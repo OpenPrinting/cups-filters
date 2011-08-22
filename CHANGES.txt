@@ -1,5 +1,0 @@
-CHANGES.txt - 2011-08-17
-------------------------
-
-CHANGES IN CUPS V1.6b1
-
