@@ -24,4 +24,5 @@ rgb.o: driver.h
 srgb.o: driver.h
 testcmyk.o: driver.h
 testdither.o: driver.h
+testimage.o: image.h
 testrgb.o: driver.h

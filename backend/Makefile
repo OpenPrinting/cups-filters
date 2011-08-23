@@ -27,7 +27,6 @@ TARGETS =	$(BACKENDS) $(UNITTESTS)
 OBJS	=	\
 		ieee1284.o \
 		parallel.o \
-		runloop.o \
 		serial.o \
 		test1284.o
 
@@ -112,18 +111,18 @@ uninstall:
 # test1284
 #
 
-test1284:	test1284.o ieee1284.o
+test1284:	test1284.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o test1284 test1284.o ieee1284.o $(LIBS)
+	$(CC) $(LDFLAGS) -o test1284 test1284.o $(LIBS)
 
 
 #
 # parallel
 #
 
-parallel:	parallel.o ieee1284.o runloop.o
+parallel:	parallel.o ieee1284.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o parallel parallel.o ieee1284.o runloop.o $(LIBS)
+	$(CC) $(LDFLAGS) -o parallel parallel.o ieee1284.o $(LIBS)
 
 
 #
@@ -132,7 +131,7 @@ parallel:	parallel.o ieee1284.o runloop.o
 
 serial:	serial.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o serial serial.o $(LIBS)
+	$(CC) $(LDFLAGS) -o serial serial.o $(BACKLIBS) $(LIBS)
 
 
 #

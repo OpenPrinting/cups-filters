@@ -28,36 +28,13 @@
 #include "backend-private.h"
 #include <stdio.h>
 
-#ifdef __hpux
-#  include <sys/modem.h>
-#endif /* __hpux */
-
-#ifdef WIN32
-#  include <io.h>
-#else
-#  include <unistd.h>
-#  include <fcntl.h>
-#  include <termios.h>
-#  ifdef __hpux
-#    include <sys/time.h>
-#  else
-#    include <sys/select.h>
-#  endif /* __hpux */
-#  ifdef HAVE_SYS_IOCTL_H
-#    include <sys/ioctl.h>
-#  endif /* HAVE_SYS_IOCTL_H */
-#endif /* WIN32 */
-
-#ifdef __sgi
-#  include <invent.h>
-#  ifndef INV_EPP_ECP_PLP
-#    define INV_EPP_ECP_PLP	6	/* From 6.3/6.4/6.5 sys/invent.h */
-#    define INV_ASO_SERIAL	14	/* serial portion of SGI ASO board */
-#    define INV_IOC3_DMA	16	/* DMA mode IOC3 serial */
-#    define INV_IOC3_PIO	17	/* PIO mode IOC3 serial */
-#    define INV_ISA_DMA		19	/* DMA mode ISA serial -- O2 */
-#  endif /* !INV_EPP_ECP_PLP */
-#endif /* __sgi */
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <sys/select.h>
+#ifdef HAVE_SYS_IOCTL_H
+#  include <sys/ioctl.h>
+#endif /* HAVE_SYS_IOCTL_H */
 
 #ifndef CRTSCTS
 #  ifdef CNEW_RTSCTS
@@ -84,6 +61,7 @@
  * Local functions...
  */
 
+static int	drain_output(int print_fd, int device_fd);
 static void	list_devices(void);
 static int	side_cb(int print_fd, int device_fd, int use_bc);
 
@@ -163,9 +141,8 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
   }
   else if (argc < 6 || argc > 7)
   {
-    _cupsLangPrintf(stderr,
-                    _("Usage: %s job-id user title copies options [file]"),
-	            argv[0]);
+    fprintf(stderr, "Usage: %s job-id user title copies options [file]\n",
+	    argv[0]);
     return (CUPS_BACKEND_FAILED);
   }
 
@@ -187,7 +164,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 
     if ((print_fd = open(argv[6], O_RDONLY)) < 0)
     {
-      _cupsLangPrintError("ERROR", _("Unable to open print file"));
+      perror("ERROR: Unable to open print file");
       return (CUPS_BACKEND_FAILED);
     }
 
@@ -237,9 +214,8 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	* available printer in the class.
 	*/
 
-        _cupsLangPrintFilter(stderr, "INFO",
-			     _("Unable to contact printer, queuing on next "
-			       "printer in class."));
+        fputs("INFO: Unable to contact printer, queuing on next printer in "
+              "class.\n", stderr);
 
        /*
         * Sleep 5 seconds to keep the job from requeuing too rapidly...
@@ -252,13 +228,12 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 
       if (errno == EBUSY)
       {
-        _cupsLangPrintFilter(stderr, "INFO",
-			     _("Printer busy; will retry in 30 seconds."));
+        fputs("INFO: Printer busy; will retry in 30 seconds.\n", stderr);
 	sleep(30);
       }
       else
       {
-	_cupsLangPrintError("ERROR", _("Unable to open device file"));
+	perror("ERROR: Unable to open serial port");
 	return (CUPS_BACKEND_FAILED);
       }
     }
@@ -318,7 +293,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
       * Process the option...
       */
 
-      if (!_cups_strcasecmp(name, "baud"))
+      if (!strcasecmp(name, "baud"))
       {
        /*
         * Set the baud rate...
@@ -375,13 +350,12 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	      break;
 #  endif /* B230400 */
           default :
-	      _cupsLangPrintFilter(stderr, "WARNING",
-	                           _("Unsupported baud rate: %s"), value);
+	      fprintf(stderr, "WARNING: Unsupported baud rate: %s\n", value);
 	      break;
 	}
 #endif /* B19200 == 19200 */
       }
-      else if (!_cups_strcasecmp(name, "bits"))
+      else if (!strcasecmp(name, "bits"))
       {
        /*
         * Set number of data bits...
@@ -402,25 +376,25 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	      break;
 	}
       }
-      else if (!_cups_strcasecmp(name, "parity"))
+      else if (!strcasecmp(name, "parity"))
       {
        /*
 	* Set parity checking...
 	*/
 
-	if (!_cups_strcasecmp(value, "even"))
+	if (!strcasecmp(value, "even"))
 	{
 	  opts.c_cflag |= PARENB;
           opts.c_cflag &= ~PARODD;
 	}
-	else if (!_cups_strcasecmp(value, "odd"))
+	else if (!strcasecmp(value, "odd"))
 	{
 	  opts.c_cflag |= PARENB;
           opts.c_cflag |= PARODD;
 	}
-	else if (!_cups_strcasecmp(value, "none"))
+	else if (!strcasecmp(value, "none"))
 	  opts.c_cflag &= ~PARENB;
-	else if (!_cups_strcasecmp(value, "space"))
+	else if (!strcasecmp(value, "space"))
 	{
 	 /*
 	  * Note: we only support space parity with 7 bits per character...
@@ -430,7 +404,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
           opts.c_cflag |= CS8;
 	  opts.c_cflag &= ~PARENB;
         }
-	else if (!_cups_strcasecmp(value, "mark"))
+	else if (!strcasecmp(value, "mark"))
 	{
 	 /*
 	  * Note: we only support mark parity with 7 bits per character
@@ -443,29 +417,29 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
           opts.c_cflag |= CSTOPB;
         }
       }
-      else if (!_cups_strcasecmp(name, "flow"))
+      else if (!strcasecmp(name, "flow"))
       {
        /*
 	* Set flow control...
 	*/
 
-	if (!_cups_strcasecmp(value, "none"))
+	if (!strcasecmp(value, "none"))
 	{
 	  opts.c_iflag &= ~(IXON | IXOFF);
           opts.c_cflag &= ~CRTSCTS;
 	}
-	else if (!_cups_strcasecmp(value, "soft"))
+	else if (!strcasecmp(value, "soft"))
 	{
 	  opts.c_iflag |= IXON | IXOFF;
           opts.c_cflag &= ~CRTSCTS;
 	}
-	else if (!_cups_strcasecmp(value, "hard") ||
-	         !_cups_strcasecmp(value, "rtscts"))
+	else if (!strcasecmp(value, "hard") ||
+	         !strcasecmp(value, "rtscts"))
         {
 	  opts.c_iflag &= ~(IXON | IXOFF);
           opts.c_cflag |= CRTSCTS;
 	}
-	else if (!_cups_strcasecmp(value, "dtrdsr"))
+	else if (!strcasecmp(value, "dtrdsr"))
 	{
 	  opts.c_iflag &= ~(IXON | IXOFF);
           opts.c_cflag &= ~CRTSCTS;
@@ -473,7 +447,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	  dtrdsr = 1;
 	}
       }
-      else if (!_cups_strcasecmp(name, "stop"))
+      else if (!strcasecmp(name, "stop"))
       {
         switch (atoi(value))
 	{
@@ -590,9 +564,8 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
       {
 	if ((bc_bytes = read(device_fd, bc_buffer, sizeof(bc_buffer))) > 0)
 	{
-	  fprintf(stderr,
-	          "DEBUG: Received " CUPS_LLFMT " bytes of back-channel data\n",
-	          CUPS_LLCAST bc_bytes);
+	  fprintf(stderr, "DEBUG: Received %d bytes of back-channel data.\n",
+	          (int)bc_bytes);
           cupsBackChannelWrite(bc_buffer, bc_bytes, 1.0);
 	}
       }
@@ -660,7 +633,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	      * Wait for DSR to go high...
 	      */
 
-	      fputs("DEBUG: DSR is low; waiting for device...\n", stderr);
+	      fputs("DEBUG: DSR is low; waiting for device.\n", stderr);
 
               do
 	      {
@@ -675,7 +648,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	      }
 	      while (!(status & TIOCM_DSR));
 
-	      fputs("DEBUG: DSR is high; writing to device...\n", stderr);
+	      fputs("DEBUG: DSR is high; writing to device.\n", stderr);
             }
 	}
 
@@ -701,7 +674,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	}
 	else
 	{
-          fprintf(stderr, "DEBUG: Wrote %d bytes...\n", (int)bytes);
+          fprintf(stderr, "DEBUG: Wrote %d bytes.\n", (int)bytes);
 
           print_bytes -= bytes;
 	  print_ptr   += bytes;
@@ -727,17 +700,116 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 
 
 /*
+ * 'drain_output()' - Drain pending print data to the device.
+ */
+
+static int				/* O - 0 on success, -1 on error */
+drain_output(int print_fd,		/* I - Print file descriptor */
+             int device_fd)		/* I - Device file descriptor */
+{
+  int		nfds;			/* Maximum file descriptor value + 1 */
+  fd_set	input;			/* Input set for reading */
+  ssize_t	print_bytes,		/* Print bytes read */
+		bytes;			/* Bytes written */
+  char		print_buffer[8192],	/* Print data buffer */
+		*print_ptr;		/* Pointer into print data buffer */
+  struct timeval timeout;		/* Timeout for read... */
+
+
+ /*
+  * Figure out the maximum file descriptor value to use with select()...
+  */
+
+  nfds = (print_fd > device_fd ? print_fd : device_fd) + 1;
+
+ /*
+  * Now loop until we are out of data from print_fd...
+  */
+
+  for (;;)
+  {
+   /*
+    * Use select() to determine whether we have data to copy around...
+    */
+
+    FD_ZERO(&input);
+    FD_SET(print_fd, &input);
+
+    timeout.tv_sec  = 0;
+    timeout.tv_usec = 0;
+
+    if (select(nfds, &input, NULL, NULL, &timeout) < 0)
+      return (-1);
+
+    if (!FD_ISSET(print_fd, &input))
+      return (0);
+
+    if ((print_bytes = read(print_fd, print_buffer,
+			    sizeof(print_buffer))) < 0)
+    {
+     /*
+      * Read error - bail if we don't see EAGAIN or EINTR...
+      */
+
+      if (errno != EAGAIN || errno != EINTR)
+      {
+        perror("ERROR: Unable to read print data");
+	return (-1);
+      }
+
+      print_bytes = 0;
+    }
+    else if (print_bytes == 0)
+    {
+     /*
+      * End of file, return...
+      */
+
+      return (0);
+    }
+
+    fprintf(stderr, "DEBUG: Read %d bytes of print data.\n",
+	    (int)print_bytes);
+
+    for (print_ptr = print_buffer; print_bytes > 0;)
+    {
+      if ((bytes = write(device_fd, print_ptr, print_bytes)) < 0)
+      {
+       /*
+        * Write error - bail if we don't see an error we can retry...
+	*/
+
+        if (errno != ENOSPC && errno != ENXIO && errno != EAGAIN &&
+	    errno != EINTR && errno != ENOTTY)
+	{
+	  perror("ERROR: Unable to write print data");
+	  return (-1);
+	}
+      }
+      else
+      {
+        fprintf(stderr, "DEBUG: Wrote %d bytes of print data.\n", (int)bytes);
+
+        print_bytes -= bytes;
+	print_ptr   += bytes;
+      }
+    }
+  }
+}
+
+
+/*
  * 'list_devices()' - List all serial devices.
  */
 
 static void
 list_devices(void)
 {
-#if defined(__hpux) || defined(__sgi) || defined(__sun) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
+#if defined(__sun) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
   static char	*funky_hex = "0123456789abcdefghijklmnopqrstuvwxyz";
 					/* Funky hex numbering used for some *
 					 * devices                           */
-#endif /* __hpux || __sgi || __sun || __FreeBSD__ || __OpenBSD__ || __FreeBSD_kernel__ */
+#endif /* __sun || __FreeBSD__ || __OpenBSD__ || __FreeBSD_kernel__ */
 
 
 #ifdef __linux
@@ -825,104 +897,6 @@ list_devices(void)
       }
     }
   }
-#elif defined(__sgi)
-  int		i, j, n;	/* Looping vars */
-  char		device[255];	/* Device filename */
-  inventory_t	*inv;		/* Hardware inventory info */
-
-
- /*
-  * IRIX maintains a hardware inventory of most devices...
-  */
-
-  setinvent();
-
-  while ((inv = getinvent()) != NULL)
-  {
-    if (inv->inv_class == INV_SERIAL)
-    {
-     /*
-      * Some sort of serial port...
-      */
-
-      if (inv->inv_type == INV_CDSIO || inv->inv_type == INV_CDSIO_E)
-      {
-       /*
-        * CDSIO port...
-        */
-
-	for (n = 0; n < 6; n ++)
-	  printf("serial serial:/dev/ttyd%d?baud=38400 \"Unknown\" \"CDSIO Board %d Serial Port #%d\"\n",
-        	 n + 5 + 8 * inv->inv_controller, inv->inv_controller, n + 1);
-      }
-      else if (inv->inv_type == INV_EPC_SERIAL)
-      {
-       /*
-        * Everest serial port...
-        */
-
-	if (inv->inv_unit == 0)
-          i = 1;
-	else
-          i = 41 + 4 * (int)inv->inv_controller;
-
-	for (n = 0; n < (int)inv->inv_state; n ++)
-	  printf("serial serial:/dev/ttyd%d?baud=38400 \"Unknown\" \"EPC Serial Port %d, Ebus slot %d\"\n",
-        	 n + i, n + 1, (int)inv->inv_controller);
-      }
-      else if (inv->inv_state > 1)
-      {
-       /*
-        * Standard serial port under IRIX 6.4 and earlier...
-        */
-
-	for (n = 0; n < (int)inv->inv_state; n ++)
-	  printf("serial serial:/dev/ttyd%d?baud=38400 \"Unknown\" \"Onboard Serial Port %d\"\n",
-        	 n + (int)inv->inv_unit + 1, n + (int)inv->inv_unit + 1);
-      }
-      else
-      {
-       /*
-        * Standard serial port under IRIX 6.5 and beyond...
-        */
-
-	printf("serial serial:/dev/ttyd%d?baud=115200 \"Unknown\" \"Onboard Serial Port %d\"\n",
-               (int)inv->inv_controller, (int)inv->inv_controller);
-      }
-    }
-  }
-
-  endinvent();
-
- /*
-  * Central Data makes serial and parallel "servers" that can be
-  * connected in a number of ways.  Look for ports...
-  */
-
-  for (i = 0; i < 10; i ++)
-    for (j = 0; j < 8; j ++)
-      for (n = 0; n < 32; n ++)
-      {
-        if (i == 8)		/* EtherLite */
-          sprintf(device, "/dev/ttydn%d%c", j, funky_hex[n]);
-        else if (i == 9)	/* PCI */
-          sprintf(device, "/dev/ttydp%d%c", j, funky_hex[n]);
-        else			/* SCSI */
-          sprintf(device, "/dev/ttyd%d%d%c", i, j, funky_hex[n]);
-
-	if (access(device, 0) == 0)
-	{
-	  if (i == 8)
-	    printf("serial serial:%s?baud=38400 \"Unknown\" \"Central Data EtherLite Serial Port, ID %d, port %d\"\n",
-  	           device, j, n);
-	  else if (i == 9)
-	    printf("serial serial:%s?baud=38400 \"Unknown\" \"Central Data PCI Serial Port, ID %d, port %d\"\n",
-  	           device, j, n);
-  	  else
-	    printf("serial serial:%s?baud=38400 \"Unknown\" \"Central Data SCSI Serial Port, logical bus %d, ID %d, port %d\"\n",
-  	           device, i, j, n);
-	}
-      }
 #elif defined(__sun)
   int		i, j, n;		/* Looping vars */
   char		device[255];		/* Device filename */
@@ -985,63 +959,6 @@ list_devices(void)
   	           device, i, j, n);
 	}
       }
-#elif defined(__hpux)
-  int		i, j, n;	/* Looping vars */
-  char		device[255];	/* Device filename */
-
-
- /*
-  * Standard serial ports...
-  */
-
-  for (i = 0; i < 10; i ++)
-  {
-    sprintf(device, "/dev/tty%dp0", i);
-    if (access(device, 0) == 0)
-      printf("serial serial:%s?baud=38400 \"Unknown\" \"Serial Port #%d\"\n",
-             device, i + 1);
-  }
-
- /*
-  * Central Data serial ports...
-  */
-
-  for (i = 0; i < 9; i ++)
-    for (j = 0; j < 8; j ++)
-      for (n = 0; n < 32; n ++)
-      {
-        if (i == 8)	/* EtherLite */
-          sprintf(device, "/dev/ttyN%d%c", j, funky_hex[n]);
-        else
-          sprintf(device, "/dev/tty%c%d%c", i + 'C', j,
-                  funky_hex[n]);
-
-	if (access(device, 0) == 0)
-	{
-	  if (i == 8)
-	    printf("serial serial:%s?baud=38400 \"Unknown\" \"Central Data EtherLite Serial Port, ID %d, port %d\"\n",
-  	           device, j, n);
-  	  else
-	    printf("serial serial:%s?baud=38400 \"Unknown\" \"Central Data SCSI Serial Port, logical bus %d, ID %d, port %d\"\n",
-  	           device, i, j, n);
-	}
-      }
-#elif defined(__osf__)
-  int		i;		/* Looping var */
-  char		device[255];	/* Device filename */
-
-
- /*
-  * Standard serial ports...
-  */
-
-  for (i = 0; i < 100; i ++)
-  {
-    sprintf(device, "/dev/tty%02d", i);
-    if (access(device, 0) == 0)
-      printf("serial serial:%s?baud=38400 \"Unknown\" \"Serial Port #%d\"\n",
-             device, i + 1);
-  }
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
   int	i, j;				/* Looping vars */
   int	fd;				/* File descriptor */
@@ -1296,7 +1213,7 @@ side_cb(int print_fd,			/* I - Print file */
   switch (command)
   {
     case CUPS_SC_CMD_DRAIN_OUTPUT :
-        if (backendDrainOutput(print_fd, device_fd))
+        if (drain_output(print_fd, device_fd))
 	  status = CUPS_SC_STATUS_IO_ERROR;
 	else if (tcdrain(device_fd))
 	  status = CUPS_SC_STATUS_IO_ERROR;

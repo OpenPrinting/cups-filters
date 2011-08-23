@@ -70,6 +70,7 @@ AC_PATH_PROG(PKGCONFIG, pkg-config)
 
 dnl Checks for header files.
 AC_HEADER_STDC
+AC_CHECK_HEADER(sys/ioctl.h,AC_DEFINE(HAVE_SYS_IOCTL_H))
 
 dnl Checks for string functions.
 AC_CHECK_FUNCS(strdup strlcat strlcpy)
@@ -104,6 +105,13 @@ case $uname in
 esac
 
 AC_SUBST(ARFLAGS)
+
+dnl Libraries needed by backends...
+BACKLIBS=""
+if test $uname = Darwin; then
+	BACKLIBS="-framework IOKit -framework CoreFoundation"
+fi
+AC_SUBST(BACKLIBS)
 
 dnl
 dnl End of "$Id$".

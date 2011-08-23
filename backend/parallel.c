@@ -1,7 +1,7 @@
 /*
  * "$Id$"
  *
- *   Parallel port backend for CUPS.
+ *   Parallel port backend for CUPS Legacy.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2007 by Easy Software Products, all rights reserved.
@@ -17,7 +17,9 @@
  * Contents:
  *
  *   main()         - Send a file to the specified parallel port.
+ *   drain_output() - Drain pending print data to the device.
  *   list_devices() - List all parallel devices.
+ *   run_loop()     - Read and write print and back-channel data.
  *   side_cb()      - Handle side-channel requests...
  */
 
@@ -26,41 +28,21 @@
  */
 
 #include "backend-private.h"
-
-#ifdef __hpux
-#  include <sys/time.h>
-#else
-#  include <sys/select.h>
-#endif /* __hpux */
-
-#ifdef WIN32
-#  include <io.h>
-#else
-#  include <unistd.h>
-#  include <fcntl.h>
-#  include <termios.h>
-#  include <sys/socket.h>
-#endif /* WIN32 */
-
-#ifdef __sgi
-#  include <invent.h>
-#  ifndef INV_EPP_ECP_PLP
-#    define INV_EPP_ECP_PLP	6	/* From 6.3/6.4/6.5 sys/invent.h */
-#    define INV_ASO_SERIAL	14	/* serial portion of SGI ASO board */
-#    define INV_IOC3_DMA	16	/* DMA mode IOC3 serial */
-#    define INV_IOC3_PIO	17	/* PIO mode IOC3 serial */
-#    define INV_ISA_DMA		19	/* DMA mode ISA serial -- O2 */
-#  endif /* !INV_EPP_ECP_PLP */
-#endif /* __sgi */
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <sys/socket.h>
 
 
 /*
  * Local functions...
  */
 
+static int	drain_output(int print_fd, int device_fd);
 static void	list_devices(void);
-static int	side_cb(int print_fd, int device_fd, int snmp_fd,
-		        http_addr_t *addr, int use_bc);
+static ssize_t	run_loop(int print_fd, int device_fd, int use_bc,
+		         int update_state);
+static int	side_cb(int print_fd, int device_fd, int use_bc);
 
 
 /*
@@ -123,9 +105,8 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
   }
   else if (argc < 6 || argc > 7)
   {
-    _cupsLangPrintf(stderr,
-		    _("Usage: %s job-id user title copies options [file]"),
-		    argv[0]);
+    fprintf(stderr, "Usage: %s job-id user title copies options [file]",
+            argv[0]);
     return (CUPS_BACKEND_FAILED);
   }
 
@@ -147,7 +128,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 
     if ((print_fd = open(argv[6], O_RDONLY)) < 0)
     {
-      _cupsLangPrintError("ERROR", _("Unable to open print file"));
+      perror("ERROR: Unable to open print file");
       return (CUPS_BACKEND_FAILED);
     }
 
@@ -215,9 +196,8 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	* available printer in the class.
 	*/
 
-        _cupsLangPrintFilter(stderr, "INFO",
-			     _("Unable to contact printer, queuing on next "
-			       "printer in class."));
+        fputs("INFO: Unable to contact printer, queuing on next printer in "
+              "class.\n", stderr);
 
        /*
         * Sleep 5 seconds to keep the job from requeuing too rapidly...
@@ -230,20 +210,18 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 
       if (errno == EBUSY)
       {
-        _cupsLangPrintFilter(stderr, "INFO",
-	                     _("Printer busy; will retry in 30 seconds."));
+        fputs("INFO: Printer busy; will retry in 30 seconds.\n", stderr);
 	sleep(30);
       }
       else if (errno == ENXIO || errno == EIO || errno == ENOENT)
       {
-        _cupsLangPrintFilter(stderr, "INFO",
-	                     _("Printer not connected; will retry in 30 "
-		               "seconds."));
+        fputs("INFO: Printer not connected; will retry in 30 seconds.\n",
+              stderr);
 	sleep(30);
       }
       else
       {
-	_cupsLangPrintError("ERROR", _("Unable to open device file"));
+	perror("ERROR: Unable to open parallel port");
 	return (CUPS_BACKEND_FAILED);
       }
     }
@@ -280,10 +258,10 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
       lseek(print_fd, 0, SEEK_SET);
     }
 
-    tbytes = backendRunLoop(print_fd, device_fd, -1, NULL, use_bc, 1, side_cb);
+    tbytes = run_loop(print_fd, device_fd, use_bc, 1);
 
     if (print_fd != 0 && tbytes >= 0)
-      _cupsLangPrintFilter(stderr, "INFO", _("Print file sent."));
+      fputs("INFO: Print file sent.\n", stderr);
   }
 
  /*
@@ -300,16 +278,115 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 
 
 /*
+ * 'drain_output()' - Drain pending print data to the device.
+ */
+
+static int				/* O - 0 on success, -1 on error */
+drain_output(int print_fd,		/* I - Print file descriptor */
+             int device_fd)		/* I - Device file descriptor */
+{
+  int		nfds;			/* Maximum file descriptor value + 1 */
+  fd_set	input;			/* Input set for reading */
+  ssize_t	print_bytes,		/* Print bytes read */
+		bytes;			/* Bytes written */
+  char		print_buffer[8192],	/* Print data buffer */
+		*print_ptr;		/* Pointer into print data buffer */
+  struct timeval timeout;		/* Timeout for read... */
+
+
+ /*
+  * Figure out the maximum file descriptor value to use with select()...
+  */
+
+  nfds = (print_fd > device_fd ? print_fd : device_fd) + 1;
+
+ /*
+  * Now loop until we are out of data from print_fd...
+  */
+
+  for (;;)
+  {
+   /*
+    * Use select() to determine whether we have data to copy around...
+    */
+
+    FD_ZERO(&input);
+    FD_SET(print_fd, &input);
+
+    timeout.tv_sec  = 0;
+    timeout.tv_usec = 0;
+
+    if (select(nfds, &input, NULL, NULL, &timeout) < 0)
+      return (-1);
+
+    if (!FD_ISSET(print_fd, &input))
+      return (0);
+
+    if ((print_bytes = read(print_fd, print_buffer,
+			    sizeof(print_buffer))) < 0)
+    {
+     /*
+      * Read error - bail if we don't see EAGAIN or EINTR...
+      */
+
+      if (errno != EAGAIN || errno != EINTR)
+      {
+        perror("ERROR: Unable to read print data");
+	return (-1);
+      }
+
+      print_bytes = 0;
+    }
+    else if (print_bytes == 0)
+    {
+     /*
+      * End of file, return...
+      */
+
+      return (0);
+    }
+
+    fprintf(stderr, "DEBUG: Read %d bytes of print data.\n",
+	    (int)print_bytes);
+
+    for (print_ptr = print_buffer; print_bytes > 0;)
+    {
+      if ((bytes = write(device_fd, print_ptr, print_bytes)) < 0)
+      {
+       /*
+        * Write error - bail if we don't see an error we can retry...
+	*/
+
+        if (errno != ENOSPC && errno != ENXIO && errno != EAGAIN &&
+	    errno != EINTR && errno != ENOTTY)
+	{
+	  perror("ERROR: Unable to write print data");
+	  return (-1);
+	}
+      }
+      else
+      {
+        fprintf(stderr, "DEBUG: Wrote %d bytes of print data.\n", (int)bytes);
+
+        print_bytes -= bytes;
+	print_ptr   += bytes;
+      }
+    }
+  }
+}
+
+
+/*
  * 'list_devices()' - List all parallel devices.
  */
 
 static void
 list_devices(void)
 {
-#if defined(__hpux) || defined(__sgi) || defined(__sun)
+#ifdef __sun
   static char	*funky_hex = "0123456789abcdefghijklmnopqrstuvwxyz";
 				/* Funky hex numbering used for some devices */
-#endif /* __hpux || __sgi || __sun */
+#endif /* __sun */
 
 #ifdef __linux
   int	i;			/* Looping var */
@@ -363,73 +440,6 @@ list_devices(void)
       close(fd);
     }
   }
-#elif defined(__sgi)
-  int		i, j, n;	/* Looping vars */
-  char		device[255];	/* Device filename */
-  inventory_t	*inv;		/* Hardware inventory info */
-
-
- /*
-  * IRIX maintains a hardware inventory of most devices...
-  */
-
-  setinvent();
-
-  while ((inv = getinvent()) != NULL)
-  {
-    if (inv->inv_class == INV_PARALLEL &&
-        (inv->inv_type == INV_ONBOARD_PLP ||
-         inv->inv_type == INV_EPP_ECP_PLP))
-    {
-     /*
-      * Standard parallel port...
-      */
-
-      puts("direct parallel:/dev/plp \"Unknown\" \"Onboard Parallel Port\"");
-    }
-    else if (inv->inv_class == INV_PARALLEL &&
-             inv->inv_type == INV_EPC_PLP)
-    {
-     /*
-      * EPC parallel port...
-      */
-
-      printf("direct parallel:/dev/plp%d \"Unknown\" \"Integral EPC parallel port, Ebus slot %d\"\n",
-             inv->inv_controller, inv->inv_controller);
-    }
-  }
-
-  endinvent();
-
- /*
-  * Central Data makes serial and parallel "servers" that can be
-  * connected in a number of ways.  Look for ports...
-  */
-
-  for (i = 0; i < 10; i ++)
-    for (j = 0; j < 8; j ++)
-      for (n = 0; n < 32; n ++)
-      {
-        if (i == 8)		/* EtherLite */
-          sprintf(device, "/dev/lpn%d%c", j, funky_hex[n]);
-        else if (i == 9)	/* PCI */
-          sprintf(device, "/dev/lpp%d%c", j, funky_hex[n]);
-        else			/* SCSI */
-          sprintf(device, "/dev/lp%d%d%c", i, j, funky_hex[n]);
-
-	if (access(device, 0) == 0)
-	{
-	  if (i == 8)
-	    printf("direct parallel:%s \"Unknown\" \"Central Data EtherLite Parallel Port, ID %d, port %d\"\n",
-	           device, j, n);
-	  else if (i == 9)
-	    printf("direct parallel:%s \"Unknown\" \"Central Data PCI Parallel Port, ID %d, port %d\"\n",
-	           device, j, n);
-  	  else
-	    printf("direct parallel:%s \"Unknown\" \"Central Data SCSI Parallel Port, logical bus %d, ID %d, port %d\"\n",
-	           device, i, j, n);
-	}
-      }
 #elif defined(__sun)
   int		i, j, n;	/* Looping vars */
   char		device[255];	/* Device filename */
@@ -500,66 +510,6 @@ list_devices(void)
 	           device, i, j, n);
 	}
       }
-#elif defined(__hpux)
-  int		i, j, n;	/* Looping vars */
-  char		device[255];	/* Device filename */
-
-
- /*
-  * Standard parallel ports...
-  */
-
-  if (access("/dev/rlp", 0) == 0)
-    puts("direct parallel:/dev/rlp \"Unknown\" \"Standard Parallel Port (/dev/rlp)\"");
-
-  for (i = 0; i < 7; i ++)
-    for (j = 0; j < 7; j ++)
-    {
-      sprintf(device, "/dev/c%dt%dd0_lp", i, j);
-      if (access(device, 0) == 0)
-	printf("direct parallel:%s \"Unknown\" \"Parallel Port #%d,%d\"\n",
-	       device, i, j);
-    }
-
- /*
-  * Central Data parallel ports...
-  */
-
-  for (i = 0; i < 9; i ++)
-    for (j = 0; j < 8; j ++)
-      for (n = 0; n < 32; n ++)
-      {
-        if (i == 8)	/* EtherLite */
-          sprintf(device, "/dev/lpN%d%c", j, funky_hex[n]);
-        else
-          sprintf(device, "/dev/lp%c%d%c", i + 'C', j,
-                  funky_hex[n]);
-
-	if (access(device, 0) == 0)
-	{
-	  if (i == 8)
-	    printf("direct parallel:%s \"Unknown\" \"Central Data EtherLite Parallel Port, ID %d, port %d\"\n",
-	           device, j, n);
-  	  else
-	    printf("direct parallel:%s \"Unknown\" \"Central Data SCSI Parallel Port, logical bus %d, ID %d, port %d\"\n",
-	           device, i, j, n);
-	}
-      }
-#elif defined(__osf__)
-  int	i;			/* Looping var */
-  int	fd;			/* File descriptor */
-  char	device[255];		/* Device filename */
-
-
-  for (i = 0; i < 3; i ++)
-  {
-    sprintf(device, "/dev/lp%d", i);
-    if ((fd = open(device, O_WRONLY)) >= 0)
-    {
-      close(fd);
-      printf("direct parallel:%s \"Unknown\" \"Parallel Port #%d\"\n", device, i + 1);
-    }
-  }
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
   int	i;			/* Looping var */
   int	fd;			/* File descriptor */
@@ -582,22 +532,257 @@ list_devices(void)
       printf("direct parallel:%s \"Unknown\" \"Parallel Port #%d (polled)\"\n", device, i + 1);
     }
   }
-#elif defined(_AIX)
-  int	i;			/* Looping var */
-  int	fd;			/* File descriptor */
-  char	device[255];		/* Device filename */
+#endif
+}
 
 
-  for (i = 0; i < 8; i ++)
+/*
+ * 'run_loop()' - Read and write print and back-channel data.
+ */
+
+static ssize_t				/* O - Total bytes on success, -1 on error */
+run_loop(int print_fd,			/* I - Print file descriptor */
+	int device_fd,			/* I - Device file descriptor */
+	int use_bc,			/* I - Use back-channel? */
+	int update_state)		/* I - Update printer-state-reasons? */
+{
+  int		nfds;			/* Maximum file descriptor value + 1 */
+  fd_set	input,			/* Input set for reading */
+		output;			/* Output set for writing */
+  ssize_t	print_bytes,		/* Print bytes read */
+		bc_bytes,		/* Backchannel bytes read */
+		total_bytes,		/* Total bytes written */
+		bytes;			/* Bytes written */
+  int		paperout;		/* "Paper out" status */
+  int		offline;		/* "Off-line" status */
+  char		print_buffer[8192],	/* Print data buffer */
+		*print_ptr,		/* Pointer into print data buffer */
+		bc_buffer[1024];	/* Back-channel data buffer */
+  struct timeval timeout;		/* Timeout for select() */
+#if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
+  struct sigaction action;		/* Actions for POSIX signals */
+#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+
+
+ /*
+  * If we are printing data from a print driver on stdin, ignore SIGTERM
+  * so that the driver can finish out any page data, e.g. to eject the
+  * current page.  We only do this for stdin printing as otherwise there
+  * is no way to cancel a raw print job...
+  */
+
+  if (!print_fd)
   {
-    sprintf(device, "/dev/lp%d", i);
-    if ((fd = open(device, O_WRONLY)) >= 0)
+#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
+    sigset(SIGTERM, SIG_IGN);
+#elif defined(HAVE_SIGACTION)
+    memset(&action, 0, sizeof(action));
+
+    sigemptyset(&action.sa_mask);
+    action.sa_handler = SIG_IGN;
+    sigaction(SIGTERM, &action, NULL);
+#else
+    signal(SIGTERM, SIG_IGN);
+#endif /* HAVE_SIGSET */
+  }
+  else if (print_fd < 0)
+  {
+   /*
+    * Copy print data from stdin, but don't mess with the signal handlers...
+    */
+
+    print_fd = 0;
+  }
+
+ /*
+  * Figure out the maximum file descriptor value to use with select()...
+  */
+
+  nfds = (print_fd > device_fd ? print_fd : device_fd) + 1;
+
+ /*
+  * Now loop until we are out of data from print_fd...
+  */
+
+  for (print_bytes = 0, print_ptr = print_buffer, offline = -1,
+           paperout = -1, total_bytes = 0;;)
+  {
+   /*
+    * Use select() to determine whether we have data to copy around...
+    */
+
+    FD_ZERO(&input);
+    if (!print_bytes)
+      FD_SET(print_fd, &input);
+    if (use_bc)
+      FD_SET(device_fd, &input);
+    if (!print_bytes)
+      FD_SET(CUPS_SC_FD, &input);
+
+    FD_ZERO(&output);
+    if (print_bytes)
+      FD_SET(device_fd, &output);
+
+    timeout.tv_sec  = 5;
+    timeout.tv_usec = 0;
+
+    if (select(nfds, &input, &output, NULL, &timeout) < 0)
     {
-      close(fd);
-      printf("direct parallel:%s \"Unknown\" \"Parallel Port #%d\"\n", device, i + 1);
+     /*
+      * Pause printing to clear any pending errors...
+      */
+
+      if (errno == ENXIO && offline != 1 && update_state)
+      {
+	fputs("STATE: +offline-report\n", stderr);
+	offline = 1;
+      }
+      else if (errno == EINTR && total_bytes == 0)
+      {
+	fputs("DEBUG: Received an interrupt before any bytes were "
+	      "written, aborting.\n", stderr);
+	return (0);
+      }
+
+      sleep(1);
+      continue;
+    }
+
+   /*
+    * Check if we have a side-channel request ready...
+    */
+
+    if (FD_ISSET(CUPS_SC_FD, &input))
+    {
+     /*
+      * Do the side-channel request, then start back over in the select
+      * loop since it may have read from print_fd...
+      */
+
+      side_cb(print_fd, device_fd, use_bc);
+      continue;
+    }
+
+   /*
+    * Check if we have back-channel data ready...
+    */
+
+    if (FD_ISSET(device_fd, &input))
+    {
+      if ((bc_bytes = read(device_fd, bc_buffer, sizeof(bc_buffer))) > 0)
+      {
+	fprintf(stderr, "DEBUG: Received %d bytes of back-channel data.\n",
+	        (int)bc_bytes);
+        cupsBackChannelWrite(bc_buffer, bc_bytes, 1.0);
+      }
+      else if (bc_bytes < 0 && errno != EAGAIN && errno != EINTR)
+      {
+        perror("DEBUG: Error reading back-channel data");
+	use_bc = 0;
+      }
+      else if (bc_bytes == 0)
+        use_bc = 0;
+    }
+
+   /*
+    * Check if we have print data ready...
+    */
+
+    if (FD_ISSET(print_fd, &input))
+    {
+      if ((print_bytes = read(print_fd, print_buffer,
+                              sizeof(print_buffer))) < 0)
+      {
+       /*
+        * Read error - bail if we don't see EAGAIN or EINTR...
+	*/
+
+	if (errno != EAGAIN || errno != EINTR)
+	{
+	  perror("ERROR: Unable to read print data");
+	  return (-1);
+	}
+
+        print_bytes = 0;
+      }
+      else if (print_bytes == 0)
+      {
+       /*
+        * End of file, break out of the loop...
+	*/
+
+        break;
+      }
+
+      print_ptr = print_buffer;
+
+      fprintf(stderr, "DEBUG: Read %d bytes of print data.\n",
+              (int)print_bytes);
+    }
+
+   /*
+    * Check if the device is ready to receive data and we have data to
+    * send...
+    */
+
+    if (print_bytes && FD_ISSET(device_fd, &output))
+    {
+      if ((bytes = write(device_fd, print_ptr, print_bytes)) < 0)
+      {
+       /*
+        * Write error - bail if we don't see an error we can retry...
+	*/
+
+        if (errno == ENOSPC)
+	{
+	  if (paperout != 1 && update_state)
+	  {
+	    fputs("STATE: +media-empty-warning\n", stderr);
+	    paperout = 1;
+	  }
+        }
+	else if (errno == ENXIO)
+	{
+	  if (offline != 1 && update_state)
+	  {
+	    fputs("STATE: +offline-report\n", stderr);
+	    offline = 1;
+	  }
+	}
+	else if (errno != EAGAIN && errno != EINTR && errno != ENOTTY)
+	{
+	  perror("ERROR: Unable to write print data");
+	  return (-1);
+	}
+      }
+      else
+      {
+        if (paperout && update_state)
+	{
+	  fputs("STATE: -media-empty-warning\n", stderr);
+	  paperout = 0;
+	}
+
+	if (offline && update_state)
+	{
+	  fputs("STATE: -offline-report\n", stderr);
+	  offline = 0;
+	}
+
+        fprintf(stderr, "DEBUG: Wrote %d bytes of print data...\n", (int)bytes);
+
+        print_bytes -= bytes;
+	print_ptr   += bytes;
+	total_bytes += bytes;
+      }
     }
   }
-#endif
+
+ /*
+  * Return with success...
+  */
+
+  return (total_bytes);
 }
 
 
@@ -608,8 +793,6 @@ list_devices(void)
 static int				/* O - 0 on success, -1 on error */
 side_cb(int         print_fd,		/* I - Print file */
         int         device_fd,		/* I - Device file */
-        int         snmp_fd,		/* I - SNMP socket (unused) */
-	http_addr_t *addr,		/* I - Device address (unused) */
 	int         use_bc)		/* I - Using back-channel? */
 {
   cups_sc_command_t	command;	/* Request command */
@@ -617,9 +800,6 @@ side_cb(int         print_fd,		/* I - Print file */
   char			data[2048];	/* Request/response data */
   int			datalen;	/* Request/response data size */
 
-
-  (void)snmp_fd;
-  (void)addr;
 
   datalen = sizeof(data);
 
@@ -629,7 +809,7 @@ side_cb(int         print_fd,		/* I - Print file */
   switch (command)
   {
     case CUPS_SC_CMD_DRAIN_OUTPUT :
-        if (backendDrainOutput(print_fd, device_fd))
+        if (drain_output(print_fd, device_fd))
 	  status = CUPS_SC_STATUS_IO_ERROR;
 	else if (tcdrain(device_fd))
 	  status = CUPS_SC_STATUS_IO_ERROR;
