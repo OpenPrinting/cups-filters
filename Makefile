@@ -1,9 +1,9 @@
 #
 # "$Id$"
 #
-#   Top-level Makefile for CUPS.
+#   Top-level Makefile for CUPS Legacy.
 #
-#   Copyright 2007-2010 by Apple Inc.
+#   Copyright 2007-2011 by Apple Inc.
 #   Copyright 1997-2007 by Easy Software Products, all rights reserved.
 #
 #   These coded instructions, statements, and computer programs are the
@@ -20,7 +20,7 @@ include Makedefs
 # Directories to make...
 #
 
-DIRS	=	cups test $(BUILDDIRS) $(PHPDIR) $(FONTS)
+DIRS	=	cupslegacy backend filter $(PHPDIR) conf data fonts
 
 
 #
@@ -29,55 +29,14 @@ DIRS	=	cups test $(BUILDDIRS) $(PHPDIR) $(FONTS)
 
 all:
 	chmod +x cups-config
-	echo Using ARCHFLAGS="$(ARCHFLAGS)"
 	echo Using ALL_CFLAGS="$(ALL_CFLAGS)"
-	echo Using ALL_CXXFLAGS="$(ALL_CXXFLAGS)"
 	echo Using CC="$(CC)"
-	echo Using CXX="$(CC)"
 	echo Using DSOFLAGS="$(DSOFLAGS)"
 	echo Using LDFLAGS="$(LDFLAGS)"
 	echo Using LIBS="$(LIBS)"
 	for dir in $(DIRS); do\
 		echo Making all in $$dir... ;\
-		(cd $$dir ; $(MAKE) $(MFLAGS) all $(UNITTESTS)) || exit 1;\
-	done
-
-
-#
-# Make library targets...
-#
-
-libs:
-	echo Using ARCHFLAGS="$(ARCHFLAGS)"
-	echo Using ALL_CFLAGS="$(ALL_CFLAGS)"
-	echo Using ALL_CXXFLAGS="$(ALL_CXXFLAGS)"
-	echo Using CC="$(CC)"
-	echo Using CXX="$(CC)"
-	echo Using DSOFLAGS="$(DSOFLAGS)"
-	echo Using LDFLAGS="$(LDFLAGS)"
-	echo Using LIBS="$(LIBS)"
-	for dir in $(DIRS); do\
-		echo Making libraries in $$dir... ;\
-		(cd $$dir ; $(MAKE) $(MFLAGS) libs) || exit 1;\
-	done
-
-
-#
-# Make unit test targets...
-#
-
-unittests:
-	echo Using ARCHFLAGS="$(ARCHFLAGS)"
-	echo Using ALL_CFLAGS="$(ALL_CFLAGS)"
-	echo Using ALL_CXXFLAGS="$(ALL_CXXFLAGS)"
-	echo Using CC="$(CC)"
-	echo Using CXX="$(CC)"
-	echo Using DSOFLAGS="$(DSOFLAGS)"
-	echo Using LDFLAGS="$(LDFLAGS)"
-	echo Using LIBS="$(LIBS)"
-	for dir in $(DIRS); do\
-		echo Making all in $$dir... ;\
-		(cd $$dir ; $(MAKE) $(MFLAGS) unittests) || exit 1;\
+		(cd $$dir ; $(MAKE) $(MFLAGS) all) || exit 1;\
 	done
 
 
@@ -98,22 +57,7 @@ clean:
 
 distclean:	clean
 	$(RM) Makedefs config.h config.log config.status
-	$(RM) cups-config
-	$(RM) conf/cupsd.conf conf/mime.convs conf/pam.std conf/snmp.conf
-	$(RM) doc/help/ref-cupsd-conf.html doc/help/standard.html doc/index.html
-	$(RM) man/client.conf.man
-	$(RM) man/cups-deviced.man man/cups-driverd.man
-	$(RM) man/cups-lpd.man man/cupsaddsmb.man man/cupsd.man
-	$(RM) man/cupsd.conf.man man/drv.man man/lpoptions.man
-	$(RM) packaging/cups.list
-	$(RM) packaging/cups-desc.plist packaging/cups-info.plist
-	$(RM) templates/header.tmpl
-	$(RM) desktop/cups.desktop
-	$(RM) scheduler/cups.sh scheduler/cups-lpd.xinetd
-	$(RM) scheduler/org.cups.cups-lpd.plist scheduler/cups.xml
-	-$(RM) doc/*/index.html
-	-$(RM) templates/*/header.tmpl
-	-$(RM) -r autom4te*.cache clang cups/charmaps cups/locale driver/test
+	-$(RM) -r autom4te*.cache clang filter/test
 
 
 #
@@ -160,15 +104,10 @@ install:	install-data install-headers install-libs install-exec
 #
 
 install-data:
-	echo Making all in cups...
-	(cd cups; $(MAKE) $(MFLAGS) all)
 	for dir in $(DIRS); do\
 		echo Installing data files in $$dir... ;\
 		(cd $$dir; $(MAKE) $(MFLAGS) install-data) || exit 1;\
 	done
-	echo Installing cups-config script...
-	$(INSTALL_DIR) -m 755 $(BINDIR)
-	$(INSTALL_SCRIPT) cups-config $(BINDIR)/cups-config
 
 
 #
@@ -176,15 +115,6 @@ install-data:
 #
 
 install-headers:
-	for dir in $(DIRS); do\
-		echo Installing header files in $$dir... ;\
-		(cd $$dir; $(MAKE) $(MFLAGS) install-headers) || exit 1;\
-	done
-	if test "x$(privateinclude)" != x; then \
-		echo Installing config.h into $(PRIVATEINCLUDE)...; \
-		$(INSTALL_DIR) -m 755 $(PRIVATEINCLUDE); \
-		$(INSTALL_DATA) config.h $(PRIVATEINCLUDE)/config.h; \
-	fi
 
 
 #
@@ -218,104 +148,6 @@ uninstall:
 		echo Uninstalling in $$dir... ;\
 		(cd $$dir; $(MAKE) $(MFLAGS) uninstall) || exit 1;\
 	done
-	echo Uninstalling cups-config script...
-	$(RM) $(BINDIR)/cups-config
-	-$(RMDIR) $(BINDIR)
-
-
-#
-# Run the test suite...
-#
-
-test:	all unittests
-	echo Running CUPS test suite...
-	cd test; ./run-stp-tests.sh
-
-
-check:	all unittests
-	echo Running CUPS test suite with defaults...
-	cd test; ./run-stp-tests.sh 1 0 n
-
-
-#
-# Create HTML documentation...
-#
-
-apihelp:
-	for dir in cgi-bin cups filter driver ppdc scheduler; do\
-		echo Generating API help in $$dir... ;\
-		(cd $$dir; $(MAKE) $(MFLAGS) apihelp) || exit 1;\
-	done
-
-framedhelp:
-	for dir in cgi-bin cups filter driver ppdc scheduler; do\
-		echo Generating framed API help in $$dir... ;\
-		(cd $$dir; $(MAKE) $(MFLAGS) framedhelp) || exit 1;\
-	done
-
-
-#
-# Create an Xcode docset...
-#
-
-docset:	apihelp
-	echo Generating docset directory tree...
-	$(RM) -r org.cups.docset
-	mkdir -p org.cups.docset/Contents/Resources/Documentation/help
-	mkdir -p org.cups.docset/Contents/Resources/Documentation/images
-	cd man; $(MAKE) $(MFLAGS) html
-	cd doc; $(MAKE) $(MFLAGS) docset
-	cd cgi-bin; $(MAKE) $(MFLAGS) makedocset
-	cgi-bin/makedocset org.cups.docset \
-		`svnversion . | sed -e '1,$$s/[a-zA-Z]//g'` \
-		doc/help/api-*.tokens
-	$(RM) doc/help/api-*.tokens
-	echo Indexing docset...
-	/Developer/usr/bin/docsetutil index org.cups.docset
-	echo Generating docset archive and feed...
-	$(RM) org.cups.docset.atom
-	/Developer/usr/bin/docsetutil package --output org.cups.docset.xar \
-		--atom org.cups.docset.atom \
-		--download-url http://www.cups.org/org.cups.docset.xar \
-		org.cups.docset
-
-
-#
-# Lines of code computation...
-#
-
-sloc:
-	for dir in cups cupslite scheduler; do \
-		(cd $$dir; $(MAKE) $(MFLAGS) sloc) || exit 1;\
-	done
-
-
-#
-# Make software distributions using EPM (http://www.epmhome.org/)...
-#
-
-EPMFLAGS	=	-v --output-dir dist $(EPMARCH)
-
-aix bsd deb depot inst pkg setld slackware swinstall tardist:
-	epm $(EPMFLAGS) -f $@ cups packaging/cups.list
-
-epm:
-	epm $(EPMFLAGS) -s packaging/installer.gif cups packaging/cups.list
-
-rpm:
-	epm $(EPMFLAGS) -f rpm -s packaging/installer.gif cups packaging/cups.list
-
-.PHONEY:	dist
-dist:	all
-	$(RM) -r dist
-	$(MAKE) $(MFLAGS) epm
-	case `uname` in \
-		*BSD*) $(MAKE) $(MFLAGS) bsd;; \
-		Darwin*) $(MAKE) $(MFLAGS) osx;; \
-		IRIX*) $(MAKE) $(MFLAGS) tardist;; \
-		Linux*) test ! -x /usr/bin/rpm || $(MAKE) $(MFLAGS) rpm;; \
-		SunOS*) $(MAKE) $(MFLAGS) pkg;; \
-	esac
 
 
 #

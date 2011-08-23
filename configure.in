@@ -25,7 +25,6 @@ sinclude(config-scripts/cups-compiler.m4)
 
 sinclude(config-scripts/cups-image.m4)
 sinclude(config-scripts/cups-largefile.m4)
-sinclude(config-scripts/cups-defaults.m4)
 sinclude(config-scripts/cups-pdf.m4)
 sinclude(config-scripts/cups-scripting.m4)
 
