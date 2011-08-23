@@ -20,7 +20,7 @@ include Makedefs
 # Directories to make...
 #
 
-DIRS	=	cupslegacy backend filter $(PHPDIR) conf data fonts
+DIRS	=	cupslegacy backend filter $(PHPDIR)
 
 
 #

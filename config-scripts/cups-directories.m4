@@ -30,11 +30,6 @@ if test "$exec_prefix" = "NONE"; then
 fi
 
 dnl Setup CUPS locations...
-AC_PATH_PROG(CUPSCONFIG,cups-config)
-if test "x$CUPSCONFIG" = x; then
-	AC_MSG_ERROR(Required cups-config is missing. Please install CUPS developer packages.)
-fi
-
 CUPS_DATADIR="`$CUPSCONFIG --datadir`"
 AC_DEFINE_UNQUOTED(CUPS_DATADIR, "$CUPS_DATADIR")
 AC_SUBST(CUPS_DATADIR)

@@ -28,6 +28,17 @@ CFLAGS="${CFLAGS:=}"
 CPPFLAGS="${CPPFLAGS:=}"
 LDFLAGS="${LDFLAGS:=}"
 
+dnl Look for CUPS...
+AC_PATH_PROG(CUPSCONFIG,cups-config)
+if test "x$CUPSCONFIG" = x; then
+	AC_MSG_ERROR(Required cups-config is missing. Please install CUPS developer packages.)
+fi
+
+CFLAGS="$CFLAGS `cups-config --cflags`"
+LDFLAGS="$LDFLAGS `cups-config --ldflags`"
+LINKCUPS="`cups-config --image --libs`"
+AC_SUBST(LINKCUPS)
+
 dnl Checks for programs...
 AC_PROG_AWK
 AC_PROG_CC

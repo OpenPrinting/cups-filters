@@ -60,18 +60,19 @@ LIBZ		=	@LIBZ@
 #
 # OPTIM         Defines the common compiler optimization/debugging options
 #               for all architectures.
-# OPTIONS       Defines other compile-time options (currently only -DDEBUG
-#               for extra debug info)
+# OPTIONS       Defines other compile-time options.
 #
 
 ALL_CFLAGS	=	-I.. $(CFLAGS) @LARGEFILE@ $(OPTIONS)
 ARFLAGS		=	@ARFLAGS@
 CFLAGS		=	@CPPFLAGS@ @CFLAGS@
-DSOFLAGS	=	-L../cups @DSOFLAGS@
+COMMONLIBS	=	@LIBS@ $(LINKCUPS)
+DSOFLAGS	=	@DSOFLAGS@
 DSOLIBS		=	@DSOLIBS@ $(COMMONLIBS)
 IMGLIBS		=	@IMGLIBS@
 LDFLAGS		=	@LDFLAGS@ @RELROFLAGS@ @PIEFLAGS@ $(OPTIM)
-LIBS		=	$(LINKCUPSLEGACY) $(LIBS)
+LIBS		=	$(LINKCUPSLEGACY) $(COMMONLIBS)
+LINKCUPS	=	@LINKCUPS@
 LINKCUPSLEGACY	=	@LINKCUPSLEGACY@
 OPTIM		=	@OPTIM@
 OPTIONS		=
