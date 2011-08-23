@@ -1,7 +1,7 @@
 dnl
 dnl "$Id$"
 dnl
-dnl   PDF filter configuration stuff for CUPS.
+dnl   PDF filter configuration stuff for CUPS Legacy.
 dnl
 dnl   Copyright 2007-2011 by Apple Inc.
 dnl   Copyright 2006 by Easy Software Products, all rights reserved.
@@ -21,17 +21,15 @@ CUPS_GHOSTSCRIPT=""
 
 case "x$with_pdftops" in
 	x) # Default/auto
-	if test $uname != Darwin; then
-		AC_PATH_PROG(CUPS_PDFTOPS, pdftops)
-		if test "x$CUPS_PDFTOPS" != x; then
-			AC_DEFINE(HAVE_PDFTOPS)
+	AC_PATH_PROG(CUPS_PDFTOPS, pdftops)
+	if test "x$CUPS_PDFTOPS" != x; then
+		AC_DEFINE(HAVE_PDFTOPS)
+		PDFTOPS="pdftops"
+	else
+		AC_PATH_PROG(CUPS_GHOSTSCRIPT, gs)
+		if test "x$CUPS_GHOSTSCRIPT" != x; then
+			AC_DEFINE(HAVE_GHOSTSCRIPT)
 			PDFTOPS="pdftops"
-		else
-			AC_PATH_PROG(CUPS_GHOSTSCRIPT, gs)
-			if test "x$CUPS_GHOSTSCRIPT" != x; then
-				AC_DEFINE(HAVE_GHOSTSCRIPT)
-				PDFTOPS="pdftops"
-			fi
 		fi
 	fi
 	;;

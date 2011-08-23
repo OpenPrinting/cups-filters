@@ -1,9 +1,9 @@
-INSTALL - CUPS v1.5.0 - 2011-07-25
-----------------------------------
+INSTALL - CUPS Legacy v1.6.0 - 2011-08-22
+-----------------------------------------
 
-This file describes how to compile and install CUPS from source code. For more
-information on CUPS see the file called "README.txt".  A complete change log can
-be found in "CHANGES.txt".
+This file describes how to compile and install CUPS Legacy from source code. For
+more information on CUPS Legacy see the file called "README.txt".  A complete
+change log can be found in "CHANGES.txt".
 
 **** IF YOU HAVE A NON-POSTSCRIPT PRINTER AND ARE NOT       ****
 **** RUNNING MAC OS X, YOU WILL ALSO NEED TO INSTALL GPL    ****
@@ -85,15 +85,6 @@ CONFIGURATION
 	LDFLAGS="-L/some/directory" \
 	./configure ...
 
-    The "--enable-debug" option compiles CUPS with debugging information
-    enabled.  Additional debug logging support can be enabled using the
-    "--enable-debug-printfs" option - these debug messages are enabled using the
-    CUPS_DEBUG_LOG environment variable at run-time.
-
-    CUPS also includes an extensive set of unit tests that can be used to find
-    and diagnose a variety of common problems - use the "--enable-unit-tests"
-    configure option to run them at build time.
-
     Once you have configured things, just type:
 
 	make ENTER
@@ -103,22 +94,6 @@ CONFIGURATION
 	gmake ENTER
 
     to build the software.
-
-
-TESTING THE SOFTWARE
-
-    Aside from the built-in unit tests, CUPS includes an automated test
-    framework for testing the entire printing system.  To run the tests, just
-    type:
-
-	make check ENTER
-
-    or if you have FreeBSD, NetBSD, or OpenBSD type:
-
-	gmake check ENTER
-
-    The test framework runs a copy of the CUPS scheduler (cupsd) on port 8631
-    in /tmp/cups-$USER and produces a nice HTML report of the results.
 
 
 INSTALLING THE SOFTWARE
@@ -131,77 +106,3 @@ INSTALLING THE SOFTWARE
     or for FreeBSD, NetBSD, or OpenBSD:
 
 	gmake install ENTER
-
-    You can also build binary packages that can be installed on other machines
-    using the RPM spec file ("packaging/cups.spec") or EPM list file
-    ("packaging/cups.list").  The latter also supports building of binary RPMs,
-    so it may be more convenient to use.
-
-    You can find the RPM software at:
-
-	http://www.rpm.org/
-
-    The EPM software is available at:
-
-	http://www.epmhome.org/
-
-
-CREATING BINARY DISTRIBUTIONS WITH EPM
-
-    The top level makefile supports generation of many types of binary
-    distributions using EPM.  To build a binary distribution type:
-
-	make <format> ENTER
-
-    or
-
-	gmake <format> ENTER
-
-    for FreeBSD, NetBSD, and OpenBSD.  The <format> target is one of the
-    following:
-
-	epm       - Builds a script + tarfile package
-	aix       - Builds an AIX package
-	bsd       - Builds a *BSD package
-	deb       - Builds a Debian package
-	depot     - Builds a HP-UX package (also swinstall)
-	inst      - Builds an IRIX package (also tardist)
-	pkg       - Builds a Solaris package
-	rpm       - Builds a RPM package
-	setld     - Build a Tru64 UNIX package
-	slackware - Build a Slackware package
-	swinstall - Build a HP-UX package (also depot)
-	tardist   - Builds an IRIX package (also inst)
-
-
-GETTING DEBUG LOGGING FROM CUPS
-
-    When configured with the "--enable-debug-printfs" option, CUPS compiles in
-    additional debug logging support in the scheduler, CUPS API, and CUPS
-    Imaging API.  The following environment variables are used to enable and
-    control debug logging:
-
-        CUPS_DEBUG_FILTER  Specifies a POSIX regular expression to control
-	                   which messages are logged.
-	CUPS_DEBUG_LEVEL   Specifies a number from 0 to 9 to control the
-	                   verbosity of the logging. The default level is 1.
-        CUPS_DEBUG_LOG     Specifies a log file to use.  Specify the name "-"
-	                   to send the messages to stderr.  Prefix a filename
-			   with "+" to append to an existing file.
-
-
-REPORTING PROBLEMS
-
-    If you have problems, READ THE DOCUMENTATION FIRST!  If the documentation
-    does not solve your problems, please post a message on the "cups.general"
-    forum at:
-
-        http://www.cups.org/newsgroups.php
-
-    Include your operating system and version, compiler and version, and any
-    errors or problems you've run into.  The "config.log" file and the output
-    from the configure script and make should also be sent, as it often helps to
-    determine the cause of your problem.
-
-    If you are running a version of Linux, be sure to provide the Linux
-    distribution you have, too.

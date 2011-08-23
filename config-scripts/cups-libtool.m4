@@ -1,7 +1,7 @@
 dnl
 dnl "$Id$"
 dnl
-dnl   Libtool stuff for CUPS.
+dnl   Libtool stuff for CUPS Legacy.
 dnl
 dnl   Copyright 2007-2011 by Apple Inc.
 dnl   Copyright 1997-2005 by Easy Software Products, all rights reserved.
@@ -27,11 +27,9 @@ AC_ARG_ENABLE(libtool_unsupported, [  --enable-libtool-unsupported
 AC_SUBST(LIBTOOL)
 
 if test x$LIBTOOL != x; then
-	LIBCUPS="libcups.la"
-	LIBCUPSIMAGE="libcupsimage.la"
-	LINKCUPS="../cups/\$(LIBCUPS)"
-	LINKCUPSIMAGE="../filter/\$(LIBCUPSIMAGE)"
 	DSO="\$(CC)"
+	LIBCUPSLEGACY="libcupslegacy.la"
+	LINKCUPSLEGACY="../filter/\$(LIBCUPSLEGACY)"
 fi
 
 dnl

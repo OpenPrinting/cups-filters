@@ -1,0 +1,6 @@
+CHANGES.txt - CUPS Legacy v1.6.0 - 2011-08-22
+---------------------------------------------
+
+CHANGES IN V1.6.0
+
+	- Initial packaging of files that are no longer included in CUPS 1.6.

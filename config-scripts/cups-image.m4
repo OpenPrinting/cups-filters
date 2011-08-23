@@ -1,7 +1,7 @@
 dnl
 dnl "$Id$"
 dnl
-dnl   Image library/filter stuff for CUPS.
+dnl   Image library/filter stuff for CUPS Legacy.
 dnl
 dnl   Copyright 2007-2011 by Apple Inc.
 dnl   Copyright 1997-2006 by Easy Software Products, all rights reserved.
@@ -16,20 +16,10 @@ dnl
 dnl See if we want the image filters included at all...
 AC_ARG_ENABLE(image, [  --enable-image          always build the image filters])
 
-DEFAULT_IMAGEFILTERS="#"
 IMGFILTERS=""
 if test "x$enable_image" != xno; then
-        AC_MSG_CHECKING(whether to build image filters)
-        if test "x$enable_image" = xyes -o $uname != Darwin; then
-		IMGFILTERS="imagetops imagetoraster"
-		DEFAULT_IMAGEFILTERS=""
-                AC_MSG_RESULT(yes)
-        else
-                AC_MSG_RESULT(no)
-        fi
+	IMGFILTERS="imagetops imagetoraster"
 fi
-
-AC_SUBST(DEFAULT_IMAGEFILTERS)
 AC_SUBST(IMGFILTERS)
 
 dnl Check for image libraries...
@@ -94,16 +84,6 @@ fi
 
 dnl Restore original LIBS settings...
 LIBS="$SAVELIBS"
-
-EXPORT_LIBJPEG="$LIBJPEG"
-EXPORT_LIBPNG="$LIBPNG"
-EXPORT_LIBTIFF="$LIBTIFF"
-EXPORT_LIBZ="$LIBZ"
-
-AC_SUBST(EXPORT_LIBJPEG)
-AC_SUBST(EXPORT_LIBPNG)
-AC_SUBST(EXPORT_LIBTIFF)
-AC_SUBST(EXPORT_LIBZ)
 
 AC_CHECK_HEADER(stdlib.h,AC_DEFINE(HAVE_STDLIB_H))
 
