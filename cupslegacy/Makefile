@@ -20,7 +20,7 @@ include ../Makedefs
 
 LIBTARGETS =	\
 		$(LIBCUPSLEGACY) \
-		libcupslegacy.a \
+		libcupslegacy.a
 UNITTARGETS =	\
 		testcmyk \
 		testdither \

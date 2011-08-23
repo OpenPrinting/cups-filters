@@ -54,9 +54,9 @@ AC_SUBST(DSOFLAGS)
 AC_SUBST(LIBCUPSLEGACY)
 
 if test x$enable_shared = xno; then
-	LINKCUPSLEGACY="../legacy/libcupslegacy.a"
+	LINKCUPSLEGACY="../cupslegacy/libcupslegacy.a"
 else
-	LINKCUPSLEGACY="-L../legacy -lcupslegacy"
+	LINKCUPSLEGACY="-L../cupslegacy -lcupslegacy"
 fi
 
 AC_SUBST(LINKCUPSLEGACY)

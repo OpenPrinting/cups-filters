@@ -28,7 +28,6 @@ DIRS	=	cupslegacy backend filter $(PHPDIR)
 #
 
 all:
-	chmod +x cups-config
 	echo Using ALL_CFLAGS="$(ALL_CFLAGS)"
 	echo Using CC="$(CC)"
 	echo Using DSOFLAGS="$(DSOFLAGS)"
