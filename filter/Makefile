@@ -241,7 +241,7 @@ pdftops:	pdftops.o common.o
 
 rastertoescpx:		rastertoescpx.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ rastertoescpx.o $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ rastertoescpx.o $(LINKCUPSLEGACY) $(LIBS)
 
 
 #
@@ -250,7 +250,8 @@ rastertoescpx:		rastertoescpx.o
 
 rastertopclx:		rastertopclx.o pcl-common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ rastertopclx.o pcl-common.o $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ rastertopclx.o pcl-common.o $(LINKCUPSLEGACY) \
+		$(LIBS)
 
 
 #

@@ -28,8 +28,7 @@
  */
 
 #include "pstext.h"
-#include "image.h"
-#include <cups/language-private.h>
+#include <cupslegacy/image.h>
 
 
 /*
@@ -114,9 +113,8 @@ main(int  argc,				/* I - Number of command-line args */
 
   if (argc < 6 || argc > 7)
   {
-    _cupsLangPrintf(stderr,
-                    _("Usage: %s job-id user title copies options file"),
-                    argv[0]);
+    fprintf(stderr, "Usage: %s job-id user title copies options file\n",
+	    argv[0]);
     return (1);
   }
 
@@ -180,7 +178,7 @@ load_banner(const char *filename)	/* I - Filename or NULL for stdin */
 
   if (!fp)
   {
-    _cupsLangPrintError("ERROR", _("Unable to open print file"));
+    perror("ERROR: Unable to open print file");
     exit(1);
   }
 
@@ -189,7 +187,7 @@ load_banner(const char *filename)	/* I - Filename or NULL for stdin */
   */
 
   if ((cups_docroot = getenv("CUPS_DOCROOT")) == NULL)
-    cups_docroot = CUPS_DOCROOT;
+    cups_docroot = "/usr/share/doc/cups";
 
   banner  = calloc(1, sizeof(banner_file_t));
   linenum = 0;
@@ -218,9 +216,8 @@ load_banner(const char *filename)	/* I - Filename or NULL for stdin */
 
     if (!*ptr)
     {
-      _cupsLangPrintFilter(stderr, "ERROR",
-                           _("Missing value on line %d of banner file."),
-			   linenum);
+      fprintf(stderr, "ERROR: Missing value on line %d of banner file.\n",
+	      linenum);
       continue;
     }
 
@@ -228,7 +225,7 @@ load_banner(const char *filename)	/* I - Filename or NULL for stdin */
     * Save keyword values in the appropriate places...
     */
 
-    if (!_cups_strcasecmp(line, "Footer"))
+    if (!strcasecmp(line, "Footer"))
     {
       if (banner->footer)
         fprintf(stderr, "DEBUG: Extra \"Footer\" on line %d of banner file\n",
@@ -236,7 +233,7 @@ load_banner(const char *filename)	/* I - Filename or NULL for stdin */
       else
         banner->footer = strdup(ptr);
     }
-    else if (!_cups_strcasecmp(line, "Header"))
+    else if (!strcasecmp(line, "Header"))
     {
       if (banner->header)
         fprintf(stderr, "DEBUG: Extra \"Header\" on line %d of banner file\n",
@@ -244,7 +241,7 @@ load_banner(const char *filename)	/* I - Filename or NULL for stdin */
       else
         banner->header = strdup(ptr);
     }
-    else if (!_cups_strcasecmp(line, "Image"))
+    else if (!strcasecmp(line, "Image"))
     {
       char	imagefile[1024];	/* Image filename */
 
@@ -267,14 +264,14 @@ load_banner(const char *filename)	/* I - Filename or NULL for stdin */
         cupsArrayAdd(banner->images, strdup(imagefile));
       }
     }
-    else if (!_cups_strcasecmp(line, "Notice"))
+    else if (!strcasecmp(line, "Notice"))
     {
       if (!banner->notices)
 	banner->notices = cupsArrayNew(NULL, NULL);
 
       cupsArrayAdd(banner->notices, strdup(ptr));
     }
-    else if (!_cups_strcasecmp(line, "Show"))
+    else if (!strcasecmp(line, "Show"))
     {
       char	*value;			/* Current value */
 
@@ -294,41 +291,41 @@ load_banner(const char *filename)	/* I - Filename or NULL for stdin */
        /*
         * Add the value to the show flags...
 	*/
-	if (!_cups_strcasecmp(value, "imageable-area"))
+	if (!strcasecmp(value, "imageable-area"))
 	  banner->show |= SHOW_IMAGEABLE_AREA;
-	else if (!_cups_strcasecmp(value, "job-billing"))
+	else if (!strcasecmp(value, "job-billing"))
 	  banner->show |= SHOW_JOB_BILLING;
-	else if (!_cups_strcasecmp(value, "job-id"))
+	else if (!strcasecmp(value, "job-id"))
 	  banner->show |= SHOW_JOB_ID;
-	else if (!_cups_strcasecmp(value, "job-name"))
+	else if (!strcasecmp(value, "job-name"))
 	  banner->show |= SHOW_JOB_NAME;
-	else if (!_cups_strcasecmp(value, "job-originating-host-name"))
+	else if (!strcasecmp(value, "job-originating-host-name"))
 	  banner->show |= SHOW_JOB_ORIGINATING_HOST_NAME;
-	else if (!_cups_strcasecmp(value, "job-originating-user-name"))
+	else if (!strcasecmp(value, "job-originating-user-name"))
 	  banner->show |= SHOW_JOB_ORIGINATING_USER_NAME;
-	else if (!_cups_strcasecmp(value, "job-uuid"))
+	else if (!strcasecmp(value, "job-uuid"))
 	  banner->show |= SHOW_JOB_UUID;
-	else if (!_cups_strcasecmp(value, "options"))
+	else if (!strcasecmp(value, "options"))
 	  banner->show |= SHOW_OPTIONS;
-	else if (!_cups_strcasecmp(value, "paper-name"))
+	else if (!strcasecmp(value, "paper-name"))
 	  banner->show |= SHOW_PAPER_NAME;
-	else if (!_cups_strcasecmp(value, "paper-size"))
+	else if (!strcasecmp(value, "paper-size"))
 	  banner->show |= SHOW_PAPER_SIZE;
-	else if (!_cups_strcasecmp(value, "printer-driver-name"))
+	else if (!strcasecmp(value, "printer-driver-name"))
 	  banner->show |= SHOW_PRINTER_DRIVER_NAME;
-	else if (!_cups_strcasecmp(value, "printer-driver-version"))
+	else if (!strcasecmp(value, "printer-driver-version"))
 	  banner->show |= SHOW_PRINTER_DRIVER_VERSION;
-	else if (!_cups_strcasecmp(value, "printer-info"))
+	else if (!strcasecmp(value, "printer-info"))
 	  banner->show |= SHOW_PRINTER_INFO;
-	else if (!_cups_strcasecmp(value, "printer-location"))
+	else if (!strcasecmp(value, "printer-location"))
 	  banner->show |= SHOW_PRINTER_LOCATION;
-	else if (!_cups_strcasecmp(value, "printer-make-and-model"))
+	else if (!strcasecmp(value, "printer-make-and-model"))
 	  banner->show |= SHOW_PRINTER_MAKE_AND_MODEL;
-	else if (!_cups_strcasecmp(value, "printer-name"))
+	else if (!strcasecmp(value, "printer-name"))
 	  banner->show |= SHOW_PRINTER_NAME;
-	else if (!_cups_strcasecmp(value, "time-at-creation"))
+	else if (!strcasecmp(value, "time-at-creation"))
 	  banner->show |= SHOW_TIME_AT_CREATION;
-	else if (!_cups_strcasecmp(value, "time-at-processing"))
+	else if (!strcasecmp(value, "time-at-processing"))
 	  banner->show |= SHOW_TIME_AT_PROCESSING;
 	else
         {
@@ -486,18 +483,18 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
   {
     for (j = 0; j < num_options; j ++)
     {
-      if (_cups_strcasecmp("media", options[j].name) &&
-	  _cups_strcasecmp("PageSize", options[j].name) &&
-	  _cups_strcasecmp("PageRegion", options[j].name) &&
-	  _cups_strcasecmp("InputSlot", options[j].name) &&
-	  _cups_strcasecmp("MediaType", options[j].name) &&
-	  _cups_strcasecmp("finishings", options[j].name) &&
-	  _cups_strcasecmp("sides", options[j].name) &&
-	  _cups_strcasecmp("Duplex", options[j].name) &&
-	  _cups_strcasecmp("orientation-requested", options[j].name) &&
-	  _cups_strcasecmp("landscape", options[j].name) &&
-	  _cups_strcasecmp("number-up", options[j].name) &&
-	  _cups_strcasecmp("OutputOrder", options[j].name))
+      if (strcasecmp("media", options[j].name) &&
+	  strcasecmp("PageSize", options[j].name) &&
+	  strcasecmp("PageRegion", options[j].name) &&
+	  strcasecmp("InputSlot", options[j].name) &&
+	  strcasecmp("MediaType", options[j].name) &&
+	  strcasecmp("finishings", options[j].name) &&
+	  strcasecmp("sides", options[j].name) &&
+	  strcasecmp("Duplex", options[j].name) &&
+	  strcasecmp("orientation-requested", options[j].name) &&
+	  strcasecmp("landscape", options[j].name) &&
+	  strcasecmp("number-up", options[j].name) &&
+	  strcasecmp("OutputOrder", options[j].name))
       continue;
 
       showlines ++;
@@ -610,8 +607,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Printer Name: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Printer Name: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT, getenv("PRINTER"));
       }
       if (banner->show & SHOW_JOB_ID)
@@ -619,16 +615,14 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
         snprintf(text, sizeof(text), "%s-%d", getenv("PRINTER"), job_id);
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Job ID: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Job ID: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT, text);
       }
       if (banner->show & SHOW_JOB_UUID)
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Job UUID: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Job UUID: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT,
 		   cupsGetOption("job-uuid", num_options, options));
       }
@@ -636,24 +630,21 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Title: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Title: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT, title);
       }
       if (banner->show & SHOW_JOB_ORIGINATING_USER_NAME)
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Printed For: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Printed For: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT, username);
       }
       if (banner->show & SHOW_JOB_ORIGINATING_HOST_NAME)
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Printed From: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Printed From: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT,
 	           cupsGetOption("job-originating-host-name", num_options,
 		                 options));
@@ -662,36 +653,34 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Billing Information: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Billing Information: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT,
 	           cupsGetOption("job-billing", num_options, options));
       }
       if (banner->show & SHOW_OPTIONS)
       {
 	printf("%.1f %.1f moveto", x, y);
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Options: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Options: ");
 
         for (j = 0; j < num_options; j ++)
 	{
-	  if (_cups_strcasecmp("media", options[j].name) &&
-	      _cups_strcasecmp("PageSize", options[j].name) &&
-	      _cups_strcasecmp("PageRegion", options[j].name) &&
-	      _cups_strcasecmp("InputSlot", options[j].name) &&
-	      _cups_strcasecmp("MediaType", options[j].name) &&
-	      _cups_strcasecmp("finishings", options[j].name) &&
-	      _cups_strcasecmp("sides", options[j].name) &&
-	      _cups_strcasecmp("Duplex", options[j].name) &&
-	      _cups_strcasecmp("orientation-requested", options[j].name) &&
-	      _cups_strcasecmp("landscape", options[j].name) &&
-	      _cups_strcasecmp("number-up", options[j].name) &&
-	      _cups_strcasecmp("OutputOrder", options[j].name))
+	  if (strcasecmp("media", options[j].name) &&
+	      strcasecmp("PageSize", options[j].name) &&
+	      strcasecmp("PageRegion", options[j].name) &&
+	      strcasecmp("InputSlot", options[j].name) &&
+	      strcasecmp("MediaType", options[j].name) &&
+	      strcasecmp("finishings", options[j].name) &&
+	      strcasecmp("sides", options[j].name) &&
+	      strcasecmp("Duplex", options[j].name) &&
+	      strcasecmp("orientation-requested", options[j].name) &&
+	      strcasecmp("landscape", options[j].name) &&
+	      strcasecmp("number-up", options[j].name) &&
+	      strcasecmp("OutputOrder", options[j].name))
           continue;
 
-          if (!_cups_strcasecmp("landscape", options[j].name))
+          if (!strcasecmp("landscape", options[j].name))
 	    strlcpy(text, "orientation-requested=landscape", sizeof(text));
-	  else if (!_cups_strcasecmp("orientation-requested", options[j].name))
+	  else if (!strcasecmp("orientation-requested", options[j].name))
 	  {
 	    switch (atoi(options[j].value))
 	    {
@@ -731,8 +720,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Description: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Description: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT,
 	           getenv("PRINTER_INFO"));
       }
@@ -740,8 +728,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Location: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Location: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT,
 	           getenv("PRINTER_LOCATION"));
       }
@@ -749,8 +736,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Make and Model: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Make and Model: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT,
 	           ppd ? ppd->nickname : NULL);
       }
@@ -765,23 +751,19 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
 
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Media Name: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Media Name: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT, option);
       }
       if (banner->show & SHOW_PAPER_SIZE)
       {
-        snprintf(text, sizeof(text),
-	         _cupsLangString(language, _("%.2f x %.2f inches")),
+        snprintf(text, sizeof(text), "%.2f x %.2f inches",
 		 PageWidth / 72.0, PageLength / 72.0);
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Media Dimensions: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Media Dimensions: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT, text);
 
-        snprintf(text, sizeof(text),
-	         _cupsLangString(language, _("%.0f x %.0f millimeters")),
+        snprintf(text, sizeof(text), "%.0f x %.0f millimeters",
 	         PageWidth * 25.4 / 72.0, PageLength * 25.4 / 72.0);
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
@@ -789,20 +771,15 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
       }
       if (banner->show & SHOW_IMAGEABLE_AREA)
       {
-        snprintf(text, sizeof(text),
-	         _cupsLangString(language,
-		                 _("%.2f x %.2f to %.2f x %.2f inches")),
+        snprintf(text, sizeof(text), "%.2f x %.2f to %.2f x %.2f inches",
 	         PageLeft / 72.0, PageBottom / 72.0,
 		 PageRight / 72.0, PageTop / 72.0);
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Media Limits: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Media Limits: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT, text);
 
-        snprintf(text, sizeof(text),
-	         _cupsLangString(language,
-		                 _("%.0f x %.0f to %.0f x %.0f millimeters")),
+        snprintf(text, sizeof(text), "%.0f x %.0f to %.0f x %.0f millimeters",
 	         PageLeft * 25.4 / 72.0, PageBottom * 25.4 / 72.0,
 		 PageRight * 25.4 / 72.0, PageTop * 25.4 / 72.0);
 	printf("%.1f %.1f moveto", x, y);
@@ -816,8 +793,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
       {
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Driver Name: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Driver Name: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT,
 	           ppd ? ppd->pcfilename : NULL);
       }
@@ -827,8 +803,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
 
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Driver Version: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Driver Version: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT,
 	           file_version ? file_version->value : NULL);
       }
@@ -850,8 +825,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
 
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Created On: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Created On: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT, text);
       }
       if (banner->show & SHOW_TIME_AT_PROCESSING)
@@ -872,8 +846,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
 
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
-	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT,
-	           _cupsLangString(language, _("Printed On: ")));
+	psTextUTF8(fonts, fontsize, PS_BOLD, PS_RIGHT, "Printed On: ");
         psTextUTF8(fonts, fontsize, PS_NORMAL, PS_LEFT, text);
       }
     }
@@ -1072,7 +1045,7 @@ write_prolog(const char *title,		/* I - Title of job */
   printf("%%%%BoundingBox: %.0f %.0f %.0f %.0f\n", PageLeft, PageBottom,
          PageRight, PageTop);
   printf("%%cupsRotation: %d\n", (Orientation & 3) * 90);
-  puts("%%Creator: bannertops/" CUPS_SVERSION);
+  puts("%%Creator: bannertops");
   printf("%%%%CreationDate: %s\n", curdate);
   puts("%%LanguageLevel: 2");
   puts("%%DocumentData: Clean7Bit");

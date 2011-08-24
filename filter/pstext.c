@@ -3,7 +3,7 @@
  *
  *   Common PostScript text code for CUPS.
  *
- *   Copyright 2008-2010 by Apple Inc.
+ *   Copyright 2008-2011 by Apple Inc.
  *
  *   These coded instructions, statements, and computer programs are the
  *   property of Apple Inc. and are protected by Federal copyright
@@ -27,7 +27,6 @@
  */
 
 #include "pstext.h"
-#include <cups/language-private.h>
 
 
 /*
@@ -76,7 +75,7 @@ psTextEmbedFonts(ps_text_t *fonts)	/* I - Font data */
   {
     printf("%%%%BeginResource: font %s\n", font);
 
-    snprintf(filename, sizeof(filename), "%s/fonts/%s", cups_datadir, font);
+    snprintf(filename, sizeof(filename), "%s/fonts/%s.pfa", cups_datadir, font);
     if ((fp = fopen(filename, "rb")) != NULL)
     {
       while ((j = fread(line, 1, sizeof(line), fp)) > 0)
@@ -86,7 +85,7 @@ psTextEmbedFonts(ps_text_t *fonts)	/* I - Font data */
     }
     else
     {
-      _cupsLangPrintError("ERROR", _("Unable to open print file"));
+      perror("ERROR: Unable to open print file");
       fprintf(stderr, "DEBUG: Unable to open \"%s\".\n", filename);
     }
 
@@ -240,13 +239,13 @@ psTextInitialize(void)
   if ((fp = fopen(filename, "r")) != NULL)
   {
     while (fscanf(fp, "%x%63s", &unicode, glyph) == 2)
-      fonts->glyphs[unicode] = _cupsStrAlloc(glyph);
+      fonts->glyphs[unicode] = strdup(glyph);
 
     fclose(fp);
   }
   else
   {
-    _cupsLangPrintError("ERROR", _("Unable to open print file"));
+    perror("ERROR: Unable to open print file");
     fprintf(stderr, "DEBUG: Unable to open \"%s\".\n", filename);
     exit(1);
   }
@@ -263,7 +262,7 @@ psTextInitialize(void)
     * Can't open charset file!
     */
 
-    _cupsLangPrintError("ERROR", _("Unable to open print file"));
+    perror("ERROR: Unable to open print file");
     fprintf(stderr, "DEBUG: Unable to open \"%s\".\n", filename);
     exit(1);
   }
@@ -275,8 +274,7 @@ psTextInitialize(void)
     */
 
     fclose(fp);
-    _cupsLangPrintFilter(stderr, "ERROR", _("Bad charset file \"%s\"."),
-                         filename);
+    fprintf(stderr, "ERROR: Bad charset file \"%s\".\n", filename);
     exit(1);
   }
 
@@ -320,8 +318,7 @@ psTextInitialize(void)
       * Can't have a font without all required values...
       */
 
-      _cupsLangPrintFilter(stderr, "ERROR",
-                           _("Bad font description line \"%s\"."), valptr);
+      fprintf(stderr, "ERROR: Bad font description line \"%s\".\n", valptr);
       fclose(fp);
       exit(1);
     }
@@ -334,8 +331,7 @@ psTextInitialize(void)
       fonts->directions[fonts->num_fonts] = -1;
     else
     {
-      _cupsLangPrintFilter(stderr, "ERROR", _("Bad text direction \"%s\"."),
-                           valptr);
+      fprintf(stderr, "ERROR: Bad text direction \"%s\".\n", valptr);
       fclose(fp);
       exit(1);
     }
@@ -358,8 +354,7 @@ psTextInitialize(void)
       * Can't have a font without all required values...
       */
 
-      _cupsLangPrintFilter(stderr, "ERROR",
-                           _("Bad font description line \"%s\"."), valptr);
+      fprintf(stderr, "ERROR: Bad font description line \"%s\".\n", valptr);
       fclose(fp);
       exit(1);
     }
@@ -370,10 +365,9 @@ psTextInitialize(void)
       fonts->widths[fonts->num_fonts] = 1;
     else if (!strcmp(valptr, "double"))
       fonts->widths[fonts->num_fonts] = 2;
-    else 
+    else
     {
-      _cupsLangPrintFilter(stderr, "ERROR", _("Bad text width \"%s\"."),
-                           valptr);
+      fprintf(stderr, "ERROR: Bad text width \"%s\".\n", valptr);
       fclose(fp);
       exit(1);
     }
@@ -398,9 +392,9 @@ psTextInitialize(void)
       if (lineptr > valptr)
       {
         if (!cupsArrayFind(fonts->unique, valptr))
-	  cupsArrayAdd(fonts->unique, _cupsStrAlloc(valptr));
+	  cupsArrayAdd(fonts->unique, strdup(valptr));
 
-	fonts->fonts[fonts->num_fonts][i] = _cupsStrAlloc(valptr);
+	fonts->fonts[fonts->num_fonts][i] = strdup(valptr);
       }
     }
 
@@ -410,7 +404,7 @@ psTextInitialize(void)
 
     for (j = i; j < 4; j ++)
       fonts->fonts[fonts->num_fonts][j] =
-          _cupsStrAlloc(fonts->fonts[fonts->num_fonts][0]);
+          strdup(fonts->fonts[fonts->num_fonts][0]);
 
    /*
     * Define the character mappings...
@@ -435,7 +429,7 @@ psTextInitialize(void)
 
   if (cupsArrayCount(fonts->unique) == 0)
   {
-    _cupsLangPrintFilter(stderr, "ERROR", _("No fonts in charset file."));
+    fputs("ERROR: No fonts in charset file.\n", stderr);
     exit(1);
   }
 

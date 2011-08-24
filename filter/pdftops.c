@@ -24,11 +24,12 @@
 
 #include <cups/cups.h>
 #include <cups/ppd.h>
-#include <cups/string-private.h>
-#include <cups/language-private.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <string.h>
+#include <ctype.h>
+#include <config.h>
 
 
 /*
@@ -105,9 +106,8 @@ main(int  argc,				/* I - Number of command-line args */
 
   if (argc < 6 || argc > 7)
   {
-    _cupsLangPrintf(stderr,
-                    _("Usage: %s job user title copies options [filename]"),
-                    argv[0]);
+    fprintf(stderr, "Usage: %s job user title copies options [file]\n",
+	    argv[0]);
     return (1);
   }
 
@@ -201,7 +201,7 @@ main(int  argc,				/* I - Number of command-line args */
     while (*pstops_end && isspace(*pstops_end & 255))
       pstops_end ++;
 
-    _cups_strcpy(pstops_start, pstops_end);
+    memmove(pstops_start, pstops_end, strlen(pstops_end) + 1);
   }
 
   if ((pstops_start = strstr(pstops_options, "fit-to-page")) != NULL &&
@@ -220,7 +220,7 @@ main(int  argc,				/* I - Number of command-line args */
     while (*pstops_end && isspace(*pstops_end & 255))
       pstops_end ++;
 
-    _cups_strcpy(pstops_start, pstops_end);
+    memmove(pstops_start, pstops_end, strlen(pstops_end) + 1);
   }
 
   if ((pstops_start = strstr(pstops_options, "landscape")) != NULL &&
@@ -239,7 +239,7 @@ main(int  argc,				/* I - Number of command-line args */
     while (*pstops_end && isspace(*pstops_end & 255))
       pstops_end ++;
 
-    _cups_strcpy(pstops_start, pstops_end);
+    memmove(pstops_start, pstops_end, strlen(pstops_end) + 1);
   }
 
   if ((pstops_start = strstr(pstops_options, "orientation-requested=")) != NULL)
@@ -252,7 +252,7 @@ main(int  argc,				/* I - Number of command-line args */
     while (*pstops_end && !isspace(*pstops_end & 255))
       pstops_end ++;
 
-    _cups_strcpy(pstops_start, pstops_end);
+    memmove(pstops_start, pstops_end, strlen(pstops_end) + 1);
   }
 
   pstops_argv[0] = argv[0];		/* Printer */
@@ -320,8 +320,8 @@ main(int  argc,				/* I - Number of command-line args */
     if ((val = cupsGetOption("fitplot", num_options, options)) == NULL)
       val = cupsGetOption("fit-to-page", num_options, options);
 
-    if (val && _cups_strcasecmp(val, "no") && _cups_strcasecmp(val, "off") &&
-	_cups_strcasecmp(val, "false"))
+    if (val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
+	strcasecmp(val, "false"))
       fit = 1;
     else
       fit = 0;
@@ -341,8 +341,8 @@ main(int  argc,				/* I - Number of command-line args */
 
       if ((val = cupsGetOption("landscape", num_options, options)) != NULL)
       {
-	if (_cups_strcasecmp(val, "no") != 0 && _cups_strcasecmp(val, "off") != 0 &&
-	    _cups_strcasecmp(val, "false") != 0)
+	if (strcasecmp(val, "no") != 0 && strcasecmp(val, "off") != 0 &&
+	    strcasecmp(val, "false") != 0)
 	  orientation = 1;
       }
       else if ((val = cupsGetOption("orientation-requested", num_options,

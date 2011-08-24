@@ -23,7 +23,7 @@
  * Include necessary headers...
  */
 
-#include "driver.h"
+#include <cupslegacy/driver.h>
 #include "pcl-common.h"
 #include <math.h>
 

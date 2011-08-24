@@ -4,7 +4,7 @@
  *   Advanced HP Page Control Language and Raster Transfer Language
  *   filter for CUPS.
  *
- *   Copyright 2007-2010 by Apple Inc.
+ *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1993-2005 by Easy Software Products
  *
  *   These coded instructions, statements, and computer programs are the
@@ -29,9 +29,7 @@
  * Include necessary headers...
  */
 
-#include "driver.h"
-#include <cups/language-private.h>
-#include <cups/string-private.h>
+#include <cupslegacy/driver.h>
 #include "pcl-common.h"
 #include <signal.h>
 
@@ -1796,9 +1794,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if (argc < 6 || argc > 7)
   {
-    _cupsLangPrintFilter(stderr, "ERROR",
-                         _("%s job-id user title copies options [file]"),
-                         "rastertopclx");
+    fprintf(stderr, "Usage: %s job-id user title copies options [file]\n",
+	    "rastertopclx");
     return (1);
   }
 
@@ -1815,8 +1812,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     ppd_status_t	status;		/* PPD error */
     int			linenum;	/* Line number */
 
-    _cupsLangPrintFilter(stderr, "ERROR",
-                         _("The PPD file could not be opened."));
+    fputs("ERROR: The PPD file could not be opened.\n", stderr);
 
     status = ppdLastError(&linenum);
 
@@ -1836,7 +1832,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   {
     if ((fd = open(argv[6], O_RDONLY)) == -1)
     {
-      _cupsLangPrintError("ERROR", _("Unable to open raster file"));
+      perror("ERROR: Unable to open raster file");
       return (1);
     }
   }
@@ -1884,7 +1880,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     Page ++;
 
     fprintf(stderr, "PAGE: %d %d\n", Page, header.NumCopies);
-    _cupsLangPrintFilter(stderr, "INFO", _("Starting page %d."), Page);
+    fprintf(stderr, "INFO: Starting page %d.\n", Page);
 
     StartPage(ppd, &header, atoi(argv[1]), argv[2], argv[3],
               num_options, options);
@@ -1900,9 +1896,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 
       if ((y & 127) == 0)
       {
-        _cupsLangPrintFilter(stderr, "INFO",
-	                     _("Printing page %d, %d%% complete."),
-			     Page, 100 * y / header.cupsHeight);
+        fprintf(stderr, "INFO: Printing page %d, %d%% complete.\n",
+		Page, 100 * y / header.cupsHeight);
         fprintf(stderr, "ATTR: job-media-progress=%d\n",
 		100 * y / header.cupsHeight);
       }
@@ -1921,7 +1916,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     * Eject the page...
     */
 
-    _cupsLangPrintFilter(stderr, "INFO", _("Finished page %d."), Page);
+    fprintf(stderr, "INFO: Finished page %d.\n", Page);
 
     EndPage(ppd, &header);
 
@@ -1938,16 +1933,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   if (fd != 0)
     close(fd);
 
-  if (Page == 0)
-  {
-    _cupsLangPrintFilter(stderr, "ERROR", _("No pages were found."));
-    return (1);
-  }
-  else
-  {
-    _cupsLangPrintFilter(stderr, "INFO", _("Ready to print."));
-    return (0);
-  }
+  return (Page == 0);
 }
 
 

@@ -3,7 +3,7 @@
  *
  *   Common filter definitions for CUPS.
  *
- *   Copyright 2007-2010 by Apple Inc.
+ *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2006 by Easy Software Products.
  *
  *   These coded instructions, statements, and computer programs are the
@@ -19,10 +19,13 @@
  * Include necessary headers...
  */
 
-#include <cups/string-private.h>
+#include <config.h>
 #include <cups/cups.h>
 #include <cups/ppd.h>
 #include <time.h>
+#include <string.h>
+#include <ctype.h>
+#include <errno.h>
 
 
 /*

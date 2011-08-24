@@ -22,9 +22,12 @@
  * Include necessary headers...
  */
 
-#include <cups/cups-private.h>
-#include "driver.h"
-#include "data/pcl.h"
+#include <cups/cups.h>
+#include <cups/ppd.h>
+#include <cupslegacy/driver.h>
+#include <string.h>
+#include <ctype.h>
+#include "pcl.h"
 
 
 /*
@@ -53,9 +56,8 @@ main(int  argc,					/* I - Number of command-line arguments */
     * and return.
     */
 
-    _cupsLangPrintf(stderr,
-                    _("Usage: %s job-id user title copies options [file]"),
-		    argv[0]);
+    fprintf(stderr, "Usage: %s job-id user title copies options [file]\n",
+	    argv[0]);
     return (1);
   }
 
@@ -123,7 +125,7 @@ main(int  argc,					/* I - Number of command-line arguments */
     * Parse the command...
     */
 
-    if (_cups_strncasecmp(lineptr, "Clean", 5) == 0 &&
+    if (strncasecmp(lineptr, "Clean", 5) == 0 &&
         (ppd->model_number & PCL_INKJET))
     {
      /*

@@ -36,11 +36,11 @@
  */
 
 #include "common.h"
-#include "image-private.h"
+#include <cupslegacy/image-private.h>
 #include <unistd.h>
 #include <math.h>
-#include <cups/language-private.h>
 #include <signal.h>
+#include <string.h>
 
 
 /*
@@ -211,9 +211,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if (argc < 6 || argc > 7)
   {
-    _cupsLangPrintf(stderr,
-                    _("Usage: %s job-id user title copies options file"),
-                    argv[0]);
+    fprintf(stderr, "Usage: %s job-id user title copies options [file]\n",
+	    argv[0]);
     return (1);
   }
 
@@ -239,7 +238,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 
     if (pipe(mypipes))
     {
-      _cupsLangPrintError("ERROR", _("Unable to create pipes for filters"));
+      perror("ERROR: Unable to create pipes for filters");
       return (errno);
     }
 
@@ -263,7 +262,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       * Error!
       */
 
-      _cupsLangPrintError("ERROR", _("Unable to fork filter"));
+      perror("ERROR: Unable to fork filter");
       return (errno);
     }
 
@@ -298,7 +297,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 
     if ((fd = cupsTempFd(filename, sizeof(filename))) < 0)
     {
-      _cupsLangPrintError("ERROR", _("Unable to copy print file"));
+      perror("ERROR: Unable to copy print file");
       return (1);
     }
 
@@ -462,8 +461,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if (cupsRasterInterpretPPD(&header, ppd, num_options, options, raster_cb))
   {
-    _cupsLangPrintFilter(stderr, "ERROR",
-                         _("The page setup information was not valid."));
+    fputs("ERROR: The page setup information was not valid.\n", stderr);
     fprintf(stderr, "DEBUG: %s\n", cupsRasterErrorString());
     return (1);
   }
@@ -665,7 +663,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Open the input image to print...
   */
 
-  _cupsLangPrintFilter(stderr, "INFO", _("Loading print file."));
+  fputs("INFO: Loading print file.\n", stderr);
 
   if (header.cupsColorSpace == CUPS_CSPACE_CIEXYZ ||
       header.cupsColorSpace == CUPS_CSPACE_CIELab ||
@@ -679,8 +677,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if (img == NULL)
   {
-    _cupsLangPrintFilter(stderr, "ERROR",
-                         _("The print file could not be opened."));
+    fputs("ERROR: The print file could not be opened.\n", stderr);
     ppdClose(ppd);
     return (1);
   }
@@ -1185,7 +1182,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     for (xpage = 0; xpage < xpages; xpage ++)
       for (ypage = 0; ypage < ypages; ypage ++, page ++)
       {
-        _cupsLangPrintFilter(stderr, "INFO", _("Formatting page %d."), page);
+        fprintf(stderr, "INFO: Formatting page %d.\n", page);
 
 	if (Orientation & 1)
 	{
@@ -1242,9 +1239,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 	      if (cupsRasterWritePixels(ras, row, header.cupsBytesPerLine) <
 	              header.cupsBytesPerLine)
 	      {
-		_cupsLangPrintFilter(stderr, "ERROR",
-		                     _("Unable to send raster data to the "
-				       "driver."));
+		fputs("ERROR: Unable to send raster data to the driver.\n",
+		      stderr);
 		cupsImageClose(img);
 		exit(1);
 	      }
@@ -1339,9 +1335,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 	    if (cupsRasterWritePixels(ras, row, header.cupsBytesPerLine) <
 	                              header.cupsBytesPerLine)
 	    {
-	      _cupsLangPrintFilter(stderr, "ERROR",
-				   _("Unable to send raster data to the "
-				     "driver."));
+	      fputs("ERROR: Unable to send raster data to the driver.\n",
+	            stderr);
 	      cupsImageClose(img);
 	      exit(1);
 	    }
@@ -1380,9 +1375,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 	      if (cupsRasterWritePixels(ras, row, header.cupsBytesPerLine) <
 	              header.cupsBytesPerLine)
 	      {
-		_cupsLangPrintFilter(stderr, "ERROR",
-		                     _("Unable to send raster data to the "
-				       "driver."));
+		fputs("ERROR: Unable to send raster data to the driver.\n",
+		      stderr);
 		cupsImageClose(img);
 		exit(1);
 	      }

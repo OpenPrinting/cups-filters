@@ -3,7 +3,7 @@
  *
  *   Common HP-PCL definitions for CUPS.
  *
- *   Copyright 2007-2010 by Apple Inc.
+ *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1993-2005 by Easy Software Products, All Rights Reserved.
  *
  *   These coded instructions, statements, and computer programs are the
@@ -17,8 +17,9 @@
  * Include necessary headers...
  */
 
-#include <cups/string-private.h>
-#include "data/pcl.h"
+#include <string.h>
+#include <ctype.h>
+#include "pcl.h"
 
 
 /*

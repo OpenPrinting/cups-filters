@@ -22,9 +22,12 @@
  * Include necessary headers...
  */
 
-#include <cups/cups-private.h>
-#include "driver.h"
-#include "data/escp.h"
+#include <cups/cups.h>
+#include <cups/ppd.h>
+#include <cupslegacy/driver.h>
+#include <string.h>
+#include <ctype.h>
+#include "escp.h"
 
 
 /*
@@ -53,9 +56,8 @@ main(int  argc,					/* I - Number of command-line arguments */
     * and return.
     */
 
-    _cupsLangPrintf(stderr,
-                    _("Usage: %s job-id user title copies options [file]"),
-		    argv[0]);
+    fprintf(stderr, "Usage: %s job-id user title copies options [file]\n",
+	    argv[0]);
     return (1);
   }
 
@@ -136,7 +138,7 @@ main(int  argc,					/* I - Number of command-line arguments */
     * Parse the command...
     */
 
-    if (_cups_strncasecmp(lineptr, "Clean", 5) == 0)
+    if (strncasecmp(lineptr, "Clean", 5) == 0)
     {
      /*
       * Clean heads...
@@ -144,7 +146,7 @@ main(int  argc,					/* I - Number of command-line arguments */
 
       cupsWritePrintData("CH\002\000\000\000", 6);
     }
-    else if (_cups_strncasecmp(lineptr, "PrintAlignmentPage", 18) == 0)
+    else if (strncasecmp(lineptr, "PrintAlignmentPage", 18) == 0)
     {
      /*
       * Print alignment page...
@@ -159,7 +161,7 @@ main(int  argc,					/* I - Number of command-line arguments */
       putchar(phase >> 8);
       feedpage = 1;
     }
-    else if (_cups_strncasecmp(lineptr, "PrintSelfTestPage", 17) == 0)
+    else if (strncasecmp(lineptr, "PrintSelfTestPage", 17) == 0)
     {
      /*
       * Print version info and nozzle check...
@@ -169,7 +171,7 @@ main(int  argc,					/* I - Number of command-line arguments */
       cupsWritePrintData("NC\002\000\000\000", 6);
       feedpage = 1;
     }
-    else if (_cups_strncasecmp(lineptr, "ReportLevels", 12) == 0)
+    else if (strncasecmp(lineptr, "ReportLevels", 12) == 0)
     {
      /*
       * Report ink levels...
@@ -177,7 +179,7 @@ main(int  argc,					/* I - Number of command-line arguments */
 
       cupsWritePrintData("IQ\001\000\001", 5);
     }
-    else if (_cups_strncasecmp(lineptr, "SetAlignment", 12) == 0)
+    else if (strncasecmp(lineptr, "SetAlignment", 12) == 0)
     {
      /*
       * Set head alignment...

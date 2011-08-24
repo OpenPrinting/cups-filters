@@ -26,7 +26,6 @@
  */
 
 #include "textcommon.h"
-#include <cups/language-private.h>
 
 
 /*
@@ -514,9 +513,8 @@ TextMain(const char *name,	/* I - Name of filter */
 
   if (argc < 6 || argc > 7)
   {
-    _cupsLangPrintf(stderr,
-                    _("Usage: %s job-id user title copies options [file]"),
-                    name);
+    fprintf(stderr, "Usage: %s job-id user title copies options [file]\n",
+            name);
     return (1);
   }
 
@@ -548,8 +546,8 @@ TextMain(const char *name,	/* I - Name of filter */
   num_options = cupsParseOptions(argv[5], 0, &options);
 
   if ((val = cupsGetOption("prettyprint", num_options, options)) != NULL &&
-      _cups_strcasecmp(val, "no") && _cups_strcasecmp(val, "off") &&
-      _cups_strcasecmp(val, "false"))
+      strcasecmp(val, "no") && strcasecmp(val, "off") &&
+      strcasecmp(val, "false"))
   {
     PageLeft     = 72.0f;
     PageRight    = PageWidth - 36.0f;
@@ -564,25 +562,25 @@ TextMain(const char *name,	/* I - Name of filter */
       NumKeywords = 0;
       Keywords    = NULL;
     }
-    else if (_cups_strcasecmp(val, "application/x-cshell") == 0)
+    else if (strcasecmp(val, "application/x-cshell") == 0)
     {
       PrettyPrint = PRETTY_SHELL;
       NumKeywords = sizeof(csh_keywords) / sizeof(csh_keywords[0]);
       Keywords    = csh_keywords;
     }
-    else if (_cups_strcasecmp(val, "application/x-csource") == 0)
+    else if (strcasecmp(val, "application/x-csource") == 0)
     {
       PrettyPrint = PRETTY_CODE;
       NumKeywords = sizeof(code_keywords) / sizeof(code_keywords[0]);
       Keywords    = code_keywords;
     }
-    else if (_cups_strcasecmp(val, "application/x-perl") == 0)
+    else if (strcasecmp(val, "application/x-perl") == 0)
     {
       PrettyPrint = PRETTY_PERL;
       NumKeywords = sizeof(perl_keywords) / sizeof(perl_keywords[0]);
       Keywords    = perl_keywords;
     }
-    else if (_cups_strcasecmp(val, "application/x-shell") == 0)
+    else if (strcasecmp(val, "application/x-shell") == 0)
     {
       PrettyPrint = PRETTY_SHELL;
       NumKeywords = sizeof(sh_keywords) / sizeof(sh_keywords[0]);
@@ -601,8 +599,8 @@ TextMain(const char *name,	/* I - Name of filter */
   if ((val = cupsGetOption("wrap", num_options, options)) == NULL)
     WrapLines = 1;
   else
-    WrapLines = !_cups_strcasecmp(val, "true") || !_cups_strcasecmp(val, "on") ||
-                !_cups_strcasecmp(val, "yes");
+    WrapLines = !strcasecmp(val, "true") || !strcasecmp(val, "on") ||
+                !strcasecmp(val, "yes");
 
   if ((val = cupsGetOption("columns", num_options, options)) != NULL)
   {
@@ -610,8 +608,7 @@ TextMain(const char *name,	/* I - Name of filter */
 
     if (PageColumns < 1)
     {
-      _cupsLangPrintFilter(stderr, "ERROR", _("Bad columns value %d."),
-                           PageColumns);
+      fprintf(stderr, "ERROR: Bad columns value %d.\n", PageColumns);
       return (1);
     }
   }
@@ -622,8 +619,7 @@ TextMain(const char *name,	/* I - Name of filter */
 
     if (CharsPerInch <= 0.0)
     {
-      _cupsLangPrintFilter(stderr, "ERROR", _("Bad cpi value %f."),
-                           CharsPerInch);
+      fprintf(stderr, "ERROR: Bad cpi value %f.\n", CharsPerInch);
       return (1);
     }
   }
@@ -634,8 +630,7 @@ TextMain(const char *name,	/* I - Name of filter */
 
     if (LinesPerInch <= 0.0)
     {
-      _cupsLangPrintFilter(stderr, "ERROR", _("Bad lpi value %f."),
-                           LinesPerInch);
+      fprintf(stderr, "ERROR: Bad lpi value %f.", LinesPerInch);
       return (1);
     }
   }
