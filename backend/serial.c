@@ -851,8 +851,7 @@ list_devices(void)
 
       close(fd);
 
-      snprintf(info, sizeof(info),
-	       _cupsLangString(cupsLangDefault(), _("Serial Port #%d")), i + 1);
+      snprintf(info, sizeof(info), "Serial Port #%d", i + 1);
 
 #  if defined(_ARCH_PPC) || defined(powerpc) || defined(__powerpc)
       printf("serial serial:%s?baud=230400 \"Unknown\" \"%s\"\n", device, info);
@@ -864,9 +863,7 @@ list_devices(void)
 
   for (i = 0; i < 16; i ++)
   {
-    snprintf(info, sizeof(info),
-	     _cupsLangString(cupsLangDefault(), _("USB Serial Port #%d")),
-	     i + 1);
+    snprintf(info, sizeof(info), "USB Serial Port #%d", i + 1);
 
     sprintf(device, "/dev/usb/ttyUSB%d", i);
     if ((fd = open(device, O_WRONLY | O_NOCTTY | O_NDELAY)) >= 0)
@@ -912,8 +909,7 @@ list_devices(void)
     sprintf(device, "/dev/cua/%c", 'a' + i);
     if (!access(device, 0))
     {
-      snprintf(info, sizeof(info),
-	       _cupsLangString(cupsLangDefault(), _("Serial Port #%d")), i + 1);
+      snprintf(info, sizeof(info), "Serial Port #%d", i + 1);
 
 #  ifdef B115200
       printf("serial serial:%s?baud=115200 \"Unknown\" \"%s\"\n", device, info);
@@ -977,8 +973,7 @@ list_devices(void)
     {
       close(fd);
 
-      snprintf(info, sizeof(info),
-	       _cupsLangString(cupsLangDefault(), _("Serial Port #%d")), i + 1);
+      snprintf(info, sizeof(info), "Serial Port #%d", i + 1);
 
       printf("serial serial:%s?baud=115200 \"Unknown\" \"%s\"\n", device, info);
     }
@@ -1071,8 +1066,7 @@ list_devices(void)
     {
       close(fd);
 
-      snprintf(info, sizeof(info),
-	       _cupsLangString(cupsLangDefault(), _("Serial Port #%d")), i + 1);
+      snprintf(info, sizeof(info), "Serial Port #%d", i + 1);
 
       printf("serial serial:%s?baud=115200 \"Unknown\" \"%s\"\n", device, info);
     }

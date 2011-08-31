@@ -247,7 +247,10 @@ load_banner(const char *filename)	/* I - Filename or NULL for stdin */
 
 
       if (ptr[0] == '/')
-        strlcpy(imagefile, ptr, sizeof(imagefile));
+      {
+        strncpy(imagefile, ptr, sizeof(imagefile) - 1);
+        imagefile[sizeof(imagefile) - 1] = '\0';
+      }
       else
         snprintf(imagefile, sizeof(imagefile), "%s/%s", cups_docroot, ptr);
 
@@ -679,30 +682,26 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
           continue;
 
           if (!strcasecmp("landscape", options[j].name))
-	    strlcpy(text, "orientation-requested=landscape", sizeof(text));
+	    strcpy(text, "orientation-requested=landscape");
 	  else if (!strcasecmp("orientation-requested", options[j].name))
 	  {
 	    switch (atoi(options[j].value))
 	    {
 	      default :
 	      case IPP_PORTRAIT :
-	          strlcpy(text, "orientation-requested=portrait",
-		          sizeof(text));
+	          strcpy(text, "orientation-requested=portrait");
 		  break;
 
 	      case IPP_LANDSCAPE :
-	          strlcpy(text, "orientation-requested=landscape",
-		          sizeof(text));
+	          strcpy(text, "orientation-requested=landscape");
 		  break;
 
 	      case IPP_REVERSE_PORTRAIT :
-	          strlcpy(text, "orientation-requested=reverse-portrait",
-		          sizeof(text));
+	          strcpy(text, "orientation-requested=reverse-portrait");
 		  break;
 
 	      case IPP_REVERSE_LANDSCAPE :
-	          strlcpy(text, "orientation-requested=reverse-landscape",
-		          sizeof(text));
+	          strcpy(text, "orientation-requested=reverse-landscape");
 		  break;
 	    }
 	  }
@@ -821,7 +820,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
           strftime(text, sizeof(text), "%c", curdate);
 	}
 	else
-	  strlcpy(text, "?", sizeof(text));
+	  strcpy(text, "?");
 
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;
@@ -842,7 +841,7 @@ write_banner(banner_file_t *banner,	/* I - Banner file */
           strftime(text, sizeof(text), "%c", curdate);
 	}
 	else
-	  strlcpy(text, "?", sizeof(text));
+	  strcpy(text, "?");
 
 	printf("%.1f %.1f moveto", x, y);
 	y -= line_height;

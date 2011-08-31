@@ -187,7 +187,8 @@ uninstall:
 
 bannertops:	bannertops.o pstext.o common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ bannertops.o pstext.o common.o $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ bannertops.o pstext.o common.o \
+		$(LINKCUPSLEGACY) $(LIBS)
 
 
 #
@@ -196,7 +197,7 @@ bannertops:	bannertops.o pstext.o common.o
 
 commandtopclx:		commandtopclx.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ commandtopclx.o $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ commandtopclx.o $(LINKCUPSLEGACY) $(LIBS)
 
 
 #
@@ -205,7 +206,7 @@ commandtopclx:		commandtopclx.o
 
 commandtoescpx:		commandtoescpx.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ commandtoescpx.o $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ commandtoescpx.o $(LINKCUPSLEGACY) $(LIBS)
 
 
 #
@@ -214,7 +215,7 @@ commandtoescpx:		commandtoescpx.o
 
 imagetops:	imagetops.o common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ imagetops.o common.o $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ imagetops.o common.o $(LINKCUPSLEGACY) $(LIBS)
 
 
 #
@@ -223,7 +224,8 @@ imagetops:	imagetops.o common.o
 
 imagetoraster:	imagetoraster.o common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ imagetoraster.o common.o $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ imagetoraster.o common.o \
+		$(LINKCUPSLEGACY) $(LIBS)
 
 
 #

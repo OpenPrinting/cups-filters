@@ -228,7 +228,7 @@ testdither:	test testdither.o libcupslegacy.a
 testimage:	testimage.o libcupslegacy.a ../Makedefs
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ testimage.o libcupslegacy.a \
-		$(IMGLIBS) $(LIBS) -lm
+		$(IMGLIBS) $(DSOLIBS) $(LIBS) -lm
 
 #
 # testrgb, test RGB separation functions.

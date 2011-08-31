@@ -3,7 +3,7 @@
  *
  *   PPD attribute lookup routine for CUPS.
  *
- *   Copyright 2007-2010 by Apple Inc.
+ *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1993-2005 by Easy Software Products.
  *
  *   These coded instructions, statements, and computer programs are the
@@ -23,7 +23,9 @@
  */
 
 #include "driver.h"
-#include <cups/string-private.h>
+#include <config.h>
+#include <string.h>
+#include <ctype.h>
 
 
 /*
@@ -73,7 +75,7 @@ cupsFindAttr(ppd_file_t *ppd,		/* I - PPD file */
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
-  strlcpy(spec, colormodel, specsize);
+  snprintf(spec, specsize, "%s", colormodel);
   fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
@@ -83,12 +85,12 @@ cupsFindAttr(ppd_file_t *ppd,		/* I - PPD file */
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
-  strlcpy(spec, media, specsize);
+  snprintf(spec, specsize, "%s", media);
   fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
-  strlcpy(spec, resolution, specsize);
+  snprintf(spec, specsize, "%s", resolution);
   fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);

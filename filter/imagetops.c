@@ -150,7 +150,10 @@ main(int  argc,				/* I - Number of command-line arguments */
     close(fd);
   }
   else
-    strlcpy(filename, argv[6], sizeof(filename));
+  {
+    strncpy(filename, argv[6], sizeof(filename) - 1);
+    filename[sizeof(filename) - 1] = '\0';
+  }
 
  /*
   * Process command-line options and write the prolog...

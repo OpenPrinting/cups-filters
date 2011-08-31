@@ -12,7 +12,7 @@
  *       testdither 0 210 383 > filename.ppm
  *       testdither 0 82 255 > filename.ppm
  *
- *   Copyright 2007-2010 by Apple Inc.
+ *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1993-2005 by Easy Software Products.
  *
  *   These coded instructions, statements, and computer programs are the
@@ -32,7 +32,9 @@
  */
 
 #include "driver.h"
-#include <cups/string-private.h>
+#include <config.h>
+#include <string.h>
+#include <ctype.h>
 
 
 /*

@@ -24,10 +24,12 @@
 
 #  include "image.h"
 #  include <cups/cups.h>
-#  include <cups/debug-private.h>
-#  include <cups/string-private.h>
+#  include <config.h>
+#  define DEBUG_printf(x)
+#  define DEBUG_puts(x)
 #  include <stdlib.h>
 #  include <string.h>
+#  include <ctype.h>
 #  ifdef WIN32
 #    include <io.h>
 #  else

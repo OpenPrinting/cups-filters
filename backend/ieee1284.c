@@ -16,9 +16,12 @@
  *
  * Contents:
  *
- *   backendGetDeviceID()  - Get the IEEE-1284 device ID string and
- *                           corresponding URI.
- *   backendGetMakeModel() - Get the make and model string from the device ID.
+ *   backendGetDeviceID()       - Get the IEEE-1284 device ID string and
+ *                                corresponding URI.
+ *   backendGetMakeModel()      - Get the make and model string from the device
+ *                                ID.
+ *   get_1284_values()          - Get 1284 device ID keys and values.
+ *   normalize_make_and_model() - Normalize a product/make-and-model string.
  */
 
 /*
@@ -26,7 +29,23 @@
  */
 
 #include "backend-private.h"
-#include <cups/cups-private.h>
+#include <cups/cups.h>
+#include <string.h>
+#include <ctype.h>
+#define DEBUG_printf(x)
+#define DEBUG_puts(x)
+#define _cups_isspace(x) isspace((x) & 255)
+#define _cups_strcasecmp strcasecmp
+#define _cups_strncasecmp strncasecmp
+
+
+/*
+ * Local functions...
+ */
+
+static int	get_1284_values(const char *device_id, cups_option_t **values);
+static char	*normalize_make_and_model(const char *make_and_model,
+		                          char *buffer, size_t bufsize);
 
 
 /*
@@ -308,7 +327,7 @@ backendGetDeviceID(
     * Get the make, model, and serial numbers...
     */
 
-    num_values = _cupsGet1284Values(device_id, &values);
+    num_values = get_1284_values(device_id, &values);
 
     if ((sern = cupsGetOption("SERIALNUMBER", num_values, values)) == NULL)
       if ((sern = cupsGetOption("SERN", num_values, values)) == NULL)
@@ -329,7 +348,8 @@ backendGetDeviceID(
     }
     else
     {
-      strlcpy(temp, make_model, sizeof(temp));
+      strncpy(temp, make_model, sizeof(temp) - 1);
+      temp[sizeof(temp) - 1] = '\0';
 
       if ((tempptr = strchr(temp, ' ')) != NULL)
         *tempptr = '\0';
@@ -401,7 +421,7 @@ backendGetMakeModel(
   * Look for the description field...
   */
 
-  num_values = _cupsGet1284Values(device_id, &values);
+  num_values = get_1284_values(device_id, &values);
 
   if ((mdl = cupsGetOption("MODEL", num_values, values)) == NULL)
     mdl = cupsGetOption("MDL", num_values, values);
@@ -421,7 +441,7 @@ backendGetMakeModel(
       * Just copy the model string, since it has the manufacturer...
       */
 
-      _ppdNormalizeMakeAndModel(mdl, make_model, make_model_size);
+      normalize_make_and_model(mdl, make_model, make_model_size);
     }
     else
     {
@@ -433,7 +453,7 @@ backendGetMakeModel(
 
       snprintf(temp, sizeof(temp), "%s %s", mfg, mdl);
 
-      _ppdNormalizeMakeAndModel(temp, make_model, make_model_size);
+      normalize_make_and_model(temp, make_model, make_model_size);
     }
   }
   else if ((des = cupsGetOption("DESCRIPTION", num_values, values)) != NULL ||
@@ -467,7 +487,7 @@ backendGetMakeModel(
       }
 
       if (spaces && letters)
-        _ppdNormalizeMakeAndModel(des, make_model, make_model_size);
+        normalize_make_and_model(des, make_model, make_model_size);
     }
   }
 
@@ -477,12 +497,292 @@ backendGetMakeModel(
     * Use "Unknown" as the printer make and model...
     */
 
-    strlcpy(make_model, "Unknown", make_model_size);
+    strncpy(make_model, "Unknown", make_model_size - 1);
+    make_model[make_model_size - 1] = '\0';
   }
 
   cupsFreeOptions(num_values, values);
 
   return (0);
+}
+
+
+/*
+ * 'get_1284_values()' - Get 1284 device ID keys and values.
+ *
+ * The returned dictionary is a CUPS option array that can be queried with
+ * cupsGetOption and freed with cupsFreeOptions.
+ */
+
+static int				/* O - Number of key/value pairs */
+get_1284_values(
+    const char *device_id,		/* I - IEEE-1284 device ID string */
+    cups_option_t **values)		/* O - Array of key/value pairs */
+{
+  int		num_values;		/* Number of values */
+  char		key[256],		/* Key string */
+		value[256],		/* Value string */
+		*ptr;			/* Pointer into key/value */
+
+
+ /*
+  * Range check input...
+  */
+
+  if (values)
+    *values = NULL;
+
+  if (!device_id || !values)
+    return (0);
+
+ /*
+  * Parse the 1284 device ID value into keys and values.  The format is
+  * repeating sequences of:
+  *
+  *   [whitespace]key:value[whitespace];
+  */
+
+  num_values = 0;
+  while (*device_id)
+  {
+    while (_cups_isspace(*device_id))
+      device_id ++;
+
+    if (!*device_id)
+      break;
+
+    for (ptr = key; *device_id && *device_id != ':'; device_id ++)
+      if (ptr < (key + sizeof(key) - 1))
+        *ptr++ = *device_id;
+
+    if (!*device_id)
+      break;
+
+    while (ptr > key && _cups_isspace(ptr[-1]))
+      ptr --;
+
+    *ptr = '\0';
+    device_id ++;
+
+    while (_cups_isspace(*device_id))
+      device_id ++;
+
+    if (!*device_id)
+      break;
+
+    for (ptr = value; *device_id && *device_id != ';'; device_id ++)
+      if (ptr < (value + sizeof(value) - 1))
+        *ptr++ = *device_id;
+
+    if (!*device_id)
+      break;
+
+    while (ptr > value && _cups_isspace(ptr[-1]))
+      ptr --;
+
+    *ptr = '\0';
+    device_id ++;
+
+    num_values = cupsAddOption(key, value, num_values, values);
+  }
+
+  return (num_values);
+}
+
+
+/*
+ * 'normalize_make_and_model()' - Normalize a product/make-and-model string.
+ *
+ * This function tries to undo the mistakes made by many printer manufacturers
+ * to produce a clean make-and-model string we can use.
+ */
+
+static char *				/* O - Normalized make-and-model string or NULL on error */
+normalize_make_and_model(
+    const char *make_and_model,		/* I - Original make-and-model string */
+    char       *buffer,			/* I - String buffer */
+    size_t     bufsize)			/* I - Size of string buffer */
+{
+  char	*bufptr;			/* Pointer into buffer */
+
+
+  if (!make_and_model || !buffer || bufsize < 1)
+  {
+    if (buffer)
+      *buffer = '\0';
+
+    return (NULL);
+  }
+
+ /*
+  * Skip leading whitespace...
+  */
+
+  while (_cups_isspace(*make_and_model))
+    make_and_model ++;
+
+ /*
+  * Remove parenthesis and add manufacturers as needed...
+  */
+
+  if (make_and_model[0] == '(')
+  {
+    strncpy(buffer, make_and_model + 1, bufsize - 1);
+    buffer[bufsize - 1] = '\0';
+
+    if ((bufptr = strrchr(buffer, ')')) != NULL)
+      *bufptr = '\0';
+  }
+  else if (!_cups_strncasecmp(make_and_model, "XPrint", 6))
+  {
+   /*
+    * Xerox XPrint...
+    */
+
+    snprintf(buffer, bufsize, "Xerox %s", make_and_model);
+  }
+  else if (!_cups_strncasecmp(make_and_model, "Eastman", 7))
+  {
+   /*
+    * Kodak...
+    */
+
+    snprintf(buffer, bufsize, "Kodak %s", make_and_model + 7);
+  }
+  else if (!_cups_strncasecmp(make_and_model, "laserwriter", 11))
+  {
+   /*
+    * Apple LaserWriter...
+    */
+
+    snprintf(buffer, bufsize, "Apple LaserWriter%s", make_and_model + 11);
+  }
+  else if (!_cups_strncasecmp(make_and_model, "colorpoint", 10))
+  {
+   /*
+    * Seiko...
+    */
+
+    snprintf(buffer, bufsize, "Seiko %s", make_and_model);
+  }
+  else if (!_cups_strncasecmp(make_and_model, "fiery", 5))
+  {
+   /*
+    * EFI...
+    */
+
+    snprintf(buffer, bufsize, "EFI %s", make_and_model);
+  }
+  else if (!_cups_strncasecmp(make_and_model, "ps ", 3) ||
+	   !_cups_strncasecmp(make_and_model, "colorpass", 9))
+  {
+   /*
+    * Canon...
+    */
+
+    snprintf(buffer, bufsize, "Canon %s", make_and_model);
+  }
+  else if (!_cups_strncasecmp(make_and_model, "primera", 7))
+  {
+   /*
+    * Fargo...
+    */
+
+    snprintf(buffer, bufsize, "Fargo %s", make_and_model);
+  }
+  else if (!_cups_strncasecmp(make_and_model, "designjet", 9) ||
+           !_cups_strncasecmp(make_and_model, "deskjet", 7))
+  {
+   /*
+    * HP...
+    */
+
+    snprintf(buffer, bufsize, "HP %s", make_and_model);
+  }
+  else
+  {
+    strncpy(buffer, make_and_model, bufsize - 1);
+    buffer[bufsize - 1] = '\0';
+  }
+
+ /*
+  * Clean up the make...
+  */
+
+  if (!_cups_strncasecmp(buffer, "agfa", 4))
+  {
+   /*
+    * Replace with AGFA (all uppercase)...
+    */
+
+    buffer[0] = 'A';
+    buffer[1] = 'G';
+    buffer[2] = 'F';
+    buffer[3] = 'A';
+  }
+  else if (!_cups_strncasecmp(buffer, "Hewlett-Packard hp ", 19))
+  {
+   /*
+    * Just put "HP" on the front...
+    */
+
+    buffer[0] = 'H';
+    buffer[1] = 'P';
+    memmove(buffer + 2, buffer + 18, strlen(buffer + 18) + 1);
+  }
+  else if (!_cups_strncasecmp(buffer, "Hewlett-Packard ", 16))
+  {
+   /*
+    * Just put "HP" on the front...
+    */
+
+    buffer[0] = 'H';
+    buffer[1] = 'P';
+    memmove(buffer + 2, buffer + 15, strlen(buffer + 15) + 1);
+  }
+  else if (!_cups_strncasecmp(buffer, "Lexmark International", 21))
+  {
+   /*
+    * Strip "International"...
+    */
+
+    memmove(buffer + 8, buffer + 21, strlen(buffer + 21) + 1);
+  }
+  else if (!_cups_strncasecmp(buffer, "herk", 4))
+  {
+   /*
+    * Replace with LHAG...
+    */
+
+    buffer[0] = 'L';
+    buffer[1] = 'H';
+    buffer[2] = 'A';
+    buffer[3] = 'G';
+  }
+  else if (!_cups_strncasecmp(buffer, "linotype", 8))
+  {
+   /*
+    * Replace with LHAG...
+    */
+
+    buffer[0] = 'L';
+    buffer[1] = 'H';
+    buffer[2] = 'A';
+    buffer[3] = 'G';
+    memmove(buffer + 4, buffer + 8, strlen(buffer + 8) + 1);
+  }
+
+ /*
+  * Remove trailing whitespace and return...
+  */
+
+  for (bufptr = buffer + strlen(buffer) - 1;
+       bufptr >= buffer && _cups_isspace(*bufptr);
+       bufptr --);
+
+  bufptr[1] = '\0';
+
+  return (buffer[0] ? buffer : NULL);
 }
 
 

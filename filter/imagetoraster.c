@@ -311,7 +311,10 @@ main(int  argc,				/* I - Number of command-line arguments */
     close(fd);
   }
   else
-    strlcpy(filename, argv[6], sizeof(filename));
+  {
+    strncpy(filename, argv[6], sizeof(filename) - 1);
+    filename[sizeof(filename) - 1] = '\0';
+  }
 
  /*
   * Process command-line options and write the prolog...
@@ -340,11 +343,11 @@ main(int  argc,				/* I - Number of command-line arguments */
     *   separate-documents-collated-copies allows for uncollated copies.
     */
 
-    Collate = _cups_strcasecmp(val, "separate-documents-collated-copies") != 0;
+    Collate = strcasecmp(val, "separate-documents-collated-copies") != 0;
   }
 
   if ((val = cupsGetOption("Collate", num_options, options)) != NULL &&
-      _cups_strcasecmp(val, "True") == 0)
+      strcasecmp(val, "True") == 0)
     Collate = 1;
 
   if ((val = cupsGetOption("gamma", num_options, options)) != NULL)
@@ -378,10 +381,10 @@ main(int  argc,				/* I - Number of command-line arguments */
   if ((val = cupsGetOption("scaling", num_options, options)) != NULL)
     zoom = atoi(val) * 0.01;
   else if ((val = cupsGetOption("fitplot", num_options, options)) != NULL &&
-           !_cups_strcasecmp(val, "true"))
+           !strcasecmp(val, "true"))
     zoom = 1.0;
   else if ((val = cupsGetOption("fit-to-page", num_options, options)) != NULL &&
-           !_cups_strcasecmp(val, "true"))
+           !strcasecmp(val, "true"))
     zoom = 1.0;
 
   if ((val = cupsGetOption("ppi", num_options, options)) != NULL)
@@ -390,47 +393,47 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if ((val = cupsGetOption("position", num_options, options)) != NULL)
   {
-    if (_cups_strcasecmp(val, "center") == 0)
+    if (strcasecmp(val, "center") == 0)
     {
       XPosition = 0;
       YPosition = 0;
     }
-    else if (_cups_strcasecmp(val, "top") == 0)
+    else if (strcasecmp(val, "top") == 0)
     {
       XPosition = 0;
       YPosition = 1;
     }
-    else if (_cups_strcasecmp(val, "left") == 0)
+    else if (strcasecmp(val, "left") == 0)
     {
       XPosition = -1;
       YPosition = 0;
     }
-    else if (_cups_strcasecmp(val, "right") == 0)
+    else if (strcasecmp(val, "right") == 0)
     {
       XPosition = 1;
       YPosition = 0;
     }
-    else if (_cups_strcasecmp(val, "top-left") == 0)
+    else if (strcasecmp(val, "top-left") == 0)
     {
       XPosition = -1;
       YPosition = 1;
     }
-    else if (_cups_strcasecmp(val, "top-right") == 0)
+    else if (strcasecmp(val, "top-right") == 0)
     {
       XPosition = 1;
       YPosition = 1;
     }
-    else if (_cups_strcasecmp(val, "bottom") == 0)
+    else if (strcasecmp(val, "bottom") == 0)
     {
       XPosition = 0;
       YPosition = -1;
     }
-    else if (_cups_strcasecmp(val, "bottom-left") == 0)
+    else if (strcasecmp(val, "bottom-left") == 0)
     {
       XPosition = -1;
       YPosition = -1;
     }
-    else if (_cups_strcasecmp(val, "bottom-right") == 0)
+    else if (strcasecmp(val, "bottom-right") == 0)
     {
       XPosition = 1;
       YPosition = -1;
@@ -451,8 +454,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   else
     val = cupsGetOption("mirror", num_options, options);
 
-  if (val && (!_cups_strcasecmp(val, "true") || !_cups_strcasecmp(val, "on") ||
-              !_cups_strcasecmp(val, "yes")))
+  if (val && (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
+              !strcasecmp(val, "yes")))
     Flip = 1;
 
  /*
@@ -868,7 +871,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   */
 
   if ((choice = ppdFindMarkedChoice(ppd, "PageSize")) != NULL &&
-      _cups_strcasecmp(choice->choice, "Custom") == 0)
+      strcasecmp(choice->choice, "Custom") == 0)
   {
     float	width,		/* New width in points */
 		length;		/* New length in points */
