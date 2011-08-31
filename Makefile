@@ -131,7 +131,7 @@ install-exec:	all
 # Install libraries...
 #
 
-install-libs:	libs
+install-libs:	all
 	for dir in $(DIRS); do\
 		echo Installing libraries in $$dir... ;\
 		(cd $$dir; $(MAKE) $(MFLAGS) install-libs) || exit 1;\

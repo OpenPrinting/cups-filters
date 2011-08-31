@@ -35,7 +35,7 @@ FONTS	=	\
 		Monospace-Oblique.pfa
 
 MIMEFILES =	\
-		legacy.types
+		legacy.convs
 
 OBJS	=	\
 		bannertops.o \
