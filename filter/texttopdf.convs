@@ -1,0 +1,6 @@
+application/x-cshell	application/pdf		0	texttopdf
+application/x-csource	application/pdf		0	texttopdf
+application/x-perl	application/pdf		0	texttopdf
+application/x-shell	application/pdf		0	texttopdf
+text/plain		application/pdf		0	texttopdf
+text/html		application/pdf		0	texttopdf

@@ -1,0 +1,6 @@
+########################################################################
+#
+# PDF filters
+#
+
+application/pdf		application/vnd.cups-pdf	22	pdftopdf

@@ -1,0 +1,3 @@
+image/x-xbitmap			xbm string(0,"#define");
+image/x-xpixmap			xpm string(3,"XPM")
+image/x-xwindowdump		xwd string(4,<00000007>)

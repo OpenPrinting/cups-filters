@@ -1,0 +1,32 @@
+charset utf8
+
+#
+# This file defines the font mappings used for Unicode/UTF-8 text printing
+# through PDF.
+#
+# Each line consists of:
+#
+#   first last direction width normal bold italic bold-italic
+#
+# First and last are the first and last glyphs in the font mapping
+# that correspond to that font; contrary to PostScript printing
+# they only select the font. To find the glyph the complete unicode
+# character will be looked up in the (3,1) resp. (3,0) cmap of the 
+# TrueType font. The glyph values are hexadecimal.
+#
+# Direction is the string "ltor" or "rtol", indicating left-to-right or
+# right-to-left text.
+#
+# Width is the string "single" or "double"; double means that the glyphs
+# are twice as wide as ASCII characters in the Courier typeface.
+#
+# "Normal", "bold", "italic", and "bold-italic" are the typefaces to use
+# for each presentation.  If characters are only available in a single
+# style then only one typeface should be listed (e.g. "Symbol")
+#
+# Each font that is listed will be used (and downloaded if needed) when
+# printing.
+#
+
+0000 04FF ltor single FreeMono.ttf FreeMonoBold.ttf FreeMonoOblique.ttf FreeMonoBoldOblique.ttf
+0500 05FF rtol single FreeMono.ttf

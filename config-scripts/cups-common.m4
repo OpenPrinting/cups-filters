@@ -22,6 +22,10 @@ AC_CONFIG_HEADER(config.h)
 dnl Version number information...
 CUPSLEGACY_VERSION="1.6.0"
 AC_SUBST(CUPSLEGACY_VERSION)
+AC_DEFINE_UNQUOTED(CUPSLEGACY_SVERSION, "CUPS v$CUPSLEGACY_VERSION")
+
+dnl version of installed CUPS
+CUPS_VERSION=`cups-config --version`
 
 dnl Default compiler flags...
 CFLAGS="${CFLAGS:=}"

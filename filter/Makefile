@@ -23,7 +23,9 @@ include ../Makedefs
 #
 
 CHARSETS =	\
-		utf-8
+		utf-8 \
+		pdf.utf-8.heavy \
+		pdf.utf-8.simple
 
 DATAFILES =	\
 		psglyphs
@@ -35,7 +37,13 @@ FONTS	=	\
 		Monospace-Oblique.pfa
 
 MIMEFILES =	\
-		legacy.convs
+		legacy.convs \
+		imagetopdf.convs \
+		imagetopdf.types \
+		pdftopdf.convs \
+		pdf.types \
+		texttopdf.convs \
+		pdftoraster.convs
 
 OBJS	=	\
 		bannertops.o \
@@ -50,7 +58,12 @@ OBJS	=	\
 		rastertoescpx.o \
 		rastertopclx.o \
 		textcommon.o \
-		texttops.o
+		texttops.o \
+		imagetopdf.o \
+		pdftoijs.o \
+		texttopdf.o \
+		pdfutils.o \
+		pdftoraster.o
 
 TARGETS	=	\
 		bannertops \
@@ -61,7 +74,11 @@ TARGETS	=	\
 		pdftops \
 		rastertoescpx \
 		rastertopclx \
-		texttops
+		texttops \
+		imagetopdf \
+		pdftoijs \
+		texttopdf \
+		pdftoraster
 
 
 #
@@ -104,6 +121,7 @@ install-data:
 	for file in $(CHARSETS); do \
 		$(INSTALL_DATA) $$file $(DATADIR)/charsets; \
 	done; \
+	$(LN) pdf.utf-8.simple $(DATADIR)/charsets/pdf.utf-8
 	echo Installing data files to $(DATADIR)/data...
 	$(INSTALL_DIR) -m 755 $(DATADIR)/data
 	for file in $(DATAFILES); do \
@@ -263,6 +281,48 @@ rastertopclx:		rastertopclx.o pcl-common.o
 texttops:	texttops.o textcommon.o common.o
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ texttops.o textcommon.o common.o $(LIBS)
+
+
+#
+# imagetopdf
+#
+
+imagetopdf:	imagetopdf.o common.o
+	echo Linking $@...
+	$(CC) $(LDFLAGS) -o $@ imagetopdf.o common.o $(LINKCUPSLEGACY) \
+		$(IMGLIBS) $(LIBS)
+
+
+#
+# pdftoijs
+#
+
+pdftoijs:	pdftoijs.o
+	echo Linking $@...
+	$(CXX) $(LDFLAGS) -o $@ pdftoijs.o \
+		$(POPPLER_LIBS) $(IJS_LIBS)
+
+
+#
+# texttopdf
+#
+
+fontembed/libfontembed.a:
+	$(MAKE) -C fontembed
+
+texttopdf:	texttopdf.o textcommon.o common.o pdfutils.o fontembed/libfontembed.a
+	echo Linking $@...
+	$(CC) $(LDFLAGS) -o $@ texttopdf.o textcommon.o common.o pdfutils.o -Lfontembed -lfontembed $(LIBS)
+
+
+#
+# pdftoraster
+#
+
+pdftoraster:	pdftoraster.o
+	echo Linking $@...
+	$(CXX) $(LDFLAGS) -o $@ pdftoraster.o \
+		$(POPPLER_LIBS) $(LCMS_LIBS) $(LINKCUPSLEGACY) $(IMGLIBS) $(LIBS)
 
 
 #

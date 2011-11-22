@@ -1,0 +1,40 @@
+libfontembed - font embedding and subsetting library
+----------------------------------------------------
+
+This library implements all the stuff required to
+embed and subset TrueType fonts, as for example 
+required in PDF files. It is completely self-contained,
+although a FreeType binding might come sometime in the future.
+
+Currently only glyf-flavored TrueType is supported,
+but OTF, i.e. CFF-flavored TrueType/OpenType is on the way.
+Also reencoding and conversion of Type1 to CFF is planned.
+PostScript embedding is another goal of the project.
+
+Usage
+-----
+(TODO)... see test_pdf.c ...
+
+
+License (MIT)
+-------------
+Copyright (c) 2008 by Tobias Hoffmann.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
