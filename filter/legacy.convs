@@ -35,6 +35,7 @@
 #
 
 application/pdf			application/vnd.cups-postscript	66	pdftops
+application/vnd.cups-pdf	application/vnd.cups-postscript	22	pdftops
 application/postscript		application/vnd.cups-postscript	66	pstops
 application/x-cshell		application/postscript		33	texttops
 application/x-csource		application/postscript		33	texttops
