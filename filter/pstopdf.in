@@ -13,8 +13,8 @@
 
 set -e
 
-PS2PS=/usr/bin/ps2ps
-GS=/usr/bin/gs
+PS2PS=@PS2PS@
+GS=@GS@
 
 PS2PS_OPTIONS="-dAutoRotatePages=/None -dAutoFilterColorImages=false \
                -dNOPLATFONTS -dPARANOIDSAFER -dNOINTERPOLATE -sstdout=%stderr"

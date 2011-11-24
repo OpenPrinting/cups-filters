@@ -55,7 +55,7 @@ clean:
 #
 
 distclean:	clean
-	$(RM) Makedefs config.h config.log config.status
+	$(RM) Makedefs filter/pdftops config.h config.log config.status
 	-$(RM) -r autom4te*.cache clang filter/test
 
 
