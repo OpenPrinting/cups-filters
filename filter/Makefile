@@ -43,7 +43,9 @@ MIMEFILES =	\
 		pdftopdf.convs \
 		pdf.types \
 		texttopdf.convs \
-		pdftoraster.convs
+		pdftoraster.convs \
+		pstopdf.convs \
+		pstopdf.types
 
 OBJS	=	\
 		bannertops.o \
@@ -79,6 +81,9 @@ TARGETS	=	\
 		pdftoijs \
 		texttopdf \
 		pdftoraster
+
+SCRIPTS	=	\
+		pstopdf
 
 
 #
@@ -149,6 +154,9 @@ install-exec:
 	for file in $(TARGETS); do \
 		$(INSTALL_BIN) $$file $(SERVERBIN)/filter; \
 	done
+	for file in $(SCRIPTS); do \
+		$(INSTALL_SCRIPT) $$file $(SERVERBIN)/filter; \
+	done
 
 
 #
@@ -192,7 +200,7 @@ uninstall:
 	-$(RMDIR) -m 755 $(DATADIR)/mime
 	-$(RMDIR) -m 755 $(DATADIR)
 	echo Uninstalling filters from $(SERVERBIN)/filter
-	for file in $(TARGETS); do \
+	for file in $(TARGETS) $(SCRIPTS); do \
 		$(RM) $(SERVERBIN)/filter/$$file; \
 	done
 	-$(RMDIR) $(SERVERBIN)/filter
