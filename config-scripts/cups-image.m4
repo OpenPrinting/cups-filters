@@ -1,7 +1,7 @@
 dnl
 dnl "$Id$"
 dnl
-dnl   Image library/filter stuff for CUPS Legacy.
+dnl   Image library/filter stuff for OpenPrinting CUPS Filters.
 dnl
 dnl   Copyright 2007-2011 by Apple Inc.
 dnl   Copyright 1997-2006 by Easy Software Products, all rights reserved.

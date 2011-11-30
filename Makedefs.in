@@ -1,7 +1,7 @@
 #
 # "$Id$"
 #
-#   Common makefile definitions for CUPS Legacy.
+#   Common makefile definitions for OpenPrinting CUPS Filters.
 #
 #   Copyright 2007-2011 by Apple Inc.
 #   Copyright 1997-2007 by Easy Software Products, all rights reserved.
@@ -49,7 +49,7 @@ INSTALL_SCRIPT	=	$(INSTALL) -c -m 555
 # Libraries...
 #
 
-LIBCUPSFILTER	=	@LIBCUPSFILTER@
+LIBCUPSFILTERS	=	@LIBCUPSFILTERS@
 LIBJPEG		=	@LIBJPEG@
 LIBPNG		=	@LIBPNG@
 LIBTIFF		=	@LIBTIFF@
@@ -82,7 +82,7 @@ FREETYPE_LIBS	=	@FREETYPE_LIBS@ $(LIBS)
 IJS_LIBS	=	@IJS_LIBS@ $(LIBS)
 POPPLER_LIBS	=	@POPPLER_LIBS@ $(LIBS)
 LINKCUPS	=	@LINKCUPS@
-LINKCUPSFILTER	=	@LINKCUPSFILTER@
+LINKCUPSFILTERS	=	@LINKCUPSFILTERS@
 OPTIM		=	@OPTIM@
 OPTIONS		=
 PHPDIR		=	@PHPDIR@

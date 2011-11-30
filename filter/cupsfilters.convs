@@ -1,7 +1,7 @@
 #
 # "$Id: mime.convs.in 9750 2011-05-06 22:53:53Z mike $"
 #
-#   Base MIME conversions file for CUPS Legacy.
+#   Base MIME conversions file for OpenPrinting CUPS Filters.
 #
 #   Copyright 2007-2011 by Apple Inc.
 #   Copyright 1997-2007 by Easy Software Products.

@@ -1,7 +1,7 @@
 #
 # "$Id$"
 #
-#   Library makefile for CUPS Legacy.
+#   Library makefile for OpenPrinting CUPS Filters.
 #
 #   Copyright 2007-2011 by Apple Inc.
 #   Copyright 1997-2006 by Easy Software Products.
@@ -19,8 +19,8 @@ include ../Makedefs
 
 
 LIBTARGETS =	\
-		$(LIBCUPSFILTER) \
-		libcupsfilter.a
+		$(LIBCUPSFILTERS) \
+		libcupsfilters.a
 UNITTARGETS =	\
 		testcmyk \
 		testdither \
@@ -73,7 +73,7 @@ all:	$(TARGETS)
 
 clean:
 	$(RM) $(OBJS) $(TARGETS)
-	$(RM) libcupsfilter.so libcupsfilter.dylib
+	$(RM) libcupsfilters.so libcupsfilters.dylib
 
 
 #
@@ -118,7 +118,7 @@ install-headers:
 
 install-libs:
 	$(INSTALL_DIR) -m 755 $(LIBDIR)
-	$(INSTALL_LIB) $(LIBCUPSFILTER) $(LIBDIR)
+	$(INSTALL_LIB) $(LIBCUPSFILTERS) $(LIBDIR)
 
 
 #
@@ -126,17 +126,17 @@ install-libs:
 #
 
 uninstall:
-	$(RM) $(LIBDIR)/libcupsfilter.1.dylib
-	$(RM) $(LIBDIR)/libcupsfilter.a
-	$(RM) $(LIBDIR)/libcupsfilter.so.1
+	$(RM) $(LIBDIR)/libcupsfilters.1.dylib
+	$(RM) $(LIBDIR)/libcupsfilters.a
+	$(RM) $(LIBDIR)/libcupsfilters.so.1
 	-$(RMDIR) $(LIBDIR)
 
 
 #
-# libcupsfilter.so.1, libcupsfilter.sl.1
+# libcupsfilters.so.1, libcupsfilters.sl.1
 #
 
-libcupsfilter.so.1:	$(LIBOBJS)
+libcupsfilters.so.1:	$(LIBOBJS)
 	echo Linking $@...
 	$(DSO) $(ARCHFLAGS) $(DSOFLAGS) -o $@ $(LIBOBJS) $(DSOLIBS) $(LINKCUPS) -lm
 	$(RM) `basename $@ .1`
@@ -144,35 +144,35 @@ libcupsfilter.so.1:	$(LIBOBJS)
 
 
 #
-# libcupsfilter.1.dylib
+# libcupsfilters.1.dylib
 #
 
-libcupsfilter.1.dylib:	$(LIBOBJS)
+libcupsfilters.1.dylib:	$(LIBOBJS)
 	echo Linking $@...
 	$(DSO) $(ARCHFLAGS) $(DSOFLAGS) -o $@ \
 		-install_name $(libdir)/$@ \
 		-current_version 1.0.0 \
 		-compatibility_version 1.0.0 \
 		$(LIBOBJS) $(DSOLIBS) $(LINKCUPS) -lm
-	$(RM) libcupsfilter.dylib
-	$(LN) $@ libcupsfilter.dylib
+	$(RM) libcupsfilters.dylib
+	$(LN) $@ libcupsfilters.dylib
 
 
 #
-# libcupsfilter.la
+# libcupsfilters.la
 #
 
-libcupsfilter.la:       $(LIBOBJS)
+libcupsfilters.la:       $(LIBOBJS)
 	echo Linking $@...
 	$(DSO) $(ARCHFLAGS) $(DSOFLAGS) -o $@ $(LIBOBJS:.o=.lo) $(DSOLIBS) \
 		-rpath $(LIBDIR) -version-info 1:0
 
 
 #
-# libcupsfilter.a
+# libcupsfilters.a
 #
 
-libcupsfilter.a:	$(LIBOBJS)
+libcupsfilters.a:	$(LIBOBJS)
 	echo Archiving $@...
 	$(RM) $@
 	$(AR) $(ARFLAGS) $@ $(LIBOBJS)
@@ -194,9 +194,9 @@ test:
 # testcmyk: Test cmyk separation functions.
 #
 
-testcmyk:	test testcmyk.o libcupsfilter.a
+testcmyk:	test testcmyk.o libcupsfilters.a
 	echo Linking $@...
-	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testcmyk.o libcupsfilter.a \
+	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testcmyk.o libcupsfilters.a \
 		$(LIBS) -lm
 	echo Running CMYK API tests...
 	./testcmyk > test/testcmyk.log
@@ -206,9 +206,9 @@ testcmyk:	test testcmyk.o libcupsfilter.a
 # testdither: Test dithering functions.
 #
 
-testdither:	test testdither.o libcupsfilter.a
+testdither:	test testdither.o libcupsfilters.a
 	echo Linking $@...
-	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testdither.o  libcupsfilter.a \
+	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testdither.o  libcupsfilters.a \
 		$(LIBS) -lm
 	echo Running dither API tests...
 	./testdither > test/0-255.pgm 2>test/0-255.log
@@ -225,18 +225,18 @@ testdither:	test testdither.o libcupsfilter.a
 # testimage: Test image loading functions.
 #
 
-testimage:	testimage.o libcupsfilter.a ../Makedefs
+testimage:	testimage.o libcupsfilters.a ../Makedefs
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ testimage.o libcupsfilter.a \
+	$(CC) $(LDFLAGS) -o $@ testimage.o libcupsfilters.a \
 		$(IMGLIBS) $(DSOLIBS) $(LIBS) -lm
 
 #
 # testrgb, test RGB separation functions.
 #
 
-testrgb:	test testrgb.o libcupsfilter.a
+testrgb:	test testrgb.o libcupsfilters.a
 	echo Linking $@...
-	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testrgb.o  libcupsfilter.a \
+	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testrgb.o  libcupsfilters.a \
 		$(LIBS) -lm
 	echo Running RGB API tests...
 	./testrgb > test/testrgb.log 2>&1 || echo "RGB tests failed!"

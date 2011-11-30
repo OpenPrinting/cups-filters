@@ -23,7 +23,7 @@
  * Include necessary headers...
  */
 
-#include <cupsfilter/driver.h>
+#include <cupsfilters/driver.h>
 #include "pcl-common.h"
 #include <math.h>
 

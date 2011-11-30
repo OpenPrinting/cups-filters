@@ -26,7 +26,7 @@
  */
 
 #include "common.h"
-#include <cupsfilter/image.h>
+#include <cupsfilters/image.h>
 #include <math.h>
 #include <signal.h>
 #include <string.h>

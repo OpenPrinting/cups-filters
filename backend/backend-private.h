@@ -1,7 +1,7 @@
 /*
  * "$Id$"
  *
- *   Backend support definitions for CUPS Legacy.
+ *   Backend support definitions for OpenPrinting CUPS Filters.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2007 by Easy Software Products, all rights reserved.
@@ -15,8 +15,8 @@
  *   This file is subject to the Apple OS-Developed Software exception.
  */
 
-#ifndef _CUPSFILTER_BACKEND_PRIVATE_H_
-#  define _CUPSFILTER_BACKEND_PRIVATE_H_
+#ifndef _CUPSFILTERS_BACKEND_PRIVATE_H_
+#  define _CUPSFILTERS_BACKEND_PRIVATE_H_
 
 
 /*
@@ -82,7 +82,7 @@ extern int		backendGetMakeModel(const char *device_id,
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
-#endif /* !_CUPSFILTER_BACKEND_PRIVATE_H_ */
+#endif /* !_CUPSFILTERS_BACKEND_PRIVATE_H_ */
 
 
 /*

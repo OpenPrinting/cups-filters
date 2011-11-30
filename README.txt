@@ -1,5 +1,5 @@
-README - CUPS Legacy v1.6 - 2011-08-22
---------------------------------------
+README - OpenPrinting CUPS Filters v1.6 - 2011-08-22
+----------------------------------------------------
 
 Looking for compile instructions?  Read the file "INSTALL.txt"
 instead...

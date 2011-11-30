@@ -1,7 +1,7 @@
 dnl
 dnl "$Id$"
 dnl
-dnl   Libtool stuff for CUPS Legacy.
+dnl   Libtool stuff for OpenPrinting CUPS Filters.
 dnl
 dnl   Copyright 2007-2011 by Apple Inc.
 dnl   Copyright 1997-2005 by Easy Software Products, all rights reserved.
@@ -28,8 +28,8 @@ AC_SUBST(LIBTOOL)
 
 if test x$LIBTOOL != x; then
 	DSO="\$(CC)"
-	LIBCUPSFILTER="libcupsfilter.la"
-	LINKCUPSFILTER="../filter/\$(LIBCUPSFILTER)"
+	LIBCUPSFILTERS="libcupsfilters.la"
+	LINKCUPSFILTERS="../filter/\$(LIBCUPSFILTERS)"
 fi
 
 dnl

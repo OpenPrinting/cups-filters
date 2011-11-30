@@ -1,7 +1,7 @@
 dnl
 dnl "$Id$"
 dnl
-dnl   Common configuration stuff for CUPS Legacy.
+dnl   Common configuration stuff for OpenPrinting CUPS Filters.
 dnl
 dnl   Copyright 2007-2011 by Apple Inc.
 dnl   Copyright 1997-2007 by Easy Software Products, all rights reserved.
@@ -20,9 +20,9 @@ dnl Set the name of the config header file...
 AC_CONFIG_HEADER(config.h)
 
 dnl Version number information...
-CUPSFILTER_VERSION="1.6.0"
-AC_SUBST(CUPSFILTER_VERSION)
-AC_DEFINE_UNQUOTED(CUPSFILTER_SVERSION, "CUPS v$CUPSFILTER_VERSION")
+CUPSFILTERS_VERSION="1.6.0"
+AC_SUBST(CUPSFILTERS_VERSION)
+AC_DEFINE_UNQUOTED(CUPSFILTERS_SVERSION, "CUPS v$CUPSFILTERS_VERSION")
 
 dnl version of installed CUPS
 CUPS_VERSION=`cups-config --version`

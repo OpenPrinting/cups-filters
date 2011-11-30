@@ -1,7 +1,7 @@
 #
 # "$Id$"
 #
-#   Filter makefile for CUPS Legacy.
+#   Filter makefile for OpenPrinting CUPS Filters.
 #
 #   Copyright 2007-2011 by Apple Inc.
 #   Copyright 1997-2006 by Easy Software Products.
@@ -37,7 +37,7 @@ FONTS	=	\
 		Monospace-Oblique.pfa
 
 MIMEFILES =	\
-		legacy.convs \
+		cupsfilters.convs \
 		imagetopdf.convs \
 		imagetopdf.types \
 		pdftopdf.convs \
@@ -214,7 +214,7 @@ uninstall:
 bannertops:	bannertops.o pstext.o common.o
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ bannertops.o pstext.o common.o \
-		$(LINKCUPSFILTER) $(LIBS)
+		$(LINKCUPSFILTERS) $(LIBS)
 
 
 #
@@ -223,7 +223,7 @@ bannertops:	bannertops.o pstext.o common.o
 
 commandtopclx:		commandtopclx.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ commandtopclx.o $(LINKCUPSFILTER) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ commandtopclx.o $(LINKCUPSFILTERS) $(LIBS)
 
 
 #
@@ -232,7 +232,7 @@ commandtopclx:		commandtopclx.o
 
 commandtoescpx:		commandtoescpx.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ commandtoescpx.o $(LINKCUPSFILTER) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ commandtoescpx.o $(LINKCUPSFILTERS) $(LIBS)
 
 
 #
@@ -241,7 +241,7 @@ commandtoescpx:		commandtoescpx.o
 
 imagetops:	imagetops.o common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ imagetops.o common.o $(LINKCUPSFILTER) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ imagetops.o common.o $(LINKCUPSFILTERS) $(LIBS)
 
 
 #
@@ -251,7 +251,7 @@ imagetops:	imagetops.o common.o
 imagetoraster:	imagetoraster.o common.o
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ imagetoraster.o common.o \
-		$(LINKCUPSFILTER) $(LIBS)
+		$(LINKCUPSFILTERS) $(LIBS)
 
 
 #
@@ -269,7 +269,7 @@ pdftops:	pdftops.o common.o
 
 rastertoescpx:		rastertoescpx.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ rastertoescpx.o $(LINKCUPSFILTER) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ rastertoescpx.o $(LINKCUPSFILTERS) $(LIBS)
 
 
 #
@@ -278,7 +278,7 @@ rastertoescpx:		rastertoescpx.o
 
 rastertopclx:		rastertopclx.o pcl-common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ rastertopclx.o pcl-common.o $(LINKCUPSFILTER) \
+	$(CC) $(LDFLAGS) -o $@ rastertopclx.o pcl-common.o $(LINKCUPSFILTERS) \
 		$(LIBS)
 
 
@@ -297,7 +297,7 @@ texttops:	texttops.o textcommon.o common.o
 
 imagetopdf:	imagetopdf.o common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ imagetopdf.o common.o $(LINKCUPSFILTER) \
+	$(CC) $(LDFLAGS) -o $@ imagetopdf.o common.o $(LINKCUPSFILTERS) \
 		$(IMGLIBS) $(LIBS)
 
 
@@ -330,7 +330,7 @@ texttopdf:	texttopdf.o textcommon.o common.o pdfutils.o fontembed/libfontembed.a
 pdftoraster:	pdftoraster.o
 	echo Linking $@...
 	$(CXX) $(LDFLAGS) -o $@ pdftoraster.o \
-		$(POPPLER_LIBS) $(LCMS_LIBS) $(LINKCUPSFILTER) $(IMGLIBS) $(LIBS)
+		$(POPPLER_LIBS) $(LCMS_LIBS) $(LINKCUPSFILTERS) $(IMGLIBS) $(LIBS)
 
 
 #

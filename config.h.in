@@ -13,15 +13,15 @@
  *   file is missing or damaged, see the license at "http://www.cups.org/".
  */
 
-#ifndef _CUPSFILTER_CONFIG_H_
-#define _CUPSFILTER_CONFIG_H_
+#ifndef _CUPSFILTERS_CONFIG_H_
+#define _CUPSFILTERS_CONFIG_H_
 
 
 /*
  * Version of software...
  */
 
-#define CUPSFILTER_SVERSION	""
+#define CUPSFILTERS_SVERSION	""
 
 
 /*
@@ -259,7 +259,7 @@
 #undef POPPLER_DATADIR
 
 
-#endif /* !_CUPSFILTER_CONFIG_H_ */
+#endif /* !_CUPSFILTERS_CONFIG_H_ */
 
 /*
  * End of "$Id$".

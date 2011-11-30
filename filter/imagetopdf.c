@@ -37,7 +37,7 @@
 
 #include "config.h"
 #include "common.h"
-#include <cupsfilter/image.h>
+#include <cupsfilters/image.h>
 #include <math.h>
 
 #if CUPS_VERSION_MAJOR < 1 \

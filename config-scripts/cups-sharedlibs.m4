@@ -1,7 +1,7 @@
 dnl
 dnl "$Id$"
 dnl
-dnl   Shared library support for CUPS Legacy.
+dnl   Shared library support for OpenPrinting CUPS Filters.
 dnl
 dnl   Copyright 2007-2011 by Apple Inc.
 dnl   Copyright 1997-2005 by Easy Software Products, all rights reserved.
@@ -21,45 +21,45 @@ AC_ARG_ENABLE(shared, [  --disable-shared        do not create shared libraries]
 if test x$enable_shared != xno; then
 	case "$uname" in
 		SunOS*)
-			LIBCUPSFILTER="libcupsfilter.so.1"
+			LIBCUPSFILTERS="libcupsfilters.so.1"
 			DSO="\$(CC)"
 			DSOFLAGS="$DSOFLAGS -Wl,-h\`basename \$@\` -G \$(OPTIM)"
 			;;
 		Linux | GNU | *BSD*)
-			LIBCUPSFILTER="libcupsfilter.so.1"
+			LIBCUPSFILTERS="libcupsfilters.so.1"
 			DSO="\$(CC)"
 			DSOFLAGS="$DSOFLAGS -Wl,-soname,\`basename \$@\` -shared \$(OPTIM)"
 			;;
 		Darwin*)
-			LIBCUPSFILTER="libcupsfilter.1.dylib"
+			LIBCUPSFILTERS="libcupsfilters.1.dylib"
 			DSO="\$(CC)"
 			DSOFLAGS="$DSOFLAGS -dynamiclib -single_module -lc"
 			;;
 		*)
 			echo "Warning: shared libraries may not be supported.  Trying -shared"
 			echo "         option with compiler."
-			LIBCUPSFILTER="libcupsfilter.so.1"
+			LIBCUPSFILTERS="libcupsfilters.so.1"
 			DSO="\$(CC)"
 			DSOFLAGS="$DSOFLAGS -Wl,-soname,\`basename \$@\` -shared \$(OPTIM)"
 			;;
 	esac
 else
 	PICFLAG=0
-	LIBCUPSFILTER="libcupsfilter.a"
+	LIBCUPSFILTERS="libcupsfilters.a"
 	DSO=":"
 fi
 
 AC_SUBST(DSO)
 AC_SUBST(DSOFLAGS)
-AC_SUBST(LIBCUPSFILTER)
+AC_SUBST(LIBCUPSFILTERS)
 
 if test x$enable_shared = xno; then
-	LINKCUPSFILTER="../cupsfilter/libcupsfilter.a"
+	LINKCUPSFILTERS="../cupsfilters/libcupsfilters.a"
 else
-	LINKCUPSFILTER="-L../cupsfilter -lcupsfilter"
+	LINKCUPSFILTERS="-L../cupsfilters -lcupsfilters"
 fi
 
-AC_SUBST(LINKCUPSFILTER)
+AC_SUBST(LINKCUPSFILTERS)
 
 dnl Update libraries for DSOs...
 if test "$DSO" != ":"; then

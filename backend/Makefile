@@ -1,7 +1,7 @@
 #
 # "$Id$"
 #
-#   Backend makefile for CUPS Legacy.
+#   Backend makefile for OpenPrinting CUPS Filters.
 #
 #   Copyright 2007-2011 by Apple Inc.
 #   Copyright 1997-2007 by Easy Software Products, all rights reserved.

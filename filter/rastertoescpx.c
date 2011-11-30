@@ -30,7 +30,7 @@
  * Include necessary headers...
  */
 
-#include <cupsfilter/driver.h>
+#include <cupsfilters/driver.h>
 #include "escp.h"
 #include <signal.h>
 #include <string.h>

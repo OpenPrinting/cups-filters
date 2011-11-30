@@ -1,7 +1,7 @@
 #
 # "$Id$"
 #
-#   Top-level Makefile for CUPS Legacy.
+#   Top-level Makefile for OpenPrinting CUPS Filters.
 #
 #   Copyright 2007-2011 by Apple Inc.
 #   Copyright 1997-2007 by Easy Software Products, all rights reserved.
@@ -20,7 +20,7 @@ include Makedefs
 # Directories to make...
 #
 
-DIRS	=	cupsfilter backend filter pdftoopvp pdftopdf $(PHPDIR)
+DIRS	=	cupsfilters backend filter pdftoopvp pdftopdf $(PHPDIR)
 
 
 #

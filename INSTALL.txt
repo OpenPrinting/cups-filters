@@ -1,9 +1,10 @@
-INSTALL - CUPS Legacy v1.6.0 - 2011-08-22
------------------------------------------
+INSTALL - OpenPrinting CUPS Filters v1.6.0 - 2011-08-22
+-------------------------------------------------------
 
-This file describes how to compile and install CUPS Legacy from source code. For
-more information on CUPS Legacy see the file called "README.txt".  A complete
-change log can be found in "CHANGES.txt".
+This file describes how to compile and install OpenPrinting CUPS
+Filters from source code. For more information on OpenPrinting CUPS
+Filters see the file called "README.txt".  A complete change log can
+be found in "CHANGES.txt".
 
 **** IF YOU HAVE A NON-POSTSCRIPT PRINTER AND ARE NOT       ****
 **** RUNNING MAC OS X, YOU WILL ALSO NEED TO INSTALL GPL    ****
