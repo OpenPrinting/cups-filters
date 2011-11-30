@@ -36,7 +36,7 @@
  */
 
 #include "common.h"
-#include <cupslegacy/image-private.h>
+#include <cupsfilter/image-private.h>
 #include <unistd.h>
 #include <math.h>
 #include <signal.h>

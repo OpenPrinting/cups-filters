@@ -21,45 +21,45 @@ AC_ARG_ENABLE(shared, [  --disable-shared        do not create shared libraries]
 if test x$enable_shared != xno; then
 	case "$uname" in
 		SunOS*)
-			LIBCUPSLEGACY="libcupslegacy.so.1"
+			LIBCUPSFILTER="libcupsfilter.so.1"
 			DSO="\$(CC)"
 			DSOFLAGS="$DSOFLAGS -Wl,-h\`basename \$@\` -G \$(OPTIM)"
 			;;
 		Linux | GNU | *BSD*)
-			LIBCUPSLEGACY="libcupslegacy.so.1"
+			LIBCUPSFILTER="libcupsfilter.so.1"
 			DSO="\$(CC)"
 			DSOFLAGS="$DSOFLAGS -Wl,-soname,\`basename \$@\` -shared \$(OPTIM)"
 			;;
 		Darwin*)
-			LIBCUPSLEGACY="libcupslegacy.1.dylib"
+			LIBCUPSFILTER="libcupsfilter.1.dylib"
 			DSO="\$(CC)"
 			DSOFLAGS="$DSOFLAGS -dynamiclib -single_module -lc"
 			;;
 		*)
 			echo "Warning: shared libraries may not be supported.  Trying -shared"
 			echo "         option with compiler."
-			LIBCUPSLEGACY="libcupslegacy.so.1"
+			LIBCUPSFILTER="libcupsfilter.so.1"
 			DSO="\$(CC)"
 			DSOFLAGS="$DSOFLAGS -Wl,-soname,\`basename \$@\` -shared \$(OPTIM)"
 			;;
 	esac
 else
 	PICFLAG=0
-	LIBCUPSLEGACY="libcupslegacy.a"
+	LIBCUPSFILTER="libcupsfilter.a"
 	DSO=":"
 fi
 
 AC_SUBST(DSO)
 AC_SUBST(DSOFLAGS)
-AC_SUBST(LIBCUPSLEGACY)
+AC_SUBST(LIBCUPSFILTER)
 
 if test x$enable_shared = xno; then
-	LINKCUPSLEGACY="../cupslegacy/libcupslegacy.a"
+	LINKCUPSFILTER="../cupsfilter/libcupsfilter.a"
 else
-	LINKCUPSLEGACY="-L../cupslegacy -lcupslegacy"
+	LINKCUPSFILTER="-L../cupsfilter -lcupsfilter"
 fi
 
-AC_SUBST(LINKCUPSLEGACY)
+AC_SUBST(LINKCUPSFILTER)
 
 dnl Update libraries for DSOs...
 if test "$DSO" != ":"; then

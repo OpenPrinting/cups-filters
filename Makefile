@@ -20,7 +20,7 @@ include Makedefs
 # Directories to make...
 #
 
-DIRS	=	cupslegacy backend filter pdftoopvp pdftopdf $(PHPDIR)
+DIRS	=	cupsfilter backend filter pdftoopvp pdftopdf $(PHPDIR)
 
 
 #

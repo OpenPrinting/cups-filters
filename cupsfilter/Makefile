@@ -19,8 +19,8 @@ include ../Makedefs
 
 
 LIBTARGETS =	\
-		$(LIBCUPSLEGACY) \
-		libcupslegacy.a
+		$(LIBCUPSFILTER) \
+		libcupsfilter.a
 UNITTARGETS =	\
 		testcmyk \
 		testdither \
@@ -73,7 +73,7 @@ all:	$(TARGETS)
 
 clean:
 	$(RM) $(OBJS) $(TARGETS)
-	$(RM) libcupslegacy.so libcupslegacy.dylib
+	$(RM) libcupsfilter.so libcupsfilter.dylib
 
 
 #
@@ -118,7 +118,7 @@ install-headers:
 
 install-libs:
 	$(INSTALL_DIR) -m 755 $(LIBDIR)
-	$(INSTALL_LIB) $(LIBCUPSLEGACY) $(LIBDIR)
+	$(INSTALL_LIB) $(LIBCUPSFILTER) $(LIBDIR)
 
 
 #
@@ -126,17 +126,17 @@ install-libs:
 #
 
 uninstall:
-	$(RM) $(LIBDIR)/libcupslegacy.1.dylib
-	$(RM) $(LIBDIR)/libcupslegacy.a
-	$(RM) $(LIBDIR)/libcupslegacy.so.1
+	$(RM) $(LIBDIR)/libcupsfilter.1.dylib
+	$(RM) $(LIBDIR)/libcupsfilter.a
+	$(RM) $(LIBDIR)/libcupsfilter.so.1
 	-$(RMDIR) $(LIBDIR)
 
 
 #
-# libcupslegacy.so.1, libcupslegacy.sl.1
+# libcupsfilter.so.1, libcupsfilter.sl.1
 #
 
-libcupslegacy.so.1:	$(LIBOBJS)
+libcupsfilter.so.1:	$(LIBOBJS)
 	echo Linking $@...
 	$(DSO) $(ARCHFLAGS) $(DSOFLAGS) -o $@ $(LIBOBJS) $(DSOLIBS) $(LINKCUPS) -lm
 	$(RM) `basename $@ .1`
@@ -144,35 +144,35 @@ libcupslegacy.so.1:	$(LIBOBJS)
 
 
 #
-# libcupslegacy.1.dylib
+# libcupsfilter.1.dylib
 #
 
-libcupslegacy.1.dylib:	$(LIBOBJS)
+libcupsfilter.1.dylib:	$(LIBOBJS)
 	echo Linking $@...
 	$(DSO) $(ARCHFLAGS) $(DSOFLAGS) -o $@ \
 		-install_name $(libdir)/$@ \
 		-current_version 1.0.0 \
 		-compatibility_version 1.0.0 \
 		$(LIBOBJS) $(DSOLIBS) $(LINKCUPS) -lm
-	$(RM) libcupslegacy.dylib
-	$(LN) $@ libcupslegacy.dylib
+	$(RM) libcupsfilter.dylib
+	$(LN) $@ libcupsfilter.dylib
 
 
 #
-# libcupslegacy.la
+# libcupsfilter.la
 #
 
-libcupslegacy.la:       $(LIBOBJS)
+libcupsfilter.la:       $(LIBOBJS)
 	echo Linking $@...
 	$(DSO) $(ARCHFLAGS) $(DSOFLAGS) -o $@ $(LIBOBJS:.o=.lo) $(DSOLIBS) \
 		-rpath $(LIBDIR) -version-info 1:0
 
 
 #
-# libcupslegacy.a
+# libcupsfilter.a
 #
 
-libcupslegacy.a:	$(LIBOBJS)
+libcupsfilter.a:	$(LIBOBJS)
 	echo Archiving $@...
 	$(RM) $@
 	$(AR) $(ARFLAGS) $@ $(LIBOBJS)
@@ -194,9 +194,9 @@ test:
 # testcmyk: Test cmyk separation functions.
 #
 
-testcmyk:	test testcmyk.o libcupslegacy.a
+testcmyk:	test testcmyk.o libcupsfilter.a
 	echo Linking $@...
-	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testcmyk.o libcupslegacy.a \
+	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testcmyk.o libcupsfilter.a \
 		$(LIBS) -lm
 	echo Running CMYK API tests...
 	./testcmyk > test/testcmyk.log
@@ -206,9 +206,9 @@ testcmyk:	test testcmyk.o libcupslegacy.a
 # testdither: Test dithering functions.
 #
 
-testdither:	test testdither.o libcupslegacy.a
+testdither:	test testdither.o libcupsfilter.a
 	echo Linking $@...
-	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testdither.o  libcupslegacy.a \
+	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testdither.o  libcupsfilter.a \
 		$(LIBS) -lm
 	echo Running dither API tests...
 	./testdither > test/0-255.pgm 2>test/0-255.log
@@ -225,18 +225,18 @@ testdither:	test testdither.o libcupslegacy.a
 # testimage: Test image loading functions.
 #
 
-testimage:	testimage.o libcupslegacy.a ../Makedefs
+testimage:	testimage.o libcupsfilter.a ../Makedefs
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ testimage.o libcupslegacy.a \
+	$(CC) $(LDFLAGS) -o $@ testimage.o libcupsfilter.a \
 		$(IMGLIBS) $(DSOLIBS) $(LIBS) -lm
 
 #
 # testrgb, test RGB separation functions.
 #
 
-testrgb:	test testrgb.o libcupslegacy.a
+testrgb:	test testrgb.o libcupsfilter.a
 	echo Linking $@...
-	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testrgb.o  libcupslegacy.a \
+	$(CC) $(ARCHFLAGS) $(LDFLAGS) -o $@ testrgb.o  libcupsfilter.a \
 		$(LIBS) -lm
 	echo Running RGB API tests...
 	./testrgb > test/testrgb.log 2>&1 || echo "RGB tests failed!"

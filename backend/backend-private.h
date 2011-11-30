@@ -15,8 +15,8 @@
  *   This file is subject to the Apple OS-Developed Software exception.
  */
 
-#ifndef _CUPSLEGACY_BACKEND_PRIVATE_H_
-#  define _CUPSLEGACY_BACKEND_PRIVATE_H_
+#ifndef _CUPSFILTER_BACKEND_PRIVATE_H_
+#  define _CUPSFILTER_BACKEND_PRIVATE_H_
 
 
 /*
@@ -82,7 +82,7 @@ extern int		backendGetMakeModel(const char *device_id,
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
-#endif /* !_CUPSLEGACY_BACKEND_PRIVATE_H_ */
+#endif /* !_CUPSFILTER_BACKEND_PRIVATE_H_ */
 
 
 /*

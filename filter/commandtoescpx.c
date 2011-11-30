@@ -24,7 +24,7 @@
 
 #include <cups/cups.h>
 #include <cups/ppd.h>
-#include <cupslegacy/driver.h>
+#include <cupsfilter/driver.h>
 #include <string.h>
 #include <ctype.h>
 #include "escp.h"

@@ -28,7 +28,7 @@
  */
 
 #include "pstext.h"
-#include <cupslegacy/image.h>
+#include <cupsfilter/image.h>
 
 
 /*

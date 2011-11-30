@@ -214,7 +214,7 @@ uninstall:
 bannertops:	bannertops.o pstext.o common.o
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ bannertops.o pstext.o common.o \
-		$(LINKCUPSLEGACY) $(LIBS)
+		$(LINKCUPSFILTER) $(LIBS)
 
 
 #
@@ -223,7 +223,7 @@ bannertops:	bannertops.o pstext.o common.o
 
 commandtopclx:		commandtopclx.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ commandtopclx.o $(LINKCUPSLEGACY) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ commandtopclx.o $(LINKCUPSFILTER) $(LIBS)
 
 
 #
@@ -232,7 +232,7 @@ commandtopclx:		commandtopclx.o
 
 commandtoescpx:		commandtoescpx.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ commandtoescpx.o $(LINKCUPSLEGACY) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ commandtoescpx.o $(LINKCUPSFILTER) $(LIBS)
 
 
 #
@@ -241,7 +241,7 @@ commandtoescpx:		commandtoescpx.o
 
 imagetops:	imagetops.o common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ imagetops.o common.o $(LINKCUPSLEGACY) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ imagetops.o common.o $(LINKCUPSFILTER) $(LIBS)
 
 
 #
@@ -251,7 +251,7 @@ imagetops:	imagetops.o common.o
 imagetoraster:	imagetoraster.o common.o
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ imagetoraster.o common.o \
-		$(LINKCUPSLEGACY) $(LIBS)
+		$(LINKCUPSFILTER) $(LIBS)
 
 
 #
@@ -269,7 +269,7 @@ pdftops:	pdftops.o common.o
 
 rastertoescpx:		rastertoescpx.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ rastertoescpx.o $(LINKCUPSLEGACY) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ rastertoescpx.o $(LINKCUPSFILTER) $(LIBS)
 
 
 #
@@ -278,7 +278,7 @@ rastertoescpx:		rastertoescpx.o
 
 rastertopclx:		rastertopclx.o pcl-common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ rastertopclx.o pcl-common.o $(LINKCUPSLEGACY) \
+	$(CC) $(LDFLAGS) -o $@ rastertopclx.o pcl-common.o $(LINKCUPSFILTER) \
 		$(LIBS)
 
 
@@ -297,7 +297,7 @@ texttops:	texttops.o textcommon.o common.o
 
 imagetopdf:	imagetopdf.o common.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ imagetopdf.o common.o $(LINKCUPSLEGACY) \
+	$(CC) $(LDFLAGS) -o $@ imagetopdf.o common.o $(LINKCUPSFILTER) \
 		$(IMGLIBS) $(LIBS)
 
 
@@ -330,7 +330,7 @@ texttopdf:	texttopdf.o textcommon.o common.o pdfutils.o fontembed/libfontembed.a
 pdftoraster:	pdftoraster.o
 	echo Linking $@...
 	$(CXX) $(LDFLAGS) -o $@ pdftoraster.o \
-		$(POPPLER_LIBS) $(LCMS_LIBS) $(LINKCUPSLEGACY) $(IMGLIBS) $(LIBS)
+		$(POPPLER_LIBS) $(LCMS_LIBS) $(LINKCUPSFILTER) $(IMGLIBS) $(LIBS)
 
 
 #

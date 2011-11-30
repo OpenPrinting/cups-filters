@@ -28,8 +28,8 @@ AC_SUBST(LIBTOOL)
 
 if test x$LIBTOOL != x; then
 	DSO="\$(CC)"
-	LIBCUPSLEGACY="libcupslegacy.la"
-	LINKCUPSLEGACY="../filter/\$(LIBCUPSLEGACY)"
+	LIBCUPSFILTER="libcupsfilter.la"
+	LINKCUPSFILTER="../filter/\$(LIBCUPSFILTER)"
 fi
 
 dnl

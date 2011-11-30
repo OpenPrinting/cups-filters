@@ -29,7 +29,7 @@
  * Include necessary headers...
  */
 
-#include <cupslegacy/driver.h>
+#include <cupsfilter/driver.h>
 #include "pcl-common.h"
 #include <signal.h>
 

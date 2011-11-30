@@ -44,7 +44,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Error.h"
 #include "GlobalParams.h"
 #include <cups/raster.h>
-#include <cupslegacy/image.h>
+#include <cupsfilter/image.h>
 #include <splash/SplashTypes.h>
 #include <splash/SplashBitmap.h>
 #include <strings.h>
