@@ -1,7 +1,0 @@
-########################################################################
-#
-# CUPS file conversion rules for pdftoraster filter
-#
-
-application/vnd.cups-pdf	application/vnd.cups-raster	66	pdftoraster
-

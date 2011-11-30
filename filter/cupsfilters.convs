@@ -1,7 +1,7 @@
 #
-# "$Id: mime.convs.in 9750 2011-05-06 22:53:53Z mike $"
+# "$Id: $"
 #
-#   Base MIME conversions file for OpenPrinting CUPS Filters.
+#   MIME conversions file for OpenPrinting CUPS Filters.
 #
 #   Copyright 2007-2011 by Apple Inc.
 #   Copyright 1997-2007 by Easy Software Products.
@@ -28,6 +28,45 @@
 #   (job-id, user, title, copies, options, [filename or stdin]) to
 #   work with CUPS.
 #
+
+########################################################################
+#
+# PDF filters
+#
+
+# CUPS file conversion rules for PostScript input when we are working with
+# the PDF printing workflow. General PostScript input should be converted to
+# PDF, so that pdftopdf is doing the page management on PDF data and the
+# renderer/driver part renders PDF. An exception is made for PostScript
+# coming from the Adobe Reader. As this PostScript cannot be converted to PDF
+# if it comes from an encrypted PDF file, we simply override pstopdf and the
+# and the PDF workflow.
+
+application/postscript		application/pdf			22	pstopdf
+application/vnd.adobe-reader-postscript	application/vnd.cups-postscript	66	pstops
+
+application/pdf		application/vnd.cups-pdf		22	pdftopdf
+application/x-cshell	application/pdf				0	texttopdf
+application/x-csource	application/pdf				0	texttopdf
+application/x-perl	application/pdf				0	texttopdf
+application/x-shell	application/pdf				0	texttopdf
+text/plain		application/pdf				0	texttopdf
+text/html		application/pdf				0	texttopdf
+image/gif		application/vnd.cups-pdf		33	imagetopdf
+image/png		application/vnd.cups-pdf		33	imagetopdf
+image/jpeg		application/vnd.cups-pdf		33	imagetopdf
+image/tiff		application/vnd.cups-pdf		33	imagetopdf
+image/x-bitmap		application/vnd.cups-pdf		33	imagetopdf
+image/x-photocd		application/vnd.cups-pdf		33	imagetopdf
+image/x-portable-anymap	application/vnd.cups-pdf		33	imagetopdf
+image/x-portable-bitmap	application/vnd.cups-pdf		33	imagetopdf
+image/x-portable-graymap application/vnd.cups-pdf		33	imagetopdf
+image/x-portable-pixmap	application/vnd.cups-pdf		33	imagetopdf
+image/x-sgi-rgb		application/vnd.cups-pdf		33	imagetopdf
+image/x-xbitmap		application/vnd.cups-pdf		33	imagetopdf
+image/x-xpixmap		application/vnd.cups-pdf		33	imagetopdf
+image/x-xwindowdump	application/vnd.cups-pdf		33	imagetopdf
+image/x-sun-raster	application/vnd.cups-pdf		33	imagetopdf
 
 ########################################################################
 #
@@ -65,6 +104,7 @@ application/vnd.cups-banner	application/postscript		33	bannertops
 # Raster filters...
 #
 
+application/vnd.cups-pdf	application/vnd.cups-raster	66	pdftoraster
 image/gif			application/vnd.cups-raster	100	imagetoraster
 image/png			application/vnd.cups-raster	100	imagetoraster
 image/jpeg			application/vnd.cups-raster	100	imagetoraster
@@ -81,5 +121,5 @@ image/x-xpixmap			application/vnd.cups-raster	100	imagetoraster
 image/x-sun-raster		application/vnd.cups-raster	100	imagetoraster
 
 #
-# End of "$Id: mime.convs.in 9750 2011-05-06 22:53:53Z mike $".
+# End of "$Id: $".
 #

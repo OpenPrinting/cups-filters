@@ -38,14 +38,7 @@ FONTS	=	\
 
 MIMEFILES =	\
 		cupsfilters.convs \
-		imagetopdf.convs \
-		imagetopdf.types \
-		pdftopdf.convs \
-		pdf.types \
-		texttopdf.convs \
-		pdftoraster.convs \
-		pstopdf.convs \
-		pstopdf.types
+		cupsfilters.types
 
 OBJS	=	\
 		bannertops.o \
