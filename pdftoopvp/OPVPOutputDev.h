@@ -83,9 +83,6 @@ public:
   // End a page.
   virtual void endPage();
 
-  //----- link borders
-  virtual void drawLink(Link *link, Catalog *catalog);
-
   //----- save/restore graphics state
   virtual void saveState(GfxState *state);
   virtual void restoreState(GfxState *state);

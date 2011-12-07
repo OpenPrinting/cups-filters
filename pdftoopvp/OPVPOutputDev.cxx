@@ -323,9 +323,6 @@ void OPVPOutputDev::endPage() {
   oprs->endPage();
 }
 
-void OPVPOutputDev::drawLink(Link *link, Catalog *catalog) {
-}
-
 void OPVPOutputDev::saveState(GfxState *state) {
   oprs->saveState();
 }
