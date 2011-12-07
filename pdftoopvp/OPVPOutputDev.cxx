@@ -273,6 +273,7 @@ void OPVPOutputDev::startDoc(XRef *xrefA) {
 #if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
 				    globalParams->getEnableFreeType(),
 				    gFalse,
+				    gFalse,
 #endif
 				    globalParams->getAntialias());
   for (i = 0; i < nT3Fonts; ++i) {
