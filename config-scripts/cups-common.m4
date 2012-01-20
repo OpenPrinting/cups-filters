@@ -72,7 +72,7 @@ if test "x$CC" = x; then
 fi
 
 dnl Check for pkg-config, which is used for some other tests later on...
-AC_PATH_PROG(PKGCONFIG, pkg-config)
+AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
 dnl Checks for header files.
 AC_HEADER_STDC

@@ -29,9 +29,9 @@
 #include "driver.h"
 #include <sys/stat.h>
 
-#ifdef HAVE_LIBLCMS
-#  include <lcms/lcms.h>
-#endif /* HAVE_LIBLCMS */
+#ifdef USE_LCMS1
+#  include <lcms.h>
+#endif /* USE_LCMS1 */
 
 
 void	test_gray(cups_sample_t *samples, int num_samples,

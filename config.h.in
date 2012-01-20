@@ -258,6 +258,8 @@
 /* Poppler data dir */
 #undef POPPLER_DATADIR
 
+/* Are we using lcms1? */
+#undef USE_LCMS1
 
 #endif /* !_CUPSFILTERS_CONFIG_H_ */
 

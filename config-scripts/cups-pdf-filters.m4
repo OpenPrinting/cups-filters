@@ -51,11 +51,35 @@ dnl Needed for pdftopdf filter compilation
 
 CXXFLAGS="-DPDFTOPDF $CXXFLAGS"
 
-dnl check lcms
-AC_CHECK_LIB(lcms,main,
-  [ LCMS_LIBS=-llcms],
-  [ echo "*** lcms library not found. ***";exit ]
-)
+dnl   Color Management
+
+AC_ARG_ENABLE(cms,
+	      AC_HELP_STRING([--disable-cms],
+	                     [Don't use color management system.]),
+              enable_cms=$enableval,
+              enable_cms="try")
+if test x$enable_cms = xyes; then
+  PKG_CHECK_MODULES(LCMS, lcms2, [lcms2=yes], [lcms2=no])
+  if test x$lcms2 = xno; then
+      PKG_CHECK_MODULES(LCMS, lcms)
+  fi
+elif test x$enable_cms = xtry; then
+  PKG_CHECK_MODULES(LCMS, lcms2,[lcms2=yes],[lcms2=no])
+  if test x$lcms2 = xyes; then
+    enable_cms=yes
+  else
+      PKG_CHECK_MODULES(LCMS, lcms,[enable_cms=yes],[enable_cms=no])
+  fi
+fi
+
+if test "x$enable_cms" = "xyes"; then
+  LCMS_LIBS=-llcms2
+  if test "x$lcms2" = "xno"; then
+    lcms1=yes;
+    AC_DEFINE(USE_LCMS1, 1, [Defines if use lcms1])
+    LCMS_LIBS=-llcms
+  fi
+fi
 AC_SUBST(LCMS_LIBS)
 
 dnl poppler source dir
@@ -147,8 +171,10 @@ fi
 
 dnl check if cms is available
 if grep "setDisplayProfileName" $POPPLER_SRCDIR/poppler/GfxState.h >/dev/null ;then
-    AC_DEFINE([USE_CMS],,[cms is available])
-    POPPLER_LIBS="$POPPLER_LIBS -llcms"
+   if test "x$enable_cms" = "xyes"; then
+       AC_DEFINE([USE_CMS],,[cms is available])
+       POPPLER_LIBS="$POPPLER_LIBS $LCMS_LIBS"
+   fi
 fi
 
 AC_DEFINE_DIR(POPPLER_DATADIR, "{datarootdir}/poppler", [Poppler data dir])
