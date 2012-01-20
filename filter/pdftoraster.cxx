@@ -49,7 +49,38 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <splash/SplashBitmap.h>
 #include <strings.h>
 #include <math.h>
+#ifdef USE_LCMS1
 #include <lcms.h>
+#define cmsColorSpaceSignature icColorSpaceSignature
+#define cmsSetLogErrorHandler cmsSetErrorHandler
+#define cmsSigXYZData icSigXYZData
+#define cmsSigLuvData icSigLuvData
+#define cmsSigLabData icSigLabData
+#define cmsSigYCbCrData icSigYCbCrData
+#define cmsSigYxyData icSigYxyData
+#define cmsSigRgbData icSigRgbData
+#define cmsSigHsvData icSigHsvData
+#define cmsSigHlsData icSigHlsData
+#define cmsSigCmyData icSigCmyData
+#define cmsSig3colorData icSig3colorData
+#define cmsSigGrayData icSigGrayData
+#define cmsSigCmykData icSigCmykData
+#define cmsSig4colorData icSig4colorData
+#define cmsSig2colorData icSig2colorData
+#define cmsSig5colorData icSig5colorData
+#define cmsSig6colorData icSig6colorData
+#define cmsSig7colorData icSig7colorData
+#define cmsSig8colorData icSig8colorData
+#define cmsSig9colorData icSig9colorData
+#define cmsSig10colorData icSig10colorData
+#define cmsSig11colorData icSig11colorData
+#define cmsSig12colorData icSig12colorData
+#define cmsSig13colorData icSig13colorData
+#define cmsSig14colorData icSig14colorData
+#define cmsSig15colorData icSig15colorData
+#else
+#include <lcms2.h>
+#endif
 
 #define MAX_CHECK_COMMENT_LINES	20
 #define MAX_BYTES_PER_PIXEL 32
@@ -162,11 +193,19 @@ static void CDECL myErrorFun(int pos, char *msg, va_list args)
   fflush(stderr);
 }
 
+#ifdef USE_LCMS1
 static int lcmsErrorHandler(int ErrorCode, const char *ErrorText)
 {
   fprintf(stderr, "ERROR: %s\n",ErrorText);
   return 1;
 }
+#else
+static void lcmsErrorHandler(cmsContext contextId, cmsUInt32Number ErrorCode,
+   const char *ErrorText)
+{
+  fprintf(stderr, "ERROR: %s\n",ErrorText);
+}
+#endif
 
 static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 {
@@ -1130,56 +1169,56 @@ static bool selectSpecialCase()
   return false;
 }
 
-static unsigned int getCMSColorSpaceType(icColorSpaceSignature cs)
+static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
 {
     switch (cs) {
-    case icSigXYZData:
+    case cmsSigXYZData:
       return PT_XYZ;
       break;
-    case icSigLabData:
+    case cmsSigLabData:
       return PT_Lab;
       break;
-    case icSigLuvData:
+    case cmsSigLuvData:
       return PT_YUV;
       break;
-    case icSigYCbCrData:
+    case cmsSigYCbCrData:
       return PT_YCbCr;
       break;
-    case icSigYxyData:
+    case cmsSigYxyData:
       return PT_Yxy;
       break;
-    case icSigRgbData:
+    case cmsSigRgbData:
       return PT_RGB;
       break;
-    case icSigGrayData:
+    case cmsSigGrayData:
       return PT_GRAY;
       break;
-    case icSigHsvData:
+    case cmsSigHsvData:
       return PT_HSV;
       break;
-    case icSigHlsData:
+    case cmsSigHlsData:
       return PT_HLS;
       break;
-    case icSigCmykData:
+    case cmsSigCmykData:
       return PT_CMYK;
       break;
-    case icSigCmyData:
+    case cmsSigCmyData:
       return PT_CMY;
       break;
-    case icSig2colorData:
-    case icSig3colorData:
-    case icSig4colorData:
-    case icSig5colorData:
-    case icSig6colorData:
-    case icSig7colorData:
-    case icSig8colorData:
-    case icSig9colorData:
-    case icSig10colorData:
-    case icSig11colorData:
-    case icSig12colorData:
-    case icSig13colorData:
-    case icSig14colorData:
-    case icSig15colorData:
+    case cmsSig2colorData:
+    case cmsSig3colorData:
+    case cmsSig4colorData:
+    case cmsSig5colorData:
+    case cmsSig6colorData:
+    case cmsSig7colorData:
+    case cmsSig8colorData:
+    case cmsSig9colorData:
+    case cmsSig10colorData:
+    case cmsSig11colorData:
+    case cmsSig12colorData:
+    case cmsSig13colorData:
+    case cmsSig14colorData:
+    case cmsSig15colorData:
     default:
       break;
     }
@@ -1630,7 +1669,11 @@ static void setPopplerColorProfile()
   case CUPS_CSPACE_ICCF:
     if (colorProfile == NULL) {
       cmsCIExyY wp;
+#ifdef USE_LCMS1
       cmsWhitePointFromTemp(6504,&wp); /* D65 White point */
+#else
+      cmsWhitePointFromTemp(&wp,6504); /* D65 White point */
+#endif
       colorProfile = cmsCreateLab4Profile(&wp);
     }
     break;
@@ -1638,7 +1681,11 @@ static void setPopplerColorProfile()
     if (colorProfile == NULL) {
       /* tansform color space via CIELab */
       cmsCIExyY wp;
+#ifdef USE_LCMS1
       cmsWhitePointFromTemp(6504,&wp); /* D65 White point */
+#else
+      cmsWhitePointFromTemp(&wp,6504); /* D65 White point */
+#endif
       cmsxyY2XYZ(&D65WhitePoint,&wp);
       colorProfile = cmsCreateLab4Profile(&wp);
     }
@@ -1687,7 +1734,7 @@ int main(int argc, char *argv[]) {
   Catalog *catalog;
 
   setErrorFunction(::myErrorFun);
-  cmsSetErrorHandler(lcmsErrorHandler);
+  cmsSetLogErrorHandler(lcmsErrorHandler);
 #ifdef GLOBALPARAMS_HAS_A_ARG
   globalParams = new GlobalParams(0);
 #else
