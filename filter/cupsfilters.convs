@@ -40,7 +40,7 @@
 # renderer/driver part renders PDF. An exception is made for PostScript
 # coming from the Adobe Reader. As this PostScript cannot be converted to PDF
 # if it comes from an encrypted PDF file, we simply override pstopdf and the
-# and the PDF workflow.
+# PDF workflow.
 
 application/postscript		application/pdf			22	pstopdf
 application/vnd.adobe-reader-postscript	application/vnd.cups-postscript	66	pstops
@@ -67,6 +67,7 @@ image/x-xbitmap		application/vnd.cups-pdf		33	imagetopdf
 image/x-xpixmap		application/vnd.cups-pdf		33	imagetopdf
 image/x-xwindowdump	application/vnd.cups-pdf		33	imagetopdf
 image/x-sun-raster	application/vnd.cups-pdf		33	imagetopdf
+application/vnd.cups-banner	application/pdf			33	bannertopdf
 
 ########################################################################
 #

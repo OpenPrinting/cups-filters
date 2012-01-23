@@ -42,6 +42,9 @@ MIMEFILES =	\
 
 OBJS	=	\
 		bannertops.o \
+		bannertopdf.o \
+		banner.o \
+		pdf.o \
 		commandtoescpx.o \
 		commandtopclx.o \
 		imagetops.o \
@@ -62,6 +65,7 @@ OBJS	=	\
 
 TARGETS	=	\
 		bannertops \
+		bannertopdf \
 		commandtoescpx \
 		commandtopclx \
 		imagetops \
@@ -208,6 +212,16 @@ bannertops:	bannertops.o pstext.o common.o
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ bannertops.o pstext.o common.o \
 		$(LINKCUPSFILTERS) $(LIBS)
+
+
+#
+# bannertopdf: The PDF banner filter.
+#
+
+bannertopdf:	bannertopdf.o banner.o pdf.o
+	echo Linking $@...
+	$(CC) $(LDFLAGS) -o $@ bannertopdf.o banner.o pdf.o \
+		$(LINKCUPSFILTERS) $(LIBS) $(POPPLER_LIBS)
 
 
 #
