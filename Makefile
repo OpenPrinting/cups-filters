@@ -55,8 +55,17 @@ clean:
 #
 
 distclean:	clean
-	$(RM) Makedefs filter/pdftops config.h config.log config.status
-	-$(RM) -r autom4te*.cache clang filter/test
+	$(RM) Makedefs filter/pstopdf config.h config.log config.status
+	$(RM) -f */*.bak
+	-$(RM) -rf autom4te*.cache clang cupsfilters/test
+
+
+#
+# Remove all files not of the source repository
+#
+
+maintainer-clean:	distclean
+	$(RM) -f configure aclocal.m4
 
 
 #

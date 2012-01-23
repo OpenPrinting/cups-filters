@@ -1,21 +1,17 @@
 # DO NOT DELETE
 
-bannertops.o: pstext.h common.h ../config.h ../cupsfilters/image.h
 bannertopdf.o: banner.h pdf.h
 banner.o: banner.h
 commandtoescpx.o: ../cupsfilters/driver.h escp.h
 commandtopclx.o: ../cupsfilters/driver.h pcl.h
-imagetops.o: common.h ../config.h ../cupsfilters/image.h
 imagetoraster.o: common.h ../config.h ../cupsfilters/image-private.h
 imagetoraster.o: ../cupsfilters/image.h
 common.o: common.h ../config.h
 pcl-common.o: ../cupsfilters/driver.h pcl-common.h pcl.h
 pdftops.o: ../config.h
-pstext.o: pstext.h common.h ../config.h
 rastertoescpx.o: ../cupsfilters/driver.h escp.h
 rastertopclx.o: ../cupsfilters/driver.h pcl-common.h pcl.h
 textcommon.o: textcommon.h common.h ../config.h
-texttops.o: textcommon.h common.h ../config.h
 imagetopdf.o: ../config.h common.h ../cupsfilters/image.h
 texttopdf.o: textcommon.h common.h ../config.h pdfutils.h fontembed/embed.h
 texttopdf.o: fontembed/bitset.h fontembed/fontfile.h fontembed/sfnt.h

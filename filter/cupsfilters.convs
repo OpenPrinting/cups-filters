@@ -77,28 +77,6 @@ application/vnd.cups-banner	application/pdf			33	bannertopdf
 application/pdf			application/vnd.cups-postscript	66	pdftops
 application/vnd.cups-pdf	application/vnd.cups-postscript	22	pdftops
 application/postscript		application/vnd.cups-postscript	66	pstops
-application/x-cshell		application/postscript		33	texttops
-application/x-csource		application/postscript		33	texttops
-application/x-perl		application/postscript		33	texttops
-application/x-shell		application/postscript		33	texttops
-text/plain			application/postscript		33	texttops
-text/css			application/postscript		33	texttops
-text/html			application/postscript		33	texttops
-image/gif			application/vnd.cups-postscript	66	imagetops
-image/png			application/vnd.cups-postscript	66	imagetops
-image/jpeg			application/vnd.cups-postscript	66	imagetops
-image/tiff			application/vnd.cups-postscript	66	imagetops
-image/x-bitmap			application/vnd.cups-postscript	66	imagetops
-image/x-photocd			application/vnd.cups-postscript	66	imagetops
-image/x-portable-anymap		application/vnd.cups-postscript	66	imagetops
-image/x-portable-bitmap		application/vnd.cups-postscript	66	imagetops
-image/x-portable-graymap	application/vnd.cups-postscript	66	imagetops
-image/x-portable-pixmap		application/vnd.cups-postscript	66	imagetops
-image/x-sgi-rgb			application/vnd.cups-postscript	66	imagetops
-image/x-xbitmap			application/vnd.cups-postscript	66	imagetops
-image/x-xpixmap			application/vnd.cups-postscript	66	imagetops
-image/x-sun-raster		application/vnd.cups-postscript	66	imagetops
-application/vnd.cups-banner	application/postscript		33	bannertops
 
 ########################################################################
 #

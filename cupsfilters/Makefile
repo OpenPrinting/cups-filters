@@ -74,6 +74,7 @@ all:	$(TARGETS)
 clean:
 	$(RM) $(OBJS) $(TARGETS)
 	$(RM) libcupsfilters.so libcupsfilters.dylib
+	$(RM) -rf cupsfilters/test
 
 
 #

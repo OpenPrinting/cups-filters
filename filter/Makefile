@@ -23,40 +23,26 @@ include ../Makedefs
 #
 
 CHARSETS =	\
-		utf-8 \
 		pdf.utf-8.heavy \
 		pdf.utf-8.simple
-
-DATAFILES =	\
-		psglyphs
-
-FONTS	=	\
-		Monospace.pfa \
-		Monospace-Bold.pfa \
-		Monospace-BoldOblique.pfa \
-		Monospace-Oblique.pfa
 
 MIMEFILES =	\
 		cupsfilters.convs \
 		cupsfilters.types
 
 OBJS	=	\
-		bannertops.o \
 		bannertopdf.o \
 		banner.o \
 		pdf.o \
 		commandtoescpx.o \
 		commandtopclx.o \
-		imagetops.o \
 		imagetoraster.o \
 		common.o \
 		pcl-common.o \
 		pdftops.o \
-		pstext.o \
 		rastertoescpx.o \
 		rastertopclx.o \
 		textcommon.o \
-		texttops.o \
 		imagetopdf.o \
 		pdftoijs.o \
 		texttopdf.o \
@@ -64,16 +50,13 @@ OBJS	=	\
 		pdftoraster.o
 
 TARGETS	=	\
-		bannertops \
 		bannertopdf \
 		commandtoescpx \
 		commandtopclx \
-		imagetops \
 		imagetoraster \
 		pdftops \
 		rastertoescpx \
 		rastertopclx \
-		texttops \
 		imagetopdf \
 		pdftoijs \
 		texttopdf \
@@ -96,6 +79,8 @@ all:	$(TARGETS)
 
 clean:
 	$(RM) $(OBJS) $(TARGETS)
+	$(RM) */*.d
+	$(RM) */*.o
 
 
 #
@@ -124,16 +109,6 @@ install-data:
 		$(INSTALL_DATA) $$file $(DATADIR)/charsets; \
 	done; \
 	$(LN) pdf.utf-8.simple $(DATADIR)/charsets/pdf.utf-8
-	echo Installing data files to $(DATADIR)/data...
-	$(INSTALL_DIR) -m 755 $(DATADIR)/data
-	for file in $(DATAFILES); do \
-		$(INSTALL_DATA) $$file $(DATADIR)/data; \
-	done
-	echo Installing fonts to $(DATADIR)/fonts...
-	$(INSTALL_DIR) -m 755 $(DATADIR)/fonts
-	for file in $(FONTS); do \
-		$(INSTALL_DATA) $$file $(DATADIR)/fonts; \
-	done
 	echo Installing MIME files to $(DATADIR)/mime...
 	$(INSTALL_DIR) -m 755 $(DATADIR)/mime
 	for file in $(MIMEFILES); do \
@@ -180,16 +155,6 @@ uninstall:
 		$(RM) $(DATADIR)/charsets/$$file; \
 	done
 	-$(RMDIR) $(DATADIR)/charsets
-	echo Uninstalling data files from $(DATADIR)/data
-	for file in $(DATAFILES); do \
-		$(RM) $(DATADIR)/data/$$file; \
-	done
-	-$(RMDIR) $(DATADIR)/data
-	echo Uninstalling fonts from $(DATADIR)/fonts
-	for file in $(FONTS); do \
-		$(RM) $(DATADIR)/fonts/$$file; \
-	done
-	-$(RMDIR) -m 755 $(DATADIR)/fonts
 	echo Uninstalling MIME files from $(DATADIR)/mime
 	for file in $(MIMEFILES); do \
 		$(RM) $(DATADIR)/mime/$$file; \
@@ -202,16 +167,6 @@ uninstall:
 	done
 	-$(RMDIR) $(SERVERBIN)/filter
 	-$(RMDIR) $(SERVERBIN)
-
-
-#
-# bannertops: The PostScript banner filter.
-#
-
-bannertops:	bannertops.o pstext.o common.o
-	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ bannertops.o pstext.o common.o \
-		$(LINKCUPSFILTERS) $(LIBS)
 
 
 #
@@ -240,15 +195,6 @@ commandtopclx:		commandtopclx.o
 commandtoescpx:		commandtoescpx.o
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ commandtoescpx.o $(LINKCUPSFILTERS) $(LIBS)
-
-
-#
-# imagetops: The PostScript image filter.
-#
-
-imagetops:	imagetops.o common.o
-	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ imagetops.o common.o $(LINKCUPSFILTERS) $(LIBS)
 
 
 #
@@ -287,15 +233,6 @@ rastertopclx:		rastertopclx.o pcl-common.o
 	echo Linking $@...
 	$(CC) $(LDFLAGS) -o $@ rastertopclx.o pcl-common.o $(LINKCUPSFILTERS) \
 		$(LIBS)
-
-
-#
-# texttops: The text to PostScript filter.
-#
-
-texttops:	texttops.o textcommon.o common.o
-	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ texttops.o textcommon.o common.o $(LIBS)
 
 
 #
