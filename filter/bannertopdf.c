@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Canonical Ltd.
+ * Copyright 2012 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -121,6 +121,7 @@ static int generate_banner_pdf(banner_t *banner,
     FILE *s;
     pdf_t *doc;
     float rect[4];
+    float x, y;
     ppd_attr_t *attr;
 
     if (!(doc = pdf_load_template(banner->template_file)))
@@ -138,9 +139,12 @@ static int generate_banner_pdf(banner_t *banner,
         fprintf(s, "Q\n");
     }
 
+    x = rect[0] + (rect[2] - rect[0]) * 0.1;
+    y = rect[1] + (rect[3] - rect[1]) * 0.5;
+
     fprintf(s, "BT\n");
     fprintf(s, "/bannertopdf-font 14 Tf\n");
-    fprintf(s, "150 400 Td\n");
+    fprintf(s, "%f %f Td\n", x, y);
     fprintf(s, "17 TL\n");
 
     if (banner->infos & INFO_IMAGEABLE_AREA)
@@ -221,12 +225,21 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    noptions = cupsParseOptions(argv[5], 0, &options);
     ppd = ppdOpenFile(getenv("PPD"));
+    if (!ppd) {
+        fprintf(stderr, "Error: could not open PPD file '%s'\n", getenv("PPD"));
+        return 1;
+    }
+
+    noptions = cupsParseOptions(argv[5], 0, &options);
     ppdMarkDefaults(ppd);
     cupsMarkOptions(ppd, noptions, options);
 
     banner = banner_new_from_file(argc == 7 ? argv[6] : "-");
+    if (!banner) {
+        fprintf(stderr, "Error: could not read banner file\n");
+        return 1;
+    }
 
     ret = generate_banner_pdf(banner,
                               ppd,

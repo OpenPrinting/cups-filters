@@ -26,6 +26,19 @@ CHARSETS =	\
 		pdf.utf-8.heavy \
 		pdf.utf-8.simple
 
+DATAFILES =	\
+		testprint \
+		default.pdf \
+		default-testpage.pdf
+
+BANNERS	=	\
+		classified \
+		confidential \
+		secret \
+		standard \
+		topsecret \
+		unclassified
+
 MIMEFILES =	\
 		cupsfilters.convs \
 		cupsfilters.types
@@ -109,6 +122,16 @@ install-data:
 		$(INSTALL_DATA) $$file $(DATADIR)/charsets; \
 	done; \
 	$(LN) pdf.utf-8.simple $(DATADIR)/charsets/pdf.utf-8
+	echo Installing data files to $(DATADIR)/data...
+	$(INSTALL_DIR) -m 755 $(DATADIR)/data
+	for file in $(DATAFILES); do \
+		$(INSTALL_DATA) $$file $(DATADIR)/data; \
+	done
+	echo Installing banners to $(DATADIR)/banners...
+	$(INSTALL_DIR) -m 755 $(DATADIR)/banners
+	for file in $(BANNERS); do \
+		$(INSTALL_DATA) $$file $(DATADIR)/banners; \
+	done
 	echo Installing MIME files to $(DATADIR)/mime...
 	$(INSTALL_DIR) -m 755 $(DATADIR)/mime
 	for file in $(MIMEFILES); do \
@@ -155,6 +178,16 @@ uninstall:
 		$(RM) $(DATADIR)/charsets/$$file; \
 	done
 	-$(RMDIR) $(DATADIR)/charsets
+	echo Uninstalling data files from $(DATADIR)/data
+	for file in $(DATAFILES); do \
+		$(RM) $(DATADIR)/data/$$file; \
+	done
+	-$(RMDIR) $(DATADIR)/data
+	echo Uninstalling banners from $(DATADIR)/banners
+	for file in $(BANNERS); do \
+		$(RM) $(DATADIR)/banners/$$file; \
+	done
+	-$(RMDIR) $(DATADIR)/banners
 	echo Uninstalling MIME files from $(DATADIR)/mime
 	for file in $(MIMEFILES); do \
 		$(RM) $(DATADIR)/mime/$$file; \

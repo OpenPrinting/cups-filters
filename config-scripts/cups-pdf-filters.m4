@@ -47,6 +47,10 @@ AC_CHECK_HEADERS([sys/types.h])
 AC_CHECK_HEADERS([unistd.h])
 AC_CHECK_HEADERS([zlib.h])
 
+dnl Template directory for the bannertopdf filter
+
+AC_DEFINE_DIR(BANNERTOPDF_DATADIR, "{CUPS_DATADIR}/data", [Directory where bannertopdf finds its data files (PDF templates)])
+
 dnl Needed for pdftopdf filter compilation
 
 CXXFLAGS="-DPDFTOPDF $CXXFLAGS"

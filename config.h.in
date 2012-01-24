@@ -168,6 +168,9 @@
 /* CUPS Version is 1.4 or newer */
 #undef CUPS_1_4
 
+/* Directory where bannertopdf finds its data files (PDF templates) */
+#undef BANNERTOPDF_DATADIR
+
 /* Use libjpeg instead of builtin jpeg decoder. */
 #undef ENABLE_LIBJPEG
 

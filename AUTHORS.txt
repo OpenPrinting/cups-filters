@@ -1,0 +1,5 @@
+Till Kamppeter, OpenPrinting/Canonical (till.kamppeter@gmail.com)
+Michael Sweet, Apple (msweet@apple.com)
+Koji Otani, BBR Inc. (sho@bbr.jp)
+Tobias Hoffmann (th55@gmx.de)
+Lars Uebernickel, Canonical (lars@uebernic.de)

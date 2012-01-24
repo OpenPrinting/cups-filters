@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Canonical Ltd.
+ * Copyright 2012 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -151,7 +151,7 @@ extern "C" void pdf_add_type1_font(pdf_t *doc,
     resdict.dictLookup("Font", &fonts);
     if (fonts.isNull()) {
         fonts.initDict(xref);
-        resdict.dictSet("Font", &font);
+        resdict.dictSet("Font", &fonts);
     }
     fonts.dictSet("bannertopdf-font", &font);
 
@@ -160,7 +160,6 @@ extern "C" void pdf_add_type1_font(pdf_t *doc,
     else
         xref->setModifiedObject(&resdict, resref);
 
-    fonts.free();
     pageobj.free();
 }
 

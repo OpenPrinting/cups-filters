@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Canonical Ltd.
+ * Copyright 2012 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -107,19 +107,17 @@ static unsigned parse_show(char *s)
 }
 
 
-static char * abs_template_path(const char *path,
-                                const char *banner_file)
+static char * template_path(const char *name)
 {
-    char *result, *wd;
+    char *result;
     size_t len;
 
-    if (path[0] == '/')
-        return strdup(path);
+    if (name[0] == '/')
+        return strdup(name);
 
-    wd = dirname(strdup(banner_file));
-    result = malloc(strlen(wd) + strlen(path) + 2);
-    sprintf(result, "%s/%s", wd, path);
-    free(wd);
+    result = malloc(strlen(BANNERTOPDF_DATADIR) + strlen(name) + 2);
+    sprintf(result, "%s/%s", BANNERTOPDF_DATADIR, name);
+
     return result;
 }
 
@@ -130,14 +128,20 @@ banner_t * banner_new_from_file(const char *filename)
     char *line = NULL;
     ssize_t len = 0;
     int linenr = 0;
-    banner_t *banner = calloc(1, sizeof *banner);
+    banner_t *banner = NULL;
 
     if (!strcmp(filename, "-"))
         f = stdin;
     else if (!(f = fopen(filename, "r"))) {
         perror("Error opening banner file");
-        return banner;
+        goto out;
     }
+
+    if (getline(&line, &len, f) == -1 ||
+        strncmp(line, "#PDF-BANNER", 11) != 0)
+        goto out;
+
+    banner = calloc(1, sizeof *banner);
 
     while (getline(&line, &len, f) != -1) {
         char *key, *value;
@@ -152,7 +156,7 @@ banner_t * banner_new_from_file(const char *filename)
         }
 
         if (!strcasecmp(key, "template"))
-            banner->template_file = abs_template_path(value, filename);
+            banner->template_file = template_path(value);
         else if (!strcasecmp(key, "header"))
             banner->header = strdup(value);
         else if (!strcasecmp(key, "footer"))
@@ -170,6 +174,11 @@ banner_t * banner_new_from_file(const char *filename)
                     linenr, key);
     }
 
+    /* load default template if none was specified */
+    if (!banner->template_file)
+        banner->template_file = template_path ("default.pdf");
+
+out:
     free(line);
     fclose(f);
     return banner;

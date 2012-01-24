@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Canonical Ltd.
+ * Copyright 2012 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -18,7 +18,7 @@
 #define banner_h
 
 #include <stdio.h>
-
+#include <config.h>
 
 enum banner_info {
     INFO_IMAGEABLE_AREA            = 1,

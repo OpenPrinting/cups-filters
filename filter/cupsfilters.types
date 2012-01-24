@@ -97,6 +97,7 @@ image/x-xwindowdump		xwd string(4,<00000007>)
 #
 
 application/vnd.cups-pdf
+application/vnd.cups-pdf-banner     string(0,'#PDF-BANNER')
 
 #
 # End of "$Id: $".
