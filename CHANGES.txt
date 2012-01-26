@@ -1,6 +1,18 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.6.0 - 2011-08-22
+CHANGES.txt - OpenPrinting CUPS Filters v1.0b1 - 2011-01-26
 -----------------------------------------------------------
 
-CHANGES IN V1.6.0
+CHANGES IN V1.0b1
 
-	- Initial packaging of files that are no longer included in CUPS 1.6.
+	- Removed the bannertops, imagetops, and texttops, they are not
+	  needed any more in the PDF-based printing workflow
+	- Added support for liblcms2
+	- Named the package "OpenPrinting CUPS Filters"
+	- Renamed libcupslegacy to libcupsfilters
+	- Joined pdftops and cpdftocps filters into one C program
+	- Added new bannertopdf filter from Lars Uebernickel:
+	  https://launchpad.net/bannertopdf
+	- Added the filters for the PDF-based printing workflow, from
+	  OpenPrinting: http://sourceforge.jp/projects/opfc/ and
+	  http://www.openprinting.org/download/printing/pdf-printing/
+	- Initial packaging of files that are no longer included in CUPS 1.6
+	  from CUPS upstream (http://www.cups.org/)
