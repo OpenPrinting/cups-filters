@@ -1,0 +1,342 @@
+*PPD-Adobe: "4.3"
+*%
+*FormatVersion:	"4.3"
+*FileVersion:	"1.1"
+*LanguageVersion: English 
+*LanguageEncoding: ISOLatin1
+*PCFileName:	"HPIJS.PPD"
+*Manufacturer:	"HP"
+*Product:	"(PhotoSmart Pro B8300)"
+*cupsVersion:	1.0
+*cupsManualCopies: True
+*cupsModelNumber:  2
+*cupsFilter:	"application/vnd.cups-pdf 0 pdftoijs"
+*ModelName:     "HP PhotoSmart Pro B8300"
+*ShortNickName: "HP PhotoSmart Pro B8300 hpijs"
+*NickName:      "HP PhotoSmart Pro B8300 CUPS/pdftoijs/hpijs"
+*PSVersion:	"(3010.000) 800"
+*LanguageLevel:	"3"
+*ColorDevice:	True
+*DefaultColorSpace: RGB
+*FileSystem:	False
+*Throughput:	"1"
+*LandscapeOrientation: Plus90
+*TTRasterizer:	Type42
+*1284DeviceID: "DRV:Dhpijs,R1,M1,F1,Sv,TI,X1200,Y1200,C1,t90,l90,g100,p100,s70;"
+
+*driverName hpijs/hpijs - HP's IJS driver for most of their non-PostScript printers: ""
+*driverType I/IJS: ""
+*driverUrl: "http://hplipopensource.com/"
+*driverObsolete: False
+*driverSupplier: "Hewlett-Packard"
+*driverManufacturerSupplied: True
+*driverLicense: "BSD"
+*driverFreeSoftware: True
+*driverSupportContactVoluntary: "https://launchpad.net/hplip HPLIP support and bug tracking system"
+*driverMaxResolution: 1200 1200
+*driverColor: True
+*driverTextSupport: 90
+*driverLineartSupport: 90
+*driverGraphicsSupport: 100
+*driverPhotoSupport: 100
+*driverRenderingSpeed: 70
+
+*DefaultResolution: 1200dpi
+
+
+
+*HWMargins: 18 36 18 9
+*VariablePaperSize: True
+*MaxMediaWidth: 100000
+*MaxMediaHeight: 100000
+*NonUIOrderDependency: 105 AnySetup *CustomPageSize
+*CustomPageSize True: ""
+*ParamCustomPageSize Width: 1 points 36 100000
+*ParamCustomPageSize Height: 2 points 36 100000
+*ParamCustomPageSize Orientation: 3 int 0 0
+*ParamCustomPageSize WidthOffset: 4 points 0 0
+*ParamCustomPageSize HeightOffset: 5 points 0 0
+
+*ijsServer: "hpijs"
+*ijsManufacturer: "HP"
+*ijsModel: "deskjet 5600"
+*ijsColorSpace: "rgb"
+
+*OpenGroup: General/General
+
+*OpenUI *Quality/Resolution, Quality, Ink Type, Media Type: PickOne
+*OrderDependency: 100 AnySetup *Quality
+*DefaultQuality: 600ColorCMYK
+
+*Quality 300ColorCMYK/300 dpi, Color, Black + Color Cartr.: ""
+*ijsParams Quality=300ColorCMYK: "Quality:Quality=0,Quality:ColorMode=2,Quality:MediaType=0,Quality:PenSet=2"
+*ijsResolution Quality=300ColorCMYK: "300 300"
+
+*Quality 300ColorCMYKFullBleed/300 dpi, Color, Full Bleed, Black + Color Cartr.: ""
+*ijsParams Quality=300ColorCMYKFullbleed: "Quality:Quality=0,Quality:ColorMode=2,Quality:MediaType=0,Quality:PenSet=2,Quality:FullBleed=1"
+*ijsResolution Quality=300ColorCMYKFullbleed: "300 300"
+
+*Quality 300DraftColorCMYK/300 dpi, Draft, Color, Black + Color Cartr.: ""
+*ijsParams Quality=300DraftColorCMYK: "Quality:Quality=1,Quality:ColorMode=2,Quality:MediaType=0,Quality:PenSet=2"
+*ijsResolution Quality=300DraftColorCMYK: "300 300"
+
+*Quality 300DraftGrayscaleCMYK/300 dpi, Draft, Grayscale, Black + Color Cartr.: ""
+*ijsParams Quality=300DraftGrayscaleCMYK: "Quality:Quality=1,Quality:ColorMode=0,Quality:MediaType=0,Quality:PenSet=2"
+*ijsResolution Quality=300DraftGrayscaleCMYK: "300 300"
+
+*Quality 300FastDraftColorCMYK/300 dpi, FastDraft, Color, Black + Color Cartr.: ""
+*ijsParams Quality=300FastDraftColorCMYK: "Quality:Quality=4,Quality:ColorMode=2,Quality:MediaType=0,Quality:PenSet=2"
+*ijsResolution 300FastDraftColorCMYK: "300 300"
+
+*Quality 300FastDraftGrayscaleCMYK/300 dpi, FastDraft, Grayscale, Black + Color Cartr.: ""
+*ijsParams Quality=300FastDraftGrayscaleCMYK: "Quality:Quality=4,Quality:ColorMode=0,Quality:MediaType=0,Quality:PenSet=2"
+*ijsResolution Quality=300FastDraftGrayscaleCMYK: "300 300"
+
+*Quality 300GrayscaleCMYK/300 dpi, Grayscale, Black + Color Cartr.: ""
+*ijsParams Quality=300GrayscaleCMYK: "Quality:Quality=0,Quality:ColorMode=0,Quality:MediaType=0,Quality:PenSet=2"
+*ijsResolution Quality=300GrayscaleCMYK: "300 300"
+
+*Quality 600ColorCMYK/600 dpi, Color, Black + Color Cartr.: ""
+*ijsParams Quality=600ColorCMYK: "Quality:Quality=0,Quality:ColorMode=2,Quality:MediaType=0,Quality:PenSet=2"
+*ijsResolution Quality=600ColorCMYK: "600 600"
+
+*Quality 600ColorCMYKFullBleed/600 dpi, Color, Full Bleed, Black + Color Cartr.: ""
+*ijsParams Quality=600ColorCMYKFullbleed: "Quality:Quality=0,Quality:ColorMode=2,Quality:MediaType=0,Quality:PenSet=2,Quality:FullBleed=1"
+*ijsResolution Quality=600ColorCMYKFullbleed: "600 600"
+
+*Quality 600GrayscaleCMYK/600 dpi, Grayscale, Black + Color Cartr.: ""
+*ijsParams Quality=600GrayscaleCMYK: "Quality:Quality=0,Quality:ColorMode=0,Quality:MediaType=0,Quality:PenSet=2"
+*ijsResolution Quality=600GrayscaleCMYK: "600 600"
+
+*Quality 1200PhotoCMYK/1200 dpi, Photo, Black + Color Cartr., Photo Paper: ""
+*ijsParams Quality=1200PhotoCMYK: "Quality:Quality=3,Quality:ColorMode=2,Quality:MediaType=2,Quality:PenSet=2"
+*ijsResolution Quality=1200PhotoCMYK: "1200 1200"
+
+*Quality 1200PhotoCMYKFullBleed/1200 dpi, Photo, Full Bleed, Black + Color Cartr., Photo Paper: ""
+*ijsParams Quality=1200PhotoCMYKFullBleed: "Quality:Quality=3,Quality:ColorMode=2,Quality:MediaType=3,Quality:PenSet=2,Quality:FullBleed=1"
+*ijsResolution Quality=1200PhotoCMYKFullBleed: "1200 1200"
+
+*CloseUI: *Quality
+
+*OpenUI *InputSlot/Media Source: PickOne
+*OrderDependency: 100 AnySetup *InputSlot
+*DefaultInputSlot: Default
+
+*InputSlot Default/Printer default: ""
+*ijsParams InputSlot=Default: "PS:MediaPosition=7"
+
+*InputSlot PhotoTray/Photo Tray: ""
+*ijsParams InputSlot=PhotoTray: "PS:MediaPosition=6"
+
+*InputSlot Upper/Upper Tray: ""
+*ijsParams InputSlot=Upper: "PS:MediaPosition=1"
+
+*InputSlot Lower/Lower Tray: ""
+*ijsParams InputSlot=Lower: "PS:MediaPosition=4"
+
+*InputSlot CDDVDTray/CD or DVD Tray: ""
+*ijsParams InputSlot=CDDVDTray: "PS:MediaPosition=14"
+
+*InputSlot Envelope/Envelope Feeder: ""
+*ijsParams InputSlot=Envelope: "PS:MediaPosition=3"
+
+*InputSlot LargeCapacity/Large Capacity Tray: ""
+*ijsParams InputSlot=LargeCapacity: "PS:MediaPosition=5"
+
+*InputSlot Manual/Manual Feeder: ""
+*ijsParams InputSlot=Manual: "PS:MediaPosition=2"
+
+*InputSlot MPTray/Multi Purpose Tray: ""
+*ijsParams InputSlot=MPTray: "PS:MediaPosition=8"
+
+*CloseUI: *InputSlot
+
+*OpenUI *PageSize/Page Size: PickOne
+*OrderDependency: 105 AnySetup *PageSize
+*DefaultPageSize: Letter
+*PageSize Letter/Letter: ""
+*PageSize A4/A4: ""
+*PageSize Photo/Photo or 4x6 inch index card: ""
+*PageSize Photo5x7/Photo or 5x7 inch index card: ""
+*PageSize PhotoTearOff/Photo with tear-off tab: ""
+*PageSize 3x5/3x5 inch index card: ""
+*PageSize 5x8/5x8 inch index card: ""
+*PageSize A3/A3: ""
+*PageSize A5/A5: ""
+*PageSize A6/A6: ""
+*PageSize A6TearOff/A6 with tear-off tab: ""
+*PageSize B4JIS/B4 (JIS): ""
+*PageSize B5JIS/B5 (JIS): ""
+*PageSize CDDVD80/CD or DVD 80 mm: ""
+*PageSize CDDVD120/CD or DVD 120 mm: ""
+*PageSize Env10/Envelope #10: ""
+*PageSize EnvC5/Envelope C5: ""
+*PageSize EnvC6/Envelope C6: ""
+*PageSize EnvDL/Envelope DL: ""
+*PageSize EnvISOB5/Envelope B5: ""
+*PageSize EnvMonarch/Envelope Monarch: ""
+*PageSize Executive/Executive: ""
+*PageSize FLSA/American Foolscap: ""
+*PageSize Hagaki/Hagaki: ""
+*PageSize Ledger/Ledger: ""
+*PageSize Legal/Legal: ""
+*PageSize Oufuku/Oufuku-Hagaki: ""
+*PageSize SuperB/Super B: ""
+*PageSize w558h774/16K: ""
+*PageSize w612h935/Executive (JIS): ""
+*PageSize w774h1116/8K: ""
+*CloseUI: *PageSize
+
+*OpenUI *PageRegion: PickOne
+*OrderDependency: 105 AnySetup *PageRegion
+*DefaultPageRegion: Letter
+*PageRegion Letter/Letter: ""
+*PageRegion A4/A4: ""
+*PageRegion Photo/Photo or 4x6 inch index card: ""
+*PageRegion Photo5x7/Photo or 5x7 inch index card: ""
+*PageRegion PhotoTearOff/Photo with tear-off tab: ""
+*PageRegion 3x5/3x5 inch index card: ""
+*PageRegion 5x8/5x8 inch index card: ""
+*PageRegion A3/A3: ""
+*PageRegion A5/A5: ""
+*PageRegion A6/A6: ""
+*PageRegion A6TearOff/A6 with tear-off tab: ""
+*PageRegion B4JIS/B4 (JIS): ""
+*PageRegion B5JIS/B5 (JIS): ""
+*PageRegion CDDVD80/CD or DVD 80 mm: ""
+*PageRegion CDDVD120/CD or DVD 120 mm: ""
+*PageRegion Env10/Envelope #10: ""
+*PageRegion EnvC5/Envelope C5: ""
+*PageRegion EnvC6/Envelope C6: ""
+*PageRegion EnvDL/Envelope DL: ""
+*PageRegion EnvISOB5/Envelope B5: ""
+*PageRegion EnvMonarch/Envelope Monarch: ""
+*PageRegion Executive/Executive: ""
+*PageRegion FLSA/American Foolscap: ""
+*PageRegion Hagaki/Hagaki: ""
+*PageRegion Ledger/Ledger: ""
+*PageRegion Legal/Legal: ""
+*PageRegion Oufuku/Oufuku-Hagaki: ""
+*PageRegion SuperB/Super B: ""
+*PageRegion w558h774/16K: ""
+*PageRegion w612h935/Executive (JIS): ""
+*PageRegion w774h1116/8K: ""
+*CloseUI: *PageRegion
+
+*DefaultImageableArea: Letter
+*ImageableArea Letter/Letter: "18 36 594 783"
+*ImageableArea A4/A4: "9.72 36 585.28 833"
+*ImageableArea Photo/Photo or 4x6 inch index card: "0 36 288 432"
+*ImageableArea Photo5x7/Photo or 5x7 inch index card: "0 36 360 504"
+*ImageableArea PhotoTearOff/Photo with tear-off tab: "0 0 288 432"
+*ImageableArea 3x5/3x5 inch index card: "0 36 216 360"
+*ImageableArea 5x8/5x8 inch index card: "0 36 360 576"
+*ImageableArea A3/A3: "14.40 36.00 827.60 1181"
+*ImageableArea A5/A5: "9 36 411 586"
+*ImageableArea A6/A6: "0 36 297 420"
+*ImageableArea A6TearOff/A6 with tear-off tab: "0 0 297 420"
+*ImageableArea B4JIS/B4 (JIS): "18 36 711 1024"
+*ImageableArea B5JIS/B5 (JIS): "18 36 498 720"
+*ImageableArea CDDVD80/CD or DVD 80 mm: "0 36 237 237"
+*ImageableArea CDDVD120/CD or DVD 120 mm: "0 36 360 360"
+*ImageableArea Env10/Envelope #10: "0 36 297 684"
+*ImageableArea EnvC5/Envelope C5: "18 36 441 640"
+*ImageableArea EnvC6/Envelope C6: "0 36 323 459"
+*ImageableArea EnvDL/Envelope DL: "0 36 312 624"
+*ImageableArea EnvISOB5/Envelope B5: "18 36 481 700"
+*ImageableArea EnvMonarch/Envelope Monarch: "0 36 279 540"
+*ImageableArea Executive/Executive: "18 36 504 747"
+*ImageableArea FLSA/American Foolscap: "18 36 594 927"
+*ImageableArea Hagaki/Hagaki: "0 36 283 420"
+*ImageableArea Ledger/Ledger: "14.40 36 777.60 1215"
+*ImageableArea Legal/Legal: "18 36 594 999"
+*ImageableArea Oufuku/Oufuku-Hagaki: "0 36 420 567"
+*ImageableArea SuperB/Super B: "14.40 36 921.60 1359"
+*ImageableArea w558h774/16K: "18 36 540 765"
+*ImageableArea w612h935/Executive (JIS): "18 36 594 926"
+*ImageableArea w774h1116/8K: "18 36 756 1107"
+
+*DefaultPaperDimension: Letter
+*PaperDimension Letter/Letter: "612 792"
+*PaperDimension A4/A4: "595 842"
+*PaperDimension Photo/Photo or 4x6 inch index card: "288 432"
+*PaperDimension Photo5x7/Photo or 5x7 inch index card: "360 504"
+*PaperDimension PhotoTearOff/Photo with tear-off tab: "288 432"
+*PaperDimension 3x5/3x5 inch index card: "216 360"
+*PaperDimension 5x8/5x8 inch index card: "360 576"
+*PaperDimension A3/A3: "842 1190"
+*PaperDimension A5/A5: "420 595"
+*PaperDimension A6/A6: "297 420"
+*PaperDimension A6TearOff/A6 with tear-off tab: "297 420"
+*PaperDimension B4JIS/B4 (JIS): "729 1033"
+*PaperDimension B5JIS/B5 (JIS): "516 729"
+*PaperDimension CDDVD80/CD or DVD 80 mm: "237 237"
+*PaperDimension CDDVD120/CD or DVD 120 mm: "360 360"
+*PaperDimension Env10/Envelope #10: "297 684"
+*PaperDimension EnvC5/Envelope C5: "459 649"
+*PaperDimension EnvC6/Envelope C6: "323 459"
+*PaperDimension EnvDL/Envelope DL: "312 624"
+*PaperDimension EnvISOB5/Envelope B5: "499 709"
+*PaperDimension EnvMonarch/Envelope Monarch: "279 540"
+*PaperDimension Executive/Executive: "522 756"
+*PaperDimension FLSA/American Foolscap: "612 936"
+*PaperDimension Hagaki/Hagaki: "283 420"
+*PaperDimension Ledger/Ledger: "792 1224"
+*PaperDimension Legal/Legal: "612 1008"
+*PaperDimension Oufuku/Oufuku-Hagaki: "420 567"
+*PaperDimension SuperB/Super B: "936 1368"
+*PaperDimension w558h774/16K: "558 774"
+*PaperDimension w612h935/Executive (JIS): "612 935"
+*PaperDimension w774h1116/8K: "774 1116"
+
+*OpenUI *Duplex/Double-Sided Printing: PickOne
+*FoomaticRIPOption Duplex: enum CmdLine A
+*OrderDependency: 120 AnySetup *Duplex
+*DefaultDuplex: None
+*Duplex DuplexNoTumble/Long Edge (Standard): ""
+*Duplex DuplexTumble/Short Edge (Flip): ""
+*Duplex None/Off: ""
+*CloseUI: *Duplex
+
+*CloseGroup: General
+
+
+*% Generic boilerplate PPD stuff as standard PostScript fonts and so on
+
+*DefaultFont: Courier
+*Font AvantGarde-Book: Standard "(001.006S)" Standard ROM
+*Font AvantGarde-BookOblique: Standard "(001.006S)" Standard ROM
+*Font AvantGarde-Demi: Standard "(001.007S)" Standard ROM
+*Font AvantGarde-DemiOblique: Standard "(001.007S)" Standard ROM
+*Font Bookman-Demi: Standard "(001.004S)" Standard ROM
+*Font Bookman-DemiItalic: Standard "(001.004S)" Standard ROM
+*Font Bookman-Light: Standard "(001.004S)" Standard ROM
+*Font Bookman-LightItalic: Standard "(001.004S)" Standard ROM
+*Font Courier: Standard "(002.004S)" Standard ROM
+*Font Courier-Bold: Standard "(002.004S)" Standard ROM
+*Font Courier-BoldOblique: Standard "(002.004S)" Standard ROM
+*Font Courier-Oblique: Standard "(002.004S)" Standard ROM
+*Font Helvetica: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Bold: Standard "(001.007S)" Standard ROM
+*Font Helvetica-BoldOblique: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Narrow-Bold: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow-BoldOblique: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow-Oblique: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Oblique: Standard "(001.006S)" Standard ROM
+*Font NewCenturySchlbk-Bold: Standard "(001.009S)" Standard ROM
+*Font NewCenturySchlbk-BoldItalic: Standard "(001.007S)" Standard ROM
+*Font NewCenturySchlbk-Italic: Standard "(001.006S)" Standard ROM
+*Font NewCenturySchlbk-Roman: Standard "(001.007S)" Standard ROM
+*Font Palatino-Bold: Standard "(001.005S)" Standard ROM
+*Font Palatino-BoldItalic: Standard "(001.005S)" Standard ROM
+*Font Palatino-Italic: Standard "(001.005S)" Standard ROM
+*Font Palatino-Roman: Standard "(001.005S)" Standard ROM
+*Font Symbol: Special "(001.007S)" Special ROM
+*Font Times-Bold: Standard "(001.007S)" Standard ROM
+*Font Times-BoldItalic: Standard "(001.009S)" Standard ROM
+*Font Times-Italic: Standard "(001.007S)" Standard ROM
+*Font Times-Roman: Standard "(001.007S)" Standard ROM
+*Font ZapfChancery-MediumItalic: Standard "(001.007S)" Standard ROM
+*Font ZapfDingbats: Special "(001.004S)" Standard ROM
+

@@ -1,4 +1,4 @@
-README - OpenPrinting CUPS Filters v1.0b1 - 2012-01-24
+README - OpenPrinting CUPS Filters v1.0b1 - 2012-01-26
 ------------------------------------------------------
 
 Looking for compile instructions?  Read the file "INSTALL.txt"
@@ -25,18 +25,25 @@ INTRODUCTION
     are provided by both CUPS and this package. Then the filters of this package
     should be used.
 
+    For compiling and using this package CUPS, Poppler, libjpeg, libpng, and
+    libtiff are needed. It is highly recommended, especially if non-PostScript
+    printers are used, to have Ghostscript, foomatic-filters, and foomatic-db
+    installed.
 
-LEGAL STUFF
+    CUPS, this package, and Ghostscript contain some rudimentary printer
+    drivers, see http://www.openprinting.org/drivers/ for a more
+    comprehensive set of printer drivers for Linux.
 
-    CUPS is Copyright 2007-2011 by Apple Inc.  CUPS and the CUPS logo are
-    trademarks of Apple Inc.
+    See
 
-    The MD5 Digest code is Copyright 1999 Aladdin Enterprises.
+    http://www.linuxfoundation.org/collaborate/workgroups/openprinting/pdf_as_standard_print_job_format
 
-    This software is based in part on the work of the Independent JPEG Group.
+    for information about the PDF-based printing workflow.
 
-    CUPS is provided under the terms of version 2 of the GNU General Public
-    License and GNU Library General Public License. This program is distributed
-    in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-    the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-    See the "doc/help/license.html" or "LICENSE.txt" files for more information.
+    Report bugs to
+
+    https://bugs.linuxfoundation.org/
+
+    Choose "OpenPrinting" as the product and "cups-filters" as the component.
+
+    See the "LICENSE.txt" files for legal information.
