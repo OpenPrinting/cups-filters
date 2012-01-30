@@ -25,10 +25,10 @@ INTRODUCTION
     are provided by both CUPS and this package. Then the filters of this package
     should be used.
 
-    For compiling and using this package CUPS, Poppler, libjpeg, libpng, and
-    libtiff are needed. It is highly recommended, especially if non-PostScript
-    printers are used, to have Ghostscript, foomatic-filters, and foomatic-db
-    installed.
+    For compiling and using this package CUPS, Poppler, libjpeg, libpng,
+    libtiff, and libijs are needed. It is highly recommended, especially if
+    non-PostScript printers are used, to have Ghostscript, foomatic-filters, and
+    foomatic-db installed.
 
     CUPS, this package, and Ghostscript contain some rudimentary printer
     drivers, see http://www.openprinting.org/drivers/ for a more

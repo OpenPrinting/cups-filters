@@ -24,9 +24,9 @@ BEFORE YOU BEGIN
     Compaq, HP, SGI, and Sun.  BSD users should use GNU make (gmake) since BSD
     make does not support "include".
 
-    Poppler must be installed to be able to compile this package.
+    Poppler and libijs must be installed to be able to compile this package.
 
-    Besides these tools you'll want the JPEG, PNG, TIFF, and ZLIB libraries for
+    Besides these tools you'll want the JPEG, PNG, TIFF, ZLIB libraries for
     image support. CUPS Filters will compile and run without these, however
     you'll miss out on many of the features provided by CUPS Filters.
 
