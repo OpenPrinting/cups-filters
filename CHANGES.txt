@@ -1,5 +1,9 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0b1 - 2011-01-26
+CHANGES.txt - OpenPrinting CUPS Filters v1.0b1 - 2011-01-30
 -----------------------------------------------------------
+
+CHANGES IN V1.0b2
+
+	- Documentation updated because libijs is needed to build this package
 
 CHANGES IN V1.0b1
 
