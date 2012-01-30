@@ -3,6 +3,9 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0b1 - 2011-01-30
 
 CHANGES IN V1.0b2
 
+	- Raised MIME conversion cost factor of pdftoraster from 66 to 100 to
+	  give priority to the gstoraster filter from Ghostscript, as this
+	  filter supports ICC-profile-based color management.
 	- Documentation updated because libijs is needed to build this package
 
 CHANGES IN V1.0b1
