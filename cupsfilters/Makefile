@@ -119,10 +119,10 @@ install-exec:
 #
 
 install-headers:
-	echo Installing header files into $(INCLUDEDIR)/cups-filters...
-	$(INSTALL_DIR) -m 755 $(INCLUDEDIR)/cups-filters
+	echo Installing header files into $(INCLUDEDIR)/cupsfilters...
+	$(INSTALL_DIR) -m 755 $(INCLUDEDIR)/cupsfilters
 	for file in $(HEADERS); do \
-		$(INSTALL_DATA) $$file $(INCLUDEDIR)/cups-filters; \
+		$(INSTALL_DATA) $$file $(INCLUDEDIR)/cupsfilters; \
 	done
 
 
