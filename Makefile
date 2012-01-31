@@ -123,6 +123,10 @@ install-data:
 #
 
 install-headers:
+	for dir in $(DIRS); do\
+		echo Installing header files in $$dir... ;\
+		(cd $$dir; $(MAKE) $(MFLAGS) install-headers) || exit 1;\
+	done
 
 
 #

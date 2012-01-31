@@ -104,6 +104,7 @@ bindir		=	@bindir@
 datadir		=	@datadir@
 datarootdir	=	@datarootdir@
 exec_prefix	=	@exec_prefix@
+includedir	=	@includedir@
 libdir		=	@libdir@
 libexecdir	=	@libexecdir@
 prefix		=	@prefix@
@@ -115,6 +116,7 @@ top_srcdir	=	@top_srcdir@
 BUILDROOT	=	$(DSTROOT)
 DATADIR		=	$(BUILDROOT)@CUPS_DATADIR@
 FONTPATH	=	$(BUILDROOT)@CUPS_FONTPATH@
+INCLUDEDIR	=	$(BUILDROOT)$(includedir)
 LIBDIR		=	$(BUILDROOT)$(libdir)
 SERVERBIN	= 	$(BUILDROOT)@CUPS_SERVERBIN@
 

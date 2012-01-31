@@ -77,6 +77,7 @@ install:	install-data install-headers install-libs install-exec
 install-data:
 
 install-exec:	all
+	echo Installing filters in $(SERVERBIN)/filter...
 	$(INSTALL_DIR) -m 755 $(SERVERBIN)/filter
 	$(INSTALL_BIN) pdftopdf $(SERVERBIN)/filter
 

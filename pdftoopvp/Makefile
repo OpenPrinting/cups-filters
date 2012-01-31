@@ -58,10 +58,12 @@ depend:
 install:	install-data install-headers install-libs install-exec
 
 install-data:	all
+	echo Installing configuration files to $(sysconfdir)/fonts/conf.d...
 	$(INSTALL_DIR) -m 755 $(BUILDROOT)$(sysconfdir)/fonts/conf.d
-	$(INSTALL_BIN) -m 644 99pdftoopvp.conf $(BUILDROOT)$(sysconfdir)/fonts/conf.d
+	$(INSTALL_DATA) -m 644 99pdftoopvp.conf $(BUILDROOT)$(sysconfdir)/fonts/conf.d
 
 install-exec:	all
+	echo Installing filters to $(SERVERBIN)/filter...
 	$(INSTALL_DIR) -m 755 $(SERVERBIN)/filter
 	$(INSTALL_BIN) pdftoopvp $(SERVERBIN)/filter
 
