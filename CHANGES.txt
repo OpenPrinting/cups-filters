@@ -3,12 +3,15 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0b1 - 2011-01-30
 
 CHANGES IN V1.0b2
 
+	- Added test.sh script for testing texttopdf
+	- Added original documentation of the PDF filters to README.txt
 	- Install C header files and the static library
 	- General clean-up of "make install" targets in Makefiles
 	- Raised MIME conversion cost factor of pdftoraster from 66 to 100 to
 	  give priority to the gstoraster filter from Ghostscript, as this
 	  filter supports ICC-profile-based color management.
-	- Documentation updated because libijs is needed to build this package
+	- Documentation updated because libijs, liblcms, freetype, and
+          fontconfig are needed to build this package
 
 CHANGES IN V1.0b1
 
