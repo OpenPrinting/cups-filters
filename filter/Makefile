@@ -208,7 +208,7 @@ uninstall:
 
 bannertopdf:	bannertopdf.o banner.o pdf.o
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ bannertopdf.o banner.o pdf.o \
+	$(CXX) $(LDFLAGS) -o $@ bannertopdf.o banner.o pdf.o \
 		$(LINKCUPSFILTERS) $(LIBS) $(POPPLER_LIBS)
 
 

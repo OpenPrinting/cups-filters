@@ -3,6 +3,7 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0b1 - 2011-01-30
 
 CHANGES IN V1.0b2
 
+	- bannertopdf needs to be lionked with C++ (bug #995)
 	- Added test.sh script for testing texttopdf
 	- Added original documentation of the PDF filters to README.txt
 	- Install C header files and the static library
