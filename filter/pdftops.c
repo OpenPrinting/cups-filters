@@ -415,7 +415,9 @@ main(int  argc,				/* I - Number of command-line args */
     }
     else
 #ifdef HAVE_PDFTOPS
-      pdf_argv[pdf_argc++] = (char *)"-level3";
+      /* Do not emit PS Level 3 with Poppler, some HP PostScript printers
+         do not like it. See https://bugs.launchpad.net/bugs/277404. */
+      pdf_argv[pdf_argc++] = (char *)"-level2";
 #else
       pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
 #endif /* HAVE_PDFTOPS */
