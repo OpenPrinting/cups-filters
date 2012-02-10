@@ -21,14 +21,14 @@ CUPS_GHOSTSCRIPT=""
 
 case "x$with_pdftops" in
 	x) # Default/auto
-	AC_PATH_PROG(CUPS_PDFTOPS, pdftops)
-	if test "x$CUPS_PDFTOPS" != x; then
-		AC_DEFINE(HAVE_PDFTOPS)
+	AC_PATH_PROG(CUPS_GHOSTSCRIPT, gs)
+	if test "x$CUPS_GHOSTSCRIPT" != x; then
+		AC_DEFINE(HAVE_GHOSTSCRIPT)
 		PDFTOPS="pdftops"
 	else
-		AC_PATH_PROG(CUPS_GHOSTSCRIPT, gs)
-		if test "x$CUPS_GHOSTSCRIPT" != x; then
-			AC_DEFINE(HAVE_GHOSTSCRIPT)
+		AC_PATH_PROG(CUPS_PDFTOPS, pdftops)
+		if test "x$CUPS_PDFTOPS" != x; then
+			AC_DEFINE(HAVE_PDFTOPS)
 			PDFTOPS="pdftops"
 		fi
 	fi

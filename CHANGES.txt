@@ -1,8 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0b1 - 2011-01-30
------------------------------------------------------------
+CHANGES.txt - OpenPrinting CUPS Filters v1.0 - 2011-02-10
+---------------------------------------------------------
 
-CHANGES IN V1.0b2
+CHANGES IN V1.0
 
+	- Built the pdftops filter based on Ghostscript by default, as
+	  Ghostscript is better optimized for print output (Ubuntu bug
+	  #926068).
 	- If the pdftops filter is built for using Poppler, let Poppler not
 	  emit PostScript level 3, as this causes problems with some HP
 	  printers (Ubuntu bug #277404, Freedesktop (Poppler) bug #19640).
