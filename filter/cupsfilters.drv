@@ -1,0 +1,125 @@
+// Include standard font and media definitions
+#include <font.defs>
+#include <media.defs>
+
+// Specify that this driver uses the HP-RTL driver...
+#include <pcl.h>
+
+// List the fonts that are supported, in this case all standard
+// fonts...
+Font *
+// Specify that this driver uses the HP-PCL driver...
+DriverType pcl
+
+// Manufacturer, model name, and version
+Manufacturer "HP"
+Version 1.0
+
+Cutter true
+Throughput 1
+
+// Additional Medias
+#media "A0B/A0B - 841x2378mm" 2384 6740
+#media "A0C/A0C - 841x3567mm" 2384 10110
+#media "A0D/A0D - 841x4756mm" 2384 13480
+
+// Supported page sizes
+HWMargins 14.4 28.8 14.4 28.8
+MediaSize Letter
+MediaSize Tabloid
+MediaSize AnsiC
+MediaSize AnsiD
+MediaSize AnsiE
+MediaSize ARCHA
+MediaSize ARCHA.Transverse
+MediaSize ARCHB
+MediaSize ARCHB.Transverse
+MediaSize ARCHC
+MediaSize ARCHC.Transverse
+MediaSize ARCHD
+MediaSize ARCHD.Transverse
+MediaSize A0D
+MediaSize A0C
+MediaSize A0B
+MediaSize A0
+MediaSize A1
+MediaSize A1.Transverse
+MediaSize A2
+MediaSize A2.Transverse
+MediaSize A3
+*MediaSize A3.Transverse
+MediaSize A4
+MediaSize A4.Transverse
+MediaSize A5
+MediaSize A5.Transverse
+
+VariablePaperSize true
+MinSize 200 200
+MaxSize 3024 129600
+
+
+// Supported resolutions
+
+  Option "Resolution/Output Resolution" PickOne AnySetup 20
+    Choice "150dpi/150 DPI" "<</HWResolution[150 150]>>setpagedevice"
+    *Choice "300dpi/300 DPI" "<</HWResolution[300 300]>>setpagedevice"
+    Choice "600dpi/600 DPI" "<</HWResolution[600 600]>>setpagedevice"
+  Option "OutputMode/Print Quality" PickOne AnySetup 50
+    Choice "Draft/Draft" "    <</OutputType (Draft)>>setpagedevice"
+    *Choice "Normal/Normal" " <</OutputType (Normal)>>setpagedevice"
+    Choice "Best/Best" "      <</OutputType (Best)>>setpagedevice"
+  Option "InputSlot/Mediasource" PickOne JCLSetup 10
+      Choice "manual/Manual" "@PJL SET MEDIASOURCE=MANUALFEED<0A>"
+      *Choice "roll/ROLL"    "@PJL SET MEDIASOURCE=ROLL<0A>"
+
+// MediaType
+
+*MediaType 0 "Paper/Plain Paper"
+MediaType 1 "Transpareny/Tranparency film"
+MediaType 2 "Velum/Velum"
+MediaType 3 "Polyester/Polyester film"
+MediaType 4 "Translucent/Translucent paper"
+MediaType 5 "Special/Special paper"
+MediaType 6 "Glossy/Glossy paper"
+
+{
+  ModelName "DesignJet 600 pcl"
+  PCFileName "dsgnjt600pcl.ppd"
+  //ModelNumber ($RTL_PJL)
+  ModelNumber ($PCL_PAPER_SIZE $PCL_PJL_HPGL2 $PCL_PJL $PCL_PJL_RESOLUTION)
+
+  ColorDevice false
+}
+
+{
+  // 750C is a color model
+  {
+    ModelName "DesignJet 750c pcl"
+    PCFileName "dsgnjt750cpcl.ppd"
+  }
+  {
+    ModelName "DesignJet 1050c pcl"
+    PCFileName "dsgnjt1050cpcl.ppd"
+  }
+  {
+    ModelName "DesignJet 4000 pcl"
+    PCFileName "dsgnjt4000pcl.ppd"
+  }
+  {
+    ModelName "DesignJet T1100 pcl"
+    PCFileName "dsgnjtt1100pcl.ppd"
+  }
+  {
+    ModelName "DesignJet T790 pcl"
+    PCFileName "dsgnjtt790pcl.ppd"
+  }
+  ModelNumber ($PCL_PAPER_SIZE $PCL_RASTER_END_COLOR $PCL_RASTER_CID $PCL_RASTER_SIMPLE $PCL_RASTER_RGB24 $PCL_PJL $PCL_PJL_PAPERWIDTH $PCL_PJL_HPGL2 $PCL_PJL_RESOLUTION)
+
+  ColorDevice true
+ *ColorModel Gray/Grayscale  w    chunky 1
+  ColorModel Black           k    chunky 1
+  ColorModel rgb/RGB         rgb  banded 2
+
+  Attribute cupsPJL cupsRET "@PJL SET RET=%?False:OFF;%?True:ON;%n"
+
+}

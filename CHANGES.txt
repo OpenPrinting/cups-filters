@@ -3,6 +3,12 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.1 - 2011-02-13
 
 CHANGES IN V1.0.1
 
+	- Install the pdftoijs sample PPD file
+	  HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd
+	- Added cupsfilters.drv, centralized ppdc-based PPD generator for the
+	  printer driver filters in this package. Current printers supported
+	  are several HP DesignJet large format inkjet printers.
+	- Fixed "make uninstall". Now everything of this package gets removed.
 	- Added wrapper scripts texttops and imagetops for backward
 	  compatibility to third-party PPD files or custom configurations
 	  which refer to these filters explicitly (Debian bug #658258).

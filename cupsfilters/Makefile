@@ -159,8 +159,9 @@ uninstall:
 	$(RM) $(LIBDIR)/libcupsfilters.a
 	-$(RMDIR) $(LIBDIR)
 	for file in $(HEADERS); do \
-		$(RM) $(INCLUDEDIR)/$$file; \
+		$(RM) $(INCLUDEDIR)/cupsfilters/$$file; \
 	done
+	-$(RMDIR) $(INCLUDEDIR)/cupsfilters
 	-$(RMDIR) $(INCLUDEDIR)
 
 
