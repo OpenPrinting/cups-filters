@@ -1,5 +1,5 @@
-README - OpenPrinting CUPS Filters v1.0 - 2012-02-10
-----------------------------------------------------
+README - OpenPrinting CUPS Filters v1.0.1 - 2012-02-13
+------------------------------------------------------
 
 Looking for compile instructions?  Read the file "INSTALL.txt"
 instead...
@@ -57,6 +57,16 @@ CUPS FILTERS FOR PDF AS STANDARD PRINT JOB FORMAT
 
     The original filters are from http://sourceforge.jp/projects/opfc/
 
+    NOTE: the texttops and imagetops filters shipping with this package
+    are simple wrapper scripts for backward compatibility with third-party
+    PPD files and custom configurations. There are not referred to in the
+    cupsfilters.convs file and therefore not used by the default
+    configuration. Direct conversion of text or images to PostScript is
+    deprecated in the PDF-based printing workflow. So do not use these
+    filters when creating new PPDs or custom configurations. The parameters
+    for these filters are the same as for texttopdf and imagetopdf (see
+    below) as the ...tops filter calls the ....topdf filter plus
+    Ghostscript's pdf2ps.
 
 IMAGETOPDF
 
