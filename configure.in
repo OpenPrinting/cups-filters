@@ -29,10 +29,8 @@ sinclude(config-scripts/cups-pdf-filters.m4)
 sinclude(config-scripts/cups-pdf.m4)
 sinclude(config-scripts/cups-scripting.m4)
 
-AC_OUTPUT(Makedefs)
-AC_OUTPUT(filter/pstopdf)
-AC_OUTPUT(filter/texttops)
-AC_OUTPUT(filter/imagetops)
+AC_CONFIG_FILES(Makedefs filter/pstopdf filter/texttops filter/imagetops)
+AC_OUTPUT
 
 dnl
 dnl End of "$Id$".

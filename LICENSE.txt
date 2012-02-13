@@ -10,6 +10,8 @@ Copyright 2006-2012 BBR Inc.
 Copyright 2008-2012 Till Kamppeter
 Copyright 2008 Tobias Hoffmann
 Copyright 2003 Robert Sander
+Copyright 2003-2006 Red Hat, Inc.
+Copyright 2003-2006 Tim Waugh <twaugh@redhat.com>
 
 
 The filters and backends which were part of CUPS formerly
@@ -26,6 +28,13 @@ the GNU Library General Public License. This program is distributed in
 the hope that it will be useful, but WITHOUT ANY WARRANTY; without
 even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE.
+
+The filter textonly and its PPD file textonly.ppd and also the filters
+texttops and imagetops are provided under the terms of version 2 of
+the GNU General Public License, or (at your option) any later
+version. This program is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 The filter bannertopdf and all their auxiliary files is provided under
 the terms of version 3 of the GNU General Public License. This program

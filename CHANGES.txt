@@ -3,6 +3,8 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.1 - 2011-02-13
 
 CHANGES IN V1.0.1
 
+	- Added the textonly filter and its PPD file, a driver for text-only
+	  printers.
 	- Install the pdftoijs sample PPD file
 	  HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd
 	- Added cupsfilters.drv, centralized ppdc-based PPD generator for the

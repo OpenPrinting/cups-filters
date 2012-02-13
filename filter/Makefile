@@ -78,10 +78,12 @@ TARGETS	=	\
 SCRIPTS	=	\
 		pstopdf \
 		texttops \
-		imagetops
+		imagetops \
+		textonly
 
 PPDFILES =	\
-		HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd
+		HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd \
+		textonly.ppd
 
 DRVFILES =	\
 		cupsfilters.drv

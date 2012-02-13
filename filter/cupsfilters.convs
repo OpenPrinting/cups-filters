@@ -99,6 +99,18 @@ image/x-xbitmap			application/vnd.cups-raster	100	imagetoraster
 image/x-xpixmap			application/vnd.cups-raster	100	imagetoraster
 image/x-sun-raster		application/vnd.cups-raster	100	imagetoraster
 
+########################################################################
+#
+# Text filters (only for text-only printers)...
+#
+
+application/x-cshell		text/plain			100	-
+application/x-csource		text/plain			100	-
+application/x-perl		text/plain			100	-
+application/x-shell		text/plain			100	-
+text/html			text/plain			100	-
+text/css			text/plain			100	-
+
 #
 # End of "$Id: $".
 #
