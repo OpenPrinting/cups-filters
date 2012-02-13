@@ -1,5 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0 - 2011-02-10
----------------------------------------------------------
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.1 - 2011-02-13
+-----------------------------------------------------------
+
+CHANGES IN V1.0.1
+
+	- Added wrapper scripts texttops and imagetops for backward
+	  compatibility to third-party PPD files or custom configurations
+	  which refer to these filters explicitly (Debian bug #658258).
 
 CHANGES IN V1.0
 

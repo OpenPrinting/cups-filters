@@ -76,7 +76,9 @@ TARGETS	=	\
 		pdftoraster
 
 SCRIPTS	=	\
-		pstopdf
+		pstopdf \
+		texttops \
+		imagetops
 
 
 #

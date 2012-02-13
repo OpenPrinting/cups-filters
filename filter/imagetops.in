@@ -1,0 +1,37 @@
+#!/bin/sh
+
+# $Id: $
+#
+# imagetops - This is a Image-to-PostScript filter for CUPS
+#
+# Note: This wrapper filter is only included for backward compatibility with
+# certan custom configurations. It is not mentioned in any of the .convs
+# files included in this package and therefore never used with the default
+# configuration. It makes sure that third-party PPD files referring to
+# imagetops explicitly or custom configurations (in /etc/cups/*.convs files)
+# will not break.
+#
+# DO NOT create new PPD or .convs files using this filter! imagetops is
+# DEPRECATED!
+
+# (C) 2012 Till Kamppeter <till.kamppeter@gmail.com>
+#
+# Released under GPL 2 or later
+#
+
+PDF2PS=@PDF2PS@
+
+echo "DEBUG: imagetops argv[$#] = $@" >&2
+echo "DEBUG: PPD: $PPD" >&2
+
+if [ $# -lt 5 -o $# -gt 6 ]; then
+    echo "ERROR: $0 job-id user title copies options [file]" >&2
+    exit 1
+fi
+
+# Read from given file.
+if [ -n "$6" ]; then
+    exec <"$6"
+fi
+
+`dirname $0`/imagetopdf "$1" "$2" "$3" "$4" "$5" | $PDF2PS - -

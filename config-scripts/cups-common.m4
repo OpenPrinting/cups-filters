@@ -58,6 +58,7 @@ AC_PATH_PROG(RMDIR,rmdir)
 AC_PATH_PROG(SED,sed)
 AC_PATH_PROG(GS,gs)
 AC_PATH_PROG(PS2PS,ps2ps)
+AC_PATH_PROG(PDF2PS,pdf2ps)
 
 AC_MSG_CHECKING(for install-sh script)
 INSTALL="`pwd`/install-sh"
