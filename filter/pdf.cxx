@@ -108,7 +108,7 @@ static Object * get_resource_dict(XRef *xref,
         xref->fetch(resref->num, resref->gen, resdict);
     }
     else if (res.isDict()) {
-        resdict->copy(&res);
+        res.copy(resdict);
         resref->num = 0;
     }
     else

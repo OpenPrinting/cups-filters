@@ -134,14 +134,15 @@ static int generate_banner_pdf(banner_t *banner,
 
     if (banner->infos & INFO_IMAGEABLE_AREA) {
         fprintf(s, "q\n");
-        fprintf(s, "0 0 0 RG /a0 gs\n");
+        fprintf(s, "0 0 0 RG\n");
         fprintf(s, "%f %f %f %f re S\n", rect[0], rect[1], rect[2], rect[3]);
         fprintf(s, "Q\n");
     }
 
-    x = rect[0] + (rect[2] - rect[0]) * 0.1;
-    y = rect[1] + (rect[3] - rect[1]) * 0.5;
+    x = 83.662;
+    y = rect[1] + (rect[3] - rect[1]) * 0.4;
 
+    fprintf(s, "0 0 0 rg\n");
     fprintf(s, "BT\n");
     fprintf(s, "/bannertopdf-font 14 Tf\n");
     fprintf(s, "%f %f Td\n", x, y);

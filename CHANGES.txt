@@ -1,5 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.1 - 2011-02-13
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.2 - 2011-02-23
 -----------------------------------------------------------
+
+CHANGES IN V1.0.2
+
+	- bannertopdf: Fixed crash caused by wron Poppler API use.
+	- bannertopdf: Info text on test page came out in gray and not in
+	  black.
 
 CHANGES IN V1.0.1
 
