@@ -1,5 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.3 - 2011-03-01
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.4 - 2011-03-02
 -----------------------------------------------------------
+
+CHANGES IN V1.0.4
+
+	- bannertopdf: Output multiple copies of the test page if duplex
+	  and/or N-up is chosen, to let the test page appear on all possible
+	  positions of the sheet (Ubuntu bug #939530).
 
 CHANGES IN V1.0.3
 

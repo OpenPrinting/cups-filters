@@ -272,6 +272,51 @@ extern "C" void pdf_resize_page (pdf_t *doc,
 }
 
 
+extern "C" void pdf_duplicate_page (pdf_t *doc,
+                                    int pagenr,
+                                    int count)
+{
+    XRef *xref = doc->getXRef();
+    Ref *pageref = doc->getCatalog()->getPageRef(pagenr);
+    Object page, parentref, parent, kids, ref, countobj;
+    int i;
+
+    xref->fetch(pageref->num, pageref->gen, &page);
+    if (!page.isDict("Page")) {
+        fprintf(stderr, "Error: malformed pdf (invalid Page object)\n");
+        return;
+    }
+
+    page.dictLookupNF("Parent", &parentref);
+    parentref.fetch(xref, &parent);
+    if (!parent.isDict("Pages")) {
+        fprintf(stderr, "Error: malformed pdf (Page.Parent must point to a "
+                        "Pages object)\n");
+        return;
+    }
+
+    parent.dictLookup("Kids", &kids);
+    if (!kids.isArray()) {
+        fprintf(stderr, "Error: malformed pdf (Pages.Kids must be an array)\n");
+        return;
+    }
+
+    // Since we're dealing with single page pdfs, simply append the same page
+    // object to the end of the array
+    for (i = 0; i < count; i++) {
+        ref.initRef(pageref->num, pageref->gen);
+        kids.arrayAdd(&ref);
+        ref.free();
+    }
+
+    countobj.initInt(count);
+    parent.dictSet("Count", &countobj);
+    countobj.free();
+
+    xref->setModifiedObject(&parent, parentref.getRef());
+}
+
+
 extern "C" void pdf_write(pdf_t *doc,
                           FILE *file)
 {

@@ -35,6 +35,16 @@ static float get_float_option(const char *name,
 }
 
 
+static int get_int_option(const char *name,
+                          int noptions,
+                          cups_option_t *options,
+                          int def)
+{
+    const char *value = cupsGetOption(name, noptions, options);
+    return value ? atoi(value) : def;
+}
+
+
 static void get_pagesize(ppd_file_t *ppd,
                          int noptions,
                          cups_option_t *options,
@@ -72,6 +82,20 @@ static void get_pagesize(ppd_file_t *ppd,
     media_limits[3] = get_float_option("page-top",
                                        noptions, options,
                                        fabs(pagesize->top));
+}
+
+
+static int duplex_marked(ppd_file_t *ppd)
+{
+    return
+        ppdIsMarked(ppd, "Duplex", "DuplexNoTumble") ||
+        ppdIsMarked(ppd, "Duplex", "DuplexTumble") ||
+        ppdIsMarked(ppd, "JCLDuplex", "DuplexNoTumble") ||
+        ppdIsMarked(ppd, "JCLDuplex", "DuplexTumble") ||
+        ppdIsMarked(ppd, "EFDuplex", "DuplexNoTumble") ||
+        ppdIsMarked(ppd, "EFDuplex", "DuplexTumble") ||
+        ppdIsMarked(ppd, "KD03Duplex", "DuplexNoTumble") ||
+        ppdIsMarked(ppd, "KD03Duplex", "DuplexTumble");
 }
 
 
@@ -129,6 +153,7 @@ static int generate_banner_pdf(banner_t *banner,
     float media_limits[4];
     float page_scale;
     ppd_attr_t *attr;
+    int copies;
 
     if (!(doc = pdf_load_template(banner->template_file)))
         return 1;
@@ -220,6 +245,14 @@ static int generate_banner_pdf(banner_t *banner,
     fclose(s);
 
     pdf_prepend_stream(doc, 1, buf, len);
+
+    copies = get_int_option("number-up", noptions, options, 1);
+    if (duplex_marked(ppd))
+        copies *= 2;
+
+    if (copies > 1)
+        pdf_duplicate_page(doc, 1, copies);
+
     pdf_write(doc, stdout);
     free(buf);
     return 0;
