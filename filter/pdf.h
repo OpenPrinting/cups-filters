@@ -26,6 +26,7 @@ extern "C" {
 typedef struct PDFDoc pdf_t;
 
 pdf_t * pdf_load_template(const char *filename);
+void pdf_free(pdf_t *pdf);
 void pdf_write(pdf_t *doc, FILE *file);
 void pdf_prepend_stream(pdf_t *doc, int page, char *buf, size_t len);
 void pdf_add_type1_font(pdf_t *doc, int page, const char *name);

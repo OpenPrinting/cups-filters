@@ -255,6 +255,7 @@ static int generate_banner_pdf(banner_t *banner,
 
     pdf_write(doc, stdout);
     free(buf);
+    pdf_free(doc);
     return 0;
 }
 

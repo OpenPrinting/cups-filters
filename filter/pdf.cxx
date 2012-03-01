@@ -43,6 +43,12 @@ extern "C" pdf_t * pdf_load_template(const char *filename)
 }
 
 
+extern "C" void pdf_free(pdf_t *pdf)
+{
+    delete pdf;
+}
+
+
 extern "C" void pdf_prepend_stream(pdf_t *doc,
                                    int page,
                                    char *buf,
@@ -317,10 +323,47 @@ extern "C" void pdf_duplicate_page (pdf_t *doc,
 }
 
 
+class NonSeekableFileOutStream: public OutStream
+{
+public:
+    NonSeekableFileOutStream(FILE *f):
+        file(f), pos(0)
+    {
+    }
+
+    void close()
+    {
+    }
+
+    int getPos()
+    {
+        return this->pos;
+    }
+
+    void put(char c)
+    {
+        fputc(c, this->file);
+        this->pos++;
+    }
+
+    void printf(const char *fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        this->pos += vfprintf(this->file, fmt, args);
+        va_end(args);
+    }
+
+private:
+    FILE *file;
+    int pos;
+};
+
+
 extern "C" void pdf_write(pdf_t *doc,
                           FILE *file)
 {
-    FileOutStream outs(file, 0);
+    NonSeekableFileOutStream outs(file);
     doc->saveAs(&outs, writeForceRewrite);
 }
 

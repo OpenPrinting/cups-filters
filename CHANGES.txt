@@ -3,6 +3,9 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.4 - 2011-03-02
 
 CHANGES IN V1.0.4
 
+	- bannertopdf: Let byte offsets for the Xref table of the PDF output
+	  being determined correctly also when the output goes to stdout
+	  (Ubuntu bug #939735).
 	- bannertopdf: Output multiple copies of the test page if duplex
 	  and/or N-up is chosen, to let the test page appear on all possible
 	  positions of the sheet (Ubuntu bug #939530).
