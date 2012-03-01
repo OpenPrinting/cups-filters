@@ -43,15 +43,16 @@ extern "C" pdf_t * pdf_load_template(const char *filename)
 }
 
 
-extern "C" void pdf_append_stream(pdf_t *doc,
-                                  int page,
-                                  char *buf,
-                                  size_t len)
+extern "C" void pdf_prepend_stream(pdf_t *doc,
+                                   int page,
+                                   char *buf,
+                                   size_t len)
 {
     XRef *xref = doc->getXRef();
     Ref *pageref = doc->getCatalog()->getPageRef(page);
     Object dict, lenobj, stream;
     Object pageobj, contents;
+    Object array;
 
     xref->fetch(pageref->num, pageref->gen, &pageobj);
     if (!pageobj.isDict() || !pageobj.dictLookupNF("Contents", &contents)) {
@@ -67,17 +68,24 @@ extern "C" void pdf_append_stream(pdf_t *doc,
     dict.dictSet("Length", &lenobj);
     stream.initStream(new MemStream(buf, 0, len, &dict));
 
+    array.initArray(xref);
+    array.arrayAdd(&stream);
+
     if (contents.isStream()) {
-        Object array;
-        array.initArray(xref);
         array.arrayAdd(&contents);
-        array.arrayAdd(&stream);
-        pageobj.dictSet("Contents", &array);
     }
-    else if (contents.isArray())
-        contents.arrayAdd(&stream);
+    else if (contents.isArray()) {
+        int i, len = contents.arrayGetLength();
+        Object obj;
+        for (i = 0; i < len; i++) {
+            contents.arrayGet(i, &obj);
+            array.arrayAdd(&obj);
+        }
+    }
     else
         fprintf(stderr, "Error: malformed pdf\n");
+
+    pageobj.dictSet("Contents", &array);
 
     xref->setModifiedObject(&pageobj, *pageref);
     pageobj.free();
@@ -160,6 +168,106 @@ extern "C" void pdf_add_type1_font(pdf_t *doc,
     else
         xref->setModifiedObject(&resdict, resref);
 
+    pageobj.free();
+}
+
+
+static bool dict_lookup_rect(Object *dict,
+                             char *key,
+                             float rect[4])
+{
+    Object o;
+    Array *array;
+    int i;
+
+    if (!dict->dictLookup(key, &o))
+        return false;
+
+    if (!o.isArray()) {
+        o.free();
+        return false;
+    }
+
+    array = o.getArray();
+    for (i = 0; i < 4; i++) {
+        Object el;
+        if (array->get(i, &el) && el.isNum())
+            rect[i] = el.getNum();
+        el.free();
+    }
+
+    o.free();
+    return i == 4;
+}
+
+
+static void dict_set_rect(XRef *xref,
+                          Object *dict,
+                          char *key,
+                          float rect[4])
+{
+    Object array;
+    int i;
+
+    array.initArray(xref);
+
+    for (i = 0; i < 4; i++) {
+        Object el;
+        el.initReal(rect[i]);
+        array.arrayAdd(&el);
+    }
+
+    dict->dictSet(key, &array);
+}
+
+
+static void fit_rect(float oldrect[4],
+                     float newrect[4],
+                     float *scale)
+{
+    float oldwidth = oldrect[2] - oldrect[0];
+    float oldheight = oldrect[3] - oldrect[1];
+    float newwidth = newrect[2] - newrect[0];
+    float newheight = newrect[3] - newrect[1];
+
+    *scale = newwidth / oldwidth;
+    if (oldheight * *scale > newheight)
+        *scale = newheight / oldheight;
+}
+
+
+extern "C" void pdf_resize_page (pdf_t *doc,
+                                 int page,
+                                 float width,
+                                 float length,
+                                 float *scale)
+{
+    XRef *xref = doc->getXRef();
+    Ref *pageref = doc->getCatalog()->getPageRef(page);
+    Object pageobj;
+    float mediabox[4] = { 0.0, 0.0, width, length };
+    float old_mediabox[4];
+
+    xref->fetch(pageref->num, pageref->gen, &pageobj);
+    if (!pageobj.isDict()) {
+        fprintf(stderr, "Error: malformed pdf\n");
+        return;
+    }
+
+    if (!dict_lookup_rect (&pageobj, "MediaBox", old_mediabox)) {
+        fprintf(stderr, "Error: pdf doesn't contain a valid mediabox\n");
+        return;
+    }
+
+    fit_rect(old_mediabox, mediabox, scale);
+
+    dict_set_rect (xref, &pageobj, "MediaBox", mediabox);
+    dict_set_rect (xref, &pageobj, "CropBox", mediabox);
+    dict_set_rect (xref, &pageobj, "TrimBox", mediabox);
+    dict_set_rect (xref, &pageobj, "ArtBox", mediabox);
+    dict_set_rect (xref, &pageobj, "BleedBox", mediabox);
+
+    xref->setModifiedObject(&pageobj, *pageref);
     pageobj.free();
 }
 

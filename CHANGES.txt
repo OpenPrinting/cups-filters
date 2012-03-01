@@ -1,9 +1,17 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.2 - 2011-02-23
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.3 - 2011-02-29
 -----------------------------------------------------------
+
+CHANGES IN V1.0.3
+
+	- bannertopdf: Draw the frame to mark the non-printable borders 1pt
+	  smaller all around to assure that it is always visible, like it was
+	  done in bannertops.
+	- bannertopdf: Scale the page to fit onto the desired output page.
+	- bannertopdf: Get and output the correct media limits.
 
 CHANGES IN V1.0.2
 
-	- bannertopdf: Fixed crash caused by wron Poppler API use.
+	- bannertopdf: Fixed crash caused by wrong Poppler API use.
 	- bannertopdf: Info text on test page came out in gray and not in
 	  black.
 

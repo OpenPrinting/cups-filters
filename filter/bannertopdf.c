@@ -35,10 +35,12 @@ static float get_float_option(const char *name,
 }
 
 
-static void get_pagerect(float rect[4],            /* x, y, width, height */
-                         ppd_file_t *ppd,
+static void get_pagesize(ppd_file_t *ppd,
                          int noptions,
-                         cups_option_t *options)
+                         cups_option_t *options,
+                         float *width,
+                         float *length,
+                         float media_limits[4])
 {
     static const ppd_size_t defaultsize = {
         0,          /* marked */
@@ -55,18 +57,21 @@ static void get_pagerect(float rect[4],            /* x, y, width, height */
     if (!(pagesize = ppdPageSize(ppd, NULL)))
         pagesize = &defaultsize;
 
-    rect[0] = get_float_option("page-left",
-                               noptions, options,
-                               pagesize->left);
-    rect[1] = get_float_option("page-bottom",
-                               noptions, options,
-                               pagesize->bottom);
-    rect[2] = get_float_option("page-right",
-                               noptions, options,
-                               fabs(pagesize->right - pagesize->left));
-    rect[3] = get_float_option("page-top",
-                               noptions, options,
-                               fabs(pagesize->top - pagesize->bottom));
+    *width = pagesize->width;
+    *length = pagesize->length;
+
+    media_limits[0] = get_float_option("page-left",
+                                       noptions, options,
+                                       pagesize->left);
+    media_limits[1] = get_float_option("page-bottom",
+                                       noptions, options,
+                                       pagesize->bottom);
+    media_limits[2] = get_float_option("page-right",
+                                       noptions, options,
+                                       fabs(pagesize->right));
+    media_limits[3] = get_float_option("page-top",
+                                       noptions, options,
+                                       fabs(pagesize->top));
 }
 
 
@@ -120,14 +125,19 @@ static int generate_banner_pdf(banner_t *banner,
     size_t len;
     FILE *s;
     pdf_t *doc;
-    float rect[4];
-    float x, y;
+    float page_width, page_length;
+    float media_limits[4];
+    float page_scale;
     ppd_attr_t *attr;
 
     if (!(doc = pdf_load_template(banner->template_file)))
         return 1;
 
-    get_pagerect(rect, ppd, noptions, options);
+    get_pagesize(ppd, noptions, options,
+                 &page_width, &page_length, media_limits);
+
+    pdf_resize_page (doc, 1, page_width, page_length, &page_scale);
+
     pdf_add_type1_font(doc, 1, "Courier");
 
     s = open_memstream(&buf, &len);
@@ -135,22 +145,27 @@ static int generate_banner_pdf(banner_t *banner,
     if (banner->infos & INFO_IMAGEABLE_AREA) {
         fprintf(s, "q\n");
         fprintf(s, "0 0 0 RG\n");
-        fprintf(s, "%f %f %f %f re S\n", rect[0], rect[1], rect[2], rect[3]);
+        fprintf(s, "%f %f %f %f re S\n", media_limits[0] + 1.0,
+                                         media_limits[1] + 1.0,
+                                         media_limits[2] - media_limits[0] - 2.0,
+                                         media_limits[3] - media_limits[1] - 2.0);
         fprintf(s, "Q\n");
     }
 
-    x = 83.662;
-    y = rect[1] + (rect[3] - rect[1]) * 0.4;
+    fprintf(s, "%f 0 0 %f 0 0 cm\n", page_scale, page_scale);
 
     fprintf(s, "0 0 0 rg\n");
     fprintf(s, "BT\n");
     fprintf(s, "/bannertopdf-font 14 Tf\n");
-    fprintf(s, "%f %f Td\n", x, y);
+    fprintf(s, "83.662 335.0 Td\n");
     fprintf(s, "17 TL\n");
 
     if (banner->infos & INFO_IMAGEABLE_AREA)
-        info_linef(s, "Media Limits", "%f x %f inches",
-                   rect[2] / 72.0, rect[3] / 72.0);
+        info_linef(s, "Media Limits", "%.2f x %.2f to %.2f x %.2f inches",
+                   media_limits[0] / 72.0,
+                   media_limits[1] / 72.0,
+                   media_limits[2] / 72.0,
+                   media_limits[3] / 72.0);
 
     if (banner->infos & INFO_JOB_BILLING)
         info_line(s, "Billing Information\n",
@@ -204,7 +219,7 @@ static int generate_banner_pdf(banner_t *banner,
     fprintf(s, "ET\n");
     fclose(s);
 
-    pdf_append_stream(doc, 1, buf, len);
+    pdf_prepend_stream(doc, 1, buf, len);
     pdf_write(doc, stdout);
     free(buf);
     return 0;
