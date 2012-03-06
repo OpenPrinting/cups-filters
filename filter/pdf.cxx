@@ -56,9 +56,10 @@ extern "C" void pdf_prepend_stream(pdf_t *doc,
 {
     XRef *xref = doc->getXRef();
     Ref *pageref = doc->getCatalog()->getPageRef(page);
-    Object dict, lenobj, stream;
+    Object dict, lenobj, stream, streamrefobj;
     Object pageobj, contents;
     Object array;
+    Ref r;
 
     xref->fetch(pageref->num, pageref->gen, &pageobj);
     if (!pageobj.isDict() || !pageobj.dictLookupNF("Contents", &contents)) {
@@ -74,8 +75,11 @@ extern "C" void pdf_prepend_stream(pdf_t *doc,
     dict.dictSet("Length", &lenobj);
     stream.initStream(new MemStream(buf, 0, len, &dict));
 
+    r = xref->addIndirectObject(&stream);
+    streamrefobj.initRef(r.num, r.gen);
+
     array.initArray(xref);
-    array.arrayAdd(&stream);
+    array.arrayAdd(&streamrefobj);
 
     if (contents.isStream()) {
         array.arrayAdd(&contents);
@@ -84,7 +88,7 @@ extern "C" void pdf_prepend_stream(pdf_t *doc,
         int i, len = contents.arrayGetLength();
         Object obj;
         for (i = 0; i < len; i++) {
-            contents.arrayGet(i, &obj);
+            contents.arrayGetNF(i, &obj);
             array.arrayAdd(&obj);
         }
     }
@@ -309,7 +313,7 @@ extern "C" void pdf_duplicate_page (pdf_t *doc,
 
     // Since we're dealing with single page pdfs, simply append the same page
     // object to the end of the array
-    for (i = 0; i < count; i++) {
+    for (i = 1; i < count; i++) {
         ref.initRef(pageref->num, pageref->gen);
         kids.arrayAdd(&ref);
         ref.free();

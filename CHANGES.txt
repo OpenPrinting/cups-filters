@@ -1,8 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.4 - 2011-03-02
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.4 - 2011-03-07
 -----------------------------------------------------------
 
 CHANGES IN V1.0.4
 
+	- bannertopdf: Fix off-by-one error in page duplication
+	- bannertopdf: Put indirect references to streams into the page's
+	  contents
 	- bannertopdf: Let byte offsets for the Xref table of the PDF output
 	  being determined correctly also when the output goes to stdout
 	  (Ubuntu bug #939735).
