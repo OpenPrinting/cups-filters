@@ -329,7 +329,7 @@ fontembed/libfontembed.a:
 
 texttopdf:	texttopdf.o textcommon.o common.o pdfutils.o fontembed/libfontembed.a
 	echo Linking $@...
-	$(CC) $(LDFLAGS) -o $@ texttopdf.o textcommon.o common.o pdfutils.o -Lfontembed -lfontembed $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ texttopdf.o textcommon.o common.o pdfutils.o -Lfontembed -lfontembed $(FONTCONFIG_LIBS) $(LIBS)
 
 
 #

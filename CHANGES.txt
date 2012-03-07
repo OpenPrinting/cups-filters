@@ -3,6 +3,9 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.4 - 2011-03-07
 
 CHANGES IN V1.0.4
 
+	- texttopdf: Fall back to altermative fonts via fontconfig if the
+	  FreeMono TrueType fonts are not installed (Debian bugs #495598
+	  and #662660).
 	- bannertopdf: Fix off-by-one error in page duplication
 	- bannertopdf: Put indirect references to streams into the page's
 	  contents

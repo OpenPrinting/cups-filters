@@ -32,6 +32,8 @@
 #include "fontembed/embed.h"
 #include <assert.h>
 #include "fontembed/sfnt.h"
+#include <fontconfig/fontconfig.h>
+#include <string.h>
 
 /*
  * Globals...
@@ -49,6 +51,44 @@ EMB_PARAMS *font_load(const char *datadir,const char *font)
   snprintf(filename, sizeof(filename), "%s/fonts/%s", datadir, font);
 
   OTF_FILE *otf=otf_load(filename);
+
+  if (!otf) {
+
+    FcPattern *pattern;
+    FcFontSet *candidates;
+    FcChar8   *fontformat, *fontname = NULL;
+    int i, spacing;
+
+    /* Remove extension from the passed file name
+       to turn it into a minimal "pattern" in the fontconfig sense */
+    if (strrchr(filename, '.'))
+       *strrchr(filename, '.') = '\0';
+
+    FcInit ();
+    pattern = FcNameParse (filename);
+    FcConfigSubstitute (0, pattern, FcMatchPattern);
+    FcDefaultSubstitute (pattern);
+
+    /* Receive a sorted list of fonts matching our pattern */
+    candidates = FcFontSort (0, pattern, FcTrue, 0, 0);
+    FcPatternDestroy (pattern);
+
+    /* In the list of fonts returned by FcFontSort()
+       find the first one that is both in TrueType format and monospaced */
+    for (i = 0; i < candidates->nfont; i++) {
+      FcPatternGetString  (candidates->fonts[i], FC_FONTFORMAT, 0, &fontformat);
+      FcPatternGetInteger (candidates->fonts[i], FC_SPACING,    0, &spacing);
+
+      if ((strcmp(fontformat, "TrueType") == 0) && (spacing == FC_MONO)) {
+        fontname = FcPatternFormat (candidates->fonts[i], "%{file|cescape}");
+        break;
+      }
+    }
+    FcFontSetDestroy (candidates);
+
+    otf = otf_load(fontname);
+  }
+
   if (!otf) {
     // TODO: try /usr/share/fonts/*/*/%s.ttf
     return NULL;
