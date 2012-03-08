@@ -1,5 +1,10 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.4 - 2011-03-07
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.5 - 2011-03-08
 -----------------------------------------------------------
+
+CHANGES IN V1.0.5
+
+	- texttopdf: Complete the implementation of fontconfig-based font
+	  selection (Debian bug #663070).
 
 CHANGES IN V1.0.4
 

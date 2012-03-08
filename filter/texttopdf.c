@@ -33,7 +33,6 @@
 #include <assert.h>
 #include "fontembed/sfnt.h"
 #include <fontconfig/fontconfig.h>
-#include <string.h>
 
 /*
  * Globals...
@@ -43,51 +42,40 @@
 int     UTF8 = 1;               /* Use UTF-8 encoding? */
 #endif /* CUPS_1_4 */
 
-EMB_PARAMS *font_load(const char *datadir,const char *font);
+EMB_PARAMS *font_load(const char *font);
 
-EMB_PARAMS *font_load(const char *datadir,const char *font)
+EMB_PARAMS *font_load(const char *font)
 {
-  char		filename[1024];	/* Glyph filenames */
-  snprintf(filename, sizeof(filename), "%s/fonts/%s", datadir, font);
+  OTF_FILE *otf;
 
-  OTF_FILE *otf=otf_load(filename);
+  FcPattern *pattern;
+  FcFontSet *candidates;
+  FcChar8   *fontformat, *fontname = NULL;
+  int i, spacing;
 
-  if (!otf) {
+  FcInit ();
+  pattern = FcNameParse (font);
+  FcConfigSubstitute (0, pattern, FcMatchPattern);
+  FcDefaultSubstitute (pattern);
 
-    FcPattern *pattern;
-    FcFontSet *candidates;
-    FcChar8   *fontformat, *fontname = NULL;
-    int i, spacing;
+  /* Receive a sorted list of fonts matching our pattern */
+  candidates = FcFontSort (0, pattern, FcTrue, 0, 0);
+  FcPatternDestroy (pattern);
 
-    /* Remove extension from the passed file name
-       to turn it into a minimal "pattern" in the fontconfig sense */
-    if (strrchr(filename, '.'))
-       *strrchr(filename, '.') = '\0';
+  /* In the list of fonts returned by FcFontSort()
+     find the first one that is both in TrueType format and monospaced */
+  for (i = 0; i < candidates->nfont; i++) {
+    FcPatternGetString  (candidates->fonts[i], FC_FONTFORMAT, 0, &fontformat);
+    FcPatternGetInteger (candidates->fonts[i], FC_SPACING,    0, &spacing);
 
-    FcInit ();
-    pattern = FcNameParse (filename);
-    FcConfigSubstitute (0, pattern, FcMatchPattern);
-    FcDefaultSubstitute (pattern);
-
-    /* Receive a sorted list of fonts matching our pattern */
-    candidates = FcFontSort (0, pattern, FcTrue, 0, 0);
-    FcPatternDestroy (pattern);
-
-    /* In the list of fonts returned by FcFontSort()
-       find the first one that is both in TrueType format and monospaced */
-    for (i = 0; i < candidates->nfont; i++) {
-      FcPatternGetString  (candidates->fonts[i], FC_FONTFORMAT, 0, &fontformat);
-      FcPatternGetInteger (candidates->fonts[i], FC_SPACING,    0, &spacing);
-
-      if ((strcmp(fontformat, "TrueType") == 0) && (spacing == FC_MONO)) {
-        fontname = FcPatternFormat (candidates->fonts[i], "%{file|cescape}");
-        break;
-      }
+    if ((strcmp(fontformat, "TrueType") == 0) && (spacing == FC_MONO)) {
+      fontname = FcPatternFormat (candidates->fonts[i], "%{file|cescape}/%{index}");
+      break;
     }
-    FcFontSetDestroy (candidates);
-
-    otf = otf_load(fontname);
   }
+  FcFontSetDestroy (candidates);
+
+  otf = otf_load(fontname);
 
   if (!otf) {
     // TODO: try /usr/share/fonts/*/*/%s.ttf
@@ -560,7 +548,7 @@ WriteProlog(const char *title,		/* I - Title of job */
               }
 
             if (k==num_fonts) {  // not found
-	      fonts[num_fonts] = Fonts[NumFonts][i] = font_load(datadir,valptr);
+	      fonts[num_fonts] = Fonts[NumFonts][i] = font_load(valptr);
               if (!fonts[num_fonts]) { // font missing/corrupt, replace by first
                 fprintf(stderr,"WARNING: Ignored bad font \"%s\"\n",valptr);
                 break;
@@ -744,7 +732,7 @@ WriteProlog(const char *title,		/* I - Title of job */
               }
 
             if (k==num_fonts) {  // not found
-	      fonts[num_fonts] = Fonts[NumFonts][i] = font_load(datadir,valptr);
+	      fonts[num_fonts] = Fonts[NumFonts][i] = font_load(valptr);
               if (!fonts[num_fonts]) { // font missing/corrupt, replace by first
                 fprintf(stderr,"WARNING: Ignored bad font \"%s\"\n",valptr);
                 break;

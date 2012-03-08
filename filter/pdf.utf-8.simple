@@ -28,5 +28,5 @@ charset utf8
 # printing.
 #
 
-0000 04FF ltor single FreeMono.ttf FreeMonoBold.ttf FreeMonoOblique.ttf FreeMonoBoldOblique.ttf
-0500 05FF rtol single FreeMono.ttf
+0000 04FF ltor single FreeMono FreeMono:bold FreeMono:oblique FreeMono:bold:oblique
+0500 05FF rtol single FreeMono

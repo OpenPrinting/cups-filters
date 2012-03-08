@@ -28,13 +28,13 @@ charset utf8
 # printing.
 #
 
-0000 00FF ltor single COUR.TTF COURBD.TTF COURI.TTF COURBI.TTF
-0100 02FF ltor single DejaVuSansMono.ttf DejaVuSansMono-Bold.ttf DejaVuSansMono-Oblique.ttf DejaVuSansMono-BoldOblique.ttf
-0300 03FF ltor single DejaVuSansMono.ttf
-0400 04FF ltor single DejaVuSansMono.ttf DejaVuSansMono-Bold.ttf DejaVuSansMono-Oblique.ttf DejaVuSansMono-BoldOblique.ttf
-0500 05FF rtol single FreeMono.ttf
-1E00 1EFF ltor single COUR.TTF COURBD.TTF COURI.TTF COURBI.TTF
-2000 21FF ltor single DejaVuSansMono.ttf DejaVuSansMono-Bold.ttf DejaVuSansMono-Oblique.ttf DejaVuSansMono-BoldOblique.ttf
-2200 23FF ltor single SYMBOL.TTF
-3000 9FFF ltor double uming.ttc/0
-#0400 04FF ltor single FreeMono.ttf FreeMonoBold.ttf FreeMonoOblique.ttf FreeMonoBoldOblique.ttf
+0000 00FF ltor single CourierNew CourierNew:bold CourierNew:italic CourierNew:bold:italic
+0100 02FF ltor single DejaVuSansMono DejaVuSansMono:bold DejaVuSansMono:oblique DejaVuSansMono:bold:oblique
+0300 03FF ltor single DejaVuSansMono
+0400 04FF ltor single DejaVuSansMono DejaVuSansMono:bold DejaVuSansMono:oblique DejaVuSansMono:bold:oblique
+0500 05FF rtol single FreeMono
+1E00 1EFF ltor single CourierNew CourierNew:bold CourierNew:italic CourierNew:bold:italic
+2000 21FF ltor single DejaVuSansMono DejaVuSansMono:bold DejaVuSansMono:oblique DejaVuSansMono:bold:oblique
+2200 23FF ltor single Symbol
+3000 9FFF ltor double ARPLUMingCN
+#0400 04FF ltor single FreeMono FreeMono:bold FreeMono:oblique FreeMono:bold:oblique
