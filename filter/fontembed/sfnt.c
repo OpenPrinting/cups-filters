@@ -7,7 +7,7 @@
 
 // TODO?
 // get_SHORT(head+48) // fontDirectionHint
-/* reqd. Tables: cmap, head, hhea, hmtx, maxp, name, OS/2, post     .
+/* reqd. Tables: cmap, head, hhea, hmtx, maxp, name, OS/2, post
  OTF: glyf,loca [cvt,fpgm,prep]
  */
 
@@ -78,7 +78,9 @@ static OTF_FILE *otf_new(FILE *f) // {{{
 }
 // }}}
 
-static char *otf_read(OTF_FILE *otf,char *buf,long pos,int length) // {{{ -  will alloc, if >buf ==NULL, returns >buf, or NULL on error
+// will alloc, if >buf ==NULL, returns >buf, or NULL on error
+// NOTE: you probably want otf_get_table()
+static char *otf_read(OTF_FILE *otf,char *buf,long pos,int length) // {{{
 {
   char *ours=NULL;
 
@@ -117,18 +119,6 @@ static char *otf_read(OTF_FILE *otf,char *buf,long pos,int length) // {{{ -  wil
   }
  
   return buf;
-}
-// }}}
-
-static unsigned int otf_checksum(const char *buf, unsigned int len) // {{{
-{
-  unsigned int ret=0;
-
-  for (len=(len+3)/4;len>0;len--,buf+=4) {
-    ret+=get_ULONG(buf);
-  }
-
-  return ret;
 }
 // }}}
 
@@ -368,7 +358,20 @@ void otf_close(OTF_FILE *otf) // {{{
 }
 // }}}
 
-static int otf_find_table(OTF_FILE *otf,unsigned int tag) // {{{ -1 on error
+static int otf_dirent_compare(const void *a,const void *b) // {{{
+{
+  const unsigned int aa=((const OTF_DIRENT *)a)->tag;
+  const unsigned int bb=((const OTF_DIRENT *)b)->tag;
+  if (aa<bb) {
+    return -1;
+  } else if (aa>bb) {
+    return 1;
+  }
+  return 0;
+}
+// }}}
+
+int otf_find_table(OTF_FILE *otf,unsigned int tag) // {{{  - table_index  or -1 on error
 {
 #if 0
   // binary search would require raw table
@@ -396,6 +399,12 @@ static int otf_find_table(OTF_FILE *otf,unsigned int tag) // {{{ -1 on error
   free(tables);
   if (result) {
     return (result-tables)/16;
+  }
+#elif 1
+  OTF_DIRENT key={.tag=tag},*res;
+  res=bsearch(&key,otf->tables,otf->numTables,sizeof(otf->tables[0]),otf_dirent_compare);
+  if (res) {
+    return (res-otf->tables);
   }
 #else
   int iA;
@@ -441,7 +450,7 @@ char *otf_get_table(OTF_FILE *otf,unsigned int tag,int *ret_len) // {{{
 }
 // }}}
 
-int otf_load_glyf(OTF_FILE *otf) // {{{ - 0 on success
+int otf_load_glyf(OTF_FILE *otf) // {{{  - 0 on success
 {
   assert((otf->flags&OTF_F_FMT_CFF)==0); // not for CFF
   int iA,len;
@@ -514,7 +523,7 @@ int otf_load_glyf(OTF_FILE *otf) // {{{ - 0 on success
 }
 // }}}
 
-int otf_load_more(OTF_FILE *otf) // {{{ -  0 on success
+int otf_load_more(OTF_FILE *otf) // {{{  - 0 on success   => hhea,hmtx,name,[glyf]
 {
   int iA;
 
@@ -583,7 +592,7 @@ int otf_load_more(OTF_FILE *otf) // {{{ -  0 on success
 }
 // }}}
 
-int otf_load_cmap(OTF_FILE *otf) // {{{ -  0 on success
+int otf_load_cmap(OTF_FILE *otf) // {{{  - 0 on success
 {
   int iA;
   int len;
@@ -752,12 +761,12 @@ unsigned short otf_from_unicode(OTF_FILE *otf,int unicode) // {{{ 0 = missing
                            get_USHORT(otf->unimap+8),
                            get_USHORT(otf->unimap+10),
                            get_USHORT(otf->unimap+12),1);
-  if (result>=otf->unimap+14+segCountX2) {
-    assert(0); // bad font, no 0xffff
+  if (result>=otf->unimap+14+segCountX2) { // outside of endCode[segCount]
+    assert(0); // bad font, no 0xffff sentinel
     return 0;
   }
 
-  result+=2+segCountX2;
+  result+=2+segCountX2; // jump over padding into startCode[segCount]
   const unsigned short startCode=get_USHORT(result);
   if (startCode>unicode) {
     return 0;
@@ -765,7 +774,8 @@ unsigned short otf_from_unicode(OTF_FILE *otf,int unicode) // {{{ 0 = missing
   result+=2*segCountX2;
   const unsigned short rangeOffset=get_USHORT(result);
   if (rangeOffset) {
-    return get_USHORT(result+rangeOffset+2*(unicode-startCode));
+    return get_USHORT(result+rangeOffset+2*(unicode-startCode)); // the so called "obscure indexing trick" into glyphIdArray[]
+    // NOTE: this is according to apple spec; microsoft says we must add delta (probably incorrect; fonts probably have delta==0), but only if !=0
   } else {
     const short delta=get_SHORT(result-segCountX2);
     return (delta+unicode)&0xffff;
@@ -774,248 +784,7 @@ unsigned short otf_from_unicode(OTF_FILE *otf,int unicode) // {{{ 0 = missing
 }
 // }}}
 
-#include "bitset.h"
-
-// include components (set bit in >glyphs) of currently loaded compound glyph (with >curgid)
-// returns additional space requirements (when bits below >donegid are touched)
-static int otf_subset_glyf(OTF_FILE *otf,int curgid,int donegid,BITSET glyphs) // {{{
-{
-  int ret=0;
-  if (get_SHORT(otf->gly)>=0) { // not composite
-    return ret; // done
-  }
-
-  char *cur=otf->gly+10;
-
-  unsigned short flags;
-  do {
-    flags=get_USHORT(cur);
-    const unsigned short sub_gid=get_USHORT(cur+2);
-    assert(sub_gid<otf->numGlyphs);
-    if (!bit_check(glyphs,sub_gid)) {
-      // bad: temporarily load sub glyph
-      const int len=otf_get_glyph(otf,sub_gid);
-      assert(len>0);
-      bit_set(glyphs,sub_gid);
-      if (sub_gid<donegid) {
-        ret+=len;
-        ret+=otf_subset_glyf(otf,sub_gid,donegid,glyphs); // composite of composites?, e.g. in DejaVu
-      }
-      const int res=otf_get_glyph(otf,curgid); // reload current glyph
-      assert(res);
-    }
-    
-    // skip parameters
-    cur+=6;
-    if (flags&0x01) {
-      cur+=2;
-    }
-    if (flags&0x08) {
-      cur+=2;
-    } else if (flags&0x40) {
-      cur+=4;
-    } else if (flags&0x80) {
-      cur+=8;
-    }
-  } while (flags&0x20); // more components
-
-  return ret;
-}
-// }}}
-
-int otf_subset2(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{{ - returns number of bytes written
-{
-  assert(otf);
-  assert(glyphs);
-  assert(output);
-
-  int iA,b,c;
-  int ret=0;
-
-  // first pass
-  bit_set(glyphs,0); // .notdef always required
-  int glyfSize=0;
-  for (iA=0,b=0,c=1;iA<otf->numGlyphs;iA++,c<<=1) {
-    if (!c) {
-      b++;
-      c=1;
-    }
-    if (glyphs[b]&c) {
-      int len=otf_get_glyph(otf,iA);
-      if (len<0) {
-        assert(0);
-        return -1;
-      } else if (len>0) {
-        glyfSize+=len;
-        len=otf_subset_glyf(otf,iA,iA,glyphs);
-        if (len<0) {
-          assert(0);
-          return -1;
-        }
-        glyfSize+=len;
-      }
-    }
-  }
-
-  int locaSize=((otf->numGlyphs+1)*(otf->indexToLocFormat+1)*2+3)&~3;
-  glyfSize=(glyfSize+3)&~3;
-  // second pass
-  char *new_loca=malloc(locaSize);
-  char *new_glyf=malloc(glyfSize);
-  if ( (!new_loca)||(!new_glyf) ) {
-    fprintf(stderr,"Bad alloc: %m\n");
-    assert(0);
-    free(new_loca);
-    free(new_glyf);
-    return -1;
-  }
-
-  int offset=0;
-  for (iA=0,b=0,c=1;iA<otf->numGlyphs;iA++,c<<=1) {
-    if (!c) {
-      b++;
-      c=1;
-    }
-
-    assert(offset%2==0);
-    // TODO? change format? if glyfSize<0x20000 
-    if (otf->indexToLocFormat==0) {
-      set_USHORT(new_loca+iA*2,offset/2);
-    } else { // ==1
-      set_ULONG(new_loca+iA*4,offset);
-    }
-
-    if (glyphs[b]&c) {
-      const int len=otf_get_glyph(otf,iA);
-      assert(len>=0);
-      memcpy(new_glyf+offset,otf->gly,len);
-      offset+=len;
-    }
-  }
-  // last entry
-  if (otf->indexToLocFormat==0) {
-    set_USHORT(new_loca+otf->numGlyphs*2,offset/2);
-  } else { // ==1
-    set_ULONG(new_loca+otf->numGlyphs*4,offset);
-  }
-  // zero padding
-  assert(glyfSize-offset<4);
-  for (iA=offset;iA<glyfSize;iA++) {
-    new_glyf[iA]=0;
-  }
-  assert(offset<=glyfSize);
-//assert(offset==glyfSize); // else TODO 0 padding
-
-  // copy some tables
-#define MAX_TABLES 11
-  int iB,new_numTables=MAX_TABLES;
-  OTF_DIRENT new_tables[MAX_TABLES]={
-      {OTF_TAG('c','m','a','p'),},
-      {OTF_TAG('c','v','t',' '),},
-      {OTF_TAG('f','p','g','m'),},
-      {OTF_TAG('g','l','y','f'),},
-      {OTF_TAG('h','e','a','d'),},
-      {OTF_TAG('h','h','e','a'),},
-      {OTF_TAG('h','m','t','x'),},
-      {OTF_TAG('l','o','c','a'),},
-      {OTF_TAG('m','a','x','p'),},
-      {OTF_TAG('n','a','m','e'),},
-      {OTF_TAG('p','r','e','p'),}};
-  for (iA=0,iB=0;(iA<otf->numTables)&&(iB<MAX_TABLES);) {
-    if (otf->tables[iA].tag==new_tables[iB].tag) {
-      new_tables[iB].checkSum=otf->tables[iA].checkSum;
-      new_tables[iB].offset=iA;
-      new_tables[iB].length=otf->tables[iA].length;
-      iA++;
-      iB++;
-    } else if (otf->tables[iA].tag<new_tables[iB].tag) {
-      iA++;
-    } else {
-      new_tables[iB].tag=0; // don't output
-      iB++;
-      new_numTables--;
-    }
-  }
-
-  // now we have to know all the checksums and lengths
-  //TODO ? reduce cmap [to (1,0) ;-)]
-  // glyf
-  new_tables[3].checkSum=otf_checksum(new_glyf,glyfSize);
-  new_tables[3].length=offset;
-  // loca
-  new_tables[7].checkSum=otf_checksum(new_loca,locaSize);
-  new_tables[7].length=(otf->numGlyphs+1)*(otf->indexToLocFormat+1)*2;
-
-  // offset table + directory
-  char new_start[12+MAX_TABLES*16];
-  set_ULONG(new_start,0x00010000); // TODO ? true / original value
-  set_USHORT(new_start+4,new_numTables);
-  otf_bsearch_params(new_numTables,16,&iA,&iB,&c); 
-  set_USHORT(new_start+6,iA);
-  set_USHORT(new_start+8,iB);
-  set_USHORT(new_start+10,c);
-
-  unsigned int csum=0;
-  offset=12+16*new_numTables;
-  iB=12;
-  for (iA=0;iA<MAX_TABLES;iA++) {
-    if (!new_tables[iA].tag) {
-      continue;
-    }
-    set_ULONG(new_start+iB,new_tables[iA].tag);
-    set_ULONG(new_start+iB+4,new_tables[iA].checkSum);
-    set_ULONG(new_start+iB+8,offset);
-    set_ULONG(new_start+iB+12,new_tables[iA].length);
-    iB+=16;
-    offset+=(new_tables[iA].length+3)&~3;
-    csum+=new_tables[iA].checkSum;
-  }
-  assert(iB==12+16*new_numTables);
-  (*output)(new_start,iB,context);
-  ret+=iB;
-  csum+=otf_checksum(new_start,iB);
-
-  // now output the tables / copy them
-  iB=12+8;
-  for (iA=0;iA<MAX_TABLES;iA++) {
-    if (!new_tables[iA].tag) {
-      continue;
-    }
-    if (iA==3) { // glyf
-      (*output)(new_glyf,glyfSize,context);
-      ret+=glyfSize;
-    } else if (iA==7) { // loca
-      (*output)(new_loca,locaSize,context);
-      ret+=locaSize;
-    } else { // just copy
-      const OTF_DIRENT *table=otf->tables+new_tables[iA].offset;
-      char *data=otf_read(otf,NULL,table->offset,table->length);
-      assert(data);
-      if (iA==4) { // head. fix global checksum
-        set_ULONG(data+8,0xb1b0afba-csum);
-      }
-      assert(ret==get_ULONG(new_start+iB));
-      (*output)(data,(table->length+3)&~3,context);
-      ret+=(table->length+3)&~3;
-      free(data);
-    }
-    iB+=16;
-  }
-
-  // TODO? suggested ordering
-  // head, hhea, maxp, hmtx, cmap, fpgm, prep, cvt, loca, glyf, name
-
-  // copy some tables [cvt,fpgm,(glyf),head!,hhea,hmtx,(loca),maxp,name(?),prep]
-
-  //TODO (cmap for non-cid)
-
-  free(new_loca);
-  free(new_glyf);
-  return ret;
-#undef MAX_TABLES
-}
-// }}}
-
+/** output stuff **/
 int otf_action_copy(void *param,int table_no,OUTPUT_FN output,void *context) // {{{
 {
   OTF_FILE *otf=param;
@@ -1026,6 +795,8 @@ int otf_action_copy(void *param,int table_no,OUTPUT_FN output,void *context) // 
     return table->length;
   }
 
+// TODO? copy_block(otf->f,table->offset,(table->length+3)&~3,output,context);
+// problem: PS currently depends on single-output.  also checksum not possible
   char *data=otf_read(otf,NULL,table->offset,table->length);
   if (!data) {
     return -1;
@@ -1038,10 +809,11 @@ int otf_action_copy(void *param,int table_no,OUTPUT_FN output,void *context) // 
 // }}}
 
 // TODO? >modified time-stamp?
+// Note: don't use this directly. otf_write_sfnt will internally replace otf_action_copy for head with this
 int otf_action_copy_head(void *param,int csum,OUTPUT_FN output,void *context) // {{{
 {
   OTF_FILE *otf=param;
-  const int table_no=otf_find_table(otf,OTF_TAG('h','e','a','d'));
+  const int table_no=otf_find_table(otf,OTF_TAG('h','e','a','d')); // we can't have csum AND table_no ... never mind!
   assert(table_no!=-1);
   const OTF_DIRENT *table=otf->tables+table_no;
 
@@ -1089,27 +861,68 @@ int otf_action_replace(void *param,int length,OUTPUT_FN output,void *context) //
 }
 // }}}
 
+/* windows "works best" with the following ordering:
+  head, hhea, maxp, OS/2, hmtx, LTSH, VDMX, hdmx, cmap, fpgm, prep, cvt, loca, glyf, kern, name, post, gasp, PCLT, DSIG
+or for CFF:
+  head, hhea, maxp, OS/2, name, cmap, post, CFF, (other tables, as convenient)
+*/
+#define NUM_PRIO 20
+static const struct { int prio; unsigned int tag; } otf_tagorder_win[]={ // {{{
+  {19,OTF_TAG('D','S','I','G')},
+  { 5,OTF_TAG('L','T','S','H')},
+  { 3,OTF_TAG('O','S','/','2')},
+  {18,OTF_TAG('P','C','L','T')},
+  { 6,OTF_TAG('V','D','M','X')},
+  { 8,OTF_TAG('c','m','a','p')},
+  {11,OTF_TAG('c','v','t',' ')},
+  { 9,OTF_TAG('f','p','g','m')},
+  {17,OTF_TAG('g','a','s','p')},
+  {13,OTF_TAG('g','l','y','f')},
+  { 7,OTF_TAG('h','d','m','x')},
+  { 0,OTF_TAG('h','e','a','d')},
+  { 1,OTF_TAG('h','h','e','a')},
+  { 4,OTF_TAG('h','m','t','x')},
+  {14,OTF_TAG('k','e','r','n')},
+  {12,OTF_TAG('l','o','c','a')},
+  { 2,OTF_TAG('m','a','x','p')},
+  {15,OTF_TAG('n','a','m','e')},
+  {16,OTF_TAG('p','o','s','t')},
+  {10,OTF_TAG('p','r','e','p')}};
+// }}}
+
 int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUTPUT_FN output,void *context) // {{{
 {
   int iA;
   int ret;
 
-  // find head
-  int headAt=-1;
-  for (iA=0;iA<numTables;iA++) {
-    if ( (otw[iA].tag==OTF_TAG('h','e','a','d'))&&
-         (otw[iA].action==otf_action_copy) ) {
-      // only this supported for now
-      headAt=iA;
-    }
+  int *order=malloc(sizeof(int)*numTables); // temporary
+  char *start=malloc(12+16*numTables);
+  if ( (!order)||(!start) ) {
+    fprintf(stderr,"Bad alloc: %m\n");
+    free(order);
+    free(start);
+    return -1;
   }
 
-  // TODO? sort tables 
+  if (1) { // sort tables 
+    int priolist[NUM_PRIO]={0,};
 
-  char *start=malloc(12+16*numTables);
-  if (!start) {
-    fprintf(stderr,"Bad alloc: %m\n");
-    return -1;
+    int iA=numTables-1,iB=sizeof(otf_tagorder_win)/sizeof(otf_tagorder_win[0])-1;
+    int ret=numTables-1;
+    while ( (iA>=0)&&(iB>=0) ) {
+      if (otw[iA].tag==otf_tagorder_win[iB].tag) {
+        priolist[otf_tagorder_win[iB--].prio]=1+iA--;
+      } else if (otw[iA].tag>otf_tagorder_win[iB].tag) {
+        order[ret--]=iA--;
+      } else { // <
+        iB--;
+      }
+    }
+    for (iA=NUM_PRIO-1;iA>=0;iA--) { // pick them up
+      if (priolist[iA]) {
+        order[ret--]=priolist[iA]-1;
+      }
+    }
   }
 
   // the header
@@ -1123,36 +936,40 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
 
   // first pass: calculate table directory / offsets and checksums
   unsigned int globalSum=0,csum;
-  int pos,res;
   int offset=12+16*numTables;
-  pos=12;
+  int headAt=-1;
   for (iA=0;iA<numTables;iA++) {
-    set_ULONG(start+pos,otw[iA].tag);
-    res=(*otw[iA].action)(otw[iA].param,otw[iA].length,NULL,&csum);
+    char *entry=start+12+16*order[iA];
+    const int res=(*otw[order[iA]].action)(otw[order[iA]].param,otw[order[iA]].length,NULL,&csum);
     assert(res>=0);
-    set_ULONG(start+pos+4,csum);
-    set_ULONG(start+pos+8,offset);
-    set_ULONG(start+pos+12,res);
-    pos+=16;
+    if (otw[order[iA]].tag==OTF_TAG('h','e','a','d')) {
+      headAt=order[iA];
+    }
+    set_ULONG(entry,otw[order[iA]].tag);
+    set_ULONG(entry+4,csum);
+    set_ULONG(entry+8,offset);
+    set_ULONG(entry+12,res);
     offset+=(res+3)&~3; // padding
     globalSum+=csum;
   }
 
   // second pass: write actual data
   // write header + directory
-  (*output)(start,pos,context);
-  ret=pos;
-  globalSum+=otf_checksum(start,pos);
-  if (headAt!=-1) {
+  ret=12+16*numTables;
+  (*output)(start,ret,context);
+  globalSum+=otf_checksum(start,ret);
+
+  // change head
+  if ( (headAt!=-1)&&(otw[headAt].action==otf_action_copy) ) { // more needed?
     otw[headAt].action=otf_action_copy_head;
     otw[headAt].length=globalSum;
   }
 
   // write tables
   for (iA=0;iA<numTables;iA++) {
-    assert(ret==get_ULONG(start+12+16*iA+8)); // table directory correct?
-    res=(*otw[iA].action)(otw[iA].param,otw[iA].length,output,context);
+    const int res=(*otw[order[iA]].action)(otw[order[iA]].param,otw[order[iA]].length,output,context);
     if (res<0) {
+      free(order);
       free(start);
       return -1;
     }
@@ -1160,160 +977,10 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
     ret+=(res+3)&~3;
   }
   assert(offset==ret);
+  free(order);
   free(start);
 
   return ret;
-}
-// }}}
-
-int otf_ttc_extract(OTF_FILE *otf,OUTPUT_FN output,void *context) // {{{
-{
-  assert(otf);
-  assert(output);
-  assert(otf->numTTC);
-  int iA;
-
-  struct _OTF_WRITE *otw;
-  otw=malloc(sizeof(struct _OTF_WRITE)*otf->numTables);
-  if (!otw) {
-    fprintf(stderr,"Bad alloc: %m\n");
-    return -1;
-  }
-
-  // just copy everything
-  for (iA=0;iA<otf->numTables;iA++) {
-    otw[iA].tag=otf->tables[iA].tag;
-    otw[iA].action=otf_action_copy;
-    otw[iA].param=otf;
-    otw[iA].length=iA;
-  }
-  iA=otf_write_sfnt(otw,otf->version,otf->numTables,output,context);
-  free(otw);
-
-  return iA;
-}
-// }}}
-
-int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{{ - returns number of bytes written
-{
-  assert(otf);
-  assert(glyphs);
-  assert(output);
-
-  int iA,b,c;
-  int ret=0;
-
-  // first pass: include all required glyphs
-  bit_set(glyphs,0); // .notdef always required
-  int glyfSize=0;
-  for (iA=0,b=0,c=1;iA<otf->numGlyphs;iA++,c<<=1) {
-    if (!c) {
-      b++;
-      c=1;
-    }
-    if (glyphs[b]&c) {
-      int len=otf_get_glyph(otf,iA);
-      if (len<0) {
-        assert(0);
-        return -1;
-      } else if (len>0) {
-        glyfSize+=len;
-        len=otf_subset_glyf(otf,iA,iA,glyphs);
-        if (len<0) {
-          assert(0);
-          return -1;
-        }
-        glyfSize+=len;
-      }
-    }
-  }
-
-  // second pass: calculate new glyf and loca
-  int locaSize=(otf->numGlyphs+1)*(otf->indexToLocFormat+1)*2;
-
-  char *new_loca=malloc(locaSize);
-  char *new_glyf=malloc(glyfSize);
-  if ( (!new_loca)||(!new_glyf) ) {
-    fprintf(stderr,"Bad alloc: %m\n");
-    assert(0);
-    free(new_loca);
-    free(new_glyf);
-    return -1;
-  }
-
-  int offset=0;
-  for (iA=0,b=0,c=1;iA<otf->numGlyphs;iA++,c<<=1) {
-    if (!c) {
-      b++;
-      c=1;
-    }
-
-    assert(offset%2==0);
-    // TODO? change format? if glyfSize<0x20000 
-    if (otf->indexToLocFormat==0) {
-      set_USHORT(new_loca+iA*2,offset/2);
-    } else { // ==1
-      set_ULONG(new_loca+iA*4,offset);
-    }
-
-    if (glyphs[b]&c) {
-      const int len=otf_get_glyph(otf,iA);
-      assert(len>=0);
-      memcpy(new_glyf+offset,otf->gly,len);
-      offset+=len;
-    }
-  }
-  // last entry
-  if (otf->indexToLocFormat==0) {
-    set_USHORT(new_loca+otf->numGlyphs*2,offset/2);
-  } else { // ==1
-    set_ULONG(new_loca+otf->numGlyphs*4,offset);
-  }
-  assert(offset==glyfSize);
-
-  // determine new tables.
-#define MAX_TABLES 12
-  int numTables=0;
-  struct _OTF_WRITE otw[MAX_TABLES]={
-      {OTF_TAG('c','m','a','p'),otf_action_copy,otf,},
-      {OTF_TAG('c','v','t',' '),otf_action_copy,otf,},
-      {OTF_TAG('f','p','g','m'),otf_action_copy,otf,},
-      {OTF_TAG('g','l','y','f'),otf_action_replace,new_glyf,glyfSize},
-      {OTF_TAG('h','e','a','d'),otf_action_copy,otf,}, // _copy_head
-      {OTF_TAG('h','h','e','a'),otf_action_copy,otf,},
-      {OTF_TAG('h','m','t','x'),otf_action_copy,otf,},
-      {OTF_TAG('l','o','c','a'),otf_action_replace,new_loca,locaSize},
-      {OTF_TAG('m','a','x','p'),otf_action_copy,otf,},
-      {OTF_TAG('n','a','m','e'),otf_action_copy,otf,},
-      {OTF_TAG('p','r','e','p'),otf_action_copy,otf,},
-      {0,0,0,0}};
-
-  for (iA=0;(iA<otf->numTables)&&(otw[numTables].tag);) {
-    if (otf->tables[iA].tag==otw[numTables].tag) {
-      if (otw[numTables].param==otf) {
-        otw[numTables].length=iA;
-      }
-      iA++;
-      numTables++;
-    } else if (otf->tables[iA].tag<otw[numTables].tag) {
-      iA++;
-    } else {
-      memmove(otw+numTables,otw+numTables+1,sizeof(struct _OTF_WRITE)*(MAX_TABLES-numTables-1)); // don't output
-    } 
-  }
-  // write them
-  ret=otf_write_sfnt(otw,otf->version,numTables,output,context);
-
-  free(new_loca);
-  free(new_glyf);
-  return ret;
-
-  // TODO? suggested ordering
-  // head, hhea, maxp, hmtx, cmap, fpgm, prep, cvt, loca, glyf, name
-  // copy some tables [cvt,fpgm,(glyf),head!,hhea,hmtx,(loca),maxp,name(?),prep]
-
-  //TODO ? reduce cmap [to (1,0) ;-)]
-  //TODO (cmap for non-cid)
 }
 // }}}
 

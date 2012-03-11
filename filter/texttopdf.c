@@ -269,7 +269,9 @@ WriteProlog(const char *title,		/* I - Title of job */
   char		line[1024],	/* Line from file */
 		*lineptr,	/* Pointer into line */
 		*valptr;	/* Pointer to value in line */
+#ifndef CUPS_1_4 /* CUPS 1.4.x or newer: support for non-utf8 removed */
   int		ch, unicode;	/* Character values */
+#endif
   int		start, end;	/* Start and end values for range */
   time_t	curtime;	/* Current time */
   struct tm	*curtm;		/* Current date */
@@ -1131,12 +1133,8 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str, int len)
         break;
       }
       if (otf) { // TODO 
-        const unsigned short gid=otf_from_unicode(otf,ch);
+        const unsigned short gid=emb_get(emb,ch);
         pdfOut_printf(pdf,"%04x", gid);
-
-        if (emb->subset) {
-          bit_set(emb->subset,gid);
-        }
       } else { // std 14 font with 7-bit us-ascii uses single byte encoding, TODO
         pdfOut_printf(pdf,"%02x",ch);
       }

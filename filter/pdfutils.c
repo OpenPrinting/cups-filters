@@ -302,7 +302,7 @@ int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{
 
   EMB_PDF_FONTDESCR *fdes=emb_pdf_fontdescr(emb);
   if (!fdes) {
-    if (emb->intype==EMB_INPUT_STDFONT) { // std-14 font
+    if (emb->outtype==EMB_FMT_STDFONT) { // std-14 font
       const int f_obj=pdfOut_add_xref(pdf);
       char *res=emb_pdf_simple_stdfont(emb);
       if (!res) {
@@ -322,15 +322,19 @@ int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{
   const int ff_obj=pdfOut_add_xref(pdf);
   pdfOut_printf(pdf,"%d 0 obj\n"
                     "<</Length %d 0 R\n"
-                    "  /Length1 %d 0 R\n"
-                    ,ff_obj,ff_obj+1,ff_obj+2);
+                    ,ff_obj,ff_obj+1);
   if (emb_pdf_get_fontfile_subtype(emb)) {
-    pdfOut_printf(pdf,"  /SubType /%s\n",
+    pdfOut_printf(pdf,"  /Subtype /%s\n",
                       emb_pdf_get_fontfile_subtype(emb));
   }
-  if (emb->outtype&EMB_OUTPUT_T1) { // TODO
-    pdfOut_printf(pdf,"  /Length2 ?\n"
-                      "  /Length3 ?\n");
+  if (emb->outtype==EMB_FMT_TTF) {
+    pdfOut_printf(pdf,"  /Length1 %d 0 R\n"
+                      ,ff_obj+2);
+  } else if (emb->outtype==EMB_FMT_T1) { // TODO
+    pdfOut_printf(pdf,"  /Length1 ?\n"
+                      "  /Length2 ?\n"
+                      "  /Length3 ?\n"
+                      );
   }
   pdfOut_printf(pdf,">>\n"
                     "stream\n");
@@ -347,12 +351,14 @@ int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{
                     "endobj\n"
                     ,l0_obj,streamsize);
 
-  const int l1_obj=pdfOut_add_xref(pdf);
-  assert(l1_obj==ff_obj+2);
-  pdfOut_printf(pdf,"%d 0 obj\n"
-                    "%d\n"
-                    "endobj\n"
-                    ,l1_obj,outlen);
+  if (emb->outtype==EMB_FMT_TTF) {
+    const int l1_obj=pdfOut_add_xref(pdf);
+    assert(l1_obj==ff_obj+2);
+    pdfOut_printf(pdf,"%d 0 obj\n"
+                      "%d\n"
+                      "endobj\n"
+                      ,l1_obj,outlen);
+  }
 
   const int fd_obj=pdfOut_add_xref(pdf);
   char *res=emb_pdf_simple_fontdescr(emb,fdes,ff_obj);

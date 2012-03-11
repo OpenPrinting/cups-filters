@@ -48,22 +48,19 @@ static inline void write_string(FILE *f,EMB_PARAMS *emb,const char *str) // {{{
 {
   assert(f);
   assert(emb);
-  OTF_FILE *otf=emb->font->sfnt;
-  assert(otf);
   int iA;
 
   if (emb->plan&EMB_A_MULTIBYTE) {
     putc('<',f); 
     for (iA=0;str[iA];iA++) {
-      const unsigned short gid=otf_from_unicode(otf,(unsigned char)str[iA]);
+      const unsigned short gid=emb_get(emb,(unsigned char)str[iA]);
       fprintf(f,"%04x",gid);
-      bit_set(emb->subset,gid);
     }
     putc('>',f); 
   } else {
     putc('(',f); 
     for (iA=0;str[iA];iA++) {
-      bit_set(emb->subset,otf_from_unicode(otf,(unsigned char)str[iA])); // TODO: emb_set(...) encoding/unicode->gid
+      emb_get(emb,(unsigned char)str[iA]);
     }
     fprintf(f,"%s",str); // TODO
     putc(')',f); 
@@ -90,8 +87,6 @@ int main(int argc,char **argv)
   int xref[100],xrefpos=3;
   int stream_len;
 
-  assert(emb->subset);
-
   fprintf(f,"%%PDF-1.3\n");
   // content
   STREAM;
@@ -103,7 +98,7 @@ int main(int argc,char **argv)
             "ET\n");
   ENDSTREAM;
 
-  bit_set(emb->subset,otf_from_unicode(otf,'a'));
+  emb_get(emb,'a');
 
   // {{{ do font
   EMB_PDF_FONTDESCR *fdes=emb_pdf_fontdescr(emb);
@@ -114,22 +109,24 @@ int main(int argc,char **argv)
   STREAMDICT;
   int ff_ref=xrefpos;
   if (emb_pdf_get_fontfile_subtype(emb)) {
-    fprintf(f,"  /SubType /%s\n",
+    fprintf(f,"  /Subtype /%s\n",
               emb_pdf_get_fontfile_subtype(emb));
   }
-  if (emb->outtype&EMB_OUTPUT_T1) {
+  if (emb->outtype==EMB_FMT_T1) {
     fprintf(f,"  /Length1 ?\n"
               "  /Length2 ?\n"
               "  /Length3 ?\n");
-  } else {
+  } else if (emb->outtype==EMB_FMT_TTF) {
     fprintf(f,"  /Length1 %d 0 R\n",xrefpos+2);
   }
   STREAMDATA;
   const int outlen=emb_embed(emb,example_outfn,f);
   ENDSTREAM;
-  OBJ;
-  fprintf(f,"%d\n",outlen);
-  ENDOBJ;
+  if (emb->outtype==EMB_FMT_TTF) {
+    OBJ;
+    fprintf(f,"%d\n",outlen);
+    ENDOBJ;
+  }
 
   OBJ;
   const int fd_ref=xrefpos;

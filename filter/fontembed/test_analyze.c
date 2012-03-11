@@ -182,7 +182,7 @@ int main(int argc,char **argv)
 
   int iA;
   for (iA=0;iA<otf->numTables;iA++) {
-    printf("%c%c%c%c %d\n",OTF_UNTAG(otf->tables[iA].tag),otf->tables[iA].length);
+    printf("%c%c%c%c %d @%d\n",OTF_UNTAG(otf->tables[iA].tag),otf->tables[iA].length,otf->tables[iA].offset);
   }
   printf("unitsPerEm: %d, indexToLocFormat: %d\n",
          otf->unitsPerEm,otf->indexToLocFormat);
@@ -197,7 +197,9 @@ int main(int argc,char **argv)
   show_cmap(otf);
   // printf("%d %d\n",otf_from_unicode(otf,'A'),0);
 
-  show_glyf(otf,1);
+  if (!(otf->flags&OTF_F_FMT_CFF)) {
+    show_glyf(otf,1);
+  }
 
   otf_close(otf);
 

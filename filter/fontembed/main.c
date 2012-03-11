@@ -53,10 +53,9 @@ void example_write_fontdescr(OTF_FILE *otf,const char *outfile) // {{{
                           );
   EMB_PDF_FONTDESCR *fdes=emb_pdf_fontdescr(emb);
   assert(fdes);
-  assert(emb->subset);
 
-  bit_set(emb->subset,otf_from_unicode(otf,'a'));
-  bit_set(emb->subset,otf_from_unicode(otf,0x400));
+  emb_get(emb,'a');
+  emb_get(emb,0x400);
 
   EMB_PDF_FONTWIDTHS *fwid=emb_pdf_fontwidths(emb);
   assert(fwid);
@@ -71,14 +70,14 @@ void example_write_fontdescr(OTF_FILE *otf,const char *outfile) // {{{
   printf("1 0 obj\n"
          "<<\n");
   if (emb_pdf_get_fontfile_subtype(emb)) {
-    printf("  /SubType /%s\n",
+    printf("  /Subtype /%s\n",
            emb_pdf_get_fontfile_subtype(emb));
   }
-  if (emb->outtype&EMB_OUTPUT_T1) {
+  if (emb->outtype==EMB_FMT_T1) {
     printf("  /Length1 ?\n"
            "  /Length2 ?\n"
            "  /Length3 ?\n");
-  } else {
+  } else if (emb->outtype==EMB_FMT_TTF) {
     printf("  /Length1 2 0 R\n");
   }
   printf("  /Length 2 0 R\n" // maybe compress it...

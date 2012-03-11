@@ -9,26 +9,20 @@ static inline void write_string(pdfOut *pdf,EMB_PARAMS *emb,const char *str) // 
 {
   assert(pdf);
   assert(emb);
-  OTF_FILE *otf=emb->font->sfnt;
-  assert(otf);
   int iA;
 
   if (emb->plan&EMB_A_MULTIBYTE) {
     putc('<',stdout); 
     for (iA=0;str[iA];iA++) {
-      const unsigned short gid=otf_from_unicode(otf,(unsigned char)str[iA]);
+      const unsigned short gid=emb_get(emb,(unsigned char)str[iA]);
       fprintf(stdout,"%04x",gid);
-      if (emb->subset) {
-        bit_set(emb->subset,gid);
-      }
     }
     putc('>',stdout); 
     pdf->filepos+=4*iA+2;
   } else { 
-    if (emb->subset) {
-      for (iA=0;str[iA];iA++) {
-        bit_set(emb->subset,otf_from_unicode(otf,(unsigned char)str[iA])); // TODO: emb_set(...) encoding/unicode->gid  // TODO: pdf: otf_from_pdf_default_encoding
-      }
+    for (iA=0;str[iA];iA++) {
+      emb_get(emb,(unsigned char)str[iA]);
+      // TODO: pdf: otf_from_pdf_default_encoding
     }
     pdfOut_putString(pdf,str,-1);
   }
