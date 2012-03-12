@@ -219,13 +219,13 @@ EMB_PDF_FONTWIDTHS *emb_pdf_fw_cidwidths(const BITSET glyphs,int len,int default
 {
   assert(getGlyphWidth);
 
-  int iA,b,c;
-  int size=0,in_region=0; // current number of elements in after region start
-
   FREQUENT *freq=NULL;
   if (default_width<0) {
     freq=frequent_new(3);
   }
+
+  int iA,b,c;
+  int size=0,in_region=0; // current number of elements in after region start
 
   // first pass: find continuous regions, calculate needed size, estimate dw
   for (iA=0,b=0,c=1;iA<len;iA++,c<<=1) {
@@ -281,19 +281,19 @@ EMB_PDF_FONTWIDTHS *emb_pdf_fw_cidwidths(const BITSET glyphs,int len,int default
           size--;
           *rlen=in_region-1; // !=0, as it does not start with >default_width
           in_region=0; // end region, immediate restart will take just the same amount of space
-        } else if ( (in_region>=2)&&
-                    (ret->warray[size-1]==w)&&
-                    (ret->warray[size-2]==w) ) {
-          // three in a row.  c1 c2 w is equally short and can be extended (-len c1 w)
-          if (in_region==2) { // completely replace
-            size-=4; 
+        } else if ( (in_region>=4)&&
+                    (ret->warray[size-1]==w)&&(ret->warray[size-2]==w)&&
+                    (ret->warray[size-3]==w)&&(ret->warray[size-4]==w) ) {
+          // five in a row.  c1 c2 w [l c] is equally short and can be extended (-len c1 w)  [w/ cost of array-region restart]
+          if (in_region==4) { // completely replace
+            size-=6; 
           } else { // first end previous region
-            size-=2;
-            *rlen=in_region-2;
+            size-=4;
+            *rlen=in_region-4;
           }
-          in_region=-2; // start range region instead
+          in_region=-4; // start range region instead
           rlen=&ret->warray[size++];
-          ret->warray[size++]=iA-2;
+          ret->warray[size++]=iA-4;
           ret->warray[size++]=w;
         } else { // just add
           in_region++;

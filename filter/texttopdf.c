@@ -1,7 +1,7 @@
 /*
  *   Text to PDF filter for the Common UNIX Printing System (CUPS).
  *
- *   Copyright 2008 by Tobias Hoffmann.
+ *   Copyright 2008,2012 by Tobias Hoffmann.
  *   Copyright 2007 by Apple Inc.
  *   Copyright 1993-2007 by Easy Software Products.
  *
@@ -50,11 +50,12 @@ EMB_PARAMS *font_load(const char *font)
 
   FcPattern *pattern;
   FcFontSet *candidates;
-  FcChar8   *fontformat, *fontname = NULL;
-  int i, spacing;
+  FcChar8   *fontname = NULL;
+  int i;
 
   FcInit ();
-  pattern = FcNameParse (font);
+  pattern = FcNameParse ((const FcChar8 *)font);
+  FcPatternAddInteger (pattern, FC_SPACING, FC_MONO); // guide fc, in case substitution becomes necessary
   FcConfigSubstitute (0, pattern, FcMatchPattern);
   FcDefaultSubstitute (pattern);
 
@@ -65,22 +66,34 @@ EMB_PARAMS *font_load(const char *font)
   /* In the list of fonts returned by FcFontSort()
      find the first one that is both in TrueType format and monospaced */
   for (i = 0; i < candidates->nfont; i++) {
+    FcChar8 *fontformat=NULL; // TODO? or just try?
+    int spacing=0; // sane default, as FC_MONO == 100
     FcPatternGetString  (candidates->fonts[i], FC_FONTFORMAT, 0, &fontformat);
     FcPatternGetInteger (candidates->fonts[i], FC_SPACING,    0, &spacing);
 
-    if ((strcmp(fontformat, "TrueType") == 0) && (spacing == FC_MONO)) {
-      fontname = FcPatternFormat (candidates->fonts[i], "%{file|cescape}/%{index}");
-      break;
+    if ( (fontformat)&&(spacing == FC_MONO) ) {
+      if (strcmp((const char *)fontformat, "TrueType") == 0) {
+        fontname = FcPatternFormat (candidates->fonts[i], (const FcChar8 *)"%{file|cescape}/%{index}");
+        break;
+      } else if (strcmp((const char *)fontformat, "CFF") == 0) {
+        fontname = FcPatternFormat (candidates->fonts[i], (const FcChar8 *)"%{file|cescape}"); // TTC only possible with non-cff glyphs!
+        break;
+      }
     }
   }
   FcFontSetDestroy (candidates);
 
-  otf = otf_load(fontname);
-
-  if (!otf) {
+  if (!fontname) {
     // TODO: try /usr/share/fonts/*/*/%s.ttf
+    fprintf(stderr,"No viable font found\n");
     return NULL;
   }
+
+  otf = otf_load((const char *)fontname);
+  if (!otf) {
+    return NULL;
+  }
+
   FONTFILE *ff=fontfile_open_sfnt(otf);
   assert(ff);
   EMB_PARAMS *emb=emb_new(ff,

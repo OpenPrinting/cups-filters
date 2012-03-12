@@ -39,27 +39,25 @@ int otf_intersect_tables(OTF_FILE *otf,struct _OTF_WRITE *otw) // {{{
 {
   int iA,iB,numTables=0;
   for (iA=0,iB=0;(iA<otf->numTables)&&(otw[iB].tag);) {
-    int keep=0;
-    if (otw[iB].action==otf_action_copy) {
-      if (otf->tables[iA].tag==otw[iB].tag) {
-        if (otw[iB].param==otf) { // find code is only active in this case
-          otw[iB].length=iA; // original table location found.
-        }
-        keep=1;
+    if (otf->tables[iA].tag==otw[iB].tag) {
+      if (otw[iB].action==otf_action_copy) {
+        otw[iB].length=iA; // original table location found.
       }
-    } else {
-      keep=1;
-    }
-    if (keep) {
-      iA++;
-      iB++;
-      numTables++;
       if (iB!=numTables) { // >, actually
         memmove(otw+numTables,otw+iB,sizeof(struct _OTF_WRITE));
       }
+      iA++;
+      iB++;
+      numTables++;
     } else if (otf->tables[iA].tag<otw[iB].tag) {
       iA++;
-    } else { // delete from otw, not in otf->tables
+    } else { // not in otf->tables
+      if (otw[iB].action!=otf_action_copy) { // keep
+        if (iB!=numTables) { // >, actually
+          memmove(otw+numTables,otw+iB,sizeof(struct _OTF_WRITE));
+        }
+        numTables++;
+      } // else delete
       iB++;
     }
   }

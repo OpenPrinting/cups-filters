@@ -923,6 +923,10 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
         order[ret--]=priolist[iA]-1;
       }
     }
+  } else {
+    for (iA=0;iA<numTables;iA++) {
+      order[iA]=iA;
+    }
   }
 
   // the header
@@ -973,7 +977,7 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
       free(start);
       return -1;
     }
-    assert(((res+3)&~3)==res); // correctly padded?
+    assert(((res+3)&~3)==res); // correctly padded? (i.e. next line is just ret+=res;)
     ret+=(res+3)&~3;
   }
   assert(offset==ret);
