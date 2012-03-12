@@ -99,7 +99,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
   assert( (post_version!=0x00020000)||(len>=34+2*otf->numGlyphs) );
   assert( (post_version!=0x00025000)||(len==35+otf->numGlyphs) );
   assert( (post_version!=0x00030000)||(len==32) );
-  assert( (post_version!=0x00020000)||(get_USHORT(post+32)==otf->numGlyphs) );
+  assert( (post_version!=0x00020000)||(get_USHORT(post+32)==otf->numGlyphs) ); // v4?
 //  assert( (post_version==0x00030000)==(!!(otf->flags&OTF_F_FMT_CFF)) ); // ghostscript embedding does this..
   // TODO: v4 (apple) :  uint16 reencoding[numGlyphs]
   if ( (post_version==0x00010000)||
@@ -311,30 +311,87 @@ EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_cidwidths(OTF_FILE *otf,const BITSET glyphs)
 #include "dynstring.h"
 
 const char *aglfn13(unsigned short uni); // aglfn13.c
+#include "macroman.h"
 
-// NOTE: statically allocated string
-const char *get_glyphname(const char *post,unsigned short *to_unicode,int charcode,unsigned short gid)
+// TODO? optimize pascal string skipping? (create index)
+// NOTE: might return a statically allocated string
+static const char *emb_otf_get_post_name(const char *post,unsigned short gid) // {{{
 {
-  if (charcode==0) {
+  if (!post) {
+    return NULL;
+  }
+  const unsigned int post_version=get_ULONG(post);
+  if (post_version==0x00010000) { // font has only 258 chars... font cannot be used on windows
+    if (gid<sizeof(macRoman)/sizeof(macRoman[0])) {
+      return macRoman[gid];
+    }
+  } else if (post_version==0x00020000) {
+    const unsigned short num_glyphs=get_USHORT(post+32);
+    // assert(num_glyphs==otf->numGlyphs);
+    if (gid<num_glyphs) {
+      unsigned short idx=get_USHORT(post+34+2*gid);
+      if (idx<258) {
+        if (gid<sizeof(macRoman)/sizeof(macRoman[0])) {
+          return macRoman[idx];
+        } 
+      } else if (idx<32768) {
+        const unsigned char *pos=post+34+2*num_glyphs;
+        for (idx-=258;idx>0;idx--) { // this sucks...
+          pos+=*pos+1; // skip this string
+        }
+        // convert pascal string to asciiz
+        static char ret[256];
+        const unsigned char len=*pos;
+        memcpy(ret,(const char *)pos+1,len);
+        ret[len]=0;
+        return ret;
+      }
+    }
+  } else if (post_version==0x00025000) { // similiar to 0x00010000, deprecated
+    const unsigned short num_glyphs=get_USHORT(post+32);
+    if (gid<num_glyphs) {
+      const unsigned short idx=post[34+gid]+gid; // post is signed char *
+      if (idx<sizeof(macRoman)/sizeof(macRoman[0])) {
+        return macRoman[idx];
+      }
+    }
+  } else if (post_version==0x00030000) {
+    // no glyph names, sorry
+//  } else if (post_version==0x00040000) { // apple AAT ?! 
+  }
+  return NULL;
+}
+// }}}
+
+// TODO!? to_unicode should be able to represent more than one unicode character?
+// NOTE: statically allocated string
+static const char *get_glyphname(const char *post,unsigned short *to_unicode,int charcode,unsigned short gid) // {{{ if charcode==0 -> force gid to be used
+{
+  if (gid==0) {
     return ".notdef";
   }
-  /*
-  ... TODO: consult post table, if there [i.e. (post!=NULL), version == 2.0/2.5 (not to be expected?)].  
-                                         (post.glyphNameIndex[gid]<258)?macStdName[...]:post.names[...]   (check ...!=0 first) 
-  if (to_unicode) { // i.e. encoding was there
-    charcode=to_unicode[charcode]; // TODO!? encoding should be able to represent more than one unicode character?
-  }
-  additional credit: for ligatures, etc  create /f_f /uni12341234  or the like
-  */
-  const char *aglname=aglfn13(charcode); // TODO? special case ZapfDingbats?
-  if (aglname) {
-    return aglname;
+  const char *postName=emb_otf_get_post_name(post,gid);
+  if (postName) {
+    return postName;
   }
   static char ret[255];
-  snprintf(ret,250,"uni%04X",charcode); // allows extraction
-//  snprintf(ret,250,"c%d",gid);  // last resort: only by gid
+  if (charcode) {
+    if (to_unicode) { // i.e. encoding was there
+      charcode=to_unicode[charcode];
+      // TODO!? to_unicode should be able to represent more than one unicode character?
+      // TODO for additional credit: for ligatures, etc  create /f_f /uni12341234  or the like
+    }
+    const char *aglname=aglfn13(charcode); // TODO? special case ZapfDingbats?
+    if (aglname) {
+      return aglname;
+    }
+    snprintf(ret,250,"uni%04X",charcode); // allows extraction
+  } else {
+    snprintf(ret,250,"c%d",gid);  // last resort: only by gid
+  }
   return ret;
 }
+// }}}
 
 struct OUTFILTER_PS {
   OUTPUT_FN out;
@@ -433,7 +490,7 @@ Status:
 */
 int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to_unicode,OUTPUT_FN output,void *context) // {{{
 {
-  const int binary=1; // binary format? // TODO
+  const int binary=0; // binary format? // TODO
   if (len>256) {
     fprintf(stderr,"Encoding too big(%d) for Type42\n",len);
     return -1;
@@ -506,8 +563,10 @@ int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to
                  "0 1 255 { 1 index exch /.notdef put } for\n");
   for (iA=0;iA<len;iA++) { // encoding data: 0...255 -> /glyphname
     const int gid=(encoding)?encoding[iA]:otf_from_unicode(otf,iA);
-    dyn_printf(&ds,"dup %d /%s put\n",
-                   iA,get_glyphname(post,to_unicode,iA,gid));
+    if (gid!=0) {
+      dyn_printf(&ds,"dup %d /%s put\n",
+                     iA,get_glyphname(post,to_unicode,iA,gid));
+    }
   }
   dyn_printf(&ds,"readonly def\n");
 

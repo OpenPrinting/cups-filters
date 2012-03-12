@@ -7,7 +7,7 @@ LIB=libfontembed.a
 CPPFLAGS=-Wall -g -fPIC
 LDFLAGS=
 
-#CPPFLAGS+=-DWITH_AGLFN
+#CPPFLAGS+=-DWITH_AGLFN -DWITH_MACROMAN
 
 OBJECTS=$(patsubst %.c,$(PREFIX)%$(SUFFIX).o,\
         $(patsubst %.cpp,$(PREFIX)%$(SUFFIX).o,\
