@@ -1,4 +1,4 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.5 - 2011-03-08
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.5 - 2011-03-14
 -----------------------------------------------------------
 
 CHANGES IN V1.0.5
