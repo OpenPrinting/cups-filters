@@ -23,6 +23,8 @@ include Makedefs
 DIRS	=	cupsfilters backend filter pdftoopvp pdftopdf $(PHPDIR)
 
 
+Makedefs:
+	$(CURDIR)/configure
 #
 # Make all targets...
 #

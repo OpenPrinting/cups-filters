@@ -101,6 +101,7 @@ all:	$(TARGETS)
 #
 
 clean:
+	$(MAKE) -C fontembed $@
 	$(RM) $(OBJS) $(TARGETS)
 	$(RM) */*.d
 	$(RM) */*.o

@@ -1,5 +1,10 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.5 - 2011-03-14
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.6 - 2011-03-14
 -----------------------------------------------------------
+
+CHANGES IN V1.0.6
+
+	- Make sure that "make clean" and "make distclean" also work if
+	  Makedefs does not exist (Debian bug #663564).
 
 CHANGES IN V1.0.5
 
