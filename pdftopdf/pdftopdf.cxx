@@ -42,6 +42,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Error.h"
 #include "GlobalParams.h"
 #include "PDFFTrueTypeFont.h"
+#include <ctype.h>
 
 namespace {
   int exitCode = 0;
@@ -591,6 +592,61 @@ void parseOpts(int argc, char **argv)
   }
 }
 
+
+/* Copied ppd_decode() from CUPS which is not exported to the API */
+
+static int				/* O - Length of decoded string */
+ppd_decode(char *string)		/* I - String to decode */
+{
+  char	*inptr,				/* Input pointer */
+	*outptr;			/* Output pointer */
+
+
+  inptr  = string;
+  outptr = string;
+
+  while (*inptr != '\0')
+    if (*inptr == '<' && isxdigit(inptr[1] & 255))
+    {
+     /*
+      * Convert hex to 8-bit values...
+      */
+
+      inptr ++;
+      while (isxdigit(*inptr & 255))
+      {
+	if (isalpha(*inptr))
+	  *outptr = (tolower(*inptr) - 'a' + 10) << 4;
+	else
+	  *outptr = (*inptr - '0') << 4;
+
+	inptr ++;
+
+        if (!isxdigit(*inptr & 255))
+	  break;
+
+	if (isalpha(*inptr))
+	  *outptr |= tolower(*inptr) - 'a' + 10;
+	else
+	  *outptr |= *inptr - '0';
+
+	inptr ++;
+	outptr ++;
+      }
+
+      while (*inptr != '>' && *inptr != '\0')
+	inptr ++;
+      while (*inptr == '>')
+	inptr ++;
+    }
+    else
+      *outptr++ = *inptr++;
+
+  *outptr = '\0';
+
+  return ((int)(outptr - string));
+}
+
 int main(int argc, char *argv[]) {
   PDFDoc *doc;
   P2PDoc *p2pdoc;
@@ -719,6 +775,18 @@ int main(int argc, char *argv[]) {
   ppdEmit(ppd,stdout,PPD_ORDER_EXIT);
 
   if (emitJCL) {
+    /* pdftopdf only adds JCL to the job if the printer is a native PDF
+       printer and the PPD is for this mode, having the "*JCLToPDFInterpreter:"
+       keyword. We need to read this keyword manually from the PPD and replace
+       the content of ppd->jcl_ps by the value of this keyword, so that
+       ppdEmitJCL() actalually adds JCL based on the presence on 
+       "*JCLToPDFInterpreter:". */
+    ppd_attr_t *attr;
+    if ((attr = ppdFindAttr(ppd,"JCLToPDFInterpreter",NULL)) != NULL) {
+      ppd->jcl_ps = strdup(attr->value);
+      ppd_decode(ppd->jcl_ps);
+    } else
+      ppd->jcl_ps = NULL;
     ppdEmitJCL(ppd,stdout,P2PDoc::options.jobId,P2PDoc::options.user,
       P2PDoc::options.title);
     emitJCLOptions(stdout,deviceCopies);
