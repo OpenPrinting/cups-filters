@@ -657,10 +657,13 @@ run_loop(int print_fd,			/* I - Print file descriptor */
      /*
       * Do the side-channel request, then start back over in the select
       * loop since it may have read from print_fd...
+      *
+      * If the side channel processing errors, go straight on to avoid
+      * blocking of the backend by side channel problems.
       */
 
-      side_cb(print_fd, device_fd, use_bc);
-      continue;
+      if (side_cb(print_fd, device_fd, use_bc) >= 0)
+	continue;
     }
 
    /*

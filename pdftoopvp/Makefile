@@ -39,6 +39,7 @@ framedhelp:
 #
 
 clean:
+	$(MAKE) -C oprs $@
 	$(RM) $(OBJS)
 	$(RM) pdftoopvp
 
