@@ -728,10 +728,10 @@ Further Infos
 -------------
 
 Font embedding is handled by libfontembed in the filter/fontembed
-subdirectory, which is under MIT license. All other files are licensed
-as stated in LICENSE.txt
+subdirectory.
 
-Please report all bugs to https://bugs.linuxfoundation.org/
+Please report all bugs to https://bugs.linuxfoundation.org/, product
+"OpenPrinting", component "cups-filters".
 
 
 PDFTORASTER
