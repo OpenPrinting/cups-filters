@@ -708,12 +708,12 @@ look at test.sh for example.
 Known Issues
 ------------
 
- - text extraction does not work (at least for pdftotext from xpdf)
+ - Text extraction does not work (at least for pdftotext from xpdf)
    for the resulting pdfs.
 
- - OTF(CFF) embedding currenty does not subset the fonts.
+ - OTF(CFF) embedding currently does not subset the fonts.
 
- - text wrapping in pretty-printing mode does not respect double-wide
+ - Text wrapping in pretty-printing mode does not respect double-wide
    characters (CJK), and thus produce wrong results (wrap too late)
    for lines where they occur.  The fix is not trivial, since all the
    pretty-printing processing is done without knowledge of / prior to
@@ -727,7 +727,7 @@ Known Issues
 Further Infos
 -------------
 
-Fontembedding is handled by libfontembed in the filter/fontembed
+Font embedding is handled by libfontembed in the filter/fontembed
 subdirectory, which is under MIT license. All other files are licensed
 as stated in LICENSE.txt
 
