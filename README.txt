@@ -140,7 +140,7 @@ orientation-requested
 
 See the CUPS documents for details of these options.
 
-6. KOWN PROBLEMS
+6. KNOWN PROBLEMS
 
 Problem:
   PBM and SUN raster images can not be printed.
@@ -685,16 +685,19 @@ This implements a texttopdf filter, and is derived from cups' texttops.
 To configure:
 -------------
 
-- texttopdf uses a CUPS_DATADIR/charset/pdf.* (e.g. pdf.utf-8) for
-  font configuration. All the fonts named here MUST also be present
-  under CUPS_DATADIR/fonts/ as TrueType fonts for texttopdf to work.
-  For TrueType Collections (.TTC) you'll have to append '/' and the 
-  number of the font in the collection to the filename charsets/pdf.utf-8
-  (resp. charsets/pdf.* ), for example to use the second font of uming.ttc 
-  use the filename uming.ttc/1
+- texttopdf uses CUPS_DATADIR/charset/pdf.utf-8 for font configuration
+  (when utf-8 was requested as charset). The font names given there are 
+  used as fontconfig selectors; the best matching font, that is both 
+  monospaced and in a supported format (TTC, TTF or OTF) will then be used.
 
-- There are examples of pdf.utf-8 in the cups/data directory,
-  you may use one of these (don't forget to copy / symlink the fonts).
+- Implementation note: TrueType Collections (.TTC) are internally handled
+  by appending '/' and the index of the font inside the collection to 
+  the filename (e.g. to use the second font of uming.ttc, the filename 
+  uming.ttc/1 must be given to the fontembed-library).
+  By appending the index-field returned from fontconfig, this is completely
+  transparent to the user (but currently not widely tested).
+
+- You may look at the two examples: pdf.utf-8.simple and pdf.utf-8.heavy.
 
 To use:
 -------
@@ -704,10 +707,11 @@ look at test.sh for example.
 
 Known Issues
 ------------
-(Release 0.0.1)
 
  - text extraction does not work (at least for pdftotext from xpdf)
    for the resulting pdfs.
+
+ - OTF(CFF) embedding currenty does not subset the fonts.
 
  - text wrapping in pretty-printing mode does not respect double-wide
    characters (CJK), and thus produce wrong results (wrap too late)
@@ -719,6 +723,15 @@ Known Issues
  - The hebrew example in test5.pdf shows one of our limitations:
    Compose glyphs are not composed with the primary glyph but printed
    as separate glyphs.
+
+Further Infos
+-------------
+
+Fontembedding is handled by libfontembed in the filter/fontembed
+subdirectory, which is under MIT license. All other files are licensed
+as stated in LICENSE.txt
+
+Please report all bugs to https://bugs.linuxfoundation.org/
 
 
 PDFTORASTER
