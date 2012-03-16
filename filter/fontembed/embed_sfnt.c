@@ -335,7 +335,7 @@ static const char *emb_otf_get_post_name(const char *post,unsigned short gid) //
           return macRoman[idx];
         } 
       } else if (idx<32768) {
-        const unsigned char *pos=post+34+2*num_glyphs;
+        const unsigned char *pos=(unsigned char *)post+34+2*num_glyphs;
         for (idx-=258;idx>0;idx--) { // this sucks...
           pos+=*pos+1; // skip this string
         }
