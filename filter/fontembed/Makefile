@@ -1,11 +1,13 @@
-SOURCES=main.c sfnt.c embed.c embed_sfnt.c test_analyse.c dynstring.c test_pdf.c fontfile.c
-LIBOBJ=sfnt.o embed.o embed_sfnt.o dynstring.o fontfile.o
+SOURCES=main.c sfnt.c sfnt_subset.c embed.c embed_sfnt.c embed_pdf.c test_analyse.c dynstring.c test_pdf.c fontfile.c frequent.c aglfn13.c
+LIBOBJ=sfnt.o sfnt_subset.o embed.o embed_sfnt.o embed_pdf.o dynstring.o fontfile.o frequent.o aglfn13.o
 EXEC=ttfread test_analyze test_pdf test_ps
 LIB=libfontembed.a
 
 #CPPFLAGS=-O3 -funroll-all-loops -finline-functions -Wall -g
 CPPFLAGS=-Wall -g -fPIC
 LDFLAGS=
+
+#CPPFLAGS+=-DWITH_AGLFN -DWITH_MACROMAN
 
 OBJECTS=$(patsubst %.c,$(PREFIX)%$(SUFFIX).o,\
         $(patsubst %.cpp,$(PREFIX)%$(SUFFIX).o,\

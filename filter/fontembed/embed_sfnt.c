@@ -1,13 +1,12 @@
 #include "embed.h"
+#include "embed_pdf_int.h"
+#include "embed_sfnt_int.h"
 #include "sfnt.h"
 #include "sfnt_int.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// from embed.c
-EMB_PDF_FONTWIDTHS *emb_pdf_fw_new(int datasize);
 
 EMB_RIGHT_TYPE emb_otf_get_rights(OTF_FILE *otf) // {{{
 {
@@ -24,11 +23,14 @@ EMB_RIGHT_TYPE emb_otf_get_rights(OTF_FILE *otf) // {{{
     if (os2_version<=0x0004) {
       // get rights
       unsigned short fsType=get_USHORT(os2+8);
-      ret=fsType&0x0200;
-      if ((fsType&0x0f)==0x0002) {
-        ret|=EMB_RIGHT_NONE;
-      } else if ((fsType&0x0f)==0x0004) {
-        ret|=EMB_RIGHT_READONLY;
+      // from Adobe's Fontpolicies_v9.pdf, pg 13:
+      if (fsType==0x0002) {
+        ret=EMB_RIGHT_NONE;
+      } else {
+        ret=fsType&0x0300; // EMB_RIGHT_BITMAPONLY, EMB_RIGHT_NO_SUBSET
+        if ((fsType&0x000c)==0x0004) {
+          ret|=EMB_RIGHT_READONLY;
+        }
       } 
     }
     free(os2);
@@ -97,7 +99,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
   assert( (post_version!=0x00020000)||(len>=34+2*otf->numGlyphs) );
   assert( (post_version!=0x00025000)||(len==35+otf->numGlyphs) );
   assert( (post_version!=0x00030000)||(len==32) );
-  assert( (post_version!=0x00020000)||(get_USHORT(post+32)==otf->numGlyphs) );
+  assert( (post_version!=0x00020000)||(get_USHORT(post+32)==otf->numGlyphs) ); // v4?
 //  assert( (post_version==0x00030000)==(!!(otf->flags&OTF_F_FMT_CFF)) ); // ghostscript embedding does this..
   // TODO: v4 (apple) :  uint16 reencoding[numGlyphs]
   if ( (post_version==0x00010000)||
@@ -212,18 +214,22 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
 }
 // }}}
 
+// TODO: split generic part and otf part
+// TODO: FIXME: gid vs. char   ... NOTE: not called in multi_byte mode...
+// Adobe does: char --MacRoman/WinAnsi--> name --AGL--> unicode --cmap(3,1) --> gid   only avoidable by setting 'symbol'+custom(1,0)/(3,0)
+// HINT: caller sets len == otf->numGlyphs   (only when not using encoding...)
 EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_widths(OTF_FILE *otf,const unsigned short *encoding,int len,const BITSET glyphs) // {{{ glyphs==NULL -> all from 0 to len
 {
   assert(otf);
 
-  int first=len,last=0;
+  int first=len,last=0; 
   int iA;
 
   if (glyphs) {
-    for (iA=0;iA<len;iA++) {
+    for (iA=0;iA<len;iA++) { // iA is a "gid" when in multi_byte mode...
       const int gid=(encoding)?encoding[iA]:otf_from_unicode(otf,iA); // TODO
       if (bit_check(glyphs,gid)) {
-        if (first>iA) {
+        if (first>iA) { // first is a character index
           first=iA;
         }
         if (last<iA) {
@@ -274,100 +280,29 @@ EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_widths(OTF_FILE *otf,const unsigned short *e
 }
 // }}}
 
-// TODO: split into general part and otf specific part
+// otf->hmtx must be there
+static int emb_otf_pdf_glyphwidth(void *context,int gid) // {{{
+{
+  OTF_FILE *otf=(OTF_FILE *)context;
+  return get_width_fast(otf,gid)*1000/otf->unitsPerEm;
+}
+// }}}
+
 EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_cidwidths(OTF_FILE *otf,const BITSET glyphs) // {{{ // glyphs==NULL -> output all
 {
   assert(otf);
 
-  int iA,b,c;
-  int dw=otf_get_width(otf,0)*1000/otf->unitsPerEm,size=0; // also ensures otf->hmtx
-  assert(dw>=0);
-  // TODO? dw from  hmtx(otf->numberOfHMetrics);
-
-  int in_array=0; // current number of elements in array mode
-
-  // first pass
-  for (iA=0,b=0,c=1;iA<otf->numGlyphs;iA++,c<<=1) {
-    if (!c) {
-      b++;
-      c=1;
-    }
-    if ( (!glyphs)||(glyphs[b]&c) ) {
-      if (in_array) {
-        in_array++;
-      } else {
-        size+=2; // len c
-        in_array=1;
-      }
-    } else {
-      size+=in_array;
-      in_array=0;
+  // ensure hmtx is there
+  if (!otf->hmtx) {
+    if (otf_load_more(otf)!=0) {
+      assert(0);
+      return NULL;
     }
   }
-  size+=in_array;
+//  int dw=emb_otf_pdf_glyphwidth(otf,0); // e.g.
+  int dw=-1; // let them estimate 
 
-  // now create the array
-  EMB_PDF_FONTWIDTHS *ret=emb_pdf_fw_new(size+1);
-  if (!ret) {
-    return NULL;
-  }
-  ret->default_width=dw;
-  ret->warray=ret->data;
-
-  // second pass
-  in_array=0;
-  size=0;
-  for (iA=0,b=0,c=1;iA<otf->numGlyphs;iA++,c<<=1) {
-    if (!c) {
-      b++;
-      c=1;
-    }
-    if ( (!glyphs)||(glyphs[b]&c) ) {
-      const int w=get_width_fast(otf,iA)*1000/otf->unitsPerEm;
-      if ( (in_array<0)&&(ret->warray[size-1]==w) ) {
-        in_array--; // just add
-        ret->warray[size-3]=in_array; // fix len;
-        continue;
-      }
-      if (in_array>0) {
-        if ( (w==dw)&&(ret->warray[size-1]==dw) ) { // omit this and prev
-          size--;
-          in_array--; // !=0, as it does not start with >dw
-          ret->warray[size-in_array-2]=in_array; // fix len
-        } else if ( (in_array>=2)&&
-                    (ret->warray[size-1]==w)&&
-                    (ret->warray[size-2]==w) ) {
-          // three in a row.  c1 c2 w is equally short
-          if (in_array==2) { // completely replace
-            size-=4; 
-          } else {
-            size-=2;
-            ret->warray[size-in_array-2]=in_array; // fix len
-            in_array=-2;
-          }
-          in_array=-2;
-          ret->warray[size++]=in_array;
-          ret->warray[size++]=iA-2;
-          ret->warray[size++]=w;
-        } else { // just add
-          in_array++;
-          ret->warray[size++]=w;
-          ret->warray[size-in_array-2]=in_array; // fix len
-        }
-      } else if (w!=dw) {
-        in_array=1;
-        ret->warray[size++]=in_array; // len
-        ret->warray[size++]=iA; // c
-        ret->warray[size++]=w;
-      } else { // especially for in_array<0
-        in_array=0;
-      }
-    } else {
-      in_array=0;
-    }
-  }
-  ret->warray[size]=0; // terminator
-  return ret;
+  return emb_pdf_fw_cidwidths(glyphs,otf->numGlyphs,dw,emb_otf_pdf_glyphwidth,otf);
 }
 // }}}
 
@@ -375,22 +310,88 @@ EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_cidwidths(OTF_FILE *otf,const BITSET glyphs)
 
 #include "dynstring.h"
 
+const char *aglfn13(unsigned short uni); // aglfn13.c
+#include "macroman.h"
+
+// TODO? optimize pascal string skipping? (create index)
+// NOTE: might return a statically allocated string
+static const char *emb_otf_get_post_name(const char *post,unsigned short gid) // {{{
+{
+  if (!post) {
+    return NULL;
+  }
+  const unsigned int post_version=get_ULONG(post);
+  if (post_version==0x00010000) { // font has only 258 chars... font cannot be used on windows
+    if (gid<sizeof(macRoman)/sizeof(macRoman[0])) {
+      return macRoman[gid];
+    }
+  } else if (post_version==0x00020000) {
+    const unsigned short num_glyphs=get_USHORT(post+32);
+    // assert(num_glyphs==otf->numGlyphs);
+    if (gid<num_glyphs) {
+      unsigned short idx=get_USHORT(post+34+2*gid);
+      if (idx<258) {
+        if (gid<sizeof(macRoman)/sizeof(macRoman[0])) {
+          return macRoman[idx];
+        } 
+      } else if (idx<32768) {
+        const unsigned char *pos=(unsigned char *)post+34+2*num_glyphs;
+        for (idx-=258;idx>0;idx--) { // this sucks...
+          pos+=*pos+1; // skip this string
+        }
+        // convert pascal string to asciiz
+        static char ret[256];
+        const unsigned char len=*pos;
+        memcpy(ret,(const char *)pos+1,len);
+        ret[len]=0;
+        return ret;
+      }
+    }
+  } else if (post_version==0x00025000) { // similiar to 0x00010000, deprecated
+    const unsigned short num_glyphs=get_USHORT(post+32);
+    if (gid<num_glyphs) {
+      const unsigned short idx=post[34+gid]+gid; // post is signed char *
+      if (idx<sizeof(macRoman)/sizeof(macRoman[0])) {
+        return macRoman[idx];
+      }
+    }
+  } else if (post_version==0x00030000) {
+    // no glyph names, sorry
+//  } else if (post_version==0x00040000) { // apple AAT ?! 
+  }
+  return NULL;
+}
+// }}}
+
+// TODO!? to_unicode should be able to represent more than one unicode character?
 // NOTE: statically allocated string
-const char *get_glyphname(const char *post,unsigned short *to_unicode,unsigned short gid)
+static const char *get_glyphname(const char *post,unsigned short *to_unicode,int charcode,unsigned short gid) // {{{ if charcode==0 -> force gid to be used
 {
   if (gid==0) {
     return ".notdef";
   }
-  /*
-  ... TODO: consult post table, if there.
-  ... otherwise consult fallback table
-  ... otherwise generate "uni...".
-  ... otherwise unique name c01...
-  */
+  const char *postName=emb_otf_get_post_name(post,gid);
+  if (postName) {
+    return postName;
+  }
   static char ret[255];
-  snprintf(ret,250,"c%d",gid);
+  if (charcode) {
+    if (to_unicode) { // i.e. encoding was there
+      charcode=to_unicode[charcode];
+      // TODO!? to_unicode should be able to represent more than one unicode character?
+      // TODO for additional credit: for ligatures, etc  create /f_f /uni12341234  or the like
+    }
+    const char *aglname=aglfn13(charcode); // TODO? special case ZapfDingbats?
+    if (aglname) {
+      return aglname;
+    }
+    snprintf(ret,250,"uni%04X",charcode); // allows extraction
+  } else {
+    snprintf(ret,250,"c%d",gid);  // last resort: only by gid
+  }
   return ret;
 }
+// }}}
 
 struct OUTFILTER_PS {
   OUTPUT_FN out;
@@ -398,27 +399,42 @@ struct OUTFILTER_PS {
   int len;
 };
 
+// TODO: for maximum compatiblity (PS<2013 interpreter)  split only on table or glyph boundary (needs lookup in loca table!)
+// Note: table boundaries are at each call!
 static void outfilter_ascii_ps(const char *buf,int len,void *context)  // {{{
 {
   struct OUTFILTER_PS *of=context;
   OUTPUT_FN out=of->out;
   int iA;
 
-  if ((of->len/64000)!=(len*2+of->len)/64000) {
-    (*out)("00>\n",4,of->ctx);
-    (*out)("<",1,of->ctx);
-    of->len+=5;
-  }
+  (*out)("<",1,of->ctx);
+  of->len++;
+
+  const char *last=buf;
   char tmp[256];
   while (len>0) {
-    for (iA=0;(iA<40)&&(len>0);iA++,len--) {
-      sprintf(tmp+2*iA,"%02x",(unsigned char)buf[iA]);
+    for (iA=0;(iA<76)&&(len>0);iA+=2,len--) {
+      const unsigned char ch=buf[iA>>1];
+      tmp[iA]="0123456789abcdef"[ch>>4];
+      tmp[iA+1]="0123456789abcdef"[ch&0x0f];
     }
-    tmp[2*iA]='\n';
-    (*out)(tmp,iA*2+1,of->ctx);
-    of->len+=iA*2+1;
-    buf+=iA;
+    buf+=iA>>1;
+    if (buf<last+64000) {
+      if (len>0) {
+        tmp[iA++]='\n';
+      }
+      (*out)(tmp,iA,of->ctx);
+    } else {
+      last=buf;
+      strcpy(tmp+iA,"00>\n<");
+      iA+=5;
+      (*out)(tmp,iA,of->ctx);
+    }
+    of->len+=iA;
   }
+
+  (*out)("00>\n",4,of->ctx);
+  of->len+=4;
 }
 // }}}
 
@@ -428,20 +444,49 @@ static void outfilter_binary_ps(const char *buf,int len,void *context)  // {{{
   OUTPUT_FN out=of->out;
 
   char tmp[100];
-  const int l=sprintf(tmp,"%d RD ",len);
+  while (len>0) {
+    const int maxlen=(len>64000)?64000:len;
+    const int l=sprintf(tmp,"%d RD ",maxlen);
+    (*out)(tmp,l,of->ctx);
+    of->len+=l;
 
-  (*out)(tmp,l,of->ctx);
-  of->len+=l;
-
-  (*out)(buf,len,of->ctx);
-  (*out)("\n",1,of->ctx);
-  of->len+=len+1;
+    (*out)(buf,maxlen,of->ctx);
+    (*out)("\n",1,of->ctx);
+    of->len+=maxlen+1;
+    len-=maxlen;
+    buf+=maxlen;
+  }
 }
 // }}}
 
 /*
-  encoding:  character-code -> glyph id  ["required", NULL: identity(?)[or: from_unicode()]] // TODO: respect subsetting
-  to_unicode:  character-code -> unicode  [NULL: no char names]
+  encoding:  character-code -> glyph id  ["required", NULL: identity, i.e. from_unicode()] // TODO: respect subsetting
+  to_unicode:  character-code -> unicode  [NULL: no char names]  // kind-of "reverse" of encoding (to_unicode does not make sense without >encoding)
+
+Status:
+  - we need a 0..255 encoding to be used in the PS file
+  - we want to allow the use of encoding[];  this should map from your desired PS-stream output character (0..255) directly to the gid
+  - if encoding[] is not used, MacRoman/WinAnsi/latin1 is expected (easiest: latin1, as it is a subset of unicode)
+    i.e. your want to output latin1 to the PS-stream
+  - len is the length of >encoding, or the "last used latin1 character"
+  - oh. in multibyte-mode no >encoding probably should mean identity(gid->gid) not (latin1->gid)
+  - non-multibyte PDF -> only 255 chars  ... not recommended (we can't just map to gids, but only to names, which acro will then cmap(3,1) to gids)
+
+  => problem with subsetting BITSET (keyed by gid); we want BITSET keyed by 0..255 (via encoding)
+
+  // TODO: a) multi font encoding
+  // TODO: b) cid/big font encoding (PS>=2015) [/CIDFontType 2]     : CMap does Charcode->CID, /CIDMap does CID->GID [e.g. Identity/delta value]
+  //          (also needed [or a)] for loca>64000 if split, etc)      e.g. /CIDMap 0  [requires PS>=3011?] 
+  //          [Danger: do not split composites]
+  // TODO? incremental download [/GlyphDirectory array or dict]     : /GlyphDirectory does GID-><glyf entry> mapping
+  //       need 'fake' gdir table (size,offset=0) in sfnt; loca, glyf can be ommited; hmtx can be omitted for PS>=3011 [/MetricsCount 2]
+  //       idea is to fill initial null entries in the array/dict   [Beware of save/restore!]
+  // NOTE: even when subsetting the font has to come first in the PS file 
+
+
+... special information: when multi-byte PDF encoding is used <gid> is output. 
+    therefore /Encoding /Identity-H + /CIDSystemInfo Adobe-Identity-0 will yield 1-1 mapping for font.
+    problem is that text is not selectable. therefore there is the /ToUnicode CMap option
 */
 int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to_unicode,OUTPUT_FN output,void *context) // {{{
 {
@@ -449,6 +494,13 @@ int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to
   if (len>256) {
     fprintf(stderr,"Encoding too big(%d) for Type42\n",len);
     return -1;
+  }
+  if (len<1) {
+    fprintf(stderr,"At least .notdef required in Type42\n");
+    return -1;
+  }
+  if (!encoding) {
+    to_unicode=NULL; // does not make sense
   }
   int iA,ret=0;
 
@@ -483,42 +535,45 @@ int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to
     }
   }
 
+  // don't forget the coordinate scaling...
   dyn_printf(&ds,"11 dict begin\n"
                  "/FontName /%s def\n"
-                 "/Encoding 256 array\n"
-                 "0 1 255 { 1 index exch /.notdef put } for\n",
-                 emb_otf_get_fontname(otf));
-  for (iA=0;iA<len;iA++) {
-    const int gid=(encoding)?encoding[iA]:iA;
-    dyn_printf(&ds,"dup %d /%s put\n",
-                   iA,get_glyphname(post,to_unicode,gid));
+                 "/FontType 42 def\n"
+                 "/FontMatrix [1 0 0 1 0 0] def\n"
+                 "/FontBBox [%f %f %f %f] def\n"
+                 "/PaintType 0 def\n",
+//                 "/XUID [42 16#%X 16#%X 16#%X 16#%X] def\n"  // TODO?!? (md5 of font data)  (16# means base16)
+                 emb_otf_get_fontname(otf),
+                 bbxmin/1000.0,bbymin/1000.0,bbxmax/1000.0,bbymax/1000.0);
+  if (post) {
+    dyn_printf(&ds,"/FontInfo 4 dict dup begin\n"
+// TODO? [even non-post]: /version|/Notice|/Copyright|/FullName|/FamilyName|/Weight  () readonly def\n   from name table: 5 7 0 4 1 2 
+// using: otf_get_name(otf,3,1,0x409,?,&len) / otf_get_name(otf,1,0,0,?,&len)   + encoding
+                   "  /ItalicAngle %d def\n"
+                   "  /isFixedPitch %s def\n"
+                   "  /UnderlinePosition %f def\n"
+                   "  /UnderlineThickness %f def\n"
+                   "end readonly def\n",
+                   get_LONG(post+4)>>16,
+                   (get_ULONG(post+12)?"true":"false"),
+                   (get_SHORT(post+8)-get_SHORT(post+10)/2)/(float)otf->unitsPerEm,
+                   get_SHORT(post+10)/(float)otf->unitsPerEm);
+  }
+  dyn_printf(&ds,"/Encoding 256 array\n"
+                 "0 1 255 { 1 index exch /.notdef put } for\n");
+  for (iA=0;iA<len;iA++) { // encoding data: 0...255 -> /glyphname
+    const int gid=(encoding)?encoding[iA]:otf_from_unicode(otf,iA);
+    if (gid!=0) {
+      dyn_printf(&ds,"dup %d /%s put\n",
+                     iA,get_glyphname(post,to_unicode,iA,gid));
+    }
   }
   dyn_printf(&ds,"readonly def\n");
 
-  dyn_printf(&ds,"/PaintType 0 def\n"
-                 "/FontMatrix [1 0 0 1 0 0] def\n"
-                 "/FontBBox [%d %d %d %d] def\n"
-                 "/FontType 42 def\n",
-//                 "/XUID\n"  // TODO?!?
-                 bbxmin,bbymin,bbxmax,bbymax);
-  if (post) {
-    dyn_printf(&ds,"/FontInfo 4 dict dup begin\n"
-                   "  /ItalicAngle %d def\n"
-                   "  /isFixedPitch %d def\n"
-                   "  /UnderlinePosition %d def\n"
-                   "  /UnderlineThickness %d def\n"
-                   "end readonly def\n",
-                   get_LONG(post+4)>>16,
-                   get_ULONG(post+12),
-                   (get_SHORT(post+8)-get_SHORT(post+10)/2)*1000/otf->unitsPerEm,
-                   get_SHORT(post+10)*1000/otf->unitsPerEm);
-  }
   if (binary) {
     dyn_printf(&ds,"/RD { string currentfile exch readstring pop } executeonly def\n");
-    dyn_printf(&ds,"/sfnts[");
-  } else {
-    dyn_printf(&ds,"/sfnts[<");
   }
+  dyn_printf(&ds,"/sfnts[\n");
 
   if (ds.len<0) {
     free(post);
@@ -529,9 +584,15 @@ int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to
   ret+=ds.len;
   ds.len=0;
 
-  // {{{ copy tables verbatim
+// TODO: only tables as in otf_subset
+// TODO:  somehow communicate table boundaries:  
+  //   otf_action_copy  does exactly one output call (per table)
+  //   only otf_action_replace might do two (padding)
+  // {{{ copy tables verbatim (does not affect ds .len)
+  struct _OTF_WRITE *otfree=NULL;
+#if 0
   struct _OTF_WRITE *otw;
-  otw=malloc(sizeof(struct _OTF_WRITE)*otf->numTables);
+  otwfree=otw=malloc(sizeof(struct _OTF_WRITE)*otf->numTables);
   if (!otw) {
     fprintf(stderr,"Bad alloc: %m\n");
     free(post);
@@ -545,37 +606,53 @@ int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to
     otw[iA].param=otf;
     otw[iA].length=iA;
   }
+  int numTables=otf->numTables;
+#else
+  struct _OTF_WRITE otw[]={ // sorted
+      {OTF_TAG('c','m','a','p'),otf_action_copy,otf,},
+      {OTF_TAG('c','v','t',' '),otf_action_copy,otf,},
+      {OTF_TAG('f','p','g','m'),otf_action_copy,otf,},
+      {OTF_TAG('g','l','y','f'),otf_action_copy,otf,},
+      {OTF_TAG('h','e','a','d'),otf_action_copy,otf,},
+      {OTF_TAG('h','h','e','a'),otf_action_copy,otf,},
+      {OTF_TAG('h','m','t','x'),otf_action_copy,otf,},
+      {OTF_TAG('l','o','c','a'),otf_action_copy,otf,},
+      {OTF_TAG('m','a','x','p'),otf_action_copy,otf,},
+      {OTF_TAG('n','a','m','e'),otf_action_copy,otf,},
+      {OTF_TAG('p','r','e','p'),otf_action_copy,otf,},
+      // vhea vmtx (never used in PDF, but possible in PS>=3011)
+      {0,0,0,0}};
+  int numTables=otf_intersect_tables(otf,otw);
+#endif
 
   struct OUTFILTER_PS of;
   of.out=output;
   of.ctx=context;
   of.len=0;
   if (binary) {
-    iA=otf_write_sfnt(otw,otf->version,otf->numTables,outfilter_binary_ps,&of);
+    iA=otf_write_sfnt(otw,otf->version,numTables,outfilter_binary_ps,&of);
   } else {
-    iA=otf_write_sfnt(otw,otf->version,otf->numTables,outfilter_ascii_ps,&of);
+    iA=otf_write_sfnt(otw,otf->version,numTables,outfilter_ascii_ps,&of);
   }
-  free(otw);
+  free(otfree);
   if (iA==-1) {
     free(post);
     free(ds.buf);
     return -1;
   }
   ret+=of.len;
-
-  if (binary) {
-    dyn_printf(&ds,"] def\n");
-  } else {
-    dyn_printf(&ds,">] def\n");
-  }
   // }}} done copying
 
-  const int num_chars=1;
-  dyn_printf(&ds,"/CharStrings %d dict dup begin\n",num_chars);
-  for (iA=0;iA<num_chars;iA++) {
-    const int gid=(encoding)?encoding[iA]:iA;
-    dyn_printf(&ds,"/%s %d def\n",get_glyphname(post,to_unicode,gid),gid);
-// ... from cmap [respecting subsetting...]
+  dyn_printf(&ds,"] def\n");
+
+  dyn_printf(&ds,"/CharStrings %d dict dup begin\n"
+                 "/.notdef 0 def\n",len);
+  for (iA=0;iA<len;iA++) { // charstrings data: /glyphname -> gid
+    const int gid=(encoding)?encoding[iA]:otf_from_unicode(otf,iA);
+    if (gid) {
+      dyn_printf(&ds,"/%s %d def\n",get_glyphname(post,to_unicode,iA,gid),gid);
+    }
+    // (respecting subsetting...)
   }
   dyn_printf(&ds,"end readonly def\n");
   dyn_printf(&ds,"FontName currentdict end definefont pop\n");

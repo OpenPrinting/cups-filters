@@ -6,19 +6,27 @@ embed and subset TrueType fonts, as for example
 required in PDF files. It is completely self-contained,
 although a FreeType binding might come sometime in the future.
 
-Currently only glyf-flavored TrueType is supported,
-but OTF, i.e. CFF-flavored TrueType/OpenType is on the way.
+Currently glyf-flavored TrueType is fully supported,
+for OTF, i.e. CFF-flavored TrueType/OpenType, subsetting is not
+done; but embedding does work.
+And single-byte mode does needs work/thought wrt. to encodings.
 Also reencoding and conversion of Type1 to CFF is planned.
 PostScript embedding is another goal of the project.
+
+The most important issue that needs fixing is support for
+text extraction in the PDF multibyte case (most common),
+which requires ToUnicode support; some preparation is already done.
 
 Usage
 -----
 (TODO)... see test_pdf.c ...
 
+ * for direct sfnt access: use <sfnt.h>
+ * for embedding: use <embed.h>  (which includes <fontfile.h>)
 
 License (MIT)
 -------------
-Copyright (c) 2008 by Tobias Hoffmann.
+Copyright (c) 2008,2012 by Tobias Hoffmann.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

@@ -21,22 +21,19 @@ static inline void write_string(FILE *f,EMB_PARAMS *emb,const char *str) // {{{
 {
   assert(f);
   assert(emb);
-  OTF_FILE *otf=emb->font->sfnt;
-  assert(otf);
   int iA;
 
   if (emb->plan&EMB_A_MULTIBYTE) {
     putc('<',f); 
     for (iA=0;str[iA];iA++) {
-      const unsigned short gid=otf_from_unicode(otf,(unsigned char)str[iA]);
+      const unsigned short gid=emb_get(emb,(unsigned char)str[iA]);
       fprintf(f,"%04x",gid);
-      bit_set(emb->subset,gid);
     }
     putc('>',f); 
   } else {
     putc('(',f); 
     for (iA=0;str[iA];iA++) {
-      bit_set(emb->subset,otf_from_unicode(otf,(unsigned char)str[iA])); // TODO: emb_set(...) encoding/unicode->gid
+      emb_get(emb,(unsigned char)str[iA]);
     }
     fprintf(f,"%s",str); // TODO
     putc(')',f); 
@@ -55,23 +52,21 @@ int main(int argc,char **argv)
   FONTFILE *ff=fontfile_open_sfnt(otf);
   EMB_PARAMS *emb=emb_new(ff,
                           EMB_DEST_PS,
-                          EMB_C_FORCE_MULTIBYTE|
+//                          EMB_C_FORCE_MULTIBYTE| // not yet...
                           EMB_C_TAKE_FONTFILE);
 
   FILE *f=fopen("test.ps","w");
   assert(f);
 
-  assert(emb->subset);
-
   fprintf(f,"%%!PS-Adobe-2.0\n");
 
   char *str="Hallo";
 
-  bit_set(emb->subset,otf_from_unicode(otf,'a'));
+  emb_get(emb,'a');
 
   int iA;
   for (iA=0;str[iA];iA++) {
-    bit_set(emb->subset,otf_from_unicode(otf,(unsigned char)str[iA]));
+    emb_get(emb,(unsigned char)str[iA]);
   }
 
   emb_embed(emb,example_outfn,f);
@@ -80,6 +75,7 @@ int main(int argc,char **argv)
   fprintf(f,"  100 100 moveto\n" // content
             "  /%s findfont 10 scalefont setfont\n",emb_otf_get_fontname(emb->font->sfnt));
   write_string(f,emb,"Hallo");
+// Note that write_string sets subset bits, but it's too late
   fprintf(f," show\n"
             "showpage\n");
 

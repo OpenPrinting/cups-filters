@@ -326,6 +326,7 @@ pdftoijs:	pdftoijs.o
 #
 
 fontembed/libfontembed.a:
+	echo Building $@...
 	$(MAKE) -C fontembed
 
 texttopdf:	texttopdf.o textcommon.o common.o pdfutils.o fontembed/libfontembed.a
