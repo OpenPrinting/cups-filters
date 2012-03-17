@@ -6,6 +6,8 @@ CHANGES IN V1.0.6
 	- pdftopdf: Added support for native PDF printers, add JCL (PJL) 
 	  options only if the PDF has the "*JCLToPDFInterpreter:" keyword.
 	- Updated README.txt for the new native PDF printer support.
+	- Added a sample PPD file for a native PDF printer,
+	  HP-Color_LaserJet_CM3530_MFP-PDF.ppd.
 	- texttopdf: A lot of internal rework; also split up into more files
 	- texttopdf: Fixed many bugs on the way
 	- texttopdf: Added support for CFF-flavoured OTFs; for these

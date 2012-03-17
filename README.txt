@@ -399,6 +399,8 @@ Options must not be implemented by specifying PostScript code to
 inject.  They must be injecting JCL code ("*JCLOpenUI:
 ... ... *JCLCloseUI: ...").
 
+A sample PPD file, HP-Color_LaserJet_CM3530_MFP-PDF.ppd is included.
+
 3. LICENSE
 
 Almost all source files are under MIT like license. However,
@@ -632,6 +634,9 @@ line:
 *cupsFilter: "application/vnd.cups-pdf 0 -"
 
 and NO "*cupsFilter:" line which accepts PostScript input.
+
+A sample PPD file for a native PDF printer,
+HP-Color_LaserJet_CM3530_MFP-PDF.ppd is included.
 
 When a printer does not support PS nor PDF, you can use Ghostscript (GS).
 In this case, you can specify device options like a PS printer.
