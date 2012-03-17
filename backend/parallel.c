@@ -559,6 +559,9 @@ run_loop(int print_fd,			/* I - Print file descriptor */
 		*print_ptr,		/* Pointer into print data buffer */
 		bc_buffer[1024];	/* Back-channel data buffer */
   struct timeval timeout;		/* Timeout for select() */
+  int           sc_ok;                  /* Flag a side channel error and
+					   stop using the side channel
+					   in such a case. */
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
@@ -599,6 +602,13 @@ run_loop(int print_fd,			/* I - Print file descriptor */
   */
 
   nfds = (print_fd > device_fd ? print_fd : device_fd) + 1;
+
+
+ /*
+  * Side channel is OK...
+  */
+
+  sc_ok = 1;
 
  /*
   * Now loop until we are out of data from print_fd...
@@ -652,18 +662,20 @@ run_loop(int print_fd,			/* I - Print file descriptor */
     * Check if we have a side-channel request ready...
     */
 
-    if (FD_ISSET(CUPS_SC_FD, &input))
+    if (sc_ok && FD_ISSET(CUPS_SC_FD, &input))
     {
      /*
       * Do the side-channel request, then start back over in the select
       * loop since it may have read from print_fd...
       *
       * If the side channel processing errors, go straight on to avoid
-      * blocking of the backend by side channel problems.
+      * blocking of the backend by side channel problems, deactivate the side
+      * channel.
       */
 
-      if (side_cb(print_fd, device_fd, use_bc) >= 0)
-	continue;
+      if (side_cb(print_fd, device_fd, use_bc))
+	sc_ok = 0;
+      continue;
     }
 
    /*
