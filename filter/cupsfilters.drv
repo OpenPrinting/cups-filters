@@ -83,16 +83,17 @@ MediaType 5 "Special/Special paper"
 MediaType 6 "Glossy/Glossy paper"
 
 {
-  ModelName "DesignJet 600 pcl"
-  PCFileName "dsgnjt600pcl.ppd"
   //ModelNumber ($RTL_PJL)
   ModelNumber ($PCL_PAPER_SIZE $PCL_PJL_HPGL2 $PCL_PJL $PCL_PJL_RESOLUTION)
+  ModelName "DesignJet 600 pcl"
+  PCFileName "dsgnjt600pcl.ppd"
 
   ColorDevice false
 }
 
 {
-  // 750C is a color model
+  // Color models
+  ModelNumber ($PCL_PAPER_SIZE $PCL_RASTER_END_COLOR $PCL_RASTER_CID $PCL_RASTER_SIMPLE $PCL_RASTER_RGB24 $PCL_PJL $PCL_PJL_PAPERWIDTH $PCL_PJL_HPGL2 $PCL_PJL_RESOLUTION)
   {
     ModelName "DesignJet 750c pcl"
     PCFileName "dsgnjt750cpcl.ppd"
@@ -113,7 +114,6 @@ MediaType 6 "Glossy/Glossy paper"
     ModelName "DesignJet T790 pcl"
     PCFileName "dsgnjtt790pcl.ppd"
   }
-  ModelNumber ($PCL_PAPER_SIZE $PCL_RASTER_END_COLOR $PCL_RASTER_CID $PCL_RASTER_SIMPLE $PCL_RASTER_RGB24 $PCL_PJL $PCL_PJL_PAPERWIDTH $PCL_PJL_HPGL2 $PCL_PJL_RESOLUTION)
 
   ColorDevice true
  *ColorModel Gray/Grayscale  w    chunky 1
