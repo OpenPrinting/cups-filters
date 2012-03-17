@@ -626,7 +626,7 @@ run_loop(int print_fd,			/* I - Print file descriptor */
       FD_SET(print_fd, &input);
     if (use_bc)
       FD_SET(device_fd, &input);
-    if (!print_bytes)
+    if (!print_bytes && sc_ok)
       FD_SET(CUPS_SC_FD, &input);
 
     FD_ZERO(&output);
