@@ -3,6 +3,8 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.6 - 2012-03-16
 
 CHANGES IN V1.0.6
 
+	- rastertopclx: Code of JCL options did not get inserted into the JCL
+	  header.
 	- parallel backend: Use the same way as CUPS does to prevent an
 	  infinite loop on side channel errors (CUPS STR #4044).
 	- pdftopdf: Added support for native PDF printers, add JCL (PJL) 

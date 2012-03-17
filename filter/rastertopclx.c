@@ -529,6 +529,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     if (ppd->model_number & PCL_PJL_RESOLUTION)
       printf("@PJL SET RESOLUTION=%d\r\n", header->HWResolution[0]);
 
+    ppdEmit(ppd, stdout, PPD_ORDER_JCL);
     if (ppd->model_number & PCL_PJL_HPGL2)
       pjl_enter_language("HPGL2");
     else if (ppd->model_number & PCL_PJL_PCL3GUI)
