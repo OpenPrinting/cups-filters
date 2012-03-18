@@ -391,13 +391,13 @@ char *emb_pdf_simple_fontdescr(EMB_PARAMS *emb,EMB_PDF_FONTDESCR *fdes,int fontf
   if (1) { // TODO type!=EMB_PDF_TYPE3
     len=snprintf(pos,size,
                  "  /FontBBox [%d %d %d %d]\n"
-                 "  /Ascend %d\n"
-                 "  /Descend %d\n"
+                 "  /Ascent %d\n"
+                 "  /Descent %d\n"
                  "  /CapHeight %d\n" // if font has Latin chars
                  "  /StemV %d\n",
                  fdes->bbxmin,fdes->bbymin,fdes->bbxmax,fdes->bbymax,
-                 fdes->ascend,
-                 fdes->descend,
+                 fdes->ascent,
+                 fdes->descent,
                  fdes->capHeight,
                  fdes->stemV);
     NEXT;

@@ -656,7 +656,7 @@ int otf_get_width(OTF_FILE *otf,unsigned short gid) // {{{  -1 on error
 #if 0
   if (gid>=otf->numberOfHMetrics) {
     return get_USHORT(otf->hmtx+(otf->numberOfHMetrics-1)*2);
-    // TODO? lsb=get_SHORT(otf->hmtx+otf->numberOfHMetrics*2+gid*2);
+    // TODO? lsb=get_SHORT(otf->hmtx+otf->numberOfHMetrics*2+gid*2);  // lsb: left_side_bearing (also in table)
   }
   return get_USHORT(otf->hmtx+gid*4);
   // TODO? lsb=get_SHORT(otf->hmtx+gid*4+2);
@@ -775,7 +775,7 @@ unsigned short otf_from_unicode(OTF_FILE *otf,int unicode) // {{{ 0 = missing
   const unsigned short rangeOffset=get_USHORT(result);
   if (rangeOffset) {
     return get_USHORT(result+rangeOffset+2*(unicode-startCode)); // the so called "obscure indexing trick" into glyphIdArray[]
-    // NOTE: this is according to apple spec; microsoft says we must add delta (probably incorrect; fonts probably have delta==0), but only if !=0
+    // NOTE: this is according to apple spec; microsoft says we must add delta (probably incorrect; fonts probably have delta==0)
   } else {
     const short delta=get_SHORT(result-segCountX2);
     return (delta+unicode)&0xffff;
@@ -907,18 +907,19 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
   if (1) { // sort tables 
     int priolist[NUM_PRIO]={0,};
 
+    // reverse intersection of both sorted arrays
     int iA=numTables-1,iB=sizeof(otf_tagorder_win)/sizeof(otf_tagorder_win[0])-1;
     int ret=numTables-1;
     while ( (iA>=0)&&(iB>=0) ) {
       if (otw[iA].tag==otf_tagorder_win[iB].tag) {
         priolist[otf_tagorder_win[iB--].prio]=1+iA--;
-      } else if (otw[iA].tag>otf_tagorder_win[iB].tag) {
+      } else if (otw[iA].tag>otf_tagorder_win[iB].tag) { // no order known: put unchanged at end of result
         order[ret--]=iA--;
       } else { // <
         iB--;
       }
     }
-    for (iA=NUM_PRIO-1;iA>=0;iA--) { // pick them up
+    for (iA=NUM_PRIO-1;iA>=0;iA--) { // pick the matched tables up in sorted order (bucketsort principle)
       if (priolist[iA]) {
         order[ret--]=priolist[iA]-1;
       }

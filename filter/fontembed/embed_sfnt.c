@@ -76,6 +76,7 @@ const char *emb_otf_get_fontname(OTF_FILE *otf) // {{{
 }
 // }}}
 
+// TODO? monospaced by actual glyph width?
 void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
 {
   int len;
@@ -105,7 +106,8 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
   if ( (post_version==0x00010000)||
        (post_version==0x00020000)||
        (post_version==0x00025000)||
-       (post_version==0x00030000) ) {
+       (post_version==0x00030000)||
+       (post_version==0x00040000) ) {
     ret->italicAngle=get_LONG(post+4)>>16;
     if (get_ULONG(post+12)>0) { // monospaced
       ret->flags|=1;
@@ -149,8 +151,8 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
       }
 
       ret->avgWidth=get_SHORT(os2+2);
-      ret->ascend=get_SHORT(os2+68)*1000/otf->unitsPerEm;
-      ret->descend=get_SHORT(os2+70)*1000/otf->unitsPerEm;
+      ret->ascent=get_SHORT(os2+68)*1000/otf->unitsPerEm;
+      ret->descent=get_SHORT(os2+70)*1000/otf->unitsPerEm;
       if (os2_version>=0x0002) {
         ret->xHeight=get_SHORT(os2+86)*1000/otf->unitsPerEm;
         ret->capHeight=get_SHORT(os2+88)*1000/otf->unitsPerEm;
@@ -166,7 +168,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
   if (os2) {
     free(os2);
   } else { // TODO (if(CFF))
-    fprintf(stderr,"WARNING: no ascend/descend, capHeight, stemV, flags\n");
+    fprintf(stderr,"WARNING: no ascent/descent, capHeight, stemV, flags\n");
     if (macStyle&0x01) { // force bold - just do it on bold
       ret->flags|=0x0400;
     }
@@ -176,13 +178,13 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
     //  ... flags TODO? (Serif, Script, Italic, AllCap,SmallCap, ForceBold)
   }
 
-// ? maybe get ascend,descend,capHeight,xHeight,stemV directly from cff
+// ? maybe get ascent,descent,capHeight,xHeight,stemV directly from cff
   // Fallbacks
-  if ( (!ret->ascend)||(!ret->descend) ) {
+  if ( (!ret->ascent)||(!ret->descent) ) {
     char *hhea=otf_get_table(otf,OTF_TAG('h','h','e','a'),&len);
     if (hhea) {
-      ret->ascend=get_SHORT(hhea+4)*1000/otf->unitsPerEm;
-      ret->descend=get_SHORT(hhea+6)*1000/otf->unitsPerEm;
+      ret->ascent=get_SHORT(hhea+4)*1000/otf->unitsPerEm;
+      ret->descent=get_SHORT(hhea+6)*1000/otf->unitsPerEm;
     }
     free(hhea);
   }
@@ -201,7 +203,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
     }
   }
   if (!ret->capHeight) { // TODO? only reqd. for fonts with latin...
-    ret->capHeight=ret->ascend;
+    ret->capHeight=ret->ascent;
   }
   if (0) { // TODO? uses only adobe latin standard? ?? e.g. Type1
     ret->flags|=0x0020;

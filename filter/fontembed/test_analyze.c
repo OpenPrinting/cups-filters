@@ -157,6 +157,26 @@ void show_glyf(OTF_FILE *otf,int full) // {{{
 }
 // }}}
 
+void show_hmtx(OTF_FILE *otf) // {{{
+{
+  assert(otf);
+  int iA;
+
+  otf_get_width(otf,0); // load table.
+  if (!otf->hmtx) {
+    printf("NOTE: no hmtx table!\n");
+    return;
+  }
+  printf("hmtx (%d):\n",otf->numberOfHMetrics);
+  for (iA=0;iA<otf->numberOfHMetrics;iA++) {
+    printf("(%d,%d) ",
+           get_USHORT(otf->hmtx+iA*4),
+           get_SHORT(otf->hmtx+iA*4+2));
+  }
+  printf(" (last is repeated for the remaining %d glyphs)\n",otf->numGlyphs-otf->numberOfHMetrics);
+}
+// }}}
+
 int main(int argc,char **argv)
 {
   const char *fn="/usr/share/fonts/truetype/microsoft/ARIALN.TTF";
@@ -200,6 +220,8 @@ int main(int argc,char **argv)
   if (!(otf->flags&OTF_F_FMT_CFF)) {
     show_glyf(otf,1);
   }
+
+  show_hmtx(otf);
 
   otf_close(otf);
 

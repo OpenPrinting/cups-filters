@@ -3,6 +3,7 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.6 - 2012-03-16
 
 CHANGES IN V1.0.6
 
+	- texttopdf: Fixed typo in pdf font dictionary keys.
 	- Fixed ColorDevice definition in cupsfilters.drv for HP DesignJet
 	  printers.
 	- Put ModelNumber entries in cupsfilters.drv at the right place to

@@ -113,7 +113,6 @@ static int otf_subset_glyf(OTF_FILE *otf,int curgid,int donegid,BITSET glyphs) /
 }
 // }}}
 
-// FIXME: no more MAX_TABLES; if (numTables!=iA) memmove
 // TODO: cmap only required in non-CID context
 int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{{ - returns number of bytes written
 {
@@ -215,11 +214,6 @@ int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{
   free(new_loca);
   free(new_glyf);
   return ret;
-
-  // TODO? suggested ordering
-  // head, hhea, maxp, hmtx, cmap, fpgm, prep, cvt, loca, glyf, name
-  // copy some tables [cvt,fpgm,(glyf),head!,hhea,hmtx,(loca),maxp,name(?),prep]
-
 
   //TODO ? reduce cmap [to (1,0) ;-)]
   //TODO (cmap for non-cid)

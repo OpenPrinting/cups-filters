@@ -9,8 +9,8 @@ typedef struct {
   // for the following: 0=not set/invalid
   int bbxmin,bbymin,bbxmax,bbymax;
   int italicAngle;    // >=90: not set/invalid
-  int ascend;
-  int descend;
+  int ascent;
+  int descent;
   int capHeight;
   int stemV;
   // optional, default=0:
