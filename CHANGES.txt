@@ -1,12 +1,13 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.6 - 2012-03-16
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.6 - 2012-03-19
 -----------------------------------------------------------
 
 CHANGES IN V1.0.6
 
+	- texttopdf: Added support for direct file references in pdf.utf-8.
 	- pdftops: Added another workaround for a bug in Brother's PostScript
 	  interpreter: Suppress CCITT compression for bitmap glyphs and
 	  images on Brother printers (Ubuntu bug #955553).
-	- texttopdf: Fixed typo in pdf font dictionary keys.
+	- texttopdf: Fixed typo in pdf font descriptor dictionary keys.
 	- Fixed ColorDevice definition in cupsfilters.drv for HP DesignJet
 	  printers.
 	- Put ModelNumber entries in cupsfilters.drv at the right place to

@@ -1,4 +1,4 @@
-README - OpenPrinting CUPS Filters v1.0.5 - 2012-03-14
+README - OpenPrinting CUPS Filters v1.0.5 - 2012-03-19
 ------------------------------------------------------
 
 Looking for compile instructions?  Read the file "INSTALL.txt"
@@ -733,6 +733,10 @@ To configure:
   (when utf-8 was requested as charset). The font names given there are 
   used as fontconfig selectors; the best matching font, that is both 
   monospaced and in a supported format (TTC, TTF or OTF) will then be used.
+
+- As a special exception, all fontnames that start with a '.' or '/' are
+  considered filenames, and fontconfig is skipped; the name is used directly
+  for loading the font file.
 
 - Implementation note: TrueType Collections (.TTC) are internally handled
   by appending '/' and the index of the font inside the collection to 
