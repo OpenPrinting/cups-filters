@@ -77,6 +77,7 @@ const char *emb_otf_get_fontname(OTF_FILE *otf) // {{{
 // }}}
 
 // TODO? monospaced by actual glyph width?
+// TODO? use PCLT table? (esp. CFF, as table dircouraged for glyf fonts)
 void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
 {
   int len;
@@ -150,7 +151,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
         ret->flags|=0x0002;
       }
 
-      ret->avgWidth=get_SHORT(os2+2);
+      ret->avgWidth=get_SHORT(os2+2)*1000/otf->unitsPerEm;
       ret->ascent=get_SHORT(os2+68)*1000/otf->unitsPerEm;
       ret->descent=get_SHORT(os2+70)*1000/otf->unitsPerEm;
       if (os2_version>=0x0002) {
@@ -204,6 +205,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
   }
   if (!ret->capHeight) { // TODO? only reqd. for fonts with latin...
     ret->capHeight=ret->ascent;
+    // TODO: OTF spec says:  use metrics of 'H' (0 if not available)
   }
   if (0) { // TODO? uses only adobe latin standard? ?? e.g. Type1
     ret->flags|=0x0020;

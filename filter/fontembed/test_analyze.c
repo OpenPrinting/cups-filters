@@ -1,5 +1,7 @@
 #include "sfnt.h"
 #include "sfnt_int.h"
+#include "embed.h"
+#include "embed_sfnt_int.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -209,6 +211,8 @@ int main(int argc,char **argv)
   printf("num glyphs: %d\n",otf->numGlyphs);
   otf_get_width(otf,0); // load table.
   printf("numberOfHMetrics: %d\n",otf->numberOfHMetrics);
+
+  printf("Embedding rights: %x\n",emb_otf_get_rights(otf));
 
   show_post(otf);
 

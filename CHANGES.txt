@@ -1,8 +1,9 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.6 - 2012-03-19
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.6 - 2012-03-20
 -----------------------------------------------------------
 
 CHANGES IN V1.0.6
 
+	- texttopdf: Fixed minor miscalculation of /AvgWidth.
 	- texttopdf: Added support for direct file references in pdf.utf-8.
 	- pdftops: Added another workaround for a bug in Brother's PostScript
 	  interpreter: Suppress CCITT compression for bitmap glyphs and
