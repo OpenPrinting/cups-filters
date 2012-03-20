@@ -23,8 +23,6 @@ include Makedefs
 DIRS	=	cupsfilters backend filter pdftoopvp pdftopdf $(PHPDIR)
 
 
-Makedefs:
-	$(CURDIR)/configure
 #
 # Make all targets...
 #
@@ -39,6 +37,9 @@ all:
 		echo Making all in $$dir... ;\
 		(cd $$dir ; $(MAKE) $(MFLAGS) all) || exit 1;\
 	done
+
+Makedefs:
+	$(CURDIR)/configure
 
 
 #
