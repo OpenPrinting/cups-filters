@@ -528,6 +528,20 @@ main(int  argc,				/* I - Number of command-line args */
   pdf_argv[pdf_argc++] = (char *)"-";
 #else
  /*
+  * PostScript debug mode: If you send a job with "lpr -o psdebug" Ghostscript
+  * will not compress pages and fonts, so that the PostScript code can get
+  * analysed. This is especially important if a PostScript printer errors or
+  * misbehaves on Ghostscript's output.
+  */
+  val = cupsGetOption("psdebug", num_options, options);
+  if (val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
+      strcasecmp(val, "false"))
+  {
+    fprintf(stderr, "DEBUG: Deactivated compression of pages and fonts in Ghostscript's PostScript output (\"psdebug\" debug mode)\n");
+    pdf_argv[pdf_argc++] = (char *)"-dCompressPages=false";
+    pdf_argv[pdf_argc++] = (char *)"-dCompressFonts=false";
+  }
+ /*
   * The PostScript interpreters on Brother printers (BR-Script) have a bug in
   * their CCITTFaxDecode filter. So we do not CCITT-compress bitmap glyphs and
   * images if the PostScript is for a Brother printer.

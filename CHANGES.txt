@@ -1,5 +1,14 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.6 - 2012-03-20
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.7 - 2012-03-20
 -----------------------------------------------------------
+
+CHANGES IN V1.0.7
+
+	- pdftops: Added PostScript debug mode. For jobs sent with "-o psdebug"
+	  the PostScript output by Ghostscript does not have compression of
+	  pages and fonts, so that one can analyse the PostScript code,
+	  especially in cases of incompatibilities and bugs of the built-in
+	  PostScript interpreters of printers. Thanks to the Ghostscript
+	  upstream developers for this hint.
 
 CHANGES IN V1.0.6
 
