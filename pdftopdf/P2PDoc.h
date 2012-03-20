@@ -95,6 +95,7 @@ public:
     GBool fontEmbeddingWhole;
     GBool fontCompress;
     GBool fontEmbeddingPreLoad;
+    GBool pdfPrinter;
     int numPreFonts;
     char **preFonts;
   };

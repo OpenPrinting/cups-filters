@@ -178,11 +178,15 @@ void P2PPageTree::output(P2POutputStream *str, int copies, GBool collate)
     outputSelf(str,pageObjects,len);
     for (i = 0;i < n;i++) {
       outPages[i]->output(str,this);
+      if (P2PDoc::options.pdfPrinter)
+	fprintf(stderr, "PAGE: %d %d\n", i+1, 1);
     }
     for (i = 1;i < copies;i++) {
       k = i*n;
       for (j = 0;j < n;j++) {
 	outPages[j]->output(str,this,pageObjects[k+j]);
+	if (P2PDoc::options.pdfPrinter)
+	  fprintf(stderr, "PAGE: %d %d\n", j+1, 1);
       }
     }
   } else {
@@ -197,8 +201,12 @@ void P2PPageTree::output(P2POutputStream *str, int copies, GBool collate)
     for (i = 0;i < n;i++) {
       k = i*copies;
       outPages[i]->output(str,this);
+      if (P2PDoc::options.pdfPrinter)
+	fprintf(stderr, "PAGE: %d %d\n", i+1, 1);
       for (j = 1;j < copies;j++) {
 	outPages[i]->output(str,this,pageObjects[k+j]);
+	if (P2PDoc::options.pdfPrinter)
+	  fprintf(stderr, "PAGE: %d %d\n", i+1, 1);
       }
     }
   }

@@ -19,7 +19,8 @@ CHANGES IN V1.0.6
 	- parallel backend: Use the same way as CUPS does to prevent an
 	  infinite loop on side channel errors (CUPS STR #4044).
 	- pdftopdf: Added support for native PDF printers, add JCL (PJL) 
-	  options only if the PDF has the "*JCLToPDFInterpreter:" keyword.
+	  options and send page_log entries only if the PDF has the
+	  "*JCLToPDFInterpreter:" keyword.
 	- Updated README.txt for the new native PDF printer support.
 	- Added a sample PPD file for a native PDF printer,
 	  HP-Color_LaserJet_CM3530_MFP-PDF.ppd.

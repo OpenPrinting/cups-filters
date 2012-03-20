@@ -785,8 +785,11 @@ int main(int argc, char *argv[]) {
     if ((attr = ppdFindAttr(ppd,"JCLToPDFInterpreter",NULL)) != NULL) {
       ppd->jcl_ps = strdup(attr->value);
       ppd_decode(ppd->jcl_ps);
-    } else
+      P2PDoc::options.pdfPrinter = gTrue;
+    } else {
       ppd->jcl_ps = NULL;
+      P2PDoc::options.pdfPrinter = gFalse;
+    }
     ppdEmitJCL(ppd,stdout,P2PDoc::options.jobId,P2PDoc::options.user,
       P2PDoc::options.title);
     emitJCLOptions(stdout,deviceCopies);
