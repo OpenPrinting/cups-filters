@@ -1,4 +1,4 @@
-README - OpenPrinting CUPS Filters v1.0.6 - 2012-03-20
+README - OpenPrinting CUPS Filters v1.0.7 - 2012-03-20
 ------------------------------------------------------
 
 Looking for compile instructions?  Read the file "INSTALL.txt"
@@ -48,6 +48,41 @@ INTRODUCTION
 
     See the "LICENSE.txt" files for legal information.
 
+POSTSCRIPT PRINTING DEBUG MODE
+
+    If you use CUPS with this package and a PostScript printer then
+    the included pdftops filter converts the print job data which is
+    in PDF format into PostScript. By default, the PostScript is
+    generated with Ghostscript's "ps2write" output device, which
+    generates a DSC-conforming PostScript with compressed embedded
+    fonts and compressed page content. This is resource-saving and
+    leads to fast wire transfer of print jobs to the rpinter.
+
+    Sometimes a PostScript printer's interpreter errors, crashes, or
+    somehow else misbehaves on Ghostscript's output. To find
+    workarounds (currently we have already workarounds for Brother and
+    Kyocera) it is much easier to work with uncompressed PostScript.
+    To get uncompressed PostScript as output, send a job with the
+    "psdebug" option, with commands like the following:
+
+      lpr -P <printer> -o psdebug <file>
+      lp -d <printer> -o psdebug <file>
+
+    If you want to send your job out of a desktop application, run
+
+      lpoptions -p <printer> -o psdebug
+
+    to make "psdebug" a personal default setting for you.
+
+    To extract the PostScript output for a developer to analyse it,
+    clone your print queue to a one which prints into a file:
+
+      cupsctl FileDevice=yes
+      lpadmin -p test -E -v file:/tmp/printout \
+      -P /etc/cups/ppd/<name of original queue>.ppd
+
+    and print into this queue as described above. The PostScript
+    output is in /tmp/printout after the job has completed.
 
 CUPS FILTERS FOR PDF AS STANDARD PRINT JOB FORMAT
 
