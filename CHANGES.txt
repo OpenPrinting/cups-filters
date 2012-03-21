@@ -3,9 +3,13 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.8 - 2012-03-21
 
 CHANGES IN V1.0.8
 
-	- pdftops: Added one more Ghostscript command line parameter to
-	  overcome a PostScript interpreter bug in Brother's printers
-	  (Ubuntu bug #960666).
+	- pdftops: Generally do not compress fonts and images, and
+	  also do not do CCITT compression for bitmap glyphs to make
+	  the PostScript output more compatible with buggy PostScript
+	  interpreters. The output gets 30-50% longer but will work on
+	  many more different printer models. Problems were also
+	  discovered on HP and not only on Brother (Ubuntu bug
+	  #960666).
 
 CHANGES IN V1.0.7
 

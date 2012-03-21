@@ -529,7 +529,7 @@ main(int  argc,				/* I - Number of command-line args */
 #else
  /*
   * PostScript debug mode: If you send a job with "lpr -o psdebug" Ghostscript
-  * will not compress pages and fonts, so that the PostScript code can get
+  * will not compress the pages, so that the PostScript code can get
   * analysed. This is especially important if a PostScript printer errors or
   * misbehaves on Ghostscript's output.
   */
@@ -537,23 +537,19 @@ main(int  argc,				/* I - Number of command-line args */
   if (val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
       strcasecmp(val, "false"))
   {
-    fprintf(stderr, "DEBUG: Deactivated compression of pages and fonts in Ghostscript's PostScript output (\"psdebug\" debug mode)\n");
+    fprintf(stderr, "DEBUG: Deactivated compression of pages in Ghostscript's PostScript output (\"psdebug\" debug mode)\n");
     pdf_argv[pdf_argc++] = (char *)"-dCompressPages=false";
-    pdf_argv[pdf_argc++] = (char *)"-dCompressFonts=false";
   }
  /*
-  * The PostScript interpreters on Brother printers (BR-Script) have a bug in
-  * their CCITTFaxDecode filter. So we do not CCITT-compress bitmap glyphs and
-  * images if the PostScript is for a Brother printer.
+  * The PostScript interpreters on many printers have a bugs which make
+  * the interpreter crash, error out, or otherwise misbehave on too
+  * heavily compressed input files, especially if code with compressed
+  * elements is compressed agin. Therefore we reduce compression here.
   */
-  if (ppd && ppd->manufacturer &&
-      !strncasecmp(ppd->manufacturer, "Brother", 7))
-  {
-    fprintf(stderr, "DEBUG: Deactivated CCITT compression of glyphs and images as workaround for Brother printers\n");
-    pdf_argv[pdf_argc++] = (char *)"-dNoT3CCITT";
-    pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
-    pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
-  }
+  pdf_argv[pdf_argc++] = (char *)"-dCompressFonts=false";
+  pdf_argv[pdf_argc++] = (char *)"-dNoT3CCITT";
+  pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
+  pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
   pdf_argv[pdf_argc++] = (char *)"-c";
   pdf_argv[pdf_argc++] = (char *)"save pop";
   pdf_argv[pdf_argc++] = (char *)"-f";
