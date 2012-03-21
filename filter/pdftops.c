@@ -552,6 +552,7 @@ main(int  argc,				/* I - Number of command-line args */
     fprintf(stderr, "DEBUG: Deactivated CCITT compression of glyphs and images as workaround for Brother printers\n");
     pdf_argv[pdf_argc++] = (char *)"-dNoT3CCITT";
     pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
+    pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
   }
   pdf_argv[pdf_argc++] = (char *)"-c";
   pdf_argv[pdf_argc++] = (char *)"save pop";

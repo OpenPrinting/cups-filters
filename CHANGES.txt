@@ -1,5 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.7 - 2012-03-20
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.8 - 2012-03-21
 -----------------------------------------------------------
+
+CHANGES IN V1.0.8
+
+	- pdftops: Added one more Ghostscript command line parameter to
+	  overcome a PostScript interpreter bug in Brother's printers
+	  (Ubuntu bug #960666).
 
 CHANGES IN V1.0.7
 
