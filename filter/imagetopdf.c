@@ -39,6 +39,7 @@
 #include "common.h"
 #include <cupsfilters/image.h>
 #include <math.h>
+#include <ctype.h>
 
 #if CUPS_VERSION_MAJOR < 1 \
   || (CUPS_VERSION_MAJOR == 1 && CUPS_VERSION_MINOR < 2)
@@ -626,6 +627,62 @@ static void outImage(int imgObj)
 }
 
 /*
+ * Copied ppd_decode() from CUPS which is not exported to the API
+ */
+
+static int				/* O - Length of decoded string */
+ppd_decode(char *string)		/* I - String to decode */
+{
+  char	*inptr,				/* Input pointer */
+	*outptr;			/* Output pointer */
+
+
+  inptr  = string;
+  outptr = string;
+
+  while (*inptr != '\0')
+    if (*inptr == '<' && isxdigit(inptr[1] & 255))
+    {
+     /*
+      * Convert hex to 8-bit values...
+      */
+
+      inptr ++;
+      while (isxdigit(*inptr & 255))
+      {
+	if (isalpha(*inptr))
+	  *outptr = (tolower(*inptr) - 'a' + 10) << 4;
+	else
+	  *outptr = (*inptr - '0') << 4;
+
+	inptr ++;
+
+        if (!isxdigit(*inptr & 255))
+	  break;
+
+	if (isalpha(*inptr))
+	  *outptr |= tolower(*inptr) - 'a' + 10;
+	else
+	  *outptr |= *inptr - '0';
+
+	inptr ++;
+	outptr ++;
+      }
+
+      while (*inptr != '>' && *inptr != '\0')
+	inptr ++;
+      while (*inptr == '>')
+	inptr ++;
+    }
+    else
+      *outptr++ = *inptr++;
+
+  *outptr = '\0';
+
+  return ((int)(outptr - string));
+}
+
+/*
  * 'main()' - Main entry...
  */
 
@@ -641,6 +698,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   int		xppi, yppi;		/* Pixels-per-inch */
   int		hue, sat;		/* Hue and saturation adjustment */
   int		emit_jcl;
+  int           pdf_printer = 0;
   char		filename[1024];		/* Name of file to print */
   int deviceCopies = 1;
   int deviceCollate = 0;
@@ -766,7 +824,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
   }
 
-  /* adujst to even page when duplex */
+  /* adjust to even page when duplex */
   if (((val = cupsGetOption("cupsEvenDuplex",num_options,options)) != 0 &&
              (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
                !strcasecmp(val, "yes"))) ||
@@ -1328,6 +1386,23 @@ main(int  argc,				/* I - Number of command-line arguments */
   */
 
   if (emit_jcl) {
+    /* pdftopdf only adds JCL to the job if the printer is a native PDF
+       printer and the PPD is for this mode, having the "*JCLToPDFInterpreter:"
+       keyword. We need to read this keyword manually from the PPD and replace
+       the content of ppd->jcl_ps by the value of this keyword, so that
+       ppdEmitJCL() actalually adds JCL based on the presence on 
+       "*JCLToPDFInterpreter:". */
+    if ((attr = ppdFindAttr(ppd,"JCLToPDFInterpreter",NULL)) != NULL)
+    {
+      ppd->jcl_ps = strdup(attr->value);
+      ppd_decode(ppd->jcl_ps);
+      pdf_printer = 1;
+    } 
+    else
+    {
+      ppd->jcl_ps = NULL;
+      pdf_printer = 0;
+    }
     ppdEmitJCL(ppd, stdout, atoi(argv[1]), argv[2], argv[3]);
     emitJCLOptions(stdout,deviceCopies);
   }
@@ -1519,10 +1594,14 @@ main(int  argc,				/* I - Number of command-line arguments */
 	  outPageObject(pageObjects[page],
 	    contentsObjs[ypages*xpage+ypage],
 	    imgObjs[ypages*xpage+ypage]);
+	  if (pdf_printer)
+	    fprintf(stderr, "PAGE: %d %d\n", page+1, 1);
 	}
       if (EvenDuplex) {
 	/* out empty page */
 	outPageObject(pageObjects[page],-1,-1);
+	if (pdf_printer)
+	  fprintf(stderr, "PAGE: %d %d\n", page+1, 1);
       }
     }
     free(contentsObjs);
@@ -1549,6 +1628,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 	{
 	  /* out Page Object */
 	  outPageObject(pageObjects[page],contentsObj,imgObj);
+	  if (pdf_printer)
+	    fprintf(stderr, "PAGE: %d %d\n", page+1, 1);
 	}
       }
     if (EvenDuplex) {
@@ -1558,6 +1639,8 @@ main(int  argc,				/* I - Number of command-line arguments */
       for (p = 0;p < Copies;p++, page++)
       {
 	outPageObject(pageObjects[page],-1,-1);
+	if (pdf_printer)
+	  fprintf(stderr, "PAGE: %d %d\n", page+1, 1);
       }
     }
   }
