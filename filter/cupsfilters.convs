@@ -74,9 +74,9 @@ application/vnd.cups-pdf-banner	application/pdf			33	bannertopdf
 # PostScript filters
 #
 
-application/pdf			application/vnd.cups-postscript	66	pdftops
+#application/pdf		application/vnd.cups-postscript	66	pdftops
 application/vnd.cups-pdf	application/vnd.cups-postscript	22	pdftops
-application/postscript		application/vnd.cups-postscript	66	pstops
+#application/postscript		application/vnd.cups-postscript	66	pstops
 
 ########################################################################
 #
