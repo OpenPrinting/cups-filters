@@ -706,7 +706,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Process command-line options and write the prolog...
   */
 
-  zoom = 0.0;
+  zoom = 1.0;
   xppi = 0;
   yppi = 0;
   hue  = 0;
@@ -815,13 +815,22 @@ main(int  argc,				/* I - Number of command-line arguments */
   else if (((val =
 	     cupsGetOption("fit-to-page", num_options, options)) != NULL) ||
 	   ((val = cupsGetOption("fitplot", num_options, options)) != NULL))
+  {
     if (!strcasecmp(val, "yes") || !strcasecmp(val, "on") ||
 	!strcasecmp(val, "true"))
       zoom = 1.0;
+    else
+      zoom = 0.0;
+  }
+  else if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
+    zoom = 0.0;
 
   if ((val = cupsGetOption("ppi", num_options, options)) != NULL)
+  {
     if (sscanf(val, "%dx%d", &xppi, &yppi) < 2)
       yppi = xppi;
+    zoom = 0.0;
+  }
 
   if ((val = cupsGetOption("position", num_options, options)) != NULL)
   {

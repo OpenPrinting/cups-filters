@@ -1,5 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.8 - 2012-03-22
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.9 - 2012-03-26
 -----------------------------------------------------------
+
+CHANGES IN V1.0.9
+
+	- imagetopdf, imagetoraster: Let image input "scale to fit"
+	  by default. This makes photo printing via AirPrint work,
+	  as the iOS devices send JPEG but do not allow setting options.
 
 CHANGES IN V1.0.8
 

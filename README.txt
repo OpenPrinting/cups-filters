@@ -48,6 +48,22 @@ INTRODUCTION
 
     See the "LICENSE.txt" files for legal information.
 
+IMAGE PRINTING DEFAULT CHANGED TO "SCALE TO FIT"
+
+    Compared to the PostScript-based original CUPS filters there is a
+    change of deafults: The imagetopdf and imagetoraster filters print
+    in "scale-to-fit" mode (image is scaled to fill one page but
+    nothing of the image being cut off) by default.
+
+    This is done to support photo printing via AirPrint. The photo
+    apps on Apple's iOS devices send print jobs as JPEG images and do
+    not allow to set any options like "scaling" or the page size. With
+    "scale-to-fit" mode set by default, the iOS photos come out on one
+    page, as expected.
+
+    To get back to the old behavior, supply one of the options
+    "nofitplot" "filplot=Off", "nofit-to-page", or "fit-to-page=Off".
+
 POSTSCRIPT PRINTING DEBUG MODE
 
     If you use CUPS with this package and a PostScript printer then
