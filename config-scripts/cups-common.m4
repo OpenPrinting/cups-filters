@@ -20,7 +20,7 @@ dnl Set the name of the config header file...
 AC_CONFIG_HEADER(config.h)
 
 dnl Version number information...
-CUPSFILTERS_VERSION="1.0.10"
+CUPSFILTERS_VERSION="1.0.11"
 AC_SUBST(CUPSFILTERS_VERSION)
 AC_DEFINE_UNQUOTED(CUPSFILTERS_SVERSION, "cups-filters v$CUPSFILTERS_VERSION")
 

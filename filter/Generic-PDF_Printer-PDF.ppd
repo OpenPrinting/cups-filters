@@ -1,7 +1,8 @@
 *PPD-Adobe: "4.3"
 *%
-*% This PPD file is for using the HP Color LaserJet CM3530 MFP in native
-*% PDF mode, using CUPS with the OpenPrinting CUPS Filters package
+*% This PPD file is for using a PDF printer in its native PDF mode, with
+*% option settings controlled via PJL commands. It uses CUPS with the
+*% OpenPrinting CUPS Filters package.
 *%
 *% This PPD is experimental. It is possible that some of the options
 *% and settings do not make sense or do not cause any change on the output.
@@ -10,23 +11,22 @@
 *%
 *% This file is published under the GNU General Public License
 *%
-*% You may save this file as 'HP-Color_LaserJet_CM3530_MFP-PDF.ppd'
+*% You may save this file as 'Generic-PDF_Printer-PDF.ppd'
 *%
 *%
 *FormatVersion:	"4.3"
 *FileVersion:	"1.1"
 *LanguageVersion: English 
 *LanguageEncoding: ISOLatin1
-*PCFileName:	"CM353PDF.PPD"
-*Manufacturer:	"HP"
-*Product:       "(HP Color LaserJet CM3530 MFP)"
-*Product:       "(Hewlett-Packard HP Color LaserJet CM3530 MFP)"
+*PCFileName:	"PDF.PPD"
+*Manufacturer:	"Generic"
+*Product:       "(Generic PDF Printer)"
 *cupsVersion:	1.0
 *cupsManualCopies: True
 *cupsModelNumber:  2
-*ModelName:     "HP Color LaserJet CM3530 MFP"
-*ShortNickName: "HP Color LaserJet CM3530 MFP"
-*NickName:      "HP Color LaserJet CM3530 MFP PDF"
+*ModelName:     "Generic PDF Printer"
+*ShortNickName: "Generic PDF Printer"
+*NickName:      "Generic PDF Printer"
 *PSVersion:     "(3010.107) 0"
 *LanguageLevel:	"3"
 *ColorDevice:	True
@@ -35,9 +35,9 @@
 *Throughput:	"30"
 *LandscapeOrientation: Plus90
 *TTRasterizer:	Type42
-*1284DeviceID: "MFG:Hewlett-Packard;CMD:PJL,BIDI-ECP,PCLXL,PCL,PDF,PJL,POSTSCRIPT;MDL:HP Color LaserJet CM3530 MFP;CLS:PRINTER;DES:Hewlett-Packard Color LaserJet CM3530 MFP;DRV:DPDF,R0,M0;"
+*1284DeviceID: "MFG:Generic;CMD:PJL,PDF;MDL:PDF Printer;CLS:PRINTER;DES:Generic PDF Printer;DRV:DPDF,R1,M0;"
 *JCLBegin:            "<1B>%-12345X@PJL JOB<0A>"
-*JCLToPDFInterpreter: "@PJL ENTER LANGUAGE = PDF <0A>"
+*JCLToPDFInterpreter: "@PJL ENTER LANGUAGE = PDF<0A>"
 *JCLEnd:              "<1B>%-12345X@PJL EOJ <0A><1B>%-12345X"
 *cupsFilter: "application/vnd.cups-pdf 0 -"
 
@@ -154,83 +154,6 @@
 *Resolution 1200dpi/1200 dpi: "@PJL SET RESOLUTION=1200<0A>"
 *JCLCloseUI: *Resolution
 
-
-*JCLOpenUI *colorbalanceblack/Color balance black: PickOne
-*OrderDependency: 100 JCLSetup *colorbalanceblack
-*Defaultcolorbalanceblack: 4
-*colorbalanceblack 0/0: "@PJL SET COLORBALANCEBLACK=0<0A>"
-*colorbalanceblack 1/1: "@PJL SET COLORBALANCEBLACK=1<0A>"
-*colorbalanceblack 2/2: "@PJL SET COLORBALANCEBLACK=2<0A>"
-*colorbalanceblack 3/3: "@PJL SET COLORBALANCEBLACK=3<0A>"
-*colorbalanceblack 4/4: "@PJL SET COLORBALANCEBLACK=4<0A>"
-*colorbalanceblack 5/5: "@PJL SET COLORBALANCEBLACK=5<0A>"
-*colorbalanceblack 6/6: "@PJL SET COLORBALANCEBLACK=6<0A>"
-*colorbalanceblack 7/7: "@PJL SET COLORBALANCEBLACK=7<0A>"
-*colorbalanceblack 8/8: "@PJL SET COLORBALANCEBLACK=8<0A>"
-*JCLCloseUI: *colorbalanceblack
-
-*CustomJCLcolorbalanceblack True: "@PJL SET COLORBALANCEBLACK=\1<0A>"
-*ParamCustomJCLcolorbalanceblack colorbalanceblack/colorbalanceblack: 1 int 0 8
-
-*JCLOpenUI *colorbalancecyan/Color balance cyan: PickOne
-*OrderDependency: 100 JCLSetup *colorbalancecyan
-*Defaultcolorbalancecyan: 4
-*colorbalancecyan 0/0: "@PJL SET COLORBALANCECYAN=0<0A>"
-*colorbalancecyan 1/1: "@PJL SET COLORBALANCECYAN=1<0A>"
-*colorbalancecyan 2/2: "@PJL SET COLORBALANCECYAN=2<0A>"
-*colorbalancecyan 3/3: "@PJL SET COLORBALANCECYAN=3<0A>"
-*colorbalancecyan 4/4: "@PJL SET COLORBALANCECYAN=4<0A>"
-*colorbalancecyan 5/5: "@PJL SET COLORBALANCECYAN=5<0A>"
-*colorbalancecyan 6/6: "@PJL SET COLORBALANCECYAN=6<0A>"
-*colorbalancecyan 7/7: "@PJL SET COLORBALANCECYAN=7<0A>"
-*colorbalancecyan 8/8: "@PJL SET COLORBALANCECYAN=8<0A>"
-*JCLCloseUI: *colorbalancecyan
-
-*CustomJCLcolorbalancecyan True: "@PJL SET COLORBALANCECYAN=\1<0A>"
-*ParamCustomJCLcolorbalancecyan colorbalancecyan/colorbalancecyan: 1 int 0 8
-
-*JCLOpenUI *colorbalancemagenta/Color balance magenta: PickOne
-*OrderDependency: 100 JCLSetup *colorbalancemagenta
-*Defaultcolorbalancemagenta: 4
-*colorbalancemagenta 0/0: "@PJL SET COLORBALANCEMAGENTA=0<0A>"
-*colorbalancemagenta 1/1: "@PJL SET COLORBALANCEMAGENTA=1<0A>"
-*colorbalancemagenta 2/2: "@PJL SET COLORBALANCEMAGENTA=2<0A>"
-*colorbalancemagenta 3/3: "@PJL SET COLORBALANCEMAGENTA=3<0A>"
-*colorbalancemagenta 4/4: "@PJL SET COLORBALANCEMAGENTA=4<0A>"
-*colorbalancemagenta 5/5: "@PJL SET COLORBALANCEMAGENTA=5<0A>"
-*colorbalancemagenta 6/6: "@PJL SET COLORBALANCEMAGENTA=6<0A>"
-*colorbalancemagenta 7/7: "@PJL SET COLORBALANCEMAGENTA=7<0A>"
-*colorbalancemagenta 8/8: "@PJL SET COLORBALANCEMAGENTA=8<0A>"
-*JCLCloseUI: *colorbalancemagenta
-
-*CustomJCLcolorbalancemagenta True: "@PJL SET COLORBALANCEMAGENTA=\1<0A>"
-*ParamCustomJCLcolorbalancemagenta colorbalancemagenta/colorbalancemagenta: 1 int 0 8
-
-*JCLOpenUI *colorbalanceyellow/Color balance yellow: PickOne
-*OrderDependency: 100 JCLSetup *colorbalanceyellow
-*Defaultcolorbalanceyellow: 4
-*colorbalanceyellow 0/0: "@PJL SET COLORBALANCEYELLOW=0<0A>"
-*colorbalanceyellow 1/1: "@PJL SET COLORBALANCEYELLOW=1<0A>"
-*colorbalanceyellow 2/2: "@PJL SET COLORBALANCEYELLOW=2<0A>"
-*colorbalanceyellow 3/3: "@PJL SET COLORBALANCEYELLOW=3<0A>"
-*colorbalanceyellow 4/4: "@PJL SET COLORBALANCEYELLOW=4<0A>"
-*colorbalanceyellow 5/5: "@PJL SET COLORBALANCEYELLOW=5<0A>"
-*colorbalanceyellow 6/6: "@PJL SET COLORBALANCEYELLOW=6<0A>"
-*colorbalanceyellow 7/7: "@PJL SET COLORBALANCEYELLOW=7<0A>"
-*colorbalanceyellow 8/8: "@PJL SET COLORBALANCEYELLOW=8<0A>"
-*JCLCloseUI: *colorbalanceyellow
-
-*CustomJCLcolorbalanceyellow True: "@PJL SET COLORBALANCEYELLOW=\1<0A>"
-*ParamCustomJCLcolorbalanceyellow colorbalanceyellow/colorbalanceyellow: 1 int 0 8
-
-
-*JCLOpenUI *colorsupplyout/On color supply out: PickOne
-*OrderDependency: 100 JCLSetup *colorsupplyout
-*Defaultcolorsupplyout: autocontinueblack
-*colorsupplyout autocontinueblack/Continue in grayscale: "@PJL SET COLORSUPPLYOUT=AUTOCONTINUEBLACK<0A>"
-*colorsupplyout stop/Stop: "@PJL SET COLORSUPPLYOUT=STOP<0A>"
-*JCLCloseUI: *colorsupplyout
-
 *JCLOpenUI *ret/Resolution Enhancement: PickOne
 *OrderDependency: 100 JCLSetup *ret
 *Defaultret: notset
@@ -248,48 +171,12 @@
 *borderless on/On: "@PJL SET BORDERLESS=ON<0A>"
 *JCLCloseUI: *borderless
 
-*JCLOpenUI *contentorientation/Content Orientation: PickOne
-*OrderDependency: 100 JCLSetup *contentorientation
-*Defaultcontentorientation: notspecified
-*contentorientation landscape/Landscape: "@PJL SET CONTENTORIENTATION=LANDSCAPE<0A>"
-*contentorientation notspecified/Not specified: "@PJL SET CONTENTORIENTATION=NOTSPECIFIED<0A>"
-*contentorientation portrait/Portrait: "@PJL SET CONTENTORIENTATION=PORTRAIT<0A>"
-*contentorientation reverselandscape/Reverse landscape: "@PJL SET CONTENTORIENTATION=REVERSELANDSCAPE<0A>"
-*contentorientation reverseportrait/Reverse portrait: "@PJL SET CONTENTORIENTATION=REVERSEPORTRAIT<0A>"
-*JCLCloseUI: *contentorientation
-
-*JCLOpenUI *edgecontrol/Edge control: PickOne
-*OrderDependency: 100 JCLSetup *edgecontrol
-*Defaultedgecontrol: maximum
-*edgecontrol normal/Normal: "@PJL SET EDGECONTROL=NORMAL<0A>"
-*edgecontrol light/Light: "@PJL SET EDGECONTROL=LIGHT<0A>"
-*edgecontrol maximum/Maximum: "@PJL SET EDGECONTROL=MAXIMUM<0A>"
-*edgecontrol off/Off: "@PJL SET EDGECONTROL=OFF<0A>"
-*JCLCloseUI: *edgecontrol
-
 *JCLOpenUI *edgetoedge/Edge to edge: PickOne
 *OrderDependency: 100 JCLSetup *edgetoedge
 *Defaultedgetoedge: yes
 *edgetoedge no/No: "@PJL SET EDGETOEDGE=NO<0A>"
 *edgetoedge yes/Yes: "@PJL SET EDGETOEDGE=YES<0A>"
 *JCLCloseUI: *edgetoedge
-
-*JCLOpenUI *finish/Finisher: PickOne
-*OrderDependency: 100 JCLSetup *finish
-*Defaultfinish: none
-*finish none/None: "@PJL SET FINISH=NONE<0A>"
-*finish on/On: "@PJL SET FINISH=ON<0A>"
-*finish staple/Staple: "@PJL SET FINISH=STAPLE<0A>"
-*JCLCloseUI: *finish
-
-*JCLOpenUI *hold/Hold Job: PickOne
-*OrderDependency: 100 JCLSetup *hold
-*Defaulthold: off
-*hold off/Off: "@PJL SET HOLD=OFF<0A>"
-*hold on/On: "@PJL SET HOLD=ON<0A>"
-*hold proof/Proof: "@PJL SET HOLD=PROOF<0A>"
-*hold store/Store: "@PJL SET HOLD=STORE<0A>"
-*JCLCloseUI: *hold
 
 *JCLOpenUI *joboffset/Job Offset: PickOne
 *OrderDependency: 100 JCLSetup *joboffset
@@ -311,63 +198,6 @@
 *overridea4withletter no/No: "@PJL SET OVERRIDEA4WITHLETTER=NO<0A>"
 *overridea4withletter yes/Yes: "@PJL SET OVERRIDEA4WITHLETTER=YES<0A>"
 *JCLCloseUI: *overridea4withletter
-
-*JCLOpenUI *planesinuse/Planes in use: PickOne
-*OrderDependency: 100 JCLSetup *planesinuse
-*Defaultplanesinuse: 3
-*planesinuse 1/1: "@PJL SET PLANESINUSE=1<0A>"
-*planesinuse 3/3: "@PJL SET PLANESINUSE=3<0A>"
-*JCLCloseUI: *planesinuse
-
-*JCLOpenUI *printonbackside/Print on back side: PickOne
-*OrderDependency: 100 JCLSetup *printonbackside
-*Defaultprintonbackside: on
-*printonbackside off/Off: "@PJL SET PRINTONBACKSIDE=OFF<0A>"
-*printonbackside on/On: "@PJL SET PRINTONBACKSIDE=ON<0A>"
-*JCLCloseUI: *printonbackside
-
-*JCLOpenUI *processingaction/Processing Action: PickOne
-*OrderDependency: 100 JCLSetup *processingaction
-*Defaultprocessingaction: replace
-*processingaction append/Append: "@PJL SET PROCESSINGACTION=APPEND<0A>"
-*processingaction replace/Replace: "@PJL SET PROCESSINGACTION=REPLACE<0A>"
-*JCLCloseUI: *processingaction
-
-*JCLOpenUI *processingboundary/Processing Boundary: PickOne
-*OrderDependency: 100 JCLSetup *processingboundary
-*Defaultprocessingboundary: job
-*processingboundary job/Job: "@PJL SET PROCESSINGBOUNDARY=JOB<0A>"
-*processingboundary mopy/Mopy: "@PJL SET PROCESSINGBOUNDARY=MOPY<0A>"
-*JCLCloseUI: *processingboundary
-
-*JCLOpenUI *reprint/Reprint job: PickOne
-*OrderDependency: 100 JCLSetup *reprint
-*Defaultreprint: auto
-*reprint auto/Automatic: "@PJL SET REPRINT=AUTO<0A>"
-*reprint off/Off: "@PJL SET REPRINT=OFF<0A>"
-*reprint on/On: "@PJL SET REPRINT=ON<0A>"
-*JCLCloseUI: *reprint
-
-*JCLOpenUI *stapleoption/Stapling Mode: PickOne
-*OrderDependency: 100 JCLSetup *stapleoption
-*Defaultstapleoption: none
-*stapleoption default/Default: "@PJL SET STAPLEOPTION=DEFAULT<0A>"
-*stapleoption custom/Custom Size: "@PJL SET STAPLEOPTION=CUSTOM<0A>"
-*stapleoption five/5: "@PJL SET STAPLEOPTION=FIVE<0A>"
-*stapleoption four/4: "@PJL SET STAPLEOPTION=FOUR<0A>"
-*stapleoption none/None: "@PJL SET STAPLEOPTION=NONE<0A>"
-*stapleoption one/1: "@PJL SET STAPLEOPTION=ONE<0A>"
-*stapleoption oneangled/One Angled: "@PJL SET STAPLEOPTION=ONEANGLED<0A>"
-*stapleoption oneopposed/One Opposed: "@PJL SET STAPLEOPTION=ONEOPPOSED<0A>"
-*stapleoption option3/Option 3: "@PJL SET STAPLEOPTION=OPTION3<0A>"
-*stapleoption option4/Option 4: "@PJL SET STAPLEOPTION=OPTION4<0A>"
-*stapleoption option5/Option 5: "@PJL SET STAPLEOPTION=OPTION5<0A>"
-*stapleoption option6/Option 6: "@PJL SET STAPLEOPTION=OPTION6<0A>"
-*stapleoption seven/7: "@PJL SET STAPLEOPTION=SEVEN<0A>"
-*stapleoption six/6: "@PJL SET STAPLEOPTION=SIX<0A>"
-*stapleoption three/3: "@PJL SET STAPLEOPTION=THREE<0A>"
-*stapleoption two/2: "@PJL SET STAPLEOPTION=TWO<0A>"
-*JCLCloseUI: *stapleoption
 
 *CloseGroup: General
 
