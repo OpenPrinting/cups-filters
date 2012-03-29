@@ -13,6 +13,7 @@
 
 #include "splash/SplashTypes.h"
 #include "splash/SplashState.h"
+#include "splash/Splash.h"
 
 class SplashPattern;
 class SplashScreen;
@@ -36,6 +37,10 @@ public:
   OPVPSplashState *copy() { return new OPVPSplashState(this); }
 
   ~OPVPSplashState();
+
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  void setState(Splash *osplash);
+#endif
 
   // Set the stroke pattern.  This does not copy <strokePatternA>.
   void setStrokePattern(SplashPattern *strokePatternA);

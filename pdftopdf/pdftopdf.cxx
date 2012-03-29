@@ -39,7 +39,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <cups/cups.h>
 #include <cups/ppd.h>
 #include <stdarg.h>
-#include "Error.h"
+#include "P2PError.h"
 #include "GlobalParams.h"
 #include "PDFFTrueTypeFont.h"
 #include <ctype.h>
@@ -72,6 +72,19 @@ namespace {
   GBool forcePageSize = gFalse;
 };
 
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+void CDECL myErrorFun(void *data, ErrorCategory category,
+    int pos, char *msg)
+{
+  if (pos >= 0) {
+    fprintf(stderr, "ERROR (%d): ", pos);
+  } else {
+    fprintf(stderr, "ERROR: ");
+  }
+  fprintf(stderr, "%s\n",msg);
+  fflush(stderr);
+}
+#else
 void CDECL myErrorFun(int pos, char *msg, va_list args)
 {
   if (pos >= 0) {
@@ -83,6 +96,7 @@ void CDECL myErrorFun(int pos, char *msg, va_list args)
   fprintf(stderr, "\n");
   fflush(stderr);
 }
+#endif
 
 GBool checkFeature(const char *feature, int num_options, cups_option_t *options)
 {
@@ -167,7 +181,7 @@ void parseOpts(int argc, char **argv)
   int intval;
 
   if (argc < 6 || argc > 7) {
-    error(-1,const_cast<char *>("%s job-id user title copies options [file]"),
+    p2pError(-1,const_cast<char *>("%s job-id user title copies options [file]"),
       argv[0]);
     exit(1);
   }
@@ -333,7 +347,7 @@ void parseOpts(int argc, char **argv)
           numberUp = intval;
           break;
       default :
-          error(-1,
+          p2pError(-1,
 		  const_cast<char *>("Unsupported number-up value %d, using number-up=1!\n"),
                   intval);
           break;
@@ -357,7 +371,7 @@ void parseOpts(int argc, char **argv)
     } else if (!strcasecmp(val,"btrl")) {
       numberUpLayout = PDFTOPDF_LAYOUT_BTRL;
     } else {
-      error(-1, const_cast<char *>("Unsupported number-up-layout value %s,"
+      p2pError(-1, const_cast<char *>("Unsupported number-up-layout value %s,"
               " using number-up-layout=lrtb!\n"), val);
     }
   }
@@ -393,7 +407,7 @@ void parseOpts(int argc, char **argv)
     } else if (!strcasecmp(val,"double-thick")) {
       pageBorder = PDFTOPDF_BORDERDOUBLE | PDFTOPDF_BORDERTHICK;
     } else {
-      error(-1, const_cast<char *>("Unsupported page-border value %s, using "
+      p2pError(-1, const_cast<char *>("Unsupported page-border value %s, using "
                       "page-border=none!\n"), val);
     }
   }
@@ -652,7 +666,11 @@ int main(int argc, char *argv[]) {
   P2PDoc *p2pdoc;
   P2POutputStream *str;
 
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  setErrorCallback(::myErrorFun,NULL);
+#else
   setErrorFunction(::myErrorFun);
+#endif
 #ifdef GLOBALPARAMS_HAS_A_ARG
   globalParams = new GlobalParams(0);
 #else
@@ -674,7 +692,7 @@ int main(int argc, char *argv[]) {
 
     fd = cupsTempFd(buf,sizeof(buf));
     if (fd < 0) {
-      error(-1,const_cast<char *>("Can't create temporary file"));
+      p2pError(-1,const_cast<char *>("Can't create temporary file"));
       exit(1);
     }
     /* remove name */
@@ -683,19 +701,19 @@ int main(int argc, char *argv[]) {
     /* copy stdin to the tmp file */
     while ((n = read(0,buf,BUFSIZ)) > 0) {
       if (write(fd,buf,n) != n) {
-        error(-1,const_cast<char *>("Can't copy stdin to temporary file"));
+        p2pError(-1,const_cast<char *>("Can't copy stdin to temporary file"));
         close(fd);
 	exit(1);
       }
     }
     if (lseek(fd,0,SEEK_SET) < 0) {
-        error(-1,const_cast<char *>("Can't rewind temporary file"));
+        p2pError(-1,const_cast<char *>("Can't rewind temporary file"));
         close(fd);
 	exit(1);
     }
 
     if ((fp = fdopen(fd,"rb")) == 0) {
-        error(-1,const_cast<char *>("Can't fdopen temporary file"));
+        p2pError(-1,const_cast<char *>("Can't fdopen temporary file"));
         close(fd);
 	exit(1);
     }
@@ -714,7 +732,7 @@ int main(int argc, char *argv[]) {
     goto err1;
   }
   if (!doc->okToPrintHighRes() && !doc->okToPrint()) {
-    error(-1,const_cast<char *>("Printing is not allowed\n"));
+    p2pError(-1,const_cast<char *>("Printing is not allowed\n"));
     exit(1);
   }
   p2pdoc = new P2PDoc(doc);

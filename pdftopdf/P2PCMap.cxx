@@ -20,7 +20,7 @@
 #include "goo/gmem.h"
 #include "goo/gfile.h"
 #include "goo/GooString.h"
-#include "Error.h"
+#include "P2PError.h"
 #include "GlobalParams.h"
 #include "PSTokenizer.h"
 #include "P2PCMap.h"
@@ -62,7 +62,7 @@ P2PCMap *P2PCMap::parse(P2PCMapCache *cache, GooString *collectionA,
       return new P2PCMap(collectionA->copy(), cMapNameA->copy(), 1);
     }
 
-    error(-1,
+    p2pError(-1,
       const_cast<char *>("Couldn't find '%s' CMap file for '%s' collection"),
 	  cMapNameA->getCString(), collectionA->getCString());
     return NULL;
@@ -88,7 +88,7 @@ P2PCMap *P2PCMap::parse(P2PCMapCache *cache, GooString *collectionA,
 	}
 	if (!pst->getToken(tok2, sizeof(tok2), &n2) ||
 	    !strcmp(tok2, "endcodespacerange")) {
-	  error(-1, const_cast<char *>("Illegal entry in codespacerange block in CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in codespacerange block in CMap"));
 	  break;
 	}
 	if (tok1[0] == '<' && tok2[0] == '<' &&
@@ -108,17 +108,17 @@ P2PCMap *P2PCMap::parse(P2PCMapCache *cache, GooString *collectionA,
 	}
 	if (!pst->getToken(tok2, sizeof(tok2), &n2) ||
 	    !strcmp(tok2, "endcidchar")) {
-	  error(-1, const_cast<char *>("Illegal entry in cidchar block in CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in cidchar block in CMap"));
 	  break;
 	}
 	if (!(tok1[0] == '<' && tok1[n1 - 1] == '>' &&
 	      n1 >= 4 && (n1 & 1) == 0)) {
-	  error(-1, const_cast<char *>("Illegal entry in cidchar block in CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in cidchar block in CMap"));
 	  continue;
 	}
 	tok1[n1 - 1] = '\0';
 	if (sscanf(tok1 + 1, "%x", &code) != 1) {
-	  error(-1, const_cast<char *>("Illegal entry in cidchar block in CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in cidchar block in CMap"));
 	  continue;
 	}
 	n1 = (n1 - 2) / 2;
@@ -134,7 +134,7 @@ P2PCMap *P2PCMap::parse(P2PCMapCache *cache, GooString *collectionA,
 	    !strcmp(tok2, "endcidrange") ||
 	    !pst->getToken(tok3, sizeof(tok3), &n3) ||
 	    !strcmp(tok3, "endcidrange")) {
-	  error(-1, const_cast<char *>("Illegal entry in cidrange block in CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in cidrange block in CMap"));
 	  break;
 	}
 	if (tok1[0] == '<' && tok2[0] == '<' &&
@@ -217,7 +217,7 @@ void P2PCMap::copyVector(CMapVectorEntry *dest, CMapVectorEntry *src) {
       copyVector(dest[i].vector, src[i].vector);
     } else {
       if (dest[i].isVector) {
-	error(-1, const_cast<char *>("Collision in usecmap"));
+	p2pError(-1, const_cast<char *>("Collision in usecmap"));
       } else {
 	dest[i].cid = src[i].cid;
       }
@@ -260,7 +260,7 @@ void P2PCMap::addCIDs(Guint start, Guint end, Guint nBytes, CID firstCID) {
   for (i = nBytes - 1; i >= 1; --i) {
     byte = (start >> (8 * i)) & 0xff;
     if (!vec[byte].isVector) {
-      error(-1, const_cast<char *>("Invalid CID (%0*x - %0*x) in CMap"),
+      p2pError(-1, const_cast<char *>("Invalid CID (%0*x - %0*x) in CMap"),
 	    2*nBytes, start, 2*nBytes, end);
       return;
     }
@@ -269,7 +269,7 @@ void P2PCMap::addCIDs(Guint start, Guint end, Guint nBytes, CID firstCID) {
   cid = firstCID;
   for (byte = (int)(start & 0xff); byte <= (int)(end & 0xff); ++byte) {
     if (vec[byte].isVector) {
-      error(-1, const_cast<char *>("Invalid CID (%0*x - %0*x) in CMap"),
+      p2pError(-1, const_cast<char *>("Invalid CID (%0*x - %0*x) in CMap"),
 	    2*nBytes, start, 2*nBytes, end);
     } else {
       vec[byte].cid = cid;

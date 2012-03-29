@@ -35,7 +35,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "P2POutputStream.h"
 #include "P2PMatrix.h"
 #include "P2PPattern.h"
-#include "Error.h"
+#include "P2PError.h"
 #include "P2PFont.h"
 #include "P2PGfx.h"
 #include "P2PDoc.h"
@@ -56,7 +56,7 @@ P2PPattern::P2PPattern(Object *objA, XRef *xrefA, P2PMatrix *matA)
   } else if (objA->isDict()) {
     pattern = new OrgPattern(objA);
   } else {
-    error(-1,const_cast<char *>("Illegal Pattern object type"));
+    p2pError(-1,const_cast<char *>("Illegal Pattern object type"));
   }
 }
 
@@ -83,7 +83,7 @@ void P2PPattern::output(P2POutputStream *str, XRef *xrefA)
     outputShadingPattern(str,orgPattern,pattern->getOrgObject(),xrefA);
     break;
   default:
-    error(-1,const_cast<char *>("Unknown pattern type %d"),orgPattern->getType());
+    p2pError(-1,const_cast<char *>("Unknown pattern type %d"),orgPattern->getType());
     break;
   }
 }
@@ -215,7 +215,7 @@ P2PPattern::OrgPattern::OrgPattern(int orgNumA, int orgGenA, XRef *xref)
 #else
   if ((pattern = GfxPattern::parse(&orgObj,NULL)) == 0) {
 #endif
-    error(-1,const_cast<char *>("Bad Pattern"));
+    p2pError(-1,const_cast<char *>("Bad Pattern"));
   }
 }
 
@@ -229,7 +229,7 @@ P2PPattern::OrgPattern::OrgPattern(Object *objA)
 #else
   if ((pattern = GfxPattern::parse(&orgObj,NULL)) == 0) {
 #endif
-    error(-1,const_cast<char *>("Bad Pattern"));
+    p2pError(-1,const_cast<char *>("Bad Pattern"));
   }
 }
 

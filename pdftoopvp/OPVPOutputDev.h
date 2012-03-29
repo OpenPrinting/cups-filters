@@ -55,9 +55,9 @@ public:
   int init(SplashColorMode colorModeA, GBool colorProfile, GBool reverseVideoA,
 		  SplashColor paperColorA,
 		  const char *driverName, int outputFD,
-		  char *printerModel,
+		  const char *printerModel,
 		  int nOptions,
-		  char *optionKeys[], char *optionVals[]);
+		  const char *optionKeys[], const char *optionVals[]);
 
   // Destructor.
   virtual ~OPVPOutputDev();

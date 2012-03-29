@@ -36,7 +36,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/mman.h>
 #include <string.h>
 #include "PDFFTrueTypeFont.h"
-#include "Error.h"
+#include "P2PError.h"
 
 #define TAG(a1,a2,a3,a4) (((a1) & 0xff) << 24 | \
    ((a2) & 0xff) << 16 | ((a3) & 0xff) << 8| ((a4) & 0xff))
@@ -193,7 +193,7 @@ void PDFFTrueTypeFont::reallocNewLHTable()
 int PDFFTrueTypeFont::readOrgTables()
 {
   if (getTableDirEntry(TAG_HEAD,&(orgTDir[TDIR_HEAD])) < 0) {
-    error(-1,const_cast<char *>("head table not found in font file %s"),
+    p2pError(-1,const_cast<char *>("head table not found in font file %s"),
        fileName);
     return -1;
   }
@@ -203,7 +203,7 @@ int PDFFTrueTypeFont::readOrgTables()
   }
 
   if (getTableDirEntry(TAG_HHEA,&(orgTDir[TDIR_HHEA])) < 0) {
-    error(-1,const_cast<char *>("hhea table not found in font file %s"),
+    p2pError(-1,const_cast<char *>("hhea table not found in font file %s"),
        fileName);
     return -1;
   }
@@ -213,7 +213,7 @@ int PDFFTrueTypeFont::readOrgTables()
   }
 
   if (getTableDirEntry(TAG_MAXP,&(orgTDir[TDIR_MAXP])) < 0) {
-    error(-1,const_cast<char *>("maxp table not found in font file %s"),
+    p2pError(-1,const_cast<char *>("maxp table not found in font file %s"),
       fileName);
     return -1;
   }
@@ -223,19 +223,19 @@ int PDFFTrueTypeFont::readOrgTables()
   }
 
   if (getTableDirEntry(TAG_LOCA,&(orgTDir[TDIR_LOCA])) < 0) {
-    error(-1,const_cast<char *>("loca table not found in font file %s"),
+    p2pError(-1,const_cast<char *>("loca table not found in font file %s"),
       fileName);
     return -1;
   }
 
   if (getTableDirEntry(TAG_GLYF,&(orgTDir[TDIR_GLYF])) < 0) {
-    error(-1,const_cast<char *>("glyf table not found in font file %s"),
+    p2pError(-1,const_cast<char *>("glyf table not found in font file %s"),
       fileName);
     return -1;
   }
 
   if (getTableDirEntry(TAG_HMTX,&(orgTDir[TDIR_HMTX])) < 0) {
-    error(-1,const_cast<char *>("hmtx table not found in font file %s"),
+    p2pError(-1,const_cast<char *>("hmtx table not found in font file %s"),
       fileName);
     return -1;
   }
@@ -716,7 +716,7 @@ int PDFFTrueTypeFont::Head::read(PDFFTrueTypeFont *font)
 {
   font->read(&version);
   if ((version & 0x10000) != 0x10000) {
-    error(-1,const_cast<char *>("Not supported head table version in file %s"),
+    p2pError(-1,const_cast<char *>("Not supported head table version in file %s"),
        font->fileName);
     return -1;
   }
@@ -791,7 +791,7 @@ int PDFFTrueTypeFont::Hhea::read(PDFFTrueTypeFont *font)
 {
   font->read(&version);
   if ((version & 0x10000) != 0x10000) {
-    error(-1,const_cast<char *>("Not supported hhea table version in file %s"),
+    p2pError(-1,const_cast<char *>("Not supported hhea table version in file %s"),
       font->fileName);
     return -1;
   }
@@ -861,7 +861,7 @@ int PDFFTrueTypeFont::Maxp::read(PDFFTrueTypeFont *font)
 {
   font->read(&version);
   if ((version & 0x10000) != 0x10000) {
-    error(-1,const_cast<char *>("Not supported maxp table version in file %s"),
+    p2pError(-1,const_cast<char *>("Not supported maxp table version in file %s"),
       font->fileName);
     return -1;
   }
@@ -954,7 +954,7 @@ int PDFFTrueTypeFont::setupCmap()
 
   if (cmap != 0) return 0; /* already setup */
   if (getTable(TAG_CMAP,&cmapTable) < 0) {
-    error(-1,const_cast<char *>("cmap table not found in font file %s"),
+    p2pError(-1,const_cast<char *>("cmap table not found in font file %s"),
       fileName);
     return -1;
   }
@@ -1001,7 +1001,7 @@ int PDFFTrueTypeFont::setupCmap()
   }
   if (i >= numCMTables && format4Offset == 0) {
     /* not found */
-    error(-1,const_cast<char *>("cmap table: Microsoft, Unicode, format 4 or 12 subtable not found in font file %s"),fileName);
+    p2pError(-1,const_cast<char *>("cmap table: Microsoft, Unicode, format 4 or 12 subtable not found in font file %s"),fileName);
     return -1;
   }
   if (format == 12) {
@@ -1171,14 +1171,14 @@ int PDFFTrueTypeFont::setOffsetTable(unsigned int faceIndexA)
     setOffset(0);
     read(&TTCTag);
     if (TTCTag != TAG_TTC) {
-      error(-1,const_cast<char *>("Illegal TTCTag:0x%08lx of TTC file:%s"),
+      p2pError(-1,const_cast<char *>("Illegal TTCTag:0x%08lx of TTC file:%s"),
         TTCTag,fileName);
       return -1;
     }
     skip<ULONG>(); /* skip version */
     read(&numFonts);
     if (numFonts <= faceIndexA) {
-      error(-1,const_cast<char *>("Too large faceIndex:%d of TTC file:%s : faces=%ld"),
+      p2pError(-1,const_cast<char *>("Too large faceIndex:%d of TTC file:%s : faces=%ld"),
         faceIndexA,fileName,numFonts);
       return -1;
     }
@@ -1228,7 +1228,7 @@ UGooString *PDFFTrueTypeFont::getFontName()
 
   if (fontName != 0) return fontName;
   if (getTable(TAG_NAME,&nameTable) < 0) {
-    error(-1,const_cast<char *>("name table not found in font file %s"),
+    p2pError(-1,const_cast<char *>("name table not found in font file %s"),
        fileName);
     return 0;
   }
@@ -1291,24 +1291,24 @@ int PDFFTrueTypeFont::init(const char *fileNameA, unsigned int faceIndexA)
   fileName = new char [strlen(fileNameA)+1];
   strcpy(fileName,fileNameA);
   if ((fontFileFD = open(fileName,O_RDONLY)) < 0) {
-    error(-1,const_cast<char *>("Can't open font file %s"),fileName);
+    p2pError(-1,const_cast<char *>("Can't open font file %s"),fileName);
     return -1;
   }
   if (fstat(fontFileFD,&sbuf) < 0) {
-    error(-1,const_cast<char *>("Can't get stat of font file %s"),fileName);
+    p2pError(-1,const_cast<char *>("Can't get stat of font file %s"),fileName);
     goto error_end;
   }
   fileLength = sbuf.st_size;
   if ((top = static_cast<unsigned char *>(
       mmap(0,fileLength,PROT_READ,MAP_PRIVATE,fontFileFD,0))) == 0) {
-    error(-1,const_cast<char *>("mmap font file %s failed"),fileName);
+    p2pError(-1,const_cast<char *>("mmap font file %s failed"),fileName);
     goto error_end;
   }
   if (setOffsetTable(faceIndexA) < 0) goto error_end2;
   setOffset(offsetTable);
   read(&sfntVersion);
   if (sfntVersion != 0x00010000) {
-    error(-1,const_cast<char *>("Illegal sfnt version in font file %s"),
+    p2pError(-1,const_cast<char *>("Illegal sfnt version in font file %s"),
       fileName);
     goto error_end2;
   }

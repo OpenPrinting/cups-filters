@@ -674,8 +674,8 @@ void P2PPage::OrgPage::fit(PDFRectangle *box, PDFRectangle *oldBox,
     mat.move(0,ow);
     if (rBox != 0) {
       rBox->x1 = rBox->y1 = 0;
-      rBox->x2 = oldBox->y2;
-      rBox->y2 = oldBox->x2;
+      rBox->x2 = oh;
+      rBox->y2 = ow;
     }
 
     scalex = w/oh*zoom;

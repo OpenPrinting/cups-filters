@@ -99,15 +99,15 @@ if test -n "$GCC"; then
 			OPTIM="-Wshadow $OPTIM"
 			CFLAGS="-Werror-implicit-function-declaration $CFLAGS"
 			PHPOPTIONS="-Wno-shadow"
-		else
-			AC_MSG_CHECKING(if GCC supports -Wno-tautological-compare)
-			OLDCFLAGS="$CFLAGS"
-			CFLAGS="$CFLAGS -Werror -Wno-tautological-compare"
-			AC_TRY_COMPILE(,,
-				[OPTIM="$OPTIM -Wno-tautological-compare"
-				AC_MSG_RESULT(yes)],
-				AC_MSG_RESULT(no))
-			CFLAGS="$OLDCFLAGS"
+		#else
+			#AC_MSG_CHECKING(if GCC supports -Wno-tautological-compare)
+			#OLDCFLAGS="$CFLAGS"
+			#CFLAGS="$CFLAGS -Werror -Wno-tautological-compare"
+			#AC_TRY_COMPILE(,,
+			#	[OPTIM="$OPTIM -Wno-tautological-compare"
+			#	AC_MSG_RESULT(yes)],
+			#	AC_MSG_RESULT(no))
+			#CFLAGS="$OLDCFLAGS"
 		fi
 	fi
 

@@ -41,7 +41,7 @@
 #include "GfxState.h"
 #include "OutputDev.h"
 #include "Page.h"
-#include "Error.h"
+#include "P2PError.h"
 #include "Gfx.h"
 #include "ProfileData.h"
 #include "UGooString.h"
@@ -141,14 +141,14 @@ void P2PGfx::outputContents(Object *obj, P2PResourceMap *mappingTableA,
     for (i = 0; i < obj->arrayGetLength(); ++i) {
       obj->arrayGet(i, &obj2);
       if (!obj2.isStream()) {
-	error(-1, const_cast<char *>("Weird page contents"));
+	p2pError(-1, const_cast<char *>("Weird page contents"));
 	obj2.free();
 	return;
       }
       obj2.free();
     }
   } else if (!obj->isStream()) {
-    error(-1, const_cast<char *>("Weird page contents"));
+    p2pError(-1, const_cast<char *>("Weird page contents"));
     return;
   }
 #ifdef PARSER_HAS_2_ARGS
@@ -186,7 +186,7 @@ void P2PGfx::go()
 
     // too many arguments - something is wrong
     } else {
-      error(getPos(), const_cast<char *>("Too many args in content stream"));
+      p2pError(getPos(), const_cast<char *>("Too many args in content stream"));
       obj.free();
     }
 
@@ -197,7 +197,7 @@ void P2PGfx::go()
 
   // args at end with no command
   if (numArgs > 0) {
-    error(getPos(), const_cast<char *>("Leftover args in content stream"));
+    p2pError(getPos(), const_cast<char *>("Leftover args in content stream"));
     for (i = 0; i < numArgs; ++i)
       args[i].free();
   }
@@ -231,7 +231,7 @@ void P2PGfx::execOp(Object *cmd, Object args[], int numArgs) {
   argPtr = args;
   if (op->numArgs >= 0) {
     if (numArgs < op->numArgs) {
-      error(getPos(), const_cast<char *>("Too few (%d) args to '%s' operator"),
+      p2pError(getPos(), const_cast<char *>("Too few (%d) args to '%s' operator"),
          numArgs, name);
       return;
     }
@@ -241,14 +241,14 @@ void P2PGfx::execOp(Object *cmd, Object args[], int numArgs) {
     }
   } else {
     if (numArgs > -op->numArgs) {
-      error(getPos(), const_cast<char *>("Too many (%d) args to '%s' operator"),
+      p2pError(getPos(), const_cast<char *>("Too many (%d) args to '%s' operator"),
 	    numArgs, name);
       return;
     }
   }
   for (i = 0; i < numArgs; ++i) {
     if (!checkArg(&argPtr[i], op->tchk[i])) {
-      error(getPos(),
+      p2pError(getPos(),
             const_cast<char *>("Arg #%d to '%s' operator is wrong type (%s)"),
 	    i, name, argPtr[i].getTypeName());
       return;
@@ -548,7 +548,7 @@ void P2PGfx::opBeginImage(Object args[], int numArgs)
   while (!obj.isCmd(const_cast<char *>("ID")) && !obj.isEOF()) {
     str->putchar(' ');
     if (!obj.isName()) {
-      error(getPos(), const_cast<char *>("Inline image dictionary key must be a name object"));
+      p2pError(getPos(), const_cast<char *>("Inline image dictionary key must be a name object"));
       P2POutput::outputObject(&obj,str,xref);
       str->putchar(' ');
       obj.free();
@@ -583,11 +583,11 @@ void P2PGfx::opBeginImage(Object args[], int numArgs)
   }
 
   if (obj.isEOF()) {
-    error(getPos(), const_cast<char *>("End of file in inline image"));
+    p2pError(getPos(), const_cast<char *>("End of file in inline image"));
     obj.free();
     dict.free();
   } else if (obj.isError()) {
-    error(getPos(), const_cast<char *>("Error in inline image"));
+    p2pError(getPos(), const_cast<char *>("Error in inline image"));
     obj.free();
     dict.free();
   } else {
@@ -737,5 +737,5 @@ void P2PGfx::doImage(Stream *istr)
  err2:
   obj1.free();
  err1:
-  error(getPos(), const_cast<char *>("Bad image parameters"));
+  p2pError(getPos(), const_cast<char *>("Bad image parameters"));
 }

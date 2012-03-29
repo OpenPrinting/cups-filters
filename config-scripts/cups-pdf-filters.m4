@@ -86,13 +86,6 @@ if test "x$enable_cms" = "xyes"; then
 fi
 AC_SUBST(LCMS_LIBS)
 
-dnl poppler source dir
-
-AC_ARG_WITH([poppler-source],[  --with-poppler-source=PATH      poppler source directory path],
-  [POPPLER_SRCDIR=$withval],
-  [POPPLER_SRCDIR=`eval echo $includedir`])
-AC_SUBST(POPPLER_SRCDIR)
-
 dnl Switch over to C++.
 AC_LANG(C++)
 
@@ -102,6 +95,28 @@ AC_CHECK_LIB(poppler,main,
   [ echo "*** poppler library not found. ***";exit ]
 )
 AC_SUBST(POPPLER_LIBS)
+
+dnl poppler source dir
+AC_ARG_WITH([poppler-source],[  --with-poppler-source=PATH      poppler source directory path],
+  [POPPLER_SRCDIR=$withval],
+  [POPPLER_SRCDIR=`eval echo $includedir`])
+AC_SUBST(POPPLER_SRCDIR)
+if test $POPPLER_SRCDIR = `eval echo $includedir`;then
+  POPPLER_VERSION=`pkg-config --modversion poppler`
+  CPPFLAGS="$CPPFLAGS -I$POPPLER_SRCDIR/poppler"
+else
+  POPPLER_LIBS=$POPPLER_SRCDIR/poppler/.libs/libpoppler.so
+  CPPFLAGS="$CPPFLAGS -I$POPPLER_SRCDIR/poppler -I$POPPLER_SRCDIR"
+  POPPLER_VERSION=`PKG_CONFIG_PATH=$POPPLER_SRCDIR pkg-config --modversion poppler`
+fi
+
+dnl poppler version
+POPPLER_VERSION_MAJOR=`echo $POPPLER_VERSION|awk -F. '{print $1;}'`
+AC_DEFINE_UNQUOTED(POPPLER_VERSION_MAJOR,$POPPLER_VERSION_MAJOR)
+POPPLER_VERSION_MINOR=`echo $POPPLER_VERSION|awk -F. '{print $2;}'`
+AC_DEFINE_UNQUOTED(POPPLER_VERSION_MINOR,$POPPLER_VERSION_MINOR)
+POPPLER_VERSION_MICRO=`echo $POPPLER_VERSION|awk -F. '{print $3;}'`
+AC_DEFINE_UNQUOTED(POPPLER_VERSION_MICRO,$POPPLER_VERSION_MICRO)
 
 dnl Check for freetype headers
 FREETYPE_LIBS=
@@ -130,6 +145,16 @@ fi
 AC_SUBST(FREETYPE_CFLAGS)
 AC_SUBST(FREETYPE_LIBS)
 
+dnl check SplashFontEngin::SplashFontEngin interface
+if test $POPPLER_SRCDIR = `eval echo $includedir`;then
+    SPLASH_HEADER_DIR=$POPPLER_SRCDIR/poppler/splash
+else
+    SPLASH_HEADER_DIR=$POPPLER_SRCDIR/splash
+fi
+if grep "enableSlightHinting" $SPLASH_HEADER_DIR/SplashFontEngine.h >/dev/null ;then
+    AC_DEFINE([SPLASH_SLIGHT_HINTING],,[SplashFontEngine enableSlightHinting])
+fi
+
 dnl check if GlobalParams::GlobalParams has a argument
 if grep "GlobalParams(char \*cfgFileName)" $POPPLER_SRCDIR/poppler/GlobalParams.h >/dev/null ;then
     AC_DEFINE([GLOBALPARAMS_HAS_A_ARG],,[GlobalParams::GlobalParams has a argument.])
@@ -151,19 +176,16 @@ if grep "getUndecodedStream" $POPPLER_SRCDIR/poppler/Stream.h >/dev/null ;then
 fi
 
 dnl check UGooString.h
-CPPFLAGS="$CPPFLAGS -I$POPPLER_SRCDIR/poppler"
 AC_CHECK_HEADER(UGooString.h,
     AC_DEFINE([HAVE_UGOOSTRING_H],,[Have UGooString.h])
 ,)
 
 dnl check CharCodeToUnicode::mapToUnicode interface
-CPPFLAGS="$CPPFLAGS -I$POPPLER_SRCDIR/poppler"
 if grep "mapToUnicode(.*Unicode[ ][ ]*\*u" $POPPLER_SRCDIR/poppler/CharCodeToUnicode.h >/dev/null ;then
     AC_DEFINE([OLD_MAPTOUNICODE],,[Old CharCodeToUnicode::mapToUnicode])
 fi
 
 dnl check GfxColorSpace::parse interface
-CPPFLAGS="$CPPFLAGS -I$POPPLER_SRCDIR/poppler"
 if grep "GfxColorSpace *\*parse(Object *\*csObj)" $POPPLER_SRCDIR/poppler/GfxState.h >/dev/null ;then
     AC_DEFINE([OLD_CS_PARSE],,[Old GfxColorSpace::parse])
 fi

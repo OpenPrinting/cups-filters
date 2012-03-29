@@ -33,7 +33,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "P2PXRef.h"
 #include "Object.h"
 #include "P2POutput.h"
-#include "Error.h"
+#include "P2PError.h"
 #include "XRef.h"
 
 class P2PObject {
@@ -93,7 +93,7 @@ public:
 
   /* output as an object */
   virtual void output(P2POutputStream *str, XRef *xref) {
-    error(-1,const_cast<char *>("Illegal output call of P2PObject:%d"),num);
+    p2pError(-1,const_cast<char *>("Illegal output call of P2PObject:%d"),num);
   }
 
   GBool isSecondPhase() { return secondPhase; }

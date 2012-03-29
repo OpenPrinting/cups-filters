@@ -39,7 +39,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <cups/cups.h>
 #include <cups/ppd.h>
 #include <stdarg.h>
-#include <Error.h>
+#include "PDFError.h"
 #include <GlobalParams.h>
 #include <splash/SplashTypes.h>
 #include <splash/SplashBitmap.h>
@@ -66,6 +66,19 @@ namespace {
   ppd_file_t *ppd = 0; // holds the memory for the strings
 };
 
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+void CDECL myErrorFun(void *data, ErrorCategory category,
+    int pos, char *msg)
+{
+  if (pos >= 0) {
+    fprintf(stderr, "ERROR (%d): ", pos);
+  } else {
+    fprintf(stderr, "ERROR: ");
+  }
+  fprintf(stderr, "%s\n",msg);
+  fflush(stderr);
+}
+#else
 void CDECL myErrorFun(int pos, char *msg, va_list args)
 {
   if (pos >= 0) {
@@ -77,6 +90,7 @@ void CDECL myErrorFun(int pos, char *msg, va_list args)
   fprintf(stderr, "\n");
   fflush(stderr);
 }
+#endif
 
 /* parse  "300 400" */
 void parse_resolution(const char *str)
@@ -107,10 +121,10 @@ void parse_colorspace(const char *str)
   } else if (strcasecmp(str,"cmyk")==0) {
     colspace=COL_CMYK;
   } else {
-    error(-1,"Unknown colorspace; supported are 'rgb', 'cmyk', 'white1', 'black1', 'white8', 'black8'");
+    pdfError(-1,"Unknown colorspace; supported are 'rgb', 'cmyk', 'white1', 'black1', 'white8', 'black8'");
 #else
   } else {
-    error(-1,"Unknown colorspace; supported are 'rgb', 'white1', 'black1', 'white8', 'black8'");
+    pdfError(-1,"Unknown colorspace; supported are 'rgb', 'white1', 'black1', 'white8', 'black8'");
 #endif
     exit(1);
   }
@@ -170,7 +184,7 @@ void parseOpts(int argc, char **argv)
   cups_option_t *options = 0;
 
   if (argc < 6 || argc > 7) {
-    error(-1,"%s job-id user title copies options [file]",
+    pdfError(-1,"%s job-id user title copies options [file]",
       argv[0]);
     exit(1);
   }
@@ -194,7 +208,7 @@ void parseOpts(int argc, char **argv)
     parse_colorspace(attr->value);
   }
   if ( (!ijsserver)||(!devManu)||(!devModel)||(colspace==NONE) ) {
-    error(-1,"ijsServer, ijsManufacturer, ijsModel and ijsColorspace must be specified in the PPD");
+    pdfError(-1,"ijsServer, ijsManufacturer, ijsModel and ijsColorspace must be specified in the PPD");
     exit(1);
   }
   
@@ -217,7 +231,7 @@ void parseOpts(int argc, char **argv)
     }
   }
   if (!resolution[0]) {
-    error(-1,"ijsResolution must be specified");
+    pdfError(-1,"ijsResolution must be specified");
     exit(1);
   }
   cupsFreeOptions(num_options,options);
@@ -269,7 +283,11 @@ int main(int argc, char *argv[]) {
   int rowpad;
   GBool reverseVideo;
 
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  setErrorCallback(::myErrorFun,NULL);
+#else
   setErrorFunction(::myErrorFun);
+#endif
 #ifdef GLOBALPARAMS_HAS_A_ARG
   globalParams = new GlobalParams(0);
 #else
@@ -288,7 +306,7 @@ int main(int argc, char *argv[]) {
 
     fd = cupsTempFd(buf,sizeof(buf));
     if (fd < 0) {
-      error(-1,"Can't create temporary file");
+      pdfError(-1,"Can't create temporary file");
       exit(1);
     }
     /* remove name */
@@ -297,19 +315,19 @@ int main(int argc, char *argv[]) {
     /* copy stdin to the tmp file */
     while ((n = read(0,buf,BUFSIZ)) > 0) {
       if (write(fd,buf,n) != n) {
-        error(-1,"Can't copy stdin to temporary file");
+        pdfError(-1,"Can't copy stdin to temporary file");
         close(fd);
 	exit(1);
       }
     }
     if (lseek(fd,0,SEEK_SET) < 0) {
-        error(-1,"Can't rewind temporary file");
+        pdfError(-1,"Can't rewind temporary file");
         close(fd);
 	exit(1);
     }
 
     if ((fp = fdopen(fd,"rb")) == 0) {
-        error(-1,"Can't fdopen temporary file");
+        pdfError(-1,"Can't fdopen temporary file");
         close(fd);
 	exit(1);
     }
@@ -325,7 +343,7 @@ int main(int argc, char *argv[]) {
     FILE *fp;
 
     if ((fp = fopen(argv[6],"rb")) == 0) {
-        error(-1,"Can't open input file %s",argv[6]);
+        pdfError(-1,"Can't open input file %s",argv[6]);
 	exit(1);
     }
 //    parsePDFTOPDFComment(fp); // TODO?
@@ -421,14 +439,18 @@ int main(int argc, char *argv[]) {
     break;
 #endif
   default:
-    error(-1,"Specified ColorSpace is not supported");
+    pdfError(-1,"Specified ColorSpace is not supported");
     exit(1);
     break;
   }
 
   out = new SplashOutputDev(cmode,rowpad/* row padding */,
     reverseVideo,paperColor,gTrue,gFalse);
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  out->startDoc(doc);
+#else
   out->startDoc(doc->getXRef());
+#endif
 
   snprintf(tmp,99,"%d",numChan);
   ijs_client_set_param(ctx,job_id,"NumChan",tmp,strlen(tmp));
@@ -464,13 +486,13 @@ int main(int argc, char *argv[]) {
     size = bitmap->getRowSize()*bitmap->getHeight();
     int status=ijs_client_send_data_wait(ctx,job_id,(const char *)bitmap->getDataPtr(),size);
     if (status) {
-        error(-1,"Can't write page %d image: %d",i,status);
+        pdfError(-1,"Can't write page %d image: %d",i,status);
 	exit(1);
     }
 
     status=ijs_client_end_page(ctx,job_id);
     if (status) {
-        error(-1,"Can't finish page %d: %d",i,status);
+        pdfError(-1,"Can't finish page %d: %d",i,status);
 	exit(1);
     }
   }

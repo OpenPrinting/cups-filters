@@ -70,7 +70,7 @@ public:
 
   // Create a new rasterizer object.
   OPVPSplash(OPVPWrapper *opvpA,
-    int nOptions, char *optionKeys[], char *optionVals[]);
+    int nOptions, const char *optionKeys[], const char *optionVals[]);
 
   virtual ~OPVPSplash();
 
@@ -214,8 +214,8 @@ private:
   void transform(SplashCoord *matrix, SplashCoord xi, SplashCoord yi,
 	   SplashCoord *xo, SplashCoord *yo);
 
-  char *getOption(char *key, int nOptions, char *optionKeys[],
-    char *optionVals[]);
+  const char *getOption(const char *key, int nOptions, const char *optionKeys[],
+    const char *optionVals[]);
 
   OPVPWrapper *opvp;
   int printerContext;

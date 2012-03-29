@@ -41,7 +41,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <cups/cups.h>
 #include <cups/ppd.h>
 #include <stdarg.h>
-#include "Error.h"
+#include "PDFError.h"
 #include "GlobalParams.h"
 #include <cups/raster.h>
 #include <cupsfilters/image.h>
@@ -181,7 +181,20 @@ namespace {
   int renderingIntent = INTENT_PERCEPTUAL;
 };
 
-static void CDECL myErrorFun(int pos, char *msg, va_list args)
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+void CDECL myErrorFun(void *data, ErrorCategory category,
+    int pos, char *msg)
+{
+  if (pos >= 0) {
+    fprintf(stderr, "ERROR (%d): ", pos);
+  } else {
+    fprintf(stderr, "ERROR: ");
+  }
+  fprintf(stderr, "%s\n",msg);
+  fflush(stderr);
+}
+#else
+void CDECL myErrorFun(int pos, char *msg, va_list args)
 {
   if (pos >= 0) {
     fprintf(stderr, "ERROR (%d): ", pos);
@@ -192,6 +205,7 @@ static void CDECL myErrorFun(int pos, char *msg, va_list args)
   fprintf(stderr, "\n");
   fflush(stderr);
 }
+#endif
 
 #ifdef USE_LCMS1
 static int lcmsErrorHandler(int ErrorCode, const char *ErrorText)
@@ -334,14 +348,14 @@ static void parseOpts(int argc, char **argv)
   ppd_attr_t *attr;
 
   if (argc < 6 || argc > 7) {
-    error(-1,const_cast<char *>("%s job-id user title copies options [file]"),
+    pdfError(-1,const_cast<char *>("%s job-id user title copies options [file]"),
       argv[0]);
     exit(1);
   }
 
   ppd = ppdOpenFile(getenv("PPD"));
   if (ppd == NULL) {
-    error(-1,const_cast<char *>("PPD file is not specified"));
+    pdfError(-1,const_cast<char *>("PPD file is not specified"));
     exit(1);
   }
   ppdMarkDefaults(ppd);
@@ -1308,7 +1322,7 @@ static void selectConvertFunc(cups_raster_t *raster)
             COLORSPACE_SH(dcst) |
             CHANNELS_SH(header.cupsNumColors) | BYTES_SH(bytes),
             renderingIntent,0)) == 0) {
-      error(-1,const_cast<char *>("Can't create color transform"));
+      pdfError(-1,const_cast<char *>("Can't create color transform"));
       exit(1);
     }
   } else {
@@ -1376,7 +1390,7 @@ static void selectConvertFunc(cups_raster_t *raster)
       convertCSpace = W8toK8;
       break;
     default:
-      error(-1,const_cast<char *>("Specified ColorSpace is not supported"));
+      pdfError(-1,const_cast<char *>("Specified ColorSpace is not supported"));
       exit(1);
       break;
     }
@@ -1455,7 +1469,7 @@ static void writePageImage(cups_raster_t *raster, SplashBitmap *bitmap,
   int pageNo)
 {
   ConvertLineFunc convertLine;
-  unsigned char *lineBuf;
+  unsigned char *lineBuf = NULL;
   unsigned char *dp;
   unsigned int rowsize = bitmap->getRowSize();
 
@@ -1477,7 +1491,7 @@ static void writePageImage(cups_raster_t *raster, SplashBitmap *bitmap,
                  bytesPerLine);
           if (cupsRasterWritePixels(raster,dp,bytesPerLine)
                != bytesPerLine) {
-            error(-1,const_cast<char *>("Can't write page %d image"),pageNo);
+            pdfError(-1,const_cast<char *>("Can't write page %d image"),pageNo);
             exit(1);
           }
         }
@@ -1496,7 +1510,7 @@ static void writePageImage(cups_raster_t *raster, SplashBitmap *bitmap,
                  bytesPerLine);
           if (cupsRasterWritePixels(raster,dp,bytesPerLine)
                != bytesPerLine) {
-            error(-1,const_cast<char *>("Can't write page %d image"),pageNo);
+            pdfError(-1,const_cast<char *>("Can't write page %d image"),pageNo);
             exit(1);
           }
         }
@@ -1635,7 +1649,7 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
     header.cupsBytesPerLine *= header.cupsNumColors;
   }
   if (!cupsRasterWriteHeader2(raster,&header)) {
-      error(-1,const_cast<char *>("Can't write page %d header"),pageNo);
+      pdfError(-1,const_cast<char *>("Can't write page %d header"),pageNo);
       exit(1);
   }
 
@@ -1713,7 +1727,7 @@ static void setPopplerColorProfile()
     popplerColorProfile = NULL;
     break;
   default:
-    error(-1,const_cast<char *>("Specified ColorSpace is not supported"));
+    pdfError(-1,const_cast<char *>("Specified ColorSpace is not supported"));
     exit(1);
     break;
   }
@@ -1733,7 +1747,11 @@ int main(int argc, char *argv[]) {
   int rowpad;
   Catalog *catalog;
 
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  setErrorCallback(::myErrorFun,NULL);
+#else
   setErrorFunction(::myErrorFun);
+#endif
   cmsSetLogErrorHandler(lcmsErrorHandler);
 #ifdef GLOBALPARAMS_HAS_A_ARG
   globalParams = new GlobalParams(0);
@@ -1753,7 +1771,7 @@ int main(int argc, char *argv[]) {
 
     fd = cupsTempFd(buf,sizeof(buf));
     if (fd < 0) {
-      error(-1,const_cast<char *>("Can't create temporary file"));
+      pdfError(-1,const_cast<char *>("Can't create temporary file"));
       exit(1);
     }
     /* remove name */
@@ -1762,19 +1780,19 @@ int main(int argc, char *argv[]) {
     /* copy stdin to the tmp file */
     while ((n = read(0,buf,BUFSIZ)) > 0) {
       if (write(fd,buf,n) != n) {
-        error(-1,const_cast<char *>("Can't copy stdin to temporary file"));
+        pdfError(-1,const_cast<char *>("Can't copy stdin to temporary file"));
         close(fd);
 	exit(1);
       }
     }
     if (lseek(fd,0,SEEK_SET) < 0) {
-        error(-1,const_cast<char *>("Can't rewind temporary file"));
+        pdfError(-1,const_cast<char *>("Can't rewind temporary file"));
         close(fd);
 	exit(1);
     }
 
     if ((fp = fdopen(fd,"rb")) == 0) {
-        error(-1,const_cast<char *>("Can't fdopen temporary file"));
+        pdfError(-1,const_cast<char *>("Can't fdopen temporary file"));
         close(fd);
 	exit(1);
     }
@@ -1790,7 +1808,7 @@ int main(int argc, char *argv[]) {
     FILE *fp;
 
     if ((fp = fopen(argv[6],"rb")) == 0) {
-        error(-1,const_cast<char *>("Can't open input file %s"),argv[6]);
+        pdfError(-1,const_cast<char *>("Can't open input file %s"),argv[6]);
 	exit(1);
     }
     parsePDFTOPDFComment(fp);
@@ -1818,7 +1836,7 @@ int main(int argc, char *argv[]) {
      && header.cupsBitsPerColor != 4
      && header.cupsBitsPerColor != 8
      && header.cupsBitsPerColor != 16) {
-    error(-1,const_cast<char *>("Specified color format is not supported"));
+    pdfError(-1,const_cast<char *>("Specified color format is not supported"));
     exit(1);
   }
   if (header.cupsColorOrder == CUPS_ORDER_PLANAR) {
@@ -1853,7 +1871,7 @@ int main(int argc, char *argv[]) {
     if (header.cupsColorOrder != CUPS_ORDER_CHUNKED
        || (header.cupsBitsPerColor != 8
           && header.cupsBitsPerColor != 16)) {
-      error(-1,const_cast<char *>("Specified color format is not supported"));
+      pdfError(-1,const_cast<char *>("Specified color format is not supported"));
       exit(1);
     }
   case CUPS_CSPACE_RGB:
@@ -1895,7 +1913,7 @@ int main(int argc, char *argv[]) {
     popplerNumColors = 1;
     break;
   default:
-    error(-1,const_cast<char *>("Specified ColorSpace is not supported"));
+    pdfError(-1,const_cast<char *>("Specified ColorSpace is not supported"));
     exit(1);
     break;
   }
@@ -1904,10 +1922,14 @@ int main(int argc, char *argv[]) {
 
   out = new SplashOutputDev(cmode,rowpad/* row padding */,
     gFalse,paperColor,gTrue,gFalse);
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  out->startDoc(doc);
+#else
   out->startDoc(doc->getXRef());
+#endif
 
   if ((raster = cupsRasterOpen(1,CUPS_RASTER_WRITE)) == 0) {
-        error(-1,const_cast<char *>("Can't open raster stream"));
+        pdfError(-1,const_cast<char *>("Can't open raster stream"));
 	exit(1);
   }
   selectConvertFunc(raster);

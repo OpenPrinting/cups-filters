@@ -240,6 +240,14 @@
 /* New font type enumeration */
 #undef FONTTYPE_ENUM2
 
+/* poppler version */
+#undef POPPLER_VERSION_MAJOR
+#undef POPPLER_VERSION_MINOR
+#undef POPPLER_VERSION_MICRO
+
+/* SplashFontEngine enableSlightHinting */
+#undef SPLASH_SLIGHT_HINTING
+
 /* GlobalParams::GlobalParams has a argument. */
 #undef GLOBALPARAMS_HAS_A_ARG
 

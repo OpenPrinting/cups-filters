@@ -1,6 +1,7 @@
 #ifndef OPVPSPLASHXPATH_H
 #define OPVPSPLASHXPATH_H
 
+#include <config.h>
 #include "splash/SplashXPath.h"
 #include "OPVPSplashPath.h"
 #include "OPVPSplashState.h"
@@ -19,9 +20,15 @@ public:
 
   OPVPSplashXPath *makeDashedPath(OPVPSplashState *state);
   void strokeNarrow(OPVPSplash *splash, OPVPSplashState *state);
+#if POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR < 19
   void strokeWide(OPVPSplash *splash, OPVPSplashState *state);
+#endif
 private:
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  OPVPSplashXPath() : SplashXPath(new SplashPath(), 0, 0, gFalse) {};
+#else
   OPVPSplashXPath() {};
+#endif
   OPVPSplashXPath(OPVPSplashXPath *xPath) : SplashXPath(xPath) {
   }
 };

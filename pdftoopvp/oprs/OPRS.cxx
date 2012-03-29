@@ -237,7 +237,7 @@ SplashError OPRS::drawImage(SplashImageSource src, void *srcData,
  */
 int OPRS::init(const char *driverName, int outputFD,
   const char *printerModel, int nOptions,
-  char *optionKeys[], char *optionVals[])
+  const char *optionKeys[], const char *optionVals[])
 {
     opvp = OPVPWrapper::loadDriver(driverName,outputFD,printerModel);
     if (opvp == 0) return -1;
@@ -551,7 +551,7 @@ void OPRS::initGS(int colorMode, int w, int h, SplashColor paperColor)
   }
 }
 
-void OPRS::error(char *msg, ...)
+void OPRS::error(const char *msg, ...)
 {
     va_list args;
 

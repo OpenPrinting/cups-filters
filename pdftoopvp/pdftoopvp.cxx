@@ -25,7 +25,7 @@
 #include "Gfx.h"
 #include <cups/cups.h>
 #include <cups/ppd.h>
-#include "Error.h"
+#include "OPVPError.h"
 #include "mcheck.h"
 
 #define MMPERINCH (25.4)
@@ -90,18 +90,18 @@ static int outOnePage(PDFDoc *doc, OPVPOutputDev *opvpOut, int pg)
   paperWidth = (int)(pw*hResolution/72+0.5);
   paperHeight = (int)(ph*vResolution/72+0.5);
   if (opvpOut->OPVPStartPage(p,paperWidth,paperHeight) < 0) {
-      error(-1,"Start Page failed");
+      opvpError(-1,"Start Page failed");
       return 2;
   }
   opvpOut->setScale(1.0,1.0,0,0,0,0,paperHeight);
   doc->displayPage(opvpOut, pg, resolution, resolution,
     0, gTrue, gTrue, gFalse);
   if (opvpOut->outSlice() < 0) {
-    error(-1,"OutSlice failed");
+    opvpError(-1,"OutSlice failed");
     return 2;
   }
   if (opvpOut->OPVPEndPage() < 0) {
-      error(-1,"End Page failed");
+      opvpError(-1,"End Page failed");
       return 2;
   }
   return 0;
@@ -109,6 +109,19 @@ static int outOnePage(PDFDoc *doc, OPVPOutputDev *opvpOut, int pg)
 
 #define MAX_OPVP_OPTIONS 20
 
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+void CDECL myErrorFun(void *data, ErrorCategory category,
+    int pos, char *msg)
+{
+  if (pos >= 0) {
+    fprintf(stderr, "ERROR (%d): ", pos);
+  } else {
+    fprintf(stderr, "ERROR: ");
+  }
+  fprintf(stderr, "%s\n",msg);
+  fflush(stderr);
+}
+#else
 void CDECL myErrorFun(int pos, char *msg, va_list args)
 {
   if (pos >= 0) {
@@ -120,15 +133,16 @@ void CDECL myErrorFun(int pos, char *msg, va_list args)
   fprintf(stderr, "\n");
   fflush(stderr);
 }
+#endif
 
 static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 {
     // get color profile path
-    char *colorModel;
-    char *cupsICCQualifier2;
-    char *cupsICCQualifier2Choice;
-    char *cupsICCQualifier3;
-    char *cupsICCQualifier3Choice;
+    const char *colorModel;
+    const char *cupsICCQualifier2;
+    const char *cupsICCQualifier2Choice;
+    const char *cupsICCQualifier3;
+    const char *cupsICCQualifier3Choice;
     ppd_attr_t *attr;
     ppd_choice_t *choice;
 
@@ -213,8 +227,8 @@ int main(int argc, char *argv[]) {
   OPVPOutputDev *opvpOut;
   GBool ok = gTrue;
   int pg;
-  char *optionKeys[MAX_OPVP_OPTIONS];
-  char *optionVals[MAX_OPVP_OPTIONS];
+  const char *optionKeys[MAX_OPVP_OPTIONS];
+  const char *optionVals[MAX_OPVP_OPTIONS];
   int nOptions = 0;
   int numPages;
   int i;
@@ -222,7 +236,11 @@ int main(int argc, char *argv[]) {
   GooString colorProfilePath("opvp.icc");
 
   exitCode = 99;
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  setErrorCallback(::myErrorFun,NULL);
+#else
   setErrorFunction(::myErrorFun);
+#endif
 
   // parse args
   int num_options;
@@ -238,7 +256,7 @@ int main(int argc, char *argv[]) {
 
 
   if (argc < 6 || argc > 7) {
-    error(-1,"ERROR: %s job-id user title copies options [file]",
+    opvpError(-1,"ERROR: %s job-id user title copies options [file]",
       argv[0]);
     return (1);
   }
@@ -581,7 +599,7 @@ exit(0);
   globalParams = new GlobalParams();
   if (enableFreeTypeStr[0]) {
     if (!globalParams->setEnableFreeType(enableFreeTypeStr)) {
-      error(-1,"Bad '-freetype' value on command line");
+      opvpError(-1,"Bad '-freetype' value on command line");
       ok = gFalse;
     }
   }
@@ -616,7 +634,7 @@ exit(0);
     /* remove name */
     unlink(name.getCString());
     if (fd < 0) {
-      error(-1,"Can't create temporary file");
+      opvpError(-1,"Can't create temporary file");
       exitCode = 2;
       goto err0;
     }
@@ -634,14 +652,14 @@ exit(0);
       }
     }
     if (strncmp(buf,"%PDF",4) != 0) {
-      error(-1,"Can't find PDF header");
+      opvpError(-1,"Can't find PDF header");
       exitCode = 2;
       goto err0;
     }
     /* copy PDF header */
     n = strlen(buf);
     if (write(fd,buf,n) != n) {
-      error(-1,"Can't copy stdin to temporary file");
+      opvpError(-1,"Can't copy stdin to temporary file");
       close(fd);
       exitCode = 2;
       goto err0;
@@ -649,21 +667,21 @@ exit(0);
     /* copy rest stdin to the tmp file */
     while ((n = fread(buf,1,sizeof(buf),stdin)) > 0) {
       if (write(fd,buf,n) != n) {
-	error(-1,"Can't copy stdin to temporary file");
+	opvpError(-1,"Can't copy stdin to temporary file");
 	close(fd);
 	exitCode = 2;
 	goto err0;
       }
     }
     if (lseek(fd,0,SEEK_SET) < 0) {
-	error(-1,"Can't rewind temporary file");
+	opvpError(-1,"Can't rewind temporary file");
 	close(fd);
 	exitCode = 2;
 	goto err0;
     }
 
     if ((fp = fdopen(fd,"rb")) == 0) {
-	error(-1,"Can't fdopen temporary file");
+	opvpError(-1,"Can't fdopen temporary file");
 	close(fd);
 	exitCode = 2;
 	goto err0;
@@ -677,14 +695,14 @@ exit(0);
     doc = new PDFDoc(fileName.copy());
   }
   if (!doc->isOk()) {
-    error(-1," Parsing PDF failed: error code %d",
+    opvpError(-1," Parsing PDF failed: error code %d",
       doc->getErrorCode());
     exitCode = 2;
     goto err05;
   }
 
   if (doc->isEncrypted() && !doc->okToPrint()) {
-    error(-1,"Print Permission Denied");
+    opvpError(-1,"Print Permission Denied");
     exitCode = 2;
     goto err05;
   }
@@ -705,7 +723,7 @@ exit(0);
 				  gFalse, paperColor,
                                  printerDriver,1,printerModel,
 				 nOptions,optionKeys,optionVals) < 0) {
-      error(-1,"OPVPOutputDev Initialize fail");
+      opvpError(-1,"OPVPOutputDev Initialize fail");
       exitCode = 2;
       goto err1;
   }
@@ -716,12 +734,12 @@ exit(0);
 fprintf(stderr,"JobInfo=%s\n",jobInfo);
 #endif
   if (opvpOut->OPVPStartJob(jobInfo) < 0) {
-      error(-1,"Start job failed");
+      opvpError(-1,"Start job failed");
       exitCode = 2;
       goto err1;
   }
   if (opvpOut->OPVPStartDoc(docInfo) < 0) {
-      error(-1,"Start Document failed");
+      opvpError(-1,"Start Document failed");
       exitCode = 2;
       goto err2;
   }
@@ -730,12 +748,12 @@ fprintf(stderr,"JobInfo=%s\n",jobInfo);
     if ((exitCode = outOnePage(doc,opvpOut,pg)) != 0) break;
   }
   if (opvpOut->OPVPEndDoc() < 0) {
-      error(-1,"End Document failed");
+      opvpError(-1,"End Document failed");
       exitCode = 2;
   }
 err2:
   if (opvpOut->OPVPEndJob() < 0) {
-      error(-1,"End job failed");
+      opvpError(-1,"End job failed");
       exitCode = 2;
   }
 

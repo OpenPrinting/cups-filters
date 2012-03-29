@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 #include "goo/gmem.h"
 #include "splash/SplashErrorCodes.h"
 #include "splash/SplashMath.h"
@@ -45,9 +46,9 @@ inline void OPVPSplash::transform(SplashCoord *matrix,
 }
 
 OPVPSplash::OPVPSplash(OPVPWrapper *opvpA,
-  int nOptions, char *optionKeys[], char *optionVals[])
+  int nOptions, const char *optionKeys[], const char *optionVals[])
 {
-  char *opv;
+  const char *opv;
 
   opvp = opvpA;
   // with default screen params
@@ -632,7 +633,12 @@ SplashError OPVPSplash::clipToPath(OPVPSplashPath *path, GBool eo) {
                                      state->flatness, gFalse);
 
       xpath->sort();
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+      SplashXPathScanner *scanner = new SplashXPathScanner(xpath,eo,
+        INT_MIN,INT_MAX);
+#else
       SplashXPathScanner *scanner = new SplashXPathScanner(xpath,eo);
+#endif
       scanner->getBBox(&xMin,&yMin,&xMax,&yMax);
       delete scanner;
       delete xpath;
@@ -855,6 +861,41 @@ void OPVPSplash::arcToCurve(SplashCoord x0, SplashCoord y0,
 
 SplashError OPVPSplash::strokeByMyself(OPVPSplashPath *path)
 {
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  SplashPath *dPath;
+  OPVPSplashPath *oPath;
+  Splash *osplash;
+  SplashPattern *savedPattern;
+
+  /* draw dashed line by myself */
+  if (path->getLength() == 0) {
+    return splashOk;
+  }
+
+  osplash = new Splash(new SplashBitmap(1,1,4,splashModeMono1,gFalse),gFalse);
+  state->setState(osplash);
+  dPath = osplash->makeStrokePath(path,state->lineWidth);
+  oPath = new OPVPSplashPath(dPath);
+  delete dPath;
+
+  if (state->lineWidth <= 1) {
+    OPVPSplashXPath *xPath;
+    xPath = new OPVPSplashXPath(oPath, state->matrix, state->flatness, gFalse);
+    xPath->strokeNarrow(this,state);
+    delete xPath;
+  } else {
+    /* change fill pattern temprarily */
+    savedPattern = state->fillPattern->copy();
+    setFillPattern(state->strokePattern->copy());
+
+    fillByMyself(oPath,gFalse);
+
+    /* restore fill pattern */
+    setFillPattern(savedPattern);
+  }
+  delete osplash;
+  return splashOk;
+#else
   OPVPSplashXPath *xPath, *xPath2;
   SplashPattern *savedPattern;
 
@@ -884,6 +925,7 @@ SplashError OPVPSplash::strokeByMyself(OPVPSplashPath *path)
 
   delete xPath;
   return splashOk;
+#endif
 }
 
 SplashError OPVPSplash::stroke(OPVPSplashPath *path) {
@@ -942,7 +984,11 @@ SplashError OPVPSplash::fillByMyself(OPVPSplashPath *path, GBool eo)
   }
   xPath = new OPVPSplashXPath(path, state->matrix, state->flatness, gTrue);
   xPath->sort();
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+  scanner = new SplashXPathScanner(xPath, eo, INT_MIN, INT_MAX);
+#else
   scanner = new SplashXPathScanner(xPath, eo);
+#endif
 
   // get the min and max x and y values
   scanner->getBBox(&xMinI, &yMinI, &xMaxI, &yMaxI);
@@ -2218,8 +2264,8 @@ void OPVPSplash::drawPixel(int x, int y, GBool noClip)
   }
 }
 
-char *OPVPSplash::getOption(char *key, int nOptions,
-  char *optionKeys[], char *optionVals[])
+const char *OPVPSplash::getOption(const char *key, int nOptions,
+  const char *optionKeys[], const char *optionVals[])
 {
   int i;
 

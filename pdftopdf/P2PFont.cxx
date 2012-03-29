@@ -35,7 +35,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "goo/gmem.h"
 #include "P2PFont.h"
 #include "GfxFont.h"
-#include "Error.h"
+#include "P2PError.h"
 #include "P2PXRef.h"
 #include "BuiltinFontTables.h"
 #include "P2PCMap.h"
@@ -380,21 +380,18 @@ void P2PFontFile::outputCIDToGID(GBool wmode, P2POutputStream *str, XRef *xref)
       }
       tfont.setupGSUB(lp->scriptTag);
     } else {
-      error(-1,const_cast<char *>("Unknown character collection %s\n"),
+      p2pError(-1,const_cast<char *>("Unknown character collection %s\n"),
         cidfont->getCollection()->getCString());
       if ((octu = cidfont->getToUnicode()) != 0) {
 	CharCode cid;
 	for (cid = 0;cid <= maxRefCID ;cid++) {
-	  int len;
 #ifdef OLD_MAPTOUNICODE
 	  Unicode ucode;
 
-	  len = octu->mapToUnicode(cid,&ucode,1);
 	  humap[cid*N_UCS_CANDIDATES] = ucode;
 #else
 	  Unicode *ucode = NULL;
 
-	  len = octu->mapToUnicode(cid,&ucode);
 	  humap[cid*N_UCS_CANDIDATES] = *ucode;
 #endif
 	  for (i = 1;i < N_UCS_CANDIDATES;i++) {
@@ -534,7 +531,7 @@ void P2PFontFile::output(P2POutputStream *str, XRef *xref)
   case fontTrueType:
   default:
     if ((fd = open(fileName->getCString(),O_RDONLY)) < 0) {
-      error(-1,const_cast<char *>("Cannot open FontFile:%s\n"),fileName->getCString());
+      p2pError(-1,const_cast<char *>("Cannot open FontFile:%s\n"),fileName->getCString());
       return;
     }
     while ((n = read(fd,buf,BUFSIZ)) > 0) {
@@ -675,7 +672,7 @@ void P2PCIDFontDict::output(P2POutputStream *str, XRef *xref)
     case fontType3:
     case fontCIDType0C:
     default:
-      error(-1,const_cast<char *>("P2PCIDFontDict: Illegal embedded font type"));
+      p2pError(-1,const_cast<char *>("P2PCIDFontDict: Illegal embedded font type"));
       goto end_output;
       break;
     }
@@ -746,12 +743,12 @@ void P2PFontDict::doReadFontDescriptor(Object *dictObj,
   if (dict->lookupNF(const_cast<char *>("FontDescriptor"),&obj) == 0
        || obj.isNull()) {
     /* no FontDescriptor */
-    error(-1,const_cast<char *>("Font:%s has no FontDescriptor entry.\n"),name);
+    p2pError(-1,const_cast<char *>("Font:%s has no FontDescriptor entry.\n"),name);
     return;
   }
   if (!obj.isRef()) {
     /* not indirect reference is error */
-    error(-1,const_cast<char *>("FontDescriptor entry of Font:%s is not indirect.\n"),name);
+    p2pError(-1,const_cast<char *>("FontDescriptor entry of Font:%s is not indirect.\n"),name);
     goto end_read;
   }
   num = obj.getRefNum();
@@ -761,9 +758,50 @@ void P2PFontDict::doReadFontDescriptor(Object *dictObj,
     fontDescriptor = static_cast<P2PFontDescriptor *>(p);
     embeddedType = fontDescriptor->getType();
   } else {
-    GooString *fileName = font->getExtFontFile();
     P2PFontFile *fp;
     UGooString *ugs;
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+    GooString *fileName;
+
+    SysFontType sftype;
+    fileName = globalParams->findSystemFontFile(font,&sftype,
+        &faceIndex, NULL);
+    if (fileName == 0) {
+      p2pError(-1, const_cast<char *>("Couldn't find a font for %s. Not embedded\n"),name);
+      goto end_read;
+    }
+    switch (sftype) {
+    case sysFontPFA:
+    case sysFontPFB:
+      p2pError(-1, const_cast<char *>("Found a Type1 font for font:%s. Embedding Type1 font not supported yet."),name);
+      goto end_read;
+      break;
+    case sysFontTTF:
+    case sysFontTTC:
+      switch (type) {
+      case fontCIDType2:
+      case fontTrueType:
+        break;
+      case fontCIDType0C:
+      case fontCIDType0:
+        embeddedType = fontCIDType2;
+        break;
+      case fontType1:
+      case fontType1C:
+        embeddedType = fontTrueType;
+        break;
+      default:
+        p2pError(-1, const_cast<char *>("Illegal type font\n"));
+        goto end_read;
+      }
+      break;
+    default:
+      p2pError(-1, const_cast<char *>("found a unknown type font for %s. Not embedded\n"),name);
+      goto end_read;
+      break;
+    }
+#else
+    GooString *fileName = font->getExtFontFile();
 
     if (fileName == 0) {
       DisplayFontParam *dfp = 0;
@@ -774,72 +812,47 @@ void P2PFontDict::doReadFontDescriptor(Object *dictObj,
 	/* a caller must not delete dfp */
       }
       if (dfp == 0) {
-	error(-1, const_cast<char *>("Couldn't find a font for %s. Not embedded\n"),name);
+	p2pError(-1, const_cast<char *>("Couldn't find a font for %s. Not embedded\n"),name);
 	goto end_read;
       }
       switch (dfp->kind) {
       case displayFontT1:
-#if 0
-	switch (type) {
-	case fontType1:
-	case fontCIDType0:
-fprintf(stderr, "DEBUG:found a font:Type1 %s. Embedding Type1 Font\n",dfp->tt.fileName->getCString());
-	  break;
-	case fontCIDType0C:
-	case fontCIDType2:
-fprintf(stderr, "DEBUG:found a mismatch type font:Type1 %s. Embedding Type1 Font\n",dfp->tt.fileName->getCString());
-	  embeddedType = fontCIDType0;
-	  break;
-	case fontType1C:
-	case fontTrueType:
-fprintf(stderr, "DEBUG:found a mismatch type font:Type1  %s. Embedding Type1 Font\n",dfp->tt.fileName->getCString());
-	  embeddedType = fontType1;
-	  break;
-	default:
-	  error(-1, const_cast<char *>("Illegal type font\n"));
-	  goto end_read;
-	}
-	fileName = dfp->t1.fileName;
-#else
-	error(-1, const_cast<char *>("Found a Type1 font for font:%s. Embedding Type1 font not supported yet."),name);
+	p2pError(-1, const_cast<char *>("Found a Type1 font for font:%s. Embedding Type1 font not supported yet."),name);
 	goto end_read;
-#endif
 	break;
       case displayFontTT:
 	switch (type) {
 	case fontCIDType2:
 	case fontTrueType:
-//fprintf(stderr, "DEBUG:found a font:TrueType %s. Embedding TrueType Font\n",dfp->tt.fileName->getCString());
-	  break;
+          break;
 	case fontCIDType0C:
 	case fontCIDType0:
-//fprintf(stderr, "DEBUG:found a mismatch type font:TrueType  %s. Embedding TrueType Font\n",dfp->tt.fileName->getCString());
-	  embeddedType = fontCIDType2;
+          embeddedType = fontCIDType2;
 	  break;
 	case fontType1:
 	case fontType1C:
-//fprintf(stderr, "DEBUG:found a mismatch type font:TrueType  %s. Embedding TrueType Font\n",dfp->tt.fileName->getCString());
-	  embeddedType = fontTrueType;
+          embeddedType = fontTrueType;
 	  break;
 	default:
-	  error(-1, const_cast<char *>("Illegal type font\n"));
+	  p2pError(-1, const_cast<char *>("Illegal type font\n"));
 	  goto end_read;
 	}
 	fileName = dfp->tt.fileName;
 	faceIndex = dfp->tt.faceIndex;
 	break;
       default:
-	error(-1, const_cast<char *>("found a unknown type font for %s. Not embedded\n"),name);
+	p2pError(-1, const_cast<char *>("found a unknown type font for %s. Not embedded\n"),name);
 	goto end_read;
 	break;
       }
     }
+#endif
     /* reset obj */
     obj.free();
 
     xref->fetch(num,gen,&obj);
     if (!obj.isDict()) {
-	error(-1, const_cast<char *>("Font Descriptor of Font:%s is not Dictionary. Not embedded\n"),name);
+	p2pError(-1, const_cast<char *>("Font Descriptor of Font:%s is not Dictionary. Not embedded\n"),name);
 	goto end_read;
     }
 //fprintf(stderr, "DEBUG: Embedding Font fileName=%s for %s\n",fileName->getCString(),name);
@@ -884,12 +897,12 @@ void P2PFontDict::readCIDFontDescriptor(GfxFontType type, const char *name,
   if (dict->lookup(const_cast<char *>("DescendantFonts"),&obj) == 0
        || obj.isNull()) {
     /* no DescendantFonts */
-    error(-1,const_cast<char *>("Font:%s has no DescendantFonts entry.\n"),name);
+    p2pError(-1,const_cast<char *>("Font:%s has no DescendantFonts entry.\n"),name);
     return;
   }
   if (!obj.isArray() || obj.arrayGetNF(0,&descendant) == 0) {
     /* illegal DescendantFonts */
-    error(-1,const_cast<char *>("Font:%s has illegal DescendantFonts entry.\n"),name);
+    p2pError(-1,const_cast<char *>("Font:%s has illegal DescendantFonts entry.\n"),name);
     goto end_read;
   }
   if (descendant.isRef()) {
@@ -906,7 +919,7 @@ void P2PFontDict::readCIDFontDescriptor(GfxFontType type, const char *name,
   }
   if (cidFontDict == 0) {
     if (!descendant.isDict()) {
-      error(-1,const_cast<char *>("Font:%s has illegal DescendantFonts entry.\n"),name);
+      p2pError(-1,const_cast<char *>("Font:%s has illegal DescendantFonts entry.\n"),name);
       goto end_read1;
     }
     doReadFontDescriptor(&descendant,type,name,xref);
@@ -997,7 +1010,7 @@ void P2PFontDict::output(P2POutputStream *str, XRef *xref)
       case fontUnknownType:
       case fontType3:
       default:
-	error(-1,const_cast<char *>("P2PFontDict: Illegal embedded font type"));
+	p2pError(-1,const_cast<char *>("P2PFontDict: Illegal embedded font type"));
 	return;
 	break;
       }
@@ -1027,13 +1040,13 @@ P2PFontDict::P2PFontDict(Object *fontDictA, XRef *xref, int num, int gen)
   dict = fontDict.getDict();
   dict->lookup(const_cast<char *>("BaseFont"),&name);
   if (!name.isName()) {
-    error(-1,const_cast<char *>("FontDictionary has not name type BaseFont entry\n"));
+    p2pError(-1,const_cast<char *>("FontDictionary has not name type BaseFont entry\n"));
     goto end_setup;
   }
   /* font id and tag are not used */
   if ((font = GfxFont::makeFont(xref,const_cast<char *>(""),
           id,fontDict.getDict())) == 0) {
-    error(-1,const_cast<char *>("Can't get font %s. Not embedded\n"),
+    p2pError(-1,const_cast<char *>("Can't get font %s. Not embedded\n"),
       name.getName());
     goto end_setup;
   }

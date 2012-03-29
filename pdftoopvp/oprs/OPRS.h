@@ -38,7 +38,7 @@ class SplashFont;
 class OPRS {
 public:
 
-  static void error(char *msg, ...);
+  static void error(const char *msg, ...);
   OPRS();
   ~OPRS();
 
@@ -145,7 +145,7 @@ public:
 
   int init(const char *driverName, int outputFD,
       const char *printerModel, int nOptions,
-      char *optionKeys[], char *optionVals[]);
+      const char *optionKeys[], const char *optionVals[]);
   void initGS(int colorMode, int w, int h, SplashColor paperColor);
   int setColorMode(int colorModeA, GBool colorProfile);
   int unloadVectorDriver();

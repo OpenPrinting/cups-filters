@@ -32,7 +32,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "goo/gmem.h"
 #include "P2PXRef.h"
 #include "P2PObject.h"
-#include "Error.h"
+#include "P2PError.h"
 
 /* increment size for object table */
 #define INCSIZE 1024
@@ -129,14 +129,14 @@ int P2PXRef::output(P2POutputStream *str)
       /* this situation is error. */
       /* but continue */
       str->puts("0000000000 00000 f \n");
-      error(-1,const_cast<char *>("freed object:%d found\n"),i);
+      p2pError(-1,const_cast<char *>("freed object:%d found\n"),i);
     } else {
       objects[i]->getNum(&num,&gen);
       offset = objects[i]->getOffset();
 
       if (offset < 0) {
 	/* not output yet. error */
-	error(-1,const_cast<char *>("not output object:%d found\n"),i);
+	p2pError(-1,const_cast<char *>("not output object:%d found\n"),i);
       } else {
 	str->printf("%010d %05d n \n",offset,gen);
       }

@@ -32,7 +32,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "P2POutputStream.h"
 #include <stdarg.h>
 #include <string.h>
-#include <Error.h>
+#include "P2PError.h"
 
 #define LINEBUFSIZE 1024
 
@@ -95,14 +95,14 @@ int P2POutputStream::write(const void *buf, int n)
       zstream.next_out = reinterpret_cast<Bytef *>(outputBuf);
       zstream.avail_out = LINEBUFSIZE*2;
       if ((r = deflate(&zstream,0)) != Z_OK) {
-	error(-1,const_cast<char *>("ZLIB:deflate error"));
+	p2pError(-1,const_cast<char *>("ZLIB:deflate error"));
 	return r;
       }
       /* Z_OK */
       /* output data */
       outputLen = LINEBUFSIZE*2-zstream.avail_out;
       if ((r = fwrite(outputBuf,1,outputLen,fp)) != outputLen) {
-	error(-1,const_cast<char *>("P2POutputStream: write  error"));
+	p2pError(-1,const_cast<char *>("P2POutputStream: write  error"));
 	break;
       }
       position += r;
@@ -111,7 +111,7 @@ int P2POutputStream::write(const void *buf, int n)
   } else {
 #endif
     if ((r = fwrite(buf,1,n,fp)) != n) {
-      error(-1,const_cast<char *>("P2POutputStream: write  error"));
+      p2pError(-1,const_cast<char *>("P2POutputStream: write  error"));
       return r;
     }
     position += r;
@@ -141,7 +141,7 @@ void P2POutputStream::startDeflate()
   zstream.opaque = 0;
 
   if (deflateInit(&zstream,Z_DEFAULT_COMPRESSION) != Z_OK) {
-    error(-1,const_cast<char *>("ZLIB:deflateInit error"));
+    p2pError(-1,const_cast<char *>("ZLIB:deflateInit error"));
     return;
   }
   deflating = gTrue;
@@ -164,20 +164,20 @@ void P2POutputStream::endDeflate()
     zstream.next_in = 0;
     zstream.avail_in = 0;
     if ((r = deflate(&zstream,Z_FINISH)) != Z_STREAM_END && r != Z_OK) {
-      error(-1,const_cast<char *>("ZLIB:deflate error"));
+      p2pError(-1,const_cast<char *>("ZLIB:deflate error"));
       break;
     }
     /* Z_OK or Z_STREAM_END */
     /* output data */
     outputLen = LINEBUFSIZE*2-zstream.avail_out;
     if ((n = fwrite(outputBuf,1,outputLen,fp)) != outputLen) {
-      error(-1,const_cast<char *>("P2POutputStream: write  error"));
+      p2pError(-1,const_cast<char *>("P2POutputStream: write  error"));
       break;
     }
     position += n;
   } while (r != Z_STREAM_END);
   if (deflateEnd(&zstream) != Z_OK) {
-      error(-1,const_cast<char *>("ZLIB:deflateEnd error"));
+      p2pError(-1,const_cast<char *>("ZLIB:deflateEnd error"));
   }
   deflating = gFalse;
 #endif

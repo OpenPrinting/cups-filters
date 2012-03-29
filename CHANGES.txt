@@ -1,6 +1,12 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.9 - 2012-03-26
------------------------------------------------------------
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.10 - 2012-03-29
+------------------------------------------------------------
 
+CHANGES IN V1.0.10
+
+	- Updated all code copied from Poppler to the current state of Poppler.
+	- Made Poppler-based PDF filters building with various versions of
+	  Poppler.
+	  
 CHANGES IN V1.0.9
 
 	- Deactivated NIME conversion rules which are not used by the PDF-

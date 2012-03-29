@@ -34,7 +34,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "P2POutput.h"
 #include "P2PObject.h"
 #include <ctype.h>
-#include "Error.h"
+#include "P2PError.h"
 
 void P2POutput::outputDict(Dict *dict, const char **keys,
   P2PObject **objs, int len, P2POutputStream *str, XRef *xref)
@@ -174,7 +174,7 @@ void P2POutput::outputName(const char *name, P2POutputStream *str, Dict *mapDict
   char *nameStr = const_cast<char *>(name);
 #endif
   Object obj;
-  static char *punctures = "()<>[]{}/%#";
+  static const char *punctures = "()<>[]{}/%#";
 
   if (mapDict != 0 && mapDict->lookupNF(nameStr,&obj) != 0) {
     if (obj.isName()) {
@@ -250,6 +250,9 @@ void P2POutput::outputObject(Object *obj, P2POutputStream *str, XRef *xref,
     break;
   case objInt:
     str->printf("%d",obj->getInt());
+    break;
+  case objUint:
+    str->printf("%u",obj->getUint());
     break;
   case objReal:
     str->printf("%f",obj->getReal());

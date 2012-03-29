@@ -29,6 +29,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "P2PError.h"
 #include "goo/GooString.h"
 #include "goo/gmem.h"
 #include "Object.h"
@@ -36,8 +37,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "PDFDoc.h"
 #include "P2PDoc.h"
 #include "P2POutputStream.h"
-#include <stdarg.h>
-#include "Error.h"
+#include "P2PError.h"
 #include "GlobalParams.h"
 #include "parseargs.h"
 #include "PDFFTrueTypeFont.h"
@@ -189,6 +189,19 @@ static ArgDesc argDesc[] = {
   {NULL}
 };
 
+#ifdef ERROR_HAS_A_CATEGORY
+void CDECL myErrorFun(void *data, ErrorCategory category,
+    int pos, char *msg)
+{
+  if (pos >= 0) {
+    fprintf(stderr, "ERROR (%d): ", pos);
+  } else {
+    fprintf(stderr, "ERROR: ");
+  }
+  fprintf(stderr, "%s\n",msg);
+  fflush(stderr);
+}
+#else
 void CDECL myErrorFun(int pos, char *msg, va_list args)
 {
   if (pos >= 0) {
@@ -200,7 +213,7 @@ void CDECL myErrorFun(int pos, char *msg, va_list args)
   fprintf(stderr, "\n");
   fflush(stderr);
 }
-
+#endif
 Paper *getPaper(char *name)
 {
   for (Paper *p = papers;p->name != NULL;p++) {
@@ -491,7 +504,11 @@ int main(int argc, char *argv[]) {
   P2POutputStream *str;
   FILE *outfp;
 
+#ifdef ERROR_HAS_A_CATEGORY
+  setErrorCallback(::myErrorFun,NULL);
+#else
   setErrorFunction(::myErrorFun);
+#endif
   parseOpts(&argc, argv);
 #ifdef GLOBALPARAMS_HAS_A_ARG
   globalParams = new GlobalParams(0);
@@ -504,7 +521,7 @@ int main(int argc, char *argv[]) {
 
   if (argc >=3 && strcmp(argv[2],"-") != 0) {
     if ((outfp = fopen(argv[2],"wb")) == NULL) {
-      error(-1,const_cast<char *>("Can't open output file:%s"),argv[3]);
+      p2pError(-1,const_cast<char *>("Can't open output file:%s"),argv[3]);
       exit(1);
     }
   } else {
@@ -520,14 +537,14 @@ int main(int argc, char *argv[]) {
 
     fp = tmpfile();
     if (fp == NULL) {
-      error(-1,const_cast<char *>("Can't create temporary file"));
+      p2pError(-1,const_cast<char *>("Can't create temporary file"));
       exit(1);
     }
 
     /* copy stdin to the tmp file */
     while ((n = fread(buf,1,BUFSIZ,stdin)) > 0) {
       if (fwrite(buf,1,n,fp) != n) {
-        error(-1,const_cast<char *>("Can't copy stdin to temporary file"));
+        p2pError(-1,const_cast<char *>("Can't copy stdin to temporary file"));
         fclose(fp);
 	exit(1);
       }
@@ -547,7 +564,7 @@ int main(int argc, char *argv[]) {
     goto err1;
   }
   if (!doc->okToChange() && !doc->okToAssemble()) {
-    error(-1,const_cast<char *>("Neither Changing, nor Assembling is allowed\n"));
+    p2pError(-1,const_cast<char *>("Neither Changing, nor Assembling is allowed\n"));
     exit(1);
   }
   p2pdoc = new P2PDoc(doc);

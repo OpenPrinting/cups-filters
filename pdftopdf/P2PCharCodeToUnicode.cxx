@@ -19,7 +19,7 @@
 #include <string.h>
 #include "goo/gmem.h"
 #include "goo/GooString.h"
-#include "Error.h"
+#include "P2PError.h"
 #include "GlobalParams.h"
 #include "PSTokenizer.h"
 #include "P2PCharCodeToUnicode.h"
@@ -52,7 +52,7 @@ P2PCharCodeToUnicode *P2PCharCodeToUnicode::parseCMapFromFile(
     ctu->parseCMap1(&getCharFromFile, f, nBits);
     fclose(f);
   } else {
-    error(-1, const_cast<char *>("Couldn't find ToUnicode CMap file for '%s'"),
+    p2pError(-1, const_cast<char *>("Couldn't find ToUnicode CMap file for '%s'"),
 	  fileName->getCString());
   }
   return ctu;
@@ -79,7 +79,7 @@ void P2PCharCodeToUnicode::parseCMap1(int (*getCharFunc)(void *), void *data,
 	  parseCMap1(&getCharFromFile, f, nBits);
 	  fclose(f);
 	} else {
-	  error(-1, const_cast<char *>("Couldn't find ToUnicode CMap file for '%s'"),
+	  p2pError(-1, const_cast<char *>("Couldn't find ToUnicode CMap file for '%s'"),
 		name->getCString());
 	}
 	delete name;
@@ -92,7 +92,7 @@ void P2PCharCodeToUnicode::parseCMap1(int (*getCharFunc)(void *), void *data,
 	}
 	if (!pst->getToken(tok2, sizeof(tok2), &n2) ||
 	    !strcmp(tok2, "endbfchar")) {
-	  error(-1, const_cast<char *>("Illegal entry in bfchar block in ToUnicode CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in bfchar block in ToUnicode CMap"));
 	  break;
 	}
 	if (!(n1 == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
@@ -106,13 +106,13 @@ void P2PCharCodeToUnicode::parseCMap1(int (*getCharFunc)(void *), void *data,
 	
 	  if (!(countAux == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
 	      tok2[0] == '<' && tok2[n2 - 1] == '>')) {
-	    error(-1, const_cast<char *>("Illegal entry in bfchar block in ToUnicode CMap"));
+	    p2pError(-1, const_cast<char *>("Illegal entry in bfchar block in ToUnicode CMap"));
 	    continue;
 	  }
 	}
 	tok1[n1 - 1] = tok2[n2 - 1] = '\0';
 	if (sscanf(tok1 + 1, "%x", &code1) != 1) {
-	  error(-1, const_cast<char *>("Illegal entry in bfchar block in ToUnicode CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in bfchar block in ToUnicode CMap"));
 	  continue;
 	}
 	addMapping(code1, tok2 + 1, n2 - 2, 0);
@@ -127,7 +127,7 @@ void P2PCharCodeToUnicode::parseCMap1(int (*getCharFunc)(void *), void *data,
 	    !strcmp(tok2, "endbfrange") ||
 	    !pst->getToken(tok3, sizeof(tok3), &n3) ||
 	    !strcmp(tok3, "endbfrange")) {
-	  error(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
 	  break;
 	}
 	if (!(n1 == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
@@ -144,14 +144,14 @@ void P2PCharCodeToUnicode::parseCMap1(int (*getCharFunc)(void *), void *data,
 	  
 	  if (!(countAux == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
 	      countAux2 == 2 + nDigits && tok2[0] == '<' && tok2[n2 - 1] == '>')) {
-	    error(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
+	    p2pError(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
 	    continue;
 	  }
 	}
 	tok1[n1 - 1] = tok2[n2 - 1] = '\0';
 	if (sscanf(tok1 + 1, "%x", &code1) != 1 ||
 	    sscanf(tok2 + 1, "%x", &code2) != 1) {
-	  error(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
 	  continue;
 	}
 	if (!strcmp(tok3, "[")) {
@@ -165,7 +165,7 @@ void P2PCharCodeToUnicode::parseCMap1(int (*getCharFunc)(void *), void *data,
 	      tok1[n1 - 1] = '\0';
 	      addMapping(code1 + i, tok1 + 1, n1 - 2, 0);
 	    } else {
-	      error(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
+	      p2pError(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
 	    }
 	    ++i;
 	  }
@@ -176,7 +176,7 @@ void P2PCharCodeToUnicode::parseCMap1(int (*getCharFunc)(void *), void *data,
 	  }
 
 	} else {
-	  error(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
+	  p2pError(-1, const_cast<char *>("Illegal entry in bfrange block in ToUnicode CMap"));
 	}
       }
       pst->getToken(tok1, sizeof(tok1), &n1);
@@ -204,7 +204,7 @@ void P2PCharCodeToUnicode::addMapping(CharCode code, char *uStr, int n,
   }
   if (n <= 4) {
     if (sscanf(uStr, "%x", &u) != 1) {
-      error(-1, const_cast<char *>("Illegal entry in ToUnicode CMap"));
+      p2pError(-1, const_cast<char *>("Illegal entry in ToUnicode CMap"));
       return;
     }
     map[code] = u + offset;
@@ -221,7 +221,7 @@ void P2PCharCodeToUnicode::addMapping(CharCode code, char *uStr, int n,
       strncpy(uHex, uStr + j*4, 4);
       uHex[4] = '\0';
       if (sscanf(uHex, "%x", &sMap[sMapLen].u[j]) != 1) {
-	error(-1, const_cast<char *>("Illegal entry in ToUnicode CMap"));
+	p2pError(-1, const_cast<char *>("Illegal entry in ToUnicode CMap"));
       }
     }
     sMap[sMapLen].u[sMap[sMapLen].len - 1] += offset;
