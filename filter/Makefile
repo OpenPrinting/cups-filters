@@ -82,6 +82,7 @@ SCRIPTS	=	\
 		textonly
 
 PPDFILES =	\
+		Generic-PDF_Printer-PDF.ppd \
 		HP-Color_LaserJet_CM3530_MFP-PDF.ppd \
 		HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd \
 		textonly.ppd
