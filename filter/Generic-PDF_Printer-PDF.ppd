@@ -1,0 +1,414 @@
+*PPD-Adobe: "4.3"
+*%
+*% This PPD file is for using the HP Color LaserJet CM3530 MFP in native
+*% PDF mode, using CUPS with the OpenPrinting CUPS Filters package
+*%
+*% This PPD is experimental. It is possible that some of the options
+*% and settings do not make sense or do not cause any change on the output.
+*% It can even happen that with certain settings nothing or an error page
+*% comes out.
+*%
+*% This file is published under the GNU General Public License
+*%
+*% You may save this file as 'HP-Color_LaserJet_CM3530_MFP-PDF.ppd'
+*%
+*%
+*FormatVersion:	"4.3"
+*FileVersion:	"1.1"
+*LanguageVersion: English 
+*LanguageEncoding: ISOLatin1
+*PCFileName:	"CM353PDF.PPD"
+*Manufacturer:	"HP"
+*Product:       "(HP Color LaserJet CM3530 MFP)"
+*Product:       "(Hewlett-Packard HP Color LaserJet CM3530 MFP)"
+*cupsVersion:	1.0
+*cupsManualCopies: True
+*cupsModelNumber:  2
+*ModelName:     "HP Color LaserJet CM3530 MFP"
+*ShortNickName: "HP Color LaserJet CM3530 MFP"
+*NickName:      "HP Color LaserJet CM3530 MFP PDF"
+*PSVersion:     "(3010.107) 0"
+*LanguageLevel:	"3"
+*ColorDevice:	True
+*DefaultColorSpace: CMYK
+*FileSystem:	False
+*Throughput:	"30"
+*LandscapeOrientation: Plus90
+*TTRasterizer:	Type42
+*1284DeviceID: "MFG:Hewlett-Packard;CMD:PJL,BIDI-ECP,PCLXL,PCL,PDF,PJL,POSTSCRIPT;MDL:HP Color LaserJet CM3530 MFP;CLS:PRINTER;DES:Hewlett-Packard Color LaserJet CM3530 MFP;DRV:DPDF,R0,M0;"
+*JCLBegin:            "<1B>%-12345X@PJL JOB<0A>"
+*JCLToPDFInterpreter: "@PJL ENTER LANGUAGE = PDF <0A>"
+*JCLEnd:              "<1B>%-12345X@PJL EOJ <0A><1B>%-12345X"
+*cupsFilter: "application/vnd.cups-pdf 0 -"
+
+*OpenGroup: General/General
+*JCLOpenUI *PageSize/Page Size: PickOne
+*OrderDependency: 100 JCLSetup *PageSize
+*DefaultPageSize: Letter
+*PageSize Letter/Letter: "@PJL SET PAPER=LETTER<0A>"
+*PageSize A4/A4: "@PJL SET PAPER=A4<0A>"
+*PageSize A5/A5: "@PJL SET PAPER=A5<0A>"
+*PageSize A6/A6: "@PJL SET PAPER=A6<0A>"
+*PageSize ISOB5/ISO B5: "@PJL SET PAPER=B5<0A>"
+*PageSize EnvC5/C5: "@PJL SET PAPER=C5<0A>"
+*PageSize Env10/Com 10: "@PJL SET PAPER=COM10<0A>"
+*PageSize EnvDL/DL: "@PJL SET PAPER=DL<0A>"
+*PageSize 5x13/Eight Point 5x13: "@PJL SET PAPER=EIGHTPOINT5X13<0A>"
+*PageSize EnvC6/Envelope C6: "@PJL SET PAPER=ENVELOPEC6<0A>"
+*PageSize Executive/Executive: "@PJL SET PAPER=EXECUTIVE<0A>"
+*PageSize B5/JIS B5: "@PJL SET PAPER=JISB5<0A>"
+*PageSize B6/JIS B6: "@PJL SET PAPER=JISB6<0A>"
+*PageSize Legal/Legal: "@PJL SET PAPER=LEGAL<0A>"
+*PageSize EnvMonarch/Monarch: "@PJL SET PAPER=MONARCH<0A>"
+*PageSize 69x95mm/16K: "@PJL SET PAPER=SIZE16K195x270<0A>"
+*PageSize Statement/Statement: "@PJL SET PAPER=STATEMENT<0A>"
+*JCLCloseUI: *PageSize
+
+*JCLOpenUI *PageRegion: PickOne
+*OrderDependency: 100 JCLSetup *PageRegion
+*DefaultPageRegion: Letter
+*PageRegion Letter/Letter: "@PJL SET PAPER=LETTER<0A>"
+*PageRegion A4/A4: "@PJL SET PAPER=A4<0A>"
+*PageRegion A5/A5: "@PJL SET PAPER=A5<0A>"
+*PageRegion A6/A6: "@PJL SET PAPER=A6<0A>"
+*PageRegion ISOB5/ISO B5: "@PJL SET PAPER=B5<0A>"
+*PageRegion EnvC5/C5: "@PJL SET PAPER=C5<0A>"
+*PageRegion Env10/Com 10: "@PJL SET PAPER=COM10<0A>"
+*PageRegion EnvDL/DL: "@PJL SET PAPER=DL<0A>"
+*PageRegion 5x13/Eight Point 5x13: "@PJL SET PAPER=EIGHTPOINT5X13<0A>"
+*PageRegion EnvC6/Envelope C6: "@PJL SET PAPER=ENVELOPEC6<0A>"
+*PageRegion Executive/Executive: "@PJL SET PAPER=EXECUTIVE<0A>"
+*PageRegion B5/JIS B5: "@PJL SET PAPER=JISB5<0A>"
+*PageRegion B6/JIS B6: "@PJL SET PAPER=JISB6<0A>"
+*PageRegion Legal/Legal: "@PJL SET PAPER=LEGAL<0A>"
+*PageRegion EnvMonarch/Monarch: "@PJL SET PAPER=MONARCH<0A>"
+*PageRegion 69x95mm/16K: "@PJL SET PAPER=SIZE16K195x270<0A>"
+*PageRegion Statement/Statement: "@PJL SET PAPER=STATEMENT<0A>"
+*JCLCloseUI: *PageRegion
+
+*DefaultImageableArea: Letter
+*ImageableArea Letter/Letter: "18 36 594 756"
+*ImageableArea A4/A4: "18 36 577 806"
+*ImageableArea A5/A5: "18 36 402 559"
+*ImageableArea A6/A6: "18 36 279 384"
+*ImageableArea ISOB5/ISO B5: "18 36 480 672"
+*ImageableArea EnvC5/C5: "18 36 441 613"
+*ImageableArea Env10/Com 10: "18 36 279 648"
+*ImageableArea EnvDL/DL: "18 36 293 587"
+*ImageableArea 5x13/Eight Point 5x13: "18 36 342 900"
+*ImageableArea EnvC6/Envelope C6: "18 36 305 423"
+*ImageableArea Executive/Executive: "18 36 504 720"
+*ImageableArea B5/JIS B5: "18 36 500 691"
+*ImageableArea B6/JIS B6: "18 36 344 482"
+*ImageableArea Legal/Legal: "18 36 594 972"
+*ImageableArea EnvMonarch/Monarch: "18 36 261 504"
+*ImageableArea 69x95mm/16K: "18 36 177 234"
+*ImageableArea Statement/Statement: "18 36 378 576"
+
+*DefaultPaperDimension: Letter
+*PaperDimension Letter/Letter: "612 792"
+*PaperDimension A4/A4: "595 842"
+*PaperDimension A5/A5: "420 595"
+*PaperDimension A6/A6: "297 420"
+*PaperDimension ISOB5/ISO B5: "498 708"
+*PaperDimension EnvC5/C5: "459 649"
+*PaperDimension Env10/Com 10: "297 684"
+*PaperDimension EnvDL/DL: "311 623"
+*PaperDimension 5x13/Eight Point 5x13: "360 936"
+*PaperDimension EnvC6/Envelope C6: "323 459"
+*PaperDimension Executive/Executive: "522 756"
+*PaperDimension B5/JIS B5: "518 727"
+*PaperDimension B6/JIS B6: "362 518"
+*PaperDimension Legal/Legal: "612 1008"
+*PaperDimension EnvMonarch/Monarch: "279 540"
+*PaperDimension 69x95mm/16K: "195 270"
+*PaperDimension Statement/Statement: "396 612"
+
+*JCLOpenUI *manualfeed/Manual Feed of Paper: PickOne
+*OrderDependency: 100 JCLSetup *manualfeed
+*Defaultmanualfeed: off
+*manualfeed off/Off: "@PJL SET MANUALFEED=OFF<0A>"
+*manualfeed on/On: "@PJL SET MANUALFEED=ON<0A>"
+*JCLCloseUI: *manualfeed
+
+*JCLOpenUI *manualduplex/Manual duplex: PickOne
+*OrderDependency: 100 JCLSetup *manualduplex
+*Defaultmanualduplex: off
+*manualduplex off/Off: "@PJL SET MANUALDUPLEX=OFF<0A>"
+*manualduplex on/On: "@PJL SET MANUALDUPLEX=ON<0A>"
+*JCLCloseUI: *manualduplex
+
+*JCLOpenUI *Duplex/Double-Sided Printing: PickOne
+*OrderDependency: 100 JCLSetup *Duplex
+*DefaultDuplex: None
+*Duplex None/Off: "@PJL SET DUPLEX=OFF<0A>"
+*Duplex DuplexNoTumble/Long-Edge binding: "@PJL SET DUPLEX=ON<0A>@PJL SET BINDING=LONGEDGE<0A>"
+*Duplex DuplexTumble/Short-Edge binding: "@PJL SET DUPLEX=ON<0A>@PJL SET BINDING=SHORTEDGE<0A>"
+*JCLCloseUI: *Duplex
+
+*JCLOpenUI *Resolution/Resolution: PickOne
+*OrderDependency: 100 JCLSetup *Resolution
+*DefaultResolution: 600dpi
+*Resolution 300dpi/300 dpi: "@PJL SET RESOLUTION=300<0A>"
+*Resolution 600dpi/600 dpi: "@PJL SET RESOLUTION=600<0A>"
+*Resolution 1200dpi/1200 dpi: "@PJL SET RESOLUTION=1200<0A>"
+*JCLCloseUI: *Resolution
+
+
+*JCLOpenUI *colorbalanceblack/Color balance black: PickOne
+*OrderDependency: 100 JCLSetup *colorbalanceblack
+*Defaultcolorbalanceblack: 4
+*colorbalanceblack 0/0: "@PJL SET COLORBALANCEBLACK=0<0A>"
+*colorbalanceblack 1/1: "@PJL SET COLORBALANCEBLACK=1<0A>"
+*colorbalanceblack 2/2: "@PJL SET COLORBALANCEBLACK=2<0A>"
+*colorbalanceblack 3/3: "@PJL SET COLORBALANCEBLACK=3<0A>"
+*colorbalanceblack 4/4: "@PJL SET COLORBALANCEBLACK=4<0A>"
+*colorbalanceblack 5/5: "@PJL SET COLORBALANCEBLACK=5<0A>"
+*colorbalanceblack 6/6: "@PJL SET COLORBALANCEBLACK=6<0A>"
+*colorbalanceblack 7/7: "@PJL SET COLORBALANCEBLACK=7<0A>"
+*colorbalanceblack 8/8: "@PJL SET COLORBALANCEBLACK=8<0A>"
+*JCLCloseUI: *colorbalanceblack
+
+*CustomJCLcolorbalanceblack True: "@PJL SET COLORBALANCEBLACK=\1<0A>"
+*ParamCustomJCLcolorbalanceblack colorbalanceblack/colorbalanceblack: 1 int 0 8
+
+*JCLOpenUI *colorbalancecyan/Color balance cyan: PickOne
+*OrderDependency: 100 JCLSetup *colorbalancecyan
+*Defaultcolorbalancecyan: 4
+*colorbalancecyan 0/0: "@PJL SET COLORBALANCECYAN=0<0A>"
+*colorbalancecyan 1/1: "@PJL SET COLORBALANCECYAN=1<0A>"
+*colorbalancecyan 2/2: "@PJL SET COLORBALANCECYAN=2<0A>"
+*colorbalancecyan 3/3: "@PJL SET COLORBALANCECYAN=3<0A>"
+*colorbalancecyan 4/4: "@PJL SET COLORBALANCECYAN=4<0A>"
+*colorbalancecyan 5/5: "@PJL SET COLORBALANCECYAN=5<0A>"
+*colorbalancecyan 6/6: "@PJL SET COLORBALANCECYAN=6<0A>"
+*colorbalancecyan 7/7: "@PJL SET COLORBALANCECYAN=7<0A>"
+*colorbalancecyan 8/8: "@PJL SET COLORBALANCECYAN=8<0A>"
+*JCLCloseUI: *colorbalancecyan
+
+*CustomJCLcolorbalancecyan True: "@PJL SET COLORBALANCECYAN=\1<0A>"
+*ParamCustomJCLcolorbalancecyan colorbalancecyan/colorbalancecyan: 1 int 0 8
+
+*JCLOpenUI *colorbalancemagenta/Color balance magenta: PickOne
+*OrderDependency: 100 JCLSetup *colorbalancemagenta
+*Defaultcolorbalancemagenta: 4
+*colorbalancemagenta 0/0: "@PJL SET COLORBALANCEMAGENTA=0<0A>"
+*colorbalancemagenta 1/1: "@PJL SET COLORBALANCEMAGENTA=1<0A>"
+*colorbalancemagenta 2/2: "@PJL SET COLORBALANCEMAGENTA=2<0A>"
+*colorbalancemagenta 3/3: "@PJL SET COLORBALANCEMAGENTA=3<0A>"
+*colorbalancemagenta 4/4: "@PJL SET COLORBALANCEMAGENTA=4<0A>"
+*colorbalancemagenta 5/5: "@PJL SET COLORBALANCEMAGENTA=5<0A>"
+*colorbalancemagenta 6/6: "@PJL SET COLORBALANCEMAGENTA=6<0A>"
+*colorbalancemagenta 7/7: "@PJL SET COLORBALANCEMAGENTA=7<0A>"
+*colorbalancemagenta 8/8: "@PJL SET COLORBALANCEMAGENTA=8<0A>"
+*JCLCloseUI: *colorbalancemagenta
+
+*CustomJCLcolorbalancemagenta True: "@PJL SET COLORBALANCEMAGENTA=\1<0A>"
+*ParamCustomJCLcolorbalancemagenta colorbalancemagenta/colorbalancemagenta: 1 int 0 8
+
+*JCLOpenUI *colorbalanceyellow/Color balance yellow: PickOne
+*OrderDependency: 100 JCLSetup *colorbalanceyellow
+*Defaultcolorbalanceyellow: 4
+*colorbalanceyellow 0/0: "@PJL SET COLORBALANCEYELLOW=0<0A>"
+*colorbalanceyellow 1/1: "@PJL SET COLORBALANCEYELLOW=1<0A>"
+*colorbalanceyellow 2/2: "@PJL SET COLORBALANCEYELLOW=2<0A>"
+*colorbalanceyellow 3/3: "@PJL SET COLORBALANCEYELLOW=3<0A>"
+*colorbalanceyellow 4/4: "@PJL SET COLORBALANCEYELLOW=4<0A>"
+*colorbalanceyellow 5/5: "@PJL SET COLORBALANCEYELLOW=5<0A>"
+*colorbalanceyellow 6/6: "@PJL SET COLORBALANCEYELLOW=6<0A>"
+*colorbalanceyellow 7/7: "@PJL SET COLORBALANCEYELLOW=7<0A>"
+*colorbalanceyellow 8/8: "@PJL SET COLORBALANCEYELLOW=8<0A>"
+*JCLCloseUI: *colorbalanceyellow
+
+*CustomJCLcolorbalanceyellow True: "@PJL SET COLORBALANCEYELLOW=\1<0A>"
+*ParamCustomJCLcolorbalanceyellow colorbalanceyellow/colorbalanceyellow: 1 int 0 8
+
+
+*JCLOpenUI *colorsupplyout/On color supply out: PickOne
+*OrderDependency: 100 JCLSetup *colorsupplyout
+*Defaultcolorsupplyout: autocontinueblack
+*colorsupplyout autocontinueblack/Continue in grayscale: "@PJL SET COLORSUPPLYOUT=AUTOCONTINUEBLACK<0A>"
+*colorsupplyout stop/Stop: "@PJL SET COLORSUPPLYOUT=STOP<0A>"
+*JCLCloseUI: *colorsupplyout
+
+*JCLOpenUI *ret/Resolution Enhancement: PickOne
+*OrderDependency: 100 JCLSetup *ret
+*Defaultret: notset
+*ret dark/Dark: "@PJL SET RET=DARK<0A>"
+*ret light/Light: "@PJL SET RET=LIGHT<0A>"
+*ret medium/Medium: "@PJL SET RET=MEDIUM<0A>"
+*ret notset/notset: "@PJL SET RET=NOTSET<0A>"
+*ret off/Off: "@PJL SET RET=OFF<0A>"
+*JCLCloseUI: *ret
+
+*JCLOpenUI *borderless/Borderless Printing: PickOne
+*OrderDependency: 100 JCLSetup *borderless
+*Defaultborderless: on
+*borderless off/Off: "@PJL SET BORDERLESS=OFF<0A>"
+*borderless on/On: "@PJL SET BORDERLESS=ON<0A>"
+*JCLCloseUI: *borderless
+
+*JCLOpenUI *contentorientation/Content Orientation: PickOne
+*OrderDependency: 100 JCLSetup *contentorientation
+*Defaultcontentorientation: notspecified
+*contentorientation landscape/Landscape: "@PJL SET CONTENTORIENTATION=LANDSCAPE<0A>"
+*contentorientation notspecified/Not specified: "@PJL SET CONTENTORIENTATION=NOTSPECIFIED<0A>"
+*contentorientation portrait/Portrait: "@PJL SET CONTENTORIENTATION=PORTRAIT<0A>"
+*contentorientation reverselandscape/Reverse landscape: "@PJL SET CONTENTORIENTATION=REVERSELANDSCAPE<0A>"
+*contentorientation reverseportrait/Reverse portrait: "@PJL SET CONTENTORIENTATION=REVERSEPORTRAIT<0A>"
+*JCLCloseUI: *contentorientation
+
+*JCLOpenUI *edgecontrol/Edge control: PickOne
+*OrderDependency: 100 JCLSetup *edgecontrol
+*Defaultedgecontrol: maximum
+*edgecontrol normal/Normal: "@PJL SET EDGECONTROL=NORMAL<0A>"
+*edgecontrol light/Light: "@PJL SET EDGECONTROL=LIGHT<0A>"
+*edgecontrol maximum/Maximum: "@PJL SET EDGECONTROL=MAXIMUM<0A>"
+*edgecontrol off/Off: "@PJL SET EDGECONTROL=OFF<0A>"
+*JCLCloseUI: *edgecontrol
+
+*JCLOpenUI *edgetoedge/Edge to edge: PickOne
+*OrderDependency: 100 JCLSetup *edgetoedge
+*Defaultedgetoedge: yes
+*edgetoedge no/No: "@PJL SET EDGETOEDGE=NO<0A>"
+*edgetoedge yes/Yes: "@PJL SET EDGETOEDGE=YES<0A>"
+*JCLCloseUI: *edgetoedge
+
+*JCLOpenUI *finish/Finisher: PickOne
+*OrderDependency: 100 JCLSetup *finish
+*Defaultfinish: none
+*finish none/None: "@PJL SET FINISH=NONE<0A>"
+*finish on/On: "@PJL SET FINISH=ON<0A>"
+*finish staple/Staple: "@PJL SET FINISH=STAPLE<0A>"
+*JCLCloseUI: *finish
+
+*JCLOpenUI *hold/Hold Job: PickOne
+*OrderDependency: 100 JCLSetup *hold
+*Defaulthold: off
+*hold off/Off: "@PJL SET HOLD=OFF<0A>"
+*hold on/On: "@PJL SET HOLD=ON<0A>"
+*hold proof/Proof: "@PJL SET HOLD=PROOF<0A>"
+*hold store/Store: "@PJL SET HOLD=STORE<0A>"
+*JCLCloseUI: *hold
+
+*JCLOpenUI *joboffset/Job Offset: PickOne
+*OrderDependency: 100 JCLSetup *joboffset
+*Defaultjoboffset: on
+*joboffset off/Off: "@PJL SET JOBOFFSET=OFF<0A>"
+*joboffset on/On: "@PJL SET JOBOFFSET=ON<0A>"
+*JCLCloseUI: *joboffset
+
+*JCLOpenUI *lowsupplies/On low supplies: PickOne
+*OrderDependency: 100 JCLSetup *lowsupplies
+*Defaultlowsupplies: continue
+*lowsupplies continue/Continue: "@PJL SET LOWSUPPLIES=CONTINUE<0A>"
+*lowsupplies stop/Stop: "@PJL SET LOWSUPPLIES=STOP<0A>"
+*JCLCloseUI: *lowsupplies
+
+*JCLOpenUI *overridea4withletter/Override A4 with Letter: PickOne
+*OrderDependency: 100 JCLSetup *overridea4withletter
+*Defaultoverridea4withletter: yes
+*overridea4withletter no/No: "@PJL SET OVERRIDEA4WITHLETTER=NO<0A>"
+*overridea4withletter yes/Yes: "@PJL SET OVERRIDEA4WITHLETTER=YES<0A>"
+*JCLCloseUI: *overridea4withletter
+
+*JCLOpenUI *planesinuse/Planes in use: PickOne
+*OrderDependency: 100 JCLSetup *planesinuse
+*Defaultplanesinuse: 3
+*planesinuse 1/1: "@PJL SET PLANESINUSE=1<0A>"
+*planesinuse 3/3: "@PJL SET PLANESINUSE=3<0A>"
+*JCLCloseUI: *planesinuse
+
+*JCLOpenUI *printonbackside/Print on back side: PickOne
+*OrderDependency: 100 JCLSetup *printonbackside
+*Defaultprintonbackside: on
+*printonbackside off/Off: "@PJL SET PRINTONBACKSIDE=OFF<0A>"
+*printonbackside on/On: "@PJL SET PRINTONBACKSIDE=ON<0A>"
+*JCLCloseUI: *printonbackside
+
+*JCLOpenUI *processingaction/Processing Action: PickOne
+*OrderDependency: 100 JCLSetup *processingaction
+*Defaultprocessingaction: replace
+*processingaction append/Append: "@PJL SET PROCESSINGACTION=APPEND<0A>"
+*processingaction replace/Replace: "@PJL SET PROCESSINGACTION=REPLACE<0A>"
+*JCLCloseUI: *processingaction
+
+*JCLOpenUI *processingboundary/Processing Boundary: PickOne
+*OrderDependency: 100 JCLSetup *processingboundary
+*Defaultprocessingboundary: job
+*processingboundary job/Job: "@PJL SET PROCESSINGBOUNDARY=JOB<0A>"
+*processingboundary mopy/Mopy: "@PJL SET PROCESSINGBOUNDARY=MOPY<0A>"
+*JCLCloseUI: *processingboundary
+
+*JCLOpenUI *reprint/Reprint job: PickOne
+*OrderDependency: 100 JCLSetup *reprint
+*Defaultreprint: auto
+*reprint auto/Automatic: "@PJL SET REPRINT=AUTO<0A>"
+*reprint off/Off: "@PJL SET REPRINT=OFF<0A>"
+*reprint on/On: "@PJL SET REPRINT=ON<0A>"
+*JCLCloseUI: *reprint
+
+*JCLOpenUI *stapleoption/Stapling Mode: PickOne
+*OrderDependency: 100 JCLSetup *stapleoption
+*Defaultstapleoption: none
+*stapleoption default/Default: "@PJL SET STAPLEOPTION=DEFAULT<0A>"
+*stapleoption custom/Custom Size: "@PJL SET STAPLEOPTION=CUSTOM<0A>"
+*stapleoption five/5: "@PJL SET STAPLEOPTION=FIVE<0A>"
+*stapleoption four/4: "@PJL SET STAPLEOPTION=FOUR<0A>"
+*stapleoption none/None: "@PJL SET STAPLEOPTION=NONE<0A>"
+*stapleoption one/1: "@PJL SET STAPLEOPTION=ONE<0A>"
+*stapleoption oneangled/One Angled: "@PJL SET STAPLEOPTION=ONEANGLED<0A>"
+*stapleoption oneopposed/One Opposed: "@PJL SET STAPLEOPTION=ONEOPPOSED<0A>"
+*stapleoption option3/Option 3: "@PJL SET STAPLEOPTION=OPTION3<0A>"
+*stapleoption option4/Option 4: "@PJL SET STAPLEOPTION=OPTION4<0A>"
+*stapleoption option5/Option 5: "@PJL SET STAPLEOPTION=OPTION5<0A>"
+*stapleoption option6/Option 6: "@PJL SET STAPLEOPTION=OPTION6<0A>"
+*stapleoption seven/7: "@PJL SET STAPLEOPTION=SEVEN<0A>"
+*stapleoption six/6: "@PJL SET STAPLEOPTION=SIX<0A>"
+*stapleoption three/3: "@PJL SET STAPLEOPTION=THREE<0A>"
+*stapleoption two/2: "@PJL SET STAPLEOPTION=TWO<0A>"
+*JCLCloseUI: *stapleoption
+
+*CloseGroup: General
+
+
+*% Generic boilerplate PPD stuff as standard PostScript fonts and so on
+
+*DefaultFont: Courier
+*Font AvantGarde-Book: Standard "(001.006S)" Standard ROM
+*Font AvantGarde-BookOblique: Standard "(001.006S)" Standard ROM
+*Font AvantGarde-Demi: Standard "(001.007S)" Standard ROM
+*Font AvantGarde-DemiOblique: Standard "(001.007S)" Standard ROM
+*Font Bookman-Demi: Standard "(001.004S)" Standard ROM
+*Font Bookman-DemiItalic: Standard "(001.004S)" Standard ROM
+*Font Bookman-Light: Standard "(001.004S)" Standard ROM
+*Font Bookman-LightItalic: Standard "(001.004S)" Standard ROM
+*Font Courier: Standard "(002.004S)" Standard ROM
+*Font Courier-Bold: Standard "(002.004S)" Standard ROM
+*Font Courier-BoldOblique: Standard "(002.004S)" Standard ROM
+*Font Courier-Oblique: Standard "(002.004S)" Standard ROM
+*Font Helvetica: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Bold: Standard "(001.007S)" Standard ROM
+*Font Helvetica-BoldOblique: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Narrow-Bold: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow-BoldOblique: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow-Oblique: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Oblique: Standard "(001.006S)" Standard ROM
+*Font NewCenturySchlbk-Bold: Standard "(001.009S)" Standard ROM
+*Font NewCenturySchlbk-BoldItalic: Standard "(001.007S)" Standard ROM
+*Font NewCenturySchlbk-Italic: Standard "(001.006S)" Standard ROM
+*Font NewCenturySchlbk-Roman: Standard "(001.007S)" Standard ROM
+*Font Palatino-Bold: Standard "(001.005S)" Standard ROM
+*Font Palatino-BoldItalic: Standard "(001.005S)" Standard ROM
+*Font Palatino-Italic: Standard "(001.005S)" Standard ROM
+*Font Palatino-Roman: Standard "(001.005S)" Standard ROM
+*Font Symbol: Special "(001.007S)" Special ROM
+*Font Times-Bold: Standard "(001.007S)" Standard ROM
+*Font Times-BoldItalic: Standard "(001.009S)" Standard ROM
+*Font Times-Italic: Standard "(001.007S)" Standard ROM
+*Font Times-Roman: Standard "(001.007S)" Standard ROM
+*Font ZapfChancery-MediumItalic: Standard "(001.007S)" Standard ROM
+*Font ZapfDingbats: Special "(001.004S)" Standard ROM
+
+

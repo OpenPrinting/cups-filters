@@ -3,6 +3,7 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.10 - 2012-03-29
 
 CHANGES IN V1.0.10
 
+	- Added Generic PPD file for native PDF printers.
 	- Updated all code copied from Poppler to the current state of Poppler.
 	- Made Poppler-based PDF filters building with various versions of
 	  Poppler.
