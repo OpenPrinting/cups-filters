@@ -1,4 +1,4 @@
-README - OpenPrinting CUPS Filters v1.0.11 - 2012-03-29
+README - OpenPrinting CUPS Filters v1.0.12 - 2012-04-04
 -------------------------------------------------------
 
 Looking for compile instructions?  Read the file "INSTALL.txt"
