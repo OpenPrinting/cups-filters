@@ -1385,7 +1385,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Write any JCL commands that are needed to print PostScript code...
   */
 
-  if (emit_jcl) {
+  if (ppd && emit_jcl) {
     /* pdftopdf only adds JCL to the job if the printer is a native PDF
        printer and the PPD is for this mode, having the "*JCLToPDFInterpreter:"
        keyword. We need to read this keyword manually from the PPD and replace
