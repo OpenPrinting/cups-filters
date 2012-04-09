@@ -129,6 +129,7 @@ static info_line_time(FILE *s,
     time_t time;
 
     if (timestamp) {
+        time = (time_t)atoll(timestamp);
         strftime(buf, sizeof buf, "%c", localtime(&time));
         info_line(s, key, buf);
     }

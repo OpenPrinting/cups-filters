@@ -1,5 +1,10 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.12 - 2012-04-04
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.13 - 2012-04-09
 ------------------------------------------------------------
+
+CHANGES IN V1.0.13
+
+	- bannertopdf: Fix display of the job dates on the test page and on
+	  banner pages (Ubuntu bug #975064).
 
 CHANGES IN V1.0.12
 
