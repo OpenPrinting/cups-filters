@@ -1,5 +1,16 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.13 - 2012-04-09
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.14 - 2012-04-10
 ------------------------------------------------------------
+
+CHANGES IN V1.0.14
+
+	- pdftops: Determine printing resolution from the PPD file and supply
+	  it on the Ghostscript or pdftops (Poppler) command line, so that
+	  the renderer does the image rendering with a resolution matching the
+	  printer's resolution. This avoids too slow processing of the jobs
+	  by the printer's built-in PostScript interpreter. In addition
+	  a default resolution of 300 dpi is used for PPDs without any hint
+	  of the printer's resolution, as most PostScript lasers use multiples
+	  of 300 dpi as resolution (Ubuntu bug #977912).
 
 CHANGES IN V1.0.13
 

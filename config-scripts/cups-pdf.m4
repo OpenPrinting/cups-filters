@@ -86,6 +86,14 @@ if test "x$CUPS_PDFTOPS" != x; then
 		AC_MSG_RESULT(no)
 	fi
 
+	AC_MSG_CHECKING(whether pdftops supports -r)
+	if ($CUPS_PDFTOPS -h 2>&1 | grep -q -- '-r '); then
+		AC_MSG_RESULT(yes)
+		AC_DEFINE(HAVE_PDFTOPS_WITH_RESOLUTION)
+	else
+		AC_MSG_RESULT(no)
+	fi
+
 	DEFAULT_PDFTOPS=""
 elif test "x$CUPS_GHOSTSCRIPT" != x; then
 	AC_MSG_CHECKING(whether gs supports the ps2write device)

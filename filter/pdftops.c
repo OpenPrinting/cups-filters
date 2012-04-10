@@ -32,6 +32,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <config.h>
+#include <cupsfilters/image-private.h>
 
 #define MAX_CHECK_COMMENT_LINES	20
 
@@ -213,6 +214,12 @@ main(int  argc,				/* I - Number of command-line args */
 		fit;			/* Fit output to default page size? */
   ppd_file_t	*ppd;			/* PPD file */
   ppd_size_t	*size;			/* Current page size */
+  char		resolution[128] = "300";/* Output resolution */
+  int           xres = 0, yres = 0,     /* resolution values */
+                numvalues;              /* Number of values actually read */
+  ppd_choice_t  *choice;
+  ppd_attr_t    *attr;
+  cups_page_header2_t header;
   cups_file_t	*fp;			/* Post-processing input file */
   int		pdf_pid,		/* Process ID for pdftops */
 		pdf_argc,		/* Number of args for pdftops */
@@ -521,12 +528,51 @@ main(int  argc,				/* I - Number of command-line args */
       pdf_argv[pdf_argc++] = (char *)"-origpagesizes";
     }
 #endif /* HAVE_PDFTOPS && HAVE_PDFTOPS_WITH_ORIGPAGESIZES */
+
+   /*
+    * Set output resolution ...
+    */
+
+    if ((choice = ppdFindMarkedChoice(ppd, "Resolution")) != NULL)
+      strncpy(resolution, choice->choice, sizeof(resolution));
+    else if ((attr = ppdFindAttr(ppd,"DefaultResolution",NULL)) != NULL)
+      strncpy(resolution, attr->value, sizeof(resolution));
+    else if (cupsRasterInterpretPPD(&header, ppd, num_options, options, NULL) == 0)
+    {
+      xres = header.HWResolution[0];
+      yres = header.HWResolution[1];
+    }
   }
 
+  if ((xres > 0) || (yres > 0) ||
+      ((numvalues = sscanf(resolution, "%dx%d", &xres, &yres)) > 0))
+  {
+    if ((yres > 0) && (xres > yres)) xres = yres;
+  }
+  else
+    xres = 300;
+
 #ifdef HAVE_PDFTOPS
+#ifdef HAVE_PDFTOPS_WITH_RESOLUTION
+ /*
+  * Set resolution to avoid slow processing by the printer when the resolution
+  * of embedded images does not match the printer' s resolution
+  */
+  pdf_argv[pdf_argc++] = (char *)"-r";
+  snprintf(resolution, sizeof(resolution), "%d", xres);
+  pdf_argv[pdf_argc++] = resolution;
+  fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", xres);
+#endif /* HAVE_PDFTOPS_WITH_RESOLUTION */
   pdf_argv[pdf_argc++] = filename;
   pdf_argv[pdf_argc++] = (char *)"-";
 #else
+ /*
+  * Set resolution to avoid slow processing by the printer when the resolution
+  * of embedded images does not match the printer' s resolution
+  */
+  snprintf(resolution, 127, "-r%d", xres);
+  pdf_argv[pdf_argc++] = resolution;
+  fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", xres);
  /*
   * PostScript debug mode: If you send a job with "lpr -o psdebug" Ghostscript
   * will not compress the pages, so that the PostScript code can get
