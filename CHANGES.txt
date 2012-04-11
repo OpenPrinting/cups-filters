@@ -1,5 +1,14 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.14 - 2012-04-10
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.15 - 2012-04-11
 ------------------------------------------------------------
+
+CHANGES IN V1.0.15
+
+	- pdftops: Suppress image compression only for Brother printers as they
+	  really need this measure to print at all. This accelerates printer-
+	  internal job processing on most other printers (tested on HP and
+	  Kyocera). Also suppress page compression on Kyocera printers, this
+	  works around a bug in Kyocera's PostScript interpreters which makes
+	  printing pages with images very slow (Ubuntu bug #977912).
 
 CHANGES IN V1.0.14
 

@@ -552,6 +552,23 @@ main(int  argc,				/* I - Number of command-line args */
   else
     xres = 300;
 
+ /*
+  * Reduce the image rendering resolution to make processing of jobs by poth
+  * the PDF->PS converter and the printer faster
+  */
+ /*
+  if (xres % 90 == 0)
+  {
+    if (xres > 360)
+      xres = max(360, xres / 2);
+  }
+  else if (xres % 75 == 0)
+  {
+    if (xres > 300)
+      xres = max(300, xres / 2);
+  }
+  */
+
 #ifdef HAVE_PDFTOPS
 #ifdef HAVE_PDFTOPS_WITH_RESOLUTION
  /*
@@ -578,24 +595,33 @@ main(int  argc,				/* I - Number of command-line args */
   * will not compress the pages, so that the PostScript code can get
   * analysed. This is especially important if a PostScript printer errors or
   * misbehaves on Ghostscript's output.
+  * On Kyocera printers we always suppress page compression, to avoid slow
+  * processing of raster images.
   */
   val = cupsGetOption("psdebug", num_options, options);
-  if (val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
-      strcasecmp(val, "false"))
+  if ((val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
+       strcasecmp(val, "false")) ||
+      (ppd && ppd->manufacturer &&
+       !strncasecmp(ppd->manufacturer, "Kyocera", 7)))
   {
-    fprintf(stderr, "DEBUG: Deactivated compression of pages in Ghostscript's PostScript output (\"psdebug\" debug mode)\n");
+    fprintf(stderr, "DEBUG: Deactivated compression of pages in Ghostscript's PostScript output (\"psdebug\" debug mode or Kyocera printer)\n");
     pdf_argv[pdf_argc++] = (char *)"-dCompressPages=false";
   }
  /*
-  * The PostScript interpreters on many printers have a bugs which make
+  * The PostScript interpreters on many printers have bugs which make
   * the interpreter crash, error out, or otherwise misbehave on too
   * heavily compressed input files, especially if code with compressed
-  * elements is compressed agin. Therefore we reduce compression here.
+  * elements is compressed again. Therefore we reduce compression here.
   */
   pdf_argv[pdf_argc++] = (char *)"-dCompressFonts=false";
   pdf_argv[pdf_argc++] = (char *)"-dNoT3CCITT";
-  pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
-  pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
+  if (ppd && ppd->manufacturer &&
+      !strncasecmp(ppd->manufacturer, "Brother", 7))
+  {
+    fprintf(stderr, "DEBUG: Deactivation of Ghostscript's image compression for Brother printers to workarounmd PS interpreter bug\n");
+    pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
+    pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
+  }
   pdf_argv[pdf_argc++] = (char *)"-c";
   pdf_argv[pdf_argc++] = (char *)"save pop";
   pdf_argv[pdf_argc++] = (char *)"-f";
