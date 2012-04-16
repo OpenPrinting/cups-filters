@@ -792,7 +792,7 @@ int main(int argc, char *argv[]) {
 
   ppdEmit(ppd,stdout,PPD_ORDER_EXIT);
 
-  if (emitJCL) {
+  if (ppd != NULL && emitJCL) {
     /* pdftopdf only adds JCL to the job if the printer is a native PDF
        printer and the PPD is for this mode, having the "*JCLToPDFInterpreter:"
        keyword. We need to read this keyword manually from the PPD and replace

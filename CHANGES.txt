@@ -1,5 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.15 - 2012-04-11
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.16 - 2012-04-16
 ------------------------------------------------------------
+
+CHANGES IN V1.0.16
+
+	- pdftopdf: Fixed segmentation faults when using N-up with certain PDF
+	  files (Ubuntu bug #980673) and when calling pdftopdf manually without
+          specifyting a PPD file.
 
 CHANGES IN V1.0.15
 

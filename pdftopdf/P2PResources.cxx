@@ -203,13 +203,12 @@ void P2PResources::handleOldForm(P2PResourceMap *map)
     xobj.free();
     if (nOldForms < n) {
         P2PObject **oldp = oldForms;
-        nOldForms = n;
         oldForms = new P2PObject *[n];
+        memset(oldForms,0,n*sizeof(P2PForm *));
         if (oldp != 0) {
-            memcpy(oldForms,oldp,n*sizeof(P2PForm *));
-        } else {
-            memset(oldForms,0,n*sizeof(P2PForm *));
+            memcpy(oldForms,oldp,nOldForms*sizeof(P2PForm *));
         }
+        nOldForms = n;
     }
     oldForms[i] = form;
   }
