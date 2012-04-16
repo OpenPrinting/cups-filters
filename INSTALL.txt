@@ -1,4 +1,4 @@
-INSTALL - OpenPrinting CUPS Filters v1.0.15 - 2012-04-11
+INSTALL - OpenPrinting CUPS Filters v1.0.16 - 2012-04-16
 --------------------------------------------------------
 
 This file describes how to compile and install OpenPrinting CUPS
