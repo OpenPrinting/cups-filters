@@ -39,7 +39,6 @@ P2PForm::P2PForm(Object *orgFormA, P2PResources *resourcesA,
   orgFormA->copy(&orgForm);
   resources = resourcesA;
   mappingTable = mapA;
-  P2PXRef::put(this);
 }
 
 P2PForm::~P2PForm()

@@ -89,7 +89,12 @@ P2PResources::~P2PResources()
     }
   }
   if (patternDict != 0) delete[] patternDict;
-  if (oldForms != 0) delete[] oldForms;
+  if (oldForms != 0) {
+    for (i = 0;i < nOldForms;i++) {
+      if (oldForms[i] != 0) delete oldForms[i];
+    }
+    delete[] oldForms;
+  }
   /* fontResource is deleted in other Class,
      Don't delete it */
 }
@@ -135,6 +140,7 @@ void P2PResources::output(P2POutputStream *str)
         P2POutput::outputName(key,str);
         str->putchar(' ');
         if (j < nOldForms && oldForms[j] != 0) {
+          P2PXRef::put(oldForms[j]);
           oldForms[j]->outputRef(str);
         } else {
           Object obj;
@@ -197,20 +203,22 @@ void P2PResources::handleOldForm(P2PResourceMap *map)
         xobj.free();
         continue;
     }
-    /* found a Form without Resource,
-      replace it with a refrence to a P2PForm */
-    form = new P2PForm(&xobj,this,map);
-    xobj.free();
-    if (nOldForms < n) {
-        P2PObject **oldp = oldForms;
-        oldForms = new P2PObject *[n];
-        memset(oldForms,0,n*sizeof(P2PForm *));
-        if (oldp != 0) {
-            memcpy(oldForms,oldp,nOldForms*sizeof(P2PForm *));
-        }
-        nOldForms = n;
+    if (nOldForms <= i || oldForms[i] == 0) {
+      /* found a Form without Resource,
+        replace it with a refrence to a P2PForm */
+      form = new P2PForm(&xobj,this,map);
+      xobj.free();
+      if (nOldForms < n) {
+          P2PObject **oldp = oldForms;
+          oldForms = new P2PObject *[n];
+          memset(oldForms,0,n*sizeof(P2PForm *));
+          if (oldp != 0) {
+              memcpy(oldForms,oldp,nOldForms*sizeof(P2PForm *));
+          }
+          nOldForms = n;
+      }
+      oldForms[i] = form;
     }
-    oldForms[i] = form;
   }
 }
 
