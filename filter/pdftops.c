@@ -539,8 +539,13 @@ main(int  argc,				/* I - Number of command-line args */
       strncpy(resolution, attr->value, sizeof(resolution));
     else if (cupsRasterInterpretPPD(&header, ppd, num_options, options, NULL) == 0)
     {
-      xres = header.HWResolution[0];
-      yres = header.HWResolution[1];
+      /* 100 dpi is default, this means that if we have 100 dpi here this
+	 method failed to find the printing resolution */
+      if (header.HWResolution[0] > 100 && header.HWResolution[1] > 100)
+      {
+	xres = header.HWResolution[0];
+	yres = header.HWResolution[1];
+      }
     }
   }
 

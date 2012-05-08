@@ -1,5 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.17 - 2012-04-20
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.18 - 2012-05-08
 ------------------------------------------------------------
+
+CHANGES IN V1.0.18
+
+	- pdftops: If printing resolution is determined by
+          cupsRasterInterpretPPD() do not stick on 100 dpi if the
+	  resolution cannot be determined (Ubuntu bug #984082).
 
 CHANGES IN V1.0.17
 
