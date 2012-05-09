@@ -549,6 +549,7 @@ main(int  argc,				/* I - Number of command-line args */
       strncpy(resolution, attr->value, sizeof(resolution));
   }
 
+  resolution[sizeof(resolution)-1] = '\0';
   if ((xres > 0) || (yres > 0) ||
       ((numvalues = sscanf(resolution, "%dx%d", &xres, &yres)) > 0))
   {

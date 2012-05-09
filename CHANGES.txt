@@ -3,6 +3,7 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.18 - 2012-05-08
 
 CHANGES IN V1.0.18
 
+	- pdftops: Added a crash guard (Ubuntu bug #982675).
 	- pdftops: Start determining the printing resolution with
 	  cupsRasterInterpretPPD(), this is the most reliable as often
 	  the choice names of the "Resolution" option are marketing names
