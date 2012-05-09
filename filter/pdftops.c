@@ -533,20 +533,20 @@ main(int  argc,				/* I - Number of command-line args */
     * Set output resolution ...
     */
 
-    if ((choice = ppdFindMarkedChoice(ppd, "Resolution")) != NULL)
+    /* Ignore error exits of cupsRasterInterpretPPD(), if it found a resolution
+       setting before erroring it is OK for us */
+    cupsRasterInterpretPPD(&header, ppd, num_options, options, NULL);
+    /* 100 dpi is default, this means that if we have 100 dpi here this
+       method failed to find the printing resolution */
+    if (header.HWResolution[0] > 100 && header.HWResolution[1] > 100)
+    {
+	xres = header.HWResolution[0];
+	yres = header.HWResolution[1];
+    }
+    else if ((choice = ppdFindMarkedChoice(ppd, "Resolution")) != NULL)
       strncpy(resolution, choice->choice, sizeof(resolution));
     else if ((attr = ppdFindAttr(ppd,"DefaultResolution",NULL)) != NULL)
       strncpy(resolution, attr->value, sizeof(resolution));
-    else if (cupsRasterInterpretPPD(&header, ppd, num_options, options, NULL) == 0)
-    {
-      /* 100 dpi is default, this means that if we have 100 dpi here this
-	 method failed to find the printing resolution */
-      if (header.HWResolution[0] > 100 && header.HWResolution[1] > 100)
-      {
-	xres = header.HWResolution[0];
-	yres = header.HWResolution[1];
-      }
-    }
   }
 
   if ((xres > 0) || (yres > 0) ||

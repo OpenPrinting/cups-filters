@@ -3,6 +3,12 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.18 - 2012-05-08
 
 CHANGES IN V1.0.18
 
+	- pdftops: Start determining the printing resolution with
+	  cupsRasterInterpretPPD(), this is the most reliable as often
+	  the choice names of the "Resolution" option are marketing names
+	  with higher numerical values than the actual resolution. Also
+	  ignore error exit values of cupsRasterInterpretPPD() as the
+	  function can error out after having found the resolution.
 	- pdftops: If printing resolution is determined by
           cupsRasterInterpretPPD() do not stick on 100 dpi if the
 	  resolution cannot be determined (Ubuntu bug #984082).
