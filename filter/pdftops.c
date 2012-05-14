@@ -49,7 +49,7 @@ static void		cancel_job(int sig);
 
 static int		job_canceled = 0;
 int			pdftopdfapplied = 0;
-char			*deviceCopies = "1";
+char			deviceCopies[32] = "1";
 int			deviceCollate = 0;
 
 
@@ -129,7 +129,11 @@ static void parsePDFTOPDFComment(char *filename)
 
       p = strchr(buf+19,':') + 1;
       while (*p == ' ' || *p == '\t') p++;
-      deviceCopies = strdup(p);
+      strncpy(deviceCopies, p, sizeof(deviceCopies));
+      deviceCopies[sizeof(deviceCopies) - 1] = '\0';
+      p = deviceCopies + strlen(deviceCopies) - 1;
+      while (*p == ' ' || *p == '\t'  || *p == '\r'  || *p == '\n') p--;
+      *(p + 1) = '\0';
       pdftopdfapplied = 1;
     } else if (strncmp(buf,"%%PDFTOPDFCollate",17) == 0) {
       char *p;
@@ -304,7 +308,7 @@ main(int  argc,				/* I - Number of command-line args */
             tempfile);
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)
-      write(fd, buffer, bytes);
+      bytes = write(fd, buffer, bytes);
 
     close(fd);
 
@@ -362,7 +366,7 @@ main(int  argc,				/* I - Number of command-line args */
     * printer does hardware collate.
     */
 
-    pstops_options = realloc(pstops_options, sizeof(pstops_options) + 8);
+    pstops_options = realloc(pstops_options, strlen(pstops_options) + 9);
     pstops_end = pstops_options + strlen(pstops_options);
     strcpy(pstops_end, " Collate");
   }

@@ -3,7 +3,14 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.18 - 2012-05-08
 
 CHANGES IN V1.0.18
 
-	- pdftops: Added a crash guard (Ubuntu bug #982675).
+	- pdftops: Fixed crash by wrong usage of sizeof() function when adding
+	  "Collate" to the fifth command line argument for the "pstops" CUPS
+	  filter call (Ubuntu bug #982675).
+	- pdftops: Removed newline from copies value when reading it from
+	  the "%%PDFTOPDFNumCopies" entry of the incoming PDF file.
+	- pdftops: Silenced compiler warning about ignoring the return
+	  value of the write() function.
+	- pdftops: Added a crash guard.
 	- pdftops: Start determining the printing resolution with
 	  cupsRasterInterpretPPD(), this is the most reliable as often
 	  the choice names of the "Resolution" option are marketing names
