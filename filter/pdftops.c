@@ -37,6 +37,13 @@
 #define MAX_CHECK_COMMENT_LINES	20
 
 /*
+ * Type definitions
+ */
+
+typedef unsigned renderer_t;
+enum renderer_e {GS = 0, PDFTOPS = 1};
+
+/*
  * Local functions...
  */
 
@@ -206,6 +213,7 @@ int					/* O - Exit status */
 main(int  argc,				/* I - Number of command-line args */
      char *argv[])			/* I - Command-line arguments */
 {
+  renderer_t    renderer = CUPS_PDFTOPS_RENDERER; /* Renderer: gs or pdftops */
   int		fd;			/* Copy file descriptor */
   char		*filename,		/* PDF file to convert */
 		tempfile[1024];		/* Temporary file */
@@ -220,6 +228,8 @@ main(int  argc,				/* I - Number of command-line args */
   ppd_size_t	*size;			/* Current page size */
   char		resolution[128] = "300";/* Output resolution */
   int           xres = 0, yres = 0,     /* resolution values */
+                maxres = CUPS_PDFTOPS_MAX_RESOLUTION,
+                                        /* Maximum image rendering resolution */
                 numvalues;              /* Number of values actually read */
   ppd_choice_t  *choice;
   ppd_attr_t    *attr;
@@ -341,6 +351,21 @@ main(int  argc,				/* I - Number of command-line args */
   cupsMarkOptions(ppd, num_options, options);
 
  /*
+  * Select the PDF renderer: Ghostscript (gs) or Poppler (pdftops)
+  */
+
+  if ((val = cupsGetOption("pdftops-renderer", num_options, options)) != NULL)
+  {
+    if (strcasecmp(val, "gs") == 0)
+      renderer = GS;
+    else if (strcasecmp(val, "pdftops") == 0)
+      renderer = PDFTOPS;
+    else
+      fprintf(stderr,
+	      "WARNING: Invalid value for \"pdftops-renderer\": \"%s\"\n", val);
+  }
+
+ /*
   * Build the pstops command-line...
   */
 
@@ -386,23 +411,26 @@ main(int  argc,				/* I - Number of command-line args */
   * Build the command-line for the pdftops or gs filter...
   */
 
-#ifdef HAVE_PDFTOPS
-  pdf_argv[0] = (char *)"pdftops";
-  pdf_argc    = 1;
-#else
-  pdf_argv[0] = (char *)"gs";
-  pdf_argv[1] = (char *)"-q";
-  pdf_argv[2] = (char *)"-dNOPAUSE";
-  pdf_argv[3] = (char *)"-dBATCH";
-  pdf_argv[4] = (char *)"-dSAFER";
-#  ifdef HAVE_GHOSTSCRIPT_PS2WRITE
-  pdf_argv[5] = (char *)"-sDEVICE=ps2write";
-#  else
-  pdf_argv[5] = (char *)"-sDEVICE=pswrite";
-#  endif /* HAVE_GHOSTSCRIPT_PS2WRITE */
-  pdf_argv[6] = (char *)"-sOUTPUTFILE=%stdout";
-  pdf_argc    = 7;
-#endif /* HAVE_PDFTOPS */
+  if (renderer == PDFTOPS)
+  {
+    pdf_argv[0] = (char *)"pdftops";
+    pdf_argc    = 1;
+  }
+  else
+  {
+    pdf_argv[0] = (char *)"gs";
+    pdf_argv[1] = (char *)"-q";
+    pdf_argv[2] = (char *)"-dNOPAUSE";
+    pdf_argv[3] = (char *)"-dBATCH";
+    pdf_argv[4] = (char *)"-dSAFER";
+#    ifdef HAVE_GHOSTSCRIPT_PS2WRITE
+    pdf_argv[5] = (char *)"-sDEVICE=ps2write";
+#    else
+    pdf_argv[5] = (char *)"-sDEVICE=pswrite";
+#    endif /* HAVE_GHOSTSCRIPT_PS2WRITE */
+    pdf_argv[6] = (char *)"-sOUTPUTFILE=%stdout";
+    pdf_argc    = 7;
+  }
 
   if (ppd)
   {
@@ -412,31 +440,34 @@ main(int  argc,				/* I - Number of command-line args */
 
     if (ppd->language_level == 1)
     {
-#ifdef HAVE_PDFTOPS
-      pdf_argv[pdf_argc++] = (char *)"-level1";
-      pdf_argv[pdf_argc++] = (char *)"-noembtt";
-#else
-      pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=1";
-#endif /* HAVE_PDFTOPS */
+      if (renderer == PDFTOPS)
+      {
+	pdf_argv[pdf_argc++] = (char *)"-level1";
+	pdf_argv[pdf_argc++] = (char *)"-noembtt";
+      }
+      else
+	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=1";
     }
     else if (ppd->language_level == 2)
     {
-#ifdef HAVE_PDFTOPS
-      pdf_argv[pdf_argc++] = (char *)"-level2";
-      if (!ppd->ttrasterizer)
-	pdf_argv[pdf_argc++] = (char *)"-noembtt";
-#else
-      pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=2";
-#endif /* HAVE_PDFTOPS */
+      if (renderer == PDFTOPS)
+      {
+	pdf_argv[pdf_argc++] = (char *)"-level2";
+	if (!ppd->ttrasterizer)
+	  pdf_argv[pdf_argc++] = (char *)"-noembtt";
+      }
+      else
+	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=2";
     }
     else
-#ifdef HAVE_PDFTOPS
-      /* Do not emit PS Level 3 with Poppler, some HP PostScript printers
-         do not like it. See https://bugs.launchpad.net/bugs/277404. */
-      pdf_argv[pdf_argc++] = (char *)"-level2";
-#else
-      pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
-#endif /* HAVE_PDFTOPS */
+    {
+      if (renderer == PDFTOPS)
+        /* Do not emit PS Level 3 with Poppler, some HP PostScript printers
+	   do not like it. See https://bugs.launchpad.net/bugs/277404. */
+	pdf_argv[pdf_argc++] = (char *)"-level2";
+      else
+	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
+    }
 
     if ((val = cupsGetOption("fitplot", num_options, options)) == NULL)
       val = cupsGetOption("fit-to-page", num_options, options);
@@ -483,46 +514,49 @@ main(int  argc,				/* I - Number of command-line args */
 	  orientation ^= 1;
       }
 
-#ifdef HAVE_PDFTOPS
-      if (orientation & 1)
+      if (renderer == PDFTOPS)
       {
-	snprintf(pdf_width, sizeof(pdf_width), "%.0f", size->length);
-	snprintf(pdf_height, sizeof(pdf_height), "%.0f", size->width);
+	if (orientation & 1)
+	{
+	  snprintf(pdf_width, sizeof(pdf_width), "%.0f", size->length);
+	  snprintf(pdf_height, sizeof(pdf_height), "%.0f", size->width);
+	}
+	else
+	{
+	  snprintf(pdf_width, sizeof(pdf_width), "%.0f", size->width);
+	  snprintf(pdf_height, sizeof(pdf_height), "%.0f", size->length);
+	}
+
+	pdf_argv[pdf_argc++] = (char *)"-paperw";
+	pdf_argv[pdf_argc++] = pdf_width;
+	pdf_argv[pdf_argc++] = (char *)"-paperh";
+	pdf_argv[pdf_argc++] = pdf_height;
+	pdf_argv[pdf_argc++] = (char *)"-expand";
+
       }
       else
       {
-	snprintf(pdf_width, sizeof(pdf_width), "%.0f", size->width);
-	snprintf(pdf_height, sizeof(pdf_height), "%.0f", size->length);
-      }
+	if (orientation & 1)
+	{
+	  snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
+		   size->length);
+	  snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
+		   size->width);
+	}
+	else
+	{
+	  snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
+		   size->width);
+	  snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
+		   size->length);
+	}
 
-      pdf_argv[pdf_argc++] = (char *)"-paperw";
-      pdf_argv[pdf_argc++] = pdf_width;
-      pdf_argv[pdf_argc++] = (char *)"-paperh";
-      pdf_argv[pdf_argc++] = pdf_height;
-      pdf_argv[pdf_argc++] = (char *)"-expand";
-
-#else
-      if (orientation & 1)
-      {
-	snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
-	         size->length);
-	snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
-	         size->width);
+	pdf_argv[pdf_argc++] = pdf_width;
+	pdf_argv[pdf_argc++] = pdf_height;
       }
-      else
-      {
-	snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
-	         size->width);
-	snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
-	         size->length);
-      }
-
-      pdf_argv[pdf_argc++] = pdf_width;
-      pdf_argv[pdf_argc++] = pdf_height;
-#endif /* HAVE_PDFTOPS */
     }
-#if defined(HAVE_PDFTOPS) && defined(HAVE_PDFTOPS_WITH_ORIGPAGESIZES)
-    else
+#ifdef HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES
+    else if (renderer == PDFTOPS)
     {
      /*
       *  Use the page sizes of the original PDF document, this way documents
@@ -531,7 +565,7 @@ main(int  argc,				/* I - Number of command-line args */
 
       pdf_argv[pdf_argc++] = (char *)"-origpagesizes";
     }
-#endif /* HAVE_PDFTOPS && HAVE_PDFTOPS_WITH_ORIGPAGESIZES */
+#endif /* HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES */
 
    /*
     * Set output resolution ...
@@ -563,80 +597,90 @@ main(int  argc,				/* I - Number of command-line args */
     xres = 300;
 
  /*
-  * Reduce the image rendering resolution to make processing of jobs by poth
-  * the PDF->PS converter and the printer faster
-  */
- /*
-  if (xres % 90 == 0)
-  {
-    if (xres > 360)
-      xres = max(360, xres / 2);
-  }
-  else if (xres % 75 == 0)
-  {
-    if (xres > 300)
-      xres = max(300, xres / 2);
-  }
+  * Get the ceiling for the image rendering resolution
   */
 
-#ifdef HAVE_PDFTOPS
-#ifdef HAVE_PDFTOPS_WITH_RESOLUTION
- /*
-  * Set resolution to avoid slow processing by the printer when the resolution
-  * of embedded images does not match the printer' s resolution
-  */
-  pdf_argv[pdf_argc++] = (char *)"-r";
-  snprintf(resolution, sizeof(resolution), "%d", xres);
-  pdf_argv[pdf_argc++] = resolution;
-  fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", xres);
-#endif /* HAVE_PDFTOPS_WITH_RESOLUTION */
-  pdf_argv[pdf_argc++] = filename;
-  pdf_argv[pdf_argc++] = (char *)"-";
-#else
- /*
-  * Set resolution to avoid slow processing by the printer when the resolution
-  * of embedded images does not match the printer' s resolution
-  */
-  snprintf(resolution, 127, "-r%d", xres);
-  pdf_argv[pdf_argc++] = resolution;
-  fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", xres);
- /*
-  * PostScript debug mode: If you send a job with "lpr -o psdebug" Ghostscript
-  * will not compress the pages, so that the PostScript code can get
-  * analysed. This is especially important if a PostScript printer errors or
-  * misbehaves on Ghostscript's output.
-  * On Kyocera printers we always suppress page compression, to avoid slow
-  * processing of raster images.
-  */
-  val = cupsGetOption("psdebug", num_options, options);
-  if ((val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
-       strcasecmp(val, "false")) ||
-      (ppd && ppd->manufacturer &&
-       !strncasecmp(ppd->manufacturer, "Kyocera", 7)))
+  if ((val = cupsGetOption("pdftops-max-image-resolution", num_options, options)) != NULL)
   {
-    fprintf(stderr, "DEBUG: Deactivated compression of pages in Ghostscript's PostScript output (\"psdebug\" debug mode or Kyocera printer)\n");
-    pdf_argv[pdf_argc++] = (char *)"-dCompressPages=false";
+    if ((numvalues = sscanf(val, "%d", &yres)) > 0)
+      maxres = yres;
+    else
+      fprintf(stderr,
+	      "WARNING: Invalid value for \"pdftops-max-image-resolution\": \"%s\"\n", val);
   }
+
  /*
-  * The PostScript interpreters on many printers have bugs which make
-  * the interpreter crash, error out, or otherwise misbehave on too
-  * heavily compressed input files, especially if code with compressed
-  * elements is compressed again. Therefore we reduce compression here.
+  * Reduce the image rendering resolution to not exceed a given maximum
+  * to make processing of jobs by the PDF->PS converter and the printer faster
+  *
+  * maxres = 0 means no limit
   */
-  pdf_argv[pdf_argc++] = (char *)"-dCompressFonts=false";
-  pdf_argv[pdf_argc++] = (char *)"-dNoT3CCITT";
-  if (ppd && ppd->manufacturer &&
-      !strncasecmp(ppd->manufacturer, "Brother", 7))
+
+  if (maxres)
+    while (xres > maxres)
+      xres = xres / 2;
+
+  if (renderer == PDFTOPS)
   {
-    fprintf(stderr, "DEBUG: Deactivation of Ghostscript's image compression for Brother printers to workarounmd PS interpreter bug\n");
-    pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
-    pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
+#ifdef HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION
+   /*
+    * Set resolution to avoid slow processing by the printer when the
+    * resolution of embedded images does not match the printer's resolution
+    */
+    pdf_argv[pdf_argc++] = (char *)"-r";
+    snprintf(resolution, sizeof(resolution), "%d", xres);
+    pdf_argv[pdf_argc++] = resolution;
+    fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", xres);
+#endif /* HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION */
+    pdf_argv[pdf_argc++] = filename;
+    pdf_argv[pdf_argc++] = (char *)"-";
   }
-  pdf_argv[pdf_argc++] = (char *)"-c";
-  pdf_argv[pdf_argc++] = (char *)"save pop";
-  pdf_argv[pdf_argc++] = (char *)"-f";
-  pdf_argv[pdf_argc++] = filename;
-#endif /* HAVE_PDFTOPS */
+  else
+  {
+   /*
+    * Set resolution to avoid slow processing by the printer when the
+    * resolution of embedded images does not match the printer's resolution
+    */
+    snprintf(resolution, 127, "-r%d", xres);
+    pdf_argv[pdf_argc++] = resolution;
+    fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", xres);
+   /*
+    * PostScript debug mode: If you send a job with "lpr -o psdebug" Ghostscript
+    * will not compress the pages, so that the PostScript code can get
+    * analysed. This is especially important if a PostScript printer errors or
+    * misbehaves on Ghostscript's output.
+    * On Kyocera printers we always suppress page compression, to avoid slow
+    * processing of raster images.
+    */
+    val = cupsGetOption("psdebug", num_options, options);
+    if ((val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
+	 strcasecmp(val, "false")) ||
+	(ppd && ppd->manufacturer &&
+	 !strncasecmp(ppd->manufacturer, "Kyocera", 7)))
+    {
+      fprintf(stderr, "DEBUG: Deactivated compression of pages in Ghostscript's PostScript output (\"psdebug\" debug mode or Kyocera printer)\n");
+      pdf_argv[pdf_argc++] = (char *)"-dCompressPages=false";
+    }
+   /*
+    * The PostScript interpreters on many printers have bugs which make
+    * the interpreter crash, error out, or otherwise misbehave on too
+    * heavily compressed input files, especially if code with compressed
+    * elements is compressed again. Therefore we reduce compression here.
+    */
+    pdf_argv[pdf_argc++] = (char *)"-dCompressFonts=false";
+    pdf_argv[pdf_argc++] = (char *)"-dNoT3CCITT";
+    if (ppd && ppd->manufacturer &&
+	!strncasecmp(ppd->manufacturer, "Brother", 7))
+    {
+      fprintf(stderr, "DEBUG: Deactivation of Ghostscript's image compression for Brother printers to workarounmd PS interpreter bug\n");
+      pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
+      pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
+    }
+    pdf_argv[pdf_argc++] = (char *)"-c";
+    pdf_argv[pdf_argc++] = (char *)"save pop";
+    pdf_argv[pdf_argc++] = (char *)"-f";
+    pdf_argv[pdf_argc++] = filename;
+  }
 
   pdf_argv[pdf_argc] = NULL;
 
@@ -645,14 +689,13 @@ main(int  argc,				/* I - Number of command-line args */
   * of the printer's PostScript interpreter?
   */
 
-#ifdef HAVE_PDFTOPS
-  need_post_proc = 0;
-#else
-  need_post_proc =
-    (ppd && ppd->manufacturer &&
-     (!strncasecmp(ppd->manufacturer, "Kyocera", 7) ||
-      !strncasecmp(ppd->manufacturer, "Brother", 7)) ? 1 : 0);
-#endif /* HAVE_PDFTOPS */
+  if (renderer == PDFTOPS)
+    need_post_proc = 0;
+  else
+    need_post_proc =
+      (ppd && ppd->manufacturer &&
+       (!strncasecmp(ppd->manufacturer, "Kyocera", 7) ||
+	!strncasecmp(ppd->manufacturer, "Brother", 7)) ? 1 : 0);
 
  /*
   * Execute "pdftops/gs | pstops [ | post-processing ]"...
@@ -694,13 +737,16 @@ main(int  argc,				/* I - Number of command-line args */
     close(pstops_pipe[0]);
     close(pstops_pipe[1]);
 
-#ifdef HAVE_PDFTOPS
-    execv(CUPS_PDFTOPS, pdf_argv);
-    perror("DEBUG: Unable to execute pdftops program");
-#else
-    execv(CUPS_GHOSTSCRIPT, pdf_argv);
-    perror("DEBUG: Unable to execute gs program");
-#endif /* HAVE_PDFTOPS */
+    if (renderer == PDFTOPS)
+    {
+      execv(CUPS_POPPLER_PDFTOPS, pdf_argv);
+      perror("DEBUG: Unable to execute pdftops program");
+    }
+    else
+    {
+      execv(CUPS_GHOSTSCRIPT, pdf_argv);
+      perror("DEBUG: Unable to execute gs program");
+    }
 
     exit(1);
   }
@@ -710,11 +756,10 @@ main(int  argc,				/* I - Number of command-line args */
     * Unable to fork!
     */
 
-#ifdef HAVE_PDFTOPS
-    perror("DEBUG: Unable to execute pdftops program");
-#else
-    perror("DEBUG: Unable to execute gs program");
-#endif /* HAVE_PDFTOPS */
+    if (renderer == PDFTOPS)
+      perror("DEBUG: Unable to execute pdftops program");
+    else
+      perror("DEBUG: Unable to execute gs program");
 
     exit_status = 1;
     goto error;
@@ -764,9 +809,7 @@ main(int  argc,				/* I - Number of command-line args */
 	else
 	  printf("%s", buffer);
 	
-#ifndef HAVE_PDFTOPS
-
-	if (ppd && ppd->manufacturer)
+	if (renderer == GS && ppd && ppd->manufacturer)
 	{
 
 	 /*
@@ -815,8 +858,6 @@ main(int  argc,				/* I - Number of command-line args */
 	  }
 	}
 	
-#endif /* !HAVE_PDFTOPS */
-
 	if (strncmp(buffer, "%%BeginProlog", 13))
 	{
 	  /* Close newly created Prolog section */
@@ -934,11 +975,7 @@ main(int  argc,				/* I - Number of command-line args */
 
 	fprintf(stderr, "DEBUG: PID %d (%s) stopped with status %d!\n",
 		wait_pid,
-#ifdef HAVE_PDFTOPS
-		wait_pid == pdf_pid ? "pdftops" :
-#else
-		wait_pid == pdf_pid ? "gs" :
-#endif /* HAVE_PDFTOPS */
+		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" : "gs") :
 		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
 		exit_status);
       }
@@ -947,11 +984,7 @@ main(int  argc,				/* I - Number of command-line args */
 	fprintf(stderr,
 		"DEBUG: PID %d (%s) was terminated normally with signal %d!\n",
 		wait_pid,
-#ifdef HAVE_PDFTOPS
-		wait_pid == pdf_pid ? "pdftops" :
-#else
-		wait_pid == pdf_pid ? "gs" :
-#endif /* HAVE_PDFTOPS */
+		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" : "gs") :
 		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
 		exit_status);
       }
@@ -960,11 +993,7 @@ main(int  argc,				/* I - Number of command-line args */
 	exit_status = WTERMSIG(wait_status);
 
 	fprintf(stderr, "DEBUG: PID %d (%s) crashed on signal %d!\n", wait_pid,
-#ifdef HAVE_PDFTOPS
-		wait_pid == pdf_pid ? "pdftops" :
-#else
-		wait_pid == pdf_pid ? "gs" :
-#endif /* HAVE_PDFTOPS */
+		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" : "gs") :
 		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
 		exit_status);
       }
@@ -972,11 +1001,7 @@ main(int  argc,				/* I - Number of command-line args */
     else
     {
       fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n", wait_pid,
-#ifdef HAVE_PDFTOPS
-	      wait_pid == pdf_pid ? "pdftops" :
-#else
-	      wait_pid == pdf_pid ? "gs" :
-#endif /* HAVE_PDFTOPS */
+	      wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" : "gs") :
 	      (wait_pid == pstops_pid ? "pstops" : "Post-processing"));
     }
   }

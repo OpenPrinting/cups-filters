@@ -113,14 +113,20 @@
 
 
 /*
+ * Default settings for the pdftops filter...
+ */
+
+#define CUPS_PDFTOPS_RENDERER	GS
+#define CUPS_PDFTOPS_MAX_RESOLUTION	1440
+
+/*
  * Location of the poppler/Xpdf pdftops program...
  */
 
-#undef HAVE_PDFTOPS
-#undef HAVE_PDFTOPS_WITH_ORIGPAGESIZES
-#undef HAVE_PDFTOPS_WITH_RESOLUTION
-#define CUPS_PDFTOPS	"/usr/bin/pdftops"
-
+#undef HAVE_POPPLER_PDFTOPS
+#undef HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES
+#undef HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION
+#define CUPS_POPPLER_PDFTOPS	"/usr/bin/pdftops"
 
 /*
  * Location of the Ghostscript gs program...
@@ -128,7 +134,7 @@
 
 #undef HAVE_GHOSTSCRIPT
 #undef HAVE_GHOSTSCRIPT_PS2WRITE
-#define CUPS_GHOSTSCRIPT "/usr/bin/gs"
+#define CUPS_GHOSTSCRIPT	"/usr/bin/gs"
 
 
 /*

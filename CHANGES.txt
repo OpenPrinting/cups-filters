@@ -1,8 +1,19 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.18 - 2012-05-08
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.18 - 2012-05-16
 ------------------------------------------------------------
 
 CHANGES IN V1.0.18
 
+	- Modified "./configure" options related to the pdftops filter to
+	  allow changing the defaults for the renderer being used by default
+	  (Ghostscript or Poppler) and the maximum image rendering resolution
+	  and to supply paths for both Ghostscript's gs and Poppler's pdftops.
+	- pdftops: Allow selection whether Ghostscript or Poppler is used
+	  at runtime, setting the "pdftops-renderer" option to "gs" or
+	  "pdftops".
+	- pdftops: Allow setting an upper limit for the image rendering
+	  resolution, also at runtime, setting the option
+	  "pdftops-max-image-resolution-default" to the desired limit in dpi.
+	  "0" means no limit.
 	- pdftops: Fixed crash by wrong usage of sizeof() function when adding
 	  "Collate" to the fifth command line argument for the "pstops" CUPS
 	  filter call (Ubuntu bug #982675).
