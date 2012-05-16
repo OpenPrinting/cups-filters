@@ -64,7 +64,7 @@ IMAGE PRINTING DEFAULT CHANGED TO "SCALE TO FIT"
     To get back to the old behavior, supply one of the options
     "nofitplot" "filplot=Off", "nofit-to-page", or "fit-to-page=Off".
 
-POSTSCRIPT PRINTING DEBUG MODE
+POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
 
     If you use CUPS with this package and a PostScript printer then
     the included pdftops filter converts the print job data which is
@@ -72,7 +72,64 @@ POSTSCRIPT PRINTING DEBUG MODE
     generated with Ghostscript's "ps2write" output device, which
     generates a DSC-conforming PostScript with compressed embedded
     fonts and compressed page content. This is resource-saving and
-    leads to fast wire transfer of print jobs to the rpinter.
+    leads to fast wire transfer of print jobs to the printer.
+
+    Unfortunately, Ghostscript's PostScript output is not compatible
+    with some printers due to interpreter bugs in the printer and in
+    addition, processing (by Ghostscript or by the printer's
+    interpreter) can get very slow with high printing resolutions when
+    parts of the incoming PDF file are converted to bitmaps if they
+    contain graphical structures which are not supported by
+    PostScript. The bitmap problem especially occurs on input files
+    with transparency, especially also the ones produced by Cairo
+    (evince and many other GNOME/GTK applications) which unnecessarily
+    introduces transparency even if the input PDF has no transparency.
+
+    Therefore there are two possibilities to configure pdftops at
+    runtime:
+
+    1. Selection of the renderer: Ghostscript or Poppler
+
+    Ghostscript has better color management and is generally optimized
+    more for printing. Poppler produces a PostScript which is
+    compatible with more buggy built-in PostScript interpreters of
+    printers and it leads to a somewhat quicker workflow when
+    graphical structures of the input PDF has to be turned into
+    bitmaps.
+
+    The selection is done by the "pdftops-renderer" option, setting it
+    to "gs" or "pdftops":
+
+    Per-job:           lpr -o pdftops-renderer=pdftops ...
+    Per-queue default: lpadmin -p printer -o pdftops-renderer-default=gs
+    Remove default:    lpadmin -p printer -R pdftops-renderer-default
+
+    By default, pdftops uses Ghostscript if this does not get changed
+    at compile time, for example by the Linux distribution vendor.
+
+    2. Limitation of the image rendering resolution
+
+    If graphical structures of the incoming PDF file have to be
+    converted to bitmaps due to limitations of PostScript, the
+    conversion of the file by pdftops or the rendering by the printer
+    can get too slow if the bitmap resolution is too high or the
+    printout quality can degrade if the bitmap resolution is too low.
+
+    By default, pdftops tries to find out the actual printing
+    resolution and sets the resolution for bitmap generation to the
+    same value. If it cannot find the printing resolution, it uses 300
+    dpi. It never goes higher than a limit of 1440 dpi. Note that this
+    default limit can get changed at compile time, for example by the
+    Linux distribution vendor.
+
+    The resolution limit for bitmaps can be changed to a lower or
+    higher value, or be set to unlimited. This is done by the option
+    "pdftops-max-image-resolution-default", setting it to the desired
+    value (in dpi) or to zero for unlimited. It can be used per-job or
+    as per-queue default as the "pdftops-renderer" option described
+    above.
+
+POSTSCRIPT PRINTING DEBUG MODE
 
     Sometimes a PostScript printer's interpreter errors, crashes, or
     somehow else misbehaves on Ghostscript's output. To find
@@ -99,6 +156,9 @@ POSTSCRIPT PRINTING DEBUG MODE
 
     and print into this queue as described above. The PostScript
     output is in /tmp/printout after the job has completed.
+
+    This option does not change anything if Poppler's pdftops is used
+    as renderer.
 
 CUPS FILTERS FOR PDF AS STANDARD PRINT JOB FORMAT
 
