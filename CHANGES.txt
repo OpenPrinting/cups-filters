@@ -1,5 +1,11 @@
-CHANGES.txt - OpenPrinting CUPS Filters v1.0.18 - 2012-05-16
+CHANGES.txt - OpenPrinting CUPS Filters v1.0.19 - 2012-05-16
 ------------------------------------------------------------
+
+CHANGES IN V1.0.19
+
+	- Corrected documentation. The option for the maximum image rendering
+	  resolution in pdftops is "pdftops-max-image-resolution", not
+	  "pdftops-max-image-resolution-default".
 
 CHANGES IN V1.0.18
 
@@ -12,7 +18,7 @@ CHANGES IN V1.0.18
 	  "pdftops".
 	- pdftops: Allow setting an upper limit for the image rendering
 	  resolution, also at runtime, setting the option
-	  "pdftops-max-image-resolution-default" to the desired limit in dpi.
+	  "pdftops-max-image-resolution" to the desired limit in dpi.
 	  "0" means no limit.
 	- pdftops: Fixed crash by wrong usage of sizeof() function when adding
 	  "Collate" to the fifth command line argument for the "pstops" CUPS

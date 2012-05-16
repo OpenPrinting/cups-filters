@@ -124,9 +124,9 @@ POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
 
     The resolution limit for bitmaps can be changed to a lower or
     higher value, or be set to unlimited. This is done by the option
-    "pdftops-max-image-resolution-default", setting it to the desired
-    value (in dpi) or to zero for unlimited. It can be used per-job or
-    as per-queue default as the "pdftops-renderer" option described
+    "pdftops-max-image-resolution", setting it to the desired value
+    (in dpi) or to zero for unlimited. It can be used per-job or as
+    per-queue default as the "pdftops-renderer" option described
     above.
 
 POSTSCRIPT PRINTING DEBUG MODE
