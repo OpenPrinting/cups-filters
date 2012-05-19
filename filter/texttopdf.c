@@ -51,6 +51,7 @@ EMB_PARAMS *font_load(const char *font)
   FcPattern *pattern;
   FcFontSet *candidates;
   FcChar8   *fontname = NULL;
+  FcResult   result;
   int i;
 
   if ( (font[0]=='/')||(font[0]=='.') ) {
@@ -64,7 +65,7 @@ EMB_PARAMS *font_load(const char *font)
     FcDefaultSubstitute (pattern);
 
     /* Receive a sorted list of fonts matching our pattern */
-    candidates = FcFontSort (0, pattern, FcTrue, 0, 0);
+    candidates = FcFontSort (0, pattern, FcFalse, 0, &result);
     FcPatternDestroy (pattern);
 
     /* In the list of fonts returned by FcFontSort()

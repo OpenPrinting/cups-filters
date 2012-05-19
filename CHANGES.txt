@@ -3,6 +3,10 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.19 - 2012-05-16
 
 CHANGES IN V1.0.19
 
+	- texttopdf: Avoid trimming the results of FcFontSort(), as this may
+	  miss some reasonable candidates under certain circumstances. BTW,
+	  fix passing a non-pointer as a pointer to "result" (Debian bug
+	  #670055),
 	- Corrected documentation. The option for the maximum image rendering
 	  resolution in pdftops is "pdftops-max-image-resolution", not
 	  "pdftops-max-image-resolution-default".
