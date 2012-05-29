@@ -3,6 +3,7 @@ CHANGES.txt - OpenPrinting CUPS Filters v1.0.19 - 2012-05-16
 
 CHANGES IN V1.0.19
 
+	- textonly: Filter did not work as a pipe with copies=1 (Bug #1032).
 	- texttopdf: Avoid trimming the results of FcFontSort(), as this may
 	  miss some reasonable candidates under certain circumstances. BTW,
 	  fix passing a non-pointer as a pointer to "result" (Debian bug
