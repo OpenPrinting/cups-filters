@@ -33,7 +33,7 @@
 #  include <fcntl.h>
 #endif /* WIN32 */
 
-#include "ieee1284.c"
+#include "backend-private.h"
 
 
 /*

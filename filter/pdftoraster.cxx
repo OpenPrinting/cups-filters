@@ -1963,22 +1963,22 @@ err1:
 
 /* replace memory allocation methods for memory check */
 
-void * operator new(size_t size)
+void * operator new(size_t size) throw (std::bad_alloc)
 {
   return gmalloc(size);
 }
 
-void operator delete(void *p)
+void operator delete(void *p) throw ()
 {
   gfree(p);
 }
 
-void * operator new[](size_t size)
+void * operator new[](size_t size) throw (std::bad_alloc)
 {
   return gmalloc(size);
 }
 
-void operator delete[](void *p)
+void operator delete[](void *p) throw ()
 {
   gfree(p);
 }

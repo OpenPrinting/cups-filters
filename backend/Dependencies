@@ -1,6 +1,0 @@
-# DO NOT DELETE THIS LINE -- make depend depends on it.
-
-ieee1284.o: backend-private.h ../config.h
-parallel.o: backend-private.h ../config.h
-serial.o: backend-private.h ../config.h
-test1284.o: ../config.h ieee1284.c backend-private.h

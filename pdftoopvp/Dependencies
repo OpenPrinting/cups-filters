@@ -1,9 +1,0 @@
-# DO NOT DELETE
-
-pdftoopvp.o: ../config.h oprs/OPRS.h opvp/opvp_common.h opvp/opvp_0_2_0.h
-pdftoopvp.o: opvp/opvp.h oprs/OPVPSplash.h oprs/OPVPSplashPath.h
-pdftoopvp.o: oprs/OPVPWrapper.h OPVPOutputDev.h
-OPVPOutputDev.o: ../config.h oprs/OPVPSplashPath.h oprs/OPVPWrapper.h
-OPVPOutputDev.o: opvp/opvp_common.h opvp/opvp_0_2_0.h opvp/opvp.h
-OPVPOutputDev.o: oprs/OPVPSplashState.h oprs/OPRS.h oprs/OPVPSplash.h
-OPVPOutputDev.o: OPVPOutputDev.h

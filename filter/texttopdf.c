@@ -365,7 +365,7 @@ WriteProlog(const char *title,		/* I - Title of job */
   pdfOut_begin_pdf(pdf);
   pdfOut_printf(pdf,"%%cupsRotation: %d\n", (Orientation & 3) * 90); // TODO?
 
-  pdfOut_add_kv(pdf,"Creator","texttopdf/" CUPSFILTERS_SVERSION);
+  pdfOut_add_kv(pdf,"Creator","texttopdf/" PACKAGE_VERSION);
 
   curtime = time(NULL);
   curtm   = localtime(&curtime);
