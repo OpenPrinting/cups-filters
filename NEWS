@@ -1,8 +1,11 @@
-NEWS - OpenPrinting CUPS Filters v1.0.19 - 2012-05-16
+NEWS - OpenPrinting CUPS Filters v1.0.19 - 2012-06-05
 ------------------------------------------------------------
 
 CHANGES IN V1.0.19
 
+	- Switched build system to autotools. This especially fixes several
+	  build problems in Gentoo.
+	- Fixes for compatibility with clang/gcc-4.7.
 	- textonly: Filter did not work as a pipe with copies=1 (Bug #1032).
 	- texttopdf: Avoid trimming the results of FcFontSort(), as this may
 	  miss some reasonable candidates under certain circumstances. BTW,
