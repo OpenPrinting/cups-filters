@@ -64,7 +64,7 @@ PKG_PROG_PKG_CONFIG([0.20])
 AC_ARG_WITH([fontdir],
 	[AS_HELP_STRING([--with-fontdir=path], [Specify path to font config directory ( default: font/conf.d/).])],
 	[with_fontdir="$withwal"],
-	[with_fontdir="font/conf.d"]
+	[with_fontdir="fonts/conf.d"]
 )
 FONTDIR="$with_fontdir"
 AC_SUBST(FONTDIR)
