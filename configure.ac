@@ -210,26 +210,15 @@ AS_IF([test x"$with_tiff" != "xno"], [
 	AC_SUBST(LIBTIFF_LIBS)
 ])
 
-# ==================
-# Check for LCMS 1/2
-# ==================
-AC_ARG_WITH([cms],
-	[AS_HELP_STRING([--without-cms], [Disable LCMS support.])],
-	[with_cms="$withval"],
-	[with_cms=yes]
-)
-AS_IF([test x"$with_cms" != "xno"], [
-	AC_DEFINE([USE_CMS], [], [Defines if use lcms2/1])
-	PKG_CHECK_MODULES([LCMS], [lcms2], [lcms2=yes], [lcms2=no])
-	AS_IF([test x"$lcms2" = "xno"], [
-		PKG_CHECK_MODULES([LCMS], [lcms])
-		AC_DEFINE([USE_LCMS1], [1], [Defines if use lcms1])
-	])
-])
-
 # ======================================
 # Check for various pdf required modules
 # ======================================
+AC_DEFINE([USE_CMS], [], [Defines if use lcms2/1])
+PKG_CHECK_MODULES([LCMS], [lcms2], [lcms2=yes], [lcms2=no])
+AS_IF([test x"$lcms2" = "xno"], [
+	PKG_CHECK_MODULES([LCMS], [lcms])
+	AC_DEFINE([USE_LCMS1], [1], [Defines if use lcms1])
+])
 PKG_CHECK_MODULES([FREETYPE], [freetype2], [AC_DEFINE([HAVE_FREETYPE_H], [1], [Have FreeType2 include files])])
 PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.0.0])
 PKG_CHECK_MODULES([IJS], [ijs])
