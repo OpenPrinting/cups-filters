@@ -509,7 +509,8 @@ pdftoraster_CFLAGS = \
 	$(LIBJPEG_CFLAGS) \
 	$(PNG_CFLAGS) \
 	$(POPPLER_CFLAGS) \
-	$(TIFF_CFLAGS)
+	$(TIFF_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
 pdftoraster_CXXFLAGS = $(pdftoraster_CFLAGS)
 pdftoraster_LDADD = \
 	$(CUPS_LIBS) \
@@ -517,7 +518,8 @@ pdftoraster_LDADD = \
 	$(LIBJPEG_LIBS) \
 	$(PNG_LIBS) \
 	$(POPPLER_LIBS) \
-	$(TIFF_LIBS)
+	$(TIFF_LIBS) \
+	libcupsfilters.la
 
 rastertoescpx_SOURCES = \
 	cupsfilters/driver.h \
