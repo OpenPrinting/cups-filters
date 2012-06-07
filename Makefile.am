@@ -540,9 +540,11 @@ rastertopclx_SOURCES = \
 	filter/rastertopclx.c
 rastertopclx_CFLAGS = \
 	$(CUPS_CFLAGS) \
+	$(PNG_CFLAGS) \
 	-I$(srcdir)/cupsfilters/
 rastertopclx_LDADD = \
 	$(CUPS_LIBS) \
+	$(PNG_LIBS) \
 	libcupsfilters.la
 
 test_pdf1_SOURCES = \
