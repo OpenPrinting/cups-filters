@@ -16,6 +16,7 @@ m4_define([cups_filters_version],[cups_filters_version_major.cups_filters_versio
 AC_INIT([cups-filters],[cups_filters_version])
 AC_CONFIG_MACRO_DIR([m4])
 m4_include([m4/ac_define_dir.m4])
+m4_include([m4/ax_compare_version.m4])
 AM_INIT_AUTOMAKE([1.11 gnu dist-xz dist-bzip2])
 AM_SILENT_RULES([yes])
 AC_LANG([C++])
@@ -104,7 +105,7 @@ CUPS_SERVERBIN="`$CUPSCONFIG --serverbin`"
 AC_DEFINE_UNQUOTED(CUPS_SERVERBIN, "$CUPS_SERVERBIN", [Path to CUPS binaries dir])
 AC_SUBST(CUPS_SERVERBIN)
 
-AS_IF([test `echo $CUPS_VERSION | cut -d '.' -f 2` -ge "4"], [
+AX_COMPARE_VERSION([$CUPS_VERSION],[gt],[1.4], [
 	AC_DEFINE(CUPS_1_4, 1, [CUPS Version is 1.4 or newer])
 ])
 AC_DEFINE(PDFTOPDF, [], [Needed for pdftopdf filter compilation])
