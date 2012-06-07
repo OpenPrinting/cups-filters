@@ -432,7 +432,6 @@ bannertopdf_CFLAGS = \
 bannertopdf_CXXFLAGS = $(bannertopdf_CFLAGS)
 bannertopdf_LDADD = \
 	$(CUPS_LIBS) \
-	$(LCMS_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(PNG_LIBS) \
 	$(POPPLER_LIBS) \
