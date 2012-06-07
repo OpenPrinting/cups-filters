@@ -132,6 +132,9 @@ AC_CHECK_HEADERS([zlib.h])
 # ================
 POPPLER_INCLUDEDIR=`pkg-config poppler --variable includedir`
 AC_CHECK_HEADER([UGooString.h], [AC_DEFINE([HAVE_UGOOSTRING_H],,[Have UGooString.h])], [])
+# FIXME:
+# Use proper c compile check not greps and then just link again poppler with all the features
+# instead of this and all the libs.
 AS_IF([grep "enableSlightHinting" $POPPLER_INCLUDEDIR/poppler/splash/SplashFontEngine.h >/dev/null], [
 	AC_DEFINE([SPLASH_SLIGHT_HINTING],,[SplashFontEngine enableSlightHinting])
 ])
