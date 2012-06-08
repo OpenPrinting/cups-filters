@@ -64,10 +64,9 @@ PKG_PROG_PKG_CONFIG([0.20])
 # ========================================
 AC_ARG_WITH([fontdir],
 	[AS_HELP_STRING([--with-fontdir=path], [Specify path to font config directory ( default: fonts/conf.d/).])],
-	[with_fontdir="$withwal"],
-	[with_fontdir="fonts/conf.d"]
+	[FONTDIR="$withval"],
+	[FONTDIR="fonts/conf.d"]
 )
-FONTDIR="$with_fontdir"
 AC_SUBST(FONTDIR)
 
 # ================================
@@ -75,7 +74,7 @@ AC_SUBST(FONTDIR)
 # ================================
 AC_ARG_WITH([cups-config],
 	[AS_HELP_STRING([--with-cups-config=path], [Specify path to cups-config executable.])],
-	[with_cups_config="$withval"],
+	[],
 	[with_cups_config=system]
 )
 
