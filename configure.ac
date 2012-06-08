@@ -375,7 +375,7 @@ AS_IF([test x"$enable_werror" = "xyes"], [
 AS_IF([test x"$GCC" = "xyes"], [
 	# Be tough with warnings and produce less careless code
 	CFLAGS="$CFLAGS -Wall -pedantic -std=gnu99"
-	CXXFLAGS="$CXXFLAGS -Wall -pedantic -Weffc++"
+	CXXFLAGS="$CXXFLAGS -Wall -pedantic" # -Weffc++" # TODO: enable when it does not print 1MB of warnings
 ])
 CFLAGS="$CFLAGS -D_GNU_SOURCE"
 CXXFLAGS="$CXXFLAGS -D_GNU_SOURCE"
