@@ -63,7 +63,7 @@ PKG_PROG_PKG_CONFIG([0.20])
 # Specify the fontdir patch if not default
 # ========================================
 AC_ARG_WITH([fontdir],
-	[AS_HELP_STRING([--with-fontdir=path], [Specify path to font config directory ( default: font/conf.d/).])],
+	[AS_HELP_STRING([--with-fontdir=path], [Specify path to font config directory ( default: fonts/conf.d/).])],
 	[with_fontdir="$withwal"],
 	[with_fontdir="fonts/conf.d"]
 )
@@ -404,7 +404,7 @@ Environment settings:
 	LDFLAGS:         ${LDFLAGS}
 Build configuration:
 	cups-config:     ${with_cups_config}
-	font directory:  ${sysconfdir}/${with_fontdir}
+	font directory:  ${sysconfdir}/${FONTDIR}
 	gs-path:         ${with_gs_path}
 	imagefilters:    ${enable_imagefilters}
 	jpeg:            ${with_jpeg}
