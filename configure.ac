@@ -216,7 +216,6 @@ AS_IF([test x"$with_tiff" != "xno"], [
 # ======================================
 # Check for various pdf required modules
 # ======================================
-AC_DEFINE([USE_CMS], [], [Defines if use lcms2/1])
 PKG_CHECK_MODULES([LCMS], [lcms2], [lcms2=yes], [lcms2=no])
 AS_IF([test x"$lcms2" = "xno"], [
 	PKG_CHECK_MODULES([LCMS], [lcms])
