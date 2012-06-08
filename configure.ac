@@ -228,7 +228,6 @@ PKG_CHECK_MODULES([IJS], [ijs])
 PKG_CHECK_MODULES([POPPLER], [poppler >= 0.18])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
-AC_DEFINE([ENABLE_ZLIB], [], [Define that we use zlib, duplicate definition FIXME])
 
 # ===================================
 # Check for large files and long long
