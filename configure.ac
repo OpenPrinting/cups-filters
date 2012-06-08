@@ -398,6 +398,10 @@ AC_OUTPUT
 # ==============================================
 AC_MSG_NOTICE([
 ==============================================================================
+Environment settings:
+	CFLAGS:          ${CFLAGS}
+	CXXFLAGS:        ${CXXFLAGS}
+	LDFLAGS:         ${LDFLAGS}
 Build configuration:
 	cms:             ${with_cms}
 	cups-config:     ${with_cups_config}
