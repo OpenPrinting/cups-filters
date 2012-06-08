@@ -302,31 +302,27 @@ AS_IF([test x"$with_pdftops" = gs], [
 	], [
 		AC_PATH_PROG(CUPS_PDFTOPS, [pdftops], [AC_MSG_ERROR([Required pdftops is missing. Please install CUPS developer packages.])])
 	])
-	AC_DEFINE([HAVE_PDFTOPS], [], [Define that we provide poppler pdftops])
-	AC_DEFINE([HAVE_POPPLER_PDFTOPS], [], [Define that we provide poppler pdftops. FIXME: duplicate define])
+	AC_DEFINE([HAVE_POPPLER_PDFTOPS], [], [Define that we provide poppler pdftops.])
 	AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOPS], [Define default renderer])
 
 	AC_MSG_CHECKING([whether pdftops supports -origpagesizes])
 	AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- -origpagesizes`], [
         	AC_MSG_RESULT([yes])
-	        AC_DEFINE([HAVE_PDFTOPS_WITH_ORIGPAGESIZES], [] , [pdftops supports -origpagesizes])
-		AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES], [] , [pdftops supports -origpagesizes. FIXME: duplicate define])
+		AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES], [] , [pdftops supports -origpagesizes.])
 	], [
 	        AC_MSG_RESULT([no])
 	])
 	AC_MSG_CHECKING([whether pdftops supports -r])
 	AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- '-r '`], [
 	        AC_MSG_RESULT([yes])
-        	AC_DEFINE([HAVE_PDFTOPS_WITH_RESOLUTION], [] , [pdftops supports -r argument])
-		AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION], [] , [pdftops supports -r argument. FIXME: duplicate define])
+		AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION], [] , [pdftops supports -r argument.])
 	], [
         	AC_MSG_RESULT([no])
 	])
 ])
 DEFAULT_PDFTOPS=""
 AC_DEFINE_UNQUOTED([CUPS_GHOSTSCRIPT], "$CUPS_GHOSTSCRIPT", [gs binary to use])
-AC_DEFINE_UNQUOTED([CUPS_PDFTOPS], "$CUPS_PDFTOPS", [pdftops binary to use])
-AC_DEFINE_UNQUOTED([CUPS_POPPLER_PDFTOPS], "$CUPS_PDFTOPS", [pdftops binary to use. FIXME: duplicate define])
+AC_DEFINE_UNQUOTED([CUPS_POPPLER_PDFTOPS], "$CUPS_PDFTOPS", [pdftops binary to use.])
 AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_MAX_RESOLUTION], [$CUPS_PDFTOPS_MAXRES], [max resolution used for pdftops when converting images])
 AC_SUBST(DEFAULT_PDFTOPS)
 AC_SUBST(PDFTOPS)
