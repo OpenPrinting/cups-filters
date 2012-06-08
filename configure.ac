@@ -403,7 +403,6 @@ Environment settings:
 	CXXFLAGS:        ${CXXFLAGS}
 	LDFLAGS:         ${LDFLAGS}
 Build configuration:
-	cms:             ${with_cms}
 	cups-config:     ${with_cups_config}
 	font directory:  ${sysconfdir}/${with_fontdir}
 	gs-path:         ${with_gs_path}
