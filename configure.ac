@@ -156,7 +156,6 @@ AS_IF([grep "mapToUnicode(.*Unicode[ ][ ]*\*u" $POPPLER_INCLUDEDIR/poppler/CharC
 AS_IF([grep "GfxColorSpace *\*parse(Object *\*csObj)" $POPPLER_INCLUDEDIR/poppler/GfxState.h >/dev/null], [
 	AC_DEFINE([HAVE_NEW_GFX_FONTTYPE],,[have new GfxFontType])
 ])
-AC_DEFINE_DIR(POPPLER_DATADIR, "{datarootdir}/poppler", [Poppler data dir])
 
 # =============
 # Image options
