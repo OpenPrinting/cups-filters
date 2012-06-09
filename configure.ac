@@ -74,7 +74,7 @@ AC_SUBST(FONTDIR)
 # ================================
 AC_ARG_WITH([cups-config],
 	[AS_HELP_STRING([--with-cups-config=path], [Specify path to cups-config executable.])],
-	[],
+	[with_cups_config="$withval"],
 	[with_cups_config=system]
 )
 
