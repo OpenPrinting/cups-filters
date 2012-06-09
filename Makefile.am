@@ -131,13 +131,13 @@ libcupsfilters_la_SOURCES = \
 libcupsfilters_la_LIBADD = \
 	$(CUPS_LIBS) \
 	$(LIBJPEG_LIBS) \
-	$(PNG_LIBS) \
+	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
 	-lm
 libcupsfilters_la_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
-	$(PNG_CFLAGS) \
+	$(LIBPNG_CFLAGS) \
 	$(TIFF_CFLAGS)
 
 libcupsfilters_la_LDFLAGS = \
@@ -163,13 +163,13 @@ testimage_SOURCES = \
 	$(pkgfiltersinclude_DATA)
 testimage_LDADD = \
 	$(LIBJPEG_LIBS) \
-	$(PNG_LIBS) \
+	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
 	libcupsfilters.la \
 	-lm
 testimage_CFLAGS = \
 	$(LIBJPEG_CFLAGS) \
-	$(PNG_CFLAGS) \
+	$(LIBPNG_CFLAGS) \
 	$(TIFF_CFLAGS)
 
 testrgb_SOURCES = \
@@ -426,14 +426,14 @@ bannertopdf_SOURCES = \
 bannertopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
-	$(PNG_CFLAGS) \
+	$(LIBPNG_CFLAGS) \
 	$(POPPLER_CFLAGS) \
 	$(TIFF_CFLAGS)
 bannertopdf_CXXFLAGS = $(bannertopdf_CFLAGS)
 bannertopdf_LDADD = \
 	$(CUPS_LIBS) \
 	$(LIBJPEG_LIBS) \
-	$(PNG_LIBS) \
+	$(LIBPNG_LIBS) \
 	$(POPPLER_LIBS) \
 	$(TIFF_LIBS)
 
@@ -463,12 +463,12 @@ imagetopdf_SOURCES = \
 imagetopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
-	$(PNG_CFLAGS) \
+	$(LIBPNG_CFLAGS) \
 	$(TIFF_CFLAGS)
 imagetopdf_LDADD = \
 	$(CUPS_LIBS) \
 	$(LIBJPEG_LIBS) \
-	$(PNG_LIBS) \
+	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS)
 
 imagetoraster_SOURCES = \
@@ -507,7 +507,7 @@ pdftoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LCMS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
-	$(PNG_CFLAGS) \
+	$(LIBPNG_CFLAGS) \
 	$(POPPLER_CFLAGS) \
 	$(TIFF_CFLAGS) \
 	-I$(srcdir)/cupsfilters/
@@ -516,7 +516,7 @@ pdftoraster_LDADD = \
 	$(CUPS_LIBS) \
 	$(LCMS_LIBS) \
 	$(LIBJPEG_LIBS) \
-	$(PNG_LIBS) \
+	$(LIBPNG_LIBS) \
 	$(POPPLER_LIBS) \
 	$(TIFF_LIBS) \
 	libcupsfilters.la
@@ -540,11 +540,11 @@ rastertopclx_SOURCES = \
 	filter/rastertopclx.c
 rastertopclx_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	$(PNG_CFLAGS) \
+	$(LIBPNG_CFLAGS) \
 	-I$(srcdir)/cupsfilters/
 rastertopclx_LDADD = \
 	$(CUPS_LIBS) \
-	$(PNG_LIBS) \
+	$(LIBPNG_LIBS) \
 	libcupsfilters.la
 
 test_pdf1_SOURCES = \
