@@ -464,12 +464,14 @@ imagetopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
-	$(TIFF_CFLAGS)
+	$(TIFF_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
 imagetopdf_LDADD = \
 	$(CUPS_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
-	$(TIFF_LIBS)
+	$(TIFF_LIBS) \
+	libcupsfilters.la
 
 imagetoraster_SOURCES = \
 	cupsfilters/image.h \
@@ -477,8 +479,12 @@ imagetoraster_SOURCES = \
 	filter/common.c \
 	filter/common.h \
 	filter/imagetoraster.c
-imagetoraster_CFLAGS = $(CUPS_CFLAGS)
-imagetoraster_LDADD = $(CUPS_LIBS)
+imagetoraster_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
+imagetoraster_LDADD = \
+	$(CUPS_LIBS) \
+	libcupsfilters.la
 
 pdftoijs_SOURCES = \
 	filter/pdftoijs.cxx \
