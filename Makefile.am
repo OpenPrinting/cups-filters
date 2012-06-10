@@ -635,5 +635,5 @@ distclean-local:
 	rm -rf *.cache *~
 
 install-data-hook:
-	$(LN_S) $(DESTDIR)$(pkgcharsetdir)/pdf.utf-8.simple \
+	$(LN_S) pdf.utf-8.simple \
 		$(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
