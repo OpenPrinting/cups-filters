@@ -3,6 +3,7 @@
 #include "embed_pdf_int.h"
 #include "embed_sfnt_int.h"
 #include <assert.h>
+#include <errno.h>
 #include <string.h>
 #include <time.h>
 #include "frequent.h"
@@ -111,7 +112,7 @@ static EMB_PDF_FONTDESCR *emb_pdf_fd_new(const char *fontname,
   }
   ret=calloc(1,len);
   if (!ret) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     assert(0);
     return NULL;
   }
@@ -206,7 +207,7 @@ EMB_PDF_FONTWIDTHS *emb_pdf_fw_new(int datasize) // {{{
   assert(datasize>=0);
   EMB_PDF_FONTWIDTHS *ret=calloc(1,sizeof(EMB_PDF_FONTWIDTHS)+datasize*sizeof(int));
   if (!ret) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     assert(0);
     return NULL;
   }
@@ -268,7 +269,7 @@ EMB_PDF_FONTWIDTHS *emb_pdf_fw_cidwidths(const BITSET glyphs,int len,int default
   // second pass
   in_region=0;
   size=0;
-  int *rlen; // position of current len field  (only valid if in_region!=0)
+  int *rlen=0; // position of current len field  (only valid if in_region!=0)
   for (iA=0,b=0,c=1;iA<len;iA++,c<<=1) {
     if (!c) {
       b++;
@@ -374,7 +375,7 @@ char *emb_pdf_simple_fontdescr(EMB_PARAMS *emb,EMB_PDF_FONTDESCR *fdes,int fontf
   size=300;
   pos=ret=malloc(size);
   if (!ret) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     return NULL;
   }
 
@@ -535,7 +536,7 @@ char *emb_pdf_simple_cidfont(EMB_PARAMS *emb,const char *fontname,int descendant
   size=250;
   pos=ret=malloc(size);
   if (!ret) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     return NULL;
   }
      // for CFF: one of:
@@ -576,7 +577,7 @@ char *emb_pdf_simple_stdfont(EMB_PARAMS *emb) // {{{ - to be freed by user
   size=300;
   pos=ret=malloc(size);
   if (!ret) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     return NULL;
   }
 

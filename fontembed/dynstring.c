@@ -1,4 +1,5 @@
 #include "dynstring.h"
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +15,7 @@ int dyn_init(DYN_STRING *ds,int reserve_size) // {{{
   ds->alloc=reserve_size;
   ds->buf=malloc(ds->alloc+1);
   if (!ds->buf) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     assert(0);
     ds->len=-1;
     return -1;
@@ -49,7 +50,7 @@ int dyn_ensure(DYN_STRING *ds,int free_space) // {{{
   char *tmp=realloc(ds->buf,ds->alloc+1);
   if (!tmp) {
     ds->len=-1;
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     assert(0);
     return -1;
   }

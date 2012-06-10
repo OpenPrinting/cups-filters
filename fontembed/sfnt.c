@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <assert.h>
 #include "sfnt_int.h"
 
@@ -93,7 +94,7 @@ static char *otf_read(OTF_FILE *otf,char *buf,long pos,int length) // {{{
 
   int res=fseek(otf->f,pos,SEEK_SET);
   if (res==-1) {
-    fprintf(stderr,"Seek failed: %m\n");
+    fprintf(stderr,"Seek failed: %s\n", strerror(errno));
     return NULL;
   }
 
@@ -102,7 +103,7 @@ static char *otf_read(OTF_FILE *otf,char *buf,long pos,int length) // {{{
   if (!buf) {
     ours=buf=malloc(sizeof(char)*pad_len);
     if (!buf) {
-      fprintf(stderr,"Bad alloc: %m\n");
+      fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
       return NULL;
     }
   }
@@ -174,7 +175,7 @@ OTF_FILE *otf_do_load(OTF_FILE *otf,int pos) // {{{
   // {{{ read directory
   otf->tables=malloc(sizeof(OTF_DIRENT)*otf->numTables);
   if (!otf->tables) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     otf_close(otf);
     return NULL;
   }
@@ -290,7 +291,7 @@ OTF_FILE *otf_load(const char *file) // {{{
       if (!*end) {
         end=malloc((tmp-file+1)*sizeof(char));
         if (!end) {
-          fprintf(stderr,"Bad alloc: %m\n");
+          fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
           return NULL;
         }
         strncpy(end,file,tmp-file);
@@ -300,13 +301,13 @@ OTF_FILE *otf_load(const char *file) // {{{
       }
     }
     if (!f) {
-      fprintf(stderr,"Could not open \"%s\": %m\n",file);
+      fprintf(stderr,"Could not open \"%s\": %s\n", file, strerror(errno));
       return NULL;
     }
   }
   otf=otf_new(f);
   if (!otf) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     fclose(f);
     return NULL;
   }
@@ -477,7 +478,7 @@ int otf_load_glyf(OTF_FILE *otf) // {{{  - 0 on success
   }
   otf->glyphOffsets=malloc((otf->numGlyphs+1)*sizeof(unsigned int));
   if (!otf->glyphOffsets) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     return -1;
   }
   if (otf->indexToLocFormat==0) {
@@ -514,7 +515,7 @@ int otf_load_glyf(OTF_FILE *otf) // {{{  - 0 on success
   }
   otf->gly=malloc(maxGlyfLen*sizeof(char));
   if (!otf->gly) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     return -1;
   }
   // }}}
@@ -898,7 +899,7 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
   int *order=malloc(sizeof(int)*numTables); // temporary
   char *start=malloc(12+16*numTables);
   if ( (!order)||(!start) ) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     free(order);
     free(start);
     return -1;

@@ -1,6 +1,7 @@
 #include "embed.h"
 #include "embed_sfnt_int.h"
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -61,7 +62,7 @@ EMB_PARAMS *emb_new(FONTFILE *font,EMB_DESTINATION dest,EMB_CONSTRAINTS mode) //
 
   EMB_PARAMS *ret=calloc(1,sizeof(EMB_PARAMS));
   if (!ret) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     if (mode&EMB_C_TAKE_FONTFILE) {
       fontfile_close(font);
     }
@@ -163,7 +164,7 @@ EMB_PARAMS *emb_new(FONTFILE *font,EMB_DESTINATION dest,EMB_CONSTRAINTS mode) //
   if (ret->plan&EMB_A_SUBSET) {
     ret->subset=bitset_new(numGlyphs);
     if (!ret->subset) {
-      fprintf(stderr,"Bad alloc: %m\n");
+      fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
       emb_close(ret);
       return NULL;
     }

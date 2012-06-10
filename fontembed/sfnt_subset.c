@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <assert.h>
 #include "bitset.h"
 
@@ -16,7 +17,7 @@ int otf_ttc_extract(OTF_FILE *otf,OUTPUT_FN output,void *context) // {{{
   struct _OTF_WRITE *otw;
   otw=malloc(sizeof(struct _OTF_WRITE)*otf->numTables);
   if (!otw) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     return -1;
   }
 
@@ -153,7 +154,7 @@ int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{
   char *new_loca=malloc(locaSize);
   char *new_glyf=malloc(glyfSize);
   if ( (!new_loca)||(!new_glyf) ) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     assert(0);
     free(new_loca);
     free(new_glyf);
@@ -266,7 +267,7 @@ static int copy_block(FILE *f,long pos,int length,OUTPUT_FN output,void *context
 
   ret=fseek(f,pos,SEEK_SET);
   if (ret==-1) {
-    fprintf(stderr,"Seek failed: %m\n");
+    fprintf(stderr,"Seek failed: %s\n", strerror(errno));
     return -1;
   }
   ret=0;
@@ -323,7 +324,7 @@ int otf_cff_extract(OTF_FILE *otf,OUTPUT_FN output,void *context) // {{{ - retur
   // second pass: calculate new glyf and loca
   char *new_cff=malloc(cffSize);
   if (!new_cff) {
-    fprintf(stderr,"Bad alloc: %m\n");
+    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
     assert(0);
     return -1;
   }
