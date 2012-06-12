@@ -49,16 +49,20 @@ CONFIGURATION
 
 	./configure
 
-    The default installation will put the CUPS Filters software in the "/etc"
-    and "/usr" directories on your system, which will overwrite some of the
-    original filters and their auxiliary of CUPS 1.5.x or earlier. The system
-    will still have the same functionality as before, but CUPS will not
-    convert all incoming files into PostScript any more, it will convert them
-    into PDF instead and after applying page management (N-up, selected pages,
-    reverse order, ...) by the pdftopdf filter and convert PDF into the
-    printer's native format then (PDF-based printing workflow). CUPS 1.6.x or
-    later does not contain any filters which this package provides. It requires
-    the installation of this package for printing with filters and drivers
+    The default installation will put the CUPS Filters software in the
+    "/etc" and "/usr" directories on your system, which will overwrite
+    some of the original filters and their auxiliary files of CUPS
+    1.5.x or earlier and the auxiliary files of bannertops in all CUPS
+    versions including version 1.6.x (see also the section "PACKAGING
+    THE SOFTWARE FOR OPERATING SYSTEM DISTRIBUTIONS" below). The
+    system will still have the same functionality as before, but CUPS
+    will not convert all incoming files into PostScript any more, it
+    will convert them into PDF instead and after applying page
+    management (N-up, selected pages, reverse order, ...) by the
+    pdftopdf filter and convert PDF into the printer's native format
+    then (PDF-based printing workflow). CUPS 1.6.x or later does not
+    contain any filters which this package provides. It requires the
+    installation of this package for printing with filters and drivers
     under Linux (or other non-Mac-OS-X operation systems).
 
     Use the "--prefix" option to install the CUPS Filters software in another
@@ -112,3 +116,60 @@ INSTALLING THE SOFTWARE
     or for FreeBSD, NetBSD, or OpenBSD:
 
 	gmake install ENTER
+
+PACKAGING THE SOFTWARE FOR OPERATING SYSTEM DISTRIBUTIONS
+
+    The use of cups-filters is supported for CUPS from version 1.5.x
+    on (to switch to the PDF-based printing workflow already now) and
+    required for CUPS 1.6.x (as it does not ship a complete filter set
+    any more). In both cases cups-filters ships some files which exist
+    also in CUPS, but the versions of cups-filters have to be used to
+    assure that printing works correctly. So in the packaging of CUPS
+    the files should be removed.
+
+    Use the alternatives facility (see update-alternatives(8)) only if
+    your CUPS version is 1.5.x and you want to make the use of
+    cups-filters optional. Note that then the files of cups-filters
+    need to have priority.
+
+    When using cups-filters with CUPS 1.5.x, many of the original CUPS
+    filters get replaced or at least useless. Please remove the
+    following files from your CUPS package:
+
+	/usr/lib/cups/backend/serial
+	/usr/lib/cups/backend/parallel
+	/usr/lib/cups/filter/bannertops
+	/usr/lib/cups/filter/commandtoescpx
+	/usr/lib/cups/filter/commandtopclx
+	/usr/lib/cups/filter/imagetops
+	/usr/lib/cups/filter/imagetoraster
+	/usr/lib/cups/filter/pdftops
+	/usr/lib/cups/filter/rastertoescpx
+	/usr/lib/cups/filter/rastertopclx
+	/usr/lib/cups/filter/texttops
+	/usr/share/cups/banners/*
+	/usr/share/cups/data/testprint
+	/usr/share/cups/data/psglyphs
+	/usr/share/cups/fonts/*
+
+    Also comment out all conversion rules which use any of the removed
+    filters. You can do it with the following command line:
+
+	perl -p -i -e 's:^(.*\s+(pdftops|texttops|imagetops|bannertops|imagetoraster)\s*)$:#\1:' /usr/share/cups/mime/mime.convs
+
+    If you use CUPS 1.6.x there is less to remove from the CUPS
+    package. It is only bannertops and its auxiliary files which are
+    in the way for bannertopdf:
+
+	/usr/lib/cups/filter/bannertops
+	/usr/share/cups/banners/*
+	/usr/share/cups/data/testprint
+
+    The conversion rules get commented out via:
+
+	perl -p -i -e 's:^(.*\s+bannertops\s*)$:#\1:' /usr/share/cups/mime/mime.convs
+
+    For CUPS 1.6.x a bug report/feature request is posted to ask for
+    (at least optional) removal of bannertops:
+
+	http://www.cups.org/str.php?L4120
