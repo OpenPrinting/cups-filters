@@ -1,6 +1,7 @@
 #include "sfnt.h"
 #include "sfnt_int.h"
 #include "embed.h"
+#include "config.h"
 #include "embed_sfnt_int.h"
 #include <assert.h>
 #include <stdio.h>
@@ -181,7 +182,7 @@ void show_hmtx(OTF_FILE *otf) // {{{
 
 int main(int argc,char **argv)
 {
-  const char *fn="/usr/share/fonts/truetype/microsoft/ARIALN.TTF";
+  const char *fn=TESTFONT;
   if (argc==2) {
     fn=argv[1];
   }

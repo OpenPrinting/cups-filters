@@ -1,4 +1,5 @@
 #include "embed.h"
+#include "config.h"
 #include "sfnt.h"
 #include <assert.h>
 #include <stdio.h>
@@ -70,7 +71,7 @@ static inline void write_string(FILE *f,EMB_PARAMS *emb,const char *str) // {{{
 
 int main(int argc,char **argv)
 {
-  const char *fn="/usr/share/fonts/truetype/microsoft/ARIALN.TTF";
+  const char *fn=TESTFONT;
   if (argc==2) {
     fn=argv[1];
   }
