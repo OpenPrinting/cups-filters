@@ -390,9 +390,6 @@ AC_CONFIG_FILES([
 	libcupsfilters.pc
 	libfontembed.pc
 	Makefile
-	filter/pstopdf
-	filter/texttops
-	filter/imagetops
 ])
 AC_OUTPUT
 
