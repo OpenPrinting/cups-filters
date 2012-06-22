@@ -391,6 +391,10 @@ main(int  argc,				/* I - Number of command-line args */
     */
 
     pstops_options = realloc(pstops_options, strlen(pstops_options) + 9);
+    if (!pstops_options) {
+      fprintf(stderr, "ERROR: Can't allocate pstops_options\n");
+      exit(2);
+    }
     pstops_end = pstops_options + strlen(pstops_options);
     strcpy(pstops_end, " Collate");
   }
