@@ -121,7 +121,7 @@ static void info_line(FILE *s,
 }
 
 
-static info_line_time(FILE *s,
+static void info_line_time(FILE *s,
                       const char *key,
                       const char *timestamp)
 {
