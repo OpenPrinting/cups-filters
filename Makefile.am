@@ -599,11 +599,8 @@ texttopdf_LDADD = \
 #TESTS += filter/test.sh
 
 EXTRA_DIST += \
-	filter/imagetops.in \
-	filter/pstopdf.in \
-	filter/test.sh \
-	filter/textonly \
-	filter/texttops.in
+	$(pkgfilter_SCRIPTS) \
+	filter/test.sh
 
 # ===
 # PPD
