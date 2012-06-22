@@ -180,7 +180,8 @@ banner_t * banner_new_from_file(const char *filename)
 
 out:
     free(line);
-    fclose(f);
+    if (f)
+        fclose(f);
     return banner;
 }
 

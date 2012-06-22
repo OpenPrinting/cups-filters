@@ -119,7 +119,6 @@ static void parsePDFTOPDFComment(char *filename)
   if ((fp = fopen(filename,"rb")) == 0) {
     fprintf(stderr, "ERROR: pdftops - cannot open print file \"%s\"\n",
             filename);
-    fclose(fp);
     return;
   }
 

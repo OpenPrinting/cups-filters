@@ -72,8 +72,8 @@ static OTF_FILE *otf_new(FILE *f) // {{{
   ret=calloc(1,sizeof(OTF_FILE));
   if (ret) {
     ret->f=f;
+    ret->version=0x00010000;
   }
-  ret->version=0x00010000;
 
   return ret;
 }
