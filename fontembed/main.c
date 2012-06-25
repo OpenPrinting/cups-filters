@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include "embed.h"
+#include "config.h"
 
 #if 0
 enum { TTF_OTF, TYPE1 } inputFile;
@@ -137,7 +138,7 @@ puts("...");
 // TODO? reencode?
 int main(int argc,char **argv) 
 {
-  const char *fn="/usr/share/fonts/truetype/microsoft/ARIALN.TTF";
+  const char *fn=TESTFONT;
   if (argc==2) {
     fn=argv[1];
   }

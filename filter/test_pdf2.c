@@ -1,4 +1,5 @@
 #include "pdfutils.h"
+#include "config.h"
 #include <assert.h>
 #include "fontembed/embed.h"
 #include "fontembed/sfnt.h"
@@ -39,7 +40,7 @@ int main()
   pdfOut_begin_pdf(pdf);
 
   // font, pt.1 
-  const char *fn="/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf";
+  const char *fn=TESTFONT;
 /*
   if (argc==2) {
     fn=argv[1];

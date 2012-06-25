@@ -14,8 +14,8 @@
 
 set -e
 
-PS2PS=@PS2PS@
-GS=@GS@
+PS2PS=`which ps2ps`
+GS=`which gs`
 
 PS2PS_OPTIONS="-dAutoRotatePages=/None -dAutoFilterColorImages=false \
                -dNOPLATFONTS -dPARANOIDSAFER -dNOINTERPOLATE -sstdout=%stderr"

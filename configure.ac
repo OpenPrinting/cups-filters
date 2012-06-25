@@ -354,6 +354,16 @@ AS_IF([test x"$with_php" = "xyes"], [
 	AC_SUBST(PHPDIR)
 ])
 
+# =========
+# Test ARGS
+# =========
+AC_ARG_WITH([test-font-path],
+	[AS_HELP_STRING([--with-test-font-path=value], [Set path to pdftops/ghostscript binary (default: /usr/share/fonts/dejavu/DejaVuSans.ttf).])],
+	[with_test_font_path="$withval"],
+	[with_test_font_path="/usr/share/fonts/dejavu/DejaVuSans.ttf"]
+)
+AC_DEFINE_UNQUOTED([TESTFONT], ["$with_test_font_path"], [Path to font used in tests])
+
 # ================
 # Check for cflags
 # ================
@@ -380,9 +390,6 @@ AC_CONFIG_FILES([
 	libcupsfilters.pc
 	libfontembed.pc
 	Makefile
-	filter/pstopdf
-	filter/texttops
-	filter/imagetops
 ])
 AC_OUTPUT
 
@@ -406,6 +413,7 @@ Build configuration:
 	png:             ${with_png}
 	php:             ${with_php}
 	php-config:      ${with_php_config}
+	test-font:       ${with_test_font_path}
 	tiff:            ${with_tiff}
 	werror:          ${enable_werror}
 ==============================================================================
