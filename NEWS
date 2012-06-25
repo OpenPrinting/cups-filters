@@ -3,7 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.19 - 2012-06-05
 
 CHANGES IN V1.0.19
 
-	- Added distribution packaging instructions to NEWS.
+	- Fixes according to Coverity scan results (Bug #1054).
+	- Added distribution packaging instructions to INSTALL.
 	- Switched build system to autotools. This especially fixes several
 	  build problems in Gentoo. Also build-tested with CUPS 1.6.0b1.
 	- Fixes for compatibility with clang/gcc-4.7.
