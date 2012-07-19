@@ -110,6 +110,13 @@ AX_COMPARE_VERSION([$CUPS_VERSION],[gt],[1.4], [
 AC_DEFINE(PDFTOPDF, [], [Needed for pdftopdf filter compilation])
 AC_DEFINE_DIR(BANNERTOPDF_DATADIR, "{CUPS_DATADIR}/data", [Directory where bannertopdf finds its data files (PDF templates)])
 
+AC_SEARCH_LIBS([dlopen],
+	[dl],
+	DLOPEN_LIBS="-ldl",
+	AC_MSG_ERROR([unable to find the dlopen() function])
+)
+AC_SUBST(DLOPEN_LIBS)
+
 # ======================
 # Check system functions
 # ======================
