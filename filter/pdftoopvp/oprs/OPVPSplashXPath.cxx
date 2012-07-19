@@ -1,5 +1,8 @@
 #include <config.h>
 #include <stdio.h>
+#ifdef HAVE_CPP_POPPLER_VERSION_H
+#include "cpp/poppler-version.h"
+#endif
 #include "splash/Splash.h"
 #include "splash/SplashMath.h"
 #include "OPVPSplashClip.h"

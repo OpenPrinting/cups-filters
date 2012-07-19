@@ -1,5 +1,10 @@
-NEWS - OpenPrinting CUPS Filters v1.0.19 - 2012-07-11
+NEWS - OpenPrinting CUPS Filters v1.0.20 - 2012-07-19
 -----------------------------------------------------
+
+CHANGES IN V1.0.20
+
+	- Made the Poppler-based filters pdftopdf and pdftoopvp build with
+	  both Poppler 0.18.x and 0.20.x (Bug #1055).
 
 CHANGES IN V1.0.19
 

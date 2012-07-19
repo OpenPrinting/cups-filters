@@ -202,6 +202,7 @@ AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
 # ================
 POPPLER_INCLUDEDIR=`pkg-config poppler --variable includedir`
 AC_CHECK_HEADER([UGooString.h], [AC_DEFINE([HAVE_UGOOSTRING_H],,[Have UGooString.h])], [])
+AC_CHECK_HEADER([poppler/cpp/poppler-version.h], [AC_DEFINE([HAVE_CPP_POPPLER_VERSION_H],,[Define if you have Poppler's "cpp/poppler-version.h" header file.])], [])
 # FIXME:
 # Use proper c compile check not greps and then just link again poppler with all the features
 # instead of this and all the libs.

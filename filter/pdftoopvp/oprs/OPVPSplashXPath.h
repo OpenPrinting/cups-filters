@@ -2,6 +2,9 @@
 #define OPVPSPLASHXPATH_H
 
 #include <config.h>
+#ifdef HAVE_CPP_POPPLER_VERSION_H
+#include "cpp/poppler-version.h"
+#endif
 #include "splash/SplashXPath.h"
 #include "OPVPSplashPath.h"
 #include "OPVPSplashState.h"
