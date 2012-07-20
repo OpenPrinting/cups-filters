@@ -151,11 +151,7 @@ void P2PGfx::outputContents(Object *obj, P2PResourceMap *mappingTableA,
     p2pError(-1, const_cast<char *>("Weird page contents"));
     return;
   }
-#ifdef PARSER_HAS_2_ARGS
-  parser = new Parser(xref, new Lexer(xref, obj));
-#else
   parser = new Parser(xref, new Lexer(xref, obj), gTrue);
-#endif
   go();
   delete parser;
   parser = NULL;

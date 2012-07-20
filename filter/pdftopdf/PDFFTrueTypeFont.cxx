@@ -1299,7 +1299,7 @@ int PDFFTrueTypeFont::init(const char *fileNameA, unsigned int faceIndexA)
     goto error_end;
   }
   fileLength = sbuf.st_size;
-  if ((top = static_cast<unsigned char *>(
+  if ((top = reinterpret_cast<unsigned char *>(
       mmap(0,fileLength,PROT_READ,MAP_PRIVATE,fontFileFD,0))) == 0) {
     p2pError(-1,const_cast<char *>("mmap font file %s failed"),fileName);
     goto error_end;
@@ -1316,7 +1316,7 @@ int PDFFTrueTypeFont::init(const char *fileNameA, unsigned int faceIndexA)
   return 0;
 
 error_end2:
-  munmap(top,fileLength);
+  munmap((char *)top,fileLength);
 error_end:
   close(fontFileFD);
   fontFileFD = -1;
@@ -1334,7 +1334,7 @@ PDFFTrueTypeFont::~PDFFTrueTypeFont()
 #endif
 
   if (top != 0) {
-    munmap(top,fileLength);
+    munmap((char *)top,fileLength);
   }
   if (fontFileFD >= 0) close(fontFileFD);
   if (fileName != 0) delete[] fileName;

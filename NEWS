@@ -3,8 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.20 - 2012-07-19
 
 CHANGES IN V1.0.20
 
+	- Improved portability of the package to non-Linux systems (Bug #1056).
 	- Made the Poppler-based filters pdftopdf and pdftoopvp build with
 	  both Poppler 0.18.x and 0.20.x (Bug #1055).
+	- Let build system check for dlopen.
 
 CHANGES IN V1.0.19
 

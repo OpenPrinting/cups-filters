@@ -18,6 +18,13 @@
 #include <stdarg.h>
 #include <math.h>
 
+#ifndef HAVE_OPEN_MEMSTREAM
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#endif
+
 #include <cups/cups.h>
 #include <cups/ppd.h>
 
@@ -155,6 +162,9 @@ static int generate_banner_pdf(banner_t *banner,
     float page_scale;
     ppd_attr_t *attr;
     int copies;
+#ifndef HAVE_OPEN_MEMSTREAM
+    struct stat st;
+#endif
 
     if (!(doc = pdf_load_template(banner->template_file)))
         return 1;
@@ -166,7 +176,15 @@ static int generate_banner_pdf(banner_t *banner,
 
     pdf_add_type1_font(doc, 1, "Courier");
 
+#ifdef HAVE_OPEN_MEMSTREAM
     s = open_memstream(&buf, &len);
+#else
+    if ((s = tmpfile()) == NULL) {
+        fprintf (stderr, "ERROR: bannertopdf: cannot create temp file: %s\n",
+                 strerror (errno));
+        return 1;
+    }
+#endif
 
     if (banner->infos & INFO_IMAGEABLE_AREA) {
         fprintf(s, "q\n");
@@ -243,6 +261,21 @@ static int generate_banner_pdf(banner_t *banner,
                        cupsGetOption("time-at-processing", noptions, options));
 
     fprintf(s, "ET\n");
+#ifndef HAVE_OPEN_MEMSTREAM
+    fflush (s);
+    if (fstat (fileno (s), &st) < 0) {
+        fprintf (stderr, "ERROR: bannertopdf: cannot fstat(): %s\n", strerror(errno));
+        return 1 ;
+    }
+    fseek (s, 0L, SEEK_SET);
+    if ((buf = malloc(st.st_size + 1)) == NULL) {
+        fprintf (stderr, "ERROR: bannertopdf: cannot malloc(): %s\n", strerror(errno));
+        return 1 ;
+    }
+    size_t nbytes = fread (buf, 1, st.st_size, s);
+    buf[st.st_size] = '\0';
+    len = strlen (buf);
+#endif /* !HAVE_OPEN_MEMSTREAM */
     fclose(s);
 
     pdf_prepend_stream(doc, 1, buf, len);

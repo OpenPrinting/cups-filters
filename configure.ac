@@ -123,6 +123,9 @@ AC_SUBST(DLOPEN_LIBS)
 AC_CHECK_FUNCS(sigaction)
 AC_CHECK_FUNCS(waitpid wait3)
 AC_CHECK_FUNCS(strtoll)
+AC_CHECK_FUNCS(open_memstream)
+AC_CHECK_FUNCS(getline,[],AC_SUBST([GETLINE],['bannertopdf-getline.$(OBJEXT)']))
+AC_CHECK_FUNCS(strcasestr,[],AC_SUBST([STRCASESTR],['pdftops-strcasestr.$(OBJEXT)']))
 AC_SEARCH_LIBS(pow, m)
 
 # ========================
@@ -133,6 +136,8 @@ AC_CHECK_HEADERS([sys/stat.h])
 AC_CHECK_HEADERS([sys/types.h])
 AC_CHECK_HEADERS([unistd.h])
 AC_CHECK_HEADERS([zlib.h])
+AC_CHECK_HEADERS([endian.h])
+AC_CHECK_HEADERS([dirent.h])
 
 # =============
 # Image options
@@ -210,31 +215,15 @@ AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
 POPPLER_INCLUDEDIR=`pkg-config poppler --variable includedir`
 AC_CHECK_HEADER([UGooString.h], [AC_DEFINE([HAVE_UGOOSTRING_H],,[Have UGooString.h])], [])
 AC_CHECK_HEADER([poppler/cpp/poppler-version.h], [AC_DEFINE([HAVE_CPP_POPPLER_VERSION_H],,[Define if you have Poppler's "cpp/poppler-version.h" header file.])], [])
-# FIXME:
-# Use proper c compile check not greps and then just link again poppler with all the features
-# instead of this and all the libs.
-AS_IF([grep "enableSlightHinting" $POPPLER_INCLUDEDIR/poppler/splash/SplashFontEngine.h >/dev/null], [
-	AC_DEFINE([SPLASH_SLIGHT_HINTING],,[SplashFontEngine enableSlightHinting])
-])
-AS_IF([grep "GlobalParams(char \*cfgFileName)" $POPPLER_INCLUDEDIR/poppler/GlobalParams.h >/dev/null], [
-	AC_DEFINE([GLOBALPARAMS_HAS_A_ARG],,[GlobalParams::GlobalParams has a argument.])
-])
-AS_IF([grep "Parser(XRef \*xrefA, Lexer \*lexerA)" $POPPLER_INCLUDEDIR/poppler/Parser.h >/dev/null], [
-	AC_DEFINE([PARSER_HAS_2_ARGS],,[Parser::Parser has two arguments.])
-])
-AS_IF([grep "fontType1COT" $POPPLER_INCLUDEDIR/poppler/GfxFont.h >/dev/null], [
-	AC_DEFINE([FONTTYPE_ENUM2],,[New font type enumeration])
-])
-AS_IF([grep "getUndecodedStream" $POPPLER_INCLUDEDIR/poppler/Stream.h >/dev/null], [
-	AC_DEFINE([HAVE_GETUNDECODEDSTREAM],,[Have Stream::getUndecodedStream])
-])
-AS_IF([grep "mapToUnicode(.*Unicode[ ][ ]*\*u" $POPPLER_INCLUDEDIR/poppler/CharCodeToUnicode.h], [
-	AC_DEFINE([OLD_MAPTOUNICODE],,[Old CharCodeToUnicode::mapToUnicode])
-])
-AS_IF([grep "GfxColorSpace *\*parse(Object *\*csObj)" $POPPLER_INCLUDEDIR/poppler/GfxState.h >/dev/null], [
-	AC_DEFINE([HAVE_NEW_GFX_FONTTYPE],,[have new GfxFontType])
-])
 
+AC_TRY_COMPILE([#include <Stream.h>],
+	[virtual Stream *s = getUndecodedStream()],
+	[AC_DEFINE([HAVE_GETUNDECODEDSTREAM],,[Define if you have Stream::getUndecodedStream().])],
+	[])
+AC_TRY_COMPILE([#include <CharCodeToUnicode.h>],
+	[CharCode c; Unicode **u; int i = mapToUnicode(c, u)],
+	[AC_DEFINE([OLD_MAPTOUNICODE],,[Define if you have Old CharCodeToUnicode::mapToUnicode()])],
+	[])
 
 # ===================================
 # Check for large files and long long

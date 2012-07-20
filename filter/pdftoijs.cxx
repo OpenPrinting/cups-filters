@@ -291,11 +291,7 @@ int main(int argc, char *argv[]) {
 #else
   setErrorFunction(::myErrorFun);
 #endif
-#ifdef GLOBALPARAMS_HAS_A_ARG
-  globalParams = new GlobalParams(0);
-#else
   globalParams = new GlobalParams();
-#endif
   parseOpts(argc, argv);
 
   if (argc == 6) {

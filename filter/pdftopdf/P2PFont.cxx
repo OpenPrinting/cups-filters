@@ -1092,20 +1092,16 @@ P2PFontDict::P2PFontDict(Object *fontDictA, XRef *xref, int num, int gen)
     case fontUnknownType:
     case fontType1:
     case fontType1C:
-#ifdef FONTTYPE_ENUM2
     case fontType1COT:
     case fontTrueTypeOT:
-#endif
       /* 8bit font */
       read8bitFontDescriptor(type,name.getName(),xref);
       break;
     case fontCIDType0:
     case fontCIDType0C:
     case fontCIDType2:
-#ifdef FONTTYPE_ENUM2
     case fontCIDType0COT:
     case fontCIDType2OT:
-#endif
       /* CID font */
       readCIDFontDescriptor(type,name.getName(),xref);
       break;

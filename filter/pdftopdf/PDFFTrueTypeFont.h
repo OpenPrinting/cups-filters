@@ -30,7 +30,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define _PDFFTRUTYPEFONT_H_
 
 #include <config.h>
+#ifdef HAVE_ENDIAN_H
 #include <endian.h>
+#endif
 #include "UGooString.h"
 #ifdef PDFTOPDF
 #include "P2POutputStream.h"

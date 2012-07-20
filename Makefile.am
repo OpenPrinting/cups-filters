@@ -426,6 +426,7 @@ bannertopdf_SOURCES = \
 	filter/bannertopdf.c \
 	filter/pdf.cxx \
 	filter/pdf.h
+EXTRA_bannertopdf_SOURCES = filter/getline.c
 bannertopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
@@ -434,11 +435,13 @@ bannertopdf_CFLAGS = \
 	$(TIFF_CFLAGS)
 bannertopdf_CXXFLAGS = $(bannertopdf_CFLAGS)
 bannertopdf_LDADD = \
+	$(GETLINE) \
 	$(CUPS_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(POPPLER_LIBS) \
 	$(TIFF_LIBS)
+bannertopdf_DEPENDENCIES = $(GETLINE)
 
 commandtoescpx_SOURCES = \
 	cupsfilters/driver.h \
@@ -506,8 +509,10 @@ pdftops_SOURCES = \
 	filter/common.c \
 	filter/common.h \
 	filter/pdftops.c
+EXTRA_pdftops_SOURCES = filter/strcasestr.c
 pdftops_CFLAGS = $(CUPS_CFLAGS)
-pdftops_LDADD = $(CUPS_LIBS)
+pdftops_LDADD = $(STRCASESTR) $(CUPS_LIBS)
+pdftops_DEPENDENCIES = $(STRCASESTR)
 
 pdftoraster_SOURCES = \
 	filter/pdftoraster.cxx \

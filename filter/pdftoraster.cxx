@@ -1756,11 +1756,7 @@ int main(int argc, char *argv[]) {
   setErrorFunction(::myErrorFun);
 #endif
   cmsSetLogErrorHandler(lcmsErrorHandler);
-#ifdef GLOBALPARAMS_HAS_A_ARG
-  globalParams = new GlobalParams(0);
-#else
   globalParams = new GlobalParams();
-#endif
   parseOpts(argc, argv);
 
   if (argc == 6) {

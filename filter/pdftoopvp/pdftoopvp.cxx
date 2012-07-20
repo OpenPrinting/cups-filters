@@ -29,7 +29,6 @@
 #include <cups/cups.h>
 #include <cups/ppd.h>
 #include "OPVPError.h"
-#include "mcheck.h"
 
 #define MMPERINCH (25.4)
 
