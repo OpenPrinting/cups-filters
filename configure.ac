@@ -275,15 +275,14 @@ AS_CASE([x$with_pdftops_maxres],
 	[AC_MSG_ERROR([Unknown value of with-pdftops-maxres provided: $with_pdftops])]
 )
 
-PDFTOPS="pdftops"
-AS_IF([test x"$with_pdftops" = gs], [
-	AS_IF([test "x$with_gs_path" != "xsystem"], [
-		CUPS_GHOSTSCRIPT="$with_gs_path"
-	], [
-		AC_PATH_PROG(CUPS_GHOSTSCRIPT, [gs], [AC_MSG_ERROR([Required gs binary is missing. Please install ghostscript-gpl package.])])
-	])
+AS_IF([test "x$with_gs_path" != "xsystem"], [
+	CUPS_GHOSTSCRIPT="$with_gs_path"
+], [
+	AC_PATH_PROG(CUPS_GHOSTSCRIPT, [gs], [AC_MSG_ERROR([Required gs binary is missing. Please install ghostscript-gpl package.])])
+])
+AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x"], [
 	AC_DEFINE([HAVE_GHOSTSCRIPT], [], [Define that we provide ghostscript binary])
-	AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [GS], [Define default renderer])
+	AS_IF([test x"$with_pdftops" = xgs], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [GS], [Define default renderer])])
 
 	AC_MSG_CHECKING(whether gs supports the ps2write device)
 	AS_IF([`$CUPS_GHOSTSCRIPT -h 2>&1 | grep -q ps2write`], [
@@ -292,14 +291,16 @@ AS_IF([test x"$with_pdftops" = gs], [
 	], [
 		AC_MSG_RESULT([no])
 	])
+])
+
+AS_IF([test "x$with_pdftops_path" != "xsystem"], [
+	CUPS_PDFTOPS="$with_pdftops"
 ], [
-	AS_IF([test "x$with_pdftops_path" != "xsystem"], [
-		CUPS_PDFTOPS="$with_pdftops"
-	], [
-		AC_PATH_PROG(CUPS_PDFTOPS, [pdftops], [AC_MSG_ERROR([Required pdftops is missing. Please install CUPS developer packages.])])
-	])
+	AC_PATH_PROG(CUPS_PDFTOPS, [pdftops], [AC_MSG_ERROR([Required pdftops is missing. Please install CUPS developer packages.])])
+])
+AS_IF([test "x$CUPS_PDFTOPS" != "x"], [
 	AC_DEFINE([HAVE_POPPLER_PDFTOPS], [], [Define that we provide poppler pdftops.])
-	AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOPS], [Define default renderer])
+	AS_IF([test x"$with_pdftops" = xpdftops], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOPS], [Define default renderer])])
 
 	AC_MSG_CHECKING([whether pdftops supports -origpagesizes])
 	AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- -origpagesizes`], [
@@ -316,12 +317,10 @@ AS_IF([test x"$with_pdftops" = gs], [
         	AC_MSG_RESULT([no])
 	])
 ])
-DEFAULT_PDFTOPS=""
+
 AC_DEFINE_UNQUOTED([CUPS_GHOSTSCRIPT], "$CUPS_GHOSTSCRIPT", [gs binary to use])
 AC_DEFINE_UNQUOTED([CUPS_POPPLER_PDFTOPS], "$CUPS_PDFTOPS", [pdftops binary to use.])
 AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_MAX_RESOLUTION], [$CUPS_PDFTOPS_MAXRES], [max resolution used for pdftops when converting images])
-AC_SUBST(DEFAULT_PDFTOPS)
-AC_SUBST(PDFTOPS)
 
 # =============
 # Check for php

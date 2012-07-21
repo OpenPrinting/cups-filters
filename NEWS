@@ -1,8 +1,16 @@
-NEWS - OpenPrinting CUPS Filters v1.0.20 - 2012-07-19
+NEWS - OpenPrinting CUPS Filters v1.0.20 - 2012-07-21
 -----------------------------------------------------
 
 CHANGES IN V1.0.20
 
+	- pdftops: Added another workaround for Kyocera printers: Some
+	  models get very slow on images which request interpolation,
+	  so now we remove the image interpolation requests by additional
+	  PostScript code only inserted for Kyocera printers (Ubuntu bug
+	  #1026974).
+	- pdftops: The build system only configured the default renderer
+	  (Ghostscript OR Poppler), not the other renderer, but as we support
+	  switching on runtime both need to get configured.
 	- Improved portability of the package to non-Linux systems (Bug #1056).
 	- Made the Poppler-based filters pdftopdf and pdftoopvp build with
 	  both Poppler 0.18.x and 0.20.x (Bug #1055).
