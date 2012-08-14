@@ -208,6 +208,7 @@ PKG_CHECK_MODULES([IJS], [ijs])
 PKG_CHECK_MODULES([POPPLER], [poppler >= 0.18])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
+PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 3.0])
 
 # ================
 # Poppler features
