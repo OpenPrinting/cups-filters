@@ -100,7 +100,7 @@ QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page)
 
   // transform, so that bbox is [0 0 w h]  (in form space)
   PageRect bbox=getBoxAsRect(getTrimBox(page));
-  mtx.translate(-bbox.left,-bbox.top);  // we want it undone
+  mtx.translate(-bbox.left,-bbox.bottom);  // we want it undone
 
   dict.replaceKey("/BBox",makeBox(0,0,bbox.width,bbox.height)); // reqd
 

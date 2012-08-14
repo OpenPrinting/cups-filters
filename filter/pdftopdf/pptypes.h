@@ -14,6 +14,7 @@ enum Rotation { ROT_0, ROT_90, ROT_180, ROT_270 };  // CCW
 void Rotation_dump(Rotation rot);
 Rotation operator+(Rotation lhs,Rotation rhs);
 Rotation operator-(Rotation lhs,Rotation rhs);
+Rotation operator-(Rotation rhs);
 //Rotation operator+=(Rotation &lhs,Rotation rhs);
 
 enum BorderType { NONE=0, ONE_THIN=2, ONE_THICK=3, TWO_THIN=4, TWO_THICK=5,

@@ -96,69 +96,115 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     return false;
   }
 
-// TODO: -left/-right needs to be subtracted from param.nup.width/height
-
   std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> pages=proc.get_pages(); // TODO: shuffle
   const int numPages=pages.size();
   std::shared_ptr<PDFTOPDF_PageHandle> curpage;
   int outputno=0;
 
   if ( (param.nup.nupX==1)&&(param.nup.nupY==1)&&(!param.fitplot) ) {
+    // TODO? fitplot also without xobject?
+    /*
     param.nup.width=param.page.width;
     param.nup.height=param.page.height;
+    */
+
+    for (int iA=0;iA<numPages;iA++) {
+      if (!param.withPage(iA+1)) {
+        continue;
+      }
+
+      pages[iA]->rotate(param.orientation);
+
+      if (param.mirror) {
+        pages[iA]->mirror();
+      }
+
+      // place border
+      if (param.border!=BorderType::NONE) {
+#if 0 // would be nice, but is not possible
+        PageRect rect=pages[iA]->getRect();
+
+        rect.left+=param.page.left;
+        rect.bottom+=param.page.bottom;
+        rect.top-=param.page.top;
+        rect.right-=param.page.right;
+        // width,height not needed for add_border_rect (FIXME?)
+        pages[iA]->add_border_rect(rect,param.border,1.0); 
+#else // this is what pstops does
+        pages[iA]->add_border_rect(param.page,param.border,1.0); 
+#endif
+      }
+
+      proc.add_page(pages[iA],param.reverse); // reverse -> insert at beginning
+    }
+    outputno=numPages;
   } else {
+// TODO... -left/-right needs to be subtracted from param.nup.width/height
     param.nup.width=param.page.right-param.page.left;
     param.nup.height=param.page.top-param.page.bottom;
-  }
 
-  double xpos=param.page.left,
-         ypos=param.page.bottom; // for whole page... TODO from position...
-  NupState nupstate(param.nup);
-  NupPageEdit pgedit;
-  for (int iA=0;iA<numPages;iA++) {
-    PageRect rect=pages[iA]->getRect();
-//    rect.dump();
+    double xpos=param.page.left,
+           ypos=param.page.bottom; // for whole page... TODO from position...
 
-    bool newPage=nupstate.nextPage(rect.width,rect.height,pgedit);
-//    printf("%d\n",newPage);
-    if (newPage) {
-      if (param.withPage(outputno)) {
-        if ( (curpage)&&(param.mirror) ) {
-          curpage->mirror();
-        }
-        proc.add_page(curpage,param.reverse); // empty will just no-op;  reverse -> insert at beginning
-      }
-      outputno++;
-      curpage=proc.new_page(param.page.width,param.page.height);
+    if (param.nup.landscape) {
+//      pages[iA]->rotate(param.normal_landscape);
+      param.orientation=param.orientation+param.normal_landscape;
+      // TODO? better
+      std::swap(param.page.width,param.page.height);
+      std::swap(param.nup.width,param.nup.height);
     }
 
-// TODO: add frame, possibly already to original page?
-// TODO? -left/-right needs to be added back?
-pages[iA]->add_border_rect(rect,param.border,pgedit.scale);
-    curpage->add_subpage(pages[iA],pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
+    NupState nupstate(param.nup);
+    NupPageEdit pgedit;
+    for (int iA=0;iA<numPages;iA++) {
+      PageRect rect=pages[iA]->getRect();
+//      rect.dump();
+
+      bool newPage=nupstate.nextPage(rect.width,rect.height,pgedit);
+      if (newPage) {
+        if ( (param.withPage(outputno))&&(curpage) ) {
+          curpage->rotate(param.orientation);
+          if (param.mirror) {
+            curpage->mirror();
+// TODO? update rect? --- not needed any more
+          }
+          proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
+        }
+        outputno++;
+        curpage=proc.new_page(param.page.width,param.page.height);
+      }
+
+      if (param.border!=BorderType::NONE) {
+        // TODO? -left/-right needs to be added back?
+        pages[iA]->add_border_rect(rect,param.border,pgedit.scale);
+      }
+
+      curpage->add_subpage(pages[iA],pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
 
 #ifdef DEBUG
-    if (auto dbg=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(curpage.get())) {
-//      dbg->debug(pgedit.sub,xpos,ypos);
-    }
+      if (auto dbg=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(curpage.get())) {
+//        dbg->debug(pgedit.sub,xpos,ypos);
+      }
 #endif
 
-//    pgedit.dump();
-  }
-  if (param.withPage(outputno)) { 
-    if ( (curpage)&&(param.mirror) ) {
-      curpage->mirror();
+//      pgedit.dump();
     }
-    proc.add_page(curpage,param.reverse); // empty will just no-op;  reverse -> insert at beginning
+    if ( (param.withPage(outputno))&&(curpage) ) {
+      curpage->rotate(param.orientation);
+      if (param.mirror) {
+        curpage->mirror();
+      }
+      outputno++;
+      proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
+    }
   }
 
-  if (param.evenDuplex) {
+  if ( (param.evenDuplex)&&(outputno&1) ) {
     // need to output empty page to not confuse duplex
     proc.add_page(proc.new_page(param.page.width,param.page.height),param.reverse);
   }
 
-  // TODO: copies (w/ collate ...)
-  proc.multiply(param.numCopies);
+  proc.multiply(param.numCopies,param.collate);
 
 //fprintf(stderr,"TODO setProcess\n");
 

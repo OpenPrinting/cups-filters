@@ -67,7 +67,7 @@ public:
 
   virtual void add_page(std::shared_ptr<PDFTOPDF_PageHandle> page,bool front);
 
-  virtual void multiply(int copies);
+  virtual void multiply(int copies,bool collate);
 
   virtual void addCM(const char *defaulticc,const char *outputicc);
 

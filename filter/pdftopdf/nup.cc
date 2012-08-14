@@ -50,7 +50,7 @@ void NupParameters::dump() const // {{{
 
 bool NupParameters::possible(int nup) // {{{
 {
-  // 1 2 3 4 6 8 9 10 12 15
+  // 1 2 3 4 6 8 9 10 12 15 16
   return (nup>=1)&&(nup<=16)&&
          ( (nup!=5)||(nup!=7)||(nup!=11)||(nup!=13)||(nup!=14) );
 }
@@ -104,6 +104,10 @@ void NupParameters::preset(int nup,NupParameters &ret) // {{{
     ret.nupX=5;
     ret.nupY=3;
     ret.landscape=true;
+    break;
+  case 16:
+    ret.nupX=4;
+    ret.nupY=4;
     break;
   }
 }

@@ -28,6 +28,7 @@ public:
   Matrix &operator*=(const Matrix &rhs);
 
   QPDFObjectHandle get() const;
+  std::string get_string() const;
 private:
   double ctm[6];
 };

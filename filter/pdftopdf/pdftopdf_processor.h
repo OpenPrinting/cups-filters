@@ -11,7 +11,7 @@ struct ProcessingParameters {
     : jobId(0),numCopies(1),
       user(0),title(0),
       fitplot(false),
-      orientation(ROT_0),
+      orientation(ROT_0),normal_landscape(ROT_270),
       duplex(false),
       border(NONE),
       reverse(false),
@@ -45,7 +45,7 @@ struct ProcessingParameters {
   const char *user, *title; // will stay around
   bool fitplot;
   PageRect page;
-  Rotation orientation;
+  Rotation orientation,normal_landscape;  // normal_landscape (i.e. default direction) is e.g. needed for number-up=2 
   bool duplex;
   BorderType border;
   NupParameters nup;
@@ -119,7 +119,7 @@ public:
 
 //  void remove_page(std::shared_ptr<PDFTOPDF_PageHandle> ph);  // not needed: we construct from scratch, at least conceptually.
 
-  virtual void multiply(int copies) =0;
+  virtual void multiply(int copies,bool collate) =0;
 
   virtual void addCM(const char *defaulticc,const char *outputicc) =0;
 

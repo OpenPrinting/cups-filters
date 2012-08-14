@@ -7,12 +7,12 @@ PageRect getBoxAsRect(QPDFObjectHandle box) // {{{
   PageRect ret;
 
   ret.left=box.getArrayItem(0).getNumericValue();
-  ret.top=box.getArrayItem(1).getNumericValue();
+  ret.bottom=box.getArrayItem(1).getNumericValue();
   ret.right=box.getArrayItem(2).getNumericValue();
-  ret.bottom=box.getArrayItem(3).getNumericValue();
+  ret.top=box.getArrayItem(3).getNumericValue();
 
   ret.width=ret.right-ret.left;
-  ret.height=ret.bottom-ret.top;
+  ret.height=ret.top-ret.bottom;
 
   return ret;
 }
@@ -56,10 +56,11 @@ QPDFObjectHandle makeRotate(Rotation rot) // {{{
 
 QPDFObjectHandle getRectAsBox(const PageRect &rect) // {{{
 {
-  return makeBox(rect.left,rect.top,rect.right,rect.bottom);
+  return makeBox(rect.left,rect.bottom,rect.right,rect.top);
 }
 // }}}
 
+#include <qpdf/QUtil.hh>
 
 Matrix::Matrix() // {{{
   : ctm({1,0,0,1,0,0})
@@ -121,8 +122,8 @@ Matrix &Matrix::rotate(double rad) // {{{
 
 Matrix &Matrix::translate(double tx,double ty) // {{{
 {
-  ctm[4]+=tx;
-  ctm[5]+=ty;
+  ctm[4]+=ctm[0]*tx+ctm[2]*ty;
+  ctm[5]+=ctm[1]*tx+ctm[3]*ty;
   return *this;
 }
 // }}}
@@ -164,6 +165,24 @@ QPDFObjectHandle Matrix::get() const // {{{
   ret.appendItem(QPDFObjectHandle::newReal(ctm[3]));
   ret.appendItem(QPDFObjectHandle::newReal(ctm[4]));
   ret.appendItem(QPDFObjectHandle::newReal(ctm[5]));
+  return ret;
+}
+// }}}
+
+std::string Matrix::get_string() const // {{{
+{
+  std::string ret;
+  ret.append(QUtil::double_to_string(ctm[0]));
+  ret.append(" ");
+  ret.append(QUtil::double_to_string(ctm[1]));
+  ret.append(" ");
+  ret.append(QUtil::double_to_string(ctm[2]));
+  ret.append(" ");
+  ret.append(QUtil::double_to_string(ctm[3]));
+  ret.append(" ");
+  ret.append(QUtil::double_to_string(ctm[4]));
+  ret.append(" ");
+  ret.append(QUtil::double_to_string(ctm[5]));
   return ret;
 }
 // }}}

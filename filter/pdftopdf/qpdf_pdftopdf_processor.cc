@@ -25,13 +25,16 @@ static std::string debug_box(const PageRect &box,float xshift,float yshift) // {
 // }}}
 
 QPDF_PDFTOPDF_PageHandle::QPDF_PDFTOPDF_PageHandle(QPDFObjectHandle page,int orig_no) // {{{
-  : page(page),no(orig_no)
+  : page(page),
+    no(orig_no),
+    rotation(ROT_0)
 {
 }
 // }}}
 
 QPDF_PDFTOPDF_PageHandle::QPDF_PDFTOPDF_PageHandle(QPDF *pdf,float width,float height) // {{{
-  : no(0)
+  : no(0),
+    rotation(ROT_0)
 {
   assert(pdf);
   page=QPDFObjectHandle::parse(
@@ -75,9 +78,9 @@ QPDFObjectHandle QPDF_PDFTOPDF_PageHandle::get() // {{{
     page.getKey("/Resources").replaceKey("/XObject",QPDFObjectHandle::newDictionary(xobjs));
     content.append("Q\n");
     page.getKey("/Contents").replaceStreamData(content,QPDFObjectHandle::newNull(),QPDFObjectHandle::newNull());
-    page.replaceOrRemoveKey("/Rotate",makeRotate(rotation));
+    page.replaceOrRemoveKey("/Rotate",makeRotate(-rotation));
   } else {
-    Rotation rot=getRotate(page)+rotation;
+    Rotation rot=getRotate(page)-rotation;
     page.replaceOrRemoveKey("/Rotate",makeRotate(rot));
   }
   page=QPDFObjectHandle(); // i.e. uninitialized
@@ -85,69 +88,68 @@ QPDFObjectHandle QPDF_PDFTOPDF_PageHandle::get() // {{{
 }
 // }}}
 
-  // TODO: factor out pre- and post-   ... also needed by mirror()!
-// TODO: add TWO, etc.; remove detection(?)
+  // TODO: factor out pre- and post-   ... also needed by mirror()!(?)
 // TODO? for non-existing (either drop comment or facility to create split streams needed)
 void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &rect,BorderType border,float fscale) // {{{
 {
   assert(isExisting());
+  assert(border!=BorderType::NONE);
   static const char *pre="%pdftopdf q\n"
                          "q\n",
                     *post="%pdftopdf Q\n"
                           "Q\n";
 
 // fscale:  inverse_scale (from nup, fitplot)
-// margin:  2.25*fscale
-// line_width:  ((thick)?0.5:0.24)*fscale
+  fscale=1.0/fscale; // TODO?
+
+  // straight from pstops
+  const double lw=(border&THICK)?0.5:0.24;
+  double line_width=lw*fscale;
+  double margin=2.25*fscale;
 // (PageLeft+margin,PageBottom+margin) rect (PageRight-PageLeft-2*margin,...)   ... for nup>1: PageLeft=0,etc.
    //  if (double)  margin+=2*fscale ...rect...
 
-  std::string boxcmd=std::string("q 1 w 0 G \n")+ // TODO
-                     QUtil::double_to_string(rect.left)+" "+QUtil::double_to_string(rect.top)+"  "+
-                     QUtil::double_to_string(rect.right-rect.left)+" "+QUtil::double_to_string(rect.bottom-rect.top)+" re S \nQ\n";
-  // TODO: border.style ...
+  std::string boxcmd="q\n";
+  boxcmd+="  "+QUtil::double_to_string(line_width)+" w 0 G \n";
+  boxcmd+="  "+QUtil::double_to_string(rect.left)+" "+QUtil::double_to_string(rect.bottom)+"  "+
+               QUtil::double_to_string(rect.right-rect.left)+" "+QUtil::double_to_string(rect.top-rect.bottom)+" re S\n";
+  if (border&TWO) {
+  boxcmd+="  "+QUtil::double_to_string(line_width*2)+" w 0.5 G \n";
+    boxcmd+="  "+QUtil::double_to_string(rect.left+margin)+" "+QUtil::double_to_string(rect.bottom+margin)+"  "+
+                 QUtil::double_to_string(rect.right-rect.left-2*margin)+" "+QUtil::double_to_string(rect.top-rect.bottom-2*margin)+" re S \n";
+  }
+  boxcmd+="Q\n";
 
 // if (!isExisting()) {
 //   // TODO: only after 
 //   return;
 // }
 
-  std::vector<QPDFObjectHandle> cntnt=page.getPageContents();
-  if (cntnt.size()>=3) { // detect previous invocation box and replace
-    // check cntnt.front() and cntnt.back()
-    PointerHolder<Buffer> pbuf_f=cntnt.front().getStreamData();
-    PointerHolder<Buffer> pbuf_b=cntnt.back().getStreamData();
-    if ( (pbuf_f->getSize()>12)&&(strncmp((char *)pbuf_f->getBuffer(),pre,12)==0)&& 
-         (pbuf_b->getSize()>12)&&(strncmp((char *)pbuf_b->getBuffer(),post,12)==0) ) {
-      // leave "stm1" alone, replace stm2
-      cntnt.back().replaceStreamData(std::string(post)+boxcmd,QPDFObjectHandle::newNull(),QPDFObjectHandle::newNull());
-      boxcmd.clear();
-    }
-  }
-  if (!boxcmd.empty()) {
-    assert(page.getOwningQPDF()); // existing pages are always indirect
-    QPDFObjectHandle stm1=QPDFObjectHandle::newStream(page.getOwningQPDF(),pre),
-                     stm2=QPDFObjectHandle::newStream(page.getOwningQPDF(),std::string(post)+boxcmd);
+  assert(page.getOwningQPDF()); // existing pages are always indirect
+  QPDFObjectHandle stm1=QPDFObjectHandle::newStream(page.getOwningQPDF(),pre),
+                   stm2=QPDFObjectHandle::newStream(page.getOwningQPDF(),std::string(post)+boxcmd);
 
-    page.addPageContents(stm1,true); // before
-    page.addPageContents(stm2,false); // after
-  }
+  page.addPageContents(stm1,true); // before
+  page.addPageContents(stm2,false); // after
 }
 // }}}
 
+// TODO: test rotation
 void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale) // {{{
 {
   auto qsub=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(sub.get());
   assert(qsub);
 
   std::string xoname="/X"+QUtil::int_to_string((qsub->no!=-1)?qsub->no:++no);
-  xobjs[xoname]=makeXObject(qsub->page.getOwningQPDF(),qsub->page); // trick: should be the same as page->getOwningQPDF() [only after made indirect]
+  xobjs[xoname]=makeXObject(qsub->page.getOwningQPDF(),qsub->page); // trick: should be the same as page->getOwningQPDF() [only after it's made indirect]
+
+  Matrix mtx;
+  mtx.translate(xpos,ypos);
+  mtx.scale(scale);
+  mtx.rotate(qsub->rotation); // TODO? -sub.rotation ?
 
   content.append("q\n  ");
-  content.append(QUtil::double_to_string(scale)+" 0 0 "+
-                 QUtil::double_to_string(scale)+" "+
-                 QUtil::double_to_string(xpos)+" "+
-                 QUtil::double_to_string(ypos)+" cm\n  ");
+  content.append(mtx.get_string()+" cm\n  ");
   content.append(xoname+" Do\n");
   content.append("Q\n");
 }
@@ -197,6 +199,7 @@ void QPDF_PDFTOPDF_PageHandle::debug(const PageRect &rect,float xpos,float ypos)
 void QPDF_PDFTOPDF_Processor::closeFile() // {{{
 {
   pdf.reset();
+  hasCM=false;
 }
 // }}}
 
@@ -348,18 +351,26 @@ void QPDF_PDFTOPDF_Processor::add_page(std::shared_ptr<PDFTOPDF_PageHandle> page
   pdf->getRoot().removeKey("/PageLabels");
 #endif
 
-// TODO? test
-void QPDF_PDFTOPDF_Processor::multiply(int copies) // {{{
+// TODO FIXME: not collated
+void QPDF_PDFTOPDF_Processor::multiply(int copies,bool collate) // {{{
 {
   assert(pdf);
   assert(copies>0); 
 
-  std::vector<QPDFObjectHandle> pages=pdf->getAllPages();
+  std::vector<QPDFObjectHandle> pages=pdf->getAllPages(); // need copy
   const int len=pages.size();
 
-  for (int iA=1;iA<copies;iA++) {
+  if (collate) {
+    for (int iA=1;iA<copies;iA++) {
+      for (int iB=0;iB<len;iB++) {
+        pdf->addPage(pages[iB].shallowCopy(),false);
+      }
+    }
+  } else {
     for (int iB=0;iB<len;iB++) {
-      pdf->addPage(pages[iB].shallowCopy(),false);
+      for (int iA=1;iA<copies;iA++) {
+        pdf->addPage(pages[iB].shallowCopy(),false);
+      }
     }
   }
 }
@@ -380,6 +391,8 @@ void QPDF_PDFTOPDF_Processor::addCM(const char *defaulticc,const char *outputicc
   addDefaultRGB(*pdf,srcicc);
 
   addOutputIntent(*pdf,outputicc);
+
+  hasCM=true;
 }
 // }}}
 
@@ -400,6 +413,11 @@ void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,ArgOwnership take) // {{{
     error("emitFile with MustDuplicate is not supported");
     return;
   }
+  if (hasCM) {
+    out.setMinimumPDFVersion("1.4");
+  } else {
+    out.setMinimumPDFVersion("1.2");
+  }
   out.write();
 }
 // }}}
@@ -411,6 +429,11 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name) // {{{
   }
   // special case: name==NULL -> stdout
   QPDFWriter out(*pdf,name);
+  if (hasCM) {
+    out.setMinimumPDFVersion("1.4");
+  } else {
+    out.setMinimumPDFVersion("1.2");
+  }
   out.write();
 }
 // }}}
