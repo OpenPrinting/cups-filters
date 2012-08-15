@@ -146,6 +146,11 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     double xpos=param.page.left,
            ypos=param.page.bottom; // for whole page... TODO from position...
 
+    if ( (param.orientation==ROT_90)||(param.orientation==ROT_270) ) {
+      std::swap(param.nup.nupX,param.nup.nupY);
+      param.nup.landscape=!param.nup.landscape;
+      param.orientation=param.orientation-param.normal_landscape;
+    }
     if (param.nup.landscape) {
 //      pages[iA]->rotate(param.normal_landscape);
       param.orientation=param.orientation+param.normal_landscape;
