@@ -6,6 +6,8 @@
 #include "intervalset.h"
 #include <vector>
 
+enum BookletMode { BOOKLET_OFF, BOOKLET_ON, BOOKLET_JUSTSHUFFLE };
+
 struct ProcessingParameters {
   ProcessingParameters() 
     : jobId(0),numCopies(1),
@@ -25,6 +27,8 @@ struct ProcessingParameters {
 
       collate(false),
       evenDuplex(false),
+
+      booklet(BOOKLET_OFF),bookSignature(-1),
 
       emitJCL(true),deviceCopies(1),
       setDuplex(false),unsetCollate(false)
@@ -68,6 +72,9 @@ struct ProcessingParameters {
 */
   bool evenDuplex; // make number of pages a multiple of 2
 
+  BookletMode booklet;
+  int bookSignature;
+
   bool emitJCL;
   int deviceCopies;
 
@@ -90,6 +97,7 @@ class PDFTOPDF_PageHandle {
 public:
   virtual ~PDFTOPDF_PageHandle() {}
   virtual PageRect getRect() const =0;
+  // fscale:  inverse_scale (from nup, fitplot)
   virtual void add_border_rect(const PageRect &rect,BorderType border,float fscale) =0;
   virtual void add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale) =0; // or simply: const NupPageEdit &edit
   virtual void mirror() =0;
@@ -133,6 +141,9 @@ public:
   // never NULL, but may throw.
   static PDFTOPDF_Processor *processor();
 };
+
+//bool checkBookletSignature(int signature) { return (signature%4==0); }
+std::vector<int> bookletShuffle(int numPages,int signature=-1);
 
 // This is all we want: 
 bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param);

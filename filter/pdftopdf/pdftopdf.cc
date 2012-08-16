@@ -402,6 +402,7 @@ void calculate(ppd_file_t *ppd,int num_options,cups_option_t *options,Processing
     } else if (strcasecmp(val,"odd")==0) {
       param.evenPages=false;
     }
+    // TODO else { error(); }
   }
 
   if ( (val=cupsGetOption("page-ranges",num_options,options)) != NULL) {
@@ -420,6 +421,24 @@ void calculate(ppd_file_t *ppd,int num_options,cups_option_t *options,Processing
   ...
   // TODO: emit-jcl
 */
+
+  param.booklet=BookletMode::BOOKLET_OFF;
+  if ( (val=cupsGetOption("booklet",num_options,options)) != NULL) {
+    if (strcasecmp(val,"shuffle-only")==0) {
+      param.booklet=BookletMode::BOOKLET_JUSTSHUFFLE;
+    } else if (is_true(val)) {
+      param.booklet=BookletMode::BOOKLET_ON;
+    } else if (!is_false(val)) {
+      error("Unsupported booklet value %s, using booklet=off!",val);
+    }
+  }
+  param.bookSignature=-1;
+  if (optGetInt("booklet-signature",num_options,options,&param.bookSignature)) {
+    if (param.bookSignature==0) {
+      error("Unsupported booklet-signature value, using booklet-signature=-1 (all)!",val);
+      param.bookSignature=-1;
+    }
+  }
 
   if ( (val=cupsGetOption("position",num_options,options)) != NULL) {
     if (!parsePosition(val,param.xpos,param.ypos)) {
