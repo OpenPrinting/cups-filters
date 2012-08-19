@@ -171,14 +171,14 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
   mtx.rotate(qsub->rotation); // TODO? -sub.rotation ?  // TODO FIXME: this might need another translation!?
   if (crop) { // TODO? other technique: set trim-box before makeXObject (but this modifies original page)
     mtx.translate(crop->left,crop->bottom);
-    crop->dump();
+//    crop->dump();
   }
 
   content.append("q\n  ");
   content.append(mtx.get_string()+" cm\n  ");
   if (crop) {
-//    content.append("0 0 "+QUtil::double_to_string(crop->right-crop->left)+" "+QUtil::double_to_string(crop->top-crop->bottom)+" re W n\n  ");
-    content.append("0 0 "+QUtil::double_to_string(crop->right-crop->left)+" "+QUtil::double_to_string(crop->top-crop->bottom)+" re S\n  ");
+    content.append("0 0 "+QUtil::double_to_string(crop->right-crop->left)+" "+QUtil::double_to_string(crop->top-crop->bottom)+" re W n\n  ");
+//    content.append("0 0 "+QUtil::double_to_string(crop->right-crop->left)+" "+QUtil::double_to_string(crop->top-crop->bottom)+" re S\n  ");
   }
   content.append(xoname+" Do\n");
   content.append("Q\n");

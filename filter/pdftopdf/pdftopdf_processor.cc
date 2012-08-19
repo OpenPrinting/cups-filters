@@ -219,6 +219,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     double xpos=param.page.left,
            ypos=param.page.bottom; // for whole page... TODO from position...
 
+const bool origls=param.nup.landscape;
     if ( (param.orientation==ROT_90)||(param.orientation==ROT_270) ) {
       std::swap(param.nup.nupX,param.nup.nupY);
       param.nup.landscape=!param.nup.landscape;
@@ -247,14 +248,24 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
       if (param.fitplot) {
         rect=page->getRect();
       } else {
+        rect.width=param.page.width;
+        rect.height=param.page.height;
+
+        if (!origls) { // TODO?! better
+          if ( (param.orientation==ROT_90)||(param.orientation==ROT_270) ) {
+            std::swap(rect.width,rect.height);
+          }
+        } else {
+          if ( (param.orientation==ROT_0)||(param.orientation==ROT_180) ) {
+            std::swap(rect.width,rect.height);
+          }
+        }
+
 // TODO?
         rect.left=0;
         rect.bottom=0;
-        rect.right=param.page.width;
-        rect.top=param.page.height;
-
-        rect.width=param.page.width;
-        rect.height=param.page.height;
+        rect.right=rect.width;
+        rect.top=rect.height;
 
         rect.rotate_move(param.orientation,rect.width,rect.height);
       }
@@ -283,8 +294,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
         page->add_border_rect(rect,param.border,1.0/pgedit.scale);
       }
 
-//      curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale,&rect); // TODO: FIXME 
-      curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
+      curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale,&rect);
+//      curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
 
 #ifdef DEBUG
       if (auto dbg=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(curpage.get())) {
