@@ -24,16 +24,25 @@ Rotation getRotate(QPDFObjectHandle page) // {{{
     return ROT_0;
   }
   double rot=page.getKey("/Rotate").getNumericValue();
-  if (rot==90.0) {
-    return ROT_90;
+  if (rot==90.0) { // CW 
+    return ROT_270; // CCW
   } else if (rot==180.0) {
     return ROT_180;
   } else if (rot==270.0) {
-    return ROT_270;
+    return ROT_90;
   } else {
     assert(rot==0.0);
   }
   return ROT_0;
+}
+// }}}
+
+double getUserUnit(QPDFObjectHandle page) // {{{
+{
+  if (!page.hasKey("/UserUnit")) {
+    return 1.0;
+  }
+  return page.getKey("/UserUnit").getNumericValue();
 }
 // }}}
 
@@ -42,10 +51,12 @@ QPDFObjectHandle makeRotate(Rotation rot) // {{{
   switch (rot) {
   case ROT_0:
     return QPDFObjectHandle::newNull();
-  case ROT_90:
+  case ROT_90: // CCW
+    return QPDFObjectHandle::newInteger(270); // CW
   case ROT_180:
+    return QPDFObjectHandle::newInteger(180);
   case ROT_270:
-    return QPDFObjectHandle::newInteger(rot*90);
+    return QPDFObjectHandle::newInteger(90);
   default:
     throw std::invalid_argument("Bad rotation");
   }
@@ -102,6 +113,27 @@ Matrix &Matrix::rotate(Rotation rot) // {{{
     break;
   default:
     assert(0);
+  }
+  return *this;
+}
+// }}}
+
+// TODO: test
+Matrix &Matrix::rotate_move(Rotation rot,double width,double height) // {{{
+{
+  rotate(rot);
+  switch (rot) {
+  case ROT_0:
+    break;
+  case ROT_90:
+    translate(width,0);
+    break;
+  case ROT_180:
+    translate(width,height);
+    break;
+  case ROT_270:
+    translate(0,height);
+    break;
   }
   return *this;
 }

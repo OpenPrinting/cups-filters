@@ -98,17 +98,17 @@ void IntervalSet::dump() const // {{{
 {
   int len=data.size();
   if (len==0) {
-    printf("(empty)\n");
+    fprintf(stderr,"(empty)\n");
     return;
   }
   len--;
   for (int iA=0;iA<len;iA++) {
-    printf("[%d,%d),",data[iA].first,data[iA].second);
+    fprintf(stderr,"[%d,%d),",data[iA].first,data[iA].second);
   }
   if (data[len].second==npos) {
-    printf("[%d,inf)\n",data[len].first);
+    fprintf(stderr,"[%d,inf)\n",data[len].first);
   } else {
-    printf("[%d,%d)\n",data[len].first,data[len].second);
+    fprintf(stderr,"[%d,%d)\n",data[len].first,data[len].second);
   }
 }
 // }}}

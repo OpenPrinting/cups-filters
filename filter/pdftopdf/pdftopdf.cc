@@ -53,6 +53,12 @@ PrinterFeatures getPrinterFeatures(ppd_file_t *ppd)
 
 void setFinalPPD(ppd_file_t *ppd,const ProcessingParameters &param)
 {
+  if ( (param.booklet==BOOKLET_ON)&&(ppdFindOption(ppd,"Duplex")) ) {
+    // TODO: elsewhere, better
+    ppdMarkOption(ppd,"Duplex","DuplexTumble");
+    // TODO? sides=two-sided-short-edge
+  }
+
   // for compatibility
   if ( (param.setDuplex)&&(ppdFindOption(ppd,"Duplex")!=NULL) ) {
     ppdMarkOption(ppd,"Duplex","True");
@@ -69,9 +75,23 @@ void setFinalPPD(ppd_file_t *ppd,const ProcessingParameters &param)
   if (param.unsetCollate) {
     ppdMarkOption(ppd,"Collate","False");
   }
-/*
 
-*/
+#if 0
+  if (ppd) {
+    if (ppd->manual_copies) {
+      // disable any hardware copying
+      ppdMarkOption(ppd,"Copies","1");
+      ppdMarkOption(ppd,"JCLCopies","1");
+    } else {
+      // use hardware copying
+      param.deviceCopies=param.numCopies;
+      param.numCopies=1;
+    }
+  }
+#else
+  ppdMarkOption(ppd,"Copies","1");
+  ppdMarkOption(ppd,"JCLCopies","1");
+#endif
 }
 
 // for choice, only overwrites ret if found in ppd
@@ -146,7 +166,8 @@ static bool ppdGetDuplex(ppd_file_t *ppd) // {{{
 }
 // }}}
 
-static bool ppdDefaultOrder(ppd_file_t *ppd) // {{{
+// TODO: enum
+static bool ppdDefaultOrder(ppd_file_t *ppd) // {{{  -- is reverse?
 {
   ppd_choice_t *choice;
   ppd_attr_t *attr;
@@ -161,7 +182,13 @@ static bool ppdDefaultOrder(ppd_file_t *ppd) // {{{
   } else if ( (attr=ppdFindAttr(ppd,"DefaultOutputOrder",0)) != NULL) {
     val=attr->value;
   }
-  return (val)&&(strcasecmp(val,"Reverse")==0);
+  if ( (!val)||(strcasecmp(val,"Normal")==0) ) {
+    return false;
+  } else if (strcasecmp(val,"Reverse")==0) {
+    return true;
+  }
+  error("Unsupported output-order value %s, using 'normal'!",val);
+  return false;
 }
 // }}}
 
@@ -279,7 +306,7 @@ static bool parseBorder(const char *val,BorderType &ret) // {{{
 }
 // }}}
 
-void calculate(ppd_file_t *ppd,int num_options,cups_option_t *options,ProcessingParameters &param)
+void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,ProcessingParameters &param) // {{{
 {
   // param.numCopies initially from commandline
   if (param.numCopies==1) {
@@ -295,10 +322,9 @@ void calculate(ppd_file_t *ppd,int num_options,cups_option_t *options,Processing
       val=cupsGetOption("ipp-attribute-fidelity",num_options,options);
     }
   }
-// TODO?  pstops checks =="true", pdftops !is_false
+// TODO?  pstops checks =="true", pdftops !is_false  ... pstops says: fitplot only for PS (i.e. not for PDF, cmp. cgpdftopdf)
   param.fitplot=(val)&&(!is_false(val));
 
-  // TODO? elsewhere
   if ( (ppd)&&(ppd->landscape>0) ) { // direction the printer rotates landscape (90 or -90)
     param.normal_landscape=ROT_90;
   } else {
@@ -335,16 +361,24 @@ void calculate(ppd_file_t *ppd,int num_options,cups_option_t *options,Processing
   }
 
   PageRect tmp; // borders (before rotation)
+
   optGetFloat("page-top",num_options,options,&tmp.top);
   optGetFloat("page-left",num_options,options,&tmp.left);
   optGetFloat("page-right",num_options,options,&tmp.right);
   optGetFloat("page-bottom",num_options,options,&tmp.bottom);
-  tmp.rotate(param.orientation);
 
-  // NaN stays NaN
-  tmp.right=param.page.width-tmp.right;
-  tmp.top=param.page.height-tmp.top;
-  param.page.set(tmp); // replace values, where tmp.* != NaN
+  if ( (param.orientation==ROT_90)||(param.orientation==ROT_270) ) { // unrotate page
+    // NaN stays NaN
+    tmp.right=param.page.height-tmp.right;
+    tmp.top=param.page.width-tmp.top;
+    tmp.rotate_move(param.orientation,param.page.height,param.page.width);
+  } else {
+    tmp.right=param.page.width-tmp.right;
+    tmp.top=param.page.height-tmp.top;
+    tmp.rotate_move(param.orientation,param.page.width,param.page.height);
+  }
+
+  param.page.set(tmp); // replace values, where tmp.* != NaN  (because tmp needed rotation, param.page not!)
 
   if (ppdGetDuplex(ppd)) {
     param.duplex=true;
@@ -356,6 +390,8 @@ void calculate(ppd_file_t *ppd,int num_options,cups_option_t *options,Processing
          (strcasecmp(val,"two-sided-short-edge")==0) ) {
       param.duplex=true;
       param.setDuplex=true;
+    } else if (strcasecmp(val,"one-sided")!=0) {
+      error("Unsupported sides value %s, using sides=one-sided!",val);
     }
   }
 
@@ -401,8 +437,9 @@ void calculate(ppd_file_t *ppd,int num_options,cups_option_t *options,Processing
       param.oddPages=false;
     } else if (strcasecmp(val,"odd")==0) {
       param.evenPages=false;
+    } else if (strcasecmp(val,"all")!=0) {
+      error("Unsupported page-set value %s, using page-set=all!",val);
     }
-    // TODO else { error(); }
   }
 
   if ( (val=cupsGetOption("page-ranges",num_options,options)) != NULL) {
@@ -417,10 +454,9 @@ void calculate(ppd_file_t *ppd,int num_options,cups_option_t *options,Processing
   }
   param.mirror=is_true(val);
 
-/*
-  ...
-  // TODO: emit-jcl
-*/
+  if ( (val=cupsGetOption("emit-jcl",num_options,options)) != NULL) {
+    param.emitJCL=!is_false(val)&&(strcmp(val,"0")!=0);
+  }
 
   param.booklet=BookletMode::BOOKLET_OFF;
   if ( (val=cupsGetOption("booklet",num_options,options)) != NULL) {
@@ -489,21 +525,24 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
   // TODO? pdftopdf* ?
   // TODO?! pdftopdfAutoRotate
 }
+// }}}
 
-void parseOpts(int argc, char **argv)
+void calculate(ppd_file_t *ppd,ProcessingParameters &param)
 {
-/*
-  ppd_attr_t *attr;
-  ppd_choice_t *choice;
-  ppd_size_t *pagesize;
+  // First step: no device copies, no device collate, no device reverse.
 
-  if (P2PDoc::options.copies == 1
-     && (choice = ppdFindMarkedChoice(ppd,"Copies")) != NULL) {
-    P2PDoc::options.copies = atoi(choice->choice);
+// TODO? better
+  param.deviceReverse=false;
+  if (param.reverse) {
+    // test OutputOrder of hardware (ppd)
+    if (ppdFindOption(ppd,"OutputOrder") != NULL) {
+      param.deviceReverse=true;
+      param.reverse=false;
+    } else {
+      // Enable evenDuplex or the first page may be empty.
+      param.evenDuplex=true; // disabled later, if non-duplex
+    }
   }
-*/
-}
-
 /*
   TODO:
     force collate for duplex and not hw-collate
@@ -525,50 +564,45 @@ void parseOpts(int argc, char **argv)
     }
   }
 
-  // check OutputOrder device
-  if (P2PDoc::options.reverse) {
-    if (ppdFindOption(ppd,"OutputOrder") != NULL) {
-      deviceReverse = gTrue;  // i.e. also param.reverse=false; !!
-    }
-  }
+see also setFinalPPD()
+*/
 
-  // TODO...
-  if (!param.duplex) {
-    param.evenDuplex=false;
-  } else if ( (slow_collate)||(slow_order) ) {
-    param.evenDuplex=true;
+  if (param.numCopies==1) {
+    // collate is not needed
+    param.collate=false; // does not make a big difference for us
+    param.unsetCollate=true;
+  }
+/* TODO?
+  if (...numOutputPages==1 [after nup,evenDuplex!]) {
+    param.collate=false; // does not make a big difference for us
+    param.unsetCollate=true; // TODO: is this worth it?
   }
 */
 
-void dump_options(int num_options,cups_option_t *options)
-{
-  printf("%d options:\n",num_options);
-  for (int iA=0;iA<num_options;iA++) {
-    printf("  %s: %s\n",options[iA].name,options[iA].value);
+  // TODO: other possibility would be: if (param.collate) { param.collate=false; param.unsetCollate=false; }
+  param.unsetCollate=true;
+
+  if ( (param.collate)&&(!param.unsetCollate) ) { // TODO?
+    param.evenDuplex=true;
   }
+
+  if (!param.duplex) {
+    param.evenDuplex=false;
+  }
+
+  // not needed yet: TODO
+  // param.deviceCopies=1;
+  // ppd->manual_copies=1; // ??
+
+  setFinalPPD(ppd,param);
 }
 
-void debugdump()
+void dump_options(int num_options,cups_option_t *options)
 {
-  ppd_file_t *ppd=NULL;
-putenv((char*)"PPD=/etc/cups/ppd/lj4l.ppd");
-//putenv((char*)"PPD=/etc/cups/ppd/aficio.ppd");
-//putenv((char*)"PPD=/etc/cups/ppd/PDF.ppd");
-  ppd=ppdOpenFile(getenv("PPD"));
-  printf("%s\n",ppdErrorString(ppdLastError(NULL)));
-  printf("%p\n",ppd);
-
- ppdMarkDefaults(ppd);
-
-  int num_options =0;
-  cups_option_t *options=NULL;
-// num_options=cupsParseOptions(,0,&options);
-num_options=cupsAddOption("PageSize","A5",num_options,&options);
-dump_options(num_options,options);
-  cupsMarkOptions(ppd,num_options,options);
-//ppdEmit(ppd,stdout,PPD_ORDER_ANY);  // debug output
-
-  cupsFreeOptions(num_options,options);
+  fprintf(stderr,"%d options:\n",num_options);
+  for (int iA=0;iA<num_options;iA++) {
+    fprintf(stderr,"  %s: %s\n",options[iA].name,options[iA].value);
+  }
 }
 
 // reads from stdin into temporary file. returns FILE *  or NULL on error 
@@ -616,8 +650,6 @@ int main(int argc,char **argv)
   if ( (argc<6)||(argc>7) ) {
     fprintf(stderr,"Usage: %s job-id user title copies options [file]\n",argv[0]);
 #ifdef DEBUG
-    debugdump();
-
 ProcessingParameters param;
 std::unique_ptr<PDFTOPDF_Processor> proc1(PDFTOPDF_Factory::processor());
   param.page.width=595.276; // A4
@@ -665,15 +697,11 @@ proc1->emitFilename("out.pdf");
 
   cupsMarkOptions(ppd,num_options,options);
 
-  // TODO: process options.
-  calculate(ppd,num_options,options,param);
+  getParameters(ppd,num_options,options,param);
+  calculate(ppd,param);
+
 #ifdef DEBUG
-  int oldfd=dup(1),newfd=dup(2);
-  dup2(newfd,1);
-  close(newfd);
   param.dump();
-  dup2(oldfd,1);
-  close(oldfd);
 #endif
 
   cupsFreeOptions(num_options,options);

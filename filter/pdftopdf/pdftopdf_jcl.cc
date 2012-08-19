@@ -6,63 +6,65 @@
 
 // TODO: -currently changes ppd.
 //
-static void emitJCLOptions(FILE *fp, ppd_file_t *ppd, int copies)
+static void emitJCLOptions(FILE *fp, ppd_file_t *ppd, int deviceCopies) // {{{
 {
   int section;
   ppd_choice_t **choices;
   int i;
   char buf[1024];
   ppd_attr_t *attr;
-  int pdftoopvp = 0;
-  int datawritten = 0;
+  bool withJCL=false,
+       datawritten=false;
 
-  if (ppd == 0) return;
+  if (!ppd) return;
+
   if ((attr = ppdFindAttr(ppd,"pdftopdfJCLBegin",NULL)) != NULL) {
-    int n = strlen(attr->value);
-    pdftoopvp = 1;
+    withJCL=true;
+    const int n=strlen(attr->value);
     for (i = 0;i < n;i++) {
-	if (attr->value[i] == '\r' || attr->value[i] == '\n') {
-	    /* skip new line */
-	    continue;
-	}
-	fputc(attr->value[i],fp);
-	datawritten = 1;
+      if (attr->value[i] == '\r' || attr->value[i] == '\n') {
+        // skip new line
+        continue;
+      }
+      fputc(attr->value[i],fp);
+      datawritten=true;
     }
   }
          
-  snprintf(buf,sizeof(buf),"%d",copies);
+  snprintf(buf,sizeof(buf),"%d",deviceCopies);
   if (ppdFindOption(ppd,"Copies") != NULL) {
     ppdMarkOption(ppd,"Copies",buf);
   } else {
     if ((attr = ppdFindAttr(ppd,"pdftopdfJCLCopies",buf)) != NULL) {
       fputs(attr->value,fp);
-      datawritten = 1;
-    } else if (pdftoopvp) {
-      fprintf(fp,"Copies=%d;",copies);
-      datawritten = 1;
+      datawritten=true;
+    } else if (withJCL) {
+      fprintf(fp,"Copies=%d;",deviceCopies);
+      datawritten=true;
     }
   }
   for (section = (int)PPD_ORDER_ANY;
       section <= (int)PPD_ORDER_PROLOG;section++) {
-    int n;
-
-    n = ppdCollect(ppd,(ppd_section_t)section,&choices);
+    int n = ppdCollect(ppd,(ppd_section_t)section,&choices);
     for (i = 0;i < n;i++) {
       snprintf(buf,sizeof(buf),"pdftopdfJCL%s",
         ((ppd_option_t *)(choices[i]->option))->keyword);
       if ((attr = ppdFindAttr(ppd,buf,choices[i]->choice)) != NULL) {
-	fputs(attr->value,fp);
-	datawritten = 1;
-      } else if (pdftoopvp) {
-	fprintf(fp,"%s=%s;",
-	  ((ppd_option_t *)(choices[i]->option))->keyword,
-	  choices[i]->choice);
-	datawritten = 1;
+        fputs(attr->value,fp);
+        datawritten=true;
+      } else if (withJCL) {
+        fprintf(fp,"%s=%s;",
+                   ((ppd_option_t *)(choices[i]->option))->keyword,
+                   choices[i]->choice);
+        datawritten=true;
       }
     }
   }
-  if (datawritten) fputc('\n',fp);
+  if (datawritten) {
+    fputc('\n',fp);
+  }
 }
+// }}}
 
 /* Copied ppd_decode() from CUPS which is not exported to the API; needed in emitPreamble() */
 // {{{ static int ppd_decode(char *string) 

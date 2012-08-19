@@ -6,10 +6,10 @@
 
 void NupParameters::dump() const // {{{
 {
-  printf("NupX: %d, NupY: %d\n"
-         "width: %f, height: %f\n",
-         nupX,nupY,
-         width,height);
+  fprintf(stderr,"NupX: %d, NupY: %d\n"
+                 "width: %f, height: %f\n",
+                 nupX,nupY,
+                 width,height);
 
   int opos=-1,fpos=-1,spos=-1;
   if (xstart==Position::LEFT) { // or Bottom
@@ -23,28 +23,28 @@ void NupParameters::dump() const // {{{
     spos=1;
   }
   if (first==Axis::X) {
-    printf("First Axis: X\n");
+    fprintf(stderr,"First Axis: X\n");
     opos=0;
   } else if (first==Axis::Y) {
-    printf("First Axis: Y\n");
+    fprintf(stderr,"First Axis: Y\n");
     opos=2;
     std::swap(fpos,spos);
   }
 
   if ( (opos==-1)||(fpos==-1)||(spos==-1) ) {
-    printf("Bad Spec: %d; start: %d, %d\n\n",
-           first,xstart,ystart);
+    fprintf(stderr,"Bad Spec: %d; start: %d, %d\n\n",
+                   first,xstart,ystart);
   } else {
     static const char *order[4]={"lr","rl","bt","tb"};
-    printf("Order: %s%s\n",
-           order[opos+fpos],order[(opos+2)%4+spos]);
+    fprintf(stderr,"Order: %s%s\n",
+                   order[opos+fpos],order[(opos+2)%4+spos]);
   }
 
-  fputs("Alignment: ",stdout);
+  fputs("Alignment: ",stderr);
   Position_dump(xalign,Axis::X);
-  fputs("/",stdout); 
+  fputs("/",stderr); 
   Position_dump(yalign,Axis::Y);
-  fputs("\n",stdout);
+  fputs("\n",stderr);
 }
 // }}}
 
@@ -135,8 +135,8 @@ void NupState::reset() // {{{
 
 void NupPageEdit::dump() const // {{{
 {
-  printf("xpos: %f, ypos: %f, scale: %f\n",
-         xpos,ypos,scale);
+  fprintf(stderr,"xpos: %f, ypos: %f, scale: %f\n",
+                 xpos,ypos,scale);
   sub.dump();
 }
 // }}}

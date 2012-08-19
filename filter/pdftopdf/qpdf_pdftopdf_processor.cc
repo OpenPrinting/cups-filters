@@ -13,14 +13,14 @@
 static std::string debug_box(const PageRect &box,float xshift,float yshift) // {{{ 
 {
   return std::string("q 1 w 0.1 G\n ")+
-         QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.top+yshift)+" m  "+
-         QUtil::double_to_string(box.right+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" l "+"S \n "+
+         QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" m  "+
+         QUtil::double_to_string(box.right+xshift)+" "+QUtil::double_to_string(box.top+yshift)+" l "+"S \n "+
 
-         QUtil::double_to_string(box.right+xshift)+" "+QUtil::double_to_string(box.top+yshift)+" m  "+
-         QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" l "+"S \n "+
+         QUtil::double_to_string(box.right+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" m  "+
+         QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.top+yshift)+" l "+"S \n "+
 
-         QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.top+yshift)+"  "+
-         QUtil::double_to_string(box.right-box.left)+" "+QUtil::double_to_string(box.bottom-box.top)+" re "+"S Q\n";
+         QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+"  "+
+         QUtil::double_to_string(box.right-box.left)+" "+QUtil::double_to_string(box.top-box.bottom)+" re "+"S Q\n";
 }
 // }}}
 
@@ -55,11 +55,14 @@ QPDF_PDFTOPDF_PageHandle::QPDF_PDFTOPDF_PageHandle(QPDF *pdf,float width,float h
 }
 // }}}
 
+// Note: PDFTOPDF_Processor always works with "/Rotate"d and "/UserUnit"-scaled pages/coordinates/..., having 0,0 at left,bottom of the TrimBox
 PageRect QPDF_PDFTOPDF_PageHandle::getRect() const // {{{
 {
   page.assertInitialized();
   PageRect ret=getBoxAsRect(getTrimBox(page));
-  ret.rotate(getRotate(page));
+  ret.translate(-ret.left,-ret.bottom);
+  ret.rotate_move(getRotate(page),ret.width,ret.height);
+  ret.scale(getUserUnit(page));
   return ret;
 }
 // }}}
@@ -78,9 +81,9 @@ QPDFObjectHandle QPDF_PDFTOPDF_PageHandle::get() // {{{
     page.getKey("/Resources").replaceKey("/XObject",QPDFObjectHandle::newDictionary(xobjs));
     content.append("Q\n");
     page.getKey("/Contents").replaceStreamData(content,QPDFObjectHandle::newNull(),QPDFObjectHandle::newNull());
-    page.replaceOrRemoveKey("/Rotate",makeRotate(-rotation));
+    page.replaceOrRemoveKey("/Rotate",makeRotate(rotation));
   } else {
-    Rotation rot=getRotate(page)-rotation;
+    Rotation rot=getRotate(page)+rotation;
     page.replaceOrRemoveKey("/Rotate",makeRotate(rot));
   }
   page=QPDFObjectHandle(); // i.e. uninitialized
@@ -88,16 +91,12 @@ QPDFObjectHandle QPDF_PDFTOPDF_PageHandle::get() // {{{
 }
 // }}}
 
-  // TODO: factor out pre- and post-   ... also needed by mirror()!(?)
+// TODO FIXME rotations are strange
 // TODO? for non-existing (either drop comment or facility to create split streams needed)
-void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &rect,BorderType border,float fscale) // {{{
+void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType border,float fscale) // {{{
 {
   assert(isExisting());
   assert(border!=BorderType::NONE);
-  static const char *pre="%pdftopdf q\n"
-                         "q\n",
-                    *post="%pdftopdf Q\n"
-                          "Q\n";
 
   // straight from pstops
   const double lw=(border&THICK)?0.5:0.24;
@@ -106,11 +105,28 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &rect,BorderType b
 // (PageLeft+margin,PageBottom+margin) rect (PageRight-PageLeft-2*margin,...)   ... for nup>1: PageLeft=0,etc.
    //  if (double)  margin+=2*fscale ...rect...
 
+PageRect pg1=getRect();
+  PageRect pg2=getBoxAsRect(getTrimBox(page));
+  // we have to invert /Rotate, /UserUnit and the left,bottom (TrimBox) translation
+  PageRect rect=_rect;
+//rect.rotate_move(-rotation,pg2.height,pg2.width);
+//rect.rotate_move(-rotation,pg1.height,pg1.width);
+  rect.scale(1.0/getUserUnit(page));
+  rect.rotate_move(-getRotate(page)-rotation,pg1.width,pg1.height);
+//  rect.rotate_move(-getRotate(page),pg1.width,pg1.height);
+
+//  PageRect pg2=getBoxAsRect(getTrimBox(page));
+  rect.translate(pg2.left,pg2.bottom);
+
+  assert(rect.left<=rect.right);
+  assert(rect.bottom<=rect.top);
+
   std::string boxcmd="q\n";
   boxcmd+="  "+QUtil::double_to_string(line_width)+" w 0 G \n";
-  boxcmd+="  "+QUtil::double_to_string(rect.left)+" "+QUtil::double_to_string(rect.bottom)+"  "+
-               QUtil::double_to_string(rect.right-rect.left)+" "+QUtil::double_to_string(rect.top-rect.bottom)+" re S\n";
+  boxcmd+="  "+QUtil::double_to_string(rect.left+margin)+" "+QUtil::double_to_string(rect.bottom+margin)+"  "+
+               QUtil::double_to_string(rect.right-rect.left-2*margin)+" "+QUtil::double_to_string(rect.top-rect.bottom-2*margin)+" re S \n";
   if (border&TWO) {
+    margin+=2*fscale;
     boxcmd+="  "+QUtil::double_to_string(rect.left+margin)+" "+QUtil::double_to_string(rect.bottom+margin)+"  "+
                  QUtil::double_to_string(rect.right-rect.left-2*margin)+" "+QUtil::double_to_string(rect.top-rect.bottom-2*margin)+" re S \n";
   }
@@ -122,16 +138,26 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &rect,BorderType b
 // }
 
   assert(page.getOwningQPDF()); // existing pages are always indirect
+#ifdef DEBUG  // draw it on top
+  static const char *pre="%pdftopdf q\n"
+                         "q\n",
+                    *post="%pdftopdf Q\n"
+                          "Q\n";
+
   QPDFObjectHandle stm1=QPDFObjectHandle::newStream(page.getOwningQPDF(),pre),
                    stm2=QPDFObjectHandle::newStream(page.getOwningQPDF(),std::string(post)+boxcmd);
 
   page.addPageContents(stm1,true); // before
   page.addPageContents(stm2,false); // after
+#else
+  QPDFObjectHandle stm=QPDFObjectHandle::newStream(page.getOwningQPDF(),boxcmd);
+  page.addPageContents(stm,true); // before
+#endif
 }
 // }}}
 
-// TODO: test rotation
-void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale) // {{{
+// TODO: test/fix with qsub rotation
+void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop) // {{{
 {
   auto qsub=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(sub.get());
   assert(qsub);
@@ -142,10 +168,18 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
   Matrix mtx;
   mtx.translate(xpos,ypos);
   mtx.scale(scale);
-  mtx.rotate(qsub->rotation); // TODO? -sub.rotation ?
+  mtx.rotate(qsub->rotation); // TODO? -sub.rotation ?  // TODO FIXME: this might need another translation!?
+  if (crop) { // TODO? other technique: set trim-box before makeXObject (but this modifies original page)
+    mtx.translate(crop->left,crop->bottom);
+    crop->dump();
+  }
 
   content.append("q\n  ");
   content.append(mtx.get_string()+" cm\n  ");
+  if (crop) {
+//    content.append("0 0 "+QUtil::double_to_string(crop->right-crop->left)+" "+QUtil::double_to_string(crop->top-crop->bottom)+" re W n\n  ");
+    content.append("0 0 "+QUtil::double_to_string(crop->right-crop->left)+" "+QUtil::double_to_string(crop->top-crop->bottom)+" re S\n  ");
+  }
   content.append(xoname+" Do\n");
   content.append("Q\n");
 }

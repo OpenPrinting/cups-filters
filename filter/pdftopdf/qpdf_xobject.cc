@@ -90,19 +90,30 @@ QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page)
   dict.replaceKey("/Subtype",QPDFObjectHandle::newName("/Form")); // required
 //  dict.replaceKey("/FormType",QPDFObjectHandle::newInteger(1)); // optional
 
-// [/Matrix .]   ...  default is [1 0 0 1 0 0] ---    also incorporate /UserUnit here?!
+  QPDFObjectHandle box=getTrimBox(page); // already in "form space"
+  dict.replaceKey("/BBox",box); // reqd
+
+  // [/Matrix .]   ...  default is [1 0 0 1 0 0]; we incorporate /UserUnit and /Rotate here
   Matrix mtx;
   if (page.hasKey("/UserUnit")) {
     mtx.scale(page.getKey("/UserUnit").getNumericValue());
   }
+
+  // transform, so that bbox is [0 0 w h]  (in outer space, but after UserUnit)
   Rotation rot=getRotate(page);
-  mtx.rotate(rot);
+  
+  // calculate rotation effect on [0 0 w h]
+  PageRect bbox=getBoxAsRect(box),tmp;
+  tmp.left=0;
+  tmp.bottom=0;
+  tmp.right=0;
+  tmp.top=0;
+  tmp.rotate_move(rot,bbox.width,bbox.height);
+  // tmp.rotate_move moves the bbox; we must achieve this move with the matrix.
+  mtx.translate(tmp.left,tmp.bottom); // 1. move origin to end up at left,bottom after rotation
 
-  // transform, so that bbox is [0 0 w h]  (in form space)
-  PageRect bbox=getBoxAsRect(getTrimBox(page));
-  mtx.translate(-bbox.left,-bbox.bottom);  // we want it undone
-
-  dict.replaceKey("/BBox",makeBox(0,0,bbox.width,bbox.height)); // reqd
+  mtx.rotate(rot);  // 2. rotate coordinates according to /Rotate
+  mtx.translate(-bbox.left,-bbox.bottom);  // 3. move origin from 0,0 to "form space"
 
   dict.replaceKey("/Matrix",mtx.get());
 

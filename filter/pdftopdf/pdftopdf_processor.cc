@@ -8,9 +8,9 @@ void BookletMode_dump(BookletMode bkm) // {{{
 {
   static const char *bstr[3]={"Off","On","Shuffle-Only"};
   if ( (bkm<BOOKLET_OFF)||(bkm>BOOKLET_JUSTSHUFFLE) ) {
-    printf("(bad booklet mode: %d)",bkm);
+    fprintf(stderr,"(bad booklet mode: %d)",bkm);
   } else {
-    fputs(bstr[bkm],stdout);
+    fputs(bstr[bkm],stderr);
   }
 }
 // }}}
@@ -30,49 +30,49 @@ bool ProcessingParameters::withPage(int outno) const // {{{
 
 void ProcessingParameters::dump() const // {{{
 {
-  printf("jobId: %d, nupCopies: %d\n",
-         jobId,numCopies);
-  printf("user: %s, title: %s\n",
-         (user)?user:"(null)",(title)?title:"(null)");
-  printf("fitplot: %s\n",
-         (fitplot)?"true":"false");
+  fprintf(stderr,"jobId: %d, nupCopies: %d\n",
+                 jobId,numCopies);
+  fprintf(stderr,"user: %s, title: %s\n",
+                 (user)?user:"(null)",(title)?title:"(null)");
+  fprintf(stderr,"fitplot: %s\n",
+                 (fitplot)?"true":"false");
 
   page.dump();
 
-  printf("Rotation(CCW): ");
+  fprintf(stderr,"Rotation(CCW): ");
   Rotation_dump(orientation);
-  printf("\n");
+  fprintf(stderr,"\n");
 
-  printf("duplex: %s\n",
-         (duplex)?"true":"false");
+  fprintf(stderr,"duplex: %s\n",
+                 (duplex)?"true":"false");
 
-  printf("Border: ");
+  fprintf(stderr,"Border: ");
   BorderType_dump(border);
-  printf("\n");
+  fprintf(stderr,"\n");
 
   nup.dump();
 
-  printf("reverse: %s\n",
-         (reverse)?"true":"false");
+  fprintf(stderr,"reverse: %s\n",
+                 (reverse)?"true":"false");
 
-  printf("evenPages: %s, oddPages: %s\n",
-         (evenPages)?"true":"false",
-         (oddPages)?"true":"false");
+  fprintf(stderr,"evenPages: %s, oddPages: %s\n",
+                 (evenPages)?"true":"false",
+                 (oddPages)?"true":"false");
 
-  printf("page range: ");
+  fprintf(stderr,"page range: ");
   pageRange.dump();
 
-  printf("mirror: %s\n",
-         (mirror)?"true":"false");
+  fprintf(stderr,"mirror: %s\n",
+                 (mirror)?"true":"false");
 
-  printf("Position: ");
+  fprintf(stderr,"Position: ");
   Position_dump(xpos,Axis::X);
-  printf("/");
+  fprintf(stderr,"/");
   Position_dump(ypos,Axis::Y);
-  printf("\n");
+  fprintf(stderr,"\n");
 
-  printf("collate: %s\n",
-         (collate)?"true":"false");
+  fprintf(stderr,"collate: %s\n",
+                 (collate)?"true":"false");
 /*
   // std::string pageLabel; // or NULL?  must stay/dup!
   ...
@@ -80,21 +80,22 @@ void ProcessingParameters::dump() const // {{{
 
 */
 
-  printf("bookletMode: ");
+  fprintf(stderr,"bookletMode: ");
   BookletMode_dump(booklet);
-  printf("\nbooklet signature: %d\n",bookSignature);
+  fprintf(stderr,"\nbooklet signature: %d\n",
+                 bookSignature);
 
-  printf("evenDuplex: %s\n",
-         (evenDuplex)?"true":"false");
+  fprintf(stderr,"evenDuplex: %s\n",
+                 (evenDuplex)?"true":"false");
 
-  printf("emitJCL: %s\n",
-         (emitJCL)?"true":"false");
-  printf("deviceCopies: %d\n",
-         deviceCopies);
-  printf("setDuplex: %s\n",
-         (setDuplex)?"true":"false");
-  printf("unsetCollate: %s\n",
-         (unsetCollate)?"true":"false");
+  fprintf(stderr,"emitJCL: %s\n",
+                 (emitJCL)?"true":"false");
+  fprintf(stderr,"deviceCopies: %d\n",
+                 deviceCopies);
+  fprintf(stderr,"setDuplex: %s\n",
+                 (setDuplex)?"true":"false");
+  fprintf(stderr,"unsetCollate: %s\n",
+                 (unsetCollate)?"true":"false");
 }
 // }}}
 
@@ -153,7 +154,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
   if (param.booklet!=BOOKLET_OFF) {
     shuffle=bookletShuffle(numOrigPages,param.bookSignature);
     if (param.booklet==BOOKLET_ON) { // override options
-      param.duplex=true;
+  // TODO? specifically "sides=two-sided-short-edge" / DuplexTumble 
+//      param.duplex=true;   // param.setDuplex=true;  ?    currently done in setFinalPPD()
       NupParameters::preset(2,param.nup); // TODO?! better
     }
   } else { // 0 1 2 3 ... 
@@ -211,7 +213,6 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     }
     outputno=numPages;
   } else {
-// TODO... -left/-right needs to be subtracted from param.nup.width/height
     param.nup.width=param.page.right-param.page.left;
     param.nup.height=param.page.top-param.page.bottom;
 
@@ -242,7 +243,21 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
         page=pages[shuffle[iA]];
       }
 
-      PageRect rect=page->getRect();
+      PageRect rect;
+      if (param.fitplot) {
+        rect=page->getRect();
+      } else {
+// TODO?
+        rect.left=0;
+        rect.bottom=0;
+        rect.right=param.page.width;
+        rect.top=param.page.height;
+
+        rect.width=param.page.width;
+        rect.height=param.page.height;
+
+        rect.rotate_move(param.orientation,rect.width,rect.height);
+      }
 //      rect.dump();
 
       bool newPage=nupstate.nextPage(rect.width,rect.height,pgedit);
@@ -263,10 +278,12 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
       }
 
       if (param.border!=BorderType::NONE) {
-        // TODO? -left/-right needs to be added back?
+        // TODO FIXME: border gets cutted away, if orignal page had wrong size
+        // page->"uncrop"(rect);  // page->setMedia()
         page->add_border_rect(rect,param.border,1.0/pgedit.scale);
       }
 
+//      curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale,&rect); // TODO: FIXME 
       curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
 
 #ifdef DEBUG
@@ -293,8 +310,6 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
   }
 
   proc.multiply(param.numCopies,param.collate);
-
-//fprintf(stderr,"TODO setProcess\n");
 
   return true;
 }

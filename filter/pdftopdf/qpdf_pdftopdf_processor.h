@@ -29,7 +29,7 @@ class QPDF_PDFTOPDF_PageHandle : public PDFTOPDF_PageHandle {
 public:
   virtual PageRect getRect() const;
   virtual void add_border_rect(const PageRect &rect,BorderType border,float fscale);
-  virtual void add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale);
+  virtual void add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop=NULL);
   virtual void mirror();
   virtual void rotate(Rotation rot);
 

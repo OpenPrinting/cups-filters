@@ -26,7 +26,10 @@ struct PageRect {
   float top,left,right,bottom; // i.e. margins
   float width,height;
 
-  void rotate(Rotation r);
+  void rotate_move(Rotation r,float pwidth,float pheight); // pwidth original "page size" (i.e. before rotation)
+  void scale(float mult);
+  void translate(float tx,float ty);
+
   void set(const PageRect &rhs); // only for rhs.* != NAN
   void dump() const;
 };
