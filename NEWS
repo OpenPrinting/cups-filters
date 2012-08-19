@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.0.21 - 2012-07-22
 
 CHANGES IN V1.0.21
 
+	- bannertopdf: Page duplication routine fixed.
 	- bannertopdf: Fixed invalid output of a direct stream object.
 	- Added most recent contributors to AUTHORS and COPYING files.
 
