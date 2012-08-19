@@ -91,7 +91,32 @@ QPDFObjectHandle QPDF_PDFTOPDF_PageHandle::get() // {{{
 }
 // }}}
 
-// TODO FIXME rotations are strange
+// TODO: we probably need a function "ungetRect()"  to transform to page/form space
+// TODO: as member
+static PageRect ungetRect(PageRect rect,const QPDF_PDFTOPDF_PageHandle &ph,Rotation rotation,QPDFObjectHandle page)
+{
+  PageRect pg1=ph.getRect();
+  PageRect pg2=getBoxAsRect(getTrimBox(page));
+
+  // we have to invert /Rotate, /UserUnit and the left,bottom (TrimBox) translation
+//Rotation_dump(rotation);
+//Rotation_dump(getRotate(page));
+  rect.width=pg1.width;
+  rect.height=pg1.height;
+//std::swap(rect.width,rect.height);
+//rect.rotate_move(-rotation,rect.width,rect.height);
+
+  rect.rotate_move(-getRotate(page),pg1.width,pg1.height);
+  rect.scale(1.0/getUserUnit(page));
+
+//  PageRect pg2=getBoxAsRect(getTrimBox(page));
+  rect.translate(pg2.left,pg2.bottom);
+//rect.dump();
+
+  return rect;
+}
+
+  // TODO FIXME rotations are strange  ... (via ungetRect)
 // TODO? for non-existing (either drop comment or facility to create split streams needed)
 void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType border,float fscale) // {{{
 {
@@ -105,18 +130,7 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
 // (PageLeft+margin,PageBottom+margin) rect (PageRight-PageLeft-2*margin,...)   ... for nup>1: PageLeft=0,etc.
    //  if (double)  margin+=2*fscale ...rect...
 
-PageRect pg1=getRect();
-  PageRect pg2=getBoxAsRect(getTrimBox(page));
-  // we have to invert /Rotate, /UserUnit and the left,bottom (TrimBox) translation
-  PageRect rect=_rect;
-//rect.rotate_move(-rotation,pg2.height,pg2.width);
-//rect.rotate_move(-rotation,pg1.height,pg1.width);
-  rect.scale(1.0/getUserUnit(page));
-  rect.rotate_move(-getRotate(page)-rotation,pg1.width,pg1.height);
-//  rect.rotate_move(-getRotate(page),pg1.width,pg1.height);
-
-//  PageRect pg2=getBoxAsRect(getTrimBox(page));
-  rect.translate(pg2.left,pg2.bottom);
+  PageRect rect=ungetRect(_rect,*this,rotation,page);
 
   assert(rect.left<=rect.right);
   assert(rect.bottom<=rect.top);
@@ -156,6 +170,7 @@ PageRect pg1=getRect();
 }
 // }}}
 
+// TODO: better cropping
 // TODO: test/fix with qsub rotation
 void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop) // {{{
 {
@@ -163,6 +178,26 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
   assert(qsub);
 
   std::string xoname="/X"+QUtil::int_to_string((qsub->no!=-1)?qsub->no:++no);
+  if (crop) {
+    PageRect pg=qsub->getRect(),tmp=*crop;
+    // we need to fix a too small cropbox. 
+    tmp.width=tmp.right-tmp.left;
+    tmp.height=tmp.top-tmp.bottom;
+    tmp.rotate_move(-getRotate(qsub->page),tmp.width,tmp.height); // TODO TODO (pg.width? / unneeded?)
+    // TODO: better
+    // TODO: we need to obey page./Rotate
+    if (pg.width<tmp.width) {
+      pg.right=pg.left+tmp.width;
+    }
+    if (pg.height<tmp.height) {
+      pg.top=pg.bottom+tmp.height;
+    }
+    
+    PageRect rect=ungetRect(pg,*qsub,ROT_0,qsub->page);
+
+    qsub->page.replaceKey("/TrimBox",makeBox(rect.left,rect.bottom,rect.right,rect.top));
+    // TODO? do everything for cropping here?
+  }
   xobjs[xoname]=makeXObject(qsub->page.getOwningQPDF(),qsub->page); // trick: should be the same as page->getOwningQPDF() [only after it's made indirect]
 
   Matrix mtx;

@@ -251,7 +251,8 @@ const bool origls=param.nup.landscape;
         rect.width=param.page.width;
         rect.height=param.page.height;
 
-        if (!origls) { // TODO?! better
+        // TODO: better
+        if (!origls) {
           if ( (param.orientation==ROT_90)||(param.orientation==ROT_270) ) {
             std::swap(rect.width,rect.height);
           }
@@ -289,13 +290,17 @@ const bool origls=param.nup.landscape;
       }
 
       if (param.border!=BorderType::NONE) {
-        // TODO FIXME: border gets cutted away, if orignal page had wrong size
+        // TODO FIXME... border gets cutted away, if orignal page had wrong size
         // page->"uncrop"(rect);  // page->setMedia()
+        // Note: currently "fixed" in add_subpage(...&rect);
         page->add_border_rect(rect,param.border,1.0/pgedit.scale);
       }
 
-      curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale,&rect);
-//      curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
+      if (!param.fitplot) {
+        curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale,&rect);
+      } else {
+        curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
+      }
 
 #ifdef DEBUG
       if (auto dbg=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(curpage.get())) {
