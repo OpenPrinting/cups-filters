@@ -464,7 +464,12 @@ in the location specified by TMPDIR environment variable. Default location
 is "/tmp".
 
 
-PDFTOPDF
+PDFTOPDF.OLD
+
+0. DEPRECATION NOTICE
+This filter is being replaced by a new implementation that does not
+depend on poppler. Therefore it has been renamed "pdftopdf.old",
+but the references in the following sections have not been updated.
 
 1. INTRODUCTION
 
@@ -832,6 +837,21 @@ created PDF data.
 in the location specified by TMPDIR environment　variable. Default location
 is "/tmp".
 
+PDFTOPDF  -- new implementation
+
+A new implementation of the pdftopdf filter is available. 
+It depends on libqpdf to read/write pdf files.
+
+The aim is to replace and imitate the pstops filter in PDF-based workflows.
+A similar filter (which can serve as behavior reference) 
+is called "cgpdftopdf" in OS X (not open source).
+
+Known issues
+------------
+- Borders, esp. in the "number-up=1 fitplot=false"-case are sometimes drawn 
+  at incorrect locations.
+- more testing needs to be done
+- documentation largely missing
 
 TEXTTOPDF
 
