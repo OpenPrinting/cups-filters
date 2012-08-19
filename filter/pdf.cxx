@@ -82,6 +82,7 @@ extern "C" void pdf_prepend_stream(pdf_t *doc,
     array.arrayAdd(&streamrefobj);
 
     if (contents.isStream()) {
+        pageobj.dictLookupNF("Contents", &contents); // streams must be indirect, i.e. not fetch()-ed
         array.arrayAdd(&contents);
     }
     else if (contents.isArray()) {
