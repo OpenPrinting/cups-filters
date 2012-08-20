@@ -678,75 +678,84 @@ proc1->emitFilename("out.pdf");
     return 1;
   }
 
-  ProcessingParameters param;
+  try {
+    ProcessingParameters param;
 
-  param.jobId=atoi(argv[1]);
-  param.user=argv[2];
-  param.title=argv[3];
-  param.numCopies=atoi(argv[4]);
+    param.jobId=atoi(argv[1]);
+    param.user=argv[2];
+    param.title=argv[3];
+    param.numCopies=atoi(argv[4]);
 
-  // TODO?! sanity checks
+    // TODO?! sanity checks
 
-  int num_options=0;
-  cups_option_t *options=NULL;
-  num_options=cupsParseOptions(argv[5],num_options,&options);
+    int num_options=0;
+    cups_option_t *options=NULL;
+    num_options=cupsParseOptions(argv[5],num_options,&options);
 
-  ppd_file_t *ppd=NULL;
-  ppd=ppdOpenFile(getenv("PPD")); // getenv (and thus ppd) may be null. This will not cause problems.
-  ppdMarkDefaults(ppd);
+    ppd_file_t *ppd=NULL;
+    ppd=ppdOpenFile(getenv("PPD")); // getenv (and thus ppd) may be null. This will not cause problems.
+    ppdMarkDefaults(ppd);
 
-  cupsMarkOptions(ppd,num_options,options);
+    cupsMarkOptions(ppd,num_options,options);
 
-  getParameters(ppd,num_options,options,param);
-  calculate(ppd,param);
+    getParameters(ppd,num_options,options,param);
+    calculate(ppd,param);
 
 #ifdef DEBUG
-  param.dump();
+    param.dump();
 #endif
 
-  cupsFreeOptions(num_options,options);
+    cupsFreeOptions(num_options,options);
 
-  std::unique_ptr<PDFTOPDF_Processor> proc(PDFTOPDF_Factory::processor());
+    std::unique_ptr<PDFTOPDF_Processor> proc(PDFTOPDF_Factory::processor());
 
-  if (argc==7) {
-    if (!proc->loadFilename(argv[6])) {
-      ppdClose(ppd);
-      return 1;
+    if (argc==7) {
+      if (!proc->loadFilename(argv[6])) {
+        ppdClose(ppd);
+        return 1;
+      }
+    } else {
+      FILE *f=copy_stdin_to_temp();
+      if ( (!f)||
+           (!proc->loadFile(f,TakeOwnership)) ) {
+        ppdClose(ppd);
+        return 1;
+      }
     }
-  } else {
-    FILE *f=copy_stdin_to_temp();
-    if ( (!f)||
-         (!proc->loadFile(f,TakeOwnership)) ) {
-      ppdClose(ppd);
-      return 1;
-    }
-  }
 
 /* TODO
-  // color management
+    // color management
 --- PPD:
-    copyPPDLine_(fp_dest, fp_src, "*PPD-Adobe: "); 
-    copyPPDLine_(fp_dest, fp_src, "*cupsICCProfile ");  
-    copyPPDLine_(fp_dest, fp_src, "*Manufacturer:");
-    copyPPDLine_(fp_dest, fp_src, "*ColorDevice:");
-    copyPPDLine_(fp_dest, fp_src, "*DefaultColorSpace:");  
-  if (cupsICCProfile) {
-    proc.addCM(...,...);
-  }
+      copyPPDLine_(fp_dest, fp_src, "*PPD-Adobe: "); 
+      copyPPDLine_(fp_dest, fp_src, "*cupsICCProfile ");  
+      copyPPDLine_(fp_dest, fp_src, "*Manufacturer:");
+      copyPPDLine_(fp_dest, fp_src, "*ColorDevice:");
+      copyPPDLine_(fp_dest, fp_src, "*DefaultColorSpace:");  
+    if (cupsICCProfile) {
+      proc.addCM(...,...);
+    }
 */
 
-  if (!processPDFTOPDF(*proc,param)) {
+    if (!processPDFTOPDF(*proc,param)) {
+      ppdClose(ppd);
+      return 2;
+    }
+
+    emitPreamble(ppd,param); // ppdEmit, JCL stuff
+
+//    proc->emitFile(stdout);
+    proc->emitFilename(NULL);
+
+    emitPostamble(ppd,param);
     ppdClose(ppd);
-    return 2;
+  } catch (std::exception &e) {
+    // TODO? exception type
+    fprintf(stderr,"Exception: %s\n",e.what());
+    return 5;
+  } catch (...) {
+    fprintf(stderr,"Unknown exception caught. Exiting.\n");
+    return 6;
   }
-
-  emitPreamble(ppd,param); // ppdEmit, JCL stuff
-
-//  proc->emitFile(stdout);
-  proc->emitFilename(NULL);
-
-  emitPostamble(ppd,param);
-  ppdClose(ppd);
 
   return 0;
 }
