@@ -396,15 +396,25 @@ pkgfilter_PROGRAMS += pdftopdf
 pdftopdf_SOURCES = \
 	filter/pdftopdf/pdftopdf.cc \
 	filter/pdftopdf/pdftopdf_jcl.cc \
+	filter/pdftopdf/pdftopdf_jcl.h \
 	filter/pdftopdf/pdftopdf_processor.cc \
+	filter/pdftopdf/pdftopdf_processor.h \
 	filter/pdftopdf/qpdf_pdftopdf_processor.cc \
+	filter/pdftopdf/qpdf_pdftopdf_processor.h \
 	filter/pdftopdf/pptypes.cc \
+	filter/pdftopdf/pptypes.h \
 	filter/pdftopdf/nup.cc \
+	filter/pdftopdf/nup.h \
 	filter/pdftopdf/intervalset.cc \
+	filter/pdftopdf/intervalset.h \
 	filter/pdftopdf/qpdf_tools.cc \
+	filter/pdftopdf/qpdf_tools.h \
 	filter/pdftopdf/qpdf_xobject.cc \
+	filter/pdftopdf/qpdf_xobject.h \
 	filter/pdftopdf/qpdf_pdftopdf.cc \
-	filter/pdftopdf/qpdf_cm.cc
+	filter/pdftopdf/qpdf_pdftopdf.h \
+	filter/pdftopdf/qpdf_cm.cc \
+	filter/pdftopdf/qpdf_cm.h
 pdftopdf_CFLAGS = \
 	$(LIBQPDF_CFLAGS) \
 	$(CUPS_CFLAGS) \

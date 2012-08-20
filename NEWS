@@ -1,5 +1,10 @@
-NEWS - OpenPrinting CUPS Filters v1.0.21 - 2012-08-20
+NEWS - OpenPrinting CUPS Filters v1.0.22 - 2012-08-20
 -----------------------------------------------------
+
+CHANGES IN V1.0.22
+
+	- Added missing *.h files of filter/pdftopdf/ to source file list so
+	  that "make dist" builds correct upstream tarballs.
 
 CHANGES IN V1.0.21
 
