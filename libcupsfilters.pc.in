@@ -8,4 +8,5 @@ Description: Library for reading and writing cups filters
 Version: @VERSION@
 
 Libs: -L${libdir} -lcupsfilters
+Libs.private: @CUPS_LIBS@ @LIBJPEG_LIBS@ @LIBPNG_LIBS@ @LIBTIFF_LIBS@
 Cflags: -I${includedir}/cupsfilters

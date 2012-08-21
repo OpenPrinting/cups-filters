@@ -333,60 +333,6 @@ pdftoopvp_LDADD = \
 	$(DLOPEN_LIBS)
 
 EXTRA_DIST += $(pkgfontconfig_DATA)
-# ==========
-# PDF to PDF legacy
-# ==========
-pkgfilter_PROGRAMS += pdftopdf.old
-
-pdftopdf_old_SOURCES = \
-	filter/pdftopdf.old/parseargs.cxx \
-	filter/pdftopdf.old/parseargs.h \
-	filter/pdftopdf.old/PDFFTrueTypeFont.cxx \
-	filter/pdftopdf.old/PDFFTrueTypeFont.h \
-	filter/pdftopdf.old/pdftopdf.cxx \
-	filter/pdftopdf.old/P2PCatalog.cxx \
-	filter/pdftopdf.old/P2PCatalog.h \
-	filter/pdftopdf.old/P2PCMap.cxx \
-	filter/pdftopdf.old/P2PCMap.h \
-	filter/pdftopdf.old/P2PDoc.cxx \
-	filter/pdftopdf.old/P2PDoc.h \
-	filter/pdftopdf.old/P2PError.h \
-	filter/pdftopdf.old/P2PFont.cxx \
-	filter/pdftopdf.old/P2PFont.h \
-	filter/pdftopdf.old/P2PForm.cxx \
-	filter/pdftopdf.old/P2PForm.h \
-	filter/pdftopdf.old/P2PGfx.cxx \
-	filter/pdftopdf.old/P2PGfx.h \
-	filter/pdftopdf.old/P2PCharCodeToUnicode.cxx \
-	filter/pdftopdf.old/P2PCharCodeToUnicode.h \
-	filter/pdftopdf.old/P2PMatrix.h \
-	filter/pdftopdf.old/P2PObject.cxx \
-	filter/pdftopdf.old/P2PObject.h \
-	filter/pdftopdf.old/P2POutput.cxx \
-	filter/pdftopdf.old/P2POutput.h \
-	filter/pdftopdf.old/P2POutputStream.cxx \
-	filter/pdftopdf.old/P2POutputStream.h \
-	filter/pdftopdf.old/P2PPage.cxx \
-	filter/pdftopdf.old/P2PPage.h \
-	filter/pdftopdf.old/P2PPageTree.cxx \
-	filter/pdftopdf.old/P2PPageTree.h \
-	filter/pdftopdf.old/P2PPattern.cxx \
-	filter/pdftopdf.old/P2PPattern.h \
-	filter/pdftopdf.old/P2PResources.cxx \
-	filter/pdftopdf.old/P2PResources.h \
-	filter/pdftopdf.old/P2PXRef.cxx \
-	filter/pdftopdf.old/P2PXRef.h \
-	filter/pdftopdf.old/UGooString.cxx \
-	filter/pdftopdf.old/UGooString.h
-pdftopdf_old_CFLAGS = \
-	$(CUPS_CFLAGS) \
-	$(POPPLER_CFLAGS) \
-	$(ZLIB_CFLAGS)
-pdftopdf_old_CXXFLAGS = $(pdftopdf_old_CFLAGS)
-pdftopdf_old_LDADD = \
-	$(CUPS_LIBS) \
-	$(POPPLER_LIBS) \
-	$(ZLIB_LIBS)
 
 # ==========
 # PDF to PDF 

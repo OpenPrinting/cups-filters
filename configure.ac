@@ -165,8 +165,6 @@ AS_IF([test x"$with_jpeg" != "xno"], [
 	)
 	AC_SUBST(LIBJPEG_LIBS)
 ])
-AM_CONDITIONAL([BUILD_LIBJPEG], [test x"$with_jpeg" = "xyes"])
-AH_TEMPLATE([ENABLE_LIBJPEG], [Use libjpeg instead of builtin jpeg decoder.])
 
 AC_ARG_WITH([png],
 	[AS_HELP_STRING([--without-png], [Disable png support.])],
@@ -213,18 +211,7 @@ PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 3.0])
 # ================
 # Poppler features
 # ================
-POPPLER_INCLUDEDIR=`pkg-config poppler --variable includedir`
-AC_CHECK_HEADER([UGooString.h], [AC_DEFINE([HAVE_UGOOSTRING_H],,[Have UGooString.h])], [])
 AC_CHECK_HEADER([poppler/cpp/poppler-version.h], [AC_DEFINE([HAVE_CPP_POPPLER_VERSION_H],,[Define if you have Poppler's "cpp/poppler-version.h" header file.])], [])
-
-AC_TRY_COMPILE([#include <Stream.h>],
-	[virtual Stream *s = getUndecodedStream()],
-	[AC_DEFINE([HAVE_GETUNDECODEDSTREAM],,[Define if you have Stream::getUndecodedStream().])],
-	[])
-AC_TRY_COMPILE([#include <CharCodeToUnicode.h>],
-	[CharCode c; Unicode **u; int i = mapToUnicode(c, u)],
-	[AC_DEFINE([OLD_MAPTOUNICODE],,[Define if you have Old CharCodeToUnicode::mapToUnicode()])],
-	[])
 
 # ===================================
 # Check for large files and long long
