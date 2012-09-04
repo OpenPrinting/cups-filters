@@ -4,7 +4,7 @@
 #include <limits>
 #include <algorithm>
 
-const key_t IntervalSet::npos=std::numeric_limits<key_t>::max();
+const IntervalSet::key_t IntervalSet::npos=std::numeric_limits<IntervalSet::key_t>::max();
 
 void IntervalSet::clear() // {{{
 {
@@ -56,7 +56,7 @@ bool IntervalSet::contains(key_t val) const // {{{
 }
 // }}}
 
-key_t IntervalSet::next(key_t val) const // {{{
+IntervalSet::key_t IntervalSet::next(key_t val) const // {{{
 {
   val++;
   data_t::const_iterator it=std::upper_bound(data.begin(),data.end(),std::make_pair(val,npos));

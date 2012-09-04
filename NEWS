@@ -2,6 +2,7 @@ NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-04
 -----------------------------------------------------
 CHANGES IN V1.0.24
 
+	- pdftopdf: Fix build on OpenBSD (Bug #1062).
 	- pdftops: Fix stripping of page management options from the pstops
 	  command line which got already applied by pdftopdf. If the name
 	  of the option to be removed is contained in the name of a option
