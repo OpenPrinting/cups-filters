@@ -1,5 +1,14 @@
-NEWS - OpenPrinting CUPS Filters v1.0.23 - 2012-08-21
+NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-04
 -----------------------------------------------------
+CHANGES IN V1.0.24
+
+	- pdftops: Fix stripping of page management options from the pstops
+	  command line which got already applied by pdftopdf. If the name
+	  of the option to be removed is contained in the name of a option
+	  in the command line (like "number-up" in "number-up-layout" or
+	  "scaling" in "Natural-scaling"), this option gets stripped instead
+	  of the correct option (Bug #1064).
+
 CHANGES IN V1.0.23
 
 	- Removed filter/pdftopdf.old

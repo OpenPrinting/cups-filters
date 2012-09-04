@@ -174,31 +174,49 @@ void remove_options(char *options_str, const char **option_list)
 
   for (option = option_list; *option; option ++)
   {
-    while ((option_start = strcasestr(options_str, *option)) != NULL &&
-	   (!option_start[strlen(*option)] ||
-	    isspace(option_start[strlen(*option)] & 255) ||
-	    option_start[strlen(*option)] == '='))
+    option_start = options_str;
+
+    while ((option_start = strcasestr(option_start, *option)) != NULL)
     {
-      /*
-       * Strip option...
-       */
+      if (!option_start[strlen(*option)] ||
+          isspace(option_start[strlen(*option)] & 255) ||
+          option_start[strlen(*option)] == '=')
+      {
+        /*
+         * Strip option...
+         */
 
-      option_end = option_start + strlen(*option);
+        option_end = option_start + strlen(*option);
 
-      /* Remove preceding "no" of boolean option */
-      if ((option_start - options_str) >= 2 &&
-	  !strncasecmp(option_start - 2, "no", 2))
-	option_start -= 2;
+        /* Remove preceding "no" of boolean option */
+        if ((option_start - options_str) >= 2 &&
+            !strncasecmp(option_start - 2, "no", 2))
+          option_start -= 2;
 
-      /* Remove "=" and value */
-      while (*option_end && !isspace(*option_end & 255))
-	option_end ++;
+	/* Is match of the searched option name really at the beginning of
+	   the name of the option in the command line? */
+	if ((option_start > options_str) &&
+	    (!isspace(*(option_start - 1) & 255)))
+	{
+	  /* Prevent the same option to be found again. */
+	  option_start += 1;
+	  /* Skip */
+	  continue;
+	}
 
-      /* Remove spaces up to next option */
-      while (*option_end && isspace(*option_end & 255))
-	option_end ++;
+        /* Remove "=" and value */
+        while (*option_end && !isspace(*option_end & 255))
+          option_end ++;
 
-      memmove(option_start, option_end, strlen(option_end) + 1);
+        /* Remove spaces up to next option */
+        while (*option_end && isspace(*option_end & 255))
+          option_end ++;
+
+        memmove(option_start, option_end, strlen(option_end) + 1);
+      } else {
+        /* Prevent the same option to be found again. */
+        option_start += 1;
+      }
     }
   }
 }
