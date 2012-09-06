@@ -28,6 +28,7 @@
 #include <cups/file.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
@@ -41,7 +42,7 @@
  */
 
 typedef unsigned renderer_t;
-enum renderer_e {GS = 0, PDFTOPS = 1};
+enum renderer_e {GS = 0, PDFTOPS = 1, ACROREAD = 2};
 
 /*
  * Local functions...
@@ -230,8 +231,8 @@ int					/* O - Exit status */
 main(int  argc,				/* I - Number of command-line args */
      char *argv[])			/* I - Command-line arguments */
 {
-  renderer_t    renderer = CUPS_PDFTOPS_RENDERER; /* Renderer: gs or pdftops */
-  int		fd;			/* Copy file descriptor */
+  renderer_t    renderer = CUPS_PDFTOPS_RENDERER; /* Renderer: gs or pdftops or acroread */
+  int		fd = 0;			/* Copy file descriptor */
   char		*filename,		/* PDF file to convert */
 		tempfile[1024];		/* Temporary file */
   char		buffer[8192];		/* Copy buffer */
@@ -266,6 +267,7 @@ main(int  argc,				/* I - Number of command-line args */
   char		*pdf_argv[100],		/* Arguments for pdftops/gs */
 		pdf_width[255],		/* Paper width */
 		pdf_height[255],	/* Paper height */
+		pdf_widthxheight[255],	/* Paper width x height */
 		pstops_path[1024],	/* Path to pstops program */
 		*pstops_argv[7],	/* Arguments for pstops filter */
 		*pstops_options,	/* Options for pstops filter */
@@ -377,6 +379,8 @@ main(int  argc,				/* I - Number of command-line args */
       renderer = GS;
     else if (strcasecmp(val, "pdftops") == 0)
       renderer = PDFTOPS;
+    else if (strcasecmp(val, "acroread") == 0)
+      renderer = ACROREAD;
     else
       fprintf(stderr,
 	      "WARNING: Invalid value for \"pdftops-renderer\": \"%s\"\n", val);
@@ -412,7 +416,7 @@ main(int  argc,				/* I - Number of command-line args */
     if (!pstops_options) {
       fprintf(stderr, "ERROR: Can't allocate pstops_options\n");
       exit(2);
-    }
+    }   
     pstops_end = pstops_options + strlen(pstops_options);
     strcpy(pstops_end, " Collate");
   }
@@ -437,7 +441,7 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argv[0] = (char *)"pdftops";
     pdf_argc    = 1;
   }
-  else
+  else if (renderer == GS)
   {
     pdf_argv[0] = (char *)"gs";
     pdf_argv[1] = (char *)"-q";
@@ -451,6 +455,12 @@ main(int  argc,				/* I - Number of command-line args */
 #    endif /* HAVE_GHOSTSCRIPT_PS2WRITE */
     pdf_argv[6] = (char *)"-sOUTPUTFILE=%stdout";
     pdf_argc    = 7;
+  }
+  else
+  {
+    pdf_argv[0] = (char *)"acroread";
+    pdf_argv[1] = (char *)"-toPostScript";
+    pdf_argc    = 2;
   }
 
   if (ppd)
@@ -466,8 +476,10 @@ main(int  argc,				/* I - Number of command-line args */
 	pdf_argv[pdf_argc++] = (char *)"-level1";
 	pdf_argv[pdf_argc++] = (char *)"-noembtt";
       }
-      else
+      else if (renderer == GS)
 	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=1";
+      else
+        fprintf(stderr, "WARNING: Level 1 PostScript not supported by acroread.");
     }
     else if (ppd->language_level == 2)
     {
@@ -477,8 +489,10 @@ main(int  argc,				/* I - Number of command-line args */
 	if (!ppd->ttrasterizer)
 	  pdf_argv[pdf_argc++] = (char *)"-noembtt";
       }
-      else
+      else if (renderer == GS)
 	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=2";
+      else
+        pdf_argv[pdf_argc++] = (char *)"-level2";
     }
     else
     {
@@ -486,8 +500,10 @@ main(int  argc,				/* I - Number of command-line args */
         /* Do not emit PS Level 3 with Poppler, some HP PostScript printers
 	   do not like it. See https://bugs.launchpad.net/bugs/277404. */
 	pdf_argv[pdf_argc++] = (char *)"-level2";
-      else
+      else if (renderer == GS)
 	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
+      else
+        pdf_argv[pdf_argc++] = (char *)"-level3";
     }
 
     if ((val = cupsGetOption("fitplot", num_options, options)) == NULL)
@@ -555,7 +571,7 @@ main(int  argc,				/* I - Number of command-line args */
 	pdf_argv[pdf_argc++] = (char *)"-expand";
 
       }
-      else
+      else if (renderer == GS)
       {
 	if (orientation & 1)
 	{
@@ -575,6 +591,18 @@ main(int  argc,				/* I - Number of command-line args */
 	pdf_argv[pdf_argc++] = pdf_width;
 	pdf_argv[pdf_argc++] = pdf_height;
       }
+      else
+      {
+        if (orientation & 1)
+          snprintf(pdf_widthxheight, sizeof(pdf_widthxheight), "%.0fx%.0f",
+                   size->length, size->width);
+        else
+          snprintf(pdf_widthxheight, sizeof(pdf_widthxheight), "%.0fx%.0f",
+                   size->width, size->length);
+
+        pdf_argv[pdf_argc++] = (char *)"-size";
+        pdf_argv[pdf_argc++] = pdf_widthxheight;
+      }
     }
 #ifdef HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES
     else if (renderer == PDFTOPS)
@@ -587,6 +615,15 @@ main(int  argc,				/* I - Number of command-line args */
       pdf_argv[pdf_argc++] = (char *)"-origpagesizes";
     }
 #endif /* HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES */
+    else if (renderer == ACROREAD)
+    {
+     /*
+      * Use the page sizes of the original PDF document, this way documents
+      * which contain pages of different sizes can be printed correctly
+      */
+     
+      pdf_argv[pdf_argc++] = (char *)"-choosePaperByPDFPageSize";
+    }
 
    /*
     * Set output resolution ...
@@ -656,7 +693,7 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argv[pdf_argc++] = filename;
     pdf_argv[pdf_argc++] = (char *)"-";
   }
-  else
+  else if (renderer == GS)
   {
    /*
     * Set resolution to avoid slow processing by the printer when the
@@ -702,6 +739,7 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argv[pdf_argc++] = (char *)"-f";
     pdf_argv[pdf_argc++] = filename;
   }
+  /* acroread has to read from stdin */
 
   pdf_argv[pdf_argc] = NULL;
 
@@ -712,11 +750,13 @@ main(int  argc,				/* I - Number of command-line args */
 
   if (renderer == PDFTOPS)
     need_post_proc = 0;
-  else
+  else if (renderer == GS)
     need_post_proc =
       (ppd && ppd->manufacturer &&
        (!strncasecmp(ppd->manufacturer, "Kyocera", 7) ||
 	!strncasecmp(ppd->manufacturer, "Brother", 7)) ? 1 : 0);
+  else
+    need_post_proc = 1;
 
  /*
   * Execute "pdftops/gs | pstops [ | post-processing ]"...
@@ -763,10 +803,25 @@ main(int  argc,				/* I - Number of command-line args */
       execv(CUPS_POPPLER_PDFTOPS, pdf_argv);
       perror("DEBUG: Unable to execute pdftops program");
     }
-    else
+    else if (renderer == GS)
     {
       execv(CUPS_GHOSTSCRIPT, pdf_argv);
       perror("DEBUG: Unable to execute gs program");
+    }
+    else
+    {
+      /*
+       * use filename as stdin for acroread to force output to stdout
+       */
+
+      if ((fd = open(filename, O_RDONLY)))
+      {
+        dup2(fd, 0);
+        close(fd);
+      }
+     
+      execv(CUPS_ACROREAD, pdf_argv);
+      perror("DEBUG: Unable to execute acroread program");
     }
 
     exit(1);
@@ -779,8 +834,10 @@ main(int  argc,				/* I - Number of command-line args */
 
     if (renderer == PDFTOPS)
       perror("DEBUG: Unable to execute pdftops program");
-    else
+    else if (renderer == GS)
       perror("DEBUG: Unable to execute gs program");
+    else
+      perror("DEBUG: Unable to execute acroread program");
 
     exit_status = 1;
     goto error;
@@ -805,110 +862,137 @@ main(int  argc,				/* I - Number of command-line args */
 
       fp = cupsFileStdin();
 
-     /*
-      * Copy everything until after initial comments (Prolog section)
-      */
-      while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 &&
-	     strncmp(buffer, "%%BeginProlog", 13) &&
-	     strncmp(buffer, "%%EndProlog", 11) &&
-	     strncmp(buffer, "%%BeginSetup", 12) &&
-	     strncmp(buffer, "%%Page:", 7))
-	printf("%s", buffer);
-
-      if (bytes > 0)
+      if (renderer == ACROREAD)
       {
        /*
-	* Insert PostScript interpreter bug fix code in the beginning of
-	* the Prolog section (before the first active PostScript code)
-	*/
-	if (strncmp(buffer, "%%BeginProlog", 13))
-	{
-	  /* No Prolog section, create one */
-	  fprintf(stderr, "DEBUG: Adding Prolog section for workaround PostScript code\n");
-	  puts("%%BeginProlog");
-	}
-	else
-	  printf("%s", buffer);
-	
-	if (renderer == GS && ppd && ppd->manufacturer)
-	{
+        * Set %Title and %For from filter arguments since acroread inserts
+        * garbage for these when using -toPostScript
+        */
 
-	 /*
-	  * Kyocera printers have a bug in their PostScript interpreter 
-	  * making them crashing on PostScript input data generated by
-	  * Ghostscript's "ps2write" output device.
-	  *
-	  * The problem can be simply worked around by preceding the PostScript
-	  * code with some extra bits.
-	  *
-	  * See https://bugs.launchpad.net/bugs/951627
-	  *
-	  * In addition, at least some of Kyocera's PostScript printers are
-	  * very slow on rendering images which request interpolation. So we
-	  * also add some code to eliminate interpolation requests.
-	  *
-	  * See https://bugs.launchpad.net/bugs/1026974
-	  */
-
-	  if (!strncasecmp(ppd->manufacturer, "Kyocera", 7))
-	  {
-	    fprintf(stderr, "DEBUG: Inserted workaround PostScript code for Kyocera printers\n");
-	    puts("% ===== Workaround insertion by pdftops CUPS filter =====");
-	    puts("% Kyocera's PostScript interpreter crashes on early name binding,");
-	    puts("% so eliminate all \"bind\"s by redifining \"bind\" to no-op");
-	    puts("/bind {} bind def");
-	    puts("% Some Kyocera printers have an unacceptably slow implementation");
-	    puts("% of image interpolation.");
-	    puts("/image");
-	    puts("{");
-	    puts("  dup /Interpolate known");
-	    puts("  {");
-	    puts("    dup /Interpolate undef");
-	    puts("  } if");
-	    puts("  systemdict /image get exec");
-	    puts("} def");
-	    puts("% =====");
-	  }
-
-	 /*
-	  * Brother printers have a bug in their PostScript interpreter 
-	  * making them printing one blank page if PostScript input data
-	  * generated by Ghostscript's "ps2write" output device is used.
-	  *
-	  * The problem can be simply worked around by preceding the PostScript
-	  * code with some extra bits.
-	  *
-	  * See https://bugs.launchpad.net/bugs/950713
-	  */
-
-	  else if (!strncasecmp(ppd->manufacturer, "Brother", 7))
-	  {
-	    fprintf(stderr, "DEBUG: Inserted workaround PostScript code for Brother printers\n");
-	    puts("% ===== Workaround insertion by pdftops CUPS filter =====");
-	    puts("% Brother's PostScript interpreter spits out the current page");
-	    puts("% and aborts the job on the \"currenthalftone\" operator, so redefine");
-	    puts("% it to null");
-	    puts("/currenthalftone {//null} bind def");
-	    puts("/orig.sethalftone systemdict /sethalftone get def");
-	    puts("/sethalftone {dup //null eq not {//orig.sethalftone}{pop} ifelse} bind def");
-	    puts("% =====");
-	  }
-	}
-	
-	if (strncmp(buffer, "%%BeginProlog", 13))
-	{
-	  /* Close newly created Prolog section */
-	  if (strncmp(buffer, "%%EndProlog", 11))
-	    puts("%%EndProlog");
-	  printf("%s", buffer);
-	}
+        while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 &&
+               strncmp(buffer, "%%BeginProlog", 13))
+        {
+          if (strncmp(buffer, "%%Title", 7) == 0)
+            printf("%%%%Title: %s\n", argv[3]);
+          else if (strncmp(buffer, "%%For", 5) == 0)
+            printf("%%%%For: %s\n", argv[2]);
+          else
+            printf("%s", buffer);
+        }
 
        /*
 	* Copy the rest of the file
 	*/
 	while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
 	  fwrite(buffer, 1, bytes, stdout);
+      }
+      else
+      {
 
+       /*
+	* Copy everything until after initial comments (Prolog section)
+	*/
+	while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 &&
+	       strncmp(buffer, "%%BeginProlog", 13) &&
+	       strncmp(buffer, "%%EndProlog", 11) &&
+	       strncmp(buffer, "%%BeginSetup", 12) &&
+	       strncmp(buffer, "%%Page:", 7))
+	  printf("%s", buffer);
+
+	if (bytes > 0)
+	{
+	 /*
+	  * Insert PostScript interpreter bug fix code in the beginning of
+	  * the Prolog section (before the first active PostScript code)
+	  */
+	  if (strncmp(buffer, "%%BeginProlog", 13))
+	  {
+	    /* No Prolog section, create one */
+	    fprintf(stderr, "DEBUG: Adding Prolog section for workaround PostScript code\n");
+	    puts("%%BeginProlog");
+	  }
+	  else
+	    printf("%s", buffer);
+
+	  if (renderer == GS && ppd && ppd->manufacturer)
+	  {
+
+	   /*
+	    * Kyocera printers have a bug in their PostScript interpreter
+	    * making them crashing on PostScript input data generated by
+	    * Ghostscript's "ps2write" output device.
+	    *
+	    * The problem can be simply worked around by preceding the PostScript
+	    * code with some extra bits.
+	    *
+	    * See https://bugs.launchpad.net/bugs/951627
+	    *
+	    * In addition, at least some of Kyocera's PostScript printers are
+	    * very slow on rendering images which request interpolation. So we
+	    * also add some code to eliminate interpolation requests.
+	    *
+	    * See https://bugs.launchpad.net/bugs/1026974
+	    */
+
+	    if (!strncasecmp(ppd->manufacturer, "Kyocera", 7))
+	    {
+	      fprintf(stderr, "DEBUG: Inserted workaround PostScript code for Kyocera printers\n");
+	      puts("% ===== Workaround insertion by pdftops CUPS filter =====");
+	      puts("% Kyocera's PostScript interpreter crashes on early name binding,");
+	      puts("% so eliminate all \"bind\"s by redifining \"bind\" to no-op");
+	      puts("/bind {} bind def");
+	      puts("% Some Kyocera printers have an unacceptably slow implementation");
+	      puts("% of image interpolation.");
+	      puts("/image");
+	      puts("{");
+	      puts("  dup /Interpolate known");
+	      puts("  {");
+	      puts("    dup /Interpolate undef");
+	      puts("  } if");
+	      puts("  systemdict /image get exec");
+	      puts("} def");
+	      puts("% =====");
+	    }
+
+	   /*
+	    * Brother printers have a bug in their PostScript interpreter
+	    * making them printing one blank page if PostScript input data
+	    * generated by Ghostscript's "ps2write" output device is used.
+	    *
+	    * The problem can be simply worked around by preceding the PostScript
+	    * code with some extra bits.
+	    *
+	    * See https://bugs.launchpad.net/bugs/950713
+	    */
+
+	    else if (!strncasecmp(ppd->manufacturer, "Brother", 7))
+	    {
+	      fprintf(stderr, "DEBUG: Inserted workaround PostScript code for Brother printers\n");
+	      puts("% ===== Workaround insertion by pdftops CUPS filter =====");
+	      puts("% Brother's PostScript interpreter spits out the current page");
+	      puts("% and aborts the job on the \"currenthalftone\" operator, so redefine");
+	      puts("% it to null");
+	      puts("/currenthalftone {//null} bind def");
+	      puts("/orig.sethalftone systemdict /sethalftone get def");
+	      puts("/sethalftone {dup //null eq not {//orig.sethalftone}{pop} ifelse} bind def");
+	      puts("% =====");
+	    }
+	  }
+
+	  if (strncmp(buffer, "%%BeginProlog", 13))
+	  {
+	    /* Close newly created Prolog section */
+	    if (strncmp(buffer, "%%EndProlog", 11))
+	      puts("%%EndProlog");
+	    printf("%s", buffer);
+	  }
+
+	 /*
+	  * Copy the rest of the file
+	  */
+	  while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
+	    fwrite(buffer, 1, bytes, stdout);
+	}
       }
 
       exit(0);
@@ -1012,7 +1096,8 @@ main(int  argc,				/* I - Number of command-line args */
 
 	fprintf(stderr, "DEBUG: PID %d (%s) stopped with status %d!\n",
 		wait_pid,
-		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" : "gs") :
+		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
+                (renderer == GS ? "gs" : "acroread")) :
 		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
 		exit_status);
       }
@@ -1021,7 +1106,8 @@ main(int  argc,				/* I - Number of command-line args */
 	fprintf(stderr,
 		"DEBUG: PID %d (%s) was terminated normally with signal %d!\n",
 		wait_pid,
-		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" : "gs") :
+		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
+                (renderer == GS ? "gs" : "acroread")) :
 		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
 		exit_status);
       }
@@ -1030,7 +1116,8 @@ main(int  argc,				/* I - Number of command-line args */
 	exit_status = WTERMSIG(wait_status);
 
 	fprintf(stderr, "DEBUG: PID %d (%s) crashed on signal %d!\n", wait_pid,
-		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" : "gs") :
+		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
+                (renderer == GS ? "gs" : "acroread")) :
 		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
 		exit_status);
       }
@@ -1038,7 +1125,8 @@ main(int  argc,				/* I - Number of command-line args */
     else
     {
       fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n", wait_pid,
-	      wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" : "gs") :
+	      wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
+              (renderer == GS ? "gs" : "acroread")) :
 	      (wait_pid == pstops_pid ? "pstops" : "Post-processing"));
     }
   }

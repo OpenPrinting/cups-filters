@@ -188,7 +188,7 @@ AS_IF([test x"$with_tiff" != "xno"], [
 		[tiff],
 		LIBJPEG_LIBS="-ltiff",
 		AC_MSG_ERROR([tiff libraries not found.])
-	)	
+	)
 	AC_SUBST(LIBTIFF_LIBS)
 ])
 
@@ -234,12 +234,12 @@ AS_IF([test x"$long_long_found" = "xyes"], [
 # Check for pdf2ps
 # ================
 AC_ARG_WITH([pdftops],
-	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops).])],
+	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,acroread).])],
 	[with_pdftops="$withval"],
 	[with_pdftops=gs]
 )
 AS_CASE([x$with_pdftops],
-        [xgs|xpdftops], [],
+        [xgs|xpdftops|xacroread], [],
         [AC_MSG_ERROR([Unknown value of with-pdftops provided: $with_pdftops])]
 )
 AC_ARG_WITH([gs-path],
@@ -251,6 +251,11 @@ AC_ARG_WITH([pdftops-path],
         [AS_HELP_STRING([--with-pdftops-path=value], [Set path to pdftops/ghostscript binary (default: system).])],
         [with_pdftops_path="$withval"],
         [with_pdftops_path=system]
+)
+AC_ARG_WITH([acroread-path],
+        [AS_HELP_STRING([--with-acroread-path=value], [Set path to acroread binary (default: system).])],
+        [with_acroread_path="$withval"],
+        [with_acroread_path=system]
 )
 AC_ARG_WITH([pdftops-maxres],
 	[AS_HELP_STRING([--with-pdftops-maxres=value], [Set maximum image rendering resolution for pdftops filter (0, 75, 150, 300, 600, 1200, 2400, 4800, 90, 180, 360, 720, 1440, 2880, 5760, unlimited). Default: 1440])],
@@ -305,9 +310,19 @@ AS_IF([test "x$CUPS_PDFTOPS" != "x"], [
         	AC_MSG_RESULT([no])
 	])
 ])
+AS_IF([test "x$with_acroread_path" != "xsystem"], [
+	CUPS_ACROREAD="$with_acroread_path"
+], [
+	AC_PATH_PROG(CUPS_ACROREAD, [acroread], [AC_MSG_ERROR([Required acroread binary is missing. Please install acroread package.])])
+])
+AS_IF([test "x$CUPS_ACROREAD" != "x"], [
+	AC_DEFINE([HAVE_ACROREAD], [], [Define that we provide acroread.])
+	AS_IF([test x"$with_pdftops" = xacroread], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [ACROREAD], [Define default renderer])])
+])
 
 AC_DEFINE_UNQUOTED([CUPS_GHOSTSCRIPT], "$CUPS_GHOSTSCRIPT", [gs binary to use])
 AC_DEFINE_UNQUOTED([CUPS_POPPLER_PDFTOPS], "$CUPS_PDFTOPS", [pdftops binary to use.])
+AC_DEFINE_UNQUOTED([CUPS_ACROREAD], "$CUPS_ACROREAD", [acroread binary to use.])
 AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_MAX_RESOLUTION], [$CUPS_PDFTOPS_MAXRES], [max resolution used for pdftops when converting images])
 
 # =============

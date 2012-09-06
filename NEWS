@@ -2,6 +2,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-04
 -----------------------------------------------------
 CHANGES IN V1.0.24
 
+	- pdftops: Added support for using Adobe Reader (acroread) in command
+	  line mode for turning PDF to PostScript (Bug #1065).
 	- pdftopdf: Fix build on OpenBSD (Bug #1062).
 	- pdftops: Fix stripping of page management options from the pstops
 	  command line which got already applied by pdftopdf. If the name
