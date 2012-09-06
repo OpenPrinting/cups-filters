@@ -846,6 +846,12 @@ The aim is to replace and imitate the pstops filter in PDF-based workflows.
 A similar filter (which can serve as behavior reference) 
 is called "cgpdftopdf" in OS X (not open source).
 
+Notable options
+---------------
+ booklet=Off/On/Shuffle-Only
+   On also tries to set DuplexTumble (two-sided-short-edge) and forces number-up=2
+ booklet-signature=(multiple of 4, or default: -1 to use "all pages")
+
 Known issues
 ------------
 - Borders, esp. in the "number-up=1 fitplot=false"-case are sometimes drawn 

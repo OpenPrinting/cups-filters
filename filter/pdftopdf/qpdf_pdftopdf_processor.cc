@@ -460,6 +460,18 @@ void QPDF_PDFTOPDF_Processor::addCM(const char *defaulticc,const char *outputicc
 }
 // }}}
 
+
+void QPDF_PDFTOPDF_Processor::setComments(const std::vector<std::string> &comments) // {{{
+{
+  extraheader.clear();
+  for (auto &it : comments) {
+    assert(it.at(0)=='%');
+    extraheader.append(it);
+    extraheader.push_back('\n');
+  }
+}
+// }}}
+
 void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,ArgOwnership take) // {{{
 {
   if (!pdf) {
@@ -482,6 +494,9 @@ void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,ArgOwnership take) // {{{
   } else {
     out.setMinimumPDFVersion("1.2");
   }
+  if (!extraheader.empty()) {
+    out.setExtraHeaderText(extraheader);
+  }
   out.write();
 }
 // }}}
@@ -497,6 +512,9 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name) // {{{
     out.setMinimumPDFVersion("1.4");
   } else {
     out.setMinimumPDFVersion("1.2");
+  }
+  if (!extraheader.empty()) {
+    out.setExtraHeaderText(extraheader);
   }
   out.write();
 }

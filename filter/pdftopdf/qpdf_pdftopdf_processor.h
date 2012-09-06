@@ -4,27 +4,6 @@
 #include "pdftopdf_processor.h"
 #include <qpdf/QPDF.hh>
 
-/*
-class QPDF_PDFTOPDF_Processor : public PDFTOPDF_Processor {
-public:
-  QPDF_PDFTOPDF_Processor();
-  ~QPDF_PDFTOPDF_Processor();
-
-  bool loadFile(FILE *f,ArgOwnership take=WillStayAlive);
-  bool loadFilename(const char *name);
-
-  bool setProcess(const ProcessingParameters &param);
-  void emitFile(FILE *dst,ArgOwnership take=WillStayAlive);
-  void emitFilename(const char *name);
-
-private:
-  void closeFile();
-  void error(const char *fmt,...);
-private:
-  QPDF *pdf; // TODO: std::unique_ptr
-};
-*/
-
 class QPDF_PDFTOPDF_PageHandle : public PDFTOPDF_PageHandle {
 public:
   virtual PageRect getRect() const;
@@ -71,6 +50,8 @@ public:
 
   virtual void addCM(const char *defaulticc,const char *outputicc);
 
+  virtual void setComments(const std::vector<std::string> &comments);
+
   virtual void emitFile(FILE *dst,ArgOwnership take=WillStayAlive);
   virtual void emitFilename(const char *name);
 
@@ -83,6 +64,7 @@ private:
   std::vector<QPDFObjectHandle> orig_pages;
 
   bool hasCM;
+  std::string extraheader;
 };
 
 #endif

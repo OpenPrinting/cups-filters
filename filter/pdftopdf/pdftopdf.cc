@@ -594,7 +594,7 @@ see also setFinalPPD()
   // param.deviceCopies=1;
   // ppd->manual_copies=1; // ??
 
-  setFinalPPD(ppd,param);
+  setFinalPPD(ppd,param); // TODO? elsewhere/outside
 }
 
 void dump_options(int num_options,cups_option_t *options)
@@ -673,6 +673,7 @@ param.border=BorderType::ONE;
 if (!proc1->loadFilename("in.pdf")) return 2;
     param.dump();
 if (!processPDFTOPDF(*proc1,param)) return 3;
+    emitComment(*proc1,param);
 proc1->emitFilename("out.pdf");
 #endif
     return 1;
@@ -742,6 +743,7 @@ proc1->emitFilename("out.pdf");
     }
 
     emitPreamble(ppd,param); // ppdEmit, JCL stuff
+    emitComment(*proc,param); // pass information to subsequent filters viia PDF comments
 
 //    proc->emitFile(stdout);
     proc->emitFilename(NULL);

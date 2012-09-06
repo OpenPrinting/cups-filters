@@ -74,7 +74,7 @@ QPDFObjectHandle getRectAsBox(const PageRect &rect) // {{{
 #include <qpdf/QUtil.hh>
 
 Matrix::Matrix() // {{{
-  : ctm({1,0,0,1,0,0})
+  : ctm{1,0,0,1,0,0}
 {
 }
 // }}}

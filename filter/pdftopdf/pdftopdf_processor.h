@@ -5,6 +5,7 @@
 #include "nup.h"
 #include "intervalset.h"
 #include <vector>
+#include <string>
 
 enum BookletMode { BOOKLET_OFF, BOOKLET_ON, BOOKLET_JUSTSHUFFLE };
 
@@ -49,7 +50,7 @@ struct ProcessingParameters {
   const char *user, *title; // will stay around
   bool fitplot;
   PageRect page;
-  Rotation orientation,normal_landscape;  // normal_landscape (i.e. default direction) is e.g. needed for number-up=2 
+  Rotation orientation,normal_landscape;  // normal_landscape (i.e. default direction) is e.g. needed for number-up=2
   bool duplex;
   BorderType border;
   NupParameters nup;
@@ -124,6 +125,8 @@ public:
   virtual void multiply(int copies,bool collate) =0;
 
   virtual void addCM(const char *defaulticc,const char *outputicc) =0;
+
+  virtual void setComments(const std::vector<std::string> &comments) =0;
 
   virtual void emitFile(FILE *dst,ArgOwnership take=WillStayAlive) =0;
   virtual void emitFilename(const char *name) =0; // NULL -> stdout
