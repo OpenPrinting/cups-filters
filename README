@@ -88,17 +88,18 @@ POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
     Therefore there are two possibilities to configure pdftops at
     runtime:
 
-    1. Selection of the renderer: Ghostscript or Poppler
+    1. Selection of the renderer: Ghostscript, Poppler, or Adobe Reader
 
     Ghostscript has better color management and is generally optimized
     more for printing. Poppler produces a PostScript which is
     compatible with more buggy built-in PostScript interpreters of
     printers and it leads to a somewhat quicker workflow when
     graphical structures of the input PDF has to be turned into
-    bitmaps.
+    bitmaps. Adobe Reader is the PDF renderer from Adobe, the ones
+    who created PDF and PostScript.
 
     The selection is done by the "pdftops-renderer" option, setting it
-    to "gs" or "pdftops":
+    to "gs", "pdftops", or "acroread":
 
     Per-job:           lpr -o pdftops-renderer=pdftops ...
     Per-queue default: lpadmin -p printer -o pdftops-renderer-default=gs
@@ -128,6 +129,9 @@ POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
     (in dpi) or to zero for unlimited. It can be used per-job or as
     per-queue default as the "pdftops-renderer" option described
     above.
+
+    The "pdftops-max-image-resolution" option is ignored when Adobe
+    Reader is selected as PDF renderer.
 
 POSTSCRIPT PRINTING DEBUG MODE
 
