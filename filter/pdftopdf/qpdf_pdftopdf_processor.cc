@@ -464,9 +464,10 @@ void QPDF_PDFTOPDF_Processor::addCM(const char *defaulticc,const char *outputicc
 void QPDF_PDFTOPDF_Processor::setComments(const std::vector<std::string> &comments) // {{{
 {
   extraheader.clear();
-  for (auto &it : comments) {
-    assert(it.at(0)=='%');
-    extraheader.append(it);
+  const int len=comments.size();
+  for (int iA=0;iA<len;iA++) {
+    assert(comments[iA].at(0)=='%');
+    extraheader.append(comments[iA]);
     extraheader.push_back('\n');
   }
 }

@@ -1,5 +1,9 @@
-NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-07
+NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-08
 -----------------------------------------------------
+CHANGES IN V1.0.24
+
+	- pdftopdf: Don't expect too much C++11 support for now (Bug #1067).
+
 CHANGES IN V1.0.24
 
         - pdftopdf now generates the necessary pdf comments to disable 
