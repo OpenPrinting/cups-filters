@@ -163,10 +163,10 @@ void PageRect::translate(float tx,float ty) // {{{
 
 void PageRect::set(const PageRect &rhs) // {{{
 {
-  if (!isnan(rhs.top)) top=rhs.top;
-  if (!isnan(rhs.left)) left=rhs.left;
-  if (!isnan(rhs.right)) right=rhs.right;
-  if (!isnan(rhs.bottom)) bottom=rhs.bottom;
+  if (!std::isnan(rhs.top)) top=rhs.top;
+  if (!std::isnan(rhs.left)) left=rhs.left;
+  if (!std::isnan(rhs.right)) right=rhs.right;
+  if (!std::isnan(rhs.bottom)) bottom=rhs.bottom;
 }
 // }}}
 
