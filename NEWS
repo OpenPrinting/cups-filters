@@ -2,6 +2,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-08
 -----------------------------------------------------
 CHANGES IN V1.0.25
 
+	- pdftoopvp: Get correct byte order definition when building under
+	  OpenBSD (Bug #1070).
 	- serial backend: Added check for sys/ioctl.h to configure.ac (Bug
 	  #1069).
 	- pdftopdf: Made code building under OpenBSD (Bug #1068).

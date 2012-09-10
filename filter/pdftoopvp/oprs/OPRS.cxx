@@ -15,6 +15,15 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <stdarg.h>
+#if defined __OpenBSD__
+#include <sys/endian.h>
+#if BYTE_ORDER == BIG_ENDIAN
+#define __BYTE_ORDER __BIG_ENDIAN
+#else
+#define __BYTE_ORDER __LITTLE_ENDIAN
+#endif
+#endif
+
 #include "goo/gmem.h"
 #include "splash/SplashErrorCodes.h"
 #include "splash/SplashMath.h"
