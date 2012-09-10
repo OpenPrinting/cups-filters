@@ -138,6 +138,7 @@ AC_CHECK_HEADERS([unistd.h])
 AC_CHECK_HEADERS([zlib.h])
 AC_CHECK_HEADERS([endian.h])
 AC_CHECK_HEADERS([dirent.h])
+AC_CHECK_HEADERS([sys/ioctl.h])
 
 # =============
 # Image options
