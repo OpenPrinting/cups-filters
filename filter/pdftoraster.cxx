@@ -182,7 +182,7 @@ namespace {
   cmsHTRANSFORM colorTransform = NULL;
   cmsCIEXYZ D65WhitePoint;
   int renderingIntent = INTENT_PERCEPTUAL;
-};
+}
 
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
 void CDECL myErrorFun(void *data, ErrorCategory category,

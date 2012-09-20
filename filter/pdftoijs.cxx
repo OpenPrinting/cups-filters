@@ -49,7 +49,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 extern "C" {
 #include <ijs/ijs.h>
 #include <ijs/ijs_client.h>
-};
+}
 #include <vector>
 #include <string>
 
@@ -62,12 +62,12 @@ namespace {
 //  bool deviceCollate = false;
   const char *ijsserver = NULL;
   int resolution[2] = {0,0};
-  enum { NONE=-1, COL_RGB, COL_CMYK, COL_BLACK1, COL_WHITE1, COL_BLACK8, COL_WHITE8 } colspace=NONE;
+  enum ColEnum { NONE=-1, COL_RGB, COL_CMYK, COL_BLACK1, COL_WHITE1, COL_BLACK8, COL_WHITE8 } colspace=NONE;
   const char *devManu=NULL, *devModel=NULL;
   std::vector<std::pair<std::string,std::string> > params;
 
   ppd_file_t *ppd = 0; // holds the memory for the strings
-};
+}
 
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
 void CDECL myErrorFun(void *data, ErrorCategory category,

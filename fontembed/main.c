@@ -36,7 +36,7 @@ static void example_outfn(const char *buf,int len,void *context) // {{{
 {
   FILE *f=(FILE *)context;
   if (fwrite(buf,1,len,f)!=len) {
-    fprintf(stderr,"Short write: %m\n");
+    perror("Short write");
     assert(0);
     return;
   }
