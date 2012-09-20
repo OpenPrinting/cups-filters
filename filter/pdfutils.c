@@ -37,7 +37,7 @@ void pdfOut_putString(pdfOut *pdf,const char *str,int len) // {{{ - >len==-1: st
     len=strlen(str);
   }
   putc('(',stdout);
-  // escape special chars: \0 \\ \)
+  // escape special chars: \0 \\ \( \)  -- don't bother about balanced parens
   int iA=0;
   for (;len>0;iA++,len--) {
     if ( (str[iA]<32)||(str[iA]>126) ) {
@@ -46,7 +46,7 @@ void pdfOut_putString(pdfOut *pdf,const char *str,int len) // {{{ - >len==-1: st
       pdf->filepos+=iA+4;
       str+=iA+1;
       iA=-1;
-    } else if ( (str[iA]==')')||(str[iA]=='\\') ) {
+    } else if ( (str[iA]=='(')||(str[iA]==')')||(str[iA]=='\\') ) {
       fwrite(str,1,iA,stdout);
       fprintf(stdout,"\\%c",str[iA]);
       pdf->filepos+=iA+2;
@@ -287,7 +287,7 @@ static void pdfOut_outfn(const char *buf,int len,void *context) // {{{
   pdfOut *pdf=(pdfOut *)context;
 
   if (fwrite(buf,1,len,stdout)!=len) {
-    fprintf(stderr,"Short write: %m\n");
+    perror("Short write");
     assert(0);
     return;
   }
