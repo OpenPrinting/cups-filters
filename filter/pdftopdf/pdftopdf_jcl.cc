@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-// TODO: -currently changes ppd.
+// TODO: -currently changes ppd.  (Copies)
 //
 static void emitJCLOptions(FILE *fp, ppd_file_t *ppd, int deviceCopies) // {{{
 {
@@ -168,7 +168,7 @@ void emitComment(PDFTOPDF_Processor &proc,const ProcessingParameters &param) // 
     snprintf(buf,sizeof(buf),"%d",param.deviceCopies);
     output.push_back(std::string("%%PDFTOPDFNumCopies : ")+buf);
 
-    if ( (param.collate)&&(!param.unsetCollate) ) {
+    if (param.deviceCollate) {
       output.push_back("%%PDFTOPDFCollate : true");
     } else {
       output.push_back("%%PDFTOPDFCollate : false");

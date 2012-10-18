@@ -73,6 +73,10 @@ void ProcessingParameters::dump() const // {{{
 
   fprintf(stderr,"collate: %s\n",
                  (collate)?"true":"false");
+
+  fprintf(stderr,"evenDuplex: %s\n",
+                 (evenDuplex)?"true":"false");
+
 /*
   // std::string pageLabel; // or NULL?  must stay/dup!
   ...
@@ -85,17 +89,16 @@ void ProcessingParameters::dump() const // {{{
   fprintf(stderr,"\nbooklet signature: %d\n",
                  bookSignature);
 
-  fprintf(stderr,"evenDuplex: %s\n",
-                 (evenDuplex)?"true":"false");
-
   fprintf(stderr,"emitJCL: %s\n",
                  (emitJCL)?"true":"false");
   fprintf(stderr,"deviceCopies: %d\n",
                  deviceCopies);
+  fprintf(stderr,"deviceReverse: %s\n",
+                 (deviceReverse)?"true":"false");
+  fprintf(stderr,"deviceCollate: %s\n",
+                 (deviceCollate)?"true":"false");
   fprintf(stderr,"setDuplex: %s\n",
                  (setDuplex)?"true":"false");
-  fprintf(stderr,"unsetCollate: %s\n",
-                 (unsetCollate)?"true":"false");
 }
 // }}}
 

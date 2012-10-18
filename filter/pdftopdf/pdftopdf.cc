@@ -30,27 +30,6 @@ static void error(const char *fmt,...) // {{{
 
 // namespace {}
 
-struct PrinterFeatures {
-  PrinterFeatures() : canCollate(false)
-  {}
-// TODO: ppd->manual_copies
-
-  bool canCollate;
-//  bool 
-};
-
-PrinterFeatures getPrinterFeatures(ppd_file_t *ppd)
-{
-  PrinterFeatures ret;
-  if (!ppd) {
-    return ret;
-  }
-/*
-
-*/
-  return ret;
-}
-
 void setFinalPPD(ppd_file_t *ppd,const ProcessingParameters &param)
 {
   if ( (param.booklet==BOOKLET_ON)&&(ppdFindOption(ppd,"Duplex")) ) {
@@ -71,27 +50,12 @@ void setFinalPPD(ppd_file_t *ppd,const ProcessingParameters &param)
     choice->marked=0;
   }
 
-  // hardware can't collate the way we want it. Thus we collate; printer shall not
-  if (param.unsetCollate) {
-    ppdMarkOption(ppd,"Collate","False");
+  // TODO: FIXME:  unify code with emitJCLOptions, which does this "by-hand" now (and makes this code superfluous)
+  if (param.deviceCopies==1) {
+    // make sure any hardware copying is disabled
+    ppdMarkOption(ppd,"Copies","1");
+    ppdMarkOption(ppd,"JCLCopies","1");
   }
-
-#if 0
-  if (ppd) {
-    if (ppd->manual_copies) {
-      // disable any hardware copying
-      ppdMarkOption(ppd,"Copies","1");
-      ppdMarkOption(ppd,"JCLCopies","1");
-    } else {
-      // use hardware copying
-      param.deviceCopies=param.numCopies;
-      param.numCopies=1;
-    }
-  }
-#else
-  ppdMarkOption(ppd,"Copies","1");
-  ppdMarkOption(ppd,"JCLCopies","1");
-#endif
 }
 
 // for choice, only overwrites ret if found in ppd
@@ -515,7 +479,8 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 // }}}
 */
 
-  // make pages a multiple of two (only considered when duplex is on).
+  // make pages a multiple of two (only considered when duplex is on). 
+  // i.e. printer has hardware-duplex, but needs pre-inserted filler pages
   // FIXME? pdftopdf also supports it as cmdline option (via checkFeature())
   ppd_attr_t *attr;
   if ( (attr=ppdFindAttr(ppd,"cupsEvenDuplex",0)) != NULL) {
@@ -527,11 +492,23 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 }
 // }}}
 
-void calculate(ppd_file_t *ppd,ProcessingParameters &param)
+static bool printerWillCollate(ppd_file_t *ppd) // {{{
 {
-  // First step: no device copies, no device collate, no device reverse.
+  ppd_choice_t *choice;
 
-// TODO? better
+  if (  ( (choice=ppdFindMarkedChoice(ppd,"Collate")) != NULL)&&
+        (is_true(choice->choice))  ) {
+
+    // printer can collate, but also for the currently marked ppd features?
+    ppd_option_t *opt=ppdFindOption(ppd,"Collate");
+    return (opt)&&(!opt->conflicted);
+  }
+  return false;
+}
+// }}}
+
+void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
+{
   param.deviceReverse=false;
   if (param.reverse) {
     // test OutputOrder of hardware (ppd)
@@ -543,67 +520,51 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param)
       param.evenDuplex=true; // disabled later, if non-duplex
     }
   }
-/*
-  TODO:
-    force collate for duplex and not hw-collate
-
-  TODO: 
-
-  // check collate device
-  if (P2PDoc::options.collate && !ppd->manual_copies) {
-    if ((choice = ppdFindMarkedChoice(ppd,"Collate")) != NULL &&
-       !strcasecmp(choice->choice,"true")) {
-      ppd_option_t *opt;
-
-      if ((opt = ppdFindOption(ppd,"Collate")) != NULL &&
-        !opt->conflicted) {
-	deviceCollate = gTrue;
-      } else {
-	ppdMarkOption(ppd,"Collate","False");
-      }
-    }
-  }
-
-see also setFinalPPD()
-*/
 
   if (param.numCopies==1) {
     // collate is not needed
     param.collate=false; // does not make a big difference for us
-    param.unsetCollate=true;
   }
-/* TODO?
+/* TODO? instead:
   if (...numOutputPages==1 [after nup,evenDuplex!]) {
     param.collate=false; // does not make a big difference for us
-    param.unsetCollate=true; // TODO: is this worth it?
   }
 */
 
-  // TODO: other possibility would be: if (param.collate) { param.collate=false; param.unsetCollate=false; }
-  param.unsetCollate=true;
+#if 0    // for now
+  // enable hardware copy generation
+  if (ppd) {
+    if (!ppd->manual_copies) {
+      // use hardware copying
+      param.deviceCopies=param.numCopies;
+      param.numCopies=1;
+    } else {
+      param.deviceCopies=1;
+    }
+  }
+#endif 
 
-  if ( (param.collate)&&(!param.unsetCollate) ) { // TODO?
-    param.evenDuplex=true;
+  setFinalPPD(ppd,param);
+
+  // check collate device, with current ppd settings
+  if (param.collate) {
+    if (param.deviceCopies==1) { // e.g. ppd->manual_copies
+      param.deviceCollate=false;
+    } else {
+      param.deviceCollate=printerWillCollate(ppd);
+    }
+
+    if (!param.deviceCollate) {
+      ppdMarkOption(ppd,"Collate","False"); // disable any hardware-collate
+      param.evenDuplex=true; // software collate always needs fillers
+    }
   }
 
   if (!param.duplex) {
     param.evenDuplex=false;
   }
-
-  // not needed yet: TODO
-  // param.deviceCopies=1;
-  // ppd->manual_copies=1; // ??
-
-  setFinalPPD(ppd,param); // TODO? elsewhere/outside
 }
-
-void dump_options(int num_options,cups_option_t *options)
-{
-  fprintf(stderr,"%d options:\n",num_options);
-  for (int iA=0;iA<num_options;iA++) {
-    fprintf(stderr,"  %s: %s\n",options[iA].name,options[iA].value);
-  }
-}
+// }}}
 
 // reads from stdin into temporary file. returns FILE *  or NULL on error 
 // TODO? to extra file (also used in pdftoijs, e.g.)

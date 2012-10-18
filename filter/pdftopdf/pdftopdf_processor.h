@@ -32,7 +32,7 @@ struct ProcessingParameters {
       booklet(BOOKLET_OFF),bookSignature(-1),
 
       emitJCL(true),deviceCopies(1),deviceReverse(false),
-      setDuplex(false),unsetCollate(false)
+      deviceCollate(false),setDuplex(false)
   {
     page.width=612.0; // letter
     page.height=792.0;
@@ -71,14 +71,13 @@ struct ProcessingParameters {
   BookletMode booklet;
   int bookSignature;
 
+  // ppd/jcl changes
   bool emitJCL;
   int deviceCopies;
   bool deviceReverse;
-
-  // ppd changes
+  bool deviceCollate;
   bool setDuplex;
   // unsetMirror  (always)
-  bool unsetCollate;
 
   // helper functions
   bool withPage(int outno) const; // 1 based
