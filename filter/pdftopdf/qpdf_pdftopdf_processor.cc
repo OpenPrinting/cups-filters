@@ -228,9 +228,13 @@ void QPDF_PDFTOPDF_PageHandle::mirror() // {{{
     // need to wrap in XObject to keep patterns correct
     // TODO? refactor into internal ..._subpage fn ?
     std::string xoname="/X"+QUtil::int_to_string(no);
-    xobjs[xoname]=makeXObject(page.getOwningQPDF(),page);
 
-    *this=QPDF_PDFTOPDF_PageHandle(page.getOwningQPDF(),orig.width,orig.height);
+    QPDFObjectHandle subpage=get();  // this->page, with rotation
+
+    // replace all our data
+    *this=QPDF_PDFTOPDF_PageHandle(subpage.getOwningQPDF(),orig.width,orig.height);
+
+    xobjs[xoname]=makeXObject(subpage.getOwningQPDF(),subpage); // we can only now set this->xobjs
 
 //    content.append(std::string("1 0 0 1 0 0 cm\n  ");
     content.append(xoname+" Do\n");
