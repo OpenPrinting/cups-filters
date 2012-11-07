@@ -225,7 +225,11 @@ static void parseRanges(const char *range,IntervalSet &ret) // {{{
     if (*range=='-') {
       range++;
       upper=strtol(range,(char **)&range,10);
-      ret.add(1,upper+1);
+      if (upper>=2147483647) { // see also   cups/encode.c
+        ret.add(1);
+      } else {
+        ret.add(1,upper+1);
+      }
     } else {
       lower=strtol(range,(char **)&range,10);
       if (*range=='-') {
@@ -234,7 +238,11 @@ static void parseRanges(const char *range,IntervalSet &ret) // {{{
           ret.add(lower);
         } else {
           upper=strtol(range,(char **)&range,10);
-          ret.add(lower,upper+1);
+          if (upper>=2147483647) {
+            ret.add(1);
+          } else {
+            ret.add(lower,upper+1);
+          }
         }
       } else {
         ret.add(lower,lower+1);

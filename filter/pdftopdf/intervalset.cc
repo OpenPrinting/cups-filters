@@ -22,9 +22,13 @@ void IntervalSet::add(key_t start,key_t end) // {{{
 
 void IntervalSet::finish() // {{{
 {
-  std::sort(data.begin(),data.end());
-
   data_t::iterator it=data.begin(),end=data.end(),pos=it;
+  if (it==end) {
+    return;
+  }
+
+  std::sort(it,end);
+
   while (1) {
     ++it;
     if (it==end) {
@@ -61,6 +65,9 @@ IntervalSet::key_t IntervalSet::next(key_t val) const // {{{
   val++;
   data_t::const_iterator it=std::upper_bound(data.begin(),data.end(),std::make_pair(val,npos));
   if (it==data.begin()) {
+    if (it==data.end()) { // empty
+      return npos;
+    }
     return it->first;
   }
   --it;

@@ -30,7 +30,7 @@ bool ProcessingParameters::withPage(int outno) const // {{{
 
 void ProcessingParameters::dump() const // {{{
 {
-  fprintf(stderr,"jobId: %d, nupCopies: %d\n",
+  fprintf(stderr,"jobId: %d, numCopies: %d\n",
                  jobId,numCopies);
   fprintf(stderr,"user: %s, title: %s\n",
                  (user)?user:"(null)",(title)?title:"(null)");

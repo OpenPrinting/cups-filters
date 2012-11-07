@@ -2,6 +2,7 @@ NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-21
 -----------------------------------------------------
 CHANGES IN V1.0.25
 
+	- pdftopdf: Fixed segfault on "page-ranges=1-2147483647" (from cups)
 	- pdftopdf: Fixed collate filler insertion.
 	- texttopdf: Fixed deficient string escaping (Bug #1071).
 	- pdftoopvp: Get correct byte order definition when building under
