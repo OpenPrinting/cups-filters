@@ -2,6 +2,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-21
 -----------------------------------------------------
 CHANGES IN V1.0.25
 
+	- pdftopdf: pdfautorotate functionality has been patched directly 
+	  into pdftopdf (Bug #1080).
 	- pdftopdf: "mirror" produced only empty pages (XObjects not there).
 	- pdftopdf: Fixed segfault on "page-ranges=1-2147483647" (from cups).
 	- pdftopdf: Fixed collate filler insertion.

@@ -331,6 +331,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     param.page.width=pagesize->width;
     param.page.height=pagesize->length;
   }
+  param.paper_is_landscape=(param.page.width>param.page.height);
 
   PageRect tmp; // borders (before rotation)
 
@@ -497,6 +498,10 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 
   // TODO? pdftopdf* ?
   // TODO?! pdftopdfAutoRotate
+
+  // TODO?!  choose default by whether pdfautoratate filter has already been run (e.g. by mimetype)
+  param.autoRotate=( !is_false(cupsGetOption("pdfAutoRotate",num_options,options)) &&
+                     !is_false(cupsGetOption("pdftopdfAutoRotate",num_options,options)) );
 }
 // }}}
 

@@ -43,6 +43,9 @@ void ProcessingParameters::dump() const // {{{
   Rotation_dump(orientation);
   fprintf(stderr,"\n");
 
+  fprintf(stderr,"paper_is_landscape: %s\n",
+                 (paper_is_landscape)?"true":"false");
+
   fprintf(stderr,"duplex: %s\n",
                  (duplex)?"true":"false");
 
@@ -88,6 +91,9 @@ void ProcessingParameters::dump() const // {{{
   BookletMode_dump(booklet);
   fprintf(stderr,"\nbooklet signature: %d\n",
                  bookSignature);
+
+  fprintf(stderr,"autoRotate: %s\n",
+                 (autoRotate)?"true":"false");
 
   fprintf(stderr,"emitJCL: %s\n",
                  (emitJCL)?"true":"false");
@@ -147,6 +153,11 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
   if (!proc.check_print_permissions()) {
     fprintf(stderr,"Not allowed to print\n");
     return false;
+  }
+
+  if (param.autoRotate) {
+    const bool dst_lscape=( param.paper_is_landscape==( (param.orientation==ROT_0)||(param.orientation==ROT_180) ) );
+    proc.autoRotateAll(dst_lscape,param.normal_landscape);
   }
 
   std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> pages=proc.get_pages();

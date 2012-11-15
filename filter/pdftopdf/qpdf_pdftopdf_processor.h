@@ -48,6 +48,7 @@ public:
 
   virtual void multiply(int copies,bool collate);
 
+  virtual void autoRotateAll(bool dst_lscape,Rotation normal_landscape);
   virtual void addCM(const char *defaulticc,const char *outputicc);
 
   virtual void setComments(const std::vector<std::string> &comments);

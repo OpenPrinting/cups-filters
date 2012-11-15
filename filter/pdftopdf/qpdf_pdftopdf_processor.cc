@@ -443,7 +443,36 @@ void QPDF_PDFTOPDF_Processor::multiply(int copies,bool collate) // {{{
   }
 }
 // }}}
- 
+
+// TODO? elsewhere?
+void QPDF_PDFTOPDF_Processor::autoRotateAll(bool dst_lscape,Rotation normal_landscape) // {{{
+{
+  assert(pdf);
+
+  const int len=orig_pages.size();
+  for (int iA=0;iA<len;iA++) {
+    QPDFObjectHandle page=orig_pages[iA];
+
+    Rotation src_rot=getRotate(page);
+
+    // copy'n'paste from QPDF_PDFTOPDF_PageHandle::getRect
+    PageRect ret=getBoxAsRect(getTrimBox(page));
+//    ret.translate(-ret.left,-ret.bottom);
+    ret.rotate_move(src_rot,ret.width,ret.height);
+//    ret.scale(getUserUnit(page));
+
+    const bool src_lscape=(ret.width>ret.height);
+    if (src_lscape!=dst_lscape) {
+      Rotation rotation=normal_landscape;
+      // TODO? other rotation direction, e.g. if (src_rot==ROT_0)&&(param.orientation==ROT_270) ... etc.
+      // rotation=ROT_270;
+
+      page.replaceOrRemoveKey("/Rotate",makeRotate(src_rot+rotation));
+    }
+  }
+}
+// }}}
+
 #include "qpdf_cm.h"
 
 // TODO
