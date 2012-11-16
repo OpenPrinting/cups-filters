@@ -363,13 +363,11 @@ pdftopdf_SOURCES = \
 	filter/pdftopdf/qpdf_cm.h
 pdftopdf_CFLAGS = \
 	$(LIBQPDF_CFLAGS) \
-	$(CUPS_CFLAGS) \
-	$(ZLIB_CFLAGS)
+	$(CUPS_CFLAGS)
 pdftopdf_CXXFLAGS = -std=c++0x $(pdftopdf_CFLAGS)   # -std=c++11
 pdftopdf_LDADD = \
 	$(LIBQPDF_LIBS) \
-	$(CUPS_LIBS) \
-	$(ZLIB_LIBS)
+	$(CUPS_LIBS)
 
 # ======================
 # Simple filter binaries
@@ -388,7 +386,8 @@ pkgfilter_PROGRAMS += \
 	pdftoraster \
 	rastertoescpx \
 	rastertopclx \
-	texttopdf
+	texttopdf \
+	urftopdf
 if ENABLE_IMAGEFILTERS
 pkgfilter_PROGRAMS += \
 	imagetopdf \
@@ -474,6 +473,14 @@ imagetoraster_CFLAGS = \
 imagetoraster_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
+
+urftopdf_SOURCES = \
+	filter/urftopdf.cpp \
+	filter/uniraster.h
+urftopdf_CXXFLAGS = \
+	$(LIBQPDF_CFLAGS)
+urftopdf_LDADD = \
+	$(LIBQPDF_LIBS)
 
 pdftoijs_SOURCES = \
 	filter/pdftoijs.cxx \

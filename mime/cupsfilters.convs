@@ -68,6 +68,7 @@ image/x-xpixmap		application/vnd.cups-pdf		33	imagetopdf
 image/x-xwindowdump	application/vnd.cups-pdf		33	imagetopdf
 image/x-sun-raster	application/vnd.cups-pdf		33	imagetopdf
 application/vnd.cups-pdf-banner	application/pdf			33	bannertopdf
+image/urf		application/pdf				0	urftopdf
 
 ########################################################################
 #

@@ -90,6 +90,7 @@ application/vnd.adobe-reader-postscript priority(150) contains(0,4096,"%%Creator
 image/x-xbitmap			xbm string(0,"#define");
 image/x-xpixmap			xpm string(3,"XPM")
 image/x-xwindowdump		xwd string(4,<00000007>)
+image/urf			urf string(0,UNIRAST<00>)
 
 ########################################################################
 #
