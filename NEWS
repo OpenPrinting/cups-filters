@@ -2,6 +2,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-21
 -----------------------------------------------------
 CHANGES IN V1.0.25
 
+	- urftopdf: Newly added filter to convert the URF format which (at
+	  least some) iOS apps send when printing via AirPrint (Bug #1076).
 	- pdftopdf: pdfautorotate functionality has been patched directly 
 	  into pdftopdf (Bug #1080).
 	- pdftopdf: "mirror" produced only empty pages (XObjects not there).
