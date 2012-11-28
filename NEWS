@@ -1,5 +1,6 @@
-NEWS - OpenPrinting CUPS Filters v1.0.24 - 2012-09-21
+NEWS - OpenPrinting CUPS Filters v1.0.25 - 2012-11-28
 -----------------------------------------------------
+
 CHANGES IN V1.0.25
 
 	- urftopdf: Newly added filter to convert the URF format which (at
