@@ -476,7 +476,7 @@ imagetoraster_LDADD = \
 
 urftopdf_SOURCES = \
 	filter/urftopdf.cpp \
-	filter/uniraster.h
+	filter/unirast.h
 urftopdf_CXXFLAGS = \
 	$(LIBQPDF_CFLAGS)
 urftopdf_LDADD = \
