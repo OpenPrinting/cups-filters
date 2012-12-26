@@ -164,6 +164,122 @@ POSTSCRIPT PRINTING DEBUG MODE
     This option does not change anything if Poppler's pdftops is used
     as renderer.
 
+HELPER DAEMON FOR BROWSING BONJOUR-BROADCASTED REMOTE CUPS PRINTERS
+
+    From version 1.6.x on in CUPS the CUPS broadcasting/browsing
+    facility was dropped, in favour of Bonjour-based broadcasting of
+    shared printers. This is done as Bonjour broadcasting of shared
+    printers is a standard, established by the PWG (Printing Working
+    Group, http://www.pwg.org/), and most other network services
+    (shared file systems, shared media files/streams, remote desktop
+    services, ...) are also broadcasted via Bonjour.
+
+    Problem is that CUPS only broadcasts its shared printers but does
+    not browse broadcasts of other CUPS servers to make the shared
+    remote printers available locally without any configuration
+    efforts. This is a regression compared to the old CUPS
+    broadcasting/browsing. The intention of CUPS upstream is that the
+    application's print dialogs browse the Bonjour broadcasts as an
+    AirPrint-capable iPhone does, but it will take its time until all
+    toolkit developers add the needed functionality, and programs
+    using old toolkits or no toolkits at all, or the command line stay
+    uncovered.
+
+    The solution is cups-browsed, a helper daemon running in parallel
+    to the CUPS daemon which listens to Bonjour broadcasts of shared
+    CUPS printers on remote machines in the local network via
+    Avahi. For each reported remote printer it creates a local raw
+    queue pointing to the remote printer so that the printer appears
+    in local print dialogs and is also available for printing via the
+    command line. As with the former CUPS broadcasting/browsing with
+    this queue the driver on the server is used and the local print
+    dialogs give access to all options of the server-side printer
+    driver.
+
+    Also high availability with redundant print servers is
+    supported. If there is more than onbe server providing a shared
+    print queue with the same name, cups-browsed uses the first queue
+    which appeared and if this queue disappears, cups-browsed
+    seamlessly switches to the queue of another server. Unfortunately,
+    load-balancing (what CUPS did via implicit classes) is not
+    possible with cups-browsed.
+
+    For maximum security cups-browsed uses IPPS (encrypted IPP)
+    whenever possible.
+
+    Compilation:
+
+    gcc -o cups-browsed cups-browsed.c `cups-config --libs` -lavahi-client \
+    -ldbus-1 -lavahi-common -ldl -DHAVE_SIGACTION
+
+    Here is some info on how cups-browsed works internally:
+
+    - Daemon start
+      o Wait for CUPS daemon if it is not running
+      o Read out all CUPS queues created by this daemon (in former sessions)
+      o Mark them unconfirmed and set timeout 10 sec from now
+    - Main loop (use avahi_simple_poll_iterate() to do queue list maintenance
+                 regularly)
+      o Event: New printer shows up
+        + Queue for printer is already created by this daemon -> Mark list
+          entry confirmed, if discovered printer is ipps but existing queue ipp,
+	  upgrade existing queue by setting URI to ipps. Set status to
+	  to-be-created and timeout to now-1 sec to make the CUPS queue be
+	  updated.
+        + Queue does not yet exist -> Mark as to-be-created and set
+	  timeout to now-1 sec.
+      o Event: A printer disappears
+        + If we have listed a queue for it, mark the entry as disappeared, set
+          timeout to now-1 sec
+      o On any of the above events and every 2 sec
+        + Check through list of our listed queues
+          - If queue is unconfirmed and timeout has passed, mark it as
+            disappeared, set timeout to now-1 sec
+          - If queue is marked disappered and timeout has passed, check whether
+	    there are still jobs in it, if yes, set timeout to 10 sec from now,
+	    if no, remove the CUPS queue and the queue entry in our list. If
+	    removal fails, set timeout to 10 sec.
+	  - If queue is to-be-created, create it, if succeeded set to
+	    confirmed, if not, set timeout to 10 sec fron now. printer-is-shared
+	    must be set to false.
+    - Daemon shutdown
+      o Remove all CUPS queues in our list, as long as they do not have jobs.
+
+    Do not overwrite existing queues which are not created by us If
+    the simple <remote_printer> name is already taken, try to create a
+    <remote_printer>@<server> name, if this is also taken, ignore the
+    remote printer. Do not retry, to avoid polling CUPS all the time.
+
+    Do not remove queues which are not created by us. We do this by
+    listing only our queues and remove only listed queues.
+
+    Queue names: Use the name of the remote queue. If a queue with the
+    same name from another server already exists, mark the new queue
+    as duplicate and when a queue disappears, check whether it has
+    duplicates and change the URI of the disappeared queue to the URI
+    of the first duplicate, mark the queue as to-be-created with
+    timeout now-1 sec (to update the URI of the CUPS queue) and mark
+    the duplicate ddisappeared with timeout now-1 sec. In terms of
+    high availability we replace the old load balancing of the
+    implicit class by a failover solution. Alternatively (not
+    implemented), if queue with same name but from other server
+    appears, create new queue as <original name>@<server name without
+    .local>. When queue with simple name is removed, replace the first
+    of the others by one with simple name (mark old queue disappeared
+    with timeout now-1 sec and create new queue with simple name).
+
+    Fill description of the created CUPS queue with the Bonjour
+    service name (= original description) and location with the server
+    name without .local.
+
+    stderr messages only in debug mode (command line options:
+    "--debug" or "-d" or "-v").
+
+    Queue identified as from this daemon by doing the equivalent of
+    "lpadmin -p printer -o cups-browsed-default", this generates a
+    "cups-browsed" attribute in printers.conf with value "true".
+
+
 CUPS FILTERS FOR PDF AS STANDARD PRINT JOB FORMAT
 
     Here is documentation from the former CUPS add-on tarball with the filters
