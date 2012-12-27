@@ -1,8 +1,9 @@
-NEWS - OpenPrinting CUPS Filters v1.0.25 - 2012-11-28
+NEWS - OpenPrinting CUPS Filters v1.0.26 - 2012-12-27
 -----------------------------------------------------
 
 CHANGES IN V1.0.26
 
+	- Some fixes in README and INSTALL.
 	- cups-browsed: Added daemon to browse the Bonjour broadcasts of
 	  shared remote CUPS printers and automatically add local raw queues
 	  pointing to them, to resemble the behavior of the former CUPS
