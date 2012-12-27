@@ -207,9 +207,11 @@ HELPER DAEMON FOR BROWSING BONJOUR-BROADCASTED REMOTE CUPS PRINTERS
     For maximum security cups-browsed uses IPPS (encrypted IPP)
     whenever possible.
 
-    Start it as root with:
+    The "make install" process installs init scripts which make the daemon
+    automatically started during boot. You can also manually start it with
+    (as root):
 
-    /usr/sbin/cups-browsed
+    /usr/sbin/cups-browsed &
 
     or in debug mode with
 

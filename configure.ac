@@ -233,6 +233,72 @@ fi
 AC_SUBST(AVAHI_LIBS)
 AC_SUBST(AVAHI_CFLAGS)
 
+dnl Setup init.d locations...
+AC_ARG_WITH(rcdir, [AS_HELP_STRING([--with-rcdir], [Set path for rc scripts])],rcdir="$withval",rcdir="")
+AC_ARG_WITH(rclevels, [AS_HELP_STRING([--with-rclevels], [Set run levels for rc scripts])],rclevels="$withval",rclevels="2 3 5")
+AC_ARG_WITH(rcstart, [AS_HELP_STRING([--with-rcstart], [Set start number for rc scripts])],rcstart="$withval",rcstart="99")
+AC_ARG_WITH(rcstop, [AS_HELP_STRING([--with-rcstop], [Set stop number for rc scripts])],rcstop="$withval",rcstop="00")
+
+INITDIR=""
+INITDDIR=""
+RCLEVELS="$rclevels"
+RCSTART="$rcstart"
+RCSTOP="$rcstop"
+
+if test x$rcdir = x; then
+	case "`uname`" in
+		FreeBSD* | OpenBSD* | MirBSD* | ekkoBSD*)
+			# FreeBSD and OpenBSD
+			;;
+
+		Linux | GNU | GNU/k*BSD*)
+			# Linux/HURD seems to choose an init.d directory at random...
+			if test -d /sbin/init.d; then
+				# SuSE
+				INITDIR="/sbin/init.d"
+			else
+				if test -d /etc/init.d; then
+					# Others
+					INITDIR="/etc"
+				else
+					# RedHat
+					INITDIR="/etc/rc.d"
+				fi
+			fi
+			RCSTART="82"
+			RCSTOP="35"
+			;;
+
+		NetBSD*)
+			# NetBSD
+			INITDDIR="/etc/rc.d"
+			;;
+
+		*)
+			INITDIR="/etc"
+			;;
+
+	esac
+elif test "x$rcdir" != xno; then
+	if test "x$rclevels" = x; then
+		INITDDIR="$rcdir"
+	else
+		INITDIR="$rcdir"
+	fi
+fi
+
+AM_CONDITIONAL([RCLINKS], [test "x$INITDDIR" = "x"])
+
+if test "x${INITDIR}" != "x" -a "x${INITDDIR}" = "x"; then
+   INITDDIR="${INITDIR}/init.d"
+fi
+
+AC_SUBST(INITDIR)
+AC_SUBST(INITDDIR)
+AC_SUBST(RCLEVELS)
+AC_SUBST(RCSTART)
+AC_SUBST(RCSTOP)
+
 # ======================================
 # Check for various pdf required modules
 # ======================================
@@ -430,6 +496,7 @@ AC_CONFIG_FILES([
 	libcupsfilters.pc
 	libfontembed.pc
 	Makefile
+	utils/cups-browsed
 ])
 AC_OUTPUT
 
@@ -445,6 +512,7 @@ Environment settings:
 Build configuration:
 	cups-config:     ${with_cups_config}
 	font directory:  ${sysconfdir}/${FONTDIR}
+	init directory:  ${INITDDIR}
 	gs-path:         ${with_gs_path}
 	imagefilters:    ${enable_imagefilters}
 	jpeg:            ${with_jpeg}

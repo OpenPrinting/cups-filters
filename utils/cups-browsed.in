@@ -1,0 +1,154 @@
+#!/bin/sh
+# Provides: cups-browsed
+# Required-Start: $local_fs $remote_fs $network $named $time $avahi-daemon $cups
+# Required-Stop: $local_fs $remote_fs $network $named $time $avahi-daemon $cups
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: cups-browsed - Make remote CUPS printers available locally
+# Description: This daemon browses Bonjour broadcasts of shared remote CUPS
+#              printers and makes these printers available locally by creating
+#              local CUPS queues pointing to the remote queues. This replaces
+#              the CUPS browsing which was dropped in CUPS 1.6.1. For the end
+#              the behavior is the same as with the old CUPS broadcasting/
+#              browsing, but in the background the standard method for network
+#              service announcement and discovery, Bonjour, is used.
+### END INIT INFO
+
+#
+#   Linux chkconfig stuff:
+#
+#   chkconfig: 235 99 00
+#   description: Startup/shutdown script for cups-browsed.
+#
+
+#
+#   NetBSD 1.5+ rcorder script lines.  The format of the following two
+#   lines is very strict -- please don't add additional spaces!
+#
+# PROVIDE: cups-browsed
+# REQUIRE: cups
+#
+
+
+#### OS-Dependent Configuration
+
+case "`uname`" in
+	*BSD*)
+        	IS_ON=:
+		ECHO=echo
+		ECHO_OK=:
+		ECHO_ERROR=:
+		;;
+
+	Darwin*)
+		. /etc/rc.common
+
+		if test "${CUPS_BROWSED:=-YES-}" = "-NO-"; then
+			exit 0
+		fi
+
+        	IS_ON=:
+		ECHO=ConsoleMessage
+		ECHO_OK=:
+		ECHO_ERROR=:
+		;;
+
+	Linux*)
+		IS_ON=/bin/true
+		if test -f /etc/init.d/functions; then
+			. /etc/init.d/functions
+			ECHO=echo
+			ECHO_OK="echo_success"
+			ECHO_ERROR="echo_failure"
+		else
+			ECHO=echo
+			ECHO_OK=:
+			ECHO_ERROR=:
+		fi
+		;;
+
+	*)
+		IS_ON=/bin/true
+		ECHO=echo
+		ECHO_OK=:
+		ECHO_ERROR=:
+		;;
+esac
+
+#
+# Make sure we have the standard program directories in the path
+# since some operating systems (this means YOU HP-UX!) don't
+# provide a standard path on boot-up...
+#
+
+if test "x$PATH" = x; then
+	PATH="/bin:/usr/bin:/sbin:/usr/sbin"
+else
+	PATH="/bin:/usr/bin:/sbin:/usr/sbin:$PATH"
+fi
+
+export PATH
+
+#
+# See if the CUPS server (cupsd) is running...
+#
+
+case "`uname`" in
+	Linux* | *BSD* | Darwin*)
+		pid=`ps ax | awk '{if (match($5, ".*/cups-browsed$") || $5 == "cups-browsed") print $1}'`
+		;;
+	*)
+		pid=""
+		;;
+esac
+
+#
+# Start or stop cups-browsed based upon the first argument to the script.
+#
+
+case $1 in
+	start | restart | reload)
+		if $IS_ON cups; then
+			if test "$pid" != ""; then
+				kill -TERM $pid
+			fi
+			prefix=@prefix@
+			exec_prefix=@exec_prefix@
+			@sbindir@/cups-browsed &
+			if test $? != 0; then
+				$ECHO_FAIL
+				$ECHO "cups-browsed: unable to $1."
+				exit 1
+			fi
+			$ECHO_OK
+			$ECHO "cups-browsed: ${1}ed."
+		fi
+		;;
+
+	stop)
+		if test "$pid" != ""; then
+			kill -TERM $pid
+			$ECHO_OK
+			$ECHO "cups-browsed: stopped."
+		fi
+		;;
+
+	status)
+		if test "$pid" != ""; then
+			echo "cups-browsed: running."
+		else
+			echo "cups-browsed: not running."
+		fi
+		;;
+
+	*)
+		echo "Usage: cups-browsed {reload|restart|start|status|stop}"
+		exit 1
+		;;
+esac
+
+#
+# Exit with no errors.
+#
+
+exit 0

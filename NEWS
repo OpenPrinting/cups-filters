@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.0.25 - 2012-11-28
 
 CHANGES IN V1.0.26
 
+	- cups-browsed: Added daemon to browse the Bonjour broadcasts of
+	  shared remote CUPS printers and automatically add local raw queues
+	  pointing to them, to resemble the behavior of the former CUPS
+	  broadcasting/browsing which was dropped in CUPS 1.6. Now remote
+	  printers appear as local print queues as before, but with the
+	  standardized Bonjour broadcasting.
 	- "make dist" got broken in 1.0.25. Fixed.
 
 CHANGES IN V1.0.25
