@@ -31,6 +31,9 @@ BEFORE YOU BEGIN
     image support. CUPS Filters will compile and run without these, however
     you'll miss out on many of the features provided by CUPS Filters.
 
+    To get cups-browsed, the daemon to browse Bonjour broadcasts of
+    remote CUPS queues and make the queues available locally, you also
+    need libavahi-common and libavahi-client.
 
 COMPILING THE BZR REPOSITORY CODE
 
