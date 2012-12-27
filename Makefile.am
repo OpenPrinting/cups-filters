@@ -598,6 +598,25 @@ EXTRA_DIST += \
 	$(pkgfilter_SCRIPTS) \
 	filter/test.sh
 
+# =====
+# UTILS
+# =====
+
+sbin_PROGRAMS =
+if ENABLE_AVAHI
+sbin_PROGRAMS += \
+	cups-browsed
+cups_browsed_SOURCES = \
+	utils/cups-browsed.c
+cups_browsed_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	$(AVAHI_CFLAGS)
+cups_browsed_CXXFLAGS = $(cups_browsed_CFLAGS)
+cups_browsed_LDADD = \
+	$(CUPS_LIBS) \
+	$(AVAHI_LIBS)
+endif
+
 # ===
 # PPD
 # ===

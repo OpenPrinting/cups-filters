@@ -54,8 +54,7 @@ typedef enum printer_status_e {
   STATUS_UNCONFIRMED = 0,
   STATUS_CONFIRMED,
   STATUS_TO_BE_CREATED,
-  STATUS_DISAPPEARED,
-  STATUS_DUPLICATE
+  STATUS_DISAPPEARED
 } printer_status_t;
 
 /* Data structure for remote printers */
@@ -252,6 +251,10 @@ void handle_cups_queues() {
       p->status = STATUS_CONFIRMED;
       break;
 
+    /* Nothing to do */
+    case STATUS_CONFIRMED:
+      break;
+
     }
   }
 }
@@ -290,8 +293,7 @@ static void resolve_callback(
     char *rp_key, *rp_value, *adminurl_key, *adminurl_value,
       *remote_queue, *remote_host;
     remote_printer_t *p, *q;
-    int duplicate;
-    char *backup_queue_name, *local_queue_name;
+    char *backup_queue_name, *local_queue_name = NULL;
     cups_dest_t *dests, *dest;
     int i, num_dests;
     const char *val;

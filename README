@@ -207,10 +207,16 @@ HELPER DAEMON FOR BROWSING BONJOUR-BROADCASTED REMOTE CUPS PRINTERS
     For maximum security cups-browsed uses IPPS (encrypted IPP)
     whenever possible.
 
-    Compilation:
+    Start it as root with:
 
-    gcc -o cups-browsed cups-browsed.c `cups-config --libs` -lavahi-client \
-    -ldbus-1 -lavahi-common -ldl -DHAVE_SIGACTION
+    /usr/sbin/cups-browsed
+
+    or in debug mode with
+
+    /usr/sbin/cups-browsed --debug
+
+    Shut it down by sending signal 2 (SIGINT) or 15 (SIGTERM) to it. The
+    queues which it has created get removed then.
 
     Here is some info on how cups-browsed works internally:
 
