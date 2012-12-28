@@ -342,9 +342,9 @@ static void resolve_callback(
 	/* Get available CUPS queues */
 	num_dests = cupsGetDests(&dests);
 
+	local_queue_name = remote_queue;
 	if (num_dests > 0) {
 	  /* Is there a local queue with the name of the remote queue? */
-	  local_queue_name = remote_queue;
 	  for (i = num_dests, dest = dests; i > 0; i --, dest ++)
 	    /* Only consider CUPS queues not created by us */
 	    if ((((val =
