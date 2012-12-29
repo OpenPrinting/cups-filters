@@ -491,7 +491,7 @@ static void browse_callback(
   const char *name,
   const char *type,
   const char *domain,
-  AVAHI_GCC_UNUSED AvahiLookupResultFlags flags,
+  AvahiLookupResultFlags flags,
   void* userdata) {
 
   AvahiClient *c = userdata;
@@ -512,6 +512,11 @@ static void browse_callback(
 
   /* New service (remote printer) */
   case AVAHI_BROWSER_NEW:
+
+    /* Ignore events from the local machine */
+    if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
+      break;
+
     debug_printf("cups-browsed: Avahi Browser: NEW: service '%s' of type '%s' in domain '%s'\n",
 		 name, type, domain);
 
@@ -528,6 +533,10 @@ static void browse_callback(
   /* A service (remote printer) has disappeared */
   case AVAHI_BROWSER_REMOVE: {
     remote_printer_t *p, *q;
+
+    /* Ignore events from the local machine */
+    if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
+      break;
 
     debug_printf("cups-browsed: Avahi Browser: REMOVE: service '%s' of type '%s' in domain '%s'\n",
 		 name, type, domain);

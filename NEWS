@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.0.27 - 2012-12-28
 -----------------------------------------------------
 
+CHANGES IN V1.0.28
+
+	- cups-browsed: Do not create CUPS queues for shared local CUPS
+	  printers.
+
 CHANGES IN V1.0.27
 
 	- cups-browsed: The daemon crashed if there is no local CUPS queue
