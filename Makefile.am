@@ -329,7 +329,7 @@ pdftoopvp_LDADD = \
 	$(FREETYPE_LIBS) \
 	$(FONTCONFIG_LIBS) \
 	$(LIBPNG_LIBS) \
-	$(POPPLER_LIBS)
+	$(POPPLER_LIBS) \
 	$(DLOPEN_LIBS)
 
 EXTRA_DIST += $(pkgfontconfig_DATA)

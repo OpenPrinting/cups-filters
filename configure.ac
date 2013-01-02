@@ -287,7 +287,7 @@ elif test "x$rcdir" != xno; then
 	fi
 fi
 
-AM_CONDITIONAL([RCLINKS], [test "x$INITDDIR" = "x"])
+AM_CONDITIONAL([RCLINKS], [test "x$INITDIR" != "x"])
 
 if test "x${INITDIR}" != "x" -a "x${INITDDIR}" = "x"; then
    INITDDIR="${INITDIR}/init.d"
