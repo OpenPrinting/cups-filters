@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.0.29 - 2013-01-02
 -----------------------------------------------------
 
+CHANGES IN V1.0.30
+
+	- pdftoopvp: Let it build with Poppler 0.22.x. Thanks to Koji Otani
+	  from BBR Inc. (Bug #1089).
+
 CHANGES IN V1.0.29
 
 	- Fixed ./configure option "--with-rcdir=no". Thanks to Jiri

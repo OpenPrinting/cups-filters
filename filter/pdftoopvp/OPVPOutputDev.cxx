@@ -1804,8 +1804,14 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
   maskSplash = new Splash(maskBitmap, gFalse);
   maskColor[0] = 0;
   maskSplash->clear(maskColor);
+#if POPPLER_VERSION_MAJOR <= 0 && (POPPLER_VERSION_MINOR <= 20 || (POPPLER_VERSION_MINOR == 21 && POPPLER_VERSION_MICRO <= 2))
   maskSplash->drawImage(&imageSrc, &imgMaskData,
 			splashModeMono8, gFalse, maskWidth, maskHeight, mat);
+#else
+  maskSplash->drawImage(&imageSrc, &imgMaskData,
+			splashModeMono8, gFalse, maskWidth, maskHeight,
+                        mat,gFalse);
+#endif
   delete imgMaskData.imgStr;
   maskStr->close();
   gfree(imgMaskData.lookup);

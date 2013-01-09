@@ -5,6 +5,9 @@
 //========================================================================
 
 #include <config.h>
+#ifdef HAVE_CPP_POPPLER_VERSION_H
+#include "cpp/poppler-version.h"
+#endif
 
 #ifdef USE_GCC_PRAGMAS
 #pragma implementation
@@ -235,7 +238,11 @@ SplashError OPRS::drawImage(SplashImageSource src, void *srcData,
 			      SplashColorMode srcMode, GBool srcAlpha,
 			      int w, int h, SplashCoord *mat) {
     if (rasterMode) {
+#if POPPLER_VERSION_MAJOR <= 0 && (POPPLER_VERSION_MINOR <= 20 || (POPPLER_VERSION_MINOR == 21 && POPPLER_VERSION_MICRO <= 2))
 	return splash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat);
+#else
+	return splash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat,gFalse);
+#endif
     } else {
 	return opvpSplash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat);
     }
