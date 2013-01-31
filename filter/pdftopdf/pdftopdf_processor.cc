@@ -329,7 +329,6 @@ const bool origls=param.nup.landscape;
       if (param.mirror) {
         curpage->mirror();
       }
-      outputno++;
       proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
     }
   }

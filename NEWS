@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.0.29 - 2013-01-02
 
 CHANGES IN V1.0.30
 
+	- pdftopdf: Fixed incorrect evenDuplex page insertion (Bug #1088).
 	- pdftoopvp: Let it build with Poppler 0.22.x. Thanks to Koji Otani
 	  from BBR Inc. (Bug #1089).
 
