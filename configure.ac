@@ -245,6 +245,14 @@ PKG_CHECK_MODULES(AVAHI_GLIB, [avahi-glib])
 AC_SUBST(AVAHI_GLIB_CFLAGS)
 AC_SUBST(AVAHI_GLIB_LIBS)
 
+AC_ARG_WITH([browseremoteprotocols],
+	[AS_HELP_STRING([--with-browseremoteprotocols=value], [Set which protocols to listen for in cups-browsed.])],
+	[with_browseremoteprotocols="$withval"],
+	[with_browseremoteprotocols=none]
+)
+BROWSEREMOTEPROTOCOLS="$with_browseremoteprotocols"
+AC_SUBST(BROWSEREMOTEPROTOCOLS)
+
 dnl Setup init.d locations...
 AC_ARG_WITH(rcdir, [AS_HELP_STRING([--with-rcdir], [Set path for rc scripts])],rcdir="$withval",rcdir="")
 AC_ARG_WITH(rclevels, [AS_HELP_STRING([--with-rclevels], [Set run levels for rc scripts])],rclevels="$withval",rclevels="2 3 5")
@@ -509,6 +517,7 @@ AC_CONFIG_FILES([
 	libfontembed.pc
 	Makefile
 	utils/cups-browsed
+	utils/cups-browsed.conf
 ])
 AC_OUTPUT
 
@@ -536,6 +545,7 @@ Build configuration:
 	test-font:       ${with_test_font_path}
 	tiff:            ${with_tiff}
 	avahi:           ${enable_avahi}
+	browsing:        ${with_browseremoteprotocols}
 	werror:          ${enable_werror}
 ==============================================================================
 ])

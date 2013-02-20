@@ -197,6 +197,13 @@ pkgcupsdata_DATA = \
 
 EXTRA_DIST += $(pkgcupsdata_DATA)
 
+# ===========
+# CUPS Config
+# ===========
+pkgcupsserverrootdir = $(CUPS_SERVERROOT)
+pkgcupsserverroot_DATA = \
+	utils/cups-browsed.conf
+
 # =======
 # Drivers
 # =======

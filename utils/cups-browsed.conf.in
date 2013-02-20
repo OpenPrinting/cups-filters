@@ -1,0 +1,6 @@
+# Which protocols will we use to discover printers on the network?
+# Can use DNSSD and/or CUPS, or 'none' for neither.
+BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
+
+# Use BrowsePoll to poll a particular CUPS server
+# BrowsePoll cups.example.com
