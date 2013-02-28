@@ -23,8 +23,12 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
 #include <resolv.h>
 #include <stdio.h>
+#include <sys/types.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <time.h>
@@ -73,7 +77,17 @@ typedef struct remote_printer_s {
   char *domain;
 } remote_printer_t;
 
+typedef struct netif_s {
+  char *address;
+  int family;
+  union {
+    struct sockaddr_in bin_addr;
+    struct sockaddr_in6 bin6_addr;
+  } broadcast;
+} netif_t;
+
 cups_array_t *remote_printers;
+static cups_array_t *netifs;
 
 static GMainLoop *gmainloop = NULL;
 static AvahiGLibPoll *glib_poll = NULL;
@@ -137,10 +151,23 @@ ippGetValueTag(ipp_attribute_t *attr)
 }
 
 int
+ippGetCount(ipp_attribute_t *attr)
+{
+  return (attr->num_values);
+}
+
+int
 ippGetInteger(ipp_attribute_t *attr,
               int             element)
 {
   return (attr->values[element].integer);
+}
+
+int
+ippGetBoolean(ipp_attribute_t *attr,
+              int             element)
+{
+  return (attr->values[element].boolean);
 }
 
 const char *
@@ -838,6 +865,7 @@ found_cups_printer (const char *remote_host, const char *uri,
   char host[HTTP_MAX_HOST];
   char resource[HTTP_MAX_URI];
   int port;
+  netif_t *iface;
   remote_printer_t *p;
   char local_queue_name[HTTP_MAX_URI];
   char *c;
@@ -848,6 +876,18 @@ found_cups_printer (const char *remote_host, const char *uri,
 		   host, sizeof(host),
 		   &port,
 		   resource, sizeof(resource));
+
+  /* Check this isn't one of our own broadcasts */
+  for (iface = cupsArrayFirst (netifs);
+       iface;
+       iface = cupsArrayNext (netifs))
+    if (!strcmp (host, iface->address))
+      break;
+  if (iface) {
+    debug_printf("cups-browsed: ignoring own broadcast on %s\n",
+		 iface->address);
+    return;
+  }
 
   if (strncmp (resource, "/printers/", 10)) {
     debug_printf("cups-browsed: don't understand URI: %s\n", uri);
@@ -929,7 +969,7 @@ process_browse_data (GIOChannel *source,
 		     GIOCondition condition,
 		     gpointer data)
 {
-  char packet[1541];
+  char packet[2048];
   socklen_t srclen;
   struct sockaddr_in srcaddr;
   ssize_t got;
@@ -990,6 +1030,340 @@ process_browse_data (GIOChannel *source,
 
   /* Don't remove this I/O source */
   return TRUE;
+}
+
+void
+update_netifs (void)
+{
+  struct ifaddrs *ifaddr, *ifa;
+  netif_t *iface;
+
+  if (getifaddrs (&ifaddr) == -1) {
+    debug_printf("cups-browsed: unable to get interface addresses: %s\n",
+		 strerror (errno));
+    return;
+  }
+
+  while ((iface = cupsArrayFirst (netifs)) != NULL) {
+    cupsArrayRemove (netifs, iface);
+    free (iface->address);
+    free (iface);
+  }
+
+  for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
+    netif_t *iface;
+
+    if (ifa->ifa_addr == NULL)
+      continue;
+
+    if (ifa->ifa_flags & IFF_LOOPBACK)
+      continue;
+
+    if (!(ifa->ifa_flags & IFF_BROADCAST))
+      continue;
+
+    iface = malloc (sizeof (netif_t));
+    if (iface == NULL) {
+      debug_printf ("cups-browsed: malloc failure\n");
+      exit (1);
+    }
+
+    iface->address = malloc (HTTP_MAX_HOST);
+    if (iface->address == NULL) {
+      free (iface);
+      debug_printf ("cups-browsed: malloc failure\n");
+      exit (1);
+    }
+
+    iface->address[0] = '\0';
+    iface->family = ifa->ifa_addr->sa_family;
+    switch (iface->family) {
+    case AF_INET:
+      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in),
+		   iface->address, HTTP_MAX_HOST,
+		   NULL, 0, NI_NUMERICHOST);
+      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
+	      sizeof (struct sockaddr_in));
+      iface->broadcast.bin_addr.sin_port = htons (BrowsePort);
+      break;
+
+    case AF_INET6:
+      if (IN6_IS_ADDR_LINKLOCAL (&((struct sockaddr_in6 *)(ifa->ifa_addr))
+				 ->sin6_addr))
+	break;
+
+      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in6),
+		   iface->address, HTTP_MAX_HOST, NULL, 0, NI_NUMERICHOST);
+      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
+	      sizeof (struct sockaddr_in6));
+      iface->broadcast.bin6_addr.sin6_port = htons (BrowsePort);
+      break;
+    }
+
+    if (iface->address[0]) {
+      cupsArrayAdd (netifs, iface);
+      debug_printf("cups-browsed: network interface at %s\n", iface->address);
+    } else {
+      free (iface->address);
+      free (iface);
+    }
+  }
+
+  freeifaddrs (ifaddr);
+}
+
+void
+broadcast_browse_packets (int type, int state,
+			  const char *local_uri, const char *location,
+			  const char *info, const char *make_model,
+			  const char *browse_options)
+{
+  netif_t *browse;
+  char packet[2048];
+  char uri[HTTP_MAX_URI];
+  char scheme[32];
+  char username[64];
+  char host[HTTP_MAX_HOST];
+  int port;
+  char resource[HTTP_MAX_URI];
+
+  for (browse = (netif_t *)cupsArrayFirst (netifs);
+       browse != NULL;
+       browse = (netif_t *)cupsArrayNext (netifs)) {
+    /* Replace 'localhost' with our IP address on this interface */
+    httpSeparateURI(HTTP_URI_CODING_ALL, local_uri,
+		    scheme, sizeof(scheme),
+		    username, sizeof(username),
+		    host, sizeof(host),
+		    &port,
+		    resource, sizeof(resource));
+    httpAssembleURI(HTTP_URI_CODING_ALL, uri, sizeof (uri),
+		    scheme, username, browse->address, port, resource);
+
+    if (snprintf (packet, sizeof (packet),
+		  "%x "     /* type */
+		  "%x "     /* state */
+		  "%s "     /* uri */
+		  "\"%s\" " /* location */
+		  "\"%s\" " /* info */
+		  "\"%s\" " /* make-and-model */
+		  "lease-duration=%d" /* BrowseTimeout */
+		  "%s%s" /* other browse options */
+		  "\n",
+		  type, state, uri, location,
+		  info, make_model,
+		  BrowseTimeout,
+		  browse_options ? " " : "",
+		  browse_options ? browse_options : "") >= sizeof (packet)) {
+      debug_printf ("cups-browsed: oversize packet not sent\n");
+      continue;
+    }
+
+    debug_printf("cups-browsed: packet to send:\n%s", packet);
+
+    int err = sendto (browsesocket, packet,
+		      strlen (packet), 0,
+		      (struct sockaddr *) &browse->broadcast,
+		      browse->family == AF_INET ?
+		      sizeof (struct sockaddr_in) :
+		      sizeof (struct sockaddr_in6));
+    if (err)
+      debug_printf("cupsd-browsed: sendto returned %d: %s\n",
+		   err, strerror (errno));
+  }
+}
+
+gboolean
+send_browse_data (gpointer data)
+{
+  static const char * const rattrs[] = { "printer-type",
+					 "printer-state",
+					 "printer-uri-supported",
+					 "printer-info",
+					 "printer-location",
+					 "printer-make-and-model",
+					 "auth-info-required",
+					 "printer-uuid",
+					 "job-template" };
+  ipp_t *request, *response = NULL;
+  ipp_attribute_t *attr;
+  http_t *conn = NULL;
+
+  update_netifs ();
+  res_init ();
+  conn = httpConnectEncrypt ("localhost", BrowsePort,
+			     HTTP_ENCRYPT_IF_REQUESTED);
+
+  if (conn == NULL) {
+    debug_printf("cups-browsed: browse send failed to connect to localhost\n");
+    goto fail;
+  }
+
+  request = ippNewRequest(CUPS_GET_PRINTERS);
+  ippAddStrings (request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+		 "requested-attributes", sizeof (rattrs) / sizeof (rattrs[0]),
+		 NULL, rattrs);
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		"requesting-user-name", NULL, cupsUser ());
+
+  response = cupsDoRequest (conn, request, "/");
+  if (cupsLastError() > IPP_OK_CONFLICT) {
+    debug_printf("cups-browsed: browse send failed for localhost: %s\n",
+		 cupsLastErrorString ());
+    goto fail;
+  }
+
+  for (attr = ippFirstAttribute(response); attr;
+       attr = ippNextAttribute(response)) {
+    int type = -1, state = -1;
+    const char *uri = NULL;
+    gchar *location = NULL;
+    gchar *info = NULL;
+    gchar *make_model = NULL;
+    GString *browse_options = g_string_new ("");
+
+    /* Skip any non-printer attributes */
+    while (attr && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+      attr = ippNextAttribute(response);
+
+    if (!attr)
+      break;
+
+    while (attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
+      const char *attrname = ippGetName(attr);
+      int value_tag = ippGetValueTag(attr);
+      
+      /* Skip CUPS queues created by us */
+      if (!strcmp (attrname, CUPS_BROWSED_MARK) &&
+	  value_tag == IPP_TAG_STRING &&
+	  (!strcasecmp(ippGetString(attr, 0, NULL), "yes") ||
+	   !strcasecmp(ippGetString(attr, 0, NULL), "on") ||
+	   !strcasecmp(ippGetString(attr, 0, NULL), "true")))
+	/* Our special option is set to yes|on|true */
+	break;
+
+      /* Skip CUPS queues not marked as shared */
+      if (!strcmp(attrname, "printer-is-shared") &&
+	  value_tag == IPP_TAG_BOOLEAN &&
+	  ippGetBoolean(attr, 0) == 0)
+	break;
+
+      if (!strcmp(attrname, "printer-type") &&
+	  value_tag == IPP_TAG_ENUM)
+	type = ippGetInteger(attr, 0);
+      else if (!strcmp(attrname, "printer-state") &&
+	       value_tag == IPP_TAG_ENUM)
+	state = ippGetInteger(attr, 0);
+      else if (!strcmp(attrname, "printer-uri-supported") &&
+	       value_tag == IPP_TAG_URI)
+	uri = ippGetString(attr, 0, NULL);
+      else if (!strcmp(attrname, "printer-location") &&
+	       value_tag == IPP_TAG_TEXT) {
+	/* Remove quotes */
+	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
+	location = g_strjoinv ("", tokens);
+	g_strfreev (tokens);
+      } else if (!strcmp(attrname, "printer-info") &&
+		 value_tag == IPP_TAG_TEXT) {
+	/* Remove quotes */
+	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
+	info = g_strjoinv ("", tokens);
+	g_strfreev (tokens);
+      } else if (!strcmp(attrname, "printer-make-and-model") &&
+		 value_tag == IPP_TAG_TEXT) {
+	/* Remove quotes */
+	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
+	make_model = g_strjoinv ("", tokens);
+	g_strfreev (tokens);
+      } else if (!strcmp(attrname, "auth-info-required") &&
+		 value_tag == IPP_TAG_KEYWORD) {
+	if (strcmp (ippGetString(attr, 0, NULL), "none"))
+	  g_string_append_printf (browse_options, "auth-info-required=%s ",
+				  ippGetString(attr, 0, NULL));
+      } else if (!strcmp(attrname, "printer-uuid") &&
+		 value_tag == IPP_TAG_URI)
+	g_string_append_printf (browse_options, "uuid=%s ",
+				ippGetString(attr, 0, NULL));
+      else if (!strcmp(attrname, "job-sheets-default") &&
+	       value_tag == IPP_TAG_NAME &&
+	       ippGetCount(attr) == 2)
+	g_string_append_printf (browse_options, "job-sheets=%s,%s ",
+				ippGetString(attr, 0, NULL),
+				ippGetString(attr, 1, NULL));
+      else if (strstr(attrname, "-default")) {
+	gchar *name = g_strdup (attrname);
+	gchar *value = NULL;
+	*strstr (name, "-default") = '\0';
+
+	switch (value_tag) {
+	  gchar **tokens;
+
+	case IPP_TAG_KEYWORD:
+	case IPP_TAG_STRING:
+	case IPP_TAG_NAME:
+	  /* Escape value */
+	  tokens = g_strsplit_set (ippGetString(attr, 0, NULL),
+				   " \"\'\\", -1);
+	  value = g_strjoinv ("\\", tokens);
+	  g_strfreev (tokens);
+	  break;
+
+	default:
+	  /* other values aren't needed? */
+	  debug_printf("cups-browsed: skipping %s (%d)\n", name, value_tag);
+	  break;
+	}
+
+	if (value) {
+	  g_string_append_printf (browse_options, "%s=%s ", name, value);
+	  g_free (value);
+	}
+
+	g_free (name);
+      }
+
+      attr = ippNextAttribute(response);
+    }
+
+    if (type != -1 && state != -1 && uri && location && info && make_model) {
+      gchar *browse_options_str = g_string_free (browse_options, FALSE);
+      browse_options = NULL;
+      g_strchomp (browse_options_str);
+
+      broadcast_browse_packets (type, state, uri, location,
+				info, make_model,
+				browse_options_str);
+
+      g_free (browse_options_str);
+    }
+
+    if (make_model)
+      g_free (make_model);
+
+    if (info)
+      g_free (info);
+
+    if (location)
+      g_free (location);
+
+    if (browse_options)
+      g_string_free (browse_options, TRUE);
+
+    if (!attr)
+      break;
+  }
+
+ fail:
+  if (response)
+    ippDelete(response);
+
+  if (conn)
+    httpClose (conn);
+
+  g_timeout_add_seconds (BrowseInterval, send_browse_data, NULL);
+
+  /* Stop this timeout handler, we called a new one */
+  return FALSE;
 }
 
 gboolean
@@ -1074,6 +1448,16 @@ fail:
   return FALSE;
 }
 
+int
+compare_netifs (netif_t *a, netif_t *b)
+{
+  if (a < b)
+    return -1;
+  if (a > b)
+    return 1;
+  return 0;
+}
+
 int compare_remote_printers (remote_printer_t *a, remote_printer_t *b) {
   return strcmp(a->name, b->name);
 }
@@ -1107,9 +1491,9 @@ read_configuration (const char *filename)
 
   while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum)) {
     debug_printf("cups-browsed: Reading config: %s %s\n", line, value);
-    if (!strcasecmp(line, "BrowseProtocols") ||
-	!strcasecmp(line, "BrowseLocalProtocols") ||
-	!strcasecmp(line, "BrowseRemoteProtocols")) {
+    if ((!strcasecmp(line, "BrowseProtocols") ||
+	 !strcasecmp(line, "BrowseLocalProtocols") ||
+	 !strcasecmp(line, "BrowseRemoteProtocols")) && value) {
       int protocols = 0;
       char *p, *saveptr;
       p = strtok_r (value, delim, &saveptr);
@@ -1168,10 +1552,6 @@ int main(int argc, char*argv[]) {
 
   read_configuration (NULL);
 
-  if (BrowseLocalProtocols & BROWSE_CUPS) {
-    fprintf(stderr, "Local support for CUPS Browsing not implemented\n");
-    BrowseLocalProtocols &= ~BROWSE_CUPS;
-  }
   if (BrowseLocalProtocols & BROWSE_DNSSD) {
     fprintf(stderr, "Local support for DNSSD not implemented\n");
     BrowseLocalProtocols &= ~BROWSE_DNSSD;
@@ -1181,6 +1561,10 @@ int main(int argc, char*argv[]) {
   while ((http = httpConnectEncrypt(cupsServer(), ippPort(),
 				    cupsEncryption())) == NULL)
     sleep(1);
+
+  /* Initialise the array of network interfaces */
+  netifs = cupsArrayNew((cups_array_func_t)compare_netifs, NULL);
+  update_netifs ();
 
   /* Read out the currently defined CUPS queues and find the ones which we
      have added in an earlier session */
@@ -1317,6 +1701,14 @@ int main(int argc, char*argv[]) {
 		     strerror (errno));
 	close (browsesocket);
 	browsesocket = -1;
+      } else {
+	int on = 1;
+	if (setsockopt (browsesocket, SOL_SOCKET, SO_BROADCAST,
+			&on, sizeof (on))) {
+	  debug_printf("cups-browsed: failed to allow broadcast: %s\n",
+		       strerror (errno));
+	  BrowseLocalProtocols &= ~BROWSE_CUPS;
+	}
       }
     }
 
@@ -1344,6 +1736,12 @@ int main(int argc, char*argv[]) {
     g_io_add_watch (browse_channel, G_IO_IN, process_browse_data, NULL);
   }
 
+  if (BrowseLocalProtocols & BROWSE_CUPS) {
+      debug_printf ("cups-browsed: will send browse data every %ds\n",
+		    BrowseInterval);
+      g_idle_add (send_browse_data, NULL);
+  }
+
   if (BrowsePoll) {
     char **server;
     for (server = BrowsePoll;
@@ -1351,7 +1749,7 @@ int main(int argc, char*argv[]) {
 	 server++) {
       debug_printf ("cups-browsed: will browse poll %s every %ds\n",
 		    *server, BrowseInterval);
-      g_timeout_add_seconds (1, browse_poll, *server);
+      g_idle_add (browse_poll, *server);
     }
   }
 

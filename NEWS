@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.29 - 2013-01-02
 
 CHANGES IN V1.0.30
 
+	- cups-browsed: Added CUPS Broadcasting for sharing local printers
+	  to remote CUPS clients with CUPS 1.5.x and older. Thanks to Tim
+	  Waugh from Red Hat.
 	- cups-browsed: Added sample config-file and build-time default
 	  setting options. Thanks to Tim Waugh from Red Hat.
 	- cups-browsed: Added CUPS browsing and BrowsePoll functionality, to

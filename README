@@ -201,7 +201,7 @@ HELPER DAEMON FOR BROWSING BONJOUR-BROADCASTED REMOTE CUPS PRINTERS
     driver.
 
     Also high availability with redundant print servers is
-    supported. If there is more than onbe server providing a shared
+    supported. If there is more than one server providing a shared
     print queue with the same name, cups-browsed uses the first queue
     which appeared and if this queue disappears, cups-browsed
     seamlessly switches to the queue of another server. Unfortunately,
