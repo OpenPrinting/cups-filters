@@ -1107,9 +1107,9 @@ read_configuration (const char *filename)
 
   while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum)) {
     debug_printf("cups-browsed: Reading config: %s %s\n", line, value);
-    if (!strcasecmp(line, "BrowseProtocols") ||
-	!strcasecmp(line, "BrowseLocalProtocols") ||
-	!strcasecmp(line, "BrowseRemoteProtocols")) {
+    if ((!strcasecmp(line, "BrowseProtocols") ||
+	 !strcasecmp(line, "BrowseLocalProtocols") ||
+	 !strcasecmp(line, "BrowseRemoteProtocols")) && value) {
       int protocols = 0;
       char *p, *saveptr;
       p = strtok_r (value, delim, &saveptr);
