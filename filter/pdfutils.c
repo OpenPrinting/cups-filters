@@ -42,7 +42,7 @@ void pdfOut_putString(pdfOut *pdf,const char *str,int len) // {{{ - >len==-1: st
   for (;len>0;iA++,len--) {
     if ( (str[iA]<32)||(str[iA]>126) ) {
       fwrite(str,1,iA,stdout);
-      fprintf(stdout,"\\%03o",str[iA]);
+      fprintf(stdout,"\\%03o",(unsigned char)str[iA]);
       pdf->filepos+=iA+4;
       str+=iA+1;
       iA=-1;

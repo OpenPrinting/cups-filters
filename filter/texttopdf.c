@@ -1148,8 +1148,7 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str, int len)
       }
 
       font = Codes[ch];
-      if (lastfont != font) {
-        assert(0); // should never happen; TODO
+      if (lastfont != font) { // only possible, when not used via write_string (e.g. utf-8filename.txt in prettyprint)
         break;
       }
       if (otf) { // TODO 
