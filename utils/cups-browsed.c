@@ -77,13 +77,10 @@ typedef struct remote_printer_s {
   char *domain;
 } remote_printer_t;
 
+/* Data structure for network interfaces */
 typedef struct netif_s {
   char *address;
-  int family;
-  union {
-    struct sockaddr_in bin_addr;
-    struct sockaddr_in6 bin6_addr;
-  } broadcast;
+  http_addr_t broadcast;
 } netif_t;
 
 cups_array_t *remote_printers;
@@ -970,19 +967,19 @@ process_browse_data (GIOChannel *source,
 		     gpointer data)
 {
   char packet[2048];
+  http_addr_t srcaddr;
   socklen_t srclen;
-  struct sockaddr_in srcaddr;
   ssize_t got;
   unsigned int type;
   unsigned int state;
-  char remote_host[16];
+  char remote_host[256];
   char uri[1024];
   char info[1024];
   char *c;
 
   srclen = sizeof (srcaddr);
   got = recvfrom (browsesocket, packet, sizeof (packet) - 1, 0,
-		    (struct sockaddr *) &srcaddr, &srclen);
+		  &srcaddr.addr, &srclen);
   if (got == -1) {
     debug_printf ("cupsd-browsed: error receiving browse packet: %s\n",
 		  strerror (errno));
@@ -991,7 +988,7 @@ process_browse_data (GIOChannel *source,
   }
 
   packet[got] = '\0';
-  strcpy (remote_host, inet_ntoa (srcaddr.sin_addr));
+  httpAddrString (&srcaddr, remote_host, sizeof (remote_host));
 
   debug_printf("cups-browsed: browse packet received from %s\n",
 	       remote_host);
@@ -1076,15 +1073,14 @@ update_netifs (void)
     }
 
     iface->address[0] = '\0';
-    iface->family = ifa->ifa_addr->sa_family;
-    switch (iface->family) {
+    switch (ifa->ifa_addr->sa_family) {
     case AF_INET:
       getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in),
 		   iface->address, HTTP_MAX_HOST,
 		   NULL, 0, NI_NUMERICHOST);
       memcpy (&iface->broadcast, ifa->ifa_broadaddr,
 	      sizeof (struct sockaddr_in));
-      iface->broadcast.bin_addr.sin_port = htons (BrowsePort);
+      iface->broadcast.ipv4.sin_port = htons (BrowsePort);
       break;
 
     case AF_INET6:
@@ -1096,7 +1092,7 @@ update_netifs (void)
 		   iface->address, HTTP_MAX_HOST, NULL, 0, NI_NUMERICHOST);
       memcpy (&iface->broadcast, ifa->ifa_broadaddr,
 	      sizeof (struct sockaddr_in6));
-      iface->broadcast.bin6_addr.sin6_port = htons (BrowsePort);
+      iface->broadcast.ipv6.sin6_port = htons (BrowsePort);
       break;
     }
 
@@ -1163,10 +1159,8 @@ broadcast_browse_packets (int type, int state,
 
     int err = sendto (browsesocket, packet,
 		      strlen (packet), 0,
-		      (struct sockaddr *) &browse->broadcast,
-		      browse->family == AF_INET ?
-		      sizeof (struct sockaddr_in) :
-		      sizeof (struct sockaddr_in6));
+		      &browse->broadcast.addr,
+		      httpAddrLength (&browse->broadcast));
     if (err)
       debug_printf("cupsd-browsed: sendto returned %d: %s\n",
 		   err, strerror (errno));
