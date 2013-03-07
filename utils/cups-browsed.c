@@ -83,8 +83,20 @@ typedef struct netif_s {
   http_addr_t broadcast;
 } netif_t;
 
+/* Data structure for browse allow/deny rules */
+typedef enum allow_type_e {
+  ALLOW_IP,
+  ALLOW_NET
+} allow_type_t;
+typedef struct allow_s {
+  allow_type_t type;
+  http_addr_t addr;
+  http_addr_t mask;
+} allow_t;
+
 cups_array_t *remote_printers;
 static cups_array_t *netifs;
+static cups_array_t *browseallow;
 
 static GMainLoop *gmainloop = NULL;
 static AvahiGLibPoll *glib_poll = NULL;
@@ -961,6 +973,65 @@ found_cups_printer (const char *remote_host, const char *uri,
   }
 }
 
+static gboolean
+allowed (struct sockaddr *srcaddr)
+{
+  allow_t *allow;
+  for (allow = cupsArrayFirst (browseallow);
+       allow;
+       allow = cupsArrayNext (browseallow)) {
+    switch (allow->type) {
+    case ALLOW_IP:
+      switch (srcaddr->sa_family) {
+      case AF_INET:
+	if (((struct sockaddr_in *) srcaddr)->sin_addr.s_addr ==
+	    allow->addr.ipv4.sin_addr.s_addr)
+	  return TRUE;
+	break;
+
+      case AF_INET6:
+	if (!memcmp (&((struct sockaddr_in6 *) srcaddr)->sin6_addr,
+		     &allow->addr.ipv6.sin6_addr,
+		     sizeof (allow->addr.ipv6.sin6_addr)))
+	  return TRUE;
+	break;
+      }
+      break;
+
+    case ALLOW_NET:
+      switch (srcaddr->sa_family) {
+	struct sockaddr_in6 *src6addr;
+
+      case AF_INET:
+	if ((((struct sockaddr_in *) srcaddr)->sin_addr.s_addr &
+	     allow->mask.ipv4.sin_addr.s_addr) ==
+	    allow->addr.ipv4.sin_addr.s_addr)
+	  return TRUE;
+	break;
+
+      case AF_INET6:
+	src6addr = (struct sockaddr_in6 *) srcaddr;
+	if (((src6addr->sin6_addr.s6_addr[0] &
+	      allow->mask.ipv6.sin6_addr.s6_addr[0]) ==
+	     allow->addr.ipv6.sin6_addr.s6_addr[0]) &&
+	    ((src6addr->sin6_addr.s6_addr[1] &
+	      allow->mask.ipv6.sin6_addr.s6_addr[1]) ==
+	     allow->addr.ipv6.sin6_addr.s6_addr[1]) &&
+	    ((src6addr->sin6_addr.s6_addr[2] &
+	      allow->mask.ipv6.sin6_addr.s6_addr[2]) ==
+	     allow->addr.ipv6.sin6_addr.s6_addr[2]) &&
+	    ((src6addr->sin6_addr.s6_addr[3] &
+	      allow->mask.ipv6.sin6_addr.s6_addr[3]) ==
+	     allow->addr.ipv6.sin6_addr.s6_addr[3]))
+	  return TRUE;
+	break;
+      }
+    }
+  }
+
+  return FALSE;
+}
+
 gboolean
 process_browse_data (GIOChannel *source,
 		     GIOCondition condition,
@@ -989,6 +1060,13 @@ process_browse_data (GIOChannel *source,
 
   packet[got] = '\0';
   httpAddrString (&srcaddr, remote_host, sizeof (remote_host));
+
+  /* Check this packet is allowed */
+  if (!allowed ((struct sockaddr *) &srcaddr)) {
+    debug_printf("cups-browsed: browse packet from %s disallowed\n",
+		 remote_host);
+    return TRUE;
+  }
 
   debug_printf("cups-browsed: browse packet received from %s\n",
 	       remote_host);
@@ -1452,7 +1530,7 @@ fail:
 }
 
 int
-compare_netifs (netif_t *a, netif_t *b)
+compare_pointers (void *a, void *b, void *data)
 {
   if (a < b)
     return -1;
@@ -1472,6 +1550,58 @@ sigterm_handler(int sig) {
   /* Flag that we should stop and return... */
   g_main_loop_quit(gmainloop);
   debug_printf("cups-browsed: Caught signal %d, shutting down ...\n", sig);
+}
+
+static int
+read_browseallow_value (const char *value)
+{
+  char *p;
+  struct in_addr addr;
+  allow_t *allow = calloc (1, sizeof (allow_t));
+  p = strchr (value, '/');
+  if (p) {
+    char *s = strdup (value);
+    s[p - value] = '\0';
+
+    if (!inet_aton (s, &addr)) {
+      free (s);
+      goto fail;
+    }
+
+    free (s);
+    allow->type = ALLOW_NET;
+    allow->addr.ipv4.sin_addr.s_addr = addr.s_addr;
+
+    p++;
+    if (strchr (p, '.')) {
+      if (inet_aton (p, &addr))
+	allow->mask.ipv4.sin_addr.s_addr = addr.s_addr;
+      else
+	goto fail;
+    } else {
+      char *endptr;
+      unsigned long bits = strtoul (p, &endptr, 10);
+      if (p == endptr)
+	goto fail;
+
+      if (bits > 32)
+	goto fail;
+
+      allow->mask.ipv4.sin_addr.s_addr = htonl (((0xffffffff << (32 - bits)) &
+						 0xffffffff));
+    }
+  } else if (inet_aton (value, &addr)) {
+    allow->type = ALLOW_IP;
+    allow->addr.ipv4.sin_addr.s_addr = addr.s_addr;
+  } else
+    goto fail;
+
+  cupsArrayAdd (browseallow, allow);
+  return 0;
+
+fail:
+  free (allow);
+  return 1;
 }
 
 void
@@ -1517,8 +1647,7 @@ read_configuration (const char *filename)
 	BrowseRemoteProtocols = protocols;
       else
 	BrowseLocalProtocols = BrowseRemoteProtocols = protocols;
-    }
-    else if (!strcasecmp(line, "BrowsePoll") && value) {
+    } else if (!strcasecmp(line, "BrowsePoll") && value) {
       char **old = BrowsePoll;
       BrowsePoll = realloc (BrowsePoll, (NumBrowsePoll + 1) * sizeof (char *));
       if (!BrowsePoll) {
@@ -1528,7 +1657,10 @@ read_configuration (const char *filename)
 	debug_printf("cups-browsed: Adding BrowsePoll server: %s\n", value);
 	BrowsePoll[NumBrowsePoll++] = strdup (value);
       }
-    }
+    } else if (!strcasecmp(line, "BrowseAllow") && value)
+      if (read_browseallow_value (value))
+	debug_printf ("cups-browsed: BrowseAllow value \"%s\" not understood\n",
+		      value);
   }
 
   cupsFileClose(fp);
@@ -1553,6 +1685,10 @@ int main(int argc, char*argv[]) {
        !strncmp(argv[1], "-v", 2)))
     debug = 1;
 
+  /* Initialise the browseallow array */
+  browseallow = cupsArrayNew(compare_pointers, NULL);
+
+  /* Read in cups-browsed.conf */
   read_configuration (NULL);
 
   if (BrowseLocalProtocols & BROWSE_DNSSD) {
@@ -1566,7 +1702,7 @@ int main(int argc, char*argv[]) {
     sleep(1);
 
   /* Initialise the array of network interfaces */
-  netifs = cupsArrayNew((cups_array_func_t)compare_netifs, NULL);
+  netifs = cupsArrayNew(compare_pointers, NULL);
   update_netifs ();
 
   /* Read out the currently defined CUPS queues and find the ones which we
