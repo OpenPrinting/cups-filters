@@ -168,7 +168,7 @@ POSTSCRIPT PRINTING DEBUG MODE
     This option does not change anything if Poppler's pdftops is used
     as renderer.
 
-HELPER DAEMON FOR BROWSING BONJOUR-BROADCASTED REMOTE CUPS PRINTERS
+HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS
 
     From version 1.6.0 on in CUPS the CUPS broadcasting/browsing
     facility was dropped, in favour of Bonjour-based broadcasting of
@@ -191,14 +191,14 @@ HELPER DAEMON FOR BROWSING BONJOUR-BROADCASTED REMOTE CUPS PRINTERS
 
     The solution is cups-browsed, a helper daemon running in parallel
     to the CUPS daemon which listens to Bonjour broadcasts of shared
-    CUPS printers on remote machines in the local network via
-    Avahi. For each reported remote printer it creates a local raw
-    queue pointing to the remote printer so that the printer appears
-    in local print dialogs and is also available for printing via the
-    command line. As with the former CUPS broadcasting/browsing with
-    this queue the driver on the server is used and the local print
-    dialogs give access to all options of the server-side printer
-    driver.
+    CUPS printers on remote machines in the local network via Avahi,
+    and can also listen for (and send) CUPS Browsing broadcasts. For
+    each reported remote printer it creates a local raw queue pointing
+    to the remote printer so that the printer appears in local print
+    dialogs and is also available for printing via the command
+    line. As with the former CUPS broadcasting/browsing with this
+    queue the driver on the server is used and the local print dialogs
+    give access to all options of the server-side printer driver.
 
     Also high availability with redundant print servers is
     supported. If there is more than one server providing a shared
@@ -290,6 +290,11 @@ HELPER DAEMON FOR BROWSING BONJOUR-BROADCASTED REMOTE CUPS PRINTERS
     Queue identified as from this daemon by doing the equivalent of
     "lpadmin -p printer -o cups-browsed-default", this generates a
     "cups-browsed" attribute in printers.conf with value "true".
+
+    The configuration file for cups-browsed is
+    /etc/cups/cups-browsed.conf.  This file can include limited forms
+    of the original CUPS BrowseRemoteProtocols, BrowseLocalProtocols,
+    BrowsePoll, and BrowseAllow directives.
 
 
 CUPS FILTERS FOR PDF AS STANDARD PRINT JOB FORMAT
