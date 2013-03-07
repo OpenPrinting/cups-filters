@@ -1,8 +1,10 @@
-NEWS - OpenPrinting CUPS Filters v1.0.29 - 2013-01-02
+NEWS - OpenPrinting CUPS Filters v1.0.30 - 2013-03-07
 -----------------------------------------------------
 
 CHANGES IN V1.0.30
 
+	- cups-browsed: Do not remove a generated local print queue when
+	  it was made the system default printer.
 	- texttopdf: Fixed corrupted pdf when a utf-8 title is given and
 	  corresponding crash with 'prettyprint' (Ubuntu Bug 1137438).
 	- cups-browsed: Added CUPS Broadcasting for sharing local printers
