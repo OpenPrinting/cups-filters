@@ -1392,6 +1392,15 @@ browse_poll (gpointer data)
 		 NULL,
 		 rattrs);
 
+  /* Ask the server to exclude printers that are remote or not shared,
+     or implicit classes. */
+  ippAddInteger (request, IPP_TAG_OPERATION, IPP_TAG_ENUM,
+		 "printer-type-mask",
+		 CUPS_PRINTER_REMOTE | CUPS_PRINTER_IMPLICIT |
+		 CUPS_PRINTER_NOT_SHARED);
+  ippAddInteger (request, IPP_TAG_OPERATION, IPP_TAG_ENUM,
+		 "printer-type", 0);
+
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_NAME,
 		"requesting-user-name", NULL, cupsUser ());
 
