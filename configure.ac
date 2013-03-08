@@ -207,6 +207,8 @@ AC_PATH_PROG(PKGCONFIG, pkg-config)
 dnl Avahi for cups-browsed
 AVAHI_LIBS=""
 AVAHI_CFLAGS=""
+AVAHI_GLIB_CFLAGS=""
+AVAHI_GLIB_LIBS=""
 
 AC_ARG_ENABLE([avahi],
 	[AS_HELP_STRING([--disable-avahi], [Disable DNS Service Discovery support using Avahi.])],
@@ -231,6 +233,7 @@ if test "x$PKGCONFIG" != x -a x$enable_avahi != xno; then
 		AC_DEFINE(HAVE_AVAHI, [], [Define if you have the avahi library])
 	else
 		AC_MSG_RESULT(no)
+		enable_avahi=no
 	fi
 fi
 
@@ -241,7 +244,10 @@ PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.30.2])
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
-PKG_CHECK_MODULES(AVAHI_GLIB, [avahi-glib])
+if test "x$PKGCONFIG" != x -a x$enable_avahi != xno; then
+	PKG_CHECK_MODULES(AVAHI_GLIB, [avahi-glib])
+fi
+
 AC_SUBST(AVAHI_GLIB_CFLAGS)
 AC_SUBST(AVAHI_GLIB_LIBS)
 

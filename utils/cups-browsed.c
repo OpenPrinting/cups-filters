@@ -36,12 +36,14 @@
 
 #include <glib.h>
 
+#ifdef HAVE_AVAHI
 #include <avahi-client/client.h>
 #include <avahi-client/lookup.h>
 
 #include <avahi-glib/glib-watch.h>
 #include <avahi-common/malloc.h>
 #include <avahi-common/error.h>
+#endif /* HAVE_AVAHI */
 
 #include <cups/cups.h>
 
@@ -99,7 +101,9 @@ static cups_array_t *netifs;
 static cups_array_t *browseallow;
 
 static GMainLoop *gmainloop = NULL;
+#ifdef HAVE_AVAHI
 static AvahiGLibPoll *glib_poll = NULL;
+#endif /* HAVE_AVAHI */
 static guint queues_timer_id = (guint) -1;
 static int browsesocket = -1;
 
@@ -557,6 +561,7 @@ recheck_timer (void)
   }
 }
 
+#ifdef HAVE_AVAHI
 static void resolve_callback(
   AvahiServiceResolver *r,
   AVAHI_GCC_UNUSED AvahiIfIndex interface,
@@ -905,6 +910,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
   }
 
 }
+#endif /* HAVE_AVAHI */
 
 void
 found_cups_printer (const char *remote_host, const char *uri,
@@ -1712,9 +1718,11 @@ read_configuration (const char *filename)
 }
 
 int main(int argc, char*argv[]) {
+#ifdef HAVE_AVAHI
   AvahiClient *client = NULL;
   AvahiServiceBrowser *sb1 = NULL, *sb2 = NULL;
   int error;
+#endif /* HAVE_AVAHI */
   int ret = 1;
   http_t *http;
   cups_dest_t *dests,
@@ -1740,6 +1748,13 @@ int main(int argc, char*argv[]) {
     fprintf(stderr, "Local support for DNSSD not implemented\n");
     BrowseLocalProtocols &= ~BROWSE_DNSSD;
   }
+
+#ifndef HAVE_AVAHI
+  if (BrowseRemoteProtocols & BROWSE_DNSSD) {
+    fprintf(stderr, "Remote support for DNSSD not supported\n");
+    BrowseRemoteProtocols &= ~BROWSE_DNSSD;
+  }
+#endif /* HAVE_AVAHI */
 
   /* Wait for CUPS daemon to start */
   while ((http = httpConnectEncrypt(cupsServer(), ippPort(),
@@ -1815,6 +1830,7 @@ int main(int argc, char*argv[]) {
   debug_printf("cups-browsed: Using signal handler SIGNAL\n");
 #endif /* HAVE_SIGSET */
 
+#ifdef HAVE_AVAHI
   if (BrowseRemoteProtocols & BROWSE_DNSSD) {
     /* Allocate main loop object */
     if (!(glib_poll = avahi_glib_poll_new(NULL, G_PRIORITY_DEFAULT))) {
@@ -1866,6 +1882,7 @@ int main(int argc, char*argv[]) {
       }
     }
   }
+#endif /* HAVE_AVAHI */
 
   if (BrowseLocalProtocols & BROWSE_CUPS ||
       BrowseRemoteProtocols & BROWSE_CUPS) {
@@ -1955,7 +1972,8 @@ fail:
     p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
   }
   handle_cups_queues(NULL);
-    
+
+#ifdef HAVE_AVAHI
   /* Free the data structures for Bonjour browsing */
   if (sb1)
     avahi_service_browser_free(sb1);
@@ -1967,6 +1985,7 @@ fail:
 
   if (glib_poll)
     avahi_glib_poll_free(glib_poll);
+#endif /* HAVE_AVAHI */
 
   if (browsesocket != -1)
       close (browsesocket);
