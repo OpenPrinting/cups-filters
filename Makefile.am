@@ -610,9 +610,7 @@ EXTRA_DIST += \
 # =====
 
 EXTRA_DIST += utils/cups-browsed.in
-sbin_PROGRAMS =
-if ENABLE_AVAHI
-sbin_PROGRAMS += \
+sbin_PROGRAMS = \
 	cups-browsed
 cups_browsed_SOURCES = \
 	utils/cups-browsed.c
@@ -629,7 +627,6 @@ cups_browsed_LDADD = \
 	$(GLIB_LIBS)
 initrcdir = $(INITDDIR)
 initrc_SCRIPTS = utils/cups-browsed
-endif
 
 # ===
 # PPD
@@ -666,7 +663,6 @@ distclean-local:
 	rm -rf *.cache *~
 
 install-data-hook:
-if ENABLE_AVAHI
 if RCLINKS
 	for level in $(RCLEVELS); do \
 		$(INSTALL) -d -m 755 $(DESTDIR)$(INITDIR)/rc$${level}.d; \
@@ -676,18 +672,15 @@ if RCLINKS
 	$(INSTALL) -d -m 755 $(DESTDIR)$(INITDIR)/rc0.d; \
 	$(LN_S) ../init.d/cups-browsed $(DESTDIR)$(INITDIR)/rc0.d/K$(RCSTOP)cups-browsed;
 endif
-endif
 	$(LN_S) pdf.utf-8.simple \
 		$(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
 
 
 uninstall-hook:
-if ENABLE_AVAHI
 if RCLINKS
 	if test "x$(INITDIR)" != x; then \
 		$(RM) $(DESTDIR)$(BUILDROOT)$(INITDIR)/rc?.d/[SK]??cups-browsed || :; \
 		rmdir $(DESTDIR)$(BUILDROOT)$(INITDIR)/rc?.d || :;\
 	fi
-endif
 endif
 	$(RM) $(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
