@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.0.30 - 2013-03-07
 
 CHANGES IN V1.0.31
 
+	- pdftopdf: improved error output.
 	- pdftopdf: getRotation now handles unusual cases more graceful
 	  (probably fixes Ubuntu Bug 1154318).
 	- Fixed build system to allow building without Avahi. In this case
