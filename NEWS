@@ -5,7 +5,7 @@ CHANGES IN V1.0.31
 
 	- Fixed build system to allow building without Avahi. In this case
 	  a cups-browsed with only CUPS broadcasting/browsing will get
-	  built. Thanks to Tim Waugh from Red Hat (Bug #1101).
+	  built. Thanks to Tim Waugh from Red Hat (Bug #1101, Bug #1102).
 
 CHANGES IN V1.0.30
 
