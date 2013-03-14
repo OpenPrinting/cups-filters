@@ -98,6 +98,8 @@ void addOutputIntent(QPDF &pdf,const char *filename) // {{{
  
 ? what if page already defines /Default?   -- probably keep!
 
+? maybe we need to set /ColorSpace  in /Images ?    [gs idea is to just add the /Default-key and then reprocess...]
+
 */
 
 // TODO? test

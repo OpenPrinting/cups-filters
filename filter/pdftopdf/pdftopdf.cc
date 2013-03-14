@@ -20,7 +20,7 @@ static void error(const char *fmt,...) // {{{
   va_list ap;
   va_start(ap,fmt);
 
-  fputs("Error: ",stderr);
+  fputs("ERROR: ",stderr);
   vfprintf(stderr,fmt,ap);
   fputs("\n",stderr);
 
@@ -726,10 +726,10 @@ proc1->emitFilename("out.pdf");
     ppdClose(ppd);
   } catch (std::exception &e) {
     // TODO? exception type
-    fprintf(stderr,"Exception: %s\n",e.what());
+    error("Exception: %s",e.what());
     return 5;
   } catch (...) {
-    fprintf(stderr,"Unknown exception caught. Exiting.\n");
+    error("Unknown exception caught. Exiting.");
     return 6;
   }
 

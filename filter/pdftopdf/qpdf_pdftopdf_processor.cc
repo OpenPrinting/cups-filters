@@ -277,6 +277,7 @@ void QPDF_PDFTOPDF_Processor::error(const char *fmt,...) // {{{
   va_list ap;
 
   va_start(ap,fmt);
+  fputs("ERROR: ",stderr);
   vfprintf(stderr,fmt,ap);
   fputs("\n",stderr);
   va_end(ap);
@@ -484,7 +485,7 @@ void QPDF_PDFTOPDF_Processor::addCM(const char *defaulticc,const char *outputicc
     return; // nothing to do
   }
 
-  QPDFObjectHandle srcicc=setDefaultICC(*pdf,defaulticc);
+  QPDFObjectHandle srcicc=setDefaultICC(*pdf,defaulticc); // TODO? rename to putDefaultICC?
   addDefaultRGB(*pdf,srcicc);
 
   addOutputIntent(*pdf,outputicc);
