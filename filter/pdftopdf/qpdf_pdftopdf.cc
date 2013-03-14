@@ -1,6 +1,7 @@
 #include "qpdf_pdftopdf.h"
 #include <assert.h>
 #include <stdexcept>
+#include <qpdf/QUtil.hh>
 
 PageRect getBoxAsRect(QPDFObjectHandle box) // {{{
 {
@@ -24,14 +25,18 @@ Rotation getRotate(QPDFObjectHandle page) // {{{
     return ROT_0;
   }
   double rot=page.getKey("/Rotate").getNumericValue();
+  rot=fmod(rot,360.0);
+  if (rot<0) {
+    rot+=360.0;
+  }
   if (rot==90.0) { // CW 
     return ROT_270; // CCW
   } else if (rot==180.0) {
     return ROT_180;
   } else if (rot==270.0) {
     return ROT_90;
-  } else {
-    assert(rot==0.0);
+  } else if (rot!=0.0) {
+    throw std::runtime_error("Unexpected /Rotation value: "+QUtil::double_to_string(rot));
   }
   return ROT_0;
 }
