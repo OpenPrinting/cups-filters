@@ -666,13 +666,13 @@ install-data-hook:
 if RCLINKS
 	for level in $(RCLEVELS); do \
 		$(INSTALL) -d -m 755 $(DESTDIR)$(INITDIR)/rc$${level}.d; \
-		$(LN_S) ../init.d/cups-browsed $(DESTDIR)$(INITDIR)/rc$${level}.d/S$(RCSTART)cups-browsed; \
-		$(LN_S) ../init.d/cups-browsed $(DESTDIR)$(INITDIR)/rc$${level}.d/K$(RCSTOP)cups-browsed; \
+		$(LN_S) -f ../init.d/cups-browsed $(DESTDIR)$(INITDIR)/rc$${level}.d/S$(RCSTART)cups-browsed; \
+		$(LN_S) -f ../init.d/cups-browsed $(DESTDIR)$(INITDIR)/rc$${level}.d/K$(RCSTOP)cups-browsed; \
 	done; \
 	$(INSTALL) -d -m 755 $(DESTDIR)$(INITDIR)/rc0.d; \
-	$(LN_S) ../init.d/cups-browsed $(DESTDIR)$(INITDIR)/rc0.d/K$(RCSTOP)cups-browsed;
+	$(LN_S) -f ../init.d/cups-browsed $(DESTDIR)$(INITDIR)/rc0.d/K$(RCSTOP)cups-browsed;
 endif
-	$(LN_S) pdf.utf-8.simple \
+	$(LN_S) -f pdf.utf-8.simple \
 		$(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
 
 
