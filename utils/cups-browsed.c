@@ -690,7 +690,8 @@ static void resolve_callback(
 	for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	     p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
 	  if (!strcmp(p->name, local_queue_name) &&
-	      !strcmp(p->host, remote_host))
+	      (p->host[0] == '\0' ||
+	       !strcmp(p->host, remote_host)))
 	    break;
 
 	if (p) {

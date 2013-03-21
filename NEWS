@@ -3,9 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.0.30 - 2013-03-07
 
 CHANGES IN V1.0.31
 
+	- cups-browsed: cups-browsed removed valid local queues pointing to
+	  remote queues when cups-browsed did not shut down cleanly after
+	  the previous session, leaving the user with missing local accessor
+	  queues for some of the remote CUPS queues.
 	- Fixed build system to allow parallel or multilib builds. Thanks to
 	  Timo Gurr for the patch (Bug #1104).
-	- pdftopdf: improved error output.
+	- pdftopdf: Improved error output.
 	- pdftopdf: getRotation now handles unusual cases more graceful
 	  (probably fixes Ubuntu Bug 1154318).
 	- Fixed build system to allow building without Avahi. In this case
