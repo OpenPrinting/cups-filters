@@ -200,6 +200,15 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS
     queue the driver on the server is used and the local print dialogs
     give access to all options of the server-side printer driver.
 
+    Note that CUPS broadcasting/browsing is available for legacy
+    support, to let the local CUPS daemon work seamlessly together
+    with remote CUPS daemons of version 1.5.x and older which only
+    support CUPS broadcasting/browsing. In networks with only CUPS
+    1.6.x servers (or Ubuntu or Fedora/Red Hat servers with CUPS
+    1.5.x) please use the native Bonjour broadcasting of your servers
+    and cups-browsed, configured for Bonjour browsing only on the
+    clients.
+
     Also high availability with redundant print servers is
     supported. If there is more than one server providing a shared
     print queue with the same name, cups-browsed uses the first queue
@@ -211,9 +220,14 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS
     For maximum security cups-browsed uses IPPS (encrypted IPP)
     whenever possible.
 
-    The "make install" process installs init scripts which make the daemon
-    automatically started during boot. You can also manually start it with
-    (as root):
+    The configuration file for cups-browsed is
+    /etc/cups/cups-browsed.conf.  This file can include limited forms
+    of the original CUPS BrowseRemoteProtocols, BrowseLocalProtocols,
+    BrowsePoll, and BrowseAllow directives.
+
+    The "make install" process installs init scripts which make the
+    daemon automatically started during boot. You can also manually
+    start it with (as root):
 
     /usr/sbin/cups-browsed &
 
@@ -221,10 +235,13 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS
 
     /usr/sbin/cups-browsed --debug
 
-    Shut it down by sending signal 2 (SIGINT) or 15 (SIGTERM) to it. The
-    queues which it has created get removed then.
+    Shut it down by sending signal 2 (SIGINT) or 15 (SIGTERM) to
+    it. The queues which it has created get removed then (except a
+    queue set as system default, to not loose its system default
+    state).
 
-    Here is some info on how cups-browsed works internally:
+    Here is some info on how cups-browsed works internally )first concept of a
+    daemon which does only Bonjour browsing):
 
     - Daemon start
       o Wait for CUPS daemon if it is not running
@@ -290,12 +307,6 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS
     Queue identified as from this daemon by doing the equivalent of
     "lpadmin -p printer -o cups-browsed-default", this generates a
     "cups-browsed" attribute in printers.conf with value "true".
-
-    The configuration file for cups-browsed is
-    /etc/cups/cups-browsed.conf.  This file can include limited forms
-    of the original CUPS BrowseRemoteProtocols, BrowseLocalProtocols,
-    BrowsePoll, and BrowseAllow directives.
-
 
 CUPS FILTERS FOR PDF AS STANDARD PRINT JOB FORMAT
 

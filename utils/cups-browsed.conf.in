@@ -2,5 +2,25 @@
 # Can use DNSSD and/or CUPS, or 'none' for neither.
 BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 
+# Which protocols will we use to broadcast shared local printers to the network?
+# Can use DNSSD and/or CUPS, or 'none' for neither.
+# Only CUPS is actually supported, as DNSSD is done by CUPS itself (we ignore
+# DNSSD in this directive).
+# BrowseLocalProtocols none
+
+# Settings of this directive apply to both BrowseRemoteProtocols and
+# BrowseLocalProtocols.
+# Can use DNSSD and/or CUPS, or 'none' for neither.
+# BrowseProtocols none
+
+# Only browse remote printers from selected servers
+# BrowseAllow cups.example.com
+# BrowseAllow 192.168.1.12
+# BrowseAllow 192.168.1.0/24
+# BrowseAllow 192.168.1.0/255.255.255.0
+
 # Use BrowsePoll to poll a particular CUPS server
 # BrowsePoll cups.example.com
+# BrowsePoll cups.example.com:631
+
+# Unknown directives are ignored, also unknown values.
