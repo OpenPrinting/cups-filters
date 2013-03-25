@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.31 - 2013-03-21
 -----------------------------------------------------
 
+CHANGES IN V1.0.32
+
+	- cups-browsed: Added support for "...:<port>" extensions of
+	  BrowsePoll addresses. Thanks to Tim Waugh from Red Hat (Ubuntu
+	  bug 1159213).
+
 CHANGES IN V1.0.31
 
 	- cups-browsed: cups-browsed removed valid local queues pointing to
