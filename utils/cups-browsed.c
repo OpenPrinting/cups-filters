@@ -1494,15 +1494,27 @@ gboolean
 browse_poll (gpointer data)
 {
   static const char * const rattrs[] = { "printer-uri-supported" };
-  char *server = data;
+  char *server = strdup (data);
   ipp_t *request, *response = NULL;
   ipp_attribute_t *attr;
   http_t *conn;
+  int port = BrowsePort;
+  char *colon;
 
   debug_printf ("cups-browsed: browse polling %s\n", server);
 
+  colon = strchr (server, ':');
+  if (colon) {
+    char *endptr;
+    unsigned long n;
+    *colon++ = '\0';
+    n = strtoul (colon, &endptr, 10);
+    if (endptr != colon && n < INT_MAX)
+      port = (int) n;
+  }
+
   res_init ();
-  conn = httpConnectEncrypt (server, BrowsePort, HTTP_ENCRYPT_IF_REQUESTED);
+  conn = httpConnectEncrypt (server, port, HTTP_ENCRYPT_IF_REQUESTED);
 
   if (conn == NULL) {
     debug_printf("cups-browsed: browse poll failed to connect to %s\n", server);
