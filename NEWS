@@ -3,6 +3,19 @@ NEWS - OpenPrinting CUPS Filters v1.0.31 - 2013-03-21
 
 CHANGES IN V1.0.32
 
+	- cups-browsed: Shared algorithm to generate local queues based on
+	  browsed remote queue data between Bonjour and CUPS browsing, as the
+	  simpler method used for CUPS browsing could overwrite local print
+	  queues and had de-duplication problems, for example if the server
+	  appears on two IPs in the network (connected by both ethernet and
+	  WLAN).
+	- cups-browsed: CUPS broadcasting also broadcasted non-shared,
+	  especially cups-browsed-generated printers. Switched to detection
+	  of non-shared printers by the appropriate bit in the printer-type
+	  bit field IPP attribute.
+	- cups-browsed: Made CUPS broadcasting work also without BrowseAllow
+	  lines in cups-browsed.conf. In this case we accept all remote
+	  printers (Ubuntu bug #1163764).
 	- README: Updated documentation for cups-browsed.
 	- Added more comments and examples to /etc/cups/cups-browsed.conf.
 	- cups-browsed: Added support for "...:<port>" extensions of

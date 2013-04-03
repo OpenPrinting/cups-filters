@@ -561,6 +561,153 @@ recheck_timer (void)
   }
 }
 
+void generate_local_queue(const char *host,
+			  uint16_t port,
+			  char *resource,
+			  const char *name,
+			  const char *type,
+			  const char *domain) {
+  char *remote_queue, *remote_host;
+  remote_printer_t *p;
+  char *backup_queue_name, *local_queue_name = NULL;
+  cups_dest_t *dests, *dest;
+  int i, num_dests;
+  const char *val;
+
+  /* This is a remote CUPS queue, find queue name and host name */
+  remote_queue = resource + 9;
+  remote_host = strdup(host);
+  if (!strcmp(remote_host + strlen(remote_host) - 6, ".local"))
+    remote_host[strlen(remote_host) - 6] = '\0';
+  if (!strcmp(remote_host + strlen(remote_host) - 7, ".local."))
+    remote_host[strlen(remote_host) - 7] = '\0';
+  debug_printf("cups-browsed: Found CUPS queue: %s on host %s.\n",
+	       remote_queue, remote_host);
+
+  /* Check if there exists already a CUPS queue with the
+     requested name Try name@host in such a case and if
+     this is also taken, ignore the printer */
+  if ((backup_queue_name = malloc((strlen(remote_queue) + 
+				   strlen(remote_host) + 2) *
+				  sizeof(char))) == NULL) {
+    debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
+    exit(1);
+  }
+  sprintf(backup_queue_name, "%s@%s", remote_queue, remote_host);
+
+  /* Get available CUPS queues */
+  num_dests = cupsGetDests(&dests);
+
+  local_queue_name = remote_queue;
+  if (num_dests > 0) {
+    /* Is there a local queue with the name of the remote queue? */
+    for (i = num_dests, dest = dests; i > 0; i --, dest ++)
+      /* Only consider CUPS queues not created by us */
+      if ((((val =
+	     cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
+			   dest->options)) == NULL) ||
+	   (strcasecmp(val, "yes") != 0 &&
+	    strcasecmp(val, "on") != 0 &&
+	    strcasecmp(val, "true") != 0)) &&
+	  !strcmp(local_queue_name, dest->name))
+	break;
+    if (i > 0) {
+      /* Found local queue with same name as remote queue */
+      /* Is there a local queue with the name <queue>@<host>? */
+      local_queue_name = backup_queue_name;
+      debug_printf("cups-browsed: %s already taken, using fallback name: %s\n",
+		   remote_queue, local_queue_name);
+      for (i = num_dests, dest = dests; i > 0; i --, dest ++)
+	/* Only consider CUPS queues not created by us */
+	if ((((val =
+	       cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
+			     dest->options)) == NULL) ||
+	     (strcasecmp(val, "yes") != 0 &&
+	      strcasecmp(val, "on") != 0 &&
+	      strcasecmp(val, "true") != 0)) &&
+	    !strcmp(local_queue_name, dest->name))
+	  break;
+      if (i > 0) {
+	/* Found also a local queue with name <queue>@<host>, so
+	   ignore this remote printer */
+	debug_printf("cups-browsed: %s also taken, printer ignored.\n",
+		     local_queue_name);
+	return;
+      }
+    }
+    cupsFreeDests(num_dests, dests);
+  }
+
+  /* Check if we have already created a queue for the discovered
+     printer */
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
+    if (!strcmp(p->name, local_queue_name) &&
+	(p->host[0] == '\0' ||
+	 !strcmp(p->host, remote_host)))
+      break;
+
+  if (p) {
+    /* We have already created a local queue, check whether the
+       discovered service allows us to upgrade the queue to IPPS */
+    if (strcasestr(type, "_ipps") &&
+	!strncmp(p->uri, "ipp:", 4)) {
+
+      /* Schedule local queue for upgrade to ipps: */
+      if ((p->uri = realloc(p->uri, strlen(p->uri) + 2)) == NULL){
+	debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
+	exit(1);
+      }
+      memmove((void *)(p->uri + 4), (const void *)(p->uri + 3),
+	      strlen(p->uri) - 2);
+      p->uri[3] = 's';
+      p->status = STATUS_TO_BE_CREATED;
+      p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+      debug_printf("cups-browsed: Upgrading printer %s (Host: %s) to IPPS. New URI: %s\n",
+		   p->name, p->host, p->uri);
+
+    } else {
+
+      /* Nothing to do, mark queue entry as confirmed if the entry
+	 is unconfirmed */
+      debug_printf("cups-browsed: Entry for %s (Host: %s, URI: %s) already exists.\n",
+		   p->name, p->host, p->uri);
+      if (p->status == STATUS_UNCONFIRMED) {
+	p->status = STATUS_CONFIRMED;
+	p->timeout = (time_t) -1;
+	debug_printf("cups-browsed: Marking entry for %s (Host: %s, URI: %s) as confirmed.\n",
+		     p->name, p->host, p->uri);
+      }
+
+    }
+
+  } else {
+
+    /* We need to create a local queue pointing to the
+       discovered printer */
+
+    /* Device URI: ipp(s)://<remote host>:631/printers/<remote queue> */
+    char *uri = malloc(strlen(host) +
+		       strlen(remote_queue) + 34);
+    if (uri == NULL) {
+      debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
+      exit(1);
+    }
+    sprintf(uri, "ipp%s://%s:%u/printers/%s",
+	    (strcasestr(type, "_ipps") ? "s" : ""), host,
+	    port, remote_queue);
+
+    p = create_local_queue (local_queue_name, uri, remote_host,
+			    name, type, domain);
+    free (uri);
+  }
+
+  if (p)
+    debug_printf("cups-browsed: Bonjour IDs: Service name: \"%s\", "
+		 "Service type: \"%s\", Domain: \"%s\"\n",
+		 p->service_name, p->type, p->domain);
+}
+
 #ifdef HAVE_AVAHI
 static void resolve_callback(
   AvahiServiceResolver *r,
@@ -593,13 +740,7 @@ static void resolve_callback(
   /* New remote printer found */
   case AVAHI_RESOLVER_FOUND: {
     AvahiStringList *rp_entry, *adminurl_entry;
-    char *rp_key, *rp_value, *adminurl_key, *adminurl_value,
-      *remote_queue, *remote_host;
-    remote_printer_t *p;
-    char *backup_queue_name, *local_queue_name = NULL;
-    cups_dest_t *dests, *dest;
-    int i, num_dests;
-    const char *val;
+    char *rp_key, *rp_value, *adminurl_key, *adminurl_value;
 
     debug_printf("cups-browsed: Avahi Resolver: Service '%s' of type '%s' in domain '%s'.\n",
 		 name, type, domain);
@@ -620,139 +761,7 @@ static void resolve_callback(
 	  !strcmp(adminurl_key, "adminurl") &&
 	  !strcmp(adminurl_value + strlen(adminurl_value) -
 		  strlen(rp_value), rp_value)) {
-
-	/* This IS a remote CUPS queue, find queue name and host name */
-	remote_queue = rp_value + 9;
-	remote_host = strdup(host_name);
-	if (!strcmp(remote_host + strlen(remote_host) - 6, ".local"))
-	  remote_host[strlen(remote_host) - 6] = '\0';
-	if (!strcmp(remote_host + strlen(remote_host) - 7, ".local."))
-	  remote_host[strlen(remote_host) - 7] = '\0';
-	debug_printf("cups-browsed: Found CUPS queue: %s on host %s.\n",
-		     remote_queue, remote_host);
-
-	/* Check if there exists already a CUPS queue with the
-	   requested name Try name@host in such a case and if
-	   this is also taken, ignore the printer */
-	if ((backup_queue_name = malloc((strlen(remote_queue) + 
-					 strlen(remote_host) + 2) *
-					sizeof(char))) == NULL) {
-	  debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
-	  exit(1);
-	}
-	sprintf(backup_queue_name, "%s@%s", remote_queue, remote_host);
-
-	/* Get available CUPS queues */
-	num_dests = cupsGetDests(&dests);
-
-	local_queue_name = remote_queue;
-	if (num_dests > 0) {
-	  /* Is there a local queue with the name of the remote queue? */
-	  for (i = num_dests, dest = dests; i > 0; i --, dest ++)
-	    /* Only consider CUPS queues not created by us */
-	    if ((((val =
-		   cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
-				 dest->options)) == NULL) ||
-		 (strcasecmp(val, "yes") != 0 &&
-		  strcasecmp(val, "on") != 0 &&
-		  strcasecmp(val, "true") != 0)) &&
-		!strcmp(local_queue_name, dest->name))
-	      break;
-	  if (i > 0) {
-	    /* Found local queue with same name as remote queue */
-	    /* Is there a local queue with the name <queue>@<host>? */
-	    local_queue_name = backup_queue_name;
-	    debug_printf("cups-browsed: %s already taken, using fallback name: %s\n",
-			 remote_queue, local_queue_name);
-	    for (i = num_dests, dest = dests; i > 0; i --, dest ++)
-	      /* Only consider CUPS queues not created by us */
-	      if ((((val =
-		     cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
-				   dest->options)) == NULL) ||
-		   (strcasecmp(val, "yes") != 0 &&
-		    strcasecmp(val, "on") != 0 &&
-		    strcasecmp(val, "true") != 0)) &&
-		  !strcmp(local_queue_name, dest->name))
-		break;
-	    if (i > 0) {
-	      /* Found also a local queue with name <queue>@<host>, so
-		 ignore this remote printer */
-	      debug_printf("cups-browsed: %s also taken, printer ignored.\n",
-			   local_queue_name);
-	      break;
-	    }
-	  }
-	  cupsFreeDests(num_dests, dests);
-	}
-
-	/* Check if we have already created a queue for the discovered
-	   printer */
-	for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
-	     p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-	  if (!strcmp(p->name, local_queue_name) &&
-	      (p->host[0] == '\0' ||
-	       !strcmp(p->host, remote_host)))
-	    break;
-
-	if (p) {
-	  /* We have already created a local queue, check whether the
-	     discovered service allows us to upgrade the queue to IPPS */
-	  if (strcasestr(type, "_ipps") &&
-	      !strncmp(p->uri, "ipp:", 4)) {
-
-	    /* Schedule local queue for upgrade to ipps: */
-	    if ((p->uri = realloc(p->uri, strlen(p->uri) + 2)) == NULL){
-	      debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
-	      exit(1);
-	    }
-	    memmove((void *)(p->uri + 4), (const void *)(p->uri + 3),
-		    strlen(p->uri) - 2);
-	    p->uri[3] = 's';
-	    p->status = STATUS_TO_BE_CREATED;
-	    p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-	    debug_printf("cups-browsed: Upgrading printer %s (Host: %s) to IPPS. New URI: %s\n",
-			 p->name, p->host, p->uri);
-
-	  } else {
-
-	    /* Nothing to do, mark queue entry as confirmed if the entry
-	       is unconfirmed */
-	    debug_printf("cups-browsed: Entry for %s (Host: %s, URI: %s) already exists.\n",
-			 p->name, p->host, p->uri);
-	    if (p->status == STATUS_UNCONFIRMED) {
-	      p->status = STATUS_CONFIRMED;
-	      p->timeout = (time_t) -1;
-	      debug_printf("cups-browsed: Marking entry for %s (Host: %s, URI: %s) as confirmed.\n",
-			   p->name, p->host, p->uri);
-	    }
-
-	  }
-
-	} else {
-
-	  /* We need to create a local queue pointing to the
-	     discovered printer */
-
-	  /* Device URI: ipp(s)://<remote host>:631/printers/<remote queue> */
-	  char *uri = malloc(strlen(host_name) +
-			     strlen(remote_queue) + 34);
-	  if (uri == NULL) {
-	    debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
-	    exit(1);
-	  }
-	  sprintf(uri, "ipp%s://%s:%u/printers/%s",
-		  (strcasestr(type, "_ipps") ? "s" : ""), host_name,
-		  port, remote_queue);
-
-	  p = create_local_queue (local_queue_name, uri, remote_host,
-				  name, type, domain);
-	  free (uri);
-	}
-
-	if (p)
-	  debug_printf("cups-browsed: Bonjour IDs: Service name: \"%s\", "
-		       "Service type: \"%s\", Domain: \"%s\"\n",
-		       p->service_name, p->type, p->domain);
+	generate_local_queue(host_name, port, rp_value, name, type, domain);
       }
 
       /* Clean up */
@@ -917,15 +926,13 @@ void
 found_cups_printer (const char *remote_host, const char *uri,
 		    const char *info)
 {
-  char resolved_uri[HTTP_MAX_URI];
   char scheme[32];
   char username[64];
   char host[HTTP_MAX_HOST];
   char resource[HTTP_MAX_URI];
   int port;
   netif_t *iface;
-  remote_printer_t *p;
-  char local_queue_name[HTTP_MAX_URI];
+  char local_resource[HTTP_MAX_URI];
   char *c;
 
   httpSeparateURI (HTTP_URI_CODING_ALL, uri,
@@ -952,17 +959,16 @@ found_cups_printer (const char *remote_host, const char *uri,
     return;
   }
 
-  strncpy (local_queue_name, resource + 10, sizeof (local_queue_name) - 1);
-  local_queue_name[sizeof (local_queue_name) - 1] = '\0';
-  c = strchr (local_queue_name, '?');
+  strncpy (local_resource, resource + 1, sizeof (local_resource) - 1);
+  local_resource[sizeof (local_resource) - 1] = '\0';
+  c = strchr (local_resource, '?');
   if (c)
     *c = '\0';
 
-  debug_printf("cups-browsed: browsed queue name is %s\n", local_queue_name);
+  debug_printf("cups-browsed: browsed queue name is %s\n",
+	       local_resource + 9);
 
   /* Does the host need resolving? */
-  strncpy (resolved_uri, uri, sizeof (resolved_uri) - 1);
-  resolved_uri[sizeof (resolved_uri) - 1] = '\0';
   if (host[strspn (host, "0123456789.")] == '\0') {
     /* Yes. Resolve it. */
     struct addrinfo hints, *addr;
@@ -972,60 +978,24 @@ found_cups_printer (const char *remote_host, const char *uri,
     hints.ai_flags = 0;
     hints.ai_protocol = 0;
     if (!getaddrinfo (host, NULL, &hints, &addr)) {
-      if (!getnameinfo (addr->ai_addr, addr->ai_addrlen,
-			host, sizeof(host),
-			NULL, 0, 0))
-	httpAssembleURI (HTTP_URI_CODING_ALL,
-			 resolved_uri, sizeof(resolved_uri),
-			 scheme, username, host, port, resource);
-
+      getnameinfo (addr->ai_addr, addr->ai_addrlen,
+		   host, sizeof(host),
+		   NULL, 0, 0);
       freeaddrinfo (addr);
     }
   }
 
-  /* Do we already know about this queue? */
-  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
-       p;
-       p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    if (!strcmp(p->uri, resolved_uri))
-      break;
-    else if (!strcmp(p->name, local_queue_name)) {
-      if (strchr (local_queue_name, '@') == NULL) {
-	debug_printf("cups-browsed: %s already exists\n", local_queue_name);
-	strncat (local_queue_name, "@", sizeof (local_queue_name) - 1);
-	strncat (local_queue_name, host, sizeof (local_queue_name) - 1);
-      } else {
-	debug_printf("cups-browsed: %s already exists\n", local_queue_name);
-	return;
-      }
-    }
-
-  if (p) {
-    debug_printf("cups-browsed: already have this queue (%s)\n", p->name);
-    if (p->status == STATUS_DISAPPEARED)
-      debug_printf("cups-browsed: stopping browse timeout timer for %s\n",
-		   p->name);
-
-    p->status = STATUS_BROWSE_PACKET_RECEIVED;
-    p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-  } else {
-    p = create_local_queue (local_queue_name, uri, remote_host,
-			    info ? info : "", "", "");
-
-    if (p) {
-      p->status = STATUS_BROWSE_PACKET_RECEIVED;
-      p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-      debug_printf("cups-browsed: New remote printer %s found. "
-		   "Host: %s, URI: %s\n",
-		   p->name, remote_host, p->uri);
-    }
-  }
+  generate_local_queue(host, port, local_resource, info, "", "");
 }
 
 static gboolean
 allowed (struct sockaddr *srcaddr)
 {
   allow_t *allow;
+  if (cupsArrayCount(browseallow) == 0) {
+    /* No "BrowseAllow" line, allow all servers */
+    return TRUE;
+  }
   for (allow = cupsArrayFirst (browseallow);
        allow;
        allow = cupsArrayNext (browseallow)) {
@@ -1357,25 +1327,16 @@ send_browse_data (gpointer data)
       const char *attrname = ippGetName(attr);
       int value_tag = ippGetValueTag(attr);
       
-      /* Skip CUPS queues created by us */
-      if (!strcmp (attrname, CUPS_BROWSED_MARK) &&
-	  value_tag == IPP_TAG_STRING &&
-	  (!strcasecmp(ippGetString(attr, 0, NULL), "yes") ||
-	   !strcasecmp(ippGetString(attr, 0, NULL), "on") ||
-	   !strcasecmp(ippGetString(attr, 0, NULL), "true")))
-	/* Our special option is set to yes|on|true */
-	break;
-
-      /* Skip CUPS queues not marked as shared */
-      if (!strcmp(attrname, "printer-is-shared") &&
-	  value_tag == IPP_TAG_BOOLEAN &&
-	  ippGetBoolean(attr, 0) == 0)
-	break;
-
       if (!strcmp(attrname, "printer-type") &&
-	  value_tag == IPP_TAG_ENUM)
+	  value_tag == IPP_TAG_ENUM) {
 	type = ippGetInteger(attr, 0);
-      else if (!strcmp(attrname, "printer-state") &&
+	if (type & CUPS_PRINTER_NOT_SHARED) {
+	  /* Skip CUPS queues not marked as shared */
+	  state = -1;
+	  type = -1;
+	  break;
+	}
+      } else if (!strcmp(attrname, "printer-state") &&
 	       value_tag == IPP_TAG_ENUM)
 	state = ippGetInteger(attr, 0);
       else if (!strcmp(attrname, "printer-uri-supported") &&
