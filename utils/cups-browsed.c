@@ -698,7 +698,7 @@ void generate_local_queue(const char *host,
 	    port, remote_queue);
 
     p = create_local_queue (local_queue_name, uri, remote_host,
-			    name, type, domain);
+			    name ? name : "", type, domain);
     free (uri);
   }
 
@@ -985,7 +985,7 @@ found_cups_printer (const char *remote_host, const char *uri,
     }
   }
 
-  generate_local_queue(host, port, local_resource, info, "", "");
+  generate_local_queue(host, port, local_resource, info ? info : "", "", "");
 }
 
 static gboolean

@@ -1,6 +1,10 @@
 NEWS - OpenPrinting CUPS Filters v1.0.32 - 2013-04-03
 -----------------------------------------------------
 
+CHANGES IN V1.0.33
+
+	- cups-browsed: Added NULL check (Bug #1106).
+
 CHANGES IN V1.0.32
 
 	- cups-browsed: Shared algorithm to generate local queues based on
