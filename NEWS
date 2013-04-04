@@ -27,12 +27,12 @@ CHANGES IN V1.0.31
 	- cups-browsed: cups-browsed removed valid local queues pointing to
 	  remote queues when cups-browsed did not shut down cleanly after
 	  the previous session, leaving the user with missing local accessor
-	  queues for some of the remote CUPS queues.
+	  queues for some of the remote CUPS queues (Ubuntu bug #1131149).
 	- Fixed build system to allow parallel or multilib builds. Thanks to
 	  Timo Gurr for the patch (Bug #1104).
 	- pdftopdf: Improved error output.
 	- pdftopdf: getRotation now handles unusual cases more graceful
-	  (probably fixes Ubuntu Bug 1154318).
+	  (probably fixes Ubuntu Bug #1154318).
 	- Fixed build system to allow building without Avahi. In this case
 	  a cups-browsed with only CUPS broadcasting/browsing will get
 	  built. Thanks to Tim Waugh from Red Hat (Bug #1101, Bug #1102).
@@ -40,9 +40,9 @@ CHANGES IN V1.0.31
 CHANGES IN V1.0.30
 
 	- cups-browsed: Do not remove a generated local print queue when
-	  it was made the system default printer.
+	  it was made the system default printer (Ubuntu bug #1146407).
 	- texttopdf: Fixed corrupted pdf when a utf-8 title is given and
-	  corresponding crash with 'prettyprint' (Ubuntu Bug 1137438).
+	  corresponding crash with 'prettyprint' (Ubuntu Bug #1137438).
 	- cups-browsed: Added CUPS Broadcasting for sharing local printers
 	  to remote CUPS clients with CUPS 1.5.x and older. Thanks to Tim
 	  Waugh from Red Hat.
