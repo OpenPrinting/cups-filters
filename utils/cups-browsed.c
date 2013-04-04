@@ -663,6 +663,10 @@ void generate_local_queue(const char *host,
       p->uri[3] = 's';
       p->status = STATUS_TO_BE_CREATED;
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+      p->host = strdup(remote_host);
+      p->service_name = strdup(name);
+      p->type = strdup(type);
+      p->domain = strdup(domain);
       debug_printf("cups-browsed: Upgrading printer %s (Host: %s) to IPPS. New URI: %s\n",
 		   p->name, p->host, p->uri);
 
@@ -680,6 +684,14 @@ void generate_local_queue(const char *host,
       }
 
     }
+    if (p->host[0] == '\0')
+      p->host = strdup(remote_host);
+    if (p->service_name[0] == '\0' && name)
+      p->service_name = strdup(name);
+    if (p->type[0] == '\0' && type)
+      p->type = strdup(type);
+    if (p->domain[0] == '\0' && domain)
+      p->domain = strdup(domain);
 
   } else {
 
