@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.0.33 - 2013-04-04
 
 CHANGES IN V1.0.34
 
+	- pdftopdf: Enabled hardware copy generation, if available.
 	- pdftopdf: Fixed evenDuplex logic.
 	- cups-browsed: If a queue left over from the last session
 	  gets confirmed, fill in the data structure with the Bonjour

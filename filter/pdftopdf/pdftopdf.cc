@@ -534,7 +534,7 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
     }
   }
 
-#if 0    // for now
+#if 1    // for now
   // enable hardware copy generation
   if (ppd) {
     if (!ppd->manual_copies) {
