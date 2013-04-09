@@ -534,16 +534,6 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
     }
   }
 
-  if (param.numCopies==1) {
-    // collate is not needed
-    param.collate=false; // does not make a big difference for us
-  }
-/* TODO? instead:
-  if (...numOutputPages==1 [after nup,evenDuplex!]) {
-    param.collate=false; // does not make a big difference for us
-  }
-*/
-
 #if 0    // for now
   // enable hardware copy generation
   if (ppd) {
@@ -555,22 +545,29 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
       param.deviceCopies=1;
     }
   }
-#endif 
+#endif
 
   setFinalPPD(ppd,param);
 
-  // check collate device, with current ppd settings
-  if (param.collate) {
-    if (param.deviceCopies==1) { // e.g. ppd->manual_copies
-      param.deviceCollate=false;
-    } else {
-      param.deviceCollate=printerWillCollate(ppd);
-    }
+  if ( (param.numCopies==1)&&(param.deviceCopies==1) ) {
+    // collate is never needed for a single page
+    param.collate=false; // (this does not make a big difference for us)
+    param.deviceCollate=false;
+  } else if ( (param.deviceCopies==1)&&(param.duplex) ) { // i.e. (numCopies>1), in software
+    // duplex printing of multiple software copies:
+    // collate + evenDuplex must be forced to prevent copies on the backsides
+    param.collate=true;
+    param.deviceCollate=false; // either (!ppd) or (ppd->manual_copies)
+  } else if (param.collate) { // collate requested by user
+    // check collate device, with current/final(!) ppd settings
+    param.deviceCollate=printerWillCollate(ppd);
+  } else { // (!param.collate)
+    param.deviceCollate=false;
+  }
 
-    if (!param.deviceCollate) {
-      ppdMarkOption(ppd,"Collate","False"); // disable any hardware-collate
-      param.evenDuplex=true; // software collate always needs fillers
-    }
+  if ( (param.collate)&&(!param.deviceCollate) ) { // software collate
+    ppdMarkOption(ppd,"Collate","False"); // disable any hardware-collate (in JCL)
+    param.evenDuplex=true; // fillers always needed
   }
 
   if (!param.duplex) {
