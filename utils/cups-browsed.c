@@ -24,6 +24,9 @@
 #include <ctype.h>
 #include <errno.h>
 #include <ifaddrs.h>
+#if defined(__OpenBSD__)
+#include <sys/socket.h>
+#endif /* __OpenBSD__ */
 #include <net/if.h>
 #include <netinet/in.h>
 #include <resolv.h>
