@@ -635,6 +635,8 @@ void generate_local_queue(const char *host,
 	   ignore this remote printer */
 	debug_printf("cups-browsed: %s also taken, printer ignored.\n",
 		     local_queue_name);
+	free (backup_queue_name);
+	free (remote_host);
 	return;
       }
     }
@@ -716,6 +718,9 @@ void generate_local_queue(const char *host,
 			    name ? name : "", type, domain);
     free (uri);
   }
+
+  free (backup_queue_name);
+  free (remote_host);
 
   if (p)
     debug_printf("cups-browsed: Bonjour IDs: Service name: \"%s\", "
