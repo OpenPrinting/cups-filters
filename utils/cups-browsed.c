@@ -403,6 +403,8 @@ gboolean handle_cups_queues(gpointer unused) {
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  break;
 	}
+	if (response)
+	  ippDelete(response);
 
 	/* No jobs, not default printer, remove the CUPS queue */
 	request = ippNewRequest(CUPS_DELETE_PRINTER);
