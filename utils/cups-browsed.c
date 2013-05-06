@@ -1567,8 +1567,11 @@ fail:
   if (conn)
     httpClose (conn);
 
+  if (server)
+    free (server);
+
   /* Call a new timeout handler so that we run again */
-  g_timeout_add_seconds (BrowseInterval, browse_poll, server);
+  g_timeout_add_seconds (BrowseInterval, browse_poll, data);
 
   /* Stop this timeout handler, we called a new one */
   return FALSE;
