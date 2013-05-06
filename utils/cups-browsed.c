@@ -1933,13 +1933,13 @@ int main(int argc, char*argv[]) {
   }
 
   if (BrowsePoll) {
-    char **server;
-    for (server = BrowsePoll;
-	 *server;
-	 server++) {
+    size_t index;
+    for (index = 0;
+	 index < NumBrowsePoll;
+	 index++) {
       debug_printf ("cups-browsed: will browse poll %s every %ds\n",
-		    *server, BrowseInterval);
-      g_idle_add (browse_poll, *server);
+		    BrowsePoll[index], BrowseInterval);
+      g_idle_add (browse_poll, BrowsePoll[index]);
     }
   }
 
