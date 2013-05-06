@@ -335,7 +335,7 @@ static const char *emb_otf_get_post_name(const char *post,unsigned short gid) //
     if (gid<num_glyphs) {
       unsigned short idx=get_USHORT(post+34+2*gid);
       if (idx<258) {
-        if (gid<sizeof(macRoman)/sizeof(macRoman[0])) {
+        if (idx<sizeof(macRoman)/sizeof(macRoman[0])) {
           return macRoman[idx];
         } 
       } else if (idx<32768) {
