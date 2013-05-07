@@ -655,7 +655,12 @@ _cupsImageReadTIFF(
     case PHOTOMETRIC_PALETTE :
 	if (!TIFFGetField(tif, TIFFTAG_COLORMAP, &redcmap, &greencmap, &bluecmap))
 	{
-          fputs("DEBUG: No colormap tag in the file!\n", stderr);
+	  _TIFFfree(scanline);
+	  free(in);
+	  free(out);
+
+	  TIFFClose(tif);
+	  fputs("DEBUG: No colormap tag in the file!\n", stderr);
 	  fclose(fp);
 	  return (-1);
 	}

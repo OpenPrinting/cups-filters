@@ -403,6 +403,8 @@ gboolean handle_cups_queues(gpointer unused) {
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  break;
 	}
+	if (response)
+	  ippDelete(response);
 
 	/* No jobs, not default printer, remove the CUPS queue */
 	request = ippNewRequest(CUPS_DELETE_PRINTER);
@@ -635,6 +637,8 @@ void generate_local_queue(const char *host,
 	   ignore this remote printer */
 	debug_printf("cups-browsed: %s also taken, printer ignored.\n",
 		     local_queue_name);
+	free (backup_queue_name);
+	free (remote_host);
 	return;
       }
     }
@@ -716,6 +720,9 @@ void generate_local_queue(const char *host,
 			    name ? name : "", type, domain);
     free (uri);
   }
+
+  free (backup_queue_name);
+  free (remote_host);
 
   if (p)
     debug_printf("cups-browsed: Bonjour IDs: Service name: \"%s\", "
@@ -1562,8 +1569,11 @@ fail:
   if (conn)
     httpClose (conn);
 
+  if (server)
+    free (server);
+
   /* Call a new timeout handler so that we run again */
-  g_timeout_add_seconds (BrowseInterval, browse_poll, server);
+  g_timeout_add_seconds (BrowseInterval, browse_poll, data);
 
   /* Stop this timeout handler, we called a new one */
   return FALSE;
@@ -1933,13 +1943,13 @@ int main(int argc, char*argv[]) {
   }
 
   if (BrowsePoll) {
-    char **server;
-    for (server = BrowsePoll;
-	 *server;
-	 server++) {
+    size_t index;
+    for (index = 0;
+	 index < NumBrowsePoll;
+	 index++) {
       debug_printf ("cups-browsed: will browse poll %s every %ds\n",
-		    *server, BrowseInterval);
-      g_idle_add (browse_poll, *server);
+		    BrowsePoll[index], BrowseInterval);
+      g_idle_add (browse_poll, BrowsePoll[index]);
     }
   }
 

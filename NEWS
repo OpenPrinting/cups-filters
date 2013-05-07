@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.34 - 2013-04-10
 -----------------------------------------------------
 
+CHANGES IN V1.0.35
+
+	- libcupsfilters, libfontembed, pdftopdf, texttopdf, cups-browsed:
+	  Fixed several resource leaks and other problems. Thanks to Jiri
+	  Popelka from Red Hat for the patch (Bug #1116).
+
 CHANGES IN V1.0.34
 
 	- cups-browsed: Fixed build with OpenBSD (Bug #1103).

@@ -52,7 +52,7 @@ bool NupParameters::possible(int nup) // {{{
 {
   // 1 2 3 4 6 8 9 10 12 15 16
   return (nup>=1)&&(nup<=16)&&
-         ( (nup!=5)||(nup!=7)||(nup!=11)||(nup!=13)||(nup!=14) );
+         ( (nup!=5)&&(nup!=7)&&(nup!=11)&&(nup!=13)&&(nup!=14) );
 }
 // }}}
 

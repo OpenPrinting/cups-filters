@@ -1220,6 +1220,7 @@ static void write_pretty_header() // {{{
       x = PageRight - PageLeft - 36.0f / LinesPerInch - stringwidth_x(pagestr);
   }
   write_font_str(x,y,ATTR_BOLD,pagestr,-1);
+  free(pagestr);
 
   pdfOut_printf(pdf,"Q\n");
 }
