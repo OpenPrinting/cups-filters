@@ -608,6 +608,8 @@ TextMain(const char *name,	/* I - Name of filter */
 
     if (PageColumns < 1)
     {
+      if (fp != stdin)
+        fclose(fp);
       fprintf(stderr, "ERROR: Bad columns value %d.\n", PageColumns);
       return (1);
     }
@@ -619,6 +621,8 @@ TextMain(const char *name,	/* I - Name of filter */
 
     if (CharsPerInch <= 0.0)
     {
+      if (fp != stdin)
+        fclose(fp);
       fprintf(stderr, "ERROR: Bad cpi value %f.\n", CharsPerInch);
       return (1);
     }
@@ -630,6 +634,8 @@ TextMain(const char *name,	/* I - Name of filter */
 
     if (LinesPerInch <= 0.0)
     {
+      if (fp != stdin)
+        fclose(fp);
       fprintf(stderr, "ERROR: Bad lpi value %f.", LinesPerInch);
       return (1);
     }
@@ -1109,6 +1115,9 @@ TextMain(const char *name,	/* I - Name of filter */
   */
 
   WriteEpilogue();
+
+  if (fp != stdin)
+    fclose(fp);
 
   if (ppd != NULL)
     ppdClose(ppd);
