@@ -20,7 +20,7 @@ m4_include([m4/ax_compare_version.m4])
 AM_INIT_AUTOMAKE([1.11 gnu dist-xz dist-bzip2])
 AM_SILENT_RULES([yes])
 AC_LANG([C++])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 # Extra defines for the config.h
 AH_BOTTOM([
 #ifdef HAVE_LONG_LONG
