@@ -27,6 +27,11 @@ BEFORE YOU BEGIN
     Poppler, libijs, freetype, fontconfig, and liblcms (liblcms2 recommended) 
     must be installed to be able to compile this package.
 
+    Note that Poppler has to be compiled with the
+    "--enable-poppler-cpp" configure option (or the
+    "libpoppler-cpp-dev(el)" package has to be installed if the
+    Poppler packages from a Linux distribution are used).
+
     Besides these tools you'll want the JPEG, PNG, TIFF, ZLIB libraries for
     image support. CUPS Filters will compile and run without these, however
     you'll miss out on many of the features provided by CUPS Filters.
