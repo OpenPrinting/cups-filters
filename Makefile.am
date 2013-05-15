@@ -213,6 +213,15 @@ pkgdriver_DATA = \
 
 EXTRA_DIST += $(pkgdriver_DATA)
 
+# =======
+# Definitions for drivers
+# =======
+pkgppdcdir = $(CUPS_DATADIR)/ppdc
+pkgppdc_DATA = \
+	filter/pcl.h
+
+EXTRA_DIST += $(pkgppdc_DATA)
+
 # =====
 # MIMEs
 # =====
