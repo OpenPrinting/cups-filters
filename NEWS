@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.34 - 2013-04-10
 
 CHANGES IN V1.0.35
 
+	- Install pcl.h, it is needed by cupsfilters.drv. Thanks to Jiri
+	  Popelka from Red Hat for the patch (Bug #1133).
 	- Make cups-filters building with automake 1.13. Thanks to Andreas K.
 	  Huettel (dilfridge) on IRC.
 	- libcupsfilters, libfontembed, pdftopdf, texttopdf, cups-browsed:
