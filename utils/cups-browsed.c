@@ -639,6 +639,7 @@ void generate_local_queue(const char *host,
 		     local_queue_name);
 	free (backup_queue_name);
 	free (remote_host);
+	cupsFreeDests(num_dests, dests);
 	return;
       }
     }

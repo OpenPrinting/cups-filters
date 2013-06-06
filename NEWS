@@ -9,7 +9,7 @@ CHANGES IN V1.0.35
 	  Huettel (dilfridge) on IRC.
 	- libcupsfilters, libfontembed, pdftopdf, texttopdf, cups-browsed:
 	  Fixed several resource leaks and other problems. Thanks to Jiri
-	  Popelka from Red Hat for the patch (Bug #1116).
+	  Popelka from Red Hat for the patches (Bug #1116).
 
 CHANGES IN V1.0.34
 
