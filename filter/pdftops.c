@@ -497,9 +497,17 @@ main(int  argc,				/* I - Number of command-line args */
     else
     {
       if (renderer == PDFTOPS)
-        /* Do not emit PS Level 3 with Poppler, some HP PostScript printers
-	   do not like it. See https://bugs.launchpad.net/bugs/277404. */
-	pdf_argv[pdf_argc++] = (char *)"-level2";
+      {
+        /* Do not emit PS Level 3 with Poppler on HP PostScript laser printers
+	   as some do not like it. See https://bugs.launchpad.net/bugs/277404.*/
+	if (ppd->manufacturer &&
+	    (!strncasecmp(ppd->manufacturer, "HP", 2) ||
+	     !strncasecmp(ppd->manufacturer, "Hewlett-Packard", 15)) &&
+	    (strcasestr(ppd->nickname, "laserjet")))
+	  pdf_argv[pdf_argc++] = (char *)"-level2";
+	else
+	  pdf_argv[pdf_argc++] = (char *)"-level3";
+      }
       else if (renderer == GS)
 	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
       else
