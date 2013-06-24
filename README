@@ -92,18 +92,26 @@ POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
     Therefore there are two possibilities to configure pdftops at
     runtime:
 
-    1. Selection of the renderer: Ghostscript, Poppler, or Adobe Reader
+    1. Selection of the renderer: Ghostscript, Poppler, pdftocairo, or
+    Adobe Reader
 
     Ghostscript has better color management and is generally optimized
     more for printing. Poppler produces a PostScript which is
     compatible with more buggy built-in PostScript interpreters of
     printers and it leads to a somewhat quicker workflow when
     graphical structures of the input PDF has to be turned into
-    bitmaps. Adobe Reader is the PDF renderer from Adobe, the ones
-    who created PDF and PostScript.
+    bitmaps. Adobe Reader is the PDF renderer from Adobe, the ones who
+    created PDF and PostScript. pdftocairo is a good choice for the
+    PDF output of Cairo (for example when printing from evince).  It
+    is less resource-consuming when rasterizing graphical elements
+    which cannot be represented in PostScript (like
+    transparency). Note that pdftocairo only supports PDF input using
+    DeviceRGB, DeviceGray, RGB or sGray and is not capable of
+    generating PostScript level 1. So its support is only experimental
+    and distributions should not choose it as default.
 
     The selection is done by the "pdftops-renderer" option, setting it
-    to "gs", "pdftops", or "acroread":
+    to "gs", "pdftops", "pdftocairo", or "acroread":
 
     Per-job:           lpr -o pdftops-renderer=pdftops ...
     Per-queue default: lpadmin -p printer -o pdftops-renderer-default=gs

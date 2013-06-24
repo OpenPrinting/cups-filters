@@ -42,7 +42,7 @@
  */
 
 typedef unsigned renderer_t;
-enum renderer_e {GS = 0, PDFTOPS = 1, ACROREAD = 2};
+enum renderer_e {GS = 0, PDFTOPS = 1, ACROREAD = 2, PDFTOCAIRO = 3};
 
 /*
  * Local functions...
@@ -381,6 +381,8 @@ main(int  argc,				/* I - Number of command-line args */
       renderer = PDFTOPS;
     else if (strcasecmp(val, "acroread") == 0)
       renderer = ACROREAD;
+    else if (strcasecmp(val, "pdftocairo") == 0)
+      renderer = PDFTOCAIRO;
     else
       fprintf(stderr,
 	      "WARNING: Invalid value for \"pdftops-renderer\": \"%s\"\n", val);
@@ -456,6 +458,12 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argv[6] = (char *)"-sOUTPUTFILE=%stdout";
     pdf_argc    = 7;
   }
+  else if (renderer == PDFTOCAIRO)
+  {
+    pdf_argv[0] = (char *)"pdftocairo";
+    pdf_argv[1] = (char *)"-ps";
+    pdf_argc    = 2;
+  }
   else
   {
     pdf_argv[0] = (char *)"acroread";
@@ -478,6 +486,8 @@ main(int  argc,				/* I - Number of command-line args */
       }
       else if (renderer == GS)
 	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=1";
+      else if (renderer == PDFTOCAIRO)
+        fprintf(stderr, "WARNING: Level 1 PostScript not supported by pdftocairo.");
       else
         fprintf(stderr, "WARNING: Level 1 PostScript not supported by acroread.");
     }
@@ -491,7 +501,7 @@ main(int  argc,				/* I - Number of command-line args */
       }
       else if (renderer == GS)
 	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=2";
-      else
+      else /* PDFTOCAIRO || ACROREAD */
         pdf_argv[pdf_argc++] = (char *)"-level2";
     }
     else
@@ -510,7 +520,7 @@ main(int  argc,				/* I - Number of command-line args */
       }
       else if (renderer == GS)
 	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
-      else
+      else /* PDFTOCAIRO || ACROREAD */
         pdf_argv[pdf_argc++] = (char *)"-level3";
     }
 
@@ -559,7 +569,7 @@ main(int  argc,				/* I - Number of command-line args */
 	  orientation ^= 1;
       }
 
-      if (renderer == PDFTOPS)
+      if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
       {
 	if (orientation & 1)
 	{
@@ -613,7 +623,7 @@ main(int  argc,				/* I - Number of command-line args */
       }
     }
 #ifdef HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES
-    else if (renderer == PDFTOPS)
+    else if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
     {
      /*
       *  Use the page sizes of the original PDF document, this way documents
@@ -686,7 +696,7 @@ main(int  argc,				/* I - Number of command-line args */
     while (xres > maxres)
       xres = xres / 2;
 
-  if (renderer == PDFTOPS)
+  if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
   {
 #ifdef HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION
    /*
@@ -756,7 +766,7 @@ main(int  argc,				/* I - Number of command-line args */
   * of the printer's PostScript interpreter?
   */
 
-  if (renderer == PDFTOPS)
+  if ((renderer == PDFTOPS) || (renderer == PDFTOPS))
     need_post_proc = 0;
   else if (renderer == GS)
     need_post_proc =
@@ -816,6 +826,11 @@ main(int  argc,				/* I - Number of command-line args */
       execv(CUPS_GHOSTSCRIPT, pdf_argv);
       perror("DEBUG: Unable to execute gs program");
     }
+    else if (renderer == PDFTOCAIRO)
+    {
+      execv(CUPS_POPPLER_PDFTOCAIRO, pdf_argv);
+      perror("DEBUG: Unable to execute pdftocairo program");
+    }
     else
     {
       /*
@@ -844,6 +859,8 @@ main(int  argc,				/* I - Number of command-line args */
       perror("DEBUG: Unable to execute pdftops program");
     else if (renderer == GS)
       perror("DEBUG: Unable to execute gs program");
+    else if (renderer == PDFTOCAIRO)
+      perror("DEBUG: Unable to execute pdftocairo program");
     else
       perror("DEBUG: Unable to execute acroread program");
 
@@ -1105,7 +1122,8 @@ main(int  argc,				/* I - Number of command-line args */
 	fprintf(stderr, "DEBUG: PID %d (%s) stopped with status %d!\n",
 		wait_pid,
 		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
-                (renderer == GS ? "gs" : "acroread")) :
+                (renderer == PDFTOCAIRO ? "pdftocairo" :
+		(renderer == GS ? "gs" : "acroread"))) :
 		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
 		exit_status);
       }
@@ -1115,7 +1133,8 @@ main(int  argc,				/* I - Number of command-line args */
 		"DEBUG: PID %d (%s) was terminated normally with signal %d!\n",
 		wait_pid,
 		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
-                (renderer == GS ? "gs" : "acroread")) :
+                (renderer == PDFTOCAIRO ? "pdftocairo" :
+                (renderer == GS ? "gs" : "acroread"))) :
 		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
 		exit_status);
       }
@@ -1125,7 +1144,8 @@ main(int  argc,				/* I - Number of command-line args */
 
 	fprintf(stderr, "DEBUG: PID %d (%s) crashed on signal %d!\n", wait_pid,
 		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
-                (renderer == GS ? "gs" : "acroread")) :
+                (renderer == PDFTOCAIRO ? "pdftocairo" :
+                (renderer == GS ? "gs" : "acroread"))) :
 		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
 		exit_status);
       }
@@ -1134,7 +1154,8 @@ main(int  argc,				/* I - Number of command-line args */
     {
       fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n", wait_pid,
 	      wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
-              (renderer == GS ? "gs" : "acroread")) :
+              (renderer == PDFTOCAIRO ? "pdftocairo" :
+              (renderer == GS ? "gs" : "acroread"))) :
 	      (wait_pid == pstops_pid ? "pstops" : "Post-processing"));
     }
   }
