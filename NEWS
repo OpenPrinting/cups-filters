@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.34 - 2013-04-10
 
 CHANGES IN V1.0.35
 
+	- cups-browsed: Changed default of browsing protocols fron none to
+	  both DNS-SD and CUPS.
 	- pdftops: Let Poppler generally generate PostScript level 3 if the
 	  PPD identifies the printer as PS3 printer, make an exception of
 	  sending PostScript Level 2 only for HP's laser printers, to not

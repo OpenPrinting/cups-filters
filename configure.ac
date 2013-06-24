@@ -63,7 +63,7 @@ PKG_PROG_PKG_CONFIG([0.20])
 # Specify the fontdir patch if not default
 # ========================================
 AC_ARG_WITH([fontdir],
-	[AS_HELP_STRING([--with-fontdir=path], [Specify path to font config directory ( default: fonts/conf.d/).])],
+	[AS_HELP_STRING([--with-fontdir=path], [Specify path to font config directory (default: fonts/conf.d/).])],
 	[FONTDIR="$withval"],
 	[FONTDIR="fonts/conf.d"]
 )
@@ -252,9 +252,9 @@ AC_SUBST(AVAHI_GLIB_CFLAGS)
 AC_SUBST(AVAHI_GLIB_LIBS)
 
 AC_ARG_WITH([browseremoteprotocols],
-	[AS_HELP_STRING([--with-browseremoteprotocols=value], [Set which protocols to listen for in cups-browsed.])],
+	[AS_HELP_STRING([--with-browseremoteprotocols=value], [Set which protocols to listen for in cups-browsed (default: dnssd cups)])],
 	[with_browseremoteprotocols="$withval"],
-	[with_browseremoteprotocols=none]
+	[with_browseremoteprotocols="dnssd cups"]
 )
 BROWSEREMOTEPROTOCOLS="$with_browseremoteprotocols"
 AC_SUBST(BROWSEREMOTEPROTOCOLS)
