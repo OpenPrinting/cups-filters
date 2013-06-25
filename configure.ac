@@ -449,13 +449,13 @@ AS_IF([test "x$CUPS_PDFTOPS" != "x"], [
 	])
 ])
 AS_IF([test "x$with_pdftocairo_path" != "xsystem"], [
-	CUPS_PDFTOPS="$with_pdftocairo"
+	CUPS_PDFTOPS="$with_pdftocairo_path"
 ], [
 	AC_PATH_PROG(CUPS_PDFTOCAIRO, [pdftocairo], [AC_MSG_ERROR([Required pdftocairo is missing. Please install Poppler developer packages.])])
 ])
 AS_IF([test "x$CUPS_PDFTOCAIRO" != "x"], [
 	AC_DEFINE([HAVE_POPPLER_PDFTOCAIRO], [], [Define that we provide poppler pdftocairo.])
-	AS_IF([test x"$with_pdftocairo" = xpdftocairo], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOCAIRO], [Define default renderer])])
+	AS_IF([test x"$with_pdftops" = xpdftocairo], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOCAIRO], [Define default renderer])])
 ])
 AS_IF([test "x$with_acroread_path" != "xsystem"], [
 	CUPS_ACROREAD="$with_acroread_path"
