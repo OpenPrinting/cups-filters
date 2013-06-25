@@ -432,7 +432,7 @@ the followings option settings in a PPD file.
 Collate:
   If Collate is defined, "imagetopdf" judges the printer supports Collate.
 Copies:
-  If cupsManualCopies is defined as False, "imagetopdf" judges the printer
+  If cupsManualCopies is defined as True, "imagetopdf" judges the printer
   does not support Copies feature.
 　
 Duplex:
@@ -778,7 +778,7 @@ the followings option settings in a PPD file.
 Collate:
   If Collate is defined, "pdftopdf" judges the printer supports Collate.
 Copies:
-  If cupsManualCopies is defined as False, "pdftopdf" judges the printer
+  If cupsManualCopies is defined as True, "pdftopdf" judges the printer
   does not support Copies feature.
 Duplex:
   If Duplex is defined, "pdftopdf" judges the printer supports Duplex.
