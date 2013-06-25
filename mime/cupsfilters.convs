@@ -42,10 +42,10 @@
 # if it comes from an encrypted PDF file, we simply override pstopdf and the
 # PDF workflow.
 
-application/postscript		application/pdf			22	pstopdf
+application/postscript		application/pdf			100	pstopdf
 application/vnd.adobe-reader-postscript	application/vnd.cups-postscript	66	pstops
 
-application/pdf		application/vnd.cups-pdf		22	pdftopdf
+application/pdf		application/vnd.cups-pdf		66	pdftopdf
 application/x-cshell	application/pdf				0	texttopdf
 application/x-csource	application/pdf				0	texttopdf
 application/x-perl	application/pdf				0	texttopdf
@@ -76,7 +76,7 @@ image/urf		application/pdf				0	urftopdf
 #
 
 #application/pdf		application/vnd.cups-postscript	66	pdftops
-application/vnd.cups-pdf	application/vnd.cups-postscript	22	pdftops
+application/vnd.cups-pdf	application/vnd.cups-postscript	100	pdftops
 #application/postscript		application/vnd.cups-postscript	66	pstops
 
 ########################################################################

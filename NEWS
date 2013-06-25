@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.34 - 2013-04-10
 
 CHANGES IN V1.0.35
 
+	- Modified the cost factors of the filters to avoid unneeded PDF
+	  conversion detours when the input data is PostScript. Instead of
+	  pstopdf->pdftopdf->pdftops and pstopdf->pdftopdf->gstoraster we
+	  get pstops and pstops->gstoraster now (Bug #1138).
 	- pdftops: Added experimental support for pdftocairo as PDF renderer.
 	  Note that PostScript level 1 output and PDF input with color
 	  spaces other than DeviceRGB, DeviceGray, sRGB or sGray is not
