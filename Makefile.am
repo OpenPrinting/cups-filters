@@ -218,7 +218,8 @@ EXTRA_DIST += $(pkgdriver_DATA)
 # =======
 pkgppdcdir = $(CUPS_DATADIR)/ppdc
 pkgppdc_DATA = \
-	filter/pcl.h
+	filter/pcl.h \
+	filter/escp.h
 
 EXTRA_DIST += $(pkgppdc_DATA)
 

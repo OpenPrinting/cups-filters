@@ -1,6 +1,10 @@
 NEWS - OpenPrinting CUPS Filters v1.0.35 - 2013-06-26
 -----------------------------------------------------
 
+CHANGES IN V1.0.36
+
+	- Install also escp.h, it is useful for .drv files.
+
 CHANGES IN V1.0.35
 
 	- pdftoraster: Silenced compiler warning (Bug #1092).
