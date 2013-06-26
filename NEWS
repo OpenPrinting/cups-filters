@@ -1,4 +1,4 @@
-NEWS - OpenPrinting CUPS Filters v1.0.34 - 2013-04-10
+NEWS - OpenPrinting CUPS Filters v1.0.35 - 2013-06-26
 -----------------------------------------------------
 
 CHANGES IN V1.0.35
@@ -6,7 +6,7 @@ CHANGES IN V1.0.35
 	- pdftoraster: Silenced compiler warning (Bug #1092).
 	- bannertopdf: Fixed typo which prevented the host name to be shown
 	  (Bug #1115).
-	- README: Fixed info about the PPD keywork cupsManualCopies (Bug
+	- README: Fixed info about the PPD keyword cupsManualCopies (Bug
 	  #1086).
 	- Modified the cost factors of the filters to avoid unneeded PDF
 	  conversion detours when the input data is PostScript. Instead of
