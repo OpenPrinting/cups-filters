@@ -503,7 +503,7 @@ static unsigned char *reverseLineSwapBit(unsigned char *src,
     bp = src+size-1;
     dp = dst;
     for (unsigned int j = 0;j < size;j++,bp--,dp++) {
-      *dp = revTable[~*bp];
+      *dp = revTable[(unsigned char)(~*bp)];
     }
   } else {
     unsigned int pd,d;
