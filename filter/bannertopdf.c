@@ -223,7 +223,7 @@ static int generate_banner_pdf(banner_t *banner,
 
     if (banner->infos & INFO_JOB_ORIGINATING_HOST_NAME)
         info_line(s, "Printed from",
-                  cupsGetOption("jobs-originating-host-name",
+                  cupsGetOption("job-originating-host-name",
                                 noptions, options));
 
     if (banner->infos & INFO_JOB_ORIGINATING_USER_NAME)
