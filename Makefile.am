@@ -619,7 +619,6 @@ EXTRA_DIST += \
 # UTILS
 # =====
 
-EXTRA_DIST += utils/cups-browsed.in
 sbin_PROGRAMS = \
 	cups-browsed
 cups_browsed_SOURCES = \
@@ -637,6 +636,11 @@ cups_browsed_LDADD = \
 	$(GLIB_LIBS)
 initrcdir = $(INITDDIR)
 initrc_SCRIPTS = utils/cups-browsed
+man_MANS = \
+	utils/cups-browsed.8 \
+	utils/cups-browsed.conf.5
+EXTRA_DIST += utils/cups-browsed.in \
+	$(man_MANS)
 
 # ===
 # PPD
