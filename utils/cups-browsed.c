@@ -991,23 +991,6 @@ found_cups_printer (const char *remote_host, const char *uri,
   debug_printf("cups-browsed: browsed queue name is %s\n",
 	       local_resource + 9);
 
-  /* Does the host need resolving? */
-  if (host[strspn (host, "0123456789.")] == '\0') {
-    /* Yes. Resolve it. */
-    struct addrinfo hints, *addr;
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_flags = 0;
-    hints.ai_protocol = 0;
-    if (!getaddrinfo (host, NULL, &hints, &addr)) {
-      getnameinfo (addr->ai_addr, addr->ai_addrlen,
-		   host, sizeof(host),
-		   NULL, 0, 0);
-      freeaddrinfo (addr);
-    }
-  }
-
   generate_local_queue(host, port, local_resource, info ? info : "", "", "");
 }
 
