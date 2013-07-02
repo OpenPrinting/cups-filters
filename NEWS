@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.35 - 2013-06-26
 
 CHANGES IN V1.0.36
 
+	- cups-browsed: Do not resolve host names of remote printers discovered 
+	  via CUPS broadcasts (Bug #1141).
 	- Added man pages for cups-browsed and cups-browsed.conf. Thanks to
 	  Brian Potkin for the contribution (Debian bug #714460).
 	- Install also escp.h, it is useful for .drv files.
