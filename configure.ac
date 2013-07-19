@@ -422,6 +422,8 @@ AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x"], [
 	], [
 		AC_MSG_RESULT([no])
 	])
+], [
+	CUPS_GHOSTSCRIPT="gs"
 ])
 
 AS_IF([test "x$with_pdftops_path" != "xsystem"], [
@@ -447,6 +449,8 @@ AS_IF([test "x$CUPS_PDFTOPS" != "x"], [
 	], [
         	AC_MSG_RESULT([no])
 	])
+], [
+	CUPS_PDFTOPS="/usr/bin/pdftops"
 ])
 AS_IF([test "x$with_pdftocairo_path" != "xsystem"], [
 	CUPS_PDFTOPS="$with_pdftocairo_path"
@@ -456,6 +460,8 @@ AS_IF([test "x$with_pdftocairo_path" != "xsystem"], [
 AS_IF([test "x$CUPS_PDFTOCAIRO" != "x"], [
 	AC_DEFINE([HAVE_POPPLER_PDFTOCAIRO], [], [Define that we provide poppler pdftocairo.])
 	AS_IF([test x"$with_pdftops" = xpdftocairo], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOCAIRO], [Define default renderer])])
+], [
+	CUPS_PDFTOCAIRO="pdftocairo"
 ])
 AS_IF([test "x$with_acroread_path" != "xsystem"], [
 	CUPS_ACROREAD="$with_acroread_path"
@@ -465,6 +471,8 @@ AS_IF([test "x$with_acroread_path" != "xsystem"], [
 AS_IF([test "x$CUPS_ACROREAD" != "x"], [
 	AC_DEFINE([HAVE_ACROREAD], [], [Define that we provide acroread.])
 	AS_IF([test x"$with_pdftops" = xacroread], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [ACROREAD], [Define default renderer])])
+], [
+	CUPS_ACROREAD="acroread"
 ])
 
 AC_DEFINE_UNQUOTED([CUPS_GHOSTSCRIPT], "$CUPS_GHOSTSCRIPT", [gs binary to use])

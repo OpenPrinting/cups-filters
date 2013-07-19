@@ -818,17 +818,17 @@ main(int  argc,				/* I - Number of command-line args */
 
     if (renderer == PDFTOPS)
     {
-      execv(CUPS_POPPLER_PDFTOPS, pdf_argv);
+      execvp(CUPS_POPPLER_PDFTOPS, pdf_argv);
       perror("DEBUG: Unable to execute pdftops program");
     }
     else if (renderer == GS)
     {
-      execv(CUPS_GHOSTSCRIPT, pdf_argv);
+      execvp(CUPS_GHOSTSCRIPT, pdf_argv);
       perror("DEBUG: Unable to execute gs program");
     }
     else if (renderer == PDFTOCAIRO)
     {
-      execv(CUPS_POPPLER_PDFTOCAIRO, pdf_argv);
+      execvp(CUPS_POPPLER_PDFTOCAIRO, pdf_argv);
       perror("DEBUG: Unable to execute pdftocairo program");
     }
     else
@@ -843,7 +843,7 @@ main(int  argc,				/* I - Number of command-line args */
         close(fd);
       }
      
-      execv(CUPS_ACROREAD, pdf_argv);
+      execvp(CUPS_ACROREAD, pdf_argv);
       perror("DEBUG: Unable to execute acroread program");
     }
 

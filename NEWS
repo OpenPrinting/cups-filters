@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.0.35 - 2013-06-26
 
 CHANGES IN V1.0.36
 
+	- pdftops: If one or more of the PDF-to-PS renderers (Ghostscript,
+	  Poppler pdftops, Poppler pdftocairo, acroread) is not installed
+	  at build time, pre-fill the appropriate executable's path with the
+	  executable name to allow the use of this renderer when it gets
+	  installed later (Debian bug #716842).
 	- cups-browsed: Do not resolve host names of remote printers discovered 
 	  via CUPS broadcasts (Bug #1141).
 	- Added man pages for cups-browsed and cups-browsed.conf. Thanks to
