@@ -11,6 +11,7 @@ public:
   virtual void add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop=NULL);
   virtual void mirror();
   virtual void rotate(Rotation rot);
+  virtual void add_label(const PageRect &rect, const std::string label);
 
   void debug(const PageRect &rect,float xpos,float ypos);
 private:

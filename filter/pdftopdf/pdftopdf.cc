@@ -9,6 +9,8 @@
 #include <assert.h>
 #include <cups/cups.h>
 #include <cups/ppd.h>
+#include <iomanip>
+#include <sstream>
 #include <memory>
 
 #include "pdftopdf_processor.h"
@@ -402,8 +404,27 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     param.reverse=ppdDefaultOrder(ppd);
   }
 
-  // TODO: pageLabel  (not used)
-  // param.pageLabel=cupsGetOption("page-label",num_options,options);  // strdup?
+  std::string rawlabel;
+  char *classification = getenv("CLASSIFICATION");
+  if (classification)
+    rawlabel.append (classification);
+
+  if ( (val=cupsGetOption("page-label", num_options, options)) != NULL) {
+    if (!rawlabel.empty())
+      rawlabel.append (" - ");
+    rawlabel.append(cupsGetOption("page-label",num_options,options));
+  }
+
+  std::ostringstream cookedlabel;
+  for (std::string::iterator it = rawlabel.begin();
+       it != rawlabel.end ();
+       ++it) {
+    if (*it < 32 || *it > 126)
+      cookedlabel << "\\" << std::oct << std::setfill('0') << std::setw(3) << (unsigned int) *it;
+    else
+      cookedlabel.put (*it);
+  }
+  param.pageLabel = cookedlabel.str ();
 
   if ( (val=cupsGetOption("page-set",num_options,options)) != NULL) {
     if (strcasecmp(val,"even")==0) {

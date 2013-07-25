@@ -20,7 +20,7 @@ struct ProcessingParameters {
       border(NONE),
       reverse(false),
 
-//      pageLabel(NULL),
+      pageLabel(),
       evenPages(true),oddPages(true),
 
       mirror(false),
@@ -60,7 +60,7 @@ struct ProcessingParameters {
   NupParameters nup;
   bool reverse;
 
-  // std::string pageLabel; // or NULL?  must stay/dup!
+  std::string pageLabel;
   bool evenPages,oddPages;
   IntervalSet pageRange;
 
@@ -105,6 +105,7 @@ public:
   virtual void add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop=NULL) =0;
   virtual void mirror() =0;
   virtual void rotate(Rotation rot) =0;
+  virtual void add_label(const PageRect &rect, const std::string label) =0;
 };
 
 // TODO: ... error output?

@@ -80,12 +80,8 @@ void ProcessingParameters::dump() const // {{{
   fprintf(stderr,"evenDuplex: %s\n",
                  (evenDuplex)?"true":"false");
 
-/*
-  // std::string pageLabel; // or NULL?  must stay/dup!
-  ...
-  ...
-
-*/
+  fprintf(stderr,"pageLabel: %s\n",
+	  pageLabel.empty () ? "(none)" : pageLabel.c_str());
 
   fprintf(stderr,"bookletMode: ");
   BookletMode_dump(booklet);
@@ -206,6 +202,10 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
         page->mirror();
       }
 
+      if (!param.pageLabel.empty()) {
+	page->add_label(param.page, param.pageLabel);
+      }
+
       // place border
       if ( (param.border!=BorderType::NONE)&&(iA<numOrigPages) ) {
 #if 0 // would be nice, but is not possible
@@ -308,6 +308,10 @@ const bool origls=param.nup.landscape;
         // page->"uncrop"(rect);  // page->setMedia()
         // Note: currently "fixed" in add_subpage(...&rect);
         page->add_border_rect(rect,param.border,1.0/pgedit.scale);
+      }
+
+      if (!param.pageLabel.empty()) {
+	page->add_label(param.page, param.pageLabel);
       }
 
       if (!param.fitplot) {

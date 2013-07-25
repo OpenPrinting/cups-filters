@@ -257,6 +257,94 @@ void QPDF_PDFTOPDF_PageHandle::rotate(Rotation rot) // {{{
 }
 // }}}
 
+void QPDF_PDFTOPDF_PageHandle::add_label(const PageRect &_rect, const std::string label) // {{{
+{
+  assert(isExisting());
+
+  PageRect rect = ungetRect (_rect, *this, rotation, page);
+
+  assert (rect.left <= rect.right);
+  assert (rect.bottom <= rect.top);
+
+  // TODO: Only add in the font once, not once per page.
+  QPDFObjectHandle font = page.getOwningQPDF()->makeIndirectObject (
+    QPDFObjectHandle::parse(
+      "<<"
+      " /Type /Font"
+      " /Subtype /Type1"
+      " /Name /pagelabel-font"
+      " /BaseFont /Helvetica" // TODO: support UTF-8 labels?
+      ">>"));
+  QPDFObjectHandle resources = page.getKey ("/Resources");
+  QPDFObjectHandle rfont = resources.getKey ("/Font");
+  rfont.replaceKey ("/pagelabel-font", font);
+
+  double margin = 2.25;
+  double height = 12;
+
+  std::string boxcmd = "q\n";
+
+  // White filled rectangle (top)
+  boxcmd += "  1 1 1 rg\n";
+  boxcmd += "  " + QUtil::double_to_string(rect.left + margin) + " " +
+		   QUtil::double_to_string(rect.top - height - 2 * margin) + " " +
+		   QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
+		   QUtil::double_to_string(height + 2 * margin) + " re f\n";
+
+  // White filled rectangle (bottom)
+  boxcmd += "  " + QUtil::double_to_string(rect.left + margin) + " " +
+		   QUtil::double_to_string(rect.bottom + height + margin) + " " +
+		   QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
+		   QUtil::double_to_string(height + 2 * margin) + " re f\n";
+
+  // Black outline (top)
+  boxcmd += "  0 0 0 RG\n";
+  boxcmd += "  " + QUtil::double_to_string(rect.left + margin) + " " +
+		   QUtil::double_to_string(rect.top - height - 2 * margin) + " " +
+		   QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
+		   QUtil::double_to_string(height + 2 * margin) + " re S\n";
+
+  // Black outline (bottom)
+  boxcmd += "  " + QUtil::double_to_string(rect.left + margin) + " " +
+		   QUtil::double_to_string(rect.bottom + height + margin) + " " +
+		   QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
+		   QUtil::double_to_string(height + 2 * margin) + " re S\n";
+
+  // Black text (top)
+  boxcmd += "  0 0 0 rg\n";
+  boxcmd += "  BT\n";
+  boxcmd += "  /pagelabel-font 12 Tf\n";
+  boxcmd += "  " + QUtil::double_to_string(rect.left + 2 * margin) + " " +
+		   QUtil::double_to_string(rect.top - height - margin) + " Td\n";
+  boxcmd += "  (" + label + ") Tj\n";
+  boxcmd += "  ET\n";
+
+  // Black text (bottom)
+  boxcmd += "  BT\n";
+  boxcmd += "  /pagelabel-font 12 Tf\n";
+  boxcmd += "  " + QUtil::double_to_string(rect.left + 2 * margin) + " " +
+		   QUtil::double_to_string(rect.bottom + height + 2 * margin) + " Td\n";
+  boxcmd += "  (" + label + ") Tj\n";
+  boxcmd += "  ET\n";
+
+  boxcmd += "Q\n";
+
+  assert(page.getOwningQPDF()); // existing pages are always indirect
+  static const char *pre="%pdftopdf q\n"
+                         "q\n",
+                    *post="%pdftopdf Q\n"
+                          "Q\n";
+
+  QPDFObjectHandle stm1=QPDFObjectHandle::newStream(page.getOwningQPDF(),
+						    std::string(pre)),
+                   stm2=QPDFObjectHandle::newStream(page.getOwningQPDF(),
+						    std::string(post) + boxcmd);
+
+  page.addPageContents(stm1,true); // before
+  page.addPageContents(stm2,false); // after
+}
+// }}}
+
 void QPDF_PDFTOPDF_PageHandle::debug(const PageRect &rect,float xpos,float ypos) // {{{
 {
   assert(!isExisting());
@@ -264,7 +352,7 @@ void QPDF_PDFTOPDF_PageHandle::debug(const PageRect &rect,float xpos,float ypos)
 }
 // }}}
 
-
+// }}}
 void QPDF_PDFTOPDF_Processor::closeFile() // {{{
 {
   pdf.reset();

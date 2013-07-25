@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.35 - 2013-06-26
 
 CHANGES IN V1.0.36
 
+	- pdftopdf: Added support for page labels. "page-label" option and
+	  "CLASSIFICATION" environment variable. Thanks to Tim Waugh from
+	  Red Hat for the patch.
 	- pdftops: If one or more of the PDF-to-PS renderers (Ghostscript,
 	  Poppler pdftops, Poppler pdftocairo, acroread) is not installed
 	  at build time, pre-fill the appropriate executable's path with the
