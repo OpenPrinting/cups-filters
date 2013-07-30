@@ -48,6 +48,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "GlobalParams.h"
 #include <cups/raster.h>
 #include <cupsfilters/image.h>
+#include <cupsfilters/raster.h>
 #include <splash/SplashTypes.h>
 #include <splash/SplashBitmap.h>
 #include <strings.h>
@@ -357,80 +358,82 @@ static void parseOpts(int argc, char **argv)
   }
 
   ppd = ppdOpenFile(getenv("PPD"));
-  if (ppd == NULL) {
-    pdfError(-1,const_cast<char *>("PPD file is not specified"));
-    exit(1);
-  }
-  ppdMarkDefaults(ppd);
+  if (ppd == NULL)
+    fprintf(stderr, "DEBUG: PPD file is not specified.\n");
+  if (ppd)
+    ppdMarkDefaults(ppd);
   options = NULL;
   num_options = cupsParseOptions(argv[5],0,&options);
-  cupsMarkOptions(ppd,num_options,options);
-  handleRqeuiresPageRegion();
-  cupsRasterInterpretPPD(&header,ppd,num_options,options,0);
-  attr = ppdFindAttr(ppd,"pdftorasterRenderingIntent",NULL);
-  if (attr != NULL && attr->value != NULL) {
-    if (strcasecmp(attr->value,"PERCEPTUAL") != 0) {
-      renderingIntent = INTENT_PERCEPTUAL;
-    } else if (strcasecmp(attr->value,"RELATIVE_COLORIMETRIC") != 0) {
-      renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
-    } else if (strcasecmp(attr->value,"SATURATION") != 0) {
-      renderingIntent = INTENT_SATURATION;
-    } else if (strcasecmp(attr->value,"ABSOLUTE_COLORIMETRIC") != 0) {
-      renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
-    }
-  }
-  if (header.Duplex) {
-    /* analyze options relevant to Duplex */
-    const char *backside = "";
-    /* APDuplexRequiresFlippedMargin */
-    enum {
-      FM_NO, FM_FALSE, FM_TRUE
-    } flippedMargin = FM_NO;
-
-    attr = ppdFindAttr(ppd,"cupsBackSide",NULL);
+  if (ppd) {
+    cupsMarkOptions(ppd,num_options,options);
+    handleRqeuiresPageRegion();
+    cupsRasterInterpretPPD(&header,ppd,num_options,options,0);
+    attr = ppdFindAttr(ppd,"pdftorasterRenderingIntent",NULL);
     if (attr != NULL && attr->value != NULL) {
-      ppd->flip_duplex = 0;
-      backside = attr->value;
-    } else if (ppd->flip_duplex) {
-      backside = "Rotated"; /* compatible with Max OS and GS 8.71 */
+      if (strcasecmp(attr->value,"PERCEPTUAL") != 0) {
+	renderingIntent = INTENT_PERCEPTUAL;
+      } else if (strcasecmp(attr->value,"RELATIVE_COLORIMETRIC") != 0) {
+	renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
+      } else if (strcasecmp(attr->value,"SATURATION") != 0) {
+	renderingIntent = INTENT_SATURATION;
+      } else if (strcasecmp(attr->value,"ABSOLUTE_COLORIMETRIC") != 0) {
+	renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
+      }
     }
+    if (header.Duplex) {
+      /* analyze options relevant to Duplex */
+      const char *backside = "";
+      /* APDuplexRequiresFlippedMargin */
+      enum {
+	FM_NO, FM_FALSE, FM_TRUE
+      } flippedMargin = FM_NO;
 
-    attr = ppdFindAttr(ppd,"APDuplexRequiresFlippedMargin",NULL);
-    if (attr != NULL && attr->value != NULL) {
-      if (strcasecmp(attr->value,"true") == 0) {
-        flippedMargin = FM_TRUE;
-      } else {
-        flippedMargin = FM_FALSE;
+      attr = ppdFindAttr(ppd,"cupsBackSide",NULL);
+      if (attr != NULL && attr->value != NULL) {
+	ppd->flip_duplex = 0;
+	backside = attr->value;
+      } else if (ppd->flip_duplex) {
+	backside = "Rotated"; /* compatible with Max OS and GS 8.71 */
+      }
+
+      attr = ppdFindAttr(ppd,"APDuplexRequiresFlippedMargin",NULL);
+      if (attr != NULL && attr->value != NULL) {
+	if (strcasecmp(attr->value,"true") == 0) {
+	  flippedMargin = FM_TRUE;
+	} else {
+	  flippedMargin = FM_FALSE;
+	}
+      }
+      if (strcasecmp(backside,"ManualTumble") == 0 && header.Tumble) {
+	swap_image_x = swap_image_y = true;
+	swap_margin_x = swap_margin_y = true;
+	if (flippedMargin == FM_TRUE) {
+	  swap_margin_y = false;
+	}
+      } else if (strcasecmp(backside,"Rotated") == 0 && !header.Tumble) {
+	swap_image_x = swap_image_y = true;
+	swap_margin_x = swap_margin_y = true;
+	if (flippedMargin == FM_TRUE) {
+	  swap_margin_y = false;
+	}
+      } else if (strcasecmp(backside,"Flipped") == 0) {
+	if (header.Tumble) {
+	  swap_image_x = true;
+	  swap_margin_x = swap_margin_y = true;
+	} else {
+	  swap_image_y = true;
+	}
+	if (flippedMargin == FM_FALSE) {
+	  swap_margin_y = !swap_margin_y;
+	}
       }
     }
-    if (strcasecmp(backside,"ManualTumble") == 0 && header.Tumble) {
-      swap_image_x = swap_image_y = true;
-      swap_margin_x = swap_margin_y = true;
-      if (flippedMargin == FM_TRUE) {
-        swap_margin_y = false;
-      }
-    } else if (strcasecmp(backside,"Rotated") == 0 && !header.Tumble) {
-      swap_image_x = swap_image_y = true;
-      swap_margin_x = swap_margin_y = true;
-      if (flippedMargin == FM_TRUE) {
-        swap_margin_y = false;
-      }
-    } else if (strcasecmp(backside,"Flipped") == 0) {
-      if (header.Tumble) {
-        swap_image_x = true;
-        swap_margin_x = swap_margin_y = true;
-      } else {
-        swap_image_y = true;
-      }
-      if (flippedMargin == FM_FALSE) {
-        swap_margin_y = !swap_margin_y;
-      }
+    if (getColorProfilePath(ppd,&profilePath)) {
+      /* ICCProfile is specified */
+      colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
     }
-  }
-  if (getColorProfilePath(ppd,&profilePath)) {
-    /* ICCProfile is specified */
-    colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
-  }
+  } else
+    cupsRasterParseIPPOptions(&header,num_options,options,1,1);
 }
 
 static void parsePDFTOPDFComment(FILE *fp)
@@ -1548,48 +1551,23 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
 
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
-  for (i = ppd->num_sizes, size = ppd->sizes;
-       i > 0;
-       i --, size ++) {
-    /* Skip page sizes which conflict with settings of the other options */
-    /* TODO XXX */
-    /* Find size of document's page under the PPD page sizes */
-    if (fabs(header.PageSize[1] - size->length) < 5.0 &&
-	fabs(header.PageSize[0] - size->width) < 5.0)
-      break;
-  }
-  if (i > 0) {
-    /*
-     * Standard size...
-     */
-    fprintf(stderr, "DEBUG: size = %s\n", size->name);
-    landscape = 0;
-    paperdimensions[0] = size->width;
-    paperdimensions[1] = size->length;
-    margins[0] = size->left;
-    margins[1] = size->bottom;
-    margins[2] = size->width - size->right;
-    margins[3] = size->length - size->top;
-    strncpy(header.cupsPageSizeName, size->name, 64);
-  } else {
-    /*
-     * No matching portrait size; look for a matching size in
-     * landscape orientation...
-     */
-
+  if (ppd) {
     for (i = ppd->num_sizes, size = ppd->sizes;
 	 i > 0;
-	 i --, size ++)
-      if (fabs(header.PageSize[0] - size->length) < 5.0 &&
-	  fabs(header.PageSize[1] - size->width) < 5.0)
+	 i --, size ++) {
+      /* Skip page sizes which conflict with settings of the other options */
+      /* TODO XXX */
+      /* Find size of document's page under the PPD page sizes */
+      if (fabs(header.PageSize[1] - size->length) < 5.0 &&
+	  fabs(header.PageSize[0] - size->width) < 5.0)
 	break;
-
+    }
     if (i > 0) {
       /*
-       * Standard size in landscape orientation...
+       * Standard size...
        */
-      fprintf(stderr, "DEBUG: landscape size = %s\n", size->name);
-      landscape = 1;
+      fprintf(stderr, "DEBUG: size = %s\n", size->name);
+      landscape = 0;
       paperdimensions[0] = size->width;
       paperdimensions[1] = size->length;
       margins[0] = size->left;
@@ -1599,17 +1577,53 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
       strncpy(header.cupsPageSizeName, size->name, 64);
     } else {
       /*
-       * Custom size...
+       * No matching portrait size; look for a matching size in
+       * landscape orientation...
        */
-      fprintf(stderr, "DEBUG: size = Custom\n");
-      landscape = 0;
-      paperdimensions[1] = size->length;
-      for (i = 0; i < 2; i ++)
-	paperdimensions[i] = header.PageSize[i];
-      for (i = 0; i < 4; i ++)
-	margins[i] = ppd->custom_margins[i];
-      header.cupsPageSizeName[0] = '\0';
+
+      for (i = ppd->num_sizes, size = ppd->sizes;
+	   i > 0;
+	   i --, size ++)
+	if (fabs(header.PageSize[0] - size->length) < 5.0 &&
+	    fabs(header.PageSize[1] - size->width) < 5.0)
+	  break;
+
+      if (i > 0) {
+	/*
+	 * Standard size in landscape orientation...
+	 */
+	fprintf(stderr, "DEBUG: landscape size = %s\n", size->name);
+	landscape = 1;
+	paperdimensions[0] = size->width;
+	paperdimensions[1] = size->length;
+	margins[0] = size->left;
+	margins[1] = size->bottom;
+	margins[2] = size->width - size->right;
+	margins[3] = size->length - size->top;
+	strncpy(header.cupsPageSizeName, size->name, 64);
+      } else {
+	/*
+	 * Custom size...
+	 */
+	fprintf(stderr, "DEBUG: size = Custom\n");
+	landscape = 0;
+	paperdimensions[1] = size->length;
+	for (i = 0; i < 2; i ++)
+	  paperdimensions[i] = header.PageSize[i];
+	for (i = 0; i < 4; i ++)
+	  margins[i] = ppd->custom_margins[i];
+	header.cupsPageSizeName[0] = '\0';
+      }
     }
+  } else {
+    for (i = 0; i < 2; i ++)
+      paperdimensions[i] = header.PageSize[i];
+    for (i = 0; i < 4; i ++)
+      margins[i] = 0.0;
+    /*margins[0] = 0.0;
+    margins[1] = 0.0;
+    margins[2] = header.PageSize[0];
+    margins[3] = header.PageSize[1];*/
   }
 
   if (header.Duplex && (pageNo & 1) == 0) {
