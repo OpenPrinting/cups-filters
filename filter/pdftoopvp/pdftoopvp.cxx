@@ -112,8 +112,13 @@ static int outOnePage(PDFDoc *doc, OPVPOutputDev *opvpOut, int pg)
 #define MAX_OPVP_OPTIONS 20
 
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 23
+void CDECL myErrorFun(void *data, ErrorCategory category,
+    Goffset pos, char *msg)
+#else
 void CDECL myErrorFun(void *data, ErrorCategory category,
     int pos, char *msg)
+#endif
 {
   if (pos >= 0) {
     fprintf(stderr, "ERROR (%d): ", pos);
@@ -619,9 +624,6 @@ exit(0);
     char *s;
     GooString name;
     int fd;
-    Object obj;
-    BaseStream *str;
-    FILE *fp;
     char buf[4096];
     int n;
 
@@ -633,8 +635,6 @@ exit(0);
     }
     name.append("/XXXXXX");
     fd = mkstemp(name.getCString());
-    /* remove name */
-    unlink(name.getCString());
     if (fd < 0) {
       opvpError(-1,"Can't create temporary file");
       exitCode = 2;
@@ -675,23 +675,10 @@ exit(0);
 	goto err0;
       }
     }
-    if (lseek(fd,0,SEEK_SET) < 0) {
-	opvpError(-1,"Can't rewind temporary file");
-	close(fd);
-	exitCode = 2;
-	goto err0;
-    }
-
-    if ((fp = fdopen(fd,"rb")) == 0) {
-	opvpError(-1,"Can't fdopen temporary file");
-	close(fd);
-	exitCode = 2;
-	goto err0;
-    }
-
-    obj.initNull();
-    str = new FileStream(fp,0,gFalse,0,&obj);
-    doc = new PDFDoc(str);
+    close(fd);
+    doc = new PDFDoc(&name);
+    /* remove name */
+    unlink(name.getCString());
   } else {
     /* no jcl check */
     doc = new PDFDoc(fileName.copy());

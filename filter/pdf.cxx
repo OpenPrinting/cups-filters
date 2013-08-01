@@ -17,6 +17,10 @@
 #include "pdf.h"
 
 #include <PDFDoc.h>
+#include <config.h>
+#ifdef HAVE_CPP_POPPLER_VERSION_H
+#include "cpp/poppler-version.h"
+#endif
 
 
 extern "C" pdf_t * pdf_load_template(const char *filename)
@@ -343,7 +347,11 @@ public:
     {
     }
 
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 23
+    Goffset getPos()
+#else
     int getPos()
+#endif
     {
         return this->pos;
     }

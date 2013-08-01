@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.35 - 2013-06-26
 
 CHANGES IN V1.0.36
 
+	- pdftoopvp, pdftoijs, pdftoraster, bannertopdf: Made code working
+	  with Poppler 0.24.x (Bug #1144).
 	- gstoraster: Silenced compiler warnings.
 	- gstoraster, pdftoraster: Added support for PPD-less printing
 	  controlled by IPP attributes.
