@@ -30,9 +30,13 @@ MIT Open Source License  -  http://www.opensource.org/
 
 /* PS/PDF to CUPS Raster filter based on Ghostscript */
 
+#include <cups/cups.h>
+#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
+#define HAVE_CUPS_1_7 1
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <cups/cups.h>
 #include <stdarg.h>
 #include <fcntl.h>
 #include <cups/raster.h>
@@ -676,7 +680,14 @@ main (int argc, char **argv, char *envp[])
   if (ppd)
     cupsRasterInterpretPPD(&h,ppd,num_options,options,0);
   else
+#ifdef HAVE_CUPS_1_7
     cupsRasterParseIPPOptions(&h,num_options,options,1,1);
+#else
+  {
+    fprintf(stderr, "ERROR: No PPD file specified.\n");
+    exit(1);
+  }
+#endif /* HAVE_CUPS_1_7 */
 
   /* setPDF specific options */
   if (doc_type == GS_DOC_TYPE_PDF) {

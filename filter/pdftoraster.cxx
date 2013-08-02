@@ -26,6 +26,11 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  pdf to raster filter
 */
 
+#include <cups/cups.h>
+#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
+#define HAVE_CUPS_1_7 1
+#endif
+
 #define USE_CMS
 
 #include <config.h>
@@ -41,7 +46,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "PDFDoc.h"
 #include "SplashOutputDev.h"
 #include "GfxState.h"
-#include <cups/cups.h>
 #include <cups/ppd.h>
 #include <stdarg.h>
 #include "PDFError.h"
@@ -438,7 +442,14 @@ static void parseOpts(int argc, char **argv)
       colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
     }
   } else
+#ifdef HAVE_CUPS_1_7
     cupsRasterParseIPPOptions(&header,num_options,options,1,1);
+#else
+  {
+    fprintf(stderr, "ERROR: No PPD file specified.\n");
+    exit(1);
+  }
+#endif /* HAVE_CUPS_1_7 */
 }
 
 static void parsePDFTOPDFComment(FILE *fp)

@@ -12,6 +12,11 @@
  *                                 and apply them to the CUPS Raster header.
  */
 
+#include <cups/cups.h>
+#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
+#define HAVE_CUPS_1_7 1
+#endif
+
 /*
  * Include necessary headers.
  */
@@ -20,7 +25,9 @@
 #include <config.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef HAVE_CUPS_1_7
 #include <cups/pwg.h>
+#endif /* HAVE_CUPS_1_7 */
 
 /*
  * '_strlcpy()' - Safely copy two strings.
@@ -69,6 +76,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 						     for all fields for which
 						     we did not get an option */
 {
+#ifdef HAVE_CUPS_1_7
   int		i;			/* Looping var */
   char		*ptr,			/* Pointer into string */
 		s[255];			/* Temporary string */
@@ -1020,6 +1028,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   }
   else if (set_defaults)
     h->cupsRenderingIntent[0] = '\0';
+#endif /* HAVE_CUPS_1_7 */
 
   return (0);
 }
