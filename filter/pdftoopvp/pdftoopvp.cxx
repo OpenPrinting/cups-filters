@@ -121,7 +121,11 @@ void CDECL myErrorFun(void *data, ErrorCategory category,
 #endif
 {
   if (pos >= 0) {
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 23
+    fprintf(stderr, "ERROR (%lld): ", pos);
+#else
     fprintf(stderr, "ERROR (%d): ", pos);
+#endif
   } else {
     fprintf(stderr, "ERROR: ");
   }
