@@ -121,6 +121,49 @@ AC_SEARCH_LIBS([dlopen],
 )
 AC_SUBST(DLOPEN_LIBS)
 
+# Transient run-time state dir of CUPS
+CUPS_STATEDIR=""
+AC_ARG_WITH(rundir, [  --with-cups-rundir           set transient run-time state directory of CUPS],CUPS_STATEDIR="$withval",[
+        case "$uname" in
+                Darwin*)
+                        # Darwin (OS X)
+                        CUPS_STATEDIR="$CUPS_SERVERROOT"
+                        ;;
+                *)
+                        # All others
+                        CUPS_STATEDIR="$localstatedir/run/cups"
+                        ;;
+        esac])
+AC_DEFINE_UNQUOTED(CUPS_STATEDIR, "$CUPS_STATEDIR", [Transient run-time state dir of CUPS])
+AC_SUBST(CUPS_STATEDIR)
+
+# Domain socket of CUPS...
+CUPS_DEFAULT_DOMAINSOCKET=""
+AC_ARG_WITH(domainsocket, [  --with-cups-domainsocket     set unix domain socket name used by CUPS
+],
+        default_domainsocket="$withval",
+        default_domainsocket="")
+
+if test x$enable_domainsocket != xno -a x$default_domainsocket != xno; then
+        if test "x$default_domainsocket" = x; then
+                case "$uname" in
+                        Darwin*)
+                                # Darwin and MaxOS X do their own thing...
+                                CUPS_DEFAULT_DOMAINSOCKET="$localstatedir/run/cu
+psd"
+                                ;;
+                        *)
+                                # All others use FHS standard...
+                                CUPS_DEFAULT_DOMAINSOCKET="$CUPS_STATEDIR/cups.sock"
+                                ;;
+                esac
+        else
+                CUPS_DEFAULT_DOMAINSOCKET="$default_domainsocket"
+        fi
+fi
+AC_DEFINE_UNQUOTED(CUPS_DEFAULT_DOMAINSOCKET, "$CUPS_DEFAULT_DOMAINSOCKET", "Domain socket of CUPS")
+AC_SUBST(CUPS_DEFAULT_DOMAINSOCKET)
+
 # ======================
 # Check system functions
 # ======================
@@ -579,6 +622,7 @@ Build configuration:
 	cups-config:     ${with_cups_config}
 	font directory:  ${sysconfdir}/${FONTDIR}
 	init directory:  ${INITDDIR}
+	cups dom socket: ${CUPS_DEFAULT_DOMAINSOCKET}
 	gs-path:         ${with_gs_path}
 	imagefilters:    ${enable_imagefilters}
 	jpeg:            ${with_jpeg}

@@ -81,6 +81,19 @@ BrowseRemoteProtocols.
 
 .fam T
 .fi
+The DomainSocket directive specifies the domain socket through which
+the locally running CUPS daemon is accessed. If not specified the
+standard domain socket of CUPS is used. Use this if you have specified
+an alternative domain socket for CUPS via a Listen directive in
+/etc/cups/cupsd.conf. If cups-browsed is not able to access the local
+CUPS daemon via a domain socket it accesses it via localhost.
+.PP
+.nf
+.fam C
+        DomainSocket /var/run/cups/cups.sock
+
+.fam T
+.fi
 .SH SEE ALSO
 
 \fBcups-browsed\fP(8)

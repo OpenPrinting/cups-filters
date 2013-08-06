@@ -233,6 +233,14 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS
     of the original CUPS BrowseRemoteProtocols, BrowseLocalProtocols,
     BrowsePoll, and BrowseAllow directives.
 
+    Note that cups-browsed does not work with remote CUPS servers
+    specified by a client.conf file. It always connects to the local
+    CUPS daemon by setting the CUPS_SERVER environment variable and so
+    overriding client.conf. If your local CUPS daemon uses a
+    non-standard domain socket as only way of access, you need to
+    specify it via the DomainSocket directive in
+    /etc/cups/cups-browsed.conf.
+
     The "make install" process installs init scripts which make the
     daemon automatically started during boot. You can also manually
     start it with (as root):

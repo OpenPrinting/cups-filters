@@ -32,6 +32,7 @@
 #include <resolv.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <time.h>
@@ -119,6 +120,7 @@ static unsigned int BrowseTimeout = 300;
 static uint16_t BrowsePort = 631;
 static char **BrowsePoll = NULL;
 static size_t NumBrowsePoll = 0;
+static char *DomainSocket = NULL;
 
 static int debug = 0;
 
@@ -1691,10 +1693,14 @@ read_configuration (const char *filename)
 	debug_printf("cups-browsed: Adding BrowsePoll server: %s\n", value);
 	BrowsePoll[NumBrowsePoll++] = strdup (value);
       }
-    } else if (!strcasecmp(line, "BrowseAllow") && value)
+    } else if (!strcasecmp(line, "BrowseAllow") && value) {
       if (read_browseallow_value (value))
 	debug_printf ("cups-browsed: BrowseAllow value \"%s\" not understood\n",
 		      value);
+    } else if (!strcasecmp(line, "DomainSocket") && value) {
+      if (value[0] != '\0')
+	DomainSocket = strdup(value);
+    }
   }
 
   cupsFileClose(fp);
@@ -1726,6 +1732,23 @@ int main(int argc, char*argv[]) {
 
   /* Read in cups-browsed.conf */
   read_configuration (NULL);
+
+  /* Set the CUPS_SERVER environment variable to assure that cups-browsed
+     always works with the local CUPS daemon and never with a remote one
+     specified by a client.conf file */
+#ifdef CUPS_DEFAULT_DOMAINSOCKET
+  if (DomainSocket == NULL)
+    DomainSocket = CUPS_DEFAULT_DOMAINSOCKET;
+#endif
+  if (DomainSocket != NULL) {
+    struct stat sockinfo;               /* Domain socket information */
+    if (!stat(DomainSocket, &sockinfo) &&
+        (sockinfo.st_mode & S_IRWXO) == S_IRWXO)
+      setenv("CUPS_SERVER", DomainSocket, 1);
+    else
+      setenv("CUPS_SERVER", "localhost", 1);
+  } else
+    setenv("CUPS_SERVER", "localhost", 1);
 
   if (BrowseLocalProtocols & BROWSE_DNSSD) {
     fprintf(stderr, "Local support for DNSSD not implemented\n");

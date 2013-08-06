@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.35 - 2013-06-26
 
 CHANGES IN V1.0.36
 
+	- cups-browsed: Assure that it always applies to the local CUPS
+	  daemon and never to a remote one specified via client.conf
+	  (Ubuntu bug #1207203).
 	- pdftoopvp, pdftoijs, pdftoraster, bannertopdf: Made code working
 	  with Poppler 0.24.x (Bug #1144).
 	- gstoraster: Silenced compiler warnings.

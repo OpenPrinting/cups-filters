@@ -23,4 +23,8 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # BrowsePoll cups.example.com
 # BrowsePoll cups.example.com:631
 
+# Use DomainSocket to access the local CUPS daemon via another than the
+# default domain socket
+# DomainSocket @CUPS_DEFAULT_DOMAINSOCKET@
+
 # Unknown directives are ignored, also unknown values.
