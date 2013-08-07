@@ -1468,7 +1468,32 @@ browse_poll (gpointer data)
   ipp_attribute_t *attr;
   http_t *conn;
   int port = BrowsePort;
-  char *colon;
+  char *colon,*slash;
+  int major = 0;
+  int minor = 0;
+
+  slash = strchr (server, '/');
+  if (slash) {
+    *slash++ = '\0';
+    if (!strcmp(slash, "version=1.0")) {
+      major = 1;
+      minor = 0;
+    } else if (!strcmp(slash, "version=1.1")) {
+      major = 1;
+      minor = 1;
+    } else if (!strcmp(slash, "version=2.0")) {
+      major = 2;
+      minor = 0;
+    } else if (!strcmp(slash, "version=2.1")) {
+      major = 2;
+      minor = 1;
+    } else if (!strcmp(slash, "version=2.2")) {
+      major = 2;
+      minor = 2;
+    } else {
+      debug_printf ("ignoring unknown server option: %s\n", slash);
+    }
+  }
 
   debug_printf ("cups-browsed: browse polling %s\n", server);
 
@@ -1491,6 +1516,10 @@ browse_poll (gpointer data)
   }
 
   request = ippNewRequest(CUPS_GET_PRINTERS);
+  if (major > 0) {
+    debug_printf("cups-browsed: setting IPP version %d.%d\n", major, minor);
+    ippSetVersion (request, major, minor);
+  }
 
   ippAddStrings (request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
 		 "requested-attributes", sizeof (rattrs) / sizeof (rattrs[0]),

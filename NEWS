@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.35 - 2013-06-26
 
 CHANGES IN V1.0.36
 
+	- cups-browsed: Allow BrowsePoll operation also access print queues
+	  on older CUPS servers. Thanks to David Mohr for the patch.
 	- cups-browsed: Assure that it always applies to the local CUPS
 	  daemon and never to a remote one specified via client.conf
 	  (Ubuntu bug #1207203).
