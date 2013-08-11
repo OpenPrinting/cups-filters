@@ -116,7 +116,8 @@ AC_DEFINE_DIR(BANNERTOPDF_DATADIR, "{CUPS_DATADIR}/data", [Directory where banne
 
 AC_SEARCH_LIBS([dlopen],
 	[dl],
-	DLOPEN_LIBS="-ldl",
+	[test "$ac_cv_search_dlopen" = "none required" ||
+	 DLOPEN_LIBS="$ac_cv_search_dlopen"],
 	AC_MSG_ERROR([unable to find the dlopen() function])
 )
 AC_SUBST(DLOPEN_LIBS)
