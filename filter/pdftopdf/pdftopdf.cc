@@ -3,8 +3,6 @@
 // Copyright (c) 2006-2011, BBR Inc.  All rights reserved.
 // MIT Licensed.
 
-// TODO: check ppd==NULL (?)
-
 #include <stdio.h>
 #include <assert.h>
 #include <cups/cups.h>
@@ -174,6 +172,11 @@ static bool optGetCollate(int num_options,cups_option_t *options) // {{{
     */
     return (strcasecmp(val,"separate-documents-uncollated-copies")!=0);
   }
+
+  if ( (val=cupsGetOption("sheet-collate",num_options,options)) != NULL) {
+    return (strcasecmp(val,"uncollated")!=0);
+  }
+
   return false;
 }
 // }}}
@@ -282,6 +285,13 @@ static bool parseBorder(const char *val,BorderType &ret) // {{{
 
 void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,ProcessingParameters &param) // {{{
 {
+  const char *val;
+
+  if ((val = cupsGetOption("copies",num_options,options)) != NULL) {
+    int copies = atoi(val);
+    if (copies > 0)
+      param.numCopies = copies;
+  }
   // param.numCopies initially from commandline
   if (param.numCopies==1) {
     ppdGetInt(ppd,"Copies",&param.numCopies);
@@ -290,7 +300,6 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     param.numCopies=1;
   }
 
-  const char *val;
   if ( (val=cupsGetOption("fitplot",num_options,options)) == NULL) {
     if ( (val=cupsGetOption("fit-to-page",num_options,options)) == NULL) {
       val=cupsGetOption("ipp-attribute-fidelity",num_options,options);
@@ -398,7 +407,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     }
   }
 
-  if ( (val=cupsGetOption("OutputOrder",num_options,options)) != NULL) {
+  if ( (val=cupsGetOption("OutputOrder",num_options,options)) != NULL ||
+       (val=cupsGetOption("page-delivery",num_options,options)) != NULL ) {
     param.reverse=(strcasecmp(val,"Reverse")==0);
   } else if (ppd) {
     param.reverse=ppdDefaultOrder(ppd);

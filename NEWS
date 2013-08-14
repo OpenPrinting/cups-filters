@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.36 - 2013-08-13
 
 CHANGES IN V1.0.37
 
+	- pdftopdf: Accept additional command line options for PPD-less
+	  printing.
 	- cups-browsed: Fixed building with CUPS 1.5.x and older,
 	  ippSetVersion() was missing under the accessor function definitions
 	  for backward compatibility.
