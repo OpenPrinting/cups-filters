@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.36 - 2013-08-13
 -----------------------------------------------------
 
+CHANGES IN V1.0.37
+
+	- cups-browsed: Fixed building with CUPS 1.5.x and older,
+	  ippSetVersion() was missing under the accessor function definitions
+	  for backward compatibility.
+
 CHANGES IN V1.0.36
 
 	- Fixed libdl detection in configure. Thanks to Andreas Huettel and
