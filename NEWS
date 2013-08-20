@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.36 - 2013-08-13
 
 CHANGES IN V1.0.37
 
+	- cupsfilters.convs: Reworked the cost factors of the filters to
+	  avoid bogus filter chains like pstotiff|imagetopdf instead of
+	  pstopdf|pdftopdf for PostScript->PDF. Thanks to Tim Waugh from
+	  Red Hat for the report.
 	- pdftopdf: Accept additional command line options for PPD-less
 	  printing.
 	- cups-browsed: Fixed building with CUPS 1.5.x and older,
