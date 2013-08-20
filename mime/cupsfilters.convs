@@ -42,32 +42,32 @@
 # if it comes from an encrypted PDF file, we simply override pstopdf and the
 # PDF workflow.
 
-application/postscript		application/pdf			100	pstopdf
+application/postscript		application/pdf			33	pstopdf
 application/vnd.adobe-reader-postscript	application/vnd.cups-postscript	66	pstops
 
 application/pdf		application/vnd.cups-pdf		66	pdftopdf
-application/x-cshell	application/pdf				0	texttopdf
-application/x-csource	application/pdf				0	texttopdf
-application/x-perl	application/pdf				0	texttopdf
-application/x-shell	application/pdf				0	texttopdf
-text/plain		application/pdf				0	texttopdf
-text/html		application/pdf				0	texttopdf
-image/gif		application/vnd.cups-pdf		33	imagetopdf
-image/png		application/vnd.cups-pdf		33	imagetopdf
-image/jpeg		application/vnd.cups-pdf		33	imagetopdf
-image/tiff		application/vnd.cups-pdf		33	imagetopdf
-image/x-bitmap		application/vnd.cups-pdf		33	imagetopdf
-image/x-photocd		application/vnd.cups-pdf		33	imagetopdf
-image/x-portable-anymap	application/vnd.cups-pdf		33	imagetopdf
-image/x-portable-bitmap	application/vnd.cups-pdf		33	imagetopdf
-image/x-portable-graymap application/vnd.cups-pdf		33	imagetopdf
-image/x-portable-pixmap	application/vnd.cups-pdf		33	imagetopdf
-image/x-sgi-rgb		application/vnd.cups-pdf		33	imagetopdf
-image/x-xbitmap		application/vnd.cups-pdf		33	imagetopdf
-image/x-xpixmap		application/vnd.cups-pdf		33	imagetopdf
-image/x-xwindowdump	application/vnd.cups-pdf		33	imagetopdf
-image/x-sun-raster	application/vnd.cups-pdf		33	imagetopdf
-application/vnd.cups-pdf-banner	application/pdf			33	bannertopdf
+application/x-cshell	application/pdf				32	texttopdf
+application/x-csource	application/pdf				32	texttopdf
+application/x-perl	application/pdf				32	texttopdf
+application/x-shell	application/pdf				32	texttopdf
+text/plain		application/pdf				32	texttopdf
+text/html		application/pdf				32	texttopdf
+image/gif		application/vnd.cups-pdf		65	imagetopdf
+image/png		application/vnd.cups-pdf		65	imagetopdf
+image/jpeg		application/vnd.cups-pdf		65	imagetopdf
+image/tiff		application/vnd.cups-pdf		65	imagetopdf
+image/x-bitmap		application/vnd.cups-pdf		65	imagetopdf
+image/x-photocd		application/vnd.cups-pdf		65	imagetopdf
+image/x-portable-anymap	application/vnd.cups-pdf		65	imagetopdf
+image/x-portable-bitmap	application/vnd.cups-pdf		65	imagetopdf
+image/x-portable-graymap application/vnd.cups-pdf		65	imagetopdf
+image/x-portable-pixmap	application/vnd.cups-pdf		65	imagetopdf
+image/x-sgi-rgb		application/vnd.cups-pdf		65	imagetopdf
+image/x-xbitmap		application/vnd.cups-pdf		65	imagetopdf
+image/x-xpixmap		application/vnd.cups-pdf		65	imagetopdf
+image/x-xwindowdump	application/vnd.cups-pdf		65	imagetopdf
+image/x-sun-raster	application/vnd.cups-pdf		65	imagetopdf
+application/vnd.cups-pdf-banner	application/pdf			32	bannertopdf
 image/urf		application/pdf				0	urftopdf
 
 ########################################################################
@@ -84,8 +84,8 @@ application/vnd.cups-pdf	application/vnd.cups-postscript	100	pdftops
 # Raster filters...
 #
 
-application/vnd.cups-pdf	application/vnd.cups-raster	66	gstoraster
-application/vnd.cups-postscript	application/vnd.cups-raster	100	gstoraster
+application/vnd.cups-pdf	application/vnd.cups-raster	99	gstoraster
+application/vnd.cups-postscript	application/vnd.cups-raster	200	gstoraster
 application/vnd.cups-pdf	application/vnd.cups-raster	100	pdftoraster
 image/gif			application/vnd.cups-raster	100	imagetoraster
 image/png			application/vnd.cups-raster	100	imagetoraster
