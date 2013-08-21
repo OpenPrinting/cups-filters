@@ -3,9 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.0.36 - 2013-08-13
 
 CHANGES IN V1.0.37
 
+	- Added example configuration files for systemd and Upstart. Thanks
+	  to Tomáš Chvátal for the systemd file.
 	- Build system: Make sure that gstoraster gets linked against the
 	  libcupsfilters of the currently built package and not of the
-	  system (Thanks to Tomáš Chvátal).
+	  system. Thanks to Tomáš Chvátal.
 	- cupsfilters.convs: Reworked the cost factors of the filters to
 	  avoid bogus filter chains like pstotiff|imagetopdf instead of
 	  pstopdf|pdftopdf for PostScript->PDF. Thanks to Tim Waugh from

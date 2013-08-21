@@ -287,6 +287,9 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS
 
         exec /usr/sbin/cups-browsed
 
+    These files are included in the source distribution as
+    utils/cups-browsed.service and utils/cups-browsed-upstart.conf.
+
     Here is some info on how cups-browsed works internally (first concept of a
     daemon which does only Bonjour browsing):
 

@@ -16,7 +16,9 @@ EXTRA_DIST = \
 	$(doc_DATA) \
 	autogen.sh \
 	libcupsfilters.pc.in \
-	libfontembed.pc.in
+	libfontembed.pc.in \
+	utils/cups-browsed.service \
+	utils/cups-browsed-upstart.conf
 
 # ========
 # Backends
