@@ -558,7 +558,7 @@ AS_IF([test x"$with_php" = "xyes"], [
 # Test ARGS
 # =========
 AC_ARG_WITH([test-font-path],
-	[AS_HELP_STRING([--with-test-font-path=value], [Set path to pdftops/ghostscript binary (default: /usr/share/fonts/dejavu/DejaVuSans.ttf).])],
+	[AS_HELP_STRING([--with-test-font-path=value], [Set path to font used for tests (default: /usr/share/fonts/dejavu/DejaVuSans.ttf).])],
 	[with_test_font_path="$withval"],
 	[with_test_font_path="/usr/share/fonts/dejavu/DejaVuSans.ttf"]
 )
