@@ -474,7 +474,7 @@ gstoraster_CFLAGS = \
 	-I$(srcdir)/cupsfilters/
 gstoraster_LDADD = \
 	$(CUPS_LIBS) \
-	-lcupsfilters
+	libcupsfilters.la
 
 imagetopdf_SOURCES = \
 	cupsfilters/image.h \
