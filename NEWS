@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.37 - 2013-08-28
 -----------------------------------------------------
 
+CHANGES IN V1.0.38
+
+	- pstopdf: Added "-dUseCIEColor" to the Ghostscript command line
+	  to assure compatibility with newer Ghostscript versions (9.08
+	  and newer).
+
 CHANGES IN V1.0.37
 
 	- Added example configuration files for systemd and Upstart. Thanks

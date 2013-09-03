@@ -22,7 +22,7 @@ PS2PS_OPTIONS="-dAutoRotatePages=/None -dAutoFilterColorImages=false \
 PS2PDF_OPTIONS="-q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -dCompatibilityLevel=1.3"
 PS2PDF_OPTIONS="$PS2PDF_OPTIONS $PS2PS_OPTIONS"
 PS2PDF_OPTIONS="$PS2PDF_OPTIONS -dColorImageFilter=/FlateEncode \
-                -dPDFSETTINGS=/printer \
+                -dPDFSETTINGS=/printer -dUseCIEColor \
                 -dColorConversionStrategy=/LeaveColorUnchanged"
 
 echo "DEBUG: pstopdf $# args: $@" >&2
