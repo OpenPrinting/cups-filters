@@ -752,6 +752,7 @@ main(int  argc,				/* I - Number of command-line args */
       pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
       pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
     }
+    pdf_argv[pdf_argc++] = (char *)"-dNOINTERPOLATE";
     pdf_argv[pdf_argc++] = (char *)"-c";
     pdf_argv[pdf_argc++] = (char *)"save pop";
     pdf_argv[pdf_argc++] = (char *)"-f";

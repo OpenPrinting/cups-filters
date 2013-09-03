@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.37 - 2013-08-28
 
 CHANGES IN V1.0.38
 
+	- pdftops: Added "-dNOINTERPOLATE" to the Ghostscript command line
+	  for quicker processing of embedded bitmaps.
 	- pstopdf: Added "-dUseCIEColor" to the Ghostscript command line
 	  to assure compatibility with newer Ghostscript versions (9.08
 	  and newer).
