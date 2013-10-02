@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.0.38 - 2013-09-03
 -----------------------------------------------------
 
+CHANGES IN V1.0.39
+
+	- cups-browsed: Improve the efficiency of BrowsePoll by using
+          IPP notifications when possible. It falls back to the
+          previous behaviour if it is not possible to use this
+          optimization. Thanks to Tim Waugh from Red Hat for the patch.
+
 CHANGES IN V1.0.38
 
 	- pdftops: Added "-dNOINTERPOLATE" to the Ghostscript command line

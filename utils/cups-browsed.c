@@ -100,6 +100,16 @@ typedef struct allow_s {
   http_addr_t mask;
 } allow_t;
 
+/* Data structure for a BrowsePoll server */
+typedef struct browsepoll_s {
+  char *server;
+  int port;
+  int major;
+  int minor;
+  gboolean can_subscribe;
+  int subscription_id;
+} browsepoll_t;
+
 cups_array_t *remote_printers;
 static cups_array_t *netifs;
 static cups_array_t *browseallow;
@@ -118,7 +128,7 @@ static unsigned int BrowseRemoteProtocols = BROWSE_DNSSD;
 static unsigned int BrowseInterval = 60;
 static unsigned int BrowseTimeout = 300;
 static uint16_t BrowsePort = 631;
-static char **BrowsePoll = NULL;
+static browsepoll_t **BrowsePoll = NULL;
 static size_t NumBrowsePoll = 0;
 static char *DomainSocket = NULL;
 
@@ -232,6 +242,16 @@ void debug_printf(const char *format, ...) {
     fflush(stderr);
     va_end(arglist);
   }
+}
+
+static const char *
+password_callback (const char *prompt,
+		   http_t *http,
+		   const char *method,
+		   const char *resource,
+		   void *user_data)
+{
+  return NULL;
 }
 
 static remote_printer_t *
@@ -1469,66 +1489,22 @@ send_browse_data (gpointer data)
   return FALSE;
 }
 
-gboolean
-browse_poll (gpointer data)
+static void
+browse_poll_get_printers (browsepoll_t *context, http_t *conn)
 {
   static const char * const rattrs[] = { "printer-uri-supported" };
-  char *server = strdup (data);
   ipp_t *request, *response = NULL;
   ipp_attribute_t *attr;
-  http_t *conn;
-  int port = BrowsePort;
-  char *colon,*slash;
-  int major = 0;
-  int minor = 0;
 
-  slash = strchr (server, '/');
-  if (slash) {
-    *slash++ = '\0';
-    if (!strcmp(slash, "version=1.0")) {
-      major = 1;
-      minor = 0;
-    } else if (!strcmp(slash, "version=1.1")) {
-      major = 1;
-      minor = 1;
-    } else if (!strcmp(slash, "version=2.0")) {
-      major = 2;
-      minor = 0;
-    } else if (!strcmp(slash, "version=2.1")) {
-      major = 2;
-      minor = 1;
-    } else if (!strcmp(slash, "version=2.2")) {
-      major = 2;
-      minor = 2;
-    } else {
-      debug_printf ("ignoring unknown server option: %s\n", slash);
-    }
-  }
-
-  debug_printf ("cups-browsed: browse polling %s\n", server);
-
-  colon = strchr (server, ':');
-  if (colon) {
-    char *endptr;
-    unsigned long n;
-    *colon++ = '\0';
-    n = strtoul (colon, &endptr, 10);
-    if (endptr != colon && n < INT_MAX)
-      port = (int) n;
-  }
-
-  res_init ();
-  conn = httpConnectEncrypt (server, port, HTTP_ENCRYPT_IF_REQUESTED);
-
-  if (conn == NULL) {
-    debug_printf("cups-browsed: browse poll failed to connect to %s\n", server);
-    goto fail;
-  }
+  debug_printf ("cups-browsed [BrowsePoll %s:%d]: CUPS-Get-Printers\n",
+		context->server, context->port);
 
   request = ippNewRequest(CUPS_GET_PRINTERS);
-  if (major > 0) {
-    debug_printf("cups-browsed: setting IPP version %d.%d\n", major, minor);
-    ippSetVersion (request, major, minor);
+  if (context->major > 0) {
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: setting IPP version %d.%d\n",
+		 context->server, context->port, context->major,
+		 context->minor);
+    ippSetVersion (request, context->major, context->minor);
   }
 
   ippAddStrings (request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
@@ -1550,8 +1526,8 @@ browse_poll (gpointer data)
 
   response = cupsDoRequest(conn, request, "/");
   if (cupsLastError() > IPP_OK_CONFLICT) {
-    debug_printf("cups-browsed: browse poll failed for server %s: %s\n",
-		 server, cupsLastErrorString ());
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: failed: %s\n",
+		 context->server, context->port, cupsLastErrorString ());
     goto fail;
   }
 
@@ -1579,7 +1555,7 @@ browse_poll (gpointer data)
     }
 
     if (uri)
-      found_cups_printer (server, uri, info);
+      found_cups_printer (context->server, uri, info);
 
     if (!attr)
       break;
@@ -1590,12 +1566,226 @@ browse_poll (gpointer data)
 fail:
   if (response)
     ippDelete(response);
+}
 
-  if (conn)
-    httpClose (conn);
+static void
+browse_poll_create_subscription (browsepoll_t *context, http_t *conn)
+{
+  static const char * const events[] = { "printer-added",
+					 "printer-changed",
+					 "printer-config-changed",
+					 "printer-modified",
+					 "printer-deleted",
+					 "printer-state-changed" };
+  ipp_t *request, *response = NULL;
+  ipp_attribute_t *attr;
 
-  if (server)
-    free (server);
+  debug_printf ("cups-browsed [BrowsePoll %s:%d]: IPP-Create-Subscription\n",
+		context->server, context->port);
+
+  request = ippNewRequest(IPP_CREATE_PRINTER_SUBSCRIPTION);
+  if (context->major > 0) {
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: setting IPP version %d.%d\n",
+		 context->server, context->port, context->major,
+		 context->minor);
+    ippSetVersion (request, context->major, context->minor);
+  }
+
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, "/");
+  ippAddString (request, IPP_TAG_SUBSCRIPTION, IPP_TAG_KEYWORD,
+		"notify-pull-method", NULL, "ippget");
+  ippAddString (request, IPP_TAG_SUBSCRIPTION, IPP_TAG_CHARSET,
+		"notify-charset", NULL, "utf-8");
+  ippAddString (request, IPP_TAG_SUBSCRIPTION, IPP_TAG_NAME,
+		"requesting-user-name", NULL, cupsUser ());
+  ippAddStrings (request, IPP_TAG_SUBSCRIPTION, IPP_TAG_KEYWORD,
+		 "notify-events", sizeof (events) / sizeof (events[0]),
+		 NULL, events);
+  ippAddInteger (request, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
+		 "notify-time-interval", BrowseInterval);
+
+  response = cupsDoRequest (conn, request, "/");
+  if (!response || ippGetStatusCode (response) > IPP_OK_CONFLICT) {
+    debug_printf("cupsd-browsed [BrowsePoll %s:%d]: failed: %s\n",
+		 context->server, context->port, cupsLastErrorString ());
+    context->subscription_id = -1;
+    context->can_subscribe = FALSE;
+    goto fail;
+  }
+
+  for (attr = ippFirstAttribute(response); attr;
+       attr = ippNextAttribute(response)) {
+    if (ippGetGroupTag (attr) == IPP_TAG_SUBSCRIPTION) {
+      if (ippGetValueTag (attr) == IPP_TAG_INTEGER &&
+	  !strcmp (ippGetName (attr), "notify-subscription-id")) {
+	context->subscription_id = ippGetInteger (attr, 0);
+	debug_printf("cups-browsed [BrowsePoll %s:%d]: subscription ID=%d\n",
+		     context->server, context->port, context->subscription_id);
+	break;
+      }
+    }
+  }
+
+  if (!attr) {
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: no ID returned\n",
+		 context->server, context->port);
+    context->subscription_id = -1;
+    context->can_subscribe = FALSE;
+  }
+
+fail:
+  if (response)
+    ippDelete(response);
+}
+
+static void
+browse_poll_cancel_subscription (browsepoll_t *context)
+{
+  ipp_t *request, *response = NULL;
+  http_t *conn = httpConnectEncrypt (context->server, context->port,
+				     HTTP_ENCRYPT_IF_REQUESTED);
+
+  if (conn == NULL) {
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: connection failure "
+		 "attempting to cancel\n", context->server, context->port);
+    return;
+  }
+
+  debug_printf ("cups-browsed [BrowsePoll %s:%d] IPP-Cancel-Subscription\n",
+		context->server, context->port);
+
+  request = ippNewRequest(IPP_CANCEL_SUBSCRIPTION);
+  if (context->major > 0) {
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: setting IPP version %d.%d\n",
+		 context->server, context->port, context->major,
+		 context->minor);
+    ippSetVersion (request, context->major, context->minor);
+  }
+
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, "/");
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		"requesting-user-name", NULL, cupsUser ());
+  ippAddInteger (request, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
+		 "notify-subscription-id", context->subscription_id);
+
+  response = cupsDoRequest (conn, request, "/");
+  if (!response || ippGetStatusCode (response) > IPP_OK_CONFLICT)
+    debug_printf("cupsd-browsed [BrowsePoll %s:%d]: failed: %s\n",
+		 context->server, context->port, cupsLastErrorString ());
+
+  if (response)
+    ippDelete(response);
+}
+
+static gboolean
+browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
+{
+  ipp_t *request, *response = NULL;
+  ipp_attribute_t *attr;
+  ipp_status_t status;
+  gboolean get_printers = FALSE;
+
+  debug_printf ("cups-browsed [BrowsePoll %s:%d] IPP-Get-Notifications\n",
+		context->server, context->port);
+
+  request = ippNewRequest(IPP_GET_NOTIFICATIONS);
+  if (context->major > 0) {
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: setting IPP version %d.%d\n",
+		 context->server, context->port, context->major,
+		 context->minor);
+    ippSetVersion (request, context->major, context->minor);
+  }
+
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, "/");
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		"requesting-user-name", NULL, cupsUser ());
+  ippAddInteger (request, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
+		 "notify-subscription-ids", context->subscription_id);
+
+  response = cupsDoRequest (conn, request, "/");
+  if (!response)
+    status = cupsLastError ();
+  else
+    status = ippGetStatusCode (response);
+
+  if (status == IPP_NOT_FOUND) {
+    /* Subscription lease has expired. */
+    debug_printf ("cups-browsed [BrowsePoll %s:%d] Lease expired\n",
+		  context->server, context->port);
+    browse_poll_create_subscription (context, conn);
+    get_printers = TRUE;
+  } else if (status > IPP_OK_CONFLICT) {
+    debug_printf("cupsd-browsed [BrowsePoll %s:%d]: failed: %s\n",
+		 context->server, context->port, cupsLastErrorString ());
+    context->can_subscribe = FALSE;
+    browse_poll_cancel_subscription (context);
+    context->subscription_id = -1;
+    get_printers = TRUE;
+    goto fail;
+  }
+
+  for (attr = ippFirstAttribute(response); attr;
+       attr = ippNextAttribute(response))
+    if (ippGetGroupTag (attr) == IPP_TAG_EVENT_NOTIFICATION)
+      /* There is a printer-* event here. */
+      break;
+
+  if (attr) {
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: printer-* event\n",
+		 context->server, context->port);
+    get_printers = TRUE;
+  } else
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: no events\n",
+		 context->server, context->port);
+
+fail:
+  if (response)
+    ippDelete(response);
+
+  return get_printers;
+}
+
+gboolean
+browse_poll (gpointer data)
+{
+  browsepoll_t *context = data;
+  http_t *conn = NULL;
+  gboolean get_printers = FALSE;
+
+  debug_printf ("cups-browsed: browse polling %s:%d\n",
+		context->server, context->port);
+
+  res_init ();
+
+  conn = httpConnectEncrypt (context->server, context->port,
+			     HTTP_ENCRYPT_IF_REQUESTED);
+  if (conn == NULL) {
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: failed to connect\n",
+		 context->server, context->port);
+    goto fail;
+  }
+
+  if (context->can_subscribe) {
+    if (context->subscription_id == -1) {
+      /* The first time this callback is run we need to create the IPP
+       * subscription to watch to printer-* events. */
+      browse_poll_create_subscription (context, conn);
+      get_printers = TRUE;
+    } else
+      /* On subsequent runs, check for notifications using our
+       * subscription. */
+      get_printers = browse_poll_get_notifications (context, conn);
+  }
+  else
+    get_printers = TRUE;
+
+  if (get_printers)
+    browse_poll_get_printers (context, conn);
+
+fail:
 
   /* Call a new timeout handler so that we run again */
   g_timeout_add_seconds (BrowseInterval, browse_poll, data);
@@ -1723,14 +1913,61 @@ read_configuration (const char *filename)
       else
 	BrowseLocalProtocols = BrowseRemoteProtocols = protocols;
     } else if (!strcasecmp(line, "BrowsePoll") && value) {
-      char **old = BrowsePoll;
-      BrowsePoll = realloc (BrowsePoll, (NumBrowsePoll + 1) * sizeof (char *));
+      browsepoll_t **old = BrowsePoll;
+      BrowsePoll = realloc (BrowsePoll,
+			    (NumBrowsePoll + 1) *
+			    sizeof (browsepoll_t));
       if (!BrowsePoll) {
 	debug_printf("cups-browsed: unable to realloc: ignoring BrowsePoll line\n");
 	BrowsePoll = old;
       } else {
-	debug_printf("cups-browsed: Adding BrowsePoll server: %s\n", value);
-	BrowsePoll[NumBrowsePoll++] = strdup (value);
+	char *colon, *slash;
+	browsepoll_t *b = malloc (sizeof (browsepoll_t));
+	if (!b) {
+	  debug_printf("cups-browsed: unable to malloc: ignoring BrowsePoll line\n");
+	  BrowsePoll = old;
+	} else {
+	  debug_printf("cups-browsed: Adding BrowsePoll server: %s\n", value);
+	  b->server = strdup (value);
+	  b->port = BrowsePort;
+	  b->can_subscribe = TRUE; /* first assume subscriptions work */
+	  b->subscription_id = -1;
+	  slash = strchr (b->server, '/');
+	  if (slash) {
+	    *slash++ = '\0';
+	    if (!strcmp (slash, "version=1.0")) {
+	      b->major = 1;
+	      b->minor = 0;
+	    } else if (!strcmp (slash, "version=1.1")) {
+	      b->major = 1;
+	      b->minor = 1;
+	    } else if (!strcmp (slash, "version=2.0")) {
+	      b->major = 2;
+	      b->minor = 0;
+	    } else if (!strcmp (slash, "version=2.1")) {
+	      b->major = 2;
+	      b->minor = 1;
+	    } else if (!strcmp (slash, "version=2.2")) {
+	      b->major = 2;
+	      b->minor = 2;
+	    } else {
+	      debug_printf ("ignoring unknown server option: %s\n", slash);
+	    }
+	  } else
+	    b->major = 0;
+
+	  colon = strchr (b->server, ':');
+	  if (colon) {
+	    char *endptr;
+	    unsigned long n;
+	    *colon++ = '\0';
+	    n = strtoul (colon, &endptr, 10);
+	    if (endptr != colon && n < INT_MAX)
+	      b->port = (int) n;
+	  }
+
+	  BrowsePoll[NumBrowsePoll++] = b;
+	}
       }
     } else if (!strcasecmp(line, "BrowseAllow") && value) {
       if (read_browseallow_value (value))
@@ -1972,6 +2209,10 @@ int main(int argc, char*argv[]) {
     goto fail;
   }
 
+  /* Override the default password callback so we don't end up
+   * prompting for it. */
+  cupsSetPasswordCB2 (password_callback, NULL);
+
   /* Run the main loop */
   gmainloop = g_main_loop_new (NULL, FALSE);
   recheck_timer ();
@@ -1994,7 +2235,7 @@ int main(int argc, char*argv[]) {
 	 index < NumBrowsePoll;
 	 index++) {
       debug_printf ("cups-browsed: will browse poll %s every %ds\n",
-		    BrowsePoll[index], BrowseInterval);
+		    BrowsePoll[index]->server, BrowseInterval);
       g_idle_add (browse_poll, BrowsePoll[index]);
     }
   }
@@ -2018,6 +2259,21 @@ fail:
   }
   handle_cups_queues(NULL);
 
+  if (BrowsePoll) {
+    size_t index;
+    for (index = 0;
+	 index < NumBrowsePoll;
+	 index++) {
+      if (BrowsePoll[index]->can_subscribe &&
+	  BrowsePoll[index]->subscription_id != -1)
+	browse_poll_cancel_subscription (BrowsePoll[index]);
+
+      free (BrowsePoll[index]->server);
+      free (BrowsePoll[index]);
+    }
+
+    free (BrowsePoll);
+  }
 #ifdef HAVE_AVAHI
   /* Free the data structures for Bonjour browsing */
   if (sb1)
