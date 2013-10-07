@@ -42,7 +42,8 @@ void pdfOut_finish_pdf(pdfOut *pdf);
 /* General output routine for our pdf.
  * Keeps track of characters actually written out
  */
-void pdfOut_printf(pdfOut *pdf,const char *fmt,...);
+void pdfOut_printf(pdfOut *pdf,const char *fmt,...)
+  __attribute__((format(printf, 2, 3)));
 
 /* write out an escaped pdf string: e.g.  (Text \(Test\)\n)
  * >len==-1: use strlen(str) 

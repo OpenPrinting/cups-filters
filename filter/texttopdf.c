@@ -250,7 +250,7 @@ WritePage(void)
   int len_obj=pdfOut_add_xref(pdf);
   assert(len_obj==content+1);
   pdfOut_printf(pdf,"%d 0 obj\n"
-                    "%d\n"
+                    "%ld\n"
                     "endobj\n",
                     len_obj,size);
 

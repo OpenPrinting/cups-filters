@@ -519,7 +519,7 @@ int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to
     free(ds.buf);
     return -1;
   }
-  dyn_printf(&ds,"%!PS-TrueTypeFont-%d-%d\n",
+  dyn_printf(&ds,"%%!PS-TrueTypeFont-%d-%d\n",
                  otf->version,get_ULONG(head+4));
   const int bbxmin=get_SHORT(head+36)*1000/otf->unitsPerEm,
             bbymin=get_SHORT(head+38)*1000/otf->unitsPerEm,

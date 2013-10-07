@@ -242,7 +242,7 @@ void pdfOut_finish_pdf(pdfOut *pdf) // {{{
                     "%010d 65535 f \n",
                     0,pdf->xrefsize+1,0);
   for (iA=0;iA<pdf->xrefsize;iA++) {
-    pdfOut_printf(pdf,"%010d 00000 n \n",
+    pdfOut_printf(pdf,"%010ld 00000 n \n",
                       pdf->xref[iA]);
   }
   pdfOut_printf(pdf,"trailer\n"
@@ -347,7 +347,7 @@ int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{
   const int l0_obj=pdfOut_add_xref(pdf);
   assert(l0_obj==ff_obj+1);
   pdfOut_printf(pdf,"%d 0 obj\n"
-                    "%d\n"
+                    "%ld\n"
                     "endobj\n"
                     ,l0_obj,streamsize);
 

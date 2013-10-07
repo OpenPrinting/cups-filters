@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.39 - 2013-10-02
 -----------------------------------------------------
 
+CHANGES IN V1.0.40
+
+	- Fixed format string issues and added __attribute__ wording
+	  to printf-like functions to catch any regressions. Thanks to
+	  Tim Waugh from Red Hat for the patch.
+
 CHANGES IN V1.0.39
 
 	- pdftops: Fix for landscape PDF handling. Do not use the
