@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.0.39 - 2013-10-02
 
 CHANGES IN V1.0.40
 
+	- pdftops: Introduced new "hybrid" renderer: Here usually
+	  Ghostscript is used, but if the printer is a Brother,
+	  Minolta, or Konica Minolta Poppler's pdftops gets used. This
+	  is a quirk rule to work around bugs in the PS interpreters
+	  of the printers.
 	- Fixed format string issues and added __attribute__ wording
 	  to printf-like functions to catch any regressions. Thanks to
 	  Tim Waugh from Red Hat for the patch.

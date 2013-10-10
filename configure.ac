@@ -412,12 +412,12 @@ AS_IF([test x"$long_long_found" = "xyes"], [
 # Check for pdf2ps
 # ================
 AC_ARG_WITH([pdftops],
-	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,pdftocairo,acroread).])],
+	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,pdftocairo,acroread,hybrid).])],
 	[with_pdftops="$withval"],
 	[with_pdftops=gs]
 )
 AS_CASE([x$with_pdftops],
-        [xgs|xpdftops|xpdftocairo|xacroread], [],
+        [xgs|xpdftops|xpdftocairo|xacroread|xhybrid], [],
         [AC_MSG_ERROR([Unknown value of with-pdftops provided: $with_pdftops])]
 )
 AC_ARG_WITH([gs-path],
@@ -518,6 +518,10 @@ AS_IF([test "x$CUPS_ACROREAD" != "x"], [
 	AS_IF([test x"$with_pdftops" = xacroread], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [ACROREAD], [Define default renderer])])
 ], [
 	CUPS_ACROREAD="acroread"
+])
+
+AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x" -a "x$CUPS_PDFTOPS" != "x"], [
+	AS_IF([test x"$with_pdftops" = xhybrid], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [HYBRID], [Define default renderer])])
 ])
 
 AC_DEFINE_UNQUOTED([CUPS_GHOSTSCRIPT], "$CUPS_GHOSTSCRIPT", [gs binary to use])
