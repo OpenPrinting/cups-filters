@@ -1677,6 +1677,8 @@ browse_poll_cancel_subscription (browsepoll_t *context)
 
   if (response)
     ippDelete(response);
+
+  httpClose (conn);
 }
 
 static gboolean
@@ -1786,6 +1788,9 @@ browse_poll (gpointer data)
     browse_poll_get_printers (context, conn);
 
 fail:
+
+  if (conn)
+    httpClose (conn);
 
   /* Call a new timeout handler so that we run again */
   g_timeout_add_seconds (BrowseInterval, browse_poll, data);
