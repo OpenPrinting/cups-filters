@@ -60,8 +60,7 @@ static int              filter_present(const char *filter);
 static int		compare_pids(filter_pid_t *a, filter_pid_t *b);
 static int		exec_filter(const char *filter, char **argv,
 			            int infd, int outfd);
-static int		exec_filters(cups_array_t *filters, const char *infile,
-				     char **argv);
+static int		exec_filters(cups_array_t *filters, char **argv);
 static int		open_pipe(int *fds);
 
 /*
@@ -153,7 +152,7 @@ main(int  argc,				/* I - Number of command-line args */
       return (1);
     }
 
-    fprintf(stderr, "DEBUG: pdftops - copying to temp print file \"%s\"\n",
+    fprintf(stderr, "DEBUG: pdftoippprinter - copying to temp print file \"%s\"\n",
             tempfile);
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)
@@ -183,9 +182,10 @@ main(int  argc,				/* I - Number of command-line args */
   * Copy the command line arguments into a NULL-terminated array
   */
 
-  for (i = 0; i < argc; i++)
+  for (i = 0; i < 6; i++)
     argv_nt[i] = argv[i];
-  argv_nt[argc] = NULL;
+  argv_nt[6] = filename;
+  argv_nt[7] = NULL;
 
  /*
   * Create filter chain
@@ -337,7 +337,7 @@ main(int  argc,				/* I - Number of command-line args */
   * Execute the filter chain
   */
 
-  exit_status = exec_filters(filter_chain, filename, (char **)argv_nt);
+  exit_status = exec_filters(filter_chain, (char **)argv_nt);
 
  /*
   * Cleanup and exit...
@@ -476,7 +476,6 @@ exec_filter(const char *filter,		/* I - Filter to execute */
 
 static int				/* O - 0 on success, 1 on error */
 exec_filters(cups_array_t  *filters,	/* I - Array of filters to run */
-             const char    *infile,	/* I - File to filter */
 	     char	   **argv)	/* I - Filter options */
 {
   int		i;			/* Looping var */
@@ -512,13 +511,10 @@ exec_filters(cups_array_t  *filters,	/* I - Array of filters to run */
 
   pids            = cupsArrayNew((cups_array_func_t)compare_pids, NULL);
   current         = 0;
-  filterfds[0][0] = -1;
+  filterfds[0][0] = 0;
   filterfds[0][1] = -1;
   filterfds[1][0] = -1;
   filterfds[1][1] = -1;
-
-  if (!infile)
-    filterfds[0][0] = 0;
 
   for (filter = (char *)cupsArrayFirst(filters);
        filter;
