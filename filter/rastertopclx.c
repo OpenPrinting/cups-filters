@@ -189,12 +189,12 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * the options and set them accordingly...
   */
 
-  if (ppdIsMarked(ppd, "Duplex", "DuplexNoTumble"))
+  if (ppd && ppdIsMarked(ppd, "Duplex", "DuplexNoTumble"))
   {
     header->Duplex = CUPS_TRUE;
     header->Tumble = CUPS_FALSE;
   }
-  else if (ppdIsMarked(ppd, "Duplex", "DuplexTumble"))
+  else if (ppd && ppdIsMarked(ppd, "Duplex", "DuplexTumble"))
   {
     header->Duplex = CUPS_TRUE;
     header->Tumble = CUPS_TRUE;
@@ -287,7 +287,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     memset(DitherStates, 0, sizeof(DitherStates));
   }
   else if (header->cupsColorSpace == CUPS_CSPACE_RGB &&
-           (ppd->model_number & PCL_RASTER_RGB24))
+           (ppd && (ppd->model_number & PCL_RASTER_RGB24)))
   {
    /*
     * Use 24-bit RGB output mode...
@@ -305,7 +305,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   }
   else if ((header->cupsColorSpace == CUPS_CSPACE_K ||
             header->cupsColorSpace == CUPS_CSPACE_W) &&
-           (ppd->model_number & PCL_RASTER_RGB24) &&
+           (ppd && (ppd->model_number & PCL_RASTER_RGB24)) &&
 	   header->cupsCompression == 10)
   {
    /*
@@ -342,11 +342,14 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     fprintf(stderr, "DEBUG: MediaType = %s\n", header->MediaType);
     fprintf(stderr, "DEBUG: Resolution = %s\n", resolution);
 
-    if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
-	header->cupsColorSpace == CUPS_CSPACE_W)
-      RGB = cupsRGBLoad(ppd, colormodel, header->MediaType, resolution);
+    if (ppd)
+    {
+      if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
+	  header->cupsColorSpace == CUPS_CSPACE_W)
+	RGB = cupsRGBLoad(ppd, colormodel, header->MediaType, resolution);
 
-    CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution);
+      CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution);
+    }
 
     if (RGB)
       fputs("DEBUG: Loaded RGB separation from PPD.\n", stderr);
@@ -355,8 +358,16 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       fputs("DEBUG: Loaded CMYK separation from PPD.\n", stderr);
     else
     {
+      /*if (header->cupsColorSpace == CUPS_CSPACE_KCMY ||
+	  header->cupsColorSpace == CUPS_CSPACE_CMYK)
+	PrinterPlanes = 4;
+      else if (header->cupsColorSpace == CUPS_CSPACE_CMY)
+	PrinterPlanes = 3;
+	else*/
+      PrinterPlanes = 1;
       fputs("DEBUG: Loading default K separation.\n", stderr);
-      CMYK = cupsCMYKNew(1);
+      /*fprintf(stderr, "DEBUG: Color Space: %d; Color Planes %d\n", header->cupsColorSpace, PrinterPlanes);*/
+      CMYK = cupsCMYKNew(PrinterPlanes);
     }
 
     PrinterPlanes = CMYK->num_channels;
@@ -431,11 +442,11 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Initialize the printer...
   */
 
-  if ((attr = ppdFindAttr(ppd, "cupsInitialNulls", NULL)) != NULL)
+  if (ppd && ((attr = ppdFindAttr(ppd, "cupsInitialNulls", NULL)) != NULL))
     for (i = atoi(attr->value); i > 0; i --)
       putchar(0);
 
-  if (Page == 1 && (ppd->model_number & PCL_PJL))
+  if (Page == 1 && (!ppd || ppd->model_number & PCL_PJL))
   {
     pjl_escape();
 
@@ -445,94 +456,95 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
     pjl_set_job(job_id, user, title);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "StartJob")) != NULL)
-      pjl_write(ppd, attr->value, NULL, job_id, user, title, num_options,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "StartJob")) != NULL))
+      pjl_write(attr->value, NULL, job_id, user, title, num_options,
                 options);
 
     snprintf(spec, sizeof(spec), "RENDERMODE.%s", colormodel);
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", spec)) != NULL)
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", spec)) != NULL))
       printf("@PJL SET RENDERMODE=%s\r\n", attr->value);
 
     snprintf(spec, sizeof(spec), "COLORSPACE.%s", colormodel);
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", spec)) != NULL)
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", spec)) != NULL))
       printf("@PJL SET COLORSPACE=%s\r\n", attr->value);
 
     snprintf(spec, sizeof(spec), "RENDERINTENT.%s", colormodel);
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", spec)) != NULL)
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", spec)) != NULL))
       printf("@PJL SET RENDERINTENT=%s\r\n", attr->value);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "Duplex")) != NULL)
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "Duplex")) != NULL))
     {
       sprintf(s, "%d", header->Duplex);
-      pjl_write(ppd, attr->value, s, job_id, user, title, num_options, options);
+      pjl_write(attr->value, s, job_id, user, title, num_options, options);
     }
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "Tumble")) != NULL)
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "Tumble")) != NULL))
     {
       sprintf(s, "%d", header->Tumble);
-      pjl_write(ppd, attr->value, s, job_id, user, title, num_options, options);
+      pjl_write(attr->value, s, job_id, user, title, num_options, options);
     }
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "MediaClass")) != NULL)
-      pjl_write(ppd, attr->value, header->MediaClass, job_id, user, title,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "MediaClass")) != NULL))
+      pjl_write(attr->value, header->MediaClass, job_id, user, title,
                 num_options, options);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "MediaColor")) != NULL)
-      pjl_write(ppd, attr->value, header->MediaColor, job_id, user, title,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "MediaColor")) != NULL))
+      pjl_write(attr->value, header->MediaColor, job_id, user, title,
                 num_options, options);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "MediaType")) != NULL)
-      pjl_write(ppd, attr->value, header->MediaType, job_id, user, title,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "MediaType")) != NULL))
+      pjl_write(attr->value, header->MediaType, job_id, user, title,
                 num_options, options);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "OutputType")) != NULL)
-      pjl_write(ppd, attr->value, header->OutputType, job_id, user, title,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "OutputType")) != NULL))
+      pjl_write(attr->value, header->OutputType, job_id, user, title,
                 num_options, options);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsBooklet")) != NULL &&
-        (choice = ppdFindMarkedChoice(ppd, "cupsBooklet")) != NULL)
-      pjl_write(ppd, attr->value, choice->choice, job_id, user, title,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsBooklet")) != NULL &&
+		(choice = ppdFindMarkedChoice(ppd, "cupsBooklet")) != NULL))
+      pjl_write(attr->value, choice->choice, job_id, user, title,
                 num_options, options);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "Jog")) != NULL)
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "Jog")) != NULL))
     {
       sprintf(s, "%d", header->Jog);
-      pjl_write(ppd, attr->value, s, job_id, user, title, num_options, options);
+      pjl_write(attr->value, s, job_id, user, title, num_options, options);
     }
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsPunch")) != NULL &&
-        (choice = ppdFindMarkedChoice(ppd, "cupsPunch")) != NULL)
-      pjl_write(ppd, attr->value, choice->choice, job_id, user, title,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsPunch")) != NULL &&
+		(choice = ppdFindMarkedChoice(ppd, "cupsPunch")) != NULL))
+      pjl_write(attr->value, choice->choice, job_id, user, title,
                 num_options, options);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsStaple")) != NULL &&
-        (choice = ppdFindMarkedChoice(ppd, "cupsStaple")) != NULL)
-      pjl_write(ppd, attr->value, choice->choice, job_id, user, title,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsStaple")) != NULL &&
+		(choice = ppdFindMarkedChoice(ppd, "cupsStaple")) != NULL))
+      pjl_write(attr->value, choice->choice, job_id, user, title,
                 num_options, options);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsRET")) != NULL &&
-        (choice = ppdFindMarkedChoice(ppd, "cupsRET")) != NULL)
-      pjl_write(ppd, attr->value, choice->choice, job_id, user, title,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsRET")) != NULL &&
+		(choice = ppdFindMarkedChoice(ppd, "cupsRET")) != NULL))
+      pjl_write(attr->value, choice->choice, job_id, user, title,
                 num_options, options);
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsTonerSave")) != NULL &&
-        (choice = ppdFindMarkedChoice(ppd, "cupsTonerSave")) != NULL)
-      pjl_write(ppd, attr->value, choice->choice, job_id, user, title,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "cupsTonerSave")) != NULL &&
+		(choice = ppdFindMarkedChoice(ppd, "cupsTonerSave")) != NULL))
+      pjl_write(attr->value, choice->choice, job_id, user, title,
                 num_options, options);
 
-    if (ppd->model_number & PCL_PJL_PAPERWIDTH)
+    if (!ppd || ppd->model_number & PCL_PJL_PAPERWIDTH)
     {
       printf("@PJL SET PAPERLENGTH=%d\r\n", header->PageSize[1] * 10);
       printf("@PJL SET PAPERWIDTH=%d\r\n", header->PageSize[0] * 10);
     }
 
-    if (ppd->model_number & PCL_PJL_RESOLUTION)
+    if (!ppd || ppd->model_number & PCL_PJL_RESOLUTION)
       printf("@PJL SET RESOLUTION=%d\r\n", header->HWResolution[0]);
 
-    ppdEmit(ppd, stdout, PPD_ORDER_JCL);
-    if (ppd->model_number & PCL_PJL_HPGL2)
+    if (ppd)
+      ppdEmit(ppd, stdout, PPD_ORDER_JCL);
+    if (ppd && ppd->model_number & PCL_PJL_HPGL2)
       pjl_enter_language("HPGL2");
-    else if (ppd->model_number & PCL_PJL_PCL3GUI)
+    else if (ppd && ppd->model_number & PCL_PJL_PCL3GUI)
       pjl_enter_language("PCL3GUI");
     else
       pjl_enter_language("PCL");
@@ -543,7 +555,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     pcl_reset();
   }
 
-  if (ppd->model_number & PCL_PJL_HPGL2)
+  if (ppd && ppd->model_number & PCL_PJL_HPGL2)
   {
     if (Page == 1)
     {
@@ -595,21 +607,21 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       pcl_set_media_type(header->cupsMediaType);
 
-      if (ppdFindAttr(ppd, "cupsPJL", "Duplex") == NULL)
+      if (!ppd || ppdFindAttr(ppd, "cupsPJL", "Duplex") == NULL)
         pcl_set_duplex(header->Duplex, header->Tumble);
 
      /*
       * Set the number of copies...
       */
 
-      if (!ppd->manual_copies)
+      if (!ppd || !ppd->manual_copies)
 	pcl_set_copies(header->NumCopies);
 
      /*
       * Set the output order/bin...
       */
 
-      if (ppdFindAttr(ppd, "cupsPJL", "Jog") == NULL && header->Jog)
+      if ((!ppd || ppdFindAttr(ppd, "cupsPJL", "Jog") == NULL) && header->Jog)
         printf("\033&l%dG", header->Jog);
     }
     else
@@ -621,7 +633,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       printf("\033&a2G");
     }
 
-    if (header->Duplex && (ppd->model_number & PCL_RASTER_CRD))
+    if (header->Duplex && (ppd && (ppd->model_number & PCL_RASTER_CRD)))
     {
      /*
       * Reload the media...
@@ -638,15 +650,15 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     printf("\033*p0Y\033*p0X");
   }
 
-  if ((attr = cupsFindAttr(ppd, "cupsPCLQuality", colormodel,
-                           header->MediaType, resolution, spec,
-			   sizeof(spec))) != NULL)
+  if (ppd && ((attr = cupsFindAttr(ppd, "cupsPCLQuality", colormodel,
+				   header->MediaType, resolution, spec,
+				   sizeof(spec))) != NULL))
   {
    /*
     * Set the print quality...
     */
 
-    if (ppd->model_number & PCL_PJL_HPGL2)
+    if (ppd && (ppd->model_number & PCL_PJL_HPGL2))
       printf("QM%d", atoi(attr->value));
     else
       printf("\033*o%dM", atoi(attr->value));
@@ -656,7 +668,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Enter graphics mode...
   */
 
-  if (ppd->model_number & PCL_RASTER_CRD)
+  if (ppd && (ppd->model_number & PCL_RASTER_CRD))
   {
    /*
     * Use configure raster data command...
@@ -669,9 +681,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       * vertical resolutions as well as a color count...
       */
 
-      if ((attr = cupsFindAttr(ppd, "cupsPCLCRDMode", colormodel,
-                               header->MediaType, resolution, spec,
-			       sizeof(spec))) != NULL)
+      if (ppd && ((attr = cupsFindAttr(ppd, "cupsPCLCRDMode", colormodel,
+				       header->MediaType, resolution, spec,
+				       sizeof(spec))) != NULL))
         i = atoi(attr->value);
       else
         i = 31;
@@ -718,7 +730,8 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       }
     }
   }
-  else if ((ppd->model_number & PCL_RASTER_CID) && OutputMode == OUTPUT_RGB)
+  else if (ppd && (ppd->model_number & PCL_RASTER_CID) &&
+	   OutputMode == OUTPUT_RGB)
   {
    /*
     * Use configure image data command...
@@ -745,12 +758,12 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       pcl_set_simple_kcmy();
   }
 
-  if ((attr = ppdFindAttr(ppd, "cupsPCLOrigin", "X")) != NULL)
+  if (ppd && ((attr = ppdFindAttr(ppd, "cupsPCLOrigin", "X")) != NULL))
     xorigin = atoi(attr->value);
   else
     xorigin = 0;
 
-  if ((attr = ppdFindAttr(ppd, "cupsPCLOrigin", "Y")) != NULL)
+  if (ppd && ((attr = ppdFindAttr(ppd, "cupsPCLOrigin", "Y")) != NULL))
     yorigin = atoi(attr->value);
   else
     yorigin = 120;
@@ -820,7 +833,7 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
   * End graphics mode...
   */
 
-  if (ppd->model_number & PCL_RASTER_END_COLOR)
+  if (ppd && (ppd->model_number & PCL_RASTER_END_COLOR))
     printf("\033*rC");			/* End color GFX */
   else
     printf("\033*r0B");			/* End B&W GFX */
@@ -829,7 +842,7 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Output a page eject sequence...
   */
 
-  if (ppd->model_number & PCL_PJL_HPGL2)
+  if (ppd && (ppd->model_number & PCL_PJL_HPGL2))
   {
      pcl_set_hpgl_mode(0);		/* Back to HP-GL/2 mode */
      printf("PG;");			/* Eject the current page */
@@ -887,7 +900,7 @@ Shutdown(ppd_file_t         *ppd,	/* I - PPD file */
   ppd_attr_t	*attr;			/* Attribute from PPD file */
 
 
-  if ((attr = ppdFindAttr(ppd, "cupsPCL", "EndJob")) != NULL)
+  if (ppd && ((attr = ppdFindAttr(ppd, "cupsPCL", "EndJob")) != NULL))
   {
    /*
     * Tell the printer how many pages were in the job...
@@ -905,12 +918,12 @@ Shutdown(ppd_file_t         *ppd,	/* I - PPD file */
     pcl_reset();
   }
 
-  if (ppd->model_number & PCL_PJL)
+  if (!ppd || (ppd->model_number & PCL_PJL))
   {
     pjl_escape();
 
-    if ((attr = ppdFindAttr(ppd, "cupsPJL", "EndJob")) != NULL)
-      pjl_write(ppd, attr->value, NULL, job_id, user, title, num_options,
+    if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", "EndJob")) != NULL))
+      pjl_write(attr->value, NULL, job_id, user, title, num_options,
                 options);
     else
       printf("@PJL EOJ\r\n");
@@ -1808,22 +1821,22 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   ppd = ppdOpenFile(getenv("PPD"));
 
-  if (!ppd)
+  if (ppd)
+  {
+    ppdMarkDefaults(ppd);
+    cupsMarkOptions(ppd, num_options, options);
+  }
+  else
   {
     ppd_status_t	status;		/* PPD error */
     int			linenum;	/* Line number */
 
-    fputs("ERROR: The PPD file could not be opened.\n", stderr);
+    fputs("DEBUG: The PPD file could not be opened.\n", stderr);
 
     status = ppdLastError(&linenum);
 
     fprintf(stderr, "DEBUG: %s on line %d.\n", ppdErrorString(status), linenum);
-
-    return (1);
   }
-
-  ppdMarkDefaults(ppd);
-  cupsMarkOptions(ppd, num_options, options);
 
  /*
   * Open the page stream...

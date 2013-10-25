@@ -41,7 +41,7 @@ pcl_set_media_size(ppd_file_t *ppd,	/* I - PPD file */
 
   printf("\033&l0O");			/* Set portrait orientation */
 
-  if (ppd->model_number & PCL_PAPER_SIZE)
+  if (!ppd || ppd->model_number & PCL_PAPER_SIZE)
     switch ((int)(length + 0.5f))
     {
       case 419 : /* Postcard */
@@ -144,8 +144,7 @@ pcl_set_media_size(ppd_file_t *ppd,	/* I - PPD file */
  */
 
 void
-pjl_write(ppd_file_t    *ppd,		/* I - PPD file */
-          const char    *format,	/* I - Format string */
+pjl_write(const char    *format,	/* I - Format string */
           const char    *value,		/* I - Value for %s */
 	  int           job_id,		/* I - Job ID */
           const char    *user,		/* I - Username */

@@ -405,6 +405,7 @@ pkgfilter_PROGRAMS += \
 	commandtopclx \
 	gstoraster \
 	pdftoijs \
+	pdftoippprinter \
 	pdftops \
 	pdftoraster \
 	rastertoescpx \
@@ -529,6 +530,15 @@ pdftoijs_LDADD = \
 	$(CUPS_LIBS) \
 	$(IJS_LIBS) \
 	$(POPPLER_LIBS)
+
+pdftoippprinter_SOURCES = \
+	filter/common.c \
+	filter/common.h \
+	filter/pdftoippprinter.c
+EXTRA_pdftoippprinter_SOURCES = filter/strcasestr.c
+pdftoippprinter_CFLAGS = $(CUPS_CFLAGS)
+pdftoippprinter_LDADD = $(STRCASESTR) $(CUPS_LIBS)
+pdftoippprinter_DEPENDENCIES = $(STRCASESTR)
 
 pdftops_SOURCES = \
 	filter/common.c \

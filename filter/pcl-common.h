@@ -62,7 +62,7 @@
 	printf("@PJL ENTER LANGUAGE=%s\r\n", (lang))
 
 extern void	pcl_set_media_size(ppd_file_t *ppd, float width, float length);
-extern void	pjl_write(ppd_file_t *ppd, const char *format,
+extern void	pjl_write(const char *format,
 		          const char *value, int job_id,
                 	  const char *user, const char *title,
 			  int num_options, cups_option_t *options);
