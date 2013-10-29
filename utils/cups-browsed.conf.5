@@ -94,6 +94,24 @@ CUPS daemon via a domain socket it accesses it via localhost.
 
 .fam T
 .fi
+The CreateIPPPrinterQueues directive specifies whether cups-browsed
+should discover IPP printers (via Bonjour) and if they understand a
+known page description language (PWG Raster, PDF, PostScript, PCL XL,
+PCL 5c/e) create PPD-less print queues (using a System V interface
+script to control the filter chain). Clients have to IPP-poll the
+capabilities of the printer and send option settings as standard IPP
+attributes. We do not poll the capabilities by ourselves to not wake
+up the printer from power-saving mode when creating the queues. Jobs
+have to be sent in PDF format. Other formats are not accepted. This
+functionality is primarily for mobile devices running CUPS to not need
+a printer setup tool nor a collection of printer drivers and PPDs.
+.PP
+.nf
+.fam C
+        CreateIPPPrinterQueues Yes
+
+.fam T
+.fi
 .SH SEE ALSO
 
 \fBcups-browsed\fP(8)

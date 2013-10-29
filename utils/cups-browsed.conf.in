@@ -28,4 +28,19 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # default domain socket
 # DomainSocket @CUPS_DEFAULT_DOMAINSOCKET@
 
+# Set CreateIPPPrinterQueues to "Yes" to let cups-browsed discover IPP
+# network printers (native printers, not CUPS queues) with known page
+# description languages (PWG Raster, PDF, PostScript, PCL XL, PCL
+# 5c/e) in the local network and auto-create PPD-less print queues for
+# them (using a System V interface script to control the filter
+# chain). Clients have to IPP-poll the capabilities of the printer and
+# send option settings as standard IPP attributes. We do not poll the
+# capabilities by ourselves to not wake up the printer from
+# power-saving mode when creating the queues. Jobs have to be sent in
+# PDF format. Other formats are not accepted. This functionality is
+# primarily for mobile devices running CUPS to not need a printer
+# setup tool nor a collection of printer drivers and PPDs.
+
+# CreateIPPPrinterQueues Yes
+
 # Unknown directives are ignored, also unknown values.

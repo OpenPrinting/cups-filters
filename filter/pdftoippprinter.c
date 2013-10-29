@@ -216,23 +216,7 @@ main(int  argc,				/* I - Number of command-line args */
 
   if ((val = cupsGetOption("output-format", num_options, options)) != NULL)
   {
-    if (strcasestr(val, "pdf"))
-      output_format = PDF;
-    else if (strcasestr(val, "postscript") ||
-	     strcasecmp(val, "ps") == 0)
-    {
-      output_format = POSTSCRIPT;
-      if (filter_present("pdftops"))
-	cupsArrayAdd(filter_chain, "pdftops");
-      else
-      {
-	fprintf(stderr,
-		"ERROR: Filter pdftops missing for \"output-format=%s\"\n", val);
-	exit_status = 1;
-	goto error;
-      }
-    }
-    else if (strcasestr(val, "raster"))
+    if (strcasestr(val, "raster"))
     {
       output_format = PWGRASTER;
       if (filter_present("gstoraster"))
@@ -260,6 +244,21 @@ main(int  argc,				/* I - Number of command-line args */
 	exit_status = 1;
 	goto error;
       }*/
+    }
+    else if (strcasestr(val, "pdf"))
+      output_format = PDF;
+    else if (strcasestr(val, "postscript"))
+    {
+      output_format = POSTSCRIPT;
+      if (filter_present("pdftops"))
+	cupsArrayAdd(filter_chain, "pdftops");
+      else
+      {
+	fprintf(stderr,
+		"ERROR: Filter pdftops missing for \"output-format=%s\"\n", val);
+	exit_status = 1;
+	goto error;
+      }
     }
     else if (strcasestr(val, "pcl"))
     {
@@ -325,8 +324,13 @@ main(int  argc,				/* I - Number of command-line args */
   }
 
   fprintf(stderr,
-	  "DEBUG: Using following CUPS filter chain to convert input data to the %s format:",
-	  val);
+	  "DEBUG: Printer supports output formats: %s\nDEBUG: Using following CUPS filter chain to convert input data to the %s format:",
+	  val,
+	  output_format == PDF ? "PDF" :
+	  (output_format == POSTSCRIPT ? "Postscript" :
+	   (output_format == PWGRASTER ? "PWG Raster" :
+	    (output_format == PCLXL ? "PCL XL" :
+	     (output_format == PCL ? "PCL 5c/e" : "unknown")))));
   for (filter = (char *)cupsArrayFirst(filter_chain);
        filter;
        filter = (char *)cupsArrayNext(filter_chain))
