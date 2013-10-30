@@ -119,14 +119,28 @@ static bool is_true(const char *value) // {{{
 
 static bool ppdGetDuplex(ppd_file_t *ppd) // {{{
 {
-  return ppdIsMarked(ppd,"Duplex","DuplexNoTumble")||
-         ppdIsMarked(ppd,"Duplex","DuplexTumble")||
-         ppdIsMarked(ppd,"JCLDuplex","DuplexNoTumble")||
-         ppdIsMarked(ppd,"JCLDuplex","DuplexTumble")||
-         ppdIsMarked(ppd,"EFDuplex","DuplexNoTumble")||
-         ppdIsMarked(ppd,"EFDuplex","DuplexTumble")||
-         ppdIsMarked(ppd,"KD03Duplex","DuplexNoTumble")||
-         ppdIsMarked(ppd,"KD03Duplex","DuplexTumble");
+  const char **option, **choice;
+  const char *option_names[] = {
+    "Duplex",
+    "JCLDuplex",
+    "EFDuplex",
+    "KD03Duplex",
+    NULL
+  };
+  const char *choice_names[] = {
+    "DuplexNoTumble",
+    "DuplexTumble",
+    "LongEdge",
+    "ShortEdge",
+    "Top",
+    "Bottom",
+    NULL
+  };
+  for (option = option_names; *option; option ++)
+    for (choice = choice_names; *choice; choice ++)
+      if (ppdIsMarked(ppd, *option, *choice))
+	return 1;
+  return 0;
 }
 // }}}
 

@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.0.41 - 2013-10-30
 -----------------------------------------------------
 
+CHANGES IN V1.0.42
+
+	- pdftopdf: When checking whether double-sided printing is
+	  chosen, do not only check for the choice names "DuplexNoTumble"
+	  and "DuplexTumble" but also for "LongEdge", "ShortEdge",
+	  "Top", and "Bottom", as CUPS does (Bug #1167).
+
 CHANGES IN V1.0.41
 
 	- cups-browsed: Added support for automatic PPD-less setup of
