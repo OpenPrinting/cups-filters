@@ -1,9 +1,9 @@
-NEWS - OpenPrinting CUPS Filters v1.0.40 - 2013-10-10
+NEWS - OpenPrinting CUPS Filters v1.0.41 - 2013-10-30
 -----------------------------------------------------
 
 CHANGES IN V1.0.41
 
-	- cups-browsed: Added support for automatiuc PPD-less setup of
+	- cups-browsed: Added support for automatic PPD-less setup of
 	  print queues for IPP printers discovered on the network via
 	  Bonjour. Supported are printers with known languages (PWG
 	  Raster, PDF, PostScript, PCL XL, PCL 5c/e), especially also
