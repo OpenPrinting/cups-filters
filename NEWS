@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.41 - 2013-10-30
 
 CHANGES IN V1.0.42
 
+	- libcupsfilters: Recognize more Adobe-generated CMYK JPEGs to
+	  take into account their inverted colors (Bug #1169).
 	- pdftopdf: When checking whether double-sided printing is
 	  chosen, do not only check for the choice names "DuplexNoTumble"
 	  and "DuplexTumble" but also for "LongEdge", "ShortEdge",

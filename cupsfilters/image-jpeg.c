@@ -78,7 +78,7 @@ _cupsImageReadJPEG(
 
   for (marker = cinfo.marker_list; marker; marker = marker->next)
     if (marker->marker == (JPEG_APP0 + 14) && marker->data_length >= 12 &&
-        !memcmp(marker->data, "Adobe", 5) && marker->data[11] == 2)
+        !memcmp(marker->data, "Adobe", 5))
     {
       fputs("DEBUG: Adobe CMYK JPEG detected (inverting color values)\n",
 	    stderr);
