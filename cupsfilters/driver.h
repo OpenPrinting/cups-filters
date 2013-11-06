@@ -13,8 +13,8 @@
  *   file is missing or damaged, see the license at "http://www.cups.org/".
  */
 
-#ifndef _CUPS_DRIVER_H_
-#  define _CUPS_DRIVER_H_
+#ifndef _CUPS_FILTERS_DRIVER_H_
+#  define _CUPS_FILTERS_DRIVER_H_
 
 #  ifdef __cplusplus
 extern "C" {
@@ -241,7 +241,7 @@ extern void		cupsCMYKSetLtDk(cups_cmyk_t *cmyk, int channel,
 }
 #  endif /* __cplusplus */
 
-#endif /* !_CUPS_DRIVER_H_ */
+#endif /* !_CUPS_FILTERS_DRIVER_H_ */
 
 /*
  * End of "$Id$".

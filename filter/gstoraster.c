@@ -41,12 +41,11 @@ MIT Open Source License  -  http://www.opensource.org/
 #include <fcntl.h>
 #include <cups/raster.h>
 #include <cupsfilters/raster.h>
+#include <cupsfilters/colord.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <errno.h>
-
-#include "colord.h"
 
 #define PDF_MAX_CHECK_COMMENT_LINES	20
 

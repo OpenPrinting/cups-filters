@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.41 - 2013-10-30
 
 CHANGES IN V1.0.42
 
+	- libcupsfilters: Moved filter/colord.[ch] into the library as
+	  this code is now used by both gstoraster and foomatic-rip.
+	- libcupsfilters: Made the names of the flags to tell that the
+	  header is already included unique in all API header files.
 	- foomatic-rip: Moved foomatic-rip's upstream home from the
 	  foomatic-filters package to cups-filters, to make it easier
 	  for distributions to ship and maintain a complete printing
@@ -16,6 +20,7 @@ CHANGES IN V1.0.42
 	  dot com) for doing this as a Google Summer of Code 2013 project.
 	- foomatic-rip: Eliminated compiler warnings.
 	- foomatic-rip: fixed "endswith()" string utility function.
+	- foomatic-rip: Removed unneeded HAVE_DBUS conditionals.
 	- gstoraster: Fixed build system for gstoraster use D-Bus for
 	  colord support.
 	- libcupsfilters: Recognize more Adobe-generated CMYK JPEGs to

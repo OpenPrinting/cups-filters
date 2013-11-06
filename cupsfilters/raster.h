@@ -7,8 +7,8 @@
  *   which should have been included with this file.
  */
 
-#ifndef _CUPSFILTERS_RASTER_H_
-#  define _CUPSFILTERS_RASTER_H_
+#ifndef _CUPS_FILTERS_RASTER_H_
+#  define _CUPS_FILTERS_RASTER_H_
 
 #  ifdef __cplusplus
 extern "C" {
@@ -47,7 +47,7 @@ extern int              cupsRasterParseIPPOptions(cups_page_header2_t *h,
 }
 #  endif /* __cplusplus */
 
-#endif /* !_CUPSFILTERS_RASTER_H_ */
+#endif /* !_CUPS_FILTERS_RASTER_H_ */
 
 /*
  * End

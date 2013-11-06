@@ -15,8 +15,8 @@
  *   This file is subject to the Apple OS-Developed Software exception.
  */
 
-#ifndef _CUPS_IMAGE_H_
-#  define _CUPS_IMAGE_H_
+#ifndef _CUPS_FILTERS_IMAGE_H_
+#  define _CUPS_FILTERS_IMAGE_H_
 
 /*
  * Include necessary headers...
@@ -123,7 +123,7 @@ extern void		cupsImageWhiteToWhite(const cups_ib_t *in,
 }
 #  endif /* __cplusplus */
 
-#endif /* !_CUPS_IMAGE_H_ */
+#endif /* !_CUPS_FILTERS_IMAGE_H_ */
 
 /*
  * End of "$Id$".

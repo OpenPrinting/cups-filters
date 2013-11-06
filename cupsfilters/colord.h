@@ -25,6 +25,13 @@ MIT Open Source License  -  http://www.opensource.org/
 */
 
 
+#ifndef _CUPS_FILTERS_COLORD_H_
+#  define _CUPS_FILTERS_COLORD_H_
+
+#  ifdef __cplusplus
+extern "C" {
+#  endif /* __cplusplus */
+
 /* Common routines for accessing the colord CMS framework */
 
 #include <cups/raster.h>
@@ -33,3 +40,9 @@ char  **colord_get_qualifier_for_ppd      (ppd_file_t *ppd);
 char   *colord_get_profile_for_device_id  (const char *device_id,
                                            const char **qualifier_tuple);
 int     colord_get_inhibit_for_device_id  (const char *device_id);
+
+#  ifdef __cplusplus
+}
+#  endif /* __cplusplus */
+
+#endif /* !_CUPS_FILTERS_COLORD_H_ */

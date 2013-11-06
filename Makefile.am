@@ -80,6 +80,7 @@ EXTRA_DIST += $(pkgcharset_DATA)
 # ====================
 pkgfiltersincludedir = $(includedir)/cupsfilters
 pkgfiltersinclude_DATA = \
+	cupsfilters/colord.h \
 	cupsfilters/driver.h \
 	cupsfilters/image.h \
 	cupsfilters/raster.h
@@ -111,6 +112,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/attr.c \
 	cupsfilters/check.c \
 	cupsfilters/cmyk.c \
+	cupsfilters/colord.c \
 	cupsfilters/dither.c \
 	cupsfilters/image.c \
 	cupsfilters/image-bmp.c \
@@ -145,10 +147,13 @@ libcupsfilters_la_CFLAGS = \
 	$(LIBJPEG_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
 	$(TIFF_CFLAGS)
-
 libcupsfilters_la_LDFLAGS = \
 	-no-undefined \
 	-version-info 1
+if BUILD_DBUS
+libcupsfilters_la_CFLAGS += $(DBUS_CFLAGS) -DHAVE_DBUS
+libcupsfilters_la_LIBADD += $(DBUS_LIBS)
+endif
 
 testcmyk_SOURCES = \
 	cupsfilters/testcmyk.c \
@@ -484,23 +489,18 @@ foomatic_rip_SOURCES = \
 	filter/foomatic-rip/spooler.c \
 	filter/foomatic-rip/spooler.h \
 	filter/foomatic-rip/util.c \
-	filter/foomatic-rip/util.h
+	filter/foomatic-rip/util.h \
+	cupsfilters/colord.h
 foomatic_rip_CFLAGS = \
-	-DCONFIG_PATH='"$(sysconfdir)/foomatic"'
+	-DCONFIG_PATH='"$(sysconfdir)/foomatic"' \
+	-I$(srcdir)/cupsfilters/
 foomatic_rip_LDADD = \
-	-lm
-if BUILD_DBUS
-foomatic_rip_SOURCES += \
-	filter/colord.c \
-	filter/colord.h
-foomatic_rip_CFLAGS += $(CUPS_CFLAGS) $(DBUS_CFLAGS) -DHAVE_DBUS
-foomatic_rip_LDADD += $(CUPS_LIBS) $(DBUS_LIBS)
-endif
+	-lm \
+	libcupsfilters.la
 
 gstoraster_SOURCES = \
 	filter/gstoraster.c \
-	filter/colord.c \
-	filter/colord.h \
+	cupsfilters/colord.h \
 	cupsfilters/raster.h
 gstoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
@@ -508,10 +508,6 @@ gstoraster_CFLAGS = \
 gstoraster_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
-if BUILD_DBUS
-gstoraster_CFLAGS += $(DBUS_CFLAGS) -DHAVE_DBUS
-gstoraster_LDADD += $(DBUS_LIBS)
-endif
 
 imagetopdf_SOURCES = \
 	cupsfilters/image.h \
