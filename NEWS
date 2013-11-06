@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.41 - 2013-10-30
 
 CHANGES IN V1.0.42
 
+	- Backends parallel and serial: Fixed logical expressions for
+	  error handling (Bug #1172).
 	- libcupsfilters: Moved filter/colord.[ch] into the library as
 	  this code is now used by both gstoraster and foomatic-rip.
 	- libcupsfilters: Made the names of the flags to tell that the

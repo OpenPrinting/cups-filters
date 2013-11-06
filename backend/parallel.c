@@ -329,7 +329,7 @@ drain_output(int print_fd,		/* I - Print file descriptor */
       * Read error - bail if we don't see EAGAIN or EINTR...
       */
 
-      if (errno != EAGAIN || errno != EINTR)
+      if (errno != EAGAIN && errno != EINTR)
       {
         perror("ERROR: Unable to read print data");
 	return (-1);
@@ -712,7 +712,7 @@ run_loop(int print_fd,			/* I - Print file descriptor */
         * Read error - bail if we don't see EAGAIN or EINTR...
 	*/
 
-	if (errno != EAGAIN || errno != EINTR)
+	if (errno != EAGAIN && errno != EINTR)
 	{
 	  perror("ERROR: Unable to read print data");
 	  return (-1);
