@@ -403,6 +403,7 @@ pkgfilter_PROGRAMS += \
 	bannertopdf \
 	commandtoescpx \
 	commandtopclx \
+	foomatic-rip \
 	gstoraster \
 	pdftoijs \
 	pdftoippprinter \
@@ -467,6 +468,35 @@ commandtopclx_CFLAGS = \
 	-I$(srcdir)/cupsfilters/
 commandtopclx_LDADD = $(CUPS_LIBS)
 
+foomatic_rip_SOURCES = \
+	filter/foomatic-rip/foomaticrip.c \
+	filter/foomatic-rip/foomaticrip.h \
+	filter/foomatic-rip/options.c \
+	filter/foomatic-rip/options.h \
+	filter/foomatic-rip/pdf.c \
+	filter/foomatic-rip/pdf.h \
+	filter/foomatic-rip/postscript.c \
+	filter/foomatic-rip/postscript.h \
+	filter/foomatic-rip/process.c \
+	filter/foomatic-rip/process.h \
+	filter/foomatic-rip/renderer.c \
+	filter/foomatic-rip/renderer.h \
+	filter/foomatic-rip/spooler.c \
+	filter/foomatic-rip/spooler.h \
+	filter/foomatic-rip/util.c \
+	filter/foomatic-rip/util.h
+foomatic_rip_CFLAGS = \
+	-DCONFIG_PATH='"$(sysconfdir)/foomatic"'
+foomatic_rip_LDADD = \
+	-lm
+if BUILD_DBUS
+foomatic_rip_SOURCES += \
+	filter/colord.c \
+	filter/colord.h
+foomatic_rip_CFLAGS += $(CUPS_CFLAGS) $(DBUS_CFLAGS) -DHAVE_DBUS
+foomatic_rip_LDADD += $(CUPS_LIBS) $(DBUS_LIBS)
+endif
+
 gstoraster_SOURCES = \
 	filter/gstoraster.c \
 	filter/colord.c \
@@ -478,6 +508,10 @@ gstoraster_CFLAGS = \
 gstoraster_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
+if BUILD_DBUS
+gstoraster_CFLAGS += $(DBUS_CFLAGS) -DHAVE_DBUS
+gstoraster_LDADD += $(DBUS_LIBS)
+endif
 
 imagetopdf_SOURCES = \
 	cupsfilters/image.h \
@@ -666,7 +700,8 @@ initrcdir = $(INITDDIR)
 initrc_SCRIPTS = utils/cups-browsed
 man_MANS = \
 	utils/cups-browsed.8 \
-	utils/cups-browsed.conf.5
+	utils/cups-browsed.conf.5 \
+	filter/foomatic-rip/foomatic-rip.1
 EXTRA_DIST += utils/cups-browsed.in \
 	$(man_MANS)
 

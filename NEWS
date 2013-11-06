@@ -3,6 +3,21 @@ NEWS - OpenPrinting CUPS Filters v1.0.41 - 2013-10-30
 
 CHANGES IN V1.0.42
 
+	- foomatic-rip: Moved foomatic-rip's upstream home from the
+	  foomatic-filters package to cups-filters, to make it easier
+	  for distributions to ship and maintain a complete printing
+	  stack and also to make upstream maintenance and development
+	  easier.
+	- foomatic-rip: Removed support for all the non-CUPS printing
+	  environments as they are discontinued upstream. Now
+	  foomatic-rip only works as a CUPS filter and in a spooler-less
+	  direct mode, where the latter is mainly for testing and
+	  debugging. Thanks to Anshul Kushwaha (anshulkushwaha1 at gmail
+	  dot com) for doing this as a Google Summer of Code 2013 project.
+	- foomatic-rip: Eliminated compiler warnings.
+	- foomatic-rip: fixed "endswith()" string utility function.
+	- gstoraster: Fixed build system for gstoraster use D-Bus for
+	  colord support.
 	- libcupsfilters: Recognize more Adobe-generated CMYK JPEGs to
 	  take into account their inverted colors (Bug #1169).
 	- pdftopdf: When checking whether double-sided printing is

@@ -1,0 +1,229 @@
+.\" This -*- nroff -*- source file is part of foomatic.
+
+.hy 0
+.TH FOOMATIC-RIP 1 "2013-11-06" "cups-filters"
+.SH NAME
+foomatic-rip \- Universal print filter/RIP wrapper
+.SH SYNOPSIS
+
+.SS \fRGeneral Options:
+.BI \fBfoomatic-rip\fR\ \fB[-v]\ [-q]\fP \fI\ <mode-specific\ options>
+
+.SS \fRSpooler-less printing filter:
+.BI \fBfoomatic-rip\fR\ \fB[\fB-P\fR \ \fI<printer>\fR \ 
+| \ \fB--ppd\fR \ \fI<ppdfile>\fR \fB]\fR \ [\fB-J\fR\ \fI<jobtitle>\fR ]
+[\fB-o\fR \ \fI<option>\fB=\fI<value>\fR \ [...]] \ \fB[\fI<files>\fB]\fR
+
+.SS \fRCUPS filter:
+.BI \fBfoomatic-rip\fR\ \fI<jobid>\fR \ \fI<user>\fR \ \fI<jobtitle>\fR \ \fI<numcopies>\fR \ \fI<options>\fR \ \fB[\fI<file>\fB]\fR 
+
+.SH DESCRIPTION
+foomatic-rip is a universal print filter which can be used as CUPS filter or
+stand-alone for spooler-less, direct printing. It has the following features:
+
+.Topic 
+It translates PostScript and PDF from standard input or a file to the printer's
+native language on standard output.
+
+.Topic
+The translation is done with an external renderer, usually Ghostscript
+(\fBgs(1)\fR). If no translation is needed (PostScript printer) the
+renderer's command line reduces to \fBcat(1)\fR. The way how this
+translation is done is described in a \fBPPD file\fR.
+
+.Topic
+Printer capabilities, how to handle user options, and how to build the
+renderer command line is always described by \fBPPD files\fR, these
+PPD files usually come from \fBFoomatic\fR or can be the ones supplied by
+the manufacturers of PostScript printers. The PPD files are the same
+for both CUPS and direct printing.
+
+.Topic
+foomatic-rip works with \fBCUPS\fR and for direct printing \fBwithout
+spooler\fR). The mode is selected by the command line options and
+environment variables which are supplied to foomatic-rip.
+
+.Topic
+foomatic-rip does not only apply option settings supplied by the user
+through the command line of the printing command, but also searches
+the entire job for embedded option settings (only PostScript
+jobs). Here not only settings which affect the whole job are taken into
+account, but also settings in the page headers, which are only valid
+for the page where they were found, so applications which produce
+PostScript code with page-specific printer option settings are fully
+supported.
+
+.SH DIRECT, SPOOLER-LESS PRINTING
+
+.SS Options
+
+.TP 10
+.B \-v
+\fRverbose mode for debugging.
+.B WARNING:
+This will create a file in /tmp that contains the debugging information.
+This opens a security loophole and should not be used in production.
+
+.TP 10
+.B \-q
+\fRquiet mode - minimal information output
+
+.TP 10
+.BI \-P \ <printer>
+\fI<printer>\fR is the configured printer which should be used for this job.
+
+.TP 10
+.BI \--ppd \ <ppdfile>
+The PPD file \fI<ppdfile>\fR should be applied for processing this job.
+.TP 10
+.BI \-o \ \fI<option>\fB=\fI<value>\fR
+Option settings for this job.
+.TP 10
+.BI \fI<files>\fR
+The file(s) to be printed.
+
+.P
+\fBfoomatic-rip\fR will print from standard input unless at least one file to
+be printed is specified on the command line.
+If your printer PPD file is stored as \fI@sysconfdir@/direct/<printer>.ppd\fR
+or \fI~/.foomatic/direct/<printer>.ppd\fR you can use it by simply specifying "-P \fI<printer>\fR".
+
+Put a line
+
+\fB*FoomaticRIPPostPipe: "| \fI<command>\fB"\fR
+.hy 0
+
+into the PPD file, right after \fB*PPD-Adobe: "4.3"\fR, where
+\fI<command>\fR is a command into which you want to re-direct the
+output data. Due to the restrictions of PPD files \fB<\fR, \fB>\fR, and
+\fB"\fR are not allowed in the \fI<command>\fR, replace them as
+follows:
+
+.CodeSkip
+.nf
+.B Character	Replacement
+.B ---------------------
+.B		<	&lt;
+.B		>	&gt;
+.B		"	&quot;
+.B		'	&apos;
+.B		&	&amp;
+.fi
+
+This way you can print directly to your printer, use
+
+\fB*FoomaticRIPPostPipe: "| cat &gt; /dev/lp0"\fR
+
+or
+
+\fB*FoomaticRIPPostPipe: "| cat &gt; /dev/usb/lp0"\fR
+
+for local parallel or USB printers. To make normal users able to print
+this way add them to the group \fBlp\fR and make sure that the
+appropriate printer device file \fI/dev/...\fR is group-writable for
+the \fBlp\fR group.
+
+for a TCP/Socket/JetDirect printer with the host name \fBprinter\fR
+listening on port \fB9100\fR you need this:
+
+\fB*FoomaticRIPPostPipe: "| /usr/bin/nc -w 1 printer 9100"\fR
+
+Note the "-w 1" in the "nc" command line, it makes "nc" exiting
+immediately after the data is transferred to the printer.
+
+\fB*FoomaticRIPPostPipe: "| rlpr -Plp@printserver"\fR
+
+directs your jobs to the LPD printer queue \fBlp\fR on the machine
+named \fBprintserver\fR.
+
+See also http://www.openprinting.org/direct-doc.html
+
+.SH "PRINTING WITH SPOOLER"
+
+See the documentation on the OpenPrinting Web site:
+.ft CW
+http://www.openprinting.org/
+\fR
+
+.SH "CONFIGURATION FILE"
+
+The file \fB@sysconfdir@/foomatic/filter.conf\fR is read whenever
+foomatic-rip is executed. It allows to configure the behavior of
+foomatic-rip as follows (lines beginning with \fB#\fR are comments and
+therefore get ignored):
+
+.TP 10
+.B debug: 0|1
+\fRTurns on (\fB1\fR) or off (\fB0\fR) the debug mode. This is equivalent to
+supplying the \fB--debug\fR command line option. Default setting is \fB0\fR.
+
+.TP 10
+.B ps_accounting: 0|1
+\fRTurns on (\fB1\fR) or off (\fB0\fR) inserting PostScript code for page
+accounting into PostScript jobs. The inserted PostScript code makes
+Ghostscript generating accounting output on stderr and CUPS can this way
+log each page which got printed. The code will only be inserted if CUPS
+is the spooler. Default setting is \fB1\fR.
+
+.TP 10
+.BI echo: \ [<path>/]<executable>
+\fRSets the path to an \fBecho(1)\fR executable which supports \fB-n\fR.
+
+.TP 10
+.BI gspath: \ [<path>/]<executable>
+\fRSets the path to the Ghostscript (\fBgs(1)\fR) executable. To be used if
+Ghostscript is at a non-standard location or if an alternative Ghostscript
+should be used.
+
+.TP 10
+.BI execpath: \ <path>[:<path>]...
+\fRSets the \fB$PATH\fR variable to be used by foomatic-rip.
+
+.TP 10
+.BI cupsfilterpath: \ <path>[:<path>]...
+\fRSets the directories (colon-separated) in which foomatic-rip searches for
+CUPS filters.
+
+.TP 10
+.BI preferred_shell: \ [<path>/]<executable>
+\fRSets the preferred shell to use when executing FoomaticRIPCommandLine and
+friends. Several PPD files use shell constructs that require a more
+modern shell like \fBbash\fR, \fBzsh\fR, or \fBksh\fR.
+
+
+.SH FILES
+.PD 0
+.TP 0
+@sysconfdir@/cups/ppd/<printer>.ppd
+.TP 0
+@sysconfdir@/direct/<printer>.ppd
+
+The PPD files of the currently defined printers
+
+.TP 0
+@sysconfdir@/foomatic/filter.conf
+
+Configuration file for foomatic-rip
+
+.PD 0
+
+.\".SH SEE ALSO
+.\".IR foomatic-XXX (1),
+
+.SH EXIT STATUS
+.B foomatic-rip
+returns 0 unless something unexpected happens.
+
+.SH AUTHOR
+Till Kamppeter <\fItill.kamppeter@gmail.com\fR> with parts of Manfred
+Wassmanns's <\fImanolo@NCC-1701.B.Shuttle.de\fR> man pages for the
+Foomatic 2.0.x filters.
+
+.SH BUGS
+None so far.
+
+Please send bug reports to the OpenPrinting bug tracker:
+
+http://bugs.linuxfoundation.org/
+
+Use "OpenPrinting" as the product and "cups-filters" as the component.
