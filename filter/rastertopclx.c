@@ -287,7 +287,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     memset(DitherStates, 0, sizeof(DitherStates));
   }
   else if (header->cupsColorSpace == CUPS_CSPACE_RGB &&
-           (ppd && (ppd->model_number & PCL_RASTER_RGB24)))
+           (!ppd || (ppd->model_number & PCL_RASTER_RGB24)))
   {
    /*
     * Use 24-bit RGB output mode...
@@ -358,15 +358,15 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       fputs("DEBUG: Loaded CMYK separation from PPD.\n", stderr);
     else
     {
-      /*if (header->cupsColorSpace == CUPS_CSPACE_KCMY ||
+      if (header->cupsColorSpace == CUPS_CSPACE_KCMY ||
 	  header->cupsColorSpace == CUPS_CSPACE_CMYK)
 	PrinterPlanes = 4;
       else if (header->cupsColorSpace == CUPS_CSPACE_CMY)
 	PrinterPlanes = 3;
-	else*/
-      PrinterPlanes = 1;
-      fputs("DEBUG: Loading default K separation.\n", stderr);
-      /*fprintf(stderr, "DEBUG: Color Space: %d; Color Planes %d\n", header->cupsColorSpace, PrinterPlanes);*/
+      else
+	PrinterPlanes = 1;
+      /*fputs("DEBUG: Loading default K separation.\n", stderr);*/
+      fprintf(stderr, "DEBUG: Color Space: %d; Color Planes %d\n", header->cupsColorSpace, PrinterPlanes);
       CMYK = cupsCMYKNew(PrinterPlanes);
     }
 
@@ -467,6 +467,8 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     snprintf(spec, sizeof(spec), "COLORSPACE.%s", colormodel);
     if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", spec)) != NULL))
       printf("@PJL SET COLORSPACE=%s\r\n", attr->value);
+    if (!ppd)
+      printf("@PJL SET COLORSPACE=%s\r\n", colormodel);
 
     snprintf(spec, sizeof(spec), "RENDERINTENT.%s", colormodel);
     if (ppd && ((attr = ppdFindAttr(ppd, "cupsPJL", spec)) != NULL))
@@ -730,7 +732,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       }
     }
   }
-  else if (ppd && (ppd->model_number & PCL_RASTER_CID) &&
+  else if ((!ppd || (ppd->model_number & PCL_RASTER_CID)) &&
 	   OutputMode == OUTPUT_RGB)
   {
    /*
@@ -740,8 +742,8 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     pcl_set_simple_resolution(header->HWResolution[0]);
 					/* Set output resolution */
 
-    cupsWritePrintData("\033*v6W\0\3\0\10\10\10", 11);
-					/* 24-bit RGB */
+    cupsWritePrintData("\033*v6W\2\3\0\10\10\10", 11);
+					/* 24-bit sRGB */
   }
   else
   {

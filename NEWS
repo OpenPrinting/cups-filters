@@ -3,6 +3,32 @@ NEWS - OpenPrinting CUPS Filters v1.0.41 - 2013-10-30
 
 CHANGES IN V1.0.42
 
+	- pdftoippprinter: Made PCL 5c/e printing working correctly,
+	  by first adding support for unprintable margins and
+	  defaulting to 12pt margins if no margin info is supplied,
+	  and second, by doing color printing always in RGB color
+	  space.
+	- rastertopclx: Improved support for PPD-less printing,
+	  allowing color printing with (s)RGB color space. Output is
+	  in sRGB then.
+	- rastertopclx: Determine page size and select correct PCL
+	  command for the page size more reliably, especially for
+	  landscape-oriented pages.
+	- gstoraster: Do correct PWG Raster output, allow switching to
+	  PWG Raster via "media-class=PwgRaster" option and CUPS
+	  Raster via "media-class=". Default for PPD-less printing is
+	  PWG Raster.
+	- gstoraster: Support applying unprintable margins for
+	  PPD-less mode with CUPS Raster output.
+	- libcupsfilters: Added support for "media-left-margin",
+	  "media-right-margin", "media-bottom-margin", and
+	  "media-top-margin" IPP options to specify unprintable
+	  margins in 1/100th of a mm, to allow PPD-less printing with
+	  unprintable margins (esp. PCL 5c/e with rastertopclx).
+	- libcupsfilters: Do not set "MediaClass" to "PwgRaster" when
+	  we request a CUPS Raster header and not a PWG Raster header.
+	- libcupsfilters: Fixed typo in a debug message in the colord
+          support part.
 	- cupsfilters.convs: Corrected cost factor of
 	  vnd.cups-postscript -> vnd.cups-raster conversion with
 	  gstoraster, so that input data of the type

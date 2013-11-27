@@ -17,6 +17,8 @@
  *   exec_filter()    - Execute a filter process
  *   exec_filters()   - Execute a filter chain
  *   open_pipe()      - Create a pipe to transfer data from filter to filter
+ *   get_option_in_str() - Get an option value from a string like argv[5]
+ *   set_option_in_str() - Set an option value in a string like argv[5]
  */
 
 /*
@@ -62,12 +64,18 @@ static int		exec_filter(const char *filter, char **argv,
 			            int infd, int outfd);
 static int		exec_filters(cups_array_t *filters, char **argv);
 static int		open_pipe(int *fds);
+static char*		get_option_in_str(char *buf, const char *option,
+					  int return_value);
+static void		set_option_in_str(char *buf, int buflen,
+					  const char *option,
+					  const char *value);
 
 /*
  * Local globals...
  */
 
 static int		job_canceled = 0;
+
 
 /*
  * 'main()' - Main entry for filter...
@@ -87,14 +95,28 @@ main(int  argc,				/* I - Number of command-line args */
   int		num_options;		/* Number of options */
   cups_option_t	*options;		/* Options */
   const char	*val;			/* Option value */
-  const char	*argv_nt[8];		/* NULL-terminated array of the command
+  char	        *argv_nt[8];		/* NULL-terminated array of the command
 					   line arguments */
+  int           optbuflen;
   cups_array_t  *filter_chain;          /* Filter chain to execute */
   int		exit_status = 0;	/* Exit status */
-  char		*filter;
+  int		color_printing;		/* Do we print in color? */
+  char		*filter, *p;
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+  static const char * const color_mode_option_names[] =
+    {	/* Possible names for a color mode option */
+      "pwg-raster-document-type",
+      "PwgRasterDocumentType",
+      "print-color-mode",
+      "PrintColorMode",
+      "color-space",
+      "ColorSpace",
+      "color-model",
+      "ColorModel",
+      NULL
+    };
 
 
  /*
@@ -182,8 +204,13 @@ main(int  argc,				/* I - Number of command-line args */
   * Copy the command line arguments into a NULL-terminated array
   */
 
-  for (i = 0; i < 6; i++)
+  for (i = 0; i < 5; i++)
     argv_nt[i] = argv[i];
+  /* We copy the contents of argv[5] into a somewhat larger buffer so that
+     we can manipulate it */
+  optbuflen = strlen(argv[5]) + 256;
+  argv_nt[5] = calloc(optbuflen, sizeof(char));
+  strcpy(argv_nt[5], (const char*)argv[5]);
   argv_nt[6] = filename;
   argv_nt[7] = NULL;
 
@@ -219,6 +246,9 @@ main(int  argc,				/* I - Number of command-line args */
     if (strcasestr(val, "raster"))
     {
       output_format = PWGRASTER;
+      /* PWG Raster output */
+      set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
+      set_option_in_str(argv_nt[5], optbuflen, "media-class", "PwgRaster");
       if (filter_present("gstoraster"))
 	cupsArrayAdd(filter_chain, "gstoraster");
       else
@@ -296,6 +326,47 @@ main(int  argc,				/* I - Number of command-line args */
   }
   if (output_format == PCL)
   {
+    /* We need CUPS Raster as we want to use rastertopclx with unprintable
+       margins */
+    set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
+    set_option_in_str(argv_nt[5], optbuflen, "media-class", "");
+    /* Does the client send info about margins? */
+    if (!get_option_in_str(argv_nt[5], "media-left-margin", 0) &&
+	!get_option_in_str(argv_nt[5], "media-right-margin", 0) &&
+	!get_option_in_str(argv_nt[5], "media-top-margin", 0) &&
+	!get_option_in_str(argv_nt[5], "media-bottom-margin", 0))
+    {
+      /* Set default 12pt margins if there is no info about printer's
+	 unprintable margins (100th of mm units, 12.0 * 2540.0 / 72.0 = 423.33)
+      */
+      set_option_in_str(argv_nt[5], optbuflen, "media-left-margin", "423.33");
+      set_option_in_str(argv_nt[5], optbuflen, "media-right-margin", "423.33");
+      set_option_in_str(argv_nt[5], optbuflen, "media-top-margin", "423.33");
+      set_option_in_str(argv_nt[5], optbuflen, "media-bottom-margin", "423.33");
+    }
+    /* Check whether the job is requested to be printed in color and if so,
+       set the color space to RGB as this is the best color printing support
+       in PCL 5c */
+    color_printing = 0;
+    for (i = 0; color_mode_option_names[i]; i ++)
+    {
+      p = get_option_in_str(argv_nt[5], color_mode_option_names[i], 1);
+      if (p && (strcasestr(p, "RGB") || strcasestr(p, "CMY") ||
+		strcasestr(p, "color")))
+      {
+	color_printing = 1;
+	break;
+      }
+    }
+    if (color_printing == 1)
+    {
+      /* Remove unneeded color mode options */
+      for (i = 0; color_mode_option_names[i]; i ++)
+	set_option_in_str(argv_nt[5], optbuflen, color_mode_option_names[i],
+			  NULL);
+      /* Set RGB as color mode */
+      set_option_in_str(argv_nt[5], optbuflen, "print-color-mode", "RGB");
+    }
     if (filter_present("gstoraster"))
       cupsArrayAdd(filter_chain, "gstoraster");
     else
@@ -687,6 +758,86 @@ open_pipe(int *fds)			/* O - Pipe file descriptors (2) */
   */
 
   return (0);
+}
+
+
+/*
+ * Get option value in a string of options
+ */
+
+static char*				/* O - Value, NULL if option not set */
+get_option_in_str(char *buf,		/* I - Buffer with option list string */
+		  const char *option,	/* I - Option of which to get value */
+		  int return_value)	/* I - Return value or only check
+					   presence of option? */
+{
+  char *p1, *p2;
+  char *result;
+
+  if (!buf || !option)
+    return NULL;
+  if ((p1 = strcasestr(buf, option)) == NULL)
+    return NULL;
+  if (p1 > buf && *(p1 - 1) != ' ' && *(p1 - 1) != '\t')
+    return NULL;
+  p2 = p1 + strlen(option);
+  if (*p2 == ' ' || *p2 == '\t' || *p2 == '\0')
+    return "";
+  if (*p2 != '=')
+    return NULL;
+  if (!return_value)
+    return "";
+  p1 = p2 + 1;
+  for (p2 = p1; *p2 != ' ' && *p2 != '\t' && *p2 != '\0'; p2 ++);
+  if (p2 == p1)
+    return "";
+  result = calloc(p2 - p1 + 1, sizeof(char));
+  memcpy(result, p1, p2 - p1);
+  result[p2 - p1] = '\0';
+  return result;
+}
+
+
+/*
+ * Set an option in a string of options
+ */
+
+void					/* O - 0 on success, 1 on error */
+set_option_in_str(char *buf,		/* I - Buffer with option list string */
+		  int buflen,		/* I - Length of buffer */
+		  const char *option,	/* I - Option to change/add */
+		  const char *value)	/* I - New value for option, NULL
+					       removes option */
+{
+  char *p1, *p2;
+
+  if (!buf || buflen == 0 || !option)
+    return;
+  /* Remove any occurrence of option in the string */
+  p1 = buf;
+  while (*p1 != '\0' && (p2 = strcasestr(p1, option)) != NULL)
+  {
+    if (p2 > buf && *(p2 - 1) != ' ' && *(p2 - 1) != '\t')
+    {
+      p1 = p2 + 1;
+      continue;
+    }
+    p1 = p2 + strlen(option);
+    if (*p1 != '=' && *p1 != ' ' && *p1 != '\t' && *p1 != '\0')
+      continue;
+    while (*p1 != ' ' && *p1 != '\t' && *p1 != '\0') p1 ++;
+    while ((*p1 == ' ' || *p1 == '\t') && *p1 != '\0') p1 ++;
+    memmove(p2, p1, strlen(buf) - (buf - p1) + 1);
+    p1 = p2;
+  }
+  /* Add option=value to the end of the string */
+  if (!value)
+    return;
+  p1 = buf + strlen(buf);
+  *p1 = ' ';
+  p1 ++;
+  snprintf(p1, buflen - (buf - p1), "%s=%s", option, value);
+  buf[buflen - 1] = '\0';
 }
 
 /*

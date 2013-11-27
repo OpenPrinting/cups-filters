@@ -86,6 +86,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
                 *media_source,          /* Media source */
                 *media_type;		/* Media type */
   pwg_media_t   *size_found;            /* page size found for given name */
+  float         size;                   /* page size dimension */
 
  /*
   * Range check input...
@@ -165,7 +166,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	   (val = cupsGetOption("MediaClass", num_options, options)) != NULL)
     _strlcpy(h->MediaClass, val, sizeof(h->MediaClass));
   else if (set_defaults)
-    strcpy(h->MediaClass, "PwgRaster");
+    strcpy(h->MediaClass, "");
 
   if ((val = cupsGetOption("media-color", num_options, options)) != NULL ||
       (val = cupsGetOption("MediaColor", num_options, options)) != NULL)
@@ -326,13 +327,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   }
   else if (set_defaults)
     h->LeadingEdge = CUPS_EDGE_TOP;
-
-  if (pwg_raster || set_defaults)
-  {
-    /* TODO - Support for margins */
-    h->Margins[0] = 0;
-    h->Margins[1] = 0;
-  }
 
   if (pwg_raster || set_defaults)
   {
@@ -607,6 +601,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   if (pwg_raster)
   {
     /* Set "reserved" fields to 0 */
+    h->Margins[0] = 0;
+    h->Margins[1] = 0;
     h->ImagingBoundingBox[0] = 0;
     h->ImagingBoundingBox[1] = 0;
     h->ImagingBoundingBox[2] = 0;
@@ -618,15 +614,58 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   }
   else
   {
-    /* TODO - Support for non-zero margins */
-    h->ImagingBoundingBox[0] = 0;
-    h->ImagingBoundingBox[1] = 0;
-    h->ImagingBoundingBox[2] = h->PageSize[0];
-    h->ImagingBoundingBox[3] = h->PageSize[1];
-    h->cupsImagingBBox[0] = 0.0;
-    h->cupsImagingBBox[1] = 0.0;
-    h->cupsImagingBBox[2] = h->cupsPageSize[0];
-    h->cupsImagingBBox[3] = h->cupsPageSize[1];
+    if ((val = cupsGetOption("media-left-margin", num_options, options))
+	!= NULL)
+    {
+      size = atol(val) * 72.0 / 2540.0; 
+      h->Margins[0] = (int)size;
+      h->ImagingBoundingBox[0] = (int)size;
+      h->cupsImagingBBox[0] = size;
+    }
+    else if (set_defaults)
+    {
+      h->Margins[0] = 0;
+      h->ImagingBoundingBox[0] = 0;
+      h->cupsImagingBBox[0] = 0.0;
+    }
+    if ((val = cupsGetOption("media-bottom-margin", num_options, options))
+	!= NULL)
+    {
+      size = atol(val) * 72.0 / 2540.0; 
+      h->Margins[1] = (int)size;
+      h->ImagingBoundingBox[1] = (int)size;
+      h->cupsImagingBBox[1] = size;
+    }
+    else if (set_defaults)
+    {
+      h->Margins[1] = 0;
+      h->ImagingBoundingBox[1] = 0;
+      h->cupsImagingBBox[1] = 0.0;
+    }
+    if ((val = cupsGetOption("media-right-margin", num_options, options))
+	!= NULL)
+    {
+      size = atol(val) * 72.0 / 2540.0; 
+      h->ImagingBoundingBox[2] = h->PageSize[0] - (int)size;
+      h->cupsImagingBBox[2] = h->cupsPageSize[0] - size;
+    }
+    else if (set_defaults)
+    {
+      h->ImagingBoundingBox[2] = h->PageSize[0];
+      h->cupsImagingBBox[2] = h->cupsPageSize[0];
+    }
+    if ((val = cupsGetOption("media-top-margin", num_options, options))
+	!= NULL)
+    {
+      size = atol(val) * 72.0 / 2540.0; 
+      h->ImagingBoundingBox[3] = h->PageSize[1] - (int)size;
+      h->cupsImagingBBox[3] = h->cupsPageSize[1] - size;
+    }
+    else if (set_defaults)
+    {
+      h->ImagingBoundingBox[3] = h->PageSize[1];
+      h->cupsImagingBBox[3] = h->cupsPageSize[1];
+    }
   }
 
   if (pwg_raster)

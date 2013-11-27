@@ -333,7 +333,7 @@ colord_get_profile_for_device_id (const char *device_id,
   /* find the device */
   device_path = get_device_path_for_device_id (con, device_id);
   if (device_path == NULL) {
-    fprintf(stderr, "DEBUG: Failed to get find device %s\n", device_id);
+    fprintf(stderr, "DEBUG: Failed to get device %s\n", device_id);
     goto out;
   }
 

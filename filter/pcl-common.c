@@ -37,12 +37,66 @@ pcl_set_media_size(ppd_file_t *ppd,	/* I - PPD file */
                    float      width,	/* I - Width of page */
                    float      length)	/* I - Length of page */
 {
-  (void)width;
+  float l;
+  int l_int;
+
+  if (width < length)
+    l = length;
+  else
+    l = width;
+  l_int = (int)(l + 0.5f);
+  fprintf (stderr, "DEBUG: Width: %f Length: %f Long Edge: %f\n",
+	   width, length, l);
 
   printf("\033&l0O");			/* Set portrait orientation */
 
   if (!ppd || ppd->model_number & PCL_PAPER_SIZE)
-    switch ((int)(length + 0.5f))
+  {
+    if (l_int >= 418 && l_int <= 420) /* Postcard */
+      printf("\033&l71A");		/* Set page size */
+    else if (l_int >= 539 && l_int <= 541) /* Monarch Envelope */
+      printf("\033&l80A");		/* Set page size */
+    else if (l_int >= 566 && l_int <= 568) /* Double Postcard */
+      printf("\033&l72A");		/* Set page size */
+    else if (l_int >= 594 && l_int <= 596) /* A5 */
+      printf("\033&l25A");		/* Set page size */
+    else if (l_int >= 611 && l_int <= 613) /* Statement */
+      printf("\033&l5A");		/* Set page size */
+    else if (l_int >= 623 && l_int <= 625) /* DL Envelope */
+      printf("\033&l90A");		/* Set page size */
+    else if (l_int >= 648 && l_int <= 650) /* C5 Envelope */
+      printf("\033&l91A");		/* Set page size */
+    else if (l_int >= 683 && l_int <= 685) /* COM-10 Envelope */
+      printf("\033&l81A");		/* Set page size */
+    else if (l_int >= 708 && l_int <= 710) /* B5 Envelope */
+      printf("\033&l100A");		/* Set page size */
+    else if (l_int >= 728 && l_int <= 730) /* B5 */
+      printf("\033&l45A");		/* Set page size */
+    else if (l_int >= 755 && l_int <= 757) /* Executive */
+      printf("\033&l1A");		/* Set page size */
+    else if (l_int >= 791 && l_int <= 793) /* Letter */
+      printf("\033&l2A");		/* Set page size */
+    else if (l_int >= 841 && l_int <= 843) /* A4 */
+      printf("\033&l26A");		/* Set page size */
+    else if (l_int >= 935 && l_int <= 937) /* Foolscap */
+      printf("\033&l23A");		/* Set page size */
+    else if (l_int >= 1007 && l_int <= 1009) /* Legal */
+      printf("\033&l3A");		/* Set page size */
+    else if (l_int >= 1031 && l_int <= 1033) /* B4 */
+      printf("\033&l46A");		/* Set page size */
+    else if (l_int >= 1190 && l_int <= 1192) /* A3 */
+      printf("\033&l27A");		/* Set page size */
+    else if (l_int >= 1223 && l_int <= 1225) /* Tabloid */
+      printf("\033&l6A");		/* Set page size */
+    else
+    {
+      printf("\033&l101A");		/* Set page size */
+      printf("\033&l6D\033&k12H");	/* Set 6 LPI, 10 CPI */
+      printf("\033&l%.2fP", l / 12.0);	/* Set page length */
+      printf("\033&l%.0fF", l / 12.0);	/* Set text length to page */
+    }
+#if 0
+    switch ((int)(l + 0.5f))
     {
       case 419 : /* Postcard */
           printf("\033&l71A");		/* Set page size */
@@ -119,18 +173,20 @@ pcl_set_media_size(ppd_file_t *ppd,	/* I - PPD file */
       default :
           printf("\033&l101A");		/* Set page size */
 	  printf("\033&l6D\033&k12H");	/* Set 6 LPI, 10 CPI */
-	  printf("\033&l%.2fP", length / 12.0);
+	  printf("\033&l%.2fP", l / 12.0);
 					/* Set page length */
-	  printf("\033&l%.0fF", length / 12.0);
+	  printf("\033&l%.0fF", l / 12.0);
 					/* Set text length to page */
 	  break;
     }
+#endif
+  }
   else
   {
     printf("\033&l6D\033&k12H");	/* Set 6 LPI, 10 CPI */
-    printf("\033&l%.2fP", length / 12.0);
+    printf("\033&l%.2fP", l / 12.0);
 					/* Set page length */
-    printf("\033&l%.0fF", length / 12.0);
+    printf("\033&l%.0fF", l / 12.0);
 					/* Set text length to page */
   }
 
