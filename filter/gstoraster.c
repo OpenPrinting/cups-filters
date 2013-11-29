@@ -35,6 +35,7 @@ MIT Open Source License  -  http://www.opensource.org/
 #define HAVE_CUPS_1_7 1
 #endif
 
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -49,12 +50,6 @@ MIT Open Source License  -  http://www.opensource.org/
 
 #define PDF_MAX_CHECK_COMMENT_LINES	20
 
-#ifndef GS
-#define GS "gs"
-#endif
-#ifndef BINDIR
-#define BINDIR "/usr/bin"
-#endif
 #ifndef CUPS_FONTPATH
 #define CUPS_FONTPATH "/usr/share/cups/fonts"
 #endif
@@ -663,7 +658,7 @@ main (int argc, char **argv, char *envp[])
 
   /* Part of Ghostscript command line which is not dependent on the job and/or
      the driver */
-  snprintf(tmpstr, sizeof(tmpstr), "%s/%s", BINDIR, GS);
+  snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_GHOSTSCRIPT);
   cupsArrayAdd(gs_args, strdup(tmpstr));
   cupsArrayAdd(gs_args, strdup("-dQUIET"));
   /*cupsArrayAdd(gs_args, strdup("-dDEBUG"));*/
@@ -752,7 +747,7 @@ main (int argc, char **argv, char *envp[])
   cupsArrayAdd(gs_args, strdup("-_"));
 
   /* Execute Ghostscript command line ... */
-  snprintf(tmpstr, sizeof(tmpstr), "%s/%s", BINDIR, GS);
+  snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_GHOSTSCRIPT);
 
   /* call Ghostscript */
   rewind(fp);

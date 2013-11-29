@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.41 - 2013-10-30
 
 CHANGES IN V1.0.42
 
+	- gstoraster: At build time use the path for Ghostscript which
+	  our build system already finds for pdftops.
 	- pdftoraster: Take into account rotate field in PDF header,
 	  when pdftopdf rotates a page to fit the paper it sets the
 	  rotate field and does not swap the width and height entries.
