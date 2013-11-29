@@ -249,12 +249,12 @@ main(int  argc,				/* I - Number of command-line args */
       /* PWG Raster output */
       set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
       set_option_in_str(argv_nt[5], optbuflen, "media-class", "PwgRaster");
-      if (filter_present("gstoraster"))
+      if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
 	cupsArrayAdd(filter_chain, "gstoraster");
       else
       {
 	fprintf(stderr,
-		"DEBUG: Filter gstoraster missing for \"output-format=%s\", using pdftoraster.\n", val);
+		"DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n", CUPS_GHOSTSCRIPT, val);
 	if (filter_present("pdftoraster"))
 	  cupsArrayAdd(filter_chain, "pdftoraster");
 	else
@@ -265,15 +265,6 @@ main(int  argc,				/* I - Number of command-line args */
 	  goto error;
 	}
       }
-      /*if (filter_present("rastertopwg"))
-	cupsArrayAdd(filter_chain, "rastertopwg");
-      else
-      {
-	fprintf(stderr,
-		"ERROR: Filter rastertopwg missing for \"output-format=%s\"\n", val);
-	exit_status = 1;
-	goto error;
-      }*/
     }
     else if (strcasestr(val, "pdf"))
       output_format = PDF;
@@ -367,12 +358,12 @@ main(int  argc,				/* I - Number of command-line args */
       /* Set RGB as color mode */
       set_option_in_str(argv_nt[5], optbuflen, "print-color-mode", "RGB");
     }
-    if (filter_present("gstoraster"))
+    if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
       cupsArrayAdd(filter_chain, "gstoraster");
     else
     {
       fprintf(stderr,
-	      "DEBUG: Filter gstoraster missing for \"output-format=%s\", using pdftoraster.\n", val);
+	      "DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n", CUPS_GHOSTSCRIPT, val);
       if (filter_present("pdftoraster"))
 	cupsArrayAdd(filter_chain, "pdftoraster");
       else
