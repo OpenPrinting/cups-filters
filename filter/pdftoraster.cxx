@@ -445,15 +445,25 @@ static void parseOpts(int argc, char **argv)
       /* ICCProfile is specified */
       colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
     }
-  } else
+  } else {
 #ifdef HAVE_CUPS_1_7
-    cupsRasterParseIPPOptions(&header,num_options,options,1,1);
+    int pwgraster = 1;
+    const char *t = cupsGetOption("media-class", num_options, options);
+    if (t == NULL)
+      t = cupsGetOption("MediaClass", num_options, options);
+    if (t != NULL)
+    {
+      if (strcasestr(t, "pwg"))
+	pwgraster = 1;
+      else
+	pwgraster = 0; 
+    }
+    cupsRasterParseIPPOptions(&header,num_options,options,pwgraster,1);
 #else
-  {
     fprintf(stderr, "ERROR: No PPD file specified.\n");
     exit(1);
-  }
 #endif /* HAVE_CUPS_1_7 */
+  }
 }
 
 static void parsePDFTOPDFComment(FILE *fp)
@@ -1561,7 +1571,7 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
   int i;
   bool landscape = 0;
 
-  fprintf(stderr, "DEBUG: mediaBox = [ %f %f %f %f ] rotate = %d\n",
+  fprintf(stderr, "DEBUG: mediaBox = [ %f %f %f %f ]; rotate = %d\n",
 	  mediaBox->x1, mediaBox->y1, mediaBox->x2, mediaBox->y2, rotate);
   l = mediaBox->x2 - mediaBox->x1;
   if (l < 0) l = -l;
@@ -1645,8 +1655,16 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
   } else {
     for (i = 0; i < 2; i ++)
       paperdimensions[i] = header.PageSize[i];
-    for (i = 0; i < 4; i ++)
-      margins[i] = 0.0;
+    if (header.cupsImagingBBox[3] > 0.0) {
+      /* Set margins if we have a bounding box defined ... */
+      margins[0] = header.cupsImagingBBox[0];
+      margins[1] = header.cupsImagingBBox[1];
+      margins[2] = paperdimensions[0] - header.cupsImagingBBox[2];
+      margins[3] = paperdimensions[1] - header.cupsImagingBBox[3];
+    } else
+      /* ... otherwise use zero margins */
+      for (i = 0; i < 4; i ++)
+	margins[i] = 0.0;
     /*margins[0] = 0.0;
     margins[1] = 0.0;
     margins[2] = header.PageSize[0];
@@ -1671,21 +1689,31 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
   bitmapoffset[1] = margins[3] / 72.0 * header.HWResolution[1];
 
   /* write page header */
-  header.cupsWidth = (paperdimensions[0] - margins[0] - margins[2]) / 72.0 * 
-    header.HWResolution[0];
-  header.cupsHeight = (paperdimensions[1] - margins[1] - margins[3]) / 72.0 *
-    header.HWResolution[1];
+  header.cupsWidth = ((paperdimensions[0] - margins[0] - margins[2]) /
+		      72.0 * header.HWResolution[0]) + 0.5;
+  header.cupsHeight = ((paperdimensions[1] - margins[1] - margins[3]) /
+		       72.0 * header.HWResolution[1] + 0.5);
   for (i = 0; i < 2; i ++) {
     header.cupsPageSize[i] = paperdimensions[i];
-    header.PageSize[i] = (unsigned int)header.cupsPageSize[i];
-    header.Margins[i] = margins[i];
+    header.PageSize[i] = (unsigned int)(header.cupsPageSize[i] + 0.5);
+    if (strcasecmp(header.MediaClass, "PwgRaster") != 0)
+      header.Margins[i] = margins[i] + 0.5;
+    else
+      header.Margins[i] = 0;
   }
-  header.cupsImagingBBox[0] = margins[0];
-  header.cupsImagingBBox[1] = margins[1];
-  header.cupsImagingBBox[2] = paperdimensions[0]-margins[2];
-  header.cupsImagingBBox[3] = paperdimensions[1]-margins[3];
-  for (i = 0; i < 4; i ++)
-    header.ImagingBoundingBox[i] = (unsigned int)header.cupsImagingBBox[i];
+  if (strcasecmp(header.MediaClass, "PwgRaster") != 0) {
+    header.cupsImagingBBox[0] = margins[0];
+    header.cupsImagingBBox[1] = margins[1];
+    header.cupsImagingBBox[2] = paperdimensions[0] - margins[2];
+    header.cupsImagingBBox[3] = paperdimensions[1] - margins[3];
+    for (i = 0; i < 4; i ++)
+      header.ImagingBoundingBox[i] =
+	(unsigned int)(header.cupsImagingBBox[i] + 0.5);
+  } else
+    for (i = 0; i < 4; i ++) {
+      header.cupsImagingBBox[i] = 0.0;
+      header.ImagingBoundingBox[i] = 0;
+    }
 
   bytesPerLine = header.cupsBytesPerLine = (header.cupsBitsPerPixel *
     header.cupsWidth + 7) / 8;

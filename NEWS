@@ -17,12 +17,12 @@ CHANGES IN V1.0.42
 	- rastertopclx: Determine page size and select correct PCL
 	  command for the page size more reliably, especially for
 	  landscape-oriented pages.
-	- gstoraster: Do correct PWG Raster output, allow switching to
-	  PWG Raster via "media-class=PwgRaster" option and CUPS
-	  Raster via "media-class=". Default for PPD-less printing is
-	  PWG Raster.
-	- gstoraster: Support applying unprintable margins for
-	  PPD-less mode with CUPS Raster output.
+	- gstoraster, pdftoraster: Do correct PWG Raster output, allow
+	  switching to PWG Raster via "media-class=PwgRaster" option
+	  and CUPS Raster via "media-class=". Default for PPD-less
+	  printing is PWG Raster.
+	- gstoraster, pdftoraster: Support applying unprintable
+	  margins for PPD-less mode with CUPS Raster output.
 	- libcupsfilters: Added support for "media-left-margin",
 	  "media-right-margin", "media-bottom-margin", and
 	  "media-top-margin" IPP options to specify unprintable
