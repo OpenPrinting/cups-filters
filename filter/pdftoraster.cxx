@@ -1553,6 +1553,7 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
   SplashBitmap *bitmap;
   Page *page = catalog->getPage(pageNo);
   PDFRectangle *mediaBox = page->getMediaBox();
+  int rotate = page->getRotate();
   double paperdimensions[2], /* Physical size of the paper */
     margins[4];	/* Physical margins of print */
   ppd_size_t *size;		/* Page size */
@@ -1560,14 +1561,20 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
   int i;
   bool landscape = 0;
 
-  fprintf(stderr, "DEBUG: mediaBox = [ %f %f %f %f ]\n",
-	  mediaBox->x1, mediaBox->y1, mediaBox->x2, mediaBox->y2);
+  fprintf(stderr, "DEBUG: mediaBox = [ %f %f %f %f ] rotate = %d\n",
+	  mediaBox->x1, mediaBox->y1, mediaBox->x2, mediaBox->y2, rotate);
   l = mediaBox->x2 - mediaBox->x1;
   if (l < 0) l = -l;
-  header.PageSize[0] = (unsigned)l;
+  if (rotate == 90 || rotate == 270)
+    header.PageSize[1] = (unsigned)l;
+  else
+    header.PageSize[0] = (unsigned)l;
   l = mediaBox->y2 - mediaBox->y1;
   if (l < 0) l = -l;
-  header.PageSize[1] = (unsigned)l;
+  if (rotate == 90 || rotate == 270)
+    header.PageSize[0] = (unsigned)l;
+  else
+    header.PageSize[1] = (unsigned)l;
 
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
