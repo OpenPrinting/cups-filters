@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 -----------------------------------------------------
 
+CHANGES IN V1.0.43
+
+	- pdftops: After fixing the output of rotated PDF pages
+	  (usually landscape-oriented pages rotated by pdftopdf) in
+	  Poppler (Poppler/freedesktop.org bug #72312) corrected the
+	  use of "pdftops -origpagesizes" in pdftops appropriately
+	  (Red Hat bug #768811).
+
 CHANGES IN V1.0.42
 
 	- pdftoippprinter: Check also the presence of Ghostscript and
