@@ -125,7 +125,7 @@ AC_SUBST(DLOPEN_LIBS)
 
 # Transient run-time state dir of CUPS
 CUPS_STATEDIR=""
-AC_ARG_WITH(rundir, [  --with-cups-rundir           set transient run-time state directory of CUPS],CUPS_STATEDIR="$withval",[
+AC_ARG_WITH(cups-rundir, [  --with-cups-rundir           set transient run-time state directory of CUPS],CUPS_STATEDIR="$withval",[
         case "$uname" in
                 Darwin*)
                         # Darwin (OS X)
@@ -141,7 +141,7 @@ AC_SUBST(CUPS_STATEDIR)
 
 # Domain socket of CUPS...
 CUPS_DEFAULT_DOMAINSOCKET=""
-AC_ARG_WITH(domainsocket, [  --with-cups-domainsocket     set unix domain socket name used by CUPS
+AC_ARG_WITH(cups-domainsocket, [  --with-cups-domainsocket     set unix domain socket name used by CUPS
 ],
         default_domainsocket="$withval",
         default_domainsocket="")
