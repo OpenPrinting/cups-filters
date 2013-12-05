@@ -5,7 +5,7 @@
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2006 by Easy Software Products.
- *   Copyright 2011-2012 by Till Kamppeter
+ *   Copyright 2011-2013 by Till Kamppeter
  *
  *   These coded instructions, statements, and computer programs are the
  *   property of Apple Inc. and are protected by Federal copyright
@@ -244,7 +244,8 @@ main(int  argc,				/* I - Number of command-line args */
 		fit;			/* Fit output to default page size? */
   ppd_file_t	*ppd;			/* PPD file */
   ppd_size_t	*size;			/* Current page size */
-  char		resolution[128] = "300";/* Output resolution */
+  float		width = 0.0, length = 0.0;/* Page dimensions in points */
+  char		resolution[128] = "";   /* Output resolution */
   int           xres = 0, yres = 0,     /* resolution values */
                 maxres = CUPS_PDFTOPS_MAX_RESOLUTION,
                                         /* Maximum image rendering resolution */
@@ -271,7 +272,9 @@ main(int  argc,				/* I - Number of command-line args */
 		pstops_path[1024],	/* Path to pstops program */
 		*pstops_argv[7],	/* Arguments for pstops filter */
 		*pstops_options,	/* Options for pstops filter */
-		*pstops_end;		/* End of pstops filter option */
+		*pstops_end,		/* End of pstops filter option */
+		*ptr;			/* Pointer into value */
+  pwg_media_t   *size_found;            /* page size found for given name */
   const char	*cups_serverbin;	/* CUPS_SERVERBIN environment variable */
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
@@ -360,14 +363,21 @@ main(int  argc,				/* I - Number of command-line args */
   parsePDFTOPDFComment(filename);
 
  /*
+  * Read out the options from the fifth command line argument
+  */
+
+  num_options = cupsParseOptions(argv[5], 0, &options);
+
+ /*
   * Load the PPD file and mark options...
   */
 
-  ppd         = ppdOpenFile(getenv("PPD"));
-  num_options = cupsParseOptions(argv[5], 0, &options);
-
-  ppdMarkDefaults(ppd);
-  cupsMarkOptions(ppd, num_options, options);
+  ppd = ppdOpenFile(getenv("PPD"));
+  if (ppd)
+  {
+    ppdMarkDefaults(ppd);
+    cupsMarkOptions(ppd, num_options, options);
+  }
 
  /*
   * Select the PDF renderer: Ghostscript (gs), Poppler (pdftops),
@@ -453,7 +463,8 @@ main(int  argc,				/* I - Number of command-line args */
   pstops_argv[6] = NULL;
 
  /*
-  * Build the command-line for the pdftops or gs filter...
+  * Build the command-line for the pdftops, gs, pdftocairo, or
+  * acroread filter...
   */
 
   if (renderer == PDFTOPS)
@@ -489,12 +500,12 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argc    = 2;
   }
 
+ /*
+  * Set language level and TrueType font handling...
+  */
+
   if (ppd)
   {
-   /*
-    * Set language level and TrueType font handling...
-    */
-
     if (ppd->language_level == 1)
     {
       if (renderer == PDFTOPS)
@@ -541,130 +552,176 @@ main(int  argc,				/* I - Number of command-line args */
       else /* PDFTOCAIRO || ACROREAD */
         pdf_argv[pdf_argc++] = (char *)"-level3";
     }
+  }
+  else
+  {
+    /* Use PostScript level 2 as it works with nearly every printer */
+    if (renderer == PDFTOPS)
+    {
+      pdf_argv[pdf_argc++] = (char *)"-level2";
+      pdf_argv[pdf_argc++] = (char *)"-noembtt";
+    }
+    else if (renderer == GS)
+      pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=2";
+    else /* PDFTOCAIRO || ACROREAD */
+      pdf_argv[pdf_argc++] = (char *)"-level2";
+  }
 
-    if ((val = cupsGetOption("fitplot", num_options, options)) == NULL)
-      val = cupsGetOption("fit-to-page", num_options, options);
+  if ((val = cupsGetOption("fitplot", num_options, options)) == NULL)
+    val = cupsGetOption("fit-to-page", num_options, options);
+  if (val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
+      strcasecmp(val, "false"))
+    fit = 1;
+  else
+    fit = 0;
 
-    if (val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
-	strcasecmp(val, "false"))
-      fit = 1;
-    else
-      fit = 0;
+ /*
+  * Set output page size...
+  */
 
+  if (ppd)
+  {
+    size = ppdPageSize(ppd, NULL);
+    if (size)
+    {
+      width = size->width;
+      length = size->length;
+    }
+  }
+  else
+  {
+    if ((val = cupsGetOption("media-size", num_options, options)) != NULL ||
+	(val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
+	(val = cupsGetOption("page-size", num_options, options)) != NULL ||
+	(val = cupsGetOption("PageSize", num_options, options)) != NULL)
+    {
+      size_found = NULL;
+      if ((size_found = pwgMediaForPWG(val)) == NULL)
+	if ((size_found = pwgMediaForPPD(val)) == NULL)
+	  size_found = pwgMediaForLegacy(val);
+      if (size_found != NULL)
+      {
+	width = (size_found->width + 0.5) * 72.0 / 2540.0;
+	length = (size_found->length + 0.5) * 72.0 / 2540.0;
+      }
+      else
+	fprintf(stderr, "DEBUG: Unsupported page size %s.\n", val);
+    }
+  }
+
+  fprintf(stderr, "DEBUG: XXX1 %f %f %d\n", width, length, fit);
+  if (width > 0 && length > 0 && fit)
+  {
    /*
-    * Set output page size...
+    * Got the size, now get the orientation...
     */
 
-    size = ppdPageSize(ppd, NULL);
-    if (size && fit)
+    orientation = 0;
+
+    if ((val = cupsGetOption("landscape", num_options, options)) != NULL)
+    {
+      if (strcasecmp(val, "no") != 0 && strcasecmp(val, "off") != 0 &&
+	  strcasecmp(val, "false") != 0)
+	orientation = 1;
+    }
+    else if ((val = cupsGetOption("orientation-requested", num_options,
+                                    options)) != NULL)
     {
      /*
-      * Got the size, now get the orientation...
+      * Map IPP orientation values to 0 to 3:
+      *
+      *   3 = 0 degrees   = 0
+      *   4 = 90 degrees  = 1
+      *   5 = -90 degrees = 3
+      *   6 = 180 degrees = 2
       */
 
-      orientation = 0;
+      orientation = atoi(val) - 3;
+      if (orientation >= 2)
+	orientation ^= 1;
+    }
 
-      if ((val = cupsGetOption("landscape", num_options, options)) != NULL)
+    fprintf(stderr, "DEBUG: XXX2 %d\n", orientation);
+    if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
+    {
+      if (orientation & 1)
       {
-	if (strcasecmp(val, "no") != 0 && strcasecmp(val, "off") != 0 &&
-	    strcasecmp(val, "false") != 0)
-	  orientation = 1;
-      }
-      else if ((val = cupsGetOption("orientation-requested", num_options,
-                                    options)) != NULL)
-      {
-       /*
-	* Map IPP orientation values to 0 to 3:
-	*
-	*   3 = 0 degrees   = 0
-	*   4 = 90 degrees  = 1
-	*   5 = -90 degrees = 3
-	*   6 = 180 degrees = 2
-	*/
-
-	orientation = atoi(val) - 3;
-	if (orientation >= 2)
-	  orientation ^= 1;
-      }
-
-      if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
-      {
-	if (orientation & 1)
-	{
-	  snprintf(pdf_width, sizeof(pdf_width), "%.0f", size->length);
-	  snprintf(pdf_height, sizeof(pdf_height), "%.0f", size->width);
-	}
-	else
-	{
-	  snprintf(pdf_width, sizeof(pdf_width), "%.0f", size->width);
-	  snprintf(pdf_height, sizeof(pdf_height), "%.0f", size->length);
-	}
-
-	pdf_argv[pdf_argc++] = (char *)"-paperw";
-	pdf_argv[pdf_argc++] = pdf_width;
-	pdf_argv[pdf_argc++] = (char *)"-paperh";
-	pdf_argv[pdf_argc++] = pdf_height;
-	pdf_argv[pdf_argc++] = (char *)"-expand";
-
-      }
-      else if (renderer == GS)
-      {
-	if (orientation & 1)
-	{
-	  snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
-		   size->length);
-	  snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
-		   size->width);
-	}
-	else
-	{
-	  snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
-		   size->width);
-	  snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
-		   size->length);
-	}
-
-	pdf_argv[pdf_argc++] = pdf_width;
-	pdf_argv[pdf_argc++] = pdf_height;
+	snprintf(pdf_width, sizeof(pdf_width), "%.0f", length);
+	snprintf(pdf_height, sizeof(pdf_height), "%.0f", width);
       }
       else
       {
-        if (orientation & 1)
-          snprintf(pdf_widthxheight, sizeof(pdf_widthxheight), "%.0fx%.0f",
-                   size->length, size->width);
-        else
-          snprintf(pdf_widthxheight, sizeof(pdf_widthxheight), "%.0fx%.0f",
-                   size->width, size->length);
-
-        pdf_argv[pdf_argc++] = (char *)"-size";
-        pdf_argv[pdf_argc++] = pdf_widthxheight;
+	snprintf(pdf_width, sizeof(pdf_width), "%.0f", width);
+	snprintf(pdf_height, sizeof(pdf_height), "%.0f", length);
       }
+
+      pdf_argv[pdf_argc++] = (char *)"-paperw";
+      pdf_argv[pdf_argc++] = pdf_width;
+      pdf_argv[pdf_argc++] = (char *)"-paperh";
+      pdf_argv[pdf_argc++] = pdf_height;
+      pdf_argv[pdf_argc++] = (char *)"-expand";
+
     }
+    else if (renderer == GS)
+    {
+      if (orientation & 1)
+      {
+	snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
+		 length);
+	snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
+		 width);
+      }
+      else
+      {
+	snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
+		 width);
+	snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
+		 length);
+      }
+
+      pdf_argv[pdf_argc++] = pdf_width;
+      pdf_argv[pdf_argc++] = pdf_height;
+    }
+    else
+    {
+      if (orientation & 1)
+	snprintf(pdf_widthxheight, sizeof(pdf_widthxheight), "%.0fx%.0f",
+		 length, width);
+      else
+	snprintf(pdf_widthxheight, sizeof(pdf_widthxheight), "%.0fx%.0f",
+		 width, length);
+
+      pdf_argv[pdf_argc++] = (char *)"-size";
+      pdf_argv[pdf_argc++] = pdf_widthxheight;
+    }
+  }
 #ifdef HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES
-    else if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
-    {
-     /*
-      *  Use the page sizes of the original PDF document, this way documents
-      *  which contain pages of different sizes can be printed correctly
-      */
-
-      pdf_argv[pdf_argc++] = (char *)"-origpagesizes";
-    }
-#endif /* HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES */
-    else if (renderer == ACROREAD)
-    {
-     /*
-      * Use the page sizes of the original PDF document, this way documents
-      * which contain pages of different sizes can be printed correctly
-      */
-
-      pdf_argv[pdf_argc++] = (char *)"-choosePaperByPDFPageSize";
-    }
-
+  else if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
+  {
    /*
-    * Set output resolution ...
+    *  Use the page sizes of the original PDF document, this way documents
+    *  which contain pages of different sizes can be printed correctly
     */
 
+    pdf_argv[pdf_argc++] = (char *)"-origpagesizes";
+  }
+#endif /* HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES */
+  else if (renderer == ACROREAD)
+  {
+   /*
+    * Use the page sizes of the original PDF document, this way documents
+    * which contain pages of different sizes can be printed correctly
+    */
+
+    pdf_argv[pdf_argc++] = (char *)"-choosePaperByPDFPageSize";
+  }
+
+ /*
+  * Set output resolution ...
+  */
+
+  if (ppd)
+  {
     /* Ignore error exits of cupsRasterInterpretPPD(), if it found a resolution
        setting before erroring it is OK for us */
     cupsRasterInterpretPPD(&header, ppd, num_options, options, NULL);
@@ -672,18 +729,52 @@ main(int  argc,				/* I - Number of command-line args */
        method failed to find the printing resolution */
     if (header.HWResolution[0] > 100 && header.HWResolution[1] > 100)
     {
-	xres = header.HWResolution[0];
-	yres = header.HWResolution[1];
+      xres = header.HWResolution[0];
+      yres = header.HWResolution[1];
     }
     else if ((choice = ppdFindMarkedChoice(ppd, "Resolution")) != NULL)
       strncpy(resolution, choice->choice, sizeof(resolution));
     else if ((attr = ppdFindAttr(ppd,"DefaultResolution",NULL)) != NULL)
       strncpy(resolution, attr->value, sizeof(resolution));
+    resolution[sizeof(resolution)-1] = '\0';
+    if ((xres == 0) && (yres == 0) &&
+	((numvalues = sscanf(resolution, "%dx%d", &xres, &yres)) <= 0))
+      fprintf(stderr,
+	      "DEBUG: No resolution information found in the PPD file.\n");
   }
+  if ((xres == 0) && (yres == 0))
+  {
+    if ((val = cupsGetOption("printer-resolution", num_options,
+			   options)) != NULL ||
+	(val = cupsGetOption("Resolution", num_options, options)) != NULL)
+    {
+      xres = yres = strtol(val, (char **)&ptr, 10);
+      if (ptr > val && xres > 0)
+      {
+	if (*ptr == 'x')
+	  yres = strtol(ptr + 1, (char **)&ptr, 10);
+      }
 
-  resolution[sizeof(resolution)-1] = '\0';
-  if ((xres > 0) || (yres > 0) ||
-      ((numvalues = sscanf(resolution, "%dx%d", &xres, &yres)) > 0))
+      if (ptr <= val || xres <= 0 || yres <= 0 || !ptr ||
+	  (*ptr != '\0' &&
+	   strcasecmp(ptr, "dpi") &&
+	   strcasecmp(ptr, "dpc") &&
+	   strcasecmp(ptr, "dpcm")))
+      {
+	fprintf(stderr, "DEBUG: Bad resolution value \"%s\".\n", val);
+      }
+      else
+      {
+	if (!strcasecmp(ptr, "dpc") ||
+	    !strcasecmp(ptr, "dpcm"))
+	{
+	  xres = xres * 254 / 100;
+	  yres = yres * 254 / 100;
+	}
+      }
+    }
+  }
+  if ((xres > 0) || (yres > 0))
   {
     if ((yres > 0) && (xres > yres)) xres = yres;
   }
@@ -983,7 +1074,7 @@ main(int  argc,				/* I - Number of command-line args */
 	      fprintf(stderr, "DEBUG: Inserted workaround PostScript code for Kyocera printers\n");
 	      puts("% ===== Workaround insertion by pdftops CUPS filter =====");
 	      puts("% Kyocera's PostScript interpreter crashes on early name binding,");
-	      puts("% so eliminate all \"bind\"s by redifining \"bind\" to no-op");
+	      puts("% so eliminate all \"bind\"s by redefining \"bind\" to no-op");
 	      puts("/bind {} bind def");
 	      puts("% Some Kyocera printers have an unacceptably slow implementation");
 	      puts("% of image interpolation.");
