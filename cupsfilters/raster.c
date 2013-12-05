@@ -272,7 +272,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     }
 
     if (ptr <= val || xres <= 0 || yres <= 0 || !ptr ||
-	(strcasecmp(ptr, "dpi") &&
+	(*ptr != '\0' &&
+	 strcasecmp(ptr, "dpi") &&
 	 strcasecmp(ptr, "dpc") &&
 	 strcasecmp(ptr, "dpcm")))
     {

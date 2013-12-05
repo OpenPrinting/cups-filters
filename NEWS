@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
+	- libcupsfilters: cupsRasterParseIPPOptions() allows
+	  specifying resolutions without unit now, assuming dpi then
+	  (example: "600x600").
 	- Fixed "--with-cups-rundir" and "--with-cups-domainsocket" 
 	  options in configure (Bug #1174).
 	- pdftops: After fixing the output of rotated PDF pages
