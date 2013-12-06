@@ -240,11 +240,7 @@ main(int  argc,				/* I - Number of command-line args */
   int		num_options;		/* Number of options */
   cups_option_t	*options;		/* Options */
   const char	*val;			/* Option value */
-  int		orientation,		/* Output orientation */
-		fit;			/* Fit output to default page size? */
   ppd_file_t	*ppd;			/* PPD file */
-  ppd_size_t	*size;			/* Current page size */
-  float		width = 0.0, length = 0.0;/* Page dimensions in points */
   char		resolution[128] = "";   /* Output resolution */
   int           xres = 0, yres = 0,     /* resolution values */
                 maxres = CUPS_PDFTOPS_MAX_RESOLUTION,
@@ -266,15 +262,11 @@ main(int  argc,				/* I - Number of command-line args */
 		wait_status,		/* Status from child */
 		exit_status = 0;	/* Exit status */
   char		*pdf_argv[100],		/* Arguments for pdftops/gs */
-		pdf_width[255],		/* Paper width */
-		pdf_height[255],	/* Paper height */
-		pdf_widthxheight[255],	/* Paper width x height */
 		pstops_path[1024],	/* Path to pstops program */
 		*pstops_argv[7],	/* Arguments for pstops filter */
 		*pstops_options,	/* Options for pstops filter */
 		*pstops_end,		/* End of pstops filter option */
 		*ptr;			/* Pointer into value */
-  pwg_media_t   *size_found;            /* page size found for given name */
   const char	*cups_serverbin;	/* CUPS_SERVERBIN environment variable */
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
@@ -567,136 +559,8 @@ main(int  argc,				/* I - Number of command-line args */
       pdf_argv[pdf_argc++] = (char *)"-level2";
   }
 
-  if ((val = cupsGetOption("fitplot", num_options, options)) == NULL)
-    val = cupsGetOption("fit-to-page", num_options, options);
-  if (val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
-      strcasecmp(val, "false"))
-    fit = 1;
-  else
-    fit = 0;
-
- /*
-  * Set output page size...
-  */
-
-  if (ppd)
-  {
-    size = ppdPageSize(ppd, NULL);
-    if (size)
-    {
-      width = size->width;
-      length = size->length;
-    }
-  }
-  else
-  {
-    if ((val = cupsGetOption("media-size", num_options, options)) != NULL ||
-	(val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
-	(val = cupsGetOption("page-size", num_options, options)) != NULL ||
-	(val = cupsGetOption("PageSize", num_options, options)) != NULL)
-    {
-      size_found = NULL;
-      if ((size_found = pwgMediaForPWG(val)) == NULL)
-	if ((size_found = pwgMediaForPPD(val)) == NULL)
-	  size_found = pwgMediaForLegacy(val);
-      if (size_found != NULL)
-      {
-	width = (size_found->width + 0.5) * 72.0 / 2540.0;
-	length = (size_found->length + 0.5) * 72.0 / 2540.0;
-      }
-      else
-	fprintf(stderr, "DEBUG: Unsupported page size %s.\n", val);
-    }
-  }
-
-  fprintf(stderr, "DEBUG: XXX1 %f %f %d\n", width, length, fit);
-  if (width > 0 && length > 0 && fit)
-  {
-   /*
-    * Got the size, now get the orientation...
-    */
-
-    orientation = 0;
-
-    if ((val = cupsGetOption("landscape", num_options, options)) != NULL)
-    {
-      if (strcasecmp(val, "no") != 0 && strcasecmp(val, "off") != 0 &&
-	  strcasecmp(val, "false") != 0)
-	orientation = 1;
-    }
-    else if ((val = cupsGetOption("orientation-requested", num_options,
-                                    options)) != NULL)
-    {
-     /*
-      * Map IPP orientation values to 0 to 3:
-      *
-      *   3 = 0 degrees   = 0
-      *   4 = 90 degrees  = 1
-      *   5 = -90 degrees = 3
-      *   6 = 180 degrees = 2
-      */
-
-      orientation = atoi(val) - 3;
-      if (orientation >= 2)
-	orientation ^= 1;
-    }
-
-    fprintf(stderr, "DEBUG: XXX2 %d\n", orientation);
-    if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
-    {
-      if (orientation & 1)
-      {
-	snprintf(pdf_width, sizeof(pdf_width), "%.0f", length);
-	snprintf(pdf_height, sizeof(pdf_height), "%.0f", width);
-      }
-      else
-      {
-	snprintf(pdf_width, sizeof(pdf_width), "%.0f", width);
-	snprintf(pdf_height, sizeof(pdf_height), "%.0f", length);
-      }
-
-      pdf_argv[pdf_argc++] = (char *)"-paperw";
-      pdf_argv[pdf_argc++] = pdf_width;
-      pdf_argv[pdf_argc++] = (char *)"-paperh";
-      pdf_argv[pdf_argc++] = pdf_height;
-      pdf_argv[pdf_argc++] = (char *)"-expand";
-
-    }
-    else if (renderer == GS)
-    {
-      if (orientation & 1)
-      {
-	snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
-		 length);
-	snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
-		 width);
-      }
-      else
-      {
-	snprintf(pdf_width, sizeof(pdf_width), "-dDEVICEWIDTHPOINTS=%.0f",
-		 width);
-	snprintf(pdf_height, sizeof(pdf_height), "-dDEVICEHEIGHTPOINTS=%.0f",
-		 length);
-      }
-
-      pdf_argv[pdf_argc++] = pdf_width;
-      pdf_argv[pdf_argc++] = pdf_height;
-    }
-    else
-    {
-      if (orientation & 1)
-	snprintf(pdf_widthxheight, sizeof(pdf_widthxheight), "%.0fx%.0f",
-		 length, width);
-      else
-	snprintf(pdf_widthxheight, sizeof(pdf_widthxheight), "%.0fx%.0f",
-		 width, length);
-
-      pdf_argv[pdf_argc++] = (char *)"-size";
-      pdf_argv[pdf_argc++] = pdf_widthxheight;
-    }
-  }
 #ifdef HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES
-  else if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
+  if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
   {
    /*
     *  Use the page sizes of the original PDF document, this way documents
@@ -706,8 +570,9 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argv[pdf_argc++] = (char *)"-origpagesizes";
     pdf_argv[pdf_argc++] = (char *)"-nocenter";
   }
+  else
 #endif /* HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES */
-  else if (renderer == ACROREAD)
+  if (renderer == ACROREAD)
   {
    /*
     * Use the page sizes of the original PDF document, this way documents

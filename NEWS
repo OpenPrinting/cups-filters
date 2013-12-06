@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
+	- pdftops: Ignore "landscape", "orientation-requested",
+	  "fit-to-page", and any page geometry options. The first two
+	  do not make sense on PDF input and therefore should only be
+	  used in ...topdf filters used before pdftopdf, the others
+	  are already taken care of by pdftopdf so that pdftops gets
+	  pages with print-ready page geometry.
 	- pdftopdf: Ignore "landscape" and "orientation-requested"
 	  options as setting the orientation does not make sense for
 	  readily layouted PDF files.
@@ -16,10 +22,10 @@ CHANGES IN V1.0.43
 	  Poppler/freedesktop.org bug #72312, comment #6).
 	- pstopdf: Support for the "landscape" and
 	  "orientation-requested" options (Ubuntu bug #1243484).
-	- pdftops: Support for PPD-less printing, page size,
-	  resolution, and fit-to-page can now be supplied by the
-	  command line (TODO: Duplex and make/model for quirk
-	  exceptions).
+	- pdftops: Support for PPD-less printing, the resolution can
+	  now be supplied by the command line, pdftopdf takes care of
+	  the page geometry (TODO: Duplex, input tray(?), and
+	  make/model for quirk exceptions).
 	- libcupsfilters: cupsRasterParseIPPOptions() allows
 	  specifying resolutions without unit now, assuming dpi then
 	  (example: "600x600").
