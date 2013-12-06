@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
+	- pdftopdf: Ignore "landscape" and "orientation-requested"
+	  options as setting the orientation does not make sense for
+	  readily layouted PDF files.
 	- pdftops: Added "-nocenter" to the call of "pdftops
 	  -origpagesizes" (Poppler/freedesktop.org bug #72312,
 	  comments #6 and #7).
