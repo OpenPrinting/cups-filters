@@ -3,10 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
-	- pdftopdf: If there is no PPD file or no "*LandscapeOrientation:"
-	  keyword in the PPD file, rotate counterclockwise, not clockwise
-	  to fit a landscape-oriented page on a portrait-oriented sheet
-	  (See Poppler/freedesktop.org bug #72312, comment #6).
+	- pdftops: Added "-nocenter" to the call of "pdftops
+	  -origpagesizes" (Poppler/freedesktop.org bug #72312,
+	  comments #6 and #7).
+	- pdftopdf: If there is no PPD file or no
+	  "*LandscapeOrientation:" keyword in the PPD file, rotate
+	  counterclockwise, not clockwise to fit a landscape-oriented
+	  page on a portrait-oriented sheet (See
+	  Poppler/freedesktop.org bug #72312, comment #6).
 	- pstopdf: Support for the "landscape" and
 	  "orientation-requested" options (Ubuntu bug #1243484).
 	- pdftops: Support for PPD-less printing, page size,

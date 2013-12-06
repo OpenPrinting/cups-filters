@@ -704,6 +704,7 @@ main(int  argc,				/* I - Number of command-line args */
     */
 
     pdf_argv[pdf_argc++] = (char *)"-origpagesizes";
+    pdf_argv[pdf_argc++] = (char *)"-nocenter";
   }
 #endif /* HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES */
   else if (renderer == ACROREAD)
