@@ -322,10 +322,10 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 // TODO?  pstops checks =="true", pdftops !is_false  ... pstops says: fitplot only for PS (i.e. not for PDF, cmp. cgpdftopdf)
   param.fitplot=(val)&&(!is_false(val));
 
-  if ( (ppd)&&(ppd->landscape>0) ) { // direction the printer rotates landscape (90 or -90)
-    param.normal_landscape=ROT_90;
-  } else {
+  if (ppd && (ppd->landscape < 0)) { // direction the printer rotates landscape (90 or -90)
     param.normal_landscape=ROT_270;
+  } else {
+    param.normal_landscape=ROT_90;
   }
 
   int ipprot;
