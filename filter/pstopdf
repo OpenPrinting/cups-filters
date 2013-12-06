@@ -85,6 +85,7 @@ if test -n "$resolution"; then
   fi
 fi
 
+orientation=
 width=
 height=
 bl_x=
@@ -99,6 +100,22 @@ pagesize=
 unit=
 customw=
 customh=
+
+eval "$(printf "%s" "$5" | sed -nre 's/.*(^|\s)orientation-requested=3.*/orientation="${orientation:-0}"/p')"
+eval "$(printf "%s" "$5" | sed -nre 's/.*(^|\s)orientation-requested=4.*/orientation="${orientation:-90}"/p')"
+eval "$(printf "%s" "$5" | sed -nre 's/.*(^|\s)orientation-requested=5.*/orientation="${orientation:-270}"/p')"
+eval "$(printf "%s" "$5" | sed -nre 's/.*(^|\s)orientation-requested=6.*/orientation="${orientation:-180}"/p')"
+if printf "%s" "$5" | grep -iPq '(\s|^)landscape(=(1|on|yes|true))?(\s|$)'; then
+    if test -e "$PPD"; then
+	eval "$(sed -nre 's/^\*LandscapeOrientation:\s*Plus90.*/orientation="${orientation:-90}"/p' "$PPD")"
+	eval "$(sed -nre 's/^\*LandscapeOrientation:\s*Minus90.*/orientation="${orientation:-270}"/p' "$PPD")"
+    else
+	orientation="${orientation:-270}"
+    fi
+fi
+orientation="${orientation:-0}"
+echo "DEBUG: Orientation requested: $orientation" >&2
+
 eval "$(printf "%s" "$5" | sed -nre 's/.*(^|\s)(PageSize|PageRegion)=(\S+).*/pagesize="${pagesize:-\3}"/p')"
 if test -e "$PPD"; then
     eval "$(sed -nre 's/^\*DefaultPageSize:\s*(\S+).*/pagesize="${pagesize:-\1}"/p' "$PPD")"
@@ -157,6 +174,32 @@ if test -n "$width" && test -n "$height" && \
 fi
 echo "DEBUG: Relative margins: $margin_l, $margin_b, $margin_r, $margin_t" >&2
 
+if test "$orientation" = "90" || test "$orientation" = "270"; then
+    swap="$width"
+    width="$height"
+    height="$swap"
+fi
+if test "$orientation" = "90"; then
+    swap="$margin_l"
+    margin_l="$margin_b"
+    margin_b="$margin_r"
+    margin_r="$margin_t"
+    margin_t="$swap"
+elif test "$orientation" = "180"; then
+    swap="$margin_l"
+    margin_l="$margin_r"
+    margin_r="$swap"
+    swap="$margin_t"
+    margin_t="$margin_b"
+    margin_b="$swap"
+elif test "$orientation" = "270"; then
+    swap="$margin_l"
+    margin_l="$margin_t"
+    margin_t="$margin_r"
+    margin_r="$margin_b"
+    margin_b="$swap"
+fi
+
 if test -n "$margin_l" && test -n "$margin_b" && \
     test -n "$margin_r" && test -n "$margin_t"; then
     inject_ps="<</.HWMargins[$margin_l $margin_b $margin_r $margin_t] /Margins[0 0]>>setpagedevice"
@@ -173,24 +216,7 @@ if test -n "$height"; then
   ppd_opts="${ppd_opts:+$ppd_opts }-dDEVICEHEIGHTPOINTS=$height"
 fi
 echo "DEBUG: PPD options: $ppd_opts" >&2
-
-# We do not supply the margins to the ps2pdf process, as this breaks
-# full-bleed printing and also disturbs the printing if PPDs have too
-# conservative margin definitions.
-inject_ps=
-
-# Injection
 echo "DEBUG: PostScript to be injected: $inject_ps" >&2
-if test -n "$inject_ps"; then
-  echo "DEBUG: Injecting PostScript: $inject_ps" >&2
-
-  orig_infile="$infile"
-
-  infile=$(mktemp -t pstopdf.XXXXXX)
-  tempfiles="$tempfiles $infile"
-
-  perl -p -e 'if (! $did) { s:(^%!.*)$:\1\n'"$inject_ps"': && $did++; }' "$orig_infile" > "$infile"
-fi
 
 # DRM
 
@@ -204,5 +230,5 @@ else
   DRMFILTER=cat
 fi
 
-echo "DEBUG: Running $DRMFILTER | $GS $PS2PDF_OPTIONS $donumcopies $ppd_opts -sOutputFile=- $OPTIONS -c .setpdfwrite -f -" >&2
-cat "$infile" | $DRMFILTER | $GS $PS2PDF_OPTIONS $donumcopies $ppd_opts -sOutputFile=- $OPTIONS -c .setpdfwrite -f -
+echo "DEBUG: Running $DRMFILTER | $GS $PS2PDF_OPTIONS $donumcopies $ppd_opts -sOutputFile=- $OPTIONS -c $inject_ps .setpdfwrite -f -" >&2
+cat "$infile" | $DRMFILTER | $GS $PS2PDF_OPTIONS $donumcopies $ppd_opts -sOutputFile=- $OPTIONS -c "$inject_ps" .setpdfwrite -f -

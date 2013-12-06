@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
+	- pstopdf: Support for the "landscape" and
+	  "orientation-requested" options (Ubuntu bug #1243484).
 	- pdftops: Support for PPD-less printing, page size,
 	  resolution, and fit-to-page can now be supplied by the
 	  command line (TODO: Duplex and make/model for quirk
