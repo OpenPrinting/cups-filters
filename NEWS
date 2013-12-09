@@ -13,9 +13,6 @@ CHANGES IN V1.0.43
 	  used in ...topdf filters used before pdftopdf, the others
 	  are already taken care of by pdftopdf so that pdftops gets
 	  pages with print-ready page geometry.
-	- pdftopdf: Ignore "landscape" and "orientation-requested"
-	  options as setting the orientation does not make sense for
-	  readily layouted PDF files.
 	- pdftops: Added "-nocenter" to the call of "pdftops
 	  -origpagesizes" (Poppler/freedesktop.org bug #72312,
 	  comments #6 and #7).

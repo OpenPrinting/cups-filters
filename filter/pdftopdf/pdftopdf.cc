@@ -328,11 +328,6 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     param.normal_landscape=ROT_90;
   }
 
-#if 0
-  // "landscape" and "orientation-requested" are only relevant for jobs
-  // where the layout still needs to be generated, for PDF files which
-  // are readily layouted they do not make sense, therefore we ignore them
-  // here.
   int ipprot;
   param.orientation=ROT_0;
   if ( (val=cupsGetOption("landscape",num_options,options)) != NULL) {
@@ -350,9 +345,6 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
       param.orientation=ipp2rot[ipprot-3];
     }
   }
-#else
-  param.orientation=ROT_0;
-#endif /* 0 */
 
   ppd_size_t *pagesize;
   // param.page default is letter, border 36,18
