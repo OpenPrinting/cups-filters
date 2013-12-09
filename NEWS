@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
+	- pdftops: Let Ghostscript output PostScript level 3 also for
+	  PPD-less printing, but not for HP lasers or when make/model
+	  info is not supplied.
 	- foomatic-rip: Take PATH_MAX constant from limits.h if
 	  available instead defining it's own version conflicting with
 	  kfreebsd. Thanks to Peter Green for the patch (Debian bug
@@ -23,10 +26,10 @@ CHANGES IN V1.0.43
 	  Poppler/freedesktop.org bug #72312, comment #6).
 	- pstopdf: Support for the "landscape" and
 	  "orientation-requested" options (Ubuntu bug #1243484).
-	- pdftops: Support for PPD-less printing, the resolution can
-	  now be supplied by the command line, pdftopdf takes care of
-	  the page geometry (TODO: Duplex, input tray(?), and
-	  make/model for quirk exceptions).
+	- pdftops: Support for PPD-less printing, the resolution and
+	  make/model (for quirk rules) can now be supplied by the
+	  command line, pdftopdf takes care of the page geometry
+	  (TODO: Duplex, input tray(?)).
 	- libcupsfilters: cupsRasterParseIPPOptions() allows
 	  specifying resolutions without unit now, assuming dpi then
 	  (example: "600x600").

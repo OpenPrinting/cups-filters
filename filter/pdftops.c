@@ -59,6 +59,7 @@ static int		job_canceled = 0;
 int			pdftopdfapplied = 0;
 char			deviceCopies[32] = "1";
 int			deviceCollate = 0;
+char                    make_model[128] = "";
 
 
 /*
@@ -371,6 +372,20 @@ main(int  argc,				/* I - Number of command-line args */
     cupsMarkOptions(ppd, num_options, options);
   }
 
+  if ((val = cupsGetOption("make-and-model", num_options, options)) != NULL)
+  {
+    strncpy(make_model, val, sizeof(make_model));
+    for (ptr = make_model; *ptr; ptr ++)
+      if (*ptr == '_') *ptr = ' ';
+  }
+  else if (ppd)
+  {
+    snprintf(make_model, sizeof(make_model), "%s %s", ppd->manufacturer,
+	     ppd->product + 1);
+    make_model[strlen(make_model) - 1] = '\0';
+  }
+  fprintf(stderr, "DEBUG: Printer make and model: %s\n", make_model);
+
  /*
   * Select the PDF renderer: Ghostscript (gs), Poppler (pdftops),
   * Adobe Reader (arcoread), Poppler with Cairo (pdftocairo), or
@@ -397,9 +412,9 @@ main(int  argc,				/* I - Number of command-line args */
 
   if (renderer == HYBRID)
   {
-    if (ppd && ppd->manufacturer &&
-	(!strncasecmp(ppd->manufacturer, "Brother", 7) ||
-	 strcasestr(ppd->manufacturer, "Minolta")))
+    if (make_model[0] &&
+	(!strncasecmp(make_model, "Brother", 7) ||
+	 strcasestr(make_model, "Minolta")))
       {
 	fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for Brother, Minolta, and Konica Minolta to work around bugs in the printer's PS interpreters\n");
 	renderer = PDFTOPS;
@@ -531,10 +546,10 @@ main(int  argc,				/* I - Number of command-line args */
       {
         /* Do not emit PS Level 3 with Poppler on HP PostScript laser printers
 	   as some do not like it. See https://bugs.launchpad.net/bugs/277404.*/
-	if (ppd->manufacturer &&
-	    (!strncasecmp(ppd->manufacturer, "HP", 2) ||
-	     !strncasecmp(ppd->manufacturer, "Hewlett-Packard", 15)) &&
-	    (strcasestr(ppd->nickname, "laserjet")))
+	if (make_model[0] ||
+	    ((!strncasecmp(make_model, "HP", 2) ||
+	      !strncasecmp(make_model, "Hewlett-Packard", 15)) &&
+	     (strcasestr(make_model, "laserjet"))))
 	  pdf_argv[pdf_argc++] = (char *)"-level2";
 	else
 	  pdf_argv[pdf_argc++] = (char *)"-level3";
@@ -547,16 +562,23 @@ main(int  argc,				/* I - Number of command-line args */
   }
   else
   {
-    /* Use PostScript level 2 as it works with nearly every printer */
     if (renderer == PDFTOPS)
     {
-      pdf_argv[pdf_argc++] = (char *)"-level2";
+      /* Do not emit PS Level 3 with Poppler on HP PostScript laser printers
+	 as some do not like it. See https://bugs.launchpad.net/bugs/277404.*/
+      if (!make_model[0] ||
+	  ((!strncasecmp(make_model, "HP", 2) ||
+	    !strncasecmp(make_model, "Hewlett-Packard", 15)) &&
+	   (strcasestr(make_model, "laserjet"))))
+	pdf_argv[pdf_argc++] = (char *)"-level2";
+      else
+	pdf_argv[pdf_argc++] = (char *)"-level3";
       pdf_argv[pdf_argc++] = (char *)"-noembtt";
     }
     else if (renderer == GS)
-      pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=2";
+      pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
     else /* PDFTOCAIRO || ACROREAD */
-      pdf_argv[pdf_argc++] = (char *)"-level2";
+      pdf_argv[pdf_argc++] = (char *)"-level3";
   }
 
 #ifdef HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES
@@ -706,8 +728,8 @@ main(int  argc,				/* I - Number of command-line args */
     val = cupsGetOption("psdebug", num_options, options);
     if ((val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
 	 strcasecmp(val, "false")) ||
-	(ppd && ppd->manufacturer &&
-	 !strncasecmp(ppd->manufacturer, "Kyocera", 7)))
+	(make_model[0] &&
+	 !strncasecmp(make_model, "Kyocera", 7)))
     {
       fprintf(stderr, "DEBUG: Deactivated compression of pages in Ghostscript's PostScript output (\"psdebug\" debug mode or Kyocera printer)\n");
       pdf_argv[pdf_argc++] = (char *)"-dCompressPages=false";
@@ -720,8 +742,8 @@ main(int  argc,				/* I - Number of command-line args */
     */
     pdf_argv[pdf_argc++] = (char *)"-dCompressFonts=false";
     pdf_argv[pdf_argc++] = (char *)"-dNoT3CCITT";
-    if (ppd && ppd->manufacturer &&
-	!strncasecmp(ppd->manufacturer, "Brother", 7))
+    if (make_model[0] &&
+	!strncasecmp(make_model, "Brother", 7))
     {
       fprintf(stderr, "DEBUG: Deactivation of Ghostscript's image compression for Brother printers to workarounmd PS interpreter bug\n");
       pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
@@ -746,9 +768,9 @@ main(int  argc,				/* I - Number of command-line args */
     need_post_proc = 0;
   else if (renderer == GS)
     need_post_proc =
-      (ppd && ppd->manufacturer &&
-       (!strncasecmp(ppd->manufacturer, "Kyocera", 7) ||
-	!strncasecmp(ppd->manufacturer, "Brother", 7)) ? 1 : 0);
+      (make_model[0] &&
+       (!strncasecmp(make_model, "Kyocera", 7) ||
+	!strncasecmp(make_model, "Brother", 7)) ? 1 : 0);
   else
     need_post_proc = 1;
 
@@ -915,7 +937,7 @@ main(int  argc,				/* I - Number of command-line args */
 	  else
 	    printf("%s", buffer);
 
-	  if (renderer == GS && ppd && ppd->manufacturer)
+	  if (renderer == GS && make_model[0])
 	  {
 
 	   /*
@@ -935,7 +957,7 @@ main(int  argc,				/* I - Number of command-line args */
 	    * See https://bugs.launchpad.net/bugs/1026974
 	    */
 
-	    if (!strncasecmp(ppd->manufacturer, "Kyocera", 7))
+	    if (!strncasecmp(make_model, "Kyocera", 7))
 	    {
 	      fprintf(stderr, "DEBUG: Inserted workaround PostScript code for Kyocera printers\n");
 	      puts("% ===== Workaround insertion by pdftops CUPS filter =====");
@@ -966,7 +988,7 @@ main(int  argc,				/* I - Number of command-line args */
 	    * See https://bugs.launchpad.net/bugs/950713
 	    */
 
-	    else if (!strncasecmp(ppd->manufacturer, "Brother", 7))
+	    else if (!strncasecmp(make_model, "Brother", 7))
 	    {
 	      fprintf(stderr, "DEBUG: Inserted workaround PostScript code for Brother printers\n");
 	      puts("% ===== Workaround insertion by pdftops CUPS filter =====");
