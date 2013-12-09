@@ -158,7 +158,7 @@ EMB_PDF_FONTDESCR *emb_pdf_fontdescr(EMB_PARAMS *emb) // {{{ -  to be freed by u
   if (!rands) {
     rands=time(NULL);
   }
-  
+
   char subtag[7];
   subtag[6]=0;
   if (emb->plan&EMB_A_SUBSET) {
@@ -196,7 +196,7 @@ EMB_PDF_FONTDESCR *emb_pdf_fontdescr(EMB_PARAMS *emb) // {{{ -  to be freed by u
   if ( (emb->intype==EMB_FMT_TTF)||(emb->intype==EMB_FMT_OTF) ) {
     emb_otf_get_pdf_fontdescr(emb->font->sfnt,ret);
   } else {
-    assert(0); 
+    assert(0);
   }
   return ret;
 }
@@ -237,7 +237,7 @@ EMB_PDF_FONTWIDTHS *emb_pdf_fw_cidwidths(const BITSET glyphs,int len,int default
     if ( (!glyphs)||(glyphs[b]&c) ) {
       if (freq) {
         const int w=(*getGlyphWidth)(context,iA);
-        frequent_add(freq,w); 
+        frequent_add(freq,w);
       }
       if (in_region) {
         in_region++;
@@ -287,7 +287,7 @@ EMB_PDF_FONTWIDTHS *emb_pdf_fw_cidwidths(const BITSET glyphs,int len,int default
                     (ret->warray[size-3]==w)&&(ret->warray[size-4]==w) ) {
           // five in a row.  c1 c2 w [l c] is equally short and can be extended (-len c1 w)  [w/ cost of array-region restart]
           if (in_region==4) { // completely replace
-            size-=6; 
+            size-=6;
           } else { // first end previous region
             size-=4;
             *rlen=in_region-4;
@@ -316,7 +316,7 @@ EMB_PDF_FONTWIDTHS *emb_pdf_fw_cidwidths(const BITSET glyphs,int len,int default
         ret->warray[size++]=w;
       }
     } else if (in_region) {
-      // TODO? no need to stop range region? } else if (in_region<0) { inregion--; } 
+      // TODO? no need to stop range region? } else if (in_region<0) { inregion--; }
       *rlen=in_region;
       in_region=0;
     }
@@ -361,7 +361,7 @@ EMB_PDF_FONTWIDTHS *emb_pdf_fontwidths(EMB_PARAMS *emb) // {{{
     return NULL; \
   } \
   pos+=len; \
-  size-=len; /* }}} */ 
+  size-=len; /* }}} */
 
 // TODO? /CIDSet    TODO... /FontFamily /FontStretch /FontWeight (PDF1.5?) would be nice...
 char *emb_pdf_simple_fontdescr(EMB_PARAMS *emb,EMB_PDF_FONTDESCR *fdes,int fontfile_obj_ref) // {{{ - to be freed by user
@@ -545,7 +545,7 @@ char *emb_pdf_simple_cidfont(EMB_PARAMS *emb,const char *fontname,int descendant
   if (emb->outtype==EMB_FMT_TTF) { // !=CidType0
     addenc="";
   }
-  
+
   len=snprintf(pos,size,
                "<</Type /Font\n"
                "  /Subtype /Type0\n"

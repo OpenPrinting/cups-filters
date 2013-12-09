@@ -265,30 +265,21 @@ const bool origls=param.nup.landscape;
         rect.width=param.page.width;
         rect.height=param.page.height;
 
-        // TODO: better
-        if (!origls) {
-          if ( (param.orientation==ROT_90)||(param.orientation==ROT_270) ) {
-            std::swap(rect.width,rect.height);
-          }
-        } else {
-          if ( (param.orientation==ROT_0)||(param.orientation==ROT_180) ) {
-            std::swap(rect.width,rect.height);
-          }
+// TODO? better
+        if (origls) {
+          std::swap(rect.width,rect.height);
         }
 
-// TODO?
         rect.left=0;
         rect.bottom=0;
         rect.right=rect.width;
         rect.top=rect.height;
-
-        rect.rotate_move(param.orientation,rect.width,rect.height);
       }
 //      rect.dump();
 
       bool newPage=nupstate.nextPage(rect.width,rect.height,pgedit);
       if (newPage) {
-        if ( (param.withPage(outputno))&&(curpage) ) {
+        if ( (curpage)&&(param.withPage(outputno)) ) {
           curpage->rotate(param.orientation);
           if (param.mirror) {
             curpage->mirror();
@@ -296,8 +287,8 @@ const bool origls=param.nup.landscape;
           }
           proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
         }
-        outputno++;
         curpage=proc.new_page(param.page.width,param.page.height);
+        outputno++;
       }
       if (shuffle[iA]>=numOrigPages) {
         continue;
@@ -328,7 +319,7 @@ const bool origls=param.nup.landscape;
 
 //      pgedit.dump();
     }
-    if ( (param.withPage(outputno))&&(curpage) ) {
+    if ( (curpage)&&(param.withPage(outputno)) ) {
       curpage->rotate(param.orientation);
       if (param.mirror) {
         curpage->mirror();

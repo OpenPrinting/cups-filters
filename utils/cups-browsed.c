@@ -235,18 +235,6 @@ ippSetVersion(ipp_t *ipp, int major, int minor)
   ipp->request.any.version[1] = minor;
   return (1);
 }
-
-int
-ippSetVersion(ipp_t *ipp,
-              int   major,
-              int   minor)
-{
-  if (!ipp || major < 0 || minor < 0)
-    return (0);
-  ipp->request.any.version[0] = major;
-  ipp->request.any.version[1] = minor;
-  return (1);
-}
 #endif
 
 void debug_printf(const char *format, ...) {

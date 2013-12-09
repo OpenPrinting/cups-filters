@@ -29,7 +29,7 @@ static inline int copy_file(FILE *f,OUTPUT_FN output,void *context) // {{{
   PSold: T1->T1, TTF->T1, OTF->CFF->T1, STD->STD   // output limit: T1  (maybe length, binary/text, ... limit)
   PS1: T1->T1, TTF->T1, OTF->CFF, STD->STD    // output limit: T1,CFF [does this really exists?]
   PS2: T1->T1, TTF->TTF, OTF->T1, STD->STD    // output limit: T1,TTF
-  PS3: T1->T1, TTF->TTF, OTF->CFF, STD->STD 
+  PS3: T1->T1, TTF->TTF, OTF->CFF, STD->STD
   PDF12/13?: OTF->CFF
   PDF16: OTF->OTF (,T1->CFF?)
     --- rename KEEP_T1 to NEED_T1?  NO_T42?
@@ -205,7 +205,7 @@ int emb_embed(EMB_PARAMS *emb,OUTPUT_FN output,void *context) // {{{
       assert(emb->font->sfnt);
       if (emb->plan&EMB_A_SUBSET) {
         return otf_subset(emb->font->sfnt,emb->subset,output,context);
-      } else if (emb->font->sfnt->numTTC) { // 
+      } else if (emb->font->sfnt->numTTC) { //
         return otf_ttc_extract(emb->font->sfnt,output,context);
       } else { // copy verbatim
         return copy_file(emb->font->sfnt->f,output,context);

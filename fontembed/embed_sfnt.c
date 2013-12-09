@@ -31,7 +31,7 @@ EMB_RIGHT_TYPE emb_otf_get_rights(OTF_FILE *otf) // {{{
         if ((fsType&0x000c)==0x0004) {
           ret|=EMB_RIGHT_READONLY;
         }
-      } 
+      }
     }
     free(os2);
   }
@@ -40,7 +40,7 @@ EMB_RIGHT_TYPE emb_otf_get_rights(OTF_FILE *otf) // {{{
 // }}}
 
 // NOTE: statically allocated buffer
-const char *emb_otf_get_fontname(OTF_FILE *otf) // {{{ 
+const char *emb_otf_get_fontname(OTF_FILE *otf) // {{{
 {
   static char fontname[64];
 
@@ -162,7 +162,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
       free(os2);
       os2=NULL;
     }
-  } else { 
+  } else {
     fprintf(stderr,"WARNING: no OS/2 table\n");
     // e.g. subsetted font from ghostscript // e.g. CFF
   }
@@ -212,7 +212,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
   } else {
     ret->flags|=0x0004;
   }
-  // TODO SmallCap by font name(?)  
+  // TODO SmallCap by font name(?)
 
 // TODO ;   ? cid ?
 }
@@ -226,7 +226,7 @@ EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_widths(OTF_FILE *otf,const unsigned short *e
 {
   assert(otf);
 
-  int first=len,last=0; 
+  int first=len,last=0;
   int iA;
 
   if (glyphs) {
@@ -304,7 +304,7 @@ EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_cidwidths(OTF_FILE *otf,const BITSET glyphs)
     }
   }
 //  int dw=emb_otf_pdf_glyphwidth(otf,0); // e.g.
-  int dw=-1; // let them estimate 
+  int dw=-1; // let them estimate
 
   return emb_pdf_fw_cidwidths(glyphs,otf->numGlyphs,dw,emb_otf_pdf_glyphwidth,otf);
 }
@@ -337,7 +337,7 @@ static const char *emb_otf_get_post_name(const char *post,unsigned short gid) //
       if (idx<258) {
         if (idx<sizeof(macRoman)/sizeof(macRoman[0])) {
           return macRoman[idx];
-        } 
+        }
       } else if (idx<32768) {
         const unsigned char *pos=(unsigned char *)post+34+2*num_glyphs;
         for (idx-=258;idx>0;idx--) { // this sucks...
@@ -361,7 +361,7 @@ static const char *emb_otf_get_post_name(const char *post,unsigned short gid) //
     }
   } else if (post_version==0x00030000) {
     // no glyph names, sorry
-//  } else if (post_version==0x00040000) { // apple AAT ?! 
+//  } else if (post_version==0x00040000) { // apple AAT ?!
   }
   return NULL;
 }
@@ -480,15 +480,15 @@ Status:
 
   // TODO: a) multi font encoding
   // TODO: b) cid/big font encoding (PS>=2015) [/CIDFontType 2]     : CMap does Charcode->CID, /CIDMap does CID->GID [e.g. Identity/delta value]
-  //          (also needed [or a)] for loca>64000 if split, etc)      e.g. /CIDMap 0  [requires PS>=3011?] 
+  //          (also needed [or a)] for loca>64000 if split, etc)      e.g. /CIDMap 0  [requires PS>=3011?]
   //          [Danger: do not split composites]
   // TODO? incremental download [/GlyphDirectory array or dict]     : /GlyphDirectory does GID-><glyf entry> mapping
   //       need 'fake' gdir table (size,offset=0) in sfnt; loca, glyf can be ommited; hmtx can be omitted for PS>=3011 [/MetricsCount 2]
   //       idea is to fill initial null entries in the array/dict   [Beware of save/restore!]
-  // NOTE: even when subsetting the font has to come first in the PS file 
+  // NOTE: even when subsetting the font has to come first in the PS file
 
 
-... special information: when multi-byte PDF encoding is used <gid> is output. 
+... special information: when multi-byte PDF encoding is used <gid> is output.
     therefore /Encoding /Identity-H + /CIDSystemInfo Adobe-Identity-0 will yield 1-1 mapping for font.
     problem is that text is not selectable. therefore there is the /ToUnicode CMap option
 */
@@ -551,7 +551,7 @@ int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to
                  bbxmin/1000.0,bbymin/1000.0,bbxmax/1000.0,bbymax/1000.0);
   if (post) {
     dyn_printf(&ds,"/FontInfo 4 dict dup begin\n"
-// TODO? [even non-post]: /version|/Notice|/Copyright|/FullName|/FamilyName|/Weight  () readonly def\n   from name table: 5 7 0 4 1 2 
+// TODO? [even non-post]: /version|/Notice|/Copyright|/FullName|/FamilyName|/Weight  () readonly def\n   from name table: 5 7 0 4 1 2
 // using: otf_get_name(otf,3,1,0x409,?,&len) / otf_get_name(otf,1,0,0,?,&len)   + encoding
                    "  /ItalicAngle %d def\n"
                    "  /isFixedPitch %s def\n"
@@ -589,7 +589,7 @@ int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to
   ds.len=0;
 
 // TODO: only tables as in otf_subset
-// TODO:  somehow communicate table boundaries:  
+// TODO:  somehow communicate table boundaries:
   //   otf_action_copy  does exactly one output call (per table)
   //   only otf_action_replace might do two (padding)
   // {{{ copy tables verbatim (does not affect ds .len)
@@ -671,7 +671,7 @@ int emb_otf_ps(OTF_FILE *otf,unsigned short *encoding,int len,unsigned short *to
   ds.len=0;
 
   free(ds.buf);
-  return ret; 
+  return ret;
 }
 // }}}
 

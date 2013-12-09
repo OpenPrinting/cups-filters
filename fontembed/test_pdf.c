@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
- 
+
 static void example_outfn(const char *buf,int len,void *context) // {{{
 {
   FILE *f=(FILE *)context;
@@ -52,19 +52,19 @@ static inline void write_string(FILE *f,EMB_PARAMS *emb,const char *str) // {{{
   int iA;
 
   if (emb->plan&EMB_A_MULTIBYTE) {
-    putc('<',f); 
+    putc('<',f);
     for (iA=0;str[iA];iA++) {
       const unsigned short gid=emb_get(emb,(unsigned char)str[iA]);
       fprintf(f,"%04x",gid);
     }
-    putc('>',f); 
+    putc('>',f);
   } else {
-    putc('(',f); 
+    putc('(',f);
     for (iA=0;str[iA];iA++) {
       emb_get(emb,(unsigned char)str[iA]);
     }
     fprintf(f,"%s",str); // TODO
-    putc(')',f); 
+    putc(')',f);
   }
 }
 // }}}
@@ -188,7 +188,7 @@ int main(int argc,char **argv)
             "  /Pages 2 0 R\n"
             ">>\n"
             "endobj\n");
-  // {{{ pdf trailer 
+  // {{{ pdf trailer
   int xref_start=ftell(f);
   fprintf(f,"xref\n"
             "0 %d\n"

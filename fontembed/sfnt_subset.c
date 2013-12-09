@@ -95,7 +95,7 @@ static int otf_subset_glyf(OTF_FILE *otf,int curgid,int donegid,BITSET glyphs) /
       const int res=otf_get_glyph(otf,curgid); // reload current glyph
       assert(res);
     }
-    
+
     // skip parameters
     cur+=6;
     if (flags&0x01) {
@@ -169,7 +169,7 @@ int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{
     }
 
     assert(offset%2==0);
-    // TODO? change format? if glyfSize<0x20000 
+    // TODO? change format? if glyfSize<0x20000
     if (otf->indexToLocFormat==0) {
       set_USHORT(new_loca+iA*2,offset/2);
     } else { // ==1

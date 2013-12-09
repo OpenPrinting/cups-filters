@@ -67,7 +67,7 @@ void show_name(OTF_FILE *otf) // {{{
   for (iA=0;iA<name_count;iA++) {
     const char *nrec=buf+6+12*iA;
     printf("  { platformID/encodingID/languageID/nameID: %d/%d/%d/%d\n"
-           "    length: %d, offset: %d, data                       :", 
+           "    length: %d, offset: %d, data                       :",
            get_USHORT(nrec),
            get_USHORT(nrec+2),
            get_USHORT(nrec+4),
@@ -124,7 +124,7 @@ void show_cmap(OTF_FILE *otf) // {{{
 }
 // }}}
 
-void show_glyf(OTF_FILE *otf,int full) // {{{ 
+void show_glyf(OTF_FILE *otf,int full) // {{{
 {
   assert(otf);
 

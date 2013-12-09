@@ -28,8 +28,8 @@ typedef struct {
   unsigned short numberOfHMetrics;
   char *hmtx,*name,*cmap;
   const char *unimap; // ptr to (3,1) or (3,0) cmap start
-  
-  // single glyf buffer, allocated large enough by otf_load_more() 
+
+  // single glyf buffer, allocated large enough by otf_load_more()
   char *gly;
   OTF_DIRENT *glyfTable;
 
