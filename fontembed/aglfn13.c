@@ -24,7 +24,7 @@ static const char *agl_la1ff[]={
   "acircumflex","atilde","adieresis","aring", "ae","ccedilla","egrave","eacute",
   "ecircumflex","edieresis","igrave","iacute", "icircumflex","idieresis","eth","ntilde",
   "ograve","oacute","ocircumflex","otilde", "odieresis","divide","oslash","ugrave",
-  "uacute","ucircumflex","udieresis","yacute", "thorn","ydieresis"}; 
+  "uacute","ucircumflex","udieresis","yacute", "thorn","ydieresis"};
 
 static const char *agl_l1007f[]={
   "Amacron","amacron","Abreve","abreve", "Aogonek","aogonek","Cacute","cacute",

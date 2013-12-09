@@ -118,7 +118,7 @@ static char *otf_read(OTF_FILE *otf,char *buf,long pos,int length) // {{{
       return NULL;
     }
   }
- 
+
   return buf;
 }
 // }}}
@@ -202,7 +202,7 @@ OTF_FILE *otf_do_load(OTF_FILE *otf,int pos) // {{{
     pos+=16;
   }
   // }}}
-  
+
 //  otf->flags|=OTF_F_DO_CHECKSUM;
   // {{{ check head table
   int len=0;
@@ -281,7 +281,7 @@ OTF_FILE *otf_load(const char *file) // {{{
 {
   FILE *f;
   OTF_FILE *otf;
- 
+
   int use_ttc=-1;
   if ((f=fopen(file,"rb"))==NULL) {
     // check for TTC
@@ -496,7 +496,7 @@ int otf_load_glyf(OTF_FILE *otf) // {{{  - 0 on success
     return -1;
   }
   // }}}
-  
+
   // {{{ allocate otf->gly slot
   int maxGlyfLen=0;  // no single glyf takes more space
   for (iA=1;iA<=otf->numGlyphs;iA++) {
@@ -905,7 +905,7 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
     return -1;
   }
 
-  if (1) { // sort tables 
+  if (1) { // sort tables
     int priolist[NUM_PRIO]={0,};
 
     // reverse intersection of both sorted arrays
@@ -935,7 +935,7 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
   set_ULONG(start,version);
   set_USHORT(start+4,numTables);
   int a,b,c;
-  otf_bsearch_params(numTables,16,&a,&b,&c); 
+  otf_bsearch_params(numTables,16,&a,&b,&c);
   set_USHORT(start+6,a);
   set_USHORT(start+8,b);
   set_USHORT(start+10,c);

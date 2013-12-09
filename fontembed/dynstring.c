@@ -98,7 +98,7 @@ int dyn_printf(DYN_STRING *ds,const char *fmt,...) // {{{
   va_start(va,fmt);
   ret=dyn_vprintf(ds,fmt,va);
   va_end(va);
- 
+
   return ret;
 }
 // }}}

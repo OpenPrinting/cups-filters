@@ -12,14 +12,14 @@ typedef enum { EMB_FMT_T1,       // type1, with AFM/PFM,PFA/PFB
                EMB_FMT_STDFONT   // don't embed (already present)
                } EMB_FORMAT;
 typedef enum { EMB_DEST_NATIVE,  // just subsetting/conversion
-               EMB_DEST_PS, 
+               EMB_DEST_PS,
 //               EMB_DEST_PS2,
 //               EMB_DEST_PDF13,
                EMB_DEST_PDF16
                } EMB_DESTINATION;
 
 typedef enum { EMB_RIGHT_FULL=0, EMB_RIGHT_NONE=0x02,
-               EMB_RIGHT_READONLY=0x04, 
+               EMB_RIGHT_READONLY=0x04,
                EMB_RIGHT_NO_SUBSET=0x0100,
                EMB_RIGHT_BITMAPONLY=0x0200 } EMB_RIGHT_TYPE;
 
@@ -60,7 +60,7 @@ typedef struct _EMB_PARAMS {
 } EMB_PARAMS;
 
 EMB_PARAMS *emb_new(FONTFILE *font,EMB_DESTINATION dest,EMB_CONSTRAINTS mode);
-// emb_embedd does only the "binary" part 
+// emb_embedd does only the "binary" part
 int emb_embed(EMB_PARAMS *emb,OUTPUT_FN output,void *context); // returns number of bytes written
 void emb_close(EMB_PARAMS *emb);
 

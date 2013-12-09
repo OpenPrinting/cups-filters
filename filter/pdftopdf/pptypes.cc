@@ -94,7 +94,7 @@ void PageRect::rotate_move(Rotation r,float pwidth,float pheight) // {{{
   if ( (r==ROT_90)||(r==ROT_180) ) {
     left=pwidth-left;
     right=pwidth-right;
-  } 
+  }
   if ( (r==ROT_270)||(r==ROT_180) ) {
     top=pheight-top;
     bottom=pheight-bottom;
@@ -114,8 +114,8 @@ void PageRect::rotate_move(Rotation r,float pwidth,float pheight) // {{{
     break;
   case ROT_180:
     const float tmp1=left;
-    left=width-right;
-    right=width-left;
+    left=pwidth-right;
+    right=pwidth-tmp1;
 
     const float tmp2=top;
     top=pheight-bottom;
