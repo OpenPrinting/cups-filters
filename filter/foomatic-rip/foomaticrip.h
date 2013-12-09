@@ -33,6 +33,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <time.h>
+#include <limits.h>
 
 /* This is the location of the debug logfile (and also the copy of the
  * processed PostScript data) in case you have enabled debugging above.
@@ -74,8 +75,9 @@
 /* The spooler from which foomatic-rip was called. set in main() */
 extern int spooler;
 
-
+#ifndef PATH_MAX
 #define PATH_MAX 65536
+#endif
 
 typedef struct {
     char printer[256];

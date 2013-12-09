@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
+	- foomatic-rip: Take PATH_MAX constant from limits.h if
+	  available instead defining it's own version conflicting with
+	  kfreebsd. Thanks to Peter Green for the patch (Debian bug
+	  #731658).
 	- pdftops: Ignore "landscape", "orientation-requested",
 	  "fit-to-page", and any page geometry options. The first two
 	  do not make sense on PDF input and therefore should only be
