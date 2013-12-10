@@ -49,13 +49,6 @@ void setFinalPPD(ppd_file_t *ppd,const ProcessingParameters &param)
   if ( (choice=ppdFindMarkedChoice(ppd,"MirrorPrint")) != NULL) {
     choice->marked=0;
   }
-
-  // TODO: FIXME:  unify code with emitJCLOptions, which does this "by-hand" now (and makes this code superfluous)
-  if (param.deviceCopies==1) {
-    // make sure any hardware copying is disabled
-    ppdMarkOption(ppd,"Copies","1");
-    ppdMarkOption(ppd,"JCLCopies","1");
-  }
 }
 
 // for choice, only overwrites ret if found in ppd
@@ -533,7 +526,7 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 // }}}
 */
 
-  // make pages a multiple of two (only considered when duplex is on). 
+  // make pages a multiple of two (only considered when duplex is on).
   // i.e. printer has hardware-duplex, but needs pre-inserted filler pages
   // FIXME? pdftopdf also supports it as cmdline option (via checkFeature())
   ppd_attr_t *attr;
@@ -579,35 +572,38 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
     }
   }
 
-#if 1    // for now
-  // enable hardware copy generation
-  if (ppd) {
-    if (!ppd->manual_copies) {
-      // use hardware copying
-      param.deviceCopies=param.numCopies;
-      param.numCopies=1;
-    } else {
-      param.deviceCopies=1;
-    }
-  }
-#endif
-
   setFinalPPD(ppd,param);
 
-  if ( (param.numCopies==1)&&(param.deviceCopies==1) ) {
-    // collate is never needed for a single page
-    param.collate=false; // (this does not make a big difference for us)
-    param.deviceCollate=false;
-  } else if ( (param.deviceCopies==1)&&(param.duplex) ) { // i.e. (numCopies>1), in software
-    // duplex printing of multiple software copies:
-    // collate + evenDuplex must be forced to prevent copies on the backsides
-    param.collate=true;
-    param.deviceCollate=false; // either (!ppd) or (ppd->manual_copies)
-  } else if (param.collate) { // collate requested by user
-    // check collate device, with current/final(!) ppd settings
-    param.deviceCollate=printerWillCollate(ppd);
-  } else { // (!param.collate)
-    param.deviceCollate=false;
+  if (param.numCopies==1) {
+    param.deviceCopies=1;
+    // collate is never needed for a single copy
+    param.collate=false; // (does not make a big difference for us)
+  } else if ( (ppd)&&(!ppd->manual_copies) ) { // hw copy generation available
+    param.deviceCopies=param.numCopies;
+    if (param.collate) { // collate requested by user
+      // check collate device, with current/final(!) ppd settings
+      param.deviceCollate=printerWillCollate(ppd);
+      if (!param.deviceCollate) {
+        // printer can't hw collate -> we must copy collated in sw
+        param.deviceCopies=1;
+      }
+    } // else: printer copies w/o collate and takes care of duplex/evenDuplex
+  } else { // sw copies
+    param.deviceCopies=1;
+    if (param.duplex) { // &&(numCopies>1)
+      // sw collate + evenDuplex must be forced to prevent copies on the backsides
+      param.collate=true;
+      param.deviceCollate=false;
+    }
+  }
+
+  // TODO? FIXME:  unify code with emitJCLOptions, which does this "by-hand" now (and makes this code superfluous)
+  if (param.deviceCopies==1) {
+    // make sure any hardware copying is disabled
+    ppdMarkOption(ppd,"Copies","1");
+    ppdMarkOption(ppd,"JCLCopies","1");
+  } else { // hw copy
+    param.numCopies=1; // disable sw copy
   }
 
   if ( (param.collate)&&(!param.deviceCollate) ) { // software collate
@@ -621,7 +617,7 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
 }
 // }}}
 
-// reads from stdin into temporary file. returns FILE *  or NULL on error 
+// reads from stdin into temporary file. returns FILE *  or NULL on error
 // TODO? to extra file (also used in pdftoijs, e.g.)
 FILE *copy_stdin_to_temp() // {{{
 {
@@ -743,11 +739,11 @@ proc1->emitFilename("out.pdf");
 /* TODO
     // color management
 --- PPD:
-      copyPPDLine_(fp_dest, fp_src, "*PPD-Adobe: "); 
-      copyPPDLine_(fp_dest, fp_src, "*cupsICCProfile ");  
+      copyPPDLine_(fp_dest, fp_src, "*PPD-Adobe: ");
+      copyPPDLine_(fp_dest, fp_src, "*cupsICCProfile ");
       copyPPDLine_(fp_dest, fp_src, "*Manufacturer:");
       copyPPDLine_(fp_dest, fp_src, "*ColorDevice:");
-      copyPPDLine_(fp_dest, fp_src, "*DefaultColorSpace:");  
+      copyPPDLine_(fp_dest, fp_src, "*DefaultColorSpace:");
     if (cupsICCProfile) {
       proc.addCM(...,...);
     }

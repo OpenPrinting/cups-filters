@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
+	- pdftopdf: Fixed software copy generation logic for printers
+	  with hardware copy generation, but without collate support
+	  (Ubuntu bug #1259240).
 	- pdftops: Let Ghostscript output PostScript level 3 also for
 	  PPD-less printing, but not for HP lasers or when make/model
 	  info is not supplied.
