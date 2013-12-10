@@ -10,7 +10,7 @@
 enum BookletMode { BOOKLET_OFF, BOOKLET_ON, BOOKLET_JUSTSHUFFLE };
 
 struct ProcessingParameters {
-  ProcessingParameters() 
+  ProcessingParameters()
     : jobId(0),numCopies(1),
       user(0),title(0),
       fitplot(false),
@@ -149,7 +149,7 @@ public:
 //bool checkBookletSignature(int signature) { return (signature%4==0); }
 std::vector<int> bookletShuffle(int numPages,int signature=-1);
 
-// This is all we want: 
+// This is all we want:
 bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param);
 
 

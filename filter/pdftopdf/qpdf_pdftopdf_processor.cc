@@ -10,7 +10,7 @@
 #include "qpdf_pdftopdf.h"
 
 // Use: content.append(debug_box(pe.sub,xpos,ypos));
-static std::string debug_box(const PageRect &box,float xshift,float yshift) // {{{ 
+static std::string debug_box(const PageRect &box,float xshift,float yshift) // {{{
 {
   return std::string("q 1 w 0.1 G\n ")+
          QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" m  "+
@@ -51,7 +51,7 @@ QPDF_PDFTOPDF_PageHandle::QPDF_PDFTOPDF_PageHandle(QPDF *pdf,float width,float h
   // xobjects: later (in get())
   content.assign("q\n");  // TODO? different/not needed
 
-  page=pdf->makeIndirectObject(page); // stores *pdf 
+  page=pdf->makeIndirectObject(page); // stores *pdf
 }
 // }}}
 
@@ -147,7 +147,7 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
   boxcmd+="Q\n";
 
 // if (!isExisting()) {
-//   // TODO: only after 
+//   // TODO: only after
 //   return;
 // }
 
@@ -180,7 +180,7 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
   std::string xoname="/X"+QUtil::int_to_string((qsub->no!=-1)?qsub->no:++no);
   if (crop) {
     PageRect pg=qsub->getRect(),tmp=*crop;
-    // we need to fix a too small cropbox. 
+    // we need to fix a too small cropbox.
     tmp.width=tmp.right-tmp.left;
     tmp.height=tmp.top-tmp.bottom;
     tmp.rotate_move(-getRotate(qsub->page),tmp.width,tmp.height); // TODO TODO (pg.width? / unneeded?)
@@ -192,7 +192,7 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
     if (pg.height<tmp.height) {
       pg.top=pg.bottom+tmp.height;
     }
-    
+
     PageRect rect=ungetRect(pg,*qsub,ROT_0,qsub->page);
 
     qsub->page.replaceKey("/TrimBox",makeBox(rect.left,rect.bottom,rect.right,rect.top));
@@ -218,7 +218,7 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
   content.append(xoname+" Do\n");
   content.append("Q\n");
 }
-// }}} 
+// }}}
 
 void QPDF_PDFTOPDF_PageHandle::mirror() // {{{
 {
@@ -244,7 +244,7 @@ void QPDF_PDFTOPDF_PageHandle::mirror() // {{{
 
   static const char *pre="%pdftopdf cm\n";
   // Note: we don't change (TODO need to?) the media box
-  std::string mrcmd("-1 0 0 1 "+ 
+  std::string mrcmd("-1 0 0 1 "+
                     QUtil::double_to_string(orig.right)+" 0 cm\n");
 
   content.insert(0,std::string(pre)+mrcmd);
@@ -352,7 +352,6 @@ void QPDF_PDFTOPDF_PageHandle::debug(const PageRect &rect,float xpos,float ypos)
 }
 // }}}
 
-// }}}
 void QPDF_PDFTOPDF_Processor::closeFile() // {{{
 {
   pdf.reset();
@@ -512,7 +511,7 @@ void QPDF_PDFTOPDF_Processor::add_page(std::shared_ptr<PDFTOPDF_PageHandle> page
 void QPDF_PDFTOPDF_Processor::multiply(int copies,bool collate) // {{{
 {
   assert(pdf);
-  assert(copies>0); 
+  assert(copies>0);
 
   std::vector<QPDFObjectHandle> pages=pdf->getAllPages(); // need copy
   const int len=pages.size();
