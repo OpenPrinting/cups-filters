@@ -237,6 +237,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   if (set_defaults)
     h->CutMedia = CUPS_CUT_NONE;
 
+  if (set_defaults)
+    h->Tumble = CUPS_FALSE;
   if ((val = cupsGetOption("sides", num_options, options)) != NULL ||
       (val = cupsGetOption("Duplex", num_options, options)) != NULL)
   {
@@ -249,7 +251,13 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	     !strncasecmp(val, "two-sided", 9) ||
 	     !strncasecmp(val, "TwoSided", 8) ||
 	     !strncasecmp(val, "Duplex", 6))
+    {
       h->Duplex = CUPS_TRUE;
+      if (!strncasecmp(val, "DuplexTumble", 12))
+	h->Tumble = CUPS_TRUE;
+      if (!strncasecmp(val, "DuplexNoTumble", 12))
+	h->Tumble = CUPS_FALSE;
+    }
     else if (set_defaults)
       h->Duplex = CUPS_FALSE;
   }
@@ -721,11 +729,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	     !strcasecmp(val, "TwoSidedShortEdge") ||
 	     !strcasecmp(val, "DuplexTumble"))
       h->Tumble = CUPS_TRUE;
-    else if (set_defaults)
-      h->Tumble = CUPS_FALSE;
   }
-  else if (set_defaults)
-    h->Tumble = CUPS_FALSE;
 
   h->cupsWidth = h->HWResolution[0] * h->PageSize[0] / 72;
   h->cupsHeight = h->HWResolution[1] * h->PageSize[1] / 72;
