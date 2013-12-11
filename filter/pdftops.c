@@ -244,6 +244,7 @@ main(int  argc,				/* I - Number of command-line args */
   ppd_file_t	*ppd;			/* PPD file */
   char		resolution[128] = "";   /* Output resolution */
   int           xres = 0, yres = 0,     /* resolution values */
+                mres, res,
                 maxres = CUPS_PDFTOPS_MAX_RESOLUTION,
                                         /* Maximum image rendering resolution */
                 numvalues;              /* Number of values actually read */
@@ -269,6 +270,8 @@ main(int  argc,				/* I - Number of command-line args */
 		*pstops_end,		/* End of pstops filter option */
 		*ptr;			/* Pointer into value */
   const char	*cups_serverbin;	/* CUPS_SERVERBIN environment variable */
+  int		duplex, tumble;         /* Duplex settings for PPD-less
+					   printing */
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
@@ -664,10 +667,15 @@ main(int  argc,				/* I - Number of command-line args */
   }
   if ((xres > 0) || (yres > 0))
   {
-    if ((yres > 0) && (xres > yres)) xres = yres;
+    if (yres == 0) yres = xres;
+    if (xres == 0) xres = yres;
+    if (xres > yres)
+      res = yres;
+    else
+      res = xres;
   }
   else
-    xres = 300;
+    res = 300;
 
  /*
   * Get the ceiling for the image rendering resolution
@@ -675,8 +683,8 @@ main(int  argc,				/* I - Number of command-line args */
 
   if ((val = cupsGetOption("pdftops-max-image-resolution", num_options, options)) != NULL)
   {
-    if ((numvalues = sscanf(val, "%d", &yres)) > 0)
-      maxres = yres;
+    if ((numvalues = sscanf(val, "%d", &mres)) > 0)
+      maxres = mres;
     else
       fprintf(stderr,
 	      "WARNING: Invalid value for \"pdftops-max-image-resolution\": \"%s\"\n", val);
@@ -690,8 +698,8 @@ main(int  argc,				/* I - Number of command-line args */
   */
 
   if (maxres)
-    while (xres > maxres)
-      xres = xres / 2;
+    while (res > maxres)
+      res = res / 2;
 
   if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
   {
@@ -701,9 +709,9 @@ main(int  argc,				/* I - Number of command-line args */
     * resolution of embedded images does not match the printer's resolution
     */
     pdf_argv[pdf_argc++] = (char *)"-r";
-    snprintf(resolution, sizeof(resolution), "%d", xres);
+    snprintf(resolution, sizeof(resolution), "%d", res);
     pdf_argv[pdf_argc++] = resolution;
-    fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", xres);
+    fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", res);
 #endif /* HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION */
     pdf_argv[pdf_argc++] = filename;
     pdf_argv[pdf_argc++] = (char *)"-";
@@ -714,9 +722,9 @@ main(int  argc,				/* I - Number of command-line args */
     * Set resolution to avoid slow processing by the printer when the
     * resolution of embedded images does not match the printer's resolution
     */
-    snprintf(resolution, 127, "-r%d", xres);
+    snprintf(resolution, 127, "-r%d", res);
     pdf_argv[pdf_argc++] = resolution;
-    fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", xres);
+    fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", res);
    /*
     * PostScript debug mode: If you send a job with "lpr -o psdebug" Ghostscript
     * will not compress the pages, so that the PostScript code can get
@@ -764,7 +772,7 @@ main(int  argc,				/* I - Number of command-line args */
   * of the printer's PostScript interpreter?
   */
 
-  if ((renderer == PDFTOPS) || (renderer == PDFTOPS))
+  if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
     need_post_proc = 0;
   else if (renderer == GS)
     need_post_proc =
@@ -772,6 +780,14 @@ main(int  argc,				/* I - Number of command-line args */
        (!strncasecmp(make_model, "Kyocera", 7) ||
 	!strncasecmp(make_model, "Brother", 7)) ? 1 : 0);
   else
+    need_post_proc = 1;
+
+ /*
+  * Do we need post-processing of the PostScript output to apply option
+  * settings when doing PPD-less printing?
+  */
+
+  if (!ppd)
     need_post_proc = 1;
 
  /*
@@ -1008,6 +1024,169 @@ main(int  argc,				/* I - Number of command-line args */
 	    if (strncmp(buffer, "%%EndProlog", 11))
 	      puts("%%EndProlog");
 	    printf("%s", buffer);
+	  }
+
+	  if (!ppd)
+	  {
+	   /*
+	    * Copy everything until the setup section
+	    */
+	    while (bytes > 0 &&
+		   strncmp(buffer, "%%BeginSetup", 12) &&
+		   strncmp(buffer, "%%EndSetup", 10) &&
+		   strncmp(buffer, "%%Page:", 7))
+	    {
+	      bytes = cupsFileGetLine(fp, buffer, sizeof(buffer));
+	      if (strncmp(buffer, "%%Page:", 7) &&
+		  strncmp(buffer, "%%EndSetup", 10))
+		printf("%s", buffer);
+	    }
+	  
+	    if (bytes > 0)
+	    {
+	     /*
+	      * Insert option PostScript code in Setup section
+	      */
+	      if (strncmp(buffer, "%%BeginSetup", 12))
+	      {
+		/* No Setup section, create one */
+		fprintf(stderr, "DEBUG: Adding Setup section for option PostScript code\n");
+		puts("%%BeginSetup");
+	      }
+
+	     /*
+	      * Duplex
+	      */
+	      duplex = 0;
+	      tumble = 0;
+	      if ((val = cupsGetOption("sides", num_options, options)) != NULL ||
+		  (val = cupsGetOption("Duplex", num_options, options)) != NULL)
+	      {
+		if (!strcasecmp(val, "On") ||
+			 !strcasecmp(val, "True") || !strcasecmp(val, "Yes") ||
+			 !strncasecmp(val, "two-sided", 9) ||
+			 !strncasecmp(val, "TwoSided", 8) ||
+			 !strncasecmp(val, "Duplex", 6))
+		{
+		  duplex = 1;
+		  if (!strncasecmp(val, "DuplexTumble", 12))
+		    tumble = 1;
+		}
+	      }
+
+	      if ((val = cupsGetOption("sides", num_options, options)) != NULL ||
+		  (val = cupsGetOption("Tumble", num_options, options)) != NULL)
+	      {
+		if (!strcasecmp(val, "None") || !strcasecmp(val, "Off") ||
+		    !strcasecmp(val, "False") || !strcasecmp(val, "No") ||
+		    !strcasecmp(val, "one-sided") || !strcasecmp(val, "OneSided") ||
+		    !strcasecmp(val, "two-sided-long-edge") ||
+		    !strcasecmp(val, "TwoSidedLongEdge") ||
+		    !strcasecmp(val, "DuplexNoTumble"))
+		  tumble = 0;
+		else if (!strcasecmp(val, "On") ||
+			 !strcasecmp(val, "True") || !strcasecmp(val, "Yes") ||
+			 !strcasecmp(val, "two-sided-short-edge") ||
+			 !strcasecmp(val, "TwoSidedShortEdge") ||
+			 !strcasecmp(val, "DuplexTumble"))
+		  tumble = 1;
+	      }
+
+	      if (duplex)
+	      {
+		if (tumble)
+		  puts("<</Duplex true /Tumble true>> setpagedevice");
+		else
+		  puts("<</Duplex true /Tumble false>> setpagedevice");
+	      }
+	      else
+		puts("<</Duplex false>> setpagedevice");
+
+	     /*
+	      * Resolution
+	      */
+	      if ((xres > 0) && (yres > 0))
+		printf("<</HWResolution[%d %d]>> setpagedevice\n", xres, yres);
+
+	     /*
+	      * InputSlot/MediaSource
+	      */
+	      if ((val = cupsGetOption("media-position", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("MediaPosition", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("media-source", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("MediaSource", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("InputSlot", num_options,
+				       options)) != NULL)
+	      {
+		if (!strncasecmp(val, "Auto", 4) ||
+		    !strncasecmp(val, "Default", 7))
+		  puts("<</ManualFeed false /MediaPosition 7>> setpagedevice");
+		else if (!strcasecmp(val, "Main"))
+		  puts("<</MediaPosition 0 /ManualFeed false>> setpagedevice");
+		else if (!strcasecmp(val, "Alternate"))
+		  puts("<</MediaPosition 1 /ManualFeed false>> setpagedevice");
+		else if (!strcasecmp(val, "Manual"))
+		  puts("<</MediaPosition 3 /ManualFeed true>> setpagedevice");
+		else if (!strcasecmp(val, "Top"))
+		  puts("<</MediaPosition 0 /ManualFeed false>> setpagedevice");
+		else if (!strcasecmp(val, "Bottom"))
+		  puts("<</MediaPosition 1 /ManualFeed false>> setpagedevice");
+		else if (!strcasecmp(val, "ByPassTray"))
+		  puts("<</MediaPosition 3 /ManualFeed false>> setpagedevice");
+		else if (!strcasecmp(val, "Tray1"))
+		  puts("<</MediaPosition 3 /ManualFeed false>> setpagedevice");
+		else if (!strcasecmp(val, "Tray2"))
+		  puts("<</MediaPosition 0 /ManualFeed false>> setpagedevice");
+		else if (!strcasecmp(val, "Tray3"))
+		  puts("<</MediaPosition 1 /ManualFeed false>> setpagedevice");
+	      }
+
+	     /*
+	      * ColorModel
+	      */
+	      if ((val = cupsGetOption("pwg-raster-document-type", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("PwgRasterDocumentType", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("print-color-mode", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("PrintColorMode", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("color-space", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("ColorSpace", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("color-model", num_options,
+				       options)) != NULL ||
+		  (val = cupsGetOption("ColorModel", num_options,
+				       options)) != NULL)
+	      {
+		if (!strncasecmp(val, "Black", 5))
+		  puts("<</ProcessColorModel /DeviceGray>> setpagedevice");
+		else if (!strncasecmp(val, "Cmyk", 4))
+		  puts("<</ProcessColorModel /DeviceCMYK>> setpagedevice");
+		else if (!strncasecmp(val, "Cmy", 3))
+		  puts("<</ProcessColorModel /DeviceCMY>> setpagedevice");
+		else if (!strncasecmp(val, "Rgb", 3))
+		  puts("<</ProcessColorModel /DeviceRGB>> setpagedevice");
+		else if (!strncasecmp(val, "Gray", 4))
+		  puts("<</ProcessColorModel /DeviceGray>> setpagedevice");
+		else if (!strncasecmp(val, "Color", 5))
+		  puts("<</ProcessColorModel /DeviceRGB>> setpagedevice");
+	      }
+
+	      if (strncmp(buffer, "%%BeginSetup", 12))
+	      {
+		/* Close newly created Setup section */
+		if (strncmp(buffer, "%%EndSetup", 10))
+		  puts("%%EndSetup");
+		printf("%s", buffer);
+	      }
+	    }
 	  }
 
 	 /*

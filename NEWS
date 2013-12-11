@@ -34,10 +34,10 @@ CHANGES IN V1.0.43
 	  Poppler/freedesktop.org bug #72312, comment #6).
 	- pstopdf: Support for the "landscape" and
 	  "orientation-requested" options (Ubuntu bug #1243484).
-	- pdftops: Support for PPD-less printing, the resolution and
+	- pdftops: Support for PPD-less printing on PostScript
+	  printers: duplex, resolution, input tray, color mode, and
 	  make/model (for quirk rules) can now be supplied by the
-	  command line, pdftopdf takes care of the page geometry
-	  (TODO: Duplex, input tray(?)).
+	  command line, pdftopdf takes care of the page geometry.
 	- libcupsfilters: cupsRasterParseIPPOptions() allows
 	  specifying resolutions without unit now, assuming dpi then
 	  (example: "600x600").
