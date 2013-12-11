@@ -4,6 +4,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 CHANGES IN V1.0.43
 
 	- libcupsfilters: cupsRasterParseIPPOptions() did not set
+	  sRGB color space.
+	- libcupsfilters: cupsRasterParseIPPOptions() did not set
 	  Tumble with "Duplex=DuplexTumble".
 	- pdftopdf: Fixed software copy generation logic for printers
 	  with hardware copy generation, but without collate support
