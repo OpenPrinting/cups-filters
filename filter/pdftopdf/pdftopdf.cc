@@ -7,6 +7,12 @@
 #include <assert.h>
 #include <cups/cups.h>
 #include <cups/ppd.h>
+#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
+#define HAVE_CUPS_1_7 1
+#endif
+#ifdef HAVE_CUPS_1_7
+#include <cups/pwg.h>
+#endif /* HAVE_CUPS_1_7 */
 #include <iomanip>
 #include <sstream>
 #include <memory>
@@ -349,6 +355,32 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     param.page.width=pagesize->width;
     param.page.height=pagesize->length;
   }
+#ifdef HAVE_CUPS_1_7
+  else {
+    if ((val = cupsGetOption("media-size", num_options, options)) != NULL ||
+	(val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
+	(val = cupsGetOption("page-size", num_options, options)) != NULL ||
+	(val = cupsGetOption("PageSize", num_options, options)) != NULL) {
+      pwg_media_t *size_found = NULL;
+      fprintf(stderr, "DEBUG: Page size from command line: %s\n", val);
+      if ((size_found = pwgMediaForPWG(val)) == NULL)
+	if ((size_found = pwgMediaForPPD(val)) == NULL)
+	  size_found = pwgMediaForLegacy(val);
+      if (size_found != NULL) {
+	param.page.width = size_found->width * 72.0 / 2540.0;
+        param.page.height = size_found->length * 72.0 / 2540.0;
+	param.page.top=param.page.bottom=36.0;
+	param.page.right=param.page.left=18.0;
+	param.page.right=param.page.width-param.page.right;
+	param.page.top=param.page.height-param.page.top;
+	fprintf(stderr, "DEBUG: Width: %f, Length: %f\n", param.page.width, param.page.height);
+      }
+      else
+	fprintf(stderr, "DEBUG: Unsupported page size %s.\n", val);
+    }
+  }
+#endif /* HAVE_CUPS_1_7 */
+
   param.paper_is_landscape=(param.page.width>param.page.height);
 
   PageRect tmp; // borders (before rotation)
@@ -357,6 +389,19 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   optGetFloat("page-left",num_options,options,&tmp.left);
   optGetFloat("page-right",num_options,options,&tmp.right);
   optGetFloat("page-bottom",num_options,options,&tmp.bottom);
+
+  if ((val = cupsGetOption("media-top-margin", num_options, options))
+      != NULL)
+    tmp.top = atof(val) * 72.0 / 2540.0; 
+  if ((val = cupsGetOption("media-left-margin", num_options, options))
+      != NULL)
+    tmp.left = atof(val) * 72.0 / 2540.0; 
+  if ((val = cupsGetOption("media-right-margin", num_options, options))
+      != NULL)
+    tmp.right = atof(val) * 72.0 / 2540.0; 
+  if ((val = cupsGetOption("media-bottom-margin", num_options, options))
+      != NULL)
+    tmp.bottom = atof(val) * 72.0 / 2540.0; 
 
   if ( (param.orientation==ROT_90)||(param.orientation==ROT_270) ) { // unrotate page
     // NaN stays NaN

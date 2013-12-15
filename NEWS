@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
+	- pdftopdf: Take page size from the command line if not
+	  already given by the PPD file, this way
+	  "fitplot"/"fit-to-page" also works with PPD-less printing.
 	- libcupsfilters: cupsRasterParseIPPOptions() did not set
 	  sRGB color space.
 	- libcupsfilters: cupsRasterParseIPPOptions() did not set
