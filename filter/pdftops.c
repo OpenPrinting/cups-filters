@@ -379,7 +379,7 @@ main(int  argc,				/* I - Number of command-line args */
   {
     strncpy(make_model, val, sizeof(make_model));
     for (ptr = make_model; *ptr; ptr ++)
-      if (*ptr == '_') *ptr = ' ';
+      if (*ptr == '-') *ptr = ' ';
   }
   else if (ppd)
   {

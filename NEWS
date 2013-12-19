@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.0.42 - 2013-11-29
 
 CHANGES IN V1.0.43
 
+	- cups-browsed: When automatically setting up a PPD-less print
+	  queue for an IPP network printer add make/model info as an
+	  additional "make-and-model" command line option to the call
+	  of the pdftoippprinter filter, this way filters can do
+	  make/model-specific exceptions (quirk rules).
 	- pdftopdf: Take page size from the command line if not
 	  already given by the PPD file, this way
 	  "fitplot"/"fit-to-page" also works with PPD-less printing.
