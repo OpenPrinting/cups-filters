@@ -1,0 +1,249 @@
+*PPD-Adobe: "4.3"
+*%
+*% This PPD file is for using the Fuji Xerox DocuPrint CM305 df in native PDF
+*% mode, using CUPS with the OpenPrinting CUPS Filters package
+*% option settings controlled via PJL commands. It uses CUPS with the
+*% OpenPrinting CUPS Filters package.
+*%
+*% This PPD is experimental. It is possible that some of the options
+*% and settings do not make sense or do not cause any change on the output.
+*% It can even happen that with certain settings nothing or an error page
+*% comes out.
+*%
+*% This file is published under the GNU General Public License
+*%
+*% You may save this file as 'Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd'
+*%
+*%
+*FormatVersion:	"4.3"
+*FileVersion:	"1.1"
+*LanguageVersion: English 
+*LanguageEncoding: ISOLatin1
+*PCFileName:	"CM305PDF.PPD"
+*Manufacturer:	"(Fuji Xerox)"
+*Product:       "(Fuji Xerox DocuPrint CM305 df)"
+*cupsVersion:	1.0
+*cupsManualCopies: True
+*cupsModelNumber:  2
+*ModelName:     "Fuji Xerox DocuPrint CM305 df"
+*ShortNickName: "Fuji Xerox DocuPrint CM305 df"
+*NickName:      "Fuji Xerox DocuPrint CM305 df PDF"
+*PSVersion:     "(3010.107) 0"
+*LanguageLevel:	"3"
+*ColorDevice:	True
+*DefaultColorSpace: CMYK
+*FileSystem:	False
+*Throughput:	"23"
+*LandscapeOrientation: Plus90
+*TTRasterizer:	Type42
+*1284DeviceID: "MFG:FUJI XEROX;CMD:PJL,PCLXL,PCL,PDF,HBPL,POSTSCRIPT;MDL:DocuPrint CM305 df;DES:FUJI XEROX DocuPrint CM305 df;CLS:PRINTER;"
+*JCLBegin:            "<1B>%-12345X@PJL JOB<0A>"
+*JCLToPDFInterpreter: "@PJL ENTER LANGUAGE = PDF<0A>"
+*JCLEnd:              "<1B>%-12345X@PJL EOJ <0A><1B>%-12345X"
+*cupsFilter: "application/vnd.cups-pdf 0 -"
+
+*OpenGroup: General/General
+*JCLOpenUI *PageSize/Page Size: PickOne
+*OrderDependency: 100 JCLSetup *PageSize
+*DefaultPageSize: A4
+*PageSize A4/A4: "@PJL SET PAPER=A4<0A>"
+*PageSize A5/A5: "@PJL SET PAPER=A5<0A>"
+*PageSize B5/B5: "@PJL SET PAPER=JISB5<0A>"
+*PageSize Letter/Letter: "@PJL SET PAPER=LETTER<0A>"
+*PageSize FanFoldGermanLegal/8.5 x 13: "@PJL SET PAPER=FOLIO<0A>"
+*PageSize Legal/Legal: "@PJL SET PAPER=LEGAL<0A>"
+*PageSize Executive/Executive: "@PJL SET PAPER=EXECUTIVE<0A>"
+*PageSize EnvMonarch/Monarch: "@PJL SET PAPER=MONARCH<0A>"
+*PageSize EnvDL/DL: "@PJL SET PAPER=DL<0A>"
+*PageSize EnvC5/C5: "@PJL SET PAPER=C5<0A>"
+*PageSize Env10/Com 10: "@PJL SET PAPER=COM10<0A>"
+*JCLCloseUI: *PageSize
+
+*JCLOpenUI *PageRegion: PickOne
+*OrderDependency: 100 JCLSetup *PageRegion
+*DefaultPageRegion: A4
+*PageRegion A4/A4: "@PJL SET PAPER=A4<0A>"
+*PageRegion A5/A5: "@PJL SET PAPER=A5<0A>"
+*PageRegion B5/B5: "@PJL SET PAPER=JISB5<0A>"
+*PageRegion Letter/Letter: "@PJL SET PAPER=LETTER<0A>"
+*PageRegion FanFoldGermanLegal/8.5 x 13: "@PJL SET PAPER=FOLIO<0A>"
+*PageRegion Legal/Legal: "@PJL SET PAPER=LEGAL<0A>"
+*PageRegion Executive/Executive: "@PJL SET PAPER=EXECUTIVE<0A>"
+*PageRegion EnvMonarch/Monarch: "@PJL SET PAPER=MONARCH<0A>"
+*PageRegion EnvDL/DL: "@PJL SET PAPER=DL<0A>"
+*PageRegion EnvC5/C5: "@PJL SET PAPER=C5<0A>"
+*PageRegion Env10/Com 10: "@PJL SET PAPER=COM10<0A>"
+*JCLCloseUI: *PageRegion
+
+*DefaultImageableArea: A4
+*ImageableArea A4/A4: "11.62 11.62 583.65 830.27"
+*ImageableArea A5/A5: "11.62 11.62 407.91 583.65"
+*ImageableArea B5/B5: "11.62 11.62 504.28 716.88"
+*ImageableArea Letter/Letter: "11.62 11.62 600.38 780.38"
+*ImageableArea FanFoldGermanLegal/8.5 x 13: "11.62 11.62 600.38 924.38"
+*ImageableArea Legal/Legal: "11.62 11.62 600.38 996.38"
+*ImageableArea Executive/Executive: "11.62 11.62 510.38 744.38"
+*ImageableArea EnvMonarch/Monarch: "11.62 11.62 267.38 528.38"
+*ImageableArea EnvDL/DL: "11.62 17.01 300.19 606.61"
+*ImageableArea EnvC5/C5: "11.62 11.62 447.59 637.51"
+*ImageableArea Env10/Com 10: "11.62 11.62 285.38 672.38"
+
+*DefaultPaperDimension: A4
+*PaperDimension A4/A4: "595 842"
+*PaperDimension A5/A5: "420 595"
+*PaperDimension B5/B5: "516 729"
+*PaperDimension Letter/Letter: "612 792"
+*PaperDimension FanFoldGermanLegal/8.5 x 13: "612 936"
+*PaperDimension Legal/Legal: "612 1008"
+*PaperDimension Executive/Executive: "522 756"
+*PaperDimension EnvMonarch/Monarch: "279 540"
+*PaperDimension EnvDL/DL: "312 624"
+*PaperDimension EnvC5/C5: "459 649"
+*PaperDimension Env10/Com 10: "297 684"
+
+*HWMargins: 11 11 11 11
+*LeadingEdge Short: ""
+*DefaultLeadingEdge: Short
+*MaxMediaWidth: "612"
+*MaxMediaHeight: "1008"
+*NonUIOrderDependency: 100 JCLSetup *CustomPageSize
+*CustomPageSize True: "@PJL SET PAPER=AUTO<0A>"
+
+*JCLOpenUI *InputSlot/Paper Tray: PickOne
+*OrderDependency: 100 JCLSetup *InputSlot
+*DefaultInputSlot: AutoSelect
+*InputSlot AutoSelect/Auto Select: "@PJL SET MEDIASOURCE=AUTO<0A>"
+*InputSlot 1stTray/Tray 1: "@PJL SET MEDIASOURCE=TRAY1<0A>"
+*InputSlot 2ndTray/Tray 2: "@PJL SET MEDIASOURCE=TRAY2<0A>"
+*InputSlot BypassTray/Manual Feeder: "@PJL SET MEDIASOURCE=SMH<0A>"
+*JCLCloseUI: *InputSlot
+
+*JCLOpenUI *MediaType/Paper Type: PickOne
+*OrderDependency: 100 JCLSetup *MediaType
+*DefaultMediaType: Default
+*MediaType Default/None: "@PJL SET MEDIATYPE=OFF<0A>"
+*MediaType Plain/Plain: "@PJL SET MEDIATYPE=NORMAL<0A>"
+*MediaType ThickPaper/Lightweight Cardstock: "@PJL SET MEDIATYPE=THICK<0A>"
+*MediaType ThickPaper2/Heavyweight Cardstock: "@PJL SET MEDIATYPE=THICK2<0A>"
+*MediaType Envelope/Envelope: "@PJL SET MEDIATYPE=ENVELOPE<0A>"
+*MediaType LabelPaper/Labels: "@PJL SET MEDIATYPE=LABEL<0A>"
+*MediaType Letterhead/Letterhead: "@PJL SET MEDIATYPE=LETTERHEAD<0A>"
+*MediaType CoatingPaper2/Lightweight Glossy Cardstock: "@PJL SET MEDIATYPE=COAT2<0A>"
+*MediaType CoatingPaper3/Heavyweight Glossy Cardstock: "@PJL SET MEDIATYPE=COAT3<0A>"
+*MediaType Prepunched/Hole Punched: "@PJL SET MEDIATYPE=PREPUNCHED<0A>"
+*MediaType ColoredPaper/Colored: "@PJL SET MEDIATYPE=COLOR<0A>"
+*MediaType SpecialPaper/Special: "@PJL SET MEDIATYPE=SPECIAL<0A>"
+*JCLCloseUI: *MediaType
+
+*JCLOpenUI *Duplex/Double-Sided Printing: PickOne
+*OrderDependency: 100 JCLSetup *Duplex
+*DefaultDuplex: None
+*Duplex None/Off: "@PJL SET DUPLEX=OFF<0A>"
+*Duplex DuplexNoTumble/Long-Edge binding: "@PJL SET DUPLEX=ON<0A>@PJL SET BINDING=LONGEDGE<0A>"
+*Duplex DuplexTumble/Short-Edge binding: "@PJL SET DUPLEX=ON<0A>@PJL SET BINDING=SHORTEDGE<0A>"
+*JCLCloseUI: *Duplex
+
+*DefaultResolution: 600dpi
+
+*DefaultHalftoneType: 5
+*ScreenFreq: "141.0"
+*ScreenAngle: "45.0"
+*DefaultScreenProc: Dot
+
+*JCLOpenUI *colormode/Color Mode: PickOne
+*OrderDependency: 100 JCLSetup *colormode
+*Defaultcolormode: color
+*colormode color/Color: "@PJL SET RENDERMODE=AUTOCOLOR<0A>"
+*colormode blackwhite/Black and White: "@PJL SET RENDERMODE=GRAYSCALE<0A>"
+*JCLCloseUI: *colormode
+
+*JCLOpenUI *draftMode/Draft Mode: PickOne
+*OrderDependency: 100 JCLSetup *draftMode
+*DefaultdraftMode: False
+*draftMode False/Off: "@PJL SET ECONOMODE=OFF<0A>"
+*draftMode True/On: "@PJL SET ECONOMODE=ON<0A>"
+*JCLCloseUI: *draftMode
+
+*JCLOpenUI *ret/Image Enhancement: PickOne
+*OrderDependency: 100 JCLSetup *ret
+*Defaultret: True
+*ret False/Off: "@PJL SET RET=OFF<0A>"
+*ret True/On: "@PJL SET RET=ON<0A>"
+*JCLCloseUI: *ret
+
+*UIConstraints: *PageSize A5 *Duplex DuplexNoTumble
+*UIConstraints: *PageSize A5 *Duplex DuplexTumble
+*UIConstraints: *PageSize B5 *Duplex DuplexNoTumble
+*UIConstraints: *PageSize B5 *Duplex DuplexTumble
+*UIConstraints: *PageSize Executive *Duplex DuplexNoTumble
+*UIConstraints: *PageSize Executive *Duplex DuplexTumble
+*UIConstraints: *PageSize EnvMonarch *Duplex DuplexNoTumble
+*UIConstraints: *PageSize EnvMonarch *Duplex DuplexTumble
+*UIConstraints: *PageSize EnvDL *Duplex DuplexNoTumble
+*UIConstraints: *PageSize EnvDL *Duplex DuplexTumble
+*UIConstraints: *PageSize Env10 *Duplex DuplexNoTumble
+*UIConstraints: *PageSize Env10 *Duplex DuplexTumble
+*UIConstraints: *PageSize EnvC5 *Duplex DuplexNoTumble
+*UIConstraints: *PageSize EnvC5 *Duplex DuplexTumble
+*UIConstraints: *Duplex DuplexNoTumble *PageSize A5
+*UIConstraints: *Duplex DuplexTumble *PageSize A5
+*UIConstraints: *Duplex DuplexNoTumble *PageSize B5
+*UIConstraints: *Duplex DuplexTumble *PageSize B5
+*UIConstraints: *Duplex DuplexNoTumble *PageSize Executive
+*UIConstraints: *Duplex DuplexTumble *PageSize Executive
+*UIConstraints: *Duplex DuplexNoTumble *PageSize EnvMonarch
+*UIConstraints: *Duplex DuplexTumble *PageSize EnvMonarch
+*UIConstraints: *Duplex DuplexNoTumble *PageSize EnvDL
+*UIConstraints: *Duplex DuplexTumble *PageSize EnvDL
+*UIConstraints: *Duplex DuplexNoTumble *PageSize EnvC5
+*UIConstraints: *Duplex DuplexTumble *PageSize EnvC5
+*UIConstraints: *Duplex DuplexNoTumble *PageSize Env10
+*UIConstraints: *Duplex DuplexTumble *PageSize Env10
+
+*UIConstraints: *InputSlot BypassTray *Duplex DuplexNoTumble
+*UIConstraints: *InputSlot BypassTray *Duplex DuplexTumble
+*UIConstraints: *Duplex DuplexNoTumble *InputSlot BypassTray
+*UIConstraints: *Duplex DuplexTumble *InputSlot BypassTray
+
+*CloseGroup: General
+
+*% Generic boilerplate PPD stuff as standard PostScript fonts and so on
+
+*DefaultFont: Courier
+*Font AvantGarde-Book: Standard "(001.006S)" Standard ROM
+*Font AvantGarde-BookOblique: Standard "(001.006S)" Standard ROM
+*Font AvantGarde-Demi: Standard "(001.007S)" Standard ROM
+*Font AvantGarde-DemiOblique: Standard "(001.007S)" Standard ROM
+*Font Bookman-Demi: Standard "(001.004S)" Standard ROM
+*Font Bookman-DemiItalic: Standard "(001.004S)" Standard ROM
+*Font Bookman-Light: Standard "(001.004S)" Standard ROM
+*Font Bookman-LightItalic: Standard "(001.004S)" Standard ROM
+*Font Courier: Standard "(002.004S)" Standard ROM
+*Font Courier-Bold: Standard "(002.004S)" Standard ROM
+*Font Courier-BoldOblique: Standard "(002.004S)" Standard ROM
+*Font Courier-Oblique: Standard "(002.004S)" Standard ROM
+*Font Helvetica: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Bold: Standard "(001.007S)" Standard ROM
+*Font Helvetica-BoldOblique: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Narrow-Bold: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow-BoldOblique: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow-Oblique: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Oblique: Standard "(001.006S)" Standard ROM
+*Font NewCenturySchlbk-Bold: Standard "(001.009S)" Standard ROM
+*Font NewCenturySchlbk-BoldItalic: Standard "(001.007S)" Standard ROM
+*Font NewCenturySchlbk-Italic: Standard "(001.006S)" Standard ROM
+*Font NewCenturySchlbk-Roman: Standard "(001.007S)" Standard ROM
+*Font Palatino-Bold: Standard "(001.005S)" Standard ROM
+*Font Palatino-BoldItalic: Standard "(001.005S)" Standard ROM
+*Font Palatino-Italic: Standard "(001.005S)" Standard ROM
+*Font Palatino-Roman: Standard "(001.005S)" Standard ROM
+*Font Symbol: Special "(001.007S)" Special ROM
+*Font Times-Bold: Standard "(001.007S)" Standard ROM
+*Font Times-BoldItalic: Standard "(001.009S)" Standard ROM
+*Font Times-Italic: Standard "(001.007S)" Standard ROM
+*Font Times-Roman: Standard "(001.007S)" Standard ROM
+*Font ZapfChancery-MediumItalic: Standard "(001.007S)" Standard ROM
+*Font ZapfDingbats: Special "(001.004S)" Standard ROM
+
+

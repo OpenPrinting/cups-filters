@@ -733,7 +733,11 @@ Options must not be implemented by specifying PostScript code to
 inject.  They must be injecting JCL code ("*JCLOpenUI:
 ... ... *JCLCloseUI: ...").
 
-A sample PPD file, HP-Color_LaserJet_CM3530_MFP-PDF.ppd is included.
+Sample PPD files are included:
+
+- Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd
+- Generic-PDF_Printer-PDF.ppd
+- HP-Color_LaserJet_CM3530_MFP-PDF.ppd
 
 3. LICENSE
 
@@ -969,8 +973,11 @@ line:
 
 and NO "*cupsFilter:" line which accepts PostScript input.
 
-A sample PPD file for a native PDF printer,
-HP-Color_LaserJet_CM3530_MFP-PDF.ppd is included.
+Sample PPD file for native PDF printer are included:
+
+- Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd
+- Generic-PDF_Printer-PDF.ppd
+- HP-Color_LaserJet_CM3530_MFP-PDF.ppd
 
 When a printer does not support PS nor PDF, you can use Ghostscript (GS).
 In this case, you can specify device options like a PS printer.

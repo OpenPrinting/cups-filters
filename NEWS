@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.43 - 2013-12-19
 -----------------------------------------------------
 
+CHANGES IN V1.0.44
+
+	- Added another sample PPD file for a native PDF printer,
+	  Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd. Thanks to Adrian
+	  Johnson for contributing this PPD file.
+
 CHANGES IN V1.0.43
 
 	- cups-browsed: When automatically setting up a PPD-less print

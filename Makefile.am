@@ -706,6 +706,7 @@ EXTRA_DIST += utils/cups-browsed.in \
 # ===
 ppddir = $(datadir)/ppd/cupsfilters
 ppd_DATA = \
+	ppd/Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd \
 	ppd/Generic-PDF_Printer-PDF.ppd \
 	ppd/HP-Color_LaserJet_CM3530_MFP-PDF.ppd \
 	ppd/HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd \
