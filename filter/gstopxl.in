@@ -36,7 +36,7 @@ if test "x$PPD" != x; then
 	    ;;
     esac
 else
-    device="pxlmono"
+    device="pxlcolor"
 fi
 
 # Apply PPD settings.
@@ -45,7 +45,7 @@ ps_code=
 ppd_opts=
 
 resolution=
-eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])Resolution=([0-9.]+(x[0-9.]+)?).*/resolution="${resolution:-\2}"/p')"
+eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(printer-resolution|Resolution)=([0-9.]+(x[0-9.]+)?).*/resolution="${resolution:-\3}"/pi')"
 if test -e "$PPD"; then
   eval "$(sed @SED_EXTENDED_REGEX_OPT@ 's/^\*DefaultResolution:[[:space:]]+([0-9.]+(x[0-9.]+)?).*/resolution="${resolution:-\1}"/p' "$PPD")"
 fi
@@ -55,7 +55,7 @@ if test -n "$resolution"; then
 fi
 
 pagesize=
-eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(media|PageSize)=([^[:space:]]+).*/pagesize="${pagesize:-\3}"/p')"
+eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(media|PageSize)=([^[:space:]]+).*/pagesize="${pagesize:-\3}"/pi')"
 if test -e "$PPD"; then
   eval "$(sed @SED_EXTENDED_REGEX_OPT@ 's/^\*DefaultPageSize:[[:space:]]+([^[:space:]]+).*/pagesize="${pagesize:-\1}"/p' "$PPD")"
 fi
@@ -100,7 +100,7 @@ if test -n "$margin_l" && test -n "$margin_b" && \
 fi
 
 inputslot=
-eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(InputSlot)=([^[:space:]]+).*/inputslot="${inputslot:-\3}"/p')"
+eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(media-position|MediaPosition|media-source|MediaSource|InputSlot)=([^[:space:]]+).*/inputslot="${inputslot:-\3}"/pi')"
 if test -e "$PPD"; then
   eval "$(sed @SED_EXTENDED_REGEX_OPT@ 's/^\*DefaultInputSlot:[[:space:]]+([^[:space:]]+).*/inputslot="${inputslot:-\1}"/p' "$PPD")"
 fi
@@ -108,6 +108,22 @@ echo "DEBUG: InputSlot: $inputslot" >&2
 inputslot_val=
 if test -n "$inputslot" && test -e "$PPD"; then
   eval "$(sed @SED_EXTENDED_REGEX_OPT@ 's|^\*InputSlot[[:space:]]+'"$inputslot"'/[^:]+:[[:space:]]+"[[:space:]]*<[[:space:]]*<[[:space:]]*/MediaPosition[[:space:]]*([0-9]+)[[:space:]]*>[[:space:]]*>[[:space:]]*setpagedevice[[:space:]]*".*|inputslot_val="\1"|p' "$PPD")"
+else
+  if echo "$inputslot" | grep -qiE 'Default'; then
+    inputslot_val=0
+  elif echo "$inputslot" | grep -qiE 'Auto'; then
+    inputslot_val=1
+  elif echo "$inputslot" | grep -qiE 'Manual'; then
+    inputslot_val=2
+  elif echo "$inputslot" | grep -qiE 'Multipurpose|ByPass'; then
+    inputslot_val=3
+  elif echo "$inputslot" | grep -qiE 'Main|Upper|Top'; then
+    inputslot_val=4
+  elif echo "$inputslot" | grep -qiE 'Alternat|Mid'; then
+    inputslot_val=5
+  elif echo "$inputslot" | grep -qiE 'Large|Lower|Bottom'; then
+    inputslot_val=6
+  fi
 fi
 echo "DEBUG: Value for MediaPosition: $inputslot_val" >&2
 if test -n "$inputslot_val"; then
@@ -115,13 +131,13 @@ if test -n "$inputslot_val"; then
 fi
 
 colormodel=
-eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(ColorModel)=([^[:space:]]+).*/colormodel="${colormodel:-\3}"/p')"
+eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(pwg-raster-document-type|PwgRasterDocumentType|print-color-mode|PrintColorMode|color-space|ColorSpace|color-model|ColorModel)=([^[:space:]]+).*/colormodel="${colormodel:-\3}"/pi')"
 if test -e "$PPD"; then
   eval "$(sed @SED_EXTENDED_REGEX_OPT@ 's/^\*DefaultColorModel:[[:space:]]+([^[:space:]]+).*/colormodel="${colormodel:-\1}"/p' "$PPD")"
 fi
 echo "DEBUG: ColorModel: $colormodel" >&2
-if test "$colormodel" = "Gray"; then
-    device=pxlmono
+if echo "$colormodel" | grep -qiE 'gray|black|device1|mono'; then
+  device=pxlmono
 fi
 colormodel_val=
 if test -n "$colormodel" && test -e "$PPD"; then
@@ -133,15 +149,33 @@ if test -n "$colormodel_val"; then
 fi
 
 duplex=
-eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(Duplex)=([^[:space:]]+).*/duplex="${duplex:-\3}"/p')"
+tumble=
+eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(Duplex|sides)=([^[:space:]]+).*/duplex="${duplex:-\3}"/pi')"
+eval "$(printf "%s" "$5" | sed @SED_EXTENDED_REGEX_OPT@ 's/.*(^|[[:space:]])(Tumble)=([^[:space:]]+).*/tumble="${tumble:-\3}"/pi')"
 if test -e "$PPD"; then
   eval "$(sed @SED_EXTENDED_REGEX_OPT@ 's/^\*DefaultDuplex:[[:space:]]+([^[:space:]]+).*/duplex="${duplex:-\1}"/p' "$PPD")"
 fi
 echo "DEBUG: Duplex: $duplex" >&2
+echo "DEBUG: Tumble: $tumble" >&2
 duplex_val=
 tumble_val=
 if test -n "$duplex" && test -e "$PPD"; then
   eval "$(sed @SED_EXTENDED_REGEX_OPT@ 's|^\*Duplex[[:space:]]+'"$duplex"'/[^:]+:[[:space:]]+"[[:space:]]*<[[:space:]]*<[[:space:]]*/Duplex[[:space:]]*([^[:space:]]*)[[:space:]]*(/Tumble[[:space:]]*([^[:space:]]*)[[:space:]]*)?>[[:space:]]*>[[:space:]]*setpagedevice[[:space:]]*".*|duplex_val="\1"; tumble_val="\3"|p' "$PPD")"
+else
+  if echo "$duplex" | grep -qiE 'None|Off|False|No|One'; then
+    duplex_val=false
+  elif echo "$duplex" | grep -qiE 'Duplex|On|True|Yes|Two'; then
+    duplex_val=true
+    if echo "$duplex" | grep -qiE 'DuplexTumble|short'; then
+      tumble_val=true
+    elif echo "$duplex" | grep -qiE 'DuplexNoTumble|long'; then
+      tumble_val=false
+    elif echo "$tumble" | grep -qiE 'On|True|Yes'; then
+      tumble_val=true
+    elif echo "$tumble" | grep -qiE 'Off|False|No'; then
+      tumble_val=false
+    fi
+  fi
 fi
 echo "DEBUG: Value for Duplex: $duplex_val; Value for Tumble: $tumble_val" >&2
 if test -n "$duplex_val"; then
