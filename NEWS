@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.0.43 - 2013-12-19
 
 CHANGES IN V1.0.44
 
+	- cups-browsed: Minor corrections in the error messages.
 	- gstopxl: Support for PPD-less printing. Resolution,
 	  InputSlot, Duplex, and ColorModel are set also without PPD
 	  file now.

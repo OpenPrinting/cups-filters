@@ -495,7 +495,7 @@ create_local_queue (const char *name,
       cups_serverbin = CUPS_SERVERBIN;
 
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0) {
-      debug_printf("Unable to create interface script file");
+      debug_printf("Unable to create interface script file\n");
       goto fail;
     }
 
@@ -522,7 +522,7 @@ create_local_queue (const char *name,
 
     bytes = write(fd, buffer, strlen(buffer));
     if (bytes != strlen(buffer)) {
-      debug_printf("Unable to write interface script into the file");
+      debug_printf("Unable to write interface script into the file\n");
       goto fail;
     }
 
@@ -539,7 +539,7 @@ create_local_queue (const char *name,
   return p;
 
  fail:
-  debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
+  debug_printf("cups-browsed: ERROR: Unable to create print queue, ignoring printer.\n");
   free (p->type);
   free (p->service_name);
   free (p->host);
