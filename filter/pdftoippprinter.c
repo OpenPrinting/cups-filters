@@ -272,7 +272,26 @@ main(int  argc,				/* I - Number of command-line args */
     {
       output_format = POSTSCRIPT;
       if (filter_present("pdftops"))
+      {
 	cupsArrayAdd(filter_chain, "pdftops");
+	if (access(CUPS_GHOSTSCRIPT, X_OK) != 0)
+	{
+	  fprintf(stderr,
+		  "DEBUG: Ghostscript (%s) missing for \"output-format=%s\", using Poppler's pdftops instead.\n", CUPS_GHOSTSCRIPT, val);
+	  set_option_in_str(argv_nt[5], optbuflen, "pdftops-renderer",
+			    "pdftops");
+	}
+	else if (access(CUPS_POPPLER_PDFTOPS, X_OK) != 0)
+	{
+	  fprintf(stderr,
+		  "DEBUG: Poppler's pdftops (%s) missing for \"output-format=%s\", using Ghostscript instead.\n", CUPS_POPPLER_PDFTOPS, val);
+	  set_option_in_str(argv_nt[5], optbuflen, "pdftops-renderer",
+			    "gs");
+	}
+	else
+	  set_option_in_str(argv_nt[5], optbuflen, "pdftops-renderer",
+			    "hybrid");
+      }
       else
       {
 	fprintf(stderr,
@@ -286,12 +305,12 @@ main(int  argc,				/* I - Number of command-line args */
       if (strcasestr(val, "xl"))
       {
 	output_format = PCLXL;
-	if (filter_present("gstopxl"))
+	if (filter_present("gstopxl") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
 	  cupsArrayAdd(filter_chain, "gstopxl");
 	else
 	{
 	  fprintf(stderr,
-		  "DEBUG: Filter gstopxl missing for \"output-format=%s\", falling back to PCL 5c/e.\n", val);
+		  "DEBUG: Filter gstopxl or Ghostscript (%s) missing for \"output-format=%s\", falling back to PCL 5c/e.\n", CUPS_GHOSTSCRIPT, val);
 	  output_format = PCL;
 	}
       }
