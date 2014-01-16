@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.43 - 2013-12-19
 
 CHANGES IN V1.0.44
 
+	- README: Documented the "hybrid" choice for the PDF renderer
+	  in the pdftops filter.
 	- pdftoippprinter: Handle missing Ghostscript/Poppler for all
 	  output formats.
 	- cups-browsed: Minor corrections in the error messages.

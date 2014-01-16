@@ -111,7 +111,7 @@ POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
     and distributions should not choose it as default.
 
     The selection is done by the "pdftops-renderer" option, setting it
-    to "gs", "pdftops", "pdftocairo", or "acroread":
+    to "gs", "pdftops", "pdftocairo", "acroread", or "hybrid":
 
     Per-job:           lpr -o pdftops-renderer=pdftops ...
     Per-queue default: lpadmin -p printer -o pdftops-renderer-default=gs
@@ -119,6 +119,10 @@ POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
 
     By default, pdftops uses Ghostscript if this does not get changed
     at compile time, for example by the Linux distribution vendor.
+
+    Hybrid means Ghostscript for most printers, but Poppler's pdftops
+    for Brother, Minolta, and Konica Minolta. Printer make and model
+    information comes from the PPD or via the "make-and-model" option.
 
     2. Limitation of the image rendering resolution
 
