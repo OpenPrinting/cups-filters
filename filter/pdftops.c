@@ -15,8 +15,11 @@
  *
  * Contents:
  *
- *   main()       - Main entry for filter...
- *   cancel_job() - Flag the job as canceled.
+ *   parsePDFTOPDFComment() - Check whether we are executed after pdftopdf
+ *   remove_options()       - Remove unwished entries from an option list
+ *   log_command_line()     - Log the command line of a program which we call
+ *   main()                 - Main entry for filter...
+ *   cancel_job()           - Flag the job as canceled.
  */
 
 /*
@@ -221,6 +224,33 @@ void remove_options(char *options_str, const char **option_list)
       }
     }
   }
+}
+
+
+/*
+ * Before calling any command line utility, log its command line in CUPS'
+ * debug mode
+ */
+
+void
+log_command_line(const char* file, char *const argv[])
+{
+  int i;
+  char *apos;
+
+  /* Debug output: Full command line of program to be called */
+  fprintf(stderr, "DEBUG: Running command line for %s:",
+	  (file ? file : argv[0]));
+  if (file)
+    fprintf(stderr, " %s", file);
+  for (i = (file ? 1 : 0); argv[i]; i ++) {
+    if ((strchr(argv[i],' ')) || (strchr(argv[i],'\t')))
+      apos = "'";
+    else
+      apos = "";
+    fprintf(stderr, " %s%s%s", apos, argv[i], apos);
+  }
+  fprintf(stderr, "\n");
 }
 
 
@@ -471,6 +501,8 @@ main(int  argc,				/* I - Number of command-line args */
     pstops_argv[4] = argv[4];		/* Copies */
   pstops_argv[5] = pstops_options;	/* Options */
   pstops_argv[6] = NULL;
+
+  log_command_line("pstops", pstops_argv);
 
  /*
   * Build the command-line for the pdftops, gs, pdftocairo, or
@@ -766,6 +798,8 @@ main(int  argc,				/* I - Number of command-line args */
   /* acroread has to read from stdin */
 
   pdf_argv[pdf_argc] = NULL;
+
+  log_command_line(NULL, pdf_argv);
 
  /*
   * Do we need post-processing of the PostScript output to work around bugs

@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.44 - 2014-01-17
 -----------------------------------------------------
 
+CHANGES IN V1.0.45
+
+	- pdftops: Log command lines of renderer (Ghostscript, pdftops,
+	  pdftocairo, acroread) and of pstops in CUPS' error_log (in
+	  debug mode).
+
 CHANGES IN V1.0.44
 
 	- README: Documented the "hybrid" choice for the PDF renderer
