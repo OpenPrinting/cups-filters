@@ -41,12 +41,12 @@ static int wait_for_renderer();
 
 static int pdf_count_pages(const char *filename)
 {
-    char gscommand[4095];
+    char gscommand[CMDLINE_MAX];
     char output[31] = "";
     int pagecount;
     size_t bytes;
 
-    snprintf(gscommand, 4095, "%s -dNODISPLAY -q -c "
+    snprintf(gscommand, CMDLINE_MAX, "%s -dNODISPLAY -q -c "
 	     "'/pdffile (%s) (r) file def pdfdict begin pdffile pdfopen begin "
 	     "(PageCount: ) print pdfpagecount == flush currentdict pdfclose "
 	     "end end quit'",
@@ -109,7 +109,7 @@ static int pdf_extract_pages(char filename[PATH_MAX],
                              int first,
                              int last)
 {
-    char gscommand[4095];
+    char gscommand[CMDLINE_MAX];
     char filename_arg[PATH_MAX], first_arg[50], last_arg[50];
     int fd;
 
@@ -127,7 +127,7 @@ static int pdf_extract_pages(char filename[PATH_MAX],
     else
         first_arg[0] = '\0';
 
-    snprintf(gscommand, 4095, "%s -q -dNOPAUSE -dBATCH -dPARANOIDSAFER -dNOINTERPOLATE"
+    snprintf(gscommand, CMDLINE_MAX, "%s -q -dNOPAUSE -dBATCH -dPARANOIDSAFER -dNOINTERPOLATE"
 	     "-sDEVICE=pdfwrite %s %s %s %s",
 	     gspath, filename_arg, first_arg, last_arg, pdffilename);
 

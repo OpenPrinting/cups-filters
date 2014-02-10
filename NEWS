@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.44 - 2014-01-17
 
 CHANGES IN V1.0.45
 
+	- foomatic-rip: Do not use PATH_MAX for the length of static
+	  strings which are supposed to hold a command line. Use our
+	  own CMDLINE_MAX constant to set them to a length of 65535
+	  bytes (Ubuntu bug #1019662, Debian bug #738440).
 	- pdftops: Log command lines of renderer (Ghostscript, pdftops,
 	  pdftocairo, acroread) and of pstops in CUPS' error_log (in
 	  debug mode).

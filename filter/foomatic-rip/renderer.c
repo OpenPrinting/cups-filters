@@ -37,11 +37,12 @@
  */
 int test_gs_output_redirection()
 {
-    char gstestcommand[PATH_MAX];
+    char gstestcommand[CMDLINE_MAX];
     char output[10] = "";
     int bytes;
 
-    snprintf(gstestcommand, PATH_MAX, "%s -dQUIET -dPARANOIDSAFER -dNOPAUSE "
+    snprintf(gstestcommand, CMDLINE_MAX,
+	     "%s -dQUIET -dPARANOIDSAFER -dNOPAUSE "
              "-dBATCH -dNOMEDIAATTRS -sDEVICE=ps2write -sstdout=%%stderr "
              "-sOutputFile=/dev/null -c '(hello\n) print flush' 2>&1", gspath);
 

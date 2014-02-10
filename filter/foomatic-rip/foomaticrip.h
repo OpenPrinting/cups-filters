@@ -76,8 +76,9 @@
 extern int spooler;
 
 #ifndef PATH_MAX
-#define PATH_MAX 65536
+#define PATH_MAX 4096
 #endif
+#define CMDLINE_MAX 65536
 
 typedef struct {
     char printer[256];

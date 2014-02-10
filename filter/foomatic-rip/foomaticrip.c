@@ -571,7 +571,7 @@ int print_file(const char *filename, int convert)
 
             if (!ppd_supports_pdf())
             {
-                char pdf2ps_cmd[PATH_MAX];
+                char pdf2ps_cmd[CMDLINE_MAX];
                 FILE *out, *in;
                 int renderer_pid;
 		char tmpfilename[PATH_MAX] = "";
@@ -617,12 +617,12 @@ int print_file(const char *filename, int convert)
 		   We give priority to Ghostscript here and use Poppler if
 		   Ghostscript is not available. */
 		if (spooler == SPOOLER_CUPS)
-		  snprintf(pdf2ps_cmd, PATH_MAX,
+		  snprintf(pdf2ps_cmd, CMDLINE_MAX,
 			   "pdftops '%s' '%s' '%s' '%s' '%s' '%s'",
 			   job->id, job->user, job->title, "1", job->optstr->data,
 			   filename);
 		else
-		  snprintf(pdf2ps_cmd, PATH_MAX,
+		  snprintf(pdf2ps_cmd, CMDLINE_MAX,
 			   "gs -q -sstdout=%%stderr -sDEVICE=ps2write -sOutputFile=- "
 			   "-dBATCH -dNOPAUSE -dPARANOIDSAFER -dNOINTERPOLATE %s 2>/dev/null || "
 			   "pdftops -level2 -origpagesizes %s - 2>/dev/null",
