@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.44 - 2014-01-17
 
 CHANGES IN V1.0.45
 
+	- foomatic-rip: Fixed pid_t/int function prototype mismatch
+	  (Bug #1182).
 	- Fixed --with-pdftops-path and --with-pdftocairo-path options
 	  in ./configure (Bug #1181).
 	- foomatic-rip: Do not use PATH_MAX for the length of static
