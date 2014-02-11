@@ -482,7 +482,7 @@ AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x"], [
 ])
 
 AS_IF([test "x$with_pdftops_path" != "xsystem"], [
-	CUPS_PDFTOPS="$with_pdftops"
+	CUPS_PDFTOPS="$with_pdftops_path"
 ], [
 	AC_PATH_PROG(CUPS_PDFTOPS, [pdftops], [AC_MSG_ERROR([Required pdftops is missing. Please install CUPS developer packages.])])
 ])
@@ -508,7 +508,7 @@ AS_IF([test "x$CUPS_PDFTOPS" != "x"], [
 	CUPS_PDFTOPS="/usr/bin/pdftops"
 ])
 AS_IF([test "x$with_pdftocairo_path" != "xsystem"], [
-	CUPS_PDFTOPS="$with_pdftocairo_path"
+	CUPS_PDFTOCAIRO="$with_pdftocairo_path"
 ], [
 	AC_PATH_PROG(CUPS_PDFTOCAIRO, [pdftocairo], [AC_MSG_ERROR([Required pdftocairo is missing. Please install Poppler developer packages.])])
 ])
