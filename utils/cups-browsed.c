@@ -120,6 +120,8 @@ static cups_array_t *browseallow;
 static GMainLoop *gmainloop = NULL;
 #ifdef HAVE_AVAHI
 static AvahiGLibPoll *glib_poll = NULL;
+static AvahiClient *client = NULL;
+static AvahiServiceBrowser *sb1 = NULL, *sb2 = NULL;
 #endif /* HAVE_AVAHI */
 static guint queues_timer_id = (guint) -1;
 static int browsesocket = -1;
@@ -1063,7 +1065,8 @@ void generate_local_queue(const char *host,
 	 is unconfirmed */
       debug_printf("cups-browsed: Entry for %s (Host: %s, URI: %s) already exists.\n",
 		   p->name, p->host, p->uri);
-      if (p->status == STATUS_UNCONFIRMED) {
+      if (p->status == STATUS_UNCONFIRMED ||
+	  p->status == STATUS_DISAPPEARED) {
 	p->status = STATUS_CONFIRMED;
 	p->timeout = (time_t) -1;
 	debug_printf("cups-browsed: Marking entry for %s (Host: %s, URI: %s) as confirmed.\n",
@@ -1195,7 +1198,7 @@ static void browse_callback(
 
   switch (event) {
 
-  /* Avah browser error */
+  /* Avahi browser error */
   case AVAHI_BROWSER_FAILURE:
 
     debug_printf("cups-browsed: Avahi Browser: ERROR: %s\n",
@@ -1311,17 +1314,135 @@ static void browse_callback(
 
 }
 
+void avahi_browser_shutdown() {
+  remote_printer_t *p;
+
+  /* Remove all queues which we have set up based on Bonjour discovery*/
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+    if (p->type && p->type[0]) {
+      p->status = STATUS_DISAPPEARED;
+      p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+    }
+  }
+  handle_cups_queues(NULL);
+
+  /* Free the data structures for Bonjour browsing */
+  if (sb1) {
+    avahi_service_browser_free(sb1);
+    sb1 = NULL;
+  }
+  if (sb2) {
+    avahi_service_browser_free(sb2);
+    sb2 = NULL;
+  }
+}
+
+void avahi_shutdown() {
+  avahi_browser_shutdown();
+  if (client) {
+    avahi_client_free(client);
+    client = NULL;
+  }
+  if (glib_poll) { 
+    avahi_glib_poll_free(glib_poll);
+    glib_poll = NULL;
+  }
+}
+
 static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UNUSED void * userdata) {
+  int error;
+
   assert(c);
 
   /* Called whenever the client or server state changes */
+  switch (state) {
 
-  if (state == AVAHI_CLIENT_FAILURE) {
-    debug_printf("cups-browsed: ERROR: Avahi server connection failure: %s\n",
-		 avahi_strerror(avahi_client_errno(c)));
-    g_main_loop_quit(gmainloop);
+  /* avahi-daemon available */
+  case AVAHI_CLIENT_S_REGISTERING:
+  case AVAHI_CLIENT_S_RUNNING:
+  case AVAHI_CLIENT_S_COLLISION:
+
+    debug_printf("cups-browsed: Avahi server connection got available, setting up service browsers.");
+
+    /* Create the service browsers */
+    if (!sb1)
+      if (!(sb1 =
+	    avahi_service_browser_new(c, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
+				      "_ipp._tcp", NULL, 0, browse_callback,
+				      c))) {
+	debug_printf("cups-browsed: ERROR: Failed to create service browser for IPP: %s\n",
+		     avahi_strerror(avahi_client_errno(c)));
+      }
+    if (!sb2)
+      if (!(sb2 =
+	    avahi_service_browser_new(c, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
+				      "_ipps._tcp", NULL, 0, browse_callback,
+				      c))) {
+	debug_printf("cups-browsed: ERROR: Failed to create service browser for IPPS: %s\n",
+		     avahi_strerror(avahi_client_errno(c)));
+      }
+    break;
+
+  /* Avahi client error */
+  case AVAHI_CLIENT_FAILURE:
+
+    if (avahi_client_errno(c) == AVAHI_ERR_DISCONNECTED) {
+      debug_printf("cups-browsed: Avahi server disappeared, shutting down service browsers, removing Bonjour-discovered print queues.\n");
+      avahi_browser_shutdown();
+      /* Renewing client */
+      avahi_client_free(client);
+      client = avahi_client_new(avahi_glib_poll_get(glib_poll),
+				AVAHI_CLIENT_NO_FAIL,
+				client_callback, NULL, &error);
+      if (!client) {
+	debug_printf("cups-browsed: ERROR: Failed to create client: %s\n",
+		     avahi_strerror(error));
+	BrowseRemoteProtocols &= ~BROWSE_DNSSD;
+	avahi_shutdown();
+      }
+    } else {
+      debug_printf("cups-browsed: ERROR: Avahi server connection failure: %s\n",
+		   avahi_strerror(avahi_client_errno(c)));
+      g_main_loop_quit(gmainloop);
+    }
+    break;
+
+  default:
+    break;
   }
+}
 
+void avahi_init() {
+  int error;
+
+  if (BrowseRemoteProtocols & BROWSE_DNSSD) {
+    /* Allocate main loop object */
+    if (!glib_poll)
+      if (!(glib_poll = avahi_glib_poll_new(NULL, G_PRIORITY_DEFAULT))) {
+	debug_printf("cups-browsed: ERROR: Failed to create glib poll object.\n");
+	goto avahi_init_fail;
+      }
+
+    /* Allocate a new client */
+    if (!client)
+      client = avahi_client_new(avahi_glib_poll_get(glib_poll),
+				AVAHI_CLIENT_NO_FAIL,
+				client_callback, NULL, &error);
+
+    /* Check wether creating the client object succeeded */
+    if (!client) {
+      debug_printf("cups-browsed: ERROR: Failed to create client: %s\n",
+		   avahi_strerror(error));
+      goto avahi_init_fail;
+    }
+
+    return;
+
+  avahi_init_fail:
+    BrowseRemoteProtocols &= ~BROWSE_DNSSD;
+    avahi_shutdown();
+  }
 }
 #endif /* HAVE_AVAHI */
 
@@ -2344,11 +2465,6 @@ read_configuration (const char *filename)
 }
 
 int main(int argc, char*argv[]) {
-#ifdef HAVE_AVAHI
-  AvahiClient *client = NULL;
-  AvahiServiceBrowser *sb1 = NULL, *sb2 = NULL;
-  int error;
-#endif /* HAVE_AVAHI */
   int ret = 1;
   http_t *http;
   cups_dest_t *dests,
@@ -2474,57 +2590,7 @@ int main(int argc, char*argv[]) {
 #endif /* HAVE_SIGSET */
 
 #ifdef HAVE_AVAHI
-  if (BrowseRemoteProtocols & BROWSE_DNSSD) {
-    /* Allocate main loop object */
-    if (!(glib_poll = avahi_glib_poll_new(NULL, G_PRIORITY_DEFAULT))) {
-      debug_printf("cups-browsed: ERROR: Failed to create glib poll object.\n");
-      goto avahi_fail;
-    }
-
-    /* Allocate a new client */
-    client = avahi_client_new(avahi_glib_poll_get(glib_poll), 0,
-			      client_callback, NULL, &error);
-
-    /* Check wether creating the client object succeeded */
-    if (!client) {
-      debug_printf("cups-browsed: ERROR: Failed to create client: %s\n",
-		   avahi_strerror(error));
-      goto avahi_fail;
-    }
-
-    /* Create the service browsers */
-    if (!(sb1 =
-	  avahi_service_browser_new(client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
-				    "_ipp._tcp", NULL, 0, browse_callback,
-				    client))) {
-      debug_printf("cups-browsed: ERROR: Failed to create service browser for IPP: %s\n",
-		   avahi_strerror(avahi_client_errno(client)));
-      goto avahi_fail;
-    }
-    if (!(sb2 =
-	  avahi_service_browser_new(client, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
-				    "_ipps._tcp", NULL, 0, browse_callback,
-				    client))) {
-      debug_printf("cups-browsed: ERROR: Failed to create service browser for IPPS: %s\n",
-		   avahi_strerror(avahi_client_errno(client)));
-    avahi_fail:
-      BrowseRemoteProtocols &= ~BROWSE_DNSSD;
-      if (sb2) {
-	avahi_service_browser_free(sb2);
-	sb2 = NULL;
-      }
-
-      if (client) {
-	avahi_client_free(client);
-	client = NULL;
-      }
-
-      if (glib_poll) {
-	avahi_glib_poll_free(glib_poll);
-	glib_poll = NULL;
-      }
-    }
-  }
+  avahi_init();
 #endif /* HAVE_AVAHI */
 
   if (BrowseLocalProtocols & BROWSE_CUPS ||
@@ -2635,18 +2701,9 @@ fail:
 
     free (BrowsePoll);
   }
+
 #ifdef HAVE_AVAHI
-  /* Free the data structures for Bonjour browsing */
-  if (sb1)
-    avahi_service_browser_free(sb1);
-  if (sb2)
-    avahi_service_browser_free(sb2);
-
-  if (client)
-    avahi_client_free(client);
-
-  if (glib_poll)
-    avahi_glib_poll_free(glib_poll);
+  avahi_shutdown();
 #endif /* HAVE_AVAHI */
 
   if (browsesocket != -1)
