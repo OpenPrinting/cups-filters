@@ -6,7 +6,8 @@
 .SH SYNOPSIS
 .nf
 .fam C
-\fBcups-browsed\fP [\fB-v\fP | \fB-d\fP | \fB--debug\fP]
+\fBcups-browsed\fP [\fB-v\fP | \fB-d\fP | \fB--debug\fP] [\fB--autoshutdown=mode\fP]
+[\fB--autoshutdown-timeout=timeout\fP]
 
 .fam T
 .fi
@@ -22,13 +23,33 @@ Browse CUPS broadcasts of remote printers and create/remove local raw
 queues pointing to these printers.
 .IP 3. 4
 Broadcast local queues with the CUPS protocol.
+.PP
+Note that 2. and 3. are only to allow communication with legacy CUPS servers (1.5.x or older) on the remote machine(s). The standard method to broadcast for shared/network printers to broadcast their presence is Bonjour. The CUPS broadcasting/browsing protocol is deprecated.
+
+cups-browsed can be run permanently (from system boot to shutdown) or on-demand (for example to save resources on mobile devices). For running it on-demend an auto-shutdown feature can be activated to let cups-browsed terminate when it does not have queues any more to take care of.
+
 .SH OPTIONS
 .TP
 .B
 \fB-v\fP, \fB-d\fP, \fB--debug\fP
 Debug mode
+.TP
+.B
+\fB--autoshutdown=mode\fP
+Auto shutdown mode, \fBmode\fP is \fBoff\fP for no auto shutdown, \fBon\fP for auto shutdown being active, and \fBavahi\fP for control by the avahi-daemon being run on-demand, getting auto-shutdown turned off while avahi-daemon is present and on when avahi-daemon is shut down.
+.TP
+.B
+\fB--autoshutdown-timeout=timeout\fP
+\fBtimeout\fP tells after how many seconds cups-browsed should shut down if it has no local queues set up for any discovered remote printer any more. Default is 30 seconds. 0 means immediate shutdown.
 .SH FILES
 /etc/cups/cups-browsed.conf
+.SH SIGNALS
+\fISIGINT, SIGTERM\f1: cups-browsed will shutdown.
+
+\fISIGUSR1\f1: Switches cups-browsed into permanent mode (no auto shutdown).
+
+\fISIGUSR2\f1: Switches cups-browsed into auto shutdown mode.
+
 .SH NOTES
 Please take references to cups 1.6.x to include newer versions.
 Similarily, cups 1.5.x is intended to encompass older versions too.

@@ -246,6 +246,18 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
     need a printer setup tool nor a collection of printer drivers and
     PPDs.
 
+    cups-browsed can also be started on-demand, for example to save
+    resources on mobile devices. For this, cups-browsed can be set
+    into an auto shutdown mode so that it stops automatically when it
+    has no remote printers to take care of any more, especially if an
+    on-demand running avahi-daemon stops. Note that CUPS must stay
+    running for cups-browsed removing its queues and so being able to
+    shut down. Ideal is if CUPS stays running another 30 seconds after
+    finishing its last job so that cups-browsed can take down the
+    queue. For how to set up and control this mode via command line,
+    configuration directives, or sending signals see the man pages
+    cups-browsed(8) and cups-browsed.conf(5).
+
     The configuration file for cups-browsed is
     /etc/cups/cups-browsed.conf.  This file can include limited forms
     of the original CUPS BrowseRemoteProtocols, BrowseLocalProtocols,
@@ -276,8 +288,7 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
     queue set as system default, to not loose its system default
     state).
 
-    Make sure that cups-browsed gets started after avahi-daemon, so that
-    the Bonjour/DNS-SD browsing works. On systems using systemd use a
+    On systems using systemd use a
     /usr/lib/systemd/system/cups-browsed.service file like this:
 
         [Unit]
@@ -309,6 +320,12 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
 
     These files are included in the source distribution as
     utils/cups-browsed.service and utils/cups-browsed-upstart.conf.
+
+    In the examples we start cups-browsed after starting
+    avahi-daemon. This is not required. if cups-browsed starts first,
+    the Bonjour/DNS-SD browsing kicks in as soon as avahi-daemon comes
+    up. cups-browsed is also robust against any shutdown and restart
+    of avahi-daemon.
 
     Here is some info on how cups-browsed works internally (first concept of a
     daemon which does only Bonjour browsing):

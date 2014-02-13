@@ -3,6 +3,17 @@ NEWS - OpenPrinting CUPS Filters v1.0.44 - 2014-01-17
 
 CHANGES IN V1.0.45
 
+	- cups-browsed: Added auto-shutdown feature for on-demand use
+	  of cups-browsed (for example on mobile devices). With auto
+	  shutdown active, cups-browsed terminates after a certain
+	  time interval (30 sec by default) without having any remote
+	  printer to make available locally. The mode can be turned
+	  on, turned off (default) or set to automatically be off
+	  while avahi-daemon is running an on otherwise (controlled by
+	  avahi-daemon running on-demand). The mode and the timeout
+	  interval can be selected by command line options, the
+	  configuration file, and sending signals to cups-browsed
+	  (on/off only).
 	- cups-browsed: To make Bonjour-discovered printers locally
 	  available avahi-daemon does not need to be started before
 	  cups-browsed and does not need to stay continuously running

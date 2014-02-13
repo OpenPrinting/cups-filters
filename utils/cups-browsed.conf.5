@@ -112,6 +112,34 @@ a printer setup tool nor a collection of printer drivers and PPDs.
 
 .fam T
 .fi
+The AutoShutdown directive specifies whether cups-browsed should
+automatically terminate when it has no local raw queues set up
+pointing to any discovered remote printers (auto shutdown
+mode). Setting it to "On" activates the auto-shutdown mode, setting it
+to "Off" deactiivates it (the default). The special mode "avahi" turns
+auto shutdown off while avahi-daemon is running and on when
+avahi-daemon stops. This allows running cups-browsed on-demand when
+avahi-daemon is run on-demand.
+.PP
+.nf
+.fam C
+        AutoShutdown Off
+        AutoShutdown On
+        AutoShutdown avahi
+
+.fam T
+.fi
+The AutoShutdownTimeout directive specifies after how many seconds
+without local raw queues set up pointing to any discovered remote
+printers cups-browsed should actually shut down in auto shutdown
+mode. Default is 30 seconds, 0 means immediate shutdown.
+.PP
+.nf
+.fam C
+        AutoShutdownTimeout 20
+
+.fam T
+.fi
 .SH SEE ALSO
 
 \fBcups-browsed\fP(8)

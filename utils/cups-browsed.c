@@ -137,6 +137,10 @@ static browsepoll_t **BrowsePoll = NULL;
 static size_t NumBrowsePoll = 0;
 static char *DomainSocket = NULL;
 static unsigned int CreateIPPPrinterQueues = 0;
+static int autoshutdown = 0;
+static int autoshutdown_avahi = 0;
+static int autoshutdown_timeout = 30;
+static guint autoshutdown_exec_id = 0;
 
 static int debug = 0;
 
@@ -257,6 +261,20 @@ password_callback (const char *prompt,
 		   void *user_data)
 {
   return NULL;
+}
+
+gboolean
+autoshutdown_execute (gpointer data)
+{
+  /* Are we still in auto shutdown mode and are we still without queues */
+  if (autoshutdown && cupsArrayCount(remote_printers) == 0) {
+    debug_printf("cups-browsed: Automatic shutdown as there are no print queues maintained by us for %d sec.\n",
+		 autoshutdown_timeout);
+    g_main_loop_quit(gmainloop);
+  }
+
+  /* Stop this timeout handler, we needed it only once */
+  return FALSE;
 }
 
 static remote_printer_t *
@@ -538,6 +556,16 @@ create_local_queue (const char *name,
   /* Add the new remote printer entry */
   cupsArrayAdd(remote_printers, p);
 
+  /* If auto shutdown is active we have perhaps scheduled a timer to shut down
+     due to not having queues any more to maintain, kill the timer now */
+  if (autoshutdown && autoshutdown_exec_id &&
+      cupsArrayCount(remote_printers) > 0) {
+    debug_printf ("cups-browsed: New printers there to make available, killing auto shutdown timer.\n");
+    g_source_destroy(g_main_context_find_source_by_id(NULL,
+						      autoshutdown_exec_id));
+    autoshutdown_exec_id = 0;
+  }
+
   return p;
 
  fail:
@@ -734,6 +762,17 @@ gboolean handle_cups_queues(gpointer unused) {
       if (p->ifscript) free (p->ifscript);
       free(p);
       p = NULL;
+
+      /* If auto shutdown is active and all printers we have set up got removed
+	 again, schedule the shutdown in autoshutdown_timeout seconds */
+      if (autoshutdown && !autoshutdown_exec_id &&
+	  cupsArrayCount(remote_printers) == 0) {
+	debug_printf ("cups-browsed: No printers there any more to make available, shutting down in %d sec...\n", autoshutdown_timeout);
+	autoshutdown_exec_id =
+	  g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
+				 NULL);
+      }
+
       break;
 
     /* Bonjour has reported a new remote printer, create a CUPS queue for it,
@@ -1336,6 +1375,21 @@ void avahi_browser_shutdown() {
     avahi_service_browser_free(sb2);
     sb2 = NULL;
   }
+
+  /* Switch on auto shutdown mode */
+  if (autoshutdown_avahi) {
+    autoshutdown = 1;
+    debug_printf("cups-browsed: Avahi server disappeared, switching to auto shutdown mode ...\n");
+    /* If there are no printers schedule the shutdown in autoshutdown_timeout
+       seconds */
+    if (!autoshutdown_exec_id &&
+	cupsArrayCount(remote_printers) == 0) {
+      debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available, shutting down in %d sec...\n", autoshutdown_timeout);
+      autoshutdown_exec_id =
+	g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
+			       NULL);
+    }
+  }
 }
 
 void avahi_shutdown() {
@@ -1363,7 +1417,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
   case AVAHI_CLIENT_S_RUNNING:
   case AVAHI_CLIENT_S_COLLISION:
 
-    debug_printf("cups-browsed: Avahi server connection got available, setting up service browsers.");
+    debug_printf("cups-browsed: Avahi server connection got available, setting up service browsers.\n");
 
     /* Create the service browsers */
     if (!sb1)
@@ -1382,6 +1436,20 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
 	debug_printf("cups-browsed: ERROR: Failed to create service browser for IPPS: %s\n",
 		     avahi_strerror(avahi_client_errno(c)));
       }
+
+    /* switch off auto shutdown mode */
+    if (autoshutdown_avahi) {
+      autoshutdown = 0;
+      debug_printf("cups-browsed: Avahi server available, switching to permanent mode ...\n");
+      /* If there is still an active auto shutdown timer, kill it */
+      if (autoshutdown_exec_id > 0) {
+	debug_printf ("cups-browsed: We have left auto shutdown mode, killing auto shutdown timer.\n");
+	g_source_destroy(g_main_context_find_source_by_id(NULL,
+							  autoshutdown_exec_id));
+	autoshutdown_exec_id = 0;
+      }
+    }
+
     break;
 
   /* Avahi client error */
@@ -2292,6 +2360,40 @@ sigterm_handler(int sig) {
   debug_printf("cups-browsed: Caught signal %d, shutting down ...\n", sig);
 }
 
+static void
+sigusr1_handler(int sig) {
+  (void)sig;    /* remove compiler warnings... */
+
+  /* Turn off auto shutdown mode... */
+  autoshutdown = 0;
+  debug_printf("cups-browsed: Caught signal %d, switching to permanent mode ...\n", sig);
+  /* If there is still an active auto shutdown timer, kill it */
+  if (autoshutdown_exec_id > 0) {
+    debug_printf ("cups-browsed: We have left auto shutdown mode, killing auto shutdown timer.\n");
+    g_source_destroy(g_main_context_find_source_by_id(NULL,
+						      autoshutdown_exec_id));
+    autoshutdown_exec_id = 0;
+  }
+}
+
+static void
+sigusr2_handler(int sig) {
+  (void)sig;    /* remove compiler warnings... */
+
+  /* Turn on auto shutdown mode... */
+  autoshutdown = 1;
+  debug_printf("cups-browsed: Caught signal %d, switching to auto shutdown mode ...\n", sig);
+  /* If there are no printers schedule the shutdown in autoshutdown_timeout
+     seconds */
+  if (!autoshutdown_exec_id &&
+      cupsArrayCount(remote_printers) == 0) {
+    debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available, shutting down in %d sec...\n", autoshutdown_timeout);
+    autoshutdown_exec_id =
+      g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
+			       NULL);
+  }
+}
+
 static int
 read_browseallow_value (const char *value)
 {
@@ -2376,7 +2478,7 @@ read_configuration (const char *filename)
 	else if (!strcasecmp(p, "cups"))
 	  protocols |= BROWSE_CUPS;
 	else if (strcasecmp(p, "none"))
-	  debug_printf("cups-browsed: unknown protocol '%s'\n", p);
+	  debug_printf("cups-browsed: Unknown protocol '%s'\n", p);
 
 	p = strtok_r (NULL, delim, &saveptr);
       }
@@ -2458,6 +2560,34 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	CreateIPPPrinterQueues = 0;
+    } else if (!strcasecmp(line, "AutoShutdown") && value) {
+      char *p, *saveptr;
+      p = strtok_r (value, delim, &saveptr);
+      while (p) {
+	if (!strcasecmp(p, "On") || !strcasecmp(p, "Yes") ||
+	    !strcasecmp(p, "True") || !strcasecmp(p, "1")) {
+	  autoshutdown = 1;
+	  debug_printf("cups-browsed: Turning on auto shutdown mode.\n");
+	} else if (!strcasecmp(p, "Off") || !strcasecmp(p, "No") ||
+	    !strcasecmp(p, "False") || !strcasecmp(p, "0")) {
+	  autoshutdown = 0;
+	  debug_printf("cups-browsed: Turning off auto shutdown mode (permanent mode).\n");
+	} else if (!strcasecmp(p, "avahi")) {
+	  autoshutdown_avahi = 1;
+	  debug_printf("cups-browsed: Turning on auto shutdown control by appearing and disappearing of the Avahi server.\n");
+	} else if (strcasecmp(p, "none"))
+	  debug_printf("cups-browsed: Unknown mode '%s'\n", p);
+	p = strtok_r (NULL, delim, &saveptr);
+      }
+    } else if (!strcasecmp(line, "AutoShutdownTimeout") && value) {
+      int t = atoi(value);
+      if (t >= 0) {
+	autoshutdown_timeout = t;
+	debug_printf("cups-browsed: Set auto shutdown timeout to %d sec.\n",
+		     t);
+      } else
+	debug_printf("cups-browsed: Invalid auto shutdown timeout value: %d\n",
+		     t);
     }
   }
 
@@ -2475,16 +2605,75 @@ int main(int argc, char*argv[]) {
   remote_printer_t *p;
 
   /* Turn on debug mode if requested */
-  if (argc >= 2 &&
-      (!strcmp(argv[1], "--debug") || !strcmp(argv[1], "-d") ||
-       !strncmp(argv[1], "-v", 2)))
-    debug = 1;
+  if (argc >= 2)
+    for (i = 1; i < argc; i++)
+      if (!strcmp(argv[i], "--debug") || !strcmp(argv[i], "-d") ||
+	  !strncmp(argv[i], "-v", 2)) {
+	debug = 1;
+	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+      }
 
   /* Initialise the browseallow array */
   browseallow = cupsArrayNew(compare_pointers, NULL);
 
   /* Read in cups-browsed.conf */
   read_configuration (NULL);
+
+  /* Parse command line options after reading the config file to override
+     config file settings */
+  if (argc >= 2) {
+    for (i = 1; i < argc; i++)
+      if (!strncasecmp(argv[i], "--autoshutdown-timeout", 22)) {
+	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	if (argv[i][22] == '=' && argv[i][23])
+	  val = argv[i] + 23;
+	else if (!argv[i][22] && i < argc -1) {
+	  i++;
+	  debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	  val = argv[i];
+	} else {
+	  fprintf(stderr, "cups-browsed: Expected auto shutdown timeout setting after \"--autoshutdown-timeout\" option.\n");
+	  exit(1);
+	}
+	int t = atoi(val);
+	if (t >= 0) {
+	  autoshutdown_timeout = t;
+	  debug_printf("cups-browsed: Set auto shutdown timeout to %d sec.\n",
+		       t);
+	} else {
+	  debug_printf("cups-browsed: Invalid auto shutdown timeout value: %d\n",
+		       t);
+	  exit(1);
+	}
+      } else if (!strncasecmp(argv[i], "--autoshutdown", 14)) {
+	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	if (argv[i][14] == '=' && argv[i][15])
+	  val = argv[i] + 15;
+	else if (!argv[i][14] && i < argc -1) {
+	  i++;
+	  debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	  val = argv[i];
+	} else {
+	  fprintf(stderr, "cups-browsed: Expected auto shutdown setting after \"--autoshutdown\" option.\n");
+	  exit(1);
+	}
+	if (!strcasecmp(val, "On") || !strcasecmp(val, "Yes") ||
+	    !strcasecmp(val, "True") || !strcasecmp(val, "1")) {
+	  autoshutdown = 1;
+	  debug_printf("cups-browsed: Turning on auto shutdown mode.\n");
+	} else if (!strcasecmp(val, "Off") || !strcasecmp(val, "No") ||
+	    !strcasecmp(val, "False") || !strcasecmp(val, "0")) {
+	  autoshutdown = 0;
+	  debug_printf("cups-browsed: Turning off auto shutdown mode (permanent mode).\n");
+	} else if (!strcasecmp(val, "avahi")) {
+	  autoshutdown_avahi = 1;
+	  debug_printf("cups-browsed: Turning on auto shutdown control by appearing and disappearing of the Avahi server.\n");
+	} else if (strcasecmp(val, "none")) {
+	  debug_printf("cups-browsed: Unknown mode '%s'\n", val);
+	  exit(1);
+	}
+      }
+  }
 
   /* Set the CUPS_SERVER environment variable to assure that cups-browsed
      always works with the local CUPS daemon and never with a remote one
@@ -2566,10 +2755,14 @@ int main(int argc, char*argv[]) {
   httpClose(http);
 
   /* Redirect SIGINT and SIGTERM so that we do a proper shutdown, removing
-     the CUPS queues which we have created */
+     the CUPS queues which we have created
+     Use SIGUSR1 and SIGUSR2 to turn off and turn on auto shutdown mode
+     resp. */
 #ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
   sigset(SIGTERM, sigterm_handler);
   sigset(SIGINT, sigterm_handler);
+  sigset(SIGUSR1, sigusr1_handler);
+  sigset(SIGUSR2, sigusr2_handler);
   debug_printf("cups-browsed: Using signal handler SIGSET\n");
 #elif defined(HAVE_SIGACTION)
   struct sigaction action; /* Actions for POSIX signals */
@@ -2582,14 +2775,26 @@ int main(int argc, char*argv[]) {
   sigaddset(&action.sa_mask, SIGINT);
   action.sa_handler = sigterm_handler;
   sigaction(SIGINT, &action, NULL);
+  sigemptyset(&action.sa_mask);
+  sigaddset(&action.sa_mask, SIGUSR1);
+  action.sa_handler = sigusr1_handler;
+  sigaction(SIGUSR1, &action, NULL);
+  sigemptyset(&action.sa_mask);
+  sigaddset(&action.sa_mask, SIGUSR2);
+  action.sa_handler = sigusr2_handler;
+  sigaction(SIGUSR2, &action, NULL);
   debug_printf("cups-browsed: Using signal handler SIGACTION\n");
 #else
   signal(SIGTERM, sigterm_handler);
   signal(SIGINT, sigterm_handler);
+  signal(SIGUSR1, sigusr1_handler);
+  signal(SIGUSR2, sigusr2_handler);
   debug_printf("cups-browsed: Using signal handler SIGNAL\n");
 #endif /* HAVE_SIGSET */
 
 #ifdef HAVE_AVAHI
+  if (autoshutdown_avahi)
+    autoshutdown = 1;
   avahi_init();
 #endif /* HAVE_AVAHI */
 
@@ -2665,6 +2870,15 @@ int main(int argc, char*argv[]) {
 		    BrowsePoll[index]->server, BrowseInterval);
       g_idle_add (browse_poll, BrowsePoll[index]);
     }
+  }
+
+  /* If auto shutdown is active and we do not find any printers initially,
+     schedule the shutdown in autoshutdown_timeout seconds */
+  if (autoshutdown && !autoshutdown_exec_id &&
+      cupsArrayCount(remote_printers) == 0) {
+    debug_printf ("cups-browsed: No printers found to make available, shutting down in %d sec...\n", autoshutdown_timeout);
+    autoshutdown_exec_id =
+      g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute, NULL);
   }
 
   g_main_loop_run (gmainloop);
