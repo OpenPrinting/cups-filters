@@ -525,12 +525,6 @@ out:
   return icc_profile;
 }
 
-static void
-child_reaper (int signum)
-{
-  wait(NULL);
-}
-
 int
 main (int argc, char **argv, char *envp[])
 {
@@ -567,9 +561,6 @@ main (int argc, char **argv, char *envp[])
   /* Ignore SIGPIPE and have write return an error instead */
   sa.sa_handler = SIG_IGN;
   sigaction(SIGPIPE, &sa, NULL);
-
-  sa.sa_handler = child_reaper;
-  sigaction(SIGCHLD, &sa, NULL);
 
   num_options = cupsParseOptions(argv[5], 0, &options);
 

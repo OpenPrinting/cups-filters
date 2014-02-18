@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.45 - 2014-02-13
 
 CHANGES IN V1.0.46
 
+	- gstoraster: Ignore SIGCHLD, rely on waitpid instead. Thanks
+	  to Lauri Tirkkonen (Bug #1184).
 	- gstoraster: Fix two instances of insufficient EINTR handling.
 	  Thanks to Lauri Tirkkonen (Bug #1184).
 
