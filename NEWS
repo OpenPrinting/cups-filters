@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.0.45 - 2014-02-13
 -----------------------------------------------------
 
+CHANGES IN V1.0.46
+
+	- gstoraster: Fix two instances of insufficient EINTR handling.
+	  Thanks to Lauri Tirkkonen (Bug #1184).
+
 CHANGES IN V1.0.45
 
 	- cups-browsed: Under Upstart load the AppArmor profile
