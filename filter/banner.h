@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <config.h>
+#include <cups/cups.h>
 
 enum banner_info {
     INFO_IMAGEABLE_AREA            = 1,
@@ -49,7 +50,8 @@ typedef struct {
 } banner_t;
 
 
-banner_t * banner_new_from_file(const char *filename);
+banner_t * banner_new_from_file(const char *filename,
+        int *num_options, cups_option_t **options);
 void banner_free(banner_t *banner);
 
 #endif

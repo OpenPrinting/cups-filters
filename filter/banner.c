@@ -122,7 +122,8 @@ static char * template_path(const char *name)
 }
 
 
-banner_t * banner_new_from_file(const char *filename)
+banner_t * banner_new_from_file(const char *filename,
+        int *num_options, cups_option_t **options)
 {
     FILE *f;
     char *line = NULL;
@@ -161,6 +162,14 @@ banner_t * banner_new_from_file(const char *filename)
             banner->header = strdup(value);
         else if (!strcasecmp(key, "footer"))
             banner->header = strdup(value);
+        else if (!strcasecmp(key, "font")) {
+            *num_options = cupsAddOption("banner-font",
+                    strdup(value), *num_options, options);
+        }
+        else if (!strcasecmp(key, "font-size")) {
+            *num_options = cupsAddOption("banner-font-size",
+                    strdup(value), *num_options, options);
+        }
         else if (!strcasecmp(key, "show"))
             banner->infos = parse_show(value);
         else if (!strcasecmp(key, "image") ||

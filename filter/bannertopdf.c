@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 Canonical Ltd.
+ * Copyright 2013 ALT Linux, Andrew V. Stepanov <stanv@altlinux.com>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -144,6 +145,143 @@ static void info_line_time(FILE *s,
         info_line(s, key, "unknown");
 }
 
+static const char *human_time(const char *timestamp)
+{
+    time_t time;
+    int size = sizeof(char) * 40;
+    char *buf = malloc(size);
+    strcpy(buf, "unknown");
+
+    if (timestamp) {
+        time = (time_t)atoll(timestamp);
+        strftime(buf, size, "%c", localtime(&time));
+    }
+
+    return buf;
+}
+
+/*
+ * Add new key & value.
+ */
+static opt_t* add_opt(opt_t *in_opt, const char *key, const char *val) {
+    if ( ! key || ! val ) {
+        return in_opt;
+    }
+
+    if ( !strlen(key) || !strlen(val) ) {
+        return in_opt;
+    }
+
+    opt_t *entry = malloc(sizeof(opt_t));
+    if ( ! entry ) {
+        return in_opt;
+    }
+
+    entry->key = key;
+    entry->val = val;
+    entry->next = in_opt;
+
+    return entry;
+}
+
+/*
+ * Collect all known info about current task.
+ * Bond PDF form field name with collected info.
+ *
+ * Create PDF form's field names according above.
+ */
+opt_t *get_known_opts(
+        ppd_file_t *ppd,
+        const char *jobid,
+        const char *user,
+        const char *jobtitle,
+        int noptions,
+        cups_option_t *options) {
+
+    opt_t *opt = NULL;
+
+    /* Job ID */
+    opt = add_opt(opt, "job-id", jobid);
+
+    /* Job title */
+    opt = add_opt(opt, "job-title", jobtitle);
+
+    /* Printer by */
+    opt = add_opt(opt, "user", user);
+
+    /* Printer name */
+    opt = add_opt(opt, "printer-name", getenv("PRINTER"));
+
+    /* Printer info */
+    opt = add_opt(opt, "printer-info", getenv("PRINTER_INFO"));
+
+    /* Time at creation */
+    opt = add_opt(opt, "time-at-creation",
+            human_time(cupsGetOption("time-at-creation", noptions, options)));
+
+    /* Processing time */
+    opt = add_opt(opt, "time-at-processing",
+            human_time(cupsGetOption("time-at-processing", noptions, options)));
+
+    /* Billing information */
+    opt = add_opt(opt, "job-billing",
+            cupsGetOption("job-billing", noptions, options));
+
+    /* Source hostname */
+    opt = add_opt(opt, "job-originating-host-name",
+            cupsGetOption("job-originating-host-name", noptions, options));
+
+    /* Banner font */
+    opt = add_opt(opt, "banner-font",
+            cupsGetOption("banner-font", noptions, options));
+
+    /* Banner font size */
+    opt = add_opt(opt, "banner-font-size",
+            cupsGetOption("banner-font-size", noptions, options));
+
+    /* Job UUID */
+    opt = add_opt(opt, "job-uuid",
+            cupsGetOption("job-uuid", noptions, options));
+
+    /* Security context */
+    opt = add_opt(opt, "security-context",
+            cupsGetOption("security-context", noptions, options));
+
+    /* Security context range part */
+    opt = add_opt(opt, "security-context-range",
+            cupsGetOption("security-context-range", noptions, options));
+
+    /* Security context current range part */
+    char * full_range = cupsGetOption("security-context-range", noptions, options);
+    if ( full_range ) {
+        size_t cur_size = strcspn(full_range, "-");
+        char * cur_range = strndup(full_range, cur_size);
+        opt = add_opt(opt, "security-context-range-cur", cur_range);
+    }
+
+    /* Security context type part */
+    opt = add_opt(opt, "security-context-type",
+            cupsGetOption("security-context-type", noptions, options));
+
+    /* Security context role part */
+    opt = add_opt(opt, "security-context-role",
+            cupsGetOption("security-context-role", noptions, options));
+
+    /* Security context user part */
+    opt = add_opt(opt, "security-context-user",
+            cupsGetOption("security-context-user", noptions, options));
+
+    /* Driver */
+    opt = add_opt(opt, "driver", ppd->pcfilename);
+
+    /* Driver version */
+    opt = add_opt(opt, "driver-version", ppd->pcfilename);
+
+    /* Make and model */
+    opt = add_opt(opt, "make-and-model", ppd->nickname);
+
+    return opt;
+}
 
 static int generate_banner_pdf(banner_t *banner,
                                ppd_file_t *ppd,
@@ -278,7 +416,24 @@ static int generate_banner_pdf(banner_t *banner,
 #endif /* !HAVE_OPEN_MEMSTREAM */
     fclose(s);
 
-    pdf_prepend_stream(doc, 1, buf, len);
+    opt_t * known_opts = get_known_opts(ppd,
+            jobid,
+            user,
+            jobtitle,
+            noptions,
+            options);
+
+    /*
+     * Try to find a PDF form in PDF template and fill it.
+     */
+    int ret = pdf_fill_form(doc, known_opts);
+
+    /*
+     * Could we fill a PDF form? If no, just add PDF stream.
+     */
+    if ( ! ret ) {
+        pdf_prepend_stream(doc, 1, buf, len);
+    }
 
     copies = get_int_option("number-up", noptions, options, 1);
     if (duplex_marked(ppd))
@@ -319,7 +474,7 @@ int main(int argc, char *argv[])
     ppdMarkDefaults(ppd);
     cupsMarkOptions(ppd, noptions, options);
 
-    banner = banner_new_from_file(argc == 7 ? argv[6] : "-");
+    banner = banner_new_from_file(argc == 7 ? argv[6] : "-", &noptions, &options);
     if (!banner) {
         fprintf(stderr, "Error: could not read banner file\n");
         return 1;
@@ -337,4 +492,3 @@ int main(int argc, char *argv[])
     cupsFreeOptions(noptions, options);
     return ret;
 }
-

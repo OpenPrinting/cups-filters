@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.0.46 - 2014-02-19
 -----------------------------------------------------
 
+CHANGES IN V1.0.47
+
+	- bannertopdf: Support PDF forms as banner template. This allows
+	  especially internationalized banner pages. Forms can contain
+	  fields for any CUPS/IPP value and get automatically filled
+	  Thanks to Andrew V. Stepanov from ALT Linux (Bug #1170,
+	  also first step to fix Ubuntu bug #1196986).
+
 CHANGES IN V1.0.46
 
 	- gstoraster: Ignore SIGCHLD, rely on waitpid instead. Thanks

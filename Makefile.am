@@ -60,6 +60,7 @@ pkgbanner_DATA = \
 	banners/confidential \
 	banners/secret \
 	banners/standard \
+	banners/form \
 	banners/topsecret \
 	banners/unclassified
 
@@ -201,6 +202,10 @@ EXTRA_DIST += \
 pkgcupsdatadir = $(CUPS_DATADIR)/data
 pkgcupsdata_DATA = \
 	data/default.pdf \
+	data/form_russian.pdf \
+	data/form_english.pdf \
+	data/form_english_in.odt \
+	data/form_russian_in.odt \
 	data/default-testpage.pdf \
 	data/testprint
 
@@ -437,14 +442,19 @@ bannertopdf_SOURCES = \
 	filter/banner.h \
 	filter/bannertopdf.c \
 	filter/pdf.cxx \
-	filter/pdf.h
+	filter/pdf.h \
+	fontembed/embed.h \
+	fontembed/sfnt.h
 EXTRA_bannertopdf_SOURCES = filter/getline.c
 bannertopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
 	$(POPPLER_CFLAGS) \
-	$(TIFF_CFLAGS)
+	$(TIFF_CFLAGS) \
+	$(FONTCONFIG_CFLAGS) \
+	-I$(srcdir)/fontembed/
+
 bannertopdf_CXXFLAGS = $(bannertopdf_CFLAGS)
 bannertopdf_LDADD = \
 	$(GETLINE) \
@@ -452,7 +462,10 @@ bannertopdf_LDADD = \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(POPPLER_LIBS) \
-	$(TIFF_LIBS)
+	$(TIFF_LIBS) \
+	$(FONTCONFIG_LIBS) \
+	libfontembed.la
+
 bannertopdf_DEPENDENCIES = $(GETLINE)
 
 commandtoescpx_SOURCES = \
