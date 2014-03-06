@@ -54,6 +54,9 @@
 /* Attribute to mark a CUPS queue as created by us */
 #define CUPS_BROWSED_MARK "cups-browsed"
 
+/* String to use instead of a UUID if there is no UUID*/
+#define NO_UUID "no-uuid"
+
 /* Timeout values in sec */
 #define TIMEOUT_IMMEDIATELY -1
 #define TIMEOUT_CONFIRM     10
@@ -84,6 +87,7 @@ typedef struct remote_printer_s {
   char *service_name;
   char *type;
   char *domain;
+  char *rqueueid;
 } remote_printer_t;
 
 /* Data structure for network interfaces */
@@ -286,6 +290,7 @@ create_local_queue (const char *name,
 		    const char *domain,
 		    const char *pdl,
 		    const char *make_model,
+		    const char *uuid,
 		    int is_cups_queue)
 {
   remote_printer_t *p;
@@ -365,6 +370,11 @@ create_local_queue (const char *name,
   p->service_name = strdup (info);
   if (!p->service_name)
     goto fail;
+
+  if (uuid)
+    p->rqueueid = strdup (uuid);
+  else
+    p->rqueueid = NO_UUID;
 
   /* Record Bonjour service parameters to identify print queue
      entry for removal when service disappears */
@@ -571,6 +581,7 @@ create_local_queue (const char *name,
  fail:
   debug_printf("cups-browsed: ERROR: Unable to create print queue, ignoring printer.\n");
   free (p->type);
+  free (p->rqueueid);
   free (p->service_name);
   free (p->host);
   free (p->uri);
@@ -755,6 +766,7 @@ gboolean handle_cups_queues(gpointer unused) {
       if (p->uri) free (p->uri);
       if (p->host) free (p->host);
       if (p->service_name) free (p->service_name);
+      if (p->rqueueid) free (p->rqueueid);
       if (p->type) free (p->type);
       if (p->domain) free (p->domain);
       if (p->ppd) free (p->ppd);
@@ -821,8 +833,9 @@ gboolean handle_cups_queues(gpointer unused) {
       /* Device URI: ipp(s)://<remote host>:631/printers/<remote queue> */
       num_options = cupsAddOption("device-uri", p->uri,
 				  num_options, &options);
-      /* Option cups-browsed=true, marking that we have created this queue */
-      num_options = cupsAddOption("cups-browsed-default", "true",
+      /* Option cups-browsed=<UUID of remote queue>, marking that we have
+	 created this queue, if possible with UUID of remote queue */
+      num_options = cupsAddOption(CUPS_BROWSED_MARK "-default", p->rqueueid,
 				  num_options, &options);
       /* Do not share a queue which serves only to point to a remote printer */
       num_options = cupsAddOption("printer-is-shared", "false",
@@ -931,7 +944,7 @@ void generate_local_queue(const char *host,
 			  const char *domain,
 			  void *txt) {
 
-  char *uri, *remote_queue, *remote_host, *pdl = NULL;
+  char *uri, *remote_queue, *remote_host, *pdl = NULL, *uuid = NO_UUID;
 #ifdef HAVE_AVAHI
   char *fields[] = { "product", "usb_MDL", "ty", NULL }, **f;
   AvahiStringList *entry;
@@ -985,6 +998,7 @@ void generate_local_queue(const char *host,
 	  }
 	}
       }
+      /* Find out which PDLs the printer understands */
       entry = avahi_string_list_find((AvahiStringList *)txt, "pdl");
       if (entry) {
 	avahi_string_list_get_pair(entry, &key, &value, NULL);
@@ -995,6 +1009,18 @@ void generate_local_queue(const char *host,
     }
 #endif /* HAVE_AVAHI */
   }
+#ifdef HAVE_AVAHI
+  /* Get the UUID of the remote printer/print queue */
+  if (txt) {
+    entry = avahi_string_list_find((AvahiStringList *)txt, "UUID");
+    if (entry) {
+      avahi_string_list_get_pair(entry, &key, &value, NULL);
+      if (key && value && !strcmp(key, "UUID") && strlen(value) >= 3) {
+	uuid = strdup(value);
+      }
+    }
+  }
+#endif /* HAVE_AVAHI */
   /* Check if there exists already a CUPS queue with the
      requested name Try name@host in such a case and if
      this is also taken, ignore the printer */
@@ -1035,9 +1061,10 @@ void generate_local_queue(const char *host,
       if ((((val =
 	     cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
 			   dest->options)) == NULL) ||
-	   (strcasecmp(val, "yes") != 0 &&
-	    strcasecmp(val, "on") != 0 &&
-	    strcasecmp(val, "true") != 0)) &&
+	   (strcasecmp(val, "no") == 0 ||
+	    strcasecmp(val, "off") == 0 ||
+	    strcasecmp(val, "false") == 0 ||
+	    strcasecmp(val, "0") == 0)) &&
 	  !strcmp(local_queue_name, dest->name))
 	break;
     if (i > 0) {
@@ -1051,9 +1078,10 @@ void generate_local_queue(const char *host,
 	if ((((val =
 	       cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
 			     dest->options)) == NULL) ||
-	     (strcasecmp(val, "yes") != 0 &&
-	      strcasecmp(val, "on") != 0 &&
-	      strcasecmp(val, "true") != 0)) &&
+	     (strcasecmp(val, "no") == 0 ||
+	      strcasecmp(val, "off") == 0 ||
+	      strcasecmp(val, "false") == 0 ||
+	      strcasecmp(val, "0") == 0)) &&
 	    !strcmp(local_queue_name, dest->name))
 	  break;
       if (i > 0) {
@@ -1075,28 +1103,56 @@ void generate_local_queue(const char *host,
      printer */
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    if (!strcmp(p->name, local_queue_name) &&
-	(p->host[0] == '\0' ||
-	 !strcmp(p->host, remote_host)))
+    if ((strlen(uuid) > 10 && !strcmp(p->rqueueid, uuid)) || 
+	(!strcmp(p->name, local_queue_name) &&
+	 (p->host[0] == '\0' ||
+	  !strcmp(p->host, remote_host)) &&
+	 (strlen(uuid) <= 10 || strlen(p->rqueueid) <= 10 || 
+	  !strcmp(p->rqueueid, uuid))))
       break;
 
   if (p) {
     /* We have already created a local queue, check whether the
-       discovered service allows us to upgrade the queue to IPPS */
-    if (strcasestr(type, "_ipps") &&
-	!strncmp(p->uri, "ipp:", 4)) {
+       discovered service allows us to upgrade the queue to IPPS,
+       whether we get a missing UUID, or whether the URI part
+       after ipp(s):// has changed */
+    if ((strcasestr(type, "_ipps") &&
+	 !strncmp(p->uri, "ipp:", 4)) ||
+	(strlen(uuid) > 10 &&
+	 strlen(p->rqueueid) <= 10) ||
+	strcmp(strchr(p->uri, ':'), strchr(uri, ':'))) {
 
-      /* Schedule local queue for upgrade to ipps: */
-      free(p->uri);
-      p->uri = strdup(uri);
+      /* Schedule local queue for upgrade to ipps: or for URI change */
+      if ((strcasestr(type, "_ipps") &&
+	   !strncmp(p->uri, "ipp:", 4)) ||
+	  strcmp(strchr(p->uri, ':'), strchr(uri, ':'))) {
+
+	if (strcasestr(type, "_ipps") &&
+	  !strncmp(p->uri, "ipp:", 4))
+	  debug_printf("cups-browsed: Upgrading printer %s (Host: %s) to IPPS. New URI: %s\n",
+		       p->name, remote_host, uri);
+	if (strcmp(strchr(p->uri, ':'), strchr(uri, ':')))
+	  debug_printf("cups-browsed: Changing URI of printer %s (Host: %s) to %s.\n",
+		       p->name, remote_host, uri);
+	free(p->uri);
+	p->uri = strdup(uri);
+	p->host = strdup(remote_host);
+	p->service_name = strdup(name);
+	p->type = strdup(type);
+	p->domain = strdup(domain);
+      }
+
+      /* Schedule local queue for addition of the UUID */
+      if (strlen(uuid) > 10 &&
+	  strlen(p->rqueueid) <= 10) {
+	free(p->rqueueid);
+	p->rqueueid = strdup(uuid);
+	debug_printf("cups-browsed: Adding UUID to printer %s (Host: %s). UUID: %s\n",
+		     p->name, p->host, p->rqueueid);
+      }
+
       p->status = STATUS_TO_BE_CREATED;
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-      p->host = strdup(remote_host);
-      p->service_name = strdup(name);
-      p->type = strdup(type);
-      p->domain = strdup(domain);
-      debug_printf("cups-browsed: Upgrading printer %s (Host: %s) to IPPS. New URI: %s\n",
-		   p->name, p->host, p->uri);
 
     } else {
 
@@ -1127,7 +1183,7 @@ void generate_local_queue(const char *host,
        discovered printer */
     p = create_local_queue (local_queue_name, uri, remote_host,
 			    name ? name : "", type, domain, pdl, remote_queue,
-			    is_cups_queue);
+			    uuid, is_cups_queue);
     free (uri);
   }
 
@@ -1317,7 +1373,7 @@ static void browse_callback(
 	/* Schedule this printer for updating the CUPS queue */
 	p->status = STATUS_TO_BE_CREATED;
 	p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-	/* Schedule the remote printer for removal */
+	/* Schedule the duplicate printer entry for removal */
 	q->status = STATUS_DISAPPEARED;
 	q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
 
@@ -2723,13 +2779,13 @@ int main(int argc, char*argv[]) {
       if ((val = cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
 			       dest->options)) != NULL) {
 	if (strcasecmp(val, "no") != 0 && strcasecmp(val, "off") != 0 &&
-	    strcasecmp(val, "false") != 0) {
+	    strcasecmp(val, "false") != 0 && strcasecmp(val, "0") != 0) {
 	  /* Queue found, add to our list */
 	  p = create_local_queue (dest->name,
 				  cupsGetOption("device-uri",
 						dest->num_options,
 						dest->options),
-				  "", "", "", "", NULL, NULL, 1);
+				  "", "", "", "", NULL, NULL, val, 1);
 	  if (p) {
 	    /* Mark as unconfirmed, if no Avahi report of this queue appears
 	       in a certain time frame, we will remove the queue */

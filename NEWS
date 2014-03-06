@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.46 - 2014-02-19
 
 CHANGES IN V1.0.47
 
+	- cups-browsed: Use the UUIDs of remote print queues to reliably
+	  identify them. Check for changes of the URI of a queue which
+	  we have created, especially by changes in the DNS-SD-provided
+	  host name of the remote server.
 	- bannertopdf: Support PDF forms as banner template. This allows
 	  especially internationalized banner pages. Forms can contain
 	  fields for any CUPS/IPP value and get automatically filled
