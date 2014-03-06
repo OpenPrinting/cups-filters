@@ -1110,14 +1110,14 @@ void generate_local_queue(const char *host,
 
       /* Nothing to do, mark queue entry as confirmed if the entry
 	 is unconfirmed */
-      debug_printf("cups-browsed: Entry for %s (Host: %s, URI: %s) already exists.\n",
-		   p->name, p->host, p->uri);
+      debug_printf("cups-browsed: Entry for %s (URI: %s) already exists.\n",
+		   p->name, p->uri);
       if (p->status == STATUS_UNCONFIRMED ||
 	  p->status == STATUS_DISAPPEARED) {
 	p->status = STATUS_CONFIRMED;
 	p->timeout = (time_t) -1;
-	debug_printf("cups-browsed: Marking entry for %s (Host: %s, URI: %s) as confirmed.\n",
-		     p->name, p->host, p->uri);
+	debug_printf("cups-browsed: Marking entry for %s (URI: %s) as confirmed.\n",
+		     p->name, p->uri);
       }
 
     }
