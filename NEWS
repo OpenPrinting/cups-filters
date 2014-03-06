@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.46 - 2014-02-19
 
 CHANGES IN V1.0.47
 
+	- pdftopdf: Fixed typo in initialization which sets the default
+	  value page border to an undefined value. Thanks to Helge
+	  Blischke for the patch.
 	- cups-browsed: Check for changes of the URI of a queue which
 	  we have created and correct the URI if needed, especially if
 	  a queue was not removed on shutdown of cups-browsed (default

@@ -723,7 +723,7 @@ std::unique_ptr<PDFTOPDF_Processor> proc1(PDFTOPDF_Factory::processor());
 /*
 */
 //param.nup.yalign=TOP;
-param.border=BorderType::ONE;
+param.border=BorderType::NONE;
 //param.mirror=true;
 //param.reverse=true;
 //param.numCopies=3;
