@@ -147,8 +147,8 @@ T3FontCache::T3FontCache(Ref *fontIDA, double m11A, double m12A,
   } else {
     cacheSets = 1;
   }
-  cacheData = (Guchar *)gmalloc(cacheSets * cacheAssoc * glyphSize);
-  cacheTags = (T3FontCacheTag *)gmalloc(cacheSets * cacheAssoc *
+  cacheData = (Guchar *)gmallocn3(cacheSets , cacheAssoc , glyphSize);
+  cacheTags = (T3FontCacheTag *)gmallocn3(cacheSets , cacheAssoc ,
 					sizeof(T3FontCacheTag));
   for (i = 0; i < cacheSets * cacheAssoc; ++i) {
     cacheTags[i].mru = i & (cacheAssoc - 1);
@@ -1416,7 +1416,7 @@ void OPVPOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     switch (colorMode) {
     case splashModeMono1:
     case splashModeMono8:
-      imgData.lookup = (SplashColorPtr)gmalloc(n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,1);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getGray(&pix, &gray);
@@ -1424,7 +1424,7 @@ void OPVPOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
       }
       break;
     case splashModeRGB8:
-      imgData.lookup = (SplashColorPtr)gmalloc(3 * n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,3);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getRGB(&pix, &rgb);
@@ -1434,7 +1434,7 @@ void OPVPOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
       }
       break;
     case splashModeBGR8:
-      imgData.lookup = (SplashColorPtr)gmalloc(3 * n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,3);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getRGB(&pix, &rgb);
@@ -1445,7 +1445,7 @@ void OPVPOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
       break;
 #if SPLASH_CMYK
     case splashModeCMYK8:
-      imgData.lookup = (SplashColorPtr)gmalloc(4 * n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,4);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getCMYK(&pix, &cmyk);
@@ -1672,7 +1672,7 @@ void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
     switch (colorMode) {
     case splashModeMono1:
     case splashModeMono8:
-      imgData.lookup = (SplashColorPtr)gmalloc(n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,1);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getGray(&pix, &gray);
@@ -1680,7 +1680,7 @@ void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
       }
       break;
     case splashModeRGB8:
-      imgData.lookup = (SplashColorPtr)gmalloc(3 * n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,3);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getRGB(&pix, &rgb);
@@ -1690,7 +1690,7 @@ void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
       }
       break;
     case splashModeBGR8:
-      imgData.lookup = (SplashColorPtr)gmalloc(3 * n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,3);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getRGB(&pix, &rgb);
@@ -1701,7 +1701,7 @@ void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
       break;
 #if SPLASH_CMYK
     case splashModeCMYK8:
-      imgData.lookup = (SplashColorPtr)gmalloc(4 * n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,4);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getCMYK(&pix, &cmyk);
@@ -1793,7 +1793,7 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
   imgMaskData.height = maskHeight;
   imgMaskData.y = 0;
   n = 1 << maskColorMap->getBits();
-  imgMaskData.lookup = (SplashColorPtr)gmalloc(n);
+  imgMaskData.lookup = (SplashColorPtr)gmallocn(n,1);
   for (i = 0; i < n; ++i) {
     pix = (Guchar)i;
     maskColorMap->getGray(&pix, &gray);
@@ -1839,7 +1839,7 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
     switch (colorMode) {
     case splashModeMono1:
     case splashModeMono8:
-      imgData.lookup = (SplashColorPtr)gmalloc(n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,1);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getGray(&pix, &gray);
@@ -1847,7 +1847,7 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
       }
       break;
     case splashModeRGB8:
-      imgData.lookup = (SplashColorPtr)gmalloc(3 * n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,3);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getRGB(&pix, &rgb);
@@ -1857,7 +1857,7 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
       }
       break;
     case splashModeBGR8:
-      imgData.lookup = (SplashColorPtr)gmalloc(3 * n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,3);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getRGB(&pix, &rgb);
@@ -1868,7 +1868,7 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
       break;
 #if SPLASH_CMYK
     case splashModeCMYK8:
-      imgData.lookup = (SplashColorPtr)gmalloc(4 * n);
+      imgData.lookup = (SplashColorPtr)gmallocn(n,4);
       for (i = 0; i < n; ++i) {
 	pix = (Guchar)i;
 	colorMap->getCMYK(&pix, &cmyk);

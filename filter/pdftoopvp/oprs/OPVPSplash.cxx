@@ -1094,7 +1094,7 @@ void OPVPSplash::fillGlyph(SplashCoord x, SplashCoord y,
     
     opvpbytes = (m+3)/4;
     opvpbytes *= 4;
-    bp = (Guchar *)gmalloc(opvpbytes*glyph->h);
+    bp = (Guchar *)gmallocn(glyph->h,opvpbytes);
     for (i = 0;i < glyph->h;i++) {
       memcpy(bp+i*opvpbytes,glyph->data+i*m,m);
     }
@@ -1238,8 +1238,8 @@ SplashError OPVPSplash::fillImageMaskFastWithCTM(SplashImageMaskSource src,
   /* align 4 */
   opvpbytes = (opvpbytes+3)/4;
   opvpbytes *= 4;
-  buf = (Guchar *)gmalloc(opvpbytes*h);
-  lineBuf = (SplashColorPtr)gmalloc(opvpbytes*8);
+  buf = (Guchar *)gmallocn(h,opvpbytes);
+  lineBuf = (SplashColorPtr)gmallocn(8,opvpbytes);
 
   for (i = 0;i < h;i++) {
     int k;
@@ -1417,7 +1417,7 @@ SplashError OPVPSplash::fillImageMask(SplashImageMaskSource src, void *srcData,
   imat[3] = mat[0]/det;
 
   /* read source image */
-  pixBuf = (SplashColorPtr)gmalloc(h * w);
+  pixBuf = (SplashColorPtr)gmallocn(h , w);
 
   p = pixBuf;
   for (i = 0; i < h; ++i) {
@@ -1571,8 +1571,8 @@ SplashError OPVPSplash::drawImageNotShear(SplashImageSource src,
     hs = h-1;
     he = -1;
   }
-  buf = (Guchar *)gmalloc(opvpbytes*h);
-  lineBuf = (SplashColorPtr)gmalloc(lineBufSize);
+  buf = (Guchar *)gmallocn(h,opvpbytes);
+  lineBuf = (SplashColorPtr)gmallocn(lineBufSize,1);
   switch (colorMode) {
   case splashModeMono1:
   case splashModeMono8:
@@ -1734,7 +1734,7 @@ SplashError OPVPSplash::drawImageFastWithCTM(SplashImageSource src,
     return splashErrOPVP;
     break;
   }
-  buf = (Guchar *)gmalloc(opvpbytes*h);
+  buf = (Guchar *)gmallocn(h,opvpbytes);
 
   switch (colorMode) {
   case splashModeMono1:
@@ -1960,7 +1960,7 @@ SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
   }
 
   /* read source image */
-  pixBuf = (SplashColorPtr)gmalloc(h * linesize);
+  pixBuf = (SplashColorPtr)gmallocn(h , linesize);
 
   p = pixBuf;
   for (i = 0; i < h; ++i) {
@@ -1968,8 +1968,8 @@ SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
     p += linesize;
   }
   /* allocate line buffer */
-  Guchar *lineBuf = (Guchar *)gmalloc(opvpbytes);
-  Guchar *onBuf = (Guchar *)gmalloc(width);
+  Guchar *lineBuf = (Guchar *)gmallocn(opvpbytes,1);
+  Guchar *onBuf = (Guchar *)gmallocn(width,1);
   OPVPSplashClip *clip;
   opvpctm.a = 1.0;
   opvpctm.b = 0.0;

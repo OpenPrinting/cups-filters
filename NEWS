@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.0.46 - 2014-02-19
 
 CHANGES IN V1.0.47
 
+	- pdftoopvp: SECURITY FIX for CVE-2013-6474, CVE-2013-6475,
+	  and CVE-2013-6476: Introductionof gmallocn and gmallocn3
+	  to protect against arbitrary code execution with the
+	  privileges of the "lp" user via malicious PDF files. Also
+	  restrict the directory from where OPVP drivers can get
+	  loaded.
 	- urftopdf: SECURITY FIX for CVE-2013-6473: Two heap-based
 	  buffer overflow flaws in urftopdf. If a malicious URF file
 	  were processed it could lead to arbitrary code execution

@@ -822,6 +822,12 @@ OPVPWrapper *OPVPWrapper::loadDriver(const char *driverName,
     void *handle = 0;
     OPVPWrapper *opvp = 0;
 
+    // remove directory part
+    const char *s = strrchr(driverName,'/');
+    if (s != NULL) {
+        driverName = s+1;
+    }
+
     list = genDynamicLibName(driverName);
 
     if (list) {
