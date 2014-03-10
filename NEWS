@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.46 - 2014-02-19
 
 CHANGES IN V1.0.47
 
+	- urftopdf: SECURITY FIX for CVE-2013-6473: Two heap-based
+	  buffer overflow flaws in urftopdf. If a malicious URF file
+	  were processed it could lead to arbitrary code execution
+	  with the privileges of the "lp" user.
 	- pdftopdf: Fixed typo in initialization which sets the default
 	  value page border to an undefined value. Thanks to Helge
 	  Blischke for the patch.
