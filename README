@@ -305,7 +305,6 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
     On systems using Upstart use an /etc/init/cups-browsed.conf file like this:
 
         start on (filesystem
-                  and started avahi-daemon
                   and (started cups or runlevel [2345]))
         stop on runlevel [016]
 

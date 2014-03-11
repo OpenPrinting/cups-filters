@@ -1,7 +1,9 @@
 #!/bin/sh
 # Provides: cups-browsed
-# Required-Start: $local_fs $remote_fs $network $named $time $avahi-daemon $cups
-# Required-Stop: $local_fs $remote_fs $network $named $time $avahi-daemon $cups
+# Required-Start: $local_fs $remote_fs $network $named $time $cups
+# Required-Stop: $local_fs $remote_fs $network $named $time $cups
+# Should-Start: $avahi-daemon
+# Should-Stop: $avahi-daemon
 # Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
 # Short-Description: cups-browsed - Make remote CUPS printers available locally
