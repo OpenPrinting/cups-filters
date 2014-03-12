@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.47 - 2014-03-10
 
 CHANGES IN V1.0.48
 
+	- cups-browsed: Fix for a crash which happens on Bonjour reports of
+	  printers without "product", "usb_MDL", and "ty" fields in the
+	  text record (Ubuntu bug #1284834).
 	- cups-browsed: In README and in the sample startup scripts/configs
 	  for System V Init and Upstart taken into account the fact that it
 	  is not required any more to start avahi-daemon before starting

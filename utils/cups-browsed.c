@@ -975,7 +975,7 @@ void generate_local_queue(const char *host,
     remote_queue = "printer";
 #ifdef HAVE_AVAHI
     if (txt) {
-      for (f = fields; f; f ++) {
+      for (f = fields; *f; f ++) {
 	entry = avahi_string_list_find((AvahiStringList *)txt, *f);
 	if (entry) {
 	  avahi_string_list_get_pair(entry, &key, &value, NULL);
