@@ -581,7 +581,7 @@ main(int  argc,				/* I - Number of command-line args */
       {
         /* Do not emit PS Level 3 with Poppler on HP PostScript laser printers
 	   as some do not like it. See https://bugs.launchpad.net/bugs/277404.*/
-	if (make_model[0] ||
+	if (!make_model[0] ||
 	    ((!strncasecmp(make_model, "HP", 2) ||
 	      !strncasecmp(make_model, "Hewlett-Packard", 15)) &&
 	     (strcasestr(make_model, "laserjet"))))
