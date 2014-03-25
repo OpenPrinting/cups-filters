@@ -931,7 +931,8 @@ void generate_local_queue(const char *host,
 			  const char *domain,
 			  void *txt) {
 
-  char *uri, *remote_queue, *remote_host, *pdl = NULL;
+  char uri[HTTP_MAX_URI];
+  char *remote_queue, *remote_host, *pdl = NULL;
 #ifdef HAVE_AVAHI
   char *fields[] = { "product", "usb_MDL", "ty", NULL }, **f;
   AvahiStringList *entry;
@@ -945,14 +946,9 @@ void generate_local_queue(const char *host,
 
   is_cups_queue = 0;
   /* Determine the device URI of the remote printer */
-  if ((uri = malloc(strlen(host) +
-		    strlen(resource) + 16)) == NULL){
-    debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
-    exit(1);
-  }
-  sprintf(uri, "ipp%s://%s:%u/%s",
-	  (strcasestr(type, "_ipps") ? "s" : ""), host,
-	  port, resource);
+  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), 
+		   (strcasestr(type, "_ipps") ? "ipps" : "ipp"), NULL,
+		   host, port, "/%s", resource);
   /* Find the remote host name */
   remote_host = strdup(host);
   if (!strcmp(remote_host + strlen(remote_host) - 6, ".local"))
@@ -1024,7 +1020,6 @@ void generate_local_queue(const char *host,
 	 would get, so ignore this remote printer */
       debug_printf("cups-browsed: Printer with URI %s already exists, printer ignored.\n",
 		   uri);
-      free (uri);
       free (remote_host);
       free (backup_queue_name);
       cupsFreeDests(num_dests, dests);
@@ -1062,7 +1057,6 @@ void generate_local_queue(const char *host,
 	   ignore this remote printer */
 	debug_printf("cups-browsed: %s also taken, printer ignored.\n",
 		     local_queue_name);
-	free (uri);
 	free (backup_queue_name);
 	free (remote_host);
 	cupsFreeDests(num_dests, dests);
@@ -1136,7 +1130,6 @@ void generate_local_queue(const char *host,
     p = create_local_queue (local_queue_name, uri, remote_host,
 			    name ? name : "", type, domain, pdl, remote_queue,
 			    is_cups_queue);
-    free (uri);
   }
 
   free (backup_queue_name);

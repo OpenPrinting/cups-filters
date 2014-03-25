@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.0.49 - 2014-03-24
 -----------------------------------------------------
 
+CHANGES IN V1.0.50
+
+	- cups-browsed: Build the device URIs for all local queues we create
+	  with the CUPS library function httpAssembleURIf() for proper
+	  percent escaping of characters which are not allowed in URIs
+	  (Bug #1187).
+
 CHANGES IN V1.0.49
 
 	- pdftops: Use Poppler also for Toshiba printers (Ubuntu bug
