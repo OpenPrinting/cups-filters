@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.49 - 2014-03-24
 
 CHANGES IN V1.0.50
 
+	- pdftops: Improved workaround for Toshiba printers. Instead
+	  of using Poppler do not emit TrueType fonts with Ghostscript
+	  (Ubuntu bug #998087).
 	- cups-browsed: Build the device URIs for all local queues we create
 	  with the CUPS library function httpAssembleURIf() for proper
 	  percent escaping of characters which are not allowed in URIs

@@ -422,8 +422,8 @@ main(int  argc,				/* I - Number of command-line args */
  /*
   * Select the PDF renderer: Ghostscript (gs), Poppler (pdftops),
   * Adobe Reader (arcoread), Poppler with Cairo (pdftocairo), or
-  * Hybrid (hybrid, Poppler for Brother, Minolta, Konica Minolta, and
-  * Toshiba and Ghostscript otherwise)
+  * Hybrid (hybrid, Poppler for Brother, Minolta, and Konica Minolta and
+  * Ghostscript otherwise)
   */
 
   if ((val = cupsGetOption("pdftops-renderer", num_options, options)) != NULL)
@@ -447,10 +447,9 @@ main(int  argc,				/* I - Number of command-line args */
   {
     if (make_model[0] &&
 	(!strncasecmp(make_model, "Brother", 7) ||
-	 strcasestr(make_model, "Minolta") ||
-	 !strncasecmp(make_model, "Toshiba", 7)))
+	 strcasestr(make_model, "Minolta")))
       {
-	fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for Brother, Minolta, Konica Minolta, and Toshiba to work around bugs in the printer's PS interpreters\n");
+	fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for Brother, Minolta, and Konica Minolta to work around bugs in the printer's PS interpreters\n");
 	renderer = PDFTOPS;
       }
     else
@@ -790,8 +789,24 @@ main(int  argc,				/* I - Number of command-line args */
       pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
       pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
     }
+   /*
+    * Toshiba's PS interpreters have an issue with how we handle
+    * TrueType/Type42 fonts, therefore we add command line options to turn
+    * the TTF outlines into bitmaps, usually Type 3 PostScript fonts, only
+    * large glyphs into normal image data.
+    * See https://bugs.launchpad.net/bugs/978120
+    */
+    if (make_model[0] &&
+	!strncasecmp(make_model, "Toshiba", 7))
+    {
+      fprintf(stderr, "DEBUG: To work around a bug in Toshiba's PS interpreters turn TTF font glyphs into bitmaps, usually Type 3 PS fonts, or images for large characters\n");
+      pdf_argv[pdf_argc++] = (char *)"-dHaveTrueTypes=false";
+    }
     pdf_argv[pdf_argc++] = (char *)"-dNOINTERPOLATE";
     pdf_argv[pdf_argc++] = (char *)"-c";
+    if (make_model[0] &&
+	!strncasecmp(make_model, "Toshiba", 7))
+      pdf_argv[pdf_argc++] = (char *)"<< /MaxFontItem 500000 >> setuserparams";
     pdf_argv[pdf_argc++] = (char *)"save pop";
     pdf_argv[pdf_argc++] = (char *)"-f";
     pdf_argv[pdf_argc++] = filename;
