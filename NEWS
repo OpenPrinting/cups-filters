@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.0.50 - 2014-03-27
 -----------------------------------------------------
 
+CHANGES IN V1.0.51
+
+	- cups-browsed: SECURITY FIX to prevent arbitrary code
+	  injection into the System V interface scripts generated for
+	  queues for discovered native IPP printers by a malicious IPP
+	  print service with forged make/model and/or PDL string.
+ 
 CHANGES IN V1.0.50
 
 	- pdftops: Let old HP LaserJet printers (model number without
