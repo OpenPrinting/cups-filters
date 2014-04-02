@@ -7,7 +7,7 @@ AC_PREREQ([2.65])
 # ====================
 m4_define([cups_filters_version_major],[1])
 m4_define([cups_filters_version_minor],[0])
-m4_define([cups_filters_version_micro],[50])
+m4_define([cups_filters_version_micro],[51])
 m4_define([cups_filters_version],[cups_filters_version_major.cups_filters_version_minor.cups_filters_version_micro])
 
 # =============

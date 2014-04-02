@@ -582,7 +582,28 @@ create_local_queue (const char *name,
   return NULL;
 }
 
-char *generate_queue_name(const char *str_orig)
+/*
+ * Remove all illegal characters and replace each group of such characters
+ * by a single dash
+ *
+ * mode = 0: Only allow letters, numbers, and dashes, for turning make/model
+ *           info into a valid print queue name or inro a string which can
+ *           be supplied as option value in a filter command line without
+ *           need of quoting
+ * mode = 1: Allow also '/', '.', ',', '_', for cleaning up MIME type
+ *           strings (here available Page Description Languages, PDLs) to
+ *           supply them on a filter command line without quoting
+ *
+ * Especially this prevents from arbitrary code execution by interface scripts
+ * generated for print queues to native IPP printers when a malicious IPP
+ * print service with forged PDL and/or make/model info gets broadcasted into
+ * the local network.
+ */
+
+char *                                 /* O - Cleaned string */
+remove_bad_chars(const char *str_orig, /* I - Original string */
+		 int mode)             /* I - 0: Make/Model, queue name */
+                                       /*     1: MIME types/PDLs */
 {
   int i, j;
   int havedash = 0;
@@ -595,7 +616,9 @@ char *generate_queue_name(const char *str_orig)
   for (i = 0, j = 0; i < strlen(str); i++, j++) {
     if (((str[i] >= 'A') && (str[i] <= 'Z')) ||
 	((str[i] >= 'a') && (str[i] <= 'z')) ||
-	((str[i] >= '0') && (str[i] <= '9'))) {
+	((str[i] >= '0') && (str[i] <= '9')) ||
+	(mode == 1 && (str[i] == '/' || str[i] == '_' ||
+		       str[i] == '.' || str[i] == ','))) {
       /* Letter or number, keep it */
       havedash = 0;
     } else {
@@ -976,7 +999,7 @@ void generate_local_queue(const char *host,
 	if (entry) {
 	  avahi_string_list_get_pair(entry, &key, &value, NULL);
 	  if (key && value && !strcmp(key, *f) && strlen(value) >= 3) {
-	    remote_queue = generate_queue_name(value);
+	    remote_queue = remove_bad_chars(value, 0);
 	    break;
 	  }
 	}
@@ -986,7 +1009,7 @@ void generate_local_queue(const char *host,
       if (entry) {
 	avahi_string_list_get_pair(entry, &key, &value, NULL);
 	if (key && value && !strcmp(key, "pdl") && strlen(value) >= 3) {
-	  pdl = strdup(value);
+	  pdl = remove_bad_chars(value, 1);
 	}
       }
     }
