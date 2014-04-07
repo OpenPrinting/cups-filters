@@ -545,6 +545,8 @@ TextMain(const char *name,	/* I - Name of filter */
   options     = NULL;
   num_options = cupsParseOptions(argv[5], 0, &options);
 
+  ppd = SetCommonOptions(num_options, options, 1);
+
   if ((val = cupsGetOption("prettyprint", num_options, options)) != NULL &&
       strcasecmp(val, "no") && strcasecmp(val, "off") &&
       strcasecmp(val, "false"))
@@ -593,8 +595,6 @@ TextMain(const char *name,	/* I - Name of filter */
       Keywords    = NULL;
     }
   }
-
-  ppd = SetCommonOptions(num_options, options, 1);
 
   if ((val = cupsGetOption("wrap", num_options, options)) == NULL)
     WrapLines = 1;

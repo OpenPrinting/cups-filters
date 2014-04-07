@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.51 - 2014-04-02
 
 CHANGES IN V1.0.51
 
+	- texttopdf: Make sure that margin changes for prettyprint
+	  get applied.
 	- texttopdf, imagetopdf, imagetoraster: Range-check paper
 	  dimensions and margins taken from the PPD file and correct
 	  them if needed (Bug #1195).
