@@ -3,6 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.0.52 - 2014-04-07
 
 CHANGES IN V1.0.53
 
+	- cups-browsed: SECURITY FIX: Fix on usage of the
+	  "BrowseAllow" directive in cups-browsed.conf. Before, if the
+	  argument of a "BrowseAllow" directive is not understood it
+	  is treated as the directive not having been there, allowing
+	  any host if this was the only "BrowseAllow" directive. Now
+	  we treat this as a directive which no host can fulfill, not
+	  allowing any host if it was the only one. No "BrowseAllow"
+	  directive means access for all, as before (Bug #1204).
 	- cups-browsed: SECURITY FIX: Further improvement on the fix
 	  in 1.0.51 as it was insufficient. In addition, some fixes
 	  against OOB access are done. Thanks to Sebastian Krahmer for

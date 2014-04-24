@@ -95,7 +95,8 @@ typedef struct netif_s {
 /* Data structure for browse allow/deny rules */
 typedef enum allow_type_e {
   ALLOW_IP,
-  ALLOW_NET
+  ALLOW_NET,
+  ALLOW_INVALID
 } allow_type_t;
 typedef struct allow_s {
   allow_type_t type;
@@ -1629,6 +1630,9 @@ allowed (struct sockaddr *srcaddr)
        allow;
        allow = cupsArrayNext (browseallow)) {
     switch (allow->type) {
+    case ALLOW_INVALID:
+      break;
+
     case ALLOW_IP:
       switch (srcaddr->sa_family) {
       case AF_INET:
@@ -2472,6 +2476,8 @@ read_browseallow_value (const char *value)
   char *p;
   struct in_addr addr;
   allow_t *allow = calloc (1, sizeof (allow_t));
+  if (value == NULL)
+    goto fail;
   p = strchr (value, '/');
   if (p) {
     char *s = strdup (value);
@@ -2514,7 +2520,8 @@ read_browseallow_value (const char *value)
   return 0;
 
 fail:
-  free (allow);
+  allow->type = ALLOW_INVALID;
+  cupsArrayAdd (browseallow, allow);
   return 1;
 }
 
@@ -2618,7 +2625,7 @@ read_configuration (const char *filename)
 	  BrowsePoll[NumBrowsePoll++] = b;
 	}
       }
-    } else if (!strcasecmp(line, "BrowseAllow") && value) {
+    } else if (!strcasecmp(line, "BrowseAllow")) {
       if (read_browseallow_value (value))
 	debug_printf ("cups-browsed: BrowseAllow value \"%s\" not understood\n",
 		      value);
