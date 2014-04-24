@@ -420,7 +420,7 @@ create_local_queue (const char *name,
 		   p->name, p->uri);
       goto fail;
     }
-      
+
 #if 0
     uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
 				 scheme, sizeof(scheme),
@@ -584,7 +584,7 @@ create_local_queue (const char *name,
 
 /*
  * Remove all illegal characters and replace each group of such characters
- * by a single dash
+ * by a single dash, return a free()-able string.
  *
  * mode = 0: Only allow letters, numbers, and dashes, for turning make/model
  *           info into a valid print queue name or inro a string which can
@@ -613,6 +613,11 @@ remove_bad_chars(const char *str_orig, /* I - Original string */
     return NULL;
 
   str = strdup(str_orig);
+
+  /* for later str[strlen(str)-1] access */
+  if (strlen(str) < 1)
+    return str;
+
   for (i = 0, j = 0; i < strlen(str); i++, j++) {
     if (((str[i] >= 'A') && (str[i] <= 'Z')) ||
 	((str[i] >= 'a') && (str[i] <= 'z')) ||
@@ -636,11 +641,14 @@ remove_bad_chars(const char *str_orig, /* I - Original string */
   /* Cut off trailing dashes */
   while (str[strlen(str)-1] == '-')
     str[strlen(str)-1] = '\0';
-  /* Cut off leading dashes */
-  while (str[0] == '-')
-    str ++;
 
-  return str;
+  /* Cut off leading dashes */
+  i = 0;
+  while (str[i] == '-')
+    ++i;
+
+  /* keep a free()-able string. +1 for trailing \0 */
+  return memmove(str, str + i, strlen(str) - i + 1);
 }
 
 gboolean handle_cups_queues(gpointer unused) {
@@ -737,7 +745,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	    }
 	    if (default_printer_name)
 	      break;
-	  } 
+	  }
 	}
 	if (default_printer_name &&
 	    !strcasecmp(default_printer_name, p->name)) {
@@ -955,43 +963,52 @@ void generate_local_queue(const char *host,
 			  void *txt) {
 
   char uri[HTTP_MAX_URI];
-  char *remote_queue, *remote_host, *pdl = NULL;
+  char *remote_queue = NULL, *remote_host = NULL, *pdl = NULL;
 #ifdef HAVE_AVAHI
   char *fields[] = { "product", "usb_MDL", "ty", NULL }, **f;
-  AvahiStringList *entry;
-  char *key, *value;
+  AvahiStringList *entry = NULL;
+  char *key = NULL, *value = NULL;
 #endif /* HAVE_AVAHI */
   remote_printer_t *p;
-  char *backup_queue_name, *local_queue_name = NULL;
-  cups_dest_t *dests, *dest;
+  char *backup_queue_name = NULL, *local_queue_name = NULL;
+  cups_dest_t *dests = NULL, *dest = NULL;
   int i, num_dests, is_cups_queue;
-  const char *val;
+  size_t hl = 0;
+  const char *val = NULL;
 
   is_cups_queue = 0;
+  memset(uri, 0, sizeof(uri));
+
   /* Determine the device URI of the remote printer */
-  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), 
+  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri) - 1,
 		   (strcasestr(type, "_ipps") ? "ipps" : "ipp"), NULL,
 		   host, port, "/%s", resource);
-  /* Find the remote host name */
-  remote_host = strdup(host);
-  if (!strcmp(remote_host + strlen(remote_host) - 6, ".local"))
-    remote_host[strlen(remote_host) - 6] = '\0';
-  if (!strcmp(remote_host + strlen(remote_host) - 7, ".local."))
-    remote_host[strlen(remote_host) - 7] = '\0';
+  /* Find the remote host name.
+   * Used in constructing backup_queue_name, so need to sanitize.
+   * strdup() is called inside remove_bad_chars() and result is free()-able.
+   */
+  remote_host = remove_bad_chars(host, 1);
+  hl = strlen(remote_host);
+  if (hl > 6 && !strcmp(remote_host + hl - 6, ".local"))
+    remote_host[hl - 6] = '\0';
+  if (hl > 7 && !strcmp(remote_host + hl - 7, ".local."))
+    remote_host[hl - 7] = '\0';
 
   /* Check by the resource whether the discovered printer is a CUPS queue */
   if (!strncmp(resource, "printers/", 9)) {
     /* This is a remote CUPS queue, use the remote queue name for the
        local queue */
     is_cups_queue = 1;
-    remote_queue = resource + 9;
+     /* Not directly used in script generation input later, but taken from packet,
+      * so better safe than sorry. (consider second loop with backup_queue_name) */
+    remote_queue = remove_bad_chars(resource + 9, 0);
     debug_printf("cups-browsed: Found CUPS queue: %s on host %s.\n",
 		 remote_queue, remote_host);
   } else {
     /* This is an IPP-based network printer */
     is_cups_queue = 0;
     /* Determine the queue name by the model */
-    remote_queue = "printer";
+    remote_queue = strdup("printer");
 #ifdef HAVE_AVAHI
     if (txt) {
       for (f = fields; *f; f ++) {
@@ -1018,7 +1035,7 @@ void generate_local_queue(const char *host,
   /* Check if there exists already a CUPS queue with the
      requested name Try name@host in such a case and if
      this is also taken, ignore the printer */
-  if ((backup_queue_name = malloc((strlen(remote_queue) + 
+  if ((backup_queue_name = malloc((strlen(remote_queue) +
 				   strlen(remote_host) + 2) *
 				  sizeof(char))) == NULL) {
     debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
@@ -1045,6 +1062,8 @@ void generate_local_queue(const char *host,
 		   uri);
       free (remote_host);
       free (backup_queue_name);
+      free (pdl);
+      free (remote_queue);
       cupsFreeDests(num_dests, dests);
       return;
     }
@@ -1082,6 +1101,8 @@ void generate_local_queue(const char *host,
 		     local_queue_name);
 	free (backup_queue_name);
 	free (remote_host);
+	free (pdl);
+	free (remote_queue);
 	cupsFreeDests(num_dests, dests);
 	return;
       }
@@ -1157,6 +1178,8 @@ void generate_local_queue(const char *host,
 
   free (backup_queue_name);
   free (remote_host);
+  free (pdl);
+  free (remote_queue);
 
   if (p)
     debug_printf("cups-browsed: Bonjour IDs: Service name: \"%s\", "
@@ -1228,7 +1251,7 @@ static void resolve_callback(
     }
 
     /* Clean up */
-    
+
     avahi_free(rp_key);
     avahi_free(rp_value);
     avahi_free(adminurl_key);
@@ -1422,7 +1445,7 @@ void avahi_shutdown() {
     avahi_client_free(client);
     client = NULL;
   }
-  if (glib_poll) { 
+  if (glib_poll) {
     avahi_glib_poll_free(glib_poll);
     glib_poll = NULL;
   }
@@ -1551,12 +1574,18 @@ found_cups_printer (const char *remote_host, const char *uri,
   char local_resource[HTTP_MAX_URI];
   char *c;
 
+  memset(scheme, 0, sizeof(scheme));
+  memset(username, 0, sizeof(username));
+  memset(host, 0, sizeof(host));
+  memset(resource, 0, sizeof(resource));
+  memset(local_resource, 0, sizeof(local_resource));
+
   httpSeparateURI (HTTP_URI_CODING_ALL, uri,
-		   scheme, sizeof(scheme),
-		   username, sizeof(username),
-		   host, sizeof(host),
+		   scheme, sizeof(scheme) - 1,
+		   username, sizeof(username) - 1,
+		   host, sizeof(host) - 1,
 		   &port,
-		   resource, sizeof(resource));
+		   resource, sizeof(resource)- 1);
 
   /* Check this isn't one of our own broadcasts */
   for (iface = cupsArrayFirst (netifs);
@@ -1665,7 +1694,12 @@ process_browse_data (GIOChannel *source,
   char remote_host[256];
   char uri[1024];
   char info[1024];
-  char *c;
+  char *c = NULL, *end = NULL;
+
+  memset(packet, 0, sizeof(packet));
+  memset(remote_host, 0, sizeof(remote_host));
+  memset(uri, 0, sizeof(uri));
+  memset(info, 0, sizeof(info));
 
   srclen = sizeof (srcaddr);
   got = recvfrom (browsesocket, packet, sizeof (packet) - 1, 0,
@@ -1678,7 +1712,7 @@ process_browse_data (GIOChannel *source,
   }
 
   packet[got] = '\0';
-  httpAddrString (&srcaddr, remote_host, sizeof (remote_host));
+  httpAddrString (&srcaddr, remote_host, sizeof (remote_host) - 1);
 
   /* Check this packet is allowed */
   if (!allowed ((struct sockaddr *) &srcaddr)) {
@@ -1696,28 +1730,42 @@ process_browse_data (GIOChannel *source,
   }
 
   info[0] = '\0';
+
+  /* do not read OOB */
+  end = packet + sizeof(packet);
   c = strchr (packet, '\"');
+  if (c >= end)
+     return TRUE;
+
   if (c) {
     /* Skip location field */
-    for (c++; *c != '\"'; c++)
+    for (c++; c < end && *c != '\"'; c++)
       ;
 
+    if (c >= end)
+       return TRUE;
+
     if (*c == '\"') {
-      for (c++; isspace(*c); c++)
+      for (c++; c < end && isspace(*c); c++)
 	;
     }
+
+    if (c >= end)
+      return TRUE;
 
     /* Is there an info field? */
     if (*c == '\"') {
       int i;
       c++;
       for (i = 0;
-	   i < sizeof (info) - 1 && *c != '\"';
+	   i < sizeof (info) - 1 && *c != '\"' && c < end;
 	   i++, c++)
 	info[i] = *c;
       info[i] = '\0';
     }
   }
+  if (c >= end)
+    return TRUE;
 
   found_cups_printer (remote_host, uri, info);
   recheck_timer ();
@@ -1926,7 +1974,7 @@ send_browse_data (gpointer data)
     while (attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
       const char *attrname = ippGetName(attr);
       int value_tag = ippGetValueTag(attr);
-      
+
       if (!strcmp(attrname, "printer-type") &&
 	  value_tag == IPP_TAG_ENUM) {
 	type = ippGetInteger(attr, 0);

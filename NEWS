@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.0.52 - 2014-04-07
 -----------------------------------------------------
 
+CHANGES IN V1.0.53
+
+	- cups-browsed: SECURITY FIX: Further improvement on the fix
+	  in 1.0.51 as it was insufficient. In addition, some fixes
+	  against OOB access are done. Thanks to Sebastian Krahmer for
+	  the patch (SUSE/Novell bug #871327).
+
 CHANGES IN V1.0.52
 
 	- texttopdf: Make sure that margin changes for prettyprint
