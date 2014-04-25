@@ -736,7 +736,8 @@ int main(int argc, char** argv)
         debug = 1;
 
     if (debug) {
-	int fd = mkstemp (LOG_FILE "-XXXXXX.log");
+	sprintf(tmp, "%s-XXXXXX.log", LOG_FILE);
+	int fd = mkstemps (tmp, 4);
 	if (fd != -1)
 	    logh = fdopen(fd, "w");
 	else
