@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.53 - 2014-04-25
 -----------------------------------------------------
 
+CHANGES IN V1.0.54
+
+	- cups-browsed: Always do case-insensitive comparing of
+	  strings, as CUPS queue names and URIs are case-insensitive
+	  (CUPS STR #4411).
+
 CHANGES IN V1.0.53
 
 	- foomatic-rip: Fixed segfault when creating log file (Bug

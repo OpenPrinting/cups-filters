@@ -392,7 +392,7 @@ create_local_queue (const char *name,
     for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 q;
 	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
-      if (!strcmp(q->name, p->name))
+      if (!strcasecmp(q->name, p->name))
 	break;
     p->duplicate = q ? 1 : 0;
     if (p->duplicate)
@@ -737,7 +737,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	    if (attr) {
 	      for (; attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER;
 		   attr = ippNextAttribute(response)) {
-		if (!strcmp(ippGetName(attr), "printer-name") &&
+		if (!strcasecmp(ippGetName(attr), "printer-name") &&
 		    ippGetValueTag(attr) == IPP_TAG_NAME) {
 		  default_printer_name = ippGetString(attr, 0, NULL);
 		  break;
@@ -990,13 +990,13 @@ void generate_local_queue(const char *host,
    */
   remote_host = remove_bad_chars(host, 1);
   hl = strlen(remote_host);
-  if (hl > 6 && !strcmp(remote_host + hl - 6, ".local"))
+  if (hl > 6 && !strcasecmp(remote_host + hl - 6, ".local"))
     remote_host[hl - 6] = '\0';
-  if (hl > 7 && !strcmp(remote_host + hl - 7, ".local."))
+  if (hl > 7 && !strcasecmp(remote_host + hl - 7, ".local."))
     remote_host[hl - 7] = '\0';
 
   /* Check by the resource whether the discovered printer is a CUPS queue */
-  if (!strncmp(resource, "printers/", 9)) {
+  if (!strncasecmp(resource, "printers/", 9)) {
     /* This is a remote CUPS queue, use the remote queue name for the
        local queue */
     is_cups_queue = 1;
@@ -1016,7 +1016,7 @@ void generate_local_queue(const char *host,
 	entry = avahi_string_list_find((AvahiStringList *)txt, *f);
 	if (entry) {
 	  avahi_string_list_get_pair(entry, &key, &value, NULL);
-	  if (key && value && !strcmp(key, *f) && strlen(value) >= 3) {
+	  if (key && value && !strcasecmp(key, *f) && strlen(value) >= 3) {
 	    remote_queue = remove_bad_chars(value, 0);
 	    break;
 	  }
@@ -1026,7 +1026,7 @@ void generate_local_queue(const char *host,
       entry = avahi_string_list_find((AvahiStringList *)txt, "pdl");
       if (entry) {
 	avahi_string_list_get_pair(entry, &key, &value, NULL);
-	if (key && value && !strcmp(key, "pdl") && strlen(value) >= 3) {
+	if (key && value && !strcasecmp(key, "pdl") && strlen(value) >= 3) {
 	  pdl = remove_bad_chars(value, 1);
 	}
       }
@@ -1054,7 +1054,7 @@ void generate_local_queue(const char *host,
       if (((val =
 	    cupsGetOption("device-uri", dest->num_options,
 			  dest->options)) != NULL) &&
-	  (!strcmp(val, uri)))
+	  (!strcasecmp(val, uri)))
 	break;
     if (i > 0) {
       /* Found a local queue with the same URI as our discovered printer
@@ -1077,7 +1077,7 @@ void generate_local_queue(const char *host,
 	   (strcasecmp(val, "yes") != 0 &&
 	    strcasecmp(val, "on") != 0 &&
 	    strcasecmp(val, "true") != 0)) &&
-	  !strcmp(local_queue_name, dest->name))
+	  !strcasecmp(local_queue_name, dest->name))
 	break;
     if (i > 0) {
       /* Found local queue with same name as remote queue */
@@ -1093,7 +1093,7 @@ void generate_local_queue(const char *host,
 	     (strcasecmp(val, "yes") != 0 &&
 	      strcasecmp(val, "on") != 0 &&
 	      strcasecmp(val, "true") != 0)) &&
-	    !strcmp(local_queue_name, dest->name))
+	    !strcasecmp(local_queue_name, dest->name))
 	  break;
       if (i > 0) {
 	/* Found also a local queue with name <queue>@<host>, so
@@ -1115,9 +1115,9 @@ void generate_local_queue(const char *host,
      printer */
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    if (!strcmp(p->name, local_queue_name) &&
+    if (!strcasecmp(p->name, local_queue_name) &&
 	(p->host[0] == '\0' ||
-	 !strcmp(p->host, remote_host)))
+	 !strcasecmp(p->host, remote_host)))
       break;
 
   if (p) {
@@ -1125,15 +1125,15 @@ void generate_local_queue(const char *host,
        discovered service allows us to upgrade the queue to IPPS
        or whether the URI part after ipp(s):// has changed */
     if ((strcasestr(type, "_ipps") &&
-	 !strncmp(p->uri, "ipp:", 4)) ||
-	strcmp(strchr(p->uri, ':'), strchr(uri, ':'))) {
+	 !strncasecmp(p->uri, "ipp:", 4)) ||
+	strcasecmp(strchr(p->uri, ':'), strchr(uri, ':'))) {
 
       /* Schedule local queue for upgrade to ipps: or for URI change */
       if (strcasestr(type, "_ipps") &&
-	  !strncmp(p->uri, "ipp:", 4))
+	  !strncasecmp(p->uri, "ipp:", 4))
 	debug_printf("cups-browsed: Upgrading printer %s (Host: %s) to IPPS. New URI: %s\n",
 		     p->name, remote_host, uri);
-      if (strcmp(strchr(p->uri, ':'), strchr(uri, ':')))
+      if (strcasecmp(strchr(p->uri, ':'), strchr(uri, ':')))
 	debug_printf("cups-browsed: Changing URI of printer %s (Host: %s) to %s.\n",
 		     p->name, remote_host, uri);
       free(p->uri);
@@ -1245,7 +1245,7 @@ static void resolve_callback(
     }
 
     if (rp_key && rp_value && adminurl_key && adminurl_value &&
-	!strcmp(rp_key, "rp") && !strcmp(adminurl_key, "adminurl")) {
+	!strcasecmp(rp_key, "rp") && !strcasecmp(adminurl_key, "adminurl")) {
       /* Check remote printer type and create appropriate local queue to
          point to it */
       generate_local_queue(host_name, port, rp_value, name, type, domain, txt);
@@ -1327,9 +1327,9 @@ static void browse_callback(
     /* Check whether we have listed this printer */
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-      if (!strcmp(p->service_name, name) &&
-	  !strcmp(p->type, type) &&
-	  !strcmp(p->domain, domain))
+      if (!strcasecmp(p->service_name, name) &&
+	  !strcasecmp(p->type, type) &&
+	  !strcasecmp(p->domain, domain))
 	break;
     if (p) {
       /* Check whether this queue has a duplicate from another server */
@@ -1338,8 +1338,8 @@ static void browse_callback(
 	for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	     q;
 	     q = (remote_printer_t *)cupsArrayNext(remote_printers))
-	  if (!strcmp(q->name, p->name) &&
-	      strcmp(q->host, p->host) &&
+	  if (!strcasecmp(q->name, p->name) &&
+	      strcasecmp(q->host, p->host) &&
 	      q->duplicate)
 	    break;
       }
@@ -1592,7 +1592,7 @@ found_cups_printer (const char *remote_host, const char *uri,
   for (iface = cupsArrayFirst (netifs);
        iface;
        iface = cupsArrayNext (netifs))
-    if (!strcmp (host, iface->address))
+    if (!strcasecmp (host, iface->address))
       break;
   if (iface) {
     debug_printf("cups-browsed: ignoring own broadcast on %s\n",
@@ -1600,7 +1600,7 @@ found_cups_printer (const char *remote_host, const char *uri,
     return;
   }
 
-  if (strncmp (resource, "/printers/", 10)) {
+  if (strncasecmp (resource, "/printers/", 10)) {
     debug_printf("cups-browsed: don't understand URI: %s\n", uri);
     return;
   }
@@ -1979,7 +1979,7 @@ send_browse_data (gpointer data)
       const char *attrname = ippGetName(attr);
       int value_tag = ippGetValueTag(attr);
 
-      if (!strcmp(attrname, "printer-type") &&
+      if (!strcasecmp(attrname, "printer-type") &&
 	  value_tag == IPP_TAG_ENUM) {
 	type = ippGetInteger(attr, 0);
 	if (type & CUPS_PRINTER_NOT_SHARED) {
@@ -1988,40 +1988,40 @@ send_browse_data (gpointer data)
 	  type = -1;
 	  break;
 	}
-      } else if (!strcmp(attrname, "printer-state") &&
+      } else if (!strcasecmp(attrname, "printer-state") &&
 	       value_tag == IPP_TAG_ENUM)
 	state = ippGetInteger(attr, 0);
-      else if (!strcmp(attrname, "printer-uri-supported") &&
+      else if (!strcasecmp(attrname, "printer-uri-supported") &&
 	       value_tag == IPP_TAG_URI)
 	uri = ippGetString(attr, 0, NULL);
-      else if (!strcmp(attrname, "printer-location") &&
+      else if (!strcasecmp(attrname, "printer-location") &&
 	       value_tag == IPP_TAG_TEXT) {
 	/* Remove quotes */
 	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
 	location = g_strjoinv ("", tokens);
 	g_strfreev (tokens);
-      } else if (!strcmp(attrname, "printer-info") &&
+      } else if (!strcasecmp(attrname, "printer-info") &&
 		 value_tag == IPP_TAG_TEXT) {
 	/* Remove quotes */
 	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
 	info = g_strjoinv ("", tokens);
 	g_strfreev (tokens);
-      } else if (!strcmp(attrname, "printer-make-and-model") &&
+      } else if (!strcasecmp(attrname, "printer-make-and-model") &&
 		 value_tag == IPP_TAG_TEXT) {
 	/* Remove quotes */
 	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
 	make_model = g_strjoinv ("", tokens);
 	g_strfreev (tokens);
-      } else if (!strcmp(attrname, "auth-info-required") &&
+      } else if (!strcasecmp(attrname, "auth-info-required") &&
 		 value_tag == IPP_TAG_KEYWORD) {
-	if (strcmp (ippGetString(attr, 0, NULL), "none"))
+	if (strcasecmp (ippGetString(attr, 0, NULL), "none"))
 	  g_string_append_printf (browse_options, "auth-info-required=%s ",
 				  ippGetString(attr, 0, NULL));
-      } else if (!strcmp(attrname, "printer-uuid") &&
+      } else if (!strcasecmp(attrname, "printer-uuid") &&
 		 value_tag == IPP_TAG_URI)
 	g_string_append_printf (browse_options, "uuid=%s ",
 				ippGetString(attr, 0, NULL));
-      else if (!strcmp(attrname, "job-sheets-default") &&
+      else if (!strcasecmp(attrname, "job-sheets-default") &&
 	       value_tag == IPP_TAG_NAME &&
 	       ippGetCount(attr) == 2)
 	g_string_append_printf (browse_options, "job-sheets=%s,%s ",
@@ -2158,10 +2158,10 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
     uri = NULL;
     info = NULL;
     while (attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
-      if (!strcmp (ippGetName(attr), "printer-uri-supported") &&
+      if (!strcasecmp (ippGetName(attr), "printer-uri-supported") &&
 	  ippGetValueTag(attr) == IPP_TAG_URI)
 	uri = ippGetString(attr, 0, NULL);
-      else if (!strcmp (ippGetName(attr), "printer-info") &&
+      else if (!strcasecmp (ippGetName(attr), "printer-info") &&
 	       ippGetValueTag(attr) == IPP_TAG_TEXT)
 	info = ippGetString(attr, 0, NULL);
 
@@ -2232,7 +2232,7 @@ browse_poll_create_subscription (browsepoll_t *context, http_t *conn)
        attr = ippNextAttribute(response)) {
     if (ippGetGroupTag (attr) == IPP_TAG_SUBSCRIPTION) {
       if (ippGetValueTag (attr) == IPP_TAG_INTEGER &&
-	  !strcmp (ippGetName (attr), "notify-subscription-id")) {
+	  !strcasecmp (ippGetName (attr), "notify-subscription-id")) {
 	context->subscription_id = ippGetInteger (attr, 0);
 	debug_printf("cups-browsed [BrowsePoll %s:%d]: subscription ID=%d\n",
 		     context->server, context->port, context->subscription_id);
@@ -2424,7 +2424,7 @@ compare_pointers (void *a, void *b, void *data)
 }
 
 int compare_remote_printers (remote_printer_t *a, remote_printer_t *b) {
-  return strcmp(a->name, b->name);
+  return strcasecmp(a->name, b->name);
 }
 
 static void
@@ -2591,19 +2591,19 @@ read_configuration (const char *filename)
 	  slash = strchr (b->server, '/');
 	  if (slash) {
 	    *slash++ = '\0';
-	    if (!strcmp (slash, "version=1.0")) {
+	    if (!strcasecmp (slash, "version=1.0")) {
 	      b->major = 1;
 	      b->minor = 0;
-	    } else if (!strcmp (slash, "version=1.1")) {
+	    } else if (!strcasecmp (slash, "version=1.1")) {
 	      b->major = 1;
 	      b->minor = 1;
-	    } else if (!strcmp (slash, "version=2.0")) {
+	    } else if (!strcasecmp (slash, "version=2.0")) {
 	      b->major = 2;
 	      b->minor = 0;
-	    } else if (!strcmp (slash, "version=2.1")) {
+	    } else if (!strcasecmp (slash, "version=2.1")) {
 	      b->major = 2;
 	      b->minor = 1;
-	    } else if (!strcmp (slash, "version=2.2")) {
+	    } else if (!strcasecmp (slash, "version=2.2")) {
 	      b->major = 2;
 	      b->minor = 2;
 	    } else {
@@ -2686,8 +2686,8 @@ int main(int argc, char*argv[]) {
   /* Turn on debug mode if requested */
   if (argc >= 2)
     for (i = 1; i < argc; i++)
-      if (!strcmp(argv[i], "--debug") || !strcmp(argv[i], "-d") ||
-	  !strncmp(argv[i], "-v", 2)) {
+      if (!strcasecmp(argv[i], "--debug") || !strcasecmp(argv[i], "-d") ||
+	  !strncasecmp(argv[i], "-v", 2)) {
 	debug = 1;
 	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
       }
