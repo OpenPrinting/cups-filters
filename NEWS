@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.53 - 2014-04-25
 
 CHANGES IN V1.0.54
 
+	- cups-browsed: Create local queues also to access classes on
+	  remote CUPS servers (Ubuntu bug #1313741).
 	- cups-browsed: Let a newly discovered printer not only
 	  overtaking an existing printer entry if it is from the same
 	  host (usually IPP -> IPPS) or without host entry

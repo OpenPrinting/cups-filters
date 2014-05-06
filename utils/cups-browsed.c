@@ -588,7 +588,7 @@ create_local_queue (const char *name,
  * by a single dash, return a free()-able string.
  *
  * mode = 0: Only allow letters, numbers, and dashes, for turning make/model
- *           info into a valid print queue name or inro a string which can
+ *           info into a valid print queue name or into a string which can
  *           be supplied as option value in a filter command line without
  *           need of quoting
  * mode = 1: Allow also '/', '.', ',', '_', for cleaning up MIME type
@@ -1000,9 +1000,20 @@ void generate_local_queue(const char *host,
     /* This is a remote CUPS queue, use the remote queue name for the
        local queue */
     is_cups_queue = 1;
-     /* Not directly used in script generation input later, but taken from packet,
-      * so better safe than sorry. (consider second loop with backup_queue_name) */
+    /* Not directly used in script generation input later, but taken from
+       packet, so better safe than sorry. (consider second loop with
+       backup_queue_name) */
     remote_queue = remove_bad_chars(resource + 9, 0);
+    debug_printf("cups-browsed: Found CUPS queue: %s on host %s.\n",
+		 remote_queue, remote_host);
+  } else if (!strncasecmp(resource, "classes/", 8)) {
+    /* This is a remote CUPS queue, use the remote queue name for the
+       local queue */
+    is_cups_queue = 1;
+    /* Not directly used in script generation input later, but taken from
+       packet, so better safe than sorry. (consider second loop with
+       backup_queue_name) */
+    remote_queue = remove_bad_chars(resource + 8, 0);
     debug_printf("cups-browsed: Found CUPS queue: %s on host %s.\n",
 		 remote_queue, remote_host);
   } else {
