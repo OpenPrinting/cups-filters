@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.0.53 - 2014-04-25
 
 CHANGES IN V1.0.54
 
+	- cups-browsed: Let a newly discovered printer not only
+	  overtaking an existing printer entry if it is from the same
+	  host (usually IPP -> IPPS) or without host entry
+	  (unconfirmed local queue from previous cups-browsed session)
+	  but also if it is marked disappeared. So printer entries get
+	  correctly migrated when things like a host name change of
+	  the remote server happen.
 	- cups-browsed: Always do case-insensitive comparing of
 	  strings, as CUPS queue names and URIs are case-insensitive
 	  (CUPS STR #4411).

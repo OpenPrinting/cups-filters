@@ -1117,6 +1117,8 @@ void generate_local_queue(const char *host,
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
     if (!strcasecmp(p->name, local_queue_name) &&
 	(p->host[0] == '\0' ||
+	 p->status == STATUS_UNCONFIRMED ||
+	 p->status == STATUS_DISAPPEARED ||
 	 !strcasecmp(p->host, remote_host)))
       break;
 
