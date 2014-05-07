@@ -1613,7 +1613,8 @@ found_cups_printer (const char *remote_host, const char *uri,
     return;
   }
 
-  if (strncasecmp (resource, "/printers/", 10)) {
+  if (strncasecmp (resource, "/printers/", 10) &&
+      strncasecmp (resource, "/classes/", 9)) {
     debug_printf("cups-browsed: don't understand URI: %s\n", uri);
     return;
   }
