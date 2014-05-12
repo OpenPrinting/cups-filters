@@ -736,8 +736,13 @@ int main(int argc, char** argv)
         debug = 1;
 
     if (debug) {
+#ifdef __UCLIBC__
+	sprintf(tmp, "%s-log-XXXXXX", LOG_FILE);
+	int fd = mkstemp (tmp);
+#else
 	sprintf(tmp, "%s-XXXXXX.log", LOG_FILE);
 	int fd = mkstemps (tmp, 4);
+#endif
 	if (fd != -1)
 	    logh = fdopen(fd, "w");
 	else

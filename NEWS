@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.53 - 2014-04-25
 
 CHANGES IN V1.0.54
 
+	- foomatic-rip: Let it also build with uclibc which does not
+	  provide the mkstemps() function. Thanks to Andreas K.
+	  Huettel for the patch (Gentoo bug #509884).
 	- cups-browsed: Create local queues also to access classes on
 	  remote CUPS servers (Ubuntu bug #1313741).
 	- cups-browsed: Let a newly discovered printer not only
