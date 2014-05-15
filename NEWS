@@ -3,6 +3,21 @@ NEWS - OpenPrinting CUPS Filters v1.0.53 - 2014-04-25
 
 CHANGES IN V1.0.54
 
+	- rastertopdf: Added new filter to convert PWG Raster input
+	  into a PDF file (using QPDF). This filter makes CUPS
+	  supporting the PWG Raster input format which is required to
+	  be supported by IPP Everywhere printers, making a shared
+	  CUPS queue emulating an IPP Everywhere printer. This is a
+	  first implementation which supports the black, RGB, and CMYK
+	  color spaces (mapped to (DeviceGray, DeviceRGB, and
+	  DeviceCMYK resp. in the PDF output) with 1 bit and 8 bits
+	  per component color depth. sGray, sRGB, and Adobe RGB are
+	  currently also mapped to DeviceGray and DeviceRGB but this
+	  does not work correctly. 16 bits per component color depth
+	  only works with CMYK currently. Note that mime.types of CUPS
+	  has a bug which prevents PWG Raster to be recognized, the
+	  "priority(100)" of the rule nedds to be changed to
+	  "priority(150)".
 	- foomatic-rip: Corrected declaration of print_pdf() function in
 	  pdf.h file (Debian bug #748028).
 	- foomatic-rip: Let it also build with uclibc which does not

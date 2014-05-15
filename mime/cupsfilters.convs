@@ -52,6 +52,7 @@ application/x-perl	application/pdf				32	texttopdf
 application/x-shell	application/pdf				32	texttopdf
 text/plain		application/pdf				32	texttopdf
 text/html		application/pdf				32	texttopdf
+image/pwg-raster	application/pdf				32	rastertopdf
 image/gif		application/vnd.cups-pdf		65	imagetopdf
 image/png		application/vnd.cups-pdf		65	imagetopdf
 image/jpeg		application/vnd.cups-pdf		65	imagetopdf
