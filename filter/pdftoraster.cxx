@@ -105,6 +105,7 @@ namespace {
     unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf);
 
   int exitCode = 0;
+  int pwgraster = 0;
   int deviceCopies = 1;
   bool deviceCollate = false;
   cups_page_header2_t header;
@@ -447,7 +448,7 @@ static void parseOpts(int argc, char **argv)
     }
   } else {
 #ifdef HAVE_CUPS_1_7
-    int pwgraster = 1;
+    pwgraster = 1;
     const char *t = cupsGetOption("media-class", num_options, options);
     if (t == NULL)
       t = cupsGetOption("MediaClass", num_options, options);
@@ -1525,11 +1526,7 @@ static void writePageImage(cups_raster_t *raster, SplashBitmap *bitmap,
         for (unsigned int band = 0;band < nbands;band++) {
           dp = convertLine(bp,lineBuf,h,plane+band,header.cupsWidth,
                  bytesPerLine);
-          if (cupsRasterWritePixels(raster,dp,bytesPerLine)
-               != bytesPerLine) {
-            pdfError(-1,const_cast<char *>("Can't write page %d image"),pageNo);
-            exit(1);
-          }
+          cupsRasterWritePixels(raster,dp,bytesPerLine);
         }
         bp -= rowsize;
       }
@@ -1544,11 +1541,7 @@ static void writePageImage(cups_raster_t *raster, SplashBitmap *bitmap,
         for (unsigned int band = 0;band < nbands;band++) {
           dp = convertLine(bp,lineBuf,h,plane+band,header.cupsWidth,
                  bytesPerLine);
-          if (cupsRasterWritePixels(raster,dp,bytesPerLine)
-               != bytesPerLine) {
-            pdfError(-1,const_cast<char *>("Can't write page %d image"),pageNo);
-            exit(1);
-          }
+          cupsRasterWritePixels(raster,dp,bytesPerLine);
         }
         bp += rowsize;
       }
@@ -1979,7 +1972,8 @@ int main(int argc, char *argv[]) {
   out->startDoc(doc->getXRef());
 #endif
 
-  if ((raster = cupsRasterOpen(1,CUPS_RASTER_WRITE)) == 0) {
+  if ((raster = cupsRasterOpen(1, pwgraster ? CUPS_RASTER_WRITE_PWG :
+			       CUPS_RASTER_WRITE)) == 0) {
         pdfError(-1,const_cast<char *>("Can't open raster stream"));
 	exit(1);
   }

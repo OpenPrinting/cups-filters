@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.53 - 2014-04-25
 
 CHANGES IN V1.0.54
 
+	- pdftoraster: Produce correct (compressed) PWG Raster output
+	  when requested by using the correct mode in
+	  cupsRasterOpen().
 	- rastertopdf: Added new filter to convert PWG Raster input
 	  into a PDF file (using QPDF). This filter makes CUPS
 	  supporting the PWG Raster input format which is required to
