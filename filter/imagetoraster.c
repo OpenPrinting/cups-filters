@@ -191,6 +191,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   int			plane,		/* Current color plane */
 			num_planes;	/* Number of color planes */
   char			filename[1024];	/* Name of file to print */
+  int                   cm_off;         /* Is color management off? */
 
 
  /*
@@ -492,6 +493,12 @@ main(int  argc,				/* I - Number of command-line arguments */
   else
     resolution = "";
 
+  /* support the "nocolor-management" option */
+  if ((cupsGetOption("nocolor-management", num_options, options)) == NULL)
+    cm_off = 1;
+  else
+    cm_off = 0;
+
  /*
   * Choose the appropriate colorspace...
   */
@@ -603,8 +610,9 @@ main(int  argc,				/* I - Number of command-line arguments */
  /*
   * Find a color profile matching the current options...
   */
-
-  if ((val = cupsGetOption("profile", num_options, options)) != NULL)
+   
+  if ((val = cupsGetOption("profile", num_options, options)) != NULL &&
+      !cm_off)
   {
     profile = &userprofile;
     sscanf(val, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f",
@@ -628,7 +636,8 @@ main(int  argc,				/* I - Number of command-line arguments */
     userprofile.matrix[2][1] *= 0.001f;
     userprofile.matrix[2][2] *= 0.001f;
   }
-  else if (ppd != NULL)
+  else if (ppd != NULL &&
+           !cm_off)
   {
     fprintf(stderr, "DEBUG: Searching for profile \"%s/%s\"...\n",
             resolution, media_type);
