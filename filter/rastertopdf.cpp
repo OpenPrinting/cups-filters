@@ -342,7 +342,7 @@ int main(int argc, char **argv)
     if (argc == 7)
     {
         input = fopen(argv[6], "rb");
-        if (input == NULL) die("Unable to open unirast file");
+        if (input == NULL) die("Unable to open PWG Raster file");
     }
     else
         input = stdin;
