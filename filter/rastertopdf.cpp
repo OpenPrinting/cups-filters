@@ -270,6 +270,20 @@ int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
 	    *ptr = ~*ptr;
 	}
 
+#if !ARCH_IS_BIG_ENDIAN
+	if (info->bpc == 16)
+	{
+	  // Swap byte pairs for endianess (cupsRasterReadPixels() switches
+	  // from Big Endian back to the system's Endian)
+	  for (i = bpl, ptr = PixelBuffer; i > 0; i -= 2, ptr += 2)
+	  {
+	    unsigned char swap = *ptr;
+	    *ptr = *(ptr + 1);
+	    *(ptr + 1) = swap;
+	  }
+	}
+#endif /* !ARCH_IS_BIG_ENDIAN */
+
         // write lines
 	pdf_set_line(info, cur_line, PixelBuffer);
 
