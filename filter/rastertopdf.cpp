@@ -236,7 +236,7 @@ int close_pdf_file(struct pdf_info * info)
 
 void pdf_set_line(struct pdf_info * info, unsigned line_n, unsigned char *line)
 {
-    dprintf("pdf_set_line(%d)\n", line_n);
+    //dprintf("pdf_set_line(%d)\n", line_n);
 
     if(line_n > info->height)
     {
