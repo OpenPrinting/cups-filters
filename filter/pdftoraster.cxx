@@ -188,6 +188,7 @@ namespace {
   cmsHTRANSFORM colorTransform = NULL;
   cmsCIEXYZ D65WhitePoint;
   int renderingIntent = INTENT_PERCEPTUAL;
+  bool cm_off = false;
 }
 
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
@@ -442,9 +443,14 @@ static void parseOpts(int argc, char **argv)
 	}
       }
     }
-    if (getColorProfilePath(ppd,&profilePath)) {
-      /* ICCProfile is specified */
-      colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
+    /* support the "nocolor-management" option */
+    if (cupsGetOption("nocolor-management", num_options, options) == NULL)
+      cm_off = true;
+    if (!cm_off) {
+      if (getColorProfilePath(ppd,&profilePath)) {
+        /* ICCProfile is specified */
+        colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
+      }
     }
   } else {
 #ifdef HAVE_CUPS_1_7
@@ -1962,7 +1968,9 @@ int main(int argc, char *argv[]) {
     break;
   }
 
-  setPopplerColorProfile();
+  if (!cm_off) {
+    setPopplerColorProfile();
+  }
 
   out = new SplashOutputDev(cmode,rowpad/* row padding */,
     gFalse,paperColor,gTrue,gFalse);
@@ -1977,7 +1985,9 @@ int main(int argc, char *argv[]) {
         pdfError(-1,const_cast<char *>("Can't open raster stream"));
 	exit(1);
   }
-  selectConvertFunc(raster);
+  if (!cm_off) {
+    selectConvertFunc(raster);
+  }
   for (i = 1;i <= npages;i++) {
     outPage(doc,catalog,i,out,raster);
   }

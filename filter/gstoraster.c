@@ -621,11 +621,11 @@ main (int argc, char **argv, char *envp[])
     goto out;
   }
 
-  /* support colord and the "color-management=off" option */
+  /* support colord and the "nocolor-management" option */
   snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
   device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-  t = cupsGetOption("color-management", num_options, options);
-  if (t != NULL && strcmp(t, "off") == 0)
+  t = cupsGetOption("nocolor-management", num_options, options);
+  if (t != NULL)
     device_inhibited = 1;
   if (device_inhibited)
     fprintf(stderr, "DEBUG: Device is inhibited, no CM performed\n");
