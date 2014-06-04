@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.53 - 2014-04-25
 
 CHANGES IN V1.0.54
 
+	- pdftops: Default to "hybrid" setting for the PDF->PostScript
+	  renderer.
 	- pdftoraster: Produce correct (compressed) PWG Raster output
 	  when requested by using the correct mode in
 	  cupsRasterOpen().

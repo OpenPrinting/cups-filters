@@ -424,7 +424,7 @@ AS_IF([test x"$long_long_found" = "xyes"], [
 AC_ARG_WITH([pdftops],
 	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,pdftocairo,acroread,hybrid).])],
 	[with_pdftops="$withval"],
-	[with_pdftops=gs]
+	[with_pdftops=hybrid]
 )
 AS_CASE([x$with_pdftops],
         [xgs|xpdftops|xpdftocairo|xacroread|xhybrid], [],
