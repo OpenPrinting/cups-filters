@@ -342,8 +342,8 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     fprintf(stderr, "DEBUG: MediaType = %s\n", header->MediaType);
     fprintf(stderr, "DEBUG: Resolution = %s\n", resolution);
 
-    /* support the "nocolor-management" option */
-    if (ppd && (cupsGetOption("nocolor-management", num_options, options) == NULL))
+    /* support the "no-color-management" option */
+    if (ppd && (cupsGetOption("no-color-management", num_options, options) == NULL))
     {
       if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
 	  header->cupsColorSpace == CUPS_CSPACE_W)

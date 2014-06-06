@@ -443,8 +443,8 @@ static void parseOpts(int argc, char **argv)
 	}
       }
     }
-    /* support the "nocolor-management" option */
-    if (cupsGetOption("nocolor-management", num_options, options) == NULL)
+    /* support the "no-color-management" option */
+    if (cupsGetOption("no-color-management", num_options, options) == NULL)
       cm_off = true;
     if (!cm_off) {
       if (getColorProfilePath(ppd,&profilePath)) {
