@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 -----------------------------------------------------
 
+CHANGES IN V1.0.55
+
+	- libcupsfilters: Let cupsRasterParseIPPOptions() also accept
+	  "pwg-raster-document-type" settings with hyphen between
+	  color space name and color depth.
+
 CHANGES IN V1.0.54
 
 	- pdftoraster: Support for output in the color spaces 18

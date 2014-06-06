@@ -763,14 +763,14 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     bitspercolor = 8;
     if (!strncasecmp(val, "AdobeRgb", 8))
     {
-      if (*(val + 8) == '_') 
+      if (*(val + 8) == '_' || *(val + 8) == '-') 
 	ptr = val + 9;
       colorspace = 20;
       numcolors = 3;
     }
     else if (!strncasecmp(val, "Black", 5))
     {
-      if (*(val + 5) == '_') 
+      if (*(val + 5) == '_' || *(val + 5) == '-') 
 	ptr = val + 6;
       bitspercolor = 1;
       colorspace = 3;
@@ -778,7 +778,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     }
     else if (!strncasecmp(val, "Cmyk", 4))
     {
-      if (*(val + 4) == '_') 
+      if (*(val + 4) == '_' || *(val + 4) == '-') 
 	ptr = val + 5;
       colorspace = 6;
       numcolors = 4;
@@ -787,7 +787,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     {
       ptr = val + 6;
       numcolors = strtol(ptr, (char **)&ptr, 10);
-      if (*ptr == '_')
+      if (*ptr == '_' || *ptr == '-')
       {
 	ptr ++;
 	colorspace = 47 + numcolors;
@@ -800,21 +800,21 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     }
     else if (!strncasecmp(val, "Sgray", 5))
     {
-      if (*(val + 5) == '_') 
+      if (*(val + 5) == '_' || *(val + 5) == '-') 
 	ptr = val + 6;
       colorspace = 18;
       numcolors = 1;
     }
     else if (!strncasecmp(val, "Srgb", 4))
     {
-      if (*(val + 4) == '_') 
+      if (*(val + 4) == '_' || *(val + 4) == '-') 
 	ptr = val + 5;
       colorspace = 19;
       numcolors = 3;
     }
     else if (!strncasecmp(val, "Rgb", 3))
     {
-      if (*(val + 3) == '_') 
+      if (*(val + 3) == '_' || *(val + 3) == '-') 
 	ptr = val + 4;
       colorspace = 1;
       numcolors = 3;
