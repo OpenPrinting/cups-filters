@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.53 - 2014-04-25
 
 CHANGES IN V1.0.54
 
+	- pdftoraster: Support for output in the color spaces 18
+	  (CUPS_CSPACE_SW, sGray), 19 (CUPS_CSPACE_SRGB, sRGB), and 20
+	  (CUPS_CSPACE_ADOBERGB, Adobe RGB). No color management
+	  appropriate to these color spaces is added yet.
 	- foomatic-rip, gstoraster, imagetoraster, pdftoraster,
 	  rastertopclx: added boolean option "no-color-management" to
 	  suppress all forms of color correction when
