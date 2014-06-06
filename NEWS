@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.53 - 2014-04-25
 
 CHANGES IN V1.0.54
 
+	- foomatic-rip, gstoraster, imagetoraster, pdftoraster,
+	  rastertopclx: added boolean option "no-color-management" to
+	  suppress all forms of color correction when
+	  color-calibrating the printer.
 	- pdftops: Default to "hybrid" setting for the PDF->PostScript
 	  renderer.
 	- pdftoraster: Produce correct (compressed) PWG Raster output
