@@ -262,8 +262,7 @@ int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
         // Read raster data...
         cupsRasterReadPixels(ras, PixelBuffer, bpl);
 
-	if (info->color_space == CUPS_CSPACE_K ||
-	    info->color_space == CUPS_CSPACE_SW)
+	if (info->color_space == CUPS_CSPACE_K)
 	{
 	  // Invert black to grayscale...
 	  for (i = bpl, ptr = PixelBuffer; i > 0; i --, ptr ++)
