@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 
 CHANGES IN V1.0.55
 
+	- pstopdf: Use "grep -E" instead of "grep -P" as the latter
+	  generates executable code and executes it, requiring
+	  "execmem" privileges which could be not available in some
+	  security policies. Thanks to Tim Waugh from Red Hat for the
+	  patch (Red Hat bug #1079534).
 	- foomatic-rip: NetBSD does not provide a mkstemps() function,
 	  use appropriate workaround then (Bug #1211).
 	- cups-browsed: Reorder inclusion of headers for compatibility

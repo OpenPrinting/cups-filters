@@ -105,7 +105,7 @@ eval "$(printf "%s" "$5" | sed -nre 's/.*(^|\s)orientation-requested=3.*/orienta
 eval "$(printf "%s" "$5" | sed -nre 's/.*(^|\s)orientation-requested=4.*/orientation="${orientation:-90}"/p')"
 eval "$(printf "%s" "$5" | sed -nre 's/.*(^|\s)orientation-requested=5.*/orientation="${orientation:-270}"/p')"
 eval "$(printf "%s" "$5" | sed -nre 's/.*(^|\s)orientation-requested=6.*/orientation="${orientation:-180}"/p')"
-if printf "%s" "$5" | grep -iPq '(\s|^)landscape(=(1|on|yes|true))?(\s|$)'; then
+if printf "%s" "$5" | grep -qiE '(\s|^)landscape(=(1|on|yes|true))?(\s|$)'; then
     if test -e "$PPD"; then
 	eval "$(sed -nre 's/^\*LandscapeOrientation:\s*Plus90.*/orientation="${orientation:-90}"/p' "$PPD")"
 	eval "$(sed -nre 's/^\*LandscapeOrientation:\s*Minus90.*/orientation="${orientation:-270}"/p' "$PPD")"
