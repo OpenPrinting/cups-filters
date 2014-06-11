@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 
 CHANGES IN V1.0.55
 
+	- foomatic-rip: NetBSD does not provide a mkstemps() function,
+	  use appropriate workaround then (Bug #1211).
 	- cups-browsed: Reorder inclusion of headers for compatibility
 	  with NetBSD (Bug #1212).
 	- pdftoraster: Fixed segfault caused by introduction of

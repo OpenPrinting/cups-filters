@@ -740,7 +740,7 @@ int main(int argc, char** argv)
         debug = 1;
 
     if (debug) {
-#ifdef __UCLIBC__
+#if defined(__UCLIBC__) || defined(__NetBSD__)
 	sprintf(tmp, "%s-log-XXXXXX", LOG_FILE);
 	int fd = mkstemp (tmp);
 #else
