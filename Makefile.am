@@ -467,7 +467,9 @@ bannertopdf_LDADD = \
 	$(FONTCONFIG_LIBS) \
 	libfontembed.la
 
-bannertopdf_DEPENDENCIES = $(GETLINE)
+bannertopdf_DEPENDENCIES = \
+	$(GETLINE) \
+	libfontembed.la
 
 commandtoescpx_SOURCES = \
 	cupsfilters/driver.h \
