@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 
 CHANGES IN V1.0.55
 
+	- pdftoraster: Fixed segfault caused by introduction of
+	  "no-color-management" option (Bug #1214).
 	- libcupsfilters: Let cupsRasterParseIPPOptions() also accept
 	  "pwg-raster-document-type" settings with hyphen between
 	  color space name and color depth.

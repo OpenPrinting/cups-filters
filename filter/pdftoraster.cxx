@@ -444,7 +444,7 @@ static void parseOpts(int argc, char **argv)
       }
     }
     /* support the "no-color-management" option */
-    if (cupsGetOption("no-color-management", num_options, options) == NULL)
+    if (cupsGetOption("no-color-management", num_options, options) != NULL)
       cm_off = true;
     if (!cm_off) {
       if (getColorProfilePath(ppd,&profilePath)) {
@@ -1998,9 +1998,7 @@ int main(int argc, char *argv[]) {
         pdfError(-1,const_cast<char *>("Can't open raster stream"));
 	exit(1);
   }
-  if (!cm_off) {
-    selectConvertFunc(raster);
-  }
+  selectConvertFunc(raster);
   for (i = 1;i <= npages;i++) {
     outPage(doc,catalog,i,out,raster);
   }
