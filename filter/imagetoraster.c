@@ -493,8 +493,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   else
     resolution = "";
 
-  /* support the "no-color-management" option */
-  if ((cupsGetOption("no-color-management", num_options, options)) == NULL)
+  /* support the "no-color-management=" option */
+  if ((cupsGetOption("no-color-management", num_options, options)) != NULL)
     cm_off = 1;
   else
     cm_off = 0;
