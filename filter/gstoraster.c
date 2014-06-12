@@ -621,10 +621,10 @@ main (int argc, char **argv, char *envp[])
     goto out;
   }
 
-  /* support colord and the "no-color-management" option */
+  /* support colord and the "cm-calibration" option */
   snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
   device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-  t = cupsGetOption("no-color-management", num_options, options);
+  t = cupsGetOption("cm-calibration", num_options, options);
   if (t != NULL)
     device_inhibited = 1;
   if (device_inhibited)

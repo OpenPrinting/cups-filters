@@ -188,7 +188,7 @@ namespace {
   cmsHTRANSFORM colorTransform = NULL;
   cmsCIEXYZ D65WhitePoint;
   int renderingIntent = INTENT_PERCEPTUAL;
-  bool cm_off = false;
+  bool cm_calibrate = false;
 }
 
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
@@ -443,10 +443,10 @@ static void parseOpts(int argc, char **argv)
 	}
       }
     }
-    /* support the "no-color-management" option */
-    if (cupsGetOption("no-color-management", num_options, options) != NULL)
-      cm_off = true;
-    if (!cm_off) {
+    /* support the "cm-calibration" option */
+    if (cupsGetOption("cm-calibration", num_options, options) != NULL)
+      cm_calibrate = true;
+    if (!cm_calibrate) {
       if (getColorProfilePath(ppd,&profilePath)) {
         /* ICCProfile is specified */
         colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
@@ -1981,7 +1981,7 @@ int main(int argc, char *argv[]) {
     break;
   }
 
-  if (!cm_off) {
+  if (!cm_calibrate) {
     setPopplerColorProfile();
   }
 

@@ -142,8 +142,8 @@ int jobhasjcl;
 int pdfconvertedtops;
 
 
-/* no-color-management flag */
-int cm_off = 0;
+/* cm-calibration flag */
+int cm_calibrate = 0;
 
 
 /* These variables were in 'dat' before */
@@ -320,7 +320,7 @@ void process_cmdline_options()
             _log("Pondering option '%s'\n", key);
 
         /* "profile" option to supply a color correction profile to a CUPS raster driver */
-        if (!strcmp(key, "profile") && !cm_off) {
+        if (!strcmp(key, "profile") && !cm_calibrate) {
             strlcpy(colorprofile, value, 128);
             continue;
         }
@@ -806,9 +806,9 @@ int main(int argc, char** argv)
         while ((str = arglist_get_value(arglist, "-o"))) {
             strncpy_omit(tmp, str, 1024, omit_shellescapes);
             dstrcatf(job->optstr, "%s ", tmp);
-            /* if "-o no-color-management" was passed, we raise a flag */
-            if (!strcmp(tmp, "no-color-management"))
-                cm_off = 1;           
+            /* if "-o cm-calibration" was passed, we raise a flag */
+            if (!strcmp(tmp, "cm-calibration"))
+                cm_calibrate = 1;
             arglist_remove(arglist, "-o");
 	    /* We print without spooler */
 	    spooler = SPOOLER_DIRECT;
@@ -962,8 +962,8 @@ int main(int argc, char** argv)
                 }
 
                 /* ICC profile is specified for Ghostscript unless
-                   "no-color-management" option was passed in foomatic-rip */
-                if (icc_profile != NULL && !cm_off)
+                   "cm-calibration" option was passed in foomatic-rip */
+                if (icc_profile != NULL && !cm_calibrate)
                   snprintf(cmd, sizeof(cmd),
                            "-sOutputICCProfile='%s'", icc_profile);
                 else

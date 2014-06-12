@@ -50,6 +50,8 @@
 
 #define iprintf(format, ...) fprintf(stderr, "INFO: (" PROGRAM ") " format, __VA_ARGS__)
 
+bool cm_calibrate = false;
+
 void die(const char * str)
 {
     fprintf(stderr, "ERROR: (" PROGRAM ") %s\n", str);
@@ -116,6 +118,8 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     dict["/Height"]=QPDFObjectHandle::newInteger(height);
     dict["/BitsPerComponent"]=QPDFObjectHandle::newInteger(bpc);
 
+    /* TODO Adjust for color calibration */
+    /*if (!cm_calibrate) {*/
     if (cs==CUPS_CSPACE_K) {
         dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
     } else if (cs==CUPS_CSPACE_RGB) {
@@ -128,9 +132,17 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
         dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
     } else if (cs==CUPS_CSPACE_ADOBERGB) {
         dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
-    } else {
+    } /*else if ("PROFILE") {
+        dict["/ICCBased"]=...}*/
+    else {
         return QPDFObjectHandle();
     }
+#if 0  
+      else {
+        /* assert /DeviceRGB for non-colormanaged PDF  */
+        dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
+    }
+#endif
 
     ret.replaceDict(QPDFObjectHandle::newDictionary(dict));
 
@@ -316,6 +328,10 @@ int main(int argc, char **argv)
     }
 
     num_options = cupsParseOptions(argv[5], 0, &options);
+
+    /* support the "cm-calibration" option */ 
+    if (cupsGetOption("cm-calibration", num_options, options) != NULL) 
+      cm_calibrate = true;
 
     // Open the PPD file...
     ppd = ppdOpenFile(getenv("PPD"));
