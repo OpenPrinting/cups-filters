@@ -1,0 +1,20 @@
+%!
+% License: GPL-2.0
+% Standard banner page that shows the text "Cover Page".
+% You may replace the text "Cover Page" below with your text
+% for example "Confidential" and save it as confidential.ps
+% then run "ps2pdf12 confidential.ps confidential.pdf" to make a PDF
+% and install it as /usr/share/cups/data/confidential.pdf
+% then change in /usr/share/cups/banners/confidential the
+% line "Template default.pdf" to "Template confidential.pdf"
+% to get a banner page that shows "Confidential" in its printout.
+/Helvetica findfont
+40 scalefont
+setfont
+newpath
+% a4 is 595 842 points
+% letter is 612 792 points
+150 550 moveto
+(Cover Page) show
+showpage
+
