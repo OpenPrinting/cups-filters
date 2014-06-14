@@ -207,7 +207,13 @@ pkgcupsdata_DATA = \
 	data/form_english_in.odt \
 	data/form_russian_in.odt \
 	data/default-testpage.pdf \
-	data/testprint
+	data/testprint \
+	data/classified.pdf \
+	data/confidential.pdf \
+	data/secret.pdf \
+	data/standard.pdf \
+	data/topsecret.pdf \
+	data/unclassified.pdf
 
 EXTRA_DIST += $(pkgcupsdata_DATA)
 

@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 
 CHANGES IN V1.0.55
 
+	- bannertopdf: Added new PDF template files which contain the
+	  text strings appropriate to the banners, before the banners
+	  were all equal, without text. Thanks to Johannes Meixner
+	  from SUSE/Novell for this fix (Bug #1209).
 	- bannertopdf: Fixed Makefile to mark it dependent on
 	  libfontembed.la. Thanks to Tim Waugh from Red Hat for the
 	  patch (Red Hat bug #1106101).
