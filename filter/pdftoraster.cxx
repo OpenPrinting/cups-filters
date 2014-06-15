@@ -1837,6 +1837,9 @@ int main(int argc, char *argv[]) {
   globalParams = new GlobalParams();
   parseOpts(argc, argv);
 
+  fprintf(stderr, "DEBUG: Color Management: %s\n", cm_calibrate ?
+          "Calibration Mode/Enabled" : "Calibration Mode/Off");
+
   if (argc == 6) {
     /* stdin */
     int fd;

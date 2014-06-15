@@ -118,6 +118,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 {
   int		i;			/* Temporary/looping var */
   int		plane;			/* Current plane */
+  int		cm_calibrate;		/* Color calibration mode */
   char		s[255];			/* Temporary value */
   const char	*colormodel;		/* Color model string */
   char		resolution[PPD_MAX_NAME],
@@ -230,6 +231,8 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
         colormodel = "CMYK";
 	break;
   }
+
+  cm_calibrate = 0;
 
   if (header->HWResolution[0] != header->HWResolution[1])
     snprintf(resolution, sizeof(resolution), "%dx%ddpi",
@@ -351,6 +354,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution);
     }
+
+    fprintf(stderr, "DEBUG: Color Management: %s\n", cm_calibrate ?
+            "Calibration Mode/Enabled" : "Calibration Mode/Off");
 
     if (RGB)
       fputs("DEBUG: Loaded RGB separation from PPD.\n", stderr);

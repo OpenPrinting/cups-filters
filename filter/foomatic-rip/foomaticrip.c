@@ -320,8 +320,13 @@ void process_cmdline_options()
             _log("Pondering option '%s'\n", key);
 
         /* "profile" option to supply a color correction profile to a CUPS raster driver */
-        if (!strcmp(key, "profile") && !cm_calibrate) {
+        if (!strcmp(key, "profile")) {
             strlcpy(colorprofile, value, 128);
+            continue;
+        }
+        /* option to set color calibration mode */
+        if (!strcmp(key, "cm-calibration")) {
+            cm_calibrate = 1;
             continue;
         }
         /* Solaris options that have no reason to be */
@@ -415,6 +420,13 @@ void process_cmdline_options()
             _log("Unknown boolean option \"%s\".\n", key);
     }
     free(cmdlineopts);
+
+    /* We 'clear' the profile if cm-calibration mode was specified */
+    if (cm_calibrate)
+        colorprofile[0] = '\0';
+
+    _log("CM Color Calibration Mode in CUPS: %s\n", cm_calibrate ? 
+         "Activated" : "Off");
 
     _log("Options from the PPD file:\n");
     cmdlineopts = strdup(job->optstr->data);
@@ -827,6 +839,9 @@ int main(int argc, char** argv)
         }
 
     }
+
+    _log("'CM Color Calibration' Mode in SPOOLER-LESS: %s\n", cm_calibrate ? 
+         "Activated" : "Off");
 
     /* spooler specific initialization */
     switch (spooler) {

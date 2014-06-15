@@ -217,6 +217,8 @@ main(int  argc,				/* I - Number of command-line arguments */
     return (1);
   }
 
+  cm_calibrate = 0;
+
  /*
   * See if we need to use the imagetops and pstoraster filters instead...
   */
@@ -496,6 +498,9 @@ main(int  argc,				/* I - Number of command-line arguments */
   /* support the "cm-calibration" option */
   if ((cupsGetOption("cm-calibration", num_options, options)) != NULL) 
     cm_calibrate = 1;
+
+  fprintf(stderr, "DEBUG: Color Management: %s\n", cm_calibrate ?
+          "Calibration Mode/Enabled" : "Calibration Mode/Off");
 
  /*
   * Choose the appropriate colorspace...

@@ -545,6 +545,7 @@ main (int argc, char **argv, char *envp[])
   int n;
   int num_options;
   int status = 1;
+  int cm_calibrate = 0;
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
 #ifdef HAVE_CUPS_1_7
@@ -647,6 +648,9 @@ main (int argc, char **argv, char *envp[])
     if(icc_profile != NULL)
       fprintf(stderr, "DEBUG: Using ICC Profile '%s'\n", icc_profile);
   }
+
+  fprintf(stderr, "DEBUG: Color Management: %s\n", cm_calibrate ?
+          "Calibration Mode/Enabled" : "Calibration Mode/Off");
 
   /* Ghostscript parameters */
   gs_args = cupsArrayNew(NULL, NULL);

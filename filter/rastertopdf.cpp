@@ -330,7 +330,7 @@ int main(int argc, char **argv)
     num_options = cupsParseOptions(argv[5], 0, &options);
 
     /* support the "cm-calibration" option */ 
-    if (cupsGetOption("cm-calibration", num_options, options) != NULL) 
+    if (cupsGetOption("cm-calibration", num_options, options) != NULL)
       cm_calibrate = true;
 
     // Open the PPD file...
