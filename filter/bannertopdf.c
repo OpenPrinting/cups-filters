@@ -28,6 +28,12 @@
 
 #include <cups/cups.h>
 #include <cups/ppd.h>
+#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
+#define HAVE_CUPS_1_7 1
+#endif
+#ifdef HAVE_CUPS_1_7
+#include <cups/pwg.h>
+#endif /* HAVE_CUPS_1_7 */
 
 #include "banner.h"
 #include "pdf.h"
@@ -71,8 +77,14 @@ static void get_pagesize(ppd_file_t *ppd,
         756.0,      /* top */
     };
     const ppd_size_t *pagesize;
+#ifdef HAVE_CUPS_1_7
+    pwg_media_t      *size_found;          /* page size found for given name */
+    const char       *val;                 /* Pointer into value */
+    char             *ptr1, *ptr2,         /* Pointer into string */
+                     s[255];               /* Temporary string */
+#endif /* HAVE_CUPS_1_7 */
 
-    if (!(pagesize = ppdPageSize(ppd, NULL)))
+    if (!ppd || !(pagesize = ppdPageSize(ppd, NULL)))
         pagesize = &defaultsize;
 
     *width = pagesize->width;
@@ -90,20 +102,72 @@ static void get_pagesize(ppd_file_t *ppd,
     media_limits[3] = get_float_option("page-top",
                                        noptions, options,
                                        fabs(pagesize->top));
+
+#ifdef HAVE_CUPS_1_7
+    if (!ppd) {
+      if ((val = cupsGetOption("media-size", noptions, options)) != NULL ||
+	  (val = cupsGetOption("MediaSize", noptions, options)) != NULL ||
+	  (val = cupsGetOption("page-size", noptions, options)) != NULL ||
+	  (val = cupsGetOption("PageSize", noptions, options)) != NULL ||
+	  (val = cupsGetOption("media", noptions, options)) != NULL) {
+	for (ptr1 = (char *)val; *ptr1;) {
+	  for (ptr2 = s; *ptr1 && *ptr1 != ',' && (ptr2 - s) < (sizeof(s) - 1);)
+	    *ptr2++ = *ptr1++;
+	  *ptr2++ = '\0';
+	  if (*ptr1 == ',')
+	    ptr1 ++;
+	  size_found = NULL;
+	  if ((size_found = pwgMediaForPWG(s)) == NULL)
+	    if ((size_found = pwgMediaForPPD(s)) == NULL)
+	      size_found = pwgMediaForLegacy(s);
+	  if (size_found != NULL) {
+	    *width = size_found->width * 72.0 / 2540.0;
+	    *length = size_found->length * 72.0 / 2540.0;
+	    media_limits[2] += (*width - 612.0);
+	    media_limits[3] += (*length - 792.0);
+	  }
+	}
+      }
+      if ((val = cupsGetOption("media-left-margin", noptions, options))
+	  != NULL)
+	media_limits[0] = atol(val) * 72.0 / 2540.0; 
+      if ((val = cupsGetOption("media-bottom-margin", noptions, options))
+	  != NULL)
+	media_limits[1] = atol(val) * 72.0 / 2540.0; 
+      if ((val = cupsGetOption("media-right-margin", noptions, options))
+	  != NULL)
+	media_limits[2] = *width - atol(val) * 72.0 / 2540.0; 
+      if ((val = cupsGetOption("media-top-margin", noptions, options))
+	  != NULL)
+	media_limits[3] = *length - atol(val) * 72.0 / 2540.0; 
+    }
+#endif /* HAVE_CUPS_1_7 */
 }
 
 
-static int duplex_marked(ppd_file_t *ppd)
+static int duplex_marked(ppd_file_t *ppd,
+                         int noptions,
+                         cups_option_t *options)
 {
+    const char       *val;                 /* Pointer into value */
     return
-        ppdIsMarked(ppd, "Duplex", "DuplexNoTumble") ||
+      (ppd &&
+       (ppdIsMarked(ppd, "Duplex", "DuplexNoTumble") ||
         ppdIsMarked(ppd, "Duplex", "DuplexTumble") ||
         ppdIsMarked(ppd, "JCLDuplex", "DuplexNoTumble") ||
         ppdIsMarked(ppd, "JCLDuplex", "DuplexTumble") ||
         ppdIsMarked(ppd, "EFDuplex", "DuplexNoTumble") ||
         ppdIsMarked(ppd, "EFDuplex", "DuplexTumble") ||
         ppdIsMarked(ppd, "KD03Duplex", "DuplexNoTumble") ||
-        ppdIsMarked(ppd, "KD03Duplex", "DuplexTumble");
+        ppdIsMarked(ppd, "KD03Duplex", "DuplexTumble"))) ||
+      ((val = cupsGetOption("Duplex", noptions, options))
+       != NULL &&
+       (!strcasecmp(val, "DuplexNoTumble") ||
+	!strcasecmp(val, "DuplexTumble"))) ||
+      ((val = cupsGetOption("sides", noptions, options))
+       != NULL &&
+       (!strcasecmp(val, "two-sided-long-edge") ||
+	!strcasecmp(val, "two-sided-short-edge")));
 }
 
 
@@ -198,6 +262,7 @@ opt_t *get_known_opts(
         int noptions,
         cups_option_t *options) {
 
+    ppd_attr_t *attr;
     opt_t *opt = NULL;
 
     /* Job ID */
@@ -252,7 +317,7 @@ opt_t *get_known_opts(
             cupsGetOption("security-context-range", noptions, options));
 
     /* Security context current range part */
-    char * full_range = cupsGetOption("security-context-range", noptions, options);
+    const char * full_range = cupsGetOption("security-context-range", noptions, options);
     if ( full_range ) {
         size_t cur_size = strcspn(full_range, "-");
         char * cur_range = strndup(full_range, cur_size);
@@ -271,14 +336,18 @@ opt_t *get_known_opts(
     opt = add_opt(opt, "security-context-user",
             cupsGetOption("security-context-user", noptions, options));
 
-    /* Driver */
-    opt = add_opt(opt, "driver", ppd->pcfilename);
+    if (ppd) {
+      /* Driver */
+      opt = add_opt(opt, "driver", ppd->pcfilename);
 
-    /* Driver version */
-    opt = add_opt(opt, "driver-version", ppd->pcfilename);
+      /* Driver version */
+      opt = add_opt(opt, "driver-version", 
+		    (attr = ppdFindAttr(ppd, "FileVersion", NULL)) ? 
+		    attr->value : "");
 
-    /* Make and model */
-    opt = add_opt(opt, "make-and-model", ppd->nickname);
+      /* Make and model */
+      opt = add_opt(opt, "make-and-model", ppd->nickname);
+    }
 
     return opt;
 }
@@ -371,10 +440,10 @@ static int generate_banner_pdf(banner_t *banner,
         info_line(s, "Job UUID",
                   cupsGetOption("job-uuid", noptions, options));
 
-    if (banner->infos & INFO_PRINTER_DRIVER_NAME)
+    if (ppd && banner->infos & INFO_PRINTER_DRIVER_NAME)
         info_line(s, "Driver", ppd->pcfilename);
 
-    if (banner->infos & INFO_PRINTER_DRIVER_VERSION)
+    if (ppd && banner->infos & INFO_PRINTER_DRIVER_VERSION)
         info_line(s, "Driver Version",
                   (attr = ppdFindAttr(ppd, "FileVersion", NULL)) ? attr->value : "");
 
@@ -382,9 +451,9 @@ static int generate_banner_pdf(banner_t *banner,
         info_line(s, "Description", getenv("PRINTER_INFO"));
 
     if (banner->infos & INFO_PRINTER_LOCATION)
-        info_line(s, "Driver Version", getenv("PRINTER_INFO"));
+        info_line(s, "Printer Location", getenv("PRINTER_LOCATION"));
 
-    if (banner->infos & INFO_PRINTER_MAKE_AND_MODEL)
+    if (ppd && banner->infos & INFO_PRINTER_MAKE_AND_MODEL)
         info_line(s, "Make and Model", ppd->nickname);
 
     if (banner->infos & INFO_PRINTER_NAME)
@@ -436,7 +505,7 @@ static int generate_banner_pdf(banner_t *banner,
     }
 
     copies = get_int_option("number-up", noptions, options, 1);
-    if (duplex_marked(ppd))
+    if (duplex_marked(ppd, noptions, options))
         copies *= 2;
 
     if (copies > 1)
@@ -465,14 +534,14 @@ int main(int argc, char *argv[])
     }
 
     ppd = ppdOpenFile(getenv("PPD"));
-    if (!ppd) {
-        fprintf(stderr, "Error: could not open PPD file '%s'\n", getenv("PPD"));
-        return 1;
-    }
+    if (!ppd)
+      fprintf(stderr, "DEBUG: Could not open PPD file '%s'\n", getenv("PPD"));
 
     noptions = cupsParseOptions(argv[5], 0, &options);
-    ppdMarkDefaults(ppd);
-    cupsMarkOptions(ppd, noptions, options);
+    if (ppd) {
+      ppdMarkDefaults(ppd);
+      cupsMarkOptions(ppd, noptions, options);
+    }
 
     banner = banner_new_from_file(argc == 7 ? argv[6] : "-", &noptions, &options);
     if (!banner) {

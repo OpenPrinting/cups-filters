@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 
 CHANGES IN V1.0.55
 
+	- bannertopdf: Added support for PPD-less printing, especially
+	  one gets a useful test page with PPD-less queues now.
+	- bannertopdf: Fixed "Printer Location" and "Driver Version"
+	  entries on the test page/the banners.
 	- bannertopdf: Added new PDF template files which contain the
 	  text strings appropriate to the banners, before the banners
 	  were all equal, without text. Thanks to Johannes Meixner
