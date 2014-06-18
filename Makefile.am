@@ -574,10 +574,14 @@ rastertopdf_SOURCES = \
 	filter/rastertopdf.cpp
 rastertopdf_CXXFLAGS = \
 	$(CUPS_CFLAGS) \
-	$(LIBQPDF_CFLAGS)
+	$(LCMS_CFLAGS) \
+	$(LIBQPDF_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
 rastertopdf_LDADD = \
 	$(CUPS_LIBS) \
-	$(LIBQPDF_LIBS)
+	$(LCMS_LIBS) \
+	$(LIBQPDF_LIBS) \
+	libcupsfilters.la
 
 pdftoijs_SOURCES = \
 	filter/pdftoijs.cxx \
