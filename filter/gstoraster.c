@@ -626,8 +626,10 @@ main (int argc, char **argv, char *envp[])
   snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
   device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
   t = cupsGetOption("cm-calibration", num_options, options);
-  if (t != NULL)
+  if (t != NULL) {
     device_inhibited = 1;
+    cm_calibrate = 1;
+  }
   if (device_inhibited)
     fprintf(stderr, "DEBUG: Device is inhibited, no CM performed\n");
   if (ppd)
