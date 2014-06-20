@@ -169,6 +169,8 @@ AC_SUBST(CUPS_DEFAULT_DOMAINSOCKET)
 # ======================
 # Check system functions
 # ======================
+AC_CHECK_FUNCS(strlcat)
+AC_CHECK_FUNCS(strlcpy)
 AC_CHECK_FUNCS(sigaction)
 AC_CHECK_FUNCS(waitpid wait3)
 AC_CHECK_FUNCS(strtoll)

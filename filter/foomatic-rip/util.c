@@ -164,6 +164,7 @@ strcasestr (const char *haystack, const char *needle)
 #endif
 
 #ifndef __OpenBSD__
+#ifndef HAVE_STRLCPY
 size_t strlcpy(char *dest, const char *src, size_t size)
 {
     char *pdest = dest;
@@ -182,7 +183,9 @@ size_t strlcpy(char *dest, const char *src, size_t size)
         while (*psrc++);
     return (psrc - src -1);
 }
+#endif /* ! HAVE_STRLCPY */
 
+#ifndef HAVE_STRLCAT
 size_t strlcat(char *dest, const char *src, size_t size)
 {
     char *pdest = dest;
@@ -203,6 +206,7 @@ size_t strlcat(char *dest, const char *src, size_t size)
 
     return len + (psrc - src);
 }
+#endif /* ! HAVE_STRLCAT */
 #endif /* ! __OpenBSD__ */
 
 void strrepl(char *str, const char *chars, char repl)

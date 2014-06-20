@@ -70,8 +70,12 @@ char * strcasestr (const char *haystack, const char *needle);
 /* Copy at most size-1 characters from src to dest
    dest will always be \0 terminated (unless size == 0)
    returns strlen(src) */
+#ifndef HAVE_STRLCPY
 size_t strlcpy(char *dest, const char *src, size_t size);
+#endif /* ! HAVE_STRLCPY */
+#ifndef HAVE_STRLCAT
 size_t strlcat(char *dest, const char *src, size_t size);
+#endif /* ! HAVE_STRLCAT */
 
 /* Replace all occurences of each of the characters in 'chars' by 'repl' */
 void strrepl(char *str, const char *chars, char repl);
