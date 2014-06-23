@@ -32,6 +32,7 @@
 #include <signal.h>
 #include <cups/cups.h>
 #include <cups/raster.h>
+#include <cupsfilters/colord.h>
 //#include <cupsfilters/image.h>
 
 #include <arpa/inet.h>   // ntohl
@@ -89,7 +90,8 @@ cmsHPROFILE         inputColorProfile = NULL;
 cmsHPROFILE         outputColorProfile = NULL;
 cmsHTRANSFORM       colorTransform = NULL;
 int                 renderingIntent = INTENT_PERCEPTUAL;
-bool cm_calibrate = false;
+int                 device_inhibited = 0;
+bool                cm_calibrate = false;
 
 #ifdef USE_LCMS1
 static int lcmsErrorHandler(int ErrorCode, const char *ErrorText)
@@ -172,7 +174,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     dict["/BitsPerComponent"]=QPDFObjectHandle::newInteger(bpc);
 
     /* TODO Adjust for color calibration */
-    if (!cm_calibrate) {
+    if (!device_inhibited) {
         switch (cs) {       
             case CUPS_CSPACE_CIELab:
             case CUPS_CSPACE_ICC1:
@@ -210,7 +212,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
             default: 
                 return QPDFObjectHandle();
         }
-    } else if (cm_calibrate) {
+    } else if (device_inhibited) {
         dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
     } else 
         return QPDFObjectHandle();
@@ -369,7 +371,7 @@ int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
 #endif /* !ARCH_IS_BIG_ENDIAN */
         
         // write lines        
-        if (colorTransform != NULL && !cm_calibrate) {
+        if (colorTransform != NULL && !device_inhibited) {
           // If a profile was specified, we apply the transformation
           TransformBuffer = (unsigned char *)malloc(bpl);
           pixels = bpl / (info->bpp / info->bpc);
@@ -574,6 +576,7 @@ int main(int argc, char **argv)
     int			num_options;	/* Number of options */
     cups_option_t	*options;	/* Options */
     const char		*val;		/* Option value */
+    char                tmpstr[1024];
 
     // Make sure status messages are not buffered...
     setbuf(stderr, NULL);
@@ -586,11 +589,16 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    num_options = cupsParseOptions(argv[5], 0, &options);
+    num_options = cupsParseOptions(argv[5], 0, &options);  
+
+    snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
 
     /* support the "cm-calibration" option */ 
-    if (cupsGetOption("cm-calibration", num_options, options) != NULL)
+    if (cupsGetOption("cm-calibration", num_options, options) != NULL) {
       cm_calibrate = true;
+      device_inhibited = 1;
+    }
 
     // Open the PPD file...
     ppd = ppdOpenFile(getenv("PPD"));
@@ -644,7 +652,7 @@ int main(int argc, char **argv)
       fprintf(stderr, "INFO: Starting page %d.\n", Page);
 
       // Set profile from PPD and raster header
-      if (!cm_calibrate) {
+      if (!device_inhibited) {
           // Set user profile from command-line
           if ((val = cupsGetOption("profile", num_options, options)) != NULL) {
             setProfile(val);

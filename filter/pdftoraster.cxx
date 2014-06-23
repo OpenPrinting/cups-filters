@@ -53,6 +53,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <cups/raster.h>
 #include <cupsfilters/image.h>
 #include <cupsfilters/raster.h>
+#include <cupsfilters/colord.h>
 #include <splash/SplashTypes.h>
 #include <splash/SplashBitmap.h>
 #include <strings.h>
@@ -188,6 +189,7 @@ namespace {
   cmsHTRANSFORM colorTransform = NULL;
   cmsCIEXYZ D65WhitePoint;
   int renderingIntent = INTENT_PERCEPTUAL;
+  int device_inhibited = 0;
   bool cm_calibrate = false;
 }
 
@@ -364,6 +366,7 @@ static void parseOpts(int argc, char **argv)
   int num_options = 0;
   cups_option_t *options = 0;
   GooString profilePath;
+  char tmpstr[1024];
   ppd_attr_t *attr;
 
   if (argc < 6 || argc > 7) {
@@ -443,10 +446,17 @@ static void parseOpts(int argc, char **argv)
 	}
       }
     }
+
+    snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+
     /* support the "cm-calibration" option */
-    if (cupsGetOption("cm-calibration", num_options, options) != NULL)
+    if (cupsGetOption("cm-calibration", num_options, options) != NULL) {
       cm_calibrate = true;
-    if (!cm_calibrate) {
+      device_inhibited = 1;
+    } 
+
+    if (!device_inhibited) {
       if (getColorProfilePath(ppd,&profilePath)) {
         /* ICCProfile is specified */
         colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
@@ -1984,7 +1994,7 @@ int main(int argc, char *argv[]) {
     break;
   }
 
-  if (!cm_calibrate) {
+  if (!device_inhibited) {
     setPopplerColorProfile();
   }
 

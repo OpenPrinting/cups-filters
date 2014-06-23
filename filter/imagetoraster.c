@@ -36,6 +36,7 @@
  */
 
 #include "common.h"
+#include <cupsfilters/colord.h>
 #include <cupsfilters/image-private.h>
 #include <unistd.h>
 #include <math.h>
@@ -192,7 +193,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 			num_planes;	/* Number of color planes */
   char			filename[1024];	/* Name of file to print */
   int                   cm_calibrate;   /* Are we color calibrating the device? */
-
+  int                   device_inhibited;
+  char                  tmpstr[1024];
 
  /*
   * Make sure status messages are not buffered...
@@ -495,9 +497,14 @@ main(int  argc,				/* I - Number of command-line arguments */
   else
     resolution = "";
 
+  snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+  device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+
   /* support the "cm-calibration" option */
-  if ((cupsGetOption("cm-calibration", num_options, options)) != NULL) 
+  if ((cupsGetOption("cm-calibration", num_options, options)) != NULL) {
     cm_calibrate = 1;
+    device_inhibited = 1;
+  }
 
   fprintf(stderr, "DEBUG: Color Management: %s\n", cm_calibrate ?
           "Calibration Mode/Enabled" : "Calibration Mode/Off");
@@ -615,7 +622,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   */
    
   if ((val = cupsGetOption("profile", num_options, options)) != NULL &&
-      !cm_calibrate)
+      !device_inhibited)
   {
     profile = &userprofile;
     sscanf(val, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f",
@@ -639,8 +646,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     userprofile.matrix[2][1] *= 0.001f;
     userprofile.matrix[2][2] *= 0.001f;
   }
-  else if (ppd != NULL &&
-           !cm_calibrate)
+  else if (ppd != NULL && !device_inhibited)
   {
     fprintf(stderr, "DEBUG: Searching for profile \"%s/%s\"...\n",
             resolution, media_type);

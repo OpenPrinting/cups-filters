@@ -145,6 +145,7 @@ int pdfconvertedtops;
 /* cm-calibration flag */
 int cm_calibrate = 0;
 
+int device_inhibited = 0;
 
 /* These variables were in 'dat' before */
 char colorprofile [128];
@@ -422,8 +423,10 @@ void process_cmdline_options()
     free(cmdlineopts);
 
     /* We 'clear' the profile if cm-calibration mode was specified */
-    if (cm_calibrate)
+    if (cm_calibrate) {
         colorprofile[0] = '\0';
+        device_inhibited = 1;
+    }
 
     _log("CM Color Calibration Mode in CUPS: %s\n", cm_calibrate ? 
          "Activated" : "Off");
@@ -713,7 +716,7 @@ int main(int argc, char** argv)
     char *p, *filename;
     const char *path;
     FILE *ppdfh = NULL;
-    char tmp[1024], gstoraster[256];
+    char tmp[1024], gstoraster[256], tmpstr[1024];
     int havefilter, havegstoraster;
     dstr_t *filelist;
     list_t * arglist;
@@ -793,6 +796,9 @@ int main(int argc, char** argv)
         spooler = SPOOLER_CUPS;
     }
 
+    snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+
     /* CUPS calls foomatic-rip only with 5 or 6 positional parameters,
        not with named options, like for example "-p <string>". */
     if (spooler != SPOOLER_CUPS) {
@@ -819,8 +825,10 @@ int main(int argc, char** argv)
             strncpy_omit(tmp, str, 1024, omit_shellescapes);
             dstrcatf(job->optstr, "%s ", tmp);
             /* if "-o cm-calibration" was passed, we raise a flag */
-            if (!strcmp(tmp, "cm-calibration"))
+            if (!strcmp(tmp, "cm-calibration")) {
                 cm_calibrate = 1;
+                device_inhibited = 1;
+            }
             arglist_remove(arglist, "-o");
 	    /* We print without spooler */
 	    spooler = SPOOLER_DIRECT;
@@ -962,23 +970,26 @@ int main(int argc, char** argv)
                 const char **qualifier = NULL;
                 const char *icc_profile = NULL;
 
-                qualifier = get_ppd_qualifier();
-                _log("INFO: Using qualifer: '%s.%s.%s'\n",
-                      qualifier[0], qualifier[1], qualifier[2]);
+                if (!device_inhibited) {
+                  qualifier = get_ppd_qualifier();
+                  _log("INFO: Using qualifer: '%s.%s.%s'\n",
+                        qualifier[0], qualifier[1], qualifier[2]);
 
                 /* ask colord for the profile */
-                icc_profile = colord_get_profile_for_device_id ((const char *) getenv("PRINTER"),
-                                                                qualifier);
 
-                /* fall back to PPD */
-                if (icc_profile == NULL) {
-                  _log("INFO: need to look in PPD for matching qualifer\n");
-                  icc_profile = get_icc_profile_for_qualifier(qualifier);
+                  icc_profile = colord_get_profile_for_device_id ((const char *) getenv("PRINTER"),
+                                                                  qualifier);
+
+                  /* fall back to PPD */
+                  if (icc_profile == NULL) {
+                    _log("INFO: need to look in PPD for matching qualifer\n");
+                    icc_profile = get_icc_profile_for_qualifier(qualifier);
+                  }
                 }
 
                 /* ICC profile is specified for Ghostscript unless
                    "cm-calibration" option was passed in foomatic-rip */
-                if (icc_profile != NULL && !cm_calibrate)
+                if (icc_profile != NULL)
                   snprintf(cmd, sizeof(cmd),
                            "-sOutputICCProfile='%s'", icc_profile);
                 else

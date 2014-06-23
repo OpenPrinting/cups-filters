@@ -119,6 +119,8 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   int		i;			/* Temporary/looping var */
   int		plane;			/* Current plane */
   int		cm_calibrate;		/* Color calibration mode */
+  int		device_inhibited;	/* Device Color Inhibited */
+  char          tmpstr[1024];           /* Printer String */
   char		s[255];			/* Temporary value */
   const char	*colormodel;		/* Color model string */
   char		resolution[PPD_MAX_NAME],
@@ -230,9 +232,10 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     case CUPS_CSPACE_CMYK :
         colormodel = "CMYK";
 	break;
-  }
+  }  
 
   cm_calibrate = 0;
+  device_inhibited = 0;
 
   if (header->HWResolution[0] != header->HWResolution[1])
     snprintf(resolution, sizeof(resolution), "%dx%ddpi",
@@ -345,8 +348,16 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     fprintf(stderr, "DEBUG: MediaType = %s\n", header->MediaType);
     fprintf(stderr, "DEBUG: Resolution = %s\n", resolution);
 
+    snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+
     /* support the "cm-calibration" option */
-    if (ppd && (cupsGetOption("cm-calibration", num_options, options) != NULL))
+    if ((cupsGetOption("cm-calibration", num_options, options)) != NULL) {
+      cm_calibrate = 1;
+      device_inhibited = 1;
+    }
+
+    if (ppd && !device_inhibited)
     {
       if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
 	  header->cupsColorSpace == CUPS_CSPACE_W)
