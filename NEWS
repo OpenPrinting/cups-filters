@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 
 CHANGES IN V1.0.55
 
+	- foomatic-rip, imagetoraster, pdftoraster, rastertopclx,
+	  rastertopdf: Added colord "device_inhibit" support for
+	  color-managed filters.
 	- foomatic-rip: Let it also build correctly on systems which
 	  already provide the strlcat() and strlcpy() functions, like
 	  Mac OS X. Thanks to Matt Broughton for reporting this
