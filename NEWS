@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 
 CHANGES IN V1.0.55
 
+	- cups-browsed: Do not create a local queue pointing to a
+	  remote raw queue (Ubuntu bug #1335211).
 	- foomatic-rip, imagetoraster, pdftoraster, rastertopclx,
 	  rastertopdf: Added colord "device_inhibit" support for
 	  color-managed filters.

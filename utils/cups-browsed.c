@@ -1006,6 +1006,32 @@ void generate_local_queue(const char *host,
     remote_queue = remove_bad_chars(resource + 9, 0);
     debug_printf("cups-browsed: Found CUPS queue: %s on host %s.\n",
 		 remote_queue, remote_host);
+#ifdef HAVE_AVAHI
+    /* If the remote queue has a PPD file, the "product" field of the
+       TXT record is populated. If it has no PPD file the remote queue
+       is a raw queue and so we do not jknow enough about the printer
+       behind it for auto-creating a local queue pointing to it. */
+    int raw_queue = 0;
+    if (txt) {
+      entry = avahi_string_list_find((AvahiStringList *)txt, "product");
+      if (entry) {
+	avahi_string_list_get_pair(entry, &key, &value, NULL);
+	if (!key || !value || strcasecmp(key, "product") || value[0] != '(' ||
+	    value[strlen(value) - 1] != ')') {
+	  raw_queue = 1;
+	}
+      } else
+	raw_queue = 1;
+    } else
+      raw_queue = 1;
+    if (raw_queue) {
+      /* The remote CUPS queue is raw, ignore it */
+      debug_printf("cups-browsed: Remote CUPS queue %s on host %s is raw, ignored.\n",
+		   remote_queue, remote_host);
+      free (remote_host);
+      return;
+    }
+#endif /* HAVE_AVAHI */
   } else if (!strncasecmp(resource, "classes/", 8)) {
     /* This is a remote CUPS queue, use the remote queue name for the
        local queue */
