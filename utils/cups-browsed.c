@@ -394,7 +394,7 @@ create_local_queue (const char *name,
 	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
       if (!strcasecmp(q->name, p->name))
 	break;
-    p->duplicate = q ? 1 : 0;
+    p->duplicate = (q && q->status != STATUS_DISAPPEARED) ? 1 : 0;
     if (p->duplicate)
       debug_printf("cups-browsed: Printer %s already available through host %s.\n",
 		   p->name, q->host);

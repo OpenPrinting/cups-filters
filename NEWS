@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 
 CHANGES IN V1.0.55
 
+	- cups-browsed: Do not mark a discovered printer as already
+          provided by another server when the other server's queue has
+          "disappeared" status. This queue can be from the same server
+          before it changed its name.
 	- cups-browsed: Do not create a local queue pointing to a
 	  remote raw queue (Ubuntu bug #1335211).
 	- foomatic-rip, imagetoraster, pdftoraster, rastertopclx,
