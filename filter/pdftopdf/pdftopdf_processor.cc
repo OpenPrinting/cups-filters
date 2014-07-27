@@ -328,7 +328,7 @@ const bool origls=param.nup.landscape;
     }
   }
 
-  if ( (param.evenDuplex)&&(outputno&1) ) {
+  if ( (param.evenDuplex || !param.oddPages) && (outputno & 1) ) {
     // need to output empty page to not confuse duplex
     proc.add_page(proc.new_page(param.page.width,param.page.height),param.reverse);
   }

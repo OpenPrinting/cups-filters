@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.0.54 - 2014-06-06
 
 CHANGES IN V1.0.55
 
+	- pdftopdf: Fixed manual duplex by adding a blank page to evn
+          pages if the total number of pages of the document is
+          odd. Otherwise the last page of the document would stay in
+          the input tray. This fixes also a side effect as the set of
+          even pages reducing to a zero page job if the job consists
+          of only one page, making Poppler's pdftops error out (Ubuntu
+          bug #1340435).
 	- cups-browsed: Do not mark a discovered printer as already
           provided by another server when the other server's queue has
           "disappeared" status. This queue can be from the same server
