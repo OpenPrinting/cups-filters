@@ -1,6 +1,16 @@
 NEWS - OpenPrinting CUPS Filters v1.0.55 - 2014-07-27
 -----------------------------------------------------
 
+CHANGES IN V1.0.56
+
+	- cups-browsed: Do also not mark a discovered printer as
+	  already provided by another server when the other server's
+	  queue has "unconfirmed" status. Mark the other queue with
+	  "disappeared" or "unconfirmed" status as duplicate of the
+	  discovered printer so that the new queue for the discovered
+	  printer does not get removed when the entry for the other
+	  queue times out.
+
 CHANGES IN V1.0.55
 
 	- pdftopdf: Fixed manual duplex by adding a blank page to evn

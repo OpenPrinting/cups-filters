@@ -394,10 +394,16 @@ create_local_queue (const char *name,
 	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
       if (!strcasecmp(q->name, p->name))
 	break;
-    p->duplicate = (q && q->status != STATUS_DISAPPEARED) ? 1 : 0;
+    p->duplicate = (q && q->status != STATUS_DISAPPEARED &&
+		    q->status != STATUS_UNCONFIRMED) ? 1 : 0;
     if (p->duplicate)
       debug_printf("cups-browsed: Printer %s already available through host %s.\n",
 		   p->name, q->host);
+    else if (q) {
+      q->duplicate = 1;
+      debug_printf("cups-browsed: Unconfirmed/disappeared printer %s already available through host %s, marking that printer duplicate of the newly found one.\n",
+		   p->name, q->host);
+    }
   } else {
     /* Non-CUPS printer broadcasts are most probably from printers
        directly connected to the network and using the IPP protocol.
