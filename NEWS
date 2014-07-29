@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.0.55 - 2014-07-27
 
 CHANGES IN V1.0.56
 
+	- cups-browsed: Do not consider a remote CUPS queue as raw if
+	  the TXT record is NULL as for queues broadcasted by the
+	  legacy CUPS method the TXT record does not exist. Now
+	  consider a queue with NULL TXT record only as raw if the
+	  domain entry is not empty (which tells that the queue is
+	  Bonjour-broadcasted (Bug #1223).
 	- cups-browsed: Do also not mark a discovered printer as
 	  already provided by another server when the other server's
 	  queue has "unconfirmed" status. Mark the other queue with

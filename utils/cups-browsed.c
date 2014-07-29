@@ -1028,11 +1028,11 @@ void generate_local_queue(const char *host,
 	}
       } else
 	raw_queue = 1;
-    } else
+    } else if (domain && domain[0] != '\0')
       raw_queue = 1;
     if (raw_queue) {
       /* The remote CUPS queue is raw, ignore it */
-      debug_printf("cups-browsed: Remote CUPS queue %s on host %s is raw, ignored.\n",
+      debug_printf("cups-browsed: Remote Bonjour-advertised CUPS queue %s on host %s is raw, ignored.\n",
 		   remote_queue, remote_host);
       free (remote_host);
       return;
