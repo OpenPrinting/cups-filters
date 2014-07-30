@@ -367,6 +367,7 @@ static void parseOpts(int argc, char **argv)
   cups_option_t *options = 0;
   GooString profilePath;
   char tmpstr[1024];
+  char **qualifier = NULL;
   ppd_attr_t *attr;
 
   if (argc < 6 || argc > 7) {
@@ -447,20 +448,31 @@ static void parseOpts(int argc, char **argv)
       }
     }
 
-    snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-
-    /* support the "cm-calibration" option */
+    /* support the CUPS "cm-calibration" option */
     if (cupsGetOption("cm-calibration", num_options, options) != NULL) {
       cm_calibrate = true;
       device_inhibited = 1;
-    } 
+    } else {
+      /* rely on color manager */
+      snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+      device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+    }
 
     if (!device_inhibited) {
-      if (getColorProfilePath(ppd,&profilePath)) {
-        /* ICCProfile is specified */
-        colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
-      }
+      if (ppd) 
+        qualifier = colord_get_qualifier_for_ppd(ppd);
+      
+      if (qualifier != NULL) 
+         colorProfile = colord_get_profile_for_device_id (tmpstr,
+                                                    (const char**) qualifier);
+
+      /* fall back to the PPD */
+      if (colorProfile == NULL) 
+        if (getColorProfilePath(ppd,&profilePath)) 
+          colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
+
+      fprintf(stderr, "DEBUG: ICC Profile: %s\n", colorProfile ?
+          colorProfile : "None");
     }
   } else {
 #ifdef HAVE_CUPS_1_7
