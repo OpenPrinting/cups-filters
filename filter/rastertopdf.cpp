@@ -464,105 +464,53 @@ int setProfile(const char * path)
       return 1;
 }
 
-/* Obtain a source profile using color qualifiers */
-int setCupsColorProfile(ppd_file_t* ppd, const char* cupsRenderingIntent, 
-                    const char * mediaType, cups_cspace_t cs, unsigned xdpi, unsigned ydpi)
+/* Obtain a source profile name using color qualifiers from raster file */
+const char * getIPPColorProfileName(const char * media_type, cups_cspace_t cs, unsigned dpi)
 {
-    std::string MediaType;
-    std::string resolution;
-    std::string colorModel;
+    std::string mediaType = "";
+    std::string resolution = "";
+    std::string colorModel = "";
    
-    std::string path;
-    ppd_attr_t *attr;
-
-    if (ppd == NULL) {
-        return 1;
-    }      
-
-    if (cupsRenderingIntent != NULL) {
-        if (strcasecmp(cupsRenderingIntent,"PERCEPTUAL") != 0) {
-  	    renderingIntent = INTENT_PERCEPTUAL;
-        } else if (strcasecmp(cupsRenderingIntent,"RELATIVE_COLORIMETRIC") != 0) {
-  	  renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
-        } else if (strcasecmp(cupsRenderingIntent,"SATURATION") != 0) {
-	  renderingIntent = INTENT_SATURATION;
-        } else if (strcasecmp(cupsRenderingIntent,"ABSOLUTE_COLORIMETRIC") != 0) {
-	  renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
-        }
-      }
+    std::string iccProfile = "";
 
     // ColorModel
     switch (cs) {
         case CUPS_CSPACE_RGB:
-            colorModel = "Rgb";
+            colorModel = "rgb";
             break;
         case CUPS_CSPACE_SRGB:
-            colorModel = "Srgb";
+            colorModel = "srgb";
             break;
         case CUPS_CSPACE_ADOBERGB:
-            colorModel = "AdobeRgb";
+            colorModel = "adobergb";
             break;
         case CUPS_CSPACE_K:
-            colorModel = "Sgray";
+            colorModel = "gray";
             break;
         case CUPS_CSPACE_CMYK:
-            colorModel = "Cmyk";
+            colorModel = "cmyk";
             break;
         default:
             colorModel = "";
             break;
      }
+ 
+    if (media_type != NULL)
+      mediaType = media_type;
+    if (dpi > 0)
+      resolution = dpi;
 
-    // Resolution
-    resolution = xdpi + "x" + ydpi;
+    // Requires color space and media type qualifiers
+    if (resolution != "" || colorModel != "")
+      return 0;
 
-    // MediaType
-    if (mediaType != NULL)
-      MediaType = mediaType;
+    // profile-uri reference: "http://www.server.com/colorModel-Resolution-mediaType.icc
+    if (mediaType != "")          
+      iccProfile = colorModel + "-" + resolution + ".icc";
+    else 
+      iccProfile = colorModel + "-" + resolution + "-" + mediaType + ".icc";
 
-    for (attr = ppdFindAttr(ppd,"cupsICCProfile",NULL);attr != NULL;
-       attr = ppdFindNextAttr(ppd,"cupsICCProfile",NULL)) {
-	// check color model
-	char buf[PPD_MAX_NAME];
-	char *p, *r;
-
-	strncpy(buf,attr->spec,sizeof(buf));
-	if ((p = strchr(buf,'.')) != NULL) {
-	    *p = '\0';
-	}
-	if (!colorModel.empty() && buf[0] != '\0'
-	    && strcasecmp(buf,colorModel.c_str()) != 0) continue;
-	if (p == NULL) {
-	    break;
-	} else {
-	    p++;
-	    if ((r = strchr(p,'.')) != 0) {
-		*r = '\0';
-	    }
-	}
-	if (!resolution.empty() && p[0] != '\0'
-	    && strcasecmp(p,resolution.c_str()) != 0) continue;
-	if (r == NULL) {
-	    break;
-	} else {
-	    r++;
-	    if ((p = strchr(r,'.')) != 0) {
-		*p = '\0';
-	    }
-	}
-	if (!MediaType.empty() || r[0] == '\0'
-	    || strcasecmp(r,MediaType.c_str()) == 0) break;
-        }
-    if (attr != NULL) {
-	// matched
-	path = "";
-	if (attr->value[0] != '/') {
-	    path = path + CUPS_DATADIR + "/profiles/";
-	}
-	path = path + CUPS_DATADIR + attr->value;
-    }
-
-    return setProfile(path.c_str());
+    return iccProfile.c_str();
 }
 
 int main(int argc, char **argv)
@@ -574,6 +522,7 @@ int main(int argc, char **argv)
     cups_page_header2_t	header;		/* Page header from file */
     ppd_file_t		*ppd;		/* PPD file */
     int			num_options;	/* Number of options */
+    const char*         profile_name;	/* IPP Profile Name */
     cups_option_t	*options;	/* Options */
     const char		*val;		/* Option value */
     char                tmpstr[1024];
@@ -591,13 +540,15 @@ int main(int argc, char **argv)
 
     num_options = cupsParseOptions(argv[5], 0, &options);  
 
-    snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-
-    /* support the "cm-calibration" option */ 
+    /* support the CUPS "cm-calibration" option */ 
     if (cupsGetOption("cm-calibration", num_options, options) != NULL) {
       cm_calibrate = true;
       device_inhibited = 1;
+    } else {
+      /* Check color manager status */
+      snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+      device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+      // device_inhibited = isDeviceCm(tmpstr);
     }
 
     // Open the PPD file...
@@ -651,19 +602,19 @@ int main(int argc, char **argv)
       Page ++;
       fprintf(stderr, "INFO: Starting page %d.\n", Page);
 
-      // Set profile from PPD and raster header
+      // Set profile from raster header
       if (!device_inhibited) {
-          // Set user profile from command-line
-          if ((val = cupsGetOption("profile", num_options, options)) != NULL) {
-            setProfile(val);
-          } /* else if (setCupsColorProfile(ppd, header.cupsRenderingIntent, 
-                              header.MediaType, header.cupsColorSpace, 
-                              header.HWResolution[0], header.HWResolution[1]) != 0)  {            
-          } */
+          profile_name = getIPPColorProfileName(header.MediaType, 
+                                                header.cupsColorSpace, 
+                                                header.HWResolution[0]);
 
-          // TESTING create color transformation
+          if (profile_name) {
+            fprintf(stderr, "DEBUG: ICC Profile: %s\n", profile_name ?
+            "None" : profile_name);
+            //downloadIPPColorProfile(profile_name);
+            //setProfile(profile_name);
+          }
           if (inputColorProfile != NULL && outputColorProfile != NULL) {
-             /* TODO apply conversion by other cases (color space) */
              unsigned int bytes = header.cupsBitsPerColor/8;
              unsigned int dcst = getCMSColorSpaceType(cmsGetColorSpace(inputColorProfile));
              colorTransform = cmsCreateTransform(inputColorProfile,
