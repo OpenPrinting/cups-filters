@@ -27,5 +27,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /* Interface for Kolor Manager */
 
 /* Get color management state of a printer */
-int kmIsPrinterCMOff(const char *);
+int kmIsPrinterCMOff(const char * /*printer_name*/);
 
+/* Get profile from color manager */
+const char * kmGetPrinterProfile(const char* /*printer_name*/);
