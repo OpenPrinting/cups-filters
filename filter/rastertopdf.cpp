@@ -199,21 +199,63 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
             case CUPS_CSPACE_W:
             case CUPS_CSPACE_SW:
             case CUPS_CSPACE_WHITE:
-                dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
+                dict["/ColorSpace"]=
+                    QPDFObjectHandle::parse("["
+                                             "/CalGray"
+                                               "<<" 
+                                                  "/WhitePoint " 
+                                                  "[ 0.9420288 1.0 0.82490540 ] "
+                                                  "/Gamma 2.2"
+                                                ">>"
+                                             "]");
                 break;
             case CUPS_CSPACE_CMYK:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
                 break;
             case CUPS_CSPACE_RGB:
-            case CUPS_CSPACE_SRGB:
-            case CUPS_CSPACE_ADOBERGB:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
+                break;
+            case CUPS_CSPACE_SRGB:
+               // TODO Remove sRGB approximation once ICC 
+               // profile embedding is finalized
+               dict["/ColorSpace"]=
+                    QPDFObjectHandle::parse("["
+                                             "/CalRGB"
+                                               "<<" 
+                                                  "/WhitePoint" 
+                                                  "[ 0.9642 1.0 0.8249 ]"
+                                                  "/Gamma [ 2.2 2.2 2.2 ]"
+                                                ">>"
+                                             "]");           
+                break;
+            case CUPS_CSPACE_ADOBERGB:
+                dict["/ColorSpace"]=
+                    QPDFObjectHandle::parse("["
+                                             "/CalRGB"
+                                               "<<" 
+                                                  "/WhitePoint" 
+                                                  "[ 0.95045471 1.0 1.08905029 ]"
+                                                  "/Gamma [ 2.2 2.2 2.2 ]"
+                                                ">>"
+                                             "]");
                 break;
             default: 
                 return QPDFObjectHandle();
         }
     } else if (device_inhibited) {
-        dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
+        switch(cs) {
+          case CUPS_CSPACE_K:
+            dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
+            break;
+          case CUPS_CSPACE_RGB:
+          case CUPS_CSPACE_SRGB:
+          case CUPS_CSPACE_ADOBERGB:
+            dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
+            break;
+          case CUPS_CSPACE_CMYK:
+            dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
+            break;
+        }
     } else 
         return QPDFObjectHandle();
 
