@@ -87,10 +87,10 @@
 #define iprintf(format, ...) fprintf(stderr, "INFO: (" PROGRAM ") " format, __VA_ARGS__)
 
 cmsHPROFILE         colorProfile = NULL;
-//cmsHTRANSFORM       colorTransform = NULL;
 int                 renderingIntent = INTENT_PERCEPTUAL;
 int                 device_inhibited = 0;
 bool                cm_calibrate = false;
+
 
 #ifdef USE_LCMS1
 static int lcmsErrorHandler(int ErrorCode, const char *ErrorText)
@@ -111,6 +111,13 @@ void die(const char * str)
     fprintf(stderr, "ERROR: (" PROGRAM ") %s\n", str);
     exit(1);
 }
+
+// Commonly-used white point and gamma numbers
+double adobergb_wp[3] = {0.95045471, 1.0, 1.08905029};
+double sgray_wp[3] = {0.9420288, 1.0, 0.82490540};
+double adobergb_gamma[3] = {2.2, 2.2, 2.2};
+double sgray_gamma[1] = {2.2};
+
 
 //------------- PDF ---------------
 
@@ -173,6 +180,7 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
   std::map<std::string,QPDFObjectHandle> dict;
   std::map<std::string,QPDFObjectHandle> streamdict;
   std::string n_value = "";
+  std::string alternate_cs = "";
   size_t profile_size;
   PointerHolder<Buffer>ph;
 
@@ -181,17 +189,23 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
   // Write color component # for /ICCBased array in stream dictionary
   switch(css){
     case icSigGrayData:
-      streamdict["/N"]=QPDFObjectHandle::newName("1");
+      n_value = "1";
+      alternate_cs = "/DeviceGray";
       break;
     case icSigRgbData:
-      streamdict["/N"]=QPDFObjectHandle::newName("3");
+      n_value = "3";
+      alternate_cs = "/DeviceRGB";
       break;
     case icSigCmykData:
-      streamdict["/N"]=QPDFObjectHandle::newName("4");
+      n_value = "4";
+      alternate_cs = "/DeviceCMYK";
       break;
     default:
       break;
   }
+
+  streamdict["/Alternate"]=QPDFObjectHandle::newName(alternate_cs);
+  streamdict["/N"]=QPDFObjectHandle::newName(n_value);
 
   // Read profile into memory
   _cmsSaveProfileToMem(colorProfile, NULL, &profile_size);
@@ -216,11 +230,73 @@ QPDFObjectHandle embedSrgbProfile(QPDF &pdf)
   return embedIccProfile(pdf);
 }
 
+/* 
+Calibration function for non-Lab PDF color spaces 
+Requires white point data, and if available, gamma or matrix numbers.
+
+Output:
+  [/'color_space' 
+     << /Gamma ['gamma[0]'...'gamma[n]']
+        /WhitePoint ['wp[0]' 'wp[1]' 'wp[2]']
+        /Matrix ['matrix[0]'...'matrix[n*n]']
+     >>
+  ]        
+*/
+QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[], 
+                                     double gamma[], double matrix[])
+{    
+    // Check for invalid input
+    if ((!strcmp("/CalGray", color_space) && matrix != NULL) ||
+         wp == NULL)
+      return QPDFObjectHandle();
+
+    QPDFObjectHandle ret;
+    std::string csString = color_space;
+    std::string colorSpaceArrayString = "";
+
+    char gamma_str[128];
+    char wp_str[256];
+    char matrix_str[512];
+
+    // Convert numbers into string data for /Gamma, /WhitePoint, and/or /Matrix
+
+    if (!strcmp("/CalGray", color_space) && gamma != NULL)
+      snprintf(gamma_str, sizeof(gamma_str), "/Gamma %g", 
+                  gamma[0]);
+    else if (!strcmp("/CalRGB", color_space) && gamma != NULL) 
+      snprintf(gamma_str, sizeof(gamma_str), "/Gamma [%g %g %g]", 
+                  gamma[0], gamma[1], gamma[2]); 
+    else
+      gamma_str[0] = '\0';
+    
+    if (wp != NULL)
+      snprintf(wp_str, sizeof(wp_str), "/WhitePoint [%g %g %g]", 
+                  wp[0], wp[1], wp[2]); 
+    else
+      wp_str[0] = '\0';
+
+
+    if (!strcmp("/CalRGB", color_space) && matrix != NULL) {
+      snprintf(matrix_str, sizeof(matrix_str), "/Matrix [%g %g %g %g %g %g %g %g %g]", 
+                  matrix[0], matrix[1], matrix[2],
+                  matrix[3], matrix[4], matrix[5],
+                  matrix[6], matrix[7], matrix[8]);
+    } else
+      matrix_str[0] = '\0';
+
+    // Write array string
+    colorSpaceArrayString = "[" + csString + " <<" 
+                            + gamma_str + " " + wp_str + " " + matrix_str
+                            + " >>]";
+                           
+    ret = QPDFObjectHandle::parse(colorSpaceArrayString);
+
+    return ret;
+}
+
 QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned width, unsigned height, cups_cspace_t cs, unsigned bpc)
 {
     QPDFObjectHandle ret = QPDFObjectHandle::newStream(&pdf);
-    QPDFObjectHandle array = QPDFObjectHandle::newArray();
-    array = embedIccProfile(pdf);
 
     std::map<std::string,QPDFObjectHandle> dict;
 
@@ -254,17 +330,12 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
                 break;
             case CUPS_CSPACE_K:
             case CUPS_CSPACE_W:
-            case CUPS_CSPACE_SW:
             case CUPS_CSPACE_WHITE:
-                dict["/ColorSpace"]=
-                     QPDFObjectHandle::parse("["
-                                             "/CalGray"
-                                               "<<" 
-                                                  "/WhitePoint " 
-                                                  "[ 0.9420288 1.0 0.82490540 ] "
-                                                  "/Gamma 2.2"
-                                                ">>"
-                                             "]");
+                dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
+            case CUPS_CSPACE_SW:
+                dict["/ColorSpace"]=getCalibrationArray("/CalGray", 
+                                                        sgray_wp, 
+                                                        sgray_gamma, 0);
                 break;
             case CUPS_CSPACE_CMYK:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
@@ -276,15 +347,9 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
                 dict["/ColorSpace"]=embedSrgbProfile(pdf);         
                 break;
             case CUPS_CSPACE_ADOBERGB:
-                dict["/ColorSpace"]=
-                    QPDFObjectHandle::parse("["
-                                             "/CalRGB"
-                                               "<<" 
-                                                  "/WhitePoint" 
-                                                  "[ 0.95045471 1.0 1.08905029 ]"
-                                                  "/Gamma [ 2.2 2.2 2.2 ]"
-                                                ">>"
-                                             "]");
+                dict["/ColorSpace"]=getCalibrationArray("/CalRGB", 
+                                                        adobergb_wp, 
+                                                        adobergb_gamma, 0);
                 break;
             default: 
                 return QPDFObjectHandle();
@@ -696,7 +761,7 @@ int main(int argc, char **argv)
       if (!device_inhibited) {
           if ((profile_name = cupsGetOption("profile", num_options, options)) != NULL) {
             setProfile(profile_name);          
-          }
+          } 
 
           fprintf(stderr, "DEBUG: ICC Profile: %s\n", !colorProfile ?
           "None" : profile_name);
