@@ -74,6 +74,7 @@
 #define cmsSig13colorData icSig13colorData
 #define cmsSig14colorData icSig14colorData
 #define cmsSig15colorData icSig15colorData
+#define cmsSaveProfileToMem _cmsSaveProfileToMem
 #else
 #include <lcms2.h>
 #endif
@@ -184,19 +185,19 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
   size_t profile_size;
   PointerHolder<Buffer>ph;
 
-  icColorSpaceSignature css = cmsGetColorSpace(colorProfile);
+  cmsColorSpaceSignature css = cmsGetColorSpace(colorProfile);
 
   // Write color component # for /ICCBased array in stream dictionary
   switch(css){
-    case icSigGrayData:
+    case cmsSigGrayData:
       n_value = "1";
       alternate_cs = "/DeviceGray";
       break;
-    case icSigRgbData:
+    case cmsSigRgbData:
       n_value = "3";
       alternate_cs = "/DeviceRGB";
       break;
-    case icSigCmykData:
+    case cmsSigCmykData:
       n_value = "4";
       alternate_cs = "/DeviceCMYK";
       break;
@@ -208,9 +209,9 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
   streamdict["/N"]=QPDFObjectHandle::newName(n_value);
 
   // Read profile into memory
-  _cmsSaveProfileToMem(colorProfile, NULL, &profile_size);
+  cmsSaveProfileToMem(colorProfile, NULL, &profile_size);
   unsigned char buff[profile_size];
-  _cmsSaveProfileToMem(colorProfile, buff, &profile_size);
+  cmsSaveProfileToMem(colorProfile, buff, &profile_size);
 
   // Write ICC profile buffer into PDF
   ph = new Buffer(buff, profile_size);  
