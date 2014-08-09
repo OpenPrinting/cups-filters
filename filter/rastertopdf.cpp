@@ -307,33 +307,29 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     dict["/Height"]=QPDFObjectHandle::newInteger(height);
     dict["/BitsPerComponent"]=QPDFObjectHandle::newInteger(bpc);
 
-    /* TODO Adjust for color calibration */
     if (!device_inhibited && colorProfile == NULL) {
-        switch (cs) {       
-            case CUPS_CSPACE_CIELab:
-            case CUPS_CSPACE_ICC1:
-            case CUPS_CSPACE_ICC2:
-            case CUPS_CSPACE_ICC3:
-            case CUPS_CSPACE_ICC4:
-            case CUPS_CSPACE_ICC5:
-            case CUPS_CSPACE_ICC6:
-            case CUPS_CSPACE_ICC7:
-            case CUPS_CSPACE_ICC8:
-            case CUPS_CSPACE_ICC9:
-            case CUPS_CSPACE_ICCA:
-            case CUPS_CSPACE_ICCB:
-            case CUPS_CSPACE_ICCC:
-            case CUPS_CSPACE_ICCD:
-            case CUPS_CSPACE_ICCE:
-            case CUPS_CSPACE_ICCF:
-            case CUPS_CSPACE_CIEXYZ:
-                dict["/ColorSpace"]=QPDFObjectHandle::newName("/CalRGB");
+        switch (cs) {
+            case CUPS_CSPACE_DEVICE1:
+            case CUPS_CSPACE_DEVICE2:
+            case CUPS_CSPACE_DEVICE3:
+            case CUPS_CSPACE_DEVICE4:
+            case CUPS_CSPACE_DEVICE5:
+            case CUPS_CSPACE_DEVICE6:
+            case CUPS_CSPACE_DEVICE7:
+            case CUPS_CSPACE_DEVICE8:
+            case CUPS_CSPACE_DEVICE9:
+            case CUPS_CSPACE_DEVICEA:
+            case CUPS_CSPACE_DEVICEB:
+            case CUPS_CSPACE_DEVICEC:
+            case CUPS_CSPACE_DEVICED:
+            case CUPS_CSPACE_DEVICEE:
+            case CUPS_CSPACE_DEVICEF:
+                // For right now, DeviceN will use /DeviceCMYK in the PDF
+                dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
                 break;
             case CUPS_CSPACE_K:
-            case CUPS_CSPACE_W:
-            case CUPS_CSPACE_WHITE:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
-            case CUPS_CSPACE_SW:
+            case CUPS_CSPACE_SW:                
                 dict["/ColorSpace"]=getCalibrationArray("/CalGray", 
                                                         sgray_wp, 
                                                         sgray_gamma, 0);
@@ -358,6 +354,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     } else if (device_inhibited) {
         switch(cs) {
           case CUPS_CSPACE_K:
+          case CUPS_CSPACE_SW:
             dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
             break;
           case CUPS_CSPACE_RGB:
@@ -365,9 +362,26 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
           case CUPS_CSPACE_ADOBERGB:
             dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
             break;
+          case CUPS_CSPACE_DEVICE1:
+          case CUPS_CSPACE_DEVICE2:
+          case CUPS_CSPACE_DEVICE3:
+          case CUPS_CSPACE_DEVICE4:
+          case CUPS_CSPACE_DEVICE5:
+          case CUPS_CSPACE_DEVICE6:
+          case CUPS_CSPACE_DEVICE7:
+          case CUPS_CSPACE_DEVICE8:
+          case CUPS_CSPACE_DEVICE9:
+          case CUPS_CSPACE_DEVICEA:
+          case CUPS_CSPACE_DEVICEB:
+          case CUPS_CSPACE_DEVICEC:
+          case CUPS_CSPACE_DEVICED:
+          case CUPS_CSPACE_DEVICEE:
+          case CUPS_CSPACE_DEVICEF:
           case CUPS_CSPACE_CMYK:
             dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
             break;
+          default:
+            return QPDFObjectHandle();
         }
     } else if (colorProfile != NULL) 
         dict["/ColorSpace"]=embedIccProfile(pdf);
