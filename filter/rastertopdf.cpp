@@ -582,11 +582,13 @@ int setProfile(const char * path)
       colorProfile = cmsOpenProfileFromFile(path,"r");
 
     if (colorProfile != NULL) {
-      fputs("DEBUG: Unable to load profile.\n", stderr); 
+      fputs("DEBUG: Load profile successful.\n", stderr); 
       return 0;
     }
-    else
+    else {
+      fputs("DEBUG: Unable to load profile.\n", stderr); 
       return 1;
+    }
 }
 
 /* Obtain a source profile name using color qualifiers from raster file */
