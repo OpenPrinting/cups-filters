@@ -171,7 +171,7 @@ QPDFObjectHandle makeBox(double x1, double y1, double x2, double y2)
 QPDFObjectHandle embedIccProfile(QPDF &pdf)
 {
     if (colorProfile == NULL) {
-      return QPDFObjectHandle();
+      return QPDFObjectHandle::newNull();
     }
     QPDFObjectHandle ret;
     QPDFObjectHandle array = QPDFObjectHandle::newArray();
@@ -201,7 +201,8 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
         alternate_cs = "/DeviceCMYK";
         break;
       default:
-        break;
+        fputs("DEBUG: Failed to embed ICC Profile.\n", stderr);
+        return QPDFObjectHandle::newNull();
     }
 
     streamdict["/Alternate"]=QPDFObjectHandle::newName(alternate_cs);
@@ -222,6 +223,8 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
 
     // Return a PDF object reference to an '/ICCBased' array
     ret = pdf.makeIndirectObject(array);
+
+    fputs("DEBUG: ICC Profile embedded in PDF.\n", stderr); 
 
     return ret;
 }
@@ -306,6 +309,9 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
 {
     QPDFObjectHandle ret = QPDFObjectHandle::newStream(&pdf);
 
+    QPDFObjectHandle icc_ref;
+    int isProfileEmbedded = 0;
+
     std::map<std::string,QPDFObjectHandle> dict;
 
     dict["/Type"]=QPDFObjectHandle::newName("/XObject");
@@ -314,7 +320,14 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     dict["/Height"]=QPDFObjectHandle::newInteger(height);
     dict["/BitsPerComponent"]=QPDFObjectHandle::newInteger(bpc);
 
-    if (!device_inhibited && colorProfile == NULL) {
+    if (colorProfile != NULL && !device_inhibited) {
+      icc_ref = embedIccProfile(pdf);
+
+      if (!icc_ref.isNull()) {
+        dict["/ColorSpace"]=icc_ref;
+        isProfileEmbedded = 1;
+      }
+    } else if (!device_inhibited) {
         switch (cs) {
             case CUPS_CSPACE_DEVICE1:
             case CUPS_CSPACE_DEVICE2:
@@ -348,14 +361,19 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
                 break;
             case CUPS_CSPACE_SRGB:
-                dict["/ColorSpace"]=embedSrgbProfile(pdf);         
+                icc_ref = embedSrgbProfile(pdf);
+                if (icc_ref.isNull())
+                  dict["/ColorSpace"]=icc_ref;
+                else 
+                  dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
                 break;
             case CUPS_CSPACE_ADOBERGB:
                 dict["/ColorSpace"]=getCalibrationArray("/CalRGB", 
                                                         adobergb_wp, 
                                                         adobergb_gamma, 0);
                 break;
-            default: 
+            default:
+                fputs("DEBUG: Color space not supported.\n", stderr); 
                 return QPDFObjectHandle();
         }
     } else if (device_inhibited) {
@@ -388,11 +406,10 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
             dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
             break;
           default:
+            fputs("DEBUG: Color space not supported.\n", stderr); 
             return QPDFObjectHandle();
         }
-    } else if (colorProfile != NULL) 
-        dict["/ColorSpace"]=embedIccProfile(pdf);
-      else
+    } else
         return QPDFObjectHandle();
 
     ret.replaceDict(QPDFObjectHandle::newDictionary(dict));
@@ -564,8 +581,10 @@ int setProfile(const char * path)
     if (path != NULL) 
       colorProfile = cmsOpenProfileFromFile(path,"r");
 
-    if (colorProfile != NULL)
+    if (colorProfile != NULL) {
+      fputs("DEBUG: Unable to load profile.\n", stderr); 
       return 0;
+    }
     else
       return 1;
 }
