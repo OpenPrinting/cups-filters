@@ -181,8 +181,13 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
     std::map<std::string,QPDFObjectHandle> streamdict;
     std::string n_value = "";
     std::string alternate_cs = "";
-    size_t profile_size;
     PointerHolder<Buffer>ph;
+
+#ifdef USE_LCMS1
+    size_t profile_size;
+#else
+    unsigned int profile_size;
+#endif
 
     cmsColorSpaceSignature css = cmsGetColorSpace(colorProfile);
 
