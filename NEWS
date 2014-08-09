@@ -3,6 +3,19 @@ NEWS - OpenPrinting CUPS Filters v1.0.55 - 2014-07-27
 
 CHANGES IN V1.0.56
 
+	- rastertopdf: Some code polishing and removal of now unneeded
+	  functions
+	- rastertopdf: Reduced color space handling to only
+	  PWG-supported color spaces
+	- rastertopdf: Added colorspace calibration function; included
+	  optional "/Alternate" PDF key for ICC profile embedding
+	- rastertopdf: Colorspace sRGB now embeds srgb icc profile;
+	  implemented ICC Profile embedding (PDF 1.3 spec)
+	- rastertopdf: Added basic color calibration
+	- rastertopdf: Implemented ICC Profile creation code for IPP
+	  Everywhere (from PWG raster)
+	- pdftoraster: Added colord handling of ICC profiles
+	- kmdevices.cpp/.h: Added interface for Kolor Manager
 	- cups-browsed: Do not consider a remote CUPS queue as raw if
 	  the TXT record is NULL as for queues broadcasted by the
 	  legacy CUPS method the TXT record does not exist. Now
