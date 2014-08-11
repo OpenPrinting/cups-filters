@@ -116,6 +116,9 @@ double adobergb_wp[3] = {0.95045471, 1.0, 1.08905029};
 double sgray_wp[3] = {0.9420288, 1.0, 0.82490540};
 double adobergb_gamma[3] = {2.2, 2.2, 2.2};
 double sgray_gamma[1] = {2.2};
+double adobergb_matrix[9] = {0.60974121, 0.31111145, 0.01947021, 
+                             0.20527649, 0.62567139, 0.06086731, 
+                             0.14918518, 0.06321716, 0.74456785};
 
 
 //------------- PDF ---------------
@@ -310,6 +313,18 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     return ret;
 }
 
+QPDFObjectHandle getCalRGBArray(double wp[3], double gamma[3], double matrix[9])
+{
+    QPDFObjectHandle ret = getCalibrationArray("/CalRGB", wp, gamma, matrix);
+    return ret;
+}
+
+QPDFObjectHandle getCalGrayArray(double wp[3], double gamma[1])
+{
+    QPDFObjectHandle ret = getCalibrationArray("/CalGray", wp, gamma, 0);
+    return ret;
+}
+
 QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned width, unsigned height, cups_cspace_t cs, unsigned bpc)
 {
     QPDFObjectHandle ret = QPDFObjectHandle::newStream(&pdf);
@@ -354,10 +369,9 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
                 break;
             case CUPS_CSPACE_K:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
+                break;
             case CUPS_CSPACE_SW:                
-                dict["/ColorSpace"]=getCalibrationArray("/CalGray", 
-                                                        sgray_wp, 
-                                                        sgray_gamma, 0);
+                dict["/ColorSpace"]=getCalGrayArray(sgray_wp, sgray_gamma);
                 break;
             case CUPS_CSPACE_CMYK:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
@@ -373,9 +387,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
                   dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
                 break;
             case CUPS_CSPACE_ADOBERGB:
-                dict["/ColorSpace"]=getCalibrationArray("/CalRGB", 
-                                                        adobergb_wp, 
-                                                        adobergb_gamma, 0);
+                dict["/ColorSpace"]=getCalRGBArray(adobergb_wp, adobergb_gamma, adobergb_matrix);
                 break;
             default:
                 fputs("DEBUG: Color space not supported.\n", stderr); 
