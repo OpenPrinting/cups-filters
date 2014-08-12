@@ -184,17 +184,13 @@ namespace {
     {3,11,1,9},
     {15,7,13,5} 
   };
-  cmsCIExyYTRIPLE adobergb_matrix[3] = {
+  cmsCIExyYTRIPLE adobergb_matrix = {
     {0.60974121, 0.31111145, 0.01947021}, 
     {0.20527649, 0.62567139, 0.06086731}, 
     {0.14918518, 0.06321716, 0.74456785}
   };
-  cmsCIExyY adobergb_wp[1] = {
-    {0.95045471, 1.0, 1.08905029}
-  };
-  cmsCIExyY sgray_wp[1] = {
-    {0.9420288, 1.0, 0.82490540}
-  };
+  cmsCIExyY adobergb_wp = {0.95045471, 1.0, 1.08905029};
+  cmsCIExyY sgray_wp = {0.9420288, 1.0, 0.82490540};
 
   /* for color profiles */
   cmsHPROFILE colorProfile = NULL;
@@ -252,26 +248,6 @@ static void lcmsErrorHandler(cmsContext contextId, cmsUInt32Number ErrorCode,
    const char *ErrorText)
 {
   fprintf(stderr, "ERROR: %s\n",ErrorText);
-}
-#endif
-
-#ifdef USE_LCMS1
-cmsToneCurve* getGammaTriple(double value)
-{
-    cmsToneCurve Gamma = cmsBuildGamma(256, value);
-    cmsToneCurve Gamma3[3];
-    Gamma3[0] = Gamma3[1] = Gamma3[2] = Gamma;
-  
-    return Gamma3;
-}
-#else
-cmsToneCurve** getGammaTriple(double value)
-{
-    cmsToneCurve * Gamma = cmsBuildGamma(NULL, value);
-    cmsToneCurve * Gamma3[3];
-    Gamma3[0] = Gamma3[1] = Gamma3[2] = Gamma;
-  
-    return Gamma3;
 }
 #endif
 
@@ -1371,10 +1347,26 @@ static void selectConvertFunc(cups_raster_t *raster)
   }
   allocLineBuf = true;
 
-  if (header.cupsColorSpace == CUPS_CSPACE_ADOBERGB) {    
-    colorProfile = cmsCreateRGBProfile(adobergb_wp, adobergb_matrix, getGammaTriple(2.2));
-  } else if (header.cupsColorSpace == CUPS_CSPACE_SW) {    
-    colorProfile = cmsCreateGrayProfile(sgray_wp, cmsBuildGamma(NULL, 2.2));
+  if (header.cupsColorSpace == CUPS_CSPACE_ADOBERGB) {
+#if USE_LCMS1
+    cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
+    cmsToneCurve Gamma3[3];
+#else
+    cmsToneCurve * Gamma = cmsBuildGamma(NULL, 2.2);
+    cmsToneCurve * Gamma3[3];
+#endif    
+    Gamma3[0] = Gamma3[1] = Gamma3[2] = Gamma;
+
+    // Build AdobeRGB profile
+    colorProfile = cmsCreateRGBProfile(&adobergb_wp, &adobergb_matrix, Gamma3);
+  } else if (header.cupsColorSpace == CUPS_CSPACE_SW) {   
+#if USE_LCMS1
+    cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
+#else
+    cmsToneCurve * Gamma = cmsBuildGamma(NULL, 2.2);
+#endif 
+    // Build sGray profile
+    colorProfile = cmsCreateGrayProfile(&sgray_wp, Gamma);
   }
 
   if (colorProfile != NULL && popplerColorProfile != colorProfile 
