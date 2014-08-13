@@ -190,7 +190,7 @@ namespace {
     {0.14918518, 0.06321716, 0.74456785}
   };
   cmsCIExyY adobergb_wp = {0.95045471, 1.0, 1.08905029};
-  cmsCIExyY sgray_wp = {0.9420288, 1.0, 0.82490540};
+  cmsCIExyY sgray_wp = {0.9505, 1.0, 1.0890};
 
   /* for color profiles */
   cmsHPROFILE colorProfile = NULL;

@@ -113,7 +113,7 @@ void die(const char * str)
 
 // Commonly-used white point and gamma numbers
 double adobergb_wp[3] = {0.95045471, 1.0, 1.08905029};
-double sgray_wp[3] = {0.9420288, 1.0, 0.82490540};
+double sgray_wp[3] = {0.9505, 1, 1.0890};
 double adobergb_gamma[3] = {2.2, 2.2, 2.2};
 double sgray_gamma[1] = {2.2};
 double adobergb_matrix[9] = {0.60974121, 0.31111145, 0.01947021, 
