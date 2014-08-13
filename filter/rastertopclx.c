@@ -349,7 +349,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     fprintf(stderr, "DEBUG: Resolution = %s\n", resolution);
 
     snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+#ifdef HAVE_DBUS
     device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+#endif
 
     /* support the "cm-calibration" option */
     if ((cupsGetOption("cm-calibration", num_options, options)) != NULL) {

@@ -464,10 +464,13 @@ static void parseOpts(int argc, char **argv)
     } else {
       /* rely on color manager */
       snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+#ifdef HAVE_DBUS
       device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+#endif
     }
 
     if (!device_inhibited) {
+#ifdef HAVE_DBUS
       if (ppd) 
         qualifier = colord_get_qualifier_for_ppd(ppd);
       
@@ -482,6 +485,7 @@ static void parseOpts(int argc, char **argv)
 
       fprintf(stderr, "DEBUG: ICC Profile: %s\n", colorProfile ?
           colorProfile : "None");
+#endif
     }
   } else {
 #ifdef HAVE_CUPS_1_7

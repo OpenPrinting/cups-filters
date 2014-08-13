@@ -797,7 +797,9 @@ int main(int argc, char** argv)
     }
 
     snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+#ifdef HAVE_DBUS
     device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+#endif
 
     /* CUPS calls foomatic-rip only with 5 or 6 positional parameters,
        not with named options, like for example "-p <string>". */
@@ -975,10 +977,11 @@ int main(int argc, char** argv)
                   _log("INFO: Using qualifer: '%s.%s.%s'\n",
                         qualifier[0], qualifier[1], qualifier[2]);
 
-                /* ask colord for the profile */
-
+#ifdef HAVE_DBUS                
+                  /* ask colord for the profile */
                   icc_profile = colord_get_profile_for_device_id ((const char *) getenv("PRINTER"),
                                                                   qualifier);
+#endif
 
                   /* fall back to PPD */
                   if (icc_profile == NULL) {

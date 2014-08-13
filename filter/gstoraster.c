@@ -624,7 +624,9 @@ main (int argc, char **argv, char *envp[])
 
   /* support colord and the "cm-calibration" option */
   snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
+#ifdef HAVE_DBUS
   device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+#endif
   t = cupsGetOption("cm-calibration", num_options, options);
   if (t != NULL) {
     device_inhibited = 1;
