@@ -381,7 +381,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
                 break;
             case CUPS_CSPACE_SRGB:
                 icc_ref = embedSrgbProfile(pdf);
-                if (icc_ref.isNull())
+                if (!icc_ref.isNull())
                   dict["/ColorSpace"]=icc_ref;
                 else 
                   dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
