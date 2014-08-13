@@ -711,7 +711,7 @@ void free_job(jobparams_t *job)
 int main(int argc, char** argv)
 {
     int i;
-    int verbose = 0, quiet = 0;
+    int verbose = 0, quiet = 0, use_colord = 0;
     const char* str;
     char *p, *filename;
     const char *path;
@@ -797,9 +797,11 @@ int main(int argc, char** argv)
     }
 
     snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-#ifdef HAVE_DBUS
-    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-#endif
+    if (strcmp(tmpstr, "cups-(null)") != 0) {
+      device_inhibited = colord_get_inhibit_for_device_id (tmpstr);      
+      if (!device_inhibited)
+        use_colord = 1;
+    }
 
     /* CUPS calls foomatic-rip only with 5 or 6 positional parameters,
        not with named options, like for example "-p <string>". */
@@ -977,11 +979,11 @@ int main(int argc, char** argv)
                   _log("INFO: Using qualifer: '%s.%s.%s'\n",
                         qualifier[0], qualifier[1], qualifier[2]);
 
-#ifdef HAVE_DBUS                
-                  /* ask colord for the profile */
-                  icc_profile = colord_get_profile_for_device_id ((const char *) getenv("PRINTER"),
-                                                                  qualifier);
-#endif
+                  if (use_colord) {
+                    /* ask colord for the profile */
+                    icc_profile = colord_get_profile_for_device_id ((const char *) getenv("PRINTER"),
+                                                                    qualifier);
+                  }
 
                   /* fall back to PPD */
                   if (icc_profile == NULL) {

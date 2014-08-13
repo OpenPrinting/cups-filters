@@ -372,7 +372,7 @@ static void  handleRqeuiresPageRegion() {
 
 static void parseOpts(int argc, char **argv)
 {
-  int num_options = 0;
+  int num_options = 0, use_colord = 0;
   cups_option_t *options = 0;
   GooString profilePath;
   char tmpstr[1024];
@@ -464,29 +464,28 @@ static void parseOpts(int argc, char **argv)
     } else {
       /* rely on color manager */
       snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-#ifdef HAVE_DBUS
-      device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-#endif
+      if (strcmp(tmpstr, "cups-(null)") != 0) {
+        device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+        
+        if (!device_inhibited)
+          use_colord = 1;
+      }
     }
 
-    if (!device_inhibited) {
-#ifdef HAVE_DBUS
+    if (use_colord) {
       if (ppd) 
         qualifier = colord_get_qualifier_for_ppd(ppd);
       
       if (qualifier != NULL) 
          colorProfile = colord_get_profile_for_device_id (tmpstr,
                                                     (const char**) qualifier);
+    } else if (!device_inhibited)      
+      if (getColorProfilePath(ppd,&profilePath)) 
+        colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
 
-      /* fall back to the PPD */
-      if (colorProfile == NULL) 
-        if (getColorProfilePath(ppd,&profilePath)) 
-          colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
+    fprintf(stderr, "DEBUG: ICC Profile: %s\n", colorProfile ?
+        colorProfile : "None");
 
-      fprintf(stderr, "DEBUG: ICC Profile: %s\n", colorProfile ?
-          colorProfile : "None");
-#endif
-    }
   } else {
 #ifdef HAVE_CUPS_1_7
     pwgraster = 1;

@@ -689,10 +689,9 @@ int main(int argc, char **argv)
       device_inhibited = 1;
     } else {
       /* Check color manager status */
-      snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-#ifdef HAVE_DBUS
-      device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-#endif
+      snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));      
+      if (strcmp(tmpstr, "cups-(null)") != 0) 
+        device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
       // device_inhibited = isDeviceCm(tmpstr);
     }
 
