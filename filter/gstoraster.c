@@ -41,8 +41,8 @@ MIT Open Source License  -  http://www.opensource.org/
 #include <stdarg.h>
 #include <fcntl.h>
 #include <cups/raster.h>
+#include <cupsfilters/colormanager.h>
 #include <cupsfilters/raster.h>
-#include <cupsfilters/colord.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
@@ -454,6 +454,7 @@ out:
   return status;
 }
 
+#if 0
 static char *
 get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
 {
@@ -524,13 +525,14 @@ get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
 out:
   return icc_profile;
 }
+#endif
 
 int
 main (int argc, char **argv, char *envp[])
 {
   char buf[BUFSIZ];
   char *icc_profile = NULL;
-  char **qualifier = NULL;
+  /*char **qualifier = NULL;*/
   char *tmp;
   char tmpstr[1024];
   const char *t = NULL;
@@ -540,15 +542,13 @@ main (int argc, char **argv, char *envp[])
   GsDocType doc_type;
   gs_page_header h;
   int fd;
-  int device_inhibited;
-  int i;
+  int cm_disabled;
   int n;
   int num_options;
   int status = 1;
-  int use_colord = 0;
-  int cm_calibrate = 0;
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
+  cm_calibration_t cm_calibrate;
 #ifdef HAVE_CUPS_1_7
   int pwgraster;
 #endif /* HAVE_CUPS_1_7 */
@@ -623,41 +623,16 @@ main (int argc, char **argv, char *envp[])
     goto out;
   }
 
-  /* support colord and the "cm-calibration" option */
-  snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-  if (strcmp(tmpstr, "cups-(null)") != 0) {
-    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-    if (!device_inhibited)
-      use_colord = 1;
-  }
+  /*  Check status of color management in CUPS */
+  cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
 
-  t = cupsGetOption("cm-calibration", num_options, options);
-  if (t != NULL) {
-    device_inhibited = 1;
-    cm_calibrate = 1;
-  }
-  if (device_inhibited)
-    fprintf(stderr, "DEBUG: Device is inhibited, no CM performed\n");
-  if (ppd && use_colord)
-    qualifier = colord_get_qualifier_for_ppd (ppd);
-  if (qualifier != NULL) {
+  if (cm_calibrate == CM_CALIBRATION_ENABLED)
+    cm_disabled = 1;
+  else 
+    cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
 
-    fprintf(stderr, "DEBUG: PPD uses qualifier '%s.%s.%s'\n",
-            qualifier[0], qualifier[1], qualifier[2]);
-
-    icc_profile = colord_get_profile_for_device_id (tmpstr,
-                                                    (const char**) qualifier);
-
-    /* fall back to the PPD */
-    if (icc_profile == NULL)
-      icc_profile = get_ppd_icc_fallback (ppd, qualifier);
-
-    if(icc_profile != NULL)
-      fprintf(stderr, "DEBUG: Using ICC Profile '%s'\n", icc_profile);
-  }
-
-  fprintf(stderr, "DEBUG: Color Management: %s\n", cm_calibrate ?
-          "Calibration Mode/Enabled" : "Calibration Mode/Off");
+  if (!cm_disabled)
+    cmGetPrinterIccProfile(getenv("PRINTER"), &icc_profile, ppd);
 
   /* Ghostscript parameters */
   gs_args = cupsArrayNew(NULL, NULL);
@@ -678,7 +653,7 @@ main (int argc, char **argv, char *envp[])
   cupsArrayAdd(gs_args, strdup("-dNOINTERPOLATE"));
   if (doc_type == GS_DOC_TYPE_PS)
     cupsArrayAdd(gs_args, strdup("-dNOMEDIAATTRS"));
-  if (device_inhibited)
+  if (cm_disabled)
     cupsArrayAdd(gs_args, strdup("-dUseFastColor"));
   cupsArrayAdd(gs_args, strdup("-sDEVICE=cups"));
   cupsArrayAdd(gs_args, strdup("-sstdout=%stderr"));
@@ -765,11 +740,6 @@ main (int argc, char **argv, char *envp[])
 out:
   if (fp)
     fclose(fp);
-  if (qualifier != NULL) {
-    for (i=0; qualifier[i] != NULL; i++)
-      free(qualifier[i]);
-    free(qualifier);
-  }
   if (gs_args) {
     while ((tmp = cupsArrayFirst(gs_args)) != NULL) {
       cupsArrayRemove(gs_args,tmp);

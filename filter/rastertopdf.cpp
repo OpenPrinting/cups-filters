@@ -32,7 +32,7 @@
 #include <signal.h>
 #include <cups/cups.h>
 #include <cups/raster.h>
-#include <cupsfilters/colord.h>
+#include <cupsfilters/colormanager.h>
 //#include <cupsfilters/image.h>
 
 #include <arpa/inet.h>   // ntohl
@@ -88,8 +88,8 @@
 #define iprintf(format, ...) fprintf(stderr, "INFO: (" PROGRAM ") " format, __VA_ARGS__)
 
 cmsHPROFILE         colorProfile = NULL;
-int                 device_inhibited = 0;
-bool                cm_calibrate = false;
+int                 cm_disabled = 0;
+cm_calibration_t    cm_calibrate;
 
 #ifdef USE_LCMS1
 static int lcmsErrorHandler(int ErrorCode, const char *ErrorText)
@@ -110,15 +110,6 @@ void die(const char * str)
     fprintf(stderr, "ERROR: (" PROGRAM ") %s\n", str);
     exit(1);
 }
-
-// Commonly-used white point and gamma numbers
-double adobergb_wp[3] = {0.95045471, 1.0, 1.08905029};
-double sgray_wp[3] = {0.9505, 1, 1.0890};
-double adobergb_gamma[3] = {2.2, 2.2, 2.2};
-double sgray_gamma[1] = {2.2};
-double adobergb_matrix[9] = {0.60974121, 0.31111145, 0.01947021, 
-                             0.20527649, 0.62567139, 0.06086731, 
-                             0.14918518, 0.06321716, 0.74456785};
 
 
 //------------- PDF ---------------
@@ -330,7 +321,6 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     QPDFObjectHandle ret = QPDFObjectHandle::newStream(&pdf);
 
     QPDFObjectHandle icc_ref;
-    int isProfileEmbedded = 0;
 
     std::map<std::string,QPDFObjectHandle> dict;
 
@@ -340,14 +330,12 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     dict["/Height"]=QPDFObjectHandle::newInteger(height);
     dict["/BitsPerComponent"]=QPDFObjectHandle::newInteger(bpc);
 
-    if (colorProfile != NULL && !device_inhibited) {
+    if (colorProfile != NULL && !cm_disabled) {
       icc_ref = embedIccProfile(pdf);
 
-      if (!icc_ref.isNull()) {
+      if (!icc_ref.isNull())
         dict["/ColorSpace"]=icc_ref;
-        isProfileEmbedded = 1;
-      }
-    } else if (!device_inhibited) {
+    } else if (!cm_disabled) {
         switch (cs) {
             case CUPS_CSPACE_DEVICE1:
             case CUPS_CSPACE_DEVICE2:
@@ -371,7 +359,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
                 break;
             case CUPS_CSPACE_SW:                
-                dict["/ColorSpace"]=getCalGrayArray(sgray_wp, sgray_gamma);
+                dict["/ColorSpace"]=getCalGrayArray(cmWhitePointSGray(), cmGammaSGray());
                 break;
             case CUPS_CSPACE_CMYK:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
@@ -387,13 +375,13 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
                   dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
                 break;
             case CUPS_CSPACE_ADOBERGB:
-                dict["/ColorSpace"]=getCalRGBArray(adobergb_wp, adobergb_gamma, adobergb_matrix);
+                dict["/ColorSpace"]=getCalRGBArray(cmWhitePointAdobeRgb(), cmGammaAdobeRgb(), cmMatrixAdobeRgb());
                 break;
             default:
                 fputs("DEBUG: Color space not supported.\n", stderr); 
                 return QPDFObjectHandle();
         }
-    } else if (device_inhibited) {
+    } else if (cm_disabled) {
         switch(cs) {
           case CUPS_CSPACE_K:
           case CUPS_CSPACE_SW:
@@ -523,6 +511,7 @@ int close_pdf_file(struct pdf_info * info)
         finish_page(info); // any active
 
         QPDFWriter output(info->pdf,NULL);
+//        output.setMinimumPDFVersion("1.4");
         output.write();
     } catch (...) {
         return 1;
@@ -668,7 +657,6 @@ int main(int argc, char **argv)
     int			num_options;	/* Number of options */
     const char*         profile_name;	/* IPP Profile Name */
     cups_option_t	*options;	/* Options */
-    char                tmpstr[1024];   /* Printer name */
 
     // Make sure status messages are not buffered...
     setbuf(stderr, NULL);
@@ -684,16 +672,12 @@ int main(int argc, char **argv)
     num_options = cupsParseOptions(argv[5], 0, &options);  
 
     /* support the CUPS "cm-calibration" option */ 
-    if (cupsGetOption("cm-calibration", num_options, options) != NULL) {
-      cm_calibrate = true;
-      device_inhibited = 1;
-    } else {
-      /* Check color manager status */
-      snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));      
-      if (strcmp(tmpstr, "cups-(null)") != 0) 
-        device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-      // device_inhibited = isDeviceCm(tmpstr);
-    }
+    cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+
+    if (cm_calibrate == CM_CALIBRATION_ENABLED)
+      cm_disabled = 1;
+    else
+      cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
 
     // Open the PPD file...
     ppd = ppdOpenFile(getenv("PPD"));
@@ -737,23 +721,19 @@ int main(int argc, char **argv)
     if (create_pdf_file(&pdf) != 0)
       die("Unable to create PDF file");
 
-    fprintf(stderr, "DEBUG: Color Management: %s\n", cm_calibrate ?
-           "Calibration Mode/Enabled" : "Calibration Mode/Off");
-
     while (cupsRasterReadHeader2(ras, &header))
     {
       // Write a status message with the page number
       Page ++;
       fprintf(stderr, "INFO: Starting page %d.\n", Page);
 
-      if (!device_inhibited) {
+      if (!cm_disabled) {
           // Use "profile=profile_name.icc" to embed 'profile_name.icc' into the PDF
           // for testing.
           if ((profile_name = cupsGetOption("profile", num_options, options)) != NULL) 
-            setProfile(profile_name);          
-          
-          fprintf(stderr, "DEBUG: ICC Profile: %s\n", !colorProfile ?
-          "None" : profile_name);
+            setProfile(profile_name);
+          if (colorProfile != NULL)       
+            fprintf(stderr, "DEBUG: User ICC Profile: %s\n", profile_name);
       }
       // Add a new page to PDF file
       if (add_pdf_page(&pdf, Page, header.cupsWidth, header.cupsHeight,

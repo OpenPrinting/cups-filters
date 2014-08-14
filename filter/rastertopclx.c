@@ -29,8 +29,8 @@
  * Include necessary headers...
  */
 
+#include <cupsfilters/colormanager.h>
 #include <cupsfilters/driver.h>
-#include <cupsfilters/colord.h>
 #include "pcl-common.h"
 #include <signal.h>
 
@@ -119,9 +119,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 {
   int		i;			/* Temporary/looping var */
   int		plane;			/* Current plane */
-  int		cm_calibrate;		/* Color calibration mode */
-  int		device_inhibited;	/* Device Color Inhibited */
-  char          tmpstr[1024];           /* Printer String */
+  int		cm_disabled;	/* Device Color Inhibited */
   char		s[255];			/* Temporary value */
   const char	*colormodel;		/* Color model string */
   char		resolution[PPD_MAX_NAME],
@@ -137,7 +135,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 		  0.0,
 		  1.0
 		};
-
+  cm_calibration_t cm_calibrate;	/* Color calibration mode */
 
  /*
   * Debug info...
@@ -235,8 +233,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	break;
   }  
 
-  cm_calibrate = 0;
-  device_inhibited = 0;
+  cm_disabled = 0;
 
   if (header->HWResolution[0] != header->HWResolution[1])
     snprintf(resolution, sizeof(resolution), "%dx%ddpi",
@@ -349,17 +346,15 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     fprintf(stderr, "DEBUG: MediaType = %s\n", header->MediaType);
     fprintf(stderr, "DEBUG: Resolution = %s\n", resolution);
 
-    snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-    if (strcmp(tmpstr, "cups-(null)") != 0) 
-      device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-
     /* support the "cm-calibration" option */
-    if ((cupsGetOption("cm-calibration", num_options, options)) != NULL) {
-      cm_calibrate = 1;
-      device_inhibited = 1;
-    }
+    cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
 
-    if (ppd && !device_inhibited)
+    if (cm_calibrate == CM_CALIBRATION_ENABLED)
+      cm_disabled = 1;
+    else
+      cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
+
+    if (ppd && !cm_disabled)
     {
       if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
 	  header->cupsColorSpace == CUPS_CSPACE_W)
@@ -367,9 +362,6 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution);
     }
-
-    fprintf(stderr, "DEBUG: Color Management: %s\n", cm_calibrate ?
-            "Calibration Mode/Enabled" : "Calibration Mode/Off");
 
     if (RGB)
       fputs("DEBUG: Loaded RGB separation from PPD.\n", stderr);

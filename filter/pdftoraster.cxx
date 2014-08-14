@@ -53,7 +53,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <cups/raster.h>
 #include <cupsfilters/image.h>
 #include <cupsfilters/raster.h>
-#include <cupsfilters/colord.h>
+#include <cupsfilters/colormanager.h>
 #include <splash/SplashTypes.h>
 #include <splash/SplashBitmap.h>
 #include <strings.h>
@@ -184,13 +184,6 @@ namespace {
     {3,11,1,9},
     {15,7,13,5} 
   };
-  cmsCIExyYTRIPLE adobergb_matrix = {
-    {0.60974121, 0.31111145, 0.01947021}, 
-    {0.20527649, 0.62567139, 0.06086731}, 
-    {0.14918518, 0.06321716, 0.74456785}
-  };
-  cmsCIExyY adobergb_wp = {0.95045471, 1.0, 1.08905029};
-  cmsCIExyY sgray_wp = {0.9505, 1.0, 1.0890};
 
   /* for color profiles */
   cmsHPROFILE colorProfile = NULL;
@@ -199,7 +192,50 @@ namespace {
   cmsCIEXYZ D65WhitePoint;
   int renderingIntent = INTENT_PERCEPTUAL;
   int device_inhibited = 0;
-  bool cm_calibrate = false;
+  cm_calibration_t cm_calibrate;
+}
+
+cmsCIExyY adobergb_wp()
+{
+    double * xyY = cmWhitePointAdobeRgb();
+    cmsCIExyY wp;
+
+    wp.x = xyY[0];
+    wp.y = xyY[1];
+    wp.Y = xyY[2];
+
+    return wp;
+}
+
+cmsCIExyY sgray_wp()
+{
+    double * xyY = cmWhitePointSGray();
+    cmsCIExyY wp;
+
+    wp.x = xyY[0];
+    wp.y = xyY[1];
+    wp.Y = xyY[2];
+
+    return wp;
+}
+
+cmsCIExyYTRIPLE adobergb_matrix()
+{
+    cmsCIExyYTRIPLE m;
+
+    double * matrix = cmMatrixAdobeRgb();
+    
+    m.Red.x = matrix[0];
+    m.Red.y = matrix[1];
+    m.Red.Y = matrix[2];
+    m.Green.x = matrix[3];
+    m.Green.y = matrix[4];
+    m.Green.Y = matrix[5];
+    m.Blue.x = matrix[6];
+    m.Blue.y = matrix[7];
+    m.Blue.Y = matrix[8];
+
+    return m;
 }
 
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
@@ -251,6 +287,7 @@ static void lcmsErrorHandler(cmsContext contextId, cmsUInt32Number ErrorCode,
 }
 #endif
 
+#if 0
 static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 {
     // get color profile path
@@ -333,6 +370,7 @@ static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
     }
     return gFalse;
 }
+#endif
 
 static void  handleRqeuiresPageRegion() {
   ppd_choice_t *mf;
@@ -372,11 +410,10 @@ static void  handleRqeuiresPageRegion() {
 
 static void parseOpts(int argc, char **argv)
 {
-  int num_options = 0, use_colord = 0;
+  int num_options = 0;
   cups_option_t *options = 0;
   GooString profilePath;
-  char tmpstr[1024];
-  char **qualifier = NULL;
+  char * profile = 0;
   ppd_attr_t *attr;
 
   if (argc < 6 || argc > 7) {
@@ -458,35 +495,17 @@ static void parseOpts(int argc, char **argv)
     }
 
     /* support the CUPS "cm-calibration" option */
-    if (cupsGetOption("cm-calibration", num_options, options) != NULL) {
-      cm_calibrate = true;
+    cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+
+    if (cm_calibrate == CM_CALIBRATION_ENABLED)
       device_inhibited = 1;
-    } else {
-      /* rely on color manager */
-      snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-      if (strcmp(tmpstr, "cups-(null)") != 0) {
-        device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-        
-        if (!device_inhibited)
-          use_colord = 1;
-      }
-    }
-
-    if (use_colord) {
-      if (ppd) 
-        qualifier = colord_get_qualifier_for_ppd(ppd);
-      
-      if (qualifier != NULL) 
-         colorProfile = colord_get_profile_for_device_id (tmpstr,
-                                                    (const char**) qualifier);
-    } 
-    
-    if (!device_inhibited && colorProfile == NULL)
-      if (getColorProfilePath(ppd,&profilePath)) 
-        colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
-
-    fprintf(stderr, "DEBUG: ICC Profile: %s\n", colorProfile ?
-        colorProfile : "None");
+    else 
+      device_inhibited = cmIsPrinterCmDisabled(getenv("PRINTER"));
+       
+    if (!device_inhibited) 
+      cmGetPrinterIccProfile(getenv("PRINTER"), &profile, ppd);
+    if (profile != NULL)
+      colorProfile = cmsOpenProfileFromFile(profile,"r");    
 
   } else {
 #ifdef HAVE_CUPS_1_7
@@ -1325,6 +1344,9 @@ static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
 /* select convertLine function */
 static void selectConvertFunc(cups_raster_t *raster)
 {
+   cmsCIExyY wp;
+   cmsCIExyYTRIPLE primaries;
+
   /* select convertLine function */
 
   if ((colorProfile == NULL || popplerColorProfile == colorProfile) 
@@ -1352,6 +1374,7 @@ static void selectConvertFunc(cups_raster_t *raster)
   }
   allocLineBuf = true;
 
+  // FIXME needs cleanup
   if (header.cupsColorSpace == CUPS_CSPACE_ADOBERGB) {
 #if USE_LCMS1
     cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
@@ -1363,7 +1386,9 @@ static void selectConvertFunc(cups_raster_t *raster)
     Gamma3[0] = Gamma3[1] = Gamma3[2] = Gamma;
 
     // Build AdobeRGB profile
-    colorProfile = cmsCreateRGBProfile(&adobergb_wp, &adobergb_matrix, Gamma3);
+    primaries = adobergb_matrix();
+    wp = adobergb_wp();
+    colorProfile = cmsCreateRGBProfile(&wp, &primaries, Gamma3);
   } else if (header.cupsColorSpace == CUPS_CSPACE_SW) {   
 #if USE_LCMS1
     cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
@@ -1371,8 +1396,11 @@ static void selectConvertFunc(cups_raster_t *raster)
     cmsToneCurve * Gamma = cmsBuildGamma(NULL, 2.2);
 #endif 
     // Build sGray profile
-    colorProfile = cmsCreateGrayProfile(&sgray_wp, Gamma);
+    wp = sgray_wp();
+    colorProfile = cmsCreateGrayProfile(&wp, Gamma);
   }
+
+  if (colorProfile == NULL) return;
 
   if (colorProfile != NULL && popplerColorProfile != colorProfile 
       && !device_inhibited) {
@@ -1898,9 +1926,6 @@ int main(int argc, char *argv[]) {
   cmsSetLogErrorHandler(lcmsErrorHandler);
   globalParams = new GlobalParams();
   parseOpts(argc, argv);
-
-  fprintf(stderr, "DEBUG: Color Management: %s\n", cm_calibrate ?
-          "Calibration Mode/Enabled" : "Calibration Mode/Off");
 
   if (argc == 6) {
     /* stdin */
