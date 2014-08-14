@@ -326,7 +326,8 @@ colord_get_profile_for_device_id (const char *device_id,
   /* connect to system bus */
   con = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
   if (con == NULL) {
-    fprintf(stderr, "ERROR: Failed to connect to system bus\n");
+    // If D-Bus is not reachable, gracefully leave and ignore error
+    //fprintf(stderr, "ERROR: Failed to connect to system bus\n");
     goto out;
   }
 
@@ -422,7 +423,8 @@ colord_get_inhibit_for_device_id (const char *device_id)
   /* connect to system bus */
   con = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
   if (con == NULL) {
-    fprintf(stderr, "ERROR: Failed to connect to system bus\n");
+    // If D-Bus is not reachable, gracefully leave and ignore error
+    //fprintf(stderr, "ERROR: Failed to connect to system bus\n");
     goto out;
   }
 

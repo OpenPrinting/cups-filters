@@ -545,6 +545,7 @@ main (int argc, char **argv, char *envp[])
   int n;
   int num_options;
   int status = 1;
+  int use_colord = 0;
   int cm_calibrate = 0;
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
@@ -624,7 +625,12 @@ main (int argc, char **argv, char *envp[])
 
   /* support colord and the "cm-calibration" option */
   snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-  device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+  if (strcmp(tmpstr, "cups-(null)") != 0) {
+    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+    if (!device_inhibited)
+      use_colord = 1;
+  }
+
   t = cupsGetOption("cm-calibration", num_options, options);
   if (t != NULL) {
     device_inhibited = 1;
@@ -632,14 +638,13 @@ main (int argc, char **argv, char *envp[])
   }
   if (device_inhibited)
     fprintf(stderr, "DEBUG: Device is inhibited, no CM performed\n");
-  if (ppd)
+  if (ppd && use_colord)
     qualifier = colord_get_qualifier_for_ppd (ppd);
   if (qualifier != NULL) {
 
     fprintf(stderr, "DEBUG: PPD uses qualifier '%s.%s.%s'\n",
             qualifier[0], qualifier[1], qualifier[2]);
 
-    snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
     icc_profile = colord_get_profile_for_device_id (tmpstr,
                                                     (const char**) qualifier);
 

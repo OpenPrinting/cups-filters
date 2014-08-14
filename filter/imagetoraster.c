@@ -498,7 +498,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     resolution = "";
 
   snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-  device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+
+  if (strcmp(tmpstr, "cups-(null)") != 0) 
+    device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
 
   /* support the "cm-calibration" option */
   if ((cupsGetOption("cm-calibration", num_options, options)) != NULL) {

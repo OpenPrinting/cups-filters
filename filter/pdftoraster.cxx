@@ -190,7 +190,7 @@ namespace {
     {0.14918518, 0.06321716, 0.74456785}
   };
   cmsCIExyY adobergb_wp = {0.95045471, 1.0, 1.08905029};
-  cmsCIExyY sgray_wp = {0.9420288, 1.0, 0.82490540};
+  cmsCIExyY sgray_wp = {0.9505, 1.0, 1.0890};
 
   /* for color profiles */
   cmsHPROFILE colorProfile = NULL;
@@ -372,7 +372,7 @@ static void  handleRqeuiresPageRegion() {
 
 static void parseOpts(int argc, char **argv)
 {
-  int num_options = 0;
+  int num_options = 0, use_colord = 0;
   cups_option_t *options = 0;
   GooString profilePath;
   char tmpstr[1024];
@@ -464,25 +464,30 @@ static void parseOpts(int argc, char **argv)
     } else {
       /* rely on color manager */
       snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-      device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+      if (strcmp(tmpstr, "cups-(null)") != 0) {
+        device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
+        
+        if (!device_inhibited)
+          use_colord = 1;
+      }
     }
 
-    if (!device_inhibited) {
+    if (use_colord) {
       if (ppd) 
         qualifier = colord_get_qualifier_for_ppd(ppd);
       
       if (qualifier != NULL) 
          colorProfile = colord_get_profile_for_device_id (tmpstr,
                                                     (const char**) qualifier);
+    } 
+    
+    if (!device_inhibited && colorProfile == NULL)
+      if (getColorProfilePath(ppd,&profilePath)) 
+        colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
 
-      /* fall back to the PPD */
-      if (colorProfile == NULL) 
-        if (getColorProfilePath(ppd,&profilePath)) 
-          colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
+    fprintf(stderr, "DEBUG: ICC Profile: %s\n", colorProfile ?
+        colorProfile : "None");
 
-      fprintf(stderr, "DEBUG: ICC Profile: %s\n", colorProfile ?
-          colorProfile : "None");
-    }
   } else {
 #ifdef HAVE_CUPS_1_7
     pwgraster = 1;
