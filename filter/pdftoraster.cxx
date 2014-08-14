@@ -1400,8 +1400,6 @@ static void selectConvertFunc(cups_raster_t *raster)
     colorProfile = cmsCreateGrayProfile(&wp, Gamma);
   }
 
-  if (colorProfile == NULL) return;
-
   if (colorProfile != NULL && popplerColorProfile != colorProfile 
       && !device_inhibited) {
     unsigned int bytes;
