@@ -30,6 +30,7 @@
  */
 
 #include <cupsfilters/driver.h>
+#include <cupsfilters/colord.h>
 #include "pcl-common.h"
 #include <signal.h>
 
