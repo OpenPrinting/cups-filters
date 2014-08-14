@@ -479,7 +479,9 @@ static void parseOpts(int argc, char **argv)
       if (qualifier != NULL) 
          colorProfile = colord_get_profile_for_device_id (tmpstr,
                                                     (const char**) qualifier);
-    } else if (!device_inhibited)      
+    } 
+    
+    if (!device_inhibited && colorProfile == NULL)
       if (getColorProfilePath(ppd,&profilePath)) 
         colorProfile = cmsOpenProfileFromFile(profilePath.getCString(),"r");
 

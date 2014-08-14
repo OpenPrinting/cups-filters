@@ -627,7 +627,8 @@ main (int argc, char **argv, char *envp[])
   snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
   if (strcmp(tmpstr, "cups-(null)") != 0) {
     device_inhibited = colord_get_inhibit_for_device_id (tmpstr);
-    use_colord = 1;
+    if (!device_inhibited)
+      use_colord = 1;
   }
 
   t = cupsGetOption("cm-calibration", num_options, options);
