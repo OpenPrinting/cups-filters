@@ -82,6 +82,7 @@ EXTRA_DIST += $(pkgcharset_DATA)
 pkgfiltersincludedir = $(includedir)/cupsfilters
 pkgfiltersinclude_DATA = \
 	cupsfilters/colord.h \
+	cupsfilters/colormanager.h \
 	cupsfilters/driver.h \
 	cupsfilters/image.h \
 	cupsfilters/raster.h
@@ -114,6 +115,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/check.c \
 	cupsfilters/cmyk.c \
 	cupsfilters/colord.c \
+	cupsfilters/colormanager.c \
 	cupsfilters/dither.c \
 	cupsfilters/image.c \
 	cupsfilters/image-bmp.c \
