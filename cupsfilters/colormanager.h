@@ -37,10 +37,21 @@ cm_calibration_t    cmGetCupsColorCalibrateMode       (cups_option_t* /*options*
                                                              int /*num_options*/);
 
 extern int          cmGetPrinterIccProfile            (const char*  /*printer_id*/,
-                                                       const char** /*icc_profile*/,
+                                                       char** /*icc_profile*/,
                                                        ppd_file_t*  /*ppd*/);
 
 extern int          cmIsPrinterCmDisabled             (const char* /*printer_id*/);
+
+/* Return specific calibration data */
+
+extern double*      cmGammaAdobeRgb                   (void);
+extern double*      cmGammaSGray                      (void);
+
+extern double*      cmWhitePointAdobeRgb              (void);
+extern double*      cmWhitePointSGray                 (void);
+
+extern double*      cmMatrixAdobeRgb                  (void);
+
 
 
 #  ifdef __cplusplus
