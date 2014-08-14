@@ -547,6 +547,7 @@ imagetopdf_LDADD = \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
+	-lm \
 	libcupsfilters.la
 
 imagetoraster_SOURCES = \
@@ -560,6 +561,7 @@ imagetoraster_CFLAGS = \
 	-I$(srcdir)/cupsfilters/
 imagetoraster_LDADD = \
 	$(CUPS_LIBS) \
+	-lm \
 	libcupsfilters.la
 
 urftopdf_SOURCES = \
