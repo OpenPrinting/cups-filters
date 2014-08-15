@@ -120,7 +120,8 @@ struct pdf_info
       : pagecount(0),
         width(0),height(0),
         line_bytes(0),
-        bpp(0), bpc(0), color_space(CUPS_CSPACE_K),
+        bpp(0), bpc(0), render_intent(""),
+        color_space(CUPS_CSPACE_K),
         page_width(0),page_height(0)
     {
     }
@@ -133,6 +134,7 @@ struct pdf_info
     unsigned line_bytes;
     unsigned bpp;
     unsigned bpc;
+    std::string render_intent;
     cups_cspace_t color_space;
     PointerHolder<Buffer> page_data;
     double page_width,page_height;
@@ -316,7 +318,8 @@ QPDFObjectHandle getCalGrayArray(double wp[3], double gamma[1])
     return ret;
 }
 
-QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned width, unsigned height, cups_cspace_t cs, unsigned bpc)
+QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned width, 
+                           unsigned height, std::string render_intent, cups_cspace_t cs, unsigned bpc)
 {
     QPDFObjectHandle ret = QPDFObjectHandle::newStream(&pdf);
 
@@ -330,6 +333,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     dict["/Height"]=QPDFObjectHandle::newInteger(height);
     dict["/BitsPerComponent"]=QPDFObjectHandle::newInteger(bpc);
 
+    /* Write "/ColorSpace" dictionary based on raster input */
     if (colorProfile != NULL && !cm_disabled) {
       icc_ref = embedIccProfile(pdf);
 
@@ -417,6 +421,20 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     } else
         return QPDFObjectHandle();
 
+    if (!cm_disabled) {
+      // Write rendering intent into the PDF based on raster settings
+      if (render_intent == "Perceptual") {
+        dict["/Intent"]=QPDFObjectHandle::newName("/Perceptual");
+      } else if (render_intent == "Absolute") {
+        dict["/Intent"]=QPDFObjectHandle::newName("/AbsoluteColorimetric");
+      } else if (render_intent == "Relative") {
+        dict["/Intent"]=QPDFObjectHandle::newName("/RelativeColorimetric");
+      } else if (render_intent == "Saturation") {
+        dict["/Intent"]=QPDFObjectHandle::newName("/Saturation");
+      }
+    }
+    
+
     ret.replaceDict(QPDFObjectHandle::newDictionary(dict));
 
 #ifdef PRE_COMPRESS
@@ -442,7 +460,7 @@ void finish_page(struct pdf_info * info)
     if(!info->page_data.getPointer())
         return;
 
-    QPDFObjectHandle image = makeImage(info->pdf, info->page_data, info->width, info->height, info->color_space, info->bpc);
+    QPDFObjectHandle image = makeImage(info->pdf, info->page_data, info->width, info->height, info->render_intent, info->color_space, info->bpc);
     if(!image.isInitialized()) die("Unable to load image data");
 
     // add it
@@ -460,7 +478,7 @@ void finish_page(struct pdf_info * info)
 }
 
 int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
-		 unsigned height, int bpp, int bpc, int bpl,
+		 unsigned height, int bpp, int bpc, int bpl, std::string render_intent,
 		 cups_cspace_t color_space, unsigned xdpi, unsigned ydpi)
 {
     try {
@@ -471,6 +489,7 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
         info->line_bytes = bpl;
         info->bpp = bpp;
         info->bpc = bpc;
+        info->render_intent = render_intent;
 	info->color_space = color_space;
 
         if (info->height > (std::numeric_limits<unsigned>::max() / info->line_bytes)) {
@@ -735,11 +754,12 @@ int main(int argc, char **argv)
           if (colorProfile != NULL)       
             fprintf(stderr, "DEBUG: User ICC Profile: %s\n", profile_name);
       }
+
       // Add a new page to PDF file
       if (add_pdf_page(&pdf, Page, header.cupsWidth, header.cupsHeight,
-		       header.cupsBitsPerPixel, header.cupsBitsPerColor,
-		       header.cupsBytesPerLine,
-		       header.cupsColorSpace, header.HWResolution[0],
+		       header.cupsBitsPerPixel, header.cupsBitsPerColor, 
+		       header.cupsBytesPerLine, header.cupsRenderingIntent, 
+                       header.cupsColorSpace, header.HWResolution[0],
 		       header.HWResolution[1]) != 0)
 	die("Unable to start new PDF page");
 
