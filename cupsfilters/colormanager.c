@@ -24,6 +24,7 @@ double sgray_gamma[1] = {2.2};
 double adobergb_matrix[9] = {0.60974121, 0.20527649, 0.14918518, 
                              0.31111145, 0.62567139, 0.06321716, 
                              0.01947021, 0.06086731, 0.74456787};
+double blackpoint_default[3] = {0.0, 0.0, 0.0};
 /*
  * Public functions
  */
@@ -100,6 +101,11 @@ double* cmWhitePointSGray(void)
 double* cmMatrixAdobeRgb(void)
 {
     return adobergb_matrix;
+}
+
+double* cmBlackPointDefault(void)
+{
+    return blackpoint_default;
 }
 
 /*

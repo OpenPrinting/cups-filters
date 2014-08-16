@@ -51,6 +51,7 @@ extern double*      cmWhitePointAdobeRgb              (void);
 extern double*      cmWhitePointSGray                 (void);
 
 extern double*      cmMatrixAdobeRgb                  (void);
+extern double*      cmBlackPointDefault               (void);
 
 
 

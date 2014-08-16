@@ -255,7 +255,7 @@ Output:
   ]        
 */
 QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[], 
-                                     double gamma[], double matrix[])
+                                     double gamma[], double matrix[], double bp[])
 {    
     // Check for invalid input
     if ((!strcmp("/CalGray", color_space) && matrix != NULL) ||
@@ -267,10 +267,14 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     std::string colorSpaceArrayString = "";
 
     char gamma_str[128];
+    char bp_str[256];
     char wp_str[256];
     char matrix_str[512];
 
     // Convert numbers into string data for /Gamma, /WhitePoint, and/or /Matrix
+
+    snprintf(wp_str, sizeof(wp_str), "/WhitePoint [%g %g %g]", 
+                wp[0], wp[1], wp[2]); 
 
     if (!strcmp("/CalGray", color_space) && gamma != NULL)
       snprintf(gamma_str, sizeof(gamma_str), "/Gamma %g", 
@@ -281,11 +285,11 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     else
       gamma_str[0] = '\0';
     
-    if (wp != NULL)
-      snprintf(wp_str, sizeof(wp_str), "/WhitePoint [%g %g %g]", 
-                  wp[0], wp[1], wp[2]); 
+    if (bp != NULL)
+      snprintf(bp_str, sizeof(bp_str), "/BlackPoint [%g %g %g]", 
+                  bp[0], bp[1], bp[2]); 
     else
-      wp_str[0] = '\0';
+      bp_str[0] = '\0';
 
 
     if (!strcmp("/CalRGB", color_space) && matrix != NULL) {
@@ -296,9 +300,13 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     } else
       matrix_str[0] = '\0';
 
+    if (bp != NULL)
+      snprintf(wp_str, sizeof(wp_str), "/WhitePoint [%g %g %g]", 
+                  wp[0], wp[1], wp[2]); 
+
     // Write array string
     colorSpaceArrayString = "[" + csString + " <<" 
-                            + gamma_str + " " + wp_str + " " + matrix_str
+                            + gamma_str + " " + wp_str + " " + matrix_str + " " + bp_str
                             + " >>]";
                            
     ret = QPDFObjectHandle::parse(colorSpaceArrayString);
@@ -306,15 +314,15 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     return ret;
 }
 
-QPDFObjectHandle getCalRGBArray(double wp[3], double gamma[3], double matrix[9])
+QPDFObjectHandle getCalRGBArray(double wp[3], double gamma[3], double matrix[9], double bp[3])
 {
-    QPDFObjectHandle ret = getCalibrationArray("/CalRGB", wp, gamma, matrix);
+    QPDFObjectHandle ret = getCalibrationArray("/CalRGB", wp, gamma, matrix, bp);
     return ret;
 }
 
-QPDFObjectHandle getCalGrayArray(double wp[3], double gamma[1])
+QPDFObjectHandle getCalGrayArray(double wp[3], double gamma[1], double bp[3])
 {
-    QPDFObjectHandle ret = getCalibrationArray("/CalGray", wp, gamma, 0);
+    QPDFObjectHandle ret = getCalibrationArray("/CalGray", wp, gamma, 0, bp);
     return ret;
 }
 
@@ -325,6 +333,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
 
     QPDFObjectHandle icc_ref;
 
+    int use_blackpoint = 0;
     std::map<std::string,QPDFObjectHandle> dict;
 
     dict["/Type"]=QPDFObjectHandle::newName("/XObject");
@@ -332,6 +341,23 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
     dict["/Width"]=QPDFObjectHandle::newInteger(width);
     dict["/Height"]=QPDFObjectHandle::newInteger(height);
     dict["/BitsPerComponent"]=QPDFObjectHandle::newInteger(bpc);
+
+    if (!cm_disabled) {
+      // Write rendering intent into the PDF based on raster settings
+      if (render_intent == "Perceptual") {
+        dict["/Intent"]=QPDFObjectHandle::newName("/Perceptual");
+      } else if (render_intent == "Absolute") {
+        dict["/Intent"]=QPDFObjectHandle::newName("/AbsoluteColorimetric");
+      } else if (render_intent == "Relative") {
+        dict["/Intent"]=QPDFObjectHandle::newName("/RelativeColorimetric");
+      } else if (render_intent == "Saturation") {
+        dict["/Intent"]=QPDFObjectHandle::newName("/Saturation");
+      } else if (render_intent == "RelativeBpc") {
+        /* Enable blackpoint compensation */
+        dict["/Intent"]=QPDFObjectHandle::newName("/RelativeColorimetric");
+        use_blackpoint = 1;
+      }
+    }
 
     /* Write "/ColorSpace" dictionary based on raster input */
     if (colorProfile != NULL && !cm_disabled) {
@@ -362,8 +388,12 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
             case CUPS_CSPACE_K:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
                 break;
-            case CUPS_CSPACE_SW:                
-                dict["/ColorSpace"]=getCalGrayArray(cmWhitePointSGray(), cmGammaSGray());
+            case CUPS_CSPACE_SW:
+                if (use_blackpoint)
+                  dict["/ColorSpace"]=getCalGrayArray(cmWhitePointSGray(), cmGammaSGray(), 
+                                                      cmBlackPointDefault());
+                else
+                  dict["/ColorSpace"]=getCalGrayArray(cmWhitePointSGray(), cmGammaSGray(), 0);
                 break;
             case CUPS_CSPACE_CMYK:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
@@ -379,7 +409,12 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
                   dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
                 break;
             case CUPS_CSPACE_ADOBERGB:
-                dict["/ColorSpace"]=getCalRGBArray(cmWhitePointAdobeRgb(), cmGammaAdobeRgb(), cmMatrixAdobeRgb());
+                if (use_blackpoint)
+                  dict["/ColorSpace"]=getCalRGBArray(cmWhitePointAdobeRgb(), cmGammaAdobeRgb(), 
+                                                         cmMatrixAdobeRgb(), cmBlackPointDefault());
+                else
+                  dict["/ColorSpace"]=getCalRGBArray(cmWhitePointAdobeRgb(), 
+                                                     cmGammaAdobeRgb(), cmMatrixAdobeRgb(), 0);
                 break;
             default:
                 fputs("DEBUG: Color space not supported.\n", stderr); 
@@ -420,20 +455,6 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
         }
     } else
         return QPDFObjectHandle();
-
-    if (!cm_disabled) {
-      // Write rendering intent into the PDF based on raster settings
-      if (render_intent == "Perceptual") {
-        dict["/Intent"]=QPDFObjectHandle::newName("/Perceptual");
-      } else if (render_intent == "Absolute") {
-        dict["/Intent"]=QPDFObjectHandle::newName("/AbsoluteColorimetric");
-      } else if (render_intent == "Relative") {
-        dict["/Intent"]=QPDFObjectHandle::newName("/RelativeColorimetric");
-      } else if (render_intent == "Saturation") {
-        dict["/Intent"]=QPDFObjectHandle::newName("/Saturation");
-      }
-    }
-    
 
     ret.replaceDict(QPDFObjectHandle::newDictionary(dict));
 
