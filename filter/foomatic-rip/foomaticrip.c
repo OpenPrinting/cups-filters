@@ -43,7 +43,7 @@
 #include <math.h>
 #include <signal.h>
 #include <pwd.h>
-#include <cupsfilters/colord.h>
+#include <cupsfilters/colormanager.h>
 
 /* Logging */
 FILE* logh = NULL;
@@ -145,7 +145,7 @@ int pdfconvertedtops;
 /* cm-calibration flag */
 int cm_calibrate = 0;
 
-int device_inhibited = 0;
+int cm_disabled = 0;
 
 /* These variables were in 'dat' before */
 char colorprofile [128];
@@ -425,7 +425,7 @@ void process_cmdline_options()
     /* We 'clear' the profile if cm-calibration mode was specified */
     if (cm_calibrate) {
         colorprofile[0] = '\0';
-        device_inhibited = 1;
+        cm_disabled = 1;
     }
 
     _log("CM Color Calibration Mode in CUPS: %s\n", cm_calibrate ? 
@@ -711,12 +711,12 @@ void free_job(jobparams_t *job)
 int main(int argc, char** argv)
 {
     int i;
-    int verbose = 0, quiet = 0, use_colord = 0;
+    int verbose = 0, quiet = 0;
     const char* str;
     char *p, *filename;
     const char *path;
     FILE *ppdfh = NULL;
-    char tmp[1024], gstoraster[256], tmpstr[1024];
+    char tmp[1024], gstoraster[256];
     int havefilter, havegstoraster;
     dstr_t *filelist;
     list_t * arglist;
@@ -796,12 +796,8 @@ int main(int argc, char** argv)
         spooler = SPOOLER_CUPS;
     }
 
-    snprintf (tmpstr, sizeof(tmpstr), "cups-%s", getenv("PRINTER"));
-    if (strcmp(tmpstr, "cups-(null)") != 0) {
-      device_inhibited = colord_get_inhibit_for_device_id (tmpstr);      
-      if (!device_inhibited)
-        use_colord = 1;
-    }
+    /* Check status of printer color management from the color manager */
+    cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
 
     /* CUPS calls foomatic-rip only with 5 or 6 positional parameters,
        not with named options, like for example "-p <string>". */
@@ -831,7 +827,7 @@ int main(int argc, char** argv)
             /* if "-o cm-calibration" was passed, we raise a flag */
             if (!strcmp(tmp, "cm-calibration")) {
                 cm_calibrate = 1;
-                device_inhibited = 1;
+                cm_disabled = 1;
             }
             arglist_remove(arglist, "-o");
 	    /* We print without spooler */
@@ -974,16 +970,12 @@ int main(int argc, char** argv)
                 const char **qualifier = NULL;
                 const char *icc_profile = NULL;
 
-                if (!device_inhibited) {
+                if (!cm_disabled) {
                   qualifier = get_ppd_qualifier();
                   _log("INFO: Using qualifer: '%s.%s.%s'\n",
                         qualifier[0], qualifier[1], qualifier[2]);
 
-                  if (use_colord) {
-                    /* ask colord for the profile */
-                    icc_profile = colord_get_profile_for_device_id ((const char *) getenv("PRINTER"),
-                                                                    qualifier);
-                  }
+                  cmGetPrinterIccProfile(getenv("PRINTER"), &icc_profile, 0);
 
                   /* fall back to PPD */
                   if (icc_profile == NULL) {

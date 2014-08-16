@@ -147,7 +147,7 @@ int _get_colord_profile(const char* printer_name,
                         char** profile, 
                         ppd_file_t* ppd)
 {
-    if (printer_name == NULL || profile == 0 || ppd == NULL) {
+    if (printer_name == NULL || profile == 0) {
       fprintf(stderr, "DEBUG: Color Manager: Invalid input - Unable to find profile.\n"); 
       return -1;
     }
@@ -160,15 +160,20 @@ int _get_colord_profile(const char* printer_name,
 
     qualifier = colord_get_qualifier_for_ppd(ppd);
 
+    /* Get profile from colord */
     if (qualifier != NULL) {
       printer_id = _get_colord_printer_id(printer_name);
       icc_profile = colord_get_profile_for_device_id (printer_id, qualifier);
     }
 
     if (icc_profile) 
-      is_profile_set = 1;
-    else if ((icc_profile = _get_ppd_icc_fallback(ppd, qualifier)) != NULL) 
-      is_profile_set = 1;
+      is_profile_set = 1; 
+    else if (ppd) {
+    /* Get optional fallback PPD profile */
+      icc_profile = _get_ppd_icc_fallback(ppd, qualifier);
+      if (icc_profile)
+        is_profile_set = 1;
+    }
     
     if (is_profile_set)
       *profile = strdup(icc_profile);
