@@ -191,7 +191,7 @@ namespace {
   cmsHTRANSFORM colorTransform = NULL;
   cmsCIEXYZ D65WhitePoint;
   int renderingIntent = INTENT_PERCEPTUAL;
-  int device_inhibited = 0;
+  int cm_disabled = 0;
   cm_calibration_t cm_calibrate;
 }
 
@@ -236,6 +236,49 @@ cmsCIExyYTRIPLE adobergb_matrix()
     m.Blue.Y = matrix[8];
 
     return m;
+}
+
+cmsHPROFILE adobergb_profile()
+{
+    cmsHPROFILE adobergb;
+
+    cmsCIExyY wp;
+    cmsCIExyYTRIPLE primaries;
+
+#if USE_LCMS1
+    cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
+    cmsToneCurve Gamma3[3];
+#else
+    cmsToneCurve * Gamma = cmsBuildGamma(NULL, 2.2);
+    cmsToneCurve * Gamma3[3];
+#endif    
+    Gamma3[0] = Gamma3[1] = Gamma3[2] = Gamma;
+
+    // Build AdobeRGB profile
+    primaries = adobergb_matrix();
+    wp = adobergb_wp();
+    adobergb = cmsCreateRGBProfile(&wp, &primaries, Gamma3);
+
+    return adobergb;
+}
+
+cmsHPROFILE sgray_profile()
+{
+    cmsHPROFILE sgray;
+
+    cmsCIExyY wp;
+    cmsCIExyYTRIPLE primaries;
+
+#if USE_LCMS1
+    cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
+#else
+    cmsToneCurve * Gamma = cmsBuildGamma(NULL, 2.2);
+#endif 
+    // Build sGray profile
+    wp = sgray_wp();
+    sgray = cmsCreateGrayProfile(&wp, Gamma);
+
+    return sgray;
 }
 
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
@@ -498,12 +541,12 @@ static void parseOpts(int argc, char **argv)
     cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
 
     if (cm_calibrate == CM_CALIBRATION_ENABLED)
-      device_inhibited = 1;
+      cm_disabled = 1;
     else 
-      device_inhibited = cmIsPrinterCmDisabled(getenv("PRINTER"));
+      cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
        
-    if (!device_inhibited) 
-      cmGetPrinterIccProfile(getenv("PRINTER"), &profile, ppd);
+    if (!cm_disabled) 
+      cmGetPrinterIccProfile(getenv("PRINTER"), &profile, 0);
     if (profile != NULL)
       colorProfile = cmsOpenProfileFromFile(profile,"r");    
 
@@ -1344,11 +1387,6 @@ static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
 /* select convertLine function */
 static void selectConvertFunc(cups_raster_t *raster)
 {
-   cmsCIExyY wp;
-   cmsCIExyYTRIPLE primaries;
-
-  /* select convertLine function */
-
   if ((colorProfile == NULL || popplerColorProfile == colorProfile) 
       && (header.cupsColorOrder == CUPS_ORDER_CHUNKED
        || header.cupsNumColors == 1)) {
@@ -1374,34 +1412,8 @@ static void selectConvertFunc(cups_raster_t *raster)
   }
   allocLineBuf = true;
 
-  // FIXME needs cleanup
-  if (header.cupsColorSpace == CUPS_CSPACE_ADOBERGB) {
-#if USE_LCMS1
-    cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
-    cmsToneCurve Gamma3[3];
-#else
-    cmsToneCurve * Gamma = cmsBuildGamma(NULL, 2.2);
-    cmsToneCurve * Gamma3[3];
-#endif    
-    Gamma3[0] = Gamma3[1] = Gamma3[2] = Gamma;
-
-    // Build AdobeRGB profile
-    primaries = adobergb_matrix();
-    wp = adobergb_wp();
-    colorProfile = cmsCreateRGBProfile(&wp, &primaries, Gamma3);
-  } else if (header.cupsColorSpace == CUPS_CSPACE_SW) {   
-#if USE_LCMS1
-    cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
-#else
-    cmsToneCurve * Gamma = cmsBuildGamma(NULL, 2.2);
-#endif 
-    // Build sGray profile
-    wp = sgray_wp();
-    colorProfile = cmsCreateGrayProfile(&wp, Gamma);
-  }
-
   if (colorProfile != NULL && popplerColorProfile != colorProfile 
-      && !device_inhibited) {
+      && !cm_disabled) {
     unsigned int bytes;
 
     switch (header.cupsColorSpace) {
@@ -1457,7 +1469,7 @@ static void selectConvertFunc(cups_raster_t *raster)
       pdfError(-1,const_cast<char *>("Can't create color transform"));
       exit(1);
     }
-  } else if (device_inhibited) {
+  } else if (cm_disabled) {
     convertCSpace = convertCSpaceNone;
     convertBits = convertBitsNoop;
   } else {
@@ -1870,12 +1882,18 @@ static void setPopplerColorProfile()
       colorProfile = cmsCreateLab4Profile(&wp);
     }
     break;
-  case CUPS_CSPACE_RGB:
   case CUPS_CSPACE_SRGB:
+    colorProfile = cmsCreate_sRGBProfile();
+    break;
   case CUPS_CSPACE_ADOBERGB:
+    colorProfile = adobergb_profile();
+    break;
+  case CUPS_CSPACE_SW:
+    colorProfile = sgray_profile();
+    break;
+  case CUPS_CSPACE_RGB:
   case CUPS_CSPACE_K:
   case CUPS_CSPACE_W:
-  case CUPS_CSPACE_SW:
   case CUPS_CSPACE_WHITE:
   case CUPS_CSPACE_GOLD:
   case CUPS_CSPACE_SILVER:
@@ -2069,7 +2087,7 @@ int main(int argc, char *argv[]) {
     break;
   }
 
-  if (!device_inhibited) {
+  if (!cm_disabled) {
     setPopplerColorProfile();
   }
 
