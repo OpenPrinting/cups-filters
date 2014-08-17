@@ -33,7 +33,7 @@
 #include <cups/cups.h>
 #include <cups/raster.h>
 #include <cupsfilters/colormanager.h>
-//#include <cupsfilters/image.h>
+#include <cupsfilters/image.h>
 
 #include <arpa/inet.h>   // ntohl
 
@@ -87,9 +87,19 @@
 
 #define iprintf(format, ...) fprintf(stderr, "INFO: (" PROGRAM ") " format, __VA_ARGS__)
 
+
+typedef unsigned char *(*convertFunction)(unsigned char *src,
+  unsigned char *dst, unsigned int pixels);
+
+typedef unsigned char *(*bitFunction)(unsigned char *src,
+  unsigned char *dst, unsigned int pixels);
+
 cmsHPROFILE         colorProfile = NULL;
 int                 cm_disabled = 0;
 cm_calibration_t    cm_calibrate;
+convertFunction     conversion_function;
+bitFunction         bit_function;
+
 
 #ifdef USE_LCMS1
 static int lcmsErrorHandler(int ErrorCode, const char *ErrorText)
@@ -104,6 +114,65 @@ static void lcmsErrorHandler(cmsContext contextId, cmsUInt32Number ErrorCode,
   fprintf(stderr, "ERROR: %s\n",ErrorText);
 }
 #endif
+
+
+unsigned char *invertBits(unsigned char *src, unsigned char *dst, unsigned int pixels)
+{ 
+    unsigned int i;
+
+    // Invert black to grayscale...
+    for (i = pixels, dst = src; i > 0; i --, dst ++)
+      *dst = ~*dst;
+
+    return dst;
+}
+
+unsigned char *noBitConversion(unsigned char *src, unsigned char *dst, unsigned int pixels)
+{
+    return src;
+}
+
+unsigned char *rgbToCmyk(unsigned char *src, unsigned char *dst, unsigned int pixels)
+{
+    cupsImageRGBToCMYK(src,dst,pixels);
+    return dst;
+}
+
+unsigned char *whiteToCmyk(unsigned char *src, unsigned char *dst, unsigned int pixels)
+{
+    cupsImageWhiteToCMYK(src,dst,pixels);
+    return dst;
+}
+
+unsigned char *cmykToRgb(unsigned char *src, unsigned char *dst, unsigned int pixels)
+{
+    cupsImageCMYKToRGB(src,dst,pixels);
+    return dst;
+}
+
+unsigned char *whiteToRgb(unsigned char *src, unsigned char *dst, unsigned int pixels)
+{
+    cupsImageWhiteToRGB(src,dst,pixels);
+    return dst;
+}
+
+unsigned char *rgbToWhite(unsigned char *src, unsigned char *dst, unsigned int pixels)
+{
+    cupsImageRGBToWhite(src,dst,pixels);
+    return dst;
+}
+
+unsigned char *cmykToWhite(unsigned char *src, unsigned char *dst, unsigned int pixels)
+{
+    cupsImageCMYKToWhite(src,dst,pixels);
+    return dst;
+}
+
+unsigned char *noColorConversion(unsigned char *src,
+  unsigned char *dst, unsigned int pixels)
+{
+    return src;
+}
 
 void die(const char * str)
 {
@@ -300,10 +369,6 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     } else
       matrix_str[0] = '\0';
 
-    if (bp != NULL)
-      snprintf(wp_str, sizeof(wp_str), "/WhitePoint [%g %g %g]", 
-                  wp[0], wp[1], wp[2]); 
-
     // Write array string
     colorSpaceArrayString = "[" + csString + " <<" 
                             + gamma_str + " " + wp_str + " " + matrix_str + " " + bp_str
@@ -498,6 +563,192 @@ void finish_page(struct pdf_info * info)
     info->page_data = PointerHolder<Buffer>();
 }
 
+void modify_pdf_color(struct pdf_info * info, int bpp, int bpc, convertFunction fn)
+{
+    unsigned old_bpp = info->bpp;
+    unsigned old_bpc = info->bpc;
+    double old_ncolor = old_bpp/old_bpc;
+
+    unsigned old_line_bytes = info->line_bytes;
+
+    double new_ncolor = bpp/bpc;
+
+    info->line_bytes = (unsigned)old_line_bytes*(new_ncolor/old_ncolor);
+    info->bpp = bpp;
+    info->bpc = bpc;
+    conversion_function = fn; 
+
+    return;
+}
+
+/* Perform modifications to PDF if color space conversions are needed */      // FIXME Simplify code
+int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl, 
+                     int bpp, int bpc, std::string render_intent, cups_cspace_t color_space)
+{
+    int error = 0;
+
+    info->width = width;
+    info->height = height;
+    info->line_bytes = bpl;
+    info->bpp = bpp;
+    info->bpc = bpc;
+    info->render_intent = render_intent;
+    info->color_space = color_space;
+
+    if (colorProfile != NULL) {
+      cmsColorSpaceSignature css = cmsGetColorSpace(colorProfile);
+
+      // Convert image and PDF color space to an embedded ICC Profile
+      switch(css) {
+        case cmsSigGrayData:
+          if (color_space == CUPS_CSPACE_CMYK){
+              modify_pdf_color(info, 8, 8, cmykToWhite);
+              bit_function = noBitConversion;
+            } else if (color_space == CUPS_CSPACE_RGB) {
+              modify_pdf_color(info, 8, 8, rgbToWhite);
+              bit_function = invertBits;
+            } else {             
+              conversion_function = noColorConversion;
+              bit_function = noBitConversion;
+            }
+            info->color_space = CUPS_CSPACE_K;
+            break;
+        case cmsSigRgbData:
+          if (color_space == CUPS_CSPACE_CMYK) {
+              modify_pdf_color(info, 24, 8, cmykToRgb);
+              bit_function = noBitConversion;
+            } else if (color_space == CUPS_CSPACE_K) {
+              modify_pdf_color(info, 24, 8, whiteToRgb);
+              bit_function = invertBits;
+            } else {
+              conversion_function = noColorConversion;
+              bit_function = noBitConversion;
+            }
+            info->color_space = CUPS_CSPACE_RGB;
+            break;
+        case cmsSigCmykData:
+          if (color_space == CUPS_CSPACE_RGB){
+             modify_pdf_color(info, 32, 8, rgbToCmyk);
+             bit_function = noBitConversion;
+           } else if (color_space == CUPS_CSPACE_K) {
+             modify_pdf_color(info, 32, 8, whiteToCmyk);
+             bit_function = invertBits;
+           } else {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           }
+           info->color_space = CUPS_CSPACE_CMYK;
+           break;
+        default:
+          fputs("DEBUG: Unable to convert profile.\n", stderr);
+          colorProfile = NULL;
+          return 1;
+      }
+    } else if (!cm_disabled) {       
+      switch (color_space) {
+         case CUPS_CSPACE_CMYK:
+           if ((bpp == 32 && bpc == 8) || (bpp == 64 && bpc == 16)) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           } else if (bpp == 24 && bpc == 8) {
+             modify_pdf_color(info, 32, 8, rgbToCmyk);
+             bit_function = noBitConversion;
+           } else if (bpp == 48 && bpc == 16) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           } else if (bpp == 8 && bpc == 8) {
+             modify_pdf_color(info, 32, 8, whiteToCmyk);
+             bit_function = invertBits;
+           } else if (bpp == 16 && bpc == 16) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           } 
+           break;
+         case CUPS_CSPACE_ADOBERGB:
+         case CUPS_CSPACE_RGB:
+         case CUPS_CSPACE_SRGB:
+           if ((bpp == 24 && bpc == 8) || (bpp == 48 && bpc == 16)) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           } else if (bpp == 32 && bpc == 8) {
+             modify_pdf_color(info, 24, 8, cmykToRgb);
+             bit_function = noBitConversion;
+           } else if (bpp == 64 && bpc == 16) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           } else if (bpp == 8 && bpc == 8) {
+             modify_pdf_color(info, 24, 8, whiteToRgb);
+             bit_function = invertBits;
+           } else if (bpp == 16 && bpc == 16) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           }
+           break;
+         case CUPS_CSPACE_K:           
+           if ((bpp == 8 && bpc == 8) || (bpp == 16 && bpc == 16) ||
+               (bpp == 1 && bpc == 1)) {
+             conversion_function = noColorConversion;
+             bit_function = invertBits;
+           } else if (bpp == 32 && bpc == 8) {
+             modify_pdf_color(info, 8, 8, cmykToWhite);
+             bit_function = noBitConversion;
+           } else if (bpp == 64 && bpc == 16) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           } else if (bpp == 24 && bpc == 8) {
+             modify_pdf_color(info, 8, 8, rgbToWhite);            
+             bit_function = noBitConversion;
+           } else if (bpp == 48 && bpc == 16) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           }
+           break;     
+         case CUPS_CSPACE_SW:
+           if ((bpp == 8 && bpc == 8) || (bpp == 16 && bpc == 16)) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           } else if (bpp == 32 && bpc == 8) {
+             modify_pdf_color(info, 8, 8, cmykToWhite);
+             bit_function = noBitConversion;
+           } else if (bpp == 64 && bpc == 16) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           } else if (bpp == 24 && bpc == 8) {
+             modify_pdf_color(info, 8, 8, rgbToWhite);            
+             bit_function = noBitConversion;
+           } else if (bpp == 48 && bpc == 16) {
+             conversion_function = noColorConversion;
+             bit_function = noBitConversion;
+           }
+           break;        
+         case CUPS_CSPACE_DEVICE1:
+         case CUPS_CSPACE_DEVICE2:
+         case CUPS_CSPACE_DEVICE3:
+         case CUPS_CSPACE_DEVICE4:
+         case CUPS_CSPACE_DEVICE5:
+         case CUPS_CSPACE_DEVICE6:
+         case CUPS_CSPACE_DEVICE7:
+         case CUPS_CSPACE_DEVICE8:
+         case CUPS_CSPACE_DEVICE9:
+         case CUPS_CSPACE_DEVICEA:
+         case CUPS_CSPACE_DEVICEB:
+         case CUPS_CSPACE_DEVICEC:
+         case CUPS_CSPACE_DEVICED:
+         case CUPS_CSPACE_DEVICEE:
+         case CUPS_CSPACE_DEVICEF:
+         default:
+           conversion_function = noColorConversion;
+           bit_function = noBitConversion;
+           break;
+      }
+   } else {
+     conversion_function = noColorConversion;
+     bit_function = noBitConversion;
+   }
+
+   return 0;
+}
+
 int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
 		 unsigned height, int bpp, int bpc, int bpl, std::string render_intent,
 		 cups_cspace_t color_space, unsigned xdpi, unsigned ydpi)
@@ -505,13 +756,8 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
     try {
         finish_page(info); // any active
 
-        info->width = width;
-        info->height = height;
-        info->line_bytes = bpl;
-        info->bpp = bpp;
-        info->bpc = bpc;
-        info->render_intent = render_intent;
-	info->color_space = color_space;
+        prepare_pdf_page(info, width, height, bpl, bpp, 
+                         bpc, render_intent, color_space);
 
         if (info->height > (std::numeric_limits<unsigned>::max() / info->line_bytes)) {
             die("Page too big");
@@ -579,23 +825,18 @@ int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
     // We should be at raster start
     int i;
     unsigned cur_line = 0;
-    unsigned char *PixelBuffer, *ptr;
+    unsigned char *PixelBuffer, *ptr, *buff;
 
     PixelBuffer = (unsigned char *)malloc(bpl);
+    buff = (unsigned char *)malloc(info->line_bytes);
 
     do
     {
         // Read raster data...
         cupsRasterReadPixels(ras, PixelBuffer, bpl);
 
-	if (info->color_space == CUPS_CSPACE_K)
-	{
-	  // Invert black to grayscale...
-	  for (i = bpl, ptr = PixelBuffer; i > 0; i --, ptr ++)
-	    *ptr = ~*ptr;
-	}
-
 #if !ARCH_IS_BIG_ENDIAN
+
 	if (info->bpc == 16)
 	{
 	  // Swap byte pairs for endianess (cupsRasterReadPixels() switches
@@ -607,16 +848,18 @@ int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
 	    *(ptr + 1) = swap;
 	  }
 	}
-
 #endif /* !ARCH_IS_BIG_ENDIAN */
 
-        // write lines
- 	pdf_set_line(info, cur_line, PixelBuffer);
+        // perform bit operations if necessary
+        bit_function(PixelBuffer, ptr,  bpl);
 
+        // write lines and color convert when necessary
+ 	pdf_set_line(info, cur_line, conversion_function(PixelBuffer, buff, width));
 	++cur_line;
     }
     while(cur_line < height);
 
+    free(buff);
     free(PixelBuffer);
 
     return 0;
