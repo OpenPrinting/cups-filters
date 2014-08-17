@@ -94,6 +94,8 @@ typedef unsigned char *(*convertFunction)(unsigned char *src,
 typedef unsigned char *(*bitFunction)(unsigned char *src,
   unsigned char *dst, unsigned int pixels);
 
+typedef void (*pdfConvertFunction)(struct pdf_info * info);
+
 cmsHPROFILE         colorProfile = NULL;
 int                 cm_disabled = 0;
 cm_calibration_t    cm_calibrate;
@@ -227,6 +229,66 @@ QPDFObjectHandle makeBox(double x1, double y1, double x2, double y2)
     ret.appendItem(QPDFObjectHandle::newReal(x2));
     ret.appendItem(QPDFObjectHandle::newReal(y2));
     return ret;
+}
+
+void modify_pdf_color(struct pdf_info * info, int bpp, int bpc, convertFunction fn)
+{
+    unsigned old_bpp = info->bpp;
+    unsigned old_bpc = info->bpc;
+    double old_ncolor = old_bpp/old_bpc;
+
+    unsigned old_line_bytes = info->line_bytes;
+
+    double new_ncolor = bpp/bpc;
+
+    info->line_bytes = (unsigned)old_line_bytes*(new_ncolor/old_ncolor);
+    info->bpp = bpp;
+    info->bpc = bpc;
+    conversion_function = fn; 
+
+    return;
+}
+
+void convertPdf_Cmyk8ToWhite8(struct pdf_info * info)
+{
+    modify_pdf_color(info, 8, 8, cmykToWhite);
+    bit_function = noBitConversion;
+}
+
+void convertPdf_Rgb8ToWhite8(struct pdf_info * info)
+{
+    modify_pdf_color(info, 8, 8, rgbToWhite);
+    bit_function = noBitConversion;
+}
+
+void convertPdf_NoConversion(struct pdf_info * info)
+{
+    conversion_function = noColorConversion;
+    bit_function = noBitConversion;
+}
+
+void convertPdf_Cmyk8ToRgb8(struct pdf_info * info)
+{
+    modify_pdf_color(info, 24, 8, cmykToRgb);
+    bit_function = noBitConversion;
+}
+
+void convertPdf_White8ToRgb8(struct pdf_info * info)
+{
+    modify_pdf_color(info, 24, 8, whiteToRgb);
+    bit_function = invertBits;
+}
+
+void convertPdf_Rgb8ToCmyk8(struct pdf_info * info)
+{
+    modify_pdf_color(info, 32, 8, rgbToCmyk);
+    bit_function = noBitConversion;
+}
+
+void convertPdf_White8ToCmyk8(struct pdf_info * info)
+{
+    modify_pdf_color(info, 32, 8, whiteToCmyk);
+    bit_function = invertBits;
 }
 
 #define PRE_COMPRESS
@@ -563,29 +625,20 @@ void finish_page(struct pdf_info * info)
     info->page_data = PointerHolder<Buffer>();
 }
 
-void modify_pdf_color(struct pdf_info * info, int bpp, int bpc, convertFunction fn)
-{
-    unsigned old_bpp = info->bpp;
-    unsigned old_bpc = info->bpc;
-    double old_ncolor = old_bpp/old_bpc;
-
-    unsigned old_line_bytes = info->line_bytes;
-
-    double new_ncolor = bpp/bpc;
-
-    info->line_bytes = (unsigned)old_line_bytes*(new_ncolor/old_ncolor);
-    info->bpp = bpp;
-    info->bpc = bpc;
-    conversion_function = fn; 
-
-    return;
-}
-
+#define IMAGE_CMYK_8   (bpp == 32 && bpc == 8)
+#define IMAGE_CMYK_16  (bpp == 64 && bpc == 16)
+#define IMAGE_RGB_8    (bpp == 24 && bpc == 8)
+#define IMAGE_RGB_16   (bpp == 48 && bpc == 16)
+#define IMAGE_WHITE_1  (bpp == 1 && bpc == 1)
+#define IMAGE_WHITE_8  (bpp == 8 && bpc == 8)
+#define IMAGE_WHITE_16 (bpp == 16 && bpc == 16)
 /* Perform modifications to PDF if color space conversions are needed */      // FIXME Simplify code
 int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl, 
                      int bpp, int bpc, std::string render_intent, cups_cspace_t color_space)
 {
     int error = 0;
+    pdfConvertFunction fn = convertPdf_NoConversion;
+    cmsColorSpaceSignature css;
 
     info->width = width;
     info->height = height;
@@ -596,130 +649,95 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
     info->color_space = color_space;
 
     if (colorProfile != NULL) {
-      cmsColorSpaceSignature css = cmsGetColorSpace(colorProfile);
+      css = cmsGetColorSpace(colorProfile);
 
-      // Convert image and PDF color space to an embedded ICC Profile
+      // Convert image and PDF color space to an embedded ICC Profile color space
       switch(css) {
         case cmsSigGrayData:
-          if (color_space == CUPS_CSPACE_CMYK){
-              modify_pdf_color(info, 8, 8, cmykToWhite);
-              bit_function = noBitConversion;
-            } else if (color_space == CUPS_CSPACE_RGB) {
-              modify_pdf_color(info, 8, 8, rgbToWhite);
-              bit_function = invertBits;
-            } else {             
-              conversion_function = noColorConversion;
-              bit_function = noBitConversion;
-            }
-            info->color_space = CUPS_CSPACE_K;
-            break;
+          if (color_space == CUPS_CSPACE_CMYK)
+            fn = convertPdf_Cmyk8ToWhite8;
+          else if (color_space == CUPS_CSPACE_RGB) 
+            fn = convertPdf_Rgb8ToWhite8;
+          else              
+            fn = convertPdf_NoConversion;
+
+          info->color_space = CUPS_CSPACE_K;
+          break;
         case cmsSigRgbData:
-          if (color_space == CUPS_CSPACE_CMYK) {
-              modify_pdf_color(info, 24, 8, cmykToRgb);
-              bit_function = noBitConversion;
-            } else if (color_space == CUPS_CSPACE_K) {
-              modify_pdf_color(info, 24, 8, whiteToRgb);
-              bit_function = invertBits;
-            } else {
-              conversion_function = noColorConversion;
-              bit_function = noBitConversion;
-            }
-            info->color_space = CUPS_CSPACE_RGB;
-            break;
+          if (color_space == CUPS_CSPACE_CMYK) 
+            fn = convertPdf_Cmyk8ToRgb8;
+          else if (color_space == CUPS_CSPACE_K) 
+            fn = convertPdf_White8ToRgb8;
+          else 
+            fn = convertPdf_NoConversion;
+
+          info->color_space = CUPS_CSPACE_RGB;
+          break;
         case cmsSigCmykData:
-          if (color_space == CUPS_CSPACE_RGB){
-             modify_pdf_color(info, 32, 8, rgbToCmyk);
-             bit_function = noBitConversion;
-           } else if (color_space == CUPS_CSPACE_K) {
-             modify_pdf_color(info, 32, 8, whiteToCmyk);
-             bit_function = invertBits;
-           } else {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           }
+          if (color_space == CUPS_CSPACE_RGB)
+            fn = convertPdf_Rgb8ToCmyk8;
+          else if (color_space == CUPS_CSPACE_K) 
+            fn = convertPdf_White8ToCmyk8;
+          else 
+            fn = convertPdf_NoConversion;
            info->color_space = CUPS_CSPACE_CMYK;
            break;
         default:
           fputs("DEBUG: Unable to convert profile.\n", stderr);
           colorProfile = NULL;
-          return 1;
+          error = 1;
       }
     } else if (!cm_disabled) {       
       switch (color_space) {
          case CUPS_CSPACE_CMYK:
-           if ((bpp == 32 && bpc == 8) || (bpp == 64 && bpc == 16)) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           } else if (bpp == 24 && bpc == 8) {
-             modify_pdf_color(info, 32, 8, rgbToCmyk);
-             bit_function = noBitConversion;
-           } else if (bpp == 48 && bpc == 16) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           } else if (bpp == 8 && bpc == 8) {
-             modify_pdf_color(info, 32, 8, whiteToCmyk);
-             bit_function = invertBits;
-           } else if (bpp == 16 && bpc == 16) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           } 
+           if (IMAGE_CMYK_8 || IMAGE_CMYK_16)
+             fn = convertPdf_NoConversion;
+           else if (IMAGE_RGB_8)
+             fn = convertPdf_Rgb8ToCmyk8;  
+           else if (IMAGE_RGB_16)
+             fn = convertPdf_NoConversion;
+           else if (IMAGE_WHITE_8)
+             fn = convertPdf_White8ToCmyk8;  
+           else if (IMAGE_WHITE_16) 
+             fn = convertPdf_NoConversion;
            break;
          case CUPS_CSPACE_ADOBERGB:
          case CUPS_CSPACE_RGB:
          case CUPS_CSPACE_SRGB:
-           if ((bpp == 24 && bpc == 8) || (bpp == 48 && bpc == 16)) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           } else if (bpp == 32 && bpc == 8) {
-             modify_pdf_color(info, 24, 8, cmykToRgb);
-             bit_function = noBitConversion;
-           } else if (bpp == 64 && bpc == 16) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           } else if (bpp == 8 && bpc == 8) {
-             modify_pdf_color(info, 24, 8, whiteToRgb);
-             bit_function = invertBits;
-           } else if (bpp == 16 && bpc == 16) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           }
+           if (IMAGE_RGB_8 || IMAGE_RGB_16)
+             fn = convertPdf_NoConversion;  
+           else if (IMAGE_CMYK_8)
+             fn = convertPdf_Cmyk8ToRgb8;
+           else if (IMAGE_CMYK_16)
+             fn = convertPdf_NoConversion;  
+           else if (IMAGE_WHITE_8)
+             fn = convertPdf_White8ToRgb8;
+           else if (IMAGE_WHITE_16) 
+             fn = convertPdf_NoConversion;       
            break;
          case CUPS_CSPACE_K:           
-           if ((bpp == 8 && bpc == 8) || (bpp == 16 && bpc == 16) ||
-               (bpp == 1 && bpc == 1)) {
-             conversion_function = noColorConversion;
-             bit_function = invertBits;
-           } else if (bpp == 32 && bpc == 8) {
-             modify_pdf_color(info, 8, 8, cmykToWhite);
-             bit_function = noBitConversion;
-           } else if (bpp == 64 && bpc == 16) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           } else if (bpp == 24 && bpc == 8) {
-             modify_pdf_color(info, 8, 8, rgbToWhite);            
-             bit_function = noBitConversion;
-           } else if (bpp == 48 && bpc == 16) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           }
+           if (IMAGE_WHITE_8 || IMAGE_WHITE_16 || IMAGE_WHITE_1)
+             fn = convertPdf_NoConversion;
+           else if (IMAGE_CMYK_8)
+             fn = convertPdf_Cmyk8ToWhite8;
+           else if (IMAGE_CMYK_16)
+             fn = convertPdf_NoConversion;
+           else if (IMAGE_RGB_8) 
+             fn = convertPdf_Rgb8ToWhite8;
+           else if (IMAGE_RGB_16) 
+             fn = convertPdf_NoConversion;
            break;     
          case CUPS_CSPACE_SW:
-           if ((bpp == 8 && bpc == 8) || (bpp == 16 && bpc == 16)) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           } else if (bpp == 32 && bpc == 8) {
-             modify_pdf_color(info, 8, 8, cmykToWhite);
-             bit_function = noBitConversion;
-           } else if (bpp == 64 && bpc == 16) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           } else if (bpp == 24 && bpc == 8) {
-             modify_pdf_color(info, 8, 8, rgbToWhite);            
-             bit_function = noBitConversion;
-           } else if (bpp == 48 && bpc == 16) {
-             conversion_function = noColorConversion;
-             bit_function = noBitConversion;
-           }
+           if (IMAGE_WHITE_8 || IMAGE_WHITE_16) 
+             fn = convertPdf_NoConversion;
+           else if (IMAGE_CMYK_8) 
+             fn = convertPdf_Cmyk8ToWhite8;
+           else if (IMAGE_CMYK_16)
+             fn = convertPdf_NoConversion;
+           else if (IMAGE_RGB_8)
+             fn = convertPdf_Rgb8ToWhite8;
+           else if (IMAGE_RGB_16)
+             fn = convertPdf_NoConversion;
            break;        
          case CUPS_CSPACE_DEVICE1:
          case CUPS_CSPACE_DEVICE2:
@@ -736,17 +754,24 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
          case CUPS_CSPACE_DEVICED:
          case CUPS_CSPACE_DEVICEE:
          case CUPS_CSPACE_DEVICEF:
+             fn = convertPdf_NoConversion;
+             break;
          default:
-           conversion_function = noColorConversion;
-           bit_function = noBitConversion;
+           fputs("DEBUG: Color space not supported.\n", stderr);
+           error = 1;
            break;
       }
-   } else {
-     conversion_function = noColorConversion;
-     bit_function = noBitConversion;
-   }
+   } else if (cm_disabled)
+       fn = convertPdf_NoConversion;
+     else {
+       fputs("DEBUG: Unable to convert PDF color.\n", stderr);
+       error = 1;
+     }
 
-   return 0;
+   if (!error)
+     fn(info);
+
+   return error;
 }
 
 int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
