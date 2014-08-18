@@ -330,6 +330,7 @@ static void lcmsErrorHandler(cmsContext contextId, cmsUInt32Number ErrorCode,
 }
 #endif
 
+
 #if 0
 static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 {
@@ -546,7 +547,8 @@ static void parseOpts(int argc, char **argv)
       cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
        
     if (!cm_disabled) 
-      cmGetPrinterIccProfile(getenv("PRINTER"), &profile, 0);
+      cmGetPrinterIccProfile(getenv("PRINTER"), &profile, ppd);
+
     if (profile != NULL)
       colorProfile = cmsOpenProfileFromFile(profile,"r");    
 
