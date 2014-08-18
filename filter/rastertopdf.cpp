@@ -127,7 +127,7 @@ unsigned char *invertBits(unsigned char *src, unsigned char *dst, unsigned int p
       *dst = ~*dst;
 
     return dst;
-}
+}	
 
 unsigned char *noBitConversion(unsigned char *src, unsigned char *dst, unsigned int pixels)
 {
@@ -139,7 +139,6 @@ unsigned char *rgbToCmyk(unsigned char *src, unsigned char *dst, unsigned int pi
     cupsImageRGBToCMYK(src,dst,pixels);
     return dst;
 }
-
 unsigned char *whiteToCmyk(unsigned char *src, unsigned char *dst, unsigned int pixels)
 {
     cupsImageWhiteToCMYK(src,dst,pixels);
@@ -231,6 +230,8 @@ QPDFObjectHandle makeBox(double x1, double y1, double x2, double y2)
     return ret;
 }
 
+// PDF color conversion functons...
+
 void modify_pdf_color(struct pdf_info * info, int bpp, int bpc, convertFunction fn)
 {
     unsigned old_bpp = info->bpp;
@@ -239,7 +240,7 @@ void modify_pdf_color(struct pdf_info * info, int bpp, int bpc, convertFunction 
 
     unsigned old_line_bytes = info->line_bytes;
 
-    double new_ncolor = bpp/bpc;
+    double new_ncolor = (bpp/bpc);
 
     info->line_bytes = (unsigned)old_line_bytes*(new_ncolor/old_ncolor);
     info->bpp = bpp;
@@ -247,6 +248,12 @@ void modify_pdf_color(struct pdf_info * info, int bpp, int bpc, convertFunction 
     conversion_function = fn; 
 
     return;
+}
+
+void convertPdf_NoConversion(struct pdf_info * info)
+{
+    conversion_function = noColorConversion;
+    bit_function = noBitConversion;
 }
 
 void convertPdf_Cmyk8ToWhite8(struct pdf_info * info)
@@ -258,12 +265,6 @@ void convertPdf_Cmyk8ToWhite8(struct pdf_info * info)
 void convertPdf_Rgb8ToWhite8(struct pdf_info * info)
 {
     modify_pdf_color(info, 8, 8, rgbToWhite);
-    bit_function = noBitConversion;
-}
-
-void convertPdf_NoConversion(struct pdf_info * info)
-{
-    conversion_function = noColorConversion;
     bit_function = noBitConversion;
 }
 
@@ -288,6 +289,12 @@ void convertPdf_Rgb8ToCmyk8(struct pdf_info * info)
 void convertPdf_White8ToCmyk8(struct pdf_info * info)
 {
     modify_pdf_color(info, 32, 8, whiteToCmyk);
+    bit_function = invertBits;
+}
+
+void convertPdf_InvertColors(struct pdf_info * info)
+{
+    conversion_function = noColorConversion;
     bit_function = invertBits;
 }
 
@@ -632,14 +639,15 @@ void finish_page(struct pdf_info * info)
 #define IMAGE_WHITE_1  (bpp == 1 && bpc == 1)
 #define IMAGE_WHITE_8  (bpp == 8 && bpc == 8)
 #define IMAGE_WHITE_16 (bpp == 16 && bpc == 16)
-/* Perform modifications to PDF if color space conversions are needed */      // FIXME Simplify code
+/* Perform modifications to PDF if color space conversion needed */      
 int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl, 
                      int bpp, int bpc, std::string render_intent, cups_cspace_t color_space)
 {
     int error = 0;
-    pdfConvertFunction fn = convertPdf_NoConversion;
+    pdfConvertFunction fn;
     cmsColorSpaceSignature css;
 
+    /* Register available raster information into the PDF */
     info->width = width;
     info->height = height;
     info->line_bytes = bpl;
@@ -659,7 +667,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
           else if (color_space == CUPS_CSPACE_RGB) 
             fn = convertPdf_Rgb8ToWhite8;
           else              
-            fn = convertPdf_NoConversion;
+            fn = convertPdf_InvertColors;
 
           info->color_space = CUPS_CSPACE_K;
           break;
@@ -680,13 +688,15 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
             fn = convertPdf_White8ToCmyk8;
           else 
             fn = convertPdf_NoConversion;
-           info->color_space = CUPS_CSPACE_CMYK;
-           break;
+
+          info->color_space = CUPS_CSPACE_CMYK;
+          break;
         default:
-          fputs("DEBUG: Unable to convert profile.\n", stderr);
+          fputs("DEBUG: Unable to convert PDF from profile.\n", stderr);
           colorProfile = NULL;
           error = 1;
       }
+      // Perform conversion of an image color space 
     } else if (!cm_disabled) {       
       switch (color_space) {
          case CUPS_CSPACE_CMYK:
@@ -717,7 +727,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
            break;
          case CUPS_CSPACE_K:           
            if (IMAGE_WHITE_8 || IMAGE_WHITE_16 || IMAGE_WHITE_1)
-             fn = convertPdf_NoConversion;
+             fn = convertPdf_InvertColors;
            else if (IMAGE_CMYK_8)
              fn = convertPdf_Cmyk8ToWhite8;
            else if (IMAGE_CMYK_16)
@@ -729,7 +739,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
            break;     
          case CUPS_CSPACE_SW:
            if (IMAGE_WHITE_8 || IMAGE_WHITE_16) 
-             fn = convertPdf_NoConversion;
+             fn = convertPdf_InvertColors;
            else if (IMAGE_CMYK_8) 
              fn = convertPdf_Cmyk8ToWhite8;
            else if (IMAGE_CMYK_16)
