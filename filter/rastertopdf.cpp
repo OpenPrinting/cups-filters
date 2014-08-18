@@ -88,19 +88,22 @@
 #define iprintf(format, ...) fprintf(stderr, "INFO: (" PROGRAM ") " format, __VA_ARGS__)
 
 
+// Color conversion function
 typedef unsigned char *(*convertFunction)(unsigned char *src,
   unsigned char *dst, unsigned int pixels);
 
+// Bit conversion function
 typedef unsigned char *(*bitFunction)(unsigned char *src,
   unsigned char *dst, unsigned int pixels);
 
+// PDF color conversion function
 typedef void (*pdfConvertFunction)(struct pdf_info * info);
 
-cmsHPROFILE         colorProfile = NULL;
-int                 cm_disabled = 0;
-cm_calibration_t    cm_calibrate;
-convertFunction     conversion_function;
-bitFunction         bit_function;
+cmsHPROFILE         colorProfile = NULL;     // ICC Profile to be applied to PDF
+int                 cm_disabled = 0;         // Flag rasied if color management is disabled 
+cm_calibration_t    cm_calibrate;            // Status of CUPS color management ("on" or "off")
+convertFunction     conversion_function;     // Raster color conversion function
+bitFunction         bit_function;            // Raster bit function
 
 
 #ifdef USE_LCMS1
@@ -118,6 +121,9 @@ static void lcmsErrorHandler(cmsContext contextId, cmsUInt32Number ErrorCode,
 #endif
 
 
+
+// Bit conversion functions
+
 unsigned char *invertBits(unsigned char *src, unsigned char *dst, unsigned int pixels)
 { 
     unsigned int i;
@@ -133,6 +139,8 @@ unsigned char *noBitConversion(unsigned char *src, unsigned char *dst, unsigned 
 {
     return src;
 }
+
+// Color conversion functions
 
 unsigned char *rgbToCmyk(unsigned char *src, unsigned char *dst, unsigned int pixels)
 {
@@ -174,6 +182,9 @@ unsigned char *noColorConversion(unsigned char *src,
 {
     return src;
 }
+
+
+
 
 void die(const char * str)
 {
@@ -229,6 +240,10 @@ QPDFObjectHandle makeBox(double x1, double y1, double x2, double y2)
     ret.appendItem(QPDFObjectHandle::newReal(y2));
     return ret;
 }
+
+
+
+
 
 // PDF color conversion functons...
 
@@ -298,6 +313,8 @@ void convertPdf_InvertColors(struct pdf_info * info)
     bit_function = invertBits;
 }
 
+
+
 #define PRE_COMPRESS
 
 // Create an '/ICCBased' array and embed a previously 
@@ -307,8 +324,12 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
     if (colorProfile == NULL) {
       return QPDFObjectHandle::newNull();
     }
+    
+    // Return handler
     QPDFObjectHandle ret;
+    // ICCBased array
     QPDFObjectHandle array = QPDFObjectHandle::newArray();
+    // Profile stream dictionary
     QPDFObjectHandle iccstream;
 
     std::map<std::string,QPDFObjectHandle> dict;
@@ -409,11 +430,16 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     char wp_str[256];
     char matrix_str[512];
 
+
     // Convert numbers into string data for /Gamma, /WhitePoint, and/or /Matrix
 
+
+    // WhitePoint
     snprintf(wp_str, sizeof(wp_str), "/WhitePoint [%g %g %g]", 
                 wp[0], wp[1], wp[2]); 
 
+
+    // Gamma
     if (!strcmp("/CalGray", color_space) && gamma != NULL)
       snprintf(gamma_str, sizeof(gamma_str), "/Gamma %g", 
                   gamma[0]);
@@ -423,6 +449,8 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     else
       gamma_str[0] = '\0';
     
+
+    // BlackPoint
     if (bp != NULL)
       snprintf(bp_str, sizeof(bp_str), "/BlackPoint [%g %g %g]", 
                   bp[0], bp[1], bp[2]); 
@@ -430,6 +458,7 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
       bp_str[0] = '\0';
 
 
+    // Matrix
     if (!strcmp("/CalRGB", color_space) && matrix != NULL) {
       snprintf(matrix_str, sizeof(matrix_str), "/Matrix [%g %g %g %g %g %g %g %g %g]", 
                   matrix[0], matrix[1], matrix[2],
@@ -438,7 +467,8 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     } else
       matrix_str[0] = '\0';
 
-    // Write array string
+
+    // Write array string...
     colorSpaceArrayString = "[" + csString + " <<" 
                             + gamma_str + " " + wp_str + " " + matrix_str + " " + bp_str
                             + " >>]";
@@ -632,17 +662,19 @@ void finish_page(struct pdf_info * info)
     info->page_data = PointerHolder<Buffer>();
 }
 
+
+/* Perform modifications to PDF if color space conversions are needed */      
+int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl, 
+                     int bpp, int bpc, std::string render_intent, cups_cspace_t color_space)
+{
 #define IMAGE_CMYK_8   (bpp == 32 && bpc == 8)
 #define IMAGE_CMYK_16  (bpp == 64 && bpc == 16)
 #define IMAGE_RGB_8    (bpp == 24 && bpc == 8)
 #define IMAGE_RGB_16   (bpp == 48 && bpc == 16)
 #define IMAGE_WHITE_1  (bpp == 1 && bpc == 1)
 #define IMAGE_WHITE_8  (bpp == 8 && bpc == 8)
-#define IMAGE_WHITE_16 (bpp == 16 && bpc == 16)
-/* Perform modifications to PDF if color space conversion needed */      
-int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl, 
-                     int bpp, int bpc, std::string render_intent, cups_cspace_t color_space)
-{
+#define IMAGE_WHITE_16 (bpp == 16 && bpc == 16)    
+     
     int error = 0;
     pdfConvertFunction fn;
     cmsColorSpaceSignature css;
@@ -661,6 +693,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
 
       // Convert image and PDF color space to an embedded ICC Profile color space
       switch(css) {
+        // Convert PDF to Grayscale when using a gray profile
         case cmsSigGrayData:
           if (color_space == CUPS_CSPACE_CMYK)
             fn = convertPdf_Cmyk8ToWhite8;
@@ -668,9 +701,9 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
             fn = convertPdf_Rgb8ToWhite8;
           else              
             fn = convertPdf_InvertColors;
-
           info->color_space = CUPS_CSPACE_K;
           break;
+        // Convert PDF to RGB when using an RGB profile
         case cmsSigRgbData:
           if (color_space == CUPS_CSPACE_CMYK) 
             fn = convertPdf_Cmyk8ToRgb8;
@@ -678,9 +711,9 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
             fn = convertPdf_White8ToRgb8;
           else 
             fn = convertPdf_NoConversion;
-
           info->color_space = CUPS_CSPACE_RGB;
           break;
+        // Convert PDF to CMYK when using an RGB profile
         case cmsSigCmykData:
           if (color_space == CUPS_CSPACE_RGB)
             fn = convertPdf_Rgb8ToCmyk8;
@@ -688,7 +721,6 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
             fn = convertPdf_White8ToCmyk8;
           else 
             fn = convertPdf_NoConversion;
-
           info->color_space = CUPS_CSPACE_CMYK;
           break;
         default:
@@ -699,6 +731,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
       // Perform conversion of an image color space 
     } else if (!cm_disabled) {       
       switch (color_space) {
+         // Convert image to CMYK
          case CUPS_CSPACE_CMYK:
            if (IMAGE_CMYK_8 || IMAGE_CMYK_16)
              fn = convertPdf_NoConversion;
@@ -711,6 +744,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
            else if (IMAGE_WHITE_16) 
              fn = convertPdf_NoConversion;
            break;
+         // Convert image to RGB
          case CUPS_CSPACE_ADOBERGB:
          case CUPS_CSPACE_RGB:
          case CUPS_CSPACE_SRGB:
@@ -725,6 +759,8 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
            else if (IMAGE_WHITE_16) 
              fn = convertPdf_NoConversion;       
            break;
+         // Convert image to Grayscale
+         case CUPS_CSPACE_SW:
          case CUPS_CSPACE_K:           
            if (IMAGE_WHITE_8 || IMAGE_WHITE_16 || IMAGE_WHITE_1)
              fn = convertPdf_InvertColors;
@@ -736,19 +772,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
              fn = convertPdf_Rgb8ToWhite8;
            else if (IMAGE_RGB_16) 
              fn = convertPdf_NoConversion;
-           break;     
-         case CUPS_CSPACE_SW:
-           if (IMAGE_WHITE_8 || IMAGE_WHITE_16) 
-             fn = convertPdf_InvertColors;
-           else if (IMAGE_CMYK_8) 
-             fn = convertPdf_Cmyk8ToWhite8;
-           else if (IMAGE_CMYK_16)
-             fn = convertPdf_NoConversion;
-           else if (IMAGE_RGB_8)
-             fn = convertPdf_Rgb8ToWhite8;
-           else if (IMAGE_RGB_16)
-             fn = convertPdf_NoConversion;
-           break;        
+           break;    
          case CUPS_CSPACE_DEVICE1:
          case CUPS_CSPACE_DEVICE2:
          case CUPS_CSPACE_DEVICE3:
@@ -764,6 +788,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
          case CUPS_CSPACE_DEVICED:
          case CUPS_CSPACE_DEVICEE:
          case CUPS_CSPACE_DEVICEF:
+             // No conversion for right now
              fn = convertPdf_NoConversion;
              break;
          default:
@@ -771,9 +796,14 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
            error = 1;
            break;
       }
-   } else if (cm_disabled)
-       fn = convertPdf_NoConversion;
-     else {
+   } else if (cm_disabled) {
+       // If color management is disabled, grayscale data must be
+       // inverted regardless
+       if (IMAGE_WHITE_8 || IMAGE_WHITE_16 || IMAGE_WHITE_1)
+         fn = convertPdf_InvertColors;
+       else
+         fn = convertPdf_NoConversion;
+   } else {
        fputs("DEBUG: Unable to convert PDF color.\n", stderr);
        error = 1;
      }
@@ -1045,14 +1075,14 @@ int main(int argc, char **argv)
       Page ++;
       fprintf(stderr, "INFO: Starting page %d.\n", Page);
 
-      if (!cm_disabled) {
-          // Use "profile=profile_name.icc" to embed 'profile_name.icc' into the PDF
-          // for testing.
-          if ((profile_name = cupsGetOption("profile", num_options, options)) != NULL) 
-            setProfile(profile_name);
-          if (colorProfile != NULL)       
-            fprintf(stderr, "DEBUG: User ICC Profile: %s\n", profile_name);
+      // Use "profile=profile_name.icc" to embed 'profile_name.icc' into the PDF
+      // for testing. Forces color management to enable.
+      if ((profile_name = cupsGetOption("profile", num_options, options)) != NULL) {
+        setProfile(profile_name);
+        cm_disabled = 0;
       }
+      if (colorProfile != NULL)       
+        fprintf(stderr, "DEBUG: TEST ICC Profile specified (color management forced ON): \n[%s]\n", profile_name);
 
       // Add a new page to PDF file
       if (add_pdf_page(&pdf, Page, header.cupsWidth, header.cupsHeight,
