@@ -1,6 +1,32 @@
 NEWS - OpenPrinting CUPS Filters v1.0.57 - 2014-08-14
 -----------------------------------------------------
 
+CHANGES IN V1.0.58
+
+	- pdftoraster: Changed ICC profile get function to accept a
+	  PPD fallback profile.
+	- pdftoraster: Fixed handling of cupsColorSpaces 18,19,20.
+	- rastertopdf: Added test feature to force color management if
+	  "profile=" option is specified.
+	- rastertopdf: Grayscale color conversion now properly inverts
+          bits.
+	- rastertopdf: Code cleanup for prepare_pdf_page().
+	- rastertopdf: Implemented basic 8bit->8bit color space
+	  conversions.
+	- rastertopdf: Added black point compensation.
+	- rastertopdf: Added handling of color rendering intent.
+	- gstoraster, imagetoraster, pdftoraster, rastertopclx,
+	  rastertopdf, foomatic-rip: Use color management functions in
+	  libcupsfilters.
+	- libcupsfilters: Modified code formatting and documentation in
+	  the color management functions.
+	- libcupsfilters: Fixed string handling and added debug log
+          messages in the color management functions.
+	- libcupsfilters: Fixed Adobe RGB matrix for proper rendering
+          (transpose)
+	- libcupsfilters: Moved color management functions from the
+	  individual filters to the libcupsfilters library.
+
 CHANGES IN V1.0.57
 
 	- rastertopclx: Fixed implicit declaration of
