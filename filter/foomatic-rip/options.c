@@ -1628,6 +1628,9 @@ void read_ppd_file(const char *filename)
         /* remove last newline */
         dstrremovenewline(value);
 
+        /* remove last whitespace */
+        dstrtrim_right(value);
+
         /* process key/value pairs */
         if (strcmp(key, "NickName") == 0) {
             unhtmlify(printer_model, 256, value->data);

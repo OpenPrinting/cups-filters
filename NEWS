@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.0.58 - 2014-08-20
 -----------------------------------------------------
 
+CHANGES IN V1.0.59
+
+	- foomatic-rip: Clean trailing white space from PPD file lines to
+	  avoid a segfault caused by it (Bug #1227).
+
 CHANGES IN V1.0.58
 
 	- pdftoraster: Changed ICC profile get function to accept a
