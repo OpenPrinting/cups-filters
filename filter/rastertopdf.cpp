@@ -688,6 +688,10 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
     info->render_intent = render_intent;
     info->color_space = color_space;
 
+    /* Invert grayscale by default */
+    if (color_space == CUPS_CSPACE_K)
+      fn = convertPdf_InvertColors;
+
     if (colorProfile != NULL) {
       css = cmsGetColorSpace(colorProfile);
 
@@ -763,7 +767,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
          case CUPS_CSPACE_SW:
          case CUPS_CSPACE_K:           
            if (IMAGE_WHITE_8 || IMAGE_WHITE_16 || IMAGE_WHITE_1)
-             fn = convertPdf_InvertColors;
+             fn = convertPdf_NoConversion; 
            else if (IMAGE_CMYK_8)
              fn = convertPdf_Cmyk8ToWhite8;
            else if (IMAGE_CMYK_16)
@@ -797,16 +801,14 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
            break;
       }
    } else if (cm_disabled) {
-       // If color management is disabled, grayscale data must be
-       // inverted regardless
-       if (IMAGE_WHITE_8 || IMAGE_WHITE_16 || IMAGE_WHITE_1)
-         fn = convertPdf_InvertColors;
-       else
-         fn = convertPdf_NoConversion;
+     // If color management is disabled, grayscale data must be
+     // inverted regardless
+     if (color_space != CUPS_CSPACE_K)
+       fn = convertPdf_NoConversion;
    } else {
-       fputs("DEBUG: Unable to convert PDF color.\n", stderr);
-       error = 1;
-     }
+     fputs("DEBUG: Unable to convert PDF color.\n", stderr);
+     error = 1;
+   }
 
    if (!error)
      fn(info);
