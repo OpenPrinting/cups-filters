@@ -676,7 +676,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
 #define IMAGE_WHITE_16 (bpp == 16 && bpc == 16)    
      
     int error = 0;
-    pdfConvertFunction fn;
+    pdfConvertFunction fn = convertPdf_NoConversion;
     cmsColorSpaceSignature css;
 
     /* Register available raster information into the PDF */
@@ -713,8 +713,6 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
             fn = convertPdf_Cmyk8ToRgb8;
           else if (color_space == CUPS_CSPACE_K) 
             fn = convertPdf_White8ToRgb8;
-          else 
-            fn = convertPdf_NoConversion;
           info->color_space = CUPS_CSPACE_RGB;
           break;
         // Convert PDF to CMYK when using an RGB profile
@@ -723,8 +721,6 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
             fn = convertPdf_Rgb8ToCmyk8;
           else if (color_space == CUPS_CSPACE_K) 
             fn = convertPdf_White8ToCmyk8;
-          else 
-            fn = convertPdf_NoConversion;
           info->color_space = CUPS_CSPACE_CMYK;
           break;
         default:
@@ -737,9 +733,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
       switch (color_space) {
          // Convert image to CMYK
          case CUPS_CSPACE_CMYK:
-           if (IMAGE_CMYK_8 || IMAGE_CMYK_16)
-             fn = convertPdf_NoConversion;
-           else if (IMAGE_RGB_8)
+           if (IMAGE_RGB_8)
              fn = convertPdf_Rgb8ToCmyk8;  
            else if (IMAGE_RGB_16)
              fn = convertPdf_NoConversion;
@@ -752,9 +746,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
          case CUPS_CSPACE_ADOBERGB:
          case CUPS_CSPACE_RGB:
          case CUPS_CSPACE_SRGB:
-           if (IMAGE_RGB_8 || IMAGE_RGB_16)
-             fn = convertPdf_NoConversion;  
-           else if (IMAGE_CMYK_8)
+           if (IMAGE_CMYK_8)
              fn = convertPdf_Cmyk8ToRgb8;
            else if (IMAGE_CMYK_16)
              fn = convertPdf_NoConversion;  
@@ -765,10 +757,8 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
            break;
          // Convert image to Grayscale
          case CUPS_CSPACE_SW:
-         case CUPS_CSPACE_K:           
-           if (IMAGE_WHITE_8 || IMAGE_WHITE_16 || IMAGE_WHITE_1)
-             fn = convertPdf_NoConversion; 
-           else if (IMAGE_CMYK_8)
+         case CUPS_CSPACE_K:
+           if (IMAGE_CMYK_8)
              fn = convertPdf_Cmyk8ToWhite8;
            else if (IMAGE_CMYK_16)
              fn = convertPdf_NoConversion;
@@ -800,15 +790,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
            error = 1;
            break;
       }
-   } else if (cm_disabled) {
-     // If color management is disabled, grayscale data must be
-     // inverted regardless
-     if (color_space != CUPS_CSPACE_K)
-       fn = convertPdf_NoConversion;
-   } else {
-     fputs("DEBUG: Unable to convert PDF color.\n", stderr);
-     error = 1;
-   }
+   } 
 
    if (!error)
      fn(info);
