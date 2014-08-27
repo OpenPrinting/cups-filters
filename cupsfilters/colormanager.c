@@ -171,12 +171,12 @@ int
 _get_colord_printer_cm_status(const char *printer_name)  /* Dest name */
 {
 
-    /* If invalid input, we assume color-management as off */
+    /* If invalid input, we leave color management alone */
     if (printer_name == NULL) {
       fprintf(stderr, "DEBUG: Color Manager: Invalid printer name.\n");
-      return 1;
+      return 0;
     } else if (!strcmp(printer_name, "(null)"))
-      return 1;
+      return 0;
  
     int is_printer_cm_disabled = 0;   /* color management status flag */
     char *printer_id = 0;             /* colord printer id string */
