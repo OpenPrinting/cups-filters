@@ -1414,8 +1414,7 @@ static void selectConvertFunc(cups_raster_t *raster)
   }
   allocLineBuf = true;
 
-  if (colorProfile != NULL && popplerColorProfile != colorProfile 
-      && !cm_disabled) {
+  if (colorProfile != NULL && popplerColorProfile != colorProfile) {
     unsigned int bytes;
 
     switch (header.cupsColorSpace) {
@@ -1471,9 +1470,6 @@ static void selectConvertFunc(cups_raster_t *raster)
       pdfError(-1,const_cast<char *>("Can't create color transform"));
       exit(1);
     }
-  } else if (cm_disabled) {
-    convertCSpace = convertCSpaceNone;
-    convertBits = convertBitsNoop;
   } else {
     /* select convertCSpace function */
     switch (header.cupsColorSpace) {
