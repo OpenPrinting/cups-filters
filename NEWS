@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.0.58 - 2014-08-20
 
 CHANGES IN V1.0.59
 
+	- pdftoraster: Removed "cm_disabled" flag in selectConvFunc()
+	- libcupsfilters: Allowed color management to continue while
+	  invalid input
+	- rastertopdf: Streamlined PDF conversion code
+	- rastertopdf: Invert all CUPS_CSPACE_K documents by default
 	- foomatic-rip: Clean trailing white space from PPD file lines to
 	  avoid a segfault caused by it (Bug #1227).
 
