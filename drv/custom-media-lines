@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# This script generates the CustomMedia lines for the Generic IPP
+# Everywhere Printer PPD file in cupsfilters.drv based on the paper
+# size info in cups/pwg-media.c of the CUPS source code.
+
+# The script needs sed and bc
+
+while read line; do
+    if printf "%s" "$line" | grep -q '^_PWG_MEDIA_'; then
+	eval "$(printf "%s" "$line" | sed -nre 's/^_PWG_MEDIA_(\S+)\((\S+),\s*(\S+),\s*(\S+),\s*(\S+),\s*(\S+)\s*\)\s*,?\s*$/unit="\1"; pwgname="\2"; ippname="\3"; ppdname="\4"; width="\5"; height="\6"/p')"
+	if [ "$unit" = "IN" ]; then
+	    widthpt="$(printf "scale=8; (%s)*72.0\n" "$width" | bc)"
+	    heightpt="$(printf "scale=8; (%s)*72.0\n" "$height" | bc)"
+	fi
+	if [ "$unit" = "MM" ]; then
+	    widthpt="$(printf "scale=8; (%s)*72.0/25.4\n" "$width" | bc)"
+	    heightpt="$(printf "scale=8; (%s)*72.0/25.4\n" "$height" | bc)"
+	fi
+	if [ "$ppdname" != "NULL" ]; then
+	    shortname="$ppdname"
+	elif [ "$ippname" != "NULL" ]; then
+	    shortname="$ippname"
+	elif [ "$pwgname" != "NULL" ]; then
+	    shortname="$pwgname"
+	else
+	    continue
+	fi
+	if [ "$ppdname" != "NULL" ]; then
+	    longname="$ppdname"
+	elif [ "$ippname" != "NULL" ]; then
+	    longname="$ippname"
+	elif [ "$pwgname" != "NULL" ]; then
+	    longname="$pwgname"
+	else
+	    continue
+	fi
+      	#printf "%s %s %s %f %f %s %.0f %.0f PT %s/%s\n" $pwgname $ippname $ppdname $width $height $unit $widthpt $heightpt $shortname $longname
+	printf "  CustomMedia \"%s/%s\" %.2f %.2f 0 0 0 0 \"<</PageSize[%.2f %.2f]/ImagingBBox null>>setpagedevice\"\n\t\"<</PageSize[%.2f %.2f]/ImagingBBox null>>setpagedevice\"\n" $shortname $longname $widthpt $heightpt $widthpt $heightpt $widthpt $heightpt
+    fi
+done

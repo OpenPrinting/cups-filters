@@ -551,6 +551,7 @@ main (int argc, char **argv, char *envp[])
   cm_calibration_t cm_calibrate;
 #ifdef HAVE_CUPS_1_7
   int pwgraster;
+  ppd_attr_t *attr;
 #endif /* HAVE_CUPS_1_7 */
 
   if (argc < 6 || argc > 7) {
@@ -660,7 +661,19 @@ main (int argc, char **argv, char *envp[])
   cupsArrayAdd(gs_args, strdup("-sOutputFile=%stdout"));
 
   if (ppd)
+  {
     cupsRasterInterpretPPD(&h,ppd,num_options,options,0);
+#ifdef HAVE_CUPS_1_7
+    if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
+	(!strcasecmp(attr->value, "true")
+	 || !strcasecmp(attr->value, "on") ||
+	 !strcasecmp(attr->value, "yes")))
+    {
+      pwgraster = 1;
+      cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 0);
+    }
+#endif /* HAVE_CUPS_1_7 */
+  }
   else
   {
 #ifdef HAVE_CUPS_1_7

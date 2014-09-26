@@ -552,6 +552,16 @@ static void parseOpts(int argc, char **argv)
     if (profile != NULL)
       colorProfile = cmsOpenProfileFromFile(profile,"r");    
 
+#ifdef HAVE_CUPS_1_7
+    if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
+	(!strcasecmp(attr->value, "true")
+	 || !strcasecmp(attr->value, "on") ||
+	 !strcasecmp(attr->value, "yes")))
+    {
+      pwgraster = 1;
+      cupsRasterParseIPPOptions(&header, num_options, options, pwgraster, 0);
+    }
+#endif /* HAVE_CUPS_1_7 */
   } else {
 #ifdef HAVE_CUPS_1_7
     pwgraster = 1;
