@@ -495,7 +495,7 @@ Attribute "PWGRaster" "" "Yes"
   ModelName "Generic IPP Everywhere Printer"
   Attribute "NickName" "" "Generic IPP Everywhere Printer"
   Attribute "ShortNickName" "" "Generic IPP Everywhere Printer"
-  Attribute "1284DeviceID" "" "MFG:Generic;MDL:IPP Everywhere Printer;DES:Generic IPP Everywhere Printer;CLS:PRINTER;CMD:PWG Raster;DRV:Dpwg-raster,R1,M0;"
+  Attribute "1284DeviceID" "" "MFG:Generic;MDL:IPP Everywhere Printer;DES:Generic IPP Everywhere Printer;CLS:PRINTER;CMD:PWGRaster;DRV:Dpwgraster,R1,M0;"
   PCFileName "pwgrast.ppd"
   Attribute "Product" "" "(Generic IPP Everywhere Printer)"
 

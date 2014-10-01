@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.0.59 - 2014-09-26
 -----------------------------------------------------
 
+CHANGES IN V1.0.60
+
+	- cupsfilters.drv: Corrected the CMD: field of the device ID,
+	  it must read "PWGRaster" there to conform to the PWG standard.
+
 CHANGES IN V1.0.59
 
 	- cupsfilters.drv: Added PPD file for a Generic IPP Everywhere
