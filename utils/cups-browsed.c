@@ -422,7 +422,7 @@ create_local_queue (const char *name,
       goto fail;
     }
 
-    if (!pdl || pdl[0] == '\0') {
+    if (!pdl || pdl[0] == '\0' || (!strcasestr(pdl, "application/postscript") && !strcasestr(pdl, "application/pdf") && !strcasestr(pdl, "image/pwg-raster") && !strcasestr(pdl, "application/vnd.hp-PCL") && !strcasestr(pdl, "application/vnd.hp-PCLXL"))) {
       debug_printf("cups-browsed: Cannot create remote printer %s (%s) as its PDLs are not known, ignoring this printer.\n",
 		   p->name, p->uri);
       goto fail;

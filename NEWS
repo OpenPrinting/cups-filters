@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.59 - 2014-09-26
 
 CHANGES IN V1.0.60
 
+	- cups-browsed, pdftoippprinter: Do not confuse the PDL "PCLm"
+	  with "PCL". The former is a proprietary, PDF-based raster
+	  format and has nothing to do with PCL.
 	- cupsfilters.drv: Corrected the CMD: field of the device ID,
 	  it must read "PWGRaster" there to conform to the PWG standard.
 

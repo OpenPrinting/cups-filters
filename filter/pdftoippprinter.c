@@ -300,9 +300,9 @@ main(int  argc,				/* I - Number of command-line args */
 	goto error;
       }
     }
-    else if (strcasestr(val, "pcl"))
+    else if ((p = strcasestr(val, "hp-pcl")) != NULL)
     {
-      if (strcasestr(val, "xl"))
+      if (!strcasecmp(p, "hp-pclxl"))
       {
 	output_format = PCLXL;
 	if (filter_present("gstopxl") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
