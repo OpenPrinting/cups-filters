@@ -13,6 +13,7 @@
 *cupsManualCopies: True
 *cupsModelNumber:  2
 *cupsFilter:    "text/plain 0 textonly"
+*cupsFilter2:    "text/plain text/plain 0 textonly"
 *ModelName:     "Generic text-only printer"
 *ShortNickName: "Generic text-only printer"
 *NickName:      "Generic text-only printer"

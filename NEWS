@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.0.60 - 2014-10-06
 -----------------------------------------------------
 
+CHANGES IN V1.0.61
+
+	- cupsfilters.drv, *-PDF.ppd, textonly.ppd: Added
+	  "*cupsFilter2: ..."  lines to the PPD files to support
+	  data-format-specific behavior of backends, especially of the
+	  IPP backend.
+
 CHANGES IN V1.0.60
 
 	- cups-browsed, pdftoippprinter: Do not confuse the PDL "PCLm"
