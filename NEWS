@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.60 - 2014-10-06
 
 CHANGES IN V1.0.61
 
+	- cups-browsed: Fixed memory leak when a
+	  cups-browsed-generated print queue is the default
+	  printer. Thanks to Tim Waugh from Red Hat for the patch (Red
+	  Hat bug: #1119290).
 	- cupsfilters.drv, *-PDF.ppd, textonly.ppd: Added
 	  "*cupsFilter2: ..."  lines to the PPD files to support
 	  data-format-specific behavior of backends, especially of the

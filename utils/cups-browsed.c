@@ -761,6 +761,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	  httpClose(http);
 	  /* Schedule the removal of the queue for later */
 	  p->timeout = current_time + TIMEOUT_RETRY;
+	  ippDelete(response);
 	  break;
 	}
 	if (response)
