@@ -135,14 +135,35 @@ void emitPreamble(ppd_file_t *ppd,const ProcessingParameters &param) // {{{
        ppdEmitJCL() actually adds JCL based on the presence on 
        "*JCLToPDFInterpreter:". */
     ppd_attr_t *attr;
+    char buf[1024];
+    int devicecopies_done = 0;
+    char *old_jcl_ps = ppd->jcl_ps;
+    /* If there is a "Copies" option in the PPD file, assure that hardware
+       copies are implemented as described by this option */
+    if (ppdFindOption(ppd,"Copies") != NULL &&
+	param.deviceCopies > 1) {
+      snprintf(buf,sizeof(buf),"%d",param.deviceCopies);
+      ppdMarkOption(ppd,"Copies",buf);
+      devicecopies_done = 1;
+    }
     if ( (attr=ppdFindAttr(ppd,"JCLToPDFInterpreter",NULL)) != NULL) {
-      ppd->jcl_ps=strdup(attr->value);
+      if (param.deviceCopies > 1 && devicecopies_done == 0 && // HW copies
+	  strncmp(ppd->jcl_begin, "\033%-12345X@", 10) == 0) { // PJL
+	/* Add a PJL command to implement the hardware copies */
+        const size_t size=strlen(attr->value)+1+30;
+        ppd->jcl_ps=(char *)malloc(size*sizeof(char));
+        snprintf(ppd->jcl_ps, size, "@PJL SET COPIES=%d\n%s",
+		 param.deviceCopies, attr->value);
+      } else
+	ppd->jcl_ps=strdup(attr->value);
       ppd_decode(ppd->jcl_ps);
     } else {
       ppd->jcl_ps=NULL;
     }
     ppdEmitJCL(ppd,stdout,param.jobId,param.user,param.title);
     emitJCLOptions(stdout,ppd,param.deviceCopies);
+    free(ppd->jcl_ps);
+    ppd->jcl_ps = old_jcl_ps; // cups uses pool allocator, not free()
   }
 }
 // }}}
