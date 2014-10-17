@@ -152,8 +152,13 @@ void emitPreamble(ppd_file_t *ppd,const ProcessingParameters &param) // {{{
 	/* Add a PJL command to implement the hardware copies */
         const size_t size=strlen(attr->value)+1+30;
         ppd->jcl_ps=(char *)malloc(size*sizeof(char));
-        snprintf(ppd->jcl_ps, size, "@PJL SET COPIES=%d\n%s",
-		 param.deviceCopies, attr->value);
+        if (param.deviceCollate) {
+          snprintf(ppd->jcl_ps, size, "@PJL SET QTY=%d\n%s",
+                   param.deviceCopies, attr->value);
+        } else {
+          snprintf(ppd->jcl_ps, size, "@PJL SET COPIES=%d\n%s",
+                   param.deviceCopies, attr->value);
+        }
       } else
 	ppd->jcl_ps=strdup(attr->value);
       ppd_decode(ppd->jcl_ps);
