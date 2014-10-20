@@ -3,8 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.61 - 2014-10-10
 
 CHANGES IN V1.0.62
 
-	- pdftopdf: Correct handling of hardware copies in PJL/JCL and/or
-	  when the PPD file has a "Copies" option.
+	- imagetopdf, pdftopdf: Correct handling of hardware copies in
+	  PJL/JCL and/or when the PPD file has a "Copies" option.
 
 CHANGES IN V1.0.61
 

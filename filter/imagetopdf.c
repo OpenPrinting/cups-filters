@@ -1392,9 +1392,39 @@ main(int  argc,				/* I - Number of command-line arguments */
        the content of ppd->jcl_ps by the value of this keyword, so that
        ppdEmitJCL() actalually adds JCL based on the presence on 
        "*JCLToPDFInterpreter:". */
+    ppd_attr_t *attr;
+    char buf[1024];
+    int devicecopies_done = 0;
+    char *old_jcl_ps = ppd->jcl_ps;
+    /* If there is a "Copies" option in the PPD file, assure that hardware
+       copies are implemented as described by this option */
+    if (ppdFindOption(ppd,"Copies") != NULL && deviceCopies > 1)
+    {
+      snprintf(buf,sizeof(buf),"%d",deviceCopies);
+      ppdMarkOption(ppd,"Copies",buf);
+      devicecopies_done = 1;
+    }
     if ((attr = ppdFindAttr(ppd,"JCLToPDFInterpreter",NULL)) != NULL)
     {
-      ppd->jcl_ps = strdup(attr->value);
+      if (deviceCopies > 1 && devicecopies_done == 0 && /* HW copies */
+	  strncmp(ppd->jcl_begin, "\033%-12345X@", 10) == 0) /* PJL */
+      {
+	/* Add a PJL command to implement the hardware copies */
+        const size_t size = strlen(attr->value) + 1 + 30;
+        ppd->jcl_ps = (char *)malloc(size * sizeof(char));
+        if (deviceCollate)
+	{
+          snprintf(ppd->jcl_ps, size, "@PJL SET QTY=%d\n%s",
+                   deviceCopies, attr->value);
+        }
+	else
+	{
+          snprintf(ppd->jcl_ps, size, "@PJL SET COPIES=%d\n%s",
+                   deviceCopies, attr->value);
+        }
+      } 
+      else
+	ppd->jcl_ps = strdup(attr->value);
       ppd_decode(ppd->jcl_ps);
       pdf_printer = 1;
     } 
@@ -1405,6 +1435,8 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
     ppdEmitJCL(ppd, stdout, atoi(argv[1]), argv[2], argv[3]);
     emitJCLOptions(stdout,deviceCopies);
+    free(ppd->jcl_ps);
+    ppd->jcl_ps = old_jcl_ps; /* cups uses pool allocator, not free() */
   }
 
  /*
