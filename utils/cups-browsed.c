@@ -117,6 +117,7 @@ typedef struct browsepoll_s {
 cups_array_t *remote_printers;
 static cups_array_t *netifs;
 static cups_array_t *browseallow;
+static gboolean browseallow_all = FALSE;
 
 static GMainLoop *gmainloop = NULL;
 #ifdef HAVE_AVAHI
@@ -1669,8 +1670,8 @@ static gboolean
 allowed (struct sockaddr *srcaddr)
 {
   allow_t *allow;
-  if (cupsArrayCount(browseallow) == 0) {
-    /* No "BrowseAllow" line, allow all servers */
+  if (browseallow_all || cupsArrayCount(browseallow) == 0) {
+    /* "BrowseAllow All", or no "BrowseAllow" line, so allow all servers */
     return TRUE;
   }
   for (allow = cupsArrayFirst (browseallow);
@@ -2522,7 +2523,14 @@ read_browseallow_value (const char *value)
 {
   char *p;
   struct in_addr addr;
-  allow_t *allow = calloc (1, sizeof (allow_t));
+  allow_t *allow;
+
+  if (!strcasecmp (value, "all")) {
+    browseallow_all = TRUE;
+    return 0;
+  }
+  
+  allow = calloc (1, sizeof (allow_t));
   if (value == NULL)
     goto fail;
   p = strchr (value, '/');
