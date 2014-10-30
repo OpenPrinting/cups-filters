@@ -14,6 +14,7 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # BrowseProtocols none
 
 # Only browse remote printers from selected servers
+# BrowseAllow All
 # BrowseAllow cups.example.com
 # BrowseAllow 192.168.1.12
 # BrowseAllow 192.168.1.0/24
