@@ -26,12 +26,12 @@
 #if defined(__OpenBSD__)
 #include <sys/socket.h>
 #endif /* __OpenBSD__ */
+#include <sys/types.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include <ifaddrs.h>
 #include <resolv.h>
 #include <stdio.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <assert.h>
 #include <stdlib.h>
