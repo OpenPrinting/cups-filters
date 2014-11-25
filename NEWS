@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.61 - 2014-10-10
 
 CHANGES IN V1.0.62
 
+	- pdftops: Apply workarounds for Kyocera also to Utax printers
+	  as Utax uses hard- and software from Kyocera. Thanks to Edward
+	  Huang from Kyocera.
 	- cups-browsed: Added support for "BrowseAllow All" in the
 	  cups-browsed.conf file.
 	- cups-browsed: Reorder inclusion of headers for compatibility
