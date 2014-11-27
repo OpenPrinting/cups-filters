@@ -594,11 +594,11 @@ create_local_queue (const char *name,
  * Remove all illegal characters and replace each group of such characters
  * by a single dash, return a free()-able string.
  *
- * mode = 0: Only allow letters, numbers, and dashes, for turning make/model
- *           info into a valid print queue name or into a string which can
- *           be supplied as option value in a filter command line without
- *           need of quoting
- * mode = 1: Allow also '/', '.', ',', '_', for cleaning up MIME type
+ * mode = 0: Only allow letters, numbers, dashes, and underscores for
+ *           turning make/model info into a valid print queue name or
+ *           into a string which can be supplied as option value in a
+ *           filter command line without need of quoting
+ * mode = 1: Allow also '/', '.', ',' for cleaning up MIME type
  *           strings (here available Page Description Languages, PDLs) to
  *           supply them on a filter command line without quoting
  *
@@ -630,9 +630,10 @@ remove_bad_chars(const char *str_orig, /* I - Original string */
     if (((str[i] >= 'A') && (str[i] <= 'Z')) ||
 	((str[i] >= 'a') && (str[i] <= 'z')) ||
 	((str[i] >= '0') && (str[i] <= '9')) ||
-	(mode == 1 && (str[i] == '/' || str[i] == '_' ||
+	str[i] == '_' ||
+	(mode == 1 && (str[i] == '/' ||
 		       str[i] == '.' || str[i] == ','))) {
-      /* Letter or number, keep it */
+      /* Allowed character, keep it */
       havedash = 0;
     } else {
       /* Replace all other characters by a single '-' */
