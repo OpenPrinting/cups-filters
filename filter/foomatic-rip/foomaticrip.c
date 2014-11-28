@@ -181,10 +181,11 @@ void config_set_option(const char *key, const char *value)
     if (strcmp(key, "debug") == 0)
         debug = atoi(value);
 
-    /* What path to use for filter programs and such. Your printer driver must be
-     * in the path, as must be the renderer, $enscriptcommand, and possibly other
-     * stuff. The default path is often fine on Linux, but may not be on other
-     * systems. */
+    /* What path to use for filter programs and such
+     *
+     * Your printer driver must be in the path, as must be the renderer,
+     * and possibly other stuff. The default path is often fine on Linux,
+     * but may not be on other systems. */
     else if (strcmp(key, "execpath") == 0 && !isempty(value))
         setenv("PATH", value, 1);
 
