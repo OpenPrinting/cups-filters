@@ -63,11 +63,11 @@
 
 /* Status of remote printer */
 typedef enum printer_status_e {
-  STATUS_UNCONFIRMED = 0,
-  STATUS_CONFIRMED,
-  STATUS_TO_BE_CREATED,
-  STATUS_BROWSE_PACKET_RECEIVED,
-  STATUS_DISAPPEARED
+  STATUS_UNCONFIRMED = 0,	/* Generated in a previous session */
+  STATUS_CONFIRMED,		/* Avahi confirms UNCONFIRMED printer */
+  STATUS_TO_BE_CREATED,		/* Scheduled for creation */
+  STATUS_BROWSE_PACKET_RECEIVED,/* Scheduled for creation with timeout */
+  STATUS_DISAPPEARED		/* Scheduled for removal */
 } printer_status_t;
 
 /* Data structure for remote printers */
@@ -964,13 +964,14 @@ recheck_timer (void)
   }
 }
 
-void generate_local_queue(const char *host,
-			  uint16_t port,
-			  char *resource,
-			  const char *name,
-			  const char *type,
-			  const char *domain,
-			  void *txt) {
+static remote_printer_t *
+generate_local_queue(const char *host,
+		     uint16_t port,
+		     char *resource,
+		     const char *name,
+		     const char *type,
+		     const char *domain,
+		     void *txt) {
 
   char uri[HTTP_MAX_URI];
   char *remote_queue = NULL, *remote_host = NULL, *pdl = NULL;
@@ -985,6 +986,8 @@ void generate_local_queue(const char *host,
   int i, num_dests, is_cups_queue;
   size_t hl = 0;
   const char *val = NULL;
+  gboolean create = TRUE;
+  
 
   is_cups_queue = 0;
   memset(uri, 0, sizeof(uri));
@@ -1038,7 +1041,7 @@ void generate_local_queue(const char *host,
       debug_printf("cups-browsed: Remote Bonjour-advertised CUPS queue %s on host %s is raw, ignored.\n",
 		   remote_queue, remote_host);
       free (remote_host);
-      return;
+      return NULL;
     }
 #endif /* HAVE_AVAHI */
   } else if (!strncasecmp(resource, "classes/", 8)) {
@@ -1102,18 +1105,9 @@ void generate_local_queue(const char *host,
 			  dest->options)) != NULL) &&
 	  (!strcasecmp(val, uri)))
 	break;
-    if (i > 0) {
-      /* Found a local queue with the same URI as our discovered printer
-	 would get, so ignore this remote printer */
-      debug_printf("cups-browsed: Printer with URI %s already exists, printer ignored.\n",
-		   uri);
-      free (remote_host);
-      free (backup_queue_name);
-      free (pdl);
-      free (remote_queue);
-      cupsFreeDests(num_dests, dests);
-      return;
-    }
+    if (i > 0)
+      create = FALSE;
+
     /* Is there a local queue with the name of the remote queue? */
     for (i = num_dests, dest = dests; i > 0; i --, dest ++)
       /* Only consider CUPS queues not created by us */
@@ -1151,7 +1145,7 @@ void generate_local_queue(const char *host,
 	free (pdl);
 	free (remote_queue);
 	cupsFreeDests(num_dests, dests);
-	return;
+	return NULL;
       }
     }
     cupsFreeDests(num_dests, dests);
@@ -1167,6 +1161,23 @@ void generate_local_queue(const char *host,
 	 p->status == STATUS_DISAPPEARED ||
 	 !strcasecmp(p->host, remote_host)))
       break;
+
+  if (!create) {
+    if (p)
+      return p;
+    else {
+      /* Found a local queue with the same URI as our discovered printer
+	 would get, so ignore this remote printer */
+      debug_printf("cups-browsed: Printer with URI %s already exists, printer ignored.\n",
+		   uri);
+      free (remote_host);
+      free (backup_queue_name);
+      free (pdl);
+      free (remote_queue);
+      cupsFreeDests(num_dests, dests);
+      return NULL;
+    }
+  }
 
   if (p) {
     /* We have already created a local queue, check whether the
@@ -1234,6 +1245,8 @@ void generate_local_queue(const char *host,
     debug_printf("cups-browsed: Bonjour IDs: Service name: \"%s\", "
 		 "Service type: \"%s\", Domain: \"%s\"\n",
 		 p->service_name, p->type, p->domain);
+
+  return p;
 }
 
 #ifdef HAVE_AVAHI
@@ -1610,6 +1623,10 @@ void avahi_init() {
 }
 #endif /* HAVE_AVAHI */
 
+/*
+ * A CUPS printer has been discovered via CUPS Browsing
+ * or with BrowsePoll
+ */
 void
 found_cups_printer (const char *remote_host, const char *uri,
 		    const char *info)
@@ -1622,6 +1639,7 @@ found_cups_printer (const char *remote_host, const char *uri,
   netif_t *iface;
   char local_resource[HTTP_MAX_URI];
   char *c;
+  remote_printer_t *printer;
 
   memset(scheme, 0, sizeof(scheme));
   memset(username, 0, sizeof(username));
@@ -1663,8 +1681,18 @@ found_cups_printer (const char *remote_host, const char *uri,
   debug_printf("cups-browsed: browsed queue name is %s\n",
 	       local_resource + 9);
 
-  generate_local_queue(host, port, local_resource, info ? info : "",
-		       "", "", NULL);
+  printer = generate_local_queue(host, port, local_resource,
+				 info ? info : "",
+				 "", "", NULL);
+
+  if (printer) {
+    if (printer->status == STATUS_TO_BE_CREATED)
+      printer->status = STATUS_BROWSE_PACKET_RECEIVED;
+    else {
+      printer->status = STATUS_DISAPPEARED;
+      printer->timeout = time(NULL) + BrowseTimeout;
+    }
+  }
 }
 
 static gboolean
