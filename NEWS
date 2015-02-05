@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.62 - 2015-01-14
 -----------------------------------------------------
 
+CHANGES IN V1.0.63
+
+	- cups-browsed: Fixed CUPS Browsing timeouts. Thanks to Tim
+          Waugh from Red Hat for the patch (Bug #1252, Red Hat bug
+          #1189254).
+
 CHANGES IN V1.0.62
 
 	- cups-browsed: Allow underscore characters in print queue names.
