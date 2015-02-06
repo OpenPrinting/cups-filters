@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.62 - 2015-01-14
 
 CHANGES IN V1.0.63
 
+	- foomatic-rip: Added hint to man page that direct, spooler-less mode
+	  is mainly for testing and debugging (Bug #1253).
 	- foomatic-rip: Added a symlink of the filter to the binary executable
 	  directory (usually /usr/bin), so that LSB compliance test scripts
 	  work (Bug #1255).

@@ -39,9 +39,10 @@ the manufacturers of PostScript printers. The PPD files are the same
 for both CUPS and direct printing.
 
 .Topic
-foomatic-rip works with \fBCUPS\fR and for direct printing \fBwithout
-spooler\fR). The mode is selected by the command line options and
-environment variables which are supplied to foomatic-rip.
+foomatic-rip works with \fBCUPS\fR and for direct printing (\fBwithout
+spooler\fR), where the latter is mainly for testing and debugging.
+The mode is selected by the command line options and environment
+variables which are supplied to foomatic-rip.
 
 .Topic
 foomatic-rip does not only apply option settings supplied by the user
