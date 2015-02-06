@@ -777,6 +777,10 @@ EXTRA_DIST += \
 distclean-local:
 	rm -rf *.cache *~
 
+install-exec-hook:
+	$(INSTALL) -d -m 755 $(DESTDIR)$(bindir)
+	$(LN_S) -f $(pkgfilterdir)/foomatic-rip $(DESTDIR)$(bindir)
+
 install-data-hook:
 if RCLINKS
 	for level in $(RCLEVELS); do \
@@ -799,3 +803,4 @@ if RCLINKS
 	fi
 endif
 	$(RM) $(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
+	$(RM) $(DESTDIR)$(bindir)/foomatic-rip
