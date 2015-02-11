@@ -1947,7 +1947,9 @@ process_browse_data (GIOChannel *source,
   if (c >= end)
     return TRUE;
 
-  found_cups_printer (remote_host, uri, info);
+  if (!(type & CUPS_PRINTER_DELETE))
+    found_cups_printer (remote_host, uri, info);
+
   recheck_timer ();
 
   /* Don't remove this I/O source */
