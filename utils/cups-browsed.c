@@ -115,10 +115,18 @@ typedef struct browsepoll_s {
   int sequence_number;
 } browsepoll_t;
 
+/* Local printer (key is name) */
+typedef struct local_printer_s {
+  char *device_uri;
+  gboolean cups_browsed_controlled;
+} local_printer_t;
+
 cups_array_t *remote_printers;
 static cups_array_t *netifs;
 static cups_array_t *browseallow;
 static gboolean browseallow_all = FALSE;
+
+static GHashTable *local_printers;
 
 static GMainLoop *gmainloop = NULL;
 #ifdef HAVE_AVAHI
@@ -264,6 +272,65 @@ password_callback (const char *prompt,
 		   void *user_data)
 {
   return NULL;
+}
+
+static local_printer_t *
+new_local_printer (const char *device_uri,
+		   gboolean cups_browsed_controlled)
+{
+  local_printer_t *printer = g_malloc (sizeof (local_printer_t));
+  printer->device_uri = strdup (device_uri);
+  printer->cups_browsed_controlled = cups_browsed_controlled;
+  return printer;
+}
+
+static void
+free_local_printer (gpointer data)
+{
+  local_printer_t *printer = data;
+  free (printer->device_uri);
+  free (printer);
+}
+
+static gboolean
+local_printer_has_uri (gpointer key,
+		       gpointer value,
+		       gpointer user_data)
+{
+  local_printer_t *printer = value;
+  char *device_uri = user_data;
+  return g_str_equal (printer->device_uri, device_uri);
+}
+
+static void
+update_local_printers (void)
+{
+  /* Just use cupsGetDests() */
+  cups_dest_t *dests = NULL;
+  int num_dests = cupsGetDests (&dests);
+  g_hash_table_remove_all (local_printers);
+  for (int i = 0; i < num_dests; i++) {
+    const char *val;
+    cups_dest_t *dest = &dests[i];
+    local_printer_t *printer;
+    gboolean cups_browsed_controlled;
+    const char *device_uri = cupsGetOption ("device-uri",
+					    dest->num_options,
+					    dest->options);
+    val = cupsGetOption (CUPS_BROWSED_MARK,
+			 dest->num_options,
+			 dest->options);
+    cups_browsed_controlled = (!strcasecmp (val, "yes") ||
+			       !strcasecmp (val, "on") ||
+			       !strcasecmp (val, "true"));
+    printer = new_local_printer (device_uri,
+				 cups_browsed_controlled);
+    g_hash_table_insert (local_printers,
+			 g_strdup (dest->name),
+			 printer);
+  }
+
+  cupsFreeDests (num_dests, dests);
 }
 
 gboolean
@@ -982,11 +1049,10 @@ generate_local_queue(const char *host,
   char *key = NULL, *value = NULL;
 #endif /* HAVE_AVAHI */
   remote_printer_t *p;
+  local_printer_t *local_printer;
   char *backup_queue_name = NULL, *local_queue_name = NULL;
-  cups_dest_t *dests = NULL, *dest = NULL;
-  int i, num_dests, is_cups_queue;
+  int is_cups_queue;
   size_t hl = 0;
-  const char *val = NULL;
   gboolean create = TRUE;
   
 
@@ -1095,48 +1161,30 @@ generate_local_queue(const char *host,
   sprintf(backup_queue_name, "%s@%s", remote_queue, remote_host);
 
   /* Get available CUPS queues */
-  num_dests = cupsGetDests(&dests);
+  update_local_printers ();
 
   local_queue_name = remote_queue;
-  if (num_dests > 0) {
-    /* Is there a local queue with the same URI as the remote queue? */
-    for (i = num_dests, dest = dests; i > 0; i --, dest ++)
-      if (((val =
-	    cupsGetOption("device-uri", dest->num_options,
-			  dest->options)) != NULL) &&
-	  (!strcasecmp(val, uri)))
-	break;
-    if (i > 0)
-      create = FALSE;
 
+  /* Is there a local queue with the same URI as the remote queue? */
+  if (g_hash_table_find (local_printers,
+			 local_printer_has_uri,
+			 uri))
+    create = FALSE;
+
+  if (create) {
     /* Is there a local queue with the name of the remote queue? */
-    for (i = num_dests, dest = dests; i > 0; i --, dest ++)
+    local_printer = g_hash_table_lookup (local_printers,
+					 local_queue_name);
       /* Only consider CUPS queues not created by us */
-      if ((((val =
-	     cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
-			   dest->options)) == NULL) ||
-	   (strcasecmp(val, "yes") != 0 &&
-	    strcasecmp(val, "on") != 0 &&
-	    strcasecmp(val, "true") != 0)) &&
-	  !strcasecmp(local_queue_name, dest->name))
-	break;
-    if (i > 0) {
+    if (local_printer && !local_printer->cups_browsed_controlled) {
       /* Found local queue with same name as remote queue */
       /* Is there a local queue with the name <queue>@<host>? */
       local_queue_name = backup_queue_name;
       debug_printf("cups-browsed: %s already taken, using fallback name: %s\n",
 		   remote_queue, local_queue_name);
-      for (i = num_dests, dest = dests; i > 0; i --, dest ++)
-	/* Only consider CUPS queues not created by us */
-	if ((((val =
-	       cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
-			     dest->options)) == NULL) ||
-	     (strcasecmp(val, "yes") != 0 &&
-	      strcasecmp(val, "on") != 0 &&
-	      strcasecmp(val, "true") != 0)) &&
-	    !strcasecmp(local_queue_name, dest->name))
-	  break;
-      if (i > 0) {
+      local_printer = g_hash_table_lookup (local_printers,
+					   local_queue_name);
+      if (local_printer && !local_printer->cups_browsed_controlled) {
 	/* Found also a local queue with name <queue>@<host>, so
 	   ignore this remote printer */
 	debug_printf("cups-browsed: %s also taken, printer ignored.\n",
@@ -1145,11 +1193,9 @@ generate_local_queue(const char *host,
 	free (remote_host);
 	free (pdl);
 	free (remote_queue);
-	cupsFreeDests(num_dests, dests);
 	return NULL;
       }
     }
-    cupsFreeDests(num_dests, dests);
   }
 
   /* Check if we have already created a queue for the discovered
@@ -1175,7 +1221,6 @@ generate_local_queue(const char *host,
       free (backup_queue_name);
       free (pdl);
       free (remote_queue);
-      cupsFreeDests(num_dests, dests);
       return NULL;
     }
   }
@@ -2889,6 +2934,11 @@ int main(int argc, char*argv[]) {
   netifs = cupsArrayNew(compare_pointers, NULL);
   update_netifs ();
 
+  local_printers = g_hash_table_new_full (g_str_hash,
+					  g_str_equal,
+					  g_free,
+					  free_local_printer);
+
   /* Read out the currently defined CUPS queues and find the ones which we
      have added in an earlier session */
   num_dests = cupsGetDests(&dests);
@@ -3098,6 +3148,8 @@ fail:
 
   if (browsesocket != -1)
       close (browsesocket);
+
+  g_hash_table_destroy (local_printers);
 
   return ret;
 }
