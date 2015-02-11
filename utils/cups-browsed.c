@@ -132,6 +132,17 @@ typedef struct local_printer_s {
   gboolean cups_browsed_controlled;
 } local_printer_t;
 
+/* Browse data to send for local printer */
+typedef struct browse_data_s {
+  int type;
+  int state;
+  char *uri;
+  char *location;
+  char *info;
+  char *make_model;
+  char *browse_options;
+} browse_data_t;
+
 cups_array_t *remote_printers;
 static cups_array_t *netifs;
 static cups_array_t *browseallow;
@@ -141,6 +152,8 @@ static GHashTable *local_printers;
 static browsepoll_t *local_printers_context = NULL;
 static http_t *local_conn = NULL;
 static gboolean inhibit_local_printers_update = FALSE;
+
+static GList *browse_data = NULL;
 
 static GMainLoop *gmainloop = NULL;
 #ifdef HAVE_AVAHI
@@ -353,6 +366,240 @@ local_printers_create_subscription (http_t *conn)
 }
 
 static void
+get_local_printers (void)
+{
+  cups_dest_t *dests = NULL;
+  int num_dests = cupsGetDests (&dests);
+  debug_printf ("cups-browsed [BrowsePoll localhost:631]: cupsGetDests\n");
+  g_hash_table_remove_all (local_printers);
+  for (int i = 0; i < num_dests; i++) {
+    const char *val;
+    cups_dest_t *dest = &dests[i];
+    local_printer_t *printer;
+    gboolean cups_browsed_controlled;
+    const char *device_uri = cupsGetOption ("device-uri",
+					    dest->num_options,
+					    dest->options);
+    val = cupsGetOption (CUPS_BROWSED_MARK,
+			 dest->num_options,
+			 dest->options);
+    cups_browsed_controlled = val && (!strcasecmp (val, "yes") ||
+				      !strcasecmp (val, "on") ||
+				      !strcasecmp (val, "true"));
+    printer = new_local_printer (device_uri,
+				 cups_browsed_controlled);
+    g_hash_table_insert (local_printers,
+			 g_strdup (dest->name),
+			 printer);
+  }
+
+  cupsFreeDests (num_dests, dests);
+}
+
+static browse_data_t *
+new_browse_data (int type, int state, const gchar *uri,
+		 const gchar *location, const gchar *info,
+		 const gchar *make_model, const gchar *browse_options)
+{
+  browse_data_t *data = g_malloc (sizeof (browse_data_t));
+  data->type = type;
+  data->state = state;
+  data->uri = g_strdup (uri);
+  data->location = g_strdup (location);
+  data->info = g_strdup (info);
+  data->make_model = g_strdup (make_model);
+  data->browse_options = g_strdup (browse_options);
+  return data;
+}
+
+static void
+browse_data_free (gpointer data)
+{
+  browse_data_t *bdata = data;
+  g_free (bdata->uri);
+  g_free (bdata->location);
+  g_free (bdata->info);
+  g_free (bdata->make_model);
+  g_free (bdata->browse_options);
+  g_free (bdata);
+}
+
+static void
+prepare_browse_data (void)
+{
+  static const char * const rattrs[] = { "printer-type",
+					 "printer-state",
+					 "printer-uri-supported",
+					 "printer-info",
+					 "printer-location",
+					 "printer-make-and-model",
+					 "auth-info-required",
+					 "printer-uuid",
+					 "job-template" };
+  ipp_t *request, *response = NULL;
+  ipp_attribute_t *attr;
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
+
+  if (conn == NULL) {
+    debug_printf("cups-browsed: browse send failed to connect to localhost\n");
+    goto fail;
+  }
+
+  request = ippNewRequest(CUPS_GET_PRINTERS);
+  ippAddStrings (request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+		 "requested-attributes", sizeof (rattrs) / sizeof (rattrs[0]),
+		 NULL, rattrs);
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		"requesting-user-name", NULL, cupsUser ());
+
+  debug_printf("cups-browsed: preparing browse data\n");
+  response = cupsDoRequest (conn, request, "/");
+  if (cupsLastError() > IPP_OK_CONFLICT) {
+    debug_printf("cups-browsed: browse send failed for localhost: %s\n",
+		 cupsLastErrorString ());
+    goto fail;
+  }
+
+  g_list_free_full (browse_data, browse_data_free);
+  browse_data = NULL;
+  for (attr = ippFirstAttribute(response); attr;
+       attr = ippNextAttribute(response)) {
+    int type = -1, state = -1;
+    const char *uri = NULL;
+    gchar *location = NULL;
+    gchar *info = NULL;
+    gchar *make_model = NULL;
+    GString *browse_options = g_string_new ("");
+
+    /* Skip any non-printer attributes */
+    while (attr && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+      attr = ippNextAttribute(response);
+
+    if (!attr)
+      break;
+
+    while (attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
+      const char *attrname = ippGetName(attr);
+      int value_tag = ippGetValueTag(attr);
+
+      if (!strcasecmp(attrname, "printer-type") &&
+	  value_tag == IPP_TAG_ENUM) {
+	type = ippGetInteger(attr, 0);
+	if (type & CUPS_PRINTER_NOT_SHARED) {
+	  /* Skip CUPS queues not marked as shared */
+	  state = -1;
+	  type = -1;
+	  break;
+	}
+      } else if (!strcasecmp(attrname, "printer-state") &&
+	       value_tag == IPP_TAG_ENUM)
+	state = ippGetInteger(attr, 0);
+      else if (!strcasecmp(attrname, "printer-uri-supported") &&
+	       value_tag == IPP_TAG_URI)
+	uri = ippGetString(attr, 0, NULL);
+      else if (!strcasecmp(attrname, "printer-location") &&
+	       value_tag == IPP_TAG_TEXT) {
+	/* Remove quotes */
+	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
+	location = g_strjoinv ("", tokens);
+	g_strfreev (tokens);
+      } else if (!strcasecmp(attrname, "printer-info") &&
+		 value_tag == IPP_TAG_TEXT) {
+	/* Remove quotes */
+	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
+	info = g_strjoinv ("", tokens);
+	g_strfreev (tokens);
+      } else if (!strcasecmp(attrname, "printer-make-and-model") &&
+		 value_tag == IPP_TAG_TEXT) {
+	/* Remove quotes */
+	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
+	make_model = g_strjoinv ("", tokens);
+	g_strfreev (tokens);
+      } else if (!strcasecmp(attrname, "auth-info-required") &&
+		 value_tag == IPP_TAG_KEYWORD) {
+	if (strcasecmp (ippGetString(attr, 0, NULL), "none"))
+	  g_string_append_printf (browse_options, "auth-info-required=%s ",
+				  ippGetString(attr, 0, NULL));
+      } else if (!strcasecmp(attrname, "printer-uuid") &&
+		 value_tag == IPP_TAG_URI)
+	g_string_append_printf (browse_options, "uuid=%s ",
+				ippGetString(attr, 0, NULL));
+      else if (!strcasecmp(attrname, "job-sheets-default") &&
+	       value_tag == IPP_TAG_NAME &&
+	       ippGetCount(attr) == 2)
+	g_string_append_printf (browse_options, "job-sheets=%s,%s ",
+				ippGetString(attr, 0, NULL),
+				ippGetString(attr, 1, NULL));
+      else if (strstr(attrname, "-default")) {
+	gchar *name = g_strdup (attrname);
+	gchar *value = NULL;
+	*strstr (name, "-default") = '\0';
+
+	switch (value_tag) {
+	  gchar **tokens;
+
+	case IPP_TAG_KEYWORD:
+	case IPP_TAG_STRING:
+	case IPP_TAG_NAME:
+	  /* Escape value */
+	  tokens = g_strsplit_set (ippGetString(attr, 0, NULL),
+				   " \"\'\\", -1);
+	  value = g_strjoinv ("\\", tokens);
+	  g_strfreev (tokens);
+	  break;
+
+	default:
+	  /* other values aren't needed? */
+	  debug_printf("cups-browsed: skipping %s (%d)\n", name, value_tag);
+	  break;
+	}
+
+	if (value) {
+	  g_string_append_printf (browse_options, "%s=%s ", name, value);
+	  g_free (value);
+	}
+
+	g_free (name);
+      }
+
+      attr = ippNextAttribute(response);
+    }
+
+    if (type != -1 && state != -1 && uri && location && info && make_model) {
+      gchar *browse_options_str = g_string_free (browse_options, FALSE);
+      browse_data_t *data;
+      browse_options = NULL;
+      g_strchomp (browse_options_str);
+      data = new_browse_data (type, state, uri, location,
+			      info, make_model, browse_options_str);
+      browse_data = g_list_insert (browse_data, data, 0);
+      g_free (browse_options_str);
+    }
+
+    if (make_model)
+      g_free (make_model);
+
+    if (info)
+      g_free (info);
+
+    if (location)
+      g_free (location);
+
+    if (browse_options)
+      g_string_free (browse_options, TRUE);
+
+    if (!attr)
+      break;
+  }
+
+ fail:
+  if (response)
+    ippDelete(response);
+}
+
+static void
 update_local_printers (void)
 {
   gboolean get_printers = FALSE;
@@ -381,32 +628,10 @@ update_local_printers (void)
     get_printers = TRUE;
 
   if (get_printers) {
-    cups_dest_t *dests = NULL;
-    int num_dests = cupsGetDests (&dests);
-    debug_printf ("cups-browsed [BrowsePoll localhost:631]: cupsGetDests\n");
-    g_hash_table_remove_all (local_printers);
-    for (int i = 0; i < num_dests; i++) {
-      const char *val;
-      cups_dest_t *dest = &dests[i];
-      local_printer_t *printer;
-      gboolean cups_browsed_controlled;
-      const char *device_uri = cupsGetOption ("device-uri",
-					      dest->num_options,
-					      dest->options);
-      val = cupsGetOption (CUPS_BROWSED_MARK,
-			     dest->num_options,
-			   dest->options);
-      cups_browsed_controlled = val && (!strcasecmp (val, "yes") ||
-					!strcasecmp (val, "on") ||
-					!strcasecmp (val, "true"));
-      printer = new_local_printer (device_uri,
-				   cups_browsed_controlled);
-      g_hash_table_insert (local_printers,
-			   g_strdup (dest->name),
-			   printer);
-    }
+    get_local_printers ();
 
-    cupsFreeDests (num_dests, dests);
+    if (BrowseLocalProtocols & BROWSE_CUPS)
+      prepare_browse_data ();
   }
 }
 
@@ -2054,12 +2279,10 @@ update_netifs (void)
   freeifaddrs (ifaddr);
 }
 
-void
-broadcast_browse_packets (int type, int state,
-			  const char *local_uri, const char *location,
-			  const char *info, const char *make_model,
-			  const char *browse_options)
+static void
+broadcast_browse_packets (gpointer data, gpointer user_data)
 {
+  browse_data_t *bdata = data;
   netif_t *browse;
   char packet[2048];
   char uri[HTTP_MAX_URI];
@@ -2073,7 +2296,7 @@ broadcast_browse_packets (int type, int state,
        browse != NULL;
        browse = (netif_t *)cupsArrayNext (netifs)) {
     /* Replace 'localhost' with our IP address on this interface */
-    httpSeparateURI(HTTP_URI_CODING_ALL, local_uri,
+    httpSeparateURI(HTTP_URI_CODING_ALL, bdata->uri,
 		    scheme, sizeof(scheme),
 		    username, sizeof(username),
 		    host, sizeof(host),
@@ -2092,11 +2315,16 @@ broadcast_browse_packets (int type, int state,
 		  "lease-duration=%d" /* BrowseTimeout */
 		  "%s%s" /* other browse options */
 		  "\n",
-		  type, state, uri, location,
-		  info, make_model,
+		  bdata->type,
+		  bdata->state,
+		  uri,
+		  bdata->location,
+		  bdata->info,
+		  bdata->make_model,
 		  BrowseTimeout,
-		  browse_options ? " " : "",
-		  browse_options ? browse_options : "") >= sizeof (packet)) {
+		  bdata->browse_options ? " " : "",
+		  bdata->browse_options ? bdata->browse_options : "")
+	>= sizeof (packet)) {
       debug_printf ("cups-browsed: oversize packet not sent\n");
       continue;
     }
@@ -2107,7 +2335,7 @@ broadcast_browse_packets (int type, int state,
 		      strlen (packet), 0,
 		      &browse->broadcast.addr,
 		      httpAddrLength (&browse->broadcast));
-    if (err)
+    if (err == -1)
       debug_printf("cupsd-browsed: sendto returned %d: %s\n",
 		   err, strerror (errno));
   }
@@ -2116,177 +2344,10 @@ broadcast_browse_packets (int type, int state,
 gboolean
 send_browse_data (gpointer data)
 {
-  static const char * const rattrs[] = { "printer-type",
-					 "printer-state",
-					 "printer-uri-supported",
-					 "printer-info",
-					 "printer-location",
-					 "printer-make-and-model",
-					 "auth-info-required",
-					 "printer-uuid",
-					 "job-template" };
-  ipp_t *request, *response = NULL;
-  ipp_attribute_t *attr;
-  http_t *conn = NULL;
-
   update_netifs ();
   res_init ();
-  conn = http_connect_local ();
-
-  if (conn == NULL) {
-    debug_printf("cups-browsed: browse send failed to connect to localhost\n");
-    goto fail;
-  }
-
-  request = ippNewRequest(CUPS_GET_PRINTERS);
-  ippAddStrings (request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-		 "requested-attributes", sizeof (rattrs) / sizeof (rattrs[0]),
-		 NULL, rattrs);
-  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_NAME,
-		"requesting-user-name", NULL, cupsUser ());
-
-  response = cupsDoRequest (conn, request, "/");
-  if (cupsLastError() > IPP_OK_CONFLICT) {
-    debug_printf("cups-browsed: browse send failed for localhost: %s\n",
-		 cupsLastErrorString ());
-    goto fail;
-  }
-
-  for (attr = ippFirstAttribute(response); attr;
-       attr = ippNextAttribute(response)) {
-    int type = -1, state = -1;
-    const char *uri = NULL;
-    gchar *location = NULL;
-    gchar *info = NULL;
-    gchar *make_model = NULL;
-    GString *browse_options = g_string_new ("");
-
-    /* Skip any non-printer attributes */
-    while (attr && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
-      attr = ippNextAttribute(response);
-
-    if (!attr)
-      break;
-
-    while (attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
-      const char *attrname = ippGetName(attr);
-      int value_tag = ippGetValueTag(attr);
-
-      if (!strcasecmp(attrname, "printer-type") &&
-	  value_tag == IPP_TAG_ENUM) {
-	type = ippGetInteger(attr, 0);
-	if (type & CUPS_PRINTER_NOT_SHARED) {
-	  /* Skip CUPS queues not marked as shared */
-	  state = -1;
-	  type = -1;
-	  break;
-	}
-      } else if (!strcasecmp(attrname, "printer-state") &&
-	       value_tag == IPP_TAG_ENUM)
-	state = ippGetInteger(attr, 0);
-      else if (!strcasecmp(attrname, "printer-uri-supported") &&
-	       value_tag == IPP_TAG_URI)
-	uri = ippGetString(attr, 0, NULL);
-      else if (!strcasecmp(attrname, "printer-location") &&
-	       value_tag == IPP_TAG_TEXT) {
-	/* Remove quotes */
-	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
-	location = g_strjoinv ("", tokens);
-	g_strfreev (tokens);
-      } else if (!strcasecmp(attrname, "printer-info") &&
-		 value_tag == IPP_TAG_TEXT) {
-	/* Remove quotes */
-	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
-	info = g_strjoinv ("", tokens);
-	g_strfreev (tokens);
-      } else if (!strcasecmp(attrname, "printer-make-and-model") &&
-		 value_tag == IPP_TAG_TEXT) {
-	/* Remove quotes */
-	gchar **tokens = g_strsplit (ippGetString(attr, 0, NULL), "\"", -1);
-	make_model = g_strjoinv ("", tokens);
-	g_strfreev (tokens);
-      } else if (!strcasecmp(attrname, "auth-info-required") &&
-		 value_tag == IPP_TAG_KEYWORD) {
-	if (strcasecmp (ippGetString(attr, 0, NULL), "none"))
-	  g_string_append_printf (browse_options, "auth-info-required=%s ",
-				  ippGetString(attr, 0, NULL));
-      } else if (!strcasecmp(attrname, "printer-uuid") &&
-		 value_tag == IPP_TAG_URI)
-	g_string_append_printf (browse_options, "uuid=%s ",
-				ippGetString(attr, 0, NULL));
-      else if (!strcasecmp(attrname, "job-sheets-default") &&
-	       value_tag == IPP_TAG_NAME &&
-	       ippGetCount(attr) == 2)
-	g_string_append_printf (browse_options, "job-sheets=%s,%s ",
-				ippGetString(attr, 0, NULL),
-				ippGetString(attr, 1, NULL));
-      else if (strstr(attrname, "-default")) {
-	gchar *name = g_strdup (attrname);
-	gchar *value = NULL;
-	*strstr (name, "-default") = '\0';
-
-	switch (value_tag) {
-	  gchar **tokens;
-
-	case IPP_TAG_KEYWORD:
-	case IPP_TAG_STRING:
-	case IPP_TAG_NAME:
-	  /* Escape value */
-	  tokens = g_strsplit_set (ippGetString(attr, 0, NULL),
-				   " \"\'\\", -1);
-	  value = g_strjoinv ("\\", tokens);
-	  g_strfreev (tokens);
-	  break;
-
-	default:
-	  /* other values aren't needed? */
-	  debug_printf("cups-browsed: skipping %s (%d)\n", name, value_tag);
-	  break;
-	}
-
-	if (value) {
-	  g_string_append_printf (browse_options, "%s=%s ", name, value);
-	  g_free (value);
-	}
-
-	g_free (name);
-      }
-
-      attr = ippNextAttribute(response);
-    }
-
-    if (type != -1 && state != -1 && uri && location && info && make_model) {
-      gchar *browse_options_str = g_string_free (browse_options, FALSE);
-      browse_options = NULL;
-      g_strchomp (browse_options_str);
-
-      broadcast_browse_packets (type, state, uri, location,
-				info, make_model,
-				browse_options_str);
-
-      g_free (browse_options_str);
-    }
-
-    if (make_model)
-      g_free (make_model);
-
-    if (info)
-      g_free (info);
-
-    if (location)
-      g_free (location);
-
-    if (browse_options)
-      g_string_free (browse_options, TRUE);
-
-    if (!attr)
-      break;
-  }
-
- fail:
-  if (response)
-    ippDelete(response);
-
+  update_local_printers ();
+  g_list_foreach (browse_data, broadcast_browse_packets, NULL);
   g_timeout_add_seconds (BrowseInterval, send_browse_data, NULL);
 
   /* Stop this timeout handler, we called a new one */
@@ -3265,6 +3326,9 @@ fail:
       close (browsesocket);
 
   g_hash_table_destroy (local_printers);
+
+  if (BrowseLocalProtocols & BROWSE_CUPS)
+    g_list_free_full (browse_data, browse_data_free);
 
   return ret;
 }
