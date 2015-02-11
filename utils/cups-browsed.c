@@ -2866,13 +2866,43 @@ read_configuration (const char *filename)
   cupsFileClose(fp);
 }
 
+static void
+find_previous_queue (gpointer key,
+		     gpointer value,
+		     gpointer user_data)
+{
+  const char *name = key;
+  const local_printer_t *printer = value;
+  remote_printer_t *p;
+  if (printer->cups_browsed_controlled) {
+    /* Queue found, add to our list */
+    p = create_local_queue (name,
+			    printer->device_uri,
+			    "", "", "", "", NULL, NULL, 1);
+    if (p) {
+      /* Mark as unconfirmed, if no Avahi report of this queue appears
+	 in a certain time frame, we will remove the queue */
+      p->status = STATUS_UNCONFIRMED;
+
+      if (BrowseRemoteProtocols & BROWSE_CUPS)
+	p->timeout = time(NULL) + BrowseTimeout;
+      else
+	p->timeout = time(NULL) + TIMEOUT_CONFIRM;
+
+      p->duplicate = 0;
+      debug_printf("cups-browsed: Found CUPS queue %s (URI: %s) from previous session.\n",
+		   p->name, p->uri);
+    } else {
+      debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
+      exit(1);
+    }
+  }
+}
+
 int main(int argc, char*argv[]) {
   int ret = 1;
   http_t *http;
-  cups_dest_t *dests,
-              *dest;
-  int i,
-      num_dests;
+  int i;
   const char *val;
   remote_printer_t *p;
 
@@ -2991,43 +3021,10 @@ int main(int argc, char*argv[]) {
 
   /* Read out the currently defined CUPS queues and find the ones which we
      have added in an earlier session */
-  num_dests = cupsGetDests(&dests);
+  update_local_printers ();
   remote_printers = cupsArrayNew((cups_array_func_t)compare_remote_printers,
 				 NULL);
-  if (num_dests > 0) {
-    for (i = num_dests, dest = dests; i > 0; i --, dest ++) {
-      if ((val = cupsGetOption(CUPS_BROWSED_MARK, dest->num_options,
-			       dest->options)) != NULL) {
-	if (strcasecmp(val, "no") != 0 && strcasecmp(val, "off") != 0 &&
-	    strcasecmp(val, "false") != 0) {
-	  /* Queue found, add to our list */
-	  p = create_local_queue (dest->name,
-				  cupsGetOption("device-uri",
-						dest->num_options,
-						dest->options),
-				  "", "", "", "", NULL, NULL, 1);
-	  if (p) {
-	    /* Mark as unconfirmed, if no Avahi report of this queue appears
-	       in a certain time frame, we will remove the queue */
-	    p->status = STATUS_UNCONFIRMED;
-
-	    if (BrowseRemoteProtocols & BROWSE_CUPS)
-	      p->timeout = time(NULL) + BrowseTimeout;
-	    else
-	      p->timeout = time(NULL) + TIMEOUT_CONFIRM;
-
-	    p->duplicate = 0;
-	    debug_printf("cups-browsed: Found CUPS queue %s (URI: %s) from previous session.\n",
-			 p->name, p->uri);
-	  } else {
-	    debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
-	    exit(1);
-	  }
-	}
-      }
-    }
-    cupsFreeDests(num_dests, dests);
-  }
+  g_hash_table_foreach (local_printers, find_previous_queue, NULL);
 
   /* Redirect SIGINT and SIGTERM so that we do a proper shutdown, removing
      the CUPS queues which we have created
