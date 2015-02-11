@@ -112,6 +112,7 @@ typedef struct browsepoll_s {
   int minor;
   gboolean can_subscribe;
   int subscription_id;
+  int sequence_number;
 } browsepoll_t;
 
 cups_array_t *remote_printers;
@@ -2376,7 +2377,6 @@ static gboolean
 browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
 {
   ipp_t *request, *response = NULL;
-  ipp_attribute_t *attr;
   ipp_status_t status;
   gboolean get_printers = FALSE;
 
@@ -2397,6 +2397,8 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
 		"requesting-user-name", NULL, cupsUser ());
   ippAddInteger (request, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
 		 "notify-subscription-ids", context->subscription_id);
+  ippAddInteger (request, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
+		 "notify-sequence-numbers", context->sequence_number);
 
   response = cupsDoRequest (conn, request, "/");
   if (!response)
@@ -2416,25 +2418,36 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
     context->can_subscribe = FALSE;
     browse_poll_cancel_subscription (context);
     context->subscription_id = -1;
+    context->sequence_number = 0;
     get_printers = TRUE;
-    goto fail;
   }
 
-  for (attr = ippFirstAttribute(response); attr;
-       attr = ippNextAttribute(response))
-    if (ippGetGroupTag (attr) == IPP_TAG_EVENT_NOTIFICATION)
-      /* There is a printer-* event here. */
-      break;
+  if (!get_printers) {
+    ipp_attribute_t *attr;
+    gboolean seen_event = FALSE;
+    int last_seq = context->sequence_number;
+    assert (response != NULL);
+    for (attr = ippFirstAttribute(response); attr;
+	 attr = ippNextAttribute(response))
+      if (ippGetGroupTag (attr) == IPP_TAG_EVENT_NOTIFICATION) {
+	/* There is a printer-* event here. */
+	seen_event = TRUE;
 
-  if (attr) {
-    debug_printf("cups-browsed [BrowsePoll %s:%d]: printer-* event\n",
-		 context->server, context->port);
-    get_printers = TRUE;
-  } else
-    debug_printf("cups-browsed [BrowsePoll %s:%d]: no events\n",
-		 context->server, context->port);
+	if (!strcmp (ippGetName (attr), "notify-sequence-number") &&
+	    ippGetValueTag (attr) == IPP_TAG_INTEGER)
+	  last_seq = ippGetInteger (attr, 0);
+      }
 
-fail:
+    if (seen_event) {
+      debug_printf("cups-browsed [BrowsePoll %s:%d]: printer-* event\n",
+		   context->server, context->port);
+      context->sequence_number = last_seq + 1;
+      get_printers = TRUE;
+    } else
+      debug_printf("cups-browsed [BrowsePoll %s:%d]: no events\n",
+		   context->server, context->port);
+  }
+
   if (response)
     ippDelete(response);
 
