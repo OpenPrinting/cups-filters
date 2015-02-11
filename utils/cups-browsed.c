@@ -140,6 +140,7 @@ static gboolean browseallow_all = FALSE;
 static GHashTable *local_printers;
 static browsepoll_t *local_printers_context = NULL;
 static http_t *local_conn = NULL;
+static gboolean inhibit_local_printers_update = FALSE;
 
 static GMainLoop *gmainloop = NULL;
 #ifdef HAVE_AVAHI
@@ -356,6 +357,9 @@ update_local_printers (void)
 {
   gboolean get_printers = FALSE;
   http_t *conn;
+
+  if (inhibit_local_printers_update)
+    return;
 
   conn = http_connect_local ();
   if (conn &&
@@ -2631,11 +2635,15 @@ browse_poll (gpointer data)
   else
     get_printers = TRUE;
 
+  update_local_printers ();
+  inhibit_local_printers_update = TRUE;
   if (get_printers)
     browse_poll_get_printers (context, conn);
   else
     g_list_foreach (context->printers, browsepoll_printer_keepalive,
 		    context->server);
+
+  inhibit_local_printers_update = FALSE;
 
 fail:
 
