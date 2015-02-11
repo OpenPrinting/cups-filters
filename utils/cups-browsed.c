@@ -159,6 +159,8 @@ static int debug = 0;
 static void recheck_timer (void);
 static void browse_poll_create_subscription (browsepoll_t *context,
 					     http_t *conn);
+static gboolean browse_poll_get_notifications (browsepoll_t *context,
+					       http_t *conn);
 
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
 #define HAVE_CUPS_1_6 1
@@ -318,18 +320,6 @@ local_printers_create_subscription (http_t *conn)
   browse_poll_create_subscription (local_printers_context, conn);
 }
 
-static gboolean
-local_printers_get_notifications (http_t *conn)
-{
-  gboolean get_printers = FALSE;
-
-  debug_printf ("cups-browsed [local printers] IPP-Get-Notification\n");
-
-  get_printers = TRUE;
-
-  return get_printers;
-}
-
 static void
 update_local_printers (void)
 {
@@ -337,24 +327,29 @@ update_local_printers (void)
   http_t *conn = httpConnectEncrypt ("localhost",
 				     BrowsePort,
 				     HTTP_ENCRYPT_IF_REQUESTED);
-  if (!conn)
-    return;
 
-  if (local_printers_context->can_subscribe) {
-    if (local_printers_context->subscription_id == -1) {
+  if (conn &&
+      (!local_printers_context || local_printers_context->can_subscribe)) {
+    if (!local_printers_context ||
+	local_printers_context->subscription_id == -1) {
       /* No subscription yet. First, create the subscription. */
       local_printers_create_subscription (conn);
       get_printers = TRUE;
     } else
-    /* We already have a subscription, so use it. */
-      get_printers = local_printers_get_notifications (conn);
+      /* We already have a subscription, so use it. */
+
+      /* Note: for the moment, browse_poll_get_notifications() just
+       * tells us whether we should re-fetch the printer list, so it
+       * is safe to use here. */
+      get_printers = browse_poll_get_notifications (local_printers_context,
+						    conn);
   } else
     get_printers = TRUE;
 
   if (get_printers) {
     cups_dest_t *dests = NULL;
     int num_dests = cupsGetDests (&dests);
-    debug_printf ("cups-browsed [BrowsePoll localhost:631] cupsGetDests\n");
+    debug_printf ("cups-browsed [BrowsePoll localhost:631]: cupsGetDests\n");
     g_hash_table_remove_all (local_printers);
     for (int i = 0; i < num_dests; i++) {
       const char *val;
