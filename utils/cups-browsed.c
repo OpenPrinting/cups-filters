@@ -104,6 +104,12 @@ typedef struct allow_s {
   http_addr_t mask;
 } allow_t;
 
+/* Data struct for a printer discovered using BrowsePoll */
+typedef struct browsepoll_printer_s {
+  char *uri_supported;
+  char *info;
+} browsepoll_printer_t;
+
 /* Data structure for a BrowsePoll server */
 typedef struct browsepoll_s {
   char *server;
@@ -113,6 +119,11 @@ typedef struct browsepoll_s {
   gboolean can_subscribe;
   int subscription_id;
   int sequence_number;
+
+  /* Remember which printers we discovered. This way we can just ask
+   * if anything has changed, and if not we know these printers are
+   * still there. */
+  GList *printers; /* of browsepoll_printer_t */
 } browsepoll_t;
 
 /* Local printer (key is name) */
@@ -344,8 +355,9 @@ static void
 update_local_printers (void)
 {
   gboolean get_printers = FALSE;
-  http_t *conn = http_connect_local ();
+  http_t *conn;
 
+  conn = http_connect_local ();
   if (conn &&
       (!local_printers_context || local_printers_context->can_subscribe)) {
     if (!local_printers_context ||
@@ -2277,12 +2289,32 @@ send_browse_data (gpointer data)
   return FALSE;
 }
 
+static browsepoll_printer_t *
+new_browsepoll_printer (const char *uri_supported,
+			const char *info)
+{
+  browsepoll_printer_t *printer = g_malloc (sizeof (browsepoll_printer_t));
+  printer->uri_supported = g_strdup (uri_supported);
+  printer->info = g_strdup (info);
+  return printer;
+}
+
+static void
+browsepoll_printer_free (gpointer data)
+{
+  browsepoll_printer_t *printer = data;
+  free (printer->uri_supported);
+  free (printer->info);
+}
+
 static void
 browse_poll_get_printers (browsepoll_t *context, http_t *conn)
 {
-  static const char * const rattrs[] = { "printer-uri-supported" };
+  static const char * const rattrs[] = { "printer-uri-supported",
+					 "printer-info"};
   ipp_t *request, *response = NULL;
   ipp_attribute_t *attr;
+  GList *printers = NULL;
 
   debug_printf ("cups-browsed [BrowsePoll %s:%d]: CUPS-Get-Printers\n",
 		context->server, context->port);
@@ -2321,6 +2353,7 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
 
   for (attr = ippFirstAttribute(response); attr;
        attr = ippNextAttribute(response)) {
+    browsepoll_printer_t *printer;
     const char *uri, *info;
 
     while (attr && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
@@ -2332,6 +2365,7 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
     uri = NULL;
     info = NULL;
     while (attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
+
       if (!strcasecmp (ippGetName(attr), "printer-uri-supported") &&
 	  ippGetValueTag(attr) == IPP_TAG_URI)
 	uri = ippGetString(attr, 0, NULL);
@@ -2342,13 +2376,18 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
       attr = ippNextAttribute(response);
     }
 
-    if (uri)
+    if (uri) {
       found_cups_printer (context->server, uri, info);
+      printer = new_browsepoll_printer (uri, info);
+      printers = g_list_insert (printers, printer, 0);
+    }
 
     if (!attr)
       break;
   }
 
+  g_list_free_full (context->printers, browsepoll_printer_free);
+  context->printers = printers;
   recheck_timer ();
 
 fail:
@@ -2550,6 +2589,14 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
   return get_printers;
 }
 
+static void
+browsepoll_printer_keepalive (gpointer data, gpointer user_data)
+{
+  browsepoll_printer_t *printer = data;
+  const char *server = user_data;
+  found_cups_printer (server, printer->uri_supported, printer->info);
+}
+
 gboolean
 browse_poll (gpointer data)
 {
@@ -2586,6 +2633,9 @@ browse_poll (gpointer data)
 
   if (get_printers)
     browse_poll_get_printers (context, conn);
+  else
+    g_list_foreach (context->printers, browsepoll_printer_keepalive,
+		    context->server);
 
 fail:
 
@@ -3182,6 +3232,8 @@ fail:
 	browse_poll_cancel_subscription (BrowsePoll[index]);
 
       free (BrowsePoll[index]->server);
+      g_list_free_full (BrowsePoll[index]->printers,
+			browsepoll_printer_free);
       free (BrowsePoll[index]);
     }
 
@@ -3190,6 +3242,8 @@ fail:
 
   if (local_printers_context) {
     browse_poll_cancel_subscription (local_printers_context);
+    g_list_free_full (local_printers_context->printers,
+		      browsepoll_printer_free);
     free (local_printers_context);
   }
 
