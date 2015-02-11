@@ -128,6 +128,7 @@ static gboolean browseallow_all = FALSE;
 
 static GHashTable *local_printers;
 static browsepoll_t *local_printers_context = NULL;
+static http_t *local_conn = NULL;
 
 static GMainLoop *gmainloop = NULL;
 #ifdef HAVE_AVAHI
@@ -279,6 +280,25 @@ password_callback (const char *prompt,
   return NULL;
 }
 
+static http_t *
+http_connect_local (void)
+{
+  if (!local_conn)
+    local_conn = httpConnectEncrypt(cupsServer(), ippPort(),
+				    cupsEncryption());
+
+  return local_conn;
+}
+
+static void
+http_close_local (void)
+{
+  if (local_conn) {
+    httpClose (local_conn);
+    local_conn = NULL;
+  }
+}
+
 static local_printer_t *
 new_local_printer (const char *device_uri,
 		   gboolean cups_browsed_controlled)
@@ -324,9 +344,7 @@ static void
 update_local_printers (void)
 {
   gboolean get_printers = FALSE;
-  http_t *conn = httpConnectEncrypt ("localhost",
-				     BrowsePort,
-				     HTTP_ENCRYPT_IF_REQUESTED);
+  http_t *conn = http_connect_local ();
 
   if (conn &&
       (!local_printers_context || local_printers_context->can_subscribe)) {
@@ -374,8 +392,6 @@ update_local_printers (void)
 
     cupsFreeDests (num_dests, dests);
   }
-
-  httpClose (conn);
 }
 
 gboolean
@@ -818,8 +834,7 @@ gboolean handle_cups_queues(gpointer unused) {
 
       /* Remove the CUPS queue */
       if (!p->duplicate) { /* Duplicates do not have a CUPS queue */
-	if ((http = httpConnectEncrypt(cupsServer(), ippPort(),
-				       cupsEncryption())) == NULL) {
+	if ((http = http_connect_local ()) == NULL) {
 	  debug_printf("cups-browsed: Unable to connect to CUPS!\n");
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  break;
@@ -833,7 +848,6 @@ gboolean handle_cups_queues(gpointer unused) {
 	if (num_jobs != 0) { /* error or jobs */
 	  debug_printf("cups-browsed: Queue has still jobs or CUPS error!\n");
 	  cupsFreeJobs(num_jobs, jobs);
-	  httpClose(http);
 	  /* Schedule the removal of the queue for later */
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  break;
@@ -873,7 +887,6 @@ gboolean handle_cups_queues(gpointer unused) {
 	    !strcasecmp(default_printer_name, p->name)) {
 	  /* Printer is currently the system's default printer,
 	     do not remove it */
-	  httpClose(http);
 	  /* Schedule the removal of the queue for later */
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  ippDelete(response);
@@ -897,10 +910,8 @@ gboolean handle_cups_queues(gpointer unused) {
 	if (cupsLastError() > IPP_OK_CONFLICT) {
 	  debug_printf("cups-browsed: Unable to remove CUPS queue!\n");
 	  p->timeout = current_time + TIMEOUT_RETRY;
-	  httpClose(http);
 	  break;
 	}
-	httpClose(http);
       }
 
       /* CUPS queue removed, remove the list entry */
@@ -950,8 +961,7 @@ gboolean handle_cups_queues(gpointer unused) {
 		   p->name);
 
       /* Create a new CUPS queue or modify the existing queue */
-      if ((http = httpConnectEncrypt(cupsServer(), ippPort(),
-				     cupsEncryption())) == NULL) {
+      if ((http = http_connect_local ()) == NULL) {
 	debug_printf("cups-browsed: Unable to connect to CUPS!\n");
 	p->timeout = current_time + TIMEOUT_RETRY;
 	break;
@@ -1014,10 +1024,8 @@ gboolean handle_cups_queues(gpointer unused) {
       if (cupsLastError() > IPP_OK_CONFLICT) {
 	debug_printf("cups-browsed: Unable to create CUPS queue!\n");
 	p->timeout = current_time + TIMEOUT_RETRY;
-	httpClose(http);
 	break;
       }
-      httpClose(http);
 
       if (p->status == STATUS_BROWSE_PACKET_RECEIVED) {
 	p->status = STATUS_DISAPPEARED;
@@ -2105,8 +2113,7 @@ send_browse_data (gpointer data)
 
   update_netifs ();
   res_init ();
-  conn = httpConnectEncrypt ("localhost", BrowsePort,
-			     HTTP_ENCRYPT_IF_REQUESTED);
+  conn = http_connect_local ();
 
   if (conn == NULL) {
     debug_printf("cups-browsed: browse send failed to connect to localhost\n");
@@ -2261,9 +2268,6 @@ send_browse_data (gpointer data)
  fail:
   if (response)
     ippDelete(response);
-
-  if (conn)
-    httpClose (conn);
 
   g_timeout_add_seconds (BrowseInterval, send_browse_data, NULL);
 
@@ -2971,8 +2975,7 @@ int main(int argc, char*argv[]) {
 #endif /* HAVE_AVAHI */
 
   /* Wait for CUPS daemon to start */
-  while ((http = httpConnectEncrypt(cupsServer(), ippPort(),
-				    cupsEncryption())) == NULL)
+  while ((http = http_connect_local ()) == NULL)
     sleep(1);
 
   /* Initialise the array of network interfaces */
@@ -3023,7 +3026,6 @@ int main(int argc, char*argv[]) {
     }
     cupsFreeDests(num_dests, dests);
   }
-  httpClose(http);
 
   /* Redirect SIGINT and SIGTERM so that we do a proper shutdown, removing
      the CUPS queues which we have created
@@ -3191,6 +3193,8 @@ fail:
     browse_poll_cancel_subscription (local_printers_context);
     free (local_printers_context);
   }
+
+  http_close_local ();
 
 #ifdef HAVE_AVAHI
   avahi_shutdown();
