@@ -127,6 +127,7 @@ static cups_array_t *browseallow;
 static gboolean browseallow_all = FALSE;
 
 static GHashTable *local_printers;
+static browsepoll_t *local_printers_context = NULL;
 
 static GMainLoop *gmainloop = NULL;
 #ifdef HAVE_AVAHI
@@ -156,6 +157,8 @@ static guint autoshutdown_exec_id = 0;
 static int debug = 0;
 
 static void recheck_timer (void);
+static void browse_poll_create_subscription (browsepoll_t *context,
+					     http_t *conn);
 
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
 #define HAVE_CUPS_1_6 1
@@ -303,34 +306,81 @@ local_printer_has_uri (gpointer key,
 }
 
 static void
-update_local_printers (void)
+local_printers_create_subscription (http_t *conn)
 {
-  /* Just use cupsGetDests() */
-  cups_dest_t *dests = NULL;
-  int num_dests = cupsGetDests (&dests);
-  g_hash_table_remove_all (local_printers);
-  for (int i = 0; i < num_dests; i++) {
-    const char *val;
-    cups_dest_t *dest = &dests[i];
-    local_printer_t *printer;
-    gboolean cups_browsed_controlled;
-    const char *device_uri = cupsGetOption ("device-uri",
-					    dest->num_options,
-					    dest->options);
-    val = cupsGetOption (CUPS_BROWSED_MARK,
-			 dest->num_options,
-			 dest->options);
-    cups_browsed_controlled = (!strcasecmp (val, "yes") ||
-			       !strcasecmp (val, "on") ||
-			       !strcasecmp (val, "true"));
-    printer = new_local_printer (device_uri,
-				 cups_browsed_controlled);
-    g_hash_table_insert (local_printers,
-			 g_strdup (dest->name),
-			 printer);
+  if (!local_printers_context) {
+    local_printers_context = g_malloc0 (sizeof (browsepoll_t));
+    local_printers_context->server = "localhost";
+    local_printers_context->port = BrowsePort;
+    local_printers_context->can_subscribe = TRUE;
   }
 
-  cupsFreeDests (num_dests, dests);
+  browse_poll_create_subscription (local_printers_context, conn);
+}
+
+static gboolean
+local_printers_get_notifications (http_t *conn)
+{
+  gboolean get_printers = FALSE;
+
+  debug_printf ("cups-browsed [local printers] IPP-Get-Notification\n");
+
+  get_printers = TRUE;
+
+  return get_printers;
+}
+
+static void
+update_local_printers (void)
+{
+  gboolean get_printers = FALSE;
+  http_t *conn = httpConnectEncrypt ("localhost",
+				     BrowsePort,
+				     HTTP_ENCRYPT_IF_REQUESTED);
+  if (!conn)
+    return;
+
+  if (local_printers_context->can_subscribe) {
+    if (local_printers_context->subscription_id == -1) {
+      /* No subscription yet. First, create the subscription. */
+      local_printers_create_subscription (conn);
+      get_printers = TRUE;
+    } else
+    /* We already have a subscription, so use it. */
+      get_printers = local_printers_get_notifications (conn);
+  } else
+    get_printers = TRUE;
+
+  if (get_printers) {
+    cups_dest_t *dests = NULL;
+    int num_dests = cupsGetDests (&dests);
+    debug_printf ("cups-browsed [BrowsePoll localhost:631] cupsGetDests\n");
+    g_hash_table_remove_all (local_printers);
+    for (int i = 0; i < num_dests; i++) {
+      const char *val;
+      cups_dest_t *dest = &dests[i];
+      local_printer_t *printer;
+      gboolean cups_browsed_controlled;
+      const char *device_uri = cupsGetOption ("device-uri",
+					      dest->num_options,
+					      dest->options);
+      val = cupsGetOption (CUPS_BROWSED_MARK,
+			     dest->num_options,
+			   dest->options);
+      cups_browsed_controlled = val && (!strcasecmp (val, "yes") ||
+					!strcasecmp (val, "on") ||
+					!strcasecmp (val, "true"));
+      printer = new_local_printer (device_uri,
+				   cups_browsed_controlled);
+      g_hash_table_insert (local_printers,
+			   g_strdup (dest->name),
+			   printer);
+    }
+
+    cupsFreeDests (num_dests, dests);
+  }
+
+  httpClose (conn);
 }
 
 gboolean
@@ -3140,6 +3190,11 @@ fail:
     }
 
     free (BrowsePoll);
+  }
+
+  if (local_printers_context) {
+    browse_poll_cancel_subscription (local_printers_context);
+    free (local_printers_context);
   }
 
 #ifdef HAVE_AVAHI
