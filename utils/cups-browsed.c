@@ -2438,7 +2438,7 @@ browse_poll_cancel_subscription (browsepoll_t *context)
     return;
   }
 
-  debug_printf ("cups-browsed [BrowsePoll %s:%d] IPP-Cancel-Subscription\n",
+  debug_printf ("cups-browsed [BrowsePoll %s:%d]: IPP-Cancel-Subscription\n",
 		context->server, context->port);
 
   request = ippNewRequest(IPP_CANCEL_SUBSCRIPTION);
@@ -2474,7 +2474,7 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
   ipp_status_t status;
   gboolean get_printers = FALSE;
 
-  debug_printf ("cups-browsed [BrowsePoll %s:%d] IPP-Get-Notifications\n",
+  debug_printf ("cups-browsed [BrowsePoll %s:%d]: IPP-Get-Notifications\n",
 		context->server, context->port);
 
   request = ippNewRequest(IPP_GET_NOTIFICATIONS);
@@ -2502,7 +2502,7 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
 
   if (status == IPP_NOT_FOUND) {
     /* Subscription lease has expired. */
-    debug_printf ("cups-browsed [BrowsePoll %s:%d] Lease expired\n",
+    debug_printf ("cups-browsed [BrowsePoll %s:%d]: Lease expired\n",
 		  context->server, context->port);
     browse_poll_create_subscription (context, conn);
     get_printers = TRUE;
@@ -2543,7 +2543,7 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
   }
 
   if (response)
-    ippDelete(response);
+    ippDelete (response);
 
   return get_printers;
 }
