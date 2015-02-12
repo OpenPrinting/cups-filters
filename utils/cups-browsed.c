@@ -1536,6 +1536,10 @@ generate_local_queue(const char *host,
 	debug_printf("cups-browsed: Changing URI of printer %s (Host: %s) to %s.\n",
 		     p->name, remote_host, uri);
       free(p->uri);
+      free(p->host);
+      free(p->service_name);
+      free(p->type);
+      free(p->domain);
       p->uri = strdup(uri);
       p->status = STATUS_TO_BE_CREATED;
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
@@ -1559,14 +1563,22 @@ generate_local_queue(const char *host,
       }
 
     }
-    if (p->host[0] == '\0')
+    if (p->host[0] == '\0') {
+      free (p->host);
       p->host = strdup(remote_host);
-    if (p->service_name[0] == '\0' && name)
+    }
+    if (p->service_name[0] == '\0' && name) {
+      free (p->service_name);
       p->service_name = strdup(name);
-    if (p->type[0] == '\0' && type)
+    }
+    if (p->type[0] == '\0' && type) {
+      free (p->type);
       p->type = strdup(type);
-    if (p->domain[0] == '\0' && domain)
+    }
+    if (p->domain[0] == '\0' && domain) {
+      free (p->domain);
       p->domain = strdup(domain);
+    }
   } else {
 
     /* We need to create a local queue pointing to the
