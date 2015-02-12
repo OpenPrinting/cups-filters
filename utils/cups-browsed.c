@@ -1504,17 +1504,17 @@ generate_local_queue(const char *host,
       break;
 
   if (!create) {
-    if (p)
+    free (remote_host);
+    free (backup_queue_name);
+    free (pdl);
+    free (remote_queue);
+    if (p) {
       return p;
-    else {
+    } else {
       /* Found a local queue with the same URI as our discovered printer
 	 would get, so ignore this remote printer */
       debug_printf("cups-browsed: Printer with URI %s already exists, printer ignored.\n",
 		   uri);
-      free (remote_host);
-      free (backup_queue_name);
-      free (pdl);
-      free (remote_queue);
       return NULL;
     }
   }
@@ -2370,6 +2370,7 @@ browsepoll_printer_free (gpointer data)
   browsepoll_printer_t *printer = data;
   free (printer->uri_supported);
   free (printer->info);
+  free (printer);
 }
 
 static void
@@ -2890,52 +2891,47 @@ read_configuration (const char *filename)
 	BrowsePoll = old;
       } else {
 	char *colon, *slash;
-	browsepoll_t *b = malloc (sizeof (browsepoll_t));
-	if (!b) {
-	  debug_printf("cups-browsed: unable to malloc: ignoring BrowsePoll line\n");
-	  BrowsePoll = old;
-	} else {
-	  debug_printf("cups-browsed: Adding BrowsePoll server: %s\n", value);
-	  b->server = strdup (value);
-	  b->port = BrowsePort;
-	  b->can_subscribe = TRUE; /* first assume subscriptions work */
-	  b->subscription_id = -1;
-	  slash = strchr (b->server, '/');
-	  if (slash) {
-	    *slash++ = '\0';
-	    if (!strcasecmp (slash, "version=1.0")) {
-	      b->major = 1;
-	      b->minor = 0;
-	    } else if (!strcasecmp (slash, "version=1.1")) {
-	      b->major = 1;
-	      b->minor = 1;
-	    } else if (!strcasecmp (slash, "version=2.0")) {
-	      b->major = 2;
-	      b->minor = 0;
-	    } else if (!strcasecmp (slash, "version=2.1")) {
-	      b->major = 2;
-	      b->minor = 1;
-	    } else if (!strcasecmp (slash, "version=2.2")) {
-	      b->major = 2;
-	      b->minor = 2;
-	    } else {
-	      debug_printf ("ignoring unknown server option: %s\n", slash);
-	    }
-	  } else
-	    b->major = 0;
-
-	  colon = strchr (b->server, ':');
-	  if (colon) {
-	    char *endptr;
-	    unsigned long n;
-	    *colon++ = '\0';
-	    n = strtoul (colon, &endptr, 10);
-	    if (endptr != colon && n < INT_MAX)
-	      b->port = (int) n;
+	browsepoll_t *b = g_malloc0 (sizeof (browsepoll_t));
+	debug_printf("cups-browsed: Adding BrowsePoll server: %s\n", value);
+	b->server = strdup (value);
+	b->port = BrowsePort;
+	b->can_subscribe = TRUE; /* first assume subscriptions work */
+	b->subscription_id = -1;
+	slash = strchr (b->server, '/');
+	if (slash) {
+	  *slash++ = '\0';
+	  if (!strcasecmp (slash, "version=1.0")) {
+	    b->major = 1;
+	    b->minor = 0;
+	  } else if (!strcasecmp (slash, "version=1.1")) {
+	    b->major = 1;
+	    b->minor = 1;
+	  } else if (!strcasecmp (slash, "version=2.0")) {
+	    b->major = 2;
+	    b->minor = 0;
+	  } else if (!strcasecmp (slash, "version=2.1")) {
+	    b->major = 2;
+	    b->minor = 1;
+	  } else if (!strcasecmp (slash, "version=2.2")) {
+	    b->major = 2;
+	    b->minor = 2;
+	  } else {
+	    debug_printf ("ignoring unknown server option: %s\n", slash);
 	  }
+	} else
+	  b->major = 0;
 
-	  BrowsePoll[NumBrowsePoll++] = b;
+	colon = strchr (b->server, ':');
+	if (colon) {
+	  char *endptr;
+	  unsigned long n;
+	  *colon++ = '\0';
+	  n = strtoul (colon, &endptr, 10);
+	  if (endptr != colon && n < INT_MAX)
+	    b->port = (int) n;
 	}
+
+	BrowsePoll[NumBrowsePoll++] = b;
       }
     } else if (!strcasecmp(line, "BrowseAllow")) {
       if (read_browseallow_value (value))
