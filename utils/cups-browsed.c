@@ -2598,7 +2598,7 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
   ippAddInteger (request, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
 		 "notify-subscription-ids", context->subscription_id);
   ippAddInteger (request, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
-		 "notify-sequence-numbers", context->sequence_number);
+		 "notify-sequence-numbers", context->sequence_number + 1);
 
   response = cupsDoRequest (conn, request, "/");
   if (!response)
@@ -2641,7 +2641,7 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
     if (seen_event) {
       debug_printf("cups-browsed [BrowsePoll %s:%d]: printer-* event\n",
 		   context->server, context->port);
-      context->sequence_number = last_seq + 1;
+      context->sequence_number = last_seq;
       get_printers = TRUE;
     } else
       debug_printf("cups-browsed [BrowsePoll %s:%d]: no events\n",
