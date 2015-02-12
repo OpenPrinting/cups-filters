@@ -49,6 +49,8 @@
 #include <avahi-common/error.h>
 #endif /* HAVE_AVAHI */
 
+#include <gio/gio.h>
+
 #include <cups/cups.h>
 
 /* Attribute to mark a CUPS queue as created by us */
@@ -173,6 +175,7 @@ static unsigned int BrowseTimeout = 300;
 static uint16_t BrowsePort = 631;
 static browsepoll_t **BrowsePoll = NULL;
 static size_t NumBrowsePoll = 0;
+static guint update_netifs_sourceid = -1;
 static char *DomainSocket = NULL;
 static unsigned int CreateIPPPrinterQueues = 0;
 static int autoshutdown = 0;
@@ -2209,16 +2212,17 @@ process_browse_data (GIOChannel *source,
   return TRUE;
 }
 
-void
-update_netifs (void)
+static gboolean
+update_netifs (gpointer data)
 {
   struct ifaddrs *ifaddr, *ifa;
   netif_t *iface;
 
+  update_netifs_sourceid = -1;
   if (getifaddrs (&ifaddr) == -1) {
     debug_printf("cups-browsed: unable to get interface addresses: %s\n",
 		 strerror (errno));
-    return;
+    return FALSE;
   }
 
   while ((iface = cupsArrayFirst (netifs)) != NULL) {
@@ -2289,6 +2293,9 @@ update_netifs (void)
   }
 
   freeifaddrs (ifaddr);
+
+  /* If run as a timeout, don't run it again. */
+  return FALSE;
 }
 
 static void
@@ -2356,7 +2363,7 @@ broadcast_browse_packets (gpointer data, gpointer user_data)
 gboolean
 send_browse_data (gpointer data)
 {
-  update_netifs ();
+  update_netifs (NULL);
   res_init ();
   update_local_printers ();
   g_list_foreach (browse_data, broadcast_browse_packets, NULL);
@@ -2994,6 +3001,36 @@ read_configuration (const char *filename)
 }
 
 static void
+defer_update_netifs (void)
+{
+  if (update_netifs_sourceid != -1)
+    g_source_remove (update_netifs_sourceid);
+
+  update_netifs_sourceid = g_timeout_add_seconds (10, update_netifs, NULL);
+}
+
+static void
+nm_properties_changed (GDBusProxy *proxy,
+		       GVariant *changed_properties,
+		       const gchar *const *invalidated_properties,
+		       gpointer user_data)
+{
+  GVariantIter *iter;
+  const gchar *key;
+  GVariant *value;
+  g_variant_get (changed_properties, "a{sv}", &iter);
+  while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
+    if (!strcmp (key, "ActiveConnections")) {
+      debug_printf ("cups-browsed: NetworkManager ActiveConnections changed\n");
+      defer_update_netifs ();
+      break;
+    }
+  }
+
+  g_variant_iter_free (iter);
+}
+
+static void
 find_previous_queue (gpointer key,
 		     gpointer value,
 		     gpointer user_data)
@@ -3032,6 +3069,7 @@ int main(int argc, char*argv[]) {
   int i;
   const char *val;
   remote_printer_t *p;
+  GDBusProxy *proxy = NULL;
 
   /* Turn on debug mode if requested */
   if (argc >= 2)
@@ -3139,7 +3177,7 @@ int main(int argc, char*argv[]) {
 
   /* Initialise the array of network interfaces */
   netifs = cupsArrayNew(compare_pointers, NULL);
-  update_netifs ();
+  update_netifs (NULL);
 
   local_printers = g_hash_table_new_full (g_str_hash,
 					  g_str_equal,
@@ -3244,6 +3282,22 @@ int main(int argc, char*argv[]) {
    * prompting for it. */
   cupsSetPasswordCB2 (password_callback, NULL);
 
+  /* Watch NetworkManager for network interface changes */
+  proxy = g_dbus_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+					 G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
+					 NULL, /* GDBusInterfaceInfo */
+					 "org.freedesktop.NetworkManager",
+					 "/org/freedesktop/NetworkManager",
+					 "org.freedesktop.NetworkManager",
+					 NULL, /* GCancellable */
+					 NULL); /* GError */
+
+  if (proxy)
+    g_signal_connect (proxy,
+		      "g-properties-changed",
+		      G_CALLBACK (nm_properties_changed),
+		      NULL);
+
   /* Run the main loop */
   gmainloop = g_main_loop_new (NULL, FALSE);
   recheck_timer ();
@@ -3290,6 +3344,9 @@ int main(int argc, char*argv[]) {
 fail:
 
   /* Clean up things */
+
+  if (proxy)
+    g_object_unref (proxy);
 
   /* Remove all queues which we have set up */
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);

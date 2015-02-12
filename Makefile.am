@@ -724,13 +724,15 @@ cups_browsed_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(AVAHI_CFLAGS) \
 	$(AVAHI_GLIB_CFLAGS) \
-	$(GLIB_CFLAGS)
+	$(GLIB_CFLAGS) \
+	$(GIO_CFLAGS)
 cups_browsed_CXXFLAGS = $(cups_browsed_CFLAGS)
 cups_browsed_LDADD = \
 	$(CUPS_LIBS) \
 	$(AVAHI_LIBS) \
 	$(AVAHI_GLIB_LIBS) \
-	$(GLIB_LIBS)
+	$(GLIB_LIBS) \
+	$(GIO_LIBS)
 initrcdir = $(INITDDIR)
 initrc_SCRIPTS = utils/cups-browsed
 man_MANS = \

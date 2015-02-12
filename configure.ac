@@ -298,6 +298,14 @@ fi
 AC_SUBST(AVAHI_GLIB_CFLAGS)
 AC_SUBST(AVAHI_GLIB_LIBS)
 
+GIO_CFLAGS=""
+GIO_LIBS=""
+if test "x$PKGCONFIG" != x; then
+	PKG_CHECK_MODULES(GIO, [gio-2.0])
+fi
+AC_SUBST(GIO_CFLAGS)
+AC_SUBST(GIO_LIBS)
+
 AC_ARG_WITH([browseremoteprotocols],
 	[AS_HELP_STRING([--with-browseremoteprotocols=value], [Set which protocols to listen for in cups-browsed (default: dnssd cups)])],
 	[with_browseremoteprotocols="$withval"],
