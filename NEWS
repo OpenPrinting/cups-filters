@@ -1,6 +1,25 @@
 NEWS - OpenPrinting CUPS Filters v1.0.63 - 2015-02-11
 -----------------------------------------------------
 
+CHANGES IN V1.0.65
+
+	- cups-browsed: Listen for NetworkManager changes (Red Hat bug #975933).
+	- cups-browsed: Fix for memory leak introduced in BZR rev 7059.
+	- cups-browsed: Memory leak/uninit fixes.
+	- cups-browsed: Cache prepared browse data to send.
+	- cups-browsed: Only get local notifications once per BrowsePoll run.
+	- cups-browsed: Fix BrowsePoll now notifications work properly. Need 
+	  to maintain a list of printers to keep alive for the case of there
+	  being no notifications of changes.
+	- cups-browsed: Use local browsepolling for getting initial printer
+	  list.
+	- cups-browsed: Ignore browse packets for deleted printers.
+	- cups-browsed: Cache connection to local cupsd.
+	- cups-browsed: Use notifications to track local printers.
+  	  This avoids expensive calls to cupsGetDests().
+	- cups-browsed: Manage subscriptions for local browsepolling.
+	- cups-browsed: Track notify-sequence-number for notifications.
+
 CHANGES IN V1.0.63
 
 	- foomatic-rip: Added hint to man page that direct, spooler-less mode
