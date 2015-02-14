@@ -20,6 +20,23 @@ CHANGES IN V1.0.65
 	- cups-browsed: Manage subscriptions for local browsepolling.
 	- cups-browsed: Track notify-sequence-number for notifications.
 
+CHANGES IN V1.0.64
+
+	- cups-browsed: Added PPD file generator for IPP Everywhere
+	  printers.  If auto-setup of discovered IPP printers is
+	  activated ("CreateIPPPrinterQueues Yes" in
+	  cups-browsed.conf), the printer provides suitable capability
+	  information via a Get-Printer-Attributes IPP call, and
+	  prints PWG or PostScript input, a PPD is auto-generated
+	  based on the Get-Printer-Attributes IPP response. Otherwise
+	  a System-V interface script is used as befreo. Advantage of
+	  the PPD file is that current print dialogs aloow access to
+	  the options, no IPP request done by the dialog is
+	  required. The PPD generator code is borrowed from the CUPS
+	  2.1.x development code repository. It will perhaps be
+	  removed in the future when CUPS provides proper API function
+	  for its PPD generator.
+
 CHANGES IN V1.0.63
 
 	- foomatic-rip: Added hint to man page that direct, spooler-less mode

@@ -52,6 +52,7 @@
 #include <gio/gio.h>
 
 #include <cups/cups.h>
+#include <cups/ppd.h>
 
 /* Attribute to mark a CUPS queue as created by us */
 #define CUPS_BROWSED_MARK "cups-browsed"
@@ -190,6 +191,7 @@ static void browse_poll_create_subscription (browsepoll_t *context,
 					     http_t *conn);
 static gboolean browse_poll_get_notifications (browsepoll_t *context,
 					       http_t *conn);
+char            *_ppdCreateFromIPP(char *buffer, size_t bufsize, ipp_t *response);
 
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
 #define HAVE_CUPS_1_6 1
@@ -670,53 +672,10 @@ create_local_queue (const char *name,
   char		buffer[8192];		/* Buffer for creating script */
   int           bytes;
   const char	*cups_serverbin;	/* CUPS_SERVERBIN environment variable */
-#if 0
-  int i, uri_status, port, status;
+  int uri_status, port;
   http_t *http;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
   ipp_t *request, *response;
-  ipp_attribute_t *attr;
-  static const char * const requested_attrs[] =
-    {	/* Requested attributes for getting IPP network printer capabilities */
-	/* Explicit attribute listings for the case that "all" does not cover
-	   everything */
-      "job-template",
-      "printer-description",
-      /*"document-format-supported",
-      "color-supported",
-      "pages-per-minute",
-      "pages-per-minute-color",
-      "media-supported",
-      "media-ready",
-      "media-default",
-      "media-type-supported",
-      "media-source-supported",*/
-      "media-col-database",
-      /*"sides-supported",
-      "sides-default",
-      "output-bin-supported",
-      "output-bin-default",
-      "finishings-supported",
-      "finishings-default",
-      "print-color-mode-supported",
-      "print-color-mode-default",
-      "output-mode-supported",
-      "output-mode-default",
-      "print-quality-supported",
-      "print-quality-default",
-      "printer-resolution-supported",
-      "printer-resolution-default",
-      "copies-supported",
-      "copies-default",*/
-      /* Catch things which were forgotten above or newly introduced */
-      "all"
-    };
-  static int versions_to_try[] =
-    {
-      20,
-      11
-    };
-#endif /* 0 */
 
   /* Mark this as a queue to be created locally pointing to the printer */
   if ((p = (remote_printer_t *)calloc(1, sizeof(remote_printer_t))) == NULL) {
@@ -791,7 +750,7 @@ create_local_queue (const char *name,
        shared printers around. */
 
     if (CreateIPPPrinterQueues == 0) {
-      debug_printf("cups-browsed: Printer %s (%s) is an IPP network printer and cups-browsed id not configured to set up such printers automatically, ignoring this printer.\n",
+      debug_printf("cups-browsed: Printer %s (%s) is an IPP network printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
 		   p->name, p->uri);
       goto fail;
     }
@@ -802,7 +761,11 @@ create_local_queue (const char *name,
       goto fail;
     }
 
-#if 0
+    p->duplicate = 0;
+    p->model = NULL;
+
+    /* Request printer properties and try to generate a PPD file for the
+       printer (mainly IPP Everywhere printers) */
     uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
 				 scheme, sizeof(scheme),
 				 userpass, sizeof(userpass),
@@ -817,71 +780,57 @@ create_local_queue (const char *name,
 		   p->uri, host_name, port);
       goto fail;
     }
-    for (i = 0;
-	 i < sizeof(versions_to_try) / sizeof(versions_to_try[0]);
-	 i ++) {
-      /* Create IPP request */
-      request = ippNewRequest(IPP_GET_PRINTER_ATTRIBUTES);
-      /* Set IPP version */
-      ippSetVersion(request, versions_to_try[i] / 10, versions_to_try[i] % 10);
-      /* Printer URI */
-      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
-		   "printer-uri", NULL, p->uri);
-      /* Requested IPP attributes */
-      ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-		    "requested-attributes",
-		    sizeof(requested_attrs) / sizeof(requested_attrs[0]),
-		    NULL, requested_attrs);
-      /* Do it */
-      response = cupsDoRequest(http, request, resource);
-      if (response == NULL) {
-	debug_printf("cups-browsed: No answer to Get-Printer-Attributes IPP request from remote printer %s, ignoring this printer (IPP Error: %s %s).\n",
-		     p->uri, ippErrorString(cupsLastError()),
-		     cupsLastErrorString());
-	httpClose(http);
+    request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
+    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL, uri);
+    response = cupsDoRequest(http, request, resource);
+
+    if (!_ppdCreateFromIPP(buffer, sizeof(buffer), response)) {
+      debug_printf("cups-browsed: Unable to create PPD file: %s\n", strerror(errno));
+      p->ppd = NULL;
+
+      if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
+      cups_serverbin = CUPS_SERVERBIN;
+
+      if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0) {
+	debug_printf("Unable to create interface script file\n");
 	goto fail;
       }
-      status = cupsLastError();
-      debug_printf("cups-browsed: Remote printer %s, IPP %3.1f: %s (%s)\n",
-		   p->uri, versions_to_try[i] / 10.0,
-		   ippErrorString(cupsLastError()),
-		   cupsLastErrorString());
-      /* If succeeded, go on, on error try a lower IPP version */
-      if (status < 0x0400)
-	break;
-    }
-    if (i >= sizeof(versions_to_try) / sizeof(versions_to_try[0])) {
-      /* All IPP versions failed */
-      debug_printf("cups-browsed: Remote printer %s: All IPP versions failed\n",
-		   p->uri);
-      goto fail;
-    }
-    /* Read out the printer's capabilities */
-    attr = ippFirstAttribute(response);
-    while (attr) {
-      debug_printf("Attr: %s\n",
-		   ippGetName(attr));
-      for (i = 0; i < ippGetCount(attr); i ++)
-	debug_printf("Keyword: %s\n",
-		     ippGetString(attr, i, NULL));
-      attr = ippNextAttribute(response);
-    }
-    attr = ippFindAttribute(response,
-			    "document-format-supported",
-			    IPP_TAG_ZERO);
-    if (attr)
-      for (i = 0; i < ippGetCount(attr); i ++)
-	debug_printf("Format: %s\n",
-		     ippGetString(attr, i, NULL));
-    else
-      debug_printf("No formats\n");
-    
-    /* Clean up */
-    ippDelete(response);
-    httpClose(http);
-#endif /* 0 */
+      
+      debug_printf("Creating temp script file \"%s\"\n", tempfile);
 
-    p->duplicate = 0;
+      snprintf(buffer, sizeof(buffer),
+	       "#!/bin/sh\n"
+	       "# System V interface script for printer %s generated by cups-browsed\n"
+	       "\n"
+	       "if [ $# -lt 5 -o $# -gt 6 ]; then\n"
+	       "  echo \"ERROR: $0 job-id user title copies options [file]\" >&2\n"
+	       "  exit 1\n"
+	       "fi\n"
+	       "\n"
+	       "# Read from given file\n"
+	       "if [ -n \"$6\" ]; then\n"
+	       "  exec \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" < \"$6\"\n"
+	       "fi\n"
+	       "\n"
+	       "extra_options=\"output-format=%s make-and-model=%s\"\n"
+	       "\n"
+	       "%s/filter/pdftoippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$5 $extra_options\"\n",
+	       p->name, pdl, make_model, cups_serverbin);
+
+      bytes = write(fd, buffer, strlen(buffer));
+      if (bytes != strlen(buffer)) {
+	debug_printf("Unable to write interface script into the file\n");
+	goto fail;
+      }
+
+      close(fd);
+
+      p->ifscript = strdup(tempfile);
+    } else {
+      debug_printf("cups-browsed: Created temporary IPP Everywhere PPD: %s\n", buffer);
+      p->ppd = strdup(buffer);
+      p->ifscript = NULL;
+    }
 
     /*p->model = "drv:///sample.drv/laserjet.ppd";
       debug_printf("cups-browsed: PPD from system for %s: %s\n", p->name, p->model);*/
@@ -892,46 +841,6 @@ create_local_queue (const char *name,
     /*p->ifscript = "/usr/lib/cups/filter/pdftoippprinter-wrapper";
       debug_printf("cups-browsed: System V Interface script for %s: %s\n", p->name, p->ifscript);*/
 
-    if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
-      cups_serverbin = CUPS_SERVERBIN;
-
-    if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0) {
-      debug_printf("Unable to create interface script file\n");
-      goto fail;
-    }
-
-    debug_printf("Creating temp script file \"%s\"\n", tempfile);
-
-    snprintf(buffer, sizeof(buffer),
-	     "#!/bin/sh\n"
-	     "# System V interface script for printer %s generated by cups-browsed\n"
-	     "\n"
-	     "if [ $# -lt 5 -o $# -gt 6 ]; then\n"
-	     "  echo \"ERROR: $0 job-id user title copies options [file]\" >&2\n"
-	     "  exit 1\n"
-	     "fi\n"
-	     "\n"
-	     "# Read from given file\n"
-	     "if [ -n \"$6\" ]; then\n"
-	     "  exec \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" < \"$6\"\n"
-	     "fi\n"
-	     "\n"
-	     "extra_options=\"output-format=%s make-and-model=%s\"\n"
-	     "\n"
-	     "%s/filter/pdftoippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$5 $extra_options\"\n",
-	     p->name, pdl, make_model, cups_serverbin);
-
-    bytes = write(fd, buffer, strlen(buffer));
-    if (bytes != strlen(buffer)) {
-      debug_printf("Unable to write interface script into the file\n");
-      goto fail;
-    }
-
-    close(fd);
-
-    p->ppd = NULL;
-    p->model = NULL;
-    p->ifscript = strdup(tempfile);
   }
 
   /* Add the new remote printer entry */
@@ -1262,8 +1171,10 @@ gboolean handle_cups_queues(gpointer unused) {
 	unlink(p->ifscript);
 	free(p->ifscript);
 	p->ifscript = NULL;
-      } else
+      } else {
+	debug_printf("cups-browsed: Raw queue %s\n", p->name);
 	ippDelete(cupsDoRequest(http, request, "/admin/"));
+      }
       cupsFreeOptions(num_options, options);
       if (cupsLastError() > IPP_OK_CONFLICT) {
 	debug_printf("cups-browsed: Unable to create CUPS queue!\n");
@@ -3397,3 +3308,978 @@ fail:
 
   return ret;
 }
+
+
+/*
+ * The code below is borrowed from the CUPS 2.1.x upstream repository
+ * (via patches attached to https://www.cups.org/str.php?L4258). This
+ * allows for automatic PPD generation already with CUPS versions older
+ * than CUPS 2.1.x. We have also an additional test and development
+ * platform for this code. Taken from cups/ppd-cache.c,
+ * cups/string-private.h, cups/string.c.
+ * 
+ * The advantage of PPD generation instead of working with System V
+ * interface scripts is that the print dialogs of the clients do not
+ * need to ask the printer for its options via IPP. So we have access
+ * to the options with the current PPD-based dialogs and can even share
+ * the automatically created print queue to other CUPS-based machines
+ * without problems.
+ */
+
+
+typedef struct _pwg_finishings_s	/**** PWG finishings mapping data ****/
+{
+  ipp_finishings_t	value;		/* finishings value */
+  int			num_options;	/* Number of options to apply */
+  cups_option_t		*options;	/* Options to apply */
+} _pwg_finishings_t;
+
+#define _PWG_EQUIVALENT(x, y)	(abs((x)-(y)) < 2)
+
+static void	pwg_ppdize_name(const char *ipp, char *name, size_t namesize);
+static void	pwg_ppdize_resolution(ipp_attribute_t *attr, int element, int *xres, int *yres, char *name, size_t namesize);
+
+int			/* O - 1 on match, 0 otherwise */
+_cups_isalnum(int ch)			/* I - Character to test */
+{
+  return ((ch >= '0' && ch <= '9') ||
+          (ch >= 'A' && ch <= 'Z') ||
+          (ch >= 'a' && ch <= 'z'));
+}
+
+int			/* O - 1 on match, 0 otherwise */
+_cups_isalpha(int ch)			/* I - Character to test */
+{
+  return ((ch >= 'A' && ch <= 'Z') ||
+          (ch >= 'a' && ch <= 'z'));
+}
+
+int			/* O - 1 on match, 0 otherwise */
+_cups_islower(int ch)			/* I - Character to test */
+{
+  return (ch >= 'a' && ch <= 'z');
+}
+
+int			/* O - 1 on match, 0 otherwise */
+_cups_isspace(int ch)			/* I - Character to test */
+{
+  return (ch == ' ' || ch == '\f' || ch == '\n' || ch == '\r' || ch == '\t' ||
+          ch == '\v');
+}
+
+int			/* O - 1 on match, 0 otherwise */
+_cups_isupper(int ch)			/* I - Character to test */
+{
+  return (ch >= 'A' && ch <= 'Z');
+}
+
+int			/* O - Converted character */
+_cups_tolower(int ch)			/* I - Character to convert */
+{
+  return (_cups_isupper(ch) ? ch - 'A' + 'a' : ch);
+}
+
+int			/* O - Converted character */
+_cups_toupper(int ch)			/* I - Character to convert */
+{
+  return (_cups_islower(ch) ? ch - 'a' + 'A' : ch);
+}
+
+/*
+ * '_cups_strcasecmp()' - Do a case-insensitive comparison.
+ */
+
+int				/* O - Result of comparison (-1, 0, or 1) */
+_cups_strcasecmp(const char *s,	/* I - First string */
+                 const char *t)	/* I - Second string */
+{
+  while (*s != '\0' && *t != '\0')
+  {
+    if (_cups_tolower(*s) < _cups_tolower(*t))
+      return (-1);
+    else if (_cups_tolower(*s) > _cups_tolower(*t))
+      return (1);
+
+    s ++;
+    t ++;
+  }
+
+  if (*s == '\0' && *t == '\0')
+    return (0);
+  else if (*s != '\0')
+    return (1);
+  else
+    return (-1);
+}
+
+/*
+ * '_cups_strncasecmp()' - Do a case-insensitive comparison on up to N chars.
+ */
+
+int					/* O - Result of comparison (-1, 0, or 1) */
+_cups_strncasecmp(const char *s,	/* I - First string */
+                  const char *t,	/* I - Second string */
+		  size_t     n)		/* I - Maximum number of characters to compare */
+{
+  while (*s != '\0' && *t != '\0' && n > 0)
+  {
+    if (_cups_tolower(*s) < _cups_tolower(*t))
+      return (-1);
+    else if (_cups_tolower(*s) > _cups_tolower(*t))
+      return (1);
+
+    s ++;
+    t ++;
+    n --;
+  }
+
+  if (n == 0)
+    return (0);
+  else if (*s == '\0' && *t == '\0')
+    return (0);
+  else if (*s != '\0')
+    return (1);
+  else
+    return (-1);
+}
+
+#ifndef HAVE_STRLCPY
+/*
+ * '_cups_strlcpy()' - Safely copy two strings.
+ */
+
+size_t					/* O - Length of string */
+strlcpy(char       *dst,		/* O - Destination string */
+	const char *src,		/* I - Source string */
+	size_t      size)		/* I - Size of destination string buffer */
+{
+  size_t	srclen;			/* Length of source string */
+
+
+ /*
+  * Figure out how much room is needed...
+  */
+
+  size --;
+
+  srclen = strlen(src);
+
+ /*
+  * Copy the appropriate amount...
+  */
+
+  if (srclen > size)
+    srclen = size;
+
+  memmove(dst, src, srclen);
+  dst[srclen] = '\0';
+
+  return (srclen);
+}
+#endif /* !HAVE_STRLCPY */
+
+/*
+ * '_ppdCreateFromIPP()' - Create a PPD file describing the capabilities
+ *                         of an IPP printer.
+ */
+
+char *					/* O - PPD filename or NULL on error */
+_ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
+                  size_t bufsize,	/* I - Size of filename buffer */
+		  ipp_t  *response)	/* I - Get-Printer-Attributes response */
+{
+  cups_file_t		*fp;		/* PPD file */
+  ipp_attribute_t	*attr,		/* xxx-supported */
+			*defattr,	/* xxx-default */
+			*x_dim, *y_dim;	/* Media dimensions */
+  ipp_t			*media_size;	/* Media size collection */
+  char			make[256],	/* Make and model */
+			*model,		/* Model name */
+			ppdname[PPD_MAX_NAME];
+		    			/* PPD keyword */
+  int			i, j,		/* Looping vars */
+			count,		/* Number of values */
+			bottom,		/* Largest bottom margin */
+			left,		/* Largest left margin */
+			right,		/* Largest right margin */
+			top;		/* Largest top margin */
+  pwg_media_t		*pwg;		/* PWG media size */
+  int			xres, yres;	/* Resolution values */
+
+
+ /*
+  * Range check input...
+  */
+
+  if (buffer)
+    *buffer = '\0';
+
+  if (!buffer || bufsize < 1 || !response)
+    return (NULL);
+
+ /*
+  * Open a temporary file for the PPD...
+  */
+
+  if ((fp = cupsTempFile2(buffer, (int)bufsize)) == NULL)
+    return (NULL);
+
+ /*
+  * Standard stuff for PPD file...
+  */
+
+  cupsFilePuts(fp, "*PPD-Adobe: \"4.3\"\n");
+  cupsFilePuts(fp, "*FormatVersion: \"4.3\"\n");
+  cupsFilePrintf(fp, "*FileVersion: \"%d.%d\"\n", CUPS_VERSION_MAJOR, CUPS_VERSION_MINOR);
+  cupsFilePuts(fp, "*LanguageVersion: English\n");
+  cupsFilePuts(fp, "*LanguageEncoding: ISOLatin1\n");
+  cupsFilePuts(fp, "*PSVersion: \"(3010.000) 0\"\n");
+  cupsFilePuts(fp, "*LanguageLevel: \"3\"\n");
+  cupsFilePuts(fp, "*FileSystem: False\n");
+  cupsFilePuts(fp, "*PCFileName: \"ippeve.ppd\"\n");
+
+  if ((attr = ippFindAttribute(response, "printer-make-and-model", IPP_TAG_TEXT)) != NULL)
+    strlcpy(make, ippGetString(attr, 0, NULL), sizeof(make));
+  else
+    strlcpy(make, "Unknown Printer", sizeof(make));
+
+  if (!_cups_strncasecmp(make, "Hewlett Packard ", 16) ||
+      !_cups_strncasecmp(make, "Hewlett-Packard ", 16))
+  {
+    model = make + 16;
+    strlcpy(make, "HP", sizeof(make));
+  }
+  else if ((model = strchr(make, ' ')) != NULL)
+    *model++ = '\0';
+  else
+    model = make;
+
+  cupsFilePrintf(fp, "*Manufacturer: \"%s\"\n", make);
+  cupsFilePrintf(fp, "*ModelName: \"%s\"\n", model);
+  cupsFilePrintf(fp, "*Product: \"(%s)\"\n", model);
+  cupsFilePrintf(fp, "*NickName: \"%s\"\n", model);
+  cupsFilePrintf(fp, "*ShortNickName: \"%s\"\n", model);
+
+  if ((attr = ippFindAttribute(response, "color-supported", IPP_TAG_BOOLEAN)) != NULL && ippGetBoolean(attr, 0))
+    cupsFilePuts(fp, "*ColorDevice: True\n");
+  else
+    cupsFilePuts(fp, "*ColorDevice: False\n");
+
+  cupsFilePrintf(fp, "*cupsVersion: %d.%d\n", CUPS_VERSION_MAJOR, CUPS_VERSION_MINOR);
+  cupsFilePuts(fp, "*cupsSNMPSupplies: False\n");
+  cupsFilePuts(fp, "*cupsLanguages: \"en\"\n");
+
+ /*
+  * Filters...
+  */
+
+  if ((attr = ippFindAttribute(response, "document-format-supported", IPP_TAG_MIMETYPE)) != NULL)
+  {
+    int formatfound = 0;
+
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      const char *format = ippGetString(attr, i, NULL);
+					/* PDL */
+#if 0
+      if (!_cups_strcasecmp(format, "application/pdf"))
+        cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 10 -\"\n");
+      else if (!_cups_strcasecmp(format, "application/postscript"))
+        cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 10 -\"\n");
+      else if (_cups_strcasecmp(format, "application/octet-stream") && _cups_strcasecmp(format, "application/vnd.hp-pcl") && _cups_strcasecmp(format, "text/plain"))
+        cupsFilePrintf(fp, "*cupsFilter2: \"%s %s 10 -\"\n", format, format);
+#endif
+      /* For now cups-filters only supports these PPD files with PWG Raster
+	 and PostScript, so create a PPD only for these formats */
+      if (!_cups_strcasecmp(format, "image/pwg-raster")) {
+        cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 10 -\"\n");
+	formatfound = 1;
+      } else if (!_cups_strcasecmp(format, "application/postscript")) {
+        cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 10 -\"\n");
+	formatfound = 1;
+      }
+    }
+    if (formatfound == 0) {
+      debug_printf("cups-browsed: No data format suitable for PPD auto-generation supported by the printer, not generating PPD\n");
+      unlink(buffer);
+      return(NULL);
+    }
+  }
+
+ /*
+  * PageSize/PageRegion/ImageableArea/PaperDimension
+  */
+
+  if ((attr = ippFindAttribute(response, "media-bottom-margin-supported", IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, bottom = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+      if (ippGetInteger(attr, i) > bottom)
+        bottom = ippGetInteger(attr, i);
+  }
+  else
+    bottom = 1270;
+
+  if ((attr = ippFindAttribute(response, "media-left-margin-supported", IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, left = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+      if (ippGetInteger(attr, i) > left)
+        left = ippGetInteger(attr, i);
+  }
+  else
+    left = 635;
+
+  if ((attr = ippFindAttribute(response, "media-right-margin-supported", IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, right = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+      if (ippGetInteger(attr, i) > right)
+        right = ippGetInteger(attr, i);
+  }
+  else
+    right = 635;
+
+  if ((attr = ippFindAttribute(response, "media-top-margin-supported", IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, top = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+      if (ippGetInteger(attr, i) > top)
+        top = ippGetInteger(attr, i);
+  }
+  else
+    top = 1270;
+
+  if ((defattr = ippFindAttribute(response, "media-col-default", IPP_TAG_BEGIN_COLLECTION)) != NULL)
+  {
+    if ((attr = ippFindAttribute(ippGetCollection(defattr, 0), "media-size", IPP_TAG_BEGIN_COLLECTION)) != NULL)
+    {
+      media_size = ippGetCollection(attr, 0);
+      x_dim      = ippFindAttribute(media_size, "x-dimension", IPP_TAG_INTEGER);
+      y_dim      = ippFindAttribute(media_size, "y-dimension", IPP_TAG_INTEGER);
+
+      if (x_dim && y_dim)
+      {
+        pwg = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
+	strlcpy(ppdname, pwg->ppd, sizeof(ppdname));
+      }
+      else
+	strlcpy(ppdname, "Unknown", sizeof(ppdname));
+    }
+    else
+      strlcpy(ppdname, "Unknown", sizeof(ppdname));
+  }
+
+  if ((attr = ippFindAttribute(response, "media-size-supported", IPP_TAG_BEGIN_COLLECTION)) != NULL)
+  {
+    cupsFilePrintf(fp, "*OpenUI *PageSize: PickOne\n"
+		       "*OrderDependency: 10 AnySetup *PageSize\n"
+                       "*DefaultPageSize: %s\n", ppdname);
+    if (ippGetCount(attr) == 0) {
+      debug_printf("cups-browsed: No page sizes reported as supported by the printer, not generating PPD\n");
+      unlink(buffer);
+      return(NULL);
+    }
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      media_size = ippGetCollection(attr, i);
+      x_dim      = ippFindAttribute(media_size, "x-dimension", IPP_TAG_INTEGER);
+      y_dim      = ippFindAttribute(media_size, "y-dimension", IPP_TAG_INTEGER);
+
+      if (x_dim && y_dim)
+      {
+        pwg = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
+
+        cupsFilePrintf(fp, "*PageSize %s: \"<</PageSize[%.1f %.1f]>>setpagedevice\"\n", pwg->ppd, pwg->width * 72.0 / 2540.0, pwg->length * 72.0 / 2540.0);
+      }
+    }
+    cupsFilePuts(fp, "*CloseUI: *PageSize\n");
+
+    cupsFilePrintf(fp, "*OpenUI *PageRegion: PickOne\n"
+                       "*OrderDependency: 10 AnySetup *PageRegion\n"
+                       "*DefaultPageRegion: %s\n", ppdname);
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      media_size = ippGetCollection(attr, i);
+      x_dim      = ippFindAttribute(media_size, "x-dimension", IPP_TAG_INTEGER);
+      y_dim      = ippFindAttribute(media_size, "y-dimension", IPP_TAG_INTEGER);
+
+      if (x_dim && y_dim)
+      {
+        pwg = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
+
+        cupsFilePrintf(fp, "*PageRegion %s: \"<</PageSize[%.1f %.1f]>>setpagedevice\"\n", pwg->ppd, pwg->width * 72.0 / 2540.0, pwg->length * 72.0 / 2540.0);
+      }
+    }
+    cupsFilePuts(fp, "*CloseUI: *PageRegion\n");
+
+    cupsFilePrintf(fp, "*DefaultImageableArea: %s\n"
+		       "*DefaultPaperDimension: %s\n", ppdname, ppdname);
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      media_size = ippGetCollection(attr, i);
+      x_dim      = ippFindAttribute(media_size, "x-dimension", IPP_TAG_INTEGER);
+      y_dim      = ippFindAttribute(media_size, "y-dimension", IPP_TAG_INTEGER);
+
+      if (x_dim && y_dim)
+      {
+        pwg = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
+
+        cupsFilePrintf(fp, "*ImageableArea %s: \"%.1f %.1f %.1f %.1f\"\n", pwg->ppd, left * 72.0 / 2540.0, bottom * 72.0 / 2540.0, (pwg->width - right) * 72.0 / 2540.0, (pwg->length - top) * 72.0 / 2540.0);
+        cupsFilePrintf(fp, "*PaperDimension %s: \"%.1f %.1f\"\n", pwg->ppd, pwg->width * 72.0 / 2540.0, pwg->length * 72.0 / 2540.0);
+      }
+    }
+  } else {
+    debug_printf("cups-browsed: No page sizes reported as supported by the printer, not generating PPD\n");
+    unlink(buffer);
+    return(NULL);
+  }
+
+ /*
+  * InputSlot...
+  */
+
+  if ((attr = ippFindAttribute(ippGetCollection(defattr, 0), "media-source", IPP_TAG_KEYWORD)) != NULL)
+    pwg_ppdize_name(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
+  else
+    strlcpy(ppdname, "Unknown", sizeof(ppdname));
+
+  if ((attr = ippFindAttribute(response, "media-source-supported", IPP_TAG_KEYWORD)) != NULL && (count = ippGetCount(attr)) > 1)
+  {
+    static const char * const sources[][2] =
+    {
+      { "Auto", "Automatic" },
+      { "Main", "Main" },
+      { "Alternate", "Alternate" },
+      { "LargeCapacity", "Large Capacity" },
+      { "Manual", "Manual" },
+      { "Envelope", "Envelope" },
+      { "Disc", "Disc" },
+      { "Photo", "Photo" },
+      { "Hagaki", "Hagaki" },
+      { "MainRoll", "Main Roll" },
+      { "AlternateRoll", "Alternate Roll" },
+      { "Top", "Top" },
+      { "Middle", "Middle" },
+      { "Bottom", "Bottom" },
+      { "Side", "Side" },
+      { "Left", "Left" },
+      { "Right", "Right" },
+      { "Center", "Center" },
+      { "Rear", "Rear" },
+      { "ByPassTray", "Multipurpose" },
+      { "Tray1", "Tray 1" },
+      { "Tray2", "Tray 2" },
+      { "Tray3", "Tray 3" },
+      { "Tray4", "Tray 4" },
+      { "Tray5", "Tray 5" },
+      { "Tray6", "Tray 6" },
+      { "Tray7", "Tray 7" },
+      { "Tray8", "Tray 8" },
+      { "Tray9", "Tray 9" },
+      { "Tray10", "Tray 10" },
+      { "Tray11", "Tray 11" },
+      { "Tray12", "Tray 12" },
+      { "Tray13", "Tray 13" },
+      { "Tray14", "Tray 14" },
+      { "Tray15", "Tray 15" },
+      { "Tray16", "Tray 16" },
+      { "Tray17", "Tray 17" },
+      { "Tray18", "Tray 18" },
+      { "Tray19", "Tray 19" },
+      { "Tray20", "Tray 20" },
+      { "Roll1", "Roll 1" },
+      { "Roll2", "Roll 2" },
+      { "Roll3", "Roll 3" },
+      { "Roll4", "Roll 4" },
+      { "Roll5", "Roll 5" },
+      { "Roll6", "Roll 6" },
+      { "Roll7", "Roll 7" },
+      { "Roll8", "Roll 8" },
+      { "Roll9", "Roll 9" },
+      { "Roll10", "Roll 10" }
+    };
+
+    cupsFilePrintf(fp, "*OpenUI *InputSlot: PickOne\n"
+                       "*OrderDependency: 10 AnySetup *InputSlot\n"
+                       "*DefaultInputSlot: %s\n", ppdname);
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      pwg_ppdize_name(ippGetString(attr, i, NULL), ppdname, sizeof(ppdname));
+
+      for (j = 0; j < (int)(sizeof(sources) / sizeof(sources[0])); j ++)
+        if (!strcmp(sources[j][0], ppdname))
+	{
+	  cupsFilePrintf(fp, "*InputSlot %s/%s: \"<</MediaPosition %d>>setpagedevice\"\n", ppdname, sources[j][1], j);
+	  break;
+	}
+    }
+    cupsFilePuts(fp, "*CloseUI: *InputSlot\n");
+  }
+
+ /*
+  * MediaType...
+  */
+
+  if ((attr = ippFindAttribute(ippGetCollection(defattr, 0), "media-type", IPP_TAG_KEYWORD)) != NULL)
+    pwg_ppdize_name(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
+  else
+    strlcpy(ppdname, "Unknown", sizeof(ppdname));
+
+  if ((attr = ippFindAttribute(response, "media-type-supported", IPP_TAG_KEYWORD)) != NULL && (count = ippGetCount(attr)) > 1)
+  {
+    static const char * const types[][2] =
+    {					/* Media type strings (far from complete) */
+      { "Auto", "Automatic" },
+      { "Cardstock", "Cardstock" },
+      { "Disc", "CD/DVD/Bluray" },
+      { "Envelope", "Envelope" },
+      { "Labels", "Label" },
+      { "Other", "Other" },
+      { "Photographic", "Photo" },
+      { "PhotographicGlossy", "Glossy Photo" },
+      { "PhotographicHighGloss", "High-Gloss Photo" },
+      { "PhotographicMatte", "Matte Photo" },
+      { "PhotographicSatin", "Satin Photo" },
+      { "PhotographicSemiGloss", "Semi-Gloss Photo" },
+      { "Stationery", "Plain Paper" },
+      { "StationeryLetterhead", "Letterhead" },
+      { "Transparency", "Transparency" }
+    };
+
+    cupsFilePrintf(fp, "*OpenUI *MediaType: PickOne\n"
+                       "*OrderDependency: 10 AnySetup *MediaType\n"
+                       "*DefaultMediaType: %s\n", ppdname);
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      pwg_ppdize_name(ippGetString(attr, i, NULL), ppdname, sizeof(ppdname));
+
+      for (j = 0; j < (int)(sizeof(types) / sizeof(types[0])); j ++)
+        if (!strcmp(types[j][0], ppdname))
+	{
+	  cupsFilePrintf(fp, "*MediaType %s/%s: \"<</MediaType(%s)>>setpagedevice\"\n", ppdname, types[j][1], ppdname);
+	  break;
+	}
+
+      if (j >= (int)(sizeof(types) / sizeof(types[0])))
+	cupsFilePrintf(fp, "*MediaType %s: \"<</MediaType(%s)>>setpagedevice\"\n", ppdname, ppdname);
+
+    }
+    cupsFilePuts(fp, "*CloseUI: *MediaType\n");
+  }
+
+ /*
+  * ColorModel...
+  */
+
+  if ((attr = ippFindAttribute(response, "pwg-raster-document-type-supported", IPP_TAG_KEYWORD)) == NULL)
+    attr = ippFindAttribute(response, "print-color-mode-supported", IPP_TAG_KEYWORD);
+
+  if (attr && ippGetCount(attr) > 0)
+  {
+    const char *default_color = NULL;	/* Default */
+
+    cupsFilePuts(fp, "*OpenUI *ColorModel/Color Mode: PickOne\n"
+		     "*OrderDependency: 10 AnySetup *ColorModel\n");
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      const char *keyword = ippGetString(attr, i, NULL);
+					/* Keyword for color/bit depth */
+
+      if (!strcmp(keyword, "black_1") || !strcmp(keyword, "bi-level") || !strcmp(keyword, "process-bi-level"))
+      {
+        cupsFilePuts(fp, "*ColorModel FastGray/Fast Grayscale: \"<</cupsColorSpace 3/cupsBitsPerColor 1/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n");
+
+        if (!default_color)
+	  default_color = "FastGray";
+      }
+      else if (!strcmp(keyword, "sgray_8") || !strcmp(keyword, "monochrome") || !strcmp(keyword, "process-monochrome"))
+      {
+        cupsFilePuts(fp, "*ColorModel Gray/Grayscale: \"<</cupsColorSpace 18/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n");
+
+        if (!default_color || !strcmp(default_color, "FastGray"))
+	  default_color = "Gray";
+      }
+      else if (!strcmp(keyword, "srgb_8") || !strcmp(keyword, "color"))
+      {
+        cupsFilePuts(fp, "*ColorModel RGB/Color: \"<</cupsColorSpace 19/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n");
+
+	default_color = "RGB";
+      }
+    }
+
+    if (default_color)
+      cupsFilePrintf(fp, "*DefaultColorModel: %s\n", default_color);
+
+    cupsFilePuts(fp, "*CloseUI: *ColorModel\n");
+  }
+
+ /*
+  * Duplex...
+  */
+
+  if ((attr = ippFindAttribute(response, "sides-supported", IPP_TAG_KEYWORD)) != NULL && ippContainsString(attr, "two-sided-long-edge"))
+  {
+    cupsFilePuts(fp, "*OpenUI *Duplex/2-Sided Printing: PickOne\n"
+                     "*OrderDependency: 10 AnySetup *Duplex\n"
+                     "*DefaultDuplex: None\n"
+                     "*Duplex None/Off (1-Sided): \"<</Duplex false>>setpagedevice\"\n"
+                     "*Duplex DuplexNoTumble/Long-Edge (Portrait): \"<</Duplex true/Tumble false>>setpagedevice\"\n"
+                     "*Duplex DuplexTumble/Short-Edge (Landscape): \"<</Duplex true/Tumble true>>setpagedevice\"\n"
+                     "*CloseUI: *Duplex\n");
+
+    if ((attr = ippFindAttribute(response, "pwg-raster-document-sheet-back", IPP_TAG_KEYWORD)) != NULL)
+    {
+      const char *keyword = ippGetString(attr, 0, NULL);
+					/* Keyword value */
+
+      if (!strcmp(keyword, "flipped"))
+        cupsFilePuts(fp, "*cupsBackSide: Flipped\n");
+      else if (!strcmp(keyword, "manual-tumble"))
+        cupsFilePuts(fp, "*cupsBackSide: ManualTumble\n");
+      else if (!strcmp(keyword, "normal"))
+        cupsFilePuts(fp, "*cupsBackSide: Normal\n");
+      else
+        cupsFilePuts(fp, "*cupsBackSide: Rotated\n");
+    }
+    else if ((attr = ippFindAttribute(response, "urf-supported", IPP_TAG_KEYWORD)) != NULL)
+    {
+      for (i = 0, count = ippGetCount(attr); i < count; i ++)
+      {
+	const char *dm = ippGetString(attr, i, NULL);
+					  /* DM value */
+
+	if (!_cups_strcasecmp(dm, "DM1"))
+	{
+	  cupsFilePuts(fp, "*cupsBackSide: Normal\n");
+	  break;
+	}
+	else if (!_cups_strcasecmp(dm, "DM2"))
+	{
+	  cupsFilePuts(fp, "*cupsBackSide: Flipped\n");
+	  break;
+	}
+	else if (!_cups_strcasecmp(dm, "DM3"))
+	{
+	  cupsFilePuts(fp, "*cupsBackSide: Rotated\n");
+	  break;
+	}
+	else if (!_cups_strcasecmp(dm, "DM4"))
+	{
+	  cupsFilePuts(fp, "*cupsBackSide: ManualTumble\n");
+	  break;
+	}
+      }
+    }
+  }
+
+ /*
+  * cupsPrintQuality and DefaultResolution...
+  */
+
+  if ((attr = ippFindAttribute(response, "pwg-raster-document-resolution-supported", IPP_TAG_RESOLUTION)) != NULL)
+  {
+    count = ippGetCount(attr);
+
+    pwg_ppdize_resolution(attr, count / 2, &xres, &yres, ppdname, sizeof(ppdname));
+    cupsFilePrintf(fp, "*DefaultResolution: %s\n", ppdname);
+
+    cupsFilePuts(fp, "*OpenUI *cupsPrintQuality/Print Quality: PickOne\n"
+                     "*OrderDependency: 10 AnySetup *cupsPrintQuality\n"
+                     "*DefaultcupsPrintQuality: Normal\n");
+    if (count > 2)
+    {
+      pwg_ppdize_resolution(attr, 0, &xres, &yres, NULL, 0);
+      cupsFilePrintf(fp, "*cupsPrintQuality Draft: \"<</HWResolution[%d %d]>>setpagedevice\"\n", xres, yres);
+    }
+    pwg_ppdize_resolution(attr, count / 2, &xres, &yres, NULL, 0);
+    cupsFilePrintf(fp, "*cupsPrintQuality Normal: \"<</HWResolution[%d %d]>>setpagedevice\"\n", xres, yres);
+    if (count > 1)
+    {
+      pwg_ppdize_resolution(attr, count - 1, &xres, &yres, NULL, 0);
+      cupsFilePrintf(fp, "*cupsPrintQuality High: \"<</HWResolution[%d %d]>>setpagedevice\"\n", xres, yres);
+    }
+
+    cupsFilePuts(fp, "*CloseUI: *cupsPrintQuality\n");
+  }
+  else if ((attr = ippFindAttribute(response, "urf-supported", IPP_TAG_KEYWORD)) != NULL)
+  {
+    int lowdpi = 0, hidpi = 0;		/* Lower and higher resolution */
+
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      const char *rs = ippGetString(attr, i, NULL);
+					/* RS value */
+
+      if (_cups_strncasecmp(rs, "RS", 2))
+        continue;
+
+      lowdpi = atoi(rs + 2);
+      if ((rs = strrchr(rs, '-')) != NULL)
+        hidpi = atoi(rs + 1);
+      else
+        hidpi = lowdpi;
+      break;
+    }
+
+    if (lowdpi == 0)
+    {
+     /*
+      * Invalid "urf-supported" value...
+      */
+
+      cupsFilePuts(fp, "*DefaultResolution: 300dpi\n");
+    }
+    else
+    {
+     /*
+      * Generate print qualities based on low and high DPIs...
+      */
+
+      cupsFilePrintf(fp, "*DefaultResolution: %ddpi\n", lowdpi);
+
+      cupsFilePuts(fp, "*OpenUI *cupsPrintQuality/Print Quality: PickOne\n"
+		       "*OrderDependency: 10 AnySetup *cupsPrintQuality\n"
+		       "*DefaultcupsPrintQuality: Normal\n");
+      if ((lowdpi & 1) == 0)
+	cupsFilePrintf(fp, "*cupsPrintQuality Draft: \"<</HWResolution[%d %d]>>setpagedevice\"\n", lowdpi, lowdpi / 2);
+      cupsFilePrintf(fp, "*cupsPrintQuality Normal: \"<</HWResolution[%d %d]>>setpagedevice\"\n", lowdpi, lowdpi);
+      if (hidpi > lowdpi)
+	cupsFilePrintf(fp, "*cupsPrintQuality High: \"<</HWResolution[%d %d]>>setpagedevice\"\n", hidpi, hidpi);
+      cupsFilePuts(fp, "*CloseUI: *cupsPrintQuality\n");
+    }
+  }
+  else if ((attr = ippFindAttribute(response, "printer-resolution-default", IPP_TAG_RESOLUTION)) != NULL)
+  {
+    pwg_ppdize_resolution(attr, 0, &xres, &yres, ppdname, sizeof(ppdname));
+    cupsFilePrintf(fp, "*DefaultResolution: %s\n", ppdname);
+  }
+  else
+    cupsFilePuts(fp, "*DefaultResolution: 300dpi\n");
+
+ /*
+  * Close up and return...
+  */
+
+  cupsFileClose(fp);
+
+  return (buffer);
+}
+
+
+/*
+ * '_pwgInputSlotForSource()' - Get the InputSlot name for the given PWG
+ *                              media-source.
+ */
+
+const char *				/* O - InputSlot name */
+_pwgInputSlotForSource(
+    const char *media_source,		/* I - PWG media-source */
+    char       *name,			/* I - Name buffer */
+    size_t     namesize)		/* I - Size of name buffer */
+{
+ /*
+  * Range check input...
+  */
+
+  if (!media_source || !name || namesize < PPD_MAX_NAME)
+    return (NULL);
+
+  if (_cups_strcasecmp(media_source, "main"))
+    strlcpy(name, "Cassette", namesize);
+  else if (_cups_strcasecmp(media_source, "alternate"))
+    strlcpy(name, "Multipurpose", namesize);
+  else if (_cups_strcasecmp(media_source, "large-capacity"))
+    strlcpy(name, "LargeCapacity", namesize);
+  else if (_cups_strcasecmp(media_source, "bottom"))
+    strlcpy(name, "Lower", namesize);
+  else if (_cups_strcasecmp(media_source, "middle"))
+    strlcpy(name, "Middle", namesize);
+  else if (_cups_strcasecmp(media_source, "top"))
+    strlcpy(name, "Upper", namesize);
+  else if (_cups_strcasecmp(media_source, "rear"))
+    strlcpy(name, "Rear", namesize);
+  else if (_cups_strcasecmp(media_source, "side"))
+    strlcpy(name, "Side", namesize);
+  else if (_cups_strcasecmp(media_source, "envelope"))
+    strlcpy(name, "Envelope", namesize);
+  else if (_cups_strcasecmp(media_source, "main-roll"))
+    strlcpy(name, "Roll", namesize);
+  else if (_cups_strcasecmp(media_source, "alternate-roll"))
+    strlcpy(name, "Roll2", namesize);
+  else
+    pwg_ppdize_name(media_source, name, namesize);
+
+  return (name);
+}
+
+
+/*
+ * '_pwgMediaTypeForType()' - Get the MediaType name for the given PWG
+ *                            media-type.
+ */
+
+const char *				/* O - MediaType name */
+_pwgMediaTypeForType(
+    const char *media_type,		/* I - PWG media-type */
+    char       *name,			/* I - Name buffer */
+    size_t     namesize)		/* I - Size of name buffer */
+{
+ /*
+  * Range check input...
+  */
+
+  if (!media_type || !name || namesize < PPD_MAX_NAME)
+    return (NULL);
+
+  if (_cups_strcasecmp(media_type, "auto"))
+    strlcpy(name, "Auto", namesize);
+  else if (_cups_strcasecmp(media_type, "cardstock"))
+    strlcpy(name, "Cardstock", namesize);
+  else if (_cups_strcasecmp(media_type, "envelope"))
+    strlcpy(name, "Envelope", namesize);
+  else if (_cups_strcasecmp(media_type, "photographic-glossy"))
+    strlcpy(name, "Glossy", namesize);
+  else if (_cups_strcasecmp(media_type, "photographic-high-gloss"))
+    strlcpy(name, "HighGloss", namesize);
+  else if (_cups_strcasecmp(media_type, "photographic-matte"))
+    strlcpy(name, "Matte", namesize);
+  else if (_cups_strcasecmp(media_type, "stationery"))
+    strlcpy(name, "Plain", namesize);
+  else if (_cups_strcasecmp(media_type, "stationery-coated"))
+    strlcpy(name, "Coated", namesize);
+  else if (_cups_strcasecmp(media_type, "stationery-inkjet"))
+    strlcpy(name, "Inkjet", namesize);
+  else if (_cups_strcasecmp(media_type, "stationery-letterhead"))
+    strlcpy(name, "Letterhead", namesize);
+  else if (_cups_strcasecmp(media_type, "stationery-preprinted"))
+    strlcpy(name, "Preprinted", namesize);
+  else if (_cups_strcasecmp(media_type, "transparency"))
+    strlcpy(name, "Transparency", namesize);
+  else
+    pwg_ppdize_name(media_type, name, namesize);
+
+  return (name);
+}
+
+
+/*
+ * '_pwgPageSizeForMedia()' - Get the PageSize name for the given media.
+ */
+
+const char *				/* O - PageSize name */
+_pwgPageSizeForMedia(
+    pwg_media_t *media,		/* I - Media */
+    char         *name,			/* I - PageSize name buffer */
+    size_t       namesize)		/* I - Size of name buffer */
+{
+  const char	*sizeptr,		/* Pointer to size in PWG name */
+		*dimptr;		/* Pointer to dimensions in PWG name */
+
+
+ /*
+  * Range check input...
+  */
+
+  if (!media || !name || namesize < PPD_MAX_NAME)
+    return (NULL);
+
+ /*
+  * Copy or generate a PageSize name...
+  */
+
+  if (media->ppd)
+  {
+   /*
+    * Use a standard Adobe name...
+    */
+
+    strlcpy(name, media->ppd, namesize);
+  }
+  else if (!media->pwg || !strncmp(media->pwg, "custom_", 7) ||
+           (sizeptr = strchr(media->pwg, '_')) == NULL ||
+	   (dimptr = strchr(sizeptr + 1, '_')) == NULL ||
+	   (size_t)(dimptr - sizeptr) > namesize)
+  {
+   /*
+    * Use a name of the form "wNNNhNNN"...
+    */
+
+    snprintf(name, namesize, "w%dh%d", (int)PWG_TO_POINTS(media->width),
+             (int)PWG_TO_POINTS(media->length));
+  }
+  else
+  {
+   /*
+    * Copy the size name from class_sizename_dimensions...
+    */
+
+    memcpy(name, sizeptr + 1, (size_t)(dimptr - sizeptr - 1));
+    name[dimptr - sizeptr - 1] = '\0';
+  }
+
+  return (name);
+}
+
+
+/*
+ * 'pwg_ppdize_name()' - Convert an IPP keyword to a PPD keyword.
+ */
+
+static void
+pwg_ppdize_name(const char *ipp,	/* I - IPP keyword */
+                char       *name,	/* I - Name buffer */
+		size_t     namesize)	/* I - Size of name buffer */
+{
+  char	*ptr,				/* Pointer into name buffer */
+	*end;				/* End of name buffer */
+
+
+  *name = (char)toupper(*ipp++);
+
+  for (ptr = name + 1, end = name + namesize - 1; *ipp && ptr < end;)
+  {
+    if (*ipp == '-' && _cups_isalpha(ipp[1]))
+    {
+      ipp ++;
+      *ptr++ = (char)toupper(*ipp++ & 255);
+    }
+    else
+      *ptr++ = *ipp++;
+  }
+
+  *ptr = '\0';
+}
+
+
+
+/*
+ * 'pwg_ppdize_resolution()' - Convert PWG resolution values to PPD values.
+ */
+
+static void
+pwg_ppdize_resolution(
+    ipp_attribute_t *attr,		/* I - Attribute to convert */
+    int             element,		/* I - Element to convert */
+    int             *xres,		/* O - X resolution in DPI */
+    int             *yres,		/* O - Y resolution in DPI */
+    char            *name,		/* I - Name buffer */
+    size_t          namesize)		/* I - Size of name buffer */
+{
+  ipp_res_t units;			/* Units for resolution */
+
+
+  *xres = ippGetResolution(attr, element, yres, &units);
+
+  if (units == IPP_RES_PER_CM)
+  {
+    *xres = (int)(*xres * 2.54);
+    *yres = (int)(*yres * 2.54);
+  }
+
+  if (name && namesize > 4)
+  {
+    if (*xres == *yres)
+      snprintf(name, namesize, "%ddpi", *xres);
+    else
+      snprintf(name, namesize, "%dx%ddpi", *xres, *yres);
+  }
+}
+
+
