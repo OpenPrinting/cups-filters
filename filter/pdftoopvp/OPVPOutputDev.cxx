@@ -278,7 +278,11 @@ void OPVPOutputDev::startDoc(XRef *xrefA) {
 				    gFalse,
                                     gFalse,
 #endif
+#if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 30
 				    globalParams->getAntialias());
+#else
+                                    gFalse);
+#endif
   for (i = 0; i < nT3Fonts; ++i) {
     delete t3FontCache[i];
   }

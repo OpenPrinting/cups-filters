@@ -436,7 +436,11 @@ int main(int argc, char *argv[]) {
   }
 
   out = new SplashOutputDev(cmode,rowpad/* row padding */,
-    reverseVideo,paperColor,gTrue,gFalse);
+    reverseVideo,paperColor,gTrue
+#if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 30
+    ,gFalse
+#endif
+    );
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   out->startDoc(doc);
 #else

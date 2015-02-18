@@ -614,7 +614,9 @@ exit(0);
       ok = gFalse;
     }
   }
+#if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 30
   globalParams->setAntialias("no");
+#endif
   if (quiet) {
     globalParams->setErrQuiet(quiet);
   }
