@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.0.65 - 2015-02-13
 
 CHANGES IN V1.0.66
 
+	- cups-browsed: SECURITY FIX: Fixed a bug in the remove_bad_chars()
+	  failing to reliably filter out illegal characters if there are two
+	  or more subsequent illegal characters, allowing execution of
+	  arbitrary commands with the rights of the "lp" user, using forged
+	  print service announcements on DNS-SD servers (Bug #1265).
 	- pdftoopvp: Added conditionals to also build with Poppler 0.31.0
 	  and newer. Thanks to Armin K. (krejzi at email dot com) for the
 	  patch (Bug #1254).

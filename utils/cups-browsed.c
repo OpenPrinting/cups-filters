@@ -917,6 +917,7 @@ remove_bad_chars(const char *str_orig, /* I - Original string */
 		       str[i] == '.' || str[i] == ','))) {
       /* Allowed character, keep it */
       havedash = 0;
+      str[j] = str[i];
     } else {
       /* Replace all other characters by a single '-' */
       if (havedash == 1)
