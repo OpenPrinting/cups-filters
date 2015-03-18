@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.67 - 2015-03-11
 
 CHANGES IN V1.0.68
 
+	- cups-browsed: Added conditionals so that it also builds with
+	  CUPS 1.5.x (but then withou support for automatically creating
+	  queues for IPP network printers). Thanks to Johannes Meixner from
+	  SUSE for the patch (Bug #1268).
 	- Ricoh-PDF_Printer-PDF.ppd: Added PPD file for Ricoh's PDF printers
 	  (experimental). Thanks to Ulrich Wehner from Ricoh for the file.
 

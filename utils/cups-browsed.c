@@ -191,11 +191,19 @@ static void browse_poll_create_subscription (browsepoll_t *context,
 					     http_t *conn);
 static gboolean browse_poll_get_notifications (browsepoll_t *context,
 					       http_t *conn);
-char            *_ppdCreateFromIPP(char *buffer, size_t bufsize, ipp_t *response);
 
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
 #define HAVE_CUPS_1_6 1
 #endif
+
+#ifdef HAVE_CUPS_1_6
+/* The following function uses a lot of CUPS >= 1.6 specific stuff.
+   The following function is only called in create_local_queue()
+   to set up local queues for non-CUPS printer broadcasts
+   that is disabled in create_local_queue() for older CUPS <= 1.5.4.
+   Accordingly the following function is also disabled here for CUPS < 1.6. */
+char            *_ppdCreateFromIPP(char *buffer, size_t bufsize, ipp_t *response);
+#endif /* HAVE_CUPS_1_6 */
 
 /*
  * CUPS 1.6 makes various structures private and
@@ -738,6 +746,14 @@ create_local_queue (const char *name,
 		   p->name, q->host);
     }
   } else {
+#ifndef HAVE_CUPS_1_6
+    /* The following code uses a lot of CUPS >= 1.6 specific stuff.
+       For older CUPS <= 1.5.4 the following functionality is skipped
+       which means for CUPS <= 1.5.4 only for CUPS printer broadcasts
+       there are local queues created which should be sufficient
+       on systems where traditional CUPS <= 1.5.4 is used. */
+    goto fail;
+#else /* HAVE_CUPS_1_6 */
     /* Non-CUPS printer broadcasts are most probably from printers
        directly connected to the network and using the IPP protocol.
        We check whether we can set them up without a device-specific
@@ -841,6 +857,7 @@ create_local_queue (const char *name,
     /*p->ifscript = "/usr/lib/cups/filter/pdftoippprinter-wrapper";
       debug_printf("cups-browsed: System V Interface script for %s: %s\n", p->name, p->ifscript);*/
 
+#endif /* HAVE_CUPS_1_6 */
   }
 
   /* Add the new remote printer entry */
@@ -3307,6 +3324,12 @@ fail:
   return ret;
 }
 
+#ifdef HAVE_CUPS_1_6
+/* The following code uses a lot of CUPS >= 1.6 specific stuff.
+   The following code is only needed for create_local_queue()
+   to set up local queues for non-CUPS printer broadcasts
+   that is disabled in create_local_queue() for older CUPS <= 1.5.4.
+   Accordingly the following code is also disabled here for CUPS < 1.6. */
 
 /*
  * The code below is borrowed from the CUPS 2.1.x upstream repository
@@ -4279,5 +4302,6 @@ pwg_ppdize_resolution(
       snprintf(name, namesize, "%dx%ddpi", *xres, *yres);
   }
 }
+#endif /* HAVE_CUPS_1_6 */
 
 
