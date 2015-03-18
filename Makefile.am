@@ -751,6 +751,7 @@ ppd_DATA = \
 	ppd/Generic-PDF_Printer-PDF.ppd \
 	ppd/HP-Color_LaserJet_CM3530_MFP-PDF.ppd \
 	ppd/HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd \
+	ppd/Ricoh-PDF_Printer-PDF.ppd \
 	ppd/pxlcolor.ppd \
 	ppd/pxlmono.ppd \
 	ppd/textonly.ppd

@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.0.67 - 2015-03-11
 -----------------------------------------------------
 
+CHANGES IN V1.0.68
+
+	- Ricoh-PDF_Printer-PDF.ppd: Added PPD file for Ricoh's PDF printers
+	  (experimental). Thanks to Ulrich Wehner from Ricoh for the file.
+
 CHANGES IN V1.0.67
 
 	- cups-browsed: Use g_source_remove() instead of g_source_destroy()
