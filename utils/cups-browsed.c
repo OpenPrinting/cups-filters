@@ -182,7 +182,7 @@ static unsigned int CreateIPPPrinterQueues = 0;
 static int autoshutdown = 0;
 static int autoshutdown_avahi = 0;
 static int autoshutdown_timeout = 30;
-static guint autoshutdown_exec_id = 0;
+static guint autoshutdown_exec_id = -1;
 
 static int debug = 0;
 
@@ -865,11 +865,11 @@ create_local_queue (const char *name,
 
   /* If auto shutdown is active we have perhaps scheduled a timer to shut down
      due to not having queues any more to maintain, kill the timer now */
-  if (autoshutdown && autoshutdown_exec_id &&
+  if (autoshutdown && autoshutdown_exec_id > 0 &&
       cupsArrayCount(remote_printers) > 0) {
     debug_printf ("cups-browsed: New printers there to make available, killing auto shutdown timer.\n");
     g_source_remove(autoshutdown_exec_id);
-    autoshutdown_exec_id = 0;
+    autoshutdown_exec_id = -1;
   }
 
   return p;
@@ -1100,7 +1100,7 @@ gboolean handle_cups_queues(gpointer unused) {
 
       /* If auto shutdown is active and all printers we have set up got removed
 	 again, schedule the shutdown in autoshutdown_timeout seconds */
-      if (autoshutdown && !autoshutdown_exec_id &&
+      if (autoshutdown && autoshutdown_exec_id <= 0 &&
 	  cupsArrayCount(remote_printers) == 0) {
 	debug_printf ("cups-browsed: No printers there any more to make available, shutting down in %d sec...\n", autoshutdown_timeout);
 	autoshutdown_exec_id =
@@ -1245,7 +1245,7 @@ recheck_timer (void)
     } else if (timeout == (time_t) -1 || p->timeout - now < timeout)
       timeout = p->timeout - now;
 
-  if (queues_timer_id != (guint) -1)
+  if (queues_timer_id > 0)
     g_source_remove (queues_timer_id);
 
   if (timeout != (time_t) -1) {
@@ -1774,7 +1774,7 @@ void avahi_browser_shutdown() {
     debug_printf("cups-browsed: Avahi server disappeared, switching to auto shutdown mode ...\n");
     /* If there are no printers schedule the shutdown in autoshutdown_timeout
        seconds */
-    if (!autoshutdown_exec_id &&
+    if (autoshutdown_exec_id <= 0 &&
 	cupsArrayCount(remote_printers) == 0) {
       debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available, shutting down in %d sec...\n", autoshutdown_timeout);
       autoshutdown_exec_id =
@@ -1837,7 +1837,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
       if (autoshutdown_exec_id > 0) {
 	debug_printf ("cups-browsed: We have left auto shutdown mode, killing auto shutdown timer.\n");
 	g_source_remove(autoshutdown_exec_id);
-	autoshutdown_exec_id = 0;
+	autoshutdown_exec_id = -1;
       }
     }
 
@@ -2699,7 +2699,7 @@ sigusr1_handler(int sig) {
   if (autoshutdown_exec_id > 0) {
     debug_printf ("cups-browsed: We have left auto shutdown mode, killing auto shutdown timer.\n");
     g_source_remove(autoshutdown_exec_id);
-    autoshutdown_exec_id = 0;
+    autoshutdown_exec_id = -1;
   }
 }
 
@@ -2712,7 +2712,7 @@ sigusr2_handler(int sig) {
   debug_printf("cups-browsed: Caught signal %d, switching to auto shutdown mode ...\n", sig);
   /* If there are no printers schedule the shutdown in autoshutdown_timeout
      seconds */
-  if (!autoshutdown_exec_id &&
+  if (autoshutdown_exec_id <= 0 &&
       cupsArrayCount(remote_printers) == 0) {
     debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available, shutting down in %d sec...\n", autoshutdown_timeout);
     autoshutdown_exec_id =
@@ -2929,7 +2929,7 @@ read_configuration (const char *filename)
 static void
 defer_update_netifs (void)
 {
-  if (update_netifs_sourceid != -1)
+  if (update_netifs_sourceid > 0)
     g_source_remove (update_netifs_sourceid);
 
   update_netifs_sourceid = g_timeout_add_seconds (10, update_netifs, NULL);
@@ -3253,7 +3253,7 @@ int main(int argc, char*argv[]) {
 
   /* If auto shutdown is active and we do not find any printers initially,
      schedule the shutdown in autoshutdown_timeout seconds */
-  if (autoshutdown && !autoshutdown_exec_id &&
+  if (autoshutdown && autoshutdown_exec_id <= 0 &&
       cupsArrayCount(remote_printers) == 0) {
     debug_printf ("cups-browsed: No printers found to make available, shutting down in %d sec...\n", autoshutdown_timeout);
     autoshutdown_exec_id =
