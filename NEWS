@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 -----------------------------------------------------
 
+CHANGES IN V1.0.69
+
+	- pdftoippprinter: Support also PWG Raster as input format so that
+	  an auto-generated, PPD-less queue for an IPP printer emulates an
+	  IPP Everywhere printer.
+
 CHANGES IN V1.0.68
 
 	- cups-browsed: Numeric IDs for GSources of the glib event

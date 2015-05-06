@@ -228,6 +228,17 @@ main(int  argc,				/* I - Number of command-line args */
     cupsArrayAdd(filter_chain, "gziptoany");
 
  /*
+  * If the rastertopdf filter is present and the input is in PWG Raster format
+  * add the rastertopdf filter to the filter chain to support the PWG Raster
+  * input. This way the PPD-less auto-generated print queue emulates an IPP
+  * Everywhere printer, as PPDed CUPS queues do.
+  */
+  
+  if (filter_present("rastertopdf") && (val = getenv("CONTENT_TYPE")) != NULL &&
+      strcasestr(val, "pwg-raster") != NULL)
+    cupsArrayAdd(filter_chain, "rastertopdf");
+
+ /*
   * Check the presence of the pdftopdf filter and add it to the filter
   * chain if it is there
   */
