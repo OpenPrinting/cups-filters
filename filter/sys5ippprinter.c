@@ -1,8 +1,9 @@
 /*
- *   pdftoippprinter
+ *   sys5ippprinter
  *
- *   System-V-interface-style CUPS filter for PPD-less printing of PDF input
- *   data on IPP printers which advertise themselves via Bonjour/DNS-SD.
+ *   System-V-interface-style CUPS filter for PPD-less printing of PDF and
+ *   PWG Raster input data on IPP printers which advertise themselves via
+ *   Bonjour/DNS-SD.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2006 by Easy Software Products.
@@ -174,7 +175,7 @@ main(int  argc,				/* I - Number of command-line args */
       return (1);
     }
 
-    fprintf(stderr, "DEBUG: pdftoippprinter - copying to temp print file \"%s\"\n",
+    fprintf(stderr, "DEBUG: sys5ippprinter - copying to temp print file \"%s\"\n",
             tempfile);
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)

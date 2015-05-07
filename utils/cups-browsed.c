@@ -830,7 +830,7 @@ create_local_queue (const char *name,
 	       "\n"
 	       "extra_options=\"output-format=%s make-and-model=%s\"\n"
 	       "\n"
-	       "%s/filter/pdftoippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$5 $extra_options\"\n",
+	       "%s/filter/sys5ippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$5 $extra_options\"\n",
 	       p->name, pdl, make_model, cups_serverbin);
 
       bytes = write(fd, buffer, strlen(buffer));
@@ -854,7 +854,7 @@ create_local_queue (const char *name,
     /*p->ppd = "/usr/share/ppd/cupsfilters/pxlcolor.ppd";
       debug_printf("cups-browsed: PPD from file for %s: %s\n", p->name, p->ppd);*/
 
-    /*p->ifscript = "/usr/lib/cups/filter/pdftoippprinter-wrapper";
+    /*p->ifscript = "/usr/lib/cups/filter/sys5ippprinter";
       debug_printf("cups-browsed: System V Interface script for %s: %s\n", p->name, p->ifscript);*/
 
 #endif /* HAVE_CUPS_1_6 */
