@@ -38,6 +38,7 @@
 #include "config.h"
 #include "common.h"
 #include <cupsfilters/image.h>
+#include <cupsfilters/raster.h>
 #include <math.h>
 #include <ctype.h>
 
@@ -690,6 +691,9 @@ int					/* O - Exit status */
 main(int  argc,				/* I - Number of command-line arguments */
      char *argv[])			/* I - Command-line arguments */
 {
+  cups_page_header2_t h;                /* CUPS Raster page header, to */
+                                        /* accommodate results of command */
+                                        /* line parsing for PPD-less queue */
   ppd_choice_t	*choice;		/* PPD option choice */
   int		num_options;		/* Number of print options */
   cups_option_t	*options;		/* Print options */
@@ -776,6 +780,27 @@ main(int  argc,				/* I - Number of command-line arguments */
   num_options = cupsParseOptions(argv[5], 0, &options);
 
   ppd = SetCommonOptions(num_options, options, 0);
+  if (!ppd) {
+    cupsRasterParseIPPOptions(&h, num_options, options, 0, 1);
+    Orientation = h.Orientation;
+    Duplex = h.Duplex;
+    ColorDevice = h.cupsNumColors <= 1 ? 0 : 1;
+    PageWidth = h.cupsPageSize[0] != 0.0 ? h.cupsPageSize[0] :
+      (float)h.PageSize[0];
+    PageLength = h.cupsPageSize[1] != 0.0 ? h.cupsPageSize[1] :
+      (float)h.PageSize[1];
+    PageLeft = h.cupsImagingBBox[0] != 0.0 ? h.cupsImagingBBox[0] :
+      (float)h.ImagingBoundingBox[0];
+    PageBottom = h.cupsImagingBBox[1] != 0.0 ? h.cupsImagingBBox[1] :
+      (float)h.ImagingBoundingBox[1];
+    PageRight = h.cupsImagingBBox[2] != 0.0 ? h.cupsImagingBBox[2] :
+      (float)h.ImagingBoundingBox[2];
+    PageTop = h.cupsImagingBBox[3] != 0.0 ? h.cupsImagingBBox[3] :
+      (float)h.ImagingBoundingBox[3];
+    Flip = h.MirrorPrint ? 1 : 0;
+    Collate = h.Collate ? 1 : 0;
+    Copies = h.NumCopies;
+  }
 
   if (Copies == 1
       && (choice = ppdFindMarkedChoice(ppd,"Copies")) != NULL) {
