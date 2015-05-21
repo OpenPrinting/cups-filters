@@ -670,6 +670,8 @@ create_local_queue (const char *name,
 		    const char *type,
 		    const char *domain,
 		    const char *pdl,
+		    int color,
+		    int duplex,
 		    const char *make_model,
 		    int is_cups_queue)
 {
@@ -828,10 +830,11 @@ create_local_queue (const char *name,
 	       "  exec \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" < \"$6\"\n"
 	       "fi\n"
 	       "\n"
-	       "extra_options=\"output-format=%s make-and-model=%s\"\n"
+	       "extra_options=\"output-format=%s make-and-model=%s print-color-mode=%s%s\"\n"
 	       "\n"
 	       "%s/filter/sys5ippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$5 $extra_options\"\n",
-	       p->name, pdl, make_model, cups_serverbin);
+	       p->name, pdl, make_model, color == 1 ? "rgb" : "gray",
+	       duplex == 1 ? " sides=two-sided-long-edge" : "", cups_serverbin);
 
       bytes = write(fd, buffer, strlen(buffer));
       if (bytes != strlen(buffer)) {
@@ -1268,6 +1271,7 @@ generate_local_queue(const char *host,
 
   char uri[HTTP_MAX_URI];
   char *remote_queue = NULL, *remote_host = NULL, *pdl = NULL;
+  int color = 0, duplex = 0;
 #ifdef HAVE_AVAHI
   char *fields[] = { "product", "usb_MDL", "ty", NULL }, **f;
   AvahiStringList *entry = NULL;
@@ -1369,6 +1373,24 @@ generate_local_queue(const char *host,
 	avahi_string_list_get_pair(entry, &key, &value, NULL);
 	if (key && value && !strcasecmp(key, "pdl") && strlen(value) >= 3) {
 	  pdl = remove_bad_chars(value, 1);
+	}
+      }
+      /* Find out if we have a color printer */
+      entry = avahi_string_list_find((AvahiStringList *)txt, "Color");
+      if (entry) {
+	avahi_string_list_get_pair(entry, &key, &value, NULL);
+	if (key && value && !strcasecmp(key, "Color")) {
+	  if (!strcasecmp(value, "T")) color = 1;
+	  if (!strcasecmp(value, "F")) color = 0;
+	}
+      }
+      /* Find out if we have a duplex printer */
+      entry = avahi_string_list_find((AvahiStringList *)txt, "Duplex");
+      if (entry) {
+	avahi_string_list_get_pair(entry, &key, &value, NULL);
+	if (key && value && !strcasecmp(key, "Duplex")) {
+	  if (!strcasecmp(value, "T")) duplex = 1;
+	  if (!strcasecmp(value, "F")) duplex = 0;
 	}
       }
     }
@@ -1515,8 +1537,8 @@ generate_local_queue(const char *host,
     /* We need to create a local queue pointing to the
        discovered printer */
     p = create_local_queue (local_queue_name, uri, remote_host,
-			    name ? name : "", type, domain, pdl, remote_queue,
-			    is_cups_queue);
+			    name ? name : "", type, domain, pdl, color, duplex,
+			    remote_queue, is_cups_queue);
   }
 
   free (backup_queue_name);
@@ -2968,7 +2990,7 @@ find_previous_queue (gpointer key,
     /* Queue found, add to our list */
     p = create_local_queue (name,
 			    printer->device_uri,
-			    "", "", "", "", NULL, NULL, 1);
+			    "", "", "", "", NULL, 0, 0, NULL, 1);
     if (p) {
       /* Mark as unconfirmed, if no Avahi report of this queue appears
 	 in a certain time frame, we will remove the queue */
