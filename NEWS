@@ -8,9 +8,9 @@ CHANGES IN V1.0.69
 	- sys5ippprinter: Renamed pdftoippprinter to reflect that it is
 	  once a System 5 interface script and second does not accept only
 	  PDF as input.
-	- pdftoippprinter: Support also PWG Raster as input format so that
-	  an auto-generated, PPD-less queue for an IPP printer emulates an
-	  IPP Everywhere printer.
+	- pdftoippprinter: Support also PWG Raster and JPEG as input formats
+	  so that an auto-generated, PPD-less queue for an IPP printer emulates
+	  an IPP Everywhere printer.
 
 CHANGES IN V1.0.68
 
