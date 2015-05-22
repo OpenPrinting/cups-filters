@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 
 CHANGES IN V1.0.69
 
+	- cups-browsed: When auto-generating a PPD-less print queue for an
+	  IPP network printer, determine default page size, unprintable margins,
+	  and color space from the printer via an IPP request.
 	- imagetopdf: Debug logging should be only controlled by the LogLevel
 	  of CUPS, not by an awkward build time switch.
 	- cups-browsed: Determine from the TXT records of the Bonjour broadcast

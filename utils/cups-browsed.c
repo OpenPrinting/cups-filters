@@ -662,6 +662,45 @@ autoshutdown_execute (gpointer data)
   return FALSE;
 }
 
+int
+color_space_score(const char *color_space)
+{
+  int score = 0;
+  char *p = color_space;
+
+  if (!p) return -1;
+  if (!strncasecmp(p, "s", 1)) {
+    p += 1;
+    score += 2;
+  } else if (!strncasecmp(p, "adobe", 5)) {
+    p += 5;
+    score += 1;
+  } else
+    score += 3;
+  if (!strncasecmp(p, "black", 5)) {
+    p += 5;
+    score += 1000;
+  } else if (!strncasecmp(p, "gray", 4)) {
+    p += 4;
+    score += 2000;
+  } else if (!strncasecmp(p, "cmyk", 4)) {
+    p += 4;
+    score += 4000;
+  } else if (!strncasecmp(p, "cmy", 3)) {
+    p += 3;
+    score += 3000;
+  } else if (!strncasecmp(p, "rgb", 3)) {
+    p += 3;
+    score += 5000;
+  } 
+  if (!strncasecmp(p, "-", 1) || !strncasecmp(p, "_", 1)) {
+    p += 1;
+  }
+  score += strtol(p, (char **)&p, 10) * 10;
+  debug_printf("Score for color space %s: %d\n", color_space, score);
+  return score;
+}
+
 static remote_printer_t *
 create_local_queue (const char *name,
 		    const char *uri,
@@ -686,6 +725,13 @@ create_local_queue (const char *name,
   http_t *http;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
   ipp_t *request, *response;
+#ifdef HAVE_CUPS_1_6
+  ipp_attribute_t *attr;
+  char valuebuffer[65536];
+  int i, count, left, right, bottom, top;
+  char *default_page_size = NULL, *best_color_space = NULL, *color_space;
+  char page_size_option[256], margins_option[256];
+#endif /* HAVE_CUPS_1_6 */
 
   /* Mark this as a queue to be created locally pointing to the printer */
   if ((p = (remote_printer_t *)calloc(1, sizeof(remote_printer_t))) == NULL) {
@@ -802,9 +848,101 @@ create_local_queue (const char *name,
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL, uri);
     response = cupsDoRequest(http, request, resource);
 
+    /* Log all printer attributes for debugging */
+    if (debug) {
+      attr = ippFirstAttribute(response);
+      while (attr) {
+	debug_printf("Attr: %s\n",
+		     ippGetName(attr));
+	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+	debug_printf("Value: %s\n", valuebuffer);
+	for (i = 0; i < ippGetCount(attr); i ++)
+	  debug_printf("Keyword: %s\n",
+		       ippGetString(attr, i, NULL));
+	attr = ippNextAttribute(response);
+      }
+    }
+
     if (!_ppdCreateFromIPP(buffer, sizeof(buffer), response)) {
       debug_printf("cups-browsed: Unable to create PPD file: %s\n", strerror(errno));
       p->ppd = NULL;
+
+      /* Find default page size of the printer */
+      attr = ippFindAttribute(response,
+			      "media-default",
+			      IPP_TAG_ZERO);
+      if (attr) {
+	default_page_size = ippGetString(attr, 0, NULL);
+	debug_printf("Default page size: %s\n",
+		     default_page_size);
+	snprintf(page_size_option, sizeof(page_size_option),
+		 " media=%s", default_page_size);
+      } else {
+	attr = ippFindAttribute(response,
+				"media-ready",
+				IPP_TAG_ZERO);
+	if (attr) {
+	  default_page_size = ippGetString(attr, 0, NULL);
+	  debug_printf("Default page size: %s\n",
+		       default_page_size);
+	  snprintf(page_size_option, sizeof(page_size_option),
+		   " media=%s", default_page_size);
+	} else
+	  debug_printf("No default page size found!\n");
+      }
+
+      /* Find maximum unprintable margins of the printer */
+      if ((attr = ippFindAttribute(response, "media-bottom-margin-supported", IPP_TAG_INTEGER)) != NULL) {
+	for (i = 1, bottom = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+	  if (ippGetInteger(attr, i) > bottom)
+	    bottom = ippGetInteger(attr, i);
+      } else
+	bottom = 1270;
+
+      if ((attr = ippFindAttribute(response, "media-left-margin-supported", IPP_TAG_INTEGER)) != NULL) {
+	for (i = 1, left = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+	  if (ippGetInteger(attr, i) > left)
+	    left = ippGetInteger(attr, i);
+      } else
+	left = 635;
+
+      if ((attr = ippFindAttribute(response, "media-right-margin-supported", IPP_TAG_INTEGER)) != NULL) {
+	for (i = 1, right = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+	  if (ippGetInteger(attr, i) > right)
+	    right = ippGetInteger(attr, i);
+      } else
+	right = 635;
+
+      if ((attr = ippFindAttribute(response, "media-top-margin-supported", IPP_TAG_INTEGER)) != NULL) {
+	for (i = 1, top = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+	  if (ippGetInteger(attr, i) > top)
+	    top = ippGetInteger(attr, i);
+      } else
+	top = 1270;
+
+      debug_printf("Margins: Left: %d, Right: %d, Top: %d, Bottom: %d\n",
+		   left, right, top, bottom);
+	
+      snprintf(margins_option, sizeof(margins_option),
+	       " media-left-margin=%d media-bottom-margin=%d media-right-margin=%d media-top-margin=%d",
+	       left, bottom, right, top);
+
+      /* Find best color space of the printer */
+      attr = ippFindAttribute(response,
+			      "pwg-raster-document-type-supported",
+			      IPP_TAG_ZERO);
+      if (attr) {
+	for (i = 0; i < ippGetCount(attr); i ++) {
+	  color_space = ippGetString(attr, i, NULL);
+	  debug_printf("Supported color space: %s\n", color_space);
+	  if (color_space_score(color_space) >
+	      color_space_score(best_color_space))
+	    best_color_space = color_space;
+	}
+	debug_printf("Best color space: %s\n",
+		     best_color_space);
+      } else
+	debug_printf("No info about supported color spaces found!\n");
 
       if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
       cups_serverbin = CUPS_SERVERBIN;
@@ -830,10 +968,13 @@ create_local_queue (const char *name,
 	       "  exec \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" < \"$6\"\n"
 	       "fi\n"
 	       "\n"
-	       "extra_options=\"output-format=%s make-and-model=%s print-color-mode=%s%s\"\n"
+	       "extra_options=\"output-format=%s make-and-model=%s print-color-mode=%s%s%s%s\"\n"
 	       "\n"
-	       "%s/filter/sys5ippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$5 $extra_options\"\n",
-	       p->name, pdl, make_model, color == 1 ? "rgb" : "gray",
+	       "%s/filter/sys5ippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$extra_options $5\"\n",
+	       p->name, pdl, make_model,
+	       best_color_space ? best_color_space :
+	       (color == 1 ? "rgb" : "gray"),
+	       default_page_size ? page_size_option : "", margins_option,
 	       duplex == 1 ? " sides=two-sided-long-edge" : "", cups_serverbin);
 
       bytes = write(fd, buffer, strlen(buffer));
