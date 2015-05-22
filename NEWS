@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 
 CHANGES IN V1.0.69
 
+	- imagetopdf: Debug logging should be only controlled by the LogLevel
+	  of CUPS, not by an awkward build time switch.
 	- cups-browsed: Determine from the TXT records of the Bonjour broadcast
 	  of an IPP network printer whether it has color and duplex
 	  capabilities and if yes, let auto-generated PPD-less print queues

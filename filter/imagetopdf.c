@@ -727,10 +727,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
 
   title = argv[3];
-#ifdef DEBUG
   fprintf(stderr, "INFO: %s %s %s %s %s %s %s\n", argv[0], argv[1], argv[2],
           argv[3], argv[4], argv[5], argv[6] ? argv[6] : "(null)");
-#endif
 
  /*
   * Copy stdin as needed...
@@ -749,10 +747,8 @@ main(int  argc,				/* I - Number of command-line arguments */
       return (1);
     }
 
-#ifdef DEBUG
     fprintf(stderr, "DEBUG: imagetopdf - copying to temp print file \"%s\"\n",
             filename);
-#endif
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)
       write(fd, buffer, bytes);
@@ -1040,10 +1036,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   if (yppi == 0)
     yppi = xppi;
 
-#ifdef DEBUG
   fprintf(stderr, "DEBUG: Before scaling: xppi=%d, yppi=%d, zoom=%.2f\n",
           xppi, yppi, zoom);
-#endif
 
   if (xppi > 0)
   {
@@ -1062,18 +1056,14 @@ main(int  argc,				/* I - Number of command-line arguments */
       yprint = (PageTop - PageBottom) / 72.0;
     }
 
-#ifdef DEBUG
     fprintf(stderr, "DEBUG: Before scaling: xprint=%.1f, yprint=%.1f\n",
             xprint, yprint);
-#endif
 
     xinches = (float)cupsImageGetWidth(img) / (float)xppi;
     yinches = (float)cupsImageGetHeight(img) / (float)yppi;
 
-#ifdef DEBUG
     fprintf(stderr, "DEBUG: Image size is %.1f x %.1f inches...\n",
             xinches, yinches);
-#endif
 
     if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
     {
@@ -1088,9 +1078,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       * Rotate the image if it will fit landscape but not portrait...
       */
 
-#ifdef DEBUG
       fputs("DEBUG: Auto orientation...\n", stderr);
-#endif
 
       if ((xinches > xprint || yinches > yprint) &&
           xinches <= yprint && yinches <= xprint)
@@ -1099,9 +1087,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 	* Rotate the image as needed...
 	*/
 
-#ifdef DEBUG
         fputs("DEBUG: Using landscape orientation...\n", stderr);
-#endif
 
 	Orientation = (Orientation + 1) & 3;
 	xsize       = yprint;
@@ -1120,13 +1106,11 @@ main(int  argc,				/* I - Number of command-line arguments */
     yprint = (PageTop - PageBottom) / 72.0;
     aspect = (float)cupsImageGetYPPI(img) / (float)cupsImageGetXPPI(img);
 
-#ifdef DEBUG
     fprintf(stderr, "DEBUG: Before scaling: xprint=%.1f, yprint=%.1f\n",
             xprint, yprint);
 
     fprintf(stderr, "DEBUG: cupsImageGetXPPI(img) = %d, cupsImageGetYPPI(img) = %d, aspect = %f\n",
             cupsImageGetXPPI(img), cupsImageGetYPPI(img), aspect);
-#endif
 
     xsize = xprint * zoom;
     ysize = xsize * cupsImageGetHeight(img) / cupsImageGetWidth(img) / aspect;
@@ -1146,10 +1130,8 @@ main(int  argc,				/* I - Number of command-line arguments */
       xsize2 = ysize2 * cupsImageGetWidth(img) * aspect / cupsImageGetHeight(img);
     }
 
-#ifdef DEBUG
     fprintf(stderr, "DEBUG: Portrait size is %.2f x %.2f inches\n", xsize, ysize);
     fprintf(stderr, "DEBUG: Landscape size is %.2f x %.2f inches\n", xsize2, ysize2);
-#endif
 
     if (cupsGetOption("orientation-requested", num_options, options) == NULL &&
         cupsGetOption("landscape", num_options, options) == NULL)
@@ -1159,9 +1141,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       * portrait if they are equal...
       */
 
-#ifdef DEBUG
       fputs("DEBUG: Auto orientation...\n", stderr);
-#endif
 
       if ((xsize * ysize) < (xsize2 * xsize2))
       {
@@ -1169,9 +1149,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 	* Do landscape orientation...
 	*/
 
-#ifdef DEBUG
         fputs("DEBUG: Using landscape orientation...\n", stderr);
-#endif
 
 	Orientation = 1;
 	xinches     = xsize2;
@@ -1185,9 +1163,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 	* Do portrait orientation...
 	*/
 
-#ifdef DEBUG
         fputs("DEBUG: Using portrait orientation...\n", stderr);
-#endif
 
 	Orientation = 0;
 	xinches     = xsize;
@@ -1196,9 +1172,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
     else if (Orientation & 1)
     {
-#ifdef DEBUG
       fputs("DEBUG: Using landscape orientation...\n", stderr);
-#endif
 
       xinches     = xsize2;
       yinches     = ysize2;
@@ -1207,9 +1181,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
     else
     {
-#ifdef DEBUG
       fputs("DEBUG: Using portrait orientation...\n", stderr);
-#endif
 
       xinches     = xsize;
       yinches     = ysize;
@@ -1237,10 +1209,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   xprint = xinches / xpages;
   yprint = yinches / ypages;
 
-#ifdef DEBUG
   fprintf(stderr, "DEBUG: xpages = %dx%.2fin, ypages = %dx%.2fin\n",
           xpages, xprint, ypages, yprint);
-#endif
 
  /*
   * Update the page size for custom sizes...
@@ -1286,10 +1256,8 @@ main(int  argc,				/* I - Number of command-line arguments */
     if (length < ppd->custom_min[1])
       length = ppd->custom_min[1];
 
-#ifdef DEBUG
     fprintf(stderr, "DEBUG: Updated custom page size to %.2f x %.2f inches...\n",
             width / 72.0, length / 72.0);
-#endif
 
    /*
     * Set the new custom size...
@@ -1476,7 +1444,6 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   row = malloc(cupsImageGetWidth(img) * abs(colorspace) + 3);
 
-#ifdef DEBUG
   fprintf(stderr, "DEBUG: XPosition=%d, YPosition=%d, Orientation=%d\n",
           XPosition, YPosition, Orientation);
   fprintf(stderr, "DEBUG: xprint=%.0f, yprint=%.0f\n", xprint, yprint);
@@ -1484,7 +1451,6 @@ main(int  argc,				/* I - Number of command-line arguments */
           PageLeft, PageRight, PageWidth);
   fprintf(stderr, "DEBUG: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f\n",
           PageBottom, PageTop, PageLength);
-#endif
 
   if (Flip) {
     pr = PageWidth - PageLeft;
@@ -1609,9 +1575,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 	break;
   }
 
-#ifdef DEBUG
   fprintf(stderr, "DEBUG: left=%.2f, top=%.2f\n", left, top);
-#endif
 
   if (Collate)
   {
