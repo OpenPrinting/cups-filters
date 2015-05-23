@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 
 CHANGES IN V1.0.69
 
+	- imagetopdf: Corrections in PDF output: Let evince display the PDF
+	  with the correct size including margins and let ghostscript not
+	  complain about an invalid xref entry.
 	- cups-browsed: Do not add options to the System V interface script
 	  which calls sys5ippprinter but set the options as defaults for the
 	  CUPS queue in printers.conf.

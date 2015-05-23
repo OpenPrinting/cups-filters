@@ -402,8 +402,8 @@ static void outPrologue(int nPages)
 
 static void outPageObject(int pageObj, int contentsObj, int imgObj)
 {
-  int trfuncObj = newObj();
-  int lengthObj = newObj();
+  int trfuncObj;
+  int lengthObj;
   int startOffset;
   int length;
   int outTrfunc = (gammaval != 1.0 || brightness != 1.0);
@@ -421,8 +421,7 @@ static void outPageObject(int pageObj, int contentsObj, int imgObj)
     "/TrimBox [ 0 0 %f %f ] ",PageWidth,PageLength);
   outPdf(linebuf);
   snprintf(linebuf,LINEBUFSIZE,
-    "/CropBox [ %f %f %f %f ] ",
-    PageLeft,PageBottom,PageRight,PageTop);
+    "/CropBox [ 0 0 %f %f ] ",PageWidth,PageLength);
   outPdf(linebuf);
   if (contentsObj >= 0) {
     snprintf(linebuf,LINEBUFSIZE,
@@ -439,6 +438,8 @@ static void outPageObject(int pageObj, int contentsObj, int imgObj)
     outPdf(linebuf);
   }
   if (outTrfunc) {
+    trfuncObj = newObj();
+    lengthObj = newObj();
     snprintf(linebuf,LINEBUFSIZE,
       "/ExtGState << /GS1 << /TR %d 0 R >> >>\n",trfuncObj);
     outPdf(linebuf);
