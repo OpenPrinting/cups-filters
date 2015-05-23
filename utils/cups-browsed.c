@@ -80,6 +80,8 @@ typedef struct remote_printer_s {
   char *ppd;
   char *model;
   char *ifscript;
+  int num_options;
+  cups_option_t *options;
   printer_status_t status;
   time_t timeout;
   int duplicate;
@@ -666,7 +668,7 @@ int
 color_space_score(const char *color_space)
 {
   int score = 0;
-  char *p = color_space;
+  const char *p = color_space;
 
   if (!p) return -1;
   if (!strncasecmp(p, "s", 1)) {
@@ -729,8 +731,7 @@ create_local_queue (const char *name,
   ipp_attribute_t *attr;
   char valuebuffer[65536];
   int i, count, left, right, bottom, top;
-  char *default_page_size = NULL, *best_color_space = NULL, *color_space;
-  char page_size_option[256], margins_option[256];
+  const char *default_page_size = NULL, *best_color_space = NULL, *color_space;
 #endif /* HAVE_CUPS_1_6 */
 
   /* Mark this as a queue to be created locally pointing to the printer */
@@ -748,6 +749,9 @@ create_local_queue (const char *name,
   if (!p->uri)
     goto fail;
 
+  p->num_options = 0;
+  p->options = NULL;
+  
   p->host = strdup (host);
   if (!p->host)
     goto fail;
@@ -875,8 +879,9 @@ create_local_queue (const char *name,
 	default_page_size = ippGetString(attr, 0, NULL);
 	debug_printf("Default page size: %s\n",
 		     default_page_size);
-	snprintf(page_size_option, sizeof(page_size_option),
-		 " media=%s", default_page_size);
+	p->num_options = cupsAddOption("media-default",
+				       strdup(default_page_size),
+				       p->num_options, &(p->options));
       } else {
 	attr = ippFindAttribute(response,
 				"media-ready",
@@ -885,8 +890,9 @@ create_local_queue (const char *name,
 	  default_page_size = ippGetString(attr, 0, NULL);
 	  debug_printf("Default page size: %s\n",
 		       default_page_size);
-	  snprintf(page_size_option, sizeof(page_size_option),
-		   " media=%s", default_page_size);
+	  p->num_options = cupsAddOption("media-default",
+					 strdup(default_page_size),
+					 p->num_options, &(p->options));
 	} else
 	  debug_printf("No default page size found!\n");
       }
@@ -898,6 +904,10 @@ create_local_queue (const char *name,
 	    bottom = ippGetInteger(attr, i);
       } else
 	bottom = 1270;
+      snprintf(buffer, sizeof(buffer), "%d", bottom);
+      p->num_options = cupsAddOption("media-bottom-margin-default",
+				     strdup(buffer),
+				     p->num_options, &(p->options));
 
       if ((attr = ippFindAttribute(response, "media-left-margin-supported", IPP_TAG_INTEGER)) != NULL) {
 	for (i = 1, left = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
@@ -905,6 +915,10 @@ create_local_queue (const char *name,
 	    left = ippGetInteger(attr, i);
       } else
 	left = 635;
+      snprintf(buffer, sizeof(buffer), "%d", left);
+      p->num_options = cupsAddOption("media-left-margin-default",
+				     strdup(buffer),
+				     p->num_options, &(p->options));
 
       if ((attr = ippFindAttribute(response, "media-right-margin-supported", IPP_TAG_INTEGER)) != NULL) {
 	for (i = 1, right = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
@@ -912,6 +926,10 @@ create_local_queue (const char *name,
 	    right = ippGetInteger(attr, i);
       } else
 	right = 635;
+      snprintf(buffer, sizeof(buffer), "%d", right);
+      p->num_options = cupsAddOption("media-right-margin-default",
+				     strdup(buffer),
+				     p->num_options, &(p->options));
 
       if ((attr = ippFindAttribute(response, "media-top-margin-supported", IPP_TAG_INTEGER)) != NULL) {
 	for (i = 1, top = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
@@ -919,13 +937,13 @@ create_local_queue (const char *name,
 	    top = ippGetInteger(attr, i);
       } else
 	top = 1270;
+      snprintf(buffer, sizeof(buffer), "%d", top);
+      p->num_options = cupsAddOption("media-top-margin-default",
+				     strdup(buffer),
+				     p->num_options, &(p->options));
 
       debug_printf("Margins: Left: %d, Right: %d, Top: %d, Bottom: %d\n",
 		   left, right, top, bottom);
-	
-      snprintf(margins_option, sizeof(margins_option),
-	       " media-left-margin=%d media-bottom-margin=%d media-right-margin=%d media-top-margin=%d",
-	       left, bottom, right, top);
 
       /* Find best color space of the printer */
       attr = ippFindAttribute(response,
@@ -941,8 +959,25 @@ create_local_queue (const char *name,
 	}
 	debug_printf("Best color space: %s\n",
 		     best_color_space);
-      } else
+	p->num_options = cupsAddOption("print-color-mode-default",
+				       strdup(best_color_space),
+				       p->num_options, &(p->options));
+      } else {
 	debug_printf("No info about supported color spaces found!\n");
+	p->num_options = cupsAddOption("print-color-mode-default",
+				       color == 1 ? "rgb" : "black",
+				       p->num_options, &(p->options));
+      }
+
+      if (duplex)
+	p->num_options = cupsAddOption("sides-default", "two-sided-long-edge",
+				       p->num_options, &(p->options));
+	
+      p->num_options = cupsAddOption("output-format-default", strdup(pdl),
+				     p->num_options, &(p->options));
+      p->num_options = cupsAddOption("make-and-model-default",
+				     strdup(make_model),
+				     p->num_options, &(p->options));
 
       if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
       cups_serverbin = CUPS_SERVERBIN;
@@ -968,14 +1003,8 @@ create_local_queue (const char *name,
 	       "  exec \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" < \"$6\"\n"
 	       "fi\n"
 	       "\n"
-	       "extra_options=\"output-format=%s make-and-model=%s print-color-mode=%s%s%s%s\"\n"
-	       "\n"
-	       "%s/filter/sys5ippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$extra_options $5\"\n",
-	       p->name, pdl, make_model,
-	       best_color_space ? best_color_space :
-	       (color == 1 ? "rgb" : "gray"),
-	       default_page_size ? page_size_option : "", margins_option,
-	       duplex == 1 ? " sides=two-sided-long-edge" : "", cups_serverbin);
+	       "%s/filter/sys5ippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$5\"\n",
+	       p->name, cups_serverbin);
 
       bytes = write(fd, buffer, strlen(buffer));
       if (bytes != strlen(buffer)) {
@@ -1023,6 +1052,7 @@ create_local_queue (const char *name,
   free (p->type);
   free (p->service_name);
   free (p->host);
+  cupsFreeOptions(p->num_options, p->options);
   free (p->uri);
   free (p->name);
   if (p->ppd) free (p->ppd);
@@ -1115,6 +1145,7 @@ gboolean handle_cups_queues(gpointer unused) {
   time_t current_time = time(NULL);
   const char *default_printer_name;
   ipp_attribute_t *attr;
+  int i;
 
   debug_printf("cups-browsed: Processing printer list ...\n");
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -1232,6 +1263,7 @@ gboolean handle_cups_queues(gpointer unused) {
       cupsArrayRemove(remote_printers, p);
       if (p->name) free (p->name);
       if (p->uri) free (p->uri);
+      cupsFreeOptions(p->num_options, p->options);
       if (p->host) free (p->host);
       if (p->service_name) free (p->service_name);
       if (p->type) free (p->type);
@@ -1311,6 +1343,12 @@ gboolean handle_cups_queues(gpointer unused) {
       /* Location: <Remote host name> */
       num_options = cupsAddOption("printer-location", p->host,
 				  num_options, &options);
+      /* Default option settings from printer entry */
+      for (i = 0; i < p->num_options; i ++)
+	num_options = cupsAddOption(strdup(p->options[i].name),
+				    strdup(p->options[i].value),
+				    num_options, &options);
+      
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
       /* PPD from system's CUPS installation */
       if (p->model) {
@@ -1823,6 +1861,7 @@ static void browse_callback(
   /* A service (remote printer) has disappeared */
   case AVAHI_BROWSER_REMOVE: {
     remote_printer_t *p, *q;
+    int i;
 
     /* Ignore events from the local machine */
     if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
@@ -1857,6 +1896,7 @@ static void browse_callback(
 	free (p->service_name);
 	free (p->type);
 	free (p->domain);
+	cupsFreeOptions(p->num_options, p->options);
 	if (p->ppd) free (p->ppd);
 	if (p->model) free (p->model);
 	if (p->ifscript) free (p->ifscript);
@@ -1866,6 +1906,10 @@ static void browse_callback(
 	p->service_name = strdup(q->service_name);
 	p->type = strdup(q->type);
 	p->domain = strdup(q->domain);
+	for (i = 0; i < q->num_options; i ++)
+	  p->num_options = cupsAddOption(strdup(q->options[i].name),
+					 strdup(q->options[i].value),
+					 p->num_options, &(p->options));
 	if (q->ppd) p->ppd = strdup(q->ppd);
 	if (q->model) p->model = strdup(q->model);
 	if (q->ifscript) p->ifscript = strdup(q->ifscript);
