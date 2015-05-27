@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 
 CHANGES IN V1.0.69
 
+	- pstopdf: Removed "-dUseCIEColor" from the Ghostscript command line.
+	  In modern Ghostscript versions (9.11 and newer) it is recommended to
+	  not use it with the pdfwrite and ps2write output devices any more.
 	- imagetopdf: Corrections in PDF output: Let evince display the PDF
 	  with the correct size including margins and let ghostscript not
 	  complain about an invalid xref entry.
