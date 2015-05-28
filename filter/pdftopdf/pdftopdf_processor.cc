@@ -243,6 +243,8 @@ const bool origls=param.nup.landscape;
 //      pages[iA]->rotate(param.normal_landscape);
       param.orientation=param.orientation+param.normal_landscape;
       // TODO? better
+      xpos=param.page.bottom;
+      ypos=param.page.width - param.page.right;
       std::swap(param.page.width,param.page.height);
       std::swap(param.nup.width,param.nup.height);
     }

@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 
 CHANGES IN V1.0.69
 
+	- pdftopdf: Center Landscape-oriented jobs correctly on the page
+	  if the "fitplot" or "number-up" options are used (Bug #1284).
 	- pstopdf: Removed "-dUseCIEColor" from the Ghostscript command line.
 	  In modern Ghostscript versions (9.11 and newer) it is recommended to
 	  not use it with the pdfwrite and ps2write output devices any more.
