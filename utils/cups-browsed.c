@@ -148,6 +148,13 @@ typedef struct browse_data_s {
   char *browse_options;
 } browse_data_t;
 
+/* Ways how to set up a queue for an IPP network printer */
+typedef enum ipp_queue_type_e {
+  PPD_AUTO,
+  PPD_ONLY,
+  PPD_NEVER
+} ipp_queue_type_t;
+
 cups_array_t *remote_printers;
 static cups_array_t *netifs;
 static cups_array_t *browseallow;
@@ -181,6 +188,7 @@ static size_t NumBrowsePoll = 0;
 static guint update_netifs_sourceid = -1;
 static char *DomainSocket = NULL;
 static unsigned int CreateIPPPrinterQueues = 0;
+static ipp_queue_type_t IPPPrinterQueueType = PPD_AUTO;
 static int autoshutdown = 0;
 static int autoshutdown_avahi = 0;
 static int autoshutdown_timeout = 30;
@@ -867,8 +875,13 @@ create_local_queue (const char *name,
       }
     }
 
-    if (!_ppdCreateFromIPP(buffer, sizeof(buffer), response)) {
-      debug_printf("cups-browsed: Unable to create PPD file: %s\n", strerror(errno));
+    if (IPPPrinterQueueType == PPD_NEVER || !_ppdCreateFromIPP(buffer, sizeof(buffer), response)) {
+      if (IPPPrinterQueueType == PPD_AUTO || IPPPrinterQueueType == PPD_ONLY) {
+	debug_printf("cups-browsed: Unable to create PPD file: %s\n", strerror(errno));
+	if (IPPPrinterQueueType == PPD_ONLY)
+	  goto fail;
+      }
+      
       p->ppd = NULL;
 
       /* Find default page size of the printer */
@@ -3099,6 +3112,13 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	CreateIPPPrinterQueues = 0;
+    } else if (!strcasecmp(line, "IPPPrinterQueueType") && value) {
+      if (!strncasecmp(value, "Auto", 4))
+	IPPPrinterQueueType = PPD_AUTO;
+      else if (!strncasecmp(value, "PPD", 3))
+	IPPPrinterQueueType = PPD_ONLY;
+      else if (!strncasecmp(value, "NoPPD", 5))
+	IPPPrinterQueueType = PPD_NEVER;
     } else if (!strcasecmp(line, "AutoShutdown") && value) {
       char *p, *saveptr;
       p = strtok_r (value, delim, &saveptr);

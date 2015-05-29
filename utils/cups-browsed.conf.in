@@ -44,6 +44,21 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 
 # CreateIPPPrinterQueues Yes
 
+# If cups-browsed is automatically creating print queues for native
+# IPP network printers ("CreateIPPPrinterQueues Yes"), the type of
+# queue to be created can be selected by the "IPPPrinterQueueType"
+# directive.  The "PPD" setting makes always queues with PPD file
+# being created and no queue if the printer does not supply sufficient
+# information for creating a PPD. With "NoPPD" the queue is always
+# created with a System V interface script as filter, also when
+# creatig a PPD would be possible.  "Auto" (the default) lets a PPD
+# being created if the printer supplies sufficient information and a
+# System V interface script otherwise.
+
+# IPPPrinterQueueType Auto
+# IPPPrinterQueueType PPD
+# IPPPrinterQueueType NoPPD
+
 # The AutoShutdown directive specifies whether cups-browsed should
 # automatically terminate when it has no local raw queues set up
 # pointing to any discovered remote printers (auto shutdown

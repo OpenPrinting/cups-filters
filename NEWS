@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 
 CHANGES IN V1.0.69
 
+	- cups-browsed: Added "IPPPrinterQueueType Auto/PPD/NoPPD" directive
+	  to cups-browsed.conf to allow controlling how cups-browsed
+	  creates queues fr native IPP network printers: with PPD, with
+	  System V interface script, or selecting automatically.
 	- pdftopdf: Center Landscape-oriented jobs correctly on the page
 	  if the "fitplot" or "number-up" options are used (Bug #1284).
 	- pstopdf: Removed "-dUseCIEColor" from the Ghostscript command line.
