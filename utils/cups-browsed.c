@@ -3638,6 +3638,121 @@ _cups_toupper(int ch)			/* I - Character to convert */
   return (_cups_islower(ch) ? ch - 'a' + 'A' : ch);
 }
 
+#ifndef HAVE_STRLCPY
+/*
+ * '_cups_strlcpy()' - Safely copy two strings.
+ */
+
+size_t					/* O - Length of string */
+strlcpy(char       *dst,		/* O - Destination string */
+	const char *src,		/* I - Source string */
+	size_t      size)		/* I - Size of destination string buffer */
+{
+  size_t	srclen;			/* Length of source string */
+
+
+ /*
+  * Figure out how much room is needed...
+  */
+
+  size --;
+
+  srclen = strlen(src);
+
+ /*
+  * Copy the appropriate amount...
+  */
+
+  if (srclen > size)
+    srclen = size;
+
+  memmove(dst, src, srclen);
+  dst[srclen] = '\0';
+
+  return (srclen);
+}
+#endif /* !HAVE_STRLCPY */
+
+/*
+ * '_cupsStrFormatd()' - Format a floating-point number.
+ */
+
+char *					/* O - Pointer to end of string */
+_cupsStrFormatd(char         *buf,	/* I - String */
+                char         *bufend,	/* I - End of string buffer */
+		double       number,	/* I - Number to format */
+                struct lconv *loc)	/* I - Locale data */
+{
+  char		*bufptr,		/* Pointer into buffer */
+		temp[1024],		/* Temporary string */
+		*tempdec,		/* Pointer to decimal point */
+		*tempptr;		/* Pointer into temporary string */
+  const char	*dec;			/* Decimal point */
+  int		declen;			/* Length of decimal point */
+
+
+ /*
+  * Format the number using the "%.12f" format and then eliminate
+  * unnecessary trailing 0's.
+  */
+
+  snprintf(temp, sizeof(temp), "%.12f", number);
+  for (tempptr = temp + strlen(temp) - 1;
+       tempptr > temp && *tempptr == '0';
+       *tempptr-- = '\0');
+
+ /*
+  * Next, find the decimal point...
+  */
+
+  if (loc && loc->decimal_point)
+  {
+    dec    = loc->decimal_point;
+    declen = (int)strlen(dec);
+  }
+  else
+  {
+    dec    = ".";
+    declen = 1;
+  }
+
+  if (declen == 1)
+    tempdec = strchr(temp, *dec);
+  else
+    tempdec = strstr(temp, dec);
+
+ /*
+  * Copy everything up to the decimal point...
+  */
+
+  if (tempdec)
+  {
+    for (tempptr = temp, bufptr = buf;
+         tempptr < tempdec && bufptr < bufend;
+	 *bufptr++ = *tempptr++);
+
+    tempptr += declen;
+
+    if (*tempptr && bufptr < bufend)
+    {
+      *bufptr++ = '.';
+
+      while (*tempptr && bufptr < bufend)
+        *bufptr++ = *tempptr++;
+    }
+
+    *bufptr = '\0';
+  }
+  else
+  {
+    strlcpy(buf, temp, (size_t)(bufend - buf + 1));
+    bufptr = buf + strlen(buf);
+  }
+
+  return (bufptr);
+}
+
+
 /*
  * '_cups_strcasecmp()' - Do a case-insensitive comparison.
  */
@@ -3696,40 +3811,6 @@ _cups_strncasecmp(const char *s,	/* I - First string */
     return (-1);
 }
 
-#ifndef HAVE_STRLCPY
-/*
- * '_cups_strlcpy()' - Safely copy two strings.
- */
-
-size_t					/* O - Length of string */
-strlcpy(char       *dst,		/* O - Destination string */
-	const char *src,		/* I - Source string */
-	size_t      size)		/* I - Size of destination string buffer */
-{
-  size_t	srclen;			/* Length of source string */
-
-
- /*
-  * Figure out how much room is needed...
-  */
-
-  size --;
-
-  srclen = strlen(src);
-
- /*
-  * Copy the appropriate amount...
-  */
-
-  if (srclen > size)
-    srclen = size;
-
-  memmove(dst, src, srclen);
-  dst[srclen] = '\0';
-
-  return (srclen);
-}
-#endif /* !HAVE_STRLCPY */
 
 /*
  * '_ppdCreateFromIPP()' - Create a PPD file describing the capabilities
@@ -3758,6 +3839,8 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 			top;		/* Largest top margin */
   pwg_media_t		*pwg;		/* PWG media size */
   int			xres, yres;	/* Resolution values */
+  struct lconv		*loc = localeconv();
+					/* Locale data */
 
 
  /*
@@ -3937,9 +4020,15 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
       if (x_dim && y_dim)
       {
+        char	twidth[256],		/* Width string */
+		tlength[256];		/* Length string */
+
         pwg = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
 
-        cupsFilePrintf(fp, "*PageSize %s: \"<</PageSize[%.1f %.1f]>>setpagedevice\"\n", pwg->ppd, pwg->width * 72.0 / 2540.0, pwg->length * 72.0 / 2540.0);
+        _cupsStrFormatd(twidth, twidth + sizeof(twidth), pwg->width * 72.0 / 2540.0, loc);
+        _cupsStrFormatd(tlength, tlength + sizeof(tlength), pwg->length * 72.0 / 2540.0, loc);
+
+        cupsFilePrintf(fp, "*PageSize %s: \"<</PageSize[%s %s]>>setpagedevice\"\n", pwg->ppd, twidth, tlength);
       }
     }
     cupsFilePuts(fp, "*CloseUI: *PageSize\n");
@@ -3955,9 +4044,15 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
       if (x_dim && y_dim)
       {
+        char	twidth[256],		/* Width string */
+		tlength[256];		/* Length string */
+
         pwg = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
 
-        cupsFilePrintf(fp, "*PageRegion %s: \"<</PageSize[%.1f %.1f]>>setpagedevice\"\n", pwg->ppd, pwg->width * 72.0 / 2540.0, pwg->length * 72.0 / 2540.0);
+        _cupsStrFormatd(twidth, twidth + sizeof(twidth), pwg->width * 72.0 / 2540.0, loc);
+        _cupsStrFormatd(tlength, tlength + sizeof(tlength), pwg->length * 72.0 / 2540.0, loc);
+
+        cupsFilePrintf(fp, "*PageRegion %s: \"<</PageSize[%s %s]>>setpagedevice\"\n", pwg->ppd, twidth, tlength);
       }
     }
     cupsFilePuts(fp, "*CloseUI: *PageRegion\n");
@@ -3972,10 +4067,24 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
       if (x_dim && y_dim)
       {
+        char	tleft[256],		/* Left string */
+		tbottom[256],		/* Bottom string */
+		tright[256],		/* Right string */
+		ttop[256],		/* Top string */
+		twidth[256],		/* Width string */
+		tlength[256];		/* Length string */
+
         pwg = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
 
-        cupsFilePrintf(fp, "*ImageableArea %s: \"%.1f %.1f %.1f %.1f\"\n", pwg->ppd, left * 72.0 / 2540.0, bottom * 72.0 / 2540.0, (pwg->width - right) * 72.0 / 2540.0, (pwg->length - top) * 72.0 / 2540.0);
-        cupsFilePrintf(fp, "*PaperDimension %s: \"%.1f %.1f\"\n", pwg->ppd, pwg->width * 72.0 / 2540.0, pwg->length * 72.0 / 2540.0);
+        _cupsStrFormatd(tleft, tleft + sizeof(tleft), left * 72.0 / 2540.0, loc);
+        _cupsStrFormatd(tbottom, tbottom + sizeof(tbottom), bottom * 72.0 / 2540.0, loc);
+        _cupsStrFormatd(tright, tright + sizeof(tright), (pwg->width - right) * 72.0 / 2540.0, loc);
+        _cupsStrFormatd(ttop, ttop + sizeof(ttop), (pwg->length - top) * 72.0 / 2540.0, loc);
+        _cupsStrFormatd(twidth, twidth + sizeof(twidth), pwg->width * 72.0 / 2540.0, loc);
+        _cupsStrFormatd(tlength, tlength + sizeof(tlength), pwg->length * 72.0 / 2540.0, loc);
+
+        cupsFilePrintf(fp, "*ImageableArea %s: \"%s %s %s %s\"\n", pwg->ppd, tleft, tbottom, tright, ttop);
+        cupsFilePrintf(fp, "*PaperDimension %s: \"%s %s\"\n", pwg->ppd, twidth, tlength);
       }
     }
   } else {

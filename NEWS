@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 
 CHANGES IN V1.0.69
 
+	- cups-browsed: Updated PPD file generator for auto-generated queues
+	  for IPP network printers from the CUPS 2.1.x upstream code, so that
+	  floating-point numbers are written in a locale-neutral way
+	  (CUPS STR #4579).
 	- cups-browsed: When checking whether a queue name already exists
 	  as a locally defined queue, do case-insensitive comparing as for
 	  CUPS printer names are case-insensitive. This assures that
