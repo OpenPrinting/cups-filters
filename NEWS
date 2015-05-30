@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 
 CHANGES IN V1.0.69
 
+	- cups-browsed: When checking whether a queue name already exists
+	  as a locally defined queue, do case-insensitive comparing as for
+	  CUPS printer names are case-insensitive. This assures that
+	  already existing queues do never get overwritten.
 	- cups-browsed: Added "IPPPrinterQueueType Auto/PPD/NoPPD" directive
 	  to cups-browsed.conf to allow controlling how cups-browsed
 	  creates queues fr native IPP network printers: with PPD, with

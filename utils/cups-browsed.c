@@ -412,7 +412,7 @@ get_local_printers (void)
     printer = new_local_printer (device_uri,
 				 cups_browsed_controlled);
     g_hash_table_insert (local_printers,
-			 g_strdup (dest->name),
+			 g_ascii_strdown (dest->name, -1),
 			 printer);
   }
 
@@ -1471,7 +1471,8 @@ generate_local_queue(const char *host,
 #endif /* HAVE_AVAHI */
   remote_printer_t *p;
   local_printer_t *local_printer;
-  char *backup_queue_name = NULL, *local_queue_name = NULL;
+  char *backup_queue_name = NULL, *local_queue_name = NULL,
+       *local_queue_name_lower = NULL;
   int is_cups_queue;
   size_t hl = 0;
   gboolean create = TRUE;
@@ -1612,17 +1613,21 @@ generate_local_queue(const char *host,
 
   if (create) {
     /* Is there a local queue with the name of the remote queue? */
+    local_queue_name_lower = g_ascii_strdown(local_queue_name, -1);
     local_printer = g_hash_table_lookup (local_printers,
-					 local_queue_name);
-      /* Only consider CUPS queues not created by us */
+					 local_queue_name_lower);
+    free(local_queue_name_lower);
+    /* Only consider CUPS queues not created by us */
     if (local_printer && !local_printer->cups_browsed_controlled) {
       /* Found local queue with same name as remote queue */
       /* Is there a local queue with the name <queue>@<host>? */
       local_queue_name = backup_queue_name;
       debug_printf("cups-browsed: %s already taken, using fallback name: %s\n",
 		   remote_queue, local_queue_name);
+      local_queue_name_lower = g_ascii_strdown(local_queue_name, -1);
       local_printer = g_hash_table_lookup (local_printers,
-					   local_queue_name);
+					   local_queue_name_lower);
+      free(local_queue_name_lower);
       if (local_printer && !local_printer->cups_browsed_controlled) {
 	/* Found also a local queue with name <queue>@<host>, so
 	   ignore this remote printer */
