@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.68 - 2015-04-13
 
 CHANGES IN V1.0.69
 
+	- cups-browsed: When generating a PPD for an auto-discovered IPP
+	  network printer, create a "ColorModel" option only if valid
+	  choices are reported for it by the IPP printer.
 	- cups-browsed: Updated PPD file generator for auto-generated queues
 	  for IPP network printers from the CUPS 2.1.x upstream code, so that
 	  floating-point numbers are written in a locale-neutral way

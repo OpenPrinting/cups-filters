@@ -4237,8 +4237,6 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   {
     const char *default_color = NULL;	/* Default */
 
-    cupsFilePuts(fp, "*OpenUI *ColorModel/Color Mode: PickOne\n"
-		     "*OrderDependency: 10 AnySetup *ColorModel\n");
     for (i = 0, count = ippGetCount(attr); i < count; i ++)
     {
       const char *keyword = ippGetString(attr, i, NULL);
@@ -4246,6 +4244,9 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
       if (!strcmp(keyword, "black_1") || !strcmp(keyword, "bi-level") || !strcmp(keyword, "process-bi-level"))
       {
+	if (!default_color)
+	  cupsFilePuts(fp, "*OpenUI *ColorModel/Color Mode: PickOne\n"
+		       "*OrderDependency: 10 AnySetup *ColorModel\n");
         cupsFilePuts(fp, "*ColorModel FastGray/Fast Grayscale: \"<</cupsColorSpace 3/cupsBitsPerColor 1/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n");
 
         if (!default_color)
@@ -4253,6 +4254,9 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
       else if (!strcmp(keyword, "sgray_8") || !strcmp(keyword, "monochrome") || !strcmp(keyword, "process-monochrome"))
       {
+	if (!default_color)
+	  cupsFilePuts(fp, "*OpenUI *ColorModel/Color Mode: PickOne\n"
+		       "*OrderDependency: 10 AnySetup *ColorModel\n");
         cupsFilePuts(fp, "*ColorModel Gray/Grayscale: \"<</cupsColorSpace 18/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n");
 
         if (!default_color || !strcmp(default_color, "FastGray"))
@@ -4260,6 +4264,9 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
       else if (!strcmp(keyword, "srgb_8") || !strcmp(keyword, "color"))
       {
+	if (!default_color)
+	  cupsFilePuts(fp, "*OpenUI *ColorModel/Color Mode: PickOne\n"
+		       "*OrderDependency: 10 AnySetup *ColorModel\n");
         cupsFilePuts(fp, "*ColorModel RGB/Color: \"<</cupsColorSpace 19/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n");
 
 	default_color = "RGB";
@@ -4267,9 +4274,10 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     }
 
     if (default_color)
+    {
       cupsFilePrintf(fp, "*DefaultColorModel: %s\n", default_color);
-
-    cupsFilePuts(fp, "*CloseUI: *ColorModel\n");
+      cupsFilePuts(fp, "*CloseUI: *ColorModel\n");
+    }
   }
 
  /*
