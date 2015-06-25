@@ -1529,6 +1529,7 @@ generate_local_queue(const char *host,
       /* The remote CUPS queue is raw, ignore it */
       debug_printf("cups-browsed: Remote Bonjour-advertised CUPS queue %s on host %s is raw, ignored.\n",
 		   remote_queue, remote_host);
+      free (remote_queue);
       free (remote_host);
       return NULL;
     }
@@ -1555,6 +1556,7 @@ generate_local_queue(const char *host,
 	if (entry) {
 	  avahi_string_list_get_pair(entry, &key, &value, NULL);
 	  if (key && value && !strcasecmp(key, *f) && strlen(value) >= 3) {
+            free (remote_queue);
 	    remote_queue = remove_bad_chars(value, 0);
 	    break;
 	  }
