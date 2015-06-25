@@ -1816,10 +1816,20 @@ static void resolve_callback(
 
     /* Clean up */
 
-    avahi_free(rp_key);
-    avahi_free(rp_value);
-    avahi_free(adminurl_key);
-    avahi_free(adminurl_value);
+    if (rp_entry) {
+      avahi_free(rp_key);
+      avahi_free(rp_value);
+    } else {
+      free(rp_key);
+      free(rp_value);
+    }
+    if (adminurl_entry) {
+      avahi_free(adminurl_key);
+      avahi_free(adminurl_value);
+    } else {
+      free(adminurl_key);
+      free(adminurl_value);
+    }
     break;
   }
   }
@@ -2959,7 +2969,7 @@ read_browseallow_value (const char *value)
   }
   
   allow = calloc (1, sizeof (allow_t));
-  if (value == NULL)
+  if (allow == NULL)
     goto fail;
   p = strchr (value, '/');
   if (p) {
@@ -3055,7 +3065,7 @@ read_configuration (const char *filename)
       browsepoll_t **old = BrowsePoll;
       BrowsePoll = realloc (BrowsePoll,
 			    (NumBrowsePoll + 1) *
-			    sizeof (browsepoll_t));
+			    sizeof (browsepoll_t *));
       if (!BrowsePoll) {
 	debug_printf("cups-browsed: unable to realloc: ignoring BrowsePoll line\n");
 	BrowsePoll = old;
@@ -3103,7 +3113,7 @@ read_configuration (const char *filename)
 
 	BrowsePoll[NumBrowsePoll++] = b;
       }
-    } else if (!strcasecmp(line, "BrowseAllow")) {
+    } else if (!strcasecmp(line, "BrowseAllow") && value) {
       if (read_browseallow_value (value))
 	debug_printf ("cups-browsed: BrowseAllow value \"%s\" not understood\n",
 		      value);
