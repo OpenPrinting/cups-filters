@@ -2963,13 +2963,13 @@ read_browseallow_value (const char *value)
   struct in_addr addr;
   allow_t *allow;
 
-  if (!strcasecmp (value, "all")) {
+  if (value && !strcasecmp (value, "all")) {
     browseallow_all = TRUE;
     return 0;
   }
   
   allow = calloc (1, sizeof (allow_t));
-  if (allow == NULL)
+  if (value == NULL)
     goto fail;
   p = strchr (value, '/');
   if (p) {
@@ -3113,7 +3113,7 @@ read_configuration (const char *filename)
 
 	BrowsePoll[NumBrowsePoll++] = b;
       }
-    } else if (!strcasecmp(line, "BrowseAllow") && value) {
+    } else if (!strcasecmp(line, "BrowseAllow")) {
       if (read_browseallow_value (value))
 	debug_printf ("cups-browsed: BrowseAllow value \"%s\" not understood\n",
 		      value);
