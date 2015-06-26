@@ -3,6 +3,15 @@ NEWS - OpenPrinting CUPS Filters v1.0.69 - 2015-06-10
 
 CHANGES IN V1.0.70
 
+	- cups-browsed: leak fixes
+	- cups-browsed: Further BrowseAllow fixing
+	- cups-browsed: BrowsePoll is an array of pointers, not structures,
+	  so allocate room for the pointers
+  	- cups-browsed: Prevent NULL dereference when handling BrowseAllow
+	  without value
+  	- cups-browsed: Use memory deallocation function corresponding to
+	  allocation function used
+	- cups-browsed: Fixes for glib source handling (Red Hat bug #1228555)
 	- foomatic-rip: Allow using another shell than /bin/bash using the
 	  "--with-shell=..." option for "./configure". Thanks to Leonardo
 	  Taccari for the patch (Bug #1288).
