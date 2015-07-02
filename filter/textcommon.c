@@ -26,6 +26,7 @@
  */
 
 #include "textcommon.h"
+#include <limits.h>
 
 
 /*
@@ -644,6 +645,45 @@ TextMain(const char *name,	/* I - Name of filter */
   if (PrettyPrint)
     PageTop -= 216.0f / LinesPerInch;
 
+ /*
+  * Allocate memory for the page...
+  */
+
+  SizeColumns = (PageRight - PageLeft) / 72.0 * CharsPerInch;
+  SizeLines   = (PageTop - PageBottom) / 72.0 * LinesPerInch;
+
+ /*
+  * Enforce minimum size...
+  */
+  if (SizeColumns < 1)
+    SizeColumns = 1;
+  if (SizeLines < 1)
+    SizeLines = 1;
+
+  if (SizeLines >= INT_MAX / SizeColumns / sizeof(lchar_t))
+  {
+    fprintf(stderr, "ERROR: bad page size\n");
+    exit(1);
+  }
+
+  Page    = calloc(sizeof(lchar_t *), SizeLines);
+  if (!Page)
+  {
+    fprintf(stderr, "ERROR: cannot allocate memory for page\n");
+    exit(1);
+  }
+
+  Page[0] = calloc(sizeof(lchar_t), SizeColumns * SizeLines);
+  if (!Page[0])
+  {
+    free(Page);
+    fprintf(stderr, "ERROR: cannot allocate memory for page\n");
+    exit(1);
+  }
+
+  for (i = 1; i < SizeLines; i ++)
+    Page[i] = Page[0] + i * SizeColumns;
+
   Copies = atoi(argv[4]);
 
   WriteProlog(argv[3], argv[2], getenv("CLASSIFICATION"),
@@ -1122,6 +1162,8 @@ TextMain(const char *name,	/* I - Name of filter */
   if (ppd != NULL)
     ppdClose(ppd);
 
+  free(Page[0]);
+  free(Page);
   return (0);
 }
 

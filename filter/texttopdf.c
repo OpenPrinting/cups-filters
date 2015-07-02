@@ -172,9 +172,6 @@ WriteEpilogue(void)
 		{ "FN","FB","FI" };
   int i,j;
 
-  free(Page[0]);
-  free(Page);
-
   // embed fonts
   for (i = PrettyPrint ? 2 : 1; i >= 0; i --) {
     for (j = 0; j < NumFonts; j ++) 
@@ -332,26 +329,6 @@ WriteProlog(const char *title,		/* I - Title of job */
     PageBottom += 36;
     PageTop    -= 36;
   }
-
- /*
-  * Allocate memory for the page...
-  */
-
-  SizeColumns = (PageRight - PageLeft) / 72.0 * CharsPerInch;
-  SizeLines   = (PageTop - PageBottom) / 72.0 * LinesPerInch;
-
- /*
-  * Enforce minimum size...
-  */
-  if (SizeColumns < 1)
-    SizeColumns = 1;
-  if (SizeLines < 1)
-    SizeLines = 1;
-
-  Page    = calloc(sizeof(lchar_t *), SizeLines);
-  Page[0] = calloc(sizeof(lchar_t), SizeColumns * SizeLines);
-  for (i = 1; i < SizeLines; i ++)
-    Page[i] = Page[0] + i * SizeColumns;
 
   if (PageColumns > 1)
   {
