@@ -28,5 +28,5 @@ charset utf8
 # printing.
 #
 
-0000 04FF ltor single FreeMono FreeMono:bold FreeMono:oblique FreeMono:bold:oblique
-0500 05FF rtol single FreeMono
+0000 04FF ltor single monospace monospace:bold monospace:oblique monospace:bold:oblique
+0500 05FF rtol single monospace

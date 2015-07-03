@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.0.71 - 2015-07-02
 -----------------------------------------------------
 
+CHANGES IN V1.0.72
+
+	- texttopdf: Request the generic 'monospace' font alias from fontconfig
+	  instead of the hard-coded FreeMono. Thanks to Fabian Greffrath
+	  (fabian at debian dot org) for the patch (Debian bug #788048).
+ 
 CHANGES IN V1.0.71
 
   	- texttopdf: The Page allocation is moved into textcommon.c, where it
