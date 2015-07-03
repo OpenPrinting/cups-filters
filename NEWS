@@ -11,11 +11,11 @@ CHANGES IN V1.0.71
 
   	- texttopdf: The Page allocation is moved into textcommon.c, where it
 	  does all the necessary checking: lower-bounds for CVE-2015-3258 and
-	  upper-bounds for CVE-2015-3259 due to integer overflows for the
+	  upper-bounds for CVE-2015-3279 due to integer overflows for the
 	  calloc() call initialising Page[0] and the memset() call in
 	  texttopdf.c's WritePage() function zeroing the entire array. Thanks
 	  to Tim Waugh from Red Hat for the patch.
-	- texttopdf: Upper-bounds checking (CVE-2015-3259).
+	- texttopdf: Upper-bounds checking (CVE-2015-3279).
 
 CHANGES IN V1.0.70
 
