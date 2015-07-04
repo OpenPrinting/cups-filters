@@ -702,7 +702,7 @@ void _print_ps(stream_t *stream)
                             if (spooler == SPOOLER_CUPS &&
                                 linetype == LT_BEGIN_FEATURE &&
                                 !option_get_value(o, optionset("notfirst")) &&
-				strcmp(option_get_value(o, optset) ?: "", value) != 0 &&
+				strcmp((val = option_get_value(o, optset)) ? val : "", value) != 0 &&
                                 (inheader || option_get_section(o) == SECTION_PAGESETUP)) {
 
                                 /* We have the first occurence of an option

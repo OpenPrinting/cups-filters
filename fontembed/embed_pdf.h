@@ -22,7 +22,7 @@ typedef struct {
   char *registry,*ordering;
   int supplement;
 
-  char data[]; // used for storing e.g. >fontname
+  char data[1]; // used for storing e.g. >fontname
 } EMB_PDF_FONTDESCR;
 
 typedef struct {
@@ -34,7 +34,7 @@ typedef struct {
   int default_width;
   int *warray; // format: (len c w ... w)*   if (len<0) { c1 (c2=c1+(-len)) w } else { c w[len] }, terminated by len==0
 
-  int data[];
+  int data[1];
 } EMB_PDF_FONTWIDTHS;
 
 const char *emb_pdf_get_font_subtype(EMB_PARAMS *emb);

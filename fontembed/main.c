@@ -1,10 +1,11 @@
+#include "config.h"
 #include "sfnt.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "embed.h"
-#include "config.h"
 
 #if 0
 enum { TTF_OTF, TYPE1 } inputFile;
@@ -89,7 +90,7 @@ void example_write_fontdescr(OTF_FILE *otf,const char *outfile) // {{{
   if (outfile) {
     FILE *f=fopen(outfile,"w");
     if (!f) {
-      fprintf(stderr,"Opening \"%s\" for writing failed: %m\n",outfile);
+      fprintf(stderr,"Opening \"%s\" for writing failed: %s\n",outfile, strerror(errno));
       assert(0);
       emb_close(emb);
       return;

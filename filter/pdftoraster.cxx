@@ -26,6 +26,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  pdf to raster filter
 */
 
+#include <config.h>
 #include <cups/cups.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
@@ -33,7 +34,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define USE_CMS
 
-#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef HAVE_CPP_POPPLER_VERSION_H
@@ -2146,8 +2146,13 @@ err1:
 }
 
 /* replace memory allocation methods for memory check */
+/* For compatibility with g++ >= 4.7 compilers _GLIBCXX_THROW
+ *  should be used as a guard, otherwise use traditional definition */
+#ifndef _GLIBCXX_THROW
+#define _GLIBCXX_THROW throw
+#endif
 
-void * operator new(size_t size) throw (std::bad_alloc)
+void * operator new(size_t size) _GLIBCXX_THROW (std::bad_alloc)
 {
   return gmalloc(size);
 }
@@ -2157,7 +2162,7 @@ void operator delete(void *p) throw ()
   gfree(p);
 }
 
-void * operator new[](size_t size) throw (std::bad_alloc)
+void * operator new[](size_t size) _GLIBCXX_THROW (std::bad_alloc)
 {
   return gmalloc(size);
 }

@@ -12,6 +12,7 @@
  *                                 and apply them to the CUPS Raster header.
  */
 
+#include <config.h>
 #include <cups/cups.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
@@ -22,7 +23,6 @@
  */
 
 #include "driver.h"
-#include <config.h>
 #include <string.h>
 #include <ctype.h>
 #ifdef HAVE_CUPS_1_7

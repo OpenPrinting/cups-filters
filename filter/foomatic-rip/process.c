@@ -28,6 +28,7 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <signal.h>
 
 int kidgeneration = 0;
 

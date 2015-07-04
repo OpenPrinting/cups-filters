@@ -770,7 +770,13 @@ err2:
 }
 
 /* for memory debug */
-void *operator new(size_t size) throw (std::bad_alloc)
+/* For compatibility with g++ >= 4.7 compilers _GLIBCXX_THROW
+ *  should be used as a guard, otherwise use traditional definition */
+#ifndef _GLIBCXX_THROW
+#define _GLIBCXX_THROW throw
+#endif
+
+void * operator new(size_t size) _GLIBCXX_THROW (std::bad_alloc)
 {
     void *p = malloc(size);
     return p;

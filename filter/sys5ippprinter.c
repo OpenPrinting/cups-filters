@@ -26,6 +26,7 @@
  * Include necessary headers...
  */
 
+#include <config.h>
 #include <cups/cups.h>
 #include <cups/ppd.h>
 #include <cups/file.h>
@@ -37,7 +38,6 @@
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
-#include <config.h>
 #include <cupsfilters/image-private.h>
 
 #define MAX_CHECK_COMMENT_LINES	20

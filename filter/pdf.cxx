@@ -15,6 +15,7 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <config.h>
 #include "pdf.h"
 
 #include <PDFDoc.h>
@@ -24,7 +25,6 @@
 #include <GfxFont.h>
 #include <Page.h>
 #include <PDFDocEncoding.h>
-#include <config.h>
 #ifdef HAVE_CPP_POPPLER_VERSION_H
 #include "cpp/poppler-version.h"
 #endif

@@ -17,8 +17,8 @@
 #ifndef banner_h
 #define banner_h
 
-#include <stdio.h>
 #include <config.h>
+#include <stdio.h>
 #include <cups/cups.h>
 
 enum banner_info {

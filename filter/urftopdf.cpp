@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits>
+#include <errno.h>
 
 #include <arpa/inet.h>   // ntohl
 
@@ -54,7 +55,7 @@
 
 void die(const char * str)
 {
-    fprintf(stderr, "CRIT: (" PROGRAM ") die(%s) [%m]\n", str);
+    fprintf(stderr, "CRIT: (" PROGRAM ") die(%s) [%s]\n", str, strerror(errno));
     exit(1);
 }
 

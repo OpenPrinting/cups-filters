@@ -22,9 +22,9 @@
  * Include necessary headers...
  */
 
+#  include <config.h>
 #  include "image.h"
 #  include <cups/cups.h>
-#  include <config.h>
 #  define DEBUG_printf(x)
 #  define DEBUG_puts(x)
 #  include <stdlib.h>

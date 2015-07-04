@@ -13,6 +13,7 @@
 #include <stdarg.h>
 #include <memory.h>
 #include <stdlib.h>
+#include <string.h>
 #include "pdfutils.h"
 #include "fontembed/embed.h"
 

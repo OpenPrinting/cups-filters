@@ -30,12 +30,12 @@ MIT Open Source License  -  http://www.opensource.org/
 
 /* PS/PDF to CUPS Raster filter based on Ghostscript */
 
+#include <config.h>
 #include <cups/cups.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
 #endif
 
-#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>

@@ -923,7 +923,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     fputs("DEBUG: Pointer list at start of page...\n", stderr);
 
     for (band = DotAvailList; band != NULL; band = band->next)
-      fprintf(stderr, "DEBUG: %p\n", band);
+      fprintf(stderr, "DEBUG: %p\n", (void*)band);
 
     fputs("DEBUG: ----END----\n", stderr);
 
@@ -996,7 +996,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	  band->count = DotRowCount;
 
 	fprintf(stderr, "DEBUG: DotBands[%d][%d] = %p, x = %d, y = %d, plane = %d, count = %d\n",
-	        subrow, plane, band, band->x, band->y, band->plane, band->count);
+	        subrow, plane, (void*)band, band->x, band->y, band->plane, band->count);
       }
 
       subrow = (subrow + DotRowFeed) % modrow;
@@ -1109,9 +1109,9 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
     fputs("DEBUG: Pointer list at end of page...\n", stderr);
 
     for (band = DotUsedList; band != NULL; band = band->next)
-      fprintf(stderr, "DEBUG: %p (used)\n", band);
+      fprintf(stderr, "DEBUG: %p (used)\n", (void*)band);
     for (band = DotAvailList; band != NULL; band = band->next)
-      fprintf(stderr, "DEBUG: %p (avail)\n", band);
+      fprintf(stderr, "DEBUG: %p (avail)\n", (void*)band);
 
     fputs("DEBUG: ----END----\n", stderr);
 
@@ -1122,7 +1122,7 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
       OutputBand(ppd, header, band);
 
       fprintf(stderr, "DEBUG: freeing used band %p, prev = %p, next = %p\n",
-              band, band->prev, band->next);
+              (void*)band, (void*)band->prev, (void*)band->next);
 
       free(band->buffer);
       free(band);
@@ -1137,7 +1137,7 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
       next = band->next;
 
       fprintf(stderr, "DEBUG: freeing avail band %p, prev = %p,  next = %p\n",
-              band, band->prev, band->next);
+              (void*)band, (void*)band->prev, (void*)band->next);
 
       free(band->buffer);
       free(band);
@@ -1506,7 +1506,7 @@ OutputBand(ppd_file_t         *ppd,	/* I - PPD file */
   DotRowCurrent = band->y;
 
   fprintf(stderr, "DEBUG: Printing band %p, x = %d, y = %d, plane = %d, count = %d, OutputFeed = %d\n",
-          band, band->x, band->y, band->plane, band->count, OutputFeed);
+          (void*)band, band->x, band->y, band->plane, band->count, OutputFeed);
 
  /*
   * Compute step values...
@@ -1722,7 +1722,7 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
 	    */
 
             fprintf(stderr, "DEBUG: Blank band %p, x = %d, y = %d, plane = %d, count = %d\n",
-	            band, band->x, band->y, band->plane, band->count);
+	            (void*)band, band->x, band->y, band->plane, band->count);
 
 	    band->y     += band->count * DotRowStep;
 	    band->row   = 0;

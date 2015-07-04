@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.0.71 - 2015-07-02
 
 CHANGES IN V1.0.72
 
+	- libcupsfilters, bannertopdf, foomatic-rip, gstoraster, pdftoijs,
+	  sys5ippprinter, pdftoopvp, pdftops, pdftoraster, rastertoescpx,
+	  urftopdf, texttopdf: Miscellaneous fixes for build compatibility with
+	  different platforms, like config.h as very first include and so on.
+	  Thanks to Richard Palo for the patch (Bug #1264).
 	- texttopdf: Request the generic 'monospace' font alias from fontconfig
 	  instead of the hard-coded FreeMono. Thanks to Fabian Greffrath
 	  (fabian at debian dot org) for the patch (Debian bug #788048).

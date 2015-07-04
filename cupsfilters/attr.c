@@ -22,8 +22,8 @@
  * Include necessary headers.
  */
 
-#include "driver.h"
 #include <config.h>
+#include "driver.h"
 #include <string.h>
 #include <ctype.h>
 

@@ -127,7 +127,7 @@ banner_t * banner_new_from_file(const char *filename,
 {
     FILE *f;
     char *line = NULL;
-    ssize_t len = 0;
+    size_t len = 0;
     int linenr = 0;
     banner_t *banner = NULL;
 
