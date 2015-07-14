@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.71 - 2015-07-02
 
 CHANGES IN V1.0.72
 
+	- pdftoopvp: Adaptations to API changes on Poppler 0.34.0, note that
+	  this patch disables color management in this filter. Thanks to
+	  Vincent le Garrec and Andreas K. Huettel for the patch (Bug #1301,
+	  Gentoo bug #554782).
 	- libcupsfilters, bannertopdf, foomatic-rip, gstoraster, pdftoijs,
 	  sys5ippprinter, pdftoopvp, pdftops, pdftoraster, rastertoescpx,
 	  urftopdf, texttopdf: Miscellaneous fixes for build compatibility with

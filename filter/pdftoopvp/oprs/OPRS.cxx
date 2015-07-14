@@ -240,8 +240,10 @@ SplashError OPRS::drawImage(SplashImageSource src, void *srcData,
     if (rasterMode) {
 #if POPPLER_VERSION_MAJOR <= 0 && (POPPLER_VERSION_MINOR <= 20 || (POPPLER_VERSION_MINOR == 21 && POPPLER_VERSION_MICRO <= 2))
 	return splash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat);
-#else
+#elif POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR <= 33
 	return splash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat,gFalse);
+#else
+	return splash->drawImage(src,0,srcData,srcMode,srcAlpha,w,h,mat,gFalse);
 #endif
     } else {
 	return opvpSplash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat);
