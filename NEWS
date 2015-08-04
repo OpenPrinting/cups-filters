@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.71 - 2015-07-02
 
 CHANGES IN V1.0.72
 
+	- foomatic-rip: Prevent crash when supplying "media" option with empty
+	  value ("media=", Ubuntu bug #1479871).
 	- pdftoopvp: Adaptations to API changes on Poppler 0.34.0, note that
 	  this patch disables color management in this filter. Thanks to
 	  Vincent le Garrec and Andreas K. Huettel for the patch (Bug #1301,

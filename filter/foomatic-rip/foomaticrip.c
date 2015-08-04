@@ -358,6 +358,8 @@ void process_cmdline_options()
                     drivers do that.  We may have to standardize the verbose
                     names to make them work as selections, too. */
 
+	        if (value[0] == '\0')
+		    continue;
                 p = strtok(value, ",");
                 do {
                     if ((opt = find_option("PageSize")) && option_accepts_value(opt, p))
