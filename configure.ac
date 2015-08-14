@@ -306,6 +306,14 @@ fi
 AC_SUBST(GIO_CFLAGS)
 AC_SUBST(GIO_LIBS)
 
+GIO_UNIX_CFLAGS=""
+GIO_UNIX_LIBS=""
+if test "x$PKGCONFIG" != x; then
+	PKG_CHECK_MODULES(GIO_UNIX, [gio-unix-2.0])
+fi
+AC_SUBST(GIO_UNIX_CFLAGS)
+AC_SUBST(GIO_UNIX_LIBS)
+
 AC_ARG_WITH([browseremoteprotocols],
 	[AS_HELP_STRING([--with-browseremoteprotocols=value], [Set which protocols to listen for in cups-browsed (default: dnssd cups)])],
 	[with_browseremoteprotocols="$withval"],

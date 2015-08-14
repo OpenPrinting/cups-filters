@@ -54,6 +54,8 @@
 #include <cups/cups.h>
 #include <cups/ppd.h>
 
+#include "cups-notifier.h"
+
 /* Attribute to mark a CUPS queue as created by us */
 #define CUPS_BROWSED_MARK "cups-browsed"
 
@@ -63,6 +65,14 @@
 #define TIMEOUT_RETRY       10
 #define TIMEOUT_REMOVE      -1
 #define TIMEOUT_CHECK_LIST   2
+
+#define NOTIFY_LEASE_DURATION (24 * 60 * 60)
+#define CUPS_DBUS_NAME "org.cups.cupsd.Notifier"
+#define CUPS_DBUS_PATH "/org/cups/cupsd/Notifier"
+#define CUPS_DBUS_INTERFACE "org.cups.cupsd.Notifier"
+
+#define LOCAL_DEFAULT_PRINTER_FILE "/var/cache/cups/cups-browsed-local-default-printer"
+#define REMOTE_DEFAULT_PRINTER_FILE "/var/cache/cups/cups-browsed-remote-default-printer"
 
 /* Status of remote printer */
 typedef enum printer_status_e {
@@ -193,6 +203,7 @@ static int autoshutdown = 0;
 static int autoshutdown_avahi = 0;
 static int autoshutdown_timeout = 30;
 static guint autoshutdown_exec_id = 0;
+static const char *default_printer = NULL;
 
 static int debug = 0;
 
@@ -711,6 +722,365 @@ color_space_score(const char *color_space)
   return score;
 }
 
+static int
+create_subscription ()
+{
+  ipp_t *req;
+  ipp_t *resp;
+  ipp_attribute_t *attr;
+  int id = 0;
+
+  req = ippNewRequest (IPP_CREATE_PRINTER_SUBSCRIPTION);
+  ippAddString (req, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, "/");
+  ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_KEYWORD,
+		"notify-events", NULL, "all");
+  ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_URI,
+		"notify-recipient-uri", NULL, "dbus://");
+  ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
+		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
+
+  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
+  if (!resp || cupsLastError() != IPP_OK) {
+    g_warning ("Error subscribing to CUPS notifications: %s\n",
+	       cupsLastErrorString ());
+    return 0;
+  }
+
+  attr = ippFindAttribute (resp, "notify-subscription-id", IPP_TAG_INTEGER);
+  if (attr)
+    id = ippGetInteger (attr, 0);
+  else
+    g_warning ("ipp-create-printer-subscription response doesn't contain "
+	       "subscription id.\n");
+
+  ippDelete (resp);
+  return id;
+}
+
+
+static gboolean
+renew_subscription (int id)
+{
+  ipp_t *req;
+  ipp_t *resp;
+
+  req = ippNewRequest (IPP_RENEW_SUBSCRIPTION);
+  ippAddInteger (req, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
+		 "notify-subscription-id", id);
+  ippAddString (req, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, "/");
+  ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_URI,
+		"notify-recipient-uri", NULL, "dbus://");
+  ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
+		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
+
+  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
+  if (!resp || cupsLastError() != IPP_OK) {
+    g_warning ("Error renewing CUPS subscription %d: %s\n",
+	       id, cupsLastErrorString ());
+    return FALSE;
+  }
+
+  ippDelete (resp);
+  return TRUE;
+}
+
+
+static gboolean
+renew_subscription_timeout (gpointer userdata)
+{
+  int *subscription_id = userdata;
+
+  if (*subscription_id <= 0 || !renew_subscription (*subscription_id))
+    *subscription_id = create_subscription ();
+
+  return TRUE;
+}
+
+
+void
+cancel_subscription (int id)
+{
+  ipp_t *req;
+  ipp_t *resp;
+
+  if (id <= 0)
+    return;
+
+  req = ippNewRequest (IPP_CANCEL_SUBSCRIPTION);
+  ippAddString (req, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, "/");
+  ippAddInteger (req, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
+		 "notify-subscription-id", id);
+
+  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
+  if (!resp || cupsLastError() != IPP_OK) {
+    g_warning ("Error subscribing to CUPS notifications: %s\n",
+	       cupsLastErrorString ());
+    return;
+  }
+
+  ippDelete (resp);
+}
+
+int
+set_cups_default_printer(const char *printer) {
+  ipp_t	*request;
+  char uri[HTTP_MAX_URI];
+
+  if (printer == NULL)
+    return 0;
+  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+                   "localhost", 0, "/printers/%s", printer);
+  request = ippNewRequest(IPP_OP_CUPS_SET_DEFAULT);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
+               "printer-uri", NULL, uri);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
+               NULL, cupsUser());
+  ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
+  if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
+    debug_printf("cups-browsed: ERROR: Failed setting CUPS default printer to '%s': %s\n",
+		 printer, cupsLastErrorString());
+    return -1;
+  }
+  debug_printf("cups-browsed: Successfully set CUPS default printer to '%s'\n",
+	       printer);
+  return 0;
+}
+
+const char*
+get_cups_default_printer() {
+  ipp_t *request, *response;
+  ipp_attribute_t *attr;
+  const char *default_printer_name = NULL;
+  
+  request = ippNewRequest(CUPS_GET_DEFAULT);
+  /* Default user */
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+	       "requesting-user-name", NULL, cupsUser());
+  /* Do it */
+  response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/");
+  if (cupsLastError() > IPP_OK_CONFLICT || !response) {
+    debug_printf("cups-browsed: Could not determine system default printer!\n");
+  } else {
+    for (attr = ippFirstAttribute(response); attr != NULL;
+	 attr = ippNextAttribute(response)) {
+      while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+	attr = ippNextAttribute(response);
+      if (attr) {
+	for (; attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER;
+	     attr = ippNextAttribute(response)) {
+	  if (!strcasecmp(ippGetName(attr), "printer-name") &&
+	      ippGetValueTag(attr) == IPP_TAG_NAME) {
+	    default_printer_name = ippGetString(attr, 0, NULL);
+	    break;
+	  }
+	}
+      }
+      if (default_printer_name)
+	break;
+    }
+  }
+  return default_printer_name;
+}
+
+int
+is_cups_default_printer(const char *printer) {
+  if (printer == NULL)
+    return 0;
+  const char *cups_default = get_cups_default_printer();
+  if (cups_default == NULL)
+    return 0;
+  if (!strcasecmp(printer, cups_default))
+    return 1;
+  return 0;
+}
+
+int
+invalidate_default_printer(int local) {
+  const char *filename = local ? LOCAL_DEFAULT_PRINTER_FILE :
+    REMOTE_DEFAULT_PRINTER_FILE;
+  unlink(filename);
+  return 0;
+}
+
+int
+record_default_printer(const char *printer, int local) {
+  FILE *fp = NULL;
+  const char *filename = local ? LOCAL_DEFAULT_PRINTER_FILE :
+    REMOTE_DEFAULT_PRINTER_FILE;
+
+  if (printer == NULL)
+    return invalidate_default_printer(local);
+
+  fp = fopen(filename, "w+");
+  if (fp == NULL) {
+    debug_printf("cups-browsed: ERROR: Failed creating file %s\n",
+		 filename);
+    return -1;
+  }
+  fprintf(fp, "%s", printer);
+  fclose(fp);
+  
+  return 0;
+}
+
+const char*
+retrieve_default_printer(int local) {
+  FILE *fp = NULL;
+  const char *filename = local ? LOCAL_DEFAULT_PRINTER_FILE :
+    REMOTE_DEFAULT_PRINTER_FILE;
+  const char *printer = NULL;
+  char *p, buf[1024];
+  int n;
+
+  fp = fopen(filename, "r");
+  if (fp == NULL) {
+    debug_printf("cups-browsed: Failed reading file %s\n",
+		 filename);
+    return NULL;
+  }
+  p = buf;
+  n = fscanf(fp, "%s", p);
+  if (n == 1) {
+    if (strlen(p) > 0)
+      printer = p;
+  }
+  fclose(fp);
+  
+  return printer;
+}
+
+int
+is_created_by_cups_browsed (const char *printer) {
+  remote_printer_t *p;
+
+  if (printer == NULL)
+    return 0;
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
+    if (!strcasecmp(printer, p->name))
+      return 1;
+
+  return 0;
+}
+
+int
+queue_creation_handle_default(const char *printer) {
+  /* If this queue is recorded as the former default queue (and the current
+     default is local), set it as default (the CUPS notification handler
+     will record the local default printer then) */
+  const char *recorded_default = retrieve_default_printer(0);
+  if (recorded_default == NULL || strcasecmp(recorded_default, printer))
+    return 0;
+  const char *current_default = get_cups_default_printer();
+  if (current_default == NULL || !is_created_by_cups_browsed(current_default)) {
+    if (set_cups_default_printer(printer) < 0) {
+      debug_printf("cups-browsed: ERROR: Could not set former default printer %s as default again.\n",
+		   printer);
+      return -1;
+    } else {
+      debug_printf("cups-browsed: Former default printer %s re-appeared, set as default again.\n",
+		   printer);
+      invalidate_default_printer(0);
+    }
+  }
+  return 0;
+}
+
+int
+queue_removal_handle_default(const char *printer) {
+  /* If the queue is the default printer, get back
+     to the recorded local default printer, record this queue for getting the
+     default set to this queue again if it re-appears. */
+  /* We call this also if a queue is only conserved because on cups-browsed
+     shutdown it still has jobs */
+  if (!is_cups_default_printer(printer))
+    return 0;
+  /* Record the fact that this printer was default */
+  if (record_default_printer(default_printer, 0) < 0) {
+      /* Delete record file if recording failed */
+    debug_printf("cups-browsed: ERROR: Failed recording remote default printer (%s). Removing the file with possible old recording.\n",
+		 printer);
+    invalidate_default_printer(0);
+  } else
+    debug_printf("cups-browsed: Recorded the fact that the current printer (%s) is the default printer before deleting the queue and returning to the local default printer.\n",
+		 printer);
+  /* Switch back to a recorded local printer, if available */
+  const char *local_default = retrieve_default_printer(1);
+  if (local_default != NULL) {
+    if (set_cups_default_printer(local_default) >= 0)
+      debug_printf("cups-browsed: Switching back to %s as default printer.\n",
+		   local_default);
+    else {
+      debug_printf("cups-browsed: ERROR: Unable to switch back to %s as default printer.\n",
+		   local_default);
+      return -1;
+    }
+  }
+  invalidate_default_printer(1);
+  return 0;
+}
+
+static void
+on_printer_state_changed (CupsNotifier *object,
+                          const gchar *text,
+                          const gchar *printer_uri,
+                          const gchar *printer,
+                          guint printer_state,
+                          const gchar *printer_state_reasons,
+                          gboolean printer_is_accepting_jobs,
+                          gpointer user_data)
+{
+  char *p, buf[1024];
+
+  if ((p = strstr(text, " is now the default printer")) != NULL) {
+    /* Default printer has changed, we are triggered by the new default
+       printer */
+    strncpy(buf, text, p - text);
+    buf[p - text] = '\0';
+    debug_printf("cups-browsed: [CUPS Notification] Default printer changed from %s to %s.\n",
+		 default_printer, buf);
+    if (is_created_by_cups_browsed(default_printer)) {
+      /* Previous default printer created by cups-browsed */
+      if (!is_created_by_cups_browsed(buf)) {
+	/* New default printer local */
+	/* Removed backed-up local default printer as we do not have a
+	   remote printer as default any more */
+	invalidate_default_printer(1);
+	debug_printf("cups-browsed: Manually switched default printer from a cups-browsed-generated one to a local printer.\n");
+      }
+    } else {
+      /* Previous default printer local */
+      if (is_created_by_cups_browsed(buf)) {
+	/* New default printer created by cups-browsed */
+	/* Back up the local default printer to be able to return to it
+	   if the remote printer disappears */
+	if (record_default_printer(default_printer, 1) < 0) {
+	  /* Delete record file if recording failed */
+	  debug_printf("cups-browsed: ERROR: Failed recording local default printer. Removing the file with possible old recording.\n");
+	  invalidate_default_printer(1);
+	} else
+	  debug_printf("cups-browsed: Recorded previous default printer so that if the currently selected cups-browsed-generated one disappears, we can return to the old local one.\n");
+	/* Remove a recorded remote printer as after manually selecting
+	   another one as default this one is not relevant any more */
+	invalidate_default_printer(0);
+      }
+    }
+    if (default_printer != NULL)
+      free((void *)default_printer);
+    default_printer = strdup(buf);
+  } else if ((p = strstr(text, " is no longer the default printer")) != NULL) {
+    /* Default printer has changed, we are triggered by the former default
+       printer */
+    strncpy(buf, text, p - text);
+    buf[p - text] = '\0';
+    debug_printf("cups-browsed: [CUPS Notification] %s not default printer any more.\n", buf);
+  }
+}
+
+
 static remote_printer_t *
 create_local_queue (const char *name,
 		    const char *uri,
@@ -1154,10 +1524,8 @@ gboolean handle_cups_queues(gpointer unused) {
   cups_option_t *options;
   int num_jobs;
   cups_job_t *jobs;
-  ipp_t *request, *response;
+  ipp_t *request;
   time_t current_time = time(NULL);
-  const char *default_printer_name;
-  ipp_attribute_t *attr;
   int i;
 
   debug_printf("cups-browsed: Processing printer list ...\n");
@@ -1211,49 +1579,12 @@ gboolean handle_cups_queues(gpointer unused) {
 	  break;
 	}
 
-	/* Check whether the queue is the system default. In this case do not
-	   remove it, so that this user setting does not get lost */
-	default_printer_name = NULL;
-	request = ippNewRequest(CUPS_GET_DEFAULT);
-	/* Default user */
-	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
-		     "requesting-user-name", NULL, cupsUser());
-	/* Do it */
-	response = cupsDoRequest(http, request, "/");
-	if (cupsLastError() > IPP_OK_CONFLICT || !response) {
-	  debug_printf("cups-browsed: Could not determine system default printer!\n");
-	} else {
-	  for (attr = ippFirstAttribute(response); attr != NULL;
-	       attr = ippNextAttribute(response)) {
-	    while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
-	      attr = ippNextAttribute(response);
-	    if (attr) {
-	      for (; attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER;
-		   attr = ippNextAttribute(response)) {
-		if (!strcasecmp(ippGetName(attr), "printer-name") &&
-		    ippGetValueTag(attr) == IPP_TAG_NAME) {
-		  default_printer_name = ippGetString(attr, 0, NULL);
-		  break;
-		}
-	      }
-	    }
-	    if (default_printer_name)
-	      break;
-	  }
-	}
-	if (default_printer_name &&
-	    !strcasecmp(default_printer_name, p->name)) {
-	  /* Printer is currently the system's default printer,
-	     do not remove it */
-	  /* Schedule the removal of the queue for later */
-	  p->timeout = current_time + TIMEOUT_RETRY;
-	  ippDelete(response);
-	  break;
-	}
-	if (response)
-	  ippDelete(response);
+	/* If this queue was the default printer, note that fact so that
+	   it gets the default printer again when it re-appears, also switch
+	   back to the last local default printer */
+	queue_removal_handle_default(p->name);
 
-	/* No jobs, not default printer, remove the CUPS queue */
+	/* No jobs, remove the CUPS queue */
 	request = ippNewRequest(CUPS_DELETE_PRINTER);
 	/* Printer URI: ipp://localhost:631/printers/<queue name> */
 	httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
@@ -1394,6 +1725,10 @@ gboolean handle_cups_queues(gpointer unused) {
 	break;
       }
 
+      /* If this queue was the default printer in its previous life, make
+	 it the default printer again. */
+      queue_creation_handle_default(p->name);
+
       if (p->status == STATUS_BROWSE_PACKET_RECEIVED) {
 	p->status = STATUS_DISAPPEARED;
 	p->timeout = time(NULL) + BrowseTimeout;
@@ -1406,8 +1741,11 @@ gboolean handle_cups_queues(gpointer unused) {
 
       break;
 
-    /* Nothing to do */
     case STATUS_CONFIRMED:
+      /* If this queue was the default printer in its previous life, make
+	 it the default printer again. */
+      queue_creation_handle_default(p->name);
+
       break;
 
     }
@@ -3240,6 +3578,9 @@ int main(int argc, char*argv[]) {
   const char *val;
   remote_printer_t *p;
   GDBusProxy *proxy = NULL;
+  CupsNotifier *cups_notifier = NULL;
+  GError *error = NULL;
+  int subscription_id = 0;
 
   /* Turn on debug mode if requested */
   if (argc >= 2)
@@ -3357,6 +3698,8 @@ int main(int argc, char*argv[]) {
   /* Read out the currently defined CUPS queues and find the ones which we
      have added in an earlier session */
   update_local_printers ();
+  if ((val = get_cups_default_printer()) != NULL)
+    default_printer = strdup(val);
   remote_printers = cupsArrayNew((cups_array_func_t)compare_remote_printers,
 				 NULL);
   g_hash_table_foreach (local_printers, find_previous_queue, NULL);
@@ -3495,6 +3838,26 @@ int main(int argc, char*argv[]) {
     }
   }
 
+  /* Subscribe to CUPS' D-Bus notifications and create a proxy to receive
+     the notifications */
+  subscription_id = create_subscription ();
+  g_timeout_add_seconds (NOTIFY_LEASE_DURATION - 60,
+			 renew_subscription_timeout,
+			 &subscription_id);
+  cups_notifier = cups_notifier_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
+							0,
+							NULL,
+							CUPS_DBUS_PATH,
+							NULL,
+							&error);
+  if (error) {
+    g_warning ("Error creating cups notify handler: %s", error->message);
+    g_error_free (error);
+    goto fail;
+  }
+  g_signal_connect (cups_notifier, "printer-state-changed",
+		    G_CALLBACK (on_printer_state_changed), NULL);
+
   /* If auto shutdown is active and we do not find any printers initially,
      schedule the shutdown in autoshutdown_timeout seconds */
   if (autoshutdown && !autoshutdown_exec_id &&
@@ -3514,6 +3877,10 @@ int main(int argc, char*argv[]) {
 fail:
 
   /* Clean up things */
+
+  cancel_subscription (subscription_id);
+  if (cups_notifier)
+    g_object_unref (cups_notifier);
 
   if (proxy)
     g_object_unref (proxy);

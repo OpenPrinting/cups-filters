@@ -716,23 +716,38 @@ EXTRA_DIST += \
 # UTILS
 # =====
 
+cups_notifier_sources = \
+	cups-notifier.c \
+	cups-notifier.h
+
+$(cups_notifier_sources): utils/org.cups.cupsd.Notifier.xml
+	gdbus-codegen \
+	    --interface-prefix org.cups.cupsd \
+	    --c-namespace Cups \
+	    --generate-c-code cups-notifier \
+	    $^
+
 sbin_PROGRAMS = \
 	cups-browsed
 cups_browsed_SOURCES = \
 	utils/cups-browsed.c
+nodist_cups_browsed_SOURCES = \
+	$(cups_notifier_sources)
 cups_browsed_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(AVAHI_CFLAGS) \
 	$(AVAHI_GLIB_CFLAGS) \
 	$(GLIB_CFLAGS) \
-	$(GIO_CFLAGS)
+	$(GIO_CFLAGS) \
+	$(GIO_UNIX_CFLAGS)
 cups_browsed_CXXFLAGS = $(cups_browsed_CFLAGS)
 cups_browsed_LDADD = \
 	$(CUPS_LIBS) \
 	$(AVAHI_LIBS) \
 	$(AVAHI_GLIB_LIBS) \
 	$(GLIB_LIBS) \
-	$(GIO_LIBS)
+	$(GIO_LIBS) \
+	$(GIO_UNIX_LIBS)
 initrcdir = $(INITDDIR)
 initrc_SCRIPTS = utils/cups-browsed
 man_MANS = \
@@ -740,7 +755,10 @@ man_MANS = \
 	utils/cups-browsed.conf.5 \
 	filter/foomatic-rip/foomatic-rip.1
 EXTRA_DIST += utils/cups-browsed.in \
-	$(man_MANS)
+	$(man_MANS) \
+	utils/org.cups.cupsd.Notifier.xml
+BUILT_SOURCES = $(cups_notifier_sources)
+CLEANFILES = $(BUILT_SOURCES)
 
 # ===
 # PPD

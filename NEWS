@@ -3,6 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.0.71 - 2015-07-02
 
 CHANGES IN V1.0.72
 
+	- cups-browsed: Introduced new handling for the default
+	  printer using cache files. So we do not need to keep an auto-generated
+	  queue because it is set as default printer. If the auto-generated
+	  queue disappears, the old local printer is set as default again and
+	  when it re-appears it returns to be the default printer.
+	- cups-browsed: Added infrastructure for subscribing to CUPS
+	  notifications for things like improved default printer handling,
+	  load balancing, ...
 	- foomatic-rip: Prevent crash when supplying "media" option with empty
 	  value ("media=", Ubuntu bug #1479871).
 	- pdftoopvp: Adaptations to API changes on Poppler 0.34.0, note that
