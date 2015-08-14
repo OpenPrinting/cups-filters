@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.0.71 - 2015-07-02
 
 CHANGES IN V1.0.72
 
+	- cups-browsed: Added LDAP support. Appropriately configured via
+	  cups-browsed.conf remote printers made available via LDAP will be
+	  looked up and local queues pointing to them created. Thanks to
+	  Raphael Geissert (atomo64 at gmail dot com) for contributing this
+	  patch (Debian bug #795185).
 	- cups-browsed: Introduced new handling for the default
 	  printer using cache files. So we do not need to keep an auto-generated
 	  queue because it is set as default printer. If the auto-generated

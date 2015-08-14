@@ -14,7 +14,7 @@
 .fam T
 .fi
 .SH DESCRIPTION
-\fBcups-browsed\fP has three independently switchable functions:
+\fBcups-browsed\fP has four independently switchable functions:
 .IP 1. 4
 Browse Bonjour broadcasts of remote printers and create/remove local
 raw queues pointing to these printers.
@@ -22,9 +22,12 @@ raw queues pointing to these printers.
 Browse CUPS broadcasts of remote printers and create/remove local raw
 queues pointing to these printers.
 .IP 3. 4
+Browse an LDAP server for printers and create/remove local raw
+queues pointing to these printers.
+.IP 4. 4
 Broadcast local queues with the CUPS protocol.
 .PP
-Note that 2. and 3. are only to allow communication with legacy CUPS servers (1.5.x or older) on the remote machine(s). The standard method to broadcast for shared/network printers to broadcast their presence is Bonjour. The CUPS broadcasting/browsing protocol is deprecated.
+Note that 2. and 4. are only to allow communication with legacy CUPS servers (1.5.x or older) on the remote machine(s). The standard method to broadcast for shared/network printers to broadcast their presence is Bonjour. The CUPS broadcasting/browsing protocol is deprecated.
 
 cups-browsed can be run permanently (from system boot to shutdown) or on-demand (for example to save resources on mobile devices). For running it on-demend an auto-shutdown feature can be activated to let cups-browsed terminate when it does not have queues any more to take care of.
 
@@ -59,7 +62,12 @@ In environments with only cups 1.6.x servers and clients (plus
 enables the automatic discovery of remote queues and their display in
 printing dialogues of applications and with command line tools.
 .PP
-The facility provided by 3. means that servers running cups 1.6.x plus
+The facility provided by 3. allows printers that are registered in an LDAP
+server to be added as local queues. CUPS servers 1.5.x are able to automatically
+register printers in LDAP. The facility provided by \fBcups-browsed\fP allows
+a filter string to further limit the printers that are browsed from LDAP.
+.PP
+The facility provided by 4. means that servers running cups 1.6.x plus
 \fBcups-browsed\fP can broadcast their local queues so that clients with cups
 1.5.x get these queues automatically available. The outcome of 2. is
 that clients running cups 1.6.x plus \fBcups-browsed\fP can use the CUPS

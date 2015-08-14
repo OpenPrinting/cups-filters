@@ -1,5 +1,5 @@
 # Which protocols will we use to discover printers on the network?
-# Can use DNSSD and/or CUPS, or 'none' for neither.
+# Can use DNSSD and/or CUPS and/or LDAP, or 'none' for neither.
 BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 
 # Which protocols will we use to broadcast shared local printers to the network?
@@ -10,7 +10,7 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 
 # Settings of this directive apply to both BrowseRemoteProtocols and
 # BrowseLocalProtocols.
-# Can use DNSSD and/or CUPS, or 'none' for neither.
+# Can use DNSSD and/or CUPS and/or LDAP, or 'none' for neither.
 # BrowseProtocols none
 
 # Only browse remote printers from selected servers
@@ -24,6 +24,15 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # BrowsePoll cups.example.com
 # BrowsePoll cups.example.com:631
 # BrowsePoll cups.example.com:631/version=1.1
+
+# LDAP browsing configuration
+# The default value for all options is an empty string. Example configuration:
+# BrowseLDAPBindDN cn=cups-browsed,dc=domain,dc=tld
+# BrowseLDAPCACertFile /path/to/server/certificate.pem
+# BrowseLDAPDN ou=printers,dc=domain,dc=tld
+# BrowseLDAPFilter (printerLocation=/Office 1/*)
+# BrowseLDAPPassword s3cret
+# BrowseLDAPServer ldaps://ldap.domain.tld
 
 # Use DomainSocket to access the local CUPS daemon via another than the
 # default domain socket

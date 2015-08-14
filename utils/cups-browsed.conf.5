@@ -63,13 +63,14 @@ The default is "dnssd cups".
         BrowseRemoteProtocols CUPS dnssd
         BrowseRemoteProtocols CUPS
         BrowseRemoteProtocols dnssd
+        BrowseRemoteProtocols ldap
 
 .fam T
 .fi
 The BrowseProtocols directive specifies the protocols to use when
 finding remote shared printers on the network and advertising local
-shared printers. "dnssd" is ignored for BrowseLocalProtocols. Multiple
-protocols can be specified by separating them with spaces. The
+shared printers. "dnssd" and "ldap" are ignored for BrowseLocalProtocols.
+Multiple protocols can be specified by separating them with spaces. The
 default is "none" for BrowseLocalProtocols and "dnssd cups" for
 BrowseRemoteProtocols.
 .PP
@@ -79,6 +80,25 @@ BrowseRemoteProtocols.
         BrowseProtocols CUPS dnssd
         BrowseProtocols CUPS
         BrowseProtocols dnssd
+        BrowseProtocols ldap
+
+.fam T
+.fi
+The configuration for the LDAP browsing mode define where the LDAP search
+should be performed. If built with an LDAP library that supports TLS, the
+path to the server's certificate, or to a certificates store, can be
+specified.
+The optional filter allows the LDAP search to be more specific, and is used
+in addition to the hardcoded filter (objectclass=cupsPrinter).
+.PP
+.nf
+.fam C
+        BrowseLDAPBindDN cn=cups-browsed,dc=domain,dc=tld
+        BrowseLDAPCACertFile /path/to/server/certificate.pem
+        BrowseLDAPDN ou=printers,dc=domain,dc=tld
+        BrowseLDAPFilter (printerLocation=/Office 1/*)
+        BrowseLDAPPassword s3cret
+        BrowseLDAPServer ldaps://ldap.domain.tld
 
 .fam T
 .fi
