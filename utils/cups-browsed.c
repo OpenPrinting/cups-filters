@@ -1790,6 +1790,20 @@ is_created_by_cups_browsed (const char *printer) {
   return 0;
 }
 
+remote_printer_t *
+printer_record (const char *printer) {
+  remote_printer_t *p;
+
+  if (printer == NULL)
+    return NULL;
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
+    if (!strcasecmp(printer, p->name))
+      return p;
+
+  return NULL;
+}
+
 int
 queue_creation_handle_default(const char *printer) {
   /* If this queue is recorded as the former default queue (and the current
@@ -1859,6 +1873,8 @@ on_printer_state_changed (CupsNotifier *object,
 {
   char *p, buf[1024];
 
+  debug_printf("cups-browsed: [CUPS Notification] Printer state change: %s\n",
+	       text);
   if ((p = strstr(text, " is now the default printer")) != NULL) {
     /* Default printer has changed, we are triggered by the new default
        printer */
@@ -1901,6 +1917,53 @@ on_printer_state_changed (CupsNotifier *object,
     strncpy(buf, text, p - text);
     buf[p - text] = '\0';
     debug_printf("cups-browsed: [CUPS Notification] %s not default printer any more.\n", buf);
+  }
+}
+
+static void
+on_printer_deleted (CupsNotifier *object,
+		    const gchar *text,
+		    const gchar *printer_uri,
+		    const gchar *printer,
+		    guint printer_state,
+		    const gchar *printer_state_reasons,
+		    gboolean printer_is_accepting_jobs,
+		    gpointer user_data)
+{
+  remote_printer_t *p;
+  const char* r;
+
+  debug_printf("cups-browsed: [CUPS Notification] Printer deleted: %s\n",
+	       text);
+
+  if (is_created_by_cups_browsed(printer)) {
+    /* a cups-browsed-generated printer got deleted, re-create it */
+    debug_printf("cups-browsed: Printer %s got deleted, re-creating it.\n",
+		 printer);
+    /* If the deleted printer was the default printer, make sure it gets the
+       default printer again */
+    if (default_printer && !strcasecmp(printer, default_printer)) {
+      if (record_default_printer(printer, 0) < 0) {
+	/* Delete record file if recording failed */
+	debug_printf("cups-browsed: ERROR: Failed recording remote default printer. Removing the file with possible old recording.\n");
+	invalidate_default_printer(0);
+      } else
+	debug_printf("cups-browsed: Recorded %s as remote default printer so that it gets set as default after re-creating.\n");
+      /* Make sure that a recorded local default printer does not get lost
+	 during the recovery operation */
+      if ((r = retrieve_default_printer(1)) != NULL) {
+	if (default_printer != NULL)
+	  free((void *)default_printer);
+	default_printer = strdup(r);
+      }
+    }
+    /* Schedule for immediate creation of the CUPS queue */
+    p = printer_record(printer);
+    if (p) {
+      p->status = STATUS_TO_BE_CREATED;
+      p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+      recheck_timer();
+    }
   }
 }
 
@@ -4799,6 +4862,8 @@ int main(int argc, char*argv[]) {
   }
   g_signal_connect (cups_notifier, "printer-state-changed",
 		    G_CALLBACK (on_printer_state_changed), NULL);
+  g_signal_connect (cups_notifier, "printer-deleted",
+		    G_CALLBACK (on_printer_deleted), NULL);
 
   /* If auto shutdown is active and we do not find any printers initially,
      schedule the shutdown in autoshutdown_timeout seconds */
