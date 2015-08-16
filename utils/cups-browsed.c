@@ -804,82 +804,6 @@ color_space_score(const char *color_space)
   return score;
 }
 
-static int
-create_subscription ()
-{
-  ipp_t *req;
-  ipp_t *resp;
-  ipp_attribute_t *attr;
-  int id = 0;
-
-  req = ippNewRequest (IPP_CREATE_PRINTER_SUBSCRIPTION);
-  ippAddString (req, IPP_TAG_OPERATION, IPP_TAG_URI,
-		"printer-uri", NULL, "/");
-  ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_KEYWORD,
-		"notify-events", NULL, "all");
-  ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_URI,
-		"notify-recipient-uri", NULL, "dbus://");
-  ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
-		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
-
-  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
-  if (!resp || cupsLastError() != IPP_OK) {
-    g_warning ("Error subscribing to CUPS notifications: %s\n",
-	       cupsLastErrorString ());
-    return 0;
-  }
-
-  attr = ippFindAttribute (resp, "notify-subscription-id", IPP_TAG_INTEGER);
-  if (attr)
-    id = ippGetInteger (attr, 0);
-  else
-    g_warning ("ipp-create-printer-subscription response doesn't contain "
-	       "subscription id.\n");
-
-  ippDelete (resp);
-  return id;
-}
-
-
-static gboolean
-renew_subscription (int id)
-{
-  ipp_t *req;
-  ipp_t *resp;
-
-  req = ippNewRequest (IPP_RENEW_SUBSCRIPTION);
-  ippAddInteger (req, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
-		 "notify-subscription-id", id);
-  ippAddString (req, IPP_TAG_OPERATION, IPP_TAG_URI,
-		"printer-uri", NULL, "/");
-  ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_URI,
-		"notify-recipient-uri", NULL, "dbus://");
-  ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
-		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
-
-  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
-  if (!resp || cupsLastError() != IPP_OK) {
-    g_warning ("Error renewing CUPS subscription %d: %s\n",
-	       id, cupsLastErrorString ());
-    return FALSE;
-  }
-
-  ippDelete (resp);
-  return TRUE;
-}
-
-
-static gboolean
-renew_subscription_timeout (gpointer userdata)
-{
-  int *subscription_id = userdata;
-
-  if (*subscription_id <= 0 || !renew_subscription (*subscription_id))
-    *subscription_id = create_subscription ();
-
-  return TRUE;
-}
-
 
 #ifdef HAVE_LDAP_REBIND_PROC
 #  if defined(LDAP_API_FEATURE_X_OPENLDAP) && (LDAP_API_VERSION > 2000)
@@ -1621,6 +1545,83 @@ ldap_getval_firststring(
 }
 
 #endif /* HAVE_LDAP */
+
+
+static int
+create_subscription ()
+{
+  ipp_t *req;
+  ipp_t *resp;
+  ipp_attribute_t *attr;
+  int id = 0;
+
+  req = ippNewRequest (IPP_CREATE_PRINTER_SUBSCRIPTION);
+  ippAddString (req, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, "/");
+  ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_KEYWORD,
+		"notify-events", NULL, "all");
+  ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_URI,
+		"notify-recipient-uri", NULL, "dbus://");
+  ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
+		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
+
+  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
+  if (!resp || cupsLastError() != IPP_OK) {
+    g_warning ("Error subscribing to CUPS notifications: %s\n",
+	       cupsLastErrorString ());
+    return 0;
+  }
+
+  attr = ippFindAttribute (resp, "notify-subscription-id", IPP_TAG_INTEGER);
+  if (attr)
+    id = ippGetInteger (attr, 0);
+  else
+    g_warning ("ipp-create-printer-subscription response doesn't contain "
+	       "subscription id.\n");
+
+  ippDelete (resp);
+  return id;
+}
+
+
+static gboolean
+renew_subscription (int id)
+{
+  ipp_t *req;
+  ipp_t *resp;
+
+  req = ippNewRequest (IPP_RENEW_SUBSCRIPTION);
+  ippAddInteger (req, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
+		 "notify-subscription-id", id);
+  ippAddString (req, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, "/");
+  ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_URI,
+		"notify-recipient-uri", NULL, "dbus://");
+  ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
+		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
+
+  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
+  if (!resp || cupsLastError() != IPP_OK) {
+    g_warning ("Error renewing CUPS subscription %d: %s\n",
+	       id, cupsLastErrorString ());
+    return FALSE;
+  }
+
+  ippDelete (resp);
+  return TRUE;
+}
+
+
+static gboolean
+renew_subscription_timeout (gpointer userdata)
+{
+  int *subscription_id = userdata;
+
+  if (*subscription_id <= 0 || !renew_subscription (*subscription_id))
+    *subscription_id = create_subscription ();
+
+  return TRUE;
+}
 
 
 void
