@@ -223,11 +223,13 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
 
     Also high availability with redundant print servers is
     supported. If there is more than one server providing a shared
-    print queue with the same name, cups-browsed uses the first queue
-    which appeared and if this queue disappears, cups-browsed
-    seamlessly switches to the queue of another server. Unfortunately,
-    load-balancing (what CUPS did via implicit classes) is not
-    possible with cups-browsed.
+    print queue with the same name, cups-browsed forms a cluster
+    locally with this name as queue name and printing through
+    the "implicitclass" backend. Each job triggers cups-browsed
+    to check which remote queue is the best for the job, meaning
+    that it is enabled and has the fewest jobs of all queues in the
+    cluster. This makes all queues/printers equally used. This is
+    also what CUPS formerly did with implicit classes.
 
     For maximum security cups-browsed uses IPPS (encrypted IPP)
     whenever possible.
