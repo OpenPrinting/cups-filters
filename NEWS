@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.0.72 - 2015-08-18
 -----------------------------------------------------
 
+CHANGES IN V1.0.73
+
+	- cups-browsed: Added missing
+          utils/org.cups.cupsd.Notifier.xml file.
+
 CHANGES IN V1.0.72
 
 	- cups-browsed, implicitclass: Added load balancing
