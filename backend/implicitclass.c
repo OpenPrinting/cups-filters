@@ -124,7 +124,7 @@ main(int  argc,				/* I - Number of command-line args */
       /* Timeout, no useful data from cups-browsed received */
       fprintf(stderr, "ERROR: No destination host name supplied by cups-browsed for printer \"%s\", is cups-browsed running?\n",
 	      queue_name);
-      exit(CUPS_BACKEND_RETRY);
+      exit(CUPS_BACKEND_STOP);
     }
     
     /* We have the destination host name now, do the job */

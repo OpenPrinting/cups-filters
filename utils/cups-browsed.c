@@ -1651,6 +1651,125 @@ cancel_subscription (int id)
   ippDelete (resp);
 }
 
+const char*
+is_disabled(const char *printer, const char *reason) {
+  ipp_t *request, *response;
+  ipp_attribute_t *attr;
+  const char *pname = NULL;
+  ipp_pstate_t pstate = IPP_PRINTER_IDLE;
+  const char *pstatemsg = NULL;
+  static const char *pattrs[] =
+                {
+                  "printer-name",
+                  "printer-state",
+		  "printer-state-message"
+                };
+
+  request = ippNewRequest(CUPS_GET_PRINTERS);
+  ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+		"requested-attributes",
+		sizeof(pattrs) / sizeof(pattrs[0]),
+		NULL, pattrs);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+	       "requesting-user-name",
+	       NULL, cupsUser());
+  if ((response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/")) != NULL) {
+    for (attr = ippFirstAttribute(response); attr != NULL;
+	 attr = ippNextAttribute(response)) {
+      while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+	attr = ippNextAttribute(response);
+      if (attr == NULL)
+	break;
+      pname = NULL;
+      pstate = IPP_PRINTER_IDLE;
+      pstatemsg = NULL;
+      while (attr != NULL && ippGetGroupTag(attr) ==
+	     IPP_TAG_PRINTER) {
+	if (!strcmp(ippGetName(attr), "printer-name") &&
+	    ippGetValueTag(attr) == IPP_TAG_NAME)
+	  pname = ippGetString(attr, 0, NULL);
+	else if (!strcmp(ippGetName(attr), "printer-state") &&
+		 ippGetValueTag(attr) == IPP_TAG_ENUM)
+	  pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
+	else if (!strcmp(ippGetName(attr), "printer-state-message") &&
+		 ippGetValueTag(attr) == IPP_TAG_TEXT)
+	  pstatemsg = ippGetString(attr, 0, NULL);
+	attr = ippNextAttribute(response);
+      }
+      if (pname == NULL) {
+	if (attr == NULL)
+	  break;
+	else
+	  continue;
+      }
+      if (!strcasecmp(pname, printer)) {
+	switch (pstate) {
+	case IPP_PRINTER_IDLE:
+	case IPP_PRINTER_PROCESSING:
+	  return NULL;
+	case IPP_PRINTER_STOPPED:
+	  if (reason == NULL)
+	    return pstatemsg;
+	  else if (strcasestr(pstatemsg, reason) != NULL)
+	    return pstatemsg;
+	  else
+	    return NULL;
+	}
+      }
+    }
+    debug_printf("cups-browsed: ERROR: No information found about the requested printer '%s'\n",
+		 printer);
+    return NULL;
+  }
+  debug_printf("cups-browsed: ERROR: Request for printer info failed: %s\n",
+	       cupsLastErrorString());
+  return NULL;
+}
+
+int
+enable_printer (const char *printer) {
+  ipp_t *request;
+  char uri[HTTP_MAX_URI];
+
+  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+		   "localhost", 0, "/printers/%s", printer);
+  request = ippNewRequest (IPP_RESUME_PRINTER);
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, uri);
+  ippDelete(cupsDoRequest (CUPS_HTTP_DEFAULT, request, "/admin/"));
+  if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
+    debug_printf("cups-browsed: ERROR: Failed enabling printer '%s': %s\n",
+		 printer, cupsLastErrorString());
+    return -1;
+  }
+  debug_printf("cups-browsed: Enabled printer '%s'\n", printer);
+  return 0;
+}
+
+int
+disable_printer (const char *printer, const char *reason) {
+  ipp_t *request;
+  char uri[HTTP_MAX_URI];
+
+  if (reason == NULL)
+    reason = "Disabled by cups-browsed";
+  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+		   "localhost", 0, "/printers/%s", printer);
+  request = ippNewRequest (IPP_PAUSE_PRINTER);
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		"printer-uri", NULL, uri);
+  ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_TEXT,
+		"printer-state-message", NULL, reason);
+  ippDelete(cupsDoRequest (CUPS_HTTP_DEFAULT, request, "/admin/"));
+  if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
+    debug_printf("cups-browsed: ERROR: Failed disabling printer '%s': %s\n",
+		 printer, cupsLastErrorString());
+    return -1;
+  }
+  debug_printf("cups-browsed: Disabled printer '%s'\n", printer);
+  return 0;
+}
+
 int
 set_cups_default_printer(const char *printer) {
   ipp_t	*request;
@@ -2601,6 +2720,8 @@ gboolean handle_cups_queues(gpointer unused) {
 	if (num_jobs != 0) { /* error or jobs */
 	  debug_printf("cups-browsed: Queue has still jobs or CUPS error!\n");
 	  cupsFreeJobs(num_jobs, jobs);
+	  /* Disable the queue */
+	  disable_printer(p->name, "Printer disappeared or cups-browsed shutdown");
 	  /* Schedule the removal of the queue for later */
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  break;
@@ -2787,6 +2908,11 @@ gboolean handle_cups_queues(gpointer unused) {
 	 it the default printer again. */
       queue_creation_handle_default(p->name);
 
+      /* If cups-browsed or the implicitclass backend has disabled this
+	 queue, re-enable it. */
+      if (is_disabled(p->name, "cups-browsed"))
+	enable_printer(p->name);
+
       if (p->status == STATUS_BROWSE_PACKET_RECEIVED) {
 	p->status = STATUS_DISAPPEARED;
 	p->timeout = time(NULL) + BrowseTimeout;
@@ -2803,6 +2929,11 @@ gboolean handle_cups_queues(gpointer unused) {
       /* If this queue was the default printer in its previous life, make
 	 it the default printer again. */
       queue_creation_handle_default(p->name);
+
+      /* If cups-browsed or the implicitclass backend has disabled this
+	 queue, re-enable it. */
+      if (is_disabled(p->name, "cups-browsed"))
+	enable_printer(p->name);
 
       break;
 
