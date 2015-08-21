@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.0.73 - 2015-08-18
 -----------------------------------------------------
 
+CHANGES IN V1.0.74
+
+	- cups-browsed: After polling info from remote CUPS servers to find
+	  the best destination job, set the default CUPS server back to local.
+
 CHANGES IN V1.0.73
 
 	- cups-browsed: Added missing

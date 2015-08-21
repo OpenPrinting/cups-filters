@@ -2019,6 +2019,10 @@ on_printer_state_changed (CupsNotifier *object,
 	  }
 	}
       }
+      /* Set CUPS server back to local */
+      cupsSetServer(NULL);
+      /* Write the selected destination host into a file so that the
+	 implicitclass backend will pick it up */
       snprintf(filename, sizeof(filename), IMPLICIT_CLASS_DEST_HOST_FILE,
 	       printer);
       fp = fopen(filename, "w+");
