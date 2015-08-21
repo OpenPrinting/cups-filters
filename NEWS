@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.73 - 2015-08-18
 
 CHANGES IN V1.0.74
 
+	- cups-browsed: Do not schedule printers for update when they are
+	  already marked as disappeared.
 	- cups-browsed: Added sanity checks when saving the default printer
 	  selection in a file.
 	- cups-browsed, implicitclass: If remote queues disappear or

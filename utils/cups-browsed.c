@@ -2204,7 +2204,7 @@ on_printer_deleted (CupsNotifier *object,
     }
     /* Schedule for immediate creation of the CUPS queue */
     p = printer_record(printer);
-    if (p) {
+    if (p && p->status != STATUS_DISAPPEARED) {
       p->status = STATUS_TO_BE_CREATED;
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
       recheck_timer();
@@ -2309,8 +2309,10 @@ create_local_queue (const char *name,
       if (!q->duplicate_of) {
 	/* Update q to get implicitclass:... URI */
 	q->num_duplicates ++;
-	q->status = STATUS_TO_BE_CREATED;
-	q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	if (q->status != STATUS_DISAPPEARED) {
+	  q->status = STATUS_TO_BE_CREATED;
+	  q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	}
       }
     } else if (q) {
       q->duplicate_of = p;
@@ -2318,8 +2320,10 @@ create_local_queue (const char *name,
 		   p->name, q->host);
       /* Update p to get implicitclass:... URI */
       p->num_duplicates ++;
-      p->status = STATUS_TO_BE_CREATED;
-      p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+      if (p->status != STATUS_DISAPPEARED) {
+	p->status = STATUS_TO_BE_CREATED;
+	p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+      }
     }
   } else {
 #ifndef HAVE_CUPS_1_6
@@ -2753,12 +2757,14 @@ gboolean handle_cups_queues(gpointer unused) {
       } else {
 	/* "master printer" of this duplicate */
 	q = p->duplicate_of;
-	debug_printf("cups-browsed: Removed a duplicate of printer %s on %s, scheduling its master printer %s on host %s for update, to assure it will have the correct device URI.\n",
-		     p->name, p->host, q->name, q->host);
-	/* Schedule for update, so that an implicitclass:... URI gets
-	   removed if not needed any more */
-	q->status = STATUS_TO_BE_CREATED;
-	q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	if (q->status != STATUS_DISAPPEARED) {
+	  debug_printf("cups-browsed: Removed a duplicate of printer %s on %s, scheduling its master printer %s on host %s for update, to assure it will have the correct device URI.\n",
+		       p->name, p->host, q->name, q->host);
+	  /* Schedule for update, so that an implicitclass:... URI gets
+	     removed if not needed any more */
+	  q->status = STATUS_TO_BE_CREATED;
+	  q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	}
       }
 
       /* CUPS queue removed, remove the list entry */
@@ -3440,13 +3446,15 @@ static void browse_callback(
       if (p->duplicate_of) {
 	/* "master printer" of this duplicate */
 	q = p->duplicate_of;
-	debug_printf("cups-browsed: Removing the duplicate printer %s on host %s, scheduling its master printer %s on host %s for update, to assure it will have the correct device URI.\n",
-		     p->name, p->host, q->name, q->host);
-	/* Schedule for update, so that an implicitclass:... URI gets
-	   removed if not needed any more */
 	q->num_duplicates --;
-	q->status = STATUS_TO_BE_CREATED;
-	q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	if (q->status != STATUS_DISAPPEARED) {
+	  debug_printf("cups-browsed: Removing the duplicate printer %s on host %s, scheduling its master printer %s on host %s for update, to assure it will have the correct device URI.\n",
+		       p->name, p->host, q->name, q->host);
+	  /* Schedule for update, so that an implicitclass:... URI gets
+	     removed if not needed any more */
+	  q->status = STATUS_TO_BE_CREATED;
+	  q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	}
 	q = NULL;
       } else {
 	/* Check whether this queue has a duplicate from another server and
