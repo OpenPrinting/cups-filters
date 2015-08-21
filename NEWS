@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.73 - 2015-08-18
 
 CHANGES IN V1.0.74
 
+	- cups-browsed: Added sanity checks when saving the default printer
+	  selection in a file.
 	- cups-browsed, implicitclass: If remote queues disappear or
 	  cups-browsed shuts down and a cups-browsed-generated queue still
 	  has jobs and needs to be kept therefore, disable it and re-enable

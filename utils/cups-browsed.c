@@ -1857,13 +1857,14 @@ record_default_printer(const char *printer, int local) {
   const char *filename = local ? LOCAL_DEFAULT_PRINTER_FILE :
     REMOTE_DEFAULT_PRINTER_FILE;
 
-  if (printer == NULL)
+  if (printer == NULL || strlen(printer) == 0)
     return invalidate_default_printer(local);
 
   fp = fopen(filename, "w+");
   if (fp == NULL) {
     debug_printf("cups-browsed: ERROR: Failed creating file %s\n",
 		 filename);
+    invalidate_default_printer(local);
     return -1;
   }
   fprintf(fp, "%s", printer);
