@@ -32,6 +32,8 @@
 #  include <stdlib.h>
 #  include <errno.h>
 #  include <signal.h>
+#  include <unistd.h>
+#  include <fcntl.h>
 
 #  ifdef __linux
 #    include <sys/ioctl.h>
@@ -40,8 +42,6 @@
 #    define LPIOC_GET_DEVICE_ID(len)	_IOC(_IOC_READ, 'P', IOCNR_GET_DEVICE_ID, len)
 #    include <linux/parport.h>
 #    include <linux/ppdev.h>
-#    include <unistd.h>
-#    include <fcntl.h>
 #  endif /* __linux */
 
 #  ifdef __sun

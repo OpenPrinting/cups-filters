@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.73 - 2015-08-18
 
 CHANGES IN V1.0.74
 
+	- backends: Include unistd.h and fcntl.h in backend-private.h for
+	  all platforms, not only Linux, so that the backends build also
+	  on non-Linux platforms (Bug #1308).
 	- cups-browsed: Do not schedule printers for update when they are
 	  already marked as disappeared.
 	- cups-browsed: Added sanity checks when saving the default printer
