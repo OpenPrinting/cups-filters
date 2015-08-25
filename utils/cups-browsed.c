@@ -2065,7 +2065,7 @@ on_printer_state_changed (CupsNotifier *object,
        the appropriate device URI to the backend. */
     debug_printf("cups-browsed: [CUPS Notification] %s starts processing a job.\n", printer);
     p = printer_record(printer);
-    if (p->num_duplicates > 0) {
+    if (p && p->num_duplicates > 0) {
       debug_printf("cups-browsed: [CUPS Notification] %s is using the \"implicitclass\" CUPS backend, so let us search a destination for this job.\n", printer);
       for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	   p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {

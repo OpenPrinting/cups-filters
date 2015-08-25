@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.73 - 2015-08-18
 
 CHANGES IN V1.0.74
 
+	- cups-browsed: Added NULL check when getting the notification of
+	  a printer starting to process a job and checking whether this
+	  printer is created by cups-browsed with the implicitclass:
+	  backend (Ubuntu bug #1488524).
 	- backends: Include unistd.h and fcntl.h in backend-private.h for
 	  all platforms, not only Linux, so that the backends build also
 	  on non-Linux platforms (Bug #1308).
