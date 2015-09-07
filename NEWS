@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.74 - 2015-08-25
 
 CHANGES IN V1.0.74
 
+	- texttopdf: Fixed segfault when outputting BoldItalic (Bug #1314).
+
+CHANGES IN V1.0.74
+
 	- cups-browsed: Added NULL check when getting the notification of
 	  a printer starting to process a job and checking whether this
 	  printer is created by cups-browsed with the implicitclass:
