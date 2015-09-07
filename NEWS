@@ -1,7 +1,7 @@
-NEWS - OpenPrinting CUPS Filters v1.0.74 - 2015-08-25
+NEWS - OpenPrinting CUPS Filters v1.0.75 - 2015-09-07
 -----------------------------------------------------
 
-CHANGES IN V1.0.74
+CHANGES IN V1.0.75
 
 	- texttopdf: Really support BoldItalic (original texttops just maps
 	  BoldItalic to Bold).
