@@ -169,11 +169,11 @@ void
 WriteEpilogue(void)
 {
   static char	*names[] =	/* Font names */
-		{ "FN","FB","FI" };
+		{ "FN","FB","FI","FBI" };
   int i,j;
 
   // embed fonts
-  for (i = PrettyPrint ? 2 : 1; i >= 0; i --) {
+  for (i = PrettyPrint ? 3 : 1; i >= 0; i --) {
     for (j = 0; j < NumFonts; j ++) 
     {
       EMB_PARAMS *emb=Fonts[j][i];
@@ -197,7 +197,7 @@ WriteEpilogue(void)
                     "<<\n",
                     FontResource);
 
-  for (i = PrettyPrint ? 2 : 1; i >= 0; i --) {
+  for (i = PrettyPrint ? 3 : 1; i >= 0; i --) {
     for (j = 0; j < NumFonts; j ++) {
       EMB_PARAMS *emb=Fonts[j][i];
       if (emb->font->fobj) { // used
@@ -1079,7 +1079,7 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str, int len)
 {
   unsigned short		ch;		/* Current character */
   static char	*names[] =	/* Font names */
-		{ "FN","FB","FI","FB" }; /* BoldItalic is not used in original texttops, but replaced with just Bold */
+		{ "FN","FB","FI","FBI" }; /* BoldItalic is not used in original texttops, but replaced with just Bold */
 
   if (len==-1) {
     for (len=0;str[len].ch;len++);
