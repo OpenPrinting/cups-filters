@@ -1079,7 +1079,7 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str, int len)
 {
   unsigned short		ch;		/* Current character */
   static char	*names[] =	/* Font names */
-		{ "FN","FB","FI","FBI" }; /* BoldItalic is not used in original texttops, but replaced with just Bold */
+		{ "FN","FB","FI","FBI" };
 
   if (len==-1) {
     for (len=0;str[len].ch;len++);
