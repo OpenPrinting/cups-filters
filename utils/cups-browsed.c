@@ -245,6 +245,8 @@ static gboolean inhibit_local_printers_update = FALSE;
 
 static GList *browse_data = NULL;
 
+static CupsNotifier *cups_notifier = NULL;
+
 static GMainLoop *gmainloop = NULL;
 #ifdef HAVE_AVAHI
 static AvahiGLibPoll *glib_poll = NULL;
@@ -1569,8 +1571,8 @@ create_subscription ()
 
   resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
   if (!resp || cupsLastError() != IPP_OK) {
-    g_warning ("Error subscribing to CUPS notifications: %s\n",
-	       cupsLastErrorString ());
+    debug_printf ("cups-browsed: Error subscribing to CUPS notifications: %s\n",
+		  cupsLastErrorString ());
     return 0;
   }
 
@@ -1578,8 +1580,9 @@ create_subscription ()
   if (attr)
     id = ippGetInteger (attr, 0);
   else
-    g_warning ("ipp-create-printer-subscription response doesn't contain "
-	       "subscription id.\n");
+    debug_printf ("cups-browsed: "
+		  "ipp-create-printer-subscription response doesn't contain "
+		  "subscription id.\n");
 
   ippDelete (resp);
   return id;
@@ -1604,8 +1607,8 @@ renew_subscription (int id)
 
   resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
   if (!resp || cupsLastError() != IPP_OK) {
-    g_warning ("Error renewing CUPS subscription %d: %s\n",
-	       id, cupsLastErrorString ());
+    debug_printf ("cups-browsed: Error renewing CUPS subscription %d: %s\n",
+		  id, cupsLastErrorString ());
     return FALSE;
   }
 
@@ -1643,8 +1646,8 @@ cancel_subscription (int id)
 
   resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
   if (!resp || cupsLastError() != IPP_OK) {
-    g_warning ("Error subscribing to CUPS notifications: %s\n",
-	       cupsLastErrorString ());
+    debug_printf ("cups-browsed: Error subscribing to CUPS notifications: %s\n",
+		  cupsLastErrorString ());
     return;
   }
 
@@ -1929,6 +1932,10 @@ printer_record (const char *printer) {
 
 int
 queue_creation_handle_default(const char *printer) {
+  /* No default printer management if we cannot get D-Bus notifications
+     from CUPS */
+  if (cups_notifier == NULL)
+    return 0;
   /* If this queue is recorded as the former default queue (and the current
      default is local), set it as default (the CUPS notification handler
      will record the local default printer then) */
@@ -1952,6 +1959,10 @@ queue_creation_handle_default(const char *printer) {
 
 int
 queue_removal_handle_default(const char *printer) {
+  /* No default printer management if we cannot get D-Bus notifications
+     from CUPS */
+  if (cups_notifier == NULL)
+    return 0;
   /* If the queue is the default printer, get back
      to the recorded local default printer, record this queue for getting the
      default set to this queue again if it re-appears. */
@@ -2737,6 +2748,17 @@ gboolean handle_cups_queues(gpointer unused) {
 	   back to the last local default printer */
 	queue_removal_handle_default(p->name);
 
+	/* If we do not have a subscription to CUPS' D-Bus notifications and
+	   so no default printer management, we simply do not remove this
+	   CUPS queue if it is the default printer, to not cause a change
+	   of the default printer or the loss of the information that this
+	   printer is the default printer. */
+	if (cups_notifier == NULL && is_cups_default_printer(p->name)) {
+	  /* Schedule the removal of the queue for later */
+	  p->timeout = current_time + TIMEOUT_RETRY;
+	  break;
+	}
+	
 	/* No jobs, remove the CUPS queue */
 	request = ippNewRequest(CUPS_DELETE_PRINTER);
 	/* Printer URI: ipp://localhost:631/printers/<queue name> */
@@ -2821,9 +2843,12 @@ gboolean handle_cups_queues(gpointer unused) {
          for load balancing. In this case we will assign an implicitclass:...
 	 device URI, which makes cups-browsed find the best destination for
 	 each job. */
-      if (p->num_duplicates > 0) {
+      if (cups_notifier != NULL && p->num_duplicates > 0) {
 	/* We have duplicates, so we use the device URI
-	   implicitclass:<queue name> */
+	   implicitclass:<queue name>
+	   We never use the implicitclass backend if we do not have D-Bus
+	   notification from CUPS as we cannot assign a destination printer
+	   to an incoming job then. */
 	snprintf(device_uri, sizeof(device_uri), "implicitclass:%s",
 		 p->name);
 	debug_printf("cups-browsed: Print queue %s has duplicates, using implicit class device URI %s\n",
@@ -4895,7 +4920,6 @@ int main(int argc, char*argv[]) {
   const char *val;
   remote_printer_t *p;
   GDBusProxy *proxy = NULL;
-  CupsNotifier *cups_notifier = NULL;
   GError *error = NULL;
   int subscription_id = 0;
 
@@ -4988,25 +5012,25 @@ int main(int argc, char*argv[]) {
     setenv("CUPS_SERVER", "localhost", 1);
 
   if (BrowseLocalProtocols & BROWSE_DNSSD) {
-    fprintf(stderr, "Local support for DNSSD not implemented\n");
+    fprintf(stderr, "cups-browsed: Local support for DNSSD not implemented\n");
     BrowseLocalProtocols &= ~BROWSE_DNSSD;
   }
 
   if (BrowseLocalProtocols & BROWSE_LDAP) {
-    fprintf(stderr, "Local support for LDAP not implemented\n");
+    fprintf(stderr, "cups-browsed: Local support for LDAP not implemented\n");
     BrowseLocalProtocols &= ~BROWSE_LDAP;
   }
 
 #ifndef HAVE_AVAHI
   if (BrowseRemoteProtocols & BROWSE_DNSSD) {
-    fprintf(stderr, "Remote support for DNSSD not supported\n");
+    fprintf(stderr, "cups-browsed: Remote support for DNSSD not supported\n");
     BrowseRemoteProtocols &= ~BROWSE_DNSSD;
   }
 #endif /* HAVE_AVAHI */
 
 #ifndef HAVE_LDAP
   if (BrowseRemoteProtocols & BROWSE_LDAP) {
-    fprintf(stderr, "Remote support for LDAP not supported\n");
+    fprintf(stderr, "cups-browsed: Remote support for LDAP not supported\n");
     BrowseRemoteProtocols &= ~BROWSE_LDAP;
   }
 #endif /* HAVE_LDAP */
@@ -5188,14 +5212,16 @@ int main(int argc, char*argv[]) {
 							NULL,
 							&error);
   if (error) {
-    g_warning ("Error creating cups notify handler: %s", error->message);
+    fprintf (stderr, "cups-browsed: Error creating cups notify handler: %s", error->message);
     g_error_free (error);
-    goto fail;
+    cups_notifier = NULL;
   }
-  g_signal_connect (cups_notifier, "printer-state-changed",
-		    G_CALLBACK (on_printer_state_changed), NULL);
-  g_signal_connect (cups_notifier, "printer-deleted",
-		    G_CALLBACK (on_printer_deleted), NULL);
+  if (cups_notifier != NULL) {
+    g_signal_connect (cups_notifier, "printer-state-changed",
+		      G_CALLBACK (on_printer_state_changed), NULL);
+    g_signal_connect (cups_notifier, "printer-deleted",
+		      G_CALLBACK (on_printer_deleted), NULL);
+  }
 
   /* If auto shutdown is active and we do not find any printers initially,
      schedule the shutdown in autoshutdown_timeout seconds */
@@ -5217,10 +5243,6 @@ fail:
 
   /* Clean up things */
 
-  cancel_subscription (subscription_id);
-  if (cups_notifier)
-    g_object_unref (cups_notifier);
-
   if (proxy)
     g_object_unref (proxy);
 
@@ -5231,6 +5253,10 @@ fail:
     p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
   }
   handle_cups_queues(NULL);
+
+  cancel_subscription (subscription_id);
+  if (cups_notifier)
+    g_object_unref (cups_notifier);
 
   if (BrowsePoll) {
     size_t index;

@@ -1,6 +1,18 @@
 NEWS - OpenPrinting CUPS Filters v1.0.75 - 2015-09-07
 -----------------------------------------------------
 
+CHANGES IN V1.0.76
+
+	- cups-browsed: Make absence of CUPS notifications via D-Bus
+	  non-fatal and fall back to the old behavior of cups-browsed
+	  (fail-over instead of load balancing for equally-named
+	  remote queues, do not remove generated queue if it is
+	  default instead of default printer management). This solves
+	  problems of CUPS and/or cups-browsed built without D-Bus
+	  support or absence of D-Bus on the system (Bug #1316).
+	- cups-browsed: Do not use g_warning() function, sneaked in by
+	  copy and paste of CUPS subscription functions.
+
 CHANGES IN V1.0.75
 
 	- texttopdf: Really support BoldItalic (original texttops just maps
