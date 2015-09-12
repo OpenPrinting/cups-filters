@@ -731,7 +731,7 @@ $(cups_notifier_sources): utils/org.cups.cupsd.Notifier.xml
 	    --interface-prefix org.cups.cupsd \
 	    --c-namespace Cups \
 	    --generate-c-code cups-notifier \
-	    $^
+	    utils/org.cups.cupsd.Notifier.xml
 
 sbin_PROGRAMS = \
 	cups-browsed

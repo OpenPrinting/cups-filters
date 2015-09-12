@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.75 - 2015-09-07
 
 CHANGES IN V1.0.76
 
+	- cups-browsed: Make build also working with BSD make (Bug
+          #1310).
 	- cups-browsed, implicitclass: Let the load-balancing queue up
 	  the jobs in the local (generated) queue until a free (idle,
 	  enabled, and accepting jobs) remote queue is found (check
