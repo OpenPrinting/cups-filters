@@ -3,6 +3,21 @@ NEWS - OpenPrinting CUPS Filters v1.0.75 - 2015-09-07
 
 CHANGES IN V1.0.76
 
+	- cups-browsed, implicitclass: Let the load-balancing queue up
+	  the jobs in the local (generated) queue until a free (idle,
+	  enabled, and accepting jobs) remote queue is found (check
+	  every 5 sec if no free queue available). This gives a more
+	  even distribution of the work amongst the servers and
+	  protects against the case that a bunch of jobs gets
+	  inaccessible or lost if one of the servers fails.
+	- cups-browsed: Let the load-balancing also check whether the
+	  destination queue is actually accepting jobs.
+	- cups-browsed: If a generated queue is not removed on
+	  shutdown of cups-browsed due to remaining jobs in it,
+	  re-enable it in the next cups-browsed session even if it was
+	  disabled by something other than cups-browsed.
+	- implicitclass: Clean up debug and error messages.
+	- implicitclass: Fix exit codes for immediate retry of jobs.
 	- cups-browsed: Make absence of CUPS notifications via D-Bus
 	  non-fatal and fall back to the old behavior of cups-browsed
 	  (fail-over instead of load balancing for equally-named

@@ -124,7 +124,7 @@ main(int  argc,				/* I - Number of command-line args */
       /* Timeout, no useful data from cups-browsed received */
       fprintf(stderr, "ERROR: No destination host name supplied by cups-browsed for printer \"%s\", is cups-browsed running?\n",
 	      queue_name);
-      exit(CUPS_BACKEND_STOP);
+      return (CUPS_BACKEND_STOP);
     }
     
     /* We have the destination host name now, do the job */
@@ -189,30 +189,33 @@ main(int  argc,				/* I - Number of command-line args */
 	  status = cupsWriteRequestData(CUPS_HTTP_DEFAULT, buffer, (size_t)bytes);
 
 	if (status != HTTP_CONTINUE) {
-	  fprintf(stderr, "%s: Error - unable to queue the print data - %s.",
+	  fprintf(stderr, "ERROR: %s: Unable to queue the print data - %s. Retrying.",
 		  argv[0], httpStatus(status));
 	  cupsFinishDocument(CUPS_HTTP_DEFAULT, queue_name);
 	  cupsCancelJob2(CUPS_HTTP_DEFAULT, queue_name, job_id, 0);
-	  return (1);
+	  return (CUPS_BACKEND_RETRY_CURRENT);
 	}
 
 	if (cupsFinishDocument(CUPS_HTTP_DEFAULT, queue_name) != IPP_OK) {
-	  fprintf(stderr, "%s: %s", argv[0], cupsLastErrorString());
+	  fprintf(stderr, "ERROR: %s: Unable to complete the job - %s. Retrying.",
+		  argv[0], cupsLastErrorString());
 	  cupsCancelJob2(CUPS_HTTP_DEFAULT, queue_name, job_id, 0);
-	  return (1);
+	  return (CUPS_BACKEND_RETRY_CURRENT);
 	}
       }
 
       if (job_id < 1) {
-	fprintf(stderr, "%s: %s", argv[0], cupsLastErrorString());
-	return (1);
+	fprintf(stderr, "ERROR: %s: Unable to create job - %s. Retrying.",
+		argv[0], cupsLastErrorString());
+	return (CUPS_BACKEND_RETRY_CURRENT);
       }
 
-      return (0);
+      return (CUPS_BACKEND_OK);
 
     } else {
-      fprintf(stderr, "ERROR: No suitable destination host found by cups-browsed.\n");
-      exit(CUPS_BACKEND_RETRY);
+      fprintf(stderr, "DEBUG: No suitable destination host found by cups-browsed, retrying in 5 sec.\n");
+      sleep(5);
+      return (CUPS_BACKEND_RETRY_CURRENT);
     }
   }
   else if (argc != 1)
@@ -220,7 +223,7 @@ main(int  argc,				/* I - Number of command-line args */
     fprintf(stderr,
 	    "Usage: %s job-id user title copies options [file]",
 	    argv[0]);
-    return (1);
+    return (CUPS_BACKEND_FAILED);
   }
 
  /*

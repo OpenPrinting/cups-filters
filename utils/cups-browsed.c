@@ -163,6 +163,7 @@ typedef struct remote_printer_s {
   time_t timeout;
   void *duplicate_of;
   int num_duplicates;
+  int last_printer;
   char *host;
   char *service_name;
   char *type;
@@ -2005,22 +2006,23 @@ on_printer_state_changed (CupsNotifier *object,
                           gboolean printer_is_accepting_jobs,
                           gpointer user_data)
 {
+  int i;
   char *ptr, buf[1024];
-  remote_printer_t *p;
+  remote_printer_t *p, *q;
   char server_str[1024];
   ipp_t *request, *response;
   ipp_attribute_t *attr;
   const char *pname = NULL;
   ipp_pstate_t pstate = IPP_PRINTER_IDLE;
-  int num_jobs, min_jobs = 99999999;
-  cups_job_t *jobs = NULL;
+  int paccept = 0;
   const char *dest_host = NULL;
   char filename[1024];
   FILE *fp;
   static const char *pattrs[] =
                 {
                   "printer-name",
-                  "printer-state"
+                  "printer-state",
+                  "printer-is-accepting-jobs"
                 };
 
   debug_printf("cups-browsed: [CUPS Notification] Printer state change: %s\n",
@@ -2070,19 +2072,36 @@ on_printer_state_changed (CupsNotifier *object,
     debug_printf("cups-browsed: [CUPS Notification] %s not default printer any more.\n", buf);
   } else if ((ptr = strstr(text, " state changed to processing")) != NULL) {
     /* Printer started processing a job, check if it uses the implicitclass
-       backend and if so, check all remote printers assigned to itself and
-       to its duplicates which is the most suitable to send the job to (in
-       terms of being enabled and minimum number of queued jobs). Supply
-       the appropriate device URI to the backend. */
+       backend and if so, check all remote printers assigned to this printer
+       and to its duplicates which is currently accepting jobs and idle. If all
+       are busy, we send a failure message and the backend will close with an
+       error code after some seconds of delay, to make the job getting retried
+       making us checking again here. If we find a destination, we tell the
+       backend which remote queue this destination is, making the backend
+       printing the job there immediately. */
     debug_printf("cups-browsed: [CUPS Notification] %s starts processing a job.\n", printer);
-    p = printer_record(printer);
-    if (p && p->num_duplicates > 0) {
+    q = printer_record(printer);
+    /* If we hit a duplicate and not the "master", switch to the "master" */
+    if (q && q->duplicate_of)
+      q = q->duplicate_of;
+    /* Having duplicates means that we are using the implicitclass backend */
+    if (q && q->num_duplicates > 0) {
       debug_printf("cups-browsed: [CUPS Notification] %s is using the \"implicitclass\" CUPS backend, so let us search a destination for this job.\n", printer);
-      for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
-	   p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+      /* We keep track of the printer which we used last time and start
+	 checking with the next printer this time, to get a "round robin"
+	 type of printer usage instead of having most jobs going to the first
+	 printer in the list. Method taken from the cupsdFindAvailablePrinter()
+	 function of the scheduler/classes.c file of CUPS. */
+      if (q->last_printer < 0 ||
+	  q->last_printer >= cupsArrayCount(remote_printers))
+	q->last_printer = 0;
+      for (i = q->last_printer + 1; ; i++) {
+	if (i >= cupsArrayCount(remote_printers))
+	  i = 0;
+	p = (remote_printer_t *)cupsArrayIndex(remote_printers, i);
 	if (!strcasecmp(p->name, printer) &&
 	    p->status == STATUS_CONFIRMED) {
-	  debug_printf("cups-browsed: Checking state and number of jobs of remote printer %s on host %s.\n", printer, p->host);
+	  debug_printf("cups-browsed: Checking state of remote printer %s on host %s.\n", printer, p->host);
 	  snprintf(server_str, sizeof(server_str), "%s:%d", p->host, ippPort());
 	  cupsSetServer(server_str);
 	  /* Check whether the printer is idle, processing, or disabled */
@@ -2096,6 +2115,9 @@ on_printer_state_changed (CupsNotifier *object,
 		       NULL, cupsUser());
 	  if ((response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/")) !=
 	      NULL) {
+	    pname = NULL;
+	    pstate = IPP_PRINTER_IDLE;
+	    paccept = 0;
 	    for (attr = ippFirstAttribute(response); attr != NULL;
 		 attr = ippNextAttribute(response)) {
 	      while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
@@ -2104,6 +2126,7 @@ on_printer_state_changed (CupsNotifier *object,
 		break;
 	      pname = NULL;
 	      pstate = IPP_PRINTER_IDLE;
+	      paccept = 0;
 	      while (attr != NULL && ippGetGroupTag(attr) ==
 		     IPP_TAG_PRINTER) {
 		if (!strcmp(ippGetName(attr), "printer-name") &&
@@ -2112,6 +2135,10 @@ on_printer_state_changed (CupsNotifier *object,
 		else if (!strcmp(ippGetName(attr), "printer-state") &&
 			 ippGetValueTag(attr) == IPP_TAG_ENUM)
 		  pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
+		else if (!strcmp(ippGetName(attr),
+				 "printer-is-accepting-jobs") &&
+			 ippGetValueTag(attr) == IPP_TAG_BOOLEAN)
+		  paccept = ippGetBoolean(attr, 0);
 		attr = ippNextAttribute(response);
 	      }
 	      if (pname == NULL) {
@@ -2121,34 +2148,34 @@ on_printer_state_changed (CupsNotifier *object,
 		  continue;
 	      }
 	      if (!strcasecmp(pname, printer)) {
-		switch (pstate) {
-		case IPP_PRINTER_IDLE:
-		  dest_host = p->host;
-		  debug_printf("cups-browsed: Printer %s on host %s is idle, take this as destination and stop searching.\n", printer, p->host);
-		  break;
-		case IPP_PRINTER_PROCESSING:
-		  num_jobs = 0;
-		  jobs = NULL;
-		  num_jobs =
-		    cupsGetJobs2(CUPS_HTTP_DEFAULT, &jobs, printer, 0,
-				 CUPS_WHICHJOBS_ACTIVE);
-		  if (num_jobs >= 0 && num_jobs < min_jobs) {
-		    min_jobs = num_jobs;
+		if (paccept) {
+		  debug_printf("cups-browsed: Printer %s on host %s is accepting jobs, check whether it is idle.\n", printer, p->host);
+		  switch (pstate) {
+		  case IPP_PRINTER_IDLE:
 		    dest_host = p->host;
+		    debug_printf("cups-browsed: Printer %s on host %s is idle, take this as destination and stop searching.\n", printer, p->host);
+		    break;
+		  case IPP_PRINTER_PROCESSING:
+		    debug_printf("cups-browsed: Printer %s on host %s is printing.\n", printer, p->host);
+		    break;
+		  case IPP_PRINTER_STOPPED:
+		    debug_printf("cups-browsed: Printer %s on host %s is disabled, skip it.\n", printer, p->host);
+		    break;
 		  }
-		  debug_printf("cups-browsed: Printer %s on host %s is printing and it has %d jobs.\n", printer, p->host, num_jobs);
-		  break;
-		case IPP_PRINTER_STOPPED:
-		  debug_printf("cups-browsed: Printer %s on host %s is disabled, skip it.\n", printer, p->host);
-		  break;
+		} else {
+		  debug_printf("cups-browsed: Printer %s on host %s is not accepting jobs, skip it.\n", printer, p->host);
 		}
 		break;
 	      }
 	    }
-	    if (pstate == IPP_PRINTER_IDLE)
+	    if (pstate == IPP_PRINTER_IDLE && paccept) {
+	      q->last_printer = i;
 	      break;
+	    }
 	  }
 	}
+	if (i == q->last_printer)
+	  break;
       }
       /* Set CUPS server back to local */
       cupsSetServer(NULL);
@@ -2168,7 +2195,7 @@ on_printer_state_changed (CupsNotifier *object,
 		     printer, dest_host, filename);
       } else {
 	fprintf(fp, "\"NO_DEST_FOUND\"");
-	debug_printf("cups-browsed: ERROR: No destination found for job to %s (file %s)\n",
+	debug_printf("cups-browsed: No destination found for job to %s (file %s)\n",
 		     printer, filename);
       }
       fclose(fp);
@@ -2962,10 +2989,8 @@ gboolean handle_cups_queues(gpointer unused) {
 	 it the default printer again. */
       queue_creation_handle_default(p->name);
 
-      /* If cups-browsed or the implicitclass backend has disabled this
-	 queue, re-enable it. */
-      if (is_disabled(p->name, "cups-browsed"))
-	enable_printer(p->name);
+      /* If this is queue disabled, re-enable it. */
+      enable_printer(p->name);
 
       break;
 
