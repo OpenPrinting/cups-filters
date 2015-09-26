@@ -127,8 +127,19 @@ main(int  argc,				/* I - Number of command-line args */
       return (CUPS_BACKEND_STOP);
     }
     
-    /* We have the destination host name now, do the job */
-    if (strcmp(dest_host, "NO_DEST_FOUND")) {
+    if (!strcmp(dest_host, "NO_DEST_FOUND")) {
+      /* All remote queues are either disabled or not accepting jobs, let
+	 CUPS retry after the usual interval */
+      fprintf(stderr, "ERROR: No suitable destination host found by cups-browsed.\n");
+      return (CUPS_BACKEND_RETRY);
+    } else if (!strcmp(dest_host, "ALL_DESTS_BUSY")) {
+      /* We queue on the client and all remote queues are busy, so we wait
+	 5 sec  and check again then */
+      fprintf(stderr, "DEBUG: No free destination host found by cups-browsed, retrying in 5 sec.\n");
+      sleep(5);
+      return (CUPS_BACKEND_RETRY_CURRENT);
+    } else {
+      /* We have the destination host name now, do the job */
       char server_str[1024];
       const char *title;
       int num_options = 0;
@@ -211,11 +222,6 @@ main(int  argc,				/* I - Number of command-line args */
       }
 
       return (CUPS_BACKEND_OK);
-
-    } else {
-      fprintf(stderr, "DEBUG: No suitable destination host found by cups-browsed, retrying in 5 sec.\n");
-      sleep(5);
-      return (CUPS_BACKEND_RETRY_CURRENT);
     }
   }
   else if (argc != 1)

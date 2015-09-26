@@ -1,32 +1,43 @@
 # Which protocols will we use to discover printers on the network?
 # Can use DNSSD and/or CUPS and/or LDAP, or 'none' for neither.
+
 BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
+
 
 # Which protocols will we use to broadcast shared local printers to the network?
 # Can use DNSSD and/or CUPS, or 'none' for neither.
 # Only CUPS is actually supported, as DNSSD is done by CUPS itself (we ignore
 # DNSSD in this directive).
+
 # BrowseLocalProtocols none
+
 
 # Settings of this directive apply to both BrowseRemoteProtocols and
 # BrowseLocalProtocols.
 # Can use DNSSD and/or CUPS and/or LDAP, or 'none' for neither.
+
 # BrowseProtocols none
 
+
 # Only browse remote printers from selected servers
+
 # BrowseAllow All
 # BrowseAllow cups.example.com
 # BrowseAllow 192.168.1.12
 # BrowseAllow 192.168.1.0/24
 # BrowseAllow 192.168.1.0/255.255.255.0
 
+
 # Use BrowsePoll to poll a particular CUPS server
+
 # BrowsePoll cups.example.com
 # BrowsePoll cups.example.com:631
 # BrowsePoll cups.example.com:631/version=1.1
 
+
 # LDAP browsing configuration
 # The default value for all options is an empty string. Example configuration:
+
 # BrowseLDAPBindDN cn=cups-browsed,dc=domain,dc=tld
 # BrowseLDAPCACertFile /path/to/server/certificate.pem
 # BrowseLDAPDN ou=printers,dc=domain,dc=tld
@@ -34,9 +45,12 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # BrowseLDAPPassword s3cret
 # BrowseLDAPServer ldaps://ldap.domain.tld
 
+
 # Use DomainSocket to access the local CUPS daemon via another than the
 # default domain socket
+
 # DomainSocket @CUPS_DEFAULT_DOMAINSOCKET@
+
 
 # Set CreateIPPPrinterQueues to "Yes" to let cups-browsed discover IPP
 # network printers (native printers, not CUPS queues) with known page
@@ -53,6 +67,7 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 
 # CreateIPPPrinterQueues Yes
 
+
 # If cups-browsed is automatically creating print queues for native
 # IPP network printers ("CreateIPPPrinterQueues Yes"), the type of
 # queue to be created can be selected by the "IPPPrinterQueueType"
@@ -68,6 +83,48 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # IPPPrinterQueueType PPD
 # IPPPrinterQueueType NoPPD
 
+
+# The LoadBalancing directive switches between two methods of handling
+# load balancing between equally-named remote queues which are
+# represented by one local print queue making up a cluster of them
+# (implicit class).
+
+# The two methods are:
+
+# Queuing of jobs on the client (LoadBalancing QueueOnClient):
+
+# Here we queue up the jobs on the client and regularly check the
+# clustered remote print queues. If we find an idle queue, we pass
+# on a job to it.
+
+# This is also the method which CUPS uses for classes. Advantage is a
+# more even distribution of the job workload on the servers
+# (especially if the printing speed of the servers is very different),
+# and if a server fails, there are not several jobs stuck or
+# lost. Disadvantage is that if one takes the client (laptop, mobile
+# phone, ...) out of the local network, printing stops with the jobs
+# waiting in the local queue.
+
+# Queuing of jobs on the servers (LoadBalancing QueueOnServers):
+
+# Here we check the number of jobs on each of the clustered remote
+# printers and send an incoming job immediately to the remote printer
+# with the lowest amount of jobs in its queue. This way no jobs queue
+# up locally, all jobs which are waiting are waiting on one of the
+# remote servers.
+
+# Not having jobs waiting locally has the advantage that we can take
+# the local machine from the network and all jobs get printed.
+# Disadvantage is that if a server with a full queue of jobs goes
+# away, the jobs go away, too.
+
+# Default is queuing the jobs on the client as this is what CUPS does
+# with classes.
+
+# LoadBalancing QueueOnClient
+# LoadBalancing QueueOnServers
+
+
 # The AutoShutdown directive specifies whether cups-browsed should
 # automatically terminate when it has no local raw queues set up
 # pointing to any discovered remote printers (auto shutdown
@@ -81,11 +138,13 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # AutoShutdown On
 # AutoShutdown avahi
 
+
 # The AutoShutdownTimeout directive specifies after how many seconds
 # without local raw queues set up pointing to any discovered remote
 # printers cups-browsed should actually shut down in auto shutdown
 # mode. Default is 30 seconds, 0 means immediate shutdown.
 
 # AutoShutdownTimeout 30
+
 
 # Unknown directives are ignored, also unknown values.

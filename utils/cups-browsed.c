@@ -234,6 +234,12 @@ typedef enum ipp_queue_type_e {
   PPD_NEVER
 } ipp_queue_type_t;
 
+/* Ways how we can do load balancing on remote queues with the same name */
+typedef enum load_balancing_type_e {
+  QUEUE_ON_CLIENT,
+  QUEUE_ON_SERVERS
+} load_balancing_type_t;
+
 cups_array_t *remote_printers;
 static cups_array_t *netifs;
 static cups_array_t *browseallow;
@@ -282,6 +288,7 @@ static guint update_netifs_sourceid = 0;
 static char *DomainSocket = NULL;
 static unsigned int CreateIPPPrinterQueues = 0;
 static ipp_queue_type_t IPPPrinterQueueType = PPD_AUTO;
+static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
 static int autoshutdown = 0;
 static int autoshutdown_avahi = 0;
 static int autoshutdown_timeout = 30;
@@ -2015,7 +2022,11 @@ on_printer_state_changed (CupsNotifier *object,
   const char *pname = NULL;
   ipp_pstate_t pstate = IPP_PRINTER_IDLE;
   int paccept = 0;
+  int num_jobs, min_jobs = 99999999;
+  cups_job_t *jobs = NULL;
   const char *dest_host = NULL;
+  int dest_index = 0;
+  int valid_dest_found = 0;
   char filename[1024];
   FILE *fp;
   static const char *pattrs[] =
@@ -2072,13 +2083,47 @@ on_printer_state_changed (CupsNotifier *object,
     debug_printf("cups-browsed: [CUPS Notification] %s not default printer any more.\n", buf);
   } else if ((ptr = strstr(text, " state changed to processing")) != NULL) {
     /* Printer started processing a job, check if it uses the implicitclass
-       backend and if so, check all remote printers assigned to this printer
-       and to its duplicates which is currently accepting jobs and idle. If all
-       are busy, we send a failure message and the backend will close with an
-       error code after some seconds of delay, to make the job getting retried
-       making us checking again here. If we find a destination, we tell the
-       backend which remote queue this destination is, making the backend
-       printing the job there immediately. */
+       backend and if so, we select the remote queue to which to send the job
+       in a way so that we get load balancing between all remote queues
+       associated with this queue.
+
+       There are two methods to do that (configurable in cups-browsed.conf):
+
+       Queuing of jobs on the client (LoadBalancingType = QUEUE_ON_CLIENT):
+
+       Here we check all remote printers assigned to this printer and to its
+       duplicates which is currently accepting jobs and idle. If all are busy,
+       we send a failure message and the backend will close with an error code
+       after some seconds of delay, to make the job getting retried making us
+       checking again here. If we find a destination, we tell the backend
+       which remote queue this destination is, making the backend printing the
+       job there immediately.
+
+       With this all waiting jobs get queued up on the client, on the servers
+       there will only be the jobs which are actually printing, as we do not
+       send jobs to a server which is already printing. This is also the
+       method which CUPS uses for classes. Advantage is a more even
+       distribution of the job workload on the servers, and if a server fails,
+       there are not several jobs stuck or lost. Disadvantage is that if one
+       takes the client (laptop, mobile phone, ...) out of the local network,
+       printing stops with the jobs waiting in the local queue.
+
+       Queuing of jobs on the servers (LoadBalancingType = QUEUE_ON_SERVERS):
+
+       Here we check all remote printers assigned to this printer and to its
+       duplicates which is currently accepting jobs and find the one with the
+       lowest amount of jobs waiting and send the job to there. So on the
+       local queue we have never jobs waiting if at least one remote printer
+       accepts jobs.
+
+       Not having jobs waiting locally has the advantage that we can take the
+       local machine from the network and all jobs get printed. Disadvantage
+       is that if a server with a full queue of jobs goes away, the jobs go
+       away, too.
+
+       Default is queuing the jobs on the client as this is what CUPS does
+       with classes. */
+
     debug_printf("cups-browsed: [CUPS Notification] %s starts processing a job.\n", printer);
     q = printer_record(printer);
     /* If we hit a duplicate and not the "master", switch to the "master" */
@@ -2149,14 +2194,30 @@ on_printer_state_changed (CupsNotifier *object,
 	      }
 	      if (!strcasecmp(pname, printer)) {
 		if (paccept) {
-		  debug_printf("cups-browsed: Printer %s on host %s is accepting jobs, check whether it is idle.\n", printer, p->host);
+		  debug_printf("cups-browsed: Printer %s on host %s is accepting jobs.\n", printer, p->host);
 		  switch (pstate) {
 		  case IPP_PRINTER_IDLE:
+		    valid_dest_found = 1;
 		    dest_host = p->host;
+		    dest_index = i;
 		    debug_printf("cups-browsed: Printer %s on host %s is idle, take this as destination and stop searching.\n", printer, p->host);
 		    break;
 		  case IPP_PRINTER_PROCESSING:
-		    debug_printf("cups-browsed: Printer %s on host %s is printing.\n", printer, p->host);
+		    valid_dest_found = 1;
+		    if (LoadBalancingType == QUEUE_ON_SERVERS) {
+		      num_jobs = 0;
+		      jobs = NULL;
+		      num_jobs =
+			cupsGetJobs2(CUPS_HTTP_DEFAULT, &jobs, printer, 0,
+				     CUPS_WHICHJOBS_ACTIVE);
+		      if (num_jobs >= 0 && num_jobs < min_jobs) {
+			min_jobs = num_jobs;
+			dest_host = p->host;
+			dest_index = i;
+		      }
+		      debug_printf("cups-browsed: Printer %s on host %s is printing and it has %d jobs.\n", printer, p->host, num_jobs);
+		    } else
+		      debug_printf("cups-browsed: Printer %s on host %s is printing.\n", printer, p->host);
 		    break;
 		  case IPP_PRINTER_STOPPED:
 		    debug_printf("cups-browsed: Printer %s on host %s is disabled, skip it.\n", printer, p->host);
@@ -2190,9 +2251,14 @@ on_printer_state_changed (CupsNotifier *object,
 	return;
       }
       if (dest_host) {
+	q->last_printer = dest_index;
 	fprintf(fp, "\"%s\"", dest_host);
 	debug_printf("cups-browsed: Wrote destination for job to %s: %s (to file %s)\n",
 		     printer, dest_host, filename);
+      } else if (valid_dest_found == 1) {
+	fprintf(fp, "\"ALL_DESTS_BUSY\"");
+	debug_printf("cups-browsed: All destinations busy for job to %s (file %s)\n",
+		     printer, filename);
       } else {
 	fprintf(fp, "\"NO_DEST_FOUND\"");
 	debug_printf("cups-browsed: No destination found for job to %s (file %s)\n",
@@ -2989,7 +3055,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	 it the default printer again. */
       queue_creation_handle_default(p->name);
 
-      /* If this is queue disabled, re-enable it. */
+      /* If this queue is disabled, re-enable it. */
       enable_printer(p->name);
 
       break;
@@ -4815,6 +4881,11 @@ read_configuration (const char *filename)
 	IPPPrinterQueueType = PPD_ONLY;
       else if (!strncasecmp(value, "NoPPD", 5))
 	IPPPrinterQueueType = PPD_NEVER;
+    } else if (!strcasecmp(line, "LoadBalancing") && value) {
+      if (!strncasecmp(value, "QueueOnClient", 13))
+	LoadBalancingType = QUEUE_ON_CLIENT;
+      else if (!strncasecmp(value, "QueueOnServers", 14))
+	LoadBalancingType = QUEUE_ON_SERVERS;
     } else if (!strcasecmp(line, "AutoShutdown") && value) {
       char *p, *saveptr;
       p = strtok_r (value, delim, &saveptr);
@@ -4845,17 +4916,17 @@ read_configuration (const char *filename)
 		     t);
     }
 #ifdef HAVE_LDAP
-      else if (!strcasecmp(line, "BrowseLDAPBindDN") && value) {
+    else if (!strcasecmp(line, "BrowseLDAPBindDN") && value) {
       if (value[0] != '\0')
 	BrowseLDAPBindDN = strdup(value);
     }
 #  ifdef HAVE_LDAP_SSL
-      else if (!strcasecmp(line, "BrowseLDAPCACertFile") && value) {
+    else if (!strcasecmp(line, "BrowseLDAPCACertFile") && value) {
       if (value[0] != '\0')
 	BrowseLDAPCACertFile = strdup(value);
     }
 #  endif /* HAVE_LDAP_SSL */
-      else if (!strcasecmp(line, "BrowseLDAPDN") && value) {
+    else if (!strcasecmp(line, "BrowseLDAPDN") && value) {
       if (value[0] != '\0')
 	BrowseLDAPDN = strdup(value);
     } else if (!strcasecmp(line, "BrowseLDAPPassword") && value) {

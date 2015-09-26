@@ -133,6 +133,69 @@ a printer setup tool nor a collection of printer drivers and PPDs.
 
 .fam T
 .fi
+If cups-browsed is automatically creating print queues for native
+IPP network printers ("CreateIPPPrinterQueues Yes"), the type of
+queue to be created can be selected by the "IPPPrinterQueueType"
+directive.  The "PPD" setting makes always queues with PPD file
+being created and no queue if the printer does not supply sufficient
+information for creating a PPD. With "NoPPD" the queue is always
+created with a System V interface script as filter, also when
+creatig a PPD would be possible.  "Auto" (the default) lets a PPD
+being created if the printer supplies sufficient information and a
+System V interface script otherwise.
+.PP
+.nf
+.fam C
+        IPPPrinterQueueType Auto
+        IPPPrinterQueueType PPD
+        IPPPrinterQueueType NoPPD
+
+.fam T
+.fi
+The LoadBalancing directive switches between two methods of handling
+load balancing between equally-named remote queues which are
+represented by one local print queue making up a cluster of them
+(implicit class).
+.PP
+The two methods are:
+.PP
+Queuing of jobs on the client (LoadBalancing QueueOnClient):
+.PP
+Here we queue up the jobs on the client and regularly check the
+clustered remote print queues. If we find an idle queue, we pass
+on a job to it.
+.PP
+This is also the method which CUPS uses for classes. Advantage is a
+more even distribution of the job workload on the servers
+(especially if the printing speed of the servers is very different),
+and if a server fails, there are not several jobs stuck or
+lost. Disadvantage is that if one takes the client (laptop, mobile
+phone, ...) out of the local network, printing stops with the jobs
+waiting in the local queue.
+.PP
+Queuing of jobs on the servers (LoadBalancing QueueOnServers):
+.PP
+Here we check the number of jobs on each of the clustered remote
+printers and send an incoming job immediately to the remote printer
+with the lowest amount of jobs in its queue. This way no jobs queue
+up locally, all jobs which are waiting are waiting on one of the
+remote servers.
+.PP
+Not having jobs waiting locally has the advantage that we can take
+the local machine from the network and all jobs get printed.
+Disadvantage is that if a server with a full queue of jobs goes
+away, the jobs go away, too.
+.PP
+Default is queuing the jobs on the client as this is what CUPS does
+with classes.
+.PP
+.nf
+.fam C
+        LoadBalancing QueueOnClient
+        LoadBalancing QueueOnServers
+
+.fam T
+.fi
 The AutoShutdown directive specifies whether cups-browsed should
 automatically terminate when it has no local raw queues set up
 pointing to any discovered remote printers (auto shutdown
