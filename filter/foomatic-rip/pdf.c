@@ -121,11 +121,15 @@ static int pdf_extract_pages(char filename[PATH_MAX],
     close (fd);
 
     snprintf(filename_arg, PATH_MAX, "-sOutputFile=%s", filename);
-    snprintf(first_arg, 50, "-dFirstPage=%d", first);
-    if (last > 0)
-        snprintf(last_arg, 50, "-dLastPage=%d", last);
-    else
-        first_arg[0] = '\0';
+
+    first_arg[0] = '\0';
+    last_arg[0] = '\0';
+    if (first > 1)
+    {
+        snprintf(first_arg, 50, "-dFirstPage=%d", first);
+        if (last >= first)
+            snprintf(last_arg, 50, "-dLastPage=%d", last);
+    }
 
     snprintf(gscommand, CMDLINE_MAX, "%s -q -dNOPAUSE -dBATCH -dPARANOIDSAFER -dNOINTERPOLATE"
 	     "-sDEVICE=pdfwrite %s %s %s %s",
@@ -188,13 +192,16 @@ static int render_pages_with_ghostscript(dstr_t *cmd,
 
     dstrinsertf(cmd, end_gs_cmd, " %s ", filename);
 
-    if (lastpage > 0)
-        dstrinsertf(cmd, start_gs_cmd +2,
-                    " -dFirstPage=%d -dLastPage=%d ",
-                    firstpage, lastpage);
-    else
-        dstrinsertf(cmd, start_gs_cmd +2,
-                    " -dFirstPage=%d ", firstpage);
+    if (firstpage > 1)
+    {
+        if (lastpage >= firstpage)
+            dstrinsertf(cmd, start_gs_cmd +2,
+                        " -dFirstPage=%d -dLastPage=%d ",
+                        firstpage, lastpage);
+        else
+            dstrinsertf(cmd, start_gs_cmd +2,
+                        " -dFirstPage=%d ", firstpage);
+    }
 
     return start_renderer(cmd->data);
 }

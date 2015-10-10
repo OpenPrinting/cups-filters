@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.76 - 2015-09-12
 
 CHANGES IN V1.0.77
 
+	- foomatic-rip: Use -dFirstPage=... and -dLastPage=... only
+	  if really needed (Bug #1324).
 	- cups-browsed, implicitclass: Make the load-balancing
 	  configurable so that one can select whether the jobs get
 	  queued up locally like in a CUPS class or whether they get
