@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.0.76 - 2015-09-12
 
 CHANGES IN V1.0.77
 
+	- cups-browsed: Added a mode in which IP-based device URIs
+	  for the generation of local print queues are used, for
+	  cases with problems in local host name resolution.
 	- foomatic-rip: Use -dFirstPage=... and -dLastPage=... only
 	  if really needed (Bug #1324).
 	- cups-browsed, implicitclass: Make the load-balancing

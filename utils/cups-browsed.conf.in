@@ -52,6 +52,17 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # DomainSocket @CUPS_DEFAULT_DOMAINSOCKET@
 
 
+# Set IPBasedDeviceURIs to "Yes" if cups-browsed should create its
+# local queues with device URIs with the IP addresses instead of the
+# host names of the remote servers. This mode is there for any
+# problems with host name resolution in the network, especially also
+# if avahi-daemon is only run for printer discovery and already
+# stopped while still printing. By default this mode is turned off,
+# meaning that we use URIs with host names.
+
+# IPBasedDeviceURIs Yes
+
+
 # Set CreateIPPPrinterQueues to "Yes" to let cups-browsed discover IPP
 # network printers (native printers, not CUPS queues) with known page
 # description languages (PWG Raster, PDF, PostScript, PCL XL, PCL

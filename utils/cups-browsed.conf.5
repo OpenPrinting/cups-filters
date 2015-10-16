@@ -115,6 +115,20 @@ CUPS daemon via a domain socket it accesses it via localhost.
 
 .fam T
 .fi
+Set IPBasedDeviceURIs to "Yes" if cups-browsed should create its local
+queues with device URIs with the IP addresses instead of the host
+names of the remote servers. This mode is there for any problems with
+host name resolution in the network, especially also if avahi-daemon
+is only run for printer discovery and already stopped while still
+printing. By default this mode is turned off, meaning that we use URIs
+with host names.
+.PP
+.nf
+.fam C
+        IPBasedDeviceURIs Yes
+
+.fam T
+.fi
 The CreateIPPPrinterQueues directive specifies whether cups-browsed
 should discover IPP printers (via Bonjour) and if they understand a
 known page description language (PWG Raster, PDF, PostScript, PCL XL,

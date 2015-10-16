@@ -165,6 +165,7 @@ typedef struct remote_printer_s {
   int num_duplicates;
   int last_printer;
   char *host;
+  char *ip;
   char *service_name;
   char *type;
   char *domain;
@@ -286,6 +287,7 @@ static browsepoll_t **BrowsePoll = NULL;
 static size_t NumBrowsePoll = 0;
 static guint update_netifs_sourceid = 0;
 static char *DomainSocket = NULL;
+static unsigned int IPBasedDeviceURIs = 0;
 static unsigned int CreateIPPPrinterQueues = 0;
 static ipp_queue_type_t IPPPrinterQueueType = PPD_AUTO;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
@@ -302,7 +304,9 @@ static void browse_poll_create_subscription (browsepoll_t *context,
 					     http_t *conn);
 static gboolean browse_poll_get_notifications (browsepoll_t *context,
 					       http_t *conn);
-static remote_printer_t *generate_local_queue(const char *host, uint16_t port,
+static remote_printer_t *generate_local_queue(const char *host,
+					      const char *ip,
+					      uint16_t port,
 					      char *resource, const char *name,
 					      const char *type,
 					      const char *domain, void *txt);
@@ -1386,7 +1390,7 @@ cupsdUpdateLDAPBrowse(void)
     debug_printf("cups-browsed: browsed LDAP queue name is %s\n",
 		 local_resource + 9);
 
-    generate_local_queue(host, port, local_resource, info, "", "", NULL);
+    generate_local_queue(host, NULL, port, local_resource, info, "", "", NULL);
 
   }
 
@@ -2131,7 +2135,7 @@ on_printer_state_changed (CupsNotifier *object,
       q = q->duplicate_of;
     /* Having duplicates means that we are using the implicitclass backend */
     if (q && q->num_duplicates > 0) {
-      debug_printf("cups-browsed: [CUPS Notification] %s is using the \"implicitclass\" CUPS backend, so let us search a destination for this job.\n", printer);
+      debug_printf("cups-browsed: [CUPS Notification] %s is using the \"implicitclass\" CUPS backend, so let us search for a destination for this job.\n", printer);
       /* We keep track of the printer which we used last time and start
 	 checking with the next printer this time, to get a "round robin"
 	 type of printer usage instead of having most jobs going to the first
@@ -2147,7 +2151,8 @@ on_printer_state_changed (CupsNotifier *object,
 	if (!strcasecmp(p->name, printer) &&
 	    p->status == STATUS_CONFIRMED) {
 	  debug_printf("cups-browsed: Checking state of remote printer %s on host %s.\n", printer, p->host);
-	  snprintf(server_str, sizeof(server_str), "%s:%d", p->host, ippPort());
+	  snprintf(server_str, sizeof(server_str), "%s:%d",
+		   p->ip ? p->ip : p->host, ippPort());
 	  cupsSetServer(server_str);
 	  /* Check whether the printer is idle, processing, or disabled */
 	  request = ippNewRequest(CUPS_GET_PRINTERS);
@@ -2198,7 +2203,7 @@ on_printer_state_changed (CupsNotifier *object,
 		  switch (pstate) {
 		  case IPP_PRINTER_IDLE:
 		    valid_dest_found = 1;
-		    dest_host = p->host;
+		    dest_host = p->ip ? p->ip : p->host;
 		    dest_index = i;
 		    debug_printf("cups-browsed: Printer %s on host %s is idle, take this as destination and stop searching.\n", printer, p->host);
 		    break;
@@ -2212,7 +2217,7 @@ on_printer_state_changed (CupsNotifier *object,
 				     CUPS_WHICHJOBS_ACTIVE);
 		      if (num_jobs >= 0 && num_jobs < min_jobs) {
 			min_jobs = num_jobs;
-			dest_host = p->host;
+			dest_host = p->ip ? p->ip : p->host;
 			dest_index = i;
 		      }
 		      debug_printf("cups-browsed: Printer %s on host %s is printing and it has %d jobs.\n", printer, p->host, num_jobs);
@@ -2321,6 +2326,7 @@ static remote_printer_t *
 create_local_queue (const char *name,
 		    const char *uri,
 		    const char *host,
+		    const char *ip,
 		    const char *info,
 		    const char *type,
 		    const char *domain,
@@ -2372,6 +2378,8 @@ create_local_queue (const char *name,
   p->host = strdup (host);
   if (!p->host)
     goto fail;
+
+  p->ip = (ip != NULL ? strdup (ip) : NULL);
 
   p->service_name = strdup (info);
   if (!p->service_name)
@@ -2690,6 +2698,7 @@ create_local_queue (const char *name,
   free (p->type);
   free (p->service_name);
   free (p->host);
+  if (p->ip) free (p->ip);
   cupsFreeOptions(p->num_options, p->options);
   free (p->uri);
   free (p->name);
@@ -2888,6 +2897,7 @@ gboolean handle_cups_queues(gpointer unused) {
       if (p->uri) free (p->uri);
       cupsFreeOptions(p->num_options, p->options);
       if (p->host) free (p->host);
+      if (p->ip) free (p->ip);
       if (p->service_name) free (p->service_name);
       if (p->type) free (p->type);
       if (p->domain) free (p->domain);
@@ -3104,6 +3114,7 @@ recheck_timer (void)
 
 static remote_printer_t *
 generate_local_queue(const char *host,
+		     const char *ip,
 		     uint16_t port,
 		     char *resource,
 		     const char *name,
@@ -3134,7 +3145,7 @@ generate_local_queue(const char *host,
   /* Determine the device URI of the remote printer */
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri) - 1,
 		   (strcasestr(type, "_ipps") ? "ipps" : "ipp"), NULL,
-		   host, port, "/%s", resource);
+		   (ip != NULL ? ip : host), port, "/%s", resource);
   /* Find the remote host name.
    * Used in constructing backup_queue_name, so need to sanitize.
    * strdup() is called inside remove_bad_chars() and result is free()-able.
@@ -3339,6 +3350,7 @@ generate_local_queue(const char *host,
 		     p->name, remote_host, uri);
       free(p->uri);
       free(p->host);
+      free(p->ip);
       free(p->service_name);
       free(p->type);
       free(p->domain);
@@ -3346,6 +3358,7 @@ generate_local_queue(const char *host,
       p->status = STATUS_TO_BE_CREATED;
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
       p->host = strdup(remote_host);
+      p->ip = (ip != NULL ? strdup(ip) : NULL);
       p->service_name = strdup(name);
       p->type = strdup(type);
       p->domain = strdup(domain);
@@ -3369,6 +3382,10 @@ generate_local_queue(const char *host,
       free (p->host);
       p->host = strdup(remote_host);
     }
+    if (p->ip && p->ip[0] == '\0') {
+      free (p->ip);
+      p->ip = (ip !=NULL ? strdup(ip) : NULL);
+    }
     if (p->service_name[0] == '\0' && name) {
       free (p->service_name);
       p->service_name = strdup(name);
@@ -3385,7 +3402,7 @@ generate_local_queue(const char *host,
 
     /* We need to create a local queue pointing to the
        discovered printer */
-    p = create_local_queue (local_queue_name, uri, remote_host,
+    p = create_local_queue (local_queue_name, uri, remote_host, ip,
 			    name ? name : "", type, domain, pdl, color, duplex,
 			    remote_queue, is_cups_queue);
   }
@@ -3406,8 +3423,8 @@ generate_local_queue(const char *host,
 #ifdef HAVE_AVAHI
 static void resolve_callback(
   AvahiServiceResolver *r,
-  AVAHI_GCC_UNUSED AvahiIfIndex interface,
-  AVAHI_GCC_UNUSED AvahiProtocol protocol,
+  AvahiIfIndex interface,
+  AvahiProtocol protocol,
   AvahiResolverEvent event,
   const char *name,
   const char *type,
@@ -3461,9 +3478,36 @@ static void resolve_callback(
 
     if (rp_key && rp_value && adminurl_key && adminurl_value &&
 	!strcasecmp(rp_key, "rp") && !strcasecmp(adminurl_key, "adminurl")) {
-      /* Check remote printer type and create appropriate local queue to
-         point to it */
-      generate_local_queue(host_name, port, rp_value, name, type, domain, txt);
+      /* Determine the remote printer's IP */
+      if (IPBasedDeviceURIs != 0) {
+	char addrstr[256];
+	int addrfound = 0;
+	if (address->proto == AVAHI_PROTO_INET) {
+	  avahi_address_snprint(addrstr, sizeof(addrstr), address);
+	  addrfound = 1;
+	} else if (address->proto == AVAHI_PROTO_INET6 &&
+		   interface != AVAHI_IF_UNSPEC) {
+	  char ifname[IF_NAMESIZE];
+	  addrstr[0] = '[';
+	  avahi_address_snprint(addrstr + 1, sizeof(addrstr) - 1, address);
+	  snprintf(addrstr + strlen(addrstr), sizeof(addrstr) - strlen(addrstr),
+		   "+%s]", if_indextoname(interface, ifname));
+	  addrfound = 1;
+	}
+	if (addrfound == 1) {
+	  /* Check remote printer type and create appropriate local queue to
+	     point to it */
+	  debug_printf("cups-browsed: Avahi Resolver: Service '%s' of type '%s' in domain '%s' with IP address %s.\n",
+		       name, type, domain, addrstr);
+	  generate_local_queue(host_name, addrstr, port, rp_value, name, type, domain, txt);
+	} else
+	  debug_printf("cups-browsed: Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not determine IP address.\n",
+		       name, type, domain);
+      } else {
+	/* Check remote printer type and create appropriate local queue to
+	   point to it */
+	generate_local_queue(host_name, NULL, port, rp_value, name, type, domain, txt);
+      }
     }
 
     /* Clean up */
@@ -3587,6 +3631,7 @@ static void browse_callback(
 	/* Remove the data of the disappeared remote printer */
 	free (p->uri);
 	free (p->host);
+	if (p->ip) free (p->ip);
 	free (p->service_name);
 	free (p->type);
 	free (p->domain);
@@ -3597,6 +3642,7 @@ static void browse_callback(
 	/* Replace the data with the data of the duplicate printer */
 	p->uri = strdup(q->uri);
 	p->host = strdup(q->host);
+	p->ip = (q->ip != NULL ? strdup(q->ip) : NULL);
 	p->service_name = strdup(q->service_name);
 	p->type = strdup(q->type);
 	p->domain = strdup(q->domain);
@@ -3872,7 +3918,7 @@ found_cups_printer (const char *remote_host, const char *uri,
   debug_printf("cups-browsed: browsed queue name is %s\n",
 	       local_resource + 9);
 
-  printer = generate_local_queue(host, port, local_resource,
+  printer = generate_local_queue(host, NULL, port, local_resource,
 				 info ? info : "",
 				 "", "", NULL);
 
@@ -4867,6 +4913,13 @@ read_configuration (const char *filename)
     } else if (!strcasecmp(line, "DomainSocket") && value) {
       if (value[0] != '\0')
 	DomainSocket = strdup(value);
+    } else if (!strcasecmp(line, "IPBasedDeviceURIs") && value) {
+      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
+	IPBasedDeviceURIs = 1;
+      else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
+	IPBasedDeviceURIs = 0;
     } else if (!strcasecmp(line, "CreateIPPPrinterQueues") && value) {
       if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
@@ -4987,7 +5040,7 @@ find_previous_queue (gpointer key,
     /* Queue found, add to our list */
     p = create_local_queue (name,
 			    printer->device_uri,
-			    "", "", "", "", NULL, 0, 0, NULL, 1);
+			    "", "", "", "", "", NULL, 0, 0, NULL, 1);
     if (p) {
       /* Mark as unconfirmed, if no Avahi report of this queue appears
 	 in a certain time frame, we will remove the queue */
