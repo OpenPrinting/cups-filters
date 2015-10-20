@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.0.76 - 2015-09-12
 
 CHANGES IN V1.0.77
 
+	- foomatic-rip: Fixed string length for shell path constant, to
+	  work also with systems having longer paths (Bug #1325)
 	- cups-browsed: Added a mode in which IP-based device URIs
 	  for the generation of local print queues are used, for
 	  cases with problems in local host name resolution.

@@ -174,7 +174,7 @@ char cupsfilterpath[PATH_MAX] = "/usr/local/lib/cups/filter:"
                                 "/opt/cups/filter:"
                                 "/usr/lib/cups/filter";
 
-char modern_shell[64] = SHELL;
+char modern_shell[] = SHELL;
 
 void config_set_option(const char *key, const char *value)
 {
