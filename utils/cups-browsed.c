@@ -139,6 +139,7 @@ static int	ldap_rebind_proc(LDAP *RebindLDAPHandle,
 
 #define LOCAL_DEFAULT_PRINTER_FILE "/var/cache/cups/cups-browsed-local-default-printer"
 #define REMOTE_DEFAULT_PRINTER_FILE "/var/cache/cups/cups-browsed-remote-default-printer"
+#define SAVE_OPTIONS_FILE "/var/cache/cups/cups-browsed-options-%s"
 #define IMPLICIT_CLASS_DEST_HOST_FILE "/var/cache/cups/cups-browsed-dest-host-%s"
 
 /* Status of remote printer */
@@ -1732,7 +1733,7 @@ is_disabled(const char *printer, const char *reason) {
 	}
       }
     }
-    debug_printf("cups-browsed: ERROR: No information found about the requested printer '%s'\n",
+    debug_printf("cups-browsed: No information regarding enabled/disabled found about the requested printer '%s'\n",
 		 printer);
     return NULL;
   }
@@ -1912,6 +1913,188 @@ retrieve_default_printer(int local) {
   fclose(fp);
   
   return printer;
+}
+
+int
+invalidate_printer_options(const char *printer) {
+  char filename[1024];
+
+  snprintf(filename, sizeof(filename), SAVE_OPTIONS_FILE,
+	   printer);
+  unlink(filename);
+  return 0;
+}
+
+int
+record_printer_options(const char *printer) {
+  char filename[1024];
+  FILE *fp = NULL;
+  char uri[HTTP_MAX_URI], *resource;
+  ipp_t *request, *response;
+  ipp_attribute_t *attr;
+  const char *key;
+  char valuebuffer[65536];
+  const char *ppdname;
+  ppd_file_t *ppd;
+  ppd_option_t *ppd_opt;
+  /* List of IPP attributes to get recorded */
+  static const char *attrs_to_record[] =
+                {
+                  "*-default",
+		  "auth-info-required",
+                  /*"device-uri",*/
+                  "job-quota-period",
+		  "job-k-limit",
+		  "job-page-limit",
+		  /*"port-monitor",*/
+		  "printer-error-policy",
+		  "printer-info",
+		  "printer-is-accepting-jobs",
+		  "printer-is-shared",
+		  "printer-geo-location",
+		  "printer-location",
+		  "printer-op-policy",
+		  "printer-organization",
+		  "printer-organizational-unit",
+		  /*"printer-state",
+		  "printer-state-message",
+		  "printer-state-reasons",*/
+		  "requesting-user-name-allowed",
+		  "requesting-user-name-denied",
+		  NULL
+                };
+  const char **ptr;
+
+  if (printer == NULL || strlen(printer) == 0)
+    return 0;
+
+  snprintf(filename, sizeof(filename), SAVE_OPTIONS_FILE,
+	   printer);
+
+  debug_printf("cups-browsed: Recording printer options for %s to %s\n",
+	       printer, filename);
+
+  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+		   "localhost", 0, "/printers/%s", printer);
+  resource = uri + (strlen(uri) - strlen(printer) - 10);
+  request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
+	       uri);
+  response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, resource);
+
+  fp = fopen(filename, "w+");
+  if (fp == NULL) {
+    debug_printf("cups-browsed: ERROR: Failed creating file %s\n",
+		 filename);
+    return -1;
+  }
+
+  /* Write all supported printer attributes */
+  attr = ippFirstAttribute(response);
+  while (attr) {
+    key = ippGetName(attr);
+    for (ptr = attrs_to_record; *ptr; ptr++)
+      if (strcasecmp(key, *ptr) == 0 ||
+	  (*ptr[0] == '*' &&
+	   strcasecmp(key + strlen(key) - strlen(*ptr) + 1, *ptr + 1) == 0))
+	break;
+    if (*ptr != NULL) {
+      fprintf (fp, "%s=", key);
+      ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+      fprintf (fp, "%s\n", valuebuffer);
+    }
+    attr = ippNextAttribute(response);
+  }
+
+  /* If there is a PPD file for this printer, either local for IPP network
+     printers or on the remote CUPS server for remote CUPS printers, we
+     save the local settings for the PPD options. */
+  if ((ppdname = cupsGetPPD(printer)) == NULL) {
+    debug_printf("cups-browsed: Unable to get PPD file for %s: %s\n",
+		 printer, cupsLastErrorString());
+  } else if ((ppd = ppdOpenFile(ppdname)) == NULL) {
+    unlink(ppdname);
+    debug_printf("cups-browsed: Unable to open PPD file for %s.\n",
+		 printer);
+  } else {
+    ppdMarkDefaults(ppd);
+
+    for (ppd_opt = ppdFirstOption(ppd); ppd_opt; ppd_opt = ppdNextOption(ppd))
+      if (strcasecmp(ppd_opt->keyword, "PageRegion") != 0)
+	fprintf (fp, "%s=%s\n", ppd_opt->keyword, ppd_opt->defchoice);
+
+    ppdClose(ppd);
+    unlink(ppdname);
+  }
+
+  fclose(fp);
+
+  return 0;
+}
+
+int
+retrieve_printer_options(const char *printer) {
+  char filename[1024];
+  FILE *fp = NULL;
+  char uri[HTTP_MAX_URI];
+  ipp_t *request;
+  int num_options;
+  cups_option_t *options;
+  char opt[65536], *val;
+
+  if (printer == NULL || strlen(printer) == 0)
+    return 0;
+
+  snprintf(filename, sizeof(filename), SAVE_OPTIONS_FILE,
+	   printer);
+
+  debug_printf("cups-browsed: Retrieving printer options for %s from %s\n",
+	       printer, filename);
+
+  fp = fopen(filename, "r");
+  if (fp == NULL) {
+    debug_printf("cups-browsed: Failed reading file %s, probably no options recorded yet\n",
+		 filename);
+    return 0;
+  }
+
+  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+		   "localhost", ippPort(), "/printers/%s", printer);
+  request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
+	       uri);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+	       "requesting-user-name", NULL, cupsUser());
+
+  /* Now read the lines of the file and add each setting to our request */
+  num_options = 0;
+  options = NULL;
+  errno = 0;
+  while ((val = fgets(opt, sizeof(opt), fp)) != NULL) {
+    if (strlen(opt) > 1 && (val = strchr(opt, '=')) != NULL) {
+      *val = '\0';
+      val ++;
+      val[strlen(val)-1] = '\0';
+      num_options = cupsAddOption(opt, val, num_options, &options);
+    }
+  }
+  if (errno != 0) {
+    debug_printf("cups-browsed: Failed reading file %s: %s\n",
+		 filename, strerror(errno));
+    fclose(fp);
+    return -1;
+  }	 
+  fclose(fp);
+
+  cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
+  cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
+  ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
+  cupsFreeOptions(num_options, options);
+  if (cupsLastError() > IPP_OK_CONFLICT)
+    debug_printf("cups-browsed: Unable to modify CUPS queue (%s)!\n",
+		 cupsLastErrorString());
+
+  return 0;
 }
 
 int
@@ -2318,6 +2501,29 @@ on_printer_deleted (CupsNotifier *object,
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
       recheck_timer();
     }
+  }
+}
+
+static void
+on_printer_modified (CupsNotifier *object,
+		     const gchar *text,
+		     const gchar *printer_uri,
+		     const gchar *printer,
+		     guint printer_state,
+		     const gchar *printer_state_reasons,
+		     gboolean printer_is_accepting_jobs,
+		     gpointer user_data)
+{
+  debug_printf("cups-browsed: [CUPS Notification] Printer modified: %s\n",
+	       text);
+
+  if (is_created_by_cups_browsed(printer)) {
+    /* The user has changed settings of a printer which we have generated,
+       backup the changes for the case of a crash or unclean shutdown of
+       cups-browsed. */
+    debug_printf("cups-browsed: Settings of printer %s got modified, doing backup.\n",
+		 printer);
+    record_printer_options(printer);
   }
 }
 
@@ -2830,6 +3036,10 @@ gboolean handle_cups_queues(gpointer unused) {
 	  break;
 	}
 
+	/* Record the option settings to retrieve them when the remote
+	   queue re-appears later or when cups-browsed gets started again */
+	record_printer_options(p->name);
+
 	/* Check whether there are still jobs and do not remove the queue
 	   then */
 	num_jobs = 0;
@@ -3006,7 +3216,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	num_options = cupsAddOption(strdup(p->options[i].name),
 				    strdup(p->options[i].value),
 				    num_options, &options);
-      
+      cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
       /* PPD from system's CUPS installation */
       if (p->model) {
@@ -3039,6 +3249,9 @@ gboolean handle_cups_queues(gpointer unused) {
 	break;
       }
 
+      /* Option settings which we have recorded from the previous session */
+      retrieve_printer_options(p->name);
+
       /* If this queue was the default printer in its previous life, make
 	 it the default printer again. */
       queue_creation_handle_default(p->name);
@@ -3067,6 +3280,10 @@ gboolean handle_cups_queues(gpointer unused) {
 
       /* If this queue is disabled, re-enable it. */
       enable_printer(p->name);
+
+      /* Record the options, to record any changes which happened
+	 while cups-browsed was not running */
+      record_printer_options(p->name);
 
       break;
 
@@ -5370,6 +5587,8 @@ int main(int argc, char*argv[]) {
 		      G_CALLBACK (on_printer_state_changed), NULL);
     g_signal_connect (cups_notifier, "printer-deleted",
 		      G_CALLBACK (on_printer_deleted), NULL);
+    g_signal_connect (cups_notifier, "printer-modified",
+		      G_CALLBACK (on_printer_modified), NULL);
   }
 
   /* If auto shutdown is active and we do not find any printers initially,
