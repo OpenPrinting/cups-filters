@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.76 - 2015-09-12
 
 CHANGES IN V1.0.77
 
+	- cups-browsed: Removed assert() calls which remained from
+	  copy and paste in the very beginning of the development of
+	  cups-browsed.  assert() is only for use during debugging and
+	  should not be used in production code.
 	- cups-browsed: Let option settings of a generated print queue
 	  be saved before taking the queue down so that when the remote
 	  printer appears again all user changes get restored, making

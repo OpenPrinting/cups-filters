@@ -33,7 +33,6 @@
 #include <resolv.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <time.h>
 #include <signal.h>
@@ -3653,7 +3652,8 @@ static void resolve_callback(
   AvahiLookupResultFlags flags,
   AVAHI_GCC_UNUSED void* userdata) {
 
-  assert(r);
+  if (r == NULL)
+    return;
 
   /* Called whenever a service has been resolved successfully or timed out */
 
@@ -3764,7 +3764,8 @@ static void browse_callback(
   void* userdata) {
 
   AvahiClient *c = userdata;
-  assert(b);
+  if (b == NULL)
+    return;
 
   /* Called whenever a new services becomes available on the LAN or
      is removed from the LAN */
@@ -3971,7 +3972,8 @@ void avahi_shutdown() {
 static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UNUSED void * userdata) {
   int error;
 
-  assert(c);
+  if (c == NULL)
+    return;
 
   /* Called whenever the client or server state changes */
   switch (state) {
@@ -4745,7 +4747,8 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
     ipp_attribute_t *attr;
     gboolean seen_event = FALSE;
     int last_seq = context->sequence_number;
-    assert (response != NULL);
+    if (response == NULL)
+      return FALSE;
     for (attr = ippFirstAttribute(response); attr;
 	 attr = ippNextAttribute(response))
       if (ippGetGroupTag (attr) == IPP_TAG_EVENT_NOTIFICATION) {
