@@ -1,9 +1,13 @@
-NEWS - OpenPrinting CUPS Filters v1.0.76 - 2015-09-12
------------------------------------------------------
+NEWS - OpenPrinting CUPS Filters v1.1.0 - 2015-10-27
+----------------------------------------------------
 
-CHANGES IN V1.0.77
+CHANGES IN V1.1.0
 
-	- cups-browsed: Added "Defau;ltOptions" directive to
+	- Version numbering scheme changed: Releases with feature
+	  addition/change have the minor number increased now, pure
+	  bug fix releases get the revision number increased, to make
+	  use of the minor number which stayed zero all the time.
+	- cups-browsed: Added "DefaultOptions" directive to
 	  cups-browsed.conf to allow defining default option settings
 	  for local queues to be generated for newly appearing remote
 	  printers.
