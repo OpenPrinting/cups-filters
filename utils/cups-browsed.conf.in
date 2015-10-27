@@ -136,6 +136,21 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # LoadBalancing QueueOnServers
 
 
+# With the DefaultOptions directive one or more option settings can be
+# defined to be applied to every print queue newly created by
+# cups-browsed. Each option is supplied as one supplies options with
+# the "-o" command line argument to the "lpadmin" command (Run "man
+# lpadmin" for more details). More than one option can be supplied
+# separating the options by spaces. By default no option settings are
+# pre-defined.
+
+# Note that print queues which cups-browsed already created before
+# remember their previous settings and so these settings do not get
+# applied.
+
+# DefaultOptions Option1=Value1 Option2=Value2 Option3 noOption4
+
+
 # The AutoShutdown directive specifies whether cups-browsed should
 # automatically terminate when it has no local raw queues set up
 # pointing to any discovered remote printers (auto shutdown

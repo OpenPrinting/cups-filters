@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.0.76 - 2015-09-12
 
 CHANGES IN V1.0.77
 
+	- cups-browsed: Added "Defau;ltOptions" directive to
+	  cups-browsed.conf to allow defining default option settings
+	  for local queues to be generated for newly appearing remote
+	  printers.
 	- cups-browsed: Removed assert() calls which remained from
 	  copy and paste in the very beginning of the development of
 	  cups-browsed.  assert() is only for use during debugging and

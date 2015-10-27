@@ -291,6 +291,7 @@ static unsigned int IPBasedDeviceURIs = 0;
 static unsigned int CreateIPPPrinterQueues = 0;
 static ipp_queue_type_t IPPPrinterQueueType = PPD_AUTO;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
+static const char *DefaultOptions = NULL;
 static int autoshutdown = 0;
 static int autoshutdown_avahi = 0;
 static int autoshutdown_timeout = 30;
@@ -2044,54 +2045,67 @@ retrieve_printer_options(const char *printer) {
   if (printer == NULL || strlen(printer) == 0)
     return 0;
 
+  num_options = 0;
+  options = NULL;
+
+  /* Do we have default option settings in cups-browsed.conf? */
+  if (DefaultOptions) {
+    debug_printf("cups-browsed: Applying default option settings to printer %s: %s\n",
+		 printer, DefaultOptions);
+    num_options = cupsParseOptions(DefaultOptions, num_options, &options);
+  }
+
+  /* Prepare reading file with saved option settings */
   snprintf(filename, sizeof(filename), SAVE_OPTIONS_FILE,
 	   printer);
 
   debug_printf("cups-browsed: Retrieving printer options for %s from %s\n",
 	       printer, filename);
 
+  /* Open the file with the saved option settings for this print queue */
   fp = fopen(filename, "r");
   if (fp == NULL) {
     debug_printf("cups-browsed: Failed reading file %s, probably no options recorded yet\n",
 		 filename);
-    return 0;
-  }
-
-  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		   "localhost", ippPort(), "/printers/%s", printer);
-  request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
-	       uri);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
-	       "requesting-user-name", NULL, cupsUser());
-
-  /* Now read the lines of the file and add each setting to our request */
-  num_options = 0;
-  options = NULL;
-  errno = 0;
-  while ((val = fgets(opt, sizeof(opt), fp)) != NULL) {
-    if (strlen(opt) > 1 && (val = strchr(opt, '=')) != NULL) {
-      *val = '\0';
-      val ++;
-      val[strlen(val)-1] = '\0';
-      num_options = cupsAddOption(opt, val, num_options, &options);
+  } else {
+    /* Now read the lines of the file and add each setting to our request */
+    errno = 0;
+    debug_printf("cups-browsed: Applying retrieved option settings to printer %s:", printer);
+    while ((val = fgets(opt, sizeof(opt), fp)) != NULL) {
+      if (strlen(opt) > 1 && (val = strchr(opt, '=')) != NULL) {
+	*val = '\0';
+	val ++;
+	val[strlen(val)-1] = '\0';
+	debug_printf(" %s=%s", opt, val);
+	num_options = cupsAddOption(opt, val, num_options, &options);
+      }
     }
-  }
-  if (errno != 0) {
-    debug_printf("cups-browsed: Failed reading file %s: %s\n",
-		 filename, strerror(errno));
+    debug_printf("\n");
+    if (errno != 0) {
+      debug_printf("cups-browsed: Failed reading file %s: %s\n",
+		   filename, strerror(errno));
+      fclose(fp);
+    }	 
     fclose(fp);
-    return -1;
-  }	 
-  fclose(fp);
+  }
 
-  cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
-  cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
-  ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
-  cupsFreeOptions(num_options, options);
-  if (cupsLastError() > IPP_OK_CONFLICT)
-    debug_printf("cups-browsed: Unable to modify CUPS queue (%s)!\n",
-		 cupsLastErrorString());
+  if (num_options > 0) {
+    /* Do an IPP request to apply the option settings */
+    httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+		     "localhost", ippPort(), "/printers/%s", printer);
+    request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
+    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
+		 uri);
+    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		 "requesting-user-name", NULL, cupsUser());
+    cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
+    cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
+    ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
+    cupsFreeOptions(num_options, options);
+    if (cupsLastError() > IPP_OK_CONFLICT)
+      debug_printf("cups-browsed: Unable to modify CUPS queue (%s)!\n",
+		   cupsLastErrorString());
+  }
 
   return 0;
 }
@@ -5159,6 +5173,9 @@ read_configuration (const char *filename)
 	LoadBalancingType = QUEUE_ON_CLIENT;
       else if (!strncasecmp(value, "QueueOnServers", 14))
 	LoadBalancingType = QUEUE_ON_SERVERS;
+    } else if (!strcasecmp(line, "DefaultOptions") && value) {
+      if (strlen(value) > 0)
+	DefaultOptions = strdup(value);
     } else if (!strcasecmp(line, "AutoShutdown") && value) {
       char *p, *saveptr;
       p = strtok_r (value, delim, &saveptr);
