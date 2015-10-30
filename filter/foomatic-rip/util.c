@@ -31,7 +31,7 @@
 #include <assert.h>
 
 
-const char* shellescapes = "|<>&!$\'\"#*?()[]{}";
+const char* shellescapes = "|<>&!$\'\"`#*?()[]{}";
 
 const char * temp_dir()
 {
