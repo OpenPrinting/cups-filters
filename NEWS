@@ -4,8 +4,8 @@ NEWS - OpenPrinting CUPS Filters v1.1.0 - 2015-10-27
 CHANGES IN V1.1.1
 
 	- foomatic-rip: SECURITY FIX: Also consider the back tick
-	  ('`') as an illegal shell escape character. Thanks to
-	  Gynvael Coldwind from the Google Security Team for the hint.
+	  ('`') as an illegal shell escape character. Thanks to Michal
+	  Kowalczyk from the Google Security Team for the hint.
 
 CHANGES IN V1.1.0
 
