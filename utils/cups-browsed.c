@@ -228,6 +228,14 @@ typedef struct browse_data_s {
   char *browse_options;
 } browse_data_t;
 
+/* Ways how to represent the remote printer's IP in the device URI */
+typedef enum ip_based_uris_e {
+  IP_BASED_URIS_NO,
+  IP_BASED_URIS_ANY,
+  IP_BASED_URIS_IPV4_ONLY,
+  IP_BASED_URIS_IPV6_ONLY
+} ip_based_uris_t;
+
 /* Ways how to set up a queue for an IPP network printer */
 typedef enum ipp_queue_type_e {
   PPD_AUTO,
@@ -287,7 +295,7 @@ static browsepoll_t **BrowsePoll = NULL;
 static size_t NumBrowsePoll = 0;
 static guint update_netifs_sourceid = 0;
 static char *DomainSocket = NULL;
-static unsigned int IPBasedDeviceURIs = 0;
+static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static unsigned int CreateIPPPrinterQueues = 0;
 static ipp_queue_type_t IPPPrinterQueueType = PPD_AUTO;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
@@ -3710,14 +3718,16 @@ static void resolve_callback(
     if (rp_key && rp_value && adminurl_key && adminurl_value &&
 	!strcasecmp(rp_key, "rp") && !strcasecmp(adminurl_key, "adminurl")) {
       /* Determine the remote printer's IP */
-      if (IPBasedDeviceURIs != 0) {
+      if (IPBasedDeviceURIs != IP_BASED_URIS_NO) {
 	char addrstr[256];
 	int addrfound = 0;
-	if (address->proto == AVAHI_PROTO_INET) {
+	if (address->proto == AVAHI_PROTO_INET &&
+	    IPBasedDeviceURIs != IP_BASED_URIS_IPV6_ONLY) {
 	  avahi_address_snprint(addrstr, sizeof(addrstr), address);
 	  addrfound = 1;
 	} else if (address->proto == AVAHI_PROTO_INET6 &&
-		   interface != AVAHI_IF_UNSPEC) {
+		   interface != AVAHI_IF_UNSPEC &&
+		   IPBasedDeviceURIs != IP_BASED_URIS_IPV4_ONLY) {
 	  char ifname[IF_NAMESIZE];
 	  addrstr[0] = '[';
 	  avahi_address_snprint(addrstr + 1, sizeof(addrstr) - 1, address);
@@ -5148,12 +5158,18 @@ read_configuration (const char *filename)
       if (value[0] != '\0')
 	DomainSocket = strdup(value);
     } else if (!strcasecmp(line, "IPBasedDeviceURIs") && value) {
-      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
-	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
-	IPBasedDeviceURIs = 1;
+      if (!strcasecmp(value, "IPv4") || !strcasecmp(value, "IPv4Only"))
+	IPBasedDeviceURIs = IP_BASED_URIS_IPV4_ONLY;
+      else if (!strcasecmp(value, "IPv6") || !strcasecmp(value, "IPv6Only"))
+	IPBasedDeviceURIs = IP_BASED_URIS_IPV6_ONLY;
+      else if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	       !strcasecmp(value, "on") || !strcasecmp(value, "1") ||
+	       !strcasecmp(value, "IP") || !strcasecmp(value, "IPAddress"))
+	IPBasedDeviceURIs = IP_BASED_URIS_ANY;
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
-	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
-	IPBasedDeviceURIs = 0;
+	       !strcasecmp(value, "off") || !strcasecmp(value, "0") ||
+	       !strcasecmp(value, "Name") || !strcasecmp(value, "HostName"))
+	IPBasedDeviceURIs = IP_BASED_URIS_NO;
     } else if (!strcasecmp(line, "CreateIPPPrinterQueues") && value) {
       if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))

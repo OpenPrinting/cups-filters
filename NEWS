@@ -1,8 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.1.0 - 2015-10-27
 ----------------------------------------------------
 
-CHANGES IN V1.1.1
+CHANGES IN V1.2.0
 
+	- cups-browsed: When using IP-address-based device URIs via
+	  the "IPBasedDeviceURIs" directive in cups-browsed.conf, add
+	  two additional settings to restrict the used IP addresses to
+	  either only IPv4 addresses or only IPv6 addresses.
 	- foomatic-rip: SECURITY FIX: Also consider the back tick
 	  ('`') as an illegal shell escape character. Thanks to Michal
 	  Kowalczyk from the Google Security Team for the hint.

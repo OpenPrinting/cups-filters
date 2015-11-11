@@ -123,9 +123,16 @@ is only run for printer discovery and already stopped while still
 printing. By default this mode is turned off, meaning that we use URIs
 with host names.
 .PP
+If you prefer IPv4 or IPv6 IP addresses in the URIs, you can set
+IPBasedDeviceURIs to "IPv4" to only get IPv4 IP addresses or
+IPBasedDeviceURIs to "IPv6" to only get IPv6 IP addresses.
+.PP
 .nf
 .fam C
+        IPBasedDeviceURIs No
         IPBasedDeviceURIs Yes
+        IPBasedDeviceURIs IPv4
+        IPBasedDeviceURIs IPv6
 
 .fam T
 .fi
