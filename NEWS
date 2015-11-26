@@ -9,7 +9,8 @@ CHANGES IN V1.2.0
 	  either only IPv4 addresses or only IPv6 addresses.
 	- foomatic-rip: SECURITY FIX: Also consider the back tick
 	  ('`') as an illegal shell escape character. Thanks to Michal
-	  Kowalczyk from the Google Security Team for the hint.
+	  Kowalczyk from the Google Security Team for the hint
+	  (CVE-2015-8327).
 
 CHANGES IN V1.1.0
 
