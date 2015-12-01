@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <resolv.h>
 #include <stdio.h>
@@ -3670,6 +3671,72 @@ generate_local_queue(const char *host,
   return p;
 }
 
+static gboolean
+allowed (struct sockaddr *srcaddr)
+{
+  allow_t *allow;
+  if (browseallow_all || cupsArrayCount(browseallow) == 0) {
+    /* "BrowseAllow All", or no "BrowseAllow" line, so allow all servers */
+    return TRUE;
+  }
+  for (allow = cupsArrayFirst (browseallow);
+       allow;
+       allow = cupsArrayNext (browseallow)) {
+    switch (allow->type) {
+    case ALLOW_INVALID:
+      break;
+
+    case ALLOW_IP:
+      switch (srcaddr->sa_family) {
+      case AF_INET:
+	if (((struct sockaddr_in *) srcaddr)->sin_addr.s_addr ==
+	    allow->addr.ipv4.sin_addr.s_addr)
+	  return TRUE;
+	break;
+
+      case AF_INET6:
+	if (!memcmp (&((struct sockaddr_in6 *) srcaddr)->sin6_addr,
+		     &allow->addr.ipv6.sin6_addr,
+		     sizeof (allow->addr.ipv6.sin6_addr)))
+	  return TRUE;
+	break;
+      }
+      break;
+
+    case ALLOW_NET:
+      switch (srcaddr->sa_family) {
+	struct sockaddr_in6 *src6addr;
+
+      case AF_INET:
+	if ((((struct sockaddr_in *) srcaddr)->sin_addr.s_addr &
+	     allow->mask.ipv4.sin_addr.s_addr) ==
+	    allow->addr.ipv4.sin_addr.s_addr)
+	  return TRUE;
+	break;
+
+      case AF_INET6:
+	src6addr = (struct sockaddr_in6 *) srcaddr;
+	if (((src6addr->sin6_addr.s6_addr[0] &
+	      allow->mask.ipv6.sin6_addr.s6_addr[0]) ==
+	     allow->addr.ipv6.sin6_addr.s6_addr[0]) &&
+	    ((src6addr->sin6_addr.s6_addr[1] &
+	      allow->mask.ipv6.sin6_addr.s6_addr[1]) ==
+	     allow->addr.ipv6.sin6_addr.s6_addr[1]) &&
+	    ((src6addr->sin6_addr.s6_addr[2] &
+	      allow->mask.ipv6.sin6_addr.s6_addr[2]) ==
+	     allow->addr.ipv6.sin6_addr.s6_addr[2]) &&
+	    ((src6addr->sin6_addr.s6_addr[3] &
+	      allow->mask.ipv6.sin6_addr.s6_addr[3]) ==
+	     allow->addr.ipv6.sin6_addr.s6_addr[3]))
+	  return TRUE;
+	break;
+      }
+    }
+  }
+
+  return FALSE;
+}
+
 #ifdef HAVE_AVAHI
 static void resolve_callback(
   AvahiServiceResolver *r,
@@ -3730,29 +3797,45 @@ static void resolve_callback(
     if (rp_key && rp_value && adminurl_key && adminurl_value &&
 	!strcasecmp(rp_key, "rp") && !strcasecmp(adminurl_key, "adminurl")) {
       /* Determine the remote printer's IP */
-      if (IPBasedDeviceURIs != IP_BASED_URIS_NO) {
+      if (IPBasedDeviceURIs != IP_BASED_URIS_NO ||
+	  (!browseallow_all && cupsArrayCount(browseallow) > 0)) {
+	struct sockaddr saddr;
+	struct sockaddr *addr = &saddr;
 	char addrstr[256];
 	int addrfound = 0;
 	if (address->proto == AVAHI_PROTO_INET &&
 	    IPBasedDeviceURIs != IP_BASED_URIS_IPV6_ONLY) {
 	  avahi_address_snprint(addrstr, sizeof(addrstr), address);
-	  addrfound = 1;
+	  addr->sa_family = AF_INET;
+	  if (inet_aton(addrstr,
+			&((struct sockaddr_in *) addr)->sin_addr) &&
+	      allowed(addr))
+	    addrfound = 1;
 	} else if (address->proto == AVAHI_PROTO_INET6 &&
 		   interface != AVAHI_IF_UNSPEC &&
 		   IPBasedDeviceURIs != IP_BASED_URIS_IPV4_ONLY) {
 	  char ifname[IF_NAMESIZE];
 	  addrstr[0] = '[';
 	  avahi_address_snprint(addrstr + 1, sizeof(addrstr) - 1, address);
-	  snprintf(addrstr + strlen(addrstr), sizeof(addrstr) - strlen(addrstr),
-		   "+%s]", if_indextoname(interface, ifname));
-	  addrfound = 1;
+	  addr->sa_family = AF_INET6;
+	  if (inet_pton(AF_INET6, addrstr + 1,
+			&((struct sockaddr_in6 *) addr)->sin6_addr) &&
+	      allowed(addr)) {
+	    snprintf(addrstr + strlen(addrstr), sizeof(addrstr) -
+		     strlen(addrstr), "+%s]",
+		     if_indextoname(interface, ifname));
+	    addrfound = 1;
+	  }
 	}
 	if (addrfound == 1) {
 	  /* Check remote printer type and create appropriate local queue to
 	     point to it */
-	  debug_printf("cups-browsed: Avahi Resolver: Service '%s' of type '%s' in domain '%s' with IP address %s.\n",
-		       name, type, domain, addrstr);
-	  generate_local_queue(host_name, addrstr, port, rp_value, name, type, domain, txt);
+	  if (IPBasedDeviceURIs != IP_BASED_URIS_NO) {
+	    debug_printf("cups-browsed: Avahi Resolver: Service '%s' of type '%s' in domain '%s' with IP address %s.\n",
+			 name, type, domain, addrstr);
+	    generate_local_queue(host_name, addrstr, port, rp_value, name, type, domain, txt);
+	  } else
+	    generate_local_queue(host_name, NULL, port, rp_value, name, type, domain, txt);
 	} else
 	  debug_printf("cups-browsed: Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not determine IP address.\n",
 		       name, type, domain);
@@ -4185,72 +4268,6 @@ found_cups_printer (const char *remote_host, const char *uri,
       printer->timeout = time(NULL) + BrowseTimeout;
     }
   }
-}
-
-static gboolean
-allowed (struct sockaddr *srcaddr)
-{
-  allow_t *allow;
-  if (browseallow_all || cupsArrayCount(browseallow) == 0) {
-    /* "BrowseAllow All", or no "BrowseAllow" line, so allow all servers */
-    return TRUE;
-  }
-  for (allow = cupsArrayFirst (browseallow);
-       allow;
-       allow = cupsArrayNext (browseallow)) {
-    switch (allow->type) {
-    case ALLOW_INVALID:
-      break;
-
-    case ALLOW_IP:
-      switch (srcaddr->sa_family) {
-      case AF_INET:
-	if (((struct sockaddr_in *) srcaddr)->sin_addr.s_addr ==
-	    allow->addr.ipv4.sin_addr.s_addr)
-	  return TRUE;
-	break;
-
-      case AF_INET6:
-	if (!memcmp (&((struct sockaddr_in6 *) srcaddr)->sin6_addr,
-		     &allow->addr.ipv6.sin6_addr,
-		     sizeof (allow->addr.ipv6.sin6_addr)))
-	  return TRUE;
-	break;
-      }
-      break;
-
-    case ALLOW_NET:
-      switch (srcaddr->sa_family) {
-	struct sockaddr_in6 *src6addr;
-
-      case AF_INET:
-	if ((((struct sockaddr_in *) srcaddr)->sin_addr.s_addr &
-	     allow->mask.ipv4.sin_addr.s_addr) ==
-	    allow->addr.ipv4.sin_addr.s_addr)
-	  return TRUE;
-	break;
-
-      case AF_INET6:
-	src6addr = (struct sockaddr_in6 *) srcaddr;
-	if (((src6addr->sin6_addr.s6_addr[0] &
-	      allow->mask.ipv6.sin6_addr.s6_addr[0]) ==
-	     allow->addr.ipv6.sin6_addr.s6_addr[0]) &&
-	    ((src6addr->sin6_addr.s6_addr[1] &
-	      allow->mask.ipv6.sin6_addr.s6_addr[1]) ==
-	     allow->addr.ipv6.sin6_addr.s6_addr[1]) &&
-	    ((src6addr->sin6_addr.s6_addr[2] &
-	      allow->mask.ipv6.sin6_addr.s6_addr[2]) ==
-	     allow->addr.ipv6.sin6_addr.s6_addr[2]) &&
-	    ((src6addr->sin6_addr.s6_addr[3] &
-	      allow->mask.ipv6.sin6_addr.s6_addr[3]) ==
-	     allow->addr.ipv6.sin6_addr.s6_addr[3]))
-	  return TRUE;
-	break;
-      }
-    }
-  }
-
-  return FALSE;
 }
 
 gboolean
