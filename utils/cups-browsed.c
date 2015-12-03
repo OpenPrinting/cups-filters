@@ -178,14 +178,23 @@ typedef struct netif_s {
   http_addr_t broadcast;
 } netif_t;
 
-/* Data structure for browse allow/deny rules */
+/* Data structures for browse allow/deny rules */
+typedef enum browse_order_e {
+  ORDER_ALLOW_DENY,
+  ORDER_DENY_ALLOW
+} browse_order_t;
 typedef enum allow_type_e {
   ALLOW_IP,
   ALLOW_NET,
   ALLOW_INVALID
 } allow_type_t;
+typedef enum allow_sense_e {
+  ALLOW_ALLOW,
+  ALLOW_DENY
+} allow_sense_t;
 typedef struct allow_s {
   allow_type_t type;
+  allow_sense_t sense;
   http_addr_t addr;
   http_addr_t mask;
 } allow_t;
@@ -254,6 +263,8 @@ cups_array_t *remote_printers;
 static cups_array_t *netifs;
 static cups_array_t *browseallow;
 static gboolean browseallow_all = FALSE;
+static gboolean browsedeny_all = FALSE;
+static browse_order_t browse_order;
 
 static GHashTable *local_printers;
 static browsepoll_t *local_printers_context = NULL;
@@ -3675,66 +3686,109 @@ static gboolean
 allowed (struct sockaddr *srcaddr)
 {
   allow_t *allow;
-  if (browseallow_all || cupsArrayCount(browseallow) == 0) {
-    /* "BrowseAllow All", or no "BrowseAllow" line, so allow all servers */
-    return TRUE;
-  }
-  for (allow = cupsArrayFirst (browseallow);
-       allow;
-       allow = cupsArrayNext (browseallow)) {
-    switch (allow->type) {
-    case ALLOW_INVALID:
-      break;
+  int i;
+  gboolean server_allowed;
+  allow_sense_t sense;
 
-    case ALLOW_IP:
-      switch (srcaddr->sa_family) {
-      case AF_INET:
-	if (((struct sockaddr_in *) srcaddr)->sin_addr.s_addr ==
-	    allow->addr.ipv4.sin_addr.s_addr)
-	  return TRUE;
+  if (browse_order == ORDER_DENY_ALLOW)
+    /* BrowseOrder Deny,Allow: Allow server, then apply BrowseDeny lines,
+       after that BrowseAllow lines */
+    server_allowed = TRUE;
+  else
+    /* BrowseOrder Allow,Deny: Deny server, then apply BrowseAllow lines,
+       after that BrowseDeny lines */
+    server_allowed = FALSE;
+
+  for (i = 0; i <= 1; i ++) {
+    if (browse_order == ORDER_DENY_ALLOW)
+      /* Treat BrowseDeny lines first, then BrowseAllow lines */
+      sense = (i == 0 ? ALLOW_DENY : ALLOW_ALLOW);
+    else
+      /* Treat BrowseAllow lines first, then BrowseDeny lines */
+      sense = (i == 0 ? ALLOW_ALLOW : ALLOW_DENY);
+
+    if (server_allowed == (sense == ALLOW_ALLOW ? TRUE : FALSE))
+      continue;
+
+    if (browseallow_all && sense == ALLOW_ALLOW) {
+      server_allowed = TRUE;
+      continue;
+    }
+    if (browsedeny_all && sense == ALLOW_DENY) {
+      server_allowed = FALSE;
+      continue;
+    }
+
+    for (allow = cupsArrayFirst (browseallow);
+	 allow;
+	 allow = cupsArrayNext (browseallow)) {
+      if (allow->sense != sense)
+	continue;
+
+      switch (allow->type) {
+      case ALLOW_INVALID:
 	break;
 
-      case AF_INET6:
-	if (!memcmp (&((struct sockaddr_in6 *) srcaddr)->sin6_addr,
-		     &allow->addr.ipv6.sin6_addr,
-		     sizeof (allow->addr.ipv6.sin6_addr)))
-	  return TRUE;
-	break;
-      }
-      break;
+      case ALLOW_IP:
+	switch (srcaddr->sa_family) {
+	case AF_INET:
+	  if (((struct sockaddr_in *) srcaddr)->sin_addr.s_addr ==
+	      allow->addr.ipv4.sin_addr.s_addr) {
+	    server_allowed = (sense == ALLOW_ALLOW ? TRUE : FALSE);
+	    goto match;
+	  }
+	  break;
 
-    case ALLOW_NET:
-      switch (srcaddr->sa_family) {
-	struct sockaddr_in6 *src6addr;
-
-      case AF_INET:
-	if ((((struct sockaddr_in *) srcaddr)->sin_addr.s_addr &
-	     allow->mask.ipv4.sin_addr.s_addr) ==
-	    allow->addr.ipv4.sin_addr.s_addr)
-	  return TRUE;
+	case AF_INET6:
+	  if (!memcmp (&((struct sockaddr_in6 *) srcaddr)->sin6_addr,
+		       &allow->addr.ipv6.sin6_addr,
+		       sizeof (allow->addr.ipv6.sin6_addr))) {
+	    server_allowed = (sense == ALLOW_ALLOW ? TRUE : FALSE);
+	    goto match;
+	  }
+	  break;
+	}
 	break;
 
-      case AF_INET6:
-	src6addr = (struct sockaddr_in6 *) srcaddr;
-	if (((src6addr->sin6_addr.s6_addr[0] &
-	      allow->mask.ipv6.sin6_addr.s6_addr[0]) ==
-	     allow->addr.ipv6.sin6_addr.s6_addr[0]) &&
-	    ((src6addr->sin6_addr.s6_addr[1] &
-	      allow->mask.ipv6.sin6_addr.s6_addr[1]) ==
-	     allow->addr.ipv6.sin6_addr.s6_addr[1]) &&
-	    ((src6addr->sin6_addr.s6_addr[2] &
-	      allow->mask.ipv6.sin6_addr.s6_addr[2]) ==
-	     allow->addr.ipv6.sin6_addr.s6_addr[2]) &&
-	    ((src6addr->sin6_addr.s6_addr[3] &
-	      allow->mask.ipv6.sin6_addr.s6_addr[3]) ==
-	     allow->addr.ipv6.sin6_addr.s6_addr[3]))
-	  return TRUE;
-	break;
+      case ALLOW_NET:
+	switch (srcaddr->sa_family) {
+	  struct sockaddr_in6 *src6addr;
+
+	case AF_INET:
+	  if ((((struct sockaddr_in *) srcaddr)->sin_addr.s_addr &
+	       allow->mask.ipv4.sin_addr.s_addr) ==
+	      allow->addr.ipv4.sin_addr.s_addr) {
+	    server_allowed = (sense == ALLOW_ALLOW ? TRUE : FALSE);
+	    goto match;
+	  }
+	  break;
+
+	case AF_INET6:
+	  src6addr = (struct sockaddr_in6 *) srcaddr;
+	  if (((src6addr->sin6_addr.s6_addr[0] &
+		allow->mask.ipv6.sin6_addr.s6_addr[0]) ==
+	       allow->addr.ipv6.sin6_addr.s6_addr[0]) &&
+	      ((src6addr->sin6_addr.s6_addr[1] &
+		allow->mask.ipv6.sin6_addr.s6_addr[1]) ==
+	       allow->addr.ipv6.sin6_addr.s6_addr[1]) &&
+	      ((src6addr->sin6_addr.s6_addr[2] &
+		allow->mask.ipv6.sin6_addr.s6_addr[2]) ==
+	       allow->addr.ipv6.sin6_addr.s6_addr[2]) &&
+	      ((src6addr->sin6_addr.s6_addr[3] &
+		allow->mask.ipv6.sin6_addr.s6_addr[3]) ==
+	       allow->addr.ipv6.sin6_addr.s6_addr[3])) {
+	    server_allowed = (sense == ALLOW_ALLOW ? TRUE : FALSE);
+	    goto match;
+	  }
+	  break;
+	}
       }
     }
+  match:
+    continue;
   }
 
-  return FALSE;
+  return server_allowed;
 }
 
 #ifdef HAVE_AVAHI
@@ -5021,18 +5075,25 @@ sigusr2_handler(int sig) {
 }
 
 static int
-read_browseallow_value (const char *value)
+read_browseallow_value (const char *value, allow_sense_t sense)
 {
   char *p;
   struct in_addr addr;
   allow_t *allow;
 
   if (value && !strcasecmp (value, "all")) {
-    browseallow_all = TRUE;
-    return 0;
+    if (sense == ALLOW_ALLOW) {
+      browseallow_all = TRUE;
+      return 0;
+    } else if (sense == ALLOW_DENY) {
+      browsedeny_all = TRUE;
+      return 0;
+    } else
+      return 1;
   }
   
   allow = calloc (1, sizeof (allow_t));
+  allow->sense = sense;
   if (value == NULL)
     goto fail;
   p = strchr (value, '/');
@@ -5090,6 +5151,10 @@ read_configuration (const char *filename)
   char line[HTTP_MAX_BUFFER];
   char *value;
   const char *delim = " \t,";
+  int browse_allow_line_found = 0;
+  int browse_deny_line_found = 0;
+  int browse_order_line_found = 0;
+  int browse_line_found = 0;
 
   if (!filename)
     filename = CUPS_SERVERROOT "/cups-browsed.conf";
@@ -5180,8 +5245,34 @@ read_configuration (const char *filename)
 	BrowsePoll[NumBrowsePoll++] = b;
       }
     } else if (!strcasecmp(line, "BrowseAllow")) {
-      if (read_browseallow_value (value))
+      if (read_browseallow_value (value, ALLOW_ALLOW))
 	debug_printf ("cups-browsed: BrowseAllow value \"%s\" not understood\n",
+		      value);
+      else {
+	browse_allow_line_found = 1;
+	browse_line_found = 1;
+      }
+    } else if (!strcasecmp(line, "BrowseDeny")) {
+      if (read_browseallow_value (value, ALLOW_DENY))
+	debug_printf ("cups-browsed: BrowseDeny value \"%s\" not understood\n",
+		      value);
+      else {
+	browse_deny_line_found = 1;
+	browse_line_found = 1;
+      }
+    } else if (!strcasecmp(line, "BrowseOrder") && value) {
+      if (!strncasecmp(value, "Allow", 5) &&
+	  strcasestr(value, "Deny")) { /* Allow,Deny */
+	browse_order = ORDER_ALLOW_DENY;
+	browse_order_line_found = 1;
+	browse_line_found = 1;
+      } else if (!strncasecmp(value, "Deny", 4) &&
+		 strcasestr(value, "Allow")) { /* Deny,Allow */
+	browse_order = ORDER_DENY_ALLOW;
+	browse_order_line_found = 1;
+	browse_line_found = 1;
+      } else
+	debug_printf ("cups-browsed: BrowseOrder value \"%s\" not understood\n",
 		      value);
     } else if (!strcasecmp(line, "DomainSocket") && value) {
       if (value[0] != '\0')
@@ -5275,6 +5366,28 @@ read_configuration (const char *filename)
 	BrowseLDAPFilter = strdup(value);
     }
 #endif /* HAVE_LDAP */
+  }
+
+  if (browse_line_found == 0) {
+    /* No "Browse..." lines at all */
+    browseallow_all = 1;
+    browse_order = ORDER_DENY_ALLOW;
+    debug_printf("cups-browsed: No \"Browse...\" line at all, accept all servers (\"BrowseOrder Deny,Allow\").\n");
+  } else if (browse_order_line_found == 0) {
+    /* No "BrowseOrder" line */
+    if (browse_allow_line_found == 0) {
+      /* Only "BrowseDeny" lines */
+      browse_order = ORDER_DENY_ALLOW;
+      debug_printf("cups-browsed: No \"BrowseOrder\" line and only \"BrowseDeny\" lines, accept all except what matches the \"BrowseDeny\" lines  (\"BrowseOrder Deny,Allow\").\n");
+    } else if (browse_deny_line_found == 0) {
+      /* Only "BrowseAllow" lines */
+      browse_order = ORDER_ALLOW_DENY;
+      debug_printf("cups-browsed: No \"BrowseOrder\" line and only \"BrowseAllow\" lines, deny all except what matches the \"BrowseAllow\" lines  (\"BrowseOrder Allow,Deny\").\n");
+    } else {
+      /* Default for "BrowseOrder" */
+      browse_order = ORDER_DENY_ALLOW;
+      debug_printf("cups-browsed: No \"BrowseOrder\" line, use \"BrowseOrder Deny,Allow\" as default.\n");
+    }
   }
 
   cupsFileClose(fp);

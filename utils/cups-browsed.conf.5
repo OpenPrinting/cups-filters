@@ -9,10 +9,43 @@ located in the /etc/cups directory. Each line in the file can be a
 configuration directive, a blank line, or a comment. Comment lines start
 with the # character.
 .SH DIRECTIVES
-
-The BrowseAllow directive specifies a system or network to accept
-CUPS browse packets from. The default is to accept browse packets from
-all hosts when BrowseRemoteProtocols uses the CUPS protocol.
+Only browse remote printers (via DNS-SD or CUPS browsing) from
+selected servers using the "BrowseAllow", "BrowseDeny", and
+"BrowseOrder" directives
+.PP
+This servers for restricting the choice of printers in print dialogs
+to trusted servers or to reduce the number of listed printers in the
+print dialogs to a more user-friendly amount in large networks with
+very many shared printers.
+.PP
+This only filters the selection of remote printers for which
+cups-browsed creates local queues. If the print dialog uses other
+mechanisms to list remote printers as for example direct DNS-SD
+access, cups-browsed has no influence.
+.PP
+"BrowseAllow": Accept printers from these hosts or networks. If there
+are only "BrowseAllow" lines and no "BrowseOrder" and/or "BrowseDeny"
+lines, only servers matching at last one "BrowseAllow" line are
+accepted.
+.PP
+"BrowseDeny": Deny printers from these hosts or networks. If there are
+only "BrowseDeny" lines and no "BrowseOrder" and/or "BrowseAllow"
+lines, all servers NOT matching any of the "BrowseDeny" lines are
+accepted.
+.PP
+"BrowseOrder": Determine the order in which "BrowseAllow" and
+"BrowseDeny" lines are applied. With "BrowseOrder Deny,Allow" in the
+beginning all servers are accepted, then the "BrowseDeny" lines are
+applied to exclude unwished servers or networks and after that the
+"BrowseAllow" lines to re-include servers or networks. With
+"BrowseOrder Allow,Deny" we start with denying all servers, then
+applying the "BrowseAllow" lines and afterwards the "BrowseDeny"
+lines.
+.PP
+Default for "BrowseOrder" is "Deny.Allow" if there are both
+"BrowseAllow" and "BrowseDeny" lines.
+.PP
+If there are no "Browse..." lines at all, all servers are accepted.
 .PP
 .nf
 .fam C
@@ -21,6 +54,13 @@ all hosts when BrowseRemoteProtocols uses the CUPS protocol.
         BrowseAllow 192.168.7.0/24
         BrowseAllow 192.168.7.0/255.255.255.0
 
+        BrowseDeny All
+        BrowseDeny 192.168.1.13
+        BrowseDeny 192.168.3.0/24
+        BrowseDeny 192.168.3.0/255.255.255.0
+
+        BrowseOrder Deny,Allow
+        BrowseOrder Allow,Deny
 
 .fam T
 .fi

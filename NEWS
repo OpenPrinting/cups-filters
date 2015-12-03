@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.2.0 - 2015-11-26
 
 CHANGES IN V1.3.0
 
+	- cups-browsed: Added support for BrowseDeny and BrowseOrder
+	  directives in cups-browsed.conf.
 	- cups-browsed: Let the BrowseAllow lines in cups-browsed.conf
 	  also apply to remote printers discovered via DNS-SD.
 	- cups-browsed: Auto-create queues for PCL-5c/e printers but
