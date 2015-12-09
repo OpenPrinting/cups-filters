@@ -13,7 +13,7 @@ Only browse remote printers (via DNS-SD or CUPS browsing) from
 selected servers using the "BrowseAllow", "BrowseDeny", and
 "BrowseOrder" directives
 .PP
-This servers for restricting the choice of printers in print dialogs
+This serves for restricting the choice of printers in print dialogs
 to trusted servers or to reduce the number of listed printers in the
 print dialogs to a more user-friendly amount in large networks with
 very many shared printers.
@@ -21,7 +21,8 @@ very many shared printers.
 This only filters the selection of remote printers for which
 cups-browsed creates local queues. If the print dialog uses other
 mechanisms to list remote printers as for example direct DNS-SD
-access, cups-browsed has no influence.
+access, cups-browsed has no influence. cups-browsed also does not
+prevent the user from manually accessing non-listed printers.
 .PP
 "BrowseAllow": Accept printers from these hosts or networks. If there
 are only "BrowseAllow" lines and no "BrowseOrder" and/or "BrowseDeny"
@@ -61,6 +62,230 @@ If there are no "Browse..." lines at all, all servers are accepted.
 
         BrowseOrder Deny,Allow
         BrowseOrder Allow,Deny
+
+.fam T
+.fi
+Filtering of remote printers by other properties than IP addresses of
+their servers
+.PP
+Often the desired selection of printers cannot be reached by only
+taking into account the IP addresses of the servers. For these cases
+there is the BrowseFilter directive to filter by most of the known
+properties of the printer.
+.PP
+By default there is no BrowseFilter line meaning that no filtering is
+applied.
+.PP
+To do filtering one can supply one or more BrowseFilter directives
+like this:
+.PP
+.nf
+.fam C
+        BrowseFilter [NOT] [EXACT] <FIELD> [<VALUE>]
+
+.fam T
+.fi
+The BrowseFilter directive always starts with the word "BrowseFilter"
+and it must at least contain the name of the data field (<FIELD>) of
+the printer's properties to which it should apply.
+.PP
+Avaialble field names are:
+.PP
+.nf
+.fam C
+        name:    Name of the local print queue to be created
+        host:    Host name of the remote print server
+        port:    Port through which the printer is accessed on the server
+        service: DNS/SD service name of the remote printer
+        domain:  Domain of the remote print server
+
+.fam T
+.fi
+Also all field names in the TXT records of DNS-SD-advertised printers
+are valid, like "color", "duplex", "pdl", ... If the field name of the
+filter rule does not exist for the printer, the rule is skipped.
+.PP
+The optional <VALUE> field is either the exact value (when the option
+EXACT is supplied) or a regular expression (Run "man 7 regex" in a
+terminal window) to be matched with the data field.
+.PP
+If no <VALUE> filed is supplied, rules with field names of the TXT
+record are considered for boolean matching (true/false) of boolean
+field (like duplex, which can have the values "T" for true and "F" for
+false).
+.PP
+If the option NOT is supplied, the filter rule is fulfilled if the
+regular expression or the exact value DOES NOT match the content of
+the data field. In a boolean rule (without <VALUE>) the rule matches
+false.
+.PP
+Regular expressions are always considered case-insensitive and
+extended POSIX regular expressions. Field names and options (NOT,
+EXACT) are all evaluated case-insensitive. If there is an error in a
+regular expression, the BrowseFilter line gets ignored.
+.PP
+Especially to note is that supplying any simple string consisting of
+only letters, numbers, spaces, and some basic special characters as a
+regular expression matches if it is contained somewhere in the data
+field.
+.PP
+If there is more than one BrowseFilter directive, ALL the directives
+need to be fulfilled for the remote printer to be accepted. If one is
+not fulfilled, the printer will get ignored.
+.PP
+Examples:
+.PP
+Rules for standard data items which are supplied with any remote
+printer advertised via DNS-SD:
+.PP
+Print queue name must contain "hum_res_", this matches "hum_res_mono"
+or "hum_res_color" but also "old_hum_res_mono":
+.PP
+.nf
+.fam C
+        BrowseFilter name hum_res_
+
+.fam T
+.fi
+This matches if the remote host name contains "printserver", like
+"printserver.local", "printserver2.example.com", "newprintserver":
+.PP
+.nf
+.fam C
+        BrowseFilter host printserver
+
+.fam T
+.fi
+This matches all ports with 631 int its number, for example 631, 8631,
+10631,...:
+.PP
+.nf
+.fam C
+        BrowseFilter port 631
+
+.fam T
+.fi
+This rule matches if the DNS-SD service name contains "@ printserver":
+.PP
+.nf
+.fam C
+        Browsefilter service @ printserver
+
+.fam T
+.fi
+Matches all domains with "local" in their names, not only "local" but
+also things like "printlocally.com":
+.PP
+.nf
+.fam C
+        BrowseFilter domain local
+
+.fam T
+.fi
+Examples for rules applying to items of the TXT record:
+.PP
+This rule selects PostScript printers, as the "PDL" field in the TXT
+record contains "postscript" then. This includes also remote CUPS
+queues which accept PostScript, independent of whether the physical
+printer behind the CUPS queue accepts PostScript or not.
+.PP
+.nf
+.fam C
+        BrowseFilter pdl postscript
+
+.fam T
+.fi
+Color printers usually contain a "Color" entry set to "T" (for true)
+in the TXT record. This rule selects them:
+.PP
+.nf
+.fam C
+        BrowseFilter color
+
+.fam T
+.fi
+This is a similar rule to select only duplex (automatic double-sided
+printing) printers:
+.PP
+.nf
+.fam C
+        BrowseFilter duplex
+
+.fam T
+.fi
+Rules with the NOT option:
+.PP
+This rule EXCLUDES printers from all hosts containing "financial" in
+their names, nice to get rid of the 100s of printers of the financial
+department:
+.PP
+.nf
+.fam C
+        BrowseFilter NOT host financial
+
+.fam T
+.fi
+Get only monochrome printers ("Color" set to "F", meaning false, in
+the TXT record):
+.PP
+.nf
+.fam C
+        BrowseFilter NOT color
+
+.fam T
+.fi
+Rules with more advanced use of regular expressions:
+.PP
+Only queue names which BEGIN WITH "hum_res_" are accepted now, so we
+still get "hum_res_mono" or "hum_res_color" but not "old_hum_res_mono"
+any more:
+.PP
+.nf
+.fam C
+        BrowseFilter name ^hum_res_
+
+.fam T
+.fi
+Server names is accepted if it contains "print_server" OR
+"graphics_dep_server":
+.PP
+.nf
+.fam C
+        BrowseFilter host print_server|graphics_dep_server
+
+.fam T
+.fi
+"printserver1", "printserver2", and "printserver3", nothing else:
+.PP
+.nf
+.fam C
+        BrowseFilter host ^printserver[1-3]$
+
+.fam T
+.fi
+Printers understanding at least one of PostScript, PCL, or PDF:
+.PP
+.nf
+.fam C
+        BrowseFilter pdl postscript|pcl|pdf
+
+.fam T
+.fi
+Examples for the EXACT option:
+.PP
+Only printers from "printserver.local" are accepted:
+.PP
+.nf
+.fam C
+        BrowseFilter EXACT host printserver.local
+
+.fam T
+.fi
+Printers from all servers except "prinserver2.local" are accepted:
+.PP
+.nf
+.fam C
+        BrowseFilter NOT EXACT host prinserver2.local
 
 .fam T
 .fi

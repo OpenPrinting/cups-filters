@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.2.0 - 2015-11-26
 
 CHANGES IN V1.3.0
 
+	- cups-browsed: Added new BrowseFilter directive in
+	  cups-browsed.conf.  This directive allows filtering of the
+	  remote printers to be accepted on most properties/metadata
+	  supplied with the DNS-SD broadcasts. This allows, in
+	  addition to BrowseAllow/BrowseDeny/BrowseOrder, to reduce
+	  the amount of printers listed in print dialogs to a more
+	  useful amount.
 	- cups-browsed: Added support for BrowseDeny and BrowseOrder
 	  directives in cups-browsed.conf.
 	- cups-browsed: Let the BrowseAllow lines in cups-browsed.conf

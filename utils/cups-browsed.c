@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <signal.h>
+#include <regex.h>
 
 #include <glib.h>
 
@@ -199,6 +200,18 @@ typedef struct allow_s {
   http_addr_t mask;
 } allow_t;
 
+/* Data structures for browse filter rules */
+typedef enum filter_sense_s {
+  FILTER_MATCH,
+  FILTER_NOT_MATCH
+} filter_sense_t;
+typedef struct browse_filter_s {
+  filter_sense_t sense;
+  char *field;
+  char *regexp;
+  regex_t *cregexp;
+} browse_filter_t;
+
 /* Data struct for a printer discovered using BrowsePoll */
 typedef struct browsepoll_printer_s {
   char *uri_supported;
@@ -265,6 +278,7 @@ static cups_array_t *browseallow;
 static gboolean browseallow_all = FALSE;
 static gboolean browsedeny_all = FALSE;
 static browse_order_t browse_order;
+static cups_array_t *browsefilter;
 
 static GHashTable *local_printers;
 static browsepoll_t *local_printers_context = NULL;
@@ -3374,6 +3388,134 @@ recheck_timer (void)
   }
 }
 
+static gboolean
+matched_filters (const char *name,
+		 const char *host,
+		 uint16_t port,
+		 const char *service_name,
+		 const char *domain,
+		 void *txt) {
+  browse_filter_t *filter;
+  const char *property = NULL;
+  char buf[10];
+#ifdef HAVE_AVAHI
+  AvahiStringList *entry = NULL;
+  char *key = NULL, *value = NULL;
+#endif /* HAVE_AVAHI */
+
+  debug_printf("cups-browsed: Matching printer \"%s\" with properties Host = \"%s\", Port = %d, Service Name = \"%s\", Domain = \"%s\" with the BrowseFilter lines in cups-browsed.conf\n", name, host, port, service_name, domain);
+  /* Go through all BrowseFilter lines and stop if one line does not match,
+     rejecting this printer */
+  for (filter = cupsArrayFirst (browsefilter);
+       filter;
+       filter = cupsArrayNext (browsefilter)) {
+    debug_printf("cups-browsed: Matching with line \"BrowseFilter %s%s%s %s\"",
+		 (filter->sense == FILTER_NOT_MATCH ? "NOT " : ""),
+		 (filter->regexp && !filter->cregexp ? "EXACT " : ""),
+		 filter->field, (filter->regexp ? filter->regexp : ""));
+#ifdef HAVE_AVAHI
+    /* Go through the TXT record to see whether this rule applies to a field
+       in there */
+    if (txt) {
+      entry = avahi_string_list_find((AvahiStringList *)txt, filter->field);
+      if (entry) {
+	avahi_string_list_get_pair(entry, &key, &value, NULL);
+	if (key) {
+	  debug_printf(", TXT record entry: %s = %s",
+		       key, (value ? value : ""));
+	  if (filter->regexp) {
+	    /* match regexp */
+	    if (!value)
+	      value = "";
+	    if ((filter->cregexp &&
+		 regexec(filter->cregexp, value, 0, NULL, 0) == 0) ||
+		(!filter->cregexp && !strcasecmp(filter->regexp, value))) {
+	      if (filter->sense == FILTER_NOT_MATCH)
+		goto filter_failed;
+	    } else {
+	      if (filter->sense == FILTER_MATCH)
+		goto filter_failed;
+	    }	      
+	  } else {
+	    /* match boolean value */
+	    if (filter->sense == FILTER_MATCH) {
+ 	      if (!value || strcasecmp(value, "T"))
+		goto filter_failed;
+	    } else {
+ 	      if (value && !strcasecmp(value, "T"))
+		goto filter_failed;
+	    }
+	  }
+	}
+	goto filter_matched;
+      }
+    }
+#endif /* HAVE_AVAHI */
+
+    /* Does one of the properties outside the TXT record match? */
+    property = buf;
+    buf[0] = '\0';
+    if (!strcasecmp(filter->field, "Name") ||
+	!strcasecmp(filter->field, "Printer") ||
+	!strcasecmp(filter->field, "PrinterName") ||
+	!strcasecmp(filter->field, "Queue") ||
+	!strcasecmp(filter->field, "QueueName")) {
+      if (name)
+	property = name;
+    } else if (!strcasecmp(filter->field, "Host") ||
+	       !strcasecmp(filter->field, "HostName") ||
+	       !strcasecmp(filter->field, "RemoteHost") ||
+	       !strcasecmp(filter->field, "RemoteHostName") ||
+	       !strcasecmp(filter->field, "Server") ||
+	       !strcasecmp(filter->field, "ServerName")) {
+      if (host)
+	property = host;
+    } else if (!strcasecmp(filter->field, "Port")) {
+      if (port)
+	snprintf(buf, sizeof(buf), "%d", port);
+    } else if (!strcasecmp(filter->field, "Service") ||
+	       !strcasecmp(filter->field, "ServiceName")) {
+      if (service_name)
+	property = service_name;
+    } else if (!strcasecmp(filter->field, "Domain")) {
+      if (domain)
+	property = domain;
+    } else
+      property = NULL;
+    if (property) {
+      if (!filter->regexp)
+	filter->regexp = "";
+      if ((filter->cregexp &&
+	   regexec(filter->cregexp, property, 0, NULL, 0) == 0) ||
+	  (!filter->cregexp && !strcasecmp(filter->regexp, property))) {
+	if (filter->sense == FILTER_NOT_MATCH)
+	  goto filter_failed;
+      } else {
+	if (filter->sense == FILTER_MATCH)
+	  goto filter_failed;
+      }
+      goto filter_matched;
+    }
+
+    debug_printf(": Field not found --> SKIPPED\n");
+    continue;
+
+  filter_matched:
+    debug_printf(" --> MATCHED\n");
+  }
+
+  /* All BrowseFilter lines matching, accept this printer */
+  debug_printf("cups-browsed: All BrowseFilter lines matched or skipped, accepting printer %s\n",
+	       name);
+  return TRUE;
+
+ filter_failed:
+  debug_printf(" --> FAILED\n");
+  debug_printf("cups-browsed: One BrowseFilter line did not match, ignoring printer %s\n",
+	       name);
+  return FALSE;
+}
+
 static remote_printer_t *
 generate_local_queue(const char *host,
 		     const char *ip,
@@ -3565,6 +3707,17 @@ generate_local_queue(const char *host,
 	return NULL;
       }
     }
+  }
+
+  if (!matched_filters (local_queue_name, remote_host, port, name, domain,
+			txt)) {
+    debug_printf("cups-browsed: Printer %s does not match BrowseFilter lines in cups-browsed.conf, printer ignored.\n",
+		 local_queue_name);
+    free (backup_queue_name);
+    free (remote_host);
+    free (pdl);
+    free (remote_queue);
+    return NULL;
   }
 
   /* Check if we have already created a queue for the discovered
@@ -5149,12 +5302,15 @@ read_configuration (const char *filename)
   cups_file_t *fp;
   int linenum;
   char line[HTTP_MAX_BUFFER];
-  char *value;
+  char *value, *ptr, *field;
   const char *delim = " \t,";
   int browse_allow_line_found = 0;
   int browse_deny_line_found = 0;
   int browse_order_line_found = 0;
   int browse_line_found = 0;
+  browse_filter_t *filter = NULL;
+  int browse_filter_options, exact_match, err;
+  char errbuf[1024];
 
   if (!filename)
     filename = CUPS_SERVERROOT "/cups-browsed.conf";
@@ -5274,6 +5430,87 @@ read_configuration (const char *filename)
       } else
 	debug_printf ("cups-browsed: BrowseOrder value \"%s\" not understood\n",
 		      value);
+    } else if (!strcasecmp(line, "BrowseFilter") && value) {
+      ptr = value;
+      /* Skip whitw space */
+      while (*ptr && isspace(*ptr)) ptr ++;
+      /* Premature line end */
+      if (!*ptr) goto browse_filter_fail;
+      filter = calloc (1, sizeof (browse_filter_t));
+      if (!filter) goto browse_filter_fail;
+      browse_filter_options = 1;
+      filter->sense = FILTER_MATCH;
+      exact_match = 0;
+      while (browse_filter_options) {
+	if (!strncasecmp(ptr, "NOT", 3) && *(ptr + 3) &&
+	    isspace(*(ptr + 3))) {
+	  /* Accept remote printers where regexp does NOT match or where
+	     the boolean field is false */
+	  filter->sense = FILTER_NOT_MATCH;
+	  ptr += 4;
+	  /* Skip white space until next word */
+	  while (*ptr && isspace(*ptr)) ptr ++;
+	  /* Premature line end without field name */
+	  if (!*ptr) goto browse_filter_fail;
+	} else if (!strncasecmp(ptr, "EXACT", 5) && *(ptr + 5) &&
+		   isspace(*(ptr + 5))) {
+	  /* Consider the rest of the line after the field name a string which
+	     has to match the field exactly */
+	  exact_match = 1;
+	  ptr += 6;
+	  /* Skip white space until next word */
+	  while (*ptr && isspace(*ptr)) ptr ++;
+	  /* Premature line end without field name */
+	  if (!*ptr) goto browse_filter_fail;
+	} else
+	  /* No more options, consider next word the name of the field which
+	     should match the regexp */
+	  browse_filter_options = 0;
+      }
+      field = ptr;
+      while (*ptr && !isspace(*ptr)) ptr ++;
+      if (*ptr) {
+	/* Mark end of the field name */
+	*ptr = '\0';
+	/* Skip white space until regexp or line end */
+	ptr ++;
+	while (*ptr && isspace(*ptr)) ptr ++;
+      }
+      filter->field = strdup(field);
+      if (!*ptr) {
+	/* Only field name and no regexp is given, so this rule is
+	   about matching a boolean value */
+	filter->regexp = NULL;
+	filter->cregexp = NULL;
+      } else {
+	/* The rest of the line is the regexp, store and compile it */
+	filter->regexp = strdup(ptr);
+	if (!exact_match) {
+	  /* Compile the regexp only if the line does not require an exact
+	     match (using the EXACT option */
+	  filter->cregexp = calloc(1, sizeof (regex_t));
+	  if ((err = regcomp(filter->cregexp, filter->regexp,
+			     REG_EXTENDED | REG_ICASE)) != 0) {
+	    regerror(err, filter->cregexp, errbuf, sizeof(errbuf));
+	    debug_printf ("cups-browsed: BrowseFilter line with error in regular expression \"%s\": %s\n",
+			  filter->regexp, errbuf);
+	    goto browse_filter_fail;
+	  }
+	} else
+	  filter->cregexp = NULL;
+      }
+      cupsArrayAdd (browsefilter, filter);
+      continue;
+    browse_filter_fail:
+      if (filter) {
+	if (filter->field)
+	  free(filter->field);
+	if (filter->regexp)
+	  free(filter->regexp);
+	if (filter->cregexp)
+	  regfree(filter->cregexp);
+	free(filter);
+      }
     } else if (!strcasecmp(line, "DomainSocket") && value) {
       if (value[0] != '\0')
 	DomainSocket = strdup(value);
@@ -5478,6 +5715,9 @@ int main(int argc, char*argv[]) {
 
   /* Initialise the browseallow array */
   browseallow = cupsArrayNew(compare_pointers, NULL);
+
+  /* Initialise the browsefilter array */
+  browsefilter = cupsArrayNew(compare_pointers, NULL);
 
   /* Read in cups-browsed.conf */
   read_configuration (NULL);
