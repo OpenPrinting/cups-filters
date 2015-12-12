@@ -32,7 +32,7 @@ INTRODUCTION
     recommended), libavahi-common, and libavahi-client are needed. It
     is highly recommended, especially if non-PostScript printers are
     used, to have Ghostscript, foomatic-filters, and foomatic-db
-    installed. To support Braille embossers liblouis is needed.
+    installed.
 
     CUPS, this package, and Ghostscript contain some rudimentary printer
     drivers, see http://www.openprinting.org/drivers/ for a more
@@ -1511,8 +1511,6 @@ License: GNU General Public License version 3 or any newer version
 BRAILLE EMBOSSING
 =================
 
-Building and using this part requires liblouis to be installed.
-
 cups-filters also provides filters and drivers for braille
 embossers. It supports:
 
@@ -1641,6 +1639,17 @@ Greek, with 2.5mm dot spacing and 5mm line spacing. All options can be omitted,
 the default values are shown here.
 
 lp -o "LibLouis=fr-fr-g1 LibLouis2=gr-gr-g1 TextDotDistance=250 LineSpacing=500" file.txt
+
+
+----------------------------
+Remark about the source code
+----------------------------
+
+The file filter/braille/drivers/index/ubrlto4dot.c is used to generate
+the translation table in
+filter/braille/drivers/index/imageubrltoindexv[34]. It is included as
+"source code" for these two files, even if actually running the
+generation in the Makefile is more tedious than really useful.
 
 
 ----
