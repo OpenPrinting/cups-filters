@@ -1,0 +1,97 @@
+#!/bin/bash
+
+#
+# Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# 
+
+# Make sure we have enough options
+if [ $# != 5 -a $# != 6 ]; then
+  echo "ERROR: $0 jobid user name nb options [filename]" >&2
+  exit 1
+fi
+
+NB=$4
+OPTIONS=$5
+FILE=$6
+
+case $0 in
+  *indexv3*) . @CUPS_DATADIR@/braille/indexv3.sh ;;
+  *indexv4*) . @CUPS_DATADIR@/braille/indexv4.sh ;;
+  *) echo "ERROR: $0 must be called as somethingindexv3 or somethingindexv4" >&2
+     exit 1
+     ;;
+esac
+
+printf "$INIT"
+
+if [ $LIBLOUIS1 != None -o \
+     $LIBLOUIS2 != None -o \
+     $LIBLOUIS3 != None -o \
+     $LIBLOUIS4 != None ]
+then
+  # software-translated, send to printer in transparent mode
+  echo "INFO: Writing text to Index embosser in transparent mode" >&2
+  if [ -z "$FILE" ]
+  then
+    cat
+  else
+    cat "$FILE"
+  fi | (
+    while read LINE
+    do
+      # Strip CRs
+      LINE=${LINE//$'\015'}
+      CHARS=$(printf %s "$LINE" | wc -c)
+      if [ "$CHARS" -gt 127 ]
+      then
+        # Index printers have a bug with numbers between 128 and 255 in
+        # transparent mode escape sequence. This is normally not a problem since
+        # 128 chars is more than a line worth of text
+	echo "ERROR: Line too long ($CHARS)" >&2
+	exit 1
+      fi
+      if [ "$CHARS" -gt 0 ]
+      then
+	# Enter transparent mode for $CHARS characters
+	printf "\\033\\\\\\x$(printf %02x $CHARS)\\x00"
+	# Echo those $CHARS characters
+	printf %s "$LINE" | tr " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_{}|~\`abcdefghijklmnopqrstuvwxyz" "\\0V tSQW"$'\004'"gvAT@DP"$'\024'"d"$'\002\006'"\"bB&fF\$a\`Cw4q"$'\020\001\003\021'"1!"$'\023'"3#"$'\022'"2"$'\005\007\025'"5%"$'\027'"7'"$'\026'"6EGrUueRcs0pRsc0"$'\020\001\003\021'"1!"$'\023'"3#"$'\022'"2"$'\005\007\025'"5%"$'\027'"7'"$'\026'"6EGrUue"
+      fi
+      printf "\\r\\n"
+    done
+  )
+else
+  # not software-translated, send to printer as such
+  echo "INFO: Writing text to Index embosser" >&2
+  if [ -z "$FILE" ]
+  then
+    cat
+  else
+    cat "$FILE"
+  fi
+fi
+
+printf '\032'
+printf '\032'
+
+echo "INFO: Ready" >&2

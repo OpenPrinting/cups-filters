@@ -32,7 +32,7 @@ INTRODUCTION
     recommended), libavahi-common, and libavahi-client are needed. It
     is highly recommended, especially if non-PostScript printers are
     used, to have Ghostscript, foomatic-filters, and foomatic-db
-    installed.
+    installed. To support Braille embossers liblouis is needed.
 
     CUPS, this package, and Ghostscript contain some rudimentary printer
     drivers, see http://www.openprinting.org/drivers/ for a more
@@ -1506,3 +1506,147 @@ the filter coming with this package is converted to use libqpdf
 instead (the same library as pdftopdf uses).
 
 License: GNU General Public License version 3 or any newer version
+
+
+BRAILLE EMBOSSING
+=================
+
+Building and using this part requires liblouis to be installed.
+
+cups-filters also provides filters and drivers for braille
+embossers. It supports:
+
+- Text on all kinds of embossers with generic support
+- Text and graphics on the Index V3 embossers.
+
+This is configured in CUPS just like any printer. Options can then be configured
+in the standard printer panel, or passed as -o options to the lp command.
+
+
+------------
+Text support
+------------
+
+Text can be embossed either with no translation on the computer side (the
+embosser will translate), or with translation on the computer side (thanks to
+liblouis). It is a matter of running
+
+lp file.txt
+
+or even
+
+lp file.html
+lp file.doc
+lp file.pdf
+lp file.rtf
+lp file.docx
+
+
+-------------
+Image support
+-------------
+
+Images can be embossed by converting them to braille dots.
+
+The orientation of the image can be controlled. By default it will be rotate to
+portrait, i.e. it will be rotate by 90 degree if it was wider than high. Other
+rotation modes are provided.
+
+The image can be processed for edge detection. When no processing is done (edge
+detection is configured to "None"), the dark pixels are embossed if the Negate
+option is off, or the light pixels are embossed if the Negate option is on. When
+edge processing is done, only the edges of the images will be embossed. The
+Basic and the Canny algorithms bring differing results. The Basic algorithm
+can be tuned thanks to the edge factor only. The Canny algorithm can also be
+tuned: increasing the Upper value will reduce the amount of detected edges (and
+vice-versa), increasing the Lower value will reduce the lengths of the detected
+edges (and vice-versa). The Radius and Sigma parameter control the blurring
+performed before edge detection, to improve the result; the Radius parameter
+controls how large blurring should be performed, setting it to zero requests
+autodetection; the Sigma parameter determines how strongly blurring should be
+performed.
+
+A lot of images formats are support, so one can just run
+
+lp file.png
+lp file.gif
+lp file.jpg
+...
+
+Here are complete examples for controlling the processing (all options can be
+omitted, the default values are shown here):
+
+lp -o "Edge=None Rotate=90> Negate" file.png
+lp -o "Edge=None Rotate=90> noNegate" file.png
+lp -o "Edge=Edge EdgeFactor=1" file.png
+lp -o "Edge=Canny CannyRadius=0 CannySigma=1 CannyLower=10 CannyUpper=30" file.png
+
+
+------------------------
+Generic embosser support
+------------------------
+
+It should be possible to make all embossers use the generic driver. For this to
+work, one has to:
+
+- configure the embosser itself so that it uses an MIT/NABCC/BRF braille table
+- add in CUPS a printer with the "Generic" manufacturer and "Braille embosser"
+  model
+- configure CUPS options according to the embosser settings, so that CUPS knows
+  the page size, braille spacing, etc.
+
+The generic driver can emboss text, as well as images, but images will probably
+be distorted by the Braille interline spacing.
+
+
+-----------------------
+Index embossers support
+-----------------------
+
+Supported models:
+
+Basic-S V3/4
+Basic-D V3/4
+Everest-D V3/4
+4-Waves PRO V3
+4X4 PRO V3
+Braille Box V4
+
+Index V3 embosser support has been well tested. It supports both text and
+graphics mode.  Embossers with firmware 10.30 and above can be easily configured
+from CUPS (paper dimension, braille spacing, etc.).
+
+Index V4 embosser support has not been tested, but is very close to V3 support,
+so it is probably working fine already.  Feedback would be very welcome.
+
+To connect an Index embosser through Ethernet, gather its IP adress, select the
+"AppSocket/HP JetDirect" network printer protocol, and set
+socket://the.embosser.IP.address:9100 as Connection URL.
+
+The density of dots for images can easily be chosen from the command line, for
+instance:
+
+lp -o "GraphicDotDistance=160" file.png
+
+to select 1.6mm dots spacing
+
+
+----------------------
+Braille output options
+----------------------
+
+The output can be finely tuned from the standard printing panel, or from the
+command-line, the following example selects translation tables for French and
+Greek, with 2.5mm dot spacing and 5mm line spacing. All options can be omitted,
+the default values are shown here.
+
+lp -o "LibLouis=fr-fr-g1 LibLouis2=gr-gr-g1 TextDotDistance=250 LineSpacing=500" file.txt
+
+
+----
+TODO
+----
+
+- Test whether one wants to negate, e.g. to emboss as few dots as possible
+- textubrltoindex when liblouis tools will be able to emit 8dot braille
+

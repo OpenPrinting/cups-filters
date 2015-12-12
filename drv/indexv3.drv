@@ -1,0 +1,132 @@
+// 
+// Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// 
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+// 
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+// 
+
+#include <media.defs>
+#include <media-braille.defs>
+#include <liblouis.defs>
+#include <imagemagick.defs>
+#include <braille.defs>
+#include <index.defs>
+
+#po fr "fr.po"
+
+Manufacturer "Index"
+Version 1.0
+
+Filter text/vnd.cups-brf 0 textbrftoindexv3
+Filter image/vnd.cups-ubrl 0 imageubrltoindexv3
+
+//
+// Common options
+//
+
+HWMargins 0.5mm 0.5mm 0.5mm 0.5mm
+VariablePaperSize true
+MinSize 1in 1in
+
+Group "Index/Index support"
+  Option "IndexFirmwareVersion/Installed firmware version" PickOne AnySetup 10
+  Choice "102000/10.20 or above" ""
+  *Choice "103000/10.30 or above" ""
+  // Provides DBT but we just use transparent mode
+  //Choice "110210/11.02.1 or above" ""
+  // Provides user-defined interline size
+  Choice "120130/12.01.3 or above" ""
+
+
+//
+// Basic-D
+//
+{
+  ModelName "Basic-D V3"
+  PCFileName "ibasicd3.ppd"
+
+  MaxSize 325mm 10m
+
+  Group "Index"
+    Option "IndexFolding" PickOne AnySetup 10
+    Choice "SingleZ/Single-sided z-folding" ""
+    Choice "DoubleZ/Double-sided z-folding" ""
+
+  Attribute "IndexPaperLength" "" In
+}
+
+
+//
+// Basic-S
+//
+{
+  ModelName "Basic-S V3"
+  PCFileName "ibasics3.ppd"
+
+  MaxSize 325mm 10m
+
+  Attribute "IndexPaperLength" "" In
+}
+
+
+//
+// 4-Waves PRO
+//
+{
+  ModelName "4-Waves PRO"
+  PCFileName "i4waves3.ppd"
+
+  MaxSize 325mm 10m
+
+  Group "Index"
+    Option "IndexFolding" PickOne AnySetup 10
+    Choice "SingleZ/Single-sided z-folding" ""
+    Choice "DoubleZ/Double-sided z-folding" ""
+}
+
+
+//
+// Everest-D
+//
+{
+  ModelName "Everest-D V3"
+  PCFileName "ieveres3.ppd"
+
+  MaxSize 297mm 10m
+
+  Attribute "IndexPaperLength" "" Mm
+}
+
+
+//
+// 4x4 PRO
+//
+{
+  ModelName "4x4 PRO V3"
+  PCFileName "i4x4pro3.ppd"
+
+  MaxSize 297mm 10m
+
+  Group "Index"
+    Option "IndexFolding" PickOne AnySetup 10
+    Choice "DoubleS/Double-sided saddle stitch 4 pages" ""
+
+  Attribute "IndexPaperLength" "" Mm
+}

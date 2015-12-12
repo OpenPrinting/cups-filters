@@ -238,6 +238,12 @@ pkgcupsserverroot_DATA = \
 pkgdriverdir = $(CUPS_DATADIR)/drv
 pkgdriver_DATA = \
 	drv/cupsfilters.drv
+if ENABLE_BRAILLE
+pkgdriver_DATA += \
+	drv/generic-brf.drv \
+	drv/indexv3.drv \
+	drv/indexv4.drv
+endif
 
 EXTRA_DIST += $(pkgdriver_DATA)
 
@@ -248,6 +254,26 @@ pkgppdcdir = $(CUPS_DATADIR)/ppdc
 pkgppdc_DATA = \
 	filter/pcl.h \
 	filter/escp.h
+if ENABLE_BRAILLE
+GENERATED_LIBLOUIS = \
+	filter/braille/filters/liblouis2.defs \
+	filter/braille/filters/liblouis3.defs \
+	filter/braille/filters/liblouis4.defs
+GENERATED_DEFS=$(GENERATED_LIBLOUIS)
+
+$(GENERATED_LIBLOUIS): filter/braille/filters/liblouis%.defs: filter/braille/filters/liblouis1.defs
+	sed -e "s/Braille transcription/Additional Braille transcription ($*)/" -e s/LibLouis/LibLouis$*/ < $< > $@
+
+pkgppdc_DATA += \
+	filter/braille/drivers/common/media-braille.defs \
+	filter/braille/drivers/index/index.defs \
+	filter/braille/filters/braille.defs \
+	filter/braille/filters/imagemagick.defs \
+	filter/braille/filters/liblouis1.defs \
+	filter/braille/filters/liblouis.defs
+nodist_pkgppdc_DATA = \
+	$(GENERATED_LIBLOUIS)
+endif
 
 EXTRA_DIST += $(pkgppdc_DATA)
 
@@ -258,8 +284,25 @@ pkgmimedir = $(CUPS_DATADIR)/mime
 pkgmime_DATA = \
 	mime/cupsfilters.convs \
 	mime/cupsfilters.types
+if ENABLE_BRAILLE
+pkgmime_DATA += \
+	mime/braille.convs \
+	mime/braille.types
+endif
 
 EXTRA_DIST += $(pkgmime_DATA)
+
+# =================
+# Braille aux files
+# =================
+if ENABLE_BRAILLE
+pkgbrailledir = $(CUPS_DATADIR)/braille
+nodist_pkgbraille_SCRIPTS = \
+	filter/braille/drivers/index/indexv4.sh \
+	filter/braille/drivers/index/indexv3.sh \
+	filter/braille/drivers/index/index.sh \
+	filter/braille/filters/cups-braille.sh
+endif
 
 # =================
 # Fontembed library
@@ -423,6 +466,15 @@ pkgfilter_SCRIPTS = \
 	filter/pstopdf \
 	filter/textonly \
 	filter/texttops
+if ENABLE_BRAILLE
+nodist_pkgfilter_SCRIPTS = \
+	filter/braille/drivers/generic/brftoembosser \
+	filter/braille/drivers/index/imageubrltoindexv3 \
+	filter/braille/drivers/index/imageubrltoindexv4 \
+	filter/braille/drivers/index/textbrftoindexv3 \
+	filter/braille/filters/imagetobrf \
+	filter/braille/filters/texttobrf
+endif
 pkgfilter_PROGRAMS += \
 	bannertopdf \
 	commandtoescpx \
@@ -806,7 +858,12 @@ distclean-local:
 
 install-exec-hook:
 	$(INSTALL) -d -m 755 $(DESTDIR)$(bindir)
+	$(INSTALL) -d -m 755 $(DESTDIR)$(pkgfilterdir)
 	$(LN_S) -f $(pkgfilterdir)/foomatic-rip $(DESTDIR)$(bindir)
+if ENABLE_BRAILLE
+	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
+	$(LN_S) -f textbrftoindexv3 $(DESTDIR)$(pkgfilterdir)/textbrftoindexv4
+endif
 
 install-data-hook:
 if RCLINKS
@@ -831,3 +888,7 @@ if RCLINKS
 endif
 	$(RM) $(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
 	$(RM) $(DESTDIR)$(bindir)/foomatic-rip
+if ENABLE_BRAILLE
+	$(RM) $(DESTDIR)$(pkgfilterdir)/imagetoubrl
+	$(RM) $(DESTDIR)$(pkgfilterdir)/textbrftoindexv4
+endif

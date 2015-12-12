@@ -1,0 +1,117 @@
+#!/bin/bash
+
+#
+# Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# 
+
+# Make sure we have enough options
+if [ $# != 5 -a $# != 6 ]; then
+  echo "ERROR: $0 jobid user name nb options [filename]" >&2
+  exit 1
+fi
+
+NB=$4
+OPTIONS=$5
+FILE=$6
+
+. @CUPS_DATADIR@/braille/cups-braille.sh
+
+# Default rendering without translation: just reformat paragraphs
+RENDER_CALL="fmt -$TEXTWIDTH"
+
+####################
+# Liblouis options #
+####################
+LIBLOUIS_CONFIG=""
+
+#  number of cells per line
+LIBLOUIS_CONFIG+=" -CcellsPerLine=$TEXTWIDTH -ClinesPerPage=$TEXTHEIGHT -CbraillePages=yes"
+
+#  input encoding
+if [ "$CHARSET" = utf-8 ]
+then
+  LIBLOUIS_CONFIG+=" -CinputTextEncoding=UTF8"
+else
+  LIBLOUIS_CONFIG+=" -CinputTextEncoding=ascii8"
+fi
+
+echo "DEBUG: Input content type: $CONTENT_TYPE" >&2
+
+#  Tool to be used for the conversion
+# FIXME CONTENT_TYPE contains original document, not document passed as parameter ?!!
+case $CONTENT_TYPE in
+  text/plain)
+    LIBLOUIS_TOOL="file2brl"
+    CONVERT=""
+    ;;
+  text/html)
+    LIBLOUIS_TOOL="file2brl -t"
+    CONVERT=""
+    ;;
+  text/xml|application/xml|application/xhtml+xml)
+    LIBLOUIS_TOOL="file2brl"
+    CONVERT=""
+    ;;
+  application/msword)
+    LIBLOUIS_TOOL="file2brl"
+    CONVERT="antiword -x db /dev/stdin"
+    ;;
+  application/vnd.openxmlformats-officedocument.wordprocessingml.document)
+    LIBLOUIS_TOOL="file2brl"
+    CONVERT="docx2txt"
+    ;;
+  text/rtf|application/rtf)
+    LIBLOUIS_TOOL="file2brl"
+    CONVERT="rtf2xml /dev/stdin"
+    ;;
+  application/pdf)
+    LIBLOUIS_TOOL="file2brl -p"
+    CONVERT="pdftotext -raw /dev/stdin /dev/stdout"
+    ;;
+  *)
+    echo "ERROR: unsupported content type $CONTENT_TYPE" >&2
+    exit 1
+    ;;
+esac
+
+#  Selected braille table
+if [ -n "$LIBLOUIS_TABLES" ]
+then
+  RENDER_CALL="$LIBLOUIS_TOOL -CliteraryTextTable=$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
+fi
+
+# Now proceeed
+cd $TMPDIR
+echo "INFO: Reformating text" >&2
+[ -z "$FILE" ] && FILE=/dev/stdin
+
+if [ -z "$CONVERT" ]
+then
+  printf "DEBUG: Calling $RENDER_CALL on '%s'\n" "$FILE" >&2
+   < "$FILE" $RENDER_CALL
+else
+  printf "DEBUG: Calling $CONVERT | $RENDER_CALL on '%s'\n" "$FILE" >&2
+  < "$FILE" $CONVERT | $RENDER_CALL
+fi
+
+echo "INFO: Ready" >&2

@@ -1,0 +1,139 @@
+// 
+// Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// 
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+// 
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+// 
+
+#include <media.defs>
+#include <media-braille.defs>
+#include <liblouis.defs>
+#include <imagemagick.defs>
+#include <braille.defs>
+#include <index.defs>
+
+#po fr "fr.po"
+
+Manufacturer "Index"
+Version 1.0
+
+Filter text/vnd.cups-brf 0 textbrftoindexv4
+Filter image/vnd.cups-ubrl 0 imageubrltoindexv4
+
+//
+// Common options
+//
+
+HWMargins 0.5mm 0.5mm 0.5mm 0.5mm
+VariablePaperSize true
+MinSize 1in 1in
+
+Group "Index/Index support"
+  Option "IndexFirmwareVersion/Installed firmware version" PickOne AnySetup 10
+  Choice "102000/10.20 or above" ""
+  *Choice "103000/10.30 or above" ""
+  // Provides DBT but we just use transparent mode
+  //Choice "110210/11.02.1 or above" ""
+
+Group "Braille"
+  Option "IndexTable/Firmware Braille Table" PickOne AnySetup 10
+  Choice "5/American computer 6 dots" ""
+  Choice "6/American computer 8 dots" ""
+  Choice "7/English computer 8 dots" ""
+  Choice "8/English literal without capital" ""
+  Choice "9/IBM 437 computer 6 dots" ""
+  Choice "10/IBM 437 computer 8 dots" ""
+  Choice "11/IBM 850 computer 8 dots" ""
+  Choice "12/German computer 8 dots" ""
+  Choice "13/Italian literal with capital" ""
+  Choice "14/Italian literal without capital" ""
+  Choice "15/Portuguese literal with capital" ""
+  Choice "16/Spanish computer 6 dots" ""
+  Choice "17/Spanish computer 8 dots" ""
+  Choice "18/Spanish user defined 3 ANSI" ""
+  Choice "19/Spanish user defined 4 ASCII" ""
+  Choice "20/Swedish literal without capital" ""
+  Choice "21/Polish computer 6 dots" ""
+  Choice "22/Polish literal with capital" ""
+  Choice "23/Polish own table 03" ""
+  Choice "24/Polish own table 04" ""
+  Choice "24/Dutch computer 6 dots" ""
+  Choice "25/Dutch own table 02" ""
+
+
+//
+// Basic-D
+//
+{
+  ModelName "Basic-D V4"
+  PCFileName "ibasicd4.ppd"
+
+  MaxSize 325mm 10m
+
+  Group "Index"
+    Option "IndexFolding" PickOne AnySetup 10
+    Choice "SingleZ/Single-sided z-folding" ""
+    Choice "DoubleZ/Double-sided z-folding" ""
+    Choice "SingleSZ/Single-sided sideways z-folding" ""
+    Choice "DoubleSZ/Double-sided sideways z-folding" ""
+}
+
+
+//
+// Basic-S
+//
+{
+  ModelName "Basic-S V4"
+  PCFileName "ibasics4.ppd"
+
+  MaxSize 325mm 10m
+}
+
+
+//
+// Everest-D
+//
+{
+  ModelName "Everest-D V4"
+  PCFileName "ieveres4.ppd"
+
+  MaxSize 297mm 10m
+
+  Group "Index"
+    Option "IndexFolding" PickOne AnySetup 10
+    Choice "DoubleS/Double-sided saddle stitch 4 pages" ""
+    Choice "SingleS/Single-sided saddle stitch 4 pages" ""
+}
+
+
+//
+// Braille Box
+//
+{
+  ModelName "Braille Box V4"
+  PCFileName "ibrlbox4.ppd"
+
+  MaxSize 297mm 10m
+
+  Group "Index"
+    Option "IndexFolding" PickOne AnySetup 10
+    Choice "DoubleS/Double-sided saddle stitch 4 pages" ""
+    Choice "SingleS/Single-sided saddle stitch 4 pages" ""
+}

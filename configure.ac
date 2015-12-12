@@ -681,6 +681,27 @@ fi
 AC_SUBST(SED_EXTENDED_REGEX_OPT)
 AC_SUBST(CUPS_GHOSTSCRIPT)
 
+# ==========================
+# Braille embossing/liblouis
+# ==========================
+AC_ARG_ENABLE(braille, AS_HELP_STRING([--enable-braille],[enable Braille embosing filters, requires liblouis]),
+	      enable_braille=$enableval,enable_braille=yes)
+AC_MSG_CHECKING(for liblouis)
+if $PKGCONFIG --exists liblouis; then
+	AC_MSG_RESULT(yes)
+	if test "x$PKGCONFIG" != x -a "x$enable_braille" = xyes; then
+		TABLESDIR=`$PKGCONFIG --variable=tablesdir liblouis`
+	else
+		TABLESDIR=/usr/share/liblouis/tables
+	fi
+else
+	AC_MSG_RESULT(no)
+	enable_braille=no
+	TABLESDIR=/usr/share/liblouis/tables
+fi
+AM_CONDITIONAL(ENABLE_BRAILLE, test "x$enable_braille" = xyes)
+AC_SUBST(TABLESDIR)
+
 # =========================================================
 # Select a different shell instead of the default /bin/bash
 # =========================================================
@@ -702,6 +723,16 @@ AC_CONFIG_FILES([
 	utils/cups-browsed
 	utils/cups-browsed.conf
 	filter/foomatic-rip/foomatic-rip.1
+	filter/braille/drivers/index/indexv4.sh
+	filter/braille/drivers/index/indexv3.sh
+	filter/braille/drivers/index/index.sh
+	filter/braille/drivers/index/textbrftoindexv3
+	filter/braille/drivers/index/imageubrltoindexv3
+	filter/braille/drivers/index/imageubrltoindexv4
+	filter/braille/drivers/generic/brftoembosser
+	filter/braille/filters/cups-braille.sh
+	filter/braille/filters/imagetobrf
+	filter/braille/filters/texttobrf
 ])
 AC_OUTPUT
 
@@ -735,5 +766,7 @@ Build configuration:
 	dbus:            ${enable_dbus}
 	browsing:        ${with_browseremoteprotocols}
 	werror:          ${enable_werror}
+	braille:	 ${enable_braille}
+	braille tables:  ${TABLESDIR}
 ==============================================================================
 ])

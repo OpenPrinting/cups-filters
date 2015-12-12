@@ -1,0 +1,317 @@
+#!/bin/bash
+
+#
+# Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# 
+
+# Make sure we have enough options
+if [ $# != 5 -a $# != 6 ]; then
+  echo "ERROR: $0 jobid user name nb options [filename]" >&2
+  exit 1
+fi
+
+NB=$4
+OPTIONS=$5
+FILE=$6
+
+. @CUPS_SERVERBIN@/filter/indexv4.sh
+printf "$INIT"
+
+# Enter 4-dot graphic mode
+# TODO: use image mode instead, to benefit from much better resolution
+printf "\033\007"
+
+echo "INFO: Writing text to Index embosser" >&2
+( if [ -z "$FILE" ]
+then
+  cat
+else
+  cat "$FILE"
+fi ) | sed \
+	-e 's/⠀/@@/g' \
+	-e 's/⠁/A@/g' \
+	-e 's/⠂/B@/g' \
+	-e 's/⠃/C@/g' \
+	-e 's/⠄/D@/g' \
+	-e 's/⠅/E@/g' \
+	-e 's/⠆/F@/g' \
+	-e 's/⠇/G@/g' \
+	-e 's/⡀/H@/g' \
+	-e 's/⡁/I@/g' \
+	-e 's/⡂/J@/g' \
+	-e 's/⡃/K@/g' \
+	-e 's/⡄/L@/g' \
+	-e 's/⡅/M@/g' \
+	-e 's/⡆/N@/g' \
+	-e 's/⡇/O@/g' \
+	-e 's/⠈/@A/g' \
+	-e 's/⠉/AA/g' \
+	-e 's/⠊/BA/g' \
+	-e 's/⠋/CA/g' \
+	-e 's/⠌/DA/g' \
+	-e 's/⠍/EA/g' \
+	-e 's/⠎/FA/g' \
+	-e 's/⠏/GA/g' \
+	-e 's/⡈/HA/g' \
+	-e 's/⡉/IA/g' \
+	-e 's/⡊/JA/g' \
+	-e 's/⡋/KA/g' \
+	-e 's/⡌/LA/g' \
+	-e 's/⡍/MA/g' \
+	-e 's/⡎/NA/g' \
+	-e 's/⡏/OA/g' \
+	-e 's/⠐/@B/g' \
+	-e 's/⠑/AB/g' \
+	-e 's/⠒/BB/g' \
+	-e 's/⠓/CB/g' \
+	-e 's/⠔/DB/g' \
+	-e 's/⠕/EB/g' \
+	-e 's/⠖/FB/g' \
+	-e 's/⠗/GB/g' \
+	-e 's/⡐/HB/g' \
+	-e 's/⡑/IB/g' \
+	-e 's/⡒/JB/g' \
+	-e 's/⡓/KB/g' \
+	-e 's/⡔/LB/g' \
+	-e 's/⡕/MB/g' \
+	-e 's/⡖/NB/g' \
+	-e 's/⡗/OB/g' \
+	-e 's/⠘/@C/g' \
+	-e 's/⠙/AC/g' \
+	-e 's/⠚/BC/g' \
+	-e 's/⠛/CC/g' \
+	-e 's/⠜/DC/g' \
+	-e 's/⠝/EC/g' \
+	-e 's/⠞/FC/g' \
+	-e 's/⠟/GC/g' \
+	-e 's/⡘/HC/g' \
+	-e 's/⡙/IC/g' \
+	-e 's/⡚/JC/g' \
+	-e 's/⡛/KC/g' \
+	-e 's/⡜/LC/g' \
+	-e 's/⡝/MC/g' \
+	-e 's/⡞/NC/g' \
+	-e 's/⡟/OC/g' \
+	-e 's/⠠/@D/g' \
+	-e 's/⠡/AD/g' \
+	-e 's/⠢/BD/g' \
+	-e 's/⠣/CD/g' \
+	-e 's/⠤/DD/g' \
+	-e 's/⠥/ED/g' \
+	-e 's/⠦/FD/g' \
+	-e 's/⠧/GD/g' \
+	-e 's/⡠/HD/g' \
+	-e 's/⡡/ID/g' \
+	-e 's/⡢/JD/g' \
+	-e 's/⡣/KD/g' \
+	-e 's/⡤/LD/g' \
+	-e 's/⡥/MD/g' \
+	-e 's/⡦/ND/g' \
+	-e 's/⡧/OD/g' \
+	-e 's/⠨/@E/g' \
+	-e 's/⠩/AE/g' \
+	-e 's/⠪/BE/g' \
+	-e 's/⠫/CE/g' \
+	-e 's/⠬/DE/g' \
+	-e 's/⠭/EE/g' \
+	-e 's/⠮/FE/g' \
+	-e 's/⠯/GE/g' \
+	-e 's/⡨/HE/g' \
+	-e 's/⡩/IE/g' \
+	-e 's/⡪/JE/g' \
+	-e 's/⡫/KE/g' \
+	-e 's/⡬/LE/g' \
+	-e 's/⡭/ME/g' \
+	-e 's/⡮/NE/g' \
+	-e 's/⡯/OE/g' \
+	-e 's/⠰/@F/g' \
+	-e 's/⠱/AF/g' \
+	-e 's/⠲/BF/g' \
+	-e 's/⠳/CF/g' \
+	-e 's/⠴/DF/g' \
+	-e 's/⠵/EF/g' \
+	-e 's/⠶/FF/g' \
+	-e 's/⠷/GF/g' \
+	-e 's/⡰/HF/g' \
+	-e 's/⡱/IF/g' \
+	-e 's/⡲/JF/g' \
+	-e 's/⡳/KF/g' \
+	-e 's/⡴/LF/g' \
+	-e 's/⡵/MF/g' \
+	-e 's/⡶/NF/g' \
+	-e 's/⡷/OF/g' \
+	-e 's/⠸/@G/g' \
+	-e 's/⠹/AG/g' \
+	-e 's/⠺/BG/g' \
+	-e 's/⠻/CG/g' \
+	-e 's/⠼/DG/g' \
+	-e 's/⠽/EG/g' \
+	-e 's/⠾/FG/g' \
+	-e 's/⠿/GG/g' \
+	-e 's/⡸/HG/g' \
+	-e 's/⡹/IG/g' \
+	-e 's/⡺/JG/g' \
+	-e 's/⡻/KG/g' \
+	-e 's/⡼/LG/g' \
+	-e 's/⡽/MG/g' \
+	-e 's/⡾/NG/g' \
+	-e 's/⡿/OG/g' \
+	-e 's/⢀/@H/g' \
+	-e 's/⢁/AH/g' \
+	-e 's/⢂/BH/g' \
+	-e 's/⢃/CH/g' \
+	-e 's/⢄/DH/g' \
+	-e 's/⢅/EH/g' \
+	-e 's/⢆/FH/g' \
+	-e 's/⢇/GH/g' \
+	-e 's/⣀/HH/g' \
+	-e 's/⣁/IH/g' \
+	-e 's/⣂/JH/g' \
+	-e 's/⣃/KH/g' \
+	-e 's/⣄/LH/g' \
+	-e 's/⣅/MH/g' \
+	-e 's/⣆/NH/g' \
+	-e 's/⣇/OH/g' \
+	-e 's/⢈/@I/g' \
+	-e 's/⢉/AI/g' \
+	-e 's/⢊/BI/g' \
+	-e 's/⢋/CI/g' \
+	-e 's/⢌/DI/g' \
+	-e 's/⢍/EI/g' \
+	-e 's/⢎/FI/g' \
+	-e 's/⢏/GI/g' \
+	-e 's/⣈/HI/g' \
+	-e 's/⣉/II/g' \
+	-e 's/⣊/JI/g' \
+	-e 's/⣋/KI/g' \
+	-e 's/⣌/LI/g' \
+	-e 's/⣍/MI/g' \
+	-e 's/⣎/NI/g' \
+	-e 's/⣏/OI/g' \
+	-e 's/⢐/@J/g' \
+	-e 's/⢑/AJ/g' \
+	-e 's/⢒/BJ/g' \
+	-e 's/⢓/CJ/g' \
+	-e 's/⢔/DJ/g' \
+	-e 's/⢕/EJ/g' \
+	-e 's/⢖/FJ/g' \
+	-e 's/⢗/GJ/g' \
+	-e 's/⣐/HJ/g' \
+	-e 's/⣑/IJ/g' \
+	-e 's/⣒/JJ/g' \
+	-e 's/⣓/KJ/g' \
+	-e 's/⣔/LJ/g' \
+	-e 's/⣕/MJ/g' \
+	-e 's/⣖/NJ/g' \
+	-e 's/⣗/OJ/g' \
+	-e 's/⢘/@K/g' \
+	-e 's/⢙/AK/g' \
+	-e 's/⢚/BK/g' \
+	-e 's/⢛/CK/g' \
+	-e 's/⢜/DK/g' \
+	-e 's/⢝/EK/g' \
+	-e 's/⢞/FK/g' \
+	-e 's/⢟/GK/g' \
+	-e 's/⣘/HK/g' \
+	-e 's/⣙/IK/g' \
+	-e 's/⣚/JK/g' \
+	-e 's/⣛/KK/g' \
+	-e 's/⣜/LK/g' \
+	-e 's/⣝/MK/g' \
+	-e 's/⣞/NK/g' \
+	-e 's/⣟/OK/g' \
+	-e 's/⢠/@L/g' \
+	-e 's/⢡/AL/g' \
+	-e 's/⢢/BL/g' \
+	-e 's/⢣/CL/g' \
+	-e 's/⢤/DL/g' \
+	-e 's/⢥/EL/g' \
+	-e 's/⢦/FL/g' \
+	-e 's/⢧/GL/g' \
+	-e 's/⣠/HL/g' \
+	-e 's/⣡/IL/g' \
+	-e 's/⣢/JL/g' \
+	-e 's/⣣/KL/g' \
+	-e 's/⣤/LL/g' \
+	-e 's/⣥/ML/g' \
+	-e 's/⣦/NL/g' \
+	-e 's/⣧/OL/g' \
+	-e 's/⢨/@M/g' \
+	-e 's/⢩/AM/g' \
+	-e 's/⢪/BM/g' \
+	-e 's/⢫/CM/g' \
+	-e 's/⢬/DM/g' \
+	-e 's/⢭/EM/g' \
+	-e 's/⢮/FM/g' \
+	-e 's/⢯/GM/g' \
+	-e 's/⣨/HM/g' \
+	-e 's/⣩/IM/g' \
+	-e 's/⣪/JM/g' \
+	-e 's/⣫/KM/g' \
+	-e 's/⣬/LM/g' \
+	-e 's/⣭/MM/g' \
+	-e 's/⣮/NM/g' \
+	-e 's/⣯/OM/g' \
+	-e 's/⢰/@N/g' \
+	-e 's/⢱/AN/g' \
+	-e 's/⢲/BN/g' \
+	-e 's/⢳/CN/g' \
+	-e 's/⢴/DN/g' \
+	-e 's/⢵/EN/g' \
+	-e 's/⢶/FN/g' \
+	-e 's/⢷/GN/g' \
+	-e 's/⣰/HN/g' \
+	-e 's/⣱/IN/g' \
+	-e 's/⣲/JN/g' \
+	-e 's/⣳/KN/g' \
+	-e 's/⣴/LN/g' \
+	-e 's/⣵/MN/g' \
+	-e 's/⣶/NN/g' \
+	-e 's/⣷/ON/g' \
+	-e 's/⢸/@O/g' \
+	-e 's/⢹/AO/g' \
+	-e 's/⢺/BO/g' \
+	-e 's/⢻/CO/g' \
+	-e 's/⢼/DO/g' \
+	-e 's/⢽/EO/g' \
+	-e 's/⢾/FO/g' \
+	-e 's/⢿/GO/g' \
+	-e 's/⣸/HO/g' \
+	-e 's/⣹/IO/g' \
+	-e 's/⣺/JO/g' \
+	-e 's/⣻/KO/g' \
+	-e 's/⣼/LO/g' \
+	-e 's/⣽/MO/g' \
+	-e 's/⣾/NO/g' \
+	-e 's/⣿/OO/g' \
+	\
+	-e 's/@*$//' \
+	-e 's/^$/'$'\015''/' -e 's/\([^'$'\015'']\)$/\1'$'\015''/'
+
+# Exit 4-dot graphic mode
+printf '\033\006'
+# Finish document
+printf '\032'
+printf '\032'
+
+echo "INFO: Ready" >&2
