@@ -28,7 +28,7 @@
 #include <imagemagick.defs>
 #include <braille.defs>
 
-#po fr "fr.po"
+#po fr "fr-braille.po"
 
 Manufacturer "Generic"
 Version 1.0

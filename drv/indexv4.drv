@@ -29,7 +29,7 @@
 #include <braille.defs>
 #include <index.defs>
 
-#po fr "fr.po"
+#po fr "fr-braille.po"
 
 Manufacturer "Index"
 Version 1.0
@@ -74,8 +74,8 @@ Group "Braille"
   Choice "22/Polish literal with capital" ""
   Choice "23/Polish own table 03" ""
   Choice "24/Polish own table 04" ""
-  Choice "24/Dutch computer 6 dots" ""
-  Choice "25/Dutch own table 02" ""
+  Choice "25/Dutch computer 6 dots" ""
+  Choice "26/Dutch own table 02" ""
 
 
 //

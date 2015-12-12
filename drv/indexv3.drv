@@ -29,7 +29,7 @@
 #include <braille.defs>
 #include <index.defs>
 
-#po fr "fr.po"
+#po fr "fr-braille.po"
 
 Manufacturer "Index"
 Version 1.0

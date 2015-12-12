@@ -270,7 +270,8 @@ pkgppdc_DATA += \
 	filter/braille/filters/braille.defs \
 	filter/braille/filters/imagemagick.defs \
 	filter/braille/filters/liblouis1.defs \
-	filter/braille/filters/liblouis.defs
+	filter/braille/filters/liblouis.defs \
+	filter/braille/drivers/common/fr-braille.po
 nodist_pkgppdc_DATA = \
 	$(GENERATED_LIBLOUIS)
 endif
