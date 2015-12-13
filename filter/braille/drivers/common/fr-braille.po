@@ -95,7 +95,7 @@ msgid "Upside Down"
 msgstr "Retourner"
 
 msgid "Edge detection"
-msgstr "Détection de contour"
+msgstr "DÃ©tection de contour"
 
 msgid "Simple"
 msgstr "Simple"
@@ -125,22 +125,22 @@ msgid "Index support"
 msgstr "Support Index"
 
 msgid "Installed firmware version"
-msgstr "Version de firmware installée"
+msgstr "Version de firmware installÃ©e"
 
 msgid "10.20 or above"
-msgstr "10.20 ou supérieur"
+msgstr "10.20 ou supÃ©rieur"
 
 msgid "10.30 or above"
-msgstr "10.30 ou supérieur"
+msgstr "10.30 ou supÃ©rieur"
 
 msgid "11.02.1 or above"
-msgstr "11.02.1 ou supérieur"
+msgstr "11.02.1 ou supÃ©rieur"
 
 msgid "11.03.2 or above"
-msgstr "11.03.2 ou supérieur"
+msgstr "11.03.2 ou supÃ©rieur"
 
 msgid "12.01.3 or above"
-msgstr "12.01.3 ou supérieur"
+msgstr "12.01.3 ou supÃ©rieur"
 
 msgid "Page folding"
 msgstr "Recto-Verso"
@@ -176,16 +176,16 @@ msgid "6-dot MIT table"
 msgstr "Table MIT 6 points"
 
 msgid "User-defined Table 1"
-msgstr "Table 1 définie par l'utilisateur"
+msgstr "Table 1 dÃ©finie par l'utilisateur"
 
 msgid "User-defined Table 2"
-msgstr "Table 2 définie par l'utilisateur"
+msgstr "Table 2 dÃ©finie par l'utilisateur"
 
 msgid "User-defined Table 3"
-msgstr "Table 3 définie par l'utilisateur"
+msgstr "Table 3 dÃ©finie par l'utilisateur"
 
 msgid "User-defined Table 4"
-msgstr "Table 4 définie par l'utilisateur"
+msgstr "Table 4 dÃ©finie par l'utilisateur"
 
 msgid "Multiple impact"
 msgstr "Impact multiple"
