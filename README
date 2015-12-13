@@ -1628,6 +1628,11 @@ lp -o "GraphicDotDistance=160" file.png
 
 to select 1.6mm dots spacing
 
+Troubleshooting: if your embosser starts every document with spurious
+"TM0,BM0,IM0,OM0" or "TM0,BI0", your embosser is most probably still using an
+old 10.20 firmware.  Please either reflash the embosser with a firmware version
+10.30 or above, or select the 10.20 firmware version in the "index" panel of the
+cups printer options.
 
 ----------------------
 Braille output options
