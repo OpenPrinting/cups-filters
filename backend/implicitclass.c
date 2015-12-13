@@ -1,7 +1,13 @@
 /*
  * "$Id$"
  *
- * DNS-SD discovery backend for CUPS.
+ * implicitclass backend for implementing an implicit-class-like behavior
+ * of redundant print servers managed by cups-browsed.
+ *
+ * Copyright 2015 by Till Kamppeter
+ *
+ * This is based on dnssd.c of CUPS
+ * dnssd.c copyright notice is follows:
  *
  * Copyright 2008-2015 by Apple Inc.
  *
