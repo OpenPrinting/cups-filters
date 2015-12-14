@@ -6,7 +6,7 @@ CHANGES IN V1.4.0
 	- foomatic-rip: SECURITY FIX: Also consider the semicolon
 	  (';') as an illegal shell escape character. Thanks to Adam
 	  Chester (adam dot chester at pentest dot co dot uk) for the
-	  hint.
+	  hint (CVE-2015-8560).
 	- brftoembosser, imagetobrf, imagetoubrl, imageubrltoindexv3,
 	  imageubrltoindexv4, textbrftoindexv3, textbrftoindexv4,
 	  texttobrf, braille.convs, braille.types, generic-brf.drv,
