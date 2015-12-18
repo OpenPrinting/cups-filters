@@ -1,3 +1,11 @@
+# All configuration options described here can also be supplied on the
+# command line of cups-browsed via the "-o" option. In case of
+# contradicting settings the setting defined in the configuration file
+# will get used.
+
+# Unknown directives are ignored, also unknown values.
+
+
 # Which protocols will we use to discover printers on the network?
 # Can use DNSSD and/or CUPS and/or LDAP, or 'none' for neither.
 
@@ -378,6 +386,3 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # mode. Default is 30 seconds, 0 means immediate shutdown.
 
 # AutoShutdownTimeout 30
-
-
-# Unknown directives are ignored, also unknown values.

@@ -6,8 +6,10 @@
 .SH SYNOPSIS
 .nf
 .fam C
-\fBcups-browsed\fP [\fB-v\fP | \fB-d\fP | \fB--debug\fP] [\fB--autoshutdown=mode\fP]
-[\fB--autoshutdown-timeout=timeout\fP]
+\fBcups-browsed\fP [\fB-v\fP | \fB-d\fP | \fB--debug\fP] [\fB-c\fP \fIconfig-file\fP]
+[\fB-o\fP \fIoption\fB=\fIvalue\fP] [\fB-o\fP '\fIconfig file line\fP'] ...
+[\fB--autoshutdown=\fImode\fP] [\fB--autoshutdown-timeout=\fItimeout\fP]
+[\fB-h\fP | \fB--help\fP]
 
 .fam T
 .fi
@@ -38,12 +40,24 @@ cups-browsed can be run permanently (from system boot to shutdown) or on-demand 
 Debug mode
 .TP
 .B
+\fB-c\fP \fIconfig-file\fP
+Uses the alternative configuration file \fIconfig-file\fP instead of the standard one.
+.TP
+.B
+\fB-o\fP \fIoption\fB=\fIvalue\fB, -o\fP '\fIconfig file line\fP'
+Supply configuration options via the command line. You can supply any line which also could be put into the configuration file, but note that due to the spaces the line has to be put into quotes, or for a simple key/value pair the space between key and value can get replaced by '='. If command-line-supplied configuration settings are contradicting with the ones in the configuration file, the ones in the configuration file will get used.
+.TP
+.B
 \fB--autoshutdown=mode\fP
 Auto shutdown mode, \fBmode\fP is \fBoff\fP for no auto shutdown, \fBon\fP for auto shutdown being active, and \fBavahi\fP for control by the avahi-daemon being run on-demand, getting auto-shutdown turned off while avahi-daemon is present and on when avahi-daemon is shut down.
 .TP
 .B
 \fB--autoshutdown-timeout=timeout\fP
 \fBtimeout\fP tells after how many seconds cups-browsed should shut down if it has no local queues set up for any discovered remote printer any more. Default is 30 seconds. 0 means immediate shutdown.
+.TP
+.B
+\fB-h, --help\fP
+Display usage info and do not start the daemon.
 .SH FILES
 /etc/cups/cups-browsed.conf
 .SH SIGNALS

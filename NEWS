@@ -1,6 +1,15 @@
 NEWS - OpenPrinting CUPS Filters v1.4.0 - 2015-12-14
 ----------------------------------------------------
 
+CHANGES IN V1.5.0
+
+	- cups-browsed: Allow use of an alternative configuration file
+	  via the "-c" command line option.
+	- cups-browsed: Allow supplying configuration settings via the
+          command line using the "-o" command line option.
+	- cups-browsed: Command line help via the "-h" or "--help"
+          command line option.
+
 CHANGES IN V1.4.0
 
 	- foomatic-rip: SECURITY FIX: Also consider the semicolon

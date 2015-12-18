@@ -273,6 +273,8 @@ typedef enum load_balancing_type_e {
 } load_balancing_type_t;
 
 cups_array_t *remote_printers;
+static char *alt_config_file = NULL;
+static cups_array_t *command_line_config;
 static cups_array_t *netifs;
 static cups_array_t *browseallow;
 static gboolean browseallow_all = FALSE;
@@ -5300,9 +5302,9 @@ void
 read_configuration (const char *filename)
 {
   cups_file_t *fp;
-  int linenum;
+  int i, linenum = 0;
   char line[HTTP_MAX_BUFFER];
-  char *value, *ptr, *field;
+  char *value = NULL, *ptr, *field;
   const char *delim = " \t,";
   int browse_allow_line_found = 0;
   int browse_deny_line_found = 0;
@@ -5321,8 +5323,33 @@ read_configuration (const char *filename)
     return;
   }
 
-  while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum)) {
-    debug_printf("cups-browsed: Reading config: %s %s\n", line, value);
+  i = 0;
+  linenum = -1;
+  /* First, we read the option settings supplied on the command line via
+     "-o ..." in the order given on the command line, then we read the lines
+     of the configuration file. This means that if there are contradicting
+     settings on the command line and in the configuration file, the setting
+     in the configuration file is used. */
+  while ((i < cupsArrayCount(command_line_config) &&
+	  (value = cupsArrayIndex(command_line_config, i++)) &&
+	  strncpy(line, value, sizeof(line))) ||
+	 cupsFileGetConf(fp, line, sizeof(line), &value, &linenum)) {
+    if (linenum < 0) {
+      /* We are still readin options from the command line ("-o ..."),
+	 separate key (line) and value (value) */
+      value = line;
+      while (*value && !isspace(*value) && !(*value == '='))
+	value ++;
+      if (*value) {
+	*value = '\0';
+	value ++;
+	while (*value && (isspace(*value) || (*value == '=')))
+	  value ++;
+      }
+    }
+    
+    debug_printf("cups-browsed: Reading config%s: %s %s\n",
+		 (linenum < 0 ? " (from command line)" : ""), line, value);
     if ((!strcasecmp(line, "BrowseProtocols") ||
 	 !strcasecmp(line, "BrowseLocalProtocols") ||
 	 !strcasecmp(line, "BrowseRemoteProtocols")) && value) {
@@ -5704,14 +5731,8 @@ int main(int argc, char*argv[]) {
   GError *error = NULL;
   int subscription_id = 0;
 
-  /* Turn on debug mode if requested */
-  if (argc >= 2)
-    for (i = 1; i < argc; i++)
-      if (!strcasecmp(argv[i], "--debug") || !strcasecmp(argv[i], "-d") ||
-	  !strncasecmp(argv[i], "-v", 2)) {
-	debug = 1;
-	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
-      }
+  /* Initialise the command_line_config array */
+  command_line_config = cupsArrayNew(compare_pointers, NULL);
 
   /* Initialise the browseallow array */
   browseallow = cupsArrayNew(compare_pointers, NULL);
@@ -5719,14 +5740,54 @@ int main(int argc, char*argv[]) {
   /* Initialise the browsefilter array */
   browsefilter = cupsArrayNew(compare_pointers, NULL);
 
-  /* Read in cups-browsed.conf */
-  read_configuration (NULL);
-
-  /* Parse command line options after reading the config file to override
-     config file settings */
-  if (argc >= 2) {
+  /* Read command line options */
+  if (argc >= 2)
     for (i = 1; i < argc; i++)
-      if (!strncasecmp(argv[i], "--autoshutdown-timeout", 22)) {
+      if (!strcasecmp(argv[i], "--debug") || !strcasecmp(argv[i], "-d") ||
+	  !strncasecmp(argv[i], "-v", 2)) {
+	/* Turn on debug mode if requested */
+	debug = 1;
+	debug_printf("cups-browsed: Reading command line option %s, turning on debug mode.\n",
+		     argv[i]);
+      } else if (!strncasecmp(argv[i], "-c", 2)) {
+	/* Alternative configuration file */
+	val = argv[i] + 2;
+	if (strlen(val) == 0) {
+	  i ++;
+	  if (i < argc && *argv[i] != '-')
+	    val = argv[i];
+	  else
+	    val = NULL;
+	}
+	if (val) {
+	  alt_config_file = strdup(val);
+	  debug_printf("cups-browsed: Reading command line option -c %s, using alternative configuration file.\n",
+		       alt_config_file);
+	} else {
+	  fprintf(stderr,
+		  "cups-browsed: Reading command line option -c, no alternative configuration file name supplied.\n\n");
+	  goto help;
+	}     
+      } else if (!strncasecmp(argv[i], "-o", 2)) {
+	/* Configuration option via command line */
+	val = argv[i] + 2;
+	if (strlen(val) == 0) {
+	  i ++;
+	  if (i < argc && *argv[i] != '-')
+	    val = argv[i];
+	  else
+	    val = NULL;
+	}
+	if (val) {
+	  cupsArrayAdd (command_line_config, strdup(val));
+	  debug_printf("cups-browsed: Reading command line option -o %s, applying extra configuration option.\n",
+		 val);
+	} else {
+	  fprintf(stderr,
+		  "cups-browsed: Reading command line option -o, no extra configuration option supplied.\n\n");
+	  goto help;
+	}     
+      } else if (!strncasecmp(argv[i], "--autoshutdown-timeout", 22)) {
 	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
 	if (argv[i][22] == '=' && argv[i][23])
 	  val = argv[i] + 23;
@@ -5735,8 +5796,8 @@ int main(int argc, char*argv[]) {
 	  debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
 	  val = argv[i];
 	} else {
-	  fprintf(stderr, "cups-browsed: Expected auto shutdown timeout setting after \"--autoshutdown-timeout\" option.\n");
-	  exit(1);
+	  fprintf(stderr, "cups-browsed: Expected auto shutdown timeout setting after \"--autoshutdown-timeout\" option.\n\n");
+	  goto help;
 	}
 	int t = atoi(val);
 	if (t >= 0) {
@@ -5744,9 +5805,9 @@ int main(int argc, char*argv[]) {
 	  debug_printf("cups-browsed: Set auto shutdown timeout to %d sec.\n",
 		       t);
 	} else {
-	  debug_printf("cups-browsed: Invalid auto shutdown timeout value: %d\n",
+	  debug_printf("cups-browsed: Invalid auto shutdown timeout value: %d\n\n",
 		       t);
-	  exit(1);
+	  goto help;
 	}
       } else if (!strncasecmp(argv[i], "--autoshutdown", 14)) {
 	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
@@ -5757,8 +5818,8 @@ int main(int argc, char*argv[]) {
 	  debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
 	  val = argv[i];
 	} else {
-	  fprintf(stderr, "cups-browsed: Expected auto shutdown setting after \"--autoshutdown\" option.\n");
-	  exit(1);
+	  fprintf(stderr, "cups-browsed: Expected auto shutdown setting after \"--autoshutdown\" option.\n\n");
+	  goto help;
 	}
 	if (!strcasecmp(val, "On") || !strcasecmp(val, "Yes") ||
 	    !strcasecmp(val, "True") || !strcasecmp(val, "1")) {
@@ -5772,11 +5833,22 @@ int main(int argc, char*argv[]) {
 	  autoshutdown_avahi = 1;
 	  debug_printf("cups-browsed: Turning on auto shutdown control by appearing and disappearing of the Avahi server.\n");
 	} else if (strcasecmp(val, "none")) {
-	  debug_printf("cups-browsed: Unknown mode '%s'\n", val);
-	  exit(1);
+	  debug_printf("cups-browsed: Unknown mode '%s'\n\n", val);
+	  goto help;
 	}
+      } else if (!strcasecmp(argv[i], "--help") || !strcasecmp(argv[i], "-h")) {
+	/* Help!! */
+	goto help;
+      } else {
+	/* Unknown option */
+	fprintf(stderr,
+		"cups-browsed: Reading command line option %s, unknown command line option.\n\n",
+		argv[i]);
+        goto help;
       }
-  }
+
+  /* Read in cups-browsed.conf */
+  read_configuration (alt_config_file);
 
   /* Set the CUPS_SERVER environment variable to assure that cups-browsed
      always works with the local CUPS daemon and never with a remote one
@@ -6093,6 +6165,27 @@ fail:
     g_list_free_full (browse_data, browse_data_free);
 
   return ret;
+
+ help:
+
+  fprintf(stderr,
+	  "Usage: cups-browsed [options]\n"
+	  "Options:\n"
+	  "  -c cups-browsed.conf    Set alternative cups-browsed.conf file to use.\n"
+	  "  -d                      Run in debug mode (verbose logging).\n"
+	  "  -h                      Show this usage message.\n"
+	  "  -o Option=Value         Supply configuration option via command line,\n"
+	  "                          options are the same as in cups-browsed.conf.\n"
+	  "  --autoshutdown=<mode>   Automatically shut down cups-browsed when inactive:\n"
+	  "                          <mode> can be set to Off, On, or avahi, where Off\n"
+	  "                          means that cups-browsed stays running permanently\n"
+	  "                          (default), On means that it shuts down after 30\n"
+	  "                          seconds (or any given timeout) of inactivity, and\n"
+	  "                          avahi means that cups-browsed shuts down when\n"
+	  "                          avahi-daemon shuts down.\n"
+	  "  --autoshutdown-timout=<time> Timeout (in seconds) for auto-shutdown.\n");
+
+  return 1;
 }
 
 #ifdef HAVE_CUPS_1_6
