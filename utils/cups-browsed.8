@@ -9,7 +9,7 @@
 \fBcups-browsed\fP [\fB-v\fP | \fB-d\fP | \fB--debug\fP] [\fB-c\fP \fIconfig-file\fP]
 [\fB-o\fP \fIoption\fB=\fIvalue\fP] [\fB-o\fP '\fIconfig file line\fP'] ...
 [\fB--autoshutdown=\fImode\fP] [\fB--autoshutdown-timeout=\fItimeout\fP]
-[\fB-h\fP | \fB--help\fP]
+[\fB-h\fP | \fB--help\fP | \fB--version\fP]
 
 .fam T
 .fi
@@ -37,7 +37,7 @@ cups-browsed can be run permanently (from system boot to shutdown) or on-demand 
 .TP
 .B
 \fB-v\fP, \fB-d\fP, \fB--debug\fP
-Debug mode
+Debug mode (verbose logging)
 .TP
 .B
 \fB-c\fP \fIconfig-file\fP
@@ -56,8 +56,8 @@ Auto shutdown mode, \fBmode\fP is \fBoff\fP for no auto shutdown, \fBon\fP for a
 \fBtimeout\fP tells after how many seconds cups-browsed should shut down if it has no local queues set up for any discovered remote printer any more. Default is 30 seconds. 0 means immediate shutdown.
 .TP
 .B
-\fB-h, --help\fP
-Display usage info and do not start the daemon.
+\fB-h, --help, --version\fP
+Display usage and version info and do not start the daemon.
 .SH FILES
 /etc/cups/cups-browsed.conf
 .SH SIGNALS

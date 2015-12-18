@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.5.0 - 2015-12-17
 ----------------------------------------------------
 
+
+CHANGES IN V1.6.0
+
+	- cups-browsed: Added version info to help screen and start-up
+	  in debug mode, call help screen also via "--version" option.
+	- cups-browsed: Minor improvements in help screen and man
+          page.
+
 CHANGES IN V1.5.0
 
 	- cups-browsed: Allow use of an alternative configuration file
