@@ -36,9 +36,6 @@ FILE=$6
 
 . @CUPS_DATADIR@/braille/cups-braille.sh
 
-# Default rendering without translation: just reformat paragraphs
-RENDER_CALL="fmt -$TEXTWIDTH"
-
 ####################
 # Liblouis options #
 ####################
@@ -57,47 +54,77 @@ fi
 
 echo "DEBUG: Input content type: $CONTENT_TYPE" >&2
 
-#  Tool to be used for the conversion
-# FIXME CONTENT_TYPE contains original document, not document passed as parameter ?!!
-case $CONTENT_TYPE in
-  text/plain)
-    LIBLOUIS_TOOL="file2brl"
-    CONVERT=""
-    ;;
-  text/html)
-    LIBLOUIS_TOOL="file2brl -t"
-    CONVERT=""
-    ;;
-  text/xml|application/xml|application/xhtml+xml)
-    LIBLOUIS_TOOL="file2brl"
-    CONVERT=""
-    ;;
-  application/msword)
-    LIBLOUIS_TOOL="file2brl"
-    CONVERT="antiword -x db /dev/stdin"
-    ;;
-  application/vnd.openxmlformats-officedocument.wordprocessingml.document)
-    LIBLOUIS_TOOL="file2brl"
-    CONVERT="docx2txt"
-    ;;
-  text/rtf|application/rtf)
-    LIBLOUIS_TOOL="file2brl"
-    CONVERT="rtf2xml /dev/stdin"
-    ;;
-  application/pdf)
-    LIBLOUIS_TOOL="file2brl -p"
-    CONVERT="pdftotext -raw /dev/stdin /dev/stdout"
-    ;;
-  *)
-    echo "ERROR: unsupported content type $CONTENT_TYPE" >&2
-    exit 1
-    ;;
-esac
-
 #  Selected braille table
 if [ -n "$LIBLOUIS_TABLES" ]
 then
+  #  Tool to be used for the conversion
+  # FIXME CONTENT_TYPE contains original document, not document passed as parameter ?!!
+  case $CONTENT_TYPE in
+    text/plain)
+      LIBLOUIS_TOOL="file2brl"
+      CONVERT=""
+      ;;
+    text/html)
+      LIBLOUIS_TOOL="file2brl -t"
+      CONVERT=""
+      ;;
+    text/xml|application/xml|application/xhtml+xml)
+      LIBLOUIS_TOOL="file2brl"
+      CONVERT=""
+      ;;
+    application/msword)
+      LIBLOUIS_TOOL="file2brl"
+      CONVERT="antiword -x db /dev/stdin"
+      ;;
+    application/vnd.openxmlformats-officedocument.wordprocessingml.document)
+      LIBLOUIS_TOOL="file2brl"
+      CONVERT="docx2txt"
+      ;;
+    text/rtf|application/rtf)
+      LIBLOUIS_TOOL="file2brl"
+      CONVERT="rtf2xml /dev/stdin"
+      ;;
+    application/pdf)
+      LIBLOUIS_TOOL="file2brl -p"
+      CONVERT="pdftotext -raw /dev/stdin /dev/stdout"
+      ;;
+    *)
+      echo "ERROR: unsupported content type $CONTENT_TYPE" >&2
+      exit 1
+      ;;
+  esac
   RENDER_CALL="$LIBLOUIS_TOOL -CliteraryTextTable=$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
+else
+  # Default rendering without translation: just reformat paragraphs
+  RENDER_CALL="fmt -$TEXTWIDTH"
+
+  #  Tool to be used for the conversion
+  # FIXME CONTENT_TYPE contains original document, not document passed as parameter ?!!
+  case $CONTENT_TYPE in
+    text/plain)
+      CONVERT=""
+      ;;
+    text/html)
+      CONVERT=""
+      RENDER_CALL="lynx -width=$TEXTWIDTH -dump -stdin"
+      ;;
+    application/msword)
+      CONVERT="antiword /dev/stdin"
+      ;;
+    application/vnd.openxmlformats-officedocument.wordprocessingml.document)
+      CONVERT="docx2txt"
+      ;;
+    text/rtf|application/rtf)
+      CONVERT="rtf2txt /dev/stdin"
+      ;;
+    application/pdf)
+      CONVERT="pdftotext -raw /dev/stdin /dev/stdout"
+      ;;
+    *)
+      echo "ERROR: unsupported content type $CONTENT_TYPE" >&2
+      exit 1
+      ;;
+  esac
 fi
 
 # Now proceeed

@@ -1,9 +1,10 @@
 NEWS - OpenPrinting CUPS Filters v1.5.0 - 2015-12-17
 ----------------------------------------------------
 
-
 CHANGES IN V1.6.0
 
+	- braille: If the user does not select a Braille translation,
+	  let the embosser do the translation.
 	- cups-browsed: Added version info to help screen and start-up
 	  in debug mode, call help screen also via "--version" option.
 	- cups-browsed: Minor improvements in help screen and man
