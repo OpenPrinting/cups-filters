@@ -86,9 +86,9 @@ echo "INFO: Converting image" 1>&2
 if [ -z "$FILE" ]
 then
   printf "DEBUG: Calling $RENDER_CALL from stdin\n" 1>&2
-  $RENDER_CALL | tail -n +4
+  $RENDER_CALL | sed -e '/^Width: [0-9]*$/,/^$/d' 
 else
   printf "DEBUG: Calling $RENDER_CALL on '%s'\n" "$FILE" 1>&2
-  $RENDER_CALL < "$FILE" | tail -n +4
+  $RENDER_CALL < "$FILE" | sed -e '/^Width: [0-9]*$/,/^$/d' 
 fi
 echo "INFO: Ready" >&2
