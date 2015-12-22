@@ -25,7 +25,7 @@ EXTRA_DIST = \
 # Backends
 # ========
 pkgbackenddir = $(CUPS_SERVERBIN)/backend
-pkgbackend_PROGRAMS = parallel serial implicitclass
+pkgbackend_PROGRAMS = parallel serial beh implicitclass
 
 check_PROGRAMS = test1284
 # We need ieee1284 up and running.
@@ -44,6 +44,12 @@ serial_SOURCES = \
 	backend/serial.c
 serial_LDADD = $(CUPS_LIBS)
 serial_CFLAGS = $(CUPS_CFLAGS)
+
+beh_SOURCES = \
+	backend/backend-private.h \
+	backend/beh.c
+beh_LDADD = $(CUPS_LIBS)
+beh_CFLAGS = $(CUPS_CFLAGS)
 
 implicitclass_SOURCES = \
 	backend/backend-private.h \

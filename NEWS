@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.5.0 - 2015-12-17
 
 CHANGES IN V1.6.0
 
+	- beh: Introduced beh, the Backend Error Handler, a wrapper
+	  backend to make handling of backend errors more
+	  configurable. This backend is a C re-write of the beh
+	  backend written in Perl which was part of the former
+	  foomatic-filters package. Several people asked for beh
+	  getting moved to cups-filters.
 	- braille: Make image printing working also if ImageMagick
 	  generates formatted images without header.
 	- braille: If the user does not select a Braille translation,
