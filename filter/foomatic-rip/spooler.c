@@ -27,6 +27,7 @@
 #include "options.h"
 #include <stdlib.h>
 #include <unistd.h>
+#include <limits.h>
 
 const char *spooler_name(int spooler)
 {
@@ -155,7 +156,7 @@ const char *accounting_prolog_code =
 
 void init_cups(list_t *arglist, dstr_t *filelist, jobparams_t *job)
 {
-    char path [1024] = "";
+    char path [PATH_MAX] = "";
     char cups_jobid [128];
     char cups_user [128];
     char cups_jobtitle [128];
@@ -165,14 +166,14 @@ void init_cups(list_t *arglist, dstr_t *filelist, jobparams_t *job)
     char cups_filename [256];
 
     if (getenv("CUPS_FONTPATH"))
-        strcpy(path, getenv("CUPS_FONTPATH"));
+        strncpy(path, getenv("CUPS_FONTPATH"), PATH_MAX - 1);
     else if (getenv("CUPS_DATADIR")) {
-        strcpy(path, getenv("CUPS_DATADIR"));
-        strcat(path, "/fonts");
+       strncpy(path, getenv("CUPS_DATADIR"), PATH_MAX - 1);
+       strncat(path, "/fonts", PATH_MAX - strlen(path) - 1);
     }
     if (getenv("GS_LIB")) {
-        strcat(path, ":");
-        strcat(path, getenv("GS_LIB"));
+        strncat(path, ":", PATH_MAX - strlen(path) - 1);
+        strncat(path, getenv("GS_LIB"), PATH_MAX - strlen(path) - 1);
     }
     setenv("GS_LIB", path, 1);
 
