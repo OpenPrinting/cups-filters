@@ -5863,7 +5863,8 @@ int main(int argc, char*argv[]) {
   if (DomainSocket != NULL) {
     struct stat sockinfo;               /* Domain socket information */
     if (!stat(DomainSocket, &sockinfo) &&
-        (sockinfo.st_mode & S_IRWXO) == S_IRWXO)
+        (sockinfo.st_mode & S_IROTH) != 0 &&
+        (sockinfo.st_mode & S_IWOTH) != 0)
       setenv("CUPS_SERVER", DomainSocket, 1);
     else
       setenv("CUPS_SERVER", "localhost", 1);
