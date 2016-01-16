@@ -272,6 +272,12 @@ typedef enum load_balancing_type_e {
   QUEUE_ON_SERVERS
 } load_balancing_type_t;
 
+/* Ways how inactivity for auto-shutdown is defined */
+typedef enum autoshutdown_inactivity_type_e {
+  NO_QUEUES,
+  NO_JOBS
+} autoshutdown_inactivity_type_t;
+
 cups_array_t *remote_printers;
 static char *alt_config_file = NULL;
 static cups_array_t *command_line_config;
@@ -331,6 +337,7 @@ static const char *DefaultOptions = NULL;
 static int autoshutdown = 0;
 static int autoshutdown_avahi = 0;
 static int autoshutdown_timeout = 30;
+static autoshutdown_inactivity_type_t autoshutdown_on = NO_QUEUES;
 static guint autoshutdown_exec_id = 0;
 static const char *default_printer = NULL;
 
@@ -804,12 +811,39 @@ update_local_printers (void)
   }
 }
 
+int
+check_jobs () {
+  int num_jobs = 0;
+  cups_job_t *jobs = NULL;
+  remote_printer_t *p;
+
+  if (cupsArrayCount(remote_printers) > 0)
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	 p;
+	 p = (remote_printer_t *)cupsArrayNext(remote_printers))
+      if (!p->duplicate_of) {
+	num_jobs = cupsGetJobs2(CUPS_HTTP_DEFAULT, &jobs, p->name, 0,
+				CUPS_WHICHJOBS_ACTIVE);
+	if (num_jobs > 0) {
+	  debug_printf("cups-browsed: Queue %s still has jobs!\n", p->name);
+	  cupsFreeJobs(num_jobs, jobs);
+	  return 1;
+	}
+      }
+
+  debug_printf("cups-browsed: All our remote printers are without jobs.\n");
+  return 0;
+}
+
 gboolean
 autoshutdown_execute (gpointer data)
 {
-  /* Are we still in auto shutdown mode and are we still without queues */
-  if (autoshutdown && cupsArrayCount(remote_printers) == 0) {
-    debug_printf("cups-browsed: Automatic shutdown as there are no print queues maintained by us for %d sec.\n",
+  /* Are we still in auto shutdown mode and are we still without queues or
+     jobs*/
+  if (autoshutdown &&
+      (cupsArrayCount(remote_printers) == 0 ||
+       (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
+    debug_printf("cups-browsed: Automatic shutdown as there are no print queues maintained by us or no jobs on them for %d sec.\n",
 		 autoshutdown_timeout);
     g_main_loop_quit(gmainloop);
   }
@@ -2274,6 +2308,29 @@ on_printer_state_changed (CupsNotifier *object,
 
   debug_printf("cups-browsed: [CUPS Notification] Printer state change: %s\n",
 	       text);
+
+  if (autoshutdown && autoshutdown_on == NO_JOBS) {
+    if (check_jobs() == 0) {
+      /* If auto shutdown is active for triggering on no jobs being left, we
+	 schedule the shutdown in autoshutdown_timeout seconds */
+      if (!autoshutdown_exec_id) {
+	debug_printf ("cups-browsed: No jobs there any more on printers made available by us, shutting down in %d sec...\n", autoshutdown_timeout);
+	autoshutdown_exec_id =
+	  g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
+				 NULL);
+      }
+    } else {
+      /* If auto shutdown is active for triggering on no jobs being left, we
+	 cancel a shutdown in autoshutdown_timeout seconds as there are jobs
+         again. */
+      if (autoshutdown_exec_id) {
+	debug_printf ("cups-browsed: New jobs there on the printers made available by us, killing auto shutdown timer.\n");
+	g_source_remove(autoshutdown_exec_id);
+	autoshutdown_exec_id = 0;
+      }
+    }
+  }
+  
   if ((ptr = strstr(text, " is now the default printer")) != NULL) {
     /* Default printer has changed, we are triggered by the new default
        printer */
@@ -2952,6 +3009,7 @@ create_local_queue (const char *name,
   /* If auto shutdown is active we have perhaps scheduled a timer to shut down
      due to not having queues any more to maintain, kill the timer now */
   if (autoshutdown && autoshutdown_exec_id &&
+      autoshutdown_on == NO_QUEUES &&
       cupsArrayCount(remote_printers) > 0) {
     debug_printf ("cups-browsed: New printers there to make available, killing auto shutdown timer.\n");
     g_source_remove(autoshutdown_exec_id);
@@ -3179,10 +3237,13 @@ gboolean handle_cups_queues(gpointer unused) {
       p = NULL;
 
       /* If auto shutdown is active and all printers we have set up got removed
-	 again, schedule the shutdown in autoshutdown_timeout seconds */
+	 again, schedule the shutdown in autoshutdown_timeout seconds 
+         Note that in this case we also do not have jobs any more so if we
+         auto shutdown on running out of jobs, trigger it here, too. */
       if (autoshutdown && !autoshutdown_exec_id &&
-	  cupsArrayCount(remote_printers) == 0) {
-	debug_printf ("cups-browsed: No printers there any more to make available, shutting down in %d sec...\n", autoshutdown_timeout);
+	  (cupsArrayCount(remote_printers) == 0 ||
+	   (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
+	debug_printf ("cups-browsed: No printers there any more to make available or no jobs, shutting down in %d sec...\n", autoshutdown_timeout);
 	autoshutdown_exec_id =
 	  g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
 				 NULL);
@@ -4273,11 +4334,12 @@ void avahi_browser_shutdown() {
   if (autoshutdown_avahi) {
     autoshutdown = 1;
     debug_printf("cups-browsed: Avahi server disappeared, switching to auto shutdown mode ...\n");
-    /* If there are no printers schedule the shutdown in autoshutdown_timeout
-       seconds */
+    /* If there are no printers or no jobs schedule the shutdown in
+       autoshutdown_timeout seconds */
     if (!autoshutdown_exec_id &&
-	cupsArrayCount(remote_printers) == 0) {
-      debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available, shutting down in %d sec...\n", autoshutdown_timeout);
+	(cupsArrayCount(remote_printers) == 0 ||
+	 (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
+      debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available or no jobs on them, shutting down in %d sec...\n", autoshutdown_timeout);
       autoshutdown_exec_id =
 	g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
 			       NULL);
@@ -5218,11 +5280,12 @@ sigusr2_handler(int sig) {
   /* Turn on auto shutdown mode... */
   autoshutdown = 1;
   debug_printf("cups-browsed: Caught signal %d, switching to auto shutdown mode ...\n", sig);
-  /* If there are no printers schedule the shutdown in autoshutdown_timeout
-     seconds */
+  /* If there are no printers or no jobs schedule the shutdown in
+     autoshutdown_timeout seconds */
   if (!autoshutdown_exec_id &&
-      cupsArrayCount(remote_printers) == 0) {
-    debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available, shutting down in %d sec...\n", autoshutdown_timeout);
+      (cupsArrayCount(remote_printers) == 0 ||
+       (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
+    debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available or no jobs on them, shutting down in %d sec...\n", autoshutdown_timeout);
     autoshutdown_exec_id =
       g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
 			       NULL);
@@ -5604,6 +5667,23 @@ read_configuration (const char *filename)
       } else
 	debug_printf("cups-browsed: Invalid auto shutdown timeout value: %d\n",
 		     t);
+    } else if (!strcasecmp(line, "AutoShutdownOn") && value) {
+      int success = 0;
+      if (!strncasecmp(value, "no", 2)) {
+	if (strcasestr(value + 2, "queue")) {
+	  autoshutdown_on = NO_QUEUES;
+	  success = 1;
+	} else if (strcasestr(value + 2, "job")) {
+	  autoshutdown_on = NO_JOBS;
+	  success = 1;
+	}
+      }
+      if (success)
+	debug_printf("cups-browsed: Set auto shutdown inactivity type to no %s.\n",
+		     autoshutdown_on == NO_QUEUES ? "queues" : "jobs");
+      else
+	debug_printf("cups-browsed: Invalid auto shutdown inactivity type value: %s\n",
+		     value);
     }
 #ifdef HAVE_LDAP
     else if (!strcasecmp(line, "BrowseLDAPBindDN") && value) {
@@ -5809,6 +5889,34 @@ int main(int argc, char*argv[]) {
 		       t);
 	  goto help;
 	}
+      } else if (!strncasecmp(argv[i], "--autoshutdown-on", 17)) {
+	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	if (argv[i][17] == '=' && argv[i][18])
+	  val = argv[i] + 18;
+	else if (!argv[i][17] && i < argc - 1) {
+	  i++;
+	  debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	  val = argv[i];
+	} else {
+	  fprintf(stderr, "cups-browsed: Expected auto shutdown inactivity type (\"no-queues\" or \"no-jobs\") after \"--autoshutdown-on\" option.\n\n");
+	  goto help;
+	}
+	int success = 0;
+	if (!strncasecmp(val, "no", 2)) {
+	  if (strcasestr(val + 2, "queue")) {
+	    autoshutdown_on = NO_QUEUES;
+	    success = 1;
+	  } else if (strcasestr(val + 2, "job")) {
+	    autoshutdown_on = NO_JOBS;
+	    success = 1;
+	  }
+	}
+	if (success)
+	  debug_printf("cups-browsed: Set auto shutdown inactivity type to no %s.\n",
+		       autoshutdown_on == NO_QUEUES ? "queues" : "jobs");
+	else
+	  debug_printf("cups-browsed: Invalid auto shutdown inactivity type value: %s\n",
+		       val);
       } else if (!strncasecmp(argv[i], "--autoshutdown", 14)) {
 	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
 	if (argv[i][14] == '=' && argv[i][15])
@@ -5961,6 +6069,19 @@ int main(int argc, char*argv[]) {
   avahi_init();
 #endif /* HAVE_AVAHI */
 
+  if (autoshutdown == 1) {
+    /* If there are no printers or no jobs schedule the shutdown in
+       autoshutdown_timeout seconds */
+    if (!autoshutdown_exec_id &&
+	(cupsArrayCount(remote_printers) == 0 ||
+	 (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
+      debug_printf ("cups-browsed: We set auto shutdown mode and no printers are there to make available or no jobs on them, shutting down in %d sec...\n", autoshutdown_timeout);
+      autoshutdown_exec_id =
+	g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
+			       NULL);
+    }
+  }
+  
   if (BrowseLocalProtocols & BROWSE_CUPS ||
       BrowseRemoteProtocols & BROWSE_CUPS) {
     /* Set up our CUPS Browsing socket */
@@ -6192,7 +6313,15 @@ fail:
 	  "                          seconds (or any given timeout) of inactivity, and\n"
 	  "                          avahi means that cups-browsed shuts down when\n"
 	  "                          avahi-daemon shuts down.\n"
-	  "  --autoshutdown-timout=<time> Timeout (in seconds) for auto-shutdown.\n");
+	  "  --autoshutdown-timout=<time> Timeout (in seconds) for auto-shutdown.\n"
+	  "  --autoshutdown-on=<type> Type of inactivity which leads to an auto-\n"
+	  "                          shutdown: If <type> is \"no-queues\", the shutdown\n"
+	  "                          is triggered by not having any cups-browsed-created\n"
+	  "                          print queue any more. With <type> being \"no-jobs\"\n"
+	  "                          shutdown is initiated by no job being printed\n"
+	  "                          on any cups-browsed-generated print queue any more.\n"
+	  "                          \"no-queues\" is the default.\n"
+	  );
 
   return 1;
 }

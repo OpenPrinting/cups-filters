@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.6.0 - 2016-01-14
 ----------------------------------------------------
 
+CHANGES IN V1.7.0
+
+	- cups-browsed: Added possibility to trigger the auto shutdown
+	  by the queues of cups-browsed being without jobs. Before
+	  auto shutdown was only possible when all queues have gone
+	  away. This allows auto shutdown on mobile devices where
+	  avahi-daemon is also used for other things than printing.
+
 CHANGES IN V1.6.0
 
 	- cups-browsed: Fixed use of CUPS domain socket, both
