@@ -7,7 +7,7 @@ Copyright 1993-2007 Easy Software Products
 Copyright 2007-2011 Apple Inc.
 Copyright 2012 Canonical Ltd.
 Copyright 2006-2012 BBR Inc.
-Copyright 2008-2015 Till Kamppeter
+Copyright 2008-2016 Till Kamppeter
 Copyright 2008,2012 Tobias Hoffmann
 Copyright 2003 Robert Sander
 Copyright 2003-2006 Red Hat, Inc.
@@ -21,12 +21,12 @@ Copyright 2008 Lars Übernickel
 
 The filters and backends which were part of CUPS formerly
 (commandtoescpx, commandtopclx, imagetoraster, pdftops, rastertoescpx,
-rastertopclx, parallel, serial) and also imagetopdf, pstopdf, and
-texttopdf and all their auxiliary files are provided under the terms
-of version 2 of the GNU General Public License. This program is
-distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.
+rastertopclx, parallel, serial) and also imagetopdf, pstopdf,
+texttopdf, beh, and implicitclass and all their auxiliary files are
+provided under the terms of version 2 of the GNU General Public
+License. This program is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 The libcupsfilters library is provided under the terms of version 2 of
 the GNU Library General Public License. This program is distributed in
