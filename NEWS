@@ -1,8 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.7.0 - 2016-01-18
 ----------------------------------------------------
 
-CHANGES IN V1.7.1
+CHANGES IN V1.8.0
 
+	- braille: Added checks for the presence of helper tools, to
+	  get clear messages in the CUPS error_log if something is
+	  missing.
 	- Fixed copyright headers of files inherited from CUPS or
           derived from CUPS, pointing to COPYING as license info file,
           removing Apple exceptions, removing hints that a missing
