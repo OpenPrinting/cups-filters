@@ -1,6 +1,4 @@
 /*
- * "$Id$"
- *
  *   Sample/test driver interface program for CUPS.
  *
  *   This program handles listing and installing both static PPD files
@@ -12,9 +10,8 @@
  *
  *   These coded instructions, statements, and computer programs are the
  *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "LICENSE.txt"
- *   which should have been included with this file.  If this file is
- *   file is missing or damaged, see the license at "http://www.cups.org/".
+ *   law.  Distribution and use rights are outlined in the file "COPYING"
+ *   which should have been included with this file.
  *
  * Contents:
  *
@@ -170,7 +167,3 @@ list_ppds(const char *name)		/* I - Program name */
   return (0);
 }
 
-
-/*
- * End of "$Id$".
- */

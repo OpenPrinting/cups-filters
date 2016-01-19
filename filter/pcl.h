@@ -1,6 +1,4 @@
 /*
- * "$Id$"
- *
  *   This file contains model number definitions for the CUPS unified
  *   PCL driver.
  *
@@ -9,9 +7,8 @@
  *
  *   These coded instructions, statements, and computer programs are the
  *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "LICENSE.txt"
- *   which should have been included with this file.  If this file is
- *   file is missing or damaged, see the license at "http://www.cups.org/".
+ *   law.  Distribution and use rights are outlined in the file "COPYING"
+ *   which should have been included with this file.
  */
 
 /* General PCL Support */
@@ -32,7 +29,3 @@
 #define PCL_PJL_PCL3GUI		0x80000		/* Enter PCL3GUI */
 #define PCL_PJL_RESOLUTION	0x100000	/* Use PJL SET RESOLUTION */
 
-
-/*
- * End of "$Id$".
- */

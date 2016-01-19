@@ -1,6 +1,4 @@
 /*
- * "$Id$"
- *
  *   Printer driver utilities header file for CUPS.
  *
  *   Copyright 2007 by Apple Inc.
@@ -8,9 +6,8 @@
  *
  *   These coded instructions, statements, and computer programs are the
  *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "LICENSE.txt"
- *   which should have been included with this file.  If this file is
- *   file is missing or damaged, see the license at "http://www.cups.org/".
+ *   law.  Distribution and use rights are outlined in the file "COPYING"
+ *   which should have been included with this file.
  */
 
 #ifndef _CUPS_FILTERS_DRIVER_H_
@@ -242,8 +239,4 @@ extern void		cupsCMYKSetLtDk(cups_cmyk_t *cmyk, int channel,
 #  endif /* __cplusplus */
 
 #endif /* !_CUPS_FILTERS_DRIVER_H_ */
-
-/*
- * End of "$Id$".
- */
 

@@ -3,9 +3,8 @@
  *
  *   Copyright 2008 by Tobias Hoffmann.
  *
- *   This file is licensed as noted in "LICENSE.txt" 
- *   which should have been included with this file.  If this file is
- *   file is missing or damaged, see the license at "http://www.cups.org/".
+ *   This file is licensed as noted in "COPYING" 
+ *   which should have been included with this file.
  *
  */
 #include <time.h>

@@ -1,6 +1,16 @@
 NEWS - OpenPrinting CUPS Filters v1.7.0 - 2016-01-18
 ----------------------------------------------------
 
+CHANGES IN V1.7.1
+
+	- Fixed copyright headers of files inherited from CUPS or
+          derived from CUPS, pointing to COPYING as license info file,
+          removing Apple exceptions, removing hints that a missing
+          license info file can be found at www.cups.org, and removing
+          "$Id" SVN file ID placeholders.
+	- Updated COPYING file for missing implicitclass and beh
+          backends.
+
 CHANGES IN V1.7.0
 
 	- cups-browsed: Added possibility to trigger the auto shutdown

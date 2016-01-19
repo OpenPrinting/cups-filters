@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# $Id: $
-#
 # imagetops - This is a Image-to-PostScript filter for CUPS
 #
 # Note: This wrapper filter is only included for backward compatibility with

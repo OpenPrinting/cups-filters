@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# $Id: pstopdf,v 1.3 2003/02/15 15:21:00 gurubert Exp $
-#
 # This is a Postscript to PDF filter for CUPS
 #
 # (C) 2003 Robert Sander <robert.sander@epigenomics.com>

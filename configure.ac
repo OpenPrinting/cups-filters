@@ -289,8 +289,6 @@ AC_SUBST(AVAHI_LIBS)
 AC_SUBST(AVAHI_CFLAGS)
 
 dnl
-dnl "$Id: cups-ldap.m4 9771 2011-05-12 05:21:56Z mike $"
-dnl
 dnl   LDAP configuration stuff for CUPS.
 dnl
 dnl   Copyright 2007-2011 by Apple Inc.
@@ -298,9 +296,8 @@ dnl   Copyright 2003-2006 by Easy Software Products, all rights reserved.
 dnl
 dnl   These coded instructions, statements, and computer programs are the
 dnl   property of Apple Inc. and are protected by Federal copyright
-dnl   law.  Distribution and use rights are outlined in the file "LICENSE.txt"
-dnl   which should have been included with this file.  If this file is
-dnl   file is missing or damaged, see the license at "http://www.cups.org/".
+dnl   law.  Distribution and use rights are outlined in the file "COPYING"
+dnl   which should have been included with this file.
 dnl
 
 AC_ARG_ENABLE([ldap], [AS_HELP_STRING([--disable-ldap], [disable LDAP support.])],
@@ -334,10 +331,6 @@ if test x$enable_ldap != xno; then
     ])
 
 fi
-
-dnl
-dnl End of "$Id: cups-ldap.m4 9771 2011-05-12 05:21:56Z mike $".
-dnl
 
 PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.30.2])
 AC_SUBST(GLIB_CFLAGS)

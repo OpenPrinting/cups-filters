@@ -1,6 +1,4 @@
 /*
- * "$Id$"
- *
  *   Serial port backend for CUPS.
  *
  *   Copyright 2007-2011 by Apple Inc.
@@ -8,11 +6,8 @@
  *
  *   These coded instructions, statements, and computer programs are the
  *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "LICENSE.txt"
- *   "LICENSE" which should have been included with this file.  If this
- *   file is missing or damaged, see the license at "http://www.cups.org/".
- *
- *   This file is subject to the Apple OS-Developed Software exception.
+ *   law.  Distribution and use rights are outlined in the file "COPYING"
+ *   which should have been included with this file.
  *
  * Contents:
  *
@@ -1231,8 +1226,3 @@ side_cb(int print_fd,			/* I - Print file */
 
   return (cupsSideChannelWrite(command, status, data, datalen, 1.0));
 }
-
-
-/*
- * End of "$Id$".
- */

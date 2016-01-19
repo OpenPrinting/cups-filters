@@ -20,17 +20,14 @@ COMPILING AND INSTALLING
 	make install
 
 
-RESOURCES AND SUPPORT
-
-    Questions should be reported to the CUPS newsgroups/mailing
-    lists at:
-
-	http://www.cups.org/newsgroups.php
+BUG REPORTS
 
     Bug reports and enhancement requests can be submitted via the
     form at:
 
-	http://www.cups.org/str.php
+        https://bugs.linuxfoundation.org/
+
+    Use "OpenPrinting" as product and "cups-filters" as component.
 
 
 QUICK REFERENCE DOCUMENTATION

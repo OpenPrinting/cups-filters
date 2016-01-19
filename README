@@ -50,7 +50,7 @@ INTRODUCTION
 
     Choose "OpenPrinting" as the product and "cups-filters" as the component.
 
-    See the "LICENSE.txt" files for legal information.
+    See the "COPYING" files for legal information.
 
 IMAGE PRINTING DEFAULT CHANGED TO "SCALE TO FIT"
 
@@ -450,7 +450,7 @@ printable area.
 
 2. LICENSE
 
-"imagetopdf.c" is under the CUPS license. See the "LICENSE.txt" file.
+"imagetopdf.c" is under the CUPS license. See the "COPYING" file.
 For other files, see the copyright notice and license of each file.
 
 3. COMMAND LINE

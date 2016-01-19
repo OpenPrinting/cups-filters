@@ -1,7 +1,5 @@
 #!/bin/sh
 #
-# "$Id$"
-#
 # Install a program, script, or datafile.
 #
 # Copyright 2008-2009 by Apple Inc.

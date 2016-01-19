@@ -6,9 +6,8 @@ dnl Copyright 1997-2007 by Easy Software Products, all rights reserved.
 dnl
 dnl These coded instructions, statements, and computer programs are the
 dnl property of Apple Inc. and are protected by Federal copyright
-dnl law.  Distribution and use rights are outlined in the file "LICENSE.txt"
-dnl which should have been included with this file.  If this file is
-dnl file is missing or damaged, see the license at "http://www.cups.org/".
+dnl law.  Distribution and use rights are outlined in the file "COPYING"
+dnl which should have been included with this file.
 dnl
 
 AC_PREFIX_DEFAULT(/)

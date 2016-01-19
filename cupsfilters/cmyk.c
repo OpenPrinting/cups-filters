@@ -1,6 +1,4 @@
 /*
- * "$Id$"
- *
  *   CMYK color separation code for CUPS.
  *
  *   Copyright 2007-2011 by Apple Inc.
@@ -8,9 +6,8 @@
  *
  *   These coded instructions, statements, and computer programs are the
  *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "LICENSE.txt"
- *   which should have been included with this file.  If this file is
- *   file is missing or damaged, see the license at "http://www.cups.org/".
+ *   law.  Distribution and use rights are outlined in the file "COPYING"
+ *   which should have been included with this file.
  *
  * Contents:
  *
@@ -1951,7 +1948,3 @@ cupsCMYKSetLtDk(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
             cmyk->channels[channel + 0][i], cmyk->channels[channel + 1][i]);
 }
 
-
-/*
- * End of "$Id$".
- */
