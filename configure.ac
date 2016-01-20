@@ -690,7 +690,6 @@ if $PKGCONFIG --exists liblouis; then
 	fi
 else
 	AC_MSG_RESULT(no)
-	enable_braille=no
 	TABLESDIR=/usr/share/liblouis/tables
 fi
 AM_CONDITIONAL(ENABLE_BRAILLE, test "x$enable_braille" = xyes)
@@ -704,7 +703,7 @@ AC_ARG_WITH([shell],
 	[with_shell="$withval"],
 	[with_shell="/bin/bash"]
 )
-AC_DEFINE_UNQUOTED([SHELL], "$with_shell", [Path for a modern shell])]
+AC_DEFINE_UNQUOTED([SHELL], "$with_shell", [Path for a modern shell])
 
 # =====================
 # Prepare all .in files

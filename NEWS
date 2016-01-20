@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.7.0 - 2016-01-18
 
 CHANGES IN V1.8.0
 
+	- braille: Allow to build with Braille support also if
+	  liblouis is not installed at build time.
 	- braille: Added checks for the presence of helper tools, to
 	  get clear messages in the CUPS error_log if something is
 	  missing.
