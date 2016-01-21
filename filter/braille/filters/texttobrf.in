@@ -54,58 +54,13 @@ fi
 
 echo "DEBUG: Input content type: $CONTENT_TYPE" >&2
 
-#  Selected braille table
-if [ -n "$LIBLOUIS_TABLES" ]
-then
-  checkTool file2brl liblouis "translating braille"
+# FIXME CONTENT_TYPE contains original document, not document passed as parameter ?!!
 
-  #  Tool to be used for the conversion
-  # FIXME CONTENT_TYPE contains original document, not document passed as parameter ?!!
-  case $CONTENT_TYPE in
-    text/plain)
-      LIBLOUIS_TOOL="file2brl"
-      CONVERT=""
-      ;;
-    text/html)
-      LIBLOUIS_TOOL="file2brl -t"
-      CONVERT=""
-      ;;
-    text/xml|application/xml|application/xhtml+xml)
-      LIBLOUIS_TOOL="file2brl"
-      CONVERT=""
-      ;;
-    application/msword)
-      LIBLOUIS_TOOL="file2brl"
-      CONVERT="antiword -x db /dev/stdin"
-      checkTool antiword antiword "translating MS-Word doc files"
-      ;;
-    application/vnd.openxmlformats-officedocument.wordprocessingml.document)
-      LIBLOUIS_TOOL="file2brl"
-      CONVERT="docx2txt"
-      checkTool docx2txt docx2txt "translating MS-Word docx files"
-      ;;
-    text/rtf|application/rtf)
-      LIBLOUIS_TOOL="file2brl"
-      CONVERT="rtf2xml /dev/stdin"
-      checkTool rtf2xml rtf2xml "translating RTF files"
-      ;;
-    application/pdf)
-      LIBLOUIS_TOOL="file2brl -p"
-      CONVERT="pdftotext -raw /dev/stdin /dev/stdout"
-      checkTool pdftotext poppler "translating PDF files"
-      ;;
-    *)
-      echo "ERROR: unsupported content type $CONTENT_TYPE" >&2
-      exit 1
-      ;;
-  esac
-  RENDER_CALL="$LIBLOUIS_TOOL -CliteraryTextTable=$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
-else
+setupTextRendering() {
   # Default rendering without translation: just reformat paragraphs
   RENDER_CALL="fmt -$TEXTWIDTH"
 
   #  Tool to be used for the conversion
-  # FIXME CONTENT_TYPE contains original document, not document passed as parameter ?!!
   case $CONTENT_TYPE in
     text/plain)
       CONVERT=""
@@ -136,6 +91,66 @@ else
       exit 1
       ;;
   esac
+}
+
+#  Selected braille table
+if [ -n "$LIBLOUIS_TABLES" ]
+then
+  if type file2brl
+  then
+    # Good, we can use liblouisutdml
+    case $CONTENT_TYPE in
+      text/plain)
+	LIBLOUIS_TOOL="file2brl"
+	CONVERT=""
+	;;
+      text/html)
+	LIBLOUIS_TOOL="file2brl -t"
+	CONVERT=""
+	;;
+      text/xml|application/xml|application/xhtml+xml)
+	LIBLOUIS_TOOL="file2brl"
+	CONVERT=""
+	;;
+      application/msword)
+	LIBLOUIS_TOOL="file2brl"
+	CONVERT="antiword -x db /dev/stdin"
+	checkTool antiword antiword "translating MS-Word doc files"
+	;;
+      application/vnd.openxmlformats-officedocument.wordprocessingml.document)
+	LIBLOUIS_TOOL="file2brl"
+	CONVERT="docx2txt"
+	checkTool docx2txt docx2txt "translating MS-Word docx files"
+	;;
+      text/rtf|application/rtf)
+	LIBLOUIS_TOOL="file2brl"
+	CONVERT="rtf2xml /dev/stdin"
+	checkTool rtf2xml rtf2xml "translating RTF files"
+	;;
+      application/pdf)
+	LIBLOUIS_TOOL="file2brl -p"
+	CONVERT="pdftotext -raw /dev/stdin /dev/stdout"
+	checkTool pdftotext poppler "translating PDF files"
+	;;
+      *)
+	echo "ERROR: unsupported content type $CONTENT_TYPE" >&2
+	exit 1
+	;;
+    esac
+    RENDER_CALL="$LIBLOUIS_TOOL -CliteraryTextTable=$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
+  elif type lou_translate
+  then
+    # Only liblouis, but better than nothing
+    setupTextRendering
+    printf "WARN: The liblouisutdml package is required for translating braille better\n" >&2
+    TRANSLATE="lou_translate $LIBLOUIS_TABLES,braille-patterns.cti"
+  else
+    printf "ERROR: The liblouisutdml package is required for translating braille\n" >&2
+    exit 1
+  fi
+else
+  # No translation, only text rendering
+  setupTextRendering
 fi
 
 # Now proceeed
@@ -147,9 +162,13 @@ if [ -z "$CONVERT" ]
 then
   printf "DEBUG: Calling $RENDER_CALL on '%s'\n" "$FILE" >&2
    < "$FILE" $RENDER_CALL
-else
+elif [ -z "$TRANSLATE" ]
+then
   printf "DEBUG: Calling $CONVERT | $RENDER_CALL on '%s'\n" "$FILE" >&2
   < "$FILE" $CONVERT | $RENDER_CALL
+else
+  printf "DEBUG: Calling $CONVERT | $RENDER_CALL | $TRANSLATE on '%s'\n" "$FILE" >&2
+  < "$FILE" $CONVERT | $RENDER_CALL | $TRANSLATE
 fi
 
 echo "INFO: Ready" >&2
