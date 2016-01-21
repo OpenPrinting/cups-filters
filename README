@@ -34,6 +34,12 @@ INTRODUCTION
     used, to have Ghostscript, foomatic-filters, and foomatic-db
     installed.
 
+    For Braille embosser support (see below) you will also need at
+    least liblouis, ImageMagick, and poppler-utils. Recommended is to
+    also have liblouisutdml, antiword, docx2txt for more sophisticated
+    Braille generation representing also the formatting of the input
+    text. None of these is needed for compiling cups-filters.
+
     CUPS, this package, and Ghostscript contain some rudimentary printer
     drivers, see http://www.openprinting.org/drivers/ for a more
     comprehensive set of printer drivers for Linux.

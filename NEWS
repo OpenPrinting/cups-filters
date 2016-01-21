@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.7.0 - 2016-01-18
 
 CHANGES IN V1.8.0
 
+	- braille: Added info about additional packages needed for Braille
+	  printing to the README file.
 	- braille: Let the Braille filters use lou_translate of
 	  liblouis if the more sophisticated file2brl of liblouisutdml
 	  is not installed. This is decided on at run time, so later
