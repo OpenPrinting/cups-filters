@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.7.0 - 2016-01-18
 
 CHANGES IN V1.8.0
 
+	- COPYING: Replaced the COPYING file by a file in Debian format,
+	  derived from Debian's file but updated and corrected.
 	- braille: Added info about additional packages needed for Braille
 	  printing to the README file.
 	- braille: Let the Braille filters use lou_translate of
