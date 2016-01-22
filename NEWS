@@ -1,6 +1,15 @@
 NEWS - OpenPrinting CUPS Filters v1.8.0 - 2016-01-18
 ----------------------------------------------------
 
+CHANGES IN V1.8.1
+
+	- cups-browsed: Do not disable queues which still have jobs (and
+	  therefore cannot be removed) when avahi-daemon goes away, the
+	  print server is most probably still available and printing can
+	  be continued. Especially important on mobile devices where
+	  avahi-daemon is shut down when the print dialog is closed (and
+	  the job(s) still printing).
+
 CHANGES IN V1.8.0
 
 	- COPYING: Replaced the COPYING file by a file in Debian format,

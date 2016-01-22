@@ -302,6 +302,7 @@ static GMainLoop *gmainloop = NULL;
 static AvahiGLibPoll *glib_poll = NULL;
 static AvahiClient *client = NULL;
 static AvahiServiceBrowser *sb1 = NULL, *sb2 = NULL;
+static int avahi_present = 0;
 #endif /* HAVE_AVAHI */
 #ifdef HAVE_LDAP
 static const char * const ldap_attrs[] =/* CUPS LDAP attributes */
@@ -3168,7 +3169,14 @@ gboolean handle_cups_queues(gpointer unused) {
 	  debug_printf("cups-browsed: Queue has still jobs or CUPS error!\n");
 	  cupsFreeJobs(num_jobs, jobs);
 	  /* Disable the queue */
-	  disable_printer(p->name, "Printer disappeared or cups-browsed shutdown");
+#ifdef HAVE_AVAHI
+	  if (avahi_present || p->domain == NULL || p->domain[0] == '\0')
+	    /* If avahi has got shut down, do not disable queues which are,
+	       created based on DNS-SD broadcasts as the server has most
+	       probably not gone away */
+#endif /* HAVE_AVAHI */
+	    disable_printer(p->name,
+			    "Printer disappeared or cups-browsed shutdown");
 	  /* Schedule the removal of the queue for later */
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  break;
@@ -3378,9 +3386,10 @@ gboolean handle_cups_queues(gpointer unused) {
 	 it the default printer again. */
       queue_creation_handle_default(p->name);
 
-      /* If cups-browsed or the implicitclass backend has disabled this
+      /* If cups-browsed or a failed backend has disabled this
 	 queue, re-enable it. */
-      if (is_disabled(p->name, "cups-browsed"))
+      if (is_disabled(p->name, "cups-browsed") ||
+	  is_disabled(p->name, "Printer stopped due to backend errors"))
 	enable_printer(p->name);
 
       if (p->status == STATUS_BROWSE_PACKET_RECEIVED) {
@@ -4310,6 +4319,8 @@ static void browse_callback(
 void avahi_browser_shutdown() {
   remote_printer_t *p;
 
+  avahi_present = 0;
+
   /* Remove all queues which we have set up based on Bonjour discovery*/
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
@@ -4393,6 +4404,8 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
 		     avahi_strerror(avahi_client_errno(c)));
       }
 
+    avahi_present = 1;
+    
     /* switch off auto shutdown mode */
     if (autoshutdown_avahi) {
       autoshutdown = 0;
