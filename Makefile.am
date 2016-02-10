@@ -469,11 +469,14 @@ pdftopdf_LDADD = \
 # Simple filter binaries
 # ======================
 pkgfilter_SCRIPTS = \
-	filter/gstopxl \
 	filter/imagetops \
 	filter/pstopdf \
 	filter/textonly \
 	filter/texttops
+if ENABLE_GHOSTSCRIPT
+pkgfilter_SCRIPTS += \
+	filter/gstopxl
+endif
 if ENABLE_BRAILLE
 nodist_pkgfilter_SCRIPTS = \
 	filter/braille/drivers/generic/brftoembosser \
@@ -487,8 +490,6 @@ pkgfilter_PROGRAMS += \
 	bannertopdf \
 	commandtoescpx \
 	commandtopclx \
-	foomatic-rip \
-	gstoraster \
 	pdftoijs \
 	sys5ippprinter \
 	pdftops \
@@ -498,6 +499,14 @@ pkgfilter_PROGRAMS += \
 	texttopdf \
 	urftopdf \
 	rastertopdf
+if ENABLE_GHOSTSCRIPT
+pkgfilter_PROGRAMS += \
+	gstoraster
+endif
+if ENABLE_FOOMATIC
+pkgfilter_PROGRAMS += \
+	foomatic-rip
+endif
 if ENABLE_IMAGEFILTERS
 pkgfilter_PROGRAMS += \
 	imagetopdf \
@@ -818,8 +827,11 @@ initrcdir = $(INITDDIR)
 initrc_SCRIPTS = utils/cups-browsed
 man_MANS = \
 	utils/cups-browsed.8 \
-	utils/cups-browsed.conf.5 \
+	utils/cups-browsed.conf.5
+if ENABLE_FOOMATIC
+man_MANS += \
 	filter/foomatic-rip/foomatic-rip.1
+endif
 EXTRA_DIST += utils/cups-browsed.in \
 	$(man_MANS) \
 	utils/org.cups.cupsd.Notifier.xml
@@ -836,9 +848,12 @@ ppd_DATA = \
 	ppd/HP-Color_LaserJet_CM3530_MFP-PDF.ppd \
 	ppd/HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd \
 	ppd/Ricoh-PDF_Printer-PDF.ppd \
-	ppd/pxlcolor.ppd \
-	ppd/pxlmono.ppd \
 	ppd/textonly.ppd
+if ENABLE_GHOSTSCRIPT
+ppd_DATA += \
+	ppd/pxlcolor.ppd \
+	ppd/pxlmono.ppd
+endif
 
 EXTRA_DIST += $(ppd_DATA)
 
@@ -867,7 +882,9 @@ distclean-local:
 install-exec-hook:
 	$(INSTALL) -d -m 755 $(DESTDIR)$(bindir)
 	$(INSTALL) -d -m 755 $(DESTDIR)$(pkgfilterdir)
+if ENABLE_FOOMATIC
 	$(LN_S) -f $(pkgfilterdir)/foomatic-rip $(DESTDIR)$(bindir)
+endif
 if ENABLE_BRAILLE
 	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
 	$(LN_S) -f textbrftoindexv3 $(DESTDIR)$(pkgfilterdir)/textbrftoindexv4
@@ -895,7 +912,9 @@ if RCLINKS
 	fi
 endif
 	$(RM) $(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
+if ENABLE_FOOMATIC
 	$(RM) $(DESTDIR)$(bindir)/foomatic-rip
+endif
 if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/imagetoubrl
 	$(RM) $(DESTDIR)$(pkgfilterdir)/textbrftoindexv4

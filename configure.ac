@@ -484,6 +484,11 @@ AS_IF([test x"$long_long_found" = "xyes"], [
 # ================
 # Check for pdf2ps
 # ================
+AC_ARG_ENABLE([ghostscript],
+	[AS_HELP_STRING([--disable-ghostscript], [Disable filters using Ghostscript.])],
+	[enable_ghostscript="$enableval"],
+	[enable_ghostscript=yes]
+)
 AC_ARG_WITH([pdftops],
 	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,pdftocairo,acroread,hybrid).])],
 	[with_pdftops="$withval"],
@@ -524,25 +529,35 @@ AS_CASE([x$with_pdftops_maxres],
 	[AC_MSG_ERROR([Unknown value of with-pdftops-maxres provided: $with_pdftops])]
 )
 
-AS_IF([test "x$with_gs_path" != "xsystem"], [
-	CUPS_GHOSTSCRIPT="$with_gs_path"
-], [
-	AC_PATH_PROG(CUPS_GHOSTSCRIPT, [gs], [AC_MSG_ERROR([Required gs binary is missing. Please install ghostscript-gpl package.])])
-])
-AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x"], [
-	AC_DEFINE([HAVE_GHOSTSCRIPT], [], [Define that we provide ghostscript binary])
-	AS_IF([test x"$with_pdftops" = xgs], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [GS], [Define default renderer])])
-
-	AC_MSG_CHECKING(whether gs supports the ps2write device)
-	AS_IF([`$CUPS_GHOSTSCRIPT -h 2>&1 | grep -q ps2write`], [
-		AC_MSG_RESULT([yes])
-		AC_DEFINE([HAVE_GHOSTSCRIPT_PS2WRITE], [], [gs supports ps2write])
+CUPS_GHOSTSCRIPT=""
+AS_IF([test "x$enable_ghostscript" != "xyes"], [
+	AS_IF([test "x$with_gs_path" != "xsystem"], [
+	       AC_MSG_ERROR([Cannot supply both --disable-ghostscript and --gs-path=])
 	], [
-		AC_MSG_RESULT([no])
+		with_gs_path=""
 	])
 ], [
-	CUPS_GHOSTSCRIPT="gs"
+	AS_IF([test "x$with_gs_path" != "xsystem"], [
+		CUPS_GHOSTSCRIPT="$with_gs_path"
+	], [
+		AC_PATH_PROG(CUPS_GHOSTSCRIPT, [gs], [AC_MSG_ERROR([Required gs binary is missing. Please install ghostscript-gpl package.])])
+	])
+	AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x"], [
+		AC_DEFINE([HAVE_GHOSTSCRIPT], [], [Define that we provide ghostscript binary])
+		AS_IF([test x"$with_pdftops" = xgs], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [GS], [Define default renderer])])
+
+		AC_MSG_CHECKING(whether gs supports the ps2write device)
+		AS_IF([`$CUPS_GHOSTSCRIPT -h 2>&1 | grep -q ps2write`], [
+			AC_MSG_RESULT([yes])
+			AC_DEFINE([HAVE_GHOSTSCRIPT_PS2WRITE], [], [gs supports ps2write])
+		], [
+			AC_MSG_RESULT([no])
+		])
+	], [
+		CUPS_GHOSTSCRIPT="gs"
+	])
 ])
+AM_CONDITIONAL(ENABLE_GHOSTSCRIPT, test "x$enable_ghostscript" = xyes)
 
 AS_IF([test "x$with_pdftops_path" != "xsystem"], [
 	CUPS_PDFTOPS="$with_pdftops_path"
@@ -602,6 +617,16 @@ AC_DEFINE_UNQUOTED([CUPS_POPPLER_PDFTOPS], "$CUPS_PDFTOPS", [pdftops binary to u
 AC_DEFINE_UNQUOTED([CUPS_POPPLER_PDFTOCAIRO], "$CUPS_PDFTOCAIRO", [pdftocairo binary to use.])
 AC_DEFINE_UNQUOTED([CUPS_ACROREAD], "$CUPS_ACROREAD", [acroread binary to use.])
 AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_MAX_RESOLUTION], [$CUPS_PDFTOPS_MAXRES], [max resolution used for pdftops when converting images])
+
+# ==================
+# Check for foomatic
+# ==================
+AC_ARG_ENABLE([foomatic],
+	[AS_HELP_STRING([--disable-foomatic], [Disable Foomatic-based filters.])],
+	[enable_foomatic="$enableval"],
+	[enable_foomatic=yes]
+)
+AM_CONDITIONAL([ENABLE_FOOMATIC], [test "x$enable_foomatic" = "xyes"])
 
 # =============
 # Check for php
@@ -741,8 +766,10 @@ Environment settings:
 Build configuration:
 	cups-config:     ${with_cups_config}
 	font directory:  ${sysconfdir}/${FONTDIR}
+	foomatic:        ${enable_foomatic}
 	init directory:  ${INITDDIR}
 	cups dom socket: ${CUPS_DEFAULT_DOMAINSOCKET}
+	ghostscript:     ${enable_ghostscript}
 	gs-path:         ${with_gs_path}
 	imagefilters:    ${enable_imagefilters}
 	jpeg:            ${with_jpeg}

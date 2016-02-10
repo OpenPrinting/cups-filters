@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.8.1 - 2016-01-22
 
 CHANGES IN V1.8.2
 
+	- Allow disabling dependencies on Ghostscript and Foomatic
+	  (Bug #1342).
 	- cups-browsed: Optionally generate also local queues pointing
 	  to remote raw queues. Usually only queues pointing to remote
 	  queues with PPD/driver are created (Debian bug #814020,
