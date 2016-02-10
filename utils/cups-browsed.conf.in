@@ -278,6 +278,16 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # IPBasedDeviceURIs IPv6
 
 
+# Set CreateRemoteRawPrinterQueues to "Yes" to let cups-browsed also
+# create local queues pointing to remote raw CUPS queues. Normally,
+# only queues pointing to remote queues with PPD/driver are created
+# as we do not use drivers on the client side, but in some cases
+# accessing a remote raw queue can make sense, for example if the
+# queue forwards the jobs by a special backend like Tea4CUPS.
+
+# CreateRemoteRawPrinterQueues Yes
+
+
 # Set CreateIPPPrinterQueues to "Yes" to let cups-browsed discover IPP
 # network printers (native printers, not CUPS queues) with known page
 # description languages (PWG Raster, PDF, PostScript, PCL XL, PCL

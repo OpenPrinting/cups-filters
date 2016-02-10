@@ -331,6 +331,7 @@ static size_t NumBrowsePoll = 0;
 static guint update_netifs_sourceid = 0;
 static char *DomainSocket = NULL;
 static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
+static unsigned int CreateRemoteRawPrinterQueues = 0;
 static unsigned int CreateIPPPrinterQueues = 0;
 static ipp_queue_type_t IPPPrinterQueueType = PPD_AUTO;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
@@ -3662,7 +3663,7 @@ generate_local_queue(const char *host,
 	raw_queue = 1;
     } else if (domain && domain[0] != '\0')
       raw_queue = 1;
-    if (raw_queue) {
+    if (raw_queue && CreateRemoteRawPrinterQueues == 0) {
       /* The remote CUPS queue is raw, ignore it */
       debug_printf("cups-browsed: Remote Bonjour-advertised CUPS queue %s on host %s is raw, ignored.\n",
 		   remote_queue, remote_host);
@@ -5630,6 +5631,13 @@ read_configuration (const char *filename)
 	       !strcasecmp(value, "off") || !strcasecmp(value, "0") ||
 	       !strcasecmp(value, "Name") || !strcasecmp(value, "HostName"))
 	IPBasedDeviceURIs = IP_BASED_URIS_NO;
+    } else if (!strcasecmp(line, "CreateRemoteRawPrinterQueues") && value) {
+      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
+	CreateRemoteRawPrinterQueues = 1;
+      else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
+	CreateRemoteRawPrinterQueues = 0;
     } else if (!strcasecmp(line, "CreateIPPPrinterQueues") && value) {
       if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))

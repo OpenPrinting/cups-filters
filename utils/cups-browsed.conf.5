@@ -401,6 +401,19 @@ IPBasedDeviceURIs to "IPv6" to only get IPv6 IP addresses.
 
 .fam T
 .fi
+Set CreateRemoteRawPrinterQueues to "Yes" to let cups-browsed also
+create local queues pointing to remote raw CUPS queues. Normally,
+only queues pointing to remote queues with PPD/driver are created
+as we do not use drivers on the client side, but in some cases
+accessing a remote raw queue can make sense, for example if the
+queue forwards the jobs by a special backend like Tea4CUPS.
+.PP
+.nf
+.fam C
+        CreateRemoteRawPrinterQueues Yes
+
+.fam T
+.fi
 The CreateIPPPrinterQueues directive specifies whether cups-browsed
 should discover IPP printers (via Bonjour) and if they understand a
 known page description language (PWG Raster, PDF, PostScript, PCL XL,

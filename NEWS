@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.8.1 - 2016-01-22
 ----------------------------------------------------
 
+CHANGES IN V1.8.2
+
+	- cups-browsed: Optionally generate also local queues pointing
+	  to remote raw queues. Usually only queues pointing to remote
+	  queues with PPD/driver are created (Debian bug #814020,
+	  Debian bug #756724).
+
 CHANGES IN V1.8.1
 
 	- cups-browsed: Do not disable queues which still have jobs (and
