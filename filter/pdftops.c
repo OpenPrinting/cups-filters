@@ -444,9 +444,13 @@ main(int  argc,				/* I - Number of command-line args */
   {
     if (make_model[0] &&
 	(!strncasecmp(make_model, "Brother", 7) ||
-	 strcasestr(make_model, "Minolta")))
+	 strcasestr(make_model, "Minolta") ||
+	 (!strncasecmp(make_model, "Apple", 5) &&
+	  (ptr = strcasestr(make_model, "LaserWriter")) &&
+	  (ptr = strcasestr(ptr + 11, "12")) &&
+	  (ptr = strcasestr(ptr + 2, "640")))))
     {
-      fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for Brother, Minolta, and Konica Minolta to work around bugs in the printer's PS interpreters\n");
+      fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for Brother, Minolta, Konica Minolta, and Apple LaserWriter 12/640 to work around bugs in the printer's PS interpreters\n");
       renderer = PDFTOPS;
     }
     else
@@ -454,7 +458,7 @@ main(int  argc,				/* I - Number of command-line args */
    /*
     * Use Poppler instead of Ghostscript for old HP LaserJet printers due to
     * a bug in their PS interpreters. They are very slow with Ghostscript.
-    * a LaserJet is considered old if its model number does not have a letter
+    * A LaserJet is considered old if its model number does not have a letter
     * in the beginning, like LaserJet 3 or LaserJet 4000, not LaserJet P2015.
     * See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=742765
     */

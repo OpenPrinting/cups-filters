@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.8.2 - 2016-02-11
 ----------------------------------------------------
 
+CHANGES IN V1.8.3
+
+	- pdftops: Switch to Poppler as PDF renderer also for the Apple
+	  LaserWriter 12/640, to work around a bug in the printer's
+	  PostScript interpreter (Bug #1344).
+
 CHANGES IN V1.8.2
 
 	- Allow disabling dependencies on Ghostscript and Foomatic
