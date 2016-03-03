@@ -103,7 +103,7 @@ Copyright: 2007-2011, Apple Inc
   1993-2007, Easy Software Products
 License: GPL-2
 
-Files: mime/cupsfilters.convs*
+Files: mime/cupsfilters*.convs*
 Copyright: 2007-2011, Apple Inc
   1997-2007, Easy Software Products
   2012-2016, Till Kamppeter

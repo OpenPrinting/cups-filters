@@ -292,6 +292,10 @@ pkgmimedir = $(CUPS_DATADIR)/mime
 pkgmime_DATA = \
 	mime/cupsfilters.convs \
 	mime/cupsfilters.types
+if ENABLE_GHOSTSCRIPT
+pkgmime_DATA += \
+	mime/cupsfilters-ghostscript.convs
+endif
 if ENABLE_BRAILLE
 pkgmime_DATA += \
 	mime/braille.convs \
