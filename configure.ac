@@ -443,7 +443,7 @@ AS_IF([test x"$lcms2" = "xno"], [
 ])
 PKG_CHECK_MODULES([FREETYPE], [freetype2], [AC_DEFINE([HAVE_FREETYPE_H], [1], [Have FreeType2 include files])])
 PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.0.0])
-PKG_CHECK_MODULES([IJS], [ijs])
+PKG_CHECK_MODULES([IJS], [ijs], [have_ijs=yes], [have_ijs=no])
 PKG_CHECK_MODULES([POPPLER], [poppler >= 0.18])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
@@ -489,6 +489,15 @@ AC_ARG_ENABLE([ghostscript],
 	[enable_ghostscript="$enableval"],
 	[enable_ghostscript=yes]
 )
+AC_ARG_ENABLE([ijs],
+	[AS_HELP_STRING([--disable-ijs], [Disable filters using IJS.])],
+	[enable_ijs="$enableval"],
+	[enable_ijs=yes]
+)
+AS_IF([test "x$enable_ijs" = "xyes" -a "x$have_ijs" != "xyes"], [
+       AC_MSG_ERROR([IJS not found, but requested.])
+])
+AM_CONDITIONAL(ENABLE_IJS, test "x$enable_ijs" = "xyes")
 AC_ARG_WITH([pdftops],
 	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,pdftocairo,acroread,hybrid).])],
 	[with_pdftops="$withval"],
