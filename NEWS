@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.8.2 - 2016-02-11
 
 CHANGES IN V1.8.3
 
+	- Fixed pkg-config support so that $PKG_CONFIG gets used and
+	  cross compilation works (Bug #1347).
 	- gstoraster: Put conversion rules for this filter into a
 	  separate file, so that they do not get installed when we
 	  build without Ghostscript support (Bug #1346).

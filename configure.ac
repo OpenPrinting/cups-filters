@@ -249,9 +249,6 @@ AS_IF([test x"$with_tiff" != "xno"], [
 # Check for modules needed by utils/
 # ==================================
 
-dnl Check for pkg-config, which is used for some other tests later on...
-AC_PATH_PROG(PKGCONFIG, pkg-config)
-
 dnl Avahi for cups-browsed
 AVAHI_LIBS=""
 AVAHI_CFLAGS=""
@@ -272,17 +269,9 @@ AC_ARG_WITH(avahi-includes,
 	[AS_HELP_STRING([--with-avahi-includes], [Set directory for Avahi includes])],
 	AVAHI_CFLAGS="-I$withval $AVAHI_CFLAGS",)
 
-if test "x$PKGCONFIG" != x -a x$enable_avahi != xno; then
-	AC_MSG_CHECKING(for Avahi)
-	if $PKGCONFIG --exists avahi-client; then
-		AC_MSG_RESULT(yes)
-		AVAHI_CFLAGS="$AVAHI_CFLAGS `$PKGCONFIG --cflags avahi-client`"
-		AVAHI_LIBS="$AVAHI_LIBS `$PKGCONFIG --libs avahi-client`"
-		AC_DEFINE(HAVE_AVAHI, [], [Define if you have the avahi library])
-	else
-		AC_MSG_RESULT(no)
-		enable_avahi=no
-	fi
+if test "x$enable_avahi" != xno; then
+	PKG_CHECK_MODULES(AVAHI, avahi-client,
+		[AC_DEFINE(HAVE_AVAHI, [], [Define if you have the avahi library])])
 fi
 
 AC_SUBST(AVAHI_LIBS)
@@ -336,26 +325,18 @@ PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.30.2])
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
-if test "x$PKGCONFIG" != x -a x$enable_avahi != xno; then
+if test x$enable_avahi != xno; then
 	PKG_CHECK_MODULES(AVAHI_GLIB, [avahi-glib])
 fi
 
 AC_SUBST(AVAHI_GLIB_CFLAGS)
 AC_SUBST(AVAHI_GLIB_LIBS)
 
-GIO_CFLAGS=""
-GIO_LIBS=""
-if test "x$PKGCONFIG" != x; then
-	PKG_CHECK_MODULES(GIO, [gio-2.0])
-fi
+PKG_CHECK_MODULES(GIO, [gio-2.0])
 AC_SUBST(GIO_CFLAGS)
 AC_SUBST(GIO_LIBS)
 
-GIO_UNIX_CFLAGS=""
-GIO_UNIX_LIBS=""
-if test "x$PKGCONFIG" != x; then
-	PKG_CHECK_MODULES(GIO_UNIX, [gio-unix-2.0])
-fi
+PKG_CHECK_MODULES(GIO_UNIX, [gio-unix-2.0])
 AC_SUBST(GIO_UNIX_CFLAGS)
 AC_SUBST(GIO_UNIX_LIBS)
 
@@ -715,17 +696,17 @@ AC_SUBST(CUPS_GHOSTSCRIPT)
 AC_ARG_ENABLE(braille, AS_HELP_STRING([--enable-braille],[enable Braille embosing filters, requires liblouis]),
 	      enable_braille=$enableval,enable_braille=yes)
 AC_MSG_CHECKING(for liblouis)
-if $PKGCONFIG --exists liblouis; then
+PKG_CHECK_EXISTS([liblouis], [
 	AC_MSG_RESULT(yes)
-	if test "x$PKGCONFIG" != x -a "x$enable_braille" = xyes; then
-		TABLESDIR=`$PKGCONFIG --variable=tablesdir liblouis`
+	if test "x$enable_braille" = xyes; then
+		TABLESDIR=`$PKG_CONFIG --variable=tablesdir liblouis`
 	else
 		TABLESDIR=/usr/share/liblouis/tables
 	fi
-else
+], [
 	AC_MSG_RESULT(no)
 	TABLESDIR=/usr/share/liblouis/tables
-fi
+])
 AM_CONDITIONAL(ENABLE_BRAILLE, test "x$enable_braille" = xyes)
 AC_SUBST(TABLESDIR)
 
