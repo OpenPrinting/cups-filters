@@ -3333,9 +3333,6 @@ gboolean handle_cups_queues(gpointer unused) {
       /* Option cups-browsed=true, marking that we have created this queue */
       num_options = cupsAddOption(CUPS_BROWSED_MARK "-default", "true",
 				  num_options, &options);
-      /* Do not share a queue which serves only to point to a remote printer */
-      num_options = cupsAddOption("printer-is-shared", "false",
-				  num_options, &options);
       /* Description: <Bonjour service name> */
       num_options = cupsAddOption("printer-info", p->service_name,
 				  num_options, &options);
@@ -3375,10 +3372,37 @@ gboolean handle_cups_queues(gpointer unused) {
       }
       cupsFreeOptions(num_options, options);
       if (cupsLastError() > IPP_OK_CONFLICT) {
-	debug_printf("cups-browsed: Unable to create CUPS queue!\n");
+	debug_printf("cups-browsed: Unable to create/modify CUPS queue!\n");
 	p->timeout = current_time + TIMEOUT_RETRY;
 	break;
       }
+
+      /* Do not share a queue which serves only to point to a remote printer
+
+	 We do this in a seperate IPP request as on newer CUPS versions we
+         get an error when changing the printer-is-shared bit on a queue
+         pointing to a remote CUPS printer, this way we assure all other
+	 settings be applied amd when setting the printer-is-shared to
+         false amd this errors, we can safely ignore the error as on queues
+	 pointing to remote CUPS printers the bit is set to false by default
+	 (these printers are never shared) */
+
+      request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		   "printer-uri", NULL, uri);
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		 "requesting-user-name", NULL, cupsUser());
+      num_options = 0;
+      options = NULL;
+      num_options = cupsAddOption("printer-is-shared", "false",
+				  num_options, &options);
+      cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
+      cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
+      ippDelete(cupsDoRequest(http, request, "/admin/"));
+      cupsFreeOptions(num_options, options);
+      if (cupsLastError() > IPP_OK_CONFLICT)
+	debug_printf("cups-browsed: Unable to set printer-is-shared bit to false (%s)!\n",
+		     cupsLastErrorString());
 
       /* Option settings which we have recorded from the previous session */
       retrieve_printer_options(p->name);

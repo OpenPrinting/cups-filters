@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.8.2 - 2016-02-11
 
 CHANGES IN V1.8.3
 
+	- cups-browsed: When creating or modifying a local print queue
+	  set the printer-is-shared bit to false in a separate IPP
+	  request as this operation errors on queues directly pointing
+	  to remote CUPS queues with the IPP backend. This way we can
+	  ignore the error and assure that all other settings are
+	  applied (Ubuntu bug #1560099).
 	- Fixed pkg-config support so that $PKG_CONFIG gets used and
 	  cross compilation works (Bug #1347).
 	- gstoraster: Put conversion rules for this filter into a
