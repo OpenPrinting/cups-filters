@@ -256,10 +256,10 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
     printer and send option settings as standard IPP attributes. We do
     not poll the capabilities by ourselves to not wake up the printer
     from power-saving mode when creating the queues. Jobs have to be
-    sent in PDF format. Other formats are not accepted. This
-    functionality is primarily for mobile devices running CUPS to not
-    need a printer setup tool nor a collection of printer drivers and
-    PPDs.
+    sent in one of PDF, PWG Raster, or JPEG format. Other formats are
+    not accepted. This functionality is primarily for mobile devices
+    running CUPS to not need a printer setup tool nor a collection of
+    printer drivers and PPDs.
 
     cups-browsed can also be started on-demand, for example to save
     resources on mobile devices. For this, cups-browsed can be set
