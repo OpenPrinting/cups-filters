@@ -71,7 +71,7 @@ setupTextRendering() {
       checkTool lynx lynx "translating html files"
       ;;
     application/msword)
-      CONVERT="antiword /dev/stdin"
+      CONVERT="antiword -"
       checkTool antiword antiword "translating MS-Word doc files"
       ;;
     application/vnd.openxmlformats-officedocument.wordprocessingml.document)
@@ -82,8 +82,8 @@ setupTextRendering() {
       CONVERT="rtf2txt /dev/stdin"
       checkTool rtf2txt rtf2txt "translating RTF files"
       ;;
-    application/pdf)
-      CONVERT="pdftotext -raw /dev/stdin /dev/stdout"
+    application/pdf|application/vnd.cups-pdf-banner)
+      CONVERT="pdftotext -raw - -"
       checkTool pdftotext poppler "translating PDF files"
       ;;
     *)
@@ -114,7 +114,7 @@ then
 	;;
       application/msword)
 	LIBLOUIS_TOOL="file2brl"
-	CONVERT="antiword -x db /dev/stdin"
+	CONVERT="antiword -x db -"
 	checkTool antiword antiword "translating MS-Word doc files"
 	;;
       application/vnd.openxmlformats-officedocument.wordprocessingml.document)
@@ -127,9 +127,9 @@ then
 	CONVERT="rtf2xml /dev/stdin"
 	checkTool rtf2xml rtf2xml "translating RTF files"
 	;;
-      application/pdf)
+      application/pdf|application/vnd.cups-pdf-banner)
 	LIBLOUIS_TOOL="file2brl -p"
-	CONVERT="pdftotext -raw /dev/stdin /dev/stdout"
+	CONVERT="pdftotext -raw - -"
 	checkTool pdftotext poppler "translating PDF files"
 	;;
       *)
@@ -156,19 +156,33 @@ fi
 # Now proceeed
 cd $TMPDIR
 echo "INFO: Reformating text" >&2
-[ -z "$FILE" ] && FILE=/dev/stdin
 
 if [ -z "$CONVERT" ]
 then
   printf "DEBUG: Calling $RENDER_CALL on '%s'\n" "$FILE" >&2
+  if [ -z "$FILE" ]
+  then
+    $RENDER_CALL
+  else
    < "$FILE" $RENDER_CALL
+  fi
 elif [ -z "$TRANSLATE" ]
 then
   printf "DEBUG: Calling $CONVERT | $RENDER_CALL on '%s'\n" "$FILE" >&2
+  if [ -z "$FILE" ]
+  then
+    $CONVERT | $RENDER_CALL
+  else
   < "$FILE" $CONVERT | $RENDER_CALL
+  fi
 else
   printf "DEBUG: Calling $CONVERT | $RENDER_CALL | $TRANSLATE on '%s'\n" "$FILE" >&2
+  if [ -z "$FILE" ]
+  then
+    $CONVERT | $RENDER_CALL | $TRANSLATE
+  else
   < "$FILE" $CONVERT | $RENDER_CALL | $TRANSLATE
+  fi
 fi
 
 echo "INFO: Ready" >&2
