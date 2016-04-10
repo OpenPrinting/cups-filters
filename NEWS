@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 
 CHANGES IN V1.8.4
 
+	- braille: Drop output of the "type" command when checking the
+	  presence of helper utilities.
 	- braille: Do not send EOF twice to the braille embosser.
 	- cups-browsed/sys5ippprinter: Fixed documentation about the allowed
 	  input formats for auto-created network printer queues using

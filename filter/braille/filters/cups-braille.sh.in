@@ -236,7 +236,7 @@ checkTool() {
   TOOL=$1
   PACKAGE=$2
   USE=$3
-  if ! type $TOOL
+  if ! type $TOOL > /dev/null
   then
     printf "ERROR: The $PACKAGE package is required for $USE\n" >&2
     exit 1

@@ -96,7 +96,7 @@ setupTextRendering() {
 #  Selected braille table
 if [ -n "$LIBLOUIS_TABLES" ]
 then
-  if type file2brl
+  if type file2brl > /dev/null
   then
     # Good, we can use liblouisutdml
     case $CONTENT_TYPE in
@@ -138,7 +138,7 @@ then
 	;;
     esac
     RENDER_CALL="$LIBLOUIS_TOOL -CliteraryTextTable=$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
-  elif type lou_translate
+  elif type lou_translate > /dev/null
   then
     # Only liblouis, but better than nothing
     setupTextRendering
