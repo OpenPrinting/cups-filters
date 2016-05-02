@@ -336,8 +336,8 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
     utils/cups-browsed.service and utils/cups-browsed-upstart.conf.
 
     In the examples we start cups-browsed after starting
-    avahi-daemon. This is not required. if cups-browsed starts first,
-    the Bonjour/DNS-SD browsing kicks in as soon as avahi-daemon comes
+    avahi-daemon. This is not required. If cups-browsed starts first,
+    then Bonjour/DNS-SD browsing kicks in as soon as avahi-daemon comes
     up. cups-browsed is also robust against any shutdown and restart
     of avahi-daemon.
 
@@ -389,7 +389,7 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
     duplicates and change the URI of the disappeared queue to the URI
     of the first duplicate, mark the queue as to-be-created with
     timeout now-1 sec (to update the URI of the CUPS queue) and mark
-    the duplicate ddisappeared with timeout now-1 sec. In terms of
+    the duplicate disappeared with timeout now-1 sec. In terms of
     high availability we replace the old load balancing of the
     implicit class by a failover solution. Alternatively (not
     implemented), if queue with same name but from other server
@@ -639,7 +639,7 @@ as follows;
 Because PDF cannot specify device options in a PDF file, you have to define
 all the device options as JCLs.
 
-When a printer does not support PS nor PDF, you can use Ghostscript (GS).
+When a printer does not support PS or PDF, you can use Ghostscript (GS).
 In this case, you can specify device options like a PS printer.
 If you want to use the same printer and same PPD file for both PDF and PS
 printing, when you print a PS file, you can specify that GS handles it,
@@ -1014,7 +1014,7 @@ Sample PPD file for native PDF printer are included:
 - Generic-PDF_Printer-PDF.ppd
 - HP-Color_LaserJet_CM3530_MFP-PDF.ppd
 
-When a printer does not support PS nor PDF, you can use Ghostscript (GS).
+When a printer does not support PS or PDF, you can use Ghostscript (GS).
 In this case, you can specify device options like a PS printer.
 If you want to use the same printer and same PPD file for both PDF and PS
 printing, when you print a PS file, you can specify that GS handles it,
@@ -1310,7 +1310,7 @@ Following information is for developers, not for driver users.
 
 7.1 Temporally files location
 
-"pdftoijs" creates temporally files if needed. Temporary files are created
+"pdftoijs" creates temporary files if needed. Temporary files are created
 in the location specified by TMPDIR environment variable. Default location
 is "/tmp".
 

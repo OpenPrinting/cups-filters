@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 
 CHANGES IN V1.8.4
 
+	- README: Fixed typos. Thanks to Pranjal Bhor (bhor dot pranjal at
+	  gmail dot com) for the patch.
 	- braille: Recognize application/vnd.cups-pdf-banner MIME type and
 	  read standard input directly instead of using /dev/stdin.
 	- braille: Drop output of the "type" command when checking the
