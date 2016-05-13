@@ -350,7 +350,8 @@ gs_spawn (const char *filename,
   int n;
   int numargs;
   int pid;
-  int status = 1;
+  int status = 65536;
+  int wstatus;
 
   /* Put Ghostscript command line argument into an array for the "exec()"
      call */
@@ -443,12 +444,21 @@ retry_write:
   close (fds[1]);
 
 retry_wait:
-  if (waitpid (pid, &status, 0) == -1) {
+  if (waitpid (pid, &wstatus, 0) == -1) {
     if (errno == EINTR)
       goto retry_wait;
     perror ("gs");
     goto out;
   }
+
+  /* How did Ghostscript terminate */
+  if (WIFEXITED(wstatus))
+    /* Via exit() anywhere or return() in the main() function */
+    status = WEXITSTATUS(wstatus);
+  else if (WIFSIGNALED(wstatus))
+    /* Via signal */
+    status = 256 * WTERMSIG(wstatus);
+
 out:
   free(gsargv);
   return status;
@@ -750,6 +760,7 @@ main (int argc, char **argv, char *envp[])
   /* call Ghostscript */
   rewind(fp);
   status = gs_spawn (tmpstr, gs_args, envp, fp);
+  if (status != 0) status = 1;
 out:
   if (fp)
     fclose(fp);
