@@ -1109,9 +1109,32 @@ is called "cgpdftopdf" in OS X (not open source).
 
 Notable options
 ---------------
- booklet=Off/On/Shuffle-Only
-   On also tries to set DuplexTumble (two-sided-short-edge) and forces number-up=2
- booklet-signature=(multiple of 4, or default: -1 to use "all pages")
+
+booklet=Off/On/Shuffle-Only
+
+On also tries to set DuplexTumble (two-sided-short-edge) and forces number-up=2
+
+booklet-signature=(multiple of 4, or default: -1 to use "all pages")
+
+pdfAutorotate/nopdfAutorotate
+
+A PDF file containing pages with page width greater than page height
+(a landscape page) has such pages automatically rotated anticlockwise
+by 90 degrees unless the PPD file has a *LandscapeOrientation line
+saying 'Minus90', which results in a 90 degree rotation clockwise. To
+turn off the feature on a job-by-job basis use
+
+  lp -d <print_queue_name> -o nopdfAutorotate <document>
+
+On a per-queue basis use
+
+  -o nopdfAutorotate-default
+
+as an option to lpadmin.
+
+Note that the 'landscape' and 'orientation-requested=4' options of
+CUPS take precedence and are applied before 'pdfAutorotate' or
+'nopdfAutorotate'.
 
 Known issues
 ------------

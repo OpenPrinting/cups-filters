@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 
 CHANGES IN V1.8.4
 
+	- README: Added documentation for the pdfAutorotate option in
+	  pdftopdf.
 	- gstoraster: Treat status output of the waitpid() function properly,
 	  to avoid gstoraster exiting with zero status when Ghostscript
 	  exited with non-zero status or got terminated by a signal
