@@ -1100,29 +1100,76 @@ is "/tmp".
 PDFTOPDF  -- new implementation
 ===============================
 
-A new implementation of the pdftopdf filter is available. 
-It depends on libqpdf to read/write pdf files.
+The new implementation of the pdftopdf filter depends on libqpdf to
+read/write pdf files.
 
-The aim is to replace and imitate the pstops filter in PDF-based workflows.
-A similar filter (which can serve as behavior reference) 
+It replaces and imitate the pstops filter in PDF-based workflows.
+A similar filter (which can serve as behavior reference)
 is called "cgpdftopdf" in OS X (not open source).
 
-Notable options
----------------
+Command line
+------------
 
-booklet=Off/On/Shuffle-Only
+pdftopdf follows the usual CUPS filter calling conventions, i.e.
 
-On also tries to set DuplexTumble (two-sided-short-edge) and forces number-up=2
+  pdftopdf <job> <user> <title> <num-copies> <options> [<filename>]
 
-booklet-signature=(multiple of 4, or default: -1 to use "all pages")
+together with the environment variables "PPD" and "CLASSIFICATION".
 
-pdfAutorotate/nopdfAutorotate
+When omitting <filename>, "pdftopdf" reads a PDF file from stdin.
+Internally this will write the data to a temporary file, because
+the PDF format cannot be processed in a streaming fashion.
 
-A PDF file containing pages with page width greater than page height
-(a landscape page) has such pages automatically rotated anticlockwise
-by 90 degrees unless the PPD file has a *LandscapeOrientation line
-saying 'Minus90', which results in a 90 degree rotation clockwise. To
-turn off the feature on a job-by-job basis use
+<options> are delimited by space; boolean type CUPS options can be set
+by only adding the option key, other types are provided as
+pairs of key and value, <key>=<value>.
+
+pdftopdf processes the following standard command-line and/or PPD options:
+
+Copies      # ppd will only override, when commandline parameter was 1
+fitplot / fit-to-page / ipp-attribute-fidelity
+landscape / orientation-requested
+PageSize / page-size / MediaSize / media-size
+page-left / page-right / page-bottom / page-top
+media-top-margin / media-left-margin / media-right-margin / media-bottom-margin
+Duplex / JCLDuplex / EFDuplex / JD03Duplex / sides
+number-up / number-up-layout
+page-border
+OutputOrder / OutputBin / DefaultOutputOrder / page-delivery
+page-label
+page-set
+page-ranges
+MirrorPrint / mirror
+emit-jcl
+position
+Collate / multiple-document-handling / sheet-collate
+cupsEvenDuplex
+cupsManualCopies  # via ppd
+
+Additional (non-standard) options
+---------------------------------
+
+1) Booklet printing
+
+  booklet=Off/On/Shuffle-Only
+
+"On" also tries to set DuplexTumble (two-sided-short-edge) and forces number-up=2
+
+  booklet-signature=(multiple of 4, or default: -1 to use "all pages")
+
+2) Page autorotate
+
+pdftopdf automatically rotates pages to the same orientation,
+instead of (e.g. fitplot) scaling them down unrotated.
+This behavier can be controlled by
+
+  pdfAutorotate / nopdfAutorotate
+
+Specifically, if a PDF file contains pages with page width greater than
+page height (a landscape page), such pages are automatically rotated
+anticlockwise by 90 degrees, unless the PPD file specifies
+"*LandscapeOrientation: Minus90". In this case, clockwise rotation is used.
+To turn off the feature on a job-by-job basis use
 
   lp -d <print_queue_name> -o nopdfAutorotate <document>
 
@@ -1132,16 +1179,85 @@ On a per-queue basis use
 
 as an option to lpadmin.
 
-Note that the 'landscape' and 'orientation-requested=4' options of
-CUPS take precedence and are applied before 'pdfAutorotate' or
-'nopdfAutorotate'.
+When the 'landscape' or 'orientation-requested=4' (or =5) option of CUPS is
+given, the pdfAutorotate processing will adjust and accordingly rotate the
+non-landscape pages are rotated instead.
+
+Note: Some pages might end up 180 degree rotated (instead of 0 degree).
+Those should probably be rotated manually before binding the pages together.
+
+Native PDF Printer / JCL Support
+--------------------------------
+
+pdftopdf will emit JCL when provided with a PPD file that includes the
+"*JCLToPDFInterpreter:" keyword.
+
+This enables for hardware copy generation and device collate; e.g. with PJL:
+
+*JCLBegin:           "<1B>%-12345X@PJL JOB<0A>"
+*JCLToPDFInterpreter: "@PJL ENTER LANGUAGE = PDF <0A>"
+*JCLEnd:             "<1B>%-12345X@PJL EOJ <0A><1B>%-12345X"
+
+For each marked option, the prefixed "pdftopdfJCL<option name>" keywords
+can also be used to send raw JCL strings for that option.
+These keywords also include *pdftopdfJCLBegin and *pdftopdfJCLCopies,
+This allows the use of the same PPD for PDF- and PS-based workflows,
+as pdftopdfJCL... will not be read in the PS case.
+
+When the PPD contains the "Copies" keyword, pdftopdf will detect the use
+of PJL and has special code which adds "@PJL SET COPIES=...",
+or "@PJL SET QTY=...", respectively.
+
+Other JCL code can be injected via "*JCLOpenUI: ..." ... "*JCLCloseUI: ...".
+
+Special PDF comments
+--------------------
+
+pdftopdf adds comments to the pdf preamble that might esp. be of use
+to subsequent filters, e.g.
+
+  % This file was generated by pdftopdf
+  %%PDFTOPDFNumCopies : 1
+  %%PDFTOPDFCollate : false
+
+The "NumCopies" and "Collate" values refer to the expected device/hardware
+copies, i.e. when pdftopdf's soft-copy generation did not handle this options.
+
+Limitations
+-----------
+
+pdftopdf does not support functions that are not related to printing
+features, including interactive features and document interchange features.
+Many of these operators and sections are just ignored.
+Some of these may be output, but those functions are not assured.
+
+Most notable is the use of AcroForms; their content will not be printed
+if any non-trivial processing by pdftopdf is involved (e.g. "fitplot").
+This only occurs when a file is printed directly, e.g. by "lpr".
+
+Usual PDF viewer applications (xpdf, evince, acroread, ghostscript, ...)
+will hardcopy the form content into printable pdf operations,
+when choosing to print such a document.
 
 Known issues
 ------------
-- Borders, esp. in the "number-up=1 fitplot=false"-case are sometimes drawn 
+
+- Borders, esp. in the "number-up=1 fitplot=false"-case might be drawn
   at incorrect locations.
-- more testing needs to be done
-- documentation largely missing
+
+- JCL documentation is sparse.
+  The imagetopdf or old pdftopdf documentation contains a tad more information.
+
+- Missing AcroForm-content might surprise users printing PDF files directly /
+  from the command-line (see the Limitations section, above).
+
+License
+-------
+
+pdftopdf is released under the MIT license.
+
+The required libqpdf is available under version 2 of the Artistic License,
+e.g. here: https://github.com/qpdf/qpdf
 
 
 TEXTTOPDF

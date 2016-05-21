@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 
 CHANGES IN V1.8.4
 
+	- README: Extended pdftopdf's documentation.
 	- README: Added documentation for the pdfAutorotate option in
 	  pdftopdf.
 	- gstoraster: Treat status output of the waitpid() function properly,

@@ -800,7 +800,7 @@ proc1->emitFilename("out.pdf");
     }
 
     emitPreamble(ppd,param); // ppdEmit, JCL stuff
-    emitComment(*proc,param); // pass information to subsequent filters viia PDF comments
+    emitComment(*proc,param); // pass information to subsequent filters via PDF comments
 
 //    proc->emitFile(stdout);
     proc->emitFilename(NULL);
