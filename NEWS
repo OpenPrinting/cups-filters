@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 
 CHANGES IN V1.8.4
 
+	- cups-browsed: Added "Requires=cups-service" to the
+	  cups-browsed.service file, so that systemd keeps CUPS running while
+	  shutting down cups-browsed on system shutdown (Ubuntu bug #1579905).
 	- README: Extended pdftopdf's documentation.
 	- README: Added documentation for the pdfAutorotate option in
 	  pdftopdf.

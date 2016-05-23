@@ -1,5 +1,6 @@
 [Unit]
 Description=Make remote CUPS printers available locally
+Requires=cups.service
 After=cups.service avahi-daemon.service
 Wants=cups.service avahi-daemon.service
 
