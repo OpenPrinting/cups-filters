@@ -1,8 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 ----------------------------------------------------
 
-CHANGES IN V1.8.4
+CHANGES IN V1.9.0
 
+	- cups-browsed: Added support for debug logging into a file (usually
+	  /var/log/cups/cups-browsed_log, to be activated via "-l" or
+	  "--logfile" option or via "DebugLogging file" option in
+	  cups-browsed.conf.
+	- cups-browesd: Consistent use of debug_printf() in the LDAP support.
 	- cups-browsed: Added "Requires=cups-service" to the
 	  cups-browsed.service file, so that systemd keeps CUPS running while
 	  shutting down cups-browsed on system shutdown (Ubuntu bug #1579905).

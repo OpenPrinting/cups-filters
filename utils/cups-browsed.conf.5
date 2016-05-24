@@ -9,6 +9,19 @@ located in the /etc/cups directory. Each line in the file can be a
 configuration directive, a blank line, or a comment. Comment lines start
 with the # character.
 .SH DIRECTIVES
+The "DebugLogging" directive determines how should debug logging be done.
+Into the file /var/log/cups/cups-browsed_log ("file"), to stderr ("stderr"), or
+not at all ("none").
+.PP
+.nf
+.fam C
+        DebugLogging file
+        DebugLogging stderr
+        DebugLogging file stderr
+        DebugLogging none
+
+.fam T
+.fi
 Only browse remote printers (via DNS-SD or CUPS browsing) from
 selected servers using the "BrowseAllow", "BrowseDeny", and
 "BrowseOrder" directives

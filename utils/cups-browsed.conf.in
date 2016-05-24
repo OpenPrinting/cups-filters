@@ -6,6 +6,16 @@
 # Unknown directives are ignored, also unknown values.
 
 
+# How should debug logging be done? Into the file
+# /var/log/cups/cups-browsed_log ('file'), to stderr ('stderr'), or
+# not at all ('none')?
+
+# DebugLogging file
+# DebugLogging stderr
+# DebugLogging file stderr
+# DebugLogging none
+
+
 # Which protocols will we use to discover printers on the network?
 # Can use DNSSD and/or CUPS and/or LDAP, or 'none' for neither.
 

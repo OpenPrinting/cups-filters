@@ -142,6 +142,7 @@ static int	ldap_rebind_proc(LDAP *RebindLDAPHandle,
 #define REMOTE_DEFAULT_PRINTER_FILE "/var/cache/cups/cups-browsed-remote-default-printer"
 #define SAVE_OPTIONS_FILE "/var/cache/cups/cups-browsed-options-%s"
 #define IMPLICIT_CLASS_DEST_HOST_FILE "/var/cache/cups/cups-browsed-dest-host-%s"
+#define DEBUG_LOG_FILE "/var/log/cups/cups-browsed_log"
 
 /* Status of remote printer */
 typedef enum printer_status_e {
@@ -343,7 +344,9 @@ static autoshutdown_inactivity_type_t autoshutdown_on = NO_QUEUES;
 static guint autoshutdown_exec_id = 0;
 static const char *default_printer = NULL;
 
-static int debug = 0;
+static int debug_stderr = 0;
+static int debug_logfile = 0;
+static FILE *lfp = NULL;
 
 static void recheck_timer (void);
 static void browse_poll_create_subscription (browsepoll_t *context,
@@ -463,12 +466,43 @@ ippSetVersion(ipp_t *ipp, int major, int minor)
 }
 #endif
 
-void debug_printf(const char *format, ...) {
-  if (debug) {
+void
+start_debug_logging()
+{
+  lfp = fopen(DEBUG_LOG_FILE, "a+");
+  if (lfp == NULL) {
+    fprintf(stderr, "cups-browsed: ERROR: Failed creating debug log file %s\n",
+	    DEBUG_LOG_FILE);
+    exit(1);
+  }
+}
+
+void
+stop_debug_logging()
+{
+  debug_logfile = 0;
+  fclose(lfp);
+}
+
+void
+debug_printf(const char *format, ...) {
+  if (debug_stderr || debug_logfile) {
+    time_t curtime = time(NULL);
+    char buf[64];
+    ctime_r(&curtime, buf);
+    while(isspace(buf[strlen(buf)-1])) buf[strlen(buf)-1] = '\0';
     va_list arglist;
     va_start(arglist, format);
-    vfprintf(stderr, format, arglist);
-    fflush(stderr);
+    if (debug_stderr) {
+      fprintf(stderr, "%s ", buf);
+      vfprintf(stderr, format, arglist);
+      fflush(stderr);
+    }
+    if (debug_logfile) {
+      fprintf(lfp, "%s ", buf);
+      vfprintf(lfp, format, arglist);
+      fflush(lfp);
+    }
     va_end(arglist);
   }
 }
@@ -621,7 +655,7 @@ prepare_browse_data (void)
   conn = http_connect_local ();
 
   if (conn == NULL) {
-    debug_printf("cups-browsed: browse send failed to connect to localhost\n");
+    debug_printf("browse send failed to connect to localhost\n");
     goto fail;
   }
 
@@ -632,10 +666,10 @@ prepare_browse_data (void)
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_NAME,
 		"requesting-user-name", NULL, cupsUser ());
 
-  debug_printf("cups-browsed: preparing browse data\n");
+  debug_printf("preparing browse data\n");
   response = cupsDoRequest (conn, request, "/");
   if (cupsLastError() > IPP_OK_CONFLICT) {
-    debug_printf("cups-browsed: browse send failed for localhost: %s\n",
+    debug_printf("browse send failed for localhost: %s\n",
 		 cupsLastErrorString ());
     goto fail;
   }
@@ -730,7 +764,7 @@ prepare_browse_data (void)
 
 	default:
 	  /* other values aren't needed? */
-	  debug_printf("cups-browsed: skipping %s (%d)\n", name, value_tag);
+	  debug_printf("skipping %s (%d)\n", name, value_tag);
 	  break;
 	}
 
@@ -827,13 +861,13 @@ check_jobs () {
 	num_jobs = cupsGetJobs2(CUPS_HTTP_DEFAULT, &jobs, p->name, 0,
 				CUPS_WHICHJOBS_ACTIVE);
 	if (num_jobs > 0) {
-	  debug_printf("cups-browsed: Queue %s still has jobs!\n", p->name);
+	  debug_printf("Queue %s still has jobs!\n", p->name);
 	  cupsFreeJobs(num_jobs, jobs);
 	  return 1;
 	}
       }
 
-  debug_printf("cups-browsed: All our remote printers are without jobs.\n");
+  debug_printf("All our remote printers are without jobs.\n");
   return 0;
 }
 
@@ -845,7 +879,7 @@ autoshutdown_execute (gpointer data)
   if (autoshutdown &&
       (cupsArrayCount(remote_printers) == 0 ||
        (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
-    debug_printf("cups-browsed: Automatic shutdown as there are no print queues maintained by us or no jobs on them for %d sec.\n",
+    debug_printf("Automatic shutdown as there are no print queues maintained by us or no jobs on them for %d sec.\n",
 		 autoshutdown_timeout);
     g_main_loop_quit(gmainloop);
   }
@@ -922,7 +956,7 @@ ldap_rebind_proc(
   * Bind to new LDAP server...
   */
 
-  debug_printf("cups-browsed: ldap_rebind_proc: Rebind to %s\n", refsp);
+  debug_printf("ldap_rebind_proc: Rebind to %s\n", refsp);
 
 #    if LDAP_API_VERSION > 3000
   bval.bv_val = BrowseLDAPPassword;
@@ -960,7 +994,7 @@ ldap_rebind_proc(
         * Free current values...
         */
 
-        debug_printf("cups-browsed: ldap_rebind_proc: Free values...\n");
+        debug_printf("ldap_rebind_proc: Free values...\n");
 
         if (dnp && *dnp)
           free(*dnp);
@@ -974,8 +1008,7 @@ ldap_rebind_proc(
         * Return credentials for LDAP referal...
         */
 
-        debug_printf("cups-browsed: "
-                        "ldap_rebind_proc: Return necessary values...\n");
+        debug_printf("ldap_rebind_proc: Return necessary values...\n");
 
         *dnp         = strdup(BrowseLDAPBindDN);
         *passwdp     = strdup(BrowseLDAPPassword);
@@ -987,8 +1020,7 @@ ldap_rebind_proc(
         * Should never happen...
         */
 
-        fprintf(stderr, "cups-browsed: "
-                        "LDAP rebind has been called with wrong freeit value!\n");
+        debug_printf("LDAP rebind has been called with wrong freeit value!\n");
         break;
   }
 
@@ -1025,15 +1057,13 @@ ldap_connect(void)
 
   if (BrowseLDAPCACertFile)
   {
-    debug_printf("cups-browsed: "
-	            "ldap_connect: Setting CA certificate file \"%s\"\n",
+    debug_printf("ldap_connect: Setting CA certificate file \"%s\"\n",
                     BrowseLDAPCACertFile);
 
     if ((rc = ldap_set_option(NULL, LDAP_OPT_X_TLS_CACERTFILE,
 	                      (void *)BrowseLDAPCACertFile)) != LDAP_SUCCESS)
-      fprintf(stderr, "cups-browsed: "
-                      "Unable to set CA certificate file for LDAP "
-                      "connections: %d - %s\n", rc, ldap_err2string(rc));
+      debug_printf("Unable to set CA certificate file for LDAP "
+		   "connections: %d - %s\n", rc, ldap_err2string(rc));
   }
 #    endif /* HAVE_LDAP_SSL */
 
@@ -1059,8 +1089,8 @@ ldap_connect(void)
 
   if (!BrowseLDAPServer)
   {
-    fprintf(stderr, "cups-browsed: BrowseLDAPServer not configured!\n");
-    fprintf(stderr, "cups-browsed: Disabling LDAP browsing!\n");
+    debug_printf("BrowseLDAPServer not configured!\n");
+    debug_printf("Disabling LDAP browsing!\n");
     /*BrowseLocalProtocols  &= ~BROWSE_LDAP;*/
     BrowseRemoteProtocols &= ~BROWSE_LDAP;
     return (NULL);
@@ -1075,9 +1105,9 @@ ldap_connect(void)
     ldap_ssl = 1;
   else
   {
-    fprintf(stderr, "cups-browsed: Unrecognized LDAP protocol (%s)!\n",
-                    ldap_protocol);
-    fprintf(stderr, "cups-browsed: Disabling LDAP browsing!\n");
+    debug_printf("Unrecognized LDAP protocol (%s)!\n",
+		 ldap_protocol);
+    debug_printf("Disabling LDAP browsing!\n");
     /*BrowseLocalProtocols &= ~BROWSE_LDAP;*/
     BrowseRemoteProtocols &= ~BROWSE_LDAP;
     return (NULL);
@@ -1091,7 +1121,7 @@ ldap_connect(void)
       ldap_port = LDAP_PORT;
   }
 
-  debug_printf("cups-browsed: ldap_connect: PROT:%s HOST:%s PORT:%d\n",
+  debug_printf("ldap_connect: PROT:%s HOST:%s PORT:%d\n",
                   ldap_protocol, ldap_host, ldap_port);
 
  /*
@@ -1118,8 +1148,7 @@ ldap_connect(void)
       rc = ldapssl_client_init(BrowseLDAPCACertFile, (void *)NULL);
       if (rc != LDAP_SUCCESS)
       {
-        fprintf(stderr, "cups-browsed: "
-                        "Failed to initialize LDAP SSL client!\n");
+        debug_printf("Failed to initialize LDAP SSL client!\n");
         rc = LDAP_OPERATIONS_ERROR;
       }
       else
@@ -1133,8 +1162,7 @@ ldap_connect(void)
     }
     else
     {
-      fprintf(stderr, "cups-browsed: "
-                      "LDAP SSL certificate file/database not configured!\n");
+      debug_printf("LDAP SSL certificate file/database not configured!\n");
       rc = LDAP_OPERATIONS_ERROR;
     }
 
@@ -1144,8 +1172,7 @@ ldap_connect(void)
     * Return error, because client libraries doesn't support SSL
     */
 
-    fprintf(stderr, "cups-browsed: "
-                    "LDAP client libraries do not support SSL\n");
+    debug_printf("LDAP client libraries do not support SSL\n");
     rc = LDAP_OPERATIONS_ERROR;
 
 #    endif /* HAVE_LDAP_SSL */
@@ -1158,13 +1185,13 @@ ldap_connect(void)
 
   if (rc != LDAP_SUCCESS)
   {
-    fprintf(stderr, "cups-browsed: Unable to initialize LDAP!\n");
+    debug_printf("Unable to initialize LDAP!\n");
 
     if (rc == LDAP_SERVER_DOWN || rc == LDAP_CONNECT_ERROR)
-      fprintf(stderr, "cups-browsed: Temporarily disabling LDAP browsing...\n");
+      debug_printf("Temporarily disabling LDAP browsing...\n");
     else
     {
-      fprintf(stderr, "cups-browsed: Disabling LDAP browsing!\n");
+      debug_printf("Disabling LDAP browsing!\n");
 
       /*BrowseLocalProtocols  &= ~BROWSE_LDAP;*/
       BrowseRemoteProtocols &= ~BROWSE_LDAP;
@@ -1182,9 +1209,9 @@ ldap_connect(void)
   if (ldap_set_option(TempBrowseLDAPHandle, LDAP_OPT_PROTOCOL_VERSION,
                            (const void *)&version) != LDAP_SUCCESS)
   {
-    fprintf(stderr, "cups-browsed: Unable to set LDAP protocol version %d!\n",
-                   version);
-    fprintf(stderr, "cups-browsed: Disabling LDAP browsing!\n");
+    debug_printf("Unable to set LDAP protocol version %d!\n",
+		 version);
+    debug_printf("Disabling LDAP browsing!\n");
 
     /*BrowseLocalProtocols  &= ~BROWSE_LDAP;*/
     BrowseRemoteProtocols &= ~BROWSE_LDAP;
@@ -1203,9 +1230,8 @@ ldap_connect(void)
   rc = ldap_set_rebind_proc(TempBrowseLDAPHandle, &ldap_rebind_proc,
                             (void *)NULL);
   if (rc != LDAP_SUCCESS)
-    fprintf(stderr, "cups-browsed: "
-                    "Setting LDAP rebind function failed with status %d: %s\n",
-                    rc, ldap_err2string(rc));
+    debug_printf("Setting LDAP rebind function failed with status %d: %s\n",
+		 rc, ldap_err2string(rc));
 
 #    else
 
@@ -1236,16 +1262,16 @@ ldap_connect(void)
 
   if (rc != LDAP_SUCCESS)
   {
-    fprintf(stderr, "cups-browsed: LDAP bind failed with error %d: %s\n",
-                    rc, ldap_err2string(rc));
+    debug_printf("LDAP bind failed with error %d: %s\n",
+		 rc, ldap_err2string(rc));
 
 #  if defined(HAVE_LDAP_SSL) && defined (HAVE_MOZILLA_LDAP)
     if (ldap_ssl && (rc == LDAP_SERVER_DOWN || rc == LDAP_CONNECT_ERROR))
     {
       ssl_err = PORT_GetError();
       if (ssl_err != 0)
-        fprintf(stderr, "cups-browsed: LDAP SSL error %d: %s\n", ssl_err,
-                        ldapssl_err2string(ssl_err));
+        debug_printf("LDAP SSL error %d: %s\n", ssl_err,
+		     ldapssl_err2string(ssl_err));
     }
 #  endif /* defined(HAVE_LDAP_SSL) && defined (HAVE_MOZILLA_LDAP) */
 
@@ -1254,7 +1280,7 @@ ldap_connect(void)
     return (NULL);
   }
 
-  debug_printf("cups-browsed: LDAP connection established\n");
+  debug_printf("LDAP connection established\n");
 
   return (TempBrowseLDAPHandle);
 }
@@ -1275,7 +1301,7 @@ ldap_reconnect(void)
   * if the new connection was successful.
   */
 
-  debug_printf("cups-browsed: Try LDAP reconnect...\n");
+  debug_printf("Try LDAP reconnect...\n");
 
   TempBrowseLDAPHandle = ldap_connect();
 
@@ -1312,9 +1338,8 @@ ldap_disconnect(LDAP *ld)		/* I - LDAP handle */
 #  endif /* defined(HAVE_OPENLDAP) && LDAP_API_VERSION > 3000 */
 
   if (rc != LDAP_SUCCESS)
-    fprintf(stderr, "cups-browsed: "
-                    "Unbind from LDAP server failed with status %d: %s\n",
-                    rc, ldap_err2string(rc));
+    debug_printf("Unbind from LDAP server failed with status %d: %s\n",
+		 rc, ldap_err2string(rc));
 }
 
 /*
@@ -1341,7 +1366,7 @@ cupsdUpdateLDAPBrowse(void)
   LDAPMessage	*res,			/* LDAP search results */
 		  *e;			/* Current entry from search */
 
-  debug_printf("cups-browsed: UpdateLDAPBrowse\n");
+  debug_printf("UpdateLDAPBrowse\n");
 
  /*
   * Reconnect if LDAP Handle is invalid...
@@ -1370,8 +1395,7 @@ cupsdUpdateLDAPBrowse(void)
     if (BrowseLDAPUpdate && ((rc == LDAP_SERVER_DOWN) || (rc == LDAP_CONNECT_ERROR)))
     {
       BrowseLDAPUpdate = FALSE;
-      debug_printf("cups-browsed: "
-                      "LDAP update temporary disabled\n");
+      debug_printf("LDAP update temporary disabled\n");
     }
     return;
   }
@@ -1383,8 +1407,7 @@ cupsdUpdateLDAPBrowse(void)
   if (! BrowseLDAPUpdate)
   {
     BrowseLDAPUpdate = TRUE;
-    debug_printf("cups-browsed: "
-                    "LDAP update enabled\n");
+    debug_printf("LDAP update enabled\n");
   }
 
  /*
@@ -1392,7 +1415,7 @@ cupsdUpdateLDAPBrowse(void)
   */
 
   limit = ldap_count_entries(BrowseLDAPHandle, res);
-  debug_printf("cups-browsed: LDAP search returned %d entries\n", limit);
+  debug_printf("LDAP search returned %d entries\n", limit);
   if (limit < 1)
   {
     ldap_freeres(res);
@@ -1450,7 +1473,7 @@ cupsdUpdateLDAPBrowse(void)
 
     if (strncasecmp (resource, "/printers/", 10) &&
 	strncasecmp (resource, "/classes/", 9)) {
-      debug_printf("cups-browsed: don't understand URI: %s\n", uri);
+      debug_printf("don't understand URI: %s\n", uri);
       return;
     }
 
@@ -1460,7 +1483,7 @@ cupsdUpdateLDAPBrowse(void)
     if (c)
       *c = '\0';
 
-    debug_printf("cups-browsed: browsed LDAP queue name is %s\n",
+    debug_printf("browsed LDAP queue name is %s\n",
 		 local_resource + 9);
 
     generate_local_queue(host, NULL, port, local_resource, info, "", "", NULL);
@@ -1500,12 +1523,10 @@ ldap_search_rec(LDAP        *ld,	/* I - LDAP handler */
 
   if (rc == LDAP_SERVER_DOWN || rc == LDAP_CONNECT_ERROR)
   {
-    fprintf(stderr, "cups-browsed: "
-                    "LDAP search failed with status %d: %s\n",
-                     rc, ldap_err2string(rc));
-    debug_printf("cups-browsed: "
-                    "We try the LDAP search once again after reconnecting to "
-		    "the server\n");
+    debug_printf("LDAP search failed with status %d: %s\n",
+		 rc, ldap_err2string(rc));
+    debug_printf("We try the LDAP search once again after reconnecting to "
+		 "the server\n");
     ldap_freeres(*res);
     ldr = ldap_reconnect();
 
@@ -1518,12 +1539,10 @@ ldap_search_rec(LDAP        *ld,	/* I - LDAP handler */
   }
 
   if (rc == LDAP_NO_SUCH_OBJECT)
-    debug_printf("cups-browsed: "
-                    "ldap_search_rec: LDAP entry/object not found\n");
+    debug_printf("ldap_search_rec: LDAP entry/object not found\n");
   else if (rc != LDAP_SUCCESS)
-    fprintf(stderr, "cups-browsed: "
-                    "ldap_search_rec: LDAP search failed with status %d: %s\n",
-                     rc, ldap_err2string(rc));
+    debug_printf("ldap_search_rec: LDAP search failed with status %d: %s\n",
+		 rc, ldap_err2string(rc));
 
   if (rc != LDAP_SUCCESS)
     ldap_freeres(*res);
@@ -1544,9 +1563,9 @@ ldap_freeres(LDAPMessage *entry)	/* I - LDAP handler */
 
   rc = ldap_msgfree(entry);
   if (rc == -1)
-    fprintf(stderr, "cups-browsed: Can't free LDAPMessage!\n");
+    debug_printf("Can't free LDAPMessage!\n");
   else if (rc == 0)
-    debug_printf("cups-browsed: Freeing LDAPMessage was unnecessary\n");
+    debug_printf("Freeing LDAPMessage was unnecessary\n");
 }
 
 
@@ -1577,9 +1596,8 @@ ldap_getval_firststring(
   {
     rc = -1;
     dn = ldap_get_dn(ld, entry);
-    fprintf(stderr, "cups-browsed: "
-                    "Failed to get LDAP value %s for %s!\n",
-                    attr, dn);
+    debug_printf("Failed to get LDAP value %s for %s!\n",
+		 attr, dn);
     ldap_memfree(dn);
   }
   else
@@ -1593,9 +1611,8 @@ ldap_getval_firststring(
     {
       rc = -1;
       dn = ldap_get_dn(ld, entry);
-      fprintf(stderr, "cups-browsed: "
-                      "Attribute %s is too big! (dn: %s)\n",
-                      attr, dn);
+      debug_printf("Attribute %s is too big! (dn: %s)\n",
+		   attr, dn);
       ldap_memfree(dn);
     }
     else
@@ -1617,8 +1634,8 @@ ldap_getval_firststring(
   {
     rc = -1;
     dn = ldap_get_dn(ld, entry);
-    fprintf(stderr, "cups-browsed: Failed to get LDAP value %s for %s!\n",
-                    attr, dn);
+    debug_printf("Failed to get LDAP value %s for %s!\n",
+		 attr, dn);
     ldap_memfree(dn);
   }
   else
@@ -1656,7 +1673,7 @@ create_subscription ()
 
   resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
   if (!resp || cupsLastError() != IPP_OK) {
-    debug_printf ("cups-browsed: Error subscribing to CUPS notifications: %s\n",
+    debug_printf ("Error subscribing to CUPS notifications: %s\n",
 		  cupsLastErrorString ());
     return 0;
   }
@@ -1665,7 +1682,7 @@ create_subscription ()
   if (attr)
     id = ippGetInteger (attr, 0);
   else
-    debug_printf ("cups-browsed: "
+    debug_printf (""
 		  "ipp-create-printer-subscription response doesn't contain "
 		  "subscription id.\n");
 
@@ -1692,7 +1709,7 @@ renew_subscription (int id)
 
   resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
   if (!resp || cupsLastError() != IPP_OK) {
-    debug_printf ("cups-browsed: Error renewing CUPS subscription %d: %s\n",
+    debug_printf ("Error renewing CUPS subscription %d: %s\n",
 		  id, cupsLastErrorString ());
     return FALSE;
   }
@@ -1731,7 +1748,7 @@ cancel_subscription (int id)
 
   resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
   if (!resp || cupsLastError() != IPP_OK) {
-    debug_printf ("cups-browsed: Error subscribing to CUPS notifications: %s\n",
+    debug_printf ("Error subscribing to CUPS notifications: %s\n",
 		  cupsLastErrorString ());
     return;
   }
@@ -1805,11 +1822,11 @@ is_disabled(const char *printer, const char *reason) {
 	}
       }
     }
-    debug_printf("cups-browsed: No information regarding enabled/disabled found about the requested printer '%s'\n",
+    debug_printf("No information regarding enabled/disabled found about the requested printer '%s'\n",
 		 printer);
     return NULL;
   }
-  debug_printf("cups-browsed: ERROR: Request for printer info failed: %s\n",
+  debug_printf("ERROR: Request for printer info failed: %s\n",
 	       cupsLastErrorString());
   return NULL;
 }
@@ -1826,11 +1843,11 @@ enable_printer (const char *printer) {
 		"printer-uri", NULL, uri);
   ippDelete(cupsDoRequest (CUPS_HTTP_DEFAULT, request, "/admin/"));
   if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
-    debug_printf("cups-browsed: ERROR: Failed enabling printer '%s': %s\n",
+    debug_printf("ERROR: Failed enabling printer '%s': %s\n",
 		 printer, cupsLastErrorString());
     return -1;
   }
-  debug_printf("cups-browsed: Enabled printer '%s'\n", printer);
+  debug_printf("Enabled printer '%s'\n", printer);
   return 0;
 }
 
@@ -1850,11 +1867,11 @@ disable_printer (const char *printer, const char *reason) {
 		"printer-state-message", NULL, reason);
   ippDelete(cupsDoRequest (CUPS_HTTP_DEFAULT, request, "/admin/"));
   if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
-    debug_printf("cups-browsed: ERROR: Failed disabling printer '%s': %s\n",
+    debug_printf("ERROR: Failed disabling printer '%s': %s\n",
 		 printer, cupsLastErrorString());
     return -1;
   }
-  debug_printf("cups-browsed: Disabled printer '%s'\n", printer);
+  debug_printf("Disabled printer '%s'\n", printer);
   return 0;
 }
 
@@ -1874,11 +1891,11 @@ set_cups_default_printer(const char *printer) {
                NULL, cupsUser());
   ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
   if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
-    debug_printf("cups-browsed: ERROR: Failed setting CUPS default printer to '%s': %s\n",
+    debug_printf("ERROR: Failed setting CUPS default printer to '%s': %s\n",
 		 printer, cupsLastErrorString());
     return -1;
   }
-  debug_printf("cups-browsed: Successfully set CUPS default printer to '%s'\n",
+  debug_printf("Successfully set CUPS default printer to '%s'\n",
 	       printer);
   return 0;
 }
@@ -1896,7 +1913,7 @@ get_cups_default_printer() {
   /* Do it */
   response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/");
   if (cupsLastError() > IPP_OK_CONFLICT || !response) {
-    debug_printf("cups-browsed: Could not determine system default printer!\n");
+    debug_printf("Could not determine system default printer!\n");
   } else {
     for (attr = ippFirstAttribute(response); attr != NULL;
 	 attr = ippNextAttribute(response)) {
@@ -1950,7 +1967,7 @@ record_default_printer(const char *printer, int local) {
 
   fp = fopen(filename, "w+");
   if (fp == NULL) {
-    debug_printf("cups-browsed: ERROR: Failed creating file %s\n",
+    debug_printf("ERROR: Failed creating file %s\n",
 		 filename);
     invalidate_default_printer(local);
     return -1;
@@ -1972,7 +1989,7 @@ retrieve_default_printer(int local) {
 
   fp = fopen(filename, "r");
   if (fp == NULL) {
-    debug_printf("cups-browsed: Failed reading file %s\n",
+    debug_printf("Failed reading file %s\n",
 		 filename);
     return NULL;
   }
@@ -2043,7 +2060,7 @@ record_printer_options(const char *printer) {
   snprintf(filename, sizeof(filename), SAVE_OPTIONS_FILE,
 	   printer);
 
-  debug_printf("cups-browsed: Recording printer options for %s to %s\n",
+  debug_printf("Recording printer options for %s to %s\n",
 	       printer, filename);
 
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
@@ -2056,7 +2073,7 @@ record_printer_options(const char *printer) {
 
   fp = fopen(filename, "w+");
   if (fp == NULL) {
-    debug_printf("cups-browsed: ERROR: Failed creating file %s\n",
+    debug_printf("ERROR: Failed creating file %s\n",
 		 filename);
     return -1;
   }
@@ -2082,11 +2099,11 @@ record_printer_options(const char *printer) {
      printers or on the remote CUPS server for remote CUPS printers, we
      save the local settings for the PPD options. */
   if ((ppdname = cupsGetPPD(printer)) == NULL) {
-    debug_printf("cups-browsed: Unable to get PPD file for %s: %s\n",
+    debug_printf("Unable to get PPD file for %s: %s\n",
 		 printer, cupsLastErrorString());
   } else if ((ppd = ppdOpenFile(ppdname)) == NULL) {
     unlink(ppdname);
-    debug_printf("cups-browsed: Unable to open PPD file for %s.\n",
+    debug_printf("Unable to open PPD file for %s.\n",
 		 printer);
   } else {
     ppdMarkDefaults(ppd);
@@ -2122,7 +2139,7 @@ retrieve_printer_options(const char *printer) {
 
   /* Do we have default option settings in cups-browsed.conf? */
   if (DefaultOptions) {
-    debug_printf("cups-browsed: Applying default option settings to printer %s: %s\n",
+    debug_printf("Applying default option settings to printer %s: %s\n",
 		 printer, DefaultOptions);
     num_options = cupsParseOptions(DefaultOptions, num_options, &options);
   }
@@ -2131,30 +2148,30 @@ retrieve_printer_options(const char *printer) {
   snprintf(filename, sizeof(filename), SAVE_OPTIONS_FILE,
 	   printer);
 
-  debug_printf("cups-browsed: Retrieving printer options for %s from %s\n",
+  debug_printf("Retrieving printer options for %s from %s\n",
 	       printer, filename);
 
   /* Open the file with the saved option settings for this print queue */
   fp = fopen(filename, "r");
   if (fp == NULL) {
-    debug_printf("cups-browsed: Failed reading file %s, probably no options recorded yet\n",
+    debug_printf("Failed reading file %s, probably no options recorded yet\n",
 		 filename);
   } else {
     /* Now read the lines of the file and add each setting to our request */
     errno = 0;
-    debug_printf("cups-browsed: Applying retrieved option settings to printer %s:", printer);
+    debug_printf("Applying retrieved option settings to printer %s:\n", printer);
     while ((val = fgets(opt, sizeof(opt), fp)) != NULL) {
       if (strlen(opt) > 1 && (val = strchr(opt, '=')) != NULL) {
 	*val = '\0';
 	val ++;
 	val[strlen(val)-1] = '\0';
-	debug_printf(" %s=%s", opt, val);
+	debug_printf("   %s=%s\n", opt, val);
 	num_options = cupsAddOption(opt, val, num_options, &options);
       }
     }
     debug_printf("\n");
     if (errno != 0) {
-      debug_printf("cups-browsed: Failed reading file %s: %s\n",
+      debug_printf("Failed reading file %s: %s\n",
 		   filename, strerror(errno));
       fclose(fp);
     }	 
@@ -2175,7 +2192,7 @@ retrieve_printer_options(const char *printer) {
     ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
     cupsFreeOptions(num_options, options);
     if (cupsLastError() > IPP_OK_CONFLICT)
-      debug_printf("cups-browsed: Unable to modify CUPS queue (%s)!\n",
+      debug_printf("Unable to modify CUPS queue (%s)!\n",
 		   cupsLastErrorString());
   }
 
@@ -2225,11 +2242,11 @@ queue_creation_handle_default(const char *printer) {
   const char *current_default = get_cups_default_printer();
   if (current_default == NULL || !is_created_by_cups_browsed(current_default)) {
     if (set_cups_default_printer(printer) < 0) {
-      debug_printf("cups-browsed: ERROR: Could not set former default printer %s as default again.\n",
+      debug_printf("ERROR: Could not set former default printer %s as default again.\n",
 		   printer);
       return -1;
     } else {
-      debug_printf("cups-browsed: Former default printer %s re-appeared, set as default again.\n",
+      debug_printf("Former default printer %s re-appeared, set as default again.\n",
 		   printer);
       invalidate_default_printer(0);
     }
@@ -2253,20 +2270,20 @@ queue_removal_handle_default(const char *printer) {
   /* Record the fact that this printer was default */
   if (record_default_printer(default_printer, 0) < 0) {
       /* Delete record file if recording failed */
-    debug_printf("cups-browsed: ERROR: Failed recording remote default printer (%s). Removing the file with possible old recording.\n",
+    debug_printf("ERROR: Failed recording remote default printer (%s). Removing the file with possible old recording.\n",
 		 printer);
     invalidate_default_printer(0);
   } else
-    debug_printf("cups-browsed: Recorded the fact that the current printer (%s) is the default printer before deleting the queue and returning to the local default printer.\n",
+    debug_printf("Recorded the fact that the current printer (%s) is the default printer before deleting the queue and returning to the local default printer.\n",
 		 printer);
   /* Switch back to a recorded local printer, if available */
   const char *local_default = retrieve_default_printer(1);
   if (local_default != NULL) {
     if (set_cups_default_printer(local_default) >= 0)
-      debug_printf("cups-browsed: Switching back to %s as default printer.\n",
+      debug_printf("Switching back to %s as default printer.\n",
 		   local_default);
     else {
-      debug_printf("cups-browsed: ERROR: Unable to switch back to %s as default printer.\n",
+      debug_printf("ERROR: Unable to switch back to %s as default printer.\n",
 		   local_default);
       return -1;
     }
@@ -2308,7 +2325,7 @@ on_printer_state_changed (CupsNotifier *object,
                   "printer-is-accepting-jobs"
                 };
 
-  debug_printf("cups-browsed: [CUPS Notification] Printer state change: %s\n",
+  debug_printf("[CUPS Notification] Printer state change: %s\n",
 	       text);
 
   if (autoshutdown && autoshutdown_on == NO_JOBS) {
@@ -2316,7 +2333,7 @@ on_printer_state_changed (CupsNotifier *object,
       /* If auto shutdown is active for triggering on no jobs being left, we
 	 schedule the shutdown in autoshutdown_timeout seconds */
       if (!autoshutdown_exec_id) {
-	debug_printf ("cups-browsed: No jobs there any more on printers made available by us, shutting down in %d sec...\n", autoshutdown_timeout);
+	debug_printf ("No jobs there any more on printers made available by us, shutting down in %d sec...\n", autoshutdown_timeout);
 	autoshutdown_exec_id =
 	  g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
 				 NULL);
@@ -2326,7 +2343,7 @@ on_printer_state_changed (CupsNotifier *object,
 	 cancel a shutdown in autoshutdown_timeout seconds as there are jobs
          again. */
       if (autoshutdown_exec_id) {
-	debug_printf ("cups-browsed: New jobs there on the printers made available by us, killing auto shutdown timer.\n");
+	debug_printf ("New jobs there on the printers made available by us, killing auto shutdown timer.\n");
 	g_source_remove(autoshutdown_exec_id);
 	autoshutdown_exec_id = 0;
       }
@@ -2338,7 +2355,7 @@ on_printer_state_changed (CupsNotifier *object,
        printer */
     strncpy(buf, text, ptr - text);
     buf[ptr - text] = '\0';
-    debug_printf("cups-browsed: [CUPS Notification] Default printer changed from %s to %s.\n",
+    debug_printf("[CUPS Notification] Default printer changed from %s to %s.\n",
 		 default_printer, buf);
     if (is_created_by_cups_browsed(default_printer)) {
       /* Previous default printer created by cups-browsed */
@@ -2347,7 +2364,7 @@ on_printer_state_changed (CupsNotifier *object,
 	/* Removed backed-up local default printer as we do not have a
 	   remote printer as default any more */
 	invalidate_default_printer(1);
-	debug_printf("cups-browsed: Manually switched default printer from a cups-browsed-generated one to a local printer.\n");
+	debug_printf("Manually switched default printer from a cups-browsed-generated one to a local printer.\n");
       }
     } else {
       /* Previous default printer local */
@@ -2357,10 +2374,10 @@ on_printer_state_changed (CupsNotifier *object,
 	   if the remote printer disappears */
 	if (record_default_printer(default_printer, 1) < 0) {
 	  /* Delete record file if recording failed */
-	  debug_printf("cups-browsed: ERROR: Failed recording local default printer. Removing the file with possible old recording.\n");
+	  debug_printf("ERROR: Failed recording local default printer. Removing the file with possible old recording.\n");
 	  invalidate_default_printer(1);
 	} else
-	  debug_printf("cups-browsed: Recorded previous default printer so that if the currently selected cups-browsed-generated one disappears, we can return to the old local one.\n");
+	  debug_printf("Recorded previous default printer so that if the currently selected cups-browsed-generated one disappears, we can return to the old local one.\n");
 	/* Remove a recorded remote printer as after manually selecting
 	   another one as default this one is not relevant any more */
 	invalidate_default_printer(0);
@@ -2375,7 +2392,7 @@ on_printer_state_changed (CupsNotifier *object,
        printer */
     strncpy(buf, text, ptr - text);
     buf[ptr - text] = '\0';
-    debug_printf("cups-browsed: [CUPS Notification] %s not default printer any more.\n", buf);
+    debug_printf("[CUPS Notification] %s not default printer any more.\n", buf);
   } else if ((ptr = strstr(text, " state changed to processing")) != NULL) {
     /* Printer started processing a job, check if it uses the implicitclass
        backend and if so, we select the remote queue to which to send the job
@@ -2419,14 +2436,14 @@ on_printer_state_changed (CupsNotifier *object,
        Default is queuing the jobs on the client as this is what CUPS does
        with classes. */
 
-    debug_printf("cups-browsed: [CUPS Notification] %s starts processing a job.\n", printer);
+    debug_printf("[CUPS Notification] %s starts processing a job.\n", printer);
     q = printer_record(printer);
     /* If we hit a duplicate and not the "master", switch to the "master" */
     if (q && q->duplicate_of)
       q = q->duplicate_of;
     /* Having duplicates means that we are using the implicitclass backend */
     if (q && q->num_duplicates > 0) {
-      debug_printf("cups-browsed: [CUPS Notification] %s is using the \"implicitclass\" CUPS backend, so let us search for a destination for this job.\n", printer);
+      debug_printf("[CUPS Notification] %s is using the \"implicitclass\" CUPS backend, so let us search for a destination for this job.\n", printer);
       /* We keep track of the printer which we used last time and start
 	 checking with the next printer this time, to get a "round robin"
 	 type of printer usage instead of having most jobs going to the first
@@ -2441,7 +2458,7 @@ on_printer_state_changed (CupsNotifier *object,
 	p = (remote_printer_t *)cupsArrayIndex(remote_printers, i);
 	if (!strcasecmp(p->name, printer) &&
 	    p->status == STATUS_CONFIRMED) {
-	  debug_printf("cups-browsed: Checking state of remote printer %s on host %s.\n", printer, p->host);
+	  debug_printf("Checking state of remote printer %s on host %s.\n", printer, p->host);
 	  snprintf(server_str, sizeof(server_str), "%s:%d",
 		   p->ip ? p->ip : p->host, ippPort());
 	  cupsSetServer(server_str);
@@ -2490,13 +2507,13 @@ on_printer_state_changed (CupsNotifier *object,
 	      }
 	      if (!strcasecmp(pname, printer)) {
 		if (paccept) {
-		  debug_printf("cups-browsed: Printer %s on host %s is accepting jobs.\n", printer, p->host);
+		  debug_printf("Printer %s on host %s is accepting jobs.\n", printer, p->host);
 		  switch (pstate) {
 		  case IPP_PRINTER_IDLE:
 		    valid_dest_found = 1;
 		    dest_host = p->ip ? p->ip : p->host;
 		    dest_index = i;
-		    debug_printf("cups-browsed: Printer %s on host %s is idle, take this as destination and stop searching.\n", printer, p->host);
+		    debug_printf("Printer %s on host %s is idle, take this as destination and stop searching.\n", printer, p->host);
 		    break;
 		  case IPP_PRINTER_PROCESSING:
 		    valid_dest_found = 1;
@@ -2511,16 +2528,16 @@ on_printer_state_changed (CupsNotifier *object,
 			dest_host = p->ip ? p->ip : p->host;
 			dest_index = i;
 		      }
-		      debug_printf("cups-browsed: Printer %s on host %s is printing and it has %d jobs.\n", printer, p->host, num_jobs);
+		      debug_printf("Printer %s on host %s is printing and it has %d jobs.\n", printer, p->host, num_jobs);
 		    } else
-		      debug_printf("cups-browsed: Printer %s on host %s is printing.\n", printer, p->host);
+		      debug_printf("Printer %s on host %s is printing.\n", printer, p->host);
 		    break;
 		  case IPP_PRINTER_STOPPED:
-		    debug_printf("cups-browsed: Printer %s on host %s is disabled, skip it.\n", printer, p->host);
+		    debug_printf("Printer %s on host %s is disabled, skip it.\n", printer, p->host);
 		    break;
 		  }
 		} else {
-		  debug_printf("cups-browsed: Printer %s on host %s is not accepting jobs, skip it.\n", printer, p->host);
+		  debug_printf("Printer %s on host %s is not accepting jobs, skip it.\n", printer, p->host);
 		}
 		break;
 	      }
@@ -2542,22 +2559,22 @@ on_printer_state_changed (CupsNotifier *object,
 	       printer);
       fp = fopen(filename, "w+");
       if (fp == NULL) {
-	debug_printf("cups-browsed: ERROR: Failed creating file %s\n",
+	debug_printf("ERROR: Failed creating file %s\n",
 		     filename);
 	return;
       }
       if (dest_host) {
 	q->last_printer = dest_index;
 	fprintf(fp, "\"%s\"", dest_host);
-	debug_printf("cups-browsed: Wrote destination for job to %s: %s (to file %s)\n",
+	debug_printf("Wrote destination for job to %s: %s (to file %s)\n",
 		     printer, dest_host, filename);
       } else if (valid_dest_found == 1) {
 	fprintf(fp, "\"ALL_DESTS_BUSY\"");
-	debug_printf("cups-browsed: All destinations busy for job to %s (file %s)\n",
+	debug_printf("All destinations busy for job to %s (file %s)\n",
 		     printer, filename);
       } else {
 	fprintf(fp, "\"NO_DEST_FOUND\"");
-	debug_printf("cups-browsed: No destination found for job to %s (file %s)\n",
+	debug_printf("No destination found for job to %s (file %s)\n",
 		     printer, filename);
       }
       fclose(fp);
@@ -2578,22 +2595,22 @@ on_printer_deleted (CupsNotifier *object,
   remote_printer_t *p;
   const char* r;
 
-  debug_printf("cups-browsed: [CUPS Notification] Printer deleted: %s\n",
+  debug_printf("[CUPS Notification] Printer deleted: %s\n",
 	       text);
 
   if (is_created_by_cups_browsed(printer)) {
     /* a cups-browsed-generated printer got deleted, re-create it */
-    debug_printf("cups-browsed: Printer %s got deleted, re-creating it.\n",
+    debug_printf("Printer %s got deleted, re-creating it.\n",
 		 printer);
     /* If the deleted printer was the default printer, make sure it gets the
        default printer again */
     if (default_printer && !strcasecmp(printer, default_printer)) {
       if (record_default_printer(printer, 0) < 0) {
 	/* Delete record file if recording failed */
-	debug_printf("cups-browsed: ERROR: Failed recording remote default printer. Removing the file with possible old recording.\n");
+	debug_printf("ERROR: Failed recording remote default printer. Removing the file with possible old recording.\n");
 	invalidate_default_printer(0);
       } else
-	debug_printf("cups-browsed: Recorded %s as remote default printer so that it gets set as default after re-creating.\n");
+	debug_printf("Recorded %s as remote default printer so that it gets set as default after re-creating.\n");
       /* Make sure that a recorded local default printer does not get lost
 	 during the recovery operation */
       if ((r = retrieve_default_printer(1)) != NULL) {
@@ -2622,14 +2639,14 @@ on_printer_modified (CupsNotifier *object,
 		     gboolean printer_is_accepting_jobs,
 		     gpointer user_data)
 {
-  debug_printf("cups-browsed: [CUPS Notification] Printer modified: %s\n",
+  debug_printf("[CUPS Notification] Printer modified: %s\n",
 	       text);
 
   if (is_created_by_cups_browsed(printer)) {
     /* The user has changed settings of a printer which we have generated,
        backup the changes for the case of a crash or unclean shutdown of
        cups-browsed. */
-    debug_printf("cups-browsed: Settings of printer %s got modified, doing backup.\n",
+    debug_printf("Settings of printer %s got modified, doing backup.\n",
 		 printer);
     record_printer_options(printer);
   }
@@ -2670,7 +2687,7 @@ create_local_queue (const char *name,
 
   /* Mark this as a queue to be created locally pointing to the printer */
   if ((p = (remote_printer_t *)calloc(1, sizeof(remote_printer_t))) == NULL) {
-    debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
+    debug_printf("ERROR: Unable to allocate memory.\n");
     return NULL;
   }
 
@@ -2730,7 +2747,7 @@ create_local_queue (const char *name,
     p->duplicate_of = (q && q->status != STATUS_DISAPPEARED &&
 		       q->status != STATUS_UNCONFIRMED) ? q : NULL;
     if (p->duplicate_of) {
-      debug_printf("cups-browsed: Printer %s already available through host %s.\n",
+      debug_printf("Printer %s already available through host %s.\n",
 		   p->name, q->host);
       if (!q->duplicate_of) {
 	/* Update q to get implicitclass:... URI */
@@ -2742,7 +2759,7 @@ create_local_queue (const char *name,
       }
     } else if (q) {
       q->duplicate_of = p;
-      debug_printf("cups-browsed: Unconfirmed/disappeared printer %s already available through host %s, marking that printer duplicate of the newly found one.\n",
+      debug_printf("Unconfirmed/disappeared printer %s already available through host %s, marking that printer duplicate of the newly found one.\n",
 		   p->name, q->host);
       /* Update p to get implicitclass:... URI */
       p->num_duplicates ++;
@@ -2772,7 +2789,7 @@ create_local_queue (const char *name,
        shared printers around. */
 
     if (CreateIPPPrinterQueues == 0) {
-      debug_printf("cups-browsed: Printer %s (%s) is an IPP network printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
+      debug_printf("Printer %s (%s) is an IPP network printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
 		   p->name, p->uri);
       goto fail;
     }
@@ -2790,7 +2807,7 @@ create_local_queue (const char *name,
 	   !strcasestr(make_model, "LaserJet") &&
 	   !strcasestr(make_model, "Mopier"))) &&
 	 !strcasestr(pdl, "application/vnd.hp-PCLXL"))) {
-      debug_printf("cups-browsed: Cannot create remote printer %s (%s) as its PDLs are not known, ignoring this printer.\n",
+      debug_printf("Cannot create remote printer %s (%s) as its PDLs are not known, ignoring this printer.\n",
 		   p->name, p->uri);
       goto fail;
     }
@@ -2811,7 +2828,7 @@ create_local_queue (const char *name,
       goto fail;
     if ((http = httpConnect(host_name, port)) ==
 	NULL) {
-      debug_printf("cups-browsed: Cannot connect to remote printer %s (%s:%d), ignoring this printer.\n",
+      debug_printf("Cannot connect to remote printer %s (%s:%d), ignoring this printer.\n",
 		   p->uri, host_name, port);
       goto fail;
     }
@@ -2820,7 +2837,7 @@ create_local_queue (const char *name,
     response = cupsDoRequest(http, request, resource);
 
     /* Log all printer attributes for debugging */
-    if (debug) {
+    if (debug_stderr || debug_logfile) {
       attr = ippFirstAttribute(response);
       while (attr) {
 	debug_printf("Attr: %s\n",
@@ -2836,7 +2853,7 @@ create_local_queue (const char *name,
 
     if (IPPPrinterQueueType == PPD_NEVER || !_ppdCreateFromIPP(buffer, sizeof(buffer), response)) {
       if (IPPPrinterQueueType == PPD_AUTO || IPPPrinterQueueType == PPD_ONLY) {
-	debug_printf("cups-browsed: Unable to create PPD file: %s\n", strerror(errno));
+	debug_printf("Unable to create PPD file: %s\n", strerror(errno));
 	if (IPPPrinterQueueType == PPD_ONLY)
 	  goto fail;
       }
@@ -2988,19 +3005,19 @@ create_local_queue (const char *name,
 
       p->ifscript = strdup(tempfile);
     } else {
-      debug_printf("cups-browsed: Created temporary IPP Everywhere PPD: %s\n", buffer);
+      debug_printf("Created temporary IPP Everywhere PPD: %s\n", buffer);
       p->ppd = strdup(buffer);
       p->ifscript = NULL;
     }
 
     /*p->model = "drv:///sample.drv/laserjet.ppd";
-      debug_printf("cups-browsed: PPD from system for %s: %s\n", p->name, p->model);*/
+      debug_printf("PPD from system for %s: %s\n", p->name, p->model);*/
 
     /*p->ppd = "/usr/share/ppd/cupsfilters/pxlcolor.ppd";
-      debug_printf("cups-browsed: PPD from file for %s: %s\n", p->name, p->ppd);*/
+      debug_printf("PPD from file for %s: %s\n", p->name, p->ppd);*/
 
     /*p->ifscript = "/usr/lib/cups/filter/sys5ippprinter";
-      debug_printf("cups-browsed: System V Interface script for %s: %s\n", p->name, p->ifscript);*/
+      debug_printf("System V Interface script for %s: %s\n", p->name, p->ifscript);*/
 
 #endif /* HAVE_CUPS_1_6 */
   }
@@ -3013,7 +3030,7 @@ create_local_queue (const char *name,
   if (autoshutdown && autoshutdown_exec_id &&
       autoshutdown_on == NO_QUEUES &&
       cupsArrayCount(remote_printers) > 0) {
-    debug_printf ("cups-browsed: New printers there to make available, killing auto shutdown timer.\n");
+    debug_printf ("New printers there to make available, killing auto shutdown timer.\n");
     g_source_remove(autoshutdown_exec_id);
     autoshutdown_exec_id = 0;
   }
@@ -3021,7 +3038,7 @@ create_local_queue (const char *name,
   return p;
 
  fail:
-  debug_printf("cups-browsed: ERROR: Unable to create print queue, ignoring printer.\n");
+  debug_printf("ERROR: Unable to create print queue, ignoring printer.\n");
   free (p->type);
   free (p->service_name);
   free (p->host);
@@ -3119,7 +3136,7 @@ gboolean handle_cups_queues(gpointer unused) {
   time_t current_time = time(NULL);
   int i;
 
-  debug_printf("cups-browsed: Processing printer list ...\n");
+  debug_printf("Processing printer list ...\n");
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
     switch (p->status) {
@@ -3135,7 +3152,7 @@ gboolean handle_cups_queues(gpointer unused) {
       p->status = STATUS_DISAPPEARED;
       p->timeout = current_time + TIMEOUT_IMMEDIATELY;
 
-      debug_printf("cups-browsed: No remote printer named %s available, removing entry from previous session.\n",
+      debug_printf("No remote printer named %s available, removing entry from previous session.\n",
 		   p->name);
 
     /* Bonjour has reported this printer as disappeared or we have replaced
@@ -3146,13 +3163,13 @@ gboolean handle_cups_queues(gpointer unused) {
       if (p->timeout > current_time)
 	break;
 
-      debug_printf("cups-browsed: Removing entry %s%s.\n", p->name,
+      debug_printf("Removing entry %s%s.\n", p->name,
 		   (p->duplicate_of ? "" : " and its CUPS queue"));
 
       /* Remove the CUPS queue */
       if (!p->duplicate_of) { /* Duplicates do not have a CUPS queue */
 	if ((http = http_connect_local ()) == NULL) {
-	  debug_printf("cups-browsed: Unable to connect to CUPS!\n");
+	  debug_printf("Unable to connect to CUPS!\n");
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  break;
 	}
@@ -3167,7 +3184,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	jobs = NULL;
 	num_jobs = cupsGetJobs2(http, &jobs, p->name, 0, CUPS_WHICHJOBS_ACTIVE);
 	if (num_jobs != 0) { /* error or jobs */
-	  debug_printf("cups-browsed: Queue has still jobs or CUPS error!\n");
+	  debug_printf("Queue has still jobs or CUPS error!\n");
 	  cupsFreeJobs(num_jobs, jobs);
 	  /* Disable the queue */
 #ifdef HAVE_AVAHI
@@ -3212,7 +3229,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	/* Do it */
 	ippDelete(cupsDoRequest(http, request, "/admin/"));
 	if (cupsLastError() > IPP_OK_CONFLICT) {
-	  debug_printf("cups-browsed: Unable to remove CUPS queue!\n");
+	  debug_printf("Unable to remove CUPS queue!\n");
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  break;
 	}
@@ -3220,7 +3237,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	/* "master printer" of this duplicate */
 	q = p->duplicate_of;
 	if (q->status != STATUS_DISAPPEARED) {
-	  debug_printf("cups-browsed: Removed a duplicate of printer %s on %s, scheduling its master printer %s on host %s for update, to assure it will have the correct device URI.\n",
+	  debug_printf("Removed a duplicate of printer %s on %s, scheduling its master printer %s on host %s for update, to assure it will have the correct device URI.\n",
 		       p->name, p->host, q->name, q->host);
 	  /* Schedule for update, so that an implicitclass:... URI gets
 	     removed if not needed any more */
@@ -3252,7 +3269,7 @@ gboolean handle_cups_queues(gpointer unused) {
       if (autoshutdown && !autoshutdown_exec_id &&
 	  (cupsArrayCount(remote_printers) == 0 ||
 	   (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
-	debug_printf ("cups-browsed: No printers there any more to make available or no jobs, shutting down in %d sec...\n", autoshutdown_timeout);
+	debug_printf ("No printers there any more to make available or no jobs, shutting down in %d sec...\n", autoshutdown_timeout);
 	autoshutdown_exec_id =
 	  g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
 				 NULL);
@@ -3278,9 +3295,9 @@ gboolean handle_cups_queues(gpointer unused) {
       if (p->timeout > current_time)
 	break;
 
-      debug_printf("cups-browsed: Creating/Updating CUPS queue for %s\n",
+      debug_printf("Creating/Updating CUPS queue for %s\n",
 		   p->name);
-      debug_printf("cups-browsed: Queue has %d duplicates\n",
+      debug_printf("Queue has %d duplicates\n",
 		   p->num_duplicates);
 
       /* Determine whether we we have duplicates, and so an implicit class
@@ -3295,18 +3312,18 @@ gboolean handle_cups_queues(gpointer unused) {
 	   to an incoming job then. */
 	snprintf(device_uri, sizeof(device_uri), "implicitclass:%s",
 		 p->name);
-	debug_printf("cups-browsed: Print queue %s has duplicates, using implicit class device URI %s\n",
+	debug_printf("Print queue %s has duplicates, using implicit class device URI %s\n",
 		     p->name, device_uri);
       } else {
 	/* Device URI: ipp(s)://<remote host>:631/printers/<remote queue> */
 	strncpy(device_uri, p->uri, sizeof(device_uri));
-	debug_printf("cups-browsed: Print queue %s has no duplicates, using direct device URI %s\n",
+	debug_printf("Print queue %s has no duplicates, using direct device URI %s\n",
 		     p->name, device_uri);
       }
 
       /* Create a new CUPS queue or modify the existing queue */
       if ((http = http_connect_local ()) == NULL) {
-	debug_printf("cups-browsed: Unable to connect to CUPS!\n");
+	debug_printf("Unable to connect to CUPS!\n");
 	p->timeout = current_time + TIMEOUT_RETRY;
 	break;
       }
@@ -3348,12 +3365,12 @@ gboolean handle_cups_queues(gpointer unused) {
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
       /* PPD from system's CUPS installation */
       if (p->model) {
-	debug_printf("cups-browsed: Non-raw queue %s with system PPD: %s\n", p->name, p->model);
+	debug_printf("Non-raw queue %s with system PPD: %s\n", p->name, p->model);
 	p->ppd = cupsGetServerPPD(http, p->model);
       }
       /* Do it */
       if (p->ppd) {
-	debug_printf("cups-browsed: Non-raw queue %s with PPD file: %s\n", p->name, p->ppd);
+	debug_printf("Non-raw queue %s with PPD file: %s\n", p->name, p->ppd);
 	ippDelete(cupsDoFileRequest(http, request, "/admin/", p->ppd));
 	if (p->model) {
 	  unlink(p->ppd);
@@ -3361,18 +3378,18 @@ gboolean handle_cups_queues(gpointer unused) {
 	  p->ppd = NULL;
 	}
       } else if (p->ifscript) {
-	debug_printf("cups-browsed: Non-raw queue %s with interface script: %s\n", p->name, p->ifscript);
+	debug_printf("Non-raw queue %s with interface script: %s\n", p->name, p->ifscript);
 	ippDelete(cupsDoFileRequest(http, request, "/admin/", p->ifscript));
 	unlink(p->ifscript);
 	free(p->ifscript);
 	p->ifscript = NULL;
       } else {
-	debug_printf("cups-browsed: Raw queue %s\n", p->name);
+	debug_printf("Raw queue %s\n", p->name);
 	ippDelete(cupsDoRequest(http, request, "/admin/"));
       }
       cupsFreeOptions(num_options, options);
       if (cupsLastError() > IPP_OK_CONFLICT) {
-	debug_printf("cups-browsed: Unable to create/modify CUPS queue!\n");
+	debug_printf("Unable to create/modify CUPS queue!\n");
 	p->timeout = current_time + TIMEOUT_RETRY;
 	break;
       }
@@ -3401,7 +3418,7 @@ gboolean handle_cups_queues(gpointer unused) {
       ippDelete(cupsDoRequest(http, request, "/admin/"));
       cupsFreeOptions(num_options, options);
       if (cupsLastError() > IPP_OK_CONFLICT)
-	debug_printf("cups-browsed: Unable to set printer-is-shared bit to false (%s)!\n",
+	debug_printf("Unable to set printer-is-shared bit to false (%s)!\n",
 		     cupsLastErrorString());
 
       /* Option settings which we have recorded from the previous session */
@@ -3420,7 +3437,7 @@ gboolean handle_cups_queues(gpointer unused) {
       if (p->status == STATUS_BROWSE_PACKET_RECEIVED) {
 	p->status = STATUS_DISAPPEARED;
 	p->timeout = time(NULL) + BrowseTimeout;
-	debug_printf("cups-browsed: starting BrowseTimeout timer for %s (%ds)\n",
+	debug_printf("starting BrowseTimeout timer for %s (%ds)\n",
 		     p->name, BrowseTimeout);
       } else {
 	p->status = STATUS_CONFIRMED;
@@ -3478,10 +3495,10 @@ recheck_timer (void)
 
   if (timeout != (time_t) -1) {
     queues_timer_id = g_timeout_add_seconds (timeout, handle_cups_queues, NULL);
-    debug_printf("cups-browsed: checking queues in %ds\n", timeout);
+    debug_printf("checking queues in %ds\n", timeout);
   } else {
     queues_timer_id = 0;
-    debug_printf("cups-browsed: listening\n");
+    debug_printf("listening\n");
   }
 }
 
@@ -3500,13 +3517,13 @@ matched_filters (const char *name,
   char *key = NULL, *value = NULL;
 #endif /* HAVE_AVAHI */
 
-  debug_printf("cups-browsed: Matching printer \"%s\" with properties Host = \"%s\", Port = %d, Service Name = \"%s\", Domain = \"%s\" with the BrowseFilter lines in cups-browsed.conf\n", name, host, port, service_name, domain);
+  debug_printf("Matching printer \"%s\" with properties Host = \"%s\", Port = %d, Service Name = \"%s\", Domain = \"%s\" with the BrowseFilter lines in cups-browsed.conf\n", name, host, port, service_name, domain);
   /* Go through all BrowseFilter lines and stop if one line does not match,
      rejecting this printer */
   for (filter = cupsArrayFirst (browsefilter);
        filter;
        filter = cupsArrayNext (browsefilter)) {
-    debug_printf("cups-browsed: Matching with line \"BrowseFilter %s%s%s %s\"",
+    debug_printf("Matching with line \"BrowseFilter %s%s%s %s\"",
 		 (filter->sense == FILTER_NOT_MATCH ? "NOT " : ""),
 		 (filter->regexp && !filter->cregexp ? "EXACT " : ""),
 		 filter->field, (filter->regexp ? filter->regexp : ""));
@@ -3602,13 +3619,13 @@ matched_filters (const char *name,
   }
 
   /* All BrowseFilter lines matching, accept this printer */
-  debug_printf("cups-browsed: All BrowseFilter lines matched or skipped, accepting printer %s\n",
+  debug_printf("All BrowseFilter lines matched or skipped, accepting printer %s\n",
 	       name);
   return TRUE;
 
  filter_failed:
   debug_printf(" --> FAILED\n");
-  debug_printf("cups-browsed: One BrowseFilter line did not match, ignoring printer %s\n",
+  debug_printf("One BrowseFilter line did not match, ignoring printer %s\n",
 	       name);
   return FALSE;
 }
@@ -3667,7 +3684,7 @@ generate_local_queue(const char *host,
        packet, so better safe than sorry. (consider second loop with
        backup_queue_name) */
     remote_queue = remove_bad_chars(resource + 9, 0);
-    debug_printf("cups-browsed: Found CUPS queue: %s on host %s.\n",
+    debug_printf("Found CUPS queue: %s on host %s.\n",
 		 remote_queue, remote_host);
 #ifdef HAVE_AVAHI
     /* If the remote queue has a PPD file, the "product" field of the
@@ -3689,7 +3706,7 @@ generate_local_queue(const char *host,
       raw_queue = 1;
     if (raw_queue && CreateRemoteRawPrinterQueues == 0) {
       /* The remote CUPS queue is raw, ignore it */
-      debug_printf("cups-browsed: Remote Bonjour-advertised CUPS queue %s on host %s is raw, ignored.\n",
+      debug_printf("Remote Bonjour-advertised CUPS queue %s on host %s is raw, ignored.\n",
 		   remote_queue, remote_host);
       free (remote_queue);
       free (remote_host);
@@ -3704,7 +3721,7 @@ generate_local_queue(const char *host,
        packet, so better safe than sorry. (consider second loop with
        backup_queue_name) */
     remote_queue = remove_bad_chars(resource + 8, 0);
-    debug_printf("cups-browsed: Found CUPS queue: %s on host %s.\n",
+    debug_printf("Found CUPS queue: %s on host %s.\n",
 		 remote_queue, remote_host);
   } else {
     /* This is an IPP-based network printer */
@@ -3759,7 +3776,7 @@ generate_local_queue(const char *host,
   if ((backup_queue_name = malloc((strlen(remote_queue) +
 				   strlen(remote_host) + 2) *
 				  sizeof(char))) == NULL) {
-    debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
+    debug_printf("ERROR: Unable to allocate memory.\n");
     exit(1);
   }
   sprintf(backup_queue_name, "%s@%s", remote_queue, remote_host);
@@ -3786,7 +3803,7 @@ generate_local_queue(const char *host,
       /* Found local queue with same name as remote queue */
       /* Is there a local queue with the name <queue>@<host>? */
       local_queue_name = backup_queue_name;
-      debug_printf("cups-browsed: %s already taken, using fallback name: %s\n",
+      debug_printf("%s already taken, using fallback name: %s\n",
 		   remote_queue, local_queue_name);
       local_queue_name_lower = g_ascii_strdown(local_queue_name, -1);
       local_printer = g_hash_table_lookup (local_printers,
@@ -3795,7 +3812,7 @@ generate_local_queue(const char *host,
       if (local_printer && !local_printer->cups_browsed_controlled) {
 	/* Found also a local queue with name <queue>@<host>, so
 	   ignore this remote printer */
-	debug_printf("cups-browsed: %s also taken, printer ignored.\n",
+	debug_printf("%s also taken, printer ignored.\n",
 		     local_queue_name);
 	free (backup_queue_name);
 	free (remote_host);
@@ -3808,7 +3825,7 @@ generate_local_queue(const char *host,
 
   if (!matched_filters (local_queue_name, remote_host, port, name, domain,
 			txt)) {
-    debug_printf("cups-browsed: Printer %s does not match BrowseFilter lines in cups-browsed.conf, printer ignored.\n",
+    debug_printf("Printer %s does not match BrowseFilter lines in cups-browsed.conf, printer ignored.\n",
 		 local_queue_name);
     free (backup_queue_name);
     free (remote_host);
@@ -3838,7 +3855,7 @@ generate_local_queue(const char *host,
     } else {
       /* Found a local queue with the same URI as our discovered printer
 	 would get, so ignore this remote printer */
-      debug_printf("cups-browsed: Printer with URI %s already exists, printer ignored.\n",
+      debug_printf("Printer with URI %s already exists, printer ignored.\n",
 		   uri);
       return NULL;
     }
@@ -3855,10 +3872,10 @@ generate_local_queue(const char *host,
       /* Schedule local queue for upgrade to ipps: or for URI change */
       if (strcasestr(type, "_ipps") &&
 	  !strncasecmp(p->uri, "ipp:", 4))
-	debug_printf("cups-browsed: Upgrading printer %s (Host: %s) to IPPS. New URI: %s\n",
+	debug_printf("Upgrading printer %s (Host: %s) to IPPS. New URI: %s\n",
 		     p->name, remote_host, uri);
       if (strcasecmp(strchr(p->uri, ':'), strchr(uri, ':')))
-	debug_printf("cups-browsed: Changing URI of printer %s (Host: %s) to %s.\n",
+	debug_printf("Changing URI of printer %s (Host: %s) to %s.\n",
 		     p->name, remote_host, uri);
       free(p->uri);
       free(p->host);
@@ -3879,13 +3896,13 @@ generate_local_queue(const char *host,
 
       /* Nothing to do, mark queue entry as confirmed if the entry
 	 is unconfirmed */
-      debug_printf("cups-browsed: Entry for %s (URI: %s) already exists.\n",
+      debug_printf("Entry for %s (URI: %s) already exists.\n",
 		   p->name, p->uri);
       if (p->status == STATUS_UNCONFIRMED ||
 	  p->status == STATUS_DISAPPEARED) {
 	p->status = STATUS_CONFIRMED;
 	p->timeout = (time_t) -1;
-	debug_printf("cups-browsed: Marking entry for %s (URI: %s) as confirmed.\n",
+	debug_printf("Marking entry for %s (URI: %s) as confirmed.\n",
 		     p->name, p->uri);
       }
 
@@ -3925,7 +3942,7 @@ generate_local_queue(const char *host,
   free (remote_queue);
 
   if (p)
-    debug_printf("cups-browsed: Bonjour IDs: Service name: \"%s\", "
+    debug_printf("Bonjour IDs: Service name: \"%s\", "
 		 "Service type: \"%s\", Domain: \"%s\"\n",
 		 p->service_name, p->type, p->domain);
 
@@ -4066,7 +4083,7 @@ static void resolve_callback(
 
   /* Resolver error */
   case AVAHI_RESOLVER_FAILURE:
-    debug_printf("cups-browsed: Avahi-Resolver: Failed to resolve service '%s' of type '%s' in domain '%s': %s\n",
+    debug_printf("Avahi-Resolver: Failed to resolve service '%s' of type '%s' in domain '%s': %s\n",
 		 name, type, domain,
 		 avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
     break;
@@ -4076,7 +4093,7 @@ static void resolve_callback(
     AvahiStringList *rp_entry, *adminurl_entry;
     char *rp_key, *rp_value, *adminurl_key, *adminurl_value;
 
-    debug_printf("cups-browsed: Avahi Resolver: Service '%s' of type '%s' in domain '%s'.\n",
+    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s'.\n",
 		 name, type, domain);
 
     rp_entry = avahi_string_list_find(txt, "rp");
@@ -4135,13 +4152,13 @@ static void resolve_callback(
 	  /* Check remote printer type and create appropriate local queue to
 	     point to it */
 	  if (IPBasedDeviceURIs != IP_BASED_URIS_NO) {
-	    debug_printf("cups-browsed: Avahi Resolver: Service '%s' of type '%s' in domain '%s' with IP address %s.\n",
+	    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with IP address %s.\n",
 			 name, type, domain, addrstr);
 	    generate_local_queue(host_name, addrstr, port, rp_value, name, type, domain, txt);
 	  } else
 	    generate_local_queue(host_name, NULL, port, rp_value, name, type, domain, txt);
 	} else
-	  debug_printf("cups-browsed: Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not determine IP address.\n",
+	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not determine IP address.\n",
 		       name, type, domain);
       } else {
 	/* Check remote printer type and create appropriate local queue to
@@ -4198,7 +4215,7 @@ static void browse_callback(
   /* Avahi browser error */
   case AVAHI_BROWSER_FAILURE:
 
-    debug_printf("cups-browsed: Avahi Browser: ERROR: %s\n",
+    debug_printf("Avahi Browser: ERROR: %s\n",
 		 avahi_strerror(avahi_client_errno(avahi_service_browser_get_client(b))));
     g_main_loop_quit(gmainloop);
     return;
@@ -4210,7 +4227,7 @@ static void browse_callback(
     if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
       break;
 
-    debug_printf("cups-browsed: Avahi Browser: NEW: service '%s' of type '%s' in domain '%s'\n",
+    debug_printf("Avahi Browser: NEW: service '%s' of type '%s' in domain '%s'\n",
 		 name, type, domain);
 
     /* We ignore the returned resolver object. In the callback
@@ -4232,7 +4249,7 @@ static void browse_callback(
     if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
       break;
 
-    debug_printf("cups-browsed: Avahi Browser: REMOVE: service '%s' of type '%s' in domain '%s'\n",
+    debug_printf("Avahi Browser: REMOVE: service '%s' of type '%s' in domain '%s'\n",
 		 name, type, domain);
 
     /* Check whether we have listed this printer */
@@ -4249,7 +4266,7 @@ static void browse_callback(
 	q = p->duplicate_of;
 	q->num_duplicates --;
 	if (q->status != STATUS_DISAPPEARED) {
-	  debug_printf("cups-browsed: Removing the duplicate printer %s on host %s, scheduling its master printer %s on host %s for update, to assure it will have the correct device URI.\n",
+	  debug_printf("Removing the duplicate printer %s on host %s, scheduling its master printer %s on host %s for update, to assure it will have the correct device URI.\n",
 		       p->name, p->host, q->name, q->host);
 	  /* Schedule for update, so that an implicitclass:... URI gets
 	     removed if not needed any more */
@@ -4309,7 +4326,7 @@ static void browse_callback(
 	q->status = STATUS_DISAPPEARED;
 	q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
 
-	debug_printf("cups-browsed: Printer %s diasappeared, replacing by backup on host %s with URI %s.\n",
+	debug_printf("Printer %s diasappeared, replacing by backup on host %s with URI %s.\n",
 		     p->name, p->host, p->uri);
       } else {
 
@@ -4317,12 +4334,12 @@ static void browse_callback(
 	p->status = STATUS_DISAPPEARED;
 	p->timeout = time(NULL) + TIMEOUT_REMOVE;
 
-	debug_printf("cups-browsed: Printer %s (Host: %s, URI: %s) disappeared and no duplicate available, or a duplicate of another printer, removing entry.\n",
+	debug_printf("Printer %s (Host: %s, URI: %s) disappeared and no duplicate available, or a duplicate of another printer, removing entry.\n",
 		     p->name, p->host, p->uri);
 
       }
 
-      debug_printf("cups-browsed: Bonjour IDs: Service name: \"%s\", Service type: \"%s\", Domain: \"%s\"\n",
+      debug_printf("Bonjour IDs: Service name: \"%s\", Service type: \"%s\", Domain: \"%s\"\n",
 		   p->service_name, p->type, p->domain);
 
       recheck_timer ();
@@ -4333,7 +4350,7 @@ static void browse_callback(
   /* All cached Avahi events are treated now */
   case AVAHI_BROWSER_ALL_FOR_NOW:
   case AVAHI_BROWSER_CACHE_EXHAUSTED:
-    debug_printf("cups-browsed: Avahi Browser: %s\n",
+    debug_printf("Avahi Browser: %s\n",
 		 event == AVAHI_BROWSER_CACHE_EXHAUSTED ?
 		 "CACHE_EXHAUSTED" : "ALL_FOR_NOW");
     break;
@@ -4369,13 +4386,13 @@ void avahi_browser_shutdown() {
   /* Switch on auto shutdown mode */
   if (autoshutdown_avahi) {
     autoshutdown = 1;
-    debug_printf("cups-browsed: Avahi server disappeared, switching to auto shutdown mode ...\n");
+    debug_printf("Avahi server disappeared, switching to auto shutdown mode ...\n");
     /* If there are no printers or no jobs schedule the shutdown in
        autoshutdown_timeout seconds */
     if (!autoshutdown_exec_id &&
 	(cupsArrayCount(remote_printers) == 0 ||
 	 (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
-      debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available or no jobs on them, shutting down in %d sec...\n", autoshutdown_timeout);
+      debug_printf ("We entered auto shutdown mode and no printers are there to make available or no jobs on them, shutting down in %d sec...\n", autoshutdown_timeout);
       autoshutdown_exec_id =
 	g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
 			       NULL);
@@ -4409,7 +4426,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
   case AVAHI_CLIENT_S_RUNNING:
   case AVAHI_CLIENT_S_COLLISION:
 
-    debug_printf("cups-browsed: Avahi server connection got available, setting up service browsers.\n");
+    debug_printf("Avahi server connection got available, setting up service browsers.\n");
 
     /* Create the service browsers */
     if (!sb1)
@@ -4417,7 +4434,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
 	    avahi_service_browser_new(c, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
 				      "_ipp._tcp", NULL, 0, browse_callback,
 				      c))) {
-	debug_printf("cups-browsed: ERROR: Failed to create service browser for IPP: %s\n",
+	debug_printf("ERROR: Failed to create service browser for IPP: %s\n",
 		     avahi_strerror(avahi_client_errno(c)));
       }
     if (!sb2)
@@ -4425,7 +4442,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
 	    avahi_service_browser_new(c, AVAHI_IF_UNSPEC, AVAHI_PROTO_UNSPEC,
 				      "_ipps._tcp", NULL, 0, browse_callback,
 				      c))) {
-	debug_printf("cups-browsed: ERROR: Failed to create service browser for IPPS: %s\n",
+	debug_printf("ERROR: Failed to create service browser for IPPS: %s\n",
 		     avahi_strerror(avahi_client_errno(c)));
       }
 
@@ -4434,10 +4451,10 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
     /* switch off auto shutdown mode */
     if (autoshutdown_avahi) {
       autoshutdown = 0;
-      debug_printf("cups-browsed: Avahi server available, switching to permanent mode ...\n");
+      debug_printf("Avahi server available, switching to permanent mode ...\n");
       /* If there is still an active auto shutdown timer, kill it */
       if (autoshutdown_exec_id) {
-	debug_printf ("cups-browsed: We have left auto shutdown mode, killing auto shutdown timer.\n");
+	debug_printf ("We have left auto shutdown mode, killing auto shutdown timer.\n");
 	g_source_remove(autoshutdown_exec_id);
 	autoshutdown_exec_id = 0;
       }
@@ -4449,7 +4466,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
   case AVAHI_CLIENT_FAILURE:
 
     if (avahi_client_errno(c) == AVAHI_ERR_DISCONNECTED) {
-      debug_printf("cups-browsed: Avahi server disappeared, shutting down service browsers, removing Bonjour-discovered print queues.\n");
+      debug_printf("Avahi server disappeared, shutting down service browsers, removing Bonjour-discovered print queues.\n");
       avahi_browser_shutdown();
       /* Renewing client */
       avahi_client_free(client);
@@ -4457,13 +4474,13 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
 				AVAHI_CLIENT_NO_FAIL,
 				client_callback, NULL, &error);
       if (!client) {
-	debug_printf("cups-browsed: ERROR: Failed to create client: %s\n",
+	debug_printf("ERROR: Failed to create client: %s\n",
 		     avahi_strerror(error));
 	BrowseRemoteProtocols &= ~BROWSE_DNSSD;
 	avahi_shutdown();
       }
     } else {
-      debug_printf("cups-browsed: ERROR: Avahi server connection failure: %s\n",
+      debug_printf("ERROR: Avahi server connection failure: %s\n",
 		   avahi_strerror(avahi_client_errno(c)));
       g_main_loop_quit(gmainloop);
     }
@@ -4481,7 +4498,7 @@ void avahi_init() {
     /* Allocate main loop object */
     if (!glib_poll)
       if (!(glib_poll = avahi_glib_poll_new(NULL, G_PRIORITY_DEFAULT))) {
-	debug_printf("cups-browsed: ERROR: Failed to create glib poll object.\n");
+	debug_printf("ERROR: Failed to create glib poll object.\n");
 	goto avahi_init_fail;
       }
 
@@ -4493,7 +4510,7 @@ void avahi_init() {
 
     /* Check wether creating the client object succeeded */
     if (!client) {
-      debug_printf("cups-browsed: ERROR: Failed to create client: %s\n",
+      debug_printf("ERROR: Failed to create client: %s\n",
 		   avahi_strerror(error));
       goto avahi_init_fail;
     }
@@ -4545,14 +4562,14 @@ found_cups_printer (const char *remote_host, const char *uri,
     if (!strcasecmp (host, iface->address))
       break;
   if (iface) {
-    debug_printf("cups-browsed: ignoring own broadcast on %s\n",
+    debug_printf("ignoring own broadcast on %s\n",
 		 iface->address);
     return;
   }
 
   if (strncasecmp (resource, "/printers/", 10) &&
       strncasecmp (resource, "/classes/", 9)) {
-    debug_printf("cups-browsed: don't understand URI: %s\n", uri);
+    debug_printf("don't understand URI: %s\n", uri);
     return;
   }
 
@@ -4562,7 +4579,7 @@ found_cups_printer (const char *remote_host, const char *uri,
   if (c)
     *c = '\0';
 
-  debug_printf("cups-browsed: browsed queue name is %s\n",
+  debug_printf("browsed queue name is %s\n",
 	       local_resource + 9);
 
   printer = generate_local_queue(host, NULL, port, local_resource,
@@ -4615,16 +4632,16 @@ process_browse_data (GIOChannel *source,
 
   /* Check this packet is allowed */
   if (!allowed ((struct sockaddr *) &srcaddr)) {
-    debug_printf("cups-browsed: browse packet from %s disallowed\n",
+    debug_printf("browse packet from %s disallowed\n",
 		 remote_host);
     return TRUE;
   }
 
-  debug_printf("cups-browsed: browse packet received from %s\n",
+  debug_printf("browse packet received from %s\n",
 	       remote_host);
 
   if (sscanf (packet, "%x%x%1023s", &type, &state, uri) < 3) {
-    debug_printf("cups-browsed: incorrect browse packet format\n");
+    debug_printf("incorrect browse packet format\n");
     return TRUE;
   }
 
@@ -4683,7 +4700,7 @@ update_netifs (gpointer data)
 
   update_netifs_sourceid = 0;
   if (getifaddrs (&ifaddr) == -1) {
-    debug_printf("cups-browsed: unable to get interface addresses: %s\n",
+    debug_printf("unable to get interface addresses: %s\n",
 		 strerror (errno));
     return FALSE;
   }
@@ -4711,14 +4728,14 @@ update_netifs (gpointer data)
 
     iface = malloc (sizeof (netif_t));
     if (iface == NULL) {
-      debug_printf ("cups-browsed: malloc failure\n");
+      debug_printf ("malloc failure\n");
       exit (1);
     }
 
     iface->address = malloc (HTTP_MAX_HOST);
     if (iface->address == NULL) {
       free (iface);
-      debug_printf ("cups-browsed: malloc failure\n");
+      debug_printf ("malloc failure\n");
       exit (1);
     }
 
@@ -4748,7 +4765,7 @@ update_netifs (gpointer data)
 
     if (iface->address[0]) {
       cupsArrayAdd (netifs, iface);
-      debug_printf("cups-browsed: network interface at %s\n", iface->address);
+      debug_printf("network interface at %s\n", iface->address);
     } else {
       free (iface->address);
       free (iface);
@@ -4807,11 +4824,11 @@ broadcast_browse_packets (gpointer data, gpointer user_data)
 		  bdata->browse_options ? " " : "",
 		  bdata->browse_options ? bdata->browse_options : "")
 	>= sizeof (packet)) {
-      debug_printf ("cups-browsed: oversize packet not sent\n");
+      debug_printf ("oversize packet not sent\n");
       continue;
     }
 
-    debug_printf("cups-browsed: packet to send:\n%s", packet);
+    debug_printf("packet to send:\n%s", packet);
 
     int err = sendto (browsesocket, packet,
 		      strlen (packet), 0,
@@ -5153,7 +5170,7 @@ browse_poll (gpointer data)
   http_t *conn = NULL;
   gboolean get_printers = FALSE;
 
-  debug_printf ("cups-browsed: browse polling %s:%d\n",
+  debug_printf ("browse polling %s:%d\n",
 		context->server, context->port);
 
   res_init ();
@@ -5212,8 +5229,7 @@ browse_ldap_poll (gpointer data)
   /* do real stuff here */
   if (!BrowseLDAPDN)
   {
-    fprintf(stderr, "cups-browsed: "
-		    "Need to set BrowseLDAPDN to use LDAP browsing!\n");
+    debug_printf("Need to set BrowseLDAPDN to use LDAP browsing!\n");
     BrowseLocalProtocols &= ~BROWSE_LDAP;
     BrowseRemoteProtocols &= ~BROWSE_LDAP;
 
@@ -5235,8 +5251,7 @@ browse_ldap_poll (gpointer data)
       tmpFilter = (char *)malloc(filterLen + 1);
       if (!tmpFilter)
 	{
-	  fprintf(stderr, "cups-browsed: "
-			  "Could not allocate memory for LDAP browse query filter!\n");
+	  debug_printf("Could not allocate memory for LDAP browse query filter!\n");
 	  BrowseLocalProtocols &= ~BROWSE_LDAP;
 	  BrowseRemoteProtocols &= ~BROWSE_LDAP;
 
@@ -5293,7 +5308,7 @@ sigterm_handler(int sig) {
 
   /* Flag that we should stop and return... */
   g_main_loop_quit(gmainloop);
-  debug_printf("cups-browsed: Caught signal %d, shutting down ...\n", sig);
+  debug_printf("Caught signal %d, shutting down ...\n", sig);
 }
 
 static void
@@ -5302,10 +5317,10 @@ sigusr1_handler(int sig) {
 
   /* Turn off auto shutdown mode... */
   autoshutdown = 0;
-  debug_printf("cups-browsed: Caught signal %d, switching to permanent mode ...\n", sig);
+  debug_printf("Caught signal %d, switching to permanent mode ...\n", sig);
   /* If there is still an active auto shutdown timer, kill it */
   if (autoshutdown_exec_id) {
-    debug_printf ("cups-browsed: We have left auto shutdown mode, killing auto shutdown timer.\n");
+    debug_printf ("We have left auto shutdown mode, killing auto shutdown timer.\n");
     g_source_remove(autoshutdown_exec_id);
     autoshutdown_exec_id = 0;
   }
@@ -5317,13 +5332,13 @@ sigusr2_handler(int sig) {
 
   /* Turn on auto shutdown mode... */
   autoshutdown = 1;
-  debug_printf("cups-browsed: Caught signal %d, switching to auto shutdown mode ...\n", sig);
+  debug_printf("Caught signal %d, switching to auto shutdown mode ...\n", sig);
   /* If there are no printers or no jobs schedule the shutdown in
      autoshutdown_timeout seconds */
   if (!autoshutdown_exec_id &&
       (cupsArrayCount(remote_printers) == 0 ||
        (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
-    debug_printf ("cups-browsed: We entered auto shutdown mode and no printers are there to make available or no jobs on them, shutting down in %d sec...\n", autoshutdown_timeout);
+    debug_printf ("We entered auto shutdown mode and no printers are there to make available or no jobs on them, shutting down in %d sec...\n", autoshutdown_timeout);
     autoshutdown_exec_id =
       g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
 			       NULL);
@@ -5419,7 +5434,7 @@ read_configuration (const char *filename)
     filename = CUPS_SERVERROOT "/cups-browsed.conf";
 
   if ((fp = cupsFileOpen(filename, "r")) == NULL) {
-    debug_printf("cups-browsed: unable to open configuration file; "
+    debug_printf("unable to open configuration file; "
 		 "using defaults\n");
     return;
   }
@@ -5449,9 +5464,25 @@ read_configuration (const char *filename)
       }
     }
     
-    debug_printf("cups-browsed: Reading config%s: %s %s\n",
+    debug_printf("Reading config%s: %s %s\n",
 		 (linenum < 0 ? " (from command line)" : ""), line, value);
-    if ((!strcasecmp(line, "BrowseProtocols") ||
+    if (!strcasecmp(line, "DebugLogging") && value) {
+      char *p, *saveptr;
+      p = strtok_r (value, delim, &saveptr);
+      while (p) {
+	if (!strcasecmp(p, "file")) {
+	  if (debug_logfile == 0) {
+	    debug_logfile = 1;
+	    start_debug_logging();
+	  }
+	} else if (!strcasecmp(p, "stderr"))
+	  debug_stderr = 1;
+	else if (strcasecmp(p, "none"))
+	  debug_printf("Unknown debug logging mode '%s'\n", p);
+
+	p = strtok_r (NULL, delim, &saveptr);
+      }
+    } else if ((!strcasecmp(line, "BrowseProtocols") ||
 	 !strcasecmp(line, "BrowseLocalProtocols") ||
 	 !strcasecmp(line, "BrowseRemoteProtocols")) && value) {
       int protocols = 0;
@@ -5465,7 +5496,7 @@ read_configuration (const char *filename)
 	else if (!strcasecmp(p, "ldap"))
 	  protocols |= BROWSE_LDAP;
 	else if (strcasecmp(p, "none"))
-	  debug_printf("cups-browsed: Unknown protocol '%s'\n", p);
+	  debug_printf("Unknown protocol '%s'\n", p);
 
 	p = strtok_r (NULL, delim, &saveptr);
       }
@@ -5482,12 +5513,12 @@ read_configuration (const char *filename)
 			    (NumBrowsePoll + 1) *
 			    sizeof (browsepoll_t *));
       if (!BrowsePoll) {
-	debug_printf("cups-browsed: unable to realloc: ignoring BrowsePoll line\n");
+	debug_printf("unable to realloc: ignoring BrowsePoll line\n");
 	BrowsePoll = old;
       } else {
 	char *colon, *slash;
 	browsepoll_t *b = g_malloc0 (sizeof (browsepoll_t));
-	debug_printf("cups-browsed: Adding BrowsePoll server: %s\n", value);
+	debug_printf("Adding BrowsePoll server: %s\n", value);
 	b->server = strdup (value);
 	b->port = BrowsePort;
 	b->can_subscribe = TRUE; /* first assume subscriptions work */
@@ -5530,7 +5561,7 @@ read_configuration (const char *filename)
       }
     } else if (!strcasecmp(line, "BrowseAllow")) {
       if (read_browseallow_value (value, ALLOW_ALLOW))
-	debug_printf ("cups-browsed: BrowseAllow value \"%s\" not understood\n",
+	debug_printf ("BrowseAllow value \"%s\" not understood\n",
 		      value);
       else {
 	browse_allow_line_found = 1;
@@ -5538,7 +5569,7 @@ read_configuration (const char *filename)
       }
     } else if (!strcasecmp(line, "BrowseDeny")) {
       if (read_browseallow_value (value, ALLOW_DENY))
-	debug_printf ("cups-browsed: BrowseDeny value \"%s\" not understood\n",
+	debug_printf ("BrowseDeny value \"%s\" not understood\n",
 		      value);
       else {
 	browse_deny_line_found = 1;
@@ -5556,7 +5587,7 @@ read_configuration (const char *filename)
 	browse_order_line_found = 1;
 	browse_line_found = 1;
       } else
-	debug_printf ("cups-browsed: BrowseOrder value \"%s\" not understood\n",
+	debug_printf ("BrowseOrder value \"%s\" not understood\n",
 		      value);
     } else if (!strcasecmp(line, "BrowseFilter") && value) {
       ptr = value;
@@ -5620,7 +5651,7 @@ read_configuration (const char *filename)
 	  if ((err = regcomp(filter->cregexp, filter->regexp,
 			     REG_EXTENDED | REG_ICASE)) != 0) {
 	    regerror(err, filter->cregexp, errbuf, sizeof(errbuf));
-	    debug_printf ("cups-browsed: BrowseFilter line with error in regular expression \"%s\": %s\n",
+	    debug_printf ("BrowseFilter line with error in regular expression \"%s\": %s\n",
 			  filter->regexp, errbuf);
 	    goto browse_filter_fail;
 	  }
@@ -5691,26 +5722,26 @@ read_configuration (const char *filename)
 	if (!strcasecmp(p, "On") || !strcasecmp(p, "Yes") ||
 	    !strcasecmp(p, "True") || !strcasecmp(p, "1")) {
 	  autoshutdown = 1;
-	  debug_printf("cups-browsed: Turning on auto shutdown mode.\n");
+	  debug_printf("Turning on auto shutdown mode.\n");
 	} else if (!strcasecmp(p, "Off") || !strcasecmp(p, "No") ||
 	    !strcasecmp(p, "False") || !strcasecmp(p, "0")) {
 	  autoshutdown = 0;
-	  debug_printf("cups-browsed: Turning off auto shutdown mode (permanent mode).\n");
+	  debug_printf("Turning off auto shutdown mode (permanent mode).\n");
 	} else if (!strcasecmp(p, "avahi")) {
 	  autoshutdown_avahi = 1;
-	  debug_printf("cups-browsed: Turning on auto shutdown control by appearing and disappearing of the Avahi server.\n");
+	  debug_printf("Turning on auto shutdown control by appearing and disappearing of the Avahi server.\n");
 	} else if (strcasecmp(p, "none"))
-	  debug_printf("cups-browsed: Unknown mode '%s'\n", p);
+	  debug_printf("Unknown mode '%s'\n", p);
 	p = strtok_r (NULL, delim, &saveptr);
       }
     } else if (!strcasecmp(line, "AutoShutdownTimeout") && value) {
       int t = atoi(value);
       if (t >= 0) {
 	autoshutdown_timeout = t;
-	debug_printf("cups-browsed: Set auto shutdown timeout to %d sec.\n",
+	debug_printf("Set auto shutdown timeout to %d sec.\n",
 		     t);
       } else
-	debug_printf("cups-browsed: Invalid auto shutdown timeout value: %d\n",
+	debug_printf("Invalid auto shutdown timeout value: %d\n",
 		     t);
     } else if (!strcasecmp(line, "AutoShutdownOn") && value) {
       int success = 0;
@@ -5724,10 +5755,10 @@ read_configuration (const char *filename)
 	}
       }
       if (success)
-	debug_printf("cups-browsed: Set auto shutdown inactivity type to no %s.\n",
+	debug_printf("Set auto shutdown inactivity type to no %s.\n",
 		     autoshutdown_on == NO_QUEUES ? "queues" : "jobs");
       else
-	debug_printf("cups-browsed: Invalid auto shutdown inactivity type value: %s\n",
+	debug_printf("Invalid auto shutdown inactivity type value: %s\n",
 		     value);
     }
 #ifdef HAVE_LDAP
@@ -5761,21 +5792,21 @@ read_configuration (const char *filename)
     /* No "Browse..." lines at all */
     browseallow_all = 1;
     browse_order = ORDER_DENY_ALLOW;
-    debug_printf("cups-browsed: No \"Browse...\" line at all, accept all servers (\"BrowseOrder Deny,Allow\").\n");
+    debug_printf("No \"Browse...\" line at all, accept all servers (\"BrowseOrder Deny,Allow\").\n");
   } else if (browse_order_line_found == 0) {
     /* No "BrowseOrder" line */
     if (browse_allow_line_found == 0) {
       /* Only "BrowseDeny" lines */
       browse_order = ORDER_DENY_ALLOW;
-      debug_printf("cups-browsed: No \"BrowseOrder\" line and only \"BrowseDeny\" lines, accept all except what matches the \"BrowseDeny\" lines  (\"BrowseOrder Deny,Allow\").\n");
+      debug_printf("No \"BrowseOrder\" line and only \"BrowseDeny\" lines, accept all except what matches the \"BrowseDeny\" lines  (\"BrowseOrder Deny,Allow\").\n");
     } else if (browse_deny_line_found == 0) {
       /* Only "BrowseAllow" lines */
       browse_order = ORDER_ALLOW_DENY;
-      debug_printf("cups-browsed: No \"BrowseOrder\" line and only \"BrowseAllow\" lines, deny all except what matches the \"BrowseAllow\" lines  (\"BrowseOrder Allow,Deny\").\n");
+      debug_printf("No \"BrowseOrder\" line and only \"BrowseAllow\" lines, deny all except what matches the \"BrowseAllow\" lines  (\"BrowseOrder Allow,Deny\").\n");
     } else {
       /* Default for "BrowseOrder" */
       browse_order = ORDER_DENY_ALLOW;
-      debug_printf("cups-browsed: No \"BrowseOrder\" line, use \"BrowseOrder Deny,Allow\" as default.\n");
+      debug_printf("No \"BrowseOrder\" line, use \"BrowseOrder Deny,Allow\" as default.\n");
     }
   }
 
@@ -5803,7 +5834,7 @@ nm_properties_changed (GDBusProxy *proxy,
   g_variant_get (changed_properties, "a{sv}", &iter);
   while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
     if (!strcmp (key, "ActiveConnections")) {
-      debug_printf ("cups-browsed: NetworkManager ActiveConnections changed\n");
+      debug_printf ("NetworkManager ActiveConnections changed\n");
       defer_update_netifs ();
       break;
     }
@@ -5837,10 +5868,10 @@ find_previous_queue (gpointer key,
 
       p->duplicate_of = NULL;
       p->num_duplicates = 0;
-      debug_printf("cups-browsed: Found CUPS queue %s (URI: %s) from previous session.\n",
+      debug_printf("Found CUPS queue %s (URI: %s) from previous session.\n",
 		   p->name, p->uri);
     } else {
-      debug_printf("cups-browsed: ERROR: Unable to allocate memory.\n");
+      debug_printf("ERROR: Unable to allocate memory.\n");
       exit(1);
     }
   }
@@ -5870,10 +5901,19 @@ int main(int argc, char*argv[]) {
     for (i = 1; i < argc; i++)
       if (!strcasecmp(argv[i], "--debug") || !strcasecmp(argv[i], "-d") ||
 	  !strncasecmp(argv[i], "-v", 2)) {
-	/* Turn on debug mode if requested */
-	debug = 1;
-	debug_printf("cups-browsed: Reading command line option %s, turning on debug mode.\n",
+	/* Turn on debug output mode if requested */
+	debug_stderr = 1;
+	debug_printf("Reading command line option %s, turning on debug mode (Log on standard error).\n",
 		     argv[i]);
+      } else if (!strcasecmp(argv[i], "--logfile") ||
+		 !strcasecmp(argv[i], "-l")) {
+	/* Turn on debug log file mode if requested */
+	if (debug_logfile == 0) {
+	  debug_logfile = 1;
+	  start_debug_logging();
+	  debug_printf("Reading command line option %s, turning on debug mode (Log into log file %s).\n",
+		       argv[i], DEBUG_LOG_FILE);
+	}
       } else if (!strncasecmp(argv[i], "-c", 2)) {
 	/* Alternative configuration file */
 	val = argv[i] + 2;
@@ -5886,11 +5926,11 @@ int main(int argc, char*argv[]) {
 	}
 	if (val) {
 	  alt_config_file = strdup(val);
-	  debug_printf("cups-browsed: Reading command line option -c %s, using alternative configuration file.\n",
+	  debug_printf("Reading command line option -c %s, using alternative configuration file.\n",
 		       alt_config_file);
 	} else {
 	  fprintf(stderr,
-		  "cups-browsed: Reading command line option -c, no alternative configuration file name supplied.\n\n");
+		  "Reading command line option -c, no alternative configuration file name supplied.\n\n");
 	  goto help;
 	}     
       } else if (!strncasecmp(argv[i], "-o", 2)) {
@@ -5905,45 +5945,45 @@ int main(int argc, char*argv[]) {
 	}
 	if (val) {
 	  cupsArrayAdd (command_line_config, strdup(val));
-	  debug_printf("cups-browsed: Reading command line option -o %s, applying extra configuration option.\n",
+	  debug_printf("Reading command line option -o %s, applying extra configuration option.\n",
 		 val);
 	} else {
 	  fprintf(stderr,
-		  "cups-browsed: Reading command line option -o, no extra configuration option supplied.\n\n");
+		  "Reading command line option -o, no extra configuration option supplied.\n\n");
 	  goto help;
 	}     
       } else if (!strncasecmp(argv[i], "--autoshutdown-timeout", 22)) {
-	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	debug_printf("Reading command line: %s\n", argv[i]);
 	if (argv[i][22] == '=' && argv[i][23])
 	  val = argv[i] + 23;
 	else if (!argv[i][22] && i < argc -1) {
 	  i++;
-	  debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	  debug_printf("Reading command line: %s\n", argv[i]);
 	  val = argv[i];
 	} else {
-	  fprintf(stderr, "cups-browsed: Expected auto shutdown timeout setting after \"--autoshutdown-timeout\" option.\n\n");
+	  fprintf(stderr, "Expected auto shutdown timeout setting after \"--autoshutdown-timeout\" option.\n\n");
 	  goto help;
 	}
 	int t = atoi(val);
 	if (t >= 0) {
 	  autoshutdown_timeout = t;
-	  debug_printf("cups-browsed: Set auto shutdown timeout to %d sec.\n",
+	  debug_printf("Set auto shutdown timeout to %d sec.\n",
 		       t);
 	} else {
-	  debug_printf("cups-browsed: Invalid auto shutdown timeout value: %d\n\n",
-		       t);
+	  fprintf(stderr, "Invalid auto shutdown timeout value: %d\n\n",
+		  t);
 	  goto help;
 	}
       } else if (!strncasecmp(argv[i], "--autoshutdown-on", 17)) {
-	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	debug_printf("Reading command line: %s\n", argv[i]);
 	if (argv[i][17] == '=' && argv[i][18])
 	  val = argv[i] + 18;
 	else if (!argv[i][17] && i < argc - 1) {
 	  i++;
-	  debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	  debug_printf("Reading command line: %s\n", argv[i]);
 	  val = argv[i];
 	} else {
-	  fprintf(stderr, "cups-browsed: Expected auto shutdown inactivity type (\"no-queues\" or \"no-jobs\") after \"--autoshutdown-on\" option.\n\n");
+	  fprintf(stderr, "Expected auto shutdown inactivity type (\"no-queues\" or \"no-jobs\") after \"--autoshutdown-on\" option.\n\n");
 	  goto help;
 	}
 	int success = 0;
@@ -5957,36 +5997,36 @@ int main(int argc, char*argv[]) {
 	  }
 	}
 	if (success)
-	  debug_printf("cups-browsed: Set auto shutdown inactivity type to no %s.\n",
+	  debug_printf("Set auto shutdown inactivity type to no %s.\n",
 		       autoshutdown_on == NO_QUEUES ? "queues" : "jobs");
 	else
-	  debug_printf("cups-browsed: Invalid auto shutdown inactivity type value: %s\n",
+	  debug_printf("Invalid auto shutdown inactivity type value: %s\n",
 		       val);
       } else if (!strncasecmp(argv[i], "--autoshutdown", 14)) {
-	debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	debug_printf("Reading command line: %s\n", argv[i]);
 	if (argv[i][14] == '=' && argv[i][15])
 	  val = argv[i] + 15;
 	else if (!argv[i][14] && i < argc -1) {
 	  i++;
-	  debug_printf("cups-browsed: Reading command line: %s\n", argv[i]);
+	  debug_printf("Reading command line: %s\n", argv[i]);
 	  val = argv[i];
 	} else {
-	  fprintf(stderr, "cups-browsed: Expected auto shutdown setting after \"--autoshutdown\" option.\n\n");
+	  fprintf(stderr, "Expected auto shutdown setting after \"--autoshutdown\" option.\n\n");
 	  goto help;
 	}
 	if (!strcasecmp(val, "On") || !strcasecmp(val, "Yes") ||
 	    !strcasecmp(val, "True") || !strcasecmp(val, "1")) {
 	  autoshutdown = 1;
-	  debug_printf("cups-browsed: Turning on auto shutdown mode.\n");
+	  debug_printf("Turning on auto shutdown mode.\n");
 	} else if (!strcasecmp(val, "Off") || !strcasecmp(val, "No") ||
 	    !strcasecmp(val, "False") || !strcasecmp(val, "0")) {
 	  autoshutdown = 0;
-	  debug_printf("cups-browsed: Turning off auto shutdown mode (permanent mode).\n");
+	  debug_printf("Turning off auto shutdown mode (permanent mode).\n");
 	} else if (!strcasecmp(val, "avahi")) {
 	  autoshutdown_avahi = 1;
-	  debug_printf("cups-browsed: Turning on auto shutdown control by appearing and disappearing of the Avahi server.\n");
+	  debug_printf("Turning on auto shutdown control by appearing and disappearing of the Avahi server.\n");
 	} else if (strcasecmp(val, "none")) {
-	  debug_printf("cups-browsed: Unknown mode '%s'\n\n", val);
+	  fprintf(stderr, "Unknown mode '%s'\n\n", val);
 	  goto help;
 	}
       } else if (!strcasecmp(argv[i], "--version") ||
@@ -5996,7 +6036,7 @@ int main(int argc, char*argv[]) {
       } else {
 	/* Unknown option */
 	fprintf(stderr,
-		"cups-browsed: Reading command line option %s, unknown command line option.\n\n",
+		"Reading command line option %s, unknown command line option.\n\n",
 		argv[i]);
         goto help;
       }
@@ -6025,25 +6065,25 @@ int main(int argc, char*argv[]) {
     setenv("CUPS_SERVER", "localhost", 1);
 
   if (BrowseLocalProtocols & BROWSE_DNSSD) {
-    fprintf(stderr, "cups-browsed: Local support for DNSSD not implemented\n");
+    debug_printf("Local support for DNSSD not implemented\n");
     BrowseLocalProtocols &= ~BROWSE_DNSSD;
   }
 
   if (BrowseLocalProtocols & BROWSE_LDAP) {
-    fprintf(stderr, "cups-browsed: Local support for LDAP not implemented\n");
+    debug_printf("Local support for LDAP not implemented\n");
     BrowseLocalProtocols &= ~BROWSE_LDAP;
   }
 
 #ifndef HAVE_AVAHI
   if (BrowseRemoteProtocols & BROWSE_DNSSD) {
-    fprintf(stderr, "cups-browsed: Remote support for DNSSD not supported\n");
+    debug_printf("Remote support for DNSSD not supported\n");
     BrowseRemoteProtocols &= ~BROWSE_DNSSD;
   }
 #endif /* HAVE_AVAHI */
 
 #ifndef HAVE_LDAP
   if (BrowseRemoteProtocols & BROWSE_LDAP) {
-    fprintf(stderr, "cups-browsed: Remote support for LDAP not supported\n");
+    debug_printf("Remote support for LDAP not supported\n");
     BrowseRemoteProtocols &= ~BROWSE_LDAP;
   }
 #endif /* HAVE_LDAP */
@@ -6079,7 +6119,7 @@ int main(int argc, char*argv[]) {
   sigset(SIGINT, sigterm_handler);
   sigset(SIGUSR1, sigusr1_handler);
   sigset(SIGUSR2, sigusr2_handler);
-  debug_printf("cups-browsed: Using signal handler SIGSET\n");
+  debug_printf("Using signal handler SIGSET\n");
 #elif defined(HAVE_SIGACTION)
   struct sigaction action; /* Actions for POSIX signals */
   memset(&action, 0, sizeof(action));
@@ -6099,13 +6139,13 @@ int main(int argc, char*argv[]) {
   sigaddset(&action.sa_mask, SIGUSR2);
   action.sa_handler = sigusr2_handler;
   sigaction(SIGUSR2, &action, NULL);
-  debug_printf("cups-browsed: Using signal handler SIGACTION\n");
+  debug_printf("Using signal handler SIGACTION\n");
 #else
   signal(SIGTERM, sigterm_handler);
   signal(SIGINT, sigterm_handler);
   signal(SIGUSR1, sigusr1_handler);
   signal(SIGUSR2, sigusr2_handler);
-  debug_printf("cups-browsed: Using signal handler SIGNAL\n");
+  debug_printf("Using signal handler SIGNAL\n");
 #endif /* HAVE_SIGSET */
 
 #ifdef HAVE_AVAHI
@@ -6120,7 +6160,7 @@ int main(int argc, char*argv[]) {
     if (!autoshutdown_exec_id &&
 	(cupsArrayCount(remote_printers) == 0 ||
 	 (autoshutdown_on == NO_JOBS && check_jobs() == 0))) {
-      debug_printf ("cups-browsed: We set auto shutdown mode and no printers are there to make available or no jobs on them, shutting down in %d sec...\n", autoshutdown_timeout);
+      debug_printf ("We set auto shutdown mode and no printers are there to make available or no jobs on them, shutting down in %d sec...\n", autoshutdown_timeout);
       autoshutdown_exec_id =
 	g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
 			       NULL);
@@ -6132,7 +6172,7 @@ int main(int argc, char*argv[]) {
     /* Set up our CUPS Browsing socket */
     browsesocket = socket (AF_INET, SOCK_DGRAM, 0);
     if (browsesocket == -1) {
-      debug_printf("cups-browsed: failed to create CUPS Browsing socket: %s\n",
+      debug_printf("failed to create CUPS Browsing socket: %s\n",
 		   strerror (errno));
     } else {
       struct sockaddr_in addr;
@@ -6141,7 +6181,7 @@ int main(int argc, char*argv[]) {
       addr.sin_family = AF_INET;
       addr.sin_port = htons (BrowsePort);
       if (bind (browsesocket, (struct sockaddr *)&addr, sizeof (addr))) {
-	debug_printf("cups-browsed: failed to bind CUPS Browsing socket: %s\n",
+	debug_printf("failed to bind CUPS Browsing socket: %s\n",
 		     strerror (errno));
 	close (browsesocket);
 	browsesocket = -1;
@@ -6149,7 +6189,7 @@ int main(int argc, char*argv[]) {
 	int on = 1;
 	if (setsockopt (browsesocket, SOL_SOCKET, SO_BROADCAST,
 			&on, sizeof (on))) {
-	  debug_printf("cups-browsed: failed to allow broadcast: %s\n",
+	  debug_printf("failed to allow broadcast: %s\n",
 		       strerror (errno));
 	  BrowseLocalProtocols &= ~BROWSE_CUPS;
 	}
@@ -6165,7 +6205,7 @@ int main(int argc, char*argv[]) {
   if (BrowseLocalProtocols == 0 &&
       BrowseRemoteProtocols == 0 &&
       !BrowsePoll) {
-    debug_printf("cups-browsed: nothing left to do\n");
+    debug_printf("nothing left to do\n");
     ret = 0;
     goto fail;
   }
@@ -6201,14 +6241,14 @@ int main(int argc, char*argv[]) {
   }
 
   if (BrowseLocalProtocols & BROWSE_CUPS) {
-      debug_printf ("cups-browsed: will send browse data every %ds\n",
+      debug_printf ("will send browse data every %ds\n",
 		    BrowseInterval);
       g_idle_add (send_browse_data, NULL);
   }
 
 #ifdef HAVE_LDAP
   if (BrowseRemoteProtocols & BROWSE_LDAP) {
-      debug_printf ("cups-browsed: will browse poll LDAP every %ds\n",
+      debug_printf ("will browse poll LDAP every %ds\n",
 		    BrowseInterval);
       g_idle_add (browse_ldap_poll, NULL);
   }
@@ -6219,7 +6259,7 @@ int main(int argc, char*argv[]) {
     for (index = 0;
 	 index < NumBrowsePoll;
 	 index++) {
-      debug_printf ("cups-browsed: will browse poll %s every %ds\n",
+      debug_printf ("will browse poll %s every %ds\n",
 		    BrowsePoll[index]->server, BrowseInterval);
       g_idle_add (browse_poll, BrowsePoll[index]);
     }
@@ -6238,7 +6278,7 @@ int main(int argc, char*argv[]) {
 							NULL,
 							&error);
   if (error) {
-    fprintf (stderr, "cups-browsed: Error creating cups notify handler: %s", error->message);
+    fprintf (stderr, "Error creating cups notify handler: %s", error->message);
     g_error_free (error);
     cups_notifier = NULL;
   }
@@ -6255,14 +6295,14 @@ int main(int argc, char*argv[]) {
      schedule the shutdown in autoshutdown_timeout seconds */
   if (autoshutdown && !autoshutdown_exec_id &&
       cupsArrayCount(remote_printers) == 0) {
-    debug_printf ("cups-browsed: No printers found to make available, shutting down in %d sec...\n", autoshutdown_timeout);
+    debug_printf ("No printers found to make available, shutting down in %d sec...\n", autoshutdown_timeout);
     autoshutdown_exec_id =
       g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute, NULL);
   }
 
   g_main_loop_run (gmainloop);
 
-  debug_printf("cups-browsed: main loop exited\n");
+  debug_printf("main loop exited\n");
   g_main_loop_unref (gmainloop);
   gmainloop = NULL;
   ret = 0;
@@ -6327,12 +6367,16 @@ fail:
 #endif /* HAVE_LDAP */
 
   if (browsesocket != -1)
-      close (browsesocket);
+    close (browsesocket);
 
   g_hash_table_destroy (local_printers);
 
   if (BrowseLocalProtocols & BROWSE_CUPS)
     g_list_free_full (browse_data, browse_data_free);
+
+  /* Close log file if we have one */
+  if (debug_logfile == 1)
+    stop_debug_logging();
 
   return ret;
 
@@ -6345,7 +6389,9 @@ fail:
 	  "  -c cups-browsed.conf    Set alternative cups-browsed.conf file to use.\n"
 	  "  -d\n"
 	  "  -v\n"
-	  "  --debug                 Run in debug mode (verbose logging).\n"
+	  "  --debug                 Run in debug mode (logging to stderr).\n"
+	  "  -l\n"
+	  "  --logfile               Run in debug mode (logging into file).\n"
 	  "  -h\n"
 	  "  --help\n"
 	  "  --version               Show this usage message.\n"
@@ -6751,7 +6797,7 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
     }
     if (formatfound == 0) {
-      debug_printf("cups-browsed: No data format suitable for PPD auto-generation supported by the printer, not generating PPD\n");
+      debug_printf("No data format suitable for PPD auto-generation supported by the printer, not generating PPD\n");
       unlink(buffer);
       return(NULL);
     }
@@ -6823,7 +6869,7 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 		       "*OrderDependency: 10 AnySetup *PageSize\n"
                        "*DefaultPageSize: %s\n", ppdname);
     if (ippGetCount(attr) == 0) {
-      debug_printf("cups-browsed: No page sizes reported as supported by the printer, not generating PPD\n");
+      debug_printf("No page sizes reported as supported by the printer, not generating PPD\n");
       unlink(buffer);
       return(NULL);
     }
@@ -6903,7 +6949,7 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
     }
   } else {
-    debug_printf("cups-browsed: No page sizes reported as supported by the printer, not generating PPD\n");
+    debug_printf("No page sizes reported as supported by the printer, not generating PPD\n");
     unlink(buffer);
     return(NULL);
   }
