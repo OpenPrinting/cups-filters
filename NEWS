@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 
 CHANGES IN V1.9.0
 
+	- README: Removed the documentation of the old Poppler-based pdftopdf
+	  filter which is not included any more.
 	- cups-browsed: Do not schedule failed operations for later repetition
 	  during shutdown.
 	- cups-browsed: Added support for debug logging into a file (usually
