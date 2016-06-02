@@ -17,14 +17,14 @@ double getUserUnit(QPDFObjectHandle page);
 
 // PDF CTM
 class Matrix {
-public:
+ public:
   Matrix(); // identity
   Matrix(QPDFObjectHandle ar);
   
   Matrix &rotate(Rotation rot);
   Matrix &rotate_move(Rotation rot,double width,double height);
   Matrix &rotate(double rad);
-//  Matrix &rotate_deg(double deg);
+  //  Matrix &rotate_deg(double deg);
 
   Matrix &translate(double tx,double ty);
   Matrix &scale(double sx,double sy);
@@ -34,7 +34,7 @@ public:
 
   QPDFObjectHandle get() const;
   std::string get_string() const;
-private:
+ private:
   double ctm[6];
 };
 

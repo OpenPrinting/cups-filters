@@ -84,8 +84,8 @@ IntervalSet::key_t IntervalSet::next(key_t val) const // {{{
 
 bool IntervalSet::intersect(const value_t &a,const value_t &b) const // {{{
 {
-  return ( (a.first>=b.first)&&(a.first<b.second) )||
-         ( (b.first>=a.first)&&(b.first<a.second) );
+  return ((a.first>=b.first) && (a.first<b.second)) ||
+    ((b.first>=a.first) && (b.first<a.second));
 }
 // }}}
 
@@ -119,4 +119,3 @@ void IntervalSet::dump() const // {{{
   }
 }
 // }}}
-

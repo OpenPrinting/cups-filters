@@ -49,7 +49,7 @@ bool hasOutputIntent(QPDF &pdf) // {{{
 // }}}
 
 // TODO: test
-  // TODO? find existing , replace and return  (?)
+// TODO? find existing , replace and return  (?)
 void addOutputIntent(QPDF &pdf,const char *filename) // {{{
 {
   std::string icc=load_file(filename);
@@ -85,21 +85,21 @@ void addOutputIntent(QPDF &pdf,const char *filename) // {{{
 
 
 /* for color management:
- Use /DefaultGray, /DefaultRGB, /DefaultCMYK ...  from *current* resource dictionary ...
- i.e. set 
- /Resources <<
+   Use /DefaultGray, /DefaultRGB, /DefaultCMYK ...  from *current* resource dictionary ...
+   i.e. set 
+   /Resources <<
    /ColorSpace <<    --- can use just one indirect ref for this (probably)
-     /DefaultRGB [/ICCBased 5 0 R]   ... sensible use is sRGB  for DefaultRGB, etc.
+   /DefaultRGB [/ICCBased 5 0 R]   ... sensible use is sRGB  for DefaultRGB, etc.
    >>
- >>
- for every page  (what with form /XObjects?)  and most importantly RGB (leave CMYK, Gray for now, as this is already printer native(?))
+   >>
+   for every page  (what with form /XObjects?)  and most importantly RGB (leave CMYK, Gray for now, as this is already printer native(?))
 
-? also every  form XObject, pattern, type3 font, annotation appearance stream(=form xobject +X)
- 
-? what if page already defines /Default?   -- probably keep!
+   ? also every  form XObject, pattern, type3 font, annotation appearance stream(=form xobject +X)
 
-? maybe we need to set /ColorSpace  in /Images ?    [gs idea is to just add the /Default-key and then reprocess...]
+   ? what if page already defines /Default?   -- probably keep!
 
+   ? maybe we need to set /ColorSpace  in /Images ?    [gs idea is to just add the /Default-key and then reprocess...]
+   
 */
 
 // TODO? test
@@ -128,8 +128,8 @@ void addDefaultRGB(QPDF &pdf,QPDFObjectHandle srcicc) // {{{
 // }}}
 
 // TODO? test
-  // TODO: find existing , replace and return  (?)
-  // TODO: check icc  fitness
+// TODO: find existing , replace and return  (?)
+// TODO: check icc  fitness
 QPDFObjectHandle setDefaultICC(QPDF &pdf,const char *filename) // {{{
 {
   // TODO: find existing , replace and return  (?)

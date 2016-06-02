@@ -223,4 +223,3 @@ std::string Matrix::get_string() const // {{{
   return ret;
 }
 // }}}
-

@@ -10,32 +10,32 @@
 enum BookletMode { BOOKLET_OFF, BOOKLET_ON, BOOKLET_JUSTSHUFFLE };
 
 struct ProcessingParameters {
-  ProcessingParameters()
-    : jobId(0),numCopies(1),
-      user(0),title(0),
-      fitplot(false),
-      orientation(ROT_0),normal_landscape(ROT_270),
-      paper_is_landscape(false),
-      duplex(false),
-      border(NONE),
-      reverse(false),
+ProcessingParameters()
+: jobId(0),numCopies(1),
+    user(0),title(0),
+    fitplot(false),
+    orientation(ROT_0),normal_landscape(ROT_270),
+    paper_is_landscape(false),
+    duplex(false),
+    border(NONE),
+    reverse(false),
 
-      pageLabel(),
-      evenPages(true),oddPages(true),
+    pageLabel(),
+    evenPages(true),oddPages(true),
 
-      mirror(false),
+    mirror(false),
 
-      xpos(CENTER),ypos(CENTER),
+    xpos(CENTER),ypos(CENTER),
 
-      collate(false),
-      evenDuplex(false),
+    collate(false),
+    evenDuplex(false),
 
-      booklet(BOOKLET_OFF),bookSignature(-1),
+    booklet(BOOKLET_OFF),bookSignature(-1),
 
-      autoRotate(false),
+    autoRotate(false),
 
-      emitJCL(true),deviceCopies(1),deviceReverse(false),
-      deviceCollate(false),setDuplex(false)
+    emitJCL(true),deviceCopies(1),deviceReverse(false),
+    deviceCollate(false),setDuplex(false)
   {
     page.width=612.0; // letter
     page.height=792.0;
@@ -96,7 +96,7 @@ struct ProcessingParameters {
 enum ArgOwnership { WillStayAlive,MustDuplicate,TakeOwnership };
 
 class PDFTOPDF_PageHandle {
-public:
+ public:
   virtual ~PDFTOPDF_PageHandle() {}
   virtual PageRect getRect() const =0;
   // fscale:  inverse_scale (from nup, fitplot)
@@ -110,14 +110,14 @@ public:
 
 // TODO: ... error output?
 class PDFTOPDF_Processor { // abstract interface
-public:
+ public:
   virtual ~PDFTOPDF_Processor() {}
 
-// TODO: ... qpdf wants password at load time
+  // TODO: ... qpdf wants password at load time
   virtual bool loadFile(FILE *f,ArgOwnership take=WillStayAlive) =0;
   virtual bool loadFilename(const char *name) =0;
 
-// TODO? virtual bool may_modify/may_print/?
+  // TODO? virtual bool may_modify/may_print/?
   virtual bool check_print_permissions() =0;
 
   virtual std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> get_pages() =0; // shared_ptr because of type erasure (deleter)
@@ -126,7 +126,7 @@ public:
 
   virtual void add_page(std::shared_ptr<PDFTOPDF_PageHandle> page,bool front) =0; // at back/front -- either from get_pages() or new_page()+add_subpage()-calls  (or [also allowed]: empty)
 
-//  void remove_page(std::shared_ptr<PDFTOPDF_PageHandle> ph);  // not needed: we construct from scratch, at least conceptually.
+  //  void remove_page(std::shared_ptr<PDFTOPDF_PageHandle> ph);  // not needed: we construct from scratch, at least conceptually.
 
   virtual void multiply(int copies,bool collate) =0;
 
@@ -139,9 +139,8 @@ public:
   virtual void emitFilename(const char *name) =0; // NULL -> stdout
 };
 
-
 class PDFTOPDF_Factory {
-public:
+ public:
   // never NULL, but may throw.
   static PDFTOPDF_Processor *processor();
 };
@@ -151,6 +150,5 @@ std::vector<int> bookletShuffle(int numPages,int signature=-1);
 
 // This is all we want:
 bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param);
-
 
 #endif

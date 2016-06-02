@@ -14,7 +14,7 @@ static void emitJCLOptions(FILE *fp, ppd_file_t *ppd, int deviceCopies) // {{{
   char buf[1024];
   ppd_attr_t *attr;
   bool withJCL=false,
-       datawritten=false;
+    datawritten=false;
 
   if (!ppd) return;
 
@@ -44,18 +44,18 @@ static void emitJCLOptions(FILE *fp, ppd_file_t *ppd, int deviceCopies) // {{{
     }
   }
   for (section = (int)PPD_ORDER_ANY;
-      section <= (int)PPD_ORDER_PROLOG;section++) {
+       section <= (int)PPD_ORDER_PROLOG;section++) {
     int n = ppdCollect(ppd,(ppd_section_t)section,&choices);
     for (i = 0;i < n;i++) {
       snprintf(buf,sizeof(buf),"pdftopdfJCL%s",
-        ((ppd_option_t *)(choices[i]->option))->keyword);
+	       ((ppd_option_t *)(choices[i]->option))->keyword);
       if ((attr = ppdFindAttr(ppd,buf,choices[i]->choice)) != NULL) {
         fputs(attr->value,fp);
         datawritten=true;
       } else if (withJCL) {
         fprintf(fp,"%s=%s;",
-                   ((ppd_option_t *)(choices[i]->option))->keyword,
-                   choices[i]->choice);
+		((ppd_option_t *)(choices[i]->option))->keyword,
+		choices[i]->choice);
         datawritten=true;
       }
     }
@@ -72,22 +72,19 @@ static int				/* O - Length of decoded string */
 ppd_decode(char *string)		/* I - String to decode */
 {
   char	*inptr,				/* Input pointer */
-	*outptr;			/* Output pointer */
-
+    *outptr;			/* Output pointer */
 
   inptr  = string;
   outptr = string;
 
   while (*inptr != '\0')
-    if (*inptr == '<' && isxdigit(inptr[1] & 255))
-    {
-     /*
-      * Convert hex to 8-bit values...
-      */
+    if (*inptr == '<' && isxdigit(inptr[1] & 255)) {
+      /*
+       * Convert hex to 8-bit values...
+       */
 
       inptr ++;
-      while (isxdigit(*inptr & 255))
-      {
+      while (isxdigit(*inptr & 255)) {
 	if (isalpha(*inptr))
 	  *outptr = (tolower(*inptr) - 'a' + 10) << 4;
 	else
@@ -111,8 +108,7 @@ ppd_decode(char *string)		/* I - String to decode */
 	inptr ++;
       while (*inptr == '>')
 	inptr ++;
-    }
-    else
+    } else
       *outptr++ = *inptr++;
 
   *outptr = '\0';
@@ -146,7 +142,7 @@ void emitPreamble(ppd_file_t *ppd,const ProcessingParameters &param) // {{{
       ppdMarkOption(ppd,"Copies",buf);
       devicecopies_done = 1;
     }
-    if ( (attr=ppdFindAttr(ppd,"JCLToPDFInterpreter",NULL)) != NULL) {
+    if ((attr=ppdFindAttr(ppd,"JCLToPDFInterpreter",NULL)) != NULL) {
       if (param.deviceCopies > 1 && devicecopies_done == 0 && // HW copies
 	  strncmp(ppd->jcl_begin, "\033%-12345X@", 10) == 0) { // PJL
 	/* Add a PJL command to implement the hardware copies */

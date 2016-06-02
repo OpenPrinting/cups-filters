@@ -22,7 +22,7 @@ enum BorderType { NONE=0, ONE_THIN=2, ONE_THICK=3, TWO_THIN=4, TWO_THICK=5,
 void BorderType_dump(BorderType border);
 
 struct PageRect {
-  PageRect() : top(NAN),left(NAN),right(NAN),bottom(NAN),width(NAN),height(NAN) {}
+PageRect() : top(NAN),left(NAN),right(NAN),bottom(NAN),width(NAN),height(NAN) {}
   float top,left,right,bottom; // i.e. margins
   float width,height;
 

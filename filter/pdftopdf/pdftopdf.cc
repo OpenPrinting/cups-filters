@@ -38,21 +38,21 @@ static void error(const char *fmt,...) // {{{
 
 void setFinalPPD(ppd_file_t *ppd,const ProcessingParameters &param)
 {
-  if ( (param.booklet==BOOKLET_ON)&&(ppdFindOption(ppd,"Duplex")) ) {
+  if ((param.booklet==BOOKLET_ON)&&(ppdFindOption(ppd,"Duplex"))) {
     // TODO: elsewhere, better
     ppdMarkOption(ppd,"Duplex","DuplexTumble");
     // TODO? sides=two-sided-short-edge
   }
 
   // for compatibility
-  if ( (param.setDuplex)&&(ppdFindOption(ppd,"Duplex")!=NULL) ) {
+  if ((param.setDuplex)&&(ppdFindOption(ppd,"Duplex")!=NULL)) {
     ppdMarkOption(ppd,"Duplex","True");
     ppdMarkOption(ppd,"Duplex","On");
   }
 
   // we do it, printer should not
   ppd_choice_t *choice;
-  if ( (choice=ppdFindMarkedChoice(ppd,"MirrorPrint")) != NULL) {
+  if ((choice=ppdFindMarkedChoice(ppd,"MirrorPrint")) != NULL) {
     choice->marked=0;
   }
 }
@@ -100,8 +100,8 @@ static bool is_false(const char *value) // {{{
     return false;
   }
   return (strcasecmp(value,"no")==0)||
-         (strcasecmp(value,"off")==0)||
-         (strcasecmp(value,"false")==0);
+    (strcasecmp(value,"off")==0)||
+    (strcasecmp(value,"false")==0);
 }
 // }}}
 
@@ -111,8 +111,8 @@ static bool is_true(const char *value) // {{{
     return false;
   }
   return (strcasecmp(value,"yes")==0)||
-         (strcasecmp(value,"on")==0)||
-         (strcasecmp(value,"true")==0);
+    (strcasecmp(value,"on")==0)||
+    (strcasecmp(value,"true")==0);
 }
 // }}}
 
@@ -151,15 +151,15 @@ static bool ppdDefaultOrder(ppd_file_t *ppd) // {{{  -- is reverse?
   const char *val=NULL;
 
   // Figure out the right default output order from the PPD file...
-  if ( (choice=ppdFindMarkedChoice(ppd,"OutputOrder")) != NULL) {
+  if ((choice=ppdFindMarkedChoice(ppd,"OutputOrder")) != NULL) {
     val=choice->choice;
-  } else if (  ( (choice=ppdFindMarkedChoice(ppd,"OutputBin")) != NULL)&&
-               ( (attr=ppdFindAttr(ppd,"PageStackOrder",choice->choice)) != NULL)  ) {
+  } else if (((choice=ppdFindMarkedChoice(ppd,"OutputBin")) != NULL)&&
+	     ((attr=ppdFindAttr(ppd,"PageStackOrder",choice->choice)) != NULL)) {
     val=attr->value;
-  } else if ( (attr=ppdFindAttr(ppd,"DefaultOutputOrder",0)) != NULL) {
+  } else if ((attr=ppdFindAttr(ppd,"DefaultOutputOrder",0)) != NULL) {
     val=attr->value;
   }
-  if ( (!val)||(strcasecmp(val,"Normal")==0) ) {
+  if ((!val)||(strcasecmp(val,"Normal")==0)) {
     return false;
   } else if (strcasecmp(val,"Reverse")==0) {
     return true;
@@ -176,7 +176,7 @@ static bool optGetCollate(int num_options,cups_option_t *options) // {{{
   }
 
   const char *val=NULL;
-  if ( (val=cupsGetOption("multiple-document-handling",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("multiple-document-handling",num_options,options)) != NULL) {
    /* This IPP attribute is unnecessarily complicated:
     *   single-document, separate-documents-collated-copies, single-document-new-sheet:
     *      -> collate (true)
@@ -186,7 +186,7 @@ static bool optGetCollate(int num_options,cups_option_t *options) // {{{
     return (strcasecmp(val,"separate-documents-uncollated-copies")!=0);
   }
 
-  if ( (val=cupsGetOption("sheet-collate",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("sheet-collate",num_options,options)) != NULL) {
     return (strcasecmp(val,"uncollated")!=0);
   }
 
@@ -313,12 +313,12 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     param.numCopies=1;
   }
 
-  if ( (val=cupsGetOption("fitplot",num_options,options)) == NULL) {
-    if ( (val=cupsGetOption("fit-to-page",num_options,options)) == NULL) {
+  if ((val=cupsGetOption("fitplot",num_options,options)) == NULL) {
+    if ((val=cupsGetOption("fit-to-page",num_options,options)) == NULL) {
       val=cupsGetOption("ipp-attribute-fidelity",num_options,options);
     }
   }
-// TODO?  pstops checks =="true", pdftops !is_false  ... pstops says: fitplot only for PS (i.e. not for PDF, cmp. cgpdftopdf)
+  // TODO?  pstops checks =="true", pdftops !is_false  ... pstops says: fitplot only for PS (i.e. not for PDF, cmp. cgpdftopdf)
   param.fitplot=(val)&&(!is_false(val));
 
   if (ppd && (ppd->landscape < 0)) { // direction the printer rotates landscape (90 or -90)
@@ -329,7 +329,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 
   int ipprot;
   param.orientation=ROT_0;
-  if ( (val=cupsGetOption("landscape",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("landscape",num_options,options)) != NULL) {
     if (!is_false(val)) {
       param.orientation=param.normal_landscape;
     }
@@ -337,7 +337,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     /* IPP orientation values are:
      *   3: 0 degrees,  4: 90 degrees,  5: -90 degrees,  6: 180 degrees
      */
-    if ( (ipprot<3)||(ipprot>6) ) {
+    if ((ipprot<3)||(ipprot>6)) {
       error("Bad value (%d) for orientation-requested, using 0 degrees",ipprot);
     } else {
       static const Rotation ipp2rot[4]={ROT_0, ROT_90, ROT_270, ROT_180};
@@ -347,7 +347,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 
   ppd_size_t *pagesize;
   // param.page default is letter, border 36,18
-  if ( (pagesize=ppdPageSize(ppd,0)) != NULL) { // "already rotated"
+  if ((pagesize=ppdPageSize(ppd,0)) != NULL) { // "already rotated"
     param.page.top=pagesize->top;
     param.page.left=pagesize->left;
     param.page.right=pagesize->right;
@@ -403,7 +403,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
       != NULL)
     tmp.bottom = atof(val) * 72.0 / 2540.0; 
 
-  if ( (param.orientation==ROT_90)||(param.orientation==ROT_270) ) { // unrotate page
+  if ((param.orientation==ROT_90)||(param.orientation==ROT_270)) { // unrotate page
     // NaN stays NaN
     tmp.right=param.page.height-tmp.right;
     tmp.top=param.page.width-tmp.top;
@@ -421,9 +421,9 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   } else if (is_true(cupsGetOption("Duplex",num_options,options))) {
     param.duplex=true;
     param.setDuplex=true;
-  } else if ( (val=cupsGetOption("sides",num_options,options)) != NULL) {
-    if ( (strcasecmp(val,"two-sided-long-edge")==0)||
-         (strcasecmp(val,"two-sided-short-edge")==0) ) {
+  } else if ((val=cupsGetOption("sides",num_options,options)) != NULL) {
+    if ((strcasecmp(val,"two-sided-long-edge")==0)||
+	(strcasecmp(val,"two-sided-short-edge")==0)) {
       param.duplex=true;
       param.setDuplex=true;
     } else if (strcasecmp(val,"one-sided")!=0) {
@@ -443,7 +443,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     NupParameters::preset(nup,param.nup);
   }
 
-  if ( (val=cupsGetOption("number-up-layout",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("number-up-layout",num_options,options)) != NULL) {
     if (!parseNupLayout(val,param.nup)) {
       error("Unsupported number-up-layout %s, using number-up-layout=lrtb!",val);
       param.nup.first=Axis::X;
@@ -452,15 +452,15 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     }
   }
 
-  if ( (val=cupsGetOption("page-border",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("page-border",num_options,options)) != NULL) {
     if (!parseBorder(val,param.border)) {
       error("Unsupported page-border value %s, using page-border=none!",val);
       param.border=BorderType::NONE;
     }
   }
 
-  if ( (val=cupsGetOption("OutputOrder",num_options,options)) != NULL ||
-       (val=cupsGetOption("page-delivery",num_options,options)) != NULL ) {
+  if ((val=cupsGetOption("OutputOrder",num_options,options)) != NULL ||
+      (val=cupsGetOption("page-delivery",num_options,options)) != NULL) {
     param.reverse=(strcasecmp(val,"Reverse")==0);
   } else if (ppd) {
     param.reverse=ppdDefaultOrder(ppd);
@@ -471,7 +471,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   if (classification)
     rawlabel.append (classification);
 
-  if ( (val=cupsGetOption("page-label", num_options, options)) != NULL) {
+  if ((val=cupsGetOption("page-label", num_options, options)) != NULL) {
     if (!rawlabel.empty())
       rawlabel.append (" - ");
     rawlabel.append(cupsGetOption("page-label",num_options,options));
@@ -488,7 +488,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   }
   param.pageLabel = cookedlabel.str ();
 
-  if ( (val=cupsGetOption("page-set",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("page-set",num_options,options)) != NULL) {
     if (strcasecmp(val,"even")==0) {
       param.oddPages=false;
     } else if (strcasecmp(val,"odd")==0) {
@@ -498,24 +498,24 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     }
   }
 
-  if ( (val=cupsGetOption("page-ranges",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("page-ranges",num_options,options)) != NULL) {
     parseRanges(val,param.pageRange);
   }
 
   ppd_choice_t *choice;
-  if ( (choice=ppdFindMarkedChoice(ppd,"MirrorPrint")) != NULL) {
+  if ((choice=ppdFindMarkedChoice(ppd,"MirrorPrint")) != NULL) {
     val=choice->choice;
   } else {
     val=cupsGetOption("mirror",num_options,options);
   }
   param.mirror=is_true(val);
 
-  if ( (val=cupsGetOption("emit-jcl",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("emit-jcl",num_options,options)) != NULL) {
     param.emitJCL=!is_false(val)&&(strcmp(val,"0")!=0);
   }
 
   param.booklet=BookletMode::BOOKLET_OFF;
-  if ( (val=cupsGetOption("booklet",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("booklet",num_options,options)) != NULL) {
     if (strcasecmp(val,"shuffle-only")==0) {
       param.booklet=BookletMode::BOOKLET_JUSTSHUFFLE;
     } else if (is_true(val)) {
@@ -532,7 +532,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     }
   }
 
-  if ( (val=cupsGetOption("position",num_options,options)) != NULL) {
+  if ((val=cupsGetOption("position",num_options,options)) != NULL) {
     if (!parsePosition(val,param.xpos,param.ypos)) {
       error("Unrecognized position value %s, using position=center!",val);
       param.xpos=Position::CENTER;
@@ -565,8 +565,8 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
   const char *val;
   ppd_attr_t *attr;
 
-  return ( (val=cupsGetOption(feature,num_options,options)) != NULL && is_true(val)) ||
-         ( (attr=ppdFindAttr(ppd,feature,0)) != NULL && is_true(attr->val));
+  return ((val=cupsGetOption(feature,num_options,options)) != NULL && is_true(val)) ||
+         ((attr=ppdFindAttr(ppd,feature,0)) != NULL && is_true(attr->val));
 }
 // }}}
 */
@@ -575,7 +575,7 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
   // i.e. printer has hardware-duplex, but needs pre-inserted filler pages
   // FIXME? pdftopdf also supports it as cmdline option (via checkFeature())
   ppd_attr_t *attr;
-  if ( (attr=ppdFindAttr(ppd,"cupsEvenDuplex",0)) != NULL) {
+  if ((attr=ppdFindAttr(ppd,"cupsEvenDuplex",0)) != NULL) {
     param.evenDuplex=is_true(attr->value);
   }
 
@@ -583,8 +583,8 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
   // TODO?! pdftopdfAutoRotate
 
   // TODO?!  choose default by whether pdfautoratate filter has already been run (e.g. by mimetype)
-  param.autoRotate=( !is_false(cupsGetOption("pdfAutoRotate",num_options,options)) &&
-                     !is_false(cupsGetOption("pdftopdfAutoRotate",num_options,options)) );
+  param.autoRotate=(!is_false(cupsGetOption("pdfAutoRotate",num_options,options)) &&
+		    !is_false(cupsGetOption("pdftopdfAutoRotate",num_options,options)));
 }
 // }}}
 
@@ -592,8 +592,8 @@ static bool printerWillCollate(ppd_file_t *ppd) // {{{
 {
   ppd_choice_t *choice;
 
-  if (  ( (choice=ppdFindMarkedChoice(ppd,"Collate")) != NULL)&&
-        (is_true(choice->choice))  ) {
+  if (((choice=ppdFindMarkedChoice(ppd,"Collate")) != NULL)&&
+      (is_true(choice->choice))) {
 
     // printer can collate, but also for the currently marked ppd features?
     ppd_option_t *opt=ppdFindOption(ppd,"Collate");
@@ -623,7 +623,7 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
     param.deviceCopies=1;
     // collate is never needed for a single copy
     param.collate=false; // (does not make a big difference for us)
-  } else if ( (ppd)&&(!ppd->manual_copies) ) { // hw copy generation available
+  } else if ((ppd)&&(!ppd->manual_copies)) { // hw copy generation available
     param.deviceCopies=param.numCopies;
     if (param.collate) { // collate requested by user
       // check collate device, with current/final(!) ppd settings
@@ -651,7 +651,7 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
     param.numCopies=1; // disable sw copy
   }
 
-  if ( (param.collate)&&(!param.deviceCollate) ) { // software collate
+  if ((param.collate)&&(!param.deviceCollate)) { // software collate
     ppdMarkOption(ppd,"Collate","False"); // disable any hardware-collate (in JCL)
     param.evenDuplex=true; // fillers always needed
   }
@@ -679,7 +679,7 @@ FILE *copy_stdin_to_temp() // {{{
   unlink(buf);
 
   // copy stdin to the tmp file
-  while ( (n=read(0,buf,BUFSIZ)) > 0) {
+  while ((n=read(0,buf,BUFSIZ)) > 0) {
     if (write(fd,buf,n) != n) {
       error("Can't copy stdin to temporary file");
       close(fd);
@@ -693,7 +693,7 @@ FILE *copy_stdin_to_temp() // {{{
   }
 
   FILE *f;
-  if ( (f=fdopen(fd,"rb")) == 0) {
+  if ((f=fdopen(fd,"rb")) == 0) {
     error("Can't fdopen temporary file");
     close(fd);
     return NULL;
@@ -704,34 +704,32 @@ FILE *copy_stdin_to_temp() // {{{
 
 int main(int argc,char **argv)
 {
-  if ( (argc<6)||(argc>7) ) {
+  if ((argc<6)||(argc>7)) {
     fprintf(stderr,"Usage: %s job-id user title copies options [file]\n",argv[0]);
 #ifdef DEBUG
-ProcessingParameters param;
-std::unique_ptr<PDFTOPDF_Processor> proc1(PDFTOPDF_Factory::processor());
-  param.page.width=595.276; // A4
-  param.page.height=841.89;
+    ProcessingParameters param;
+    std::unique_ptr<PDFTOPDF_Processor> proc1(PDFTOPDF_Factory::processor());
+    param.page.width=595.276; // A4
+    param.page.height=841.89;
 
-  param.page.top=param.page.bottom=36.0;
-  param.page.right=param.page.left=18.0;
-  param.page.right=param.page.width-param.page.right;
-  param.page.top=param.page.height-param.page.top;
+    param.page.top=param.page.bottom=36.0;
+    param.page.right=param.page.left=18.0;
+    param.page.right=param.page.width-param.page.right;
+    param.page.top=param.page.height-param.page.top;
 
-// param.nup.calculate(4,0.707,0.707,param.nup);
-  param.nup.nupX=2;
-  param.nup.nupY=2;
-/*
-*/
-//param.nup.yalign=TOP;
-param.border=BorderType::NONE;
-//param.mirror=true;
-//param.reverse=true;
-//param.numCopies=3;
-if (!proc1->loadFilename("in.pdf")) return 2;
+    //param.nup.calculate(4,0.707,0.707,param.nup);
+    param.nup.nupX=2;
+    param.nup.nupY=2;
+    //param.nup.yalign=TOP;
+    param.border=BorderType::NONE;
+    //param.mirror=true;
+    //param.reverse=true;
+    //param.numCopies=3;
+    if (!proc1->loadFilename("in.pdf")) return 2;
     param.dump();
-if (!processPDFTOPDF(*proc1,param)) return 3;
+    if (!processPDFTOPDF(*proc1,param)) return 3;
     emitComment(*proc1,param);
-proc1->emitFilename("out.pdf");
+    proc1->emitFilename("out.pdf");
 #endif
     return 1;
   }
@@ -774,8 +772,8 @@ proc1->emitFilename("out.pdf");
       }
     } else {
       FILE *f=copy_stdin_to_temp();
-      if ( (!f)||
-           (!proc->loadFile(f,TakeOwnership)) ) {
+      if ((!f)||
+	  (!proc->loadFile(f,TakeOwnership))) {
         ppdClose(ppd);
         return 1;
       }
@@ -802,7 +800,7 @@ proc1->emitFilename("out.pdf");
     emitPreamble(ppd,param); // ppdEmit, JCL stuff
     emitComment(*proc,param); // pass information to subsequent filters via PDF comments
 
-//    proc->emitFile(stdout);
+    //proc->emitFile(stdout);
     proc->emitFilename(NULL);
 
     emitPostamble(ppd,param);

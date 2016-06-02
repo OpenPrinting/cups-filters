@@ -6,7 +6,7 @@
 void Position_dump(Position pos) // {{{
 {
   static const char *pstr[3]={"Left/Bottom","Center","Right/Top"};
-  if ( (pos<LEFT)||(pos>RIGHT) ) {
+  if ((pos < LEFT) || (pos > RIGHT)) {
     fprintf(stderr,"(bad position: %d)",pos);
   } else {
     fputs(pstr[pos+1],stderr);
@@ -16,8 +16,8 @@ void Position_dump(Position pos) // {{{
 
 void Position_dump(Position pos,Axis axis) // {{{
 {
-  assert( (axis==Axis::X)||(axis==Axis::Y) );
-  if ( (pos<LEFT)||(pos>RIGHT) ) {
+  assert((axis == Axis::X) || (axis == Axis::Y));
+  if ((pos < LEFT) || (pos > RIGHT)) {
     fprintf(stderr,"(bad position: %d)",pos);
     return;
   }
@@ -31,11 +31,10 @@ void Position_dump(Position pos,Axis axis) // {{{
 }
 // }}}
 
-
 void Rotation_dump(Rotation rot) // {{{
 {
   static const char *rstr[4]={"0 deg","90 deg","180 deg","270 deg"}; // CCW
-  if ( (rot<ROT_0)||(rot>ROT_270) ) {
+  if ((rot < ROT_0) || (rot > ROT_270)) {
     fprintf(stderr,"(bad rotation: %d)",rot);
   } else {
     fputs(rstr[rot],stderr);
@@ -61,10 +60,9 @@ Rotation operator-(Rotation rhs) // {{{
 }
 // }}}
 
-
 void BorderType_dump(BorderType border) // {{{
 {
-  if ( (border<NONE)||(border==1)||(border>TWO_THICK) ) {
+  if ((border < NONE) || (border == 1) || (border > TWO_THICK)) {
     fprintf(stderr,"(bad border: %d)",border);
   } else {
     static const char *bstr[6]={"None",NULL,"one thin","one thick","two thin","two thick"};
@@ -73,7 +71,6 @@ void BorderType_dump(BorderType border) // {{{
 }
 // }}}
 
-
 void PageRect::rotate_move(Rotation r,float pwidth,float pheight) // {{{
 {
 #if 1
@@ -81,7 +78,7 @@ void PageRect::rotate_move(Rotation r,float pwidth,float pheight) // {{{
     std::swap(top,bottom);
     std::swap(left,right);
   }
-  if ( (r==ROT_90)||(r==ROT_270) ) {
+  if ((r == ROT_90) || (r == ROT_270)) {
     const float tmp=bottom;
     bottom=left;
     left=top;
@@ -91,11 +88,11 @@ void PageRect::rotate_move(Rotation r,float pwidth,float pheight) // {{{
     std::swap(width,height);
     std::swap(pwidth,pheight);
   }
-  if ( (r==ROT_90)||(r==ROT_180) ) {
+  if ((r == ROT_90) || (r == ROT_180)) {
     left=pwidth-left;
     right=pwidth-right;
   }
-  if ( (r==ROT_270)||(r==ROT_180) ) {
+  if ((r == ROT_270) || (r == ROT_180)) {
     top=pheight-top;
     bottom=pheight-bottom;
   }
@@ -173,9 +170,8 @@ void PageRect::set(const PageRect &rhs) // {{{
 void PageRect::dump() const // {{{
 {
   fprintf(stderr,"top: %f, left: %f, right: %f, bottom: %f\n"
-                 "width: %f, height: %f\n",
-                 top,left,right,bottom,
-                 width,height);
+	  "width: %f, height: %f\n",
+	  top,left,right,bottom,
+	  width,height);
 }
 // }}}
-

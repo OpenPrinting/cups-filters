@@ -13,14 +13,14 @@
 static std::string debug_box(const PageRect &box,float xshift,float yshift) // {{{
 {
   return std::string("q 1 w 0.1 G\n ")+
-         QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" m  "+
-         QUtil::double_to_string(box.right+xshift)+" "+QUtil::double_to_string(box.top+yshift)+" l "+"S \n "+
+    QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" m  "+
+    QUtil::double_to_string(box.right+xshift)+" "+QUtil::double_to_string(box.top+yshift)+" l "+"S \n "+
 
-         QUtil::double_to_string(box.right+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" m  "+
-         QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.top+yshift)+" l "+"S \n "+
+    QUtil::double_to_string(box.right+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" m  "+
+    QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.top+yshift)+" l "+"S \n "+
 
-         QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+"  "+
-         QUtil::double_to_string(box.right-box.left)+" "+QUtil::double_to_string(box.top-box.bottom)+" re "+"S Q\n";
+    QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+"  "+
+    QUtil::double_to_string(box.right-box.left)+" "+QUtil::double_to_string(box.top-box.bottom)+" re "+"S Q\n";
 }
 // }}}
 
@@ -99,24 +99,24 @@ static PageRect ungetRect(PageRect rect,const QPDF_PDFTOPDF_PageHandle &ph,Rotat
   PageRect pg2=getBoxAsRect(getTrimBox(page));
 
   // we have to invert /Rotate, /UserUnit and the left,bottom (TrimBox) translation
-//Rotation_dump(rotation);
-//Rotation_dump(getRotate(page));
+  //Rotation_dump(rotation);
+  //Rotation_dump(getRotate(page));
   rect.width=pg1.width;
   rect.height=pg1.height;
-//std::swap(rect.width,rect.height);
-//rect.rotate_move(-rotation,rect.width,rect.height);
+  //std::swap(rect.width,rect.height);
+  //rect.rotate_move(-rotation,rect.width,rect.height);
 
   rect.rotate_move(-getRotate(page),pg1.width,pg1.height);
   rect.scale(1.0/getUserUnit(page));
 
-//  PageRect pg2=getBoxAsRect(getTrimBox(page));
+  //  PageRect pg2=getBoxAsRect(getTrimBox(page));
   rect.translate(pg2.left,pg2.bottom);
-//rect.dump();
+  //rect.dump();
 
   return rect;
 }
 
-  // TODO FIXME rotations are strange  ... (via ungetRect)
+// TODO FIXME rotations are strange  ... (via ungetRect)
 // TODO? for non-existing (either drop comment or facility to create split streams needed)
 void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType border,float fscale) // {{{
 {
@@ -127,8 +127,8 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
   const double lw=(border&THICK)?0.5:0.24;
   double line_width=lw*fscale;
   double margin=2.25*fscale;
-// (PageLeft+margin,PageBottom+margin) rect (PageRight-PageLeft-2*margin,...)   ... for nup>1: PageLeft=0,etc.
-   //  if (double)  margin+=2*fscale ...rect...
+  // (PageLeft+margin,PageBottom+margin) rect (PageRight-PageLeft-2*margin,...)   ... for nup>1: PageLeft=0,etc.
+  //  if (double)  margin+=2*fscale ...rect...
 
   PageRect rect=ungetRect(_rect,*this,rotation,page);
 
@@ -138,28 +138,28 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
   std::string boxcmd="q\n";
   boxcmd+="  "+QUtil::double_to_string(line_width)+" w 0 G \n";
   boxcmd+="  "+QUtil::double_to_string(rect.left+margin)+" "+QUtil::double_to_string(rect.bottom+margin)+"  "+
-               QUtil::double_to_string(rect.right-rect.left-2*margin)+" "+QUtil::double_to_string(rect.top-rect.bottom-2*margin)+" re S \n";
+    QUtil::double_to_string(rect.right-rect.left-2*margin)+" "+QUtil::double_to_string(rect.top-rect.bottom-2*margin)+" re S \n";
   if (border&TWO) {
     margin+=2*fscale;
     boxcmd+="  "+QUtil::double_to_string(rect.left+margin)+" "+QUtil::double_to_string(rect.bottom+margin)+"  "+
-                 QUtil::double_to_string(rect.right-rect.left-2*margin)+" "+QUtil::double_to_string(rect.top-rect.bottom-2*margin)+" re S \n";
+      QUtil::double_to_string(rect.right-rect.left-2*margin)+" "+QUtil::double_to_string(rect.top-rect.bottom-2*margin)+" re S \n";
   }
   boxcmd+="Q\n";
 
-// if (!isExisting()) {
-//   // TODO: only after
-//   return;
-// }
-
+  // if (!isExisting()) {
+  //   // TODO: only after
+  //   return;
+  // }
+  
   assert(page.getOwningQPDF()); // existing pages are always indirect
 #ifdef DEBUG  // draw it on top
   static const char *pre="%pdftopdf q\n"
-                         "q\n",
-                    *post="%pdftopdf Q\n"
-                          "Q\n";
+    "q\n",
+    *post="%pdftopdf Q\n"
+    "Q\n";
 
   QPDFObjectHandle stm1=QPDFObjectHandle::newStream(page.getOwningQPDF(),pre),
-                   stm2=QPDFObjectHandle::newStream(page.getOwningQPDF(),std::string(post)+boxcmd);
+    stm2=QPDFObjectHandle::newStream(page.getOwningQPDF(),std::string(post)+boxcmd);
 
   page.addPageContents(stm1,true); // before
   page.addPageContents(stm2,false); // after
@@ -206,14 +206,14 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
   mtx.rotate(qsub->rotation); // TODO? -sub.rotation ?  // TODO FIXME: this might need another translation!?
   if (crop) { // TODO? other technique: set trim-box before makeXObject (but this modifies original page)
     mtx.translate(crop->left,crop->bottom);
-//    crop->dump();
+    // crop->dump();
   }
 
   content.append("q\n  ");
   content.append(mtx.get_string()+" cm\n  ");
   if (crop) {
     content.append("0 0 "+QUtil::double_to_string(crop->right-crop->left)+" "+QUtil::double_to_string(crop->top-crop->bottom)+" re W n\n  ");
-//    content.append("0 0 "+QUtil::double_to_string(crop->right-crop->left)+" "+QUtil::double_to_string(crop->top-crop->bottom)+" re S\n  ");
+    //    content.append("0 0 "+QUtil::double_to_string(crop->right-crop->left)+" "+QUtil::double_to_string(crop->top-crop->bottom)+" re S\n  ");
   }
   content.append(xoname+" Do\n");
   content.append("Q\n");
@@ -236,7 +236,7 @@ void QPDF_PDFTOPDF_PageHandle::mirror() // {{{
 
     xobjs[xoname]=makeXObject(subpage.getOwningQPDF(),subpage); // we can only now set this->xobjs
 
-//    content.append(std::string("1 0 0 1 0 0 cm\n  ");
+    // content.append(std::string("1 0 0 1 0 0 cm\n  ");
     content.append(xoname+" Do\n");
 
     assert(!isExisting());
@@ -267,8 +267,8 @@ void QPDF_PDFTOPDF_PageHandle::add_label(const PageRect &_rect, const std::strin
   assert (rect.bottom <= rect.top);
 
   // TODO: Only add in the font once, not once per page.
-  QPDFObjectHandle font = page.getOwningQPDF()->makeIndirectObject (
-    QPDFObjectHandle::parse(
+  QPDFObjectHandle font = page.getOwningQPDF()->makeIndirectObject
+    (QPDFObjectHandle::parse(
       "<<"
       " /Type /Font"
       " /Subtype /Type1"
@@ -286,44 +286,50 @@ void QPDF_PDFTOPDF_PageHandle::add_label(const PageRect &_rect, const std::strin
 
   // White filled rectangle (top)
   boxcmd += "  1 1 1 rg\n";
-  boxcmd += "  " + QUtil::double_to_string(rect.left + margin) + " " +
-		   QUtil::double_to_string(rect.top - height - 2 * margin) + " " +
-		   QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
-		   QUtil::double_to_string(height + 2 * margin) + " re f\n";
+  boxcmd += "  " +
+    QUtil::double_to_string(rect.left + margin) + " " +
+    QUtil::double_to_string(rect.top - height - 2 * margin) + " " +
+    QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
+    QUtil::double_to_string(height + 2 * margin) + " re f\n";
 
   // White filled rectangle (bottom)
-  boxcmd += "  " + QUtil::double_to_string(rect.left + margin) + " " +
-		   QUtil::double_to_string(rect.bottom + height + margin) + " " +
-		   QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
-		   QUtil::double_to_string(height + 2 * margin) + " re f\n";
+  boxcmd += "  " +
+    QUtil::double_to_string(rect.left + margin) + " " +
+    QUtil::double_to_string(rect.bottom + height + margin) + " " +
+    QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
+    QUtil::double_to_string(height + 2 * margin) + " re f\n";
 
   // Black outline (top)
   boxcmd += "  0 0 0 RG\n";
-  boxcmd += "  " + QUtil::double_to_string(rect.left + margin) + " " +
-		   QUtil::double_to_string(rect.top - height - 2 * margin) + " " +
-		   QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
-		   QUtil::double_to_string(height + 2 * margin) + " re S\n";
+  boxcmd += "  " +
+    QUtil::double_to_string(rect.left + margin) + " " +
+    QUtil::double_to_string(rect.top - height - 2 * margin) + " " +
+    QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
+    QUtil::double_to_string(height + 2 * margin) + " re S\n";
 
   // Black outline (bottom)
-  boxcmd += "  " + QUtil::double_to_string(rect.left + margin) + " " +
-		   QUtil::double_to_string(rect.bottom + height + margin) + " " +
-		   QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
-		   QUtil::double_to_string(height + 2 * margin) + " re S\n";
+  boxcmd += "  " +
+    QUtil::double_to_string(rect.left + margin) + " " +
+    QUtil::double_to_string(rect.bottom + height + margin) + " " +
+    QUtil::double_to_string(rect.right - rect.left - 2 * margin) + " " +
+    QUtil::double_to_string(height + 2 * margin) + " re S\n";
 
   // Black text (top)
   boxcmd += "  0 0 0 rg\n";
   boxcmd += "  BT\n";
   boxcmd += "  /pagelabel-font 12 Tf\n";
-  boxcmd += "  " + QUtil::double_to_string(rect.left + 2 * margin) + " " +
-		   QUtil::double_to_string(rect.top - height - margin) + " Td\n";
+  boxcmd += "  " +
+    QUtil::double_to_string(rect.left + 2 * margin) + " " +
+    QUtil::double_to_string(rect.top - height - margin) + " Td\n";
   boxcmd += "  (" + label + ") Tj\n";
   boxcmd += "  ET\n";
 
   // Black text (bottom)
   boxcmd += "  BT\n";
   boxcmd += "  /pagelabel-font 12 Tf\n";
-  boxcmd += "  " + QUtil::double_to_string(rect.left + 2 * margin) + " " +
-		   QUtil::double_to_string(rect.bottom + height + 2 * margin) + " Td\n";
+  boxcmd += "  " +
+    QUtil::double_to_string(rect.left + 2 * margin) + " " +
+    QUtil::double_to_string(rect.bottom + height + 2 * margin) + " Td\n";
   boxcmd += "  (" + label + ") Tj\n";
   boxcmd += "  ET\n";
 
@@ -331,14 +337,14 @@ void QPDF_PDFTOPDF_PageHandle::add_label(const PageRect &_rect, const std::strin
 
   assert(page.getOwningQPDF()); // existing pages are always indirect
   static const char *pre="%pdftopdf q\n"
-                         "q\n",
-                    *post="%pdftopdf Q\n"
-                          "Q\n";
+    "q\n",
+    *post="%pdftopdf Q\n"
+    "Q\n";
 
   QPDFObjectHandle stm1=QPDFObjectHandle::newStream(page.getOwningQPDF(),
 						    std::string(pre)),
-                   stm2=QPDFObjectHandle::newStream(page.getOwningQPDF(),
-						    std::string(post) + boxcmd);
+    stm2=QPDFObjectHandle::newStream(page.getOwningQPDF(),
+				     std::string(post) + boxcmd);
 
   page.addPageContents(stm1,true); // before
   page.addPageContents(stm2,false); // after
@@ -428,7 +434,6 @@ bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name) // {{{
 }
 // }}}
 
-
 void QPDF_PDFTOPDF_Processor::start() // {{{
 {
   assert(pdf);
@@ -460,7 +465,6 @@ bool QPDF_PDFTOPDF_Processor::check_print_permissions() // {{{
 }
 // }}}
 
-
 std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> QPDF_PDFTOPDF_Processor::get_pages() // {{{
 {
   std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> ret;
@@ -486,7 +490,8 @@ std::shared_ptr<PDFTOPDF_PageHandle> QPDF_PDFTOPDF_Processor::new_page(float wid
     return std::shared_ptr<PDFTOPDF_PageHandle>();
   }
   return std::shared_ptr<QPDF_PDFTOPDF_PageHandle>(new QPDF_PDFTOPDF_PageHandle(pdf.get(),width,height));
-  // return std::make_shared<QPDF_PDFTOPDF_PageHandle>(pdf.get(),width,height);  // problem: make_shared not friend
+  // return std::make_shared<QPDF_PDFTOPDF_PageHandle>(pdf.get(),width,height);
+  // problem: make_shared not friend
 }
 // }}}
 
@@ -501,11 +506,11 @@ void QPDF_PDFTOPDF_Processor::add_page(std::shared_ptr<PDFTOPDF_PageHandle> page
 // }}}
 
 #if 0
-  // we remove stuff now probably defunct  TODO
-  pdf->getRoot().removeKey("/PageMode");
-  pdf->getRoot().removeKey("/Outlines");
-  pdf->getRoot().removeKey("/OpenAction");
-  pdf->getRoot().removeKey("/PageLabels");
+// we remove stuff now probably defunct  TODO
+pdf->getRoot().removeKey("/PageMode");
+pdf->getRoot().removeKey("/Outlines");
+pdf->getRoot().removeKey("/OpenAction");
+pdf->getRoot().removeKey("/PageLabels");
 #endif
 
 void QPDF_PDFTOPDF_Processor::multiply(int copies,bool collate) // {{{
@@ -545,9 +550,9 @@ void QPDF_PDFTOPDF_Processor::autoRotateAll(bool dst_lscape,Rotation normal_land
 
     // copy'n'paste from QPDF_PDFTOPDF_PageHandle::getRect
     PageRect ret=getBoxAsRect(getTrimBox(page));
-//    ret.translate(-ret.left,-ret.bottom);
+    // ret.translate(-ret.left,-ret.bottom);
     ret.rotate_move(src_rot,ret.width,ret.height);
-//    ret.scale(getUserUnit(page));
+    // ret.scale(getUserUnit(page));
 
     const bool src_lscape=(ret.width>ret.height);
     if (src_lscape!=dst_lscape) {
@@ -580,7 +585,6 @@ void QPDF_PDFTOPDF_Processor::addCM(const char *defaulticc,const char *outputicc
   hasCM=true;
 }
 // }}}
-
 
 void QPDF_PDFTOPDF_Processor::setComments(const std::vector<std::string> &comments) // {{{
 {
@@ -642,5 +646,5 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name) // {{{
 }
 // }}}
 
-  // TODO:
-  //   loadPDF();   success?
+// TODO:
+//   loadPDF();   success?

@@ -36,47 +36,47 @@ void CombineFromContents_Provider::provideStreamData(int objid, int generation, 
 }
 
 /*
-To convert a page to an XObject there are several keys to consider:
+  To convert a page to an XObject there are several keys to consider:
 
-/Type /Page        -> /Type /XObject (/Type optional for XObject)
-                   -> /Subtype /Form
-                   -> [/FormType 1]  (optional)
-/Parent ? ? R      -> remove
-/Resources dict    -> copy
-/MediaBox rect [/CropBox /BleedBox /TrimBox /ArtBox] 
-                   -> /BBox  (use TrimBox [+ Bleed consideration?], with fallback to /MediaBox)
-                      note that /BBox is in *Form Space*, see /Matrix!
-[/BoxColorInfo dict]   (used for guidelines that may be shown by viewer)
-                   -> ignore/remove
-[/Contents asfd]   -> concatenate into stream data of the XObject (page is a dict, XObject a stream)
+  /Type /Page        -> /Type /XObject (/Type optional for XObject)
+                     -> /Subtype /Form
+                     -> [/FormType 1]  (optional)
+  /Parent ? ? R      -> remove
+  /Resources dict    -> copy
+  /MediaBox rect [/CropBox /BleedBox /TrimBox /ArtBox] 
+                     -> /BBox  (use TrimBox [+ Bleed consideration?], with fallback to /MediaBox)
+                        note that /BBox is in *Form Space*, see /Matrix!
+  [/BoxColorInfo dict]   (used for guidelines that may be shown by viewer)
+                     -> ignore/remove
+  [/Contents asfd]   -> concatenate into stream data of the XObject (page is a dict, XObject a stream)
 
-[/Rotate 90]   ... must be handled (either use CTM where XObject is /used/ -- or set /Matrix)
-[/UserUnit] (PDF 1.6)   -> to /Matrix ?   -- it MUST be handled.
+  [/Rotate 90]   ... must be handled (either use CTM where XObject is /used/ -- or set /Matrix)
+  [/UserUnit] (PDF 1.6)   -> to /Matrix ?   -- it MUST be handled.
 
-[/Group dict]      -> copy
-[/Thumb stream]    -> remove, not needed any more / would have to be regenerated (combined)
-[/B]               article beads -- ignore for now
-[/Dur]             -> remove  (transition duration)
-[/Trans]           -> remove  (transitions)
-[/AA]              -> remove  (additional-actions)
+  [/Group dict]      -> copy
+  [/Thumb stream]    -> remove, not needed any more / would have to be regenerated (combined)
+  [/B]               article beads -- ignore for now
+  [/Dur]             -> remove  (transition duration)
+  [/Trans]           -> remove  (transitions)
+  [/AA]              -> remove  (additional-actions)
 
-[/Metadata]        what shall we do?? (kill: we can't combine XML)
-[/PieceInfo]       -> remove, we can't combine private app data (?)
-[/LastModified  date]  (opt except /PieceInfo)  -> see there
+  [/Metadata]        what shall we do?? (kill: we can't combine XML)
+  [/PieceInfo]       -> remove, we can't combine private app data (?)
+  [/LastModified  date]  (opt except /PieceInfo)  -> see there
 
-[/PZ]              -> remove, can't combine/keep (preferred zoom level)
-[/SeparationInfo]  -> remove, no way to keep this (needed for separation)
+  [/PZ]              -> remove, can't combine/keep (preferred zoom level)
+  [/SeparationInfo]  -> remove, no way to keep this (needed for separation)
 
-[/ID]              related to web capture -- ignore/kill?
-[/StructParents]   (opt except pdf contains "structural content items")
-                   -> copy (is this correct?)
+  [/ID]              related to web capture -- ignore/kill?
+  [/StructParents]   (opt except pdf contains "structural content items")
+                     -> copy (is this correct?)
 
-[/Annots]          annotations -- ignore for now
-[/Tabs]            tab order for annotations (/R row, /C column, /S structure order) -- see /Annots
+  [/Annots]          annotations -- ignore for now
+  [/Tabs]            tab order for annotations (/R row, /C column, /S structure order) -- see /Annots
 
-[/TemplateInstantiated]  (reqd, if page was created from named page obj, 1.5) -- ? just ignore?
-[/PresSteps]       -> remove (sub-page navigation for presentations) [no subpage navigation for printing / nup]
-[/VP]              viewport rects -- ignore/drop or recalculate into new page
+  [/TemplateInstantiated]  (reqd, if page was created from named page obj, 1.5) -- ? just ignore?
+  [/PresSteps]       -> remove (sub-page navigation for presentations) [no subpage navigation for printing / nup]
+  [/VP]              viewport rects -- ignore/drop or recalculate into new page
 
 */
 QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page)
@@ -88,7 +88,7 @@ QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page)
 
   dict.replaceKey("/Type",QPDFObjectHandle::newName("/XObject")); // optional
   dict.replaceKey("/Subtype",QPDFObjectHandle::newName("/Form")); // required
-//  dict.replaceKey("/FormType",QPDFObjectHandle::newInteger(1)); // optional
+  // dict.replaceKey("/FormType",QPDFObjectHandle::newInteger(1)); // optional
 
   QPDFObjectHandle box=getTrimBox(page); // already in "form space"
   dict.replaceKey("/BBox",box); // reqd
@@ -122,14 +122,14 @@ QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page)
     dict.replaceKey("/Group",page.getKey("/Group")); // (transparency); opt, copy if there
   }
 
-// ?? /StructParents   ... can basically copy from page, but would need fixup in Structure Tree
-// FIXME: remove (globally) Tagged spec (/MarkInfo), and Structure Tree
+  // ?? /StructParents   ... can basically copy from page, but would need fixup in Structure Tree
+  // FIXME: remove (globally) Tagged spec (/MarkInfo), and Structure Tree
 
   // Note: [/Name]  (reqd. only in 1.0 -- but there we even can't use our normal img/patter procedures)
 
-// none:
-//  QPDFObjectHandle filter=QPDFObjectHandle::newArray();
-//  QPDFObjectHandle decode_parms=QPDFObjectHandle::newArray();
+  // none:
+  //  QPDFObjectHandle filter=QPDFObjectHandle::newArray();
+  //  QPDFObjectHandle decode_parms=QPDFObjectHandle::newArray();
   // null leads to use of "default filters" from qpdf's settings
   QPDFObjectHandle filter=QPDFObjectHandle::newNull();
   QPDFObjectHandle decode_parms=QPDFObjectHandle::newNull();
@@ -144,29 +144,27 @@ QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page)
 
 /*
   we will have to fix up the structure tree (e.g. /K in element), when copying  /StructParents;
-    (there is /Pg, which has to point to the containing page, /Stm when it's not part of the page's content stream 
-     i.e. when it is in our XObject!; then there is /StmOwn ...)
+  (there is /Pg, which has to point to the containing page, /Stm when it's not part of the page's content stream 
+  i.e. when it is in our XObject!; then there is /StmOwn ...)
   when not copying, we have to remove the structure tree completely (also /MarkInfo dict)
   Still this might not be sufficient(?), as there are probably BDC and EMC operators in the stream.
 */
 
 /* /XObject /Form has
-[/Type /XObject]
-/Subtype /Form
-[/FormType 1]
-/BBox rect         from crop box, or recalculate
-[/Matrix .]   ...  default is [1 0 0 1 0 0] ---   we have to incorporate /UserUnit here?!
-[/Resources dict]  from page.
-[/Group dict]      used for transparency -- can copy from page
-[/Ref dict]        not needed; for external reference
-[/Metadata]        not, as long we can not combine.
-[/PieceInfo]       can copy, but not combine 
-[/LastModified date]    copy if /PieceInfo there
-[/StructParent]    . don't want to be one   ... have to read more spec
-[/StructParents]   . copy from page!
-[/OPI]             no opi version. don't set
-[/OC]              is this optional content? NO! not needed.
-[/Name]            (only reqd. in 1.0 -- but there we even can't use our normal img/patter procedures)
+   [/Type /XObject]
+   /Subtype /Form
+   [/FormType 1]
+   /BBox rect         from crop box, or recalculate
+   [/Matrix .]   ...  default is [1 0 0 1 0 0] ---   we have to incorporate /UserUnit here?!
+   [/Resources dict]  from page.
+   [/Group dict]      used for transparency -- can copy from page
+   [/Ref dict]        not needed; for external reference
+   [/Metadata]        not, as long we can not combine.
+   [/PieceInfo]       can copy, but not combine 
+   [/LastModified date]    copy if /PieceInfo there
+   [/StructParent]    . don't want to be one   ... have to read more spec
+   [/StructParents]   . copy from page!
+   [/OPI]             no opi version. don't set
+   [/OC]              is this optional content? NO! not needed.
+   [/Name]            (only reqd. in 1.0 -- but there we even can't use our normal img/patter procedures)
 */
-
-
