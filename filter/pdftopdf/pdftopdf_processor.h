@@ -35,7 +35,10 @@ ProcessingParameters()
     autoRotate(false),
 
     emitJCL(true),deviceCopies(1),deviceReverse(false),
-    deviceCollate(false),setDuplex(false)
+    deviceCollate(false),setDuplex(false),
+
+    page_logging(-1)
+
   {
     page.width=612.0; // letter
     page.height=792.0;
@@ -84,6 +87,9 @@ ProcessingParameters()
   bool deviceCollate;
   bool setDuplex;
   // unsetMirror  (always)
+
+  int page_logging;
+  int copies_to_be_logged;
 
   // helper functions
   bool withPage(int outno) const; // 1 based

@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 
 CHANGES IN V1.9.0
 
+	- pdftopdf: Added functionality for logging pages in the
+	  /var/log/cups/page_log file. Logging can also be forced or
+	  surpressed via command line (page-logging=on/off/auto) and
+	  page logging is also done for filters which should do but
+	  actually do not do: foomatic-rip, gstopxl, hpps (CUPS issue #4798,
+	  Ubuntu bug #1585380).
 	- pdftopdf: Whitespace and indentation clean-up.
 	- README: Removed the documentation of the old Poppler-based pdftopdf
 	  filter which is not included any more.

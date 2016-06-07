@@ -585,6 +585,152 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
   // TODO?!  choose default by whether pdfautoratate filter has already been run (e.g. by mimetype)
   param.autoRotate=(!is_false(cupsGetOption("pdfAutoRotate",num_options,options)) &&
 		    !is_false(cupsGetOption("pdftopdfAutoRotate",num_options,options)));
+
+  // Do we have to do the page logging in page_log?
+
+  // CUPS standard is that the last filter (not the backend, usually the
+  // printer driver) does page logging in the /var/log/cups/page_log file
+  // by outputting "PAGE: <# of current page> <# of copies>" to stderr.
+
+  // pdftopdf would have to do this only for PDF printers as in this case
+  // pdftopdf is the last filter, but some of the other filters are not
+  // able to do the logging because they do not have access to the number
+  // of pages of the file to be printed, so pdftopdf overtakes their logging
+  // duty.
+
+  // The filters currently are:
+  // - foomatic-rip (lets Ghostscript convert PDF to printer's format via
+  //   built-in drivers, no access to the PDF content)
+  // - gstopxl (simple script filter)
+  // - hpps (bug)
+
+  // Check whether page logging is forced or suppressed by the command line
+  if ((val=cupsGetOption("page-logging",num_options,options)) != NULL) {
+    if (strcasecmp(val,"auto") == 0) {
+      param.page_logging = -1;
+      fprintf(stderr,
+	      "DEBUG: pdftopdf: Automatic page logging selected by command line.\n");
+    } else if (is_true(val)) {
+      param.page_logging = 1;
+      fprintf(stderr,
+	      "DEBUG: pdftopdf: Forced page logging selected by command line.\n");
+    } else if (is_false(val)) {
+      param.page_logging = 0;
+      fprintf(stderr,
+	      "DEBUG: pdftopdf: Suppressed page logging selected by command line.\n");
+    } else {
+      error("Unsupported page-logging value %s, using page-logging=auto!",val);
+      param.page_logging = -1;
+    }
+  }
+
+  if (param.page_logging == -1) {
+    // Determine the last filter in the chain via cupsFilter(2) lines of the
+    // PPD file and FINAL_CONTENT_TYPE
+    if (!ppd) {
+      // If there is no PPD do not log when not requested by command line
+      param.page_logging = 0;
+      fprintf(stderr,
+	      "DEBUG: pdftopdf: No PPD file specified, could not determine whether to log pages or not, so turned off page logging.\n");
+    } else {
+      char *final_content_type = getenv("FINAL_CONTENT_TYPE");
+      char *lastfilter = NULL;
+      if (final_content_type == NULL) {
+	// No FINAL_CONTENT_TYPE env variable set, we cannot determine
+	// whether we have to log pages, so do not log.
+	param.page_logging = 0;
+	fprintf(stderr,
+		"DEBUG: pdftopdf: No FINAL_CONTENT_TYPE environment variable, could not determine whether to log pages or not, so turned off page logging.\n");
+      // Proceed depending on number of cupsFilter(2) lines in PPD
+      } else if (ppd->num_filters == 0) {
+	// No filter line, manufacturer-supplied PostScript PPD
+	// In this case pstops, called by pdftops does the logging
+	param.page_logging = 0;
+      } else if (ppd->num_filters == 1) {
+	// One filter line, so this one filter is the last filter
+	lastfilter = ppd->filters[0];
+      } else {
+	// More than one filter line, determine the one which got
+	// actually used via FINAL_CONTENT_TYPE
+	ppd_attr_t *ppd_attr;
+	if ((ppd_attr = ppdFindAttr(ppd, "cupsFilter2", NULL)) != NULL) {
+	  // We have cupsFilter2 lines, use only these
+	  do {
+	    // Go to the second work, which is the destination MIME type
+	    char *p = ppd_attr->value;
+	    while (!isspace(*p)) p ++;
+	    while (isspace(*p)) p ++;
+	    // Compare with FINAL_CONTEN_TYPE
+	    if (!strncasecmp(final_content_type, p,
+			     strlen(final_content_type))) {
+	      lastfilter = ppd_attr->value;
+	      break;
+	    }
+	  } while ((ppd_attr = ppdFindNextAttr(ppd, "cupsFilter2", NULL))
+		   != NULL);
+	} else {
+	  // We do not have cupsFilter2 lines, use the cupsFilter lines
+	  int i;
+	  for (i = 0; i < ppd->num_filters; i ++) {
+	    // Compare source MIME type (first word) with FINAL_CONTENT_TYPE
+	    if (!strncasecmp(final_content_type, ppd->filters[i],
+			     strlen(final_content_type))) {
+	      lastfilter = ppd->filters[i];
+	      break;
+	    }
+	  }
+	}
+      }
+      if (param.page_logging == -1) {
+	if (lastfilter) {
+	  // Get the name of the last filter, without mime type and cost
+	  char *p = lastfilter;
+	  char *q = p + strlen(p) - 1;
+	  while(!isspace(*q) && *q != '/') q --;
+	  lastfilter = q + 1;
+	  // Check whether we have to log
+	  if (!strcasecmp(lastfilter, "-")) {
+	    // No filter defined in the PPD, if incoming data
+	    // (FINAL_CONTENT_TYPE) is PDF, pdftopdf is last filter
+	    // (PDF printer) and has to log
+	    if (strcasestr(final_content_type, "/pdf") ||
+		strcasestr(final_content_type, "/vnd.cups-pdf"))
+	      param.page_logging = 1;
+	    else
+	      param.page_logging = 0;
+	  } else if (!strcasecmp(lastfilter, "pdftopdf")) {
+	    // pdftopdf is last filter (PDF printer)
+	    param.page_logging = 1;
+	  } else if (!strcasecmp(lastfilter, "gstopxl")) {
+	    // gstopxl is last filter, this is a simple script without
+	    // access to the pages of the file to be printed, so we log the
+	    // pages
+	    param.page_logging = 1;
+	  } else if (!strcasecmp(lastfilter, "foomatic-rip")) {
+	    // foomatic-rip is last filter, foomatic-rip is mainly used as
+	    // Ghostscript wrapper to use Ghostscript's built-in printer
+	    // drivers. Here there is also no access to the pages so that we
+	    // delegate the logging to pdftopdf
+	    param.page_logging = 1;
+	  } else if (!strcasecmp(lastfilter, "hpps")) {
+	    // hpps is last filter, hpps is part of HPLIP and it is a bug that
+	    // it does not do the page logging.
+	    param.page_logging = 1;
+	  } else {
+	    // All the other filters log pages as expected.
+	    param.page_logging = 0;
+	  }
+	} else {
+	  error("pdftopdf: Last filter could not get determined, page logging turned off.");
+	  param.page_logging = 0;
+	}
+      }
+      fprintf(stderr,
+	      "DEBUG: pdftopdf: Last filter determined by the PPD: %s; FINAL_CONTENT_TYPE: %s => pdftopdf will %slog pages in page_log.\n",
+	      (lastfilter ? lastfilter : "None"), final_content_type,
+	      (param.page_logging == 0 ? "not " : ""));
+    }
+  }
 }
 // }}}
 
@@ -741,6 +887,7 @@ int main(int argc,char **argv)
     param.user=argv[2];
     param.title=argv[3];
     param.numCopies=atoi(argv[4]);
+    param.copies_to_be_logged=atoi(argv[4]);
 
     // TODO?! sanity checks
 

@@ -192,6 +192,10 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
         continue;
       }
 
+      // Log page in /var/log/cups/page_log
+      if (param.page_logging == 1)
+	fprintf(stderr, "PAGE: %d %d\n", iA + 1, param.copies_to_be_logged);
+
       if (shuffle[iA]>=numOrigPages) {
         // add empty page as filler
         proc.add_page(proc.new_page(param.page.width,param.page.height),param.reverse);
@@ -291,6 +295,10 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
 	    // TODO? update rect? --- not needed any more
           }
           proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
+	  // Log page in /var/log/cups/page_log
+	  if (param.page_logging == 1)
+	    fprintf(stderr, "PAGE: %d %d\n", outputno,
+		    param.copies_to_be_logged);
         }
         curpage=proc.new_page(param.page.width,param.page.height);
         outputno++;
@@ -330,12 +338,18 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
         curpage->mirror();
       }
       proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
+      // Log page in /var/log/cups/page_log
+      if (param.page_logging == 1)
+	fprintf(stderr, "PAGE: %d %d\n", outputno, param.copies_to_be_logged);
     }
   }
 
   if ((param.evenDuplex || !param.oddPages) && (outputno & 1)) {
     // need to output empty page to not confuse duplex
     proc.add_page(proc.new_page(param.page.width,param.page.height),param.reverse);
+    // Log page in /var/log/cups/page_log
+    if (param.page_logging == 1)
+      fprintf(stderr, "PAGE: %d %d\n", outputno + 1, param.copies_to_be_logged);
   }
 
   proc.multiply(param.numCopies,param.collate);
