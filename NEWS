@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 
 CHANGES IN V1.9.0
 
+	- sys5ippprinter: Added page logging (to /var/log/cups/page_log)
+	  functionality.
 	- pdftopdf: Added functionality for logging pages in the
 	  /var/log/cups/page_log file. Logging can also be forced or
 	  surpressed via command line (page-logging=on/off/auto) and
