@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.8.3 - 2016-03-23
 
 CHANGES IN V1.9.0
 
+	- foomatic-rip: Removed page logging via insertion of PostScript code.
+	  This works only with Ghostscript and PostScript input and even
+	  then it can break things or simply not work. We do the page logging
+	  for foomatic-rip in pdftopdf now, which is more universal and more
+	  reliable.
 	- sys5ippprinter: Added page logging (to /var/log/cups/page_log)
 	  functionality.
 	- pdftopdf: Added functionality for logging pages in the

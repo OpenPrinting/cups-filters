@@ -128,8 +128,6 @@ extern char jclprefix[256];
 extern char cmd[4096];
 extern char cmd_pdf[4096];
 
-extern int ps_accounting;
-
 
 int option_is_composite(option_t *opt);
 int option_is_ps_command(option_t *opt);

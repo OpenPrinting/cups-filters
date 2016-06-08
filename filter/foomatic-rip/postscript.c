@@ -491,24 +491,8 @@ void _print_ps(stream_t *stream)
                         /* End of Setup */
                         _log("Found: %%%%EndSetup\n");
                         insetup = 0;
-                        if (inheader) {
-                            if (spooler == SPOOLER_CUPS) {
-                                /* In case of CUPS, we must insert the
-                                accounting stuff just before the
-                                %%EndSetup comment in order to leave any
-                                EndPage procedures that have been
-                                defined by either the pstops filter or
-                                the PostScript job itself fully
-                                functional. */
-                                if (!setupfound) {
-                                    dstrclear(tmp);
-                                    append_setup_section(tmp, optset, 0);
-                                    dstrprepend(line, tmp->data);
-                                    setupfound = 1;
-                                }
-                            }
+                        if (inheader)
                             insertoptions = linect +1;
-                        }
                         else {
                             /* The "%%BeginSetup...%%EndSetup" which
                             OpenOffice.org has inserted after the first

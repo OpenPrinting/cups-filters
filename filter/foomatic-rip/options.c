@@ -45,7 +45,6 @@ char cmd [4096];
 char cmd_pdf [4096];
 dstr_t *postpipe = NULL;  /* command into which the output of this
                              filter should be piped */
-int ps_accounting = 1;
 char cupsfilter [256];
 int jobentitymaxlen = 0;
 int userentitymaxlen = 0;
@@ -1652,15 +1651,6 @@ void read_ppd_file(const char *filename)
         else if (strcmp(key, "FoomaticRIPCommandLinePDF") == 0) {
             unhtmlify(cmd_pdf, 4096, value->data);
         }
-        else if (strcmp(key, "FoomaticRIPNoPageAccounting") == 0) {
-            /* Boolean value */
-            if (strcasecmp(value->data, "true") == 0) {
-                /* Driver is not compatible with page accounting according to the
-                   Foomatic database, so turn it off for this driver */
-                ps_accounting = 0;
-                _log("CUPS page accounting disabled by driver.\n");
-            }
-        }
         else if (!strcmp(key, "cupsFilter")) {
             /* cupsFilter: <code> */
             /* only save the filter for "application/vnd.cups-raster" */
@@ -2103,12 +2093,6 @@ void append_setup_section(dstr_t *str, int optset, int comments)
     if (comments) {
         _log("\"Setup\" section is missing, inserting it.\n");
         dstrcat(str, "%%BeginSetup\n");
-    }
-
-    /* PostScript code to generate accounting messages for CUPS */
-    if (spooler == SPOOLER_CUPS && ps_accounting == 1) {
-        _log("Inserting PostScript code for CUPS' page accounting\n");
-        dstrcat(str, accounting_prolog);
     }
 
     /* Generate the option code (not necessary when CUPS is spooler and

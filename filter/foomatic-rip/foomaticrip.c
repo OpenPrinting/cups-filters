@@ -132,7 +132,6 @@ FILE * open_postpipe()
 
 
 char printer_model[256] = "";
-const char *accounting_prolog = NULL;
 char attrpath[256] = "";
 
 

@@ -38,122 +38,6 @@ const char *spooler_name(int spooler)
     return "<unknown>";
 }
 
-/*  This piece of PostScript code (initial idea 2001 by Michael
-    Allerhand (michael.allerhand at ed dot ac dot uk, vastly
-    improved by Till Kamppeter in 2002) lets Ghostscript output
-    the page accounting information which CUPS needs on standard
-    error.
-    Redesign by Helge Blischke (2004-11-17):
-    - As the PostScript job itself may define BeginPage and/or EndPage
-    procedures, or the alternate pstops filter may have inserted
-    such procedures, we make sure that the accounting routine
-    will safely coexist with those. To achieve this, we force
-    - the accountint stuff to be inserted at the very end of the
-        PostScript job's setup section,
-    - the accounting stuff just using the return value of the
-        existing EndPage procedure, if any (and providing a default one
-        if not).
-    - As PostScript jobs may contain calls to setpagedevice "between"
-    pages, e.g. to change media type, do in-job stapling, etc.,
-    we cannot rely on the "showpage count since last pagedevice
-    activation" but instead count the physical pages by ourselves
-    (in a global dictionary).
-*/
-const char *accounting_prolog_code =
-    "[{\n"
-    "%% Code for writing CUPS accounting tags on standard error\n"
-    "\n"
-    "/cupsPSLevel2 % Determine whether we can do PostScript level 2 or newer\n"
-    "    systemdict/languagelevel 2 copy\n"
-    "    known{get exec}{pop pop 1}ifelse 2 ge\n"
-    "def\n"
-    "\n"
-    "cupsPSLevel2\n"
-    "{                    % in case of level 2 or higher\n"
-    "    currentglobal true setglobal    % define a dictioary foomaticDict\n"
-    "    globaldict begin        % in global VM and establish a\n"
-    "    /foomaticDict            % pages count key there\n"
-    "    <<\n"
-    "        /PhysPages 0\n"
-    "    >>def\n"
-    "    end\n"
-    "    setglobal\n"
-    "}if\n"
-    "\n"
-    "/cupsGetNumCopies { % Read the number of Copies requested for the current\n"
-    "            % page\n"
-    "    cupsPSLevel2\n"
-    "    {\n"
-    "    % PS Level 2+: Get number of copies from Page Device dictionary\n"
-    "    currentpagedevice /NumCopies get\n"
-    "    }\n"
-    "    {\n"
-    "    % PS Level 1: Number of copies not in Page Device dictionary\n"
-    "    null\n"
-    "    }\n"
-    "    ifelse\n"
-    "    % Check whether the number is defined, if it is \"null\" use #copies \n"
-    "    % instead\n"
-    "    dup null eq {\n"
-    "    pop #copies\n"
-    "    }\n"
-    "    if\n"
-    "    % Check whether the number is defined now, if it is still \"null\" use 1\n"
-    "    % instead\n"
-    "    dup null eq {\n"
-    "    pop 1\n"
-    "    } if\n"
-    "} bind def\n"
-    "\n"
-    "/cupsWrite { % write a string onto standard error\n"
-    "    (%stderr) (w) file\n"
-    "    exch writestring\n"
-    "} bind def\n"
-    "\n"
-    "/cupsFlush    % flush standard error to make it sort of unbuffered\n"
-    "{\n"
-    "    (%stderr)(w)file flushfile\n"
-    "}bind def\n"
-    "\n"
-    "cupsPSLevel2\n"
-    "{                % In language level 2, we try to do something reasonable\n"
-    "  <<\n"
-    "    /EndPage\n"
-    "    [                    % start the array that becomes the procedure\n"
-    "      currentpagedevice/EndPage 2 copy known\n"
-    "      {get}                    % get the existing EndPage procedure\n"
-    "      {pop pop {exch pop 2 ne}bind}ifelse    % there is none, define the default\n"
-    "      /exec load                % make sure it will be executed, whatever it is\n"
-    "      /dup load                    % duplicate the result value\n"
-    "      {                    % true: a sheet gets printed, do accounting\n"
-    "        currentglobal true setglobal        % switch to global VM ...\n"
-    "        foomaticDict begin            % ... and access our special dictionary\n"
-    "        PhysPages 1 add            % count the sheets printed (including this one)\n"
-    "        dup /PhysPages exch def        % and save the value\n"
-    "        end                    % leave our dict\n"
-    "        exch setglobal                % return to previous VM\n"
-    "        (PAGE: )cupsWrite             % assemble and print the accounting string ...\n"
-    "        16 string cvs cupsWrite            % ... the sheet count ...\n"
-    "        ( )cupsWrite                % ... a space ...\n"
-    "        cupsGetNumCopies             % ... the number of copies ...\n"
-    "        16 string cvs cupsWrite            % ...\n"
-    "        (\\n)cupsWrite                % ... a newline\n"
-    "        cupsFlush\n"
-    "      }/if load\n"
-    "                    % false: current page gets discarded; do nothing    \n"
-    "    ]cvx bind                % make the array executable and apply bind\n"
-    "  >>setpagedevice\n"
-    "}\n"
-    "{\n"
-    "    % In language level 1, we do no accounting currently, as there is no global VM\n"
-    "    % the contents of which are undesturbed by save and restore. \n"
-    "    % If we may be sure that showpage never gets called inside a page related save / restore pair\n"
-    "    % we might implement an hack with showpage similar to the one above.\n"
-    "}ifelse\n"
-    "\n"
-    "} stopped cleartomark\n";
-
-
 void init_cups(list_t *arglist, dstr_t *filelist, jobparams_t *job)
 {
     char path [PATH_MAX] = "";
@@ -203,8 +87,6 @@ void init_cups(list_t *arglist, dstr_t *filelist, jobparams_t *job)
             _log("Getting input from file %s\n", cups_filename);
         }
     }
-
-    accounting_prolog = accounting_prolog_code;
 
     /* On which queue are we printing?
        CUPS gives the PPD file the same name as the printer queue,

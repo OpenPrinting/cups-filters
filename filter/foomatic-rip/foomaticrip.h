@@ -107,7 +107,6 @@ extern struct dstr *currentcmd;
 extern struct dstr *jclappend;
 extern char **jclprepend;
 extern int jobhasjcl;
-extern const char *accounting_prolog;
 extern char cupsfilterpath[PATH_MAX];
 extern int debug;
 extern int do_docs;
