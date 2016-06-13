@@ -159,14 +159,6 @@ therefore get ignored):
 supplying the \fB--debug\fR command line option. Default setting is \fB0\fR.
 
 .TP 10
-.B ps_accounting: 0|1
-\fRTurns on (\fB1\fR) or off (\fB0\fR) inserting PostScript code for page
-accounting into PostScript jobs. The inserted PostScript code makes
-Ghostscript generating accounting output on stderr and CUPS can this way
-log each page which got printed. The code will only be inserted if CUPS
-is the spooler. Default setting is \fB1\fR.
-
-.TP 10
 .BI echo: \ [<path>/]<executable>
 \fRSets the path to an \fBecho(1)\fR executable which supports \fB-n\fR.
 
