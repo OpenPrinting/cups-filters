@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.9.0 - 2016-06-09
 ----------------------------------------------------
 
+CHANGES IN V1.9.1
+
+	- pdftops: Also added Dell to the list of manufacturers whose
+	  printers need Poppler's PostScript to work around their
+	  PostScript interpreter bugs (Debian bug #827040).
+
 CHANGES IN V1.9.0
 
 	- foomatic-rip: Removed page logging via insertion of PostScript code.

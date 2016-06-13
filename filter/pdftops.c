@@ -419,7 +419,7 @@ main(int  argc,				/* I - Number of command-line args */
  /*
   * Select the PDF renderer: Ghostscript (gs), Poppler (pdftops),
   * Adobe Reader (arcoread), Poppler with Cairo (pdftocairo), or
-  * Hybrid (hybrid, Poppler for Brother, Minolta, Konica Minolta, and
+  * Hybrid (hybrid, Poppler for Brother, Minolta, Konica Minolta, Dell, and
   * old HP LaserJets and Ghostscript otherwise)
   */
 
@@ -444,13 +444,14 @@ main(int  argc,				/* I - Number of command-line args */
   {
     if (make_model[0] &&
 	(!strncasecmp(make_model, "Brother", 7) ||
+	 !strncasecmp(make_model, "Dell", 4) ||
 	 strcasestr(make_model, "Minolta") ||
 	 (!strncasecmp(make_model, "Apple", 5) &&
 	  (ptr = strcasestr(make_model, "LaserWriter")) &&
 	  (ptr = strcasestr(ptr + 11, "12")) &&
 	  (ptr = strcasestr(ptr + 2, "640")))))
     {
-      fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for Brother, Minolta, Konica Minolta, and Apple LaserWriter 12/640 to work around bugs in the printer's PS interpreters\n");
+      fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for Brother, Minolta, Konica Minolta, Dell, and Apple LaserWriter 12/640 to work around bugs in the printer's PS interpreters\n");
       renderer = PDFTOPS;
     }
     else
