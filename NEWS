@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.9.0 - 2016-06-09
 
 CHANGES IN V1.9.1
 
+	- cups-browsed: From cups-browsed.service removed the unneeded
+	  "Wants=cups.service" as we have "Requires=cups.service"
+	  (Debian bug #827455, #827457).
 	- foomatic-rip: Updated man page for removed page logging
 	  facility.
 	- pdftops: Also added Dell to the list of manufacturers whose
