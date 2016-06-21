@@ -824,6 +824,11 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       if (ptr)
 	bitspercolor = strtol(ptr, (char **)&ptr, 10);
       bitsperpixel = bitspercolor * numcolors;
+      /* In 1-bit-per-color RGB modes we add a forth bit to each pixel
+	 to align the pixels with bytes */
+      if (bitsperpixel == 3 &&
+	  strcasestr(val, "Rgb"))
+	bitsperpixel = 4;
       h->cupsBitsPerColor = bitspercolor;
       h->cupsBitsPerPixel = bitsperpixel;
       h->cupsColorSpace = colorspace;
