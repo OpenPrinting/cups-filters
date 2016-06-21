@@ -499,6 +499,8 @@ debug_printf(const char *format, ...) {
       vfprintf(stderr, format, arglist);
       fflush(stderr);
     }
+    va_end(arglist);
+    va_start(arglist, format);
     if (debug_logfile) {
       fprintf(lfp, "%s ", buf);
       vfprintf(lfp, format, arglist);

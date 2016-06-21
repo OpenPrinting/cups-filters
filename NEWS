@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.9.0 - 2016-06-09
 
 CHANGES IN V1.9.1
 
+	- cups-browsed: Fixed crash when trying to get debugg logging
+	  both to the terminal and into a file.
 	- libcupsfilters: Fixed crash of pdftoraster when the color
 	  space is an RGB space (3 colors) with 1 bit color
 	  depth. Here we need to add one bit to the pixels (to get 4
