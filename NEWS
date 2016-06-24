@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.9.0 - 2016-06-09
 
 CHANGES IN V1.9.1
 
+	- pstopdf: Make the filter only get installed if Ghostscript is
+	  present and also moved its conversion rules into the
+	  cupsfilters-ghostscript.convs file.
 	- cups-browsed: Fixed crash when trying to get debugg logging
 	  both to the terminal and into a file.
 	- libcupsfilters: Fixed crash of pdftoraster when the color

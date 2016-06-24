@@ -474,12 +474,12 @@ pdftopdf_LDADD = \
 # ======================
 pkgfilter_SCRIPTS = \
 	filter/imagetops \
-	filter/pstopdf \
 	filter/textonly \
 	filter/texttops
 if ENABLE_GHOSTSCRIPT
 pkgfilter_SCRIPTS += \
-	filter/gstopxl
+	filter/gstopxl \
+	filter/pstopdf
 endif
 if ENABLE_BRAILLE
 nodist_pkgfilter_SCRIPTS = \

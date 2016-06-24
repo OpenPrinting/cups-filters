@@ -34,13 +34,13 @@
 
 # CUPS file conversion rules for PostScript input when we are working with
 # the PDF printing workflow. General PostScript input should be converted to
-# PDF, so that pdftopdf is doing the page management on PDF data and the
+# PDF (see cupsfilters-ghostscript.convs as this is done by Ghostscript), so
+# that pdftopdf is doing the page management on PDF data and the
 # renderer/driver part renders PDF. An exception is made for PostScript
 # coming from the Adobe Reader. As this PostScript cannot be converted to PDF
 # if it comes from an encrypted PDF file, we simply override pstopdf and the
 # PDF workflow.
 
-application/postscript	application/pdf				0	pstopdf
 application/vnd.adobe-reader-postscript	application/vnd.cups-postscript	66	pstops
 
 application/pdf		application/vnd.cups-pdf		66	pdftopdf

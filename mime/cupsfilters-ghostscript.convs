@@ -15,5 +15,6 @@
 # Ghostscript-based filters...
 #
 
+application/postscript		application/pdf			0	pstopdf
 application/vnd.cups-pdf	application/vnd.cups-raster	99	gstoraster
 application/vnd.cups-postscript	application/vnd.cups-raster	175	gstoraster
