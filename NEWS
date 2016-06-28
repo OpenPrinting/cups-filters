@@ -3,6 +3,15 @@ NEWS - OpenPrinting CUPS Filters v1.9.0 - 2016-06-09
 
 CHANGES IN V1.10.0
 
+	- gstoraster, gstopxl, gstopdf, pstopdf: Integrated
+	  functionality of script-based filters pstopdf and gstopxl
+	  into gstoraster filter as script-based filters cannot access
+	  the print queue's PPD file with current CUPS due to change
+	  of PPD file permissions.  To make gstoraster always produce
+	  the correct output format (CUPS/PWG Raster, PDF, PCL-XL) it
+	  is called via new wrapper scripts (gstopdf, gstopxl) which
+	  set an environment variable telling the format. The old
+	  filter scripts got removed.
 	- imagetops, texttops: Do not use $0 in the wrapper scripts,
 	  when CUPS calls filters, it passes the queue name as $0, not
 	  path and name of the called filter.

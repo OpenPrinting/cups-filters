@@ -479,7 +479,7 @@ pkgfilter_SCRIPTS = \
 if ENABLE_GHOSTSCRIPT
 pkgfilter_SCRIPTS += \
 	filter/gstopxl \
-	filter/pstopdf
+	filter/gstopdf
 endif
 if ENABLE_BRAILLE
 nodist_pkgfilter_SCRIPTS = \

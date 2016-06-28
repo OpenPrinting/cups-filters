@@ -123,13 +123,13 @@
 *OrderDependency: 10 AnySetup *InputSlot
 *DefaultInputSlot: Default
 *InputSlot Default/Default: "<</MediaPosition 0>>setpagedevice"
-*InputSlot Auto/Automatically Select: "<</MediaPosition 1>>setpagedevice"
-*InputSlot MultiPurpose/Tray 1: "<</MediaPosition 3>>setpagedevice"
-*InputSlot Upper/Tray 2: "<</MediaPosition 4>>setpagedevice"
-*InputSlot Lower/Tray 3: "<</MediaPosition 5>>setpagedevice"
-*InputSlot LargeCapacity/Tray 4: "<</MediaPosition 7>>setpagedevice"
-*InputSlot Manual/Manual Feed: "<</MediaPosition 2>>setpagedevice"
-*InputSlot Envelope/Envelope Feed: "<</MediaPosition 6>>setpagedevice"
+*InputSlot Auto/Automatically Select: "<</MediaPosition 0>>setpagedevice"
+*InputSlot MultiPurpose/Tray 1: "<</MediaPosition 19>>setpagedevice"
+*InputSlot Upper/Tray 2: "<</MediaPosition 1>>setpagedevice"
+*InputSlot Lower/Tray 3: "<</MediaPosition 2>>setpagedevice"
+*InputSlot LargeCapacity/Tray 4: "<</MediaPosition 3>>setpagedevice"
+*InputSlot Manual/Manual Feed: "<</MediaPosition 4>>setpagedevice"
+*InputSlot Envelope/Envelope Feed: "<</MediaPosition 5>>setpagedevice"
 *CloseUI: *InputSlot
 
 *OpenUI *Resolution/Output Resolution: PickOne

@@ -548,6 +548,7 @@ AS_IF([test "x$enable_ghostscript" != "xyes"], [
 	])
 ])
 AM_CONDITIONAL(ENABLE_GHOSTSCRIPT, test "x$enable_ghostscript" = xyes)
+AC_SUBST(CUPS_GHOSTSCRIPT)
 
 AS_IF([test "x$with_pdftops_path" != "xsystem"], [
 	CUPS_PDFTOPS="$with_pdftops_path"
@@ -675,21 +676,6 @@ AS_IF([test x"$GCC" = "xyes"], [
 CFLAGS="$CFLAGS -D_GNU_SOURCE"
 CXXFLAGS="$CXXFLAGS -D_GNU_SOURCE"
 
-# =======
-# gstopxl
-# =======
-AC_PROG_SED
-dnl See if it is GNU sed or else.
-dnl - need more work to tell SED features.
-SED_EXTENDED_REGEX_OPT=-nre
-sed_variant=`sed --version 2>&1`
-sed_variant=`echo $sed_variant|sed -e 's/ .*//'`
-if test "$sed_variant" != GNU ; then
-SED_EXTENDED_REGEX_OPT=-nEe
-fi
-AC_SUBST(SED_EXTENDED_REGEX_OPT)
-AC_SUBST(CUPS_GHOSTSCRIPT)
-
 # ==========================
 # Braille embossing/liblouis
 # ==========================
@@ -727,7 +713,6 @@ AC_CONFIG_FILES([
 	libcupsfilters.pc
 	libfontembed.pc
 	Makefile
-	filter/gstopxl
 	utils/cups-browsed
 	utils/cups-browsed.conf
 	filter/foomatic-rip/foomatic-rip.1

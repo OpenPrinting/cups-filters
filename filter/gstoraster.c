@@ -63,6 +63,12 @@ typedef enum {
   GS_DOC_TYPE_UNKNOWN
 } GsDocType;
 
+typedef enum {
+  OUTPUT_FORMAT_RASTER,
+  OUTPUT_FORMAT_PDF,
+  OUTPUT_FORMAT_PXL
+} OutFormatType;
+
 #ifdef CUPS_RASTER_SYNCv1
 typedef cups_page_header2_t gs_page_header;
 #else
@@ -133,48 +139,57 @@ parse_pdf_header_options(FILE *fp, gs_page_header *h)
 }
 
 static void
-add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args)
+add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
+		       OutFormatType outformat, int pxlcolor)
 {
   int i;
   char tmpstr[1024];
 
   /* Simple boolean, enumerated choice, numerical, and string parameters */
-  if (h->MediaClass[0] |= '\0') {
-    snprintf(tmpstr, sizeof(tmpstr), "-sMediaClass=%s", h->MediaClass);
-    cupsArrayAdd(gs_args, strdup(tmpstr));
+  if (outformat == OUTPUT_FORMAT_RASTER) {
+    if (h->MediaClass[0] |= '\0') {
+      snprintf(tmpstr, sizeof(tmpstr), "-sMediaClass=%s", h->MediaClass);
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->MediaColor[0] |= '\0') {
+      snprintf(tmpstr, sizeof(tmpstr), "-sMediaColor=%s", h->MediaColor);
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->MediaType[0] |= '\0') {
+      snprintf(tmpstr, sizeof(tmpstr), "-sMediaType=%s", h->MediaType);
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->OutputType[0] |= '\0') {
+      snprintf(tmpstr, sizeof(tmpstr), "-sOutputType=%s", h->OutputType);
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->AdvanceDistance) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dAdvanceDistance=%d",
+	       (unsigned)(h->AdvanceDistance));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->AdvanceMedia) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dAdvanceMedia=%d",
+	       (unsigned)(h->AdvanceMedia));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->Collate) {
+      cupsArrayAdd(gs_args, strdup("-dCollate"));
+    }
+    if (h->CutMedia) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dCutMedia=%d",
+	       (unsigned)(h->CutMedia));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
   }
-  if (h->MediaColor[0] |= '\0') {
-    snprintf(tmpstr, sizeof(tmpstr), "-sMediaColor=%s", h->MediaColor);
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->MediaType[0] |= '\0') {
-    snprintf(tmpstr, sizeof(tmpstr), "-sMediaType=%s", h->MediaType);
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->OutputType[0] |= '\0') {
-    snprintf(tmpstr, sizeof(tmpstr), "-sOutputType=%s", h->OutputType);
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->AdvanceDistance) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dAdvanceDistance=%d",
-	     (unsigned)(h->AdvanceDistance));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->AdvanceMedia) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dAdvanceMedia=%d",
-	     (unsigned)(h->AdvanceMedia));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->Collate) {
-    cupsArrayAdd(gs_args, strdup("-dCollate"));
-  }
-  if (h->CutMedia) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dCutMedia=%d",
-	     (unsigned)(h->CutMedia));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->Duplex) {
-    cupsArrayAdd(gs_args, strdup("-dDuplex"));
+  if (outformat == OUTPUT_FORMAT_RASTER ||
+      outformat == OUTPUT_FORMAT_PXL) {
+    /* PDF output is only for turning PostScript input data into PDF
+       not for sending PDF to a PDF printer (this is done by pdftopdf)
+       therefore we do not apply duplex/tumble here. */
+    if (h->Duplex) {
+      cupsArrayAdd(gs_args, strdup("-dDuplex"));
+    }
   }
   if ((h->HWResolution[0] != 100) || (h->HWResolution[1] != 100))
     snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",
@@ -182,50 +197,90 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args)
   else
     snprintf(tmpstr, sizeof(tmpstr), "-r100x100");
   cupsArrayAdd(gs_args, strdup(tmpstr));
-  if (h->InsertSheet) {
-    cupsArrayAdd(gs_args, strdup("-dInsertSheet"));
+  if (outformat == OUTPUT_FORMAT_RASTER) {
+    if (h->InsertSheet) {
+      cupsArrayAdd(gs_args, strdup("-dInsertSheet"));
+    }
+    if (h->Jog) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dJog=%d",
+	       (unsigned)(h->Jog));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->LeadingEdge) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dLeadingEdge=%d",
+	       (unsigned)(h->LeadingEdge));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->ManualFeed) {
+      cupsArrayAdd(gs_args, strdup("-dManualFeed"));
+    }
   }
-  if (h->Jog) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dJog=%d",
-	     (unsigned)(h->Jog));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
+  if (outformat == OUTPUT_FORMAT_RASTER ||
+      outformat == OUTPUT_FORMAT_PXL) {
+    if (h->MediaPosition) {
+      int mediapos;
+      if (outformat == OUTPUT_FORMAT_PXL) {
+	/* Convert PWG MediaPosition values to PXL-ones */
+	if (h->MediaPosition == 1) /* Main */
+	  mediapos = 4;
+	else if (h->MediaPosition == 2) /* Alternate */
+	  mediapos = 5;
+	else if (h->MediaPosition == 3) /* Large Capacity */
+	  mediapos = 7;
+	else if (h->MediaPosition == 4) /* Manual */
+	  mediapos = 2;
+	else if (h->MediaPosition == 5) /* Envelope */
+	  mediapos = 6;
+	else if (h->MediaPosition == 11) /* Top */
+	  mediapos = 4;
+	else if (h->MediaPosition == 12) /* Middle */
+	  mediapos = 5;
+	else if (h->MediaPosition == 13) /* Bottom */
+	  mediapos = 7;
+	else if (h->MediaPosition == 19) /* Bypass */
+	  mediapos = 3;
+	else if (h->MediaPosition == 20) /* Tray 1 */
+	  mediapos = 3;
+	else if (h->MediaPosition == 21) /* Tray 2 */
+	  mediapos = 4;
+	else if (h->MediaPosition == 22) /* Tray 3 */
+	  mediapos = 5;
+	else if (h->MediaPosition == 23) /* Tray 4 */
+	  mediapos = 7;
+	else
+	  mediapos = 0;
+      } else
+	mediapos = h->MediaPosition;
+      snprintf(tmpstr, sizeof(tmpstr), "-dMediaPosition=%d",
+	       (unsigned)(mediapos));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
   }
-  if (h->LeadingEdge) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dLeadingEdge=%d",
-	     (unsigned)(h->LeadingEdge));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->ManualFeed) {
-    cupsArrayAdd(gs_args, strdup("-dManualFeed"));
-  }
-  if (h->MediaPosition) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dMediaPosition=%d",
-	     (unsigned)(h->MediaPosition));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->MediaWeight) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dMediaWeight=%d",
-	     (unsigned)(h->MediaWeight));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->MirrorPrint) {
-    cupsArrayAdd(gs_args, strdup("-dMirrorPrint"));
-  }
-  if (h->NegativePrint) {
-    cupsArrayAdd(gs_args, strdup("-dNegativePrint"));
-  }
-  if (h->NumCopies != 1) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dNumCopies=%d",
-	     (unsigned)(h->NumCopies));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->Orientation) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dOrientation=%d",
-	     (unsigned)(h->Orientation));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->OutputFaceUp) {
-    cupsArrayAdd(gs_args, strdup("-dOutputFaceUp"));
+  if (outformat == OUTPUT_FORMAT_RASTER) {
+    if (h->MediaWeight) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dMediaWeight=%d",
+	       (unsigned)(h->MediaWeight));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->MirrorPrint) {
+      cupsArrayAdd(gs_args, strdup("-dMirrorPrint"));
+    }
+    if (h->NegativePrint) {
+      cupsArrayAdd(gs_args, strdup("-dNegativePrint"));
+    }
+    if (h->NumCopies != 1) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dNumCopies=%d",
+	       (unsigned)(h->NumCopies));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->Orientation) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dOrientation=%d",
+	       (unsigned)(h->Orientation));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->OutputFaceUp) {
+      cupsArrayAdd(gs_args, strdup("-dOutputFaceUp"));
+    }
   }
   if (h->PageSize[0] != 612)
     snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEWIDTHPOINTS=%d",
@@ -239,98 +294,131 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args)
   else
     snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEHEIGHTPOINTS=792");
   cupsArrayAdd(gs_args, strdup(tmpstr));
-  if (h->Separations) {
-    cupsArrayAdd(gs_args, strdup("-dSeparations"));
+  if (outformat == OUTPUT_FORMAT_RASTER) {
+    if (h->Separations) {
+      cupsArrayAdd(gs_args, strdup("-dSeparations"));
+    }
+    if (h->TraySwitch) {
+      cupsArrayAdd(gs_args, strdup("-dTraySwitch"));
+    }
   }
-  if (h->TraySwitch) {
-    cupsArrayAdd(gs_args, strdup("-dTraySwitch"));
+  if (outformat == OUTPUT_FORMAT_RASTER ||
+      outformat == OUTPUT_FORMAT_PXL) {
+    /* PDF output is only for turning PostScript input data into PDF
+       not for sending PDF to a PDF printer (this is done by pdftopdf)
+       therefore we do not apply duplex/tumble here. */
+    if (h->Tumble) {
+      cupsArrayAdd(gs_args, strdup("-dTumble"));
+    }
   }
-  if (h->Tumble) {
-    cupsArrayAdd(gs_args, strdup("-dTumble"));
-  }
-  if (h->cupsMediaType) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsMediaType=%d",
-	     (unsigned)(h->cupsMediaType));
+  if (outformat == OUTPUT_FORMAT_RASTER) {
+    if (h->cupsMediaType) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsMediaType=%d",
+	       (unsigned)(h->cupsMediaType));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->cupsBitsPerColor != 1)
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsBitsPerColor=%d",
+	       (unsigned)(h->cupsBitsPerColor));
+    else
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsBitsPerColor=1");
+    cupsArrayAdd(gs_args, strdup(tmpstr));
+    if (h->cupsColorOrder != CUPS_ORDER_CHUNKED)
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorOrder=%d",
+	       (unsigned)(h->cupsColorOrder));
+    else
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorOrder=%d",
+	       CUPS_ORDER_CHUNKED);
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
-  if (h->cupsBitsPerColor != 1)
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsBitsPerColor=%d",
-	     (unsigned)(h->cupsBitsPerColor));
-  else
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsBitsPerColor=1");
-  cupsArrayAdd(gs_args, strdup(tmpstr));
-  if (h->cupsColorOrder != CUPS_ORDER_CHUNKED)
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorOrder=%d",
-	     (unsigned)(h->cupsColorOrder));
-  else
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorOrder=%d",
-	     CUPS_ORDER_CHUNKED);
-  cupsArrayAdd(gs_args, strdup(tmpstr));
-  if (h->cupsColorSpace != CUPS_CSPACE_K)
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorSpace=%d",
-	     (unsigned)(h->cupsColorSpace));
-  else
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorSpace=%d",
-	     CUPS_CSPACE_K);
-  cupsArrayAdd(gs_args, strdup(tmpstr));
-  if (h->cupsCompression) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsCompression=%d",
-	     (unsigned)(h->cupsCompression));
+  if (outformat == OUTPUT_FORMAT_RASTER) {
+    if (h->cupsColorSpace != CUPS_CSPACE_K)
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorSpace=%d",
+	       (unsigned)(h->cupsColorSpace));
+    else
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorSpace=%d",
+	       CUPS_CSPACE_K);
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
-  if (h->cupsRowCount) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsRowCount=%d",
-	     (unsigned)(h->cupsRowCount));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
+  
+  if (outformat == OUTPUT_FORMAT_PXL) {
+    if (h->cupsColorSpace == CUPS_CSPACE_W ||
+	h->cupsColorSpace == CUPS_CSPACE_K ||
+	h->cupsColorSpace == CUPS_CSPACE_WHITE ||
+	h->cupsColorSpace == CUPS_CSPACE_GOLD ||
+	h->cupsColorSpace == CUPS_CSPACE_SILVER ||
+	h->cupsColorSpace == CUPS_CSPACE_SW ||
+	h->cupsColorSpace == CUPS_CSPACE_ICC1 ||
+	h->cupsColorSpace == CUPS_CSPACE_DEVICE1)
+      /* Monochrome color spaces -> use "pxlmono" device */
+      pxlcolor = 0;
+    if (pxlcolor == 1)
+      cupsArrayAdd(gs_args, strdup("-sDEVICE=pxlcolor"));
+    else
+      cupsArrayAdd(gs_args, strdup("-sDEVICE=pxlmono"));
   }
-  if (h->cupsRowFeed) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsRowFeed=%d",
-	     (unsigned)(h->cupsRowFeed));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->cupsRowStep) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsRowStep=%d",
-	     (unsigned)(h->cupsRowStep));
-    cupsArrayAdd(gs_args, strdup(tmpstr));
+  if (outformat == OUTPUT_FORMAT_RASTER) {
+    if (h->cupsCompression) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsCompression=%d",
+	       (unsigned)(h->cupsCompression));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->cupsRowCount) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsRowCount=%d",
+	       (unsigned)(h->cupsRowCount));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->cupsRowFeed) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsRowFeed=%d",
+	       (unsigned)(h->cupsRowFeed));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+    if (h->cupsRowStep) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsRowStep=%d",
+	       (unsigned)(h->cupsRowStep));
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
   }
 #ifdef CUPS_RASTER_SYNCv1
-  if (h->cupsBorderlessScalingFactor != 1.0f) {
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsBorderlessScalingFactor=%.4f",
-	     h->cupsBorderlessScalingFactor);
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  for (i=0; i <= 15; i ++)
-    if (h->cupsInteger[i]) {
-      snprintf(tmpstr, sizeof(tmpstr), "-dcupsInteger%d=%d",
-	       i, (unsigned)(h->cupsInteger[i]));
+  if (outformat == OUTPUT_FORMAT_RASTER) {
+    if (h->cupsBorderlessScalingFactor != 1.0f) {
+      snprintf(tmpstr, sizeof(tmpstr), "-dcupsBorderlessScalingFactor=%.4f",
+	       h->cupsBorderlessScalingFactor);
       cupsArrayAdd(gs_args, strdup(tmpstr));
     }
-  for (i=0; i <= 15; i ++)
-    if (h->cupsReal[i]) {
-      snprintf(tmpstr, sizeof(tmpstr), "-dcupsReal%d=%.4f",
-	       i, h->cupsReal[i]);
+    for (i=0; i <= 15; i ++)
+      if (h->cupsInteger[i]) {
+	snprintf(tmpstr, sizeof(tmpstr), "-dcupsInteger%d=%d",
+		 i, (unsigned)(h->cupsInteger[i]));
+	cupsArrayAdd(gs_args, strdup(tmpstr));
+      }
+    for (i=0; i <= 15; i ++)
+      if (h->cupsReal[i]) {
+	snprintf(tmpstr, sizeof(tmpstr), "-dcupsReal%d=%.4f",
+		 i, h->cupsReal[i]);
+	cupsArrayAdd(gs_args, strdup(tmpstr));
+      }
+    for (i=0; i <= 15; i ++)
+      if (h->cupsString[i][0] != '\0') {
+	snprintf(tmpstr, sizeof(tmpstr), "-scupsString%d=%s",
+		 i, h->cupsString[i]);
+	cupsArrayAdd(gs_args, strdup(tmpstr));
+      }
+    if (h->cupsMarkerType[0] != '\0') {
+      snprintf(tmpstr, sizeof(tmpstr), "-scupsMarkerType=%s",
+	       h->cupsMarkerType);
       cupsArrayAdd(gs_args, strdup(tmpstr));
     }
-  for (i=0; i <= 15; i ++)
-    if (h->cupsString[i][0] != '\0') {
-      snprintf(tmpstr, sizeof(tmpstr), "-scupsString%d=%s",
-	       i, h->cupsString[i]);
+    if (h->cupsRenderingIntent[0] != '\0') {
+      snprintf(tmpstr, sizeof(tmpstr), "-scupsRenderingIntent=%s",
+	       h->cupsRenderingIntent);
       cupsArrayAdd(gs_args, strdup(tmpstr));
     }
-  if (h->cupsMarkerType[0] != '\0') {
-    snprintf(tmpstr, sizeof(tmpstr), "-scupsMarkerType=%s",
-	     h->cupsMarkerType);
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->cupsRenderingIntent[0] != '\0') {
-    snprintf(tmpstr, sizeof(tmpstr), "-scupsRenderingIntent=%s",
-	     h->cupsRenderingIntent);
-    cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (h->cupsPageSizeName[0] != '\0') {
-    snprintf(tmpstr, sizeof(tmpstr), "-scupsPageSizeName=%s",
-	     h->cupsPageSizeName);
-    cupsArrayAdd(gs_args, strdup(tmpstr));
+    if (h->cupsPageSizeName[0] != '\0') {
+      snprintf(tmpstr, sizeof(tmpstr), "-scupsPageSizeName=%s",
+	       h->cupsPageSizeName);
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
   }
 #endif /* CUPS_RASTER_SYNCv1 */
 }
@@ -540,6 +628,8 @@ out:
 int
 main (int argc, char **argv, char *envp[])
 {
+  char *outformat_env = NULL;
+  OutFormatType outformat;
   char buf[BUFSIZ];
   char *icc_profile = NULL;
   /*char **qualifier = NULL;*/
@@ -559,8 +649,9 @@ main (int argc, char **argv, char *envp[])
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
   cm_calibration_t cm_calibrate;
+  int pxlcolor = 1;
 #ifdef HAVE_CUPS_1_7
-  int pwgraster;
+  int pwgraster = 0;
   ppd_attr_t *attr;
 #endif /* HAVE_CUPS_1_7 */
 
@@ -575,6 +666,26 @@ main (int argc, char **argv, char *envp[])
   sa.sa_handler = SIG_IGN;
   sigaction(SIGPIPE, &sa, NULL);
 
+  /* Determine the output format via an environment variable set by a wrapper
+     script */
+  outformat_env = getenv("OUTFORMAT");
+  if (outformat_env == NULL || strcasestr(outformat_env, "raster"))
+    outformat = OUTPUT_FORMAT_RASTER;
+  else if (strcasestr(outformat_env, "pdf"))
+    outformat = OUTPUT_FORMAT_PDF;
+  else if (strcasestr(outformat_env, "xl"))
+    outformat = OUTPUT_FORMAT_PXL;
+  else {
+    fprintf(stderr, "ERROR: OUTFORMAT=\"%s\", cannot determine output format\n",
+      outformat_env);
+    goto out;
+  }
+  fprintf(stderr, "DEBUG: OUTFORMAT=\"%s\", so output format will be %s\n",
+	  outformat_env,
+	  (outformat == OUTPUT_FORMAT_RASTER ? "CUPS/PWG Raster" :
+	   (outformat == OUTPUT_FORMAT_PDF ? "PDF" :
+	    "PCL XL")));
+  
   num_options = cupsParseOptions(argv[5], 0, &options);
 
   t = getenv("PPD");
@@ -649,7 +760,7 @@ main (int argc, char **argv, char *envp[])
   gs_args = cupsArrayNew(NULL, NULL);
   if (!gs_args) {
     fprintf(stderr, "ERROR: Unable to allocate memory for Ghostscript arguments array\n");
-    exit(1);
+    goto out;
   }
 
   /* Part of Ghostscript command line which is not dependent on the job and/or
@@ -666,46 +777,99 @@ main (int argc, char **argv, char *envp[])
     cupsArrayAdd(gs_args, strdup("-dNOMEDIAATTRS"));
   if (cm_disabled)
     cupsArrayAdd(gs_args, strdup("-dUseFastColor"));
-  cupsArrayAdd(gs_args, strdup("-sDEVICE=cups"));
   cupsArrayAdd(gs_args, strdup("-sstdout=%stderr"));
   cupsArrayAdd(gs_args, strdup("-sOutputFile=%stdout"));
 
+  /* Ghostscript output device */
+  if (outformat == OUTPUT_FORMAT_RASTER)
+    cupsArrayAdd(gs_args, strdup("-sDEVICE=cups"));
+  else if (outformat == OUTPUT_FORMAT_PDF)
+    cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfwrite"));
+  /* In case of PCL XL output we determine later whether we will have
+     to use the "pxlmono" or "pxlcolor" output device */
+
+  /* Special Ghostscript options for PDF output */
+  if (outformat == OUTPUT_FORMAT_PDF) {
+    cupsArrayAdd(gs_args, strdup("-dCompatibilityLevel=1.3"));
+    cupsArrayAdd(gs_args, strdup("-dAutoRotatePages=/None"));
+    cupsArrayAdd(gs_args, strdup("-dAutoFilterColorImages=false"));
+    cupsArrayAdd(gs_args, strdup("-dNOPLATFONTS"));
+    cupsArrayAdd(gs_args, strdup("-dColorImageFilter=/FlateEncode"));
+    cupsArrayAdd(gs_args, strdup("-dPDFSETTINGS=/printer"));
+    cupsArrayAdd(gs_args, strdup("-dColorConversionStrategy=/LeaveColorUnchanged"));
+  }
+  
   if (ppd)
   {
     cupsRasterInterpretPPD(&h,ppd,num_options,options,0);
 #ifdef HAVE_CUPS_1_7
-    if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
-	(!strcasecmp(attr->value, "true")
-	 || !strcasecmp(attr->value, "on") ||
-	 !strcasecmp(attr->value, "yes")))
+    if (outformat == OUTPUT_FORMAT_RASTER)
     {
-      pwgraster = 1;
-      cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 0);
+      if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
+	  (!strcasecmp(attr->value, "true") ||
+	   !strcasecmp(attr->value, "on") ||
+	   !strcasecmp(attr->value, "yes")))
+      {
+	pwgraster = 1;
+	cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 0);
+      }
     }
 #endif /* HAVE_CUPS_1_7 */
+    if (outformat == OUTPUT_FORMAT_PXL)
+    {
+      if ((attr = ppdFindAttr(ppd,"ColorDevice",0)) != 0 &&
+	  (!strcasecmp(attr->value, "false") ||
+	   !strcasecmp(attr->value, "off") ||
+	   !strcasecmp(attr->value, "no")))
+	/* Monochrome PCL XL printer, according to PPD */
+	pxlcolor = 0;
+    }
   }
   else
   {
 #ifdef HAVE_CUPS_1_7
-    pwgraster = 1;
-    t = cupsGetOption("media-class", num_options, options);
-    if (t == NULL)
-      t = cupsGetOption("MediaClass", num_options, options);
-    if (t != NULL)
+    if (outformat == OUTPUT_FORMAT_RASTER)
     {
-      if (strcasestr(t, "pwg"))
-	pwgraster = 1;
-      else
-	pwgraster = 0; 
+      pwgraster = 1;
+      t = cupsGetOption("media-class", num_options, options);
+      if (t == NULL)
+	t = cupsGetOption("MediaClass", num_options, options);
+      if (t != NULL)
+      {
+	if (strcasestr(t, "pwg"))
+	  pwgraster = 1;
+	else
+	  pwgraster = 0; 
+      }
     }
     cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 1);
 #else
     fprintf(stderr, "ERROR: No PPD file specified.\n");
-    exit(1);
+    goto out;
 #endif /* HAVE_CUPS_1_7 */
   }
 
-  /* setPDF specific options */
+  if ((h.HWResolution[0] == 100) && (h.HWResolution[1] == 100)) {
+    /* No "Resolution" option */
+    if (ppd && (attr = ppdFindAttr(ppd, "DefaultResolution", 0)) != NULL) {
+      /* "*DefaultResolution" keyword in the PPD */
+      const char *p = attr->value;
+      h.HWResolution[0] = atoi(p);
+      if ((p = strchr(p, 'x')) != NULL)
+	h.HWResolution[1] = atoi(p);
+      else
+	h.HWResolution[1] = h.HWResolution[0];
+      if (h.HWResolution[0] <= 0)
+	h.HWResolution[0] = 300;
+      if (h.HWResolution[1] <= 0)
+	h.HWResolution[1] = h.HWResolution[0];
+    } else {
+      h.HWResolution[0] = 300;
+      h.HWResolution[1] = 300;
+    }
+  }
+
+  /* set PDF-specific options */
   if (doc_type == GS_DOC_TYPE_PDF) {
     parse_pdf_header_options(fp, &h);
   }
@@ -715,7 +879,7 @@ main (int argc, char **argv, char *envp[])
   h.Orientation = CUPS_ORIENT_0;
 
   /* get all the data from the header and pass it to ghostscript */
-  add_pdf_header_options (&h, gs_args);
+  add_pdf_header_options (&h, gs_args, outformat, pxlcolor);
 
   /* CUPS font path */
   if ((t = getenv("CUPS_FONTPATH")) == NULL)
