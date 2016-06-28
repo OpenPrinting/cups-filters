@@ -32,4 +32,4 @@ if [ -n "$6" ]; then
     exec <"$6"
 fi
 
-`dirname $0`/texttopdf "$1" "$2" "$3" "$4" "$5" | $PDF2PS - -
+$CUPS_SERVERBIN/filter/texttopdf "$1" "$2" "$3" "$4" "$5" | $PDF2PS - -

@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.9.0 - 2016-06-09
 
 CHANGES IN V1.10.0
 
+	- imagetops, texttops: Do not use $0 in the wrapper scripts,
+	  when CUPS calls filters, it passes the queue name as $0, not
+	  path and name of the called filter.
 	- cups-browsed: When creating local queues for discovered IPP
 	  network printers always create PPD files and if the
 	  information supplied by the printer via IPP is insufficient
