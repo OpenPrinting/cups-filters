@@ -1,8 +1,17 @@
 NEWS - OpenPrinting CUPS Filters v1.9.0 - 2016-06-09
 ----------------------------------------------------
 
-CHANGES IN V1.9.1
+CHANGES IN V1.10.0
 
+	- cups-browsed: When creating local queues for discovered IPP
+	  network printers always create PPD files and if the
+	  information supplied by the printer via IPP is insufficient
+	  use information from the DNS-SD entry or default values
+	  suitable for most printers. Use System V interface scripts
+	  only on explicit request in cups-browsed.conf. This change
+	  is to address the fact that System V interface script
+	  support is removed from CUPS 2.2.x and later for security
+	  reasons.
 	- pstopdf: Make the filter only get installed if Ghostscript is
 	  present and also moved its conversion rules into the
 	  cupsfilters-ghostscript.convs file.
