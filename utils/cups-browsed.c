@@ -6738,7 +6738,10 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   int			xres, yres;	/* Resolution values */
   struct lconv		*loc = localeconv();
 					/* Locale data */
-
+  char			filter_path[1024];
+                                        /* Path to filter executable */
+  const char		*cups_serverbin;/* CUPS_SERVERBIN environment
+					   variable */
 
  /*
   * Range check input...
@@ -6830,8 +6833,17 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
         cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 100 -\"\n");
 	formatfound = 1;
       } else if (!_cups_strncasecmp(format, "application/vnd.hp-pclxl", 24)) {
-        cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 10 gstopxl\"\n");
-	formatfound = 1;
+	/* Check whether the gstopxl filter and ghostscript is installed,
+	   otherwise ignore the PCL-XL support of the printer */
+	if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
+	  cups_serverbin = CUPS_SERVERBIN;
+	snprintf(filter_path, sizeof(filter_path), "%s/filter/gstopxl",
+		 cups_serverbin);
+	if (access(filter_path, X_OK) == 0 &&
+	    access(CUPS_GHOSTSCRIPT, X_OK) == 0) {
+	  cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 10 gstopxl\"\n");
+	  formatfound = 1;
+	}
       } else if (!_cups_strncasecmp(format, "application/vnd.hp-pcl", 22)) {
         cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 10 rastertopclx\"\n");
 	formatfound = 1;
