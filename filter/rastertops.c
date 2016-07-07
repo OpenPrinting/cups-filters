@@ -103,6 +103,7 @@ writeImage(int           bpc,	 /* I - bits per color */
   default:
   case CUPS_CSPACE_K:
   case CUPS_CSPACE_W:
+  case CUPS_CSPACE_SW:
     printf("/DeviceGray setcolorspace\n");
     break;
   }
@@ -128,11 +129,15 @@ writeImage(int           bpc,	 /* I - bits per color */
   case CUPS_CSPACE_CMYK:
     printf("/Decode [0 1 0 1 0 1 0 1]\n");
     break;
+  
+  case CUPS_CSPACE_SW:
+  	printf("/Decode [0 1]\n");
+  	break;
 
   default:
   case CUPS_CSPACE_K:
   case CUPS_CSPACE_W:
-    printf("/Decode [0 1]\n");
+    printf("/Decode [1 0]\n");
     break;
   }     
 	
