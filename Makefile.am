@@ -501,7 +501,8 @@ pkgfilter_PROGRAMS += \
 	rastertopclx \
 	texttopdf \
 	urftopdf \
-	rastertopdf
+	rastertopdf \
+	rastertops
 if ENABLE_IJS
 pkgfilter_PROGRAMS += \
 	pdftoijs
@@ -667,6 +668,16 @@ rastertopdf_LDADD = \
 	$(CUPS_LIBS) \
 	$(LCMS_LIBS) \
 	$(LIBQPDF_LIBS) \
+	libcupsfilters.la
+
+rastertops_SOURCES = \
+	filter/rastertops.c
+rastertops_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
+rastertops_LDADD = \
+	$(CUPS_LIBS) \
+	-lz \
 	libcupsfilters.la
 
 pdftoijs_SOURCES = \

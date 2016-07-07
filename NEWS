@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.9.0 - 2016-06-09
 
 CHANGES IN V1.10.0
 
+	- rastertops: Added new filter to turn PWG Raster into
+	  PostScript, in preparation for MuPDF support. Thanks to
+	  Pranjal Bhor for contributing this as part of his Google
+	  Summer of Code project.
 	- gstoraster, gstopxl, gstopdf, pstopdf: Integrated
 	  functionality of script-based filters pstopdf and gstopxl
 	  into gstoraster filter as script-based filters cannot access
