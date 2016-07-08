@@ -182,6 +182,13 @@ Copyright: 2010, Neil 'Superna' Armstrong <superna9999@gmail.com>
  2014 Till Kamppeter <till.kamppeter@gmail.com>
 License: GPL-3+
 
+Files: filter/rastertops.c
+Copyright: 2016 Pranjal Bhor <bhor.pranjal@gmail.com>
+ 2010 Neil 'Superna' Armstrong <superna9999@gmail.com>
+ 2012 Tobias Hoffmann <smilingthax@gmail.com>
+ 2014 Till Kamppeter <till.kamppeter@gmail.com>
+License: GPL-3+
+
 Files: filter/strcasestr.c
 Copyright: 1990, 1993, The Regents of the University of California
 License: BSD-4-clause
