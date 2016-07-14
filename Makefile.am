@@ -474,7 +474,6 @@ pdftopdf_LDADD = \
 # ======================
 pkgfilter_SCRIPTS = \
 	filter/imagetops \
-	filter/textonly \
 	filter/texttops
 if ENABLE_GHOSTSCRIPT
 pkgfilter_SCRIPTS += \
@@ -495,6 +494,7 @@ pkgfilter_PROGRAMS += \
 	commandtoescpx \
 	commandtopclx \
 	sys5ippprinter \
+	texttotext \
 	pdftops \
 	pdftoraster \
 	rastertoescpx \
@@ -702,6 +702,13 @@ sys5ippprinter_CFLAGS = $(CUPS_CFLAGS)
 sys5ippprinter_LDADD = $(STRCASESTR) $(CUPS_LIBS)
 sys5ippprinter_DEPENDENCIES = $(STRCASESTR)
 
+texttotext_SOURCES = \
+	filter/texttotext.c
+EXTRA_texttotext_SOURCES = filter/strcasestr.c
+texttotext_CFLAGS = $(CUPS_CFLAGS)
+texttotext_LDADD = $(STRCASESTR) $(CUPS_LIBS)
+texttotext_DEPENDENCIES = $(STRCASESTR)
+
 pdftops_SOURCES = \
 	filter/common.c \
 	filter/common.h \
@@ -864,8 +871,7 @@ ppd_DATA = \
 	ppd/Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd \
 	ppd/Generic-PDF_Printer-PDF.ppd \
 	ppd/HP-Color_LaserJet_CM3530_MFP-PDF.ppd \
-	ppd/Ricoh-PDF_Printer-PDF.ppd \
-	ppd/textonly.ppd
+	ppd/Ricoh-PDF_Printer-PDF.ppd
 if ENABLE_IJS
 ppd_DATA += \
 	ppd/HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd
