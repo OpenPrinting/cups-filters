@@ -1270,6 +1270,175 @@ instead (the same library as pdftopdf uses).
 License: GNU General Public License version 3 or any newer version
 
 
+TEXTTOTEXT
+==========
+
+This is a special filter for text-only printers (e. g. line printers,
+daisy-wheel printers, POS printers, ...) or for using printers in
+their text mode (e. g. dot-matrix printers or otherwise unsupported
+printers). It takes plain text (UTF-8-encoded as this is standard with
+CUPS) and not PDF as input.
+
+The texttotext filter replaces the former textonly filter.
+
+It is for the following use cases:
+
+- Using text-only printers, like line printers or daisy-wheel
+  printers. Note that only text can get printed in the way the printer
+  is designed. No support for graphics printing tricks like ASCII art
+  or printing pixels with the period character.
+
+- Fast and less resource-consuming text printing with dot-matrix
+  printers using the printer's text mode instead of converting the
+  text to PDF and printing the PDF in the printer's graphics mode,
+  which is slow, loud, and consumes much more ink.
+
+- POS printing. POS printers often print only text on roll paper. This
+  filter has a non-paginated mode which prints continuously, ignoring
+  page height definitions.
+
+The filter has the following features:
+
+- Conversion of UTF-8 to most printer's encodings.
+
+- To each page size a number of lines and columns is assigned, after that
+  you only need to select the size of the paper in use.
+
+- At end of page you can optionally send a Form Feed or let the filter fill
+  up the rest of the page with blank lines.
+
+- New lines can be initiated by Line Feed, Carriage Return, or both.
+
+- Adjustable margins.
+
+- Adjustable width for tab stops.
+
+- Pagination can be turned off for roll paper or continuous printing in
+  general.
+
+- Wrapping or truncation of long lines
+
+- Support for most of CUPS' page management options (only with
+  pagination turned on): page-ranges, page-set, output-order, collate,
+  multiple copies.
+
+Setting up the printer
+
+In the printer setup tool select the "Generic Text-Only Printer" (with
+lpadmin use "-m drv:///cupsfilters.drv/textonly.ppd"), then under the
+"Installable Options" adjust the following:
+
+- Which page sizes to use and how many lines and columns the printer
+  is capable to print on them. The default setting for lines and
+  columns assume 6 lines per inch and 10 columns per inch.
+
+- Whether to send a Form Feed character after each page. Sending a
+  Form Feed is highly recommended to get the content of each page
+  exactly onto the desired sheet. If the printer does not support Form
+  Feed characters, turn them off and make sure that you have adjusted
+  the correct number of lines for each page size, as the printer is
+  advancing pages by filling up the rest of the paper with blank
+  lines.
+
+- How the printer advancs to a new line. Most printers require both
+  Crriage Return and Line Feed (the DOS/Windows standard), but some
+  would also work with either Carriage Return or Line Feed.
+
+- The printer's encoding: Most text and dot-matrix printers (usually
+  older devices) do not understand CUPS' standard encoding UTF-8 but
+  instead, the use a simpler encoding (where each character is
+  represented by one byte). ASCII should always work, but does not
+  support letters with accents. So check the printer's manual what is
+  supported. You cannot only use the encodings suggested by the PPD
+  file, but any one-byte-per-character encoding which the "iconv"
+  utility supports (see "iconv --list" for a list of encodings).
+
+Also note that text-only and dot-matrix printers often have a DIP
+switch block which allows for some hardware configuration, like
+newline characters, length of page, input encoding, ...
+
+Options of the texttotext filter:
+
+To be usually used when sending a job:
+
+PageSize: Paper format to be used. Make sure that the number of lines
+and columns printable on each paper size are correctly adjusted with
+the appropriate setup option. The page height is ignore when
+pagination is turned off. Possible values: Letter, Legal, Tabloid,
+Ledger, A4, A3, FanFoldGerman, FanFoldGermanLegal, 11x14Rotated,
+LegalRotated, Custom1, Custom2, Custom3
+
+OverLongLines: What to do with lines longer that the width of the
+page: Truncate: Simply drop the extra characters; WrapAtWidth
+(default): Continue the line in the next line on the paper; WordWrap:
+As WrapAtWidth, but do not cut in the middle of a word.
+
+TabWidth: Width of a tab stop. Can be any positive number.
+
+Pagination: On: Text is divided in pages depending on the page size
+selection, with each page having the user-selected margins,
+recommended for sheet paper; Off: Text is printed continuously,
+ignoring page breaks and the height and upper and lower margins of the
+destination page size, recommended for roll paper, POS, long lists on
+continuous paper, ... Note that with pagination turned off, multiple
+copies, collate, page-ranges, page-set, and output-order are not
+supported and therefore ignored.
+
+page-left, page-right, page-top, page-bottom: Width of the margins
+left blank, counted in lines or columns. Top and bottom margins are
+ignored when pagination is turned off. Can be any positive number or
+zero for no margin.
+
+To be usually used when setting up the printer:
+
+PrinterEncoding: The printer's character encoding (code page). Any
+encoding which the iconv utility can generate (see "iconv --list") and
+which uses only one byte per character can be used. This should
+support practically any printer which is capable of printing
+text. ASCII is the default setting. See the printer's manual for the
+correct encoding to use.
+
+NewlineCharacters: The characters sent on the end of a line, LineFeed
+(LF), Crriage Return (CR), or both Carriage Return and Line Feed
+(CRLF). Default is CRLF as most printers require this.
+
+SendFF: On: Send a Form Feed after each page, so that printer changes
+to the next sheet. Off: Do not send Form Feeds. To advance to the next
+page blank lines are printed to fill up the page (requires the number
+of limes for the selected page size correctly being set). When
+pagination is off, Form Feeds are never sent.
+
+LetterAvailable, LegalAvailable, TabloidAvailable, LedgerAvailable,
+A4Available, A3Available, FanFoldGermanAvailable,
+FanFoldGermanLegalAvailable, 11x14RotatedAvailable,
+LegalRotatedAvailable, Custom1Available, Custom2Available,
+Custom3Available: On: Paper of this size is available; Off: This paper
+size is not available.
+
+LetterNumLines, LegalNumLines, TabloidNumLines, LedgerNumLines,
+A4NumLines, A3NumLines, FanFoldGermanNumLines,
+FanFoldGermanLegalNumLines, 11x14RotatedNumLines,
+LegalRotatedNumLines, Custom1NumLines, Custom2NumLines,
+Custom3NumLines: Maximum number of text lines fitting on the paper
+size. Default value is selected assuming 6 lines per inch. Can be any
+positive number.
+
+LetterNumColumns, LegalNumColumns, TabloidNumColumns,
+LedgerNumColumns, A4NumColumns, A3NumColumns, FanFoldGermanNumColumns,
+FanFoldGermanLegalNumColumns, 11x14RotatedNumColumns,
+LegalRotatedNumColumns, Custom1NumColumns, Custom2NumColumns,
+Custom3NumColumns: Maximum number of columns (characters) fitting on
+the paper size. Default value is selected assuming 10 characters per
+inch. Can be any positive number.
+
+Standard CUPS options supported:
+
+page-ranges, page set, output-order, collate
+
+Note that these options and multiple copies are ignored when
+pagination is turned off.
+
+
 BEH - Backend Error Handler wrapper backend
 ===========================================
 
