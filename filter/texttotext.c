@@ -87,7 +87,7 @@ main(int  argc,				/* I - Number of command-line args */
   ppd_file_t	*ppd;			/* PPD file */
   int		num_options;		/* Number of options */
   cups_option_t	*options;		/* Options */
-  const char	*val;			/* Option value */
+  const char	*val, *val2;			/* Option value */
   ppd_attr_t    *ppd_attr;              /* Attribute taken from the PPD */
   int           num_lines = 66,         /* Lines per page */
                 num_columns = 80;       /* Characters per line */
@@ -268,48 +268,43 @@ main(int  argc,				/* I - Number of command-line args */
   * Parse the options
   */
 
+  /* With the "PageSize"/"PageRegion" options we only determine the number
+     of lines and columns of a page, we do not use the geometry defined by
+     "PaperDimension" and "ImageableArea" in the PPD */
   if ((val = cupsGetOption("PageSize", num_options, options)) != NULL ||
-      (val = cupsGetOption("PageRegion", num_options, options)) != NULL)
-  {
-    /* With the "PageSize" option we only determine the number of lines
-       and columns of a page, we do not use the geometry defined by
-       "PaperDimension" and "ImageableArea" in the PPD */
-    snprintf(buffer, sizeof(buffer), "%sNumLines", val);
-    fprintf(stderr, "DEBUG: PageSize: %s\n", val);
-    if ((val = cupsGetOption(buffer, num_options, options)) != NULL)
-      num_lines = atoi(val);
-    snprintf(buffer, sizeof(buffer), "%sNumColumns", val);
-    if ((val = cupsGetOption(buffer, num_options, options)) != NULL)
-      num_columns = atoi(val);
-    fprintf(stderr, "DEBUG: Lines per page: %d; Characters per line: %d\n",
-	    num_lines, num_columns);
-  }
-
-  if (num_lines <= 0 || num_columns <= 0) {
-    /* Invalid page size, fall back to PPD default */
-    if ((ppd_attr = ppdFindAttr(ppd, "DefaultPageSize", NULL)) != NULL ||
-	(ppd_attr = ppdFindAttr(ppd, "DefaultPageRegion", NULL)) != NULL) {
+      (val = cupsGetOption("PageRegion", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultPageSize", NULL)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultPageRegion", NULL)) != NULL) {
+    if (val == NULL)
       val = ppd_attr->value;
-      fprintf(stderr, "ERROR: Invalid page size, trying default size from PPD file: %s\n",
-	      val);
-      snprintf(buffer, sizeof(buffer), "%sNumLines", val);
-      if ((val = cupsGetOption(buffer, num_options, options)) != NULL)
-	num_lines = atoi(val);
-      snprintf(buffer, sizeof(buffer), "%sNumColumns", val);
-      if ((val = cupsGetOption(buffer, num_options, options)) != NULL)
-	num_columns = atoi(val);
-      fprintf(stderr, "DEBUG: Lines per page: %d; Characters per line: %d\n",
-	      num_lines, num_columns);
-      if (num_lines <= 0) {
-	fprintf(stderr, "ERROR: Invalid number of lines %d, using default: 66\n",
-		num_lines);
-	num_lines = 66;
-      }
-      if (num_columns <= 0) {
-	fprintf(stderr, "ERROR: Invalid number of columns %d, using default: 80\n",
-		num_columns);
-	num_columns = 80;
-      }
+    fprintf(stderr, "DEBUG: PageSize: %s\n", val);
+    snprintf(buffer, sizeof(buffer), "Default%sNumLines", val);
+    if ((val2 = cupsGetOption(buffer + 7, num_options, options)) != NULL ||
+	(ppd_attr = ppdFindAttr(ppd, buffer, NULL)) != NULL) {
+      if (val2 == NULL)
+	val2 = ppd_attr->value;
+      if (!strncasecmp(val2, "Custom.", 7))
+	val2 += 7;
+      num_lines = atoi(val2);
+    }
+    snprintf(buffer, sizeof(buffer), "Default%sNumColumns", val);
+    if ((val2 = cupsGetOption(buffer + 7, num_options, options)) != NULL ||
+	(ppd_attr = ppdFindAttr(ppd, buffer, NULL)) != NULL) {
+      if (val2 == NULL)
+	val2 = ppd_attr->value;
+      if (!strncasecmp(val2, "Custom.", 7))
+	val2 += 7;
+      num_columns = atoi(val2);
+    }
+    if (num_lines <= 0) {
+      fprintf(stderr, "DEBUG: Invalid number of lines %d, using default: 66\n",
+	      num_lines);
+      num_lines = 66;
+    }
+    if (num_columns <= 0) {
+      fprintf(stderr, "DEBUG: Invalid number of columns %d, using default: 80\n",
+	      num_columns);
+      num_columns = 80;
     }
   }
 
@@ -320,7 +315,7 @@ main(int  argc,				/* I - Number of command-line args */
     if (i > 0)
       num_lines = i;
     else
-      fprintf(stderr, "ERROR: Invalid number of lines %d, using default value: %d\n",
+      fprintf(stderr, "DEBUG: Invalid number of lines %d, using default value: %d\n",
 	      i, num_lines);
   }
   if ((val = cupsGetOption("page-width", num_options, options)) != NULL) {
@@ -328,41 +323,61 @@ main(int  argc,				/* I - Number of command-line args */
     if (i > 0)
       num_columns = i;
     else
-      fprintf(stderr, "ERROR: Invalid number of columns %d, using default value: %d\n",
+      fprintf(stderr, "DEBUG: Invalid number of columns %d, using default value: %d\n",
 	      i, num_columns);
   }
 
   fprintf(stderr, "DEBUG: Lines per page: %d; Characters per line: %d\n",
 	  num_lines, num_columns);
   
-  if ((val = cupsGetOption("page-left", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("page-left", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-left", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
+    if (!strncasecmp(val, "Custom.", 7))
+      val += 7;
     page_left = atoi(val);
     if (page_left < 0 || page_left > num_columns - 1) {
-      fprintf(stderr, "ERROR: Invalid left margin %d, setting to 0.\n",
+      fprintf(stderr, "DEBUG: Invalid left margin %d, setting to 0.\n",
 	      page_left);
       page_left = 0;
     }
   }
-  if ((val = cupsGetOption("page-right", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("page-right", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-right", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
+    if (!strncasecmp(val, "Custom.", 7))
+      val += 7;
     page_right = atoi(val);
     if (page_right < 0 || page_right > num_columns - page_left - 1) {
-      fprintf(stderr, "ERROR: Invalid right margin %d, setting to 0.\n",
+      fprintf(stderr, "DEBUG: Invalid right margin %d, setting to 0.\n",
 	      page_right);
       page_right = 0;
     }
   }
-  if ((val = cupsGetOption("page-top", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("page-top", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-top", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
+    if (!strncasecmp(val, "Custom.", 7))
+      val += 7;
     page_top = atoi(val);
     if (page_top < 0 || page_top > num_lines - 1) {
-      fprintf(stderr, "ERROR: Invalid top margin %d, setting to 0.\n",
+      fprintf(stderr, "DEBUG: Invalid top margin %d, setting to 0.\n",
 	      page_top);
       page_top = 0;
     }
   }
-  if ((val = cupsGetOption("page-bottom", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("page-bottom", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-bottom", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
+    if (!strncasecmp(val, "Custom.", 7))
+      val += 7;
     page_bottom = atoi(val);
     if (page_bottom < 0 || page_bottom > num_lines - page_top - 1) {
-      fprintf(stderr, "ERROR: Invalid bottom margin %d, setting to 0.\n",
+      fprintf(stderr, "DEBUG: Invalid bottom margin %d, setting to 0.\n",
 	      page_bottom);
       page_bottom = 0;
     }
@@ -376,7 +391,12 @@ main(int  argc,				/* I - Number of command-line args */
 	  text_height, text_width);
 
   strcpy(encoding, "ASCII//IGNORE");
-  if ((val = cupsGetOption("PrinterEncoding", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("PrinterEncoding", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultPrinterEncoding", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
+    if (!strncasecmp(val, "Custom.", 7))
+      val += 7;
     if (val[0] != '\0') {
       snprintf(encoding, sizeof(encoding), "%s//IGNORE", val);
       for (p = encoding; *p; p ++)
@@ -385,7 +405,10 @@ main(int  argc,				/* I - Number of command-line args */
   }
   fprintf(stderr, "DEBUG: Output encoding: %s\n", encoding);
   
-  if ((val = cupsGetOption("OverLongLines", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("OverlongLines", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultOverlongLines", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
     if (!strcasecmp(val, "Truncate"))
       overlong_lines = TRUNCATE;
     else if (!strcasecmp(val, "WordWrap"))
@@ -393,7 +416,7 @@ main(int  argc,				/* I - Number of command-line args */
     else if (!strcasecmp(val, "WrapAtWidth"))
       overlong_lines = WRAPATWIDTH;
     else
-      fprintf(stderr, "ERROR: Invalid value for OverLongLines: %s, using default value.\n",
+      fprintf(stderr, "DEBUG: Invalid value for OverlongLines: %s, using default value.\n",
 	      val);
   }
   fprintf(stderr, "DEBUG: Handling of overlong lines: %s\n",
@@ -401,42 +424,56 @@ main(int  argc,				/* I - Number of command-line args */
 	   (overlong_lines == WORDWRAP ? "Word-wrap" :
 	    "Wrap exactly at maximum width")));
 
-  if ((val = cupsGetOption("TabWidth", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("TabWidth", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultTabWidth", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
+    if (!strncasecmp(val, "Custom.", 7))
+      val += 7;
     i = atoi(val);
     if (i > 0)
       tab_width = i;
     else
-      fprintf(stderr, "ERROR: Invalid tab width %d, using default value: %d\n",
+      fprintf(stderr, "DEBUG: Invalid tab width %d, using default value: %d\n",
 	      i, tab_width);
   }
   fprintf(stderr, "DEBUG: Tab width: %d\n", tab_width);
 
-  if ((val = cupsGetOption("Pagination", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("Pagination", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultPagination", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
     if (is_true(val))
       pagination = 1;
     else if (is_false(val))
       pagination = 0;
     else
-      fprintf(stderr, "ERROR: Invalid value for Pagination: %s, using default value.\n",
+      fprintf(stderr, "DEBUG: Invalid value for Pagination: %s, using default value.\n",
 	      val);
   }
   fprintf(stderr, "DEBUG: Pagination (Print in defined pages): %s\n",
 	  (pagination ? "Yes" : "No"));
 
-  if ((val = cupsGetOption("SendFF", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("SendFF", num_options, options)) != NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultSendFF", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
     if (is_true(val))
       send_ff = 1;
     else if (is_false(val))
       send_ff = 0;
     else
-      fprintf(stderr, "ERROR: Invalid value for SendFF: %s, using default value.\n",
+      fprintf(stderr, "DEBUG: Invalid value for SendFF: %s, using default value.\n",
 	      val);
   }
   fprintf(stderr, "DEBUG: Send Form Feed character at end of page: %s\n",
 	  (send_ff ? "Yes" : "No"));
 
   if ((val = cupsGetOption("NewlineCharacters", num_options, options)) !=
-      NULL) {
+      NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultNewlineCharacters", NULL)) != NULL) {
+    if (val == NULL)
+      val = ppd_attr->value;
     if (!strcasecmp(val, "LF"))
       newline_char = LF;
     else if (!strcasecmp(val, "CR"))
@@ -444,7 +481,7 @@ main(int  argc,				/* I - Number of command-line args */
     else if (!strcasecmp(val, "CRLF"))
       newline_char = CRLF;
     else
-      fprintf(stderr, "ERROR: Invalid value for NewlineCharacters: %s, using default value.\n",
+      fprintf(stderr, "DEBUG: Invalid value for NewlineCharacters: %s, using default value.\n",
 	      val);
   }
   fprintf(stderr, "DEBUG: Characters sent to make printer start a new line: %s\n",
@@ -472,7 +509,7 @@ main(int  argc,				/* I - Number of command-line args */
       even_pages = 1;
       odd_pages = 1;
     } else
-      fprintf(stderr, "ERROR: Invalid value for page-set: %s, using default value.\n",
+      fprintf(stderr, "DEBUG: Invalid value for page-set: %s, using default value.\n",
 	      val);
   }
   if (!even_pages || !odd_pages)
@@ -486,7 +523,7 @@ main(int  argc,				/* I - Number of command-line args */
     if (!strcasecmp(val, "reverse"))
       reverse_order = 1;
     else
-      fprintf(stderr, "ERROR: Invalid value for OutputOrder: %s, using default value.\n",
+      fprintf(stderr, "DEBUG: Invalid value for OutputOrder: %s, using default value.\n",
 	      val);
   }
   fprintf(stderr, "DEBUG: Print pages in reverse order: %s\n",
@@ -498,7 +535,7 @@ main(int  argc,				/* I - Number of command-line args */
     else if (is_false(val))
       collate = 0;
     else
-      fprintf(stderr, "ERROR: Invalid value for Collate: %s, using default value.\n",
+      fprintf(stderr, "DEBUG: Invalid value for Collate: %s, using default value.\n",
 	      val);
   }
   fprintf(stderr, "DEBUG: Collate copies: %s\n",
@@ -575,7 +612,7 @@ main(int  argc,				/* I - Number of command-line args */
          ends with an incomplete UTF-8 character. Log
          this fact. */
       if (insize > 0 && incomplete_char)
-	fprintf(stderr, "ERROR: Input text file ends with incomplete UTF-8 character sequence, file possibly incomplete, but printing the successfully read part anyway.\n");
+	fprintf(stderr, "DEBUG: Input text file ends with incomplete UTF-8 character sequence, file possibly incomplete, but printing the successfully read part anyway.\n");
 
       /* Now write out the byte sequence to get into the
 	 initial state if this is necessary.  */
@@ -782,7 +819,7 @@ main(int  argc,				/* I - Number of command-line args */
   close(fd);
   
   if (iconv_close (cd) != 0)
-    fprintf (stderr, "ERROR: Error closing iconv encoding conversion session\n");
+    fprintf (stderr, "DEBUG: Error closing iconv encoding conversion session\n");
 
   /* Error out on an illegal UTF-8 sequence in the input file */
   if (result < 0)
