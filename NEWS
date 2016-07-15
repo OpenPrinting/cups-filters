@@ -8,9 +8,10 @@ CHANGES IN V1.10.0
 	  PPD file, with a lot of options to fit practically all
 	  printer models amd paper sizes, support for CUPS' page
 	  management options, and support for configuring the print
-	  queue and controlling the options by the PPD file.
-	- textonly: Removed the old script-based filter for text-only
-	  printers.
+	  queue and controlling the options by the PPD file. The PPD
+	  is now generated on-the-fly by cupsfilters.drv.
+	- textonly: Removed the old script-based filter and its PPD
+	  for text-only printers.
 	- rastertops: Added new filter to turn PWG Raster into
 	  PostScript, in preparation for MuPDF support. Thanks to
 	  Pranjal Bhor for contributing this as part of his Google
