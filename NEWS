@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.10.0 - 2016-07-15
 -----------------------------------------------------
 
+CHANGES IN V1.10.1
+
+	- libcupsfilters: Added missing "#include <cups/ppd.h>" to make
+	  sure that the package builds on all systems (Bug #1366).
+
 CHANGES IN V1.10.0
 
 	- texttotext: Added new filter for text-only printers written
