@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.10.0 - 2016-07-15
 
 CHANGES IN V1.10.1
 
+	- cups-browsed: Fixed several memory leaks, especially when
+	  using IPP requests. Thanks to Ivo Straka for finding them
+	  with Valgrind and supplying a patch to fix them (Bug #1365,
+	  Ubuntu bug #1203276).
 	- libcupsfilters: Added missing "#include <cups/ppd.h>" to make
 	  sure that the package builds on all systems (Bug #1366).
 
