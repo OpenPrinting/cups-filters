@@ -1760,13 +1760,14 @@ cancel_subscription (int id)
   ippDelete (resp);
 }
 
-const char*
+char*
 is_disabled(const char *printer, const char *reason) {
   ipp_t *request, *response;
   ipp_attribute_t *attr;
   const char *pname = NULL;
   ipp_pstate_t pstate = IPP_PRINTER_IDLE;
-  const char *pstatemsg = NULL;
+  const char *p;
+  char *pstatemsg = NULL;
   static const char *pattrs[] =
                 {
                   "printer-name",
@@ -1806,8 +1807,8 @@ is_disabled(const char *printer, const char *reason) {
 	else if (!strcmp(ippGetName(attr), "printer-state-message") &&
 		 ippGetValueTag(attr) == IPP_TAG_TEXT) {
 	  free(pstatemsg);
-	  pstatemsg = ippGetString(attr, 0, NULL);
-	  if (pstatemsg != NULL) pstatemsg = strdup(pstatemsg);
+	  p = ippGetString(attr, 0, NULL);
+	  if (p != NULL) pstatemsg = strdup(p);
 	}
 	attr = ippNextAttribute(response);
       }
@@ -1918,12 +1919,12 @@ set_cups_default_printer(const char *printer) {
   return 0;
 }
 
-const char*
+char*
 get_cups_default_printer() {
   ipp_t *request, *response;
   ipp_attribute_t *attr;
   const char *default_printer_name = NULL;
-  const char *name_string;
+  char *name_string;
   
   request = ippNewRequest(CUPS_GET_DEFAULT);
   /* Default user */
@@ -1968,7 +1969,7 @@ int
 is_cups_default_printer(const char *printer) {
   if (printer == NULL)
     return 0;
-  const char *cups_default = get_cups_default_printer();
+  char *cups_default = get_cups_default_printer();
   if (cups_default == NULL)
     return 0;
   if (!strcasecmp(printer, cups_default)) {
@@ -2272,7 +2273,7 @@ queue_creation_handle_default(const char *printer) {
   const char *recorded_default = retrieve_default_printer(0);
   if (recorded_default == NULL || strcasecmp(recorded_default, printer))
     return 0;
-  const char *current_default = get_cups_default_printer();
+  char *current_default = get_cups_default_printer();
   if (current_default == NULL || !is_created_by_cups_browsed(current_default)) {
     if (set_cups_default_printer(printer) < 0) {
       debug_printf("ERROR: Could not set former default printer %s as default again.\n",
@@ -3178,7 +3179,7 @@ gboolean handle_cups_queues(gpointer unused) {
   ipp_t *request;
   time_t current_time = time(NULL);
   int i;
-  const char *disabled_str;
+  char *disabled_str;
 
   debug_printf("Processing printer list ...\n");
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -3481,10 +3482,10 @@ gboolean handle_cups_queues(gpointer unused) {
 
       /* If cups-browsed or a failed backend has disabled this
 	 queue, re-enable it. */
-      if (disabled_str = is_disabled(p->name, "cups-browsed")) {
+      if ((disabled_str = is_disabled(p->name, "cups-browsed")) != NULL) {
 	enable_printer(p->name);
 	free(disabled_str);
-      } else if (disabled_str = is_disabled(p->name, "Printer stopped due to backend errors")) {
+      } else if ((disabled_str = is_disabled(p->name, "Printer stopped due to backend errors")) != NULL) {
 	enable_printer(p->name);
 	free(disabled_str);
       }
@@ -5949,7 +5950,7 @@ int main(int argc, char*argv[]) {
   int ret = 1;
   http_t *http;
   int i;
-  const char *val;
+  char *val;
   remote_printer_t *p;
   GDBusProxy *proxy = NULL;
   GError *error = NULL;
