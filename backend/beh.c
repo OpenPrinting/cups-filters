@@ -33,7 +33,8 @@ static int		job_canceled = 0; /* Set to 1 on SIGTERM */
  * Local functions...
  */
 
-static int		call_backend(char *uri, char **argv, char *tempfile);
+static int		call_backend(char *uri, int argc, char **argv,
+				     char *tempfile);
 static void		sigterm_handler(int sig);
 
 
@@ -165,7 +166,8 @@ main(int  argc,				/* I - Number of command-line args */
   * Do it!
   */
 
-  while ((retval = call_backend(ptr, argv, filename)) != CUPS_BACKEND_OK &&
+  while ((retval = call_backend(ptr, argc, argv, filename)) !=
+	 CUPS_BACKEND_OK &&
 	 !job_canceled) {
     if (att > 0) {
       att --;
@@ -205,9 +207,11 @@ main(int  argc,				/* I - Number of command-line args */
  */
 
 static int
-call_backend(char *uri,
+call_backend(char *uri,                 /* I - URI of final destination */
+	     int  argc,                 /* I - Number of command line
+	                                       arguments */
 	     char **argv,		/* I - Command-line arguments */
-	     char *filename) {
+	     char *filename) {          /* I - File name of input data */
   const char	*cups_serverbin;	/* Location of programs */
   char		scheme[1024],           /* Scheme from URI */
                 *ptr,			/* Pointer into scheme */
@@ -232,7 +236,12 @@ call_backend(char *uri,
   } else
     snprintf(cmdline, sizeof(cmdline),
 	     "%s/backend/%s '%s' '%s' '%s' '%s' '%s' %s",
-	     cups_serverbin, scheme, argv[1], argv[2], argv[3], argv[4],
+	     cups_serverbin, scheme, argv[1], argv[2], argv[3],
+	     /* Apply number of copies only if beh was called with a
+		file name and not with the print data in stdin, as
+	        backends should handle copies only if they are called
+	        with a file name */
+	     (argc == 6 ? "1" : argv[4]),
 	     argv[5], filename);
 
  /*

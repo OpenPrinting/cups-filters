@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.10.0 - 2016-07-15
 
 CHANGES IN V1.10.1
 
+	- beh: Fixed printing multiple copies with beh (Ubuntu bug
+          #1605514).
 	- cups-browsed: Fixed several memory leaks, especially when
 	  using IPP requests. Thanks to Ivo Straka for finding them
 	  with Valgrind and supplying a patch to fix them (Bug #1365,
