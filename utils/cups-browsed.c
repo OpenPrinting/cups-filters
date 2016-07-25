@@ -3086,6 +3086,7 @@ create_local_queue (const char *name,
   free (p->type);
   free (p->service_name);
   free (p->host);
+  free (p->domain);
   if (p->ip) free (p->ip);
   cupsFreeOptions(p->num_options, p->options);
   free (p->uri);
@@ -3601,23 +3602,35 @@ matched_filters (const char *name,
 	    if ((filter->cregexp &&
 		 regexec(filter->cregexp, value, 0, NULL, 0) == 0) ||
 		(!filter->cregexp && !strcasecmp(filter->regexp, value))) {
+	      avahi_free(key);
+	      avahi_free(value);
 	      if (filter->sense == FILTER_NOT_MATCH)
 		goto filter_failed;
 	    } else {
+	      avahi_free(key);
+	      avahi_free(value);
 	      if (filter->sense == FILTER_MATCH)
 		goto filter_failed;
 	    }	      
 	  } else {
 	    /* match boolean value */
 	    if (filter->sense == FILTER_MATCH) {
- 	      if (!value || strcasecmp(value, "T"))
+ 	      if (!value || strcasecmp(value, "T")) {
+		avahi_free(key);
+		avahi_free(value);
 		goto filter_failed;
+	      }
 	    } else {
- 	      if (value && !strcasecmp(value, "T"))
+ 	      if (value && !strcasecmp(value, "T")) {
+		avahi_free(key);
+		avahi_free(value);
 		goto filter_failed;
+	      }
 	    }
 	  }
 	}
+	avahi_free(key);
+	avahi_free(value);
 	goto filter_matched;
       }
     }
@@ -3758,6 +3771,8 @@ generate_local_queue(const char *host,
 	    value[strlen(value) - 1] != ')') {
 	  raw_queue = 1;
 	}
+	avahi_free(key);
+	avahi_free(value);
       } else
 	raw_queue = 1;
     } else if (domain && domain[0] != '\0')
@@ -3800,8 +3815,12 @@ generate_local_queue(const char *host,
 	    } else
 	      make_model = strdup(value);
 	    remote_queue = remove_bad_chars(make_model, 0);
+	    avahi_free(key);
+	    avahi_free(value);
 	    break;
 	  }
+	  avahi_free(key);
+	  avahi_free(value);
 	}
       }
       /* Find out which PDLs the printer understands */
@@ -3811,6 +3830,8 @@ generate_local_queue(const char *host,
 	if (key && value && !strcasecmp(key, "pdl") && strlen(value) >= 3) {
 	  pdl = remove_bad_chars(value, 1);
 	}
+	avahi_free(key);
+	avahi_free(value);
       }
       /* Find out if we have a color printer */
       entry = avahi_string_list_find((AvahiStringList *)txt, "Color");
@@ -3820,6 +3841,8 @@ generate_local_queue(const char *host,
 	  if (!strcasecmp(value, "T")) color = 1;
 	  if (!strcasecmp(value, "F")) color = 0;
 	}
+	avahi_free(key);
+	avahi_free(value);
       }
       /* Find out if we have a duplex printer */
       entry = avahi_string_list_find((AvahiStringList *)txt, "Duplex");
@@ -3829,6 +3852,8 @@ generate_local_queue(const char *host,
 	  if (!strcasecmp(value, "T")) duplex = 1;
 	  if (!strcasecmp(value, "F")) duplex = 0;
 	}
+	avahi_free(key);
+	avahi_free(value);
       }
     }
 #endif /* HAVE_AVAHI */
