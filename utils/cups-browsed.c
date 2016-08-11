@@ -126,6 +126,10 @@ static int	ldap_rebind_proc(LDAP *RebindLDAPHandle,
 /* Attribute to mark a CUPS queue as created by us */
 #define CUPS_BROWSED_MARK "cups-browsed"
 
+/* Attribute to tell the implicitclass backend the destination queue for
+   the current job */
+#define CUPS_BROWSED_DEST_PRINTER "cups-browsed-dest-printer"
+
 /* Timeout values in sec */
 #define TIMEOUT_IMMEDIATELY -1
 #define TIMEOUT_CONFIRM     10
@@ -138,11 +142,12 @@ static int	ldap_rebind_proc(LDAP *RebindLDAPHandle,
 #define CUPS_DBUS_PATH "/org/cups/cupsd/Notifier"
 #define CUPS_DBUS_INTERFACE "org.cups.cupsd.Notifier"
 
-#define LOCAL_DEFAULT_PRINTER_FILE "/var/cache/cups/cups-browsed-local-default-printer"
-#define REMOTE_DEFAULT_PRINTER_FILE "/var/cache/cups/cups-browsed-remote-default-printer"
-#define SAVE_OPTIONS_FILE "/var/cache/cups/cups-browsed-options-%s"
-#define IMPLICIT_CLASS_DEST_HOST_FILE "/var/cache/cups/cups-browsed-dest-host-%s"
-#define DEBUG_LOG_FILE "/var/log/cups/cups-browsed_log"
+#define DEFAULT_CACHEDIR "/var/cache/cups"
+#define DEFAULT_LOGDIR "/var/log/cups"
+#define LOCAL_DEFAULT_PRINTER_FILE "/cups-browsed-local-default-printer"
+#define REMOTE_DEFAULT_PRINTER_FILE "/cups-browsed-remote-default-printer"
+#define SAVE_OPTIONS_FILE "/cups-browsed-options-%s"
+#define DEBUG_LOG_FILE "/cups-browsed_log"
 
 /* Status of remote printer */
 typedef enum printer_status_e {
@@ -348,6 +353,13 @@ static int debug_stderr = 0;
 static int debug_logfile = 0;
 static FILE *lfp = NULL;
 
+static char cachedir[1024];
+static char logdir[1024];
+static char local_default_printer_file[1024];
+static char remote_default_printer_file[1024];
+static char save_options_file[1024];
+static char debug_log_file[1024];
+
 static void recheck_timer (void);
 static void browse_poll_create_subscription (browsepoll_t *context,
 					     http_t *conn);
@@ -471,10 +483,13 @@ ippSetVersion(ipp_t *ipp, int major, int minor)
 void
 start_debug_logging()
 {
-  lfp = fopen(DEBUG_LOG_FILE, "a+");
+  if (debug_log_file[0] == '\0')
+    return;
+  if (lfp == NULL)
+    lfp = fopen(debug_log_file, "a+");
   if (lfp == NULL) {
     fprintf(stderr, "cups-browsed: ERROR: Failed creating debug log file %s\n",
-	    DEBUG_LOG_FILE);
+	    debug_log_file);
     exit(1);
   }
 }
@@ -483,7 +498,9 @@ void
 stop_debug_logging()
 {
   debug_logfile = 0;
-  fclose(lfp);
+  if (lfp)
+    fclose(lfp);
+  lfp = NULL;
 }
 
 void
@@ -494,20 +511,20 @@ debug_printf(const char *format, ...) {
     ctime_r(&curtime, buf);
     while(isspace(buf[strlen(buf)-1])) buf[strlen(buf)-1] = '\0';
     va_list arglist;
-    va_start(arglist, format);
     if (debug_stderr) {
+      va_start(arglist, format);
       fprintf(stderr, "%s ", buf);
       vfprintf(stderr, format, arglist);
       fflush(stderr);
+      va_end(arglist);
     }
-    va_end(arglist);
-    va_start(arglist, format);
-    if (debug_logfile) {
+    if (debug_logfile && lfp) {
+      va_start(arglist, format);
       fprintf(lfp, "%s ", buf);
       vfprintf(lfp, format, arglist);
       fflush(lfp);
+      va_end(arglist);
     }
-    va_end(arglist);
   }
 }
 
@@ -1982,8 +1999,8 @@ is_cups_default_printer(const char *printer) {
 
 int
 invalidate_default_printer(int local) {
-  const char *filename = local ? LOCAL_DEFAULT_PRINTER_FILE :
-    REMOTE_DEFAULT_PRINTER_FILE;
+  const char *filename = local ? local_default_printer_file :
+    remote_default_printer_file;
   unlink(filename);
   return 0;
 }
@@ -1991,8 +2008,8 @@ invalidate_default_printer(int local) {
 int
 record_default_printer(const char *printer, int local) {
   FILE *fp = NULL;
-  const char *filename = local ? LOCAL_DEFAULT_PRINTER_FILE :
-    REMOTE_DEFAULT_PRINTER_FILE;
+  const char *filename = local ? local_default_printer_file :
+    remote_default_printer_file;
 
   if (printer == NULL || strlen(printer) == 0)
     return invalidate_default_printer(local);
@@ -2013,8 +2030,8 @@ record_default_printer(const char *printer, int local) {
 const char*
 retrieve_default_printer(int local) {
   FILE *fp = NULL;
-  const char *filename = local ? LOCAL_DEFAULT_PRINTER_FILE :
-    REMOTE_DEFAULT_PRINTER_FILE;
+  const char *filename = local ? local_default_printer_file :
+    remote_default_printer_file;
   const char *printer = NULL;
   char *p, buf[1024];
   int n;
@@ -2040,7 +2057,7 @@ int
 invalidate_printer_options(const char *printer) {
   char filename[1024];
 
-  snprintf(filename, sizeof(filename), SAVE_OPTIONS_FILE,
+  snprintf(filename, sizeof(filename), save_options_file,
 	   printer);
   unlink(filename);
   return 0;
@@ -2089,7 +2106,7 @@ record_printer_options(const char *printer) {
   if (printer == NULL || strlen(printer) == 0)
     return 0;
 
-  snprintf(filename, sizeof(filename), SAVE_OPTIONS_FILE,
+  snprintf(filename, sizeof(filename), save_options_file,
 	   printer);
 
   debug_printf("Recording printer options for %s to %s\n",
@@ -2121,9 +2138,11 @@ record_printer_options(const char *printer) {
 	   strcasecmp(key + strlen(key) - strlen(*ptr) + 1, *ptr + 1) == 0))
 	break;
     if (*ptr != NULL) {
-      fprintf (fp, "%s=", key);
-      ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-      fprintf (fp, "%s\n", valuebuffer);
+      if (strcasecmp(key, CUPS_BROWSED_DEST_PRINTER "-default") != 0) {
+	fprintf (fp, "%s=", key);
+	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+	fprintf (fp, "%s\n", valuebuffer);
+      }
     }
     attr = ippNextAttribute(response);
   }
@@ -2179,7 +2198,7 @@ retrieve_printer_options(const char *printer) {
   }
 
   /* Prepare reading file with saved option settings */
-  snprintf(filename, sizeof(filename), SAVE_OPTIONS_FILE,
+  snprintf(filename, sizeof(filename), save_options_file,
 	   printer);
 
   debug_printf("Retrieving printer options for %s from %s\n",
@@ -2352,17 +2371,26 @@ on_printer_state_changed (CupsNotifier *object,
   const char *dest_host = NULL;
   int dest_index = 0;
   int valid_dest_found = 0;
-  char filename[1024];
-  FILE *fp;
+  char uri[HTTP_MAX_URI];
+  int job_id = 0;
+  int num_options;
+  cups_option_t *options;
   static const char *pattrs[] =
                 {
                   "printer-name",
                   "printer-state",
                   "printer-is-accepting-jobs"
                 };
+  static const char *jattrs[] =
+		{
+		  "job-id",
+		  "job-state"
+		};
 
-  debug_printf("[CUPS Notification] Printer state change: %s\n",
-	       text);
+  debug_printf("[CUPS Notification] Printer state change on printer %s: %s\n",
+	       printer, text);
+  debug_printf("[CUPS Notification] Printer state reasons: %s\n",
+	       printer_state_reasons);
 
   if (autoshutdown && autoshutdown_on == NO_JOBS) {
     if (check_jobs() == 0) {
@@ -2589,31 +2617,77 @@ on_printer_state_changed (CupsNotifier *object,
       }
       /* Set CUPS server back to local */
       cupsSetServer(NULL);
-      /* Write the selected destination host into a file so that the
-	 implicitclass backend will pick it up */
-      snprintf(filename, sizeof(filename), IMPLICIT_CLASS_DEST_HOST_FILE,
-	       printer);
-      fp = fopen(filename, "w+");
-      if (fp == NULL) {
-	debug_printf("ERROR: Failed creating file %s\n",
-		     filename);
-	return;
+      /* Find the ID of the current job */
+      request = ippNewRequest(IPP_GET_JOBS);
+      httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+		       "localhost", ippPort(), "/printers/%s", printer);
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		   "printer-uri", NULL, uri);
+      ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+		    "requested-attributes",
+		    sizeof(jattrs) / sizeof(jattrs[0]), NULL, jattrs);
+      job_id = 0;
+      if ((response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/")) != NULL) {
+	/* Get the current active job on this queue... */
+	ipp_jstate_t jobstate = IPP_JOB_PENDING;
+	for (attr = ippFirstAttribute(response); attr != NULL;
+	     attr = ippNextAttribute(response)) {
+	  if (!ippGetName(attr)) {
+	    if (jobstate == IPP_JOB_PROCESSING)
+	      break;
+	    else
+	      continue;
+	  }
+	  if (!strcmp(ippGetName(attr), "job-id") &&
+	      ippGetValueTag(attr) == IPP_TAG_INTEGER)
+	    job_id = ippGetInteger(attr, 0);
+	  else if (!strcmp(ippGetName(attr), "job-state") &&
+		   ippGetValueTag(attr) == IPP_TAG_ENUM)
+	    jobstate = (ipp_jstate_t)ippGetInteger(attr, 0);
+	}
+	if (jobstate != IPP_JOB_PROCESSING)
+	  job_id = 0;
+	ippDelete(response);
       }
+      if (job_id == 0)
+	debug_printf("ERROR: could not determine ID of curremt job on %s\n",
+		     printer);
+
+      /* Write the selected destination host into an option of our implicit
+	 class queue (cups-browsed-dest-printer="<dest>") so that the
+	 implicitclass backend will pick it up */
+      request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		   "printer-uri", NULL, uri);
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		   "requesting-user-name", NULL, cupsUser());
       if (dest_host) {
 	q->last_printer = dest_index;
-	fprintf(fp, "\"%s\"", dest_host);
-	debug_printf("Wrote destination for job to %s: %s (to file %s)\n",
-		     printer, dest_host, filename);
+	snprintf(buf, sizeof(buf), "\"%d %s\"", job_id, dest_host);
+	debug_printf("Destination for job %d to %s: %s\n",
+		     job_id, printer, dest_host);
       } else if (valid_dest_found == 1) {
-	fprintf(fp, "\"ALL_DESTS_BUSY\"");
-	debug_printf("All destinations busy for job to %s (file %s)\n",
-		     printer, filename);
+	snprintf(buf, sizeof(buf), "\"%d ALL_DESTS_BUSY\"", job_id);
+	debug_printf("All destinations busy for job %d to %s\n",
+		     job_id, printer);
       } else {
-	fprintf(fp, "\"NO_DEST_FOUND\"");
-	debug_printf("No destination found for job to %s (file %s)\n",
-		     printer, filename);
+	snprintf(buf, sizeof(buf), "\"%d NO_DEST_FOUND\"", job_id);
+	debug_printf("No destination found for job %d to %s\n",
+		     job_id, printer);
       }
-      fclose(fp);
+      num_options = 0;
+      options = NULL;
+      num_options = cupsAddOption(CUPS_BROWSED_DEST_PRINTER "-default", buf,
+				  num_options, &options);
+      cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
+      cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
+      ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
+      cupsFreeOptions(num_options, options);
+      if (cupsLastError() > IPP_OK_CONFLICT) {
+	debug_printf("ERROR: Unable to set printer-is-shared bit to false (%s)!\n",
+		     cupsLastErrorString());
+	return;
+      }
     }
   }
 }
@@ -5574,6 +5648,12 @@ read_configuration (const char *filename)
 
 	p = strtok_r (NULL, delim, &saveptr);
       }
+    } else if (!strcasecmp(line, "CacheDir") && value) {
+      if (value[0] != '\0')
+	strncpy(cachedir, value, sizeof(cachedir) - 1);
+    } else if (!strcasecmp(line, "LogDir") && value) {
+      if (value[0] != '\0')
+	strncpy(logdir, value, sizeof(logdir) - 1);
     } else if ((!strcasecmp(line, "BrowseProtocols") ||
 	 !strcasecmp(line, "BrowseLocalProtocols") ||
 	 !strcasecmp(line, "BrowseRemoteProtocols")) && value) {
@@ -6006,7 +6086,7 @@ int main(int argc, char*argv[]) {
 	  debug_logfile = 1;
 	  start_debug_logging();
 	  debug_printf("Reading command line option %s, turning on debug mode (Log into log file %s).\n",
-		       argv[i], DEBUG_LOG_FILE);
+		       argv[i], debug_log_file);
 	}
       } else if (!strncasecmp(argv[i], "-c", 2)) {
 	/* Alternative configuration file */
@@ -6139,6 +6219,34 @@ int main(int argc, char*argv[]) {
   
   /* Read in cups-browsed.conf */
   read_configuration (alt_config_file);
+
+  /* Set the paths of the auxiliary files */
+  if (cachedir[0] == '\0')
+    strncpy(cachedir, DEFAULT_CACHEDIR, sizeof(cachedir) - 1);
+  if (logdir[0] == '\0')
+    strncpy(logdir, DEFAULT_LOGDIR, sizeof(logdir) - 1);
+  strncpy(local_default_printer_file, cachedir,
+	  sizeof(local_default_printer_file) - 1);
+  strncpy(local_default_printer_file + strlen(cachedir),
+	  LOCAL_DEFAULT_PRINTER_FILE,
+	  sizeof(local_default_printer_file) - strlen(cachedir) - 1);
+  strncpy(remote_default_printer_file, cachedir,
+	  sizeof(remote_default_printer_file) - 1);
+  strncpy(remote_default_printer_file + strlen(cachedir),
+	  REMOTE_DEFAULT_PRINTER_FILE,
+	  sizeof(remote_default_printer_file) - strlen(cachedir) - 1);
+  strncpy(save_options_file, cachedir,
+	  sizeof(save_options_file) - 1);
+  strncpy(save_options_file + strlen(cachedir),
+	  SAVE_OPTIONS_FILE,
+	  sizeof(save_options_file) - strlen(cachedir) - 1);
+  strncpy(debug_log_file, logdir,
+	  sizeof(debug_log_file) - 1);
+  strncpy(debug_log_file + strlen(logdir),
+	  DEBUG_LOG_FILE,
+	  sizeof(debug_log_file) - strlen(logdir) - 1);
+  if (debug_logfile == 1)
+    start_debug_logging();
 
   /* Set the CUPS_SERVER environment variable to assure that cups-browsed
      always works with the local CUPS daemon and never with a remote one

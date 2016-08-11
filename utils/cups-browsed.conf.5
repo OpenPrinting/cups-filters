@@ -9,6 +9,26 @@ located in the /etc/cups directory. Each line in the file can be a
 configuration directive, a blank line, or a comment. Comment lines start
 with the # character.
 .SH DIRECTIVES
+The "CacheDir" directive determines where cups-browsed should save
+information about the print queues it had generated when shutting down,
+like whether one of these queues was the default printer, or default
+option settings of the queues.
+.PP
+.nf
+.fam C
+        CacheDir /var/cache/cups
+
+.fam T
+.fi
+With "LogDir" can be defined where cups-browsed creates its debug log file
+(if "DebugLogging file" is set).
+.PP
+.nf
+.fam C
+        LogDir /var/log/cups
+
+.fam T
+.fi
 The "DebugLogging" directive determines how should debug logging be done.
 Into the file /var/log/cups/cups-browsed_log ("file"), to stderr ("stderr"), or
 not at all ("none").

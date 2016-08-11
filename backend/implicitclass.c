@@ -27,7 +27,10 @@
  * Local globals...
  */
 
-#define IMPLICIT_CLASS_DEST_HOST_FILE "/var/cache/cups/cups-browsed-dest-host-%s"
+/* IPP Attribute which cups-browsed uses to tell us the destination queue for
+   the current job */
+#define CUPS_BROWSED_DEST_PRINTER "cups-browsed-dest-printer"
+
 static int		job_canceled = 0;
 					/* Set to 1 on SIGTERM */
 
@@ -46,12 +49,19 @@ main(int  argc,				/* I - Number of command-line args */
      char *argv[])			/* I - Command-line arguments */
 {
   const char	*device_uri;            /* URI with which we were called */
-  char queue_name[1024],
-       filename[1024];
-  FILE *fp;
-  char *ptr1, *ptr2;
-  int i, n;
+  char queue_name[1024];
+  const char *ptr1;
+  char *ptr2;
+  const char *job_id;
+  int i;
   char dest_host[1024];	/* Destination host */
+  ipp_t *request, *response;
+  ipp_attribute_t *attr;
+  char uri[HTTP_MAX_URI];
+  static const char *pattrs[] =
+                {
+                  "printer-defaults"
+                };
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
@@ -88,39 +98,82 @@ main(int  argc,				/* I - Number of command-line args */
       device_uri = argv[0];
     }
     if ((ptr1 = strchr(device_uri, ':')) == NULL) {
+      fprintf(stderr, "ERROR: Incorrect device URI syntax: %s\n",
+	      device_uri);
+      return (CUPS_BACKEND_STOP);
     }
     ptr1 ++;
     strncpy(queue_name, ptr1, sizeof(queue_name));
-    snprintf(filename, sizeof(filename), IMPLICIT_CLASS_DEST_HOST_FILE,
-	     queue_name);
+    httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+		     "localhost", ippPort(), "/printers/%s", queue_name);
+    job_id = argv[1];
     for (i = 0; i < 40; i++) {
       /* Wait up to 20 sec for cups-browsed to supply the destination host */
-      /* Try reading the file where cups-browsed has deposited the destination
-	 host */
-      fp = fopen(filename, "r");
-      if (fp == NULL)
+      /* Try reading the option in which cups-browsed has deposited the
+	 destination host */
+      request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
+		   uri);
+      ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+		    "requested-attributes",
+		    sizeof(pattrs) / sizeof(pattrs[0]),
+		    NULL, pattrs);
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		   "requesting-user-name",
+		   NULL, cupsUser());
+      if ((response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/")) ==
+	  NULL)
 	goto failed;
-      ptr1 = dest_host;
-      /* Destination host is between double quotes, as double quotes are
-	 illegal in host names one easily recognizes whether the file is
-	 complete and avoids accepting a partially written host name */
-      n = fscanf(fp, "\"%s", ptr1);
-      fclose(fp);
-      if (n == 1 && strlen(ptr1) > 0) {
-	if ((ptr2 = strchr((const char *)ptr1, '"')) != NULL) {
-	  *ptr2 = '\0';
+      for (attr = ippFirstAttribute(response); attr != NULL;
+	   attr = ippNextAttribute(response)) {
+	while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+	  attr = ippNextAttribute(response);
+	if (attr == NULL)
 	  break;
+	ptr1 = NULL;
+	while (attr != NULL && ippGetGroupTag(attr) ==
+	       IPP_TAG_PRINTER) {
+	  if (!strcmp(ippGetName(attr),
+		      CUPS_BROWSED_DEST_PRINTER "-default"))
+	    ptr1 = ippGetString(attr, 0, NULL);
+	  if (ptr1 != NULL)
+	    break;
+	  attr = ippNextAttribute(response);
 	}
+	if (ptr1 != NULL)
+	  break;
+      }
+      fprintf(stderr, "DEBUG: Read " CUPS_BROWSED_DEST_PRINTER " option: %s\n", ptr1);
+      if (ptr1 == NULL)
+	goto failed;
+      /* Destination host is between double quotes, as double quotes are
+	 illegal in host names one easily recognizes whether the option is
+	 complete and avoids accepting a partially written host name */
+      if (*ptr1 != '"')
+	goto failed;
+      ptr1 ++;
+      /* Check whether option was set for this job, if not, keep waiting */
+      if (strncmp(ptr1, job_id, strlen(job_id)) != 0)
+	goto failed;
+      ptr1 += strlen(job_id);
+      if (*ptr1 != ' ')
+	goto failed;
+      ptr1 ++;
+      /* Read destination host name (or message) and check whether it is
+	 complete (second double quote) */
+      strncpy(dest_host, ptr1, sizeof(dest_host));
+      ptr1 = dest_host;
+      if ((ptr2 = strchr(ptr1, '"')) != NULL) {
+	*ptr2 = '\0';
+	ippDelete(response);
+	break;
       }
     failed:
+      ippDelete(response);
       /* Pause half a second before next attempt */
       usleep(500000);
     }
 
-    /* Delete host name file after having read it once, so that we wait for
-       cups-browsed's decision again on the next job */
-    unlink(filename);
-    
     if (i >= 40) {
       /* Timeout, no useful data from cups-browsed received */
       fprintf(stderr, "ERROR: No destination host name supplied by cups-browsed for printer \"%s\", is cups-browsed running?\n",

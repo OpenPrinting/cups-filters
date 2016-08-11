@@ -6,6 +6,19 @@
 # Unknown directives are ignored, also unknown values.
 
 
+# Where should cups-browsed save information about the print queues it had
+# generated when shutting down, like whether one of these queues was the
+# default printer, or default option settings of the queues?
+
+# CacheDir /var/cache/cups
+
+
+# Where should cups-browsed create its debug log file (if "DebugLogging file"
+# is set)?
+
+# LogDir /var/log/cups
+
+
 # How should debug logging be done? Into the file
 # /var/log/cups/cups-browsed_log ('file'), to stderr ('stderr'), or
 # not at all ('none')?

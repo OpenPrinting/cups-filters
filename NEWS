@@ -1,9 +1,20 @@
 NEWS - OpenPrinting CUPS Filters v1.10.0 - 2016-07-15
 -----------------------------------------------------
 
-CHANGES IN V1.10.1
+CHANGES IN V1.11.0
 
-	- beh: Fixed printing multiple copies with beh (Ubuntu bug
+	- cups-browsed, implicitclass: Avoid the use of files for the
+	  communication between cups-browsed and the load-balancing
+	  backend implicitclass. Instead of in a file, cups-brwsed
+	  stores the destination server name in an option (which CUPS
+	  saves in printers.conf) which the implicitclass backend
+	  reads via IPP. This not only makes it easier to run
+	  cups-filters in a sandbox, but it is also better in terms of
+	  system security.
+	- cups-browsed: Allow configuring where the files produced by
+	  cups-browsed will get stored. This makes it easier to run
+	  cups-filters in a sandbox.
+        - beh: Fixed printing multiple copies with beh (Ubuntu bug
           #1605514).
 	- cups-browsed: Fixed several memory leaks, especially when
 	  using IPP requests and DNS-SD TXT record look-ups. Thanks to
