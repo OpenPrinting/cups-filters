@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.10.0 - 2016-07-15
 
 CHANGES IN V1.11.0
 
+	- gstoraster: Fix setting of width and height of the page in
+	  pixels when there is no Resolution option in the PPD.
 	- cups-browsed, implicitclass: Avoid the use of files for the
 	  communication between cups-browsed and the load-balancing
 	  backend implicitclass. Instead of in a file, cups-brwsed
