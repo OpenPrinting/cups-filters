@@ -867,6 +867,8 @@ main (int argc, char **argv, char *envp[])
       h.HWResolution[0] = 300;
       h.HWResolution[1] = 300;
     }
+    h.cupsWidth = h.HWResolution[0] * h.PageSize[0] / 72;
+    h.cupsHeight = h.HWResolution[1] * h.PageSize[1] / 72;
   }
 
   /* set PDF-specific options */
