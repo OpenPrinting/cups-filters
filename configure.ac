@@ -425,15 +425,20 @@ AS_IF([test x"$lcms2" = "xno"], [
 PKG_CHECK_MODULES([FREETYPE], [freetype2], [AC_DEFINE([HAVE_FREETYPE_H], [1], [Have FreeType2 include files])])
 PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.0.0])
 PKG_CHECK_MODULES([IJS], [ijs], [have_ijs=yes], [have_ijs=no])
-PKG_CHECK_MODULES([POPPLER], [poppler >= 0.18])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
 PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 3.0.2])
 
-# ================
-# Poppler features
-# ================
-AC_CHECK_HEADER([poppler/cpp/poppler-version.h], [AC_DEFINE([HAVE_CPP_POPPLER_VERSION_H],,[Define if you have Poppler's "cpp/poppler-version.h" header file.])], [])
+# =================
+# Check for Poppler
+# =================
+AC_ARG_ENABLE(poppler, AS_HELP_STRING([--enable-poppler],[enable Poppler-based filters]),
+	      enable_poppler=$enableval,enable_poppler=yes)
+AM_CONDITIONAL(ENABLE_POPPLER, test x$enable_poppler = xyes)
+if test x$enable_poppler = xyes; then
+	PKG_CHECK_MODULES([POPPLER], [poppler >= 0.18])
+	AC_CHECK_HEADER([poppler/cpp/poppler-version.h], [AC_DEFINE([HAVE_CPP_POPPLER_VERSION_H],,[Define if you have Poppler's "cpp/poppler-version.h" header file.])], [])
+fi
 
 # ===============
 # Check for D-Bus
@@ -777,10 +782,11 @@ Build configuration:
 	foomatic:        ${enable_foomatic}
 	init directory:  ${INITDDIR}
 	cups dom socket: ${CUPS_DEFAULT_DOMAINSOCKET}
-	mutool:          ${enable_mutool}
-	mutool-path:     ${with_mutool_path}
+	poppler:         ${enable_poppler}
 	ghostscript:     ${enable_ghostscript}
 	gs-path:         ${with_gs_path}
+	mutool:          ${enable_mutool}
+	mutool-path:     ${with_mutool_path}
 	imagefilters:    ${enable_imagefilters}
 	jpeg:            ${with_jpeg}
 	pdftocairo-path: ${with_pdftocairo_path}

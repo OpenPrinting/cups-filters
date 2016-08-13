@@ -27,12 +27,12 @@ INTRODUCTION
     printing. In that case some filters are provided by both CUPS and
     this package. Then the filters of this package should be used.
 
-    For compiling and using this package CUPS, Poppler, libjpeg,
-    libpng, libtiff, libijs, freetype, fontconfig, liblcms (liblcms2
-    recommended), libavahi-common, and libavahi-client are needed. It
-    is highly recommended, especially if non-PostScript printers are
-    used, to have Ghostscript, foomatic-filters, and foomatic-db
-    installed.
+    For compiling and using this package CUPS, libjpeg, libpng,
+    libtiff, freetype, fontconfig, liblcms (liblcms2 recommended),
+    libavahi-common, libavahi-client, libdbus, and glib are needed. It
+    is highly recommended, especially if non-PDF printers are used, to
+    have at least one of Ghostscript, Poppler, or MuPDF. To print
+    banner pages Poppler is needed.
 
     For Braille embosser support (see below) you will also need at
     least liblouis, ImageMagick, and poppler-utils. Recommended is to
@@ -45,8 +45,8 @@ INTRODUCTION
     comprehensive set of printer drivers for Linux.
 
     See
-
-    http://www.linuxfoundation.org/collaborate/workgroups/openprinting/pdf_as_standard_print_job_format
+    
+    https://wiki.linuxfoundation.org/openprinting/pdf_as_standard_print_job_format
 
     for information about the PDF-based printing workflow.
 

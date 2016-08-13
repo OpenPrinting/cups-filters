@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.10.0 - 2016-07-15
 
 CHANGES IN V1.11.0
 
+	- Build system: Allow building cups-filters without Poppler
+	  (--disable-poppler in ./configure command line) This skips
+	  the build of pdftoraster, bannertopdf, pdftoijs, and
+	  pdftoopvp and the installation of these filters and their
+	  auxiliary files. With this cups-filters can be easily
+	  installed on mobile/appliance systems with MuPDF as the only
+	  PDF interpreter.
 	- mupdftoraster: Added filter to support MuPDF as PDF
 	  interpreter. MuPDF is a lightweight PDF interpreter
 	  especially interesting for mobile systems and
