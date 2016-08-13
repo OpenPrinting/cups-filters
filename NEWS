@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.10.0 - 2016-07-15
 
 CHANGES IN V1.11.0
 
+	- mupdftoraster: Added filter to support MuPDF as PDF
+	  interpreter. MuPDF is a lightweight PDF interpreter
+	  especially interesting for mobile systems and
+	  appliances. Thanks to Pranjal Bhor for contributing this as
+	  part of his Google Summer of Code project.
 	- gstoraster: Fix setting of width and height of the page in
 	  pixels when there is no Resolution option in the PPD.
 	- cups-browsed, implicitclass: Avoid the use of files for the

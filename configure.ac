@@ -463,6 +463,21 @@ AS_IF([test x"$long_long_found" = "xyes"], [
 ])
 
 # ================
+# Check for Mutool
+# ================
+AC_ARG_ENABLE([mutool],
+	[AS_HELP_STRING([--disable-mutool], [Disable filters using mutool.])],
+	[enable_mutool="$enableval"],
+	[enable_mutool=yes]
+)
+
+AC_ARG_WITH([mutool-path],
+	[AS_HELP_STRING([--with-mutool-path=value], [Set path to mutool binary (default: system).])],
+	[with_mutool_path="$withval"],
+	[with_mutool_path=system]
+)
+
+# ================
 # Check for pdf2ps
 # ================
 AC_ARG_ENABLE([ghostscript],
@@ -550,6 +565,23 @@ AS_IF([test "x$enable_ghostscript" != "xyes"], [
 AM_CONDITIONAL(ENABLE_GHOSTSCRIPT, test "x$enable_ghostscript" = xyes)
 AC_SUBST(CUPS_GHOSTSCRIPT)
 
+CUPS_MUTOOL=""
+AS_IF([test "x$enable_mutool" != "xyes"], [
+	AS_IF([test "x$with_mutool_path" != "xsystem"], [
+	       AC_MSG_ERROR([Cannot supply both --disable-mutool and --mutool-path=])
+	], [
+		with_mutool_path=""
+	])
+], [
+	AS_IF([test "x$with_mutool_path" != "xsystem"], [
+		CUPS_MUTOOL="$with_mutool_path"
+	], [
+		AC_PATH_PROG(CUPS_MUTOOL, [mutool], [AC_MSG_ERROR([Required mutool binary is missing. Please install mutool.])])
+	])
+])
+AM_CONDITIONAL(ENABLE_MUTOOL, test "x$enable_mutool" = xyes)
+AC_SUBST(CUPS_MUTOOL)
+
 AS_IF([test "x$with_pdftops_path" != "xsystem"], [
 	CUPS_PDFTOPS="$with_pdftops_path"
 ], [
@@ -604,6 +636,7 @@ AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x" -a "x$CUPS_PDFTOPS" != "x"], [
 ])
 
 AC_DEFINE_UNQUOTED([CUPS_GHOSTSCRIPT], "$CUPS_GHOSTSCRIPT", [gs binary to use])
+AC_DEFINE_UNQUOTED([CUPS_MUTOOL],"$CUPS_MUTOOL",[mutool binary to use])
 AC_DEFINE_UNQUOTED([CUPS_POPPLER_PDFTOPS], "$CUPS_PDFTOPS", [pdftops binary to use.])
 AC_DEFINE_UNQUOTED([CUPS_POPPLER_PDFTOCAIRO], "$CUPS_PDFTOCAIRO", [pdftocairo binary to use.])
 AC_DEFINE_UNQUOTED([CUPS_ACROREAD], "$CUPS_ACROREAD", [acroread binary to use.])
@@ -744,6 +777,8 @@ Build configuration:
 	foomatic:        ${enable_foomatic}
 	init directory:  ${INITDDIR}
 	cups dom socket: ${CUPS_DEFAULT_DOMAINSOCKET}
+	mutool:          ${enable_mutool}
+	mutool-path:     ${with_mutool_path}
 	ghostscript:     ${enable_ghostscript}
 	gs-path:         ${with_gs_path}
 	imagefilters:    ${enable_imagefilters}

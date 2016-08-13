@@ -296,6 +296,10 @@ if ENABLE_GHOSTSCRIPT
 pkgmime_DATA += \
 	mime/cupsfilters-ghostscript.convs
 endif
+if ENABLE_MUTOOL
+pkgmime_DATA += \
+	mime/cupsfilters-mupdf.convs
+endif
 if ENABLE_BRAILLE
 pkgmime_DATA += \
 	mime/braille.convs \
@@ -511,6 +515,10 @@ if ENABLE_GHOSTSCRIPT
 pkgfilter_PROGRAMS += \
 	gstoraster
 endif
+if ENABLE_MUTOOL
+pkgfilter_PROGRAMS += \
+	mupdftoraster
+endif
 if ENABLE_FOOMATIC
 pkgfilter_PROGRAMS += \
 	foomatic-rip
@@ -669,6 +677,15 @@ rastertopdf_LDADD = \
 	$(LCMS_LIBS) \
 	$(LIBQPDF_LIBS) \
 	libcupsfilters.la
+
+mupdftoraster_SOURCES = \
+        filter/mupdftoraster.c
+mupdftoraster_CFLAGS = \
+        $(CUPS_CFLAGS) \
+        -I$(srcdir)/cupsfilters/
+mupdftoraster_LDADD = \
+        $(CUPS_LIBS) \
+        libcupsfilters.la
 
 rastertops_SOURCES = \
 	filter/rastertops.c
