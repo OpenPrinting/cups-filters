@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2008-2013, Till Kamppeter
+Copyright (c) 2008-2016, Till Kamppeter
 Copyright (c) 2011, Tim Waugh
 Copyright (c) 2011-2013, Richard Hughes
 

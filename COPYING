@@ -127,6 +127,13 @@ Copyright: 2011-2013, Richard Hughes
   2008-2016, Till Kamppeter
 License: Expat
 
+Files: filter/mupdftoraster.c
+Copyright: 2011-2013, Richard Hughes
+  2011, Tim Waugh
+  2008-2016, Till Kamppeter
+  2016, Pranjal Bhor
+License: Expat
+
 Files: filter/imagetopdf*
 Copyright: 1993-2007, Easy Software Products
 License: GPL-2
