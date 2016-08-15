@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.10.0 - 2016-07-15
 
 CHANGES IN V1.11.0
 
+	- gstoraster, pdftops, foomatic-rip: Use -dNOMEDIAATTRS when
+	  calling Ghostscript. This way Ghostscript does not try to
+	  match media sizes with internal lists.
 	- Build system: Allow building cups-filters without Poppler
 	  (--disable-poppler in ./configure command line) This skips
 	  the build of pdftoraster, bannertopdf, pdftoijs, and
