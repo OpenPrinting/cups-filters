@@ -351,7 +351,7 @@ void log_jcl()
 int exec_kid4(FILE *in, FILE *out, void *user_arg)
 {
     FILE *fileh = open_postpipe();
-    int driverjcl = NULL;
+    int driverjcl = 0;
     size_t readbinarybytes;
 
     log_jcl();

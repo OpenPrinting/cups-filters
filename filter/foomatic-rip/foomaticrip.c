@@ -630,6 +630,10 @@ int print_file(const char *filename, int convert)
 		   The "-dNOINTERPOLATE" makes Ghostscript rendering
 		   significantly faster.
 
+		   The "-dNOMEDIAATTRS" makes Ghostscript not checking the
+		   page sizes against a list of known sizes and try to
+		   correct them.
+
 		   Note that Ghostscript's "pswrite" output device turns text
 		   into bitmaps and therefore produces huge PostScript files.
 		   In addition, this output device is deprecated. Therefore
@@ -645,7 +649,7 @@ int print_file(const char *filename, int convert)
 		else
 		  snprintf(pdf2ps_cmd, CMDLINE_MAX,
 			   "gs -q -sstdout=%%stderr -sDEVICE=ps2write -sOutputFile=- "
-			   "-dBATCH -dNOPAUSE -dPARANOIDSAFER -dNOINTERPOLATE %s 2>/dev/null || "
+			   "-dBATCH -dNOPAUSE -dPARANOIDSAFER -dNOINTERPOLATE -dNOMEDIAATTRS %s 2>/dev/null || "
 			   "pdftops -level2 -origpagesizes %s - 2>/dev/null",
 			   filename, filename);
 
@@ -977,7 +981,8 @@ int main(int argc, char** argv)
                   _log("INFO: Using qualifer: '%s.%s.%s'\n",
                         qualifier[0], qualifier[1], qualifier[2]);
 
-                  cmGetPrinterIccProfile(getenv("PRINTER"), &icc_profile, 0);
+                  cmGetPrinterIccProfile(getenv("PRINTER"),
+					 (char **)&icc_profile, 0);
 
                   /* fall back to PPD */
                   if (icc_profile == NULL) {

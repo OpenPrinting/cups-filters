@@ -131,7 +131,7 @@ static int pdf_extract_pages(char filename[PATH_MAX],
             snprintf(last_arg, 50, "-dLastPage=%d", last);
     }
 
-    snprintf(gscommand, CMDLINE_MAX, "%s -q -dNOPAUSE -dBATCH -dPARANOIDSAFER -dNOINTERPOLATE"
+    snprintf(gscommand, CMDLINE_MAX, "%s -q -dNOPAUSE -dBATCH -dPARANOIDSAFER -dNOINTERPOLATE -dNOMEDIAATTRS"
 	     "-sDEVICE=pdfwrite %s %s %s %s",
 	     gspath, filename_arg, first_arg, last_arg, pdffilename);
 
