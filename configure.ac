@@ -500,12 +500,12 @@ AS_IF([test "x$enable_ijs" = "xyes" -a "x$have_ijs" != "xyes"], [
 ])
 AM_CONDITIONAL(ENABLE_IJS, test "x$enable_ijs" = "xyes")
 AC_ARG_WITH([pdftops],
-	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,pdftocairo,acroread,hybrid).])],
+	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,pdftocairo,acroread,mupdf,hybrid).])],
 	[with_pdftops="$withval"],
 	[with_pdftops=hybrid]
 )
 AS_CASE([x$with_pdftops],
-        [xgs|xpdftops|xpdftocairo|xacroread|xhybrid], [],
+        [xgs|xpdftops|xpdftocairo|xacroread|xmupdf|xhybrid], [],
         [AC_MSG_ERROR([Unknown value of with-pdftops provided: $with_pdftops])]
 )
 AC_ARG_WITH([gs-path],
@@ -583,6 +583,7 @@ AS_IF([test "x$enable_mutool" != "xyes"], [
 	], [
 		AC_PATH_PROG(CUPS_MUTOOL, [mutool], [AC_MSG_ERROR([Required mutool binary is missing. Please install mutool.])])
 	])
+	AS_IF([test x"$with_pdftops" = xmupdf], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [MUPDF], [Define default renderer])])
 ])
 AM_CONDITIONAL(ENABLE_MUTOOL, test "x$enable_mutool" = xyes)
 AC_SUBST(CUPS_MUTOOL)
@@ -590,7 +591,7 @@ AC_SUBST(CUPS_MUTOOL)
 AS_IF([test "x$with_pdftops_path" != "xsystem"], [
 	CUPS_PDFTOPS="$with_pdftops_path"
 ], [
-	AC_PATH_PROG(CUPS_PDFTOPS, [pdftops], [AC_MSG_ERROR([Required pdftops is missing. Please install CUPS developer packages.])])
+	AC_PATH_PROG(CUPS_PDFTOPS, [pdftops], [AC_MSG_ERROR([Required pdftops is missing. Please install the pdftops utility of Poppler.])])
 ])
 AS_IF([test "x$CUPS_PDFTOPS" != "x"], [
 	AC_DEFINE([HAVE_POPPLER_PDFTOPS], [], [Define that we provide poppler pdftops.])
