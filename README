@@ -98,8 +98,8 @@ POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
     Therefore there are two possibilities to configure pdftops at
     runtime:
 
-    1. Selection of the renderer: Ghostscript, Poppler, pdftocairo, or
-    Adobe Reader
+    1. Selection of the renderer: Ghostscript, Poppler, pdftocairo,
+    Adobe Reader, or MuPDF
 
     Ghostscript has better color management and is generally optimized
     more for printing. Poppler produces a PostScript which is
@@ -117,7 +117,7 @@ POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
     and distributions should not choose it as default.
 
     The selection is done by the "pdftops-renderer" option, setting it
-    to "gs", "pdftops", "pdftocairo", "acroread", or "hybrid":
+    to "gs", "pdftops", "pdftocairo", "acroread", "mupdf", or "hybrid":
 
     Per-job:           lpr -o pdftops-renderer=pdftops ...
     Per-queue default: lpadmin -p printer -o pdftops-renderer-default=gs
