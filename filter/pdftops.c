@@ -42,7 +42,7 @@
  */
 
 typedef unsigned renderer_t;
-enum renderer_e {GS = 0, PDFTOPS = 1, ACROREAD = 2, PDFTOCAIRO = 3, HYBRID = 4};
+enum renderer_e {GS = 0, PDFTOPS = 1, ACROREAD = 2, PDFTOCAIRO = 3, MUPDF = 4, HYBRID = 5};
 
 /*
  * Local functions...
@@ -102,6 +102,17 @@ const char *pstops_exclude_page_management[] = {
   "position",
   "saturation",
   "scaling",
+  NULL
+};
+
+
+/*
+ * Options which we do not pass on to the mupdftoraster and rastertops
+ * filters when we render via MuPDF
+ */
+
+const char *mupdf_exclude_general[] = {
+  "Resolution",
   NULL
 };
 
@@ -279,13 +290,16 @@ main(int  argc,				/* I - Number of command-line args */
   ppd_attr_t    *attr;
   cups_page_header2_t header;
   cups_file_t	*fp;			/* Post-processing input file */
-  int		pdf_pid,		/* Process ID for pdftops */
-		pdf_argc,		/* Number of args for pdftops */
+  int		pdf_pid,		/* Process ID for pdftops/gs */
+		pdf_argc = 0,		/* Number of args for pdftops/gs */
 		pstops_pid,		/* Process ID of pstops filter */
 		pstops_pipe[2],		/* Pipe to pstops filter */
 		need_post_proc = 0,     /* Post-processing needed? */
 		post_proc_pid = 0,	/* Process ID of post-processing */
 		post_proc_pipe[2],	/* Pipe to post-processing */
+		need_rastertops = 0,    /* rastertops (for MuPDF) needed */
+		rastertops_pid = 0,	/* Process ID of rastertops */
+		rastertops_pipe[2],	/* Pipe to rastertops */
 		wait_children,		/* Number of child processes left */
 		wait_pid,		/* Process ID from wait() */
 		wait_status,		/* Status from child */
@@ -295,8 +309,16 @@ main(int  argc,				/* I - Number of command-line args */
 		*pstops_argv[7],	/* Arguments for pstops filter */
 		*pstops_options,	/* Options for pstops filter */
 		*pstops_end,		/* End of pstops filter option */
+		rastertops_path[1024],	/* Path to rastertops program */
+		*rastertops_argv[7],	/* Arguments for rastertops filter */
+		mupdftoraster_path[1024], /* Path to mupdftoraster program */
+                *mupdf_options,		/* Options for mupdftoraster and
+					   rastertops filters */
+		*mupdf_end,		/* End of mupdftoraster and rastertops
+					   filter option */
 		*ptr;			/* Pointer into value */
-  const char	*cups_serverbin;	/* CUPS_SERVERBIN environment variable */
+  const char	*cups_serverbin;	/* CUPS_SERVERBIN environment
+					   variable */
   int		duplex, tumble;         /* Duplex settings for PPD-less
 					   printing */
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
@@ -433,6 +455,8 @@ main(int  argc,				/* I - Number of command-line args */
       renderer = ACROREAD;
     else if (strcasecmp(val, "pdftocairo") == 0)
       renderer = PDFTOCAIRO;
+    else if (strcasecmp(val, "mupdf") == 0)
+      renderer = MUPDF;
     else if (strcasecmp(val, "hybrid") == 0)
       renderer = HYBRID;
     else
@@ -531,6 +555,35 @@ main(int  argc,				/* I - Number of command-line args */
   log_command_line("pstops", pstops_argv);
 
  /*
+  * Build the rastertops command-line (MuPDF only)...
+  */
+
+  if (renderer == MUPDF)
+  {
+    if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
+      cups_serverbin = CUPS_SERVERBIN;
+
+    snprintf(rastertops_path, sizeof(rastertops_path), "%s/filter/rastertops",
+	     cups_serverbin);
+
+    mupdf_options = strdup(argv[5]);
+    remove_options(mupdf_options, mupdf_exclude_general);
+
+    rastertops_argv[0] = argv[0];		/* Printer */
+    rastertops_argv[1] = argv[1];		/* Job */
+    rastertops_argv[2] = argv[2];		/* User */
+    rastertops_argv[3] = argv[3];		/* Title */
+    if (pdftopdfapplied)
+      rastertops_argv[4] = deviceCopies;     	/* Copies */
+    else
+      rastertops_argv[4] = argv[4];		/* Copies */
+    rastertops_argv[5] = mupdf_options;	/* Options */
+    rastertops_argv[6] = NULL;
+
+    log_command_line("rastertops", rastertops_argv);
+  }
+
+ /*
   * Build the command-line for the pdftops, gs, pdftocairo, or
   * acroread filter...
   */
@@ -562,11 +615,28 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argv[1] = (char *)"-ps";
     pdf_argc    = 2;
   }
-  else
+  else if (renderer == ACROREAD)
   {
     pdf_argv[0] = (char *)"acroread";
     pdf_argv[1] = (char *)"-toPostScript";
     pdf_argc    = 2;
+  }
+  else if (renderer == MUPDF)
+  {
+    snprintf(mupdftoraster_path, sizeof(mupdftoraster_path),
+	     "%s/filter/mupdftoraster", cups_serverbin);
+    pdf_argv[0] = "mupdftoraster";
+    pdf_argv[1] = argv[1];		/* Job */
+    pdf_argv[2] = argv[2];		/* User */
+    pdf_argv[3] = argv[3];		/* Title */
+    if (pdftopdfapplied)
+      pdf_argv[4] = deviceCopies;     	/* Copies */
+    else
+      pdf_argv[4] = argv[4];		/* Copies */
+    pdf_argv[5] = mupdf_options;	/* Options */
+    pdf_argv[6] = filename;
+    pdf_argv[7] = NULL;
+    pdf_argc    = 8;
   }
 
  /*
@@ -586,8 +656,10 @@ main(int  argc,				/* I - Number of command-line args */
 	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=1";
       else if (renderer == PDFTOCAIRO)
         fprintf(stderr, "WARNING: Level 1 PostScript not supported by pdftocairo.");
-      else
+      else if (renderer == ACROREAD)
         fprintf(stderr, "WARNING: Level 1 PostScript not supported by acroread.");
+      else if (renderer == MUPDF)
+        fprintf(stderr, "WARNING: Level 1 PostScript not supported by rastertops.");
     }
     else if (ppd->language_level == 2)
     {
@@ -841,7 +913,22 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argv[pdf_argc++] = (char *)"-f";
     pdf_argv[pdf_argc++] = filename;
   }
-  /* acroread has to read from stdin */
+  else if (renderer == MUPDF)
+  {
+   /*
+    * Add Resolution option to avoid slow processing by the printer when the
+    * resolution of embedded images does not match the printer's resolution
+    */
+    mupdf_options = realloc(mupdf_options, strlen(mupdf_options) + 30);
+    if (!mupdf_options) {
+      fprintf(stderr, "ERROR: Can't allocate mupdf_options\n");
+      exit(2);
+    }
+    mupdf_end = mupdf_options + strlen(mupdf_options);
+    snprintf(mupdf_end, 30, " Resolution=%ddpi", res);
+    pdf_argv[5] = mupdf_options;
+    rastertops_argv[5] = mupdf_options;
+  }
 
   pdf_argv[pdf_argc] = NULL;
 
@@ -852,7 +939,8 @@ main(int  argc,				/* I - Number of command-line args */
   * of the printer's PostScript interpreter?
   */
 
-  if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
+  if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO) ||
+      (renderer == MUPDF))
     need_post_proc = 0;
   else if (renderer == GS)
     need_post_proc =
@@ -872,15 +960,41 @@ main(int  argc,				/* I - Number of command-line args */
     need_post_proc = 1;
 
  /*
-  * Execute "pdftops/gs | pstops [ | post-processing ]"...
+  * Do we need to run rastertops when we are using mupdftoraster as PDF
+  * renderer
   */
 
+  if (renderer == MUPDF)
+    need_rastertops = 1;
+
+ /*
+  * Execute "pdftops/gs/mupdftoraster [ | rastertops ] [ | PS post-processing ]
+  *          | pstops"...
+  */
+
+
+ /*
+  * Create a pipe for each pair of subsequent processes. The variables
+  * are named by the receiving process.
+  */
+  
   if (pipe(pstops_pipe))
   {
     perror("DEBUG: Unable to create pipe for pstops");
 
     exit_status = 1;
     goto error;
+  }
+
+  if (need_rastertops)
+  {
+    if (pipe(rastertops_pipe))
+    {
+      perror("DEBUG: Unable to create pipe for rastertops");
+
+      exit_status = 1;
+      goto error;
+    }
   }
 
   if (need_post_proc)
@@ -900,7 +1014,18 @@ main(int  argc,				/* I - Number of command-line args */
     * Child comes here...
     */
 
-    if (need_post_proc)
+    if (need_rastertops)
+    {
+      dup2(rastertops_pipe[1], 1);
+      close(rastertops_pipe[0]);
+      close(rastertops_pipe[1]);
+      if (need_post_proc)
+      {
+	close(post_proc_pipe[0]);
+	close(post_proc_pipe[1]);
+      }
+    }
+    else if (need_post_proc)
     {
       dup2(post_proc_pipe[1], 1);
       close(post_proc_pipe[0]);
@@ -926,7 +1051,7 @@ main(int  argc,				/* I - Number of command-line args */
       execvp(CUPS_POPPLER_PDFTOCAIRO, pdf_argv);
       perror("DEBUG: Unable to execute pdftocairo program");
     }
-    else
+    else if (renderer == ACROREAD)
     {
       /*
        * use filename as stdin for acroread to force output to stdout
@@ -940,6 +1065,11 @@ main(int  argc,				/* I - Number of command-line args */
      
       execvp(CUPS_ACROREAD, pdf_argv);
       perror("DEBUG: Unable to execute acroread program");
+    }
+    else if (renderer == MUPDF)
+    {
+      execvp(mupdftoraster_path, pdf_argv);
+      perror("DEBUG: Unable to execute mupdftoraster program");
     }
 
     exit(1);
@@ -956,14 +1086,57 @@ main(int  argc,				/* I - Number of command-line args */
       perror("DEBUG: Unable to execute gs program");
     else if (renderer == PDFTOCAIRO)
       perror("DEBUG: Unable to execute pdftocairo program");
-    else
+    else if (renderer == ACROREAD)
       perror("DEBUG: Unable to execute acroread program");
+    else if (renderer == MUPDF)
+      perror("DEBUG: Unable to execute mupdftoraster program");
 
     exit_status = 1;
     goto error;
   }
 
   fprintf(stderr, "DEBUG: Started filter %s (PID %d)\n", pdf_argv[0], pdf_pid);
+
+  if (need_rastertops)
+  {
+    if ((rastertops_pid = fork()) == 0)
+    {
+     /*
+      * Child comes here...
+      */
+
+      dup2(rastertops_pipe[0], 0);
+      close(rastertops_pipe[0]);
+      close(rastertops_pipe[1]);
+      if (need_post_proc)
+      {
+	dup2(post_proc_pipe[1], 1);
+	close(post_proc_pipe[0]);
+	close(post_proc_pipe[1]);
+      }
+      else
+	dup2(pstops_pipe[1], 1);
+      close(pstops_pipe[0]);
+      close(pstops_pipe[1]);
+
+      execvp(rastertops_path, rastertops_argv);
+      perror("DEBUG: Unable to execute rastertops program");
+    }
+    else if (post_proc_pid < 0)
+    {
+     /*
+      * Unable to fork!
+      */
+
+      perror("DEBUG: Unable to execute rastertops program");
+
+      exit_status = 1;
+      goto error;
+    }
+
+    fprintf(stderr, "DEBUG: Started filter rastertops (PID %d)\n",
+	    rastertops_pid);
+  }
 
   if (need_post_proc)
   {
@@ -979,6 +1152,11 @@ main(int  argc,				/* I - Number of command-line args */
       dup2(pstops_pipe[1], 1);
       close(pstops_pipe[0]);
       close(pstops_pipe[1]);
+      if (need_rastertops)
+      {
+	close(rastertops_pipe[0]);
+	close(rastertops_pipe[1]);
+      }
 
       fp = cupsFileStdin();
 
@@ -1302,14 +1480,19 @@ main(int  argc,				/* I - Number of command-line args */
     * Child comes here...
     */
 
+    dup2(pstops_pipe[0], 0);
+    close(pstops_pipe[0]);
+    close(pstops_pipe[1]);
+    if (need_rastertops)
+    {
+      close(rastertops_pipe[0]);
+      close(rastertops_pipe[1]);
+    }
     if (need_post_proc)
     {
       close(post_proc_pipe[0]);
       close(post_proc_pipe[1]);
     }
-    dup2(pstops_pipe[0], 0);
-    close(pstops_pipe[0]);
-    close(pstops_pipe[1]);
 
     execv(pstops_path, pstops_argv);
     perror("DEBUG: Unable to execute pstops program");
@@ -1337,12 +1520,17 @@ main(int  argc,				/* I - Number of command-line args */
     close(post_proc_pipe[0]);
     close(post_proc_pipe[1]);
   }
+  if (need_rastertops)
+  {
+    close(rastertops_pipe[0]);
+    close(rastertops_pipe[1]);
+  }
 
  /*
   * Wait for the child processes to exit...
   */
 
-  wait_children = 2 + need_post_proc;
+  wait_children = 2 + need_rastertops + need_post_proc;
 
   while (wait_children > 0)
   {
@@ -1355,6 +1543,8 @@ main(int  argc,				/* I - Number of command-line args */
       if (job_canceled)
       {
 	kill(pdf_pid, SIGTERM);
+	if (need_rastertops)
+	  kill(rastertops_pid, SIGTERM);
 	if (need_post_proc)
 	  kill(post_proc_pid, SIGTERM);
 	kill(pstops_pid, SIGTERM);
@@ -1380,10 +1570,17 @@ main(int  argc,				/* I - Number of command-line args */
 
 	fprintf(stderr, "DEBUG: PID %d (%s) stopped with status %d!\n",
 		wait_pid,
-		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
+		wait_pid == pdf_pid ?
+		(renderer == PDFTOPS ? "pdftops" :
                 (renderer == PDFTOCAIRO ? "pdftocairo" :
-		(renderer == GS ? "gs" : "acroread"))) :
-		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
+		(renderer == GS ? "gs" :
+		(renderer == ACROREAD ? "acroread" :
+		(renderer == MUPDF ? "mupdftoraster" :
+		 "Unknown renderer"))))) :
+		(wait_pid == pstops_pid ? "pstops" :
+		(wait_pid == rastertops_pid ? "rastertops" :
+		(wait_pid == post_proc_pid ? "Post-processing" :
+		 "Unknown process"))),
 		exit_status);
       }
       else if (WTERMSIG(wait_status) == SIGTERM)
@@ -1391,31 +1588,54 @@ main(int  argc,				/* I - Number of command-line args */
 	fprintf(stderr,
 		"DEBUG: PID %d (%s) was terminated normally with signal %d!\n",
 		wait_pid,
-		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
+		wait_pid == pdf_pid ?
+		(renderer == PDFTOPS ? "pdftops" :
                 (renderer == PDFTOCAIRO ? "pdftocairo" :
-                (renderer == GS ? "gs" : "acroread"))) :
-		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
+		(renderer == GS ? "gs" :
+		(renderer == ACROREAD ? "acroread" :
+		(renderer == MUPDF ? "mupdftoraster" :
+		 "Unknown renderer"))))) :
+		(wait_pid == pstops_pid ? "pstops" :
+		(wait_pid == rastertops_pid ? "rastertops" :
+		(wait_pid == post_proc_pid ? "Post-processing" :
+		 "Unknown process"))),
 		exit_status);
       }
       else
       {
 	exit_status = WTERMSIG(wait_status);
 
-	fprintf(stderr, "DEBUG: PID %d (%s) crashed on signal %d!\n", wait_pid,
-		wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
+	fprintf(stderr, "DEBUG: PID %d (%s) crashed on signal %d!\n",
+		wait_pid,
+		wait_pid == pdf_pid ?
+		(renderer == PDFTOPS ? "pdftops" :
                 (renderer == PDFTOCAIRO ? "pdftocairo" :
-                (renderer == GS ? "gs" : "acroread"))) :
-		(wait_pid == pstops_pid ? "pstops" : "Post-processing"),
+		(renderer == GS ? "gs" :
+		(renderer == ACROREAD ? "acroread" :
+		(renderer == MUPDF ? "mupdftoraster" :
+		 "Unknown renderer"))))) :
+		(wait_pid == pstops_pid ? "pstops" :
+		(wait_pid == rastertops_pid ? "rastertops" :
+		(wait_pid == post_proc_pid ? "Post-processing" :
+		 "Unknown process"))),
 		exit_status);
       }
     }
     else
     {
-      fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n", wait_pid,
-	      wait_pid == pdf_pid ? (renderer == PDFTOPS ? "pdftops" :
-              (renderer == PDFTOCAIRO ? "pdftocairo" :
-              (renderer == GS ? "gs" : "acroread"))) :
-	      (wait_pid == pstops_pid ? "pstops" : "Post-processing"));
+      fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n",
+	      wait_pid,
+	      wait_pid == pdf_pid ?
+	      (renderer == PDFTOPS ? "pdftops" :
+	      (renderer == PDFTOCAIRO ? "pdftocairo" :
+	      (renderer == GS ? "gs" :
+	      (renderer == ACROREAD ? "acroread" :
+	      (renderer == MUPDF ? "mupdftoraster" :
+	       "Unknown renderer"))))) :
+	      (wait_pid == pstops_pid ? "pstops" :
+	      (wait_pid == rastertops_pid ? "rastertops" :
+	      (wait_pid == post_proc_pid ? "Post-processing" :
+	       "Unknown process"))));
     }
   }
 
