@@ -51,14 +51,13 @@ writeProlog(cups_cspace_t  mode,   /* I - Color mode (gray or color) */
   /* Document header... */
   printf("%%!PS-Adobe-3.0\n");
   printf("%%%%BoundingBox: %d %d %d %d\n", 0, 0, width, height);
-  printf("%%Creator: Cups-Filters\n");
-  printf("%%LanguageLevel: 2\n");
-  printf("%%DocumentData: Clean7Bit\n");
-  printf("%%EndComments\n");
-  printf("%%BeginProlog\n");
-  printf("%%EndProlog\n");
-  printf("\n");
-  printf("%%Pages: (atend)\n");
+  printf("%%%%Creator: Cups-Filters\n");
+  printf("%%%%LanguageLevel: 2\n");
+  printf("%%%%DocumentData: Clean7Bit\n");
+  printf("%%%%Pages: (atend)\n");
+  printf("%%%%EndComments\n");
+  printf("%%%%BeginProlog\n");
+  printf("%%%%EndProlog\n");
 }
 
 /*
@@ -338,7 +337,7 @@ writeEndPage()
 {
   printf("\ngrestore\n");
   printf("showpage\n");
-  printf("%%PageTrailer\n");
+  printf("%%%%PageTrailer\n");
 }
 
 /*
@@ -348,9 +347,9 @@ writeEndPage()
 void
 writeTrailer(int  pages) /* I - Number of pages */
 {
-  printf("%%Trailer\n");
+  printf("%%%%Trailer\n");
   printf("%%%%Pages: %d\n", pages);
-  printf("%%EOF\n");
+  printf("%%%%EOF\n");
 }
 
 /*
