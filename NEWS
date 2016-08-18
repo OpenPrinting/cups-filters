@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.11.0 - 2016-08-18
 -----------------------------------------------------
 
+CHANGES IN V1.11.1
+
+	- mupdftoraster: Lowered the priority (raised the cost value)
+	  in the cupsfilters-mupdf.convs file so that in a full
+	  cups-filters installation MuPDF is not prioritized.
+
 CHANGES IN V1.11.0
 
 	- pdftops: Added support for MuPDF as PDF renderer. MuPDF can
