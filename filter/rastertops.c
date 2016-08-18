@@ -462,7 +462,6 @@ main(int  argc,	   /* I - Number of command-line arguments */
 
     Page ++;
 
-    fprintf(stderr, "PAGE: %d %d\n", Page, header.NumCopies);
     fprintf(stderr, "INFO: Starting page %d.\n", Page);
 
    /*

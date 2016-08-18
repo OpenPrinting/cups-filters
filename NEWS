@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.10.0 - 2016-07-15
 
 CHANGES IN V1.11.0
 
+	- rastertops: Removed unneeded page logging.
 	- rastertops: Fixed DSC comments, some were only preceded by
 	  a single '%' instead of a double "%%".
 	- gstoraster, pdftops, foomatic-rip: Use -dNOMEDIAATTRS when
