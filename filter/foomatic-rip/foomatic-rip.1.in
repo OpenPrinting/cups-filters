@@ -148,10 +148,11 @@ http://www.openprinting.org/
 
 .SH "CONFIGURATION FILE"
 
-The file \fB@sysconfdir@/foomatic/filter.conf\fR is read whenever
-foomatic-rip is executed. It allows to configure the behavior of
-foomatic-rip as follows (lines beginning with \fB#\fR are comments and
-therefore get ignored):
+The file \fB@sysconfdir@/cups/foomatic-rip.conf\fR or if it is not
+readable the file \fB@sysconfdir@/foomatic/filter.conf\fR is read
+whenever foomatic-rip is executed. It allows to configure the behavior
+of foomatic-rip as follows (lines beginning with \fB#\fR are comments
+and therefore get ignored):
 
 .TP 10
 .B debug: 0|1
@@ -193,6 +194,8 @@ modern shell like \fBbash\fR, \fBzsh\fR, or \fBksh\fR.
 
 The PPD files of the currently defined printers
 
+.TP 0
+@sysconfdir@/cups/foomatic-rip.conf
 .TP 0
 @sysconfdir@/foomatic/filter.conf
 
