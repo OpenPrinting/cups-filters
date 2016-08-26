@@ -374,6 +374,7 @@ static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 	// check color model
 	char buf[PPD_MAX_NAME];
 	char *p, *r;
+	char *datadir;
 
 	strncpy(buf,attr->spec,sizeof(buf));
 	if ((p = strchr(buf,'.')) != NULL) {
@@ -406,7 +407,9 @@ static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 	// matched
 	path->clear();
 	if (attr->value[0] != '/') {
-	    path->append(CUPS_DATADIR);
+	    if ((datadir = getenv("CUPS_DATADIR")) == NULL)
+		datadir = CUPS_DATADIR;
+	    path->append(datadir);
 	    path->append("/profiles/");
 	}
 	path->append(attr->value);

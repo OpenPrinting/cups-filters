@@ -50,13 +50,6 @@ MIT Open Source License  -  http://www.opensource.org/
 
 #define PDF_MAX_CHECK_COMMENT_LINES	20
 
-#ifndef CUPS_FONTPATH
-#define CUPS_FONTPATH "/usr/share/cups/fonts"
-#endif
-#ifndef CUPSDATA
-#define CUPSDATA "/usr/share/cups"
-#endif
-
 typedef enum {
   GS_DOC_TYPE_PDF,
   GS_DOC_TYPE_PS,
@@ -561,6 +554,7 @@ get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
   char qualifer_tmp[1024];
   const char *profile_key;
   ppd_attr_t *attr;
+  char *datadir;
 
   /* get profile attr, falling back to CUPS */
   profile_key = "APTiogaProfile";
@@ -583,6 +577,9 @@ get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
     goto out;
   }
 
+  if ((datadir = getenv("CUPS_DATADIR")) == NULL)
+    datadir = CUPS_DATADIR;
+
   /* try to find a profile that matches the qualifier exactly */
   for (;attr != NULL; attr = ppdFindNextAttr(ppd, profile_key, NULL)) {
     fprintf(stderr, "INFO: found profile %s in PPD with qualifier '%s'\n",
@@ -595,7 +592,7 @@ get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
     /* expand to a full path if not already specified */
     if (attr->value[0] != '/')
       snprintf(full_path, sizeof(full_path),
-               "%s/profiles/%s", CUPSDATA, attr->value);
+               "%s/profiles/%s", datadir, attr->value);
     else
       strncpy(full_path, attr->value, sizeof(full_path));
 

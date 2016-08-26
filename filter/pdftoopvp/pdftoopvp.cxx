@@ -156,6 +156,7 @@ static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
     const char *cupsICCQualifier3Choice;
     ppd_attr_t *attr;
     ppd_choice_t *choice;
+    char *datadir;
 
     if ((attr = ppdFindAttr(ppd,"ColorModel",NULL)) != NULL) {
 	colorModel = attr->value;
@@ -220,7 +221,9 @@ static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 	// matched
 	path->clear();
 	if (attr->value[0] != '/') {
-	    path->append(CUPS_DATADIR);
+	    if ((datadir = getenv("CUPS_DATADIR")) == NULL)
+		datadir = CUPS_DATADIR;
+	    path->append(datadir);
 	    path->append("/profiles/");
 	}
 	path->append(attr->value);

@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.11.1 - 2016-08-18
 -----------------------------------------------------
 
+CHANGES IN V1.11.2
+
+	- bannertopdf, foomatic-rip, gstoraster, mupdftoraster,
+	  pdftoopvp, pdftoraster: Do not use build-time hard-coded
+	  paths, but always the paths from the environment variables
+	  which CUPS sets when calling its filters. This is needed to
+	  run the printing stack in a sandbox.
+
 CHANGES IN V1.11.1
 
 	- mupdftoraster: Lowered the priority (raised the cost value)

@@ -800,6 +800,9 @@ int main(int argc, char** argv)
     if (getenv("PPD")) {
         strncpy(job->ppdfile, getenv("PPD"), 256);
         spooler = SPOOLER_CUPS;
+	if (getenv("CUPS_SERVERBIN"))
+	    strncpy(cupsfilterpath, getenv("CUPS_SERVERBIN"),
+		    sizeof(cupsfilterpath));
     }
 
     /* Check status of printer color management from the color manager */

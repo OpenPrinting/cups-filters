@@ -109,14 +109,19 @@ static unsigned parse_show(char *s)
 
 static char * template_path(const char *name)
 {
-    char *result;
+    char *datadir, *result;
     size_t len;
 
     if (name[0] == '/')
         return strdup(name);
 
-    result = malloc(strlen(BANNERTOPDF_DATADIR) + strlen(name) + 2);
-    sprintf(result, "%s/%s", BANNERTOPDF_DATADIR, name);
+    if ((datadir = getenv("CUPS_DATADIR")) == NULL) {
+        result = malloc(strlen(BANNERTOPDF_DATADIR) + strlen(name) + 2);
+        sprintf(result, "%s/%s", BANNERTOPDF_DATADIR, name);
+    } else {
+        result = malloc(strlen(datadir) + strlen(name) + 7);
+        sprintf(result, "%s/data/%s", datadir, name);
+    }  
 
     return result;
 }

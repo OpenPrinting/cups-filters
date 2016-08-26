@@ -52,13 +52,6 @@ MIT Open Source License  -  http://www.opensource.org/
 
 #define PDF_MAX_CHECK_COMMENT_LINES	20
 
-#ifndef CUPS_FONTPATH
-#define CUPS_FONTPATH "/usr/share/cups/fonts"
-#endif
-#ifndef CUPSDATA
-#define CUPSDATA "/usr/share/cups"
-#endif
-
 #define CUPS_IPTEMPFILE "/tmp/ip-XXXXXX"
 #define CUPS_OPTEMPFILE "/tmp/op-XXXXXX"
 
