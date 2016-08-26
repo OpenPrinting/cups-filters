@@ -624,6 +624,7 @@ foomatic_rip_CFLAGS = \
 	-DCONFIG_PATH='"$(sysconfdir)/foomatic"' \
 	-I$(srcdir)/cupsfilters/
 foomatic_rip_LDADD = \
+	$(CUPS_LIBS) \
 	-lm \
 	libcupsfilters.la
 

@@ -89,9 +89,9 @@ void init_cups(list_t *arglist, dstr_t *filelist, jobparams_t *job)
     }
 
     /* On which queue are we printing?
-       CUPS gives the PPD file the same name as the printer queue,
-       so we can get the queue name from the name of the PPD file. */
-    file_basename(job->printer, job->ppdfile, 256);
+       CUPS puts the print queue name into the PRINTER environment variable
+       when calling filters. */
+    strncpy(job->printer, getenv("PRINTER"), 256);
 
     free(cups_options);
 }

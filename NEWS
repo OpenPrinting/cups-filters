@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.11.1 - 2016-08-18
 
 CHANGES IN V1.11.2
 
+	- foomatic-rip: When run as regular CUPS filter, read the PPD
+	  through CUPS and get the print queue name by environment
+	  variable.
 	- bannertopdf, foomatic-rip, gstoraster, mupdftoraster,
 	  pdftoopvp, pdftoraster: Do not use build-time hard-coded
 	  paths, but always the paths from the environment variables

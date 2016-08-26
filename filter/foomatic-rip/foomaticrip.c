@@ -721,7 +721,6 @@ int main(int argc, char** argv)
     const char* str;
     char *p, *filename;
     const char *path;
-    FILE *ppdfh = NULL;
     char tmp[1024], gstoraster[256];
     int havefilter, havegstoraster;
     dstr_t *filelist;
@@ -918,10 +917,12 @@ int main(int argc, char** argv)
     /* PPD File */
     /* Load the PPD file and build a data structure for the renderer's
        command line and the options */
-    if (!(ppdfh = fopen(job->ppdfile, "r")))
-        rip_die(EXIT_PRNERR_NORETRY_BAD_SETTINGS, "Unable to open PPD file %s\n", job->ppdfile);
-
-    read_ppd_file(job->ppdfile);
+    if (spooler == SPOOLER_CUPS && job->printer && strlen(job->printer) > 0) {
+      str = cupsGetPPD(job->printer);
+      read_ppd_file(str);
+      unlink(str);
+    } else 
+      read_ppd_file(job->ppdfile);
 
     /* We do not need to parse the PostScript job when we don't have
        any options. If we have options, we must check whether the

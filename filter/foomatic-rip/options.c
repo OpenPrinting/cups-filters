@@ -1566,10 +1566,8 @@ void read_ppd_file(const char *filename)
     icc_mapping_entry_t *entry;
 
     fh = fopen(filename, "r");
-    if (!fh) {
-        _log("error opening %s\n", filename);
-        exit(EXIT_PRNERR_NORETRY_BAD_SETTINGS);
-    }
+    if (!fh)
+	rip_die(EXIT_PRNERR_NORETRY_BAD_SETTINGS, "Unable to open PPD file %s\n", filename);
     _log("Parsing PPD file ...\n");
 
     dstrassure(value, 256);
