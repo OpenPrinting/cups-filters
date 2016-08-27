@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.11.1 - 2016-08-18
 
 CHANGES IN V1.11.2
 
+	- cups-browsed: Allow turning off the use of CUPS' domain
+	  socket via cups-browsed.conf.
 	- foomatic-rip: When run as regular CUPS filter use preferably
 	  /etc/cups/foomatic-rip.conf (or wherever the CUPS
 	  configuration files reside, occurring to the CUPS_SERVERROOT

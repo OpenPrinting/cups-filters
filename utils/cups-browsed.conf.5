@@ -405,11 +405,14 @@ the locally running CUPS daemon is accessed. If not specified the
 standard domain socket of CUPS is used. Use this if you have specified
 an alternative domain socket for CUPS via a Listen directive in
 /etc/cups/cupsd.conf. If cups-browsed is not able to access the local
-CUPS daemon via a domain socket it accesses it via localhost.
+CUPS daemon via a domain socket it accesses it via localhost. "None"
+or "Off" lets cups-browsed not use CUPS' domain socket.
 .PP
 .nf
 .fam C
         DomainSocket /var/run/cups/cups.sock
+        DomainSocket None
+        DomainSocket Off
 
 .fam T
 .fi

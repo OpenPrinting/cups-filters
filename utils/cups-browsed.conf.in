@@ -278,9 +278,12 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 
 
 # Use DomainSocket to access the local CUPS daemon via another than the
-# default domain socket
+# default domain socket. "None" or "Off" lets cups-browsed not use CUPS'
+# domain socket.
 
 # DomainSocket @CUPS_DEFAULT_DOMAINSOCKET@
+# DomainSocket None
+# DomainSocket Off
 
 
 # Set IPBasedDeviceURIs to "Yes" if cups-browsed should create its

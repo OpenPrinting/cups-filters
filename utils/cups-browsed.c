@@ -6251,20 +6251,24 @@ int main(int argc, char*argv[]) {
   /* Set the CUPS_SERVER environment variable to assure that cups-browsed
      always works with the local CUPS daemon and never with a remote one
      specified by a client.conf file */
+  if (getenv("CUPS_SERVER") == NULL) {
 #ifdef CUPS_DEFAULT_DOMAINSOCKET
-  if (DomainSocket == NULL)
-    DomainSocket = CUPS_DEFAULT_DOMAINSOCKET;
+    if (DomainSocket == NULL)
+      DomainSocket = CUPS_DEFAULT_DOMAINSOCKET;
 #endif
-  if (DomainSocket != NULL) {
-    struct stat sockinfo;               /* Domain socket information */
-    if (!stat(DomainSocket, &sockinfo) &&
-        (sockinfo.st_mode & S_IROTH) != 0 &&
-        (sockinfo.st_mode & S_IWOTH) != 0)
-      setenv("CUPS_SERVER", DomainSocket, 1);
-    else
+    if (DomainSocket != NULL) {
+      struct stat sockinfo;               /* Domain socket information */
+      if (strcasecmp(DomainSocket, "None") != 0 &&
+	  strcasecmp(DomainSocket, "Off") != 0 &&
+	  !stat(DomainSocket, &sockinfo) &&
+	  (sockinfo.st_mode & S_IROTH) != 0 &&
+	  (sockinfo.st_mode & S_IWOTH) != 0)
+	setenv("CUPS_SERVER", DomainSocket, 1);
+      else
+	setenv("CUPS_SERVER", "localhost", 1);
+    } else
       setenv("CUPS_SERVER", "localhost", 1);
-  } else
-    setenv("CUPS_SERVER", "localhost", 1);
+  }
 
   if (BrowseLocalProtocols & BROWSE_DNSSD) {
     debug_printf("Local support for DNSSD not implemented\n");
