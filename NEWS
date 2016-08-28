@@ -6,8 +6,8 @@ CHANGES IN V1.11.2
 	- cups-browsed: Allow turning off the use of CUPS' domain
 	  socket via cups-browsed.conf.
 	- foomatic-rip: When run as regular CUPS filter use preferably
-	  /etc/cups/foomatic-rip.conf (or wherever the CUPS
-	  configuration files reside, occurring to the CUPS_SERVERROOT
+	  /etc/cups/foomatic-rip.conf (or whereever the CUPS
+	  configuration files reside, according to the CUPS_SERVERROOT
 	  environment variable) as configuration file. This way we can
 	  more easily run the printing stack in a sandbox.
 	- foomatic-rip: When run as regular CUPS filter, read the PPD
