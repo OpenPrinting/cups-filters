@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 -----------------------------------------------------
 
+CHANGES IN V1.11.3
+
+	- cups-browsed: Fixed clustering equally-named queues of
+	  different remote servers, to assure to have one master
+	  referencing to all duplicates and noy a daisy chain of
+	  duplicate references.
+
 CHANGES IN V1.11.2
 
 	- cups-browsed: Allow turning off the use of CUPS' domain

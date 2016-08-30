@@ -2852,21 +2852,21 @@ create_local_queue (const char *name,
     for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 q;
 	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
-      if (!strcasecmp(q->name, p->name) &&
-	  q != p)
+      if (!strcasecmp(q->name, p->name) && /* Queue with same name on server */
+	  !q->duplicate_of && /* Find the master of the queues with this name,
+				 to avoid "daisy chaining" */
+	  q != p) /* Skip our current queue */
 	break;
     p->duplicate_of = (q && q->status != STATUS_DISAPPEARED &&
 		       q->status != STATUS_UNCONFIRMED) ? q : NULL;
     if (p->duplicate_of) {
       debug_printf("Printer %s already available through host %s.\n",
 		   p->name, q->host);
-      if (!q->duplicate_of) {
-	/* Update q to get implicitclass:... URI */
-	q->num_duplicates ++;
-	if (q->status != STATUS_DISAPPEARED) {
-	  q->status = STATUS_TO_BE_CREATED;
-	  q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-	}
+      /* Update q to get implicitclass:... URI */
+      q->num_duplicates ++;
+      if (q->status != STATUS_DISAPPEARED) {
+	q->status = STATUS_TO_BE_CREATED;
+	q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
       }
     } else if (q) {
       q->duplicate_of = p;
