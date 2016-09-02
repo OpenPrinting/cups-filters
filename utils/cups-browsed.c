@@ -334,6 +334,7 @@ static uint16_t BrowsePort = 631;
 static browsepoll_t **BrowsePoll = NULL;
 static size_t NumBrowsePoll = 0;
 static guint update_netifs_sourceid = 0;
+static char local_server_str[1024];
 static char *DomainSocket = NULL;
 static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static unsigned int CreateRemoteRawPrinterQueues = 0;
@@ -480,6 +481,32 @@ ippSetVersion(ipp_t *ipp, int major, int minor)
 }
 #endif
 
+
+#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
+#define HAVE_CUPS_1_7 1
+#endif
+
+/*
+ * The httpAddrPort() function was only introduced in CUPS 1.7.x
+ */
+#ifndef HAVE_CUPS_1_7
+int                                     /* O - Port number */
+httpAddrPort(http_addr_t *addr)         /* I - Address */
+{
+  if (!addr)
+    return (-1);
+#ifdef AF_INET6
+  else if (addr->addr.sa_family == AF_INET6)
+    return (ntohs(addr->ipv6.sin6_port));
+#endif /* AF_INET6 */
+  else if (addr->addr.sa_family == AF_INET)
+    return (ntohs(addr->ipv4.sin_port));
+  else
+    return (0);
+}
+#endif
+
+
 void
 start_debug_logging()
 {
@@ -541,6 +568,7 @@ password_callback (const char *prompt,
 static http_t *
 http_connect_local (void)
 {
+  debug_printf("cups-browsed: Creating http connection to local CUPS daemon: %s:%d\n", cupsServer(), ippPort());
   if (!local_conn)
     local_conn = httpConnectEncrypt(cupsServer(), ippPort(),
 				    cupsEncryption());
@@ -588,10 +616,13 @@ local_printer_has_uri (gpointer key,
 static void
 local_printers_create_subscription (http_t *conn)
 {
+  char temp[1024];
   if (!local_printers_context) {
     local_printers_context = g_malloc0 (sizeof (browsepoll_t));
-    local_printers_context->server = "localhost";
-    local_printers_context->port = BrowsePort;
+    local_printers_context->server =
+      strdup(httpAddrString(httpGetAddress(conn),
+			    temp, sizeof(temp)));
+    local_printers_context->port = httpAddrPort(httpGetAddress(conn));
     local_printers_context->can_subscribe = TRUE;
   }
 
@@ -603,7 +634,7 @@ get_local_printers (void)
 {
   cups_dest_t *dests = NULL;
   int num_dests = cupsGetDests (&dests);
-  debug_printf ("cups-browsed [BrowsePoll localhost:631]: cupsGetDests\n");
+  debug_printf ("cups-browsed (%s): cupsGetDests\n", local_server_str);
   g_hash_table_remove_all (local_printers);
   for (int i = 0; i < num_dests; i++) {
     const char *val;
@@ -2360,7 +2391,7 @@ on_printer_state_changed (CupsNotifier *object,
   int i;
   char *ptr, buf[1024];
   remote_printer_t *p, *q;
-  char server_str[1024];
+  http_t *http = NULL;
   ipp_t *request, *response;
   ipp_attribute_t *attr;
   const char *pname = NULL;
@@ -2523,100 +2554,101 @@ on_printer_state_changed (CupsNotifier *object,
 	if (!strcasecmp(p->name, printer) &&
 	    p->status == STATUS_CONFIRMED) {
 	  debug_printf("Checking state of remote printer %s on host %s.\n", printer, p->host);
-	  snprintf(server_str, sizeof(server_str), "%s:%d",
-		   p->ip ? p->ip : p->host, ippPort());
-	  cupsSetServer(server_str);
-	  /* Check whether the printer is idle, processing, or disabled */
-	  request = ippNewRequest(CUPS_GET_PRINTERS);
-	  ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-			"requested-attributes",
-			sizeof(pattrs) / sizeof(pattrs[0]),
-			NULL, pattrs);
-	  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
-		       "requesting-user-name",
-		       NULL, cupsUser());
-	  if ((response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/")) !=
-	      NULL) {
-	    pname = NULL;
-	    pstate = IPP_PRINTER_IDLE;
-	    paccept = 0;
-	    for (attr = ippFirstAttribute(response); attr != NULL;
-		 attr = ippNextAttribute(response)) {
-	      while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
-		attr = ippNextAttribute(response);
-	      if (attr == NULL)
-		break;
+	  http = httpConnectEncrypt (p->ip ? p->ip : p->host, ippPort(),
+				     HTTP_ENCRYPT_IF_REQUESTED);
+	  if (http) {
+	    /* Check whether the printer is idle, processing, or disabled */
+	    request = ippNewRequest(CUPS_GET_PRINTERS);
+	    ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+			  "requested-attributes",
+			  sizeof(pattrs) / sizeof(pattrs[0]),
+			  NULL, pattrs);
+	    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+			 "requesting-user-name",
+			 NULL, cupsUser());
+	    if ((response = cupsDoRequest(http, request, "/")) !=
+		NULL) {
 	      pname = NULL;
 	      pstate = IPP_PRINTER_IDLE;
 	      paccept = 0;
-	      while (attr != NULL && ippGetGroupTag(attr) ==
-		     IPP_TAG_PRINTER) {
-		if (!strcmp(ippGetName(attr), "printer-name") &&
-		    ippGetValueTag(attr) == IPP_TAG_NAME)
-		  pname = ippGetString(attr, 0, NULL);
-		else if (!strcmp(ippGetName(attr), "printer-state") &&
-			 ippGetValueTag(attr) == IPP_TAG_ENUM)
-		  pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
-		else if (!strcmp(ippGetName(attr),
-				 "printer-is-accepting-jobs") &&
-			 ippGetValueTag(attr) == IPP_TAG_BOOLEAN)
-		  paccept = ippGetBoolean(attr, 0);
-		attr = ippNextAttribute(response);
-	      }
-	      if (pname == NULL) {
+	      for (attr = ippFirstAttribute(response); attr != NULL;
+		   attr = ippNextAttribute(response)) {
+		while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+		  attr = ippNextAttribute(response);
 		if (attr == NULL)
 		  break;
-		else
-		  continue;
-	      }
-	      if (!strcasecmp(pname, printer)) {
-		if (paccept) {
-		  debug_printf("Printer %s on host %s is accepting jobs.\n", printer, p->host);
-		  switch (pstate) {
-		  case IPP_PRINTER_IDLE:
-		    valid_dest_found = 1;
-		    dest_host = p->ip ? p->ip : p->host;
-		    dest_index = i;
-		    debug_printf("Printer %s on host %s is idle, take this as destination and stop searching.\n", printer, p->host);
-		    break;
-		  case IPP_PRINTER_PROCESSING:
-		    valid_dest_found = 1;
-		    if (LoadBalancingType == QUEUE_ON_SERVERS) {
-		      num_jobs = 0;
-		      jobs = NULL;
-		      num_jobs =
-			cupsGetJobs2(CUPS_HTTP_DEFAULT, &jobs, printer, 0,
-				     CUPS_WHICHJOBS_ACTIVE);
-		      if (num_jobs >= 0 && num_jobs < min_jobs) {
-			min_jobs = num_jobs;
-			dest_host = p->ip ? p->ip : p->host;
-			dest_index = i;
-		      }
-		      debug_printf("Printer %s on host %s is printing and it has %d jobs.\n", printer, p->host, num_jobs);
-		    } else
-		      debug_printf("Printer %s on host %s is printing.\n", printer, p->host);
-		    break;
-		  case IPP_PRINTER_STOPPED:
-		    debug_printf("Printer %s on host %s is disabled, skip it.\n", printer, p->host);
-		    break;
-		  }
-		} else {
-		  debug_printf("Printer %s on host %s is not accepting jobs, skip it.\n", printer, p->host);
+		pname = NULL;
+		pstate = IPP_PRINTER_IDLE;
+		paccept = 0;
+		while (attr != NULL && ippGetGroupTag(attr) ==
+		       IPP_TAG_PRINTER) {
+		  if (!strcmp(ippGetName(attr), "printer-name") &&
+		      ippGetValueTag(attr) == IPP_TAG_NAME)
+		    pname = ippGetString(attr, 0, NULL);
+		  else if (!strcmp(ippGetName(attr), "printer-state") &&
+			   ippGetValueTag(attr) == IPP_TAG_ENUM)
+		    pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
+		  else if (!strcmp(ippGetName(attr),
+				   "printer-is-accepting-jobs") &&
+			   ippGetValueTag(attr) == IPP_TAG_BOOLEAN)
+		    paccept = ippGetBoolean(attr, 0);
+		  attr = ippNextAttribute(response);
 		}
+		if (pname == NULL) {
+		  if (attr == NULL)
+		    break;
+		  else
+		    continue;
+		}
+		if (!strcasecmp(pname, printer)) {
+		  if (paccept) {
+		    debug_printf("Printer %s on host %s is accepting jobs.\n", printer, p->host);
+		    switch (pstate) {
+		    case IPP_PRINTER_IDLE:
+		      valid_dest_found = 1;
+		      dest_host = p->ip ? p->ip : p->host;
+		      dest_index = i;
+		      debug_printf("Printer %s on host %s is idle, take this as destination and stop searching.\n", printer, p->host);
+		      break;
+		    case IPP_PRINTER_PROCESSING:
+		      valid_dest_found = 1;
+		      if (LoadBalancingType == QUEUE_ON_SERVERS) {
+			num_jobs = 0;
+			jobs = NULL;
+			num_jobs =
+			  cupsGetJobs2(http, &jobs, printer, 0,
+				       CUPS_WHICHJOBS_ACTIVE);
+			if (num_jobs >= 0 && num_jobs < min_jobs) {
+			  min_jobs = num_jobs;
+			  dest_host = p->ip ? p->ip : p->host;
+			  dest_index = i;
+			}
+			debug_printf("Printer %s on host %s is printing and it has %d jobs.\n", printer, p->host, num_jobs);
+		      } else
+			debug_printf("Printer %s on host %s is printing.\n", printer, p->host);
+		      break;
+		    case IPP_PRINTER_STOPPED:
+		      debug_printf("Printer %s on host %s is disabled, skip it.\n", printer, p->host);
+		      break;
+		    }
+		  } else {
+		    debug_printf("Printer %s on host %s is not accepting jobs, skip it.\n", printer, p->host);
+		  }
+		  break;
+		}
+	      }
+	      if (pstate == IPP_PRINTER_IDLE && paccept) {
+		q->last_printer = i;
 		break;
 	      }
 	    }
-	    if (pstate == IPP_PRINTER_IDLE && paccept) {
-	      q->last_printer = i;
-	      break;
-	    }
+	    httpClose(http);
+	    http = NULL;
 	  }
 	}
 	if (i == q->last_printer)
 	  break;
       }
-      /* Set CUPS server back to local */
-      cupsSetServer(NULL);
       /* Find the ID of the current job */
       request = ippNewRequest(IPP_GET_JOBS);
       httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
@@ -2786,7 +2818,7 @@ create_local_queue (const char *name,
   int           bytes;
   const char	*cups_serverbin;	/* CUPS_SERVERBIN environment variable */
   int uri_status, port;
-  http_t *http;
+  http_t *http = NULL;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
   ipp_t *request, *response = NULL;
 #ifdef HAVE_CUPS_1_6
@@ -3152,11 +3184,15 @@ create_local_queue (const char *name,
   }
 
   ippDelete(response);
+  if (http)
+    httpClose(http);
   return p;
 
  fail:
   debug_printf("ERROR: Unable to create print queue, ignoring printer.\n");
   ippDelete(response);
+  if (http)
+    httpClose(http);
   free (p->type);
   free (p->service_name);
   free (p->host);
@@ -6248,10 +6284,14 @@ int main(int argc, char*argv[]) {
   if (debug_logfile == 1)
     start_debug_logging();
 
-  /* Set the CUPS_SERVER environment variable to assure that cups-browsed
-     always works with the local CUPS daemon and never with a remote one
-     specified by a client.conf file */
-  if (getenv("CUPS_SERVER") == NULL) {
+  /* Point to selected CUPS server or domain socket via the CUPS_SERVER
+     environment variable or DomainSocket configuration file option.
+     Default to localhost:631 (and not to CUPS default to override
+     client.conf files as cups-browsed works only with a local CUPS
+     daemon, not with remote ones. */
+  if (getenv("CUPS_SERVER") != NULL) {
+    strncpy(local_server_str, getenv("CUPS_SERVER"), sizeof(local_server_str));
+  } else {
 #ifdef CUPS_DEFAULT_DOMAINSOCKET
     if (DomainSocket == NULL)
       DomainSocket = CUPS_DEFAULT_DOMAINSOCKET;
@@ -6263,12 +6303,15 @@ int main(int argc, char*argv[]) {
 	  !stat(DomainSocket, &sockinfo) &&
 	  (sockinfo.st_mode & S_IROTH) != 0 &&
 	  (sockinfo.st_mode & S_IWOTH) != 0)
-	setenv("CUPS_SERVER", DomainSocket, 1);
+	strncpy(local_server_str, DomainSocket, sizeof(local_server_str));
       else
-	setenv("CUPS_SERVER", "localhost", 1);
+	strncpy(local_server_str, "localhost:631", sizeof(local_server_str));
     } else
-      setenv("CUPS_SERVER", "localhost", 1);
+      strncpy(local_server_str, "localhost:631", sizeof(local_server_str));
+    setenv("CUPS_SERVER", local_server_str, 1);
   }
+  cupsSetServer(local_server_str);
+  BrowsePort = ippPort();
 
   if (BrowseLocalProtocols & BROWSE_DNSSD) {
     debug_printf("Local support for DNSSD not implemented\n");
