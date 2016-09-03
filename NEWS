@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: Treat discovered printers correctly also if
+	  they use a non-standard port, even if several CUPS daemons
+	  are running on the same server, on different ports. This
+	  also improves the support of a sandboxed printing stack.
 	- cups-browsed: Close http connections opened for polling
 	  properties of IPP network printers, to fix a possible memory
 	  leak.

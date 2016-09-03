@@ -208,8 +208,7 @@ main(int  argc,				/* I - Number of command-line args */
 	 and we are not blocked until the job is printed. So a subsequent job
 	 will be immediately processed and sent out to another server */
       /* Set destination server */
-      snprintf(server_str, sizeof(server_str), "%s:%d", dest_host,
-	       ippPort());
+      snprintf(server_str, sizeof(server_str), "%s", dest_host);
       cupsSetServer(server_str);
       /* Parse the command line option and prepare them for the new print
 	 job */
