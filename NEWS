@@ -13,8 +13,7 @@ CHANGES IN V1.11.3
 	- cups-browsed: Cleaned up HTTP access to local and remote
 	  CUPS servers and IPP printers, to assure that the local CUPS
 	  daemon is always accessed the same (user-defined) way
-	  (domain socket/localhost:port). Possibly fixes Debian bug
-	  #832637.
+	  (domain socket/localhost:port). Fixes Debian bug #832637.
 	- cups-browsed: Fixed clustering equally-named queues of
 	  different remote servers, to assure to have one master
 	  referencing to all duplicates and noy a daisy chain of
