@@ -3,6 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: When equally-named remote queues are joined
+	  to a load-balancing cluster using the implicitclass backend
+	  CUPS does not make the server's PPD file available on the
+	  client any more. To fix this, we download the PPD file
+	  when creating an implictclass:... queue and apply it to the
+	  queue. This way the options of the printer(s) are always
+	  available for enumeration, especially in print dialogs
+	  (Bug #1372).
 	- cups-browsed: Treat discovered printers correctly also if
 	  they use a non-standard port, even if several CUPS daemons
 	  are running on the same server, on different ports. This

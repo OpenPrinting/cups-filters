@@ -3290,15 +3290,17 @@ remove_bad_chars(const char *str_orig, /* I - Original string */
 gboolean handle_cups_queues(gpointer unused) {
   remote_printer_t *p, *q;
   http_t *http;
-  char uri[HTTP_MAX_URI], device_uri[HTTP_MAX_URI], buf[1024];
+  char uri[HTTP_MAX_URI], device_uri[HTTP_MAX_URI], buf[1024], line[1024];
   int num_options;
   cups_option_t *options;
   int num_jobs;
   cups_job_t *jobs;
   ipp_t *request;
   time_t current_time = time(NULL);
-  int i;
-  char *disabled_str;
+  int i, new_cupsfilter_line_inserted, cont_line_read, want_raw;
+  char *disabled_str, *ptr, *prefix;
+  const char *loadedppd = NULL;
+  cups_file_t *in, *out;
 
   debug_printf("Processing printer list ...\n");
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -3475,6 +3477,7 @@ gboolean handle_cups_queues(gpointer unused) {
          for load balancing. In this case we will assign an implicitclass:...
 	 device URI, which makes cups-browsed find the best destination for
 	 each job. */
+      loadedppd = NULL;
       if (cups_notifier != NULL && p->num_duplicates > 0) {
 	/* We have duplicates, so we use the device URI
 	   implicitclass:<queue name>
@@ -3485,6 +3488,117 @@ gboolean handle_cups_queues(gpointer unused) {
 		 p->name);
 	debug_printf("Print queue %s has duplicates, using implicit class device URI %s\n",
 		     p->name, device_uri);
+	if (p->ppd == NULL && p->model == NULL && p->ifscript == NULL) {
+	  /* Having another backend than the CUPS "ipp" backend the
+	     options from the PPD of the queue on the server are not
+	     automatically used on the client any more, so we have to
+	     explicitly load the PPD from one of the servers, apply it
+	     to our local queue, and replace its "*cupsFilter(2): ..."
+	     lines by one line making the print data get passed through
+	     to the server without filtering on the client (where not
+	     necessarily the right filters/drivers are installed) so
+	     that it gets filtered on the server. In addition, we prefix
+	     the PPD's NickName, so that automatic PPD updating by the
+	     distribution's package installation/update infrastructure
+	     is suppressed. */
+	  /* Load the PPD file from one of the servers */
+	  if ((http = httpConnectEncrypt(p->ip ? p->ip : p->host,
+					 p->port ? p->port : ippPort(),
+					 cupsEncryption())) == NULL) {
+	    debug_printf("Could not connect to the server %s:%d for %s!\n",
+			 p->host, p->port, p->name);
+	    p->timeout = current_time + TIMEOUT_RETRY;
+	    break;
+	  }
+	  if ((loadedppd = cupsGetPPD2(http, p->name)) == NULL &&
+	      CreateRemoteRawPrinterQueues == 0) {
+	    debug_printf("Unable to load PPD file for %s from the server %s:%d!\n",
+			 p->name, p->host, p->port);
+	    p->timeout = current_time + TIMEOUT_RETRY;
+	    httpClose(http);
+	    break;
+	  } else {
+	    debug_printf("Loading PPD file for printer %s from server %s:%d!\n",
+			 p->name, p->host, p->port);
+	    httpClose(http);
+	    if ((out = cupsTempFile2(buf, sizeof(buf))) == NULL) {
+	      debug_printf("Unable to create temporary file!\n");
+	      p->timeout = current_time + TIMEOUT_RETRY;
+	      unlink(loadedppd);
+	      break;
+	    }
+	    if ((in = cupsFileOpen(loadedppd, "r")) == NULL) {
+	      debug_printf("Unable to open the downloaded PPD file!\n");
+	      p->timeout = current_time + TIMEOUT_RETRY;
+	      unlink(loadedppd);
+	      break;
+	    }
+	    new_cupsfilter_line_inserted = 0;
+	    cont_line_read = 0;
+	    while (cupsFileGets(in, line, sizeof(line))) {
+	      if (!strncmp(line, "*cupsFilter:", 12) ||
+		  !strncmp(line, "*cupsFilter2:", 13)) {
+		cont_line_read = 0;
+		/* "*cupfFilter(2): ..." line: Remove it and replace the
+		   first one by a line which passes through the data
+		   unfiltered */
+		if (new_cupsfilter_line_inserted == 0) {
+		  cupsFilePrintf(out, "*cupsFilter: \"*/* 0 -\"\n");
+		  new_cupsfilter_line_inserted = 1;
+		}
+		/* Find the end of the "*cupsFilter(2): ..." entry in the
+		   case it spans more than one line */
+		do {
+		  if (strlen(line) != 0) {
+		    ptr = line + strlen(line) - 1;
+		    while(isspace(*ptr) && ptr > line)
+		      ptr --;
+		    if (*ptr == '"')
+		      break;
+		  }
+		  cont_line_read = 1;
+		} while (cupsFileGets(in, line, sizeof(line)));
+	      } else if (!strncmp(line, "*NickName:", 10)) {
+		cont_line_read = 0;
+		/* Prefix the "NickName" of the printer so that automatic
+		   PPD updaters skip this PPD */
+		ptr = strchr(line, '"');
+		if (ptr) {
+		  ptr ++;
+		  prefix = "Cluster of ";
+		  line[sizeof(line) - strlen(prefix) - 1] = '\0';
+		  memmove(ptr + strlen(prefix), ptr, strlen(ptr) + 1);
+		  memmove(ptr, prefix, strlen(prefix));
+		  ptr = line + strlen(line) - 1;
+		  while(isspace(*ptr) && ptr > line) {
+		    ptr --;
+		    *ptr = '\0';
+		  }
+		  if (*ptr != '"') {
+		    if (ptr < line + sizeof(line) - 2) {
+		      *(ptr + 1) = '"';
+		      *(ptr + 2) = '\0';
+		    } else {
+		      line[sizeof(line) - 2] = '"';
+		      line[sizeof(line) - 1] = '\0';
+		    }
+		  }
+		}
+		cupsFilePrintf(out, "%s\n", line);
+	      } else if (cont_line_read == 0 || strncmp(line, "*End", 4)) {
+		cont_line_read = 0;
+		/* Simply write out the line as we read it */
+		cupsFilePrintf(out, "%s\n", line);
+	      }
+	    }
+	    if (new_cupsfilter_line_inserted == 0)
+	      cupsFilePrintf(out, "*cupsFilter: \"*/* 0 -\"\n");
+	    cupsFileClose(in);
+	    cupsFileClose(out);
+	    p->ppd = strdup(buf);
+	    unlink(loadedppd);
+	  }
+	}
       } else {
 	/* Device URI: ipp(s)://<remote host>:631/printers/<remote queue> */
 	strncpy(device_uri, p->uri, sizeof(device_uri));
@@ -3544,20 +3658,24 @@ gboolean handle_cups_queues(gpointer unused) {
       if (p->ppd) {
 	debug_printf("Non-raw queue %s with PPD file: %s\n", p->name, p->ppd);
 	ippDelete(cupsDoFileRequest(http, request, "/admin/", p->ppd));
-	if (p->model) {
+	want_raw = 0;
+	if (p->model || loadedppd) {
 	  unlink(p->ppd);
 	  free(p->ppd);
 	  p->ppd = NULL;
+	  loadedppd = NULL;
 	}
       } else if (p->ifscript) {
 	debug_printf("Non-raw queue %s with interface script: %s\n", p->name, p->ifscript);
 	ippDelete(cupsDoFileRequest(http, request, "/admin/", p->ifscript));
+	want_raw = 0;
 	unlink(p->ifscript);
 	free(p->ifscript);
 	p->ifscript = NULL;
       } else {
 	debug_printf("Raw queue %s\n", p->name);
 	ippDelete(cupsDoRequest(http, request, "/admin/"));
+	want_raw = 1;
       }
       cupsFreeOptions(num_options, options);
       if (cupsLastError() > IPP_OK_CONFLICT) {
@@ -3592,6 +3710,32 @@ gboolean handle_cups_queues(gpointer unused) {
       if (cupsLastError() > IPP_OK_CONFLICT)
 	debug_printf("Unable to set printer-is-shared bit to false (%s)!\n",
 		     cupsLastErrorString());
+
+      /* If we are about to create a raw queue or turn a non-raw queue
+	 into a raw one, add "ppd-name=raw" option to remove any
+	 existing PPD file assigned to the queue.
+
+         Also here we do a separate IPP request as it errors in some
+         cases. */
+      if (want_raw) {
+	debug_printf("Removing local PPD file for printer %s\n", p->name);
+	request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
+	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		     "printer-uri", NULL, uri);
+	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		     "requesting-user-name", NULL, cupsUser());
+	num_options = 0;
+	options = NULL;
+	num_options = cupsAddOption("ppd-name", "raw",
+				    num_options, &options);
+	cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
+	cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
+	ippDelete(cupsDoRequest(http, request, "/admin/"));
+	cupsFreeOptions(num_options, options);
+	if (cupsLastError() > IPP_OK_CONFLICT)
+	  debug_printf("Unable to remove PPD file from the print queue (%s)!\n",
+		       cupsLastErrorString());
+      }
 
       /* Option settings which we have recorded from the previous session */
       retrieve_printer_options(p->name);
