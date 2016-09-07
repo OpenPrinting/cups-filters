@@ -2337,7 +2337,8 @@ printer_record (const char *printer) {
     return NULL;
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    if (!strcasecmp(printer, p->name))
+    if (!strcasecmp(printer, p->name) &&
+	!p->duplicate_of)
       return p;
 
   return NULL;

@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: Let the printer_record() function always
+	  return the master record for the printer name and not an
+	  arbitrary duplicate.
 	- cups-browsed: Fixes in the function for saving option
 	  settings: Save PPD options suffixed with "-default" if the
 	  PPD is from a queue pointing to remote CUPS printer(s) to
