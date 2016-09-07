@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: Fixes in the function for saving option
+	  settings: Save PPD options suffixed with "-default" if the
+	  PPD is from a queue pointing to remote CUPS printer(s) to
+	  save the options in printers.conf. Also make sure to not
+	  save the same option twice with different values.
 	- cups-browsed: When equally-named remote queues are joined
 	  to a load-balancing cluster using the implicitclass backend
 	  CUPS does not make the server's PPD file available on the
