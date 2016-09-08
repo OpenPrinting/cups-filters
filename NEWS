@@ -3,14 +3,18 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: Added flag to inhibit auto-backup of option
+	  settings by the on_printer_modified() notification handler
+	  during print que setup and removal.
 	- cups-browsed: Let the printer_record() function always
 	  return the master record for the printer name and not an
 	  arbitrary duplicate.
-	- cups-browsed: Fixes in the function for saving option
-	  settings: Save PPD options suffixed with "-default" if the
-	  PPD is from a queue pointing to remote CUPS printer(s) to
-	  save the options in printers.conf. Also make sure to not
-	  save the same option twice with different values.
+	- cups-browsed: Fixes in the functionality for saving option
+	  settings: Make sure to not save the same option twice with
+	  different values, do not save the "printer-is-shared" option
+	  (errors out when re-applying option in the next session), do
+	  not save PPD options of remote CUPS printers (we do not have
+	  a local PPD permanently).
 	- cups-browsed: When equally-named remote queues are joined
 	  to a load-balancing cluster using the implicitclass backend
 	  CUPS does not make the server's PPD file available on the

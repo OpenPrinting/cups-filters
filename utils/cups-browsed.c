@@ -178,6 +178,7 @@ typedef struct remote_printer_s {
   char *service_name;
   char *type;
   char *domain;
+  int no_autosave;
 } remote_printer_t;
 
 /* Data structure for network interfaces */
@@ -2124,7 +2125,7 @@ record_printer_options(const char *printer) {
 		  "printer-error-policy",
 		  "printer-info",
 		  "printer-is-accepting-jobs",
-		  "printer-is-shared",
+		  /*"printer-is-shared",*/
 		  "printer-geo-location",
 		  "printer-location",
 		  "printer-op-policy",
@@ -2179,8 +2180,6 @@ record_printer_options(const char *printer) {
       if (strcasecmp(ppd_opt->keyword, "PageRegion") != 0) {
 	if (ipp_printer)
 	  strncpy(buf, ppd_opt->keyword, sizeof(buf));
-	else
-	  snprintf(buf, sizeof(buf), "%s-default", ppd_opt->keyword);
 	num_options = cupsAddOption(buf, ppd_opt->defchoice,
 				    num_options, &options);
       }
@@ -2308,7 +2307,7 @@ retrieve_printer_options(const char *printer) {
     ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
     cupsFreeOptions(num_options, options);
     if (cupsLastError() > IPP_OK_CONFLICT)
-      debug_printf("Unable to modify CUPS queue (%s)!\n",
+      debug_printf("Unable to modify CUPS queue, applying options (%s)!\n",
 		   cupsLastErrorString());
   }
 
@@ -2818,6 +2817,8 @@ on_printer_modified (CupsNotifier *object,
 		     gboolean printer_is_accepting_jobs,
 		     gpointer user_data)
 {
+  remote_printer_t *p;
+
   debug_printf("[CUPS Notification] Printer modified: %s\n",
 	       text);
 
@@ -2825,9 +2826,14 @@ on_printer_modified (CupsNotifier *object,
     /* The user has changed settings of a printer which we have generated,
        backup the changes for the case of a crash or unclean shutdown of
        cups-browsed. */
-    debug_printf("Settings of printer %s got modified, doing backup.\n",
-		 printer);
-    record_printer_options(printer);
+    p = printer_record(printer);
+    if (!p->no_autosave) {
+      debug_printf("Settings of printer %s got modified, doing backup.\n",
+		   printer);
+      p->no_autosave = 1; /* Avoid infinite recursion */
+      record_printer_options(printer);
+      p->no_autosave = 0;
+    }
   }
 }
 
@@ -2913,6 +2919,10 @@ create_local_queue (const char *name,
   p->status = STATUS_TO_BE_CREATED;
   p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
 
+  /* Flag which can be set to inhibit automatic saving of option settings
+     by the on_printer_modified() notification handler function */
+  p->no_autosave = 0;
+  
   if (is_cups_queue) {
     /* Our local queue must be raw, so that the PPD file and driver
        on the remote CUPS server get used */
@@ -3373,6 +3383,10 @@ gboolean handle_cups_queues(gpointer unused) {
 	  break;
 	}
 
+	/* Do not auto-save option settings due to the print queue removal
+	   process */
+	p->no_autosave = 1;
+
 	/* Record the option settings to retrieve them when the remote
 	   queue re-appears later or when cups-browsed gets started again */
 	record_printer_options(p->name);
@@ -3397,6 +3411,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	  /* Schedule the removal of the queue for later */
 	  if (in_shutdown == 0) {
 	    p->timeout = current_time + TIMEOUT_RETRY;
+	    p->no_autosave = 0;
 	    break;
 	  }
 	}
@@ -3415,6 +3430,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	  /* Schedule the removal of the queue for later */
 	  if (in_shutdown == 0) {
 	    p->timeout = current_time + TIMEOUT_RETRY;
+	    p->no_autosave = 0;
 	    break;
 	  }
 	}
@@ -3435,6 +3451,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	  debug_printf("Unable to remove CUPS queue!\n");
 	  if (in_shutdown == 0) {
 	    p->timeout = current_time + TIMEOUT_RETRY;
+	    p->no_autosave = 0;
 	    break;
 	  }
 	}
@@ -3442,7 +3459,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	/* "master printer" of this duplicate */
 	q = p->duplicate_of;
 	if (q->status != STATUS_DISAPPEARED) {
-	  debug_printf("Removed a duplicate of printer %s on %s:%d, scheduling its master printer %s on host %s, port %d for update, to assure it will have the correct device URI.\n",
+	  debug_printf("Removed duplicate printer %s on %s:%d, scheduling its master printer %s on host %s, port %d for update, to assure it will have the correct device URI.\n",
 		       p->name, p->host, p->port, q->name, q->host, q->port);
 	  /* Schedule for update, so that an implicitclass:... URI gets
 	     removed if not needed any more */
@@ -3505,6 +3522,10 @@ gboolean handle_cups_queues(gpointer unused) {
       debug_printf("Queue has %d duplicates\n",
 		   p->num_duplicates);
 
+      /* Do not auto-save option settings due to the print queue creation
+	 process */
+      p->no_autosave = 1;
+
       /* Determine whether we we have duplicates, and so an implicit class
          for load balancing. In this case we will assign an implicitclass:...
 	 device URI, which makes cups-browsed find the best destination for
@@ -3540,6 +3561,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	    debug_printf("Could not connect to the server %s:%d for %s!\n",
 			 p->host, p->port, p->name);
 	    p->timeout = current_time + TIMEOUT_RETRY;
+	    p->no_autosave = 0;
 	    break;
 	  }
 	  if ((loadedppd = cupsGetPPD2(http, p->name)) == NULL &&
@@ -3547,6 +3569,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	    debug_printf("Unable to load PPD file for %s from the server %s:%d!\n",
 			 p->name, p->host, p->port);
 	    p->timeout = current_time + TIMEOUT_RETRY;
+	    p->no_autosave = 0;
 	    httpClose(http);
 	    break;
 	  } else {
@@ -3556,12 +3579,15 @@ gboolean handle_cups_queues(gpointer unused) {
 	    if ((out = cupsTempFile2(buf, sizeof(buf))) == NULL) {
 	      debug_printf("Unable to create temporary file!\n");
 	      p->timeout = current_time + TIMEOUT_RETRY;
+	      p->no_autosave = 0;
 	      unlink(loadedppd);
 	      break;
 	    }
 	    if ((in = cupsFileOpen(loadedppd, "r")) == NULL) {
 	      debug_printf("Unable to open the downloaded PPD file!\n");
 	      p->timeout = current_time + TIMEOUT_RETRY;
+	      p->no_autosave = 0;
+	      cupsFileClose(out);
 	      unlink(loadedppd);
 	      break;
 	    }
@@ -3642,6 +3668,7 @@ gboolean handle_cups_queues(gpointer unused) {
       if ((http = http_connect_local ()) == NULL) {
 	debug_printf("Unable to connect to CUPS!\n");
 	p->timeout = current_time + TIMEOUT_RETRY;
+	p->no_autosave = 0;
 	break;
       }
       request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
@@ -3711,8 +3738,10 @@ gboolean handle_cups_queues(gpointer unused) {
       }
       cupsFreeOptions(num_options, options);
       if (cupsLastError() > IPP_OK_CONFLICT) {
-	debug_printf("Unable to create/modify CUPS queue!\n");
+	debug_printf("Unable to create/modify CUPS queue (%s)!\n",
+		     cupsLastErrorString());
 	p->timeout = current_time + TIMEOUT_RETRY;
+	p->no_autosave = 0;
 	break;
       }
 
@@ -3796,6 +3825,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	p->timeout = (time_t) -1;
       }
 
+      p->no_autosave = 0;
       break;
 
     case STATUS_CONFIRMED:
@@ -5505,7 +5535,7 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
     browse_poll_create_subscription (context, conn);
     get_printers = TRUE;
   } else if (status > IPP_OK_CONFLICT) {
-    debug_printf("cupsd-browsed [BrowsePoll %s:%d]: failed: %s\n",
+    debug_printf("cups-browsed [BrowsePoll %s:%d]: failed: %s\n",
 		 context->server, context->port, cupsLastErrorString ());
     context->can_subscribe = FALSE;
     browse_poll_cancel_subscription (context);
