@@ -1811,6 +1811,35 @@ cancel_subscription (int id)
   ippDelete (resp);
 }
 
+int
+is_created_by_cups_browsed (const char *printer) {
+  remote_printer_t *p;
+
+  if (printer == NULL)
+    return 0;
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
+    if (!strcasecmp(printer, p->name))
+      return 1;
+
+  return 0;
+}
+
+remote_printer_t *
+printer_record (const char *printer) {
+  remote_printer_t *p;
+
+  if (printer == NULL)
+    return NULL;
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
+    if (!strcasecmp(printer, p->name) &&
+	!p->duplicate_of)
+      return p;
+
+  return NULL;
+}
+
 char*
 is_disabled(const char *printer, const char *reason) {
   ipp_t *request, *response;
@@ -2099,6 +2128,7 @@ invalidate_printer_options(const char *printer) {
 
 int
 record_printer_options(const char *printer) {
+  remote_printer_t *p;
   char filename[1024];
   FILE *fp = NULL;
   char uri[HTTP_MAX_URI], *resource;
@@ -2149,25 +2179,30 @@ record_printer_options(const char *printer) {
   debug_printf("Recording printer options for %s to %s\n",
 	       printer, filename);
 
+  /* Get our data about this printer */
+  p = printer_record(printer);
+
   /* If there is a PPD file for this printer, we save the local
      settings for the PPD options. */
-  if ((ppdname = cupsGetPPD(printer)) == NULL) {
-    debug_printf("Unable to get PPD file for %s: %s\n",
-		 printer, cupsLastErrorString());
-  } else if ((ppd = ppdOpenFile(ppdname)) == NULL) {
-    unlink(ppdname);
-    debug_printf("Unable to open PPD file for %s.\n",
-		 printer);
-  } else {
-    ppdMarkDefaults(ppd);
-    for (ppd_opt = ppdFirstOption(ppd); ppd_opt; ppd_opt = ppdNextOption(ppd))
-      if (strcasecmp(ppd_opt->keyword, "PageRegion") != 0) {
-	strncpy(buf, ppd_opt->keyword, sizeof(buf));
-	num_options = cupsAddOption(buf, ppd_opt->defchoice,
-				    num_options, &options);
-      }
-    ppdClose(ppd);
-    unlink(ppdname);
+  if (cups_notifier != NULL || (p && p->netprinter)) {
+    if ((ppdname = cupsGetPPD(printer)) == NULL) {
+      debug_printf("Unable to get PPD file for %s: %s\n",
+		   printer, cupsLastErrorString());
+    } else if ((ppd = ppdOpenFile(ppdname)) == NULL) {
+      unlink(ppdname);
+      debug_printf("Unable to open PPD file for %s.\n",
+		   printer);
+    } else {
+      ppdMarkDefaults(ppd);
+      for (ppd_opt = ppdFirstOption(ppd); ppd_opt; ppd_opt = ppdNextOption(ppd))
+	if (strcasecmp(ppd_opt->keyword, "PageRegion") != 0) {
+	  strncpy(buf, ppd_opt->keyword, sizeof(buf));
+	  num_options = cupsAddOption(buf, ppd_opt->defchoice,
+				      num_options, &options);
+	}
+      ppdClose(ppd);
+      unlink(ppdname);
+    }
   }
 
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
@@ -2264,35 +2299,6 @@ load_printer_options(const char *printer, int num_options,
     fclose(fp);
   }
   return (num_options);
-}
-
-int
-is_created_by_cups_browsed (const char *printer) {
-  remote_printer_t *p;
-
-  if (printer == NULL)
-    return 0;
-  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
-       p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    if (!strcasecmp(printer, p->name))
-      return 1;
-
-  return 0;
-}
-
-remote_printer_t *
-printer_record (const char *printer) {
-  remote_printer_t *p;
-
-  if (printer == NULL)
-    return NULL;
-  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
-       p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    if (!strcasecmp(printer, p->name) &&
-	!p->duplicate_of)
-      return p;
-
-  return NULL;
 }
 
 int
@@ -3509,7 +3515,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	   to an incoming job then. */
 	snprintf(device_uri, sizeof(device_uri), "implicitclass:%s",
 		 p->name);
-	debug_printf("Print queue %s has duplicates, using implicit class device URI %s\n",
+	debug_printf("Print queue %s is for remote CUPS queue(s) and we get notifications from CUPS, using implicit class device URI %s\n",
 		     p->name, device_uri);
 	/* Having another backend than the CUPS "ipp" backend the
 	   options from the PPD of the queue on the server are not
@@ -3670,7 +3676,7 @@ gboolean handle_cups_queues(gpointer unused) {
       } else {
 	/* Device URI: ipp(s)://<remote host>:631/printers/<remote queue> */
 	strncpy(device_uri, p->uri, sizeof(device_uri));
-	debug_printf("Print queue %s has no duplicates, using direct device URI %s\n",
+	debug_printf("Print queue %s is for an IPP network printer, or we do not get notifications from CUPS, using direct device URI %s\n",
 		     p->name, device_uri);
       }
 
