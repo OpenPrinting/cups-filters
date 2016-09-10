@@ -49,7 +49,7 @@ CHANGES IN V1.11.3
 	  (domain socket/localhost:port). Fixes Debian bug #832637.
 	- cups-browsed: Fixed clustering equally-named queues of
 	  different remote servers, to assure to have one master
-	  referencing to all duplicates and noy a daisy chain of
+	  referencing to all duplicates and not a daisy chain of
 	  duplicate references.
 
 CHANGES IN V1.11.2
