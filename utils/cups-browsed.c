@@ -154,7 +154,6 @@ typedef enum printer_status_e {
   STATUS_UNCONFIRMED = 0,	/* Generated in a previous session */
   STATUS_CONFIRMED,		/* Avahi confirms UNCONFIRMED printer */
   STATUS_TO_BE_CREATED,		/* Scheduled for creation */
-  STATUS_BROWSE_PACKET_RECEIVED,/* Scheduled for creation with timeout */
   STATUS_DISAPPEARED		/* Scheduled for removal */
 } printer_status_t;
 
@@ -180,6 +179,7 @@ typedef struct remote_printer_s {
   char *domain;
   int no_autosave;
   int netprinter;
+  int is_legacy;
 } remote_printer_t;
 
 /* Data structure for network interfaces */
@@ -2877,6 +2877,10 @@ create_local_queue (const char *name,
      by the on_printer_modified() notification handler function */
   p->no_autosave = 0;
 
+  /* Flag to mark whether this printer was discovered through a legacy
+     CUPS broadcast (1) or through DNS-SD/Bonjour (0) */
+  p->is_legacy = 0;
+  
   if (is_cups_queue) {
     /* Our local queue must be raw, so that the PPD file and driver
        on the remote CUPS server get used */
@@ -3461,14 +3465,16 @@ gboolean handle_cups_queues(gpointer unused) {
     /* Bonjour has reported a new remote printer, create a CUPS queue for it,
        or upgrade an existing queue, or update a queue to use a backup host
        when it has disappeared on the currently used host */
-    case STATUS_TO_BE_CREATED:
       /* (...or, we've just received a CUPS Browsing packet for this queue) */
-    case STATUS_BROWSE_PACKET_RECEIVED:
+    case STATUS_TO_BE_CREATED:
 
       /* Do not create a queue for duplicates */
       if (p->duplicate_of) {
 	p->status = STATUS_CONFIRMED;
-	p->timeout = (time_t) -1;
+	if (p->is_legacy)
+	  p->timeout = time(NULL) + BrowseTimeout;
+	else
+	  p->timeout = (time_t) -1;
 	break;
       }
 
@@ -3739,7 +3745,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	  debug_printf("Raw queue %s\n", p->name);
 	  want_raw = 1;
 	} else {
-	  debug_printf("Queue %skeeping its current PPD file/interface script\n", p->name);
+	  debug_printf("Queue %s keeping its current PPD file/interface script\n", p->name);
 	  want_raw = 0;
 	}	  
 	ippDelete(cupsDoRequest(http, request, "/admin/"));
@@ -3820,30 +3826,36 @@ gboolean handle_cups_queues(gpointer unused) {
 	free(disabled_str);
       }
 
-      if (p->status == STATUS_BROWSE_PACKET_RECEIVED) {
-	p->status = STATUS_DISAPPEARED;
+      p->status = STATUS_CONFIRMED;
+      if (p->is_legacy) {
 	p->timeout = time(NULL) + BrowseTimeout;
 	debug_printf("starting BrowseTimeout timer for %s (%ds)\n",
 		     p->name, BrowseTimeout);
-      } else {
-	p->status = STATUS_CONFIRMED;
+      } else
 	p->timeout = (time_t) -1;
-      }
 
       p->no_autosave = 0;
       break;
 
     case STATUS_CONFIRMED:
-      /* If this queue was the default printer in its previous life, make
-	 it the default printer again. */
-      queue_creation_handle_default(p->name);
+      if (p->is_legacy && p->timeout > current_time) {
+	/* Remove a queue based on a legacy CUPS broadcast when the
+	   broadcast timeout expires without a new broadcast of this
+	   queue from the server */
+	p->status = STATUS_DISAPPEARED;
+	p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+      } else {
+	/* If this queue was the default printer in its previous life, make
+	   it the default printer again. */
+	queue_creation_handle_default(p->name);
 
-      /* If this queue is disabled, re-enable it. */
-      enable_printer(p->name);
+	/* If this queue is disabled, re-enable it. */
+	enable_printer(p->name);
 
-      /* Record the options, to record any changes which happened
-	 while cups-browsed was not running */
-      record_printer_options(p->name);
+	/* Record the options, to record any changes which happened
+	   while cups-browsed was not running */
+	record_printer_options(p->name);
+      }
 
       break;
 
@@ -4323,7 +4335,10 @@ generate_local_queue(const char *host,
       if (p->status == STATUS_UNCONFIRMED ||
 	  p->status == STATUS_DISAPPEARED) {
 	p->status = STATUS_CONFIRMED;
-	p->timeout = (time_t) -1;
+	if (p->is_legacy) 
+	  p->timeout = time(NULL) + BrowseTimeout;
+	else
+	  p->timeout = (time_t) -1;
 	debug_printf("Marking entry for %s (URI: %s) as confirmed.\n",
 		     p->name, p->uri);
       }
@@ -4740,6 +4755,7 @@ static void browse_callback(
 	if (q->model) p->model = strdup(q->model);
 	if (q->ifscript) p->ifscript = strdup(q->ifscript);
 	p->netprinter = q->netprinter;
+	p->is_legacy = q->is_legacy;
 	for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	     r;
 	     r = (remote_printer_t *)cupsArrayNext(remote_printers))
@@ -5016,12 +5032,9 @@ found_cups_printer (const char *remote_host, const char *uri,
 				 "", "", NULL);
 
   if (printer) {
-    if (printer->status == STATUS_TO_BE_CREATED)
-      printer->status = STATUS_BROWSE_PACKET_RECEIVED;
-    else {
-      printer->status = STATUS_DISAPPEARED;
+    printer->is_legacy = 1;
+    if (printer->status != STATUS_TO_BE_CREATED)
       printer->timeout = time(NULL) + BrowseTimeout;
-    }
   }
 }
 

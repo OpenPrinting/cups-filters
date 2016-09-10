@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: Do not mark remote printers discovered via
+	  legacy CUPS broadcasts as disappeared right from the beginning
+	  to implement the browse timeout. Instead manage their expiring
+	  by introducing a flag which marks them as CUPS legacy printers
+	  (Bug #1374).
 	- cups-browsed: When we have remote CUPS printers, we use the
 	  implicitclass backend and a local copy of the remote PPD
 	  file already if we have only a single remote printer with
