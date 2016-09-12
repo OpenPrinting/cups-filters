@@ -4,10 +4,12 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 CHANGES IN V1.11.3
 
 	- cups-browsed: Do not mark remote printers discovered via
-	  legacy CUPS broadcasts as disappeared right from the beginning
-	  to implement the browse timeout. Instead manage their expiring
-	  by introducing a flag which marks them as CUPS legacy printers
-	  (Bug #1374).
+	  legacy CUPS broadcasts as disappeared right from the
+	  beginning to implement the browse timeout. Instead manage
+	  their expiring by introducing a flag which marks them as
+	  CUPS legacy printers. Printers with disappeared status are
+	  considered invalid in some situations, especially when
+	  clusterin equally-named remote printers (Bug #1374).
 	- cups-browsed: When we have remote CUPS printers, we use the
 	  implicitclass backend and a local copy of the remote PPD
 	  file already if we have only a single remote printer with
@@ -22,13 +24,13 @@ CHANGES IN V1.11.3
 	  implictclass:... queue and apply it to the queue. This way
 	  the options of the printer(s) are always available for
 	  enumeration, especially in print dialogs (Bug #1372). We
-	  modify the local copy setting any options save from the
+	  modify the local copy setting any options saved from the
 	  previous session and inhibiting local execution of filters
 	  (as the driver for the remote printer is not necessarily
 	  available locally).
 	- cups-browsed: Added flag to inhibit auto-backup of option
 	  settings by the on_printer_modified() notification handler
-	  during print que setup and removal.
+	  during print queue setup and removal.
 	- cups-browsed: Let the printer_record() function always
 	  return the master record for the printer name and not an
 	  arbitrary duplicate.
@@ -38,7 +40,7 @@ CHANGES IN V1.11.3
 	  (errors out when re-applying option in the next session).
 	- cups-browsed: Treat discovered printers correctly also if
 	  they use a non-standard port, even if several CUPS daemons
-	  are running on the same server, on different ports. This
+	  are running on the same server but on different ports. This
 	  also improves the support of a sandboxed printing stack.
 	- cups-browsed: Close http connections opened for polling
 	  properties of IPP network printers, to fix a possible memory
@@ -46,7 +48,8 @@ CHANGES IN V1.11.3
 	- cups-browsed: Cleaned up HTTP access to local and remote
 	  CUPS servers and IPP printers, to assure that the local CUPS
 	  daemon is always accessed the same (user-defined) way
-	  (domain socket/localhost:port). Fixes Debian bug #832637.
+	  (domain socket/localhost:port). This especially prevents
+	  cups-browwsed hanging on shutdown (Debian bug #832637).
 	- cups-browsed: Fixed clustering equally-named queues of
 	  different remote servers, to assure to have one master
 	  referencing to all duplicates and not a daisy chain of
