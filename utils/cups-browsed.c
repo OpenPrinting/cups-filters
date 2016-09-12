@@ -568,13 +568,28 @@ password_callback (const char *prompt,
   return NULL;
 }
 
+http_t *
+httpConnectEncryptShortTimeout(const char *host, int port,
+			       http_encryption_t encryption)
+{
+  return (httpConnect2(host, port, NULL, AF_UNSPEC, encryption, 1, 3000,
+                       NULL));
+}
+
+int
+http_timeout_cb(http_t *http, void *user_data)
+{
+  return 0;
+}
+
 static http_t *
 http_connect_local (void)
 {
   debug_printf("cups-browsed: Creating http connection to local CUPS daemon: %s:%d\n", cupsServer(), ippPort());
   if (!local_conn)
-    local_conn = httpConnectEncrypt(cupsServer(), ippPort(),
-				    cupsEncryption());
+    local_conn = httpConnectEncryptShortTimeout(cupsServer(), ippPort(),
+						cupsEncryption());
+  httpSetTimeout(local_conn, 3, http_timeout_cb, NULL);
 
   return local_conn;
 }
@@ -907,13 +922,16 @@ check_jobs () {
   int num_jobs = 0;
   cups_job_t *jobs = NULL;
   remote_printer_t *p;
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   if (cupsArrayCount(remote_printers) > 0)
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p;
 	 p = (remote_printer_t *)cupsArrayNext(remote_printers))
       if (!p->duplicate_of) {
-	num_jobs = cupsGetJobs2(CUPS_HTTP_DEFAULT, &jobs, p->name, 0,
+	num_jobs = cupsGetJobs2(conn, &jobs, p->name, 0,
 				CUPS_WHICHJOBS_ACTIVE);
 	if (num_jobs > 0) {
 	  debug_printf("Queue %s still has jobs!\n", p->name);
@@ -937,6 +955,7 @@ autoshutdown_execute (gpointer data)
     debug_printf("Automatic shutdown as there are no print queues maintained by us or no jobs on them for %d sec.\n",
 		 autoshutdown_timeout);
     g_main_loop_quit(gmainloop);
+    g_main_context_wakeup(NULL);
   }
 
   /* Stop this timeout handler, we needed it only once */
@@ -1715,6 +1734,9 @@ create_subscription ()
   ipp_t *resp;
   ipp_attribute_t *attr;
   int id = 0;
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   req = ippNewRequest (IPP_CREATE_PRINTER_SUBSCRIPTION);
   ippAddString (req, IPP_TAG_OPERATION, IPP_TAG_URI,
@@ -1726,7 +1748,7 @@ create_subscription ()
   ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
 		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
 
-  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
+  resp = cupsDoRequest (conn, req, "/");
   if (!resp || cupsLastError() != IPP_OK) {
     debug_printf ("Error subscribing to CUPS notifications: %s\n",
 		  cupsLastErrorString ());
@@ -1751,6 +1773,9 @@ renew_subscription (int id)
 {
   ipp_t *req;
   ipp_t *resp;
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   req = ippNewRequest (IPP_RENEW_SUBSCRIPTION);
   ippAddInteger (req, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
@@ -1762,7 +1787,7 @@ renew_subscription (int id)
   ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
 		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
 
-  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
+  resp = cupsDoRequest (conn, req, "/");
   if (!resp || cupsLastError() != IPP_OK) {
     debug_printf ("Error renewing CUPS subscription %d: %s\n",
 		  id, cupsLastErrorString ());
@@ -1791,6 +1816,9 @@ cancel_subscription (int id)
 {
   ipp_t *req;
   ipp_t *resp;
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   if (id <= 0)
     return;
@@ -1801,7 +1829,7 @@ cancel_subscription (int id)
   ippAddInteger (req, IPP_TAG_OPERATION, IPP_TAG_INTEGER,
 		 "notify-subscription-id", id);
 
-  resp = cupsDoRequest (CUPS_HTTP_DEFAULT, req, "/");
+  resp = cupsDoRequest (conn, req, "/");
   if (!resp || cupsLastError() != IPP_OK) {
     debug_printf ("Error subscribing to CUPS notifications: %s\n",
 		  cupsLastErrorString ());
@@ -1854,6 +1882,9 @@ is_disabled(const char *printer, const char *reason) {
                   "printer-state",
 		  "printer-state-message"
                 };
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   request = ippNewRequest(CUPS_GET_PRINTERS);
   ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
@@ -1863,7 +1894,7 @@ is_disabled(const char *printer, const char *reason) {
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
 	       "requesting-user-name",
 	       NULL, cupsUser());
-  if ((response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/")) != NULL) {
+  if ((response = cupsDoRequest(conn, request, "/")) != NULL) {
     for (attr = ippFirstAttribute(response); attr != NULL;
 	 attr = ippNextAttribute(response)) {
       while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
@@ -1934,13 +1965,16 @@ int
 enable_printer (const char *printer) {
   ipp_t *request;
   char uri[HTTP_MAX_URI];
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
 		   "localhost", 0, "/printers/%s", printer);
   request = ippNewRequest (IPP_RESUME_PRINTER);
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		"printer-uri", NULL, uri);
-  ippDelete(cupsDoRequest (CUPS_HTTP_DEFAULT, request, "/admin/"));
+  ippDelete(cupsDoRequest (conn, request, "/admin/"));
   if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
     debug_printf("ERROR: Failed enabling printer '%s': %s\n",
 		 printer, cupsLastErrorString());
@@ -1954,6 +1988,9 @@ int
 disable_printer (const char *printer, const char *reason) {
   ipp_t *request;
   char uri[HTTP_MAX_URI];
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   if (reason == NULL)
     reason = "Disabled by cups-browsed";
@@ -1964,7 +2001,7 @@ disable_printer (const char *printer, const char *reason) {
 		"printer-uri", NULL, uri);
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_TEXT,
 		"printer-state-message", NULL, reason);
-  ippDelete(cupsDoRequest (CUPS_HTTP_DEFAULT, request, "/admin/"));
+  ippDelete(cupsDoRequest (conn, request, "/admin/"));
   if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
     debug_printf("ERROR: Failed disabling printer '%s': %s\n",
 		 printer, cupsLastErrorString());
@@ -1978,6 +2015,9 @@ int
 set_cups_default_printer(const char *printer) {
   ipp_t	*request;
   char uri[HTTP_MAX_URI];
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   if (printer == NULL)
     return 0;
@@ -1988,7 +2028,7 @@ set_cups_default_printer(const char *printer) {
                "printer-uri", NULL, uri);
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
                NULL, cupsUser());
-  ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
+  ippDelete(cupsDoRequest(conn, request, "/admin/"));
   if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
     debug_printf("ERROR: Failed setting CUPS default printer to '%s': %s\n",
 		 printer, cupsLastErrorString());
@@ -2005,13 +2045,16 @@ get_cups_default_printer() {
   ipp_attribute_t *attr;
   const char *default_printer_name = NULL;
   char *name_string;
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
   
   request = ippNewRequest(CUPS_GET_DEFAULT);
   /* Default user */
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
 	       "requesting-user-name", NULL, cupsUser());
   /* Do it */
-  response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/");
+  response = cupsDoRequest(conn, request, "/");
   if (cupsLastError() > IPP_OK_CONFLICT || !response) {
     debug_printf("Could not determine system default printer!\n");
   } else {
@@ -2169,6 +2212,9 @@ record_printer_options(const char *printer) {
 		  NULL
                 };
   const char **ptr;
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   if (printer == NULL || strlen(printer) == 0)
     return 0;
@@ -2211,7 +2257,7 @@ record_printer_options(const char *printer) {
   request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
 	       uri);
-  response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, resource);
+  response = cupsDoRequest(conn, request, resource);
 
   /* Write all supported printer attributes */
   if (response) {
@@ -2408,6 +2454,9 @@ on_printer_state_changed (CupsNotifier *object,
 		  "job-id",
 		  "job-state"
 		};
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
 
   debug_printf("[CUPS Notification] Printer state change on printer %s: %s\n",
 	       printer, text);
@@ -2546,10 +2595,14 @@ on_printer_state_changed (CupsNotifier *object,
 	if (!strcasecmp(p->name, printer) &&
 	    p->status == STATUS_CONFIRMED) {
 	  debug_printf("Checking state of remote printer %s on host %s, IP %s, port %d.\n", printer, p->host, p->ip, p->port);
-	  http = httpConnectEncrypt (p->ip ? p->ip : p->host, p->port,
-				     HTTP_ENCRYPT_IF_REQUESTED);
+	  http = httpConnectEncryptShortTimeout (p->ip ? p->ip : p->host,
+						 p->port,
+						 HTTP_ENCRYPT_IF_REQUESTED);
+	  debug_printf("HTTP connection to %s:%d established.\n", p->host,
+		       p->port);
 	  if (http) {
 	    /* Check whether the printer is idle, processing, or disabled */
+	    httpSetTimeout(http, 2, http_timeout_cb, NULL);
 	    request = ippNewRequest(CUPS_GET_PRINTERS);
 	    ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
 			  "requested-attributes",
@@ -2560,6 +2613,8 @@ on_printer_state_changed (CupsNotifier *object,
 			 NULL, cupsUser());
 	    if ((response = cupsDoRequest(http, request, "/")) !=
 		NULL) {
+	      debug_printf("IPP request to %s:%d successful.\n", p->host,
+			   p->port);
 	      pname = NULL;
 	      pstate = IPP_PRINTER_IDLE;
 	      paccept = 0;
@@ -2635,7 +2690,9 @@ on_printer_state_changed (CupsNotifier *object,
 		q->last_printer = i;
 		break;
 	      }
-	    }
+	    } else
+	      debug_printf("IPP request to %s:%d failed.\n", p->host,
+			   p->port);
 	    httpClose(http);
 	    http = NULL;
 	  }
@@ -2653,7 +2710,7 @@ on_printer_state_changed (CupsNotifier *object,
 		    "requested-attributes",
 		    sizeof(jattrs) / sizeof(jattrs[0]), NULL, jattrs);
       job_id = 0;
-      if ((response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/")) != NULL) {
+      if ((response = cupsDoRequest(conn, request, "/")) != NULL) {
 	/* Get the current active job on this queue... */
 	ipp_jstate_t jobstate = IPP_JOB_PENDING;
 	for (attr = ippFirstAttribute(response); attr != NULL;
@@ -2708,10 +2765,11 @@ on_printer_state_changed (CupsNotifier *object,
 				  num_options, &options);
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
-      ippDelete(cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/admin/"));
+      ippDelete(cupsDoRequest(conn, request, "/admin/"));
       cupsFreeOptions(num_options, options);
       if (cupsLastError() > IPP_OK_CONFLICT) {
-	debug_printf("ERROR: Unable to set printer-is-shared bit to false (%s)!\n",
+	debug_printf("ERROR: Unable to set \"" CUPS_BROWSED_DEST_PRINTER
+		     "-default\" option to communicate the destination server for this job (%s)!\n",
 		     cupsLastErrorString());
 	return;
       }
@@ -3530,15 +3588,17 @@ gboolean handle_cups_queues(gpointer unused) {
 	   distribution's package installation/update infrastructure
 	   is suppressed. */
 	/* Load the PPD file from one of the servers */
-	if ((http = httpConnectEncrypt(p->ip ? p->ip : p->host,
-				       p->port ? p->port : ippPort(),
-				       cupsEncryption())) == NULL) {
+	if ((http = httpConnectEncryptShortTimeout(p->ip ? p->ip : p->host,
+						   p->port ? p->port :
+						   ippPort(),
+						   cupsEncryption())) == NULL) {
 	  debug_printf("Could not connect to the server %s:%d for %s!\n",
 		       p->host, p->port, p->name);
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  p->no_autosave = 0;
 	  break;
 	}
+	httpSetTimeout(http, 3, http_timeout_cb, NULL);
 	if ((loadedppd = cupsGetPPD2(http, p->name)) == NULL &&
 	    CreateRemoteRawPrinterQueues == 0) {
 	  debug_printf("Unable to load PPD file for %s from the server %s:%d!\n",
@@ -4670,6 +4730,7 @@ static void browse_callback(
     debug_printf("Avahi Browser: ERROR: %s\n",
 		 avahi_strerror(avahi_client_errno(avahi_service_browser_get_client(b))));
     g_main_loop_quit(gmainloop);
+    g_main_context_wakeup(NULL);
     return;
 
   /* New service (remote printer) */
@@ -4934,6 +4995,7 @@ static void client_callback(AvahiClient *c, AvahiClientState state, AVAHI_GCC_UN
       debug_printf("ERROR: Avahi server connection failure: %s\n",
 		   avahi_strerror(avahi_client_errno(c)));
       g_main_loop_quit(gmainloop);
+      g_main_context_wakeup(NULL);
     }
     break;
 
@@ -5485,14 +5547,16 @@ static void
 browse_poll_cancel_subscription (browsepoll_t *context)
 {
   ipp_t *request, *response = NULL;
-  http_t *conn = httpConnectEncrypt (context->server, context->port,
-				     HTTP_ENCRYPT_IF_REQUESTED);
+  http_t *conn = httpConnectEncryptShortTimeout (context->server, context->port,
+						 HTTP_ENCRYPT_IF_REQUESTED);
 
   if (conn == NULL) {
     debug_printf("cups-browsed [BrowsePoll %s:%d]: connection failure "
 		 "attempting to cancel\n", context->server, context->port);
     return;
   }
+
+  httpSetTimeout(conn, 3, http_timeout_cb, NULL);
 
   debug_printf ("cups-browsed [BrowsePoll %s:%d]: IPP-Cancel-Subscription\n",
 		context->server, context->port);
@@ -5625,13 +5689,15 @@ browse_poll (gpointer data)
 
   res_init ();
 
-  conn = httpConnectEncrypt (context->server, context->port,
-			     HTTP_ENCRYPT_IF_REQUESTED);
+  conn = httpConnectEncryptShortTimeout (context->server, context->port,
+					 HTTP_ENCRYPT_IF_REQUESTED);
   if (conn == NULL) {
     debug_printf("cups-browsed [BrowsePoll %s:%d]: failed to connect\n",
 		 context->server, context->port);
     goto fail;
   }
+
+  httpSetTimeout(conn, 3, http_timeout_cb, NULL);
 
   if (context->can_subscribe) {
     if (context->subscription_id == -1) {
@@ -5759,6 +5825,7 @@ sigterm_handler(int sig) {
 
   /* Flag that we should stop and return... */
   g_main_loop_quit(gmainloop);
+  g_main_context_wakeup(NULL);
   debug_printf("Caught signal %d, shutting down ...\n", sig);
 }
 

@@ -3,6 +3,19 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- implicitclass: Do not let the job get immediately retried on
+	  failure to send it out to the remote CUPS printer. By
+	  repeating to send the job to an unavailable server so
+	  quickly, cups-browsed gets bombed with requests and hangs on
+	  shutdown.
+	- cups-browsed: Shortened timeouts of HTTP connections and IPP
+	  requests to 3 seconds amd of IPP requests to remote CUPS
+	  servers to 2 seconds. For local IPP requests always use the
+	  connection once created via http_connect_local(). Also call
+	  g_main_context_wakeup(NULL) after each
+	  g_main_loop_quit(gmainloop) call. These measures should
+	  reduce long hangs of cups-browsed on shutdown when a CUPS
+	  server got unavailable.
 	- cups-browsed: Do not mark remote printers discovered via
 	  legacy CUPS broadcasts as disappeared right from the
 	  beginning to implement the browse timeout. Instead manage

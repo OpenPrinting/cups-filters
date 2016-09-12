@@ -203,7 +203,7 @@ main(int  argc,				/* I - Number of command-line args */
 
       fprintf(stderr, "DEBUG: Received destination host name from cups-browsed: %s\n",
 	      dest_host);
-      /* Instead of fdeeding the job into the IPP backend, we re-print it into
+      /* Instead of feeding the job into the IPP backend, we re-print it into
 	 the server's CUPS queue. This way the job gets spooled on the server
 	 and we are not blocked until the job is printed. So a subsequent job
 	 will be immediately processed and sent out to another server */
@@ -257,21 +257,21 @@ main(int  argc,				/* I - Number of command-line args */
 		  argv[0], httpStatus(status));
 	  cupsFinishDocument(CUPS_HTTP_DEFAULT, queue_name);
 	  cupsCancelJob2(CUPS_HTTP_DEFAULT, queue_name, job_id, 0);
-	  return (CUPS_BACKEND_RETRY_CURRENT);
+	  return (CUPS_BACKEND_RETRY);
 	}
 
 	if (cupsFinishDocument(CUPS_HTTP_DEFAULT, queue_name) != IPP_OK) {
 	  fprintf(stderr, "ERROR: %s: Unable to complete the job - %s. Retrying.",
 		  argv[0], cupsLastErrorString());
 	  cupsCancelJob2(CUPS_HTTP_DEFAULT, queue_name, job_id, 0);
-	  return (CUPS_BACKEND_RETRY_CURRENT);
+	  return (CUPS_BACKEND_RETRY);
 	}
       }
 
       if (job_id < 1) {
 	fprintf(stderr, "ERROR: %s: Unable to create job - %s. Retrying.",
 		argv[0], cupsLastErrorString());
-	return (CUPS_BACKEND_RETRY_CURRENT);
+	return (CUPS_BACKEND_RETRY);
       }
 
       return (CUPS_BACKEND_OK);
