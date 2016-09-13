@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: When saving option settings, remove
+	  backslashes added when the settings are read out via IPP
+	  request. Otherwise the backslashes would double with each
+	  session of cups-browsed.
 	- implicitclass: Do not let the job get immediately retried on
 	  failure to send it out to the remote CUPS printer. By
 	  repeating to send the job to an unavailable server so

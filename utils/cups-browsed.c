@@ -2178,7 +2178,7 @@ record_printer_options(const char *printer) {
   ipp_t *request, *response;
   ipp_attribute_t *attr;
   const char *key;
-  char buf[65536];
+  char buf[65536], *c;
   const char *ppdname = NULL;
   ppd_file_t *ppd;
   ppd_option_t *ppd_opt;
@@ -2274,6 +2274,13 @@ record_printer_options(const char *printer) {
 	    (ppdname == NULL ||
 	     strncasecmp(key + strlen(key) - 8, "-default", 8))) {
 	  ippAttributeString(attr, buf, sizeof(buf));
+	  buf[sizeof(buf) - 1] = '\0';
+	  c = buf;
+	  while (*c) {
+	    if (*c == '\\')
+	      memmove(c, c + 1, strlen(c));
+	    if (*c) c ++;
+	  }
 	  num_options = cupsAddOption(key, buf, num_options, &options);
 	}
       }
