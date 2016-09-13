@@ -2182,8 +2182,7 @@ record_printer_options(const char *printer) {
   const char *ppdname = NULL;
   ppd_file_t *ppd;
   ppd_option_t *ppd_opt;
-  int num_options = 0;
-  cups_option_t *options = NULL, *option;
+  cups_option_t *option;
   int i;
   /* List of IPP attributes to get recorded */
   static const char *attrs_to_record[] =
@@ -2219,14 +2218,20 @@ record_printer_options(const char *printer) {
   if (printer == NULL || strlen(printer) == 0)
     return 0;
 
+  /* Get our data about this printer */
+  p = printer_record(printer);
+
+  if (p == NULL) {
+    debug_printf("Not recording printer options for %s: Unkown printer!\n",
+		 printer);
+    return 0;
+  }
+  
   snprintf(filename, sizeof(filename), save_options_file,
 	   printer);
 
   debug_printf("Recording printer options for %s to %s\n",
 	       printer, filename);
-
-  /* Get our data about this printer */
-  p = printer_record(printer);
 
   /* If there is a PPD file for this printer, we save the local
      settings for the PPD options. */
@@ -2243,8 +2248,8 @@ record_printer_options(const char *printer) {
       for (ppd_opt = ppdFirstOption(ppd); ppd_opt; ppd_opt = ppdNextOption(ppd))
 	if (strcasecmp(ppd_opt->keyword, "PageRegion") != 0) {
 	  strncpy(buf, ppd_opt->keyword, sizeof(buf));
-	  num_options = cupsAddOption(buf, ppd_opt->defchoice,
-				      num_options, &options);
+	  p->num_options = cupsAddOption(buf, ppd_opt->defchoice,
+					 p->num_options, &(p->options));
 	}
       ppdClose(ppd);
       unlink(ppdname);
@@ -2281,7 +2286,8 @@ record_printer_options(const char *printer) {
 	      memmove(c, c + 1, strlen(c));
 	    if (*c) c ++;
 	  }
-	  num_options = cupsAddOption(key, buf, num_options, &options);
+	  p->num_options = cupsAddOption(key, buf, p->num_options,
+					 &(p->options));
 	}
       }
       attr = ippNextAttribute(response);
@@ -2289,20 +2295,18 @@ record_printer_options(const char *printer) {
     ippDelete(response);
   }
 
-  if (num_options > 0) {
+  if (p->num_options > 0) {
     fp = fopen(filename, "w+");
     if (fp == NULL) {
       debug_printf("ERROR: Failed creating file %s\n",
 		   filename);
-      cupsFreeOptions(num_options, options);
       return -1;
     }
 
-    for (i = num_options, option = options; i > 0; i --, option ++)
+    for (i = p->num_options, option = p->options; i > 0; i --, option ++)
       fprintf (fp, "%s=%s\n", option->name, option->value);
 
     fclose(fp);
-    cupsFreeOptions(num_options, options);
 
     return 0;
   } else
@@ -3494,7 +3498,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	/* "master printer" of this duplicate */
 	q = p->duplicate_of;
 	if (q->status != STATUS_DISAPPEARED) {
-	  debug_printf("Removed duplicate printer %s on %s:%d, scheduling its master printer %s on host %s, port %d for update, to assure it will have the correct device URI.\n",
+	  debug_printf("Removed duplicate printer %s on %s:%d, scheduling its master printer %s on host %s, port %d for update.\n",
 		       p->name, p->host, p->port, q->name, q->host, q->port);
 	  /* Schedule for update */
 	  q->status = STATUS_TO_BE_CREATED;
@@ -4759,7 +4763,6 @@ static void browse_callback(
   /* A service (remote printer) has disappeared */
   case AVAHI_BROWSER_REMOVE: {
     remote_printer_t *p, *q, *r;
-    int i;
 
     /* Ignore events from the local machine */
     if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
@@ -4808,7 +4811,6 @@ static void browse_callback(
 	free (p->service_name);
 	free (p->type);
 	free (p->domain);
-	cupsFreeOptions(p->num_options, p->options);
 	if (p->ppd) free (p->ppd);
 	if (p->model) free (p->model);
 	if (p->ifscript) free (p->ifscript);
@@ -4821,10 +4823,6 @@ static void browse_callback(
 	p->type = strdup(q->type);
 	p->domain = strdup(q->domain);
 	p->num_duplicates --;
-	for (i = 0; i < q->num_options; i ++)
-	  p->num_options = cupsAddOption(strdup(q->options[i].name),
-					 strdup(q->options[i].value),
-					 p->num_options, &(p->options));
 	if (q->ppd) p->ppd = strdup(q->ppd);
 	if (q->model) p->model = strdup(q->model);
 	if (q->ifscript) p->ifscript = strdup(q->ifscript);

@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: Make sure that saved PPD options do not get
+	  lost if for some reason the PPD file cannot be loaded in a
+	  new cups-browsed session (or the loaded PPD file is
+	  different).  This is done by holding a copy of the settings
+	  in the remote printer data structure.
 	- cups-browsed: When saving option settings, remove
 	  backslashes added when the settings are read out via IPP
 	  request. Otherwise the backslashes would double with each
