@@ -4405,10 +4405,17 @@ generate_local_queue(const char *host,
   if (p) {
     /* We have already created a local queue, check whether the
        discovered service allows us to upgrade the queue to IPPS
-       or whether the URI part after ipp(s):// has changed */
+       or whether the URI part after ipp(s):// has changed, or
+       whether the discovered queue is discovered via Bonjour
+       having more info in contrary to the existing being
+       discovered by legacy CUPS or LDAP */
     if ((strcasestr(type, "_ipps") &&
 	 !strncasecmp(p->uri, "ipp:", 4)) ||
-	strcasecmp(strchr(p->uri, ':'), strchr(uri, ':'))) {
+	strcasecmp(strchr(p->uri, ':'), strchr(uri, ':')) ||
+	((p->domain == NULL || p->domain[0] == '\0') &&
+	 domain != NULL && domain[0] != '\0' &&
+	 (p->type == NULL || p->type[0] == '\0') &&
+	 type != NULL && type[0] != '\0')) {
 
       /* Schedule local queue for upgrade to ipps: or for URI change */
       if (strcasestr(type, "_ipps") &&
@@ -4418,6 +4425,18 @@ generate_local_queue(const char *host,
       if (strcasecmp(strchr(p->uri, ':'), strchr(uri, ':')))
 	debug_printf("Changing URI of printer %s (Host: %s, Port: %d) to %s.\n",
 		     p->name, remote_host, port, uri);
+      if ((p->domain == NULL || p->domain[0] == '\0') &&
+	  domain != NULL && domain[0] != '\0' &&
+	  (p->type == NULL || p->type[0] == '\0') &&
+	  type != NULL && type[0] != '\0') {
+	debug_printf("Discovered printer %s (Host: %s, Port: %d, URI: %s) by Bonjour now.\n",
+		     p->name, remote_host, port, uri);
+	if (p->is_legacy) {
+	  p->is_legacy = 0;
+	  if (p->status == STATUS_CONFIRMED)
+	    p->timeout = (time_t) -1;
+	}
+      }
       free(p->uri);
       free(p->host);
       free(p->ip);
@@ -5137,7 +5156,9 @@ found_cups_printer (const char *remote_host, const char *uri,
 				 info ? info : "",
 				 "", "", NULL);
 
-  if (printer) {
+  if (printer &&
+      (printer->domain == NULL || printer->domain[0] == '\0' ||
+       printer->type == NULL || printer->type[0] == '\0')) {
     printer->is_legacy = 1;
     if (printer->status != STATUS_TO_BE_CREATED) {
       printer->timeout = time(NULL) + BrowseTimeout;

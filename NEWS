@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: If a queue is not only discovered via Bonjour
+	  but also via legacy CUPS or LDAP, prefer the Bonjour record
+	  as it provides more information and there is also a defined
+	  cancellation broadcast.
 	- cups-browsed: Let PPD options saved in the last session also
 	  get applied to generated PPDs for IPP network printers.
 	- cups-browsed: Make sure that saved PPD options do not get
