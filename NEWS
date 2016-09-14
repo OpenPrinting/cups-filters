@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.11.2 - 2016-08-28
 
 CHANGES IN V1.11.3
 
+	- cups-browsed: Let PPD options saved in the last session also
+	  get applied to generated PPDs for IPP network printers.
 	- cups-browsed: Make sure that saved PPD options do not get
 	  lost if for some reason the PPD file cannot be loaded in a
 	  new cups-browsed session (or the loaded PPD file is
