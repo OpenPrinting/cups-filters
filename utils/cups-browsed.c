@@ -585,11 +585,15 @@ http_timeout_cb(http_t *http, void *user_data)
 static http_t *
 http_connect_local (void)
 {
-  debug_printf("cups-browsed: Creating http connection to local CUPS daemon: %s:%d\n", cupsServer(), ippPort());
-  if (!local_conn)
+  if (!local_conn) {
+    debug_printf("cups-browsed: Creating http connection to local CUPS daemon: %s:%d\n", cupsServer(), ippPort());
     local_conn = httpConnectEncryptShortTimeout(cupsServer(), ippPort(),
 						cupsEncryption());
-  httpSetTimeout(local_conn, 3, http_timeout_cb, NULL);
+  }
+  if (local_conn)
+    httpSetTimeout(local_conn, 3, http_timeout_cb, NULL);
+  else
+    debug_printf("cups-browsed: Failed creating http connection to local CUPS daemon: %s:%d\n", cupsServer(), ippPort());
 
   return local_conn;
 }
@@ -3946,24 +3950,18 @@ gboolean handle_cups_queues(gpointer unused) {
       break;
 
     case STATUS_CONFIRMED:
-      if (p->is_legacy && p->timeout > current_time) {
+      /* Only act if the timeout has passed */
+      if (p->timeout > current_time)
+	break;
+
+      if (p->is_legacy) {
 	/* Remove a queue based on a legacy CUPS broadcast when the
 	   broadcast timeout expires without a new broadcast of this
 	   queue from the server */
 	p->status = STATUS_DISAPPEARED;
 	p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-      } else {
-	/* If this queue was the default printer in its previous life, make
-	   it the default printer again. */
-	queue_creation_handle_default(p->name);
-
-	/* If this queue is disabled, re-enable it. */
-	enable_printer(p->name);
-
-	/* Record the options, to record any changes which happened
-	   while cups-browsed was not running */
-	record_printer_options(p->name);
-      }
+      } else
+	p->timeout = (time_t) -1;
 
       break;
 
@@ -4002,11 +4000,11 @@ recheck_timer (void)
     g_source_remove (queues_timer_id);
 
   if (timeout != (time_t) -1) {
-    queues_timer_id = g_timeout_add_seconds (timeout, handle_cups_queues, NULL);
     debug_printf("checking queues in %ds\n", timeout);
+    queues_timer_id = g_timeout_add_seconds (timeout, handle_cups_queues, NULL);
   } else {
-    queues_timer_id = 0;
     debug_printf("listening\n");
+    queues_timer_id = 0;
   }
 }
 
@@ -4403,6 +4401,8 @@ generate_local_queue(const char *host,
   }
 
   if (p) {
+    debug_printf("Entry for %s (URI: %s) already exists.\n",
+		 p->name, p->uri);
     /* We have already created a local queue, check whether the
        discovered service allows us to upgrade the queue to IPPS
        or whether the URI part after ipp(s):// has changed, or
@@ -4453,26 +4453,31 @@ generate_local_queue(const char *host,
       p->type = strdup(type);
       p->domain = strdup(domain);
 
-    } else {
-
-      /* Nothing to do, mark queue entry as confirmed if the entry
-	 is unconfirmed */
-      debug_printf("Entry for %s (URI: %s) already exists.\n",
-		   p->name, p->uri);
-      if (p->status == STATUS_UNCONFIRMED ||
-	  p->status == STATUS_DISAPPEARED) {
-	p->status = STATUS_CONFIRMED;
-	if (p->is_legacy) {
-	  p->timeout = time(NULL) + BrowseTimeout;
-	  debug_printf("starting BrowseTimeout timer for %s (%ds)\n",
-		       p->name, BrowseTimeout);
-	} else
-	  p->timeout = (time_t) -1;
-	debug_printf("Marking entry for %s (URI: %s) as confirmed.\n",
-		     p->name, p->uri);
-      }
-
     }
+
+    /* Mark queue entry as confirmed if the entry
+       is unconfirmed */
+    if (p->status == STATUS_UNCONFIRMED ||
+	p->status == STATUS_DISAPPEARED) {
+      debug_printf("Marking entry for %s (URI: %s) as confirmed.\n",
+		   p->name, p->uri);
+      p->status = STATUS_CONFIRMED;
+      if (p->is_legacy) {
+	p->timeout = time(NULL) + BrowseTimeout;
+	debug_printf("starting BrowseTimeout timer for %s (%ds)\n",
+		     p->name, BrowseTimeout);
+      } else
+	p->timeout = (time_t) -1;
+      /* If this queue was the default printer in its previous life, make
+	 it the default printer again. */
+      queue_creation_handle_default(p->name);
+      /* If this queue is disabled, re-enable it. */
+      enable_printer(p->name);
+      /* Record the options, to record any changes which happened
+	 while cups-browsed was not running */
+      record_printer_options(p->name);
+    }
+
     if (p->host[0] == '\0') {
       free (p->host);
       p->host = strdup(remote_host);
@@ -5526,8 +5531,6 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
 
   g_list_free_full (context->printers, browsepoll_printer_free);
   context->printers = printers;
-  if (in_shutdown == 0)
-    recheck_timer ();
 
 fail:
   if (response)
@@ -5785,7 +5788,10 @@ browse_poll (gpointer data)
 
   inhibit_local_printers_update = FALSE;
 
-fail:
+  if (in_shutdown == 0)
+    recheck_timer ();
+
+ fail:
 
   if (conn)
     httpClose (conn);

@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.11.3 - 2016-09-15
 -----------------------------------------------------
 
+CHANGES IN V1.11.4
+
+	- cups-browsed: Fixes to avoid unneeded calls of
+	  handle_cups_queues() and even infinite loops (Possible fix
+	  for bug #1376). Also make sure that queues left over from
+	  the previous cups-browsed session are integrated correctly.
+
 CHANGES IN V1.11.3
 
 	- cups-browsed: If a queue is not only discovered via Bonjour
