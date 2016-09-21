@@ -74,6 +74,32 @@ IMAGE PRINTING DEFAULT CHANGED TO "SCALE TO FIT"
     To get back to the old behavior, supply one of the options
     "nofitplot" "filplot=Off", "nofit-to-page", or "fit-to-page=Off".
 
+GHOSTSCRIPT RENDERING OF FILLED PATHS
+
+    When Ghostscript is rendering PostScript or PDF files into a
+    raster format the filled paths are ususally rendered with the
+    any-part-of-pixel method as it is PostScript standard. On
+    low-resolution printers, like label printers with 203 dpi,
+    graphics output can get inaccurate and so for example bar codes do
+    not work any more. This problem can be solved by letting
+    Ghostscript use the center-of-pixel method.
+
+    This can be done by either supplying the option "-o
+    center-of-pixel" or "-o CenterOfPixel" on the command line when
+    printing or by adding a "CenterOfPixel" option to the PPD file and
+    set it to "true", for example by adding the following lines to the
+    PPD file of the print queue (usually in /etc/cups/ppd/):
+
+        *OpenUI *CenterOfPixel/Center Of Pixel: PickOne
+        *OrderDependency: 20 AnySetup *CenterOfPixel
+        *DefaultCenterOfPixel: true
+        *CenterOfPixel true/true: ""
+        *CenterOfPixel false/false: ""
+        *CloseUI: *CenterOfPixel
+
+   This option can be used when the print queue uses the gstoraster
+   filter.
+
 POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
 
     If you use CUPS with this package and a PostScript printer then

@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.11.3 - 2016-09-15
 
 CHANGES IN V1.11.4
 
+	- gstoraster: Allow Ghostscript to use the center-of-pixel
+	  method instead of the PostScript-standard any-part-of-pixel
+	  method when rendering filled paths. This improves the
+	  graphics output quality of low-resolution printers like
+	  label printers, for example to assure readability of bar
+	  codes (Bug #1373).
 	- cups-browsed: Fixes to avoid unneeded calls of
 	  handle_cups_queues() and even infinite loops (Possible fix
 	  for bug #1376). Also make sure that queues left over from

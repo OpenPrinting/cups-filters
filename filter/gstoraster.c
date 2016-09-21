@@ -909,6 +909,27 @@ main (int argc, char **argv, char *envp[])
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
 
+  /* Do we have a "center-of-pixel" command line option or
+     "CenterOfPixel" PPD option set to "true"? In this case let
+     Ghostscript use the center-of-pixel rule instead of the
+     PostScript-standard any-part-of-pixel rule when filling a
+     path. This improves the accuracy of graphics (like bar codes for
+     example) on low-resolution printers (like label printers with
+     typically 203 dpi). See
+     https://bugs.linuxfoundation.org/show_bug.cgi?id=1373 */
+  if (((t = cupsGetOption("CenterOfPixel", num_options, options)) == NULL &&
+       (t = cupsGetOption("center-of-pixel", num_options, options)) == NULL &&
+       ppd && (attr = ppdFindAttr(ppd,"DefaultCenterOfPixel", NULL)) != NULL &&
+       (!strcasecmp(attr->value, "true") ||
+	!strcasecmp(attr->value, "on") ||
+	!strcasecmp(attr->value, "yes"))) ||
+      (t && (!strcasecmp(t, "true") || !strcasecmp(t, "on") ||
+	     !strcasecmp(t, "yes")))) {
+    fprintf(stderr, "DEBUG: Ghostscript using Center-of-Pixel method to fill paths.\n");
+    cupsArrayAdd(gs_args, strdup("0 .setfilladjust"));
+  } else
+    fprintf(stderr, "DEBUG: Ghostscript using Any-Part-of-Pixel method to fill paths.\n");
+
   /* Mark the end of PostScript commands supplied on the Ghostscript command
      line (with the "-c" option), so that we can supply the input file name */
   cupsArrayAdd(gs_args, strdup("-f"));
