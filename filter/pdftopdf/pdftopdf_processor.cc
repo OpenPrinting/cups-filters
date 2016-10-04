@@ -231,8 +231,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
       }
 
       proc.add_page(page,param.reverse); // reverse -> insert at beginning
+      outputno++;
     }
-    outputno=numPages;
   } else {
     param.nup.width=param.page.right-param.page.left;
     param.nup.height=param.page.top-param.page.bottom;
