@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.11.4 - 2016-09-21
 
 CHANGES IN V1.11.5
 
+	- cups-browsed: Allow changing BrowseInterval and
+	  BrowseTimeout via cups-browsed.conf, as it was formerly with
+	  CUPS (Debian bug #794655).
 	- pdftopdf: Count the actual output pages also if the
 	  number-up option is not used, to correctly find out whether
 	  we have an even or odd number of pages, even if the

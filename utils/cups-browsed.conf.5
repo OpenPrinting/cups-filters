@@ -416,6 +416,28 @@ or "Off" lets cups-browsed not use CUPS' domain socket.
 
 .fam T
 .fi
+The interval between browsing/broadcasting cycles, local and/or
+remote, can be adjusted with the BrowseInterval directive.
+.PP
+.nf
+.fam C
+        BrowseInterval 60
+
+.fam T
+.fi
+The BrowseTimeout directive determines the amount of time that
+browsing-related operations are allowed to take in seconds.
+Notably, adding or removing one printer queue is considered as one
+operation. The timeout applies to each one of those operations.
+Especially queues discovered by CUPS broadcasts will be removed after
+this timeout if no further broadcast from the server happens.
+.PP
+.nf
+.fam C
+        BrowseTimeout 300
+
+.fam T
+.fi
 Set IPBasedDeviceURIs to "Yes" if cups-browsed should create its local
 queues with device URIs with the IP addresses instead of the host
 names of the remote servers. This mode is there for any problems with

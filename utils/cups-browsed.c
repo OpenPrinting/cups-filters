@@ -6262,6 +6262,19 @@ read_configuration (const char *filename)
 	  regfree(filter->cregexp);
 	free(filter);
       }
+    } else if ((!strcasecmp(line, "BrowseInterval") || !strcasecmp(line, "BrowseTimeout")) && value) {
+      int t = atoi(value);
+      if (t >= 0) {
+	if (!strcasecmp(line, "BrowseInterval"))
+	  BrowseInterval = t;
+	else if (!strcasecmp(line, "BrowseTimeout"))
+	  BrowseTimeout = t;
+
+	debug_printf("Set %s to %d sec.\n",
+		     line, t);
+      } else
+	debug_printf("Invalid %s value: %d\n",
+		     line, t);
     } else if (!strcasecmp(line, "DomainSocket") && value) {
       if (value[0] != '\0')
 	DomainSocket = strdup(value);

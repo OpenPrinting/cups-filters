@@ -105,6 +105,21 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # BrowseOrder Allow,Deny
 
 
+# The interval between browsing/broadcasting cycles, local and/or
+# remote, can be adjusted with the BrowseInterval directive.
+
+# BrowseInterval 60
+
+
+# Browsing-related operations such as adding or removing printer queues
+# and broadcasting are each allowed to take up to a given amount of time.
+# It can be configured, in seconds, with the BrowseTimeout directive.
+# Especially queues discovered by CUPS broadcasts will be removed after
+# this timeout if no further broadcast from the server happens.
+
+# BrowseTimeout 300
+
+
 # Filtering of remote printers by other properties than IP addresses
 # of their servers
 
