@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.11.4 - 2016-09-21
 
 CHANGES IN V1.11.5
 
+	- foomatic-rip: Replace old manpage macro calls from
+	  foomatic-filters 3.0.2-20050114.
 	- cups-browsed: Allow changing BrowseInterval and
 	  BrowseTimeout via cups-browsed.conf, as it was formerly with
 	  CUPS (Debian bug #794655).

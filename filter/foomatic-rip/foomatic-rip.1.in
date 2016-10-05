@@ -21,30 +21,35 @@ foomatic-rip \- Universal print filter/RIP wrapper
 foomatic-rip is a universal print filter which can be used as CUPS filter or
 stand-alone for spooler-less, direct printing. It has the following features:
 
-.Topic 
+.TP 2m
+\[bu]
 It translates PostScript and PDF from standard input or a file to the printer's
 native language on standard output.
 
-.Topic
+.TP 2m
+\[bu]
 The translation is done with an external renderer, usually Ghostscript
 (\fBgs(1)\fR). If no translation is needed (PostScript printer) the
 renderer's command line reduces to \fBcat(1)\fR. The way how this
 translation is done is described in a \fBPPD file\fR.
 
-.Topic
+.TP 2m
+\[bu]
 Printer capabilities, how to handle user options, and how to build the
 renderer command line is always described by \fBPPD files\fR, these
 PPD files usually come from \fBFoomatic\fR or can be the ones supplied by
 the manufacturers of PostScript printers. The PPD files are the same
 for both CUPS and direct printing.
 
-.Topic
+.TP 2m
+\[bu]
 foomatic-rip works with \fBCUPS\fR and for direct printing (\fBwithout
 spooler\fR), where the latter is mainly for testing and debugging.
 The mode is selected by the command line options and environment
 variables which are supplied to foomatic-rip.
 
-.Topic
+.TP 2m
+\[bu]
 foomatic-rip does not only apply option settings supplied by the user
 through the command line of the printing command, but also searches
 the entire job for embedded option settings (only PostScript
@@ -100,7 +105,10 @@ output data. Due to the restrictions of PPD files \fB<\fR, \fB>\fR, and
 \fB"\fR are not allowed in the \fI<command>\fR, replace them as
 follows:
 
-.CodeSkip
+.ie t \
+.  sp 0.2v
+.el \
+.  sp
 .nf
 .B Character	Replacement
 .B ---------------------
