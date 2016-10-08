@@ -65,25 +65,27 @@ EMB_PARAMS *font_load(const char *font)
     candidates = FcFontSort (0, pattern, FcFalse, 0, &result);
     FcPatternDestroy (pattern);
 
-    /* In the list of fonts returned by FcFontSort()
-       find the first one that is both in TrueType format and monospaced */
-    for (i = 0; i < candidates->nfont; i++) {
-      FcChar8 *fontformat=NULL; // TODO? or just try?
-      int spacing=0; // sane default, as FC_MONO == 100
-      FcPatternGetString  (candidates->fonts[i], FC_FONTFORMAT, 0, &fontformat);
-      FcPatternGetInteger (candidates->fonts[i], FC_SPACING,    0, &spacing);
+    if (candidates) {
+      /* In the list of fonts returned by FcFontSort()
+	 find the first one that is both in TrueType format and monospaced */
+      for (i = 0; i < candidates->nfont; i++) {
+	FcChar8 *fontformat=NULL; // TODO? or just try?
+	int spacing=0; // sane default, as FC_MONO == 100
+	FcPatternGetString  (candidates->fonts[i], FC_FONTFORMAT, 0, &fontformat);
+	FcPatternGetInteger (candidates->fonts[i], FC_SPACING,    0, &spacing);
 
-      if ( (fontformat)&&(spacing == FC_MONO) ) {
-        if (strcmp((const char *)fontformat, "TrueType") == 0) {
-          fontname = FcPatternFormat (candidates->fonts[i], (const FcChar8 *)"%{file|cescape}/%{index}");
-          break;
-        } else if (strcmp((const char *)fontformat, "CFF") == 0) {
-          fontname = FcPatternFormat (candidates->fonts[i], (const FcChar8 *)"%{file|cescape}"); // TTC only possible with non-cff glyphs!
-          break;
-        }
+	if ( (fontformat)&&(spacing == FC_MONO) ) {
+	  if (strcmp((const char *)fontformat, "TrueType") == 0) {
+	    fontname = FcPatternFormat (candidates->fonts[i], (const FcChar8 *)"%{file|cescape}/%{index}");
+	    break;
+	  } else if (strcmp((const char *)fontformat, "CFF") == 0) {
+	    fontname = FcPatternFormat (candidates->fonts[i], (const FcChar8 *)"%{file|cescape}"); // TTC only possible with non-cff glyphs!
+	    break;
+	  }
+	}
       }
+      FcFontSetDestroy (candidates);
     }
-    FcFontSetDestroy (candidates);
   }
 
   if (!fontname) {
