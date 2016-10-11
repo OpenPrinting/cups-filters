@@ -178,6 +178,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
   const int numPages=std::max(shuffle.size(),pages.size());
 
   std::shared_ptr<PDFTOPDF_PageHandle> curpage;
+  int outputpage=0;
   int outputno=0;
 
   if ((param.nup.nupX==1)&&(param.nup.nupY==1)&&(!param.fitplot)) {
@@ -199,6 +200,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
       if (shuffle[iA]>=numOrigPages) {
         // add empty page as filler
         proc.add_page(proc.new_page(param.page.width,param.page.height),param.reverse);
+	outputno++;
         continue; // no border, etc.
       }
       auto page=pages[shuffle[iA]];
@@ -288,7 +290,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
 
       bool newPage=nupstate.nextPage(rect.width,rect.height,pgedit);
       if (newPage) {
-        if ((curpage)&&(param.withPage(outputno))) {
+        if ((curpage)&&(param.withPage(outputpage))) {
           curpage->rotate(param.orientation);
           if (param.mirror) {
             curpage->mirror();
@@ -296,12 +298,13 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
           }
           proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
 	  // Log page in /var/log/cups/page_log
+	  outputno++;
 	  if (param.page_logging == 1)
 	    fprintf(stderr, "PAGE: %d %d\n", outputno,
 		    param.copies_to_be_logged);
         }
         curpage=proc.new_page(param.page.width,param.page.height);
-        outputno++;
+        outputpage++;
       }
       if (shuffle[iA]>=numOrigPages) {
         continue;
@@ -332,13 +335,14 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
 
       // pgedit.dump();
     }
-    if ((curpage)&&(param.withPage(outputno))) {
+    if ((curpage)&&(param.withPage(outputpage))) {
       curpage->rotate(param.orientation);
       if (param.mirror) {
         curpage->mirror();
       }
       proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
       // Log page in /var/log/cups/page_log
+      outputno ++;
       if (param.page_logging == 1)
 	fprintf(stderr, "PAGE: %d %d\n", outputno, param.copies_to_be_logged);
     }
