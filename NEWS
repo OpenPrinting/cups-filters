@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.11.4 - 2016-09-21
 
 CHANGES IN V1.11.5
 
+	- cups-browsed: Corrected checking of the PDLs of an IPP network
+	  printer. Now PCL 5c/e printers (not HP inkjets) should get
+	  recognized correctly.
 	- texttopdf: Added missing NULL check to avoid a segfault when
 	  texttopdf does not find a suitable (monospace TTF) font.
 	- foomatic-rip: Replace old manpage macro calls from

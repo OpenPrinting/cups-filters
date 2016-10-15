@@ -3032,14 +3032,15 @@ create_local_queue (const char *name,
 	 ((!strcasestr(pdl, "application/vnd.hp-PCL") &&
 	   !strcasestr(pdl, "application/PCL") &&
 	   !strcasestr(pdl, "application/x-pcl")) ||
-	  ((strncasecmp(make_model, "HP", 2) ||
-	    strncasecmp(make_model, "Hewlett Packard", 15) ||
-	    strncasecmp(make_model, "Hewlett-Packard", 15)) &&
+	  ((!strncasecmp(make_model, "HP", 2) || /* HP inkjets not supported */
+	    !strncasecmp(make_model, "Hewlett Packard", 15) ||
+	    !strncasecmp(make_model, "Hewlett-Packard", 15)) &&
 	   !strcasestr(make_model, "LaserJet") &&
 	   !strcasestr(make_model, "Mopier"))) &&
 	 !strcasestr(pdl, "application/vnd.hp-PCLXL"))) {
-      debug_printf("Cannot create remote printer %s (%s) as its PDLs are not known, ignoring this printer.\n",
-		   p->name, p->uri);
+      debug_printf("Cannot create remote printer %s (URI: %s, Model: %s, Accepted data formats: %s) as its PDLs are not known, ignoring this printer.\n",
+		   p->name, p->uri, make_model, pdl);
+      debug_printf("Supported PDLs: PWG Raster, PostScript, PDF, PCL XL, PCL 5c/e (HP inkjets report themselves as PCL printers but their PCL is not supported)\n");
       goto fail;
     }
 
