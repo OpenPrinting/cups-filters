@@ -601,7 +601,9 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
   // The filters currently are:
   // - foomatic-rip (lets Ghostscript convert PDF to printer's format via
   //   built-in drivers, no access to the PDF content)
-  // - gstopxl (simple script filter)
+  // - gstopxl (uses Ghostscript, like foomatic-rip)
+  // - *toraster on IPP Everywhere printers (then *toraster gets the last
+  //   filter, the case if FINAL_CONTENT_TYPE env var is "image/pwg-raster")
   // - hpps (bug)
 
   // Check whether page logging is forced or suppressed by the command line
@@ -644,7 +646,7 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
       // Proceed depending on number of cupsFilter(2) lines in PPD
       } else if (ppd->num_filters == 0) {
 	// No filter line, manufacturer-supplied PostScript PPD
-	// In this case pstops, called by pdftops does the logging
+	// In this case pstops, called by pdftops, does the logging
 	param.page_logging = 0;
       } else if (ppd->num_filters == 1) {
 	// One filter line, so this one filter is the last filter
@@ -690,11 +692,14 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 	  lastfilter = q + 1;
 	  // Check whether we have to log
 	  if (!strcasecmp(lastfilter, "-")) {
-	    // No filter defined in the PPD, if incoming data
-	    // (FINAL_CONTENT_TYPE) is PDF, pdftopdf is last filter
-	    // (PDF printer) and has to log
+	    // No filter defined in the PPD
+	    // If output data (FINAL_CONTENT_TYPE) is PDF, pdftopdf is last
+	    // filter (PDF printer) and has to log
+	    // If output data (FINAL_CONTENT_TYPE) is PWG Raster, *toraster is
+	    // last filter (IPP Everywhere printer) and pdftopdf has to log
 	    if (strcasestr(final_content_type, "/pdf") ||
-		strcasestr(final_content_type, "/vnd.cups-pdf"))
+		strcasestr(final_content_type, "/vnd.cups-pdf") ||
+		strcasestr(final_content_type, "/pwg-raster"))
 	      param.page_logging = 1;
 	    else
 	      param.page_logging = 0;
@@ -702,9 +707,16 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 	    // pdftopdf is last filter (PDF printer)
 	    param.page_logging = 1;
 	  } else if (!strcasecmp(lastfilter, "gstopxl")) {
-	    // gstopxl is last filter, this is a simple script without
-	    // access to the pages of the file to be printed, so we log the
-	    // pages
+	    // gstopxl is last filter, this is a Ghostscript-based filter
+	    // without access to the pages of the file to be printed, so we
+	    // log the pages
+	    param.page_logging = 1;
+	  } else if (!strcasecmp(lastfilter + strlen(lastfilter) - 8,
+				 "toraster")) {
+	    // On IPP Everywhere printers which accept PWG Raster data one
+	    // of gstoraster, pdftoraster, or mupdftoraster is the last
+	    // filter. These filters do not log pages so pdftopdf has to
+	    // do it
 	    param.page_logging = 1;
 	  } else if (!strcasecmp(lastfilter, "foomatic-rip")) {
 	    // foomatic-rip is last filter, foomatic-rip is mainly used as

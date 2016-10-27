@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.11.4 - 2016-09-21
 
 CHANGES IN V1.11.5
 
+	- pdftopdf: Do the page logging also for IPP Everywhere
+	  printers which use the PWG Raster data format as the
+	  ...toraster filters being the last filter then do not log.
 	- gstoraster, pdftoraster: Let filters generate PWG Raster if
           the environment variable FINAL_CONTENT_TYPE is set to
           image/pwg-raster, make sure full-page bitmaps are generated
