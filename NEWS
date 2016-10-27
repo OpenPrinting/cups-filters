@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.11.4 - 2016-09-21
 
 CHANGES IN V1.11.5
 
+	- build system: Several fixes, especially to make it work when
+	  cross-compiling or using a build server (Bug #1378).
 	- cups-browsed: Silenced a warning.
 	- cups-browsed: For remote CUPS queues with a dot in their name
 	  no local queue got created (Bug #1379).

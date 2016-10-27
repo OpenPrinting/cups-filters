@@ -82,7 +82,7 @@ AC_ARG_WITH([cups-config],
 AS_IF([test "x$with_cups_config" != "xsystem"], [
 	CUPSCONFIG=$with_cups_config
 ], [
-	AC_PATH_PROG(CUPSCONFIG, [cups-config])
+	AC_PATH_TOOL(CUPSCONFIG, [cups-config])
 	AS_IF([test -z "$CUPSCONFIG"], [
 		AC_MSG_ERROR([Required cups-config is missing. Please install CUPS developer packages.])
 	])
@@ -152,8 +152,7 @@ if test x$enable_domainsocket != xno -a x$default_domainsocket != xno; then
                 case "$uname" in
                         Darwin*)
                                 # Darwin and MaxOS X do their own thing...
-                                CUPS_DEFAULT_DOMAINSOCKET="$localstatedir/run/cu
-psd"
+                                CUPS_DEFAULT_DOMAINSOCKET="$localstatedir/run/cupsd"
                                 ;;
                         *)
                                 # All others use FHS standard...
@@ -538,24 +537,35 @@ AS_CASE([x$with_pdftops_maxres],
 	[xunlimited], [CUPS_PDFTOPS_MAXRES=0],
 	[AC_MSG_ERROR([Unknown value of with-pdftops-maxres provided: $with_pdftops])]
 )
+AC_ARG_ENABLE([gs-ps2write],
+	[AS_HELP_STRING([--disable-gs-ps2write], [Ghostscript doesn't support ps2write device.])],
+	[enable_gs_ps2write="$enableval"],
+	[enable_gs_ps2write=yes]
+)
 
 CUPS_GHOSTSCRIPT=""
 AS_IF([test "x$enable_ghostscript" != "xyes"], [
-	AS_IF([test "x$with_gs_path" != "xsystem"], [
-	       AC_MSG_ERROR([Cannot supply both --disable-ghostscript and --gs-path=])
-	], [
-		with_gs_path=""
-	])
+       with_gs_path=""
 ], [
 	AS_IF([test "x$with_gs_path" != "xsystem"], [
 		CUPS_GHOSTSCRIPT="$with_gs_path"
 	], [
-		AC_PATH_PROG(CUPS_GHOSTSCRIPT, [gs], [AC_MSG_ERROR([Required gs binary is missing. Please install ghostscript-gpl package.])])
+		AS_IF([test "x$cross_compiling" = "xyes"], [
+			CUPS_GHOSTSCRIPT="gs"
+		], [
+			AC_CHECK_PROG(CUPS_GHOSTSCRIPT, gs, gs)
+		])
 	])
-	AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x"], [
-		AC_DEFINE([HAVE_GHOSTSCRIPT], [], [Define that we provide ghostscript binary])
-		AS_IF([test x"$with_pdftops" = xgs], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [GS], [Define default renderer])])
+	AS_IF([test "x$CUPS_GHOSTSCRIPT" = "x"], [
+		AC_MSG_ERROR([Required gs binary is missing. Please install ghostscript-gpl package.])
+	])
+	AC_DEFINE([HAVE_GHOSTSCRIPT], [], [Define that we provide ghostscript binary])
+	AS_IF([test x"$with_pdftops" = xgs], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [GS], [Define default renderer])])
 
+	AS_IF([test "xenable_gs_ps2write" = "xyes"], [
+		AC_DEFINE([HAVE_GHOSTSCRIPT_PS2WRITE], [], [gs supports ps2write])
+	])
+	AS_IF([test "x$cross_compiling" != "xyes"], [
 		AC_MSG_CHECKING(whether gs supports the ps2write device)
 		AS_IF([`$CUPS_GHOSTSCRIPT -h 2>&1 | grep -q ps2write`], [
 			AC_MSG_RESULT([yes])
@@ -563,8 +573,6 @@ AS_IF([test "x$enable_ghostscript" != "xyes"], [
 		], [
 			AC_MSG_RESULT([no])
 		])
-	], [
-		CUPS_GHOSTSCRIPT="gs"
 	])
 ])
 AM_CONDITIONAL(ENABLE_GHOSTSCRIPT, test "x$enable_ghostscript" = xyes)
@@ -572,16 +580,19 @@ AC_SUBST(CUPS_GHOSTSCRIPT)
 
 CUPS_MUTOOL=""
 AS_IF([test "x$enable_mutool" != "xyes"], [
-	AS_IF([test "x$with_mutool_path" != "xsystem"], [
-	       AC_MSG_ERROR([Cannot supply both --disable-mutool and --mutool-path=])
-	], [
-		with_mutool_path=""
-	])
+	with_mutool_path=""
 ], [
 	AS_IF([test "x$with_mutool_path" != "xsystem"], [
 		CUPS_MUTOOL="$with_mutool_path"
 	], [
-		AC_PATH_PROG(CUPS_MUTOOL, [mutool], [AC_MSG_ERROR([Required mutool binary is missing. Please install mutool.])])
+		AS_IF([test "x$cross_compiling" = "xyes"], [
+			CUPS_MUTOOL="mutool"
+		], [
+			AC_CHECK_PROG(CUPS_MUTOOL, mutool, mutool)
+		])
+	])
+	AS_IF([test "x$CUPS_MUTOOL" = "x"], [
+		AC_MSG_ERROR([Required mutool binary is missing. Please install mutool.])
 	])
 	AS_IF([test x"$with_pdftops" = xmupdf], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [MUPDF], [Define default renderer])])
 ])
@@ -591,50 +602,53 @@ AC_SUBST(CUPS_MUTOOL)
 AS_IF([test "x$with_pdftops_path" != "xsystem"], [
 	CUPS_PDFTOPS="$with_pdftops_path"
 ], [
-	AC_PATH_PROG(CUPS_PDFTOPS, [pdftops], [AC_MSG_ERROR([Required pdftops is missing. Please install the pdftops utility of Poppler.])])
+	AS_IF([test "x$cross_compiling" = "xyes"], [
+		CUPS_PDFTOPS="pdftops"
+	], [
+		AC_CHECK_PROG(CUPS_PDFTOPS, pdftops, pdftops)
+	])
+	AS_IF([test "x$CUPS_PDFTOPS" = "x"], [
+		AC_MSG_ERROR([Required pdftops is missing. Please install the pdftops utility of Poppler.])
+	])
 ])
 AS_IF([test "x$CUPS_PDFTOPS" != "x"], [
 	AC_DEFINE([HAVE_POPPLER_PDFTOPS], [], [Define that we provide poppler pdftops.])
 	AS_IF([test x"$with_pdftops" = xpdftops], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOPS], [Define default renderer])])
 
-	AC_MSG_CHECKING([whether pdftops supports -origpagesizes])
-	AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- -origpagesizes`], [
-        	AC_MSG_RESULT([yes])
-		AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES], [] , [pdftops supports -origpagesizes.])
-	], [
-	        AC_MSG_RESULT([no])
+	AS_IF([test "x$cross_compiling" != "xyes"], [
+		AC_MSG_CHECKING([whether pdftops supports -origpagesizes])
+		AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- -origpagesizes`], [
+        		AC_MSG_RESULT([yes])
+			AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES], [] , [pdftops supports -origpagesizes.])
+		], [
+	        	AC_MSG_RESULT([no])
+		])
+		AC_MSG_CHECKING([whether pdftops supports -r])
+		AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- '-r '`], [
+	        	AC_MSG_RESULT([yes])
+			AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION], [] , [pdftops supports -r argument.])
+		], [
+        		AC_MSG_RESULT([no])
+		])
 	])
-	AC_MSG_CHECKING([whether pdftops supports -r])
-	AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- '-r '`], [
-	        AC_MSG_RESULT([yes])
-		AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION], [] , [pdftops supports -r argument.])
-	], [
-        	AC_MSG_RESULT([no])
-	])
-], [
-	CUPS_PDFTOPS="/usr/bin/pdftops"
 ])
 AS_IF([test "x$with_pdftocairo_path" != "xsystem"], [
 	CUPS_PDFTOCAIRO="$with_pdftocairo_path"
 ], [
-	AC_PATH_PROG(CUPS_PDFTOCAIRO, [pdftocairo], [AC_MSG_ERROR([Required pdftocairo is missing. Please install Poppler developer packages.])])
+	CUPS_PDFTOCAIRO="pdftocairo"
 ])
 AS_IF([test "x$CUPS_PDFTOCAIRO" != "x"], [
-	AC_DEFINE([HAVE_POPPLER_PDFTOCAIRO], [], [Define that we provide poppler pdftocairo.])
 	AS_IF([test x"$with_pdftops" = xpdftocairo], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOCAIRO], [Define default renderer])])
 ], [
-	CUPS_PDFTOCAIRO="pdftocairo"
+	AC_MSG_ERROR([Required pdftocairo is missing. Please install Poppler developer packages.])
 ])
 AS_IF([test "x$with_acroread_path" != "xsystem"], [
 	CUPS_ACROREAD="$with_acroread_path"
 ], [
-	AC_PATH_PROG(CUPS_ACROREAD, [acroread], [AC_MSG_ERROR([Required acroread binary is missing. Please install acroread package.])])
+	CUPS_ACROREAD="acroread"
 ])
 AS_IF([test "x$CUPS_ACROREAD" != "x"], [
-	AC_DEFINE([HAVE_ACROREAD], [], [Define that we provide acroread.])
 	AS_IF([test x"$with_pdftops" = xacroread], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [ACROREAD], [Define default renderer])])
-], [
-	CUPS_ACROREAD="acroread"
 ])
 
 AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x" -a "x$CUPS_PDFTOPS" != "x"], [
@@ -677,7 +691,7 @@ AS_IF([test x"$with_php" = "xyes"], [
 	AS_IF([test "x$with_php_config" != "xsystem"], [
 		PHPCONFIG=$with_php_config
 	], [
-		AC_PATH_PROG(PHPCONFIG, [php-config])
+		AC_PATH_TOOL(PHPCONFIG, [php-config])
 		AS_IF([test -z "$PHPCONFIG"], [
 			AC_MSG_ERROR([Required php-config is missing. Please install PHP developer packages.])
 		])
