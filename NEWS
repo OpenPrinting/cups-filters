@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.11.4 - 2016-09-21
 
 CHANGES IN V1.11.5
 
+	- cups-browsed: For remote CUPS queues with a dot in their name
+	  no local queue got created (Bug #1379).
 	- pdftopdf: Do the page logging also for IPP Everywhere
 	  printers which use the PWG Raster data format as the
 	  ...toraster filters being the last filter then do not log.

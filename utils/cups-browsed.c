@@ -3338,9 +3338,9 @@ remove_bad_chars(const char *str_orig, /* I - Original string */
     if (((str[i] >= 'A') && (str[i] <= 'Z')) ||
 	((str[i] >= 'a') && (str[i] <= 'z')) ||
 	((str[i] >= '0') && (str[i] <= '9')) ||
-	str[i] == '_' ||
+	str[i] == '_' || str[i] == '.' ||
 	(mode == 1 && (str[i] == '/' ||
-		       str[i] == '.' || str[i] == ','))) {
+		       str[i] == ','))) {
       /* Allowed character, keep it */
       havedash = 0;
       str[j] = str[i];
