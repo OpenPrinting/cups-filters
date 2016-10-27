@@ -6505,7 +6505,7 @@ int main(int argc, char*argv[]) {
   browsefilter = cupsArrayNew(compare_pointers, NULL);
 
   /* Read command line options */
-  if (argc >= 2)
+  if (argc >= 2) {
     for (i = 1; i < argc; i++)
       if (!strcasecmp(argv[i], "--debug") || !strcasecmp(argv[i], "-d") ||
 	  !strncasecmp(argv[i], "-v", 2)) {
@@ -6648,6 +6648,7 @@ int main(int argc, char*argv[]) {
 		argv[i]);
         goto help;
       }
+  }
 
   debug_printf("cups-browsed of cups-filters version "VERSION" starting.\n");
   
