@@ -591,7 +591,7 @@ exec_filter(const char *filter,		/* I - Filter to execute */
     * Execute command...
     */
 
-    execv(filter, argv);
+    execvp(filter, argv);
 
     perror(filter);
 

@@ -215,7 +215,7 @@ mutool_spawn (const char *filename,
 
   if ((pid = fork()) == 0) {
     /* Execute Mutool command line ... */
-    execve(filename, mutoolargv, envp);
+    execvpe(filename, mutoolargv, envp);
     perror(filename);
     goto out;
   }

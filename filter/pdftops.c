@@ -1494,7 +1494,7 @@ main(int  argc,				/* I - Number of command-line args */
       close(post_proc_pipe[1]);
     }
 
-    execv(pstops_path, pstops_argv);
+    execvp(pstops_path, pstops_argv);
     perror("DEBUG: Unable to execute pstops program");
 
     exit(1);

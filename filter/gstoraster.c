@@ -502,7 +502,7 @@ gs_spawn (const char *filename,
     }
 
     /* Execute Ghostscript command line ... */
-    execve(filename, gsargv, envp);
+    execvpe(filename, gsargv, envp);
     perror(filename);
     goto out;
   }
