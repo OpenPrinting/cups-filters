@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.11.4 - 2016-09-21
 
 CHANGES IN V1.11.5
 
+	- gstoraster, pdftoraster: Let filters generate PWG Raster if
+          the environment variable FINAL_CONTENT_TYPE is set to
+          image/pwg-raster, make sure full-page bitmaps are generated
+          in PWG_raster mode, and added mime conversion rules for
+          direct PWG Raster output.
 	- cups-browsed: Corrected checking of the PDLs of an IPP network
 	  printer. Now PCL 5c/e printers (not HP inkjets) should get
 	  recognized correctly.

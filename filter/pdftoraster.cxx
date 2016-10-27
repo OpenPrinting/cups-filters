@@ -267,7 +267,6 @@ cmsHPROFILE sgray_profile()
     cmsHPROFILE sgray;
 
     cmsCIExyY wp;
-    cmsCIExyYTRIPLE primaries;
 
 #if USE_LCMS1
     cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
@@ -460,7 +459,8 @@ static void parseOpts(int argc, char **argv)
   int num_options = 0;
   cups_option_t *options = 0;
   GooString profilePath;
-  char * profile = 0;
+  char *profile = 0;
+  const char *t = NULL;
   ppd_attr_t *attr;
 
   if (argc < 6 || argc > 7) {
@@ -469,6 +469,12 @@ static void parseOpts(int argc, char **argv)
     exit(1);
   }
 
+#ifdef HAVE_CUPS_1_7
+  t = getenv("FINAL_CONTENT_TYPE");
+  if (t && strcasestr(t, "pwg"))
+    pwgraster = 1;
+#endif /* HAVE_CUPS_1_7 */
+    
   ppd = ppdOpenFile(getenv("PPD"));
   if (ppd == NULL)
     fprintf(stderr, "DEBUG: PPD file is not specified.\n");
@@ -560,15 +566,14 @@ static void parseOpts(int argc, char **argv)
 	(!strcasecmp(attr->value, "true")
 	 || !strcasecmp(attr->value, "on") ||
 	 !strcasecmp(attr->value, "yes")))
-    {
       pwgraster = 1;
+    if (pwgraster == 1)
       cupsRasterParseIPPOptions(&header, num_options, options, pwgraster, 0);
-    }
 #endif /* HAVE_CUPS_1_7 */
   } else {
 #ifdef HAVE_CUPS_1_7
     pwgraster = 1;
-    const char *t = cupsGetOption("media-class", num_options, options);
+    t = cupsGetOption("media-class", num_options, options);
     if (t == NULL)
       t = cupsGetOption("MediaClass", num_options, options);
     if (t != NULL)
@@ -1724,10 +1729,12 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
       landscape = 0;
       paperdimensions[0] = size->width;
       paperdimensions[1] = size->length;
-      margins[0] = size->left;
-      margins[1] = size->bottom;
-      margins[2] = size->width - size->right;
-      margins[3] = size->length - size->top;
+      if (pwgraster == 0) {
+	margins[0] = size->left;
+	margins[1] = size->bottom;
+	margins[2] = size->width - size->right;
+	margins[3] = size->length - size->top;
+      }
       strncpy(header.cupsPageSizeName, size->name, 64);
     } else {
       /*
@@ -1750,10 +1757,12 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
 	landscape = 1;
 	paperdimensions[0] = size->width;
 	paperdimensions[1] = size->length;
-	margins[0] = size->left;
-	margins[1] = size->bottom;
-	margins[2] = size->width - size->right;
-	margins[3] = size->length - size->top;
+	if (pwgraster == 0) {
+	  margins[0] = size->left;
+	  margins[1] = size->bottom;
+	  margins[2] = size->width - size->right;
+	  margins[3] = size->length - size->top;
+	}
 	strncpy(header.cupsPageSizeName, size->name, 64);
       } else {
 	/*
@@ -1764,8 +1773,9 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
 	paperdimensions[1] = size->length;
 	for (i = 0; i < 2; i ++)
 	  paperdimensions[i] = header.PageSize[i];
-	for (i = 0; i < 4; i ++)
-	  margins[i] = ppd->custom_margins[i];
+	if (pwgraster == 0)
+	  for (i = 0; i < 4; i ++)
+	    margins[i] = ppd->custom_margins[i];
 	header.cupsPageSizeName[0] = '\0';
       }
     }
@@ -1774,10 +1784,12 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
       paperdimensions[i] = header.PageSize[i];
     if (header.cupsImagingBBox[3] > 0.0) {
       /* Set margins if we have a bounding box defined ... */
-      margins[0] = header.cupsImagingBBox[0];
-      margins[1] = header.cupsImagingBBox[1];
-      margins[2] = paperdimensions[0] - header.cupsImagingBBox[2];
-      margins[3] = paperdimensions[1] - header.cupsImagingBBox[3];
+      if (pwgraster == 0) {
+	margins[0] = header.cupsImagingBBox[0];
+	margins[1] = header.cupsImagingBBox[1];
+	margins[2] = paperdimensions[0] - header.cupsImagingBBox[2];
+	margins[3] = paperdimensions[1] - header.cupsImagingBBox[3];
+      }
     } else
       /* ... otherwise use zero margins */
       for (i = 0; i < 4; i ++)
@@ -1806,19 +1818,26 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
   bitmapoffset[1] = margins[3] / 72.0 * header.HWResolution[1];
 
   /* write page header */
-  header.cupsWidth = ((paperdimensions[0] - margins[0] - margins[2]) /
-		      72.0 * header.HWResolution[0]) + 0.5;
-  header.cupsHeight = ((paperdimensions[1] - margins[1] - margins[3]) /
-		       72.0 * header.HWResolution[1] + 0.5);
+  if (pwgraster == 0) {
+    header.cupsWidth = ((paperdimensions[0] - margins[0] - margins[2]) /
+			72.0 * header.HWResolution[0]) + 0.5;
+    header.cupsHeight = ((paperdimensions[1] - margins[1] - margins[3]) /
+			 72.0 * header.HWResolution[1]) + 0.5;
+  } else {
+    header.cupsWidth = (paperdimensions[0] /
+			72.0 * header.HWResolution[0]) + 0.5;
+    header.cupsHeight = (paperdimensions[1] /
+			 72.0 * header.HWResolution[1]) + 0.5;
+  }
   for (i = 0; i < 2; i ++) {
     header.cupsPageSize[i] = paperdimensions[i];
     header.PageSize[i] = (unsigned int)(header.cupsPageSize[i] + 0.5);
-    if (strcasecmp(header.MediaClass, "PwgRaster") != 0)
+    if (pwgraster == 0)
       header.Margins[i] = margins[i] + 0.5;
     else
       header.Margins[i] = 0;
   }
-  if (strcasecmp(header.MediaClass, "PwgRaster") != 0) {
+  if (pwgraster == 0) {
     header.cupsImagingBBox[0] = margins[0];
     header.cupsImagingBBox[1] = margins[1];
     header.cupsImagingBBox[2] = paperdimensions[0] - margins[2];

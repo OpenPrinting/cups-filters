@@ -795,6 +795,15 @@ main (int argc, char **argv, char *envp[])
     cupsArrayAdd(gs_args, strdup("-dColorConversionStrategy=/LeaveColorUnchanged"));
   }
   
+#ifdef HAVE_CUPS_1_7
+  if (outformat == OUTPUT_FORMAT_RASTER)
+  {
+    t = getenv("FINAL_CONTENT_TYPE");
+    if (t && strcasestr(t, "pwg"))
+      pwgraster = 1;
+  }
+#endif /* HAVE_CUPS_1_7 */
+    
   if (ppd)
   {
     cupsRasterInterpretPPD(&h,ppd,num_options,options,0);
@@ -805,10 +814,9 @@ main (int argc, char **argv, char *envp[])
 	  (!strcasecmp(attr->value, "true") ||
 	   !strcasecmp(attr->value, "on") ||
 	   !strcasecmp(attr->value, "yes")))
-      {
 	pwgraster = 1;
+      if (pwgraster == 1)
 	cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 0);
-      }
     }
 #endif /* HAVE_CUPS_1_7 */
     if (outformat == OUTPUT_FORMAT_PXL)
