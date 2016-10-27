@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.11.4 - 2016-09-21
 
 CHANGES IN V1.11.5
 
+	- cups-browsed: Fixed several typos in the documentation (Bug
+	  #1378).
 	- gstoraster, mupdftoraster, pdftops, sys5ippprinter: Use
 	  execvp() and execvpe() to call programs so that the $PATH
 	  environment variable gets used to find the programs (Bug
@@ -10,8 +12,8 @@ CHANGES IN V1.11.5
 	- build system: Several fixes, especially to make it work when
 	  cross-compiling or using a build server (Bug #1378).
 	- cups-browsed: Silenced a warning.
-	- cups-browsed: For remote CUPS queues with a dot in their name
-	  no local queue got created (Bug #1379).
+	- cups-browsed: For remote CUPS queues with a dot in their
+	  name no local queue got created (Bug #1379).
 	- pdftopdf: Do the page logging also for IPP Everywhere
 	  printers which use the PWG Raster data format as the
 	  ...toraster filters being the last filter then do not log.

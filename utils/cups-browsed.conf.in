@@ -141,7 +141,7 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # field (<FIELD>) of the printer's properties to which it should
 # apply.
 
-# Avaialble field names are:
+# Available field names are:
 
 #   name:    Name of the local print queue to be created
 #   host:    Host name of the remote print server

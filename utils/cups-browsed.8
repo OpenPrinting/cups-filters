@@ -31,7 +31,7 @@ Broadcast local queues with the CUPS protocol.
 .PP
 Note that 2. and 4. are only to allow communication with legacy CUPS servers (1.5.x or older) on the remote machine(s). The standard method to broadcast for shared/network printers to broadcast their presence is Bonjour. The CUPS broadcasting/browsing protocol is deprecated.
 
-cups-browsed can be run permanently (from system boot to shutdown) or on-demand (for example to save resources on mobile devices). For running it on-demend an auto-shutdown feature can be activated to let cups-browsed terminate when it does not have queues any more to take care of.
+cups-browsed can be run permanently (from system boot to shutdown) or on-demand (for example to save resources on mobile devices). For running it on-demand an auto-shutdown feature can be activated to let cups-browsed terminate when it does not have queues any more to take care of.
 
 .SH OPTIONS
 .TP
@@ -77,7 +77,7 @@ Display usage and version info and do not start the daemon.
 
 .SH NOTES
 Please take references to cups 1.6.x to include newer versions.
-Similarily, cups 1.5.x is intended to encompass older versions too.
+Similarly, cups 1.5.x is intended to encompass older versions too.
 .PP
 In environments with only cups 1.6.x servers and clients (plus
 \fBcups-browsed\fP on either server or client or both) the function described in 1.
