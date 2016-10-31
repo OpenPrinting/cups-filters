@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.11.5 - 2016-10-28
 -----------------------------------------------------
 
+CHANGES IN V1.11.6
+
+	- pdftops: Do not default to simply "pdftops" when calling the
+	  Poppler pdftops utility, as the $PATH of CUPS when running
+	  filters/backends starts with /usr/lib/cups/filter/ and then
+	  pdftops would call itself (Bug #1380).
+
 CHANGES IN V1.11.5
 
 	- cups-browsed: Fixed several typos in the documentation (Bug
