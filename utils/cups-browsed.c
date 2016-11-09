@@ -268,6 +268,14 @@ typedef enum ip_based_uris_e {
   IP_BASED_URIS_IPV6_ONLY
 } ip_based_uris_t;
 
+/* Automatically create queues for IPP network printers: No, only for
+   IPP printers, for all printers */
+typedef enum create_ipp_printer_queues_e {
+  IPP_PRINTERS_NO,
+  IPP_PRINTERS_EVERYWHERE,
+  IPP_PRINTERS_ALL
+} create_ipp_printer_queues_t;
+
 /* Ways how to set up a queue for an IPP network printer */
 typedef enum ipp_queue_type_e {
   PPD_YES,
@@ -341,7 +349,7 @@ static char local_server_str[1024];
 static char *DomainSocket = NULL;
 static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static unsigned int CreateRemoteRawPrinterQueues = 0;
-static unsigned int CreateIPPPrinterQueues = 0;
+static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_NO;
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
 static const char *DefaultOptions = NULL;
@@ -3019,7 +3027,7 @@ create_local_queue (const char *name,
        from mobile devices, even if there is no CUPS server with
        shared printers around. */
 
-    if (CreateIPPPrinterQueues == 0) {
+    if (CreateIPPPrinterQueues == IPP_PRINTERS_NO) {
       debug_printf("Printer %s (%s) is an IPP network printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
 		   p->name, p->uri);
       goto fail;
@@ -3083,6 +3091,36 @@ create_local_queue (const char *name,
 	  debug_printf("Keyword: %s\n",
 		       ippGetString(attr, i, NULL));
 	attr = ippNextAttribute(response);
+      }
+    }
+
+    /* If we have opted for only IPP Everywhere printers being set up
+       automatically, we check whether the printer has the "ipp-everywhere"
+       keyword in its "ipp-features-supported" IPP attribute. If the keyword
+       or the attribute is not present, we skip this printer. */
+    if (CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE) {
+      valuebuffer[0] = '\0';
+      if ((attr = ippFindAttribute(response, "ipp-features-supported", IPP_TAG_KEYWORD)) != NULL) {
+	debug_printf("Checking whether printer %s is IPP Everywhere: Attr: %s\n",
+		     p->name, ippGetName(attr));
+	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+	debug_printf("Checking whether printer %s is IPP Everywhere: Value: %s\n",
+		     p->name, valuebuffer);
+	if (strcasecmp(valuebuffer, "ipp-everywhere")) {
+	  for (i = 0; i < ippGetCount(attr); i ++) {
+	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
+		    sizeof(valuebuffer));
+	    debug_printf("Checking whether printer %s is IPP Everywhere: Keyword: %s\n",
+			 p->name, valuebuffer);
+	    if (!strcasecmp(valuebuffer, "ipp-everywhere"))
+	      break;
+	  }
+	}
+      }
+      if (!attr || strcasecmp(valuebuffer, "ipp-everywhere")) {
+	debug_printf("Printer %s (%s) is not an IPP Everywhere printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
+		   p->name, p->uri);
+	goto fail;
       }
     }
 
@@ -6300,12 +6338,15 @@ read_configuration (const char *filename)
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	CreateRemoteRawPrinterQueues = 0;
     } else if (!strcasecmp(line, "CreateIPPPrinterQueues") && value) {
-      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+      if (!strcasecmp(value, "all") ||
+	  !strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
-	CreateIPPPrinterQueues = 1;
+	CreateIPPPrinterQueues = IPP_PRINTERS_ALL;
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
-	CreateIPPPrinterQueues = 0;
+	CreateIPPPrinterQueues = IPP_PRINTERS_NO;
+      else if (strcasestr(value, "every"))
+	CreateIPPPrinterQueues = IPP_PRINTERS_EVERYWHERE;
     } else if (!strcasecmp(line, "IPPPrinterQueueType") && value) {
       if (!strncasecmp(value, "Auto", 4))
 	IPPPrinterQueueType = PPD_YES;

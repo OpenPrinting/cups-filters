@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.11.6 - 2016-10-31
 -----------------------------------------------------
 
+CHANGES IN V1.11.7
+
+	- cups-browsed: For automatic creation of print queues for IPP
+	  network printers also allow only creating queues for IPP
+	  Everywhere printers and not only for all suitable printers,
+	  configurable via the CreateIPPPrinterQueues directive in
+	  cups-browsed.conf.
+
 CHANGES IN V1.11.6
 
 	- pdftops: Do not default to simply "pdftops" when calling the
