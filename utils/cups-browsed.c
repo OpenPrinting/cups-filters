@@ -2209,7 +2209,7 @@ record_printer_options(const char *printer) {
 		  "printer-error-policy",
 		  "printer-info",
 		  "printer-is-accepting-jobs",
-		  /*"printer-is-shared",*/
+		  "printer-is-shared",
 		  "printer-geo-location",
 		  "printer-location",
 		  "printer-op-policy",
@@ -3426,6 +3426,7 @@ gboolean handle_cups_queues(gpointer unused) {
   cups_file_t *in, *out;
   char keyword[1024], *keyptr;
   const char *customval;
+  const char *val = NULL;
 
   debug_printf("Processing printer list ...\n");
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -3870,9 +3871,10 @@ gboolean handle_cups_queues(gpointer unused) {
 				  num_options, &options);
       /* Default option settings from printer entry */
       for (i = 0; i < p->num_options; i ++)
-	num_options = cupsAddOption(strdup(p->options[i].name),
-				    strdup(p->options[i].value),
-				    num_options, &options);
+	if (strcasecmp(p->options[i].name, "printer-is-shared"))
+	  num_options = cupsAddOption(strdup(p->options[i].name),
+				      strdup(p->options[i].value),
+				      num_options, &options);
       /* Encode option list into IPP attributes */
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
@@ -3910,7 +3912,8 @@ gboolean handle_cups_queues(gpointer unused) {
 	break;
       }
 
-      /* Do not share a queue which serves only to point to a remote printer
+      /* Do not share a queue which serves only to point to a remote CUPS
+	 printer
 
 	 We do this in a seperate IPP request as on newer CUPS versions we
          get an error when changing the printer-is-shared bit on a queue
@@ -3918,7 +3921,11 @@ gboolean handle_cups_queues(gpointer unused) {
 	 settings be applied amd when setting the printer-is-shared to
          false amd this errors, we can safely ignore the error as on queues
 	 pointing to remote CUPS printers the bit is set to false by default
-	 (these printers are never shared) */
+	 (these printers are never shared)
+
+	 If our printer is an IPP network printer and not a CUPS queue, we
+         keep track of whether the user has changed the printer-is-shared
+         bit and recover this setting */
 
       request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
       ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
@@ -3927,8 +3934,14 @@ gboolean handle_cups_queues(gpointer unused) {
 		 "requesting-user-name", NULL, cupsUser());
       num_options = 0;
       options = NULL;
-      num_options = cupsAddOption("printer-is-shared", "false",
-				  num_options, &options);
+      if (p->netprinter == 1 &&
+	  (val = cupsGetOption("printer-is-shared", p->num_options,
+			       p->options)) != NULL)
+	num_options = cupsAddOption("printer-is-shared", val,
+				    num_options, &options);
+      else
+	num_options = cupsAddOption("printer-is-shared", "false",
+				    num_options, &options);
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
       ippDelete(cupsDoRequest(http, request, "/admin/"));

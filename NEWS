@@ -1,8 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.11.6 - 2016-10-31
 -----------------------------------------------------
 
-CHANGES IN V1.11.7
+CHANGES IN V1.12.0
 
+	- cups-browsed: If a user changes the printer-is-shared bit of
+	  an auto-created print queue for an IPP network printer (not
+	  for a remote CUPS queue), record this fact and recover the
+	  change when creating this queue in the next session.
 	- cups-browsed: For automatic creation of print queues for IPP
 	  network printers also allow only creating queues for IPP
 	  Everywhere printers and not only for all suitable printers,
