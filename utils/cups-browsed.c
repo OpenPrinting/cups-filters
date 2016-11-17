@@ -351,6 +351,7 @@ static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static unsigned int CreateRemoteRawPrinterQueues = 0;
 static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_NO;
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
+static int NewIPPPrinterQueuesShared = 0;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
 static const char *DefaultOptions = NULL;
 static int in_shutdown = 0;
@@ -3925,7 +3926,9 @@ gboolean handle_cups_queues(gpointer unused) {
 
 	 If our printer is an IPP network printer and not a CUPS queue, we
          keep track of whether the user has changed the printer-is-shared
-         bit and recover this setting */
+         bit and recover this setting. The default setting for a new
+         queue is configurable via the NewIPPPrinterQueuesShared directive
+         in cups-browsed.conf */
 
       request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
       ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
@@ -3938,6 +3941,9 @@ gboolean handle_cups_queues(gpointer unused) {
 	  (val = cupsGetOption("printer-is-shared", p->num_options,
 			       p->options)) != NULL)
 	num_options = cupsAddOption("printer-is-shared", val,
+				    num_options, &options);
+      else if (p->netprinter == 1 && NewIPPPrinterQueuesShared) 
+	num_options = cupsAddOption("printer-is-shared", "true",
 				    num_options, &options);
       else
 	num_options = cupsAddOption("printer-is-shared", "false",
@@ -6369,6 +6375,13 @@ read_configuration (const char *filename)
 	IPPPrinterQueueType = PPD_NO;
       else if (!strncasecmp(value, "Interface", 9))
 	IPPPrinterQueueType = PPD_NO;
+    } else if (!strcasecmp(line, "NewIPPPrinterQueuesShared") && value) {
+      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
+	NewIPPPrinterQueuesShared = 1;
+      else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
+	NewIPPPrinterQueuesShared = 0;
     } else if (!strcasecmp(line, "LoadBalancing") && value) {
       if (!strncasecmp(value, "QueueOnClient", 13))
 	LoadBalancingType = QUEUE_ON_CLIENT;

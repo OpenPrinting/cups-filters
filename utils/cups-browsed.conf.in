@@ -376,6 +376,17 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # IPPPrinterQueueType Auto
 
 
+# The NewIPPPrinterQueuesShared directive determines whether a print
+# queue for a newly discovered IPP network printer (not remote CUPS
+# queue) will be shared to the local network or not. This is only
+# valid for newly discovered printers. For printers discovered in an
+# earlier cups-browsed session, cups-browsed will remember whether the
+# printer was shared, so changes by the user get conserved. Default is
+# not to share newly discovered IPP printers.
+
+# NewIPPPrinterQueuesShared Yes
+
+
 # The LoadBalancing directive switches between two methods of handling
 # load balancing between equally-named remote queues which are
 # represented by one local print queue making up a cluster of them

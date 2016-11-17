@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.11.6 - 2016-10-31
 
 CHANGES IN V1.12.0
 
+	- cups-browsed: Added new "NewIPPPrinterQueuesShared"
+	  directive to cups-browsed.conf, which allows to decide
+	  whether the auto-created local print queue for an newly
+	  discovered IPP network printer will be shared or not. For
+	  printers discovered earlier, cups-browsed remembers the
+	  previous setting.
 	- cups-browsed: If a user changes the printer-is-shared bit of
 	  an auto-created print queue for an IPP network printer (not
 	  for a remote CUPS queue), record this fact and recover the
