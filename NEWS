@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.11.6 - 2016-10-31
 
 CHANGES IN V1.12.0
 
+	- cups-browsed: Added support for auto setup of IPP printers
+	  understanding the Apple Raster input data format (.urf, on
+	  AirPrint printers), only if CUPS 2.2.2 is used, which can
+	  generate this format via its rastertopwg filter.
 	- cups-browsed: Added new "NewIPPPrinterQueuesShared"
 	  directive to cups-browsed.conf, which allows to decide
 	  whether the auto-created local print queue for an newly

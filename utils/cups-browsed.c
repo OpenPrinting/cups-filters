@@ -120,6 +120,7 @@ static int	ldap_rebind_proc(LDAP *RebindLDAPHandle,
 
 #include <cups/cups.h>
 #include <cups/ppd.h>
+#include <cups/raster.h>
 
 #include "cups-notifier.h"
 
@@ -3038,6 +3039,9 @@ create_local_queue (const char *name,
 	(!strcasestr(pdl, "application/postscript") &&
 	 !strcasestr(pdl, "application/pdf") &&
 	 !strcasestr(pdl, "image/pwg-raster") &&
+#ifdef CUPS_RASTER_HAVE_APPLERASTER
+	 !strcasestr(pdl, "image/urf") &&
+#endif
 	 ((!strcasestr(pdl, "application/vnd.hp-PCL") &&
 	   !strcasestr(pdl, "application/PCL") &&
 	   !strcasestr(pdl, "application/x-pcl")) ||
@@ -7538,6 +7542,11 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       } else if (!_cups_strncasecmp(format, "image/pwg-raster", 16)) {
         cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 0 -\"\n");
 	formatfound = 1;
+#ifdef CUPS_RASTER_HAVE_APPLERASTER
+      } else if (!_cups_strncasecmp(format, "image/urf", 9)) {
+        cupsFilePuts(fp, "*cupsFilter2: \"image/urf image/urf 0 -\"\n");
+	formatfound = 1;
+#endif
       }
       if (attr)
 	/* Next format in attribute */
