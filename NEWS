@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.11.6 - 2016-10-31
 
 CHANGES IN V1.12.0
 
+	- cups-browsed: Synced the PPD generator with the one of CUPS,
+	  giving the best possible support for IPP Everywhere and
+	  AirPrint printers. Especially support for more media types
+	  and for finishing units got added. Also support for more
+	  different ways to represent the printer capabilities via
+	  IPP attributes got added.
 	- cups-browsed: Added support for auto setup of IPP printers
 	  understanding the Apple Raster input data format (.urf, on
 	  AirPrint printers), only if CUPS 2.2.2 is used, which can
