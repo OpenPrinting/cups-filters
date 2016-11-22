@@ -25,9 +25,10 @@ CHANGES IN V1.12.0
 	  change when creating this queue in the next session.
 	- cups-browsed: For automatic creation of print queues for IPP
 	  network printers also allow only creating queues for IPP
-	  Everywhere printers and not only for all suitable printers,
-	  configurable via the CreateIPPPrinterQueues directive in
-	  cups-browsed.conf.
+	  Everywhere printers, only for Apple Raster printers, or for
+	  both printer types designed for driverless printing and not
+	  only for all suitable printers, configurable via the
+	  CreateIPPPrinterQueues directive in cups-browsed.conf.
 
 CHANGES IN V1.11.6
 

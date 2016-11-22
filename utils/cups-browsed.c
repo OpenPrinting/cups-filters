@@ -274,6 +274,8 @@ typedef enum ip_based_uris_e {
 typedef enum create_ipp_printer_queues_e {
   IPP_PRINTERS_NO,
   IPP_PRINTERS_EVERYWHERE,
+  IPP_PRINTERS_APPLERASTER,
+  IPP_PRINTERS_DRIVERLESS,
   IPP_PRINTERS_ALL
 } create_ipp_printer_queues_t;
 
@@ -2913,6 +2915,8 @@ create_local_queue (const char *name,
   char valuebuffer[65536];
   int i, count, left, right, bottom, top;
   const char *default_page_size = NULL, *best_color_space = NULL, *color_space;
+  int is_everywhere = 0;
+  int is_appleraster = 0;
 #endif /* HAVE_CUPS_1_6 */
 
   /* Mark this as a queue to be created locally pointing to the printer */
@@ -3099,11 +3103,13 @@ create_local_queue (const char *name,
       }
     }
 
-    /* If we have opted for only IPP Everywhere printers being set up
+    /* If we have opted for only IPP Everywhere printers or for only printers 
+       designed for driverless use (IPP Everywhere + Apple Raster) being set up
        automatically, we check whether the printer has the "ipp-everywhere"
-       keyword in its "ipp-features-supported" IPP attribute. If the keyword
-       or the attribute is not present, we skip this printer. */
-    if (CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE) {
+       keyword in its "ipp-features-supported" IPP attribute to see whether
+       we have an IPP Everywhere printer. */
+    if (CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE ||
+	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
       valuebuffer[0] = '\0';
       if ((attr = ippFindAttribute(response, "ipp-features-supported", IPP_TAG_KEYWORD)) != NULL) {
 	debug_printf("Checking whether printer %s is IPP Everywhere: Attr: %s\n",
@@ -3122,13 +3128,66 @@ create_local_queue (const char *name,
 	  }
 	}
       }
-      if (!attr || strcasecmp(valuebuffer, "ipp-everywhere")) {
-	debug_printf("Printer %s (%s) is not an IPP Everywhere printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
-		   p->name, p->uri);
-	goto fail;
-      }
+      if (attr && !strcasecmp(valuebuffer, "ipp-everywhere"))
+        is_everywhere = 1;
     }
 
+    /* If we have opted for only Apple Raster printers or for only printers 
+       designed for driverless use (IPP Everywhere + Apple Raster) being set up
+       automatically, we check whether the printer has a non-empty string
+       in its "urf-supported" IPP attribute to see whether we have an Apple
+       Raster printer. */
+    if (CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER ||
+	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
+      valuebuffer[0] = '\0';
+      if ((attr = ippFindAttribute(response, "urf-supported", IPP_TAG_KEYWORD)) != NULL) {
+	debug_printf("Checking whether printer %s understands Apple Raster: Attr: %s\n",
+		     p->name, ippGetName(attr));
+	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+	debug_printf("Checking whether printer %s understands Apple Raster: Value: %s\n",
+		     p->name, valuebuffer);
+	if (valuebuffer[0] == '\0') {
+	  for (i = 0; i < ippGetCount(attr); i ++) {
+	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
+		    sizeof(valuebuffer));
+	    debug_printf("Checking whether printer %s understands Apple Raster: Keyword: %s\n",
+			 p->name, valuebuffer);
+	    if (valuebuffer[0] != '\0')
+	      break;
+	  }
+	}
+      }
+      if (attr && valuebuffer[0] != '\0')
+        is_appleraster = 1;
+    }
+
+    /* If the printer is not IPP Everywhere or Apple Raster and we opted for
+       only such printers, we skip this printer. */
+    if ((CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS &&
+	 is_everywhere == 0 && is_appleraster == 0) ||
+	(CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE &&
+	 is_everywhere == 0) ||
+	(CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER &&
+	 is_appleraster == 0)) {
+      debug_printf("Printer %s (%s, %s%s%s%s%s) does not support the driverless printing protocol cups-browsed is configured to accept for setting up such printers automatically, ignoring this printer.\n",
+		   p->name, p->uri,
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    (is_everywhere ? "" : "not ") : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    "IPP Everywhere" : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    " and " : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    (is_appleraster ? "" : "not ") : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    "Apple Raster" : ""));
+      goto fail;
+    }
+    
     if (IPPPrinterQueueType == PPD_YES) {
       if (!_ppdCreateFromIPP(buffer, sizeof(buffer), response, make_model,
 			     pdl, color, duplex)) {
@@ -6368,8 +6427,14 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	CreateIPPPrinterQueues = IPP_PRINTERS_NO;
-      else if (strcasestr(value, "every"))
+      else if ((strcasestr(value, "driver") && strcasestr(value, "less")) ||
+	       ((strcasestr(value, "every") || strcasestr(value, "pwg")) &&
+		(strcasestr(value, "apple") || strcasestr(value, "air"))))
+	CreateIPPPrinterQueues = IPP_PRINTERS_DRIVERLESS;
+      else if (strcasestr(value, "every") || strcasestr(value, "pwg"))
 	CreateIPPPrinterQueues = IPP_PRINTERS_EVERYWHERE;
+      else if (strcasestr(value, "apple") || strcasestr(value, "air"))
+	CreateIPPPrinterQueues = IPP_PRINTERS_APPLERASTER;
     } else if (!strcasecmp(line, "IPPPrinterQueueType") && value) {
       if (!strncasecmp(value, "Auto", 4))
 	IPPPrinterQueueType = PPD_YES;
