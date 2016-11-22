@@ -275,17 +275,15 @@ HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
 
     In addition, cups-browsed is also capable of discovering IPP
     network printers (native printers, not CUPS queues) with known
-    page description languages (PWG Raster, PDF, PostScript, PCL XL,
-    PCL 5c/e) in the local network and auto-create PPD-less print
-    queues for them (using a System V interface script to control the
-    filter chain). Clients have to IPP-poll the capabilities of the
-    printer and send option settings as standard IPP attributes. We do
-    not poll the capabilities by ourselves to not wake up the printer
-    from power-saving mode when creating the queues. Jobs have to be
-    sent in one of PDF, PWG Raster, or JPEG format. Other formats are
-    not accepted. This functionality is primarily for mobile devices
-    running CUPS to not need a printer setup tool nor a collection of
-    printer drivers and PPDs.
+    page description languages (PWG Raster, Apple Raster, PDF,
+    PostScript, PCL XL, PCL 5c/e) in the local network and auto-create
+    print queues with auto-created PPD file or PPD-less for them (for
+    the latter using a System V interface script to control the filter
+    chain, only available for CUPS 2.1.0 and older, clients have to
+    IPP-poll the capabilities of the printer and send option settings
+    as standard IPP attributes then). This functionality is primarily
+    for mobile devices running CUPS to not need a printer setup tool
+    nor a collection of printer drivers and PPDs.
 
     cups-browsed can also be started on-demand, for example to save
     resources on mobile devices. For this, cups-browsed can be set
