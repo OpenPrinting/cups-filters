@@ -7677,7 +7677,7 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	/* We put a high cost factor here as if a printer supports also
 	   another format, like PWG or Apple Raster, we prefer it, as many
 	   PostScript printers have bugs in their PostScript interpreters */
-        cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 300 -\"\n");
+        cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 500 -\"\n");
 	formatfound = 1;
       } else if (!_cups_strncasecmp(format, "application/vnd.hp-pclxl", 24)) {
 	/* Check whether the gstopxl filter is installed,
@@ -7690,7 +7690,7 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	  /* We put a high cost factor here as if a printer supports also
 	     another format, like PWG or Apple Raster, we prefer it, as some
 	     PCL-XL printers have bugs in their PCL-XL interpreters */
-	  cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 100 gstopxl\"\n");
+	  cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 300 gstopxl\"\n");
 	  formatfound = 1;
 	}
       } else if (!_cups_strncasecmp(format, "application/vnd.hp-pcl", 22)) {
@@ -7698,7 +7698,7 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	   another format, like PWG or Apple Raster, we prefer it, as there
 	   are some printers, like HP inkjets which report to accept PCL
            but do not support PCL 5c/e or PCL-XL */
-        cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 500 rastertopclx\"\n");
+        cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 700 rastertopclx\"\n");
 	formatfound = 1;
       } else if (!_cups_strncasecmp(format, "image/pwg-raster", 16)) {
         cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 0 -\"\n");
@@ -7706,7 +7706,7 @@ _ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	is_pwg = 1;
 #ifdef CUPS_RASTER_HAVE_APPLERASTER
       } else if (!_cups_strncasecmp(format, "image/urf", 9)) {
-        cupsFilePuts(fp, "*cupsFilter2: \"image/urf image/urf 0 -\"\n");
+        cupsFilePuts(fp, "*cupsFilter2: \"image/urf image/urf 100 -\"\n");
 	formatfound = 1;
 	is_apple = 1;
 #endif
