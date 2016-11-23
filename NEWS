@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.11.6 - 2016-10-31
 
 CHANGES IN V1.12.0
 
+	- libcupsfilters, cups-browsed: Moved the PPD generator for
+	  IPP network printers from cups-browsed to libcupsfilters, so
+	  that it can also be used by other utilities.
 	- cups-browsed: When auto-generating a PPD set the cost values
 	  in the filter lines to give the highest priority to PDF,
 	  then PWG Raster, Apple Raster, PCL-XL, PostScript, PCL 5c/e.

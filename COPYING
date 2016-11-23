@@ -35,11 +35,11 @@ Copyright: 2007-2011, Apple Inc
 License: GPL-2
 
 Files: cupsfilters/*
-Copyright: 2007-2011 Apple Inc
+Copyright: 2007-2016 Apple Inc
  1993-2007 by Easy Software Products
  2011-2013, Richard Hughes
  2011, Tim Waugh
- 2013, Till Kamppeter
+ 2013-2016, Till Kamppeter
  2014, Joseph Simon
 License: LGPL-2
 

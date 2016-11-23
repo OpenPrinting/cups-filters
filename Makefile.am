@@ -100,7 +100,8 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/colormanager.h \
 	cupsfilters/driver.h \
 	cupsfilters/image.h \
-	cupsfilters/raster.h
+	cupsfilters/raster.h \
+	cupsfilters/ppdgenerator.h
 
 lib_LTLIBRARIES = libcupsfilters.la
 
@@ -150,6 +151,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/image-zoom.c \
 	cupsfilters/lut.c \
 	cupsfilters/pack.c \
+	cupsfilters/ppdgenerator.c \
 	cupsfilters/raster.c \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
@@ -871,7 +873,8 @@ cups_browsed_CFLAGS = \
 	$(AVAHI_GLIB_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GIO_CFLAGS) \
-	$(GIO_UNIX_CFLAGS)
+	$(GIO_UNIX_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
 cups_browsed_CXXFLAGS = $(cups_browsed_CFLAGS)
 cups_browsed_LDADD = \
 	$(CUPS_LIBS) \
@@ -879,7 +882,8 @@ cups_browsed_LDADD = \
 	$(AVAHI_GLIB_LIBS) \
 	$(GLIB_LIBS) \
 	$(GIO_LIBS) \
-	$(GIO_UNIX_LIBS)
+	$(GIO_UNIX_LIBS) \
+	libcupsfilters.la
 initrcdir = $(INITDDIR)
 initrc_SCRIPTS = utils/cups-browsed
 man_MANS = \
