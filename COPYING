@@ -232,9 +232,15 @@ Files: ltmain.sh
 Copyright: 1996-2001, 2003-2011 Free Software Foundation, Inc.
 License: GPL-2+
 
-Files: utils/*
+Files: utils/cups-browsed*
+ org.cups.cupsd.Notifier.xml
 Copyright: 2012-2016 Till Kamppeter
  2013-2015 Tim Waugh
+License: LGPL-2.1+
+
+Files: utils/driverless*
+Copyright: 2012-2016 Till Kamppeter
+ 2007-2016 Apple Inc.
 License: LGPL-2.1+
 
 Files: drv/cupsfilters.drv

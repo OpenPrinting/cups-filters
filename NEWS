@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.11.6 - 2016-10-31
 
 CHANGES IN V1.12.0
 
+	- driverless: Added new /usr/lib/cups/driver/driverless
+	  utility to make CUPS auto-generate PPD files for printers
+	  designed for driverless use (IPP Everywhere, Apple Raster)
+	  when they are set up with a printer setup tool. This gives
+	  transparency to set up these printers with legacy printer
+	  setup tools. This utility is also linked to /ustr/bin to
+	  manually generate PPDs via command line.
 	- libcupsfilters, cups-browsed: Moved the PPD generator for
 	  IPP network printers from cups-browsed to libcupsfilters, so
 	  that it can also be used by other utilities.

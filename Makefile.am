@@ -64,6 +64,24 @@ test1284_SOURCES = \
 test1284_LDADD = $(CUPS_LIBS)
 test1284_CFLAGS = $(CUPS_CFLAGS)
 
+# ==============
+# PPD Generators
+# ==============
+if ENABLE_DRIVERLESS
+pkgppdgendir = $(CUPS_SERVERBIN)/driver
+pkgppdgen_PROGRAMS = driverless
+
+driverless_SOURCES = \
+	utils/driverless.c
+driverless_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
+driverless_CXXFLAGS = $(driverless_CFLAGS)
+driverless_LDADD = \
+	$(CUPS_LIBS) \
+	libcupsfilters.la
+endif
+
 # =======
 # Banners
 # =======
@@ -950,6 +968,9 @@ install-exec-hook:
 if ENABLE_FOOMATIC
 	$(LN_S) -f $(pkgfilterdir)/foomatic-rip $(DESTDIR)$(bindir)
 endif
+if ENABLE_DRIVERLESS
+	$(LN_S) -f $(pkgppdgendir)/driverless $(DESTDIR)$(bindir)
+endif
 if ENABLE_BRAILLE
 	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
 	$(LN_S) -f textbrftoindexv3 $(DESTDIR)$(pkgfilterdir)/textbrftoindexv4
@@ -979,6 +1000,9 @@ endif
 	$(RM) $(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
 if ENABLE_FOOMATIC
 	$(RM) $(DESTDIR)$(bindir)/foomatic-rip
+endif
+if ENABLE_DRIVERLESS
+	$(RM) $(DESTDIR)$(bindir)/driverless
 endif
 if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/imagetoubrl
