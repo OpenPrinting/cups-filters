@@ -353,6 +353,7 @@ static char local_server_str[1024];
 static char *DomainSocket = NULL;
 static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static unsigned int CreateRemoteRawPrinterQueues = 0;
+static unsigned int CreateRemoteCUPSPrinterQueues = 1;
 static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_NO;
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static int NewIPPPrinterQueuesShared = 0;
@@ -2965,6 +2966,11 @@ create_local_queue (const char *name,
   p->is_legacy = 0;
   
   if (is_cups_queue) {
+    if (CreateRemoteCUPSPrinterQueues == 0) {
+      debug_printf("Printer %s (%s) is a remote CUPS printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
+		   p->name, p->uri);
+      goto fail;
+    }
     /* Our local queue must be raw, so that the PPD file and driver
        on the remote CUPS server get used */
     p->netprinter = 0;
@@ -6410,6 +6416,13 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	CreateRemoteRawPrinterQueues = 0;
+    } else if (!strcasecmp(line, "CreateRemoteCUPSPrinterQueues") && value) {
+      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
+	CreateRemoteCUPSPrinterQueues = 1;
+      else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
+	CreateRemoteCUPSPrinterQueues = 0;
     } else if (!strcasecmp(line, "CreateIPPPrinterQueues") && value) {
       if (!strcasecmp(value, "all") ||
 	  !strcasecmp(value, "yes") || !strcasecmp(value, "true") ||

@@ -329,6 +329,17 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # CreateRemoteRawPrinterQueues Yes
 
 
+# cups-browsed by default creates local print queues for each shared
+# CUPS print queue which it discovers on remote machines in the local
+# network(s). Set CreateRemoteCUPSPrinterQueues to "No" if you do not
+# want cups-browsed to do this. For example you can set cups-browsed
+# to only create queues for IPP network printers setting
+# CreateIPPPrinterQueues not to "No" and CreateRemoteCUPSPrinterQueues
+# to "No".
+
+# CreateRemoteCUPSPrinterQueues No
+
+
 # Set CreateIPPPrinterQueues to "All" to let cups-browsed discover IPP
 # network printers (native printers, not CUPS queues) with known page
 # description languages (PWG Raster, PDF, PostScript, PCL XL, PCL

@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.11.6 - 2016-10-31
 
 CHANGES IN V1.12.0
 
+	- cups-browsed: Added new "CreateRemoteCUPSPrinterQueues"
+	  directive to cups-browsed.conf, which allows to decide
+	  whether to auto-create local print queues for shared CUPS
+	  queues on remote machines. This way one can also set up
+	  servers which only create queues for IPP network printers.
 	- driverless: Added new /usr/lib/cups/driver/driverless
 	  utility to make CUPS auto-generate PPD files for printers
 	  designed for driverless use (IPP Everywhere, Apple Raster)
@@ -28,7 +33,7 @@ CHANGES IN V1.12.0
 	  generate this format via its rastertopwg filter.
 	- cups-browsed: Added new "NewIPPPrinterQueuesShared"
 	  directive to cups-browsed.conf, which allows to decide
-	  whether the auto-created local print queue for an newly
+	  whether the auto-created local print queue for a newly
 	  discovered IPP network printer will be shared or not. For
 	  printers discovered earlier, cups-browsed remembers the
 	  previous setting.
