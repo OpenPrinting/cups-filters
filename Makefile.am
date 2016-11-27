@@ -19,7 +19,8 @@ EXTRA_DIST = \
 	libfontembed.pc.in \
 	utils/cups-browsed.service \
 	utils/cups-browsed-upstart.conf \
-	filter/braille/drivers/index/ubrlto4dot.c
+	filter/braille/drivers/index/ubrlto4dot.c \
+	filter/braille/filters/TODO.txt
 
 # ========
 # Backends
