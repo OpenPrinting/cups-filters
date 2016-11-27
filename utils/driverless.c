@@ -295,7 +295,9 @@ list_printers (int mode)
 		   "CMD:%s;", value + 1);
 	}
 
-	if (make[0])
+	if (make[0] &&
+	    (strncasecmp(model, make, strlen(make)) ||
+	     !isspace(model[strlen(make)])))
 	  snprintf(make_and_model, sizeof(make_and_model), "%s %s",
 		   make, model);
 	else
