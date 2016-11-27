@@ -1,0 +1,59 @@
+.TH driverless 1 "27 Nov 2016" "" ""
+.SH NAME
+\fBdriverless \fP- PPD generator utility for driverless printing
+\fB
+.SH SYNOPSIS
+.nf
+.fam C
+\fBdriverless\fP [\fB-h\fP | \fB--help\fP | \fB--version\fP] [\fB-d\fP | \fB-v\fP | \fB--debug\fP] [\fBlist\fP] | [\fBcat\fP \fIdriver URI\fP] | [\fIIPP printer URI\fP]
+
+.fam T
+.fi
+.fam T
+.fi
+.SH DESCRIPTION
+\fBdriverless\fP generates PPD files for printers which are designed
+for driverless printing (currently IPP Everywhere and Apple Raster
+printers) by polling capability information from the printers via
+IPP. it can be either called for listing suitable printers in the
+network and for actually generating the PPD It can also be called by
+CUPS when CUPS is listing available PPDs/drivers or creating print
+queues, making the setup of driverless printers with printer setup
+tools transparently working.
+.P
+For automatic use by CUPS when setting up printers with printer setup
+tools or via CUPS' command line utilities the tools has to be placed
+in the /usr/lib/cups/driver/ directory.
+.SH OPTIONS
+.TP
+.B
+\fB-h\fP, \fB--help\fP, \fB--version\fP
+Show help page, including version number.
+.TP
+.B
+\fB-v\fP, \fB-d\fP, \fB--debug\fP
+Debug mode, verbose logging to stderr.
+.TP
+.B
+\fBlist\fP
+List the driver URIs and metadata for all available IPP printers suitable
+for driverless PPD file generation (to be used by CUPS).
+.TP
+.B
+\fBcat\fP \fIdriver URI\fP
+Generate the PPD file for the supplied \fIdriver URI\fP from the output of "list"
+(to be used by CUPS).
+.TP
+.B
+\fIIPP printer URI\fB
+Generate the PPD file for the supplied \fIIPP printer URI\fP (suitable URIs are listed when calling driverless without options).
+.TP
+When called without options, the IPP printer URIs of all available IPP printers will be listed.
+.P
+.SH SEE ALSO
+
+\fBcups-browsed\fP(8)
+.PP
+.SH AUTHOR
+The authors of \fBdriverless\fP are listed in /usr/share/doc/\fBcups-filters\fP/AUTHORS.
+.PP

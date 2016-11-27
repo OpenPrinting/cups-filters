@@ -907,6 +907,9 @@ initrc_SCRIPTS = utils/cups-browsed
 man_MANS = \
 	utils/cups-browsed.8 \
 	utils/cups-browsed.conf.5
+if ENABLE_DRIVERLESS
+man_MANS += utils/driverless.1
+endif
 if ENABLE_FOOMATIC
 man_MANS += \
 	filter/foomatic-rip/foomatic-rip.1
