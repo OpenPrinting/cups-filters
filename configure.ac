@@ -117,10 +117,27 @@ AC_ARG_ENABLE([driverless], [AS_HELP_STRING([--disable-driverless], [enable PPD 
         [enable_driverless="$enableval"],
         [enable_driverless=yes]
 )
-AX_COMPARE_VERSION([$CUPS_VERSION],[gt],[1.6], [
+AX_COMPARE_VERSION([$CUPS_VERSION],[ge],[1.6], [
 	AM_CONDITIONAL([ENABLE_DRIVERLESS],
 	[test "x$enable_driverless" != "xno"])
 ])
+
+APPLE_RASTER_FILTER=rastertopdf
+AX_COMPARE_VERSION([$CUPS_VERSION],[lt],[2.2.2], [
+	APPLE_RASTER_FILTER=urftopdf
+])
+AC_ARG_WITH([apple-raster-filter],
+	[AS_HELP_STRING([--with-apple-raster-filter=value], [Select filter for Apple Raster input (rastertopdf, urftopdf). Default: "$APPLE_RASTER_FILTER"])],
+	[with_apple_raster_filter="$withval"],
+	[with_apple_raster_filter="$APPLE_RASTER_FILTER"]
+)
+AS_CASE([x$with_apple_raster_filter],
+	[xrastertopdf|xurftopdf], [APPLE_RASTER_FILTER=$with_apple_raster_filter],
+	[AC_MSG_ERROR([Unknown value of with-apple-raster-filter provided: $with_apple_raster_filter])]
+)
+AM_CONDITIONAL([ENABLE_URFTOPDF],
+	       [test "x$APPLE_RASTER_FILTER" == "xurftopdf"])
+AC_SUBST(APPLE_RASTER_FILTER)
 
 AC_DEFINE(PDFTOPDF, [], [Needed for pdftopdf filter compilation])
 AC_DEFINE_DIR(BANNERTOPDF_DATADIR, "{CUPS_DATADIR}/data", [Directory where bannertopdf finds its data files (PDF templates)])
@@ -800,6 +817,7 @@ AC_CONFIG_FILES([
 	filter/braille/filters/cups-braille.sh
 	filter/braille/filters/imagetobrf
 	filter/braille/filters/texttobrf
+	mime/cupsfilters.convs
 ])
 AC_OUTPUT
 
@@ -842,5 +860,6 @@ Build configuration:
 	braille:	 ${enable_braille}
 	braille tables:  ${TABLESDIR}
 	driverless:      ${enable_driverless}
+	apple-raster:    ${APPLE_RASTER_FILTER}
 ==============================================================================
 ])

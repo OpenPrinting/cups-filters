@@ -67,7 +67,7 @@ image/x-xpixmap		application/vnd.cups-pdf		65	imagetopdf
 image/x-xwindowdump	application/vnd.cups-pdf		65	imagetopdf
 image/x-sun-raster	application/vnd.cups-pdf		65	imagetopdf
 application/vnd.cups-pdf-banner	application/pdf			32	bannertopdf
-image/urf		application/pdf				0	urftopdf
+image/urf		application/pdf				0	@APPLE_RASTER_FILTER@
 
 ########################################################################
 #
