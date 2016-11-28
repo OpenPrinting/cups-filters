@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.12.0 - 2016-11-27
 -----------------------------------------------------
 
+CHANGES IN V1.13.0
+
+	- driverless: Added a CUPS backend mode to the driverless
+	  utility. Running as a CUPS backend in discovery mode it
+	  lists the IPP URIs of the suitable printers in printer setup
+	  tools and in "lpinfo -v", as conneting via IPP is required
+	  for driverless printing.
+
 CHANGES IN V1.12.0
 
 	- cups-browsed: Added new "CreateRemoteCUPSPrinterQueues"

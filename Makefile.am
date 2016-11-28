@@ -969,11 +969,13 @@ distclean-local:
 install-exec-hook:
 	$(INSTALL) -d -m 755 $(DESTDIR)$(bindir)
 	$(INSTALL) -d -m 755 $(DESTDIR)$(pkgfilterdir)
+	$(INSTALL) -d -m 755 $(DESTDIR)$(pkgbackenddir)
 if ENABLE_FOOMATIC
 	$(LN_S) -f $(pkgfilterdir)/foomatic-rip $(DESTDIR)$(bindir)
 endif
 if ENABLE_DRIVERLESS
 	$(LN_S) -f $(pkgppdgendir)/driverless $(DESTDIR)$(bindir)
+	$(LN_S) -f $(pkgppdgendir)/driverless $(DESTDIR)$(pkgbackenddir)
 endif
 if ENABLE_BRAILLE
 	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
@@ -1007,6 +1009,7 @@ if ENABLE_FOOMATIC
 endif
 if ENABLE_DRIVERLESS
 	$(RM) $(DESTDIR)$(bindir)/driverless
+	$(RM) $(DESTDIR)$(pkgbackenddir)/driverless
 endif
 if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/imagetoubrl

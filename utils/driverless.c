@@ -95,7 +95,7 @@ list_printers (int mode)
   ippfind_argv[12] = "-x";
   ippfind_argv[13] = "echo";             /* Output the needed data fields */
   ippfind_argv[14] = "-en";              /* separated by newline characters */
-  if (mode == 1)
+  if (mode > 0)
     ippfind_argv[15] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
   else
     ippfind_argv[15] = "{service_uri}\n";
@@ -106,7 +106,7 @@ list_printers (int mode)
   ippfind_argv[9] = "-x";
   ippfind_argv[10] = "echo";             /* Output the needed data fields */
   ippfind_argv[11] = "-en";              /* separated by newline characters */
-  if (mode == 1)
+  if (mode > 0)
     ippfind_argv[12] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
   else
     ippfind_argv[12] = "{service_uri}\n";
@@ -177,8 +177,13 @@ list_printers (int mode)
 	continue;
       }
       if (mode == 0)
+	/* Manual call on the command line */
 	printf("%s", buffer);
       else {
+	/* Call by CUPS, either as PPD generator
+	   (/usr/lib/cups/driver/, with "list" command line argument)
+	   or as backend in discovery mode (/usr/lib/cups/backend/,
+	   env variable "SOFTWARE" starts with "CUPS") */
 	ptr = buffer;
 	service_uri = ptr;
 	ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
@@ -302,9 +307,15 @@ list_printers (int mode)
 		   make, model);
 	else
 	  strncpy(make_and_model, model, sizeof(make_and_model));
-	
-	printf("\"driverless:%s\" en \"%s\" \"%s, cups-filters " VERSION
-	       "\" \"%s\"\n", service_uri, make, make_and_model, device_id);
+
+	if (mode == 1)
+	  /* Call with "list" argument (PPD generator in list mode */
+	  printf("\"driverless:%s\" en \"%s\" \"%s, cups-filters " VERSION
+		 "\" \"%s\"\n", service_uri, make, make_and_model, device_id);
+	else
+	  /* Call without arguments and env variable "SOFTWARE" starting
+	     with "CUPS" (Backend in discovery mode) */
+	  printf("network %s \"%s\" \"%s (via IPP)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, device_id);
 
       read_error:
 	continue;
@@ -593,8 +604,17 @@ int main(int argc, char*argv[]) {
       }
   }
 
-  /* Call without arguments, list printer URIs for all suitable printers */
-  exit(list_printers(0));
+  /* Call without arguments, list printer URIs for all suitable printers
+     when started manually, list printer URIs and metadata like CUPS
+     backends do when started as CUPS backend (discovery mode only) */
+  if ((val = getenv("SOFTWARE")) != NULL &&
+      strncasecmp(val, "CUPS", 4) == 0) {
+    /* CUPS backend in discovery mode */
+    debug = 1;
+    exit(list_printers(2));
+  } else
+    /* Manual call */
+    exit(list_printers(0));
 
  help:
 

@@ -21,9 +21,15 @@ CUPS when CUPS is listing available PPDs/drivers or creating print
 queues, making the setup of driverless printers with printer setup
 tools transparently working.
 .P
-For automatic use by CUPS when setting up printers with printer setup
-tools or via CUPS' command line utilities the tools has to be placed
-in the /usr/lib/cups/driver/ directory.
+For automatic use by CUPS when setting up printers with legacy printer
+setup tools (like system-config-printer or the CUPS web interface
+http://localhost:631/) or via CUPS' command line utilities the tools
+has to be placed in the /usr/lib/cups/driver/ directory (for listing
+and generating the PPDs for the available driverless-capable printers)
+and in /usr/lib/cups/backend (preferably by a symbolic link, to list
+IPP-based device URIs for the suitable printers in printer setup
+tools), so that the printers can be set up correctly. Note that
+driverless printing requires IPP communication with the printer.
 .SH OPTIONS
 .TP
 .B
