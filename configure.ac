@@ -127,7 +127,7 @@ AX_COMPARE_VERSION([$CUPS_VERSION],[lt],[2.2.2], [
 	APPLE_RASTER_FILTER=urftopdf
 ])
 AC_ARG_WITH([apple-raster-filter],
-	[AS_HELP_STRING([--with-apple-raster-filter=value], [Select filter for Apple Raster input (rastertopdf, urftopdf). Default: "$APPLE_RASTER_FILTER"])],
+	[AS_HELP_STRING([--with-apple-raster-filter=rastertopdf|urftopdf], [Select filter for Apple Raster input. Default: rastertopdf for CUPS 2.2.2+, urftopdf for older CUPS])],
 	[with_apple_raster_filter="$withval"],
 	[with_apple_raster_filter="$APPLE_RASTER_FILTER"]
 )
