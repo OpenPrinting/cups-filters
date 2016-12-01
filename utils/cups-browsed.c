@@ -4600,9 +4600,9 @@ generate_local_queue(const char *host,
       free (p->host);
       p->host = strdup(remote_host);
     }
-    if (p->ip && p->ip[0] == '\0') {
-      free (p->ip);
-      p->ip = (ip !=NULL ? strdup(ip) : NULL);
+    if (p->ip == NULL || p->ip[0] == '\0') {
+      if (p->ip) free (p->ip);
+      p->ip = (ip != NULL ? strdup(ip) : NULL);
     }
     if (p->port == 0)
       p->port = port;
@@ -4975,7 +4975,7 @@ static void browse_callback(
 	     q = (remote_printer_t *)cupsArrayNext(remote_printers))
 	  if (!strcasecmp(q->name, p->name) &&
 	      (strcasecmp(q->host, p->host) || q->port != p->port) &&
-	      q->duplicate_of)
+	      q->duplicate_of == p)
 	    break;
       }
       if (q) {
@@ -5008,7 +5008,7 @@ static void browse_callback(
 	     r = (remote_printer_t *)cupsArrayNext(remote_printers))
 	  if (!strcasecmp(p->name, r->name) &&
 	      (strcasecmp(p->host, r->host) || p->port != r->port) &&
-	      r->duplicate_of)
+	      r->duplicate_of == q)
 	    r->duplicate_of = p;
 	/* Schedule this printer for updating the CUPS queue */
 	p->status = STATUS_TO_BE_CREATED;
@@ -5063,7 +5063,7 @@ void avahi_browser_shutdown() {
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
     }
   }
-  handle_cups_queues(NULL);
+  recheck_timer();
 
   /* Free the data structures for Bonjour browsing */
   if (sb1) {
@@ -7112,7 +7112,7 @@ fail:
     p->status = STATUS_DISAPPEARED;
     p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
   }
-  handle_cups_queues(NULL);
+  recheck_timer();
 
   cancel_subscription (subscription_id);
   if (cups_notifier)

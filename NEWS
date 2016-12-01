@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.12.0 - 2016-11-27
 
 CHANGES IN V1.13.0
 
+	- cups-browsed: Minor corrections in the handling of the data
+	  records of the discovered printers.
 	- rastertopdf, urftopdf: As with libcupsimage from CUPS 2.2.2
 	  on rastertopdf also understands Apple Raster and much better
 	  than urftopdf does, use rastertopdf for Apple Raster
