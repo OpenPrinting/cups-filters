@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.12.0 - 2016-11-27
 
 CHANGES IN V1.13.0
 
+	- cups-browsed: Use the httpGetAddr() only with CUPS 2.0.x or
+	  newer, as older CUPS versions do not provide it (Bug #1381).
 	- cups-browsed: Minor corrections in the handling of the data
 	  records of the discovered printers.
 	- rastertopdf, urftopdf: As with libcupsimage from CUPS 2.2.2

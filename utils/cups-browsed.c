@@ -513,6 +513,11 @@ httpAddrPort(http_addr_t *addr)         /* I - Address */
 #endif
 
 
+#if (CUPS_VERSION_MAJOR > 1)
+#define HAVE_CUPS_2_0 1
+#endif
+
+
 void
 start_debug_logging()
 {
@@ -644,10 +649,16 @@ local_printers_create_subscription (http_t *conn)
   char temp[1024];
   if (!local_printers_context) {
     local_printers_context = g_malloc0 (sizeof (browsepoll_t));
+    /* The httpGetAddr() function was introduced in CUPS 2.0.0 */
+#ifdef HAVE_CUPS_2_0
     local_printers_context->server =
       strdup(httpAddrString(httpGetAddress(conn),
 			    temp, sizeof(temp)));
     local_printers_context->port = httpAddrPort(httpGetAddress(conn));
+#else
+    local_printers_context->server = cupsServer();
+    local_printers_context->port = ippPort();
+#endif
     local_printers_context->can_subscribe = TRUE;
   }
 
