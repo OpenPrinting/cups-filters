@@ -310,12 +310,12 @@ list_printers (int mode)
 
 	if (mode == 1)
 	  /* Call with "list" argument (PPD generator in list mode */
-	  printf("\"driverless:%s\" en \"%s\" \"%s, cups-filters " VERSION
+	  printf("\"driverless:%s\" en \"%s\" \"%s, driverless, cups-filters " VERSION
 		 "\" \"%s\"\n", service_uri, make, make_and_model, device_id);
 	else
 	  /* Call without arguments and env variable "SOFTWARE" starting
 	     with "CUPS" (Backend in discovery mode) */
-	  printf("network %s \"%s\" \"%s (via IPP)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, device_id);
+	  printf("network %s \"%s\" \"%s (driverless)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, device_id);
 
       read_error:
 	continue;

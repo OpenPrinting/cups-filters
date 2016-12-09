@@ -1,6 +1,15 @@
 NEWS - OpenPrinting CUPS Filters v1.13.0 - 2016-12-09
 -----------------------------------------------------
 
+CHANGES IN V1.13.1
+
+	- driverless, libcupsfilters: Make "driverless list" output
+	  and output of driverless as CUPS backend in discovery mode
+	  add the word "driverless" to its output, to make it easier
+	  to set up driverless printers with printer setup tools.
+	  Made the NickName of the generated PPDs also match with the
+	  "driverless list" output.
+
 CHANGES IN V1.13.0
 
 	- cups-browsed: Use the httpGetAddr() only with CUPS 2.0.x or
