@@ -331,6 +331,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 		 int    duplex)         /* O - Error/status message */
 {
   cups_file_t		*fp;		/* PPD file */
+  cups_array_t		*sizes;		/* Media sizes we've added */
   ipp_attribute_t	*attr,		/* xxx-supported */
 			*defattr,	/* xxx-default */
 			*x_dim, *y_dim;	/* Media dimensions */
@@ -635,6 +636,10 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     cupsFilePrintf(fp, "*OpenUI *PageSize: PickOne\n"
 		       "*OrderDependency: 10 AnySetup *PageSize\n"
                        "*DefaultPageSize: %s\n", ppdname);
+
+    sizes = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0,
+			  (cups_acopy_func_t)strdup, (cups_afree_func_t)free);
+
     for (i = 0, count = ippGetCount(attr); i < count; i ++)
     {
       if (ippGetValueTag(attr) == IPP_TAG_BEGIN_COLLECTION)
@@ -653,6 +658,15 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
         char	twidth[256],		/* Width string */
 		tlength[256];		/* Length string */
 
+        if (cupsArrayFind(sizes, (void *)pwg->ppd))
+        {
+          cupsFilePrintf(fp, "*%% warning: Duplicate size '%s' reported by printer.\n",
+			 pwg->ppd);
+          continue;
+        }
+
+        cupsArrayAdd(sizes, (void *)pwg->ppd);
+
         _cupsStrFormatd(twidth, twidth + sizeof(twidth), pwg->width * 72.0 / 2540.0, loc);
         _cupsStrFormatd(tlength, tlength + sizeof(tlength), pwg->length * 72.0 / 2540.0, loc);
 
@@ -660,6 +674,10 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
     }
     cupsFilePuts(fp, "*CloseUI: *PageSize\n");
+
+    cupsArrayDelete(sizes);
+    sizes = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0,
+			  (cups_acopy_func_t)strdup, (cups_afree_func_t)free);
 
     cupsFilePrintf(fp, "*OpenUI *PageRegion: PickOne\n"
                        "*OrderDependency: 10 AnySetup *PageRegion\n"
@@ -682,6 +700,11 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
         char	twidth[256],		/* Width string */
 		tlength[256];		/* Length string */
 
+        if (cupsArrayFind(sizes, (void *)pwg->ppd))
+          continue;
+
+        cupsArrayAdd(sizes, (void *)pwg->ppd);
+
         _cupsStrFormatd(twidth, twidth + sizeof(twidth), pwg->width * 72.0 / 2540.0, loc);
         _cupsStrFormatd(tlength, tlength + sizeof(tlength), pwg->length * 72.0 / 2540.0, loc);
 
@@ -689,6 +712,10 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
     }
     cupsFilePuts(fp, "*CloseUI: *PageRegion\n");
+
+    cupsArrayDelete(sizes);
+    sizes = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0,
+			  (cups_acopy_func_t)strdup, (cups_afree_func_t)free);
 
     cupsFilePrintf(fp, "*DefaultImageableArea: %s\n"
 		       "*DefaultPaperDimension: %s\n", ppdname, ppdname);
@@ -714,6 +741,11 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 		twidth[256],		/* Width string */
 		tlength[256];		/* Length string */
 
+        if (cupsArrayFind(sizes, (void *)pwg->ppd))
+          continue;
+
+        cupsArrayAdd(sizes, (void *)pwg->ppd);
+
         _cupsStrFormatd(tleft, tleft + sizeof(tleft), left * 72.0 / 2540.0, loc);
         _cupsStrFormatd(tbottom, tbottom + sizeof(tbottom), bottom * 72.0 / 2540.0, loc);
         _cupsStrFormatd(tright, tright + sizeof(tright), (pwg->width - right) * 72.0 / 2540.0, loc);
@@ -725,6 +757,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
         cupsFilePrintf(fp, "*PaperDimension %s: \"%s %s\"\n", pwg->ppd, twidth, tlength);
       }
     }
+    cupsArrayDelete(sizes);
   } else {
     cupsFilePrintf(fp,
 		   "*%% Printer did not supply page size info via IPP, using defaults\n"

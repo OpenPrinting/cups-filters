@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.13.0 - 2016-12-09
 
 CHANGES IN V1.13.1
 
+	- libcupsfilters: Let PPD generator for driverless printing
+	  suppress page sizes which the printer reports more than
+	  once (CUPS Issue #4933).
 	- driverless, libcupsfilters: Make "driverless list" output
 	  and output of driverless as CUPS backend in discovery mode
 	  add the word "driverless" to its output, to make it easier
