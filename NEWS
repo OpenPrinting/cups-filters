@@ -3,6 +3,16 @@ NEWS - OpenPrinting CUPS Filters v1.13.0 - 2016-12-09
 
 CHANGES IN V1.13.1
 
+	- cups-browsed: If CUPS is stopped while cups-browsed is
+          running and there are queue for IPP network printers (not
+          remote CUPS queues) on restart of CUPS the still existing
+          local CUPS queue is not correctly re-connected with
+          cups-browsed and therefore gets removed after a
+          timeout. This should be fixed after a clean-up of
+          re-connecting with remaining queues from a previous session
+          (Debian bug #848223).
+	- cups-browsed: Generated queues did not get removed on
+          shutdown.
 	- libcupsfilters: Let PPD generator for driverless printing
 	  suppress page sizes which the printer reports more than
 	  once (CUPS Issue #4933).
