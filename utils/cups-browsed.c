@@ -2975,15 +2975,17 @@ create_local_queue (const char *name,
   /* Flag to mark whether this printer was discovered through a legacy
      CUPS broadcast (1) or through DNS-SD/Bonjour (0) */
   p->is_legacy = 0;
-  
-  if (is_cups_queue) {
-    if (CreateRemoteCUPSPrinterQueues == 0) {
+
+  /* Remote CUPS printer or local queue remaining from previous cups-browsed
+     session */
+  if (is_cups_queue == 1 || is_cups_queue == -1) {
+    if (is_cups_queue == 1 && CreateRemoteCUPSPrinterQueues == 0) {
       debug_printf("Printer %s (%s) is a remote CUPS printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
 		   p->name, p->uri);
       goto fail;
     }
-    /* Our local queue must be raw, so that the PPD file and driver
-       on the remote CUPS server get used */
+    /* For a remote CUPS printer Our local queue must be raw, so that the
+       PPD file and driver on the remote CUPS server get used */
     p->netprinter = 0;
     p->ppd = NULL;
     p->model = NULL;
@@ -6604,7 +6606,7 @@ find_previous_queue (gpointer key,
     /* Queue found, add to our list */
     p = create_local_queue (name,
 			    printer->device_uri,
-			    "", "", 0, "", "", "", NULL, 0, 0, NULL, NULL, 1);
+			    "", "", 0, "", "", "", NULL, 0, 0, NULL, NULL, -1);
     if (p) {
       /* Mark as unconfirmed, if no Avahi report of this queue appears
 	 in a certain time frame, we will remove the queue */

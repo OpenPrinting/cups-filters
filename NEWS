@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.13.0 - 2016-12-09
 
 CHANGES IN V1.13.1
 
+	- cups-browsed: Avoid erroring out when restarting after a
+	  crash (with generated queues not deleted due to the crash)
+	  and the configuration option
+	  CreateRemoteCUPSPrinterQueues=No being set.
 	- cups-browsed: If CUPS is stopped while cups-browsed is
           running and there are queue for IPP network printers (not
           remote CUPS queues) on restart of CUPS the still existing
