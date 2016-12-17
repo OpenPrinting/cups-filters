@@ -12,7 +12,7 @@ CHANGES IN V1.13.1
           re-connecting with remaining queues from a previous session
           (Debian bug #848223).
 	- cups-browsed: Generated queues did not get removed on
-          shutdown.
+          shutdown (Debian bug #848167).
 	- libcupsfilters: Let PPD generator for driverless printing
 	  suppress page sizes which the printer reports more than
 	  once (CUPS Issue #4933).
