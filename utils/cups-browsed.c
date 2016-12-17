@@ -7108,8 +7108,7 @@ fail:
     g_object_unref (proxy);
 
   /* Remove all queues which we have set up */
-  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
-       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+  while ((p = (remote_printer_t *)cupsArrayFirst(remote_printers)) != NULL) {
     p->status = STATUS_DISAPPEARED;
     p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
     handle_cups_queues(NULL);
