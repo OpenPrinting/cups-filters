@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.13.1 - 2016-12-17
 -----------------------------------------------------
 
+CHANGES IN V1.13.2
+
+	- driverless: Added "-T 3" to the ippfind command line. This
+	  makes ippfind search the Bonjour broadcasts for up to 3
+	  seconds when searching for IPP printers, raising the
+	  reliability in finding all of them (Debian bug #848712).
+
 CHANGES IN V1.13.1
 
 	- cups-browsed: Avoid erroring out when restarting after a

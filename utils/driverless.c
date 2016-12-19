@@ -52,7 +52,8 @@ list_printers (int mode)
 		wait_pid,		/* Process ID from wait() */
 		wait_status,		/* Status from child */
   		exit_status = 0,	/* Exit status */
-  		bytes;			/* Bytes copied */
+                bytes,			/* Bytes copied */
+                i;
   char		*ippfind_argv[100],	/* Arguments for ippfind */
 		buffer[8192];		/* Copy buffer */
   cups_file_t	*fp;			/* Post-processing input file */
@@ -79,39 +80,43 @@ list_printers (int mode)
 
   /* ippfind ! --txt printer-type --and \( --txt-pdl image/pwg-raster --or --txt-pdl image/urf \) -x echo -en '{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{service_name}\t{txt_pdl}\n' \; */
 
-  ippfind_argv[0]  = "ippfind";
-  ippfind_argv[1]  = "!";                /* ! --txt printer-type */
-  ippfind_argv[2]  = "--txt";            /* No remote CUPS queues */
-  ippfind_argv[3]  = "printer-type";     /* (no "printer-type" in TXT record) */
-  ippfind_argv[4]  = "--and";            /* and */
-  ippfind_argv[5]  = "(";
-  ippfind_argv[6]  = "--txt-pdl";        /* PDL list in TXT record contains */
-  ippfind_argv[7]  = "image/pwg-raster"; /* PWG Raster (IPP Everywhere) */
+  i = 0;
+  ippfind_argv[i++]  = "ippfind";
+  ippfind_argv[i++]  = "-T";               /* Bonjour poll timeout */
+  ippfind_argv[i++]  = "3";                /* 3 seconds */
+  ippfind_argv[i++]  = "!";                /* ! --txt printer-type */
+  ippfind_argv[i++]  = "--txt";            /* No remote CUPS queues */
+  ippfind_argv[i++]  = "printer-type";     /* (no "printer-type" in TXT
+					      record) */
+  ippfind_argv[i++]  = "--and";            /* and */
+  ippfind_argv[i++]  = "(";
+  ippfind_argv[i++]  = "--txt-pdl";        /* PDL list in TXT record contains */
+  ippfind_argv[i++]  = "image/pwg-raster"; /* PWG Raster (IPP Everywhere) */
 #ifdef CUPS_RASTER_HAVE_APPLERASTER
-  ippfind_argv[8]  = "--or";             /* or */
-  ippfind_argv[9]  = "--txt-pdl";
-  ippfind_argv[10] = "image/urf";        /* Apple Raster */
-  ippfind_argv[11] = ")";
-  ippfind_argv[12] = "-x";
-  ippfind_argv[13] = "echo";             /* Output the needed data fields */
-  ippfind_argv[14] = "-en";              /* separated by newline characters */
+  ippfind_argv[i++]  = "--or";             /* or */
+  ippfind_argv[i++]  = "--txt-pdl";
+  ippfind_argv[i++] = "image/urf";        /* Apple Raster */
+  ippfind_argv[i++] = ")";
+  ippfind_argv[i++] = "-x";
+  ippfind_argv[i++] = "echo";             /* Output the needed data fields */
+  ippfind_argv[i++] = "-en";              /* separated by tab characters */
   if (mode > 0)
-    ippfind_argv[15] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
+    ippfind_argv[i++] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
   else
-    ippfind_argv[15] = "{service_uri}\n";
-  ippfind_argv[16] = ";";
-  ippfind_argv[17] = NULL;
+    ippfind_argv[i++] = "{service_uri}\n";
+  ippfind_argv[i++] = ";";
+  ippfind_argv[i++] = NULL;
 #else
-  ippfind_argv[8] = ")";
-  ippfind_argv[9] = "-x";
-  ippfind_argv[10] = "echo";             /* Output the needed data fields */
-  ippfind_argv[11] = "-en";              /* separated by newline characters */
+  ippfind_argv[i++] = ")";
+  ippfind_argv[i++] = "-x";
+  ippfind_argv[i++] = "echo";             /* Output the needed data fields */
+  ippfind_argv[i++] = "-en";              /* separated by tab characters */
   if (mode > 0)
-    ippfind_argv[12] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
+    ippfind_argv[i++] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
   else
-    ippfind_argv[12] = "{service_uri}\n";
-  ippfind_argv[13] = ";";
-  ippfind_argv[14] = NULL;
+    ippfind_argv[i++] = "{service_uri}\n";
+  ippfind_argv[i++] = ";";
+  ippfind_argv[i++] = NULL;
 #endif
 
  /*
