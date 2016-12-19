@@ -254,7 +254,7 @@ list_printers (int mode)
 	if (txt_pdl[0] != '\0')
 	  strncpy(pdl, txt_pdl, sizeof(pdl));
 
-	if (!device_id[0] && strcmp(model, "Unknown")) {
+	if (!device_id[0] && strcasecmp(model, "Unknown")) {
 	  if (make[0])
 	    snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
 		     make, model);
@@ -274,20 +274,25 @@ list_printers (int mode)
 	}
 
 	if (device_id[0] &&
-	    !strstr(device_id, "CMD:") &&
-	    !strstr(device_id, "COMMAND SET:") &&
-	    (strstr(pdl, "application/pdf") ||
-	     strstr(pdl, "application/postscript") ||
-	     strstr(pdl, "application/vnd.hp-PCL") ||
-	     strstr(pdl, "image/"))) {
+	    !strcasestr(device_id, "CMD:") &&
+	    !strcasestr(device_id, "COMMAND SET:") &&
+	    (strcasestr(pdl, "application/pdf") ||
+	     strcasestr(pdl, "application/postscript") ||
+	     strcasestr(pdl, "application/vnd.hp-PCL") ||
+	     strcasestr(pdl, "image/"))) {
 	  value[0] = '\0';
-	  if (strstr(pdl, "application/pdf"))
+	  if (strcasestr(pdl, "application/pdf"))
 	    strncat(value, ",PDF", sizeof(value));
-	  if (strstr(pdl, "application/postscript"))
+	  if (strcasestr(pdl, "application/postscript"))
 	    strncat(value, ",PS", sizeof(value));
-	  if (strstr(pdl, "application/vnd.hp-PCL"))
+	  if (strcasestr(pdl, "application/vnd.hp-PCL"))
 	    strncat(value, ",PCL", sizeof(value));
-	  for (ptr = strstr(pdl, "image/"); ptr; ptr = strstr(ptr, "image/")) {
+	  if (strcasestr(pdl, "image/pwg-raster"))
+	    strncat(value, ",PWGRaster", sizeof(value));
+	  if (strcasestr(pdl, "image/urf"))
+	    strncat(value, ",AppleRaster", sizeof(value));
+	  for (ptr = strcasestr(pdl, "image/"); ptr;
+	       ptr = strcasestr(ptr, "image/")) {
 	    char *valptr = value + strlen(value);
 	    if (valptr < (value + sizeof(value) - 1))
 	      *valptr++ = ',';
