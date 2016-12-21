@@ -1144,7 +1144,10 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   * Duplex...
   */
 
-  if (((attr = ippFindAttribute(response, "sides-supported", IPP_TAG_KEYWORD)) != NULL && ippContainsString(attr, "two-sided-long-edge")) || duplex)
+  if (((attr = ippFindAttribute(response, "sides-supported",
+				IPP_TAG_KEYWORD)) != NULL &&
+       ippContainsString(attr, "two-sided-long-edge")) ||
+      (attr == NULL && duplex))
   {
     cupsFilePrintf(fp, "*OpenUI *Duplex/%s: PickOne\n"
 		       "*OrderDependency: 10 AnySetup *Duplex\n"
