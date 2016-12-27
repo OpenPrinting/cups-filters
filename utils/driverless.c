@@ -404,6 +404,10 @@ list_printers (int mode)
 		  (wait_pid == post_proc_pid ? "Post-processing" :
 		   "Unknown process"),
 		  exit_status);
+	/* When run by CUPS do not exit with an error status if there is 
+	   simply no driverless printer available or no Avahi present */
+	if (mode != 0 && wait_pid == ippfind_pid && exit_status <= 2)
+	  exit_status = 0;	  
       }
       else if (WTERMSIG(wait_status) == SIGTERM)
       {
