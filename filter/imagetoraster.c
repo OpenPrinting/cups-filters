@@ -305,7 +305,7 @@ main(int  argc,				/* I - Number of command-line arguments */
             filename);
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)
-      write(fd, buffer, bytes);
+      bytes = write(fd, buffer, bytes);
 
     close(fd);
   }
