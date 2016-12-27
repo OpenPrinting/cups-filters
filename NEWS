@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.13.1 - 2016-12-17
 
 CHANGES IN V1.13.2
 
+	- imagetoraster: Fixed several bugs in the calculation of the
+          page geometry (Debian bug #849380).
 	- libcupsfilters: If the IPP-polled printer has the
 	  "sides-supported" attribute, determine the need of a
 	  "Duplex" option solely whether the attribute has a
