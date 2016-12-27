@@ -1,4 +1,4 @@
-.TH driverless 1 "27 Nov 2016" "" ""
+.TH driverless 1 "27 Dec 2016" "" ""
 .SH NAME
 \fBdriverless \fP- PPD generator utility for driverless printing
 \fB
@@ -13,23 +13,28 @@
 .fi
 .SH DESCRIPTION
 \fBdriverless\fP generates PPD files for printers which are designed
-for driverless printing (currently IPP Everywhere and Apple Raster
+for driverless printing (currently IPP Everywhere and AirPrint
 printers) by polling capability information from the printers via
 IPP. it can be either called for listing suitable printers in the
-network and for actually generating the PPD It can also be called by
+network and for actually generating the PPD. It can also be called by
 CUPS when CUPS is listing available PPDs/drivers or creating print
 queues, making the setup of driverless printers with printer setup
 tools transparently working.
 .P
-For automatic use by CUPS when setting up printers with legacy printer
-setup tools (like system-config-printer or the CUPS web interface
-http://localhost:631/) or via CUPS' command line utilities the tools
-has to be placed in the /usr/lib/cups/driver/ directory (for listing
-and generating the PPDs for the available driverless-capable printers)
-and in /usr/lib/cups/backend (preferably by a symbolic link, to list
-IPP-based device URIs for the suitable printers in printer setup
-tools), so that the printers can be set up correctly. Note that
-driverless printing requires IPP communication with the printer.
+driverless is placed in /usr/lib/cups/driver/ for listing available
+driverless-capable printers and generating PPDs for them. It should
+also be put in /usr/lib/cups/backend/ (preferably by a symbolic link)
+to list IPP device URIs for suitable printers. Printer setup tools
+like system-config-printer, the CUPS web interface at
+http://localhost:631/, and CUPS' command line utilities can use
+driverless with CUPS to list available driverless-capable printers,
+determine their IPP device URIs and generate PPDs for them. The
+printers will be automatically and correctly set up for driverless
+printing. Note that driverless printing requires IPP communication
+with the printer.
+.P
+A second symbolic link to /usr/lib/cups/driver/driverless from
+/usr/bin/ allows driverless to be called directly by a user.
 .SH OPTIONS
 .TP
 .B
@@ -58,7 +63,7 @@ When called without options, the IPP printer URIs of all available IPP printers 
 .P
 .SH SEE ALSO
 
-\fBcups-browsed\fP(8)
+\fBcups-browsed\fP(8), \fBippfind\fP(1)
 .PP
 .SH AUTHOR
 The authors of \fBdriverless\fP are listed in /usr/share/doc/\fBcups-filters\fP/AUTHORS.

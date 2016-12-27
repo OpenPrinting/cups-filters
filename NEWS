@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.13.1 - 2016-12-17
 
 CHANGES IN V1.13.2
 
+	- driverless: Fixes on the man page (Debian bug #849075).
 	- driverless: Do not error-exit (non-zero status) when run by
 	  CUPS as backend or PPD generator when no driverless printer
 	  is found or Avahi not running. When run from thr command
