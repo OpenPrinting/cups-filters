@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.13.1 - 2016-12-17
 
 CHANGES IN V1.13.2
 
+	- imagetoraster: Removed (incomplete) PWG Raster support. For
+	  PWG Raster output we let the rastertopwg filter from CUPS do
+	  the finalization (mainly adding white pixels at the borders
+	  to get a full-page bitmap).
 	- imagetoraster: Fixed several bugs in the calculation of the
           page geometry (Debian bug #849380).
 	- libcupsfilters: If the IPP-polled printer has the

@@ -190,9 +190,6 @@ main(int  argc,				/* I - Number of command-line arguments */
   char			filename[1024];	/* Name of file to print */
   cm_calibration_t      cm_calibrate;   /* Are we color calibrating the device? */
   int                   cm_disabled;    /* Color management disabled? */
-#ifdef HAVE_CUPS_1_7
-  int                   pwgraster;
-#endif /* HAVE_CUPS_1_7 */
 
 
  /*
@@ -479,21 +476,6 @@ main(int  argc,				/* I - Number of command-line arguments */
     fprintf(stderr, "DEBUG: %s\n", cupsRasterErrorString());
     return (1);
   }
-
-#ifdef HAVE_CUPS_1_7
- /*
-  * Check whether we need PWG Raster output
-  */
-  pwgraster = 0;
-  if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
-      (!strcasecmp(attr->value, "true")
-       || !strcasecmp(attr->value, "on") ||
-       !strcasecmp(attr->value, "yes")))
-  {
-    pwgraster = 1;
-    cupsRasterParseIPPOptions(&header, num_options, options, pwgraster, 0);
-  }
-#endif /* HAVE_CUPS_1_7 */
 
  /*
   * Get the media type and resolution that have been chosen...
