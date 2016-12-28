@@ -28,7 +28,7 @@ ColorDevice Yes
 Throughput 1
 
 // CUPS filters...
-Filter "application/vnd.cups-raster 0 -"
+Filter "image/pwg-raster 0 -"
 Attribute "cupsFilter2" "" "application/vnd.cups-raster image/pwg-raster 0 -"
 
 Attribute "RequiresPageRegion" "All" "True"
