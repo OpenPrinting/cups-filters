@@ -4821,11 +4821,18 @@ static void resolve_callback(
 	  (!browseallow_all && cupsArrayCount(browseallow) > 0)) {
 	struct sockaddr saddr;
 	struct sockaddr *addr = &saddr;
-	char addrstr[256];
+	char *addrstr;
+	int addrlen;
+	/*char ifname[IF_NAMESIZE];*/
 	int addrfound = 0;
+	if ((addrstr = calloc(256, sizeof(char))) == NULL) {
+	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not allocate memory to determine IP address.\n",
+		       name, type, domain);
+	  goto clean_up;
+	}
 	if (address->proto == AVAHI_PROTO_INET &&
 	    IPBasedDeviceURIs != IP_BASED_URIS_IPV6_ONLY) {
-	  avahi_address_snprint(addrstr, sizeof(addrstr), address);
+	  avahi_address_snprint(addrstr, 256, address);
 	  addr->sa_family = AF_INET;
 	  if (inet_aton(addrstr,
 			&((struct sockaddr_in *) addr)->sin_addr) &&
@@ -4834,16 +4841,18 @@ static void resolve_callback(
 	} else if (address->proto == AVAHI_PROTO_INET6 &&
 		   interface != AVAHI_IF_UNSPEC &&
 		   IPBasedDeviceURIs != IP_BASED_URIS_IPV4_ONLY) {
-	  char ifname[IF_NAMESIZE];
 	  addrstr[0] = '[';
-	  avahi_address_snprint(addrstr + 1, sizeof(addrstr) - 1, address);
+	  avahi_address_snprint(addrstr + 1, 256 - 3, address);
+	  addrlen = strlen(addrstr + 1);
 	  addr->sa_family = AF_INET6;
 	  if (inet_pton(AF_INET6, addrstr + 1,
 			&((struct sockaddr_in6 *) addr)->sin6_addr) &&
 	      allowed(addr)) {
-	    snprintf(addrstr + strlen(addrstr), sizeof(addrstr) -
-		     strlen(addrstr), "+%s]",
-		     if_indextoname(interface, ifname));
+	    /*snprintf(addrstr + addrlen + 1, 256 -
+		     addrlen - 1, "%%%s]",
+		     if_indextoname(interface, ifname));*/
+	    addrstr[addrlen + 1] = ']';
+	    addrstr[addrlen + 2] = '\0';
 	    addrfound = 1;
 	  }
 	}
@@ -4859,12 +4868,15 @@ static void resolve_callback(
 	} else
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not determine IP address.\n",
 		       name, type, domain);
+	free(addrstr);
       } else {
 	/* Check remote printer type and create appropriate local queue to
 	   point to it */
 	generate_local_queue(host_name, NULL, port, rp_value, name, type, domain, txt);
       }
     }
+
+    clean_up:
 
     /* Clean up */
 
