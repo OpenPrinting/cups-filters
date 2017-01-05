@@ -4823,7 +4823,7 @@ static void resolve_callback(
 	struct sockaddr *addr = &saddr;
 	char *addrstr;
 	int addrlen;
-	/*char ifname[IF_NAMESIZE];*/
+	char ifname[IF_NAMESIZE];
 	int addrfound = 0;
 	if ((addrstr = calloc(256, sizeof(char))) == NULL) {
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not allocate memory to determine IP address.\n",
@@ -4841,18 +4841,25 @@ static void resolve_callback(
 	} else if (address->proto == AVAHI_PROTO_INET6 &&
 		   interface != AVAHI_IF_UNSPEC &&
 		   IPBasedDeviceURIs != IP_BASED_URIS_IPV4_ONLY) {
-	  addrstr[0] = '[';
-	  avahi_address_snprint(addrstr + 1, 256 - 3, address);
-	  addrlen = strlen(addrstr + 1);
+	  strncpy(addrstr, "[v1.", 256);
+	  avahi_address_snprint(addrstr + 4, 256 - 6, address);
+	  addrlen = strlen(addrstr + 4);
 	  addr->sa_family = AF_INET6;
-	  if (inet_pton(AF_INET6, addrstr + 1,
+	  if (inet_pton(AF_INET6, addrstr + 4,
 			&((struct sockaddr_in6 *) addr)->sin6_addr) &&
 	      allowed(addr)) {
-	    /*snprintf(addrstr + addrlen + 1, 256 -
-		     addrlen - 1, "%%%s]",
-		     if_indextoname(interface, ifname));*/
-	    addrstr[addrlen + 1] = ']';
-	    addrstr[addrlen + 2] = '\0';
+	    if (!strncasecmp(addrstr + 4, "fe", 2) &&
+		(addrstr[6] == '8' || addrstr[6] == '9' ||
+		 addrstr[6] == 'A' || addrstr[6] == 'B' ||
+		 addrstr[6] == 'a' || addrstr[6] == 'B'))
+	      /* Link-local address, needs specification of interface */
+	      snprintf(addrstr + addrlen + 4, 256 -
+		       addrlen - 4, "%%%s]",
+		       if_indextoname(interface, ifname));
+	    else {
+	      addrstr[addrlen + 4] = ']';
+	      addrstr[addrlen + 5] = '\0';
+	    }
 	    addrfound = 1;
 	  }
 	}

@@ -6,8 +6,7 @@ CHANGES IN V1.13.3
 	- libcupsfilters: Added the "output-bin" option support from
 	  CUPS' PPD generator to our PPD generator (CUPS Issue #4938).
 	- cups-browsed: Make support for printers with IPv6 IP address
-	  work. Link-local addresses where the interface has to be
-	  specified do not work.
+	  work. Both link-local and regular addresses work.
 
 CHANGES IN V1.13.2
 
