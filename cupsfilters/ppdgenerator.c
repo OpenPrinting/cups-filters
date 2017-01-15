@@ -548,6 +548,9 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	formatfound = 1;
 	is_apple = 1;
 #endif
+      } else if (!_cups_strncasecmp(format, "image/jpeg", 10)) {
+	cupsFilePuts(fp, "*cupsFilter2: \"image/jpeg image/jpeg 0 -\"\n");
+	formatfound = 1;
       }
       if (attr)
 	/* Next format in attribute */

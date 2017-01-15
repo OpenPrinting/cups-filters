@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.13.2 - 2016-12-28
 
 CHANGES IN V1.13.3
 
+	- libcupsfilters: When auto-generating PPD files added support
+	  for passing through JPEG input to printers which understand
+	  JPEG. This is also done in CUPS-generated PPDs (Debian bug
+	  #851499).
 	- libcupsfilters: Added the "output-bin" option support from
 	  CUPS' PPD generator to our PPD generator (CUPS Issue #4938).
 	- cups-browsed: Make support for printers with IPv6 IP address
