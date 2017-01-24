@@ -756,7 +756,7 @@ prepare_browse_data (void)
 
   debug_printf("preparing browse data\n");
   response = cupsDoRequest (conn, request, "/");
-  if (cupsLastError() > IPP_OK_CONFLICT) {
+  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
     debug_printf("browse send failed for localhost: %s\n",
 		 cupsLastErrorString ());
     goto fail;
@@ -1767,7 +1767,7 @@ create_subscription ()
 		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
 
   resp = cupsDoRequest (conn, req, "/");
-  if (!resp || cupsLastError() != IPP_OK) {
+  if (!resp || cupsLastError() != IPP_STATUS_OK) {
     debug_printf ("Error subscribing to CUPS notifications: %s\n",
 		  cupsLastErrorString ());
     return 0;
@@ -1806,7 +1806,7 @@ renew_subscription (int id)
 		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
 
   resp = cupsDoRequest (conn, req, "/");
-  if (!resp || cupsLastError() != IPP_OK) {
+  if (!resp || cupsLastError() != IPP_STATUS_OK) {
     debug_printf ("Error renewing CUPS subscription %d: %s\n",
 		  id, cupsLastErrorString ());
     return FALSE;
@@ -1848,7 +1848,7 @@ cancel_subscription (int id)
 		 "notify-subscription-id", id);
 
   resp = cupsDoRequest (conn, req, "/");
-  if (!resp || cupsLastError() != IPP_OK) {
+  if (!resp || cupsLastError() != IPP_STATUS_OK) {
     debug_printf ("Error subscribing to CUPS notifications: %s\n",
 		  cupsLastErrorString ());
     return;
@@ -1993,7 +1993,7 @@ enable_printer (const char *printer) {
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		"printer-uri", NULL, uri);
   ippDelete(cupsDoRequest (conn, request, "/admin/"));
-  if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
+  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
     debug_printf("ERROR: Failed enabling printer '%s': %s\n",
 		 printer, cupsLastErrorString());
     return -1;
@@ -2020,7 +2020,7 @@ disable_printer (const char *printer, const char *reason) {
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_TEXT,
 		"printer-state-message", NULL, reason);
   ippDelete(cupsDoRequest (conn, request, "/admin/"));
-  if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
+  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
     debug_printf("ERROR: Failed disabling printer '%s': %s\n",
 		 printer, cupsLastErrorString());
     return -1;
@@ -2047,7 +2047,7 @@ set_cups_default_printer(const char *printer) {
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
                NULL, cupsUser());
   ippDelete(cupsDoRequest(conn, request, "/admin/"));
-  if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
+  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
     debug_printf("ERROR: Failed setting CUPS default printer to '%s': %s\n",
 		 printer, cupsLastErrorString());
     return -1;
@@ -2073,7 +2073,7 @@ get_cups_default_printer() {
 	       "requesting-user-name", NULL, cupsUser());
   /* Do it */
   response = cupsDoRequest(conn, request, "/");
-  if (cupsLastError() > IPP_OK_CONFLICT || !response) {
+  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE || !response) {
     debug_printf("Could not determine system default printer!\n");
   } else {
     for (attr = ippFirstAttribute(response); attr != NULL;
@@ -2796,7 +2796,7 @@ on_printer_state_changed (CupsNotifier *object,
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
       ippDelete(cupsDoRequest(conn, request, "/admin/"));
       cupsFreeOptions(num_options, options);
-      if (cupsLastError() > IPP_OK_CONFLICT) {
+      if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	debug_printf("ERROR: Unable to set \"" CUPS_BROWSED_DEST_PRINTER
 		     "-default\" option to communicate the destination server for this job (%s)!\n",
 		     cupsLastErrorString());
@@ -3605,7 +3605,7 @@ gboolean handle_cups_queues(gpointer unused) {
 		     "requesting-user-name", NULL, cupsUser());
 	/* Do it */
 	ippDelete(cupsDoRequest(http, request, "/admin/"));
-	if (cupsLastError() > IPP_OK_CONFLICT) {
+	if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	  debug_printf("Unable to remove CUPS queue!\n");
 	  if (in_shutdown == 0) {
 	    p->timeout = current_time + TIMEOUT_RETRY;
@@ -3978,7 +3978,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	ippDelete(cupsDoRequest(http, request, "/admin/"));
       }
       cupsFreeOptions(num_options, options);
-      if (cupsLastError() > IPP_OK_CONFLICT) {
+      if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	debug_printf("Unable to create/modify CUPS queue (%s)!\n",
 		     cupsLastErrorString());
 	p->timeout = current_time + TIMEOUT_RETRY;
@@ -4025,7 +4025,7 @@ gboolean handle_cups_queues(gpointer unused) {
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
       ippDelete(cupsDoRequest(http, request, "/admin/"));
       cupsFreeOptions(num_options, options);
-      if (cupsLastError() > IPP_OK_CONFLICT)
+      if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE)
 	debug_printf("Unable to set printer-is-shared bit to false (%s)!\n",
 		     cupsLastErrorString());
 
@@ -4050,7 +4050,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
 	ippDelete(cupsDoRequest(http, request, "/admin/"));
 	cupsFreeOptions(num_options, options);
-	if (cupsLastError() > IPP_OK_CONFLICT)
+	if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE)
 	  debug_printf("Unable to remove PPD file from the print queue (%s)!\n",
 		       cupsLastErrorString());
       }
@@ -5628,7 +5628,7 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
 		"requesting-user-name", NULL, cupsUser ());
 
   response = cupsDoRequest(conn, request, "/");
-  if (cupsLastError() > IPP_OK_CONFLICT) {
+  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
     debug_printf("cups-browsed [BrowsePoll %s:%d]: failed: %s\n",
 		 context->server, context->port, cupsLastErrorString ());
     goto fail;
@@ -5715,7 +5715,8 @@ browse_poll_create_subscription (browsepoll_t *context, http_t *conn)
 		 "notify-time-interval", BrowseInterval);
 
   response = cupsDoRequest (conn, request, "/");
-  if (!response || ippGetStatusCode (response) > IPP_OK_CONFLICT) {
+  if (!response ||
+      ippGetStatusCode (response) > IPP_STATUS_OK_EVENTS_COMPLETE) {
     debug_printf("cupsd-browsed [BrowsePoll %s:%d]: failed: %s\n",
 		 context->server, context->port, cupsLastErrorString ());
     context->subscription_id = -1;
@@ -5782,7 +5783,8 @@ browse_poll_cancel_subscription (browsepoll_t *context)
 		 "notify-subscription-id", context->subscription_id);
 
   response = cupsDoRequest (conn, request, "/");
-  if (!response || ippGetStatusCode (response) > IPP_OK_CONFLICT)
+  if (!response ||
+      ippGetStatusCode (response) > IPP_STATUS_OK_EVENTS_COMPLETE)
     debug_printf("cupsd-browsed [BrowsePoll %s:%d]: failed: %s\n",
 		 context->server, context->port, cupsLastErrorString ());
 
@@ -5825,13 +5827,13 @@ browse_poll_get_notifications (browsepoll_t *context, http_t *conn)
   else
     status = ippGetStatusCode (response);
 
-  if (status == IPP_NOT_FOUND) {
+  if (status == IPP_STATUS_ERROR_NOT_FOUND) {
     /* Subscription lease has expired. */
     debug_printf ("cups-browsed [BrowsePoll %s:%d]: Lease expired\n",
 		  context->server, context->port);
     browse_poll_create_subscription (context, conn);
     get_printers = TRUE;
-  } else if (status > IPP_OK_CONFLICT) {
+  } else if (status > IPP_STATUS_OK_EVENTS_COMPLETE) {
     debug_printf("cups-browsed [BrowsePoll %s:%d]: failed: %s\n",
 		 context->server, context->port, cupsLastErrorString ());
     context->can_subscribe = FALSE;

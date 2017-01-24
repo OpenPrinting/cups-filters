@@ -1,6 +1,15 @@
 NEWS - OpenPrinting CUPS Filters v1.13.3 - 2017-01-18
 -----------------------------------------------------
 
+CHANGES IN V1.13.4
+
+	- cups-browsed: Do not use deprecated names for IPP status
+	  constants
+	- cups-browsed: Corrected determination whether an IPP status
+	  is an error, to avoid "Unable to create/modify CUPS queue
+	  (Success)" and infinite repetition of a succeeded operation
+	  (Debian bug #852436).
+
 CHANGES IN V1.13.3
 
 	- libcupsfilters: When auto-generating PPD files added support
