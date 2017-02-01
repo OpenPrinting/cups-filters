@@ -1443,14 +1443,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       cupsFilePuts(fp, "*CloseUI: *cupsPrintQuality\n");
     }
   }
-  else if (is_apple || is_pwg) {
-    snprintf(ppdgenerator_msg, sizeof(ppdgenerator_msg),
-	     "IPP attribute \"%s\" missing, needed for %s Raster output format, not generating PPD file.",
-	     (is_pwg ? "pwg-raster-document-resolution-supported" :
-	      "urf-supported"),
-	     (is_pwg ? "PWG" : "Apple"));
-    goto bad_ppd;
-  } else if ((attr = ippFindAttribute(response, "printer-resolution-default", IPP_TAG_RESOLUTION)) != NULL)
+  else if ((attr = ippFindAttribute(response, "printer-resolution-default", IPP_TAG_RESOLUTION)) != NULL)
   {
     pwg_ppdize_resolution(attr, 0, &xres, &yres, ppdname, sizeof(ppdname));
     cupsFilePrintf(fp, "*DefaultResolution: %s\n", ppdname);

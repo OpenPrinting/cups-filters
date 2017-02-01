@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.13.3 - 2017-01-18
 
 CHANGES IN V1.13.4
 
+	- libcupsfilters: Let PPD generator for driverless printing
+	  not error out when there is no urf-supported or
+	  pwg-raster-document-resolution-supported IPP attribute,
+	  simply accept the default resolution also from the
+	  printer-resolution-default attribute or set a default value
+	  of 300 dpi to get a working PPD file.
 	- cups-browsed: Do not use deprecated names for IPP status
 	  constants
 	- cups-browsed: Corrected determination whether an IPP status
