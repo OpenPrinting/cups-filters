@@ -1,5 +1,5 @@
 // 
-// Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// Copyright (c) 2015-2016 Samuel Thibault <samuel.thibault@ens-lyon.org>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -56,3 +56,70 @@ Group "Braille"
   Choice "3/User-defined Table 3" ""
   Choice "4/User-defined Table 4" ""
 
+Option "TopMargin/Top margin" PickOne AnySetup 10
+  Choice "0" ""
+  Choice "1" ""
+  *Choice "2" ""
+  Choice "3" ""
+  Choice "4" ""
+  Choice "5" ""
+  Choice "6" ""
+  Choice "7" ""
+  Choice "8" ""
+  Choice "9" ""
+  Choice "10" ""
+
+Option "BottomMargin/Bottom margin" PickOne AnySetup 10
+  Choice "0" ""
+  Choice "1" ""
+  *Choice "2" ""
+  Choice "3" ""
+  Choice "4" ""
+  Choice "5" ""
+  Choice "6" ""
+  Choice "7" ""
+  Choice "8" ""
+  Choice "9" ""
+  Choice "10" ""
+
+Option "InnerMargin/Inner margin" PickOne AnySetup 10
+  Choice "0" ""
+  Choice "1" ""
+  *Choice "2" ""
+  Choice "3" ""
+  Choice "4" ""
+  Choice "5" ""
+  Choice "6" ""
+  Choice "7" ""
+  Choice "8" ""
+  Choice "9" ""
+  Choice "10" ""
+
+Option "OuterMargin/Outer margin" PickOne AnySetup 10
+  Choice "0" ""
+  Choice "1" ""
+  *Choice "2" ""
+  Choice "3" ""
+  Choice "4" ""
+  Choice "5" ""
+  Choice "6" ""
+  Choice "7" ""
+  Choice "8" ""
+  Choice "9" ""
+  Choice "10" ""
+
+Option "PageNumber/Page Number" PickOne AnySetup 10
+  Choice "None/None" ""
+  Choice "Top/Top-middle" ""
+  Choice "TopLeft/Top-left" ""
+  Choice "TopRight/Top-right" ""
+  Choice "Bottom/Bottom-middle" ""
+  Choice "BottomLeft/Bottom-left" ""
+  Choice "BottomRight/Bottom-right" ""
+
+UIConstraints "*TopMargin 0 *PageNumber Top"
+UIConstraints "*TopMargin 0 *PageNumber TopLeft"
+UIConstraints "*TopMargin 0 *PageNumber TopRight"
+UIConstraints "*BottomMargin 0 *PageNumber Bottom"
+UIConstraints "*BottomMargin 0 *PageNumber BottomLeft"
+UIConstraints "*BottomMargin 0 *PageNumber BottomRight"

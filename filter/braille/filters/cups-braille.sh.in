@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015-2016 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015-2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -144,7 +144,7 @@ case "$PAGESIZE" in
     ;;
 esac
 
-# TODO: hardcoded margin
+# TODO: hardcoded embosser margin
 PRINTABLEWIDTH=$((PAGEWIDTH - 1000))
 PRINTABLEHEIGHT=$((PAGEHEIGHT - 1000))
 
@@ -167,9 +167,38 @@ esac
 TEXTDOTS=$(getOptionNumber TextDots)
 LINESPACING=$(getOptionNumber LineSpacing)
 
+# Cell dimension, including spacing
+TEXTCELLWIDTH=$(( $TEXTDOTDISTANCE + $TEXTCELLDISTANCE ))
+TEXTCELLHEIGHT=$(( $TEXTDOTDISTANCE * ($TEXTDOTS / 2 - 1) + $LINESPACING ))
+
+if [ "$(getOption TopMargin)" = "" ]
+then
+  # No margin
+  TEXTAREAWIDTH=$PRINTABLEWIDTH
+  TEXTAREAHEIGHT=$PRINTABLEHEIGHT
+else
+  # Margins in cells
+  TOPMARGIN=$(getOptionNumber TopMargin)
+  BOTTOMMARGIN=$(getOptionNumber BottomMargin)
+  if [ "$(getOption InnerMargin)" = "" ]
+  then
+    LEFTMARGIN=$(getOptionNumber LeftMargin)
+    RIGHTMARGIN=$(getOptionNumber RightMargin)
+    WIDTHMARGIN=$(( $LEFTMARGIN + $RIGHTMARGIN ))
+  else
+    INNERMARGIN=$(getOptionNumber InnerMargin)
+    OUTERMARGIN=$(getOptionNumber OuterMargin)
+    WIDTHMARGIN=$(( $INNERMARGIN + $OUTERMARGIN ))
+  fi
+    
+  # Subtract margins from printable area
+  TEXTAREAWIDTH=$(( $PRINTABLEWIDTH - $WIDTHMARGIN * $TEXTCELLWIDTH ))
+  TEXTAREAHEIGHT=$(( $PRINTABLEHEIGHT - ($TOPMARGIN + $BOTTOMMARGIN) * $TEXTCELLHEIGHT ))
+fi
+
 # Compute number of printable cells according to page width and height
-TEXTWIDTH=$(( ($PRINTABLEWIDTH + $TEXTCELLDISTANCE) / ($TEXTDOTDISTANCE + $TEXTCELLDISTANCE) ))
-TEXTHEIGHT=$(( ($PRINTABLEHEIGHT + $LINESPACING) / ($TEXTDOTDISTANCE * ($TEXTDOTS / 2 - 1) + $LINESPACING) ))
+TEXTWIDTH=$(( ($TEXTAREAWIDTH + $TEXTCELLDISTANCE) / $TEXTCELLWIDTH  ))
+TEXTHEIGHT=$(( ($TEXTAREAHEIGHT + $LINESPACING) / $TEXTCELLHEIGHT ))
 
 #
 # Graphic spacing

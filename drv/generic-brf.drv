@@ -1,5 +1,5 @@
 // 
-// Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -63,6 +63,58 @@ Option "SendFF/Send FormFeed" Boolean AnySetup 10
 Option "SendSUB/Send Sub (^Z)" Boolean AnySetup 10
   *Choice "True/Yes" ""
   Choice "False/No" ""
+
+Option "TopMargin/Top margin" PickOne AnySetup 10
+  Choice "0" ""
+  Choice "1" ""
+  *Choice "2" ""
+  Choice "3" ""
+  Choice "4" ""
+  Choice "5" ""
+  Choice "6" ""
+  Choice "7" ""
+  Choice "8" ""
+  Choice "9" ""
+  Choice "10" ""
+
+Option "BottomMargin/Bottom margin" PickOne AnySetup 10
+  Choice "0" ""
+  Choice "1" ""
+  *Choice "2" ""
+  Choice "3" ""
+  Choice "4" ""
+  Choice "5" ""
+  Choice "6" ""
+  Choice "7" ""
+  Choice "8" ""
+  Choice "9" ""
+  Choice "10" ""
+
+Option "LeftMargin/Left margin" PickOne AnySetup 10
+  Choice "0" ""
+  Choice "1" ""
+  *Choice "2" ""
+  Choice "3" ""
+  Choice "4" ""
+  Choice "5" ""
+  Choice "6" ""
+  Choice "7" ""
+  Choice "8" ""
+  Choice "9" ""
+  Choice "10" ""
+
+Option "RightMargin/Right margin" PickOne AnySetup 10
+  Choice "0" ""
+  Choice "1" ""
+  *Choice "2" ""
+  Choice "3" ""
+  Choice "4" ""
+  Choice "5" ""
+  Choice "6" ""
+  Choice "7" ""
+  Choice "8" ""
+  Choice "9" ""
+  Choice "10" ""
 
 ModelName "Braille embosser"
 PCFileName "gen-brf.ppd"
