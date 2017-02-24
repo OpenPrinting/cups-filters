@@ -1,4 +1,4 @@
-/***
+ /***
   This file is part of cups-filters.
 
   This file is free software; you can redistribute it and/or modify it
@@ -3491,7 +3491,8 @@ gboolean handle_cups_queues(gpointer unused) {
   cups_job_t *jobs;
   ipp_t *request;
   time_t current_time = time(NULL);
-  int i, new_cupsfilter_line_inserted, cont_line_read, want_raw;
+  int i, new_cupsfilter_line_inserted, ap_remote_queue_id_line_inserted,
+    cont_line_read, want_raw;
   char *disabled_str, *ptr, *prefix;
   const char *loadedppd = NULL;
   int pass_through_ppd;
@@ -3813,6 +3814,7 @@ gboolean handle_cups_queues(gpointer unused) {
 		      " and inhibiting client-side filtering of the job" : ""),
 		     buf);
 	new_cupsfilter_line_inserted = 0;
+	ap_remote_queue_id_line_inserted = 0;
 	cont_line_read = 0;
 	while (cupsFileGets(in, line, sizeof(line))) {
 	  if (pass_through_ppd == 1 &&
@@ -3896,6 +3898,14 @@ gboolean handle_cups_queues(gpointer unused) {
 	      cupsFilePrintf(out, "%s\n", line);
 	  } else if (cont_line_read == 0 || strncmp(line, "*End", 4)) {
 	    cont_line_read = 0;
+	    /* Write an "APRemoteQueueID" line to make this queue marked
+	       as remote printer by CUPS */
+	    if (strncmp(line, "*%", 2) &&
+		strncmp(line, "*PPD-Adobe:", 11) &&
+		ap_remote_queue_id_line_inserted == 0) {
+	      ap_remote_queue_id_line_inserted = 1;
+	      cupsFilePrintf(out, "*APRemoteQueueID: \"\"\n");
+	    }
 	    /* Simply write out the line as we read it */
 	    cupsFilePrintf(out, "%s\n", line);
 	  }

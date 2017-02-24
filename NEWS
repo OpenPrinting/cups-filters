@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.13.4 - 2017-02-17
 -----------------------------------------------------
 
+CHANGES IN V1.13.5
+
+	- cups-browsed: When creating a local queue for a remote CUPS
+	  printer, add the line '*APRemoteQueueID: ""' to the PPD file
+	  so that CUPS sets the CUPS_PRINTER_REMOTE bit for the
+	  printer type of the local queue (Bug #1386).
+
 CHANGES IN V1.13.4
 
 	- libcupsfilters: Let PPD generator for driverless printing
