@@ -817,7 +817,11 @@ AC_CONFIG_FILES([
 	filter/braille/filters/cups-braille.sh
 	filter/braille/filters/imagetobrf
 	filter/braille/filters/texttobrf
+	filter/braille/filters/liblouis1.defs.gen
 	mime/cupsfilters.convs
+])
+AC_CONFIG_COMMANDS([executable-scripts], [
+	chmod +x filter/braille/filters/liblouis1.defs.gen
 ])
 AC_OUTPUT
 

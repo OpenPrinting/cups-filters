@@ -289,17 +289,26 @@ GENERATED_LIBLOUIS = \
 	filter/braille/filters/liblouis2.defs \
 	filter/braille/filters/liblouis3.defs \
 	filter/braille/filters/liblouis4.defs
-GENERATED_DEFS=$(GENERATED_LIBLOUIS)
+GENERATED_DEFS=	\
+	filter/braille/filters/liblouis1.defs \
+	$(GENERATED_LIBLOUIS)
+
+filter/braille/filters/liblouis1.defs: filter/braille/filters/liblouis1.defs.gen
+	$< > $@
 
 $(GENERATED_LIBLOUIS): filter/braille/filters/liblouis%.defs: filter/braille/filters/liblouis1.defs
-	sed -e "s/Braille transcription/Additional Braille transcription ($*)/" -e s/LibLouis/LibLouis$*/ < $< > $@
+	sed -e "s/Braille transcription/Additional Braille transcription ($*)/" \
+	    -e "s/^  \\*Choice /  Choice /" \
+	    -e "s/^  Choice \"None\//  *Choice \"None\//" \
+	    -e s/LibLouis/LibLouis$*/ \
+	    < $< > $@
 
 pkgppdc_DATA += \
 	filter/braille/drivers/common/media-braille.defs \
 	filter/braille/drivers/index/index.defs \
 	filter/braille/filters/braille.defs \
 	filter/braille/filters/imagemagick.defs \
-	filter/braille/filters/liblouis1.defs \
+	filter/braille/filters/liblouis1.defs.gen.in \
 	filter/braille/filters/liblouis.defs \
 	filter/braille/drivers/common/fr-braille.po
 nodist_pkgppdc_DATA = \

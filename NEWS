@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.13.4 - 2017-02-17
 
 CHANGES IN V1.13.5
 
+	- braille: Automatically select a table according to the
+	  current locale.
+	- braille: Update for liblouis table list.
 	- braille: Added support for text margins.
 	- cups-browsed: When creating a local queue for a remote CUPS
 	  printer, add the line '*APRemoteQueueID: ""' to the PPD file

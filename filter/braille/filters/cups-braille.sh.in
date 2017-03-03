@@ -228,19 +228,53 @@ getOptionLibLouis () {
        ;;
   esac
 
-  # Check presence of table
-  if [ "$VALUE" != None ]
-  then
-    [ -f "$TABLESDIR/$VALUE".utb ] && VALUE="$VALUE".utb
-    [ -f "$TABLESDIR/$VALUE".ctb ] && VALUE="$VALUE".ctb
-    if [ ! -f "$TABLESDIR/$VALUE" ]
-    then
-      printf "ERROR: Could not find $OPTION table '%s'\n" "$VALUE"
-      exit 1
-    fi
-  fi
+  LOCALE=${LANG%@*}
+  LOCALE=${LOCALE%.*}
+  LANGUAGE=${LOCALE%_*}
 
-  printf "%s" "$VALUE"
+  # Check presence of table
+  case "$VALUE" in
+    None)
+      printf None
+      ;;
+    Locale)
+      if [ -f "$TABLESDIR/$LOCALE.tbl" ]
+      then
+	printf "%s" "$LOCALE.tbl"
+      elif [ -f "$TABLESDIR/$LANGUAGE.tbl" ]
+      then
+	printf "%s" "$LANGUAGE.tbl"
+      else
+        printf "WARN: Could not find $OPTION table '%s.tbl' or '%s.tbl'\n" "$LOCALE" "$LANGUAGE" >&2
+	printf None
+      fi
+      ;;
+    Locale-g[0-3])
+      GRADE=${VALUE#Locale-g}
+      for i in "$TABLESDIR/$LOCALE.tbl" "$TABLESDIR/$LOCALE"*.tbl "$TABLESDIR/$LANGUAGE.tbl" "$TABLESDIR/$LANGUAGE"*.tbl
+      do
+	if grep -q "^#+grade:$GRADE$" "$i"
+	then
+	  printf "%s" "${i//*\/}"
+	  exit 0
+	fi
+      done
+      printf "ERROR: Could not find $OPTION table '%s*.tbl' or '%s*.tbl' with grade $GRADE\n" "$LOCALE" "$LANGUAGE" >&2
+      printf None
+      exit 1
+      ;;
+    *)
+      [ -f "$TABLESDIR/$VALUE".utb ] && VALUE="$VALUE".utb
+      [ -f "$TABLESDIR/$VALUE".ctb ] && VALUE="$VALUE".ctb
+      if [ ! -f "$TABLESDIR/$VALUE" ]
+      then
+        printf "ERROR: Could not find $OPTION table '%s'\n" "$VALUE" >&2
+        exit 1
+      fi
+
+      printf "%s" "$VALUE"
+      ;;
+  esac
 }
 
 LIBLOUIS1=$(getOptionLibLouis LibLouis)
