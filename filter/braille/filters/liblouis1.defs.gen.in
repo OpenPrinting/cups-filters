@@ -110,9 +110,9 @@ echo '  Choice "Locale-g3/Default for language grade 3" ""'
       "fi-fi-8dot")	LANGUAGE=Finnish DESC="8dot" ;;
       "fi-fi")		LANGUAGE=Finnish DESC="6dot" ;;
       "fr-2007")	LANGUAGE=French DESC="2007" ;;
-      "fr-bfu-comp6")	LANGUAGE=French DESC="Braille Français Unifié computer 6 dots" ;;
-      "fr-bfu-comp8")	LANGUAGE=French DESC="Braille Français Unifié computer 8 dots" ;;
-      "fr-bfu-g2")	LANGUAGE=French DESC="Braille Français Unifié grade 2" ;;
+      "fr-bfu-comp6")	LANGUAGE=French DESC="Braille FranÃ§ais UnifiÃ© computer 6 dots" ;;
+      "fr-bfu-comp8")	LANGUAGE=French DESC="Braille FranÃ§ais UnifiÃ© computer 8 dots" ;;
+      "fr-bfu-g2")	LANGUAGE=French DESC="Braille FranÃ§ais UnifiÃ© grade 2" ;;
       "fr-ca-g1")	LANGUAGE=French LOCATION=Canada DESC="grade 1" ;;
       "Fr-Ca-g2")	LANGUAGE=French LOCATION=Canada DESC="grade 2" ;;
       "fr-fr-g1")	LANGUAGE=French LOCATION=France DESC="grade 1" ;;
@@ -236,7 +236,7 @@ echo '  Choice "Locale-g3/Default for language grade 3" ""'
   	fr_FR)	LANGUAGE=French ;;
   	hu_HU)	LANGUAGE=Hungarian ;;
   	it_IT)	LANGUAGE=Italian ;;
-  	nb_NO)	LANGUAGE="Norwegian Bokmål" ;;
+  	nb_NO)	LANGUAGE="Norwegian BokmÃ¥l" ;;
   	nl_NL)	LANGUAGE=Dutch ;;
   	nn_NO)	LANGUAGE="Norwegian Nynorsk" ;;
   	pl_PL)	LANGUAGE=Polish ;;
