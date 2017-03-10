@@ -33,6 +33,7 @@
  * Include necessary headers.
  */
 
+#include <errno.h>
 #include "driver.h"
 #include <string.h>
 #include <ctype.h>
@@ -334,6 +335,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   cups_array_t		*sizes;		/* Media sizes we've added */
   ipp_attribute_t	*attr,		/* xxx-supported */
 			*defattr,	/* xxx-default */
+                        *quality,	/* print-quality-supported */
 			*x_dim, *y_dim;	/* Media dimensions */
   ipp_t			*media_size;	/* Media size collection */
   char			make[256],	/* Make and model */
@@ -434,15 +436,27 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   if (buffer)
     *buffer = '\0';
 
-  if (!buffer || bufsize < 1 || !response)
+  if (!buffer || bufsize < 1)
+  {
+    _cupsSetError(IPP_STATUS_ERROR_INTERNAL, strerror(EINVAL), 0);
     return (NULL);
+  }
+
+  if (!response)
+  {
+    _cupsSetError(IPP_STATUS_ERROR_INTERNAL, _("No IPP attributes."), 1);
+    return (NULL);
+  }
 
  /*
   * Open a temporary file for the PPD...
   */
 
   if ((fp = cupsTempFile2(buffer, (int)bufsize)) == NULL)
+  {
+    _cupsSetError(IPP_STATUS_ERROR_INTERNAL, strerror(errno), 0);
     return (NULL);
+  }
 
  /*
   * Standard stuff for PPD file...
@@ -929,6 +943,19 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       { "cardboard", _("Cardboard") },
       { "cardstock", _("Cardstock") },
       { "cd", _("CD") },
+      { "com.hp.advanced-photo", _("Advanced Photo Paper") }, /* HP */
+      { "com.hp.brochure-glossy", _("Glossy Brochure Paper") }, /* HP */
+      { "com.hp.brochure-matte", _("Matte Brochure Paper") }, /* HP */
+      { "com.hp.cover-matte", _("Matte Cover Paper") }, /* HP */
+      { "com.hp.ecosmart-lite", _("Office Recycled Paper") }, /* HP */
+      { "com.hp.everyday-glossy", _("Everyday Glossy Photo Paper") }, /* HP */
+      { "com.hp.everyday-matte", _("Everyday Matte Paper") }, /* HP */
+      { "com.hp.extra-heavy", _("Extra Heavyweight Paper") }, /* HP */
+      { "com.hp.intermediate", _("Multipurpose Paper") }, /* HP */
+      { "com.hp.mid-weight", _("Mid-Weight Paper") }, /* HP */
+      { "com.hp.premium-inkjet", _("Premium Inkjet Paper") }, /* HP */
+      { "com.hp.premium-photo", _("Premium Photo Glossy Paper") }, /* HP */
+      { "com.hp.premium-presentation-matte", _("Premium Presentation Matte Paper") }, /* HP */
       { "continuous", _("Continuous") },
       { "continuous-long", _("Continuous Long") },
       { "continuous-short", _("Continuous Short") },
@@ -976,6 +1003,10 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       { "gravure-cylinder", _("Gravure Cylinder") },
       { "image-setter-paper", _("Image Setter Paper") },
       { "imaging-cylinder", _("Imaging Cylinder") },
+      { "jp.co.canon_photo-paper-plus-glossy-ii", _("Photo Paper Plus Glossy II") }, /* Canon */
+      { "jp.co.canon_photo-paper-pro-platinum", _("Photo Paper Pro Platinum") }, /* Canon */
+      { "jp.co.canon-photo-paper-plus-glossy-ii", _("Photo Paper Plus Glossy II") }, /* Canon */
+      { "jp.co.canon-photo-paper-pro-platinum", _("Photo Paper Pro Platinum") }, /* Canon */
       { "labels", _("Labels") },
       { "labels-colored", _("Colored Labels") },
       { "labels-glossy", _("Glossy Labels") },
@@ -999,6 +1030,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       { "multi-part-form", _("Multi Part Form") },
       { "other", _("Other") },
       { "paper", _("Paper") },
+      { "photo", _("Photo Paper") }, /* HP mis-spelling */
       { "photographic", _("Photo Paper") },
       { "photographic-archival", _("Photographic Archival") },
       { "photographic-film", _("Photo Film") },
@@ -1027,14 +1059,14 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       { "single-face", _("Single Face") },
       { "single-wall", _("Single Wall Cardboard") },
       { "sleeve", _("Sleeve") },
-      { "stationery", _("Stationery") },
-      { "stationery-archival", _("Stationery Archival") },
+      { "stationery", _("Plain Paper") },
+      { "stationery-archival", _("Archival Paper") },
       { "stationery-coated", _("Coated Paper") },
-      { "stationery-cotton", _("Stationery Cotton") },
+      { "stationery-cotton", _("Cotton Paper") },
       { "stationery-fine", _("Vellum Paper") },
       { "stationery-heavyweight", _("Heavyweight Paper") },
-      { "stationery-heavyweight-coated", _("Stationery Heavyweight Coated") },
-      { "stationery-inkjet", _("Stationery Inkjet Paper") },
+      { "stationery-heavyweight-coated", _("Heavyweight Coated Paper") },
+      { "stationery-inkjet", _("Inkjet Paper") },
       { "stationery-letterhead", _("Letterhead") },
       { "stationery-lightweight", _("Lightweight Paper") },
       { "stationery-preprinted", _("Preprinted Paper") },
@@ -1050,14 +1082,20 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     cupsFilePrintf(fp, "*OpenUI *MediaType: PickOne\n"
                        "*OrderDependency: 10 AnySetup *MediaType\n"
                        "*DefaultMediaType: %s\n", ppdname);
-    for (i = 0; i < (int)(sizeof(media_types) / sizeof(media_types[0])); i ++)
+    for (i = 0; i < count; i ++)
     {
-      if (!ippContainsString(attr, media_types[i][0]))
-        continue;
+      const char *keyword = ippGetString(attr, i, NULL);
 
-      pwg_ppdize_name(media_types[i][0], ppdname, sizeof(ppdname));
+      pwg_ppdize_name(keyword, ppdname, sizeof(ppdname));
 
-      cupsFilePrintf(fp, "*MediaType %s/%s: \"<</MediaType(%s)>>setpagedevice\"\n", ppdname, _cupsLangString(lang, media_types[i][1]), ppdname);
+      for (j = 0; j < (int)(sizeof(media_types) / sizeof(media_types[0])); j ++)
+        if (!strcmp(keyword, media_types[j][0]))
+          break;
+
+      if (j < (int)(sizeof(media_types) / sizeof(media_types[0])))
+        cupsFilePrintf(fp, "*MediaType %s/%s: \"<</MediaType(%s)>>setpagedevice\"\n", ppdname, _cupsLangString(lang, media_types[j][1]), ppdname);
+      else
+        cupsFilePrintf(fp, "*MediaType %s/%s: \"<</MediaType(%s)>>setpagedevice\"\n", ppdname, keyword, ppdname);
     }
     cupsFilePuts(fp, "*CloseUI: *MediaType\n");
   }
@@ -1368,6 +1406,8 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   * cupsPrintQuality and DefaultResolution...
   */
 
+  quality = ippFindAttribute(response, "print-quality-supported", IPP_TAG_ENUM);
+
   if ((attr = ippFindAttribute(response, "pwg-raster-document-resolution-supported", IPP_TAG_RESOLUTION)) != NULL)
   {
     count = ippGetCount(attr);
@@ -1378,16 +1418,19 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     cupsFilePrintf(fp, "*OpenUI *cupsPrintQuality/%s: PickOne\n"
 		       "*OrderDependency: 10 AnySetup *cupsPrintQuality\n"
 		       "*DefaultcupsPrintQuality: Normal\n", _cupsLangString(lang, _("Print Quality")));
-    if (count > 2)
+    if (count > 2 || ippContainsInteger(quality, IPP_QUALITY_DRAFT))
     {
       pwg_ppdize_resolution(attr, 0, &xres, &yres, NULL, 0);
       cupsFilePrintf(fp, "*cupsPrintQuality Draft/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("Draft")), xres, yres);
     }
     pwg_ppdize_resolution(attr, count / 2, &xres, &yres, NULL, 0);
     cupsFilePrintf(fp, "*cupsPrintQuality Normal/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("Normal")), xres, yres);
-    if (count > 1)
+    if (count > 1 || ippContainsInteger(quality, IPP_QUALITY_HIGH))
     {
-      pwg_ppdize_resolution(attr, count - 1, &xres, &yres, NULL, 0);
+      if (count > 1)
+        pwg_ppdize_resolution(attr, count - 1, &xres, &yres, NULL, 0);
+      else
+        pwg_ppdize_resolution(attr, 0, &xres, &yres, NULL, 0);
       cupsFilePrintf(fp, "*cupsPrintQuality High/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("High")), xres, yres);
     }
 
@@ -1437,19 +1480,38 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 			 "*DefaultcupsPrintQuality: Normal\n", _cupsLangString(lang, _("Print Quality")));
       if ((lowdpi & 1) == 0)
 	cupsFilePrintf(fp, "*cupsPrintQuality Draft/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("Draft")), lowdpi, lowdpi / 2);
+      else if (ippContainsInteger(quality, IPP_QUALITY_DRAFT))
+	cupsFilePrintf(fp, "*cupsPrintQuality Draft/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("Draft")), lowdpi, lowdpi);
       cupsFilePrintf(fp, "*cupsPrintQuality Normal/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("Normal")), lowdpi, lowdpi);
-      if (hidpi > lowdpi)
+      if (hidpi > lowdpi || ippContainsInteger(quality, IPP_QUALITY_HIGH))
 	cupsFilePrintf(fp, "*cupsPrintQuality High/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("High")), hidpi, hidpi);
       cupsFilePuts(fp, "*CloseUI: *cupsPrintQuality\n");
     }
   }
-  else if ((attr = ippFindAttribute(response, "printer-resolution-default", IPP_TAG_RESOLUTION)) != NULL)
-  {
-    pwg_ppdize_resolution(attr, 0, &xres, &yres, ppdname, sizeof(ppdname));
-    cupsFilePrintf(fp, "*DefaultResolution: %s\n", ppdname);
-  }
   else
-    cupsFilePuts(fp, "*DefaultResolution: 300dpi\n");
+  {
+    if ((attr = ippFindAttribute(response, "printer-resolution-default", IPP_TAG_RESOLUTION)) != NULL)
+    {
+      pwg_ppdize_resolution(attr, 0, &xres, &yres, ppdname, sizeof(ppdname));
+    }
+    else
+    {
+      xres = yres = 300;
+      strlcpy(ppdname, "300dpi", sizeof(ppdname));
+    }
+
+    cupsFilePrintf(fp, "*DefaultResolution: %s\n", ppdname);
+
+    cupsFilePrintf(fp, "*OpenUI *cupsPrintQuality/%s: PickOne\n"
+                       "*OrderDependency: 10 AnySetup *cupsPrintQuality\n"
+                       "*DefaultcupsPrintQuality: Normal\n", _cupsLangString(lang, _("Print Quality")));
+    if (ippContainsInteger(quality, IPP_QUALITY_DRAFT))
+      cupsFilePrintf(fp, "*cupsPrintQuality Draft/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("Draft")), xres, yres);
+    cupsFilePrintf(fp, "*cupsPrintQuality Normal/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("Normal")), xres, yres);
+    if (ippContainsInteger(quality, IPP_QUALITY_HIGH))
+      cupsFilePrintf(fp, "*cupsPrintQuality High/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("High")), xres, yres);
+    cupsFilePuts(fp, "*CloseUI: *cupsPrintQuality\n");
+  }
 
  /*
   * Close up and return...
@@ -1474,6 +1536,8 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   cupsFileClose(fp);
   unlink(buffer);
   *buffer = '\0';
+
+  _cupsSetError(IPP_STATUS_ERROR_INTERNAL, _("Printer does not support required IPP attributes or document formats."), 1);
 
   return (NULL);
 }
