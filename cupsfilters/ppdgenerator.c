@@ -682,6 +682,18 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
           continue;
         }
 
+	if (!pwg->ppd || pwg->width <= 0 || pwg->length <= 0) {
+	  cupsFilePrintf(fp, "*%% warning: Invalid size '%s' (%dx%d pt, %.1fx%.1f inches, %.1fx%.1f cm) reported by printer.\n",
+			 (pwg->ppd ? pwg->ppd : "NO SIZE NAME"),
+			 (int)(pwg->width * 72.0 / 2540.0),
+			 (int)(pwg->length * 72.0 / 2540.0),
+			 pwg->width / 2540.0,
+			 pwg->length / 2540.0,
+			 pwg->width / 1000.0,
+			 pwg->length / 1000.0);
+	  continue;
+	}
+
         cupsArrayAdd(sizes, (void *)pwg->ppd);
 
         _cupsStrFormatd(twidth, twidth + sizeof(twidth), pwg->width * 72.0 / 2540.0, loc);
@@ -719,6 +731,9 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
         if (cupsArrayFind(sizes, (void *)pwg->ppd))
           continue;
+
+	if (!pwg->ppd || pwg->width <= 0 || pwg->length <= 0)
+	  continue;
 
         cupsArrayAdd(sizes, (void *)pwg->ppd);
 
@@ -760,6 +775,9 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
         if (cupsArrayFind(sizes, (void *)pwg->ppd))
           continue;
+
+	if (!pwg->ppd || pwg->width <= 0 || pwg->length <= 0)
+	  continue;
 
         cupsArrayAdd(sizes, (void *)pwg->ppd);
 
