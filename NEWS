@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.13.4 - 2017-02-17
 
 CHANGES IN V1.13.5
 
+	- libcupsfilters: Do not generate a PPD file where the only
+	  output data format is JPEG, as JPEG does not support
+	  multi-page documents.
 	- libcupsfilters: Let PPD generator skip broken page size
 	  records and add warnings for debugging to the PPD.
 	- libcupsfilters: Updated PPD generator to match with the
