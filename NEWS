@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.13.4 - 2017-02-17
 
 CHANGES IN V1.13.5
 
+	- driverless: Improved error message output.
 	- libcupsfilters: Fixed error handling of the PPD file
 	  generator for driverless printing, so that callers get
 	  decent error messages.

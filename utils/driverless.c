@@ -475,8 +475,10 @@ generate_ppd (const char *uri)
 			       host_name, sizeof(host_name),
 			       &(host_port),
 			       resource, sizeof(resource));
-  if (uri_status != HTTP_URI_OK)
+  if (uri_status != HTTP_URI_OK) {
+    fprintf(stderr, "ERROR: Invalid URI: %s\n", uri);
     goto fail;
+  }
   if ((http = httpConnect(host_name, host_port)) ==
       NULL) {
     fprintf(stderr, "ERROR: Cannot connect to remote printer %s (%s:%d)\n",
@@ -504,12 +506,14 @@ generate_ppd (const char *uri)
 
   /* Generate the PPD file */
   if (!ppdCreateFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0, 0)) {
-    if (errno != 0)
+    if (strlen(ppdgenerator_msg) > 0)
+      fprintf(stderr, "ERROR: Unable to create PPD file: %s\n",
+	      ppdgenerator_msg);
+    else if (errno != 0)
       fprintf(stderr, "ERROR: Unable to create PPD file: %s\n",
 	      strerror(errno));
     else
-      fprintf(stderr, "ERROR: Unable to create PPD file: %s\n",
-	      ppdgenerator_msg);
+      fprintf(stderr, "ERROR: Unable to create PPD file: Unknown reason\n");
     goto fail;
   } else if (debug) {
     fprintf(stderr, "DEBUG: PPD generation successful: %s\n", ppdgenerator_msg);
@@ -529,8 +533,6 @@ generate_ppd (const char *uri)
   return 0;
   
  fail:
-  fprintf(stderr, "ERROR: Unable to generate PPD file.\n");
-
   ippDelete(response);
   if (http)
     httpClose(http);
