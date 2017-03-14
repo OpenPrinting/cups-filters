@@ -79,6 +79,34 @@ char ppdgenerator_msg[1024];
 static void	pwg_ppdize_name(const char *ipp, char *name, size_t namesize);
 static void	pwg_ppdize_resolution(ipp_attribute_t *attr, int element, int *xres, int *yres, char *name, size_t namesize);
 
+/*
+ * '_cupsSetError()' - Set the last PPD generator status-message.
+ *
+ * This function replaces the original _cupsSetError() of the private
+ * API of the CUPS library. The #define and the renamed function prevent
+ * from the linker using the original function of the CUPS library instead 
+ * of this replacement function.
+ */
+
+#define _cupsSetError(x, y, z) _CFcupsSetError(x, y, z)
+
+void
+_CFcupsSetError(ipp_status_t status,	/* I - IPP status code
+					   (for compatibility, ignored) */
+		const char   *message,	/* I - status-message value */
+		int          localize)	/* I - Localize the message?
+					   (for compatibility, ignored) */
+{
+  (void)status;
+  (void)localize;
+
+  if (!message && errno)
+    message  = strerror(errno);
+
+  if (message)
+    snprintf(ppdgenerator_msg, sizeof(ppdgenerator_msg), "%s", message);
+}
+
 int			/* O - 1 on match, 0 otherwise */
 _cups_isalnum(int ch)			/* I - Character to test */
 {
@@ -329,7 +357,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 		 const char *make_model,/* I - Make and model from DNS-SD */
 		 const char *pdl,       /* I - List of PDLs from DNS-SD */
 		 int    color,          /* I - Color printer? (from DNS-SD) */
-		 int    duplex)         /* O - Error/status message */
+		 int    duplex)         /* I - Duplex printer? (from DNS-SD) */
 {
   cups_file_t		*fp;		/* PPD file */
   cups_array_t		*sizes;		/* Media sizes we've added */
@@ -577,11 +605,8 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
     }
   }
-  if (formatfound == 0) {
-    snprintf(ppdgenerator_msg, sizeof(ppdgenerator_msg),
-	     "No data format suitable for PPD auto-generation supported by the printer, not generating PPD file.");
+  if (formatfound == 0)
     goto bad_ppd;
-  }
 
  /*
   * PageSize/PageRegion/ImageableArea/PaperDimension
@@ -1478,10 +1503,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       * Invalid "urf-supported" value...
       */
 
-      snprintf(ppdgenerator_msg, sizeof(ppdgenerator_msg),
-	       "Invalid resolution entry in \"urf-supported\" IPP attribute: %s. Not generating PPD file.",
-	       ippGetString(attr, i, NULL));
-	       goto bad_ppd;
+      goto bad_ppd;
     }
     else
     {
