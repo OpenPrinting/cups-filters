@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.13.4 - 2017-02-17
 
 CHANGES IN V1.13.5
 
+	- foomatic-rip: When called via the utility cupsfilter from
+          CUPS, foomatic-rip was not able to read the PPD file with
+          the file name supplied as environment variable PPD (Bug
+          #1388).
 	- driverless: Improved error message output.
 	- libcupsfilters: Fixed error handling of the PPD file
 	  generator for driverless printing, so that callers get
