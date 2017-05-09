@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.13.5 - 2017-04-27
 -----------------------------------------------------
 
+CHANGES IN V1.13.6
+
+	- cups-browsed: Added ./configure script option
+	  "--enable-auto-setup-driverless" to let cups-browsed
+	  automatically set up IPP network printers by default.
+
 CHANGES IN V1.13.5
 
 	- foomatic-rip: When called via the utility cupsfilter from

@@ -142,6 +142,14 @@ AC_SUBST(APPLE_RASTER_FILTER)
 AC_DEFINE(PDFTOPDF, [], [Needed for pdftopdf filter compilation])
 AC_DEFINE_DIR(BANNERTOPDF_DATADIR, "{CUPS_DATADIR}/data", [Directory where bannertopdf finds its data files (PDF templates)])
 
+AC_ARG_ENABLE([auto-setup-driverless], [AS_HELP_STRING([--enable-auto-setup-driverless], [enable automatic setup of IPP network printers with driverless printing support.])],
+        [enable_auto_setup_driverless="$enableval"],
+        [enable_auto_setup_driverless=no]
+)
+if test "x$enable_auto_setup_driverless" != "xno"; then
+	AC_DEFINE([DRIVERLESS_IPP_PRINTERS_AUTO_SETUP], [], [Auto-setup driverless IPP network printers?])
+fi
+
 AC_SEARCH_LIBS([dlopen],
 	[dl],
 	[AS_IF([test "$ac_cv_search_dlopen" != "none required"], [
@@ -865,5 +873,6 @@ Build configuration:
 	braille tables:  ${TABLESDIR}
 	driverless:      ${enable_driverless}
 	apple-raster:    ${APPLE_RASTER_FILTER}
+	driverless auto-setup: ${enable_auto_setup_driverless}
 ==============================================================================
 ])
