@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.13.5 - 2017-04-27
 
 CHANGES IN V1.13.6
 
+	- cups-browsed: Fixes and improvements in comments and debug
+	  messages: 1. Bonjour -> DNS-SD; 2. When a remote CUPS class
+	  is discovered, tell that it is a class; 3. Show network
+	  interface and IPv4/IPv6 when a DNS-Sd service appears or
+	  disappears.
 	- cups-browsed: Added ./configure script option
 	  "--enable-auto-setup-driverless" to let cups-browsed
 	  automatically set up IPP network printers by default.
