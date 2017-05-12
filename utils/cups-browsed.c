@@ -274,6 +274,7 @@ typedef enum ip_based_uris_e {
    IPP printers, for all printers */
 typedef enum create_ipp_printer_queues_e {
   IPP_PRINTERS_NO,
+  IPP_PRINTERS_LOCAL_ONLY,
   IPP_PRINTERS_EVERYWHERE,
   IPP_PRINTERS_APPLERASTER,
   IPP_PRINTERS_DRIVERLESS,
@@ -357,7 +358,7 @@ static unsigned int CreateRemoteCUPSPrinterQueues = 1;
 #ifdef DRIVERLESS_IPP_PRINTERS_AUTO_SETUP
 static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_DRIVERLESS;
 #else
-static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_NO;
+static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_LOCAL_ONLY;
 #endif
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static int NewIPPPrinterQueuesShared = 0;
@@ -4836,6 +4837,13 @@ static void resolve_callback(
 	adminurl_value = strdup("");
     }
 
+    if (CreateIPPPrinterQueues == IPP_PRINTERS_LOCAL_ONLY &&
+	strcasecmp(ifname, "lo")) {
+      debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, not a local service.\n",
+		   name, type, domain);
+      goto clean_up;
+    }
+
     if (rp_key && rp_value && adminurl_key && adminurl_value &&
 	!strcasecmp(rp_key, "rp") && !strcasecmp(adminurl_key, "adminurl")) {
       /* Determine the remote printer's IP */
@@ -6481,6 +6489,8 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	CreateIPPPrinterQueues = IPP_PRINTERS_NO;
+      else if (strcasestr(value, "local") || strcasestr(value, "usb"))
+	CreateIPPPrinterQueues = IPP_PRINTERS_LOCAL_ONLY;
       else if ((strcasestr(value, "driver") && strcasestr(value, "less")) ||
 	       ((strcasestr(value, "every") || strcasestr(value, "pwg")) &&
 		(strcasestr(value, "apple") || strcasestr(value, "air"))))

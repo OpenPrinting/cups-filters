@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.13.5 - 2017-04-27
 
 CHANGES IN V1.13.6
 
+	- cups-browsed: Added new setting "LocalOnly" for the
+          CreateIPPPrinterQueues in cups-browsed.conf. With this new
+          setting (which is the default from now on) only for local
+          printers made available as IPP printers (like IPP-over-USB
+          printers with ippusbxd) queues are auto-created. With this
+          we can follow the common standard of distributions where USB
+          printers are automatically set up and network printers not.
 	- cups-browsed: Fixes and improvements in comments and debug
 	  messages: 1. Bonjour -> DNS-SD; 2. When a remote CUPS class
 	  is discovered, tell that it is a class; 3. Show network
