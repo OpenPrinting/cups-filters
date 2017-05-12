@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.13.5 - 2017-04-27
 
 CHANGES IN V1.13.6
 
+	- cups-browsed: When a printer is discovered via DNS-SD on the
+	  "lo" (loopback) interface the printer is not reliably
+	  accessible through the reported host name (which is the
+	  network host name of the local machine). Until this problem
+	  is fixed in Avahi, we create queues for such printers with a
+	  URI based on the IP address. This is a workaround until
+	  Avahi fully supports the "lo" interface.
 	- cups-browsed: Added new setting "LocalOnly" for the
           CreateIPPPrinterQueues in cups-browsed.conf. With this new
           setting (which is the default from now on) only for local

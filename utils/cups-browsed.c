@@ -4847,7 +4847,7 @@ static void resolve_callback(
     if (rp_key && rp_value && adminurl_key && adminurl_value &&
 	!strcasecmp(rp_key, "rp") && !strcasecmp(adminurl_key, "adminurl")) {
       /* Determine the remote printer's IP */
-      if (IPBasedDeviceURIs != IP_BASED_URIS_NO ||
+      if (IPBasedDeviceURIs != IP_BASED_URIS_NO || !strcasecmp(ifname, "lo") ||
 	  (!browseallow_all && cupsArrayCount(browseallow) > 0)) {
 	struct sockaddr saddr;
 	struct sockaddr *addr = &saddr;
@@ -4895,10 +4895,13 @@ static void resolve_callback(
 	if (addrfound == 1) {
 	  /* Check remote printer type and create appropriate local queue to
 	     point to it */
-	  if (IPBasedDeviceURIs != IP_BASED_URIS_NO) {
+	  if (IPBasedDeviceURIs != IP_BASED_URIS_NO ||
+	      !strcasecmp(ifname, "lo")) {
 	    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with IP address %s.\n",
 			 name, type, domain, addrstr);
-	    generate_local_queue(host_name, addrstr, port, rp_value, name, type, domain, txt);
+	    generate_local_queue((strcasecmp(ifname, "lo") ?
+				  host_name : addrstr),
+				 addrstr, port, rp_value, name, type, domain, txt);
 	  } else
 	    generate_local_queue(host_name, NULL, port, rp_value, name, type, domain, txt);
 	} else
