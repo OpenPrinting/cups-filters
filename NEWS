@@ -1,7 +1,7 @@
-NEWS - OpenPrinting CUPS Filters v1.13.5 - 2017-04-27
+NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 -----------------------------------------------------
 
-CHANGES IN V1.13.6
+CHANGES IN V1.14.0
 
 	- cups-browsed: When a printer is discovered via DNS-SD on the
 	  "lo" (loopback) interface the printer is not reliably
