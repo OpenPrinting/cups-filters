@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 -----------------------------------------------------
 
+CHANGES IN V1.14.1
+
+	- libcupsfilters: Let PPD generator do case-insensitive
+	  comparisons for PWG Raster color spaces, as some printers
+	  (Epson) do not use the standard-conforming all-lowercase
+	  form for them (CUPS Issue #4998).
+
 CHANGES IN V1.14.0
 
 	- cups-browsed: When a printer is discovered via DNS-SD on the
