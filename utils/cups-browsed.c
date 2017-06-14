@@ -4803,8 +4803,11 @@ static void resolve_callback(
   case AVAHI_RESOLVER_FAILURE:
     debug_printf("Avahi-Resolver: Failed to resolve service '%s' of type '%s' in domain '%s' on interface '%s' (%s): %s\n",
 		 name, type, domain, ifname,
-		 (address->proto == AVAHI_PROTO_INET ? "IPv4" :
-		  address->proto == AVAHI_PROTO_INET6 ? "IPv6" : "Unknown"),
+		 (address ?
+		  (address->proto == AVAHI_PROTO_INET ? "IPv4" :
+		   address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
+		   "IPv4/IPv6 Unknown") :
+		  "IPv4/IPv6 Unknown"),
 		 avahi_strerror(avahi_client_errno(avahi_service_resolver_get_client(r))));
     break;
 
@@ -4815,8 +4818,11 @@ static void resolve_callback(
 
     debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' on interface '%s' (%s).\n",
 		 name, type, domain, ifname,
-		 (address->proto == AVAHI_PROTO_INET ? "IPv4" :
-		  address->proto == AVAHI_PROTO_INET6 ? "IPv6" : "Unknown"));
+		 (address ?
+		  (address->proto == AVAHI_PROTO_INET ? "IPv4" :
+		   address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
+		   "IPv4/IPv6 Unknown") :
+		  "IPv4/IPv6 Unknown"));
 
     rp_entry = avahi_string_list_find(txt, "rp");
     if (rp_entry)
@@ -4859,7 +4865,8 @@ static void resolve_callback(
 		       name, type, domain);
 	  goto clean_up;
 	}
-	if (address->proto == AVAHI_PROTO_INET &&
+	if (address &&
+	    address->proto == AVAHI_PROTO_INET &&
 	    IPBasedDeviceURIs != IP_BASED_URIS_IPV6_ONLY) {
 	  avahi_address_snprint(addrstr, 256, address);
 	  addr->sa_family = AF_INET;
@@ -4867,7 +4874,8 @@ static void resolve_callback(
 			&((struct sockaddr_in *) addr)->sin_addr) &&
 	      allowed(addr))
 	    addrfound = 1;
-	} else if (address->proto == AVAHI_PROTO_INET6 &&
+	} else if (address &&
+		   address->proto == AVAHI_PROTO_INET6 &&
 		   interface != AVAHI_IF_UNSPEC &&
 		   IPBasedDeviceURIs != IP_BASED_URIS_IPV4_ONLY) {
 	  strncpy(addrstr, "[v1.", 256);
@@ -4891,7 +4899,9 @@ static void resolve_callback(
 	    }
 	    addrfound = 1;
 	  }
-	}
+	} else
+	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s': No IP address information available.\n",
+		       name, type, domain);
 	if (addrfound == 1) {
 	  /* Check remote printer type and create appropriate local queue to
 	     point to it */
