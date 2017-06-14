@@ -4785,7 +4785,7 @@ static void resolve_callback(
   AVAHI_GCC_UNUSED void* userdata) {
   char ifname[IF_NAMESIZE];
 
-  if (r == NULL)
+  if (r == NULL || name == NULL || type == NULL || domain == NULL)
     return;
 
   /* Ignore local queues on the port of the cupsd we are serving for */
@@ -4824,20 +4824,18 @@ static void resolve_callback(
 		   "IPv4/IPv6 Unknown") :
 		  "IPv4/IPv6 Unknown"));
 
-    rp_entry = avahi_string_list_find(txt, "rp");
-    if (rp_entry)
+    if (txt && (rp_entry = avahi_string_list_find(txt, "rp")))
       avahi_string_list_get_pair(rp_entry, &rp_key, &rp_value, NULL);
     else {
       rp_key = strdup("rp");
       rp_value = strdup("");
     }
-    adminurl_entry = avahi_string_list_find(txt, "adminurl");
-    if (adminurl_entry)
+    if (txt && (adminurl_entry = avahi_string_list_find(txt, "adminurl")))
       avahi_string_list_get_pair(adminurl_entry, &adminurl_key,
 				 &adminurl_value, NULL);
     else {
       adminurl_key = strdup("adminurl");
-      if ((adminurl_value = malloc(strlen(host_name) + 8)) != NULL)
+      if (host_name && (adminurl_value = malloc(strlen(host_name) + 8)) != NULL)
 	sprintf(adminurl_value, "http://%s", host_name);
       else
 	adminurl_value = strdup("");
@@ -4850,7 +4848,7 @@ static void resolve_callback(
       goto clean_up;
     }
 
-    if (rp_key && rp_value && adminurl_key && adminurl_value &&
+    if (txt && rp_key && rp_value && adminurl_key && adminurl_value &&
 	!strcasecmp(rp_key, "rp") && !strcasecmp(adminurl_key, "adminurl")) {
       /* Determine the remote printer's IP */
       if (IPBasedDeviceURIs != IP_BASED_URIS_NO || !strcasecmp(ifname, "lo") ||
@@ -4906,10 +4904,11 @@ static void resolve_callback(
 	  /* Check remote printer type and create appropriate local queue to
 	     point to it */
 	  if (IPBasedDeviceURIs != IP_BASED_URIS_NO ||
-	      !strcasecmp(ifname, "lo")) {
+	      !strcasecmp(ifname, "lo") ||
+	      !host_name) {
 	    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with IP address %s.\n",
 			 name, type, domain, addrstr);
-	    generate_local_queue((strcasecmp(ifname, "lo") ?
+	    generate_local_queue((strcasecmp(ifname, "lo") && host_name ?
 				  host_name : addrstr),
 				 addrstr, port, rp_value, name, type, domain, txt);
 	  } else
@@ -4921,7 +4920,11 @@ static void resolve_callback(
       } else {
 	/* Check remote printer type and create appropriate local queue to
 	   point to it */
-	generate_local_queue(host_name, NULL, port, rp_value, name, type, domain, txt);
+	if (host_name)
+	  generate_local_queue(host_name, NULL, port, rp_value, name, type, domain, txt);
+	else
+	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, host name not supplied.\n",
+		       name, type, domain);
       }
     }
 
@@ -4991,6 +4994,9 @@ static void browse_callback(
   /* New service (remote printer) */
   case AVAHI_BROWSER_NEW:
 
+    if (c == NULL || name == NULL || type == NULL || domain == NULL)
+      return;
+
     debug_printf("Avahi Browser: NEW: service '%s' of type '%s' in domain '%s' on interface '%s'\n",
 		 name, type, domain, ifname);
 
@@ -5007,6 +5013,9 @@ static void browse_callback(
   /* A service (remote printer) has disappeared */
   case AVAHI_BROWSER_REMOVE: {
     remote_printer_t *p, *q, *r;
+
+    if (name == NULL || type == NULL || domain == NULL)
+      return;
 
     /* Ignore events from the local machine */
     if (flags & AVAHI_LOOKUP_RESULT_LOCAL)

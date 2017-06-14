@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 
 CHANGES IN V1.14.1
 
+	- cups-browsed: Added more NULL checks to Avahi callback
+          functions.
 	- cups-browsed: Added NULL check to avoid crashes in the Avahi
 	  resolver callback (Ubuntu bug #1696967).
 	- libcupsfilters: Let PPD generator do case-insensitive
