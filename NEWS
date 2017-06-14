@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 
 CHANGES IN V1.14.1
 
+	- cups-browsed: Do not check whether the DNS-SD event is from
+	  the local machine in the browse_callback() function. We
+	  cannot check the port here.
 	- cups-browsed: Added more NULL checks to Avahi callback
           functions.
 	- cups-browsed: Added NULL check to avoid crashes in the Avahi

@@ -5017,11 +5017,7 @@ static void browse_callback(
     if (name == NULL || type == NULL || domain == NULL)
       return;
 
-    /* Ignore events from the local machine */
-    if (flags & AVAHI_LOOKUP_RESULT_LOCAL)
-      break;
-
-    debug_printf("Avahi Browser: REMOVE: service '%s' of type '%s' in domain '%s'on interface '%s'\n",
+    debug_printf("Avahi Browser: REMOVE: service '%s' of type '%s' in domain '%s' on interface '%s'\n",
 		 name, type, domain, ifname);
 
     /* Check whether we have listed this printer */
