@@ -4112,6 +4112,12 @@ gboolean handle_cups_queues(gpointer unused) {
       break;
 
     }
+    /* If we have removed a queue, break the loop. to avoid reading
+       non-existing array elements or past the end of the array.
+       If we are not yet done with our tasks the recheck_timer() call
+       will immediately call us again to do the rest. */
+    if (p == NULL)
+      break;
   }
 
   if (in_shutdown == 0)
