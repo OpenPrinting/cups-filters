@@ -8,12 +8,6 @@ CHANGES IN V1.14.1
 	  thread they are running. This way one can see whether
 	  problems can be caused by concurrent access to global
 	  resources.
-	- cups-browsed: Let the handle_cups_queues() function
-	  immediately break out of the loop when it has removed a
-	  printer entry, so that no non-existing entries are read and
-	  no reading beyond the end of the array happens.
-	  handle_cups_queues() gets immediately called again if it did
-	  not complete the processing due to this.
 	- cups-browsed: Do not check whether the DNS-SD event is from
 	  the local machine in the browse_callback() function. We
 	  cannot check the port here.

@@ -3647,6 +3647,13 @@ gboolean handle_cups_queues(gpointer unused) {
       }
 
       /* CUPS queue removed, remove the list entry */
+      /* Note that we do not need to break out of the loop passing through
+	 all elements of a CUPS array when we remove an element via the
+	 cupsArrayRemove() function, as the function decreases the array-
+	 internal index by one and so the cupsArrayNext() call gives us
+	 the element right after the deleted element. So no skipping
+         of an element and especially no reading beyond the  end of the
+         array. */
       cupsArrayRemove(remote_printers, p);
       if (p->name) free (p->name);
       if (p->uri) free (p->uri);
@@ -4127,12 +4134,6 @@ gboolean handle_cups_queues(gpointer unused) {
       break;
 
     }
-    /* If we have removed a queue, break the loop. to avoid reading
-       non-existing array elements or past the end of the array.
-       If we are not yet done with our tasks the recheck_timer() call
-       will immediately call us again to do the rest. */
-    if (p == NULL)
-      break;
   }
 
   if (in_shutdown == 0)
