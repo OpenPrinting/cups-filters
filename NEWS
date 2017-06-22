@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 
 CHANGES IN V1.14.1
 
+	- cups-browsed: All functions which are called via Glib
+	  functions or otherwise event-triggered log now in which
+	  thread they are running. This way one can see whether
+	  problems can be caused by concurrent access to global
+	  resources.
 	- cups-browsed: Let the handle_cups_queues() function
 	  immediately break out of the loop when it has removed a
 	  printer entry, so that no non-existing entries are read and

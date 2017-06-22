@@ -38,6 +38,7 @@
 #include <time.h>
 #include <signal.h>
 #include <regex.h>
+#include <pthread.h>
 
 #include <glib.h>
 
@@ -634,6 +635,7 @@ static void
 free_local_printer (gpointer data)
 {
   local_printer_t *printer = data;
+  debug_printf("free_local_printer() in THREAD %ld\n", pthread_self());
   free (printer->device_uri);
   free (printer);
 }
@@ -645,6 +647,7 @@ local_printer_has_uri (gpointer key,
 {
   local_printer_t *printer = value;
   char *device_uri = user_data;
+  debug_printf("local_printer_has_uri() in THREAD %ld\n", pthread_self());
   return g_str_equal (printer->device_uri, device_uri);
 }
 
@@ -721,6 +724,7 @@ static void
 browse_data_free (gpointer data)
 {
   browse_data_t *bdata = data;
+  debug_printf("browse_data_free() in THREAD %ld\n", pthread_self());
   g_free (bdata->uri);
   g_free (bdata->location);
   g_free (bdata->info);
@@ -970,6 +974,7 @@ check_jobs () {
 gboolean
 autoshutdown_execute (gpointer data)
 {
+  debug_printf("autoshutdown_execute() in THREAD %ld\n", pthread_self());
   /* Are we still in auto shutdown mode and are we still without queues or
      jobs*/
   if (autoshutdown &&
@@ -1827,6 +1832,8 @@ renew_subscription_timeout (gpointer userdata)
 {
   int *subscription_id = userdata;
 
+  debug_printf("renew_subscription_timeout() in THREAD %ld\n", pthread_self());
+
   if (*subscription_id <= 0 || !renew_subscription (*subscription_id))
     *subscription_id = create_subscription ();
 
@@ -2490,6 +2497,8 @@ on_printer_state_changed (CupsNotifier *object,
 		};
   http_t *conn = NULL;
 
+  debug_printf("on_printer_state_changed() in THREAD %ld\n", pthread_self());
+
   conn = http_connect_local ();
 
   debug_printf("[CUPS Notification] Printer state change on printer %s: %s\n",
@@ -2824,6 +2833,8 @@ on_printer_deleted (CupsNotifier *object,
   remote_printer_t *p;
   const char* r;
 
+  debug_printf("on_printer_deleted() in THREAD %ld\n", pthread_self());
+
   debug_printf("[CUPS Notification] Printer deleted: %s\n",
 	       text);
 
@@ -2870,6 +2881,8 @@ on_printer_modified (CupsNotifier *object,
 		     gpointer user_data)
 {
   remote_printer_t *p;
+
+  debug_printf("on_printer_modified() in THREAD %ld\n", pthread_self());
 
   debug_printf("[CUPS Notification] Printer modified: %s\n",
 	       text);
@@ -3507,6 +3520,8 @@ gboolean handle_cups_queues(gpointer unused) {
   char keyword[1024], *keyptr;
   const char *customval;
   const char *val = NULL;
+
+  debug_printf("handle_cups_queues() in THREAD %ld\n", pthread_self());
 
   debug_printf("Processing printer list ...\n");
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -4791,6 +4806,8 @@ static void resolve_callback(
   AVAHI_GCC_UNUSED void* userdata) {
   char ifname[IF_NAMESIZE];
 
+  debug_printf("resolve_callback() in THREAD %ld\n", pthread_self());
+
   if (r == NULL || name == NULL || type == NULL || domain == NULL)
     return;
 
@@ -4976,6 +4993,8 @@ static void browse_callback(
 
   AvahiClient *c = userdata;
   char ifname[IF_NAMESIZE];
+
+  debug_printf("browse_callback() in THREAD %ld\n", pthread_self());
 
   if (b == NULL)
     return;
@@ -5387,6 +5406,8 @@ process_browse_data (GIOChannel *source,
   char info[1024];
   char *c = NULL, *end = NULL;
 
+  debug_printf("process_browse_data() in THREAD %ld\n", pthread_self());
+
   memset(packet, 0, sizeof(packet));
   memset(remote_host, 0, sizeof(remote_host));
   memset(uri, 0, sizeof(uri));
@@ -5473,6 +5494,8 @@ update_netifs (gpointer data)
 {
   struct ifaddrs *ifaddr, *ifa;
   netif_t *iface;
+
+  debug_printf("update_netifs() in THREAD %ld\n", pthread_self());
 
   update_netifs_sourceid = 0;
   if (getifaddrs (&ifaddr) == -1) {
@@ -5567,6 +5590,8 @@ broadcast_browse_packets (gpointer data, gpointer user_data)
   int port;
   char resource[HTTP_MAX_URI];
 
+  debug_printf("broadcast_browse_packets() in THREAD %ld\n", pthread_self());
+
   for (browse = (netif_t *)cupsArrayFirst (netifs);
        browse != NULL;
        browse = (netif_t *)cupsArrayNext (netifs)) {
@@ -5619,6 +5644,7 @@ broadcast_browse_packets (gpointer data, gpointer user_data)
 gboolean
 send_browse_data (gpointer data)
 {
+  debug_printf("send_browse_data() in THREAD %ld\n", pthread_self());
   update_netifs (NULL);
   res_init ();
   update_local_printers ();
@@ -5643,6 +5669,7 @@ static void
 browsepoll_printer_free (gpointer data)
 {
   browsepoll_printer_t *printer = data;
+  debug_printf("browsepoll_printer_free() in THREAD %ld\n", pthread_self());
   free (printer->uri_supported);
   free (printer->info);
   free (printer);
@@ -5939,6 +5966,7 @@ browsepoll_printer_keepalive (gpointer data, gpointer user_data)
 {
   browsepoll_printer_t *printer = data;
   const char *server = user_data;
+  debug_printf("browsepoll_printer_keepalive() in THREAD %ld\n", pthread_self());
   found_cups_printer (server, printer->uri_supported, printer->info);
 }
 
@@ -5948,6 +5976,8 @@ browse_poll (gpointer data)
   browsepoll_t *context = data;
   http_t *conn = NULL;
   gboolean get_printers = FALSE;
+
+  debug_printf("browse_poll() in THREAD %ld\n", pthread_self());
 
   debug_printf ("browse polling %s:%d\n",
 		context->server, context->port);
@@ -6009,6 +6039,8 @@ browse_ldap_poll (gpointer data)
 {
   char                  *tmpFilter;     /* Query filter */
   int                   filterLen;
+
+  debug_printf("browse_ldap_poll() in THREAD %ld\n", pthread_self());
 
   /* do real stuff here */
   if (!BrowseLDAPDN)
@@ -6663,6 +6695,7 @@ nm_properties_changed (GDBusProxy *proxy,
   GVariantIter *iter;
   const gchar *key;
   GVariant *value;
+  debug_printf("nm_properties_changed() in THREAD %ld\n", pthread_self());
   g_variant_get (changed_properties, "a{sv}", &iter);
   while (g_variant_iter_loop (iter, "{&sv}", &key, &value)) {
     if (!strcmp (key, "ActiveConnections")) {
@@ -6683,6 +6716,7 @@ find_previous_queue (gpointer key,
   const char *name = key;
   const local_printer_t *printer = value;
   remote_printer_t *p;
+  debug_printf("find_previous_queue() in THREAD %ld\n", pthread_self());
   if (printer->cups_browsed_controlled) {
     /* Queue found, add to our list */
     p = create_local_queue (name,
@@ -6906,6 +6940,8 @@ int main(int argc, char*argv[]) {
 	  sizeof(debug_log_file) - strlen(logdir) - 1);
   if (debug_logfile == 1)
     start_debug_logging();
+
+  debug_printf("main() in THREAD %ld\n", pthread_self());
 
   /* Point to selected CUPS server or domain socket via the CUPS_SERVER
      environment variable or DomainSocket configuration file option.
