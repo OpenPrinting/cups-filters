@@ -5167,7 +5167,10 @@ void avahi_browser_shutdown() {
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
     }
   }
-  recheck_timer();
+  if (in_shutdown == 0)
+    recheck_timer();
+  else
+    handle_cups_queues(NULL);
 
   /* Free the data structures for DNS-SD browsing */
   if (sb1) {
@@ -7232,11 +7235,12 @@ fail:
     g_object_unref (proxy);
 
   /* Remove all queues which we have set up */
-  while ((p = (remote_printer_t *)cupsArrayFirst(remote_printers)) != NULL) {
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
     p->status = STATUS_DISAPPEARED;
     p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-    handle_cups_queues(NULL);
   }
+  handle_cups_queues(NULL);
 
   cancel_subscription (subscription_id);
   if (cups_notifier)
