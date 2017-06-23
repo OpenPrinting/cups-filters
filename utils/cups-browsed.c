@@ -2945,6 +2945,10 @@ create_local_queue (const char *name,
     return NULL;
   }
 
+  /* Assure that, if we have forgotten to set a field in the printer
+     record, that it is set to zero */
+  memset(p, 0, sizeof(remote_printer_t));
+  
   /* Queue name */
   p->name = strdup(name);
   if (!p->name)

@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 
 CHANGES IN V1.14.1
 
+	- cups-browsed: When creating a record for a discovered
+	  printer set it all zero before filling it in, to assure
+	  that no field is in an undefined state.
 	- cups-browsed: All functions which are called via Glib
 	  functions or otherwise event-triggered log now in which
 	  thread they are running. This way one can see whether
