@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 
 CHANGES IN V1.14.1
 
+	- cups-browsed: Check whether a connection to the local CUPS
+	  daemon actually happened before using it (Ubuntu bug
+	  #1644049).
 	- cups-browsed: Set unused fields of printer record to NULL
 	  when tranfering data from the record of a duplicate printer
 	  to the record of a disappeared one.
