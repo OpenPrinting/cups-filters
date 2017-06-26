@@ -5102,9 +5102,10 @@ static void browse_callback(
 	p->type = strdup(q->type);
 	p->domain = strdup(q->domain);
 	p->num_duplicates --;
-	if (q->ppd) p->ppd = strdup(q->ppd);
-	if (q->model) p->model = strdup(q->model);
+	if (q->ppd) p->ppd = strdup(q->ppd); else p->ppd = NULL;
+	if (q->model) p->model = strdup(q->model); else p->model = NULL;
 	if (q->ifscript) p->ifscript = strdup(q->ifscript);
+	else p->ifscript = NULL;
 	p->netprinter = q->netprinter;
 	p->is_legacy = q->is_legacy;
 	for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);

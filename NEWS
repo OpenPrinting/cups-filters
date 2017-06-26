@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 
 CHANGES IN V1.14.1
 
+	- cups-browsed: Set unused fields of printer record to NULL
+	  when tranfering data from the record of a duplicate printer
+	  to the record of a disappeared one.
 	- cups-browsed: Simplify removal of all queues on shutdown or
 	  stop of Avahi.
 	- cups-browsed: When creating a record for a discovered
