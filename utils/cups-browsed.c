@@ -2026,7 +2026,7 @@ enable_printer (const char *printer) {
   }
 
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		   "localhost", 0, "/printers/%s", printer);
+		   "localhost", ippPort(), "/printers/%s", printer);
   request = ippNewRequest (IPP_RESUME_PRINTER);
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		"printer-uri", NULL, uri);
@@ -2056,7 +2056,7 @@ disable_printer (const char *printer, const char *reason) {
   if (reason == NULL)
     reason = "Disabled by cups-browsed";
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		   "localhost", 0, "/printers/%s", printer);
+		   "localhost", ippPort(), "/printers/%s", printer);
   request = ippNewRequest (IPP_PAUSE_PRINTER);
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		"printer-uri", NULL, uri);
@@ -2088,7 +2088,7 @@ set_cups_default_printer(const char *printer) {
   if (printer == NULL)
     return 0;
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-                   "localhost", 0, "/printers/%s", printer);
+                   "localhost", ippPort(), "/printers/%s", printer);
   request = ippNewRequest(IPP_OP_CUPS_SET_DEFAULT);
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
                "printer-uri", NULL, uri);
@@ -2327,7 +2327,7 @@ record_printer_options(const char *printer) {
   conn = http_connect_local ();
   if (conn) {
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		     "localhost", 0, "/printers/%s", printer);
+		     "localhost", ippPort(), "/printers/%s", printer);
     resource = uri + (strlen(uri) - strlen(printer) - 10);
     request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
@@ -3670,7 +3670,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	request = ippNewRequest(CUPS_DELETE_PRINTER);
 	/* Printer URI: ipp://localhost:631/printers/<queue name> */
 	httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-			 "localhost", 0, "/printers/%s", p->name);
+			 "localhost", ippPort(), "/printers/%s", p->name);
 	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		     "printer-uri", NULL, uri);
 	/* Default user */
