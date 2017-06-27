@@ -2987,6 +2987,11 @@ create_local_queue (const char *name,
   int is_appleraster = 0;
 #endif /* HAVE_CUPS_1_6 */
 
+  if (!name || !uri || !host || !info || !type || !domain) {
+    debug_printf("ERROR: create_local_queue(): Input value missing!");
+    return NULL;
+  }
+
   /* Mark this as a queue to be created locally pointing to the printer */
   if ((p = (remote_printer_t *)calloc(1, sizeof(remote_printer_t))) == NULL) {
     debug_printf("ERROR: Unable to allocate memory.\n");
@@ -4393,6 +4398,11 @@ generate_local_queue(const char *host,
        *local_queue_name_lower = NULL;
   int is_cups_queue;
   
+  if (!host || !resource || !name || !type || !domain) {
+    debug_printf("ERROR: generate_local_queue(): Input value missing!");
+    return NULL;
+  }
+
 
   is_cups_queue = 0;
   memset(uri, 0, sizeof(uri));
