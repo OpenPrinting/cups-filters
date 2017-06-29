@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 
 CHANGES IN V1.14.1
 
+	- cups-browsed: Do correct removal of printer entry handling
+	  duplicates correctly also when a legacy CUPS-broadcasted
+	  printer disappears or a printer remaining from the last
+	  session does not appear again.
 	- cups-browsed: Use getline() instead of fgets() to read saved
 	  option settings. This is less crash-prone (Ubuntu bug
 	  #1658833).

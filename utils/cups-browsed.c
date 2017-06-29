@@ -3089,20 +3089,14 @@ create_local_queue (const char *name,
 		   p->name, q->host, q->port);
       /* Update q */
       q->num_duplicates ++;
-      if (q->status != STATUS_DISAPPEARED) {
-	q->status = STATUS_TO_BE_CREATED;
-	q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-      }
+      q->status = STATUS_TO_BE_CREATED;
+      q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
     } else if (q) {
       q->duplicate_of = p;
       debug_printf("Unconfirmed/disappeared printer %s already available through host %s, port %d, marking that printer duplicate of the newly found one.\n",
 		   p->name, q->host, q->port);
-      /* Update p */
-      p->num_duplicates ++;
-      if (p->status != STATUS_DISAPPEARED) {
-	p->status = STATUS_TO_BE_CREATED;
-	p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-      }
+      if (q->status == STATUS_UNCONFIRMED)
+	p->num_duplicates ++;
     }
   } else {
 #ifndef HAVE_CUPS_1_6
@@ -3563,6 +3557,89 @@ remove_bad_chars(const char *str_orig, /* I - Original string */
   return memmove(str, str + i, strlen(str) - i + 1);
 }
 
+void
+remove_printer_entry(remote_printer_t *p) {
+  remote_printer_t *q, *r;
+
+  if (p == NULL) {
+    debug_printf ("ERROR: remove_printer_entry(): Supplied printer entry is NULL");
+    return;
+  }
+
+  q = NULL;
+  if (p->duplicate_of) {
+    /* "master printer" of this duplicate */
+    q = p->duplicate_of;
+    q->num_duplicates --;
+    if (q->status != STATUS_DISAPPEARED) {
+      debug_printf("Removing the duplicate printer %s on host %s, port %d, scheduling its master printer %s on host %s, port %d for update, to assure it will have the correct device URI.\n",
+		   p->name, p->host, p->port, q->name, q->host, q->port);
+      /* Schedule for update */
+      q->status = STATUS_TO_BE_CREATED;
+      q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+    }
+    q = NULL;
+  } else {
+    /* Check whether this queue has a duplicate from another server and
+       find it */
+    for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	 q;
+	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
+      if (q != p && q->duplicate_of == p)
+	break;
+  }
+  if (q) {
+    /* Remove the data of the disappeared remote printer */
+    free (p->uri);
+    free (p->host);
+    if (p->ip) free (p->ip);
+    free (p->service_name);
+    free (p->type);
+    free (p->domain);
+    if (p->ppd) free (p->ppd);
+    if (p->model) free (p->model);
+    if (p->ifscript) free (p->ifscript);
+    /* Replace the data with the data of the duplicate printer */
+    p->uri = strdup(q->uri);
+    p->host = strdup(q->host);
+    p->ip = (q->ip != NULL ? strdup(q->ip) : NULL);
+    p->port = q->port;
+    p->service_name = strdup(q->service_name);
+    p->type = strdup(q->type);
+    p->domain = strdup(q->domain);
+    p->num_duplicates --;
+    if (q->ppd) p->ppd = strdup(q->ppd); else p->ppd = NULL;
+    if (q->model) p->model = strdup(q->model); else p->model = NULL;
+    if (q->ifscript) p->ifscript = strdup(q->ifscript);
+    else p->ifscript = NULL;
+    p->netprinter = q->netprinter;
+    p->is_legacy = q->is_legacy;
+    for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	 r;
+	 r = (remote_printer_t *)cupsArrayNext(remote_printers))
+      if (r->duplicate_of == q)
+	r->duplicate_of = p;
+    /* Schedule this printer for updating the CUPS queue */
+    p->status = STATUS_TO_BE_CREATED;
+    p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+    /* Schedule the duplicate printer entry for removal */
+    q->status = STATUS_DISAPPEARED;
+    q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+
+    debug_printf("Printer %s diasappeared, replacing by backup on host %s, port %d with URI %s.\n",
+		 p->name, p->host, p->port, p->uri);
+  } else {
+
+    /* Schedule CUPS queue for removal */
+    p->status = STATUS_DISAPPEARED;
+    p->timeout = time(NULL) + TIMEOUT_REMOVE;
+
+    debug_printf("Printer %s (Host: %s, Port: %d, URI: %s) disappeared and no duplicate available, or a duplicate of another printer, removing entry.\n",
+		 p->name, p->host, p->port, p->uri);
+
+  }
+}
+
 gboolean handle_cups_queues(gpointer unused) {
   remote_printer_t *p, *q;
   http_t *http, *remote_http;
@@ -3600,11 +3677,9 @@ gboolean handle_cups_queues(gpointer unused) {
 	break;
 
       /* Queue not reported again by DNS-SD, remove it */
-      p->status = STATUS_DISAPPEARED;
-      p->timeout = current_time + TIMEOUT_IMMEDIATELY;
-
       debug_printf("No remote printer named %s available, removing entry from previous session.\n",
 		   p->name);
+      remove_printer_entry(p);
 
     /* DNS-SD has reported this printer as disappeared or we have replaced
        this printer by another one */
@@ -4190,8 +4265,7 @@ gboolean handle_cups_queues(gpointer unused) {
 	/* Remove a queue based on a legacy CUPS broadcast when the
 	   broadcast timeout expires without a new broadcast of this
 	   queue from the server */
-	p->status = STATUS_DISAPPEARED;
-	p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	remove_printer_entry(p);
       } else
 	p->timeout = (time_t) -1;
 
@@ -5107,7 +5181,7 @@ static void browse_callback(
 
   /* A service (remote printer) has disappeared */
   case AVAHI_BROWSER_REMOVE: {
-    remote_printer_t *p, *q, *r;
+    remote_printer_t *p;
 
     if (name == NULL || type == NULL || domain == NULL)
       return;
@@ -5123,83 +5197,7 @@ static void browse_callback(
 	  !strcasecmp(p->domain, domain))
 	break;
     if (p) {
-      q = NULL;
-      if (p->duplicate_of) {
-	/* "master printer" of this duplicate */
-	q = p->duplicate_of;
-	q->num_duplicates --;
-	if (q->status != STATUS_DISAPPEARED) {
-	  debug_printf("Removing the duplicate printer %s on host %s, port %d, scheduling its master printer %s on host %s, port %d for update, to assure it will have the correct device URI.\n",
-		       p->name, p->host, p->port, q->name, q->host, q->port);
-	  /* Schedule for update */
-	  q->status = STATUS_TO_BE_CREATED;
-	  q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-	}
-	q = NULL;
-      } else {
-	/* Check whether this queue has a duplicate from another server and
-	   find it */
-	for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
-	     q;
-	     q = (remote_printer_t *)cupsArrayNext(remote_printers))
-	  if (!strcasecmp(q->name, p->name) &&
-	      (strcasecmp(q->host, p->host) || q->port != p->port) &&
-	      q->duplicate_of == p)
-	    break;
-      }
-      if (q) {
-	/* Remove the data of the disappeared remote printer */
-	free (p->uri);
-	free (p->host);
-	if (p->ip) free (p->ip);
-	free (p->service_name);
-	free (p->type);
-	free (p->domain);
-	if (p->ppd) free (p->ppd);
-	if (p->model) free (p->model);
-	if (p->ifscript) free (p->ifscript);
-	/* Replace the data with the data of the duplicate printer */
-	p->uri = strdup(q->uri);
-	p->host = strdup(q->host);
-	p->ip = (q->ip != NULL ? strdup(q->ip) : NULL);
-	p->port = q->port;
-	p->service_name = strdup(q->service_name);
-	p->type = strdup(q->type);
-	p->domain = strdup(q->domain);
-	p->num_duplicates --;
-	if (q->ppd) p->ppd = strdup(q->ppd); else p->ppd = NULL;
-	if (q->model) p->model = strdup(q->model); else p->model = NULL;
-	if (q->ifscript) p->ifscript = strdup(q->ifscript);
-	else p->ifscript = NULL;
-	p->netprinter = q->netprinter;
-	p->is_legacy = q->is_legacy;
-	for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
-	     r;
-	     r = (remote_printer_t *)cupsArrayNext(remote_printers))
-	  if (!strcasecmp(p->name, r->name) &&
-	      (strcasecmp(p->host, r->host) || p->port != r->port) &&
-	      r->duplicate_of == q)
-	    r->duplicate_of = p;
-	/* Schedule this printer for updating the CUPS queue */
-	p->status = STATUS_TO_BE_CREATED;
-	p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-	/* Schedule the duplicate printer entry for removal */
-	q->status = STATUS_DISAPPEARED;
-	q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-
-	debug_printf("Printer %s diasappeared, replacing by backup on host %s, port %d with URI %s.\n",
-		     p->name, p->host, p->port, p->uri);
-      } else {
-
-	/* Schedule CUPS queue for removal */
-	p->status = STATUS_DISAPPEARED;
-	p->timeout = time(NULL) + TIMEOUT_REMOVE;
-
-	debug_printf("Printer %s (Host: %s, Port: %d, URI: %s) disappeared and no duplicate available, or a duplicate of another printer, removing entry.\n",
-		     p->name, p->host, p->port, p->uri);
-
-      }
-
+      remove_printer_entry(p);
       debug_printf("DNS-SD IDs: Service name: \"%s\", Service type: \"%s\", Domain: \"%s\"\n",
 		   p->service_name, p->type, p->domain);
 
