@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.14.0 - 2017-05-15
 
 CHANGES IN V1.14.1
 
+	- cups-browsed: Use getline() instead of fgets() to read saved
+	  option settings. This is less crash-prone (Ubuntu bug
+	  #1658833).
+	- cups-browsed: Improved error logging when saving option
+          settings.
 	- cups-browsed: Added NULL checks for generate_local_queue()
 	  and create_local_queue() functions.
 	- cups-browsed: When accessing local CUPS queues use always

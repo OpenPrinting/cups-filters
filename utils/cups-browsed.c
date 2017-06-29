@@ -2372,13 +2372,18 @@ record_printer_options(const char *printer) {
   if (p->num_options > 0) {
     fp = fopen(filename, "w+");
     if (fp == NULL) {
-      debug_printf("ERROR: Failed creating file %s\n",
-		   filename);
+      debug_printf("ERROR: Failed creating file %s: %s\n",
+		   filename, strerror(errno));
       return -1;
     }
 
     for (i = p->num_options, option = p->options; i > 0; i --, option ++)
-      fprintf (fp, "%s=%s\n", option->name, option->value);
+      if (fprintf (fp, "%s=%s\n", option->name, option->value) < 0) {
+	debug_printf("ERROR: Failed to write into file %s: %s\n",
+		     filename, strerror(errno));
+	fclose(fp);
+	return -1;
+      }
 
     fclose(fp);
 
@@ -2392,7 +2397,8 @@ load_printer_options(const char *printer, int num_options,
 		     cups_option_t **options) {
   char filename[1024];
   FILE *fp = NULL;
-  char opt[65536], *val;
+  char *opt = NULL, *val;
+  size_t optlen = 0;
 
   if (printer == NULL || strlen(printer) == 0 || options == NULL)
     return 0;
@@ -2414,7 +2420,7 @@ load_printer_options(const char *printer, int num_options,
     errno = 0;
     debug_printf("Loading following option settings for printer %s:\n",
 		 printer);
-    while ((val = fgets(opt, sizeof(opt), fp)) != NULL) {
+    while (getline(&opt, &optlen, fp) != -1) {
       if (strlen(opt) > 1 && (val = strchr(opt, '=')) != NULL) {
 	*val = '\0';
 	val ++;
@@ -2427,6 +2433,7 @@ load_printer_options(const char *printer, int num_options,
     if (errno != 0)
       debug_printf("Failed reading saved options file %s: %s\n",
 		   filename, strerror(errno));
+    free(opt);
     fclose(fp);
   }
   return (num_options);
