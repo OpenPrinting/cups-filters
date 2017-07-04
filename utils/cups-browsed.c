@@ -5662,7 +5662,8 @@ static gboolean
 update_netifs (gpointer data)
 {
   struct ifaddrs *ifaddr, *ifa;
-  netif_t *iface;
+  netif_t *iface, *iface2;
+  int dupe;
 
   debug_printf("update_netifs() in THREAD %ld\n", pthread_self());
 
@@ -5710,12 +5711,25 @@ update_netifs (gpointer data)
     iface->address[0] = '\0';
     switch (ifa->ifa_addr->sa_family) {
     case AF_INET:
-      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in),
-		   iface->address, HTTP_MAX_HOST,
-		   NULL, 0, NI_NUMERICHOST);
+      /* copy broadcast addr/fill in port first to faciliate dupe compares */
       memcpy (&iface->broadcast, ifa->ifa_broadaddr,
 	      sizeof (struct sockaddr_in));
       iface->broadcast.ipv4.sin_port = htons (BrowsePort);
+      /* discard if we already have an interface sharing the broadcast address */
+      dupe = 0;
+      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
+           iface2 != NULL;
+           iface2 = (netif_t *)cupsArrayNext (netifs)) {
+	if (memcmp(&iface2->broadcast, &iface->broadcast,
+	    sizeof(struct sockaddr_in)) == 0) {
+	  dupe = 1;
+	  break;
+	}
+      }
+      if (dupe) break;
+      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in),
+		   iface->address, HTTP_MAX_HOST,
+		   NULL, 0, NI_NUMERICHOST);
       break;
 
     case AF_INET6:
@@ -5723,11 +5737,24 @@ update_netifs (gpointer data)
 				 ->sin6_addr))
 	break;
 
-      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in6),
-		   iface->address, HTTP_MAX_HOST, NULL, 0, NI_NUMERICHOST);
+      /* see above for order */
       memcpy (&iface->broadcast, ifa->ifa_broadaddr,
 	      sizeof (struct sockaddr_in6));
       iface->broadcast.ipv6.sin6_port = htons (BrowsePort);
+      /* discard alias addresses (identical broadcast) */
+      dupe = 0;
+      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
+           iface2 != NULL;
+           iface2 = (netif_t *)cupsArrayNext (netifs)) {
+	if (memcmp(&iface2->broadcast, ifa->ifa_broadaddr,
+	    sizeof(struct sockaddr_in6)) == 0) {
+	  dupe = 1;
+	  break;
+	}
+      }
+      if (dupe) break;
+      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in6),
+		   iface->address, HTTP_MAX_HOST, NULL, 0, NI_NUMERICHOST);
       break;
     }
 

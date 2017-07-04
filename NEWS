@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- cups-browsed: Skip multiple browse entries for the same
+	  printer with interface alias addresses.  Thanks to Edgar
+	  Fuss (ef at math dot uni-bonn dot de, Bug #1399).
 	- cups-browsed: Improved support for Description (Info) and
 	  Location fields of remote CUPS queues. Thanks to Edgar Fuss
 	  (ef at math dot uni-bonn dot de, Bug #1398).
