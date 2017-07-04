@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 -----------------------------------------------------
 
+CHANGES IN V1.14.2
+
+	- cups-browsed: Additional NULL checks in the
+	  create_local_queue() function. Thanks to Edgar Fuss (ef at
+	  math dot uni-bonn dot de, Bug #1398).
+
 CHANGES IN V1.14.1
 
 	- cups-browsed: Do correct removal of printer entry handling

@@ -3468,17 +3468,17 @@ create_local_queue (const char *name,
 
  fail:
   debug_printf("ERROR: Unable to create print queue, ignoring printer.\n");
-  ippDelete(response);
+  if (response) ippDelete(response);
   if (http)
     httpClose(http);
-  free (p->type);
-  free (p->service_name);
-  free (p->host);
-  free (p->domain);
+  if (p->type) free (p->type);
+  if (p->service_name) free (p->service_name);
+  if (p->host) free (p->host);
+  if (p->domain) free (p->domain);
   if (p->ip) free (p->ip);
   cupsFreeOptions(p->num_options, p->options);
-  free (p->uri);
-  free (p->name);
+  if (p->uri) free (p->uri);
+  if (p->name) free (p->name);
   if (p->ppd) free (p->ppd);
   if (p->model) free (p->model);
   if (p->ifscript) free (p->ifscript);
