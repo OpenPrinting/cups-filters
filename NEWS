@@ -1,8 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 -----------------------------------------------------
 
-CHANGES IN V1.14.2
+CHANGES IN V1.15.0
 
+	- cups-browsed: Improved support for Description (Info) and
+	  Location fields of remote CUPS queues. Thanks to Edgar Fuss
+	  (ef at math dot uni-bonn dot de, Bug #1398).
 	- cups-browsed: Renamed variable names for better code
 	  readability.  Thanks to Edgar Fuss (ef at math dot uni-bonn
 	  dot de, Bug #1398).

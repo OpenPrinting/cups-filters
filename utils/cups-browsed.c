@@ -163,6 +163,8 @@ typedef enum printer_status_e {
 /* Data structure for remote printers */
 typedef struct remote_printer_s {
   char *queue_name;
+  char *location;
+  char *info;
   char *uri;
   char *ppd;
   char *model;
@@ -227,6 +229,7 @@ typedef struct browse_filter_s {
 /* Data struct for a printer discovered using BrowsePoll */
 typedef struct browsepoll_printer_s {
   char *uri_supported;
+  char *location;
   char *info;
 } browsepoll_printer_t;
 
@@ -393,6 +396,8 @@ static remote_printer_t *generate_local_queue(const char *host,
 					      const char *ip,
 					      uint16_t port,
 					      char *resource, const char *service_name,
+					      const char *location,
+					      const char *info,
 					      const char *type,
 					      const char *domain, void *txt);
 
@@ -1592,7 +1597,7 @@ cupsdUpdateLDAPBrowse(void)
     debug_printf("browsed LDAP queue name is %s\n",
 		 local_resource + 9);
 
-    generate_local_queue(host, NULL, port, local_resource, info, "", "", NULL);
+    generate_local_queue(host, NULL, port, local_resource, info, location, info, "", "", NULL);
 
   }
 
@@ -2960,6 +2965,8 @@ on_printer_modified (CupsNotifier *object,
 
 static remote_printer_t *
 create_local_queue (const char *queue_name,
+		    const char *location,
+		    const char *info,
 		    const char *uri,
 		    const char *host,
 		    const char *ip,
@@ -3012,6 +3019,14 @@ create_local_queue (const char *queue_name,
   /* Queue name */
   p->queue_name = strdup(queue_name);
   if (!p->queue_name)
+    goto fail;
+
+  p->location = strdup(location);
+  if (!p->location)
+    goto fail;
+
+  p->info = strdup(info);
+  if (!p->info)
     goto fail;
 
   p->uri = strdup(uri);
@@ -3478,6 +3493,8 @@ create_local_queue (const char *queue_name,
   if (p->ip) free (p->ip);
   cupsFreeOptions(p->num_options, p->options);
   if (p->uri) free (p->uri);
+  if (p->location) free (p->location);
+  if (p->info) free (p->info);
   if (p->queue_name) free (p->queue_name);
   if (p->ppd) free (p->ppd);
   if (p->model) free (p->model);
@@ -3591,6 +3608,8 @@ remove_printer_entry(remote_printer_t *p) {
   }
   if (q) {
     /* Remove the data of the disappeared remote printer */
+    free (p->location);
+    free (p->info);
     free (p->uri);
     free (p->host);
     if (p->ip) free (p->ip);
@@ -3601,6 +3620,8 @@ remove_printer_entry(remote_printer_t *p) {
     if (p->model) free (p->model);
     if (p->ifscript) free (p->ifscript);
     /* Replace the data with the data of the duplicate printer */
+    p->location = strdup(q->location);
+    p->info = strdup(q->info);
     p->uri = strdup(q->uri);
     p->host = strdup(q->host);
     p->ip = (q->ip != NULL ? strdup(q->ip) : NULL);
@@ -3796,6 +3817,8 @@ gboolean handle_cups_queues(gpointer unused) {
          array. */
       cupsArrayRemove(remote_printers, p);
       if (p->queue_name) free (p->queue_name);
+      if (p->location) free (p->location);
+      if (p->info) free (p->info);
       if (p->uri) free (p->uri);
       cupsFreeOptions(p->num_options, p->options);
       if (p->host) free (p->host);
@@ -4461,6 +4484,8 @@ generate_local_queue(const char *host,
 		     uint16_t port,
 		     char *resource,
 		     const char *service_name,
+		     const char *location,
+		     const char *info,
 		     const char *type,
 		     const char *domain,
 		     void *txt) {
@@ -4473,6 +4498,7 @@ generate_local_queue(const char *host,
   char *fields[] = { "product", "usb_MDL", "ty", NULL }, **f;
   AvahiStringList *entry = NULL;
   char *key = NULL, *value = NULL;
+  char *note_value = NULL;
 #endif /* HAVE_AVAHI */
   remote_printer_t *p;
   local_printer_t *local_printer;
@@ -4616,6 +4642,26 @@ generate_local_queue(const char *host,
     }
 #endif /* HAVE_AVAHI */
   }
+  /* Extract location from DNS-SD TXT record's "note" field */
+#ifdef HAVE_AVAHI
+  if (!location) {
+    if (txt) {
+      entry = avahi_string_list_find((AvahiStringList *)txt, "note");
+      if (entry) {
+	avahi_string_list_get_pair(entry, &key, &note_value, NULL);
+	if (key && note_value && !strcasecmp(key, "note")) {
+	  debug_printf("generate_local_queue: TXT.note: |%s|\n", note_value); /* !! */
+	  location = note_value;
+	}
+        avahi_free(key);
+        /* don't avahi_free(note_value) here! */
+      }
+    }
+    if (!location)
+      location = "";
+  }
+  /* A NULL location is only passed in from resolve_callback(), which is HAVE_AVAHI */
+#endif /* HAVE_AVAHI */
   /* Check if there exists already a CUPS queue with the
      requested name Try name@host in such a case and if
      this is also taken, ignore the printer */
@@ -4658,6 +4704,9 @@ generate_local_queue(const char *host,
       free (pdl);
       free (remote_queue);
       free (make_model);
+#ifdef HAVE_AVAHI
+      if (note_value) avahi_free(note_value);
+#endif /* HAVE_AVAHI */
       return NULL;
     }
   }
@@ -4671,6 +4720,9 @@ generate_local_queue(const char *host,
     free (pdl);
     free (remote_queue);
     free (make_model);
+#ifdef HAVE_AVAHI
+    if (note_value) avahi_free(note_value);
+#endif /* HAVE_AVAHI */
     return NULL;
   }
 
@@ -4698,6 +4750,9 @@ generate_local_queue(const char *host,
     free (pdl);
     free (remote_queue);
     free (make_model);
+#ifdef HAVE_AVAHI
+    if (note_value) avahi_free(note_value);
+#endif /* HAVE_AVAHI */
     return NULL;
   }
 
@@ -4738,12 +4793,16 @@ generate_local_queue(const char *host,
 	    p->timeout = (time_t) -1;
 	}
       }
+      free(p->location);
+      free(p->info);
       free(p->uri);
       free(p->host);
       free(p->ip);
       free(p->service_name);
       free(p->type);
       free(p->domain);
+      p->location = strdup(location);
+      p->info = strdup(info);
       p->uri = strdup(uri);
       p->status = STATUS_TO_BE_CREATED;
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
@@ -4779,6 +4838,14 @@ generate_local_queue(const char *host,
       record_printer_options(p->queue_name);
     }
 
+    if (p->location[0] == '\0') {
+      free (p->location);
+      p->location = strdup(location);
+    }
+    if (p->info[0] == '\0') {
+      free (p->info);
+      p->info = strdup(info);
+    }
     if (p->host[0] == '\0') {
       free (p->host);
       p->host = strdup(remote_host);
@@ -4806,7 +4873,7 @@ generate_local_queue(const char *host,
 
     /* We need to create a local queue pointing to the
        discovered printer */
-    p = create_local_queue (local_queue_name, uri, remote_host, ip, port,
+    p = create_local_queue (local_queue_name, location, info, uri, remote_host, ip, port,
 			    service_name ? service_name : "", type, domain, pdl, color, duplex,
 			    make_model, remote_queue, is_cups_queue);
   }
@@ -4816,6 +4883,9 @@ generate_local_queue(const char *host,
   free (pdl);
   free (remote_queue);
   free (make_model);
+#ifdef HAVE_AVAHI
+  if (note_value) avahi_free(note_value);
+#endif /* HAVE_AVAHI */
 
   if (p)
     debug_printf("DNS-SD IDs: Service name: \"%s\", "
@@ -5018,6 +5088,20 @@ static void resolve_callback(
 
     if (txt && rp_key && rp_value && adminurl_key && adminurl_value &&
 	!strcasecmp(rp_key, "rp") && !strcasecmp(adminurl_key, "adminurl")) {
+      char *p, instance[64];
+      /* Extract instance from DNSSD service name (to serve as info field) */
+      p = strstr(name, " @ ");
+      if (p) {
+	int n;
+	n = p - name;
+	if (n >= sizeof(instance))
+	  n = sizeof(instance) - 1;
+	strncpy(instance, name, n);
+	instance[n] = '\0';
+	debug_printf("Avahi-Resolver: instance: |%s|\n", instance); /* !! */
+      } else {
+	instance[0] = '\0';
+      }
       /* Determine the remote printer's IP */
       if (IPBasedDeviceURIs != IP_BASED_URIS_NO || !strcasecmp(ifname, "lo") ||
 	  (!browseallow_all && cupsArrayCount(browseallow) > 0)) {
@@ -5078,9 +5162,9 @@ static void resolve_callback(
 			 name, type, domain, addrstr);
 	    generate_local_queue((strcasecmp(ifname, "lo") && host_name ?
 				  host_name : addrstr),
-				 addrstr, port, rp_value, name, type, domain, txt);
+				 addrstr, port, rp_value, name, NULL, instance, type, domain, txt);
 	  } else
-	    generate_local_queue(host_name, NULL, port, rp_value, name, type, domain, txt);
+	    generate_local_queue(host_name, NULL, port, rp_value, name, NULL, instance, type, domain, txt);
 	} else
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not determine IP address.\n",
 		       name, type, domain);
@@ -5089,7 +5173,7 @@ static void resolve_callback(
 	/* Check remote printer type and create appropriate local queue to
 	   point to it */
 	if (host_name)
-	  generate_local_queue(host_name, NULL, port, rp_value, name, type, domain, txt);
+	  generate_local_queue(host_name, NULL, port, rp_value, name, NULL, instance, type, domain, txt);
 	else
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, host name not supplied.\n",
 		       name, type, domain);
@@ -5395,7 +5479,7 @@ void avahi_init() {
  */
 void
 found_cups_printer (const char *remote_host, const char *uri,
-		    const char *info)
+		    const char *location, const char *info)
 {
   char scheme[32];
   char username[64];
@@ -5449,6 +5533,7 @@ found_cups_printer (const char *remote_host, const char *uri,
 
   printer = generate_local_queue(host, NULL, port, local_resource,
 				 info ? info : "",
+				 location ? location : "", info ? info : "",
 				 "", "", NULL);
 
   if (printer &&
@@ -5476,6 +5561,7 @@ process_browse_data (GIOChannel *source,
   unsigned int state;
   char remote_host[256];
   char uri[1024];
+  char location[1024];
   char info[1024];
   char *c = NULL, *end = NULL;
 
@@ -5523,8 +5609,18 @@ process_browse_data (GIOChannel *source,
      return TRUE;
 
   if (c) {
-    /* Skip location field */
-    for (c++; c < end && *c != '\"'; c++)
+    /* Extract location field */
+    {
+      int i;
+      c++;
+      for (i = 0;
+	   i < sizeof (location) - 1 && *c != '\"' && c < end;
+	   i++, c++)
+	location[i] = *c;
+      location[i] = '\0';
+      debug_printf("process_browse_data: location: |%s|\n", location); /* !! */
+    }
+    for (; c < end && *c != '\"'; c++)
       ;
 
     if (c >= end)
@@ -5547,13 +5643,14 @@ process_browse_data (GIOChannel *source,
 	   i++, c++)
 	info[i] = *c;
       info[i] = '\0';
+      debug_printf("process_browse_data: info: |%s|\n", info); /* !! */
     }
   }
   if (c >= end)
     return TRUE;
 
   if (!(type & CUPS_PRINTER_DELETE))
-    found_cups_printer (remote_host, uri, info);
+    found_cups_printer (remote_host, uri, location, info);
 
   if (in_shutdown == 0)
     recheck_timer ();
@@ -5730,10 +5827,12 @@ send_browse_data (gpointer data)
 
 static browsepoll_printer_t *
 new_browsepoll_printer (const char *uri_supported,
+			const char *location,
 			const char *info)
 {
   browsepoll_printer_t *printer = g_malloc (sizeof (browsepoll_printer_t));
   printer->uri_supported = g_strdup (uri_supported);
+  printer->location = g_strdup (location);
   printer->info = g_strdup (info);
   return printer;
 }
@@ -5744,6 +5843,7 @@ browsepoll_printer_free (gpointer data)
   browsepoll_printer_t *printer = data;
   debug_printf("browsepoll_printer_free() in THREAD %ld\n", pthread_self());
   free (printer->uri_supported);
+  free (printer->location);
   free (printer->info);
   free (printer);
 }
@@ -5795,7 +5895,7 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
   for (attr = ippFirstAttribute(response); attr;
        attr = ippNextAttribute(response)) {
     browsepoll_printer_t *printer;
-    const char *uri, *info;
+    const char *uri, *location, *info;
 
     while (attr && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
       attr = ippNextAttribute(response);
@@ -5810,6 +5910,9 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
       if (!strcasecmp (ippGetName(attr), "printer-uri-supported") &&
 	  ippGetValueTag(attr) == IPP_TAG_URI)
 	uri = ippGetString(attr, 0, NULL);
+      else if (!strcasecmp (ippGetName(attr), "printer-location") &&
+	       ippGetValueTag(attr) == IPP_TAG_TEXT)
+	location = ippGetString(attr, 0, NULL);
       else if (!strcasecmp (ippGetName(attr), "printer-info") &&
 	       ippGetValueTag(attr) == IPP_TAG_TEXT)
 	info = ippGetString(attr, 0, NULL);
@@ -5818,8 +5921,8 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
     }
 
     if (uri) {
-      found_cups_printer (context->server, uri, info);
-      printer = new_browsepoll_printer (uri, info);
+      found_cups_printer (context->server, uri, location, info);
+      printer = new_browsepoll_printer (uri, location, info);
       printers = g_list_insert (printers, printer, 0);
     }
 
@@ -6040,7 +6143,8 @@ browsepoll_printer_keepalive (gpointer data, gpointer user_data)
   browsepoll_printer_t *printer = data;
   const char *server = user_data;
   debug_printf("browsepoll_printer_keepalive() in THREAD %ld\n", pthread_self());
-  found_cups_printer (server, printer->uri_supported, printer->info);
+  found_cups_printer (server, printer->uri_supported, printer->location,
+		      printer->info);
 }
 
 gboolean
@@ -6793,6 +6897,7 @@ find_previous_queue (gpointer key,
   if (printer->cups_browsed_controlled) {
     /* Queue found, add to our list */
     p = create_local_queue (name,
+			    "", "",
 			    printer->device_uri,
 			    "", "", 0, "", "", "", NULL, 0, 0, NULL, NULL, -1);
     if (p) {
