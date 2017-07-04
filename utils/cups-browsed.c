@@ -4136,12 +4136,11 @@ gboolean handle_cups_queues(gpointer unused) {
       /* Option cups-browsed=true, marking that we have created this queue */
       num_options = cupsAddOption(CUPS_BROWSED_MARK "-default", "true",
 				  num_options, &options);
-      /* Description: <DNS-SD service name> */
-      num_options = cupsAddOption("printer-info", p->service_name,
+      /* Description */
+      num_options = cupsAddOption("printer-info", p->info,
 				  num_options, &options);
-      /* Location: <Remote host name> (Port: <port>) */
-      snprintf(buf, sizeof(buf), "%s (Port: %d)", p->host, p->port);
-      num_options = cupsAddOption("printer-location", buf,
+      /* Location */
+      num_options = cupsAddOption("printer-location", p->location,
 				  num_options, &options);
       /* Default option settings from printer entry */
       for (i = 0; i < p->num_options; i ++)
