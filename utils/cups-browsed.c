@@ -4090,7 +4090,8 @@ gboolean handle_cups_queues(gpointer unused) {
 	    cont_line_read = 0;
 	    /* Write an "APRemoteQueueID" line to make this queue marked
 	       as remote printer by CUPS */
-	    if (strncmp(line, "*%", 2) &&
+	    if (p->netprinter == 0 &&
+		strncmp(line, "*%", 2) &&
 		strncmp(line, "*PPD-Adobe:", 11) &&
 		ap_remote_queue_id_line_inserted == 0) {
 	      ap_remote_queue_id_line_inserted = 1;
