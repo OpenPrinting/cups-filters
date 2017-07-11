@@ -3,6 +3,17 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- cups-browsed: Take care of CUPS' temporary queues. Do not
+	  consider them when checking whether a queue with the same
+	  name as the one we are creating already exists and make
+	  temporary queues permanent (or remove them) before
+	  overwriting them with our local queue.
+	- cups-browsed: Make the naming scheme for locally created
+	  print queue configurable, especially allow for naming based
+	  on the DNS-SD service name (now default) as this is the same
+	  scheme as CUPS uses for its temporary queues. This way we
+	  prevent CUPS creating temporary queues when cups-browsed is
+	  already creating a queue.
 	- cups-browsed: Do not add "APRemoteQueueID" keyword to the
 	  local queue's PPD file if the queue is for an IPP network
 	  printer.

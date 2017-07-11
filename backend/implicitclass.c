@@ -201,8 +201,18 @@ main(int  argc,				/* I - Number of command-line args */
       int fd, job_id;
       char buffer[8192];
 
+      ptr2 = strrchr(dest_host, '/');
+      if (ptr2) {
+	*ptr2 = '\0';
+	ptr2 ++;
+      } else
+	ptr2 = queue_name;
+      
       fprintf(stderr, "DEBUG: Received destination host name from cups-browsed: %s\n",
 	      dest_host);
+      fprintf(stderr, "DEBUG: Received destination queue name from cups-browsed: %s\n",
+	      ptr2);
+
       /* Instead of feeding the job into the IPP backend, we re-print it into
 	 the server's CUPS queue. This way the job gets spooled on the server
 	 and we are not blocked until the job is printed. So a subsequent job
@@ -232,7 +242,7 @@ main(int  argc,				/* I - Number of command-line args */
 	fd = 0; /* stdin */
       
       /* Queue the job directly on the server */
-      if ((job_id = cupsCreateJob(CUPS_HTTP_DEFAULT, queue_name,
+      if ((job_id = cupsCreateJob(CUPS_HTTP_DEFAULT, ptr2,
 				  title ? title : "(stdin)",
 				  num_options, options)) > 0) {
 	http_status_t       status;         /* Write status */
@@ -245,7 +255,7 @@ main(int  argc,				/* I - Number of command-line args */
 					 options)) == NULL)
 	  format = CUPS_FORMAT_AUTO;
 	
-	status = cupsStartDocument(CUPS_HTTP_DEFAULT, queue_name, job_id, NULL,
+	status = cupsStartDocument(CUPS_HTTP_DEFAULT, ptr2, job_id, NULL,
 				   format, 1);
 
 	while (status == HTTP_CONTINUE &&
@@ -255,15 +265,15 @@ main(int  argc,				/* I - Number of command-line args */
 	if (status != HTTP_CONTINUE) {
 	  fprintf(stderr, "ERROR: %s: Unable to queue the print data - %s. Retrying.",
 		  argv[0], httpStatus(status));
-	  cupsFinishDocument(CUPS_HTTP_DEFAULT, queue_name);
-	  cupsCancelJob2(CUPS_HTTP_DEFAULT, queue_name, job_id, 0);
+	  cupsFinishDocument(CUPS_HTTP_DEFAULT, ptr2);
+	  cupsCancelJob2(CUPS_HTTP_DEFAULT, ptr2, job_id, 0);
 	  return (CUPS_BACKEND_RETRY);
 	}
 
-	if (cupsFinishDocument(CUPS_HTTP_DEFAULT, queue_name) != IPP_OK) {
+	if (cupsFinishDocument(CUPS_HTTP_DEFAULT, ptr2) != IPP_OK) {
 	  fprintf(stderr, "ERROR: %s: Unable to complete the job - %s. Retrying.",
 		  argv[0], cupsLastErrorString());
-	  cupsCancelJob2(CUPS_HTTP_DEFAULT, queue_name, job_id, 0);
+	  cupsCancelJob2(CUPS_HTTP_DEFAULT, ptr2, job_id, 0);
 	  return (CUPS_BACKEND_RETRY);
 	}
       }
