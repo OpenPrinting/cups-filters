@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- cups-browsed: Removed repeated code for clean-up when
+	  generate_local_queue() function fails.
 	- cups-browsed: Take care of CUPS' temporary queues. Do not
 	  consider them when checking whether a queue with the same
 	  name as the one we are creating already exists and make

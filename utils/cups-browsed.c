@@ -4711,7 +4711,7 @@ generate_local_queue(const char *host,
   char *key = NULL, *value = NULL;
   char *note_value = NULL;
 #endif /* HAVE_AVAHI */
-  remote_printer_t *p;
+  remote_printer_t *p = NULL;
   local_printer_t *local_printer;
   char *backup_queue_name = NULL, *local_queue_name = NULL,
        *local_queue_name_lower = NULL;
@@ -4922,15 +4922,7 @@ generate_local_queue(const char *host,
 	 ignore this remote printer */
       debug_printf("%s also taken, printer ignored.\n",
 		   local_queue_name);
-      free (backup_queue_name);
-      free (remote_host);
-      free (pdl);
-      free (queue_name);
-      free (make_model);
-#ifdef HAVE_AVAHI
-      if (note_value) avahi_free(note_value);
-#endif /* HAVE_AVAHI */
-      return NULL;
+      goto fail;
     }
   }
 
@@ -4938,15 +4930,7 @@ generate_local_queue(const char *host,
 			txt)) {
     debug_printf("Printer %s does not match BrowseFilter lines in cups-browsed.conf, printer ignored.\n",
 		 local_queue_name);
-    free (backup_queue_name);
-    free (remote_host);
-    free (pdl);
-    free (queue_name);
-    free (make_model);
-#ifdef HAVE_AVAHI
-    if (note_value) avahi_free(note_value);
-#endif /* HAVE_AVAHI */
-    return NULL;
+    goto fail;
   }
 
   /* Check if we have already created a queue for the discovered
@@ -4968,15 +4952,7 @@ generate_local_queue(const char *host,
        would get, so ignore this remote printer */
     debug_printf("Printer with URI %s already exists, printer ignored.\n",
 		 uri);
-    free (remote_host);
-    free (backup_queue_name);
-    free (pdl);
-    free (queue_name);
-    free (make_model);
-#ifdef HAVE_AVAHI
-    if (note_value) avahi_free(note_value);
-#endif /* HAVE_AVAHI */
-    return NULL;
+    goto fail;
   }
 
   if (p) {
@@ -5101,6 +5077,7 @@ generate_local_queue(const char *host,
 			    make_model, is_cups_queue);
   }
 
+ fail:
   free (backup_queue_name);
   free (remote_host);
   free (pdl);
