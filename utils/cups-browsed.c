@@ -327,6 +327,7 @@ static browse_order_t browse_order;
 static cups_array_t *browsefilter;
 
 static GHashTable *local_printers;
+static GHashTable *cups_supported_remote_printers;
 static browsepoll_t *local_printers_context = NULL;
 static http_t *local_conn = NULL;
 static gboolean inhibit_local_printers_update = FALSE;
@@ -372,6 +373,7 @@ static char *DomainSocket = NULL;
 static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static local_queue_naming_t LocalQueueNamingRemoteCUPS=LOCAL_QUEUE_NAMING_DNSSD;
 static local_queue_naming_t LocalQueueNamingIPPPrinter=LOCAL_QUEUE_NAMING_DNSSD;
+static unsigned int OnlyUnsupportedByCUPS = 0;
 static unsigned int CreateRemoteRawPrinterQueues = 0;
 static unsigned int CreateRemoteCUPSPrinterQueues = 1;
 #ifdef DRIVERLESS_IPP_PRINTERS_AUTO_SETUP
@@ -642,6 +644,102 @@ http_close_local (void)
   }
 }
 
+
+/*
+ * Remove all illegal characters and replace each group of such characters
+ * by a single separator character (dash or underscore), return a free()-able
+ * string.
+ *
+ * mode = 0: Only allow letters, numbers, dashes, and underscores for
+ *           turning make/model info into a valid print queue name or
+ *           into a string which can be supplied as option value in a
+ *           filter command line without need of quoting. Replace all
+ *           groups of illegal characters by single dashes and remove
+ *           leading and trailing dashes.
+ * mode = 1: Allow also '/', '.', ',' for cleaning up MIME type
+ *           strings (here available Page Description Languages, PDLs) to
+ *           supply them on a filter command line without quoting.
+ *           Replace all groups of illegal characters by single dashes
+ *           and remove leading and trailing dashes.
+ * mode = 2: Keep all locale-free alphanumeric characters (a-z, A-Z, 0-9)
+ *           and replace everything else by underscores. Replace all
+ *           groups of illegal characters by single underscores. This is
+ *           for generating print queue names from DNS-SD service names
+ *           to do it exactly as CUPS 2.2.x (or newer) does, so that CUPS
+ *           does not create its own temporary queues in addition.
+ *
+ * Especially this prevents from arbitrary code execution by interface scripts
+ * generated for print queues to native IPP printers when a malicious IPP
+ * print service with forged PDL and/or make/model info gets broadcasted into
+ * the local network.
+ */
+
+char *                                 /* O - Cleaned string */
+remove_bad_chars(const char *str_orig, /* I - Original string */
+		 int mode)             /* I - 0: Make/Model, queue name */
+                                       /*     1: MIME types/PDLs */
+                                       /*     2: Queue name from DNS-SD */
+                                       /*        service name */
+{
+  int i, j;
+  int havesep = 0;
+  char sep, *str;
+
+  if (str_orig == NULL)
+    return NULL;
+
+  str = strdup(str_orig);
+
+  /* for later str[strlen(str)-1] access */
+  if (strlen(str) < 1)
+    return str;
+
+  /* Select separator character */
+  if (mode == 2)
+    sep = '_';
+  else
+    sep = '-';
+
+  for (i = 0, j = 0; i < strlen(str); i++, j++) {
+    if (((str[i] >= 'A') && (str[i] <= 'Z')) ||
+	((str[i] >= 'a') && (str[i] <= 'z')) ||
+	((str[i] >= '0') && (str[i] <= '9')) ||
+	(mode != 2 && (str[i] == '_' ||
+		       str[i] == '.')) ||
+	(mode == 1 && (str[i] == '/' ||
+		       str[i] == ','))) {
+      /* Allowed character, keep it */
+      havesep = 0;
+      str[j] = str[i];
+    } else {
+      /* Replace all other characters by a single separator */
+      if (havesep == 1)
+	j --;
+      else {
+	havesep = 1;
+	str[j] = sep;
+      }
+    }
+  }
+  /* Add terminating zero */
+  str[j] = '\0';
+
+  i = 0;
+  if (mode != 2) {
+    /* Cut off trailing separators */
+    while (strlen(str) > 0 && str[strlen(str)-1] == sep)
+      str[strlen(str)-1] = '\0';
+
+    /* Cut off leading separators */
+    while (str[i] == sep)
+      ++i;
+  }
+
+  /* keep a free()-able string. +1 for trailing \0 */
+  return memmove(str, str + i, strlen(str) - i + 1);
+}
+
+
 static local_printer_t *
 new_local_printer (const char *device_uri,
 		   gboolean cups_browsed_controlled)
@@ -670,6 +768,25 @@ local_printer_has_uri (gpointer key,
   char *device_uri = user_data;
   debug_printf("local_printer_has_uri() in THREAD %ld\n", pthread_self());
   return g_str_equal (printer->device_uri, device_uri);
+}
+
+static gboolean
+local_printer_service_name_matches (gpointer key,
+				    gpointer value,
+				    gpointer user_data)
+{
+  char *queue_name = key;
+  char *service_name = user_data;
+  char *p;
+  debug_printf("local_printer_service_name_matches() in THREAD %ld\n",
+	       pthread_self());
+  p = remove_bad_chars(service_name, 2);
+  if (p && strncasecmp(p, queue_name, 63) == 0) {
+    free(p);
+    return TRUE;
+  }
+  if (p) free(p);
+  return FALSE;
 }
 
 static void
@@ -717,11 +834,17 @@ get_local_printers (void)
   /* We only want to have a list of actually existing CUPS queues, not of
      DNS-SD-discovered printers for which CUPS can auto-setup a driverless
      print queue */
-  cupsEnumDests(CUPS_DEST_FLAGS_NONE, 1000, NULL, CUPS_PRINTER_LOCAL,
-		CUPS_PRINTER_DISCOVERED, (cups_dest_cb_t)add_dest_cb,
-		&dest_list);
+  if (OnlyUnsupportedByCUPS)
+    cupsEnumDests(CUPS_DEST_FLAGS_NONE, 1000, NULL, 0, 0,
+		  (cups_dest_cb_t)add_dest_cb, &dest_list);
+  else
+    cupsEnumDests(CUPS_DEST_FLAGS_NONE, 1000, NULL, CUPS_PRINTER_LOCAL,
+		  CUPS_PRINTER_DISCOVERED, (cups_dest_cb_t)add_dest_cb,
+		  &dest_list);
   debug_printf ("cups-browsed (%s): cupsEnumDests\n", local_server_str);
   g_hash_table_remove_all (local_printers);
+  if (OnlyUnsupportedByCUPS)
+    g_hash_table_remove_all (cups_supported_remote_printers);
   int num_dests = dest_list.num_dests;
   cups_dest_t *dests = dest_list.dests;
   for (int i = 0; i < num_dests; i++) {
@@ -729,18 +852,35 @@ get_local_printers (void)
     cups_dest_t *dest = &dests[i];
     local_printer_t *printer;
     gboolean cups_browsed_controlled;
+    gboolean is_temporary;
+    gboolean is_cups_supported_remote;
+
     const char *device_uri = cupsGetOption ("device-uri",
 					    dest->num_options,
 					    dest->options);
 
-    /* Skip temporary CUPS queues */
+    /* Temporary CUPS queue? */
     val = cupsGetOption ("printer-is-temporary",
 			 dest->num_options,
 			 dest->options);
-    if (val && (!strcasecmp (val, "yes") ||
-		!strcasecmp (val, "on") ||
-		!strcasecmp (val, "true")))
-      continue;
+    is_temporary = (val && (!strcasecmp (val, "yes") ||
+			    !strcasecmp (val, "on") ||
+			    !strcasecmp (val, "true")));
+
+    if (OnlyUnsupportedByCUPS) {
+      /* Printer discovered by DNS-SD and supported by CUPS' temporary
+	 queues? */
+      val = cupsGetOption ("printer-uri-supported",
+			   dest->num_options,
+			   dest->options);
+      /* Printer has no local CUPS queue but CUPS would create a
+	 temporary queue on-demand */
+      is_cups_supported_remote = (val == NULL || is_temporary);
+    } else {
+      is_cups_supported_remote = 0;
+      if (is_temporary)
+	continue;
+    }
 
     val = cupsGetOption (CUPS_BROWSED_MARK,
 			 dest->num_options,
@@ -750,9 +890,15 @@ get_local_printers (void)
 				      !strcasecmp (val, "true"));
     printer = new_local_printer (device_uri,
 				 cups_browsed_controlled);
-    g_hash_table_insert (local_printers,
-			 g_ascii_strdown (dest->name, -1),
-			 printer);
+
+    if (is_cups_supported_remote)
+      g_hash_table_insert (cups_supported_remote_printers,
+			   g_ascii_strdown (dest->name, -1),
+			   printer);
+    else
+      g_hash_table_insert (local_printers,
+			   g_ascii_strdown (dest->name, -1),
+			   printer);
   }
 
   cupsFreeDests (num_dests, dests);
@@ -3036,100 +3182,6 @@ on_printer_modified (CupsNotifier *object,
 }
 
 
-/*
- * Remove all illegal characters and replace each group of such characters
- * by a single separator character (dash or underscore), return a free()-able
- * string.
- *
- * mode = 0: Only allow letters, numbers, dashes, and underscores for
- *           turning make/model info into a valid print queue name or
- *           into a string which can be supplied as option value in a
- *           filter command line without need of quoting. Replace all
- *           groups of illegal characters by single dashes and remove
- *           leading and trailing dashes.
- * mode = 1: Allow also '/', '.', ',' for cleaning up MIME type
- *           strings (here available Page Description Languages, PDLs) to
- *           supply them on a filter command line without quoting.
- *           Replace all groups of illegal characters by single dashes
- *           and remove leading and trailing dashes.
- * mode = 2: Keep all locale-free alphanumeric characters (a-z, A-Z, 0-9)
- *           and replace everything else by underscores. Replace all
- *           groups of illegal characters by single underscores. This is
- *           for generating print queue names from DNS-SD service names
- *           to do it exactly as CUPS 2.2.x (or newer) does, so that CUPS
- *           does not create its own temporary queues in addition.
- *
- * Especially this prevents from arbitrary code execution by interface scripts
- * generated for print queues to native IPP printers when a malicious IPP
- * print service with forged PDL and/or make/model info gets broadcasted into
- * the local network.
- */
-
-char *                                 /* O - Cleaned string */
-remove_bad_chars(const char *str_orig, /* I - Original string */
-		 int mode)             /* I - 0: Make/Model, queue name */
-                                       /*     1: MIME types/PDLs */
-                                       /*     2: Queue name from DNS-SD */
-                                       /*        service name */
-{
-  int i, j;
-  int havesep = 0;
-  char sep, *str;
-
-  if (str_orig == NULL)
-    return NULL;
-
-  str = strdup(str_orig);
-
-  /* for later str[strlen(str)-1] access */
-  if (strlen(str) < 1)
-    return str;
-
-  /* Select separator character */
-  if (mode == 2)
-    sep = '_';
-  else
-    sep = '-';
-
-  for (i = 0, j = 0; i < strlen(str); i++, j++) {
-    if (((str[i] >= 'A') && (str[i] <= 'Z')) ||
-	((str[i] >= 'a') && (str[i] <= 'z')) ||
-	((str[i] >= '0') && (str[i] <= '9')) ||
-	(mode != 2 && (str[i] == '_' ||
-		       str[i] == '.')) ||
-	(mode == 1 && (str[i] == '/' ||
-		       str[i] == ','))) {
-      /* Allowed character, keep it */
-      havesep = 0;
-      str[j] = str[i];
-    } else {
-      /* Replace all other characters by a single separator */
-      if (havesep == 1)
-	j --;
-      else {
-	havesep = 1;
-	str[j] = sep;
-      }
-    }
-  }
-  /* Add terminating zero */
-  str[j] = '\0';
-
-  i = 0;
-  if (mode != 2) {
-    /* Cut off trailing separators */
-    while (strlen(str) > 0 && str[strlen(str)-1] == sep)
-      str[strlen(str)-1] = '\0';
-
-    /* Cut off leading separators */
-    while (str[i] == sep)
-      ++i;
-  }
-
-  /* keep a free()-able string. +1 for trailing \0 */
-  return memmove(str, str + i, strlen(str) - i + 1);
-}
-
 static remote_printer_t *
 create_local_queue (const char *queue_name,
 		    const char *location,
@@ -4933,6 +4985,21 @@ generate_local_queue(const char *host,
     goto fail;
   }
 
+  /* If we only want to create queues for printers for which CUPS does
+     not already auto-create queues, we check here whether we can skip
+     this printer */
+  if (OnlyUnsupportedByCUPS) {
+    if (g_hash_table_find (cups_supported_remote_printers,
+			   local_printer_service_name_matches,
+			   (gpointer *)service_name)) {
+      /* Found a DNS-SD-discovered CUPS-supported printer whose URI matches
+	 our discovered printer */
+      debug_printf("Printer %s (DNS-SD service name \"%s\") does not need to be covered by us as it is already supported by CUPS, skipping.\n",
+		   local_queue_name, service_name);
+      goto fail;
+    }
+  }
+  
   /* Check if we have already created a queue for the discovered
      printer */
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -6954,6 +7021,13 @@ read_configuration (const char *filename)
 	LocalQueueNamingIPPPrinter = LOCAL_QUEUE_NAMING_DNSSD;
       else if (strcasestr(value, "Make") && strcasestr(value, "Model"))
 	LocalQueueNamingIPPPrinter = LOCAL_QUEUE_NAMING_MAKE_MODEL;
+    } else if (!strcasecmp(line, "OnlyUnsupportedByCUPS") && value) {
+      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
+	OnlyUnsupportedByCUPS = 1;
+      else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
+	OnlyUnsupportedByCUPS = 0;
     } else if (!strcasecmp(line, "CreateRemoteRawPrinterQueues") && value) {
       if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
@@ -7440,6 +7514,10 @@ int main(int argc, char*argv[]) {
 					  g_str_equal,
 					  g_free,
 					  free_local_printer);
+  cups_supported_remote_printers = g_hash_table_new_full (g_str_hash,
+							  g_str_equal,
+							  g_free,
+							  free_local_printer);
 
   /* Read out the currently defined CUPS queues and find the ones which we
      have added in an earlier session */
@@ -7714,6 +7792,7 @@ fail:
     close (browsesocket);
 
   g_hash_table_destroy (local_printers);
+  g_hash_table_destroy (cups_supported_remote_printers);
 
   if (BrowseLocalProtocols & BROWSE_CUPS)
     g_list_free_full (browse_data, browse_data_free);
