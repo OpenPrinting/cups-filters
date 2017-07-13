@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- cups-browsed: Prevent the creation of two remote printer
+	  entries for IPP network printers with the same local queue
+	  name. This could happen with make/model-based naming.
 	- cups-browsed: Added the possibility to optionally not
 	  create local queues for remote printers for which CUPS
 	  (from 2.2.x on) auto-creates queues by itself (DNS-SD

@@ -3379,6 +3379,16 @@ create_local_queue (const char *queue_name,
       goto fail;
     }
 
+    /* Check whether we have an equally named queue already */
+    for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	 q;
+	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
+      if (!strcasecmp(q->queue_name, p->queue_name)) {/* Queue with same name */
+	debug_printf("We have already created a queue with the name %s for another printer. Skipping this printer.\n", p->queue_name);
+	debug_printf("Try setting \"LocalQueueNamingIPPPrinter DNS-SD\" in cups-browsed.conf.\n");
+	goto fail;
+      }
+
     p->duplicate_of = NULL;
     p->num_duplicates = 0;
     p->model = NULL;
