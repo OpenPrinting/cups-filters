@@ -3299,8 +3299,10 @@ create_local_queue (const char *queue_name,
 		   p->queue_name, p->uri);
       goto fail;
     }
-    /* For a remote CUPS printer Our local queue must be raw, so that the
-       PPD file and driver on the remote CUPS server get used */
+    /* For a remote CUPS printer our local queue will be raw or get a
+       PPD file from the remote CUPS server, so that the driver on the
+       remote CUPS server get used. So we will not generate a PPD file
+       or interface script at this point. */
     p->netprinter = 0;
     p->ppd = NULL;
     p->model = NULL;
@@ -3310,10 +3312,10 @@ create_local_queue (const char *queue_name,
     for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 q;
 	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
-      if (!strcasecmp(q->queue_name, p->queue_name) && /* Queue with same name on server */
-	  !q->duplicate_of && /* Find the master of the queues with this name,
-				 to avoid "daisy chaining" */
-	  q != p) /* Skip our current queue */
+      if (!strcasecmp(q->queue_name, p->queue_name) && /* Queue with same name
+							  on server */
+	  !q->duplicate_of) /* Find the master of the queues with this name,
+			       to avoid "daisy chaining" */
 	break;
     p->duplicate_of = (q && q->status != STATUS_DISAPPEARED &&
 		       q->status != STATUS_UNCONFIRMED) ? q : NULL;
