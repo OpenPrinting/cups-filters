@@ -409,15 +409,17 @@ static void browse_poll_create_subscription (browsepoll_t *context,
 					     http_t *conn);
 static gboolean browse_poll_get_notifications (browsepoll_t *context,
 					       http_t *conn);
-static remote_printer_t *generate_local_queue(const char *host,
-					      const char *ip,
-					      uint16_t port,
-					      char *resource,
-					      const char *service_name,
-					      const char *location,
-					      const char *info,
-					      const char *type,
-					      const char *domain, void *txt);
+static remote_printer_t
+*examine_discovered_printer_record(const char *host,
+				   const char *ip,
+				   uint16_t port,
+				   char *resource,
+				   const char *service_name,
+				   const char *location,
+				   const char *info,
+				   const char *type,
+				   const char *domain,
+				   void *txt);
 
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
 #define HAVE_CUPS_1_6 1
@@ -1807,7 +1809,9 @@ cupsdUpdateLDAPBrowse(void)
     debug_printf("LDAP: Remote host: %s; Port: %d; Remote queue name: %s; Service Name: %s\n",
 		 host, port, strchr(local_resource, '/') + 1, service_name);
 
-    generate_local_queue(host, NULL, port, local_resource, service_name, location, info, "", "", NULL);
+    examine_discovered_printer_record(host, NULL, port, local_resource,
+				      service_name, location, info, "", "",
+				      NULL);
 
   }
 
@@ -3183,21 +3187,21 @@ on_printer_modified (CupsNotifier *object,
 
 
 static remote_printer_t *
-create_local_queue (const char *queue_name,
-		    const char *location,
-		    const char *info,
-		    const char *uri,
-		    const char *host,
-		    const char *ip,
-		    int port,
-		    const char *service_name,
-		    const char *type,
-		    const char *domain,
-		    const char *pdl,
-		    int color,
-		    int duplex,
-		    const char *make_model,
-		    int is_cups_queue)
+create_remote_printer_entry (const char *queue_name,
+			     const char *location,
+			     const char *info,
+			     const char *uri,
+			     const char *host,
+			     const char *ip,
+			     int port,
+			     const char *service_name,
+			     const char *type,
+			     const char *domain,
+			     const char *pdl,
+			     int color,
+			     int duplex,
+			     const char *make_model,
+			     int is_cups_queue)
 {
   remote_printer_t *p;
   remote_printer_t *q;
@@ -3220,7 +3224,7 @@ create_local_queue (const char *queue_name,
 #endif /* HAVE_CUPS_1_6 */
 
   if (!queue_name || !uri || !host || !service_name || !type || !domain) {
-    debug_printf("ERROR: create_local_queue(): Input value missing!");
+    debug_printf("ERROR: create_remote_printer_entry(): Input value missing!\n");
     return NULL;
   }
 
@@ -4759,16 +4763,16 @@ matched_filters (const char *queue_name,
 }
 
 static remote_printer_t *
-generate_local_queue(const char *host,
-		     const char *ip,
-		     uint16_t port,
-		     char *resource,
-		     const char *service_name,
-		     const char *location,
-		     const char *info,
-		     const char *type,
-		     const char *domain,
-		     void *txt) {
+examine_discovered_printer_record(const char *host,
+				  const char *ip,
+				  uint16_t port,
+				  char *resource,
+				  const char *service_name,
+				  const char *location,
+				  const char *info,
+				  const char *type,
+				  const char *domain,
+				  void *txt) {
 
   char uri[HTTP_MAX_URI];
   char *queue_name = NULL, *remote_host = NULL, *pdl = NULL,
@@ -4787,7 +4791,7 @@ generate_local_queue(const char *host,
   int is_cups_queue;
   
   if (!host || !resource || !service_name || !type || !domain) {
-    debug_printf("ERROR: generate_local_queue(): Input value missing!");
+    debug_printf("ERROR: examine_discovered_printer_record(): Input value missing!\n");
     return NULL;
   }
 
@@ -4942,7 +4946,7 @@ generate_local_queue(const char *host,
       if (entry) {
 	avahi_string_list_get_pair(entry, &key, &note_value, NULL);
 	if (key && note_value && !strcasecmp(key, "note")) {
-	  debug_printf("generate_local_queue: TXT.note: |%s|\n", note_value); /* !! */
+	  debug_printf("examine_discovered_printer_record: TXT.note: |%s|\n", note_value); /* !! */
 	  location = note_value;
 	}
         avahi_free(key);
@@ -5156,9 +5160,11 @@ generate_local_queue(const char *host,
 
     /* We need to create a local queue pointing to the
        discovered printer */
-    p = create_local_queue (local_queue_name, location, info, uri, remote_host, ip, port,
-			    service_name ? service_name : "", type, domain, pdl, color, duplex,
-			    make_model, is_cups_queue);
+    p = create_remote_printer_entry (local_queue_name, location, info, uri,
+				     remote_host, ip, port,
+				     service_name ? service_name : "", type,
+				     domain, pdl, color, duplex, make_model,
+				     is_cups_queue);
   }
 
  fail:
@@ -5444,11 +5450,15 @@ static void resolve_callback(
 	      !host_name) {
 	    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with IP address %s.\n",
 			 name, type, domain, addrstr);
-	    generate_local_queue((strcasecmp(ifname, "lo") && host_name ?
-				  host_name : addrstr),
-				 addrstr, port, rp_value, name, NULL, instance, type, domain, txt);
+	    examine_discovered_printer_record((strcasecmp(ifname, "lo") &&
+					       host_name ? host_name : addrstr),
+					      addrstr, port, rp_value, name,
+					      NULL, instance, type, domain,
+					      txt);
 	  } else
-	    generate_local_queue(host_name, NULL, port, rp_value, name, NULL, instance, type, domain, txt);
+	    examine_discovered_printer_record(host_name, NULL, port, rp_value,
+					      name, NULL, instance, type,
+					      domain, txt);
 	} else
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not determine IP address.\n",
 		       name, type, domain);
@@ -5457,7 +5467,9 @@ static void resolve_callback(
 	/* Check remote printer type and create appropriate local queue to
 	   point to it */
 	if (host_name)
-	  generate_local_queue(host_name, NULL, port, rp_value, name, NULL, instance, type, domain, txt);
+	  examine_discovered_printer_record(host_name, NULL, port, rp_value,
+					    name, NULL, instance, type, domain,
+					    txt);
 	else
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, host name not supplied.\n",
 		       name, type, domain);
@@ -5830,10 +5842,10 @@ found_cups_printer (const char *remote_host, const char *uri,
   debug_printf("CUPS browsing: Remote host: %s; Port: %d; Remote queue name: %s; Service Name: %s\n",
 	       host, port, strchr(local_resource, '/') + 1, service_name);
 
-  printer = generate_local_queue(host, NULL, port, local_resource,
-				 service_name,
-				 location ? location : "", info ? info : "",
-				 "", "", NULL);
+  printer = examine_discovered_printer_record(host, NULL, port, local_resource,
+					      service_name,
+					      location ? location : "",
+					      info ? info : "", "", "", NULL);
 
   if (printer &&
       (printer->domain == NULL || printer->domain[0] == '\0' ||
@@ -7241,10 +7253,8 @@ find_previous_queue (gpointer key,
   debug_printf("find_previous_queue() in THREAD %ld\n", pthread_self());
   if (printer->cups_browsed_controlled) {
     /* Queue found, add to our list */
-    p = create_local_queue (name,
-			    "", "",
-			    printer->device_uri,
-			    "", "", 0, "", "", "", NULL, 0, 0, NULL, -1);
+    p = create_remote_printer_entry (name, "", "", printer->device_uri, "", "",
+				     0, "", "", "", NULL, 0, 0, NULL, -1);
     if (p) {
       /* Mark as unconfirmed, if no Avahi report of this queue appears
 	 in a certain time frame, we will remove the queue */
