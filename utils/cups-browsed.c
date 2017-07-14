@@ -3317,6 +3317,11 @@ create_local_queue (const char *queue_name,
 	  !q->duplicate_of) /* Find the master of the queues with this name,
 			       to avoid "daisy chaining" */
 	break;
+    if (q->netprinter == 1) {
+      debug_printf("We have already created a queue with the name %s for another printer which is not a remote CUPS printer. Skipping this printer.\n", p->queue_name);
+      debug_printf("Try setting \"LocalQueueNamingRemoteCUPS DNS-SD\" or \"LocalQueueNamingRemoteCUPS RemoteName\" in cups-browsed.conf.\n");
+      goto fail;
+    }
     p->duplicate_of = (q && q->status != STATUS_DISAPPEARED &&
 		       q->status != STATUS_UNCONFIRMED) ? q : NULL;
     if (p->duplicate_of) {
