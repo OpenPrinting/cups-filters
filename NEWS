@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- pdftoopvp: Added missing "#include <math.h>" needed for
+	  cross-compiling for arm-v7a-linux-gnueabi (Bug #1232).
 	- cups-browsed: Prevent the creation of two remote printer
 	  entries for two IPP network printers or an IPP network
 	  printer and a remote CUPS printer with the same local queue

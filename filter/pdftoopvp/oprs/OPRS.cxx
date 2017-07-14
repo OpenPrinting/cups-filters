@@ -18,6 +18,7 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <stdarg.h>
+#include <math.h>
 #if defined __OpenBSD__
 #include <sys/endian.h>
 #if BYTE_ORDER == BIG_ENDIAN
