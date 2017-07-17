@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- cups-browsed: Skip callback functions and the CUPS queue
+	  creation/update/removal loop when cups-browsed is terminated
+	  by a SIGTERM signal. This avoids hanging on shutdown. Thanks
+	  to Edgar Fuss (ef at math dot uni-bonn dot de, Bug #1402).
 	- libcupsfilters: Added some fallbacks for incorrect
 	  resolution IPP attributes on IPP network printers (Debian
 	  bug #868360).
