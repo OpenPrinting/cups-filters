@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- libcupsfilters: Added some fallbacks for incorrect
+	  resolution IPP attributes on IPP network printers (Debian
+	  bug #868360).
 	- pdftoopvp: Added missing "#include <math.h>" needed for
 	  cross-compiling for arm-v7a-linux-gnueabi (Bug #1232).
 	- cups-browsed: Prevent the creation of two remote printer

@@ -1540,11 +1540,21 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
   quality = ippFindAttribute(response, "print-quality-supported", IPP_TAG_ENUM);
 
+  xres = 0;
+  yres = 0;
   if ((attr = ippFindAttribute(response, "pwg-raster-document-resolution-supported", IPP_TAG_RESOLUTION)) != NULL)
   {
     count = ippGetCount(attr);
-
     pwg_ppdize_resolution(attr, count / 2, &xres, &yres, ppdname, sizeof(ppdname));
+  }
+  if ((xres < 75 || yres < 75) &&
+      (attr = ippFindAttribute(response, "printer-resolution-supported", IPP_TAG_RESOLUTION)) != NULL)
+  {
+    count = ippGetCount(attr);
+    pwg_ppdize_resolution(attr, count / 2, &xres, &yres, ppdname, sizeof(ppdname));
+  }
+  if (xres >= 75 && yres >= 75)
+  {
     cupsFilePrintf(fp, "*DefaultResolution: %s\n", ppdname);
 
     cupsFilePrintf(fp, "*OpenUI *cupsPrintQuality/%s: PickOne\n"
@@ -1623,7 +1633,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     {
       pwg_ppdize_resolution(attr, 0, &xres, &yres, ppdname, sizeof(ppdname));
     }
-    else
+    if (xres < 75 || yres < 75)
     {
       xres = yres = 300;
       strlcpy(ppdname, "300dpi", sizeof(ppdname));
