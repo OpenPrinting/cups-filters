@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- cups-browsed: Add "AutoClustering" directive to
+	  cups-browsed.conf to turn on and off automatically
+	  clustering equally named local print queues which point to
+	  remote CUPS printers. When automatic clustering is turned
+	  off, queue name clashes are prevented by adding "@<server
+	  name>" to local queue names based on the remote queue name
+	  or on make and model.
 	- cups-browsed: Skip callback functions and the CUPS queue
 	  creation/update/removal loop when cups-browsed is terminated
 	  by a SIGTERM signal. This avoids hanging on shutdown. Thanks

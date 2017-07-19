@@ -631,6 +631,41 @@ not to share newly discovered IPP printers.
 
 .fam T
 .fi
+If there is more than one remote CUPS printer whose local queue
+would get the same name and AutoClustering is set to "Yes" (the
+default) only one local queue is created which makes up a
+load-balancing cluster of the remote printers which would get this
+queue name (implicit class). This means that when several jobs are
+sent to this queue they get distributed between the printers, using
+the method chosen by the LoadBalancing directive.
+.PP
+Note that the forming of clusters depends on the naming scheme for
+local queues created by cups-browsed. If you have set
+LocalQueueNamingRemoteCUPS to "DNSSD" you will not get automatic
+clustering as the DNS-SD service names are always unique. With
+LocalQueueNamingRemoteCUPS set to "RemoteName" local queues are
+named as the CUPS queues on the remote servers are named and so
+equally named queues on different servers get clustered (this is how
+CUPS did it in version 1.5.x or older). LocalQueueNamingRemoteCUPS
+set to "MakeModel" makes remote printers of the same model get
+clustered. Note that then a cluster can contain more than one queue
+of the same server.
+.PP
+With AutoClustering set to "No", for each remote CUPS printer an
+individual local queue is created, and to avoid name clashes when
+using the LocalQueueNamingRemoteCUPS settings "RemoteName" or
+"MakeModel" "@<server name>" is added to the local queue name.
+.PP
+Only remote CUPS printers get clustered, not IPP network printers or
+IPP-over-USB printers.
+.PP
+.nf
+.fam C
+        AutoClustering Yes
+        AutoClustering No
+
+.fam T
+.fi
 The LoadBalancing directive switches between two methods of handling
 load balancing between equally-named remote queues which are
 represented by one local print queue making up a cluster of them

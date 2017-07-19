@@ -383,6 +383,7 @@ static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_LOCAL_O
 #endif
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static int NewIPPPrinterQueuesShared = 0;
+static int AutoClustering = 1;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
 static const char *DefaultOptions = NULL;
 static int terminating = 0; /* received SIGTERM, ignore callbacks,
@@ -3338,6 +3339,11 @@ create_remote_printer_entry (const char *queue_name,
 	  !q->duplicate_of) /* Find the master of the queues with this name,
 			       to avoid "daisy chaining" */
 	break;
+    if (q && AutoClustering == 0) {
+      debug_printf("We have already created a queue with the name %s for another remote CUPS printer but automatic clustering of equally named printers is turned off. Skipping this printer.\n", p->queue_name);
+      debug_printf("In cups-browsed.conf try setting \"AutoClustering On\" to cluster equally-named remote CUPS printers or \"LocalQueueNamingRemoteCUPS DNS-SD\" to avoid queue name clashes.\n");
+      goto fail;
+    }
     if (q && q->netprinter == 1) {
       debug_printf("We have already created a queue with the name %s for another printer which is not a remote CUPS printer. Skipping this printer.\n", p->queue_name);
       debug_printf("Try setting \"LocalQueueNamingRemoteCUPS DNS-SD\" or \"LocalQueueNamingRemoteCUPS RemoteName\" in cups-browsed.conf.\n");
@@ -4812,7 +4818,7 @@ examine_discovered_printer_record(const char *host,
   char *note_value = NULL;
 #endif /* HAVE_AVAHI */
   remote_printer_t *p = NULL;
-  local_printer_t *local_printer;
+  local_printer_t *local_printer = NULL;
   char *backup_queue_name = NULL, *local_queue_name = NULL,
        *local_queue_name_lower = NULL;
   int is_cups_queue;
@@ -4999,15 +5005,30 @@ examine_discovered_printer_record(const char *host,
   /* Get available CUPS queues */
   update_local_printers ();
 
-  local_queue_name = queue_name;
-
-  /* Is there a local queue with the name of the remote queue? */
-  local_queue_name_lower = g_ascii_strdown(local_queue_name, -1);
-  local_printer = g_hash_table_lookup (local_printers,
+  /* We skip trying to use the queue name purely derived from the
+     remote CUPS queue name or make and model for remote CUPS queues
+     when automatic clustering of remote cUPS queues is turned off,
+     to directly create queues with names containing the server name
+     to avoid name clashes and with this remote queues skipped by
+     cups-browsed. */
+  if (!is_cups_queue ||
+      AutoClustering == 1 ||
+      LocalQueueNamingRemoteCUPS == LOCAL_QUEUE_NAMING_DNSSD) {
+    local_queue_name = queue_name;
+    /* Is there a local queue with the name of the remote queue? */
+    local_queue_name_lower = g_ascii_strdown(local_queue_name, -1);
+    local_printer = g_hash_table_lookup (local_printers,
 				       local_queue_name_lower);
-  free(local_queue_name_lower);
-  /* Only consider CUPS queues not created by us */
-  if (local_printer && !local_printer->cups_browsed_controlled) {
+    free(local_queue_name_lower);
+  }
+  /* Use the originally chosen queue name plus the server name if
+     the original name is already taken or if we had skipped using
+     it. To decide on whether the queue name is already taken, only
+     consider CUPS queues not created by us */
+  if ((is_cups_queue &&
+       AutoClustering == 0 &&
+       LocalQueueNamingRemoteCUPS != LOCAL_QUEUE_NAMING_DNSSD) ||
+      (local_printer && !local_printer->cups_browsed_controlled)) {
     /* Found local queue with same name as remote queue */
     /* Is there a local queue with the name <queue>@<host>? */
     local_queue_name = backup_queue_name;
@@ -7157,6 +7178,13 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	NewIPPPrinterQueuesShared = 0;
+    } else if (!strcasecmp(line, "AutoClustering") && value) {
+      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
+	AutoClustering = 1;
+      else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
+	AutoClustering = 0;
     } else if (!strcasecmp(line, "LoadBalancing") && value) {
       if (!strncasecmp(value, "QueueOnClient", 13))
 	LoadBalancingType = QUEUE_ON_CLIENT;
