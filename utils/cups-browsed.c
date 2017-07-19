@@ -5056,7 +5056,9 @@ examine_discovered_printer_record(const char *host,
 	(p->host[0] == '\0' ||
 	 p->status == STATUS_UNCONFIRMED ||
 	 p->status == STATUS_DISAPPEARED ||
-	 (!strcasecmp(p->host, remote_host) && p->port == port)))
+	 (!strcasecmp(p->host, remote_host) && p->port == port &&
+	  strlen(p->uri) - strlen(resource) > 0 &&
+	  !strcasecmp(p->uri + strlen(p->uri) - strlen(resource), resource))))
       break;
 
   /* Is there a local queue with the same URI as the remote queue? */
