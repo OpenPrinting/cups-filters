@@ -174,7 +174,6 @@ typedef struct remote_printer_s {
   printer_status_t status;
   time_t timeout;
   void *duplicate_of;
-  int num_duplicates;
   int last_printer;
   char *host;
   char *ip;
@@ -3274,7 +3273,6 @@ create_remote_printer_entry (const char *queue_name,
     goto fail;
 
   p->duplicate_of = NULL;
-  p->num_duplicates = 0;
   
   p->num_options = 0;
   p->options = NULL;
@@ -3355,15 +3353,12 @@ create_remote_printer_entry (const char *queue_name,
       debug_printf("Printer %s already available through host %s, port %d.\n",
 		   p->queue_name, q->host, q->port);
       /* Update q */
-      q->num_duplicates ++;
       q->status = STATUS_TO_BE_CREATED;
       q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
     } else if (q) {
       q->duplicate_of = p;
       debug_printf("Unconfirmed/disappeared printer %s already available through host %s, port %d, marking that printer duplicate of the newly found one.\n",
 		   p->queue_name, q->host, q->port);
-      if (q->status == STATUS_UNCONFIRMED)
-	p->num_duplicates ++;
     }
   } else {
 #ifndef HAVE_CUPS_1_6
@@ -3424,7 +3419,6 @@ create_remote_printer_entry (const char *queue_name,
       }
 
     p->duplicate_of = NULL;
-    p->num_duplicates = 0;
     p->model = NULL;
     p->netprinter = 1;
 
@@ -3778,7 +3772,6 @@ remove_printer_entry(remote_printer_t *p) {
   if (p->duplicate_of) {
     /* "master printer" of this duplicate */
     q = p->duplicate_of;
-    q->num_duplicates --;
     if (q->status != STATUS_DISAPPEARED) {
       debug_printf("Removing the duplicate printer %s on host %s, port %d, scheduling its master printer %s on host %s, port %d for update, to assure it will have the correct device URI.\n",
 		   p->queue_name, p->host, p->port,
@@ -3820,7 +3813,6 @@ remove_printer_entry(remote_printer_t *p) {
     p->service_name = strdup(q->service_name);
     p->type = strdup(q->type);
     p->domain = strdup(q->domain);
-    p->num_duplicates --;
     if (q->ppd) p->ppd = strdup(q->ppd); else p->ppd = NULL;
     if (q->model) p->model = strdup(q->model); else p->model = NULL;
     if (q->ifscript) p->ifscript = strdup(q->ifscript);
@@ -4075,8 +4067,6 @@ gboolean handle_cups_queues(gpointer unused) {
 
       debug_printf("Creating/Updating CUPS queue %s\n",
 		   p->queue_name);
-      debug_printf("Queue has %d duplicates\n",
-		   p->num_duplicates);
 
       /* Make sure to have a connection to the local CUPS daemon */
       if ((http = http_connect_local ()) == NULL) {
@@ -7346,7 +7336,6 @@ find_previous_queue (gpointer key,
 	p->timeout = time(NULL) + TIMEOUT_CONFIRM;
 
       p->duplicate_of = NULL;
-      p->num_duplicates = 0;
       debug_printf("Found CUPS queue %s (URI: %s) from previous session.\n",
 		   p->queue_name, p->uri);
     } else {
