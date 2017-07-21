@@ -173,7 +173,7 @@ typedef struct remote_printer_s {
   cups_option_t *options;
   printer_status_t status;
   time_t timeout;
-  void *duplicate_of;
+  void *slave_of;
   int last_printer;
   char *host;
   char *ip;
@@ -1165,7 +1165,7 @@ check_jobs () {
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p;
 	 p = (remote_printer_t *)cupsArrayNext(remote_printers))
-      if (!p->duplicate_of) {
+      if (!p->slave_of) {
 	num_jobs = cupsGetJobs2(conn, &jobs, p->queue_name, 0,
 				CUPS_WHICHJOBS_ACTIVE);
 	if (num_jobs > 0) {
@@ -2129,7 +2129,7 @@ printer_record (const char *printer) {
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
     if (!strcasecmp(printer, p->queue_name) &&
-	!p->duplicate_of)
+	!p->slave_of)
       return p;
 
   return NULL;
@@ -2146,14 +2146,14 @@ log_cluster(remote_printer_t *p) {
 		 p->queue_name);
     return;
   }
-  if (p->duplicate_of)
-    q = p->duplicate_of;
+  if (p->slave_of)
+    q = p->slave_of;
   else
     q = p;
   debug_printf("Remote CUPS printers clustered as queue %s:\n", q->queue_name);
   for (r = (remote_printer_t *)cupsArrayFirst(remote_printers), i = 0;
        r; r = (remote_printer_t *)cupsArrayNext(remote_printers), i ++)
-    if (r == q || r->duplicate_of == q)
+    if (r == q || r->slave_of == q)
       debug_printf("  %s%s%s\n", r->uri,
 		   (r == q ? "*" : ""),
 		   (i == q->last_printer ? " (last job printed)" : ""));
@@ -2883,7 +2883,7 @@ on_printer_state_changed (CupsNotifier *object,
        Queuing of jobs on the client (LoadBalancingType = QUEUE_ON_CLIENT):
 
        Here we check all remote printers assigned to this printer and to its
-       duplicates which is currently accepting jobs and idle. If all are busy,
+       slaves which is currently accepting jobs and idle. If all are busy,
        we send a failure message and the backend will close with an error code
        after some seconds of delay, to make the job getting retried making us
        checking again here. If we find a destination, we tell the backend
@@ -2902,7 +2902,7 @@ on_printer_state_changed (CupsNotifier *object,
        Queuing of jobs on the servers (LoadBalancingType = QUEUE_ON_SERVERS):
 
        Here we check all remote printers assigned to this printer and to its
-       duplicates which is currently accepting jobs and find the one with the
+       slaves which is currently accepting jobs and find the one with the
        lowest amount of jobs waiting and send the job to there. So on the
        local queue we have never jobs waiting if at least one remote printer
        accepts jobs.
@@ -2923,9 +2923,9 @@ on_printer_state_changed (CupsNotifier *object,
       return;
     }
     q = printer_record(printer);
-    /* If we hit a duplicate and not the "master", switch to the "master" */
-    if (q && q->duplicate_of)
-      q = q->duplicate_of;
+    /* If we hit a slave and not the master, switch to the master */
+    if (q && q->slave_of)
+      q = q->slave_of;
     if (q && q->netprinter == 0) {
       /* We have remote CUPS queue(s) and so are using the implicitclass 
 	 backend */
@@ -3297,7 +3297,7 @@ create_remote_printer_entry (const char *queue_name,
   if (!p->uri)
     goto fail;
 
-  p->duplicate_of = NULL;
+  p->slave_of = NULL;
   p->last_printer = -1;
   
   p->num_options = 0;
@@ -3360,8 +3360,8 @@ create_remote_printer_entry (const char *queue_name,
 	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
       if (!strcasecmp(q->queue_name, p->queue_name) && /* Queue with same name
 							  on server */
-	  !q->duplicate_of) /* Find the master of the queues with this name,
-			       to avoid "daisy chaining" */
+	  !q->slave_of) /* Find the master of the queues with this name,
+			   to avoid "daisy chaining" */
 	break;
     if (q && AutoClustering == 0) {
       debug_printf("We have already created a queue with the name %s for another remote CUPS printer but automatic clustering of equally named printers is turned off. Skipping this printer.\n", p->queue_name);
@@ -3373,9 +3373,9 @@ create_remote_printer_entry (const char *queue_name,
       debug_printf("Try setting \"LocalQueueNamingRemoteCUPS DNS-SD\" or \"LocalQueueNamingRemoteCUPS RemoteName\" in cups-browsed.conf.\n");
       goto fail;
     }
-    p->duplicate_of = (q && q->status != STATUS_DISAPPEARED &&
-		       q->status != STATUS_UNCONFIRMED) ? q : NULL;
-    if (p->duplicate_of) {
+    p->slave_of = (q && q->status != STATUS_DISAPPEARED &&
+		   q->status != STATUS_UNCONFIRMED) ? q : NULL;
+    if (p->slave_of) {
       debug_printf("Printer %s already available through host %s, port %d.\n",
 		   p->queue_name, q->host, q->port);
       /* Update q */
@@ -3383,8 +3383,8 @@ create_remote_printer_entry (const char *queue_name,
       q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
       log_cluster(p);
     } else if (q) {
-      q->duplicate_of = p;
-      debug_printf("Unconfirmed/disappeared printer %s already available through host %s, port %d, marking that printer duplicate of the newly found one.\n",
+      q->slave_of = p;
+      debug_printf("Unconfirmed/disappeared printer %s already available through host %s, port %d, marking that printer a slave of the newly found one.\n",
 		   p->queue_name, q->host, q->port);
       log_cluster(p);
     }
@@ -3446,7 +3446,7 @@ create_remote_printer_entry (const char *queue_name,
 	goto fail;
       }
 
-    p->duplicate_of = NULL;
+    p->slave_of = NULL;
     p->model = NULL;
     p->netprinter = 1;
 
@@ -3796,34 +3796,34 @@ remove_printer_entry(remote_printer_t *p) {
     return;
   }
 
-  if (!p->duplicate_of) {
-    /* Check whether this queue has a duplicate from another server and
+  if (!p->slave_of) {
+    /* Check whether this queue has a slave from another server and
        find it */
     for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 q;
 	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
-      if (q != p && q->duplicate_of == p &&
+      if (q != p && q->slave_of == p &&
 	  q->status != STATUS_DISAPPEARED && q->status != STATUS_UNCONFIRMED)
 	break;
   }
   if (q) {
-    /* Make q the master of the cluster and p a duplicate of q. This way
+    /* Make q the master of the cluster and p a slave of q. This way
        removal of p does not delete the cluster's CUPS queue and update 
        of q makes sure the cluster's queue gets back into working state */
     for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 r;
 	 r = (remote_printer_t *)cupsArrayNext(remote_printers))
-      if (r != q && r->duplicate_of == p)
-	r->duplicate_of = q;
-    q->duplicate_of = NULL;
-    p->duplicate_of = q;
+      if (r != q && r->slave_of == p)
+	r->slave_of = q;
+    q->slave_of = NULL;
+    p->slave_of = q;
     /* Schedule this printer for updating the CUPS queue */
     q->status = STATUS_TO_BE_CREATED;
     q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
     debug_printf("Printer %s (%s) diasappeared, replacing by backup on host %s, port %d with URI %s.\n",
 		 p->queue_name, p->uri, q->host, q->port, q->uri);
   } else
-    debug_printf("Printer %s (Host: %s, Port: %d, URI: %s) disappeared and no duplicate available (or it is a duplicate of another printer), removing entry.\n",
+    debug_printf("Printer %s (Host: %s, Port: %d, URI: %s) disappeared and no slave available (or it is a slave of another printer), removing entry.\n",
 		 p->queue_name, p->host, p->port, p->uri);
     
   /* Schedule entry and its CUPS queue for removal */
@@ -3894,11 +3894,11 @@ gboolean handle_cups_queues(gpointer unused) {
 	break;
 
       debug_printf("Removing entry %s%s.\n", p->queue_name,
-		   (p->duplicate_of ? "" : " and its CUPS queue"));
+		   (p->slave_of ? "" : " and its CUPS queue"));
 
       /* Remove the CUPS queue */
-      /* Duplicates do not have a CUPS queue */
-      if ((q = p->duplicate_of) == NULL ||
+      /* Slaves do not have a CUPS queue */
+      if ((q = p->slave_of) == NULL ||
 	  q->status == STATUS_DISAPPEARED ||
 	  q->status == STATUS_UNCONFIRMED) {
 	q = NULL;
@@ -4031,8 +4031,8 @@ gboolean handle_cups_queues(gpointer unused) {
       /* (...or, we've just received a CUPS Browsing packet for this queue) */
     case STATUS_TO_BE_CREATED:
 
-      /* Do not create a queue for duplicates */
-      if (p->duplicate_of) {
+      /* Do not create a queue for slaves */
+      if (p->slave_of) {
 	p->status = STATUS_CONFIRMED;
 	if (p->is_legacy) {
 	  p->timeout = time(NULL) + BrowseTimeout;
@@ -7326,7 +7326,7 @@ find_previous_queue (gpointer key,
       else
 	p->timeout = time(NULL) + TIMEOUT_CONFIRM;
 
-      p->duplicate_of = NULL;
+      p->slave_of = NULL;
       debug_printf("Found CUPS queue %s (URI: %s) from previous session.\n",
 		   p->queue_name, p->uri);
     } else {
