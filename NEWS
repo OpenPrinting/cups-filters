@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- cups-browsed: Log the error if the network interface name of
+	  a DNS-SD event could not be determined.
+	- cups-browsed: Simplified printer entry removal procedure.
+	- cups-browsed: Log memeber printer list of a printer cluster
+	  (implicit class) when a member printer is added or removed.
 	- cups-browsed: Removed superfluous (and not correctly
           working) duplicate counter from the remote printer entry
           data structure.
