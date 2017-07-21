@@ -4898,7 +4898,7 @@ examine_discovered_printer_record(const char *host,
     /* This is an IPP-based network printer */
     is_cups_queue = 0;
     /* Determine the queue name */
-    if (LocalQueueNamingRemoteCUPS == LOCAL_QUEUE_NAMING_MAKE_MODEL &&
+    if (LocalQueueNamingIPPPrinter == LOCAL_QUEUE_NAMING_MAKE_MODEL &&
 	make_model)
       /* Works only if we actually have make/model info in the DNS-SD record*/
       queue_name = remove_bad_chars(make_model, 0);
