@@ -3831,7 +3831,7 @@ remove_printer_entry(remote_printer_t *p) {
   p->timeout = time(NULL) + TIMEOUT_REMOVE;
 }
 
-gboolean handle_cups_queues(gpointer unused) {
+gboolean update_cups_queues(gpointer unused) {
   remote_printer_t *p, *q;
   http_t *http, *remote_http;
   char uri[HTTP_MAX_URI], device_uri[HTTP_MAX_URI], buf[1024], line[1024];
@@ -3856,7 +3856,7 @@ gboolean handle_cups_queues(gpointer unused) {
   cups_dest_t *dest = NULL;
   int is_temporary;
 
-  debug_printf("handle_cups_queues() in THREAD %ld\n", pthread_self());
+  debug_printf("update_cups_queues() in THREAD %ld\n", pthread_self());
 
   debug_printf("Processing printer list ...\n");
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -3864,7 +3864,7 @@ gboolean handle_cups_queues(gpointer unused) {
 
     /* terminating means we have received a signal and should shut down.
        in_shutdown means we have exited the main loop.
-       handle_cups_queues() is called after having exited the main loop
+       update_cups_queues() is called after having exited the main loop
        in order to remove any queues we have set up */
     if (terminating && !in_shutdown) {
       debug_printf("Stopping processing printer list because cups-browsed is terminating.\n");
@@ -4621,7 +4621,7 @@ recheck_timer (void)
 
   if (timeout != (time_t) -1) {
     debug_printf("checking queues in %ds\n", timeout);
-    queues_timer_id = g_timeout_add_seconds (timeout, handle_cups_queues, NULL);
+    queues_timer_id = g_timeout_add_seconds (timeout, update_cups_queues, NULL);
   } else {
     debug_printf("listening\n");
     queues_timer_id = 0;
@@ -5664,7 +5664,7 @@ void avahi_browser_shutdown() {
   if (in_shutdown == 0)
     recheck_timer();
   else
-    handle_cups_queues(NULL);
+    update_cups_queues(NULL);
 
   /* Free the data structures for DNS-SD browsing */
   if (sb1) {
@@ -7829,7 +7829,7 @@ fail:
     p->status = STATUS_DISAPPEARED;
     p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
   }
-  handle_cups_queues(NULL);
+  update_cups_queues(NULL);
 
   cancel_subscription (subscription_id);
   if (cups_notifier)
