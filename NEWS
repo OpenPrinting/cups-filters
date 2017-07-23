@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.14.1 - 2017-06-29
 
 CHANGES IN V1.15.0
 
+	- cups-browsed: Removed the function to compare printer entries
+	  for sorting the printer entry list. This led to corruption
+	  of the list and so to crashes.
+	- cups-browsed: Fixed crashes when many printers (especially
+	  all printers of a load-balanced cluster) are removed at once.
+	- cups-browsed: Log the full list of handled remote printers
+	  whenever one is added or removed.
 	- cups-browsed: Renamed the handle_cups_queues() function to
 	  update_cups_queues() to better reflect what it is doing.
 	- cups-browsed: When clustering remote CUPS printers together

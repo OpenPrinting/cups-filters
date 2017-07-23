@@ -2114,7 +2114,7 @@ is_created_by_cups_browsed (const char *printer) {
     return 0;
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    if (!strcasecmp(printer, p->queue_name))
+    if (!p->slave_of && !strcasecmp(printer, p->queue_name))
       return 1;
 
   return 0;
@@ -2128,8 +2128,7 @@ printer_record (const char *printer) {
     return NULL;
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    if (!strcasecmp(printer, p->queue_name) &&
-	!p->slave_of)
+    if (!p->slave_of && !strcasecmp(printer, p->queue_name))
       return p;
 
   return NULL;
@@ -2153,10 +2152,30 @@ log_cluster(remote_printer_t *p) {
   debug_printf("Remote CUPS printers clustered as queue %s:\n", q->queue_name);
   for (r = (remote_printer_t *)cupsArrayFirst(remote_printers), i = 0;
        r; r = (remote_printer_t *)cupsArrayNext(remote_printers), i ++)
-    if (r == q || r->slave_of == q)
+    if (r->status != STATUS_DISAPPEARED && r->status != STATUS_UNCONFIRMED &&
+	(r == q || r->slave_of == q))
       debug_printf("  %s%s%s\n", r->uri,
 		   (r == q ? "*" : ""),
 		   (i == q->last_printer ? " (last job printed)" : ""));
+}
+
+void
+log_all_printers() {
+  remote_printer_t *p, *q;
+  if (!debug_stderr && !debug_logfile)
+    return;
+  debug_printf("=== Remote printer overview ===\n");
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
+    debug_printf("Printer %s: Local queue %s, %s, Slave of %s%s\n", p->uri,
+		 p->queue_name,
+		 (p->netprinter ? "IPP Printer" : "Remote CUPS Printer"),
+		 ((q = p->slave_of) != NULL ? q->uri : "None"),
+		 (p->status == STATUS_UNCONFIRMED ? " (Unconfirmed)" :
+		  (p->status == STATUS_DISAPPEARED ? " (Disappeared)" :
+		   (p->status == STATUS_TO_BE_CREATED ?
+		    " (To be created/updated)" : ""))));
+  debug_printf("===============================\n");
 }
 
 char*
@@ -3181,7 +3200,8 @@ on_printer_deleted (CupsNotifier *object,
     }
     /* Schedule for immediate creation of the CUPS queue */
     p = printer_record(printer);
-    if (p && p->status != STATUS_DISAPPEARED) {
+    if (p && p->status != STATUS_DISAPPEARED &&
+	p->status != STATUS_UNCONFIRMED) {
       p->status = STATUS_TO_BE_CREATED;
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
       if (in_shutdown == 0)
@@ -3749,6 +3769,7 @@ create_remote_printer_entry (const char *queue_name,
 
   /* Add the new remote printer entry */
   cupsArrayAdd(remote_printers, p);
+  log_all_printers();
 
   /* If auto shutdown is active we have perhaps scheduled a timer to shut down
      due to not having queues any more to maintain, kill the timer now */
@@ -3813,10 +3834,15 @@ remove_printer_entry(remote_printer_t *p) {
     for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 r;
 	 r = (remote_printer_t *)cupsArrayNext(remote_printers))
-      if (r != q && r->slave_of == p)
+      if (r != q && r->slave_of == p &&
+	  r->status != STATUS_DISAPPEARED && r->status != STATUS_UNCONFIRMED)
 	r->slave_of = q;
     q->slave_of = NULL;
     p->slave_of = q;
+    q->num_options = p->num_options;
+    q->options = p->options;
+    p->num_options = 0;
+    p->options = NULL;
     /* Schedule this printer for updating the CUPS queue */
     q->status = STATUS_TO_BE_CREATED;
     q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
@@ -3832,7 +3858,7 @@ remove_printer_entry(remote_printer_t *p) {
 }
 
 gboolean update_cups_queues(gpointer unused) {
-  remote_printer_t *p, *q;
+  remote_printer_t *p, *q, *r;
   http_t *http, *remote_http;
   char uri[HTTP_MAX_URI], device_uri[HTTP_MAX_URI], buf[1024], line[1024];
   char *remote_cups_queue;
@@ -3857,6 +3883,26 @@ gboolean update_cups_queues(gpointer unused) {
   int is_temporary;
 
   debug_printf("update_cups_queues() in THREAD %ld\n", pthread_self());
+
+  /* Create dummy entry to point slaves at when their master is about to
+     get removed now (if we point them to NULL, we would try to remove
+     the already removed CUPS queue again when it comes to the removal
+     of the slave. */
+  if ((r = (remote_printer_t *)calloc(1, sizeof(remote_printer_t))) == NULL) {
+    debug_printf("ERROR: Unable to allocate memory.\n");
+    if (in_shutdown == 0)
+      recheck_timer ();
+    return FALSE;
+  }
+  memset(r, 0, sizeof(remote_printer_t));
+  r->uri = "<DELETED>";
+  /* Now redirect the slave_of pointers of the masters which get deleted now
+     to this dummy entry */
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
+    if (p->status == STATUS_DISAPPEARED &&
+	(q = p->slave_of) != NULL && q->status == STATUS_DISAPPEARED)
+      p->slave_of = r;
 
   debug_printf("Processing printer list ...\n");
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -3893,15 +3939,12 @@ gboolean update_cups_queues(gpointer unused) {
       if (p->timeout > current_time)
 	break;
 
-      debug_printf("Removing entry %s%s.\n", p->queue_name,
+      debug_printf("Removing entry %s (%s)%s.\n", p->queue_name, p->uri,
 		   (p->slave_of ? "" : " and its CUPS queue"));
 
       /* Remove the CUPS queue */
       /* Slaves do not have a CUPS queue */
-      if ((q = p->slave_of) == NULL ||
-	  q->status == STATUS_DISAPPEARED ||
-	  q->status == STATUS_UNCONFIRMED) {
-	q = NULL;
+      if ((q = p->slave_of) == NULL) {
 	
 	if ((http = http_connect_local ()) == NULL) {
 	  debug_printf("Unable to connect to CUPS!\n");
@@ -3961,8 +4004,10 @@ gboolean update_cups_queues(gpointer unused) {
 	    break;
 	  }
 	}
-	
+
 	/* No jobs, remove the CUPS queue */
+	debug_printf("Removing local CUPS queue %s (%s).\n", p->queue_name,
+		     p->uri);
 	request = ippNewRequest(CUPS_DELETE_PRINTER);
 	/* Printer URI: ipp://localhost:631/printers/<queue name> */
 	httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
@@ -4009,6 +4054,7 @@ gboolean update_cups_queues(gpointer unused) {
       free(p);
       p = NULL;
       if (q) log_cluster(q);
+      log_all_printers();
 
       /* If auto shutdown is active and all printers we have set up got removed
 	 again, schedule the shutdown in autoshutdown_timeout seconds 
@@ -4588,6 +4634,8 @@ gboolean update_cups_queues(gpointer unused) {
     }
   }
 
+  free(r);
+  
   if (in_shutdown == 0)
     recheck_timer ();
 
@@ -5622,7 +5670,8 @@ static void browse_callback(
     /* Check whether we have listed this printer */
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-      if (!strcasecmp(p->service_name, name) &&
+      if (p->status != STATUS_DISAPPEARED &&
+	  !strcasecmp(p->service_name, name) &&
 	  !strcasecmp(p->type, type) &&
 	  !strcasecmp(p->domain, domain))
 	break;
@@ -6679,10 +6728,6 @@ compare_pointers (void *a, void *b, void *data)
   return 0;
 }
 
-int compare_remote_printers (remote_printer_t *a, remote_printer_t *b) {
-  return strcasecmp(a->queue_name, b->queue_name);
-}
-
 static void
 sigterm_handler(int sig) {
   (void)sig;    /* remove compiler warnings... */
@@ -7613,8 +7658,7 @@ int main(int argc, char*argv[]) {
     default_printer = strdup(val);
     free(val);
   }
-  remote_printers = cupsArrayNew((cups_array_func_t)compare_remote_printers,
-				 NULL);
+  remote_printers = cupsArrayNew(NULL, NULL);
   g_hash_table_foreach (local_printers, find_previous_queue, NULL);
 
   /* Redirect SIGINT and SIGTERM so that we do a proper shutdown, removing
