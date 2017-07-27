@@ -504,6 +504,74 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # AutoClustering No
 
 
+# Load-balancing printer cluster formation can also be manually
+# controlled by defining explicitly which remote CUPS printers should
+# get clustered together.
+
+# This is done by the "Cluster" directive:
+
+# Cluster <QUEUENAME>: <EXPRESSION1> <EXPRESSION2> ...
+# Cluster <QUEUENAME>
+
+# If no expressions are given, <QUEUENAME> is used as the first and
+# only expression for this cluster.
+
+# Discovered printers are matched against all the expressions of all
+# defined clusters. The first expression which matches the discovered
+# printer determines to which cluster it belongs. Note that this way a
+# printer can only belong to one cluster. Once matched, further
+# cluster definitions will not checked any more.
+
+# With the first printer matching a cluster's expression a local queue
+# with the name <QUEUENAME> is created. If more printers are
+# discovered and match this cluster, they join the cluster. Printing
+# to this queue prints to all these printers in a load-balancing
+# manner, according to to the setting of the LoadBalancing directive.
+
+# Each expression must be a string of characters without spaces. If
+# spaces are needed, replace them by underscores ('_').
+
+# An expression can be matched in three ways:
+
+# 1. By the name of the CUPS queue on the remote server
+# 2. By make and model name of the remote printer
+# 3. By the DNS-SD service name of the remote printer
+
+# Note that the matching is done case-insensitively and any group of
+# non-alphanumerical characters is replaced by a single underscore.
+
+# So if an expression is "HP_DeskJet_2540" and the remote server
+# reports "hp Deskjet-2540" the printer gets matched to this cluster.
+
+# If "AutoClustering" is not set to "No" both your manual cluster
+# definitions will be followed and automatic clustering of
+# equally-named remote queues will be performed. If a printer matches
+# in both categories the match to the manually defined cluster has
+# priority. Automatic clustering of equally-named remote printers is
+# not performed if there is a manually defined cluster with this name
+# (at least as the printers do not match this cluster).
+
+# Examples:
+
+# To cluster all remote CUPS queues named "laserprinter" in your local
+# network but not cluster any other equally-named remote CUPS printers
+# use (Local queue will get named "laserprinter"):
+
+# AutoClustering No
+# Cluster laserprinter
+
+# To cluster all remote CUPS queues of HP LaserJet 4050 printers in a
+# local queue named "LJ4050":
+
+# Cluster LJ4050: HP_LaserJet_4050
+
+# As DNS-SD service names are unique in a network you can create a
+# cluster from exactly specified printers (spaces replaced by
+# underscors):
+
+# Cluster hrdep: oldlaser_@_hr-server1 newlaser_@_hr-server2
+
+
 # The LoadBalancing directive switches between two methods of handling
 # load balancing between equally-named remote queues which are
 # represented by one local print queue making up a cluster of them

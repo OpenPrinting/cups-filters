@@ -271,6 +271,12 @@ typedef struct browse_data_s {
   char *browse_options;
 } browse_data_t;
 
+/* Data structure for manual definition of load-balancing clusters */
+typedef struct cluster_s {
+  char *local_queue_name;
+  cups_array_t *members;
+} cluster_t;
+
 /* Ways how to represent the remote printer's IP in the device URI */
 typedef enum ip_based_uris_e {
   IP_BASED_URIS_NO,
@@ -383,6 +389,7 @@ static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_LOCAL_O
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static int NewIPPPrinterQueuesShared = 0;
 static int AutoClustering = 1;
+static cups_array_t *clusters;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
 static const char *DefaultOptions = NULL;
 static int terminating = 0; /* received SIGTERM, ignore callbacks,
@@ -3359,15 +3366,17 @@ create_remote_printer_entry (const char *queue_name,
 
   /* Remote CUPS printer or local queue remaining from previous cups-browsed
      session */
-  if (is_cups_queue == 1 || is_cups_queue == -1) {
-    if (is_cups_queue == 1 && CreateRemoteCUPSPrinterQueues == 0) {
+  /* is_cups_queue: -1: Unknown, 0: IPP printer, 1: Remote CUPS queue,
+                     2: Remote CUPS queue in user-defined cluster      */
+  if (is_cups_queue != 0) {
+    if (is_cups_queue > 0 && CreateRemoteCUPSPrinterQueues == 0) {
       debug_printf("Printer %s (%s) is a remote CUPS printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
 		   p->queue_name, p->uri);
       goto fail;
     }
     /* For a remote CUPS printer our local queue will be raw or get a
        PPD file from the remote CUPS server, so that the driver on the
-       remote CUPS server get used. So we will not generate a PPD file
+       remote CUPS server gets used. So we will not generate a PPD file
        or interface script at this point. */
     p->netprinter = 0;
     p->ppd = NULL;
@@ -3383,9 +3392,9 @@ create_remote_printer_entry (const char *queue_name,
 	  !q->slave_of) /* Find the master of the queues with this name,
 			   to avoid "daisy chaining" */
 	break;
-    if (q && AutoClustering == 0) {
-      debug_printf("We have already created a queue with the name %s for another remote CUPS printer but automatic clustering of equally named printers is turned off. Skipping this printer.\n", p->queue_name);
-      debug_printf("In cups-browsed.conf try setting \"AutoClustering On\" to cluster equally-named remote CUPS printers or \"LocalQueueNamingRemoteCUPS DNS-SD\" to avoid queue name clashes.\n");
+    if (q && AutoClustering == 0 && is_cups_queue == 1) {
+      debug_printf("We have already created a queue with the name %s for another remote CUPS printer but automatic clustering of equally named printers is turned off nor did we find a manually defined cluster this printer belongs to. Skipping this printer.\n", p->queue_name);
+      debug_printf("In cups-browsed.conf try setting \"AutoClustering On\" to cluster equally-named remote CUPS printers, \"LocalQueueNamingRemoteCUPS DNS-SD\" to avoid queue name clashes, or define clusters with the \"Cluster\" directive.\n");
       goto fail;
     }
     if (q && q->netprinter == 1) {
@@ -4838,6 +4847,8 @@ examine_discovered_printer_record(const char *host,
   char *key = NULL, *value = NULL;
   char *note_value = NULL;
 #endif /* HAVE_AVAHI */
+  cluster_t *cluster = NULL;
+  char *member = NULL, *str = NULL;
   remote_printer_t *p = NULL;
   local_printer_t *local_printer = NULL;
   char *backup_queue_name = NULL, *local_queue_name = NULL,
@@ -5068,13 +5079,6 @@ examine_discovered_printer_record(const char *host,
     }
   }
 
-  if (!matched_filters (local_queue_name, remote_host, port, service_name, domain,
-			txt)) {
-    debug_printf("Printer %s does not match BrowseFilter lines in cups-browsed.conf, printer ignored.\n",
-		 local_queue_name);
-    goto fail;
-  }
-
   /* If we only want to create queues for printers for which CUPS does
      not already auto-create queues, we check here whether we can skip
      this printer */
@@ -5089,7 +5093,70 @@ examine_discovered_printer_record(const char *host,
       goto fail;
     }
   }
-  
+
+  if (is_cups_queue) {
+    /* Check whether our new printer matches one of the user-defined
+       printer clusters */
+    for (cluster = cupsArrayFirst(clusters);
+	 cluster;
+	 cluster = cupsArrayNext(clusters)) {
+      for (member = cupsArrayFirst(cluster->members);
+	   member;
+	   member = cupsArrayNext(cluster->members)) {
+	/* Match remote CUPS queue name */
+	if ((str = strrchr(resource, '/')) != NULL && strlen(str) > 1) {
+	  str = remove_bad_chars(str + 1, 2);
+	  if (strcasecmp(member, str) == 0) /* Match */
+	    break;
+	  free(str);
+	}
+	/* Match make and model */
+	if (make_model) {
+	  str = remove_bad_chars(make_model, 2);
+	  if (strcasecmp(member, str) == 0) /* Match */
+	    break;
+	  free(str);
+	}
+	/* Match DNS-SD service name */
+	if (service_name) {
+	  str = remove_bad_chars(service_name, 2);
+	  if (strcasecmp(member, str) == 0) /* Match */
+	    break;
+	  free(str);
+	}	  
+      }
+      if (member)
+	break;
+    }
+    if (cluster) {
+      local_queue_name = cluster->local_queue_name;
+      is_cups_queue = 2;
+      free(str);
+    } else if (AutoClustering) {
+      /* If we do automatic clustering by matching queue names, do not
+	 add a queue to a manually defined cluster because it matches
+	 the cluster's local queue name. Manually defined clusters can
+	 only be joined by printers which match one of the cluster's
+	 member names */
+      for (cluster = cupsArrayFirst(clusters);
+	   cluster;
+	   cluster = cupsArrayNext(clusters)) {
+	if (strcasecmp(local_queue_name, cluster->local_queue_name) == 0) {
+	  debug_printf("We have already a manually defined printer cluster with the name %s. Automatic clustering does not add this printer to this cluster as it does not match any of the cluster's member names. Skipping this printer.\n", local_queue_name);
+	  debug_printf("In cups-browsed.conf try \"LocalQueueNamingRemoteCUPS DNS-SD\" or give another name to your manually defined cluster (\"Cluster\" directive) to avoid name clashes.\n");
+	  goto fail;
+	}
+      }
+    }
+  }
+
+  if (!matched_filters (local_queue_name, remote_host, port, service_name, domain,
+			txt)) {
+    debug_printf("Printer %s does not match BrowseFilter lines in cups-browsed.conf, printer ignored.\n",
+		 local_queue_name);
+    goto fail;
+  }
+
   /* Check if we have already created a queue for the discovered
      printer */
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -6852,7 +6919,7 @@ read_configuration (const char *filename)
   cups_file_t *fp;
   int i, linenum = 0;
   char line[HTTP_MAX_BUFFER];
-  char *value = NULL, *ptr, *field;
+  char *value = NULL, *ptr, *start;
   const char *delim = " \t,";
   int browse_allow_line_found = 0;
   int browse_deny_line_found = 0;
@@ -6861,6 +6928,7 @@ read_configuration (const char *filename)
   browse_filter_t *filter = NULL;
   int browse_filter_options, exact_match, err;
   char errbuf[1024];
+  cluster_t *cluster = NULL;
 
   if (!filename)
     filename = CUPS_SERVERROOT "/cups-browsed.conf";
@@ -7029,7 +7097,7 @@ read_configuration (const char *filename)
 		      value);
     } else if (!strcasecmp(line, "BrowseFilter") && value) {
       ptr = value;
-      /* Skip whitw space */
+      /* Skip white space */
       while (*ptr && isspace(*ptr)) ptr ++;
       /* Premature line end */
       if (!*ptr) goto browse_filter_fail;
@@ -7064,7 +7132,7 @@ read_configuration (const char *filename)
 	     should match the regexp */
 	  browse_filter_options = 0;
       }
-      field = ptr;
+      start = ptr;
       while (*ptr && !isspace(*ptr)) ptr ++;
       if (*ptr) {
 	/* Mark end of the field name */
@@ -7073,7 +7141,7 @@ read_configuration (const char *filename)
 	ptr ++;
 	while (*ptr && isspace(*ptr)) ptr ++;
       }
-      filter->field = strdup(field);
+      filter->field = strdup(start);
       if (!*ptr) {
 	/* Only field name and no regexp is given, so this rule is
 	   about matching a boolean value */
@@ -7211,6 +7279,78 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	AutoClustering = 0;
+    } else if (!strcasecmp(line, "Cluster") && value) {
+      ptr = value;
+      /* Skip white space */
+      while (*ptr && isspace(*ptr)) ptr ++;
+      /* Premature line end */
+      if (!*ptr) goto cluster_fail;
+      /* Find the local queue name for the cluster */
+      start = ptr;
+      while (*ptr && !isspace(*ptr) && *ptr != ':') ptr ++;
+      if (*ptr) {
+	/* Mark end of the local queue name */
+	*ptr = '\0';
+	/* Skip colon and white space until next word or line end */
+	ptr ++;
+	while (*ptr && (isspace(*ptr) || *ptr == ':')) ptr ++;
+      }
+      /* Empty queue name */
+      if (strlen(start) <= 0)
+	goto cluster_fail;
+      /* Clean queue name */
+      start = remove_bad_chars(start, 0);
+      /* Check whether we have already a cluster with this name */
+      for (cluster = cupsArrayFirst(clusters);
+	   cluster;
+	   cluster = cupsArrayNext(clusters))
+	if (!strcasecmp(start, cluster->local_queue_name)) {
+	  debug_printf("Duplicate cluster with queue name \"%s\".\n",
+		       start);
+	  cluster = NULL;
+	  goto cluster_fail;
+	}
+      /* Create the new cluster definition */
+      cluster = calloc (1, sizeof (cluster_t));
+      if (!cluster) goto cluster_fail;
+      cluster->local_queue_name = start;
+      cluster->members = cupsArrayNew(compare_pointers, NULL);
+      if (!*ptr) {
+	/* Only local queue name given, so assume this name as the only
+	   member name (only remote queues with this name match) */
+	cupsArrayAdd(cluster->members, remove_bad_chars(start, 2));
+      } else {
+	/* The rest of the line lists one or more member queue names */
+	while (*ptr) {
+	  start = ptr;
+	  while (*ptr && !isspace(*ptr)) ptr ++;
+	  if (*ptr) {
+	    /* Mark end of the current word */
+	    *ptr = '\0';
+	    /* Skip white space until next word or line end */
+	    ptr ++;
+	    while (*ptr && isspace(*ptr)) ptr ++;
+	  }
+	  /* Add member queue name to the list */
+	  if (strlen(start) > 0)
+	    cupsArrayAdd(cluster->members, remove_bad_chars(start, 2));
+	}
+      }
+      cupsArrayAdd (clusters, cluster);
+      continue;
+    cluster_fail:
+      if (cluster) {
+	if (cluster->local_queue_name)
+	  free(cluster->local_queue_name);
+	if (cluster->members) {
+	  while ((ptr = cupsArrayFirst (cluster->members)) != NULL) {
+	    cupsArrayRemove (cluster->members, ptr);
+	    free (ptr);
+	  }
+	  cupsArrayDelete (cluster->members);
+	}
+	free(cluster);
+      }
     } else if (!strcasecmp(line, "LoadBalancing") && value) {
       if (!strncasecmp(value, "QueueOnClient", 13))
 	LoadBalancingType = QUEUE_ON_CLIENT;
@@ -7399,6 +7539,9 @@ int main(int argc, char*argv[]) {
 
   /* Initialise the browsefilter array */
   browsefilter = cupsArrayNew(compare_pointers, NULL);
+
+  /* Initialise the clusters array */
+  clusters = cupsArrayNew(compare_pointers, NULL);
 
   /* Read command line options */
   if (argc >= 2) {
