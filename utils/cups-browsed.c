@@ -6785,16 +6785,6 @@ browse_ldap_poll (gpointer data)
 }
 #endif /* HAVE_LDAP */
 
-int
-compare_pointers (void *a, void *b, void *data)
-{
-  if (a < b)
-    return -1;
-  if (a > b)
-    return 1;
-  return 0;
-}
-
 static void
 sigterm_handler(int sig) {
   (void)sig;    /* remove compiler warnings... */
@@ -7314,7 +7304,7 @@ read_configuration (const char *filename)
       cluster = calloc (1, sizeof (cluster_t));
       if (!cluster) goto cluster_fail;
       cluster->local_queue_name = start;
-      cluster->members = cupsArrayNew(compare_pointers, NULL);
+      cluster->members = cupsArrayNew(NULL, NULL);
       if (!*ptr) {
 	/* Only local queue name given, so assume this name as the only
 	   member name (only remote queues with this name match) */
@@ -7532,16 +7522,16 @@ int main(int argc, char*argv[]) {
   int subscription_id = 0;
 
   /* Initialise the command_line_config array */
-  command_line_config = cupsArrayNew(compare_pointers, NULL);
+  command_line_config = cupsArrayNew(NULL, NULL);
 
   /* Initialise the browseallow array */
-  browseallow = cupsArrayNew(compare_pointers, NULL);
+  browseallow = cupsArrayNew(NULL, NULL);
 
   /* Initialise the browsefilter array */
-  browsefilter = cupsArrayNew(compare_pointers, NULL);
+  browsefilter = cupsArrayNew(NULL, NULL);
 
   /* Initialise the clusters array */
-  clusters = cupsArrayNew(compare_pointers, NULL);
+  clusters = cupsArrayNew(NULL, NULL);
 
   /* Read command line options */
   if (argc >= 2) {
@@ -7782,7 +7772,7 @@ int main(int argc, char*argv[]) {
     sleep(1);
 
   /* Initialise the array of network interfaces */
-  netifs = cupsArrayNew(compare_pointers, NULL);
+  netifs = cupsArrayNew(NULL, NULL);
   update_netifs (NULL);
 
   local_printers = g_hash_table_new_full (g_str_hash,
@@ -7801,7 +7791,7 @@ int main(int argc, char*argv[]) {
     default_printer = strdup(val);
     free(val);
   }
-  remote_printers = cupsArrayNew(compare_pointers, NULL);
+  remote_printers = cupsArrayNew(NULL, NULL);
   g_hash_table_foreach (local_printers, find_previous_queue, NULL);
 
   /* Redirect SIGINT and SIGTERM so that we do a proper shutdown, removing

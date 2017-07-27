@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.15.0 - 2017-07-24
 
 CHANGES IN V1.16.0
 
+	- cups-browsed: Let elements in arrays get stacked up in the
+	  order they are added, before, they were in the order how
+	  they are positioned in memory. This especially led to a
+	  random order of printer cluster definitions and of
+	  command-line-supplied configuration options.
 	- cups-browsed: On shutdown not all locally created queues got
           deleted.
 	- cups-browsed: Added support for manual definition of
