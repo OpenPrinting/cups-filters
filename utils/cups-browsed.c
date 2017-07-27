@@ -3777,6 +3777,7 @@ create_remote_printer_entry (const char *queue_name,
   }
 
   /* Add the new remote printer entry */
+  log_all_printers();
   cupsArrayAdd(remote_printers, p);
   log_all_printers();
 
@@ -3914,6 +3915,7 @@ gboolean update_cups_queues(gpointer unused) {
       p->slave_of = r;
 
   debug_printf("Processing printer list ...\n");
+  log_all_printers();
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
 
@@ -4062,8 +4064,6 @@ gboolean update_cups_queues(gpointer unused) {
       if (p->ifscript) free (p->ifscript);
       free(p);
       p = NULL;
-      if (q) log_cluster(q);
-      log_all_printers();
 
       /* If auto shutdown is active and all printers we have set up got removed
 	 again, schedule the shutdown in autoshutdown_timeout seconds 
@@ -4104,7 +4104,6 @@ gboolean update_cups_queues(gpointer unused) {
 
       debug_printf("Creating/Updating CUPS queue %s\n",
 		   p->queue_name);
-      log_cluster(p);
 
       /* Make sure to have a connection to the local CUPS daemon */
       if ((http = http_connect_local ()) == NULL) {
@@ -4642,6 +4641,7 @@ gboolean update_cups_queues(gpointer unused) {
 
     }
   }
+  log_all_printers();
 
   free(r);
   
@@ -7801,7 +7801,7 @@ int main(int argc, char*argv[]) {
     default_printer = strdup(val);
     free(val);
   }
-  remote_printers = cupsArrayNew(NULL, NULL);
+  remote_printers = cupsArrayNew(compare_pointers, NULL);
   g_hash_table_foreach (local_printers, find_previous_queue, NULL);
 
   /* Redirect SIGINT and SIGTERM so that we do a proper shutdown, removing
