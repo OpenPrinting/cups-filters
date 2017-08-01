@@ -6408,6 +6408,7 @@ browse_poll_get_printers (browsepoll_t *context, http_t *conn)
 
     uri = NULL;
     info = NULL;
+    location = NULL;
     while (attr && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
 
       if (!strcasecmp (ippGetName(attr), "printer-uri-supported") &&
