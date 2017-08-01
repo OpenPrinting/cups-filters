@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.16.0 - 2017-07-27
 
 CHANGES IN V1.16.1
 
+	- cups-browsed: Additional NULL checks for description and
+          location.
 	- cups-browsed: Fixed crash which happens when using
 	  BrowsePoll (Debian bug #723835).
 

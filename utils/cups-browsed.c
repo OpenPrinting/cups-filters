@@ -3292,7 +3292,8 @@ create_remote_printer_entry (const char *queue_name,
   int is_appleraster = 0;
 #endif /* HAVE_CUPS_1_6 */
 
-  if (!queue_name || !uri || !host || !service_name || !type || !domain) {
+  if (!queue_name || !location || !info || !uri || !host || !service_name ||
+      !type || !domain) {
     debug_printf("ERROR: create_remote_printer_entry(): Input value missing!\n");
     return NULL;
   }
@@ -4855,7 +4856,8 @@ examine_discovered_printer_record(const char *host,
        *local_queue_name_lower = NULL;
   int is_cups_queue;
   
-  if (!host || !resource || !service_name || !type || !domain) {
+  if (!host || !resource || !service_name || !location || !info || !type ||
+      !domain) {
     debug_printf("ERROR: examine_discovered_printer_record(): Input value missing!\n");
     return NULL;
   }
@@ -5601,11 +5603,11 @@ static void resolve_callback(
 	    examine_discovered_printer_record((strcasecmp(ifname, "lo") &&
 					       host_name ? host_name : addrstr),
 					      addrstr, port, rp_value, name,
-					      NULL, instance, type, domain,
+					      "", instance, type, domain,
 					      txt);
 	  } else
 	    examine_discovered_printer_record(host_name, NULL, port, rp_value,
-					      name, NULL, instance, type,
+					      name, "", instance, type,
 					      domain, txt);
 	} else
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not determine IP address.\n",
@@ -5616,7 +5618,7 @@ static void resolve_callback(
 	   point to it */
 	if (host_name)
 	  examine_discovered_printer_record(host_name, NULL, port, rp_value,
-					    name, NULL, instance, type, domain,
+					    name, "", instance, type, domain,
 					    txt);
 	else
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, host name not supplied.\n",
@@ -5981,7 +5983,7 @@ found_cups_printer (const char *remote_host, const char *uri,
 
   if (strncasecmp (resource, "/printers/", 10) &&
       strncasecmp (resource, "/classes/", 9)) {
-    debug_printf("don't understand URI: %s\n", uri);
+    debug_printf("Don't understand URI: %s\n", uri);
     return;
   }
 
