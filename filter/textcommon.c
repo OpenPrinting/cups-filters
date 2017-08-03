@@ -1084,7 +1084,8 @@ TextMain(const char *name,	/* I - Name of filter */
 
             if (PrettyPrint)
               Page[line][i].attr = attr;
-	    else if (ch == ' ' && Page[line][i].ch)
+
+	    if (ch == ' ' && Page[line][i].ch)
 	      ch = Page[line][i].ch;
             else if (ch == Page[line][i].ch)
               Page[line][i].attr |= ATTR_BOLD;
