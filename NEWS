@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.16.0 - 2017-07-27
 
 CHANGES IN V1.16.1
 
+	- texttopdf: When "prettyprint" is used, do not drop out of
+	  C/shell comment mode too early. Thanks to Michael Moran
+	  (vampm at comcast dot net) for the patch.
 	- cups-browsed: Additional NULL checks for description and
           location.
 	- cups-browsed: Fixed crash which happens when using
