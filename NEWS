@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.16.0 - 2017-07-27
 
 CHANGES IN V1.16.1
 
+	- texttopdf: Allow to alter margins, and chars/lines per Inch
+	  when using "prettyprint". Thanks to Michael Moran (vampm at
+	  comcast dot net) for the patch.
 	- texttopdf: When "prettyprint" is used, do not drop out of
 	  C/shell comment mode too early. Thanks to Michael Moran
 	  (vampm at comcast dot net) for the patch.
