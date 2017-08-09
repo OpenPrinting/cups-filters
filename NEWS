@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.16.0 - 2017-07-27
 
 CHANGES IN V1.16.1
 
+	- cups-browsed: Make timeouts for HTTP access to the local
+	  CUPS daemon and remote IPP printers configurable. Thanks to
+	  Cedric Dufour (cedric dot dufour at idiap dot ch) for the
+	  patch (Bug #1387, Debian bug #852436).
 	- texttopdf: Allow bold and underline formatting to be used
 	  together when using "prettyprint". Thanks to Michael Moran
 	  (vampm at comcast dot net) for the patch.

@@ -301,6 +301,16 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # DomainSocket Off
 
 
+# Set HTTP timeout (in seconds) for requests sent to local/remote
+# resources Note that too short timeouts can make services getting
+# missed when they are present and operations be unneccesarily
+# repeated and too long timeouts can make operations take too long
+# when the server does not respond.
+
+# HttpLocalTimeout 5
+# HttpRemoteTimeout 10
+
+
 # Set OnlyUnsupportedByCUPS to "Yes" will make cups-browsed not create
 # local queues for remote printers for which CUPS creates queues by
 # itself.  These printers are printers advertised via DNS-SD and doing

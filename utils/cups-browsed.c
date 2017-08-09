@@ -375,6 +375,8 @@ static size_t NumBrowsePoll = 0;
 static guint update_netifs_sourceid = 0;
 static char local_server_str[1024];
 static char *DomainSocket = NULL;
+static unsigned int HttpLocalTimeout = 5;
+static unsigned int HttpRemoteTimeout = 10;
 static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static local_queue_naming_t LocalQueueNamingRemoteCUPS=LOCAL_QUEUE_NAMING_DNSSD;
 static local_queue_naming_t LocalQueueNamingIPPPrinter=LOCAL_QUEUE_NAMING_DNSSD;
@@ -627,6 +629,7 @@ httpConnectEncryptShortTimeout(const char *host, int port,
 int
 http_timeout_cb(http_t *http, void *user_data)
 {
+  debug_printf("HTTP timeout! (consider increasing HttpLocalTimeout/HttpRemoteTimeout value)\n");
   return 0;
 }
 
@@ -639,7 +642,7 @@ http_connect_local (void)
 						cupsEncryption());
   }
   if (local_conn)
-    httpSetTimeout(local_conn, 3, http_timeout_cb, NULL);
+    httpSetTimeout(local_conn, HttpLocalTimeout, http_timeout_cb, NULL);
   else
     debug_printf("cups-browsed: Failed creating http connection to local CUPS daemon: %s:%d\n", cupsServer(), ippPort());
 
@@ -2980,7 +2983,7 @@ on_printer_state_changed (CupsNotifier *object,
 		       p->port);
 	  if (http) {
 	    /* Check whether the printer is idle, processing, or disabled */
-	    httpSetTimeout(http, 2, http_timeout_cb, NULL);
+	    httpSetTimeout(http, HttpRemoteTimeout, http_timeout_cb, NULL);
 	    request = ippNewRequest(CUPS_GET_PRINTERS);
 	    ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
 			  "requested-attributes",
@@ -4112,7 +4115,7 @@ gboolean update_cups_queues(gpointer unused) {
 	p->timeout = current_time + TIMEOUT_RETRY;
 	break;
       }
-      httpSetTimeout(http, 3, http_timeout_cb, NULL);
+      httpSetTimeout(http, HttpLocalTimeout, http_timeout_cb, NULL);
 
       /* Do not auto-save option settings due to the print queue creation
 	 process */
@@ -4276,7 +4279,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    p->no_autosave = 0;
 	    break;
 	  }
-	  httpSetTimeout(remote_http, 3, http_timeout_cb, NULL);
+	  httpSetTimeout(remote_http, HttpRemoteTimeout, http_timeout_cb, NULL);
 	  if ((loadedppd = cupsGetPPD2(remote_http, remote_cups_queue))
 	      == NULL &&
 	      CreateRemoteRawPrinterQueues == 0) {
@@ -6529,7 +6532,7 @@ browse_poll_cancel_subscription (browsepoll_t *context)
     return;
   }
 
-  httpSetTimeout(conn, 3, http_timeout_cb, NULL);
+  httpSetTimeout(conn, HttpRemoteTimeout, http_timeout_cb, NULL);
 
   debug_printf ("cups-browsed [BrowsePoll %s:%d]: IPP-Cancel-Subscription\n",
 		context->server, context->port);
@@ -6675,7 +6678,7 @@ browse_poll (gpointer data)
     goto fail;
   }
 
-  httpSetTimeout(conn, 3, http_timeout_cb, NULL);
+  httpSetTimeout(conn, HttpRemoteTimeout, http_timeout_cb, NULL);
 
   if (context->can_subscribe) {
     if (context->subscription_id == -1) {
@@ -7185,6 +7188,19 @@ read_configuration (const char *filename)
     } else if (!strcasecmp(line, "DomainSocket") && value) {
       if (value[0] != '\0')
 	DomainSocket = strdup(value);
+    } else if ((!strcasecmp(line, "HttpLocalTimeout") || !strcasecmp(line, "HttpRemoteTimeout")) && value) {
+      int t = atoi(value);
+      if (t >= 0) {
+	if (!strcasecmp(line, "HttpLocalTimeout"))
+	  HttpLocalTimeout = t;
+	else if (!strcasecmp(line, "HttpRemoteTimeout"))
+	  HttpRemoteTimeout = t;
+
+	debug_printf("Set %s to %d sec.\n",
+		     line, t);
+      } else
+	debug_printf("Invalid %s value: %d\n",
+		     line, t);
     } else if (!strcasecmp(line, "IPBasedDeviceURIs") && value) {
       if (!strcasecmp(value, "IPv4") || !strcasecmp(value, "IPv4Only"))
 	IPBasedDeviceURIs = IP_BASED_URIS_IPV4_ONLY;

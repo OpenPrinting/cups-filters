@@ -416,6 +416,19 @@ or "Off" lets cups-browsed not use CUPS' domain socket.
 
 .fam T
 .fi
+Set HTTP timeout (in seconds) for requests sent to local/remote
+resources Note that too short timeouts can make services getting
+missed when they are present and operations be unneccesarily
+repeated and too long timeouts can make operations take too long
+when the server does not respond.
+.PP
+.nf
+.fam C
+        HttpLocalTimeout 5
+        HttpRemoteTimeout 10
+
+.fam T
+.fi
 The interval between browsing/broadcasting cycles, local and/or
 remote, can be adjusted with the BrowseInterval directive.
 .PP
