@@ -13,13 +13,13 @@ INTRODUCTION
     provides System V and Berkeley command-line interfaces, a web
     interface, and a C API to manage printers and print jobs.
 
-    This distribution contains backends, filters, and other software
-    that was once part of the core CUPS distribution but is no longer
+    This package contains backends, filters, and other software that
+    was once part of the core CUPS distribution but is no longer
     maintained by Apple Inc. In addition it contains additional
     filters and software developed independently of Apple, especially
     filters for the PDF-centric printing workflow introduced by
-    OpenPrinting and a daemon to browse Bonjour broadcasts of remote
-    CUPS printers and makes these printers available locally.
+    OpenPrinting and a daemon to browse broadcasts of remote CUPS
+    printers and IPP printers to make them available locally.
 
     From CUPS 1.6.0 on, this package is required for using printer
     drivers with CUPS under Linux. With CUPS 1.5.x and earlier this
@@ -34,15 +34,24 @@ INTRODUCTION
     have at least one of Ghostscript, Poppler, or MuPDF. To print
     banner pages Poppler is needed.
 
+    The Poppler-based filters need a C++ compiler which supports C++11
+    and Poppler being built with the "./configure" options
+    "--enable-splash --disable-fixedpoint --disable-single-precision"
+    (if in the actually used Poppler version such options are
+    available). This is the case for most modern Linux distributions.
+
     For Braille embosser support (see below) you will also need at
     least liblouis, ImageMagick, and poppler-utils. Recommended is to
     also have liblouisutdml, antiword, docx2txt for more sophisticated
     Braille generation representing also the formatting of the input
     text. None of these is needed for compiling cups-filters.
 
-    CUPS, this package, and Ghostscript contain some rudimentary printer
-    drivers, see http://www.openprinting.org/drivers/ for a more
-    comprehensive set of printer drivers for Linux.
+    CUPS, this package, and Ghostscript contain some rudimentary
+    printer drivers and especially the filters needed for driverless
+    printing (currently PWG Raster, Apple Raster, and PDF output
+    formats, for AirPrint and IPP Everywhere printers), see
+    http://www.openprinting.org/drivers/ for a more comprehensive set
+    of printer drivers for Linux.
 
     See
     

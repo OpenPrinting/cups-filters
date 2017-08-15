@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.16.1 - 2017-08-11
 
 CHANGES IN V1.16.1
 
+	- README: Updated the introduction section to reflect the
+	  current functionality of cups-filters, and the build
+	  requirements for the Poppler-based filters (C++11: Bug
+	  #1404, Build configuration of Poppler: Bug #1257). Thanks to
+	  Roland Hieber (r dot hieber at pengutronix dot de) to find
+	  out about this.
 	- pdftoopvp, bannertopdf, pdftoraster: Build with C++11
 	  standard as some features of this standard are needed by
 	  these filters (or by Poppler). Thanks to Roland Hieber (r
