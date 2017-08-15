@@ -197,7 +197,8 @@ _cupsImageReadPNM(
           break;
 
       case 4 :
-          fread(out, (img->xsize + 7) / 8, 1, fp);
+          if (fread(out, (img->xsize + 7) / 8, 1, fp) == 0 && ferror(fp))
+	    DEBUG_printf(("Error reading file!"));
           for (x = img->xsize, inptr = in, outptr = out, bit = 128;
                x > 0;
                x --, inptr ++)
@@ -218,11 +219,13 @@ _cupsImageReadPNM(
           break;
 
       case 5 :
-          fread(in, img->xsize, 1, fp);
+          if (fread(in, img->xsize, 1, fp) == 0 && ferror(fp))
+	    DEBUG_printf(("Error reading file!"));
           break;
 
       case 6 :
-          fread(in, img->xsize, 3, fp);
+          if (fread(in, img->xsize, 3, fp) == 0 && ferror(fp))
+	    DEBUG_printf(("Error reading file!"));
           break;
     }
 

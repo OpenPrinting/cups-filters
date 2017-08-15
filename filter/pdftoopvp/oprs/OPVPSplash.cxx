@@ -1716,7 +1716,6 @@ SplashError OPVPSplash::drawImageFastWithCTM(SplashImageSource src,
   opvp_fix_t opvpx,opvpy;
   int opvpbytes;
   opvp_ctm_t opvpctm;
-  SplashError result = splashOk;
   Guchar *buf = 0, *bp;
 
   switch (colorMode) {
@@ -1752,7 +1751,6 @@ SplashError OPVPSplash::drawImageFastWithCTM(SplashImageSource src,
     break;
   default:
     OPRS::error("Image: no supported color mode\n");
-    result = splashErrOPVP;
     goto err0;
     break;
   }
@@ -1774,7 +1772,6 @@ SplashError OPVPSplash::drawImageFastWithCTM(SplashImageSource src,
   }
   if (opvp->DrawImage(w,h,opvpbytes,OPVP_IFORMAT_RAW,1,1,(void *)(buf)) < 0) {
     OPRS::error("DrawImage error\n");
-    result = splashErrOPVP;
   }
 err0:
   /* reset CTM */
@@ -1795,7 +1792,7 @@ err0:
 SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
 			      SplashColorMode srcMode, GBool srcAlpha,
 			      int w, int h, SplashCoord *mat) {
-  GBool ok, rot, halftone;
+  GBool ok, rot;
   SplashCoord xScale, yScale, xShear, yShear;
   int tx, ty, scaledWidth, scaledHeight, xSign, ySign;
   int ulx, uly, llx, lly, urx, ury, lrx, lry;
@@ -1828,7 +1825,6 @@ SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
     OPRS::error("Image Mode mismatch\n");
     return splashErrModeMismatch;
   }
-  halftone = colorMode == splashModeMono1 && srcMode == splashModeMono8;
 
   // check for singular matrix
   if (splashAbs(mat[0] * mat[3] - mat[1] * mat[2]) < 0.000001) {
@@ -1926,7 +1922,6 @@ SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
 
   opvp_fix_t opvpx,opvpy;
   int opvpbytes, linesize;
-  OPVP_Rectangle opvprect;
   int width = xMax-xMin+1;
   int height = yMax-yMin+1;
   opvp_ctm_t opvpctm;
@@ -1975,8 +1970,6 @@ SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
   opvpctm.b = 0.0;
   opvpctm.c = 0.0;
   opvpctm.d = 1.0;
-  OPVP_i2Fix(0,opvprect.p0.x);
-  OPVP_i2Fix(0,opvprect.p0.y);
 
   clip = state->clip->copy();
   if (w < scaledWidth || h < scaledHeight) {
@@ -2095,8 +2088,6 @@ SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
 	result = splashErrOPVP;
 	goto err1;
       }
-      OPVP_i2Fix(n,opvprect.p1.x);
-      OPVP_i2Fix(1,opvprect.p1.y);
       /* canonlisp driver use CTM only, ignores currentPoint */
       /* So, set start point to CTM */
       opvpctm.e = xMin+sx;

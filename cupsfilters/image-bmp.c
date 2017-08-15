@@ -163,9 +163,10 @@ _cupsImageReadBMP(
   if (colors_used == 0 && depth <= 8)
     colors_used = 1 << depth;
 
-  if (colors_used > 0)
-    fread(colormap, colors_used, 4, fp);
-  else
+  if (colors_used > 0) {
+    if (fread(colormap, colors_used, 4, fp) == 0 && ferror(fp))
+      DEBUG_printf(("Error reading file!"));
+  } else
     memset(colormap, 0, sizeof(colormap));
 
  /*

@@ -110,7 +110,6 @@ static unsigned parse_show(char *s)
 static char * template_path(const char *name)
 {
     char *datadir, *result;
-    size_t len;
 
     if (name[0] == '/')
         return strdup(name);

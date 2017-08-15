@@ -123,9 +123,12 @@ _cupsImageReadSunRaster(
     memset(cmap[1], 0, sizeof(cmap[1]));
     memset(cmap[2], 0, sizeof(cmap[2]));
 
-    fread(cmap[0], 1, ras_maplength / 3, fp);
-    fread(cmap[1], 1, ras_maplength / 3, fp);
-    fread(cmap[2], 1, ras_maplength / 3, fp);
+    if (fread(cmap[0], 1, ras_maplength / 3, fp) == 0 && ferror(fp))
+      DEBUG_printf(("Error reading file!"));
+    if (fread(cmap[1], 1, ras_maplength / 3, fp) == 0 && ferror(fp))
+      DEBUG_printf(("Error reading file!"));
+    if (fread(cmap[2], 1, ras_maplength / 3, fp) == 0 && ferror(fp))
+      DEBUG_printf(("Error reading file!"));
   }
 
  /*
@@ -186,7 +189,10 @@ _cupsImageReadSunRaster(
       p = in;
 
     if (ras_type != RT_BYTE_ENCODED)
-      fread(p, scanwidth, 1, fp);
+    {
+      if (fread(p, scanwidth, 1, fp) == 0 && ferror(fp))
+	DEBUG_printf(("Error reading file!"));
+    }
     else
     {
       for (i = scanwidth; i > 0; i --, p ++)

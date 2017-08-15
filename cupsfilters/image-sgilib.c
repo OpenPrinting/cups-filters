@@ -27,6 +27,7 @@
  */
 
 #include "image-sgi.h"
+#include "image-private.h"
 
 
 /*
@@ -546,7 +547,8 @@ getlong(FILE *fp)			/* I - File to read from */
   unsigned char	b[4];			/* Bytes from file */
 
 
-  fread(b, 4, 1, fp);
+  if (fread(b, 4, 1, fp) == 0 && ferror(fp))
+    DEBUG_printf(("Error reading file!"));
   return ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]);
 }
 
@@ -561,7 +563,8 @@ getshort(FILE *fp)			/* I - File to read from */
   unsigned char	b[2];			/* Bytes from file */
 
 
-  fread(b, 2, 1, fp);
+  if (fread(b, 2, 1, fp) == 0 && ferror(fp))
+    DEBUG_printf(("Error reading file!"));
   return ((b[0] << 8) | b[1]);
 }
 

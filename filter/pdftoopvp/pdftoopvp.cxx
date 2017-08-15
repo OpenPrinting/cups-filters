@@ -156,7 +156,7 @@ static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
     const char *cupsICCQualifier3Choice;
     ppd_attr_t *attr;
     ppd_choice_t *choice;
-    char *datadir;
+    const char *datadir;
 
     if ((attr = ppdFindAttr(ppd,"ColorModel",NULL)) != NULL) {
 	colorModel = attr->value;

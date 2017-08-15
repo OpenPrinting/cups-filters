@@ -707,7 +707,7 @@ jobparams_t * create_job()
     passwd = getpwuid(getuid());
     if (passwd)
         strlcpy(job->user, passwd->pw_name, 128);
-    snprintf(job->title, 128, "%s@%s", job->user, job->host);
+    snprintf(job->title, 2048, "%s@%s", job->user, job->host);
 
     return job;
 }
@@ -809,7 +809,7 @@ int main(int argc, char** argv)
     }
 
     if (getenv("PPD")) {
-        strncpy(job->ppdfile, getenv("PPD"), 256);
+        strncpy(job->ppdfile, getenv("PPD"), 2048);
         spooler = SPOOLER_CUPS;
 	if (getenv("CUPS_SERVERBIN"))
 	    strncpy(cupsfilterpath, getenv("CUPS_SERVERBIN"),
@@ -824,7 +824,7 @@ int main(int argc, char** argv)
     if (spooler != SPOOLER_CUPS) {
 
         if ((str = arglist_get_value(arglist, "-j")) || (str = arglist_get_value(arglist, "-J"))) {
-            strncpy_omit(job->title, str, 128, omit_shellescapes);
+            strncpy_omit(job->title, str, 2048, omit_shellescapes);
           if (!arglist_remove(arglist, "-j"))
         	arglist_remove(arglist, "-J");
 	}
@@ -832,11 +832,11 @@ int main(int argc, char** argv)
         /* PPD file name given via the command line
            allow duplicates, and use the last specified one */
             while ((str = arglist_get_value(arglist, "-p"))) {
-                strncpy(job->ppdfile, str, 256);
+                strncpy(job->ppdfile, str, 2048);
                 arglist_remove(arglist, "-p");
             }
 	    while ((str = arglist_get_value(arglist, "--ppd"))) {
-	        strncpy(job->ppdfile, str, 256);
+	        strncpy(job->ppdfile, str, 2048);
 	        arglist_remove(arglist, "--ppd");
 	    }
 

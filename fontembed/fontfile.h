@@ -10,7 +10,7 @@ struct _FONTFILE {
   union {
     int fobj;
     void *user;
-  };
+  } fo;
 };
 
 typedef struct _FONTFILE FONTFILE;

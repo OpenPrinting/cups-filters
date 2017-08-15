@@ -92,7 +92,8 @@ _cupsImageReadGIF(
   * Read the header; we already know it is a GIF file...
   */
 
-  fread(buf, 13, 1, fp);
+  if (fread(buf, 13, 1, fp) == 0 && ferror(fp))
+    DEBUG_printf(("Error reading file!"));
 
   img->xsize = (buf[7] << 8) | buf[6];
   img->ysize = (buf[9] << 8) | buf[8];
@@ -129,7 +130,8 @@ _cupsImageReadGIF(
           break;
 
       case ',' :	/* cupsImage data */
-          fread(buf, 9, 1, fp);
+          if (fread(buf, 9, 1, fp) == 0 && ferror(fp))
+	    DEBUG_printf(("Error reading file!"));
 
           if (buf[8] & GIF_COLORMAP)
           {

@@ -244,7 +244,8 @@ _get_colord_profile(const char   *printer_name,     /* Dest name */
     if (qualifier != NULL) {
       printer_id = _get_colord_printer_id(printer_name);
       /* Get profile from colord using qualifiers */
-      icc_profile = colord_get_profile_for_device_id (printer_id, qualifier);
+      icc_profile = colord_get_profile_for_device_id ((const char *)printer_id,
+						      (const char **)qualifier);
     }
 
     if (icc_profile) 

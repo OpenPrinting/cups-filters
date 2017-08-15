@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.16.1 - 2017-08-11
 
 CHANGES IN V1.16.1
 
+	- All C/C++ files: Silenced all compiler warnings, at least
+	  the ones appearing when building on Ubuntu Linux 17.10 with
+	  GCC 7.1.0.
 	- README: Updated the introduction section to reflect the
 	  current functionality of cups-filters, and the build
 	  requirements for the Poppler-based filters (C++11: Bug

@@ -511,7 +511,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
   Gushort *codeToGID;
 #endif
   double m11, m12, m21, m22;
-  int substIdx, n;
+  int n;
   int faceIndex = 0;
   GBool recreateFont = gFalse;
 
@@ -519,7 +519,6 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
   font = NULL;
   fileName = NULL;
   tmpBuf = NULL;
-  substIdx = -1;
 
   if (!(gfxFont = state->getFont())) {
     goto err1;

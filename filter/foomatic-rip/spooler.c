@@ -43,7 +43,7 @@ void init_cups(list_t *arglist, dstr_t *filelist, jobparams_t *job)
     char path [PATH_MAX] = "";
     char cups_jobid [128];
     char cups_user [128];
-    char cups_jobtitle [128];
+    char cups_jobtitle [2048];
     char cups_copies [128];
     int cups_options_len;
     char *cups_options;
@@ -64,12 +64,14 @@ void init_cups(list_t *arglist, dstr_t *filelist, jobparams_t *job)
     /* Get all command line parameters */
     strncpy_omit(cups_jobid, arglist_get(arglist, 0), 128, omit_shellescapes);
     strncpy_omit(cups_user, arglist_get(arglist, 1), 128, omit_shellescapes);
-    strncpy_omit(cups_jobtitle, arglist_get(arglist, 2), 128, omit_shellescapes);
+    strncpy_omit(cups_jobtitle, arglist_get(arglist, 2), 2048,
+		 omit_shellescapes);
     strncpy_omit(cups_copies, arglist_get(arglist, 3), 128, omit_shellescapes);
 
     cups_options_len = strlen(arglist_get(arglist, 4));
     cups_options = malloc(cups_options_len + 1);
-    strncpy_omit(cups_options, arglist_get(arglist, 4), cups_options_len + 1, omit_shellescapes);
+    strncpy_omit(cups_options, arglist_get(arglist, 4), cups_options_len + 1,
+		 omit_shellescapes);
 
     /* Common job parameters */
     strcpy(job->id, cups_jobid);
@@ -106,22 +108,22 @@ int find_ppdfile(const char *user_default_path, jobparams_t *job)
     if (access(job->ppdfile, R_OK) == 0)
         return 1;
 
-    snprintf(job->ppdfile, 256, "%s.ppd", job->printer); /* current dir */
+    snprintf(job->ppdfile, 2048, "%s.ppd", job->printer); /* current dir */
     if (access(job->ppdfile, R_OK) == 0)
         return 1;
-    snprintf(job->ppdfile, 256, "%s/%s.ppd", user_default_path, job->printer); /* user dir */
+    snprintf(job->ppdfile, 2048, "%s/%s.ppd", user_default_path, job->printer); /* user dir */
     if (access(job->ppdfile, R_OK) == 0)
         return 1;
-    snprintf(job->ppdfile, 256, "%s/direct/%s.ppd", CONFIG_PATH, job->printer); /* system dir */
+    snprintf(job->ppdfile, 2048, "%s/direct/%s.ppd", CONFIG_PATH, job->printer); /* system dir */
     if (access(job->ppdfile, R_OK) == 0)
         return 1;
-    snprintf(job->ppdfile, 256, "%s/%s.ppd", CONFIG_PATH, job->printer); /* system dir */
+    snprintf(job->ppdfile, 2048, "%s/%s.ppd", CONFIG_PATH, job->printer); /* system dir */
     if (access(job->ppdfile, R_OK) == 0)
         return 1;
-    snprintf(job->ppdfile, 256, "/etc/cups/ppd/%s.ppd", job->printer); /* CUPS config dir */
+    snprintf(job->ppdfile, 2048, "/etc/cups/ppd/%s.ppd", job->printer); /* CUPS config dir */
     if (access(job->ppdfile, R_OK) == 0)
         return 1;
-    snprintf(job->ppdfile, 256, "/usr/local/etc/cups/ppd/%s.ppd", job->printer); /* CUPS config dir */
+    snprintf(job->ppdfile, 2048, "/usr/local/etc/cups/ppd/%s.ppd", job->printer); /* CUPS config dir */
     if (access(job->ppdfile, R_OK) == 0)
         return 1;
 

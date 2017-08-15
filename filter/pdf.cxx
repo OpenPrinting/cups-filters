@@ -546,7 +546,8 @@ extern "C" int pdf_fill_form(pdf_t *doc, opt_t *opt)
     /* Page's resources dictionary */
     Object resdict;
     Ref resref;
-    Object *ret = get_resource_dict(xref, pageobj.getDict(), &resdict, &resref);
+    
+    get_resource_dict(xref, pageobj.getDict(), &resdict, &resref);
 
     FormPageWidgets *widgets = page->getFormWidgets();
     if ( !widgets ) {

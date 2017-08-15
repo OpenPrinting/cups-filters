@@ -370,7 +370,8 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
 
     // Read profile into memory
     cmsSaveProfileToMem(colorProfile, NULL, &profile_size);
-    unsigned char buff[profile_size];
+    unsigned char *buff =
+      (unsigned char *)calloc(profile_size, sizeof(unsigned char));
     cmsSaveProfileToMem(colorProfile, buff, &profile_size);
 
     // Write ICC profile buffer into PDF
@@ -384,6 +385,7 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
     // Return a PDF object reference to an '/ICCBased' array
     ret = pdf.makeIndirectObject(array);
 
+    free(buff);
     fputs("DEBUG: ICC Profile embedded in PDF.\n", stderr); 
 
     return ret;
@@ -874,7 +876,7 @@ int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
     // We should be at raster start
     int i;
     unsigned cur_line = 0;
-    unsigned char *PixelBuffer, *ptr, *buff;
+    unsigned char *PixelBuffer, *ptr = NULL, *buff;
 
     PixelBuffer = (unsigned char *)malloc(bpl);
     buff = (unsigned char *)malloc(info->line_bytes);

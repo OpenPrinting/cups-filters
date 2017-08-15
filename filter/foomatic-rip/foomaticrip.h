@@ -85,8 +85,8 @@ typedef struct {
     char id[128];
     char user[128];
     char host[128];
-    char title[128];
-    char ppdfile[256];
+    char title[2048];
+    char ppdfile[2048];
     char copies[128];
     int rbinumcopies;
     struct dstr *optstr;

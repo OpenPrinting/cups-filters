@@ -325,7 +325,8 @@ cupsImageOpen(
 
   fseek(fp, 2048, SEEK_SET);
   memset(header2, 0, sizeof(header2));
-  fread(header2, 1, sizeof(header2), fp);
+  if (fread(header2, 1, sizeof(header2), fp) == 0 && ferror(fp))
+    DEBUG_printf(("Error reading file!"));
   fseek(fp, 0, SEEK_SET);
 
  /*
@@ -661,7 +662,9 @@ flush_tile(cups_image_t *img)		/* I - Image */
     }
   }
 
-  write(img->cachefile, tile->ic->pixels, bpp * CUPS_TILE_SIZE * CUPS_TILE_SIZE);
+  if (write(img->cachefile, tile->ic->pixels,
+	    bpp * CUPS_TILE_SIZE * CUPS_TILE_SIZE) == -1)
+    DEBUG_printf(("Error writing cache tile!"));
 
   tile->ic    = NULL;
   tile->dirty = 0;
@@ -753,7 +756,9 @@ get_tile(cups_image_t *img,		/* I - Image */
                     CUPS_LLCAST tile->pos));
 
       lseek(img->cachefile, tile->pos, SEEK_SET);
-      read(img->cachefile, ic->pixels, bpp * CUPS_TILE_SIZE * CUPS_TILE_SIZE);
+      if (read(img->cachefile, ic->pixels,
+	       bpp * CUPS_TILE_SIZE * CUPS_TILE_SIZE) == -1)
+	DEBUG_printf(("Error reading cache tile!"));
     }
     else
     {

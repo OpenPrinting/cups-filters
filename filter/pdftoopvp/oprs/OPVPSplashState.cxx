@@ -26,11 +26,6 @@
 // SplashState
 //------------------------------------------------------------------------
 
-// number of components in each color mode
-static int opvpSplashColorModeNComps[] = {
-  1, 1, 3, 3, 4
-};
-
 OPVPSplashState::OPVPSplashState(int width, int height, GBool vectorAntialias,
 			 SplashScreenParams *screenParams) {
   SplashColor color;
