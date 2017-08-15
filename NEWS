@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.16.1 - 2017-08-11
 
 CHANGES IN V1.16.1
 
+	- pdftoopvp, bannertopdf, pdftoraster: Build with C++11
+	  standard as some features of this standard are needed by
+	  these filters (or by Poppler). Thanks to Roland Hieber (r
+	  dot hieber at pengutronix dot de) for the patch (Bug #1404).
 	- cups-browsed: Make timeouts for HTTP access to the local
 	  CUPS daemon and remote IPP printers configurable. Thanks to
 	  Cedric Dufour (cedric dot dufour at idiap dot ch) for the

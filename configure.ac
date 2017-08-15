@@ -52,6 +52,7 @@ AH_BOTTOM([
 # ===========================
 AC_PROG_CC
 AC_PROG_CXX
+AX_CXX_COMPILE_STDCXX([11],[noext],[mandatory])
 AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
