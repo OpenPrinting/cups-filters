@@ -1,8 +1,9 @@
 NEWS - OpenPrinting CUPS Filters v1.16.1 - 2017-08-11
 -----------------------------------------------------
 
-CHANGES IN V1.16.1
+CHANGES IN V1.16.2
 
+	- driverless, foomatic-rip: Create relative symbolic links.
 	- All C/C++ files: Silenced all compiler warnings, at least
 	  the ones appearing when building on Ubuntu Linux 17.10 with
 	  GCC 7.1.0.
@@ -16,6 +17,9 @@ CHANGES IN V1.16.1
 	  standard as some features of this standard are needed by
 	  these filters (or by Poppler). Thanks to Roland Hieber (r
 	  dot hieber at pengutronix dot de) for the patch (Bug #1404).
+
+CHANGES IN V1.16.1
+
 	- cups-browsed: Make timeouts for HTTP access to the local
 	  CUPS daemon and remote IPP printers configurable. Thanks to
 	  Cedric Dufour (cedric dot dufour at idiap dot ch) for the
