@@ -22,7 +22,7 @@ INTRODUCTION
     printers and IPP printers to make them available locally.
 
     From CUPS 1.6.0 on, this package is required for using printer
-    drivers with CUPS under Linux. With CUPS 1.5.x and earlier this
+    drivers with CUPS under Linux. With CUPS 1.5.x and 1.4.x this
     package can be used optionally to switch over to PDF-based
     printing. In that case some filters are provided by both CUPS and
     this package. Then the filters of this package should be used.

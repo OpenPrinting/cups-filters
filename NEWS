@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.16.1 - 2017-08-11
 
 CHANGES IN V1.16.2
 
+	- README: Minimum CUPS requirement of cups-filters is CUPS
+	  1.4.x.  It does not build with earlier CUPS versions (Bug
+	  #993).
 	- driverless, foomatic-rip: Create relative symbolic links.
 	- All C/C++ files: Silenced all compiler warnings, at least
 	  the ones appearing when building on Ubuntu Linux 17.10 with
