@@ -1,6 +1,10 @@
 NEWS - OpenPrinting CUPS Filters v1.16.2 - 2017-08-18
 -----------------------------------------------------
 
+CHANGES IN V1.16.3
+
+	- libfontembed: Reverted unneeded soname change.
+
 CHANGES IN V1.16.2
 
 	- README: Minimum CUPS requirement of cups-filters is CUPS

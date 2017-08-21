@@ -404,7 +404,7 @@ libfontembed_la_SOURCES = \
 	fontembed/sfnt_subset.c
 libfontembed_la_LDFLAGS = \
 	-no-undefined \
-	-version-info 2
+	-version-info 1
 
 ttfread_SOURCES = fontembed/main.c
 ttfread_LDADD = libfontembed.la
