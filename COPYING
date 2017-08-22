@@ -41,6 +41,7 @@ Copyright: 2007-2016 Apple Inc
  2011, Tim Waugh
  2013-2016, Till Kamppeter
  2014, Joseph Simon
+ 2017, Sahil Arora
 License: LGPL-2
 
 Files: cupsfilters/colord.c
@@ -106,6 +107,7 @@ Files: mime/cupsfilters*.convs*
 Copyright: 2007-2011, Apple Inc
   1997-2007, Easy Software Products
   2012-2016, Till Kamppeter
+  2017, Sahil Arora
 License: GPL-2
 
 Files: filter/foomatic-rip/*
@@ -173,10 +175,15 @@ Files: filter/pdfutils.c
 Copyright: 2008, Tobias Hoffmann
 License: GPL-2
 
+Files: filter/rastertopclm
+Copyright: 2017 Sahil Arora <sahilarora.535@gmail.com>
+License: GPL-3+
+
 Files: filter/rastertopdf.cpp
 Copyright: 2010, Neil 'Superna' Armstrong <superna9999@gmail.com>
  2012 Tobias Hoffmann <smilingthax@gmail.com>
  2014 Till Kamppeter <till.kamppeter@gmail.com>
+ 2017 Sahil Arora <sahilarora.535@gmail.com>
 License: GPL-3+
 
 Files: filter/rastertops.c
@@ -241,6 +248,7 @@ License: LGPL-2.1+
 Files: utils/driverless*
 Copyright: 2012-2016 Till Kamppeter
  2007-2016 Apple Inc.
+ 2017 Sahil Arora
 License: LGPL-2.1+
 
 Files: drv/cupsfilters.drv
