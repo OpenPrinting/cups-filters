@@ -12,11 +12,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * @brief Convert PWG Raster to a PDF file
+ * @brief Convert PWG Raster to a PDF/PCLm file
  * @file rastertopdf.cpp
  * @author Neil 'Superna' Armstrong <superna9999@gmail.com> (C) 2010
  * @author Tobias Hoffmann <smilingthax@gmail.com> (c) 2012
  * @author Till Kamppeter <till.kamppeter@gmail.com> (c) 2014
+ * @author Sahil Arora <sahilarora.535@gmail.com> (c) 2017
  */
 
 #include <config.h>
@@ -44,6 +45,8 @@
 
 #include <qpdf/Pl_Flate.hh>
 #include <qpdf/Pl_Buffer.hh>
+#include <qpdf/Pl_RunLength.hh>
+#include <qpdf/Pl_DCT.hh>
 
 #ifdef USE_LCMS1
 #include <lcms.h>
@@ -87,6 +90,17 @@
 
 #define iprintf(format, ...) fprintf(stderr, "INFO: (" PROGRAM ") " format, __VA_ARGS__)
 
+typedef enum {
+  OUTPUT_FORMAT_PDF,
+  OUTPUT_FORMAT_PCLM
+} OutFormatType;
+
+// Compression method for providing data to PCLm Streams.
+typedef enum {
+  DCT_DECODE = 0,
+  RLE_DECODE,
+  FLATE_DECODE
+} CompressionMethod;
 
 // Color conversion function
 typedef unsigned char *(*convertFunction)(unsigned char *src,
@@ -183,8 +197,68 @@ unsigned char *noColorConversion(unsigned char *src,
     return src;
 }
 
+/**
+ * 'split_strings()' - Split a string to a vector of strings given some delimiters
+ * O - std::vector of std::string after splitting
+ * I - input string to be split
+ * I - string containing delimiters
+ */
+static std::vector<std::string>
+split_strings(std::string const &str, std::string delimiters = ",")
+{
+  std::vector<std::string> vec(0);
+  std::string value = "";
+  bool push_flag = false;
 
+  for (size_t i = 0; i < str.size(); i ++)
+  {
+    if (push_flag && !(value.empty()))
+    {
+      vec.push_back(value);
+      push_flag = false;
+      value.clear();
+    }
 
+    if (delimiters.find(str[i]) != std::string::npos)
+      push_flag = true;
+    else
+      value += str[i];
+  }
+  if (!value.empty())
+    vec.push_back(value);
+  return vec;
+}
+
+/**
+ * 'num_digits()' - Calculates the number of digits in an integer
+ * O - number of digits in the input integer
+ * I - the integer whose digits needs to be calculated
+ */
+int num_digits(int n)
+{
+  if (n == 0) return 1;
+  int digits = 0;
+  while (n)
+  {
+    ++digits;
+    n /= 10;
+  }
+  return digits;
+}
+
+/**
+ * 'int_to_fwstring()' - Convert a number to fixed width string by padding with zeroes
+ * O - converted string
+ * I - the integee which needs to be converted to string
+ * I - width of string required
+ */
+std::string int_to_fwstring(int n, int width)
+{
+  int num_zeroes = width - num_digits(n);
+  if (num_zeroes < 0)
+    num_zeroes = 0;
+  return std::string(num_zeroes, '0') + QUtil::int_to_string(n);
+}
 
 void die(const char * str)
 {
@@ -201,9 +275,20 @@ struct pdf_info
       : pagecount(0),
         width(0),height(0),
         line_bytes(0),
-        bpp(0), bpc(0), render_intent(""),
+        bpp(0), bpc(0),
+        pclm_num_strips(0),
+        pclm_strip_height_preferred(16),  /* default strip height */
+        pclm_strip_height(0),
+        pclm_strip_height_supported(1, 16),
+        pclm_compression_method_preferred(0),
+        pclm_source_resolution_supported(0),
+        pclm_source_resolution_default(""),
+        pclm_raster_back_side(""),
+        pclm_strip_data(0),
+        render_intent(""),
         color_space(CUPS_CSPACE_K),
-        page_width(0),page_height(0)
+        page_width(0),page_height(0),
+        outformat(OUTPUT_FORMAT_PDF)
     {
     }
 
@@ -215,23 +300,34 @@ struct pdf_info
     unsigned line_bytes;
     unsigned bpp;
     unsigned bpc;
+    unsigned                  pclm_num_strips;
+    unsigned                  pclm_strip_height_preferred;
+    std::vector<unsigned>     pclm_strip_height;
+    std::vector<unsigned>     pclm_strip_height_supported;
+    std::vector<CompressionMethod> pclm_compression_method_preferred;
+    std::vector<std::string>  pclm_source_resolution_supported;
+    std::string               pclm_source_resolution_default;
+    std::string               pclm_raster_back_side;
+    std::vector< PointerHolder<Buffer> > pclm_strip_data;
     std::string render_intent;
     cups_cspace_t color_space;
     PointerHolder<Buffer> page_data;
     double page_width,page_height;
+    OutFormatType outformat;
 };
 
-int create_pdf_file(struct pdf_info * info)
+int create_pdf_file(struct pdf_info * info, const OutFormatType & outformat)
 {
     try {
         info->pdf.emptyPDF();
+        info->outformat = outformat;
     } catch (...) {
         return 1;
     }
     return 0;
 }
 
-QPDFObjectHandle makeBox(double x1, double y1, double x2, double y2)
+QPDFObjectHandle makeRealBox(double x1, double y1, double x2, double y2)
 {
     QPDFObjectHandle ret=QPDFObjectHandle::newArray();
     ret.appendItem(QPDFObjectHandle::newReal(x1));
@@ -241,6 +337,15 @@ QPDFObjectHandle makeBox(double x1, double y1, double x2, double y2)
     return ret;
 }
 
+QPDFObjectHandle makeIntegerBox(int x1, int y1, int x2, int y2)
+{
+    QPDFObjectHandle ret = QPDFObjectHandle::newArray();
+    ret.appendItem(QPDFObjectHandle::newInteger(x1));
+    ret.appendItem(QPDFObjectHandle::newInteger(y1));
+    ret.appendItem(QPDFObjectHandle::newInteger(x2));
+    ret.appendItem(QPDFObjectHandle::newInteger(y2));
+    return ret;
+}
 
 
 
@@ -314,7 +419,6 @@ void convertPdf_InvertColors(struct pdf_info * info)
 }
 
 
-
 #define PRE_COMPRESS
 
 // Create an '/ICCBased' array and embed a previously 
@@ -371,7 +475,7 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
     // Read profile into memory
     cmsSaveProfileToMem(colorProfile, NULL, &profile_size);
     unsigned char *buff =
-      (unsigned char *)calloc(profile_size, sizeof(unsigned char));
+        (unsigned char *)calloc(profile_size, sizeof(unsigned char));
     cmsSaveProfileToMem(colorProfile, buff, &profile_size);
 
     // Write ICC profile buffer into PDF
@@ -489,6 +593,109 @@ QPDFObjectHandle getCalRGBArray(double wp[3], double gamma[3], double matrix[9],
 QPDFObjectHandle getCalGrayArray(double wp[3], double gamma[1], double bp[3])
 {
     QPDFObjectHandle ret = getCalibrationArray("/CalGray", wp, gamma, 0, bp);
+    return ret;
+}
+
+/**
+ * 'makePclmStrips()' - return an std::vector of QPDFObjectHandle, each containing the
+ *                      stream data of the various strips which make up a PCLm page.
+ * O - std::vector of QPDFObjectHandle
+ * I - QPDF object
+ * I - number of strips per page
+ * I - std::vector of PointerHolder<Buffer> containing data for each strip
+ * I - strip width
+ * I - strip height
+ * I - color space
+ * I - bits per component
+ */
+std::vector<QPDFObjectHandle>
+makePclmStrips(QPDF &pdf, unsigned num_strips,
+               std::vector< PointerHolder<Buffer> > &strip_data,
+               std::vector<CompressionMethod> &compression_methods,
+               unsigned width, unsigned height, cups_cspace_t cs, unsigned bpc)
+{
+    std::vector<QPDFObjectHandle> ret(num_strips);
+    for (size_t i = 0; i < num_strips; i ++)
+      ret[i] = QPDFObjectHandle::newStream(&pdf);
+
+    // Strip stream dictionary
+    std::map<std::string,QPDFObjectHandle> dict;
+
+    dict["/Type"]=QPDFObjectHandle::newName("/XObject");
+    dict["/Subtype"]=QPDFObjectHandle::newName("/Image");
+    dict["/Width"]=QPDFObjectHandle::newInteger(width);
+    dict["/Height"]=QPDFObjectHandle::newInteger(height);
+    dict["/BitsPerComponent"]=QPDFObjectHandle::newInteger(bpc);
+
+    J_COLOR_SPACE color_space;
+    unsigned components;
+    /* Write "/ColorSpace" dictionary based on raster input */
+    switch(cs) {
+      case CUPS_CSPACE_K:
+      case CUPS_CSPACE_SW:
+        dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceGray");
+        color_space = JCS_GRAYSCALE;
+        components = 1;
+        break;
+      case CUPS_CSPACE_RGB:
+      case CUPS_CSPACE_SRGB:
+      case CUPS_CSPACE_ADOBERGB:
+        dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
+        color_space = JCS_RGB;
+        components = 3;
+        break;
+      default:
+        fputs("DEBUG: Color space not supported.\n", stderr); 
+        return std::vector<QPDFObjectHandle>(num_strips, QPDFObjectHandle());
+    }
+
+    // We deliver already compressed content (instead of letting QPDFWriter do it)
+    // to avoid using excessive memory. For that we first get preferred compression
+    // method to pre-compress content for strip streams.
+
+    // Use the compression method with highest priority of the available methods
+    // __________________
+    // Priority | Method
+    // ------------------
+    // 0        | DCT
+    // 1        | RLE
+    // 2        | FLATE
+    // ------------------
+    CompressionMethod compression = compression_methods.front();
+    for (std::vector<CompressionMethod>::iterator it = compression_methods.begin();
+         it != compression_methods.end(); ++it)
+      compression = compression > *it ? compression : *it;
+
+    // write compressed stream data
+    for (size_t i = 0; i < num_strips; i ++)
+    {
+      ret[i].replaceDict(QPDFObjectHandle::newDictionary(dict));
+      Pl_Buffer psink("psink");
+      if (compression == FLATE_DECODE)
+      {
+        Pl_Flate pflate("pflate", &psink, Pl_Flate::a_deflate);
+        pflate.write(strip_data[i]->getBuffer(), strip_data[i]->getSize());
+        pflate.finish();
+        ret[i].replaceStreamData(PointerHolder<Buffer>(psink.getBuffer()),
+                              QPDFObjectHandle::newName("/FlateDecode"),QPDFObjectHandle::newNull());
+      }
+      else if (compression == RLE_DECODE)
+      {
+        Pl_RunLength prle("prle", &psink, Pl_RunLength::a_encode);
+        prle.write(strip_data[i]->getBuffer(),strip_data[i]->getSize());
+        prle.finish();
+        ret[i].replaceStreamData(PointerHolder<Buffer>(psink.getBuffer()),
+                              QPDFObjectHandle::newName("/RunLengthDecode"),QPDFObjectHandle::newNull());
+      }
+      else if (compression == DCT_DECODE)
+      {
+        Pl_DCT pdct("pdct", &psink, width, height, components, color_space);
+        pdct.write(strip_data[i]->getBuffer(),strip_data[i]->getSize());
+        pdct.finish();
+        ret[i].replaceStreamData(PointerHolder<Buffer>(psink.getBuffer()),
+                              QPDFObjectHandle::newName("/DCTDecode"),QPDFObjectHandle::newNull());
+      }
+    }
     return ret;
 }
 
@@ -643,31 +850,86 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned 
 
 void finish_page(struct pdf_info * info)
 {
-    //Finish previous Page
-    if(!info->page_data.getPointer())
+    if (info->outformat == OUTPUT_FORMAT_PDF)
+    {
+      // Finish previous PDF Page
+      if(!info->page_data.getPointer())
+          return;
+
+      QPDFObjectHandle image = makeImage(info->pdf, info->page_data, info->width, info->height, info->render_intent, info->color_space, info->bpc);
+      if(!image.isInitialized()) die("Unable to load image data");
+
+      // add it
+      info->page.getKey("/Resources").getKey("/XObject").replaceKey("/I",image);
+    }
+    else if (info->outformat == OUTPUT_FORMAT_PCLM)
+    {
+      // Finish previous PCLm page
+      if (info->pclm_num_strips == 0)
         return;
 
-    QPDFObjectHandle image = makeImage(info->pdf, info->page_data, info->width, info->height, info->render_intent, info->color_space, info->bpc);
-    if(!image.isInitialized()) die("Unable to load image data");
+      for (size_t i = 0; i < info->pclm_strip_data.size(); i ++)
+        if(!info->pclm_strip_data[i].getPointer())
+          return;
 
-    // add it
-    info->page.getKey("/Resources").getKey("/XObject").replaceKey("/I",image);
+      std::vector<QPDFObjectHandle> strips = makePclmStrips(info->pdf, info->pclm_num_strips, info->pclm_strip_data, info->pclm_compression_method_preferred, info->width, info->pclm_strip_height_preferred, info->color_space, info->bpc);
+      for (size_t i = 0; i < info->pclm_num_strips; i ++)
+        if(!strips[i].isInitialized()) die("Unable to load strip data");
+
+      // add it
+      for (size_t i = 0; i < info->pclm_num_strips; i ++)
+        info->page.getKey("/Resources").getKey("/XObject")
+                  .replaceKey("/Image" +
+                              int_to_fwstring(i,num_digits(info->pclm_num_strips - 1)),
+                              strips[i]);
+    }
 
     // draw it
     std::string content;
-    content.append(QUtil::double_to_string(info->page_width) + " 0 0 " + 
-                   QUtil::double_to_string(info->page_height) + " 0 0 cm\n");
-    content.append("/I Do\n");
-    info->page.getKey("/Contents").replaceStreamData(content,QPDFObjectHandle::newNull(),QPDFObjectHandle::newNull());
+    if (info->outformat == OUTPUT_FORMAT_PDF)
+    {
+      content.append(QUtil::double_to_string(info->page_width) + " 0 0 " +
+                     QUtil::double_to_string(info->page_height) + " 0 0 cm\n");
+      content.append("/I Do\n");
+    }
+    else if (info->outformat == OUTPUT_FORMAT_PCLM)
+    {
+      std::string res = info->pclm_source_resolution_default;
+
+      // resolution is in dpi, so remove the last three characters from
+      // resolution string to get resolution integer
+      unsigned resolution_integer = std::stoi(res.substr(0, res.size() - 3));
+      double d = (double)DEFAULT_PDF_UNIT / resolution_integer;
+      content.append(QUtil::double_to_string(d) + " 0 0 " + QUtil::double_to_string(d) + " 0 0 cm\n");
+      unsigned yAnchor = info->height;
+      for (unsigned i = 0; i < info->pclm_num_strips; i ++)
+      {
+        yAnchor -= info->pclm_strip_height[i];
+        content.append("/P <</MCID 0>> BDC q\n");
+        content.append(QUtil::int_to_string(info->width) + " 0 0 " +
+                        QUtil::int_to_string(info->pclm_strip_height[i]) +
+                        " 0 " + QUtil::int_to_string(yAnchor) + " cm\n");
+        content.append("/Image" +
+                       int_to_fwstring(i, num_digits(info->pclm_num_strips - 1)) +
+                       " Do Q\n");
+      }
+    }
+
+    QPDFObjectHandle page_contents = info->page.getKey("/Contents");
+    if (info->outformat == OUTPUT_FORMAT_PDF)
+      page_contents.replaceStreamData(content, QPDFObjectHandle::newNull(), QPDFObjectHandle::newNull());
+    else if (info->outformat == OUTPUT_FORMAT_PCLM)
+      page_contents.getArrayItem(0).replaceStreamData(content, QPDFObjectHandle::newNull(), QPDFObjectHandle::newNull());
 
     // bookkeeping
     info->page_data = PointerHolder<Buffer>();
+    info->pclm_strip_data.clear();
 }
 
 
 /* Perform modifications to PDF if color space conversions are needed */      
-int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl, 
-                     int bpp, int bpc, std::string render_intent, cups_cspace_t color_space)
+int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height, unsigned bpl, 
+                     unsigned bpp, unsigned bpc, std::string render_intent, cups_cspace_t color_space)
 {
 #define IMAGE_CMYK_8   (bpp == 32 && bpc == 8)
 #define IMAGE_CMYK_16  (bpp == 64 && bpc == 16)
@@ -676,7 +938,7 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
 #define IMAGE_WHITE_1  (bpp == 1 && bpc == 1)
 #define IMAGE_WHITE_8  (bpp == 8 && bpc == 8)
 #define IMAGE_WHITE_16 (bpp == 16 && bpc == 16)    
-     
+
     int error = 0;
     pdfConvertFunction fn = convertPdf_NoConversion;
     cmsColorSpaceSignature css;
@@ -689,6 +951,19 @@ int prepare_pdf_page(struct pdf_info * info, int width, int height, int bpl,
     info->bpc = bpc;
     info->render_intent = render_intent;
     info->color_space = color_space;
+    if (info->outformat == OUTPUT_FORMAT_PCLM)
+    {
+      info->pclm_num_strips = (height / info->pclm_strip_height_preferred) +
+                              (height % info->pclm_strip_height_preferred ? 1 : 0);
+      info->pclm_strip_height.resize(info->pclm_num_strips);
+      info->pclm_strip_data.resize(info->pclm_num_strips);
+      for (size_t i = 0; i < info->pclm_num_strips; i ++)
+      {
+        info->pclm_strip_height[i] = info->pclm_strip_height_preferred < height ?
+                                     info->pclm_strip_height_preferred : height;
+        height -= info->pclm_strip_height[i];
+      }
+    }
 
     /* Invert grayscale by default */
     if (color_space == CUPS_CSPACE_K)
@@ -813,7 +1088,14 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
         if (info->height > (std::numeric_limits<unsigned>::max() / info->line_bytes)) {
             die("Page too big");
         }
-        info->page_data = PointerHolder<Buffer>(new Buffer(info->line_bytes*info->height));
+        if (info->outformat == OUTPUT_FORMAT_PDF)
+          info->page_data = PointerHolder<Buffer>(new Buffer(info->line_bytes*info->height));
+        else if (info->outformat == OUTPUT_FORMAT_PCLM)
+        {
+          // reserve space for PCLm strips
+          for (size_t i = 0; i < info->pclm_num_strips; i ++)
+            info->pclm_strip_data[i] = PointerHolder<Buffer>(new Buffer(info->line_bytes*info->pclm_strip_height[i]));
+        }
 
         QPDFObjectHandle page = QPDFObjectHandle::parse(
             "<<"
@@ -824,12 +1106,23 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
             "  /MediaBox null "
             "  /Contents null "
             ">>");
-        page.replaceKey("/Contents",QPDFObjectHandle::newStream(&info->pdf)); // data will be provided later
-    
+
         // Convert to pdf units
         info->page_width=((double)info->width/xdpi)*DEFAULT_PDF_UNIT;
         info->page_height=((double)info->height/ydpi)*DEFAULT_PDF_UNIT;
-        page.replaceKey("/MediaBox",makeBox(0,0,info->page_width,info->page_height));
+        if (info->outformat == OUTPUT_FORMAT_PDF)
+        {
+          page.replaceKey("/Contents",QPDFObjectHandle::newStream(&info->pdf)); // data will be provided later
+          page.replaceKey("/MediaBox",makeRealBox(0,0,info->page_width,info->page_height));
+        }
+        else if (info->outformat == OUTPUT_FORMAT_PCLM)
+        {
+          page.replaceKey("/Contents",
+            QPDFObjectHandle::newArray(std::vector<QPDFObjectHandle>(1, QPDFObjectHandle::newStream(&info->pdf))));
+
+          // box with dimensions rounded off to the nearest integer
+          page.replaceKey("/MediaBox",makeIntegerBox(0,0,info->page_width + 0.5,info->page_height + 0.5));
+        }
     
         info->page = info->pdf.makeIndirectObject(page); // we want to keep a reference
         info->pdf.addPage(info->page, false);
@@ -849,6 +1142,8 @@ int close_pdf_file(struct pdf_info * info)
 
         QPDFWriter output(info->pdf,NULL);
 //        output.setMinimumPDFVersion("1.4");
+        if (info->outformat == OUTPUT_FORMAT_PCLM)
+          output.setPCLm(true);
         output.write();
     } catch (...) {
         return 1;
@@ -866,8 +1161,20 @@ void pdf_set_line(struct pdf_info * info, unsigned line_n, unsigned char *line)
         dprintf("Bad line %d\n", line_n);
         return;
     }
-  
-    memcpy((info->page_data->getBuffer()+(line_n*info->line_bytes)), line, info->line_bytes);
+
+    switch(info->outformat)
+    {
+      case OUTPUT_FORMAT_PDF:
+        memcpy((info->page_data->getBuffer()+(line_n*info->line_bytes)), line, info->line_bytes);
+        break;
+      case OUTPUT_FORMAT_PCLM:
+        // copy line data into appropriate pclm strip
+        size_t strip_num = line_n / info->pclm_strip_height_preferred;
+        unsigned line_strip = line_n - strip_num*info->pclm_strip_height_preferred;
+        memcpy(((info->pclm_strip_data[strip_num])->getBuffer() + (line_strip*info->line_bytes)),
+               line, info->line_bytes);
+        break;
+    }
 }
 
 int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
@@ -982,12 +1289,15 @@ const char * getIPPColorProfileName(const char * media_type, cups_cspace_t cs, u
 
 int main(int argc, char **argv)
 {
+    char *outformat_env = NULL;
+    OutFormatType outformat; /* Output format */
     int fd, Page;
     struct pdf_info pdf;
     FILE * input = NULL;
     cups_raster_t	*ras;		/* Raster stream for printing */
     cups_page_header2_t	header;		/* Page header from file */
     ppd_file_t		*ppd;		/* PPD file */
+    ppd_attr_t    *attr;  /* PPD attribute */
     int			num_options;	/* Number of options */
     const char*         profile_name;	/* IPP Profile Name */
     cups_option_t	*options;	/* Options */
@@ -1003,12 +1313,27 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    /* Determine the output format via an environment variable set by a wrapper
+        script */
+      if ((outformat_env = getenv("OUTFORMAT")) == NULL || strcasestr(outformat_env, "pdf"))
+        outformat = OUTPUT_FORMAT_PDF;
+      else if (strcasestr(outformat_env, "pclm"))
+        outformat = OUTPUT_FORMAT_PCLM;
+      else {
+        fprintf(stderr, "ERROR: OUTFORMAT=\"%s\", cannot determine output format\n",
+          outformat_env);
+        return 1;
+      }
+      fprintf(stderr, "DEBUG: OUTFORMAT=\"%s\", output format will be %s\n",
+        outformat_env, (outformat == OUTPUT_FORMAT_PDF ? "PDF" : "PCLM"));
+  
     num_options = cupsParseOptions(argv[5], 0, &options);  
 
     /* support the CUPS "cm-calibration" option */ 
     cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
 
-    if (cm_calibrate == CM_CALIBRATION_ENABLED)
+    if (outformat == OUTPUT_FORMAT_PCLM ||
+        cm_calibrate == CM_CALIBRATION_ENABLED)
       cm_disabled = 1;
     else
       cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
@@ -1052,8 +1377,89 @@ int main(int argc, char **argv)
     Page = 0;
 
     // Create PDF file
-    if (create_pdf_file(&pdf) != 0)
+    if (create_pdf_file(&pdf, outformat) != 0)
       die("Unable to create PDF file");
+
+    /* Get PCLm attributes from PPD */
+    if (ppd && outformat == OUTPUT_FORMAT_PCLM)
+    {
+      char *attr_name = (char *)"cupsPclmStripHeightPreferred";
+      if ((attr = ppdFindAttr(ppd, attr_name, NULL)) != NULL)
+      {
+        fprintf(stderr, "DEBUG: PPD PCLm attribute \"%s\" with value \"%s\"\n",
+            attr_name, attr->value);
+        pdf.pclm_strip_height_preferred = atoi(attr->value);
+      }
+      else
+        pdf.pclm_strip_height_preferred = 16; /* default strip height */
+
+      attr_name = (char *)"cupsPclmStripHeightSupported";
+      if ((attr = ppdFindAttr(ppd, attr_name, NULL)) != NULL)
+      {
+        fprintf(stderr, "DEBUG: PPD PCLm attribute \"%s\" with value \"%s\"\n",
+            attr_name, attr->value);
+        pdf.pclm_strip_height_supported.clear();  // remove default value = 16
+        std::vector<std::string> vec = split_strings(attr->value, ",");
+        for (size_t i = 0; i < vec.size(); i ++)
+          pdf.pclm_strip_height_supported.push_back(atoi(vec[i].c_str()));
+        vec.clear();
+      }
+
+      attr_name = (char *)"cupsPclmRasterBackSide";
+      if ((attr = ppdFindAttr(ppd, attr_name, NULL)) != NULL)
+      {
+        fprintf(stderr, "DEBUG: PPD PCLm attribute \"%s\" with value \"%s\"\n",
+            attr_name, attr->value);
+        pdf.pclm_raster_back_side = attr->value;
+      }
+
+      attr_name = (char *)"cupsPclmSourceResolutionDefault";
+      if ((attr = ppdFindAttr(ppd, attr_name, NULL)) != NULL)
+      {
+        fprintf(stderr, "DEBUG: PPD PCLm attribute \"%s\" with value \"%s\"\n",
+            attr_name, attr->value);
+        pdf.pclm_source_resolution_default = attr->value;
+      }
+
+      attr_name = (char *)"cupsPclmSourceResolutionSupported";
+      if ((attr = ppdFindAttr(ppd, attr_name, NULL)) != NULL)
+      {
+        fprintf(stderr, "DEBUG: PPD PCLm attribute \"%s\" with value \"%s\"\n",
+            attr_name, attr->value);
+        pdf.pclm_source_resolution_supported = split_strings(attr->value, ",");
+      }
+
+      attr_name = (char *)"cupsPclmCompressionMethodPreferred";
+      if ((attr = ppdFindAttr(ppd, attr_name, NULL)) != NULL)
+      {
+        fprintf(stderr, "DEBUG: PPD PCLm attribute \"%s\" with value \"%s\"\n",
+            attr_name, attr->value);
+        std::vector<std::string> vec = split_strings(attr->value, ",");
+
+        // get all compression methods supported by the printer
+        for (std::vector<std::string>::iterator it = vec.begin();
+             it != vec.end(); ++it)
+        {
+          std::string compression_method = *it;
+          for (char& x: compression_method)
+            x = tolower(x);
+          if (compression_method == "flate")
+            pdf.pclm_compression_method_preferred.push_back(FLATE_DECODE);
+          else if (compression_method == "rle")
+            pdf.pclm_compression_method_preferred.push_back(RLE_DECODE);
+          else if (compression_method == "jpeg")
+            pdf.pclm_compression_method_preferred.push_back(DCT_DECODE);
+        }
+
+      }
+      // If the compression methods is none of the above or is erreneous
+      // use FLATE as compression method and show a warning.
+      if (pdf.pclm_compression_method_preferred.empty())
+      {
+        fprintf(stderr, "WARNING: (rastertopclm) Unable parse PPD attribute \"%s\". Using FLATE for encoding image streams.\n", attr_name);
+        pdf.pclm_compression_method_preferred.push_back(FLATE_DECODE);
+      }
+    }
 
     while (cupsRasterReadHeader2(ras, &header))
     {
@@ -1063,7 +1469,8 @@ int main(int argc, char **argv)
 
       // Use "profile=profile_name.icc" to embed 'profile_name.icc' into the PDF
       // for testing. Forces color management to enable.
-      if ((profile_name = cupsGetOption("profile", num_options, options)) != NULL) {
+      if (outformat == OUTPUT_FORMAT_PDF &&
+          (profile_name = cupsGetOption("profile", num_options, options)) != NULL) {
         setProfile(profile_name);
         cm_disabled = 0;
       }

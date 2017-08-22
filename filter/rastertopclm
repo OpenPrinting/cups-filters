@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# rastertopclm - Raster to PCLm filter for CUPS
+#
+# Note: This is only a wrapper filter, the real work is done by rastertopdf
+#
+# (C) 2017 Sahil Arora <sahilarora.535@gmail.com>
+#
+# Released under GPL 2 or later
+#
+
+echo "DEBUG: rastertopclm argv[$#] = $@" >&2
+echo "DEBUG: PPD: $PPD" >&2
+
+if [ $# -lt 5 -o $# -gt 6 ]; then
+    echo "ERROR: rastertopclm job-id user title copies options [file]" >&2
+    exit 1
+fi
+
+# Read from given file.
+if [ -n "$6" ]; then
+    exec <"$6"
+fi
+
+OUTFORMAT=PCLM $CUPS_SERVERBIN/filter/rastertopdf "$1" "$2" "$3" "$4" "$5"
