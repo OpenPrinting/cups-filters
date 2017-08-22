@@ -519,7 +519,8 @@ pdftopdf_LDADD = \
 # ======================
 pkgfilter_SCRIPTS = \
 	filter/imagetops \
-	filter/texttops
+	filter/texttops  \
+	filter/rastertopclm
 if ENABLE_GHOSTSCRIPT
 pkgfilter_SCRIPTS += \
 	filter/gstopxl \

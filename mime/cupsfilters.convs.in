@@ -4,6 +4,7 @@
 #   Copyright 2007-2011 by Apple Inc.
 #   Copyright 1997-2007 by Easy Software Products.
 #   Copyright 2012-2016 by Till Kamppeter.
+#   Copyright 2017 by Sahil Arora.
 #
 #   These coded instructions, statements, and computer programs are the
 #   property of Apple Inc. and are protected by Federal copyright
@@ -68,6 +69,7 @@ image/x-xwindowdump	application/vnd.cups-pdf		65	imagetopdf
 image/x-sun-raster	application/vnd.cups-pdf		65	imagetopdf
 application/vnd.cups-pdf-banner	application/pdf			32	bannertopdf
 image/urf		application/pdf				0	@APPLE_RASTER_FILTER@
+application/vnd.cups-raster application/PCLm			32	rastertopclm
 
 ########################################################################
 #

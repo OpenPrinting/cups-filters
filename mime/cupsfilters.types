@@ -5,10 +5,14 @@
 #   VERSIONS OF OPENPRINTING CUPS FILTERS.  Instead, create a "local.types"
 #   file that reflects your local configuration changes.
 #
-#   Copyright 2011 by Till Kamppeter
+#   Copyright 2007-2011 by Apple Inc.
+#   Copyright 1997-2007 by Easy Software Products.
+#   Copyright 2012-2016 by Till Kamppeter.
+#   Copyright 2017 by Sahil Arora.
 #
-#
-#   Distribution and use rights are outlined in the file "COPYING"
+#   These coded instructions, statements, and computer programs are the
+#   property of Apple Inc. and are protected by Federal copyright
+#   law.  Distribution and use rights are outlined in the file "COPYING"
 #   which should have been included with this file.
 #
 
@@ -97,4 +101,5 @@ image/urf			urf string(0,UNIRAST<00>)
 
 application/vnd.cups-pdf
 application/vnd.cups-pdf-banner     string(0,'#PDF-BANNER')
+application/PCLm
 

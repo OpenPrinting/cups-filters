@@ -92,6 +92,9 @@ list_printers (int mode)
   ippfind_argv[i++]  = "(";
   ippfind_argv[i++]  = "--txt-pdl";        /* PDL list in TXT record contains */
   ippfind_argv[i++]  = "image/pwg-raster"; /* PWG Raster (IPP Everywhere) */
+  ippfind_argv[i++]  = "--or";             /* or */
+  ippfind_argv[i++]  = "--txt-pdl";
+  ippfind_argv[i++]  = "application/PCLm"; /* PCLm */
 #ifdef CUPS_RASTER_HAVE_APPLERASTER
   ippfind_argv[i++]  = "--or";             /* or */
   ippfind_argv[i++]  = "--txt-pdl";
@@ -279,10 +282,13 @@ list_printers (int mode)
 	    (strcasestr(pdl, "application/pdf") ||
 	     strcasestr(pdl, "application/postscript") ||
 	     strcasestr(pdl, "application/vnd.hp-PCL") ||
+	     strcasestr(pdl, "application/PCLm") ||
 	     strcasestr(pdl, "image/"))) {
 	  value[0] = '\0';
 	  if (strcasestr(pdl, "application/pdf"))
 	    strncat(value, ",PDF", sizeof(value));
+	  if (strcasestr(pdl, "application/PCLm"))
+	    strncat(value, ",PCLM", sizeof(value));
 	  if (strcasestr(pdl, "application/postscript"))
 	    strncat(value, ",PS", sizeof(value));
 	  if (strcasestr(pdl, "application/vnd.hp-PCL"))
