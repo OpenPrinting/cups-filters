@@ -176,12 +176,12 @@ WriteEpilogue(void)
     for (j = 0; j < NumFonts; j ++) 
     {
       EMB_PARAMS *emb=Fonts[j][i];
-      if (emb->font->fo.fobj) { // already embedded
+      if (emb->font->fobj) { // already embedded
         continue;
       }
       if ( (!emb->subset)||(bits_used(emb->subset,emb->font->sfnt->numGlyphs)) ) {
-        emb->font->fo.fobj=pdfOut_write_font(pdf,emb);
-        assert(emb->font->fo.fobj);
+        emb->font->fobj=pdfOut_write_font(pdf,emb);
+        assert(emb->font->fobj);
       }
     }
   }
@@ -199,8 +199,8 @@ WriteEpilogue(void)
   for (i = PrettyPrint ? 3 : 1; i >= 0; i --) {
     for (j = 0; j < NumFonts; j ++) {
       EMB_PARAMS *emb=Fonts[j][i];
-      if (emb->font->fo.fobj) { // used
-        pdfOut_printf(pdf,"  /%s%02x %d 0 R\n",names[i],j,emb->font->fo.fobj);
+      if (emb->font->fobj) { // used
+        pdfOut_printf(pdf,"  /%s%02x %d 0 R\n",names[i],j,emb->font->fobj);
       }
     }
   }

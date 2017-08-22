@@ -1,6 +1,16 @@
 NEWS - OpenPrinting CUPS Filters v1.16.3 - 2017-08-21
 -----------------------------------------------------
 
+CHANGES IN V1.16.4
+
+	- Build system: Switched over to C11 standard with GNU
+          extensions (-std=gnu11).
+	- Build system: Removed -pedantic flag as it is only needed
+          for compatibility with commercial compilers like the ones of
+          Windows (and we use GNU extensions anyway).
+	- libfontembed, texttopdf: reverted removal of anonymous
+          union.
+
 CHANGES IN V1.16.3
 
 	- libfontembed: Reverted unneeded soname change.
