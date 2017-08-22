@@ -2,6 +2,7 @@
  *   IPP Everywhere/Apple Raster/IPP legacy PPD generator
  *
  *   Copyright 2016 by Till Kamppeter.
+ *   Copyright 2017 by Sahil Arora.
  *
  *   The PPD generator is based on the PPD generator for the CUPS
  *   "lpadmin -m everywhere" functionality in the cups/ppd-cache.c
@@ -553,6 +554,9 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       if (!_cups_strncasecmp(format, "application/pdf", 15)) {
         cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
 	formatfound = 1;
+      } else if (!_cups_strncasecmp(format, "application/PCLm", 16)) {
+        cupsFilePuts(fp, "*cupsFilter2: \"application/PCLm application/PCLm 10 -\"\n");
+	formatfound = 1;
       } else if (!_cups_strncasecmp(format, "application/postscript", 22)) {
 	/* We put a high cost factor here as if a printer supports also
 	   another format, like PWG or Apple Raster, we prefer it, as many
@@ -607,6 +611,53 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   }
   if (formatfound == 0)
     goto bad_ppd;
+
+ /*
+  * Generically check for PCLm attributes in IPP response
+  * and ppdize them one by one
+  */
+
+  attr = ippFirstAttribute(response); /* first attribute */
+  while (attr)                        /* loop through all the attributes */
+  {
+    if (_cups_strncasecmp(ippGetName(attr), "pclm", 4) == 0)
+    {
+      pwg_ppdize_name(ippGetName(attr), ppdname, sizeof(ppdname));
+      cupsFilePrintf(fp, "*cups%s: ", ppdname);
+      ipp_tag_t tag = ippGetValueTag(attr);
+      count = ippGetCount(attr);
+
+      if (tag == IPP_TAG_RESOLUTION)  /* ppdize values of type resolution */
+      {
+        pwg_ppdize_resolution(attr, 0, &xres, &yres, ppdname, sizeof(ppdname));
+        if (count > 1)
+        {
+          cupsFilePrintf(fp, "\"%s", ppdname);
+          for (i = 1, count = ippGetCount(attr); i < count; i ++)
+          {
+            pwg_ppdize_resolution(attr, i, &xres, &yres, ppdname, sizeof(ppdname));
+            cupsFilePrintf(fp, ",%s", ppdname);
+          }
+          cupsFilePuts(fp, "\"\n");
+        }
+        else
+          cupsFilePrintf(fp, "%s\n", ppdname);
+      }
+      else
+      {
+        ippAttributeString(attr, ppdname, sizeof(ppdname));
+        if (count > 1 || /* quotes around multi-valued and string attributes */
+            tag == IPP_TAG_STRING ||
+            tag == IPP_TAG_TEXT ||
+            tag == IPP_TAG_TEXTLANG)
+          cupsFilePrintf(fp, "\"%s\"\n", ppdname);
+        else
+          cupsFilePrintf(fp, "%s\n", ppdname);
+      }
+    }
+    attr = ippNextAttribute(response);
+  }
+
 
  /*
   * PageSize/PageRegion/ImageableArea/PaperDimension
