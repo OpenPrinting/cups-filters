@@ -114,7 +114,7 @@ AX_COMPARE_VERSION([$CUPS_VERSION],[gt],[1.4], [
 	AC_DEFINE(CUPS_1_4, 1, [CUPS Version is 1.4 or newer])
 ])
 
-AC_ARG_ENABLE([driverless], [AS_HELP_STRING([--disable-driverless], [enable PPD generator for driverless printing in /usr/lib/cups/drivers/.])],
+AC_ARG_ENABLE([driverless], [AS_HELP_STRING([--enable-driverless], [enable PPD generator for driverless printing in /usr/lib/cups/driver/, for manual setup of driverless printers with printer setup tool.])],
         [enable_driverless="$enableval"],
         [enable_driverless=yes]
 )

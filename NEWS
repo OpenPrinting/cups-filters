@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.17.0 - 2017-08-22
 -----------------------------------------------------
 
+CHANGES IN V1.17.1
+
+	- Build system: Fixed help mesage for "--enable-driverless" configure
+	  option (Bug #1405).
+
 CHANGES IN V1.17.0
 
 	- rastertopdf, rastertopclm, driverless, cups-browsed,
