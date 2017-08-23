@@ -1330,20 +1330,20 @@ int main(int argc, char **argv)
     /* Determine the output format via an environment variable set by a wrapper
         script */
 #ifdef QPDF_HAVE_PCLM
-      if ((outformat_env = getenv("OUTFORMAT")) == NULL || strcasestr(outformat_env, "pdf"))
-        outformat = OUTPUT_FORMAT_PDF;
-      else if (strcasestr(outformat_env, "pclm"))
-        outformat = OUTPUT_FORMAT_PCLM;
-      else {
-        fprintf(stderr, "ERROR: OUTFORMAT=\"%s\", cannot determine output format\n",
-          outformat_env);
-        return 1;
-      }
-#else
+    if ((outformat_env = getenv("OUTFORMAT")) == NULL || strcasestr(outformat_env, "pdf"))
       outformat = OUTPUT_FORMAT_PDF;
+    else if (strcasestr(outformat_env, "pclm"))
+      outformat = OUTPUT_FORMAT_PCLM;
+    else {
+      fprintf(stderr, "ERROR: OUTFORMAT=\"%s\", cannot determine output format\n",
+	      outformat_env);
+      return 1;
+    }
+#else
+    outformat = OUTPUT_FORMAT_PDF;
 #endif
-      fprintf(stderr, "DEBUG: OUTFORMAT=\"%s\", output format will be %s\n",
-        outformat_env, (outformat == OUTPUT_FORMAT_PDF ? "PDF" : "PCLM"));
+    fprintf(stderr, "DEBUG: OUTFORMAT=\"%s\", output format will be %s\n",
+	    outformat_env, (outformat == OUTPUT_FORMAT_PDF ? "PDF" : "PCLM"));
   
     num_options = cupsParseOptions(argv[5], 0, &options);  
 
@@ -1374,6 +1374,12 @@ int main(int argc, char **argv)
       status = ppdLastError(&linenum);
       
       fprintf(stderr, "DEBUG: %s on line %d.\n", ppdErrorString(status), linenum);
+#ifdef QPDF_HAVE_PCLM
+      if (outformat == OUTPUT_FORMAT_PCLM) {
+	fprintf(stderr, "ERROR: PCLm output only possible with PPD file.\n");
+	return 1;
+      }
+#endif
     }
 
     // Open the page stream...
