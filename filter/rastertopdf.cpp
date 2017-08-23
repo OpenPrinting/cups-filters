@@ -45,8 +45,10 @@
 
 #include <qpdf/Pl_Flate.hh>
 #include <qpdf/Pl_Buffer.hh>
+#ifdef QPDF_HAVE_PCLM
 #include <qpdf/Pl_RunLength.hh>
 #include <qpdf/Pl_DCT.hh>
+#endif
 
 #ifdef USE_LCMS1
 #include <lcms.h>
@@ -596,6 +598,7 @@ QPDFObjectHandle getCalGrayArray(double wp[3], double gamma[1], double bp[3])
     return ret;
 }
 
+#ifdef QPDF_HAVE_PCLM
 /**
  * 'makePclmStrips()' - return an std::vector of QPDFObjectHandle, each containing the
  *                      stream data of the various strips which make up a PCLm page.
@@ -698,6 +701,7 @@ makePclmStrips(QPDF &pdf, unsigned num_strips,
     }
     return ret;
 }
+#endif
 
 QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data, unsigned width, 
                            unsigned height, std::string render_intent, cups_cspace_t cs, unsigned bpc)
@@ -862,6 +866,7 @@ void finish_page(struct pdf_info * info)
       // add it
       info->page.getKey("/Resources").getKey("/XObject").replaceKey("/I",image);
     }
+#ifdef QPDF_HAVE_PCLM
     else if (info->outformat == OUTPUT_FORMAT_PCLM)
     {
       // Finish previous PCLm page
@@ -883,6 +888,7 @@ void finish_page(struct pdf_info * info)
                               int_to_fwstring(i,num_digits(info->pclm_num_strips - 1)),
                               strips[i]);
     }
+#endif
 
     // draw it
     std::string content;
@@ -892,6 +898,7 @@ void finish_page(struct pdf_info * info)
                      QUtil::double_to_string(info->page_height) + " 0 0 cm\n");
       content.append("/I Do\n");
     }
+#ifdef QPDF_HAVE_PCLM
     else if (info->outformat == OUTPUT_FORMAT_PCLM)
     {
       std::string res = info->pclm_source_resolution_default;
@@ -914,16 +921,21 @@ void finish_page(struct pdf_info * info)
                        " Do Q\n");
       }
     }
+#endif
 
     QPDFObjectHandle page_contents = info->page.getKey("/Contents");
     if (info->outformat == OUTPUT_FORMAT_PDF)
       page_contents.replaceStreamData(content, QPDFObjectHandle::newNull(), QPDFObjectHandle::newNull());
+#ifdef QPDF_HAVE_PCLM
     else if (info->outformat == OUTPUT_FORMAT_PCLM)
       page_contents.getArrayItem(0).replaceStreamData(content, QPDFObjectHandle::newNull(), QPDFObjectHandle::newNull());
+#endif
 
     // bookkeeping
     info->page_data = PointerHolder<Buffer>();
+#ifdef QPDF_HAVE_PCLM
     info->pclm_strip_data.clear();
+#endif
 }
 
 
@@ -1142,8 +1154,10 @@ int close_pdf_file(struct pdf_info * info)
 
         QPDFWriter output(info->pdf,NULL);
 //        output.setMinimumPDFVersion("1.4");
+#ifdef QPDF_HAVE_PCLM
         if (info->outformat == OUTPUT_FORMAT_PCLM)
           output.setPCLm(true);
+#endif
         output.write();
     } catch (...) {
         return 1;
@@ -1315,6 +1329,7 @@ int main(int argc, char **argv)
 
     /* Determine the output format via an environment variable set by a wrapper
         script */
+#ifdef QPDF_HAVE_PCLM
       if ((outformat_env = getenv("OUTFORMAT")) == NULL || strcasestr(outformat_env, "pdf"))
         outformat = OUTPUT_FORMAT_PDF;
       else if (strcasestr(outformat_env, "pclm"))
@@ -1324,6 +1339,9 @@ int main(int argc, char **argv)
           outformat_env);
         return 1;
       }
+#else
+      outformat = OUTPUT_FORMAT_PDF;
+#endif
       fprintf(stderr, "DEBUG: OUTFORMAT=\"%s\", output format will be %s\n",
         outformat_env, (outformat == OUTPUT_FORMAT_PDF ? "PDF" : "PCLM"));
   

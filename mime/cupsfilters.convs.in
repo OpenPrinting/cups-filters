@@ -69,7 +69,7 @@ image/x-xwindowdump	application/vnd.cups-pdf		65	imagetopdf
 image/x-sun-raster	application/vnd.cups-pdf		65	imagetopdf
 application/vnd.cups-pdf-banner	application/pdf			32	bannertopdf
 image/urf		application/pdf				0	@APPLE_RASTER_FILTER@
-application/vnd.cups-raster application/PCLm			32	rastertopclm
+@QPDF_NO_PCLM@application/vnd.cups-raster application/PCLm			32	rastertopclm
 
 ########################################################################
 #

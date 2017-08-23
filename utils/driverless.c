@@ -81,46 +81,42 @@ list_printers (int mode)
   /* ippfind ! --txt printer-type --and \( --txt-pdl image/pwg-raster --or --txt-pdl image/urf \) -x echo -en '{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{service_name}\t{txt_pdl}\n' \; */
 
   i = 0;
-  ippfind_argv[i++]  = "ippfind";
-  ippfind_argv[i++]  = "-T";               /* Bonjour poll timeout */
-  ippfind_argv[i++]  = "3";                /* 3 seconds */
-  ippfind_argv[i++]  = "!";                /* ! --txt printer-type */
-  ippfind_argv[i++]  = "--txt";            /* No remote CUPS queues */
-  ippfind_argv[i++]  = "printer-type";     /* (no "printer-type" in TXT
+  ippfind_argv[i++] = "ippfind";
+  ippfind_argv[i++] = "-T";               /* Bonjour poll timeout */
+  ippfind_argv[i++] = "3";                /* 3 seconds */
+  ippfind_argv[i++] = "!";                /* ! --txt printer-type */
+  ippfind_argv[i++] = "--txt";            /* No remote CUPS queues */
+  ippfind_argv[i++] = "printer-type";     /* (no "printer-type" in TXT
 					      record) */
-  ippfind_argv[i++]  = "--and";            /* and */
-  ippfind_argv[i++]  = "(";
-  ippfind_argv[i++]  = "--txt-pdl";        /* PDL list in TXT record contains */
-  ippfind_argv[i++]  = "image/pwg-raster"; /* PWG Raster (IPP Everywhere) */
-  ippfind_argv[i++]  = "--or";             /* or */
-  ippfind_argv[i++]  = "--txt-pdl";
-  ippfind_argv[i++]  = "application/PCLm"; /* PCLm */
-#ifdef CUPS_RASTER_HAVE_APPLERASTER
-  ippfind_argv[i++]  = "--or";             /* or */
-  ippfind_argv[i++]  = "--txt-pdl";
-  ippfind_argv[i++] = "image/urf";        /* Apple Raster */
-  ippfind_argv[i++] = ")";
-  ippfind_argv[i++] = "-x";
-  ippfind_argv[i++] = "echo";             /* Output the needed data fields */
-  ippfind_argv[i++] = "-en";              /* separated by tab characters */
-  if (mode > 0)
-    ippfind_argv[i++] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
-  else
-    ippfind_argv[i++] = "{service_uri}\n";
-  ippfind_argv[i++] = ";";
-  ippfind_argv[i++] = NULL;
-#else
-  ippfind_argv[i++] = ")";
-  ippfind_argv[i++] = "-x";
-  ippfind_argv[i++] = "echo";             /* Output the needed data fields */
-  ippfind_argv[i++] = "-en";              /* separated by tab characters */
-  if (mode > 0)
-    ippfind_argv[i++] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
-  else
-    ippfind_argv[i++] = "{service_uri}\n";
-  ippfind_argv[i++] = ";";
-  ippfind_argv[i++] = NULL;
+  ippfind_argv[i++] = "--and";            /* and */
+  ippfind_argv[i++] = "(";
+  ippfind_argv[i++] = "--txt-pdl";        /* PDL list in TXT record contains */
+  ippfind_argv[i++] = "image/pwg-raster"; /* PWG Raster (IPP Everywhere) */
+#ifdef QPDF_HAVE_PCLM
+  ippfind_argv[i++] = "--or";             /* or */
+  ippfind_argv[i++] = "--txt-pdl";
+  ippfind_argv[i++] = "application/PCLm"; /* PCLm */
 #endif
+#ifdef CUPS_RASTER_HAVE_APPLERASTER
+  ippfind_argv[i++] = "--or";             /* or */
+  ippfind_argv[i++] = "--txt-pdl";
+  ippfind_argv[i++] = "image/urf";        /* Apple Raster */
+#endif
+  ippfind_argv[i++] = "--or";             /* or */
+  ippfind_argv[i++] = "--txt-pdl";
+  ippfind_argv[i++] = "application/pdf";  /* PDF */
+  ippfind_argv[i++] = ")";
+  ippfind_argv[i++] = "-x";
+  ippfind_argv[i++] = "echo";             /* Output the needed data fields */
+  ippfind_argv[i++] = "-en";              /* separated by tab characters */
+  if (mode > 0)
+    ippfind_argv[i++] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
+  else
+    ippfind_argv[i++] = "{service_uri}\n";
+  ippfind_argv[i++] = ";";
+  ippfind_argv[i++] = NULL;
+  /*for (i = 0; ippfind_argv[i]; i++) fprintf(stderr, "%s ", ippfind_argv[i]);
+    fprintf(stderr, "\n");*/
 
  /*
   * Create a pipe for passing the ippfind output to post-processing
