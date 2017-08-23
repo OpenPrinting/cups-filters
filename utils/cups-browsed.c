@@ -297,8 +297,10 @@ typedef enum local_queue_naming_e {
 typedef enum create_ipp_printer_queues_e {
   IPP_PRINTERS_NO,
   IPP_PRINTERS_LOCAL_ONLY,
-  IPP_PRINTERS_EVERYWHERE,
+  IPP_PRINTERS_PWGRASTER,
   IPP_PRINTERS_APPLERASTER,
+  IPP_PRINTERS_PCLM,
+  IPP_PRINTERS_PDF,
   IPP_PRINTERS_DRIVERLESS,
   IPP_PRINTERS_ALL
 } create_ipp_printer_queues_t;
@@ -3291,8 +3293,10 @@ create_remote_printer_entry (const char *queue_name,
   char valuebuffer[65536];
   int i, count, left, right, bottom, top;
   const char *default_page_size = NULL, *best_color_space = NULL, *color_space;
-  int is_everywhere = 0;
+  int is_pwgraster = 0;
   int is_appleraster = 0;
+  int is_pclm = 0;
+  int is_pdf = 0;
 #endif /* HAVE_CUPS_1_6 */
 
   if (!queue_name || !location || !info || !uri || !host || !service_name ||
@@ -3435,11 +3439,12 @@ create_remote_printer_entry (const char *queue_name,
        We check whether we can set them up without a device-specific
        driver, only using page description languages which the
        operating system provides: PCL 5c/5e/6/XL, PostScript, PDF, PWG
-       Raster. Especially IPP Everywhere printers and PDF-capable 
-       AirPrint printers will work this way. Making only driverless
-       queues we can get an easy, configuration-less way to print
-       from mobile devices, even if there is no CUPS server with
-       shared printers around. */
+       Raster, Apple Raster, PCLm. Especially printers designed for
+       driverless printing (DNS-SD + IPP 2.x + at least one of PWG
+       Raster, Apple Raster, PCLm, PDF) will work this way. Making
+       only driverless queues we can get an easy, configuration-less
+       way to print from mobile devices, even if there is no CUPS
+       server with shared printers around. */
 
     if (CreateIPPPrinterQueues == IPP_PRINTERS_NO) {
       debug_printf("Printer %s (%s) is an IPP network printer and cups-browsed is not configured to set up such printers automatically, ignoring this printer.\n",
@@ -3454,6 +3459,9 @@ create_remote_printer_entry (const char *queue_name,
 #ifdef CUPS_RASTER_HAVE_APPLERASTER
 	 !strcasestr(pdl, "image/urf") &&
 #endif
+#ifdef QPDF_HAVE_PCLM
+	 !strcasestr(pdl, "application/PCLm") &&
+#endif
 	 ((!strcasestr(pdl, "application/vnd.hp-PCL") &&
 	   !strcasestr(pdl, "application/PCL") &&
 	   !strcasestr(pdl, "application/x-pcl")) ||
@@ -3465,7 +3473,18 @@ create_remote_printer_entry (const char *queue_name,
 	 !strcasestr(pdl, "application/vnd.hp-PCLXL"))) {
       debug_printf("Cannot create remote printer %s (URI: %s, Model: %s, Accepted data formats: %s) as its PDLs are not known, ignoring this printer.\n",
 		   p->queue_name, p->uri, make_model, pdl);
-      debug_printf("Supported PDLs: PWG Raster, PostScript, PDF, PCL XL, PCL 5c/e (HP inkjets report themselves as PCL printers but their PCL is not supported)\n");
+      debug_printf("Supported PDLs: PWG Raster, %s%sPostScript, PDF, PCL XL, PCL 5c/e (HP inkjets report themselves as PCL printers but their PCL is not supported)\n",
+#ifdef CUPS_RASTER_HAVE_APPLERASTER
+		   "Apple Raster, ",
+#else
+		   "",
+#endif
+#ifdef QPDF_HAVE_PCLM
+		   "PCLm, "
+#else
+		   ""
+#endif
+		   );
       goto fail;
     }
 
@@ -3484,7 +3503,7 @@ create_remote_printer_entry (const char *queue_name,
     p->netprinter = 1;
 
     /* Request printer properties via IPP to generate a PPD file for the
-       printer (mainly IPP Everywhere printers)
+       printer (mainly driverless-capable printers)
        If we work with Systen V interface scripts use this info to set
        option defaults. */
     uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
@@ -3520,40 +3539,72 @@ create_remote_printer_entry (const char *queue_name,
       }
     }
 
-    /* If we have opted for only IPP Everywhere printers or for only printers 
-       designed for driverless use (IPP Everywhere + Apple Raster) being set up
-       automatically, we check whether the printer has the "ipp-everywhere"
-       keyword in its "ipp-features-supported" IPP attribute to see whether
-       we have an IPP Everywhere printer. */
-    if (CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE ||
+    /* If we have opted for only printers designed for driverless use (PWG
+       Raster + Apple Raster + PCLm + PDF) being set up automatically, we check
+       first, whether our printer supports IPP 2.0 or newer. If not, we
+       skip this printer */
+    if (CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
+      valuebuffer[0] = '\0';
+      if ((attr = ippFindAttribute(response,
+				   "ipp-versions-supported",
+				   IPP_TAG_KEYWORD)) != NULL) {
+	debug_printf("Checking whether printer %s supports IPP 2.x or newer: Attr: %s\n",
+		     p->queue_name, ippGetName(attr));
+	for (i = 0; i < ippGetCount(attr); i ++) {
+	  strncpy(valuebuffer, ippGetString(attr, i, NULL),
+		  sizeof(valuebuffer));
+	  debug_printf("Checking whether printer %s supports IPP 2.x or newer: Keyword: %s\n",
+		       p->queue_name, valuebuffer);
+	  if (valuebuffer[0] > '1')
+	    break;
+	}
+      }
+      if (!attr || valuebuffer[0] == '\0' || valuebuffer[0] <= '1') {
+	debug_printf("cups-browsed is configured to auto-setup only printers which are designed for driverless printing. These printers require IPP 2.x or newer, but this printer only supports IPP 1.x or older. Skipping.\n");
+	goto fail;
+      } else
+	debug_printf("--> Printer supports IPP 2.x or newer.\n");
+    }
+
+    /* If we have opted for only PWG Raster printers or for only printers 
+       designed for driverless use (PWG Raster + Apple Raster + PCLm + PDF)
+       being set up automatically, we check whether the printer has a non-empty
+       string in its "pwg-raster-document-resolution-supported" IPP attribute
+       to see whether we have a PWG Raster printer. */
+    if (CreateIPPPrinterQueues == IPP_PRINTERS_PWGRASTER ||
 	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
       valuebuffer[0] = '\0';
-      if ((attr = ippFindAttribute(response, "ipp-features-supported", IPP_TAG_KEYWORD)) != NULL) {
-	debug_printf("Checking whether printer %s is IPP Everywhere: Attr: %s\n",
+      if ((attr = ippFindAttribute(response,
+				   "pwg-raster-document-resolution-supported",
+				   IPP_TAG_KEYWORD)) != NULL) {
+	debug_printf("Checking whether printer %s is PWG Raster: Attr: %s\n",
 		     p->queue_name, ippGetName(attr));
 	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-	debug_printf("Checking whether printer %s is IPP Everywhere: Value: %s\n",
+	debug_printf("Checking whether printer %s is PWG Raster: Value: %s\n",
 		     p->queue_name, valuebuffer);
-	if (strcasecmp(valuebuffer, "ipp-everywhere")) {
+	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
 	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
 		    sizeof(valuebuffer));
-	    debug_printf("Checking whether printer %s is IPP Everywhere: Keyword: %s\n",
+	    debug_printf("Checking whether printer %s is PWG Raster: Keyword: %s\n",
 			 p->queue_name, valuebuffer);
-	    if (!strcasecmp(valuebuffer, "ipp-everywhere"))
+	    if (valuebuffer[0] != '\0')
 	      break;
 	  }
 	}
       }
-      if (attr && !strcasecmp(valuebuffer, "ipp-everywhere"))
-        is_everywhere = 1;
+      if (attr && valuebuffer[0] != '\0')
+        is_pwgraster = 1;
+      debug_printf("--> Printer %s PWG Raster.\n",
+		   is_pwgraster ? "supports" : "does not support");
     }
 
+#ifdef CUPS_RASTER_HAVE_APPLERASTER
     /* If we have opted for only Apple Raster printers or for only printers 
-       designed for driverless use (IPP Everywhere + Apple Raster) being set up
-       automatically, we check whether the printer has a non-empty string
-       in its "urf-supported" IPP attribute to see whether we have an Apple
-       Raster printer. */
+       designed for driverless use (PWG Raster + Apple Raster + PCLm + PDF)
+       being set up automatically, we check whether the printer has a non-empty
+       string in its "urf-supported" IPP attribute to see whether we have an
+       Apple Raster printer. */
     if (CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER ||
 	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
       valuebuffer[0] = '\0';
@@ -3576,35 +3627,114 @@ create_remote_printer_entry (const char *queue_name,
       }
       if (attr && valuebuffer[0] != '\0')
         is_appleraster = 1;
+      debug_printf("--> Printer %s Apple Raster.\n",
+		   is_appleraster ? "supports" : "does not support");
+    }
+#endif
+
+#ifdef QPDF_HAVE_PCLM
+    /* If we have opted for only PCLm printers or for only printers 
+       designed for driverless use (PWG Raster + Apple Raster + PCLm + PDF)
+       being set up automatically, we check whether the printer has a non-empty
+       string in its "pclm-compression-method-preferred" IPP attribute to see
+       whether we have a PCLm printer. */
+    if (CreateIPPPrinterQueues == IPP_PRINTERS_PCLM ||
+	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
+      valuebuffer[0] = '\0';
+      if ((attr = ippFindAttribute(response,
+				   "pclm-compression-method-preferred",
+				   IPP_TAG_KEYWORD)) != NULL) {
+	debug_printf("Checking whether printer %s understands PCLm: Attr: %s\n",
+		     p->queue_name, ippGetName(attr));
+	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+	debug_printf("Checking whether printer %s understands PCLm: Value: %s\n",
+		     p->queue_name, valuebuffer);
+	if (valuebuffer[0] == '\0') {
+	  for (i = 0; i < ippGetCount(attr); i ++) {
+	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
+		    sizeof(valuebuffer));
+	    debug_printf("Checking whether printer %s understands PCLm: Keyword: %s\n",
+			 p->queue_name, valuebuffer);
+	    if (valuebuffer[0] != '\0')
+	      break;
+	  }
+	}
+      }
+      if (attr && valuebuffer[0] != '\0')
+        is_pclm = 1;
+      debug_printf("--> Printer %s PCLm.\n",
+		   is_pclm ? "supports" : "does not support");
+    }
+#endif
+
+    /* If we have opted for only PDF printers or for only printers 
+       designed for driverless use (PWG Raster + Apple Raster + PCLm + PDF)
+       being set up automatically, we check whether the printer has 
+       "application/pdf" under its PDLs. */
+    if (CreateIPPPrinterQueues == IPP_PRINTERS_PDF ||
+	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
+	debug_printf("Checking whether printer %s understands PDF: PDLs: %s\n",
+		     p->queue_name, pdl);
+      if(strcasestr(pdl, "application/pdf"))
+        is_pdf = 1;
+      debug_printf("--> Printer %s PDF.\n",
+		   is_pdf ? "supports" : "does not support");
     }
 
-    /* If the printer is not IPP Everywhere or Apple Raster and we opted for
-       only such printers, we skip this printer. */
+    /* If the printer is not the driverless printer we opted for, we skip
+       this printer. */
     if ((CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS &&
-	 is_everywhere == 0 && is_appleraster == 0) ||
-	(CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE &&
-	 is_everywhere == 0) ||
+	 is_pwgraster == 0 && is_appleraster == 0 && is_pclm == 0 &&
+	 is_pdf == 0) ||
+	(CreateIPPPrinterQueues == IPP_PRINTERS_PWGRASTER &&
+	 is_pwgraster == 0) ||
 	(CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER &&
-	 is_appleraster == 0)) {
-      debug_printf("Printer %s (%s, %s%s%s%s%s) does not support the driverless printing protocol cups-browsed is configured to accept for setting up such printers automatically, ignoring this printer.\n",
+	 is_appleraster == 0) ||
+	(CreateIPPPrinterQueues == IPP_PRINTERS_PCLM &&
+	 is_pclm == 0) ||
+	(CreateIPPPrinterQueues == IPP_PRINTERS_PDF &&
+	 is_pdf == 0)) {
+      debug_printf("Printer %s (%s%s%s%s%s%s%s%s%s%s%s%s%s) does not support the driverless printing protocol cups-browsed is configured to accept for setting up such printers automatically, ignoring this printer.\n",
 		   p->queue_name, p->uri,
-		   (CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE ||
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_PWGRASTER ||
 		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
-		    (is_everywhere ? "" : "not ") : ""),
-		   (CreateIPPPrinterQueues == IPP_PRINTERS_EVERYWHERE ||
+		    ", " : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_PWGRASTER ||
 		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
-		    "IPP Everywhere" : ""),
-		   (CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
-		    " and " : ""),
+		    (is_pwgraster ? "" : "not ") : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_PWGRASTER ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    "PWG Raster" : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    ", " : ""),
 		   (CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER ||
 		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
 		    (is_appleraster ? "" : "not ") : ""),
 		   (CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER ||
 		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
-		    "Apple Raster" : ""));
+		    "Apple Raster" : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_PCLM ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    ", " : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_PCLM ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    (is_pclm ? "" : "not ") : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_PCLM ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    "PCLm" : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_PDF ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    ", " : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_PDF ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    (is_pdf ? "" : "not ") : ""),
+		   (CreateIPPPrinterQueues == IPP_PRINTERS_PDF ||
+		    CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS ?
+		    "PDF" : ""));
       goto fail;
     }
-    
+
     if (IPPPrinterQueueType == PPD_YES) {
       if (!ppdCreateFromIPP(buffer, sizeof(buffer), response, make_model,
 			    pdl, color, duplex)) {
@@ -7257,14 +7387,16 @@ read_configuration (const char *filename)
 	CreateIPPPrinterQueues = IPP_PRINTERS_NO;
       else if (strcasestr(value, "local") || strcasestr(value, "usb"))
 	CreateIPPPrinterQueues = IPP_PRINTERS_LOCAL_ONLY;
-      else if ((strcasestr(value, "driver") && strcasestr(value, "less")) ||
-	       ((strcasestr(value, "every") || strcasestr(value, "pwg")) &&
-		(strcasestr(value, "apple") || strcasestr(value, "air"))))
+      else if (strcasestr(value, "driver") && strcasestr(value, "less"))
 	CreateIPPPrinterQueues = IPP_PRINTERS_DRIVERLESS;
       else if (strcasestr(value, "every") || strcasestr(value, "pwg"))
-	CreateIPPPrinterQueues = IPP_PRINTERS_EVERYWHERE;
+	CreateIPPPrinterQueues = IPP_PRINTERS_PWGRASTER;
       else if (strcasestr(value, "apple") || strcasestr(value, "air"))
 	CreateIPPPrinterQueues = IPP_PRINTERS_APPLERASTER;
+      else if (strcasestr(value, "pclm") || strcasestr(value, "pcl-m"))
+	CreateIPPPrinterQueues = IPP_PRINTERS_PCLM;
+      else if (strcasestr(value, "pdf"))
+	CreateIPPPrinterQueues = IPP_PRINTERS_PDF;
     } else if (!strcasecmp(line, "IPPPrinterQueueType") && value) {
       if (!strncasecmp(value, "Auto", 4))
 	IPPPrinterQueueType = PPD_YES;
