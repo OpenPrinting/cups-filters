@@ -22,23 +22,30 @@ INTRODUCTION
     printers and IPP printers to make them available locally.
 
     From CUPS 1.6.0 on, this package is required for using printer
-    drivers with CUPS under Linux. With CUPS 1.5.x and 1.4.x this
-    package can be used optionally to switch over to PDF-based
-    printing. In that case some filters are provided by both CUPS and
-    this package. Then the filters of this package should be used.
+    drivers (und also driverless printing) with CUPS under Linux. With
+    CUPS 1.5.x and 1.4.x this package can be used optionally to switch
+    over to PDF-based printing. In that case some filters are provided
+    by both CUPS and this package. Then the filters of this package
+    should be used.
 
-    For compiling and using this package CUPS, libjpeg, libpng,
-    libtiff, freetype, fontconfig, liblcms (liblcms2 recommended),
-    libavahi-common, libavahi-client, libdbus, and glib are needed. It
-    is highly recommended, especially if non-PDF printers are used, to
-    have at least one of Ghostscript, Poppler, or MuPDF. To print
-    banner pages Poppler is needed.
+    For compiling and using this package CUPS, libqpdf, libjpeg,
+    libpng, libtiff, freetype, fontconfig, liblcms (liblcms2
+    recommended), libavahi-common, libavahi-client, libdbus, and glib
+    are needed. It is highly recommended, especially if non-PDF
+    printers are used, to have at least one of Ghostscript, Poppler,
+    or MuPDF. To print banner pages Poppler is needed.
 
     The Poppler-based filters need a C++ compiler which supports C++11
     and Poppler being built with the "./configure" options
     "--enable-splash --disable-fixedpoint --disable-single-precision"
     (if in the actually used Poppler version such options are
     available). This is the case for most modern Linux distributions.
+
+    For PCLm output (used by Mopria and Wi-Fi Direct printers) QPDF of
+    at least version 7.0.0 is required.
+
+    For Apple Raster output (used by AirPrint printers) at least CUPS
+    2.2.2 is required.
 
     For Braille embosser support (see below) you will also need at
     least liblouis, ImageMagick, and poppler-utils. Recommended is to
@@ -48,10 +55,10 @@ INTRODUCTION
 
     CUPS, this package, and Ghostscript contain some rudimentary
     printer drivers and especially the filters needed for driverless
-    printing (currently PWG Raster, Apple Raster, and PDF output
-    formats, for AirPrint and IPP Everywhere printers), see
-    http://www.openprinting.org/drivers/ for a more comprehensive set
-    of printer drivers for Linux.
+    printing (currently PWG Raster, Apple Raster, PCLm, and PDF output
+    formats, for IPP Everywhere, AirPrint, Mopria, and Wi-Fi Direct
+    printers), see http://www.openprinting.org/drivers/ for a more
+    comprehensive set of printer drivers for Linux.
 
     See
     
