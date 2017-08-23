@@ -100,8 +100,8 @@ typedef enum {
 // Compression method for providing data to PCLm Streams.
 typedef enum {
   DCT_DECODE = 0,
-  RLE_DECODE,
-  FLATE_DECODE
+  FLATE_DECODE,
+  RLE_DECODE
 } CompressionMethod;
 
 // Color conversion function
@@ -661,8 +661,8 @@ makePclmStrips(QPDF &pdf, unsigned num_strips,
     // Priority | Method
     // ------------------
     // 0        | DCT
-    // 1        | RLE
-    // 2        | FLATE
+    // 1        | FLATE
+    // 2        | RLE
     // ------------------
     CompressionMethod compression = compression_methods.front();
     for (std::vector<CompressionMethod>::iterator it = compression_methods.begin();

@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.17.0 - 2017-08-22
 
 CHANGES IN V1.17.1
 
+	- rastertopdf: Prefer RLE compression instead of Flate as there are
+	  HP printers where Flate is buggy.
 	- Build system: Fixed help mesage for "--enable-driverless" configure
 	  option (Bug #1405).
 
