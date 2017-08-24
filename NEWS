@@ -3,10 +3,18 @@ NEWS - OpenPrinting CUPS Filters v1.17.0 - 2017-08-22
 
 CHANGES IN V1.17.1
 
-	- rastertopdf: Prefer RLE compression instead of Flate as there are
-	  HP printers where Flate is buggy.
-	- Build system: Fixed help mesage for "--enable-driverless" configure
-	  option (Bug #1405).
+	- libcupsfilters: Completely redone the way how to determine
+	  the resolutions to use for the default resolution and print
+	  quality option. Resolution lists from IPP attributes are now
+	  read into sorted, duplicate-free lists with wrong
+	  resolutions removed or fixed. Resolutions actually used are
+	  the common ones between the supported PDLs, PDls with
+	  inferior maximum resolution or with broken resolution list
+	  are skipped (Debian bug #868360, Ubuntu bug #1712019).
+	- rastertopdf: Prefer RLE compression instead of Flate as
+	  there are HP printers where Flate is buggy.
+	- Build system: Fixed help mesage for "--enable-driverless"
+	  configure option (Bug #1405).
 
 CHANGES IN V1.17.0
 
