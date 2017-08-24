@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.17.0 - 2017-08-22
 
 CHANGES IN V1.17.1
 
+	- libcupsfilters: In the PPD file generator renamed the option
+	  "cupsPrintQuality" into the IPP name "print-quality" as CUPS
+	  does not update the "print-quality=4" entry in the filter
+	  command line based on the setting of "cupsPrintQuality"
+	  (CUPS issue #5090).
 	- libcupsfilters: Completely redone the way how to determine
 	  the resolutions to use for the default resolution and print
 	  quality option in the PPDs generated for IPP
@@ -12,7 +17,7 @@ CHANGES IN V1.17.1
 	  ones between the supported PDLs, PDls with inferior maximum
 	  resolution or with broken resolution list are skipped
 	  (Debian bug #868360, Ubuntu bug #1712019, CUPS issue #5088,
-	  CUPS Issue #5091).
+	  CUPS issue #5091).
 	- rastertopdf: Prefer RLE compression instead of Flate as
 	  there are HP printers where Flate is buggy.
 	- Build system: Fixed help mesage for "--enable-driverless"

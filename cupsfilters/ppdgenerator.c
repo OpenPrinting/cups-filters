@@ -1986,26 +1986,27 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     cupsFilePrintf(fp, "*DefaultResolution: %dx%ddpi\n", xres, yres);
 
  /*
-  * cupsPrintQuality...
+  * print-quality...
   */
   
   if ((quality =
        ippFindAttribute(response, "print-quality-supported",
 			IPP_TAG_ENUM)) != NULL)
   {
-    cupsFilePrintf(fp, "*OpenUI *cupsPrintQuality/%s: PickOne\n"
-		       "*OrderDependency: 10 AnySetup *cupsPrintQuality\n"
-		       "*DefaultcupsPrintQuality: Normal\n",
-		       _cupsLangString(lang, _("Print Quality")));
+    cupsFilePrintf(fp, "*OpenUI *print-quality/%s: PickOne\n"
+		       "*OrderDependency: 10 AnySetup *print-quality\n"
+		       "*Defaultprint-quality: %d\n",
+		   _cupsLangString(lang, _("Print Quality")),
+		   IPP_QUALITY_NORMAL);
     if (ippContainsInteger(quality, IPP_QUALITY_DRAFT))
-      cupsFilePrintf(fp, "*cupsPrintQuality Draft/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("Draft")),
+      cupsFilePrintf(fp, "*print-quality %d/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", IPP_QUALITY_DRAFT, _cupsLangString(lang, _("Draft")),
 		     min_res->x, min_res->y);
-    cupsFilePrintf(fp, "*cupsPrintQuality Normal/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("Normal")),
+    cupsFilePrintf(fp, "*print-quality %d/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", IPP_QUALITY_NORMAL, _cupsLangString(lang, _("Normal")),
 		   common_def->x, common_def->y);
     if (ippContainsInteger(quality, IPP_QUALITY_HIGH))
-      cupsFilePrintf(fp, "*cupsPrintQuality High/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", _cupsLangString(lang, _("High")),
+      cupsFilePrintf(fp, "*print-quality %d/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n", IPP_QUALITY_HIGH, _cupsLangString(lang, _("High")),
 		     max_res->x, max_res->y);
-    cupsFilePuts(fp, "*CloseUI: *cupsPrintQuality\n");
+    cupsFilePuts(fp, "*CloseUI: *print-quality\n");
   }
 
  /*
