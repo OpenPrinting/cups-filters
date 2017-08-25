@@ -615,7 +615,7 @@ std::vector<QPDFObjectHandle>
 makePclmStrips(QPDF &pdf, unsigned num_strips,
                std::vector< PointerHolder<Buffer> > &strip_data,
                std::vector<CompressionMethod> &compression_methods,
-               unsigned width, unsigned height, cups_cspace_t cs, unsigned bpc)
+               unsigned width, std::vector<unsigned>& strip_height, cups_cspace_t cs, unsigned bpc)
 {
     std::vector<QPDFObjectHandle> ret(num_strips);
     for (size_t i = 0; i < num_strips; i ++)
@@ -627,7 +627,6 @@ makePclmStrips(QPDF &pdf, unsigned num_strips,
     dict["/Type"]=QPDFObjectHandle::newName("/XObject");
     dict["/Subtype"]=QPDFObjectHandle::newName("/Image");
     dict["/Width"]=QPDFObjectHandle::newInteger(width);
-    dict["/Height"]=QPDFObjectHandle::newInteger(height);
     dict["/BitsPerComponent"]=QPDFObjectHandle::newInteger(bpc);
 
     J_COLOR_SPACE color_space;
@@ -672,6 +671,7 @@ makePclmStrips(QPDF &pdf, unsigned num_strips,
     // write compressed stream data
     for (size_t i = 0; i < num_strips; i ++)
     {
+      dict["/Height"]=QPDFObjectHandle::newInteger(strip_height[i]);
       ret[i].replaceDict(QPDFObjectHandle::newDictionary(dict));
       Pl_Buffer psink("psink");
       if (compression == FLATE_DECODE)
@@ -692,7 +692,7 @@ makePclmStrips(QPDF &pdf, unsigned num_strips,
       }
       else if (compression == DCT_DECODE)
       {
-        Pl_DCT pdct("pdct", &psink, width, height, components, color_space);
+        Pl_DCT pdct("pdct", &psink, width, strip_height[i], components, color_space);
         pdct.write(strip_data[i]->getBuffer(),strip_data[i]->getSize());
         pdct.finish();
         ret[i].replaceStreamData(PointerHolder<Buffer>(psink.getBuffer()),
@@ -877,7 +877,7 @@ void finish_page(struct pdf_info * info)
         if(!info->pclm_strip_data[i].getPointer())
           return;
 
-      std::vector<QPDFObjectHandle> strips = makePclmStrips(info->pdf, info->pclm_num_strips, info->pclm_strip_data, info->pclm_compression_method_preferred, info->width, info->pclm_strip_height_preferred, info->color_space, info->bpc);
+      std::vector<QPDFObjectHandle> strips = makePclmStrips(info->pdf, info->pclm_num_strips, info->pclm_strip_data, info->pclm_compression_method_preferred, info->width, info->pclm_strip_height, info->color_space, info->bpc);
       for (size_t i = 0; i < info->pclm_num_strips; i ++)
         if(!strips[i].isInitialized()) die("Unable to load strip data");
 
