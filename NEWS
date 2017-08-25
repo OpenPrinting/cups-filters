@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.17.0 - 2017-08-22
 
 CHANGES IN V1.17.1
 
+	- libcupsfilters: Added direct PNG printing to the PPD
+	  generator, the one of CUPS has it, too.
 	- libcupsfilters: In the PPD file generator renamed the option
 	  "cupsPrintQuality" into the IPP name "print-quality" as CUPS
 	  does not update the "print-quality=4" entry in the filter

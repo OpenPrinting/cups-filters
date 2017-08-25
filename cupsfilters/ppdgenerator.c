@@ -446,7 +446,7 @@ ippResolutionListToArray(ipp_attribute_t *attr)
   cups_array_t *res_array = NULL;
   res_t *res;
   int i;
-  
+
   if (attr) {
     ipp_tag_t tag = ippGetValueTag(attr);
     int count = ippGetCount(attr);
@@ -486,7 +486,7 @@ ippResolutionListToArray(ipp_attribute_t *attr)
    Note that when calling this function the addresses of the pointers
    to the resolution arrays and default resolutions have to be given
    (call by reference) as all will get modified by the function. */
-   
+
 int /* 1 on success, 0 on failure */
 joinResolutionArrays(cups_array_t **current, cups_array_t **new,
 		     res_t **current_default, res_t **new_default,
@@ -497,7 +497,7 @@ joinResolutionArrays(cups_array_t **current, cups_array_t **new,
 {
   res_t *res;
   int retval;
-  
+
   if (current == NULL || new == NULL || *new == NULL ||
       cupsArrayCount(*new) == 0) {
     retval = 0;
@@ -781,14 +781,14 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   * PDLs and common resolutions ...
   */
 
-  /* Put all available PDls into a simple case-insensitevely searchable
-     sorted string list */
   common_res = NULL;
   current_res = NULL;
   common_def = NULL;
   current_def = NULL;
   min_res = NULL;
   max_res = NULL;
+  /* Put all available PDls into a simple case-insensitevely searchable
+     sorted string list */
   if ((pdl_list = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
 				(cups_acopy_func_t)strdup,
 				(cups_afree_func_t)free)) == NULL)
@@ -808,7 +808,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       if (attr) format = ippGetString(attr, i, NULL);
       /* Add format to list of supported PDLs, skip duplicates */
       if (!cupsArrayFind(pdl_list, (void *)format))
-	cupsArrayAdd(pdl_list, (void *)format);      
+	cupsArrayAdd(pdl_list, (void *)format);
       if (attr)
 	/* Next format in attribute */
 	i ++;
@@ -939,6 +939,8 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   }
   if (cupsArrayFind(pdl_list, "image/jpeg"))
     cupsFilePuts(fp, "*cupsFilter2: \"image/jpeg image/jpeg 0 -\"\n");
+  if (cupsArrayFind(pdl_list, "image/png"))
+    cupsFilePuts(fp, "*cupsFilter2: \"image/png image/png 0 -\"\n");
   cupsArrayDelete(pdl_list);
   if (formatfound == 0)
     goto bad_ppd;
