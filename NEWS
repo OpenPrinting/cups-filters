@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.17.1 - 2017-08-25
 -----------------------------------------------------
 
+CHANGES IN V1.17.2
+
+	- libcupsfilters: Fixed outstanding bug in PCLm with JPEG (DCT)
+	  compression. Now PCLm support is completely working.
+
 CHANGES IN V1.17.1
 
 	- libcupsfilters: Added direct PNG printing to the PPD
