@@ -1,9 +1,15 @@
 NEWS - OpenPrinting CUPS Filters v1.17.2 - 2017-08-25
 -----------------------------------------------------
 
+CHANGES IN V1.17.3
+
+	- libcupsfilters: Do not check maximum resolutions of raster-based
+	  PDLs, as implementation was incorrect and reliability of PDLs is
+	  more important than maximum resolution.
+
 CHANGES IN V1.17.2
 
-	- libcupsfilters: Fixed outstanding bug in PCLm with JPEG (DCT)
+	- rastertopdf: Fixed outstanding bug in PCLm with JPEG (DCT)
 	  compression. Now PCLm support is completely working.
 
 CHANGES IN V1.17.1

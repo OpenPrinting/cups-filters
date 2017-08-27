@@ -479,8 +479,6 @@ ippResolutionListToArray(ipp_attribute_t *attr)
    "current_default" holds the default resolution of the array "current".
    It will get replaced by "new_default" if "current_default" is either
    NULL or a resolution which is not in "current" any more.
-   With "mode" set to 1 you can reject joining resolution lists which
-   have a lower maximum resolution than "current".
    "new" and "new_default" will be deleted/freed and set to NULL after
    each, successful or unsuccssful operation.
    Note that when calling this function the addresses of the pointers
@@ -489,11 +487,7 @@ ippResolutionListToArray(ipp_attribute_t *attr)
 
 int /* 1 on success, 0 on failure */
 joinResolutionArrays(cups_array_t **current, cups_array_t **new,
-		     res_t **current_default, res_t **new_default,
-		     int mode) /* mode: 0: Always succeed if at least 1
-				           resolution remains.
-				        1: Fail if the max. resolution gets
-				           lower */
+		     res_t **current_default, res_t **new_default)
 {
   res_t *res;
   int retval;
@@ -517,16 +511,6 @@ joinResolutionArrays(cups_array_t **current, cups_array_t **new,
   } else if (cupsArrayCount(*current) == 0) {
     retval = 1;
     goto finish;
-  }
-
-  if (mode) {
-    /* With mode == 1 fail if the new array has a lower maximum
-       resolution than the original one */
-    if (compare_resolutions(cupsArrayLast(*new),
-			    cupsArrayLast(*current), NULL) < 0) {
-      retval = 0;
-      goto finish;
-    }
   }
 
   /* Dry run: Check whether the two array have at least one resolution
@@ -619,10 +603,6 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
                         *current_def,   /* Default resolution of current PDL */
                         *min_res,       /* Minimum common resolution */
                         *max_res;       /* Maximum common resolution */
-  int                   join_mode = 1;  /* 0: Accept PDLs with lower max
-					      resolution than the previous
-					      ones.
-					   1: Skip such PDLs */
   cups_lang_t		*lang = cupsLangDefault();
 					/* Localization info */
   struct lconv		*loc = localeconv();
@@ -830,11 +810,10 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
      supported PDLs. Choose the default resolution from the most
      desirable of all resolution-requiring PDLs if it is common in all
      of them. Skip a resolution-requiring PDL if its resolution list
-     attrinbute is missing or if its maximum resolution is lower than
-     of the more desirable PDLs. Use the general resolution list and
-     default resolution of the printer only if it does not support any
-     resolution-requiring PDL. Use 300 dpi if there is no resolution
-     info at all in the attributes. */
+     attrinbute is missing or contains only broken entries. Use the
+     general resolution list and default resolution of the printer
+     only if it does not support any resolution-requiring PDL. Use 300
+     dpi if there is no resolution info at all in the attributes. */
   if (cupsArrayFind(pdl_list, "application/pdf")) {
     cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
     formatfound = 1;
@@ -845,7 +824,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       current_def = NULL;
       if ((current_res = ippResolutionListToArray(attr)) != NULL &&
 	  joinResolutionArrays(&common_res, &current_res, &common_def,
-			       &current_def, join_mode)) {
+			       &current_def)) {
 	cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 0 -\"\n");
 	formatfound = 1;
 	is_pwg = 1;
@@ -880,7 +859,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	  current_def = NULL;
 	  if (cupsArrayCount(current_res) > 0 &&
 	      joinResolutionArrays(&common_res, &current_res, &common_def,
-				   &current_def, join_mode)) {
+				   &current_def)) {
 	    cupsFilePuts(fp, "*cupsFilter2: \"image/urf image/urf 100 -\"\n");
 	    formatfound = 1;
 	    is_apple = 1;
@@ -899,7 +878,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	current_def = NULL;
       if ((current_res = ippResolutionListToArray(attr)) != NULL &&
 	  joinResolutionArrays(&common_res, &current_res, &common_def,
-			       &current_def, join_mode)) {
+			       &current_def)) {
 	cupsFilePuts(fp, "*cupsFilter2: \"application/PCLm application/PCLm 200 -\"\n");
 	formatfound = 1;
 	is_pclm = 1;
@@ -955,7 +934,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	current_def = NULL;
       if ((current_res = ippResolutionListToArray(attr)) != NULL)
 	joinResolutionArrays(&common_res, &current_res, &common_def,
-			     &current_def, join_mode);
+			     &current_def);
     }
   }
   /* Still no resolution found? Default to 300 dpi */
