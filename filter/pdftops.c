@@ -606,8 +606,9 @@ main(int  argc,				/* I - Number of command-line args */
 #    else
     pdf_argv[6] = (char *)"-sDEVICE=pswrite";
 #    endif /* HAVE_GHOSTSCRIPT_PS2WRITE */
-    pdf_argv[7] = (char *)"-sOUTPUTFILE=%stdout";
-    pdf_argc    = 8;
+    pdf_argv[7] = (char *)"-dShowAcroForm";
+    pdf_argv[8] = (char *)"-sOUTPUTFILE=%stdout";
+    pdf_argc    = 9;
   }
   else if (renderer == PDFTOCAIRO)
   {

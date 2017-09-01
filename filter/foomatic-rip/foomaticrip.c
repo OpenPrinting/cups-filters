@@ -653,7 +653,7 @@ int print_file(const char *filename, int convert)
 		else
 		  snprintf(pdf2ps_cmd, CMDLINE_MAX,
 			   "gs -q -sstdout=%%stderr -sDEVICE=ps2write -sOutputFile=- "
-			   "-dBATCH -dNOPAUSE -dPARANOIDSAFER -dNOINTERPOLATE -dNOMEDIAATTRS %s 2>/dev/null || "
+			   "-dBATCH -dNOPAUSE -dPARANOIDSAFER -dNOINTERPOLATE -dNOMEDIAATTRS -dShowAcroForm %s 2>/dev/null || "
 			   "pdftops -level2 -origpagesizes %s - 2>/dev/null",
 			   filename, filename);
 
@@ -1018,7 +1018,7 @@ int main(int argc, char** argv)
                 else
                   cmd[0] = '\0';
 
-                snprintf(gstoraster, sizeof(gstoraster), "gs -dQUIET -dDEBUG -dPARANOIDSAFER -dNOPAUSE -dBATCH -dNOINTERPOLATE -dNOMEDIAATTRS -sDEVICE=cups %s -sOutputFile=- -", cmd);
+                snprintf(gstoraster, sizeof(gstoraster), "gs -dQUIET -dDEBUG -dPARANOIDSAFER -dNOPAUSE -dBATCH -dNOINTERPOLATE -dNOMEDIAATTRS -sDEVICE=cups -dShowAcroForm %s -sOutputFile=- -", cmd);
             }
 
             /* build Ghostscript/CUPS driver command line */

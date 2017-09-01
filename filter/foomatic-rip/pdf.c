@@ -132,7 +132,7 @@ static int pdf_extract_pages(char filename[PATH_MAX],
     }
 
     snprintf(gscommand, CMDLINE_MAX, "%s -q -dNOPAUSE -dBATCH -dPARANOIDSAFER -dNOINTERPOLATE -dNOMEDIAATTRS"
-	     "-sDEVICE=pdfwrite %s %s %s %s",
+	     "-sDEVICE=pdfwrite -dShowAcroForm %s %s %s %s",
 	     gspath, filename_arg, first_arg, last_arg, pdffilename);
 
     FILE *pd = popen(gscommand, "r");
@@ -192,6 +192,8 @@ static int render_pages_with_ghostscript(dstr_t *cmd,
 
     dstrinsertf(cmd, end_gs_cmd, " %s ", filename);
 
+    dstrinsertf(cmd, start_gs_cmd + 2, " -dShowAcroForm ");
+    
     if (firstpage > 1)
     {
         if (lastpage >= firstpage)
