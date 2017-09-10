@@ -1,6 +1,18 @@
 NEWS - OpenPrinting CUPS Filters v1.17.3 - 2017-09-07
 -----------------------------------------------------
 
+CHANGES IN V1.17.4
+
+	- pdftopdf: If the input PDF file contains an interactive
+	  form, flatten it to static PDF so that further manipulation,
+	  like scaling, number-up, ... do not let the filled for
+	  content getting lost. This is implemented by using the
+	  pdftocairo utility of Poppler and if this fails Ghostscript
+	  (9.22 or later recommended). This will probably replaced by
+	  a QPDF-based solution later. Thanks to Tobias Hoffmann for
+	  the QPDF-based detection of PDF forms (Bug #1315, Ubuntu bug
+	  #1564249).
+
 CHANGES IN V1.17.3
 
 	- bannertopdf: Make it working also with Poppler 0.58.0 and newer

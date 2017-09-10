@@ -3,6 +3,7 @@
 // Copyright (c) 2006-2011, BBR Inc.  All rights reserved.
 // MIT Licensed.
 
+#include <config.h>
 #include <stdio.h>
 #include <assert.h>
 #include <cups/cups.h>
@@ -16,6 +17,10 @@
 #include <iomanip>
 #include <sstream>
 #include <memory>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "pdftopdf_processor.h"
 #include "pdftopdf_jcl.h"
@@ -860,6 +865,136 @@ FILE *copy_stdin_to_temp() // {{{
 }
 // }}}
 
+static int
+sub_process_spawn (const char *filename,
+          cups_array_t *sub_process_args,
+          FILE *fp) // {{{
+{
+  char *argument;
+  char buf[BUFSIZ];
+  char **sub_process_argv;
+  const char* apos;
+  int fds[2];
+  int i;
+  int n;
+  int numargs;
+  int pid;
+  int status = 65536;
+  int wstatus;
+
+  /* Put sub-process command line argument into an array for the "exec()"
+     call */
+  numargs = cupsArrayCount(sub_process_args);
+  sub_process_argv = (char **)calloc(numargs + 1, sizeof(char *));
+  for (argument = (char *)cupsArrayFirst(sub_process_args), i = 0; argument;
+       argument = (char *)cupsArrayNext(sub_process_args), i++) {
+    sub_process_argv[i] = argument;
+  }
+  sub_process_argv[i] = NULL;
+
+  /* Debug output: Full sub-process command line */
+  fprintf(stderr, "DEBUG: PDF form flattening command line:");
+  for (i = 0; sub_process_argv[i]; i ++) {
+    if ((strchr(sub_process_argv[i],' ')) || (strchr(sub_process_argv[i],'\t')))
+      apos = "'";
+    else
+      apos = "";
+    fprintf(stderr, " %s%s%s", apos, sub_process_argv[i], apos);
+  }
+  fprintf(stderr, "\n");
+
+  /* Create a pipe for feeding the job into sub-process */
+  if (pipe(fds))
+  {
+    fds[0] = -1;
+    fds[1] = -1;
+    fprintf(stderr, "ERROR: Unable to establish pipe for sub-process call\n");
+    goto out;
+  }
+
+  /* Set the "close on exec" flag on each end of the pipe... */
+  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC))
+  {
+    close(fds[0]);
+    close(fds[1]);
+    fds[0] = -1;
+    fds[1] = -1;
+    fprintf(stderr, "ERROR: Unable to set \"close on exec\" flag on read end of the pipe for sub-process call\n");
+    goto out;
+  }
+  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC))
+  {
+    close(fds[0]);
+    close(fds[1]);
+    fprintf(stderr, "ERROR: Unable to set \"close on exec\" flag on write end of the pipe for sub-process call\n");
+    goto out;
+  }
+
+  if ((pid = fork()) == 0)
+  {
+    /* Couple pipe with STDIN of sub-process */
+    if (fds[0] != 0) {
+      close(0);
+      if (fds[0] > 0) {
+        if (dup(fds[0]) < 0) {
+	  fprintf(stderr, "ERROR: Unable to couple pipe with STDIN of sub-process\n");
+	  goto out;
+	}
+      } else {
+        fprintf(stderr, "ERROR: Unable to couple pipe with STDIN of sub-process\n");
+        goto out;
+      }
+    }
+    close(fds[1]);
+
+    /* Execute sub-process command line ... */
+    execvp(filename, sub_process_argv);
+    perror(filename);
+    close(fds[0]);
+    goto out;
+  }
+
+  close(fds[0]);
+  /* Feed job data into the sub-process */
+  while ((n = fread(buf, 1, BUFSIZ, fp)) > 0) {
+    int count;
+retry_write:
+    count = write(fds[1], buf, n);
+    if (count != n) {
+      if (count == -1) {
+        if (errno == EINTR) {
+          goto retry_write;
+	}
+        fprintf(stderr, "ERROR: write failed: %s\n", strerror(errno));
+      }
+      fprintf(stderr, "ERROR: Can't feed job data into the sub-process\n");
+      goto out;
+    }
+  }
+  close (fds[1]);
+
+retry_wait:
+  if (waitpid (pid, &wstatus, 0) == -1) {
+    if (errno == EINTR)
+      goto retry_wait;
+    perror ("sub-process");
+    goto out;
+  }
+
+  /* How did the sub-process terminate */
+  if (WIFEXITED(wstatus))
+    /* Via exit() anywhere or return() in the main() function */
+    status = WEXITSTATUS(wstatus);
+  else if (WIFSIGNALED(wstatus))
+    /* Via signal */
+    status = 256 * WTERMSIG(wstatus);
+
+out:
+  free(sub_process_argv);
+  return status;
+}
+// }}}
+
 int main(int argc,char **argv)
 {
   if ((argc<6)||(argc>7)) {
@@ -924,17 +1059,112 @@ int main(int argc,char **argv)
 
     std::unique_ptr<PDFTOPDF_Processor> proc(PDFTOPDF_Factory::processor());
 
+    FILE *tmpfile = NULL;
     if (argc==7) {
       if (!proc->loadFilename(argv[6])) {
         ppdClose(ppd);
         return 1;
       }
     } else {
-      FILE *f=copy_stdin_to_temp();
-      if ((!f)||
-	  (!proc->loadFile(f,TakeOwnership))) {
+      tmpfile = copy_stdin_to_temp();
+      if ((!tmpfile)||
+	  (!proc->loadFile(tmpfile,WillStayAlive))) {
         ppdClose(ppd);
         return 1;
+      }
+    }
+
+    /* The input file contains a PDF form. To not loose the data filled
+       into the form during our further manipulations we need to flatten
+       the form, meaning that we integrate the filled in data into the
+       pages themselves instead of holding them in an extra layer */
+    if (proc->hasAcroForm()) {
+      /* Prepare the input file for being read by the form flattening
+	 process */
+      FILE *infile = NULL;
+      if (argc == 7) {
+	/* We read from a named file */
+	infile = fopen(argv[6], "r");
+      } else {
+	/* We read from a temporary file */
+	if (tmpfile) rewind(tmpfile);
+	infile = tmpfile;
+      }
+      if (infile == NULL) {
+	error("Could not open the input file for flattening the PDF form!");
+	return 1;
+      }
+      /* Create a temporary file for the output of the flattened PDF */
+      char buf[BUFSIZ];
+      int fd = cupsTempFd(buf,sizeof(buf));
+      if (fd<0) {
+	error("Can't create temporary file for flattened PDF form!");
+	return 1;
+      }
+      FILE *outfile = NULL;
+      if ((outfile=fdopen(fd,"rb")) == 0) {
+	error("Can't fdopen temporary file for the flattened PDF form!");
+	close(fd);
+	return 1;
+      }
+      int flattening_done = 0;
+      const char *command;
+      cups_array_t *args;
+      /* Choose the utility to be used and create its command line */
+      /* Try pdftocairo first, the preferred utility for form-flattening */
+      command = CUPS_POPPLER_PDFTOCAIRO;
+      args = cupsArrayNew(NULL, NULL);
+      cupsArrayAdd(args, strdup(command));
+      cupsArrayAdd(args, strdup("-pdf"));
+      cupsArrayAdd(args, strdup("-"));
+      cupsArrayAdd(args, strdup(buf));
+      /* Run the pdftocairo form flattening process */
+      rewind(infile);
+      int status = sub_process_spawn (command, args, infile);
+      cupsArrayDelete(args);
+      if (status == 0)
+	flattening_done = 1;
+      else {
+	error("Unable to execute pdftocairo for form flattening!");
+	/* Try Ghostscript, currently the only working alternative */
+	command = CUPS_GHOSTSCRIPT;
+	args = cupsArrayNew(NULL, NULL);
+	cupsArrayAdd(args, strdup(command));
+	cupsArrayAdd(args, strdup("-dQUIET"));
+	cupsArrayAdd(args, strdup("-dPARANOIDSAFER"));
+	cupsArrayAdd(args, strdup("-dNOPAUSE"));
+	cupsArrayAdd(args, strdup("-dBATCH"));
+	cupsArrayAdd(args, strdup("-dNOINTERPOLATE"));
+	cupsArrayAdd(args, strdup("-dNOMEDIAATTRS"));
+	cupsArrayAdd(args, strdup("-sDEVICE=pdfwrite"));
+	cupsArrayAdd(args, strdup("-dShowAcroForm"));
+	cupsArrayAdd(args, strdup("-sstdout=%stderr"));
+	memmove(buf + 13, buf, sizeof(buf) - 13);
+	memcpy(buf, "-sOutputFile=", 13);
+	cupsArrayAdd(args, strdup(buf));
+	cupsArrayAdd(args, strdup("-"));
+	/* Run the Ghostscript form flattening process */
+	rewind(infile);
+	int status = sub_process_spawn (command, args, infile);
+	cupsArrayDelete(args);
+	if (status == 0)
+	  flattening_done = 1;
+	else {
+	  error("Unable to execute Ghostscript for form flattening!");
+	  error("No suitable utility for flattening filled PDF forms available, no flattening performed. Filled in content will not be printed.");
+	  rewind(infile);
+	}
+      }
+      /* Clean up */
+      fclose(infile);
+      /* Load the flattened PDF file into our PDF processor */
+      if (flattening_done) {
+	rewind(outfile);
+	unlink(buf);
+	if (!proc->loadFile(outfile,TakeOwnership)) {
+	  error("Unable to create a PDF processor on the flattened form!"); 
+	  return 1;
+	}
       }
     }
 

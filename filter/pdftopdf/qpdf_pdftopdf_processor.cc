@@ -648,3 +648,16 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name) // {{{
 
 // TODO:
 //   loadPDF();   success?
+
+bool QPDF_PDFTOPDF_Processor::hasAcroForm() // {{{
+{
+  if (!pdf) {
+    return false;
+  }
+  QPDFObjectHandle root=pdf->getRoot();
+  if (!root.hasKey("/AcroForm")) {
+    return false;
+  }
+  return true;
+}
+// }}}

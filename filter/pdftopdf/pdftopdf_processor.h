@@ -143,6 +143,8 @@ class PDFTOPDF_Processor { // abstract interface
 
   virtual void emitFile(FILE *dst,ArgOwnership take=WillStayAlive) =0;
   virtual void emitFilename(const char *name) =0; // NULL -> stdout
+
+  virtual bool hasAcroForm() =0;
 };
 
 class PDFTOPDF_Factory {
