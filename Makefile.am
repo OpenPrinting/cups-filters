@@ -308,11 +308,12 @@ pkgppdc_DATA += \
 	filter/braille/drivers/index/index.defs \
 	filter/braille/filters/braille.defs \
 	filter/braille/filters/imagemagick.defs \
-	filter/braille/filters/liblouis1.defs.gen.in \
 	filter/braille/filters/liblouis.defs \
 	filter/braille/drivers/common/fr-braille.po
 nodist_pkgppdc_DATA = \
-	$(GENERATED_LIBLOUIS)
+	$(GENERATED_DEFS)
+
+EXTRA_DIST += filter/braille/filters/liblouis1.defs.gen.in
 endif
 
 EXTRA_DIST += $(pkgppdc_DATA)
@@ -533,6 +534,8 @@ nodist_pkgfilter_SCRIPTS = \
 	filter/braille/drivers/index/imageubrltoindexv4 \
 	filter/braille/drivers/index/textbrftoindexv3 \
 	filter/braille/filters/imagetobrf \
+	filter/braille/filters/vectortopdf \
+	filter/braille/filters/vectortobrf \
 	filter/braille/filters/texttobrf
 endif
 pkgfilter_PROGRAMS += \
@@ -994,6 +997,13 @@ if ENABLE_DRIVERLESS
 endif
 if ENABLE_BRAILLE
 	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
+	$(LN_S) -f vectortopdf $(DESTDIR)$(pkgfilterdir)/svgtopdf
+	$(LN_S) -f vectortopdf $(DESTDIR)$(pkgfilterdir)/xfigtopdf
+	$(LN_S) -f vectortopdf $(DESTDIR)$(pkgfilterdir)/wmftopdf
+	$(LN_S) -f vectortopdf $(DESTDIR)$(pkgfilterdir)/emftopdf
+	$(LN_S) -f vectortopdf $(DESTDIR)$(pkgfilterdir)/cgmtopdf
+	$(LN_S) -f vectortopdf $(DESTDIR)$(pkgfilterdir)/cmxtopdf
+	$(LN_S) -f vectortobrf $(DESTDIR)$(pkgfilterdir)/vectortoubrl
 	$(LN_S) -f textbrftoindexv3 $(DESTDIR)$(pkgfilterdir)/textbrftoindexv4
 endif
 

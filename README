@@ -1611,6 +1611,22 @@ lp file.rtf
 lp file.docx
 
 
+--------------------
+Vector Image support
+--------------------
+
+Vector images can be embossed by converting them to braille dots.
+
+This needs the inkscape package installed. Various input formats are then
+supported: .svg, .fig, .wmf, .emf, .cgm, .cmx
+
+The conversion assumes that the input is black-on-white. If it is
+white-on-black, the -o Negate option can be used.
+
+This image support is preferred over the generic image support described below,
+which has to reconstruct lines to be embossed.
+
+
 -------------
 Image support
 -------------

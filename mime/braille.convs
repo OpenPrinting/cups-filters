@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,6 @@ image/gif		image/vnd.cups-brf	70	imagetobrf
 image/jpeg		image/vnd.cups-brf	70	imagetobrf
 image/pcx		image/vnd.cups-brf	70	imagetobrf
 image/png		image/vnd.cups-brf	70	imagetobrf
-image/svg		image/vnd.cups-brf	70	imagetobrf
 image/tiff		image/vnd.cups-brf	70	imagetobrf
 image/vnd.microsoft.icon	image/vnd.cups-brf	70	imagetobrf
 image/x-ms-bmp		image/vnd.cups-brf	70	imagetobrf
@@ -59,7 +58,6 @@ image/gif		image/vnd.cups-ubrl	70	imagetoubrl
 image/jpeg		image/vnd.cups-ubrl	70	imagetoubrl
 image/pcx		image/vnd.cups-ubrl	70	imagetoubrl
 image/png		image/vnd.cups-ubrl	70	imagetoubrl
-image/svg		image/vnd.cups-ubrl	70	imagetoubrl
 image/tiff		image/vnd.cups-ubrl	70	imagetoubrl
 image/vnd.microsoft.icon	image/vnd.cups-ubrl	70	imagetoubrl
 image/x-ms-bmp		image/vnd.cups-ubrl	70	imagetoubrl
@@ -71,5 +69,17 @@ image/x-xbitmap		image/vnd.cups-ubrl	70	imagetoubrl
 image/x-xpixmap		image/vnd.cups-ubrl	70	imagetoubrl
 image/x-xwindowdump	image/vnd.cups-ubrl	70	imagetoubrl
 
-# TODO: 
-#image/svg		image/vnd.cups-brf	30	vectortobrf
+image/svg		image/vnd.cups-pdf	30	svgtopdf
+image/svg+xml		image/vnd.cups-pdf	30	svgtopdf
+application/x-xfig	image/vnd.cups-pdf	30	xfigtopdf
+image/wmf		image/vnd.cups-pdf	30	wmftopdf
+image/x-wmf		image/vnd.cups-pdf	30	wmftopdf
+windows/metafile	image/vnd.cups-pdf	30	wmftopdf
+application/x-msmetafile	image/vnd.cups-pdf	30	wmftopdf
+image/emf		image/vnd.cups-pdf	30	emftopdf
+image/x-emf		image/vnd.cups-pdf	30	emftopdf
+image/cgm		image/vnd.cups-pdf	30	cgmtopdf
+image/x-cmx		image/vnd.cups-pdf	30	cmxtopdf
+
+image/vnd.cups-pdf	image/vnd.cups-brf	30	vectortobrf
+image/vnd.cups-pdf	image/vnd.cups-ubrl	30	vectortoubrl
