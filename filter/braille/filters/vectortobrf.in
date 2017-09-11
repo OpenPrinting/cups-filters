@@ -1,0 +1,70 @@
+#!/bin/bash
+
+#
+# Copyright (c) 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# 
+
+# Make sure we have enough options
+if [ $# != 5 -a $# != 6 ]; then
+  echo "ERROR: $0 jobid user name nb options [filename]" >&2
+  exit 1
+fi
+
+NB=$4
+OPTIONS=$5
+FILE=$6
+
+OUTPUT_FORMAT=brf
+
+case $0 in
+  *vectortoubrl*) OUTPUT_FORMAT=ubrl ;;
+esac
+
+. @CUPS_DATADIR@/braille/cups-braille.sh
+
+checkTool convert imagemagick "embossing images"
+
+NEGATE=$(getOption Negate)
+case "$NEGATE" in
+  True)  NEGATE=-negate ;;
+  False) NEGATE= ;;
+  *)
+    printf "ERROR: Option Negate must either True or False, got '%s'\n" "$NEGATE" >&2
+    exit 1
+    ;;
+esac
+
+GS_CALL="gs -q -dDEVICEWIDTHPOINTS=${GRAPHICWIDTH} -dDEVICEHEIGHTPOINTS=${GRAPHICHEIGHT} -noantialias -dTextAlphaBits=1 -dGraphicsAlphaBits=1 -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pngmono -dFitPage -r72 -sOutputFile=-"
+RENDER_CALL="convert $NEGATE - $OUTPUT_FORMAT:-"
+
+# Now proceeed
+echo "INFO: Converting image" 1>&2
+if [ -z "$FILE" ]
+then
+  printf "DEBUG: Calling $GS_CALL and $RENDER_CALL from stdin\n" 1>&2
+  $GS_CALL - | sed -e '/-noantialias/d' | $RENDER_CALL | sed -e '/^Width: [0-9]*$/,/^$/d'
+else
+  printf "DEBUG: Calling $GS_CALL and $RENDER_CALL on '%s'\n" "$FILE" 1>&2
+  $GS_CALL "$FILE" | sed -e '/-noantialias/d' | $RENDER_CALL | sed -e '/^Width: [0-9]*$/,/^$/d' 
+fi
+echo "INFO: Ready" >&2

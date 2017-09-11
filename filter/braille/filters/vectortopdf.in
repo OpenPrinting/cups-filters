@@ -1,0 +1,70 @@
+#!/bin/bash
+
+#
+# Copyright (c) 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# 
+
+# Make sure we have enough options
+if [ $# != 5 -a $# != 6 ]; then
+  echo "ERROR: $0 jobid user name nb options [filename]" >&2
+  exit 1
+fi
+
+NB=$4
+OPTIONS=$5
+FILE=$6
+
+case $0 in
+  *svgtopdf*) INPUT_FORMAT=svg ;;
+  *xfigtopdf*) INPUT_FORMAT=fig ;;
+  *wmftopdf*) INPUT_FORMAT=wmf ;;
+  *emftopdf*) INPUT_FORMAT=emf ;;
+  *cgmtopdf*) INPUT_FORMAT=cgm ;;
+  *cmxtopdf*) INPUT_FORMAT=cmx ;;
+esac
+
+trap -- 'rm -f "$FILE_FORMAT"' EXIT
+trap -- 'rm -f "$FILE_FORMAT_PDF"' EXIT
+FILE_FORMAT=$(mktemp "${TMPDIR:-/tmp}/vectortopdf.XXXXXX.${INPUT_FORMAT}")
+FILE_PDF=$(mktemp "${TMPDIR:-/tmp}/vectortopdf.XXXXXX.pdf")
+
+if [ -z "$FILE" ]
+then
+  # Get input from stdin
+  cat > "$FILE_FORMAT"
+else
+  cat "$FILE" > "$FILE_FORMAT"
+fi
+
+. @CUPS_DATADIR@/braille/cups-braille.sh
+
+checkTool inkscape inkscape "embossing ${INPUT_FORMAT} vector images"
+
+INKSCAPE="inkscape -z --export-area-drawing"
+
+echo "INFO: Converting image" 1>&2
+printf "DEBUG: Calling $INKSCAPE on '%s'\n" "$FILE_FORMAT" 1>&2
+$INKSCAPE -A "$FILE_PDF" "$FILE_FORMAT"
+cat "$FILE_PDF"
+
+echo "INFO: Ready" >&2
