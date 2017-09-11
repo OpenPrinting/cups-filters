@@ -1,5 +1,5 @@
 // 
-// Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,11 +31,6 @@ Option "TextDotDistance/Text dot distance" PickOne AnySetup 10
 Option "TextDots/Text dots" PickOne AnySetup 10
   Choice "8/8 dots" ""
   *Choice "6/6 dots" ""
-
-Option "GraphicDotDistance/Graphic dot distance" PickOne AnySetup 10
-  Choice "160/1.6mm" ""
-  *Choice "200/2.0mm" ""
-  Choice "250/2.5mm" ""
 
 Option "LineSpacing/Line spacing" PickOne AnySetup 10
   Choice "250/2.5mm" ""

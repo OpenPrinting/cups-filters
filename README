@@ -1586,7 +1586,7 @@ cups-filters also provides filters and drivers for braille
 embossers. It supports:
 
 - Text on all kinds of embossers with generic support
-- Text and graphics on the Index V3 embossers.
+- Text and graphics on the Index V3 embossers and above.
 
 This is configured in CUPS just like any printer. Options can then be configured
 in the standard printer panel, or passed as -o options to the lp command.
@@ -1634,8 +1634,15 @@ Image support
 Images can be embossed by converting them to braille dots.
 
 The orientation of the image can be controlled. By default it will be rotate to
-portrait, i.e. it will be rotate by 90 degree if it was wider than high. Other
-rotation modes are provided.
+fit the image orientation, i.e. it will be rotate by 90 degree if it is wider
+than high and the paper is higher than wide, or if vice-versa. Other rotation
+modes are provided.
+
+By default, the image will be resized to fit the size of the paper. Disabling
+the resize (Resize set to No) will crop the image to the paper size. This is
+useful for instance when a carefully-drawn image was designed especially for
+embossing, and thus its pixels should exactly match with braille dots. In such
+case, edge detection should very probably be disabled too.
 
 The image can be processed for edge detection. When no processing is done (edge
 detection is configured to "None"), the dark pixels are embossed if the Negate
@@ -1661,11 +1668,22 @@ lp file.jpg
 Here are complete examples for controlling the processing (all options can be
 omitted, the default values are shown here):
 
-lp -o "Edge=None Rotate=90> Negate" file.png
-lp -o "Edge=None Rotate=90> noNegate" file.png
+Emboss the image without edge detection, as black on white or white on black:
+
+lp -o "Edge=None" file.png
+lp -o "Edge=None Negate" file.png
+
+Emboss the image with edge detection, the default tuning parameters are set
+here:
+
 lp -o "Edge=Edge EdgeFactor=1" file.png
 lp -o "Edge=Canny CannyRadius=0 CannySigma=1 CannyLower=10 CannyUpper=30" file.png
 
+Emboss the image as it is, without any resize or edge detection, as black on
+white or white on black:
+
+lp -o "noResize Edge=None" file.png
+lp -o "noResize Edge=None Negate" file.png
 
 ------------------------
 Generic embosser support

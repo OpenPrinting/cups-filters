@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -67,23 +67,20 @@ msgstr "Espacement de ligne"
 msgid "Image conversion"
 msgstr "Conversion d'image"
 
+msgid "Resize"
+msgstr "Retailler"
+
 msgid "Rotation"
 msgstr "Rotation"
 
 msgid "No rotation"
 msgstr "Pas de rotation"
 
-msgid "Rotate clockwise to portrait"
-msgstr "Rotation horaire vers portrait"
+msgid "Rotate clockwise to fit paper"
+msgstr "Rotation horaire pour correspondre au papier"
 
-msgid "Rotate clockwise to landscape"
-msgstr "Rotation horaire vers paysage"
-
-msgid "Rotate counter clockwise to portrait"
-msgstr "Rotation anti-horaire vers portrait"
-
-msgid "Rotate counter clockwise to landscape"
-msgstr "Rotation anti-horaire vers paysage"
+msgid "Rotate counter clockwise to fit paper"
+msgstr "Rotation anti-horaire pour correspondre au papier"
 
 msgid "Clockwise"
 msgstr "Horaire"

@@ -1,5 +1,5 @@
 // 
-// Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,15 +23,23 @@
 // 
 
 Group "Image/Image conversion"
+
+Option "GraphicDotDistance/Graphic dot distance" PickOne AnySetup 10
+  Choice "160/1.6mm" ""
+  *Choice "200/2.0mm" ""
+  Choice "250/2.5mm" ""
+
 Option "Rotate/Rotation" PickOne AnySetup 10
   Choice "0/No rotation" ""
-  *Choice "90>/Rotate clockwise to portrait" ""
-  Choice "90</Rotate clockwise to landscape" ""
-  Choice "270>/Rotate counter clockwise to portrait" ""
-  Choice "270</Rotate counter clockwise to landscape" ""
+  *Choice "90>/Rotate clockwise to fit paper" ""
+  Choice "270>/Rotate counter clockwise to fit paper" ""
   Choice "90/Clockwise" ""
   Choice "270/Counter clockwise" ""
   Choice "180/Upside Down" ""
+
+Option "Resize/Resize" Boolean AnySetup 10
+  *Choice "True/Yes" ""
+  Choice "False/No" ""
 
 Option "Edge/Edge detection" PickOne AnySetup 10
   Choice "None/None"   ""
