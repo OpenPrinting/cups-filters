@@ -43,8 +43,7 @@ case $0 in
   *cmxtopdf*) INPUT_FORMAT=cmx ;;
 esac
 
-trap -- 'rm -f "$FILE_FORMAT"' EXIT
-trap -- 'rm -f "$FILE_FORMAT_PDF"' EXIT
+trap -- 'rm -f "$FILE_FORMAT" "$FILE_PDF"' EXIT
 FILE_FORMAT=$(mktemp "${TMPDIR:-/tmp}/vectortopdf.XXXXXX.${INPUT_FORMAT}")
 FILE_PDF=$(mktemp "${TMPDIR:-/tmp}/vectortopdf.XXXXXX.pdf")
 
