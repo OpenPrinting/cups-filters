@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.17.4 - 2017-09-10
 
 CHANGES IN V1.17.5
 
+	- libcupsfilters: In the PPD generator for driverless printing
+	  renamed the "print-quality" option back to
+	  "cupsPrintQuality" as the support for this option got fixed
+	  in CUPS (CUPS issue #5090).
 	- braille: Improvements on the braille support for bitmap
           images: Moves the graphical dot distance option to the image
           conversion group, add an option to avoid image resize, and
