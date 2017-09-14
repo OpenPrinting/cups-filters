@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.17.5 - 2017-09-13
 
 CHANGES IN V1.17.6
 
+	- braille: Embossers can only emboss integer numbers of 2x4
+          cells. Thanks to Samuel Thibault for this patch.
 	- braille: In Index graphical mode we need to disable the text
 	  margins, since they come in earlier on the way to
 	  there. Thanks to Samuel Thibault for this patch.

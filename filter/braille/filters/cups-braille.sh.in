@@ -207,8 +207,8 @@ TEXTHEIGHT=$(( ($TEXTAREAHEIGHT + $LINESPACING) / $TEXTCELLHEIGHT ))
 # Compute number of printable cells according to page size
 # Take into account that dots have a width.
 GRAPHICDOTDISTANCE=$(getOptionNumber GraphicDotDistance)
-GRAPHICWIDTH=$(( ($PRINTABLEWIDTH - 160) / $GRAPHICDOTDISTANCE ))
-GRAPHICHEIGHT=$(( ($PRINTABLEHEIGHT - 160) / $GRAPHICDOTDISTANCE ))
+GRAPHICWIDTH=$(( ( ($PRINTABLEWIDTH - 160) / $GRAPHICDOTDISTANCE ) / 2 * 2 ))
+GRAPHICHEIGHT=$(( ( ($PRINTABLEHEIGHT - 160) / $GRAPHICDOTDISTANCE ) / 4 * 4 ))
 
 #
 # Text translation
