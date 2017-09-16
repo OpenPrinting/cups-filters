@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.17.6 - 2017-09-15
 
 CHANGES IN V1.17.7
 
+	- braille: Fix the disabling of the text margins in Index
+	  graphics mode. Thanks to Samuel Thibault for this patch.
 	- braille: Support for direct, structured embossing of XML and
 	  XML-based file formats (like odt, docx, ...). Thanks to
 	  Samuel Thibault for this patch.

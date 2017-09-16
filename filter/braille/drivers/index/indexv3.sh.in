@@ -32,8 +32,14 @@ then
   # Firmware 10.30 and above support temporary parameters
   INIT=$'\033'D
 
-  # Configure margins
-  INIT+=TM$TOPMARGIN,BM$BOTTOMMARGIN,IM$INNERMARGIN,OM$OUTERMARGIN
+  if [ -z "$NOMARGIN" ]
+  then
+    # Configure margins
+    INIT+=TM$TOPMARGIN,BM$BOTTOMMARGIN,IM$INNERMARGIN,OM$OUTERMARGIN
+  else
+    # disable margins
+    INIT+=TM0,BM0,IM0,OM0
+  fi
 
   # Trying to disable banner page seems to pose problems
   #INIT+=,BP

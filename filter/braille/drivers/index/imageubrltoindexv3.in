@@ -35,10 +35,7 @@ OPTIONS=$5
 FILE=$6
 
 # Disable margins, they are done by imagemagick before this
-TOPMARGIN=0
-BOTTOMMARGIN=0
-INNERMARGIN=0
-OUTERMARGIN=0
+NOMARGIN=1
 
 . @CUPS_DATADIR@/braille/indexv3.sh
 printf "$INIT"
