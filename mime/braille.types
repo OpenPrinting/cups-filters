@@ -30,6 +30,8 @@ image/vnd.cups-pdf
 
 application/sgml	sgml
 
+application/vnd.recordare.musicxml+xml xml contains(0,1000,"<score-partwise")
+
 application/vnd.oasis.opendocument.chart					odc
 application/vnd.oasis.opendocument.database					odb
 application/vnd.oasis.opendocument.formula					odf

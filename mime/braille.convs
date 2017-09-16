@@ -30,6 +30,8 @@ application/xhtml	text/vnd.cups-brf	10	texttobrf
 application/xml		text/vnd.cups-brf	10	texttobrf
 application/sgml	text/vnd.cups-brf	10	texttobrf
 
+application/vnd.recordare.musicxml+xml text/vnd.cups-brf	30	musicxmltobrf
+
 application/vnd.oasis.opendocument.chart			text/vnd.cups-brf	30	texttobrf
 application/vnd.oasis.opendocument.formula			text/vnd.cups-brf	30	texttobrf
 application/vnd.oasis.opendocument.graphics			text/vnd.cups-brf	30	texttobrf
