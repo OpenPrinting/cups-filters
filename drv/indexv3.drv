@@ -1,5 +1,5 @@
 // 
-// Copyright (c) 2015 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,7 @@ Filter image/vnd.cups-ubrl 0 imageubrltoindexv3
 // Common options
 //
 
-HWMargins 0.5mm 0.5mm 0.5mm 0.5mm
+HWMargins 0mm 5mm 0mm 2mm
 VariablePaperSize true
 MinSize 1in 1in
 

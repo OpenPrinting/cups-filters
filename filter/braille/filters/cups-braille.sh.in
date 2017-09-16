@@ -25,7 +25,7 @@
 # Get an attribute from the ppd file
 getAttribute () {
   ATTRIBUTE=$1
-  VALUE=`grep "^\*$ATTRIBUTE:" "$PPD" | cut -d" " -f2`
+  VALUE=`grep "^\*$ATTRIBUTE:" "$PPD" | cut -d" " -f2-`
   VALUE=${VALUE##\"}
   VALUE=${VALUE%%\"}
   printf "DEBUG: Attribute $ATTRIBUTE is '%s'\n" "$VALUE" >&2
@@ -144,9 +144,48 @@ case "$PAGESIZE" in
     ;;
 esac
 
-# TODO: hardcoded embosser margin
-PRINTABLEWIDTH=$((PAGEWIDTH - 1000))
-PRINTABLEHEIGHT=$((PAGEHEIGHT - 1000))
+HWMARGINS=$(getAttribute HWMargins)
+printf "DEBUG: HW margins are $HWMARGINS\n" >&2
+HWMARGIN_LEFT="${HWMARGINS%% *}"
+HWMARGINS="${HWMARGINS#* }"
+HWMARGIN_BOTTOM="${HWMARGINS%% *}"
+HWMARGINS="${HWMARGINS#* }"
+HWMARGIN_RIGHT="${HWMARGINS%% *}"
+HWMARGINS="${HWMARGINS#* }"
+HWMARGIN_TOP="${HWMARGINS%% *}"
+
+# Convert from points (1/72 of inch) to 1/100th of mm
+points2mm() {
+  # First get an integer so bash can compute
+  # I.e. convert to 10^15th of point
+  # Note: bash's integer computation will work until about 1000mm, that's plenty :)
+  POINTS="$1"
+  INT_POINTS="${POINTS%.*}"
+  if [ "$INT_POINTS" = "$POINTS" ]
+  then
+    FRAC_POINTS=000000000000000
+  else
+    FRAC_POINTS="${POINTS#*.}000000000000000"
+  fi
+  FRAC_POINTS="${FRAC_POINTS:0:15}"
+  FRAC_POINTS="$INT_POINTS$FRAC_POINTS"
+  # Then we can compute conversion
+  # We round up to be safe
+  FRAC_INCH=$((("$FRAC_POINTS" + 71) / 72))
+  FRAC_CM=$((("$FRAC_INCH" * 254 + 99) / 100))
+  HUNDRENDTH_MM=$((("$FRAC_CM" + 999999999999) / 1000000000000))
+  echo $HUNDRENDTH_MM
+}
+
+MARGIN_LEFT=$(points2mm "$HWMARGIN_LEFT")
+MARGIN_RIGHT=$(points2mm "$HWMARGIN_RIGHT")
+MARGIN_TOP=$(points2mm "$HWMARGIN_TOP")
+MARGIN_BOTTOM=$(points2mm "$HWMARGIN_BOTTOM")
+
+printf "DEBUG: margins are left $MARGIN_LEFT right $MARGIN_RIGHT top $MARGIN_TOP bottom $MARGIN_BOTTOM\n" >&2
+
+PRINTABLEWIDTH=$((PAGEWIDTH - $MARGIN_LEFT - $MARGIN_RIGHT))
+PRINTABLEHEIGHT=$((PAGEHEIGHT - $MARGIN_TOP - $MARGIN_BOTTOM))
 
 
 #
