@@ -28,9 +28,30 @@ text/plain		text/vnd.cups-brf	0	texttobrf
 text/html		text/vnd.cups-brf	10	texttobrf
 application/xhtml	text/vnd.cups-brf	10	texttobrf
 application/xml		text/vnd.cups-brf	10	texttobrf
+application/sgml	text/vnd.cups-brf	10	texttobrf
+
+application/vnd.oasis.opendocument.chart			text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.formula			text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.graphics			text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.graphics-template		text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.presentation			text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.presentation-template	text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.spreadsheet			text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.spreadsheet-template		text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.text				text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.text-master			text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.text-template		text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.text-web			text/vnd.cups-brf	30	texttobrf
 
 application/msword	text/vnd.cups-brf	30	texttobrf
-application/vnd.openxmlformats-officedocument.wordprocessingml.document text/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.presentationml.presentation	text/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.presentationml.slide		text/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.presentationml.slideshow		text/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.presentationml.template		text/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet		text/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.spreadsheetml.template		text/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.wordprocessingml.document		text/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.wordprocessingml.template		text/vnd.cups-brf	30	texttobrf
 
 text/rtf		text/vnd.cups-brf	30	texttobrf
 application/rtf		text/vnd.cups-brf	30	texttobrf

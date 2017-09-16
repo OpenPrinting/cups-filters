@@ -1605,10 +1605,17 @@ lp file.txt
 or even
 
 lp file.html
+lp file.odt
 lp file.doc
-lp file.pdf
 lp file.rtf
 lp file.docx
+lp file.pdf
+
+Important: it is really preferrable to directly print the document files
+themselves, and not a pdf output, or printing from the application (which
+would first convert to pdf). That way, the braille conversion will have the
+proper document structure (paragraphs, titles, footnotes, etc.) to produce good
+quality.
 
 
 --------------------
