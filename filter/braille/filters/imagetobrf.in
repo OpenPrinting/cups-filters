@@ -70,6 +70,16 @@ case "$ROTATE" in
     ;;
 esac
 
+MIRROR=$(getOption mirror)
+case "$MIRROR" in
+  True|true)   MIRROR="-flop" ;;
+  False|false) MIRROR="" ;;
+  *)
+    printf "ERROR: Option mirror must either True or False, got '%s'\n" "$MIRROR" >&2
+    exit 1
+    ;;
+esac
+
 PAGE="-page ${TOTALGRAPHICWIDTH}x${TOTALGRAPHICHEIGHT}+${GRAPHICHOFFSET}+${GRAPHICVOFFSET}"
 
 RESIZE=$(getOption fitplot)
@@ -100,7 +110,7 @@ case $EDGE in
     ;;
 esac
 
-RENDER_CALL="convert $WORK -rotate $ROTATE $PAGE $RESIZE -flatten - $OUTPUT_FORMAT:-"
+RENDER_CALL="convert $WORK -rotate $ROTATE $PAGE $RESIZE $MIRROR -flatten - $OUTPUT_FORMAT:-"
 
 # Now proceeed
 echo "INFO: Converting image" 1>&2

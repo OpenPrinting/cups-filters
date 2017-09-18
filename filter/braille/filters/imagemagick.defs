@@ -41,6 +41,10 @@ Option "fitplot/Resize" Boolean AnySetup 10
   *Choice "True/Yes" ""
   Choice "False/No" ""
 
+Option "mirror/Mirror" Boolean AnySetup 10
+  Choice "True/Yes" ""
+  *Choice "False/No" ""
+
 Option "Edge/Edge detection" PickOne AnySetup 10
   Choice "None/None"   ""
   Choice "Edge/Simple" ""

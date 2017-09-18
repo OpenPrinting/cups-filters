@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.17.6 - 2017-09-15
 
 CHANGES IN V1.17.7
 
+	- braille: Add a mirror option for graphical output. Thanks to
+          Samuel Thibault for this patch.
 	- braille: Rename the internal cups name of the Resize option
 	  to the standard well-known and well-documented fitplot
 	  option. Thanks to Samuel Thibault for this patch.

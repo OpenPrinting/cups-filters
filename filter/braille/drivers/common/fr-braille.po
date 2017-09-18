@@ -118,6 +118,9 @@ msgstr "Conversion d'image"
 msgid "Resize"
 msgstr "Retailler"
 
+msgid "Mirror"
+msgstr "Miroir"
+
 msgid "Rotation"
 msgstr "Rotation"
 
