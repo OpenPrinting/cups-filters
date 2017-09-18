@@ -1758,6 +1758,19 @@ the default values are shown here.
 lp -o "LibLouis=fr-fr-g1 LibLouis2=gr-gr-g1 TextDotDistance=250 LineSpacing=500" file.txt
 
 
+---------------
+BRF file output
+---------------
+
+One can generate BRF files by adding a virtual BRF printer.
+
+When creating it in the cups interface, choose the CUPS-BRF local printer,
+select the Generic maker, and choose the Generic Braille embosser model.
+
+Printing to the resulting printer will generate a .brf file in a BRF
+subdirectory of the home directory.
+
+
 ----------------------------
 Remark about the source code
 ----------------------------

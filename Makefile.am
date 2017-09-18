@@ -65,6 +65,13 @@ test1284_SOURCES = \
 test1284_LDADD = $(CUPS_LIBS)
 test1284_CFLAGS = $(CUPS_CFLAGS)
 
+if ENABLE_BRAILLE
+pkgbackend_PROGRAMS += cups-brf
+
+cups_brf_SOURCES = \
+	backend/cups-brf.c
+endif
+
 # ==============
 # PPD Generators
 # ==============
@@ -1020,6 +1027,9 @@ if RCLINKS
 endif
 	$(LN_S) -f pdf.utf-8.simple \
 		$(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
+if ENABLE_BRAILLE
+	chmod g-rwx,o-rwx $(DESTDIR)/$(pkgbackenddir)/cups-brf
+endif
 
 
 uninstall-hook:

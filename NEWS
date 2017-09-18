@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.17.6 - 2017-09-15
 
 CHANGES IN V1.17.7
 
+	- braille: Add virtual BRF backend for generating
+	  ready-to-emboss BRF files with cups, similarly to the
+	  cups-pdf backend. Thanks to Samuel Thibault for this patch.
 	- braille: Some tools seem to emit true/false instead of
 	  True/False, so let us cope with it. Thanks to Samuel
 	  Thibault for this patch.
