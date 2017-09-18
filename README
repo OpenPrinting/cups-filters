@@ -1646,7 +1646,7 @@ than high and the paper is higher than wide, or if vice-versa. Other rotation
 modes are provided.
 
 By default, the image will be resized to fit the size of the paper. Disabling
-the resize (Resize set to No) will crop the image to the paper size. This is
+the resize (fitplot set to No) will crop the image to the paper size. This is
 useful for instance when a carefully-drawn image was designed especially for
 embossing, and thus its pixels should exactly match with braille dots. In such
 case, edge detection should very probably be disabled too.
@@ -1689,8 +1689,8 @@ lp -o "Edge=Canny CannyRadius=0 CannySigma=1 CannyLower=10 CannyUpper=30" file.p
 Emboss the image as it is, without any resize or edge detection, as black on
 white or white on black:
 
-lp -o "noResize Edge=None" file.png
-lp -o "noResize Edge=None Negate" file.png
+lp -o "nofitplot Edge=None" file.png
+lp -o "nofitplot Edge=None Negate" file.png
 
 ------------------------
 Generic embosser support

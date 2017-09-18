@@ -37,7 +37,7 @@ Option "Rotate/Rotation" PickOne AnySetup 10
   Choice "270/Counter clockwise" ""
   Choice "180/Upside Down" ""
 
-Option "Resize/Resize" Boolean AnySetup 10
+Option "fitplot/Resize" Boolean AnySetup 10
   *Choice "True/Yes" ""
   Choice "False/No" ""
 

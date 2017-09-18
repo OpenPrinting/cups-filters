@@ -72,12 +72,12 @@ esac
 
 PAGE="-page ${TOTALGRAPHICWIDTH}x${TOTALGRAPHICHEIGHT}+${GRAPHICHOFFSET}+${GRAPHICVOFFSET}"
 
-RESIZE=$(getOption Resize)
+RESIZE=$(getOption fitplot)
 case "$RESIZE" in
   True|true) RESIZE="-size ${GRAPHICWIDTH}x${GRAPHICHEIGHT} -resize ${GRAPHICWIDTH}x${GRAPHICHEIGHT}" ;;
   False|false) RESIZE="-crop ${GRAPHICWIDTH}x${GRAPHICHEIGHT}+${GRAPHICHOFFSET}+${GRAPHICVOFFSET}" ;;
   *)
-    printf "ERROR: Option Resize must either True or False, got '%s'\n" "$RESIZE" >&2
+    printf "ERROR: Option fitplot must either True or False, got '%s'\n" "$RESIZE" >&2
     exit 1
     ;;
 esac
