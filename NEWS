@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.17.6 - 2017-09-15
 
 CHANGES IN V1.17.7
 
+	- braille: Updated French translation. Thanks to Samuel
+	  Thibault for this patch.
 	- braille: Add a PPD which generates UBRL output, i.e. Braille
 	  expressed in Unicode. This is not useful for actual
 	  embossers, but very convenient to check output to be

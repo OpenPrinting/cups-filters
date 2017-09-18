@@ -43,14 +43,35 @@ msgstr "Transcription Braille"
 msgid "None"
 msgstr "Aucune"
 
-msgid "Additional Braille transcription"
-msgstr "Transcription Braille additionnelle"
+msgid "Additional Braille transcription (2)"
+msgstr "Transcription Braille additionnelle (2)"
+
+msgid "Additional Braille transcription (3)"
+msgstr "Transcription Braille additionnelle (3)"
+
+msgid "Additional Braille transcription (4)"
+msgstr "Transcription Braille additionnelle (4)"
+
+msgid "Default for language"
+msgstr "Par défaut pour la langue"
+
+msgid "Default for language grade 0"
+msgstr "Par défaut pour la langue grade 0"
+
+msgid "Default for language grade 1"
+msgstr "Par défaut pour la langue grade 1"
+
+msgid "Default for language grade 2"
+msgstr "Par défaut pour la langue grade 2"
+
+msgid "Default for language grade 3"
+msgstr "Par défaut pour la langue grade 3"
 
 msgid "Text dot distance"
 msgstr "Distance points texte"
 
 msgid "Text dots"
-msgstr "Points text"
+msgstr "Points texte"
 
 msgid "8 dots"
 msgstr "8 points"
@@ -63,6 +84,21 @@ msgstr "Distance points graphique"
 
 msgid "Line spacing"
 msgstr "Espacement de ligne"
+
+msgid "Top margin"
+msgstr "Marge haut"
+
+msgid "Bottom margin"
+msgstr "Marge bas"
+
+msgid "Inner margin"
+msgstr "Marge intérieure"
+
+msgid "Outer margin"
+msgstr "Marge extérieure"
+
+msgid "Page number"
+msgstr "Numéro de page"
 
 msgid "Image conversion"
 msgstr "Conversion d'image"
@@ -184,5 +220,5 @@ msgstr "Table 3 définie par l'utilisateur"
 msgid "User-defined Table 4"
 msgstr "Table 4 définie par l'utilisateur"
 
-msgid "Multiple impact"
+msgid "Multiple Impact"
 msgstr "Impact multiple"
