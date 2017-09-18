@@ -1039,5 +1039,12 @@ if ENABLE_DRIVERLESS
 endif
 if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/imagetoubrl
+	$(RM) $(DESTDIR)$(pkgfilterdir)/svgtopdf
+	$(RM) $(DESTDIR)$(pkgfilterdir)/xfigtopdf
+	$(RM) $(DESTDIR)$(pkgfilterdir)/wmftopdf
+	$(RM) $(DESTDIR)$(pkgfilterdir)/emftopdf
+	$(RM) $(DESTDIR)$(pkgfilterdir)/cgmtopdf
+	$(RM) $(DESTDIR)$(pkgfilterdir)/cmxtopdf
+	$(RM) $(DESTDIR)$(pkgfilterdir)/vectortoubrl
 	$(RM) $(DESTDIR)$(pkgfilterdir)/textbrftoindexv4
 endif
