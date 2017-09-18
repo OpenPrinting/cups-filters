@@ -46,8 +46,8 @@ checkTool convert imagemagick "embossing images"
 
 NEGATE=$(getOption Negate)
 case "$NEGATE" in
-  True)  NEGATE=-negate ;;
-  False) NEGATE= ;;
+  True|true)  NEGATE=-negate ;;
+  False|false) NEGATE= ;;
   *)
     printf "ERROR: Option Negate must either True or False, got '%s'\n" "$NEGATE" >&2
     exit 1
@@ -72,8 +72,8 @@ esac
 
 RESIZE=$(getOption Resize)
 case "$RESIZE" in
-  True) RESIZE="-size ${GRAPHICWIDTH}x${GRAPHICHEIGHT} -resize ${GRAPHICWIDTH}x${GRAPHICHEIGHT}" ;;
-  False) RESIZE="-crop ${GRAPHICWIDTH}x${GRAPHICHEIGHT}+0+0" ;;
+  True|true) RESIZE="-size ${GRAPHICWIDTH}x${GRAPHICHEIGHT} -resize ${GRAPHICWIDTH}x${GRAPHICHEIGHT}" ;;
+  False|false) RESIZE="-crop ${GRAPHICWIDTH}x${GRAPHICHEIGHT}+0+0" ;;
   *)
     printf "ERROR: Option Resize must either True or False, got '%s'\n" "$RESIZE" >&2
     exit 1

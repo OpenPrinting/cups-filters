@@ -3,7 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.17.6 - 2017-09-15
 
 CHANGES IN V1.17.7
 
-	- braille: "make uninstall" did not remove all the links.
+	- braille: Some tools seem to emit true/false instead of
+	  True/False, so let us cope with it. Thanks to Samuel
+	  Thibault for this patch.
+	- braille: "make uninstall" did not remove all the
+	  links. Thanks to Samuel Thibault for this patch.
 	- braille: Add support for embossing MusicXML files, through
 	  the FreeDots transcriptor. Thanks to Samuel Thibault for
 	  this patch.

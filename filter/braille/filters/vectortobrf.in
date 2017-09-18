@@ -46,8 +46,8 @@ checkTool convert imagemagick "embossing images"
 
 NEGATE=$(getOption Negate)
 case "$NEGATE" in
-  True)  NEGATE=-negate ;;
-  False) NEGATE= ;;
+  True|true)  NEGATE=-negate ;;
+  False|false) NEGATE= ;;
   *)
     printf "ERROR: Option Negate must either True or False, got '%s'\n" "$NEGATE" >&2
     exit 1
