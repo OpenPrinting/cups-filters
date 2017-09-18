@@ -123,18 +123,18 @@ then
 	CONVERT=""
 	;;
       application/msword)
-	LIBLOUIS_TOOL="file2brl 2> /dev/null"
+	LIBLOUIS_TOOL="file2brl"
 	CONVERT="antiword -x db -"
 	checkTool antiword antiword "translating MS-Word doc files"
 	;;
       application/vnd.oasis.opendocument*)
-	LIBLOUIS_TOOL="file2brl 2> /dev/null"
+	LIBLOUIS_TOOL="file2brl"
 	dumptofile
 	CONVERT="unzip -p $FILE content.xml"
 	checkTool unzip unzip "translating LibreOffice/OpenOffice OpenDocument files"
 	;;
       application/vnd.openxmlformats-officedocument*)
-	LIBLOUIS_TOOL="file2brl 2> /dev/null"
+	LIBLOUIS_TOOL="file2brl"
 	dumptofile
 	CONVERT="unzip -p $FILE word/document.xml"
 	checkTool unzip unzip "translating MS-Word docx files"
@@ -179,26 +179,26 @@ then
   printf "DEBUG: Calling $RENDER_CALL on '%s'\n" "$FILE" >&2
   if [ -z "$FILE" ]
   then
-    $RENDER_CALL
+    $RENDER_CALL 2> /dev/null
   else
-   < "$FILE" $RENDER_CALL
+   < "$FILE" $RENDER_CALL 2> /dev/null
   fi
 elif [ -z "$TRANSLATE" ]
 then
   printf "DEBUG: Calling $CONVERT | $RENDER_CALL on '%s'\n" "$FILE" >&2
   if [ -z "$FILE" ]
   then
-    $CONVERT | $RENDER_CALL
+    $CONVERT | $RENDER_CALL 2> /dev/null
   else
-  < "$FILE" $CONVERT | $RENDER_CALL
+  < "$FILE" $CONVERT | $RENDER_CALL 2> /dev/null
   fi
 else
   printf "DEBUG: Calling $CONVERT | $RENDER_CALL | $TRANSLATE on '%s'\n" "$FILE" >&2
   if [ -z "$FILE" ]
   then
-    $CONVERT | $RENDER_CALL | $TRANSLATE
+    $CONVERT | $RENDER_CALL 2> /dev/null | $TRANSLATE
   else
-  < "$FILE" $CONVERT | $RENDER_CALL | $TRANSLATE
+  < "$FILE" $CONVERT | $RENDER_CALL 2> /dev/null | $TRANSLATE
   fi
 fi
 
