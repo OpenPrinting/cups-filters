@@ -54,17 +54,19 @@ case "$NEGATE" in
     ;;
 esac
 
+PAGE="-page ${TOTALGRAPHICWIDTH}x${TOTALGRAPHICHEIGHT}+${GRAPHICHOFFSET}+${GRAPHICVOFFSET}"
+
 GS_CALL="gs -q -dDEVICEWIDTHPOINTS=${GRAPHICWIDTH} -dDEVICEHEIGHTPOINTS=${GRAPHICHEIGHT} -noantialias -dTextAlphaBits=1 -dGraphicsAlphaBits=1 -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pngmono -dFitPage -r72 -sOutputFile=-"
-RENDER_CALL="convert $NEGATE - $OUTPUT_FORMAT:-"
+RENDER_CALL="convert $NEGATE $PAGE -flatten - $OUTPUT_FORMAT:-"
 
 # Now proceeed
 echo "INFO: Converting image" 1>&2
 if [ -z "$FILE" ]
 then
-  printf "DEBUG: Calling $GS_CALL and $RENDER_CALL from stdin\n" 1>&2
-  $GS_CALL - | sed -e '/-noantialias/d' | $RENDER_CALL | sed -e '/^Width: [0-9]*$/,/^$/d'
+  printf "DEBUG: Calling %s and %s from stdin\n" "$GS_CALL" "$RENDER_CALL" 1>&2
+  $GS_CALL - | sed -e '/-noantialias/d' | $RENDER_CALL | sed -e '/^\(Width\|X\|Y\): [0-9]*$/,/^$/d'
 else
-  printf "DEBUG: Calling $GS_CALL and $RENDER_CALL on '%s'\n" "$FILE" 1>&2
-  $GS_CALL "$FILE" | sed -e '/-noantialias/d' | $RENDER_CALL | sed -e '/^Width: [0-9]*$/,/^$/d' 
+  printf "DEBUG: Calling %s and %s on '%s'\n" "$GS_CALL" "$RENDER_CALL" "$FILE" 1>&2
+  $GS_CALL "$FILE" | sed -e '/-noantialias/d' | $RENDER_CALL | sed -e '/^\(Width\|X\|Y\): [0-9]*$/,/^$/d'
 fi
 echo "INFO: Ready" >&2

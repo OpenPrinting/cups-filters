@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.17.6 - 2017-09-15
 
 CHANGES IN V1.17.7
 
+	- braille: Add support for margins in graphical mode,
+	  defaulting them to 15 points (a bit more than 5mm). Thanks
+	  to Samuel Thibault for this patch.
 	- braille: Updated French translation. Thanks to Samuel
 	  Thibault for this patch.
 	- braille: Add a PPD which generates UBRL output, i.e. Braille

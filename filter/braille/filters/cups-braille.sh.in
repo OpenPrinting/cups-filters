@@ -75,6 +75,7 @@ getOption () {
 getOptionNumber () {
   OPTION=$1
   VALUE=$(getOption $OPTION)
+  VALUE=${VALUE#Custom.}
   case "$VALUE" in
     [0-9]*) ;;
     *) printf "ERROR: Option $OPTION must be a number, got '%s'\n" "$VALUE" >&2
@@ -144,8 +145,9 @@ case "$PAGESIZE" in
     ;;
 esac
 
+# Margins as announced by embosser
 HWMARGINS=$(getAttribute HWMargins)
-printf "DEBUG: HW margins are $HWMARGINS\n" >&2
+echo "DEBUG: HW margins are $HWMARGINS" >&2
 HWMARGIN_LEFT="${HWMARGINS%% *}"
 HWMARGINS="${HWMARGINS#* }"
 HWMARGIN_BOTTOM="${HWMARGINS%% *}"
@@ -182,11 +184,25 @@ MARGIN_RIGHT=$(points2mm "$HWMARGIN_RIGHT")
 MARGIN_TOP=$(points2mm "$HWMARGIN_TOP")
 MARGIN_BOTTOM=$(points2mm "$HWMARGIN_BOTTOM")
 
-printf "DEBUG: margins are left $MARGIN_LEFT right $MARGIN_RIGHT top $MARGIN_TOP bottom $MARGIN_BOTTOM\n" >&2
+# Margins requested by user
+PAGE_LEFT=$(points2mm $(getOptionNumber page-left))
+PAGE_RIGHT=$(points2mm $(getOptionNumber page-right))
+PAGE_TOP=$(points2mm $(getOptionNumber page-top))
+PAGE_BOTTOM=$(points2mm $(getOptionNumber page-bottom))
 
-PRINTABLEWIDTH=$((PAGEWIDTH - $MARGIN_LEFT - $MARGIN_RIGHT))
-PRINTABLEHEIGHT=$((PAGEHEIGHT - $MARGIN_TOP - $MARGIN_BOTTOM))
+[ -n "$PAGE_LEFT"   -a "$MARGIN_LEFT"   -le "$PAGE_LEFT"   ] || PAGE_LEFT=$MARGIN_LEFT
+[ -n "$PAGE_RIGHT"  -a "$MARGIN_RIGHT"  -le "$PAGE_RIGHT"  ] || PAGE_RIGHT=$MARGIN_RIGHT
+[ -n "$PAGE_TOP"    -a "$MARGIN_TOP"    -le "$PAGE_TOP"    ] || PAGE_TOP=$MARGIN_TOP
+[ -n "$PAGE_BOTTOM" -a "$MARGIN_BOTTOM" -le "$PAGE_BOTTOM" ] || PAGE_BOTTOM=$MARGIN_BOTTOM
 
+echo "DEBUG: hard margins are left $MARGIN_LEFT right $MARGIN_RIGHT top $MARGIN_TOP bottom $MARGIN_BOTTOM" >&2
+echo "DEBUG: graphical margins are left $PAGE_LEFT right $PAGE_RIGHT top $PAGE_TOP bottom $PAGE_BOTTOM" >&2
+
+# This is the hardware-printable area
+PRINTABLEWIDTH=$(($PAGEWIDTH - $MARGIN_LEFT - $MARGIN_RIGHT))
+PRINTABLEHEIGHT=$(($PAGEHEIGHT - $MARGIN_TOP - $MARGIN_BOTTOM))
+
+echo "DEBUG: printable area is ${PRINTABLEWIDTH}x${PRINTABLEHEIGHT}" >&2
 
 #
 # Text spacing
@@ -244,10 +260,31 @@ TEXTHEIGHT=$(( ($TEXTAREAHEIGHT + $LINESPACING) / $TEXTCELLHEIGHT ))
 #
 
 # Compute number of printable cells according to page size
-# Take into account that dots have a width.
 GRAPHICDOTDISTANCE=$(getOptionNumber GraphicDotDistance)
-GRAPHICWIDTH=$(( ( ($PRINTABLEWIDTH - 160) / $GRAPHICDOTDISTANCE ) / 2 * 2 ))
-GRAPHICHEIGHT=$(( ( ($PRINTABLEHEIGHT - 160) / $GRAPHICDOTDISTANCE ) / 4 * 4 ))
+
+# This is the total area we will send to the embosser
+TOTALGRAPHICWIDTH=$(( ( ($PRINTABLEWIDTH - 160) / $GRAPHICDOTDISTANCE ) / 2 * 2 ))
+TOTALGRAPHICHEIGHT=$(( ( ($PRINTABLEHEIGHT - 160) / $GRAPHICDOTDISTANCE ) / 4 * 4 ))
+
+echo "DEBUG: total graphical: ${TOTALGRAPHICWIDTH}x${TOTALGRAPHICHEIGHT}" >&2
+
+# This is how many dots we have to introduce to respect at least the software left+top margin
+GRAPHICHOFFSET=$(( ($PAGE_LEFT - $MARGIN_LEFT + $GRAPHICDOTDISTANCE - 1) / $GRAPHICDOTDISTANCE ))
+GRAPHICVOFFSET=$(( ($PAGE_TOP - $MARGIN_TOP + $GRAPHICDOTDISTANCE - 1) / $GRAPHICDOTDISTANCE ))
+
+echo "DEBUG: graphical offset: ${GRAPHICHOFFSET}x${GRAPHICVOFFSET}" >&2
+
+# This is the resulting actual margin
+GRAPHICLEFTMARGIN=$(( $MARGIN_LEFT + $GRAPHICHOFFSET * $GRAPHICDOTDISTANCE ))
+GRAPHICTOPMARGIN=$(( $MARGIN_TOP + $GRAPHICVOFFSET * $GRAPHICDOTDISTANCE ))
+
+echo "DEBUG: rounded graphical top-left corner margin: ${GRAPHICLEFTMARGIN}x${GRAPHICTOPMARGIN}" >&2
+
+# Then compute how many dots we can afford until reaching the software right+bottom margin
+GRAPHICWIDTH=$(( ( ( $PAGEWIDTH - $GRAPHICLEFTMARGIN - $PAGE_RIGHT ) - 160) / $GRAPHICDOTDISTANCE ))
+GRAPHICHEIGHT=$(( ( ( $PAGEHEIGHT - $GRAPHICTOPMARGIN - $PAGE_BOTTOM ) - 160) / $GRAPHICDOTDISTANCE ))
+
+echo "DEBUG: resulting graphical area: ${GRAPHICWIDTH}x${GRAPHICHEIGHT}" >&2
 
 #
 # Text translation

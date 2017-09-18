@@ -70,10 +70,12 @@ case "$ROTATE" in
     ;;
 esac
 
+PAGE="-page ${TOTALGRAPHICWIDTH}x${TOTALGRAPHICHEIGHT}+${GRAPHICHOFFSET}+${GRAPHICVOFFSET}"
+
 RESIZE=$(getOption Resize)
 case "$RESIZE" in
   True|true) RESIZE="-size ${GRAPHICWIDTH}x${GRAPHICHEIGHT} -resize ${GRAPHICWIDTH}x${GRAPHICHEIGHT}" ;;
-  False|false) RESIZE="-crop ${GRAPHICWIDTH}x${GRAPHICHEIGHT}+0+0" ;;
+  False|false) RESIZE="-crop ${GRAPHICWIDTH}x${GRAPHICHEIGHT}+${GRAPHICHOFFSET}+${GRAPHICVOFFSET}" ;;
   *)
     printf "ERROR: Option Resize must either True or False, got '%s'\n" "$RESIZE" >&2
     exit 1
@@ -98,16 +100,16 @@ case $EDGE in
     ;;
 esac
 
-RENDER_CALL="convert $WORK -rotate $ROTATE $RESIZE - $OUTPUT_FORMAT:-"
+RENDER_CALL="convert $WORK -rotate $ROTATE $PAGE $RESIZE -flatten - $OUTPUT_FORMAT:-"
 
 # Now proceeed
 echo "INFO: Converting image" 1>&2
 if [ -z "$FILE" ]
 then
-  printf "DEBUG: Calling $RENDER_CALL from stdin\n" 1>&2
-  $RENDER_CALL | sed -e '/^Width: [0-9]*$/,/^$/d' 
+  printf "DEBUG: Calling %s from stdin\n" "$RENDER_CALL" 1>&2
+  $RENDER_CALL | sed -e '/^\(Width\|X\|Y\): [0-9]*$/,/^$/d'
 else
-  printf "DEBUG: Calling $RENDER_CALL on '%s'\n" "$FILE" 1>&2
-  $RENDER_CALL < "$FILE" | sed -e '/^Width: [0-9]*$/,/^$/d' 
+  printf "DEBUG: Calling %s on '%s'\n" "$RENDER_CALL" "$FILE" 1>&2
+  $RENDER_CALL < "$FILE" | sed -e '/^\(Width\|X\|Y\): [0-9]*$/,/^$/d'
 fi
 echo "INFO: Ready" >&2

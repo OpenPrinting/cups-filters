@@ -100,6 +100,18 @@ msgstr "Marge extérieure"
 msgid "Page number"
 msgstr "Numéro de page"
 
+msgid "Graphical top margin"
+msgstr "Marge graphique haut"
+
+msgid "Graphical bottom margin"
+msgstr "Marge graphique bas"
+
+msgid "Graphical left margin"
+msgstr "Marge graphique gauche"
+
+msgid "Graphical right margin"
+msgstr "Marge graphique droite"
+
 msgid "Image conversion"
 msgstr "Conversion d'image"
 
