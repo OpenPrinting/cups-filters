@@ -278,6 +278,7 @@ pkgdriver_DATA = \
 if ENABLE_BRAILLE
 pkgdriver_DATA += \
 	drv/generic-brf.drv \
+	drv/generic-ubrl.drv \
 	drv/indexv3.drv \
 	drv/indexv4.drv
 endif

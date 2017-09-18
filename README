@@ -1771,6 +1771,20 @@ Printing to the resulting printer will generate a .brf file in a BRF
 subdirectory of the home directory.
 
 
+----------------
+UBRL file output
+----------------
+
+One can generate Unicode braille files, not useful for embossing, but which can
+be easily looked at by sighted people to check for the output.
+
+In the cups interface, create a printer with the CUPS-BRF local printer,
+the Generic maker, and choose the Generic UBRL generator model.
+
+Printing to the resulting printer will generate a .brf file in a BRF
+subdirectory of the home directory.
+
+
 ----------------------------
 Remark about the source code
 ----------------------------
