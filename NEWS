@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.17.7 - 2017-09-18
 -----------------------------------------------------
 
+CHANGES IN V1.17.8
+
+	- Build system: Fixed typo which broke the
+	  "--enable-gs-ps2write" ./configure command line option (Bug
+	  #1410).
+
 CHANGES IN V1.17.7
 
 	- braille: Add a mirror option for graphical output. Thanks to

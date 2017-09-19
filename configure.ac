@@ -627,7 +627,7 @@ AS_IF([test "x$enable_ghostscript" != "xyes"], [
 	AC_DEFINE([HAVE_GHOSTSCRIPT], [], [Define that we provide ghostscript binary])
 	AS_IF([test x"$with_pdftops" = xgs], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [GS], [Define default renderer])])
 
-	AS_IF([test "xenable_gs_ps2write" = "xyes"], [
+	AS_IF([test x"$enable_gs_ps2write" = "xyes"], [
 		AC_DEFINE([HAVE_GHOSTSCRIPT_PS2WRITE], [], [gs supports ps2write])
 	])
 	AS_IF([test "x$cross_compiling" != "xyes"], [
