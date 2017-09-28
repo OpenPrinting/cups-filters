@@ -52,7 +52,7 @@ int test_gs_output_redirection()
         return 0;
     }
 
-    bytes = fread(output, 1, 10, pd);
+    bytes = fread_or_die(output, 1, 10, pd);
     pclose(pd);
 
     if (bytes > 0 && startswith(output, "hello"))
@@ -288,7 +288,7 @@ static int write_merged_jcl_options(FILE *stream,
          * also contains the "<esc>%-12345X" which has to be in the beginning
          * of the job */
         if (p)
-            fwrite(original_opts[0], 1, p - original_opts[0], stream);
+            fwrite_or_die(original_opts[0], 1, p - original_opts[0], stream);
         else
             fprintf(stream, "%s\n", original_opts[0]);
 
@@ -392,7 +392,7 @@ int exec_kid4(FILE *in, FILE *out, void *user_arg)
 
     /* A JCL trailer */
     if (argv_count(jclprepend) > 0 && !driverjcl)
-        fwrite(jclappend->data, jclappend->len, 1, fileh);
+        fwrite_or_die(jclappend->data, jclappend->len, 1, fileh);
 
     fclose(in);
     if (fclose(fileh) != 0)

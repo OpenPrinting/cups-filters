@@ -56,7 +56,7 @@ static int pdf_count_pages(const char *filename)
     if (!pd)
       rip_die(EXIT_STARVED, "Failed to execute ghostscript to determine number of input pages!\n");
 
-    bytes = fread(output, 1, 31, pd);
+    bytes = fread_or_die(output, 1, 31, pd);
     pclose(pd);
 
     if (bytes <= 0 || sscanf(output, "PageCount: %d", &pagecount) < 1)

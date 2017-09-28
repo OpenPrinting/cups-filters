@@ -520,7 +520,7 @@ void write_output(void *data, size_t len)
     while (isspace(*p++) && left-- > 0)
         ;
 
-    fwrite((void *)p, left, 1, postpipe);
+    fwrite_or_die((void *)p, left, 1, postpipe);
     fflush(postpipe);
 }
 
@@ -575,7 +575,7 @@ int print_file(const char *filename, int convert)
         }
     }
 
-    n = fread(buf, 1, sizeof(buf) - 1, file);
+    n = fread_or_die(buf, 1, sizeof(buf) - 1, file);
     buf[n] = '\0';
     type = guess_file_type(buf, n, &startpos);
     /* We do not use any JCL preceeded to the inputr data, as it is simply
@@ -751,6 +751,7 @@ int main(int argc, char** argv)
 
     signal(SIGTERM, signal_terminate);
     signal(SIGINT, signal_terminate);
+    signal(SIGPIPE, SIG_IGN);
 
     /* First try to find a config file in the CUS config directory, like
        /etc/cups/foomatic-rip.conf */

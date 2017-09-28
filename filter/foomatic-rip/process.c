@@ -125,6 +125,10 @@ static pid_t _start_process(const char *name,
     }
 
     if (pid == 0) { /* Child */
+
+        // Reset sigpipe behavior to default for all children
+        signal(SIGPIPE, SIG_DFL);
+
         if (pipe_in) {
             close(pfdin[1]);
             in = fdopen(pfdin[0], "r");
@@ -179,7 +183,7 @@ int exec_command(FILE *in, FILE *out, void *cmd)
     if (out && dup2(fileno(out), fileno(stdout)) < 0)
         rip_die(EXIT_PRNERR_NORETRY_BAD_SETTINGS, "%s: Could not dup stdout\n", (const char *)cmd);
 
-    execl(get_modern_shell(), get_modern_shell(), "-c", (const char *)cmd, (char *)NULL);
+    execl(get_modern_shell(), get_modern_shell(), "-e", "-c", (const char *)cmd, (char *)NULL);
 
     _log("Error: Executing \"%s -c %s\" failed (%s).\n", get_modern_shell(), (const char *)cmd, strerror(errno));
     return EXIT_PRNERR_NORETRY_BAD_SETTINGS;

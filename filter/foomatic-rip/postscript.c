@@ -1016,14 +1016,14 @@ void _print_ps(stream_t *stream)
 
                     if (!isempty(psfifo->data)) {
                         /* Send psfifo to renderer */
-                        fwrite(psfifo->data, psfifo->len, 1, rendererhandle);
+                        fwrite_or_die(psfifo->data, psfifo->len, 1, rendererhandle);
                         /* flush psfifo */
                         dstrclear(psfifo);
                     }
 
                     /* Send line to renderer */
                     if (!printprevpage) {
-                        fwrite(line->data, line->len, 1, rendererhandle);
+                        fwrite_or_die(line->data, line->len, 1, rendererhandle);
 
                         while (stream_next_line(line, stream) > 0) {
                             if (startswith(line->data, "%%")) {
@@ -1033,7 +1033,7 @@ void _print_ps(stream_t *stream)
                                 break;
                             }
                             else {
-                                fwrite(line->data, line->len, 1, rendererhandle);
+                                fwrite_or_die(line->data, line->len, 1, rendererhandle);
                                 linect++;
                             }
                         }
@@ -1125,14 +1125,14 @@ void _print_ps(stream_t *stream)
 
         if (psfifo->len) {
             /* Send psfifo to the renderer */
-            fwrite(psfifo->data, psfifo->len, 1, rendererhandle);
+            fwrite_or_die(psfifo->data, psfifo->len, 1, rendererhandle);
             dstrclear(psfifo);
         }
 
         /* Print the rest of the input data */
         if (more_stuff) {
             while (stream_next_line(tmp, stream))
-                fwrite(tmp->data, tmp->len, 1, rendererhandle);
+                fwrite_or_die(tmp->data, tmp->len, 1, rendererhandle);
         }
     }
 
@@ -1181,7 +1181,7 @@ void get_renderer_handle(const dstr_t *prepend, FILE **fd, pid_t *pid)
 
     /* Feed the PostScript header and the FIFO contents */
     if (prepend)
-        fwrite(prepend->data, prepend->len, 1, kid3in);
+        fwrite_or_die(prepend->data, prepend->len, 1, kid3in);
 
     /* We are the parent, return glob to the file handle */
     *fd = kid3in;

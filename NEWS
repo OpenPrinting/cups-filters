@@ -3,6 +3,15 @@ NEWS - OpenPrinting CUPS Filters v1.17.7 - 2017-09-18
 
 CHANGES IN V1.17.8
 
+	- foomatic-rip: Change execution of renderer thread to fail
+	  whenever any of its individual sub-comands fails. Thanks to
+	  LUUM (luum at chromium dot org) for the patch (Bug #1412).
+	- foomatic-rip: Parent process now ignores SIGPIPE calls from
+	  upstream/downstream CUPS filters, per
+	  https://www.cups.org/doc/api-filter.html, while correctly
+	  noting child process failures and exiting
+	  accordingly. Thanks to LUUM (luum at chromium dot org) for
+	  the patch (Bug #1412).
 	- Build system: Fixed typo which broke the
 	  "--enable-gs-ps2write" ./configure command line option (Bug
 	  #1410).

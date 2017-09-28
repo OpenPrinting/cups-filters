@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <errno.h>
 
 
 const char* shellescapes = "|;<>&!$\'\"`#*?()[]{}";
@@ -289,6 +290,22 @@ const char * strncpy_tochar(char *dest, const char *src, size_t max, const char 
     }
     *pdest = '\0';
     return psrc +1;
+}
+
+size_t fwrite_or_die(const void* ptr, size_t size, size_t count, FILE* stream) {
+  size_t res = fwrite(ptr, size, count, stream);
+  if (ferror(stream))
+    rip_die(EXIT_PRNERR, "Encountered error %s during fwrite", strerror(errno));
+
+  return res;
+}
+
+size_t fread_or_die(void* ptr, size_t size, size_t count, FILE* stream) {
+  size_t res = fread(ptr, size, count, stream);
+  if (ferror(stream))
+    rip_die(EXIT_PRNERR, "Encountered error %s during fread", strerror(errno));
+
+  return res;
 }
 
 int find_in_path(const char *progname, const char *paths, char *found_in)
@@ -1111,15 +1128,15 @@ int copy_file(FILE *dest,
 
     if (alreadyread && alreadyread_len)
     {
-        if (fwrite(alreadyread, 1, alreadyread_len, dest) < alreadyread_len)
+        if (fwrite_or_die(alreadyread, 1, alreadyread_len, dest) < alreadyread_len)
         {
             _log("Could not write to temp file\n");
             return 0;
         }
     }
 
-    while ((bytes = fread(buf, 1, 8192, src)))
-        fwrite(buf, 1, bytes, dest);
+    while ((bytes = fread_or_die(buf, 1, 8192, src)))
+        fwrite_or_die(buf, 1, bytes, dest);
 
     return !ferror(src) && !ferror(dest);
 }

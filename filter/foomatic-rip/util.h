@@ -98,6 +98,11 @@ void escapechars(char *dest, size_t size, const char *src, const char *esc_chars
 */
 const char * strncpy_tochar(char *dest, const char *src, size_t max, const char *stopchars);
 
+/* "safe" versions of standard <cstdio> fwrite and fread that will cause the
+ * program to exit gracefully when a write/read fails */
+size_t fwrite_or_die(const void* ptr, size_t size, size_t count, FILE* stream);
+size_t fread_or_die(void* ptr, size_t size, size_t count, FILE* stream);
+
 /* 'paths' is a colon seperated list of paths (like $PATH) 
  * 'found_in' may be NULL if it is not needed */
 int find_in_path(const char *progname, const char *paths, char *found_in);
