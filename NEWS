@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.17.8 - 2017-09-28
 -----------------------------------------------------
 
+CHANGES IN V1.17.9
+
+	- cups-browsed: Get printer-location field from remote printers.
+	  Thanks to Marek Kasik for the patch (Bug #1413).
+
 CHANGES IN V1.17.8
 
 	- foomatic-rip: Change execution of renderer thread to fail

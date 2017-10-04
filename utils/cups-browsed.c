@@ -6490,6 +6490,7 @@ static void
 browse_poll_get_printers (browsepoll_t *context, http_t *conn)
 {
   static const char * const rattrs[] = { "printer-uri-supported",
+					 "printer-location",
 					 "printer-info"};
   ipp_t *request, *response = NULL;
   ipp_attribute_t *attr;
