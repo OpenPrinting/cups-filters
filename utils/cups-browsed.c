@@ -4357,6 +4357,14 @@ gboolean update_cups_queues(gpointer unused) {
 	debug_printf("Creating permanent CUPS queue %s.\n",
 		     p->queue_name);
 
+      /* Do we have default option settings in cups-browsed.conf? */
+      if (DefaultOptions) {
+	debug_printf("Applying default option settings to printer %s: %s\n",
+		     p->queue_name, DefaultOptions);
+	p->num_options = cupsParseOptions(DefaultOptions, p->num_options,
+					  &p->options);
+      }
+
       /* Loading saved option settings from last session */
       p->num_options = load_printer_options(p->queue_name, p->num_options,
 					    &p->options);
