@@ -177,7 +177,7 @@ License: GPL-2
 
 Files: filter/rastertopclm
 Copyright: 2017 Sahil Arora <sahilarora.535@gmail.com>
-License: GPL-3+
+License: GPL-2+
 
 Files: filter/rastertopdf.cpp
 Copyright: 2010, Neil 'Superna' Armstrong <superna9999@gmail.com>
