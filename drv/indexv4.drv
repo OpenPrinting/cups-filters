@@ -82,7 +82,7 @@ Group "Braille"
 // Basic-D
 //
 {
-  ModelName "Basic-D V4"
+  ModelName "Basic-D V4/V5"
   PCFileName "ibasicd4.ppd"
 
   MaxSize 325mm 10m
@@ -100,7 +100,7 @@ Group "Braille"
 // Basic-S
 //
 {
-  ModelName "Basic-S V4"
+  ModelName "Basic-S V4/V5"
   PCFileName "ibasics4.ppd"
 
   MaxSize 325mm 10m
@@ -111,7 +111,7 @@ Group "Braille"
 // Everest-D
 //
 {
-  ModelName "Everest-D V4"
+  ModelName "Everest-D V4/V5"
   PCFileName "ieveres4.ppd"
 
   MaxSize 297mm 10m
@@ -127,7 +127,7 @@ Group "Braille"
 // Braille Box
 //
 {
-  ModelName "Braille Box V4"
+  ModelName "Braille Box V4/V5"
   PCFileName "ibrlbox4.ppd"
 
   MaxSize 297mm 10m
