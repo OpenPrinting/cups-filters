@@ -173,9 +173,9 @@ points2mm() {
   FRAC_POINTS="$INT_POINTS$FRAC_POINTS"
   # Then we can compute conversion
   # We round up to be safe
-  FRAC_INCH=$((("$FRAC_POINTS" + 71) / 72))
-  FRAC_CM=$((("$FRAC_INCH" * 254 + 99) / 100))
-  HUNDRENDTH_MM=$((("$FRAC_CM" + 999999999999) / 1000000000000))
+  FRAC_INCH=$((($FRAC_POINTS + 71) / 72))
+  FRAC_CM=$((($FRAC_INCH * 254 + 99) / 100))
+  HUNDRENDTH_MM=$((($FRAC_CM + 999999999999) / 1000000000000))
   echo $HUNDRENDTH_MM
 }
 

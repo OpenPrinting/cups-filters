@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.17.9 - 2017-10-05
 
 CHANGES IN V1.17.10
 
+	- braille: Old bash does not like quotes, like in '$(("123" +
+	  0))'. Removed unneeded quotes. Thanks to Samuel Thibault for
+	  this patch.
 	- braille: Index V5 embossers are compatible with the V4
 	  protocol so we do not need driver changes, we just need to
 	  advertise the support. Thanks to Samuel Thibault for this
