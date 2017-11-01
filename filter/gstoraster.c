@@ -39,6 +39,7 @@ MIT Open Source License  -  http://www.opensource.org/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 #include <fcntl.h>
 #include <cups/raster.h>
 #include <cupsfilters/colormanager.h>
@@ -503,7 +504,7 @@ gs_spawn (const char *filename,
 
     /* Execute Ghostscript command line ... */
     execvpe(filename, gsargv, envp);
-    perror(filename);
+    fprintf(stderr, "ERROR: Unable to launch Ghostscript: %s: %s\n", filename, strerror(errno));
     goto out;
   }
 
