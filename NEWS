@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.17.9 - 2017-10-05
 
 CHANGES IN V1.17.10
 
+	- braille: Spaces at the head of lines were not getting
+	  embossed, because bash would eat them in the read
+	  command. IFS allows to avoid the issue. Thanks to Samuel
+	  Thibault for this patch.
 	- gstoraster: Emit proper error message if Ghostscript is missing.
 	  Thanks to Peter De Wachter (pdewacht at gmail dot com) for the
 	  patch (Bug #1415).
