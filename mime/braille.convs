@@ -23,42 +23,42 @@
 # 
 
 # Textual conversions
-text/plain		text/vnd.cups-brf	0	texttobrf
+text/plain		application/vnd.cups-brf	0	texttobrf
 
-text/html		text/vnd.cups-brf	10	texttobrf
-application/xhtml	text/vnd.cups-brf	10	texttobrf
-application/xml		text/vnd.cups-brf	10	texttobrf
-application/sgml	text/vnd.cups-brf	10	texttobrf
+text/html		application/vnd.cups-brf	10	texttobrf
+application/xhtml	application/vnd.cups-brf	10	texttobrf
+application/xml		application/vnd.cups-brf	10	texttobrf
+application/sgml	application/vnd.cups-brf	10	texttobrf
 
-application/vnd.recordare.musicxml+xml text/vnd.cups-brf	30	musicxmltobrf
+application/vnd.recordare.musicxml+xml application/vnd.cups-brf	30	musicxmltobrf
 
-application/vnd.oasis.opendocument.chart			text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.formula			text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.graphics			text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.graphics-template		text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.presentation			text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.presentation-template	text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.spreadsheet			text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.spreadsheet-template		text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.text				text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.text-master			text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.text-template		text/vnd.cups-brf	30	texttobrf
-application/vnd.oasis.opendocument.text-web			text/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.chart			application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.formula			application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.graphics			application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.graphics-template		application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.presentation			application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.presentation-template	application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.spreadsheet			application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.spreadsheet-template		application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.text				application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.text-master			application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.text-template		application/vnd.cups-brf	30	texttobrf
+application/vnd.oasis.opendocument.text-web			application/vnd.cups-brf	30	texttobrf
 
-application/msword	text/vnd.cups-brf	30	texttobrf
-application/vnd.openxmlformats-officedocument.presentationml.presentation	text/vnd.cups-brf	30	texttobrf
-application/vnd.openxmlformats-officedocument.presentationml.slide		text/vnd.cups-brf	30	texttobrf
-application/vnd.openxmlformats-officedocument.presentationml.slideshow		text/vnd.cups-brf	30	texttobrf
-application/vnd.openxmlformats-officedocument.presentationml.template		text/vnd.cups-brf	30	texttobrf
-application/vnd.openxmlformats-officedocument.spreadsheetml.sheet		text/vnd.cups-brf	30	texttobrf
-application/vnd.openxmlformats-officedocument.spreadsheetml.template		text/vnd.cups-brf	30	texttobrf
-application/vnd.openxmlformats-officedocument.wordprocessingml.document		text/vnd.cups-brf	30	texttobrf
-application/vnd.openxmlformats-officedocument.wordprocessingml.template		text/vnd.cups-brf	30	texttobrf
+application/msword	application/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.presentationml.presentation	application/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.presentationml.slide		application/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.presentationml.slideshow		application/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.presentationml.template		application/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet		application/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.spreadsheetml.template		application/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.wordprocessingml.document		application/vnd.cups-brf	30	texttobrf
+application/vnd.openxmlformats-officedocument.wordprocessingml.template		application/vnd.cups-brf	30	texttobrf
 
-text/rtf		text/vnd.cups-brf	30	texttobrf
-application/rtf		text/vnd.cups-brf	30	texttobrf
+text/rtf		application/vnd.cups-brf	30	texttobrf
+application/rtf		application/vnd.cups-brf	30	texttobrf
 
-application/pdf		text/vnd.cups-brf	100	texttobrf
+application/pdf		application/vnd.cups-brf	100	texttobrf
 
 
 # Picture conversions

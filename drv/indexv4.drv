@@ -34,7 +34,7 @@
 Manufacturer "Index"
 Version 1.0
 
-Filter text/vnd.cups-brf 0 textbrftoindexv4
+Filter application/vnd.cups-brf 0 textbrftoindexv4
 Filter image/vnd.cups-ubrl 0 imageubrltoindexv4
 
 //
