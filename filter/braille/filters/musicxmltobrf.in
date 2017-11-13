@@ -40,7 +40,7 @@ checkTool FreeDots FreeDots "translating musicxml files"
 checkTool lou_translate liblouis "translating musicxml files"
 
 CONVERT="FreeDots -nw -w $TEXTWIDTH /dev/stdin"
-TRANSLATE="lou_translate $LIBLOUIS_TABLES,braille-patterns.cti"
+TRANSLATE="lou_translate en-us-brf.dis,$LIBLOUIS_TABLES,braille-patterns.cti"
 
 cd $TMPDIR
 echo "INFO: Translating MusicXML" >&2
