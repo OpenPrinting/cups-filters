@@ -3,15 +3,17 @@ NEWS - OpenPrinting CUPS Filters v1.17.9 - 2017-10-05
 
 CHANGES IN V1.17.10
 
+	- braille: use application/vnd.cups-brf instead of
+	  text/vnd.cups-brf. Thanks to Samuel Thibault for this patch.
 	- braille: Make sure liblouis emits pure BRF output. Thanks to
 	  Samuel Thibault for this patch.
 	- braille: Spaces at the head of lines were not getting
 	  embossed, because bash would eat them in the read
 	  command. IFS allows to avoid the issue. Thanks to Samuel
 	  Thibault for this patch.
-	- gstoraster: Emit proper error message if Ghostscript is missing.
-	  Thanks to Peter De Wachter (pdewacht at gmail dot com) for the
-	  patch (Bug #1415).
+	- gstoraster: Emit proper error message if Ghostscript is
+	  missing.  Thanks to Peter De Wachter (pdewacht at gmail dot
+	  com) for the patch (Bug #1415).
 	- braille: Old bash does not like quotes, like in '$(("123" +
 	  0))'. Removed unneeded quotes. Thanks to Samuel Thibault for
 	  this patch.
