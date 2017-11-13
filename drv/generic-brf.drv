@@ -35,7 +35,7 @@ Version 1.0
 
 Throughput 1
 
-Filter text/vnd.cups-brf 0 brftoembosser
+Filter application/vnd.cups-brf 0 brftoembosser
 Filter image/vnd.cups-brf 0 brftoembosser
 
 MediaSize Legal

@@ -22,8 +22,8 @@
 # THE SOFTWARE.
 # 
 
-text/vnd.cups-brf	brf
-text/vnd.cups-ubrl
+application/vnd.cups-brf	brf
+application/vnd.cups-ubrl
 image/vnd.cups-brf
 image/vnd.cups-ubrl
 image/vnd.cups-pdf
