@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.17.9 - 2017-10-05
 
 CHANGES IN V1.17.10
 
+	- braille: Make sure liblouis emits pure BRF output. Thanks to
+	  Samuel Thibault for this patch.
 	- braille: Spaces at the head of lines were not getting
 	  embossed, because bash would eat them in the read
 	  command. IFS allows to avoid the issue. Thanks to Samuel
