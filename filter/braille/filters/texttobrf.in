@@ -154,13 +154,13 @@ then
 	exit 1
 	;;
     esac
-    RENDER_CALL="$LIBLOUIS_TOOL -CliteraryTextTable=$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
+    RENDER_CALL="$LIBLOUIS_TOOL -CliteraryTextTable=en-us-brf.dis,$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
   elif type lou_translate > /dev/null
   then
     # Only liblouis, but better than nothing
     setupTextRendering
     printf "WARN: The liblouisutdml package is required for translating braille better\n" >&2
-    TRANSLATE="lou_translate $LIBLOUIS_TABLES,braille-patterns.cti"
+    TRANSLATE="lou_translate en-us-brf.dis,$LIBLOUIS_TABLES,braille-patterns.cti"
   else
     printf "ERROR: The liblouisutdml package is required for translating braille\n" >&2
     exit 1
