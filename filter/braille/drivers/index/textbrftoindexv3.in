@@ -57,7 +57,7 @@ then
   else
     cat "$FILE"
   fi | (
-    while IFS=$'\n' read LINE
+    while IFS=$'\n' read -r LINE
     do
       # Strip CRs
       LINE=${LINE//$'\015'}
