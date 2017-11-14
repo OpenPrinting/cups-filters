@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.17.9 - 2017-10-05
 
 CHANGES IN V1.17.10
 
+	- braille: Fix handling non-printable characters in BRF
+	  files. Thanks to Samuel Thibault for this patch.
+	- braille: Fix printing backslashes in BRF files. Thanks to
+          Samuel Thibault for this patch.
 	- braille: use application/vnd.cups-brf instead of
 	  text/vnd.cups-brf. Thanks to Samuel Thibault for this patch.
 	- braille: Make sure liblouis emits pure BRF output. Thanks to
