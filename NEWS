@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.17.9 - 2017-10-05
 
 CHANGES IN V1.17.10
 
+	- cups-browsed: Set "printer-location" as an attribute and not
+	  as an option when creating/updating a CUPS queue (Bug
+	  #1413).
 	- braille: Fix handling non-printable characters in BRF
 	  files. Thanks to Samuel Thibault for this patch.
 	- braille: Fix printing backslashes in BRF files. Thanks to
