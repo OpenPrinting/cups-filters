@@ -57,10 +57,35 @@ then
   else
     cat "$FILE"
   fi | (
-    while IFS=$'\n' read LINE
+    while IFS=$'\n' read -r LINE
     do
       # Strip CRs
       LINE=${LINE//$'\015'}
+      # Ignore SUBs
+      LINE=${LINE//$'\032'}
+
+      # Interpret FFs
+      while [ -n "$LINE" -a -z "${LINE/#$'\014'*}" ]
+      do
+        printf "\\f"
+	LINE=${LINE#$'\014'}
+      done
+
+      # Make sure there is nothing else we don't process
+      if [ -n "$LINE" ]
+      then
+	if [ -z "${LINE/*[$'\001'-$'\037'$'\177']*}" ]
+	then
+	  echo "ERROR: unsupported control character in BRF file" >&2
+	  exit 1
+	fi
+	if [ -z "${LINE/*[$'\200'-$'\377']*}" ]
+	then
+	  echo "ERROR: unsupported non-ASCII character in BRF file" >&2
+	  exit 1
+	fi
+      fi
+
       CHARS=$(printf %s "$LINE" | wc -c)
       if [ "$CHARS" -gt 127 ]
       then
