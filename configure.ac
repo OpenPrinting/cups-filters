@@ -668,7 +668,7 @@ AS_IF([test "x$with_pdftops_path" != "xsystem"], [
 	CUPS_PDFTOPS="$with_pdftops_path"
 ], [
 	AS_IF([test "x$cross_compiling" = "xyes"], [
-		CUPS_PDFTOPS="pdftops"
+		CUPS_PDFTOPS="/usr/bin/pdftops"
 	], [
 		AC_CHECK_PROG(CUPS_PDFTOPS, pdftops, /usr/bin/pdftops)
 	])

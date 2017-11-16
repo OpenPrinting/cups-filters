@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.17.9 - 2017-10-05
 
 CHANGES IN V1.17.10
 
+	- Build system: Set default path for pdftops to
+	  /usr/bin/pdftops also for cross-compiling (Bug #1417).
 	- cups-browsed: Set "printer-location" as an attribute and not
 	  as an option when creating/updating a CUPS queue (Bug
 	  #1413).
