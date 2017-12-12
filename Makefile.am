@@ -432,11 +432,12 @@ EXTRA_DIST += \
 	fontembed/README
 
 pkgfilter_PROGRAMS =
+pkgfilterdir = $(CUPS_SERVERBIN)/filter
 
 # ===========
 # PDF to OPVP
 # ===========
-pkgfilterdir = $(CUPS_SERVERBIN)/filter
+if ENABLE_OPVP
 if ENABLE_POPPLER
 pkgfilter_PROGRAMS += \
 	pdftoopvp
@@ -444,6 +445,8 @@ endif
 
 pkgfontconfigdir = $(sysconfdir)/$(FONTDIR)
 pkgfontconfig_DATA = filter/pdftoopvp/99pdftoopvp.conf
+endif
+EXTRA_DIST += filter/pdftoopvp/99pdftoopvp.conf
 
 pdftoopvp_SOURCES = \
 	filter/pdftoopvp/oprs/OPRS.cxx \
@@ -485,8 +488,6 @@ pdftoopvp_LDADD = \
 	$(LIBPNG_LIBS) \
 	$(POPPLER_LIBS) \
 	$(DLOPEN_LIBS)
-
-EXTRA_DIST += $(pkgfontconfig_DATA)
 
 # ==========
 # PDF to PDF 
@@ -960,6 +961,9 @@ ppd_DATA = \
 if ENABLE_POPPLER
 if ENABLE_IJS
 ppd_DATA += \
+	ppd/HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd
+else
+EXTRA_DIST += \
 	ppd/HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd
 endif
 endif

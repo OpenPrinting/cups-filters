@@ -1,8 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.17.9 - 2017-10-05
 -----------------------------------------------------
 
-CHANGES IN V1.17.10
+CHANGES IN V1.18.0
 
+	- pdftoijs, pdftoopvp: Build pdftoijs and pdftoopvp only on
+	  demand (via "--enable-ijs" and "--enable-opvp" on the
+	  ./configure command line). There are actually no known
+	  printer drivers using these filters. If no one complains
+	  about the missing filters they will get completely removed.
 	- Build system: Set default path for pdftops to
 	  /usr/bin/pdftops also for cross-compiling (Bug #1417).
 	- cups-browsed: Set "printer-location" as an attribute and not

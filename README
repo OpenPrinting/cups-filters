@@ -1048,6 +1048,8 @@ is "/tmp".
 PDFTOIJS
 ========
 
+(Optional, only included when building with "./configure ... --enable-ijs ...")
+
 1. INTRODUCTION
 
 "pdftoijs" is a filter for CUPS. It reads PDF files, converts it
@@ -1113,6 +1115,8 @@ is "/tmp".
 
 PDFTOOPVP
 =========
+
+(Optional, only included when building with "./configure ... --enable-opvp ...")
 
 1. INTRODUCTION
 
