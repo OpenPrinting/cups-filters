@@ -28,6 +28,9 @@ image/vnd.cups-brf
 image/vnd.cups-ubrl
 image/vnd.cups-pdf
 
+application/vnd.cups-paged-brf
+application/vnd.cups-paged-ubrl
+
 application/sgml	sgml
 
 application/vnd.recordare.musicxml+xml xml contains(0,1000,"<score-partwise")
