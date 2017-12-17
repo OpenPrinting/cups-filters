@@ -1,0 +1,144 @@
+#!/bin/bash
+
+#
+# Copyright (c) 2015-2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+# 
+
+# Make sure we have enough options
+if [ $# != 5 -a $# != 6 ]; then
+  echo "ERROR: $0 jobid user name nb options [filename]" >&2
+  exit 1
+fi
+
+NB=$4
+OPTIONS=$5
+FILE=$6
+
+. @CUPS_DATADIR@/braille/cups-braille.sh
+
+shopt -s extglob
+
+# Construct list of pages from PAGERANGES
+
+PAGES=" "   # Explicit list of pages
+AFTER=      # All pages including and after this
+BEFORE=     # All pages before and including this
+
+while [ -n "${PAGERANGES}" ]
+do
+  PAGERANGE=${PAGERANGES/,*}
+  PAGERANGE=${PAGERANGE%%*( )}
+  PAGERANGE=${PAGERANGE##*( )}
+  if [ -n "${PAGERANGES/*,*}" ]
+  then
+    # last range
+    PAGERANGES=""
+  else
+    # Remove leading range
+    PAGERANGES="${PAGERANGES#*,}"
+  fi
+
+  if [ -n "${PAGERANGE/*-*}" ]
+  then
+    # single-page
+    PAGES="$PAGES$PAGERANGE "
+
+  elif [ -z "${PAGERANGE%%*-}" ]
+  then
+    # To the end
+    FIRST=${PAGERANGE%%-*}
+    if [ -z "$AFTER" ] || [ "$FIRST" -lt "$AFTER" ]
+    then
+      AFTER="$FIRST"
+    fi
+
+  elif [ -z "${PAGERANGE##-*}" ]
+  then
+    # From the beginning
+    LAST=${PAGERANGE##*-}
+    if [ -z "$BEFORE" ] || [ "$LAST" -gt "$BEFORE" ]
+    then
+      BEFORE="$LAST"
+    fi
+
+  else
+    # page range
+    FIRST=${PAGERANGE/-*}
+    LAST=${PAGERANGE/*-}
+    PAGES="$PAGES$(seq "$FIRST" "$LAST" | tr $'\012' ' ')"
+
+  fi
+done
+
+# Determine whether to print this page
+doprint() {
+  PAGE="$1"
+  if [ -n "$BEFORE" ] && [ "$PAGE" -le "$BEFORE" ]
+  then
+    echo 1
+    return
+  elif [ -n "$AFTER" ] && [ "$PAGE" -ge "$AFTER" ]
+  then
+    echo 1
+    return
+  fi
+  case "$PAGES" in
+    *\ $PAGE\ *)
+      echo 1
+      return
+      ;;
+  esac
+  echo 0
+}
+
+if [ -z "$FILE" ]
+then
+  cat
+else
+  cat "$FILE"
+fi | (
+  P=1
+  DOPRINT=$(doprint $P)
+  while IFS=$'\n' read -r LINE
+  do
+    while [ -z "${LINE/*$'\014'*}" ]
+    do
+      # Possibly print before FF
+      HEAD=${LINE%%$'\014'*}
+      [ $DOPRINT == 0 ] || printf %s "$HEAD"$'\014'
+
+      # Next page 
+      P=$(($P + 1))
+      DOPRINT=$(doprint $P)
+
+      # Drop head of line
+      LINE=${LINE#*$'\014'}
+    done
+
+    # Remainder of line
+    [ $DOPRINT == 0 ] || printf "%s\n" "$LINE"
+  done
+)
+
+echo "INFO: Ready" >&2
+exit 0
