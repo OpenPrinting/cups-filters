@@ -93,14 +93,20 @@ setupTextRendering() {
   esac
 }
 
-# sometimes we can't filter directly from stdin because the tools need to seek
-# within the file (e.g. unzip). This can be called in such case to dump stdin to
-# a file
+# sometimes we can't filter directly from stdin or the original file because the
+# tools need to seek within the file (e.g. unzip), or spaces in the path pose
+# problem. This can be called in such case to dump the original content to a
+# fresh file
 dumptofile() {
-  [ -z "$FILE" ] || return 0 # Already a file
+  ORIGFILE="$FILE"
+  FILE=$(mktemp "${TMPDIR:-/tmp}/texttobrf.tmp.XXXXXX")
   trap -- 'rm -f "$FILE"' EXIT
-  FILE=$(mktemp "${TMPDIR:-/tmp}/texttobrf.tmp")
-  cat > "$FILE"
+  if [ -n "$ORIGFILE" ]
+  then
+    cat "$ORIGFILE" > "$FILE"
+  else
+    cat > "$FILE"
+  fi
 }
 
 #  Selected braille table

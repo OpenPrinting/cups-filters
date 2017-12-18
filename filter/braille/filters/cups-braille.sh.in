@@ -85,7 +85,9 @@ getOptionNumber () {
   printf "%s" "$VALUE"
 }
 
+# Printing options: number of copies and page ranges
 [ -z "$NB" ] && NB=1
+PAGERANGES=$(getOption page-ranges)
 
 #
 # Page size

@@ -35,7 +35,7 @@ Version 1.0
 
 Throughput 1
 
-Filter text/vnd.cups-ubrl 0 -
+Filter text/vnd.cups-paged-ubrl 0 -
 Filter image/vnd.cups-ubrl 0 -
 
 MediaSize Legal
