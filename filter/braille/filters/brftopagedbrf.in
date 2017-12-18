@@ -44,6 +44,8 @@ PAGES=" "   # Explicit list of pages
 AFTER=      # All pages including and after this
 BEFORE=     # All pages before and including this
 
+[ -n "$PAGERANGES" ] || PAGERANGES="1-"
+
 while [ -n "${PAGERANGES}" ]
 do
   PAGERANGE=${PAGERANGES/,*}
