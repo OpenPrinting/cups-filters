@@ -8,6 +8,8 @@
 *~
 *.pc
 *.tar.*
+core
+core.*
 aclocal.m4
 autom4te.cache
 build
