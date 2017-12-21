@@ -383,6 +383,7 @@ static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static local_queue_naming_t LocalQueueNamingRemoteCUPS=LOCAL_QUEUE_NAMING_DNSSD;
 static local_queue_naming_t LocalQueueNamingIPPPrinter=LOCAL_QUEUE_NAMING_DNSSD;
 static unsigned int OnlyUnsupportedByCUPS = 0;
+static unsigned int UseCUPSGeneratedPPDs = 1;
 static unsigned int CreateRemoteRawPrinterQueues = 0;
 static unsigned int CreateRemoteCUPSPrinterQueues = 1;
 #ifdef DRIVERLESS_IPP_PRINTERS_AUTO_SETUP
@@ -3285,7 +3286,7 @@ create_remote_printer_entry (const char *queue_name,
   int           bytes;
   const char	*cups_serverbin;	/* CUPS_SERVERBIN environment variable */
   int uri_status, host_port;
-  http_t *http = NULL;
+  http_t *http_printer = NULL, *http_cups = NULL;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
   ipp_t *request, *response = NULL;
 #ifdef HAVE_CUPS_1_6
@@ -3514,7 +3515,7 @@ create_remote_printer_entry (const char *queue_name,
 				 resource, sizeof(resource));
     if (uri_status != HTTP_URI_OK)
       goto fail;
-    if ((http = httpConnect(host_name, host_port)) ==
+    if ((http_printer = httpConnect(host_name, host_port)) ==
 	NULL) {
       debug_printf("Cannot connect to remote printer %s (%s:%d), ignoring this printer.\n",
 		   p->uri, host_name, host_port);
@@ -3522,7 +3523,7 @@ create_remote_printer_entry (const char *queue_name,
     }
     request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL, uri);
-    response = cupsDoRequest(http, request, resource);
+    response = cupsDoRequest(http_printer, request, resource);
 
     /* Log all printer attributes for debugging */
     if (debug_stderr || debug_logfile) {
@@ -3736,18 +3737,67 @@ create_remote_printer_entry (const char *queue_name,
     }
 
     if (IPPPrinterQueueType == PPD_YES) {
-      if (!ppdCreateFromIPP(buffer, sizeof(buffer), response, make_model,
-			    pdl, color, duplex)) {
-	if (errno != 0)
-	  debug_printf("Unable to create PPD file: %s\n", strerror(errno));
-	else
-	  debug_printf("Unable to create PPD file: %s\n", ppdgenerator_msg);
-	goto fail;
-      } else {
-	debug_printf("PPD generation successful: %s\n", ppdgenerator_msg);
-	debug_printf("Created temporary PPD file: %s\n", buffer);
-	p->ppd = strdup(buffer);
-	p->ifscript = NULL;
+      p->ifscript = NULL;
+      p->ppd = NULL;
+      if (UseCUPSGeneratedPPDs) {
+	if (LocalQueueNamingIPPPrinter != LOCAL_QUEUE_NAMING_DNSSD) {
+	  debug_printf("Local queue %s: We can replace temporary CUPS queues and keep their PPD file only when we name our queues like them, to avoid duplicate queues to the same printer.\n", p->queue_name);
+	  debug_printf("Not loading PPD from temporary CUPS queue for this printer.\n");
+	  debug_printf("Try setting \"LocalQueueNamingIPPPrinter DNS-SD\" in cups-browsed.conf.\n");
+	} else {
+	  /* Check whether CUPS creates a temporary queue for this printer,
+	     and if so, download its PPD file */
+	  if ((http_cups = http_connect_local ()) == NULL)
+	    debug_printf("Unable to connect to CUPS!\n");
+	  else {
+	    cups_dest_t *dest = cupsGetNamedDest(http_cups, p->queue_name, NULL);
+	    if (dest) {
+	      /* CUPS has found a queue with this name.
+		 Either CUPS generates a temporary queue here or we have already
+		 made this queue permanent. In any case, load the PPD from this
+		 queue to conserve the PPD which CUPS has originally generated. */
+	      /* This call makes CUPS actually create the queue so that we can
+		 grab the PPD. We discard the result of the call. */
+	      debug_printf("Establishing dummy connection to make CUPS create the temporary queue.\n");
+	      cups_dinfo_t *dinfo = cupsCopyDestInfo(http_cups, dest);
+	      if (dinfo == NULL)
+		debug_printf("Unable to connect to destination.\n");
+	      else {
+		debug_printf("Temporary queue created, grabbing the PPD.\n");
+		cupsFreeDestInfo(dinfo);
+		const char *loadedppd = NULL;
+		if ((loadedppd = cupsGetPPD2(http_cups, p->queue_name))
+		    == NULL)
+		  debug_printf("Unable to load PPD from local temporary queue %s!\n",
+			       p->queue_name);
+		else {
+		  p->ppd = strdup(loadedppd);
+		  debug_printf("Loaded PPD file %s from local temporary queue %s.\n",
+			       p->ppd, p->queue_name);
+		}
+	      }
+	      cupsFreeDests(1, dest);
+	    }
+	  }
+	}
+      }
+      if (p->ppd == NULL) {
+	/* If we do not want CUPS-generated PPDs or we cannot obtain a
+	   CUPS-generated PPD, for example if CUPS does not create a 
+	   temporary queue for this printer, we generate a PPD by
+	   ourselves */
+	if (!ppdCreateFromIPP(buffer, sizeof(buffer), response, make_model,
+			      pdl, color, duplex)) {
+	  if (errno != 0)
+	    debug_printf("Unable to create PPD file: %s\n", strerror(errno));
+	  else
+	    debug_printf("Unable to create PPD file: %s\n", ppdgenerator_msg);
+	  goto fail;
+	} else {
+	  debug_printf("PPD generation successful: %s\n", ppdgenerator_msg);
+	  debug_printf("Created temporary PPD file: %s\n", buffer);
+	  p->ppd = strdup(buffer);
+	}
       }
     } else if (IPPPrinterQueueType == PPD_NO) {
       p->ppd = NULL;
@@ -3926,15 +3976,15 @@ create_remote_printer_entry (const char *queue_name,
   }
 
   ippDelete(response);
-  if (http)
-    httpClose(http);
+  if (http_printer)
+    httpClose(http_printer);
   return p;
 
  fail:
   debug_printf("ERROR: Unable to create print queue, ignoring printer.\n");
   if (response) ippDelete(response);
-  if (http)
-    httpClose(http);
+  if (http_printer)
+    httpClose(http_printer);
   if (p->type) free (p->type);
   if (p->service_name) free (p->service_name);
   if (p->host) free (p->host);
@@ -7373,6 +7423,13 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	OnlyUnsupportedByCUPS = 0;
+    } else if (!strcasecmp(line, "UseCUPSGeneratedPPDs") && value) {
+      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
+	UseCUPSGeneratedPPDs = 1;
+      else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+	  !strcasecmp(value, "off") || !strcasecmp(value, "0"))
+	UseCUPSGeneratedPPDs = 0;
     } else if (!strcasecmp(line, "CreateRemoteRawPrinterQueues") && value) {
       if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
