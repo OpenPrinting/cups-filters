@@ -3527,15 +3527,18 @@ create_remote_printer_entry (const char *queue_name,
 
     /* Log all printer attributes for debugging */
     if (debug_stderr || debug_logfile) {
+      debug_printf("Full list of IPP attributes (get-printer-attributes) for printer %s:\n",
+		   p->queue_name);
       attr = ippFirstAttribute(response);
       while (attr) {
-	debug_printf("Attr: %s\n",
+	debug_printf("  Attr: %s\n",
 		     ippGetName(attr));
 	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-	debug_printf("Value: %s\n", valuebuffer);
+	debug_printf("  Value: %s\n", valuebuffer);
+	const char *kw;
 	for (i = 0; i < ippGetCount(attr); i ++)
-	  debug_printf("Keyword: %s\n",
-		       ippGetString(attr, i, NULL));
+	  if ((kw = ippGetString(attr, i, NULL)) != NULL)
+	    debug_printf("  Keyword: %s\n", kw);
 	attr = ippNextAttribute(response);
       }
     }
@@ -3546,25 +3549,25 @@ create_remote_printer_entry (const char *queue_name,
        skip this printer */
     if (CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
       valuebuffer[0] = '\0';
+      debug_printf("Checking whether printer %s supports IPP 2.x or newer:\n",
+		   p->queue_name);
       if ((attr = ippFindAttribute(response,
 				   "ipp-versions-supported",
 				   IPP_TAG_KEYWORD)) != NULL) {
-	debug_printf("Checking whether printer %s supports IPP 2.x or newer: Attr: %s\n",
-		     p->queue_name, ippGetName(attr));
+	debug_printf("  Attr: %s\n", ippGetName(attr));
 	for (i = 0; i < ippGetCount(attr); i ++) {
 	  strncpy(valuebuffer, ippGetString(attr, i, NULL),
 		  sizeof(valuebuffer));
-	  debug_printf("Checking whether printer %s supports IPP 2.x or newer: Keyword: %s\n",
-		       p->queue_name, valuebuffer);
+	  debug_printf("  Keyword: %s\n", valuebuffer);
 	  if (valuebuffer[0] > '1')
 	    break;
 	}
       }
       if (!attr || valuebuffer[0] == '\0' || valuebuffer[0] <= '1') {
-	debug_printf("cups-browsed is configured to auto-setup only printers which are designed for driverless printing. These printers require IPP 2.x or newer, but this printer only supports IPP 1.x or older. Skipping.\n");
+	debug_printf("  --> cups-browsed is configured to auto-setup only printers which are designed for driverless printing. These printers require IPP 2.x or newer, but this printer only supports IPP 1.x or older. Skipping.\n");
 	goto fail;
       } else
-	debug_printf("--> Printer supports IPP 2.x or newer.\n");
+	debug_printf("  --> Printer supports IPP 2.x or newer.\n");
     }
 
     /* If we have opted for only PWG Raster printers or for only printers 
@@ -3575,20 +3578,19 @@ create_remote_printer_entry (const char *queue_name,
     if (CreateIPPPrinterQueues == IPP_PRINTERS_PWGRASTER ||
 	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
       valuebuffer[0] = '\0';
+      debug_printf("Checking whether printer %s is PWG Raster:\n",
+		   p->queue_name);
       if ((attr = ippFindAttribute(response,
 				   "pwg-raster-document-resolution-supported",
 				   IPP_TAG_KEYWORD)) != NULL) {
-	debug_printf("Checking whether printer %s is PWG Raster: Attr: %s\n",
-		     p->queue_name, ippGetName(attr));
+	debug_printf("  Attr: %s\n", ippGetName(attr));
 	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-	debug_printf("Checking whether printer %s is PWG Raster: Value: %s\n",
-		     p->queue_name, valuebuffer);
+	debug_printf("  Value: %s\n", valuebuffer);
 	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
 	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
 		    sizeof(valuebuffer));
-	    debug_printf("Checking whether printer %s is PWG Raster: Keyword: %s\n",
-			 p->queue_name, valuebuffer);
+	    debug_printf("  Keyword: %s\n", valuebuffer);
 	    if (valuebuffer[0] != '\0')
 	      break;
 	  }
@@ -3596,7 +3598,7 @@ create_remote_printer_entry (const char *queue_name,
       }
       if (attr && valuebuffer[0] != '\0')
         is_pwgraster = 1;
-      debug_printf("--> Printer %s PWG Raster.\n",
+      debug_printf("  --> Printer %s PWG Raster.\n",
 		   is_pwgraster ? "supports" : "does not support");
     }
 
@@ -3609,18 +3611,17 @@ create_remote_printer_entry (const char *queue_name,
     if (CreateIPPPrinterQueues == IPP_PRINTERS_APPLERASTER ||
 	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
       valuebuffer[0] = '\0';
+      debug_printf("Checking whether printer %s understands Apple Raster:\n",
+		   p->queue_name);
       if ((attr = ippFindAttribute(response, "urf-supported", IPP_TAG_KEYWORD)) != NULL) {
-	debug_printf("Checking whether printer %s understands Apple Raster: Attr: %s\n",
-		     p->queue_name, ippGetName(attr));
+	debug_printf("  Attr: %s\n", ippGetName(attr));
 	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-	debug_printf("Checking whether printer %s understands Apple Raster: Value: %s\n",
-		     p->queue_name, valuebuffer);
+	debug_printf("  Value: %s\n", valuebuffer);
 	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
 	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
 		    sizeof(valuebuffer));
-	    debug_printf("Checking whether printer %s understands Apple Raster: Keyword: %s\n",
-			 p->queue_name, valuebuffer);
+	    debug_printf("  Keyword: %s\n", valuebuffer);
 	    if (valuebuffer[0] != '\0')
 	      break;
 	  }
@@ -3628,7 +3629,7 @@ create_remote_printer_entry (const char *queue_name,
       }
       if (attr && valuebuffer[0] != '\0')
         is_appleraster = 1;
-      debug_printf("--> Printer %s Apple Raster.\n",
+      debug_printf("  --> Printer %s Apple Raster.\n",
 		   is_appleraster ? "supports" : "does not support");
     }
 #endif
@@ -3642,20 +3643,19 @@ create_remote_printer_entry (const char *queue_name,
     if (CreateIPPPrinterQueues == IPP_PRINTERS_PCLM ||
 	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
       valuebuffer[0] = '\0';
+      debug_printf("Checking whether printer %s understands PCLm:\n",
+		   p->queue_name);
       if ((attr = ippFindAttribute(response,
 				   "pclm-compression-method-preferred",
 				   IPP_TAG_KEYWORD)) != NULL) {
-	debug_printf("Checking whether printer %s understands PCLm: Attr: %s\n",
-		     p->queue_name, ippGetName(attr));
+	debug_printf("  Attr: %s\n", ippGetName(attr));
 	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-	debug_printf("Checking whether printer %s understands PCLm: Value: %s\n",
-		     p->queue_name, valuebuffer);
+	debug_printf("  Value: %s\n", p->queue_name, valuebuffer);
 	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
 	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
 		    sizeof(valuebuffer));
-	    debug_printf("Checking whether printer %s understands PCLm: Keyword: %s\n",
-			 p->queue_name, valuebuffer);
+	    debug_printf("  Keyword: %s\n", valuebuffer);
 	    if (valuebuffer[0] != '\0')
 	      break;
 	  }
@@ -3663,7 +3663,7 @@ create_remote_printer_entry (const char *queue_name,
       }
       if (attr && valuebuffer[0] != '\0')
         is_pclm = 1;
-      debug_printf("--> Printer %s PCLm.\n",
+      debug_printf("  --> Printer %s PCLm.\n",
 		   is_pclm ? "supports" : "does not support");
     }
 #endif
@@ -3678,7 +3678,7 @@ create_remote_printer_entry (const char *queue_name,
 		     p->queue_name, pdl);
       if(strcasestr(pdl, "application/pdf"))
         is_pdf = 1;
-      debug_printf("--> Printer %s PDF.\n",
+      debug_printf("  --> Printer %s PDF.\n",
 		   is_pdf ? "supports" : "does not support");
     }
 
