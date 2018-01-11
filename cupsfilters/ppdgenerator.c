@@ -1212,13 +1212,13 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
   cupsFilePuts(fp, "*PPD-Adobe: \"4.3\"\n");
   cupsFilePuts(fp, "*FormatVersion: \"4.3\"\n");
-  cupsFilePrintf(fp, "*FileVersion: \"%d.%d\"\n", CUPS_VERSION_MAJOR, CUPS_VERSION_MINOR);
+  cupsFilePrintf(fp, "*FileVersion: \"%s\"\n", VERSION);
   cupsFilePuts(fp, "*LanguageVersion: English\n");
   cupsFilePuts(fp, "*LanguageEncoding: ISOLatin1\n");
   cupsFilePuts(fp, "*PSVersion: \"(3010.000) 0\"\n");
   cupsFilePuts(fp, "*LanguageLevel: \"3\"\n");
   cupsFilePuts(fp, "*FileSystem: False\n");
-  cupsFilePuts(fp, "*PCFileName: \"ippeve.ppd\"\n");
+  cupsFilePuts(fp, "*PCFileName: \"drvless.ppd\"\n");
 
   if ((attr = ippFindAttribute(response, "printer-make-and-model", IPP_TAG_TEXT)) != NULL)
     strlcpy(make, ippGetString(attr, 0, NULL), sizeof(make));
@@ -1253,6 +1253,12 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   cupsFilePrintf(fp, "*cupsVersion: %d.%d\n", CUPS_VERSION_MAJOR, CUPS_VERSION_MINOR);
   cupsFilePuts(fp, "*cupsSNMPSupplies: False\n");
   cupsFilePuts(fp, "*cupsLanguages: \"en\"\n");
+
+  if ((attr = ippFindAttribute(response, "printer-more-info", IPP_TAG_URI)) != NULL)
+    cupsFilePrintf(fp, "*APSupplies: \"%s\"\n", ippGetString(attr, 0, NULL));
+
+  if ((attr = ippFindAttribute(response, "printer-charge-info-uri", IPP_TAG_URI)) != NULL)
+    cupsFilePrintf(fp, "*cupsChargeInfoURI: \"%s\"\n", ippGetString(attr, 0, NULL));
 
   /* Message catalogs for UI strings */
   if (opt_strings_catalog == NULL) {
