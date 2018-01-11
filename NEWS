@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.18.0 - 2017-12-19
 
 CHANGES IN V1.19.0
 
+	- libcupsfilters: Let the PPD generator use the IPP string
+	  tables in the translation files of CUPS 2.3.x or newer
+	  (English strings only). Let all options in the PPD have
+	  human-readable option and choice names. In case of CUPS
+	  2.2.x or older (or if the CUPS translation are missing) we
+	  fall back to internal tables.
 	- cups-browsed: Improved debug output when checking IPP
 	  attributes of IPP printers.
 	- .gitignore: Ignore also core files.
