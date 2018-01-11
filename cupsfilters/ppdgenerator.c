@@ -2360,7 +2360,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
         if (!default_color)
 	  default_color = "FastGray";
       }
-      else if (!strcasecmp(keyword, "sgray_8") || !strcmp(keyword, "W8") || !strcmp(keyword, "monochrome") || !strcmp(keyword, "process-monochrome"))
+      else if (!strncasecmp(keyword, "sgray_", 6) || !strncmp(keyword, "W8", 2) || !strncmp(keyword, "W16", 3) || !strcmp(keyword, "monochrome") || !strcmp(keyword, "process-monochrome"))
       {
         if (!default_color)
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
@@ -2370,14 +2370,15 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
 	human_readable2 = lookup_choice("monochrome", "media-type", opt_strings_catalog,
 					printer_opt_strings_catalog);
-        cupsFilePrintf(fp, "*ColorModel Gray/%s: \"<</cupsColorSpace 18/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+        cupsFilePrintf(fp, "*ColorModel Gray/%s: \"<</cupsColorSpace 18/cupsBitsPerColor %s/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
 		           (human_readable2 ? human_readable2 :
-			    _cupsLangString(lang, _("Grayscale"))));
+			    _cupsLangString(lang, _("Grayscale"))),
+		           (strstr(keyword, "16") ? "16" : "8"));
 
         if (!default_color || !strcmp(default_color, "FastGray"))
 	  default_color = "Gray";
       }
-      else if (!strcasecmp(keyword, "srgb_8") || !strcmp(keyword, "SRGB24") || !strcmp(keyword, "color"))
+      else if (!strncasecmp(keyword, "srgb_", 5) || !strncmp(keyword, "SRGB", 4) || !strcmp(keyword, "color"))
       {
         if (!default_color)
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
@@ -2387,13 +2388,14 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 
 	human_readable2 = lookup_choice("color", "media-type", opt_strings_catalog,
 					printer_opt_strings_catalog);
-        cupsFilePrintf(fp, "*ColorModel RGB/%s: \"<</cupsColorSpace 19/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+        cupsFilePrintf(fp, "*ColorModel RGB/%s: \"<</cupsColorSpace 19/cupsBitsPerColor %s/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
 		           (human_readable2 ? human_readable2 :
-			    _cupsLangString(lang, _("Color"))));
+			    _cupsLangString(lang, _("Color"))),
+		           (strstr(keyword, "16") || strstr(keyword, "48") ? "16" : "8"));
 
 	default_color = "RGB";
       }
-      else if (!strcasecmp(keyword, "adobe-rgb_16") || !strcmp(keyword, "ADOBERGB48"))
+      else if (!strncasecmp(keyword, "adobe-rgb_", 10) || !strncmp(keyword, "ADOBERGB", 8))
       {
         if (!default_color)
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
@@ -2401,7 +2403,9 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 			     (human_readable ? human_readable :
 			      _cupsLangString(lang, _("Color Mode"))));
 
-        cupsFilePrintf(fp, "*ColorModel AdobeRGB/%s: \"<</cupsColorSpace 20/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n", _cupsLangString(lang, _("Deep Color")));
+        cupsFilePrintf(fp, "*ColorModel AdobeRGB/%s: \"<</cupsColorSpace 20/cupsBitsPerColor %s/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Deep Color (Wide Gamut, AdobeRGB)")),
+		           (strstr(keyword, "16") || strstr(keyword, "48") ? "16" : "8"));
 
         if (!default_color)
 	  default_color = "AdobeRGB";
