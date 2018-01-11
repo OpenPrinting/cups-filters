@@ -3,10 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.18.0 - 2017-12-19
 
 CHANGES IN V1.19.0
 
-	- libcupsfilters: In the PPD generator added support
-	  for "finishings-col-database" (Finishing Presets).
-	- libcupsfilters: Improved the generation of the PageSize
-	  option in PPDs, using also "media-col-database".
+	- libcupsfilters: Overtaken new features from CUPS' PPD
+	  generator: Presets, Finishing Templates, and extraction of
+	  media sizes from "media-col-database"
 	- libcupsfilters: Improvements on header of generated PPDs:
 	  use cups-filters version number, "drvless.ppd" PCFileName,
 	  APSupplies and cupsChargeInfoURI from CUPS.
