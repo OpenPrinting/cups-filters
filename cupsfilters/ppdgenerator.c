@@ -3004,6 +3004,59 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   }
 
  /*
+  * Print Optimization ...
+  */
+
+  /* Only add this option if jobs get sent to the printer as PDF,
+     PWG Raster, or Apple Raster, as only then arbitrary IPP
+     attributes get passed through from the filter command line
+     to the printer by the "ipp" CUPS backend. */
+  if (is_pdf || is_pwg || is_apple) {
+    if ((attr = ippFindAttribute(response, "print-content-optimize-default", IPP_TAG_ZERO)) != NULL)
+      strlcpy(ppdname, ippGetString(attr, 0, NULL), sizeof(ppdname));
+    else
+      strlcpy(ppdname, "auto", sizeof(ppdname));
+
+    if ((attr = ippFindAttribute(response, "print-content-optimize-supported", IPP_TAG_ZERO)) != NULL && (count = ippGetCount(attr)) > 1) {
+      static const char * const content_optimize_types[][2] =
+      {					/* "print-content-optimize" strings */
+	{ "auto", _("Automatic") },
+	{ "graphic", _("Graphics") },
+	{ "graphics", _("Graphics") },
+	{ "photo", _("Photo") },
+	{ "text", _("Text") },
+	{ "text-and-graphic", _("Text And Graphics") },
+	{ "text-and-graphics", _("Text And Graphics") }
+      };
+
+      human_readable = lookup_option("print-content-optimize", opt_strings_catalog,
+				     printer_opt_strings_catalog);
+      cupsFilePrintf(fp, "*OpenUI *print-content-optimize/%s: PickOne\n"
+		     "*OrderDependency: 10 AnySetup *print-content-optimize\n"
+		     "*Defaultprint-content-optimize: %s\n",
+		     (human_readable ? human_readable : "Print Optimization"),
+		     ppdname);
+      for (i = 0; i < count; i ++) {
+	keyword = ippGetString(attr, i, NULL);
+
+	human_readable = lookup_choice((char *)keyword, "print-content-optimize", opt_strings_catalog,
+				       printer_opt_strings_catalog);
+	if (human_readable == NULL)
+	  for (j = 0; j < (int)(sizeof(content_optimize_types) / sizeof(content_optimize_types[0])); j ++)
+	    if (!strcmp(content_optimize_types[j][0], keyword)) {
+	      human_readable = (char *)_cupsLangString(lang, content_optimize_types[j][1]);
+	      break;
+	    }
+	cupsFilePrintf(fp, "*print-content-optimize %s%s%s: \"\"\n",
+		       keyword,
+		       (human_readable ? "/" : ""),
+		       (human_readable ? human_readable : ""));
+      }
+      cupsFilePuts(fp, "*CloseUI: *print-content-optimize\n");
+    }
+  }
+
+ /*
   * Presets...
   */
 

@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.18.0 - 2017-12-19
 
 CHANGES IN V1.19.0
 
+	- libcupsfilters: Let the PPD generator add a "Print
+	  Optimization" option when a
+	  "print-content-optimize-supported" IPP attribute is found.
 	- libcupsfilters: Let the PPD generator read out the maximum
 	  of info about color spaces and this way not only reliably
 	  the correct choices are added to the ColorModel option but
