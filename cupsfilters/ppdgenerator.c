@@ -3003,15 +3003,15 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     cupsFilePuts(fp, "*CloseUI: *cupsPrintQuality\n");
   }
 
- /*
-  * Print Optimization ...
-  */
-
-  /* Only add this option if jobs get sent to the printer as PDF,
+  /* Only add these options if jobs get sent to the printer as PDF,
      PWG Raster, or Apple Raster, as only then arbitrary IPP
      attributes get passed through from the filter command line
      to the printer by the "ipp" CUPS backend. */
   if (is_pdf || is_pwg || is_apple) {
+    /*
+     * Print Optimization ...
+     */
+
     if ((attr = ippFindAttribute(response, "print-content-optimize-default", IPP_TAG_ZERO)) != NULL)
       strlcpy(ppdname, ippGetString(attr, 0, NULL), sizeof(ppdname));
     else
@@ -3053,6 +3053,96 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 		       (human_readable ? human_readable : ""));
       }
       cupsFilePuts(fp, "*CloseUI: *print-content-optimize\n");
+    }
+
+    /*
+     * Print Rendering Intent ...
+     */
+
+    if ((attr = ippFindAttribute(response, "print-rendering-intent-default", IPP_TAG_ZERO)) != NULL)
+      strlcpy(ppdname, ippGetString(attr, 0, NULL), sizeof(ppdname));
+    else
+      strlcpy(ppdname, "auto", sizeof(ppdname));
+
+    if ((attr = ippFindAttribute(response, "print-rendering-intent-supported", IPP_TAG_ZERO)) != NULL && (count = ippGetCount(attr)) > 1) {
+      static const char * const rendering_intents[][2] =
+      {					/* "print-rendering-intent" strings */
+	{ "auto", _("Automatic") },
+	{ "absolute", _("Absolute") },
+	{ "perceptual", _("Perceptual") },
+	{ "relative", _("Relative") },
+	{ "relative-bpc", _("Relative w/Black Point Compensation") },
+	{ "saturation", _("Saturation") }
+      };
+
+      human_readable = lookup_option("print-rendering-intent", opt_strings_catalog,
+				     printer_opt_strings_catalog);
+      cupsFilePrintf(fp, "*OpenUI *print-rendering-intent/%s: PickOne\n"
+		     "*OrderDependency: 10 AnySetup *print-rendering-intent\n"
+		     "*Defaultprint-rendering-intent: %s\n",
+		     (human_readable ? human_readable : "Print Rendering Intent"),
+		     ppdname);
+      for (i = 0; i < count; i ++) {
+	keyword = ippGetString(attr, i, NULL);
+
+	human_readable = lookup_choice((char *)keyword, "print-rendering-intent", opt_strings_catalog,
+				       printer_opt_strings_catalog);
+	if (human_readable == NULL)
+	  for (j = 0; j < (int)(sizeof(rendering_intents) / sizeof(rendering_intents[0])); j ++)
+	    if (!strcmp(rendering_intents[j][0], keyword)) {
+	      human_readable = (char *)_cupsLangString(lang, rendering_intents[j][1]);
+	      break;
+	    }
+	cupsFilePrintf(fp, "*print-rendering-intent %s%s%s: \"\"\n",
+		       keyword,
+		       (human_readable ? "/" : ""),
+		       (human_readable ? human_readable : ""));
+      }
+      cupsFilePuts(fp, "*CloseUI: *print-rendering-intent\n");
+    }
+    /*
+     * Print Scaling ...
+     */
+
+    if ((attr = ippFindAttribute(response, "print-scaling-default", IPP_TAG_ZERO)) != NULL)
+      strlcpy(ppdname, ippGetString(attr, 0, NULL), sizeof(ppdname));
+    else
+      strlcpy(ppdname, "auto", sizeof(ppdname));
+
+    if ((attr = ippFindAttribute(response, "print-scaling-supported", IPP_TAG_ZERO)) != NULL && (count = ippGetCount(attr)) > 1) {
+      static const char * const scaling_types[][2] =
+      {					/* "print-scaling" strings */
+	{ "auto", _("Automatic") },
+	{ "auto-fit", _("Auto Fit") },
+	{ "fill", _("Fill") },
+	{ "fit", _("Fit") },
+	{ "none", _("None") }
+      };
+
+      human_readable = lookup_option("print-scaling", opt_strings_catalog,
+				     printer_opt_strings_catalog);
+      cupsFilePrintf(fp, "*OpenUI *print-scaling/%s: PickOne\n"
+		     "*OrderDependency: 10 AnySetup *print-scaling\n"
+		     "*Defaultprint-scaling: %s\n",
+		     (human_readable ? human_readable : "Print Scaling"),
+		     ppdname);
+      for (i = 0; i < count; i ++) {
+	keyword = ippGetString(attr, i, NULL);
+
+	human_readable = lookup_choice((char *)keyword, "print-scaling", opt_strings_catalog,
+				       printer_opt_strings_catalog);
+	if (human_readable == NULL)
+	  for (j = 0; j < (int)(sizeof(scaling_types) / sizeof(scaling_types[0])); j ++)
+	    if (!strcmp(scaling_types[j][0], keyword)) {
+	      human_readable = (char *)_cupsLangString(lang, scaling_types[j][1]);
+	      break;
+	    }
+	cupsFilePrintf(fp, "*print-scaling %s%s%s: \"\"\n",
+		       keyword,
+		       (human_readable ? "/" : ""),
+		       (human_readable ? human_readable : ""));
+      }
+      cupsFilePuts(fp, "*CloseUI: *print-scaling\n");
     }
   }
 
