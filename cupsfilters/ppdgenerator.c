@@ -2337,21 +2337,28 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   if (attr && ippGetCount(attr) > 0)
   {
     const char *default_color = NULL;	/* Default */
+    int first_choice = 1,
+        have_bi_level = 0,
+        have_mono = 0;
 
     for (i = 0, count = ippGetCount(attr); i < count; i ++)
     {
       keyword = ippGetString(attr, i, NULL);
 					/* Keyword for color/bit depth */
 
-      if (!strcasecmp(keyword, "black_1") || !strcmp(keyword, "bi-level") || !strcmp(keyword, "process-bi-level"))
+      if (!have_bi_level &&
+	  (!strcasecmp(keyword, "black_1") || !strcmp(keyword, "bi-level") || !strcmp(keyword, "process-bi-level")))
       {
-        if (!default_color)
+	have_bi_level = 1;
+        if (first_choice) {
+	  first_choice = 0;
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
 			     "*OrderDependency: 10 AnySetup *ColorModel\n",
 			     (human_readable ? human_readable :
 			      _cupsLangString(lang, _("Color Mode"))));
+	}
 
-	human_readable2 = lookup_choice("bi-level", "media-type", opt_strings_catalog,
+	human_readable2 = lookup_choice("bi-level", "print-color-mode", opt_strings_catalog,
 					printer_opt_strings_catalog);
         cupsFilePrintf(fp, "*ColorModel FastGray/%s: \"<</cupsColorSpace 3/cupsBitsPerColor 1/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
 		           (human_readable2 ? human_readable2 :
@@ -2360,55 +2367,191 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
         if (!default_color)
 	  default_color = "FastGray";
       }
-      else if (!strncasecmp(keyword, "sgray_", 6) || !strncmp(keyword, "W8", 2) || !strncmp(keyword, "W16", 3) || !strcmp(keyword, "monochrome") || !strcmp(keyword, "process-monochrome"))
+      else if (!have_mono &&
+	       (!strcasecmp(keyword, "sgray_8") || !strncmp(keyword, "W8", 2) || !strcmp(keyword, "monochrome") || !strcmp(keyword, "process-monochrome")))
       {
-        if (!default_color)
+	have_mono = 1;
+        if (first_choice) {
+	  first_choice = 0;
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
 			     "*OrderDependency: 10 AnySetup *ColorModel\n",
 			     (human_readable ? human_readable :
 			      _cupsLangString(lang, _("Color Mode"))));
+	}
 
-	human_readable2 = lookup_choice("monochrome", "media-type", opt_strings_catalog,
+	human_readable2 = lookup_choice("monochrome", "print-color-mode", opt_strings_catalog,
 					printer_opt_strings_catalog);
-        cupsFilePrintf(fp, "*ColorModel Gray/%s: \"<</cupsColorSpace 18/cupsBitsPerColor %s/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+        cupsFilePrintf(fp, "*ColorModel Gray/%s: \"<</cupsColorSpace 18/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
 		           (human_readable2 ? human_readable2 :
-			    _cupsLangString(lang, _("Grayscale"))),
-		           (strstr(keyword, "16") ? "16" : "8"));
+			    _cupsLangString(lang, _("Grayscale"))));
 
         if (!default_color || !strcmp(default_color, "FastGray"))
 	  default_color = "Gray";
       }
-      else if (!strncasecmp(keyword, "srgb_", 5) || !strncmp(keyword, "SRGB", 4) || !strcmp(keyword, "color"))
+      else if (!strcasecmp(keyword, "sgray_16") || !strncmp(keyword, "W8-16", 5) || !strncmp(keyword, "W16", 3))
       {
-        if (!default_color)
+        if (first_choice) {
+	  first_choice = 0;
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
 			     "*OrderDependency: 10 AnySetup *ColorModel\n",
 			     (human_readable ? human_readable :
 			      _cupsLangString(lang, _("Color Mode"))));
+	}
 
-	human_readable2 = lookup_choice("color", "media-type", opt_strings_catalog,
+        cupsFilePrintf(fp, "*ColorModel Gray16/%s: \"<</cupsColorSpace 18/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Deep Gray (High Definition Grayscale)")));
+
+        if (!default_color || !strcmp(default_color, "FastGray"))
+	  default_color = "Gray16";
+      }
+      else if (!strcasecmp(keyword, "srgb_8") || !strncmp(keyword, "SRGB24", 6) || !strcmp(keyword, "color"))
+      {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			     "*OrderDependency: 10 AnySetup *ColorModel\n",
+			     (human_readable ? human_readable :
+			      _cupsLangString(lang, _("Color Mode"))));
+	}
+
+	human_readable2 = lookup_choice("color", "print-color-mode", opt_strings_catalog,
 					printer_opt_strings_catalog);
-        cupsFilePrintf(fp, "*ColorModel RGB/%s: \"<</cupsColorSpace 19/cupsBitsPerColor %s/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+        cupsFilePrintf(fp, "*ColorModel RGB/%s: \"<</cupsColorSpace 19/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
 		           (human_readable2 ? human_readable2 :
-			    _cupsLangString(lang, _("Color"))),
-		           (strstr(keyword, "16") || strstr(keyword, "48") ? "16" : "8"));
+			    _cupsLangString(lang, _("Color"))));
 
 	default_color = "RGB";
       }
-      else if (!strncasecmp(keyword, "adobe-rgb_", 10) || !strncmp(keyword, "ADOBERGB", 8))
+      else if ((!strcasecmp(keyword, "srgb_16") || !strncmp(keyword, "SRGB48", 6)) &&
+	       !ippContainsString(attr, "srgb_8"))
       {
-        if (!default_color)
+        if (first_choice) {
+	  first_choice = 0;
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
 			     "*OrderDependency: 10 AnySetup *ColorModel\n",
 			     (human_readable ? human_readable :
 			      _cupsLangString(lang, _("Color Mode"))));
+	}
 
-        cupsFilePrintf(fp, "*ColorModel AdobeRGB/%s: \"<</cupsColorSpace 20/cupsBitsPerColor %s/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		           _cupsLangString(lang, _("Deep Color (Wide Gamut, AdobeRGB)")),
-		           (strstr(keyword, "16") || strstr(keyword, "48") ? "16" : "8"));
+	human_readable2 = lookup_choice("color", "print-color-mode", opt_strings_catalog,
+					printer_opt_strings_catalog);
+        cupsFilePrintf(fp, "*ColorModel RGB/%s: \"<</cupsColorSpace 19/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           (human_readable2 ? human_readable2 :
+			    _cupsLangString(lang, _("Color"))));
+
+	default_color = "RGB";
+      }
+      else if (!strcasecmp(keyword, "adobe-rgb_16") || !strncmp(keyword, "ADOBERGB48", 10) ||
+	       !strncmp(keyword, "ADOBERGB24-48", 13))
+      {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			     "*OrderDependency: 10 AnySetup *ColorModel\n",
+			     (human_readable ? human_readable :
+			      _cupsLangString(lang, _("Color Mode"))));
+	}
+
+        cupsFilePrintf(fp, "*ColorModel AdobeRGB/%s: \"<</cupsColorSpace 20/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Deep Color (Wide Color Gamut, AdobeRGB)")));
 
         if (!default_color)
 	  default_color = "AdobeRGB";
+      }
+      else if ((!strcasecmp(keyword, "adobe-rgb_8") || !strcmp(keyword, "ADOBERGB24")) &&
+	       !ippContainsString(attr, "adobe-rgb_16"))
+      {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			     "*OrderDependency: 10 AnySetup *ColorModel\n",
+			     (human_readable ? human_readable :
+			      _cupsLangString(lang, _("Color Mode"))));
+	}
+
+        cupsFilePrintf(fp, "*ColorModel AdobeRGB/%s: \"<</cupsColorSpace 20/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Deep Color (Wide Color Gamut, AdobeRGB)")));
+
+        if (!default_color)
+	  default_color = "AdobeRGB";
+      }
+      else if ((!strcasecmp(keyword, "black_8") && !ippContainsString(attr, "black_16")) || !strcmp(keyword, "DEVW8"))
+      {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			     "*OrderDependency: 10 AnySetup *ColorModel\n",
+			     (human_readable ? human_readable :
+			      _cupsLangString(lang, _("Color Mode"))));
+	}
+
+        cupsFilePrintf(fp, "*ColorModel DeviceGray/%s: \"<</cupsColorSpace 0/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Device Gray")));
+      }
+      else if (!strcasecmp(keyword, "black_16") || !strcmp(keyword, "DEVW16") || !strcmp(keyword, "DEVW8-16"))
+      {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			     "*OrderDependency: 10 AnySetup *ColorModel\n",
+			     (human_readable ? human_readable :
+			      _cupsLangString(lang, _("Color Mode"))));
+	}
+
+        cupsFilePrintf(fp, "*ColorModel DeviceGray/%s: \"<</cupsColorSpace 0/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Device Gray")));
+      }
+      else if ((!strcasecmp(keyword, "cmyk_8") && !ippContainsString(attr, "cmyk_16")) || !strcmp(keyword, "DEVCMYK32"))
+      {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			     "*OrderDependency: 10 AnySetup *ColorModel\n",
+			     (human_readable ? human_readable :
+			      _cupsLangString(lang, _("Color Mode"))));
+	}
+
+        cupsFilePrintf(fp, "*ColorModel CMYK/%s: \"<</cupsColorSpace 6/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Device CMYK")));
+      }
+      else if (!strcasecmp(keyword, "cmyk_16") || !strcmp(keyword, "DEVCMYK32-64") || !strcmp(keyword, "DEVCMYK64"))
+      {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			     "*OrderDependency: 10 AnySetup *ColorModel\n",
+			     (human_readable ? human_readable :
+			      _cupsLangString(lang, _("Color Mode"))));
+	}
+
+        cupsFilePrintf(fp, "*ColorModel CMYK/%s: \"<</cupsColorSpace 6/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Device CMYK")));
+      }
+      else if ((!strcasecmp(keyword, "rgb_8") && !ippContainsString(attr, "rgb_16")) || !strcmp(keyword, "DEVRGB24"))
+      {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			     "*OrderDependency: 10 AnySetup *ColorModel\n",
+			     (human_readable ? human_readable :
+			      _cupsLangString(lang, _("Color Mode"))));
+	}
+
+        cupsFilePrintf(fp, "*ColorModel DeviceRGB/%s: \"<</cupsColorSpace 1/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Device RGB")));
+      }
+      else if (!strcasecmp(keyword, "rgb_16") || !strcmp(keyword, "DEVRGB24-48") || !strcmp(keyword, "DEVRGB48"))
+      {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			     "*OrderDependency: 10 AnySetup *ColorModel\n",
+			     (human_readable ? human_readable :
+			      _cupsLangString(lang, _("Color Mode"))));
+	}
+
+        cupsFilePrintf(fp, "*ColorModel DeviceRGB/%s: \"<</cupsColorSpace 1/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+		           _cupsLangString(lang, _("Device RGB")));
       }
     }
 

@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.19.0 - 2018-01-15
 -----------------------------------------------------
 
+CHANGES IN V1.20.0
+
+	- libcupsfilters: Completed color space support in the PPD
+	  generator: Added DeviceGray/RGB/CMYK, default to 8 bit for
+	  SRGB and to 16 bit for AdobeRGB, avoid duplicate listings of
+	  the same color space.
+
 CHANGES IN V1.19.0
 
 	- libcupsfilters: Let the PPD generator add the options "Print
