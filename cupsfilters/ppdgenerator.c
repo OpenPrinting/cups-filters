@@ -745,8 +745,8 @@ load_opt_strings_catalog(const char *location, cups_array_t *options)
 		    10: EOF, save last entry */
   int digit;
 
-  if (location == NULL || strncasecmp(location, "http:", 5) ||
-      strncasecmp(location, "https:", 6)) {
+  if (location == NULL || (strncasecmp(location, "http:", 5) &&
+			   strncasecmp(location, "https:", 6))) {
     if (location == NULL ||
 	(stat(location, &statbuf) == 0 && S_ISDIR(statbuf.st_mode))) /* directory? */
       filename = _findCUPSMessageCatalog(location);
@@ -844,7 +844,7 @@ load_opt_strings_catalog(const char *location, cups_array_t *options)
 	continue;
       }
       /* Check line if it is a valid IPP attribute:
-	 No spaces, only lowercae letters, digits, '-', '_',
+	 No spaces, only lowercase letters, digits, '-', '_',
 	 "option" or "option.choice" */
       for (ptr = start, sep = NULL; ptr < end; ptr ++)
 	if (*ptr == '.') { /* Separator between option and choice */
@@ -868,10 +868,8 @@ load_opt_strings_catalog(const char *location, cups_array_t *options)
       }
       if (sep && strlen(sep) > 0) /* Choice name found */
 	choice_name = strdup(sep);
-      else { /* Empty choice name */
-	part = -1;
-	continue;
-      }
+      else /* Empty choice name */
+	choice_name = NULL;
       if (part == 2) { /* Human-readable string in the same line */
 	start = start2;
 	end = end2;
