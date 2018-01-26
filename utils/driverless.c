@@ -466,6 +466,13 @@ generate_ppd (const char *uri)
   ipp_attribute_t *attr;
   char buffer[65536], ppdname[1024];
   int i, fd, bytes;
+  static const char * const pattrs[] =
+  {
+    "job-template",
+    "printer-defaults",
+    "printer-description",
+    "media-col-database"
+  };
 
   /* Request printer properties via IPP to generate a PPD file for the
      printer (mainly IPP Everywhere printers)
@@ -490,6 +497,9 @@ generate_ppd (const char *uri)
   request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
 	       NULL, uri);
+  ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+		"requested-attributes", sizeof(pattrs) / sizeof(pattrs[0]),
+		NULL, pattrs);
   response = cupsDoRequest(http, request, resource);
 
   /* Log all printer attributes for debugging */

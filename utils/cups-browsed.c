@@ -3298,6 +3298,13 @@ create_remote_printer_entry (const char *queue_name,
   int is_appleraster = 0;
   int is_pclm = 0;
   int is_pdf = 0;
+  static const char * const pattrs[] =
+  {
+    "job-template",
+    "printer-defaults",
+    "printer-description",
+    "media-col-database"
+  };
 #endif /* HAVE_CUPS_1_6 */
 
   if (!queue_name || !location || !info || !uri || !host || !service_name ||
@@ -3523,6 +3530,9 @@ create_remote_printer_entry (const char *queue_name,
     }
     request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL, uri);
+    ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+		  "requested-attributes", sizeof(pattrs) / sizeof(pattrs[0]),
+		  NULL, pattrs);
     response = cupsDoRequest(http_printer, request, resource);
 
     /* Log all printer attributes for debugging */

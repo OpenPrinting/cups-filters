@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.19.0 - 2018-01-15
 
 CHANGES IN V1.20.0
 
+	- cups-browsed, driverless: Fixed get-printer-attributes call
+	  on driverless printers for generating the PPD, explicitly
+	  requesting the media-col-database attribute as otherwise
+	  borderless page sizes do not appear.
 	- libcupsfilters: Fixed loading option/choice strings lists
 	  from driverless printers for PPD file generation. Especially
 	  proprietary media types appear correctly now.
