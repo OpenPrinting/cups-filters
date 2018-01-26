@@ -1720,51 +1720,8 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	  max_length = upper;
       }
     }
-
-    if ((max_width == 0 || max_length == 0) && (attr = ippFindAttribute(response, "media-size-supported", IPP_TAG_BEGIN_COLLECTION)) != NULL)
-    {
-     /*
-      * Some printers don't list custom size support in media-col-database...
-      */
-
-      for (i = 0, count = ippGetCount(attr); i < count; i ++)
-      {
-	media_size  = ippGetCollection(attr, i);
-	x_dim       = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
-	y_dim       = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
-
-	if (ippGetValueTag(x_dim) == IPP_TAG_RANGE || ippGetValueTag(y_dim) == IPP_TAG_RANGE)
-	{
-	 /*
-	  * Custom size - record the min/max values...
-	  */
-
-	  int lower, upper;		/* Range values */
-
-	  if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
-	    lower = ippGetRange(x_dim, 0, &upper);
-	  else
-	    lower = upper = ippGetInteger(x_dim, 0);
-
-	  if (lower < min_width)
-	    min_width = lower;
-	  if (upper > max_width)
-	    max_width = upper;
-
-	  if (ippGetValueTag(y_dim) == IPP_TAG_RANGE)
-	    lower = ippGetRange(y_dim, 0, &upper);
-	  else
-	    lower = upper = ippGetInteger(y_dim, 0);
-
-	  if (lower < min_length)
-	    min_length = lower;
-	  if (upper > max_length)
-	    max_length = upper;
-	}
-      }
-    }
   }
-  else if ((attr = ippFindAttribute(response, "media-size-supported", IPP_TAG_BEGIN_COLLECTION)) != NULL)
+  if ((attr = ippFindAttribute(response, "media-size-supported", IPP_TAG_BEGIN_COLLECTION)) != NULL)
   {
     for (i = 0, count = ippGetCount(attr); i < count; i ++)
     {
@@ -1822,13 +1779,13 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
     }
   }
-  else if ((attr = ippFindAttribute(response, "media-supported", IPP_TAG_ZERO)) != NULL)
+  if ((attr = ippFindAttribute(response, "media-supported", IPP_TAG_ZERO)) != NULL)
   {
     for (i = 0, count = ippGetCount(attr); i < count; i ++)
     {
       const char	*pwg_size = ippGetString(attr, i, NULL);
 					/* PWG size name */
-      cups_size_t	temp;		/* Current size */
+      cups_size_t	temp, *temp2;	/* Current size, found size */
 
       if ((pwg = pwgMediaForPWG(pwg_size)) != NULL)
       {
@@ -1860,7 +1817,19 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	  else
 	    strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
 
-	  if (!cupsArrayFind(sizes, &temp))
+	  /* Add the printer's original IPP name to an already found size */
+	  if ((temp2 = cupsArrayFind(sizes, &temp)) != NULL) {
+	    snprintf(temp2->media + strlen(temp2->media),
+		     sizeof(temp2->media) - strlen(temp2->media),
+		     " %s", pwg_size);
+	    /* Check if we have also a borderless version of the size and add
+	       the original IPP name also there */
+	    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
+	    if ((temp2 = cupsArrayFind(sizes, &temp)) != NULL)
+	      snprintf(temp2->media + strlen(temp2->media),
+		     sizeof(temp2->media) - strlen(temp2->media),
+		     " %s", pwg_size);
+	  } else
 	    cupsArrayAdd(sizes, &temp);
 	}
       }
@@ -1878,8 +1847,9 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 		tright[256],		/* Right string */
 		ttop[256],		/* Top string */
 		twidth[256],		/* Width string */
-		tlength[256];		/* Length string */
-
+		tlength[256],		/* Length string */
+		ppdsizename[128];
+    char        *ippsizename;
     cupsFilePrintf(fp, "*OpenUI *PageSize/%s: PickOne\n"
 		       "*OrderDependency: 10 AnySetup *PageSize\n"
 		       "*DefaultPageSize: %s\n", "Media Size", ppdname);
@@ -1887,16 +1857,28 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     {
       _cupsStrFormatd(twidth, twidth + sizeof(twidth), size->width * 72.0 / 2540.0, loc);
       _cupsStrFormatd(tlength, tlength + sizeof(tlength), size->length * 72.0 / 2540.0, loc);
+      strlcpy(ppdsizename, size->media, sizeof(ppdsizename));
+      if ((ippsizename = strchr(ppdsizename, ' ')) != NULL) {
+	*ippsizename = '\0';
+	ippsizename ++;
+      }
 
-      pwg = pwgMediaForSize(size->width, size->length);
-      if (pwg)
-	human_readable = lookup_choice((char *)pwg->pwg, "media", opt_strings_catalog,
+      if (ippsizename)
+	human_readable = lookup_choice(ippsizename, "media", opt_strings_catalog,
 				       printer_opt_strings_catalog);
       else
 	human_readable = NULL;
-      cupsFilePrintf(fp, "*PageSize %s%s%s: \"<</PageSize[%s %s]>>setpagedevice\"\n", size->media,
+      if (!human_readable) {
+	pwg = pwgMediaForSize(size->width, size->length);
+	if (pwg)
+	  human_readable = lookup_choice((char *)pwg->pwg, "media", opt_strings_catalog,
+					 printer_opt_strings_catalog);
+      }
+      cupsFilePrintf(fp, "*PageSize %s%s%s%s: \"<</PageSize[%s %s]>>setpagedevice\"\n", ppdsizename,
 		     (human_readable ? "/" : ""),
 		     (human_readable ? human_readable : ""),
+		     (human_readable && strstr(ppdsizename, ".Borderless") ?
+		      " (Borderless)" : ""),
 		     twidth, tlength);
     }
     cupsFilePuts(fp, "*CloseUI: *PageSize\n");
@@ -1908,16 +1890,28 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     {
       _cupsStrFormatd(twidth, twidth + sizeof(twidth), size->width * 72.0 / 2540.0, loc);
       _cupsStrFormatd(tlength, tlength + sizeof(tlength), size->length * 72.0 / 2540.0, loc);
+      strlcpy(ppdsizename, size->media, sizeof(ppdsizename));
+      if ((ippsizename = strchr(ppdsizename, ' ')) != NULL) {
+	*ippsizename = '\0';
+	ippsizename ++;
+      }
 
-      pwg = pwgMediaForSize(size->width, size->length);
-      if (pwg)
-	human_readable = lookup_choice((char *)pwg->pwg, "media", opt_strings_catalog,
+      if (ippsizename)
+	human_readable = lookup_choice(ippsizename, "media", opt_strings_catalog,
 				       printer_opt_strings_catalog);
       else
 	human_readable = NULL;
-      cupsFilePrintf(fp, "*PageRegion %s%s%s: \"<</PageSize[%s %s]>>setpagedevice\"\n", size->media,
+      if (!human_readable) {
+	pwg = pwgMediaForSize(size->width, size->length);
+	if (pwg)
+	  human_readable = lookup_choice((char *)pwg->pwg, "media", opt_strings_catalog,
+					 printer_opt_strings_catalog);
+      }
+      cupsFilePrintf(fp, "*PageRegion %s%s%s%s: \"<</PageSize[%s %s]>>setpagedevice\"\n", ppdsizename,
 		     (human_readable ? "/" : ""),
 		     (human_readable ? human_readable : ""),
+		     (human_readable && strstr(ppdsizename, ".Borderless") ?
+		      " (Borderless)" : ""),
 		     twidth, tlength);
     }
     cupsFilePuts(fp, "*CloseUI: *PageRegion\n");
@@ -1933,9 +1927,12 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       _cupsStrFormatd(ttop, ttop + sizeof(ttop), (size->length - size->top) * 72.0 / 2540.0, loc);
       _cupsStrFormatd(twidth, twidth + sizeof(twidth), size->width * 72.0 / 2540.0, loc);
       _cupsStrFormatd(tlength, tlength + sizeof(tlength), size->length * 72.0 / 2540.0, loc);
+      strlcpy(ppdsizename, size->media, sizeof(ppdsizename));
+      if ((ippsizename = strchr(ppdsizename, ' ')) != NULL)
+	*ippsizename = '\0';
 
-      cupsFilePrintf(fp, "*ImageableArea %s: \"%s %s %s %s\"\n", size->media, tleft, tbottom, tright, ttop);
-      cupsFilePrintf(fp, "*PaperDimension %s: \"%s %s\"\n", size->media, twidth, tlength);
+      cupsFilePrintf(fp, "*ImageableArea %s: \"%s %s %s %s\"\n", ppdsizename, tleft, tbottom, tright, ttop);
+      cupsFilePrintf(fp, "*PaperDimension %s: \"%s %s\"\n", ppdsizename, twidth, tlength);
     }
 
     cupsArrayDelete(sizes);

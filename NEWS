@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.19.0 - 2018-01-15
 
 CHANGES IN V1.20.0
 
+	- libcupsfilters: The PPD generator lists all page sizes with
+	  human-readable names now, including proprietary names of the
+	  printer.
 	- cups-browsed, driverless: Fixed get-printer-attributes call
 	  on driverless printers for generating the PPD, explicitly
 	  requesting the media-col-database attribute as otherwise
