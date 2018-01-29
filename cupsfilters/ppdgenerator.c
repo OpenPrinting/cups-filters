@@ -448,6 +448,14 @@ _searchDirForCatalog(const char *dirname)
   if (dirname == NULL)
     return NULL;
 
+  /* Check first whether we have an English file and prefer this */
+  snprintf(catalogpath, sizeof(catalogpath), "%s/en/cups_en.po", dirname);
+  if (access(catalogpath, R_OK) == 0) {
+    /* Found */
+    catalog = strdup(catalogpath);
+    return catalog;
+  }
+
   if ((dir = cupsDirOpen(dirname)) == NULL)
     return NULL;
 
@@ -492,7 +500,7 @@ _searchDirForCatalog(const char *dirname)
 	if (access(catalogpath, R_OK) != 0)
 	  continue;
 	/* Found */
-	catalog = catalogpath;
+	catalog = strdup(catalogpath);
 	break;
       }
       cupsDirClose(subdir);

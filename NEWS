@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.19.0 - 2018-01-15
 
 CHANGES IN V1.20.0
 
+	- libcupsfilters: Let the PPD generator prefer the English
+	  translation file from CUPS for the human-readable strings in
+	  the PPD files.
 	- libcupsfilters: The PPD generator lists all page sizes with
 	  human-readable names now, including proprietary names of the
 	  printer.
