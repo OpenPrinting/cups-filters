@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.20.0 - 2018-01-29
 -----------------------------------------------------
 
+CHANGES IN V1.20.1
+
+	- cups-browsed: Fixed crash when CUPS reports a print queue
+          without "device-uri" attribute when cups-browsed polls a
+          list of local CUPS queues (Issue #16).
+
 CHANGES IN V1.20.0
 
 	- libcupsfilters: Let the PPD generator prefer the English

@@ -875,6 +875,8 @@ get_local_printers (void)
     const char *device_uri = cupsGetOption ("device-uri",
 					    dest->num_options,
 					    dest->options);
+    if (device_uri == NULL)
+      device_uri = "";
 
     /* Temporary CUPS queue? */
     val = cupsGetOption ("printer-is-temporary",
@@ -5467,6 +5469,10 @@ examine_discovered_printer_record(const char *host,
       record_printer_options(p->queue_name);
     }
 
+    if (p->uri[0] == '\0') {
+      free (p->uri);
+      p->uri = strdup(uri);
+    }
     if (p->location[0] == '\0') {
       free (p->location);
       p->location = strdup(location);
