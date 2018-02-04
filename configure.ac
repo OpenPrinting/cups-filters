@@ -856,6 +856,7 @@ AC_CONFIG_FILES([
 	filter/braille/filters/cups-braille.sh
 	filter/braille/filters/imagetobrf
 	filter/braille/filters/texttobrf
+	filter/braille/filters/brftopagedbrf
 	filter/braille/filters/vectortopdf
 	filter/braille/filters/vectortobrf
 	filter/braille/filters/musicxmltobrf

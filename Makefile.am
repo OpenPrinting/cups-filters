@@ -591,6 +591,7 @@ nodist_pkgfilter_SCRIPTS = \
 	filter/braille/filters/vectortopdf \
 	filter/braille/filters/vectortobrf \
 	filter/braille/filters/texttobrf \
+	filter/braille/filters/brftopagedbrf \
 	filter/braille/filters/musicxmltobrf
 endif
 
