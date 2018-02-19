@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.20.0 - 2018-01-29
 
 CHANGES IN V1.20.1
 
+	- braille: Fix some missing options on indexv4. Thanks to
+	  Samuel Thibault for this patch (Pull request #21).
 	- braille: Fix disabling margins on indexv4 in graphic
           mode. Thanks to Samuel Thibault for this patch (Pull request
           #20).
