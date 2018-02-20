@@ -360,15 +360,14 @@ pwg_copy_size(cups_size_t *size)	/* I - Media size to copy */
 }
 
 static int				/* O  - 1 on success, 0 on failure */
-cups_get_url(http_t     **http,		/* IO - Current HTTP connection */
-             const char *url,		/* I  - URL to get */
-             char       *name,		/* I  - Temporary filename */
-             size_t     namesize)	/* I  - Size of temporary filename buffer */
+get_url(const char *url,		/* I  - URL to get */
+	char       *name,		/* I  - Temporary filename */
+	size_t     namesize)		/* I  - Size of temporary filename buffer */
 {
+  http_t		*http = NULL;
   char			scheme[32],	/* URL scheme */
 			userpass[256],	/* URL username:password */
 			host[256],	/* URL host */
-			curhost[256],	/* Current host */
 			resource[256];	/* URL resource */
   int			port;		/* URL port */
   http_encryption_t	encryption;	/* Type of encryption to use */
@@ -384,21 +383,18 @@ cups_get_url(http_t     **http,		/* IO - Current HTTP connection */
   else
     encryption = HTTP_ENCRYPTION_IF_REQUESTED;
 
-  if (!*http || strcasecmp(host, httpGetHostname(*http, curhost, sizeof(curhost))) || httpAddrPort(httpGetAddress(*http)) != port)
-  {
-    httpClose(*http);
-    *http = httpConnect2(host, port, NULL, AF_UNSPEC, encryption, 1, 5000, NULL);
-  }
+  http = httpConnect2(host, port, NULL, AF_UNSPEC, encryption, 1, 5000, NULL);
 
-  if (!*http)
+  if (!http)
     return (0);
 
   if ((fd = cupsTempFd(name, (int)namesize)) < 0)
     return (0);
 
-  status = cupsGetFd(*http, resource, fd);
+  status = cupsGetFd(http, resource, fd);
 
   close(fd);
+  httpClose(http);
 
   if (status != HTTP_STATUS_OK)
   {
@@ -736,7 +732,6 @@ lookup_choice(char *name, char *opt_name, cups_array_t *options,
 void
 load_opt_strings_catalog(const char *location, cups_array_t *options)
 {
-  http_t *http = NULL;
   char tmpfile[1024];
   const char *filename = NULL;
   struct stat statbuf;
@@ -761,10 +756,8 @@ load_opt_strings_catalog(const char *location, cups_array_t *options)
     else
       filename = location;
   } else {
-    if (cups_get_url(&http, location, tmpfile, sizeof(tmpfile)))
+    if (get_url(location, tmpfile, sizeof(tmpfile)))
       filename = tmpfile;
-    if (http)
-      httpClose(http);
   }
   if (!filename)
     return;
