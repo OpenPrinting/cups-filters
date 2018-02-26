@@ -158,7 +158,7 @@ http://www.openprinting.org/
 
 The file \fB@sysconfdir@/cups/foomatic-rip.conf\fR or if it is not
 readable the file \fB@sysconfdir@/foomatic/filter.conf\fR is read
-whenever foomatic-rip is executed. It allows to configure the behavior
+whenever foomatic-rip is executed. It allows one to configure the behavior
 of foomatic-rip as follows (lines beginning with \fB#\fR are comments
 and therefore get ignored):
 
