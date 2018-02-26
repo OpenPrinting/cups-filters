@@ -1075,7 +1075,7 @@ int main(int argc, char** argv)
         dstrclear(postpipe);
 
     if (postpipe->len)
-        _log("Ouput will be redirected to:\n%s\n", postpipe);
+        _log("Output will be redirected to:\n%s\n", postpipe);
 
 
     filename = strtok_r(filelist->data, " ", &p);
