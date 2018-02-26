@@ -2569,7 +2569,7 @@ record_printer_options(const char *printer) {
   p = printer_record(printer);
 
   if (p == NULL) {
-    debug_printf("Not recording printer options for %s: Unkown printer!\n",
+    debug_printf("Not recording printer options for %s: Unknown printer!\n",
 		 printer);
     return 0;
   }
