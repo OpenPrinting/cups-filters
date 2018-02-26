@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.20.1 - 2018-02-25
 -----------------------------------------------------
 
+CHANGES IN V1.20.2
+
+	- cups-browsed, foomatic-rip: Fixed several typos. Thanks to
+	  Didier Raboud for the patches.
+
 CHANGES IN V1.20.1
 
 	- libcupsfilters: Silenced warning when using CUPS < 2.x by
