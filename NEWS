@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.20.1 - 2018-02-25
 
 CHANGES IN V1.20.2
 
+	- .gitignore: Added filter/braille/filters/brftopagedbrf
 	- cups-browsed, foomatic-rip: Fixed several typos. Thanks to
 	  Didier Raboud for the patches.
 
