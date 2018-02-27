@@ -44,6 +44,7 @@ filter/braille/drivers/index/imageubrltoindexv[34]
 filter/braille/drivers/index/index.sh
 filter/braille/drivers/index/indexv[34].sh
 filter/braille/drivers/index/textbrftoindexv3
+filter/braille/filters/brftopagedbrf
 filter/braille/filters/cups-braille.sh
 filter/braille/filters/imagetobrf
 filter/braille/filters/liblouis1.defs.gen
