@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.20.1 - 2018-02-25
 
 CHANGES IN V1.20.2
 
+	- cups-browsed: The configuration setting
+	  "CreateIPPPrinterQueues LocalOnly" suppressed also the
+	  automatic generation of local queues for remote CUPS
+	  printers whereas this option is only intended for physical
+	  IPP printers.
 	- cups-browsed: Identify remote CUPS queues by the
 	  "printer-type" TXT record entry and not by the
 	  "ipp(s)://<host>/printers/<name>" URIs, there are also IPP

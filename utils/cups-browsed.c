@@ -5740,8 +5740,13 @@ static void resolve_callback(
 	adminurl_value = strdup("");
     }
 
+    /* If we create queues only for local IPP printers (like IPP-over-USB
+       with ippusbxd) check whether the entry is local and skip if not.
+       We also check for remote CUPS (with "printer-type" TXT field) as this
+       option is only for IPP network printers */
     if (CreateIPPPrinterQueues == IPP_PRINTERS_LOCAL_ONLY &&
-	strcasecmp(ifname, "lo")) {
+	strcasecmp(ifname, "lo") &&
+	(!txt || avahi_string_list_find(txt, "printer-type") == NULL)) {
       debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, not a local service.\n",
 		   name, type, domain);
       goto clean_up;
