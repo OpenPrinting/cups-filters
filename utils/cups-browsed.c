@@ -5087,6 +5087,7 @@ examine_discovered_printer_record(const char *host,
 
 #ifdef HAVE_AVAHI
   if (txt) {
+    /* Find make and model by the TXT record */
     for (f = fields; *f; f ++) {
       entry = avahi_string_list_find((AvahiStringList *)txt, *f);
       if (entry) {
@@ -5105,13 +5106,26 @@ examine_discovered_printer_record(const char *host,
 	avahi_free(value);
       }
     }
+    /* Check by the printer-type TXT field whether the discovered printer is a CUPS queue */
+    entry = avahi_string_list_find((AvahiStringList *)txt, "printer-type");
+    if (entry) {
+      avahi_string_list_get_pair(entry, &key, &value, NULL);
+      if (key && value && strlen(value) > 1 && !strcasecmp(key, "printer-type") && value[0] == '0' &&
+	  value[1] == 'x') {
+	is_cups_queue = 1;
+      }
+      avahi_free(key);
+      avahi_free(value);
+    }
   }
-#endif /* HAVE_AVAHI */
+#else
   /* Check by the resource whether the discovered printer is a CUPS queue */
   if (!strncasecmp(resource, "printers/", 9) ||
-      !strncasecmp(resource, "classes/", 8)) {
+      !strncasecmp(resource, "classes/", 8))
     /* This is a remote CUPS queue or class */
     is_cups_queue = 1;
+#endif /* HAVE_AVAHI */
+  if (is_cups_queue) {
     debug_printf("Found CUPS queue/class: %s on host %s.\n",
 		 strchr(resource, '/') + 1, remote_host);
 #ifdef HAVE_AVAHI
@@ -5161,7 +5175,6 @@ examine_discovered_printer_record(const char *host,
       queue_name = remove_bad_chars(service_name, 2);
   } else {
     /* This is an IPP-based network printer */
-    is_cups_queue = 0;
     /* Determine the queue name */
     if (LocalQueueNamingIPPPrinter == LOCAL_QUEUE_NAMING_MAKE_MODEL &&
 	make_model)

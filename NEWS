@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.20.1 - 2018-02-25
 
 CHANGES IN V1.20.2
 
+	- cups-browsed: Identify remote CUPS queues by the
+	  "printer-type" TXT record entry and not by the
+	  "ipp(s)://<host>/printers/<name>" URIs, there are also IPP
+	  network printers with such URIs (HP LaserJet Professional
+	  M1212nf MFP in Ubuntu bug #1731417).
 	- .gitignore: Added filter/braille/filters/brftopagedbrf
 	- cups-browsed, foomatic-rip: Fixed several typos. Thanks to
 	  Didier Raboud for the patches.
