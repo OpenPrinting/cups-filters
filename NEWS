@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.20.1 - 2018-02-25
 
 CHANGES IN V1.20.2
 
+	- cups-browsed: If the user modifies/overwrites a print queue
+	  created by cups-browsed, it will now automatically released
+	  from the control of cups-browsed, so the modified queue does
+	  not get removed by cups-browsed on shutdown.  (Ubuntu bug
+	  #1731417).
 	- cups-browsed: The configuration setting
 	  "CreateIPPPrinterQueues LocalOnly" suppressed also the
 	  automatic generation of local queues for remote CUPS

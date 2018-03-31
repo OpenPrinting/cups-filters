@@ -157,7 +157,8 @@ typedef enum printer_status_e {
   STATUS_UNCONFIRMED = 0,	/* Generated in a previous session */
   STATUS_CONFIRMED,		/* Avahi confirms UNCONFIRMED printer */
   STATUS_TO_BE_CREATED,		/* Scheduled for creation */
-  STATUS_DISAPPEARED		/* Scheduled for removal */
+  STATUS_DISAPPEARED,		/* Scheduled for removal */
+  STATUS_TO_BE_RELEASED		/* Scheduled for release from cups-browsed */
 } printer_status_t;
 
 /* Data structure for remote printers */
@@ -168,6 +169,7 @@ typedef struct remote_printer_s {
   char *uri;
   char *ppd;
   char *model;
+  char *nickname;
   char *ifscript;
   int num_options;
   cups_option_t *options;
@@ -2168,6 +2170,7 @@ log_cluster(remote_printer_t *p) {
   for (r = (remote_printer_t *)cupsArrayFirst(remote_printers), i = 0;
        r; r = (remote_printer_t *)cupsArrayNext(remote_printers), i ++)
     if (r->status != STATUS_DISAPPEARED && r->status != STATUS_UNCONFIRMED &&
+	r->status != STATUS_TO_BE_RELEASED &&
 	(r == q || r->slave_of == q))
       debug_printf("  %s%s%s\n", r->uri,
 		   (r == q ? "*" : ""),
@@ -2188,8 +2191,9 @@ log_all_printers() {
 		 ((q = p->slave_of) != NULL ? q->uri : "None"),
 		 (p->status == STATUS_UNCONFIRMED ? " (Unconfirmed)" :
 		  (p->status == STATUS_DISAPPEARED ? " (Disappeared)" :
-		   (p->status == STATUS_TO_BE_CREATED ?
-		    " (To be created/updated)" : ""))));
+		   (p->status == STATUS_TO_BE_RELEASED ? " (To be released from cups-browsed)" :
+		    (p->status == STATUS_TO_BE_CREATED ?
+		     " (To be created/updated)" : "")))));
   debug_printf("===============================\n");
 }
 
@@ -2574,6 +2578,12 @@ record_printer_options(const char *printer) {
     return 0;
   }
   
+  if (p->status == STATUS_TO_BE_RELEASED) {
+    debug_printf("Not recording printer options for externally modified printer %s.\n",
+		 printer);
+    return 0;
+  }
+
   snprintf(filename, sizeof(filename), save_options_file,
 	   printer);
 
@@ -3216,7 +3226,8 @@ on_printer_deleted (CupsNotifier *object,
     /* Schedule for immediate creation of the CUPS queue */
     p = printer_record(printer);
     if (p && p->status != STATUS_DISAPPEARED &&
-	p->status != STATUS_UNCONFIRMED) {
+	p->status != STATUS_UNCONFIRMED &&
+	p->status != STATUS_TO_BE_RELEASED) {
       p->status = STATUS_TO_BE_CREATED;
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
       if (in_shutdown == 0)
@@ -3235,23 +3246,167 @@ on_printer_modified (CupsNotifier *object,
 		     gboolean printer_is_accepting_jobs,
 		     gpointer user_data)
 {
-  remote_printer_t *p;
+  remote_printer_t *p, *q;
+  http_t        *conn = NULL;
+  ipp_t         *request,               /* IPP Request */
+                *response = NULL;       /* IPP Response */
+  ipp_attribute_t *attr;                /* Current attribute */
+  const char    *printername,           /* Print queue name */
+                *uri,                   /* Printer URI */
+                *device;                /* Printer device URI */
+  static const char *pattrs[] =         /* Attributes we need for printers... */
+                {
+                  "printer-name",
+                  "printer-uri-supported",
+                  "device-uri"
+                };
+  const char    *loadedppd = NULL;
+  ppd_file_t    *ppd;
 
   debug_printf("on_printer_modified() in THREAD %ld\n", pthread_self());
 
   debug_printf("[CUPS Notification] Printer modified: %s\n",
 	       text);
 
-  if (terminating) {
-    debug_printf("[CUPS Notification]: Ignoring because cups-browsed is terminating.\n");
-    return;
-  }
-
   if (is_created_by_cups_browsed(printer)) {
+    p = printer_record(printer);
+    /* Get the URI which our CUPS queue actually has now, a change of the
+       URI means a modification or replacement of the print queue by
+       something user-defined. So we schedule this queue for release from
+       handling by cups-browsed */
+    conn = http_connect_local ();
+    if (conn == NULL) {
+      debug_printf("Cannot connect to local CUPS to find the actual device URI of the printer %s.\n",
+		   printer);
+    } else {
+      request = ippNewRequest(CUPS_GET_PRINTERS);
+      ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+		    "requested-attributes", sizeof(pattrs) / sizeof(pattrs[0]),
+		    NULL, pattrs);
+      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
+		   NULL, cupsUser());
+      response = cupsDoRequest(conn, request, "/");
+    }
+    if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
+      debug_printf("lpstat: %s\n", cupsLastErrorString());
+      ippDelete(response);
+    } else {
+      for (attr = ippFirstAttribute(response); attr != NULL;
+	   attr = ippNextAttribute(response)) {
+	while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+	  attr = ippNextAttribute(response);
+	if (attr == NULL)
+	  break;
+	printername = NULL;
+	device      = NULL;
+	uri         = NULL;
+	while (attr != NULL && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
+	  if (!strcmp(ippGetName(attr), "printer-name") &&
+	      ippGetValueTag(attr) == IPP_TAG_NAME)
+	    printername = ippGetString(attr, 0, NULL);
+	  if (!strcmp(ippGetName(attr), "printer-uri-supported") &&
+	      ippGetValueTag(attr) == IPP_TAG_URI)
+	    uri = ippGetString(attr, 0, NULL);
+	  if (!strcmp(ippGetName(attr), "device-uri") &&
+	      ippGetValueTag(attr) == IPP_TAG_URI)
+	    device = ippGetString(attr, 0, NULL);
+	  attr = ippNextAttribute(response);
+	}
+	if (printername == NULL) {
+	  if (attr == NULL)
+	    break;
+	  else
+	    continue;
+	}
+	if (strcasecmp(printer, printername) == 0) {
+	  /* Found our printer in the response */
+	  if (device == NULL)
+	    device = uri;
+	  if (device != NULL &&
+	      (p->uri == NULL ||
+	       (p->netprinter != 0 && strcasecmp(device, p->uri)) ||
+	       (p->netprinter == 0 &&
+		(strlen(device) < 14 || strncmp(device, "implicitclass:", 14) || strcasecmp(device + 14, printer))))) {
+	    /* The printer's device URI is different to what we have
+	       assigned, so we got notified because the queue was
+	       externally modified and so we will release this printer
+	       from the control of cups-browsed */
+	    debug_printf("Printer %s got modified externally, discovered by a change of its device URI from %s to %s.\n",
+			 printer,
+			 (p->uri ? (p->netprinter ? p->uri : "implicitclass:...") : "(not yet determined)"),
+			 device);
+	    p->status = STATUS_TO_BE_RELEASED;
+	  }
+	  break;
+	}
+      }
+    }
+
+    /* Get the NickName of the PPD which our CUPS queue actually uses
+       now, a change of the NickName means a replacement of the PPD of
+       the print queue by a user-selected one. So we schedule this
+       queue for release from handling by cups-browsed */
+    if ((loadedppd = cupsGetPPD2(conn, printer))
+	== NULL) {
+      debug_printf("Unable to load PPD from local queue %s, queue seems to be raw.\n",
+		   printer);
+      if (p->nickname && p->nickname[0] != '\0') {
+	/* We have set up this printer with a PPD file but the queue
+	   does not have a PPD file any more, so we were notified
+	   because the queue was externally modified and so we will
+	   release this printer from the control of cups-browsed */
+	debug_printf("Printer %s got modified externally, discovered by the removal of its PPD file.\n",
+		     printer);
+	p->status = STATUS_TO_BE_RELEASED;
+      }
+    } else {
+      if ((ppd = ppdOpenFile(loadedppd)) == NULL)
+	debug_printf("Unable to open downloaded PPD from local queue %s.\n",
+		     printer);
+      else {
+	if (p->nickname == NULL || ppd->nickname == NULL ||
+	    strcasecmp(p->nickname, ppd->nickname)) {
+	  /* The PPD file of the queue got replaced which we
+	     discovered by comparing the NickName of the PPD with the
+	     NickName which the PPD we have used has. So we were
+	     notified because the queue was externally modified and so
+	     we will release this printer from the control of
+	     cups-browsed */
+	  debug_printf("Printer %s got modified externally, discovered by the NickName of its PPD file having changed from \"%s\" to \"%s\".\n",
+		       printer, (p->nickname ? p->nickname : "(no PPD)"),
+		       (ppd->nickname ? ppd->nickname : "(NickName not readable)"));
+	  p->status = STATUS_TO_BE_RELEASED;
+	}
+      }
+      unlink(loadedppd);
+    }
+
+    if (p->status == STATUS_TO_BE_RELEASED) {
+      p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+      debug_printf("Released CUPS queue %s from the control of cups-browsed. Destination URI(s):\n",
+		   printer);
+      debug_printf("  %s\n", p->uri);
+      /* Release slaves */
+      for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	   q; q = (remote_printer_t *)cupsArrayNext(remote_printers))
+	if (q != p && strcasecmp(q->queue_name, printer) == 0) {
+	  q->status = STATUS_TO_BE_RELEASED;
+	  q->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	  debug_printf("  %s\n", q->uri);
+	}
+      if (in_shutdown == 0)
+	recheck_timer();
+      /* Stop here, do not save option changes of this queue now */
+      return;
+    }
+
+    if (terminating) {
+      debug_printf("[CUPS Notification]: Not saving external option changes because cups-browsed is terminating.\n");
+      return;
+    }
     /* The user has changed settings of a printer which we have generated,
        backup the changes for the case of a crash or unclean shutdown of
        cups-browsed. */
-    p = printer_record(printer);
     if (!p->no_autosave) {
       debug_printf("Settings of printer %s got modified, doing backup.\n",
 		   printer);
@@ -3400,6 +3555,7 @@ create_remote_printer_entry (const char *queue_name,
     p->ppd = NULL;
     p->model = NULL;
     p->ifscript = NULL;
+    p->nickname = NULL;
     /* Check whether we have an equally named queue already from another
        server */
     for (q = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -3421,7 +3577,8 @@ create_remote_printer_entry (const char *queue_name,
       goto fail;
     }
     p->slave_of = (q && q->status != STATUS_DISAPPEARED &&
-		   q->status != STATUS_UNCONFIRMED) ? q : NULL;
+		   q->status != STATUS_UNCONFIRMED &&
+		   q->status != STATUS_TO_BE_RELEASED) ? q : NULL;
     if (p->slave_of) {
       debug_printf("Printer %s already available through host %s, port %d.\n",
 		   p->queue_name, q->host, q->port);
@@ -3751,6 +3908,7 @@ create_remote_printer_entry (const char *queue_name,
     if (IPPPrinterQueueType == PPD_YES) {
       p->ifscript = NULL;
       p->ppd = NULL;
+      p->nickname = NULL;
       if (UseCUPSGeneratedPPDs) {
 	if (LocalQueueNamingIPPPrinter != LOCAL_QUEUE_NAMING_DNSSD) {
 	  debug_printf("Local queue %s: We can replace temporary CUPS queues and keep their PPD file only when we name our queues like them, to avoid duplicate queues to the same printer.\n", p->queue_name);
@@ -4010,6 +4168,7 @@ create_remote_printer_entry (const char *queue_name,
   if (p->ppd) free (p->ppd);
   if (p->model) free (p->model);
   if (p->ifscript) free (p->ifscript);
+  if (p->nickname) free (p->nickname);
   free (p);
   return NULL;
 }
@@ -4030,7 +4189,8 @@ remove_printer_entry(remote_printer_t *p) {
 	 q;
 	 q = (remote_printer_t *)cupsArrayNext(remote_printers))
       if (q != p && q->slave_of == p &&
-	  q->status != STATUS_DISAPPEARED && q->status != STATUS_UNCONFIRMED)
+	  q->status != STATUS_DISAPPEARED && q->status != STATUS_UNCONFIRMED &&
+	  q->status != STATUS_TO_BE_RELEASED)
 	break;
   }
   if (q) {
@@ -4041,7 +4201,8 @@ remove_printer_entry(remote_printer_t *p) {
 	 r;
 	 r = (remote_printer_t *)cupsArrayNext(remote_printers))
       if (r != q && r->slave_of == p &&
-	  r->status != STATUS_DISAPPEARED && r->status != STATUS_UNCONFIRMED)
+	  r->status != STATUS_DISAPPEARED && r->status != STATUS_UNCONFIRMED &&
+	  r->status != STATUS_TO_BE_RELEASED)
 	r->slave_of = q;
     q->slave_of = NULL;
     p->slave_of = q;
@@ -4059,7 +4220,8 @@ remove_printer_entry(remote_printer_t *p) {
 		 p->queue_name, p->host, p->port, p->uri);
     
   /* Schedule entry and its CUPS queue for removal */
-  p->status = STATUS_DISAPPEARED;
+  if (p->status != STATUS_TO_BE_RELEASED)
+    p->status = STATUS_DISAPPEARED;
   p->timeout = time(NULL) + TIMEOUT_REMOVE;
 }
 
@@ -4106,8 +4268,9 @@ gboolean update_cups_queues(gpointer unused) {
      to this dummy entry */
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    if (p->status == STATUS_DISAPPEARED &&
-	(q = p->slave_of) != NULL && q->status == STATUS_DISAPPEARED)
+    if ((p->status == STATUS_DISAPPEARED || p->status == STATUS_TO_BE_RELEASED) &&
+	(q = p->slave_of) != NULL &&
+	(q->status == STATUS_DISAPPEARED || q->status == STATUS_TO_BE_RELEASED))
       p->slave_of = r;
 
   debug_printf("Processing printer list ...\n");
@@ -4141,18 +4304,17 @@ gboolean update_cups_queues(gpointer unused) {
     /* DNS-SD has reported this printer as disappeared or we have replaced
        this printer by another one */
     case STATUS_DISAPPEARED:
+    case STATUS_TO_BE_RELEASED:
 
       /* Only act if the timeout has passed */
       if (p->timeout > current_time)
 	break;
 
       debug_printf("Removing entry %s (%s)%s.\n", p->queue_name, p->uri,
-		   (p->slave_of ? "" : " and its CUPS queue"));
+		   (p->slave_of || p->status == STATUS_TO_BE_RELEASED ? "" : " and its CUPS queue"));
 
-      /* Remove the CUPS queue */
       /* Slaves do not have a CUPS queue */
       if ((q = p->slave_of) == NULL) {
-	
 	if ((http = http_connect_local ()) == NULL) {
 	  debug_printf("Unable to connect to CUPS!\n");
 	  if (in_shutdown == 0)
@@ -4161,88 +4323,121 @@ gboolean update_cups_queues(gpointer unused) {
 	}
 
 	/* Do not auto-save option settings due to the print queue removal
-	   process */
+	   process or release process */
 	p->no_autosave = 1;
 
 	/* Record the option settings to retrieve them when the remote
 	   queue re-appears later or when cups-browsed gets started again */
 	record_printer_options(p->queue_name);
 
-	/* Check whether there are still jobs and do not remove the queue
-	   then */
-	num_jobs = 0;
-	jobs = NULL;
-	num_jobs = cupsGetJobs2(http, &jobs, p->queue_name, 0, CUPS_WHICHJOBS_ACTIVE);
-	if (num_jobs != 0) { /* error or jobs */
-	  debug_printf("Queue has still jobs or CUPS error!\n");
-	  cupsFreeJobs(num_jobs, jobs);
-	  /* Disable the queue */
+	if (p->status == STATUS_TO_BE_RELEASED) {
+	  /* Remove the "cups-browsed=true" from the options, so that 
+	     cups-browsed considers this queue as created manually */
+
+	  debug_printf("Removing \"cups-browsed=true\" from CUPS queue %s (%s).\n", p->queue_name,
+		       p->uri);
+	  request = ippNewRequest(IPP_OP_CUPS_ADD_MODIFY_PRINTER);
+	  /* Printer URI: ipp://localhost:631/printers/<queue name> */
+	  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+			   "localhost", ippPort(), "/printers/%s", p->queue_name);
+	  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		       "printer-uri", NULL, uri);
+	  /* Default user */
+	  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		       "requesting-user-name", NULL, cupsUser());
+	  /* Option */
+	  ippAddInteger(request, IPP_TAG_PRINTER, IPP_TAG_DELETEATTR,
+			CUPS_BROWSED_MARK "-default", 0);
+	  /* Do it */
+	  ippDelete(cupsDoRequest(http, request, "/admin/"));
+	  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
+	    debug_printf("Unable to remove \"cups-browsed=true\" from CUPS queue!\n");
+	    if (in_shutdown == 0) {
+	      p->timeout = current_time + TIMEOUT_RETRY;
+	      p->no_autosave = 0;
+	      break;
+	    }
+	  }
+	} else {
+	  /* Remove the CUPS queue */
+
+	  /* Check whether there are still jobs and do not remove the queue
+	     then */
+	  num_jobs = 0;
+	  jobs = NULL;
+	  num_jobs = cupsGetJobs2(http, &jobs, p->queue_name, 0, CUPS_WHICHJOBS_ACTIVE);
+	  if (num_jobs != 0) { /* error or jobs */
+	    debug_printf("Queue has still jobs or CUPS error!\n");
+	    cupsFreeJobs(num_jobs, jobs);
+	    /* Disable the queue */
 #ifdef HAVE_AVAHI
-	  if (avahi_present || p->domain == NULL || p->domain[0] == '\0')
-	    /* If avahi has got shut down, do not disable queues which are,
-	       created based on DNS-SD broadcasts as the server has most
-	       probably not gone away */
+	    if (avahi_present || p->domain == NULL || p->domain[0] == '\0')
+	      /* If avahi has got shut down, do not disable queues which are,
+		 created based on DNS-SD broadcasts as the server has most
+		 probably not gone away */
 #endif /* HAVE_AVAHI */
-	    disable_printer(p->queue_name,
-			    "Printer disappeared or cups-browsed shutdown");
-	  /* Schedule the removal of the queue for later */
-	  if (in_shutdown == 0) {
-	    p->timeout = current_time + TIMEOUT_RETRY;
-	    p->no_autosave = 0;
-	    break;
+	      disable_printer(p->queue_name,
+			      "Printer disappeared or cups-browsed shutdown");
+	    /* Schedule the removal of the queue for later */
+	    if (in_shutdown == 0) {
+	      p->timeout = current_time + TIMEOUT_RETRY;
+	      p->no_autosave = 0;
+	      break;
+	    }
 	  }
-	}
 
-	/* If this queue was the default printer, note that fact so that
-	   it gets the default printer again when it re-appears, also switch
-	   back to the last local default printer */
-	queue_removal_handle_default(p->queue_name);
+	  /* If this queue was the default printer, note that fact so that
+	     it gets the default printer again when it re-appears, also switch
+	     back to the last local default printer */
+	  queue_removal_handle_default(p->queue_name);
 
-	/* If we do not have a subscription to CUPS' D-Bus notifications and
-	   so no default printer management, we simply do not remove this
-	   CUPS queue if it is the default printer, to not cause a change
-	   of the default printer or the loss of the information that this
-	   printer is the default printer. */
-	if (cups_notifier == NULL && is_cups_default_printer(p->queue_name)) {
-	  /* Schedule the removal of the queue for later */
-	  if (in_shutdown == 0) {
-	    p->timeout = current_time + TIMEOUT_RETRY;
-	    p->no_autosave = 0;
-	    break;
+	  /* If we do not have a subscription to CUPS' D-Bus notifications and
+	     so no default printer management, we simply do not remove this
+	     CUPS queue if it is the default printer, to not cause a change
+	     of the default printer or the loss of the information that this
+	     printer is the default printer. */
+	  if (cups_notifier == NULL && is_cups_default_printer(p->queue_name)) {
+	    /* Schedule the removal of the queue for later */
+	    if (in_shutdown == 0) {
+	      p->timeout = current_time + TIMEOUT_RETRY;
+	      p->no_autosave = 0;
+	      break;
+	    }
 	  }
-	}
 
-	/* No jobs, remove the CUPS queue */
-	debug_printf("Removing local CUPS queue %s (%s).\n", p->queue_name,
-		     p->uri);
-	request = ippNewRequest(CUPS_DELETE_PRINTER);
-	/* Printer URI: ipp://localhost:631/printers/<queue name> */
-	httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-			 "localhost", ippPort(), "/printers/%s", p->queue_name);
-	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
-		     "printer-uri", NULL, uri);
-	/* Default user */
-	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
-		     "requesting-user-name", NULL, cupsUser());
-	/* Do it */
-	ippDelete(cupsDoRequest(http, request, "/admin/"));
-	if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
-	  debug_printf("Unable to remove CUPS queue!\n");
-	  if (in_shutdown == 0) {
-	    p->timeout = current_time + TIMEOUT_RETRY;
-	    p->no_autosave = 0;
-	    break;
+	  /* No jobs, remove the CUPS queue */
+	  debug_printf("Removing local CUPS queue %s (%s).\n", p->queue_name,
+		       p->uri);
+	  request = ippNewRequest(CUPS_DELETE_PRINTER);
+	  /* Printer URI: ipp://localhost:631/printers/<queue name> */
+	  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+			   "localhost", ippPort(), "/printers/%s", p->queue_name);
+	  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
+		       "printer-uri", NULL, uri);
+	  /* Default user */
+	  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+		       "requesting-user-name", NULL, cupsUser());
+	  /* Do it */
+	  ippDelete(cupsDoRequest(http, request, "/admin/"));
+	  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
+	    debug_printf("Unable to remove CUPS queue!\n");
+	    if (in_shutdown == 0) {
+	      p->timeout = current_time + TIMEOUT_RETRY;
+	      p->no_autosave = 0;
+	      break;
+	    }
 	  }
 	}
       }
 
-      /* CUPS queue removed, remove the list entry */
+      /* CUPS queue removed or released from cups-browsed, remove the list
+	 entry */
       /* Note that we do not need to break out of the loop passing through
 	 all elements of a CUPS array when we remove an element via the
 	 cupsArrayRemove() function, as the function decreases the array-
 	 internal index by one and so the cupsArrayNext() call gives us
 	 the element right after the deleted element. So no skipping
-         of an element and especially no reading beyond the  end of the
+         of an element and especially no reading beyond the end of the
          array. */
       cupsArrayRemove(remote_printers, p);
       if (p->queue_name) free (p->queue_name);
@@ -4258,6 +4453,7 @@ gboolean update_cups_queues(gpointer unused) {
       if (p->ppd) free (p->ppd);
       if (p->model) free (p->model);
       if (p->ifscript) free (p->ifscript);
+      if (p->nickname) free (p->nickname);
       free(p);
       p = NULL;
 
@@ -4321,7 +4517,7 @@ gboolean update_cups_queues(gpointer unused) {
 	 are creating would overwrite the temporary queue, and so the
 	 resulting queue will still be considered temporary by CUPS and
 	 removed after one minute of inactivity. To avoid this we need
-	 to convertthe queue into a permanent one and CUPS does this
+	 to convert the queue into a permanent one and CUPS does this
 	 only by sharing the queue (setting its boolean printer-is-shared
 	 option. We unset the bit right after that to not actually share
 	 the queue (if we want to share the queue we take care about this
@@ -4646,6 +4842,18 @@ gboolean update_cups_queues(gpointer unused) {
 	    }
 	    /* Simply write out the line as we read it */
 	    cupsFilePrintf(out, "%s\n", line);
+	  }
+	  /* Save the NickName of the PPD to check whether external
+	     manipulations of the print queue have replaced the PPD */
+	  if (!strncmp(line, "*NickName:", 10)) {
+	    ptr = strchr(line, '"');
+	    if (ptr) {
+	      ptr ++;
+	      p->nickname = strdup(ptr);
+	      ptr = strchr(p->nickname, '"');
+	      if (ptr)
+		*ptr = '\0';
+	    }
 	  }
 	}
 	if (pass_through_ppd == 1 && new_cupsfilter_line_inserted == 0)
@@ -5966,6 +6174,7 @@ static void browse_callback(
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
       if (p->status != STATUS_DISAPPEARED &&
+	  p->status != STATUS_TO_BE_RELEASED &&
 	  !strcasecmp(p->service_name, name) &&
 	  !strcasecmp(p->type, type) &&
 	  !strcasecmp(p->domain, domain))
@@ -6001,7 +6210,8 @@ void avahi_browser_shutdown() {
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
     if (p->type && p->type[0]) {
-      p->status = STATUS_DISAPPEARED;
+      if (p->status != STATUS_TO_BE_RELEASED)
+	p->status = STATUS_DISAPPEARED;
       p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
     }
   }
@@ -8255,7 +8465,8 @@ fail:
   /* Remove all queues which we have set up */
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-    p->status = STATUS_DISAPPEARED;
+    if (p->status != STATUS_TO_BE_RELEASED)
+      p->status = STATUS_DISAPPEARED;
     p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
   }
   update_cups_queues(NULL);
