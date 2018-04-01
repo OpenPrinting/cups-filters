@@ -73,29 +73,15 @@ static GsDocType
 parse_doc_type(FILE *fp)
 {
   char buf[5];
-  GsDocType doc_type;
-  char *rc;
 
   /* get the first few bytes of the file */
-  doc_type = GS_DOC_TYPE_UNKNOWN;
   rewind(fp);
-  rc = fgets(buf,sizeof(buf),fp);
-  if (rc == NULL)
-    goto out;
-
-  /* is PDF */
-  if (strncmp(buf,"%PDF",4) == 0) {
-    doc_type = GS_DOC_TYPE_PDF;
-    goto out;
+/* skip until PDF/PS start header */
+ while (fgets(buf,sizeof(buf),fp) != 0) {
+   if (strncmp(buf,"%PDF",4) == 0) return GS_DOC_TYPE_PDF;
+   if (strncmp(buf,"%!",2) == 0) return GS_DOC_TYPE_PS;
   }
-
-  /* is PS */
-  if (strncmp(buf,"%!",2) == 0) {
-    doc_type = GS_DOC_TYPE_PS;
-    goto out;
-  }
-out:
-  return doc_type;
+  return GS_DOC_TYPE_UNKNOWN;
 }
 
 static void

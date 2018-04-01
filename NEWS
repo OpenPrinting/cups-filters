@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.20.2 - 2018-03-31
 -----------------------------------------------------
 
+CHANGES IN V1.20.3
+
+	- gstoraster: Improved detection whether input is PostScript
+	  or PDF by skipping over possible headers. Thanks to Rod
+	  Schmidt (schmidtrod at q dot com) for the patch.
+
 CHANGES IN V1.20.2
 
 	- cups-browsed: If the user modifies/overwrites a print queue
