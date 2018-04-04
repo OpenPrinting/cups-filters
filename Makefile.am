@@ -1090,7 +1090,7 @@ endif
 	$(LN_S) -f pdf.utf-8.simple \
 		$(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
 if ENABLE_BRAILLE
-	chmod g-rwx,o-rwx $(DESTDIR)/$(pkgbackenddir)/cups-brf
+	chmod g-wx,o-wx $(DESTDIR)/$(pkgbackenddir)/cups-brf
 endif
 
 
