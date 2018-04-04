@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 
-# Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015, 2017-2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -39,182 +39,209 @@ echo '  Choice "Locale-g3/Default for language grade 3" ""'
   for i in $TABLESDIR/*.utb $TABLESDIR/*.ctb
   do
     file=${i##*/}
-    name=${file%.ctb}
-    name=${name%.utb}
-    DESC=$name
-    LANGUAGE=""
+    ext=${file##*.}
+    name=${file%.$ext}
+    TYPE=""
+    LANGUAGE="$name"
     LOCATION=""
     GRADE=""
-    case $name in 
-      "afr-za-g1")	LANGUAGE=Afrikaans DESC="grade 1" ;;
-      "ar-ar-g1")	LANGUAGE=Arabic DESC="grade 1" ;;
-      "ar-fa")		LANGUAGE=Persian DESC="grade 1" ;;
-      "as-in-g1")	LANGUAGE=Assamese DESC="grade 1" ;;
-      "aw-in-g1")	LANGUAGE=Awadhi DESC="grade 1" ;;
-      "be-in-g1")	LANGUAGE=Bengali DESC="grade 1" ;;
-      "bg")		LANGUAGE=Bulgarian DESC="grade 1" ;;
-      "bh")		LANGUAGE=Bihari DESC="grade 1" ;;
-      "bo")		LANGUAGE=Tibetan DESC="grade 1" ;;
-      "boxes")		DESC="Box drawing" ;;
-      "br-in-g1")	LANGUAGE=Braj DESC="Box drawing" ;;
-      "ca-g1")		LANGUAGE=Catalan DESC="grade 1" ;;
-      "chr-us-g1")	LANGUAGE=Cherokee DESC="grade 1" ;;
-      "ckb-g1")		LANGUAGE="Sorani (Kurdish)" DESC="grade 1" ;;
-      "cs-g1")		LANGUAGE=Czech DESC="grade 1" ;;
-      "cy-cy-g1")	LANGUAGE=Welsh DESC="grade 1" ;;
-      "cy-cy-g2")	LANGUAGE=Welsh DESC="grade 2" ;;
-      "Cz-Cz-g1")	LANGUAGE=Czech DESC="grade 1" ;;
-      "da-dk-g08")	LANGUAGE=Danish DESC="grade 0" ;;
-      "da-dk-g16")	LANGUAGE=Danish DESC="grade 1 6 dots" ;;
-      "da-dk-g18")	LANGUAGE=Danish DESC="grade 1 8 dots" ;;
-      "da-dk-g26")	LANGUAGE=Danish DESC="grade 2 6 dots" ;;
-      "da-dk-g26l")	LANGUAGE=Danish DESC="grade 2 6 dots limited" ;;
-      "da-dk-g28")	LANGUAGE=Danish DESC="grade 2 8 dots" ;;
-      "da-dk-g28l")	LANGUAGE=Danish DESC="grade 2 8 dots limited" ;;
-      "da-lt")		LANGUAGE=Danish DESC="LogText" ;;
-      "de-chess")	LANGUAGE=German DESC="Chess" ;;
-      "de-ch-g0")	LANGUAGE=German LOCATION=Swiss DESC="grade 0" ;;
-      "de-ch-g1")	LANGUAGE=German LOCATION=Swiss DESC="grade 1" ;;
-      "de-ch-g2")	LANGUAGE=German LOCATION=Swiss DESC="grade 2" ;;
-      "de-de-comp8")	LANGUAGE=German LOCATION=Germany DESC="computer" ;;
-      "de-de-g0")	LANGUAGE=German LOCATION=Germany DESC="grade 0" ;;
-      "de-de-g1")	LANGUAGE=German LOCATION=Germany DESC="grade 1" ;;
-      "de-de-g2")	LANGUAGE=German LOCATION=Germany DESC="grade 2" ;;
-      "dra")		LANGUAGE=Dravidian DESC="grade 1" ;;
-      "en_CA")		LANGUAGE=English LOCATION=Canada DESC="grade 1" ;;
-      "en-chess")	LANGUAGE=English DESC="Chess" ;;
-      "en-gb-comp8")	LANGUAGE=English LOCATION=U.K. DESC="computer" ;;
-      "en-gb-g1")	LANGUAGE=English LOCATION=U.K. DESC="grade 1" ;;
-      "en-GB-g2")	LANGUAGE=English LOCATION=U.K. DESC="grade 2" ;;
-      "en-in-g1")	LANGUAGE=English LOCATION=India  DESC="grade 1" ;;
-      "en-ueb-g1")	LANGUAGE=English DESC="Unified grade 1" ;;
-      "en-ueb-g2")	LANGUAGE=English DESC="Unified grade 2" ;;
-      "en-us-comp6")	LANGUAGE=English LOCATION=U.S. DESC="computer 6 dots" ;;
-      "en-us-comp8")	LANGUAGE=English LOCATION=U.S. DESC="computer 8 dots" ;;
-      "en-us-compbrl")	LANGUAGE=English LOCATION=U.S. DESC="computer" ;;
-      "en-us-g1")	LANGUAGE=English LOCATION=U.S. DESC="grade 1" ;;
-      "en-us-g2")	LANGUAGE=English LOCATION=U.S. DESC="grade 2" ;;
-      "en-us-interline")	LANGUAGE=English LOCATION=U.S. DESC="interline" ;;
-      "en-us-mathtext")	LANGUAGE=English LOCATION=U.S. DESC="mathtext" ;;
-      "eo-g1")		LANGUAGE=Esperanto DESC="grade 1" ;;
-      "eo-g1-x-system")	LANGUAGE=Esperanto DESC="grade 1 x-system" ;;
-      "Es-Es-G0")	LANGUAGE=Spanish DESC="grade 0" ;;
-      "Es-Es-g1")	LANGUAGE=Spanish DESC="grade 1" ;;
-      "es-g1")		LANGUAGE=Spanish DESC="grade 1" ;;
-      "et")		LANGUAGE=Estonian DESC="grade 1" ;;
-      "et-g0")		LANGUAGE=Estonian DESC="grade 0" ;;
-      "ethio-g1")	LANGUAGE=Ethiopic DESC="grade 1" ;;
-      "fi")		LANGUAGE=Finnish DESC="6 dot" ;;
-      "fi1")		LANGUAGE=Finnish DESC="grade 1" ;;
-      "fi2")		LANGUAGE=Finnish DESC="grade 2" ;;
-      "fi-fi-8dot")	LANGUAGE=Finnish DESC="8dot" ;;
-      "fi-fi")		LANGUAGE=Finnish DESC="6dot" ;;
-      "fr-2007")	LANGUAGE=French DESC="2007" ;;
-      "fr-bfu-comp6")	LANGUAGE=French DESC="Braille Français Unifié computer 6 dots" ;;
-      "fr-bfu-comp8")	LANGUAGE=French DESC="Braille Français Unifié computer 8 dots" ;;
-      "fr-bfu-g2")	LANGUAGE=French DESC="Braille Français Unifié grade 2" ;;
-      "fr-ca-g1")	LANGUAGE=French LOCATION=Canada DESC="grade 1" ;;
-      "Fr-Ca-g2")	LANGUAGE=French LOCATION=Canada DESC="grade 2" ;;
-      "fr-fr-g1")	LANGUAGE=French LOCATION=France DESC="grade 1" ;;
-      "Fr-Fr-g2")	LANGUAGE=French LOCATION=France DESC="grade 2" ;;
-      "ga-g1")		LANGUAGE=Gaeilge DESC="grade 1" ;;
-      "ga-g2")		LANGUAGE=Gaeilge DESC="grade 2" ;;
-      "gd")		LANGUAGE=Gaelic DESC="grade 1" ;;
-      "gon")		LANGUAGE=Gondi DESC="grade 1" ;;
-      "gr-bb")		LANGUAGE=Greek DESC="bb" ;;
-      "gr-gr-g1")	LANGUAGE=Greek DESC="grade 1" ;;
-      "gu-in-g1")	LANGUAGE=Gujarati DESC="grade 1" ;;
-      "haw-us-g1")	LANGUAGE=Hawaiian DESC="grade 1" ;;
-      "he")		LANGUAGE=Hebrew DESC="grade 1" ;;
-      "hi-in-g1")	LANGUAGE=Hindi DESC="grade 1" ;;
-      "hr")		LANGUAGE=Croatian DESC="grade 1" ;;
-      "hu-hu-comp8")	LANGUAGE=Hungarian DESC="computer 8 dots" ;;
-      "hu-hu-g1")	LANGUAGE=Hungarian DESC="grade 1" ;;
-      "hy")		LANGUAGE=Armenian DESC="grade 1" ;;
-      "is")		LANGUAGE=Icelandic DESC="grade 1" ;;
-      "it-it-comp6")	LANGUAGE=Italian DESC="computer 6 dots" ;;
-      "it-it-comp8")	LANGUAGE=Italian DESC="computer 8 dots" ;;
-      "iu-ca-g1")	LANGUAGE=Inuktitut DESC="grade 1" ;;
-      "ka-in-g1")	LANGUAGE=Kannada DESC="grade 1" ;;
-      "kh-in-g1")	LANGUAGE=Khasi DESC="grade 1" ;;
-      "ko-2006-g1")	LANGUAGE=Korean DESC="grade 1 2006" ;;
-      "ko-2006-g2")	LANGUAGE=Korean DESC="grade 2 2006" ;;
-      "ko-g1")		LANGUAGE=Korean DESC="grade 1" ;;
-      "ko-g2")		LANGUAGE=Korean DESC="grade 2" ;;
-      "kok")		LANGUAGE=Konkani DESC="grade 1" ;;
-      "kru")		LANGUAGE=Kurukh DESC="grade 1" ;;
-      "ks-in-g1")	LANGUAGE=Kashmiri DESC="grade 1" ;;
-      "lt")		LANGUAGE=Lithuanian DESC="grade 1" ;;
-      "Lv-Lv-g1")	LANGUAGE=Latvian DESC="grade 1" ;;
-      "mao-nz-g1")	LANGUAGE=Maori DESC="grade 1" ;;
-      "marburg")	DESC="Marburg maths" ;;
-      "marburg_edit")	DESC="Marburg maths post-translation editing" ;;
-      "ml-in-g1")	LANGUAGE=Malayalam DESC="grade 1" ;;
-      "mn-in-g1")	LANGUAGE=Manipuri DESC="grade 1" ;;
-      "mn-MN")		LANGUAGE=Mongolian DESC="grade 1" ;;
-      "mr-in-g1")	LANGUAGE=Marathi DESC="grade 1" ;;
-      "mt")		LANGUAGE=Maltese DESC="grade 1" ;;
-      "mun")		LANGUAGE=Munda DESC="grade 1" ;;
-      "mwr")		LANGUAGE=Marwari DESC="grade 1" ;;
-      "ne")		LANGUAGE=Nepali DESC="grade 1" ;;
-      "nemeth")		DESC="Nemeth Maths" ;;
-      "nemeth_edit")	DESC="Nemeth Maths post-translation editing" ;;
-      "nl-BE-g0")	LANGUAGE=Dutch LOCATION=Belgium DESC="grade 0" ;;
-      "nl-g0")		LANGUAGE=Dutch DESC="grade 0" ;;
-      "nl-NL-g0")	LANGUAGE=Dutch LOCATION="Netherlands" DESC="grade 0" ;;
-      "Nl-Nl-g1")	LANGUAGE=Dutch LOCATION=Netherlands DESC="grade 1" ;;
-      "no-no-8dot-fallback-6dot-g0")	LANGUAGE=Norwegian DESC="grade 0 8 dots fallback 6 dots" ;;
-      "no-no-8dot")	LANGUAGE=Norwegian DESC="grade 0 8 dots" ;;
-      "no-no-comp8")	LANGUAGE=Norwegian DESC="grade 0 computer" ;;
-      "no-no-g0")	LANGUAGE=Norwegian DESC="grade 0" ;;
-      "no-no-g1")	LANGUAGE=Norwegian DESC="grade 1" ;;
-      "no-no-g2")	LANGUAGE=Norwegian DESC="grade 2" ;;
-      "no-no-g3")	LANGUAGE=Norwegian DESC="grade 3" ;;
-      "no-no-generic")	LANGUAGE=Norwegian DESC="generic" ;;
-      "np-in-g1")	LANGUAGE=Nepali DESC="grade 1" ;;
-      "or-in-g1")	LANGUAGE=Oriya DESC="grade 1" ;;
-      "pi")		LANGUAGE=Pali DESC="grade 1" ;;
-      "pl-pl-comp8")	LANGUAGE=Polish DESC="computer" ;;
-      "Pl-Pl-g1")	LANGUAGE=Polish DESC="grade 1" ;;
-      "pt-pt-comp8")	LANGUAGE=Portuguese DESC="computer" ;;
-      "pt-pt-g1")	LANGUAGE=Portuguese DESC="grade 1" ;;
-      "pt-pt-g2")	LANGUAGE=Portuguese DESC="grade 2" ;;
-      "pu-in-g1")	LANGUAGE=Punjabi DESC="grade 1" ;;
-      "ro")		LANGUAGE=Romanian DESC="grade 1" ;;
-      "ru-compbrl")	LANGUAGE=Russian DESC="computer" ;;
-      "ru")		LANGUAGE=Russian DESC="grade 1" ;;
-      "ru-litbrl")	LANGUAGE=Russian DESC="literary" ;;
-      "ru-ru-g1")	LANGUAGE=Russian DESC="grade 1" ;;
-      "sa-in-g1")	LANGUAGE=Sasnskrit DESC="grade 1" ;;
-      "se-se")		LANGUAGE=Swedish DESC="grade 1" ;;
-      "Se-Se-g1")	LANGUAGE=Swedish DESC="grade 1" ;;
-      "si-in-g1")	LANGUAGE=Sindhi DESC="grade 1" ;;
-      "sk-g1")		LANGUAGE=Slovak DESC="grade 1" ;;
-      "sk-sk-g1")	LANGUAGE=Slovak DESC="grade 1" ;;
-      "sk-sk")		LANGUAGE=Slovak DESC="grade 1" ;;
-      "sl-si-comp8")	LANGUAGE=Slovenian DESC="computer" ;;
-      "sl-si-g1")	LANGUAGE=Slovenian DESC="grade 1" ;;
-      "sot-za-g1")	LANGUAGE=Sotho DESC="grade 1" ;;
-      "spaces")		DESC="Spaces" ;;
-      "sr-g1")		LANGUAGE=Serbian DESC="grade 1" ;;
-      "sv-1989")	LANGUAGE=Swedish DESC="1989" ;;
-      "sv-1996")	LANGUAGE=Swedish DESC="1996" ;;
-      "ta")		LANGUAGE=Tamil DESC="grade 1" ;;
-      "ta-ta-g1")	LANGUAGE=Tamil DESC="grade 1" ;;
-      "te-in-g1")	LANGUAGE=Telugu DESC="grade 1" ;;
-      "tr")		LANGUAGE=Turkish DESC="grade 1" ;;
-      "tsn-za-g1")	LANGUAGE=Tswana DESC="grade 1" ;;
-      "UEBC-g1")	LANGUAGE=English DESC="Unified grade 1" ;;
-      "UEBC-g2")	LANGUAGE=English DESC="Unified grade 2" ;;
-      "ukmaths")	DESC="U.K maths" ;;
-      "ukmaths_edit")	DESC="U.K maths post-translation editing" ;;
-      "vi")		LANGUAGE=Vietnamese DESC="grade 1" ;;
-      "vi-g1")		LANGUAGE=Vietnamese DESC="grade 1" ;;
-      "wiskunde")	LANGUAGE=Flemish DESC="grade 1" ;;
-      "zh-hk")		LANGUAGE=Chinese LOCATION="Hong Kong" DESC="grade 1" ;;
-      "zh-tw")		LANGUAGE=Chinese LOCATION="Taiwan" DESC="grade 1" ;;
-    esac
-    echo "$file:$LANGUAGE:$LOCATION:$DESC"
+    DISPLAY_NAME=""
+    display_name=$(grep ^#-display-name: "$i" | cut -d ' ' -f 2-)
+    if [ -n "$display_name" ]; then
+      # Table provides a display name, neat
+      DISPLAY_NAME=$display_name
+      LANGUAGE=$DISPLAY_NAME
+    else
+      case $name in 
+	"afr-za-g1")	LANGUAGE=Afrikaans TYPE="grade 1" ;;
+	"ar-ar-g1")	LANGUAGE=Arabic TYPE="grade 1" ;;
+	"ar-fa")	LANGUAGE=Persian TYPE="grade 1" ;;
+	"as-in-g1")	LANGUAGE=Assamese TYPE="grade 1" ;;
+	"aw-in-g1")	LANGUAGE=Awadhi TYPE="grade 1" ;;
+	"be-in-g1")	LANGUAGE=Bengali TYPE="grade 1" ;;
+	"bg")		LANGUAGE=Bulgarian TYPE="grade 1" ;;
+	"bh")		LANGUAGE=Bihari TYPE="grade 1" ;;
+	"bo")		LANGUAGE=Tibetan TYPE="grade 1" ;;
+	"boxes")	TYPE="Box drawing" ;;
+	"br-in-g1")	LANGUAGE=Braj TYPE="Box drawing" ;;
+	"ca-g1")	LANGUAGE=Catalan TYPE="grade 1" ;;
+	"chr-us-g1")	LANGUAGE=Cherokee TYPE="grade 1" ;;
+	"ckb-g1")	LANGUAGE="Sorani (Kurdish)" TYPE="grade 1" ;;
+	"cs-g1")	LANGUAGE=Czech TYPE="grade 1" ;;
+	"cy-cy-g1")	LANGUAGE=Welsh TYPE="grade 1" ;;
+	"cy-cy-g2")	LANGUAGE=Welsh TYPE="grade 2" ;;
+	"Cz-Cz-g1")	LANGUAGE=Czech TYPE="grade 1" ;;
+	"da-dk-g08")	LANGUAGE=Danish TYPE="grade 0" ;;
+	"da-dk-g16")	LANGUAGE=Danish TYPE="grade 1 6 dots" ;;
+	"da-dk-g18")	LANGUAGE=Danish TYPE="grade 1 8 dots" ;;
+	"da-dk-g26")	LANGUAGE=Danish TYPE="grade 2 6 dots" ;;
+	"da-dk-g26l")	LANGUAGE=Danish TYPE="grade 2 6 dots limited" ;;
+	"da-dk-g28")	LANGUAGE=Danish TYPE="grade 2 8 dots" ;;
+	"da-dk-g28l")	LANGUAGE=Danish TYPE="grade 2 8 dots limited" ;;
+	"da-lt")	LANGUAGE=Danish TYPE="LogText" ;;
+	"de-chess")	LANGUAGE=German TYPE="Chess" ;;
+	"de-ch-g0")	LANGUAGE=German LOCATION=Swiss TYPE="grade 0" ;;
+	"de-ch-g1")	LANGUAGE=German LOCATION=Swiss TYPE="grade 1" ;;
+	"de-ch-g2")	LANGUAGE=German LOCATION=Swiss TYPE="grade 2" ;;
+	"de-de-comp8")	LANGUAGE=German LOCATION=Germany TYPE="computer" ;;
+	"de-de-g0")	LANGUAGE=German LOCATION=Germany TYPE="grade 0" ;;
+	"de-de-g1")	LANGUAGE=German LOCATION=Germany TYPE="grade 1" ;;
+	"de-de-g2")	LANGUAGE=German LOCATION=Germany TYPE="grade 2" ;;
+	"dra")		LANGUAGE=Dravidian TYPE="grade 1" ;;
+	"el")		LANGUAGE=Greek TYPE="grade 1" ;;
+	"en_CA")	LANGUAGE=English LOCATION=Canada TYPE="grade 1" ;;
+	"en-chess")	LANGUAGE=English TYPE="Chess" ;;
+	"en-gb-comp8")	LANGUAGE=English LOCATION=U.K. TYPE="computer" ;;
+	"en-gb-g1")	LANGUAGE=English LOCATION=U.K. TYPE="grade 1" ;;
+	"en-GB-g2")	LANGUAGE=English LOCATION=U.K. TYPE="grade 2" ;;
+	"en-in-g1")	LANGUAGE=English LOCATION=India  TYPE="grade 1" ;;
+	"en-ueb-g1")	LANGUAGE=English TYPE="Unified grade 1" ;;
+	"en-ueb-g2")	LANGUAGE=English TYPE="Unified grade 2" ;;
+	"en-ueb-math")	LANGUAGE=English TYPE="Unified math definitions" ;;
+	"en-us-comp6")	LANGUAGE=English LOCATION=U.S. TYPE="computer 6 dots" ;;
+	"en-us-comp8")	LANGUAGE=English LOCATION=U.S. TYPE="computer 8 dots" ;;
+	"en-us-compbrl")	LANGUAGE=English LOCATION=U.S. TYPE="computer" ;;
+	"en-us-g1")	LANGUAGE=English LOCATION=U.S. TYPE="grade 1" ;;
+	"en-us-g2")	LANGUAGE=English LOCATION=U.S. TYPE="grade 2" ;;
+	"en-us-interline")	LANGUAGE=English LOCATION=U.S. TYPE="interline" ;;
+	"en-us-mathtext")	LANGUAGE=English LOCATION=U.S. TYPE="mathtext" ;;
+	"eo-g1")	LANGUAGE=Esperanto TYPE="grade 1" ;;
+	"eo-g1-x-system")	LANGUAGE=Esperanto TYPE="grade 1 x-system" ;;
+	"Es-Es-G0")	LANGUAGE=Spanish TYPE="grade 0" ;;
+	"Es-Es-g1")	LANGUAGE=Spanish TYPE="grade 1" ;;
+	"es-g1")	LANGUAGE=Spanish TYPE="grade 1" ;;
+	"et")		LANGUAGE=Estonian TYPE="grade 1" ;;
+	"et-g0")	LANGUAGE=Estonian TYPE="grade 0" ;;
+	"ethio-g1")	LANGUAGE=Ethiopic TYPE="grade 1" ;;
+	"fi")		LANGUAGE=Finnish TYPE="6 dot" ;;
+	"fi1")		LANGUAGE=Finnish TYPE="grade 1" ;;
+	"fi2")		LANGUAGE=Finnish TYPE="grade 2" ;;
+	"fi-fi-8dot")	LANGUAGE=Finnish TYPE="8dot" ;;
+	"fi-fi")	LANGUAGE=Finnish TYPE="6dot" ;;
+	"fr-2007")	LANGUAGE=French TYPE="2007" ;;
+	"fr-bfu-comp6")	LANGUAGE=French TYPE="Braille Français Unifié computer 6 dots" ;;
+	"fr-bfu-comp8")	LANGUAGE=French TYPE="Braille Français Unifié computer 8 dots" ;;
+	"fr-bfu-g2")	LANGUAGE=French TYPE="Braille Français Unifié grade 2" ;;
+	"fr-ca-g1")	LANGUAGE=French LOCATION=Canada TYPE="grade 1" ;;
+	"Fr-Ca-g2")	LANGUAGE=French LOCATION=Canada TYPE="grade 2" ;;
+	"fr-fr-g1")	LANGUAGE=French LOCATION=France TYPE="grade 1" ;;
+	"Fr-Fr-g2")	LANGUAGE=French LOCATION=France TYPE="grade 2" ;;
+	"ga-g1")	LANGUAGE=Gaeilge TYPE="grade 1" ;;
+	"ga-g2")	LANGUAGE=Gaeilge TYPE="grade 2" ;;
+	"gd")		LANGUAGE=Gaelic TYPE="grade 1" ;;
+	"gon")		LANGUAGE=Gondi TYPE="grade 1" ;;
+	"gr-bb")	LANGUAGE=Greek TYPE="bb" ;;
+	"gr-gr-g1")	LANGUAGE=Greek TYPE="grade 1" ;;
+	"gu-in-g1")	LANGUAGE=Gujarati TYPE="grade 1" ;;
+	"haw-us-g1")	LANGUAGE=Hawaiian TYPE="grade 1" ;;
+	"he")		LANGUAGE=Hebrew TYPE="grade 1" ;;
+	"hi-in-g1")	LANGUAGE=Hindi TYPE="grade 1" ;;
+	"hr"|"hr-g1")	LANGUAGE=Croatian TYPE="grade 1" ;;
+	"hr-comp8")	LANGUAGE=Croatian TYPE="computer 8 dots" ;;
+	"hu-hu-comp8")	LANGUAGE=Hungarian TYPE="computer 8 dots" ;;
+	"hu-hu-g1")	LANGUAGE=Hungarian TYPE="grade 1" ;;
+	"hy")		LANGUAGE=Armenian TYPE="grade 1" ;;
+	"is")		LANGUAGE=Icelandic TYPE="grade 1" ;;
+	"it-it-comp6")	LANGUAGE=Italian TYPE="computer 6 dots" ;;
+	"it-it-comp8")	LANGUAGE=Italian TYPE="computer 8 dots" ;;
+	"iu-ca-g1")	LANGUAGE=Inuktitut TYPE="grade 1" ;;
+	"ka-in-g1")	LANGUAGE=Kannada TYPE="grade 1" ;;
+	"kh-in-g1")	LANGUAGE=Khasi TYPE="grade 1" ;;
+	"ko-2006-g1")	LANGUAGE=Korean TYPE="grade 1 2006" ;;
+	"ko-2006-g2")	LANGUAGE=Korean TYPE="grade 2 2006" ;;
+	"ko-g1")	LANGUAGE=Korean TYPE="grade 1" ;;
+	"ko-g2")	LANGUAGE=Korean TYPE="grade 2" ;;
+	"kok")		LANGUAGE=Konkani TYPE="grade 1" ;;
+	"kru")		LANGUAGE=Kurukh TYPE="grade 1" ;;
+	"ks-in-g1")	LANGUAGE=Kashmiri TYPE="grade 1" ;;
+	"lt")		LANGUAGE=Lithuanian TYPE="grade 1" ;;
+	"lt-6dot")	LANGUAGE=Lithuanian TYPE="6 dots" ;;
+	"Lv-Lv-g1")	LANGUAGE=Latvian TYPE="grade 1" ;;
+	"mao-nz-g1")	LANGUAGE=Maori TYPE="grade 1" ;;
+	"marburg")	TYPE="Marburg maths" ;;
+	"marburg_edit")	TYPE="Marburg maths post-translation editing" ;;
+	"ml-in-g1")	LANGUAGE=Malayalam TYPE="grade 1" ;;
+	"mn-in-g1")	LANGUAGE=Manipuri TYPE="grade 1" ;;
+	"mn-MN"|"mn-MN-g1")	LANGUAGE=Mongolian TYPE="grade 1" ;;
+	"mn-MN-g2")	LANGUAGE=Mongolian TYPE="grade 2" ;;
+	"mr-in-g1")	LANGUAGE=Marathi TYPE="grade 1" ;;
+	"mt")		LANGUAGE=Maltese TYPE="grade 1" ;;
+	"mun")		LANGUAGE=Munda TYPE="grade 1" ;;
+	"mwr")		LANGUAGE=Marwari TYPE="grade 1" ;;
+	"ne")		LANGUAGE=Nepali TYPE="grade 1" ;;
+	"nemeth")	TYPE="Nemeth Maths" ;;
+	"nemeth_edit")	TYPE="Nemeth Maths post-translation editing" ;;
+	"nl-BE-g0")	LANGUAGE=Dutch LOCATION=Belgium TYPE="grade 0" ;;
+	"nl-g0")	LANGUAGE=Dutch TYPE="grade 0" ;;
+	"nl-NL-g0")	LANGUAGE=Dutch LOCATION="Netherlands" TYPE="grade 0" ;;
+	"Nl-Nl-g1")	LANGUAGE=Dutch LOCATION=Netherlands TYPE="grade 1" ;;
+	"no-no-8dot-fallback-6dot-g0")	LANGUAGE=Norwegian TYPE="grade 0 8 dots fallback 6 dots" ;;
+	"no-no-8dot")	LANGUAGE=Norwegian TYPE="grade 0 8 dots" ;;
+	"no-no-comp8")	LANGUAGE=Norwegian TYPE="grade 0 computer" ;;
+	"no-no-g0")	LANGUAGE=Norwegian TYPE="grade 0" ;;
+	"no-no-g1")	LANGUAGE=Norwegian TYPE="grade 1" ;;
+	"no-no-g2")	LANGUAGE=Norwegian TYPE="grade 2" ;;
+	"no-no-g3")	LANGUAGE=Norwegian TYPE="grade 3" ;;
+	"no-no-generic")	LANGUAGE=Norwegian TYPE="generic" ;;
+	"np-in-g1")	LANGUAGE=Nepali TYPE="grade 1" ;;
+	"or-in-g1")	LANGUAGE=Oriya TYPE="grade 1" ;;
+	"pi")		LANGUAGE=Pali TYPE="grade 1" ;;
+	"pl-pl-comp8")	LANGUAGE=Polish TYPE="computer" ;;
+	"Pl-Pl-g1")	LANGUAGE=Polish TYPE="grade 1" ;;
+	"pt-pt-comp8")	LANGUAGE=Portuguese TYPE="computer" ;;
+	"pt-pt-g1")	LANGUAGE=Portuguese TYPE="grade 1" ;;
+	"pt-pt-g2")	LANGUAGE=Portuguese TYPE="grade 2" ;;
+	"pu-in-g1")	LANGUAGE=Punjabi TYPE="grade 1" ;;
+	"ro")		LANGUAGE=Romanian TYPE="grade 1" ;;
+	"ru-compbrl")	LANGUAGE=Russian TYPE="computer" ;;
+	"ru")		LANGUAGE=Russian TYPE="grade 1" ;;
+	"ru-litbrl")	LANGUAGE=Russian TYPE="literary" ;;
+	"ru-ru-g1")	LANGUAGE=Russian TYPE="grade 1" ;;
+	"sa-in-g1")	LANGUAGE=Sasnskrit TYPE="grade 1" ;;
+	"se-se")	LANGUAGE=Swedish TYPE="grade 1" ;;
+	"Se-Se-g1")	LANGUAGE=Swedish TYPE="grade 1" ;;
+	"si-in-g1")	LANGUAGE=Sindhi TYPE="grade 1" ;;
+	"sin")		LANGUAGE=Sinhala TYPE="grade 1" ;;
+	"sk-g1")	LANGUAGE=Slovak TYPE="grade 1" ;;
+	"sk-sk-g1")	LANGUAGE=Slovak TYPE="grade 1" ;;
+	"sk-sk")	LANGUAGE=Slovak TYPE="grade 1" ;;
+	"sl-si-comp8")	LANGUAGE=Slovenian TYPE="computer" ;;
+	"sl-si-g1")	LANGUAGE=Slovenian TYPE="grade 1" ;;
+	"sot-za-g1")	LANGUAGE=Sotho TYPE="grade 1" ;;
+	"spaces")	TYPE="Spaces" ;;
+	"sr-g1")	LANGUAGE=Serbian TYPE="grade 1" ;;
+	"sv-1989")	LANGUAGE=Swedish TYPE="1989" ;;
+	"sv-1996")	LANGUAGE=Swedish TYPE="1996" ;;
+	"ta")		LANGUAGE=Tamil TYPE="grade 1" ;;
+	"ta-ta-g1")	LANGUAGE=Tamil TYPE="grade 1" ;;
+	"te-in-g1")	LANGUAGE=Telugu TYPE="grade 1" ;;
+	"tr"|"tr-g1")	LANGUAGE=Turkish TYPE="grade 1" ;;
+	"tsn-za-g1")	LANGUAGE=Tswana TYPE="grade 1" ;;
+	"UEBC-g1")	LANGUAGE=English TYPE="Unified grade 1" ;;
+	"UEBC-g2")	LANGUAGE=English TYPE="Unified grade 2" ;;
+	"ukmaths")	TYPE="U.K maths" ;;
+	"ukmaths_edit")	TYPE="U.K maths post-translation editing" ;;
+	"ur-pk-g1")	LANGUAGE=Urdu TYPE="grade 1" ;;
+	"ur-pk-g2")	LANGUAGE=Urdu TYPE="grade 2" ;;
+	"vi")		LANGUAGE=Vietnamese TYPE="grade 1" ;;
+	"vi-g1")	LANGUAGE=Vietnamese TYPE="grade 1" ;;
+	"wiskunde")	LANGUAGE=Flemish TYPE="grade 1" ;;
+	"zh-hk")	LANGUAGE=Chinese LOCATION="Hong Kong" TYPE="grade 1" ;;
+	"zh-tw")	LANGUAGE=Chinese LOCATION="Taiwan" TYPE="grade 1" ;;
+	"zh-chn")	LANGUAGE=Chinese LOCATION="China" TYPE="grade 1" ;;
+	*)		locale=$(grep ^#+locale: "$i" | cut -d ':' -f 2-)
+			if [ -n "$locale" ]; then
+			  LANGUAGE="$locale"
+			fi
+			if [ $ext = ctb ]; then
+			  TYPE="contracted"
+			else
+			  TYPE="computer"
+			fi
+			;;
+      esac
+    fi
+    echo "$file:$LANGUAGE:$LOCATION:$TYPE:$DISPLAY_NAME"
   done
 
   for i in $TABLESDIR/hyph_*.dic
@@ -227,38 +254,37 @@ echo '  Choice "Locale-g3/Default for language grade 3" ""'
     LOCATION=""
     GRADE=""
     case $name in
-  	brl_da_dk)	LANGUAGE=Danish ;;
-  	cs_CZ)	LANGUAGE=Czech ;;
-  	de_DE)	LANGUAGE=German ;;
-  	en_US)	LANGUAGE=English ;;
-  	eo)	LANGUAGE=Esperanto ;;
-  	es_ES)	LANGUAGE=Spanish ;;
-  	fr_FR)	LANGUAGE=French ;;
-  	hu_HU)	LANGUAGE=Hungarian ;;
-  	it_IT)	LANGUAGE=Italian ;;
-  	nb_NO)	LANGUAGE="Norwegian Bokmål" ;;
-  	nl_NL)	LANGUAGE=Dutch ;;
-  	nn_NO)	LANGUAGE="Norwegian Nynorsk" ;;
-  	pl_PL)	LANGUAGE=Polish ;;
-  	pt_PT)	LANGUAGE=Portuguese ;;
-  	ru)	LANGUAGE=Russian ;;
-  	sv_SE)	LANGUAGE=Swedish ;;
+	brl_da_dk)	LANGUAGE=Danish ;;
+	cs_CZ)	LANGUAGE=Czech ;;
+	da_DK)	LANGUAGE=Danish ;;
+	de_DE)	LANGUAGE=German ;;
+	en_US)	LANGUAGE=English ;;
+	eo)	LANGUAGE=Esperanto ;;
+	es_ES)	LANGUAGE=Spanish ;;
+	fr_FR)	LANGUAGE=French ;;
+	hu_HU)	LANGUAGE=Hungarian ;;
+	it_IT)	LANGUAGE=Italian ;;
+	nb_NO)	LANGUAGE="Norwegian Bokmål" ;;
+	nl_NL)	LANGUAGE=Dutch ;;
+	nn_NO)	LANGUAGE="Norwegian Nynorsk" ;;
+	pl_PL)	LANGUAGE=Polish ;;
+	pt_PT)	LANGUAGE=Portuguese ;;
+	ru)	LANGUAGE=Russian ;;
+	sv_SE)	LANGUAGE=Swedish ;;
+	*)      LANGUAGE=$name ;;
     esac
-    echo "$file:$LANGUAGE:$LOCATION:hyphenation rules"
+    echo "$file:$LANGUAGE:$LOCATION:hyphenation rules:"
   done
 
-) | sort -t : -k 2,3 | (
+) | sort -f -t : -k 2,3 | (
 
 IFS=:
-while read file LANGUAGE LOCATION DESC
+while read file LANGUAGE LOCATION TYPE DISPLAY_NAME
 do
-	if [ -z "$DESC" ]
-	then
-	  echo "empty description for $file!"
-	  exit 1
-	fi
+	DESC="$TYPE ($file)"
 	[ -n "$LOCATION" ] && DESC="$LOCATION $DESC"
 	[ -n "$LANGUAGE" ] && DESC="$LANGUAGE $DESC"
+	[ -n "$DISPLAY_NAME" ] && DESC="$DISPLAY_NAME ($file)"
 	echo "  Choice \"$file/$DESC\" \"\""
 done
 )
