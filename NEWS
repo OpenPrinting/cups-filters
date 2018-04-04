@@ -3,6 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.20.2 - 2018-03-31
 
 CHANGES IN V1.20.3
 
+	- braille: Do not remove read permission on cups-brf. Thanks
+	  to Samuel Thibault for this patch (Pull request #32).
+	- braille: Get braille table descriptions from liblouis
+	  metadata. Thanks to Samuel Thibault for this patch (Pull
+	  request #31).
+	- braille: Select liblouis tables based on metadata before
+	  using file names. Thanks to Samuel Thibault for this patch
+	  (Pull request #30).
 	- cups-browsed: The new method of identifying remote CUPS
 	  queues via the "printer-type" TXT record field does not work
 	  for printers discovered by legacy CUPS broadcast (CUPS 1.5.x
