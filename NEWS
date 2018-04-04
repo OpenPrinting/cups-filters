@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.20.2 - 2018-03-31
 
 CHANGES IN V1.20.3
 
+	- cups-browsed: The new method of identifying remote CUPS
+	  queues via the "printer-type" TXT record field does not work
+	  for printers discovered by legacy CUPS broadcast (CUPS 1.5.x
+	  or older). Now consider also printers without TXT record
+	  (not discovered via DNS-SD) as remote CUPS queues (Issue
+	  #34).
 	- gstoraster: Improved detection whether input is PostScript
 	  or PDF by skipping over possible headers. Thanks to Rod
 	  Schmidt (schmidtrod at q dot com) for the patch.

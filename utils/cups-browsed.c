@@ -5333,6 +5333,11 @@ examine_discovered_printer_record(const char *host,
     /* This is a remote CUPS queue or class */
     is_cups_queue = 1;
 #endif /* HAVE_AVAHI */
+  /* If we do not have a TXT record the printer was not discovered via
+     DNS-SD but via CUPS legacy or LDAP, so it is a remote CUPS queue
+     and not an IPP network printer. */
+  if (txt == NULL)
+    is_cups_queue = 1;
   if (is_cups_queue) {
     debug_printf("Found CUPS queue/class: %s on host %s.\n",
 		 strchr(resource, '/') + 1, remote_host);
