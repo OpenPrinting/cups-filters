@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015-2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015-2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -294,7 +294,7 @@ echo "DEBUG: resulting graphical area: ${GRAPHICWIDTH}x${GRAPHICHEIGHT}" >&2
 
 TABLESDIR=@TABLESDIR@
 echo "DEBUG: Liblouis table directory is $TABLESDIR" >&2
-  
+
 getOptionLibLouis () {
   OPTION=$1
   VALUE=$(getOption $OPTION)
@@ -310,6 +310,59 @@ getOptionLibLouis () {
   LOCALE=${LANG%@*}
   LOCALE=${LOCALE%.*}
   LANGUAGE=${LOCALE%_*}
+  COUNTRY=${LOCALE#*_}
+  LOUIS_LOCALE=$LANGUAGE-$COUNTRY
+
+  getLibLouisTableScore () {
+    GRADE="$1"
+    printf "DEBUG: looking for locale '%s' and grade '%s' \n" "$LOCALE" "$GRADE" >&2
+    # Try to select a good table from its metadata
+    selected=
+    selectedscore=0
+    for table in "$TABLESDIR/"*.tbl "$TABLESDIR/"*.ctb "$TABLESDIR/"*.utb; do
+      score=0
+      name=${table#$TABLESDIR/}
+
+      if grep -q "^#+locale:$LOUIS_LOCALE$" $table; then
+	printf "DEBUG: %s has correct locale %s\n" "$name" "$LOUIS_LOCALE" >&2
+	score=$((score + 15))
+      elif grep -q "^#+locale:$LANGUAGE$" $table; then
+	printf "DEBUG: %s has correct language %s\n" "$name" "$LANGUAGE" >&2
+	score=$((score + 10))
+      else
+	# Requested language is a must
+	continue
+      fi
+
+      if [ -n "$GRADE" ]; then
+	if grep -q "^#+grade:$GRADE$" $table || \
+	 ( [ "$GRADE" = 0 ] && grep -q "^#+contraction:no" $table ) \
+	then
+	  printf "DEBUG: %s has correct grade %s\n" "$name" "$GRADE" >&2
+	  score=$((score + 10))
+	else
+	  # Requested grade is a must
+	  continue
+	fi
+      fi
+
+      # Dot numbers are not always specified in liblouis :/
+      if grep -q "^#+dots:$TEXTDOTS$" $table || \
+	 ( [ "$TEXTDOTS" = 6 ] && grep -q "^#+grade:[1-3]" $table ) \
+      then
+	printf "DEBUG: %s has correct dots %s\n" "$name" "$TEXTDOTS" >&2
+	score=$((score + 2))
+      fi
+
+      if [ $score -gt $selectedscore ]; then
+	printf "DEBUG: %s has better score $score\n" "$name" >&2
+	selected=$name
+	selectedscore=$score
+      fi
+    done
+
+    echo $selected
+  }
 
   # Check presence of table
   case "$VALUE" in
@@ -317,28 +370,36 @@ getOptionLibLouis () {
       printf None
       ;;
     Locale)
-      if [ -f "$TABLESDIR/$LOCALE.tbl" ]
-      then
+      selected=$(getLibLouisTableScore '')
+      # Try tagged tables before untagged ones
+      if [ -n "$selected" ]; then
+	printf "%s" "$selected"
+      elif [ -f "$TABLESDIR/$LOCALE.tbl" ]; then
 	printf "%s" "$LOCALE.tbl"
-      elif [ -f "$TABLESDIR/$LANGUAGE.tbl" ]
-      then
+      elif [ -f "$TABLESDIR/$LANGUAGE.tbl" ]; then
 	printf "%s" "$LANGUAGE.tbl"
       else
-        printf "WARN: Could not find $OPTION table '%s.tbl' or '%s.tbl'\n" "$LOCALE" "$LANGUAGE" >&2
+        printf "WARN: Could not find $OPTION table with locale %s\n" "$LOCALE" >&2
 	printf None
       fi
       ;;
     Locale-g[0-3])
       GRADE=${VALUE#Locale-g}
-      for i in "$TABLESDIR/$LOCALE.tbl" "$TABLESDIR/$LOCALE"*.tbl "$TABLESDIR/$LANGUAGE.tbl" "$TABLESDIR/$LANGUAGE"*.tbl
-      do
-	if grep -q "^#+grade:$GRADE$" "$i"
-	then
-	  printf "%s" "${i//*\/}"
-	  exit 0
-	fi
-      done
-      printf "ERROR: Could not find $OPTION table '%s*.tbl' or '%s*.tbl' with grade $GRADE\n" "$LOCALE" "$LANGUAGE" >&2
+      selected=$(getLibLouisTableScore $GRADE)
+      if [ -n "$selected" ]; then
+	printf "%s" "$selected"
+	exit 0
+      else
+	for i in "$TABLESDIR/$LOCALE.tbl" "$TABLESDIR/$LOCALE"*.tbl "$TABLESDIR/$LANGUAGE.tbl" "$TABLESDIR/$LANGUAGE"*.tbl
+	do
+	  if grep -q "^#+grade:$GRADE$" "$i"
+	  then
+	    printf "%s" "${i//*\/}"
+	    exit 0
+	  fi
+	done
+      fi
+      printf "ERROR: Could not find $OPTION table with locale %s and grade %s\n" "$LOCALE" "$GRADE" >&2
       printf None
       exit 1
       ;;
