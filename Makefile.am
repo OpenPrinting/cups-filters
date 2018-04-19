@@ -318,15 +318,22 @@ genppdcfiles = \
 pkgppdc_DATA = $(genppdcfiles)
 
 GENERATED_LIBLOUIS = \
-	filter/braille/filters/liblouis2.defs \
 	filter/braille/filters/liblouis3.defs \
 	filter/braille/filters/liblouis4.defs
 GENERATED_DEFS = \
 	filter/braille/filters/liblouis1.defs \
+	filter/braille/filters/liblouis2.defs \
 	$(GENERATED_LIBLOUIS)
 
 filter/braille/filters/liblouis1.defs: filter/braille/filters/liblouis1.defs.gen
 	$< > $@
+
+filter/braille/filters/liblouis2.defs: filter/braille/filters/liblouis1.defs
+	sed -e "s/Braille transcription/Additional Braille transcription (2)/" \
+	    -e "s/^  \\*Choice /  Choice /" \
+	    -e "s/^  Choice \"HyphLocale\//  *Choice \"HyphLocale\//" \
+	    -e s/LibLouis/LibLouis2/ \
+	    < $< > $@
 
 $(GENERATED_LIBLOUIS): filter/braille/filters/liblouis%.defs: filter/braille/filters/liblouis1.defs
 	sed -e "s/Braille transcription/Additional Braille transcription ($*)/" \
