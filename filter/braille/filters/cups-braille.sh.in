@@ -403,6 +403,16 @@ getOptionLibLouis () {
       printf None
       exit 1
       ;;
+    HyphLocale)
+      if [ -f "$TABLESDIR/hyph_$LOCALE.dic" ]; then
+	printf "%s" "hyph_$LOCALE.dic"
+      elif [ -f "$TABLESDIR/hyph_$LANGUAGE.dic" ]; then
+	printf "%s" "hyph_$LANGUAGE.dic"
+      else
+        printf "WARN: Could not find $OPTION hyphenation table with locale %s\n" "$LOCALE" >&2
+	printf None
+      fi
+      ;;
     *)
       [ -f "$TABLESDIR/$VALUE".utb ] && VALUE="$VALUE".utb
       [ -f "$TABLESDIR/$VALUE".ctb ] && VALUE="$VALUE".ctb

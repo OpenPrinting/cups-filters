@@ -34,6 +34,7 @@ echo '  Choice "Locale-g0/Default for language grade 0" ""'
 echo '  Choice "Locale-g1/Default for language grade 1" ""'
 echo '  Choice "Locale-g2/Default for language grade 2" ""'
 echo '  Choice "Locale-g3/Default for language grade 3" ""'
+echo '  Choice "HyphLocale/Default hyphenation rules for language" ""'
 
 (
   for i in $TABLESDIR/*.utb $TABLESDIR/*.ctb

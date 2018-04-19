@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015, 2017-2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -66,6 +66,9 @@ msgstr "Par défaut pour la langue grade 2"
 
 msgid "Default for language grade 3"
 msgstr "Par défaut pour la langue grade 3"
+
+msgid "Default hyphenation rules for language"
+msgstr "Règles de césure par défaut pour la langue"
 
 msgid "Text dot distance"
 msgstr "Distance points texte"
