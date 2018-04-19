@@ -1000,7 +1000,7 @@ EXTRA_DIST += utils/cups-browsed.in \
 	filter/foomatic-rip/foomatic-rip.1.in \
 	utils/org.cups.cupsd.Notifier.xml
 BUILT_SOURCES = $(cups_notifier_sources)
-CLEANFILES = $(BUILT_SOURCES)
+CLEANFILES = $(BUILT_SOURCES) $(GENERATED_DEFS)
 
 # ===
 # PPD
