@@ -44,14 +44,6 @@ LIBLOUIS_CONFIG=""
 #  number of cells per line
 LIBLOUIS_CONFIG+=" -CcellsPerLine=$TEXTWIDTH -ClinesPerPage=$TEXTHEIGHT -CbraillePages=yes"
 
-#  input encoding
-if [ "$CHARSET" = utf-8 ]
-then
-  LIBLOUIS_CONFIG+=" -CinputTextEncoding=UTF8"
-else
-  LIBLOUIS_CONFIG+=" -CinputTextEncoding=ascii8"
-fi
-
 echo "DEBUG: Input content type: $CONTENT_TYPE" >&2
 
 # FIXME CONTENT_TYPE contains original document, not document passed as parameter ?!!
@@ -137,12 +129,14 @@ then
 	LIBLOUIS_TOOL="file2brl"
 	dumptofile
 	CONVERT="unzip -p $FILE content.xml"
+	CHARSET=utf-8
 	checkTool unzip unzip "translating LibreOffice/OpenOffice OpenDocument files"
 	;;
       application/vnd.openxmlformats-officedocument*)
 	LIBLOUIS_TOOL="file2brl"
 	dumptofile
 	CONVERT="unzip -p $FILE word/document.xml"
+	CHARSET=utf-8
 	checkTool unzip unzip "translating MS-Word docx files"
 	;;
       text/rtf|application/rtf)
@@ -153,6 +147,7 @@ then
       application/pdf|application/vnd.cups-pdf-banner)
 	LIBLOUIS_TOOL="file2brl -p"
 	CONVERT="pdftotext -raw - -"
+	CHARSET=utf-8
 	checkTool pdftotext poppler "translating PDF files"
 	;;
       *)
@@ -160,6 +155,15 @@ then
 	exit 1
 	;;
     esac
+
+    #  text encoding
+    if [ "$CHARSET" = utf-8 ]
+    then
+      LIBLOUIS_CONFIG+=" -CinputTextEncoding=UTF8"
+    else
+      LIBLOUIS_CONFIG+=" -CinputTextEncoding=ascii8"
+    fi
+
     RENDER_CALL="$LIBLOUIS_TOOL -CliteraryTextTable=en-us-brf.dis,$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
   elif type lou_translate > /dev/null
   then
