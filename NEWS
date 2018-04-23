@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.20.3 - 2018-04-12
 
 CHANGES IN V1.20.4
 
+	- cups-browsed: Moved auto-generation of PPD file for IPP
+	  network printers from create_remote_printer_entry()
+	  function to update_cups_queues(). This allows re-creating
+	  accidentally removed or overwritten local queues without
+	  losing the PPD file.
 	- braille: Add option to pick hyphenation rule according to
 	  current locale and make it the default for second
 	  translation table. Thanks to Samuel Thibault for this patch
