@@ -164,7 +164,7 @@ then
       LIBLOUIS_CONFIG+=" -CinputTextEncoding=ascii8"
     fi
 
-    RENDER_CALL="$LIBLOUIS_TOOL -CliteraryTextTable=en-us-brf.dis,$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
+    RENDER_CALL="$LIBLOUIS_TOOL -Chyphenate=yes -CliteraryTextTable=en-us-brf.dis,$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
   elif type lou_translate > /dev/null
   then
     # Only liblouis, but better than nothing
