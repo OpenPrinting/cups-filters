@@ -2797,6 +2797,166 @@ queue_removal_handle_default(const char *printer) {
   return 0;
 }
 
+static char *
+get_local_queue_name(const char *service_name,
+		     const char *make_model,
+		     const char *resource,
+		     const char *remote_host,
+		     int is_cups_queue) {
+  char *queue_name = NULL, *backup_queue_name = NULL,
+       *local_queue_name = NULL, *local_queue_name_lower = NULL;
+  local_printer_t *local_printer = NULL;
+  cluster_t *cluster = NULL;
+  char *member = NULL, *str = NULL;
+
+  if (is_cups_queue) {
+    /* This is a remote CUPS printer */
+    /* Determine the queue name */
+    if (LocalQueueNamingRemoteCUPS == LOCAL_QUEUE_NAMING_MAKE_MODEL &&
+	make_model)
+      /* Works only with DNS-SD-discovered queues as otherwise we have no
+	 make/model info */
+      queue_name = remove_bad_chars(make_model, 0);
+    else if (LocalQueueNamingRemoteCUPS == LOCAL_QUEUE_NAMING_REMOTE_NAME)
+      /* Not directly used in script generation input later, but taken from
+	 packet, so better safe than sorry. (consider second loop with
+	 backup_queue_name) */
+      queue_name = remove_bad_chars(strchr(resource, '/') + 1, 0);
+    else
+      /* Convert DNS-SD service name into a CUPS queue name exactly
+	 as CUPS would do it, to override CUPS' own temporary queue
+	 generation mechanism */
+      queue_name = remove_bad_chars(service_name, 2);
+  } else {
+    /* This is an IPP-based network printer */
+    /* Determine the queue name */
+    if (LocalQueueNamingIPPPrinter == LOCAL_QUEUE_NAMING_MAKE_MODEL &&
+	make_model)
+      /* Works only if we actually have make/model info in the DNS-SD record*/
+      queue_name = remove_bad_chars(make_model, 0);
+    else
+      /* Convert DNS-SD service name into a CUPS queue name exactly
+	 as CUPS would do it, to override CUPS' own temporary queue
+	 generation mechanism */
+      queue_name = remove_bad_chars(service_name, 2);
+  }
+  /* Check if there exists already a CUPS queue with the
+     requested name Try name@host in such a case and if
+     this is also taken, ignore the printer */
+
+  /* Get available CUPS queues */
+  update_local_printers ();
+
+  /* We skip trying to use the queue name purely derived from the
+     remote CUPS queue name or make and model for remote CUPS queues
+     when automatic clustering of remote cUPS queues is turned off,
+     to directly create queues with names containing the server name
+     to avoid name clashes and with this remote queues skipped by
+     cups-browsed. */
+  if (!is_cups_queue ||
+      AutoClustering == 1 ||
+      LocalQueueNamingRemoteCUPS == LOCAL_QUEUE_NAMING_DNSSD) {
+    local_queue_name = queue_name;
+    /* Is there a local queue with the name of the remote queue? */
+    local_queue_name_lower = g_ascii_strdown(local_queue_name, -1);
+    local_printer = g_hash_table_lookup (local_printers,
+				       local_queue_name_lower);
+    free(local_queue_name_lower);
+  }
+  /* Use the originally chosen queue name plus the server name if
+     the original name is already taken or if we had skipped using
+     it. To decide on whether the queue name is already taken, only
+     consider CUPS queues not created by us */
+  if ((is_cups_queue &&
+       AutoClustering == 0 &&
+       LocalQueueNamingRemoteCUPS != LOCAL_QUEUE_NAMING_DNSSD) ||
+      (local_printer && !local_printer->cups_browsed_controlled)) {
+    /* Found local queue with same name as remote queue */
+    /* Is there a local queue with the name <queue>@<host>? */
+    if ((backup_queue_name = malloc((strlen(queue_name) +
+				     strlen(remote_host) + 2) *
+				    sizeof(char))) == NULL) {
+      debug_printf("ERROR: Unable to allocate memory.\n");
+      exit(1);
+    }
+    sprintf(backup_queue_name, "%s@%s", queue_name, remote_host);
+    free(queue_name);
+    local_queue_name = backup_queue_name;
+    debug_printf("%s already taken, using fallback name: %s\n",
+		 queue_name, local_queue_name);
+    local_queue_name_lower = g_ascii_strdown(local_queue_name, -1);
+    local_printer = g_hash_table_lookup (local_printers,
+					 local_queue_name_lower);
+    free(local_queue_name_lower);
+    if (local_printer && !local_printer->cups_browsed_controlled) {
+      /* Found also a local queue with name <queue>@<host>, so
+	 ignore this remote printer */
+      debug_printf("%s also taken, printer ignored.\n",
+		   local_queue_name);
+      free(backup_queue_name);
+      return NULL;
+    }
+  }
+
+  if (is_cups_queue) {
+    /* Check whether our new printer matches one of the user-defined
+       printer clusters */
+    for (cluster = cupsArrayFirst(clusters);
+	 cluster;
+	 cluster = cupsArrayNext(clusters)) {
+      for (member = cupsArrayFirst(cluster->members);
+	   member;
+	   member = cupsArrayNext(cluster->members)) {
+	/* Match remote CUPS queue name */
+	if ((str = strrchr(resource, '/')) != NULL && strlen(str) > 1) {
+	  str = remove_bad_chars(str + 1, 2);
+	  if (strcasecmp(member, str) == 0) /* Match */
+	    break;
+	  free(str);
+	}
+	/* Match make and model */
+	if (make_model) {
+	  str = remove_bad_chars(make_model, 2);
+	  if (strcasecmp(member, str) == 0) /* Match */
+	    break;
+	  free(str);
+	}
+	/* Match DNS-SD service name */
+	if (service_name) {
+	  str = remove_bad_chars(service_name, 2);
+	  if (strcasecmp(member, str) == 0) /* Match */
+	    break;
+	  free(str);
+	}
+      }
+      if (member)
+	break;
+    }
+    if (cluster) {
+      local_queue_name = cluster->local_queue_name;
+      is_cups_queue = 2;
+      free(str);
+    } else if (AutoClustering) {
+      /* If we do automatic clustering by matching queue names, do not
+	 add a queue to a manually defined cluster because it matches
+	 the cluster's local queue name. Manually defined clusters can
+	 only be joined by printers which match one of the cluster's
+	 member names */
+      for (cluster = cupsArrayFirst(clusters);
+	   cluster;
+	   cluster = cupsArrayNext(clusters)) {
+	if (strcasecmp(local_queue_name, cluster->local_queue_name) == 0) {
+	  debug_printf("We have already a manually defined printer cluster with the name %s. Automatic clustering does not add this printer to this cluster as it does not match any of the cluster's member names. Skipping this printer.\n", local_queue_name);
+	  debug_printf("In cups-browsed.conf try \"LocalQueueNamingRemoteCUPS DNS-SD\" or give another name to your manually defined cluster (\"Cluster\" directive) to avoid name clashes.\n");
+	  free(local_queue_name);
+	  return NULL;
+	}
+      }
+    }
+  }
+  return local_queue_name;
+}
+
 static void
 on_printer_state_changed (CupsNotifier *object,
                           const gchar *text,
@@ -5288,7 +5448,7 @@ examine_discovered_printer_record(const char *host,
 				  void *txt) {
 
   char uri[HTTP_MAX_URI];
-  char *queue_name = NULL, *remote_host = NULL, *pdl = NULL,
+  char *remote_host = NULL, *pdl = NULL,
     *make_model = NULL;
   int color = 1, duplex = 1;
 #ifdef HAVE_AVAHI
@@ -5297,13 +5457,10 @@ examine_discovered_printer_record(const char *host,
   char *key = NULL, *value = NULL;
   char *note_value = NULL;
 #endif /* HAVE_AVAHI */
-  cluster_t *cluster = NULL;
-  char *member = NULL, *str = NULL;
   remote_printer_t *p = NULL;
-  local_printer_t *local_printer = NULL;
-  char *backup_queue_name = NULL, *local_queue_name = NULL,
-       *local_queue_name_lower = NULL;
+  char *local_queue_name = NULL;
   int is_cups_queue;
+  int raw_queue = 0;
   
   if (!host || !resource || !service_name || !location || !info || !type ||
       !domain) {
@@ -5320,15 +5477,25 @@ examine_discovered_printer_record(const char *host,
 		   (strcasestr(type, "_ipps") ? "ipps" : "ipp"), NULL,
 		   (ip != NULL ? ip : host), port, "/%s", resource);
   /* Find the remote host name.
-   * Used in constructing backup_queue_name, so need to sanitize.
+   * Used in constructing backup queue name, so need to sanitize.
    * strdup() is called inside remove_bad_chars() and result is free()-able.
    */
   remote_host = remove_bad_chars(host, 1);
-  /*hl = strlen(remote_host);
-  if (hl > 6 && !strcasecmp(remote_host + hl - 6, ".local"))
-    remote_host[hl - 6] = '\0';
-  if (hl > 7 && !strcasecmp(remote_host + hl - 7, ".local."))
-  remote_host[hl - 7] = '\0';*/
+
+  /* If we only want to create queues for printers for which CUPS does
+     not already auto-create queues, we check here whether we can skip
+     this printer */
+  if (OnlyUnsupportedByCUPS) {
+    if (g_hash_table_find (cups_supported_remote_printers,
+			   local_printer_service_name_matches,
+			   (gpointer *)service_name)) {
+      /* Found a DNS-SD-discovered CUPS-supported printer whose service name matches
+	 our discovered printer */
+      debug_printf("Printer with DNS-SD service name \"%s\" and URI \"%s\" does not need to be covered by us as it is already supported by CUPS, skipping.\n",
+		   service_name, uri);
+      goto fail;
+    }
+  }
 
 #ifdef HAVE_AVAHI
   if (txt) {
@@ -5375,15 +5542,15 @@ examine_discovered_printer_record(const char *host,
      and not an IPP network printer. */
   if (txt == NULL)
     is_cups_queue = 1;
-  if (is_cups_queue) {
+  if (is_cups_queue)
     debug_printf("Found CUPS queue/class: %s on host %s.\n",
 		 strchr(resource, '/') + 1, remote_host);
 #ifdef HAVE_AVAHI
+  if (is_cups_queue) {
     /* If the remote queue has a PPD file, the "product" field of the
        TXT record is populated. If it has no PPD file the remote queue
        is a raw queue and so we do not know enough about the printer
        behind it for auto-creating a local queue pointing to it. */
-    int raw_queue = 0;
     if (txt) {
       entry = avahi_string_list_find((AvahiStringList *)txt, "product");
       if (entry) {
@@ -5406,36 +5573,7 @@ examine_discovered_printer_record(const char *host,
       if (make_model) free (make_model);
       return NULL;
     }
-#endif /* HAVE_AVAHI */
-    /* Determine the queue name */
-    if (LocalQueueNamingRemoteCUPS == LOCAL_QUEUE_NAMING_MAKE_MODEL &&
-	make_model)
-      /* Works only with DNS-SD-discovered queues as otherwise we have no
-	 make/model info */
-      queue_name = remove_bad_chars(make_model, 0);
-    else if (LocalQueueNamingRemoteCUPS == LOCAL_QUEUE_NAMING_REMOTE_NAME)
-      /* Not directly used in script generation input later, but taken from
-	 packet, so better safe than sorry. (consider second loop with
-	 backup_queue_name) */
-      queue_name = remove_bad_chars(strchr(resource, '/') + 1, 0);
-    else
-      /* Convert DNS-SD service name into a CUPS queue name exactly
-	 as CUPS would do it, to override CUPS' own temporary queue
-	 generation mechanism */
-      queue_name = remove_bad_chars(service_name, 2);
   } else {
-    /* This is an IPP-based network printer */
-    /* Determine the queue name */
-    if (LocalQueueNamingIPPPrinter == LOCAL_QUEUE_NAMING_MAKE_MODEL &&
-	make_model)
-      /* Works only if we actually have make/model info in the DNS-SD record*/
-      queue_name = remove_bad_chars(make_model, 0);
-    else
-      /* Convert DNS-SD service name into a CUPS queue name exactly
-	 as CUPS would do it, to override CUPS' own temporary queue
-	 generation mechanism */
-      queue_name = remove_bad_chars(service_name, 2);
-#ifdef HAVE_AVAHI
     if (txt) {
       /* Find out which PDLs the printer understands */
       entry = avahi_string_list_find((AvahiStringList *)txt, "pdl");
@@ -5470,10 +5608,8 @@ examine_discovered_printer_record(const char *host,
 	avahi_free(value);
       }
     }
-#endif /* HAVE_AVAHI */
   }
   /* Extract location from DNS-SD TXT record's "note" field */
-#ifdef HAVE_AVAHI
   if (!location) {
     if (txt) {
       entry = avahi_string_list_find((AvahiStringList *)txt, "note");
@@ -5492,132 +5628,11 @@ examine_discovered_printer_record(const char *host,
   }
   /* A NULL location is only passed in from resolve_callback(), which is HAVE_AVAHI */
 #endif /* HAVE_AVAHI */
-  /* Check if there exists already a CUPS queue with the
-     requested name Try name@host in such a case and if
-     this is also taken, ignore the printer */
-  if ((backup_queue_name = malloc((strlen(queue_name) +
-				   strlen(remote_host) + 2) *
-				  sizeof(char))) == NULL) {
-    debug_printf("ERROR: Unable to allocate memory.\n");
-    exit(1);
-  }
-  sprintf(backup_queue_name, "%s@%s", queue_name, remote_host);
 
-  /* Get available CUPS queues */
-  update_local_printers ();
-
-  /* We skip trying to use the queue name purely derived from the
-     remote CUPS queue name or make and model for remote CUPS queues
-     when automatic clustering of remote cUPS queues is turned off,
-     to directly create queues with names containing the server name
-     to avoid name clashes and with this remote queues skipped by
-     cups-browsed. */
-  if (!is_cups_queue ||
-      AutoClustering == 1 ||
-      LocalQueueNamingRemoteCUPS == LOCAL_QUEUE_NAMING_DNSSD) {
-    local_queue_name = queue_name;
-    /* Is there a local queue with the name of the remote queue? */
-    local_queue_name_lower = g_ascii_strdown(local_queue_name, -1);
-    local_printer = g_hash_table_lookup (local_printers,
-				       local_queue_name_lower);
-    free(local_queue_name_lower);
-  }
-  /* Use the originally chosen queue name plus the server name if
-     the original name is already taken or if we had skipped using
-     it. To decide on whether the queue name is already taken, only
-     consider CUPS queues not created by us */
-  if ((is_cups_queue &&
-       AutoClustering == 0 &&
-       LocalQueueNamingRemoteCUPS != LOCAL_QUEUE_NAMING_DNSSD) ||
-      (local_printer && !local_printer->cups_browsed_controlled)) {
-    /* Found local queue with same name as remote queue */
-    /* Is there a local queue with the name <queue>@<host>? */
-    local_queue_name = backup_queue_name;
-    debug_printf("%s already taken, using fallback name: %s\n",
-		 queue_name, local_queue_name);
-    local_queue_name_lower = g_ascii_strdown(local_queue_name, -1);
-    local_printer = g_hash_table_lookup (local_printers,
-					 local_queue_name_lower);
-    free(local_queue_name_lower);
-    if (local_printer && !local_printer->cups_browsed_controlled) {
-      /* Found also a local queue with name <queue>@<host>, so
-	 ignore this remote printer */
-      debug_printf("%s also taken, printer ignored.\n",
-		   local_queue_name);
-      goto fail;
-    }
-  }
-
-  /* If we only want to create queues for printers for which CUPS does
-     not already auto-create queues, we check here whether we can skip
-     this printer */
-  if (OnlyUnsupportedByCUPS) {
-    if (g_hash_table_find (cups_supported_remote_printers,
-			   local_printer_service_name_matches,
-			   (gpointer *)service_name)) {
-      /* Found a DNS-SD-discovered CUPS-supported printer whose URI matches
-	 our discovered printer */
-      debug_printf("Printer %s (DNS-SD service name \"%s\") does not need to be covered by us as it is already supported by CUPS, skipping.\n",
-		   local_queue_name, service_name);
-      goto fail;
-    }
-  }
-
-  if (is_cups_queue) {
-    /* Check whether our new printer matches one of the user-defined
-       printer clusters */
-    for (cluster = cupsArrayFirst(clusters);
-	 cluster;
-	 cluster = cupsArrayNext(clusters)) {
-      for (member = cupsArrayFirst(cluster->members);
-	   member;
-	   member = cupsArrayNext(cluster->members)) {
-	/* Match remote CUPS queue name */
-	if ((str = strrchr(resource, '/')) != NULL && strlen(str) > 1) {
-	  str = remove_bad_chars(str + 1, 2);
-	  if (strcasecmp(member, str) == 0) /* Match */
-	    break;
-	  free(str);
-	}
-	/* Match make and model */
-	if (make_model) {
-	  str = remove_bad_chars(make_model, 2);
-	  if (strcasecmp(member, str) == 0) /* Match */
-	    break;
-	  free(str);
-	}
-	/* Match DNS-SD service name */
-	if (service_name) {
-	  str = remove_bad_chars(service_name, 2);
-	  if (strcasecmp(member, str) == 0) /* Match */
-	    break;
-	  free(str);
-	}	  
-      }
-      if (member)
-	break;
-    }
-    if (cluster) {
-      local_queue_name = cluster->local_queue_name;
-      is_cups_queue = 2;
-      free(str);
-    } else if (AutoClustering) {
-      /* If we do automatic clustering by matching queue names, do not
-	 add a queue to a manually defined cluster because it matches
-	 the cluster's local queue name. Manually defined clusters can
-	 only be joined by printers which match one of the cluster's
-	 member names */
-      for (cluster = cupsArrayFirst(clusters);
-	   cluster;
-	   cluster = cupsArrayNext(clusters)) {
-	if (strcasecmp(local_queue_name, cluster->local_queue_name) == 0) {
-	  debug_printf("We have already a manually defined printer cluster with the name %s. Automatic clustering does not add this printer to this cluster as it does not match any of the cluster's member names. Skipping this printer.\n", local_queue_name);
-	  debug_printf("In cups-browsed.conf try \"LocalQueueNamingRemoteCUPS DNS-SD\" or give another name to your manually defined cluster (\"Cluster\" directive) to avoid name clashes.\n");
-	  goto fail;
-	}
-      }
-    }
-  }
+  /* Determine the queue name */
+  local_queue_name = get_local_queue_name(service_name, make_model, resource, remote_host, is_cups_queue);
+  if (local_queue_name == NULL)
+    goto fail;
 
   if (!matched_filters (local_queue_name, remote_host, port, service_name, domain,
 			txt)) {
@@ -5795,11 +5810,10 @@ examine_discovered_printer_record(const char *host,
   }
 
  fail:
-  free (backup_queue_name);
   free (remote_host);
   free (pdl);
-  free (queue_name);
   free (make_model);
+  free (local_queue_name);
 #ifdef HAVE_AVAHI
   if (note_value) avahi_free(note_value);
 #endif /* HAVE_AVAHI */
