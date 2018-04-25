@@ -336,7 +336,7 @@ getOptionLibLouis () {
 
       if [ -n "$GRADE" ]; then
 	if grep -q "^#+grade:$GRADE$" $table || \
-	 ( [ "$GRADE" = 0 ] && grep -q "^#+contraction:no" $table ) \
+	 ( [ "$GRADE" = 0 ] && ( grep -q "^#+contraction:no" $table || grep -q "^#+type:computer" $table ) ) \
 	then
 	  printf "DEBUG: %s has correct grade %s\n" "$name" "$GRADE" >&2
 	  score=$((score + 10))
@@ -379,8 +379,9 @@ getOptionLibLouis () {
       elif [ -f "$TABLESDIR/$LANGUAGE.tbl" ]; then
 	printf "%s" "$LANGUAGE.tbl"
       else
-        printf "WARN: Could not find $OPTION table with locale %s\n" "$LOCALE" >&2
+        printf "ERROR: Could not find $OPTION table with locale %s\n" "$LOCALE" >&2
 	printf None
+	exit 1
       fi
       ;;
     Locale-g[0-3])
