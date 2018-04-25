@@ -112,7 +112,11 @@ then
       printf "\\r\\n"
     done
   )
-  [ $? = 0 ] || exit 1
+  if [ $? != 0 ]
+  then
+    printf '\032'
+    exit 1
+  fi
 else
   # not software-translated, send to printer as such
   echo "INFO: Writing text to Index embosser" >&2
