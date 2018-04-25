@@ -103,11 +103,13 @@ then
 	# Echo those $CHARS characters.
 	# First normalize BRF characters (`a-z{|}~ are non-standard).
 	# Drop unicode patterns with dots 7 or 8 in case the liblouis table happened to erroneously emit one
-	# Drop remaining erroneous characters
+	# Drop remaining erroneous multibyte characters
+	# Drop remaining erroneous 1-byte characters
 	# Then turn it into Index 6dots sequences.
 	printf %s "$LINE" | \
 	  tr "\`a-z{|}~" "@A-Z\\[\\\\]_" | \
 	  sed -e 's/[⡀⡁⡂⡃⡄⡅⡆⡇⡈⡉⡊⡋⡌⡍⡎⡏⡐⡑⡒⡓⡔⡕⡖⡗⡘⡙⡚⡛⡜⡝⡞⡟⡠⡡⡢⡣⡤⡥⡦⡧⡨⡩⡪⡫⡬⡭⡮⡯⡰⡱⡲⡳⡴⡵⡶⡷⡸⡹⡺⡻⡼⡽⡾⡿⢀⢁⢂⢃⢄⢅⢆⢇⢈⢉⢊⢋⢌⢍⢎⢏⢐⢑⢒⢓⢔⢕⢖⢗⢘⢙⢚⢛⢜⢝⢞⢟⢠⢡⢢⢣⢤⢥⢦⢧⢨⢩⢪⢫⢬⢭⢮⢯⢰⢱⢲⢳⢴⢵⢶⢷⢸⢹⢺⢻⢼⢽⢾⢿⣀⣁⣂⣃⣄⣅⣆⣇⣈⣉⣊⣋⣌⣍⣎⣏⣐⣑⣒⣓⣔⣕⣖⣗⣘⣙⣚⣛⣜⣝⣞⣟⣠⣡⣢⣣⣤⣥⣦⣧⣨⣩⣪⣫⣬⣭⣮⣯⣰⣱⣲⣳⣴⣵⣶⣷⣸⣹⣺⣻⣼⣽⣾⣿]/ /g' | \
+	  sed -e "s/[^] \!\"#$%&'()*+,.\\/0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\\\\^_[-]/ /g" | \
 	  tr "\000-\037\177\200-\377" " " | \
 	  tr " \!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\\[\\\\\\]^_" "\\0V tSQW"$'\004'"gvAT@DP"$'\024'"d"$'\002\006'"\"bB&fF\$a\`Cw4q"$'\020\001\003\021'"1!"$'\023'"3#"$'\022'"2"$'\005\007\025'"5%"$'\027'"7'"$'\026'"6EGrUueRcs0p"
       fi
