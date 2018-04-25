@@ -46,6 +46,7 @@ then
 
   # Common options
   INIT+="$(commonOptions)"
+  [ $? = 0 ] || exit 1
 
   # Paper size
   case "$PAPERLENGTH" in

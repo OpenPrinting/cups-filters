@@ -185,6 +185,9 @@ fi
 cd $TMPDIR
 echo "INFO: Reformating text" >&2
 
+(
+set -o pipefail
+set -e
 if [ -z "$CONVERT" ]
 then
   printf "DEBUG: Calling $RENDER_CALL on '%s'\n" "$FILE" >&2
@@ -212,5 +215,9 @@ else
   < "$FILE" $CONVERT | $RENDER_CALL 2> /dev/null | $TRANSLATE
   fi
 fi
+) || {
+  printf "ERROR: text conversion pipeline $CONVERT | $RENDER_CALL | $TRANSLATE failed\n" >&2
+  exit 1
+}
 
 echo "INFO: Ready" >&2

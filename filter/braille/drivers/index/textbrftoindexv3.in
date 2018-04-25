@@ -108,6 +108,7 @@ then
       printf "\\r\\n"
     done
   )
+  [ $? = 0 ] || exit 1
 else
   # not software-translated, send to printer as such
   echo "INFO: Writing text to Index embosser" >&2
