@@ -29,7 +29,7 @@ msgid "Braille embosser"
 msgstr "Embosseuse braille"
 
 msgid "A4 Tractor Feed"
-msgstr "A4 Traction papier"
+msgstr "A4 papier listing"
 
 msgid "Yes"
 msgstr "Oui"
@@ -203,16 +203,16 @@ msgid "Double-sided"
 msgstr "Recto-Verso"
 
 msgid "Single-sided z-folding"
-msgstr "Recto seul, pliage Z"
+msgstr "Recto seul, pliage accordéon"
 
 msgid "Double-sided z-folding"
-msgstr "Recto-Verso, pliage Z"
+msgstr "Recto-Verso, pliage accordéon"
 
 msgid "Single-sided sideways z-folding"
-msgstr "Recto seul paysage, pliage Z"
+msgstr "Recto seul paysage, pliage accordéon"
 
 msgid "Double-sided sideways z-folding"
-msgstr "Recto-Verso paysage, pliage Z"
+msgstr "Recto-Verso paysage, pliage accordéon"
 
 msgid "Double-sided saddle stitch 4 pages"
 msgstr "Recto-Verso cahier 4 pages"
