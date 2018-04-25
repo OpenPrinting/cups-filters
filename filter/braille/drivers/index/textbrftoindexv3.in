@@ -102,8 +102,12 @@ then
       then
 	# Enter transparent mode for $CHARS characters
 	printf "\\033\\\\\\x$(printf %02x $CHARS)\\x00"
-	# Echo those $CHARS characters
-	printf %s "$LINE" | tr " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\\\]^_{}|~\`abcdefghijklmnopqrstuvwxyz" "\\0V tSQW"$'\004'"gvAT@DP"$'\024'"d"$'\002\006'"\"bB&fF\$a\`Cw4q"$'\020\001\003\021'"1!"$'\023'"3#"$'\022'"2"$'\005\007\025'"5%"$'\027'"7'"$'\026'"6EGrUueRcs0pRsc0"$'\020\001\003\021'"1!"$'\023'"3#"$'\022'"2"$'\005\007\025'"5%"$'\027'"7'"$'\026'"6EGrUue"
+	# Echo those $CHARS characters.
+	# First normalize BRF characters (`a-z{|}~ are non-standard).
+	# Then turn it into Index 6dots sequences.
+	printf %s "$LINE" | \
+	  tr "\`a-z{|}~" "@A-Z\\[\\\\]_" | \
+	  tr " \!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\\[\\\\\\]^_" "\\0V tSQW"$'\004'"gvAT@DP"$'\024'"d"$'\002\006'"\"bB&fF\$a\`Cw4q"$'\020\001\003\021'"1!"$'\023'"3#"$'\022'"2"$'\005\007\025'"5%"$'\027'"7'"$'\026'"6EGrUueRcs0p"
       fi
       printf "\\r\\n"
     done
