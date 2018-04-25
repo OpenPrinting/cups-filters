@@ -187,10 +187,18 @@ MARGIN_TOP=$(points2mm "$HWMARGIN_TOP")
 MARGIN_BOTTOM=$(points2mm "$HWMARGIN_BOTTOM")
 
 # Margins requested by user
-PAGE_LEFT=$(points2mm $(getOptionNumber page-left))
-PAGE_RIGHT=$(points2mm $(getOptionNumber page-right))
-PAGE_TOP=$(points2mm $(getOptionNumber page-top))
-PAGE_BOTTOM=$(points2mm $(getOptionNumber page-bottom))
+PAGE_LEFT=$(getOptionNumber page-left)
+[ "$?" = 0 ] || exit 1
+PAGE_LEFT=$(points2mm $PAGE_LEFT)
+PAGE_RIGHT=$(getOptionNumber page-right)
+[ "$?" = 0 ] || exit 1
+PAGE_RIGHT=$(points2mm $PAGE_RIGHT)
+PAGE_TOP=$(getOptionNumber page-top)
+[ "$?" = 0 ] || exit 1
+PAGE_TOP=$(points2mm $PAGE_TOP)
+PAGE_BOTTOM=$(getOptionNumber page-bottom)
+[ "$?" = 0 ] || exit 1
+PAGE_BOTTOM=$(points2mm $PAGE_BOTTOM)
 
 [ -n "$PAGE_LEFT"   -a "$MARGIN_LEFT"   -le "$PAGE_LEFT"   ] || PAGE_LEFT=$MARGIN_LEFT
 [ -n "$PAGE_RIGHT"  -a "$MARGIN_RIGHT"  -le "$PAGE_RIGHT"  ] || PAGE_RIGHT=$MARGIN_RIGHT
@@ -211,6 +219,7 @@ echo "DEBUG: printable area is ${PRINTABLEWIDTH}x${PRINTABLEHEIGHT}" >&2
 #
 
 TEXTDOTDISTANCE=$(getOptionNumber TextDotDistance)
+[ "$?" = 0 ] || exit 1
 case "$TEXTDOTDISTANCE" in
   220) TEXTCELLDISTANCE=310 ;;
   250) TEXTCELLDISTANCE=350 ;;
@@ -222,7 +231,9 @@ case "$TEXTDOTDISTANCE" in
 esac
 
 TEXTDOTS=$(getOptionNumber TextDots)
+[ "$?" = 0 ] || exit 1
 LINESPACING=$(getOptionNumber LineSpacing)
+[ "$?" = 0 ] || exit 1
 
 # Cell dimension, including spacing
 TEXTCELLWIDTH=$(( $TEXTDOTDISTANCE + $TEXTCELLDISTANCE ))
@@ -236,15 +247,21 @@ then
 else
   # Margins in cells
   TOPMARGIN=$(getOptionNumber TopMargin)
+  [ "$?" = 0 ] || exit 1
   BOTTOMMARGIN=$(getOptionNumber BottomMargin)
+  [ "$?" = 0 ] || exit 1
   if [ "$(getOption InnerMargin)" = "" ]
   then
     LEFTMARGIN=$(getOptionNumber LeftMargin)
+    [ "$?" = 0 ] || exit 1
     RIGHTMARGIN=$(getOptionNumber RightMargin)
+    [ "$?" = 0 ] || exit 1
     WIDTHMARGIN=$(( $LEFTMARGIN + $RIGHTMARGIN ))
   else
     INNERMARGIN=$(getOptionNumber InnerMargin)
+    [ "$?" = 0 ] || exit 1
     OUTERMARGIN=$(getOptionNumber OuterMargin)
+    [ "$?" = 0 ] || exit 1
     WIDTHMARGIN=$(( $INNERMARGIN + $OUTERMARGIN ))
   fi
     
@@ -263,6 +280,7 @@ TEXTHEIGHT=$(( ($TEXTAREAHEIGHT + $LINESPACING) / $TEXTCELLHEIGHT ))
 
 # Compute number of printable cells according to page size
 GRAPHICDOTDISTANCE=$(getOptionNumber GraphicDotDistance)
+[ "$?" = 0 ] || exit 1
 
 # This is the total area we will send to the embosser
 TOTALGRAPHICWIDTH=$(( ( ($PRINTABLEWIDTH - 160) / $GRAPHICDOTDISTANCE ) / 2 * 2 ))
@@ -429,9 +447,13 @@ getOptionLibLouis () {
 }
 
 LIBLOUIS1=$(getOptionLibLouis LibLouis)
+[ "$?" = 0 ] || exit 1
 LIBLOUIS2=$(getOptionLibLouis LibLouis2)
+[ "$?" = 0 ] || exit 1
 LIBLOUIS3=$(getOptionLibLouis LibLouis3)
+[ "$?" = 0 ] || exit 1
 LIBLOUIS4=$(getOptionLibLouis LibLouis4)
+[ "$?" = 0 ] || exit 1
 
 echo "DEBUG: Table1 $LIBLOUIS1" >&2
 echo "DEBUG: Table2 $LIBLOUIS2" >&2
