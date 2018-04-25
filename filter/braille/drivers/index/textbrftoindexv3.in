@@ -77,7 +77,7 @@ then
       # Make sure there is nothing else we don't process
       if [ -n "$LINE" ]
       then
-	if [ -z "${LINE/*[$'\001'-$'\037'$'\177']*}" ]
+	if [ -z "${LINE/*[$'\000'-$'\037'$'\177']*}" ]
 	then
 	  echo "ERROR: unsupported control character in BRF file" >&2
 	  exit 1
