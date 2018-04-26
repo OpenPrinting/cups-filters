@@ -41,9 +41,6 @@ FILE=$6
 ####################
 LIBLOUIS_CONFIG=""
 
-#  number of cells per line
-LIBLOUIS_CONFIG+=" -CcellsPerLine=$TEXTWIDTH -ClinesPerPage=$TEXTHEIGHT -CbraillePages=yes"
-
 echo "DEBUG: Input content type: $CONTENT_TYPE" >&2
 
 # FIXME CONTENT_TYPE contains original document, not document passed as parameter ?!!
@@ -156,13 +153,88 @@ then
 	;;
     esac
 
-    #  text encoding
+    #
+    # text encoding
+    #
     if [ "$CHARSET" = utf-8 ]
     then
       LIBLOUIS_CONFIG+=" -CinputTextEncoding=UTF8"
     else
       LIBLOUIS_CONFIG+=" -CinputTextEncoding=ascii8"
     fi
+
+    #
+    # Page numbers options
+    #
+    BRAILLEPAGENUMBER=$(getOption BraillePageNumber)
+    case "$BRAILLEPAGENUMBER" in
+      None) LIBLOUIS_CONFIG+=" -CbraillePages=no";;
+      TopMargin) LIBLOUIS_CONFIG+=" -CbraillePages=yes -CbraillePageNumberAt=top -CpageNumberTopSeparateLine=yes";;
+      BottomMargin) LIBLOUIS_CONFIG+=" -CbraillePages=yes -CbraillePageNumberAt=bottom -CpageNumberBottomSeparateLine=yes";;
+      TopInline) LIBLOUIS_CONFIG+=" -CbraillePages=yes -CbraillePageNumberAt=top -CpageNumberTopSeparateLine=no";;
+      BottomInline) LIBLOUIS_CONFIG+=" -CbraillePages=yes -CbraillePageNumberAt=bottom -CpageNumberBottomSeparateLine=no";;
+      *)
+	printf "ERROR: Unknown braille page number option '%s'\n" "$BRAILLEPAGENUMBER" >&2
+	exit 1
+	;;
+    esac
+
+    PRINTPAGENUMBER=$(getOption PrintPageNumber)
+    case "$PRINTPAGENUMBER" in
+      None) LIBLOUIS_CONFIG+=" -CprintPages=no";;
+      TopMargin) LIBLOUIS_CONFIG+=" -CprintPages=yes -CprintPageNumberAt=top -CpageNumberTopSeparateLine=yes";;
+      BottomMargin) LIBLOUIS_CONFIG+=" -CprintPages=yes -CprintPageNumberAt=bottom -CpageNumberBottomSeparateLine=yes";;
+      TopInline) LIBLOUIS_CONFIG+=" -CprintPages=yes -CprintPageNumberAt=top -CpageNumberTopSeparateLine=no";;
+      BottomInline) LIBLOUIS_CONFIG+=" -CprintPages=yes -CprintPageNumberAt=bottom -CpageNumberBottomSeparateLine=no";;
+      *)
+	printf "ERROR: Unknown print page number option '%s'\n" "$PRINTPAGENUMBER" >&2
+	exit 1
+	;;
+    esac
+
+    # Page numbering in top or bottom margin actually reduce the given margin
+    if [ "$BRAILLEPAGENUMBER" = TopMargin -o "$PRINTPAGENUMBER" = TopMargin ]
+    then
+      TOPMARGIN=$((TOPMARGIN - 1))
+      TEXTHEIGHT=$((TEXTHEIGHT + 1))
+    fi
+    if [ "$BRAILLEPAGENUMBER" = BottomMargin -o "$PRINTPAGENUMBER" = BottomMargin ]
+    then
+      BOTTOMMARGIN=$((BOTTOMMARGIN - 1))
+      TEXTHEIGHT=$((TEXTHEIGHT + 1))
+    fi
+
+    PAGESEPARATOR=$(getOption PageSeparator)
+    case "$PAGESEPARATOR" in
+      True|true) LIBLOUIS_CONFIG+=" -CpageSeparator=yes";;
+      False|false) LIBLOUIS_CONFIG+=" -CpageSeparator=no";;
+      *)
+	printf "ERROR: Unknown page separator option '%s'\n" "$PAGESEPARATOR" >&2
+	exit 1
+	;;
+    esac
+
+    PAGESEPARATORNUMBER=$(getOption PageSeparatorNumber)
+    case "$PAGESEPARATORNUMBER" in
+      True|true) LIBLOUIS_CONFIG+=" -CpageSeparatorNumber=yes";;
+      False|false) LIBLOUIS_CONFIG+=" -CpageSeparatorNumber=no";;
+      *)
+	printf "ERROR: Unknown page separator number option '%s'\n" "$PAGESEPARATORNUMBER" >&2
+	exit 1
+	;;
+    esac
+
+    CONTINUEPAGES=$(getOption ContinuePages)
+    case "$CONTINUEPAGES" in
+      True|true) LIBLOUIS_CONFIG+=" -CcontinuePages=yes";;
+      False|false) LIBLOUIS_CONFIG+=" -CcontinuePages=no";;
+      *)
+	printf "ERROR: Unknown page separator number option '%s'\n" "$CONTINUEPAGES" >&2
+	exit 1
+	;;
+    esac
+
+    LIBLOUIS_CONFIG+=" -CcellsPerLine=$TEXTWIDTH -ClinesPerPage=$TEXTHEIGHT "
 
     RENDER_CALL="$LIBLOUIS_TOOL -Chyphenate=yes -CliteraryTextTable=en-us-brf.dis,$LIBLOUIS_TABLES,braille-patterns.cti $LIBLOUIS_CONFIG"
   elif type lou_translate > /dev/null
@@ -193,30 +265,30 @@ then
   printf "DEBUG: Calling $RENDER_CALL on '%s'\n" "$FILE" >&2
   if [ -z "$FILE" ]
   then
-    $RENDER_CALL 2> /dev/null
+    $RENDER_CALL 2> /dev/null | addmargins
   else
-   < "$FILE" $RENDER_CALL 2> /dev/null
+   < "$FILE" $RENDER_CALL 2> /dev/null | addmargins
   fi
 elif [ -z "$TRANSLATE" ]
 then
   printf "DEBUG: Calling $CONVERT | $RENDER_CALL on '%s'\n" "$FILE" >&2
   if [ -z "$FILE" ]
   then
-    $CONVERT | $RENDER_CALL 2> /dev/null
+    $CONVERT | $RENDER_CALL 2> /dev/null | addmargins
   else
-  < "$FILE" $CONVERT | $RENDER_CALL 2> /dev/null
+  < "$FILE" $CONVERT | $RENDER_CALL 2> /dev/null | addmargins
   fi
 else
   printf "DEBUG: Calling $CONVERT | $RENDER_CALL | $TRANSLATE on '%s'\n" "$FILE" >&2
   if [ -z "$FILE" ]
   then
-    $CONVERT | $RENDER_CALL 2> /dev/null | $TRANSLATE
+    $CONVERT | $RENDER_CALL 2> /dev/null | $TRANSLATE | addmargins
   else
-  < "$FILE" $CONVERT | $RENDER_CALL 2> /dev/null | $TRANSLATE
+  < "$FILE" $CONVERT | $RENDER_CALL 2> /dev/null | $TRANSLATE | addmargins
   fi
 fi
 ) || {
-  printf "ERROR: text conversion pipeline $CONVERT | $RENDER_CALL | $TRANSLATE failed\n" >&2
+  printf "ERROR: text conversion pipeline $CONVERT | $RENDER_CALL | $TRANSLATE | addmargins failed\n" >&2
   exit 1
 }
 

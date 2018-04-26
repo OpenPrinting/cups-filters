@@ -239,40 +239,50 @@ LINESPACING=$(getOptionNumber LineSpacing)
 TEXTCELLWIDTH=$(( $TEXTDOTDISTANCE + $TEXTCELLDISTANCE ))
 TEXTCELLHEIGHT=$(( $TEXTDOTDISTANCE * ($TEXTDOTS / 2 - 1) + $LINESPACING ))
 
+# Compute number of printable cells according to page width and height
+PRINTABLETEXTWIDTH=$(( ($PRINTABLEWIDTH + $TEXTCELLDISTANCE) / $TEXTCELLWIDTH  ))
+PRINTABLETEXTHEIGHT=$(( ($PRINTABLEHEIGHT + $LINESPACING) / $TEXTCELLHEIGHT ))
+
 if [ "$(getOption TopMargin)" = "" ]
 then
   # No margin
-  TEXTAREAWIDTH=$PRINTABLEWIDTH
-  TEXTAREAHEIGHT=$PRINTABLEHEIGHT
+  TEXTWIDTH=$PRINTABLETEXTWIDTH
+  TEXTHEIGHT=$PRINTABLETEXTHEIGHT
 else
   # Margins in cells
   TOPMARGIN=$(getOptionNumber TopMargin)
   [ "$?" = 0 ] || exit 1
   BOTTOMMARGIN=$(getOptionNumber BottomMargin)
   [ "$?" = 0 ] || exit 1
-  if [ "$(getOption InnerMargin)" = "" ]
-  then
-    LEFTMARGIN=$(getOptionNumber LeftMargin)
-    [ "$?" = 0 ] || exit 1
-    RIGHTMARGIN=$(getOptionNumber RightMargin)
-    [ "$?" = 0 ] || exit 1
-    WIDTHMARGIN=$(( $LEFTMARGIN + $RIGHTMARGIN ))
-  else
-    INNERMARGIN=$(getOptionNumber InnerMargin)
-    [ "$?" = 0 ] || exit 1
-    OUTERMARGIN=$(getOptionNumber OuterMargin)
-    [ "$?" = 0 ] || exit 1
-    WIDTHMARGIN=$(( $INNERMARGIN + $OUTERMARGIN ))
-  fi
-    
-  # Subtract margins from printable area
-  TEXTAREAWIDTH=$(( $PRINTABLEWIDTH - $WIDTHMARGIN * $TEXTCELLWIDTH ))
-  TEXTAREAHEIGHT=$(( $PRINTABLEHEIGHT - ($TOPMARGIN + $BOTTOMMARGIN) * $TEXTCELLHEIGHT ))
+  LEFTMARGIN=$(getOptionNumber LeftMargin)
+  [ "$?" = 0 ] || exit 1
+  RIGHTMARGIN=$(getOptionNumber RightMargin)
+  [ "$?" = 0 ] || exit 1
+  TEXTWIDTH=$(( $PRINTABLETEXTWIDTH - $LEFTMARGIN - $RIGHTMARGIN ))
+  TEXTHEIGHT=$(( $PRINTABLETEXTHEIGHT - $TOPMARGIN - $BOTTOMMARGIN ))
 fi
 
-# Compute number of printable cells according to page width and height
-TEXTWIDTH=$(( ($TEXTAREAWIDTH + $TEXTCELLDISTANCE) / $TEXTCELLWIDTH  ))
-TEXTHEIGHT=$(( ($TEXTAREAHEIGHT + $LINESPACING) / $TEXTCELLHEIGHT ))
+# Filter that adds top and left margins on the fly, to be used while producing
+# BRF output.
+addmargins() {
+  NEWPAGE=""
+  if [ -n "$TOPMARGIN" ]; then
+    for I in $(seq 1 $TOPMARGIN) ; do
+      NEWPAGE="$NEWPAGE"$'\r'$'\n'
+    done
+  fi
+  NEWPAGESED=${NEWPAGE//$'\n'/\\$'\n'}
+  LEFTSPACES=""
+  if [ -n "$LEFTMARGIN" ]; then
+    for I in $(seq 1 $LEFTMARGIN) ; do
+      LEFTSPACES="$LEFTSPACES "
+    done
+  fi
+
+  echo -n "$NEWPAGE"
+  exec sed -e "s/^\(\?\)/\1$LEFTSPACES/" \
+           -e "s//$NEWPAGESED/"
+}
 
 #
 # Graphic spacing

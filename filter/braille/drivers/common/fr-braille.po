@@ -41,7 +41,7 @@ msgid "Braille transcription"
 msgstr "Transcription Braille"
 
 msgid "None"
-msgstr "Aucune"
+msgstr "Aucun(e)"
 
 msgid "Additional Braille transcription (2)"
 msgstr "Transcription Braille additionnelle (2)"
@@ -114,6 +114,33 @@ msgstr "Marge graphique gauche"
 
 msgid "Graphical right margin"
 msgstr "Marge graphique droite"
+
+msgid "Braille Page Number"
+msgstr "Numéro de page braille"
+
+msgid "Print Page Number"
+msgstr "Numéro de page noir"
+
+msgid "Top Margin"
+msgstr "Marge en haut"
+
+msgid "Bottom Margin"
+msgstr "Marge en bas"
+
+msgid "Top Inline"
+msgstr "Intégré en haut"
+
+msgid "Bottom Inline"
+msgstr "Intégré en bas"
+
+msgid "Print Page Separator"
+msgstr "Montrer les séparations de pages"
+
+msgid "Print Page Number in Separator"
+msgstr "Indiquer le numéro de page dans la séparation"
+
+msgid "Prefix Print Page Number with Braille Page Number"
+msgstr "Préfixer le numéro de page noir avec le numéro de page braille"
 
 msgid "Image conversion"
 msgstr "Conversion d'image"

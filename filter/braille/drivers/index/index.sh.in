@@ -28,7 +28,7 @@ FIRMWARE=$(getOptionNumber IndexFirmwareVersion)
 FOLDING=$(getOption IndexFolding)
 TABLE=$(getOptionNumber IndexTable)
 MULTIPLEIMPACT=$(getOptionNumber IndexMultipleImpact)
-PAGENUMBER=$(getOption PageNumber)
+HWPAGENUMBER=$(getOption HardwarePageNumber)
 
 # Convert from 100th of mm to Inch fraction
 mmToIndexIn () {
@@ -109,15 +109,16 @@ commonOptions() {
     *)   printf "ERROR: unsupported '%s' graphic dot distance\n" "$GRAPHICDOTDISTANCE" >&2 ; exit 1 ;;
   esac
 
-  case "$PAGENUMBER" in
-    None)        INIT+=,PN0 ;;
+  # Currently unused, implemented in software
+  case "$HWPAGENUMBER" in
+    None|)       INIT+=,PN0 ;;
     Top)         INIT+=,PN1 ;;
     TopLeft)     INIT+=,PN2 ;;
     TopRight)    INIT+=,PN3 ;;
     Bottom)      INIT+=,PN4 ;;
     BottomLeft)  INIT+=,PN5 ;;
     BottomRight) INIT+=,PN6 ;;
-    *)   printf "ERROR: unsupported %s page number\n" "$PAGENUMBER" >&2 ; exit 1 ;;
+    *)   printf "ERROR: unsupported %s page number\n" "$HWPAGENUMBER" >&2 ; exit 1 ;;
   esac
 
   echo "$INIT"
