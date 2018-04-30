@@ -21,12 +21,13 @@ CHANGES IN V1.20.4
 	  is always utf-8 independently of the original locale, so we
 	  need to force that. Thanks to Samuel Thibault for this patch
 	  (Pull request #38).
-	- braille: Fix producing top and left page on generic
-	  embosser. Thanks to Samuel Thibault for this patch (Pull
-	  request #38).
 	- braille: Warn when no text translation was selected in case
 	  the user didn't notice. Thanks to Samuel Thibault for this
 	  patch (Pull request #37).
+	- braille: Strengthen error checking (Pull request #41).
+	- braille Index: Replace bogus characters with space (Pull request #41).
+	- braille: Add print and braille page number options (Pull request #41).
+	- braille Index: Use standard duplex cups option (Pull request #41).
 
 CHANGES IN V1.20.3
 
