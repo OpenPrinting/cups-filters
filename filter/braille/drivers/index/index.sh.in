@@ -111,7 +111,7 @@ commonOptions() {
 
   # Currently unused, implemented in software
   case "$HWPAGENUMBER" in
-    None|)       INIT+=,PN0 ;;
+    None|'')     INIT+=,PN0 ;;
     Top)         INIT+=,PN1 ;;
     TopLeft)     INIT+=,PN2 ;;
     TopRight)    INIT+=,PN3 ;;
