@@ -25,9 +25,19 @@
 . @CUPS_DATADIR@/braille/cups-braille.sh
 
 FIRMWARE=$(getOptionNumber IndexFirmwareVersion)
-FOLDING=$(getOption IndexFolding)
+[ $? = 0 ] || exit 1
+DUPLEX=$(getOption Duplex)
+[ -n "$DUPLEX" ] || DUPLEX=None
+ZFOLDING=$(getOption ZFolding)
+[ -n "$ZFOLDING" ] || ZFOLDING=False
+SIDEWAYS=$(getOption SideWays)
+[ -n "$SIDEWAYS" ] || SIDEWAYS=False
+SADDLESTITCH=$(getOption SaddleStitch)
+[ -n "$SADDLESTITCH" ] || SADDLESTITCH=False
 TABLE=$(getOptionNumber IndexTable)
+[ $? = 0 ] || exit 1
 MULTIPLEIMPACT=$(getOptionNumber IndexMultipleImpact)
+[ $? = 0 ] || exit 1
 HWPAGENUMBER=$(getOption HardwarePageNumber)
 
 # Convert from 100th of mm to Inch fraction
@@ -82,17 +92,25 @@ commonOptions() {
 
   INIT+=,MI$MULTIPLEIMPACT
 
-  # Support page folding
-  case "$FOLDING" in
-    Single)  INIT+=,DP1 ;;
-    Double)  INIT+=,DP2 ;;
-    SingleZ) INIT+=,DP5 ;;
-    DoubleZ) INIT+=,DP3 ;;
-    DoubleS) INIT+=,DP4 ;;
-    SingleSZ) INIT+=,DP7 ;;
-    DoubleSZ) INIT+=,DP6 ;;
-    SingleS) INIT+=,DP8 ;;
-    *)       printf "ERROR: unsupported '%s' page folding\n" "$FOLDING" >&2 ; exit 1 ;;
+  case "$DUPLEX" in
+    None|DuplexNoTumble) ;;
+    *) printf "ERROR: duplex mode %s is not supported\n" "$DUPLEX" >&2 ; exit 1;;
+  esac
+
+  case "$DUPLEX,$ZFOLDING,$SADDLESTITCH,$SIDEWAYS" in
+    None,False,False,False)           INIT+=,DP1 ;; # Single Sided
+    DuplexNoTumble,False,False,False) INIT+=,DP2 ;; # Double Sided
+
+    DuplexNoTumble,True,False,False)  INIT+=,DP3 ;; # Double Sided z-folding
+    None,True,False,False)            INIT+=,DP5 ;; # Single Sided z-folding
+
+    DuplexNoTumble,False,True,False)  INIT+=,DP4 ;; # Double Sided Saddle Stitch
+    None,False,True,False)            INIT+=,DP8 ;; # Single Sided Saddle Stitch
+
+    DuplexNoTumble,True,False,True)   INIT+=,DP6 ;; # Double Sided z-folding sideways
+    None,True,False,True)             INIT+=,DP7 ;; # Single Sided z-folding sideways
+
+    *) printf "ERROR: unsupported page folding: duplex=%s z-folding=%s sideways=%s saddlestich=%s\n" "$DUPLEX" "$ZFOLDING" "$SIDEWAYS" "$SADDLESTITCH" >&2 ; exit 1 ;;
   esac
 
   # Configure dots spacing

@@ -220,32 +220,23 @@ msgstr "11.03.2 ou supérieur"
 msgid "12.01.3 or above"
 msgstr "12.01.3 ou supérieur"
 
-msgid "Page folding"
-msgstr "Recto-Verso"
+msgid "Double-Sided Printing"
+msgstr "Impression recto-verso"
 
-msgid "Single-sided"
-msgstr "Recto seul"
+msgid "Off"
+msgstr "Désactivé"
 
-msgid "Double-sided"
-msgstr "Recto-Verso"
+msgid "Long Edge (Standard)"
+msgstr "Bord long (standard)"
 
-msgid "Single-sided z-folding"
-msgstr "Recto seul, pliage accordéon"
+msgid "Z-Folding"
+msgstr "Pliage accordéon"
 
-msgid "Double-sided z-folding"
-msgstr "Recto-Verso, pliage accordéon"
+msgid "Sideways Folding"
+msgstr "Pliage paysage"
 
-msgid "Single-sided sideways z-folding"
-msgstr "Recto seul paysage, pliage accordéon"
-
-msgid "Double-sided sideways z-folding"
-msgstr "Recto-Verso paysage, pliage accordéon"
-
-msgid "Double-sided saddle stitch 4 pages"
-msgstr "Recto-Verso cahier 4 pages"
-
-msgid "Single-sided saddle stitch 4 pages"
-msgstr "Recto cahier 4 pages"
+msgid "Saddle Stich 4 pages"
+msgstr "Cahier 4 pages"
 
 msgid "Firmware Braille Table"
 msgstr "Table Braille Firmware"

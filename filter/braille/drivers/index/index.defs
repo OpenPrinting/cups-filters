@@ -39,10 +39,6 @@ MediaSize 120x120
 ColorDevice no
 
 Group "Index/Index support"
-  Option "IndexFolding/Page folding" PickOne AnySetup 10
-  Choice "Single/Single-sided" ""
-  *Choice "Double/Double-sided" ""
-
   Option "IndexMultipleImpact/Multiple Impact" PickOne AnySetup 10
   *Choice "1" ""
   Choice "2" ""
