@@ -49,8 +49,9 @@ main(int  argc,				/* I - Number of command-line args */
      char *argv[])			/* I - Command-line arguments */
 {
   const char	*device_uri;            /* URI with which we were called */
-  char queue_name[1024];
-  const char *ptr1;
+  char scheme[32], username[10], queue_name[1024], resource[10];
+  int port, status;
+  const char *ptr1 = NULL;
   char *ptr2;
   const char *job_id;
   int i;
@@ -97,13 +98,18 @@ main(int  argc,				/* I - Number of command-line args */
 
       device_uri = argv[0];
     }
-    if ((ptr1 = strchr(device_uri, ':')) == NULL) {
+    status = httpSeparateURI(HTTP_URI_CODING_ALL, device_uri,
+			     scheme, sizeof(scheme),
+			     username, sizeof(username),
+			     queue_name, sizeof(queue_name),
+			     &port,
+			     resource, sizeof(resource));
+    if (status != HTTP_URI_STATUS_OK &&
+	status != HTTP_URI_STATUS_UNKNOWN_SCHEME) {
       fprintf(stderr, "ERROR: Incorrect device URI syntax: %s\n",
 	      device_uri);
       return (CUPS_BACKEND_STOP);
     }
-    ptr1 ++;
-    strncpy(queue_name, ptr1, sizeof(queue_name));
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
 		     "localhost", ippPort(), "/printers/%s", queue_name);
     job_id = argv[1];

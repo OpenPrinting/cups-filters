@@ -3,6 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.20.3 - 2018-04-12
 
 CHANGES IN V1.20.4
 
+	- cups-browsed: If the user modifies/overwrites a print queue
+	  created by cups-browsed, it will now not only be
+	  automatically released from the control of cups-browsed, but
+	  we also create a replacement for our generated local queue
+	  under a new name.
+	- cups-browsed: Make URIS for using the implicitclass backend
+	  correctly working also with queue names containing an '@'
+	  character.
 	- cups-browsed: Moved auto-generation of PPD file for IPP
 	  network printers from create_remote_printer_entry()
 	  function to update_cups_queues(). This allows re-creating
