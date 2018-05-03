@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// Copyright (c) 2015, 2017-2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -55,58 +55,6 @@ HWMargins 1cm 1cm 1cm 1cm
 VariablePaperSize true
 MinSize 1in 1in
 MaxSize 9999in 9999in
-
-Option "TopMargin/Top margin" PickOne AnySetup 10
-  Choice "0" ""
-  Choice "1" ""
-  *Choice "2" ""
-  Choice "3" ""
-  Choice "4" ""
-  Choice "5" ""
-  Choice "6" ""
-  Choice "7" ""
-  Choice "8" ""
-  Choice "9" ""
-  Choice "10" ""
-
-Option "BottomMargin/Bottom margin" PickOne AnySetup 10
-  Choice "0" ""
-  Choice "1" ""
-  *Choice "2" ""
-  Choice "3" ""
-  Choice "4" ""
-  Choice "5" ""
-  Choice "6" ""
-  Choice "7" ""
-  Choice "8" ""
-  Choice "9" ""
-  Choice "10" ""
-
-Option "LeftMargin/Left margin" PickOne AnySetup 10
-  Choice "0" ""
-  Choice "1" ""
-  *Choice "2" ""
-  Choice "3" ""
-  Choice "4" ""
-  Choice "5" ""
-  Choice "6" ""
-  Choice "7" ""
-  Choice "8" ""
-  Choice "9" ""
-  Choice "10" ""
-
-Option "RightMargin/Right margin" PickOne AnySetup 10
-  Choice "0" ""
-  Choice "1" ""
-  *Choice "2" ""
-  Choice "3" ""
-  Choice "4" ""
-  Choice "5" ""
-  Choice "6" ""
-  Choice "7" ""
-  Choice "8" ""
-  Choice "9" ""
-  Choice "10" ""
 
 ModelName "UBRL generator"
 PCFileName "gen-ubrl.ppd"

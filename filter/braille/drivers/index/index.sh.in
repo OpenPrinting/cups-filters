@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015-2016 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015-2016, 2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +25,20 @@
 . @CUPS_DATADIR@/braille/cups-braille.sh
 
 FIRMWARE=$(getOptionNumber IndexFirmwareVersion)
-FOLDING=$(getOption IndexFolding)
+[ $? = 0 ] || exit 1
+DUPLEX=$(getOption Duplex)
+[ -n "$DUPLEX" ] || DUPLEX=None
+ZFOLDING=$(getOption ZFolding)
+[ -n "$ZFOLDING" ] || ZFOLDING=False
+SIDEWAYS=$(getOption SideWays)
+[ -n "$SIDEWAYS" ] || SIDEWAYS=False
+SADDLESTITCH=$(getOption SaddleStitch)
+[ -n "$SADDLESTITCH" ] || SADDLESTITCH=False
 TABLE=$(getOptionNumber IndexTable)
+[ $? = 0 ] || exit 1
 MULTIPLEIMPACT=$(getOptionNumber IndexMultipleImpact)
-PAGENUMBER=$(getOption PageNumber)
+[ $? = 0 ] || exit 1
+HWPAGENUMBER=$(getOption HardwarePageNumber)
 
 # Convert from 100th of mm to Inch fraction
 mmToIndexIn () {
@@ -82,17 +92,25 @@ commonOptions() {
 
   INIT+=,MI$MULTIPLEIMPACT
 
-  # Support page folding
-  case "$FOLDING" in
-    Single)  INIT+=,DP1 ;;
-    Double)  INIT+=,DP2 ;;
-    SingleZ) INIT+=,DP5 ;;
-    DoubleZ) INIT+=,DP3 ;;
-    DoubleS) INIT+=,DP4 ;;
-    SingleSZ) INIT+=,DP7 ;;
-    DoubleSZ) INIT+=,DP6 ;;
-    SingleS) INIT+=,DP8 ;;
-    *)       printf "ERROR: unsupported '%s' page folding\n" "$FOLDING" >&2 ; exit 1 ;;
+  case "$DUPLEX" in
+    None|DuplexNoTumble) ;;
+    *) printf "ERROR: duplex mode %s is not supported\n" "$DUPLEX" >&2 ; exit 1;;
+  esac
+
+  case "$DUPLEX,$ZFOLDING,$SADDLESTITCH,$SIDEWAYS" in
+    None,False,False,False)           INIT+=,DP1 ;; # Single Sided
+    DuplexNoTumble,False,False,False) INIT+=,DP2 ;; # Double Sided
+
+    DuplexNoTumble,True,False,False)  INIT+=,DP3 ;; # Double Sided z-folding
+    None,True,False,False)            INIT+=,DP5 ;; # Single Sided z-folding
+
+    DuplexNoTumble,False,True,False)  INIT+=,DP4 ;; # Double Sided Saddle Stitch
+    None,False,True,False)            INIT+=,DP8 ;; # Single Sided Saddle Stitch
+
+    DuplexNoTumble,True,False,True)   INIT+=,DP6 ;; # Double Sided z-folding sideways
+    None,True,False,True)             INIT+=,DP7 ;; # Single Sided z-folding sideways
+
+    *) printf "ERROR: unsupported page folding: duplex=%s z-folding=%s sideways=%s saddlestich=%s\n" "$DUPLEX" "$ZFOLDING" "$SIDEWAYS" "$SADDLESTITCH" >&2 ; exit 1 ;;
   esac
 
   # Configure dots spacing
@@ -109,15 +127,16 @@ commonOptions() {
     *)   printf "ERROR: unsupported '%s' graphic dot distance\n" "$GRAPHICDOTDISTANCE" >&2 ; exit 1 ;;
   esac
 
-  case "$PAGENUMBER" in
-    None)        INIT+=,PN0 ;;
+  # Currently unused, implemented in software
+  case "$HWPAGENUMBER" in
+    None|'')     INIT+=,PN0 ;;
     Top)         INIT+=,PN1 ;;
     TopLeft)     INIT+=,PN2 ;;
     TopRight)    INIT+=,PN3 ;;
     Bottom)      INIT+=,PN4 ;;
     BottomLeft)  INIT+=,PN5 ;;
     BottomRight) INIT+=,PN6 ;;
-    *)   echo "ERROR: unsupported $PAGENUMBER page number" >&2 ; exit 1 ;;
+    *)   printf "ERROR: unsupported %s page number\n" "$HWPAGENUMBER" >&2 ; exit 1 ;;
   esac
 
   echo "$INIT"

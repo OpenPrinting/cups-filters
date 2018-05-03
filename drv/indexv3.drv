@@ -1,5 +1,5 @@
 // 
-// Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// Copyright (c) 2015, 2017-2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -64,10 +64,15 @@ Group "Index/Index support"
 
   MaxSize 325mm 10m
 
+  Group "General/General"
+  Option "Duplex/Double-Sided Printing" PickOne AnySetup 10
+    Choice "DuplexNoTumble/Long Edge (Standard)" ""
+    *Choice "None/Off" ""
+
   Group "Index"
-    Option "IndexFolding" PickOne AnySetup 10
-    Choice "SingleZ/Single-sided z-folding" ""
-    Choice "DoubleZ/Double-sided z-folding" ""
+    Option "ZFolding/Z-Folding" Boolean AnySetup 10
+    Choice "True/Yes" ""
+    *Choice "False/No" ""
 
   Attribute "IndexPaperLength" "" In
 }
@@ -95,10 +100,15 @@ Group "Index/Index support"
 
   MaxSize 325mm 10m
 
+  Group "General/General"
+  Option "Duplex/Double-Sided Printing" PickOne AnySetup 10
+    Choice "DuplexNoTumble/Long Edge (Standard)" ""
+    *Choice "None/Off" ""
+
   Group "Index"
-    Option "IndexFolding" PickOne AnySetup 10
-    Choice "SingleZ/Single-sided z-folding" ""
-    Choice "DoubleZ/Double-sided z-folding" ""
+    Option "ZFolding/Z-Folding" Boolean AnySetup 10
+    Choice "True/Yes" ""
+    *Choice "False/No" ""
 }
 
 
@@ -110,6 +120,11 @@ Group "Index/Index support"
   PCFileName "ieveres3.ppd"
 
   MaxSize 297mm 10m
+
+  Group "General/General"
+  Option "Duplex/Double-Sided Printing" PickOne AnySetup 10
+    Choice "DuplexNoTumble/Long Edge (Standard)" ""
+    *Choice "None/Off" ""
 
   Attribute "IndexPaperLength" "" Mm
 }
@@ -124,9 +139,15 @@ Group "Index/Index support"
 
   MaxSize 297mm 10m
 
+  Group "General/General"
+  Option "Duplex/Double-Sided Printing" PickOne AnySetup 10
+    Choice "DuplexNoTumble/Long Edge (Standard)" ""
+    *Choice "None/Off" ""
+
   Group "Index"
-    Option "IndexFolding" PickOne AnySetup 10
-    Choice "DoubleS/Double-sided saddle stitch 4 pages" ""
+    Option "SaddleStitch/Saddle Stitch 4 pages" Boolean AnySetup 10
+    Choice "True/Yes" ""
+    *Choice "False/No" ""
 
   Attribute "IndexPaperLength" "" Mm
 }

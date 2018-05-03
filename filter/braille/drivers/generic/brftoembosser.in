@@ -47,37 +47,12 @@ fi
 SENDFF=$(getOption SendFF)
 SENDSUB=$(getOption SendSUB)
 
-TOPMARGIN=$(getOptionNumber TopMargin)
-LEFTMARGIN=$(getOptionNumber LeftMargin)
-
 echo "INFO: Writing text to generic embosser" >&2
-
-# Produce top margin
-NEWPAGE=""
-if [ -n "$TOPMARGIN" ]; then
-  while [ $TOPMARGIN -gt 0 ]
-  do
-    NEWPAGE="$NEWPAGE"$'\r'$'\n'
-    TOPMARGIN=$(($TOPMARGIN - 1))
-  done
-fi
-NEWPAGESED=${NEWPAGE//$'\n'/\\$'\n'}
-LEFTSPACES=""
-if [ -n "$LEFTMARGIN" ]; then
-  while [ $LEFTMARGIN -gt 0 ]
-  do
-    LEFTSPACES="$LEFTSPACES "
-    LEFTMARGIN=$(($LEFTMARGIN - 1))
-  done
-fi
 
 while [ $NB -gt 0 ]
 do
-  echo -n "$NEWPAGE"
   < "$FILE" \
-    sed -e "s/^\(\?\)/\1$LEFTSPACES/" \
-        -e "s//$NEWPAGESED/" \
-        -e 's/^$/'$'\015''/' \
+    sed -e 's/^$/'$'\015''/' \
         -e 's/'$'\302'$'\240''/ /g' \
         -e 's/'$'\240''/ /g' \
         -e 's/\([^'$'\015'']\)$/\1'$'\015''/'

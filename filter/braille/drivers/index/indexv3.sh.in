@@ -32,20 +32,15 @@ then
   # Firmware 10.30 and above support temporary parameters
   INIT=$'\033'D
 
-  if [ -z "$NOMARGIN" ]
-  then
-    # Configure margins
-    INIT+=TM$TOPMARGIN,BM$BOTTOMMARGIN,IM$INNERMARGIN,OM$OUTERMARGIN
-  else
-    # disable margins
-    INIT+=TM0,BM0,IM0,OM0
-  fi
+  # Margins are implemented in software
+  INIT+=TM0,BI0
 
   # Trying to disable banner page seems to pose problems
   #INIT+=,BP
 
   # Common options
   INIT+="$(commonOptions)"
+  [ $? = 0 ] || exit 1
 
   # Paper size
   case "$PAPERLENGTH" in

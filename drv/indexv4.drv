@@ -1,5 +1,5 @@
 // 
-// Copyright (c) 2015, 2017 Samuel Thibault <samuel.thibault@ens-lyon.org>
+// Copyright (c) 2015, 2017-2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -87,12 +87,21 @@ Group "Braille"
 
   MaxSize 325mm 10m
 
+  Group "General/General"
+  Option "Duplex/Double-Sided Printing" PickOne AnySetup 10
+    Choice "DuplexNoTumble/Long Edge (Standard)" ""
+    *Choice "None/Off" ""
+
   Group "Index"
-    Option "IndexFolding" PickOne AnySetup 10
-    Choice "SingleZ/Single-sided z-folding" ""
-    Choice "DoubleZ/Double-sided z-folding" ""
-    Choice "SingleSZ/Single-sided sideways z-folding" ""
-    Choice "DoubleSZ/Double-sided sideways z-folding" ""
+    Option "ZFolding/Z-Folding" Boolean AnySetup 10
+    Choice "True/Yes" ""
+    *Choice "False/No" ""
+
+    Option "Sideways/Sideways Folding" Boolean AnySetup 10
+    Choice "True/Yes" ""
+    *Choice "False/No" ""
+
+  UIConstraints "*ZFolding True *Sideways True"
 }
 
 
@@ -116,10 +125,15 @@ Group "Braille"
 
   MaxSize 297mm 10m
 
+  Group "General/General"
+  Option "Duplex/Double-Sided Printing" PickOne AnySetup 10
+    Choice "DuplexNoTumble/Long Edge (Standard)" ""
+    *Choice "None/Off" ""
+
   Group "Index"
-    Option "IndexFolding" PickOne AnySetup 10
-    Choice "DoubleS/Double-sided saddle stitch 4 pages" ""
-    Choice "SingleS/Single-sided saddle stitch 4 pages" ""
+    Option "SaddleStitch/Saddle Stitch 4 pages" Boolean AnySetup 10
+    Choice "True/Yes" ""
+    *Choice "False/No" ""
 }
 
 
@@ -132,8 +146,13 @@ Group "Braille"
 
   MaxSize 297mm 10m
 
+  Group "General/General"
+  Option "Duplex/Double-Sided Printing" PickOne AnySetup 10
+    Choice "DuplexNoTumble/Long Edge (Standard)" ""
+    *Choice "None/Off" ""
+
   Group "Index"
-    Option "IndexFolding" PickOne AnySetup 10
-    Choice "DoubleS/Double-sided saddle stitch 4 pages" ""
-    Choice "SingleS/Single-sided saddle stitch 4 pages" ""
+    Option "SaddleStitch/Saddle Stitch 4 pages" Boolean AnySetup 10
+    Choice "True/Yes" ""
+    *Choice "False/No" ""
 }
