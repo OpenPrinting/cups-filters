@@ -66,7 +66,7 @@ struct SplashOutFontSubst {
 class SplashOutFontFileID: public SplashFontFileID {
 public:
 
-  SplashOutFontFileID(Ref *rA) { r = *rA; substIdx = -1; }
+  SplashOutFontFileID(const Ref *rA) { r = *rA; substIdx = -1; }
 
   ~SplashOutFontFileID() {}
 
