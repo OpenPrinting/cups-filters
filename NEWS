@@ -40,6 +40,8 @@ CHANGES IN V1.20.4
 	- braille: Warn when no text translation was selected in case
 	  the user didn't notice. Thanks to Samuel Thibault for this
 	  patch (Pull request #37).
+	- braille: Fix spurious spacing after last Form-Feed (Pull
+	  request #45).
 
 CHANGES IN V1.20.3
 
