@@ -2712,7 +2712,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
     cupsFilePrintf(fp, "*OpenUI *OutputBin/%s: PickOne\n"
                        "*OrderDependency: 10 AnySetup *OutputBin\n"
                        "*DefaultOutputBin: %s\n",
-		       (human_readable ? human_readable : "Media Type"),
+		       (human_readable ? human_readable : "Output Bin"),
 		       ppdname);
     for (i = 0; i < count; i ++)
     {
