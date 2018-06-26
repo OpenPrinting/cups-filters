@@ -280,8 +280,10 @@ addmargins() {
   fi
 
   echo -n "$NEWPAGE"
-  exec sed -e "s/^\(\?\)/\1$LEFTSPACES/" \
-           -e "s//$NEWPAGESED/"
+  sed -e '$s/$//' \
+      -e "s/^\(\?\)\([^]\)/\1$LEFTSPACES\2/" \
+      -e "s//$NEWPAGESED/"
+  echo -n ""
 }
 
 #

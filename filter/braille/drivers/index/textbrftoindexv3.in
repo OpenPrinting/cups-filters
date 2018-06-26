@@ -57,7 +57,9 @@ then
   else
     cat "$FILE"
   fi | (
-    while IFS=$'\n' read -r LINE
+    IFS=$'\n' read -r LINE
+    EOF=$?
+    while [ "$EOF" = 0 -o -n "$LINE" ]
     do
       # Strip CRs
       LINE=${LINE//$'\015'}
@@ -113,7 +115,12 @@ then
 	  tr "\000-\037\177\200-\377" " " | \
 	  tr " \!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\\[\\\\\\]^_" "\\0V tSQW"$'\004'"gvAT@DP"$'\024'"d"$'\002\006'"\"bB&fF\$a\`Cw4q"$'\020\001\003\021'"1!"$'\023'"3#"$'\022'"2"$'\005\007\025'"5%"$'\027'"7'"$'\026'"6EGrUueRcs0p"
       fi
-      printf "\\r\\n"
+      if [ "$EOF" = 0 ]
+      then
+	printf "\\r\\n"
+      fi
+      IFS=$'\n' read -r LINE
+      EOF=$?
     done
   )
   if [ $? != 0 ]
