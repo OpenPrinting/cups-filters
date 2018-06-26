@@ -1215,6 +1215,12 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
                                         /* Path to filter executable */
   const char		*cups_serverbin;/* CUPS_SERVERBIN environment
 					   variable */
+  char			*defaultoutbin = NULL;
+  const char		*outbin,
+			*outbin_properties;
+  int			outputorderinfofound = 0,
+			faceupdown = 1,
+			firsttolast = 1;
 
  /*
   * Range check input...
@@ -1283,6 +1289,50 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   cupsFilePrintf(fp, "*NickName: \"%s %s, driverless, cups-filters %s\"\n", make, model,
 		 VERSION);
   cupsFilePrintf(fp, "*ShortNickName: \"%s %s\"\n", make, model);
+
+  /* Which is the default output bin? */
+  if ((attr = ippFindAttribute(response, "output-bin-default", IPP_TAG_MIMETYPE)) != NULL)
+    defaultoutbin = strdup(ippGetString(attr, 0, NULL));
+  /* Find out on which position of the list of output bins the default one is, if there
+     is no default bin, take the first of this list */
+  i = 0;
+  if ((attr = ippFindAttribute(response, "output-bin-supported", IPP_TAG_MIMETYPE)) != NULL)
+  {
+    count = ippGetCount(attr);
+    for (i = 0; i < count; i ++)
+    {
+      outbin = ippGetString(attr, i, NULL);
+      if (outbin == NULL)
+	continue;
+      if (defaultoutbin == NULL)
+      {
+	defaultoutbin = strdup(outbin);
+	break;
+      }
+      else if (strcasecmp(outbin, defaultoutbin) == 0)
+	break;
+    }
+  }
+  if ((attr = ippFindAttribute(response, "printer-output-tray", IPP_TAG_MIMETYPE)) != NULL &&
+      i < ippGetCount(attr))
+  {
+    outbin_properties = ippGetString(attr, i, NULL);
+    if (strcasestr(outbin_properties, "pagedelivery=faceUp"))
+    {
+      outputorderinfofound = 1;
+      faceupdown = -1;
+    }
+    if (strcasestr(outbin_properties, "stackingorder=lastToFirst"))
+      firsttolast = -1;
+  }
+  if (outputorderinfofound == 0 && defaultoutbin && strcasestr(defaultoutbin, "face-up"))
+    faceupdown = -1;
+  if (defaultoutbin)
+    free (defaultoutbin);
+  if (firsttolast * faceupdown < 0)
+    cupsFilePuts(fp, "*DefaultOutputOrder: Reverse\n");
+  else
+    cupsFilePuts(fp, "*DefaultOutputOrder: Normal\n");
 
   if (((attr = ippFindAttribute(response, "color-supported", IPP_TAG_BOOLEAN)) != NULL && ippGetBoolean(attr, 0)) || color)
     cupsFilePuts(fp, "*ColorDevice: True\n");
