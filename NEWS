@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.20.3 - 2018-04-12
 
 CHANGES IN V1.20.4
 
+	- libcupsfilters: Let the PPD generator add "*PageStackOrder
+	  ..."  lines to the choices of the "OutputBin" option, to
+	  mark which output bins need the pages printed in reverse
+	  order (Issue #47).
 	- libcupsfilters: Let the PPD generator correctly create a
 	  "*DefaultOutputOrder: ..."  entry, depending on whether the
 	  paper is put out face-up or face-down in the default output

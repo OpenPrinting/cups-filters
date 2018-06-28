@@ -1164,6 +1164,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   cups_array_t		*sizes;		/* Media sizes we've added */
   cups_size_t		*size;		/* Current media size */
   ipp_attribute_t	*attr,		/* xxx-supported */
+                        *attr2,
 			*defattr,	/* xxx-default */
                         *quality,	/* print-quality-supported */
 			*x_dim, *y_dim;	/* Media dimensions */
@@ -2764,6 +2765,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
                        "*DefaultOutputBin: %s\n",
 		       (human_readable ? human_readable : "Output Bin"),
 		       ppdname);
+    attr2 = ippFindAttribute(response, "printer-output-tray", IPP_TAG_MIMETYPE);
     for (i = 0; i < count; i ++)
     {
       keyword = ippGetString(attr, i, NULL);
@@ -2782,6 +2784,50 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 		     ppdname,
 		     (human_readable ? "/" : ""),
 		     (human_readable ? human_readable : ""));
+      outputorderinfofound = 0;
+      faceupdown = 1;
+      firsttolast = 1;
+      if (attr2 && i < ippGetCount(attr2))
+      {
+	outbin_properties = ippGetString(attr2, i, NULL);
+	if (strcasestr(outbin_properties, "pagedelivery=faceUp"))
+	{
+	  outputorderinfofound = 1;
+	  faceupdown = -1;
+	}
+	else if (strcasestr(outbin_properties, "pagedelivery=faceDown"))
+	{
+	  outputorderinfofound = 1;
+	  faceupdown = 1;
+	}
+	if (strcasestr(outbin_properties, "stackingorder=lastToFirst"))
+	{
+	  outputorderinfofound = 1;
+	  firsttolast = -1;
+	}
+	else if (strcasestr(outbin_properties, "stackingorder=firstToLast"))
+	{
+	  outputorderinfofound = 1;
+	  firsttolast = 1;
+	}
+      }
+      if (outputorderinfofound == 0)
+      {
+	if (strcasestr(keyword, "face-up"))
+	{
+	  outputorderinfofound = 1;
+	  faceupdown = -1;
+	}
+	if (strcasestr(keyword, "face-down"))
+	{
+	  outputorderinfofound = 1;
+	  faceupdown = 1;
+	}
+      }
+      if (outputorderinfofound)
+	cupsFilePrintf(fp, "*PageStackOrder %s: %s\n",
+		       ppdname,
+		       (firsttolast * faceupdown < 0 ? "Reverse" : "Normal"));
     }
     cupsFilePuts(fp, "*CloseUI: *OutputBin\n");
   }
