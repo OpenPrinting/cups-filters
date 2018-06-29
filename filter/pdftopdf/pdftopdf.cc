@@ -465,6 +465,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   }
 
   if ((val=cupsGetOption("OutputOrder",num_options,options)) != NULL ||
+      (val=cupsGetOption("output-order",num_options,options)) != NULL ||
       (val=cupsGetOption("page-delivery",num_options,options)) != NULL) {
     param.reverse=(strcasecmp(val,"Reverse")==0);
   } else if (ppd) {

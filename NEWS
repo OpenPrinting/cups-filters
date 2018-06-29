@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.20.3 - 2018-04-12
 
 CHANGES IN V1.20.4
 
+	- pdftopdf: Accept option "output-order=normal/reverse" for
+	  reversing page order (Issue #47).
 	- libcupsfilters: Let the PPD generator add "*PageStackOrder
 	  ..."  lines to the choices of the "OutputBin" option, to
 	  mark which output bins need the pages printed in reverse
