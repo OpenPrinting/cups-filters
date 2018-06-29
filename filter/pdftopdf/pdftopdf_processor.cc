@@ -95,8 +95,6 @@ void ProcessingParameters::dump() const // {{{
 	  (emitJCL)?"true":"false");
   fprintf(stderr,"deviceCopies: %d\n",
 	  deviceCopies);
-  fprintf(stderr,"deviceReverse: %s\n",
-	  (deviceReverse)?"true":"false");
   fprintf(stderr,"deviceCollate: %s\n",
 	  (deviceCollate)?"true":"false");
   fprintf(stderr,"setDuplex: %s\n",

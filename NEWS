@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.20.3 - 2018-04-12
 
 CHANGES IN V1.20.4
 
+	- pdftopdf: Removed support for hardware-implemented reversing
+	  of page order in PostScript printers. It was once not
+	  correctly implemented in cups-filters and second, such
+	  printers are extremely rare, and on Gutenprint PPDs with
+	  pseudo OutputOrder option hardware reversing was even
+	  wrongly assumed (Issue #47).
 	- pdftopdf: Accept option "output-order=normal/reverse" for
 	  reversing page order (Issue #47).
 	- libcupsfilters: Let the PPD generator add "*PageStackOrder

@@ -34,7 +34,7 @@ ProcessingParameters()
 
     autoRotate(false),
 
-    emitJCL(true),deviceCopies(1),deviceReverse(false),
+    emitJCL(true),deviceCopies(1),
     deviceCollate(false),setDuplex(false),
 
     page_logging(-1)
@@ -83,7 +83,6 @@ ProcessingParameters()
   // ppd/jcl changes
   bool emitJCL;
   int deviceCopies;
-  bool deviceReverse;
   bool deviceCollate;
   bool setDuplex;
   // unsetMirror  (always)

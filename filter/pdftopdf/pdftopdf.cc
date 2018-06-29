@@ -769,17 +769,9 @@ static bool printerWillCollate(ppd_file_t *ppd) // {{{
 
 void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
 {
-  param.deviceReverse=false;
-  if (param.reverse) {
-    // test OutputOrder of hardware (ppd)
-    if (ppdFindOption(ppd,"OutputOrder") != NULL) {
-      param.deviceReverse=true;
-      param.reverse=false;
-    } else {
-      // Enable evenDuplex or the first page may be empty.
-      param.evenDuplex=true; // disabled later, if non-duplex
-    }
-  }
+  if (param.reverse)
+    // Enable evenDuplex or the first page may be empty.
+    param.evenDuplex=true; // disabled later, if non-duplex
 
   setFinalPPD(ppd,param);
 
