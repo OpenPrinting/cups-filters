@@ -5769,7 +5769,10 @@ examine_discovered_printer_record(const char *host,
 	(p->host[0] == '\0' ||
 	 p->status == STATUS_UNCONFIRMED ||
 	 p->status == STATUS_DISAPPEARED ||
-	 (!strcasecmp(p->host, remote_host) && p->port == port &&
+	 (!strcasecmp(p->host, remote_host) &&
+	  (p->port == port ||
+	   (p->port == 631 && port == 443) ||
+	   (p->port == 443 && port == 631)) &&
 	  strlen(p->uri) - strlen(resource) > 0 &&
 	  !strcasecmp(p->uri + strlen(p->uri) - strlen(resource), resource))))
       break;
@@ -5805,7 +5808,7 @@ examine_discovered_printer_record(const char *host,
       /* Schedule local queue for upgrade to ipps: or for URI change */
       if (strcasestr(type, "_ipps") &&
 	  !strncasecmp(p->uri, "ipp:", 4))
-	debug_printf("Upgrading printer %s (Host: %s, Port :%d) to IPPS. New URI: %s\n",
+	debug_printf("Upgrading printer %s (Host: %s, Port: %d) to IPPS. New URI: %s\n",
 		     p->queue_name, remote_host, port, uri);
       if (strcasecmp(strchr(p->uri, ':'), strchr(uri, ':')))
 	debug_printf("Changing URI of printer %s (Host: %s, Port: %d) to %s.\n",

@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.20.3 - 2018-04-12
 
 CHANGES IN V1.20.4
 
+	- cups-browsed: Also upgrade from ipp: to ipps: when the ipps:
+	  URI is on HTTPS port 443 instead of IPP port 631. This is
+	  common on IPP network printers.
 	- pdftopdf: Removed support for hardware-implemented reversing
 	  of page order in PostScript printers. It was once not
 	  correctly implemented in cups-filters and second, such
