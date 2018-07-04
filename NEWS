@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.20.3 - 2018-04-12
 
 CHANGES IN V1.20.4
 
+	- cups-browsed: When checking whether there is already a local
+	  print queue with the same URI as the one of the discovered
+	  printer, consider also as equal URI if the URIs only differ
+	  by use of IPP or IPPS and/or use of HTTPS port 443 instead
+	  of IPP port 631.
 	- cups-browsed: Also upgrade from ipp: to ipps: when the ipps:
 	  URI is on HTTPS port 443 instead of IPP port 631. This is
 	  common on IPP network printers.

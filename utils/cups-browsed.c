@@ -788,8 +788,55 @@ local_printer_has_uri (gpointer key,
 {
   local_printer_t *printer = value;
   char *device_uri = user_data;
+  char		lhost[HTTP_MAX_URI],	/* Local printer: Hostname */
+		lresource[HTTP_MAX_URI],/* Local printer: Resource path */
+		lscheme[32],		/* Local printer: URI's scheme */
+		lusername[64],		/* Local printer: URI's username */
+		dhost[HTTP_MAX_URI],	/* Discovered printer: Hostname */
+		dresource[HTTP_MAX_URI],/* Discovered printer: Resource path */
+		dscheme[32],		/* Discovered printer: URI's scheme */
+		dusername[64];		/* Discovered printer: URI's username */
+  int		lport = 0,		/* Local printer: URI's port number */
+		dport = 0;		/* Discovered printer: URI's port number */
+
   debug_printf("local_printer_has_uri() in THREAD %ld\n", pthread_self());
-  return g_str_equal (printer->device_uri, device_uri);
+  /* Separate the two URIs to be compared into their components */
+  memset(lscheme, 0, sizeof(lscheme));
+  memset(lusername, 0, sizeof(lusername));
+  memset(lhost, 0, sizeof(lhost));
+  memset(lresource, 0, sizeof(lresource));
+  memset(dscheme, 0, sizeof(dscheme));
+  memset(dusername, 0, sizeof(dusername));
+  memset(dhost, 0, sizeof(dhost));
+  memset(dresource, 0, sizeof(dresource));
+  if (printer && printer->device_uri)
+    httpSeparateURI (HTTP_URI_CODING_ALL, printer->device_uri,
+		     lscheme, sizeof(lscheme) - 1,
+		     lusername, sizeof(lusername) - 1,
+		     lhost, sizeof(lhost) - 1,
+		     &lport,
+		     lresource, sizeof(lresource) - 1);
+  if (device_uri)
+    httpSeparateURI (HTTP_URI_CODING_ALL, device_uri,
+		     dscheme, sizeof(dscheme) - 1,
+		     dusername, sizeof(dusername) - 1,
+		     dhost, sizeof(dhost) - 1,
+		     &dport,
+		     dresource, sizeof(dresource) - 1);
+  /* Consider not only absolutely equal URIs as equal
+     but alo URIs which differ only by use of IPP or
+     IPPS and/or have the IPP standard port 631
+     replaced by the HTTPS standard port 443, as this
+     is common on network printers */
+  return ((g_str_equal(lscheme, dscheme) ||
+	   (g_str_equal(lscheme, "ipp") && g_str_equal(dscheme, "ipps")) ||
+	   (g_str_equal(dscheme, "ipp") && g_str_equal(lscheme, "ipps"))) &&
+	  g_str_equal(lusername, dusername) &&
+	  g_str_equal(lhost, dhost) &&
+	  (lport == dport ||
+	   (lport == 631 && dport == 443) ||
+	   (dport == 631 && lport == 443)) &&
+	  g_str_equal(lresource, dresource));
 }
 
 static gboolean
@@ -3683,7 +3730,7 @@ on_printer_modified (CupsNotifier *object,
 			       p->uri)) {
 	  /* Found a local queue with the same URI as our discovered printer
 	     would get, so ignore this remote printer */
-	  debug_printf("Printer with URI %s already exists, no replacement queue to be created.\n",
+	  debug_printf("Printer with URI %s (or IPP/IPPS equivalent) already exists, no replacement queue to be created.\n",
 		       p->uri);
 	  re_create = 0;
 	} else if ((new_queue_name = /* Try to find a new queue name */
@@ -5783,7 +5830,7 @@ examine_discovered_printer_record(const char *host,
 			       uri)) {
     /* Found a local queue with the same URI as our discovered printer
        would get, so ignore this remote printer */
-    debug_printf("Printer with URI %s already exists, printer ignored.\n",
+    debug_printf("Printer with URI %s (or IPP/IPPS equivalent) already exists, printer ignored.\n",
 		 uri);
     goto fail;
   }
