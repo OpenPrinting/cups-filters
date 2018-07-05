@@ -164,9 +164,9 @@ static bool ppdDefaultOrder(ppd_file_t *ppd) // {{{  -- is reverse?
   } else if ((attr=ppdFindAttr(ppd,"DefaultOutputOrder",0)) != NULL) {
     val=attr->value;
   }
-  if ((!val)||(strcasecmp(val,"Normal")==0)) {
+  if ((!val)||(strcasecmp(val,"Normal")==0)||(strcasecmp(val,"same-order")==0)) {
     return false;
-  } else if (strcasecmp(val,"Reverse")==0) {
+  } else if (strcasecmp(val,"Reverse")==0||(strcasecmp(val,"reverse-order")==0)) {
     return true;
   }
   error("Unsupported output-order value %s, using 'normal'!",val);
@@ -467,7 +467,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   if ((val=cupsGetOption("OutputOrder",num_options,options)) != NULL ||
       (val=cupsGetOption("output-order",num_options,options)) != NULL ||
       (val=cupsGetOption("page-delivery",num_options,options)) != NULL) {
-    param.reverse=(strcasecmp(val,"Reverse")==0);
+    param.reverse = (strcasecmp(val, "Reverse") == 0 ||
+		     strcasecmp(val, "reverse-order") == 0);
   } else if (ppd) {
     param.reverse=ppdDefaultOrder(ppd);
   }

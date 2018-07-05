@@ -18,7 +18,8 @@ CHANGES IN V1.20.4
 	  pseudo OutputOrder option hardware reversing was even
 	  wrongly assumed (Issue #47).
 	- pdftopdf: Accept option "output-order=normal/reverse" for
-	  reversing page order (Issue #47).
+	  reversing page order (Issue #47) and also "page-delivery=
+	  same-order/reverse-order" (CUPS Issue #5340).
 	- libcupsfilters: Let the PPD generator add "*PageStackOrder
 	  ..."  lines to the choices of the "OutputBin" option, to
 	  mark which output bins need the pages printed in reverse
