@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.20.3 - 2018-04-12
 
 CHANGES IN V1.20.4
 
+	- gstoraster: Removed unneeded "if"s. Thanks to Laurent
+	  Martelli (martellilaurent at gmail dot com) for the patch
+	  (Ghostscript bug #692705).
 	- cups-browsed: When checking whether there is already a local
 	  print queue with the same URI as the one of the discovered
 	  printer, consider also as equal URI if the URIs only differ

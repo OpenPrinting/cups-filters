@@ -171,11 +171,7 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup("-dDuplex"));
     }
   }
-  if ((h->HWResolution[0] != 100) || (h->HWResolution[1] != 100))
-    snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",
-	     (unsigned)(h->HWResolution[0]), (unsigned)(h->HWResolution[1]));
-  else
-    snprintf(tmpstr, sizeof(tmpstr), "-r100x100");
+  snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",h->HWResolution[0], h->HWResolution[1]);
   cupsArrayAdd(gs_args, strdup(tmpstr));
   if (outformat == OUTPUT_FORMAT_RASTER) {
     if (h->InsertSheet) {
@@ -262,17 +258,9 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup("-dOutputFaceUp"));
     }
   }
-  if (h->PageSize[0] != 612)
-    snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEWIDTHPOINTS=%d",
-	     (unsigned)(h->PageSize[0]));
-  else
-    snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEWIDTHPOINTS=612");
+  snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEWIDTHPOINTS=%d",h->PageSize[0]);
   cupsArrayAdd(gs_args, strdup(tmpstr));
-  if (h->PageSize[1] != 792)
-    snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEHEIGHTPOINTS=%d",
-	     (unsigned)(h->PageSize[1]));
-  else
-    snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEHEIGHTPOINTS=792");
+  snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEHEIGHTPOINTS=%d",h->PageSize[1]);
   cupsArrayAdd(gs_args, strdup(tmpstr));
   if (outformat == OUTPUT_FORMAT_RASTER) {
     if (h->Separations) {
@@ -297,27 +285,11 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
 	       (unsigned)(h->cupsMediaType));
       cupsArrayAdd(gs_args, strdup(tmpstr));
     }
-    if (h->cupsBitsPerColor != 1)
-      snprintf(tmpstr, sizeof(tmpstr), "-dcupsBitsPerColor=%d",
-	       (unsigned)(h->cupsBitsPerColor));
-    else
-      snprintf(tmpstr, sizeof(tmpstr), "-dcupsBitsPerColor=1");
+    snprintf(tmpstr, sizeof(tmpstr), "-dcupsBitsPerColor=%d",h->cupsBitsPerColor);
     cupsArrayAdd(gs_args, strdup(tmpstr));
-    if (h->cupsColorOrder != CUPS_ORDER_CHUNKED)
-      snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorOrder=%d",
-	       (unsigned)(h->cupsColorOrder));
-    else
-      snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorOrder=%d",
-	       CUPS_ORDER_CHUNKED);
+    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorOrder=%d",h->cupsColorOrder);
     cupsArrayAdd(gs_args, strdup(tmpstr));
-  }
-  if (outformat == OUTPUT_FORMAT_RASTER) {
-    if (h->cupsColorSpace != CUPS_CSPACE_K)
-      snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorSpace=%d",
-	       (unsigned)(h->cupsColorSpace));
-    else
-      snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorSpace=%d",
-	       CUPS_CSPACE_K);
+    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorSpace=%d",h->cupsColorSpace);
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
   
