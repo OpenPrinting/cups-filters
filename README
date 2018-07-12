@@ -69,6 +69,10 @@ INTRODUCTION
 
     Report bugs to
 
+    https://github.com/OpenPrinting/cups-filters/issues
+
+    or alternatively to
+
     https://bugs.linuxfoundation.org/
 
     Choose "OpenPrinting" as the product and "cups-filters" as the component.
@@ -975,8 +979,15 @@ Further Infos
 Font embedding is handled by libfontembed in the filter/fontembed
 subdirectory.
 
-Please report all bugs to https://bugs.linuxfoundation.org/, product
-"OpenPrinting", component "cups-filters".
+Please report all bugs to
+
+https://github.com/OpenPrinting/cups-filters/issues
+
+or to
+
+https://bugs.linuxfoundation.org/
+
+(product "OpenPrinting", component "cups-filters").
 
 
 PDFTORASTER

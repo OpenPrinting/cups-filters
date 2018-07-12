@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.20.3 - 2018-04-12
 
 CHANGES IN V1.20.4
 
+	- README: Added link to Issue Tracker on GitHub.
 	- gstoraster: Removed unneeded "if"s. Thanks to Laurent
 	  Martelli (martellilaurent at gmail dot com) for the patch
 	  (Ghostscript bug #692705).
