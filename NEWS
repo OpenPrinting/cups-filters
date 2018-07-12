@@ -371,7 +371,8 @@ CHANGES IN V1.17.0
 
 	- rastertopdf, rastertopclm, driverless, cups-browsed,
 	  libcupsfilters: Added support for the PCLm output format for
-	  driverless printing on Mopria and Wi-Fi Direct
+	  driverless printing on printers using Wi-Fi Direct and other
+	  driverless printing standards.
 	  printers. This is the Google Summer of Code 2017 project of
 	  Sahil Arora (sahilarora dot 535 at gmail dot com). Thank you
 	  very much for your great work!  The PCLm support requires

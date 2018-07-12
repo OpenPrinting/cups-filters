@@ -41,8 +41,8 @@ INTRODUCTION
     (if in the actually used Poppler version such options are
     available). This is the case for most modern Linux distributions.
 
-    For PCLm output (used by Mopria and Wi-Fi Direct printers) QPDF of
-    at least version 7.0.0 is required.
+    For PCLm output (used by Wi-Fi Direct and other driverless
+    printing standards) QPDF of at least version 7.0.0 is required.
 
     For Apple Raster output (used by AirPrint printers) at least CUPS
     2.2.2 is required.
@@ -56,9 +56,10 @@ INTRODUCTION
     CUPS, this package, and Ghostscript contain some rudimentary
     printer drivers and especially the filters needed for driverless
     printing (currently PWG Raster, Apple Raster, PCLm, and PDF output
-    formats, for IPP Everywhere, AirPrint, Mopria, and Wi-Fi Direct
-    printers), see http://www.openprinting.org/drivers/ for a more
-    comprehensive set of printer drivers for Linux.
+    formats, for printers supporting IPP Everywhere, AirPrint, Wi-Fi
+    Direct, and other standards), see
+    http://www.openprinting.org/drivers/ for a more comprehensive set
+    of printer drivers for Linux.
 
     See
     
