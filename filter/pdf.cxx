@@ -734,6 +734,9 @@ extern "C" int pdf_fill_form(pdf_t *doc, opt_t *opt)
         }
 
         FormField *ff = fm_text->getField();
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 64
+        const
+#endif
         GooString *field_name;
         field_name = ff->getFullyQualifiedName();
         if ( ! field_name )
