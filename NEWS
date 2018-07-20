@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.20.4 - 2018-07-12
 -----------------------------------------------------
 
+CHANGES IN V1.20.5
+
+	- bannertopdf: Make it build with Poppler 0.64.0 and newer
+	  (Issue #50, Pull Request #51).
+
 CHANGES IN V1.20.4
 
 	- README: Added link to Issue Tracker on GitHub.
