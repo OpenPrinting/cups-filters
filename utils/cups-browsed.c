@@ -3003,7 +3003,7 @@ get_local_queue_name(const char *service_name,
 	break;
     }
     if (cluster) {
-      local_queue_name = cluster->local_queue_name;
+      local_queue_name = strdup(cluster->local_queue_name);
       *is_cups_queue = 2;
       free(str);
     } else if (AutoClustering) {
