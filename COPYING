@@ -69,15 +69,20 @@ License: Expat
 
 Files: filter/banner.c
   filter/banner.h
-  filter/pdf.h
   banners/*
   data/*
 Copyright: 2012, Canonical Ltd
 License: GPL-3
 
+Files: filter/pdf.h
+Copyright: 2018, Sahil Arora <sahilarora.535@gmail.com>
+  2012, Canonical Ltd
+License: GPL-3
+
 Files: filter/bannertopdf.c
   filter/pdf.cxx
-Copyright: 2013, ALT Linux, Andrew V. Stepanov <stanv@altlinux.com>
+Copyright: 2018, Sahil Arora <sahilarora.535@gmail.com>
+  2013, ALT Linux, Andrew V. Stepanov <stanv@altlinux.com>
   2012, Canonical Ltd
 License: GPL-3
 
