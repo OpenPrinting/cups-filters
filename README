@@ -33,13 +33,16 @@ INTRODUCTION
     recommended), libavahi-common, libavahi-client, libdbus, and glib
     are needed. It is highly recommended, especially if non-PDF
     printers are used, to have at least one of Ghostscript, Poppler,
-    or MuPDF. To print banner pages Poppler is needed.
+    or MuPDF.
 
     The Poppler-based filters need a C++ compiler which supports C++11
     and Poppler being built with the "./configure" options
     "--enable-splash --disable-fixedpoint --disable-single-precision"
     (if in the actually used Poppler version such options are
     available). This is the case for most modern Linux distributions.
+
+    For generating banner pages and the CUPS test page QPDF of at
+    least version 8.1.0 is required.
 
     For PCLm output (used by Wi-Fi Direct and other driverless
     printing standards) QPDF of at least version 7.0.0 is required.
@@ -1006,9 +1009,10 @@ Encryption feature is not supported.
 
 2. LICENSE
 
-Almost source files are under MIT like license. However, "pdftoraster" links
-some "poppler" libraries, and these files are under GNU public license.
-See copyright notice of each file for details.
+Almost all source files are under MIT like license. However,
+"pdftoraster" links some "poppler" libraries, and these files are
+under GNU public license.  See copyright notice of each file for
+details.
 
 3. COMMAND LINE
 
