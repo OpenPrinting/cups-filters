@@ -114,6 +114,7 @@ _cupsImageReadSunRaster(
       ras_depth == 0 || ras_depth > 32)
   {
     fputs("DEBUG: Raster image cannot be loaded!\n", stderr);
+    fclose(fp);
     return (1);
   }
 

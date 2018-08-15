@@ -1044,6 +1044,7 @@ int option_set_value(option_t *opt, int optionset, const char *value)
         if (choice && !isempty(choice->command))
             composite_set_values(opt, optionset, choice->command);
     }
+    free(newvalue);
     return 1;
 }
 
@@ -1914,6 +1915,8 @@ int ppd_supports_pdf()
     if (startswith(cmd, "gs"))
     {
         strncpy(cmd_pdf, cmd, 4096);
+        if (strlen(cmd) > 4095)
+          cmd_pdf[4095] = '\0';
         return 1;
     }
 

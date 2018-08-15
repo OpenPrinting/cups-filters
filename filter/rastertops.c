@@ -282,6 +282,8 @@ write_flate(cups_raster_t *ras,	        /* I - Image data */
       if (fwrite(out, 1, have, stdout) != have)
       {
 	(void)deflateEnd(&strm);
+	if (convertedpix != NULL)
+	  free(convertedpix);
 	return Z_ERRNO;
       }
     } while (strm.avail_out == 0);

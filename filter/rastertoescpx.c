@@ -1141,7 +1141,10 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
     }
   }
   else
+  {
     free(DotBuffers[0]);
+    DotBuffers[0] = NULL;
+  }
 
  /*
   * Output a page eject sequence...
@@ -1440,7 +1443,7 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
 
     printf("\033i");
     putchar(ctable[PrinterPlanes - 1][plane]);
-    putchar(type != 0);
+    putchar((type != 0) ? '1': '0');
     putchar(BitPlanes);
     putchar(bytes & 255);
     putchar(bytes >> 8);
@@ -1470,7 +1473,7 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
     bytes *= 8;
 
     printf("\033.");
-    putchar(type != 0);
+    putchar((type != 0) ? '1': '0');
     putchar(ystep);
     putchar(xstep);
     putchar(rows);
@@ -1906,6 +1909,10 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if (fd != 0)
     close(fd);
+  
+  for (int i = 0; i < 7; i++)
+    if (DotBuffers[i] != NULL)
+      free(DotBuffers[i]);
 
   return (page == 0);
 }
