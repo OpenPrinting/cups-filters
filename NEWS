@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.20.4 - 2018-07-12
 
 CHANGES IN V1.21.0
 
+	- libcupsfilters, cups-browsed, driverless, bannertopdf,
+          foomatic-rip, pdftops, pdftoraster, rastertops,
+          rastertoescpx, sys5ippprinter, beh: Fixed Coverity Scan
+          issues. Thanks to Zdenek Dohnal (zdohnal at redhat dot com)
+          for the tests and the patches.
 	- bannertopdf: Switched over from using Poppler to using QPDF
 	  for generating the PDF pages. With Poppler unstable APIs
 	  were used which were subject to change. Thanks to Sahil
