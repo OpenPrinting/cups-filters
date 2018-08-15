@@ -2301,7 +2301,10 @@ is_disabled(const char *printer, const char *reason) {
 	  pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
 	else if (!strcmp(ippGetName(attr), "printer-state-message") &&
 		 ippGetValueTag(attr) == IPP_TAG_TEXT) {
-	  free(pstatemsg);
+	  if (pstatemsg != NULL) {
+	    free(pstatemsg);
+	    pstatemsg = NULL;
+	  }
 	  p = ippGetString(attr, 0, NULL);
 	  if (p != NULL) pstatemsg = strdup(p);
 	}
@@ -2318,16 +2321,22 @@ is_disabled(const char *printer, const char *reason) {
 	case IPP_PRINTER_IDLE:
 	case IPP_PRINTER_PROCESSING:
 	  ippDelete(response);
-	  free(pstatemsg);
+	  if (pstatemsg != NULL) {
+	    free(pstatemsg);
+	    pstatemsg = NULL;
+	  }
 	  return NULL;
 	case IPP_PRINTER_STOPPED:
 	  ippDelete(response);
 	  if (reason == NULL)
 	    return pstatemsg;
-	  else if (strcasestr(pstatemsg, reason) != NULL)
+	  else if (pstatemsg != NULL && (strcasestr(pstatemsg, reason) != NULL))
 	    return pstatemsg;
 	  else {
-	    free(pstatemsg);
+            if (pstatemsg != NULL) {
+                free(pstatemsg);
+                pstatemsg = NULL;
+            }
 	    return NULL;
 	  }
 	}
@@ -2336,12 +2345,18 @@ is_disabled(const char *printer, const char *reason) {
     debug_printf("No information regarding enabled/disabled found about the requested printer '%s'\n",
 		 printer);
     ippDelete(response);
-    free(pstatemsg);
+    if (pstatemsg != NULL) {
+      free(pstatemsg);
+      pstatemsg = NULL;
+    }
     return NULL;
   }
   debug_printf("ERROR: Request for printer info failed: %s\n",
 	       cupsLastErrorString());
-  free(pstatemsg);
+  if (pstatemsg != NULL) {
+    free(pstatemsg);
+    pstatemsg = NULL;
+  }
   return NULL;
 }
 
@@ -3331,6 +3346,8 @@ on_printer_state_changed (CupsNotifier *object,
 		      dest_host = p->ip ? p->ip : p->host;
 		      dest_port = p->port;
 		      strncpy(dest_name, remote_cups_queue, sizeof(dest_name));
+		      if (strlen(remote_cups_queue) > 1023)
+		        dest_name[1023] = '\0';
 		      dest_index = i;
 		      debug_printf("Printer %s on host %s, port %d is idle, take this as destination and stop searching.\n",
 				   remote_cups_queue, p->host, p->port);
@@ -3347,8 +3364,9 @@ on_printer_state_changed (CupsNotifier *object,
 			  min_jobs = num_jobs;
 			  dest_host = p->ip ? p->ip : p->host;
 			  dest_port = p->port;
-			  strncpy(dest_name, remote_cups_queue,
-				  sizeof(dest_name));
+			  strncpy(dest_name, remote_cups_queue, sizeof(dest_name));
+			  if (strlen(remote_cups_queue) > 1023)
+			    dest_name[1023] = '\0';
 			  dest_index = i;
 			}
 			debug_printf("Printer %s on host %s, port %d is printing and it has %d jobs.\n",
@@ -4099,8 +4117,9 @@ create_remote_printer_entry (const char *queue_name,
 				   IPP_TAG_KEYWORD)) != NULL) {
 	debug_printf("  Attr: %s\n", ippGetName(attr));
 	for (i = 0; i < ippGetCount(attr); i ++) {
-	  strncpy(valuebuffer, ippGetString(attr, i, NULL),
-		  sizeof(valuebuffer));
+	  strncpy(valuebuffer, ippGetString(attr, i, NULL), sizeof(valuebuffer));
+	  if (strlen(ippGetString(attr, i, NULL)) > 65535)
+	    valuebuffer[65535] = '\0';
 	  debug_printf("  Keyword: %s\n", valuebuffer);
 	  if (valuebuffer[0] > '1')
 	    break;
@@ -4131,8 +4150,9 @@ create_remote_printer_entry (const char *queue_name,
 	debug_printf("  Value: %s\n", valuebuffer);
 	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
-	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
-		    sizeof(valuebuffer));
+	    strncpy(valuebuffer, ippGetString(attr, i, NULL), sizeof(valuebuffer));
+	    if (strlen(ippGetString(attr, i, NULL)) > 65535)
+	      valuebuffer[65535] = '\0';
 	    debug_printf("  Keyword: %s\n", valuebuffer);
 	    if (valuebuffer[0] != '\0')
 	      break;
@@ -4162,8 +4182,9 @@ create_remote_printer_entry (const char *queue_name,
 	debug_printf("  Value: %s\n", valuebuffer);
 	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
-	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
-		    sizeof(valuebuffer));
+	    strncpy(valuebuffer, ippGetString(attr, i, NULL), sizeof(valuebuffer));
+	    if (strlen(ippGetString(attr, i, NULL)) > 65535)
+	      valuebuffer[65535] = '\0';
 	    debug_printf("  Keyword: %s\n", valuebuffer);
 	    if (valuebuffer[0] != '\0')
 	      break;
@@ -4196,8 +4217,9 @@ create_remote_printer_entry (const char *queue_name,
 	debug_printf("  Value: %s\n", p->queue_name, valuebuffer);
 	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
-	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
-		    sizeof(valuebuffer));
+	    strncpy(valuebuffer, ippGetString(attr, i, NULL), sizeof(valuebuffer));
+	    if (strlen(ippGetString(attr, i, NULL)) > 65535)
+	      valuebuffer[65535] = '\0';
 	    debug_printf("  Keyword: %s\n", valuebuffer);
 	    if (valuebuffer[0] != '\0')
 	      break;
@@ -5064,6 +5086,8 @@ gboolean update_cups_queues(gpointer unused) {
       } else {
 	/* Device URI: ipp(s)://<remote host>:631/printers/<remote queue> */
 	strncpy(device_uri, p->uri, sizeof(device_uri));
+	if (strlen(p->uri) > HTTP_MAX_URI-1)
+	  device_uri[HTTP_MAX_URI-1] = '\0';
 	debug_printf("Print queue %s is for an IPP network printer, or we do not get notifications from CUPS, using direct device URI %s\n",
 		     p->queue_name, device_uri);
       }
@@ -5167,6 +5191,8 @@ gboolean update_cups_queues(gpointer unused) {
 	  } else if (!strncmp(line, "*Default", 8)) {
 	    cont_line_read = 0;
 	    strncpy(keyword, line + 8, sizeof(keyword));
+	    if ((strlen(line) + 8) > 1023)
+	      keyword[1023] = '\0';
 	    for (keyptr = keyword; *keyptr; keyptr ++)
 	      if (*keyptr == ':' || isspace(*keyptr & 255))
 		break;
@@ -7620,7 +7646,7 @@ read_configuration (const char *filename)
      in the configuration file is used. */
   while ((i < cupsArrayCount(command_line_config) &&
 	  (value = cupsArrayIndex(command_line_config, i++)) &&
-	  strncpy(line, value, sizeof(line))) ||
+	  strncpy(line, value, sizeof(line)) && ((strlen(value) > HTTP_MAX_BUFFER-1)? line[HTTP_MAX_BUFFER-1] = '\0':  1)) ||
 	 cupsFileGetConf(fp, line, sizeof(line), &value, &linenum)) {
     if (linenum < 0) {
       /* We are still reading options from the command line ("-o ..."),
@@ -7847,6 +7873,7 @@ read_configuration (const char *filename)
 	if (filter->cregexp)
 	  regfree(filter->cregexp);
 	free(filter);
+	filter = NULL;
       }
     } else if ((!strcasecmp(line, "BrowseInterval") || !strcasecmp(line, "BrowseTimeout")) && value) {
       int t = atoi(value);
@@ -7862,7 +7889,7 @@ read_configuration (const char *filename)
 	debug_printf("Invalid %s value: %d\n",
 		     line, t);
     } else if (!strcasecmp(line, "DomainSocket") && value) {
-      if (value[0] != '\0')
+      if (DomainSocket == NULL && value[0] != '\0')
 	DomainSocket = strdup(value);
     } else if ((!strcasecmp(line, "HttpLocalTimeout") || !strcasecmp(line, "HttpRemoteTimeout")) && value) {
       int t = atoi(value);
@@ -8031,6 +8058,10 @@ read_configuration (const char *filename)
 	}
       }
       cupsArrayAdd (clusters, cluster);
+      if (start != NULL) {
+        free(start);
+        start = NULL;
+      }
       continue;
     cluster_fail:
       if (cluster) {
@@ -8044,6 +8075,11 @@ read_configuration (const char *filename)
 	  cupsArrayDelete (cluster->members);
 	}
 	free(cluster);
+        cluster = NULL;
+      }
+      if (start != NULL) {
+        free(start);
+        start = NULL;
       }
     } else if (!strcasecmp(line, "LoadBalancing") && value) {
       if (!strncasecmp(value, "QueueOnClient", 13))
@@ -8051,7 +8087,7 @@ read_configuration (const char *filename)
       else if (!strncasecmp(value, "QueueOnServers", 14))
 	LoadBalancingType = QUEUE_ON_SERVERS;
     } else if (!strcasecmp(line, "DefaultOptions") && value) {
-      if (strlen(value) > 0)
+      if (DefaultOptions == NULL && strlen(value) > 0)
 	DefaultOptions = strdup(value);
     } else if (!strcasecmp(line, "AutoShutdown") && value) {
       char *p, *saveptr;
@@ -8425,6 +8461,8 @@ int main(int argc, char*argv[]) {
      daemon, not with remote ones. */
   if (getenv("CUPS_SERVER") != NULL) {
     strncpy(local_server_str, getenv("CUPS_SERVER"), sizeof(local_server_str));
+    if (strlen(getenv("CUPS_SERVER")) > 1023)
+      local_server_str[1023] = '\0';
   } else {
 #ifdef CUPS_DEFAULT_DOMAINSOCKET
     if (DomainSocket == NULL)
@@ -8769,6 +8807,11 @@ fail:
   /* Close log file if we have one */
   if (debug_logfile == 1)
     stop_debug_logging();
+  
+  if (DefaultOptions != NULL)
+    free(DefaultOptions);
+  if (DomainSocket != NULL)
+    free(DomainSocket);
 
   return ret;
 

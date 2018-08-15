@@ -558,8 +558,10 @@ static void parseOpts(int argc, char **argv)
     if (!cm_disabled) 
       cmGetPrinterIccProfile(getenv("PRINTER"), &profile, ppd);
 
-    if (profile != NULL)
-      colorProfile = cmsOpenProfileFromFile(profile,"r");    
+    if (profile != NULL) {
+      colorProfile = cmsOpenProfileFromFile(profile,"r");
+      free(profile);
+    }
 
 #ifdef HAVE_CUPS_1_7
     if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&

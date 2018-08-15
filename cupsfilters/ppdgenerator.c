@@ -930,6 +930,10 @@ load_opt_strings_catalog(const char *location, cups_array_t *options)
     }
   }
   cupsFileClose(fp);
+  if (choice_name != NULL)
+    free(choice_name);
+  if (opt_name != NULL)
+    free(opt_name);
   if (filename == tmpfile)
     unlink(filename);
 }

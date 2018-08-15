@@ -282,7 +282,7 @@ sgiOpenFile(FILE *file,			/* I - File to open */
         sgip->mode = SGI_WRITE;
 
         putshort(SGI_MAGIC, sgip->file);
-        putc((sgip->comp = comp) != 0, sgip->file);
+        putc(((sgip->comp = comp) != 0) ? '1': '0', sgip->file);
         putc(sgip->bpp = bpp, sgip->file);
         putshort(3, sgip->file);		/* Dimensions */
         putshort(sgip->xsize = xsize, sgip->file);

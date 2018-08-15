@@ -272,6 +272,9 @@ _get_colord_profile(const char   *printer_name,     /* Dest name */
       free(qualifier);
     }
 
+    if (icc_profile != NULL)
+      free(icc_profile);
+
     return is_profile_set;
 
 }
@@ -325,8 +328,11 @@ _get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
     if (attr->value[0] != '/')
       snprintf(full_path, sizeof(full_path),
                "%s/profiles/%s", CUPSDATA, attr->value);
-    else
+    else {
       strncpy(full_path, attr->value, sizeof(full_path));
+      if (strlen(attr->value) > 1023)
+        full_path[1023] = '\0';
+    }
 
     /* check the file exists */
     if (access(full_path, 0)) {
