@@ -1425,11 +1425,22 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
      supported PDLs. Choose the default resolution from the most
      desirable of all resolution-requiring PDLs if it is common in all
      of them. Skip a resolution-requiring PDL if its resolution list
-     attrinbute is missing or contains only broken entries. Use the
+     attribute is missing or contains only broken entries. Use the
      general resolution list and default resolution of the printer
      only if it does not support any resolution-requiring PDL. Use 300
-     dpi if there is no resolution info at all in the attributes. */
-  if (cupsArrayFind(pdl_list, "application/pdf")) {
+     dpi if there is no resolution info at all in the attributes.
+     In case of PDF as PDL check whether also the
+     "application/vnd.cups-pdf" MIME type is accepted. In this case
+     our printer is a remote CUPS queue which already runs the
+     pdftopdf filter on the server, so let the PPD take
+     "application/pdf" as input format so that pdftopdf does not also
+     get executed on the client, applying option settings twice. See
+     https://github.com/apple/cups/issues/5361 */
+  if (cupsArrayFind(pdl_list, "application/vnd.cups-pdf")) {
+    cupsFilePuts(fp, "*cupsFilter2: \"application/pdf application/pdf 0 -\"\n");
+    formatfound = 1;
+    is_pdf = 1;
+  } else if (cupsArrayFind(pdl_list, "application/pdf")) {
     cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
     formatfound = 1;
     is_pdf = 1;
