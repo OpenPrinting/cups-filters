@@ -175,7 +175,7 @@ void append_page_setup_section(dstr_t *str, int optset, int comments);
 int build_commandline(int optset, dstr_t *cmdline, int pdfcmdline);
 
 void set_options_for_page(int optset, int page);
-const char *get_icc_profile_for_qualifier(const char **qualifier);
+char *get_icc_profile_for_qualifier(const char **qualifier);
 const char **get_ppd_qualifier(void);
 
 #endif

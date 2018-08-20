@@ -438,7 +438,7 @@ _searchDirForCatalog(const char *dirname)
   const char *catalog = NULL, *c1, *c2;
   cups_dir_t *dir, *subdir;
   cups_dentry_t *subdirentry, *catalogentry;
-  char subdirpath[1024], catalogpath[1024], lang[8];
+  char subdirpath[1024], catalogpath[2048], lang[8];
   int i;
 
   if (dirname == NULL)

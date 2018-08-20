@@ -81,8 +81,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   char		*ptr,			/* Pointer into string */
 		s[255];			/* Temporary string */
   const char	*val,			/* Pointer into value */
-		*media,			/* media option */
-		*page_size,		/* PageSize option */
+                *media;			/* media option */
+  char		*page_size,		/* PageSize option */
                 *media_source,          /* Media source */
                 *media_type;		/* Media type */
   pwg_media_t   *size_found;            /* page size found for given name */

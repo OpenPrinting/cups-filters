@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.20.4 - 2018-07-12
 
 CHANGES IN V1.21.0
 
+	- libcupsfilters, cups-browsed, driverless, foomatic-rip,
+	  parallel: Silenced warnings from newest gcc.
 	- libcupsfilters: When generating a PPD for driverless
 	  printing on a remote IPP printer, make pdftopdf not being
 	  run by the local queue if the remote queue is a CUPS queue

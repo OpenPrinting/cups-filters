@@ -65,7 +65,7 @@ list_printers (int mode)
                 *txt_ty = NULL,
                 *txt_pdl = NULL,
 		value[256],		/* Value string */
-                make_and_model[512],	/* Manufacturer and model */
+                make_and_model[1024],	/* Manufacturer and model */
                 make[512],              /* Manufacturer */
 		model[256],		/* Model */
 		pdl[256],		/* PDL */

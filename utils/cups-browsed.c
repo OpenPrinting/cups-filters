@@ -401,7 +401,7 @@ static int NewIPPPrinterQueuesShared = 0;
 static int AutoClustering = 1;
 static cups_array_t *clusters;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
-static const char *DefaultOptions = NULL;
+static char *DefaultOptions = NULL;
 static int terminating = 0; /* received SIGTERM, ignore callbacks,
 			       break loops */
 static int in_shutdown = 0;
@@ -1730,7 +1730,7 @@ cupsdUpdateLDAPBrowse(void)
 		host[HTTP_MAX_URI],	/* Hostname */
 		resource[HTTP_MAX_URI],	/* Resource path */
 		local_resource[HTTP_MAX_URI],	/* Resource path */
-		service_name[HTTP_MAX_URI],
+		service_name[2048],
 		location[1024],		/* Printer location */
 		info[1024],		/* Printer information */
 		make_model[1024],	/* Printer make and model */
@@ -3100,7 +3100,7 @@ on_printer_state_changed (CupsNotifier *object,
                           gpointer user_data)
 {
   int i;
-  char *ptr, buf[1024];
+  char *ptr, buf[2048];
   remote_printer_t *p, *q;
   http_t *http = NULL;
   ipp_t *request, *response;
@@ -7617,7 +7617,7 @@ read_configuration (const char *filename)
   cups_file_t *fp;
   int i, linenum = 0;
   char line[HTTP_MAX_BUFFER];
-  char *value = NULL, *ptr, *start;
+  char *value = NULL, *ptr, *start = NULL;
   const char *delim = " \t,";
   int browse_allow_line_found = 0;
   int browse_deny_line_found = 0;

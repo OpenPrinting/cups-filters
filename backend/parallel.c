@@ -386,11 +386,11 @@ list_devices(void)
 #ifdef __linux
   int	i;			/* Looping var */
   int	fd;			/* File descriptor */
-  char	device[255],		/* Device filename */
+  char	device[512],		/* Device filename */
 	basedevice[255],	/* Base device filename for ports */
 	device_id[1024],	/* Device ID string */
 	make_model[1024],	/* Make and model */
-	info[1024],		/* Info string */
+	info[2048],		/* Info string */
 	uri[1024];		/* Device URI */
 
 
