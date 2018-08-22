@@ -462,7 +462,7 @@ PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.0.0])
 PKG_CHECK_MODULES([IJS], [ijs], [have_ijs=yes], [have_ijs=no])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
-PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 3.0.2])
+PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 8.1.0])
 
 # ===============================
 # Check for PCLm printing support

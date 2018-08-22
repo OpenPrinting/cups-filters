@@ -28,24 +28,18 @@ INTRODUCTION
     by both CUPS and this package. Then the filters of this package
     should be used.
 
-    For compiling and using this package CUPS, libqpdf, libjpeg,
-    libpng, libtiff, freetype, fontconfig, liblcms (liblcms2
-    recommended), libavahi-common, libavahi-client, libdbus, and glib
-    are needed. It is highly recommended, especially if non-PDF
-    printers are used, to have at least one of Ghostscript, Poppler,
-    or MuPDF.
+    For compiling and using this package CUPS, libqpdf (8.1.0 or
+    newer), libjpeg, libpng, libtiff, freetype, fontconfig, liblcms
+    (liblcms2 recommended), libavahi-common, libavahi-client, libdbus,
+    and glib are needed. It is highly recommended, especially if
+    non-PDF printers are used, to have at least one of Ghostscript,
+    Poppler, or MuPDF.
 
     The Poppler-based filters need a C++ compiler which supports C++11
     and Poppler being built with the "./configure" options
     "--enable-splash --disable-fixedpoint --disable-single-precision"
     (if in the actually used Poppler version such options are
     available). This is the case for most modern Linux distributions.
-
-    For generating banner pages and the CUPS test page QPDF of at
-    least version 8.1.0 is required.
-
-    For PCLm output (used by Wi-Fi Direct and other driverless
-    printing standards) QPDF of at least version 7.0.0 is required.
 
     For Apple Raster output (used by AirPrint printers) at least CUPS
     2.2.2 is required.
