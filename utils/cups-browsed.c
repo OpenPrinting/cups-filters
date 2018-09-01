@@ -7889,8 +7889,11 @@ read_configuration (const char *filename)
 	debug_printf("Invalid %s value: %d\n",
 		     line, t);
     } else if (!strcasecmp(line, "DomainSocket") && value) {
-      if (DomainSocket == NULL && value[0] != '\0')
+      if (value[0] != '\0') {
+	if (DomainSocket != NULL)
+	  free(DomainSocket);
 	DomainSocket = strdup(value);
+      }
     } else if ((!strcasecmp(line, "HttpLocalTimeout") || !strcasecmp(line, "HttpRemoteTimeout")) && value) {
       int t = atoi(value);
       if (t >= 0) {
@@ -8466,7 +8469,7 @@ int main(int argc, char*argv[]) {
   } else {
 #ifdef CUPS_DEFAULT_DOMAINSOCKET
     if (DomainSocket == NULL)
-      DomainSocket = CUPS_DEFAULT_DOMAINSOCKET;
+      DomainSocket = strdup(CUPS_DEFAULT_DOMAINSOCKET);
 #endif
     if (DomainSocket != NULL) {
       struct stat sockinfo;               /* Domain socket information */
