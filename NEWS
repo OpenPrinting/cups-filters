@@ -1,10 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.21.2 - 2018-09-02
 -----------------------------------------------------
 
-CHANGES IN V1.21.1
+CHANGES IN V1.21.2
 
 	- cups-browsed: Fixed freeing of literal string caused by
 	  Coverity Scan issue fix (Debian bug #907399).
+
+CHANGES IN V1.21.1
+
 	- foomatic-rip: Fixed segmentation fault caused by wrong
           Coverity Scan issue fix (Issue #57, Debian bug #907026).
 	- Build system: Require QPDF 8.1.0 or later as it is needed by
