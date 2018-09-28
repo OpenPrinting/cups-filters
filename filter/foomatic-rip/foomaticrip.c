@@ -663,6 +663,7 @@ int print_file(const char *filename, int convert)
                     rip_die(EXIT_PRNERR_NORETRY_BAD_SETTINGS,
                             "Couldn't dup stdout of pdf-to-ps\n");
 
+                clearerr(stdin);
                 ret = print_file("<STDIN>", 0);
 
                 wait_for_process(renderer_pid);

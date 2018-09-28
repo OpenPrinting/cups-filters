@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.21.2 - 2018-09-02
 -----------------------------------------------------
 
+CHANGES IN V1.21.3
+
+	- foomatic-rip: Reset stdin after replacing the underlying file
+          descriptor (Issue #58).
+
 CHANGES IN V1.21.2
 
 	- cups-browsed: Fixed freeing of literal string caused by
