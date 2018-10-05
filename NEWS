@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.21.3 - 2018-10-03
 -----------------------------------------------------
 
+CHANGES IN V1.21.4
+
+	- pdftoraster, pdftoopvp, pdftoijs: Poppler removed memCheck
+          and gMemReport functions, remove appropriate calls (Issue
+          #62, Pull request #66).
+
 CHANGES IN V1.21.3
 
 	- foomatic-rip: Reset stdin after replacing the underlying file
