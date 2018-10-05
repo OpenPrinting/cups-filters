@@ -763,9 +763,11 @@ err2:
  err0:
   delete globalParams;
 
+#if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR < 69
   // check for memory leaks
   Object::memCheck(stderr);
   gMemReport(stderr);
+#endif
 
 }
 /* muntrace(); */
