@@ -2162,9 +2162,11 @@ err1:
     cmsDeleteTransform(colorTransform);
   }
 
+#if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR < 69
   // Check for memory leaks
   Object::memCheck(stderr);
   gMemReport(stderr);
+#endif
 
   return exitCode;
 }
