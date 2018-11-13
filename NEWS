@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.21.3 - 2018-10-03
 
 CHANGES IN V1.21.4
 
+	- pdftopdf: Fixed printing multiple copies on driverless
+	  IPP printers. When printing collated copies the multiple
+	  copies got applied twice, resulting in n*n instead of n
+	  copies (CUPS issue #5433).
 	- pdftoraster, pdftoopvp, pdftoijs: Poppler removed memCheck
           and gMemReport functions, remove appropriate calls (Issue
           #62, Pull request #66).

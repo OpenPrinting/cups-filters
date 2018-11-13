@@ -783,11 +783,25 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
   } else if ((ppd)&&(!ppd->manual_copies)) { // hw copy generation available
     param.deviceCopies=param.numCopies;
     if (param.collate) { // collate requested by user
-      // check collate device, with current/final(!) ppd settings
-      param.deviceCollate=printerWillCollate(ppd);
-      if (!param.deviceCollate) {
-        // printer can't hw collate -> we must copy collated in sw
-        param.deviceCopies=1;
+      // Check output format (FINAL_CONTENT_TYPE env variable) whether it is
+      // of a driverless IPP printer (PDF, Apple Raster, PWG Raster, PCLm).
+      // These printers do always hardware collate if they do hardware copies.
+      // https://github.com/apple/cups/issues/5433
+      char *final_content_type = getenv("FINAL_CONTENT_TYPE");
+      if (final_content_type &&
+	  (strcasestr(final_content_type, "/pdf") ||
+	   strcasestr(final_content_type, "/vnd.cups-pdf") ||
+	   strcasestr(final_content_type, "/pwg-raster") ||
+	   strcasestr(final_content_type, "/urf") ||
+	   strcasestr(final_content_type, "/PCLm"))) {
+	param.deviceCollate = true;
+      } else {
+	// check collate device, with current/final(!) ppd settings
+	param.deviceCollate=printerWillCollate(ppd);
+	if (!param.deviceCollate) {
+	  // printer can't hw collate -> we must copy collated in sw
+	  param.deviceCopies=1;
+	}
       }
     } // else: printer copies w/o collate and takes care of duplex/evenDuplex
   } else { // sw copies
