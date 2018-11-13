@@ -283,7 +283,11 @@ cmsHPROFILE sgray_profile()
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 23
 void CDECL myErrorFun(void *data, ErrorCategory category,
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 70
+    Goffset pos, const char *msg)
+#else
     Goffset pos, char *msg)
+#endif /* MAJOR > 0 || MINOR >= 70 */
 #else
 void CDECL myErrorFun(void *data, ErrorCategory category,
     int pos, char *msg)
@@ -1686,7 +1690,7 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
 {
   SplashBitmap *bitmap;
   Page *page = catalog->getPage(pageNo);
-  PDFRectangle *mediaBox = page->getMediaBox();
+  PDFRectangle mediaBox = *page->getMediaBox();
   int rotate = page->getRotate();
   double paperdimensions[2], /* Physical size of the paper */
     margins[4];	/* Physical margins of print */
@@ -1696,14 +1700,14 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
   bool landscape = 0;
 
   fprintf(stderr, "DEBUG: mediaBox = [ %f %f %f %f ]; rotate = %d\n",
-	  mediaBox->x1, mediaBox->y1, mediaBox->x2, mediaBox->y2, rotate);
-  l = mediaBox->x2 - mediaBox->x1;
+	  mediaBox.x1, mediaBox.y1, mediaBox.x2, mediaBox.y2, rotate);
+  l = mediaBox.x2 - mediaBox.x1;
   if (l < 0) l = -l;
   if (rotate == 90 || rotate == 270)
     header.PageSize[1] = (unsigned)l;
   else
     header.PageSize[0] = (unsigned)l;
-  l = mediaBox->y2 - mediaBox->y1;
+  l = mediaBox.y2 - mediaBox.y1;
   if (l < 0) l = -l;
   if (rotate == 90 || rotate == 270)
     header.PageSize[0] = (unsigned)l;
