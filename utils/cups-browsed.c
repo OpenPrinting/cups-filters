@@ -4407,7 +4407,7 @@ gboolean update_cups_queues(gpointer unused) {
   int num_jobs;
   cups_job_t *jobs;
   ipp_t *request;
-  time_t current_time = time(NULL);
+  time_t current_time;
   int i, new_cupsfilter_line_inserted, ap_remote_queue_id_line_inserted,
     cont_line_read, want_raw;
   char *disabled_str, *ptr, *prefix;
@@ -4461,6 +4461,9 @@ gboolean update_cups_queues(gpointer unused) {
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
 
+    /* We need current time as precise as possible because of timeouts for possible retries */
+    current_time = time(NULL);
+
     /* terminating means we have received a signal and should shut down.
        in_shutdown means we have exited the main loop.
        update_cups_queues() is called after having exited the main loop
@@ -4503,6 +4506,7 @@ gboolean update_cups_queues(gpointer unused) {
 	if ((http = http_connect_local ()) == NULL) {
 	  debug_printf("Unable to connect to CUPS!\n");
 	  if (in_shutdown == 0)
+            current_time = time(NULL);
 	    p->timeout = current_time + TIMEOUT_RETRY;
 	  break;
 	}
@@ -4537,6 +4541,7 @@ gboolean update_cups_queues(gpointer unused) {
 			      "Printer disappeared or cups-browsed shutdown");
 	    /* Schedule the removal of the queue for later */
 	    if (in_shutdown == 0) {
+              current_time = time(NULL);
 	      p->timeout = current_time + TIMEOUT_RETRY;
 	      p->no_autosave = 0;
 	      break;
@@ -4556,6 +4561,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  if (cups_notifier == NULL && is_cups_default_printer(p->queue_name)) {
 	    /* Schedule the removal of the queue for later */
 	    if (in_shutdown == 0) {
+              current_time = time(NULL);
 	      p->timeout = current_time + TIMEOUT_RETRY;
 	      p->no_autosave = 0;
 	      break;
@@ -4579,6 +4585,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	    debug_printf("Unable to remove CUPS queue!\n");
 	    if (in_shutdown == 0) {
+              current_time = time(NULL);
 	      p->timeout = current_time + TIMEOUT_RETRY;
 	      p->no_autosave = 0;
 	      break;
@@ -4657,6 +4664,7 @@ gboolean update_cups_queues(gpointer unused) {
       /* Make sure to have a connection to the local CUPS daemon */
       if ((http = http_connect_local ()) == NULL) {
 	debug_printf("Unable to connect to CUPS!\n");
+        current_time = time(NULL);
 	p->timeout = current_time + TIMEOUT_RETRY;
 	break;
       }
@@ -4779,6 +4787,7 @@ gboolean update_cups_queues(gpointer unused) {
 	      cupsFreeJobs(num_jobs, jobs);
 	      /* Schedule the removal of the queue for later */
 	      if (in_shutdown == 0) {
+                current_time = time(NULL);
 		p->timeout = current_time + TIMEOUT_RETRY;
 		p->no_autosave = 0;
 		break;
@@ -4794,6 +4803,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	      debug_printf("Unable to remove temporary CUPS queue, retrying later\n");
 	      if (in_shutdown == 0) {
+                current_time = time(NULL);
 		p->timeout = current_time + TIMEOUT_RETRY;
 		p->no_autosave = 0;
 		break;
@@ -4817,6 +4827,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
 		       p->queue_name, p->uri);
 	  p->status = STATUS_DISAPPEARED;
+          current_time = time(NULL);
 	  p->timeout = current_time + TIMEOUT_IMMEDIATELY;
 	  goto cannot_create;
 	}
@@ -4834,6 +4845,7 @@ gboolean update_cups_queues(gpointer unused) {
 	      else
 		debug_printf("Unable to create PPD file: %s\n", ppdgenerator_msg);
 	      p->status = STATUS_DISAPPEARED;
+              current_time = time(NULL);
 	      p->timeout = current_time + TIMEOUT_IMMEDIATELY;
 	      goto cannot_create;
 	    } else {
@@ -4959,6 +4971,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0) {
 	    debug_printf("Unable to create interface script file\n");
 	    p->status = STATUS_DISAPPEARED;
+            current_time = time(NULL);
 	    p->timeout = current_time + TIMEOUT_IMMEDIATELY;
 	    goto cannot_create;
 	  }
@@ -4986,6 +4999,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  if (bytes != strlen(buffer)) {
 	    debug_printf("Unable to write interface script into the file\n");
 	    p->status = STATUS_DISAPPEARED;
+            current_time = time(NULL);
 	    p->timeout = current_time + TIMEOUT_IMMEDIATELY;
 	    goto cannot_create;
 	  }
@@ -5061,6 +5075,7 @@ gboolean update_cups_queues(gpointer unused) {
 	      == NULL) {
 	    debug_printf("Could not connect to the server %s:%d for %s!\n",
 			 p->host, p->port, p->queue_name);
+            current_time = time(NULL);
 	    p->timeout = current_time + TIMEOUT_RETRY;
 	    p->no_autosave = 0;
 	    break;
@@ -5071,6 +5086,7 @@ gboolean update_cups_queues(gpointer unused) {
 	      CreateRemoteRawPrinterQueues == 0) {
 	    debug_printf("Unable to load PPD file for %s from the server %s:%d!\n",
 			 p->queue_name, p->host, p->port);
+            current_time = time(NULL);
 	    p->timeout = current_time + TIMEOUT_RETRY;
 	    p->no_autosave = 0;
 	    httpClose(remote_http);
@@ -5104,6 +5120,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  ppd_status_t status = ppdLastError(&linenum);
 	  debug_printf("Unable to open PPD \"%s\": %s on line %d.",
 		       loadedppd, ppdErrorString(status), linenum);
+          current_time = time(NULL);
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  p->no_autosave = 0;
 	  unlink(loadedppd);
@@ -5113,6 +5130,7 @@ gboolean update_cups_queues(gpointer unused) {
 	cupsMarkOptions(ppd, p->num_options, p->options);
 	if ((out = cupsTempFile2(buf, sizeof(buf))) == NULL) {
 	  debug_printf("Unable to create temporary file!\n");
+          current_time = time(NULL);
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  p->no_autosave = 0;
 	  ppdClose(ppd);
@@ -5121,6 +5139,7 @@ gboolean update_cups_queues(gpointer unused) {
 	}
 	if ((in = cupsFileOpen(loadedppd, "r")) == NULL) {
 	  debug_printf("Unable to open the downloaded PPD file!\n");
+          current_time = time(NULL);
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  p->no_autosave = 0;
 	  cupsFileClose(out);
@@ -5323,6 +5342,7 @@ gboolean update_cups_queues(gpointer unused) {
       if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	debug_printf("Unable to create/modify CUPS queue (%s)!\n",
 		     cupsLastErrorString());
+        current_time = time(NULL);
 	p->timeout = current_time + TIMEOUT_RETRY;
 	p->no_autosave = 0;
 	break;
