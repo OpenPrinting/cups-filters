@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.21.3 - 2018-10-03
 
 CHANGES IN V1.21.4
 
+	- libcupsfilters: In the PPD generator for driverless IPP
+	  printing let "*cupsManualCopies: true" lines get added to
+	  the PPD if printing is done in a raster format as then
+	  pdftopdf needs to generate the copies.
 	- pdftoraster, pdftoopvp, pdftoijs: Fix build with Poppler >=
 	  0.70 (Issue #69, Pull request #70).
 	- pdftopdf: Fixed printing multiple copies on driverless IPP

@@ -1228,6 +1228,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   int			outputorderinfofound = 0,
 			faceupdown = 1,
 			firsttolast = 1;
+  int			manual_copies = -1;
 
  /*
   * Range check input...
@@ -1438,10 +1439,12 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
      https://github.com/apple/cups/issues/5361 */
   if (cupsArrayFind(pdl_list, "application/vnd.cups-pdf")) {
     cupsFilePuts(fp, "*cupsFilter2: \"application/pdf application/pdf 0 -\"\n");
+    manual_copies = 0;
     formatfound = 1;
     is_pdf = 1;
   } else if (cupsArrayFind(pdl_list, "application/pdf")) {
     cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
+    manual_copies = 0;
     formatfound = 1;
     is_pdf = 1;
   }
@@ -1452,6 +1455,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	  joinResolutionArrays(&common_res, &current_res, &common_def,
 			       &current_def)) {
 	cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 0 -\"\n");
+	if (formatfound == 0) manual_copies = 1;
 	formatfound = 1;
 	is_pwg = 1;
       }
@@ -1487,6 +1491,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	      joinResolutionArrays(&common_res, &current_res, &common_def,
 				   &current_def)) {
 	    cupsFilePuts(fp, "*cupsFilter2: \"image/urf image/urf 100 -\"\n");
+	    if (formatfound == 0) manual_copies = 1;
 	    formatfound = 1;
 	    is_apple = 1;
 	  }
@@ -1506,6 +1511,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	  joinResolutionArrays(&common_res, &current_res, &common_def,
 			       &current_def)) {
 	cupsFilePuts(fp, "*cupsFilter2: \"application/PCLm application/PCLm 200 -\"\n");
+	if (formatfound == 0) manual_copies = 1;
 	formatfound = 1;
 	is_pclm = 1;
       }
@@ -1524,6 +1530,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
 	 another format, like PWG or Apple Raster, we prefer it, as some
 	 PCL-XL printers have bugs in their PCL-XL interpreters */
       cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 300 gstopxl\"\n");
+      if (formatfound == 0) manual_copies = 1;
       formatfound = 1;
     }
   }
@@ -1532,6 +1539,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
        another format, like PWG or Apple Raster, we prefer it, as many
        PostScript printers have bugs in their PostScript interpreters */
     cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 500 -\"\n");
+    if (formatfound == 0) manual_copies = 0;
     formatfound = 1;
   }
   if (cupsArrayFind(pdl_list, "application/vnd.hp-pcl")) {
@@ -1540,6 +1548,7 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
        are some printers, like HP inkjets which report to accept PCL
        but do not support PCL 5c/e or PCL-XL */
     cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 700 rastertopclx\"\n");
+    if (formatfound == 0) manual_copies = 1;
     formatfound = 1;
   }
   if (cupsArrayFind(pdl_list, "image/jpeg"))
@@ -1547,8 +1556,15 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   if (cupsArrayFind(pdl_list, "image/png"))
     cupsFilePuts(fp, "*cupsFilter2: \"image/png image/png 0 -\"\n");
   cupsArrayDelete(pdl_list);
+  if (manual_copies < 0) manual_copies = 1;
   if (formatfound == 0)
     goto bad_ppd;
+
+  /* For the case that we will print in a raster format and not in a high-level
+     format, we need to create multiple copies on the client. We add a line to
+     the PPD which tells the pdftopdf filter to generate the copies */
+  if (manual_copies == 1)
+    cupsFilePuts(fp, "*cupsManualCopies: true\n");
 
   /* No resolution requirements by any of the supported PDLs? 
      Use "printer-resolution-supported" attribute */
