@@ -4505,9 +4505,10 @@ gboolean update_cups_queues(gpointer unused) {
       if ((q = p->slave_of) == NULL) {
 	if ((http = http_connect_local ()) == NULL) {
 	  debug_printf("Unable to connect to CUPS!\n");
-	  if (in_shutdown == 0)
+	  if (in_shutdown == 0) {
             current_time = time(NULL);
 	    p->timeout = current_time + TIMEOUT_RETRY;
+	  }
 	  break;
 	}
 
