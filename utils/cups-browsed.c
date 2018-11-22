@@ -189,6 +189,7 @@ typedef struct remote_printer_s {
   int overwritten;
   int netprinter;
   int is_legacy;
+  int timeouted;
 } remote_printer_t;
 
 /* Data structure for network interfaces */
@@ -384,6 +385,7 @@ static char local_server_str[1024];
 static char *DomainSocket = NULL;
 static unsigned int HttpLocalTimeout = 5;
 static unsigned int HttpRemoteTimeout = 10;
+static unsigned int HttpMaxRetries = 5;
 static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static local_queue_naming_t LocalQueueNamingRemoteCUPS=LOCAL_QUEUE_NAMING_DNSSD;
 static local_queue_naming_t LocalQueueNamingIPPPrinter=LOCAL_QUEUE_NAMING_DNSSD;
@@ -422,6 +424,9 @@ static char local_default_printer_file[1024];
 static char remote_default_printer_file[1024];
 static char save_options_file[1024];
 static char debug_log_file[1024];
+
+/* Static global variable for indicating we have reached http timeout */
+static int timeout_reached = 0;
 
 static void recheck_timer (void);
 static void browse_poll_create_subscription (browsepoll_t *context,
@@ -638,6 +643,7 @@ int
 http_timeout_cb(http_t *http, void *user_data)
 {
   debug_printf("HTTP timeout! (consider increasing HttpLocalTimeout/HttpRemoteTimeout value)\n");
+  timeout_reached = 1;
   return 0;
 }
 
@@ -4000,6 +4006,10 @@ create_remote_printer_entry (const char *queue_name,
      CUPS broadcast (1) or through DNS-SD (0) */
   p->is_legacy = 0;
 
+  /* Initialize variable for indication how many timeouts cups-browsed experienced
+     during creation of its print queue */
+  p->timeouted = 0;
+
   /* Remote CUPS printer or local queue remaining from previous cups-browsed
      session */
   /* is_cups_queue: -1: Unknown, 0: IPP printer, 1: Remote CUPS queue,
@@ -4461,8 +4471,18 @@ gboolean update_cups_queues(gpointer unused) {
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
 
-    /* We need current time as precise as possible because of timeouts for possible retries */
+    /* We need to get current time as precise as possible for retries
+       and null the timeout indicator */
     current_time = time(NULL);
+    timeout_reached = 0;
+
+    /* cups-browsed tried to add a print queue unsuccessfully too many times
+       due timeouts - skip print queue creation for this one */
+    if (p->timeouted >= HttpMaxRetries)
+    {
+      fprintf(stderr, "Max retries %s for creating print queue %s reached, skipping it.\n", HttpMaxRetries, p->queue_name);
+      continue;
+    }
 
     /* terminating means we have received a signal and should shut down.
        in_shutdown means we have exited the main loop.
@@ -5462,6 +5482,25 @@ gboolean update_cups_queues(gpointer unused) {
 
       break;
 
+    }
+
+    /* Check if timeout happened during the print queue creation
+       If it does - increment p->timeouted and set status to TO_BE_CREATED
+       because the creation can fall through the process, have state changed to
+       STATUS_CONFIRMED and experience the timeout */
+    /* If timeout did not happen, clear timeouted */
+    if (timeout_reached == 1)
+    {
+      fprintf(stderr, "Timeout happened during creating the queue %s, turn on DebugLogging for more info.\n", p->queue_name);
+      p->timeouted++;
+
+      debug_printf("The queue %s already timeouted %d times in row.\n", p->queue_name, p->timeouted);
+      p->status = STATUS_TO_BE_CREATED;
+    }
+    else
+    {
+      debug_printf("Creating the queue %s went smoothly.\n", p->queue_name, p->timeouted);
+      p->timeouted = 0;
     }
   }
   log_all_printers();
@@ -7924,6 +7963,16 @@ read_configuration (const char *filename)
 	  HttpRemoteTimeout = t;
 
 	debug_printf("Set %s to %d sec.\n",
+		     line, t);
+      } else
+	debug_printf("Invalid %s value: %d\n",
+		     line, t);
+    } else if (!strcasecmp(line, "HttpMaxRetries") && value) {
+      int t = atoi(value);
+      if (t > 0) {
+	HttpMaxRetries = t;
+
+	debug_printf("Set %s to %d retries.\n",
 		     line, t);
       } else
 	debug_printf("Invalid %s value: %d\n",
