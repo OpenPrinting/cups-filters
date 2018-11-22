@@ -429,11 +429,11 @@ when the server does not respond.
 
 .fam T
 .fi
-Set how many retries (N) should daemon do for creating print queues for
-remote printers which receive timeouts during print queue creation.
-The printers, which is not successfuly installed even after N retries,
-are skipped until restart of service.
-Note that too many retries can cause high CPU load.
+Set how many retries (N) should cups-browsed do for creating print
+queues for remote printers which receive timeouts during print queue
+creation.  The printers which are not successfuly set up even after N
+retries, are skipped until the next restart of the service.  Note that
+too many retries can cause high CPU load.
 .PP
 .nf
 .fam C

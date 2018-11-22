@@ -425,7 +425,7 @@ static char remote_default_printer_file[1024];
 static char save_options_file[1024];
 static char debug_log_file[1024];
 
-/* Static global variable for indicating we have reached http timeout */
+/* Static global variable for indicating we have reached the HTTP timeout */
 static int timeout_reached = 0;
 
 static void recheck_timer (void);
@@ -4006,8 +4006,8 @@ create_remote_printer_entry (const char *queue_name,
      CUPS broadcast (1) or through DNS-SD (0) */
   p->is_legacy = 0;
 
-  /* Initialize variable for indication how many timeouts cups-browsed experienced
-     during creation of its print queue */
+  /* Initialize field for how many timeouts cups-browsed experienced
+     in a row during creation of this printer's queue */
   p->timeouted = 0;
 
   /* Remote CUPS printer or local queue remaining from previous cups-browsed
@@ -4471,16 +4471,17 @@ gboolean update_cups_queues(gpointer unused) {
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
 
-    /* We need to get current time as precise as possible for retries
-       and null the timeout indicator */
+    /* We need to get the current time as precise as possible for retries
+       and reset the timeout flag */
     current_time = time(NULL);
     timeout_reached = 0;
 
-    /* cups-browsed tried to add a print queue unsuccessfully too many times
-       due timeouts - skip print queue creation for this one */
+    /* cups-browsed tried to add this print queue unsuccessfully for too
+       many times due to timeouts - Skip print queue creation for this one */
     if (p->timeouted >= HttpMaxRetries)
     {
-      fprintf(stderr, "Max retries %s for creating print queue %s reached, skipping it.\n", HttpMaxRetries, p->queue_name);
+      fprintf(stderr, "Max number of retries (%d) for creating print queue %s reached, skipping it.\n",
+	      HttpMaxRetries, p->queue_name);
       continue;
     }
 
@@ -5484,22 +5485,24 @@ gboolean update_cups_queues(gpointer unused) {
 
     }
 
-    /* Check if timeout happened during the print queue creation
+    /* Check if an HTTP timeout happened during the print queue creation
        If it does - increment p->timeouted and set status to TO_BE_CREATED
        because the creation can fall through the process, have state changed to
        STATUS_CONFIRMED and experience the timeout */
-    /* If timeout did not happen, clear timeouted */
+    /* If no timeout has happened, clear p->timeouted */
     if (timeout_reached == 1)
     {
       fprintf(stderr, "Timeout happened during creating the queue %s, turn on DebugLogging for more info.\n", p->queue_name);
-      p->timeouted++;
+      p->timeouted ++;
 
-      debug_printf("The queue %s already timeouted %d times in row.\n", p->queue_name, p->timeouted);
+      debug_printf("The queue %s already timeouted %d times in a row.\n",
+		   p->queue_name, p->timeouted);
       p->status = STATUS_TO_BE_CREATED;
     }
-    else
+    else if (p->timeouted != 0)
     {
-      debug_printf("Creating the queue %s went smoothly.\n", p->queue_name, p->timeouted);
+      debug_printf("Creating the queue %s went smoothly after %d timeouts.\n",
+		   p->queue_name, p->timeouted);
       p->timeouted = 0;
     }
   }
