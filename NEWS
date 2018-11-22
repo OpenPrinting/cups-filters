@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.21.3 - 2018-10-03
 
 CHANGES IN V1.21.4
 
+	- cups-browsed: cups-browsed: Limit the number of retries for
+	  creating a print queue when it comes to HTTP
+	  timeouts. Number of retries given by HttpMaxRetries
+	  directive in cups-browsed.conf. Thanks to Zdenek Dohnal for
+	  the patch (Pull request #73, Red Hat bug #1648697).
 	- cups-browsed: Read out current time right before setting the
 	  timeouts. Thanks to Zdenek Dohnal for the patch (Pull
 	  request #71, Red Hat bug #1648697).
