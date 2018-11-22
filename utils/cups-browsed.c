@@ -5493,7 +5493,7 @@ recheck_timer (void)
     else if (now > p->timeout) {
       timeout = 0;
       break;
-    } else if (timeout == (time_t) -1 || p->timeout - now < timeout)
+    } else if (timeout == (time_t) -1 || p->timeout - now > timeout)
       timeout = p->timeout - now;
 
   if (queues_timer_id)
