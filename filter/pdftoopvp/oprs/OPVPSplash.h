@@ -45,19 +45,19 @@ class SplashFont;
 
 class OPVPClipPath {
 public:
-  OPVPClipPath(OPVPSplashPath *pathA, GBool eoA);
+  OPVPClipPath(OPVPSplashPath *pathA, bool eoA);
   void push();
   static OPVPClipPath *pop();
   ~OPVPClipPath() { delete path; }
   OPVPSplashPath *getPath() { return path; }
-  GBool getEo() { return eo; }
-  GBool getSaved() { return saved; }
+  bool getEo() { return eo; }
+  bool getSaved() { return saved; }
 private:
   OPVPClipPath *copy();
   OPVPClipPath *next;
   OPVPSplashPath *path;
-  GBool eo;
-  GBool saved;
+  bool eo;
+  bool saved;
   static OPVPClipPath *stackTop;
 };
 
@@ -104,7 +104,7 @@ public:
 		   SplashCoord lineDashPhase);
   void clipResetToRect(SplashCoord x0, SplashCoord y0,
 		       SplashCoord x1, SplashCoord y1);
-  SplashError clipToPath(OPVPSplashPath *path, GBool eo);
+  SplashError clipToPath(OPVPSplashPath *path, bool eo);
 
   //----- state save/restore
 
@@ -121,7 +121,7 @@ public:
   SplashError stroke(OPVPSplashPath *path);
 
   // Fill a path using the current fill pattern.
-  SplashError fill(OPVPSplashPath *path, GBool eo);
+  SplashError fill(OPVPSplashPath *path, bool eo);
 
   // Draw a character, using the current fill pattern.
   SplashError fillChar(SplashCoord x, SplashCoord y, int c,
@@ -147,7 +147,7 @@ public:
   // is assumed to produce pixels in raster order, starting from the
   // top line.
   SplashError fillImageMask(SplashImageMaskSource src, void *srcData,
-			    int w, int h, SplashCoord *mat, GBool glyphMode);
+			    int w, int h, SplashCoord *mat, bool glyphMode);
 
   // Draw an image.  This will read <w>*<h> pixels from <src>, in
   // raster order, starting with the top line.  These pixels are
@@ -162,7 +162,7 @@ public:
   //    BGR8packed   BGR8Packed
   // The matrix behaves as for fillImageMask.
   SplashError drawImage(SplashImageSource src, void *srcData,
-			SplashColorMode srcMode, GBool srcAlpha,
+			SplashColorMode srcMode, bool srcAlpha,
 			int w, int h, SplashCoord *mat);
 
   //~ drawMaskedImage
@@ -173,17 +173,17 @@ public:
   SplashBitmap *getBitmap() { return 0; }
 
   // Toggle debug mode on or off.
-  void setDebugMode(GBool debugModeA) { debugMode = debugModeA; }
+  void setDebugMode(bool debugModeA) { debugMode = debugModeA; }
 
   void setColorMode(int colorModeA);
-  void setStateBypass(GBool bypass) {stateBypass = bypass;}
+  void setStateBypass(bool bypass) {stateBypass = bypass;}
   void endPage();
   SplashCoord *getMatrix();
-  void drawSpan(int x0, int x1, int y, GBool noClip);
+  void drawSpan(int x0, int x1, int y, bool noClip);
 #ifdef OLD_DRAW_IMAGE
-  void drawPixel(int x, int y, SplashColor *color, GBool noClip);
+  void drawPixel(int x, int y, SplashColor *color, bool noClip);
 #endif
-  void drawPixel(int x, int y, GBool noClip);
+  void drawPixel(int x, int y, bool noClip);
   void arcToCurve(SplashCoord x0, SplashCoord y0,
     SplashCoord x3, SplashCoord y3,
     SplashCoord cx, SplashCoord cy, SplashCoord *rx1, SplashCoord *ry1,
@@ -191,10 +191,10 @@ public:
 
 private:
   void makeBrush(SplashPattern *pattern, opvp_brush_t *brush);
-  SplashError doClipPath(OPVPSplashPath *path, GBool eo,
+  SplashError doClipPath(OPVPSplashPath *path, bool eo,
      OPVPClipPath *prevClip);
   opvp_cspace_t getOPVPColorSpace();
-  GBool equalPattern(SplashPattern *pt1, SplashPattern *pt2);
+  bool equalPattern(SplashPattern *pt1, SplashPattern *pt2);
   SplashError makeRectanglePath(SplashCoord x0, SplashCoord y0,
     SplashCoord x1, SplashCoord y1, OPVPSplashPath **p);
   SplashError drawImageFastWithCTM(SplashImageSource src, void *srcData,
@@ -205,11 +205,11 @@ private:
 			      int w, int h,
 			      int tx, int ty,
 			      int scaledWidth, int scaledHeight,
-			      int xSign, int ySign, GBool rot);
+			      int xSign, int ySign, bool rot);
   SplashError fillImageMaskFastWithCTM(SplashImageMaskSource src,
        void *srcData, int w, int h, int tx, int ty,SplashCoord *mat);
   SplashError strokeByMyself(OPVPSplashPath *path);
-  SplashError fillByMyself(OPVPSplashPath *path, GBool eo);
+  SplashError fillByMyself(OPVPSplashPath *path, bool eo);
   OPVPSplashXPath *makeDashedPath(OPVPSplashXPath *xPath);
   void transform(SplashCoord *matrix, SplashCoord xi, SplashCoord yi,
 	   SplashCoord *xo, SplashCoord *yo);
@@ -221,20 +221,20 @@ private:
   int printerContext;
 
   OPVPSplashState *state;
-  GBool debugMode;
+  bool debugMode;
   int colorMode;
-  GBool stateBypass;
+  bool stateBypass;
   OPVPClipPath *clipPath;
 
-  GBool oldLipsDriver;
-  GBool clipPathNotSaved;
-  GBool noShearImage;
-  GBool noLineStyle;
-  GBool noClipPath;
-  GBool noMiterLimit;
-  GBool ignoreMiterLimit;
-  GBool savedNoClipPath;
-  GBool noImageMask;
+  bool oldLipsDriver;
+  bool clipPathNotSaved;
+  bool noShearImage;
+  bool noLineStyle;
+  bool noClipPath;
+  bool noMiterLimit;
+  bool ignoreMiterLimit;
+  bool savedNoClipPath;
+  bool noImageMask;
   int bitmapCharThreshold;
   int maxClipPathLength;
   int maxFillPathLength;

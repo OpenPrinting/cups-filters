@@ -16,7 +16,7 @@ public:
   OPVPSplashPath *copy() { return new OPVPSplashPath(this); }
   
   void getBBox(int *xMinA, int *yMinA, int *xMaxA, int *yMaxA);
-  GBool isRectanglePath(SplashCoord *xMin, SplashCoord *yMin,
+  bool isRectanglePath(SplashCoord *xMin, SplashCoord *yMin,
     SplashCoord *xMax, SplashCoord *yMax);
   SplashError makePath(OPVPWrapper *opvp);
   void closeAllSubPath();

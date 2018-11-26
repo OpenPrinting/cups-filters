@@ -36,7 +36,7 @@ void OPVPSplashPath::getBBox(int *xMinA, int *yMinA, int *xMaxA,
   *yMaxA = splashRound(yMax);
 }
 
-GBool OPVPSplashPath::isRectanglePath(
+bool OPVPSplashPath::isRectanglePath(
   SplashCoord *xMin, SplashCoord *yMin, SplashCoord *xMax, SplashCoord *yMax)
 {
   if (length != 5
@@ -47,22 +47,22 @@ GBool OPVPSplashPath::isRectanglePath(
       || flags[2] != 0
       || flags[3] != 0
       || flags[4] != (splashPathLast | splashPathClosed)) {
-    return gFalse;
+    return false;
   }
   if (splashRound(pts[0].x) == splashRound(pts[1].x)) {
     if (splashRound(pts[1].y) != splashRound(pts[2].y)
       || splashRound(pts[2].x) != splashRound(pts[3].x)
       || splashRound(pts[3].y) != splashRound(pts[4].y)) {
-      return gFalse;
+      return false;
     }
   } else if (splashRound(pts[0].y) == splashRound(pts[1].y)) {
     if (splashRound(pts[1].x) != splashRound(pts[2].x)
       || splashRound(pts[2].y) != splashRound(pts[3].y)
       || splashRound(pts[3].x) != splashRound(pts[4].x)) {
-      return gFalse;
+      return false;
     }
   } else {
-    return gFalse;
+    return false;
   }
   *xMin = pts[0].x;
   *yMin = pts[0].y;
@@ -80,7 +80,7 @@ GBool OPVPSplashPath::isRectanglePath(
     *yMin = *yMax;
     *yMax = t;
   }
-  return gTrue;
+  return true;
 }
 
 SplashError OPVPSplashPath::makePath(OPVPWrapper *opvp)
@@ -140,7 +140,7 @@ SplashError OPVPSplashPath::makePath(OPVPWrapper *opvp)
       }
     } else {
       /* line */
-      GBool closed = (flags[j-1] & splashPathClosed) != 0;
+      bool closed = (flags[j-1] & splashPathClosed) != 0;
 
       if (closed) {
 	if (opvp->LinePath(OPVP_PATHCLOSE,

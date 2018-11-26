@@ -14,7 +14,7 @@ class OPVPSplash;
 class OPVPSplashXPath : public SplashXPath {
 public:
   OPVPSplashXPath(OPVPSplashPath *path, SplashCoord *matrix,
-                SplashCoord flatness, GBool closeSubpaths) :
+                SplashCoord flatness, bool closeSubpaths) :
 	SplashXPath(path,matrix,flatness,closeSubpaths) {
   }
 
@@ -28,7 +28,7 @@ public:
 #endif
 private:
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
-  OPVPSplashXPath() : SplashXPath(new SplashPath(), 0, 0, gFalse) {};
+  OPVPSplashXPath() : SplashXPath(new SplashPath(), 0, 0, false) {};
 #else
   OPVPSplashXPath() {};
 #endif

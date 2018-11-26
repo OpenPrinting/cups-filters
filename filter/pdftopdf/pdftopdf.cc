@@ -559,7 +559,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 
   if ((val = cupsGetOption("scaling",num_options,options)) != 0) {
     scaling = atoi(val) * 0.01;
-    fitplot = gTrue;
+    fitplot = true;
   } else if (fitplot) {
     scaling = 1.0;
   }

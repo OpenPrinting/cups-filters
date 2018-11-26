@@ -55,58 +55,58 @@ OPVPSplash::OPVPSplash(OPVPWrapper *opvpA,
 
   opvp = opvpA;
   // with default screen params
-  state = new OPVPSplashState(0,0,gFalse,(SplashScreenParams *)NULL);
-  debugMode = gFalse;
-  stateBypass = gFalse;
+  state = new OPVPSplashState(0,0,false,(SplashScreenParams *)NULL);
+  debugMode = false;
+  stateBypass = false;
   clipPath = 0;
   if (getOption("OPVP_OLDLIPSDRIVER",nOptions,
      optionKeys,optionVals) != NULL) {
-    oldLipsDriver = gTrue;
+    oldLipsDriver = true;
   } else {
-    oldLipsDriver = gFalse;
+    oldLipsDriver = false;
   }
   if (getOption("OPVP_CLIPPATHNOTSAVED",nOptions,
      optionKeys,optionVals) != NULL) {
-    clipPathNotSaved = gTrue;
+    clipPathNotSaved = true;
   } else {
-    clipPathNotSaved = gFalse;
+    clipPathNotSaved = false;
   }
   if (getOption("OPVP_NOSHEARIMAGE",nOptions,
      optionKeys,optionVals) != NULL) {
-    noShearImage = gTrue;
+    noShearImage = true;
   } else {
-    noShearImage = gFalse;
+    noShearImage = false;
   }
   if (getOption("OPVP_NOLINESTYLE",nOptions,
      optionKeys,optionVals) != NULL) {
-    noLineStyle = gTrue;
+    noLineStyle = true;
   } else {
-    noLineStyle = gFalse;
+    noLineStyle = false;
   }
   if (!opvpA->supportSetLineStyle || !opvpA->supportSetLineDash
      || !opvpA->supportSetLineDashOffset) {
-    noLineStyle = gTrue;
+    noLineStyle = true;
   }
   if (getOption("OPVP_NOCLIPPATH",nOptions,
      optionKeys,optionVals) != NULL) {
-    noClipPath = gTrue;
+    noClipPath = true;
   } else {
-    noClipPath = gFalse;
+    noClipPath = false;
   }
   if (getOption("OPVP_IGNOREMITERLIMIT",nOptions,
      optionKeys,optionVals) != NULL) {
-    ignoreMiterLimit = gTrue;
+    ignoreMiterLimit = true;
   } else {
-    ignoreMiterLimit = gFalse;
+    ignoreMiterLimit = false;
   }
   if (getOption("OPVP_NOMITERLIMIT",nOptions,
      optionKeys,optionVals) != NULL) {
-    noMiterLimit = gTrue;
+    noMiterLimit = true;
   } else {
-    noMiterLimit = gFalse;
+    noMiterLimit = false;
   }
   if (!opvpA->supportSetMiterLimit) {
-    noMiterLimit = gTrue;
+    noMiterLimit = true;
   }
   if ((opv = getOption("OPVP_BITMAPCHARTHRESHOLD",nOptions,
      optionKeys,optionVals)) != NULL) {
@@ -128,16 +128,16 @@ OPVPSplash::OPVPSplash(OPVPWrapper *opvpA,
   }
   if (getOption("OPVP_NOIMAGEMASK",nOptions,
      optionKeys,optionVals) != NULL) {
-    noImageMask = gTrue;
+    noImageMask = true;
   } else {
-    noImageMask = gFalse;
+    noImageMask = false;
   }
   if (getOption("OPVP_NOBITMAPCHAR",nOptions,
      optionKeys,optionVals) != NULL) {
     bitmapCharThreshold = 0;
   }
   if (!opvpA->supportSetClipPath) {
-    noClipPath = gTrue;
+    noClipPath = true;
   }
   savedNoClipPath = noClipPath;
   saveDriverStateCount = 0;
@@ -289,13 +289,13 @@ void OPVPSplash::makeBrush(SplashPattern *pattern, opvp_brush_t *brush)
   }
 }
 
-GBool OPVPSplash::equalPattern(SplashPattern *pat1, SplashPattern *pat2)
+bool OPVPSplash::equalPattern(SplashPattern *pat1, SplashPattern *pat2)
 {
   SplashColor c1, c2;
   if (pat1 == NULL || pat2 == NULL) {
     return pat1 == pat2;
   }
-  if (typeid(*pat1) != typeid(*pat2)) return gFalse;
+  if (typeid(*pat1) != typeid(*pat2)) return false;
 
   pat1->getColor(0,0,c1);
   pat2->getColor(0,0,c2);
@@ -312,7 +312,7 @@ GBool OPVPSplash::equalPattern(SplashPattern *pat1, SplashPattern *pat2)
   default:
     break;
   }
-  return gTrue;
+  return true;
 }
 
 void OPVPSplash::setStrokePattern(SplashPattern *strokePattern) {
@@ -447,7 +447,7 @@ void OPVPSplash::setLineDash(SplashCoord *lineDash, int lineDashLength,
 			 SplashCoord lineDashPhase) {
   int i;
   opvp_fix_t *pdash;
-  GBool equal;
+  bool equal;
 
   if (stateBypass || lineDash != state->lineDash) {
     if (lineDash == NULL || lineDashLength == 0) {
@@ -471,7 +471,7 @@ void OPVPSplash::setLineDash(SplashCoord *lineDash, int lineDashLength,
     equal = (state->lineDash != NULL);
     pdash = new opvp_fix_t[lineDashLength];
     for (i = 0;i < lineDashLength;i++) {
-      if (equal && lineDash[i] != state->lineDash[i]) equal = gFalse;
+      if (equal && lineDash[i] != state->lineDash[i]) equal = false;
       OPVP_F2FIX(lineDash[i],pdash[i]);
     }
     if (!equal && opvp->SetLineDash(lineDashLength,pdash) < 0) {
@@ -493,7 +493,7 @@ err:
   state->setLineDash(lineDash, lineDashLength, lineDashPhase);
 }
 
-SplashError OPVPSplash::doClipPath(OPVPSplashPath *path, GBool eo,
+SplashError OPVPSplash::doClipPath(OPVPSplashPath *path, bool eo,
   OPVPClipPath *prevClip)
 {
   SplashError result;
@@ -508,7 +508,7 @@ SplashError OPVPSplash::doClipPath(OPVPSplashPath *path, GBool eo,
 	  return splashErrOPVP;
 	}
       }
-      noClipPath = gTrue;
+      noClipPath = true;
     }
   } else {
     noClipPath = savedNoClipPath;
@@ -555,12 +555,12 @@ void OPVPSplash::clipResetToRect(SplashCoord x0, SplashCoord y0,
 
   if (makeRectanglePath(x0,y0,x1,y1,&p) != splashOk) return;
 
-  if (doClipPath(p,gTrue,clipPath) != splashOk) return;
-  clipPath = new OPVPClipPath(p,gTrue);
+  if (doClipPath(p,true,clipPath) != splashOk) return;
+  clipPath = new OPVPClipPath(p,true);
   state->clip->resetToRect(x0, y0, x1, y1);
 }
 
-SplashError OPVPSplash::clipToPath(OPVPSplashPath *path, GBool eo) {
+SplashError OPVPSplash::clipToPath(OPVPSplashPath *path, bool eo) {
   SplashError result;
   SplashCoord x0, y0, x1, y1;
   SplashCoord x2, y2, x3, y3;
@@ -633,7 +633,7 @@ SplashError OPVPSplash::clipToPath(OPVPSplashPath *path, GBool eo) {
       /* non rectangle path */
 
       OPVPSplashXPath *xpath = new OPVPSplashXPath(path, state->matrix, 
-                                     state->flatness, gFalse);
+                                     state->flatness, false);
 
       xpath->sort();
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
@@ -655,7 +655,7 @@ SplashError OPVPSplash::clipToPath(OPVPSplashPath *path, GBool eo) {
 	}
 	path = new OPVPSplashPath();
       } else if (clipResult == splashClipPartial) {
-	OPVPSplashClip *nclip = new OPVPSplashClip(xMin,yMin,xMax,yMax,gFalse);
+	OPVPSplashClip *nclip = new OPVPSplashClip(xMin,yMin,xMax,yMax,false);
 	nclip->clipToPath(path,state->matrix,state->flatness,eo);
 	state->clip->getBBox(&xMin,&yMin,&xMax,&yMax);
 	if ((clipResult = nclip->testRect(xMin,yMin,xMax,yMax))
@@ -727,7 +727,7 @@ SplashError OPVPSplash::restoreState() {
   OPVPSplashState *oldState;
   OPVPClipPath *oldClip;
   OPVPSplashPath *path;
-  GBool saved = gFalse;
+  bool saved = false;
 
   if (!state->next) {
     return splashErrNoSave;
@@ -755,7 +755,7 @@ SplashError OPVPSplash::restoreState() {
 	      OPRS::error("ResetClipPath error\n");
 	    return splashErrOPVP;
 	}
-	noClipPath = gTrue;
+	noClipPath = true;
       }
     } else {
       noClipPath = savedNoClipPath;
@@ -875,7 +875,7 @@ SplashError OPVPSplash::strokeByMyself(OPVPSplashPath *path)
     return splashOk;
   }
 
-  osplash = new Splash(new SplashBitmap(1,1,4,splashModeMono1,gFalse),gFalse);
+  osplash = new Splash(new SplashBitmap(1,1,4,splashModeMono1,false),false);
   state->setState(osplash);
   dPath = osplash->makeStrokePath(path,state->lineWidth);
   oPath = new OPVPSplashPath(dPath);
@@ -883,7 +883,7 @@ SplashError OPVPSplash::strokeByMyself(OPVPSplashPath *path)
 
   if (state->lineWidth <= 1) {
     OPVPSplashXPath *xPath;
-    xPath = new OPVPSplashXPath(oPath, state->matrix, state->flatness, gFalse);
+    xPath = new OPVPSplashXPath(oPath, state->matrix, state->flatness, false);
     xPath->strokeNarrow(this,state);
     delete xPath;
   } else {
@@ -891,7 +891,7 @@ SplashError OPVPSplash::strokeByMyself(OPVPSplashPath *path)
     savedPattern = state->fillPattern->copy();
     setFillPattern(state->strokePattern->copy());
 
-    fillByMyself(oPath,gFalse);
+    fillByMyself(oPath,false);
 
     /* restore fill pattern */
     setFillPattern(savedPattern);
@@ -906,7 +906,7 @@ SplashError OPVPSplash::strokeByMyself(OPVPSplashPath *path)
   if (path->getLength() == 0) {
     return splashOk;
   }
-  xPath = new OPVPSplashXPath(path, state->matrix, state->flatness, gFalse);
+  xPath = new OPVPSplashXPath(path, state->matrix, state->flatness, false);
   if (state->lineDash != NULL && state->lineDashLength > 0) {
     xPath2 = xPath->makeDashedPath(state);
     delete xPath;
@@ -975,7 +975,7 @@ SplashError OPVPSplash::stroke(OPVPSplashPath *path) {
   return splashOk;
 }
 
-SplashError OPVPSplash::fillByMyself(OPVPSplashPath *path, GBool eo)
+SplashError OPVPSplash::fillByMyself(OPVPSplashPath *path, bool eo)
 {
   OPVPSplashXPath *xPath;
   SplashXPathScanner *scanner;
@@ -985,7 +985,7 @@ SplashError OPVPSplash::fillByMyself(OPVPSplashPath *path, GBool eo)
   if (path->getLength() == 0) {
     return splashOk;
   }
-  xPath = new OPVPSplashXPath(path, state->matrix, state->flatness, gTrue);
+  xPath = new OPVPSplashXPath(path, state->matrix, state->flatness, true);
   xPath->sort();
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   scanner = new SplashXPathScanner(xPath, eo, INT_MIN, INT_MAX);
@@ -1009,7 +1009,7 @@ SplashError OPVPSplash::fillByMyself(OPVPSplashPath *path, GBool eo)
       while (scanner->getNextSpan(y, &x0, &x1)) {
         if (x0 == x1) continue;
 	if (clipRes == splashClipAllInside) {
-	  drawSpan(x0, x1-1, y, gTrue);
+	  drawSpan(x0, x1-1, y, true);
 	} else {
 	  clipRes2 = state->clip->testSpan(x0, x1, y);
 	  drawSpan(x0, x1-1, y, clipRes2 == splashClipAllInside);
@@ -1025,7 +1025,7 @@ SplashError OPVPSplash::fillByMyself(OPVPSplashPath *path, GBool eo)
   return splashOk;
 }
 
-SplashError OPVPSplash::fill(OPVPSplashPath *path, GBool eo) {
+SplashError OPVPSplash::fill(OPVPSplashPath *path, bool eo) {
   SplashError result;
   opvp_fillmode_t mode;
 
@@ -1133,20 +1133,20 @@ void OPVPSplash::fillGlyph(SplashCoord x, SplashCoord y,
 
 
     for (ty = 0;ty < glyph->h;ty++) {
-      GBool dmode = gFalse;
+      bool dmode = false;
       for (tx = 0;tx < glyph->w;tx++) {
-	GBool on = (bp[opvpbytes*ty+(tx/8)] & (0x80 >> (tx & 7))) != 0;
+	bool on = (bp[opvpbytes*ty+(tx/8)] & (0x80 >> (tx & 7))) != 0;
 
 	if (on && !dmode) {
 	  sx = tx;
-	  dmode = gTrue;
+	  dmode = true;
 	} else if (!on && dmode) {
-	  drawSpan(x0+sx,x0+tx-1,y0+ty,gTrue);
-	  dmode = gFalse;
+	  drawSpan(x0+sx,x0+tx-1,y0+ty,true);
+	  dmode = false;
 	}
       }
       if (dmode) {
-	drawSpan(x0+sx,x0+tx-1,y0+ty,gTrue);
+	drawSpan(x0+sx,x0+tx-1,y0+ty,true);
       }
     }
     /* restore stroke pattern */
@@ -1218,7 +1218,7 @@ SplashError OPVPSplash::fillChar(SplashCoord x, SplashCoord y,
     goto err0;
   }
   path->offset(xt,yt);
-  err = fill(path,gFalse);
+  err = fill(path,false);
 err0:
   if (path != 0) delete path;
   return err;
@@ -1294,8 +1294,8 @@ SplashError OPVPSplash::fillImageMaskFastWithCTM(SplashImageMaskSource src,
 }
 
 SplashError OPVPSplash::fillImageMask(SplashImageMaskSource src, void *srcData,
-			  int w, int h, SplashCoord *mat, GBool glyphMode) {
-  GBool rot;
+			  int w, int h, SplashCoord *mat, bool glyphMode) {
+  bool rot;
   SplashCoord xScale, yScale, xShear, yShear;
   int tx, ty, scaledWidth, scaledHeight, xSign, ySign;
   int ulx, uly, llx, lly, urx, ury, lrx, lry;
@@ -1435,18 +1435,18 @@ SplashError OPVPSplash::fillImageMask(SplashImageMaskSource src, void *srcData,
     cpath.lineTo(mat[0]+tx,mat[1]+ty);
     cpath.lineTo(mat[0]+mat[2]+tx,mat[1]+mat[3]+ty);
     cpath.lineTo(mat[2]+tx,mat[3]+ty);
-    clip->clipToPath(&cpath,state->matrix,1.0,gFalse);
+    clip->clipToPath(&cpath,state->matrix,1.0,false);
   }
   for (y = 0;y < height;y++) {
     int dy = y+yMin-ty;
     int sx = 0;
-    GBool dmode = gFalse;
+    bool dmode = false;
 
     for (x = 0;x < width;x++) {
       if (!clip->test(x+xMin,y+yMin)) {
 	if (dmode) {
-	  drawSpan(xMin+sx,xMin+x-1,yMin+y,gTrue);
-	  dmode = gFalse;
+	  drawSpan(xMin+sx,xMin+x-1,yMin+y,true);
+	  dmode = false;
 	}
 	continue;
       }
@@ -1456,22 +1456,22 @@ SplashError OPVPSplash::fillImageMask(SplashImageMaskSource src, void *srcData,
       ox = (int)trunc((imat[0]*dx+imat[2]*dy)*w);
       oy = (int)trunc((imat[1]*dx+imat[3]*dy)*h);
       if (ox >= 0 && ox < w && oy >= 0 && oy < h) {
-	GBool on = pixBuf[oy*w+ox] != 0;
+	bool on = pixBuf[oy*w+ox] != 0;
 
 	if (on && !dmode) {
-	  dmode = gTrue;
+	  dmode = true;
 	  sx = x;
 	} else if (!on && dmode) {
-	  drawSpan(xMin+sx,xMin+x-1,yMin+y,gTrue);
-	  dmode = gFalse;
+	  drawSpan(xMin+sx,xMin+x-1,yMin+y,true);
+	  dmode = false;
 	}
       } else if (dmode) {
-	drawSpan(xMin+sx,xMin+x-1,yMin+y,gTrue);
-	dmode = gFalse;
+	drawSpan(xMin+sx,xMin+x-1,yMin+y,true);
+	dmode = false;
       }
     }
     if (dmode) {
-      drawSpan(xMin+sx,xMin+x-1,yMin+y,gTrue);
+      drawSpan(xMin+sx,xMin+x-1,yMin+y,true);
     }
   }
   delete clip;
@@ -1495,7 +1495,7 @@ SplashError OPVPSplash::drawImageNotShear(SplashImageSource src,
 			      int w, int h,
 			      int tx, int ty,
 			      int scaledWidth, int scaledHeight,
-			      int xSign, int ySign, GBool rot) {
+			      int xSign, int ySign, bool rot) {
   int i, j;
   opvp_fix_t opvpx,opvpy;
   int opvpbytes, linesize;
@@ -1790,9 +1790,9 @@ err0:
 }
 
 SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
-			      SplashColorMode srcMode, GBool srcAlpha,
+			      SplashColorMode srcMode, bool srcAlpha,
 			      int w, int h, SplashCoord *mat) {
-  GBool ok, rot;
+  bool ok, rot;
   SplashCoord xScale, yScale, xShear, yShear;
   int tx, ty, scaledWidth, scaledHeight, xSign, ySign;
   int ulx, uly, llx, lly, urx, ury, lrx, lry;
@@ -1809,7 +1809,7 @@ SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
   }
 
   // check color modes
-  ok = gFalse; // make gcc happy
+  ok = false; // make gcc happy
   switch (colorMode) {
   case splashModeMono1:
     ok = srcMode == splashModeMono1 || srcMode == splashModeMono8;
@@ -1979,7 +1979,7 @@ SplashError OPVPSplash::drawImage(SplashImageSource src, void *srcData,
     cpath.lineTo(mat[0]+tx,mat[1]+ty);
     cpath.lineTo(mat[0]+mat[2]+tx,mat[1]+mat[3]+ty);
     cpath.lineTo(mat[2]+tx,mat[3]+ty);
-    clip->clipToPath(&cpath,state->matrix,1.0,gFalse);
+    clip->clipToPath(&cpath,state->matrix,1.0,false);
   }
   for (y = 0;y < height;y++) {
     int dy = y+yMin-ty;
@@ -2128,7 +2128,7 @@ void OPVPSplash::setColorMode(int colorModeA)
     colorMode = colorModeA;
 }
 
-void OPVPSplash::drawSpan(int x0, int x1, int y, GBool noClip)
+void OPVPSplash::drawSpan(int x0, int x1, int y, bool noClip)
 {
   int s,e;
   opvp_point_t points[1];
@@ -2137,7 +2137,7 @@ void OPVPSplash::drawSpan(int x0, int x1, int y, GBool noClip)
   int savedLineDashLength;
   SplashCoord savedLineDashPhase;
   SplashCoord savedLineWidth;
-  GBool noSpan;
+  bool noSpan;
 
 
   if (opvp->NewPath() < 0) {
@@ -2145,7 +2145,7 @@ void OPVPSplash::drawSpan(int x0, int x1, int y, GBool noClip)
     return;
   }
   if (noClip) {
-    noSpan = gFalse;
+    noSpan = false;
     OPVP_i2Fix(x0,opvpx);
     OPVP_i2Fix(y,opvpy);
     if (opvp->SetCurrentPoint(opvpx,opvpy) < 0) {
@@ -2159,7 +2159,7 @@ void OPVPSplash::drawSpan(int x0, int x1, int y, GBool noClip)
       return;
     }
   } else {
-    noSpan = gTrue;
+    noSpan = true;
     s = x0;
     while (s < x1) {
       /* find start point */
@@ -2173,7 +2173,7 @@ void OPVPSplash::drawSpan(int x0, int x1, int y, GBool noClip)
 	  if (!state->clip->test(e, y)) break;
 	}
 	/* do make span */
-	noSpan = gFalse;
+	noSpan = false;
 	OPVP_i2Fix(s,opvpx);
 	OPVP_i2Fix(y,opvpy);
 	if (opvp->SetCurrentPoint(opvpx,opvpy) < 0) {
@@ -2225,7 +2225,7 @@ void OPVPSplash::drawSpan(int x0, int x1, int y, GBool noClip)
   draw pixel with StrokePath
   color is stroke color
 */
-void OPVPSplash::drawPixel(int x, int y, GBool noClip)
+void OPVPSplash::drawPixel(int x, int y, bool noClip)
 {
   opvp_point_t points[1];
   opvp_fix_t opvpx, opvpy;
@@ -2293,12 +2293,12 @@ SplashCoord *OPVPSplash::getMatrix()
 
 OPVPClipPath *OPVPClipPath::stackTop = 0;
 
-OPVPClipPath::OPVPClipPath(OPVPSplashPath *pathA, GBool eoA)
+OPVPClipPath::OPVPClipPath(OPVPSplashPath *pathA, bool eoA)
 {
   path = pathA;
   eo = eoA;
   next = 0;
-  saved = gFalse;
+  saved = false;
 }
 
 void OPVPClipPath::push()
@@ -2308,7 +2308,7 @@ void OPVPClipPath::push()
   p = stackTop;
   stackTop = copy();
   stackTop->next = p;
-  saved = gTrue;
+  saved = true;
 }
 
 OPVPClipPath *OPVPClipPath::pop() {

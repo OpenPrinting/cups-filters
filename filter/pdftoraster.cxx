@@ -335,7 +335,7 @@ static void lcmsErrorHandler(cmsContext contextId, cmsUInt32Number ErrorCode,
 
 
 #if 0
-static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
+static bool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 {
     // get color profile path
     const char *colorModel;
@@ -416,9 +416,9 @@ static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 	    path->append("/profiles/");
 	}
 	path->append(attr->value);
-	return gTrue;
+	return true;
     }
-    return gFalse;
+    return false;
 }
 #endif
 
@@ -1818,7 +1818,7 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
 
   doc->displayPage(out,pageNo,header.HWResolution[0],
 		   header.HWResolution[1],(landscape == 0 ? 0 : 90),
-		   gTrue,gTrue,gTrue);
+		   true,true,true);
   bitmap = out->getBitmap();
   bitmapoffset[0] = margins[0] / 72.0 * header.HWResolution[0];
   bitmapoffset[1] = margins[3] / 72.0 * header.HWResolution[1];
@@ -2128,9 +2128,9 @@ int main(int argc, char *argv[]) {
   }
 
   out = new SplashOutputDev(cmode,rowpad/* row padding */,
-    gFalse,paperColor,gTrue
+    false,paperColor,true
 #if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 30
-    ,gFalse
+    ,false
 #endif
     );
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19

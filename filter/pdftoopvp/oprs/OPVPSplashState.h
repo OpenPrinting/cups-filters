@@ -31,9 +31,9 @@ class OPVPSplashState {
 public:
 
   // Create a new state object, initialized with default settings.
-  OPVPSplashState(int width, int height, GBool vectorAntialias,
+  OPVPSplashState(int width, int height, bool vectorAntialias,
 	      SplashScreenParams *screenParams);
-  OPVPSplashState(int width, int height, GBool vectorAntialias,
+  OPVPSplashState(int width, int height, bool vectorAntialias,
 	      SplashScreen *screenA);
 
   // Copy a state object.
@@ -80,11 +80,11 @@ private:
   SplashCoord *lineDash;
   int lineDashLength;
   SplashCoord lineDashPhase;
-  GBool strokeAdjust;
+  bool strokeAdjust;
   OPVPSplashClip *clip;
   SplashBitmap *softMask;
-  GBool deleteSoftMask;
-  GBool inNonIsolatedGroup;
+  bool deleteSoftMask;
+  bool inNonIsolatedGroup;
 
   OPVPSplashState *next;	// used by OPVPSplash class
 

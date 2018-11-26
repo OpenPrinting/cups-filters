@@ -70,7 +70,7 @@ public:
 
   ~SplashOutFontFileID() {}
 
-  GBool matches(SplashFontFileID *id) {
+  bool matches(SplashFontFileID *id) {
     return ((SplashOutFontFileID *)id)->r.num == r.num &&
            ((SplashOutFontFileID *)id)->r.gen == r.gen;
   }
@@ -99,9 +99,9 @@ public:
   T3FontCache(Ref *fontID, double m11A, double m12A,
 	      double m21A, double m22A,
 	      int glyphXA, int glyphYA, int glyphWA, int glyphHA,
-	      GBool aa);
+	      bool aa);
   ~T3FontCache();
-  GBool matches(Ref *idA, double m11A, double m12A,
+  bool matches(Ref *idA, double m11A, double m12A,
 		double m21A, double m22A)
     { return fontID.num == idA->num && fontID.gen == idA->gen &&
 	     m11 == m11A && m12 == m12A && m21 == m21A && m22 == m22A; }
@@ -120,7 +120,7 @@ public:
 T3FontCache::T3FontCache(Ref *fontIDA, double m11A, double m12A,
 			 double m21A, double m22A,
 			 int glyphXA, int glyphYA, int glyphWA, int glyphHA,
-			 GBool aa) {
+			 bool aa) {
   int i;
 
   fontID = *fontIDA;
@@ -189,7 +189,7 @@ OPVPOutputDev::OPVPOutputDev()
   nT3Fonts = 0;
   t3GlyphStack = 0;
   font = NULL;
-  needFontUpdate = gFalse;
+  needFontUpdate = false;
   textClipPath = 0;
   underlayCbk = 0;
   underlayCbkData = 0;
@@ -216,8 +216,8 @@ void OPVPOutputDev::setScale(double w, double h,
 }
 
 int OPVPOutputDev::init(SplashColorMode colorModeA,
-				 GBool colorProfile,
-				 GBool reverseVideoA,
+				 bool colorProfile,
+				 bool reverseVideoA,
 				 SplashColor paperColorA,
                                  const char *driverName,
 				 int outputFD,
@@ -275,13 +275,13 @@ void OPVPOutputDev::startDoc(XRef *xrefA) {
 #endif
 #if HAVE_FREETYPE_FREETYPE_H || HAVE_FREETYPE_H
 				    globalParams->getEnableFreeType(),
-				    gFalse,
-                                    gFalse,
+				    false,
+                                    false,
 #endif
 #if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 30
 				    globalParams->getAntialias());
 #else
-                                    gFalse);
+                                    false);
 #endif
   for (i = 0; i < nT3Fonts; ++i) {
     delete t3FontCache[i];
@@ -337,7 +337,7 @@ void OPVPOutputDev::saveState(GfxState *state) {
 
 void OPVPOutputDev::restoreState(GfxState *state) {
   oprs->restoreState();
-  needFontUpdate = gTrue;
+  needFontUpdate = true;
 }
 
 void OPVPOutputDev::updateAll(GfxState *state) {
@@ -349,7 +349,7 @@ void OPVPOutputDev::updateAll(GfxState *state) {
   updateMiterLimit(state);
   updateFillColor(state);
   updateStrokeColor(state);
-  needFontUpdate = gTrue;
+  needFontUpdate = true;
 }
 
 void OPVPOutputDev::updateCTM(GfxState *state, double m11, double m12,
@@ -490,7 +490,7 @@ SplashPattern *OPVPOutputDev::getColor(GfxGray gray, GfxRGB *rgb) {
 }
 
 void OPVPOutputDev::updateFont(GfxState *state) {
-    needFontUpdate = gTrue;
+    needFontUpdate = true;
 }
 
 void OPVPOutputDev::doUpdateFont(GfxState *state) {
@@ -513,9 +513,9 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
   double m11, m12, m21, m22;
   int n;
   int faceIndex = 0;
-  GBool recreateFont = gFalse;
+  bool recreateFont = false;
 
-  needFontUpdate = gFalse;
+  needFontUpdate = false;
   font = NULL;
   fileName = NULL;
   tmpBuf = NULL;
@@ -594,9 +594,9 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 
     fontsrc = new SplashFontSrc;
     if (fileName)
-      fontsrc->setFile(fileName, gFalse);
+      fontsrc->setFile(fileName, false);
     else
-      fontsrc->setBuf(tmpBuf, tmpBufLen, gTrue);
+      fontsrc->setBuf(tmpBuf, tmpBufLen, true);
 
     // load the font file
     switch (fontType) {
@@ -742,7 +742,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       // this shouldn't happen
       goto err2;
     }
-    fontFile->doAdjustMatrix = gTrue;
+    fontFile->doAdjustMatrix = true;
   }
 
   // get the font matrix
@@ -777,7 +777,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
           w1 /= w2;
           m11 *= w1;
           m21 *= w1;
-          recreateFont = gTrue;
+          recreateFont = true;
         }
       }
     }
@@ -836,7 +836,7 @@ void OPVPOutputDev::fill(GfxState *state) {
   }
 
   path = convertPath(state, state->getPath());
-  oprs->fill(path, gFalse);
+  oprs->fill(path, false);
   delete path;
 }
 
@@ -855,7 +855,7 @@ void OPVPOutputDev::eoFill(GfxState *state) {
   }
 
   path = convertPath(state, state->getPath());
-  oprs->fill(path, gTrue);
+  oprs->fill(path, true);
   delete path;
 }
 
@@ -863,7 +863,7 @@ void OPVPOutputDev::clip(GfxState *state) {
   OPVPSplashPath *path;
 
   path = convertPath(state, state->getPath());
-  oprs->clipToPath(path, gFalse);
+  oprs->clipToPath(path, false);
   delete path;
 }
 
@@ -871,7 +871,7 @@ void OPVPOutputDev::eoClip(GfxState *state) {
   OPVPSplashPath *path;
 
   path = convertPath(state, state->getPath());
-  oprs->clipToPath(path, gTrue);
+  oprs->clipToPath(path, true);
   delete path;
 }
 
@@ -918,8 +918,8 @@ void OPVPOutputDev::clipToStrokePath(GfxState *state) {
 
   // use splash for makeStrokePath
   // create dummy bitmap for creating splash
-  tbitmap = new SplashBitmap(1, 1, 1, splashModeMono1, gFalse);
-  tsplash = new Splash(tbitmap, gFalse);
+  tbitmap = new SplashBitmap(1, 1, 1, splashModeMono1, false);
+  tsplash = new Splash(tbitmap, false);
   // set line parameters
   //  except colors
   updateSplashLineDash(state, tsplash);
@@ -939,7 +939,7 @@ void OPVPOutputDev::clipToStrokePath(GfxState *state) {
   delete path;
   delete tsplash;
   delete tbitmap;
-  oprs->clipToPath(path2, gFalse);
+  oprs->clipToPath(path2, false);
   delete path2;
 }
 
@@ -1043,11 +1043,11 @@ void OPVPOutputDev::drawChar(GfxState *state, double x, double y,
   }
 }
 
-GBool OPVPOutputDev::beginType3Char(GfxState *state, double x, double y,
+bool OPVPOutputDev::beginType3Char(GfxState *state, double x, double y,
 				      double dx, double dy,
 				      CharCode code, Unicode *u, int uLen) {
   /* In a vector mode, cache is not needed */
-  return gFalse;
+  return false;
 }
 
 void OPVPOutputDev::endType3Char(GfxState *state) {
@@ -1075,13 +1075,13 @@ void OPVPOutputDev::drawType3Glyph(T3FontCache *t3Font,
   glyph.h = t3Font->glyphH;
   glyph.aa = colorMode != splashModeMono1;
   glyph.data = data;
-  glyph.freeData = gFalse;
+  glyph.freeData = false;
   oprs->fillGlyph((SplashCoord)x, (SplashCoord)y, &glyph);
 }
 
 void OPVPOutputDev::endTextObject(GfxState *state) {
   if (textClipPath) {
-    oprs->clipToPath(textClipPath, gFalse);
+    oprs->clipToPath(textClipPath, false);
     delete textClipPath;
     textClipPath = NULL;
   }
@@ -1089,18 +1089,18 @@ void OPVPOutputDev::endTextObject(GfxState *state) {
 
 struct SplashOutImageMaskData {
   ImageStream *imgStr;
-  GBool invert;
+  bool invert;
   int width, height, y;
 };
 
-GBool OPVPOutputDev::imageMaskSrc(void *data, SplashColorPtr line) {
+bool OPVPOutputDev::imageMaskSrc(void *data, SplashColorPtr line) {
   SplashOutImageMaskData *imgMaskData = (SplashOutImageMaskData *)data;
   Guchar *p;
   SplashColorPtr q;
   int x;
 
   if (imgMaskData->y == imgMaskData->height) {
-    return gFalse;
+    return false;
   }
   for (x = 0, p = imgMaskData->imgStr->getLine(), q = line;
        x < imgMaskData->width;
@@ -1108,13 +1108,13 @@ GBool OPVPOutputDev::imageMaskSrc(void *data, SplashColorPtr line) {
     *q++ = *p++ ^ imgMaskData->invert;
   }
   ++imgMaskData->y;
-  return gTrue;
+  return true;
 }
 
 void OPVPOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
-				    int width, int height, GBool invert,
-				    GBool interpolate,
-				    GBool inlineImg) {
+				    int width, int height, bool invert,
+				    bool interpolate,
+				    bool inlineImg) {
   double *ctm;
   SplashCoord mat[6];
   SplashOutImageMaskData imgMaskData;
@@ -1155,7 +1155,7 @@ struct SplashOutImageData {
   int width, height, y;
 };
 
-GBool OPVPOutputDev::imageSrc(void *data, SplashColorPtr line,
+bool OPVPOutputDev::imageSrc(void *data, SplashColorPtr line,
                               Guchar *alphaLine)
 {
   SplashOutImageData *imgData = (SplashOutImageData *)data;
@@ -1169,7 +1169,7 @@ GBool OPVPOutputDev::imageSrc(void *data, SplashColorPtr line,
   int nComps, x;
 
   if (imgData->y == imgData->height) {
-    return gFalse;
+    return false;
   }
 
   nComps = imgData->colorMap->getNumPixelComps();
@@ -1263,10 +1263,10 @@ GBool OPVPOutputDev::imageSrc(void *data, SplashColorPtr line,
   }
 
   ++imgData->y;
-  return gTrue;
+  return true;
 }
 
-GBool OPVPOutputDev::alphaImageSrc(void *data, SplashColorPtr line,
+bool OPVPOutputDev::alphaImageSrc(void *data, SplashColorPtr line,
                                   Guchar *alphaLine) {
   SplashOutImageData *imgData = (SplashOutImageData *)data;
   Guchar *p;
@@ -1280,7 +1280,7 @@ GBool OPVPOutputDev::alphaImageSrc(void *data, SplashColorPtr line,
   int nComps, x, i;
 
   if (imgData->y == imgData->height) {
-    return gFalse;
+    return false;
   }
 
   nComps = imgData->colorMap->getNumPixelComps();
@@ -1371,14 +1371,14 @@ GBool OPVPOutputDev::alphaImageSrc(void *data, SplashColorPtr line,
   }
 
   ++imgData->y;
-  return gTrue;
+  return true;
 }
 
 void OPVPOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 				int width, int height,
 				GfxImageColorMap *colorMap,
-			        GBool interpolate,
-				int *maskColors, GBool inlineImg) {
+			        bool interpolate,
+				int *maskColors, bool inlineImg) {
   double *ctm;
   SplashCoord mat[6];
   SplashOutImageData imgData;
@@ -1471,7 +1471,7 @@ void OPVPOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     srcMode = colorMode;
   }
   src = maskColors ? &alphaImageSrc : &imageSrc;
-  oprs->drawImage(src, &imgData, srcMode, maskColors ? gTrue : gFalse,
+  oprs->drawImage(src, &imgData, srcMode, maskColors ? true : false,
                   width, height, mat);
   if (inlineImg) {
     while (imgData.y < height) {
@@ -1494,7 +1494,7 @@ struct SplashOutMaskedImageData {
   int width, height, y;
 };
 
-GBool OPVPOutputDev::maskedImageSrc(void *data, SplashColorPtr line,
+bool OPVPOutputDev::maskedImageSrc(void *data, SplashColorPtr line,
      Guchar *alphaLine) {
   SplashOutMaskedImageData *imgData = (SplashOutMaskedImageData *)data;
   Guchar *p;
@@ -1509,7 +1509,7 @@ GBool OPVPOutputDev::maskedImageSrc(void *data, SplashColorPtr line,
   int nComps, x;
 
   if (imgData->y == imgData->height) {
-    return gFalse;
+    return false;
   }
 
   nComps = imgData->colorMap->getNumPixelComps();
@@ -1594,16 +1594,16 @@ GBool OPVPOutputDev::maskedImageSrc(void *data, SplashColorPtr line,
   }
 
   ++imgData->y;
-  return gTrue;
+  return true;
 }
 
 void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
 				      Stream *str, int width, int height,
 				      GfxImageColorMap *colorMap,
-				      GBool interpolate,
+				      bool interpolate,
 				      Stream *maskStr, int maskWidth,
-				      int maskHeight, GBool maskInvert,
-				      GBool maskInterpolate) {
+				      int maskHeight, bool maskInvert,
+				      bool maskInterpolate) {
   double *ctm;
   SplashCoord mat[6];
   SplashOutMaskedImageData imgData;
@@ -1634,14 +1634,14 @@ void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
   imgMaskData.width = maskWidth;
   imgMaskData.height = maskHeight;
   imgMaskData.y = 0;
-  maskBitmap = new SplashBitmap(width, height, 1, splashModeMono1, gFalse);
-  maskSplash = new Splash(maskBitmap, gFalse);
+  maskBitmap = new SplashBitmap(width, height, 1, splashModeMono1, false);
+  maskSplash = new Splash(maskBitmap, false);
   maskColor[0] = 0;
   maskSplash->clear(maskColor);
   maskColor[0] = 1;
   maskSplash->setFillPattern(new SplashSolidColor(maskColor));
   maskSplash->fillImageMask(&imageMaskSrc, &imgMaskData,
-			    maskWidth, maskHeight, mat, gFalse);
+			    maskWidth, maskHeight, mat, false);
   delete imgMaskData.imgStr;
   maskStr->close();
   delete maskSplash;
@@ -1742,7 +1742,7 @@ void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
     srcMode = splashModeRGB8;
     break;
   }  
-  oprs->drawImage(&maskedImageSrc, &imgData, srcMode, gTrue, 
+  oprs->drawImage(&maskedImageSrc, &imgData, srcMode, true,
                   width, height, mat);
 
   delete maskBitmap;
@@ -1754,11 +1754,11 @@ void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
 void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
 					  Stream *str, int width, int height,
 					  GfxImageColorMap *colorMap,
-					  GBool interpolate,
+					  bool interpolate,
 					  Stream *maskStr,
 					  int maskWidth, int maskHeight,
 					  GfxImageColorMap *maskColorMap,
-					  GBool maskInterpolate) {
+					  bool maskInterpolate) {
   double *ctm;
   SplashCoord mat[6];
   SplashOutImageData imgData;
@@ -1803,21 +1803,21 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
     imgMaskData.lookup[i] = colToByte(gray);
   }
   maskBitmap = new SplashBitmap(maskWidth,maskHeight,
-				1, splashModeMono8, gFalse);
-  maskSplash = new Splash(maskBitmap, gFalse);
+				1, splashModeMono8, false);
+  maskSplash = new Splash(maskBitmap, false);
   maskColor[0] = 0;
   maskSplash->clear(maskColor);
 #if POPPLER_VERSION_MAJOR <= 0 && (POPPLER_VERSION_MINOR <= 20 || (POPPLER_VERSION_MINOR == 21 && POPPLER_VERSION_MICRO <= 2))
   maskSplash->drawImage(&imageSrc, &imgMaskData,
-			splashModeMono8, gFalse, maskWidth, maskHeight, mat);
+			splashModeMono8, false, maskWidth, maskHeight, mat);
 #elif POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR <= 33
   maskSplash->drawImage(&imageSrc, &imgMaskData,
-			splashModeMono8, gFalse, maskWidth, maskHeight,
-                        mat,gFalse);
+			splashModeMono8, false, maskWidth, maskHeight,
+                        mat,false);
 #else
   maskSplash->drawImage(&imageSrc, 0, &imgMaskData,
-                          splashModeMono8, gFalse, maskWidth, maskHeight,
-			                          mat,gFalse);
+                          splashModeMono8, false, maskWidth, maskHeight,
+			                          mat,false);
 #endif
   delete imgMaskData.imgStr;
   maskStr->close();
@@ -1913,7 +1913,7 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
     srcMode = splashModeRGB8;
     break;
   }  
-  oprs->drawImage(&imageSrc, &imgData, srcMode, gFalse, width, height, mat);
+  oprs->drawImage(&imageSrc, &imgData, srcMode, false, width, height, mat);
 
   oprs->setSoftMask(NULL);
   gfree(imgData.lookup);

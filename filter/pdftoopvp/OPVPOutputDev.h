@@ -52,7 +52,7 @@ public:
   OPVPOutputDev();
 
   // Second Constructor
-  int init(SplashColorMode colorModeA, GBool colorProfile, GBool reverseVideoA,
+  int init(SplashColorMode colorModeA, bool colorProfile, bool reverseVideoA,
 		  SplashColor paperColorA,
 		  const char *driverName, int outputFD,
 		  const char *printerModel,
@@ -66,14 +66,14 @@ public:
 
   // Does this device use upside-down coordinates?
   // (Upside-down means (0,0) is the top left corner of the page.)
-  virtual GBool upsideDown() { return gTrue; }
+  virtual bool upsideDown() { return true; }
 
   // Does this device use drawChar() or drawString()?
-  virtual GBool useDrawChar() { return gTrue; }
+  virtual bool useDrawChar() { return true; }
 
   // Does this device use beginType3Char/endType3Char?  Otherwise,
   // text in Type 3 fonts will be drawn with drawChar/drawString.
-  virtual GBool interpretType3Chars() { return gTrue; }
+  virtual bool interpretType3Chars() { return true; }
 
   //----- initialization and control
 
@@ -118,7 +118,7 @@ public:
 			double dx, double dy,
 			double originX, double originY,
 			CharCode code, int nBytes, Unicode *u, int uLen);
-  virtual GBool beginType3Char(GfxState *state, double x, double y,
+  virtual bool beginType3Char(GfxState *state, double x, double y,
 			       double dx, double dy,
 			       CharCode code, Unicode *u, int uLen);
   virtual void endType3Char(GfxState *state);
@@ -126,27 +126,27 @@ public:
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
-			     int width, int height, GBool invert,
-			     GBool interpolate,
-			     GBool inlineImg);
+			     int width, int height, bool invert,
+			     bool interpolate,
+			     bool inlineImg);
   virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
-			 GBool interpolate,
-			 int *maskColors, GBool inlineImg);
+			 bool interpolate,
+			 int *maskColors, bool inlineImg);
   virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
 			       GfxImageColorMap *colorMap,
-			       GBool interpolate,
+			       bool interpolate,
 			       Stream *maskStr, int maskWidth, int maskHeight,
-			       GBool maskInvert, GBool maskeInterpolate);
+			       bool maskInvert, bool maskeInterpolate);
   virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height,
 				   GfxImageColorMap *colorMap,
-				   GBool interpolate,
+				   bool interpolate,
 				   Stream *maskStr,
 				   int maskWidth, int maskHeight,
 				   GfxImageColorMap *maskColorMap,
-				   GBool maskInterpolate);
+				   bool maskInterpolate);
 
   //----- Type 3 font operators
   virtual void type3D0(GfxState *state, double wx, double wy);
@@ -158,7 +158,7 @@ public:
   // Called to indicate that a new PDF document has been loaded.
   void startDoc(XRef *xrefA);
 
-  GBool isReverseVideo() { return reverseVideo; }
+  bool isReverseVideo() { return reverseVideo; }
 
   // Get the bitmap and its size.
   SplashBitmap *getBitmap() { return bitmap; }
@@ -200,12 +200,12 @@ private:
   void patternFillChar(GfxState *state,
     double x, double y, CharCode code);
 
-  static GBool imageMaskSrc(void *data, SplashColorPtr line);
-  static GBool imageSrc(void *data, SplashColorPtr line,
+  static bool imageMaskSrc(void *data, SplashColorPtr line);
+  static bool imageSrc(void *data, SplashColorPtr line,
                               Guchar *alphaLine);
-  static GBool alphaImageSrc(void *data, SplashColorPtr line,
+  static bool alphaImageSrc(void *data, SplashColorPtr line,
                               Guchar *alphaLine);
-  static GBool maskedImageSrc(void *data, SplashColorPtr line,
+  static bool maskedImageSrc(void *data, SplashColorPtr line,
                               Guchar *alphaLine);
 
   OPVPSplashPath *bitmapToPath(SplashBitmap *bitmapA, int width, int height);
@@ -218,7 +218,7 @@ private:
   void updateSplashLineDash(GfxState *state, Splash *splash);
 
   SplashColorMode colorMode;
-  GBool reverseVideo;		// reverse video mode
+  bool reverseVideo;		// reverse video mode
   SplashColor paperColor;	// paper color
 
   XRef *xref;			// xref table for current document
@@ -233,7 +233,7 @@ private:
   T3GlyphStack *t3GlyphStack;	// Type 3 glyph context stack
 
   SplashFont *font;		// current font
-  GBool needFontUpdate;		// set when the font needs to be updated
+  bool needFontUpdate;		// set when the font needs to be updated
   OPVPSplashPath *textClipPath;	// clipping path built with text object
 
   void (*underlayCbk)(void *data);

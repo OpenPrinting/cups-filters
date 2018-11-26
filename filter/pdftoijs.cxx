@@ -297,7 +297,7 @@ int main(int argc, char *argv[]) {
   int job_id;
   enum SplashColorMode cmode;
   int rowpad;
-  GBool reverseVideo;
+  bool reverseVideo;
 
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   setErrorCallback(::myErrorFun,NULL);
@@ -384,7 +384,7 @@ int main(int argc, char *argv[]) {
   /* set image's values */
   int numChan,bitsPerSample;
   const char *devName;
-  reverseVideo = gFalse;
+  reverseVideo = false;
   switch (colspace) {
   case COL_RGB:
     numChan=3;
@@ -398,7 +398,7 @@ int main(int argc, char *argv[]) {
     paperColor[2] = 255;
     break;
   case COL_BLACK1:
-    reverseVideo = gTrue;
+    reverseVideo = true;
   case COL_WHITE1:
     numChan=1;
     bitsPerSample=1;
@@ -409,7 +409,7 @@ int main(int argc, char *argv[]) {
     rowpad = 1;
     break;
   case COL_BLACK8:
-    reverseVideo = gTrue;
+    reverseVideo = true;
   case COL_WHITE8:
     numChan=1;
     bitsPerSample=8;
@@ -440,9 +440,9 @@ int main(int argc, char *argv[]) {
   }
 
   out = new SplashOutputDev(cmode,rowpad/* row padding */,
-    reverseVideo,paperColor,gTrue
+    reverseVideo,paperColor,true
 #if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 30
-    ,gFalse
+    ,false
 #endif
     );
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
@@ -471,7 +471,7 @@ int main(int argc, char *argv[]) {
     SplashBitmap *bitmap;
     unsigned int size;
 
-    doc->displayPage(out,i,resolution[0],resolution[1],0,gFalse,gFalse,gFalse);
+    doc->displayPage(out,i,resolution[0],resolution[1],0,false,false,false);
     bitmap = out->getBitmap();
 
     /* set page parameters */

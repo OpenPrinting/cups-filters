@@ -35,28 +35,28 @@
 static int resolution = 300;
 static int hResolution = 0;
 static int vResolution = 0;
-static GBool mono = gFalse;
-static GBool reverse = gFalse;
-static GBool gray = gFalse;
+static bool mono = false;
+static bool reverse = false;
+static bool gray = false;
 static char enableFreeTypeStr[16] = "";
-static GBool quiet = gFalse;
+static bool quiet = false;
 static char outputOrderStr[256] = "";
-static GBool oldLipsDriver = gFalse;
-static GBool HPDriver = gFalse;
-static GBool NECDriver = gFalse;
-static GBool clipPathNotSaved = gFalse;
-static GBool noShearImage = gFalse;
-static GBool noLineStyle = gFalse;
-static GBool noImageMask = gFalse;
-static GBool noClipPath = gFalse;
-static GBool ignoreMiterLimit = gFalse;
-static GBool noMiterLimit = gFalse;
+static bool oldLipsDriver = false;
+static bool HPDriver = false;
+static bool NECDriver = false;
+static bool clipPathNotSaved = false;
+static bool noShearImage = false;
+static bool noLineStyle = false;
+static bool noImageMask = false;
+static bool noClipPath = false;
+static bool ignoreMiterLimit = false;
+static bool noMiterLimit = false;
 static char printerDriver[1024] = "";
 static char printerModel[1024] = "";
 static char jobInfo[4096] = "";
 static char docInfo[1024] = "";
 static char pageInfo[1024] = "";
-static GBool noBitmapChar = gFalse;
+static bool noBitmapChar = false;
 static char bitmapCharThreshold[20] = "2000";
 static char maxClipPathLength[20] = "2000";
 static char maxFillPathLength[20] = "4000";
@@ -97,7 +97,7 @@ static int outOnePage(PDFDoc *doc, OPVPOutputDev *opvpOut, int pg)
   }
   opvpOut->setScale(1.0,1.0,0,0,0,0,paperHeight);
   doc->displayPage(opvpOut, pg, resolution, resolution,
-    0, gTrue, gTrue, gFalse);
+    0, true, true, false);
   if (opvpOut->outSlice() < 0) {
     opvpError(-1,"OutSlice failed");
     return 2;
@@ -150,7 +150,7 @@ void CDECL myErrorFun(int pos, char *msg, va_list args)
 }
 #endif
 
-static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
+static bool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 {
     // get color profile path
     const char *colorModel;
@@ -231,9 +231,9 @@ static GBool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 	    path->append("/profiles/");
 	}
 	path->append(attr->value);
-	return gTrue;
+	return true;
     }
-    return gFalse;
+    return false;
 }
 
 int main(int argc, char *argv[]) {
@@ -243,7 +243,7 @@ int main(int argc, char *argv[]) {
   PDFDoc *doc;
   SplashColor paperColor;
   OPVPOutputDev *opvpOut;
-  GBool ok = gTrue;
+  bool ok = true;
   int pg;
   const char *optionKeys[MAX_OPVP_OPTIONS];
   const char *optionVals[MAX_OPVP_OPTIONS];
@@ -270,7 +270,7 @@ int main(int argc, char *argv[]) {
   GooString jobInfoStr;
   GooString docInfoStr;
   GooString pageInfoStr;
-  GBool colorProfile = gFalse;
+  bool colorProfile = false;
 
 
   if (argc < 6 || argc > 7) {
@@ -293,72 +293,72 @@ int main(int argc, char *argv[]) {
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpOldLipsDriver",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  oldLipsDriver = gTrue;
+	  oldLipsDriver = true;
 	} else {
-	  oldLipsDriver = gFalse;
+	  oldLipsDriver = false;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpHPDriver",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  HPDriver = gTrue;
+	  HPDriver = true;
 	} else {
-	  HPDriver = gFalse;
+	  HPDriver = false;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpNECDriver",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  NECDriver = gTrue;
+	  NECDriver = true;
 	} else {
-	  NECDriver = gFalse;
+	  NECDriver = false;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpClipPathNotSaved",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  clipPathNotSaved = gTrue;
+	  clipPathNotSaved = true;
 	} else {
-	  clipPathNotSaved = gFalse;
+	  clipPathNotSaved = false;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpShearImage",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  noShearImage = gFalse;
+	  noShearImage = false;
 	} else {
-	  noShearImage = gTrue;
+	  noShearImage = true;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpLineStyle",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  noLineStyle = gFalse;
+	  noLineStyle = false;
 	} else {
-	  noLineStyle = gTrue;
+	  noLineStyle = true;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpImageMask",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  noImageMask = gFalse;
+	  noImageMask = false;
 	} else {
-	  noImageMask = gTrue;
+	  noImageMask = true;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpClipPath",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  noClipPath = gFalse;
+	  noClipPath = false;
 	} else {
-	  noClipPath = gTrue;
+	  noClipPath = true;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpMiterLimit",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  noMiterLimit = gFalse;
+	  noMiterLimit = false;
 	} else {
-	  noMiterLimit = gTrue;
+	  noMiterLimit = true;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpIgnoreMiterLimit",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  ignoreMiterLimit = gTrue;
+	  ignoreMiterLimit = true;
 	} else {
-	  ignoreMiterLimit = gFalse;
+	  ignoreMiterLimit = false;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpBitmapCharThreshold",0)) != 0) {
@@ -375,9 +375,9 @@ int main(int argc, char *argv[]) {
       }
       if ((attr = ppdFindAttr(ppd,"pdftoopvpBitmapChar",0)) != 0) {
 	if (strcasecmp(attr->value,"true") == 0) {
-	  noBitmapChar = gFalse;
+	  noBitmapChar = false;
 	} else {
-	  noBitmapChar = gTrue;
+	  noBitmapChar = true;
 	}
       }
       if ((attr = ppdFindAttr(ppd,"opvpDriver",0)) != 0) {
@@ -399,41 +399,41 @@ int main(int argc, char *argv[]) {
     if (strcasecmp(options[i].name,"Resolution") == 0) {
       resolution = atoi(options[i].value);
     } else if (strcasecmp(options[i].name,"pdftoopvpOldLipsDriver") == 0) {
-      oldLipsDriver = gTrue;
+      oldLipsDriver = true;
     } else if (strcasecmp(options[i].name,"pdftoopvpHPDriver") == 0) {
-      HPDriver = gTrue;
+      HPDriver = true;
     } else if (strcasecmp(options[i].name,"pdftoopvpNECDriver") == 0) {
-      NECDriver = gTrue;
+      NECDriver = true;
     } else if (strcasecmp(options[i].name,"pdftoopvpClipPathNotSaved") == 0) {
-      clipPathNotSaved = gTrue;
+      clipPathNotSaved = true;
     } else if (strcasecmp(options[i].name,"pdftoopvpShearImage") == 0) {
       if (strcasecmp(options[i].value,"false") == 0) {
-	noShearImage = gTrue;
+	noShearImage = true;
       }
     } else if (strcasecmp(options[i].name,"pdftoopvpLineStyle") == 0) {
       if (strcasecmp(options[i].value,"false") == 0) {
-	noLineStyle = gTrue;
+	noLineStyle = true;
       }
     } else if (strcasecmp(options[i].name,"pdftoopvpImageMask") == 0) {
       if (strcasecmp(options[i].value,"false") == 0) {
-	noImageMask = gTrue;
+	noImageMask = true;
       }
     } else if (strcasecmp(options[i].name,"pdftoopvpClipPath") == 0) {
       if (strcasecmp(options[i].value,"false") == 0) {
-	noClipPath = gTrue;
+	noClipPath = true;
       }
     } else if (strcasecmp(options[i].name,"pdftoopvpMiterLimit") == 0) {
       if (strcasecmp(options[i].value,"false") == 0) {
-	noMiterLimit = gTrue;
+	noMiterLimit = true;
       }
     } else if (strcasecmp(options[i].name,"pdftoopvpIgnoreMiterLimit") == 0) {
       if (strcasecmp(options[i].value,"true") == 0) {
-	ignoreMiterLimit = gTrue;
+	ignoreMiterLimit = true;
       }
     }
      else if (strcasecmp(options[i].name,"pdftoopvpBitmapChar") == 0) {
       if (strcasecmp(options[i].value,"false") == 0) {
-	noBitmapChar = gTrue;
+	noBitmapChar = true;
       }
     } else if (strcasecmp(options[i].name,"pdftoopvpBitmapCharThreshold") == 0) {
       strncpy(bitmapCharThreshold,options[i].value,
@@ -538,18 +538,18 @@ exit(0);
     optionKeys[nOptions] = "OPVP_OLDLIPSDRIVER";
     optionVals[nOptions] = "1";
     nOptions++;
-    clipPathNotSaved = gTrue;
-    noShearImage = gTrue;
+    clipPathNotSaved = true;
+    noShearImage = true;
   }
   if (HPDriver) {
-    noClipPath = gTrue;
-    noLineStyle = gTrue;
-    noShearImage = gTrue;
+    noClipPath = true;
+    noLineStyle = true;
+    noShearImage = true;
   }
   if (NECDriver) {
-    noMiterLimit = gTrue;
+    noMiterLimit = true;
     strcpy(maxClipPathLength,"6");
-    noShearImage = gTrue;
+    noShearImage = true;
   }
   if (clipPathNotSaved) {
     optionKeys[nOptions] = "OPVP_CLIPPATHNOTSAVED";
@@ -604,7 +604,7 @@ exit(0);
   if (hResolution == 0) hResolution = resolution;
   if (vResolution == 0) vResolution = resolution;
   if (strcasecmp(outputOrderStr,"reverse") == 0) {
-    reverse = gTrue;
+    reverse = true;
   }
 
   if (argc > 6) {
@@ -618,7 +618,7 @@ exit(0);
   if (enableFreeTypeStr[0]) {
     if (!globalParams->setEnableFreeType(enableFreeTypeStr)) {
       opvpError(-1,"Bad '-freetype' value on command line");
-      ok = gFalse;
+      ok = false;
     }
   }
 #if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 30
@@ -722,7 +722,7 @@ exit(0);
 				    gray ? splashModeMono8 :
 				             splashModeRGB8,
 				  colorProfile,
-				  gFalse, paperColor,
+				  false, paperColor,
                                  printerDriver,1,printerModel,
 				 nOptions,optionKeys,optionVals) < 0) {
       opvpError(-1,"OPVPOutputDev Initialize fail");

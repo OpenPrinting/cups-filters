@@ -14,8 +14,8 @@
 OPVPSplashXPath *OPVPSplashXPath::makeDashedPath(OPVPSplashState *state)
 {
   OPVPSplashXPath *dPath;
-  GBool lineDashStartOn, lineDashOn;
-  GBool atSegStart, atSegEnd, atDashStart, atDashEnd;
+  bool lineDashStartOn, lineDashOn;
+  bool atSegStart, atSegEnd, atDashStart, atDashEnd;
   int lineDashStartIdx, lineDashIdx, subpathStart;
   SplashCoord lineDashTotal, lineDashStartPhase, lineDashDist;
   int segIdx;
@@ -32,7 +32,7 @@ OPVPSplashXPath *OPVPSplashXPath::makeDashedPath(OPVPSplashState *state)
   lineDashStartPhase = state->lineDashPhase;
   i = splashFloor(lineDashStartPhase / lineDashTotal);
   lineDashStartPhase -= i * lineDashTotal;
-  lineDashStartOn = gTrue;
+  lineDashStartOn = true;
   lineDashStartIdx = 0;
   while (lineDashStartPhase >= state->lineDash[lineDashStartIdx]) {
     lineDashStartOn = !lineDashStartOn;
@@ -50,8 +50,8 @@ OPVPSplashXPath *OPVPSplashXPath::makeDashedPath(OPVPSplashState *state)
   lineDashOn = lineDashStartOn;
   lineDashIdx = lineDashStartIdx;
   lineDashDist = state->lineDash[lineDashIdx] - lineDashStartPhase;
-  atSegStart = gTrue;
-  atDashStart = gTrue;
+  atSegStart = true;
+  atDashStart = true;
   subpathStart = dPath->length;
 
   while (segIdx < length) {
@@ -63,7 +63,7 @@ OPVPSplashXPath *OPVPSplashXPath::makeDashedPath(OPVPSplashState *state)
       ay1 = sy1;
       lineDashDist -= dist;
       dist = 0;
-      atSegEnd = gTrue;
+      atSegEnd = true;
       atDashEnd = lineDashDist == 0 || (seg->flags & splashXPathLast);
     } else {
       ax1 = sx0 + (lineDashDist / dist) * (sx1 - sx0);
@@ -72,8 +72,8 @@ OPVPSplashXPath *OPVPSplashXPath::makeDashedPath(OPVPSplashState *state)
       sy0 = ay1;
       dist -= lineDashDist;
       lineDashDist = 0;
-      atSegEnd = gFalse;
-      atDashEnd = gTrue;
+      atSegEnd = false;
+      atDashEnd = true;
     }
 
     if (lineDashOn) {
@@ -95,9 +95,9 @@ OPVPSplashXPath *OPVPSplashXPath::makeDashedPath(OPVPSplashState *state)
 	lineDashIdx = 0;
       }
       lineDashDist = state->lineDash[lineDashIdx];
-      atDashStart = gTrue;
+      atDashStart = true;
     } else {
-      atDashStart = gFalse;
+      atDashStart = false;
     }
     if (atSegEnd) {
       if (++segIdx < length) {
@@ -111,13 +111,13 @@ OPVPSplashXPath *OPVPSplashXPath::makeDashedPath(OPVPSplashState *state)
 	  lineDashOn = lineDashStartOn;
 	  lineDashIdx = lineDashStartIdx;
 	  lineDashDist = state->lineDash[lineDashIdx] - lineDashStartPhase;
-	  atDashStart = gTrue;
+	  atDashStart = true;
 	  subpathStart = dPath->length;
 	}
       }
-      atSegStart = gTrue;
+      atSegStart = true;
     } else {
-      atSegStart = gFalse;
+      atSegStart = false;
     }
   }
 
@@ -257,7 +257,7 @@ void OPVPSplashXPath::strokeWide(OPVPSplash *splash, OPVPSplashState *state)
     widePath->lineTo(seg->x0 - wdy, seg->y0 + wdx);
 
     // fill the segment
-    splash->fill(widePath, gTrue);
+    splash->fill(widePath, true);
     delete widePath;
 
     // draw the line join
@@ -340,7 +340,7 @@ void OPVPSplashXPath::strokeWide(OPVPSplash *splash, OPVPSplashState *state)
 	break;
       }
       if (widePath) {
-	splash->fill(widePath, gTrue);
+	splash->fill(widePath, true);
 	delete widePath;
       }
     }

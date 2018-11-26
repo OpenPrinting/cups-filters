@@ -9,7 +9,7 @@ public:
 
   OPVPSplashClip(SplashCoord x0, SplashCoord y0,
                SplashCoord x1, SplashCoord y1,
-	                    GBool antialiasA) :
+	                    bool antialiasA) :
      SplashClip(x0,y0,x1,y1,antialiasA) {
   }
 

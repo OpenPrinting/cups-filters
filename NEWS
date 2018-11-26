@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.21.4 - 2018-11-23
 -----------------------------------------------------
 
+CHANGES IN V1.21.5
+
+	- pdftoraster, pdftopdf, pdftoijs, pdftoopvp: Do not use the
+	  Poppler-specific "GBool", "gFalse", "gTrue" any more, as
+	  Poppler has switched to standard "bool", "false", "true" in
+	  version 0.71.0 (Issue #69).
+
 CHANGES IN V1.21.4
 
 	- cups-browsed: cups-browsed: Limit the number of retries for

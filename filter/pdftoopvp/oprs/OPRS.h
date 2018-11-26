@@ -72,7 +72,7 @@ public:
   // the <lineDash> array will be copied
   void setLineDash(SplashCoord *lineDash, int lineDashLength,
 		   SplashCoord lineDashPhase);
-  SplashError clipToPath(OPVPSplashPath *path, GBool eo);
+  SplashError clipToPath(OPVPSplashPath *path, bool eo);
 
   //----- state save/restore
 
@@ -90,7 +90,7 @@ public:
   SplashError stroke(OPVPSplashPath *path);
 
   // Fill a path using the current fill pattern.
-  SplashError fill(OPVPSplashPath *path, GBool eo);
+  SplashError fill(OPVPSplashPath *path, bool eo);
 
   // Draw a character, using the current fill pattern.
   SplashError fillChar(SplashCoord x, SplashCoord y, int c, SplashFont *font,
@@ -115,7 +115,7 @@ public:
   // is assumed to produce pixels in raster order, starting from the
   // top line.
   SplashError fillImageMask(SplashImageMaskSource src, void *srcData,
-			    int w, int h, SplashCoord *mat, GBool glyphMode);
+			    int w, int h, SplashCoord *mat, bool glyphMode);
 
   // Draw an image.  This will read <w>*<h> pixels from <src>, in
   // raster order, starting with the top line.  These pixels are
@@ -130,7 +130,7 @@ public:
   //    BGR8packed   BGR8Packed
   // The matrix behaves as for fillImageMask.
   SplashError drawImage(SplashImageSource src, void *srcData,
-			SplashColorMode srcMode, GBool srcAlpha,
+			SplashColorMode srcMode, bool srcAlpha,
 			int w, int h, SplashCoord *mat);
 
   //~ drawMaskedImage
@@ -141,13 +141,13 @@ public:
   SplashBitmap *getBitmap();
 
   // Toggle debug mode on or off.
-  void setDebugMode(GBool debugModeA);
+  void setDebugMode(bool debugModeA);
 
   int init(const char *driverName, int outputFD,
       const char *printerModel, int nOptions,
       const char *optionKeys[], const char *optionVals[]);
   void initGS(int colorMode, int w, int h, SplashColor paperColor);
-  int setColorMode(int colorModeA, GBool colorProfile);
+  int setColorMode(int colorModeA, bool colorProfile);
   int unloadVectorDriver();
 
   int OPVPStartJob(char *jobInfo);
@@ -182,7 +182,7 @@ private:
     unsigned char *bitmap, int rasterWidth);
 
   GetScanLineDataFunT getGetScanLineDataFun(SplashBitmap *bitmap);
-  GBool checkAll1(unsigned char *bp, int n, int width, int mode);
+  bool checkAll1(unsigned char *bp, int n, int width, int mode);
 };
 
 #endif

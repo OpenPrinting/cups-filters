@@ -56,15 +56,15 @@ OPRS::OPRS()
   opvp = 0;
   splash = 0;
   opvpSplash = 0;
-  rasterMode = gFalse;
+  rasterMode = false;
 }
 
 int OPRS::setBitmap(SplashBitmap *bitmapA) {
   if (splash != 0) {
     delete splash;
   }
-  splash = new Splash(bitmapA, gFalse);
-  rasterMode = gTrue;
+  splash = new Splash(bitmapA, false);
+  rasterMode = true;
   return 0;
 }
 
@@ -181,7 +181,7 @@ void OPRS::setLineDash(SplashCoord *lineDash, int lineDashLength,
     SPLASH(setLineDash(lineDash,lineDashLength,lineDashPhase));
 }
 
-SplashError OPRS::clipToPath(OPVPSplashPath *path, GBool eo) {
+SplashError OPRS::clipToPath(OPVPSplashPath *path, bool eo) {
     return SPLASH(clipToPath(path,eo));
 }
 
@@ -210,7 +210,7 @@ SplashError OPRS::stroke(OPVPSplashPath *path) {
     return SPLASH(stroke(path));
 }
 
-SplashError OPRS::fill(OPVPSplashPath *path, GBool eo) {
+SplashError OPRS::fill(OPVPSplashPath *path, bool eo) {
     return SPLASH(fill(path,eo));
 }
 
@@ -231,20 +231,20 @@ SplashError OPRS::fillGlyph(SplashCoord x, SplashCoord y,
 }
 
 SplashError OPRS::fillImageMask(SplashImageMaskSource src, void *srcData,
-			  int w, int h, SplashCoord *mat, GBool glyphMode) {
+			  int w, int h, SplashCoord *mat, bool glyphMode) {
     return SPLASH(fillImageMask(src,srcData,w,h,mat,glyphMode));
 }
 
 SplashError OPRS::drawImage(SplashImageSource src, void *srcData,
-			      SplashColorMode srcMode, GBool srcAlpha,
+			      SplashColorMode srcMode, bool srcAlpha,
 			      int w, int h, SplashCoord *mat) {
     if (rasterMode) {
 #if POPPLER_VERSION_MAJOR <= 0 && (POPPLER_VERSION_MINOR <= 20 || (POPPLER_VERSION_MINOR == 21 && POPPLER_VERSION_MICRO <= 2))
 	return splash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat);
 #elif POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR <= 33
-	return splash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat,gFalse);
+	return splash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat,false);
 #else
-	return splash->drawImage(src,0,srcData,srcMode,srcAlpha,w,h,mat,gFalse);
+	return splash->drawImage(src,0,srcData,srcMode,srcAlpha,w,h,mat,false);
 #endif
     } else {
 	return opvpSplash->drawImage(src,srcData,srcMode,srcAlpha,w,h,mat);
@@ -260,7 +260,7 @@ int OPRS::init(const char *driverName, int outputFD,
 {
     opvp = OPVPWrapper::loadDriver(driverName,outputFD,printerModel);
     if (opvp == 0) return -1;
-    rasterMode = gFalse;
+    rasterMode = false;
     if (!rasterMode) {
 	opvpSplash = new OPVPSplash(opvp,nOptions,
 	  optionKeys, optionVals);
@@ -424,7 +424,7 @@ int OPRS::getRasterSize(SplashBitmap *bitmap)
     return 0;
 }
 
-GBool OPRS::checkAll1(unsigned char *bp, int n, int width, int mode)
+bool OPRS::checkAll1(unsigned char *bp, int n, int width, int mode)
 {
     int lastbytemask = 0xff;
     int i;
@@ -434,7 +434,7 @@ GBool OPRS::checkAll1(unsigned char *bp, int n, int width, int mode)
 	lastbytemask &= 0xff;
     }
     for (i = 0;i < n-1;i++) {
-	if (*bp++ != 0xff) return gFalse;
+	if (*bp++ != 0xff) return false;
     }
     return (*bp & lastbytemask) == lastbytemask;
 }
@@ -487,7 +487,7 @@ int OPRS::outSlice()
     return 0;
 }
 
-int OPRS::setColorMode(int colorModeA, GBool colorProfile)
+int OPRS::setColorMode(int colorModeA, bool colorProfile)
 {
     opvp_cspace_t cspace = OPVP_CSPACE_STANDARDRGB;
 
@@ -532,7 +532,7 @@ SplashBitmap *OPRS::getBitmap()
     return SPLASH(getBitmap());
 }
 
-void OPRS::setDebugMode(GBool debugModeA)
+void OPRS::setDebugMode(bool debugModeA)
 {
     SPLASH(setDebugMode(debugModeA));
 }
@@ -553,7 +553,7 @@ void OPRS::initGS(int colorMode, int w, int h, SplashColor paperColor)
   case splashModeRGB8: color[0] = color[1] = color[2] = 0; break;
   }
   if (!rasterMode) {
-    opvpSplash->setStateBypass(gTrue);
+    opvpSplash->setStateBypass(true);
   }
   SPLASH(setStrokePattern(new SplashSolidColor(color)));
   SPLASH(setFillPattern(new SplashSolidColor(color)));
@@ -566,7 +566,7 @@ void OPRS::initGS(int colorMode, int w, int h, SplashColor paperColor)
   SPLASH(clipResetToRect(0,0,w-1,h-1));
   SPLASH(clear(paperColor));
   if (!rasterMode) {
-    opvpSplash->setStateBypass(gFalse);
+    opvpSplash->setStateBypass(false);
   }
 }
 

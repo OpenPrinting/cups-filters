@@ -26,7 +26,7 @@
 // SplashState
 //------------------------------------------------------------------------
 
-OPVPSplashState::OPVPSplashState(int width, int height, GBool vectorAntialias,
+OPVPSplashState::OPVPSplashState(int width, int height, bool vectorAntialias,
 			 SplashScreenParams *screenParams) {
   SplashColor color;
 
@@ -48,16 +48,16 @@ OPVPSplashState::OPVPSplashState(int width, int height, GBool vectorAntialias,
   lineDash = NULL;
   lineDashLength = 0;
   lineDashPhase = 0;
-  strokeAdjust = gFalse;
+  strokeAdjust = false;
   clip = new OPVPSplashClip(0, 0, width - 0.001,
                height - 0.001, vectorAntialias);
   softMask = NULL;
-  deleteSoftMask = gFalse;
-  inNonIsolatedGroup = gFalse;
+  deleteSoftMask = false;
+  inNonIsolatedGroup = false;
   next = NULL;
 }
 
-OPVPSplashState::OPVPSplashState(int width, int height, GBool vectorAntialias,
+OPVPSplashState::OPVPSplashState(int width, int height, bool vectorAntialias,
 			 SplashScreen *screenA) {
   SplashColor color;
 
@@ -79,12 +79,12 @@ OPVPSplashState::OPVPSplashState(int width, int height, GBool vectorAntialias,
   lineDash = NULL;
   lineDashLength = 0;
   lineDashPhase = 0;
-  strokeAdjust = gFalse;
+  strokeAdjust = false;
   clip = new OPVPSplashClip(0, 0, width - 0.001,
                height - 0.001, vectorAntialias);
   softMask = NULL;
-  deleteSoftMask = gFalse;
-  inNonIsolatedGroup = gFalse;
+  deleteSoftMask = false;
+  inNonIsolatedGroup = false;
   next = NULL;
 }
 
@@ -113,7 +113,7 @@ OPVPSplashState::OPVPSplashState(OPVPSplashState *state) {
   strokeAdjust = state->strokeAdjust;
   clip = state->clip->copy();
   softMask = state->softMask;
-  deleteSoftMask = gFalse;
+  deleteSoftMask = false;
   inNonIsolatedGroup = state->inNonIsolatedGroup;
   next = NULL;
 }
@@ -174,5 +174,5 @@ void OPVPSplashState::setSoftMask(SplashBitmap *softMaskA) {
     delete softMask;
   }
   softMask = softMaskA;
-  deleteSoftMask = gTrue;
+  deleteSoftMask = true;
 }
