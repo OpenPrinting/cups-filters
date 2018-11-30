@@ -10,7 +10,7 @@ CHANGES IN V1.21.5
 
 CHANGES IN V1.21.4
 
-	- cups-browsed: cups-browsed: Limit the number of retries for
+	- cups-browsed: Limit the number of retries for
 	  creating a print queue when it comes to HTTP
 	  timeouts. Number of retries given by HttpMaxRetries
 	  directive in cups-browsed.conf. Thanks to Zdenek Dohnal for
