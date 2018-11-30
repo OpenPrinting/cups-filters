@@ -4441,7 +4441,7 @@ gboolean update_cups_queues(gpointer unused) {
   const char *customval;
   const char *val = NULL;
   cups_dest_t *dest = NULL;
-  int is_temporary;
+  int is_shared;
 
   debug_printf("update_cups_queues() in THREAD %ld\n", pthread_self());
 
@@ -4749,6 +4749,12 @@ gboolean update_cups_queues(gpointer unused) {
 	   option. We unset the bit right after that to not actually share
 	   the queue (if we want to share the queue we take care about this
 	   later).
+	   Note that we cannot reliably determine whether we have a
+	   temporary queue via the printer-is-temporary attribute,
+	   therefore we consider only shared queues as for sure
+	   permanent and not shared queues as possibly temporary. To
+	   assure we have a permanent queue in the end we set and
+	   remove the shared bit on any queue which is not shared.
 	   If the temporary queue is pointing to a remote CUPS printer
 	   we cannot modify its printer-is-shared option as CUPS prevents
 	   this. In this case we remove the temporary queue so that we
@@ -4756,15 +4762,15 @@ gboolean update_cups_queues(gpointer unused) {
 	   If the temporary queue has still jobs we will not remove it to 
 	   not loose the jobs and wait with creating our new queue until
 	   the jobs are done. */
-	val = cupsGetOption ("printer-is-temporary",
+	val = cupsGetOption ("printer-is-shared",
 			     dest->num_options,
 			     dest->options);
-	is_temporary = val && (!strcasecmp (val, "yes") ||
-			       !strcasecmp (val, "on") ||
-			       !strcasecmp (val, "true"));
+	is_shared = val && (!strcasecmp (val, "yes") ||
+			    !strcasecmp (val, "on") ||
+			    !strcasecmp (val, "true"));
 	cupsFreeDests(1, dest);
-	if (is_temporary) {
-	  debug_printf("Our new queue overwrites the temporary CUPS queue %s, so we need to make the queue permanent.\n",
+	if (!is_shared) {
+	  debug_printf("Our new queue overwrites the possibly temporary CUPS queue %s, so we need to assure the queue gets permanent.\n",
 		       p->queue_name);
 	  /* We need to modify the printer-is-shared bit twice if we need to
 	     make a temporary queue permanent but not share this queue */
@@ -4794,10 +4800,10 @@ gboolean update_cups_queues(gpointer unused) {
 	      break;
 	    }
 	  }
-	  /* Error on modifying printer-is-shared bit, removing temporary
+	  /* Error on modifying printer-is-shared bit, removing possibly temporary
 	     queue */
 	  if (i <= 1) {
-	    debug_printf("Removing the temporary CUPS queue.\n");
+	    debug_printf("Removing the possibly temporary CUPS queue.\n");
 	    /* Check whether there are still jobs and do not remove the queue
 	       then */
 	    num_jobs = 0;
@@ -5414,7 +5420,7 @@ gboolean update_cups_queues(gpointer unused) {
       ippDelete(cupsDoRequest(http, request, "/admin/"));
       cupsFreeOptions(num_options, options);
       if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE)
-	debug_printf("Unable to set printer-is-shared bit to false (%s)!\n",
+	debug_printf("Unable to modify the printer-is-shared bit (%s)!\n",
 		     cupsLastErrorString());
 
       /* If we are about to create a raw queue or turn a non-raw queue
