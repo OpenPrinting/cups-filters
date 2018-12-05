@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.21.5 - 2018-12-05
 -----------------------------------------------------
 
+CHANGES IN V1.21.6
+
+	- cups-browsed: On shutdown queues got removed even if they
+	  still had jobs (Debian bug #908147).
+
 CHANGES IN V1.21.5
 
 	- cups-browsed: We cannot reliably determine whether a CUPS

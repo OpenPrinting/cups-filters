@@ -4567,7 +4567,9 @@ gboolean update_cups_queues(gpointer unused) {
 	      p->timeout = current_time + TIMEOUT_RETRY;
 	      p->no_autosave = 0;
 	      break;
-	    }
+	    } else
+	      /* Make sure queue's list entry gets freed */
+	      goto keep_queue;
 	  }
 
 	  /* If this queue was the default printer, note that fact so that
@@ -4587,7 +4589,9 @@ gboolean update_cups_queues(gpointer unused) {
 	      p->timeout = current_time + TIMEOUT_RETRY;
 	      p->no_autosave = 0;
 	      break;
-	    }
+	    } else
+	      /* Make sure queue's list entry gets freed */
+	      goto keep_queue;
 	  }
 
 	  /* No jobs, remove the CUPS queue */
@@ -4615,6 +4619,8 @@ gboolean update_cups_queues(gpointer unused) {
 	  }
 	}
       }
+
+    keep_queue:
 
       /* CUPS queue removed or released from cups-browsed, remove the list
 	 entry */
@@ -4818,8 +4824,8 @@ gboolean update_cups_queues(gpointer unused) {
                 current_time = time(NULL);
 		p->timeout = current_time + TIMEOUT_RETRY;
 		p->no_autosave = 0;
-		break;
 	      }
+	      break;
 	    }
 	    /* No jobs, remove the CUPS queue */
 	    request = ippNewRequest(CUPS_DELETE_PRINTER);
