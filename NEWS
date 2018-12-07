@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.21.5 - 2018-12-05
 
 CHANGES IN V1.21.6
 
+	- pdftops: Use the PS interpreter of Poppler for all Apple
+	  LaserWriter 16/600, 4/600, 12/640, 12/600, 12/660 as they
+	  all seem to not work with Ghostscript's PS output (Issue
+	  #76).
 	- cups-browsed: On shutdown queues got removed even if they
 	  still had jobs (Debian bug #908147).
 
