@@ -4476,15 +4476,6 @@ gboolean update_cups_queues(gpointer unused) {
     current_time = time(NULL);
     timeout_reached = 0;
 
-    /* cups-browsed tried to add this print queue unsuccessfully for too
-       many times due to timeouts - Skip print queue creation for this one */
-    if (p->timeouted >= HttpMaxRetries)
-    {
-      fprintf(stderr, "Max number of retries (%d) for creating print queue %s reached, skipping it.\n",
-	      HttpMaxRetries, p->queue_name);
-      continue;
-    }
-
     /* terminating means we have received a signal and should shut down.
        in_shutdown means we have exited the main loop.
        update_cups_queues() is called after having exited the main loop
@@ -4685,6 +4676,14 @@ gboolean update_cups_queues(gpointer unused) {
       /* Only act if the timeout has passed */
       if (p->timeout > current_time)
 	break;
+
+      /* cups-browsed tried to add this print queue unsuccessfully for too
+	 many times due to timeouts - Skip print queue creation for this one */
+      if (p->timeouted >= HttpMaxRetries) {
+	fprintf(stderr, "Max number of retries (%d) for creating print queue %s reached, skipping it.\n",
+		HttpMaxRetries, p->queue_name);
+	continue;
+      }
 
       debug_printf("Creating/Updating CUPS queue %s\n",
 		   p->queue_name);
@@ -5477,6 +5476,24 @@ gboolean update_cups_queues(gpointer unused) {
       } else
 	p->timeout = (time_t) -1;
 
+      /* Check if an HTTP timeout happened during the print queue creation
+	 If it does - increment p->timeouted and set status to TO_BE_CREATED
+	 because the creation can fall through the process, have state changed to
+	 STATUS_CONFIRMED and experience the timeout */
+      /* If no timeout has happened, clear p->timeouted */
+      if (timeout_reached == 1) {
+	fprintf(stderr, "Timeout happened during creation of the queue %s, turn on DebugLogging for more info.\n", p->queue_name);
+	p->timeouted ++;
+	debug_printf("The queue %s already timeouted %d times in a row.\n",
+		     p->queue_name, p->timeouted);
+	p->status = STATUS_TO_BE_CREATED;
+	p->timeout = current_time + TIMEOUT_RETRY;
+      } else if (p->timeouted != 0) {
+	debug_printf("Creating the queue %s went smoothly after %d timeouts.\n",
+		     p->queue_name, p->timeouted);
+	p->timeouted = 0;
+      }
+
       p->no_autosave = 0;
       break;
 
@@ -5495,27 +5512,6 @@ gboolean update_cups_queues(gpointer unused) {
 
       break;
 
-    }
-
-    /* Check if an HTTP timeout happened during the print queue creation
-       If it does - increment p->timeouted and set status to TO_BE_CREATED
-       because the creation can fall through the process, have state changed to
-       STATUS_CONFIRMED and experience the timeout */
-    /* If no timeout has happened, clear p->timeouted */
-    if (timeout_reached == 1)
-    {
-      fprintf(stderr, "Timeout happened during creating the queue %s, turn on DebugLogging for more info.\n", p->queue_name);
-      p->timeouted ++;
-
-      debug_printf("The queue %s already timeouted %d times in a row.\n",
-		   p->queue_name, p->timeouted);
-      p->status = STATUS_TO_BE_CREATED;
-    }
-    else if (p->timeouted != 0)
-    {
-      debug_printf("Creating the queue %s went smoothly after %d timeouts.\n",
-		   p->queue_name, p->timeouted);
-      p->timeouted = 0;
     }
   }
   log_all_printers();
