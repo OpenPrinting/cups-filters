@@ -6,7 +6,7 @@ CHANGES IN V1.21.6
 	- cups-browsed: When updating the CUPS queues, also removed
 	  and unregistered queues and not only created queues got
 	  checked for HTTP timeouts, which caused crashes on shutdown
-	  (Debian bug #916149).
+	  (Issue #79, Debian bug #916149).
 	- pdftops: Use the PS interpreter of Poppler for all Apple
 	  LaserWriter 16/600, 4/600, 12/640, 12/600, 12/660 as they
 	  all seem to not work with Ghostscript's PS output (Issue
