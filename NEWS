@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.21.5 - 2018-12-05
 
 CHANGES IN V1.21.6
 
+	- cups-browsed: When a local CUPS queue pointing to a remote
+	  CUPS printer was removed and re-created to make it a
+	  permanent queue, on_printer_deleted() was triggered by
+	  cupsd's notification to re-create a lost queue. Now
+	  on_printer_deleted() checks whether the queue is really gone
+	  and only re-creates then (Issue #80).
 	- cups-browsed: When updating the CUPS queues, also removed
 	  and unregistered queues and not only created queues got
 	  checked for HTTP timeouts, which caused crashes on shutdown

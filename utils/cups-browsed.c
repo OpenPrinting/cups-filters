@@ -3494,6 +3494,8 @@ on_printer_deleted (CupsNotifier *object,
 {
   remote_printer_t *p;
   const char* r;
+  char *local_queue_name_lower = NULL;
+  local_printer_t *local_printer = NULL;
 
   debug_printf("on_printer_deleted() in THREAD %ld\n", pthread_self());
 
@@ -3506,6 +3508,21 @@ on_printer_deleted (CupsNotifier *object,
   }
 
   if (is_created_by_cups_browsed(printer)) {
+    /* Get available CUPS queues to check whether the queue did not
+       already get re-created */
+    update_local_printers ();
+    /* Look up print queue in the list */
+    local_queue_name_lower = g_ascii_strdown(printer, -1);
+    local_printer = g_hash_table_lookup (local_printers,
+					 local_queue_name_lower);
+    free(local_queue_name_lower);
+    /* If the queue is there again, do not re-create it */
+    if (local_printer) {
+      debug_printf("Printer %s already re-created.\n",
+		   printer);
+      return;
+    }
+
     /* a cups-browsed-generated printer got deleted, re-create it */
     debug_printf("Printer %s got deleted, re-creating it.\n",
 		 printer);
