@@ -333,6 +333,7 @@ cups_array_t *remote_printers;
 static char *alt_config_file = NULL;
 static cups_array_t *command_line_config;
 static cups_array_t *netifs;
+static cups_array_t *local_hostnames;
 static cups_array_t *browseallow;
 static gboolean browseallow_all = FALSE;
 static gboolean browsedeny_all = FALSE;
@@ -2241,8 +2242,8 @@ log_all_printers() {
   debug_printf("=== Remote printer overview ===\n");
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
-    debug_printf("Printer %s: Local queue %s, %s, Slave of %s%s\n", p->uri,
-		 p->queue_name,
+    debug_printf("Printer %s (%s, %s): Local queue %s, %s, Slave of %s%s\n", p->uri,
+		 p->host, (p->ip ? p->ip : "IP not determined"), p->queue_name,
 		 (p->netprinter ? "IPP Printer" : "Remote CUPS Printer"),
 		 ((q = p->slave_of) != NULL ? q->uri : "None"),
 		 (p->status == STATUS_UNCONFIRMED ? " (Unconfirmed)" :
@@ -6219,6 +6220,164 @@ allowed (struct sockaddr *srcaddr)
   return server_allowed;
 }
 
+static gboolean
+update_netifs (gpointer data)
+{
+  struct ifaddrs *ifaddr, *ifa;
+  netif_t *iface, *iface2;
+  int i, add_to_netifs, addr_size, dupe;
+  char *host, buf[HTTP_MAX_HOST], *p;
+
+  debug_printf("update_netifs() in THREAD %ld\n", pthread_self());
+
+  update_netifs_sourceid = 0;
+  if (getifaddrs (&ifaddr) == -1) {
+    debug_printf("unable to get interface addresses: %s\n",
+		 strerror (errno));
+    return FALSE;
+  }
+
+  while ((iface = cupsArrayFirst (netifs)) != NULL) {
+    cupsArrayRemove (netifs, iface);
+    free (iface->address);
+    free (iface);
+  }
+  while ((host = cupsArrayFirst (local_hostnames)) != NULL) {
+    cupsArrayRemove (local_hostnames, host);
+    free (host);
+  }
+
+  for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
+    netif_t *iface;
+
+    add_to_netifs = 1;
+
+    if (ifa->ifa_addr == NULL)
+      continue;
+
+    if (ifa->ifa_broadaddr == NULL)
+      add_to_netifs = 0;
+
+    if (ifa->ifa_flags & IFF_LOOPBACK)
+      add_to_netifs = 0;
+
+    if (!(ifa->ifa_flags & IFF_BROADCAST))
+      add_to_netifs = 0;
+
+    if (ifa->ifa_addr->sa_family == AF_INET)
+      addr_size = sizeof (struct sockaddr_in);
+    else if (ifa->ifa_addr->sa_family == AF_INET6)
+      addr_size = sizeof (struct sockaddr_in6);
+    else
+      addr_size = 0;
+    if (addr_size)
+      for (i = 0; i <= 1; i ++)
+	if (getnameinfo (ifa->ifa_addr, addr_size,
+			 buf, HTTP_MAX_HOST, NULL, 0,
+			 i == 0 ? NI_NUMERICHOST : NI_NAMEREQD) == 0)
+	  if (buf[0]) {
+	    /* Cut off "%..." from IPv6 IP addresses */
+	    if (ifa->ifa_addr->sa_family == AF_INET6 && i == 0 &&
+		(p = strchr(buf, '%')) != NULL)
+	      *p = '\0';
+	    /* discard if we already have this name or address */
+	    dupe = 0;
+	    for (host = (char *)cupsArrayFirst (local_hostnames);
+		 host != NULL;
+		 host = (char *)cupsArrayNext (local_hostnames))
+	      if (strcasecmp(buf, host) == 0) {
+		dupe = 1;
+		break;
+	      }
+	    if (dupe == 0) {
+	      cupsArrayAdd (local_hostnames, strdup(buf));
+	      debug_printf("network interface %s: Local host name/address: %s\n",
+			   ifa->ifa_name, buf);
+	    }
+	  }
+
+    if (add_to_netifs == 0)
+      continue;
+
+    iface = malloc (sizeof (netif_t));
+    if (iface == NULL) {
+      debug_printf ("malloc failure\n");
+      exit (1);
+    }
+
+    iface->address = malloc (HTTP_MAX_HOST);
+    if (iface->address == NULL) {
+      free (iface);
+      debug_printf ("malloc failure\n");
+      exit (1);
+    }
+
+    iface->address[0] = '\0';
+    switch (ifa->ifa_addr->sa_family) {
+    case AF_INET:
+      /* copy broadcast addr/fill in port first to faciliate dupe compares */
+      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
+	      sizeof (struct sockaddr_in));
+      iface->broadcast.ipv4.sin_port = htons (BrowsePort);
+      /* discard if we already have an interface sharing the broadcast address */
+      dupe = 0;
+      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
+           iface2 != NULL;
+           iface2 = (netif_t *)cupsArrayNext (netifs)) {
+	if (memcmp(&iface2->broadcast, &iface->broadcast,
+	    sizeof(struct sockaddr_in)) == 0) {
+	  dupe = 1;
+	  break;
+	}
+      }
+      if (dupe) break;
+      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in),
+		   iface->address, HTTP_MAX_HOST,
+		   NULL, 0, NI_NUMERICHOST);
+      break;
+
+    case AF_INET6:
+      if (IN6_IS_ADDR_LINKLOCAL (&((struct sockaddr_in6 *)(ifa->ifa_addr))
+				 ->sin6_addr))
+	break;
+
+      /* see above for order */
+      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
+	      sizeof (struct sockaddr_in6));
+      iface->broadcast.ipv6.sin6_port = htons (BrowsePort);
+      /* discard alias addresses (identical broadcast) */
+      dupe = 0;
+      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
+           iface2 != NULL;
+           iface2 = (netif_t *)cupsArrayNext (netifs)) {
+	if (memcmp(&iface2->broadcast, ifa->ifa_broadaddr,
+	    sizeof(struct sockaddr_in6)) == 0) {
+	  dupe = 1;
+	  break;
+	}
+      }
+      if (dupe) break;
+      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in6),
+		   iface->address, HTTP_MAX_HOST, NULL, 0, NI_NUMERICHOST);
+      break;
+    }
+
+    if (iface->address[0]) {
+      cupsArrayAdd (netifs, iface);
+      debug_printf("Network interface %s at %s for legacy CUPS browsing/broadcasting\n",
+		   ifa->ifa_name, iface->address);
+    } else {
+      free (iface->address);
+      free (iface);
+    }
+  }
+
+  freeifaddrs (ifaddr);
+
+  /* If run as a timeout, don't run it again. */
+  return FALSE;
+}
+
 #ifdef HAVE_AVAHI
 static void resolve_callback(
   AvahiServiceResolver *r,
@@ -6241,15 +6400,43 @@ static void resolve_callback(
   if (r == NULL || name == NULL || type == NULL || domain == NULL)
     return;
 
-  /* Ignore local queues on the port of the cupsd we are serving for */
-  if (flags & AVAHI_LOOKUP_RESULT_LOCAL && port == ippPort())
-    goto ignore;
-
   /* Get the interface name */
   if (!if_indextoname(interface, ifname)) {
     debug_printf("Unable to find interface name for interface %d: %s\n",
 		 interface, strerror(errno));
     strncpy(ifname, "Unknown", sizeof(ifname));
+  }
+
+  /* Ignore local queues on the port of the cupsd we are serving for */
+  if (flags & AVAHI_LOOKUP_RESULT_LOCAL && port == ippPort()) {
+    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) is from local CUPS, ignored (Avahi lookup result of local machine).\n",
+		 name, type, domain, host_name, port, ifname,
+		 (address ?
+		  (address->proto == AVAHI_PROTO_INET ? "IPv4" :
+		   address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
+		   "IPv4/IPv6 Unknown") :
+		  "IPv4/IPv6 Unknown"));
+    goto ignore;
+  }
+  if (port == ippPort()) {
+    char *host;
+    update_netifs(NULL);
+    for (host = (char *)cupsArrayFirst (local_hostnames);
+	 host != NULL;
+	 host = (char *)cupsArrayNext (local_hostnames))
+      if (strncasecmp(host_name, host, strlen(host)) == 0 &&
+	  (strlen(host_name) == strlen(host) ||
+	   strcasecmp(host_name + strlen(host), ".local") == 0 ||
+	   strcasecmp(host_name + strlen(host), ".local.") == 0)) {
+	debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) is from local CUPS, ignored (Host name of local machine).\n",
+		     name, type, domain, host_name, port, ifname,
+		     (address ?
+		      (address->proto == AVAHI_PROTO_INET ? "IPv4" :
+		       address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
+		       "IPv4/IPv6 Unknown") :
+		      "IPv4/IPv6 Unknown"));
+	goto ignore;
+      }
   }
 
   /* Called whenever a service has been resolved successfully or timed out */
@@ -6258,8 +6445,8 @@ static void resolve_callback(
 
   /* Resolver error */
   case AVAHI_RESOLVER_FAILURE:
-    debug_printf("Avahi-Resolver: Failed to resolve service '%s' of type '%s' in domain '%s' on interface '%s' (%s): %s\n",
-		 name, type, domain, ifname,
+    debug_printf("Avahi-Resolver: Failed to resolve service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s): %s\n",
+		 name, type, domain, host_name, port, ifname,
 		 (address ?
 		  (address->proto == AVAHI_PROTO_INET ? "IPv4" :
 		   address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
@@ -6273,8 +6460,8 @@ static void resolve_callback(
     AvahiStringList *rp_entry, *adminurl_entry;
     char *rp_key, *rp_value, *adminurl_key, *adminurl_value;
 
-    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' on interface '%s' (%s).\n",
-		 name, type, domain, ifname,
+    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s).\n",
+		 name, type, domain, host_name, port, ifname,
 		 (address ?
 		  (address->proto == AVAHI_PROTO_INET ? "IPv4" :
 		   address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
@@ -6328,7 +6515,7 @@ static void resolve_callback(
 	  n = sizeof(instance) - 1;
 	strncpy(instance, name, n);
 	instance[n] = '\0';
-	debug_printf("Avahi-Resolver: instance: |%s|\n", instance); /* !! */
+	debug_printf("Avahi-Resolver: Instance: %s\n", instance); /* !! */
       } else {
 	instance[0] = '\0';
       }
@@ -6927,121 +7114,6 @@ process_browse_data (GIOChannel *source,
 
   /* Don't remove this I/O source */
   return TRUE;
-}
-
-static gboolean
-update_netifs (gpointer data)
-{
-  struct ifaddrs *ifaddr, *ifa;
-  netif_t *iface, *iface2;
-  int dupe;
-
-  debug_printf("update_netifs() in THREAD %ld\n", pthread_self());
-
-  update_netifs_sourceid = 0;
-  if (getifaddrs (&ifaddr) == -1) {
-    debug_printf("unable to get interface addresses: %s\n",
-		 strerror (errno));
-    return FALSE;
-  }
-
-  while ((iface = cupsArrayFirst (netifs)) != NULL) {
-    cupsArrayRemove (netifs, iface);
-    free (iface->address);
-    free (iface);
-  }
-
-  for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
-    netif_t *iface;
-
-    if (ifa->ifa_addr == NULL)
-      continue;
-
-    if (ifa->ifa_broadaddr == NULL)
-      continue;
-
-    if (ifa->ifa_flags & IFF_LOOPBACK)
-      continue;
-
-    if (!(ifa->ifa_flags & IFF_BROADCAST))
-      continue;
-
-    iface = malloc (sizeof (netif_t));
-    if (iface == NULL) {
-      debug_printf ("malloc failure\n");
-      exit (1);
-    }
-
-    iface->address = malloc (HTTP_MAX_HOST);
-    if (iface->address == NULL) {
-      free (iface);
-      debug_printf ("malloc failure\n");
-      exit (1);
-    }
-
-    iface->address[0] = '\0';
-    switch (ifa->ifa_addr->sa_family) {
-    case AF_INET:
-      /* copy broadcast addr/fill in port first to faciliate dupe compares */
-      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
-	      sizeof (struct sockaddr_in));
-      iface->broadcast.ipv4.sin_port = htons (BrowsePort);
-      /* discard if we already have an interface sharing the broadcast address */
-      dupe = 0;
-      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
-           iface2 != NULL;
-           iface2 = (netif_t *)cupsArrayNext (netifs)) {
-	if (memcmp(&iface2->broadcast, &iface->broadcast,
-	    sizeof(struct sockaddr_in)) == 0) {
-	  dupe = 1;
-	  break;
-	}
-      }
-      if (dupe) break;
-      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in),
-		   iface->address, HTTP_MAX_HOST,
-		   NULL, 0, NI_NUMERICHOST);
-      break;
-
-    case AF_INET6:
-      if (IN6_IS_ADDR_LINKLOCAL (&((struct sockaddr_in6 *)(ifa->ifa_addr))
-				 ->sin6_addr))
-	break;
-
-      /* see above for order */
-      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
-	      sizeof (struct sockaddr_in6));
-      iface->broadcast.ipv6.sin6_port = htons (BrowsePort);
-      /* discard alias addresses (identical broadcast) */
-      dupe = 0;
-      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
-           iface2 != NULL;
-           iface2 = (netif_t *)cupsArrayNext (netifs)) {
-	if (memcmp(&iface2->broadcast, ifa->ifa_broadaddr,
-	    sizeof(struct sockaddr_in6)) == 0) {
-	  dupe = 1;
-	  break;
-	}
-      }
-      if (dupe) break;
-      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in6),
-		   iface->address, HTTP_MAX_HOST, NULL, 0, NI_NUMERICHOST);
-      break;
-    }
-
-    if (iface->address[0]) {
-      cupsArrayAdd (netifs, iface);
-      debug_printf("network interface at %s\n", iface->address);
-    } else {
-      free (iface->address);
-      free (iface);
-    }
-  }
-
-  freeifaddrs (ifaddr);
-
-  /* If run as a timeout, don't run it again. */
-  return FALSE;
 }
 
 static void
@@ -8616,6 +8688,7 @@ int main(int argc, char*argv[]) {
 
   /* Initialise the array of network interfaces */
   netifs = cupsArrayNew(NULL, NULL);
+  local_hostnames = cupsArrayNew(NULL, NULL);
   update_netifs (NULL);
 
   local_printers = g_hash_table_new_full (g_str_hash,

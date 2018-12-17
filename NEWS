@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.21.5 - 2018-12-05
 
 CHANGES IN V1.21.6
 
+	- cups-browsed: To find out whether a DNS-SD-discovered
+	  printer is from the local machine, use not only the flags in
+	  the Avahi lookup result but also check the host name.
 	- cups-browsed: When a local CUPS queue pointing to a remote
 	  CUPS printer was removed and re-created to make it a
 	  permanent queue, on_printer_deleted() was triggered by
