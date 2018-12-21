@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.21.6 - 2018-12-17
 -----------------------------------------------------
 
+CHANGES IN V1.21.7
+
+	- cups-browsed: Fixed crash in applying the BrowseFilter
+	  cups-browsed.conf directives (Debian bug #916765).
+
 CHANGES IN V1.21.6
 
 	- cups-browsed: To find out whether a DNS-SD-discovered

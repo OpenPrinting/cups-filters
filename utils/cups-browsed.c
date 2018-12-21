@@ -5614,19 +5614,21 @@ matched_filters (const char *queue_name,
 	  if (filter->regexp) {
 	    /* match regexp */
 	    if (!value)
-	      value = "";
+	      value = strdup("");
 	    if ((filter->cregexp &&
 		 regexec(filter->cregexp, value, 0, NULL, 0) == 0) ||
 		(!filter->cregexp && !strcasecmp(filter->regexp, value))) {
-	      avahi_free(key);
-	      avahi_free(value);
-	      if (filter->sense == FILTER_NOT_MATCH)
+	      if (filter->sense == FILTER_NOT_MATCH) {
+		avahi_free(key);
+		avahi_free(value);
 		goto filter_failed;
+	      }
 	    } else {
-	      avahi_free(key);
-	      avahi_free(value);
-	      if (filter->sense == FILTER_MATCH)
+	      if (filter->sense == FILTER_MATCH) {
+		avahi_free(key);
+		avahi_free(value);
 		goto filter_failed;
+	      }
 	    }	      
 	  } else {
 	    /* match boolean value */
