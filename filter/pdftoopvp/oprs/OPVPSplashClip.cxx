@@ -1,4 +1,9 @@
 #include <config.h>
+
+#ifdef HAVE_CPP_POPPLER_VERSION_H
+#include "cpp/poppler-version.h"
+#endif
+
 #include "splash/SplashXPathScanner.h"
 #include "OPVPSplashClip.h"
 
@@ -42,7 +47,13 @@ OPVPSplashPath *OPVPSplashClip::makePath()
     for (i = 0;i < blen;i++) {
       cbuf[i] = 0;
     }
-    while (scanners[0]->getNextSpan(y,&x0,&x1)) {
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 70
+    SplashXPathScanIterator iterator(*scanners[0], y);
+    while (iterator.getNextSpan(&x0, &x1))
+#else
+    while (scanners[0]->getNextSpan(y,&x0,&x1))
+#endif
+    {
       if (x0 < txMin) x0 = txMin;
       if (x1 > txMax) x1 = txMax;
       for (i = x0;i < x1;i++) {
@@ -54,7 +65,13 @@ OPVPSplashPath *OPVPSplashClip::makePath()
       for (i = 0;i < blen;i++) {
 	tbuf[i] = 0;
       }
-      while (scanners[j]->getNextSpan(y,&x0,&x1)) {
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 70
+      SplashXPathScanIterator iterator2(*scanners[j], y);
+      while (iterator2.getNextSpan(&x0, &x1))
+#else
+      while (scanners[j]->getNextSpan(y,&x0,&x1))
+#endif
+      {
 	if (x0 < txMin) x0 = txMin;
 	if (x1 > txMax) x1 = txMax;
 	for (i = x0;i < x1;i++) {

@@ -966,7 +966,13 @@ SplashError OPVPSplash::fillByMyself(OPVPSplashPath *path, bool eo)
     setStrokePattern(state->fillPattern->copy());
 
     for (y = yMinI; y < yMaxI; ++y) {
-      while (scanner->getNextSpan(y, &x0, &x1)) {
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 70
+      SplashXPathScanIterator iterator(*scanner, y);
+      while (iterator.getNextSpan(&x0, &x1))
+#else
+      while (scanner->getNextSpan(y, &x0, &x1))
+#endif
+      {
         if (x0 == x1) continue;
 	if (clipRes == splashClipAllInside) {
 	  drawSpan(x0, x1-1, y, true);
