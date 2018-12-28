@@ -464,12 +464,21 @@ int main(int argc, char *argv[]) {
       if (choices != 0) free(choices);
     }
 
+#if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 71
     strncpy(jobInfo,jobInfoStr.getCString(),sizeof(jobInfo)-1);
     jobInfo[sizeof(jobInfo)-1] = '\0';
     strncpy(docInfo,docInfoStr.getCString(),sizeof(docInfo)-1);
     docInfo[sizeof(docInfo)-1] = '\0';
     strncpy(pageInfo,pageInfoStr.getCString(),sizeof(pageInfo)-1);
     pageInfo[sizeof(pageInfo)-1] = '\0';
+#else
+    strncpy(jobInfo,jobInfoStr.c_str(),sizeof(jobInfo)-1);
+    jobInfo[sizeof(jobInfo)-1] = '\0';
+    strncpy(docInfo,docInfoStr.c_str(),sizeof(docInfo)-1);
+    docInfo[sizeof(docInfo)-1] = '\0';
+    strncpy(pageInfo,pageInfoStr.c_str(),sizeof(pageInfo)-1);
+    pageInfo[sizeof(pageInfo)-1] = '\0';
+#endif
 
     colorProfile = getColorProfilePath(ppd,&colorProfilePath);
 
@@ -629,7 +638,13 @@ exit(0);
       name.append("/tmp");
     }
     name.append("/XXXXXX");
+#if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 71
     fd = mkstemp(name.getCString());
+#else
+    std::string t = name.toStr();
+    fd = mkstemp(&t[0]);
+    name = GooString(std::move(t));
+#endif
     if (fd < 0) {
       opvpError(-1,"Can't create temporary file");
       exitCode = 2;
@@ -673,7 +688,11 @@ exit(0);
     close(fd);
     doc = new PDFDoc(&name);
     /* remove name */
+#if POPPLER_VERSION_MAJOR == 0 && POPPLER_VERSION_MINOR <= 71
     unlink(name.getCString());
+#else
+    unlink(name.c_str());
+#endif
   } else {
     /* no jcl check */
     doc = new PDFDoc(fileName.copy());

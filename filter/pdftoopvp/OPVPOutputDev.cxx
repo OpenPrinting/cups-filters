@@ -499,6 +499,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
   SplashOutFontFileID *id;
   SplashFontFile *fontFile;
   SplashFontSrc *fontsrc = NULL;
+  const char *fontName = "(unnamed)";
   FoFiTrueType *ff;
   Ref embRef;
   Object refObj, strObj;
@@ -530,6 +531,13 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
     delete id;
 
   } else {
+    if (gfxFont->getName()) {
+#if POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR <= 71
+      fontName = gfxFont->getName()->getCString();
+#else
+      fontName = gfxFont->getName()->c_str();
+#endif
+    }
 
     // if there is an embedded font, write it to disk
     if (gfxFont->getEmbeddedFontID(&embRef)) {
@@ -542,9 +550,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       fileName = globalParams->findSystemFontFile(gfxFont,&sftype,
                           &faceIndex, NULL);
       if (fileName == 0) {
-	opvpError(-1, "Couldn't find a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't find a font for '%s'", fontName);
 	goto err2;
       }
       switch (sftype) {
@@ -573,9 +579,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 			   fontsrc,
                            (const char **)
 			   ((Gfx8BitFont *)gfxFont)->getEncoding()))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -585,9 +589,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 			   fontsrc,
                            (const char **)
 			   ((Gfx8BitFont *)gfxFont)->getEncoding()))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -597,16 +599,18 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 			   fontsrc,
                            (const char **)
 			   ((Gfx8BitFont *)gfxFont)->getEncoding()))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
     case fontTrueTypeOT:
     case fontTrueType:
 	if (fileName)
+#if POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR <= 71
 	 ff = FoFiTrueType::load(fileName->getCString());
+#else
+	 ff = FoFiTrueType::load(fileName->c_str());
+#endif
 	else
 	ff = FoFiTrueType::make(tmpBuf, tmpBufLen);
       if (ff) {
@@ -621,9 +625,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 			   id,
 			   fontsrc,
 			   codeToGID, n))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -632,9 +634,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       if (!(fontFile = fontEngine->loadCIDFont(
 			   id,
 			   fontsrc))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -650,9 +650,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       if (!(fontFile = fontEngine->loadOpenTypeCFFFont(
 			   id,
 			   fontsrc,codeToGID,n))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -669,7 +667,11 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 	}
       } else {
 	if (fileName)
+#if POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR <= 71
 	  ff = FoFiTrueType::load(fileName->getCString());
+#else
+	  ff = FoFiTrueType::load(fileName->c_str());
+#endif
 	else
 	  ff = FoFiTrueType::make(tmpBuf, tmpBufLen);
 	if (! ff)
@@ -681,9 +683,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 			   id,
 			   fontsrc,
 			   codeToGID, n, faceIndex))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
