@@ -111,7 +111,6 @@ static int outOnePage(PDFDoc *doc, OPVPOutputDev *opvpOut, int pg)
 
 #define MAX_OPVP_OPTIONS 20
 
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 23
 void CDECL myErrorFun(void *data, ErrorCategory category,
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 70
@@ -136,19 +135,6 @@ void CDECL myErrorFun(void *data, ErrorCategory category,
   fprintf(stderr, "%s\n",msg);
   fflush(stderr);
 }
-#else
-void CDECL myErrorFun(int pos, char *msg, va_list args)
-{
-  if (pos >= 0) {
-    fprintf(stderr, "ERROR (%d): ", pos);
-  } else {
-    fprintf(stderr, "ERROR: ");
-  }
-  vfprintf(stderr, msg, args);
-  fprintf(stderr, "\n");
-  fflush(stderr);
-}
-#endif
 
 static bool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 {
@@ -254,11 +240,7 @@ int main(int argc, char *argv[]) {
   GooString colorProfilePath("opvp.icc");
 
   exitCode = 99;
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   setErrorCallback(::myErrorFun,NULL);
-#else
-  setErrorFunction(::myErrorFun);
-#endif
 
   // parse args
   int num_options;

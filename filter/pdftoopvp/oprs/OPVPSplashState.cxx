@@ -129,7 +129,6 @@ OPVPSplashState::~OPVPSplashState() {
   }
 }
 
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
 void OPVPSplashState::setState(Splash *osplash) {
   osplash->setMatrix(matrix);
   osplash->setFlatness(flatness);
@@ -139,7 +138,6 @@ void OPVPSplashState::setState(Splash *osplash) {
   osplash->setMiterLimit(miterLimit);
   osplash->setLineJoin(lineJoin);
 }
-#endif
 
 void OPVPSplashState::setStrokePattern(SplashPattern *strokePatternA) {
   delete strokePattern;

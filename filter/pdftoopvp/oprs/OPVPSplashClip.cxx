@@ -27,7 +27,6 @@ OPVPSplashPath *OPVPSplashClip::makePath()
   int i,j;
   int y, x0, x1;
   int txMin, tyMin, txMax, tyMax;
-  int tsxMin, tsyMin, tsxMax, tsyMax;
   Guchar *cbuf,*tbuf;
   int blen;
   OPVPSplashPath *p = new OPVPSplashPath();
@@ -37,10 +36,6 @@ OPVPSplashPath *OPVPSplashClip::makePath()
   blen = txMax-txMin+1;
   cbuf = new Guchar[blen];
   tbuf = new Guchar[blen];
-  
-  /* dummy call to clear state */
-  scanners[0]->getBBox(&tsxMin,&tsyMin,&tsxMax,&tsyMax);
-  scanners[0]->getNextSpan(tsyMin-2,&x0,&x1);
 
   for (y = tyMin;y <= tyMax;y++) {
     /* clear buffer */
