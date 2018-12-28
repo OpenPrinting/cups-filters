@@ -294,7 +294,7 @@ void OPVPOutputDev::startPage(int pageNum, GfxState *state) {
 
   if (state) {
     if (scaleWidth > 0 && scaleHeight > 0) {
-      double *ctm = state->getCTM();
+      const double *ctm = state->getCTM();
 
       switch (rotate) {
       case 90:
@@ -709,7 +709,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
   if (fontFile->doAdjustMatrix && !gfxFont->isCIDFont()) {
     double w1, w2;
     CharCode code;
-    char *name;
+    const char *name;
     for (code = 0; code < 256; ++code) {
       if ((name = ((Gfx8BitFont *)gfxFont)->getCharName(code)) &&
           name[0] == 'm' && name[1] == '\0') {
@@ -1060,7 +1060,7 @@ void OPVPOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				    int width, int height, bool invert,
 				    bool interpolate,
 				    bool inlineImg) {
-  double *ctm;
+  const double *ctm;
   SplashCoord mat[6];
   SplashOutImageMaskData imgMaskData;
 
@@ -1324,7 +1324,7 @@ void OPVPOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 				GfxImageColorMap *colorMap,
 			        bool interpolate,
 				int *maskColors, bool inlineImg) {
-  double *ctm;
+  const double *ctm;
   SplashCoord mat[6];
   SplashOutImageData imgData;
   SplashColorMode srcMode;
@@ -1549,7 +1549,7 @@ void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
 				      Stream *maskStr, int maskWidth,
 				      int maskHeight, bool maskInvert,
 				      bool maskInterpolate) {
-  double *ctm;
+  const double *ctm;
   SplashCoord mat[6];
   SplashOutMaskedImageData imgData;
   SplashOutImageMaskData imgMaskData;
@@ -1704,7 +1704,7 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
 					  int maskWidth, int maskHeight,
 					  GfxImageColorMap *maskColorMap,
 					  bool maskInterpolate) {
-  double *ctm;
+  const double *ctm;
   SplashCoord mat[6];
   SplashOutImageData imgData;
   SplashOutImageData imgMaskData;
