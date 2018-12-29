@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.21.6 - 2018-12-17
 
 CHANGES IN V1.21.7
 
+	- pdftoopvp: More fixes for building with Poppler 0.72
+	  (Pull request #83, Issue #75).
+	- pdftoraster, pdftoijs, pdftoopvp: Removed support for
+	  Poppler 0.18 (Pull request #83).
 	- cups-browsed: Fixed crash in applying the BrowseFilter
 	  cups-browsed.conf directives (Debian bug #916765).
 
