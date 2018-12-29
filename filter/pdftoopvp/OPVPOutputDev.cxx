@@ -294,7 +294,7 @@ void OPVPOutputDev::startPage(int pageNum, GfxState *state) {
 
   if (state) {
     if (scaleWidth > 0 && scaleHeight > 0) {
-      double *ctm = state->getCTM();
+      const double *ctm = state->getCTM();
 
       switch (rotate) {
       case 90:
@@ -499,17 +499,14 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
   SplashOutFontFileID *id;
   SplashFontFile *fontFile;
   SplashFontSrc *fontsrc = NULL;
+  const char *fontName = "(unnamed)";
   FoFiTrueType *ff;
   Ref embRef;
   Object refObj, strObj;
   GooString *fileName;
   char *tmpBuf;
   int tmpBufLen;
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   int *codeToGID;
-#else
-  Gushort *codeToGID;
-#endif
   double m11, m12, m21, m22;
   int n;
   int faceIndex = 0;
@@ -534,6 +531,13 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
     delete id;
 
   } else {
+    if (gfxFont->getName()) {
+#if POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR <= 71
+      fontName = gfxFont->getName()->getCString();
+#else
+      fontName = gfxFont->getName()->c_str();
+#endif
+    }
 
     // if there is an embedded font, write it to disk
     if (gfxFont->getEmbeddedFontID(&embRef)) {
@@ -541,15 +545,12 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       if (! tmpBuf)
 	goto err2;
 
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
     } else {
       SysFontType sftype;
       fileName = globalParams->findSystemFontFile(gfxFont,&sftype,
                           &faceIndex, NULL);
       if (fileName == 0) {
-	opvpError(-1, "Couldn't find a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't find a font for '%s'", fontName);
 	goto err2;
       }
       switch (sftype) {
@@ -563,34 +564,6 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 	break;
       }
     }
-#else
-    // if there is an external font file, use it
-    } else if (!(fileName = gfxFont->getExtFontFile())) {
-      DisplayFontParam *dfp;
-      // look for a display font mapping or a substitute font
-      dfp = NULL;
-      if (gfxFont->getName()) {
-        dfp = globalParams->getDisplayFont(gfxFont);
-      }
-      if (!dfp) {
-	opvpError(-1, "Couldn't find a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
-	goto err2;
-      }
-      switch (dfp->kind) {
-      case displayFontT1:
-	fileName = dfp->t1.fileName;
-	fontType = gfxFont->isCIDFont() ? fontCIDType0 : fontType1;
-	break;
-      case displayFontTT:
-	fileName = dfp->tt.fileName;
-	fontType = gfxFont->isCIDFont() ? fontCIDType2 : fontTrueType;
-	faceIndex = dfp->tt.faceIndex;
-	break;
-      }
-    }
-#endif
 
     fontsrc = new SplashFontSrc;
     if (fileName)
@@ -604,13 +577,9 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       if (!(fontFile = fontEngine->loadType1Font(
 			   id,
 			   fontsrc,
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
                            (const char **)
-#endif
 			   ((Gfx8BitFont *)gfxFont)->getEncoding()))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -618,13 +587,9 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       if (!(fontFile = fontEngine->loadType1CFont(
 			   id,
 			   fontsrc,
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
                            (const char **)
-#endif
 			   ((Gfx8BitFont *)gfxFont)->getEncoding()))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -632,20 +597,20 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       if (!(fontFile = fontEngine->loadOpenTypeT1CFont(
 			   id,
 			   fontsrc,
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
                            (const char **)
-#endif
 			   ((Gfx8BitFont *)gfxFont)->getEncoding()))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
     case fontTrueTypeOT:
     case fontTrueType:
 	if (fileName)
+#if POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR <= 71
 	 ff = FoFiTrueType::load(fileName->getCString());
+#else
+	 ff = FoFiTrueType::load(fileName->c_str());
+#endif
 	else
 	ff = FoFiTrueType::make(tmpBuf, tmpBufLen);
       if (ff) {
@@ -660,9 +625,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 			   id,
 			   fontsrc,
 			   codeToGID, n))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -671,14 +634,11 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       if (!(fontFile = fontEngine->loadCIDFont(
 			   id,
 			   fontsrc))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
     case fontCIDType0COT:
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
       n = ((GfxCIDFont *)gfxFont)->getCIDToGIDLen();
       if (n) {
         codeToGID = (int *)gmallocn(n, sizeof(int));
@@ -690,14 +650,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       if (!(fontFile = fontEngine->loadOpenTypeCFFFont(
 			   id,
 			   fontsrc,codeToGID,n))) {
-#else
-      if (!(fontFile = fontEngine->loadOpenTypeCFFFont(
-			   id,
-			   fontsrc))) {
-#endif
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -708,19 +661,17 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
       if (((GfxCIDFont *)gfxFont)->getCIDToGID()) {
 	n = ((GfxCIDFont *)gfxFont)->getCIDToGIDLen();
 	if (n) {
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
 	  codeToGID = (int *)gmallocn(n, sizeof(int));
 	  memcpy(codeToGID, ((GfxCIDFont *)gfxFont)->getCIDToGID(),
 		  n * sizeof(int));
-#else
-	  codeToGID = (Gushort *)gmallocn(n, sizeof(Gushort));
-	  memcpy(codeToGID, ((GfxCIDFont *)gfxFont)->getCIDToGID(),
-		  n * sizeof(Gushort));
-#endif
 	}
       } else {
 	if (fileName)
+#if POPPLER_VERSION_MAJOR <= 0 && POPPLER_VERSION_MINOR <= 71
 	  ff = FoFiTrueType::load(fileName->getCString());
+#else
+	  ff = FoFiTrueType::load(fileName->c_str());
+#endif
 	else
 	  ff = FoFiTrueType::make(tmpBuf, tmpBufLen);
 	if (! ff)
@@ -732,9 +683,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
 			   id,
 			   fontsrc,
 			   codeToGID, n, faceIndex))) {
-	opvpError(-1, "Couldn't create a font for '%s'",
-	      gfxFont->getName() ? gfxFont->getName()->getCString()
-	                         : "(unnamed)");
+	opvpError(-1, "Couldn't create a font for '%s'", fontName);
 	goto err2;
       }
       break;
@@ -760,7 +709,7 @@ void OPVPOutputDev::doUpdateFont(GfxState *state) {
   if (fontFile->doAdjustMatrix && !gfxFont->isCIDFont()) {
     double w1, w2;
     CharCode code;
-    char *name;
+    const char *name;
     for (code = 0; code < 256; ++code) {
       if ((name = ((Gfx8BitFont *)gfxFont)->getCharName(code)) &&
           name[0] == 'm' && name[1] == '\0') {
@@ -929,11 +878,7 @@ void OPVPOutputDev::clipToStrokePath(GfxState *state) {
   tsplash->setLineWidth(state->getTransformedLineWidth());
 
   path = convertPath(state, state->getPath());
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   spath = tsplash->makeStrokePath(path,0);
-#else
-  spath = tsplash->makeStrokePath(path);
-#endif
   path2 = new OPVPSplashPath(spath);
   delete spath;
   delete path;
@@ -1115,7 +1060,7 @@ void OPVPOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				    int width, int height, bool invert,
 				    bool interpolate,
 				    bool inlineImg) {
-  double *ctm;
+  const double *ctm;
   SplashCoord mat[6];
   SplashOutImageMaskData imgMaskData;
 
@@ -1379,7 +1324,7 @@ void OPVPOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 				GfxImageColorMap *colorMap,
 			        bool interpolate,
 				int *maskColors, bool inlineImg) {
-  double *ctm;
+  const double *ctm;
   SplashCoord mat[6];
   SplashOutImageData imgData;
   SplashColorMode srcMode;
@@ -1604,7 +1549,7 @@ void OPVPOutputDev::drawMaskedImage(GfxState *state, Object *ref,
 				      Stream *maskStr, int maskWidth,
 				      int maskHeight, bool maskInvert,
 				      bool maskInterpolate) {
-  double *ctm;
+  const double *ctm;
   SplashCoord mat[6];
   SplashOutMaskedImageData imgData;
   SplashOutImageMaskData imgMaskData;
@@ -1759,7 +1704,7 @@ void OPVPOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref,
 					  int maskWidth, int maskHeight,
 					  GfxImageColorMap *maskColorMap,
 					  bool maskInterpolate) {
-  double *ctm;
+  const double *ctm;
   SplashCoord mat[6];
   SplashOutImageData imgData;
   SplashOutImageData imgMaskData;

@@ -35,10 +35,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "cpp/poppler-version.h"
 #endif
 
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
 #define opvpError(pos,...) error(errInternal,pos,__VA_ARGS__)
-#else
-#define opvpError(pos,...) error(pos,__VA_ARGS__)
-#endif
 
 #endif

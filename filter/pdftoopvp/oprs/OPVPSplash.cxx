@@ -636,12 +636,8 @@ SplashError OPVPSplash::clipToPath(OPVPSplashPath *path, bool eo) {
                                      state->flatness, false);
 
       xpath->sort();
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
       SplashXPathScanner *scanner = new SplashXPathScanner(xpath,eo,
         INT_MIN,INT_MAX);
-#else
-      SplashXPathScanner *scanner = new SplashXPathScanner(xpath,eo);
-#endif
       scanner->getBBox(&xMin,&yMin,&xMax,&yMax);
       delete scanner;
       delete xpath;
@@ -864,7 +860,6 @@ void OPVPSplash::arcToCurve(SplashCoord x0, SplashCoord y0,
 
 SplashError OPVPSplash::strokeByMyself(OPVPSplashPath *path)
 {
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   SplashPath *dPath;
   OPVPSplashPath *oPath;
   Splash *osplash;
@@ -898,37 +893,6 @@ SplashError OPVPSplash::strokeByMyself(OPVPSplashPath *path)
   }
   delete osplash;
   return splashOk;
-#else
-  OPVPSplashXPath *xPath, *xPath2;
-  SplashPattern *savedPattern;
-
-  /* draw dashed line by myself */
-  if (path->getLength() == 0) {
-    return splashOk;
-  }
-  xPath = new OPVPSplashXPath(path, state->matrix, state->flatness, false);
-  if (state->lineDash != NULL && state->lineDashLength > 0) {
-    xPath2 = xPath->makeDashedPath(state);
-    delete xPath;
-    xPath = xPath2;
-  }
-
-  if (state->lineWidth <= 1) {
-    xPath->strokeNarrow(this,state);
-  } else {
-    /* change fill pattern temprarily */
-    savedPattern = state->fillPattern->copy();
-    setFillPattern(state->strokePattern->copy());
-
-    xPath->strokeWide(this,state);
-
-    /* restore fill pattern */
-    setFillPattern(savedPattern);
-  }
-
-  delete xPath;
-  return splashOk;
-#endif
 }
 
 SplashError OPVPSplash::stroke(OPVPSplashPath *path) {
@@ -987,11 +951,7 @@ SplashError OPVPSplash::fillByMyself(OPVPSplashPath *path, bool eo)
   }
   xPath = new OPVPSplashXPath(path, state->matrix, state->flatness, true);
   xPath->sort();
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   scanner = new SplashXPathScanner(xPath, eo, INT_MIN, INT_MAX);
-#else
-  scanner = new SplashXPathScanner(xPath, eo);
-#endif
 
   // get the min and max x and y values
   scanner->getBBox(&xMinI, &yMinI, &xMaxI, &yMaxI);
@@ -1006,7 +966,13 @@ SplashError OPVPSplash::fillByMyself(OPVPSplashPath *path, bool eo)
     setStrokePattern(state->fillPattern->copy());
 
     for (y = yMinI; y < yMaxI; ++y) {
-      while (scanner->getNextSpan(y, &x0, &x1)) {
+#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 70
+      SplashXPathScanIterator iterator(*scanner, y);
+      while (iterator.getNextSpan(&x0, &x1))
+#else
+      while (scanner->getNextSpan(y, &x0, &x1))
+#endif
+      {
         if (x0 == x1) continue;
 	if (clipRes == splashClipAllInside) {
 	  drawSpan(x0, x1-1, y, true);

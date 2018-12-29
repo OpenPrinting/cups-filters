@@ -69,7 +69,6 @@ namespace {
   ppd_file_t *ppd = 0; // holds the memory for the strings
 }
 
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 23
 void CDECL myErrorFun(void *data, ErrorCategory category,
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 70
@@ -94,19 +93,6 @@ void CDECL myErrorFun(void *data, ErrorCategory category,
   fprintf(stderr, "%s\n",msg);
   fflush(stderr);
 }
-#else
-void CDECL myErrorFun(int pos, char *msg, va_list args)
-{
-  if (pos >= 0) {
-    fprintf(stderr, "ERROR (%d): ", pos);
-  } else {
-    fprintf(stderr, "ERROR: ");
-  }
-  vfprintf(stderr, msg, args);
-  fprintf(stderr, "\n");
-  fflush(stderr);
-}
-#endif
 
 /* parse  "300 400" */
 void parse_resolution(const char *str)
@@ -299,11 +285,7 @@ int main(int argc, char *argv[]) {
   int rowpad;
   bool reverseVideo;
 
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   setErrorCallback(::myErrorFun,NULL);
-#else
-  setErrorFunction(::myErrorFun);
-#endif
   globalParams = new GlobalParams();
   parseOpts(argc, argv);
 
@@ -445,11 +427,7 @@ int main(int argc, char *argv[]) {
     ,false
 #endif
     );
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   out->startDoc(doc);
-#else
-  out->startDoc(doc->getXRef());
-#endif
 
   snprintf(tmp,99,"%d",numChan);
   ijs_client_set_param(ctx,job_id,"NumChan",tmp,strlen(tmp));

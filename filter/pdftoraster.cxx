@@ -280,7 +280,6 @@ cmsHPROFILE sgray_profile()
     return sgray;
 }
 
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 23
 void CDECL myErrorFun(void *data, ErrorCategory category,
 #if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 70
@@ -305,19 +304,6 @@ void CDECL myErrorFun(void *data, ErrorCategory category,
   fprintf(stderr, "%s\n",msg);
   fflush(stderr);
 }
-#else
-void CDECL myErrorFun(int pos, char *msg, va_list args)
-{
-  if (pos >= 0) {
-    fprintf(stderr, "ERROR (%d): ", pos);
-  } else {
-    fprintf(stderr, "ERROR: ");
-  }
-  vfprintf(stderr, msg, args);
-  fprintf(stderr, "\n");
-  fflush(stderr);
-}
-#endif
 
 #ifdef USE_LCMS1
 static int lcmsErrorHandler(int ErrorCode, const char *ErrorText)
@@ -1970,11 +1956,7 @@ int main(int argc, char *argv[]) {
   int rowpad;
   Catalog *catalog;
 
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   setErrorCallback(::myErrorFun,NULL);
-#else
-  setErrorFunction(::myErrorFun);
-#endif
   cmsSetLogErrorHandler(lcmsErrorHandler);
   globalParams = new GlobalParams();
   parseOpts(argc, argv);
@@ -2133,11 +2115,7 @@ int main(int argc, char *argv[]) {
     ,false
 #endif
     );
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 19
   out->startDoc(doc);
-#else
-  out->startDoc(doc->getXRef());
-#endif
 
   if ((raster = cupsRasterOpen(1, pwgraster ? CUPS_RASTER_WRITE_PWG :
 			       CUPS_RASTER_WRITE)) == 0) {
