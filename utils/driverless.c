@@ -482,7 +482,8 @@ generate_ppd (const char *uri)
     "job-template",
     "printer-defaults",
     "printer-description",
-    "media-col-database"
+    "media-col-database",
+    "urf-supported"
   };
 
   /* Request printer properties via IPP to generate a PPD file for the

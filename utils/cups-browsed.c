@@ -3849,7 +3849,8 @@ get_printer_attributes(const char* uri) {
     "job-template",
     "printer-defaults",
     "printer-description",
-    "media-col-database"
+    "media-col-database",
+    "urf-supported"
   };
   /* Request printer properties via IPP to generate a PPD file for the
      printer (mainly driverless-capable printers)
