@@ -9,6 +9,7 @@ CHANGES IN V1.21.7
 	  Poppler 0.18 (Pull request #83).
 	- cups-browsed: Fixed crash in applying the BrowseFilter
 	  cups-browsed.conf directives (Debian bug #916765).
+	- pdftopdf: Use QPDF for form flattening (Issues #23, #36, #2)
 
 CHANGES IN V1.21.6
 

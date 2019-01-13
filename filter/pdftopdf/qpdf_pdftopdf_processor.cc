@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <qpdf/QPDFWriter.hh>
 #include <qpdf/QUtil.hh>
+#include <qpdf/QPDFPageDocumentHelper.hh>
+#include <qpdf/QPDFAcroFormDocumentHelper.hh>
 #include "qpdf_tools.h"
 #include "qpdf_xobject.h"
 #include "qpdf_pdftopdf.h"
@@ -437,6 +439,12 @@ bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name) // {{{
 void QPDF_PDFTOPDF_Processor::start() // {{{
 {
   assert(pdf);
+
+  QPDFAcroFormDocumentHelper afdh(*pdf);
+  afdh.generateAppearancesIfNeeded();
+
+  QPDFPageDocumentHelper dh(*pdf);
+  dh.flattenAnnotations(an_print);
 
   pdf->pushInheritedAttributesToPage();
   orig_pages=pdf->getAllPages();
