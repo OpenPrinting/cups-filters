@@ -57,7 +57,6 @@ class QPDF_PDFTOPDF_Processor : public PDFTOPDF_Processor {
   virtual void emitFile(FILE *dst,ArgOwnership take=WillStayAlive);
   virtual void emitFilename(const char *name);
 
-  virtual bool hasAcroForm();
  private:
   void closeFile();
   void error(const char *fmt,...);
