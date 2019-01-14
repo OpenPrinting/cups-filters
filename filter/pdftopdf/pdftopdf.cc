@@ -1164,7 +1164,8 @@ int main(int argc,char **argv)
 	}
       }
       /* Clean up */
-      fclose(infile);
+      if (infile != tmpfile)
+	fclose(infile);
       /* Load the flattened PDF file into our PDF processor */
       if (flattening_done) {
 	rewind(outfile);
@@ -1202,6 +1203,8 @@ int main(int argc,char **argv)
 
     emitPostamble(ppd,param);
     ppdClose(ppd);
+    if (tmpfile)
+      fclose(tmpfile);
   } catch (std::exception &e) {
     // TODO? exception type
     error("Exception: %s",e.what());
