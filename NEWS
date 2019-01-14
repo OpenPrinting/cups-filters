@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.21.6 - 2018-12-17
 
 CHANGES IN V1.21.7
 
+	- pdftopdf: Use QPDF for flattening interactive PDF forms
+	  (Issues #2, #23, #36, Pull request #88).
 	- pdftopdf: Fixed bug of closing temporary file prematurely
 	  when external PDF form flattening utilities fail (Thanks to
 	  Tobias Hoffmann for finding this, see pull request #88).

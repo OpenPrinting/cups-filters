@@ -462,7 +462,7 @@ PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.0.0])
 PKG_CHECK_MODULES([IJS], [ijs], [have_ijs=yes], [have_ijs=no])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
-PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 8.1.0])
+PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 8.3.0])
 
 # ===============================
 # Check for PCLm printing support
@@ -471,13 +471,6 @@ AC_ARG_ENABLE([pclm], [AS_HELP_STRING([--enable-pclm], [enable PCLm printing.])]
 	[enable_pclm="$enableval"],
 	[enable_pclm=yes]
 )
-if test "x$enable_pclm" != "xno"; then
-	# Do we have QPDF 7.0.0 or newer?
-	AC_CHECK_HEADERS([qpdf/Pl_RunLength.hh],
-		[],
-		[enable_pclm=no]
-	)
-fi
 if test "x$enable_pclm" != "xno"; then
 	AC_DEFINE([QPDF_HAVE_PCLM], [1], [QPDF has PCLm support?])
 	QPDF_NO_PCLM=
