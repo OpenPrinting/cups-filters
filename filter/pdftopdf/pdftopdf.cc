@@ -1026,7 +1026,7 @@ int main(int argc,char **argv)
     //param.mirror=true;
     //param.reverse=true;
     //param.numCopies=3;
-    if (!proc1->loadFilename("in.pdf")) return 2;
+    if (!proc1->loadFilename("in.pdf",1)) return 2;
     param.dump();
     if (!processPDFTOPDF(*proc1,param)) return 3;
     emitComment(*proc1,param);
@@ -1063,30 +1063,61 @@ int main(int argc,char **argv)
     param.dump();
 #endif
 
+    /* Check with which method we will flatten interactive PDF forms
+       and annotations so that they get printed also after page
+       manipulations (scaling, N-up, ...). Flattening means to
+       integrate the filled in data and the printable annotations into
+       the pages themselves instead of holding them in an extra
+       layer. Default method is using QPDF, alternatives are the
+       external utilities pdftocairo or Ghostscript, but these make
+       the processing slower, especially due to extra piping of the
+       data between processes. */
+    int qpdf_flatten = 1;
+    int pdftocairo_flatten = 0;
+    int gs_flatten = 0;
+    int external_auto_flatten = 0;
+    const char	*val;
+    if ((val = cupsGetOption("pdftopdf-form-flattening", num_options, options)) != NULL) {
+      if (strcasecmp(val, "qpdf") == 0 || strcasecmp(val, "internal") == 0 ||
+	  strcasecmp(val, "auto") == 0) {
+	qpdf_flatten = 1;
+      } else if (strcasecmp(val, "external") == 0) {
+	qpdf_flatten = 0;
+	external_auto_flatten = 1;
+      } else if (strcasecmp(val, "pdftocairo") == 0) {
+	qpdf_flatten = 0;
+	pdftocairo_flatten = 1;
+      } else if (strcasecmp(val, "ghostscript") == 0 || strcasecmp(val, "gs") == 0) {
+	qpdf_flatten = 0;
+	gs_flatten = 1;
+      } else
+	fprintf(stderr,
+		"WARNING: Invalid value for \"pdftopdf-form-flattening\": \"%s\"\n", val);
+    }
+
     cupsFreeOptions(num_options,options);
 
     std::unique_ptr<PDFTOPDF_Processor> proc(PDFTOPDF_Factory::processor());
 
     FILE *tmpfile = NULL;
     if (argc==7) {
-      if (!proc->loadFilename(argv[6])) {
+      if (!proc->loadFilename(argv[6],qpdf_flatten)) {
         ppdClose(ppd);
         return 1;
       }
     } else {
       tmpfile = copy_stdin_to_temp();
       if ((!tmpfile)||
-	  (!proc->loadFile(tmpfile,WillStayAlive))) {
+	  (!proc->loadFile(tmpfile,WillStayAlive,qpdf_flatten))) {
         ppdClose(ppd);
         return 1;
       }
     }
 
-    /* The input file contains a PDF form. To not loose the data filled
-       into the form during our further manipulations we need to flatten
-       the form, meaning that we integrate the filled in data into the
-       pages themselves instead of holding them in an extra layer */
-    if (proc->hasAcroForm()) {
+    /* If the input file contains a PDF form and we opted for not
+       using QPDF for flattening the form, we pipe the PDF through
+       pdftocairo or Ghostscript here */
+    if (!qpdf_flatten && proc->hasAcroForm()) {
       /* Prepare the input file for being read by the form flattening
 	 process */
       FILE *infile = NULL;
@@ -1119,22 +1150,26 @@ int main(int argc,char **argv)
       const char *command;
       cups_array_t *args;
       /* Choose the utility to be used and create its command line */
-      /* Try pdftocairo first, the preferred utility for form-flattening */
-      command = CUPS_POPPLER_PDFTOCAIRO;
-      args = cupsArrayNew(NULL, NULL);
-      cupsArrayAdd(args, strdup(command));
-      cupsArrayAdd(args, strdup("-pdf"));
-      cupsArrayAdd(args, strdup("-"));
-      cupsArrayAdd(args, strdup(buf));
-      /* Run the pdftocairo form flattening process */
-      rewind(infile);
-      int status = sub_process_spawn (command, args, infile);
-      cupsArrayDelete(args);
-      if (status == 0)
-	flattening_done = 1;
-      else {
-	error("Unable to execute pdftocairo for form flattening!");
-	/* Try Ghostscript, currently the only working alternative */
+      if (pdftocairo_flatten || external_auto_flatten) {
+	/* Try pdftocairo first, the preferred utility for form-flattening */
+	command = CUPS_POPPLER_PDFTOCAIRO;
+	args = cupsArrayNew(NULL, NULL);
+	cupsArrayAdd(args, strdup(command));
+	cupsArrayAdd(args, strdup("-pdf"));
+	cupsArrayAdd(args, strdup("-"));
+	cupsArrayAdd(args, strdup(buf));
+	/* Run the pdftocairo form flattening process */
+	rewind(infile);
+	int status = sub_process_spawn (command, args, infile);
+	cupsArrayDelete(args);
+	if (status == 0)
+	  flattening_done = 1;
+	else
+	  error("Unable to execute pdftocairo for form flattening!");
+      }
+      if (flattening_done == 0 &&
+	  (gs_flatten || external_auto_flatten)) {
+	/* Try Ghostscript */
 	command = CUPS_GHOSTSCRIPT;
 	args = cupsArrayNew(NULL, NULL);
 	cupsArrayAdd(args, strdup(command));
@@ -1157,11 +1192,12 @@ int main(int argc,char **argv)
 	cupsArrayDelete(args);
 	if (status == 0)
 	  flattening_done = 1;
-	else {
+	else
 	  error("Unable to execute Ghostscript for form flattening!");
-	  error("No suitable utility for flattening filled PDF forms available, no flattening performed. Filled in content will not be printed.");
-	  rewind(infile);
-	}
+      }
+      if (flattening_done == 0) {
+	error("No suitable utility for flattening filled PDF forms available, no flattening performed. Filled in content will possibly not be printed.");
+	rewind(infile);
       }
       /* Clean up */
       if (infile != tmpfile)
@@ -1170,12 +1206,13 @@ int main(int argc,char **argv)
       if (flattening_done) {
 	rewind(outfile);
 	unlink(buf);
-	if (!proc->loadFile(outfile,TakeOwnership)) {
+	if (!proc->loadFile(outfile,TakeOwnership,0)) {
 	  error("Unable to create a PDF processor on the flattened form!"); 
 	  return 1;
 	}
       }
-    }
+    } else if (qpdf_flatten)
+      fprintf(stderr, "DEBUG: PDF interactive form and annotation flattening done via QPDF\n");
 
 /* TODO
     // color management

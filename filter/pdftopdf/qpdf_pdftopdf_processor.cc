@@ -381,7 +381,7 @@ void QPDF_PDFTOPDF_Processor::error(const char *fmt,...) // {{{
 
 // TODO?  try/catch for PDF parsing errors?
 
-bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,ArgOwnership take) // {{{
+bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,ArgOwnership take,int flatten_forms) // {{{
 {
   closeFile();
   if (!f) {
@@ -416,12 +416,12 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,ArgOwnership take) // {{{
     error("loadFile with MustDuplicate is not supported");
     return false;
   }
-  start();
+  start(flatten_forms);
   return true;
 }
 // }}}
 
-bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name) // {{{
+bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name,int flatten_forms) // {{{
 {
   closeFile();
   try {
@@ -431,20 +431,22 @@ bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name) // {{{
     error("loadFilename failed: %s",e.what());
     return false;
   }
-  start();
+  start(flatten_forms);
   return true;
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::start() // {{{
+void QPDF_PDFTOPDF_Processor::start(int flatten_forms) // {{{
 {
   assert(pdf);
 
-  QPDFAcroFormDocumentHelper afdh(*pdf);
-  afdh.generateAppearancesIfNeeded();
+  if (flatten_forms) {
+    QPDFAcroFormDocumentHelper afdh(*pdf);
+    afdh.generateAppearancesIfNeeded();
 
-  QPDFPageDocumentHelper dh(*pdf);
-  dh.flattenAnnotations(an_print);
+    QPDFPageDocumentHelper dh(*pdf);
+    dh.flattenAnnotations(an_print);
+  }
 
   pdf->pushInheritedAttributesToPage();
   orig_pages=pdf->getAllPages();

@@ -119,8 +119,8 @@ class PDFTOPDF_Processor { // abstract interface
   virtual ~PDFTOPDF_Processor() {}
 
   // TODO: ... qpdf wants password at load time
-  virtual bool loadFile(FILE *f,ArgOwnership take=WillStayAlive) =0;
-  virtual bool loadFilename(const char *name) =0;
+  virtual bool loadFile(FILE *f,ArgOwnership take=WillStayAlive,int flatten_forms=1) =0;
+  virtual bool loadFilename(const char *name,int flatten_forms=1) =0;
 
   // TODO? virtual bool may_modify/may_print/?
   virtual bool check_print_permissions() =0;
