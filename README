@@ -1817,6 +1817,29 @@ the default values are shown here.
 lp -o "LibLouis=fr-fr-g1 LibLouis2=gr-gr-g1 TextDotDistance=250 LineSpacing=500" file.txt
 
 
+---------------------------------
+Reworking output before embossing
+---------------------------------
+
+One may want to check and modify the .brf or .ubrl output before sending it to
+the embosser.  This can be achieved by first generating the .brf file:
+
+    /usr/sbin/cupsfilter -m application/vnd.cups-brf -p /etc/cups/ppd/yourprinter.ppd yourdocument.txt > ~/test.brf
+
+One can choose a ppd file and additionally pass -o options to control the
+generated output. One can then modify the .brf file with a text editor. One can
+then emboss it:
+
+    lp -o document-format=application/vnd.cups-brf ~/test.brf
+
+
+The same can be achieved for images:
+
+    /usr/sbin/cupsfilter -m image/vnd.cups-ubrl -p /etc/cups/ppd/yourprinter.ppd yourimage.png > ~/test.ubrl
+
+    lp -o document-format=image/vnd.cups-ubrl ~/test.ubrl
+
+
 ---------------
 BRF file output
 ---------------
