@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.22.0 - 2019-01-18
 -----------------------------------------------------
 
+CHANGES IN V1.22.1
+
+	- braille: Document how to rework output before
+	  embossing. Thanks to Samuel Thibault for this patch (Pull
+	  request #90).
+
 CHANGES IN V1.22.0
 
 	- pdftopdf: Use QPDF for flattening interactive PDF forms
