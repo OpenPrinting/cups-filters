@@ -3846,9 +3846,7 @@ get_printer_attributes(const char* uri) {
   char valuebuffer[65536];
   static const char * const pattrs[] =
   {
-    "job-template",
-    "printer-defaults",
-    "printer-description",
+    "all",
     "media-col-database"
   };
   /* Request printer properties via IPP to generate a PPD file for the

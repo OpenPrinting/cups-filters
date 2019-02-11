@@ -479,9 +479,7 @@ generate_ppd (const char *uri)
   int i, fd, bytes;
   static const char * const pattrs[] =
   {
-    "job-template",
-    "printer-defaults",
-    "printer-description",
+    "all",
     "media-col-database"
   };
 
