@@ -277,7 +277,7 @@ echo '  Choice "HyphLocale/Default hyphenation rules for language" ""'
     echo "$file:$LANGUAGE:$LOCATION:hyphenation rules:"
   done
 
-) | sort -f -t : -k 2,3 | (
+) | LC_ALL=C sort -f -t : -k 2,3 | (
 
 IFS=:
 while read file LANGUAGE LOCATION TYPE DISPLAY_NAME

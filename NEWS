@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.22.0 - 2019-01-18
 
 CHANGES IN V1.22.1
 
+	- braille: Use sort command with LC_ALL=C for reproducibility
+	  of the genrated files, needed for distribution packaging.
 	- cups-browsed, driverless: When polling the printer's
           capabilities via get-printer-attributes IPP request for
           driverless printing, use the attributes "all" and
