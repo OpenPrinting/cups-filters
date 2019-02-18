@@ -693,7 +693,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   int deviceReverse = 0;
   ppd_attr_t *attr;
   int pl,pr;
-
+  int fillprint = 0;  /* print-scaling = fill */
  /*
   * Make sure status messages are not buffered...
   */
@@ -810,6 +810,14 @@ main(int  argc,				/* I - Number of command-line arguments */
       }
   }
 
+  /*
+  *   print-scaling = fill functionality.
+  */
+  if((val = cupsGetOption("print-scaling",num_options,options)) !=0) {
+    if(!strcasecmp(val,"fill")) {
+        fillprint = 1;
+    }
+  }
 
   if ((val = cupsGetOption("OutputOrder",num_options,options)) != 0) {
     if (!strcasecmp(val, "Reverse")) {
@@ -973,6 +981,61 @@ main(int  argc,				/* I - Number of command-line arguments */
   colorspace = ColorDevice ? CUPS_IMAGE_RGB_CMYK : CUPS_IMAGE_WHITE;
 
   img = cupsImageOpen(filename, colorspace, CUPS_IMAGE_WHITE, sat, hue, NULL);
+
+  if(fillprint)
+  {
+    float w = (float)cupsImageGetWidth(img);
+    float h = (float)cupsImageGetHeight(img);
+    float pw = PageRight-PageLeft;
+    float ph = PageTop-PageBottom;
+    char temp[3072];
+    char tempfilename[1024];
+    int tempOrientation = Orientation;
+    if ((cupsTempFd(tempfilename, sizeof(tempfilename))) < 0)
+    {
+      perror("ERROR: Unable to copy image file");
+      return (1);
+    }
+    char *val;
+    if((val = cupsGetOption("orientation-requested",num_options,options))!=NULL)
+    {
+      tempOrientation = atoi(val);
+    }
+    if(tempOrientation>0)
+    {
+      if(tempOrientation==4||tempOrientation==5)
+      {
+        float temp = pw;
+        pw = ph;
+        ph = temp;
+      }
+    }
+    if(tempOrientation==0)
+    {
+      float ratio = ph/pw;
+      if(h/w < ratio)
+      {
+        float temp = pw;
+        pw = ph;
+        ph = temp;
+      }
+    }
+    float final_w,final_h;
+    if(w*ph/pw <=h){
+      final_w =w;
+      final_h =w*ph/pw; 
+    }
+    else{
+      final_w = h*pw/ph;
+      final_h = h;
+    }
+    float posw=(w-final_w)/2,posh=(h-final_h)/2;
+    posw = (1+XPosition)*posw;
+    posh = (1-YPosition)*posh;
+    cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
+    cupsImageClose(img);
+    img = img2;
+  }
 
 #if defined(USE_CONVERT_CMD) && defined(CONVERT_CMD)
   if (img == NULL) {

@@ -175,6 +175,16 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
   }
   const int numPages=std::max(shuffle.size(),pages.size());
 
+  if(param.fillprint){
+    fprintf(stderr,"Cropping input pdf and Enabling fitplot.%d\n");
+    for(int i=0;i<pages.size();i++)
+    {
+      std::shared_ptr<PDFTOPDF_PageHandle> page = pages[i];
+      Rotation currRot = page->crop(param.page,param.orientation,param.xpos,param.ypos);
+    }
+    param.fitplot = 1;
+  }
+
   std::shared_ptr<PDFTOPDF_PageHandle> curpage;
   int outputpage=0;
   int outputno=0;

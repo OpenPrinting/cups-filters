@@ -112,7 +112,8 @@ extern void		cupsImageWhiteToRGB(const cups_ib_t *in,
 			                    cups_ib_t *out, int count) _CUPS_API_1_2;
 extern void		cupsImageWhiteToWhite(const cups_ib_t *in,
 			                      cups_ib_t *out, int count) _CUPS_API_1_2;
-
+extern cups_image_t* 	cupsImageCrop(cups_image_t* img,int posw,
+					int posh,int width,int height);
 
 #  ifdef __cplusplus
 }

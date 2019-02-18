@@ -12,7 +12,7 @@ class QPDF_PDFTOPDF_PageHandle : public PDFTOPDF_PageHandle {
   virtual void mirror();
   virtual void rotate(Rotation rot);
   virtual void add_label(const PageRect &rect, const std::string label);
-
+  virtual Rotation crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos);
   void debug(const PageRect &rect,float xpos,float ypos);
  private:
   bool isExisting() const;

@@ -14,6 +14,7 @@ ProcessingParameters()
 : jobId(0),numCopies(1),
     user(0),title(0),
     fitplot(false),
+    fillprint(false),  //print-scaling = fill
     orientation(ROT_0),normal_landscape(ROT_270),
     paper_is_landscape(false),
     duplex(false),
@@ -38,7 +39,6 @@ ProcessingParameters()
     deviceCollate(false),setDuplex(false),
 
     page_logging(-1)
-
   {
     page.width=612.0; // letter
     page.height=792.0;
@@ -55,6 +55,7 @@ ProcessingParameters()
   int jobId, numCopies;
   const char *user, *title; // will stay around
   bool fitplot;
+  bool fillprint;   //print-scaling = fill
   PageRect page;
   Rotation orientation,normal_landscape;  // normal_landscape (i.e. default direction) is e.g. needed for number-up=2
   bool paper_is_landscape;
@@ -107,6 +108,7 @@ class PDFTOPDF_PageHandle {
   // fscale:  inverse_scale (from nup, fitplot)
   virtual void add_border_rect(const PageRect &rect,BorderType border,float fscale) =0;
   // TODO?! add standalone crop(...) method (not only for subpages)
+  virtual Rotation crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos) =0;
   virtual void add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop=NULL) =0;
   virtual void mirror() =0;
   virtual void rotate(Rotation rot) =0;
