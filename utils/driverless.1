@@ -13,13 +13,14 @@
 .fi
 .SH DESCRIPTION
 \fBdriverless\fP generates PPD files for printers which are designed
-for driverless printing (currently IPP Everywhere and AirPrint
-printers) by polling capability information from the printers via
-IPP. it can be either called for listing suitable printers in the
-network and for actually generating the PPD. It can also be called by
-CUPS when CUPS is listing available PPDs/drivers or creating print
-queues, making the setup of driverless printers with printer setup
-tools transparently working.
+for driverless IPP printing (currently IPP Everywhere, AirPrint,
+Mopria, and Wi-Fi-Direct printers, network printers and also
+IPP-over-USB printers with the help of ippusbxd(8)) by polling
+capability information from the printers via IPP. it can be either
+called for listing suitable printers in the network and for actually
+generating the PPD. It can also be called by CUPS when CUPS is listing
+available PPDs/drivers or creating print queues, making the setup of
+driverless printers with printer setup tools transparently working.
 .P
 driverless is placed in /usr/lib/cups/driver/ for listing available
 driverless-capable printers and generating PPDs for them. It should
@@ -58,12 +59,13 @@ Generate the PPD file for the supplied \fIdriver URI\fP from the output of "list
 .B
 \fIIPP printer URI\fB
 Generate the PPD file for the supplied \fIIPP printer URI\fP (suitable URIs are listed when calling driverless without options).
-.TP
-When called without options, the IPP printer URIs of all available IPP printers will be listed.
+.P
+When called without options, the IPP printer URIs of all available
+driverless-capable IPP printers will be listed.
 .P
 .SH SEE ALSO
 
-\fBcups-browsed\fP(8), \fBippfind\fP(1)
+\fBcups-browsed\fP(8), \fBippfind\fP(1), \fBippusbxd\fP(8)
 .PP
 .SH AUTHOR
 The authors of \fBdriverless\fP are listed in /usr/share/doc/\fBcups-filters\fP/AUTHORS.
