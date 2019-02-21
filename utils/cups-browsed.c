@@ -7777,7 +7777,7 @@ read_configuration (const char *filename)
   cups_file_t *fp;
   int i, linenum = 0;
   char line[HTTP_MAX_BUFFER];
-  char *value = NULL, *ptr, *start = NULL;
+  char *value = NULL, *ptr, *ptr2, *start;
   const char *delim = " \t,";
   int browse_allow_line_found = 0;
   int browse_deny_line_found = 0;
@@ -8175,6 +8175,7 @@ read_configuration (const char *filename)
 	AutoClustering = 0;
     } else if (!strcasecmp(line, "Cluster") && value) {
       ptr = value;
+      ptr2 = NULL;
       /* Skip white space */
       while (*ptr && isspace(*ptr)) ptr ++;
       /* Premature line end */
@@ -8193,26 +8194,27 @@ read_configuration (const char *filename)
       if (strlen(start) <= 0)
 	goto cluster_fail;
       /* Clean queue name */
-      start = remove_bad_chars(start, 0);
+      ptr2 = remove_bad_chars(start, 0);
       /* Check whether we have already a cluster with this name */
       for (cluster = cupsArrayFirst(clusters);
 	   cluster;
 	   cluster = cupsArrayNext(clusters))
-	if (!strcasecmp(start, cluster->local_queue_name)) {
+	if (!strcasecmp(ptr2, cluster->local_queue_name)) {
 	  debug_printf("Duplicate cluster with queue name \"%s\".\n",
-		       start);
+		       ptr2);
 	  cluster = NULL;
 	  goto cluster_fail;
 	}
       /* Create the new cluster definition */
       cluster = calloc (1, sizeof (cluster_t));
       if (!cluster) goto cluster_fail;
-      cluster->local_queue_name = start;
+      cluster->local_queue_name = ptr2;
       cluster->members = cupsArrayNew(NULL, NULL);
+      ptr2 = NULL;
       if (!*ptr) {
 	/* Only local queue name given, so assume this name as the only
 	   member name (only remote queues with this name match) */
-	cupsArrayAdd(cluster->members, remove_bad_chars(start, 2));
+	cupsArrayAdd(cluster->members, remove_bad_chars(ptr2, 2));
       } else {
 	/* The rest of the line lists one or more member queue names */
 	while (*ptr) {
@@ -8231,9 +8233,9 @@ read_configuration (const char *filename)
 	}
       }
       cupsArrayAdd (clusters, cluster);
-      if (start != NULL) {
-        free(start);
-        start = NULL;
+      if (ptr2 != NULL) {
+        free(ptr2);
+        ptr2 = NULL;
       }
       continue;
     cluster_fail:
@@ -8250,9 +8252,9 @@ read_configuration (const char *filename)
 	free(cluster);
         cluster = NULL;
       }
-      if (start != NULL) {
-        free(start);
-        start = NULL;
+      if (ptr2 != NULL) {
+        free(ptr2);
+        ptr2 = NULL;
       }
     } else if (!strcasecmp(line, "LoadBalancing") && value) {
       if (!strncasecmp(value, "QueueOnClient", 13))
