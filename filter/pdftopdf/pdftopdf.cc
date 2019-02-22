@@ -331,6 +331,21 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
       param.fillprint=true;
     }
   }
+  else if((val = cupsGetOption("fill",num_options,options))!=0) {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      param.fillprint = true;
+    }
+  }
+  /*
+   * crop-to-fit
+   */
+  if((val = cupsGetOption("crop-to-fit",num_options,options))!= NULL){
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      param.cropfit=1;
+    }
+  }
 
   if (ppd && (ppd->landscape < 0)) { // direction the printer rotates landscape (90 or -90)
     param.normal_landscape=ROT_270;

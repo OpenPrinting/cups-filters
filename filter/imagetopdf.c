@@ -694,6 +694,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   ppd_attr_t *attr;
   int pl,pr;
   int fillprint = 0;  /* print-scaling = fill */
+  int cropfit = 0;  /* -o crop-to-fit = true */
  /*
   * Make sure status messages are not buffered...
   */
@@ -816,6 +817,21 @@ main(int  argc,				/* I - Number of command-line arguments */
   if((val = cupsGetOption("print-scaling",num_options,options)) !=0) {
     if(!strcasecmp(val,"fill")) {
         fillprint = 1;
+    }
+  }
+  else if((val = cupsGetOption("fill",num_options,options))!=0) {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      fillprint = 1;
+    }
+  }
+  /*
+   * crop-to-fit
+   */
+  if((val = cupsGetOption("crop-to-fit",num_options,options))!= NULL){
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      cropfit=1;
     }
   }
 
@@ -981,25 +997,25 @@ main(int  argc,				/* I - Number of command-line arguments */
   colorspace = ColorDevice ? CUPS_IMAGE_RGB_CMYK : CUPS_IMAGE_WHITE;
 
   img = cupsImageOpen(filename, colorspace, CUPS_IMAGE_WHITE, sat, hue, NULL);
-
-  if(fillprint)
+  if(fillprint||cropfit)
   {
     float w = (float)cupsImageGetWidth(img);
     float h = (float)cupsImageGetHeight(img);
     float pw = PageRight-PageLeft;
     float ph = PageTop-PageBottom;
-    char temp[3072];
-    char tempfilename[1024];
     int tempOrientation = Orientation;
-    if ((cupsTempFd(tempfilename, sizeof(tempfilename))) < 0)
-    {
-      perror("ERROR: Unable to copy image file");
-      return (1);
-    }
     char *val;
+    int flag = 3;
     if((val = cupsGetOption("orientation-requested",num_options,options))!=NULL)
     {
       tempOrientation = atoi(val);
+    }
+    else if((val = cupsGetOption("landscape",num_options,options))!=NULL)
+    {
+      if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+      {
+        tempOrientation = 4;
+      }
     }
     if(tempOrientation>0)
     {
@@ -1008,33 +1024,83 @@ main(int  argc,				/* I - Number of command-line arguments */
         float temp = pw;
         pw = ph;
         ph = temp;
+        flag = 4;
       }
     }
     if(tempOrientation==0)
     {
-      float ratio = ph/pw;
-      if(h/w < ratio)
+      int temp1 = pw,
+          temp2 = ph,
+          temp3 = pw,
+          temp4 = ph;
+      if(temp1>w) temp1 = w;
+      if(temp2>h) temp2 = h;
+      if(temp3>h) temp3 = h;
+      if(temp4>w) temp4 = w; 
+      if(temp1*temp2<temp3*temp4)
       {
-        float temp = pw;
+        int temp = pw;
         pw = ph;
         ph = temp;
+        flag = 4;
       }
     }
-    float final_w,final_h;
-    if(w*ph/pw <=h){
-      final_w =w;
-      final_h =w*ph/pw; 
+    if(fillprint){
+      float final_w,final_h;
+      if(w*ph/pw <=h){
+        final_w =w;
+        final_h =w*ph/pw; 
+      }
+      else{
+        final_w = h*pw/ph;
+        final_h = h;
+      }
+      float posw=(w-final_w)/2,posh=(h-final_h)/2;
+      posw = (1+XPosition)*posw;
+      posh = (1-YPosition)*posh;
+      cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
+      cupsImageClose(img);
+      img = img2;
     }
-    else{
-      final_w = h*pw/ph;
-      final_h = h;
+    else {
+      float final_w=w,final_h=h;
+      if(final_w>pw)
+      {
+        final_w = pw;
+      }
+      if(final_h>ph)
+      {
+        final_h = ph;
+      }
+      if((fabs(final_w-w)>0.5*w)||(fabs(final_h-h)>0.5*h))
+      {
+        fprintf(stderr,"[DEBUG]: Ignoring crop-to-fit option!\n");
+        cropfit=0;
+      }
+      else{
+        float posw=(w-final_w)/2,posh=(h-final_h)/2;
+        posw = (1+XPosition)*posw;
+        posh = (1-YPosition)*posh;
+        cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
+        cupsImageClose(img);
+        img = img2;
+        if(flag==4)
+        {
+          PageBottom+=(PageTop-PageBottom-final_w)/2;
+          PageTop = PageBottom+final_w;
+          PageLeft +=(PageRight-PageLeft-final_h)/2;
+          PageRight = PageLeft+final_h;
+        }
+        else{
+          PageBottom+=(PageTop-PageBottom-final_h)/2;
+          PageTop = PageBottom+final_h;
+          PageLeft +=(PageRight-PageLeft-final_w)/2;
+          PageRight = PageLeft+final_w;
+        }
+        if(PageBottom<0) PageBottom = 0;
+        if(PageLeft<0) PageLeft = 0;
+     }
     }
-    float posw=(w-final_w)/2,posh=(h-final_h)/2;
-    posw = (1+XPosition)*posw;
-    posh = (1-YPosition)*posh;
-    cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
-    cupsImageClose(img);
-    img = img2;
   }
 
 #if defined(USE_CONVERT_CMD) && defined(CONVERT_CMD)

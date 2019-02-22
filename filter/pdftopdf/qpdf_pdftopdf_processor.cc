@@ -174,8 +174,9 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
 /*
  *  This crop function is written for print-scaling=fill option.
  *  Trim Box is used for trimming the page in required size.
+ *  scale tells if we need to scale input file.
  */
-Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos)
+Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos,bool scale)
 {
   page.assertInitialized();
   if(orientation==ROT_0||orientation==ROT_180)
@@ -195,16 +196,23 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
   {
     std::swap(pageHeight,pageWidth);
   }
-  if(width*pageHeight/pageWidth<=height)
+  if(scale)
   {
-    final_w = width;
-    final_h = width*pageHeight/pageWidth;
+    if(width*pageHeight/pageWidth<=height)
+    {
+      final_w = width;
+      final_h = width*pageHeight/pageWidth;
+    }
+    else{
+      final_w = height*pageWidth/pageHeight;
+      final_h = height;
+    }
   }
   else{
-    final_w = height*pageWidth/pageHeight;
-    final_h = height;
+    final_w = std::min(width,pageWidth);
+    final_h = std::min(height,pageHeight);
   }
-
+  fprintf(stderr,"After Cropping: %lf %lf %lf %lf\n",width,height,final_w,final_h);
   double posw = (width-final_w)/2,
         posh = (height-final_h)/2;
   // posw, posh : Position along width and height respectively.
