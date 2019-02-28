@@ -658,33 +658,28 @@ main (int argc, char **argv, char *envp[])
   if (argc == 6) {
     /* stdin */
 
-    fd = cupsTempFd(buf,BUFSIZ);
-    if (fd < 0) {
+    fp = tmpfile();
+    if (fp == NULL) {
       fprintf(stderr, "ERROR: Can't create temporary file\n");
       goto out;
     }
-    /* remove name */
-    unlink(buf);
 
     /* copy stdin to the tmp file */
-    while ((n = read(0,buf,BUFSIZ)) > 0) {
-      if (write(fd,buf,n) != n) {
+    for (n = BUFSIZ; n == BUFSIZ; ) {
+      n = fread(buf,1,BUFSIZ,stdin);
+      if (n < BUFSIZ && ferror(fp)) {
+        fprintf(stderr, "ERROR: Error when reading from stdin\n");
+        fclose(fp);
+        goto out;
+      }
+      if (fwrite(buf,1,n,fp) != n) {
         fprintf(stderr, "ERROR: Can't copy stdin to temporary file\n");
-        close(fd);
+        fclose(fp);
         goto out;
       }
     }
-    if (lseek(fd,0,SEEK_SET) < 0) {
-        fprintf(stderr, "ERROR: Can't rewind temporary file\n");
-        close(fd);
-        goto out;
-    }
 
-    if ((fp = fdopen(fd,"rb")) == 0) {
-        fprintf(stderr, "ERROR: Can't fdopen temporary file\n");
-        close(fd);
-        goto out;
-    }
+    rewind(fp);
   } else {
     /* argc == 7 filename is specified */
 
