@@ -451,6 +451,19 @@ static remote_printer_t
 #endif
 
 /*
+ * Option 'printer-is-shared' cannot be set on remote CUPS
+ * queue and requests for setting it ends with error since
+ * 2.1.1. Define HAVE_CUPS_2_2 to do not send IPP request
+ * for setting 'printer-is-shared' option on remote CUPS queues
+ * for newer versions of CUPS.
+ */
+#if (CUPS_VERSION_MAJOR > 2) || (CUPS_VERSION_MINOR > 1)
+#define HAVE_CUPS_2_2 1
+#else
+#define HAVE_CUPS_2_2 0
+#endif
+
+/*
  * CUPS 1.6 makes various structures private and
  * introduces these ippGet and ippSet functions
  * for all of the fields in these structures.
@@ -5438,7 +5451,15 @@ gboolean update_cups_queues(gpointer unused) {
       }
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
-      ippDelete(cupsDoRequest(http, request, "/admin/"));
+      /*
+       * Do IPP request for printer-is-shared option only when we have
+       * network printer or if we have remote CUPS queue, do IPP request
+       * only if we have CUPS older than 2.2.
+       */
+      if (p->netprinter != 0 || !HAVE_CUPS_2_2)
+        ippDelete(cupsDoRequest(http, request, "/admin/"));
+      else
+        ippDelete(request);
       cupsFreeOptions(num_options, options);
       if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE)
 	debug_printf("Unable to modify the printer-is-shared bit (%s)!\n",
