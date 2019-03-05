@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.22.1 - 2019-02-15
 
 CHANGES IN V1.22.2
 
+	- cups-browsed: Do not do IPP request for printer-is-shared
+          option for remote cups queues with CUPS 2.2.x and newer
+          (Pull request #91).
 	- cups-browsed: Fix crash bug when reading "Cluster"
 	  directive from configuration file (Issue #94).
 	- driverless: Updated man page as now also Mopria and
