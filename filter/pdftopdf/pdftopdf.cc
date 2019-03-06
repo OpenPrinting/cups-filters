@@ -326,6 +326,27 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   // TODO?  pstops checks =="true", pdftops !is_false  ... pstops says: fitplot only for PS (i.e. not for PDF, cmp. cgpdftopdf)
   param.fitplot=(val)&&(!is_false(val));
 
+  if((val=cupsGetOption("print-scaling",num_options,options))!=NULL) {
+    if(!strcasecmp(val,"fill")) {
+      param.fillprint=true;
+    }
+  }
+  else if((val = cupsGetOption("fill",num_options,options))!=0) {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      param.fillprint = true;
+    }
+  }
+  /*
+   * crop-to-fit
+   */
+  if((val = cupsGetOption("crop-to-fit",num_options,options))!= NULL){
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      param.cropfit=1;
+    }
+  }
+
   if (ppd && (ppd->landscape < 0)) { // direction the printer rotates landscape (90 or -90)
     param.normal_landscape=ROT_270;
   } else {
@@ -1023,6 +1044,7 @@ int main(int argc,char **argv)
     param.nup.nupY=2;
     //param.nup.yalign=TOP;
     param.border=BorderType::NONE;
+    //param.fillprint = true;
     //param.mirror=true;
     //param.reverse=true;
     //param.numCopies=3;

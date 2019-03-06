@@ -175,6 +175,16 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
   }
   const int numPages=std::max(shuffle.size(),pages.size());
 
+  if(param.fillprint||param.cropfit){
+    fprintf(stderr,"[DEBUG]: Cropping input pdf and Enabling fitplot.\n");
+    for(int i=0;i<(int)pages.size();i++)
+    {
+      std::shared_ptr<PDFTOPDF_PageHandle> page = pages[i];
+      Rotation currRot = page->crop(param.page,param.orientation,param.xpos,param.ypos,!param.cropfit);
+    }
+    param.fitplot = 1;
+  }
+
   std::shared_ptr<PDFTOPDF_PageHandle> curpage;
   int outputpage=0;
   int outputno=0;
@@ -322,7 +332,20 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
       if (!param.fitplot) {
         curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale,&rect);
       } else {
-        curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
+        if(param.cropfit){
+          double xpos2 = (param.page.right-param.page.left-(page->getRect().width))/2;
+          double ypos2 = (param.page.top-param.page.bottom-(page->getRect().height))/2;
+          if(param.orientation==ROT_270||param.orientation==ROT_90)
+          {
+            xpos2 = (param.page.right-param.page.left-(page->getRect().height))/2;
+            ypos2 = (param.page.top-param.page.bottom-(page->getRect().width))/2;
+            curpage->add_subpage(page,ypos2+param.page.bottom,xpos2+param.page.left,1);
+          }else{
+          curpage->add_subpage(page,xpos2+param.page.left,ypos2+param.page.bottom,1);
+          }
+        }
+        else
+          curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
       }
 
 #ifdef DEBUG

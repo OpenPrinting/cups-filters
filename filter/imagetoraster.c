@@ -190,8 +190,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   char			filename[1024];	/* Name of file to print */
   cm_calibration_t      cm_calibrate;   /* Are we color calibrating the device? */
   int                   cm_disabled;    /* Color management disabled? */
-
-
+  int fillprint = 0;  /* print-scaling = fill */
+  int cropfit = 0;		/* -o crop-to-fit */
  /*
   * Make sure status messages are not buffered...
   */
@@ -240,7 +240,6 @@ main(int  argc,				/* I - Number of command-line arguments */
       perror("ERROR: Unable to create pipes for filters");
       return (errno);
     }
-
     if ((pid = fork()) == 0)
     {
      /*
@@ -264,7 +263,6 @@ main(int  argc,				/* I - Number of command-line arguments */
       perror("ERROR: Unable to fork filter");
       return (errno);
     }
-
    /*
     * Update stdout so it points at the new pstoraster...
     */
@@ -391,6 +389,24 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
   else if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
     zoom = 0.0;
+
+  if((val = cupsGetOption("print-scaling",num_options,options)) !=0) {
+    if(!strcasecmp(val,"fill")) {
+        fillprint = 1;
+    }
+  }
+  else if((val = cupsGetOption("fill",num_options,options))!=0) {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      fillprint = 1;
+    }
+  }
+  if((val = cupsGetOption("crop-to-fit",num_options,options))!= NULL){
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      cropfit=1;
+    }
+  }
 
   if ((val = cupsGetOption("ppi", num_options, options)) != NULL)
   {
@@ -691,7 +707,109 @@ main(int  argc,				/* I - Number of command-line arguments */
     img = cupsImageOpen(filename, primary, secondary, sat, hue, NULL);
   else
     img = cupsImageOpen(filename, primary, secondary, sat, hue, lut);
-
+  if(img!=NULL)
+  {
+    if(fillprint||cropfit)
+    {
+      float w = (float)cupsImageGetWidth(img);
+      float h = (float)cupsImageGetHeight(img);
+      float pw = PageRight-PageLeft;
+      float ph = PageTop-PageBottom;
+      char *val;
+      int tempOrientation = Orientation;
+      int flag =3;
+      if((val = cupsGetOption("orientation-requested",num_options,options))!=NULL)
+      {
+        tempOrientation = atoi(val);
+      }
+      else if((val = cupsGetOption("landscape",num_options,options))!=NULL)
+      {
+        if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+        {
+          tempOrientation = 4;
+        }
+      }
+      if(tempOrientation>0)
+      {
+        if(tempOrientation==4||tempOrientation==5)
+        {
+          float temp = pw;
+          pw = ph;
+          ph = temp;
+          flag = 4;
+        }
+      }
+      if(tempOrientation==0)
+      {
+        if(min(pw,w)*min(ph,h)<min(pw,h)*min(ph,w))
+        {
+          int temp = pw;
+          pw = ph;
+          ph = temp;
+          flag = 4;
+        }
+      }
+      if(fillprint)
+      {
+        // Final width and height of cropped image.
+        float final_w,final_h;
+        if(w*ph/pw <=h){
+          final_w =w;
+          final_h =w*ph/pw; 
+        }
+        else{
+          final_w = h*pw/ph;
+          final_h = h;
+        }
+        // posw and posh are position of the cropped image along width and height.
+        float posw=(w-final_w)/2,posh=(h-final_h)/2;
+        posw = (1+XPosition)*posw;
+        posh = (1-YPosition)*posh;
+        cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
+        cupsImageClose(img);
+        img = img2;
+      }
+      else {
+        float final_w=w,final_h=h;
+        if(w>pw)
+        {
+          final_w = pw;
+        }
+        if(h>ph)
+        {
+          final_h = ph;
+        }
+        if((fabs(final_w-w)>0.5*w)||(fabs(final_h-h)>0.5*h))
+        {
+          fprintf(stderr,"[DEBUG]: Ignoring crop-to-fit option!\n");
+          cropfit=0;
+        }
+        else{
+          float posw=(w-final_w)/2,posh=(h-final_h)/2;
+          posw = (1+XPosition)*posw;
+          posh = (1-YPosition)*posh;
+          cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
+          cupsImageClose(img);
+          img = img2;
+          if(flag==4)
+          {
+            PageBottom+=(PageTop-PageBottom-final_w)/2;
+            PageTop = PageBottom+final_w;
+            PageLeft +=(PageRight-PageLeft-final_h)/2;
+            PageRight = PageLeft+final_h;
+          }
+          else{
+            PageBottom+=(PageTop-PageBottom-final_h)/2;
+            PageTop = PageBottom+final_h;
+            PageLeft +=(PageRight-PageLeft-final_w)/2;
+            PageRight = PageLeft+final_w;
+          }
+          if(PageBottom<0) PageBottom = 0;
+          if(PageLeft<0) PageLeft = 0;
+        }
+      }	
+    }
+  }
   if (argc == 6)
     unlink(filename);
 
