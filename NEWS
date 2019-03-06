@@ -3,6 +3,16 @@ NEWS - OpenPrinting CUPS Filters v1.22.1 - 2019-02-15
 
 CHANGES IN V1.22.2
 
+	- imagetopdf, imagetoraster, pdftopdf, libcupsfilters: Added
+	  new page scaling options: "fill" scales the input page
+	  (typically a photo) so that the output page (typically with
+	  different aspect ratio) gets completely filled, aloowing for
+	  some content of the input page getting lost. "crop-to-fit"
+	  allows for easy printing of documents on slightly different
+	  output page sizes (A4 <-> Letter) maintaining the size and
+	  centering and cropping into the destination page. Thanks to
+	  Dheeraj Yadav (dhirajyadav135 at gmail dot com) for the
+	  patch (Pull request #92).
 	- cups-browsed: Do not do IPP request for printer-is-shared
           option for remote cups queues with CUPS 2.2.x and newer
           (Pull request #91).
