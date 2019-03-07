@@ -177,6 +177,12 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
 
   if(param.fillprint||param.cropfit){
     fprintf(stderr,"[DEBUG]: Cropping input pdf and Enabling fitplot.\n");
+    if(param.noOrientation&&pages.size())
+    {
+      bool land = pages[0]->is_landscape(param.orientation);
+      if(land)
+        param.orientation = param.normal_landscape;
+    }
     for(int i=0;i<(int)pages.size();i++)
     {
       std::shared_ptr<PDFTOPDF_PageHandle> page = pages[i];

@@ -369,6 +369,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
       static const Rotation ipp2rot[4]={ROT_0, ROT_90, ROT_270, ROT_180};
       param.orientation=ipp2rot[ipprot-3];
     }
+  } else {
+    param.noOrientation = true;
   }
 
   ppd_size_t *pagesize;
