@@ -239,6 +239,22 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
   return getRotate(page);
 }
 
+bool QPDF_PDFTOPDF_PageHandle::is_landscape(Rotation orientation)
+{
+  page.assertInitialized();
+  if(orientation==ROT_0||orientation==ROT_180)
+    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_90));
+  else
+    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_0));
+
+  PageRect currpage= getBoxAsRect(getTrimBox(page));
+  double width = currpage.right-currpage.left;
+  double height = currpage.top-currpage.bottom;
+  if(width>height)
+    return true;
+  return false;
+}
+
 // TODO: better cropping
 // TODO: test/fix with qsub rotation
 void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop) // {{{
