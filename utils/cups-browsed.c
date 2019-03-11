@@ -3452,7 +3452,7 @@ on_printer_state_changed (CupsNotifier *object,
 	ippDelete(response);
       }
       if (job_id == 0)
-	debug_printf("ERROR: could not determine ID of curremt job on %s\n",
+	debug_printf("ERROR: could not determine ID of current job on %s\n",
 		     printer);
 
       /* Write the selected destination host into an option of our implicit
