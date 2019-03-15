@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.22.1 - 2019-02-15
 
 CHANGES IN V1.22.2
 
+	- cups-browsed: Let distribution of jobs sent to queues with
+	  "implicitclass" backend (usually clusters) be done by a
+	  "job-state" CUPS notification and not by
+	  "printer-state-changed" any more. The "job-state"
+	  notification already contains the job ID. Before we had to
+	  poll the job ID from CUPS via IPP which was sometimes
+	  unreliable (Issue #97).
 	- imagetopdf, imagetoraster, pdftopdf, libcupsfilters: Added
 	  new page scaling options: "fill" scales the input page
 	  (typically a photo) so that the output page (typically with

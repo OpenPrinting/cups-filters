@@ -3119,39 +3119,7 @@ on_printer_state_changed (CupsNotifier *object,
                           gboolean printer_is_accepting_jobs,
                           gpointer user_data)
 {
-  int i;
   char *ptr, buf[2048];
-  remote_printer_t *p, *q;
-  http_t *http = NULL;
-  ipp_t *request, *response;
-  ipp_attribute_t *attr;
-  const char *pname = NULL;
-  char *remote_cups_queue;
-  ipp_pstate_t pstate = IPP_PRINTER_IDLE;
-  int paccept = 0;
-  int num_jobs, min_jobs = 99999999;
-  cups_job_t *jobs = NULL;
-  const char *dest_host = NULL;
-  int dest_port = 0;
-  char dest_name[1024];
-  int dest_index = 0;
-  int valid_dest_found = 0;
-  char uri[HTTP_MAX_URI];
-  int job_id = 0;
-  int num_options;
-  cups_option_t *options;
-  static const char *pattrs[] =
-                {
-                  "printer-name",
-                  "printer-state",
-                  "printer-is-accepting-jobs"
-                };
-  static const char *jattrs[] =
-		{
-		  "job-id",
-		  "job-state"
-		};
-  http_t *conn = NULL;
 
   debug_printf("on_printer_state_changed() in THREAD %ld\n", pthread_self());
 
@@ -3230,7 +3198,94 @@ on_printer_state_changed (CupsNotifier *object,
     strncpy(buf, text, ptr - text);
     buf[ptr - text] = '\0';
     debug_printf("[CUPS Notification] %s not default printer any more.\n", buf);
-  } else if ((ptr = strstr(text, " state changed to processing")) != NULL) {
+  }
+}
+
+static void
+on_job_state (CupsNotifier *object,
+	      const gchar *text,
+	      const gchar *printer_uri,
+	      const gchar *printer,
+	      guint printer_state,
+	      const gchar *printer_state_reasons,
+	      gboolean printer_is_accepting_jobs,
+	      guint job_id,
+	      guint job_state,
+	      const gchar *job_state_reasons,
+	      const gchar *job_name,
+	      guint job_impressions_completed,
+	      gpointer user_data)
+{
+  int i;
+  char buf[2048];
+  remote_printer_t *p, *q;
+  http_t *http = NULL;
+  ipp_t *request, *response;
+  ipp_attribute_t *attr;
+  const char *pname = NULL;
+  char *remote_cups_queue;
+  ipp_pstate_t pstate = IPP_PRINTER_IDLE;
+  int paccept = 0;
+  int num_jobs, min_jobs = 99999999;
+  cups_job_t *jobs = NULL;
+  const char *dest_host = NULL;
+  int dest_port = 0;
+  char dest_name[1024];
+  int dest_index = 0;
+  int valid_dest_found = 0;
+  char uri[HTTP_MAX_URI];
+  /*int job_id = 0;*/
+  int num_options;
+  cups_option_t *options;
+  static const char *pattrs[] =
+                {
+                  "printer-name",
+                  "printer-state",
+                  "printer-is-accepting-jobs"
+                };
+  http_t *conn = NULL;
+
+  debug_printf("on_job_state() in THREAD %ld\n", pthread_self());
+
+  debug_printf("[CUPS Notification] Job state changed on printer %s: %s\n",
+	       printer, text);
+  debug_printf("[CUPS Notification] Printer state reasons: %s\n",
+	       printer_state_reasons);
+  debug_printf("[CUPS Notification] Job ID: %d\n",
+	       job_id);
+  debug_printf("[CUPS Notification] Job State: %s\n",
+	       job_state_reasons);
+  debug_printf("[CUPS Notification] Job is processing: %s\n",
+	       job_state == IPP_JOB_PROCESSING ? "Yes" : "No");
+
+  if (terminating) {
+    debug_printf("[CUPS Notification]: Ignoring because cups-browsed is terminating.\n");
+    return;
+  }
+
+  if (autoshutdown && autoshutdown_on == NO_JOBS) {
+    if (check_jobs() == 0) {
+      /* If auto shutdown is active for triggering on no jobs being left, we
+	 schedule the shutdown in autoshutdown_timeout seconds */
+      if (!autoshutdown_exec_id) {
+	debug_printf ("No jobs there any more on printers made available by us, shutting down in %d sec...\n", autoshutdown_timeout);
+	autoshutdown_exec_id =
+	  g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
+				 NULL);
+      }
+    } else {
+      /* If auto shutdown is active for triggering on no jobs being left, we
+	 cancel a shutdown in autoshutdown_timeout seconds as there are jobs
+         again. */
+      if (autoshutdown_exec_id) {
+	debug_printf ("New jobs there on the printers made available by us, killing auto shutdown timer.\n");
+	g_source_remove(autoshutdown_exec_id);
+	autoshutdown_exec_id = 0;
+      }
+    }
+  }
+
+  if (job_id != 0 && job_state == IPP_JOB_PROCESSING) {
     /* Printer started processing a job, check if it uses the implicitclass
        backend and if so, we select the remote queue to which to send the job
        in a way so that we get load balancing between all remote queues
@@ -3419,46 +3474,13 @@ on_printer_state_changed (CupsNotifier *object,
 	if (i == q->last_printer)
 	  break;
       }
-      /* Find the ID of the current job */
-      request = ippNewRequest(IPP_GET_JOBS);
-      httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		       "localhost", ippPort(), "/printers/%s", printer);
-      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
-		   "printer-uri", NULL, uri);
-      ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-		    "requested-attributes",
-		    sizeof(jattrs) / sizeof(jattrs[0]), NULL, jattrs);
-      job_id = 0;
-      if ((response = cupsDoRequest(conn, request, "/")) != NULL) {
-	/* Get the current active job on this queue... */
-	ipp_jstate_t jobstate = IPP_JOB_PENDING;
-	for (attr = ippFirstAttribute(response); attr != NULL;
-	     attr = ippNextAttribute(response)) {
-	  if (!ippGetName(attr)) {
-	    if (jobstate == IPP_JOB_PROCESSING)
-	      break;
-	    else
-	      continue;
-	  }
-	  if (!strcmp(ippGetName(attr), "job-id") &&
-	      ippGetValueTag(attr) == IPP_TAG_INTEGER)
-	    job_id = ippGetInteger(attr, 0);
-	  else if (!strcmp(ippGetName(attr), "job-state") &&
-		   ippGetValueTag(attr) == IPP_TAG_ENUM)
-	    jobstate = (ipp_jstate_t)ippGetInteger(attr, 0);
-	}
-	if (jobstate != IPP_JOB_PROCESSING)
-	  job_id = 0;
-	ippDelete(response);
-      }
-      if (job_id == 0)
-	debug_printf("ERROR: could not determine ID of current job on %s\n",
-		     printer);
 
       /* Write the selected destination host into an option of our implicit
 	 class queue (cups-browsed-dest-printer="<dest>") so that the
 	 implicitclass backend will pick it up */
       request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
+      httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+		       "localhost", ippPort(), "/printers/%s", printer);
       ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		   "printer-uri", NULL, uri);
       ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
@@ -8908,6 +8930,8 @@ int main(int argc, char*argv[]) {
   if (cups_notifier != NULL) {
     g_signal_connect (cups_notifier, "printer-state-changed",
 		      G_CALLBACK (on_printer_state_changed), NULL);
+    g_signal_connect (cups_notifier, "job-state",
+		      G_CALLBACK (on_job_state), NULL);
     g_signal_connect (cups_notifier, "printer-deleted",
 		      G_CALLBACK (on_printer_deleted), NULL);
     g_signal_connect (cups_notifier, "printer-modified",
