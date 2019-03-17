@@ -23,6 +23,12 @@
 # /var/log/cups/cups-browsed_log ('file'), to stderr ('stderr'), or
 # not at all ('none')?
 
+# Note that if cups-browsed is running as a system service (for
+# example via systemd) logging to stderr makes the log output going to
+# the journal or syslog. Only if you run cups-browsed from the command
+# line (for development or debugging) it will actually appear on
+# stderr.
+
 # DebugLogging file
 # DebugLogging stderr
 # DebugLogging file stderr
