@@ -126,7 +126,13 @@ _cupsImageReadGIF(
               transparent = buf[3];
           }
 
-          while (gif_get_block(fp, buf) != 0);
+          while (gif_get_block(fp, buf) != 0)
+          {
+            if(gif_eof)
+            {
+              return (-1);
+            }
+          }
           break;
 
       case ',' :	/* cupsImage data */
@@ -487,8 +493,11 @@ gif_read_image(FILE         *fp,	/* I - Input file */
     temp += bpp;
     if (xpos == img->xsize)
     {
-      _cupsImagePutRow(img, 0, ypos, img->xsize, pixels);
-
+      int res = _cupsImagePutRow(img, 0, ypos, img->xsize, pixels);
+      if(res)
+      {
+        return (-1);
+      }
       xpos = 0;
       temp = pixels;
 
