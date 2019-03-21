@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.22.2 - 2019-03-15
 
 CHANGES IN V1.22.3
 
+	- libcupsfilters: Added error checks for processing GIF, to
+	  avoid crashes or hangs on broken GIF files (Issues #81, #82,
+	  Pull request #100).
 	- cups-browsed: Added hint to the man page and configuration
 	  file that with "DebugLogging stderr" the logging output goes
 	  to journal or syslog if cups-browsed is running as system
