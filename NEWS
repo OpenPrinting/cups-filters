@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.22.3 - 2019-03-26
 -----------------------------------------------------
 
+CHANGES IN V1.22.4
+
+	- bannertopdf: When multiplying the page for N-up or Duplex
+	  printing one page too much was generated (Issue #102).
+
 CHANGES IN V1.22.3
 
 	- libcupsfilters: Added error checks for processing GIF, to

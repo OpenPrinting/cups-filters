@@ -511,7 +511,7 @@ static int generate_banner_pdf(banner_t *banner,
         copies *= 2;
 
     if (copies > 1)
-        pdf_duplicate_page(doc, 1, copies);
+        pdf_duplicate_page(doc, 1, copies - 1);
 
     pdf_write(doc, stdout);
 
