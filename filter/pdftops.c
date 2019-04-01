@@ -683,9 +683,12 @@ main(int  argc,				/* I - Number of command-line args */
     {
       if (renderer == PDFTOPS)
       {
-        /* Do not emit PS Level 3 with Poppler on HP PostScript laser printers
-	   as some do not like it. See https://bugs.launchpad.net/bugs/277404.*/
+        /* Do not emit PS Level 3 with Poppler on Brother and HP PostScript
+	   laser printers as some do not like it.
+	   See https://bugs.launchpad.net/bugs/277404 and
+	   https://bugs.launchpad.net/bugs/1306849 comment #42. */
 	if (!make_model[0] ||
+	    !strncasecmp(make_model, "Brother", 7) ||
 	    ((!strncasecmp(make_model, "HP", 2) ||
 	      !strncasecmp(make_model, "Hewlett-Packard", 15) ||
 	      !strncasecmp(make_model, "Hewlett Packard", 15)) &&
@@ -695,7 +698,16 @@ main(int  argc,				/* I - Number of command-line args */
 	  pdf_argv[pdf_argc++] = (char *)"-level3";
       }
       else if (renderer == GS)
-	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
+      {
+        /* Do not emit PS Level 3 with Ghostscript on Brother PostScript
+	   laser printers as some do not like it.
+	   See https://bugs.launchpad.net/bugs/1306849 comment #42. */
+	if (!make_model[0] ||
+	    !strncasecmp(make_model, "Brother", 7))
+	  pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=2";
+	else
+	  pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
+      }
       else /* PDFTOCAIRO || ACROREAD */
         pdf_argv[pdf_argc++] = (char *)"-level3";
     }

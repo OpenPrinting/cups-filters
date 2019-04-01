@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.22.3 - 2019-03-26
 
 CHANGES IN V1.22.4
 
+	- pdftops: Emit PostScript Level 2 instead of Level 3 for
+	  Brother PostScript printers as at least some of them
+	  report to support level 3 but ontly work with Level 2
+	  (Ubuntu bug #1306849, comment #42).
 	- bannertopdf: When multiplying the page for N-up or Duplex
 	  printing one page too much was generated (Issue #102).
 
