@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.22.3 - 2019-03-26
 
 CHANGES IN V1.22.4
 
+	- cups-browsed: Fix broken trailing space removal on
+	  "NickName" (Pull request #103).
 	- pdftops: Emit PostScript Level 2 instead of Level 3 for
 	  Brother PostScript printers as at least some of them
 	  report to support level 3 but ontly work with Level 2
