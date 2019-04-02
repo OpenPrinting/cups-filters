@@ -5277,8 +5277,8 @@ gboolean update_cups_queues(gpointer unused) {
 	      memmove(ptr, prefix, strlen(prefix));
 	      ptr = line + strlen(line) - 1;
 	      while(isspace(*ptr) && ptr > line) {
-		ptr --;
 		*ptr = '\0';
+		ptr --;
 	      }
 	      if (*ptr != '"') {
 		if (ptr < line + sizeof(line) - 2) {
