@@ -47,9 +47,8 @@ static int pdf_count_pages(const char *filename)
     size_t bytes;
 
     snprintf(gscommand, CMDLINE_MAX, "%s -dNODISPLAY -q -c "
-	     "'/pdffile (%s) (r) file def pdfdict begin pdffile pdfopen begin "
-	     "(PageCount: ) print pdfpagecount == flush currentdict pdfclose "
-	     "end end quit'",
+	     "'/pdffile (%s) (r) file runpdfbegin (PageCount: ) print "
+	     "pdfpagecount = quit'",
 	     gspath, filename);
 
     FILE *pd = popen(gscommand, "r");

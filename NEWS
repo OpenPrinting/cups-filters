@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.22.4 - 2019-04-05
 -----------------------------------------------------
 
+CHANGES IN V1.22.5
+
+	- foomatic-rip: Changed Ghostscript call to count pages in a
+	  PDF file to use "runpdfbegin" and not the undocumented
+	  Ghostscript internal "pdfdict", so that it works with
+	  Ghostscript 9.27 and later (Debian bug #926576, Arch Linux
+	  bug #62251).
+
 CHANGES IN V1.22.4
 
 	- cups-browsed: Fix broken trailing space removal on
