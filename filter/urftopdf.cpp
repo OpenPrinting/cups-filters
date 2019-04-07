@@ -12,8 +12,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * @brief Decode URF  to a PDF file
- * @file urf_decode.cpp
+ * @brief Decode URF to a PDF file
+ * @file urftopdf.cpp
  * @author Neil 'Superna' Armstrong <superna9999@gmail.com> (C) 2010
  * @author Tobias Hoffmann <smilingthax@gmail.com> (c) 2012
  */
