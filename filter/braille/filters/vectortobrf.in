@@ -42,7 +42,7 @@ esac
 
 . @CUPS_DATADIR@/braille/cups-braille.sh
 
-checkTool convert imagemagick "embossing images"
+checkTool gm graphicsmagick "embossing images"
 
 NEGATE=$(getOption Negate)
 case "$NEGATE" in
@@ -57,7 +57,7 @@ esac
 PAGE="-page ${TOTALGRAPHICWIDTH}x${TOTALGRAPHICHEIGHT}+${GRAPHICHOFFSET}+${GRAPHICVOFFSET}"
 
 GS_CALL="gs -q -dDEVICEWIDTHPOINTS=${GRAPHICWIDTH} -dDEVICEHEIGHTPOINTS=${GRAPHICHEIGHT} -noantialias -dTextAlphaBits=1 -dGraphicsAlphaBits=1 -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pngmono -dFitPage -r72 -sOutputFile=-"
-RENDER_CALL="convert $NEGATE $PAGE -flatten - $OUTPUT_FORMAT:-"
+RENDER_CALL="gm convert $NEGATE $PAGE -flatten - $OUTPUT_FORMAT:-"
 
 # Now proceeed
 echo "INFO: Converting image" 1>&2

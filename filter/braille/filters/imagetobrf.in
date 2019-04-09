@@ -42,7 +42,7 @@ esac
 
 . @CUPS_DATADIR@/braille/cups-braille.sh
 
-checkTool convert imagemagick "embossing images"
+checkTool gm graphicsmagick "embossing images"
 
 NEGATE=$(getOption Negate)
 case "$NEGATE" in
@@ -110,7 +110,7 @@ case $EDGE in
     ;;
 esac
 
-RENDER_CALL="convert $WORK -rotate $ROTATE $PAGE $RESIZE $MIRROR -flatten - $OUTPUT_FORMAT:-"
+RENDER_CALL="gm convert $WORK -rotate $ROTATE $PAGE $RESIZE $MIRROR -flatten - $OUTPUT_FORMAT:-"
 
 # Now proceeed
 echo "INFO: Converting image" 1>&2

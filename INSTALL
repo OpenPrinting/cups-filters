@@ -40,9 +40,9 @@ BEFORE YOU BEGIN
     remote CUPS queues and make the queues available locally, you also
     need libavahi-common and libavahi-client.
 
-COMPILING THE BZR REPOSITORY CODE
+COMPILING THE GIT REPOSITORY CODE
 
-    The CUPS Filters BZR repository doesn't hold a copy of the pre-built
+    The CUPS Filters Git repository doesn't hold a copy of the pre-built
     configure script.  You'll need to run the GNU autoconf software (2.65 or
     higher) to create it:
 

@@ -25,7 +25,7 @@
 #include <media.defs>
 #include <media-braille.defs>
 #include <liblouis.defs>
-#include <imagemagick.defs>
+#include <graphicsmagick.defs>
 #include <braille.defs>
 #include <index.defs>
 

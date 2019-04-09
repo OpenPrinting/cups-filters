@@ -344,7 +344,7 @@ brlppdcfiles = \
 	filter/braille/drivers/common/media-braille.defs \
 	filter/braille/drivers/index/index.defs \
 	filter/braille/filters/braille.defs \
-	filter/braille/filters/imagemagick.defs \
+	filter/braille/filters/graphicsmagick.defs \
 	filter/braille/filters/liblouis.defs \
 	filter/braille/drivers/common/fr-braille.po
 

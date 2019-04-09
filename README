@@ -45,7 +45,7 @@ INTRODUCTION
     2.2.2 is required.
 
     For Braille embosser support (see below) you will also need at
-    least liblouis, ImageMagick, and poppler-utils. Recommended is to
+    least liblouis, GraphicsMagick, and poppler-utils. Recommended is to
     also have liblouisutdml, antiword, docx2txt for more sophisticated
     Braille generation representing also the formatting of the input
     text. None of these is needed for compiling cups-filters.
