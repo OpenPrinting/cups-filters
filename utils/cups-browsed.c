@@ -3592,17 +3592,9 @@ on_printer_deleted (CupsNotifier *object,
   }
 }
 
-static void
-on_printer_modified (CupsNotifier *object,
-		     const gchar *text,
-		     const gchar *printer_uri,
-		     const gchar *printer,
-		     guint printer_state,
-		     const gchar *printer_state_reasons,
-		     gboolean printer_is_accepting_jobs,
-		     gpointer user_data)
+static int
+queue_overwritten (remote_printer_t *p)
 {
-  remote_printer_t *p;
   http_t        *conn = NULL;
   ipp_t         *request,               /* IPP Request */
                 *response = NULL;       /* IPP Response */
@@ -3618,6 +3610,141 @@ on_printer_modified (CupsNotifier *object,
                 };
   const char    *loadedppd = NULL;
   ppd_file_t    *ppd;
+  int           overwritten = 0;
+
+  if (p->overwritten)
+    /* We already have discovered that this queue got overwritten
+       so we do not repeat the tests and exit positively */
+    return 1;
+
+  /* Get the URI which our CUPS queue actually has now, a change of the
+     URI means a modification or replacement of the print queue by
+     something user-defined. So we schedule this queue for release from
+     handling by cups-browsed */
+  conn = http_connect_local ();
+  if (conn == NULL) {
+    debug_printf("Cannot connect to local CUPS to find the actual device URI and other properties of the printer %s.\n",
+		 p->queue_name);
+    return 0;
+  } else {
+    request = ippNewRequest(CUPS_GET_PRINTERS);
+    ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+		  "requested-attributes", sizeof(pattrs) / sizeof(pattrs[0]),
+		  NULL, pattrs);
+    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
+		 NULL, cupsUser());
+    response = cupsDoRequest(conn, request, "/");
+  }
+  if (!response || cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
+    debug_printf("lpstat: %s\n", cupsLastErrorString());
+  } else {
+    for (attr = ippFirstAttribute(response); attr != NULL;
+	 attr = ippNextAttribute(response)) {
+      while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+	attr = ippNextAttribute(response);
+      if (attr == NULL)
+	break;
+      printername = NULL;
+      device      = NULL;
+      uri         = NULL;
+      while (attr != NULL && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
+	if (!strcmp(ippGetName(attr), "printer-name") &&
+	    ippGetValueTag(attr) == IPP_TAG_NAME)
+	  printername = ippGetString(attr, 0, NULL);
+	if (!strcmp(ippGetName(attr), "printer-uri-supported") &&
+	    ippGetValueTag(attr) == IPP_TAG_URI)
+	  uri = ippGetString(attr, 0, NULL);
+	if (!strcmp(ippGetName(attr), "device-uri") &&
+	    ippGetValueTag(attr) == IPP_TAG_URI)
+	  device = ippGetString(attr, 0, NULL);
+	attr = ippNextAttribute(response);
+      }
+      if (printername == NULL) {
+	if (attr == NULL)
+	  break;
+	else
+	  continue;
+      }
+      if (strcasecmp(p->queue_name, printername) == 0) {
+	/* Found our printer in the response */
+	if (device == NULL)
+	  device = uri;
+	if (device != NULL &&
+	    (p->uri == NULL ||
+	     (p->netprinter != 0 && strcasecmp(device, p->uri)) ||
+	     (p->netprinter == 0 &&
+	      (strlen(device) < 16 || strncmp(device, "implicitclass://", 16))))) {
+	  /* The printer's device URI is different to what we have
+	     assigned, so we got notified because the queue was
+	     externally modified and so we will release this printer
+	     from the control of cups-browsed */
+	  debug_printf("Printer %s got modified externally, discovered by a change of its device URI from %s to %s.\n",
+		       p->queue_name,
+		       (p->uri ? (p->netprinter ? p->uri : "implicitclass://...") : "(not yet determined)"),
+		       device);
+	  overwritten = 1;
+	}
+	break;
+      }
+    }
+  }
+  if (response) ippDelete(response);
+
+  /* Get the NickName of the PPD which our CUPS queue actually uses
+     now, a change of the NickName means a replacement of the PPD of
+     the print queue by a user-selected one. So we schedule this
+     queue for release from handling by cups-browsed */
+  if ((loadedppd = cupsGetPPD2(conn, p->queue_name))
+      == NULL) {
+    debug_printf("Unable to load PPD from local queue %s, queue seems to be raw.\n",
+		 p->queue_name);
+    if (p->nickname && p->nickname[0] != '\0') {
+      /* We have set up this printer with a PPD file but the queue
+	 does not have a PPD file any more, so we were notified
+	 because the queue was externally modified and so we will
+	 release this printer from the control of cups-browsed */
+      debug_printf("Printer %s got modified externally, discovered by the removal of its PPD file.\n",
+		   p->queue_name);
+      overwritten = 1;
+    }
+  } else {
+    if ((ppd = ppdOpenFile(loadedppd)) == NULL)
+      debug_printf("Unable to open downloaded PPD from local queue %s.\n",
+		   p->queue_name);
+    else {
+      if (p->nickname == NULL || ppd->nickname == NULL ||
+	  strcasecmp(p->nickname, ppd->nickname)) {
+	/* The PPD file of the queue got replaced which we
+	   discovered by comparing the NickName of the PPD with the
+	   NickName which the PPD we have used has. So we were
+	   notified because the queue was externally modified and so
+	   we will release this printer from the control of
+	   cups-browsed */
+	debug_printf("Printer %s got modified externally, discovered by the NickName of its PPD file having changed from \"%s\" to \"%s\".\n",
+		     p->queue_name, (p->nickname ? p->nickname : "(no PPD)"),
+		     (ppd->nickname ? ppd->nickname : "(NickName not readable)"));
+	overwritten = 1;
+      }
+    }
+    unlink(loadedppd);
+  }
+
+  return overwritten;
+}
+
+static void
+on_printer_modified (CupsNotifier *object,
+		     const gchar *text,
+		     const gchar *printer_uri,
+		     const gchar *printer,
+		     guint printer_state,
+		     const gchar *printer_state_reasons,
+		     gboolean printer_is_accepting_jobs,
+		     gpointer user_data)
+{
+  remote_printer_t *p;
+  http_t        *conn = NULL;
+  ipp_t         *request;               /* IPP Request */
   int           re_create, is_cups_queue;
   char          *new_queue_name;
   cups_array_t  *to_be_renamed;
@@ -3635,118 +3762,8 @@ on_printer_modified (CupsNotifier *object,
          and are treating the process appropriately, so return now to
          avoid an infinite recursion */
       return;
-    /* Get the URI which our CUPS queue actually has now, a change of the
-       URI means a modification or replacement of the print queue by
-       something user-defined. So we schedule this queue for release from
-       handling by cups-browsed */
-    conn = http_connect_local ();
-    if (conn == NULL) {
-      debug_printf("Cannot connect to local CUPS to find the actual device URI of the printer %s.\n",
-		   printer);
-    } else {
-      request = ippNewRequest(CUPS_GET_PRINTERS);
-      ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-		    "requested-attributes", sizeof(pattrs) / sizeof(pattrs[0]),
-		    NULL, pattrs);
-      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
-		   NULL, cupsUser());
-      response = cupsDoRequest(conn, request, "/");
-    }
-    if (cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
-      debug_printf("lpstat: %s\n", cupsLastErrorString());
-      ippDelete(response);
-    } else {
-      for (attr = ippFirstAttribute(response); attr != NULL;
-	   attr = ippNextAttribute(response)) {
-	while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
-	  attr = ippNextAttribute(response);
-	if (attr == NULL)
-	  break;
-	printername = NULL;
-	device      = NULL;
-	uri         = NULL;
-	while (attr != NULL && ippGetGroupTag(attr) == IPP_TAG_PRINTER) {
-	  if (!strcmp(ippGetName(attr), "printer-name") &&
-	      ippGetValueTag(attr) == IPP_TAG_NAME)
-	    printername = ippGetString(attr, 0, NULL);
-	  if (!strcmp(ippGetName(attr), "printer-uri-supported") &&
-	      ippGetValueTag(attr) == IPP_TAG_URI)
-	    uri = ippGetString(attr, 0, NULL);
-	  if (!strcmp(ippGetName(attr), "device-uri") &&
-	      ippGetValueTag(attr) == IPP_TAG_URI)
-	    device = ippGetString(attr, 0, NULL);
-	  attr = ippNextAttribute(response);
-	}
-	if (printername == NULL) {
-	  if (attr == NULL)
-	    break;
-	  else
-	    continue;
-	}
-	if (strcasecmp(printer, printername) == 0) {
-	  /* Found our printer in the response */
-	  if (device == NULL)
-	    device = uri;
-	  if (device != NULL &&
-	      (p->uri == NULL ||
-	       (p->netprinter != 0 && strcasecmp(device, p->uri)) ||
-	       (p->netprinter == 0 &&
-		(strlen(device) < 16 || strncmp(device, "implicitclass://", 16))))) {
-	    /* The printer's device URI is different to what we have
-	       assigned, so we got notified because the queue was
-	       externally modified and so we will release this printer
-	       from the control of cups-browsed */
-	    debug_printf("Printer %s got modified externally, discovered by a change of its device URI from %s to %s.\n",
-			 printer,
-			 (p->uri ? (p->netprinter ? p->uri : "implicitclass://...") : "(not yet determined)"),
-			 device);
-	    p->overwritten = 1;
-	  }
-	  break;
-	}
-      }
-    }
 
-    /* Get the NickName of the PPD which our CUPS queue actually uses
-       now, a change of the NickName means a replacement of the PPD of
-       the print queue by a user-selected one. So we schedule this
-       queue for release from handling by cups-browsed */
-    if ((loadedppd = cupsGetPPD2(conn, printer))
-	== NULL) {
-      debug_printf("Unable to load PPD from local queue %s, queue seems to be raw.\n",
-		   printer);
-      if (p->nickname && p->nickname[0] != '\0') {
-	/* We have set up this printer with a PPD file but the queue
-	   does not have a PPD file any more, so we were notified
-	   because the queue was externally modified and so we will
-	   release this printer from the control of cups-browsed */
-	debug_printf("Printer %s got modified externally, discovered by the removal of its PPD file.\n",
-		     printer);
-	p->overwritten = 1;
-      }
-    } else {
-      if ((ppd = ppdOpenFile(loadedppd)) == NULL)
-	debug_printf("Unable to open downloaded PPD from local queue %s.\n",
-		     printer);
-      else {
-	if (p->nickname == NULL || ppd->nickname == NULL ||
-	    strcasecmp(p->nickname, ppd->nickname)) {
-	  /* The PPD file of the queue got replaced which we
-	     discovered by comparing the NickName of the PPD with the
-	     NickName which the PPD we have used has. So we were
-	     notified because the queue was externally modified and so
-	     we will release this printer from the control of
-	     cups-browsed */
-	  debug_printf("Printer %s got modified externally, discovered by the NickName of its PPD file having changed from \"%s\" to \"%s\".\n",
-		       printer, (p->nickname ? p->nickname : "(no PPD)"),
-		       (ppd->nickname ? ppd->nickname : "(NickName not readable)"));
-	  p->overwritten = 1;
-	}
-      }
-      unlink(loadedppd);
-    }
-
-    if (p->overwritten) {
+    if (queue_overwritten(p)) {
       /* Our generated local queue pointing to a remote printer got
 	 overwritten by an externally created queue with the same
 	 name.
@@ -3755,13 +3772,14 @@ on_printer_modified (CupsNotifier *object,
 	 <old_name>@<remote_host>.
 	 If we have slaves, we have to do this for them, too. */
 
+      p->overwritten = 1;
+
       /* First, remove the "cups-browsed=true" from the queue's
 	 options, so that cups-browsed considers this queue as created
 	 manually */
       debug_printf("Removing \"cups-browsed=true\" from CUPS queue %s (%s).\n",
 		   p->queue_name, p->uri);
-      if (conn == NULL)
-	conn = http_connect_local ();
+      conn = http_connect_local ();
       if (conn == NULL)
 	debug_printf("Browse send failed to connect to localhost\n");
       else {
@@ -4583,7 +4601,8 @@ gboolean update_cups_queues(gpointer unused) {
 	   queue re-appears later or when cups-browsed gets started again */
 	record_printer_options(p->queue_name);
 
-	if (p->status != STATUS_TO_BE_RELEASED) {
+	if (p->status != STATUS_TO_BE_RELEASED &&
+	    !queue_overwritten(p)) {
 	  /* Remove the CUPS queue */
 
 	  /* Check whether there are still jobs and do not remove the queue

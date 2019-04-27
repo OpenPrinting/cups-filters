@@ -1,6 +1,15 @@
 NEWS - OpenPrinting CUPS Filters v1.22.5 - 2019-04-07
 -----------------------------------------------------
 
+CHANGES IN V1.22.6
+
+	- cups-browsed: When removing a local queue on shutdown or
+	  when DNS-SD reports the printer as disappeared check whether
+	  the local queue got overwritten by an external process as
+	  sometimes the shutdown or disappearing event comes too close
+	  for cups-browsed receiving a printer-modified notification
+	  from CUPS before (Ubuntu bug #1731417).
+
 CHANGES IN V1.22.5
 
 	- foomatic-rip: Changed Ghostscript call to count pages in a
