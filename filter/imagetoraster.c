@@ -715,7 +715,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       float h = (float)cupsImageGetHeight(img);
       float pw = PageRight-PageLeft;
       float ph = PageTop-PageBottom;
-      char *val;
+      const char *val;
       int tempOrientation = Orientation;
       int flag =3;
       if((val = cupsGetOption("orientation-requested",num_options,options))!=NULL)

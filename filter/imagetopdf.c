@@ -1004,7 +1004,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     float pw = PageRight-PageLeft;
     float ph = PageTop-PageBottom;
     int tempOrientation = Orientation;
-    char *val;
+    const char *val;
     int flag = 3;
     if((val = cupsGetOption("orientation-requested",num_options,options))!=NULL)
     {

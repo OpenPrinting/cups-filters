@@ -3,7 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.22.5 - 2019-04-07
 
 CHANGES IN V1.22.6
 
-	- pdftopdf: Silenced compiler warning.
+	- pdftopdf, imagetopdf, imagetoraster: Silenced compiler
+          warnings.
 	- cups-browsed, driverless: Replaced httpConnect() calls by
 	  httpConnect2() calls as the former CUPS library function is
 	  deprecated.
