@@ -497,7 +497,8 @@ generate_ppd (const char *uri)
     fprintf(stderr, "ERROR: Invalid URI: %s\n", uri);
     goto fail;
   }
-  if ((http = httpConnect(host_name, host_port)) ==
+  if ((http = httpConnect2(host_name, host_port, NULL, AF_UNSPEC,
+			   HTTP_ENCRYPT_IF_REQUESTED, 1, 5000, NULL)) ==
       NULL) {
     fprintf(stderr, "ERROR: Cannot connect to remote printer %s (%s:%d)\n",
 	    uri, host_name, host_port);

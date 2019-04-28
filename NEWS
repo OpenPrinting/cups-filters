@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.22.5 - 2019-04-07
 
 CHANGES IN V1.22.6
 
+	- cups-browsed, driverless: Replaced httpConnect() calls by
+	  httpConnect2() calls as the former CUPS library function is
+	  deprecated.
 	- Build system: Compile everything using the CUPS libraries
 	  with '-D_PPD_DEPRECATED=""' for the time being until the
 	  deprecated PPD API calls get replaced, to stop the flooding

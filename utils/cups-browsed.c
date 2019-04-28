@@ -3914,8 +3914,9 @@ get_printer_attributes(const char* uri) {
 			       resource, sizeof(resource));
   if (uri_status != HTTP_URI_OK)
     return NULL;
-  if ((http_printer = httpConnect(host_name, host_port)) ==
-      NULL) {
+  if ((http_printer =
+       httpConnectEncryptShortTimeout (host_name, host_port,
+				       HTTP_ENCRYPT_IF_REQUESTED)) == NULL) {
     debug_printf("Cannot connect to remote printer with URI %s, ignoring this printer.\n",
 		 uri);
     return NULL;
