@@ -186,7 +186,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     for(int i=0;i<(int)pages.size();i++)
     {
       std::shared_ptr<PDFTOPDF_PageHandle> page = pages[i];
-      Rotation currRot = page->crop(param.page,param.orientation,param.xpos,param.ypos,!param.cropfit);
+      page->crop(param.page,param.orientation,param.xpos,param.ypos,!param.cropfit);
     }
     param.fitplot = 1;
   }
