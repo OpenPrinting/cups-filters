@@ -729,6 +729,7 @@ foomatic_rip_SOURCES = \
 	cupsfilters/colord.h
 foomatic_rip_CFLAGS = \
 	-DCONFIG_PATH='"$(sysconfdir)/foomatic"' \
+	$(CUPS_CFLAGS) \
 	-I$(srcdir)/cupsfilters/
 foomatic_rip_LDADD = \
 	$(CUPS_LIBS) \

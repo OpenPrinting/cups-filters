@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.22.5 - 2019-04-07
 
 CHANGES IN V1.22.6
 
+	- Build system: Compile everything using the CUPS libraries
+	  with '-D_PPD_DEPRECATED=""' for the time being until the
+	  deprecated PPD API calls get replaced, to stop the flooding
+	  with PPD API deprecation warnings making more important
+	  warnings being overlooked.
 	- cups-browsed: When removing a local queue on shutdown or
 	  when DNS-SD reports the printer as disappeared check whether
 	  the local queue got overwritten by an external process as

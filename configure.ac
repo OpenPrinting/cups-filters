@@ -88,7 +88,7 @@ AS_IF([test "x$with_cups_config" != "xsystem"], [
 		AC_MSG_ERROR([Required cups-config is missing. Please install CUPS developer packages.])
 	])
 ])
-CUPS_CFLAGS=`$CUPSCONFIG --cflags`
+CUPS_CFLAGS=`$CUPSCONFIG --cflags`' -D_PPD_DEPRECATED=""'
 CUPS_LIBS=`$CUPSCONFIG --image --libs`
 CUPS_VERSION=`$CUPSCONFIG --version`
 AC_SUBST(CUPS_CFLAGS)
