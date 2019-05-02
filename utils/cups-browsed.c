@@ -4095,8 +4095,13 @@ create_remote_printer_entry (const char *queue_name,
        remote CUPS server gets used. So we will not generate a PPD file
        or interface script at this point. */
     p->netprinter = 0;
-    p->prattrs = NULL;
+    p->prattrs = get_printer_attributes(p->uri);
     p->nickname = NULL;
+    if (p->prattrs == NULL) {
+      debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
+      p->queue_name, p->uri);
+      goto fail;
+    }
 
     /* Check whether we have an equally named queue already from another
        server and join a cluster if needed */
@@ -4479,9 +4484,8 @@ remove_printer_entry(remote_printer_t *p) {
 
 gboolean update_cups_queues(gpointer unused) {
   remote_printer_t *p, *q, *r;
-  http_t *http, *remote_http;
+  http_t *http;
   char uri[HTTP_MAX_URI], device_uri[HTTP_MAX_URI], buf[1024], line[1024];
-  char *remote_cups_queue;
   int num_options;
   cups_option_t *options;
   int num_jobs;
@@ -5129,11 +5133,6 @@ gboolean update_cups_queues(gpointer unused) {
       p->num_options = load_printer_options(p->queue_name, p->num_options,
 					    &p->options);
 
-      /* If we create a queue to a remote CUPS printer we need the queue
-	 name on the remote server */
-      if (p->netprinter == 0)
-	remote_cups_queue = strrchr(p->uri, '/') + 1;
-
       /* Determine whether we have an IPP network printer. If not we
 	 have remote CUPS queue(s) and so we use an implicit class for
 	 load balancing. In this case we will assign an
@@ -5170,38 +5169,36 @@ gboolean update_cups_queues(gpointer unused) {
 	     the PPD's NickName, so that automatic PPD updating by the
 	     distribution's package installation/update infrastructure
 	     is suppressed. */
-	  /* Load the PPD file from one of the servers */
-	  if ((remote_http =
-	       httpConnectEncryptShortTimeout(p->ip ? p->ip : p->host,
-					      p->port ? p->port :
-					      ippPort(),
-					      cupsEncryption()))
-	      == NULL) {
-	    debug_printf("Could not connect to the server %s:%d for %s!\n",
-			 p->host, p->port, p->queue_name);
-            current_time = time(NULL);
-	    p->timeout = current_time + TIMEOUT_RETRY;
-	    p->no_autosave = 0;
-	    break;
+	  /* Generating the ppd file for the remote cups queue */
+ 	if (p->prattrs == NULL)
+	  p->prattrs = get_printer_attributes(p->uri);
+	if (p->prattrs == NULL) {
+	  debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
+	  p->queue_name, p->uri);
+	  goto cannot_create;
+    }
+	p->nickname = NULL;
+	if (ppdfile == NULL) {
+    /* If we do not want CUPS-generated PPDs or we cannot obtain a
+      CUPS-generated PPD, for example if CUPS does not create a 
+      temporary queue for this printer, we generate a PPD by
+      ourselves */
+	  if (!ppdCreateFromIPP(buffer, sizeof(buffer), p->prattrs, p->make_model,
+	    p->pdl, p->color, p->duplex)) {
+	    if (errno != 0)
+	      debug_printf("Unable to create PPD file: %s\n", strerror(errno));
+	    else
+	      debug_printf("Unable to create PPD file: %s\n", ppdgenerator_msg);
+	    p->status = STATUS_DISAPPEARED;
+	    current_time = time(NULL);
+	    p->timeout = current_time + TIMEOUT_IMMEDIATELY;
+	    goto cannot_create;
+	    } else {
+	      debug_printf("PPD generation successful: %s\n", ppdgenerator_msg);
+	      debug_printf("Created temporary PPD file: %s\n", buffer);
+	      ppdfile = strdup(buffer);
+	    }
 	  }
-	  httpSetTimeout(remote_http, HttpRemoteTimeout, http_timeout_cb, NULL);
-	  if ((loadedppd = cupsGetPPD2(remote_http, remote_cups_queue))
-	      == NULL &&
-	      CreateRemoteRawPrinterQueues == 0) {
-	    debug_printf("Unable to load PPD file for %s from the server %s:%d!\n",
-			 p->queue_name, p->host, p->port);
-            current_time = time(NULL);
-	    p->timeout = current_time + TIMEOUT_RETRY;
-	    p->no_autosave = 0;
-	    httpClose(remote_http);
-	    break;
-	  } else if (loadedppd) {
-	    debug_printf("Loaded PPD file %s for printer %s from server %s:%d!\n",
-			 loadedppd, p->queue_name, p->host, p->port);
-	    /* Modify PPD to not filter the job */
-	    pass_through_ppd = 1;
-	  }
-	  httpClose(remote_http);
 	}
       } else {
 	/* Device URI: ipp(s)://<remote host>:631/printers/<remote queue> */
