@@ -3080,16 +3080,12 @@ join_cluster_if_needed(remote_printer_t *p,
 	!q->slave_of) /* Find the master of the queues with this name,
 			 to avoid "daisy chaining" */
       break;
-  if (q && AutoClustering == 0 && is_cups_queue == 1) {
+  if (q && AutoClustering == 0 && (is_cups_queue == 1 ||is_cups_queue == 0) ) {
     debug_printf("We have already created a queue with the name %s for another remote CUPS printer but automatic clustering of equally named printers is turned off nor did we find a manually defined cluster this printer belongs to. Skipping this printer.\n", p->queue_name);
     debug_printf("In cups-browsed.conf try setting \"AutoClustering On\" to cluster equally-named remote CUPS printers, \"LocalQueueNamingRemoteCUPS DNS-SD\" to avoid queue name clashes, or define clusters with the \"Cluster\" directive.\n");
     return -1;
   }
-  if (q && q->netprinter == 1) {
-    debug_printf("We have already created a queue with the name %s for another printer which is not a remote CUPS printer. Skipping this printer.\n", p->queue_name);
-    debug_printf("Try setting \"LocalQueueNamingRemoteCUPS DNS-SD\" or \"LocalQueueNamingRemoteCUPS RemoteName\" in cups-browsed.conf.\n");
-    return -1;
-  }
+
   p->slave_of = (q && q->status != STATUS_DISAPPEARED &&
 		 q->status != STATUS_UNCONFIRMED &&
 		 q->status != STATUS_TO_BE_RELEASED) ? q : NULL;
@@ -4493,7 +4489,7 @@ gboolean update_cups_queues(gpointer unused) {
   ipp_t *request;
   time_t current_time;
   int i, new_cupsfilter_line_inserted, ap_remote_queue_id_line_inserted,
-    cont_line_read, want_raw;
+     want_raw;
   char *disabled_str, *ptr, *prefix;
   char *ppdfile, *ifscript;
   int		fd = 0;			/* Script file descriptor */
@@ -4507,7 +4503,6 @@ gboolean update_cups_queues(gpointer unused) {
   const char *default_page_size = NULL, *best_color_space = NULL, *color_space;
 #endif
   const char *loadedppd = NULL;
-  int pass_through_ppd;
   ppd_file_t *ppd;
   ppd_choice_t *choice;
   cups_file_t *in, *out;
@@ -5116,8 +5111,6 @@ gboolean update_cups_queues(gpointer unused) {
 
 	  ifscript = strdup(tempfile);
 	}
-	ippDelete(p->prattrs);
-	p->prattrs = NULL;
       }
 #endif /* HAVE_CUPS_1_6 */
 
@@ -5139,7 +5132,6 @@ gboolean update_cups_queues(gpointer unused) {
 	 implicitclass://...  device URI, which makes cups-browsed find
 	 the best destination for each job. */
       loadedppd = NULL;
-      pass_through_ppd = 0;
       if (cups_notifier != NULL && p->netprinter == 0) {
 	/* We are not an IPP network printer, so we use the device URI
 	   implicitclass://<queue name>/
@@ -5201,11 +5193,12 @@ gboolean update_cups_queues(gpointer unused) {
 	  }
 	}
       } else {
-	/* Device URI: ipp(s)://<remote host>:631/printers/<remote queue> */
-	strncpy(device_uri, p->uri, sizeof(device_uri));
+	/* Device URI: using implicitclass backend for IPP network printer */
+	httpAssembleURI(HTTP_URI_CODING_ALL, device_uri, sizeof(device_uri),
+  "implicitclass", NULL, p->queue_name, 0, NULL);
 	if (strlen(p->uri) > HTTP_MAX_URI-1)
 	  device_uri[HTTP_MAX_URI-1] = '\0';
-	debug_printf("Print queue %s is for an IPP network printer, or we do not get notifications from CUPS, using direct device URI %s\n",
+	debug_printf("Print queue %s is for an IPP network printer, using implicitclass backend for the printer. %s\n",
 		     p->queue_name, device_uri);
       }
 
@@ -5257,58 +5250,7 @@ gboolean update_cups_queues(gpointer unused) {
 	ap_remote_queue_id_line_inserted = 0;
 	cont_line_read = 0;
 	while (cupsFileGets(in, line, sizeof(line))) {
-	  if (pass_through_ppd == 1 &&
-	      (!strncmp(line, "*cupsFilter:", 12) ||
-	       !strncmp(line, "*cupsFilter2:", 13))) {
-	    cont_line_read = 0;
-	    /* "*cupfFilter(2): ..." line: Remove it and replace the
-	       first one by a line which passes through the data
-	       unfiltered */
-	    if (new_cupsfilter_line_inserted == 0) {
-	      cupsFilePrintf(out, "*cupsFilter: \"*/* 0 -\"\n");
-	      new_cupsfilter_line_inserted = 1;
-	    }
-	    /* Find the end of the "*cupsFilter(2): ..." entry in the
-	       case it spans more than one line */
-	    do {
-	      if (strlen(line) != 0) {
-		ptr = line + strlen(line) - 1;
-		while(isspace(*ptr) && ptr > line)
-		  ptr --;
-		if (*ptr == '"')
-		  break;
-	      }
-	      cont_line_read = 1;
-	    } while (cupsFileGets(in, line, sizeof(line)));
-	  } else if (pass_through_ppd == 1 &&
-		     !strncmp(line, "*NickName:", 10)) {
-	    cont_line_read = 0;
-	    /* Prefix the "NickName" of the printer so that automatic
-	       PPD updaters skip this PPD */
-	    ptr = strchr(line, '"');
-	    if (ptr) {
-	      ptr ++;
-	      prefix = "Remote printer: ";
-	      line[sizeof(line) - strlen(prefix) - 1] = '\0';
-	      memmove(ptr + strlen(prefix), ptr, strlen(ptr) + 1);
-	      memmove(ptr, prefix, strlen(prefix));
-	      ptr = line + strlen(line) - 1;
-	      while(isspace(*ptr) && ptr > line) {
-		*ptr = '\0';
-		ptr --;
-	      }
-	      if (*ptr != '"') {
-		if (ptr < line + sizeof(line) - 2) {
-		  *(ptr + 1) = '"';
-		  *(ptr + 2) = '\0';
-		} else {
-		  line[sizeof(line) - 2] = '"';
-		  line[sizeof(line) - 1] = '\0';
-		}
-	      }
-	    }
-	    cupsFilePrintf(out, "%s\n", line);
-	  } else if (!strncmp(line, "*Default", 8)) {
+		if (!strncmp(line, "*Default", 8)) {
 	    cont_line_read = 0;
 	    strncpy(keyword, line + 8, sizeof(keyword));
 	    if ((strlen(line) + 8) > 1023)
@@ -5365,8 +5307,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    }
 	  }
 	}
-	if (pass_through_ppd == 1 && new_cupsfilter_line_inserted == 0)
-	  cupsFilePrintf(out, "*cupsFilter: \"*/* 0 -\"\n");
+
 	cupsFileClose(in);
 	cupsFileClose(out);
 	ppdClose(ppd);
