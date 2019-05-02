@@ -2706,6 +2706,247 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
  cupsArrayDelete(sizes);
 }
 
+/* Function to see which printer in the cluster supports the
+   requested job attributes*/
+int supports_job_attributes_requested(const gchar* printer,int printer_index,
+                                      int job_id, int *print_quality)
+{
+  char                  uri[1024];
+  http_t                *http = NULL;
+  ipp_attribute_t       *attr,*attr1;
+  ipp_t                 *request, *response = NULL;
+  const char            *str,*side,*resource;
+  cups_array_t          *formats_supported,*job_sheet_supported,
+                        *multiple_doc_supported,*print_qualities,
+                        *media_type_supported,*staplelocation_supported,
+                        *foldtype_supported,*punchmedia_supported,
+                        *color_supported;
+  remote_printer_t      *p;
+  int                   i,count,side_found,value,orien_req,orien,
+                        orien_found;
+  char                  valuebuffer[65536];
+  cups_array_t          *sizes;
+
+  p = (remote_printer_t *)cupsArrayIndex(remote_printers, printer_index);
+  static const char * const jattrs[] =  /* Job attributes we want */
+  {
+    "all"
+  };
+  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+     "localhost", ippPort(), "/printers/%s", printer);
+
+  /* Getting the resource */
+  resource = uri + (strlen(uri) - strlen(printer) - 10);
+
+  http = http_connect_local();
+  request = ippNewRequest(IPP_OP_GET_JOB_ATTRIBUTES);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,uri);
+  ippAddInteger(request, IPP_TAG_OPERATION, IPP_TAG_INTEGER, "job-id",job_id);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name", NULL, cupsUser());
+  ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD, "requested-attributes", 
+    (int)(sizeof(jattrs) / sizeof(jattrs[0])), NULL, jattrs);
+
+  response = cupsDoRequest(http, request,resource);
+  attr = ippFirstAttribute(response);
+
+  /* Document Format */
+    if ((attr = ippFindAttribute(response, "document-format-detected", 
+        IPP_TAG_MIMETYPE)) != NULL && ippGetCount(attr)>0){
+      str = ippGetString(attr,0, NULL);
+      formats_supported = get_mimetype_attributes(p->prattrs);
+    if(!cupsArrayFind(formats_supported, (void *)str)){
+      debug_printf("Printer %s doesn't support the document format %s\n",printer,str);
+      return 0;
+      }
+    }
+
+    /* Job Sheets*/
+    if ((attr = ippFindAttribute(response, "job-sheets", 
+        IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
+      str = ippGetString(attr,0, NULL);
+      debug_printf("Inside job-sheets supported %s\n",str);
+      job_sheet_supported = get_supported_options(p->prattrs,"job-sheets-supported");
+      print_cups_array(job_sheet_supported);
+      if(str){
+        if(!cupsArrayFind(job_sheet_supported, (void *)str) && strcmp(str,"none")){
+          debug_printf("Printer %s doesn't support the job-sheet %s\n",printer,str);
+          return 0;
+        }
+      }
+    }
+
+    /*Multiple document handling*/
+    /* Can't get multiple-document-handling data from job templates*/
+    if ((attr = ippFindAttribute(response, "multiple-document-handling", 
+        IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
+    str = ippGetString(attr,0, NULL);
+    debug_printf("Inside multiple document handling : %s\n",str);
+    if(str){
+     multiple_doc_supported = get_supported_options(p->prattrs,"multiple-document-handling-supported");
+     if(!cupsArrayFind(multiple_doc_supported, (void *)str) ){
+       debug_printf("Printer %s doesn't support the multiple document handling option %s\n",printer,str);
+        return 0;
+        }
+      }
+    }
+
+    /* Media Type */
+    if ((attr = ippFindAttribute(response, "MediaType", 
+        IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
+      str = ippGetString(attr,0, NULL);
+      debug_printf("Inside mediatype %s\n",str);
+      if(str != NULL){
+        media_type_supported = get_supported_options(p->prattrs,"media-type-supported");
+        if(!cupsArrayFind(media_type_supported, (void *)str) && strcmp(str,"Auto")){
+          debug_printf("Printer %s doesn't support the media-type %s\n",printer,str);
+          return 0;
+        }
+      }
+    }
+
+    /* Staple Location*/
+    if ((attr = ippFindAttribute(response, "StapleLocation", 
+        IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
+      str = ippGetString(attr,0, NULL);
+      debug_printf("Inside staplelocation%s\n",str);
+      if(str != NULL){
+        staplelocation_supported = get_supported_options(p->prattrs,"StapleLocation");
+        if(!cupsArrayFind(staplelocation_supported, (void *)str) && strcmp(str,"None")){
+          debug_printf("Printer %s doesn't support the staple location %s\n",printer,str);
+          return 0;
+        }
+      }
+    }
+
+    /*FoldType*/
+    if ((attr = ippFindAttribute(response, "FoldType", 
+        IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
+      str = ippGetString(attr,0, NULL);
+      debug_printf("Inside FoldType %s\n",str);
+      if(str != NULL){
+        foldtype_supported = get_supported_options(p->prattrs,"FoldType");
+        if(!cupsArrayFind(foldtype_supported, (void *)str) && strcmp(str,"None")){
+          debug_printf("Printer %s doesn't support the FoldType %s\n",printer,str);
+          return 0;
+        }
+      }
+    }
+
+    /*PunchMedia*/
+    if ((attr = ippFindAttribute(response, "PunchMedia", 
+        IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
+      str = ippGetString(attr,0, NULL);
+      debug_printf("Inside PunchMedia %s\n",str);
+      if(str != NULL){
+        punchmedia_supported = get_supported_options(p->prattrs,"PunchMedia");
+        if(!cupsArrayFind(punchmedia_supported, (void *)str) && strcmp(str,"None")){
+          debug_printf("Printer %s doesn't support the PunchMedia %s\n",printer,str);
+          return 0;
+        }
+      }
+    }
+
+    /*ColorModel*/
+    if ((attr = ippFindAttribute(response, "ColorModel", 
+        IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
+      str = ippGetString(attr,0, NULL);
+      debug_printf("Inside ColorModel %s\n",str);
+      if(str != NULL){
+        color_supported = get_supported_options(p->prattrs,"ColorModel");
+        if(!cupsArrayFind(color_supported, (void *)str) && strcmp(str,"Gray")){
+          debug_printf("Printer %s doesn't support the ColorModel %s\n",printer,str);
+          return 0;
+        }
+      }
+    }
+
+  /* Sides supported*/
+  if ((attr = ippFindAttribute(response, "Duplex", 
+      IPP_TAG_ZERO)) != NULL){
+    side_found = 0;
+    str = ippGetString(attr,0, NULL);
+    if(str){
+      if ((attr1 = ippFindAttribute(p->prattrs, "sides-supported", IPP_TAG_KEYWORD)) != NULL)
+      {
+        for(i=0,count = ippGetCount(attr1);i<count;i++){
+          side = ippGetString(attr1,i,NULL);
+          debug_printf("Side %s\n",side);
+          if(!strcmp(str,"None") && !strcmp(side,"one-sided")){
+            side_found = 1;
+            break;
+          }else if(!strcmp(str,"DuplexNoTumble") && !strcmp(side,"two-sided-long-edge")){
+            side_found = 1;
+            break;
+          }else if(!strcmp(str,"DuplexTumble") && !strcmp(side,"two-sided-short-edge")){
+            side_found = 1;
+            break;
+          }
+        }
+        if(!side_found){
+          debug_printf("Printer %s doesn't support the required duplex options\n",printer);
+          return 0;
+        }
+      }
+    }
+  }
+
+  /* Orientation Requested */
+  if ((attr = ippFindAttribute(response, "orientation-requested", 
+      IPP_TAG_ENUM)) != NULL){
+    orien_found = 0;
+    orien_req = ippGetInteger(attr, 0);
+    if ((attr1 = ippFindAttribute(p->prattrs, "orientation-requested-supported", IPP_TAG_ENUM))!= NULL){
+      for(i=0,count = ippGetCount(attr1);i<count;i++){
+        orien = ippGetInteger(attr1,i);
+        if(orien==orien_req){
+          orien_found =1;
+          break;
+        }
+      }
+      if(!orien_found){
+        debug_printf("Printer %s doesn't support the requested orientation\n",printer);
+        return 0;
+      }
+    }
+  }
+
+  /*Page Size*/
+  if ((attr = ippFindAttribute(response, "PageSize", 
+      IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
+    str = ippGetString(attr,0,NULL);
+    if(str){
+      sizes = get_pagesize(p->prattrs);
+      if(!cupsArrayFind(sizes,(void*)str)){
+        debug_printf("Printer %s doesn't support %s PageSize\n",p->uri,str);
+        return 0;
+      }
+    }
+  }
+
+  /*Print Quality*/
+  *print_quality = 4;
+  if ((attr = ippFindAttribute(response, "cupsPrintQuality", 
+      IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
+    print_qualities = get_supported_options(p->prattrs,"cupsPrintQuality");
+    print_cups_array(print_qualities);
+    str = ippGetString(attr,0,NULL);
+    debug_printf("%s\n",str);
+    if(str && !cupsArrayFind(print_qualities,(void*)str))
+    {
+      debug_printf("In\n");
+      if(!strcmp(str,"5"))
+        *print_quality = 5;
+      else if (!strcmp(str,"3"))
+        *print_quality = 3;
+      debug_printf("Printer doesn't support %s print quality\n",!strcmp(str,"5")? "HIGH": "DRAFT");
+      return 0;
+    }
+  }
+
+    return 1;
+}
+
+
 /*
  * Remove all illegal characters and replace each group of such characters
  * by a single separator character (dash or underscore), return a free()-able
