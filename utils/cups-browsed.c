@@ -1543,7 +1543,7 @@ void add_resolution_attributes(char* cluster_name,ipp_t **merged_attributes)
 /*add_mediasize_attribute - Adds media sizes to the merged_attribute for the printer*/
 void add_mediasize_attributes(char* cluster_name,ipp_t **merged_attributes)
 {
-  int                  count,i;
+  int                  count,i=0;
   remote_printer_t     *p;
   ipp_attribute_t      *attr,*media_size_supported,*x_dim,*y_dim;
   int                  num_sizes,attr_no,num_ranges;
@@ -2318,7 +2318,7 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
 cups_array_t* generate_cluster_conflicts(char* cluster_name, ipp_t *merged_attributes){
   remote_printer_t     *p;
   cups_array_t         *conflict_pairs=NULL;
-  int                  i,k,j,no_of_printers,no_of_ppd_keywords;
+  int                  i,k,j,no_of_printers=0,no_of_ppd_keywords;
   cups_array_t         *printer_first_options=NULL,*printer_second_options=NULL;
   char                 *opt1,*opt2,constraint[100],*ppdsizename,*temp;
   cups_array_t         *sizes = NULL,*pagesizes;
@@ -2456,6 +2456,254 @@ ipp_t* get_cluster_attributes(char* cluster_name)
       attr = ippNextAttribute(merged_attributes);
     }
   return merged_attributes;
+}
+
+int cluster_supports_given_attribute(char* cluster_name,ipp_tag_t tag, const char* attribute){
+  remote_printer_t        *p;
+  ipp_attribute_t         *attr;
+  int                     count;
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+      if(strcmp(cluster_name,p->queue_name))
+        continue;
+      if ((attr = ippFindAttribute(p->prattrs,attribute,tag)) != NULL && 
+        (count = ippGetCount(attr)) > 1)
+        return 1;
+    }
+  return 0; 
+}
+
+/* Generating the default values for the cluster*/
+void get_cluster_default_attributes(ipp_t** merged_attributes,
+                                    char* cluster_name,
+                                    char* default_pagesize,
+                                    const char **default_color)
+{
+  int                     max_pages_per_min = 0,pages_per_min;
+  remote_printer_t        *p,*def_printer=NULL;
+  int                     i,count;
+  ipp_attribute_t         *attr,*media_attr,*media_col_default,*defattr;
+  ipp_t                   *media_col,
+                          *media_size,*current_media=NULL;
+  char                    media_source[32],media_type[32];
+  const char              *str;
+  media_col_t             *temp;
+  const char              *keyword;
+  res_t                   *res;
+  int                     xres,yres;
+  int                     min_length=INT_MAX,min_width=INT_MAX,max_length=0,max_width=0,
+                          bottom,left,right,top;
+  char                    ppdname[41];
+  cups_array_t            *sizes;
+
+  /*The printer with the maximum Throughtput(pages_per_min) is selected as 
+    the default printer*/
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+     p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+    if(strcmp(p->queue_name,cluster_name))
+      continue;
+    if((attr = ippFindAttribute (p->prattrs, "pages-per-minute", IPP_TAG_INTEGER))!=NULL){
+      pages_per_min = ippGetInteger (attr, 0);
+      if(pages_per_min > max_pages_per_min){
+        max_pages_per_min = pages_per_min;
+        def_printer = p;
+      }
+    }
+  }
+
+  /* If none of the printer in the cluster has "pages-per-minute" in the ipp
+     response message, then select the first printer in the cluster */
+  if(!def_printer){
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+      if(strcmp(p->queue_name,cluster_name))
+        continue;
+      else{
+        def_printer = p;
+        break;
+      }
+    }
+  }
+  
+  debug_printf("Selecting printer (%s) as the default for the cluster %s\n",def_printer->uri, cluster_name);
+  debug_printf("Default Attributes of the cluster %s are : \n",cluster_name);
+
+  /* Generating the default pagesize for the cluster*/
+  sizes = generate_sizes(def_printer->prattrs,&defattr,&min_length,&min_width,&max_length,&max_width,
+                         &bottom,&left,&right,&top,ppdname);
+  strcpy(default_pagesize,ppdname);
+  debug_printf("Default PageSize : %s\n",default_pagesize);
+
+
+  /* Generating the default media-col for the cluster*/
+  if((attr = ippFindAttribute(def_printer->prattrs,"media-col-default", IPP_TAG_BEGIN_COLLECTION)) != NULL){
+    media_col = ippGetCollection(attr, 0);
+    media_size= ippGetCollection(ippFindAttribute(media_col, "media-size", IPP_TAG_BEGIN_COLLECTION), 0);
+    temp = (media_col_t *)malloc(sizeof(media_col_t));
+    temp->x = ippGetInteger(ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO),0);
+    temp->y = ippGetInteger(ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO),0);
+    temp->top_margin   = ippGetInteger(ippFindAttribute(media_col, "media-top-margin", IPP_TAG_INTEGER),0);
+    temp->bottom_margin= ippGetInteger(ippFindAttribute(media_col, "media-bottom-margin", IPP_TAG_INTEGER),0);
+    temp->left_margin  = ippGetInteger(ippFindAttribute(media_col, "media-left-margin", IPP_TAG_INTEGER),0);
+    temp->right_margin = ippGetInteger(ippFindAttribute(media_col, "media-right-margin", IPP_TAG_INTEGER),0);
+    media_type[0]='\0';
+    media_source[0]='\0';
+    temp->media_source = NULL;
+    temp->media_type = NULL;
+
+    if ((media_attr = ippFindAttribute(media_col, "media-type", IPP_TAG_KEYWORD)) != NULL)
+      pwg_ppdize_name(ippGetString(media_attr, 0, NULL),media_type, sizeof(media_type));
+    
+    if(strlen(media_type) > 1){
+      temp->media_type = (char*)malloc(sizeof(char)*32);
+      strcpy(temp->media_type,media_type);
+      debug_printf("Default MediaType : %s\n",media_type);
+    }
+      
+    if ((media_attr = ippFindAttribute(media_col, "media-source", IPP_TAG_KEYWORD)) != NULL){
+      pwg_ppdize_name(ippGetString(media_attr, 0, NULL),media_source, sizeof(media_source));
+    }
+
+    if(strlen(media_source) > 1){
+      temp->media_source = (char*)malloc(sizeof(char)*32);
+      strcpy(temp->media_source,media_source);   
+      debug_printf("Default MediaSource : %s\n",media_source);
+    }
+  
+    if(temp->media_source==NULL){
+      if(cluster_supports_given_attribute(cluster_name,IPP_TAG_KEYWORD,"media-source-supported")){
+        strcpy(temp->media_source,"Auto");
+        debug_printf("Default MediaSource : %s\n",media_source);
+      }
+    }
+
+    if(temp->media_type==NULL){
+      if(cluster_supports_given_attribute(cluster_name,IPP_TAG_KEYWORD,"media-type-supported")){
+        strcpy(temp->media_type,"auto");
+        debug_printf("Default MediaType : %s\n",media_type);
+      }
+    }
+    media_col_default = ippAddCollection(*merged_attributes, IPP_TAG_PRINTER,"media-col-default",NULL);
+    current_media = create_media_col(temp->x,temp->y,temp->left_margin,
+                        temp->right_margin,temp->top_margin,temp->bottom_margin,
+                        temp->media_source,temp->media_type);
+    ippSetCollection(*merged_attributes, &media_col_default,0,current_media);
+    
+  }
+
+  /*Finding the default colormodel for the cluster*/
+  if((attr = ippFindAttribute(def_printer->prattrs, "urf-supported", IPP_TAG_KEYWORD)) == NULL)
+       if ((attr = ippFindAttribute(def_printer->prattrs, "pwg-raster-document-type-supported", IPP_TAG_KEYWORD)) == NULL)
+         if ((attr = ippFindAttribute(def_printer->prattrs, "print-color-mode-supported", IPP_TAG_KEYWORD)) == NULL)
+           attr = ippFindAttribute(def_printer->prattrs, "output-mode-supported", IPP_TAG_KEYWORD);
+
+  if (attr && ippGetCount(attr) > 0)
+  {
+    *default_color = NULL;
+    debug_printf("ColorModel\n");
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      keyword = ippGetString(attr, i, NULL);
+      if((!strcasecmp(keyword, "black_1") || !strcmp(keyword, "bi-level") || !strcmp(keyword, "process-bi-level"))){
+        if (!*default_color)
+          *default_color = "FastGray";
+      }
+      else if((!strcasecmp(keyword, "sgray_8") || !strncmp(keyword, "W8", 2) || !strcmp(keyword, "monochrome") || !strcmp(keyword, "process-monochrome"))){      
+        if (!*default_color || !strcmp(*default_color, "FastGray"))
+          *default_color = "Gray";
+      }
+      else if (!strcasecmp(keyword, "sgray_16") || !strncmp(keyword, "W8-16", 5) || !strncmp(keyword, "W16", 3)){
+        if (!*default_color || !strcmp(*default_color, "FastGray"))
+          *default_color = "Gray16";
+      }
+      else if (!strcasecmp(keyword, "srgb_8") || !strncmp(keyword, "SRGB24", 6) || !strcmp(keyword, "color")){
+        *default_color = "RGB";
+      }
+      else if ((!strcasecmp(keyword, "srgb_16") || !strncmp(keyword, "SRGB48", 6)) && !ippContainsString(attr, "srgb_8")){
+        *default_color = "RGB";
+      }
+      else if (!strcasecmp(keyword, "adobe-rgb_16") || !strncmp(keyword, "ADOBERGB48", 10) ||!strncmp(keyword, "ADOBERGB24-48", 13)){
+        if (!*default_color)
+          *default_color = "AdobeRGB";     
+      }
+      else if ((!strcasecmp(keyword, "adobe-rgb_8") || !strcmp(keyword, "ADOBERGB24")) &&
+            !ippContainsString(attr, "adobe-rgb_16")){
+        if (!*default_color)
+          *default_color = "AdobeRGB";
+      }
+    }
+    if(*default_color)
+      debug_printf("Default ColorModel : %s\n",*default_color);
+  }
+
+  if((attr = ippFindAttribute(def_printer->prattrs, "output-bin-default", IPP_TAG_ZERO)) != NULL)
+  {
+    str = ippGetString(attr,0,NULL); 
+    ippAddString(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+      "output-bin-default",NULL,str);
+    debug_printf("Default OutputBin : %s\n",str);
+  }else{
+    if(cluster_supports_given_attribute(cluster_name,IPP_TAG_ZERO,"output-bin-supported")){
+      ippAddString(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+      "output-bin-default",NULL,"auto");
+      debug_printf("Default OutputBin : %s\n","auto");
+    }
+  }
+
+  if((attr = ippFindAttribute(def_printer->prattrs, "print-content-optimize-default", IPP_TAG_ZERO)) != NULL)
+  {
+    str = ippGetString(attr,0,NULL); 
+    ippAddString(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+      "print-content-optimize-default",NULL,str);
+    debug_printf("Default print-content-optimize : %s\n",str);
+  }else{
+    if(cluster_supports_given_attribute(cluster_name,IPP_TAG_ZERO,"print-content-optimize-default")){
+      ippAddString(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+      "print-content-optimize-default",NULL,"auto");
+      debug_printf("Default print-content-optimize : %s\n","auto");
+    }
+  }
+
+  if((attr = ippFindAttribute(def_printer->prattrs, "print-rendering-intent-default", IPP_TAG_ZERO)) != NULL)
+  {
+    str = ippGetString(attr,0,NULL); 
+    ippAddString(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+      "print-rendering-intent-default",NULL,str);
+    debug_printf("Default print-rendering-intent : %s\n",str);
+  }else{
+    if(cluster_supports_given_attribute(cluster_name,IPP_TAG_ZERO,"print-rendering-intent-default")){
+      ippAddString(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+      "print-rendering-intent-default",NULL,"auto");
+      debug_printf("Default print-rendering-intent : %s\n","auto");
+    }
+  }
+
+  if((attr = ippFindAttribute(def_printer->prattrs, "print-scaling-default", IPP_TAG_ZERO)) != NULL)
+  {
+    str = ippGetString(attr,0,NULL); 
+    ippAddString(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+      "print-scaling-default",NULL,str);
+    debug_printf("Default print-scaling : %s\n",str);
+  }else{
+    if(cluster_supports_given_attribute(cluster_name,IPP_TAG_ZERO,"print-scaling-default")){
+      ippAddString(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+      "print-scaling-default",NULL,"auto");
+      debug_printf("Default print-scaling : %s\n","auto");
+    }
+  }
+
+  if((attr = ippFindAttribute(def_printer->prattrs, "printer-resolution-default", IPP_TAG_ZERO)) != NULL)
+  {
+    if ((res = ippResolutionToRes(attr, 0)) != NULL){
+      xres = res->x;
+      yres = res->y;
+      ippAddResolution(*merged_attributes, IPP_TAG_PRINTER,"printer-resolution-default",
+        IPP_RES_PER_INCH,xres,yres);
+      debug_printf("Default Resolution : %dx%d\n",xres,yres);  
+    }
+  }
+
+ cupsArrayDelete(sizes);
 }
 
 /*
@@ -7016,7 +7264,6 @@ gboolean update_cups_queues(gpointer unused) {
 		     loadedppd, p->queue_name,
 		      " and doing client-side filtering of the job" ,
 		     buf);
-	new_cupsfilter_line_inserted = 0;
 	ap_remote_queue_id_line_inserted = 0;
 	while (cupsFileGets(in, line, sizeof(line))) {
 		if (!strncmp(line, "*Default", 8)) {
