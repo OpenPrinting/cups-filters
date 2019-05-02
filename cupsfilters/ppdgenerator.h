@@ -54,10 +54,28 @@ extern "C" {
 #ifdef HAVE_CUPS_1_6
 
 extern char ppdgenerator_msg[1024];
-
+/* Data structure for resolution (X x Y dpi) */
+typedef struct res_s {
+  int x, y;
+} res_t;
 char            *ppdCreateFromIPP(char *buffer, size_t bufsize,
 				  ipp_t *response, const char *make_model,
 				  const char *pdl, int color, int duplex);
+int             compare_resolutions(void *resolution_a, void *resolution_b,
+		        	void *user_data);
+res_t *         ippResolutionToRes(ipp_attribute_t *attr, int index);
+cups_array_t *  resolutionArrayNew();
+cups_array_t* generate_sizes(ipp_t *response,
+                             ipp_attribute_t **defattr,
+                             int *min_length,
+                             int* min_width,
+                             int* max_length,
+                             int* max_width,
+                             int* bottom,
+                             int* left,
+                             int* right,
+                             int* top,
+                             char* ppdname);
 #endif /* HAVE_CUPS_1_6 */
 
 #  ifdef __cplusplus

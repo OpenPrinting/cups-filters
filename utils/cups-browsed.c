@@ -329,6 +329,44 @@ typedef enum autoshutdown_inactivity_type_e {
   NO_JOBS
 } autoshutdown_inactivity_type_t;
 
+typedef struct media_size_s{
+  int x;
+  int y;
+}media_size_t;
+
+typedef struct pagesize_range_s{
+  int x_dim_min;
+  int x_dim_max;
+  int y_dim_min;
+  int y_dim_max;
+}pagesize_range_t;
+
+typedef struct media_col_s{
+  int x,y,top_margin,bottom_margin,left_margin,right_margin;
+  char *media_source,*media_type;
+}media_col_t;
+
+typedef struct default_str_attribute_s{
+  char* value;
+  int count;
+}default_str_attribute_t;
+
+typedef struct resolution_count_s{
+  res_t *res;
+  int count;
+}resolution_count_t;
+
+typedef struct mediacol_count_s{
+  media_col_t   *data;
+  int count;
+}mediacol_count_t;
+
+typedef struct pagesize_count_s{
+  char* pagesize;
+  int   count;
+}pagesize_count_t;
+
+
 cups_array_t *remote_printers;
 static char *alt_config_file = NULL;
 static cups_array_t *command_line_config;
@@ -425,6 +463,27 @@ static char local_default_printer_file[1024];
 static char remote_default_printer_file[1024];
 static char save_options_file[1024];
 static char debug_log_file[1024];
+
+/*Contains ppd keywords which are written by ppdgenerator.c in the ppd file.*/
+static char* ppd_keywords[] = 
+    {
+      "PageSize",
+      "PageRegion",
+      "InputSlot",
+      "MediaType",
+      "ColorModel",
+      "Duplex",
+      "OutputBin",
+      "StapleLocation",
+      "FoldType",
+      "PunchMedia",
+      "Booklet",
+      "cupsFinishingTemplate",
+      "cupsPrintQuality",
+      "print-content-optimize",
+      "print-rendering-intent",
+      "print-scaling",
+    };
 
 /* Static global variable for indicating we have reached the HTTP timeout */
 static int timeout_reached = 0;
@@ -634,6 +693,436 @@ debug_printf(const char *format, ...) {
     }
   }
 }
+/*
+ * 'create_media_size()' - Create a media-size value.
+ */
+
+static ipp_t *        /* O - media-col collection */
+create_media_size(int width,    /* I - x-dimension in 2540ths */
+      int length)   /* I - y-dimension in 2540ths */
+{
+  ipp_t *media_size = ippNew();   /* media-size value */
+
+
+  ippAddInteger(media_size, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "x-dimension",
+                width);
+  ippAddInteger(media_size, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "y-dimension",
+                length);
+
+  return (media_size);
+}
+
+/*
+ * 'create_media_range()' - Create a pagesize-range value.
+ */
+
+static ipp_t * 
+create_media_range(int x_dim_min_width,
+      int x_dim_max_width, 
+      int y_dim_min_height,
+      int y_dim_max_height) 
+{
+  ipp_t *media_size = ippNew(); 
+  ippAddRange(media_size, IPP_TAG_PRINTER, "x-dimension",
+                x_dim_min_width, x_dim_max_width);
+  ippAddRange(media_size, IPP_TAG_PRINTER, "y-dimension",
+                y_dim_min_height, y_dim_max_height);
+  return (media_size);
+}
+
+void *
+copy_media_size(void *size, void *user_data)
+{
+  media_size_t *data = (media_size_t *)size;
+  media_size_t *copy;
+
+  copy = (media_size_t *)calloc(1, sizeof(media_size_t));
+  if (copy) {
+    copy->x = data->x;
+    copy->y = data->y;
+  }
+  return copy;
+}
+
+void*
+copy_range_size(void *range, void* user_data)
+{
+  pagesize_range_t *data = (pagesize_range_t *)range;
+  pagesize_range_t *copy;
+
+  copy = (pagesize_range_t *)calloc(1,sizeof(pagesize_range_t));
+  if(copy){
+    copy->x_dim_min = data->x_dim_min;
+    copy->x_dim_max = data->x_dim_max;
+    copy->y_dim_min = data->y_dim_min;
+    copy->y_dim_max = data->y_dim_max;
+  }
+  return copy;
+}
+
+void *
+copy_media(void *media, void *user_data)
+{
+  media_col_t *data = (media_col_t *)media;
+  media_col_t *copy;
+  copy = (media_col_t *)calloc(1, sizeof(media_col_t));
+  if (copy) {
+    copy->x = data->x;
+    copy->y = data->y;
+    copy->left_margin=data->left_margin;
+    copy->right_margin=data->right_margin;
+    copy->top_margin=data->top_margin;
+    copy->bottom_margin=data->bottom_margin;
+    copy->media_source = NULL;
+    copy->media_type = NULL;
+    if(data->media_source != NULL){
+      copy->media_source = (char *)malloc(sizeof(char)*32);
+      strcpy(copy->media_source,data->media_source);
+    }
+    if(data->media_type!=NULL){
+      copy->media_type = (char *)malloc(sizeof(char)*32);;
+      strcpy(copy->media_type,data->media_type);
+    }
+  }
+  return copy;
+}
+
+void* copy_media_count(void *media, void* user_data)
+{
+  mediacol_count_t *prev = (mediacol_count_t *)media;
+  mediacol_count_t *copy;
+  copy = (mediacol_count_t*)calloc(1,sizeof(mediacol_count_t));
+  if(copy){
+  copy->data = copy_media(prev->data,NULL);
+  copy->count = prev->count;
+  }
+  return copy;
+}
+
+void* copy_pagesize_count(void *pagesize_count, void* user_data)
+{
+  pagesize_count_t *prev = (pagesize_count_t *)pagesize_count;
+  pagesize_count_t *copy;
+  copy = (pagesize_count_t*)calloc(1,sizeof(pagesize_count_t));
+  copy->pagesize = malloc(sizeof(char)*32);
+  if(copy){
+    strcpy(copy->pagesize,prev->pagesize);
+    copy->count = prev->count;
+  } 
+  return copy;
+}
+
+int compare_pagesize_count(void* pagesize_a, void* pagesize_b,void* user_data)
+{
+  pagesize_count_t *a = (pagesize_count_t *) pagesize_a;
+  pagesize_count_t *b = (pagesize_count_t *) pagesize_b;
+  if(!strcmp(a->pagesize,b->pagesize))
+    return 0;
+  return 1;
+}
+
+/*
+ * 'create_media_col()' - Create a media-col value.
+ */
+
+static ipp_t *       
+create_media_col(
+     int        width,  
+     int        length, 
+     int        left_margin,
+     int        right_margin,
+     int        top_margin,
+     int        bottom_margin,
+     char       *media_source,
+     char       *media_type)  
+{
+  ipp_t *media_col = ippNew(),    /* media-col value */
+  *media_size = create_media_size(width, length);
+
+  ippAddCollection(media_col, IPP_TAG_PRINTER, "media-size", media_size);
+  ippAddInteger(media_col, IPP_TAG_PRINTER, IPP_TAG_INTEGER,
+                "media-bottom-margin",bottom_margin);
+  ippAddInteger(media_col, IPP_TAG_PRINTER, IPP_TAG_INTEGER,
+                "media-left-margin", left_margin);
+  ippAddInteger(media_col, IPP_TAG_PRINTER, IPP_TAG_INTEGER,
+                "media-right-margin",right_margin);
+  ippAddInteger(media_col, IPP_TAG_PRINTER, IPP_TAG_INTEGER,
+                "media-top-margin", top_margin);
+  if(media_source!=NULL)
+    ippAddString(media_col, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+                 "media-source", NULL,media_source);
+  if(media_type!=NULL)
+    ippAddString(media_col, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+                 "media-type", NULL,media_type);
+  ippDelete(media_size);
+
+  return (media_col);
+}
+
+int
+compare_mediasize(void *media_a, void *media_b,
+        void *user_data){
+  media_size_t  *a=(media_size_t *)media_a;
+  media_size_t  *b=(media_size_t *)media_b;
+  if(a->x < b->x)
+    return -1;
+  else if(a->x > b->x)
+      return 1;
+  else{
+    if(a->y==b->y)
+      return 0;
+    else if(a->y < b->y)
+      return -1;
+    return 1;
+  }
+}
+
+int compare_int(int a, int b)
+{
+  if(a<b)
+    return -1;
+  else if(a>b)
+    return 1;
+  return 0;
+}
+
+int compare_rangesize(void *range_a,void *range_b,
+        void *user_data)
+{
+  pagesize_range_t *a = (pagesize_range_t *)range_a;
+  pagesize_range_t *b = (pagesize_range_t *)range_b;
+  int value;
+  if((value=compare_int(a->x_dim_min,b->x_dim_min))==0){
+    if((value=compare_int(a->x_dim_max,b->x_dim_max))==0){
+      if((value=compare_int(a->y_dim_min,b->y_dim_min))==0){
+        if((value=compare_int(a->y_dim_max,b->y_dim_max))==0){
+          return 0;
+        }
+      }
+    }
+  }
+  return value;
+}
+
+int compare_media(void *media_a, void *media_b,
+        void *user_data){
+  media_col_t  *a=(media_col_t *)media_a;
+  media_col_t  *b=(media_col_t *)media_b;
+  int value;
+  if((value=compare_int(a->x,b->x))==0){
+    if((value=compare_int(a->y,b->y))==0){
+      if((value=compare_int(a->top_margin,b->top_margin))==0){
+        if((value=compare_int(a->bottom_margin,b->bottom_margin))==0){
+          if((value=compare_int(a->right_margin,b->right_margin))==0){
+            if((value=compare_int(a->left_margin,b->left_margin))==0){
+              if(a->media_source==NULL && b->media_source == NULL){
+                if(a->media_type==NULL && b->media_type == NULL)
+                  return 0;
+                if(a->media_type==NULL)
+                  return -1;
+                if(b->media_type==NULL)
+                  return 1;
+                return strcmp(a->media_type,b->media_type);
+              }
+              if(a->media_source==NULL)
+                return -1;
+              if(b->media_source==NULL)
+                return 1;
+              if(!strcmp(a->media_source,b->media_source)){
+                if(a->media_type==NULL && b->media_type == NULL)
+                  return 0;
+                if(a->media_type==NULL)
+                  return -1;
+                if(b->media_type==NULL)
+                  return 1;
+                return strcmp(a->media_type,b->media_type);
+              }
+              else
+                return strcmp(a->media_source,b->media_source);
+            }      
+          }        
+        }
+      }
+    }
+  }
+  return value;
+}
+
+int compare_media_count(void* media_a, void* media_b,void* user_data)
+{
+  mediacol_count_t *a = (mediacol_count_t*) media_a;
+  mediacol_count_t *b = (mediacol_count_t*) media_b;
+  return (compare_media(a->data,b->data,NULL));
+}
+
+void *
+copy_default_str(void *data, void *user_data)
+{
+  default_str_attribute_t *prev = (default_str_attribute_t *)data;
+  default_str_attribute_t *copy;
+
+  copy = (default_str_attribute_t *)calloc(1, sizeof(default_str_attribute_t));
+  if (copy) {
+    copy->value = (char *)malloc(sizeof(char)*100);
+    copy->value = strdup(prev->value);
+    copy->count = prev->count;
+  }
+  return copy;
+}
+
+
+int
+compare_default_str(void *defstr_a, void *defstr_b,
+        void *user_data){
+  default_str_attribute_t  *a=(default_str_attribute_t *)defstr_a;
+  default_str_attribute_t  *b=(default_str_attribute_t *)defstr_b;
+  return strcmp(a->value,b->value);
+}
+
+void *
+copy_counted_res(void *data, void *user_data)
+{
+  resolution_count_t *prev = (resolution_count_t *)data;
+  resolution_count_t *copy;
+
+  copy = (resolution_count_t *)calloc(1, sizeof(resolution_count_t));
+  if (copy) {
+    copy->res = (res_t *)malloc(sizeof(res_t));
+    copy->res->x = prev->res->x;
+    copy->res->y = prev->res->y;
+    copy->count = prev->count;
+  }
+  return copy;
+}
+
+
+int
+compare_counted_res(void *defres_a, void *defres_b,
+        void *user_data){
+  resolution_count_t  *a=(resolution_count_t *)defres_a;
+  resolution_count_t  *b=(resolution_count_t *)defres_b;
+  return compare_resolutions(a->res,b->res,NULL);
+}
+
+/*
+ * 'pwg_compare_sizes()' - Compare two media sizes...
+ */
+
+static int        /* O - Result of comparison */
+pwg_compare_sizes(cups_size_t *a, /* I - First media size */
+                  cups_size_t *b) /* I - Second media size */
+{
+  return (strcmp(a->media, b->media));
+}
+
+
+/*
+ * 'pwg_copy_size()' - Copy a media size.
+ */
+
+static cups_size_t *      /* O - New media size */
+pwg_copy_size(cups_size_t *size)  /* I - Media size to copy */
+{
+  cups_size_t *newsize = (cups_size_t *)calloc(1, sizeof(cups_size_t));
+          /* New media size */
+
+  if (newsize)
+    memcpy(newsize, size, sizeof(cups_size_t));
+
+  return (newsize);
+}
+
+/* Function returns number of jobs queued on printer*/
+int         /* O - Number of jobs */
+get_number_of_jobs(http_t       *http,      /* I - Connection to server */
+                   const char   *uri,       /* I - uri of printer */
+                   int          myjobs,     /* I - 0 = all users, 1 = mine */
+                   int          whichjobs)  /* I - @code CUPS_WHICHJOBS_ALL@, @code CUPS_WHICHJOBS_ACTIVE@, or @code CUPS_WHICHJOBS_COMPLETED@ */
+{
+  int   n;                               /* Number of jobs */
+  ipp_t   *request,                       /* IPP Request */
+          *response;                      /* IPP Response */
+  ipp_attribute_t *attr;                  /* Current attribute */
+  int   id;                               /* job-id */
+  static const char * const attrs[] =     /* Requested attributes */
+    {
+      "job-id"
+    };
+
+  httpReconnect(http);
+
+ /*
+  * Build an IPP_GET_JOBS request, which requires the following
+  * attributes:
+  *
+  *    attributes-charset
+  *    attributes-natural-language
+  *    printer-uri
+  *    requesting-user-name
+  *    which-jobs
+  *    my-jobs
+  *    requested-attributes
+  */
+
+
+  /* Generating IPP Request */
+  request = ippNewRequest(IPP_OP_GET_JOBS);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
+               "printer-uri", NULL, uri);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
+               "requesting-user-name", NULL, cupsUser());
+  if (myjobs)
+    ippAddBoolean(request, IPP_TAG_OPERATION, "my-jobs", 1);
+  if (whichjobs == CUPS_WHICHJOBS_COMPLETED)
+    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+                 "which-jobs", NULL, "completed");
+  else if (whichjobs == CUPS_WHICHJOBS_ALL)
+    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+                 "which-jobs", NULL, "all");
+  ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+                "requested-attributes", sizeof(attrs) / sizeof(attrs[0]),
+    NULL, attrs);
+
+  /* Do the request and get back a response... */
+  n = 0;
+  if ((response = cupsDoRequest(http, request, "/")) != NULL){
+  for (attr = ippFirstAttribute(response); attr;
+       attr = ippNextAttribute(response)){
+      /* Skip leading attributes until we hit a job... */
+      while (attr && ippGetGroupTag(attr) != IPP_TAG_JOB)
+        attr = ippNextAttribute(response);
+        if (!attr)
+          break;
+     /* Pull the needed attributes from this job */
+        id = 0;      
+        while (attr && ippGetGroupTag(attr) == IPP_TAG_JOB){
+          if (!strcmp(ippGetName(attr), "job-id") &&
+            ippGetValueTag(attr) == IPP_TAG_INTEGER)
+              id = ippGetInteger(attr,0);
+          attr = ippNextAttribute(response);
+        }
+
+      /* See if we have everything needed */
+      if (!id){
+        if (!attr)
+          break;
+        else
+          continue;
+      }
+      /* Incrementing number of jobs*/
+      n ++;
+      if (!attr)
+        break;
+    }
+
+    ippDelete(response);
+  }
+
+  if (n == 0)
+    return (-1);
+  else
+    return (n);
+}
 
 static const char *
 password_callback (const char *prompt,
@@ -686,6 +1175,580 @@ http_close_local (void)
   }
 }
 
+int     /* O - 1 on match, 0 otherwise */
+_cups_isalpha(int ch)     /* I - Character to test */
+{
+  return ((ch >= 'A' && ch <= 'Z') ||
+          (ch >= 'a' && ch <= 'z'));
+}
+
+int     /* O - 1 on match, 0 otherwise */
+_cups_islower(int ch)     /* I - Character to test */
+{
+  return (ch >= 'a' && ch <= 'z');
+}
+
+int     /* O - Converted character */
+_cups_toupper(int ch)     /* I - Character to convert */
+{
+  return (_cups_islower(ch) ? ch - 'a' + 'A' : ch);
+}
+
+static void
+pwg_ppdize_name(const char *ipp,  /* I - IPP keyword */
+                char       *name, /* I - Name buffer */
+    size_t     namesize)  /* I - Size of name buffer */
+{
+  char  *ptr,       /* Pointer into name buffer */
+  *end;       /* End of name buffer */
+  *name = (char)toupper(*ipp++);
+
+  for (ptr = name + 1, end = name + namesize - 1; *ipp && ptr < end;)
+  {
+    if (*ipp == '-' && _cups_isalpha(ipp[1]))
+    {
+      ipp ++;
+      *ptr++ = (char)toupper(*ipp++ & 255);
+    }
+    else
+      *ptr++ = *ipp++;
+  }
+
+  *ptr = '\0';
+}
+
+void add_mimetype_attributes(char* cluster_name, ipp_t **merged_attributes)
+{
+  int                  count,i;
+  remote_printer_t     *p;
+  const char           *str;
+  char                 *q;
+  cups_array_t         *list;
+  ipp_attribute_t      *attr;
+  int                  num_value,attr_no;
+  char* attributes[] = {
+  "document-format-supported"
+  };
+  for(attr_no=0;attr_no<1;attr_no++){
+    if ((list = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
+        (cups_acopy_func_t)strdup,
+        (cups_afree_func_t)free)) == NULL)
+    return ;
+
+    num_value=0;
+     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+       if(strcmp(cluster_name,p->queue_name))
+        continue;
+    if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_MIMETYPE)) != NULL) {
+          count = ippGetCount(attr);
+          for(i=0;i<count;i++){
+            str = ippGetString(attr, i, NULL);
+            if (!cupsArrayFind(list, (void *)str)){
+              cupsArrayAdd(list, (void *)str);
+              num_value++;
+            }
+          }
+        }
+      }
+    if(num_value!=0){
+    char    *values[num_value];
+    for (q = (char *)cupsArrayFirst(list),i=0;
+        q;
+        q = (char *)cupsArrayNext(list),i++){
+        values[i]=malloc(sizeof(char)*strlen(q)+1);
+        strncpy(values[i],q,strlen(q)+1);
+    }
+    ippAddStrings(*merged_attributes, IPP_TAG_PRINTER,IPP_TAG_MIMETYPE,
+                attributes[attr_no], num_value, NULL,
+                (const char * const *)values);
+    }
+  } 
+  cupsArrayDelete(list);  
+}
+
+/*add_tagzero_attributes - Adds attribute to the merged_attribute variable for the cluster.
+                           This function adds attribute with value tag IPP_TAG_ZERO */
+void add_tagzero_attributes(char* cluster_name,ipp_t **merged_attributes)
+{
+  int                  count,i;                 
+  remote_printer_t     *p;                      
+  const char           *str;
+  char                 *q;
+  cups_array_t         *list;
+  ipp_attribute_t      *attr;
+  int                  num_value,attr_no;
+  char* attributes[] = {
+    "media-supported",
+    "output-bin-supported",
+    "print-content-optimize-supported",
+    "print-rendering-intent-supported",
+    "print-scaling-supported"
+  };
+  for(attr_no=0;attr_no<5;attr_no++){
+    /* Cups Array to store the values for the attribute*/
+    if ((list = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
+        (cups_acopy_func_t)strdup,
+        (cups_afree_func_t)free)) == NULL)
+    return ;
+
+    num_value=0;
+    /* Iterating over all the printers in the cluster*/
+     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+        if(strcmp(cluster_name,p->queue_name))
+          continue;
+        if((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_ZERO)) != NULL) {
+          count = ippGetCount(attr);
+          for(i=0;i<count;i++){
+            /* Pick next format from attribute */
+            str = ippGetString(attr, i, NULL);
+            /* Add format to list, skip duplicates */
+            if (!cupsArrayFind(list, (void *)str)){
+              cupsArrayAdd(list, (void *)str);
+              num_value++;
+            }
+          }
+        }
+      }
+    if(num_value!=0){
+      char    *values[num_value];
+      /* Transferring attributes value from Cups Array to char* array*/
+      for (q = (char *)cupsArrayFirst(list),i=0;q;
+           q = (char *)cupsArrayNext(list),i++){
+        values[i]=malloc(sizeof(char)*strlen(q)+1);
+        strncpy(values[i],q,strlen(q)+1);
+      }
+      ippAddStrings(*merged_attributes, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_KEYWORD),
+                    attributes[attr_no], num_value, NULL,
+                    (const char * const *)values);
+    }
+  }
+  cupsArrayDelete(list);
+}
+
+/*add_keyword_attributes - Adds attributes to the merged_attribute variable for the cluster.
+                           This function adds attributes with value tag IPP_TAG_KEYWORD*/
+void add_keyword_attributes(char* cluster_name,ipp_t **merged_attributes)
+{
+  int                  count,i;
+  remote_printer_t     *p;
+  const char           *str;
+  char                 *q;
+  cups_array_t         *list;
+  ipp_attribute_t      *attr;
+  int                  num_value,attr_no;
+  char* attributes[] = {
+  "output-mode-supported",
+  "urf-supported",
+  "pwg-raster-document-type-supported",
+  "media-source-supported",
+  "media-type-supported",
+  "print-color-mode-supported",
+  "sides-supported"
+  };
+  for(attr_no=0;attr_no<7;attr_no++){
+    if ((list = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
+        (cups_acopy_func_t)strdup,
+        (cups_afree_func_t)free)) == NULL)
+      return;
+
+    num_value=0;
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+         p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+      if(strcmp(cluster_name,p->queue_name))
+        continue;
+      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_KEYWORD)) != NULL) {
+        count = ippGetCount(attr);
+        for(i=0;i<count;i++){
+          str = ippGetString(attr, i, NULL);
+          if (!cupsArrayFind(list, (void *)str)){
+            cupsArrayAdd(list, (void *)str);
+            num_value++;
+          }
+        }
+      }
+    }
+    if(num_value!=0){
+      char    *values[num_value];
+      for(q = (char *)cupsArrayFirst(list),i=0;q;q = (char *)cupsArrayNext(list),i++){
+        values[i]=malloc(sizeof(char)*strlen(q)+1);
+        strncpy(values[i],q,strlen(q)+1);
+    }
+    ippAddStrings(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
+                attributes[attr_no], num_value, NULL,
+                (const char * const *)values);
+    }
+  }
+  cupsArrayDelete(list);
+}
+
+/*add_enum_attributes - Adds attributes to the merged_attribute variable for the cluster.
+                              This function adds attributes with value tag IPP_TAG_BEGIN_ENUM*/
+void add_enum_attributes(char* cluster_name,ipp_t **merged_attributes)
+{
+  int                  count,i,value;
+  remote_printer_t     *p;
+  char                 *str;
+  char                 *q;
+  cups_array_t         *list;
+  ipp_attribute_t      *attr;
+  int                  num_value,attr_no;
+  char* attributes[] = {
+                        "finishings-supported",
+                        "print-quality-supported",
+                        "finishing-template",
+                        "finishings-col-database"
+                        };
+  for(attr_no=0;attr_no<4;attr_no++){
+    if ((list = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
+        (cups_acopy_func_t)strdup,
+        (cups_afree_func_t)free)) == NULL)
+      return ;
+    str = malloc(sizeof(char)*10);
+    num_value=0;
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+         p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+      if(strcmp(cluster_name,p->queue_name))
+        continue;
+      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no],  IPP_TAG_ENUM)) != NULL) {
+        count = ippGetCount(attr);
+        for(i=0;i<count;i++){
+          value = ippGetInteger(attr, i);
+          sprintf(str,"%d",value);
+          if (!cupsArrayFind(list, (void *)str)){
+            cupsArrayAdd(list, (void *)str);
+            num_value++;
+          }
+        }
+      }
+    }
+
+    if(num_value!=0){
+      int   values[num_value];
+      for (q = (char *)cupsArrayFirst(list),i=0;q;
+           q = (char *)cupsArrayNext(list),i++){
+        values[i] = atoi(q);
+      }
+      ippAddIntegers(*merged_attributes, IPP_TAG_PRINTER,IPP_TAG_ENUM,
+                attributes[attr_no], num_value,values);
+    }
+  }
+  cupsArrayDelete(list);
+}
+
+/*add_margin_attribute - Adds margin attributes to the merged_attribute variable for the cluster.*/
+void add_margin_attributes(char* cluster_name,ipp_t **merged_attributes)
+{
+  int                  count,i,value;
+  remote_printer_t     *p;
+  char                 *str;
+  char                 *q;
+  cups_array_t         *list;
+  ipp_attribute_t      *attr;
+  int                  num_value,attr_no;
+  char* attributes[] = {
+  "media-bottom-margin-supported",
+  "media-left-margin-supported",
+  "media-top-margin-supported",
+  "media-right-margin-supported"
+  };
+  for(attr_no=0;attr_no<4;attr_no++){
+    if ((list = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
+        (cups_acopy_func_t)strdup,
+        (cups_afree_func_t)free)) == NULL)
+      return ;
+    str = malloc(sizeof(char)*10);
+    num_value=0;
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+         p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+      if(strcmp(cluster_name,p->queue_name))
+        continue;
+      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no],  IPP_TAG_INTEGER)) != NULL) {
+        count = ippGetCount(attr);
+        for(i=0;i<count;i++){
+          value = ippGetInteger(attr, i);
+          sprintf(str,"%d",value);
+          if (!cupsArrayFind(list, (void *)str)){
+            cupsArrayAdd(list, (void *)str);
+            num_value++;
+          }
+        }
+      }
+    }
+
+    if(num_value!=0){
+      int   values[num_value];
+      for (q = (char *)cupsArrayFirst(list),i=0;q;
+           q = (char *)cupsArrayNext(list),i++){
+        values[i] = atoi(q);
+      }
+      ippAddIntegers(*merged_attributes, IPP_TAG_PRINTER,IPP_TAG_INTEGER,
+                attributes[attr_no], num_value,values);
+    }
+  }
+  cupsArrayDelete(list);
+}
+
+/*add_resolution_attributes - Adds resolution attributes to the merged_attribute
+                                   for the cluster*/
+void add_resolution_attributes(char* cluster_name,ipp_t **merged_attributes)
+{
+  int                  count,i;
+  remote_printer_t     *p;
+  ipp_attribute_t      *attr;
+  int                  num_resolution,attr_no;
+  cups_array_t         *res_array;
+  res_t                *res,*resolution;
+  char* attributes[] = {
+                       "printer-resolution-supported",
+                       "pwg-raster-document-resolution-supported",
+                       "pclm-source-resolution-supported"
+                       };
+
+  for(attr_no=0;attr_no<3;attr_no++){
+     res_array = NULL;
+     res_array = resolutionArrayNew();
+     num_resolution = 0;
+     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+        if(strcmp(cluster_name,p->queue_name))
+          continue;
+        if((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_RESOLUTION)) != NULL){
+        for (i = 0, count = ippGetCount(attr); i < count; i ++){
+          if ((res = ippResolutionToRes(attr, i)) != NULL &&
+           cupsArrayFind(res_array, res) == NULL){
+            cupsArrayAdd(res_array, res);
+            num_resolution++;
+            }
+        }
+      }
+    }
+    if(num_resolution){
+    int xres[num_resolution],yres[num_resolution];
+    for (i = 0, resolution=cupsArrayFirst(res_array);resolution;
+     i ++, resolution = cupsArrayNext(res_array))
+      {
+      xres[i]=resolution->x;
+      yres[i]=resolution->y;
+    }
+    ippAddResolutions(*merged_attributes, IPP_TAG_PRINTER,attributes[attr_no],
+      num_resolution,IPP_RES_PER_INCH,xres,yres);
+    }
+  }
+  cupsArrayDelete(res_array);
+}
+
+/*add_mediasize_attribute - Adds media sizes to the merged_attribute for the printer*/
+void add_mediasize_attributes(char* cluster_name,ipp_t **merged_attributes)
+{
+  int                  count,i;
+  remote_printer_t     *p;
+  ipp_attribute_t      *attr,*media_size_supported,*x_dim,*y_dim;
+  int                  num_sizes,attr_no,num_ranges;
+  ipp_t                *media_size;
+  cups_array_t         *sizes,*size_ranges;
+  media_size_t         *temp,*media_s;
+  pagesize_range_t     *temp_range;
+  char* attributes[] = {
+                       "media-size-supported",
+                       };
+ sizes = cupsArrayNew3((cups_array_func_t)compare_mediasize, NULL, NULL, 0,
+                      (cups_acopy_func_t)copy_media_size, (cups_afree_func_t)free);
+ size_ranges = cupsArrayNew3((cups_array_func_t)compare_rangesize, NULL, NULL, 0,
+                      (cups_acopy_func_t)copy_range_size, (cups_afree_func_t)free);
+  temp = (media_size_t *)malloc(sizeof(media_size_t));
+  temp_range = (pagesize_range_t *)malloc(sizeof(pagesize_range_t));
+  for(attr_no=0;attr_no<1;attr_no++){
+    num_sizes = 0;
+    num_ranges = 0;
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+      if(strcmp(cluster_name,p->queue_name))
+        continue;
+      if((attr = ippFindAttribute(p->prattrs,attributes[attr_no],IPP_TAG_BEGIN_COLLECTION)) != NULL){
+        for (i = 0, count = ippGetCount(attr); i < count; i ++){
+          media_size  = ippGetCollection(attr, i);
+          x_dim = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
+          y_dim = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
+          if(ippGetValueTag(x_dim) == IPP_TAG_RANGE || ippGetValueTag(y_dim) == IPP_TAG_RANGE){
+            if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
+              temp_range->x_dim_min = ippGetRange(x_dim, 0, &temp_range->x_dim_max);
+            else
+              temp_range->x_dim_min = temp_range->x_dim_max = ippGetInteger(x_dim, 0);
+
+            if (ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+              temp_range->y_dim_min = ippGetRange(y_dim, 0, &temp_range->y_dim_max);
+            else
+              temp_range->y_dim_min = temp_range->y_dim_max = ippGetInteger(y_dim, 0);             
+            if(!cupsArrayFind(size_ranges,temp_range)){
+              cupsArrayAdd(size_ranges,temp_range);
+              num_ranges++;
+            }
+          }else{
+            temp->x  = ippGetInteger(x_dim,0);
+            temp->y  = ippGetInteger(y_dim,0);
+            if (!cupsArrayFind(sizes, temp)){
+              cupsArrayAdd(sizes, temp);
+              num_sizes++;
+            }
+          }
+        }
+      }
+    }
+    media_size_supported = ippAddCollections(*merged_attributes, IPP_TAG_PRINTER,attributes[attr_no],num_sizes+num_ranges, NULL);
+    if(num_sizes){
+      for (i = 0, media_s=cupsArrayFirst(sizes);media_s;i ++, media_s = cupsArrayNext(sizes)){
+        ipp_t *size = create_media_size(media_s->x,media_s->y);
+        ippSetCollection(*merged_attributes, &media_size_supported, i, size);
+        ippDelete(size);
+      }
+    }
+    if(num_ranges){
+      for (temp_range=cupsArrayFirst(size_ranges);temp_range;i++, temp_range = cupsArrayNext(size_ranges)){
+        ipp_t *size_range = create_media_range(temp_range->x_dim_min,temp_range->x_dim_max,
+                            temp_range->y_dim_min,temp_range->y_dim_max);
+        ippSetCollection(*merged_attributes, &media_size_supported, i, size_range);
+        ippDelete(size_range);
+      }
+    }
+  }
+  cupsArrayDelete(sizes);
+}
+
+/*add_mediadatabase_attribute - Adds media-col-database attributes for the cluster*/
+void add_mediadatabase_attributes(char* cluster_name,ipp_t **merged_attributes)
+{
+  int                  count,i;
+  remote_printer_t     *p;
+  ipp_attribute_t      *attr,*media_attr;
+  int                  num_database,attr_no;
+  cups_array_t         *media_database;
+  media_col_t          *temp,*media_data;
+  ipp_t                *media_col,
+                       *media_size,*current_media;
+  ipp_attribute_t      *media_col_database;
+  char                 media_source[32],media_type[32];
+  char* attributes[] = {
+                      "media-col-database",
+                       };
+  temp = (media_col_t *)malloc(sizeof(media_col_t));
+  media_database = cupsArrayNew3((cups_array_func_t)compare_media, NULL, NULL, 0,
+                  (cups_acopy_func_t)copy_media, (cups_afree_func_t)free);
+  for(attr_no=0;attr_no<1;attr_no++){
+    num_database = 0;
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+         p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+      if(strcmp(cluster_name,p->queue_name))
+        continue;
+      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_BEGIN_COLLECTION)) != NULL){
+        for (i = 0, count = ippGetCount(attr); i < count; i ++){
+          media_col = ippGetCollection(attr, i);
+          media_size= ippGetCollection(ippFindAttribute(media_col, "media-size", IPP_TAG_BEGIN_COLLECTION), 0);
+          temp->x     = ippGetInteger(ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO),0);
+          temp->y     = ippGetInteger(ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO),0);
+          temp->top_margin   = ippGetInteger(ippFindAttribute(media_col, "media-top-margin", IPP_TAG_INTEGER),0);
+          temp->bottom_margin= ippGetInteger(ippFindAttribute(media_col, "media-bottom-margin", IPP_TAG_INTEGER),0);
+          temp->left_margin  = ippGetInteger(ippFindAttribute(media_col, "media-left-margin", IPP_TAG_INTEGER),0);
+          temp->right_margin = ippGetInteger(ippFindAttribute(media_col, "media-right-margin", IPP_TAG_INTEGER),0);
+          media_type[0]='\0';
+          media_source[0]='\0';
+          temp->media_source = NULL;
+          temp->media_type = NULL;          
+          if ((media_attr = ippFindAttribute(media_col, "media-type", IPP_TAG_KEYWORD)) != NULL)
+            pwg_ppdize_name(ippGetString(media_attr, 0, NULL),media_type, sizeof(media_type));
+          if(strlen(media_type) > 1){
+            temp->media_type = (char*)malloc(sizeof(char)*32);
+            strcpy(temp->media_type,media_type);
+          }
+          if ((media_attr = ippFindAttribute(media_col, "media-source", IPP_TAG_KEYWORD)) != NULL)
+          {
+            pwg_ppdize_name(ippGetString(media_attr, 0, NULL),media_source, sizeof(media_source));
+          }
+          if(strlen(media_source) > 1){
+            temp->media_source = (char*)malloc(sizeof(char)*32);
+            strcpy(temp->media_source,media_source);          
+          }
+
+          if (!cupsArrayFind(media_database, temp)){
+            cupsArrayAdd(media_database, temp);
+            num_database++;
+          }
+        }
+      }
+    }
+
+    if(num_database!=0){
+      media_col_database = ippAddCollections(*merged_attributes,IPP_TAG_PRINTER,attributes[attr_no], num_database, NULL);
+      for (i = 0, media_data=cupsArrayFirst(media_database);media_data;
+           i ++, media_data=cupsArrayNext(media_database)){
+        current_media = create_media_col(media_data->x,media_data->y,media_data->left_margin,media_data->right_margin,
+                    media_data->top_margin,media_data->bottom_margin,media_data->media_source,media_data->media_type);
+        ippSetCollection(*merged_attributes, &media_col_database,i,current_media);
+        ippDelete(current_media);
+      }
+    }
+  }
+  cupsArrayDelete(media_database);
+}
+
+/*add_jobpresets_attribute - Adds presets attributes for the cluster*/
+void add_jobpresets_attribute(char* cluster_name,ipp_t ** merged_attributes)
+{
+  int                  count,i,num_preset=0,preset_no=0;
+  remote_printer_t     *p;
+  cups_array_t         *list,*added_presets;
+  ipp_t                *preset;
+  ipp_attribute_t      *attr;
+  const char           *preset_name;
+  ipp_attribute_t      *preset_attribute;
+  if ((list = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
+        (cups_acopy_func_t)strdup,
+        (cups_afree_func_t)free)) == NULL)
+    return;
+
+  if ((added_presets = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
+      (cups_acopy_func_t)strdup,
+      (cups_afree_func_t)free)) == NULL)
+    return;
+
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+    if(strcmp(cluster_name,p->queue_name))
+      continue;
+    if ((attr = ippFindAttribute(p->prattrs, "job-presets-supported", IPP_TAG_BEGIN_COLLECTION)) != NULL){
+      for (i = 0, count = ippGetCount(attr); i < count; i ++){
+        preset = ippGetCollection(attr, i);
+        preset_name = ippGetString(ippFindAttribute(preset, "preset-name", IPP_TAG_ZERO), 0, NULL);
+        if (!cupsArrayFind(list, (void *)preset_name)){
+          cupsArrayAdd(list, (void *)preset_name);
+          num_preset++;
+        }
+      }
+    }
+  }
+
+  if(num_preset==0)
+    return;
+
+  preset_attribute = ippAddCollections(*merged_attributes, IPP_TAG_PRINTER, "job-presets-supported",num_preset, NULL);
+
+  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)){
+    if ((attr = ippFindAttribute(p->prattrs, "job-presets-supported", IPP_TAG_BEGIN_COLLECTION)) != NULL){
+      for (i = 0, count = ippGetCount(attr); i < count; i ++){
+        preset = ippGetCollection(attr, i);
+        preset_name = ippGetString(ippFindAttribute(preset, "preset-name", IPP_TAG_ZERO), 0, NULL);
+        if (!cupsArrayFind(added_presets, (void *)preset_name)){
+          cupsArrayAdd(added_presets, (void *)preset_name);
+          ippSetCollection(*merged_attributes, &preset_attribute, i, preset);
+          preset_no++;
+        }else
+          continue;
+      }
+    }
+  }
+}
 
 /*
  * Remove all illegal characters and replace each group of such characters
