@@ -59,8 +59,9 @@ typedef struct res_s {
   int x, y;
 } res_t;
 char            *ppdCreateFromIPP(char *buffer, size_t bufsize,
-				  ipp_t *response, const char *make_model,
-				  const char *pdl, int color, int duplex);
+                  ipp_t *response, const char *make_model,
+                  const char *pdl, int color, int duplex,cups_array_t* conflicts,
+                  cups_array_t *sizes,char* default_pagesize, const char *default_cluster_color);
 int             compare_resolutions(void *resolution_a, void *resolution_b,
 		        	void *user_data);
 res_t *         ippResolutionToRes(ipp_attribute_t *attr, int index);

@@ -1476,14 +1476,18 @@ int is_colordevice(const char *keyword,ipp_attribute_t *attr)
  *                        of an IPP printer.
  */
 
-char *					/* O - PPD filename or NULL on error */
-ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
-		 size_t bufsize,	/* I - Size of filename buffer */
-		 ipp_t  *response,	/* I - Get-Printer-Attributes response */
-		 const char *make_model,/* I - Make and model from DNS-SD */
-		 const char *pdl,       /* I - List of PDLs from DNS-SD */
-		 int    color,          /* I - Color printer? (from DNS-SD) */
-		 int    duplex)         /* I - Duplex printer? (from DNS-SD) */
+char *          /* O - PPD filename or NULL on error */
+ppdCreateFromIPP(char   *buffer,  /* I - Filename buffer */
+     size_t bufsize,  /* I - Size of filename buffer */
+     ipp_t  *response,  /* I - Get-Printer-Attributes response */
+     const char *make_model,/* I - Make and model from DNS-SD */
+     const char *pdl,       /* I - List of PDLs from DNS-SD */
+     int    color,          /* I - Color printer? (from DNS-SD) */
+     int    duplex,          /* I - Duplex printer? (from DNS-SD) */
+     cups_array_t *conflicts,  /* I - Array of constraints */
+     cups_array_t   *sizes,   /* I - Media sizes we've added */ 
+     char*          default_pagesize, /* I - default pagesize*/
+     const char     *default_cluster_color) /* I - cluster def color (if cluster's attributes are returned)*/
 {
   cups_file_t		*fp;		/* PPD file */
   cups_array_t		*sizes;		/* Media sizes we've added */
@@ -2025,8 +2029,13 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
  /*
   * PageSize/PageRegion/ImageableArea/PaperDimension
   */
-  sizes = generate_sizes(response,&defattr,&min_length,&min_width,&max_length,&max_width,
+  printer_sizes = generate_sizes(response,&defattr,&min_length,&min_width,&max_length,&max_width,
                           &bottom,&left,&right,&top,ppdname);
+  if(sizes==NULL){
+    sizes = printer_sizes;
+  }
+  else
+    strcpy(ppdname,default_pagesize);
 
   if (cupsArrayCount(sizes) > 0)
   {
@@ -2740,6 +2749,16 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
         cupsFilePrintf(fp, "*ColorModel DeviceRGB/%s: \"<</cupsColorSpace 1/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
 		           _cupsLangString(lang, _("Device RGB")));
       }
+    }
+
+    if(default_pagesize != NULL){
+      /* Here we are dealing with a cluster, if the default cluster color
+         is not supplied we set it Gray*/
+        if(default_cluster_color!=NULL){
+          default_color = default_cluster_color;
+        }
+        else
+          default_color = "Gray";
     }
 
     if (default_color)
@@ -3668,6 +3687,18 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
 
       cupsFilePuts(fp, "\"\n*End\n");
+    }
+  }
+
+  /* 
+  * constraints
+  */
+  if(conflicts != NULL)
+  {
+    char* constraint;
+    for (constraint = (char *)cupsArrayFirst(conflicts); constraint;
+         constraint = (char *)cupsArrayNext(conflicts)){
+        cupsFilePrintf(fp,"%s",constraint);
     }
   }
 

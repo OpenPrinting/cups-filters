@@ -144,7 +144,7 @@ main(int  argc,				/* I - Number of command-line args */
 	int     bytes;      /* Bytes copied */
   char uri[HTTP_MAX_URI];
   char    *argv_nt[7];
-	int     outbuflen,filter_pid,dup_status,filefd,exit_status;
+	int     outbuflen,filter_pid,filefd,exit_status;
   static const char *pattrs[] =
                 {
                   "printer-defaults"
@@ -255,11 +255,9 @@ main(int  argc,				/* I - Number of command-line args */
 	 complete (second double quote) */
       if ((ptr2 = strchr(ptr1, '"')) != NULL) {
 	*ptr2 = '\0';
-	ippDelete(response);
 	break;
       }
     failed:
-      ippDelete(response);
       /* Pause half a second before next attempt */
       usleep(500000);
     }
@@ -374,6 +372,7 @@ main(int  argc,				/* I - Number of command-line args */
 
 	set_option_in_str(argv_nt[5], outbuflen, "output-format", document_format);
  	set_option_in_str(argv_nt[5], outbuflen, "Resolution",resolution);
+  setenv("DEVICE_URI",printer_uri, 1);
 
  	filefd = cupsTempFd(tempfile_filter, sizeof(tempfile_filter));
   /* The output of the last filter in pdftoippprinter will be written to 
@@ -381,8 +380,7 @@ main(int  argc,				/* I - Number of command-line args */
   this temperory file will help us find whether the filter worked correctly and
   what was the document-format of the filtered output.*/
   close(1);
-  dup_status = dup(filefd);
-
+  dup(filefd);
   /* Calling pdftoippprinter.c filter*/
   apply_filters(7,argv_nt);
 
@@ -407,6 +405,7 @@ main(int  argc,				/* I - Number of command-line args */
 	else if(!strcmp(document_format,"pcl"))
 	  setenv("FINAL_CONTENT_TYPE", "application/pcl", 1);
 
+  ippDelete(response);
 	/* The implicitclass backend will send the job directly to the ipp backend*/
 	pid_t pid = fork(); 
   if ( pid == 0 ) { 
