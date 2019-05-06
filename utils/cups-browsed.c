@@ -2766,7 +2766,6 @@ int supports_job_attributes_requested(const gchar* printer,int printer_index,
       str = ippGetString(attr,0, NULL);
       debug_printf("Inside job-sheets supported %s\n",str);
       job_sheet_supported = get_supported_options(p->prattrs,"job-sheets-supported");
-      print_cups_array(job_sheet_supported);
       if(str){
         if(!cupsArrayFind(job_sheet_supported, (void *)str) && strcmp(str,"none")){
           debug_printf("Printer %s doesn't support the job-sheet %s\n",printer,str);
@@ -2928,7 +2927,6 @@ int supports_job_attributes_requested(const gchar* printer,int printer_index,
   if ((attr = ippFindAttribute(response, "cupsPrintQuality", 
       IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0){
     print_qualities = get_supported_options(p->prattrs,"cupsPrintQuality");
-    print_cups_array(print_qualities);
     str = ippGetString(attr,0,NULL);
     debug_printf("%s\n",str);
     if(str && !cupsArrayFind(print_qualities,(void*)str))
