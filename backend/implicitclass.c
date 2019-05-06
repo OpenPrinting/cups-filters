@@ -27,6 +27,7 @@
 #include <cups/cups.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <cupsfilters/pdftoippprinter.h>
 
 /*
  * Local globals...
@@ -118,151 +119,6 @@ set_option_in_str(char *buf,    /* I - Buffer with option list string */
   buf[buflen - 1] = '\0';
 }
 
-
-int                             /* O - Job ID or 0 on error */
-create_job_on_printer(
-    http_t        *http,        /* I - Connection to server */
-    const char    *uri,         /* I - Printer uri */
-    const char    *resource,    /* I - Resource of Destination */
-    const char    *title,       /* I - Title of job */
-    int           num_options,  /* I - Number of options */
-    cups_option_t *options)     /* I - Options */
-{
-    int             job_id = 0;           /* job-id value */
-    ipp_t           *request,             /* Get-Printer-Attributes request */
-                    *response;            /* Supported attributes */
-    ipp_attribute_t *attr;                /* job-id attribute */
-    
-  if (job_id)
-    job_id = 0;
-
-  fprintf(stderr,"Creating job on printer %s\n",uri);
-
- /* Build a Create-Job request. */
-  if ((request = ippNewRequest(IPP_OP_CREATE_JOB)) == NULL)
-  {
-    fprintf(stderr, "Unable to create job request\n");
-    return (0);
-  }
-
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
-               NULL, uri);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
-               NULL, cupsUser());
-  if (title)
-    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "job-name", NULL,
-                 title);
-  cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
-  cupsEncodeOptions2(request, num_options, options, IPP_TAG_JOB);
-  cupsEncodeOptions2(request, num_options, options, IPP_TAG_SUBSCRIPTION);
-
- /* Send the request and get the job-id. */
-  response = cupsDoRequest(http, request, resource);
-
-  if ((attr = ippFindAttribute(response, "job-id", IPP_TAG_INTEGER)) != NULL)
-  {
-    job_id = ippGetInteger(attr,0);
-    fprintf(stderr, "Job created with id %d on printer-uri %s\n",job_id,uri);
-  }
-  ippDelete(response);
-  return (job_id);
-}
-
-
-http_status_t                  /* O - HTTP status of request */
-start_document(
-    http_t     *http,          /* I - Connection to server */
-    char       *uri,           /* I - Destination uri */
-    char       *resource,      /* I - Resource*/ 
-    int        job_id,         /* I - Job ID */
-    const char *docname,       /* I - Name of document */
-    const char *format,        /* I - MIME type or @code CUPS_FORMAT_foo@ */
-    int        last_document)  /* I - 1 for last document in job, 0 otherwise */
-{
-
-  ipp_t   *request;            /* Send-Document request */
-  http_status_t status;        /* HTTP status */
-
-  fprintf(stderr, "Creating Start Document Request for printer with uri %s\n", uri);
- /* Create a Send-Document request. */
-  if ((request = ippNewRequest(IPP_OP_SEND_DOCUMENT)) == NULL)
-  {
-    return (HTTP_STATUS_ERROR);
-  }
-
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
-               NULL, uri);
-  ippAddInteger(request, IPP_TAG_OPERATION, IPP_TAG_INTEGER, "job-id", job_id);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
-               NULL, cupsUser());
-  if (docname)
-    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "document-name",
-                 NULL, docname);
-  if (format)
-    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_MIMETYPE,
-                 "document-format", NULL, format);
-  ippAddBoolean(request, IPP_TAG_OPERATION, "last-document", (char)last_document);
-
- /*  Send and delete the request, then return the status. */
-  status = cupsSendRequest(http, request, resource, CUPS_LENGTH_VARIABLE);
-  ippDelete(request);
-  return (status);
-}
-
-ipp_status_t                          /* O - Status of document submission */
-finish_document(http_t     *http,     /* I - Connection to server */
-               const char *resource)  /* I - Destination Resource */
-{
-  ippDelete(cupsGetResponse(http, resource));
-  return (cupsLastError());
-}
-
-
-
-ipp_status_t                           /* O - IPP status */
-cancel_job(http_t     *http,           /* I - Connection to server */
-           const char  *uri,           /* I - Uri of printer */
-           const char  *resource,      /* I - Resource of printer */
-           int        job_id,          /* I - Job ID */
-          int        purge)            /* I - 1 to purge, 0 to cancel */
-{
-  ipp_t   *request;                    /* IPP request */
-
- /* Range check input. */
-  if (job_id < -1 || (!uri && job_id == 0))
-  {
-    return (0);
-  }
-
- /*
-  * Build an IPP_CANCEL_JOB or IPP_PURGE_JOBS request, which requires the following
-  * attributes:
-  *
-  *    attributes-charset
-  *    attributes-natural-language
-  *    job-uri or printer-uri + job-id
-  *    requesting-user-name
-  *    [purge-job] or [purge-jobs]
-  */
-
-  request = ippNewRequest(job_id < 0 ? IPP_OP_PURGE_JOBS : IPP_OP_CANCEL_JOB);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
-                 uri);
-  ippAddInteger(request, IPP_TAG_OPERATION, IPP_TAG_INTEGER, "job-id",
-                  job_id);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "requesting-user-name",
-               NULL, cupsUser());
-
-  if (purge && job_id >= 0)
-    ippAddBoolean(request, IPP_TAG_OPERATION, "purge-job", 1);
-  else if (!purge && job_id < 0)
-    ippAddBoolean(request, IPP_TAG_OPERATION, "purge-jobs", 0);
- 
- /* Do the request. */
-  ippDelete(cupsDoRequest(http, request, resource));
-  return (cupsLastError());
-}
-
 /*
  * 'main()' - Browse for printers.
  */
@@ -272,18 +128,23 @@ main(int  argc,				/* I - Number of command-line args */
      char *argv[])			/* I - Command-line arguments */
 {
   const char	*device_uri;            /* URI with which we were called */
-  char scheme[64], username[32], queue_name[1024], resource[32],hostname[1024],
-       printer_uri[1024];
+  char scheme[64], username[32], queue_name[1024], resource[32],
+       printer_uri[1024],document_format[256],resolution[16];
   int port, status;
   const char *ptr1 = NULL;
-  char *ptr2;
+  char *ptr2,*ptr3,*ptr4;
   const char *job_id;
+  char    *filename,    /* PDF file to convert */
+           tempfile[1024],
+           tempfile_filter[1024];   /* Temporary file */
   int i;
   char dest_host[1024];	/* Destination host */
   ipp_t *request, *response;
   ipp_attribute_t *attr;
-  http_t          *http;
+	int     bytes;      /* Bytes copied */
   char uri[HTTP_MAX_URI];
+  char    *argv_nt[7];
+	int     outbuflen,filter_pid,dup_status,filefd,exit_status;
   static const char *pattrs[] =
                 {
                   "printer-defaults"
@@ -426,7 +287,7 @@ main(int  argc,				/* I - Number of command-line args */
       const char *title;
       int num_options = 0;
       cups_option_t *options = NULL;
-      int fd, job_id;
+      int fd;
       char buffer[8192];
       
       fprintf(stderr, "DEBUG: Received destination host name from cups-browsed: printer-uri %s\n",
@@ -457,68 +318,112 @@ main(int  argc,				/* I - Number of command-line args */
 	fd = open(argv[6], O_RDONLY);
       else
 	fd = 0; /* stdin */
-  
+
+  /* Finding the document format in which the pdftoippprinter will convert the pdf
+     file*/
+  if ((ptr3 = strchr(ptr1, ' ')) != NULL) {
+	  *ptr3='\0';
+	  ptr3++;
+  }
+
+	/* Finding the resolution requested for the job*/
+	if ((ptr4 = strchr(ptr3, ' ')) != NULL) {
+	  *ptr4='\0';
+	  ptr4++;
+  }
+
   strncpy(printer_uri,ptr1,sizeof(printer_uri));
-  status = httpSeparateURI(HTTP_URI_CODING_ALL, ptr1, scheme, sizeof(scheme),
-           username, sizeof(username), hostname, sizeof(hostname), &port,
-           resource, sizeof(resource));
+	strncpy(document_format,ptr3,sizeof(document_format));
+	strncpy(resolution,ptr4,sizeof(resolution));
 
-  if(status != 0){
-      fprintf(stderr, "httpSeparateURI error, please check printer uri\n");
-      return (CUPS_BACKEND_RETRY);    
-  }
-  if (!port)
-    port = 631;   
-  http = httpConnect2(hostname, port,NULL,AF_UNSPEC, HTTP_ENCRYPT_IF_REQUESTED,
-         1,3000, NULL);
+	fprintf(stderr,"DEBUG: Recieved job for the printer with the destination uri - %s, Final-document format for the printer - %s and requested resolution - %s\n",
+		printer_uri,document_format,resolution);
 
-  job_id = create_job_on_printer(http,printer_uri,resource,
-          title ? title : "(stdin)",num_options, options);
-  
-  /* Queue the job directly on the server */
-  if (job_id > 0) {
-	http_status_t       status;         /* Write status */
-	const char          *format;        /* Document format */
-	ssize_t             bytes;          /* Bytes read */
-
-	if (cupsGetOption("raw", num_options, options))
-	  format = CUPS_FORMAT_RAW;
-	else if ((format = cupsGetOption("document-format", num_options,
-					 options)) == NULL)
-	  format = CUPS_FORMAT_AUTO;
-	
-  status = start_document(http,printer_uri,resource,job_id, NULL,
-           format, 1);
-
-	while (status == HTTP_CONTINUE &&
-	       (bytes = read(fd, buffer, sizeof(buffer))) > 0)
-	  status = cupsWriteRequestData(http, buffer, (size_t)bytes);
-
-	if (status != HTTP_CONTINUE) {
-	  fprintf(stderr, "ERROR: %s: Unable to queue the print data - %s. Retrying.",
-		  argv[0], httpStatus(status));
-    finish_document(http, resource);
-    cancel_job(http,printer_uri,resource,job_id, 0);
-	  return (CUPS_BACKEND_RETRY);
+	/* We need to send modified arguments to the IPP backend */
+	  if (argc == 6){
+   /** Copy stdin to a temp file...*/
+    if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0){
+			fprintf(stderr,"Debug: Can't Read PDF file.\n");
+			return CUPS_BACKEND_FAILED;
+		}
+	  fprintf(stderr, "Debug: implicitclass - copying to temp print file \"%s\"\n",
+						tempfile);
+	  while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)
+	    bytes = write(fd, buffer, bytes);
+	  close(fd);
+	  filename = tempfile;
+	}
+	else{
+   /** Use the filename on the command-line...*/
+	  filename    = argv[6];
+	  tempfile[0] = '\0';
 	}
 
-	if (finish_document(http,resource) != IPP_OK) {
-	  fprintf(stderr, "ERROR: %s: Unable to complete the job - %s. Retrying.",
-		  argv[0], cupsLastErrorString());
-	  cancel_job(http,printer_uri,resource, job_id, 0);
-	  return (CUPS_BACKEND_RETRY);
+	/*Copying the argument to a new char** which will be sent to the filter and 
+	  the ipp backend*/
+	for (i = 0; i < 5; i++)
+	  argv_nt[i] = argv[i];
+
+	/* Few new options will be added to the argv[5]*/
+	outbuflen = strlen(argv[5]) + 256;
+  argv_nt[5] = calloc(outbuflen, sizeof(char));
+  strcpy(argv_nt[5], (const char*)argv[5]);
+
+  /* Filter pdftoippprinter.c will read the input from this file*/
+  argv_nt[6] = filename;
+
+	set_option_in_str(argv_nt[5], outbuflen, "output-format", document_format);
+ 	set_option_in_str(argv_nt[5], outbuflen, "Resolution",resolution);
+
+ 	filefd = cupsTempFd(tempfile_filter, sizeof(tempfile_filter));
+  /* The output of the last filter in pdftoippprinter will be written to 
+  this file. We could have sent the output directly to the backend, but having
+  this temperory file will help us find whether the filter worked correctly and
+  what was the document-format of the filtered output.*/
+  close(1);
+  dup_status = dup(filefd);
+
+  /* Calling pdftoippprinter.c filter*/
+  apply_filters(7,argv_nt);
+
+  close(filefd);
+
+  /*We will send the filtered output of the pdftoippprinter.c to the IPP Backend*/
+	argv_nt[6] = tempfile_filter;
+  fprintf(stderr, "DEBUG: The filtered output of pdftoippprinter is written to file %s\n",
+  	tempfile_filter);
+
+  /*Setting the final content type to the best pdl supported by the printer.*/
+	if(!strcmp(document_format,"pdf"))
+	  setenv("FINAL_CONTENT_TYPE", "application/pdf", 1);
+	else if(!strcmp(document_format,"raster"))
+	  setenv("FINAL_CONTENT_TYPE", "image/pwg-raster", 1);
+	else if(!strcmp(document_format,"apple-raster"))
+	  setenv("FINAL_CONTENT_TYPE", "image/urf", 1);
+	else if(!strcmp(document_format,"pclm"))
+	  setenv("FINAL_CONTENT_TYPE", "application/PCLm", 1);
+	else if(!strcmp(document_format,"pclxl"))
+	  setenv("FINAL_CONTENT_TYPE", "application/vnd.hp-pclxl", 1);
+	else if(!strcmp(document_format,"pcl"))
+	  setenv("FINAL_CONTENT_TYPE", "application/pcl", 1);
+
+	/* The implicitclass backend will send the job directly to the ipp backend*/
+	pid_t pid = fork(); 
+  if ( pid == 0 ) { 
+  	  fprintf(stderr, "DEBUG: Started IPP Backend with pid: %d\n",getpid());
+      execv("/usr/lib/cups/backend/ipp",argv_nt); 
+  }else{
+     int status; 
+     waitpid(pid, &status, 0);
+     if(WIFEXITED(status)){ 
+       exit_status = WEXITSTATUS(status);         
+       fprintf(stderr, "DEBUG: The IPP Backend exited with the status %d\n",  
+                                     exit_status); 
+     } 
+     return exit_status;
+     }
+ 	 }
 	}
-      }
-
-      if (job_id < 1) {
-	fprintf(stderr, "ERROR: %s: Unable to create job - %s. Retrying.",
-		argv[0], cupsLastErrorString());
-	return (CUPS_BACKEND_RETRY);
-      }
-
-      return (CUPS_BACKEND_OK);
-    }
-  }
   else if (argc != 1)
   {
     fprintf(stderr,
