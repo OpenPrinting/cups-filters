@@ -1490,7 +1490,7 @@ ppdCreateFromIPP(char   *buffer,  /* I - Filename buffer */
      const char     *default_cluster_color) /* I - cluster def color (if cluster's attributes are returned)*/
 {
   cups_file_t		*fp;		/* PPD file */
-  cups_array_t		*sizes;		/* Media sizes we've added */
+  cups_array_t		*printer_sizes;		/* Media sizes we've added */
   cups_size_t		*size;		/* Current media size */
   ipp_attribute_t	*attr,		/* xxx-supported */
                         *attr2,
