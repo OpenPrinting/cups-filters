@@ -811,30 +811,6 @@ main(int  argc,				/* I - Number of command-line arguments */
       }
   }
 
-  /*
-  *   print-scaling = fill functionality.
-  */
-  if((val = cupsGetOption("print-scaling",num_options,options)) !=0) {
-    if(!strcasecmp(val,"fill")) {
-        fillprint = 1;
-    }
-  }
-  else if((val = cupsGetOption("fill",num_options,options))!=0) {
-    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
-    {
-      fillprint = 1;
-    }
-  }
-  /*
-   * crop-to-fit
-   */
-  if((val = cupsGetOption("crop-to-fit",num_options,options))!= NULL){
-    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
-    {
-      cropfit=1;
-    }
-  }
-
   if ((val = cupsGetOption("OutputOrder",num_options,options)) != 0) {
     if (!strcasecmp(val, "Reverse")) {
       Reverse = 1;
@@ -899,21 +875,6 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if ((val = cupsGetOption("brightness", num_options, options)) != NULL)
       brightness = atoi(val) * 0.01f;
-
-  if ((val = cupsGetOption("scaling", num_options, options)) != NULL)
-    zoom = atoi(val) * 0.01;
-  else if (((val =
-	     cupsGetOption("fit-to-page", num_options, options)) != NULL) ||
-	   ((val = cupsGetOption("fitplot", num_options, options)) != NULL))
-  {
-    if (!strcasecmp(val, "yes") || !strcasecmp(val, "on") ||
-	!strcasecmp(val, "true"))
-      zoom = 1.0;
-    else
-      zoom = 0.0;
-  }
-  else if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
-    zoom = 0.0;
 
   if ((val = cupsGetOption("ppi", num_options, options)) != NULL)
   {
@@ -997,6 +958,114 @@ main(int  argc,				/* I - Number of command-line arguments */
   colorspace = ColorDevice ? CUPS_IMAGE_RGB_CMYK : CUPS_IMAGE_WHITE;
 
   img = cupsImageOpen(filename, colorspace, CUPS_IMAGE_WHITE, sat, hue, NULL);
+  if(img!=NULL){
+
+  int margin_defined = 0;
+  int fidelity = 0;
+  int document_large = 0;
+
+  if(ppd->custom_margins[0]||ppd->custom_margins[1]||
+      ppd->custom_margins[2]||ppd->custom_margins[3])   // In case of custom margins
+    margin_defined = 1;
+  if(PageLength!=PageTop-PageBottom||PageWidth!=PageRight-PageLeft)
+    margin_defined = 1;
+
+  if((val = cupsGetOption("ipp-attribute-fidelity",num_options,options)) != NULL) {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes")||
+        !strcasecmp(val,"on")) {
+      fidelity = 1;
+    }
+  }
+
+  float w = (float)cupsImageGetWidth(img);
+  float h = (float)cupsImageGetHeight(img);
+  float pw = PageRight-PageLeft;
+  float ph = PageTop-PageBottom;
+  int tempOrientation = Orientation;
+  int flag =3;
+  if((val = cupsGetOption("orientation-requested",num_options,options))!=NULL) {
+    tempOrientation = atoi(val);
+  }
+  else if((val = cupsGetOption("landscape",num_options,options))!=NULL) {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes")) {
+      tempOrientation = 4;
+    }
+  }
+  if(tempOrientation==0) {
+    int temp1 = pw,
+          temp2 = ph,
+          temp3 = pw,
+          temp4 = ph;
+      if(temp1>w) temp1 = w;
+      if(temp2>h) temp2 = h;
+      if(temp3>h) temp3 = h;
+      if(temp4>w) temp4 = w;
+      if(temp1*temp2<temp3*temp4) {
+        tempOrientation = 4;
+      }
+  }
+  if(tempOrientation==4||tempOrientation==5) {
+    int tmp = pw;
+    pw = ph;
+    ph = tmp;
+  }
+  if(w>pw||h>ph) {
+    document_large = 1;
+  }
+
+  if((val = cupsGetOption("print-scaling",num_options,options)) != NULL) {
+    if(!strcasecmp(val,"auto")) {
+      if(fidelity||document_large) {
+        if(margin_defined)
+          zoom = 1.0;       // fit method
+        else
+          fillprint = 1;    // fill method
+      }
+      else
+        cropfit = 1;        // none method
+    }
+    else if(!strcasecmp(val,"auto-fit")) {
+      if(fidelity||document_large)
+        zoom = 1.0;         // fit method
+      else
+        cropfit = 1;        // none method
+    }
+    else if(!strcasecmp(val,"fill"))
+      fillprint = 1;        // fill method
+    else if(!strcasecmp(val,"fit"))
+      zoom = 1.0;           // fitplot = 1 or fit method
+    else
+      cropfit=1;            // none or crop-to-fit
+  }
+  else{       // print-scaling is not defined, look for alternate options.
+
+  if ((val = cupsGetOption("scaling", num_options, options)) != NULL)
+    zoom = atoi(val) * 0.01;
+  else if (((val =
+	     cupsGetOption("fit-to-page", num_options, options)) != NULL) ||
+	   ((val = cupsGetOption("fitplot", num_options, options)) != NULL))
+  {
+    if (!strcasecmp(val, "yes") || !strcasecmp(val, "on") ||
+	      !strcasecmp(val, "true"))
+      zoom = 1.0;
+    else
+      zoom = 0.0;
+  }
+  else if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
+    zoom = 0.0;
+
+  if((val = cupsGetOption("fill",num_options,options))!=0) {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes")) {
+      fillprint = 1;
+    }
+  }
+
+  if((val = cupsGetOption("crop-to-fit",num_options,options))!= NULL){
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes")) {
+      cropfit=1;
+    }
+  } }
+  }
   if(fillprint||cropfit)
   {
     float w = (float)cupsImageGetWidth(img);
