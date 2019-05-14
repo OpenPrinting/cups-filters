@@ -29,7 +29,7 @@ MIT Open Source License  -  http://www.opensource.org/
 */
 
 
-/* PS/PDF to CUPS Raster filter based on Mutool */
+/* PS/PDF to CUPS Raster filter based on mutool */
 
 #include <config.h>
 #include <cups/cups.h>
@@ -168,7 +168,7 @@ mutool_spawn (const char *filename,
 	      char **envp,
 	      FILE *fp,
 	      int ipfiledes,
-	      int opfiledes)
+	      const char* opfilename)
 {
   char *argument;
   char buf[BUFSIZ];
@@ -192,8 +192,8 @@ mutool_spawn (const char *filename,
   }
   mutoolargv[i] = NULL;
 
-  /* Debug output: Full Mutool command line and environment variables */
-  fprintf(stderr, "DEBUG: Mutool command line:");
+  /* Debug output: Full mutool command line and environment variables */
+  fprintf(stderr, "DEBUG: mutool command line:");
   for (i = 0; mutoolargv[i]; i ++) {
     if ((strchr(mutoolargv[i],' ')) || (strchr(mutoolargv[i],'\t')))
       apos = "'";
@@ -214,7 +214,7 @@ mutool_spawn (const char *filename,
   fclose(tempfp);
 
   if ((pid = fork()) == 0) {
-    /* Execute Mutool command line ... */
+    /* Execute mutool command line ... */
     execvpe(filename, mutoolargv, envp);
     perror(filename);
     goto out;
@@ -224,23 +224,27 @@ mutool_spawn (const char *filename,
   if (waitpid (pid, &wstatus, 0) == -1) {
     if (errno == EINTR)
       goto retry_wait;
-    perror ("gs");
+    perror ("mutool");
     goto out;
   }
 
-  /* How did Mutool process terminate */
+  /* How did mutool process terminate */
   if (WIFEXITED(wstatus))
     /* Via exit() anywhere or return() in the main() function */
     status = WEXITSTATUS(wstatus);
   else if (WIFSIGNALED(wstatus))
     /* Via signal */
     status = 256 * WTERMSIG(wstatus);
+  fprintf(stderr, "DEBUG: mutool completed, status: %d\n", status);
 
   /* write the output to stdout */
-  tempfp = fdopen(opfiledes, "rb");
-  while ((n = fread(buf, 1, BUFSIZ, tempfp)) > 0)
-    fwrite(buf, 1, BUFSIZ, stdout);
-  
+  tempfp = fopen(opfilename, "rb");
+  if (tempfp)
+    while ((n = fread(buf, 1, BUFSIZ, tempfp)) > 0)
+      n = fwrite(buf, 1, n, stdout);
+  else
+    fprintf(stderr, "DEBUG: Unable to read mutool output.\n");
+
   fclose(tempfp);
 
  out:
@@ -262,8 +266,8 @@ main (int argc, char **argv, char *envp[])
   FILE *fp = NULL;
   mupdf_page_header h;
   int fd,
-      ipfiledes,
-      opfiledes;
+      ipfiledes = -1,
+      opfiledes = -1;
   int cm_disabled;
   int n;
   int num_options;
@@ -359,11 +363,15 @@ main (int argc, char **argv, char *envp[])
   strncpy(opfilebuf,CUPS_OPTEMPFILE,14);
   ipfiledes = mkstemp(ipfilebuf);
   opfiledes = mkstemp(opfilebuf);
+  if (ipfiledes < 0 || opfiledes < 0) {
+    fprintf(stderr, "ERROR: Unable to create temporary files for mutool input and output.\n");
+    goto out;
+  }
 
-  /* Mutool parameters */
+  /* mutool parameters */
   mupdf_args = cupsArrayNew(NULL, NULL);
   if (!mupdf_args) {
-    fprintf(stderr, "ERROR: Unable to allocate memory for Mutool arguments array\n");
+    fprintf(stderr, "ERROR: Unable to allocate memory for mutool arguments array\n");
     goto out;
   }
 
@@ -376,7 +384,7 @@ main (int argc, char **argv, char *envp[])
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
   cupsArrayAdd(mupdf_args, strdup("-smtf"));
 
-  /* Mutool output parameters */
+  /* mutool output parameters */
   cupsArrayAdd(mupdf_args, strdup("-Fpwg"));
 
   /* Note that MuPDF only creates PWG Raster and never CUPS Raster,
@@ -431,18 +439,18 @@ main (int argc, char **argv, char *envp[])
   h.MirrorPrint = CUPS_FALSE;
   h.Orientation = CUPS_ORIENT_0;
 
-  /* get all the data from the header and pass it to Mutool */
+  /* get all the data from the header and pass it to mutool */
   add_pdf_header_options (&h, mupdf_args);
 
   snprintf(tmpstr, sizeof(tmpstr), "%s", ipfilebuf);
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
 
-  /* Execute Mutool command line ... */
+  /* Execute mutool command line ... */
   snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_MUTOOL);
 		
   /* call mutool */
   rewind(fp);
-  status = mutool_spawn (tmpstr, mupdf_args, envp, fp, ipfiledes, opfiledes);
+  status = mutool_spawn (tmpstr, mupdf_args, envp, fp, ipfiledes, opfilebuf);
   if (status != 0) status = 1;
 out:
   if (fp)
@@ -453,7 +461,9 @@ out:
   free(icc_profile);
   if (ppd)
     ppdClose(ppd);
-  unlink(ipfilebuf);
-  unlink(opfilebuf);
+  if (ipfiledes >= 0)
+    unlink(ipfilebuf);
+  if (opfiledes >= 0)
+    unlink(opfilebuf);
   return status;
 }

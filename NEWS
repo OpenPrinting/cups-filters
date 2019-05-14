@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.22.5 - 2019-04-07
 
 CHANGES IN V1.22.6
 
+	- mupdftoraster: Fixed filter not producing output at all.
 	- Build system: ENABLE_DRIVERLESS got only defined with CUPS
 	  1.6 and newer, not with older CUPS versions (Issue #111).
 	- pdftopdf, imagetopdf, imagetoraster: Silenced compiler
