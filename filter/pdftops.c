@@ -304,6 +304,7 @@ main(int  argc,				/* I - Number of command-line args */
 		wait_pid,		/* Process ID from wait() */
 		wait_status,		/* Status from child */
 		exit_status = 0;	/* Exit status */
+  int gray_output = 0; /* Checking for monochrome/grayscale PostScript output */
   char		*pdf_argv[100],		/* Arguments for pdftops/gs */
 		pstops_path[1024],	/* Path to pstops program */
 		*pstops_argv[7],	/* Arguments for pstops filter */
@@ -587,6 +588,38 @@ main(int  argc,				/* I - Number of command-line args */
     log_command_line("rastertops", rastertops_argv);
   }
 
+  /*
+  * Force monochrome/grayscale PostScript output 
+  * if job is to be printed in monochrome/grayscale
+  */
+  if (ppd->color_device == 0)  /* Monochrome printer */
+    gray_output = 1;
+  else  /*Color Printer - user option for Grayscale */
+  {
+    if ((val = cupsGetOption("pwg-raster-document-type", num_options,
+               options)) != NULL ||
+      (val = cupsGetOption("PwgRasterDocumentType", num_options,
+               options)) != NULL ||
+      (val = cupsGetOption("print-color-mode", num_options,
+               options)) != NULL ||
+      (val = cupsGetOption("PrintColorMode", num_options,
+               options)) != NULL ||
+      (val = cupsGetOption("color-space", num_options,
+               options)) != NULL ||
+      (val = cupsGetOption("ColorSpace", num_options,
+               options)) != NULL ||
+      (val = cupsGetOption("color-model", num_options,
+               options)) != NULL ||
+      (val = cupsGetOption("ColorModel", num_options,
+               options)) != NULL)
+      {
+          if (!strncasecmp(val, "Black", 5))
+            gray_output = 1;
+          else if (!strncasecmp(val, "Gray", 4))
+            gray_output = 1;
+      }
+  }
+
  /*
   * Build the command-line for the pdftops, gs, pdftocairo, or
   * acroread filter...
@@ -612,7 +645,13 @@ main(int  argc,				/* I - Number of command-line args */
 #    endif /* HAVE_GHOSTSCRIPT_PS2WRITE */
     pdf_argv[7] = (char *)"-dShowAcroForm";
     pdf_argv[8] = (char *)"-sOUTPUTFILE=%stdout";
-    pdf_argc    = 9;
+    if (gray_output == 1) /* Checking for monochrome/grayscale PostScript output */
+    {
+      pdf_argv[9] = (char *)"-sColorConversionStrategy=Gray";
+      pdf_argc = 10;
+    }
+    else
+      pdf_argc = 9;
   }
   else if (renderer == PDFTOCAIRO)
   {
@@ -863,6 +902,11 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argv[pdf_argc++] = resolution;
     fprintf(stderr, "DEBUG: Using image rendering resolution %d dpi\n", res);
 #endif /* HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION */
+    if (gray_output == 1) /* Checking for monochrome/grayscale PostScript output */
+    {
+      pdf_argv[1] = (char *)"-level1";
+      pdf_argv[pdf_argc++] = (char *)"-optimizecolorspace";
+    }
     pdf_argv[pdf_argc++] = filename;
     pdf_argv[pdf_argc++] = (char *)"-";
   }
