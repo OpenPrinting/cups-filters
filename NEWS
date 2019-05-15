@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.22.5 - 2019-04-07
 
 CHANGES IN V1.22.6
 
+	- rastertops: Fixed PageSize settings in the PostScript output
+	  (Must be in points not in pixels).
 	- pdftops, mupdftoraster: Produce actual grayscale/monochrome
 	  PostScript (and not only instructions to print grayscale/
 	  monochrome) for jobs to be printed in grayscale/monochrome

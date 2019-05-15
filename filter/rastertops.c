@@ -44,14 +44,13 @@
  */
 
 void
-writeProlog(cups_cspace_t  mode,   /* I - Color mode (gray or color) */
-	    int 	   width,  /* I - width of the image in pixels */
-            int 	   height) /* I - height of the image in pixels */
+writeProlog(int 	   width,  /* I - width of the image in points */
+            int 	   height) /* I - height of the image in points */
 {
   /* Document header... */
   printf("%%!PS-Adobe-3.0\n");
   printf("%%%%BoundingBox: %d %d %d %d\n", 0, 0, width, height);
-  printf("%%%%Creator: Cups-Filters\n");
+  printf("%%%%Creator: cups-filters\n");
   printf("%%%%LanguageLevel: 2\n");
   printf("%%%%DocumentData: Clean7Bit\n");
   printf("%%%%Pages: (atend)\n");
@@ -100,11 +99,13 @@ find_bits(cups_cspace_t mode, /* I - Color space of data */
  * 'writeImage()' - Write the information regarding the image
  */
 
-void			         /* O - Exit status */
-writeImage(int           bpc,	 /* I - bits per color */
-	   int           width,	 /* I - width of image */
-	   int           height, /* I - height of image */
-	   cups_cspace_t mode)   /* I - color model of image */
+void			             /* O - Exit status */
+writeImage(int           pagewidth,  /* I - width of page in points */
+	   int           pageheight, /* I - height of page in points */
+	   int           bpc,	     /* I - bits per color */
+	   int           pixwidth,   /* I - width of image in pixels */
+	   int           pixheight,  /* I - height of image in pixels */
+	   cups_cspace_t mode)       /* I - color model of image */
 {
   printf("gsave\n");
 
@@ -131,12 +132,12 @@ writeImage(int           bpc,	 /* I - bits per color */
 
   if (bpc == 16)
     printf("/Input currentfile /FlateDecode filter def\n");
-  printf("%d %d scale\n",width, height);
+  printf("%d %d scale\n", pagewidth, pageheight);
   printf("<< \n"
 	 "/ImageType 1\n"
 	 "/Width %d\n"
 	 "/Height %d\n"
-	 "/BitsPerComponent %d\n", width, height, find_bits(mode, bpc));
+	 "/BitsPerComponent %d\n", pixwidth, pixheight, find_bits(mode, bpc));
 
   switch (mode)
   {
@@ -168,7 +169,7 @@ writeImage(int           bpc,	 /* I - bits per color */
   else
     printf("/DataSource currentfile /FlateDecode filter\n");
 	
-  printf("/ImageMatrix [%d 0 0 %d 0 %d]\n", width, -1*height, height);
+  printf("/ImageMatrix [%d 0 0 %d 0 %d]\n", pixwidth, -1*pixheight, pixheight);
   printf(">> image\n");
 }
 
@@ -453,7 +454,7 @@ main(int  argc,	   /* I - Number of command-line arguments */
     if (!count)
     {
       count++;
-      writeProlog(header.cupsColorSpace, header.cupsWidth, header.cupsHeight);
+      writeProlog(header.PageSize[0], header.PageSize[1]);
     }
 
    /*
@@ -469,12 +470,14 @@ main(int  argc,	   /* I - Number of command-line arguments */
    /*
     *	Write the starting of the page
     */
-    writeStartPage(Page, header.cupsWidth, header.cupsHeight);
+    writeStartPage(Page, header.PageSize[0], header.PageSize[1]);
 
    /*
     *	write the information regarding the image
     */
-    writeImage(header.cupsBitsPerColor, header.cupsWidth, header.cupsHeight,
+    writeImage(header.PageSize[0], header.PageSize[1],
+	       header.cupsBitsPerColor,
+	       header.cupsWidth, header.cupsHeight,
 	       header.cupsColorSpace);
 
     /* Write the compressed image data*/
