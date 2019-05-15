@@ -118,7 +118,8 @@ parse_pdf_header_options(FILE *fp, mupdf_page_header *h)
 
 static void
 add_pdf_header_options(mupdf_page_header *h,
-		       cups_array_t 		 *mupdf_args)
+		       cups_array_t 	 *mupdf_args,
+		       int               gray_output)
 {
   char tmpstr[1024];
 
@@ -158,7 +159,13 @@ add_pdf_header_options(mupdf_page_header *h,
   case CUPS_CSPACE_W:
     snprintf(tmpstr, sizeof(tmpstr), "-cmono");
     break;
-  }    
+  }
+  /* If we got called by pdftops, gray_output is set to 0 or 1,
+     0 for a color job and 1 for a gray job */
+  if (gray_output == 1)
+    snprintf(tmpstr, sizeof(tmpstr), "-cgray");
+  else if (gray_output == 0)
+    snprintf(tmpstr, sizeof(tmpstr), "-ccmyk");
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
 }
 
@@ -272,6 +279,7 @@ main (int argc, char **argv, char *envp[])
   int n;
   int num_options;
   int status = 1;
+  int gray_output = -1;
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
   cm_calibration_t cm_calibrate;
@@ -439,8 +447,17 @@ main (int argc, char **argv, char *envp[])
   h.MirrorPrint = CUPS_FALSE;
   h.Orientation = CUPS_ORIENT_0;
 
+  /* If we got called by pdftops, the option "pdftops-mutool-gray"
+     is supplied and 0 for a color job and 1 for a gray job */
+  t = cupsGetOption("pdftops-mutool-gray", num_options, options);
+  if (t) {
+    gray_output = atoi(t);
+    if (gray_output < 0 || gray_output > 1)
+      gray_output = -1;
+  }
+
   /* get all the data from the header and pass it to mutool */
-  add_pdf_header_options (&h, mupdf_args);
+  add_pdf_header_options (&h, mupdf_args, gray_output);
 
   snprintf(tmpstr, sizeof(tmpstr), "%s", ipfilebuf);
   cupsArrayAdd(mupdf_args, strdup(tmpstr));

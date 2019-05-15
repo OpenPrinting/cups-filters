@@ -611,11 +611,15 @@ main(int  argc,				/* I - Number of command-line args */
       (val = cupsGetOption("color-model", num_options,
                options)) != NULL ||
       (val = cupsGetOption("ColorModel", num_options,
+               options)) != NULL ||
+      (val = cupsGetOption("output-mode", num_options,
+               options)) != NULL ||
+      (val = cupsGetOption("OutputMode", num_options,
                options)) != NULL)
       {
-          if (!strncasecmp(val, "Black", 5))
-            gray_output = 1;
-          else if (!strncasecmp(val, "Gray", 4))
+          if (strcasestr(val, "Black") ||
+	      strcasestr(val, "Gray") ||
+	      strcasestr(val, "Mono"))
             gray_output = 1;
       }
   }
@@ -979,14 +983,17 @@ main(int  argc,				/* I - Number of command-line args */
    /*
     * Add Resolution option to avoid slow processing by the printer when the
     * resolution of embedded images does not match the printer's resolution
+    * Also add pdftops-mutool-gray option to tell mupdftoraster whether the
+    * job is a to be printed in grayscale
     */
-    mupdf_options = realloc(mupdf_options, strlen(mupdf_options) + 30);
+    mupdf_options = realloc(mupdf_options, strlen(mupdf_options) + 50);
     if (!mupdf_options) {
       fprintf(stderr, "ERROR: Can't allocate mupdf_options\n");
       exit(2);
     }
     mupdf_end = mupdf_options + strlen(mupdf_options);
-    snprintf(mupdf_end, 30, " Resolution=%ddpi", res);
+    snprintf(mupdf_end, 50, " Resolution=%ddpi pdftops-mutool-gray=%d",
+	     res, gray_output);
     pdf_argv[5] = mupdf_options;
     rastertops_argv[5] = mupdf_options;
   }

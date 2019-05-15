@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.22.5 - 2019-04-07
 
 CHANGES IN V1.22.6
 
+	- pdftops, mupdftoraster: Produce actual grayscale/monochrome
+	  PostScript (and not only instructions to print grayscale/
+	  monochrome) for jobs to be printed in grayscale/monochrome
+	  (Issue #96, Pull request #115).
 	- mupdftoraster: Fixed filter not producing output at all.
 	- Build system: ENABLE_DRIVERLESS got only defined with CUPS
 	  1.6 and newer, not with older CUPS versions (Issue #111).
