@@ -982,7 +982,6 @@ main(int  argc,				/* I - Number of command-line arguments */
   float pw = PageRight-PageLeft;
   float ph = PageTop-PageBottom;
   int tempOrientation = Orientation;
-  int flag =3;
   if((val = cupsGetOption("orientation-requested",num_options,options))!=NULL) {
     tempOrientation = atoi(val);
   }
