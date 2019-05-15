@@ -41,6 +41,10 @@ INTRODUCTION
     (if in the actually used Poppler version such options are
     available). This is the case for most modern Linux distributions.
 
+    If you use MuPDF as PDF renderer make sure to use at least version
+    1.15, as the older versions have bugs and so some files get not
+    printed correctly.
+
     For Apple Raster output (used by AirPrint printers) at least CUPS
     2.2.2 is required.
 
