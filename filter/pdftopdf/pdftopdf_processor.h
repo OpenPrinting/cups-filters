@@ -16,6 +16,9 @@ ProcessingParameters()
     fitplot(false),
     fillprint(false),  //print-scaling = fill
     cropfit(false),
+    autoprint(false),
+    autofit(false),
+    fidelity(false),
     noOrientation(false),
     orientation(ROT_0),normal_landscape(ROT_270),
     paper_is_landscape(false),
@@ -59,6 +62,9 @@ ProcessingParameters()
   bool fitplot;
   bool fillprint;   //print-scaling = fill
   bool cropfit;     // -o crop-to-fit
+  bool autoprint;   // print-scaling = auto
+  bool autofit;     // print-scaling = auto-fit
+  bool fidelity;
   bool noOrientation;
   PageRect page;
   Rotation orientation,normal_landscape;  // normal_landscape (i.e. default direction) is e.g. needed for number-up=2

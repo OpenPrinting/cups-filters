@@ -375,39 +375,6 @@ main(int  argc,				/* I - Number of command-line arguments */
       b = 10.0f;
   }
 
-  if ((val = cupsGetOption("scaling", num_options, options)) != NULL)
-    zoom = atoi(val) * 0.01;
-  else if (((val =
-	     cupsGetOption("fit-to-page", num_options, options)) != NULL) ||
-	   ((val = cupsGetOption("fitplot", num_options, options)) != NULL))
-  {
-    if (!strcasecmp(val, "yes") || !strcasecmp(val, "on") ||
-	!strcasecmp(val, "true"))
-      zoom = 1.0;
-    else
-      zoom = 0.0;
-  }
-  else if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
-    zoom = 0.0;
-
-  if((val = cupsGetOption("print-scaling",num_options,options)) !=0) {
-    if(!strcasecmp(val,"fill")) {
-        fillprint = 1;
-    }
-  }
-  else if((val = cupsGetOption("fill",num_options,options))!=0) {
-    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
-    {
-      fillprint = 1;
-    }
-  }
-  if((val = cupsGetOption("crop-to-fit",num_options,options))!= NULL){
-    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
-    {
-      cropfit=1;
-    }
-  }
-
   if ((val = cupsGetOption("ppi", num_options, options)) != NULL)
   {
     if (sscanf(val, "%dx%d", &xppi, &yppi) < 2)
@@ -707,6 +674,123 @@ main(int  argc,				/* I - Number of command-line arguments */
     img = cupsImageOpen(filename, primary, secondary, sat, hue, NULL);
   else
     img = cupsImageOpen(filename, primary, secondary, sat, hue, lut);
+
+  if(img!=NULL){
+
+  int margin_defined = 0;
+  int fidelity = 0;
+  int document_large = 0;
+
+  if(ppd->custom_margins[0]||ppd->custom_margins[1]
+      ||ppd->custom_margins[2]||ppd->custom_margins[3])
+    margin_defined = 1;
+
+  if(PageLength!=PageTop-PageBottom||PageWidth!=PageRight-PageLeft)
+  {
+    margin_defined = 1;
+  }
+
+  if((val = cupsGetOption("ipp-attribute-fidelity",num_options,options)) != NULL)
+  {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes")||
+        !strcasecmp(val,"on"))
+    {
+      fidelity = 1;
+    }
+  }
+
+  float w = (float)cupsImageGetWidth(img);
+  float h = (float)cupsImageGetHeight(img);
+  float pw = PageRight-PageLeft;
+  float ph = PageTop-PageBottom;
+  int tempOrientation = Orientation;
+  if((val = cupsGetOption("orientation-requested",num_options,options))!=NULL)
+  {
+    tempOrientation = atoi(val);
+  }
+  else if((val = cupsGetOption("landscape",num_options,options))!=NULL)
+  {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      tempOrientation = 4;
+    }
+  }
+  if(tempOrientation==0)
+  {
+    if(min(pw,w)*min(ph,h)<min(pw,h)*min(ph,w))
+    {
+      tempOrientation = 4;
+    }
+  }
+  if(tempOrientation==4||tempOrientation==5)
+  {
+    int tmp = pw;
+    pw = ph;
+    ph = tmp;
+  }
+  if(w>pw||h>ph)
+  {
+    document_large = 1;
+  }
+
+  if((val = cupsGetOption("print-scaling",num_options,options)) != NULL)
+  {
+    if(!strcasecmp(val,"auto"))
+    {
+      if(fidelity||document_large)
+      {
+        if(margin_defined)
+          zoom = 1.0;       // fit method
+        else
+          fillprint = 1;    // fill method
+      }
+      else
+        cropfit = 1;        // none method
+    }
+    else if(!strcasecmp(val,"auto-fit"))
+    {
+      if(fidelity||document_large)
+        zoom = 1.0;         // fit method
+      else
+        cropfit = 1;        // none method
+    }
+    else if(!strcasecmp(val,"fill"))
+      fillprint = 1;        // fill method
+    else if(!strcasecmp(val,"fit"))
+      zoom = 1.0;           // fitplot = 1 or fit method
+    else
+      cropfit=1;            // none or crop-to-fit
+  }
+  else{       // print-scaling is not defined, look for alternate options.
+    if ((val = cupsGetOption("scaling", num_options, options)) != NULL)
+    zoom = atoi(val) * 0.01;
+  else if (((val =
+	     cupsGetOption("fit-to-page", num_options, options)) != NULL) ||
+	   ((val = cupsGetOption("fitplot", num_options, options)) != NULL))
+  {
+    if (!strcasecmp(val, "yes") || !strcasecmp(val, "on") ||
+	!strcasecmp(val, "true"))
+      zoom = 1.0;
+    else
+      zoom = 0.0;
+  }
+  else if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
+    zoom = 0.0;
+
+  if((val = cupsGetOption("fill",num_options,options))!=0) {
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      fillprint = 1;
+    }
+  }
+  if((val = cupsGetOption("crop-to-fit",num_options,options))!= NULL){
+    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes"))
+    {
+      cropfit=1;
+    }
+  } }
+  }
+
   if(img!=NULL)
   {
     if(fillprint||cropfit)

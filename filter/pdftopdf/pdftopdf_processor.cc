@@ -175,6 +175,46 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
   }
   const int numPages=std::max(shuffle.size(),pages.size());
 
+  if(param.autoprint||param.autofit){
+    bool margin_defined = true;
+    bool document_large = false;
+    int pw = param.page.right-param.page.left;
+    int ph = param.page.top-param.page.bottom;
+    int w=0,h=0;
+    Rotation tempRot=param.orientation;
+    PageRect r= pages[0]->getRect();
+    w = r.width;
+    h = r.height;
+
+    if(tempRot==ROT_90||tempRot==ROT_270)
+    {
+      std::swap(w,h);
+    }
+    if(w>=pw||h>=ph)
+    {
+      document_large = true;
+    }
+    if((param.page.width==pw)&&
+        (param.page.height==ph))
+        margin_defined = false;
+    if(param.autoprint){
+      if(param.fidelity||document_large) {
+        if(margin_defined)
+          param.fitplot = true;
+        else
+          param.fillprint = true;
+      }
+      else
+        param.cropfit = true;
+    }
+    else{
+      if(param.fidelity||document_large)
+        param.fitplot = true;
+      else
+        param.cropfit = true;
+    }
+  }
+
   if(param.fillprint||param.cropfit){
     fprintf(stderr,"[DEBUG]: Cropping input pdf and Enabling fitplot.\n");
     if(param.noOrientation&&pages.size())
