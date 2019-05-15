@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.22.6 - 2019-05-15
 -----------------------------------------------------
 
+CHANGES IN V1.23.0
+
+	- imagetopdf, imagetoraster, pdftopdf: Add support for
+	  print-scaling option (Issue #108, Pull request #118).
+
 CHANGES IN V1.22.6
 
 	- rastertops: Fixed PageSize settings in the PostScript output
