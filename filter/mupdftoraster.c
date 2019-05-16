@@ -172,22 +172,16 @@ add_pdf_header_options(mupdf_page_header *h,
 static int
 mutool_spawn (const char *filename,
 	      cups_array_t *mupdf_args,
-	      char **envp,
-	      FILE *fp,
-	      int ipfiledes,
-	      const char* opfilename)
+	      char **envp)
 {
   char *argument;
-  char buf[BUFSIZ];
   char **mutoolargv;
   const char* apos;
   int i;
-  int n;
   int numargs;
   int pid;
   int status = 65536;
   int wstatus;
-  FILE *tempfp;
 
   /* Put mutool command line argument into an array for the "exec()"
      call */
@@ -213,13 +207,6 @@ mutool_spawn (const char *filename,
   for (i = 0; envp[i]; i ++)
     fprintf(stderr, "DEBUG: envp[%d]=\"%s\"\n", i, envp[i]);
 
-  /* save the contents for the file to a temporary location */
-  tempfp = fdopen(ipfiledes, "wb");
-  while ((n = fread(buf, 1, BUFSIZ, fp)) > 0)
-    fwrite(buf, 1, n, tempfp);
-
-  fclose(tempfp);
-
   if ((pid = fork()) == 0) {
     /* Execute mutool command line ... */
     execvpe(filename, mutoolargv, envp);
@@ -244,16 +231,6 @@ mutool_spawn (const char *filename,
     status = 256 * WTERMSIG(wstatus);
   fprintf(stderr, "DEBUG: mutool completed, status: %d\n", status);
 
-  /* write the output to stdout */
-  tempfp = fopen(opfilename, "rb");
-  if (tempfp)
-    while ((n = fread(buf, 1, BUFSIZ, tempfp)) > 0)
-      n = fwrite(buf, 1, n, stdout);
-  else
-    fprintf(stderr, "DEBUG: Unable to read mutool output.\n");
-
-  fclose(tempfp);
-
  out:
   free(mutoolargv);
   return status;
@@ -265,16 +242,13 @@ main (int argc, char **argv, char *envp[])
   char buf[BUFSIZ];
   char *icc_profile = NULL;
   char tmpstr[1024];
-  char ipfilebuf[20],
-       opfilebuf[20];
   const char *t = NULL;
   cups_array_t *mupdf_args = NULL;
   cups_option_t *options = NULL;
   FILE *fp = NULL;
+  char infilename[1024];
   mupdf_page_header h;
-  int fd,
-      ipfiledes = -1,
-      opfiledes = -1;
+  int fd = -1;
   int cm_disabled;
   int n;
   int num_options;
@@ -314,13 +288,11 @@ main (int argc, char **argv, char *envp[])
   if (argc == 6) {
     /* stdin */
 
-    fd = cupsTempFd(buf,BUFSIZ);
+    fd = cupsTempFd(infilename, 1024);
     if (fd < 0) {
       fprintf(stderr, "ERROR: Can't create temporary file\n");
       goto out;
     }
-    /* remove name */
-    unlink(buf);
 
     /* copy stdin to the tmp file */
     while ((n = read(0,buf,BUFSIZ)) > 0) {
@@ -348,6 +320,7 @@ main (int argc, char **argv, char *envp[])
       fprintf(stderr, "ERROR: Can't open input file %s\n",argv[6]);
       goto out;
     }
+    strncpy(infilename, argv[6], 1024);
   }
 
   /* If doc type is not PDF exit */
@@ -364,18 +337,6 @@ main (int argc, char **argv, char *envp[])
   if (!cm_disabled)
     cmGetPrinterIccProfile(getenv("PRINTER"), &icc_profile, ppd);
 
-  /* Create temporary input and output files */
-  memset(ipfilebuf,0,sizeof(ipfilebuf));
-  memset(opfilebuf,0,sizeof(opfilebuf));
-  strncpy(ipfilebuf,CUPS_IPTEMPFILE,14);
-  strncpy(opfilebuf,CUPS_OPTEMPFILE,14);
-  ipfiledes = mkstemp(ipfilebuf);
-  opfiledes = mkstemp(opfilebuf);
-  if (ipfiledes < 0 || opfiledes < 0) {
-    fprintf(stderr, "ERROR: Unable to create temporary files for mutool input and output.\n");
-    goto out;
-  }
-
   /* mutool parameters */
   mupdf_args = cupsArrayNew(NULL, NULL);
   if (!mupdf_args) {
@@ -388,8 +349,7 @@ main (int argc, char **argv, char *envp[])
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
   cupsArrayAdd(mupdf_args, strdup("draw"));
   cupsArrayAdd(mupdf_args, strdup("-L"));
-  snprintf(tmpstr, sizeof(tmpstr), "-o%s", opfilebuf);
-  cupsArrayAdd(mupdf_args, strdup(tmpstr));
+  cupsArrayAdd(mupdf_args, strdup("-o-"));
   cupsArrayAdd(mupdf_args, strdup("-smtf"));
 
   /* mutool output parameters */
@@ -459,15 +419,14 @@ main (int argc, char **argv, char *envp[])
   /* get all the data from the header and pass it to mutool */
   add_pdf_header_options (&h, mupdf_args, gray_output);
 
-  snprintf(tmpstr, sizeof(tmpstr), "%s", ipfilebuf);
+  snprintf(tmpstr, sizeof(tmpstr), "%s", infilename);
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
 
   /* Execute mutool command line ... */
   snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_MUTOOL);
 		
   /* call mutool */
-  rewind(fp);
-  status = mutool_spawn (tmpstr, mupdf_args, envp, fp, ipfiledes, opfilebuf);
+  status = mutool_spawn (tmpstr, mupdf_args, envp);
   if (status != 0) status = 1;
 out:
   if (fp)
@@ -478,9 +437,7 @@ out:
   free(icc_profile);
   if (ppd)
     ppdClose(ppd);
-  if (ipfiledes >= 0)
-    unlink(ipfilebuf);
-  if (opfiledes >= 0)
-    unlink(opfilebuf);
+  if (fd >= 0)
+    unlink(infilename);
   return status;
 }

@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.22.6 - 2019-05-15
 
 CHANGES IN V1.23.0
 
+	- mupdftoraster: Reduced the use of temporary files from 3 to
+	  just one.
 	- imagetopdf, imagetoraster, pdftopdf: Add support for
 	  print-scaling option (Issue #108, Pull request #118).
 
