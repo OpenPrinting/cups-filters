@@ -22,6 +22,12 @@
 #include "backend-private.h"
 #include <cups/array.h>
 #include <ctype.h>
+#include <cups/array.h>
+#include <ctype.h>
+#include <cups/cups.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <cupsfilters/pdftoippprinter.h>
 
 /*
  * Local globals...
@@ -39,6 +45,79 @@ static int		job_canceled = 0;
 
 static void		sigterm_handler(int sig);
 
+#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
+#define HAVE_CUPS_1_6 1
+#endif
+
+#ifndef HAVE_CUPS_1_6
+int
+ippGetInteger(ipp_attribute_t *attr,
+              int             element)
+{
+  return (attr->values[element].integer);
+}
+#endif
+
+
+int                             /* O  - Next delay value */
+next_delay(int current,         /* I  - Current delay value or 0 */
+           int *previous)       /* IO - Previous delay value */
+{
+  int next;          /* Next delay value */
+  if (current > 0)
+  {
+    next      = (current + *previous) % 12;
+    *previous = next < current ? 0 : current;
+  }
+  else
+  {
+    next      = 1;
+    *previous = 0;
+  }
+  return (next);
+}
+
+/*
+ * Set an option in a string of options
+ */
+
+void          /* O - 0 on success, 1 on error */
+set_option_in_str(char *buf,    /* I - Buffer with option list string */
+      int buflen,   /* I - Length of buffer */
+      const char *option, /* I - Option to change/add */
+      const char *value)  /* I - New value for option, NULL
+                 removes option */
+{
+  char *p1, *p2;
+
+  if (!buf || buflen == 0 || !option)
+    return;
+  /* Remove any occurrence of option in the string */
+  p1 = buf;
+  while (*p1 != '\0' && (p2 = strcasestr(p1, option)) != NULL)
+  {
+    if (p2 > buf && *(p2 - 1) != ' ' && *(p2 - 1) != '\t')
+    {
+      p1 = p2 + 1;
+      continue;
+    }
+    p1 = p2 + strlen(option);
+    if (*p1 != '=' && *p1 != ' ' && *p1 != '\t' && *p1 != '\0')
+      continue;
+    while (*p1 != ' ' && *p1 != '\t' && *p1 != '\0') p1 ++;
+    while ((*p1 == ' ' || *p1 == '\t') && *p1 != '\0') p1 ++;
+    memmove(p2, p1, strlen(buf) - (buf - p1) + 1);
+    p1 = p2;
+  }
+  /* Add option=value to the end of the string */
+  if (!value)
+    return;
+  p1 = buf + strlen(buf);
+  *p1 = ' ';
+  p1 ++;
+  snprintf(p1, buflen - (buf - p1), "%s=%s", option, value);
+  buf[buflen - 1] = '\0';
+}
 
 /*
  * 'main()' - Browse for printers.
@@ -49,16 +128,23 @@ main(int  argc,				/* I - Number of command-line args */
      char *argv[])			/* I - Command-line arguments */
 {
   const char	*device_uri;            /* URI with which we were called */
-  char scheme[32], username[10], queue_name[1024], resource[10];
+  char scheme[64], username[32], queue_name[1024], resource[32],
+       printer_uri[1024],document_format[256],resolution[16];
   int port, status;
   const char *ptr1 = NULL;
-  char *ptr2;
+  char *ptr2,*ptr3,*ptr4;
   const char *job_id;
+  char    *filename,    /* PDF file to convert */
+           tempfile[1024],
+           tempfile_filter[1024];   /* Temporary file */
   int i;
   char dest_host[1024];	/* Destination host */
   ipp_t *request, *response;
   ipp_attribute_t *attr;
+	int     bytes;      /* Bytes copied */
   char uri[HTTP_MAX_URI];
+  char    *argv_nt[7];
+	int     outbuflen,filter_pid,filefd,exit_status;
   static const char *pattrs[] =
                 {
                   "printer-defaults"
@@ -167,15 +253,11 @@ main(int  argc,				/* I - Number of command-line args */
       ptr1 ++;
       /* Read destination host name (or message) and check whether it is
 	 complete (second double quote) */
-      strncpy(dest_host, ptr1, sizeof(dest_host));
-      ptr1 = dest_host;
       if ((ptr2 = strchr(ptr1, '"')) != NULL) {
 	*ptr2 = '\0';
-	ippDelete(response);
 	break;
       }
     failed:
-      ippDelete(response);
       /* Pause half a second before next attempt */
       usleep(500000);
     }
@@ -200,32 +282,20 @@ main(int  argc,				/* I - Number of command-line args */
       return (CUPS_BACKEND_RETRY_CURRENT);
     } else {
       /* We have the destination host name now, do the job */
-      char server_str[1024];
       const char *title;
       int num_options = 0;
       cups_option_t *options = NULL;
-      int fd, job_id;
+      int fd;
       char buffer[8192];
-
-      ptr2 = strrchr(dest_host, '/');
-      if (ptr2) {
-	*ptr2 = '\0';
-	ptr2 ++;
-      } else
-	ptr2 = queue_name;
       
-      fprintf(stderr, "DEBUG: Received destination host name from cups-browsed: %s\n",
-	      dest_host);
-      fprintf(stderr, "DEBUG: Received destination queue name from cups-browsed: %s\n",
-	      ptr2);
+      fprintf(stderr, "DEBUG: Received destination host name from cups-browsed: printer-uri %s\n",
+      ptr1);
 
       /* Instead of feeding the job into the IPP backend, we re-print it into
 	 the server's CUPS queue. This way the job gets spooled on the server
 	 and we are not blocked until the job is printed. So a subsequent job
 	 will be immediately processed and sent out to another server */
-      /* Set destination server */
-      snprintf(server_str, sizeof(server_str), "%s", dest_host);
-      cupsSetServer(server_str);
+
       /* Parse the command line option and prepare them for the new print
 	 job */
       cupsSetUser(argv[2]);
@@ -246,53 +316,113 @@ main(int  argc,				/* I - Number of command-line args */
 	fd = open(argv[6], O_RDONLY);
       else
 	fd = 0; /* stdin */
-      
-      /* Queue the job directly on the server */
-      if ((job_id = cupsCreateJob(CUPS_HTTP_DEFAULT, ptr2,
-				  title ? title : "(stdin)",
-				  num_options, options)) > 0) {
-	http_status_t       status;         /* Write status */
-	const char          *format;        /* Document format */
-	ssize_t             bytes;          /* Bytes read */
 
-	if (cupsGetOption("raw", num_options, options))
-	  format = CUPS_FORMAT_RAW;
-	else if ((format = cupsGetOption("document-format", num_options,
-					 options)) == NULL)
-	  format = CUPS_FORMAT_AUTO;
-	
-	status = cupsStartDocument(CUPS_HTTP_DEFAULT, ptr2, job_id, NULL,
-				   format, 1);
-
-	while (status == HTTP_CONTINUE &&
-	       (bytes = read(fd, buffer, sizeof(buffer))) > 0)
-	  status = cupsWriteRequestData(CUPS_HTTP_DEFAULT, buffer, (size_t)bytes);
-
-	if (status != HTTP_CONTINUE) {
-	  fprintf(stderr, "ERROR: %s: Unable to queue the print data - %s. Retrying.",
-		  argv[0], httpStatus(status));
-	  cupsFinishDocument(CUPS_HTTP_DEFAULT, ptr2);
-	  cupsCancelJob2(CUPS_HTTP_DEFAULT, ptr2, job_id, 0);
-	  return (CUPS_BACKEND_RETRY);
-	}
-
-	if (cupsFinishDocument(CUPS_HTTP_DEFAULT, ptr2) != IPP_OK) {
-	  fprintf(stderr, "ERROR: %s: Unable to complete the job - %s. Retrying.",
-		  argv[0], cupsLastErrorString());
-	  cupsCancelJob2(CUPS_HTTP_DEFAULT, ptr2, job_id, 0);
-	  return (CUPS_BACKEND_RETRY);
-	}
-      }
-
-      if (job_id < 1) {
-	fprintf(stderr, "ERROR: %s: Unable to create job - %s. Retrying.",
-		argv[0], cupsLastErrorString());
-	return (CUPS_BACKEND_RETRY);
-      }
-
-      return (CUPS_BACKEND_OK);
-    }
+  /* Finding the document format in which the pdftoippprinter will convert the pdf
+     file*/
+  if ((ptr3 = strchr(ptr1, ' ')) != NULL) {
+	  *ptr3='\0';
+	  ptr3++;
   }
+
+	/* Finding the resolution requested for the job*/
+	if ((ptr4 = strchr(ptr3, ' ')) != NULL) {
+	  *ptr4='\0';
+	  ptr4++;
+  }
+
+  strncpy(printer_uri,ptr1,sizeof(printer_uri));
+	strncpy(document_format,ptr3,sizeof(document_format));
+	strncpy(resolution,ptr4,sizeof(resolution));
+
+	fprintf(stderr,"DEBUG: Recieved job for the printer with the destination uri - %s, Final-document format for the printer - %s and requested resolution - %s\n",
+		printer_uri,document_format,resolution);
+
+	/* We need to send modified arguments to the IPP backend */
+	  if (argc == 6){
+   /** Copy stdin to a temp file...*/
+    if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0){
+			fprintf(stderr,"Debug: Can't Read PDF file.\n");
+			return CUPS_BACKEND_FAILED;
+		}
+	  fprintf(stderr, "Debug: implicitclass - copying to temp print file \"%s\"\n",
+						tempfile);
+	  while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)
+	    bytes = write(fd, buffer, bytes);
+	  close(fd);
+	  filename = tempfile;
+	}
+	else{
+   /** Use the filename on the command-line...*/
+	  filename    = argv[6];
+	  tempfile[0] = '\0';
+	}
+
+	/*Copying the argument to a new char** which will be sent to the filter and 
+	  the ipp backend*/
+	for (i = 0; i < 5; i++)
+	  argv_nt[i] = argv[i];
+
+	/* Few new options will be added to the argv[5]*/
+	outbuflen = strlen(argv[5]) + 256;
+  argv_nt[5] = calloc(outbuflen, sizeof(char));
+  strcpy(argv_nt[5], (const char*)argv[5]);
+
+  /* Filter pdftoippprinter.c will read the input from this file*/
+  argv_nt[6] = filename;
+
+	set_option_in_str(argv_nt[5], outbuflen, "output-format", document_format);
+ 	set_option_in_str(argv_nt[5], outbuflen, "Resolution",resolution);
+  setenv("DEVICE_URI",printer_uri, 1);
+
+ 	filefd = cupsTempFd(tempfile_filter, sizeof(tempfile_filter));
+  /* The output of the last filter in pdftoippprinter will be written to 
+  this file. We could have sent the output directly to the backend, but having
+  this temperory file will help us find whether the filter worked correctly and
+  what was the document-format of the filtered output.*/
+  close(1);
+  dup(filefd);
+  /* Calling pdftoippprinter.c filter*/
+  apply_filters(7,argv_nt);
+
+  close(filefd);
+
+  /*We will send the filtered output of the pdftoippprinter.c to the IPP Backend*/
+	argv_nt[6] = tempfile_filter;
+  fprintf(stderr, "DEBUG: The filtered output of pdftoippprinter is written to file %s\n",
+  	tempfile_filter);
+
+  /*Setting the final content type to the best pdl supported by the printer.*/
+	if(!strcmp(document_format,"pdf"))
+	  setenv("FINAL_CONTENT_TYPE", "application/pdf", 1);
+	else if(!strcmp(document_format,"raster"))
+	  setenv("FINAL_CONTENT_TYPE", "image/pwg-raster", 1);
+	else if(!strcmp(document_format,"apple-raster"))
+	  setenv("FINAL_CONTENT_TYPE", "image/urf", 1);
+	else if(!strcmp(document_format,"pclm"))
+	  setenv("FINAL_CONTENT_TYPE", "application/PCLm", 1);
+	else if(!strcmp(document_format,"pclxl"))
+	  setenv("FINAL_CONTENT_TYPE", "application/vnd.hp-pclxl", 1);
+	else if(!strcmp(document_format,"pcl"))
+	  setenv("FINAL_CONTENT_TYPE", "application/pcl", 1);
+
+  ippDelete(response);
+	/* The implicitclass backend will send the job directly to the ipp backend*/
+	pid_t pid = fork(); 
+  if ( pid == 0 ) { 
+  	  fprintf(stderr, "DEBUG: Started IPP Backend with pid: %d\n",getpid());
+      execv("/usr/lib/cups/backend/ipp",argv_nt); 
+  }else{
+     int status; 
+     waitpid(pid, &status, 0);
+     if(WIFEXITED(status)){ 
+       exit_status = WEXITSTATUS(status);         
+       fprintf(stderr, "DEBUG: The IPP Backend exited with the status %d\n",  
+                                     exit_status); 
+     } 
+     return exit_status;
+     }
+ 	 }
+	}
   else if (argc != 1)
   {
     fprintf(stderr,

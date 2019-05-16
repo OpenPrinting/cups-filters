@@ -1150,22 +1150,347 @@ joinResolutionArrays(cups_array_t **current, cups_array_t **new,
   return retval;
 }
 
+cups_array_t* generate_sizes(ipp_t *response,
+                             ipp_attribute_t **defattr,
+                             int* min_length,
+                             int* min_width,
+                             int* max_length,
+                             int* max_width,
+                             int* bottom,
+                             int* left,
+                             int* right,
+                             int* top,
+                             char* ppdname) 
+{
+  cups_array_t             *sizes;               /* Media sizes we've added */
+  ipp_attribute_t          *attr,                /* xxx-supported */
+                           *x_dim, *y_dim;       /* Media dimensions */
+  ipp_t                    *media_col,           /* Media collection */
+                           *media_size;          /* Media size collection */
+  int                      i,count = 0;
+  pwg_media_t              *pwg;                 /* PWG media size */
+  int                      left_def,right_def,bottom_def,top_def;
+  ipp_attribute_t          *margin;  /* media-xxx-margin attribute */
+
+  if ((attr = ippFindAttribute(response, "media-bottom-margin-supported", IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, *bottom = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+      if (ippGetInteger(attr, i) > *bottom)
+        *bottom = ippGetInteger(attr, i);
+  }
+  else
+    *bottom = 1270;
+
+  if ((attr = ippFindAttribute(response, "media-left-margin-supported", IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, *left = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+      if (ippGetInteger(attr, i) > *left)
+        *left = ippGetInteger(attr, i);
+  }
+  else
+    *left = 635;
+
+  if ((attr = ippFindAttribute(response, "media-right-margin-supported", IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, *right = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+      if (ippGetInteger(attr, i) > *right)
+        *right = ippGetInteger(attr, i);
+  }
+  else
+    *right = 635;
+
+  if ((attr = ippFindAttribute(response, "media-top-margin-supported", IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, *top = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
+      if (ippGetInteger(attr, i) > *top)
+        *top = ippGetInteger(attr, i);
+  }
+  else
+    *top = 1270;
+
+  if ((*defattr = ippFindAttribute(response, "media-col-default", IPP_TAG_BEGIN_COLLECTION)) != NULL)
+  {
+    if ((attr = ippFindAttribute(ippGetCollection(*defattr, 0), "media-size", IPP_TAG_BEGIN_COLLECTION)) != NULL)
+    {
+      media_size = ippGetCollection(attr, 0);
+      x_dim      = ippFindAttribute(media_size, "x-dimension", IPP_TAG_INTEGER);
+      y_dim      = ippFindAttribute(media_size, "y-dimension", IPP_TAG_INTEGER);
+  
+    if ((margin = ippFindAttribute(ippGetCollection(*defattr, 0), "media-bottom-margin", IPP_TAG_INTEGER)) != NULL)
+      bottom_def = ippGetInteger(margin, 0);
+    else
+      bottom_def = *bottom;
+
+    if ((margin = ippFindAttribute(ippGetCollection(*defattr, 0), "media-left-margin", IPP_TAG_INTEGER)) != NULL)
+      left_def = ippGetInteger(margin, 0);
+    else
+      left_def = *left;
+
+    if ((margin = ippFindAttribute(ippGetCollection(*defattr, 0), "media-right-margin", IPP_TAG_INTEGER)) != NULL)
+      right_def = ippGetInteger(margin, 0);
+    else
+      right_def = *right;
+
+    if ((margin = ippFindAttribute(ippGetCollection(*defattr, 0), "media-top-margin", IPP_TAG_INTEGER)) != NULL)
+      top_def = ippGetInteger(margin, 0);
+    else
+      top_def = *top;
+
+    if (x_dim && y_dim && (pwg = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0))) != NULL){
+        if (bottom_def == 0 && left_def == 0 && right_def == 0 && top_def == 0)
+          snprintf(ppdname, PPD_MAX_NAME, "%s.Borderless", pwg->ppd);
+        else
+          strlcpy(ppdname, pwg->ppd, PPD_MAX_NAME);
+      }
+      else
+  strlcpy(ppdname, "Unknown", PPD_MAX_NAME);
+    }
+    else
+      strlcpy(ppdname, "Unknown", PPD_MAX_NAME);
+  }
+  else if ((pwg = pwgMediaForPWG(ippGetString(ippFindAttribute(response, "media-default", IPP_TAG_ZERO), 0, NULL))) != NULL)
+    strlcpy(ppdname, pwg->ppd, PPD_MAX_NAME);
+  else
+    strlcpy(ppdname, "Unknown", PPD_MAX_NAME);
+
+  sizes = cupsArrayNew3((cups_array_func_t)pwg_compare_sizes, NULL, NULL, 0, (cups_acopy_func_t)pwg_copy_size, (cups_afree_func_t)free);
+
+  if ((attr = ippFindAttribute(response, "media-col-database", IPP_TAG_BEGIN_COLLECTION)) != NULL)
+  {
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      cups_size_t temp;   /* Current size */
+
+      media_col   = ippGetCollection(attr, i);
+      media_size  = ippGetCollection(ippFindAttribute(media_col, "media-size", IPP_TAG_BEGIN_COLLECTION), 0);
+      x_dim       = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
+      y_dim       = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
+      pwg         = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
+
+      if (pwg)
+      {
+  temp.width  = pwg->width;
+  temp.length = pwg->length;
+
+  if ((margin = ippFindAttribute(media_col, "media-bottom-margin", IPP_TAG_INTEGER)) != NULL)
+    temp.bottom = ippGetInteger(margin, 0);
+  else
+    temp.bottom = *bottom;
+
+  if ((margin = ippFindAttribute(media_col, "media-left-margin", IPP_TAG_INTEGER)) != NULL)
+    temp.left = ippGetInteger(margin, 0);
+  else
+    temp.left = *left;
+
+  if ((margin = ippFindAttribute(media_col, "media-right-margin", IPP_TAG_INTEGER)) != NULL)
+    temp.right = ippGetInteger(margin, 0);
+  else
+    temp.right = *right;
+
+  if ((margin = ippFindAttribute(media_col, "media-top-margin", IPP_TAG_INTEGER)) != NULL)
+    temp.top = ippGetInteger(margin, 0);
+  else
+    temp.top = *top;
+
+  if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 && temp.top == 0)
+    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
+  else
+    strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
+
+  if (!cupsArrayFind(sizes, &temp))
+    cupsArrayAdd(sizes, &temp);
+      }
+      else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE || ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+      {
+       /*
+  * Custom size - record the min/max values...
+  */
+
+  int lower, upper;   /* Range values */
+
+  if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
+    lower = ippGetRange(x_dim, 0, &upper);
+  else
+    lower = upper = ippGetInteger(x_dim, 0);
+
+  if (lower < *min_width)
+    *min_width = lower;
+  if (upper > *max_width)
+    *max_width = upper;
+
+  if (ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+    lower = ippGetRange(y_dim, 0, &upper);
+  else
+    lower = upper = ippGetInteger(y_dim, 0);
+
+  if (lower < *min_length)
+    *min_length = lower;
+  if (upper > *max_length)
+    *max_length = upper;
+      }
+    }
+  }
+  if ((attr = ippFindAttribute(response, "media-size-supported", IPP_TAG_BEGIN_COLLECTION)) != NULL)
+  {
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      cups_size_t temp;   /* Current size */
+
+      media_size  = ippGetCollection(attr, i);
+      x_dim       = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
+      y_dim       = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
+      pwg         = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
+
+      if (pwg)
+      {
+  temp.width  = pwg->width;
+  temp.length = pwg->length;
+  temp.bottom = *bottom;
+  temp.left   = *left;
+  temp.right  = *right;
+  temp.top    = *top;
+
+  if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 && temp.top == 0)
+    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
+  else
+    strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
+
+  if (!cupsArrayFind(sizes, &temp))
+    cupsArrayAdd(sizes, &temp);
+      }
+      else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE || ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+      {
+       /*
+  * Custom size - record the min/max values...
+  */
+
+  int lower, upper;   /* Range values */
+
+  if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
+    lower = ippGetRange(x_dim, 0, &upper);
+  else
+    lower = upper = ippGetInteger(x_dim, 0);
+
+  if (lower < *min_width)
+    *min_width = lower;
+  if (upper > *max_width)
+    *max_width = upper;
+
+  if (ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+    lower = ippGetRange(y_dim, 0, &upper);
+  else
+    lower = upper = ippGetInteger(y_dim, 0);
+
+  if (lower < *min_length)
+    *min_length = lower;
+  if (upper > *max_length)
+    *max_length = upper;
+      }
+    }
+  }
+  if ((attr = ippFindAttribute(response, "media-supported", IPP_TAG_ZERO)) != NULL)
+  {
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      const char  *pwg_size = ippGetString(attr, i, NULL);
+          /* PWG size name */
+      cups_size_t temp, *temp2; /* Current size, found size */
+
+      if ((pwg = pwgMediaForPWG(pwg_size)) != NULL)
+      {
+        if (strstr(pwg_size, "_max_") || strstr(pwg_size, "_max."))
+        {
+          if (pwg->width > *max_width)
+            *max_width = pwg->width;
+          if (pwg->length > *max_length)
+            *max_length = pwg->length;
+        }
+        else if (strstr(pwg_size, "_min_") || strstr(pwg_size, "_min."))
+        {
+          if (pwg->width < *min_width)
+            *min_width = pwg->width;
+          if (pwg->length < *min_length)
+            *min_length = pwg->length;
+        }
+        else
+        {
+    temp.width  = pwg->width;
+    temp.length = pwg->length;
+    temp.bottom = *bottom;
+    temp.left   = *left;
+    temp.right  = *right;
+    temp.top    = *top;
+
+    if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 && temp.top == 0)
+      snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
+    else
+      strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
+
+    /* Add the printer's original IPP name to an already found size */
+    if ((temp2 = cupsArrayFind(sizes, &temp)) != NULL) {
+      snprintf(temp2->media + strlen(temp2->media),
+         sizeof(temp2->media) - strlen(temp2->media),
+         " %s", pwg_size);
+      /* Check if we have also a borderless version of the size and add
+         the original IPP name also there */
+      snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
+      if ((temp2 = cupsArrayFind(sizes, &temp)) != NULL)
+        snprintf(temp2->media + strlen(temp2->media),
+         sizeof(temp2->media) - strlen(temp2->media),
+         " %s", pwg_size);
+    } else
+      cupsArrayAdd(sizes, &temp);
+  }
+      }
+    }
+  }
+  return sizes;
+}
+
+int is_colordevice(const char *keyword,ipp_attribute_t *attr)
+{
+  if (!strcasecmp(keyword, "sgray_16") || !strncmp(keyword, "W8-16", 5) || !strncmp(keyword, "W16", 3))
+      return 1;
+  else if (!strcasecmp(keyword, "srgb_8") || !strncmp(keyword, "SRGB24", 6) || !strcmp(keyword, "color"))
+      return 1;
+  else if ((!strcasecmp(keyword, "srgb_16") || !strncmp(keyword, "SRGB48", 6)) && !ippContainsString(attr, "srgb_8"))
+      return 1;
+  else if (!strcasecmp(keyword, "adobe-rgb_16") || !strncmp(keyword, "ADOBERGB48", 10) ||!strncmp(keyword, "ADOBERGB24-48", 13))
+      return 1;
+  else if ((!strcasecmp(keyword, "adobe-rgb_8") || !strcmp(keyword, "ADOBERGB24")) &&
+          !ippContainsString(attr, "adobe-rgb_16"))
+      return 1;
+  else if ((!strcasecmp(keyword, "cmyk_8") && !ippContainsString(attr, "cmyk_16")) || !strcmp(keyword, "DEVCMYK32"))
+      return 1;
+  else if (!strcasecmp(keyword, "cmyk_16") || !strcmp(keyword, "DEVCMYK32-64") || !strcmp(keyword, "DEVCMYK64"))
+      return 1;
+  else if ((!strcasecmp(keyword, "rgb_8") && !ippContainsString(attr, "rgb_16")) || !strcmp(keyword, "DEVRGB24"))
+      return 1;
+  else if (!strcasecmp(keyword, "rgb_16") || !strcmp(keyword, "DEVRGB24-48") || !strcmp(keyword, "DEVRGB48"))
+      return 1;
+  return 0;
+}
+
 /*
  * 'ppdCreateFromIPP()' - Create a PPD file describing the capabilities
  *                        of an IPP printer.
  */
 
-char *					/* O - PPD filename or NULL on error */
-ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
-		 size_t bufsize,	/* I - Size of filename buffer */
-		 ipp_t  *response,	/* I - Get-Printer-Attributes response */
-		 const char *make_model,/* I - Make and model from DNS-SD */
-		 const char *pdl,       /* I - List of PDLs from DNS-SD */
-		 int    color,          /* I - Color printer? (from DNS-SD) */
-		 int    duplex)         /* I - Duplex printer? (from DNS-SD) */
+char *          /* O - PPD filename or NULL on error */
+ppdCreateFromIPP(char   *buffer,  /* I - Filename buffer */
+     size_t bufsize,  /* I - Size of filename buffer */
+     ipp_t  *response,  /* I - Get-Printer-Attributes response */
+     const char *make_model,/* I - Make and model from DNS-SD */
+     const char *pdl,       /* I - List of PDLs from DNS-SD */
+     int    color,          /* I - Color printer? (from DNS-SD) */
+     int    duplex,          /* I - Duplex printer? (from DNS-SD) */
+     cups_array_t *conflicts,  /* I - Array of constraints */
+     cups_array_t   *sizes,   /* I - Media sizes we've added */ 
+     char*          default_pagesize, /* I - default pagesize*/
+     const char     *default_cluster_color) /* I - cluster def color (if cluster's attributes are returned)*/
 {
   cups_file_t		*fp;		/* PPD file */
-  cups_array_t		*sizes;		/* Media sizes we've added */
+  cups_array_t		*printer_sizes;		/* Media sizes we've added */
   cups_size_t		*size;		/* Current media size */
   ipp_attribute_t	*attr,		/* xxx-supported */
                         *attr2,
@@ -1346,10 +1671,40 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
   else
     cupsFilePuts(fp, "*DefaultOutputOrder: Normal\n");
 
-  if (((attr = ippFindAttribute(response, "color-supported", IPP_TAG_BOOLEAN)) != NULL && ippGetBoolean(attr, 0)) || color)
-    cupsFilePuts(fp, "*ColorDevice: True\n");
+  /* To decide whether the pritner is coloured or not we see the various colormodel
+     supported by the printer*/
+  if ((attr = ippFindAttribute(response, "urf-supported", IPP_TAG_KEYWORD)) == NULL)
+    if ((attr = ippFindAttribute(response, "pwg-raster-document-type-supported", IPP_TAG_KEYWORD)) == NULL)
+      if ((attr = ippFindAttribute(response, "print-color-mode-supported", IPP_TAG_KEYWORD)) == NULL)
+        attr = ippFindAttribute(response, "output-mode-supported", IPP_TAG_KEYWORD);
+  if(attr==NULL || !ippGetCount(attr)){    
+     if((attr = ippFindAttribute(response, "color-supported", IPP_TAG_BOOLEAN)) != NULL){
+         if(ippGetBoolean(attr, 0))
+            cupsFilePuts(fp, "*ColorDevice: True\n");
+          else
+            cupsFilePuts(fp, "*ColorDevice: False\n");
+     }
+     else{
+         if(color)
+           cupsFilePuts(fp, "*ColorDevice: True\n");
+         else
+           cupsFilePuts(fp, "*ColorDevice: Fabriclse\n");        
+     }
+   }
   else
-    cupsFilePuts(fp, "*ColorDevice: False\n");
+  {
+    int   colordevice = 0;
+    for(i = 0, count = ippGetCount(attr); i < count; i ++){
+      keyword = ippGetString(attr, i, NULL);
+      colordevice = is_colordevice(keyword,attr);
+      if(colordevice){
+           cupsFilePuts(fp, "*ColorDevice: True\n");
+           break;
+      }
+     }
+     if(colordevice==0)
+         cupsFilePuts(fp, "*ColorDevice: False\n");
+  }
 
   cupsFilePrintf(fp, "*cupsVersion: %d.%d\n", CUPS_VERSION_MAJOR, CUPS_VERSION_MINOR);
   cupsFilePuts(fp, "*cupsSNMPSupplies: False\n");
@@ -1674,256 +2029,13 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
  /*
   * PageSize/PageRegion/ImageableArea/PaperDimension
   */
-
-  if ((attr = ippFindAttribute(response, "media-bottom-margin-supported", IPP_TAG_INTEGER)) != NULL)
-  {
-    for (i = 1, bottom = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
-      if (ippGetInteger(attr, i) > bottom)
-        bottom = ippGetInteger(attr, i);
+  printer_sizes = generate_sizes(response,&defattr,&min_length,&min_width,&max_length,&max_width,
+                          &bottom,&left,&right,&top,ppdname);
+  if(sizes==NULL){
+    sizes = printer_sizes;
   }
   else
-    bottom = 1270;
-
-  if ((attr = ippFindAttribute(response, "media-left-margin-supported", IPP_TAG_INTEGER)) != NULL)
-  {
-    for (i = 1, left = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
-      if (ippGetInteger(attr, i) > left)
-        left = ippGetInteger(attr, i);
-  }
-  else
-    left = 635;
-
-  if ((attr = ippFindAttribute(response, "media-right-margin-supported", IPP_TAG_INTEGER)) != NULL)
-  {
-    for (i = 1, right = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
-      if (ippGetInteger(attr, i) > right)
-        right = ippGetInteger(attr, i);
-  }
-  else
-    right = 635;
-
-  if ((attr = ippFindAttribute(response, "media-top-margin-supported", IPP_TAG_INTEGER)) != NULL)
-  {
-    for (i = 1, top = ippGetInteger(attr, 0), count = ippGetCount(attr); i < count; i ++)
-      if (ippGetInteger(attr, i) > top)
-        top = ippGetInteger(attr, i);
-  }
-  else
-    top = 1270;
-
-  if ((defattr = ippFindAttribute(response, "media-col-default", IPP_TAG_BEGIN_COLLECTION)) != NULL)
-  {
-    if ((attr = ippFindAttribute(ippGetCollection(defattr, 0), "media-size", IPP_TAG_BEGIN_COLLECTION)) != NULL)
-    {
-      media_size = ippGetCollection(attr, 0);
-      x_dim      = ippFindAttribute(media_size, "x-dimension", IPP_TAG_INTEGER);
-      y_dim      = ippFindAttribute(media_size, "y-dimension", IPP_TAG_INTEGER);
-
-      if (x_dim && y_dim && (pwg = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0))) != NULL)
-	strlcpy(ppdname, pwg->ppd, sizeof(ppdname));
-      else
-	strlcpy(ppdname, "Unknown", sizeof(ppdname));
-    }
-    else
-      strlcpy(ppdname, "Unknown", sizeof(ppdname));
-  }
-  else if ((pwg = pwgMediaForPWG(ippGetString(ippFindAttribute(response, "media-default", IPP_TAG_ZERO), 0, NULL))) != NULL)
-    strlcpy(ppdname, pwg->ppd, sizeof(ppdname));
-  else
-    strlcpy(ppdname, "Unknown", sizeof(ppdname));
-
-  sizes = cupsArrayNew3((cups_array_func_t)pwg_compare_sizes, NULL, NULL, 0, (cups_acopy_func_t)pwg_copy_size, (cups_afree_func_t)free);
-
-  if ((attr = ippFindAttribute(response, "media-col-database", IPP_TAG_BEGIN_COLLECTION)) != NULL)
-  {
-    for (i = 0, count = ippGetCount(attr); i < count; i ++)
-    {
-      cups_size_t	temp;		/* Current size */
-      ipp_attribute_t	*margin;	/* media-xxx-margin attribute */
-
-      media_col   = ippGetCollection(attr, i);
-      media_size  = ippGetCollection(ippFindAttribute(media_col, "media-size", IPP_TAG_BEGIN_COLLECTION), 0);
-      x_dim       = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
-      y_dim       = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
-      pwg         = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
-
-      if (pwg)
-      {
-	temp.width  = pwg->width;
-	temp.length = pwg->length;
-
-	if ((margin = ippFindAttribute(media_col, "media-bottom-margin", IPP_TAG_INTEGER)) != NULL)
-	  temp.bottom = ippGetInteger(margin, 0);
-	else
-	  temp.bottom = bottom;
-
-	if ((margin = ippFindAttribute(media_col, "media-left-margin", IPP_TAG_INTEGER)) != NULL)
-	  temp.left = ippGetInteger(margin, 0);
-	else
-	  temp.left = left;
-
-	if ((margin = ippFindAttribute(media_col, "media-right-margin", IPP_TAG_INTEGER)) != NULL)
-	  temp.right = ippGetInteger(margin, 0);
-	else
-	  temp.right = right;
-
-	if ((margin = ippFindAttribute(media_col, "media-top-margin", IPP_TAG_INTEGER)) != NULL)
-	  temp.top = ippGetInteger(margin, 0);
-	else
-	  temp.top = top;
-
-	if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 && temp.top == 0)
-	  snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
-	else
-	  strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
-
-	if (!cupsArrayFind(sizes, &temp))
-	  cupsArrayAdd(sizes, &temp);
-      }
-      else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE || ippGetValueTag(y_dim) == IPP_TAG_RANGE)
-      {
-       /*
-	* Custom size - record the min/max values...
-	*/
-
-	int lower, upper;		/* Range values */
-
-	if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
-	  lower = ippGetRange(x_dim, 0, &upper);
-	else
-	  lower = upper = ippGetInteger(x_dim, 0);
-
-	if (lower < min_width)
-	  min_width = lower;
-	if (upper > max_width)
-	  max_width = upper;
-
-	if (ippGetValueTag(y_dim) == IPP_TAG_RANGE)
-	  lower = ippGetRange(y_dim, 0, &upper);
-	else
-	  lower = upper = ippGetInteger(y_dim, 0);
-
-	if (lower < min_length)
-	  min_length = lower;
-	if (upper > max_length)
-	  max_length = upper;
-      }
-    }
-  }
-  if ((attr = ippFindAttribute(response, "media-size-supported", IPP_TAG_BEGIN_COLLECTION)) != NULL)
-  {
-    for (i = 0, count = ippGetCount(attr); i < count; i ++)
-    {
-      cups_size_t	temp;		/* Current size */
-
-      media_size  = ippGetCollection(attr, i);
-      x_dim       = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
-      y_dim       = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
-      pwg         = pwgMediaForSize(ippGetInteger(x_dim, 0), ippGetInteger(y_dim, 0));
-
-      if (pwg)
-      {
-	temp.width  = pwg->width;
-	temp.length = pwg->length;
-	temp.bottom = bottom;
-	temp.left   = left;
-	temp.right  = right;
-	temp.top    = top;
-
-	if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 && temp.top == 0)
-	  snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
-	else
-	  strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
-
-	if (!cupsArrayFind(sizes, &temp))
-	  cupsArrayAdd(sizes, &temp);
-      }
-      else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE || ippGetValueTag(y_dim) == IPP_TAG_RANGE)
-      {
-       /*
-	* Custom size - record the min/max values...
-	*/
-
-	int lower, upper;		/* Range values */
-
-	if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
-	  lower = ippGetRange(x_dim, 0, &upper);
-	else
-	  lower = upper = ippGetInteger(x_dim, 0);
-
-	if (lower < min_width)
-	  min_width = lower;
-	if (upper > max_width)
-	  max_width = upper;
-
-	if (ippGetValueTag(y_dim) == IPP_TAG_RANGE)
-	  lower = ippGetRange(y_dim, 0, &upper);
-	else
-	  lower = upper = ippGetInteger(y_dim, 0);
-
-	if (lower < min_length)
-	  min_length = lower;
-	if (upper > max_length)
-	  max_length = upper;
-      }
-    }
-  }
-  if ((attr = ippFindAttribute(response, "media-supported", IPP_TAG_ZERO)) != NULL)
-  {
-    for (i = 0, count = ippGetCount(attr); i < count; i ++)
-    {
-      const char	*pwg_size = ippGetString(attr, i, NULL);
-					/* PWG size name */
-      cups_size_t	temp, *temp2;	/* Current size, found size */
-
-      if ((pwg = pwgMediaForPWG(pwg_size)) != NULL)
-      {
-        if (strstr(pwg_size, "_max_") || strstr(pwg_size, "_max."))
-        {
-          if (pwg->width > max_width)
-            max_width = pwg->width;
-          if (pwg->length > max_length)
-            max_length = pwg->length;
-        }
-        else if (strstr(pwg_size, "_min_") || strstr(pwg_size, "_min."))
-        {
-          if (pwg->width < min_width)
-            min_width = pwg->width;
-          if (pwg->length < min_length)
-            min_length = pwg->length;
-        }
-        else
-        {
-	  temp.width  = pwg->width;
-	  temp.length = pwg->length;
-	  temp.bottom = bottom;
-	  temp.left   = left;
-	  temp.right  = right;
-	  temp.top    = top;
-
-	  if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 && temp.top == 0)
-	    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
-	  else
-	    strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
-
-	  /* Add the printer's original IPP name to an already found size */
-	  if ((temp2 = cupsArrayFind(sizes, &temp)) != NULL) {
-	    snprintf(temp2->media + strlen(temp2->media),
-		     sizeof(temp2->media) - strlen(temp2->media),
-		     " %s", pwg_size);
-	    /* Check if we have also a borderless version of the size and add
-	       the original IPP name also there */
-	    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
-	    if ((temp2 = cupsArrayFind(sizes, &temp)) != NULL)
-	      snprintf(temp2->media + strlen(temp2->media),
-		     sizeof(temp2->media) - strlen(temp2->media),
-		     " %s", pwg_size);
-	  } else
-	    cupsArrayAdd(sizes, &temp);
-	}
-      }
-    }
-  }
+    strcpy(ppdname,default_pagesize);
 
   if (cupsArrayCount(sizes) > 0)
   {
@@ -2637,6 +2749,16 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
         cupsFilePrintf(fp, "*ColorModel DeviceRGB/%s: \"<</cupsColorSpace 1/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
 		           _cupsLangString(lang, _("Device RGB")));
       }
+    }
+
+    if(default_pagesize != NULL){
+      /* Here we are dealing with a cluster, if the default cluster color
+         is not supplied we set it Gray*/
+        if(default_cluster_color!=NULL){
+          default_color = default_cluster_color;
+        }
+        else
+          default_color = "Gray";
     }
 
     if (default_color)
@@ -3565,6 +3687,18 @@ ppdCreateFromIPP(char   *buffer,	/* I - Filename buffer */
       }
 
       cupsFilePuts(fp, "\"\n*End\n");
+    }
+  }
+
+  /* 
+  * constraints
+  */
+  if(conflicts != NULL)
+  {
+    char* constraint;
+    for (constraint = (char *)cupsArrayFirst(conflicts); constraint;
+         constraint = (char *)cupsArrayNext(conflicts)){
+        cupsFilePrintf(fp,"%s",constraint);
     }
   }
 

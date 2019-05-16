@@ -68,8 +68,10 @@ beh_CFLAGS = $(CUPS_CFLAGS)
 implicitclass_SOURCES = \
 	backend/backend-private.h \
 	backend/implicitclass.c
-implicitclass_LDADD = $(CUPS_LIBS)
-implicitclass_CFLAGS = $(CUPS_CFLAGS)
+implicitclass_LDADD = $(CUPS_LIBS)\
+	libcupsfilters.la
+implicitclass_CFLAGS = $(CUPS_CFLAGS)\
+	 -I$(srcdir)/cupsfilters/
 
 test1284_SOURCES = \
 	backend/backend-private.h \
@@ -143,7 +145,8 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/driver.h \
 	cupsfilters/image.h \
 	cupsfilters/raster.h \
-	cupsfilters/ppdgenerator.h
+	cupsfilters/ppdgenerator.h \
+	cupsfilters/pdftoippprinter.h
 
 lib_LTLIBRARIES = libcupsfilters.la
 
@@ -176,6 +179,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/colormanager.c \
 	cupsfilters/dither.c \
 	cupsfilters/image.c \
+	cupsfilters/pdftoippprinter.c \
 	cupsfilters/image-bmp.c \
 	cupsfilters/image-colorspace.c \
 	cupsfilters/image-gif.c \
