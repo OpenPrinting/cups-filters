@@ -527,7 +527,7 @@ generate_ppd (const char *uri)
   }
 
   /* Generate the PPD file */
-  if (!ppdCreateFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0, 0,NULL,NULL,NULL,NULL)) {
+  if (!ppdCreateFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0, 0)) {
     if (strlen(ppdgenerator_msg) > 0)
       fprintf(stderr, "ERROR: Unable to create PPD file: %s\n",
 	      ppdgenerator_msg);

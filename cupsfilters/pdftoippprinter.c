@@ -1,9 +1,8 @@
 /*
- *   sys5ippprinter
+ *   pdftoippprinter.c
  *
- *   System-V-interface-style CUPS filter for PPD-less printing of PDF and
- *   PWG Raster input data on IPP printers which advertise themselves via
- *   Bonjour/DNS-SD.
+ *   Function to convert PDF into PWG/Apple Raster and PCLm for printing
+ *   on driverless IPP printers.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2006 by Easy Software Products.
@@ -11,13 +10,13 @@
  *
  * Contents:
  *
- *   main()           - Main entry for filter...
- *   cancel_job()     - Flag the job as canceled.
- *   filter_present() - Is the requested filter actually installed?
- *   compare_pids()   - Compare process IDs for sorting PID list
- *   exec_filter()    - Execute a filter process
- *   exec_filters()   - Execute a filter chain
- *   open_pipe()      - Create a pipe to transfer data from filter to filter
+ *   apply_filters()     - Main function...
+ *   cancel_job()        - Flag the job as canceled.
+ *   filter_present()    - Is the requested filter actually installed?
+ *   compare_pids()      - Compare process IDs for sorting PID list
+ *   exec_filter()       - Execute a filter process
+ *   exec_filters()      - Execute a filter chain
+ *   open_pipe()         - Create a pipe to transfer data from filter to filter
  *   get_option_in_str() - Get an option value from a string like argv[5]
  *   set_option_in_str() - Set an option value in a string like argv[5]
  */
@@ -79,7 +78,7 @@ static int		job_canceled = 0;
 
 
 /*
- * 'main()' - Main entry for filter...
+ * 'apply_filters()' - Main function...
  */
 
 int 
@@ -162,19 +161,18 @@ apply_filters(int argc, char *argv[])
   * Copy stdin if needed...
   */
 
-  if (argc == 6)
-  {
+  if (argc == 6) {
    /*
     * Copy stdin to a temp file...
     */
 
-    if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
-    {
+    if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0) {
       perror("DEBUG: Unable to copy PDF file");
       return (1);
     }
 
-    fprintf(stderr, "DEBUG: sys5ippprinter - copying to temp print file \"%s\"\n",
+    fprintf(stderr,
+	    "DEBUG: sys5ippprinter - copying to temp print file \"%s\"\n",
             tempfile);
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)
@@ -183,9 +181,7 @@ apply_filters(int argc, char *argv[])
     close(fd);
 
     filename = tempfile;
-  }
-  else
-  {
+  } else {
    /*
     * Use the filename on the command-line...
     */
@@ -233,10 +229,8 @@ apply_filters(int argc, char *argv[])
   * Add the needed filters to the filter chain
   */
 
-  if ((val = cupsGetOption("output-format", num_options, options)) != NULL)
-  {
-    if (strcasestr(val, "raster"))
-    {
+  if ((val = cupsGetOption("output-format", num_options, options)) != NULL) {
+    if (strcasestr(val, "raster")) {
       output_format = PWGRASTER;
       /* PWG Raster output */
       set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
@@ -246,189 +240,165 @@ apply_filters(int argc, char *argv[])
       set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
       if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
 	cupsArrayAdd(filter_chain, "gstoraster");
-      else
-      {
+      else {
 	fprintf(stderr,
-		"DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n", CUPS_GHOSTSCRIPT, val);
+		"DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n",
+		CUPS_GHOSTSCRIPT, val);
 	if (filter_present("pdftoraster"))
 	  cupsArrayAdd(filter_chain, "pdftoraster");
-	else
-	{
+	else {
 	  fprintf(stderr,
-		  "ERROR: Filter pdftoraster missing for \"output-format=%s\"\n", val);
+		  "ERROR: Filter pdftoraster missing for \"output-format=%s\"\n",
+		  val);
 	  exit_status = 1;
 	  goto error;
 	}
-  setenv("FINAL_CONTENT_TYPE", "pwg", 1);
+	setenv("FINAL_CONTENT_TYPE", "pwg", 1);
       }
-    }
-    else if (strcasestr(val, "apple-raster"))
-    {
+    } else if (strcasestr(val, "apple-raster")) {
       output_format = APPLERASTER;
       /* PWG Raster output */
       set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
       set_option_in_str(argv_nt[5], optbuflen, "media-class", "");
       /* Page logging into page_log is not done by gstoraster/pdftoraster,
-   so let it be done by pdftopdf */
+	 so let it be done by pdftopdf */
       set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
       if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
-  cupsArrayAdd(filter_chain, "gstoraster");
-      else
-      {
-  fprintf(stderr,
-    "DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n", CUPS_GHOSTSCRIPT, val);
-  if (filter_present("pdftoraster"))
-    cupsArrayAdd(filter_chain, "pdftoraster");
-  else
-  {
-    fprintf(stderr,
-      "ERROR: Filter pdftoraster missing for \"output-format=%s\"\n", val);
-    exit_status = 1;
-    goto error;
-  }
+	cupsArrayAdd(filter_chain, "gstoraster");
+      else {
+	fprintf(stderr,
+		"DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n",
+		CUPS_GHOSTSCRIPT, val);
+	if (filter_present("pdftoraster"))
+	  cupsArrayAdd(filter_chain, "pdftoraster");
+	else {
+	  fprintf(stderr,
+		  "ERROR: Filter pdftoraster missing for \"output-format=%s\"\n",
+		  val);
+	  exit_status = 1;
+	  goto error;
+	}
       }
-    if (filter_present("rastertopwg"))
-      cupsArrayAdd(filter_chain, "rastertopwg");
-    else{
-      fprintf(stderr,
-      "ERROR: Filter rastertopwg missing for \"output-format=%s\"\n", val);
-      exit_status = 1;
-      goto error;   
-    }
-    setenv("FINAL_CONTENT_TYPE", "image/urf", 1);
-    }
-    else if (strcasestr(val, "pdf"))
-    {
+      if (filter_present("rastertopwg"))
+	cupsArrayAdd(filter_chain, "rastertopwg");
+      else {
+	fprintf(stderr,
+		"ERROR: Filter rastertopwg missing for \"output-format=%s\"\n",
+		val);
+	exit_status = 1;
+	goto error;
+      }
+      setenv("FINAL_CONTENT_TYPE", "image/urf", 1);
+    } else if (strcasestr(val, "pdf")) {
       output_format = PDF;
       /* Page logging into page_log has to be done by pdftopdf */
       set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
-    }
-    else if (strcasestr(val, "postscript"))
-    {
+    } else if (strcasestr(val, "postscript")) {
       output_format = POSTSCRIPT;
       /* Page logging into page_log is done by pstops, so no need by
 	 pdftopdf */
       set_option_in_str(argv_nt[5], optbuflen, "page-logging", "off");
-      if (filter_present("pdftops"))
-      {
+      if (filter_present("pdftops")) {
 	cupsArrayAdd(filter_chain, "pdftops");
-	if (access(CUPS_GHOSTSCRIPT, X_OK) != 0)
-	{
+	if (access(CUPS_GHOSTSCRIPT, X_OK) != 0) {
 	  fprintf(stderr,
-		  "DEBUG: Ghostscript (%s) missing for \"output-format=%s\", using Poppler's pdftops instead.\n", CUPS_GHOSTSCRIPT, val);
+		  "DEBUG: Ghostscript (%s) missing for \"output-format=%s\", using Poppler's pdftops instead.\n",
+		  CUPS_GHOSTSCRIPT, val);
 	  set_option_in_str(argv_nt[5], optbuflen, "pdftops-renderer",
 			    "pdftops");
-	}
-	else if (access(CUPS_POPPLER_PDFTOPS, X_OK) != 0)
-	{
+	} else if (access(CUPS_POPPLER_PDFTOPS, X_OK) != 0) {
 	  fprintf(stderr,
-		  "DEBUG: Poppler's pdftops (%s) missing for \"output-format=%s\", using Ghostscript instead.\n", CUPS_POPPLER_PDFTOPS, val);
+		  "DEBUG: Poppler's pdftops (%s) missing for \"output-format=%s\", using Ghostscript instead.\n",
+		  CUPS_POPPLER_PDFTOPS, val);
 	  set_option_in_str(argv_nt[5], optbuflen, "pdftops-renderer",
 			    "gs");
-	}
-	else
+	} else
 	  set_option_in_str(argv_nt[5], optbuflen, "pdftops-renderer",
 			    "hybrid");
-      }
-      else
-      {
+      } else {
 	fprintf(stderr,
-		"ERROR: Filter pdftops missing for \"output-format=%s\"\n", val);
+		"ERROR: Filter pdftops missing for \"output-format=%s\"\n",
+		val);
 	exit_status = 1;
 	goto error;
       }
-    }
-    else if ((p = strcasestr(val, "pcl")) != NULL)
-    {
-      if (!strcasecmp(p, "pclxl"))
-      {
+    } else if ((p = strcasestr(val, "pcl")) != NULL) {
+      if (!strcasecmp(p, "pclxl")) {
 	output_format = PCLXL;
-	if (filter_present("gstopxl") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
-	{
+	if (filter_present("gstopxl") && access(CUPS_GHOSTSCRIPT, X_OK) == 0) {
 	  cupsArrayAdd(filter_chain, "gstopxl");
 	  /* Page logging into page_log is not done by gstopxl,
 	     so let it be done by pdftopdf */
 	  set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
-	}
-	else
-	{
+	} else {
 	  fprintf(stderr,
-		  "DEBUG: Filter gstopxl or Ghostscript (%s) missing for \"output-format=%s\", falling back to PCL 5c/e.\n", CUPS_GHOSTSCRIPT, val);
+		  "DEBUG: Filter gstopxl or Ghostscript (%s) missing for \"output-format=%s\", falling back to PCL 5c/e.\n",
+		  CUPS_GHOSTSCRIPT, val);
 	  output_format = PCL;
 	}
-    }else if (!strcasecmp(p, "pclm"))
-      {
-      output_format = PCLM;
-      /* PWG Raster output */
-      set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
-      set_option_in_str(argv_nt[5], optbuflen, "media-class", "");
-      /* Page logging into page_log is not done by gstoraster/pdftoraster,
-   so let it be done by pdftopdf */
-      set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
-      if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
-  cupsArrayAdd(filter_chain, "gstoraster");
-      else
-      {
-  fprintf(stderr,
-    "DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n", CUPS_GHOSTSCRIPT, val);
-  if (filter_present("pdftoraster"))
-    cupsArrayAdd(filter_chain, "pdftoraster");
-  else
-  {
-    fprintf(stderr,
-      "ERROR: Filter pdftoraster missing for \"output-format=%s\"\n", val);
-    exit_status = 1;
-    goto error;
-  }
+      } else if (!strcasecmp(p, "pclm")) {
+	output_format = PCLM;
+	/* PWG Raster output */
+	set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
+	set_option_in_str(argv_nt[5], optbuflen, "media-class", "");
+	/* Page logging into page_log is not done by gstoraster/pdftoraster,
+	   so let it be done by pdftopdf */
+	set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
+	if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
+	  cupsArrayAdd(filter_chain, "gstoraster");
+	else {
+	  fprintf(stderr,
+		  "DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n",
+		  CUPS_GHOSTSCRIPT, val);
+	  if (filter_present("pdftoraster"))
+	    cupsArrayAdd(filter_chain, "pdftoraster");
+	  else {
+	    fprintf(stderr,
+		    "ERROR: Filter pdftoraster missing for \"output-format=%s\"\n",
+		    val);
+	    exit_status = 1;
+	    goto error;
+	  }
+	}
+	if (filter_present("rastertopclm"))
+	  cupsArrayAdd(filter_chain, "rastertopclm");
+	else {
+	  fprintf(stderr,
+		  "ERROR: Filter rastertopclm missing for \"output-format=%s\"\n",
+		  val);
+	  exit_status = 1;
+	  goto error;
+	}
       }
-    if (filter_present("rastertopclm"))
-      cupsArrayAdd(filter_chain, "rastertopclm");
-    else{
-      fprintf(stderr,
-      "ERROR: Filter rastertopclm missing for \"output-format=%s\"\n", val);
-      exit_status = 1;
-      goto error;   
-    }
-      }
-      if (!strcasecmp(p, "pclxl"))
-      {
-  output_format = PCLXL;
-  if (filter_present("gstopxl") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
-  {
-    cupsArrayAdd(filter_chain, "gstopxl");
-    /* Page logging into page_log is not done by gstopxl,
-       so let it be done by pdftopdf */
-    set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
-  }
-  else
-  {
-    fprintf(stderr,
-      "DEBUG: Filter gstopxl or Ghostscript (%s) missing for \"output-format=%s\", falling back to PCL 5c/e.\n", CUPS_GHOSTSCRIPT, val);
-    output_format = PCL;
-  }
-      }
-      else
-      {
+      if (!strcasecmp(p, "pclxl")) {
+	output_format = PCLXL;
+	if (filter_present("gstopxl") && access(CUPS_GHOSTSCRIPT, X_OK) == 0) {
+	  cupsArrayAdd(filter_chain, "gstopxl");
+	  /* Page logging into page_log is not done by gstopxl,
+	     so let it be done by pdftopdf */
+	  set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
+	} else {
+	  fprintf(stderr,
+		  "DEBUG: Filter gstopxl or Ghostscript (%s) missing for \"output-format=%s\", falling back to PCL 5c/e.\n",
+		  CUPS_GHOSTSCRIPT, val);
+	  output_format = PCL;
+	}
+      } else {
 	output_format = PCL;
       }
-    }
-    else
-    {
+    } else {
       fprintf(stderr,
 	      "ERROR: Invalid value for \"output-format\": \"%s\"\n", val);
       exit_status = 1;
       goto error;
     }
-  }
-  else
-  {
+  } else {
     fprintf(stderr,
 	    "ERROR: Missing option \"output-format\".\n");
     exit_status = 1;
     goto error;
   }
-  if (output_format == PCL)
-  {
+  if (output_format == PCL) {
     /* We need CUPS Raster as we want to use rastertopclx with unprintable
        margins */
     set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
@@ -440,8 +410,7 @@ apply_filters(int argc, char *argv[])
     if (!get_option_in_str(argv_nt[5], "media-left-margin", 0) &&
 	!get_option_in_str(argv_nt[5], "media-right-margin", 0) &&
 	!get_option_in_str(argv_nt[5], "media-top-margin", 0) &&
-	!get_option_in_str(argv_nt[5], "media-bottom-margin", 0))
-    {
+	!get_option_in_str(argv_nt[5], "media-bottom-margin", 0)) {
       /* Set default 12pt margins if there is no info about printer's
 	 unprintable margins (100th of mm units, 12.0 * 2540.0 / 72.0 = 423.33)
       */
@@ -454,18 +423,15 @@ apply_filters(int argc, char *argv[])
        set the color space to RGB as this is the best color printing support
        in PCL 5c */
     color_printing = 0;
-    for (i = 0; color_mode_option_names[i]; i ++)
-    {
+    for (i = 0; color_mode_option_names[i]; i ++) {
       p = get_option_in_str(argv_nt[5], color_mode_option_names[i], 1);
       if (p && (strcasestr(p, "RGB") || strcasestr(p, "CMY") ||
-		strcasestr(p, "color")))
-      {
+		strcasestr(p, "color"))) {
 	color_printing = 1;
 	break;
       }
     }
-    if (color_printing == 1)
-    {
+    if (color_printing == 1) {
       /* Remove unneeded color mode options */
       for (i = 0; color_mode_option_names[i]; i ++)
 	set_option_in_str(argv_nt[5], optbuflen, color_mode_option_names[i],
@@ -475,26 +441,26 @@ apply_filters(int argc, char *argv[])
     }
     if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
       cupsArrayAdd(filter_chain, "gstoraster");
-    else
-    {
+    else {
       fprintf(stderr,
-	      "DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n", CUPS_GHOSTSCRIPT, val);
+	      "DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n",
+	      CUPS_GHOSTSCRIPT, val);
       if (filter_present("pdftoraster"))
 	cupsArrayAdd(filter_chain, "pdftoraster");
-      else
-      {
+      else {
 	fprintf(stderr,
-		"ERROR: Filter pdftoraster missing for \"output-format=%s\"\n", val);
+		"ERROR: Filter pdftoraster missing for \"output-format=%s\"\n",
+		val);
 	exit_status = 1;
 	goto error;
       }
     }
     if (filter_present("rastertopclx"))
       cupsArrayAdd(filter_chain, "rastertopclx");
-    else
-    {
+    else {
       fprintf(stderr,
-	      "ERROR: Filter rastertopclx missing for \"output-format=%s\"\n", val);
+	      "ERROR: Filter rastertopclx missing for \"output-format=%s\"\n",
+	      val);
       exit_status = 1;
       goto error;
     }
@@ -508,8 +474,8 @@ apply_filters(int argc, char *argv[])
 	   (output_format == PWGRASTER ? "PWG Raster" :
 	    (output_format == PCLXL ? "PCL XL" :
 	     (output_format == PCL ? "PCL 5c/e" : 
-        (output_format == APPLERASTER ? "APPLE Raster" :
-          (output_format == PCLM ? "PCLm" : "unknown")))))));
+	      (output_format == APPLERASTER ? "APPLE Raster" :
+	       (output_format == PCLM ? "PCLm" : "unknown")))))));
   for (filter = (char *)cupsArrayFirst(filter_chain);
        filter;
        filter = (char *)cupsArrayNext(filter_chain))
@@ -526,7 +492,7 @@ apply_filters(int argc, char *argv[])
   * Cleanup and exit...
   */
 
-  error:
+ error:
 
   if (tempfile[0])
     unlink(tempfile);
@@ -549,10 +515,10 @@ cancel_job(int sig)			/* I - Signal number (unused) */
 
 
 static int
-filter_present(const char *filter)      /* I - Filter name */
+filter_present(const char *filter) /* I - Filter name */
 {
-  char		filter_path[1024];	/* Path to filter executable */
-  const char	*cups_serverbin;	/* CUPS_SERVERBIN environment variable */
+  char		filter_path[1024]; /* Path to filter executable */
+  const char	*cups_serverbin;   /* CUPS_SERVERBIN environment variable */
 
   if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
     cups_serverbin = CUPS_SERVERBIN;
@@ -592,33 +558,28 @@ exec_filter(const char *filter,		/* I - Filter to execute */
   int		pid,			/* Process ID */
 		fd;			/* Temporary file descriptor */
 
-  if ((pid = fork()) == 0)
-  {
+  if ((pid = fork()) == 0) {
    /*
     * Child process goes here...
     *
     * Update stdin/stdout/stderr as needed...
     */
 
-    if (infd != 0)
-    {
+    if (infd != 0) {
       if (infd < 0)
         infd = open("/dev/null", O_RDONLY);
 
-      if (infd > 0)
-      {
+      if (infd > 0) {
         dup2(infd, 0);
 	close(infd);
       }
     }
 
-    if (outfd != 1)
-    {
+    if (outfd != 1) {
       if (outfd < 0)
         outfd = open("/dev/null", O_WRONLY);
 
-      if (outfd > 1)
-      {
+      if (outfd > 1) {
 	dup2(outfd, 1);
 	close(outfd);
       }
@@ -627,18 +588,15 @@ exec_filter(const char *filter,		/* I - Filter to execute */
     /* Send stderr to the Nirwana if we are running gziptoany, as
        gziptoany emits a false "PAGE: 1 1" */
     if (strcasestr(filter, "gziptoany")) {
-      if ((fd = open("/dev/null", O_RDWR)) > 2)
-      {
+      if ((fd = open("/dev/null", O_RDWR)) > 2) {
 	dup2(fd, 2);
 	close(fd);
-      }
-      else
+      } else
         close(fd);
       fcntl(2, F_SETFL, O_NDELAY);
     }
 
-    if ((fd = open("/dev/null", O_RDWR)) > 3)
-    {
+    if ((fd = open("/dev/null", O_RDWR)) > 3) {
       dup2(fd, 3);
       close(fd);
     }
@@ -646,12 +604,10 @@ exec_filter(const char *filter,		/* I - Filter to execute */
       close(fd);
     fcntl(3, F_SETFL, O_NDELAY);
 
-    if ((fd = open("/dev/null", O_RDWR)) > 4)
-    {
+    if ((fd = open("/dev/null", O_RDWR)) > 4) {
       dup2(fd, 4);
       close(fd);
-    }
-    else
+    } else
       close(fd);
     fcntl(4, F_SETFL, O_NDELAY);
 
@@ -674,23 +630,23 @@ exec_filter(const char *filter,		/* I - Filter to execute */
  * 'exec_filters()' - Execute filters for the given file and options.
  */
 
-static int				/* O - 0 on success, 1 on error */
-exec_filters(cups_array_t  *filters,	/* I - Array of filters to run */
-	     char	   **argv)	/* I - Filter options */
+static int			     /* O - 0 on success, 1 on error */
+exec_filters(cups_array_t  *filters, /* I - Array of filters to run */
+	     char	   **argv)   /* I - Filter options */
 {
-  int		i;			/* Looping var */
-  char		program[1024];		/* Program to run */
-  char		*filter,		/* Current filter */
-		*next;			/* Next filter */
-  int		current,		/* Current filter */
-		filterfds[2][2],	/* Pipes for filters */
-		pid,			/* Process ID of filter */
-		status,			/* Exit status */
-		retval;			/* Return value */
-  cups_array_t	*pids;			/* Executed filters array */
-  filter_pid_t	*pid_entry,		/* Entry in executed filters array */
-		key;			/* Search key for filters */
-  const char	*cups_serverbin;	/* CUPS_SERVERBIN environment variable */
+  int		i;		     /* Looping var */
+  char		program[1024];	     /* Program to run */
+  char		*filter,	     /* Current filter */
+		*next;		     /* Next filter */
+  int		current,	     /* Current filter */
+		filterfds[2][2],     /* Pipes for filters */
+		pid,		     /* Process ID of filter */
+		status,		     /* Exit status */
+		retval;		     /* Return value */
+  cups_array_t	*pids;		     /* Executed filters array */
+  filter_pid_t	*pid_entry,	     /* Entry in executed filters array */
+		key;		     /* Search key for filters */
+  const char	*cups_serverbin;     /* CUPS_SERVERBIN environment variable */
 
  /*
   * Remove NULL ("-") filters...
@@ -718,25 +674,21 @@ exec_filters(cups_array_t  *filters,	/* I - Array of filters to run */
 
   for (filter = (char *)cupsArrayFirst(filters);
        filter;
-       filter = next, current = 1 - current)
-  {
+       filter = next, current = 1 - current) {
     next = (char *)cupsArrayNext(filters);
 
     if (filter[0] == '/') {
       strncpy(program, filter, sizeof(program));
       if (strlen(filter) > 1023)
         program[1023] = '\0';
-    }
-    else
-    {
+    } else {
       if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
 	cups_serverbin = CUPS_SERVERBIN;
       snprintf(program, sizeof(program), "%s/filter/%s", cups_serverbin,
 	       filter);
     }
 
-    if (filterfds[!current][1] > 1)
-    {
+    if (filterfds[!current][1] > 1) {
       close(filterfds[1 - current][0]);
       close(filterfds[1 - current][1]);
 
@@ -752,16 +704,14 @@ exec_filters(cups_array_t  *filters,	/* I - Array of filters to run */
     pid = exec_filter(program, argv,
                       filterfds[current][0], filterfds[1 - current][1]);
 
-    if (pid > 0)
-    {
+    if (pid > 0) {
       fprintf(stderr, "INFO: %s (PID %d) started.\n", filter, pid);
 
       pid_entry = malloc(sizeof(filter_pid_t));
       pid_entry->pid = pid;
       pid_entry->name = filter;
       cupsArrayAdd(pids, pid_entry);
-    }
-    else
+    } else
       break;
 
     argv[6] = NULL;
@@ -771,14 +721,12 @@ exec_filters(cups_array_t  *filters,	/* I - Array of filters to run */
   * Close remaining pipes...
   */
 
-  if (filterfds[0][1] > 1)
-  {
+  if (filterfds[0][1] > 1) {
     close(filterfds[0][0]);
     close(filterfds[0][1]);
   }
 
-  if (filterfds[1][1] > 1)
-  {
+  if (filterfds[1][1] > 1) {
     close(filterfds[1][0]);
     close(filterfds[1][1]);
   }
@@ -789,30 +737,24 @@ exec_filters(cups_array_t  *filters,	/* I - Array of filters to run */
 
   retval = 0;
 
-  while (cupsArrayCount(pids) > 0)
-  {
-    if ((pid = wait(&status)) < 0)
-    {
-      if (errno == EINTR && job_canceled)
-      {
+  while (cupsArrayCount(pids) > 0) {
+    if ((pid = wait(&status)) < 0) {
+      if (errno == EINTR && job_canceled) {
 	fprintf(stderr, "DEBUG: Job canceled, killing filters ...\n");
 	for (pid_entry = (filter_pid_t *)cupsArrayFirst(pids);
 	     pid_entry;
 	     pid_entry = (filter_pid_t *)cupsArrayNext(pids))
 	  kill(pid_entry->pid, SIGTERM);
 	job_canceled = 0;
-      }
-      else
+      } else
 	continue;
     }
 
     key.pid = pid;
-    if ((pid_entry = (filter_pid_t *)cupsArrayFind(pids, &key)) != NULL)
-    {
+    if ((pid_entry = (filter_pid_t *)cupsArrayFind(pids, &key)) != NULL) {
       cupsArrayRemove(pids, pid_entry);
 
-      if (status)
-      {
+      if (status) {
 	if (WIFEXITED(status))
 	  fprintf(stderr, "ERROR: %s (PID %d) stopped with status %d\n",
 		  pid_entry->name, pid, WEXITSTATUS(status));
@@ -821,8 +763,7 @@ exec_filters(cups_array_t  *filters,	/* I - Array of filters to run */
 		  pid_entry->name, pid, WTERMSIG(status));
 
         retval = 1;
-      }
-      else
+      } else
         fprintf(stderr, "INFO: %s (PID %d) exited with no errors.\n",
 	        pid_entry->name, pid);
 
@@ -847,8 +788,7 @@ open_pipe(int *fds)			/* O - Pipe file descriptors (2) */
   * Create the pipe...
   */
 
-  if (pipe(fds))
-  {
+  if (pipe(fds)) {
     fds[0] = -1;
     fds[1] = -1;
 
@@ -859,8 +799,7 @@ open_pipe(int *fds)			/* O - Pipe file descriptors (2) */
   * Set the "close on exec" flag on each end of the pipe...
   */
 
-  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC))
-  {
+  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC)) {
     close(fds[0]);
     close(fds[1]);
 
@@ -870,8 +809,7 @@ open_pipe(int *fds)			/* O - Pipe file descriptors (2) */
     return (-1);
   }
 
-  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC))
-  {
+  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC)) {
     close(fds[0]);
     close(fds[1]);
 
@@ -897,7 +835,7 @@ static char*				/* O - Value, NULL if option not set */
 get_option_in_str(char *buf,		/* I - Buffer with option list string */
 		  const char *option,	/* I - Option of which to get value */
 		  int return_value)	/* I - Return value or only check
-					   presence of option? */
+					       presence of option? */
 {
   char *p1, *p2;
   char *result;
@@ -943,10 +881,8 @@ set_option_in_str(char *buf,		/* I - Buffer with option list string */
     return;
   /* Remove any occurrence of option in the string */
   p1 = buf;
-  while (*p1 != '\0' && (p2 = strcasestr(p1, option)) != NULL)
-  {
-    if (p2 > buf && *(p2 - 1) != ' ' && *(p2 - 1) != '\t')
-    {
+  while (*p1 != '\0' && (p2 = strcasestr(p1, option)) != NULL) {
+    if (p2 > buf && *(p2 - 1) != ' ' && *(p2 - 1) != '\t') {
       p1 = p2 + 1;
       continue;
     }
@@ -967,7 +903,3 @@ set_option_in_str(char *buf,		/* I - Buffer with option list string */
   snprintf(p1, buflen - (buf - p1), "%s=%s", option, value);
   buf[buflen - 1] = '\0';
 }
-
-/*
- * End
- */
