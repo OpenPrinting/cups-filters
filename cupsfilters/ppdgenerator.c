@@ -77,7 +77,8 @@ typedef struct _pwg_finishings_s	/**** PWG finishings mapping data ****/
 #define _PWG_EQUIVALENT(x, y)	(abs((x)-(y)) < 2)
 
 static void	pwg_ppdize_name(const char *ipp, char *name, size_t namesize);
-static void	pwg_ppdize_resolution(ipp_attribute_t *attr, int element, int *xres, int *yres, char *name, size_t namesize);
+static void	pwg_ppdize_resolution(ipp_attribute_t *attr, int element,
+                                 int *xres, int *yres, char *name, size_t namesize);
 
 /*
  * '_cupsSetError()' - Set the last PPD generator status-message.
