@@ -138,7 +138,7 @@ main(int  argc,				/* I - Number of command-line args */
   int     bytes;      /* Bytes copied */
   char uri[HTTP_MAX_URI];
   char    *argv_nt[7];
-  int     outbuflen,filefd,exit_status;
+  int     outbuflen,filefd,exit_status,dup_status;
   static const char *pattrs[] =
                 {
                   "printer-defaults"
@@ -369,7 +369,11 @@ main(int  argc,				/* I - Number of command-line args */
          find whether the filter worked correctly and what was the
          document-format of the filtered output.*/
       close(1);
-      /*dup(filefd);*/
+      dup_status = dup(filefd);
+      if(dup_status < 0) {
+        fprintf(stderr, "Could not write the output of pdftoippprinter printer to tmp file\n");
+        return CUPS_BACKEND_FAILED;
+      }
 
       /* Calling pdftoippprinter.c filter*/
       apply_filters(7,argv_nt);
