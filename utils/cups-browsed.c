@@ -5714,7 +5714,6 @@ on_job_state (CupsNotifier *object,
   int dest_index = 0;
   int valid_dest_found = 0;
   char uri[HTTP_MAX_URI];
-  /*int job_id = 0;*/
   int num_options;
   cups_option_t *options;
   int num_of_printers;
@@ -5732,11 +5731,6 @@ on_job_state (CupsNotifier *object,
      "printer-is-accepting-jobs"
     };
   http_t *conn = NULL;
-  static const char *jattrs[] =
-    {
-     "job-id",
-     "job-state"
-    };
 
   debug_printf("on_job_state() in THREAD %ld\n", pthread_self());
 
@@ -5836,47 +5830,12 @@ on_job_state (CupsNotifier *object,
       /* We have remote CUPS queue(s) and so are using the implicitclass 
 	 backend */
       debug_printf("[CUPS Notification] %s is using the \"implicitclass\" CUPS backend, so let us search for a destination for this job.\n", printer);
+
       /* We keep track of the printer which we used last time and start
 	 checking with the next printer this time, to get a "round robin"
 	 type of printer usage instead of having most jobs going to the first
 	 printer in the list. Method taken from the cupsdFindAvailablePrinter()
 	 function of the scheduler/classes.c file of CUPS. */
-
-      /* Find the ID of the current job */
-      request = ippNewRequest(IPP_GET_JOBS);
-      httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		       "localhost", ippPort(), "/printers/%s", printer);
-      ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
-		   "printer-uri", NULL, uri);
-      ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-		    "requested-attributes",
-		    sizeof(jattrs) / sizeof(jattrs[0]), NULL, jattrs);
-      job_id = 0;
-      if ((response = cupsDoRequest(conn, request, "/")) != NULL) {
-	/* Get the current active job on this queue... */
-	ipp_jstate_t jobstate = IPP_JOB_PENDING;
-	for (attr = ippFirstAttribute(response); attr != NULL;
-	     attr = ippNextAttribute(response)) {
-	  if (!ippGetName(attr)) {
-	    if (jobstate == IPP_JOB_PROCESSING)
-	      break;
-	    else
-	      continue;
-	  }
-	  if (!strcmp(ippGetName(attr), "job-id") &&
-	      ippGetValueTag(attr) == IPP_TAG_INTEGER)
-	    job_id = ippGetInteger(attr, 0);
-	  else if (!strcmp(ippGetName(attr), "job-state") &&
-		   ippGetValueTag(attr) == IPP_TAG_ENUM)
-	    jobstate = (ipp_jstate_t)ippGetInteger(attr, 0);
-	}
-	if (jobstate != IPP_JOB_PROCESSING)
-	  job_id = 0;
-	ippDelete(response);
-      }
-      if (job_id == 0)
-	debug_printf("ERROR: could not determine ID of current job on %s\n",
-		     printer);
 
       if (q->last_printer < 0 ||
 	  q->last_printer >= cupsArrayCount(remote_printers))
@@ -6169,7 +6128,7 @@ on_job_state (CupsNotifier *object,
 		   "requesting-user-name", NULL, cupsUser());
       if (dest_host) {
 	q->last_printer = dest_index;
-	snprintf(buf, sizeof(buf), "\"%d %s %s %s\"", job_id,destination_uri,
+	snprintf(buf, sizeof(buf), "\"%d %s %s %s\"", job_id, destination_uri,
 		 document_format, resolution);
 	debug_printf("Destination for job %d to %s: %s:%d, queue %s\n",
 		     job_id, printer, dest_host, dest_port, dest_name);
