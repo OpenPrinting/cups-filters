@@ -25,7 +25,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  pdftoraster.cc
  pdf to raster filter
 */
-
+#include <stdio.h>
 #include <config.h>
 #include <cups/cups.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
@@ -33,7 +33,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #define USE_CMS
-
+using namespace std;
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef HAVE_CPP_POPPLER_VERSION_H
@@ -58,6 +58,13 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <splash/SplashBitmap.h>
 #include <strings.h>
 #include <math.h>
+
+#include <poppler/cpp/poppler-document.h>
+#include <poppler/cpp/poppler-page.h>
+#include <poppler/cpp/poppler-global.h>
+#include <poppler/cpp/poppler-image.h>
+#include <poppler/cpp/poppler-page-renderer.h>
+
 #ifdef USE_LCMS1
 #include <lcms.h>
 #define cmsColorSpaceSignature icColorSpaceSignature
@@ -166,7 +173,7 @@ namespace {
     {15,143,47,175,7,135,39,167,13,141,45,173,5,133,37,165},
     {207,79,239,111,199,71,231,103,205,77,237,109,197,69,229,101},
     {63,191,31,159,55,183,23,151,61,189,29,157,53,181,21,149},
-    {255,127,223,95,247,119,215,87,253,125,221,93,245,117,213,85} 
+    {255,127,223,95,247,119,215,87,253,125,221,93,245,117,213,85}
   };
   unsigned int dither2[8][8] = {
     {0,32,8,40,2,34,10,42},
@@ -176,14 +183,68 @@ namespace {
     {3,35,11,43,1,33,9,41},
     {51,19,59,27,49,17,57,25},
     {15,47,7,39,13,45,5,37},
-    {63,31,55,23,61,29,53,21} 
+    {63,31,55,23,61,29,53,21}
   };
   unsigned int dither4[4][4] = {
     {0,8,2,10},
     {12,4,14,6},
     {3,11,1,9},
-    {15,7,13,5} 
+    {15,7,13,5}
   };
+  int	Floyd16x16[16][16] =		/* Traditional Floyd ordered dither */
+  	{
+  	  { 0,   128, 32,  160, 8,   136, 40,  168,
+  	    2,   130, 34,  162, 10,  138, 42,  170 },
+  	  { 192, 64,  224, 96,  200, 72,  232, 104,
+  	    194, 66,  226, 98,  202, 74,  234, 106 },
+  	  { 48,  176, 16,  144, 56,  184, 24,  152,
+  	    50,  178, 18,  146, 58,  186, 26,  154 },
+  	  { 240, 112, 208, 80,  248, 120, 216, 88,
+  	    242, 114, 210, 82,  250, 122, 218, 90 },
+  	  { 12,  140, 44,  172, 4,   132, 36,  164,
+  	    14,  142, 46,  174, 6,   134, 38,  166 },
+  	  { 204, 76,  236, 108, 196, 68,  228, 100,
+  	    206, 78,  238, 110, 198, 70,  230, 102 },
+  	  { 60,  188, 28,  156, 52,  180, 20,  148,
+  	    62,  190, 30,  158, 54,  182, 22,  150 },
+  	  { 252, 124, 220, 92,  244, 116, 212, 84,
+  	    254, 126, 222, 94,  246, 118, 214, 86 },
+  	  { 3,   131, 35,  163, 11,  139, 43,  171,
+  	    1,   129, 33,  161, 9,   137, 41,  169 },
+  	  { 195, 67,  227, 99,  203, 75,  235, 107,
+  	    193, 65,  225, 97,  201, 73,  233, 105 },
+  	  { 51,  179, 19,  147, 59,  187, 27,  155,
+  	    49,  177, 17,  145, 57,  185, 25,  153 },
+  	  { 243, 115, 211, 83,  251, 123, 219, 91,
+  	    241, 113, 209, 81,  249, 121, 217, 89 },
+  	  { 15,  143, 47,  175, 7,   135, 39,  167,
+  	    13,  141, 45,  173, 5,   133, 37,  165 },
+  	  { 207, 79,  239, 111, 199, 71,  231, 103,
+  	    205, 77,  237, 109, 197, 69,  229, 101 },
+  	  { 63,  191, 31,  159, 55,  183, 23,  151,
+  	    61,  189, 29,  157, 53,  181, 21,  149 },
+  	  { 254, 127, 223, 95,  247, 119, 215, 87,
+  	    253, 125, 221, 93,  245, 117, 213, 85 }
+  	};
+  int	Floyd8x8[8][8] =
+  	{
+  	  {  0, 32,  8, 40,  2, 34, 10, 42 },
+  	  { 48, 16, 56, 24, 50, 18, 58, 26 },
+  	  { 12, 44,  4, 36, 14, 46,  6, 38 },
+  	  { 60, 28, 52, 20, 62, 30, 54, 22 },
+  	  {  3, 35, 11, 43,  1, 33,  9, 41 },
+  	  { 51, 19, 59, 27, 49, 17, 57, 25 },
+  	  { 15, 47,  7, 39, 13, 45,  5, 37 },
+  	  { 63, 31, 55, 23, 61, 29, 53, 21 }
+  	};
+  int	Floyd4x4[4][4] =
+  	{
+  	  {  0,  8,  2, 10 },
+  	  { 12,  4, 14,  6 },
+  	  {  3, 11,  1,  9 },
+  	  { 15,  7, 13,  5 }
+  	};
+
 
   /* for color profiles */
   cmsHPROFILE colorProfile = NULL;
@@ -224,7 +285,7 @@ cmsCIExyYTRIPLE adobergb_matrix()
     cmsCIExyYTRIPLE m;
 
     double * matrix = cmMatrixAdobeRgb();
-    
+
     m.Red.x = matrix[0];
     m.Red.y = matrix[1];
     m.Red.Y = matrix[2];
@@ -251,7 +312,7 @@ cmsHPROFILE adobergb_profile()
 #else
     cmsToneCurve * Gamma = cmsBuildGamma(NULL, 2.2);
     cmsToneCurve * Gamma3[3];
-#endif    
+#endif
     Gamma3[0] = Gamma3[1] = Gamma3[2] = Gamma;
 
     // Build AdobeRGB profile
@@ -272,7 +333,7 @@ cmsHPROFILE sgray_profile()
     cmsToneCurve Gamma = cmsBuildGamma(256, 2.2);
 #else
     cmsToneCurve * Gamma = cmsBuildGamma(NULL, 2.2);
-#endif 
+#endif
     // Build sGray profile
     wp = sgray_wp();
     sgray = cmsCreateGrayProfile(&wp, Gamma);
@@ -408,6 +469,134 @@ static bool getColorProfilePath(ppd_file_t *ppd, GooString *path)
 }
 #endif
 
+
+static void
+blank_line(cups_page_header2_t *header,	/* I - Page header */
+           unsigned char       *row)	/* I - Row buffer */
+{
+  int	count;				/* Remaining bytes */
+
+
+  count = header->cupsBytesPerLine;
+
+  switch (header->cupsColorSpace)
+  {
+    case CUPS_CSPACE_CIEXYZ :
+        while (count > 2)
+	{
+	  *row++ = 242;
+	  *row++ = 255;
+	  *row++ = 255;
+	  count -= 3;
+	}
+	break;
+
+    case CUPS_CSPACE_CIELab :
+    case CUPS_CSPACE_ICC1 :
+    case CUPS_CSPACE_ICC2 :
+    case CUPS_CSPACE_ICC3 :
+    case CUPS_CSPACE_ICC4 :
+    case CUPS_CSPACE_ICC5 :
+    case CUPS_CSPACE_ICC6 :
+    case CUPS_CSPACE_ICC7 :
+    case CUPS_CSPACE_ICC8 :
+    case CUPS_CSPACE_ICC9 :
+    case CUPS_CSPACE_ICCA :
+    case CUPS_CSPACE_ICCB :
+    case CUPS_CSPACE_ICCC :
+    case CUPS_CSPACE_ICCD :
+    case CUPS_CSPACE_ICCE :
+    case CUPS_CSPACE_ICCF :
+        while (count > 2)
+	{
+	  *row++ = 255;
+	  *row++ = 128;
+	  *row++ = 128;
+	  count -= 3;
+	}
+        break;
+
+    case CUPS_CSPACE_K :
+    case CUPS_CSPACE_CMY :
+    case CUPS_CSPACE_CMYK :
+    case CUPS_CSPACE_YMC :
+    case CUPS_CSPACE_YMCK :
+    case CUPS_CSPACE_KCMY :
+    case CUPS_CSPACE_KCMYcm :
+    case CUPS_CSPACE_GMCK :
+    case CUPS_CSPACE_GMCS :
+    case CUPS_CSPACE_WHITE :
+    case CUPS_CSPACE_GOLD :
+    case CUPS_CSPACE_SILVER :
+        memset(row, 0, count);
+	break;
+
+    default :
+        memset(row, 255, count);
+	break;
+  }
+}
+
+static void
+format_K(cups_page_header2_t *header,	/* I - Page header */
+         unsigned char       *row,	/* IO - Bitmap data for device */
+	 int                 y,		/* I - Current row */
+	 int                 z,		/* I - Current plane */
+	 int                 xsize,	/* I - Width of image data */
+	 int	             ysize,	/* I - Height of image data */
+	 unsigned char       *r0)	/* I - Primary image data */
+
+{
+
+  unsigned char	*ptr,			/* Pointer into row */
+		bitmask;		/* Current mask for pixel */
+  int		bitoffset;		/* Current offset in line */
+  int		x,			/* Current X coordinate on page */
+		*dither;		/* Pointer into dither array */
+
+
+  (void)z;
+ int XPosition=0;
+  switch (XPosition)
+  {
+    case -1 :
+        bitoffset = 0;
+	break;
+    default :
+        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+	break;
+    case 1 :
+        bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
+	break;
+  }
+
+  ptr = row + bitoffset / 8;
+
+  switch (header->cupsBitsPerColor)
+  {
+    case 1 :
+        bitmask = 0x80 >> (bitoffset & 7);
+        dither  = Floyd16x16[y & 15];
+
+        for (x = xsize; x > 0; x --)
+        {
+          fprintf(stderr, "inside function %s\n",ptr);
+          if (*r0++ > dither[x & 15])
+            *ptr ^= bitmask;
+
+          if (bitmask > 1)
+	           bitmask >>= 1;
+      	  else
+      	  {
+      	    bitmask = 0x80;
+      	    ptr ++;
+          }
+      	}
+        break;
+  }
+}
+
+
 static void  handleRqeuiresPageRegion() {
   ppd_choice_t *mf;
   ppd_choice_t *is;
@@ -464,7 +653,7 @@ static void parseOpts(int argc, char **argv)
   if (t && strcasestr(t, "pwg"))
     pwgraster = 1;
 #endif /* HAVE_CUPS_1_7 */
-    
+
   ppd = ppdOpenFile(getenv("PPD"));
   if (ppd == NULL)
     fprintf(stderr, "DEBUG: PPD file is not specified.\n");
@@ -542,10 +731,10 @@ static void parseOpts(int argc, char **argv)
 
     if (cm_calibrate == CM_CALIBRATION_ENABLED)
       cm_disabled = 1;
-    else 
+    else
       cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
-       
-    if (!cm_disabled) 
+
+    if (!cm_disabled)
       cmGetPrinterIccProfile(getenv("PRINTER"), &profile, ppd);
 
     if (profile != NULL) {
@@ -573,7 +762,7 @@ static void parseOpts(int argc, char **argv)
       if (strcasestr(t, "pwg"))
 	pwgraster = 1;
       else
-	pwgraster = 0; 
+	pwgraster = 0;
     }
     cupsRasterParseIPPOptions(&header,num_options,options,pwgraster,1);
 #else
@@ -674,6 +863,7 @@ static unsigned char *reverseLineSwapBit(unsigned char *src,
   }
   return dst;
 }
+
 
 static unsigned char *rgbToCMYKLine(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
@@ -1328,9 +1518,12 @@ static bool selectSpecialCase()
        && header.cupsBitsPerColor == specialCaseFuncs[i].bitsPerColor) {
       convertLineOdd = specialCaseFuncs[i].convertLine;
       if (header.Duplex && swap_image_x) {
+        fprintf(stderr, "here buddy\n");
         convertLineEven = specialCaseFuncs[i].convertLineSwap;
         allocLineBuf = specialCaseFuncs[i].allocLineBufSwap;
       } else {
+        fprintf(stderr, "not here buddy\n");
+
         convertLineEven = specialCaseFuncs[i].convertLine;
         allocLineBuf = specialCaseFuncs[i].allocLineBuf;
       }
@@ -1399,10 +1592,12 @@ static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
 /* select convertLine function */
 static void selectConvertFunc(cups_raster_t *raster)
 {
-  if ((colorProfile == NULL || popplerColorProfile == colorProfile) 
+  if ((colorProfile == NULL || popplerColorProfile == colorProfile)
       && (header.cupsColorOrder == CUPS_ORDER_CHUNKED
        || header.cupsNumColors == 1)) {
+         fprintf(stderr, "special case\n" );
     if (selectSpecialCase()) return;
+    else fprintf(stderr, "return\n" );
   }
 
   switch (header.cupsColorOrder) {
@@ -1623,14 +1818,130 @@ static void selectConvertFunc(cups_raster_t *raster)
   }
 }
 
-static void writePageImage(cups_raster_t *raster, SplashBitmap *bitmap,
+static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height){
+  unsigned char *temp;
+  temp=dst;
+  fprintf(stderr, "height and width in onebitpixel %d %d\n",width,height );
+  int cnt=0;
+  for(int i=0;i<height;i++){
+    for(int j=0;j<width;j+=8){
+      unsigned char tem=0;
+      for(int k=0;k<8;k++){
+        cnt++;
+          tem <<=1;
+          // fprintf(stderr, "%u\n",*src );
+          unsigned int var=*src;
+          if(var>127){
+            tem |= 0x1;
+          }
+          src +=1;
+      }
+      *dst=tem;
+      dst+=1;
+    }
+    // if(i==(height-1))fprintf(stderr, "some data %u counter %d\n",*dst,cnt );
+  }
+  return temp;
+}
+
+static unsigned char *convertonebitpixelrow(unsigned char *src, unsigned char *dst, unsigned int width){
+  unsigned char *temp;
+  temp=dst;
+    for(int j=0;j<width;j+=8){
+      unsigned char tem=0;
+      for(int k=0;k<8;k++){
+          tem <<=1;
+          // fprintf(stderr, "%u\n",*src );
+          unsigned int var=*src;
+          if(var>127){
+            tem |= 0x1;
+          }
+          src +=1;
+      }
+      *dst=tem;
+      dst+=1;
+    }
+    // if(i==(height-1))fprintf(stderr, "some data %u counter %d\n",*dst,cnt );
+  return temp;
+}
+
+static unsigned char *onebytegreyscale(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height){
+  unsigned char *temp;
+  temp=dst;
+  for(int i=0;i<height;i++){
+    for(int j=0;j<width;j++){
+      *dst=(src[0]+src[1]+src[2])/3;
+      // fprintf(stderr, "%u ",*dst );
+      src+=3;
+      dst+=1;
+    }
+    // fprintf(stderr, "\n");
+  }
+  return temp;
+}
+
+static unsigned char *removeAlpha(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height){
+  unsigned char *temp;
+  temp=dst;
+  for(int i=0;i<height;i++){
+    for(int j=0;j<width;j++){
+      dst[0]=src[0];
+      dst[1]=src[1];
+      dst[2]=src[2];
+      src+=4;
+      dst+=3;
+    }
+  }
+  return temp;
+}
+static void writePageImage(cups_raster_t *raster, SplashBitmap *bitmap,poppler::document *doc1,
   int pageNo)
 {
   ConvertLineFunc convertLine;
   unsigned char *lineBuf = NULL;
   unsigned char *dp;
+  unsigned char *row;
   unsigned int rowsize = bitmap->getRowSize();
 
+  row = (unsigned char*)malloc(2 * header.cupsBytesPerLine);
+  poppler::page *current_page =doc1->create_page(pageNo-1);
+  poppler::page_renderer pr;
+  pr.set_render_hint(poppler::page_renderer::text_antialiasing);
+  poppler::image im = pr.render_page(current_page,header.HWResolution[0],header.HWResolution[1]);
+
+
+  unsigned char *newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
+  newdata = removeAlpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
+
+  unsigned char *graydata = (unsigned char *)malloc(sizeof(char)*im.width()*im.height());
+  graydata = onebytegreyscale(newdata,graydata,im.width(),im.height());
+  fprintf(stderr, "grey scale length%d\n", strlen((const char*)graydata));
+
+  // for (int i=0; i < strlen((const char*)graydata); i++)
+  // graydata[i] = graydata[i] > 127 ? 1 : 0;
+
+  fprintf(stderr, "size of one bit %u\n",(im.width()/8)*im.height());
+  unsigned char *onebitdata = (unsigned char *)malloc(sizeof(char)*ceil((im.width()/8)*im.height()));
+  // unsigned char *iter=onebitdata;
+  // for(long long int i=0;i<((im.width()/8)*im.height());i++){
+  //   *iter=1;
+  //   iter+=1;
+  // }
+  // iter=onebitdata+((im.width()/8)*im.height())+100;
+  // fprintf(stderr, "use data %u\n",*iter );
+  onebitdata = onebitpixel(newdata,graydata,im.width(),im.height());
+  // fprintf(stderr, "one bit %d\n",strlen((const char*)onebitdata));
+  // fprintf(stderr, "%s\n",onebitdata );
+
+  unsigned int rowwidth=ceil(im.width()/8);
+  // im.save("test1.png","png");
+  poppler::image::format_enum form = poppler::image::format_rgb24;
+  poppler::image newimage = poppler::image((char *)newdata,im.width(),im.height(),form);
+  newimage.save("test.png","png");
+  // if(newimage.const_data()!=NULL)fprintf(stderr, "newimage formed\n" );
+  // unsigned char *r0 = (unsigned char*)im.const_data();
+  fprintf(stderr, "height%d width %d bytes_per_row %d\n",im.height(),im.width(),im.bytes_per_row() );
+  fprintf(stderr, "bits per pixel %d \n",header.cupsBitsPerPixel );
   if (allocLineBuf) lineBuf = new unsigned char [bytesPerLine];
   if ((pageNo & 1) == 0) {
     convertLine = convertLineEven;
@@ -1639,39 +1950,68 @@ static void writePageImage(cups_raster_t *raster, SplashBitmap *bitmap,
   }
   if (header.Duplex && (pageNo & 1) == 0 && swap_image_y) {
     for (unsigned int plane = 0;plane < nplanes;plane++) {
-      unsigned char *bp = (unsigned char *)(bitmap->getDataPtr());
 
+      unsigned char *bp = (unsigned char *)(bitmap->getDataPtr());
+      fprintf(stderr, "original bl size %d\n",strlen((const char *)bp) );
+      unsigned char *bp1=(unsigned char *)malloc(sizeof(char)*im.height()*(im.bytes_per_row()/32));
+      unsigned char *row=(unsigned char *)malloc(sizeof(char)*(im.bytes_per_row()/32));
+
+      // bp1=converttoOneBit((unsigned char *)im.const_data(),bp1,im.bytes_per_row()/8,im.height());
+      // fprintf(stderr, "original length is %d\n",strlen((const char*)bp) );
       bp += rowsize * (bitmapoffset[1] + header.cupsHeight - 1) +
         popplerBitsPerPixel * bitmapoffset[0] / 8;
       for (unsigned int h = header.cupsHeight;h > 0;h--) {
         for (unsigned int band = 0;band < nbands;band++) {
-          dp = convertLine(bp,lineBuf,h,plane+band,header.cupsWidth,
+          // blank_line(&header, row);
+          // format_K(&header,row,h,plane,im.width(),im.height(),(unsigned char*)im.const_data());
+          dp = convertLine(onebitdata,lineBuf,h,plane+band,header.cupsWidth,
                  bytesPerLine);
           cupsRasterWritePixels(raster,dp,bytesPerLine);
+          fprintf(stderr, "curlength %x\n",*dp );
+
+          // fprintf(stderr, "%u\n",row );
         }
         bp -= rowsize;
+        bp1-=bytesPerLine;
+        onebitdata-=bytesPerLine;
       }
     }
   } else {
     for (unsigned int plane = 0;plane < nplanes;plane++) {
       unsigned char *bp = (unsigned char *)(bitmap->getDataPtr());
+      fprintf(stderr, "original bl size %d header height %d nbands %d\n",strlen((const char *)bp),header.cupsHeight,nbands );
 
-      bp += rowsize * bitmapoffset[1] + 
+      fprintf(stderr, "length is %d bytes per row %d height %d  width %d\n",strlen((const char*)bp),bytesPerLine,header.cupsHeight,header.cupsWidth );
+      unsigned char *bp1=(unsigned char *)malloc(sizeof(char)*im.height()*(im.bytes_per_row()/32));
+      // bp1=converttoOneBit((unsigned char *)im.const_data(),bp1,im.bytes_per_row()/8,im.height());
+      bp += rowsize * bitmapoffset[1] +
         popplerBitsPerPixel * bitmapoffset[0] / 8;
       for (unsigned int h = 0;h < header.cupsHeight;h++) {
         for (unsigned int band = 0;band < nbands;band++) {
-          dp = convertLine(bp,lineBuf,h,plane+band,header.cupsWidth,
-                 bytesPerLine);
-          cupsRasterWritePixels(raster,dp,bytesPerLine);
+          // blank_line(&header, row);
+          // format_K(&header,row,h,plane,im.width(),im.height(),r0);
+          dp = convertLine(onebitdata,lineBuf,h,plane+band,4961,
+                 rowwidth);
+                 // fprintf(stderr, "%u\n",row );
+                 // fprintf(stderr, "curlength %u\n",bp[0] );
+                 // cupsRasterWritePixels(raster,dp,bytesPerLine);
+
+                 // fprintf(stderr, "curlength %d\n",bp[0] );
+
+          cupsRasterWritePixels(raster,dp,rowwidth);
+
         }
         bp += rowsize;
+        bp1+=bytesPerLine;
+        onebitdata+=rowwidth;
+        graydata+=620;
       }
     }
   }
   if (allocLineBuf) delete[] lineBuf;
 }
 
-static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
+static void outPage(PDFDoc *doc, poppler::document *doc1, Catalog *catalog, int pageNo,
   SplashOutputDev *out, cups_raster_t *raster)
 {
   SplashBitmap *bitmap;
@@ -1684,6 +2024,28 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
   double l, swap;
   int i;
   bool landscape = 0;
+
+  // double DPI=150;
+  // poppler::page *current_page =doc1->create_page(pageNo-1);
+  // poppler::page_renderer pr;
+  // pr.set_render_hint(poppler::page_renderer::text_antialiasing);
+  // poppler::image im = pr.render_page(current_page,DPI,DPI);
+  // int ht = im.height();
+  // int byterprow = im.bytes_per_row();
+  // im.save("new.png","png");
+  // fprintf(stderr, "one %s\n\n\n",im.const_data() );
+  // fprintf(stderr, "two%s\n\n\n",im.const_data() );
+
+  // poppler::image::format_enum form = poppler::image::format_mono;
+  // poppler::image newimage = poppler::image((char *)im.const_data(),ht,im.width(),poppler::image::format_argb32);
+  // if(newimage.const_data()!=NULL)fprintf(stderr, "newimage formed\n" );
+  // else fprintf(stderr, "newimage not formed\n");
+  // newimage.save("black.png","png");
+  // int datasz = ht*byterprow;
+  // void * p =(char *)malloc(datasz);
+  // memcpy(p,(void *)im.const_data(),datasz);
+  // fprintf(stderr, "byterprow %d data %d \n",byterprow,datasz );
+  // fprintf(stderr, "one %s\n\n\n two %s\n\n\n",newimage.const_data(),im.const_data() );
 
   fprintf(stderr, "DEBUG: mediaBox = [ %f %f %f %f ]; rotate = %d\n",
 	  mediaBox.x1, mediaBox.y1, mediaBox.x2, mediaBox.y2, rotate);
@@ -1854,7 +2216,7 @@ static void outPage(PDFDoc *doc, Catalog *catalog, int pageNo,
   }
 
   /* write page image */
-  writePageImage(raster,bitmap,pageNo);
+  writePageImage(raster,bitmap,doc1,pageNo);
 }
 
 static void setPopplerColorProfile()
@@ -1945,7 +2307,11 @@ static void setPopplerColorProfile()
   }
 }
 
+
+
+
 int main(int argc, char *argv[]) {
+  poppler::document *doc1;
   PDFDoc *doc;
   SplashOutputDev *out;
   SplashColor paperColor;
@@ -1998,6 +2364,9 @@ int main(int argc, char *argv[]) {
     parsePDFTOPDFComment(fp);
     fclose(fp);
     doc = new PDFDoc(fileName,NULL,NULL);
+
+    doc1=poppler::document::load_from_file(argv[6],"","");
+
   }
 
   if (!doc->isOk()) {
@@ -2086,7 +2455,7 @@ int main(int argc, char *argv[]) {
   case CUPS_CSPACE_WHITE:
   case CUPS_CSPACE_GOLD:
   case CUPS_CSPACE_SILVER:
-    if (header.cupsBitsPerColor == 1 
+    if (header.cupsBitsPerColor == 1
        && header.cupsBitsPerPixel == 1) {
       cmode = splashModeMono1;
       popplerBitsPerPixel = 1;
@@ -2124,7 +2493,7 @@ int main(int argc, char *argv[]) {
   }
   selectConvertFunc(raster);
   for (i = 1;i <= npages;i++) {
-    outPage(doc,catalog,i,out,raster);
+    outPage(doc,doc1,catalog,i,out,raster);
   }
   cupsRasterClose(raster);
 
