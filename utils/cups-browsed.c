@@ -1255,6 +1255,9 @@ void add_mimetype_attributes(char* cluster_name, ipp_t **merged_attributes)
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
         continue;
+      if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+        p->status ==  STATUS_TO_BE_RELEASED )
+        continue;
       if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_MIMETYPE)) != NULL) {
 	count = ippGetCount(attr);
 	for (i = 0; i < count; i ++) { 
@@ -1314,6 +1317,9 @@ void add_tagzero_attributes(char* cluster_name,ipp_t **merged_attributes)
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
 	continue;
+      if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+        p->status ==  STATUS_TO_BE_RELEASED )
+  continue;
       if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_ZERO)) != NULL) {
 	count = ippGetCount(attr);
 	for(i = 0; i < count; i ++) {
@@ -1375,6 +1381,9 @@ void add_keyword_attributes(char* cluster_name,ipp_t **merged_attributes)
          p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
         continue;
+      if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+        p->status ==  STATUS_TO_BE_RELEASED )
+        continue;
       if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_KEYWORD)) != NULL) {
         count = ippGetCount(attr);
         for (i = 0; i < count; i++) {
@@ -1431,6 +1440,9 @@ void add_enum_attributes(char* cluster_name,ipp_t **merged_attributes)
          p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
         continue;
+      if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+        p->status ==  STATUS_TO_BE_RELEASED )
+        continue;
       if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no],  IPP_TAG_ENUM)) != NULL) {
         count = ippGetCount(attr);
         for (i = 0; i < count; i ++) {
@@ -1485,6 +1497,9 @@ void add_margin_attributes(char* cluster_name,ipp_t **merged_attributes)
          p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
         continue;
+      if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+      p->status ==  STATUS_TO_BE_RELEASED )
+        continue;
       if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no],  IPP_TAG_INTEGER)) != NULL) {
         count = ippGetCount(attr);
         for (i = 0; i < count; i++) {
@@ -1535,6 +1550,9 @@ void add_resolution_attributes(char* cluster_name, ipp_t **merged_attributes)
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
 	continue;
+      if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+      p->status ==  STATUS_TO_BE_RELEASED )
+  continue;
       if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_RESOLUTION)) != NULL){
         for (i = 0, count = ippGetCount(attr); i < count; i ++) {
           if ((res = ippResolutionToRes(attr, i)) != NULL &&
@@ -1589,6 +1607,9 @@ void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
+        continue;
+      if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+        p->status ==  STATUS_TO_BE_RELEASED )
         continue;
       if ((attr = ippFindAttribute(p->prattrs, attributes[attr_no],
 				   IPP_TAG_BEGIN_COLLECTION)) != NULL) {
@@ -1681,6 +1702,9 @@ add_mediadatabase_attributes(char* cluster_name, ipp_t **merged_attributes)
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
          p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
+        continue;
+      if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+        p->status ==  STATUS_TO_BE_RELEASED )
         continue;
       if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no],
 				   IPP_TAG_BEGIN_COLLECTION)) != NULL){
@@ -1793,6 +1817,9 @@ void add_jobpresets_attribute(char* cluster_name, ipp_t ** merged_attributes)
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
     if (strcmp(cluster_name,p->queue_name))
+      continue;
+    if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+      p->status ==  STATUS_TO_BE_RELEASED )
       continue;
     if ((attr = ippFindAttribute(p->prattrs, "job-presets-supported",
 				 IPP_TAG_BEGIN_COLLECTION)) != NULL) {
@@ -2447,6 +2474,9 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
     if (!strcmp(p->queue_name,cluster_name)) {
+      if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+        p->status ==  STATUS_TO_BE_RELEASED )
+          continue;
       defattr = NULL;
       min_length = INT_MAX;
       min_width = INT_MAX;
@@ -2539,6 +2569,9 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
     p = (remote_printer_t *)cupsArrayIndex(remote_printers, j);
     if (strcmp(cluster_name,p->queue_name))
       continue;
+    if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+      p->status ==  STATUS_TO_BE_RELEASED )
+      continue;
     for (i = 0; i < no_of_ppd_keywords; i ++) {
       printer_first_options =
 	get_supported_options(p->prattrs, ppd_keywords[i]);
@@ -2598,6 +2631,9 @@ ipp_t* get_cluster_attributes(char* cluster_name)
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
     if (strcmp(cluster_name,p->queue_name))
       continue;
+    if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+      p->status ==  STATUS_TO_BE_RELEASED )
+      continue;
     if (!make_model_done) {
       strcpy(printer_make_and_model, "Cluster ");
       strcat(printer_make_and_model, cluster_name);
@@ -2646,6 +2682,9 @@ int cluster_supports_given_attribute(char* cluster_name,ipp_tag_t tag,
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
     if (strcmp(cluster_name, p->queue_name))
       continue;
+    if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+      p->status ==  STATUS_TO_BE_RELEASED )
+      continue;
     if ((attr = ippFindAttribute(p->prattrs, attribute, tag)) != NULL &&
         (count = ippGetCount(attr)) > 1)
       return 1;
@@ -2682,6 +2721,9 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
     if (strcmp(p->queue_name, cluster_name))
+      continue;
+    if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
+      p->status ==  STATUS_TO_BE_RELEASED )
       continue;
     if ((attr = ippFindAttribute (p->prattrs, "pages-per-minute",
 				  IPP_TAG_INTEGER)) != NULL) {
@@ -5851,8 +5893,12 @@ on_job_state (CupsNotifier *object,
 	  num_of_printers = 0;
 	  for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	      r; r = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-	    if(!strcmp(r->queue_name, q->queue_name))
-	      num_of_printers++;
+      if(!strcmp(r->queue_name, q->queue_name)){
+        if(r->status == STATUS_DISAPPEARED || r->status == STATUS_UNCONFIRMED ||
+          r->status ==  STATUS_TO_BE_RELEASED )
+          continue;
+       num_of_printers++;
+      }
 	  }
 
 	  /* If we are in a cluster, see whether the printer supports the 
@@ -7129,7 +7175,7 @@ remove_printer_entry(remote_printer_t *p) {
 }
 
 gboolean update_cups_queues(gpointer unused) {
-  remote_printer_t *p, *q, *r, *s;
+  remote_printer_t *p, *q, *r, *s, *master;
   http_t        *http;
   char          uri[HTTP_MAX_URI], device_uri[HTTP_MAX_URI], buf[1024],
                 line[1024];
@@ -7399,6 +7445,8 @@ gboolean update_cups_queues(gpointer unused) {
       /* Do not create a queue for slaves */
       if (p->slave_of) {
 	p->status = STATUS_CONFIRMED;
+  master = p->slave_of;
+  master->status = STATUS_TO_BE_CREATED;
 	if (p->is_legacy) {
 	  p->timeout = time(NULL) + BrowseTimeout;
 	  debug_printf("starting BrowseTimeout timer for %s (%ds)\n",
@@ -7606,8 +7654,12 @@ gboolean update_cups_queues(gpointer unused) {
 	  num_cluster_printers = 0;
 	  for (s = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	       s; s = (remote_printer_t *)cupsArrayNext(remote_printers)){
-	    if(!strcmp(s->queue_name,p->queue_name))
-	      num_cluster_printers++;
+	    if(!strcmp(s->queue_name,p->queue_name)) {
+        if(s->status == STATUS_DISAPPEARED || s->status == STATUS_UNCONFIRMED ||
+          s->status ==  STATUS_TO_BE_RELEASED )
+          continue;
+        num_cluster_printers++;
+      }
 	  }
 
 	  if (num_cluster_printers == 1) {
@@ -7918,8 +7970,12 @@ gboolean update_cups_queues(gpointer unused) {
 	  num_cluster_printers = 0;
 	  for (s = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	       s; s = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-	    if(!strcmp(s->queue_name,p->queue_name))
-	      num_cluster_printers++;
+      if(!strcmp(s->queue_name,p->queue_name)) {
+        if(s->status == STATUS_DISAPPEARED || s->status == STATUS_UNCONFIRMED ||
+          s->status ==  STATUS_TO_BE_RELEASED )
+          continue;
+        num_cluster_printers++;
+      }
 	  }
 	  if (num_cluster_printers == 1) {
 	    printer_attributes = p->prattrs;
