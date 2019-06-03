@@ -2622,10 +2622,10 @@ ipp_t* get_cluster_attributes(char* cluster_name)
 {
   remote_printer_t     *p;
   ipp_t                *merged_attributes = NULL;
-  char                 printer_make_and_model[256], buffer[1024*30];
+  char                 printer_make_and_model[256];
   ipp_attribute_t      *attr;
-  int                  color_supported=0,make_model_done = 0;
-
+  int                  color_supported=0,make_model_done = 0,i;
+  char                 valuebuffer[65536];
   merged_attributes = ippNew();
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
@@ -2662,12 +2662,18 @@ ipp_t* get_cluster_attributes(char* cluster_name)
   add_jobpresets_attribute(cluster_name, &merged_attributes);
   attr = ippFirstAttribute(merged_attributes);
   /* Printing merged attributes*/
-  debug_printf("Merged attributes for the cluster %s", cluster_name);
-  while(attr) {
-    ippAttributeString(attr, buffer, sizeof(buffer));
-    debug_printf("%s,%s\n", ippGetName(attr), buffer);
-    attr = ippNextAttribute(merged_attributes);
-  }
+  debug_printf("Merged attributes for the cluster %s : \n", cluster_name);
+  while (attr) {
+  debug_printf("  Attr: %s\n",
+         ippGetName(attr));
+  ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+  debug_printf("  Value: %s\n", valuebuffer);
+  const char *kw;
+  for (i = 0; i < ippGetCount(attr); i ++)
+    if ((kw = ippGetString(attr, i, NULL)) != NULL)
+      debug_printf("  Keyword: %s\n", kw);
+  attr = ippNextAttribute(merged_attributes);
+      }
   return merged_attributes;
 }
 
@@ -2850,7 +2856,6 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
 
   if (attr && ippGetCount(attr) > 0) {
     *default_color = NULL;
-    debug_printf("ColorModel\n");
     for (i = 0, count = ippGetCount(attr); i < count; i ++) {
       keyword = ippGetString(attr, i, NULL);
       if ((!strcasecmp(keyword, "black_1") ||
@@ -2981,7 +2986,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
   ipp_attribute_t       *attr,*attr1;
   ipp_t                 *request, *response = NULL;
   const char            *str,*side,*resource;
-  cups_array_t          *formats_supported,*job_sheet_supported,
+  cups_array_t          *job_sheet_supported,
                         *multiple_doc_supported,*print_qualities,
                         *media_type_supported,*staplelocation_supported,
                         *foldtype_supported,*punchmedia_supported,
@@ -3018,7 +3023,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
   attr = ippFirstAttribute(response);
 
   /* Document Format */
-  if ((attr = ippFindAttribute(response, "document-format-detected",
+/*  if ((attr = ippFindAttribute(response, "document-format-detected",
 			       IPP_TAG_MIMETYPE)) != NULL &&
       ippGetCount(attr) > 0) {
     str = ippGetString(attr,0, NULL);
@@ -3029,7 +3034,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
 		   printer, str);
       return 0;
     }
-  }
+  }*/
 
   /* Job Sheets*/
   if ((attr = ippFindAttribute(response, "job-sheets",
@@ -7447,6 +7452,7 @@ gboolean update_cups_queues(gpointer unused) {
 	p->status = STATUS_CONFIRMED;
   master = p->slave_of;
   master->status = STATUS_TO_BE_CREATED;
+  master->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
 	if (p->is_legacy) {
 	  p->timeout = time(NULL) + BrowseTimeout;
 	  debug_printf("starting BrowseTimeout timer for %s (%ds)\n",
