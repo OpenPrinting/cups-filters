@@ -332,7 +332,6 @@ static void parseOpts(int argc, char **argv)
 {
   int num_options = 0;
   cups_option_t *options = 0;
-  char *profilePath;
   char *profile = 0;
   const char *t = NULL;
   ppd_attr_t *attr;
@@ -1511,8 +1510,8 @@ static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsign
   unsigned char *temp;
   temp=dst;
   int cnt=0;
-  for(int i=0;i<height;i++){
-    for(int j=0;j<width;j+=8){
+  for(unsigned int i=0;i<height;i++){
+    for(unsigned int j=0;j<width;j+=8){
       unsigned char tem=0;
       for(int k=0;k<8;k++){
         cnt++;
@@ -1534,8 +1533,8 @@ static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsign
 static unsigned char *removeAlpha(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height){
   unsigned char *temp;
   temp=dst;
-  for(int i=0;i<height;i++){
-    for(int j=0;j<width;j++){
+  for(unsigned int i=0;i<height;i++){
+    for(unsigned int j=0;j<width;j++){
       dst[0]=src[2];
       dst[1]=src[1];
       dst[2]=src[0];
@@ -1559,7 +1558,7 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc1,
   pr.set_render_hint(poppler::page_renderer::text_antialiasing);
 
   unsigned char *colordata,*newdata,*graydata,*onebitdata;
-  unsigned int rowsize1,pixel_count;
+  unsigned int pixel_count;
   poppler::image im;
   //render the page according to the colourspace and generate the requried data
   switch (header.cupsColorSpace) {
@@ -1654,7 +1653,6 @@ static void outPage(poppler::document *doc1, int pageNo,
   ppd_size_t *size;		/* Page size */
   double l, swap;
   int i;
-  bool landscape = 0;
 
   poppler::page *current_page =doc1->create_page(pageNo-1);
   poppler::page_box_enum box = poppler::page_box_enum::media_box;
@@ -1702,7 +1700,6 @@ static void outPage(poppler::document *doc1, int pageNo,
        * Standard size...
        */
       fprintf(stderr, "DEBUG: size = %s\n", size->name);
-      landscape = 0;
       paperdimensions[0] = size->width;
       paperdimensions[1] = size->length;
       if (pwgraster == 0) {
@@ -1730,7 +1727,6 @@ static void outPage(poppler::document *doc1, int pageNo,
 	 * Standard size in landscape orientation...
 	 */
 	fprintf(stderr, "DEBUG: landscape size = %s\n", size->name);
-	landscape = 1;
 	paperdimensions[0] = size->width;
 	paperdimensions[1] = size->length;
 	if (pwgraster == 0) {
@@ -1745,7 +1741,6 @@ static void outPage(poppler::document *doc1, int pageNo,
 	 * Custom size...
 	 */
 	fprintf(stderr, "DEBUG: size = Custom\n");
-	landscape = 0;
 	paperdimensions[1] = size->length;
 	for (i = 0; i < 2; i ++)
 	  paperdimensions[i] = header.PageSize[i];
@@ -1928,7 +1923,6 @@ int main(int argc, char *argv[]) {
   int i;
   int npages;
   cups_raster_t *raster;
-  int rowpad;
 
   cmsSetLogErrorHandler(lcmsErrorHandler);
   parseOpts(argc, argv);
@@ -2041,7 +2035,6 @@ int main(int argc, char *argv[]) {
   case CUPS_CSPACE_RGBW:
   case CUPS_CSPACE_GMCK:
   case CUPS_CSPACE_GMCS:
-    rowpad = 4;
     popplerBitsPerPixel = 24;
     popplerNumColors = 3;
     break;
@@ -2058,7 +2051,6 @@ int main(int argc, char *argv[]) {
       popplerBitsPerPixel = 8;
     }
     /* set paper color white */
-    rowpad = 1;
     popplerNumColors = 1;
     break;
   default:
