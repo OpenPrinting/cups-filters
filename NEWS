@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.24.0 - 2019-06-03
 -----------------------------------------------------
 
+CHANGES IN V1.24.1
+
+	- libcupsfilters: Added support for color spaces CMY and RGBW
+	  when using filters without PPD file (mainly for development
+	  and debugging, option "print-color-mode" with values
+	  "cmy-XX" and "rgbw-XX" with XX being the number of bits per
+	  color).
+
 CHANGES IN V1.24.0
 
 	- cups-browsed: Integration of Deepak Patankar's Google Summer

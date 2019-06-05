@@ -786,6 +786,13 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       colorspace = 6;
       numcolors = 4;
     }
+    else if (!strncasecmp(val, "Cmy", 3))
+    {
+      if (*(val + 3) == '_' || *(val + 3) == '-') 
+	ptr = val + 4;
+      colorspace = 4;
+      numcolors = 3;
+    }
     else if (!strncasecmp(val, "Device", 6))
     {
       ptr = val + 6;
@@ -814,6 +821,13 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	ptr = val + 5;
       colorspace = 19;
       numcolors = 3;
+    }
+    else if (!strncasecmp(val, "Rgbw", 4))
+    {
+      if (*(val + 4) == '_' || *(val + 4) == '-') 
+	ptr = val + 5;
+      colorspace = 17;
+      numcolors = 4;
     }
     else if (!strncasecmp(val, "Rgb", 3))
     {
