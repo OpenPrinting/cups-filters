@@ -1661,11 +1661,11 @@ static void outPage(poppler::document *doc1, int pageNo,
   poppler::rectf mediaBox = current_page->page_rect(box);
   poppler::page::orientation_enum orient = current_page->orientation();
   switch (orient) {
-    case poppler::page::orientation_enum::landscape: rotate=90;
+    case poppler::page::landscape: rotate=90;
      break;
-    case poppler::page::orientation_enum::upside_down: rotate=180;
+    case poppler::page::upside_down: rotate=180;
      break;
-    case poppler::page::orientation_enum::seascape: rotate=270;
+    case poppler::page::seascape: rotate=270;
      break;
      default:rotate=0;
   }
