@@ -65,6 +65,7 @@ License: Expat
 Files: filter/PDFError.h
   filter/pdftoraster.cxx
 Copyright: 2008-2012, BBR Inc.
+  2019, Tanmay Anand
 License: Expat
 
 Files: filter/banner.c
