@@ -338,7 +338,7 @@ static void parseOpts(int argc, char **argv)
   ppd_attr_t *attr;
 
   if (argc < 6 || argc > 7) {
-    fprintf(stderr, "Usage: %s job-id user title copies options [file]\n",
+    fprintf(stderr, "ERROR: Usage: %s job-id user title copies options [file]\n",
 	    argv[0]);
     exit(1);
   }
@@ -1361,7 +1361,7 @@ static void selectConvertFunc(cups_raster_t *raster)
             COLORSPACE_SH(dcst) |
             CHANNELS_SH(header.cupsNumColors) | BYTES_SH(bytes),
             renderingIntent,0)) == 0) {
-      fprintf(stderr, "Can't create color transform");
+      fprintf(stderr, "ERROR: Can't create color transform");
       exit(1);
     }
   } else {
@@ -1432,7 +1432,7 @@ static void selectConvertFunc(cups_raster_t *raster)
       convertCSpace = W8toK8;
       break;
     default:
-      fprintf(stderr, "Specified ColorSpace is not supported\n" );
+      fprintf(stderr, "ERROR: Specified ColorSpace is not supported\n" );
       exit(1);
       break;
     }
@@ -1830,7 +1830,7 @@ static void outPage(poppler::document *doc1, int pageNo,
     header.cupsBytesPerLine *= header.cupsNumColors;
   }
   if (!cupsRasterWriteHeader2(raster,&header)) {
-      fprintf(stderr, "Can't write page %d header\n",pageNo );
+      fprintf(stderr, "ERROR: Can't write page %d header\n",pageNo );
       exit(1);
   }
 
@@ -1917,7 +1917,7 @@ static void setPopplerColorProfile()
     popplerColorProfile = NULL;
     break;
   default:
-    fprintf(stderr, "Specified ColorSpace is not supported\n" );
+    fprintf(stderr, "ERROR: Specified ColorSpace is not supported\n" );
     exit(1);
     break;
   }
@@ -1942,14 +1942,14 @@ int main(int argc, char *argv[]) {
 
     fd = cupsTempFd(name,sizeof(name));
     if (fd < 0) {
-      fprintf(stderr, "Can't create temporary file\n");
+      fprintf(stderr, "ERROR: Can't create temporary file\n");
       exit(1);
     }
 
     /* copy stdin to the tmp file */
     while ((n = read(0,buf,BUFSIZ)) > 0) {
       if (write(fd,buf,n) != n) {
-        fprintf(stderr, "Can't copy stdin to temporary file\n" );
+        fprintf(stderr, "ERROR: Can't copy stdin to temporary file\n" );
         close(fd);
 	exit(1);
       }
@@ -1963,7 +1963,7 @@ int main(int argc, char *argv[]) {
     FILE *fp;
 
     if ((fp = fopen(argv[6],"rb")) == 0) {
-        fprintf(stderr, "Can't open input file %s\n",argv[6]);
+        fprintf(stderr, "ERROR: Can't open input file %s\n",argv[6]);
 	exit(1);
     }
     parsePDFTOPDFComment(fp);
@@ -1990,7 +1990,7 @@ int main(int argc, char *argv[]) {
      && header.cupsBitsPerColor != 4
      && header.cupsBitsPerColor != 8
      && header.cupsBitsPerColor != 16) {
-    fprintf(stderr, "Specified color format is not supported\n");
+    fprintf(stderr, "ERROR: Specified color format is not supported\n");
     exit(1);
   }
   if (header.cupsColorOrder == CUPS_ORDER_PLANAR) {
@@ -2025,7 +2025,7 @@ int main(int argc, char *argv[]) {
     if (header.cupsColorOrder != CUPS_ORDER_CHUNKED
        || (header.cupsBitsPerColor != 8
           && header.cupsBitsPerColor != 16)) {
-      fprintf(stderr, "Specified color format is not supported\n");
+      fprintf(stderr, "ERROR: Specified color format is not supported\n");
       exit(1);
     }
   case CUPS_CSPACE_RGB:
@@ -2062,7 +2062,7 @@ int main(int argc, char *argv[]) {
     popplerNumColors = 1;
     break;
   default:
-    fprintf(stderr, "Specified ColorSpace is not supported\n");
+    fprintf(stderr, "ERROR: Specified ColorSpace is not supported\n");
     exit(1);
     break;
   }
@@ -2073,7 +2073,7 @@ int main(int argc, char *argv[]) {
 
   if ((raster = cupsRasterOpen(1, pwgraster ? CUPS_RASTER_WRITE_PWG :
 			       CUPS_RASTER_WRITE)) == 0) {
-        fprintf(stderr, "Can't open raster stream\n");
+        fprintf(stderr, "ERROR: Can't open raster stream\n");
 	exit(1);
   }
   selectConvertFunc(raster);
