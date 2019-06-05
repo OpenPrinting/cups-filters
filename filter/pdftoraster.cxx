@@ -1591,6 +1591,8 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc1,
    case CUPS_CSPACE_ADOBERGB:
    case CUPS_CSPACE_CMYK:
    case CUPS_CSPACE_SRGB:
+   case CUPS_CSPACE_CMY:
+   case CUPS_CSPACE_RGBW:
    default:
    im = pr.render_page(current_page,header.HWResolution[0],header.HWResolution[1],0,0,header.cupsWidth,header.cupsHeight);
    newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
