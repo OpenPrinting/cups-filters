@@ -62,8 +62,7 @@ Files: cupsfilters/colormanager.h
 Copyright: 2014, Joseph Simon
 License: Expat
 
-Files: filter/PDFError.h
-  filter/pdftoraster.cxx
+Files: filter/pdftoraster.cxx
 Copyright: 2008-2012, BBR Inc.
   2019, Tanmay Anand
 License: Expat
