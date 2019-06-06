@@ -35,11 +35,11 @@ INTRODUCTION
     non-PDF printers are used, to have at least one of Ghostscript,
     Poppler, or MuPDF.
 
-    The Poppler-based filters need a C++ compiler which supports C++11
-    and Poppler being built with the "./configure" options
-    "--enable-splash --disable-fixedpoint --disable-single-precision"
-    (if in the actually used Poppler version such options are
-    available). This is the case for most modern Linux distributions.
+    The Poppler-based pdftoraster filter needs a C++ compiler which
+    supports C++11 and Poppler being built with the "./configure"
+    option "-DENABLE_CPP=ON" for building the C++ support library
+    libpoppler-cpp. This is the case for most modern Linux
+    distributions.
 
     If you use MuPDF as PDF renderer make sure to use at least version
     1.15, as the older versions have bugs and so some files get not
