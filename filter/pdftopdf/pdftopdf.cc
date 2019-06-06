@@ -869,7 +869,6 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
 // }}}
 
 // reads from stdin into temporary file. returns FILE *  or NULL on error
-// TODO? to extra file (also used in pdftoijs, e.g.)
 FILE *copy_stdin_to_temp() // {{{
 {
   char buf[BUFSIZ];

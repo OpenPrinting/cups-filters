@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.24.0 - 2019-06-03
 
 CHANGES IN V1.25.0
 
+	- pdftoijs, pdftoopvp: Removed these deprecated filters
+	  completely as there is no demand for them any more. They
+	  also used unstable, undocumented APIs of Poppler.
 	- pdftoraster: Changed from using unstable, undocumented APIs
 	  of Poppler to stable, documented ones, to improve
 	  maintainability of this filter, and with it of the

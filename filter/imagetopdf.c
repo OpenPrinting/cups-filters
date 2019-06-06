@@ -149,13 +149,13 @@ void emitJCLOptions(FILE *fp, int copies)
   int i;
   char buf[1024];
   ppd_attr_t *attr;
-  int pdftoopvp = 0;
+  int pdftopdfjcl = 0;
   int datawritten = 0;
 
   if (ppd == 0) return;
   if ((attr = ppdFindAttr(ppd,"pdftopdfJCLBegin",NULL)) != NULL) {
     int n = strlen(attr->value);
-    pdftoopvp = 1;
+    pdftopdfjcl = 1;
     for (i = 0;i < n;i++) {
 	if (attr->value[i] == '\r' || attr->value[i] == '\n') {
 	    /* skip new line */
@@ -173,7 +173,7 @@ void emitJCLOptions(FILE *fp, int copies)
     if ((attr = ppdFindAttr(ppd,"pdftopdfJCLCopies",buf)) != NULL) {
       fputs(attr->value,fp);
       datawritten = 1;
-    } else if (pdftoopvp) {
+    } else if (pdftopdfjcl) {
       fprintf(fp,"Copies=%d;",copies);
       datawritten = 1;
     }
@@ -189,7 +189,7 @@ void emitJCLOptions(FILE *fp, int copies)
       if ((attr = ppdFindAttr(ppd,buf,choices[i]->choice)) != NULL) {
         fputs(attr->value,fp);
 	datawritten = 1;
-      } else if (pdftoopvp) {
+      } else if (pdftopdfjcl) {
         fprintf(fp,"%s=%s;",
           ((ppd_option_t *)(choices[i]->option))->keyword,
           choices[i]->choice);

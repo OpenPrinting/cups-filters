@@ -24,7 +24,7 @@ BEFORE YOU BEGIN
     Compaq, HP, SGI, and Sun.  BSD users should use GNU make (gmake) since BSD
     make does not support "include".
 
-    Poppler, libijs, freetype, fontconfig, and liblcms (liblcms2 recommended) 
+    Poppler, freetype, fontconfig, and liblcms (liblcms2 recommended)
     must be installed to be able to compile this package.
 
     Note that Poppler has to be compiled with the

@@ -145,21 +145,6 @@ Files: filter/imagetopdf*
 Copyright: 1993-2007, Easy Software Products
 License: GPL-2
 
-Files: filter/pdftoijs.cxx
- ppd/HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd
-Copyright: 2008, Tobias Hoffmann
-  2008, BBR Inc.
-License: Expat
-
-Files: filter/pdftoopvp/*
-Copyright: 2003, 2004, 2005, 2006, AXE,Inc
-  2007, 2008, ModifiedBBR Inc.
-  2003, Glyph & Cog, LLC
-  2006, Fuji Xerox Printing Systems Co., Ltd
-  2006, Free Standards Group
-  2006, Canon Inc
-License: Expat
-
 Files: filter/pdftopdf/*
 Copyright: 2012 Tobias Hoffmann
  2006-2011, BBR Inc

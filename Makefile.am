@@ -486,61 +486,6 @@ EXTRA_DIST += \
 pkgfilter_PROGRAMS =
 pkgfilterdir = $(CUPS_SERVERBIN)/filter
 
-# ===========
-# PDF to OPVP
-# ===========
-if ENABLE_OPVP
-if ENABLE_POPPLER
-pkgfilter_PROGRAMS += \
-	pdftoopvp
-
-pkgfontconfigdir = $(sysconfdir)/$(FONTDIR)
-pkgfontconfig_DATA = filter/pdftoopvp/99pdftoopvp.conf
-endif
-endif
-EXTRA_DIST += filter/pdftoopvp/99pdftoopvp.conf
-
-pdftoopvp_SOURCES = \
-	filter/pdftoopvp/oprs/OPRS.cxx \
-	filter/pdftoopvp/oprs/OPRS.h \
-	filter/pdftoopvp/oprs/OPVPSplashClip.cxx \
-	filter/pdftoopvp/oprs/OPVPSplashClip.h \
-	filter/pdftoopvp/oprs/OPVPSplash.cxx \
-	filter/pdftoopvp/oprs/OPVPSplash.h \
-	filter/pdftoopvp/oprs/OPVPSplashPath.cxx \
-	filter/pdftoopvp/oprs/OPVPSplashPath.h \
-	filter/pdftoopvp/oprs/OPVPSplashState.cxx \
-	filter/pdftoopvp/oprs/OPVPSplashState.h \
-	filter/pdftoopvp/oprs/OPVPSplashXPath.cxx \
-	filter/pdftoopvp/oprs/OPVPSplashXPath.h \
-	filter/pdftoopvp/oprs/OPVPWrapper.cxx \
-	filter/pdftoopvp/oprs/OPVPWrapper.h \
-	filter/pdftoopvp/oprs/OPVPWrapper_0_2.cxx \
-	filter/pdftoopvp/oprs/OPVPWrapper_0_2.h \
-	filter/pdftoopvp/OPVPError.h \
-	filter/pdftoopvp/opvp/opvp_common.h \
-	filter/pdftoopvp/opvp/opvp.h \
-	filter/pdftoopvp/opvp/opvp_0_2_0.h \
-	filter/pdftoopvp/OPVPOutputDev.cxx \
-	filter/pdftoopvp/OPVPOutputDev.h \
-	filter/pdftoopvp/pdftoopvp.cxx
-pdftoopvp_CFLAGS = \
-	$(CUPS_CFLAGS) \
-	$(FREETYPE_CFLAGS) \
-	$(FONTCONFIG_CFLAGS) \
-	$(LIBPNG_CFLAGS) \
-	$(POPPLER_CFLAGS) \
-	-I$(srcdir)/filter/pdftoopvp/oprs \
-	-I$(srcdir)/filter/pdftoopvp/opvp
-pdftoopvp_CXXFLAGS = $(pdftoopvp_CFLAGS)
-pdftoopvp_LDADD = \
-	$(CUPS_LIBS) \
-	$(FREETYPE_LIBS) \
-	$(FONTCONFIG_LIBS) \
-	$(LIBPNG_LIBS) \
-	$(POPPLER_LIBS) \
-	$(DLOPEN_LIBS)
-
 # ==========
 # PDF to PDF 
 # ==========
@@ -623,10 +568,6 @@ endif
 if ENABLE_POPPLER
 pkgfilter_PROGRAMS += \
 	pdftoraster
-if ENABLE_IJS
-pkgfilter_PROGRAMS += \
-	pdftoijs
-endif
 endif
 if ENABLE_GHOSTSCRIPT
 pkgfilter_PROGRAMS += \
@@ -824,19 +765,6 @@ rastertops_LDADD = \
 	-lz \
 	libcupsfilters.la
 
-pdftoijs_SOURCES = \
-	filter/pdftoijs.cxx \
-	filter/PDFError.h
-pdftoijs_CFLAGS = \
-	$(CUPS_CFLAGS) \
-	$(IJS_CFLAGS) \
-	$(POPPLER_CFLAGS)
-pdftoijs_CXXFLAGS = $(pdftoijs_CFLAGS)
-pdftoijs_LDADD = \
-	$(CUPS_LIBS) \
-	$(IJS_LIBS) \
-	$(POPPLER_LIBS)
-
 sys5ippprinter_SOURCES = \
 	filter/common.c \
 	filter/common.h \
@@ -863,8 +791,7 @@ pdftops_LDADD = $(STRCASESTR) $(CUPS_LIBS)
 pdftops_DEPENDENCIES = $(STRCASESTR)
 
 pdftoraster_SOURCES = \
-	filter/pdftoraster.cxx \
-	filter/PDFError.h
+	filter/pdftoraster.cxx
 pdftoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LCMS_CFLAGS) \
@@ -1022,13 +949,6 @@ genppdfiles = \
 	ppd/HP-Color_LaserJet_CM3530_MFP-PDF.ppd \
 	ppd/Ricoh-PDF_Printer-PDF.ppd
 ppd_DATA = $(genppdfiles)
-ijsppdfiles = \
-	ppd/HP-PhotoSmart_Pro_B8300-hpijs-pdftoijs.ppd
-if ENABLE_POPPLER
-if ENABLE_IJS
-ppd_DATA += $(ijsppdfiles)
-endif
-endif
 gsppdfiles = \
 	ppd/pxlcolor.ppd \
 	ppd/pxlmono.ppd
@@ -1038,7 +958,6 @@ endif
 
 EXTRA_DIST += \
 	$(genppdfiles) \
-	$(ijsppdfiles) \
 	$(gsppdfiles)
 
 # =========

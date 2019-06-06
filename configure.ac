@@ -460,7 +460,6 @@ AS_IF([test x"$lcms2" = "xno"], [
 ])
 PKG_CHECK_MODULES([FREETYPE], [freetype2], [AC_DEFINE([HAVE_FREETYPE_H], [1], [Have FreeType2 include files])])
 PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.0.0])
-PKG_CHECK_MODULES([IJS], [ijs], [have_ijs=yes], [have_ijs=no])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
 PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 8.3.0])
@@ -543,21 +542,6 @@ AC_ARG_ENABLE([ghostscript],
 	[enable_ghostscript="$enableval"],
 	[enable_ghostscript=yes]
 )
-AC_ARG_ENABLE([ijs],
-	[AS_HELP_STRING([--enable-ijs], [Enable filters using IJS.])],
-	[enable_ijs="$enableval"],
-	[enable_ijs=no]
-)
-AS_IF([test "x$enable_ijs" = "xyes" -a "x$have_ijs" != "xyes"], [
-       AC_MSG_ERROR([IJS not found, but requested.])
-])
-AM_CONDITIONAL(ENABLE_IJS, test "x$enable_ijs" = "xyes")
-AC_ARG_ENABLE([opvp],
-	[AS_HELP_STRING([--enable-opvp], [Enable filters using OpenPrinting Vector (OPVP).])],
-	[enable_opvp="$enableval"],
-	[enable_opvp=no]
-)
-AM_CONDITIONAL(ENABLE_OPVP, test "x$enable_opvp" = "xyes")
 AC_ARG_WITH([pdftops],
 	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,pdftocairo,acroread,mupdf,hybrid).])],
 	[with_pdftops="$withval"],
@@ -904,7 +888,5 @@ Build configuration:
 	apple-raster:    ${APPLE_RASTER_FILTER}
 	pclm:            ${enable_pclm}
 	driverless auto-setup: ${enable_auto_setup_driverless}
-	ijs:             ${enable_ijs}
-	opvp:            ${enable_opvp}
 ==============================================================================
 ])
