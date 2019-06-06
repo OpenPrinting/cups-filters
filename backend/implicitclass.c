@@ -2,7 +2,8 @@
  * implicitclass backend for implementing an implicit-class-like behavior
  * of redundant print servers managed by cups-browsed.
  *
- * Copyright 2015 by Till Kamppeter
+ * Copyright 2015-2019 by Till Kamppeter
+ * Copyright 2018-2019 by Deepak Patankar
  *
  * This is based on dnssd.c of CUPS
  * dnssd.c copyright notice is follows:

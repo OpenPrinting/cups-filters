@@ -1,5 +1,7 @@
 /*
 Copyright (c) 2008-2011 BBR Inc.  All rights reserved.
+Copyright (c) 2012-2019 by Till Kamppeter
+Copyright (c) 2019 by Tanmay Anand.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

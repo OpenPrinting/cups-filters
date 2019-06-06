@@ -1,7 +1,7 @@
 /* renderer.h
  *
  * Copyright (C) 2008 Till Kamppeter <till.kamppeter@gmail.com>
- * Copyright (C) 2008 Lars Uebernickel <larsuebernickel@gmx.de>
+ * Copyright (C) 2008 Lars Karlitski (formerly Uebernickel) <lars@karlitski.net>
  *
  * This file is part of foomatic-rip.
  *

@@ -1,8 +1,9 @@
 /*
  *   PWG Raster/Apple Raster/PCLm/PDF/IPP legacy PPD generator
  *
- *   Copyright 2016 by Till Kamppeter.
- *   Copyright 2017 by Sahil Arora.
+ *   Copyright 2016-2019 by Till Kamppeter.
+ *   Copyright 2017-2019 by Sahil Arora.
+ *   Copyright 2018-2019 by Deepak Patankar.
  *
  *   The PPD generator is based on the PPD generator for the CUPS
  *   "lpadmin -m everywhere" functionality in the cups/ppd-cache.c

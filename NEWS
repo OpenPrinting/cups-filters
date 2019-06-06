@@ -2798,8 +2798,8 @@ CHANGES IN V1.0b1
 	- Named the package "OpenPrinting CUPS Filters"
 	- Renamed libcupslegacy to libcupsfilters
 	- Joined pdftops and cpdftocps filters into one C program
-	- Added new bannertopdf filter from Lars Uebernickel:
-	  https://launchpad.net/bannertopdf
+	- Added new bannertopdf filter from Lars Karlitski (formerly
+	  Uebernickel): https://launchpad.net/bannertopdf
 	- Added the filters for the PDF-based printing workflow, from
 	  OpenPrinting: http://sourceforge.jp/projects/opfc/ and
 	  http://www.openprinting.org/download/printing/pdf-printing/
