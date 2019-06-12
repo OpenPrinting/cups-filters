@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.25.0 - 2019-06-06
 -----------------------------------------------------
 
+CHANGES IN V1.25.1
+
+	- pdftoraster: Added graceful handling of zero-page input
+	  (Issue #117, Pull request #127).
+
 CHANGES IN V1.25.0
 
 	- pdftoijs, pdftoopvp: Removed these deprecated filters
