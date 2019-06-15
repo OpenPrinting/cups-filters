@@ -1557,7 +1557,8 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc,
 
   poppler::page *current_page =doc->create_page(pageNo-1);
   poppler::page_renderer pr;
-  pr.set_render_hint(poppler::page_renderer::text_antialiasing);
+  pr.set_render_hint(poppler::page_renderer::antialiasing, true);
+  pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
 
   unsigned char *colordata,*newdata,*graydata,*onebitdata;
   unsigned int pixel_count;
