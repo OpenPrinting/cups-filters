@@ -1597,7 +1597,7 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc,
    case CUPS_CSPACE_CMY:
    case CUPS_CSPACE_RGBW:
    default:
-   im = pr.render_page(current_page,header.HWResolution[0],header.HWResolution[1],0,0,header.cupsWidth,header.cupsHeight);
+   im = pr.render_page(current_page,header.HWResolution[0],header.HWResolution[1],bitmapoffset[0],bitmapoffset[1],header.cupsWidth,header.cupsHeight);
    newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
    newdata = removeAlpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
    pixel_count=im.width()*im.height();
@@ -1617,8 +1617,6 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc,
     for (unsigned int plane = 0;plane < nplanes;plane++) {
       unsigned char *bp = colordata;
 
-      bp += rowsize * (bitmapoffset[1] + header.cupsHeight - 1) +
-        popplerBitsPerPixel * bitmapoffset[0] / 8;
       for (unsigned int h = header.cupsHeight;h > 0;h--) {
         for (unsigned int band = 0;band < nbands;band++) {
           dp = convertLine(bp,lineBuf,h,plane+band,header.cupsWidth,
@@ -1632,8 +1630,6 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc,
     for (unsigned int plane = 0;plane < nplanes;plane++) {
       unsigned char *bp = colordata;
 
-      bp += rowsize * bitmapoffset[1] +
-        popplerBitsPerPixel * bitmapoffset[0] / 8;
       for (unsigned int h = 0;h < header.cupsHeight;h++) {
         for (unsigned int band = 0;band < nbands;band++) {
           dp = convertLine(bp,lineBuf,h,plane+band,header.cupsWidth,
