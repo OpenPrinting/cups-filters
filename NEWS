@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.25.0 - 2019-06-06
 
 CHANGES IN V1.25.1
 
+	- pdftoraster: Fixed offset issues leading to segmentation
+	  faults (Issue #131, Pull request #132).
 	- pdftoraster: Added anti-aliasing for better raster image
 	  quality (Pull request #129).
 	- pdftoraster: Added graceful handling of zero-page input
