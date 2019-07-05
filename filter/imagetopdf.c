@@ -165,7 +165,7 @@ void emitJCLOptions(FILE *fp, int copies)
 	datawritten = 1;
     }
   }
-         
+
   snprintf(buf,sizeof(buf),"%d",copies);
   if (ppdFindOption(ppd,"Copies") != NULL) {
     ppdMarkOption(ppd,"Copies",buf);
@@ -265,7 +265,7 @@ static void putcPdf(char c)
 
 static void outPdf(const char *str)
 {
-  unsigned long len = strlen(str); 
+  unsigned long len = strlen(str);
 
   fputs(str,stdout);
   currentOffset += len;
@@ -964,8 +964,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   int fidelity = 0;
   int document_large = 0;
 
-  if(ppd->custom_margins[0]||ppd->custom_margins[1]||
-      ppd->custom_margins[2]||ppd->custom_margins[3])   // In case of custom margins
+  if(ppd && (ppd->custom_margins[0]||ppd->custom_margins[1]||
+      ppd->custom_margins[2]||ppd->custom_margins[3]))   // In case of custom margins
     margin_defined = 1;
   if(PageLength!=PageTop-PageBottom||PageWidth!=PageRight-PageLeft)
     margin_defined = 1;
@@ -1104,7 +1104,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       if(temp1>w) temp1 = w;
       if(temp2>h) temp2 = h;
       if(temp3>h) temp3 = h;
-      if(temp4>w) temp4 = w; 
+      if(temp4>w) temp4 = w;
       if(temp1*temp2<temp3*temp4)
       {
         int temp = pw;
@@ -1117,7 +1117,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       float final_w,final_h;
       if(w*ph/pw <=h){
         final_w =w;
-        final_h =w*ph/pw; 
+        final_h =w*ph/pw;
       }
       else{
         final_w = h*pw/ph;
@@ -1228,7 +1228,7 @@ main(int  argc,				/* I - Number of command-line arguments */
    /*
     * Scale the image as neccesary to match the desired pixels-per-inch.
     */
-    
+
     if (Orientation & 1)
     {
       xprint = (PageTop - PageBottom) / 72.0;
@@ -1381,7 +1381,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   if (zoom == 1.0) {
     /* If fitplot is specified, make xpages, ypages 1 forcedly.
-       Because calculation error may be caused and 
+       Because calculation error may be caused and
           result of ceil function may be larger than 1.
     */
     xpages = ypages = 1;
@@ -1567,7 +1567,7 @@ main(int  argc,				/* I - Number of command-line arguments */
        printer and the PPD is for this mode, having the "*JCLToPDFInterpreter:"
        keyword. We need to read this keyword manually from the PPD and replace
        the content of ppd->jcl_ps by the value of this keyword, so that
-       ppdEmitJCL() actalually adds JCL based on the presence on 
+       ppdEmitJCL() actalually adds JCL based on the presence on
        "*JCLToPDFInterpreter:". */
     ppd_attr_t *attr;
     char buf[1024];
@@ -1599,12 +1599,12 @@ main(int  argc,				/* I - Number of command-line arguments */
           snprintf(ppd->jcl_ps, size, "@PJL SET COPIES=%d\n%s",
                    deviceCopies, attr->value);
         }
-      } 
+      }
       else
 	ppd->jcl_ps = strdup(attr->value);
       ppd_decode(ppd->jcl_ps);
       pdf_printer = 1;
-    } 
+    }
     else
     {
       ppd->jcl_ps = NULL;
