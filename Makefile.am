@@ -778,7 +778,7 @@ texttotext_SOURCES = \
 	filter/texttotext.c
 EXTRA_texttotext_SOURCES = filter/strcasestr.c
 texttotext_CFLAGS = $(CUPS_CFLAGS)
-texttotext_LDADD = $(STRCASESTR) $(CUPS_LIBS)
+texttotext_LDADD = $(STRCASESTR) $(CUPS_LIBS) $(LIBICONV)
 texttotext_DEPENDENCIES = $(STRCASESTR)
 
 pdftops_SOURCES = \
@@ -1049,3 +1049,5 @@ if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/vectortoubrl
 	$(RM) $(DESTDIR)$(pkgfilterdir)/textbrftoindexv4
 endif
+
+SUBDIRS =
