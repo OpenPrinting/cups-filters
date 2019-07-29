@@ -9286,7 +9286,8 @@ static void resolve_callback(AvahiServiceResolver *r,
 
   /* Ignore local queues on the port of the cupsd we are serving for */
   if (port == ippPort() &&
-      ((flags & AVAHI_LOOKUP_RESULT_LOCAL) || is_local_hostname(host_name))) {
+      ((flags & AVAHI_LOOKUP_RESULT_LOCAL) || !strcasecmp(ifname, "lo") ||
+       is_local_hostname(host_name))) {
     debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) is from local CUPS, ignored (Avahi lookup result or host name of local machine).\n",
 		 name, type, domain, host_name, port, ifname,
 		 (address ?
@@ -9378,7 +9379,7 @@ static void resolve_callback(AvahiServiceResolver *r,
 	instance[0] = '\0';
       }
       /* Determine the remote printer's IP */
-      if (IPBasedDeviceURIs != IP_BASED_URIS_NO || !strcasecmp(ifname, "lo") ||
+      if (IPBasedDeviceURIs != IP_BASED_URIS_NO ||
 	  (!browseallow_all && cupsArrayCount(browseallow) > 0)) {
 	struct sockaddr saddr;
 	struct sockaddr *addr = &saddr;
@@ -9431,17 +9432,18 @@ static void resolve_callback(AvahiServiceResolver *r,
 	  /* Check remote printer type and create appropriate local queue to
 	     point to it */
 	  if (IPBasedDeviceURIs != IP_BASED_URIS_NO ||
-	      !strcasecmp(ifname, "lo") ||
 	      !host_name) {
 	    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with IP address %s.\n",
 			 name, type, domain, addrstr);
-	    examine_discovered_printer_record((strcasecmp(ifname, "lo") &&
-					       host_name ? host_name : addrstr),
+	    examine_discovered_printer_record((strcasecmp(ifname, "lo") ?
+					       host_name : "localhost"),
 					      addrstr, port, rp_value, name,
 					      "", instance, type, domain,
 					      txt);
 	  } else
-	    examine_discovered_printer_record(host_name, NULL, port, rp_value,
+	    examine_discovered_printer_record((strcasecmp(ifname, "lo") ?
+					       host_name : "localhost"),
+					      NULL, port, rp_value,
 					      name, "", instance, type,
 					      domain, txt);
 	} else
@@ -9452,7 +9454,9 @@ static void resolve_callback(AvahiServiceResolver *r,
 	/* Check remote printer type and create appropriate local queue to
 	   point to it */
 	if (host_name)
-	  examine_discovered_printer_record(host_name, NULL, port, rp_value,
+	  examine_discovered_printer_record((strcasecmp(ifname, "lo") ?
+					     host_name : "localhost"),
+					    NULL, port, rp_value,
 					    name, "", instance, type, domain,
 					    txt);
 	else
