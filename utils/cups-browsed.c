@@ -8573,44 +8573,178 @@ matched_filters (const char *queue_name,
   return FALSE;
 }
 
-int
-is_local_hostname(const char *name) {
-  char local_hostname[HOST_NAME_MAX + 1];
-  const char *p;
-  int a, b, c, d;
+static gboolean
+update_netifs (gpointer data)
+{
+  struct ifaddrs *ifaddr, *ifa;
+  netif_t *iface, *iface2;
+  int i, add_to_netifs, addr_size, dupe;
+  char *host, buf[HTTP_MAX_HOST], *p;
 
-  /* Host name is an IP address starting with 127.? */
-  if (sscanf(name, "%d.%d.%d.%d", &a, &b, &c, &d) == 4 &&
-      a == 127 &&
-      b >= 0 && b <= 255 && c >= 0 && c <= 255 && d >= 0 && d <= 255)
-    /* if (!strncasecmp(name, "127.", 4)) */
-    return 1;
+  debug_printf("update_netifs() in THREAD %ld\n", pthread_self());
 
-  /* Host name "localhost"? */
-  if (strncasecmp(name, "localhost", 9)) {
-    /* Get host name of the local machine */
-    if (gethostname(local_hostname, sizeof(local_hostname))) {
-      /* If we cannot find our machines host name (and here we already know
-	 that the input name is not "localhost") probably only the "lo"
-	 network interface is up, so assume that the name is not local */
-      debug_printf("Not able to determine host name of local machine!\n");
-      return 0;
+  update_netifs_sourceid = 0;
+  if (getifaddrs (&ifaddr) == -1) {
+    debug_printf("unable to get interface addresses: %s\n",
+		 strerror (errno));
+    return FALSE;
+  }
+
+  while ((iface = cupsArrayFirst (netifs)) != NULL) {
+    cupsArrayRemove (netifs, iface);
+    free (iface->address);
+    free (iface);
+  }
+  while ((host = cupsArrayFirst (local_hostnames)) != NULL) {
+    cupsArrayRemove (local_hostnames, host);
+    free (host);
+  }
+
+  for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
+    netif_t *iface;
+
+    add_to_netifs = 1;
+
+    if (ifa->ifa_addr == NULL)
+      continue;
+
+    if (ifa->ifa_broadaddr == NULL)
+      add_to_netifs = 0;
+
+    if (ifa->ifa_flags & IFF_LOOPBACK)
+      add_to_netifs = 0;
+
+    if (!(ifa->ifa_flags & IFF_BROADCAST))
+      add_to_netifs = 0;
+
+    if (ifa->ifa_addr->sa_family == AF_INET)
+      addr_size = sizeof (struct sockaddr_in);
+    else if (ifa->ifa_addr->sa_family == AF_INET6)
+      addr_size = sizeof (struct sockaddr_in6);
+    else
+      addr_size = 0;
+    if (addr_size)
+      for (i = 0; i <= 1; i ++)
+        if (getnameinfo (ifa->ifa_addr, addr_size,
+			 buf, HTTP_MAX_HOST, NULL, 0,
+			 i == 0 ? NI_NUMERICHOST : NI_NAMEREQD) == 0)
+	  if (buf[0]) {
+	    /* Cut off "%..." from IPv6 IP addresses */
+	    if (ifa->ifa_addr->sa_family == AF_INET6 && i == 0 &&
+		(p = strchr(buf, '%')) != NULL)
+	      *p = '\0';
+	    /* discard if we already have this name or address */
+	    dupe = 0;
+	    for (host = (char *)cupsArrayFirst (local_hostnames);
+		 host != NULL;
+		 host = (char *)cupsArrayNext (local_hostnames))
+	      if (strcasecmp(buf, host) == 0) {
+		dupe = 1;
+		break;
+	      }
+	    if (dupe == 0) {
+	      cupsArrayAdd (local_hostnames, strdup(buf));
+	      debug_printf("network interface %s: Local host name/address: %s\n",
+			   ifa->ifa_name, buf);
+	    }
+	  }
+
+    if (add_to_netifs == 0)
+      continue;
+
+    iface = malloc (sizeof (netif_t));
+    if (iface == NULL) {
+      debug_printf ("malloc failure\n");
+      exit (1);
     }
-    /* Host name is the one of the local machine? */
-    if (strncasecmp(name, local_hostname, strlen(local_hostname)))
-       return 0;
-    p = name + strlen(local_hostname);
-  } else
-    p = name + 9;
 
-  /* Also accept if host name has ".local" or ".local." extension */
-  if (*p == '\0')
-    return 1;
-  if (strncasecmp(p, ".local", 6))
-    return 0;
-  p += 6;
-  if (*p == '\0' || !strcasecmp(p, "."))
-    return 1;
+    iface->address = malloc (HTTP_MAX_HOST);
+    if (iface->address == NULL) {
+      free (iface);
+      debug_printf ("malloc failure\n");
+      exit (1);
+    }
+
+    iface->address[0] = '\0';
+    switch (ifa->ifa_addr->sa_family) {
+    case AF_INET:
+      /* copy broadcast addr/fill in port first to faciliate dupe compares */
+      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
+	      sizeof (struct sockaddr_in));
+      iface->broadcast.ipv4.sin_port = htons (BrowsePort);
+      /* discard if we already have an interface sharing the broadcast
+	 address */
+      dupe = 0;
+      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
+           iface2 != NULL;
+           iface2 = (netif_t *)cupsArrayNext (netifs)) {
+	if (memcmp(&iface2->broadcast, &iface->broadcast,
+		   sizeof(struct sockaddr_in)) == 0) {
+	  dupe = 1;
+	  break;
+	}
+      }
+      if (dupe) break;
+      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in),
+		   iface->address, HTTP_MAX_HOST,
+		   NULL, 0, NI_NUMERICHOST);
+      break;
+
+    case AF_INET6:
+      if (IN6_IS_ADDR_LINKLOCAL (&((struct sockaddr_in6 *)(ifa->ifa_addr))
+				 ->sin6_addr))
+	break;
+
+      /* see above for order */
+      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
+	      sizeof (struct sockaddr_in6));
+      iface->broadcast.ipv6.sin6_port = htons (BrowsePort);
+      /* discard alias addresses (identical broadcast) */
+      dupe = 0;
+      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
+           iface2 != NULL;
+           iface2 = (netif_t *)cupsArrayNext (netifs)) {
+	if (memcmp(&iface2->broadcast, ifa->ifa_broadaddr,
+		   sizeof(struct sockaddr_in6)) == 0) {
+	  dupe = 1;
+	  break;
+	}
+      }
+      if (dupe) break;
+      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in6),
+		   iface->address, HTTP_MAX_HOST, NULL, 0, NI_NUMERICHOST);
+      break;
+    }
+
+    if (iface->address[0]) {
+      cupsArrayAdd (netifs, iface);
+      debug_printf("Network interface %s at %s for legacy CUPS browsing/broadcasting\n",
+		   ifa->ifa_name, iface->address);
+    } else {
+      free (iface->address);
+      free (iface);
+    }
+  }
+
+  freeifaddrs (ifaddr);
+
+  /* If run as a timeout, don't run it again. */
+  return FALSE;
+}
+
+int
+is_local_hostname(const char *host_name) {
+  char *host;
+
+  update_netifs(NULL);
+  for (host = (char *)cupsArrayFirst (local_hostnames);
+       host != NULL;
+       host = (char *)cupsArrayNext (local_hostnames))
+    if (strncasecmp(host_name, host, strlen(host)) == 0 &&
+	(strlen(host_name) == strlen(host) ||
+	 strcasecmp(host_name + strlen(host), ".local") == 0 ||
+	 strcasecmp(host_name + strlen(host), ".local.") == 0))
+      return 1;
 
   return 0;
 }
@@ -9122,165 +9256,6 @@ allowed (struct sockaddr *srcaddr)
   return server_allowed;
 }
 
-static gboolean
-update_netifs (gpointer data)
-{
-  struct ifaddrs *ifaddr, *ifa;
-  netif_t *iface, *iface2;
-  int i, add_to_netifs, addr_size, dupe;
-  char *host, buf[HTTP_MAX_HOST], *p;
-
-  debug_printf("update_netifs() in THREAD %ld\n", pthread_self());
-
-  update_netifs_sourceid = 0;
-  if (getifaddrs (&ifaddr) == -1) {
-    debug_printf("unable to get interface addresses: %s\n",
-		 strerror (errno));
-    return FALSE;
-  }
-
-  while ((iface = cupsArrayFirst (netifs)) != NULL) {
-    cupsArrayRemove (netifs, iface);
-    free (iface->address);
-    free (iface);
-  }
-  while ((host = cupsArrayFirst (local_hostnames)) != NULL) {
-    cupsArrayRemove (local_hostnames, host);
-    free (host);
-  }
-
-  for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
-    netif_t *iface;
-
-    add_to_netifs = 1;
-
-    if (ifa->ifa_addr == NULL)
-      continue;
-
-    if (ifa->ifa_broadaddr == NULL)
-      add_to_netifs = 0;
-
-    if (ifa->ifa_flags & IFF_LOOPBACK)
-      add_to_netifs = 0;
-
-    if (!(ifa->ifa_flags & IFF_BROADCAST))
-      add_to_netifs = 0;
-
-    if (ifa->ifa_addr->sa_family == AF_INET)
-      addr_size = sizeof (struct sockaddr_in);
-    else if (ifa->ifa_addr->sa_family == AF_INET6)
-      addr_size = sizeof (struct sockaddr_in6);
-    else
-      addr_size = 0;
-    if (addr_size)
-      for (i = 0; i <= 1; i ++)
-        if (getnameinfo (ifa->ifa_addr, addr_size,
-			 buf, HTTP_MAX_HOST, NULL, 0,
-			 i == 0 ? NI_NUMERICHOST : NI_NAMEREQD) == 0)
-	  if (buf[0]) {
-	    /* Cut off "%..." from IPv6 IP addresses */
-	    if (ifa->ifa_addr->sa_family == AF_INET6 && i == 0 &&
-		(p = strchr(buf, '%')) != NULL)
-	      *p = '\0';
-	    /* discard if we already have this name or address */
-	    dupe = 0;
-	    for (host = (char *)cupsArrayFirst (local_hostnames);
-		 host != NULL;
-		 host = (char *)cupsArrayNext (local_hostnames))
-	      if (strcasecmp(buf, host) == 0) {
-		dupe = 1;
-		break;
-	      }
-	    if (dupe == 0) {
-	      cupsArrayAdd (local_hostnames, strdup(buf));
-	      debug_printf("network interface %s: Local host name/address: %s\n",
-			   ifa->ifa_name, buf);
-	    }
-	  }
-
-    if (add_to_netifs == 0)
-      continue;
-
-    iface = malloc (sizeof (netif_t));
-    if (iface == NULL) {
-      debug_printf ("malloc failure\n");
-      exit (1);
-    }
-
-    iface->address = malloc (HTTP_MAX_HOST);
-    if (iface->address == NULL) {
-      free (iface);
-      debug_printf ("malloc failure\n");
-      exit (1);
-    }
-
-    iface->address[0] = '\0';
-    switch (ifa->ifa_addr->sa_family) {
-    case AF_INET:
-      /* copy broadcast addr/fill in port first to faciliate dupe compares */
-      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
-	      sizeof (struct sockaddr_in));
-      iface->broadcast.ipv4.sin_port = htons (BrowsePort);
-      /* discard if we already have an interface sharing the broadcast
-	 address */
-      dupe = 0;
-      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
-           iface2 != NULL;
-           iface2 = (netif_t *)cupsArrayNext (netifs)) {
-	if (memcmp(&iface2->broadcast, &iface->broadcast,
-		   sizeof(struct sockaddr_in)) == 0) {
-	  dupe = 1;
-	  break;
-	}
-      }
-      if (dupe) break;
-      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in),
-		   iface->address, HTTP_MAX_HOST,
-		   NULL, 0, NI_NUMERICHOST);
-      break;
-
-    case AF_INET6:
-      if (IN6_IS_ADDR_LINKLOCAL (&((struct sockaddr_in6 *)(ifa->ifa_addr))
-				 ->sin6_addr))
-	break;
-
-      /* see above for order */
-      memcpy (&iface->broadcast, ifa->ifa_broadaddr,
-	      sizeof (struct sockaddr_in6));
-      iface->broadcast.ipv6.sin6_port = htons (BrowsePort);
-      /* discard alias addresses (identical broadcast) */
-      dupe = 0;
-      for (iface2 = (netif_t *)cupsArrayFirst (netifs);
-           iface2 != NULL;
-           iface2 = (netif_t *)cupsArrayNext (netifs)) {
-	if (memcmp(&iface2->broadcast, ifa->ifa_broadaddr,
-		   sizeof(struct sockaddr_in6)) == 0) {
-	  dupe = 1;
-	  break;
-	}
-      }
-      if (dupe) break;
-      getnameinfo (ifa->ifa_addr, sizeof (struct sockaddr_in6),
-		   iface->address, HTTP_MAX_HOST, NULL, 0, NI_NUMERICHOST);
-      break;
-    }
-
-    if (iface->address[0]) {
-      cupsArrayAdd (netifs, iface);
-      debug_printf("Network interface %s at %s for legacy CUPS browsing/broadcasting\n",
-		   ifa->ifa_name, iface->address);
-    } else {
-      free (iface->address);
-      free (iface);
-    }
-  }
-
-  freeifaddrs (ifaddr);
-
-  /* If run as a timeout, don't run it again. */
-  return FALSE;
-}
-
 #ifdef HAVE_AVAHI
 static void resolve_callback(AvahiServiceResolver *r,
 			     AvahiIfIndex interface,
@@ -9310,8 +9285,9 @@ static void resolve_callback(AvahiServiceResolver *r,
   }
 
   /* Ignore local queues on the port of the cupsd we are serving for */
-  if (flags & AVAHI_LOOKUP_RESULT_LOCAL && port == ippPort()) {
-    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) is from local CUPS, ignored (Avahi lookup result of local machine).\n",
+  if (port == ippPort() &&
+      ((flags & AVAHI_LOOKUP_RESULT_LOCAL) || is_local_hostname(host_name))) {
+    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) is from local CUPS, ignored (Avahi lookup result or host name of local machine).\n",
 		 name, type, domain, host_name, port, ifname,
 		 (address ?
 		  (address->proto == AVAHI_PROTO_INET ? "IPv4" :
@@ -9319,26 +9295,6 @@ static void resolve_callback(AvahiServiceResolver *r,
 		   "IPv4/IPv6 Unknown") :
 		  "IPv4/IPv6 Unknown"));
     goto ignore;
-  }
-  if (port == ippPort()) {
-    char *host;
-    update_netifs(NULL);
-    for (host = (char *)cupsArrayFirst (local_hostnames);
-	 host != NULL;
-	 host = (char *)cupsArrayNext (local_hostnames))
-      if (strncasecmp(host_name, host, strlen(host)) == 0 &&
-	  (strlen(host_name) == strlen(host) ||
-	   strcasecmp(host_name + strlen(host), ".local") == 0 ||
-	   strcasecmp(host_name + strlen(host), ".local.") == 0)) {
-	debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) is from local CUPS, ignored (Host name of local machine).\n",
-		     name, type, domain, host_name, port, ifname,
-		     (address ?
-		      (address->proto == AVAHI_PROTO_INET ? "IPv4" :
-		       address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
-		       "IPv4/IPv6 Unknown") :
-		      "IPv4/IPv6 Unknown"));
-	goto ignore;
-      }
   }
 
   /* Called whenever a service has been resolved successfully or timed out */
