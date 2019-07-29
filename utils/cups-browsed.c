@@ -8573,6 +8573,48 @@ matched_filters (const char *queue_name,
   return FALSE;
 }
 
+int
+is_local_hostname(const char *name) {
+  char local_hostname[HOST_NAME_MAX + 1];
+  const char *p;
+  int a, b, c, d;
+
+  /* Host name is an IP address starting with 127.? */
+  if (sscanf(name, "%d.%d.%d.%d", &a, &b, &c, &d) == 4 &&
+      a == 127 &&
+      b >= 0 && b <= 255 && c >= 0 && c <= 255 && d >= 0 && d <= 255)
+    /* if (!strncasecmp(name, "127.", 4)) */
+    return 1;
+
+  /* Host name "localhost"? */
+  if (strncasecmp(name, "localhost", 9)) {
+    /* Get host name of the local machine */
+    if (gethostname(local_hostname, sizeof(local_hostname))) {
+      /* If we cannot find our machines host name (and here we already know
+	 that the input name is not "localhost") probably only the "lo"
+	 network interface is up, so assume that the name is not local */
+      debug_printf("Not able to determine host name of local machine!\n");
+      return 0;
+    }
+    /* Host name is the one of the local machine? */
+    if (strncasecmp(name, local_hostname, strlen(local_hostname)))
+       return 0;
+    p = name + strlen(local_hostname);
+  } else
+    p = name + 9;
+
+  /* Also accept if host name has ".local" or ".local." extension */
+  if (*p == '\0')
+    return 1;
+  if (strncasecmp(p, ".local", 6))
+    return 0;
+  p += 6;
+  if (*p == '\0' || !strcasecmp(p, "."))
+    return 1;
+
+  return 0;
+}
+
 static remote_printer_t *
 examine_discovered_printer_record(const char *host,
 				  const char *ip,
@@ -8790,7 +8832,8 @@ examine_discovered_printer_record(const char *host,
 	(p->host[0] == '\0' ||
 	 p->status == STATUS_UNCONFIRMED ||
 	 p->status == STATUS_DISAPPEARED ||
-	 (!strcasecmp(p->host, remote_host) &&
+	 ((!strcasecmp(p->host, remote_host) ||
+	   (is_local_hostname(p->host) && is_local_hostname(remote_host))) &&
 	  (p->port == port ||
 	   (p->port == 631 && port == 443) ||
 	   (p->port == 443 && port == 631)) &&

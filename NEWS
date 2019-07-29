@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.25.1 - 2019-07-05
 -----------------------------------------------------
 
+CHANGES IN V1.25.2
+
+	- cups-browsed: Consider remote printer entries also as from
+	  the same printer if one has the local machine's network name
+	  and the other "localhost" as host name (Issue #136).
+
 CHANGES IN V1.25.1
 
 	- imagetopdf: Fixed crash when no PPD file was supplied (Pull
