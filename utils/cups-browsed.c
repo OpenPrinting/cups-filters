@@ -8775,6 +8775,7 @@ examine_discovered_printer_record(const char *host,
   char *local_queue_name = NULL;
   int is_cups_queue;
   int raw_queue = 0;
+  char *ptr;
   
   if (!host || !resource || !service_name || !location || !info || !type ||
       !domain) {
@@ -8995,33 +8996,55 @@ examine_discovered_printer_record(const char *host,
        whether the discovered queue is discovered via DNS-SD
        having more info in contrary to the existing being
        discovered by legacy CUPS or LDAP */
-    if ((strcasestr(type, "_ipps") &&
-	 !strncasecmp(p->uri, "ipp:", 4)) ||
-	strcasecmp(strchr(p->uri, ':'), strchr(uri, ':')) ||
-	((p->domain == NULL || p->domain[0] == '\0') &&
-	 domain != NULL && domain[0] != '\0' &&
-	 (p->type == NULL || p->type[0] == '\0') &&
-	 type != NULL && type[0] != '\0')) {
+    int downgrade = 0, upgrade = 0;
+    /* Check if there is a downgrade */
+    /* IPPS -> IPP */
+    if ((ptr = strcasestr(type, "_ipp")) != NULL &&
+	*(ptr + 4) != 's' &&
+	!strncasecmp(p->uri, "ipps:", 5)) {
+      downgrade = 1;
+      debug_printf("Printer %s: New discovered service from host %s, port %d, URI %s is only IPP, we have already IPPS, skipping\n",
+		   p->queue_name, remote_host, port, uri);
+    /* TODO: "lo" -> Any non-"lo" interface */
+    /* DNS-SD -> CUPS Legacy/LDAP */
+    } else if (p->domain != NULL && p->domain[0] != '\0' &&
+	       (domain == NULL || domain[0] == '\0') &&
+	       p->type != NULL && p->type[0] != '\0' &&
+	       (type == NULL || type[0] == '\0')) {
+      downgrade = 1;
+      debug_printf("Printer %s: New discovered service from host %s, port %d, URI %s is only discovered via legacy CUPS or LDAP, we have already a DNS-SD-discovered one, skipping\n",
+		   p->queue_name, remote_host, port, uri);
+    }
 
-      /* Schedule local queue for upgrade to ipps: or for URI change */
+    if (downgrade == 0) {
+      /* Check if there is an upgrade */
+      /* IPP -> IPPS */
       if (strcasestr(type, "_ipps") &&
-	  !strncasecmp(p->uri, "ipp:", 4))
+	  !strncasecmp(p->uri, "ipp:", 4)) {
+	upgrade = 1;
 	debug_printf("Upgrading printer %s (Host: %s, Port: %d) to IPPS. New URI: %s\n",
 		     p->queue_name, remote_host, port, uri);
-      if (strcasecmp(strchr(p->uri, ':'), strchr(uri, ':')))
-	debug_printf("Changing URI of printer %s (Host: %s, Port: %d) to %s.\n",
-		     p->queue_name, remote_host, port, uri);
-      if ((p->domain == NULL || p->domain[0] == '\0') &&
-	  domain != NULL && domain[0] != '\0' &&
-	  (p->type == NULL || p->type[0] == '\0') &&
-	  type != NULL && type[0] != '\0') {
+      /* TODO: Any non-"lo" interface -> "lo" */
+      /* CUPS Legacy/LDAP -> DNS-SD */
+      } else if ((p->domain == NULL || p->domain[0] == '\0') &&
+		 domain != NULL && domain[0] != '\0' &&
+		 (p->type == NULL || p->type[0] == '\0') &&
+		 type != NULL && type[0] != '\0') {
+	upgrade = 1;
 	debug_printf("Discovered printer %s (Host: %s, Port: %d, URI: %s) by DNS-SD now.\n",
 		     p->queue_name, remote_host, port, uri);
-	if (p->is_legacy) {
+      }
+    }
+
+    /* Switch local queue over to this newly discovered service */
+    if (upgrade == 1) {
+      /* Remove tiemout of legacy CUPS broadcasting */
+      if (domain != NULL && domain[0] != '\0' &&
+	  type != NULL && type[0] != '\0' &&
+	  p->is_legacy) {
 	  p->is_legacy = 0;
 	  if (p->status == STATUS_CONFIRMED)
 	    p->timeout = (time_t) -1;
-	}
       }
       free(p->location);
       free(p->info);
@@ -9048,7 +9071,6 @@ examine_discovered_printer_record(const char *host,
       p->service_name = strdup(service_name);
       p->type = strdup(type);
       p->domain = strdup(domain);
-
     }
 
     /* Mark queue entry as confirmed if the entry
@@ -9074,6 +9096,7 @@ examine_discovered_printer_record(const char *host,
       record_printer_options(p->queue_name);
     }
 
+    /* Gather extra info from our new discovery */
     if (p->uri[0] == '\0') {
       free (p->uri);
       p->uri = strdup(uri);

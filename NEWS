@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.25.1 - 2019-07-05
 
 CHANGES IN V1.25.2
 
+	- cups-browsed: If a remote printer is discovered more than
+	  once, use the new instance only if it has no downgrades and
+	  at least one upgrade compared to the old one. Features
+	  currently compared are IPP/IPPS and discovery via CUPS
+	  legacy/LDAP/DNS-SD.
 	- cups-browsed: If an Avahi-discovered entry comes through the
 	  "lo" interface, always use the host name "localhost". Use
 	  IP addresses instead of host names only if explicitly
