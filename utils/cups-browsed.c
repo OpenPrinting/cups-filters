@@ -8736,7 +8736,6 @@ int
 is_local_hostname(const char *host_name) {
   char *host;
 
-  update_netifs(NULL);
   for (host = (char *)cupsArrayFirst (local_hostnames);
        host != NULL;
        host = (char *)cupsArrayNext (local_hostnames))
@@ -8958,6 +8957,14 @@ examine_discovered_printer_record(const char *host,
 		 local_queue_name);
     goto fail;
   }
+
+
+  /* Update network interface info if we were discovered by LDAP
+     or legacy CUPS, needed for the is_local_hostname() function calls.
+     During DNS-SD discovery the update is already done by the Avahi
+     event handler function. */
+  if (type == NULL || type[0] == '\0')
+    update_netifs(NULL);
 
   /* Check if we have already created a queue for the discovered
      printer */
@@ -9312,6 +9319,7 @@ static void resolve_callback(AvahiServiceResolver *r,
   }
 
   /* Ignore local queues on the port of the cupsd we are serving for */
+  update_netifs(NULL);
   if (port == ippPort() &&
       ((flags & AVAHI_LOOKUP_RESULT_LOCAL) || !strcasecmp(ifname, "lo") ||
        is_local_hostname(host_name))) {
