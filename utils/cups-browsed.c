@@ -9024,7 +9024,11 @@ examine_discovered_printer_record(const char *host,
 	upgrade = 1;
 	debug_printf("Upgrading printer %s (Host: %s, Port: %d) to IPPS. New URI: %s\n",
 		     p->queue_name, remote_host, port, uri);
-      /* TODO: Any non-"lo" interface -> "lo" */
+      /* Any non-"lo" interface -> "lo" */
+      } else if (!strcasecmp(host, "localhost")) {
+	upgrade = 1;
+	debug_printf("Upgrading printer %s (Host: %s, Port: %d) to use loopback device \"lo\". New URI: %s\n",
+		     p->queue_name, remote_host, port, uri);
       /* CUPS Legacy/LDAP -> DNS-SD */
       } else if ((p->domain == NULL || p->domain[0] == '\0') &&
 		 domain != NULL && domain[0] != '\0' &&

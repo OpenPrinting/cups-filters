@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.25.1 - 2019-07-05
 
 CHANGES IN V1.25.2
 
+	- cups-browsed: If a remote printer is served from the local
+	  machine, prefer the "localhost"/loopback interface URI.
 	- cups-browsed: If a remote printer is discovered more than
 	  once, use the new instance only if it has no downgrades and
 	  at least one upgrade compared to the old one. Features
