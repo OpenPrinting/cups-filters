@@ -162,6 +162,14 @@ typedef enum printer_status_e {
   STATUS_TO_BE_RELEASED   /* Scheduled for release from cups-browsed */
 } printer_status_t;
 
+/* Data structure for taking note of each time the remote printer
+   appears as a discovered IPP service */
+typedef struct ipp_discovery_s {
+  char *interface;
+  char *type;
+  int family;
+} ipp_discovery_t;
+
 /* Data structure for remote printers */
 typedef struct remote_printer_s {
   char *queue_name;
@@ -186,6 +194,7 @@ typedef struct remote_printer_s {
   char *service_name;
   char *type;
   char *domain;
+  cups_array_t *ipp_discoveries;
   int no_autosave;
   int overwritten;
   int netprinter;
@@ -504,6 +513,8 @@ static remote_printer_t
 				   const char *info,
 				   const char *type,
 				   const char *domain,
+				   const char *interface,
+				   int family,
 				   void *txt);
 
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
@@ -4439,7 +4450,7 @@ cupsdUpdateLDAPBrowse(void)
 
     examine_discovered_printer_record(host, NULL, port, local_resource,
 				      service_name, location, info, "", "",
-				      NULL);
+				      "", 0, NULL);
 
   }
 
@@ -6649,6 +6660,101 @@ get_printer_attributes(const char* uri)
 }
 #endif /* HAVE_CUPS_1_6 */
 
+
+/* This compare function makes the "lo" (looback) interface always
+   sorted to the beginning of the array, this way one only needs to
+   check the first element of the error to find out whether a remote
+   printer is already available through the loopback interface (preferred
+   interface) or not.
+   All other interfaces are sorted alphabetically, the types let IPPS
+   appear before IPP, and the families numerically (makes IPv4 appear
+   before IPv6). */
+
+int
+ipp_discovery_cmp(void *va, void *vb, void *data) {
+  ipp_discovery_t *a = (ipp_discovery_t *)va;
+  ipp_discovery_t *b = (ipp_discovery_t *)vb;
+  int cmp;
+
+  if (!a && !b)
+    return 0;
+  if (a && !b)
+    return -1;
+  if (!a && b)
+    return  1;
+
+  if (!strcasecmp(a->interface, "lo") && strcasecmp(b->interface, "lo"))
+    return -1;
+  if (strcasecmp(a->interface, "lo") && !strcasecmp(b->interface, "lo"))
+    return  1;
+
+  cmp = strcasecmp(a->interface, b->interface);
+  if (cmp)
+    return cmp;
+
+  if (strcasestr(a->type, "ipps") && !strcasestr(b->type, "ipps"))
+    return -1;
+  if (!strcasestr(a->type, "ipps") && strcasestr(b->type, "ipps"))
+    return  1;
+
+  cmp = strcasecmp(a->type, b->type);
+  if (cmp)
+    return cmp;
+
+  if (a->family < b->family)
+    return -1;
+  else if (a->family > b->family)
+    return  1;
+  else
+    return 0;
+}
+
+void
+ipp_discovery_free(void *ve, void *data) {
+  ipp_discovery_t *e = (ipp_discovery_t *)ve;
+
+  if (e) {
+    if (e->interface)
+      free(e->interface);
+    if (e->type)
+      free(e->type);
+    free(e);
+  }
+}
+
+void
+ipp_discoveries_list(cups_array_t *a) {
+  ipp_discovery_t *e;
+
+  debug_printf("Printer discovered %d times:\n", cupsArrayCount(a));
+  for (e = cupsArrayFirst(a); e; e = cupsArrayNext(a))
+    debug_printf("    %s, %s, %s\n", e->interface, e->type,
+		 (e->family == AF_INET ? "IPv4" :
+		  (e->family == AF_INET6 ? "IPv6" : "???")));
+}
+
+int
+ipp_discoveries_add(cups_array_t *a,
+		    const char *interface,
+		    const char *type,
+		    int family) {
+  ipp_discovery_t *e;
+
+  if (!interface || !type)
+    return 0;
+  if ((e = (ipp_discovery_t *)calloc(1, sizeof(ipp_discovery_t))) ==
+      NULL) {
+    debug_printf("ERROR: Unable to allocate memory.\n");
+    return 0;
+  }
+  e->interface = strdup(interface);
+  e->type = strdup(type);
+  e->family = family;
+  cupsArrayAdd(a, e);
+  ipp_discoveries_list(a);
+  return 1;
+}
+
 static remote_printer_t *
 create_remote_printer_entry (const char *queue_name,
 			     const char *location,
@@ -6660,6 +6766,8 @@ create_remote_printer_entry (const char *queue_name,
 			     const char *service_name,
 			     const char *type,
 			     const char *domain,
+			     const char *interface,
+			     int family,
 			     const char *pdl,
 			     int color,
 			     int duplex,
@@ -6753,6 +6861,16 @@ create_remote_printer_entry (const char *queue_name,
   p->domain = strdup (domain);
   if (!p->domain)
     goto fail;
+
+  p->ipp_discoveries =
+    cupsArrayNew3(ipp_discovery_cmp, NULL, NULL, 0, NULL, ipp_discovery_free);
+  if (p->ipp_discoveries == NULL) {
+    debug_printf("ERROR: Unable to allocate memory.\n");
+    return NULL;
+  }
+  if (domain != NULL && domain[0] != '\0' &&
+      type != NULL && type[0] != '\0')
+    ipp_discoveries_add(p->ipp_discoveries, interface, type, family);
 
   /* Schedule for immediate creation of the CUPS queue */
   p->status = STATUS_TO_BE_CREATED;
@@ -7114,6 +7232,7 @@ create_remote_printer_entry (const char *queue_name,
   if (p->service_name) free (p->service_name);
   if (p->host) free (p->host);
   if (p->domain) free (p->domain);
+  cupsArrayDelete(p->ipp_discoveries);
   if (p->ip) free (p->ip);
   cupsFreeOptions(p->num_options, p->options);
   if (p->uri) free (p->uri);
@@ -7421,6 +7540,7 @@ gboolean update_cups_queues(gpointer unused) {
       if (p->service_name) free (p->service_name);
       if (p->type) free (p->type);
       if (p->domain) free (p->domain);
+      cupsArrayDelete(p->ipp_discoveries);
       if (p->prattrs) ippDelete (p->prattrs);
       if (p->nickname) free (p->nickname);
       free(p);
@@ -8758,6 +8878,8 @@ examine_discovered_printer_record(const char *host,
 				  const char *info,
 				  const char *type,
 				  const char *domain,
+				  const char *interface,
+				  int family,
 				  void *txt) {
 
   char uri[HTTP_MAX_URI];
@@ -8775,7 +8897,7 @@ examine_discovered_printer_record(const char *host,
   int is_cups_queue;
   int raw_queue = 0;
   char *ptr;
-  
+
   if (!host || !resource || !service_name || !location || !info || !type ||
       !domain) {
     debug_printf("ERROR: examine_discovered_printer_record(): Input value missing!\n");
@@ -9003,7 +9125,14 @@ examine_discovered_printer_record(const char *host,
        whether the discovered queue is discovered via DNS-SD
        having more info in contrary to the existing being
        discovered by legacy CUPS or LDAP */
+
     int downgrade = 0, upgrade = 0;
+
+    /* Get first element of array of interfaces on which this printer
+       got already discovered, as this one is "lo" when it already got
+       discovered through the loopback interface (preferred interface) */
+    ipp_discovery_t *ippdis = cupsArrayFirst(p->ipp_discoveries);
+
     /* Check if there is a downgrade */
     /* IPPS -> IPP */
     if ((ptr = strcasestr(type, "_ipp")) != NULL &&
@@ -9012,7 +9141,12 @@ examine_discovered_printer_record(const char *host,
       downgrade = 1;
       debug_printf("Printer %s: New discovered service from host %s, port %d, URI %s is only IPP, we have already IPPS, skipping\n",
 		   p->queue_name, remote_host, port, uri);
-    /* TODO: "lo" -> Any non-"lo" interface */
+    /* "lo" -> Any non-"lo" interface */
+    } else if (strcasecmp(interface, "lo") &&
+	       ippdis && !strcasecmp(ippdis->interface, "lo")) {
+      downgrade = 1;
+      debug_printf("Printer %s: New discovered service from host %s, port %d, URI %s is from a non-loopback interface, we have already one from the loopback interface, skipping\n",
+		   p->queue_name, remote_host, port, uri);
     /* DNS-SD -> CUPS Legacy/LDAP */
     } else if (p->domain != NULL && p->domain[0] != '\0' &&
 	       (domain == NULL || domain[0] == '\0') &&
@@ -9032,9 +9166,9 @@ examine_discovered_printer_record(const char *host,
 	debug_printf("Upgrading printer %s (Host: %s, Port: %d) to IPPS. New URI: %s\n",
 		     p->queue_name, remote_host, port, uri);
       /* Any non-"lo" interface -> "lo" */
-      } else if (!strcasecmp(host, "localhost")) {
+      } else if (!strcasecmp(interface, "lo")) {
 	upgrade = 1;
-	debug_printf("Upgrading printer %s (Host: %s, Port: %d) to use loopback device \"lo\". New URI: %s\n",
+	debug_printf("Upgrading printer %s (Host: %s, Port: %d) to use loopback interface \"lo\". New URI: %s\n",
 		     p->queue_name, remote_host, port, uri);
       /* CUPS Legacy/LDAP -> DNS-SD */
       } else if ((p->domain == NULL || p->domain[0] == '\0') &&
@@ -9082,7 +9216,9 @@ examine_discovered_printer_record(const char *host,
       p->service_name = strdup(service_name);
       p->type = strdup(type);
       p->domain = strdup(domain);
-    }
+      debug_printf("Switched over to newly discovered entry for this printer.\n");
+    } else
+      debug_printf("Staying with previously discovered entry for this printer.\n");
 
     /* Mark queue entry as confirmed if the entry
        is unconfirmed */
@@ -9152,6 +9288,9 @@ examine_discovered_printer_record(const char *host,
       free (p->domain);
       p->domain = strdup(domain);
     }
+    if (domain != NULL && domain[0] != '\0' &&
+	type != NULL && type[0] != '\0')
+      ipp_discoveries_add(p->ipp_discoveries, interface, type, family);
     p->netprinter = is_cups_queue ? 0 : 1;
   } else {
 
@@ -9160,8 +9299,8 @@ examine_discovered_printer_record(const char *host,
     p = create_remote_printer_entry (local_queue_name, location, info, uri,
 				     remote_host, ip, port,
 				     service_name ? service_name : "", type,
-				     domain, pdl, color, duplex, make_model,
-				     is_cups_queue);
+				     domain, interface, family, pdl, color,
+				     duplex, make_model, is_cups_queue);
   }
 
  fail:
@@ -9474,13 +9613,14 @@ static void resolve_callback(AvahiServiceResolver *r,
 					       host_name : "localhost"),
 					      addrstr, port, rp_value, name,
 					      "", instance, type, domain,
-					      txt);
+					      ifname, addr->sa_family, txt);
 	  } else
 	    examine_discovered_printer_record((strcasecmp(ifname, "lo") ?
 					       host_name : "localhost"),
 					      NULL, port, rp_value,
 					      name, "", instance, type,
-					      domain, txt);
+					      domain, ifname, addr->sa_family,
+					      txt);
 	} else
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, could not determine IP address.\n",
 		       name, type, domain);
@@ -9493,6 +9633,12 @@ static void resolve_callback(AvahiServiceResolver *r,
 					     host_name : "localhost"),
 					    NULL, port, rp_value,
 					    name, "", instance, type, domain,
+					    ifname,
+					    (address->proto ==
+					     AVAHI_PROTO_INET ? AF_INET :
+					     (address->proto ==
+					      AVAHI_PROTO_INET6 ? AF_INET6 :
+					      0)),
 					    txt);
 	else
 	  debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' skipped, host name not supplied.\n",
@@ -9574,8 +9720,10 @@ static void browse_callback(AvahiServiceBrowser *b,
     if (c == NULL || name == NULL || type == NULL || domain == NULL)
       return;
 
-    debug_printf("Avahi Browser: NEW: service '%s' of type '%s' in domain '%s' on interface '%s'\n",
-		 name, type, domain, ifname);
+    debug_printf("Avahi Browser: NEW: service '%s' of type '%s' in domain '%s' on interface '%s' (%s)\n",
+		 name, type, domain, ifname,
+		 protocol != AVAHI_PROTO_UNSPEC ?
+		 avahi_proto_to_string(protocol) : "Unknown");
 
     /* Ignore if terminated (by SIGTERM) */
     if (terminating) {
@@ -9600,8 +9748,10 @@ static void browse_callback(AvahiServiceBrowser *b,
     if (name == NULL || type == NULL || domain == NULL)
       return;
 
-    debug_printf("Avahi Browser: REMOVE: service '%s' of type '%s' in domain '%s' on interface '%s'\n",
-		 name, type, domain, ifname);
+    debug_printf("Avahi Browser: REMOVE: service '%s' of type '%s' in domain '%s' on interface '%s' (%s)\n",
+		 name, type, domain, ifname,
+		 protocol != AVAHI_PROTO_UNSPEC ?
+		 avahi_proto_to_string(protocol) : "Unknown");
 
     /* Ignore if terminated (by SIGTERM) */
     if (terminating) {
@@ -9615,13 +9765,35 @@ static void browse_callback(AvahiServiceBrowser *b,
       if (p->status != STATUS_DISAPPEARED &&
 	  p->status != STATUS_TO_BE_RELEASED &&
 	  !strcasecmp(p->service_name, name) &&
-	  !strcasecmp(p->type, type) &&
 	  !strcasecmp(p->domain, domain))
 	break;
     if (p) {
-      remove_printer_entry(p);
-      debug_printf("DNS-SD IDs: Service name: \"%s\", Service type: \"%s\", Domain: \"%s\"\n",
-		   p->service_name, p->type, p->domain);
+      int family =
+	(protocol == AVAHI_PROTO_INET ? AF_INET :
+	 (protocol == AVAHI_PROTO_INET6 ? AF_INET6 : 0));
+      if (p->ipp_discoveries) {
+	ipp_discovery_t *ippdis;
+	for (ippdis = cupsArrayFirst(p->ipp_discoveries); ippdis;
+	     ippdis = cupsArrayNext(p->ipp_discoveries))
+	  if (!strcasecmp(ippdis->interface, ifname) &&
+	      !strcasecmp(ippdis->type, type) &&
+	      ippdis->family == family) {
+	    debug_printf("Discovered instance for printer with Service name \"%s\", Domain \"%s\" unregistered: Interface \"%s\", Service type: \"%s\", Protocol: \"%s\"\n",
+			 p->service_name, p->domain,
+			 ippdis->interface, ippdis->type,
+			 (ippdis->family == AF_INET ? "IPv4" :
+			  (ippdis->family == AF_INET6 ? "IPv6" : "Unknown")));
+	    cupsArrayRemove(p->ipp_discoveries, (void *)ippdis);
+	    ipp_discoveries_list(p->ipp_discoveries);
+	    break;
+	  }
+	/* Remove the entry if no discovered instances are left */
+	if (cupsArrayCount(p->ipp_discoveries) == 0) {
+	  debug_printf("Removing printer with Service name \"%s\", Domain \"%s\", all discovered instances disappeared.\n",
+		       p->service_name, p->domain);
+	  remove_printer_entry(p);
+	}
+      }
 
       if (in_shutdown == 0)
 	recheck_timer ();
@@ -9887,7 +10059,8 @@ found_cups_printer (const char *remote_host, const char *uri,
   printer = examine_discovered_printer_record(host, NULL, port, local_resource,
 					      service_name,
 					      location ? location : "",
-					      info ? info : "", "", "", NULL);
+					      info ? info : "", "", "", "", 0,
+					      NULL);
 
   if (printer &&
       (printer->domain == NULL || printer->domain[0] == '\0' ||
@@ -11296,7 +11469,8 @@ find_previous_queue (gpointer key,
   if (printer->cups_browsed_controlled) {
     /* Queue found, add to our list */
     p = create_remote_printer_entry (name, "", "", printer->device_uri, "", "",
-				     0, "", "", "", NULL, 0, 0, NULL, -1);
+				     0, "", "", "", "", 0, NULL, 0, 0, NULL,
+				     -1);
     if (p) {
       /* Mark as unconfirmed, if no Avahi report of this queue appears
 	 in a certain time frame, we will remove the queue */

@@ -3,13 +3,21 @@ NEWS - OpenPrinting CUPS Filters v1.25.1 - 2019-07-05
 
 CHANGES IN V1.25.2
 
+	- cups-browsed: For each DNS-SD-discovered printer register
+	  each DNS-SD discovery instance with network interface,
+	  family, and IPP type. When DNS-SD messages of instances
+	  disappearing show up, only unregister this instance and
+	  remove the printer only if no instance is left. This
+	  prevents a local queue of a still available printer being
+	  removed when Wi-Fi (= one interface) is turned off (Issue
+	  #136).
 	- cups-browsed: If a remote printer is served from the local
 	  machine, prefer the "localhost"/loopback interface URI.
 	- cups-browsed: If a remote printer is discovered more than
 	  once, use the new instance only if it has no downgrades and
 	  at least one upgrade compared to the old one. Features
-	  currently compared are IPP/IPPS and discovery via CUPS
-	  legacy/LDAP/DNS-SD.
+	  currently compared are IPP/IPPS, loopback interface or not,
+	  and discovery via CUPS legacy/LDAP/DNS-SD.
 	- cups-browsed: If an Avahi-discovered entry comes through the
 	  "lo" interface, always use the host name "localhost". Use
 	  IP addresses instead of host names only if explicitly
