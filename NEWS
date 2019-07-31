@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.25.1 - 2019-07-05
 
 CHANGES IN V1.25.2
 
+	- cups-browsed: Added note to cups-browsed.conf and man page
+	  about IP-based URIs depending on the network interface used.
 	- cups-browsed: For each DNS-SD-discovered printer register
 	  each DNS-SD discovery instance with network interface,
 	  family, and IPP type. When DNS-SD messages of instances

@@ -403,6 +403,13 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # stopped while still printing. By default this mode is turned off,
 # meaning that we use URIs with host names.
 
+# Note that the IP addresses depend on the network interface through
+# which the printer is accessed. So do not use IP-based URIs on systems
+# with many network interfaces and where interfaces can appear and
+# disappear frequently.
+
+# This mode could also be useful for development and debugging.
+
 # If you prefer IPv4 or IPv6 IP addresses in the URIs, you can set
 # IPBasedDeviceURIs to "IPv4" to only get IPv4 IP addresses or
 # IPBasedDeviceURIs to "IPv6" to only get IPv6 IP addresses.
