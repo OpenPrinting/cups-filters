@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.25.1 - 2019-07-05
 
 CHANGES IN V1.25.2
 
+	- foomatic-rip: Fixed segmentation fault when running
+	  foomatic-rip by hand and the PRINTER environment variable is
+	  not set (Pull request #139).
 	- cups-browsed: Added note to cups-browsed.conf and man page
 	  about IP-based URIs depending on the network interface used.
 	- cups-browsed: For each DNS-SD-discovered printer register
