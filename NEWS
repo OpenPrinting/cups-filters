@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.25.2 - 2019-08-16
 -----------------------------------------------------
 
+CHANGES IN V1.25.3
+
+	- cups-browsed: Fixed check whether the remote printer understands
+	  PWG Raster (Issue #141).
+
 CHANGES IN V1.25.2
 
 	- foomatic-rip: Fixed segmentation fault when running

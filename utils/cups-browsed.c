@@ -7034,11 +7034,11 @@ create_remote_printer_entry (const char *queue_name,
     if (CreateIPPPrinterQueues == IPP_PRINTERS_PWGRASTER ||
 	CreateIPPPrinterQueues == IPP_PRINTERS_DRIVERLESS) {
       valuebuffer[0] = '\0';
-      debug_printf("Checking whether printer %s is PWG Raster:\n",
+      debug_printf("Checking whether printer %s understands PWG Raster:\n",
 		   p->queue_name);
       if ((attr = ippFindAttribute(p->prattrs,
 				   "pwg-raster-document-resolution-supported",
-				   IPP_TAG_KEYWORD)) != NULL) {
+				   IPP_TAG_RESOLUTION)) != NULL) {
 	debug_printf("  Attr: %s\n", ippGetName(attr));
 	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
 	debug_printf("  Value: %s\n", valuebuffer);
