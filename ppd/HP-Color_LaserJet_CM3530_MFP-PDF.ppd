@@ -353,7 +353,7 @@
 *OrderDependency: 100 JCLSetup *stapleoption
 *Defaultstapleoption: none
 *stapleoption default/Default: "@PJL SET STAPLEOPTION=DEFAULT<0A>"
-*stapleoption custom/Custom Size: "@PJL SET STAPLEOPTION=CUSTOM<0A>"
+*stapleoption customsize/Custom Size: "@PJL SET STAPLEOPTION=CUSTOM<0A>"
 *stapleoption five/5: "@PJL SET STAPLEOPTION=FIVE<0A>"
 *stapleoption four/4: "@PJL SET STAPLEOPTION=FOUR<0A>"
 *stapleoption none/None: "@PJL SET STAPLEOPTION=NONE<0A>"

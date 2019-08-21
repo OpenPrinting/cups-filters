@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.25.2 - 2019-08-16
 
 CHANGES IN V1.25.3
 
+	- Sample PPDs: In HP-Color_LaserJet_CM3530_MFP-PDF.ppd renamed
+	  "custom" choice of the option "stapleoption" to "customsize"
+	  as from CUPS 2.2.12 on "custom" is not accepted any more as a
+	  choice name in a PPD file.
 	- cups-browsed: Fixed check whether the remote printer understands
 	  PWG Raster (Issue #141).
 
