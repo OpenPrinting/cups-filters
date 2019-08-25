@@ -991,17 +991,8 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
   }
   if(tempOrientation==0) {
-    int temp1 = pw,
-          temp2 = ph,
-          temp3 = pw,
-          temp4 = ph;
-      if(temp1>w) temp1 = w;
-      if(temp2>h) temp2 = h;
-      if(temp3>h) temp3 = h;
-      if(temp4>w) temp4 = w;
-      if(temp1*temp2<temp3*temp4) {
-        tempOrientation = 4;
-      }
+    if(((pw > ph) && (w < h)) || ((pw < ph) && (w > h)))
+      tempOrientation = 4;
   }
   if(tempOrientation==4||tempOrientation==5) {
     int tmp = pw;
@@ -1097,15 +1088,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
     if(tempOrientation==0)
     {
-      int temp1 = pw,
-          temp2 = ph,
-          temp3 = pw,
-          temp4 = ph;
-      if(temp1>w) temp1 = w;
-      if(temp2>h) temp2 = h;
-      if(temp3>h) temp3 = h;
-      if(temp4>w) temp4 = w;
-      if(temp1*temp2<temp3*temp4)
+      if(((pw > ph) && (w < h)) || ((pw < ph) && (w > h)))
       {
         int temp = pw;
         pw = ph;
