@@ -1778,7 +1778,9 @@ static void outPage(poppler::document *doc, int pageNo,
 	if (pwgraster == 0)
 	  for (i = 0; i < 4; i ++)
 	    margins[i] = ppd->custom_margins[i];
-	header.cupsPageSizeName[0] = '\0';
+	snprintf(header.cupsPageSizeName, 64,
+		 "Custom.%dx%d",
+		 header.PageSize[0], header.PageSize[1]);
       }
     }
   } else {
