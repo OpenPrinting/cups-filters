@@ -1651,6 +1651,7 @@ static void outPage(poppler::document *doc, int pageNo,
     margins[4];	/* Physical margins of print */
   ppd_size_t *size;		/* Page size */
   double l, swap;
+  int imageable_area_fit = 0;
   int i;
 
   poppler::page *current_page =doc->create_page(pageNo-1);
@@ -1684,15 +1685,31 @@ static void outPage(poppler::document *doc, int pageNo,
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
   if (ppd) {
+    imageable_area_fit = 0;
     for (i = ppd->num_sizes, size = ppd->sizes;
 	 i > 0;
 	 i --, size ++) {
       /* Skip page sizes which conflict with settings of the other options */
       /* TODO XXX */
       /* Find size of document's page under the PPD page sizes */
-      if (fabs(header.PageSize[1] - size->length) < 5.0 &&
-	  fabs(header.PageSize[0] - size->width) < 5.0)
+      if (fabs(header.PageSize[1] - size->length) / size->length < 0.01 &&
+	  fabs(header.PageSize[0] - size->width) / size->width < 0.01)
 	break;
+    }
+    if (i == 0) {
+      /* Input page size does not fit any of the PPD's sizes, try to fit
+	 the input page size into the imageable areas of the PPD's sizes */
+      for (i = ppd->num_sizes, size = ppd->sizes;
+	   i > 0;
+	   i --, size ++)
+	if (fabs(header.PageSize[1] - size->top + size->bottom) /
+	    size->length < 0.01 &&
+	    fabs(header.PageSize[0] - size->right + size->left) /
+	    size->width < 0.01) {
+	  fprintf(stderr, "DEBUG: Imageable area fit\n");
+	  imageable_area_fit = 1;
+	  break;
+	}
     }
     if (i > 0) {
       /*
@@ -1714,13 +1731,28 @@ static void outPage(poppler::document *doc, int pageNo,
        * landscape orientation...
        */
 
+      imageable_area_fit = 0;
       for (i = ppd->num_sizes, size = ppd->sizes;
 	   i > 0;
 	   i --, size ++)
-	if (fabs(header.PageSize[0] - size->length) < 5.0 &&
-	    fabs(header.PageSize[1] - size->width) < 5.0)
+	if (fabs(header.PageSize[0] - size->length) / size->length < 0.01 &&
+	    fabs(header.PageSize[1] - size->width) / size->width < 0.01)
 	  break;
-
+      if (i == 0) {
+	/* Input page size does not fit any of the PPD's sizes, try to fit
+	   the input page size into the imageable areas of the PPD's sizes */
+	for (i = ppd->num_sizes, size = ppd->sizes;
+	     i > 0;
+	     i --, size ++)
+	  if (fabs(header.PageSize[0] - size->top + size->bottom) /
+	      size->length < 0.01 &&
+	      fabs(header.PageSize[1] - size->right + size->left) /
+	      size->width < 0.01) {
+	    fprintf(stderr, "DEBUG: Imageable area fit\n");
+	    imageable_area_fit = 1;
+	    break;
+	  }
+      }
       if (i > 0) {
 	/*
 	 * Standard size in landscape orientation...
@@ -1781,8 +1813,13 @@ static void outPage(poppler::document *doc, int pageNo,
   }
 
 
-  bitmapoffset[0] = margins[0] / 72.0 * header.HWResolution[0];
-  bitmapoffset[1] = margins[3] / 72.0 * header.HWResolution[1];
+  if (imageable_area_fit == 0) {
+    bitmapoffset[0] = margins[0] / 72.0 * header.HWResolution[0];
+    bitmapoffset[1] = margins[3] / 72.0 * header.HWResolution[1];
+  } else {
+    bitmapoffset[0] = 0;
+    bitmapoffset[1] = 0;
+  }
 
   /* write page header */
   if (pwgraster == 0) {

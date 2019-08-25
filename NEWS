@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.25.3 - 2019-08-21
 -----------------------------------------------------
 
+CHANGES IN V1.25.4
+
+	- pdftoraster: Match the input page size with a page size in
+	  the PPD only if the differences of the dimensions are less
+	  than 1%, also match the input page size against the
+	  imageable area of the PPD's page sizes if no match with the
+	  full page size is found (Issue #138).
+
 CHANGES IN V1.25.3
 
 	- Sample PPDs: In HP-Color_LaserJet_CM3530_MFP-PDF.ppd renamed
