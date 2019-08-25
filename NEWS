@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.25.3 - 2019-08-21
 
 CHANGES IN V1.25.4
 
+	- imagetoraster: Rotate image to fit output page best (Issue
+          #145).
 	- imagetoraster: Do not try to call imagetops and pstoraster
 	  any more but imagetopdf and pdftoraster instead, as the
 	  former filters do not exist any more.

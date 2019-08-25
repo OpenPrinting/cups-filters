@@ -717,7 +717,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
   if(tempOrientation==0)
   {
-    if(min(pw,w)*min(ph,h)<min(pw,h)*min(ph,w))
+    if(((pw > ph) && (w < h)) || ((pw < ph) && (w > h)))
     {
       tempOrientation = 4;
     }
@@ -825,7 +825,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       }
       if(tempOrientation==0)
       {
-        if(min(pw,w)*min(ph,h)<min(pw,h)*min(ph,w))
+        if(((pw > ph) && (w < h)) || ((pw < ph) && (w > h)))
         {
           int temp = pw;
           pw = ph;
