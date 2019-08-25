@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.25.3 - 2019-08-21
 
 CHANGES IN V1.25.4
 
+	- pdftoraster: If the PPD contains several equally-sized page
+	  size entries which match the size of the input page and one
+	  is the size selected by the user via the "PageSize" or
+	  "media" option (or the default selection in the PPD) then
+	  prefer this one instead of simply the first matching one.
 	- pdftoraster: If the input page size cannot be matched with
 	  one of the PPD's page sizes it is considered a custom size,
 	  fill the page size name field of the CUPS Raster header with

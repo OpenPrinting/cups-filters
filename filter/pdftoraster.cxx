@@ -109,6 +109,7 @@ namespace {
   bool deviceCollate = false;
   cups_page_header2_t header;
   ppd_file_t *ppd = 0;
+  char pageSizeRequested[64];
   unsigned int bitmapoffset[2];
   unsigned int popplerBitsPerPixel;
   unsigned int popplerNumColors;
@@ -466,6 +467,9 @@ static void parseOpts(int argc, char **argv)
     exit(1);
 #endif /* HAVE_CUPS_1_7 */
   }
+  strncpy(pageSizeRequested, header.cupsPageSizeName, 64);
+  fprintf(stderr, "DEBUG: Page size requested: %s\n",
+	  header.cupsPageSizeName);
 }
 
 static void parsePDFTOPDFComment(FILE *fp)
@@ -1650,6 +1654,7 @@ static void outPage(poppler::document *doc, int pageNo,
   double paperdimensions[2], /* Physical size of the paper */
     margins[4];	/* Physical margins of print */
   ppd_size_t *size;		/* Page size */
+  ppd_size_t *size_matched = NULL;
   double l, swap;
   int imageable_area_fit = 0;
   int i;
@@ -1686,17 +1691,19 @@ static void outPage(poppler::document *doc, int pageNo,
   memset(margins, 0, sizeof(margins));
   if (ppd) {
     imageable_area_fit = 0;
+    size_matched = NULL;
     for (i = ppd->num_sizes, size = ppd->sizes;
 	 i > 0;
-	 i --, size ++) {
+	 i --, size ++)
       /* Skip page sizes which conflict with settings of the other options */
       /* TODO XXX */
       /* Find size of document's page under the PPD page sizes */
       if (fabs(header.PageSize[1] - size->length) / size->length < 0.01 &&
-	  fabs(header.PageSize[0] - size->width) / size->width < 0.01)
-	break;
-    }
-    if (i == 0) {
+	  fabs(header.PageSize[0] - size->width) / size->width < 0.01 &&
+	  (size_matched == NULL ||
+	   !strcasecmp(pageSizeRequested, size->name)))
+	size_matched = size;
+    if (size_matched == NULL)
       /* Input page size does not fit any of the PPD's sizes, try to fit
 	 the input page size into the imageable areas of the PPD's sizes */
       for (i = ppd->num_sizes, size = ppd->sizes;
@@ -1705,16 +1712,18 @@ static void outPage(poppler::document *doc, int pageNo,
 	if (fabs(header.PageSize[1] - size->top + size->bottom) /
 	    size->length < 0.01 &&
 	    fabs(header.PageSize[0] - size->right + size->left) /
-	    size->width < 0.01) {
+	    size->width < 0.01 &&
+	    (size_matched == NULL ||
+	     !strcasecmp(pageSizeRequested, size->name))) {
 	  fprintf(stderr, "DEBUG: Imageable area fit\n");
 	  imageable_area_fit = 1;
-	  break;
+	  size_matched = size;
 	}
-    }
-    if (i > 0) {
+    if (size_matched) {
       /*
        * Standard size...
        */
+      size = size_matched;
       fprintf(stderr, "DEBUG: size = %s\n", size->name);
       paperdimensions[0] = size->width;
       paperdimensions[1] = size->length;
@@ -1732,13 +1741,16 @@ static void outPage(poppler::document *doc, int pageNo,
        */
 
       imageable_area_fit = 0;
+      size_matched = 0;
       for (i = ppd->num_sizes, size = ppd->sizes;
 	   i > 0;
 	   i --, size ++)
 	if (fabs(header.PageSize[0] - size->length) / size->length < 0.01 &&
-	    fabs(header.PageSize[1] - size->width) / size->width < 0.01)
-	  break;
-      if (i == 0) {
+	    fabs(header.PageSize[1] - size->width) / size->width < 0.01 &&
+	    (size_matched == NULL ||
+	     !strcasecmp(pageSizeRequested, size->name)))
+	  size_matched = size;
+      if (size_matched == NULL)
 	/* Input page size does not fit any of the PPD's sizes, try to fit
 	   the input page size into the imageable areas of the PPD's sizes */
 	for (i = ppd->num_sizes, size = ppd->sizes;
@@ -1747,16 +1759,18 @@ static void outPage(poppler::document *doc, int pageNo,
 	  if (fabs(header.PageSize[0] - size->top + size->bottom) /
 	      size->length < 0.01 &&
 	      fabs(header.PageSize[1] - size->right + size->left) /
-	      size->width < 0.01) {
+	      size->width < 0.01 &&
+	      (size_matched == NULL ||
+	       !strcasecmp(pageSizeRequested, size->name))) {
 	    fprintf(stderr, "DEBUG: Imageable area fit\n");
 	    imageable_area_fit = 1;
-	    break;
+	    size_matched = size;
 	  }
-      }
-      if (i > 0) {
+      if (size_matched) {
 	/*
 	 * Standard size in landscape orientation...
 	 */
+	size = size_matched;
 	fprintf(stderr, "DEBUG: landscape size = %s\n", size->name);
 	paperdimensions[0] = size->width;
 	paperdimensions[1] = size->length;
@@ -1813,7 +1827,6 @@ static void outPage(poppler::document *doc, int pageNo,
       swap = margins[3]; margins[3] = margins[1]; margins[1] = swap;
     }
   }
-
 
   if (imageable_area_fit == 0) {
     bitmapoffset[0] = margins[0] / 72.0 * header.HWResolution[0];
