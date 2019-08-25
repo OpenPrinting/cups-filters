@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.25.3 - 2019-08-21
 
 CHANGES IN V1.25.4
 
+	- imagetoraster: Do not try to call imagetops and pstoraster
+	  any more but imagetopdf and pdftoraster instead, as the
+	  former filters do not exist any more.
 	- pdftoraster: If the PPD contains several equally-sized page
 	  size entries which match the size of the input page and one
 	  is the size selected by the user via the "PageSize" or

@@ -216,7 +216,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
 
  /*
-  * See if we need to use the imagetops and pstoraster filters instead...
+  * See if we need to use the imagetopdf and pdftoraster filters instead...
   */
 
   options     = NULL;
@@ -226,11 +226,11 @@ main(int  argc,				/* I - Number of command-line arguments */
       cupsGetOption("page-label", num_options, options))
   {
    /*
-    * Yes, fork a copy of pstoraster and then transfer control to imagetops...
+    * Yes, fork a copy of pdftoraster and then transfer control to imagetopdf...
     */
 
-    int	mypipes[2];		/* New pipes for imagetops | pstoraster */
-    int	pid;			/* PID of pstoraster */
+    int	mypipes[2];		/* New pipes for imagetopdf | pdftoraster */
+    int	pid;			/* PID of pdftoraster */
 
 
     cupsFreeOptions(num_options, options);
@@ -243,14 +243,14 @@ main(int  argc,				/* I - Number of command-line arguments */
     if ((pid = fork()) == 0)
     {
      /*
-      * Child process for pstoraster...  Assign new pipe input to pstoraster...
+      * Child process for pdftoraster...  Assign new pipe input to pdftoraster...
       */
 
       dup2(mypipes[0], 0);
       close(mypipes[0]);
       close(mypipes[1]);
 
-      execlp("pstoraster", argv[0], argv[1], argv[2], argv[3], argv[4], argv[5],
+      execlp("pdftoraster", argv[0], argv[1], argv[2], argv[3], argv[4], argv[5],
              NULL);
       return (errno);
     }
@@ -264,7 +264,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       return (errno);
     }
    /*
-    * Update stdout so it points at the new pstoraster...
+    * Update stdout so it points at the new pdftoraster...
     */
 
     dup2(mypipes[1], 1);
@@ -272,11 +272,11 @@ main(int  argc,				/* I - Number of command-line arguments */
     close(mypipes[1]);
 
    /*
-    * Run imagetops to get the classification or page labeling that was
+    * Run imagetopdf to get the classification or page labeling that was
     * requested...
     */
 
-    execlp("imagetops", argv[0], argv[1], argv[2], argv[3], argv[4], argv[5],
+    execlp("imagetopdf", argv[0], argv[1], argv[2], argv[3], argv[4], argv[5],
            argv[6], NULL);
     return (errno);
   }
