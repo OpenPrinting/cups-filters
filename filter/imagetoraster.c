@@ -215,71 +215,8 @@ main(int  argc,				/* I - Number of command-line arguments */
     return (1);
   }
 
- /*
-  * See if we need to use the imagetopdf and pdftoraster filters instead...
-  */
-
   options     = NULL;
   num_options = cupsParseOptions(argv[5], 0, &options);
-
-  if (getenv("CLASSIFICATION") ||
-      cupsGetOption("page-label", num_options, options))
-  {
-   /*
-    * Yes, fork a copy of pdftoraster and then transfer control to imagetopdf...
-    */
-
-    int	mypipes[2];		/* New pipes for imagetopdf | pdftoraster */
-    int	pid;			/* PID of pdftoraster */
-
-
-    cupsFreeOptions(num_options, options);
-
-    if (pipe(mypipes))
-    {
-      perror("ERROR: Unable to create pipes for filters");
-      return (errno);
-    }
-    if ((pid = fork()) == 0)
-    {
-     /*
-      * Child process for pdftoraster...  Assign new pipe input to pdftoraster...
-      */
-
-      dup2(mypipes[0], 0);
-      close(mypipes[0]);
-      close(mypipes[1]);
-
-      execlp("pdftoraster", argv[0], argv[1], argv[2], argv[3], argv[4], argv[5],
-             NULL);
-      return (errno);
-    }
-    else if (pid < 0)
-    {
-     /*
-      * Error!
-      */
-
-      perror("ERROR: Unable to fork filter");
-      return (errno);
-    }
-   /*
-    * Update stdout so it points at the new pdftoraster...
-    */
-
-    dup2(mypipes[1], 1);
-    close(mypipes[0]);
-    close(mypipes[1]);
-
-   /*
-    * Run imagetopdf to get the classification or page labeling that was
-    * requested...
-    */
-
-    execlp("imagetopdf", argv[0], argv[1], argv[2], argv[3], argv[4], argv[5],
-           argv[6], NULL);
-    return (errno);
-  }
 
  /*
   * Copy stdin as needed...
