@@ -716,6 +716,7 @@ void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,ArgOwnership take) // {{{
   if (!extraheader.empty()) {
     out.setExtraHeaderText(extraheader);
   }
+  out.setPreserveEncryption(false);
   out.write();
 }
 // }}}
@@ -735,6 +736,7 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name) // {{{
   if (!extraheader.empty()) {
     out.setExtraHeaderText(extraheader);
   }
+  out.setPreserveEncryption(false);
   out.write();
 }
 // }}}
