@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.25.4 - 2019-08-30
 -----------------------------------------------------
 
+CHANGES IN V1.25.5
+
+	- pdftopdf: Do not preserve encryption, since the output
+          already goes into the printer (Issue #146, Pull request
+          #147).
+
 CHANGES IN V1.25.4
 
 	- imagetoraster: Do not call imagetops and pstoraster for
