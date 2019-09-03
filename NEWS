@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.25.4 - 2019-08-30
 
 CHANGES IN V1.25.5
 
+	- rastertopdf: Let the getIPPColorProfileName() function not
+	  return a pointer to a local variable (clang warning, Issue
+	  #150).
 	- cups-browsed: If a locally generated queue (usually with
           "implicitclass://..." URI) left over from a previous
           (crashed) session is picked up on startup, do not set the

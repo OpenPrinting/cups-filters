@@ -1298,7 +1298,7 @@ const char * getIPPColorProfileName(const char * media_type, cups_cspace_t cs, u
     else 
       iccProfile = colorModel + "-" + resolution + "-" + mediaType + ".icc";
 
-    return iccProfile.c_str();
+    return strdup(iccProfile.c_str());
 }
 
 int main(int argc, char **argv)
