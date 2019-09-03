@@ -11495,7 +11495,7 @@ find_previous_queue (gpointer key,
       debug_printf("Found CUPS queue %s (URI: %s) from previous session.\n",
 		   p->queue_name, p->uri);
     } else
-      debug_printf("ERROR: Unable to create print queue entry for prrinter of previous session: %s (%s).\n",
+      debug_printf("ERROR: Unable to create print queue entry for printer of previous session: %s (%s).\n",
 		   name, printer->device_uri);
   }
 }
