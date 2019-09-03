@@ -6908,12 +6908,12 @@ create_remote_printer_entry (const char *queue_name,
        remote CUPS server gets used. So we will not generate a PPD file
        or interface script at this point. */
     p->netprinter = 0;
-    p->prattrs = get_printer_attributes(p->uri);
     p->nickname = NULL;
-    if (p->prattrs == NULL) {
-      debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
-		   p->queue_name, p->uri);
-      goto fail;
+    if (p->uri[0] != '\0') {
+      p->prattrs = get_printer_attributes(p->uri);
+      if (p->prattrs == NULL)
+	debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
+		     p->queue_name, p->uri);
     }
   } else {
 #ifndef HAVE_CUPS_1_6
@@ -9133,9 +9133,19 @@ examine_discovered_printer_record(const char *host,
        discovered through the loopback interface (preferred interface) */
     ipp_discovery_t *ippdis = cupsArrayFirst(p->ipp_discoveries);
 
+    /* Force upgrade if the found entry is marked unconfirmed or
+       disappeared */
+    if (p->status == STATUS_UNCONFIRMED ||
+	p->status == STATUS_DISAPPEARED) {
+      upgrade = 1;
+      debug_printf("Replacing printer entry %s (Host: %s, Port: %d) as it was marked %s. New URI: %s\n",
+		   p->queue_name, remote_host, port,
+		   (p->status == STATUS_UNCONFIRMED ? "unconfirmed" :
+		    "disappeared"),
+		   uri);
     /* Check if there is a downgrade */
     /* IPPS -> IPP */
-    if ((ptr = strcasestr(type, "_ipp")) != NULL &&
+    } else if ((ptr = strcasestr(type, "_ipp")) != NULL &&
 	*(ptr + 4) != 's' &&
 	!strncasecmp(p->uri, "ipps:", 5)) {
       downgrade = 1;
@@ -11468,7 +11478,7 @@ find_previous_queue (gpointer key,
   debug_printf("find_previous_queue() in THREAD %ld\n", pthread_self());
   if (printer->cups_browsed_controlled) {
     /* Queue found, add to our list */
-    p = create_remote_printer_entry (name, "", "", printer->device_uri, "", "",
+    p = create_remote_printer_entry (name, "", "", "", "", "",
 				     0, "", "", "", "", 0, NULL, 0, 0, NULL,
 				     -1);
     if (p) {
@@ -11484,10 +11494,9 @@ find_previous_queue (gpointer key,
       p->slave_of = NULL;
       debug_printf("Found CUPS queue %s (URI: %s) from previous session.\n",
 		   p->queue_name, p->uri);
-    } else {
-      debug_printf("ERROR: Unable to allocate memory.\n");
-      exit(1);
-    }
+    } else
+      debug_printf("ERROR: Unable to create print queue entry for prrinter of previous session: %s (%s).\n",
+		   name, printer->device_uri);
   }
 }
 
