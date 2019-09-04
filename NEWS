@@ -5,7 +5,7 @@ CHANGES IN V1.25.5
 
 	- bannertopdf: Added missing "#include <cstring>" to pdf.cxx
 	  so that bannertopdf correctly builds with QPDF 9.0.0 (Issue
-	  #134).
+	  #134, Issue #151, Gentoo bug #693498).
 	- rastertopdf: Let the getIPPColorProfileName() function not
 	  return a pointer to a local variable (clang warning, Issue
 	  #150).
