@@ -20,6 +20,7 @@
 #include "pdf.h"
 #include <vector>
 #include <string>
+#include <cstring>
 #include <qpdf/QPDF.hh>
 #include <qpdf/QPDFObjectHandle.hh>
 #include <qpdf/QPDFWriter.hh>
