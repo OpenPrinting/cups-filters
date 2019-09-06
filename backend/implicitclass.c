@@ -262,7 +262,7 @@ main(int  argc,				/* I - Number of command-line args */
 	      queue_name);
       return (CUPS_BACKEND_STOP);
     }
-    
+    strncpy(dest_host,ptr1,sizeof(dest_host));
     if (!strcmp(dest_host, "NO_DEST_FOUND")) {
       /* All remote queues are either disabled or not accepting jobs, let
 	 CUPS retry after the usual interval */
