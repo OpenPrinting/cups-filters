@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.25.5 - 2019-09-06
 -----------------------------------------------------
 
+CHANGES IN V1.25.6
+
+	- texttotext: Link with libiconv if needed (Pull request
+	  #155).
+	- foomatic-rip: Fix argument representation for raw queue
+	  debug mesaage (Pull request #153).
+
 CHANGES IN V1.25.5
 
 	- bannertopdf: Added missing "#include <cstring>" to pdf.cxx
