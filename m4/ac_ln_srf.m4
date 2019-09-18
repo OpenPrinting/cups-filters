@@ -57,7 +57,7 @@ else
 fi
 if (echo >conf$$.file) 2>/dev/null; then
   if ln -s -r conf$$.file conf$$ 2>/dev/null; then
-    as_ln_srf='ln -s -r'
+    as_ln_srf='ln -s -r -f'
   elif ln -s conf$$.file conf$$ 2>/dev/null; then
     as_ln_srf='./ln-srf'
     # ... but there are two gotchas:
@@ -81,9 +81,9 @@ rmdir conf$$.dir 2>/dev/null
 # AC_PROG_LN_SRF
 # --------------------------------
 AC_DEFUN([AC_PROG_LN_SRF],
-[AC_MSG_CHECKING([whether ln -s -r works])
+[AC_MSG_CHECKING([whether ln -s -r -f works])
 AC_SUBST([LN_SRF], [$as_ln_srf])dnl
-if test "$LN_SRF" = "ln -s -r"; then
+if test "$LN_SRF" = "ln -s -r -f"; then
   AC_MSG_RESULT([yes])
 else
   AC_MSG_RESULT([no, using $LN_SRF])
