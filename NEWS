@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.25.5 - 2019-09-06
 
 CHANGES IN V1.25.6
 
+	- Build system: Support old ln versions without the -r option
+	  (Pull request #154).
 	- texttotext: Link with libiconv if needed (Pull request
 	  #155).
 	- foomatic-rip: Fix argument representation for raw queue
