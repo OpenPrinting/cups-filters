@@ -6,6 +6,7 @@ pkgconf_DATA = \
 	libfontembed.pc
 
 doc_DATA = \
+	ABOUT-NLS \
 	AUTHORS \
 	COPYING \
 	NEWS \
@@ -15,6 +16,7 @@ doc_DATA = \
 EXTRA_DIST = \
 	$(doc_DATA) \
 	autogen.sh \
+	config.rpath \
 	libcupsfilters.pc.in \
 	libfontembed.pc.in \
 	utils/cups-browsed.service \
