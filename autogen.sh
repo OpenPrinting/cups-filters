@@ -13,8 +13,19 @@ aclocal --version > /dev/null 2> /dev/null || {
     echo "error: aclocal not found"
     exit 1
 }
+
 automake --version > /dev/null 2> /dev/null || {
     echo "error: automake not found"
+    exit 1
+}
+
+autopoint --version > /dev/null 2> /dev/null || {
+    echo "error: autopoint not found"
+    exit 1
+}
+
+gettext --version > /dev/null 2> /dev/null || {
+    echo "error: gettext not found"
     exit 1
 }
 
@@ -39,6 +50,12 @@ fi
 
 rm -rf autom4te*.cache
 
+autopoint --force || {
+    echo "error: autopoint failed"
+    exit 1
+}
+# autopoint is for libiconv discovery; we don't want the po directory
+rm -rf po
 $LIBTOOLIZE --force --copy || {
     echo "error: libtoolize failed"
     exit 1

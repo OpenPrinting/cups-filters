@@ -6,6 +6,7 @@ pkgconf_DATA = \
 	libfontembed.pc
 
 doc_DATA = \
+	ABOUT-NLS \
 	AUTHORS \
 	COPYING \
 	NEWS \
@@ -15,6 +16,7 @@ doc_DATA = \
 EXTRA_DIST = \
 	$(doc_DATA) \
 	autogen.sh \
+	config.rpath \
 	libcupsfilters.pc.in \
 	libfontembed.pc.in \
 	utils/cups-browsed.service \
@@ -778,7 +780,7 @@ texttotext_SOURCES = \
 	filter/texttotext.c
 EXTRA_texttotext_SOURCES = filter/strcasestr.c
 texttotext_CFLAGS = $(CUPS_CFLAGS)
-texttotext_LDADD = $(STRCASESTR) $(CUPS_LIBS)
+texttotext_LDADD = $(STRCASESTR) $(CUPS_LIBS) $(LIBICONV)
 texttotext_DEPENDENCIES = $(STRCASESTR)
 
 pdftops_SOURCES = \
@@ -988,11 +990,11 @@ install-exec-hook:
 	$(INSTALL) -d -m 755 $(DESTDIR)$(pkgfilterdir)
 	$(INSTALL) -d -m 755 $(DESTDIR)$(pkgbackenddir)
 if ENABLE_FOOMATIC
-	$(LN_S) -r -f $(DESTDIR)$(pkgfilterdir)/foomatic-rip $(DESTDIR)$(bindir)
+	$(LN_SRF) $(DESTDIR)$(pkgfilterdir)/foomatic-rip $(DESTDIR)$(bindir)
 endif
 if ENABLE_DRIVERLESS
-	$(LN_S) -r -f $(DESTDIR)$(pkgppdgendir)/driverless $(DESTDIR)$(bindir)
-	$(LN_S) -r -f $(DESTDIR)$(pkgppdgendir)/driverless $(DESTDIR)$(pkgbackenddir)
+	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless $(DESTDIR)$(bindir)
+	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless $(DESTDIR)$(pkgbackenddir)
 endif
 if ENABLE_BRAILLE
 	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
@@ -1049,3 +1051,5 @@ if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/vectortoubrl
 	$(RM) $(DESTDIR)$(pkgfilterdir)/textbrftoindexv4
 endif
+
+SUBDIRS =

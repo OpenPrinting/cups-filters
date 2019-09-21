@@ -1105,7 +1105,7 @@ int main(int argc, char** argv)
         if (dontparse == 2) {
             /* Raw queue, simply pass the input into the postpipe (or to STDOUT
                when there is no postpipe) */
-            _log("Raw printing, executing \"cat %s\"\n\n");
+            _log("Raw printing, executing \"cat %%s\"\n\n");
             snprintf(tmp, 1024, "cat %s", postpipe->data);
             run_system_process("raw-printer", tmp);
             continue;
