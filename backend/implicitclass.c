@@ -85,7 +85,7 @@ set_option_in_str(char *buf,          /* I - Buffer with option list string */
 		  const char *value)  /* I - New value for option, NULL
 					     removes option */
 {
-  char *p1, *p2;
+  char *p1, *p2, *p3;
 
   if (!buf || buflen == 0 || !option)
     return;
@@ -99,6 +99,12 @@ set_option_in_str(char *buf,          /* I - Buffer with option list string */
     p1 = p2 + strlen(option);
     if (*p1 != '=' && *p1 != ' ' && *p1 != '\t' && *p1 != '\0')
       continue;
+    if(!strcmp(option,"cups-browsed-dest-printer")){
+      fprintf(stderr, "DEBUG: Removing cups-browsed-dest-printer option from arguments");
+      p3 = strchr(p1, '"');
+      p3++;
+      p1 = strchr(p3, '"');
+    }
     while (*p1 != ' ' && *p1 != '\t' && *p1 != '\0') p1 ++;
     while ((*p1 == ' ' || *p1 == '\t') && *p1 != '\0') p1 ++;
     memmove(p2, p1, strlen(buf) - (buf - p1) + 1);
@@ -262,7 +268,7 @@ main(int  argc,				/* I - Number of command-line args */
 	      queue_name);
       return (CUPS_BACKEND_STOP);
     }
-    
+    strncpy(dest_host,ptr1,sizeof(dest_host));
     if (!strcmp(dest_host, "NO_DEST_FOUND")) {
       /* All remote queues are either disabled or not accepting jobs, let
 	 CUPS retry after the usual interval */
@@ -360,6 +366,7 @@ main(int  argc,				/* I - Number of command-line args */
       set_option_in_str(argv_nt[5], outbuflen, "output-format",
 			document_format);
       set_option_in_str(argv_nt[5], outbuflen, "Resolution",resolution);
+      set_option_in_str(argv_nt[5], outbuflen, "cups-browsed-dest-printer",NULL);
       setenv("DEVICE_URI",printer_uri, 1);
 
       filefd = cupsTempFd(tempfile_filter, sizeof(tempfile_filter));
