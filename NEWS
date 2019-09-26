@@ -1,6 +1,15 @@
 NEWS - OpenPrinting CUPS Filters v1.25.6 - 2019-09-23
 -----------------------------------------------------
 
+CHANGES IN V1.25.7
+
+	- pdftoraster: Fixed some bugs in output bitmap generation (
+	  writePageImage() function): Segfault on output of
+	  up-side-down pages (back side when printing duplex on some
+	  printers), margin offsets not taken into account on
+	  monochrome jobs, CUPS_CSPACE_W color space not recognized as
+	  monochrome (Ubuntu bug #1845286).
+
 CHANGES IN V1.25.6
 
 	- implicitclass: Make sure the destination printer gets always

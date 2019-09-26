@@ -1569,10 +1569,11 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc,
   poppler::image im;
   //render the page according to the colourspace and generate the requried data
   switch (header.cupsColorSpace) {
+   case CUPS_CSPACE_W://gray
    case CUPS_CSPACE_K://black
    case CUPS_CSPACE_SW://sgray
     if(header.cupsBitsPerColor==1){ //special case for 1-bit colorspaces
-    im = pr.render_page(current_page,header.HWResolution[0],header.HWResolution[1],0,0,bytesPerLine*8,header.cupsHeight);
+      im = pr.render_page(current_page,header.HWResolution[0],header.HWResolution[1],bitmapoffset[0],bitmapoffset[1],bytesPerLine*8,header.cupsHeight);
     newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
     newdata = removeAlpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
     graydata=(unsigned char *)malloc(sizeof(char)*im.width()*im.height());
@@ -1583,7 +1584,7 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc,
     rowsize=bytesPerLine;
     }
     else{
-      im = pr.render_page(current_page,header.HWResolution[0],header.HWResolution[1],0,0,header.cupsWidth,header.cupsHeight);
+      im = pr.render_page(current_page,header.HWResolution[0],header.HWResolution[1],bitmapoffset[0],bitmapoffset[1],header.cupsWidth,header.cupsHeight);
       newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
       newdata = removeAlpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
       pixel_count=im.width()*im.height();
@@ -1619,11 +1620,11 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc,
   }
   if (header.Duplex && (pageNo & 1) == 0 && swap_image_y) {
     for (unsigned int plane = 0;plane < nplanes;plane++) {
-      unsigned char *bp = colordata;
+      unsigned char *bp = colordata + (header.cupsHeight - 1) * rowsize;
 
       for (unsigned int h = header.cupsHeight;h > 0;h--) {
         for (unsigned int band = 0;band < nbands;band++) {
-          dp = convertLine(bp,lineBuf,h,plane+band,header.cupsWidth,
+          dp = convertLine(bp,lineBuf,h - 1,plane+band,header.cupsWidth,
                  bytesPerLine);
           cupsRasterWritePixels(raster,dp,bytesPerLine);
         }
