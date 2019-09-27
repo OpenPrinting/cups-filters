@@ -17,6 +17,7 @@ EXTRA_DIST = \
 	$(doc_DATA) \
 	autogen.sh \
 	config.rpath \
+	ln-srf \
 	libcupsfilters.pc.in \
 	libfontembed.pc.in \
 	utils/cups-browsed.service \
