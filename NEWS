@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.25.6 - 2019-09-23
 
 CHANGES IN V1.25.7
 
+	- cups-browsed: Do not try to resolve the network interface
+	  name on Avahi messages which are not interface-related (like
+	  "All for now"or "Cache exhausted", Issue #163).
 	- Build system: The helper script ln-srf to build on systems
 	  with old ln was not included in the release tarballs (Issue
 	  #161).

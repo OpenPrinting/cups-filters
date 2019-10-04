@@ -9703,13 +9703,6 @@ static void browse_callback(AvahiServiceBrowser *b,
   if (b == NULL)
     return;
 
-  /* Get the interface name */
-  if (!if_indextoname(interface, ifname)) {
-    debug_printf("Unable to find interface name for interface %d: %s\n",
-		 interface, strerror(errno));
-    strncpy(ifname, "Unknown", sizeof(ifname));
-  }
-
   /* Called whenever a new services becomes available on the LAN or
      is removed from the LAN */
 
@@ -9729,6 +9722,13 @@ static void browse_callback(AvahiServiceBrowser *b,
 
     if (c == NULL || name == NULL || type == NULL || domain == NULL)
       return;
+
+    /* Get the interface name */
+    if (!if_indextoname(interface, ifname)) {
+      debug_printf("Unable to find interface name for interface %d: %s\n",
+		   interface, strerror(errno));
+      strncpy(ifname, "Unknown", sizeof(ifname));
+    }
 
     debug_printf("Avahi Browser: NEW: service '%s' of type '%s' in domain '%s' on interface '%s' (%s)\n",
 		 name, type, domain, ifname,
@@ -9757,6 +9757,13 @@ static void browse_callback(AvahiServiceBrowser *b,
 
     if (name == NULL || type == NULL || domain == NULL)
       return;
+
+    /* Get the interface name */
+    if (!if_indextoname(interface, ifname)) {
+      debug_printf("Unable to find interface name for interface %d: %s\n",
+		   interface, strerror(errno));
+      strncpy(ifname, "Unknown", sizeof(ifname));
+    }
 
     debug_printf("Avahi Browser: REMOVE: service '%s' of type '%s' in domain '%s' on interface '%s' (%s)\n",
 		 name, type, domain, ifname,
