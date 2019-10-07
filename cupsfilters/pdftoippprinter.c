@@ -66,15 +66,61 @@ static int		exec_filters(cups_array_t *filters, char **argv);
 static int		open_pipe(int *fds);
 static char*		get_option_in_str(char *buf, const char *option,
 					  int return_value);
-static void		set_option_in_str(char *buf, int buflen,
-					  const char *option,
-					  const char *value);
+
 
 /*
  * Local globals...
  */
 
 static int		job_canceled = 0;
+
+/*
+ * Set an option in a string of options
+ */
+
+void          /* O - 0 on success, 1 on error */
+set_option_in_str(char *buf,          /* I - Buffer with option list string */
+      int buflen,         /* I - Length of buffer */
+      const char *option, /* I - Option to change/add */
+      const char *value)  /* I - New value for option, NULL
+               removes option */
+{
+  char *p1, *p2, *p3;
+
+  if (!buf || buflen == 0 || !option)
+    return;
+  /* Remove any occurrence of option in the string */
+  p1 = buf;
+  while (*p1 != '\0' && (p2 = strcasestr(p1, option)) != NULL) {
+    if (p2 > buf && *(p2 - 1) != ' ' && *(p2 - 1) != '\t') {
+      p1 = p2 + 1;
+      continue;
+    }
+    p1 = p2 + strlen(option);
+    if(!strcmp(option,"cups-browsed")){
+      fprintf(stderr, "DEBUG: Removing option cups-browsed if it is present\n");
+    }else if (*p1 != '=' && *p1 != ' ' && *p1 != '\t' && *p1 != '\0')
+      continue;
+    if(!strcmp(option,"cups-browsed-dest-printer")){
+      fprintf(stderr, "DEBUG: Removing cups-browsed-dest-printer option from arguments\n");
+      p3 = strchr(p1, '"');
+      p3++;
+      p1 = strchr(p3, '"');
+    }
+    while (*p1 != ' ' && *p1 != '\t' && *p1 != '\0') p1 ++;
+    while ((*p1 == ' ' || *p1 == '\t') && *p1 != '\0') p1 ++;
+    memmove(p2, p1, strlen(buf) - (p1 - buf) + 1);
+    p1 = p2;
+  }
+  /* Add option=value to the end of the string */
+  if (!value)
+    return;
+  p1 = buf + strlen(buf);
+  *p1 = ' ';
+  p1 ++;
+  snprintf(p1, buflen - (p1 - buf), "%s=%s", option, value);
+  buf[buflen - 1] = '\0';
+}
 
 
 /*
@@ -230,7 +276,7 @@ apply_filters(int argc, char *argv[])
   */
 
   if ((val = cupsGetOption("output-format", num_options, options)) != NULL) {
-    if (strcasestr(val, "raster")) {
+    if (!strcmp(val, "raster")) {
       output_format = PWGRASTER;
       /* PWG Raster output */
       set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
@@ -255,7 +301,7 @@ apply_filters(int argc, char *argv[])
 	}
 	setenv("FINAL_CONTENT_TYPE", "pwg", 1);
       }
-    } else if (strcasestr(val, "apple-raster")) {
+    } else if (!strcmp(val, "apple-raster")) {
       output_format = APPLERASTER;
       /* PWG Raster output */
       set_option_in_str(argv_nt[5], optbuflen, "MediaClass", NULL);
@@ -289,11 +335,11 @@ apply_filters(int argc, char *argv[])
 	goto error;
       }
       setenv("FINAL_CONTENT_TYPE", "image/urf", 1);
-    } else if (strcasestr(val, "pdf")) {
+    } else if (!strcmp(val, "pdf")) {
       output_format = PDF;
       /* Page logging into page_log has to be done by pdftopdf */
       set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
-    } else if (strcasestr(val, "postscript")) {
+    } else if (!strcmp(val, "postscript")) {
       output_format = POSTSCRIPT;
       /* Page logging into page_log is done by pstops, so no need by
 	 pdftopdf */
@@ -864,42 +910,3 @@ get_option_in_str(char *buf,		/* I - Buffer with option list string */
 }
 
 
-/*
- * Set an option in a string of options
- */
-
-void					/* O - 0 on success, 1 on error */
-set_option_in_str(char *buf,		/* I - Buffer with option list string */
-		  int buflen,		/* I - Length of buffer */
-		  const char *option,	/* I - Option to change/add */
-		  const char *value)	/* I - New value for option, NULL
-					       removes option */
-{
-  char *p1, *p2;
-
-  if (!buf || buflen == 0 || !option)
-    return;
-  /* Remove any occurrence of option in the string */
-  p1 = buf;
-  while (*p1 != '\0' && (p2 = strcasestr(p1, option)) != NULL) {
-    if (p2 > buf && *(p2 - 1) != ' ' && *(p2 - 1) != '\t') {
-      p1 = p2 + 1;
-      continue;
-    }
-    p1 = p2 + strlen(option);
-    if (*p1 != '=' && *p1 != ' ' && *p1 != '\t' && *p1 != '\0')
-      continue;
-    while (*p1 != ' ' && *p1 != '\t' && *p1 != '\0') p1 ++;
-    while ((*p1 == ' ' || *p1 == '\t') && *p1 != '\0') p1 ++;
-    memmove(p2, p1, strlen(buf) - (buf - p1) + 1);
-    p1 = p2;
-  }
-  /* Add option=value to the end of the string */
-  if (!value)
-    return;
-  p1 = buf + strlen(buf);
-  *p1 = ' ';
-  p1 ++;
-  snprintf(p1, buflen - (buf - p1), "%s=%s", option, value);
-  buf[buflen - 1] = '\0';
-}

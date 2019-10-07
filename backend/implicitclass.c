@@ -75,52 +75,6 @@ next_delay(int current,         /* I  - Current delay value or 0 */
 }
 
 /*
- * Set an option in a string of options
- */
-
-void          /* O - 0 on success, 1 on error */
-set_option_in_str(char *buf,          /* I - Buffer with option list string */
-		  int buflen,         /* I - Length of buffer */
-		  const char *option, /* I - Option to change/add */
-		  const char *value)  /* I - New value for option, NULL
-					     removes option */
-{
-  char *p1, *p2, *p3;
-
-  if (!buf || buflen == 0 || !option)
-    return;
-  /* Remove any occurrence of option in the string */
-  p1 = buf;
-  while (*p1 != '\0' && (p2 = strcasestr(p1, option)) != NULL) {
-    if (p2 > buf && *(p2 - 1) != ' ' && *(p2 - 1) != '\t') {
-      p1 = p2 + 1;
-      continue;
-    }
-    p1 = p2 + strlen(option);
-    if (*p1 != '=' && *p1 != ' ' && *p1 != '\t' && *p1 != '\0')
-      continue;
-    if(!strcmp(option,"cups-browsed-dest-printer")){
-      fprintf(stderr, "DEBUG: Removing cups-browsed-dest-printer option from arguments");
-      p3 = strchr(p1, '"');
-      p3++;
-      p1 = strchr(p3, '"');
-    }
-    while (*p1 != ' ' && *p1 != '\t' && *p1 != '\0') p1 ++;
-    while ((*p1 == ' ' || *p1 == '\t') && *p1 != '\0') p1 ++;
-    memmove(p2, p1, strlen(buf) - (buf - p1) + 1);
-    p1 = p2;
-  }
-  /* Add option=value to the end of the string */
-  if (!value)
-    return;
-  p1 = buf + strlen(buf);
-  *p1 = ' ';
-  p1 ++;
-  snprintf(p1, buflen - (buf - p1), "%s=%s", option, value);
-  buf[buflen - 1] = '\0';
-}
-
-/*
  * 'main()' - Browse for printers.
  */
 
@@ -367,7 +321,9 @@ main(int  argc,				/* I - Number of command-line args */
 			document_format);
       set_option_in_str(argv_nt[5], outbuflen, "Resolution",resolution);
       set_option_in_str(argv_nt[5], outbuflen, "cups-browsed-dest-printer",NULL);
+      set_option_in_str(argv_nt[5], outbuflen, "cups-browsed",NULL);
       setenv("DEVICE_URI",printer_uri, 1);
+      fprintf(stderr, "Changed the argv[5] to %s\n",argv_nt[5]);
 
       filefd = cupsTempFd(tempfile_filter, sizeof(tempfile_filter));
 

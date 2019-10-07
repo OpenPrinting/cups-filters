@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.25.6 - 2019-09-23
 
 CHANGES IN V1.25.7
 
+	- implicitclass, libcupsfilters: Fixes to solve an assertion
+	  error and printing to an Apple Raster printer (Issue #162,
+	  Ubuntu bug #1845286, Ubuntu bug #1845548).
 	- cups-browsed: Do not try to resolve the network interface
 	  name on Avahi messages which are not interface-related (like
 	  "All for now"or "Cache exhausted", Issue #163).
