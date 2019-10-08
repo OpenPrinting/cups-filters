@@ -895,7 +895,7 @@ main (int argc, char **argv, char *envp[])
       (t && (!strcasecmp(t, "true") || !strcasecmp(t, "on") ||
 	     !strcasecmp(t, "yes")))) {
     fprintf(stderr, "DEBUG: Ghostscript using Center-of-Pixel method to fill paths.\n");
-    cupsArrayAdd(gs_args, strdup("0 .setfilladjust2"));
+    cupsArrayAdd(gs_args, strdup("0 0 .setfilladjust2"));
   } else
     fprintf(stderr, "DEBUG: Ghostscript using Any-Part-of-Pixel method to fill paths.\n");
 
