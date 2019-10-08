@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.25.7 - 2019-10-07
 -----------------------------------------------------
 
+CHANGES IN V1.25.8
+
+	- gstoraster: Use ".setfilladjust2" instead of the
+	  undocumented ".setfilladjust" PostScript command for
+	  Center-of-Pixel method to fill paths (Issue #164).
+
 CHANGES IN V1.25.7
 
 	- implicitclass, libcupsfilters: Fixes to solve an assertion
