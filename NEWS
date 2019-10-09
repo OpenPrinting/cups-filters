@@ -5,7 +5,7 @@ CHANGES IN V1.25.10
 
 	- libcupsfilters: Added NULL checks when handling page size
 	  names as some of the page sizes in CUPS' PWG media list have
-	  a NULL PPD name (Ubunru bug #1847488).
+	  a NULL PPD name (Ubuntu bug #1847488).
 
 CHANGES IN V1.25.9
 
