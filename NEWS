@@ -1,6 +1,10 @@
 NEWS - OpenPrinting CUPS Filters v1.25.8 - 2019-10-09
 -----------------------------------------------------
 
+CHANGES IN V1.25.9
+
+	- cups-browsed: Avoid infinite recursion on IPP 1.1 fallback.
+
 CHANGES IN V1.25.8
 
 	- cups-browsed: On a job status request accept also entries
