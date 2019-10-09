@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.25.7 - 2019-10-07
 
 CHANGES IN V1.25.8
 
+	- cups-browsed: Fall back to IPP 1.1 if a
+	  get-printer-attributes IPP request with IPP 2.x fails (Issue
+	  #124, Issue #163).
 	- gstoraster: Use ".setfilladjust2" instead of the
 	  undocumented ".setfilladjust" PostScript command for
 	  Center-of-Pixel method to fill paths (Issue #164).

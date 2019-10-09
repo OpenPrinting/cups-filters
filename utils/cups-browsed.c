@@ -5739,6 +5739,87 @@ on_printer_state_changed (CupsNotifier *object,
   }
 }
 
+#ifdef HAVE_CUPS_1_6
+static ipp_t *
+get_printer_attributes(const char* uri, int fallback_request,
+  const char* const pattrs[],int job_state_attributes, int attr_size)
+{
+  int uri_status, host_port, i;
+  http_t *http_printer = NULL;
+  char scheme[10], userpass[1024], host_name[1024], resource[1024];
+  ipp_t *request, *response = NULL;
+  ipp_attribute_t *attr;
+  char valuebuffer[65536];
+  const char *kw;
+
+  /* Request printer properties via IPP to generate a PPD file for the
+     printer (mainly driverless-capable printers)
+     If we work with Systen V interface scripts use this info to set
+     option defaults. */
+  uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
+             scheme, sizeof(scheme),
+             userpass, sizeof(userpass),
+             host_name, sizeof(host_name),
+             &(host_port),
+             resource, sizeof(resource));
+  if (uri_status != HTTP_URI_OK)
+    return NULL;
+  if ((http_printer =
+       httpConnectEncryptShortTimeout (host_name, host_port,
+               HTTP_ENCRYPT_IF_REQUESTED)) == NULL) {
+    debug_printf("Cannot connect to remote printer with URI %s, ignoring this printer.\n",
+     uri);
+    return NULL;
+  }
+  request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
+  if(fallback_request)
+    ippSetVersion(request,1,1);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL, uri);
+  ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
+    "requested-attributes", attr_size,
+    NULL, pattrs);
+
+  response = cupsDoRequest(http_printer, request, resource);
+
+  if (response) {
+    /* Log all printer attributes for debugging */
+    if (debug_stderr || debug_logfile) {
+      if(!job_state_attributes)
+        debug_printf("Full list of IPP attributes (get-printer-attributes) for printer with URI %s:\n",
+       uri);
+      attr = ippFirstAttribute(response);
+      while (attr) {
+        ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+        if(!job_state_attributes){
+          debug_printf("  Attr: %s\n",ippGetName(attr));
+          debug_printf("  Value: %s\n", valuebuffer);
+
+          for (i = 0; i < ippGetCount(attr); i ++){
+            if ((kw = ippGetString(attr, i, NULL)) != NULL){
+              debug_printf("  Keyword: %s\n", kw);
+            }
+          }
+        }
+
+        if(!strcmp(ippGetName(attr),"status-message") && 
+          !strcmp(valuebuffer,"server-error-version-not-supported")){
+          debug_printf("The server doesn't support IPP2.0 request, trying to IPP1.1 request\n");
+          return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);
+        }
+       attr = ippNextAttribute(response);
+      }
+    }
+  } else{
+    debug_printf("Request for IPP attributes (get-printer-attributes) for printer with URI %s failed: %s\n",
+     uri, cupsLastErrorString());
+    debug_printf("Trying IPP1.1 Request\n");
+    return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);
+  }
+
+  return response;
+}
+#endif /* HAVE_CUPS_1_6 */
+
 static void
 on_job_state (CupsNotifier *object,
 	      const gchar *text,
@@ -5935,23 +6016,13 @@ on_job_state (CupsNotifier *object,
 	  http = httpConnectEncryptShortTimeout (p->ip ? p->ip : p->host,
 						 p->port,
 						 HTTP_ENCRYPT_IF_REQUESTED);
-	  debug_printf("HTTP connection to %s:%d established.\n", p->host,
-		       p->port);
+
 	  if (http) {
 	    /* Check whether the printer is idle, processing, or disabled */
-	    httpSetTimeout(http, HttpRemoteTimeout, http_timeout_cb, NULL);
-	    request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
-	    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
-			 NULL,p->uri);
-	    ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-			  "requested-attributes",
-			  sizeof(pattrs) / sizeof(pattrs[0]),
-			  NULL, pattrs);
-	    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
-			 "requesting-user-name",
-			 NULL, cupsUser());
-	    if ((response = cupsDoRequest(http, request, "/")) !=
-		NULL) {
+      debug_printf("HTTP connection to %s:%d established.\n", p->host,
+           p->port);
+      response = get_printer_attributes(p->uri,0,pattrs,1, sizeof(pattrs)/sizeof(pattrs[0]));
+	    if (response != NULL) {
 	      debug_printf("IPP request to %s:%d successful.\n", p->host,
 			   p->port);
 	      pname = NULL;
@@ -6592,73 +6663,6 @@ on_printer_modified (CupsNotifier *object,
   }
 }
 
-#ifdef HAVE_CUPS_1_6
-static ipp_t *
-get_printer_attributes(const char* uri)
-{
-  int uri_status, host_port, i;
-  http_t *http_printer = NULL;
-  char scheme[10], userpass[1024], host_name[1024], resource[1024];
-  ipp_t *request, *response = NULL;
-  ipp_attribute_t *attr;
-  char valuebuffer[65536];
-  static const char * const pattrs[] =
-    {
-     "all",
-     "media-col-database"
-    };
-
-  /* Request printer properties via IPP to generate a PPD file for the
-     printer (mainly driverless-capable printers)
-     If we work with Systen V interface scripts use this info to set
-     option defaults. */
-  uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
-			       scheme, sizeof(scheme),
-			       userpass, sizeof(userpass),
-			       host_name, sizeof(host_name),
-			       &(host_port),
-			       resource, sizeof(resource));
-  if (uri_status != HTTP_URI_OK)
-    return NULL;
-  if ((http_printer =
-       httpConnectEncryptShortTimeout (host_name, host_port,
-				       HTTP_ENCRYPT_IF_REQUESTED)) == NULL) {
-    debug_printf("Cannot connect to remote printer with URI %s, ignoring this printer.\n",
-		 uri);
-    return NULL;
-  }
-  request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL, uri);
-  ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-		"requested-attributes", sizeof(pattrs) / sizeof(pattrs[0]),
-		NULL, pattrs);
-  response = cupsDoRequest(http_printer, request, resource);
-
-  if (response) {
-    /* Log all printer attributes for debugging */
-    if (debug_stderr || debug_logfile) {
-      debug_printf("Full list of IPP attributes (get-printer-attributes) for printer with URI %s:\n",
-		   uri);
-      attr = ippFirstAttribute(response);
-      while (attr) {
-	debug_printf("  Attr: %s\n",
-		     ippGetName(attr));
-	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-	debug_printf("  Value: %s\n", valuebuffer);
-	const char *kw;
-	for (i = 0; i < ippGetCount(attr); i ++)
-	  if ((kw = ippGetString(attr, i, NULL)) != NULL)
-	    debug_printf("  Keyword: %s\n", kw);
-	attr = ippNextAttribute(response);
-      }
-    }
-  } else
-    debug_printf("Request for IPP attributes (get-printer-attributes) for printer with URI %s failed: %s\n",
-		 uri, cupsLastErrorString());
-
-  return response;
-}
-#endif /* HAVE_CUPS_1_6 */
 
 
 /* This compare function makes the "lo" (looback) interface always
@@ -6785,6 +6789,11 @@ create_remote_printer_entry (const char *queue_name,
   int is_appleraster = 0;
   int is_pclm = 0;
   int is_pdf = 0;
+  const char * const pattrs[] =
+  {
+    "all",
+    "media-col-database"
+  };
 #endif /* HAVE_CUPS_1_6 */
 
   if (!queue_name || !location || !info || !uri || !host || !service_name ||
@@ -6910,7 +6919,7 @@ create_remote_printer_entry (const char *queue_name,
     p->netprinter = 0;
     p->nickname = NULL;
     if (p->uri[0] != '\0') {
-      p->prattrs = get_printer_attributes(p->uri);
+      p->prattrs = get_printer_attributes(p->uri, 0, pattrs, 0, sizeof(pattrs)/sizeof(pattrs[0]));
       if (p->prattrs == NULL)
 	debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
 		     p->queue_name, p->uri);
@@ -6990,7 +6999,7 @@ create_remote_printer_entry (const char *queue_name,
 
     p->slave_of = NULL;
     p->netprinter = 1;
-    p->prattrs = get_printer_attributes(p->uri);
+    p->prattrs = get_printer_attributes(p->uri, 0, pattrs, 0, sizeof(pattrs)/sizeof(pattrs[0]));
     if (p->prattrs == NULL) {
       debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
 		   p->queue_name, p->uri);
@@ -7343,6 +7352,11 @@ gboolean update_cups_queues(gpointer unused) {
   int           duplex;
   char          *default_pagesize;
   const char    *default_color = NULL;
+  const char * const pattrs[] =
+  {
+   "all",
+   "media-col-database"
+  };
 
   /* Create dummy entry to point slaves at when their master is about to
      get removed now (if we point them to NULL, we would try to remove
@@ -7767,7 +7781,7 @@ gboolean update_cups_queues(gpointer unused) {
 	 printer, we proceed here */
       if (p->netprinter == 1) {
 	if (p->prattrs == NULL)
-	  p->prattrs = get_printer_attributes(p->uri);
+	  p->prattrs = get_printer_attributes(p->uri, 0, pattrs, 0, sizeof(pattrs)/sizeof(pattrs[0]));
 	if (p->prattrs == NULL) {
 	  debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
 		       p->queue_name, p->uri);
@@ -8086,7 +8100,7 @@ gboolean update_cups_queues(gpointer unused) {
 	     is suppressed. */
 	  /* Generating the ppd file for the remote cups queue */
 	  if (p->prattrs == NULL)
-	    p->prattrs = get_printer_attributes(p->uri);
+	    p->prattrs = get_printer_attributes(p->uri, 0, pattrs, 0, sizeof(pattrs)/sizeof(pattrs[0]));
 	  if (p->prattrs == NULL) {
 	    debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
 			 p->queue_name, p->uri);
