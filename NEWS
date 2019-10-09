@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.25.9 - 2019-10-09
 -----------------------------------------------------
 
+CHANGES IN V1.25.10
+
+	- libcupsfilters: Added NULL checks when handling page size
+	  names as some of the page sizes in CUPS' PWG media list have
+	  a NULL PPD name (Ubunru bug #1847488).
+
 CHANGES IN V1.25.9
 
 	- cups-browsed: Fix leaks in get_printer_attributes() function.

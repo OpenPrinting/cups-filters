@@ -1162,6 +1162,7 @@ cups_array_t* generate_sizes(ipp_t *response,
   pwg_media_t              *pwg;                 /* PWG media size */
   int                      left_def,right_def,bottom_def,top_def;
   ipp_attribute_t          *margin;  /* media-xxx-margin attribute */
+  const char               *psname;
 
   if ((attr = ippFindAttribute(response, "media-bottom-margin-supported",
 			       IPP_TAG_INTEGER)) != NULL) {
@@ -1238,10 +1239,11 @@ cups_array_t* generate_sizes(ipp_t *response,
       if (x_dim && y_dim &&
 	  (pwg = pwgMediaForSize(ippGetInteger(x_dim, 0),
 				 ippGetInteger(y_dim, 0))) != NULL) {
+	psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
         if (bottom_def == 0 && left_def == 0 && right_def == 0 && top_def == 0)
-          snprintf(ppdname, PPD_MAX_NAME, "%s.Borderless", pwg->ppd);
+          snprintf(ppdname, PPD_MAX_NAME, "%s.Borderless", psname);
         else
-          strlcpy(ppdname, pwg->ppd, PPD_MAX_NAME);
+          strlcpy(ppdname, psname, PPD_MAX_NAME);
       } else
 	strlcpy(ppdname, "Unknown", PPD_MAX_NAME);
     } else
@@ -1250,9 +1252,10 @@ cups_array_t* generate_sizes(ipp_t *response,
 	      pwgMediaForPWG(ippGetString(ippFindAttribute(response,
 							   "media-default",
 							   IPP_TAG_ZERO), 0,
-					  NULL))) != NULL)
-    strlcpy(ppdname, pwg->ppd, PPD_MAX_NAME);
-  else
+					  NULL))) != NULL) {
+    psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
+    strlcpy(ppdname, psname, PPD_MAX_NAME);
+  } else
     strlcpy(ppdname, "Unknown", PPD_MAX_NAME);
 
   sizes = cupsArrayNew3((cups_array_func_t)pwg_compare_sizes, NULL, NULL, 0,
@@ -1301,11 +1304,12 @@ cups_array_t* generate_sizes(ipp_t *response,
 	else
 	  temp.top = *top;
 
+	psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
 	if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 &&
 	    temp.top == 0)
-	  snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
+	  snprintf(temp.media, sizeof(temp.media), "%s.Borderless", psname);
 	else
-	  strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
+	  strlcpy(temp.media, psname, sizeof(temp.media));
 
 	if (!cupsArrayFind(sizes, &temp))
 	  cupsArrayAdd(sizes, &temp);
@@ -1358,11 +1362,12 @@ cups_array_t* generate_sizes(ipp_t *response,
 	temp.right  = *right;
 	temp.top    = *top;
 
+	psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
 	if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 &&
 	    temp.top == 0)
-	  snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
+	  snprintf(temp.media, sizeof(temp.media), "%s.Borderless", psname);
 	else
-	  strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
+	  strlcpy(temp.media, psname, sizeof(temp.media));
 
 	if (!cupsArrayFind(sizes, &temp))
 	  cupsArrayAdd(sizes, &temp);
@@ -1422,11 +1427,12 @@ cups_array_t* generate_sizes(ipp_t *response,
 	  temp.right  = *right;
 	  temp.top    = *top;
 
+	  psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
 	  if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 &&
 	      temp.top == 0)
-	    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
+	    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", psname);
 	  else
-	    strlcpy(temp.media, pwg->ppd, sizeof(temp.media));
+	    strlcpy(temp.media, psname, sizeof(temp.media));
 
 	  /* Add the printer's original IPP name to an already found size */
 	  if ((temp2 = cupsArrayFind(sizes, &temp)) != NULL) {
@@ -1435,7 +1441,7 @@ cups_array_t* generate_sizes(ipp_t *response,
 		     " %s", pwg_size);
 	    /* Check if we have also a borderless version of the size and add
 	       the original IPP name also there */
-	    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", pwg->ppd);
+	    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", psname);
 	    if ((temp2 = cupsArrayFind(sizes, &temp)) != NULL)
 	      snprintf(temp2->media + strlen(temp2->media),
 		       sizeof(temp2->media) - strlen(temp2->media),
