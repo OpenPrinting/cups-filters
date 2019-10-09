@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.25.7 - 2019-10-07
 
 CHANGES IN V1.25.8
 
+	- cups-browsed: On a job status request accept also entries
+	  without the printer name being reported (Issue #163).
 	- cups-browsed: Fall back to IPP 1.1 if a
 	  get-printer-attributes IPP request with IPP 2.x fails (Issue
 	  #124, Issue #163).

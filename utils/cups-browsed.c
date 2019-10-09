@@ -5863,6 +5863,7 @@ on_job_state (CupsNotifier *object,
   char         resolution[32];
   res_t        *max_res=NULL,*min_res=NULL,*res;
   int          xres,yres;
+  int          got_printer_info;
   static const char *pattrs[] =
     {
      "printer-name",
@@ -6013,116 +6014,114 @@ on_job_state (CupsNotifier *object,
 	  }
 	  debug_printf("Checking state of remote printer %s on host %s, IP %s, port %d.\n",
 		       remote_cups_queue, p->host, p->ip, p->port);
-	  http = httpConnectEncryptShortTimeout (p->ip ? p->ip : p->host,
-						 p->port,
-						 HTTP_ENCRYPT_IF_REQUESTED);
 
-	  if (http) {
-	    /* Check whether the printer is idle, processing, or disabled */
-      debug_printf("HTTP connection to %s:%d established.\n", p->host,
-           p->port);
-      response = get_printer_attributes(p->uri,0,pattrs,1, sizeof(pattrs)/sizeof(pattrs[0]));
-	    if (response != NULL) {
-	      debug_printf("IPP request to %s:%d successful.\n", p->host,
-			   p->port);
-	      pname = NULL;
-	      pstate = IPP_PRINTER_IDLE;
-	      paccept = 0;
-	      for (attr = ippFirstAttribute(response); attr != NULL;
-		   attr = ippNextAttribute(response)) {
-		while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
-		  attr = ippNextAttribute(response);
-		if (attr == NULL)
-		  break;
-		pname = NULL;
-		pstate = IPP_PRINTER_IDLE;
-		paccept = 0;
-		while (attr != NULL && ippGetGroupTag(attr) ==
-		       IPP_TAG_PRINTER) {
-		  if (!strcmp(ippGetName(attr), "printer-name") &&
-		      ippGetValueTag(attr) == IPP_TAG_NAME)
-		    pname = ippGetString(attr, 0, NULL);
-		  else if (!strcmp(ippGetName(attr), "printer-state") &&
-			   ippGetValueTag(attr) == IPP_TAG_ENUM)
-		    pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
-		  else if (!strcmp(ippGetName(attr),
-				   "printer-is-accepting-jobs") &&
-			   ippGetValueTag(attr) == IPP_TAG_BOOLEAN)
-		    paccept = ippGetBoolean(attr, 0);
-		  attr = ippNextAttribute(response);
-		}
-		if (pname == NULL) {
-		  if (attr == NULL)
-		    break;
-		  else
-		    continue;
-		}
-		if (paccept) {
-		  debug_printf("Printer %s on host %s, port %d is accepting jobs.\n",
-			       remote_cups_queue, p->host, p->port);
-		  switch (pstate) {
-		  case IPP_PRINTER_IDLE:
-		    valid_dest_found = 1;
-		    dest_host = p->ip ? p->ip : p->host;
-		    dest_port = p->port;
-		    strncpy(destination_uri,p->uri,sizeof(destination_uri));
-		    printer_attributes = p->prattrs;
-		    pdl = p->pdl;
-		    s = p;
-		    strncpy(dest_name, remote_cups_queue, sizeof(dest_name));
-		    if (strlen(remote_cups_queue) > 1023)
-		      dest_name[1023] = '\0';
-		    dest_index = i;
-		    debug_printf("Printer %s on host %s, port %d is idle, take this as destination and stop searching.\n",
-				 remote_cups_queue, p->host, p->port);
-		    break;
-		  case IPP_PRINTER_PROCESSING:
-		    valid_dest_found = 1;
-		    if (LoadBalancingType == QUEUE_ON_SERVERS) {
-		      num_jobs = 0;
-		      num_jobs = get_number_of_jobs(http, p->uri, 0,
-						    CUPS_WHICHJOBS_ACTIVE);
-		      if (num_jobs >= 0 && num_jobs < min_jobs) {
-			min_jobs = num_jobs;
-			dest_host = p->ip ? p->ip : p->host;
-			dest_port = p->port;
-			strncpy(destination_uri,p->uri,sizeof(destination_uri));
-			printer_attributes = p->prattrs;
-			pdl = p->pdl;
-			s = p;
-			strncpy(dest_name, remote_cups_queue,
-				sizeof(dest_name));
-			if (strlen(remote_cups_queue) > 1023)
-			  dest_name[1023] = '\0';
-			dest_index = i;
-		      }
-		      debug_printf("Printer %s on host %s, port %d is printing and it has %d jobs.\n",
-				   remote_cups_queue, p->host, p->port,
-				   num_jobs);
-		    } else
-		      debug_printf("Printer %s on host %s, port %d is printing.\n", remote_cups_queue, p->host, p->port);
-		    break;
-		  case IPP_PRINTER_STOPPED:
-		    debug_printf("Printer %s on host %s, port %d is disabled, skip it.\n",
-				 remote_cups_queue, p->host, p->port);
-		    break;
-		  }
-		} else {
-		  debug_printf("Printer %s on host %s, port %d is not accepting jobs, skip it.\n",
-			       remote_cups_queue, p->host, p->port);
-		}
-		break;
+    /* Check whether the printer is idle, processing, or disabled */
+    debug_printf("HTTP connection to %s:%d established.\n", p->host,
+         p->port);
+    response = get_printer_attributes(p->uri,0,pattrs,1, sizeof(pattrs)/sizeof(pattrs[0]));
+    if (response != NULL) {
+      debug_printf("IPP request to %s:%d successful.\n", p->host,
+		   p->port);
+      pname = NULL;
+      pstate = IPP_PRINTER_IDLE;
+      paccept = 0;
+      for (attr = ippFirstAttribute(response); attr != NULL;
+	   attr = ippNextAttribute(response)) {
+	while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+	  attr = ippNextAttribute(response);
+	if (attr == NULL)
+	  break;
+	pname = NULL;
+	pstate = IPP_PRINTER_IDLE;
+	paccept = 0;
+  got_printer_info = 0;
+	while (attr != NULL && ippGetGroupTag(attr) ==
+	       IPP_TAG_PRINTER) {
+	  if (!strcmp(ippGetName(attr), "printer-name") &&
+	      ippGetValueTag(attr) == IPP_TAG_NAME){
+	    pname = ippGetString(attr, 0, NULL);
+      got_printer_info = 1;
+    }
+	  else if (!strcmp(ippGetName(attr), "printer-state") &&
+		   ippGetValueTag(attr) == IPP_TAG_ENUM)
+	    pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
+	  else if (!strcmp(ippGetName(attr),
+			   "printer-is-accepting-jobs") &&
+		   ippGetValueTag(attr) == IPP_TAG_BOOLEAN)
+	    paccept = ippGetBoolean(attr, 0);
+	  attr = ippNextAttribute(response);
+	}
+	if (got_printer_info == 0) {
+	  if (attr == NULL)
+	    break;
+	  else
+	    continue;
+	}
+  debug_printf("IPP Response contains attributes values printer-name %s, accepting-job %d",
+    pname, paccept);
+	if (paccept) {
+	  debug_printf("Printer %s on host %s, port %d is accepting jobs.\n",
+		       remote_cups_queue, p->host, p->port);
+	  switch (pstate) {
+	  case IPP_PRINTER_IDLE:
+	    valid_dest_found = 1;
+	    dest_host = p->ip ? p->ip : p->host;
+	    dest_port = p->port;
+	    strncpy(destination_uri,p->uri,sizeof(destination_uri));
+	    printer_attributes = p->prattrs;
+	    pdl = p->pdl;
+	    s = p;
+	    strncpy(dest_name, remote_cups_queue, sizeof(dest_name));
+	    if (strlen(remote_cups_queue) > 1023)
+	      dest_name[1023] = '\0';
+	    dest_index = i;
+	    debug_printf("Printer %s on host %s, port %d is idle, take this as destination and stop searching.\n",
+			 remote_cups_queue, p->host, p->port);
+	    break;
+	  case IPP_PRINTER_PROCESSING:
+	    valid_dest_found = 1;
+	    if (LoadBalancingType == QUEUE_ON_SERVERS) {
+	      num_jobs = 0;
+	      num_jobs = get_number_of_jobs(http, p->uri, 0,
+					    CUPS_WHICHJOBS_ACTIVE);
+	      if (num_jobs >= 0 && num_jobs < min_jobs) {
+		min_jobs = num_jobs;
+		dest_host = p->ip ? p->ip : p->host;
+		dest_port = p->port;
+		strncpy(destination_uri,p->uri,sizeof(destination_uri));
+		printer_attributes = p->prattrs;
+		pdl = p->pdl;
+		s = p;
+		strncpy(dest_name, remote_cups_queue,
+			sizeof(dest_name));
+		if (strlen(remote_cups_queue) > 1023)
+		  dest_name[1023] = '\0';
+		dest_index = i;
 	      }
-	      if (pstate == IPP_PRINTER_IDLE && paccept) {
-		q->last_printer = i;
-		break;
-	      }
+	      debug_printf("Printer %s on host %s, port %d is printing and it has %d jobs.\n",
+			   remote_cups_queue, p->host, p->port,
+			   num_jobs);
 	    } else
-	      debug_printf("IPP request to %s:%d failed.\n", p->host,
-			   p->port);
-	    httpClose(http);
-	    http = NULL;
+	      debug_printf("Printer %s on host %s, port %d is printing.\n", remote_cups_queue, p->host, p->port);
+	    break;
+	  case IPP_PRINTER_STOPPED:
+	    debug_printf("Printer %s on host %s, port %d is disabled, skip it.\n",
+			 remote_cups_queue, p->host, p->port);
+	    break;
 	  }
+	} else {
+	  debug_printf("Printer %s on host %s, port %d is not accepting jobs, skip it.\n",
+		       remote_cups_queue, p->host, p->port);
+	}
+	break;
+      }
+      if (pstate == IPP_PRINTER_IDLE && paccept) {
+	q->last_printer = i;
+	break;
+      }
+    } else
+      debug_printf("IPP request to %s:%d failed.\n", p->host,
+		   p->port);
 	}
 	if (i == q->last_printer)
 	  break;
