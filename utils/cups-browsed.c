@@ -5805,6 +5805,7 @@ get_printer_attributes(const char* uri, int fallback_request,
           !strcmp(valuebuffer,"server-error-version-not-supported")){
 	  if (!fallback_request) {
 	    debug_printf("The server doesn't support IPP2.0 request, trying to IPP1.1 request\n");
+	    httpClose(http_printer);
 	    return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);
 	  }
         }
@@ -5816,9 +5817,11 @@ get_printer_attributes(const char* uri, int fallback_request,
      uri, cupsLastErrorString());
     if (!fallback_request) {
       debug_printf("Trying IPP1.1 Request\n");
+      httpClose(http_printer);
       return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);
     }
   }
+  httpClose(http_printer);
 
   return response;
 }
