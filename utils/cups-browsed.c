@@ -6062,21 +6062,21 @@ on_job_state (CupsNotifier *object,
 	pname = NULL;
 	pstate = IPP_PRINTER_IDLE;
 	paccept = 0;
-  got_printer_info = 0;
+	got_printer_info = 0;
 	while (attr != NULL && ippGetGroupTag(attr) ==
 	       IPP_TAG_PRINTER) {
 	  if (!strcmp(ippGetName(attr), "printer-name") &&
 	      ippGetValueTag(attr) == IPP_TAG_NAME){
 	    pname = ippGetString(attr, 0, NULL);
-      got_printer_info = 1;
-    }
-	  else if (!strcmp(ippGetName(attr), "printer-state") &&
+	  } else if (!strcmp(ippGetName(attr), "printer-state") &&
 		   ippGetValueTag(attr) == IPP_TAG_ENUM)
 	    pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
 	  else if (!strcmp(ippGetName(attr),
 			   "printer-is-accepting-jobs") &&
-		   ippGetValueTag(attr) == IPP_TAG_BOOLEAN)
+		   ippGetValueTag(attr) == IPP_TAG_BOOLEAN) {
 	    paccept = ippGetBoolean(attr, 0);
+	    got_printer_info = 1;
+	  }
 	  attr = ippNextAttribute(response);
 	}
 	if (got_printer_info == 0) {
@@ -6085,8 +6085,8 @@ on_job_state (CupsNotifier *object,
 	  else
 	    continue;
 	}
-  debug_printf("IPP Response contains attributes values printer-name %s, accepting-job %d",
-    pname, paccept);
+	debug_printf("IPP Response contains attributes values printer-name %s, accepting-job %d",
+		     (pname ? pname : "(Not reported)"), paccept);
 	if (paccept) {
 	  debug_printf("Printer %s on host %s, port %d is accepting jobs.\n",
 		       remote_cups_queue, p->host, p->port);

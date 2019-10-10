@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.25.10 - 2019-10-09
 ------------------------------------------------------
 
+CHANGES IN V1.25.11
+
+	- cups-browsed: Really accept entries without printer name
+	  reported on a job status request (Issue #163).
+	- cups-browsed: Strip IPP atrribute values reported by the
+	  printer on a get-printer-attributes request from white
+	  space (Pull request #166).
+
 CHANGES IN V1.25.10
 
 	- libcupsfilters: Added NULL checks when handling page size
