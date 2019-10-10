@@ -5,7 +5,7 @@ CHANGES IN V1.25.11
 
 	- cups-browsed: Really accept entries without printer name
 	  reported on a job status request (Issue #163).
-	- cups-browsed: Strip IPP atrribute values reported by the
+	- cups-browsed: Strip IPP attribute values reported by the
 	  printer on a get-printer-attributes request from white
 	  space (Pull request #166).
 
