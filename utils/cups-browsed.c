@@ -990,6 +990,26 @@ copy_default_str(void *data, void *user_data)
   return copy;
 }
 
+char *strstrip(char *s)
+{
+  size_t size;
+  char *end;
+
+  size = strlen(s);
+
+  if (!size)
+    return s;
+
+  end = s + size - 1;
+  while (end >= s && isspace(*end))
+    end--;
+  *(end + 1) = '\0';
+
+  while (*s && isspace(*s))
+    s++;
+
+  return s;
+}
 
 int
 compare_default_str(void *defstr_a, void *defstr_b,
@@ -5790,6 +5810,7 @@ get_printer_attributes(const char* uri, int fallback_request,
       attr = ippFirstAttribute(response);
       while (attr) {
         ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+        strstrip(valuebuffer);
         if(!job_state_attributes){
           debug_printf("  Attr: %s\n",ippGetName(attr));
           debug_printf("  Value: %s\n", valuebuffer);
