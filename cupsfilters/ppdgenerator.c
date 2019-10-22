@@ -1868,7 +1868,9 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     formatfound = 1;
     is_pdf = 1;
   }
-  if (cupsArrayFind(pdl_list, "image/pwg-raster")) {
+  /* Epson ET-7700 reports pwg-raster support in get-printer-attributes response, but it does
+     not support pwg-raster in reality - all jobs ends with */
+  if (cupsArrayFind(pdl_list, "image/pwg-raster") && strncmp(model, "ET-7700 Series", 14)) {
     if ((attr = ippFindAttribute(response,
 				 "pwg-raster-document-resolution-supported",
 				 IPP_TAG_RESOLUTION)) != NULL) {
