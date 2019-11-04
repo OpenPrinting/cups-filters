@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.25.11 - 2019-10-10
 ------------------------------------------------------
 
+CHANGES IN V1.25.12
+
+	- libcupsfilters: In the cupsRasterParseIPPOptions()
+	  accept also "Mono", "Monochrome", and "Gray" as color
+	  space names.
+
 CHANGES IN V1.25.11
 
 	- cups-browsed: Really accept entries without printer name
