@@ -602,8 +602,9 @@ main(int  argc,				/* I - Number of command-line args */
     if (gray_output == 1) /* Checking for monochrome/grayscale PostScript
 			     output */
     {
-      pdf_argv[9] = (char *)"-sColorConversionStrategy=Gray";
-      pdf_argc = 10;
+      pdf_argv[9] = (char *)"-sProcessColorModel=DeviceGray";
+      pdf_argv[10] = (char *)"-sColorConversionStrategy=Gray";
+      pdf_argc = 11;
     }
     else
       pdf_argc = 9;
