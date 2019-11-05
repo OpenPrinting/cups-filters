@@ -724,7 +724,7 @@ exec_filters(cups_array_t  *filters, /* I - Array of filters to run */
     next = (char *)cupsArrayNext(filters);
 
     if (filter[0] == '/') {
-      strncpy(program, filter, sizeof(program));
+      strncpy(program, filter, sizeof(program) - 1);
       if (strlen(filter) > 1023)
         program[1023] = '\0';
     } else {

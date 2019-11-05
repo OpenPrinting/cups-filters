@@ -189,7 +189,7 @@ main(int  argc,				/* I - Number of command-line args */
 	  break;
       }
       fprintf(stderr, "DEBUG: Read " CUPS_BROWSED_DEST_PRINTER " option: %s\n",
-	      ptr1);
+	      (ptr1 ? ptr1 : "Option not found"));
       if (ptr1 == NULL)
 	goto failed;
       /* Destination host is between double quotes, as double quotes are
@@ -222,7 +222,7 @@ main(int  argc,				/* I - Number of command-line args */
 	      queue_name);
       return (CUPS_BACKEND_STOP);
     }
-    strncpy(dest_host,ptr1,sizeof(dest_host));
+    strncpy(dest_host,ptr1,sizeof(dest_host) - 1);
     if (!strcmp(dest_host, "NO_DEST_FOUND")) {
       /* All remote queues are either disabled or not accepting jobs, let
 	 CUPS retry after the usual interval */
@@ -279,9 +279,9 @@ main(int  argc,				/* I - Number of command-line args */
 	ptr4++;
       }
 
-      strncpy(printer_uri, ptr1, sizeof(printer_uri));
-      strncpy(document_format, ptr3, sizeof(document_format));
-      strncpy(resolution, ptr4, sizeof(resolution));
+      strncpy(printer_uri, ptr1, sizeof(printer_uri) - 1);
+      strncpy(document_format, ptr3, sizeof(document_format) - 1);
+      strncpy(resolution, ptr4, sizeof(resolution) - 1);
 
       fprintf(stderr,"DEBUG: Received job for the printer with the destination uri - %s, Final-document format for the printer - %s and requested resolution - %s\n",
 	      printer_uri, document_format, resolution);

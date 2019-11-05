@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.25.11 - 2019-10-10
 
 CHANGES IN V1.25.12
 
+	- libcupsfilters, beh, implicitclass, foomatic-rip,
+	  imagetopdf, mupdftoraster, pdftops, sys5ippprinter,
+	  cups-browsed, driverless: Silenced all compiler warnings to
+	  make the build process of cups-filters completely free of
+	  warnings.
 	- pdftops: Fixed crash when using filter without PPD file.
 	- pdftops: If printing grayscale jobs with Ghostscript as PDF
 	  renderer, add "-sProcessColorModel=DeviceGray" to

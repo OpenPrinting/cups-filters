@@ -329,7 +329,7 @@ _get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
       snprintf(full_path, sizeof(full_path),
                "%s/profiles/%s", CUPSDATA, attr->value);
     else {
-      strncpy(full_path, attr->value, sizeof(full_path));
+      strncpy(full_path, attr->value, sizeof(full_path) - 1);
       if (strlen(attr->value) > 1023)
         full_path[1023] = '\0';
     }

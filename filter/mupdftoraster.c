@@ -312,7 +312,7 @@ main (int argc, char **argv, char *envp[])
       fprintf(stderr, "ERROR: Can't open input file %s\n",argv[6]);
       goto out;
     }
-    strncpy(infilename, argv[6], 1024);
+    strncpy(infilename, argv[6], sizeof(infilename) - 1);
   }
 
   /* If doc type is not PDF exit */
