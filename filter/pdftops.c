@@ -542,7 +542,7 @@ main(int  argc,				/* I - Number of command-line args */
   * Force monochrome/grayscale PostScript output 
   * if job is to be printed in monochrome/grayscale
   */
-  if (ppd->color_device == 0)  /* Monochrome printer */
+  if (ppd && ppd->color_device == 0)  /* Monochrome printer */
     gray_output = 1;
   else  /*Color Printer - user option for Grayscale */
   {

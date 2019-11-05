@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.25.11 - 2019-10-10
 
 CHANGES IN V1.25.12
 
+	- pdftops: Fixed crash when using filter without PPD file.
 	- pdftops: If printing grayscale jobs with Ghostscript as PDF
 	  renderer, add "-sProcessColorModel=DeviceGray" to
 	  Ghostscript command line.
