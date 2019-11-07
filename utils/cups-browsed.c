@@ -9089,7 +9089,7 @@ examine_discovered_printer_record(const char *host,
     }
   }
   /* Extract location from DNS-SD TXT record's "note" field */
-  if (!location) {
+  if (location[0] == '\0') {
     if (txt) {
       entry = avahi_string_list_find((AvahiStringList *)txt, "note");
       if (entry) {
@@ -9103,8 +9103,6 @@ examine_discovered_printer_record(const char *host,
         /* don't avahi_free(note_value) here! */
       }
     }
-    if (!location)
-      location = "";
   }
   /* A NULL location is only passed in from resolve_callback(), which is
      HAVE_AVAHI */
