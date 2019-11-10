@@ -323,6 +323,7 @@ main(int  argc,				/* I - Number of command-line args */
       set_option_in_str(argv_nt[5], outbuflen, "cups-browsed-dest-printer",NULL);
       set_option_in_str(argv_nt[5], outbuflen, "cups-browsed",NULL);
       setenv("DEVICE_URI",printer_uri, 1);
+      fprintf(stderr, "Setting the device uri to  %s\n",printer_uri);
       fprintf(stderr, "Changed the argv[5] to %s\n",argv_nt[5]);
 
       filefd = cupsTempFd(tempfile_filter, sizeof(tempfile_filter));
@@ -366,9 +367,16 @@ main(int  argc,				/* I - Number of command-line args */
 	setenv("FINAL_CONTENT_TYPE", "application/pcl", 1);
 
       ippDelete(response);
+      strcpy(argv_nt[0], printer_uri);
+      fprintf(stderr, "Passing the following arguments to the implicitclass backend\n");
+       /*Arguments sent to the ipp backend*/
+      for( i = 0; i < 7; i++){
+         fprintf(stderr, "argv[%d]: %s\n",i,argv_nt[i]);
+       }
 
       /* The implicitclass backend will send the job directly to the
 	 ipp backend*/
+
       pid_t pid = fork();
       if ( pid == 0 ) {
 	fprintf(stderr, "DEBUG: Started IPP Backend with pid: %d\n",getpid());

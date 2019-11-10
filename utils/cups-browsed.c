@@ -5764,7 +5764,7 @@ static ipp_t *
 get_printer_attributes(const char* uri, int fallback_request,
   const char* const pattrs[],int job_state_attributes, int attr_size)
 {
-  int uri_status, host_port, i;
+  int uri_status, host_port, i, language_attr = 0, total_attrs = 0;
   http_t *http_printer = NULL;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
   ipp_t *request, *response = NULL;
@@ -5786,7 +5786,7 @@ get_printer_attributes(const char* uri, int fallback_request,
              resource, sizeof(resource));
   if (uri_status != HTTP_URI_OK)
     return NULL;
-  debug_printf("fallback 2\n");
+  
   if ((http_printer =
        httpConnectEncryptShortTimeout (host_name, host_port,
                HTTP_ENCRYPT_IF_REQUESTED)) == NULL) {
@@ -5794,7 +5794,7 @@ get_printer_attributes(const char* uri, int fallback_request,
      uri);
     return NULL;
   }
-  debug_printf("fallback 3\n");
+  
   request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
   if(fallback_request == 1)
     ippSetVersion(request,1,1);
@@ -5805,48 +5805,38 @@ get_printer_attributes(const char* uri, int fallback_request,
 
   response = cupsDoRequest(http_printer, request, resource);
   ipp_status = cupsLastError();
-  debug_printf("fallback 4\n");
-  //debug_printf("%s\n", ipp_status);
+
 
   if (response) {
     /* Log all printer attributes for debugging */
     if (debug_stderr || debug_logfile) {
-      if(1)
+      if(!job_state_attributes)
         debug_printf("Full list of IPP attributes (get-printer-attributes) for printer with URI %s:\n",
        uri);
       attr = ippFirstAttribute(response);
       while (attr) {
+        total_attrs++;
         ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
         strstrip(valuebuffer);
-        if(1/*!job_state_attributes*/){
+        if(!job_state_attributes){
           debug_printf("  Attr: %s\n",ippGetName(attr));
           debug_printf("  Value: %s\n", valuebuffer);
-
+          if(!strcmp(ippGetName(attr),"attributes-charset") ||
+          !strcmp(ippGetName(attr),"attributes-natural-language")){
+            language_attr++;
+          }
           for (i = 0; i < ippGetCount(attr); i ++){
             if ((kw = ippGetString(attr, i, NULL)) != NULL){
               debug_printf("  Keyword: %s\n", kw);
             }
           }
         }
-
-/*        if(!strcmp(ippGetName(attr),"status-message") && 
-          !strcmp(valuebuffer,"server-error-version-not-supported")){
-          if(fallback_request == 1){
-            const char * const pattr[] = {
-              "all",
-              };
-            httpClose(http_printer);
-            return get_printer_attributes(uri,2,pattr,job_state_attributes, 1);
-          }else if(fallback_request == 0){
-            httpClose(http_printer);
-            return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);   
-          }
-        } */
        attr = ippNextAttribute(response);
       }
     }
     if(ipp_status == IPP_STATUS_ERROR_BAD_REQUEST ||
-     ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED){   
+     ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED || 
+     (language_attr==2 && total_attrs==2)){   
      if(fallback_request == 1){
       const char * const pattr[] = {
         "all",
