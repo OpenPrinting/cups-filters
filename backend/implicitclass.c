@@ -307,7 +307,9 @@ main(int  argc,				/* I - Number of command-line args */
 
       /* Copying the argument to a new char** which will be sent to the filter
 	 and the ipp backend*/
-      for (i = 0; i < 5; i++)
+    argv_nt[0] = calloc(strlen(printer_uri) + 8, sizeof(char));
+    strcpy(argv_nt[0], printer_uri);
+      for (i = 1; i < 5; i++)
 	argv_nt[i] = argv[i];
 
       /* Few new options will be added to the argv[5]*/
@@ -367,8 +369,7 @@ main(int  argc,				/* I - Number of command-line args */
 	setenv("FINAL_CONTENT_TYPE", "application/pcl", 1);
 
       ippDelete(response);
-      strcpy(argv_nt[0], printer_uri);
-      fprintf(stderr, "Passing the following arguments to the implicitclass backend\n");
+      fprintf(stderr, "Passing the following arguments to the ipp backend\n");
        /*Arguments sent to the ipp backend*/
       for( i = 0; i < 7; i++){
          fprintf(stderr, "argv[%d]: %s\n",i,argv_nt[i]);
