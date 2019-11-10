@@ -818,12 +818,13 @@ int main(int argc, char** argv)
     }
 
     if (getenv("PPD")) {
-        strncpy(job->ppdfile, getenv("PPD"), 2048);
+        strncpy(job->ppdfile, getenv("PPD"), sizeof(job->ppdfile) - 1);
         if (strlen(getenv("PPD")) > 2047)
           job->ppdfile[2047] = '\0';
         spooler = SPOOLER_CUPS;
     if (getenv("CUPS_SERVERBIN")) {
-        strncpy(cupsfilterpath, getenv("CUPS_SERVERBIN"), sizeof(cupsfilterpath));
+        strncpy(cupsfilterpath, getenv("CUPS_SERVERBIN"),
+		sizeof(cupsfilterpath) - 1);
         if (strlen(getenv("CUPS_SERVERBIN")) > PATH_MAX-1)
           cupsfilterpath[PATH_MAX-1] = '\0';
         }
@@ -845,13 +846,13 @@ int main(int argc, char** argv)
         /* PPD file name given via the command line
            allow duplicates, and use the last specified one */
             while ((str = arglist_get_value(arglist, "-p"))) {
-                strncpy(job->ppdfile, str, 2048);
+                strncpy(job->ppdfile, str, sizeof(job->ppdfile) - 1);
                 if (strlen(str) > 2047)
                   job->ppdfile[2047] = '\0';
                 arglist_remove(arglist, "-p");
             }
 	    while ((str = arglist_get_value(arglist, "--ppd"))) {
-	        strncpy(job->ppdfile, str, 2048);
+	        strncpy(job->ppdfile, str, sizeof(job->ppdfile) - 1);
 	        if (strlen(str) > 2047)
 	          job->ppdfile[2047] = '\0';
 	        arglist_remove(arglist, "--ppd");

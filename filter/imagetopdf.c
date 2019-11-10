@@ -745,7 +745,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
   else
   {
-    strncpy(filename, argv[6], sizeof(filename));
+    strncpy(filename, argv[6], sizeof(filename) - 1);
   }
 
  /*

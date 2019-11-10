@@ -469,10 +469,10 @@ static FILE *lfp = NULL;
 
 static char cachedir[1024];
 static char logdir[1024];
-static char local_default_printer_file[1024];
-static char remote_default_printer_file[1024];
-static char save_options_file[1024];
-static char debug_log_file[1024];
+static char local_default_printer_file[2048];
+static char remote_default_printer_file[2048];
+static char save_options_file[2048];
+static char debug_log_file[2048];
 
 /*Contains ppd keywords which are written by ppdgenerator.c in the ppd file.*/
 static char* ppd_keywords[] = 
@@ -1306,7 +1306,7 @@ void add_mimetype_attributes(char* cluster_name, ipp_t **merged_attributes)
 	   q;
 	   q = (char *)cupsArrayNext(list),i++) {
         values[i]=malloc(sizeof(char)*strlen(q)+1);
-        strncpy(values[i],q,strlen(q)+1);
+        strncpy(values[i], q, sizeof(values[i]) - 1);
       }
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER,IPP_TAG_MIMETYPE,
 		    attributes[attr_no], num_value, NULL,
@@ -1370,7 +1370,7 @@ void add_tagzero_attributes(char* cluster_name,ipp_t **merged_attributes)
       for (q = (char *)cupsArrayFirst(list), i = 0; q;
            q = (char *)cupsArrayNext(list), i++) {
         values[i]=malloc(sizeof(char)*strlen(q)+1);
-        strncpy(values[i],q,strlen(q)+1);
+        strncpy(values[i], q, sizeof(values[i]) - 1);
       }
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_KEYWORD),
                     attributes[attr_no], num_value, NULL,
@@ -1432,7 +1432,7 @@ void add_keyword_attributes(char* cluster_name,ipp_t **merged_attributes)
 	   q;
 	   q = (char *)cupsArrayNext(list), i++) {
         values[i]=malloc(sizeof(char)*strlen(q)+1);
-        strncpy(values[i],q,strlen(q)+1);
+        strncpy(values[i], q, sizeof(values[i]) - 1);
       }
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
 		    attributes[attr_no], num_value, NULL,
@@ -4322,7 +4322,7 @@ cupsdUpdateLDAPBrowse(void)
           host[HTTP_MAX_URI],           /* Hostname */
           resource[HTTP_MAX_URI],       /* Resource path */
           local_resource[HTTP_MAX_URI], /* Resource path */
-          service_name[2048],
+          service_name[4096],
           location[1024],               /* Printer location */
           info[1024],                   /* Printer information */
           make_model[1024],             /* Printer make and model */
@@ -6130,11 +6130,11 @@ on_job_state (CupsNotifier *object,
 	    valid_dest_found = 1;
 	    dest_host = p->ip ? p->ip : p->host;
 	    dest_port = p->port;
-	    strncpy(destination_uri,p->uri,sizeof(destination_uri));
+	    strncpy(destination_uri, p->uri, sizeof(destination_uri) - 1);
 	    printer_attributes = p->prattrs;
 	    pdl = p->pdl;
 	    s = p;
-	    strncpy(dest_name, remote_cups_queue, sizeof(dest_name));
+	    strncpy(dest_name, remote_cups_queue, sizeof(dest_name) - 1);
 	    if (strlen(remote_cups_queue) > 1023)
 	      dest_name[1023] = '\0';
 	    dest_index = i;
@@ -6151,12 +6151,12 @@ on_job_state (CupsNotifier *object,
 		min_jobs = num_jobs;
 		dest_host = p->ip ? p->ip : p->host;
 		dest_port = p->port;
-		strncpy(destination_uri,p->uri,sizeof(destination_uri));
+		strncpy(destination_uri, p->uri, sizeof(destination_uri) - 1);
 		printer_attributes = p->prattrs;
 		pdl = p->pdl;
 		s = p;
 		strncpy(dest_name, remote_cups_queue,
-			sizeof(dest_name));
+			sizeof(dest_name) - 1);
 		if (strlen(remote_cups_queue) > 1023)
 		  dest_name[1023] = '\0';
 		dest_index = i;
@@ -7082,7 +7082,7 @@ create_remote_printer_entry (const char *queue_name,
 	debug_printf("  Attr: %s\n", ippGetName(attr));
 	for (i = 0; i < ippGetCount(attr); i ++) {
 	  strncpy(valuebuffer, ippGetString(attr, i, NULL),
-		  sizeof(valuebuffer));
+		  sizeof(valuebuffer) - 1);
 	  if (strlen(ippGetString(attr, i, NULL)) > 65535)
 	    valuebuffer[65535] = '\0';
 	  debug_printf("  Keyword: %s\n", valuebuffer);
@@ -7116,7 +7116,7 @@ create_remote_printer_entry (const char *queue_name,
 	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
 	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
-		    sizeof(valuebuffer));
+		    sizeof(valuebuffer) - 1);
 	    if (strlen(ippGetString(attr, i, NULL)) > 65535)
 	      valuebuffer[65535] = '\0';
 	    debug_printf("  Keyword: %s\n", valuebuffer);
@@ -7149,7 +7149,7 @@ create_remote_printer_entry (const char *queue_name,
 	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
 	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
-		    sizeof(valuebuffer));
+		    sizeof(valuebuffer) - 1);
 	    if (strlen(ippGetString(attr, i, NULL)) > 65535)
 	      valuebuffer[65535] = '\0';
 	    debug_printf("  Keyword: %s\n", valuebuffer);
@@ -7185,7 +7185,7 @@ create_remote_printer_entry (const char *queue_name,
 	if (valuebuffer[0] == '\0') {
 	  for (i = 0; i < ippGetCount(attr); i ++) {
 	    strncpy(valuebuffer, ippGetString(attr, i, NULL),
-		    sizeof(valuebuffer));
+		    sizeof(valuebuffer) - 1);
 	    if (strlen(ippGetString(attr, i, NULL)) > 65535)
 	      valuebuffer[65535] = '\0';
 	    debug_printf("  Keyword: %s\n", valuebuffer);
@@ -7879,7 +7879,8 @@ gboolean update_cups_queues(gpointer unused) {
 	    if ((attr = ippFindAttribute(printer_attributes,
 					 "printer-make-and-model",
 					 IPP_TAG_TEXT)) != NULL)
-	      strncpy(make_model, ippGetString(attr, 0, NULL), 256);
+	      strncpy(make_model, ippGetString(attr, 0, NULL),
+		      sizeof(make_model) - 1);
 	    color = 0;
 	    duplex = 0;
 	    for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -8194,7 +8195,8 @@ gboolean update_cups_queues(gpointer unused) {
 	    if((attr = ippFindAttribute(printer_attributes,
 					"printer-make-and-model",
 					IPP_TAG_TEXT)) != NULL)
-	      strncpy(make_model, ippGetString(attr, 0, NULL), 256);
+	      strncpy(make_model, ippGetString(attr, 0, NULL),
+		      sizeof(make_model) - 1);
 	    color = 0;
 	    duplex = 0;
 	    for(r = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -8301,7 +8303,7 @@ gboolean update_cups_queues(gpointer unused) {
 	ap_remote_queue_id_line_inserted = 0;
 	while (cupsFileGets(in, line, sizeof(line))) {
 	  if (!strncmp(line, "*Default", 8)) {
-	    strncpy(keyword, line + 8, sizeof(keyword));
+	    strncpy(keyword, line + 8, sizeof(keyword) - 1);
 	    if ((strlen(line) + 8) > 1023)
 	      keyword[1023] = '\0';
 	    for (keyptr = keyword; *keyptr; keyptr ++)
@@ -9122,7 +9124,7 @@ examine_discovered_printer_record(const char *host,
     }
   }
   /* Extract location from DNS-SD TXT record's "note" field */
-  if (!location) {
+  if (location[0] == '\0') {
     if (txt) {
       entry = avahi_string_list_find((AvahiStringList *)txt, "note");
       if (entry) {
@@ -9136,8 +9138,6 @@ examine_discovered_printer_record(const char *host,
         /* don't avahi_free(note_value) here! */
       }
     }
-    if (!location)
-      location = "";
   }
   /* A NULL location is only passed in from resolve_callback(), which is
      HAVE_AVAHI */
@@ -9540,7 +9540,7 @@ static void resolve_callback(AvahiServiceResolver *r,
   if (!if_indextoname(interface, ifname)) {
     debug_printf("Unable to find interface name for interface %d: %s\n",
 		 interface, strerror(errno));
-    strncpy(ifname, "Unknown", sizeof(ifname));
+    strncpy(ifname, "Unknown", sizeof(ifname) - 1);
   }
 
   /* Ignore local queues on the port of the cupsd we are serving for */
@@ -9632,7 +9632,7 @@ static void resolve_callback(AvahiServiceResolver *r,
 	n = p - name;
 	if (n >= sizeof(instance))
 	  n = sizeof(instance) - 1;
-	strncpy(instance, name, n);
+	strncpy(instance, name, sizeof(instance) - 1);
 	instance[n] = '\0';
 	debug_printf("Avahi-Resolver: Instance: %s\n", instance); /* !! */
       } else {
@@ -9664,7 +9664,7 @@ static void resolve_callback(AvahiServiceResolver *r,
 		   address->proto == AVAHI_PROTO_INET6 &&
 		   interface != AVAHI_IF_UNSPEC &&
 		   IPBasedDeviceURIs != IP_BASED_URIS_IPV4_ONLY) {
-	  strncpy(addrstr, "[v1.", 256);
+	  strncpy(addrstr, "[v1.", sizeof(addrstr) - 1);
 	  avahi_address_snprint(addrstr + 4, 256 - 6, address);
 	  addrlen = strlen(addrstr + 4);
 	  addr->sa_family = AF_INET6;
@@ -9803,7 +9803,7 @@ static void browse_callback(AvahiServiceBrowser *b,
     if (!if_indextoname(interface, ifname)) {
       debug_printf("Unable to find interface name for interface %d: %s\n",
 		   interface, strerror(errno));
-      strncpy(ifname, "Unknown", sizeof(ifname));
+      strncpy(ifname, "Unknown", sizeof(ifname) - 1);
     }
 
     debug_printf("Avahi Browser: NEW: service '%s' of type '%s' in domain '%s' on interface '%s' (%s)\n",
@@ -9838,7 +9838,7 @@ static void browse_callback(AvahiServiceBrowser *b,
     if (!if_indextoname(interface, ifname)) {
       debug_printf("Unable to find interface name for interface %d: %s\n",
 		   interface, strerror(errno));
-      strncpy(ifname, "Unknown", sizeof(ifname));
+      strncpy(ifname, "Unknown", sizeof(ifname) - 1);
     }
 
     debug_printf("Avahi Browser: REMOVE: service '%s' of type '%s' in domain '%s' on interface '%s' (%s)\n",
@@ -10961,7 +10961,7 @@ read_configuration (const char *filename)
      in the configuration file is used. */
   while ((i < cupsArrayCount(command_line_config) &&
 	  (value = cupsArrayIndex(command_line_config, i++)) &&
-	  strncpy(line, value, sizeof(line)) &&
+	  strncpy(line, value, sizeof(line) - 1) &&
 	  ((strlen(value) > HTTP_MAX_BUFFER-1) ?
 	   line[HTTP_MAX_BUFFER-1] = '\0':  1)) ||
 	 cupsFileGetConf(fp, line, sizeof(line), &value, &linenum)) {
@@ -11792,7 +11792,8 @@ int main(int argc, char*argv[]) {
      client.conf files as cups-browsed works only with a local CUPS
      daemon, not with remote ones. */
   if (getenv("CUPS_SERVER") != NULL) {
-    strncpy(local_server_str, getenv("CUPS_SERVER"), sizeof(local_server_str));
+    strncpy(local_server_str, getenv("CUPS_SERVER"),
+	    sizeof(local_server_str) - 1);
     if (strlen(getenv("CUPS_SERVER")) > 1023)
       local_server_str[1023] = '\0';
   } else {
@@ -11807,9 +11808,11 @@ int main(int argc, char*argv[]) {
 	  !stat(DomainSocket, &sockinfo) &&
 	  (sockinfo.st_mode & S_IROTH) != 0 &&
 	  (sockinfo.st_mode & S_IWOTH) != 0)
-	strncpy(local_server_str, DomainSocket, sizeof(local_server_str));
+	strncpy(local_server_str, DomainSocket,
+		sizeof(local_server_str) - 1);
       else
-	strncpy(local_server_str, "localhost:631", sizeof(local_server_str));
+	strncpy(local_server_str, "localhost:631",
+		sizeof(local_server_str) - 1);
     } else
       strncpy(local_server_str, "localhost:631", sizeof(local_server_str));
     setenv("CUPS_SERVER", local_server_str, 1);

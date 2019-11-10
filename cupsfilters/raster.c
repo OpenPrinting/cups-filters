@@ -766,29 +766,45 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     bitspercolor = 8;
     if (!strncasecmp(val, "AdobeRgb", 8))
     {
-      if (*(val + 8) == '_' || *(val + 8) == '-') 
+      if (*(val + 8) == '_' || *(val + 8) == '-')
 	ptr = val + 9;
       colorspace = 20;
       numcolors = 3;
     }
     else if (!strncasecmp(val, "Black", 5))
     {
-      if (*(val + 5) == '_' || *(val + 5) == '-') 
+      if (*(val + 5) == '_' || *(val + 5) == '-')
 	ptr = val + 6;
+      bitspercolor = 1;
+      colorspace = 3;
+      numcolors = 1;
+    }
+    else if (!strncasecmp(val, "Monochrome", 10))
+    {
+      if (*(val + 10) == '_' || *(val + 10) == '-')
+	ptr = val + 11;
+      bitspercolor = 1;
+      colorspace = 3;
+      numcolors = 1;
+    }
+    else if (!strncasecmp(val, "Mono", 4))
+    {
+      if (*(val + 4) == '_' || *(val + 4) == '-')
+	ptr = val + 5;
       bitspercolor = 1;
       colorspace = 3;
       numcolors = 1;
     }
     else if (!strncasecmp(val, "Cmyk", 4))
     {
-      if (*(val + 4) == '_' || *(val + 4) == '-') 
+      if (*(val + 4) == '_' || *(val + 4) == '-')
 	ptr = val + 5;
       colorspace = 6;
       numcolors = 4;
     }
     else if (!strncasecmp(val, "Cmy", 3))
     {
-      if (*(val + 3) == '_' || *(val + 3) == '-') 
+      if (*(val + 3) == '_' || *(val + 3) == '-')
 	ptr = val + 4;
       colorspace = 4;
       numcolors = 3;
@@ -810,28 +826,35 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     }
     else if (!strncasecmp(val, "Sgray", 5))
     {
-      if (*(val + 5) == '_' || *(val + 5) == '-') 
+      if (*(val + 5) == '_' || *(val + 5) == '-')
 	ptr = val + 6;
       colorspace = 18;
       numcolors = 1;
     }
+    else if (!strncasecmp(val, "Gray", 4))
+    {
+      if (*(val + 4) == '_' || *(val + 4) == '-')
+	ptr = val + 5;
+      colorspace = 3;
+      numcolors = 1;
+    }
     else if (!strncasecmp(val, "Srgb", 4))
     {
-      if (*(val + 4) == '_' || *(val + 4) == '-') 
+      if (*(val + 4) == '_' || *(val + 4) == '-')
 	ptr = val + 5;
       colorspace = 19;
       numcolors = 3;
     }
     else if (!strncasecmp(val, "Rgbw", 4))
     {
-      if (*(val + 4) == '_' || *(val + 4) == '-') 
+      if (*(val + 4) == '_' || *(val + 4) == '-')
 	ptr = val + 5;
       colorspace = 17;
       numcolors = 4;
     }
     else if (!strncasecmp(val, "Rgb", 3))
     {
-      if (*(val + 3) == '_' || *(val + 3) == '-') 
+      if (*(val + 3) == '_' || *(val + 3) == '-')
 	ptr = val + 4;
       colorspace = 1;
       numcolors = 3;

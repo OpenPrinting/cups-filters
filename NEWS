@@ -1,6 +1,30 @@
 NEWS - OpenPrinting CUPS Filters v1.25.11 - 2019-10-10
 ------------------------------------------------------
 
+CHANGES IN V1.25.12
+
+	- cups-browsed: Fix unset location check to use DNS-SD field
+	  (Pull request #172).
+	- libcupsfilters, beh, implicitclass, foomatic-rip,
+	  imagetopdf, mupdftoraster, pdftops, sys5ippprinter,
+	  cups-browsed, driverless: Silenced all compiler warnings to
+	  make the build process of cups-filters completely free of
+	  warnings.
+	- pdftops: Fixed crash when using filter without PPD file.
+	- pdftops: If printing grayscale jobs with Ghostscript as PDF
+	  renderer, add "-sProcessColorModel=DeviceGray" to
+	  Ghostscript command line.
+	- pdftops: Do not use the ugly "pdftops -level1 ..."
+	  workaround to get grayscale PostScript output from
+	  Poppler. It leads to huge output files with Poppler's
+	  "pdftops" utility and does not work at all with
+	  "pdftocairo".  Poppler itself does not support PostScript
+	  output converted to grayscale. Issue a warning with the hint
+	  to use Ghostscript or MuPDF as PDF renderer (Issue #169).
+	- libcupsfilters: In the cupsRasterParseIPPOptions()
+	  accept also "Mono", "Monochrome", and "Gray" as color
+	  space names.
+
 CHANGES IN V1.25.11
 
 	- cups-browsed: Really accept entries without printer name

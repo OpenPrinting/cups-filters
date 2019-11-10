@@ -406,7 +406,7 @@ main(int  argc,				/* I - Number of command-line args */
 
   if ((val = cupsGetOption("make-and-model", num_options, options)) != NULL)
   {
-    strncpy(make_model, val, sizeof(make_model));
+    strncpy(make_model, val, sizeof(make_model) - 1);
     if (strlen(val) > 127)
       make_model[127] = '\0';
     for (ptr = make_model; *ptr; ptr ++)
@@ -542,7 +542,7 @@ main(int  argc,				/* I - Number of command-line args */
   * Force monochrome/grayscale PostScript output 
   * if job is to be printed in monochrome/grayscale
   */
-  if (ppd->color_device == 0)  /* Monochrome printer */
+  if (ppd && ppd->color_device == 0)  /* Monochrome printer */
     gray_output = 1;
   else  /*Color Printer - user option for Grayscale */
   {
@@ -602,8 +602,9 @@ main(int  argc,				/* I - Number of command-line args */
     if (gray_output == 1) /* Checking for monochrome/grayscale PostScript
 			     output */
     {
-      pdf_argv[9] = (char *)"-sColorConversionStrategy=Gray";
-      pdf_argc = 10;
+      pdf_argv[9] = (char *)"-sProcessColorModel=DeviceGray";
+      pdf_argv[10] = (char *)"-sColorConversionStrategy=Gray";
+      pdf_argc = 11;
     }
     else
       pdf_argc = 9;
@@ -861,8 +862,21 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION */
     if (gray_output == 1) /* Checking for monochrome/grayscale PostScript output */
     {
-      pdf_argv[1] = (char *)"-level1";
-      pdf_argv[pdf_argc++] = (char *)"-optimizecolorspace";
+      /* Poppler does not explicitly support turning colored PDF files into
+	 grayscale PostScript. As a workaround, one could let the "pdftops"
+         command line utility generate PostScript level 1 output which is
+         always grayscale, but output files get huge and printing too 
+         slow.
+	 Recommended solution is to not use Poppler as PDF renderer for
+	 printing, especially if one uses a color PostScript printer and
+	 wants to have the possibility to print jobs also in grayscale.
+	 See the use of the "pdftops-renderer" option in the README file. */
+      /* Example code for PostScript level1 workaround: */
+      /* pdf_argv[1] = (char *)"-level1";
+	 pdf_argv[pdf_argc++] = (char *)"-optimizecolorspace"; */
+      /* Issue a warning message when printing a grayscale job with Poppler */
+      fprintf(stderr, "WARNING: Grayscale/monochrome printing requested for this job but Poppler is not able to convert to grayscale/monochrome PostScript.\n");
+      fprintf(stderr, "WARNING: Use \"pdftops-renderer\" option (see README file) to use Ghostscript or MuPDF for the PDF -> PostScript conversion.\n");
     }
     pdf_argv[pdf_argc++] = filename;
     pdf_argv[pdf_argc++] = (char *)"-";
