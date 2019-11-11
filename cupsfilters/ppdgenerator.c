@@ -1868,21 +1868,6 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     formatfound = 1;
     is_pdf = 1;
   }
-  if (cupsArrayFind(pdl_list, "image/pwg-raster")) {
-    if ((attr = ippFindAttribute(response,
-				 "pwg-raster-document-resolution-supported",
-				 IPP_TAG_RESOLUTION)) != NULL) {
-      current_def = NULL;
-      if ((current_res = ippResolutionListToArray(attr)) != NULL &&
-	  joinResolutionArrays(&common_res, &current_res, &common_def,
-			       &current_def)) {
-	cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 0 -\"\n");
-	if (formatfound == 0) manual_copies = 1;
-	formatfound = 1;
-	is_pwg = 1;
-      }
-    }
-  }
 #ifdef CUPS_RASTER_HAVE_APPLERASTER
   if (cupsArrayFind(pdl_list, "image/urf")) {
     if ((attr = ippFindAttribute(response, "urf-supported",
@@ -1923,6 +1908,21 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     }
   }
 #endif
+  if (is_apple == 0 && cupsArrayFind(pdl_list, "image/pwg-raster")) {
+    if ((attr = ippFindAttribute(response,
+				 "pwg-raster-document-resolution-supported",
+				 IPP_TAG_RESOLUTION)) != NULL) {
+      current_def = NULL;
+      if ((current_res = ippResolutionListToArray(attr)) != NULL &&
+	  joinResolutionArrays(&common_res, &current_res, &common_def,
+			       &current_def)) {
+	cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 0 -\"\n");
+	if (formatfound == 0) manual_copies = 1;
+	formatfound = 1;
+	is_pwg = 1;
+      }
+    }
+  }
 #ifdef QPDF_HAVE_PCLM
   if (cupsArrayFind(pdl_list, "application/PCLm")) {
     if ((attr = ippFindAttribute(response, "pclm-source-resolution-supported",

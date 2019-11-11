@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.25.11 - 2019-10-10
 
 CHANGES IN V1.25.12
 
+	- libcupsfilters: If a printer supports both Apple Raster and
+	  PWG Raster let the generated PPD use Apple Raster as there
+	  are several printers which report PWG Raster support but do
+	  not actually print PWG Raster (Pull reguest #168, Issue
+	  #171, CUPS issue #5238).
 	- cups-browsed: Fix unset location check to use DNS-SD field
 	  (Pull request #172).
 	- libcupsfilters, beh, implicitclass, foomatic-rip,
