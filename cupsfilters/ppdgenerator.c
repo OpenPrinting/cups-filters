@@ -3461,31 +3461,27 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 				   printer_opt_strings_catalog);
     cupsFilePrintf(fp, "*OpenUI *cupsPrintQuality/%s: PickOne\n"
 		   "*OrderDependency: 10 AnySetup *cupsPrintQuality\n"
-		   "*DefaultcupsPrintQuality: %d\n",
+		   "*DefaultcupsPrintQuality: Normal\n",
 		   (human_readable ? human_readable :
-		    _cupsLangString(lang, _("Print Quality"))),
-		   IPP_QUALITY_NORMAL);
+		    _cupsLangString(lang, _("Print Quality"))));
     if (ippContainsInteger(quality, IPP_QUALITY_DRAFT)) {
       human_readable = lookup_choice("3", "print-quality", opt_strings_catalog,
 				     printer_opt_strings_catalog);
-      cupsFilePrintf(fp, "*cupsPrintQuality %d/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n",
-		     IPP_QUALITY_DRAFT,
+      cupsFilePrintf(fp, "*cupsPrintQuality Draft/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n",
 		     (human_readable ? human_readable :
 		      _cupsLangString(lang, _("Draft"))),
 		     min_res->x, min_res->y);
     }
     human_readable = lookup_choice("4", "print-quality", opt_strings_catalog,
 				   printer_opt_strings_catalog);
-    cupsFilePrintf(fp, "*cupsPrintQuality %d/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n",
-		   IPP_QUALITY_NORMAL,
+    cupsFilePrintf(fp, "*cupsPrintQuality Normal/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n",
 		   (human_readable ? human_readable :
 		    _cupsLangString(lang, _("Normal"))),
 		   common_def->x, common_def->y);
     if (ippContainsInteger(quality, IPP_QUALITY_HIGH)) {
       human_readable = lookup_choice("5", "print-quality", opt_strings_catalog,
 				     printer_opt_strings_catalog);
-      cupsFilePrintf(fp, "*cupsPrintQuality %d/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n",
-		     IPP_QUALITY_HIGH,
+      cupsFilePrintf(fp, "*cupsPrintQuality High/%s: \"<</HWResolution[%d %d]>>setpagedevice\"\n",
 		     (human_readable ? human_readable :
 		      _cupsLangString(lang, _("High"))),
 		     max_res->x, max_res->y);

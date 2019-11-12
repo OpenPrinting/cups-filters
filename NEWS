@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.25.11 - 2019-10-10
 
 CHANGES IN V1.25.12
 
+	- libcupsfilters: Use the text names "Draft", "Normal", and
+	  "High" instead of 3, 4, and 5 as choice names for the
+	  "cupsPrintQuality" option as CUPS does (Issue #171).
 	- libcupsfilters: If a printer supports both Apple Raster and
 	  PWG Raster let the generated PPD use Apple Raster as there
 	  are several printers which report PWG Raster support but do
