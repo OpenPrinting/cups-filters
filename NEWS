@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.25.12 - 2019-11-12
 ------------------------------------------------------
 
+CHANGES IN V1.25.13
+
+	- cups-browsed: Added some missing memory allocations leading
+	  to a segfault (Issue #175).
+
 CHANGES IN V1.25.12
 
 	- libcupsfilters: Use the text names "Draft", "Normal", and

@@ -2837,6 +2837,15 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
       debug_printf("Default MediaType: %s\n", media_type);
     }
       
+    if (temp->media_type == NULL) {
+      if (cluster_supports_given_attribute(cluster_name, IPP_TAG_KEYWORD,
+					   "media-type-supported")) {
+        temp->media_type = (char*)malloc(sizeof(char)*32);
+        strcpy(temp->media_type, AUTO_OPTION);
+        debug_printf("Default MediaType: " AUTO_OPTION "\n");
+      }
+    }
+
     if ((media_attr = ippFindAttribute(media_col, "media-source",
 				       IPP_TAG_KEYWORD)) != NULL) {
       pwg_ppdize_name(ippGetString(media_attr, 0, NULL), media_source,
@@ -2852,18 +2861,12 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
     if (temp->media_source == NULL) {
       if (cluster_supports_given_attribute(cluster_name, IPP_TAG_KEYWORD,
 					   "media-source-supported")) {
-        strcpy(temp->media_source,AUTO_OPTION);
-        debug_printf("Default MediaSource: %s\n", media_source);
+        temp->media_source = (char*)malloc(sizeof(char)*32);
+        strcpy(temp->media_source, AUTO_OPTION);
+        debug_printf("Default MediaSource: " AUTO_OPTION "\n");
       }
     }
 
-    if (temp->media_type == NULL) {
-      if (cluster_supports_given_attribute(cluster_name, IPP_TAG_KEYWORD,
-					   "media-type-supported")) {
-        strcpy(temp->media_type, AUTO_OPTION);
-        debug_printf("Default MediaType: %s\n", media_type);
-      }
-    }
     media_col_default = ippAddCollection(*merged_attributes, IPP_TAG_PRINTER,
 					 "media-col-default", NULL);
     current_media = create_media_col(temp->x, temp->y, temp->left_margin,
