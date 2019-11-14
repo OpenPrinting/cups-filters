@@ -3,6 +3,17 @@ NEWS - OpenPrinting CUPS Filters v1.25.12 - 2019-11-12
 
 CHANGES IN V1.25.13
 
+	- libcupsfilters: Updated the PPD generator adding all changes
+	  of the PPD generator of CUPS: Support for "job-account-id",
+	  "job-accounting-user-id", "job-password", finishing options
+	  "trim-..." added, finishing options and
+	  "finishing-col-database" support synced with CUPS.
+	- libcups-filters: In the PPD generator get the mode for
+	  handling the back sides of the sheets when printing duplex
+	  preferrably from the "urf-supported" attribute.
+	- libcups-filters: Fixed bug that the PPD generator did not
+	  output the "*CloseUI: *ColorModel" line when it did not
+	  determine a default setting for "ColorModel".
 	- cups-browsed: Added some missing memory allocations leading
 	  to a segfault (Issue #175).
 
