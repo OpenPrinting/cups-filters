@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.25.12 - 2019-11-12
 
 CHANGES IN V1.25.13
 
+	- cups-browsed, implicitclass: Prioritize Apple Raster against
+	  PWG Raster when selecting the PDL for the destination
+	  printer for a job sent to a cluster, also cleaned up the PDL
+	  selector code and added PostScript support.
 	- libcupsfilters: Updated the PPD generator adding all changes
 	  of the PPD generator of CUPS: Support for "job-account-id",
 	  "job-accounting-user-id", "job-password", finishing options

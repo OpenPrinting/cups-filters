@@ -6201,29 +6201,31 @@ on_job_state (CupsNotifier *object,
         }
       }
 
+      /* The priority order for the PDLs is the same as in the
+	 PPD generator in cupsfilters/ppdgenerator.c */
       document_format = (char *)malloc(sizeof(char) * 32);
       if (cupsArrayFind(pdl_list, "application/vnd.cups-pdf") ||
 	  cupsArrayFind(pdl_list, "application/pdf"))
-	strcpy(document_format,"pdf");
-      else if(cupsArrayFind(pdl_list, "image/pwg-raster"))
-	strcpy(document_format,"raster");
-      else {
+	strcpy(document_format, "pdf");
 #ifdef CUPS_RASTER_HAVE_APPLERASTER
-        if (cupsArrayFind(pdl_list, "image/urf"))
-          strcpy(document_format,"apple-raster");
-#else
+      else if (cupsArrayFind(pdl_list, "image/urf"))
+	strcpy(document_format, "apple-raster");
+#endif
+      else if (cupsArrayFind(pdl_list, "image/pwg-raster"))
+	strcpy(document_format, "raster");
 #ifdef QPDF_HAVE_PCLM
-	if (cupsArrayFind(pdl_list, "application/PCLm"))
-	  strcpy(document_format,"pclm");
-#else
-	if(cupsArrayFind(pdl_list, "application/vnd.hp-pclxl"))
-	  stcpy(document_format,"pclxl");
-	else(cupsArrayFind(pdl_list, "application/vnd.hp-pcl")||cupsArrayFind(pdl_list, "application/pcl")||
-	     cupsArrayFind(pdl_list, "application/x-pcl"))
-              strcpy(document_format,"pcl");
+      else if (cupsArrayFind(pdl_list, "application/PCLm"))
+	strcpy(document_format, "pclm");
 #endif
-#endif
-      }
+      else if (cupsArrayFind(pdl_list, "application/vnd.hp-pclxl"))
+	strcpy(document_format, "pclxl");
+      else if (cupsArrayFind(pdl_list, "application/vnd.cups-postscript") ||
+	       cupsArrayFind(pdl_list, "application/postscript"))
+	strcpy(document_format, "postscript");
+      else if (cupsArrayFind(pdl_list, "application/vnd.hp-pcl") ||
+	       cupsArrayFind(pdl_list, "application/pcl") ||
+	       cupsArrayFind(pdl_list, "application/x-pcl"))
+	strcpy(document_format, "pcl");
 
       /* Deciding the resolution to be sent with the job */
       /* Finding the minimum and maximum resolution supported by the printer */

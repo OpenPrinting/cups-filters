@@ -362,6 +362,8 @@ main(int  argc,				/* I - Number of command-line args */
 	setenv("FINAL_CONTENT_TYPE", "application/PCLm", 1);
       else if(!strcmp(document_format,"pclxl"))
 	setenv("FINAL_CONTENT_TYPE", "application/vnd.hp-pclxl", 1);
+      else if(!strcmp(document_format,"postscript"))
+	setenv("FINAL_CONTENT_TYPE", "application/postscript", 1);
       else if(!strcmp(document_format,"pcl"))
 	setenv("FINAL_CONTENT_TYPE", "application/pcl", 1);
 
