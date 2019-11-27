@@ -3029,6 +3029,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
   int                   i,count,side_found,orien_req,orien,
                         orien_found;
   cups_array_t          *sizes;
+  int                   ret = 1;
 
   p = (remote_printer_t *)cupsArrayIndex(remote_printers, printer_index);
   static const char * const jattrs[] =  /* Job attributes we want */
@@ -3083,7 +3084,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
 	  strcasecmp(str,"none")) {
 	debug_printf("Printer %s doesn't support the job-sheet %s\n", printer,
 		     str);
-	return 0;
+	ret = 0;
+	goto cleanup;
       }
     }
   }
@@ -3101,7 +3103,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
       if (!cupsArrayFind(multiple_doc_supported, (void *)str)) {
 	debug_printf("Printer %s doesn't support the multiple document handling option %s\n",
 		     printer, str);
-        return 0;
+	ret = 0;
+	goto cleanup;
       }
     }
   }
@@ -3119,7 +3122,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
 	  strcasecmp(str,AUTO_OPTION)) {
 	debug_printf("Printer %s doesn't support the media-type %s\n",
 		     printer, str);
-	return 0;
+	ret = 0;
+	goto cleanup;
       }
     }
   }
@@ -3137,7 +3141,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
 	  strcasecmp(str,"None")) {
 	debug_printf("Printer %s doesn't support the staple location %s\n",
 		     printer, str);
-	return 0;
+	ret = 0;
+	goto cleanup;
       }
     }
   }
@@ -3154,7 +3159,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
 	  strcasecmp(str,"None")) {
 	debug_printf("Printer %s doesn't support the FoldType %s\n",
 		     printer, str);
-	return 0;
+	ret = 0;
+	goto cleanup;
       }
     }
   }
@@ -3171,7 +3177,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
 	  strcasecmp(str,"none")) {
 	debug_printf("Printer %s doesn't support the PunchMedia %s\n",
 		     printer, str);
-	return 0;
+	ret = 0;
+	goto cleanup;
       }
     }
   }
@@ -3188,7 +3195,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
 	  strcasecmp(str,"Gray")) {
 	debug_printf("Printer %s doesn't support the ColorModel %s\n",
 		     printer, str);
-	return 0;
+	ret = 0;
+	goto cleanup;
       }
     }
   }
@@ -3220,7 +3228,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
         if (!side_found) {
           debug_printf("Printer %s doesn't support the required duplex options\n",
 		       printer);
-          return 0;
+          ret = 0;
+          goto cleanup;
         }
       }
     }
@@ -3244,7 +3253,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
       if (!orien_found) {
         debug_printf("Printer %s doesn't support the requested orientation\n",
 		     printer);
-        return 0;
+        ret = 0;
+        goto cleanup;
       }
     }
   }
@@ -3258,7 +3268,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
       sizes = get_pagesize(p->prattrs);
       if (!cupsArrayFind(sizes, (void*)str)) {
         debug_printf("Printer %s doesn't support %s PageSize\n", p->uri, str);
-        return 0;
+        ret = 0;
+        goto cleanup;
       }
     }
   }
@@ -3279,11 +3290,15 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
         *print_quality = 3;
       debug_printf("Printer doesn't support %s print quality\n",
 		   !strcmp(str, "5") ? "HIGH": "DRAFT");
-      return 0;
+      ret = 0;
+      goto cleanup;
     }
   }
 
-  return 1;
+  cleanup:
+    ippDelete(response);
+
+  return ret;
 }
 
 
@@ -5830,6 +5845,7 @@ get_printer_attributes(const char* uri, int fallback_request,
 	  if (!fallback_request) {
 	    debug_printf("The server doesn't support IPP2.0 request, trying to IPP1.1 request\n");
 	    httpClose(http_printer);
+	    ippDelete(response);
 	    return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);
 	  }
         }
@@ -6113,25 +6129,32 @@ on_job_state (CupsNotifier *object,
 	    valid_dest_found = 1;
 	    if (LoadBalancingType == QUEUE_ON_SERVERS) {
 	      num_jobs = 0;
-	      num_jobs = get_number_of_jobs(http, p->uri, 0,
-					    CUPS_WHICHJOBS_ACTIVE);
-	      if (num_jobs >= 0 && num_jobs < min_jobs) {
-		min_jobs = num_jobs;
-		dest_host = p->ip ? p->ip : p->host;
-		dest_port = p->port;
-		strncpy(destination_uri, p->uri, sizeof(destination_uri) - 1);
-		printer_attributes = p->prattrs;
-		pdl = p->pdl;
-		s = p;
-		strncpy(dest_name, remote_cups_queue,
-			sizeof(dest_name) - 1);
-		if (strlen(remote_cups_queue) > 1023)
-		  dest_name[1023] = '\0';
-		dest_index = i;
-	      }
-	      debug_printf("Printer %s on host %s, port %d is printing and it has %d jobs.\n",
-			   remote_cups_queue, p->host, p->port,
-			   num_jobs);
+	      http = httpConnectEncryptShortTimeout (p->ip ? p->ip : p->host,
+						     p->port,
+						     HTTP_ENCRYPT_IF_REQUESTED);
+	        if (http) {
+	          num_jobs = get_number_of_jobs(http, p->uri, 0,
+					        CUPS_WHICHJOBS_ACTIVE);
+	          if (num_jobs >= 0 && num_jobs < min_jobs) {
+		    min_jobs = num_jobs;
+		    dest_host = p->ip ? p->ip : p->host;
+		    dest_port = p->port;
+		    strncpy(destination_uri, p->uri, sizeof(destination_uri) - 1);
+		    printer_attributes = p->prattrs;
+		    pdl = p->pdl;
+		    s = p;
+		    strncpy(dest_name, remote_cups_queue,
+			    sizeof(dest_name) - 1);
+		    if (strlen(remote_cups_queue) > 1023)
+		      dest_name[1023] = '\0';
+		    dest_index = i;
+	          }
+	          debug_printf("Printer %s on host %s, port %d is printing and it has %d jobs.\n",
+			       remote_cups_queue, p->host, p->port,
+			       num_jobs);
+	          httpClose(http);
+	          http = NULL;
+	        }
 	    } else
 	      debug_printf("Printer %s on host %s, port %d is printing.\n", remote_cups_queue, p->host, p->port);
 	    break;
@@ -6150,6 +6173,8 @@ on_job_state (CupsNotifier *object,
 	q->last_printer = i;
 	break;
       }
+
+      ippDelete(response);
     } else
       debug_printf("IPP request to %s:%d failed.\n", p->host,
 		   p->port);
@@ -6226,6 +6251,9 @@ on_job_state (CupsNotifier *object,
 	       cupsArrayFind(pdl_list, "application/pcl") ||
 	       cupsArrayFind(pdl_list, "application/x-pcl"))
 	strcpy(document_format, "pcl");
+
+      if (pdl_list)
+        cupsArrayDelete(pdl_list);
 
       /* Deciding the resolution to be sent with the job */
       /* Finding the minimum and maximum resolution supported by the printer */
@@ -10552,8 +10580,8 @@ browse_poll_cancel_subscription (browsepoll_t *context)
 
   if (response)
     ippDelete(response);
-
-  httpClose (conn);
+  if (conn)
+    httpClose (conn);
 }
 
 static gboolean
