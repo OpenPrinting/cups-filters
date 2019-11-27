@@ -7782,7 +7782,20 @@ gboolean update_cups_queues(gpointer unused) {
 	    cupsEncodeOptions2(request, num_options, options,
 			       IPP_TAG_OPERATION);
 	    cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
-	    ippDelete(cupsDoRequest(http, request, "/admin/"));
+	    /*
+	     * Do IPP request for printer-is-shared option only when we have
+	     * network printer or if we have remote CUPS queue, do IPP request
+	     * only if we have CUPS older than 2.2.
+	     * When you have remote queue, clean up and break from the loop.
+	     */
+	    if (p->netprinter != 0 || !HAVE_CUPS_2_2)
+	      ippDelete(cupsDoRequest(http, request, "/admin/"));
+	    else
+	    {
+	      ippDelete(request);
+	      cupsFreeOptions(num_options, options);
+	      break;
+	    }
 	    cupsFreeOptions(num_options, options);
 	    if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	      debug_printf("Unable change printer-is-shared bit to %s (%s)!\n",
