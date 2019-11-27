@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.25.12 - 2019-11-12
 
 CHANGES IN V1.25.13
 
+	- cups-browsed: Do not set printer-is-shared for remote CUPS
+	  queue when making a temporary queue permanent (Pull request
+	  #180).
+	- cups-browsed: Fix leaks of ipp_t struct and load balancing
+	  on the servers (Pull request #179).
 	- cups-browsed, implicitclass: Prioritize Apple Raster against
 	  PWG Raster when selecting the PDL for the destination
 	  printer for a job sent to a cluster, also cleaned up the PDL
@@ -12,10 +17,10 @@ CHANGES IN V1.25.13
 	  "job-accounting-user-id", "job-password", finishing options
 	  "trim-..." added, finishing options and
 	  "finishing-col-database" support synced with CUPS.
-	- libcups-filters: In the PPD generator get the mode for
+	- libcupsfilters: In the PPD generator get the mode for
 	  handling the back sides of the sheets when printing duplex
 	  preferrably from the "urf-supported" attribute.
-	- libcups-filters: Fixed bug that the PPD generator did not
+	- libcupsfilters: Fixed bug that the PPD generator did not
 	  output the "*CloseUI: *ColorModel" line when it did not
 	  determine a default setting for "ColorModel".
 	- cups-browsed: Added some missing memory allocations leading
