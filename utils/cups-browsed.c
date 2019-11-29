@@ -5860,10 +5860,12 @@ get_printer_attributes(const char* uri, int fallback_request,
         "all",
       };
       httpClose(http_printer);
+      ippDelete(response);
       debug_printf("The server doesn't support IPP2.0 request, trying request without media-col\n");
       return get_printer_attributes(uri,2,pattr,job_state_attributes, 1);
     }else if(fallback_request == 0){
       httpClose(http_printer);
+      ippDelete(response);
       debug_printf("The server doesn't support IPP2.0 request, trying IPP1.1 request\n");
       return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);   
     }
