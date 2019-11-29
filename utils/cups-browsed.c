@@ -5782,18 +5782,20 @@ static ipp_t *
 get_printer_attributes(const char* uri, int fallback_request,
   const char* const pattrs[],int job_state_attributes, int attr_size)
 {
-  int uri_status, host_port, i;
+  int uri_status, host_port, i, language_attr = 0, total_attrs = 0;
   http_t *http_printer = NULL;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
   ipp_t *request, *response = NULL;
   ipp_attribute_t *attr;
   char valuebuffer[65536];
   const char *kw;
+  ipp_status_t  ipp_status;   
 
   /* Request printer properties via IPP to generate a PPD file for the
      printer (mainly driverless-capable printers)
      If we work with Systen V interface scripts use this info to set
      option defaults. */
+
   uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
              scheme, sizeof(scheme),
              userpass, sizeof(userpass),
@@ -5802,6 +5804,7 @@ get_printer_attributes(const char* uri, int fallback_request,
              resource, sizeof(resource));
   if (uri_status != HTTP_URI_OK)
     return NULL;
+  
   if ((http_printer =
        httpConnectEncryptShortTimeout (host_name, host_port,
                HTTP_ENCRYPT_IF_REQUESTED)) == NULL) {
@@ -5809,8 +5812,9 @@ get_printer_attributes(const char* uri, int fallback_request,
      uri);
     return NULL;
   }
+  
   request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
-  if(fallback_request)
+  if(fallback_request == 1)
     ippSetVersion(request,1,1);
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL, uri);
   ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
@@ -5818,6 +5822,8 @@ get_printer_attributes(const char* uri, int fallback_request,
     NULL, pattrs);
 
   response = cupsDoRequest(http_printer, request, resource);
+  ipp_status = cupsLastError();
+
 
   if (response) {
     /* Log all printer attributes for debugging */
@@ -5827,38 +5833,56 @@ get_printer_attributes(const char* uri, int fallback_request,
        uri);
       attr = ippFirstAttribute(response);
       while (attr) {
+        total_attrs++;
         ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
         strstrip(valuebuffer);
         if(!job_state_attributes){
           debug_printf("  Attr: %s\n",ippGetName(attr));
           debug_printf("  Value: %s\n", valuebuffer);
-
+          if(!strcmp(ippGetName(attr),"attributes-charset") ||
+          !strcmp(ippGetName(attr),"attributes-natural-language")){
+            language_attr++;
+          }
           for (i = 0; i < ippGetCount(attr); i ++){
             if ((kw = ippGetString(attr, i, NULL)) != NULL){
               debug_printf("  Keyword: %s\n", kw);
             }
           }
         }
-
-        if(!strcmp(ippGetName(attr),"status-message") && 
-          !strcmp(valuebuffer,"server-error-version-not-supported")){
-	  if (!fallback_request) {
-	    debug_printf("The server doesn't support IPP2.0 request, trying to IPP1.1 request\n");
-	    httpClose(http_printer);
-	    ippDelete(response);
-	    return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);
-	  }
-        }
        attr = ippNextAttribute(response);
       }
     }
+    if(ipp_status == IPP_STATUS_ERROR_BAD_REQUEST ||
+     ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED || 
+     (language_attr==2 && total_attrs==2)){   
+     if(fallback_request == 1){
+      const char * const pattr[] = {
+        "all",
+      };
+      httpClose(http_printer);
+      debug_printf("The server doesn't support IPP2.0 request, trying request without media-col\n");
+      return get_printer_attributes(uri,2,pattr,job_state_attributes, 1);
+    }else if(fallback_request == 0){
+      httpClose(http_printer);
+      debug_printf("The server doesn't support IPP2.0 request, trying IPP1.1 request\n");
+      return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);   
+    }
+  }
+
   } else{
     debug_printf("Request for IPP attributes (get-printer-attributes) for printer with URI %s failed: %s\n",
      uri, cupsLastErrorString());
-    if (!fallback_request) {
-      debug_printf("Trying IPP1.1 Request\n");
+    if (fallback_request == 0) {
+      debug_printf("Trying Request 1.1\n");
       httpClose(http_printer);
       return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);
+    }else if(fallback_request == 1){
+      debug_printf("Trying Request without media-col\n");
+      httpClose(http_printer);
+      const char * const pattr[] = {
+        "all",
+      };
+      return get_printer_attributes(uri,2,pattr,job_state_attributes, 1);
     }
   }
   httpClose(http_printer);
