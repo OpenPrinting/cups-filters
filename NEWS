@@ -3,6 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.25.12 - 2019-11-12
 
 CHANGES IN V1.25.13
 
+	- implicitclass: When passing on the job via the "ipp" CUPS
+	  backend, set argv[0] to the destination printer URI (Pull
+	  request #173).
+	- cups-browsed: Added another fallback to the
+	  get-printer-attributes IPP request: Now after failing the
+	  standard request ("all", "media-col-database") with both IPP
+	  2.0 and IPP 1.1, try simply "all", without
+	  "media-col-database" (Pull request #173).
 	- cups-browsed: Do not set printer-is-shared for remote CUPS
 	  queue when making a temporary queue permanent (Pull request
 	  #180).
