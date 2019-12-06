@@ -1,6 +1,17 @@
 NEWS - OpenPrinting CUPS Filters v1.25.13 - 2019-11-29
 ------------------------------------------------------
 
+CHANGES IN V1.25.14
+
+	- cups-browsed: Introduced new configuration options
+	  "UpdateCUPSQueuesMaxPerCall" and
+	  "PauseBetweenCUPSQueueUpdates" to limit the amount of local
+	  CUPS queues created, modified, or removed in a single event
+	  callback. Before, when there were thousands of printers in
+	  the network, cups-browsed got blocked for other tasks, like
+	  assigning a destination printer for a cluster print job
+	  (Issue #163).
+
 CHANGES IN V1.25.13
 
 	- implicitclass: When passing on the job via the "ipp" CUPS

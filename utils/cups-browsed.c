@@ -453,6 +453,9 @@ static int AutoClustering = 1;
 static cups_array_t *clusters;
 static load_balancing_type_t LoadBalancingType = QUEUE_ON_CLIENT;
 static char *DefaultOptions = NULL;
+static int update_cups_queues_max_per_call = 10;
+static int pause_between_cups_queue_updates = 1;
+static remote_printer_t *deleted_master = NULL;
 static int terminating = 0; /* received SIGTERM, ignore callbacks,
              break loops */
 static int in_shutdown = 0;
@@ -7438,6 +7441,7 @@ gboolean update_cups_queues(gpointer unused) {
   int           duplex;
   char          *default_pagesize;
   const char    *default_color = NULL;
+  int           cups_queues_updated = 0;
   const char * const pattrs[] =
   {
    "all",
@@ -7448,14 +7452,16 @@ gboolean update_cups_queues(gpointer unused) {
      get removed now (if we point them to NULL, we would try to remove
      the already removed CUPS queue again when it comes to the removal
      of the slave. */
-  if ((r = (remote_printer_t *)calloc(1, sizeof(remote_printer_t))) == NULL) {
+  if (deleted_master == NULL &&
+      (deleted_master =
+       (remote_printer_t *)calloc(1, sizeof(remote_printer_t))) == NULL) {
     debug_printf("ERROR: Unable to allocate memory.\n");
     if (in_shutdown == 0)
       recheck_timer ();
     return FALSE;
   }
-  memset(r, 0, sizeof(remote_printer_t));
-  r->uri = "<DELETED>";
+  memset(deleted_master, 0, sizeof(remote_printer_t));
+  deleted_master->uri = "<DELETED>";
   /* Now redirect the slave_of pointers of the masters which get deleted now
      to this dummy entry */
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -7464,7 +7470,7 @@ gboolean update_cups_queues(gpointer unused) {
 	 p->status == STATUS_TO_BE_RELEASED) &&
 	(q = p->slave_of) != NULL &&
 	(q->status == STATUS_DISAPPEARED || q->status == STATUS_TO_BE_RELEASED))
-      p->slave_of = r;
+      p->slave_of = deleted_master;
 
   debug_printf("Processing printer list ...\n");
   log_all_printers();
@@ -7482,6 +7488,21 @@ gboolean update_cups_queues(gpointer unused) {
        in order to remove any queues we have set up */
     if (terminating && !in_shutdown) {
       debug_printf("Stopping processing printer list because cups-browsed is terminating.\n");
+      break;
+    }
+
+    /* We do not necessarily update all local CUPS queues which are
+       scheduled for creation, update, or removal in a single call of
+       the update_cups_queues() function, as then we could be stuck in
+       this function for a long time and other tasks of cups-browsed,
+       especially directing print jobs to destination printers before
+       the implicitclass backend times out, will not get done in time.
+       We schedule a new call of update_cups_queues() after a short
+       delay to continue with the next local CUPS queues. */
+    if (!in_shutdown && update_cups_queues_max_per_call > 0 &&
+	cups_queues_updated >= update_cups_queues_max_per_call) {
+      debug_printf("Stopping processing printer list here because the update_cups_queues() function has reached its per-call limit of %d queue updates. Continuing in further calls.\n",
+		   update_cups_queues_max_per_call);
       break;
     }
 
@@ -7604,6 +7625,9 @@ gboolean update_cups_queues(gpointer unused) {
 		       "requesting-user-name", NULL, cupsUser());
 	  /* Do it */
 	  ippDelete(cupsDoRequest(http, request, "/admin/"));
+
+	  cups_queues_updated ++;
+
 	  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	    debug_printf("Unable to remove CUPS queue!\n");
 	    if (in_shutdown == 0) {
@@ -8469,6 +8493,8 @@ gboolean update_cups_queues(gpointer unused) {
 	ippDelete(cupsDoRequest(http, request, "/admin/"));
       }
       cupsFreeOptions(num_options, options);
+      cups_queues_updated ++;
+
       if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	debug_printf("Unable to create/modify CUPS queue (%s)!\n",
 		     cupsLastErrorString());
@@ -8624,8 +8650,6 @@ gboolean update_cups_queues(gpointer unused) {
   }
   log_all_printers();
 
-  free(r);
-  
   if (in_shutdown == 0)
     recheck_timer ();
 
@@ -8659,7 +8683,9 @@ recheck_timer (void)
 
   if (timeout != (time_t) -1) {
     debug_printf("checking queues in %ds\n", timeout);
-    queues_timer_id = g_timeout_add_seconds (timeout, update_cups_queues, NULL);
+    queues_timer_id =
+      g_timeout_add_seconds (timeout + pause_between_cups_queue_updates,
+			     update_cups_queues, NULL);
   } else {
     debug_printf("listening\n");
     queues_timer_id = 0;
@@ -11503,6 +11529,27 @@ read_configuration (const char *filename)
       else
 	debug_printf("Invalid auto shutdown inactivity type value: %s\n",
 		     value);
+    } else if (!strcasecmp(line, "UpdateCUPSQueuesMaxPerCall") && value) {
+      int n = atoi(value);
+      if (n >= 0) {
+	update_cups_queues_max_per_call = n;
+	if (n > 0)
+	  debug_printf("Set maximum of CUPS queue updates per call of update_cups_queues() to %d.\n",
+		       n);
+	else
+	  debug_printf("Do not limit the number of CUPS queue updates per call of update_cups_queues().\n");
+      } else
+	debug_printf("Invalid value for maximum number of CUPS queue updates per call of update_cups_queues(): %d\n",
+		     n);
+    } else if (!strcasecmp(line, "PauseBetweenCUPSQueueUpdates") && value) {
+      int t = atoi(value);
+      if (t >= 0) {
+	pause_between_cups_queue_updates = t;
+	debug_printf("Set pause between calls of update_cups_queues() to %d sec.\n",
+		     t);
+      } else
+	debug_printf("Invalid value for pause between calls of update_cups_queues(): %d\n",
+		     t);
     }
 #ifdef HAVE_LDAP
     else if (!strcasecmp(line, "BrowseLDAPBindDN") && value) {
@@ -12126,6 +12173,8 @@ fail:
     p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
   }
   update_cups_queues(NULL);
+  if (deleted_master != NULL)
+    free(deleted_master);
 
   cancel_subscription (subscription_id);
   if (cups_notifier)
