@@ -854,7 +854,7 @@ create_media_col(int  width,
 		 char *media_type)
 {
   ipp_t *media_col = ippNew(),    /* media-col value */
-  *media_size = create_media_size(width, length);
+        *media_size = create_media_size(width, length);
 
   ippAddCollection(media_col, IPP_TAG_PRINTER, "media-size", media_size);
   ippAddInteger(media_col, IPP_TAG_PRINTER, IPP_TAG_INTEGER,
@@ -1084,9 +1084,11 @@ int         /* O - Number of jobs */
 get_number_of_jobs(http_t       *http,      /* I - Connection to server */
                    const char   *uri,       /* I - uri of printer */
                    int          myjobs,     /* I - 0 = all users, 1 = mine */
-                   int          whichjobs)  /* I - @code CUPS_WHICHJOBS_ALL@, @code CUPS_WHICHJOBS_ACTIVE@, or @code CUPS_WHICHJOBS_COMPLETED@ */
+                   int          whichjobs)  /* I - CUPS_WHICHJOBS_ALL,
+                                                   CUPS_WHICHJOBS_ACTIVE, or
+                                                   CUPS_WHICHJOBS_COMPLETED */
 {
-  int   n;                               /* Number of jobs */
+  int     n;                              /* Number of jobs */
   ipp_t   *request,                       /* IPP Request */
           *response;                      /* IPP Response */
   ipp_attribute_t *attr;                  /* Current attribute */
@@ -1202,14 +1204,16 @@ static http_t *
 http_connect_local (void)
 {
   if (!local_conn) {
-    debug_printf("cups-browsed: Creating http connection to local CUPS daemon: %s:%d\n", cupsServer(), ippPort());
+    debug_printf("cups-browsed: Creating http connection to local CUPS daemon: %s:%d\n",
+		 cupsServer(), ippPort());
     local_conn = httpConnectEncryptShortTimeout(cupsServer(), ippPort(),
 						cupsEncryption());
   }
   if (local_conn)
     httpSetTimeout(local_conn, HttpLocalTimeout, http_timeout_cb, NULL);
   else
-    debug_printf("cups-browsed: Failed creating http connection to local CUPS daemon: %s:%d\n", cupsServer(), ippPort());
+    debug_printf("cups-browsed: Failed creating http connection to local CUPS daemon: %s:%d\n",
+		 cupsServer(), ippPort());
 
   return local_conn;
 }
@@ -1248,7 +1252,8 @@ pwg_ppdize_name(const char *ipp,  /* I - IPP keyword */
 		size_t     namesize)  /* I - Size of name buffer */
 {
   char  *ptr,       /* Pointer into name buffer */
-  *end;       /* End of name buffer */
+        *end;       /* End of name buffer */
+
   *name = (char)toupper(*ipp++);
 
   for (ptr = name + 1, end = name + namesize - 1; *ipp && ptr < end;)
@@ -1267,13 +1272,13 @@ pwg_ppdize_name(const char *ipp,  /* I - IPP keyword */
 
 void add_mimetype_attributes(char* cluster_name, ipp_t **merged_attributes)
 {
-  int                  count,i;
+  int                  count, i;
   remote_printer_t     *p;
   const char           *str;
   char                 *q;
   cups_array_t         *list;
   ipp_attribute_t      *attr;
-  int                  num_value,attr_no;
+  int                  num_value, attr_no;
   char* attributes[] = {
     "document-format-supported"
   };
@@ -1282,17 +1287,18 @@ void add_mimetype_attributes(char* cluster_name, ipp_t **merged_attributes)
     if ((list = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
 			      (cups_acopy_func_t)strdup,
 			      (cups_afree_func_t)free)) == NULL)
-    return ;
+      return ;
 
-    num_value=0;
+    num_value = 0;
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
         continue;
       if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-        p->status ==  STATUS_TO_BE_RELEASED )
+	 p->status ==  STATUS_TO_BE_RELEASED )
         continue;
-      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_MIMETYPE)) != NULL) {
+      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no],
+				   IPP_TAG_MIMETYPE)) != NULL) {
 	count = ippGetCount(attr);
 	for (i = 0; i < count; i ++) { 
 	  str = ippGetString(attr, i, NULL);
@@ -1303,7 +1309,7 @@ void add_mimetype_attributes(char* cluster_name, ipp_t **merged_attributes)
 	}
       }
     }
-    if (num_value != 0){
+    if (num_value != 0) {
       char    *values[num_value];
       for (q = (char *)cupsArrayFirst(list),i=0;
 	   q;
@@ -1319,17 +1325,18 @@ void add_mimetype_attributes(char* cluster_name, ipp_t **merged_attributes)
   cupsArrayDelete(list);
 }
 
-/*add_tagzero_attributes - Adds attribute to the merged_attribute variable for the cluster.
-                           This function adds attribute with value tag IPP_TAG_ZERO */
-void add_tagzero_attributes(char* cluster_name,ipp_t **merged_attributes)
+/*add_tagzero_attributes - Adds attribute to the merged_attribute variable for
+                           the cluster. This function adds attribute with value
+                           tag IPP_TAG_ZERO */
+void add_tagzero_attributes(char* cluster_name, ipp_t **merged_attributes)
 {
-  int                  count,i;                 
-  remote_printer_t     *p;                      
+  int                  count, i;
+  remote_printer_t     *p;
   const char           *str;
   char                 *q;
   cups_array_t         *list;
   ipp_attribute_t      *attr;
-  int                  num_value,attr_no;
+  int                  num_value, attr_no;
   char* attributes[] = {
     "media-supported",
     "output-bin-supported",
@@ -1341,20 +1348,21 @@ void add_tagzero_attributes(char* cluster_name,ipp_t **merged_attributes)
   for (attr_no = 0; attr_no < 5; attr_no++) {
     /* Cups Array to store the values for the attribute*/
     if ((list = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
-        (cups_acopy_func_t)strdup,
-        (cups_afree_func_t)free)) == NULL)
+			      (cups_acopy_func_t)strdup,
+			      (cups_afree_func_t)free)) == NULL)
       return ;
 
-    num_value=0;
+    num_value = 0;
     /* Iterating over all the printers in the cluster*/
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-      if (strcmp(cluster_name,p->queue_name))
+      if (strcmp(cluster_name, p->queue_name))
 	continue;
       if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-        p->status ==  STATUS_TO_BE_RELEASED )
-  continue;
-      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_ZERO)) != NULL) {
+	 p->status ==  STATUS_TO_BE_RELEASED )
+	continue;
+      if ((attr = ippFindAttribute(p->prattrs, attributes[attr_no],
+				   IPP_TAG_ZERO)) != NULL) {
 	count = ippGetCount(attr);
 	for(i = 0; i < count; i ++) {
 	  /* Pick next format from attribute */
@@ -1362,20 +1370,21 @@ void add_tagzero_attributes(char* cluster_name,ipp_t **merged_attributes)
 	  /* Add format to list, skip duplicates */
 	  if (!cupsArrayFind(list, (void *)str)){
 	    cupsArrayAdd(list, (void *)str);
-	    num_value++;
+	    num_value ++;
 	  }
 	}
       }
     }
-    if (num_value != 0){
+    if (num_value != 0) {
       char    *values[num_value];
       /* Transferring attributes value from cups Array to char* array*/
       for (q = (char *)cupsArrayFirst(list), i = 0; q;
-           q = (char *)cupsArrayNext(list), i++) {
-        values[i]=malloc(sizeof(char)*strlen(q)+1);
+           q = (char *)cupsArrayNext(list), i ++) {
+        values[i] = malloc(sizeof(char) * strlen(q) + 1);
         strncpy(values[i], q, sizeof(values[i]) - 1);
       }
-      ippAddStrings(*merged_attributes, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_KEYWORD),
+      ippAddStrings(*merged_attributes, IPP_TAG_PRINTER,
+		    IPP_CONST_TAG(IPP_TAG_KEYWORD),
                     attributes[attr_no], num_value, NULL,
                     (const char * const *)values);
     }
@@ -1383,17 +1392,18 @@ void add_tagzero_attributes(char* cluster_name,ipp_t **merged_attributes)
   cupsArrayDelete(list);
 }
 
-/*add_keyword_attributes - Adds attributes to the merged_attribute variable for the cluster.
-                           This function adds attributes with value tag IPP_TAG_KEYWORD*/
-void add_keyword_attributes(char* cluster_name,ipp_t **merged_attributes)
+/*add_keyword_attributes - Adds attributes to the merged_attribute variable for
+                           the cluster. This function adds attributes with
+                           value tag IPP_TAG_KEYWORD*/
+void add_keyword_attributes(char* cluster_name, ipp_t **merged_attributes)
 {
-  int                  count,i;
+  int                  count, i;
   remote_printer_t     *p;
   const char           *str;
   char                 *q;
   cups_array_t         *list;
   ipp_attribute_t      *attr;
-  int                  num_value,attr_no;
+  int                  num_value, attr_no;
   char* attributes[] = {
     "output-mode-supported",
     "urf-supported",
@@ -1410,31 +1420,32 @@ void add_keyword_attributes(char* cluster_name,ipp_t **merged_attributes)
 			      (cups_afree_func_t)free)) == NULL)
       return;
 
-    num_value=0;
+    num_value = 0;
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
          p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-      if (strcmp(cluster_name,p->queue_name))
+      if (strcmp(cluster_name, p->queue_name))
         continue;
       if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-        p->status ==  STATUS_TO_BE_RELEASED )
+	 p->status == STATUS_TO_BE_RELEASED )
         continue;
-      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_KEYWORD)) != NULL) {
+      if ((attr = ippFindAttribute(p->prattrs, attributes[attr_no],
+				   IPP_TAG_KEYWORD)) != NULL) {
         count = ippGetCount(attr);
         for (i = 0; i < count; i++) {
           str = ippGetString(attr, i, NULL);
           if (!cupsArrayFind(list, (void *)str)){
             cupsArrayAdd(list, (void *)str);
-            num_value++;
+            num_value ++;
           }
         }
       }
     }
-    if (num_value!=0) {
+    if (num_value != 0) {
       char    *values[num_value];
       for (q = (char *)cupsArrayFirst(list), i=0;
 	   q;
-	   q = (char *)cupsArrayNext(list), i++) {
-        values[i]=malloc(sizeof(char)*strlen(q)+1);
+	   q = (char *)cupsArrayNext(list), i ++) {
+        values[i] = malloc(sizeof(char) * strlen(q) + 1);
         strncpy(values[i], q, sizeof(values[i]) - 1);
       }
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
@@ -1445,17 +1456,18 @@ void add_keyword_attributes(char* cluster_name,ipp_t **merged_attributes)
   cupsArrayDelete(list);
 }
 
-/*add_enum_attributes - Adds attributes to the merged_attribute variable for the cluster.
-                        This function adds attributes with value tag IPP_TAG_BEGIN_ENUM*/
-void add_enum_attributes(char* cluster_name,ipp_t **merged_attributes)
+/*add_enum_attributes - Adds attributes to the merged_attribute variable for
+                        the cluster. This function adds attributes with value
+                        tag IPP_TAG_BEGIN_ENUM*/
+void add_enum_attributes(char* cluster_name, ipp_t **merged_attributes)
 {
-  int                  count,i,value;
+  int                  count, i, value;
   remote_printer_t     *p;
   char                 *str;
   char                 *q;
   cups_array_t         *list;
   ipp_attribute_t      *attr;
-  int                  num_value,attr_no;
+  int                  num_value, attr_no;
   char* attributes[] = {
                          "finishings-supported",
                          "print-quality-supported",
@@ -1468,8 +1480,8 @@ void add_enum_attributes(char* cluster_name,ipp_t **merged_attributes)
 			      (cups_acopy_func_t)strdup,
 			      (cups_afree_func_t)free)) == NULL)
       return ;
-    str = malloc(sizeof(char)*10);
-    num_value=0;
+    str = malloc(sizeof(char) * 10);
+    num_value = 0;
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
          p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
@@ -1504,15 +1516,15 @@ void add_enum_attributes(char* cluster_name,ipp_t **merged_attributes)
 }
 
 /*add_margin_attribute - Adds margin attributes to the merged_attribute variable for the cluster.*/
-void add_margin_attributes(char* cluster_name,ipp_t **merged_attributes)
+void add_margin_attributes(char* cluster_name, ipp_t **merged_attributes)
 {
-  int                  count,i,value;
+  int                  count, i, value;
   remote_printer_t     *p;
   char                 *str;
   char                 *q;
   cups_array_t         *list;
   ipp_attribute_t      *attr;
-  int                  num_value,attr_no;
+  int                  num_value, attr_no;
   char* attributes[] = {
     "media-bottom-margin-supported",
     "media-left-margin-supported",
@@ -1526,7 +1538,7 @@ void add_margin_attributes(char* cluster_name,ipp_t **merged_attributes)
 			      (cups_afree_func_t)free)) == NULL)
       return ;
     str = malloc(sizeof(char)*10);
-    num_value=0;
+    num_value = 0;
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
          p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (strcmp(cluster_name,p->queue_name))
@@ -1564,63 +1576,66 @@ void add_margin_attributes(char* cluster_name,ipp_t **merged_attributes)
                               for the cluster*/
 void add_resolution_attributes(char* cluster_name, ipp_t **merged_attributes)
 {
-  int                  count,i;
+  int                  count, i;
   remote_printer_t     *p;
   ipp_attribute_t      *attr;
-  int                  num_resolution,attr_no;
+  int                  num_resolution, attr_no;
   cups_array_t         *res_array;
-  res_t                *res,*resolution;
+  res_t                *res, *resolution;
   char* attributes[] = {
                          "printer-resolution-supported",
                          "pwg-raster-document-resolution-supported",
                          "pclm-source-resolution-supported"
                        };
 
-  for (attr_no = 0; attr_no < 3; attr_no++) {
+  for (attr_no = 0; attr_no < 3; attr_no ++) {
     res_array = NULL;
     res_array = resolutionArrayNew();
     num_resolution = 0;
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-      if (strcmp(cluster_name,p->queue_name))
+      if (strcmp(cluster_name, p->queue_name))
 	continue;
       if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-      p->status ==  STATUS_TO_BE_RELEASED )
-  continue;
-      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no], IPP_TAG_RESOLUTION)) != NULL){
+	 p->status == STATUS_TO_BE_RELEASED )
+	continue;
+      if ((attr = ippFindAttribute(p->prattrs, attributes[attr_no],
+				   IPP_TAG_RESOLUTION)) != NULL) {
         for (i = 0, count = ippGetCount(attr); i < count; i ++) {
           if ((res = ippResolutionToRes(attr, i)) != NULL &&
 	      cupsArrayFind(res_array, res) == NULL) {
             cupsArrayAdd(res_array, res);
-            num_resolution++;
+            num_resolution ++;
 	  }
         }
       }
     }
     if (num_resolution) {
-      int xres[num_resolution],yres[num_resolution];
+      int xres[num_resolution], yres[num_resolution];
       for (i = 0, resolution=cupsArrayFirst(res_array); resolution;
 	   i ++, resolution = cupsArrayNext(res_array)) {
-	xres[i]=resolution->x;
-	yres[i]=resolution->y;
+	xres[i] = resolution->x;
+	yres[i] = resolution->y;
       }
-      ippAddResolutions(*merged_attributes, IPP_TAG_PRINTER,attributes[attr_no],
-			num_resolution,IPP_RES_PER_INCH,xres,yres);
+      ippAddResolutions(*merged_attributes, IPP_TAG_PRINTER,
+			attributes[attr_no], num_resolution,
+			IPP_RES_PER_INCH, xres, yres);
     }
   }
   cupsArrayDelete(res_array);
 }
 
-/*add_mediasize_attribute - Adds media sizes to the merged_attribute for the printer*/
+/*add_mediasize_attribute - Adds media sizes to the merged_attribute for the
+                            printer*/
 void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
 {
-  int                  count,i=0;
+  int                  count, i = 0;
   remote_printer_t     *p;
-  ipp_attribute_t      *attr,*media_size_supported,*x_dim,*y_dim;
-  int                  num_sizes,attr_no,num_ranges;
+  ipp_attribute_t      *attr, *media_size_supported, *x_dim, *y_dim;
+  int                  num_sizes, attr_no,num_ranges;
   ipp_t                *media_size;
-  cups_array_t         *sizes,*size_ranges;
-  media_size_t         *temp,*media_s;
+  cups_array_t         *sizes, *size_ranges;
+  media_size_t         *temp, *media_s;
   pagesize_range_t     *temp_range;
   char* attributes[] = {
                          "media-size-supported",
@@ -1643,7 +1658,7 @@ void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
       if (strcmp(cluster_name,p->queue_name))
         continue;
       if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-        p->status ==  STATUS_TO_BE_RELEASED )
+	 p->status ==  STATUS_TO_BE_RELEASED )
         continue;
       if ((attr = ippFindAttribute(p->prattrs, attributes[attr_no],
 				   IPP_TAG_BEGIN_COLLECTION)) != NULL) {
@@ -1652,7 +1667,7 @@ void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
           x_dim = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
           y_dim = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
           if (ippGetValueTag(x_dim) == IPP_TAG_RANGE ||
-	     ippGetValueTag(y_dim) == IPP_TAG_RANGE) {
+	      ippGetValueTag(y_dim) == IPP_TAG_RANGE) {
             if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
               temp_range->x_dim_min = ippGetRange(x_dim, 0,
 						  &temp_range->x_dim_max);
@@ -1671,8 +1686,8 @@ void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
               num_ranges++;
             }
           } else {
-            temp->x  = ippGetInteger(x_dim,0);
-            temp->y  = ippGetInteger(y_dim,0);
+            temp->x = ippGetInteger(x_dim,0);
+            temp->y = ippGetInteger(y_dim,0);
             if (!cupsArrayFind(sizes, temp)){
               cupsArrayAdd(sizes, temp);
               num_sizes++;
@@ -1683,12 +1698,12 @@ void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
     }
     media_size_supported =
       ippAddCollections(*merged_attributes,
-			IPP_TAG_PRINTER,attributes[attr_no],
+			IPP_TAG_PRINTER, attributes[attr_no],
 			num_sizes+num_ranges, NULL);
-    if (num_sizes){
+    if (num_sizes) {
       for (i = 0, media_s = cupsArrayFirst(sizes);
 	   media_s; i ++, media_s = cupsArrayNext(sizes)) {
-        ipp_t *size = create_media_size(media_s->x,media_s->y);
+        ipp_t *size = create_media_size(media_s->x, media_s->y);
         ippSetCollection(*merged_attributes, &media_size_supported, i, size);
         ippDelete(size);
       }
@@ -1709,7 +1724,8 @@ void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
   cupsArrayDelete(sizes);
 }
 
-/*add_mediadatabase_attribute - Adds media-col-database attributes for the cluster*/
+/*add_mediadatabase_attribute - Adds media-col-database attributes for the
+                                cluster*/
 void
 add_mediadatabase_attributes(char* cluster_name, ipp_t **merged_attributes)
 {
@@ -1731,16 +1747,16 @@ add_mediadatabase_attributes(char* cluster_name, ipp_t **merged_attributes)
 				 NULL, NULL, 0,
 				 (cups_acopy_func_t)copy_media,
 				 (cups_afree_func_t)free);
-  for (attr_no = 0; attr_no < 1; attr_no++) {
+  for (attr_no = 0; attr_no < 1; attr_no ++) {
     num_database = 0;
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
          p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-      if (strcmp(cluster_name,p->queue_name))
+      if (strcmp(cluster_name, p->queue_name))
         continue;
       if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-        p->status ==  STATUS_TO_BE_RELEASED )
+	 p->status == STATUS_TO_BE_RELEASED )
         continue;
-      if ((attr = ippFindAttribute(p->prattrs,attributes[attr_no],
+      if ((attr = ippFindAttribute(p->prattrs, attributes[attr_no],
 				   IPP_TAG_BEGIN_COLLECTION)) != NULL){
         for (i = 0, count = ippGetCount(attr); i < count; i ++) {
           media_col = ippGetCollection(attr, i);
@@ -1772,8 +1788,8 @@ add_mediadatabase_attributes(char* cluster_name, ipp_t **merged_attributes)
 					   "media-right-margin",
 					   IPP_TAG_INTEGER),
 			  0);
-          media_type[0]='\0';
-          media_source[0]='\0';
+          media_type[0] = '\0';
+          media_source[0] = '\0';
           temp->media_source = NULL;
           temp->media_type = NULL;          
           if ((media_attr = ippFindAttribute(media_col,
@@ -1782,7 +1798,7 @@ add_mediadatabase_attributes(char* cluster_name, ipp_t **merged_attributes)
             pwg_ppdize_name(ippGetString(media_attr, 0, NULL), media_type,
 			    sizeof(media_type));
           if (strlen(media_type) > 1) {
-            temp->media_type = (char*)malloc(sizeof(char)*32);
+            temp->media_type = (char*)malloc(sizeof(char) * 32);
             strcpy(temp->media_type, media_type);
           }
           if ((media_attr = ippFindAttribute(media_col, "media-source",
@@ -1791,19 +1807,19 @@ add_mediadatabase_attributes(char* cluster_name, ipp_t **merged_attributes)
 			    sizeof(media_source));
           }
           if(strlen(media_source) > 1) {
-            temp->media_source = (char*)malloc(sizeof(char)*32);
+            temp->media_source = (char*)malloc(sizeof(char) * 32);
             strcpy(temp->media_source, media_source);
           }
 
           if (!cupsArrayFind(media_database, temp)) {
             cupsArrayAdd(media_database, temp);
-            num_database++;
+            num_database ++;
           }
         }
       }
     }
 
-    if (num_database !=0 ) {
+    if (num_database != 0) {
       media_col_database = ippAddCollections(*merged_attributes,
 					     IPP_TAG_PRINTER,
 					     attributes[attr_no],
@@ -1829,9 +1845,9 @@ add_mediadatabase_attributes(char* cluster_name, ipp_t **merged_attributes)
 /*add_jobpresets_attribute - Adds presets attributes for the cluster*/
 void add_jobpresets_attribute(char* cluster_name, ipp_t ** merged_attributes)
 {
-  int                  count,i,num_preset=0,preset_no=0;
+  int                  count, i, num_preset = 0, preset_no = 0;
   remote_printer_t     *p;
-  cups_array_t         *list,*added_presets;
+  cups_array_t         *list, *added_presets;
   ipp_t                *preset;
   ipp_attribute_t      *attr;
   const char           *preset_name;
@@ -1850,10 +1866,10 @@ void add_jobpresets_attribute(char* cluster_name, ipp_t ** merged_attributes)
 
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-    if (strcmp(cluster_name,p->queue_name))
+    if (strcmp(cluster_name, p->queue_name))
       continue;
     if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-      p->status ==  STATUS_TO_BE_RELEASED )
+       p->status == STATUS_TO_BE_RELEASED )
       continue;
     if ((attr = ippFindAttribute(p->prattrs, "job-presets-supported",
 				 IPP_TAG_BEGIN_COLLECTION)) != NULL) {
@@ -1873,7 +1889,7 @@ void add_jobpresets_attribute(char* cluster_name, ipp_t ** merged_attributes)
     return;
 
   preset_attribute = ippAddCollections(*merged_attributes, IPP_TAG_PRINTER,
-				       "job-presets-supported",num_preset,
+				       "job-presets-supported", num_preset,
 				       NULL);
 
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
@@ -1897,20 +1913,21 @@ void add_jobpresets_attribute(char* cluster_name, ipp_t ** merged_attributes)
 
 /* get_pagesize: Function returns the standard/custom page size using
                  generate_sizes function from ppdgenerator.c*/
-static cups_array_t* get_pagesize(ipp_t *printer_attributes) {
-  cups_array_t            *sizes,*page_media;
+static cups_array_t* get_pagesize(ipp_t *printer_attributes)
+{
+  cups_array_t            *sizes, *page_media;
   cups_size_t             *size;
   ipp_attribute_t         *defattr;
-  char                    *ppdsizename,*temp;
-  int                     min_length=INT_MAX, min_width=INT_MAX,
-                          max_length=0,max_width=0,
-                          bottom,left,right,top;
+  char                    *ppdsizename, *temp;
+  int                     min_length = INT_MAX, min_width = INT_MAX,
+                          max_length = 0, max_width = 0,
+                          bottom, left, right, top;
   char                    ppdname[41];
 
-  ppdsizename = (char *)malloc(sizeof(char)*128);
+  ppdsizename = (char *)malloc(sizeof(char) * 128);
   sizes = generate_sizes(printer_attributes, &defattr, &min_length, &min_width,
-			 &max_length,&max_width,
-                         &bottom,&left,&right,&top,ppdname);
+			 &max_length, &max_width,
+                         &bottom, &left, &right, &top,ppdname);
   if ((page_media = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
 				  (cups_acopy_func_t)strdup,
 				  (cups_afree_func_t)free)) == NULL)
@@ -1928,22 +1945,23 @@ static cups_array_t* get_pagesize(ipp_t *printer_attributes) {
 
 /*get_mediadata - This function extracts the MediaType, InputSlot and OutputBin
                   supported, using IPP Response message of the printer*/
-cups_array_t* get_mediadata(ipp_t *printer_attributes,char* requested_attr){
+cups_array_t* get_mediadata(ipp_t *printer_attributes, char* requested_attr)
+{
   ipp_attribute_t         *attr;
-  int                     count,i;
+  int                     count, i;
   cups_array_t            *media_data;            
   const char              *keyword; /* Keyword value */
   char                    ppdname[41];
   char                    requested_option[30];
 
-  if (!strcmp(requested_attr,"MediaType"))
-    strcpy(requested_option,"media-type-supported");  
-  else if (!strcmp(requested_attr,"InputSlot"))
-    strcpy(requested_option,"media-source-supported");  
-  else if (!strcmp(requested_attr,"OutputBin"))
-    strcpy(requested_option,"output-bin-supported");
+  if (!strcmp(requested_attr, "MediaType"))
+    strcpy(requested_option, "media-type-supported");
+  else if (!strcmp(requested_attr, "InputSlot"))
+    strcpy(requested_option, "media-source-supported");
+  else if (!strcmp(requested_attr, "OutputBin"))
+    strcpy(requested_option, "output-bin-supported");
   else
-    return NULL;    
+    return NULL;
 
   if ((media_data = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
 				  (cups_acopy_func_t)strdup,
@@ -1966,7 +1984,7 @@ cups_array_t* get_mediadata(ipp_t *printer_attributes,char* requested_attr){
                            tag IPP_TAG_MIMETYPE*/
 cups_array_t* get_mimetype_attributes(ipp_t *printer_attributes)
 {
-  int                  count,i;
+  int                  count, i;
   const char           *str;
   cups_array_t         *document_formats;
   ipp_attribute_t      *attr;
@@ -1978,7 +1996,7 @@ cups_array_t* get_mimetype_attributes(ipp_t *printer_attributes)
     return NULL;
 
   if ((attr = ippFindAttribute(printer_attributes, "document-format-supported",
-			      IPP_TAG_MIMETYPE)) != NULL) {
+			       IPP_TAG_MIMETYPE)) != NULL) {
     count = ippGetCount(attr);
     for (i = 0; i < count; i ++) {
       str = ippGetString(attr, i, NULL);
@@ -1994,7 +2012,7 @@ cups_array_t* get_mimetype_attributes(ipp_t *printer_attributes)
 cups_array_t* get_staplelocation(ipp_t *printer_attributes)
 {
   ipp_attribute_t        *attr;
-  int                    count,value,i;
+  int                    count, value, i;
   const char             *name;
   cups_array_t           *staplelocation;
 
@@ -2004,7 +2022,7 @@ cups_array_t* get_staplelocation(ipp_t *printer_attributes)
 				      (cups_afree_func_t)free)) == NULL)
     return NULL;
   if ((attr = ippFindAttribute(printer_attributes, "finishings-supported",
-			      IPP_TAG_ENUM)) != NULL) {
+			       IPP_TAG_ENUM)) != NULL) {
     count = ippGetCount(attr);
     for (i = 0; i < count; i ++) {
       value = ippGetInteger(attr, i);
@@ -2022,13 +2040,13 @@ cups_array_t* get_staplelocation(ipp_t *printer_attributes)
 cups_array_t* get_foldtype(ipp_t *printer_attributes)
 {
   ipp_attribute_t        *attr;
-  int                    count,value,i;
+  int                    count, value, i;
   const char             *name;
   cups_array_t           *foldtype;
 
   if ((foldtype = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
-      (cups_acopy_func_t)strdup,
-      (cups_afree_func_t)free)) == NULL)
+				(cups_acopy_func_t)strdup,
+				(cups_afree_func_t)free)) == NULL)
     return NULL;
   if ((attr = ippFindAttribute(printer_attributes, "finishings-supported",
 			       IPP_TAG_ENUM)) != NULL) {
@@ -2037,8 +2055,8 @@ cups_array_t* get_foldtype(ipp_t *printer_attributes)
       value = ippGetInteger(attr, i);
       name  = ippEnumString("finishings", value);
       if (!strncmp(name, "fold-", 5))
-        if (!cupsArrayFind(foldtype,(void*)name))
-          cupsArrayAdd(foldtype,(void*)name);
+        if (!cupsArrayFind(foldtype, (void*)name))
+          cupsArrayAdd(foldtype, (void*)name);
     }
   }
   return foldtype;
@@ -2048,7 +2066,7 @@ cups_array_t* get_foldtype(ipp_t *printer_attributes)
 cups_array_t* get_finishings(ipp_t *printer_attributes)
 {
   ipp_attribute_t        *attr;
-  int                    count,value,i;
+  int                    count, value, i;
   const char             *name;
   cups_array_t           *finishings;
 
@@ -2062,8 +2080,8 @@ cups_array_t* get_finishings(ipp_t *printer_attributes)
     for (i = 0; i < count; i ++) {
       value = ippGetInteger(attr, i);
       name  = ippEnumString("finishings", value);
-      if (!cupsArrayFind(finishings,(void*)name))
-	cupsArrayAdd(finishings,(void*)name);
+      if (!cupsArrayFind(finishings, (void*)name))
+	cupsArrayAdd(finishings, (void*)name);
     }
   }
   return finishings;
@@ -2071,9 +2089,10 @@ cups_array_t* get_finishings(ipp_t *printer_attributes)
 
 
 /*get_punchmedia - Returns the puchmedia supported by the printer*/
-cups_array_t* get_punchmedia(ipp_t *printer_attributes){
+cups_array_t* get_punchmedia(ipp_t *printer_attributes)
+{
   ipp_attribute_t        *attr;
-  int                    count,value,i;
+  int                    count, value, i;
   const char             *name;
   cups_array_t           *punchmedia;
 
@@ -2088,8 +2107,8 @@ cups_array_t* get_punchmedia(ipp_t *printer_attributes){
       value = ippGetInteger(attr, i);
       name  = ippEnumString("finishings", value);
       if (!strncmp(name, "punch-", 6))
-        if (!cupsArrayFind(punchmedia,(void*)name))
-          cupsArrayAdd(punchmedia,(void*)name);
+        if (!cupsArrayFind(punchmedia, (void*)name))
+          cupsArrayAdd(punchmedia, (void*)name);
     }
   }
   return punchmedia;
@@ -2101,7 +2120,7 @@ cups_array_t* get_punchmedia(ipp_t *printer_attributes){
 cups_array_t* get_duplex(ipp_t *printer_attributes)
 {
   ipp_attribute_t        *attr;
-  int                    count,i;
+  int                    count, i;
   cups_array_t           *duplex_options;
   const char             *str;
 
@@ -2115,12 +2134,12 @@ cups_array_t* get_duplex(ipp_t *printer_attributes)
     count = ippGetCount(attr);
     for (i = 0; i < count; i ++) {
       str = ippGetString(attr, i, NULL);
-      if (!strcmp(str,"one-sided"))
-        cupsArrayAdd(duplex_options,"None");
-      else if (!strcmp(str,"two-sided-long-edge"))
-        cupsArrayAdd(duplex_options,"DuplexNoTumble");
-      else if (!strcmp(str,"two-sided-short-edge"))
-        cupsArrayAdd(duplex_options,"DuplexTumble");
+      if (!strcmp(str, "one-sided"))
+        cupsArrayAdd(duplex_options, "None");
+      else if (!strcmp(str, "two-sided-long-edge"))
+        cupsArrayAdd(duplex_options, "DuplexNoTumble");
+      else if (!strcmp(str, "two-sided-short-edge"))
+        cupsArrayAdd(duplex_options, "DuplexTumble");
     }
   }
   return duplex_options;
@@ -2225,17 +2244,17 @@ cups_array_t* get_printquality(ipp_t *printer_attributes)
   if ((quality=ippFindAttribute(printer_attributes, "print-quality-supported",
 				IPP_TAG_ENUM)) != NULL) {
     if (ippContainsInteger(quality, IPP_QUALITY_DRAFT))
-      cupsArrayAdd(print_qualities,"3");
+      cupsArrayAdd(print_qualities, "3");
     if (ippContainsInteger(quality, IPP_QUALITY_HIGH))
-      cupsArrayAdd(print_qualities,"5");
-    cupsArrayAdd(print_qualities,"4");
+      cupsArrayAdd(print_qualities, "5");
+    cupsArrayAdd(print_qualities, "4");
   }
   return print_qualities;
 }
 
 /* get_job_data - Returns the job_sheets,multiple-document-handling supported
                   by the printer*/
-cups_array_t* get_job_data(ipp_t *printer_attributes,char* requested_attr)
+cups_array_t* get_job_data(ipp_t *printer_attributes, char* requested_attr)
 {
   ipp_attribute_t       *attr;
   cups_array_t          *job_data;
@@ -2243,11 +2262,11 @@ cups_array_t* get_job_data(ipp_t *printer_attributes,char* requested_attr)
   const char*           str;
 
   if ((job_data = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
-      (cups_acopy_func_t)strdup,
-      (cups_afree_func_t)free)) == NULL)
+				(cups_acopy_func_t)strdup,
+				(cups_afree_func_t)free)) == NULL)
     return NULL;
-  if ((attr=ippFindAttribute(printer_attributes, requested_attr,
-     IPP_TAG_KEYWORD)) != NULL) {
+  if ((attr = ippFindAttribute(printer_attributes, requested_attr,
+			       IPP_TAG_KEYWORD)) != NULL) {
     for(i = 0, count = ippGetCount(attr); i < count; i ++) {
       str = ippGetString(attr, i, NULL);
       if (!cupsArrayFind(job_data, (void *)str))
@@ -2264,7 +2283,7 @@ cups_array_t* get_finishingtemplate(ipp_t *printer_attributes)
   ipp_attribute_t       *attr;
   cups_array_t          *finishing_templates;
   ipp_t                 *finishing_col; /* Current finishing collection */
-  int                   count,i;
+  int                   count, i;
   const char            *keyword;
 
   if ((finishing_templates = cupsArrayNew3((cups_array_func_t)strcasecmp,
@@ -2295,21 +2314,22 @@ cups_array_t* get_finishingtemplate(ipp_t *printer_attributes)
 
 /* get_printing_data - Returns the print-content-optimize,print-rendering-intent
                        and print-scaling attributes for the printer*/
-cups_array_t* get_printing_data(ipp_t *printer_attributes,char* requested_attr){
+cups_array_t* get_printing_data(ipp_t *printer_attributes,char* requested_attr)
+{
   ipp_attribute_t         *attr;
-  int                     count,i;
+  int                     count, i;
   cups_array_t            *printing_support;            
   const char              *keyword; 
   char                    requested_option[40];
 
-  if(!strcmp(requested_attr,"print-content-optimize"))
-    strcpy(requested_option,"print-content-optimize-supported");  
-  else if (!strcmp(requested_attr,"print-rendering-intent"))
-    strcpy(requested_option,"print-rendering-intent-supported");  
-  else if(!strcmp(requested_attr,"print-scaling"))
-    strcpy(requested_option,"print-scaling-supported");
-  else if (!strcmp(requested_attr,"job-sheets-supported"))
-    strcpy(requested_option,"job-sheets-supported");
+  if(!strcmp(requested_attr, "print-content-optimize"))
+    strcpy(requested_option, "print-content-optimize-supported");
+  else if (!strcmp(requested_attr, "print-rendering-intent"))
+    strcpy(requested_option, "print-rendering-intent-supported");
+  else if(!strcmp(requested_attr, "print-scaling"))
+    strcpy(requested_option, "print-scaling-supported");
+  else if (!strcmp(requested_attr, "job-sheets-supported"))
+    strcpy(requested_option, "job-sheets-supported");
   else
     return NULL;
 
@@ -2333,9 +2353,9 @@ cups_array_t* get_printing_data(ipp_t *printer_attributes,char* requested_attr){
 cups_array_t* get_presets(ipp_t *printer_attributes)
 {
   ipp_attribute_t         *attr;
-  int                     count,i;
+  int                     count, i;
   cups_array_t            *presets;            
-  ipp_t                   *preset ;
+  ipp_t                   *preset;
   const char              *preset_name;
 
   if ((presets = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
@@ -2343,14 +2363,14 @@ cups_array_t* get_presets(ipp_t *printer_attributes)
 			       (cups_afree_func_t)free)) == NULL)
     return NULL;
   if ((attr = ippFindAttribute(printer_attributes, "job-presets-supported",
-			       IPP_TAG_BEGIN_COLLECTION)) != NULL
-      && (count = ippGetCount(attr)) > 1) {
+			       IPP_TAG_BEGIN_COLLECTION)) != NULL &&
+      (count = ippGetCount(attr)) > 1) {
     for (i = 0, count = ippGetCount(attr); i < count; i ++) {
       preset = ippGetCollection(attr, i);
       preset_name = ippGetString(ippFindAttribute(preset, "preset-name",
 						  IPP_TAG_ZERO), 0, NULL);
-      if(!cupsArrayFind(presets,(void*)preset_name))
-        cupsArrayAdd(presets,(void *)preset_name);
+      if(!cupsArrayFind(presets, (void*)preset_name))
+        cupsArrayAdd(presets, (void *)preset_name);
     }
   }
   return presets;
@@ -2372,10 +2392,10 @@ cups_array_t* get_booklet(ipp_t *printer_attributes)
       /* Assuming that the printer which supports Booklet also supports
          printing without Booklet, so for this printer we will return
          both "True" and "False" */
-      cupsArrayAdd(booklet,"True");
+      cupsArrayAdd(booklet, "True");
     }
   }
-  cupsArrayAdd(booklet,"False");
+  cupsArrayAdd(booklet, "False");
   return booklet;
 }
 
@@ -2383,40 +2403,40 @@ cups_array_t* get_booklet(ipp_t *printer_attributes)
                            printer, such as PageSize,ColorModel etc.*/
 cups_array_t* get_supported_options(ipp_t *printer_attributes, char* option)
 {
-  if(!strcmp(option,"PageSize") || !strcmp(option,"PageRegion"))
+  if (!strcmp(option, "PageSize") || !strcmp(option, "PageRegion"))
     return get_pagesize(printer_attributes);
-  else if(!strcmp(option,"MediaType") || !strcmp(option,"InputSlot") ||
-	  !strcmp(option,"OutputBin"))
-    return get_mediadata(printer_attributes,option);
-  else if (!strcmp(option,"StapleLocation"))
+  else if (!strcmp(option, "MediaType") || !strcmp(option, "InputSlot") ||
+	   !strcmp(option, "OutputBin"))
+    return get_mediadata(printer_attributes, option);
+  else if (!strcmp(option, "StapleLocation"))
     return get_staplelocation(printer_attributes);
-  else if (!strcmp(option,"FoldType"))
+  else if (!strcmp(option, "FoldType"))
     return get_foldtype(printer_attributes);
-  else if (!strcmp(option,"PunchMedia"))
+  else if (!strcmp(option, "PunchMedia"))
     return get_punchmedia(printer_attributes);
-  else if (!strcmp(option,"cupsFinishingTemplate"))
+  else if (!strcmp(option, "cupsFinishingTemplate"))
     return get_finishingtemplate(printer_attributes);
-  else if (!strcmp(option,"cupsPrintQuality"))
+  else if (!strcmp(option, "cupsPrintQuality"))
     return get_printquality(printer_attributes);
-  else if (!strcmp(option,"job-sheets-supported") ||
-	   !strcmp(option,"print-content-optimize") ||
-	   !strcmp(option,"print-rendering-intent") ||
-	   !strcmp(option,"print-scaling"))
-    return get_printing_data(printer_attributes,option);
-  else if (!strcmp(option,"APPrinterPreset"))
+  else if (!strcmp(option, "job-sheets-supported") ||
+	   !strcmp(option, "print-content-optimize") ||
+	   !strcmp(option, "print-rendering-intent") ||
+	   !strcmp(option, "print-scaling"))
+    return get_printing_data(printer_attributes, option);
+  else if (!strcmp(option, "APPrinterPreset"))
     return get_presets(printer_attributes);
-  else if(!strcmp(option,"Booklet"))
+  else if(!strcmp(option, "Booklet"))
     return get_booklet(printer_attributes);  
-  else if(!strcmp(option,"ColorModel"))
+  else if(!strcmp(option, "ColorModel"))
     return get_colormodel(printer_attributes);  
-  else if (!strcmp(option,"Duplex"))
+  else if (!strcmp(option, "Duplex"))
     return get_duplex(printer_attributes);  
-  else if (!strcmp(option,"multiple-document-handling-supported") ||
-	   !strcmp(option,"cover-back-supported") ||
-	   !strcmp(option,"cover-front-supported") ||
-	   !strcmp(option,"cover-type-supported") ||
-	   !strcmp(option,"media-type-supported"))
-    return get_job_data(printer_attributes,option); 
+  else if (!strcmp(option, "multiple-document-handling-supported") ||
+	   !strcmp(option, "cover-back-supported") ||
+	   !strcmp(option, "cover-front-supported") ||
+	   !strcmp(option, "cover-type-supported") ||
+	   !strcmp(option, "media-type-supported"))
+    return get_job_data(printer_attributes, option);
   else if (!strcmp(option,"finishings-supported"))
     return get_finishings(printer_attributes); 
   return NULL;
@@ -2426,37 +2446,39 @@ cups_array_t* get_supported_options(ipp_t *printer_attributes, char* option)
                                option1 for keyword at value idx_option1 in
                                ppd_keywords[] and option2 for keyword at value
                                idx_option2*/
-int check_printer_with_options(char* cluster_name,int idx_option1,char* option1,
-                               int idx_option2,char* option2)
+int check_printer_with_options(char* cluster_name, int idx_option1,
+			       char* option1, int idx_option2, char* option2)
 {
   remote_printer_t     *p;
   cups_array_t         *first_attributes_value;
   cups_array_t         *second_attributes_value;
   char                 *borderless_pagesize;
-  int                  option1_is_size=0, option2_is_size=0;
+  int                  option1_is_size = 0, option2_is_size = 0;
   char  t[] = ".Borderless";
 
-  borderless_pagesize = malloc(sizeof(char)*32);
-  if (!strcmp(ppd_keywords[idx_option1],"PageSize") ||
-      !strcmp(ppd_keywords[idx_option1],"PageRegion")) {
+  borderless_pagesize = malloc(sizeof(char) * 32);
+  if (!strcmp(ppd_keywords[idx_option1], "PageSize") ||
+      !strcmp(ppd_keywords[idx_option1], "PageRegion")) {
     /* Check that we are generating .Borderless for the correct size, i.e We
        are generating 4x5.Borderless for 4x5 and not generating 
        4x5.Borderless.Borderless for 4x5.Borderless */
-    if (strlen(option1) >= 11 && !strcmp(&option1[strlen(option1)-strlen(t)], t))
+    if (strlen(option1) >= 11 &&
+	!strcmp(&option1[strlen(option1) - strlen(t)], t))
       ;
     else {
-      strcat(borderless_pagesize,option1);
-      strcat(borderless_pagesize,t);
+      strcat(borderless_pagesize, option1);
+      strcat(borderless_pagesize, t);
       option1_is_size = 1;
     }
   }
-  if (!strcmp(ppd_keywords[idx_option2],"PageSize") ||
-      !strcmp(ppd_keywords[idx_option2],"PageRegion")) {
-    if(strlen(option2) >=11 && !strcmp(&option2[strlen(option2)-strlen(t)], t))
+  if (!strcmp(ppd_keywords[idx_option2], "PageSize") ||
+      !strcmp(ppd_keywords[idx_option2], "PageRegion")) {
+    if(strlen(option2) >=11 &&
+       !strcmp(&option2[strlen(option2) - strlen(t)], t))
       ;
     else {
-      strcat(borderless_pagesize,option2);
-      strcat(borderless_pagesize,t);
+      strcat(borderless_pagesize, option2);
+      strcat(borderless_pagesize, t);
       option2_is_size = 1;
     }
   }
@@ -2485,17 +2507,17 @@ int check_printer_with_options(char* cluster_name,int idx_option1,char* option1,
 /* The function returns a array containint the sizes supported by the cluster*/
 cups_array_t* get_cluster_sizes(char* cluster_name)
 {
-  cups_array_t         *sizes=NULL;
-  cups_array_t         *cluster_sizes=NULL,
+  cups_array_t         *sizes = NULL;
+  cups_array_t         *cluster_sizes = NULL,
                        *sizes_ppdname;
   cups_size_t          *size;
   pagesize_count_t     *temp;
   remote_printer_t     *p;
   ipp_attribute_t      *defattr;
-  char                 ppdname[41],pagesize[128];
+  char                 ppdname[41], pagesize[128];
   char*                first_space;
-  int                  min_length,min_width,max_length,max_width,
-                       bottom,left,right,top;
+  int                  min_length, min_width, max_length, max_width,
+                       bottom, left, right, top;
 
   temp = (pagesize_count_t *)malloc(sizeof(pagesize_count_t));
   cluster_sizes = cupsArrayNew3((cups_array_func_t)pwg_compare_sizes,
@@ -2507,10 +2529,10 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
 				(cups_afree_func_t)free);
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-    if (!strcmp(p->queue_name,cluster_name)) {
+    if (!strcmp(p->queue_name, cluster_name)) {
       if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-        p->status ==  STATUS_TO_BE_RELEASED )
-          continue;
+	 p->status == STATUS_TO_BE_RELEASED )
+	continue;
       defattr = NULL;
       min_length = INT_MAX;
       min_width = INT_MAX;
@@ -2532,9 +2554,9 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
 	  if ((first_space = strchr(pagesize, ' ')) != NULL) {
 	    *first_space = '\0';
 	  }
-	  if (!cupsArrayFind(sizes_ppdname,pagesize)) {
+	  if (!cupsArrayFind(sizes_ppdname, pagesize)) {
 	    cupsArrayAdd(cluster_sizes, size);
-	    cupsArrayAdd(sizes_ppdname,pagesize);
+	    cupsArrayAdd(sizes_ppdname, pagesize);
 	  }
         }
       }
@@ -2548,15 +2570,16 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
 					 ipp_t *merged_attributes)
 {
   remote_printer_t     *p;
-  cups_array_t         *conflict_pairs=NULL;
-  int                  i,k,j,no_of_printers=0,no_of_ppd_keywords;
-  cups_array_t         *printer_first_options=NULL,*printer_second_options=NULL;
-  char                 *opt1,*opt2,constraint[100],*ppdsizename,*temp;
-  cups_array_t         *sizes = NULL,*pagesizes;
+  cups_array_t         *conflict_pairs = NULL;
+  int                  i, k, j, no_of_printers = 0, no_of_ppd_keywords;
+  cups_array_t         *printer_first_options = NULL,
+                       *printer_second_options = NULL;
+  char                 *opt1, *opt2, constraint[100], *ppdsizename, *temp;
+  cups_array_t         *sizes = NULL, *pagesizes;
   cups_size_t          *size;
 
   /* Cups Array to store the conflicts*/
-  ppdsizename = (char *)malloc(sizeof(char)*128);
+  ppdsizename = (char *)malloc(sizeof(char) * 128);
   if ((conflict_pairs = cupsArrayNew3((cups_array_func_t)strcasecmp,
 				      NULL, NULL, 0,
 				      (cups_acopy_func_t)strdup,
@@ -2564,11 +2587,11 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
     return NULL;
 
   /* Storing all the values supported by the cluster in cluster_options*/
-  no_of_ppd_keywords = sizeof(ppd_keywords)/sizeof(ppd_keywords[0]);
+  no_of_ppd_keywords = sizeof(ppd_keywords) / sizeof(ppd_keywords[0]);
   cups_array_t         *cluster_options[no_of_ppd_keywords];
   for(i = 0; i < no_of_ppd_keywords; i ++) {
-    if (strcmp(ppd_keywords[i],"PageSize") &&
-       strcmp(ppd_keywords[i],"PageRegion"))
+    if (strcmp(ppd_keywords[i], "PageSize") &&
+	strcmp(ppd_keywords[i], "PageRegion"))
       cluster_options[i] =
 	get_supported_options(merged_attributes,ppd_keywords[i]);
     else {
@@ -2585,11 +2608,11 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
           *temp = '\0';
         cupsArrayAdd(pagesizes, ppdsizename);
       }
-      cluster_options[i]=pagesizes;
+      cluster_options[i] = pagesizes;
     }
   }
 
-  /* Algorithm to find constriants: We iterate over printer, if we
+  /* Algorithm to find constraints: We iterate over printer, if we
      find a value for a keyword which is supported by the cluster but
      not by the printer, that value can be part of the conflict. With
      this value v and a new value (for an different keyword, at index
@@ -2601,10 +2624,10 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
   no_of_printers = cupsArrayCount(remote_printers);
   for (j = 0; j < no_of_printers; j ++) {
     p = (remote_printer_t *)cupsArrayIndex(remote_printers, j);
-    if (strcmp(cluster_name,p->queue_name))
+    if (strcmp(cluster_name, p->queue_name))
       continue;
     if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-      p->status ==  STATUS_TO_BE_RELEASED )
+       p->status == STATUS_TO_BE_RELEASED )
       continue;
     for (i = 0; i < no_of_ppd_keywords; i ++) {
       printer_first_options =
@@ -2615,8 +2638,8 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
 	  if (cupsArrayFind(printer_first_options, opt1))
 	    continue;
 	  for (k = i + 1; k < no_of_ppd_keywords; k++) {
-	    if (!strcmp(ppd_keywords[i],"PageSize") &&
-	       !strcmp(ppd_keywords[k],"PageRegion"))
+	    if (!strcmp(ppd_keywords[i], "PageSize") &&
+		!strcmp(ppd_keywords[k], "PageRegion"))
 	      continue;
 	    printer_second_options = get_supported_options(p->prattrs,
 							   ppd_keywords[k]);
@@ -2624,19 +2647,20 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
 		opt2 = cupsArrayNext(printer_second_options)) {
 	      if (check_printer_with_options(cluster_name, i, opt1, k, opt2))
 		continue;
-	      if (!strcasecmp(opt1, AUTO_OPTION) || !strcasecmp(opt2, AUTO_OPTION))
+	      if (!strcasecmp(opt1, AUTO_OPTION) ||
+		  !strcasecmp(opt2, AUTO_OPTION))
 		continue;
-	      if (!strcmp(opt1, "Gray") || !strcmp(opt2,"Gray"))
+	      if (!strcmp(opt1, "Gray") || !strcmp(opt2, "Gray"))
 		continue;
 	      sprintf(constraint, "*UIConstraints: *%s %s *%s %s\n",
 		      ppd_keywords[i],
-		      opt1,ppd_keywords[k],opt2);
+		      opt1,ppd_keywords[k], opt2);
 	      if (!cupsArrayFind(conflict_pairs, constraint)) {
-		cupsArrayAdd(conflict_pairs,constraint);
+		cupsArrayAdd(conflict_pairs, constraint);
 	      }
 	      sprintf(constraint, "*UIConstraints: *%s %s *%s %s\n",
 		      ppd_keywords[k],
-		      opt2,ppd_keywords[i],opt1);
+		      opt2, ppd_keywords[i], opt1);
 	      if (!cupsArrayFind(conflict_pairs, constraint)) {
 		cupsArrayAdd(conflict_pairs, constraint);
 	      }
@@ -2658,15 +2682,15 @@ ipp_t* get_cluster_attributes(char* cluster_name)
   ipp_t                *merged_attributes = NULL;
   char                 printer_make_and_model[256];
   ipp_attribute_t      *attr;
-  int                  color_supported=0,make_model_done = 0,i;
+  int                  color_supported = 0, make_model_done = 0, i;
   char                 valuebuffer[65536];
   merged_attributes = ippNew();
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-    if (strcmp(cluster_name,p->queue_name))
+    if (strcmp(cluster_name, p->queue_name))
       continue;
     if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-      p->status ==  STATUS_TO_BE_RELEASED )
+       p->status == STATUS_TO_BE_RELEASED )
       continue;
     if (!make_model_done) {
       strcpy(printer_make_and_model, "Cluster ");
@@ -2679,7 +2703,7 @@ ipp_t* get_cluster_attributes(char* cluster_name)
       color_supported = 1;
   }
 
-  ippAddString(merged_attributes, IPP_TAG_PRINTER,IPP_TAG_TEXT,
+  ippAddString(merged_attributes, IPP_TAG_PRINTER, IPP_TAG_TEXT,
 	       "printer-make-and-model",
                NULL, printer_make_and_model);
   ippAddBoolean(merged_attributes, IPP_TAG_PRINTER, "color-supported",
@@ -2698,20 +2722,20 @@ ipp_t* get_cluster_attributes(char* cluster_name)
   /* Printing merged attributes*/
   debug_printf("Merged attributes for the cluster %s : \n", cluster_name);
   while (attr) {
-  debug_printf("  Attr: %s\n",
-         ippGetName(attr));
-  ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-  debug_printf("  Value: %s\n", valuebuffer);
-  const char *kw;
-  for (i = 0; i < ippGetCount(attr); i ++)
-    if ((kw = ippGetString(attr, i, NULL)) != NULL)
-      debug_printf("  Keyword: %s\n", kw);
-  attr = ippNextAttribute(merged_attributes);
-      }
+    debug_printf("  Attr: %s\n",
+		 ippGetName(attr));
+    ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+    debug_printf("  Value: %s\n", valuebuffer);
+    const char *kw;
+    for (i = 0; i < ippGetCount(attr); i ++)
+      if ((kw = ippGetString(attr, i, NULL)) != NULL)
+	debug_printf("  Keyword: %s\n", kw);
+    attr = ippNextAttribute(merged_attributes);
+  }
   return merged_attributes;
 }
 
-int cluster_supports_given_attribute(char* cluster_name,ipp_tag_t tag,
+int cluster_supports_given_attribute(char* cluster_name, ipp_tag_t tag,
 				     const char* attribute)
 {
   remote_printer_t        *p;
@@ -2723,7 +2747,7 @@ int cluster_supports_given_attribute(char* cluster_name,ipp_tag_t tag,
     if (strcmp(cluster_name, p->queue_name))
       continue;
     if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-      p->status ==  STATUS_TO_BE_RELEASED )
+       p->status == STATUS_TO_BE_RELEASED )
       continue;
     if ((attr = ippFindAttribute(p->prattrs, attribute, tag)) != NULL &&
         (count = ippGetCount(attr)) > 1)
@@ -2738,21 +2762,21 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
                                     char* default_pagesize,
                                     const char **default_color)
 {
-  int                     max_pages_per_min = 0,pages_per_min;
-  remote_printer_t        *p,*def_printer=NULL;
-  int                     i,count;
-  ipp_attribute_t         *attr,*media_attr,*media_col_default,*defattr;
+  int                     max_pages_per_min = 0, pages_per_min;
+  remote_printer_t        *p, *def_printer = NULL;
+  int                     i, count;
+  ipp_attribute_t         *attr, *media_attr, *media_col_default, *defattr;
   ipp_t                   *media_col,
-                          *media_size,*current_media=NULL;
-  char                    media_source[32],media_type[32];
+                          *media_size, *current_media=NULL;
+  char                    media_source[32], media_type[32];
   const char              *str;
   media_col_t             *temp;
   const char              *keyword;
   res_t                   *res;
-  int                     xres,yres;
-  int                     min_length=INT_MAX,min_width=INT_MAX,
-                          max_length=0,max_width=0,
-                          bottom,left,right,top;
+  int                     xres, yres;
+  int                     min_length = INT_MAX, min_width = INT_MAX,
+                          max_length = 0, max_width = 0,
+                          bottom, left, right, top;
   char                    ppdname[41];
   cups_array_t            *sizes;
 
@@ -2763,7 +2787,7 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
     if (strcmp(p->queue_name, cluster_name))
       continue;
     if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
-      p->status ==  STATUS_TO_BE_RELEASED )
+       p->status == STATUS_TO_BE_RELEASED )
       continue;
     if ((attr = ippFindAttribute (p->prattrs, "pages-per-minute",
 				  IPP_TAG_INTEGER)) != NULL) {
@@ -2780,7 +2804,7 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
   if (!def_printer) {
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-      if (strcmp(p->queue_name,cluster_name))
+      if (strcmp(p->queue_name, cluster_name))
         continue;
       else {
         def_printer = p;
@@ -2791,13 +2815,13 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
   
   debug_printf("Selecting printer (%s) as the default for the cluster %s\n",
 	       def_printer->uri, cluster_name);
-  debug_printf("Default Attributes of the cluster %s are : \n",cluster_name);
+  debug_printf("Default Attributes of the cluster %s are : \n", cluster_name);
 
   /* Generating the default pagesize for the cluster*/
   sizes = generate_sizes(def_printer->prattrs, &defattr, &min_length,
 			 &min_width, &max_length, &max_width,
                          &bottom, &left, &right, &top, ppdname);
-  strcpy(default_pagesize,ppdname);
+  strcpy(default_pagesize, ppdname);
   debug_printf("Default PageSize : %s\n", default_pagesize);
 
   /* Generating the default media-col for the cluster*/
@@ -2824,8 +2848,8 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
     temp->right_margin = ippGetInteger(ippFindAttribute(media_col,
 							"media-right-margin",
 							IPP_TAG_INTEGER), 0);
-    media_type[0]='\0';
-    media_source[0]='\0';
+    media_type[0] = '\0';
+    media_source[0] = '\0';
     temp->media_source = NULL;
     temp->media_type = NULL;
 
@@ -2857,14 +2881,14 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
 
     if (strlen(media_source) > 1) {
       temp->media_source = (char*)malloc(sizeof(char)*32);
-      strcpy(temp->media_source,media_source);   
+      strcpy(temp->media_source, media_source);
       debug_printf("Default MediaSource: %s\n", media_source);
     }
 
     if (temp->media_source == NULL) {
       if (cluster_supports_given_attribute(cluster_name, IPP_TAG_KEYWORD,
 					   "media-source-supported")) {
-        temp->media_source = (char*)malloc(sizeof(char)*32);
+        temp->media_source = (char*)malloc(sizeof(char) * 32);
         strcpy(temp->media_source, AUTO_OPTION);
         debug_printf("Default MediaSource: " AUTO_OPTION "\n");
       }
@@ -2901,9 +2925,9 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
         if (!*default_color)
           *default_color = "FastGray";
       } else if ((!strcasecmp(keyword, "sgray_8") ||
-		!strncmp(keyword, "W8", 2) ||
-		!strcmp(keyword, "monochrome") ||
-		!strcmp(keyword, "process-monochrome"))) {
+		  !strncmp(keyword, "W8", 2) ||
+		  !strcmp(keyword, "monochrome") ||
+		  !strcmp(keyword, "process-monochrome"))) {
         if (!*default_color || !strcmp(*default_color, "FastGray"))
           *default_color = "Gray";
       } else if (!strcasecmp(keyword, "sgray_16") ||
@@ -2937,7 +2961,7 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
 
   if ((attr = ippFindAttribute(def_printer->prattrs, "output-bin-default",
 			       IPP_TAG_ZERO)) != NULL) {
-    str = ippGetString(attr,0,NULL);
+    str = ippGetString(attr, 0, NULL);
     ippAddString(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
 		 "output-bin-default", NULL, str);
     debug_printf("Default OutputBin: %s\n", str);
@@ -3020,16 +3044,16 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
 {
   char                  uri[1024];
   http_t                *http = NULL;
-  ipp_attribute_t       *attr,*attr1;
+  ipp_attribute_t       *attr, *attr1;
   ipp_t                 *request, *response = NULL;
-  const char            *str,*side,*resource;
+  const char            *str, *side, *resource;
   cups_array_t          *job_sheet_supported,
-                        *multiple_doc_supported,*print_qualities,
-                        *media_type_supported,*staplelocation_supported,
-                        *foldtype_supported,*punchmedia_supported,
+                        *multiple_doc_supported, *print_qualities,
+                        *media_type_supported, *staplelocation_supported,
+                        *foldtype_supported, *punchmedia_supported,
                         *color_supported;
   remote_printer_t      *p;
-  int                   i,count,side_found,orien_req,orien,
+  int                   i, count, side_found, orien_req, orien,
                         orien_found;
   cups_array_t          *sizes;
   int                   ret = 1;
@@ -3050,7 +3074,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
   request = ippNewRequest(IPP_OP_GET_JOB_ATTRIBUTES);
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
 	       uri);
-  ippAddInteger(request, IPP_TAG_OPERATION, IPP_TAG_INTEGER, "job-id",job_id);
+  ippAddInteger(request, IPP_TAG_OPERATION, IPP_TAG_INTEGER, "job-id", job_id);
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
 	       "requesting-user-name", NULL, cupsUser());
   ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
@@ -3061,20 +3085,22 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
   attr = ippFirstAttribute(response);
 
   /* Document Format */
-/*  if ((attr = ippFindAttribute(response, "document-format-detected",
+  /*
+  if ((attr = ippFindAttribute(response, "document-format-detected",
 			       IPP_TAG_MIMETYPE)) != NULL &&
       ippGetCount(attr) > 0) {
-    str = ippGetString(attr,0, NULL);
-  	debug_printf("The job-document is of the format %s\n.",str);
+    str = ippGetString(attr, 0, NULL);
+    debug_printf("The job-document is of the format %s\n.",str);
     formats_supported = get_mimetype_attributes(p->prattrs);
     if(!cupsArrayFind(formats_supported, (void *)str)){
       debug_printf("Printer %s doesn't support the document format %s\n",
 		   printer, str);
       return 0;
     }
-  }*/
+  }
+  */
 
-  /* Job Sheets*/
+  /* Job Sheets */
   if ((attr = ippFindAttribute(response, "job-sheets",
 			       IPP_TAG_ZERO)) != NULL &&
       ippGetCount(attr) > 0) {
@@ -3093,8 +3119,8 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
     }
   }
 
-  /*Multiple document handling*/
-  /* Can't get multiple-document-handling data from job templates*/
+  /* Multiple document handling */
+  /* Can't get multiple-document-handling data from job templates */
   if ((attr = ippFindAttribute(response, "multiple-document-handling",
 			       IPP_TAG_ZERO)) != NULL && ippGetCount(attr)>0) {
     str = ippGetString(attr, 0, NULL);
@@ -3116,13 +3142,13 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
   if ((attr = ippFindAttribute(response, "MediaType",
 			       IPP_TAG_ZERO)) != NULL &&
       ippGetCount(attr) > 0) {
-    str = ippGetString(attr,0, NULL);
-    debug_printf("The mediatype %s is requested for the job\n",str);
+    str = ippGetString(attr, 0, NULL);
+    debug_printf("The mediatype %s is requested for the job\n", str);
     if (str != NULL) {
       media_type_supported = get_supported_options(p->prattrs,
 						   "media-type-supported");
       if (!cupsArrayFind(media_type_supported, (void *)str) &&
-	  strcasecmp(str,AUTO_OPTION)) {
+	  strcasecmp(str, AUTO_OPTION)) {
 	debug_printf("Printer %s doesn't support the media-type %s\n",
 		     printer, str);
 	ret = 0;
@@ -3136,12 +3162,12 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
 			       IPP_TAG_ZERO)) != NULL &&
       ippGetCount(attr) > 0) {
     str = ippGetString(attr, 0, NULL);
-    debug_printf("The staplelocation %s is requested for the job\n", str);
+    debug_printf("The staple location %s is requested for the job\n", str);
     if (str != NULL) {
       staplelocation_supported =
 	get_supported_options(p->prattrs, "StapleLocation");
       if (!cupsArrayFind(staplelocation_supported, (void *)str) &&
-	  strcasecmp(str,"None")) {
+	  strcasecmp(str, "None")) {
 	debug_printf("Printer %s doesn't support the staple location %s\n",
 		     printer, str);
 	ret = 0;
@@ -3150,16 +3176,16 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
     }
   }
 
-  /*FoldType*/
+  /* FoldType */
   if ((attr = ippFindAttribute(response, "FoldType",
 			       IPP_TAG_ZERO)) != NULL &&
       ippGetCount(attr) > 0) {
     str = ippGetString(attr, 0, NULL);
     debug_printf("The FoldType %s is requested for the job\n", str);
     if (str != NULL) {
-      foldtype_supported = get_supported_options(p->prattrs,"FoldType");
+      foldtype_supported = get_supported_options(p->prattrs, "FoldType");
       if (!cupsArrayFind(foldtype_supported, (void *)str) &&
-	  strcasecmp(str,"None")) {
+	  strcasecmp(str, "None")) {
 	debug_printf("Printer %s doesn't support the FoldType %s\n",
 		     printer, str);
 	ret = 0;
@@ -3168,16 +3194,16 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
     }
   }
 
-  /*PunchMedia*/
+  /* PunchMedia */
   if ((attr = ippFindAttribute(response, "PunchMedia", 
 			       IPP_TAG_ZERO)) != NULL &&
       ippGetCount(attr) > 0) {
-    str = ippGetString(attr,0, NULL);
+    str = ippGetString(attr, 0, NULL);
     debug_printf("The PunchMedia %s is requested for the job\n", str);
     if (str != NULL) {
-      punchmedia_supported = get_supported_options(p->prattrs,"PunchMedia");
+      punchmedia_supported = get_supported_options(p->prattrs, "PunchMedia");
       if (!cupsArrayFind(punchmedia_supported, (void *)str) &&
-	  strcasecmp(str,"none")) {
+	  strcasecmp(str, "none")) {
 	debug_printf("Printer %s doesn't support the PunchMedia %s\n",
 		     printer, str);
 	ret = 0;
@@ -3186,7 +3212,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
     }
   }
 
-  /*ColorModel*/
+  /* ColorModel */
   if ((attr = ippFindAttribute(response, "ColorModel", 
 			       IPP_TAG_ZERO)) != NULL &&
       ippGetCount(attr) > 0) {
@@ -3204,7 +3230,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
     }
   }
 
-  /* Sides supported*/
+  /* Sides supported */
   if ((attr = ippFindAttribute(response, "Duplex", 
 			       IPP_TAG_ZERO)) != NULL) {
     side_found = 0;
@@ -3262,7 +3288,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
     }
   }
 
-  /*Page Size*/
+  /* Page Size */
   if ((attr = ippFindAttribute(response, "PageSize", 
 			       IPP_TAG_ZERO)) != NULL &&
       ippGetCount(attr) > 0) {
@@ -3277,7 +3303,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
     }
   }
 
-  /*Print Quality*/
+  /* Print Quality */
   *print_quality = 4;
   if ((attr = ippFindAttribute(response, "cupsPrintQuality", 
 			       IPP_TAG_ZERO)) != NULL &&
@@ -4808,11 +4834,6 @@ log_cluster(remote_printer_t *p) {
   int i;
   if (p == NULL || (!debug_stderr && !debug_logfile))
     return;
-  /* if (p->netprinter) {
-     debug_printf("Printer %s is not a remote CUPS printer, load-balanced clustering not supported.\n",
-     p->queue_name);
-     return;
-     }*/
   if (p->slave_of)
     q = p->slave_of;
   else
@@ -5094,7 +5115,7 @@ get_cups_default_printer() {
 	}
       }
       if (default_printer_name)
-  break;
+	break;
     }
   }
   
@@ -5783,7 +5804,8 @@ on_printer_state_changed (CupsNotifier *object,
 #ifdef HAVE_CUPS_1_6
 static ipp_t *
 get_printer_attributes(const char* uri, int fallback_request,
-  const char* const pattrs[],int job_state_attributes, int attr_size)
+		       const char* const pattrs[], int job_state_attributes,
+		       int attr_size)
 {
   int uri_status, host_port, i, language_attr = 0, total_attrs = 0;
   http_t *http_printer = NULL;
@@ -5792,7 +5814,7 @@ get_printer_attributes(const char* uri, int fallback_request,
   ipp_attribute_t *attr;
   char valuebuffer[65536];
   const char *kw;
-  ipp_status_t  ipp_status;   
+  ipp_status_t ipp_status;
 
   /* Request printer properties via IPP to generate a PPD file for the
      printer (mainly driverless-capable printers)
@@ -5800,29 +5822,30 @@ get_printer_attributes(const char* uri, int fallback_request,
      option defaults. */
 
   uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
-             scheme, sizeof(scheme),
-             userpass, sizeof(userpass),
-             host_name, sizeof(host_name),
-             &(host_port),
-             resource, sizeof(resource));
+			       scheme, sizeof(scheme),
+			       userpass, sizeof(userpass),
+			       host_name, sizeof(host_name),
+			       &(host_port),
+			       resource, sizeof(resource));
   if (uri_status != HTTP_URI_OK)
     return NULL;
   
   if ((http_printer =
        httpConnectEncryptShortTimeout (host_name, host_port,
-               HTTP_ENCRYPT_IF_REQUESTED)) == NULL) {
+				       HTTP_ENCRYPT_IF_REQUESTED)) == NULL) {
     debug_printf("Cannot connect to remote printer with URI %s, ignoring this printer.\n",
-     uri);
+		 uri);
     return NULL;
   }
   
   request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
   if(fallback_request == 1)
     ippSetVersion(request,1,1);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL, uri);
+  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
+	       uri);
   ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-    "requested-attributes", attr_size,
-    NULL, pattrs);
+		"requested-attributes", attr_size,
+		NULL, pattrs);
 
   response = cupsDoRequest(http_printer, request, resource);
   ipp_status = cupsLastError();
@@ -5833,61 +5856,62 @@ get_printer_attributes(const char* uri, int fallback_request,
     if (debug_stderr || debug_logfile) {
       if(!job_state_attributes)
         debug_printf("Full list of IPP attributes (get-printer-attributes) for printer with URI %s:\n",
-       uri);
+		     uri);
       attr = ippFirstAttribute(response);
       while (attr) {
-        total_attrs++;
+        total_attrs ++;
         ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
         strstrip(valuebuffer);
-        if(!job_state_attributes){
+        if (!job_state_attributes) {
           debug_printf("  Attr: %s\n",ippGetName(attr));
           debug_printf("  Value: %s\n", valuebuffer);
           if(!strcmp(ippGetName(attr),"attributes-charset") ||
-          !strcmp(ippGetName(attr),"attributes-natural-language")){
-            language_attr++;
+	     !strcmp(ippGetName(attr),"attributes-natural-language")){
+            language_attr ++;
           }
-          for (i = 0; i < ippGetCount(attr); i ++){
-            if ((kw = ippGetString(attr, i, NULL)) != NULL){
+          for (i = 0; i < ippGetCount(attr); i ++) {
+            if ((kw = ippGetString(attr, i, NULL)) != NULL) {
               debug_printf("  Keyword: %s\n", kw);
             }
           }
         }
-       attr = ippNextAttribute(response);
+	attr = ippNextAttribute(response);
       }
     }
-    if(ipp_status == IPP_STATUS_ERROR_BAD_REQUEST ||
-     ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED || 
-     (language_attr==2 && total_attrs==2)){   
-     if(fallback_request == 1){
-      const char * const pattr[] = {
-        "all",
-      };
-      httpClose(http_printer);
-      ippDelete(response);
-      debug_printf("The server doesn't support IPP2.0 request, trying request without media-col\n");
-      return get_printer_attributes(uri,2,pattr,job_state_attributes, 1);
-    }else if(fallback_request == 0){
-      httpClose(http_printer);
-      ippDelete(response);
-      debug_printf("The server doesn't support IPP2.0 request, trying IPP1.1 request\n");
-      return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);   
+    if (ipp_status == IPP_STATUS_ERROR_BAD_REQUEST ||
+	ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED ||
+	(language_attr == 2 && total_attrs == 2)) {
+      if (fallback_request == 1) {
+	const char * const pattr[] = {
+	  "all",
+	};
+	httpClose(http_printer);
+	ippDelete(response);
+	debug_printf("The server doesn't support the standard IPP request, trying request without media-col\n");
+	return get_printer_attributes(uri, 2, pattr, job_state_attributes, 1);
+      } else if (fallback_request == 0) {
+	httpClose(http_printer);
+	ippDelete(response);
+	debug_printf("The server doesn't support IPP2.0 request, trying IPP1.1 request\n");
+	return get_printer_attributes(uri, 1, pattrs, job_state_attributes,
+				      attr_size);
+      }
     }
-  }
-
-  } else{
+  } else {
     debug_printf("Request for IPP attributes (get-printer-attributes) for printer with URI %s failed: %s\n",
-     uri, cupsLastErrorString());
+		 uri, cupsLastErrorString());
     if (fallback_request == 0) {
-      debug_printf("Trying Request 1.1\n");
+      debug_printf("Trying Request with IPP 1.1\n");
       httpClose(http_printer);
-      return get_printer_attributes(uri,1,pattrs,job_state_attributes, attr_size);
-    }else if(fallback_request == 1){
+      return get_printer_attributes(uri, 1, pattrs, job_state_attributes,
+				    attr_size);
+    } else if (fallback_request == 1) {
       debug_printf("Trying Request without media-col\n");
       httpClose(http_printer);
       const char * const pattr[] = {
-        "all",
+	"all",
       };
-      return get_printer_attributes(uri,2,pattr,job_state_attributes, 1);
+      return get_printer_attributes(uri, 2, pattr, job_state_attributes, 1);
     }
   }
   httpClose(http_printer);
@@ -5934,11 +5958,11 @@ on_job_state (CupsNotifier *object,
   int num_of_printers;
   char* document_format;
   int  print_quality;
-  const char *pdl=NULL;
+  const char *pdl = NULL;
   cups_array_t *pdl_list;
   char         resolution[32];
-  res_t        *max_res=NULL,*min_res=NULL,*res;
-  int          xres,yres;
+  res_t        *max_res = NULL, *min_res = NULL, *res;
+  int          xres, yres;
   int          got_printer_info;
   static const char *pattrs[] =
     {
@@ -6066,13 +6090,14 @@ on_job_state (CupsNotifier *object,
 	  remote_cups_queue = strrchr(p->uri, '/') + 1;
 	  num_of_printers = 0;
 	  for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
-	      r; r = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-      if(!strcmp(r->queue_name, q->queue_name)){
-        if(r->status == STATUS_DISAPPEARED || r->status == STATUS_UNCONFIRMED ||
-          r->status ==  STATUS_TO_BE_RELEASED )
-          continue;
-       num_of_printers++;
-      }
+	       r; r = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+	    if (!strcmp(r->queue_name, q->queue_name)) {
+	      if(r->status == STATUS_DISAPPEARED ||
+		 r->status == STATUS_UNCONFIRMED ||
+		 r->status == STATUS_TO_BE_RELEASED )
+		continue;
+	      num_of_printers ++;
+	    }
 	  }
 
 	  /* If we are in a cluster, see whether the printer supports the 
@@ -6091,122 +6116,125 @@ on_job_state (CupsNotifier *object,
 	  debug_printf("Checking state of remote printer %s on host %s, IP %s, port %d.\n",
 		       remote_cups_queue, p->host, p->ip, p->port);
 
-    /* Check whether the printer is idle, processing, or disabled */
-    debug_printf("HTTP connection to %s:%d established.\n", p->host,
-         p->port);
-    response = get_printer_attributes(p->uri,0,pattrs,1, sizeof(pattrs)/sizeof(pattrs[0]));
-    if (response != NULL) {
-      debug_printf("IPP request to %s:%d successful.\n", p->host,
-		   p->port);
-      pname = NULL;
-      pstate = IPP_PRINTER_IDLE;
-      paccept = 0;
-      for (attr = ippFirstAttribute(response); attr != NULL;
-	   attr = ippNextAttribute(response)) {
-	while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
-	  attr = ippNextAttribute(response);
-	if (attr == NULL)
-	  break;
-	pname = NULL;
-	pstate = IPP_PRINTER_IDLE;
-	paccept = 0;
-	got_printer_info = 0;
-	while (attr != NULL && ippGetGroupTag(attr) ==
-	       IPP_TAG_PRINTER) {
-	  if (!strcmp(ippGetName(attr), "printer-name") &&
-	      ippGetValueTag(attr) == IPP_TAG_NAME){
-	    pname = ippGetString(attr, 0, NULL);
-	  } else if (!strcmp(ippGetName(attr), "printer-state") &&
-		   ippGetValueTag(attr) == IPP_TAG_ENUM)
-	    pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
-	  else if (!strcmp(ippGetName(attr),
-			   "printer-is-accepting-jobs") &&
-		   ippGetValueTag(attr) == IPP_TAG_BOOLEAN) {
-	    paccept = ippGetBoolean(attr, 0);
-	    got_printer_info = 1;
-	  }
-	  attr = ippNextAttribute(response);
-	}
-	if (got_printer_info == 0) {
-	  if (attr == NULL)
-	    break;
-	  else
-	    continue;
-	}
-	debug_printf("IPP Response contains attributes values printer-name %s, accepting-job %d",
-		     (pname ? pname : "(Not reported)"), paccept);
-	if (paccept) {
-	  debug_printf("Printer %s on host %s, port %d is accepting jobs.\n",
-		       remote_cups_queue, p->host, p->port);
-	  switch (pstate) {
-	  case IPP_PRINTER_IDLE:
-	    valid_dest_found = 1;
-	    dest_host = p->ip ? p->ip : p->host;
-	    dest_port = p->port;
-	    strncpy(destination_uri, p->uri, sizeof(destination_uri) - 1);
-	    printer_attributes = p->prattrs;
-	    pdl = p->pdl;
-	    s = p;
-	    strncpy(dest_name, remote_cups_queue, sizeof(dest_name) - 1);
-	    if (strlen(remote_cups_queue) > 1023)
-	      dest_name[1023] = '\0';
-	    dest_index = i;
-	    debug_printf("Printer %s on host %s, port %d is idle, take this as destination and stop searching.\n",
-			 remote_cups_queue, p->host, p->port);
-	    break;
-	  case IPP_PRINTER_PROCESSING:
-	    valid_dest_found = 1;
-	    if (LoadBalancingType == QUEUE_ON_SERVERS) {
-	      num_jobs = 0;
-	      http = httpConnectEncryptShortTimeout (p->ip ? p->ip : p->host,
-						     p->port,
+	  /* Check whether the printer is idle, processing, or disabled */
+	  debug_printf("HTTP connection to %s:%d established.\n", p->host,
+		       p->port);
+	  response = get_printer_attributes(p->uri, 0, pattrs, 1,
+					    sizeof(pattrs) / sizeof(pattrs[0]));
+	  if (response != NULL) {
+	    debug_printf("IPP request to %s:%d successful.\n", p->host,
+			 p->port);
+	    pname = NULL;
+	    pstate = IPP_PRINTER_IDLE;
+	    paccept = 0;
+	    for (attr = ippFirstAttribute(response); attr != NULL;
+		 attr = ippNextAttribute(response)) {
+	      while (attr != NULL && ippGetGroupTag(attr) != IPP_TAG_PRINTER)
+		attr = ippNextAttribute(response);
+	      if (attr == NULL)
+		break;
+	      pname = NULL;
+	      pstate = IPP_PRINTER_IDLE;
+	      paccept = 0;
+	      got_printer_info = 0;
+	      while (attr != NULL && ippGetGroupTag(attr) ==
+		     IPP_TAG_PRINTER) {
+		if (!strcmp(ippGetName(attr), "printer-name") &&
+		    ippGetValueTag(attr) == IPP_TAG_NAME) {
+		  pname = ippGetString(attr, 0, NULL);
+		} else if (!strcmp(ippGetName(attr), "printer-state") &&
+			   ippGetValueTag(attr) == IPP_TAG_ENUM)
+		  pstate = (ipp_pstate_t)ippGetInteger(attr, 0);
+		else if (!strcmp(ippGetName(attr),
+				 "printer-is-accepting-jobs") &&
+			 ippGetValueTag(attr) == IPP_TAG_BOOLEAN) {
+		  paccept = ippGetBoolean(attr, 0);
+		  got_printer_info = 1;
+		}
+		attr = ippNextAttribute(response);
+	      }
+	      if (got_printer_info == 0) {
+		if (attr == NULL)
+		  break;
+		else
+		  continue;
+	      }
+	      debug_printf("IPP Response contains attributes values printer-name %s, accepting-job %d",
+			   (pname ? pname : "(Not reported)"), paccept);
+	      if (paccept) {
+		debug_printf("Printer %s on host %s, port %d is accepting jobs.\n",
+			     remote_cups_queue, p->host, p->port);
+		switch (pstate) {
+		case IPP_PRINTER_IDLE:
+		  valid_dest_found = 1;
+		  dest_host = p->ip ? p->ip : p->host;
+		  dest_port = p->port;
+		  strncpy(destination_uri, p->uri, sizeof(destination_uri) - 1);
+		  printer_attributes = p->prattrs;
+		  pdl = p->pdl;
+		  s = p;
+		  strncpy(dest_name, remote_cups_queue, sizeof(dest_name) - 1);
+		  if (strlen(remote_cups_queue) > 1023)
+		    dest_name[1023] = '\0';
+		  dest_index = i;
+		  debug_printf("Printer %s on host %s, port %d is idle, take this as destination and stop searching.\n",
+			       remote_cups_queue, p->host, p->port);
+		  break;
+		case IPP_PRINTER_PROCESSING:
+		  valid_dest_found = 1;
+		  if (LoadBalancingType == QUEUE_ON_SERVERS) {
+		    num_jobs = 0;
+		    http =
+		      httpConnectEncryptShortTimeout (p->ip ? p->ip : p->host,
+						      p->port,
 						     HTTP_ENCRYPT_IF_REQUESTED);
-	        if (http) {
-	          num_jobs = get_number_of_jobs(http, p->uri, 0,
-					        CUPS_WHICHJOBS_ACTIVE);
-	          if (num_jobs >= 0 && num_jobs < min_jobs) {
-		    min_jobs = num_jobs;
-		    dest_host = p->ip ? p->ip : p->host;
-		    dest_port = p->port;
-		    strncpy(destination_uri, p->uri, sizeof(destination_uri) - 1);
-		    printer_attributes = p->prattrs;
-		    pdl = p->pdl;
-		    s = p;
-		    strncpy(dest_name, remote_cups_queue,
-			    sizeof(dest_name) - 1);
-		    if (strlen(remote_cups_queue) > 1023)
-		      dest_name[1023] = '\0';
-		    dest_index = i;
-	          }
-	          debug_printf("Printer %s on host %s, port %d is printing and it has %d jobs.\n",
-			       remote_cups_queue, p->host, p->port,
-			       num_jobs);
-	          httpClose(http);
-	          http = NULL;
-	        }
-	    } else
-	      debug_printf("Printer %s on host %s, port %d is printing.\n", remote_cups_queue, p->host, p->port);
-	    break;
-	  case IPP_PRINTER_STOPPED:
-	    debug_printf("Printer %s on host %s, port %d is disabled, skip it.\n",
-			 remote_cups_queue, p->host, p->port);
-	    break;
-	  }
-	} else {
-	  debug_printf("Printer %s on host %s, port %d is not accepting jobs, skip it.\n",
-		       remote_cups_queue, p->host, p->port);
-	}
-	break;
-      }
-      if (pstate == IPP_PRINTER_IDLE && paccept) {
-	q->last_printer = i;
-	break;
-      }
+		    if (http) {
+		      num_jobs = get_number_of_jobs(http, p->uri, 0,
+						    CUPS_WHICHJOBS_ACTIVE);
+		      if (num_jobs >= 0 && num_jobs < min_jobs) {
+			min_jobs = num_jobs;
+			dest_host = p->ip ? p->ip : p->host;
+			dest_port = p->port;
+			strncpy(destination_uri, p->uri,
+				sizeof(destination_uri) - 1);
+			printer_attributes = p->prattrs;
+			pdl = p->pdl;
+			s = p;
+			strncpy(dest_name, remote_cups_queue,
+				sizeof(dest_name) - 1);
+			if (strlen(remote_cups_queue) > 1023)
+			  dest_name[1023] = '\0';
+			dest_index = i;
+		      }
+		      debug_printf("Printer %s on host %s, port %d is printing and it has %d jobs.\n",
+				   remote_cups_queue, p->host, p->port,
+				   num_jobs);
+		      httpClose(http);
+		      http = NULL;
+		    }
+		  } else
+		    debug_printf("Printer %s on host %s, port %d is printing.\n", remote_cups_queue, p->host, p->port);
+		  break;
+		case IPP_PRINTER_STOPPED:
+		  debug_printf("Printer %s on host %s, port %d is disabled, skip it.\n",
+			       remote_cups_queue, p->host, p->port);
+		  break;
+		}
+	      } else {
+		debug_printf("Printer %s on host %s, port %d is not accepting jobs, skip it.\n",
+			     remote_cups_queue, p->host, p->port);
+	      }
+	      break;
+	    }
+	    if (pstate == IPP_PRINTER_IDLE && paccept) {
+	      q->last_printer = i;
+	      break;
+	    }
 
-      ippDelete(response);
-    } else
-      debug_printf("IPP request to %s:%d failed.\n", p->host,
-		   p->port);
+	    ippDelete(response);
+	  } else
+	    debug_printf("IPP request to %s:%d failed.\n", p->host,
+			 p->port);
 	}
 	if (i == q->last_printer)
 	  break;
@@ -6250,7 +6278,7 @@ on_job_state (CupsNotifier *object,
             while (!isspace(*format) && *format != ',' && *format != '\0')
               format ++;
             while ((isspace(*format) || *format == ',') && *format != '\0')
-              format++;
+              format ++;
 	  }
         }
       }
@@ -6333,7 +6361,7 @@ on_job_state (CupsNotifier *object,
 	  if ((res = ippResolutionToRes(attr, 0)) != NULL) {
 	    xres = res->x;
 	    yres = res->y;
-	    if(xres == yres)
+	    if (xres == yres)
 	      snprintf(resolution, sizeof(resolution), "%ddpi", xres);
 	    else
 	      snprintf(resolution, sizeof(resolution), "%dx%ddpi", xres, yres);
@@ -6534,7 +6562,8 @@ queue_overwritten (remote_printer_t *p)
 	  device = uri;
 	if (device != NULL &&
 	    (p->uri == NULL ||
-	     (strlen(device) < 16 || strncmp(device, "implicitclass://", 16)))) {
+	     (strlen(device) < 16 ||
+	      strncmp(device, "implicitclass://", 16)))) {
 	  /* The printer's device URI is different to what we have
 	     assigned, so we got notified because the queue was
 	     externally modified and so we will release this printer
@@ -7508,7 +7537,7 @@ gboolean update_cups_queues(gpointer unused) {
 
     switch (p->status) {
 
-    /* Print queue generated by us in a previous session */
+      /* Print queue generated by us in a previous session */
     case STATUS_UNCONFIRMED:
 
       /* Only act if the timeout has passed */
@@ -7680,7 +7709,7 @@ gboolean update_cups_queues(gpointer unused) {
 	debug_printf ("No printers there any more to make available or no jobs, shutting down in %d sec...\n", autoshutdown_timeout);
 	autoshutdown_exec_id =
 	  g_timeout_add_seconds (autoshutdown_timeout, autoshutdown_execute,
-         NULL);
+				 NULL);
       }
 
       break;
@@ -7694,9 +7723,9 @@ gboolean update_cups_queues(gpointer unused) {
       /* Do not create a queue for slaves */
       if (p->slave_of) {
 	p->status = STATUS_CONFIRMED;
-  master = p->slave_of;
-  master->status = STATUS_TO_BE_CREATED;
-  master->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	master = p->slave_of;
+	master->status = STATUS_TO_BE_CREATED;
+	master->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
 	if (p->is_legacy) {
 	  p->timeout = time(NULL) + BrowseTimeout;
 	  debug_printf("starting BrowseTimeout timer for %s (%ds)\n",
@@ -7768,8 +7797,7 @@ gboolean update_cups_queues(gpointer unused) {
 	      debug_printf("Temporary queue created, grabbing the PPD.\n");
 	      cupsFreeDestInfo(dinfo);
 	      loadedppd = NULL;
-	      if ((loadedppd = cupsGetPPD2(http, p->queue_name))
-		  == NULL)
+	      if ((loadedppd = cupsGetPPD2(http, p->queue_name)) == NULL)
 		debug_printf("Unable to load PPD from local temporary queue %s!\n",
 			     p->queue_name);
 	      else {
@@ -7840,8 +7868,7 @@ gboolean update_cups_queues(gpointer unused) {
 	     */
 	    if (p->netprinter != 0 || !HAVE_CUPS_2_2)
 	      ippDelete(cupsDoRequest(http, request, "/admin/"));
-	    else
-	    {
+	    else {
 	      ippDelete(request);
 	      cupsFreeOptions(num_options, options);
 	      break;
@@ -7916,13 +7943,14 @@ gboolean update_cups_queues(gpointer unused) {
 	if (IPPPrinterQueueType == PPD_YES) {
 	  num_cluster_printers = 0;
 	  for (s = (remote_printer_t *)cupsArrayFirst(remote_printers);
-	       s; s = (remote_printer_t *)cupsArrayNext(remote_printers)){
-	    if(!strcmp(s->queue_name,p->queue_name)) {
-        if(s->status == STATUS_DISAPPEARED || s->status == STATUS_UNCONFIRMED ||
-          s->status ==  STATUS_TO_BE_RELEASED )
-          continue;
-        num_cluster_printers++;
-      }
+	       s; s = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+	    if (!strcmp(s->queue_name, p->queue_name)) {
+	      if (s->status == STATUS_DISAPPEARED ||
+		  s->status == STATUS_UNCONFIRMED ||
+		  s->status == STATUS_TO_BE_RELEASED )
+		continue;
+	      num_cluster_printers ++;
+	    }
 	  }
 
 	  if (num_cluster_printers == 1) {
@@ -8224,7 +8252,9 @@ gboolean update_cups_queues(gpointer unused) {
 	     is suppressed. */
 	  /* Generating the ppd file for the remote cups queue */
 	  if (p->prattrs == NULL)
-	    p->prattrs = get_printer_attributes(p->uri, 0, pattrs, 0, sizeof(pattrs)/sizeof(pattrs[0]));
+	    p->prattrs =
+	      get_printer_attributes(p->uri, 0, pattrs, 0,
+				     sizeof(pattrs)/sizeof(pattrs[0]));
 	  if (p->prattrs == NULL) {
 	    debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
 			 p->queue_name, p->uri);
@@ -8234,12 +8264,13 @@ gboolean update_cups_queues(gpointer unused) {
 	  num_cluster_printers = 0;
 	  for (s = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	       s; s = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-      if(!strcmp(s->queue_name,p->queue_name)) {
-        if(s->status == STATUS_DISAPPEARED || s->status == STATUS_UNCONFIRMED ||
-          s->status ==  STATUS_TO_BE_RELEASED )
-          continue;
-        num_cluster_printers++;
-      }
+	    if (!strcmp(s->queue_name, p->queue_name)) {
+	      if (s->status == STATUS_DISAPPEARED ||
+		  s->status == STATUS_UNCONFIRMED ||
+		  s->status == STATUS_TO_BE_RELEASED )
+		continue;
+	      num_cluster_printers++;
+	    }
 	  }
 	  if (num_cluster_printers == 1) {
 	    printer_attributes = p->prattrs;
@@ -8260,12 +8291,12 @@ gboolean update_cups_queues(gpointer unused) {
 		      sizeof(make_model) - 1);
 	    color = 0;
 	    duplex = 0;
-	    for(r = (remote_printer_t *)cupsArrayFirst(remote_printers);
-		r; r = (remote_printer_t *)cupsArrayNext(remote_printers)){
-	      if(!strcmp(p->queue_name,r->queue_name)){
-		if(r->color==1)
+	    for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
+		 r; r = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+	      if (!strcmp(p->queue_name, r->queue_name)) {
+		if (r->color == 1)
 		  color = 1;
-		if(r->duplex==1)
+		if (r->duplex == 1)
 		  duplex = 1;
 	      }
 	    }
@@ -8294,7 +8325,8 @@ gboolean update_cups_queues(gpointer unused) {
 				   pdl, color, duplex, conflicts, sizes,
 				   default_pagesize, default_color)) {
 	      if (errno != 0)
-		debug_printf("Unable to create PPD file: %s\n", strerror(errno));
+		debug_printf("Unable to create PPD file: %s\n",
+			     strerror(errno));
 	      else
 		debug_printf("Unable to create PPD file: %s\n", ppdgenerator_msg);
 	      p->status = STATUS_DISAPPEARED;
@@ -8419,7 +8451,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  }
 	}
 	cupsFilePrintf(out,"*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
-  
+
 	cupsFileClose(in);
 	cupsFileClose(out);
 	ppdClose(ppd);
@@ -8707,7 +8739,8 @@ matched_filters (const char *queue_name,
   char *key = NULL, *value = NULL;
 #endif /* HAVE_AVAHI */
 
-  debug_printf("Matching printer \"%s\" with properties Host = \"%s\", Port = %d, Service Name = \"%s\", Domain = \"%s\" with the BrowseFilter lines in cups-browsed.conf\n", queue_name, host, port, service_name, domain);
+  debug_printf("Matching printer \"%s\" with properties Host = \"%s\", Port = %d, Service Name = \"%s\", Domain = \"%s\" with the BrowseFilter lines in cups-browsed.conf\n",
+	       queue_name, host, port, service_name, domain);
   /* Go through all BrowseFilter lines and stop if one line does not match,
      rejecting this printer */
   for (filter = cupsArrayFirst (browsefilter);
@@ -9285,8 +9318,8 @@ examine_discovered_printer_record(const char *host,
     /* Check if there is a downgrade */
     /* IPPS -> IPP */
     } else if ((ptr = strcasestr(type, "_ipp")) != NULL &&
-	*(ptr + 4) != 's' &&
-	!strncasecmp(p->uri, "ipps:", 5)) {
+	       *(ptr + 4) != 's' &&
+	       !strncasecmp(p->uri, "ipps:", 5)) {
       downgrade = 1;
       debug_printf("Printer %s: New discovered service from host %s, port %d, URI %s is only IPP, we have already IPPS, skipping\n",
 		   p->queue_name, remote_host, port, uri);
@@ -9336,9 +9369,9 @@ examine_discovered_printer_record(const char *host,
       if (domain != NULL && domain[0] != '\0' &&
 	  type != NULL && type[0] != '\0' &&
 	  p->is_legacy) {
-	  p->is_legacy = 0;
-	  if (p->status == STATUS_CONFIRMED)
-	    p->timeout = (time_t) -1;
+	p->is_legacy = 0;
+	if (p->status == STATUS_CONFIRMED)
+	  p->timeout = (time_t) -1;
       }
       free(p->location);
       free(p->info);

@@ -1165,9 +1165,9 @@ cups_array_t* generate_sizes(ipp_t *response,
                            *x_dim, *y_dim;       /* Media dimensions */
   ipp_t                    *media_col,           /* Media collection */
                            *media_size;          /* Media size collection */
-  int                      i,count = 0;
+  int                      i, count = 0;
   pwg_media_t              *pwg;                 /* PWG media size */
-  int                      left_def,right_def,bottom_def,top_def;
+  int                      left_def, right_def, bottom_def, top_def;
   ipp_attribute_t          *margin;  /* media-xxx-margin attribute */
   const char               *psname;
 
@@ -1745,8 +1745,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 				IPP_TAG_KEYWORD);
   if (attr==NULL || !ippGetCount(attr)) {
     if ((attr = ippFindAttribute(response, "color-supported", IPP_TAG_BOOLEAN))
-       != NULL) {
-      if(ippGetBoolean(attr, 0))
+	!= NULL) {
+      if (ippGetBoolean(attr, 0))
 	cupsFilePuts(fp, "*ColorDevice: True\n");
       else
 	cupsFilePuts(fp, "*ColorDevice: False\n");
@@ -1766,7 +1766,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 	break;
       }
     }
-    if(colordevice==0)
+    if (colordevice == 0)
       cupsFilePuts(fp, "*ColorDevice: False\n");
   }
 
@@ -2174,8 +2174,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		ppdsizename[128];
     char        *ippsizename;
     cupsFilePrintf(fp, "*OpenUI *PageSize/%s: PickOne\n"
-		       "*OrderDependency: 10 AnySetup *PageSize\n"
-		       "*DefaultPageSize: %s\n", "Media Size", ppdname);
+		   "*OrderDependency: 10 AnySetup *PageSize\n"
+		   "*DefaultPageSize: %s\n", "Media Size", ppdname);
     for (size = (cups_size_t *)cupsArrayFirst(sizes); size;
 	 size = (cups_size_t *)cupsArrayNext(sizes)) {
       _cupsStrFormatd(twidth, twidth + sizeof(twidth),
@@ -2212,8 +2212,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     cupsFilePuts(fp, "*CloseUI: *PageSize\n");
 
     cupsFilePrintf(fp, "*OpenUI *PageRegion/%s: PickOne\n"
-                       "*OrderDependency: 10 AnySetup *PageRegion\n"
-                       "*DefaultPageRegion: %s\n", "Media Size", ppdname);
+		   "*OrderDependency: 10 AnySetup *PageRegion\n"
+		   "*DefaultPageRegion: %s\n", "Media Size", ppdname);
     for (size = (cups_size_t *)cupsArrayFirst(sizes); size;
 	 size = (cups_size_t *)cupsArrayNext(sizes)) {
       _cupsStrFormatd(twidth, twidth + sizeof(twidth),
@@ -2921,9 +2921,9 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       cupsFilePuts(fp, "*CloseUI: *ColorModel\n");
   } else {
     cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-		       "*OrderDependency: 10 AnySetup *ColorModel\n",
-		       (human_readable ? human_readable :
-			_cupsLangString(lang, _("Color Mode"))));
+		   "*OrderDependency: 10 AnySetup *ColorModel\n",
+		   (human_readable ? human_readable :
+		    _cupsLangString(lang, _("Color Mode"))));
     cupsFilePrintf(fp, "*DefaultColorModel: Gray\n");
     cupsFilePuts(fp, "*ColorModel FastGray/Fast Grayscale: \"<</cupsColorSpace 3/cupsBitsPerColor 1/cupsColorOrder 0/cupsCompression 0/ProcessColorModel /DeviceGray>>setpagedevice\"\n");
     cupsFilePuts(fp, "*ColorModel Gray/Grayscale: \"<</cupsColorSpace 18/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0/ProcessColorModel /DeviceGray>>setpagedevice\"\n");
@@ -3968,8 +3968,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 	    if (!strcmp(keyword, "booklet-maker")) {
 	      option  = "Booklet";
 	      keyword = "True";
-	    }
-	    else if (!strncmp(keyword, "fold-", 5))
+	    } else if (!strncmp(keyword, "fold-", 5))
 	      option = "FoldType";
 	    else if (!strncmp(keyword, "punch-", 6))
 	      option = "PunchMedia";
@@ -4076,11 +4075,11 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
  /*
   * constraints
   */
-  if(conflicts != NULL) {
+  if (conflicts != NULL) {
     char* constraint;
     for (constraint = (char *)cupsArrayFirst(conflicts); constraint;
          constraint = (char *)cupsArrayNext(conflicts)) {
-      cupsFilePrintf(fp,"%s",constraint);
+      cupsFilePrintf(fp, "%s", constraint);
     }
   }
 
@@ -4091,7 +4090,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
   free(common_def);
   free(min_res);
   free(max_res);
-  
+
   snprintf(ppdgenerator_msg, sizeof(ppdgenerator_msg),
 	   "%s PPD generated.",
 	   (is_pdf ? "PDF" :

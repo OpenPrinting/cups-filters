@@ -241,7 +241,7 @@ main(int  argc,				/* I - Number of command-line args */
       cups_option_t *options = NULL;
       int fd;
       char buffer[8192];
-      
+
       fprintf(stderr, "DEBUG: Received destination host name from cups-browsed: printer-uri %s\n",
 	      ptr1);
 
@@ -249,8 +249,7 @@ main(int  argc,				/* I - Number of command-line args */
 	 job */
       cupsSetUser(argv[2]);
       title = argv[3];
-      if (title == NULL)
-      {
+      if (title == NULL) {
 	if (argc == 7) {
 	  if ((title = strrchr(argv[6], '/')) != NULL)
 	    title ++;
@@ -299,16 +298,16 @@ main(int  argc,				/* I - Number of command-line args */
 	  bytes = write(fd, buffer, bytes);
 	close(fd);
 	filename = tempfile;
-      } else{
-	/** Use the filename on the command-line...*/
+      } else {
+	/* Use the filename on the command-line... */
 	filename    = argv[6];
 	tempfile[0] = '\0';
       }
 
       /* Copying the argument to a new char** which will be sent to the filter
-	 and the ipp backend*/
-    argv_nt[0] = calloc(strlen(printer_uri) + 8, sizeof(char));
-    strcpy(argv_nt[0], printer_uri);
+	 and the ipp backend */
+      argv_nt[0] = calloc(strlen(printer_uri) + 8, sizeof(char));
+      strcpy(argv_nt[0], printer_uri);
       for (i = 1; i < 5; i++)
 	argv_nt[i] = argv[i];
 
@@ -372,18 +371,18 @@ main(int  argc,				/* I - Number of command-line args */
 
       ippDelete(response);
       fprintf(stderr, "Passing the following arguments to the ipp backend\n");
-       /*Arguments sent to the ipp backend*/
-      for( i = 0; i < 7; i++){
-         fprintf(stderr, "argv[%d]: %s\n",i,argv_nt[i]);
-       }
+      /* Arguments sent to the ipp backend */
+      for (i = 0; i < 7; i ++) {
+	fprintf(stderr, "argv[%d]: %s\n", i, argv_nt[i]);
+      }
 
       /* The implicitclass backend will send the job directly to the
 	 ipp backend*/
 
       pid_t pid = fork();
-      if ( pid == 0 ) {
-	fprintf(stderr, "DEBUG: Started IPP Backend with pid: %d\n",getpid());
-	execv("/usr/lib/cups/backend/ipp",argv_nt);
+      if (pid == 0) {
+	fprintf(stderr, "DEBUG: Started IPP Backend with pid: %d\n", getpid());
+	execv("/usr/lib/cups/backend/ipp", argv_nt);
       } else {
 	int status;
 	waitpid(pid, &status, 0);
