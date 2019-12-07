@@ -8872,8 +8872,8 @@ update_netifs (gpointer data)
 {
   struct ifaddrs *ifaddr, *ifa;
   netif_t *iface, *iface2;
-  int i, add_to_netifs, addr_size, dupe;
-  char *host, buf[HTTP_MAX_HOST], *p;
+  int i, add_to_netifs, addr_size, dupe, if_found, addr_found;
+  char *host, buf[HTTP_MAX_HOST], *p, list[65536], *l;
 
   debug_printf("update_netifs() in THREAD %ld\n", pthread_self());
 
@@ -8894,7 +8894,14 @@ update_netifs (gpointer data)
     free (host);
   }
 
+  memset(list, 0, sizeof(list));
+  snprintf(list, sizeof(list) - 1, "Network interfaces: ");
+  l = list + strlen(list);
+
   for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
+    if_found = 0;
+    addr_found = 0;
+
     netif_t *iface;
 
     add_to_netifs = 1;
@@ -8917,7 +8924,14 @@ update_netifs (gpointer data)
       addr_size = sizeof (struct sockaddr_in6);
     else
       addr_size = 0;
-    if (addr_size)
+    if (addr_size) {
+      if (strlen(list) + strlen(ifa->ifa_name) + 1 <=
+	  sizeof(list)) {
+	snprintf(l, sizeof(list) - strlen(list) - 1,
+		 "%s", ifa->ifa_name);
+	l = list + strlen(list);
+	if_found = 1;
+      }
       for (i = 0; i <= 1; i ++)
         if (getnameinfo (ifa->ifa_addr, addr_size,
 			 buf, HTTP_MAX_HOST, NULL, 0,
@@ -8938,13 +8952,31 @@ update_netifs (gpointer data)
 	      }
 	    if (dupe == 0) {
 	      cupsArrayAdd (local_hostnames, strdup(buf));
-	      debug_printf("network interface %s: Local host name/address: %s\n",
-			   ifa->ifa_name, buf);
+	      if (addr_found == 1 && strlen(list) + 3 <=
+		  sizeof(list)) {
+		snprintf(l, sizeof(list) - strlen(list) - 1,
+			 ", ");
+		l = list + strlen(list);
+	      }
+	      if (addr_found == 0 && strlen(list) + 3 <=
+		  sizeof(list)) {
+		snprintf(l, sizeof(list) - strlen(list) - 1,
+			 " (");
+		l = list + strlen(list);
+		addr_found = 1;
+	      }
+	      if (strlen(list) + strlen(buf) + 1 <=
+		  sizeof(list)) {
+		snprintf(l, sizeof(list) - strlen(list) - 1,
+			 "%s", buf);
+		l = list + strlen(list);
+	      }
 	    }
 	  }
+    }
 
     if (add_to_netifs == 0)
-      continue;
+      goto done;
 
     iface = malloc (sizeof (netif_t));
     if (iface == NULL) {
@@ -9012,13 +9044,53 @@ update_netifs (gpointer data)
 
     if (iface->address[0]) {
       cupsArrayAdd (netifs, iface);
-      debug_printf("Network interface %s at %s for legacy CUPS browsing/broadcasting\n",
-		   ifa->ifa_name, iface->address);
+      if (if_found == 1) {
+	if (addr_found == 1 && strlen(list) + 3 <= sizeof(list)) {
+	  snprintf(l, sizeof(list) - strlen(list) - 1,
+		   ", ");
+	  l = list + strlen(list);
+	}
+	if (addr_found == 0 && strlen(list) + 3 <= sizeof(list)) {
+	  snprintf(l, sizeof(list) - strlen(list) - 1,
+		   " (");
+	  l = list + strlen(list);
+	  addr_found = 1;
+	}
+	if (strlen(list) + strlen(iface->address) + 2 <= sizeof(list)) {
+	  snprintf(l, sizeof(list) - strlen(list) - 1,
+		   "%s*", iface->address);
+	  l = list + strlen(list);
+	}
+      }
     } else {
       free (iface->address);
       free (iface);
     }
+
+  done:
+    if (if_found == 1) {
+      if (addr_found == 1 && strlen(list) + 2 <= sizeof(list)) {
+	snprintf(l, sizeof(list) - strlen(list) - 1,
+		 ")");
+	l = list + strlen(list);
+      }
+      if (strlen(list) + 3 <= sizeof(list)) {
+	snprintf(l, sizeof(list) - strlen(list) - 1,
+		 ", ");
+	l = list + strlen(list);
+      }
+    }
   }
+
+  if ((l = strrchr(list, ')')) != NULL) {
+    if (strlen(list) + 2 <= sizeof(list))
+    *(l + 1) = '\0';
+  } else {
+    if (strlen(list) + 5 <= sizeof(list))
+      snprintf(list + strlen(list), sizeof(list) - strlen(list) - 1,
+	       "None");
+  }
+  debug_printf("%s\n", list);
 
   freeifaddrs (ifaddr);
 
