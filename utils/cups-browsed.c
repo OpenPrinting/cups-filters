@@ -5807,7 +5807,7 @@ get_printer_attributes(const char* uri, int fallback_request,
 		       const char* const pattrs[], int job_state_attributes,
 		       int attr_size)
 {
-  int uri_status, host_port, i, language_attr = 0, total_attrs = 0;
+  int uri_status, host_port, i, total_attrs = 0;
   http_t *http_printer = NULL;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
   ipp_t *request, *response = NULL;
@@ -5815,6 +5815,28 @@ get_printer_attributes(const char* uri, int fallback_request,
   char valuebuffer[65536];
   const char *kw;
   ipp_status_t ipp_status;
+  /* Attributes required in the IPP response */
+  const char * const req_attrs[] = {
+    "attributes-charset",
+    "attributes-natural-language",
+    "charset-configured",
+    "charset-supported",
+    "compression-supported",
+    "document-format-default",
+    "document-format-supported",
+    "generated-natural-language-supported",
+    "ipp-versions-supported",
+    "natural-language-configured",
+    "operations-supported",
+    "printer-is-accepting-jobs",
+    "printer-name",
+    "printer-state",
+    "printer-state-reasons",
+    "printer-up-time",
+    "printer-uri-supported",
+    "uri-authentication-supported",
+    "uri-security-supported"
+  };
 
   /* Request printer properties via IPP to generate a PPD file for the
      printer (mainly driverless-capable printers)
@@ -5865,10 +5887,6 @@ get_printer_attributes(const char* uri, int fallback_request,
         if (!job_state_attributes) {
           debug_printf("  Attr: %s\n",ippGetName(attr));
           debug_printf("  Value: %s\n", valuebuffer);
-          if(!strcmp(ippGetName(attr),"attributes-charset") ||
-	     !strcmp(ippGetName(attr),"attributes-natural-language")){
-            language_attr ++;
-          }
           for (i = 0; i < ippGetCount(attr); i ++) {
             if ((kw = ippGetString(attr, i, NULL)) != NULL) {
               debug_printf("  Keyword: %s\n", kw);
@@ -5878,10 +5896,31 @@ get_printer_attributes(const char* uri, int fallback_request,
 	attr = ippNextAttribute(response);
       }
     }
+    /* Check whether the IPP response contains the required attributes
+       and is not incomplete */
+    for (i = sizeof(req_attrs) / sizeof(req_attrs[0]); i > 0; i --)
+      if (ippFindAttribute(response, req_attrs[i - 1], IPP_TAG_ZERO) == NULL)
+	break;
     if (ipp_status == IPP_STATUS_ERROR_BAD_REQUEST ||
 	ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED ||
-	(language_attr == 2 && total_attrs == 2)) {
-      if (fallback_request == 1) {
+	i > 0 || total_attrs < 30) {
+      debug_printf("get-printer-attributes IPP request failed:\n");
+      if (ipp_status == IPP_STATUS_ERROR_BAD_REQUEST)
+	debug_printf("  - ipp_status == IPP_STATUS_ERROR_BAD_REQUEST\n");
+      else if (ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED)
+	debug_printf("  - ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED\n");
+      if (i > 0)
+	debug_printf("  - Required IPP attribute %s not found\n",
+		     req_attrs[i - 1]);
+      if (total_attrs < 20)
+	debug_printf("  - Too few IPP attributes: %d (30 or more expected)\n",
+		     total_attrs);
+      if (fallback_request == 2) {
+	debug_printf("get-printer-attributes: No further fallback available, giving up.\n");
+	httpClose(http_printer);
+	ippDelete(response);
+	return NULL;
+      } else if (fallback_request == 1) {
 	const char * const pattr[] = {
 	  "all",
 	};
@@ -5898,6 +5937,9 @@ get_printer_attributes(const char* uri, int fallback_request,
       }
     }
   } else {
+    debug_printf("get-printer-attributes IPP request failed:\n");
+    if (ipp_status == IPP_STATUS_ERROR_BAD_REQUEST)
+      debug_printf("  - No response\n");
     debug_printf("Request for IPP attributes (get-printer-attributes) for printer with URI %s failed: %s\n",
 		 uri, cupsLastErrorString());
     if (fallback_request == 0) {
@@ -5912,6 +5954,8 @@ get_printer_attributes(const char* uri, int fallback_request,
 	"all",
       };
       return get_printer_attributes(uri, 2, pattr, job_state_attributes, 1);
+    } else if (fallback_request == 2) {
+      debug_printf("get-printer-attributes: No further fallback available, giving up.\n");
     }
   }
   httpClose(http_printer);

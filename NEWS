@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.25.13 - 2019-11-29
 
 CHANGES IN V1.25.14
 
+	- cups-browsed: Improved the fallback mechanism of the
+	  get_printer_attributes() function. Instead of considering
+	  the request failed by the content of the response only when
+	  not more than the two language atrributes come out, we check
+	  through a list of required attributes whether they are all
+	  there.  In addition, we actually fail when all callbacks
+	  have failed (Issue #22).
 	- cups-browsed: Introduced new configuration options
 	  "UpdateCUPSQueuesMaxPerCall" and
 	  "PauseBetweenCUPSQueueUpdates" to limit the amount of local
