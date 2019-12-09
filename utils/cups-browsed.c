@@ -5938,8 +5938,7 @@ get_printer_attributes(const char* uri, int fallback_request,
     }
   } else {
     debug_printf("get-printer-attributes IPP request failed:\n");
-    if (ipp_status == IPP_STATUS_ERROR_BAD_REQUEST)
-      debug_printf("  - No response\n");
+    debug_printf("  - No response\n");
     debug_printf("Request for IPP attributes (get-printer-attributes) for printer with URI %s failed: %s\n",
 		 uri, cupsLastErrorString());
     if (fallback_request == 0) {
