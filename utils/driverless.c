@@ -36,6 +36,7 @@
 #include <cups/cups.h>
 #include <cups/ppd.h>
 #include <cups/raster.h>
+#include <cups/backend.h>
 #include <cupsfilters/ppdgenerator.h>
 
 static int              debug = 0;
@@ -58,13 +59,18 @@ list_printers (int mode)
 		buffer[8192];		/* Copy buffer */
   cups_file_t	*fp;			/* Post-processing input file */
   char		*ptr;			/* Pointer into string */
-  char          *service_uri = NULL,
+  char          *scheme = NULL,
+                *service_name = NULL,
+                *domain = NULL,
+                *reg_type = NULL,
                 *txt_usb_mfg = NULL,
                 *txt_usb_mdl = NULL,
                 *txt_product = NULL,
                 *txt_ty = NULL,
                 *txt_pdl = NULL,
-		value[256],		/* Value string */
+                value[256],             /* Value string */
+                service_uri[2048],      /* URI to list for this service */
+                service_host_name[1024],/* "Host name" for assembling URI */
                 make_and_model[1024],	/* Manufacturer and model */
                 make[512],              /* Manufacturer */
 		model[256],		/* Model */
@@ -78,7 +84,7 @@ list_printers (int mode)
    * for our desired output.
    */
 
-  /* ippfind ! --txt printer-type --and \( --txt-pdl image/pwg-raster --or --txt-pdl image/urf \) -x echo -en '{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{service_name}\t{txt_pdl}\n' \; */
+  /* ippfind ! --txt printer-type --and \( --txt-pdl image/pwg-raster --or --txt-pdl image/urf \) -x echo -en '{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{service_name}\t{txt_pdl}\n' \; */
 
   i = 0;
   ippfind_argv[i++] = "ippfind";
@@ -110,9 +116,9 @@ list_printers (int mode)
   ippfind_argv[i++] = "echo";             /* Output the needed data fields */
   ippfind_argv[i++] = "-en";              /* separated by tab characters */
   if (mode > 0)
-    ippfind_argv[i++] = "{service_uri}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
+    ippfind_argv[i++] = "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
   else
-    ippfind_argv[i++] = "{service_uri}\n";
+    ippfind_argv[i++] = "{service_scheme}\t{service_name}\t{service_domain}\t\n";
   ippfind_argv[i++] = ";";
   ippfind_argv[i++] = NULL;
   /*for (i = 0; ippfind_argv[i]; i++) fprintf(stderr, "%s ", ippfind_argv[i]);
@@ -175,25 +181,50 @@ list_printers (int mode)
 
     while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0)
     {
-      if (strncasecmp(buffer, "ipp:", 4) && strncasecmp(buffer, "ipps:", 4)) {
-	/* Invalid IPP URI */
-	fprintf(stderr, "EROOR: Invalid IPP URI: %s\n", buffer);
-	continue;
-      }
+      /* Mark all the fields of the output of ippfind */
+      ptr = buffer;
+      /* First, build the DNS-SD-service-name-based URI ... */
+      while (ptr && !isalnum(*ptr & 255)) ptr ++;
+      if (!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t') {
+	scheme = ptr;
+	ptr += 3;
+	*ptr = '\0';
+	ptr ++;
+	reg_type = "_ipp._tcp";
+      } else if (!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t') {
+	scheme = ptr;
+	ptr += 4;
+	*ptr = '\0';
+	ptr ++;
+	reg_type = "_ipps._tcp";
+      } else
+	goto read_error;
+      service_name = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr) goto read_error;
+      *ptr = '\0';
+      ptr ++;
+      domain = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr) goto read_error;
+      *ptr = '\0';
+      ptr ++;
+      snprintf(service_host_name, sizeof(service_host_name) - 1, "%s.%s.%s",
+	       service_name, reg_type, domain);
+      httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
+		       sizeof(service_uri) - 1,
+		       scheme, NULL,
+		       service_host_name, 0, "/");
+      /* ... second, complete the output line, either URI-only or with
+	 extra info for CUPS */
       if (mode == 0)
 	/* Manual call on the command line */
-	printf("%s", buffer);
+	printf("%s\n", service_uri);
       else {
 	/* Call by CUPS, either as PPD generator
 	   (/usr/lib/cups/driver/, with "list" command line argument)
 	   or as backend in discovery mode (/usr/lib/cups/backend/,
 	   env variable "SOFTWARE" starts with "CUPS") */
-	ptr = buffer;
-	service_uri = ptr;
-	ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-	if (!ptr) goto read_error;
-	*ptr = '\0';
-	ptr ++;
 	txt_usb_mfg = ptr;
 	ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
 	if (!ptr) goto read_error;
@@ -468,8 +499,10 @@ list_printers (int mode)
 }
 
 int
-generate_ppd (const char *uri)
+generate_ppd (const char *raw_uri)
 {
+  char *pseudo_argv[2];
+  const char *uri;
   int uri_status, host_port;
   http_t *http = NULL;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
@@ -482,6 +515,12 @@ generate_ppd (const char *uri)
     "all",
     "media-col-database"
   };
+
+  /* Use the URI resolver of libcups to support DNS-SD-service-name-based
+     URIs. The function returns the corresponding host-name-based URI */
+  pseudo_argv[0] = (char *)raw_uri;
+  pseudo_argv[1] = NULL;
+  uri = cupsBackendDeviceURI(pseudo_argv);
 
   /* Request printer properties via IPP to generate a PPD file for the
      printer (mainly IPP Everywhere printers)

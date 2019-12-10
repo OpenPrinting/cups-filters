@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.25.13 - 2019-11-29
 
 CHANGES IN V1.25.14
 
+	- driverless: Use DNS-SD-service-name-based URIs instead of
+	  host-name-based ones, as CUPS also does.
 	- cups-browsed: When removing a CUPS queue, do not consider an
 	  error (and retry) if the queue does not actually exist. Also
 	  ignore errors when checking whether there are still
