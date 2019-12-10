@@ -7637,7 +7637,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  jobs = NULL;
 	  num_jobs = cupsGetJobs2(http, &jobs, p->queue_name, 0,
 				  CUPS_WHICHJOBS_ACTIVE);
-	  if (num_jobs != 0) { /* error or jobs */
+	  if (num_jobs > 0) { /* There are still jobs */
 	    debug_printf("Queue has still jobs or CUPS error!\n");
 	    cupsFreeJobs(num_jobs, jobs);
 	    /* Disable the queue */
@@ -7700,8 +7700,10 @@ gboolean update_cups_queues(gpointer unused) {
 
 	  cups_queues_updated ++;
 
-	  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
-	    debug_printf("Unable to remove CUPS queue!\n");
+	  if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE &&
+	      cupsLastError() != IPP_STATUS_ERROR_NOT_FOUND) {
+	    debug_printf("Unable to remove CUPS queue! (%s)\n",
+			 cupsLastErrorString());
 	    if (in_shutdown == 0) {
               current_time = time(NULL);
 	      p->timeout = current_time + TIMEOUT_RETRY;
@@ -7934,7 +7936,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    jobs = NULL;
 	    num_jobs = cupsGetJobs2(http, &jobs, p->queue_name, 0,
 				    CUPS_WHICHJOBS_ACTIVE);
-	    if (num_jobs != 0) { /* error or jobs */
+	    if (num_jobs > 0) { /* there are still jobs */
 	      debug_printf("Temporary queue has still jobs or CUPS error, retrying later.\n");
 	      cupsFreeJobs(num_jobs, jobs);
 	      /* Schedule the removal of the queue for later */
@@ -7952,8 +7954,10 @@ gboolean update_cups_queues(gpointer unused) {
 	    ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
 			 "requesting-user-name", NULL, cupsUser());
 	    ippDelete(cupsDoRequest(http, request, "/admin/"));
-	    if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
-	      debug_printf("Unable to remove temporary CUPS queue, retrying later\n");
+	    if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE &&
+		cupsLastError() != IPP_STATUS_ERROR_NOT_FOUND) {
+	      debug_printf("Unable to remove temporary CUPS queue (%s), retrying later\n",
+			   cupsLastErrorString());
 	      if (in_shutdown == 0) {
                 current_time = time(NULL);
 		p->timeout = current_time + TIMEOUT_RETRY;

@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.25.13 - 2019-11-29
 
 CHANGES IN V1.25.14
 
+	- cups-browsed: When removing a CUPS queue, do not consider an
+	  error (and retry) if the queue does not actually exist. Also
+	  ignore errors when checking whether there are still
+	  jobs. This way when a new queue gets created and the
+	  generation of the PPD file fails the attempt to remove this
+	  non-existing queueu when removing the printer entry does not
+	  cause any problem.
 	- cups-browsed: Improved the fallback mechanism of the
 	  get_printer_attributes() function. Instead of considering
 	  the request failed by the content of the response only when
