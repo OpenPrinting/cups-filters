@@ -8727,6 +8727,21 @@ gboolean update_cups_queues(gpointer unused) {
 
     }
   }
+
+  /* If we have printer entries which we did not treat yet because of
+     update_cups_queues_max_per_call we push their timeouts by the
+     value of pause_between_cups_queue_updates into the future, so
+     that they only get worked on then. Also printer entries which are
+     scheduled in a time less than the value of
+     pause_between_cups_queue_updates will be pushed, so that
+     update_cups_queues will run the next time only after this
+     interval */
+  if (p && !in_shutdown)
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
+      if (p->timeout <= current_time + pause_between_cups_queue_updates)
+	p->timeout = current_time + pause_between_cups_queue_updates;
+
   log_all_printers();
 
   if (in_shutdown == 0)
@@ -8763,8 +8778,7 @@ recheck_timer (void)
   if (timeout != (time_t) -1) {
     debug_printf("checking queues in %ds\n", timeout);
     queues_timer_id =
-      g_timeout_add_seconds (timeout + pause_between_cups_queue_updates,
-			     update_cups_queues, NULL);
+      g_timeout_add_seconds (timeout, update_cups_queues, NULL);
   } else {
     debug_printf("listening\n");
     queues_timer_id = 0;
