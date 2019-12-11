@@ -509,18 +509,29 @@ generate_ppd (const char *raw_uri)
   ipp_t *request, *response = NULL;
   ipp_attribute_t *attr;
   char buffer[65536], ppdname[1024];
-  int i, fd, bytes;
+  int i, fd1, fd2, bytes;
   static const char * const pattrs[] =
   {
     "all",
     "media-col-database"
   };
 
+  /* Eliminate any output to stderr, to get rid of the CUPS-backend-specific
+     output of the cupsBackendDeviceURI() function */
+  fd1 = dup(2);
+  fd2 = open("/dev/null", O_WRONLY);
+  dup2(fd2, 2);
+  close(fd2);
+  
   /* Use the URI resolver of libcups to support DNS-SD-service-name-based
      URIs. The function returns the corresponding host-name-based URI */
   pseudo_argv[0] = (char *)raw_uri;
   pseudo_argv[1] = NULL;
   uri = cupsBackendDeviceURI(pseudo_argv);
+
+  /* Re-activate stderr output */
+  dup2(fd1, 2);
+  close(fd1);
 
   /* Request printer properties via IPP to generate a PPD file for the
      printer (mainly IPP Everywhere printers)
@@ -585,10 +596,10 @@ generate_ppd (const char *raw_uri)
   httpClose(http);
 
   /* Output of PPD file to stdout */
-  fd = open(ppdname, O_RDONLY);
-  while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
+  fd1 = open(ppdname, O_RDONLY);
+  while ((bytes = read(fd1, buffer, sizeof(buffer))) > 0)
     bytes = fwrite(buffer, 1, bytes, stdout);
-  close(fd);
+  close(fd1);
   unlink(buffer);
 
   return 0;
