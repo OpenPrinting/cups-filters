@@ -395,6 +395,23 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # LocalQueueNamingIPPPrinter MakeModel
 
 
+# Set DNSSDBasedDeviceURIs to "Yes" if cups-browsed should use
+# DNS-SD-service-name-based device URIs for its local queues, as CUPS
+# also does. These queues use the DNS-SD service name of the
+# discovered printer. With this the URI is independent of network
+# interfaces and ports, giving reliable connections to always the same
+# physical device. This setting is the default.
+
+# Set DNSSDBasedDeviceURIs to "No" if cups-browsed should use the
+# conventional host-name/IP-based URIs.
+
+# Note that this option has only influence on URIs for printers
+# discovered via DNS-SD, not via legacy CUPS broewsing or LDAP.
+# Those printers get always assigned the conventional URIs.
+
+# DNSSDBasedDeviceURIs Yes
+
+
 # Set IPBasedDeviceURIs to "Yes" if cups-browsed should create its
 # local queues with device URIs with the IP addresses instead of the
 # host names of the remote servers. This mode is there for any
