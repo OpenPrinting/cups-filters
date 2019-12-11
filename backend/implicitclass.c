@@ -334,8 +334,7 @@ main(int  argc,				/* I - Number of command-line args */
          to the backend, but having this temperory file will help us
          find whether the filter worked correctly and what was the
          document-format of the filtered output.*/
-      close(1);
-      dup_status = dup(filefd);
+      dup_status = dup2(filefd, 1);
       if(dup_status < 0) {
         fprintf(stderr, "Could not write the output of pdftoippprinter printer to tmp file\n");
         return CUPS_BACKEND_FAILED;
