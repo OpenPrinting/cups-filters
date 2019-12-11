@@ -4,8 +4,8 @@ NEWS - OpenPrinting CUPS Filters v1.25.13 - 2019-11-29
 CHANGES IN V1.26.0
 
 	- implicitclass: Fixed wrong stdout redirection from the
-	  filters to the IPP backend (Possible fix for Issue #163,
-	  Issue #181).
+	  filters to the IPP backend and hard-coded path for "ipp"
+	  backend call (Possible fix for Issue #163, Issue #181).
 	- cups-browsed, driverless: Use DNS-SD-service-name-based URIs
 	  instead of host-name-based ones, as CUPS also does. In
 	  cups-browsed one can switch back to the conventional

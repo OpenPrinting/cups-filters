@@ -100,6 +100,8 @@ main(int  argc,				/* I - Number of command-line args */
   char uri[HTTP_MAX_URI];
   char    *argv_nt[7];
   int     outbuflen,filefd,exit_status,dup_status;
+  char buf[1024];
+  const char *serverbin;
   static const char *pattrs[] =
                 {
                   "printer-defaults"
@@ -380,8 +382,15 @@ main(int  argc,				/* I - Number of command-line args */
 
       pid_t pid = fork();
       if (pid == 0) {
-	fprintf(stderr, "DEBUG: Started IPP Backend with pid: %d\n", getpid());
-	execv("/usr/lib/cups/backend/ipp", argv_nt);
+	serverbin = getenv("CUPS_SERVERBIN");
+	if (serverbin == NULL) {
+	  fprintf(stderr, "ERROR: Environment variable CUPS_SERVERBIN not set!");
+	  exit(1);
+	} else {
+	  snprintf(buf, sizeof(buf) - 1, "%s/backend/ipp", serverbin);
+	  fprintf(stderr, "DEBUG: Started IPP Backend with pid: %d\n", getpid());
+	  execv(buf, argv_nt);
+	}
       } else {
 	int status;
 	waitpid(pid, &status, 0);
