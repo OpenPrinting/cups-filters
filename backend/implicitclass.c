@@ -99,7 +99,7 @@ main(int  argc,				/* I - Number of command-line args */
   int     bytes;      /* Bytes copied */
   char uri[HTTP_MAX_URI];
   char    *argv_nt[7];
-  int     outbuflen,filefd,exit_status,dup_status;
+  int     outbuflen, filefd, savestdout, exit_status, dup_status;
   char buf[1024];
   const char *serverbin;
   static const char *pattrs[] =
@@ -336,16 +336,20 @@ main(int  argc,				/* I - Number of command-line args */
          to the backend, but having this temperory file will help us
          find whether the filter worked correctly and what was the
          document-format of the filtered output.*/
+      savestdout = dup(1);
       dup_status = dup2(filefd, 1);
       if(dup_status < 0) {
         fprintf(stderr, "Could not write the output of pdftoippprinter printer to tmp file\n");
         return CUPS_BACKEND_FAILED;
       }
+      close(filefd);
 
       /* Calling pdftoippprinter.c filter*/
       apply_filters(7,argv_nt);
 
-      close(filefd);
+      /* Reset stdout to standard */
+      dup2(savestdout, 1);
+      close(savestdout);
 
       /* We will send the filtered output of the pdftoippprinter.c to
 	 the IPP Backend*/
@@ -383,14 +387,12 @@ main(int  argc,				/* I - Number of command-line args */
       pid_t pid = fork();
       if (pid == 0) {
 	serverbin = getenv("CUPS_SERVERBIN");
-	if (serverbin == NULL) {
-	  fprintf(stderr, "ERROR: Environment variable CUPS_SERVERBIN not set!");
-	  exit(1);
-	} else {
-	  snprintf(buf, sizeof(buf) - 1, "%s/backend/ipp", serverbin);
-	  fprintf(stderr, "DEBUG: Started IPP Backend with pid: %d\n", getpid());
-	  execv(buf, argv_nt);
-	}
+	if (serverbin == NULL)
+	  serverbin = CUPS_SERVERBIN;
+	snprintf(buf, sizeof(buf) - 1, "%s/backend/ipp", serverbin);
+	fprintf(stderr, "DEBUG: Started IPP Backend (%s) with pid: %d\n",
+		buf, getpid());
+	execv(buf, argv_nt);
       } else {
 	int status;
 	waitpid(pid, &status, 0);
