@@ -393,8 +393,8 @@ main(int  argc,				/* I - Number of command-line args */
 	fprintf(stderr, "DEBUG: Started IPP Backend (%s) with pid: %d\n",
 		buf, getpid());
 	execv(buf, argv_nt);
-	fprintf(stderr, "ERROR: Could not start IPP Backend (%s)\n",
-		buf);
+	fprintf(stderr, "ERROR: Could not start IPP Backend (%s): %d %s\n",
+		buf, errno, strerror(errno));
 	return CUPS_BACKEND_FAILED;
       } else {
 	int status;
