@@ -98,7 +98,7 @@ main(int  argc,				/* I - Number of command-line args */
   ipp_attribute_t *attr;
   int     bytes;      /* Bytes copied */
   char uri[HTTP_MAX_URI];
-  char    *argv_nt[7];
+  char    *argv_nt[8];
   int     outbuflen, filefd, savestdout, exit_status, dup_status;
   char buf[1024];
   const char *serverbin;
@@ -320,6 +320,7 @@ main(int  argc,				/* I - Number of command-line args */
 
       /* Filter pdftoippprinter.c will read the input from this file*/
       argv_nt[6] = filename;
+      argv_nt[7] = NULL;
       set_option_in_str(argv_nt[5], outbuflen, "output-format",
 			document_format);
       set_option_in_str(argv_nt[5], outbuflen, "Resolution",resolution);
