@@ -441,7 +441,7 @@ static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
 static local_queue_naming_t LocalQueueNamingRemoteCUPS=LOCAL_QUEUE_NAMING_DNSSD;
 static local_queue_naming_t LocalQueueNamingIPPPrinter=LOCAL_QUEUE_NAMING_DNSSD;
 static unsigned int OnlyUnsupportedByCUPS = 0;
-static unsigned int UseCUPSGeneratedPPDs = 1;
+static unsigned int UseCUPSGeneratedPPDs = 0;
 static unsigned int CreateRemoteRawPrinterQueues = 0;
 static unsigned int CreateRemoteCUPSPrinterQueues = 1;
 #ifdef DRIVERLESS_IPP_PRINTERS_AUTO_SETUP
