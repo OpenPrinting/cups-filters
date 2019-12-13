@@ -6064,7 +6064,7 @@ on_job_state (CupsNotifier *object,
 		else
 		  continue;
 	      }
-	      debug_printf("IPP Response contains attributes values printer-name %s, accepting-job %d",
+	      debug_printf("IPP Response contains attributes values printer-name %s, accepting-job %d\n",
 			   (pname ? pname : "(Not reported)"), paccept);
 	      if (paccept) {
 		debug_printf("Printer %s on host %s, port %d is accepting jobs.\n",
