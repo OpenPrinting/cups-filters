@@ -36,7 +36,7 @@
 #include <cups/cups.h>
 #include <cups/ppd.h>
 #include <cups/raster.h>
-#include <cups/backend.h>
+#include <cupsfilters/ipp.h>
 #include <cupsfilters/ppdgenerator.h>
 
 static int              debug = 0;
@@ -499,81 +499,30 @@ list_printers (int mode)
 }
 
 int
-generate_ppd (const char *raw_uri)
+generate_ppd (const char *uri)
 {
-  char *pseudo_argv[2];
-  const char *uri;
-  int uri_status, host_port;
-  http_t *http = NULL;
-  char scheme[10], userpass[1024], host_name[1024], resource[1024];
-  ipp_t *request, *response = NULL;
-  ipp_attribute_t *attr;
+  ipp_t *response = NULL;
   char buffer[65536], ppdname[1024];
-  int i, fd1, fd2, bytes;
-  static const char * const pattrs[] =
-  {
-    "all",
-    "media-col-database"
-  };
-
-  /* Eliminate any output to stderr, to get rid of the CUPS-backend-specific
-     output of the cupsBackendDeviceURI() function */
-  fd1 = dup(2);
-  fd2 = open("/dev/null", O_WRONLY);
-  dup2(fd2, 2);
-  close(fd2);
-  
-  /* Use the URI resolver of libcups to support DNS-SD-service-name-based
-     URIs. The function returns the corresponding host-name-based URI */
-  pseudo_argv[0] = (char *)raw_uri;
-  pseudo_argv[1] = NULL;
-  uri = cupsBackendDeviceURI(pseudo_argv);
-
-  /* Re-activate stderr output */
-  dup2(fd1, 2);
-  close(fd1);
+  int fd, bytes;
+  char *ptr1, *ptr2;
 
   /* Request printer properties via IPP to generate a PPD file for the
-     printer (mainly IPP Everywhere printers)
-     If we work with Systen V interface scripts use this info to set
-     option defaults. */
-  uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
-			       scheme, sizeof(scheme),
-			       userpass, sizeof(userpass),
-			       host_name, sizeof(host_name),
-			       &(host_port),
-			       resource, sizeof(resource));
-  if (uri_status != HTTP_URI_OK) {
-    fprintf(stderr, "ERROR: Invalid URI: %s\n", uri);
-    goto fail;
-  }
-  if ((http = httpConnect2(host_name, host_port, NULL, AF_UNSPEC,
-			   HTTP_ENCRYPT_IF_REQUESTED, 1, 5000, NULL)) ==
-      NULL) {
-    fprintf(stderr, "ERROR: Cannot connect to remote printer %s (%s:%d)\n",
-	    uri, host_name, host_port);
-    goto fail;
-  }
-  request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
-	       NULL, uri);
-  ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
-		"requested-attributes", sizeof(pattrs) / sizeof(pattrs[0]),
-		NULL, pattrs);
-  response = cupsDoRequest(http, request, resource);
-
-  /* Log all printer attributes for debugging */
+     printer */
+  response = get_printer_attributes(uri, NULL, 0, NULL, 0, 1);
   if (debug) {
-    attr = ippFirstAttribute(response);
-    while (attr) {
-      fprintf(stderr, "DEBUG2: Attr: %s\n", ippGetName(attr));
-      ippAttributeString(attr, buffer, sizeof(buffer));
-      fprintf(stderr, "DEBUG2: Value: %s\n", buffer);
-      for (i = 0; i < ippGetCount(attr); i ++)
-	fprintf(stderr, "DEBUG2: Keyword: %s\n",
-		ippGetString(attr, i, NULL));
-      attr = ippNextAttribute(response);
+    ptr1 = get_printer_attributes_log;
+    while(ptr1) {
+      ptr2 = strchr(ptr1, '\n');
+      if (ptr2) *ptr2 = '\0';
+      fprintf(stderr, "DEBUG2: %s\n", ptr1);
+      if (ptr2) *ptr2 = '\n';
+      ptr1 = ptr2 ? (ptr2 + 1) : NULL;
     }
+  }
+  if (response == NULL) {
+    fprintf(stderr, "ERROR: Unable to create PPD file: Could not poll sufficient capability info from the printer (%s, %s) via IPP!\n",
+	    uri, resolve_uri(uri));
+    goto fail;
   }
 
   /* Generate the PPD file */
@@ -593,21 +542,19 @@ generate_ppd (const char *raw_uri)
   }
 
   ippDelete(response);
-  httpClose(http);
 
   /* Output of PPD file to stdout */
-  fd1 = open(ppdname, O_RDONLY);
-  while ((bytes = read(fd1, buffer, sizeof(buffer))) > 0)
+  fd = open(ppdname, O_RDONLY);
+  while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
     bytes = fwrite(buffer, 1, bytes, stdout);
-  close(fd1);
+  close(fd);
   unlink(buffer);
 
   return 0;
   
  fail:
-  ippDelete(response);
-  if (http)
-    httpClose(http);
+  if (response)
+    ippDelete(response);
 
   return 1;
 }

@@ -3,6 +3,17 @@ NEWS - OpenPrinting CUPS Filters v1.25.13 - 2019-11-29
 
 CHANGES IN V1.26.0
 
+	- libcupsfilters: Re-structured the get_printer_attributes()
+	  function to remove the recursive calls for the fallbacks, to
+	  check required attributes in the response only if requested,
+	  and to fully integrate the method of getting a suitable
+	  response for a full printer capability list also if the
+	  printer is only IPP 1.1 or does not support the
+	  "media-col-database" attribute (Issue #163).
+	- libcupsfilters, cups-browsed, driverless: Moved the funtions
+	  get_printer_attributes() and resolve_uri() from cups-browsed
+	  into libcupsfilters, to share them with the driverless
+	  utility.
 	- implicitclass: Fixed wrong stdout redirection from the
 	  filters to the IPP backend and hard-coded path for "ipp"
 	  backend call (Possible fix for Issue #163, Issue #181).

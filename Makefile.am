@@ -147,6 +147,7 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/colormanager.h \
 	cupsfilters/driver.h \
 	cupsfilters/image.h \
+	cupsfilters/ipp.h \
 	cupsfilters/raster.h \
 	cupsfilters/ppdgenerator.h \
 	cupsfilters/pdftoippprinter.h
@@ -198,6 +199,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/image-sun.c \
 	cupsfilters/image-tiff.c \
 	cupsfilters/image-zoom.c \
+	cupsfilters/ipp.c \
 	cupsfilters/lut.c \
 	cupsfilters/pack.c \
 	cupsfilters/ppdgenerator.c \
