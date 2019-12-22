@@ -1,6 +1,16 @@
 NEWS - OpenPrinting CUPS Filters v1.26.0 - 2019-12-13
 -----------------------------------------------------
 
+CHANGES IN V1.26.1
+
+	- libcupsfilters: When using the
+          "media-{bottom,left,right,top}-margin-supported" IPP
+          attributes (needed if we have no "media-col-database"), use
+          the minimum and not the maximum margins, this allows
+          accessing more of the printer's capabilities, especially for
+          legacy printers which do not provide sufficient information
+          (Issue #22).
+
 CHANGES IN V1.26.0
 
 	- cups-browsed: When generating local queues for printers for

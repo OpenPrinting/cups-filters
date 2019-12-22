@@ -1175,7 +1175,7 @@ cups_array_t* generate_sizes(ipp_t *response,
 			       IPP_TAG_INTEGER)) != NULL) {
     for (i = 1, *bottom = ippGetInteger(attr, 0), count = ippGetCount(attr);
 	 i < count; i ++)
-      if (ippGetInteger(attr, i) > *bottom)
+      if (i == 1 || ippGetInteger(attr, i) < *bottom)
         *bottom = ippGetInteger(attr, i);
   } else
     *bottom = 1270;
@@ -1184,7 +1184,7 @@ cups_array_t* generate_sizes(ipp_t *response,
 			       IPP_TAG_INTEGER)) != NULL) {
     for (i = 1, *left = ippGetInteger(attr, 0), count = ippGetCount(attr);
 	 i < count; i ++)
-      if (ippGetInteger(attr, i) > *left)
+      if (i == 1 || ippGetInteger(attr, i) < *left)
         *left = ippGetInteger(attr, i);
   } else
     *left = 635;
@@ -1193,7 +1193,7 @@ cups_array_t* generate_sizes(ipp_t *response,
 			       IPP_TAG_INTEGER)) != NULL) {
     for (i = 1, *right = ippGetInteger(attr, 0), count = ippGetCount(attr);
 	 i < count; i ++)
-      if (ippGetInteger(attr, i) > *right)
+      if (i == 1 || ippGetInteger(attr, i) < *right)
         *right = ippGetInteger(attr, i);
   } else
     *right = 635;
@@ -1202,7 +1202,7 @@ cups_array_t* generate_sizes(ipp_t *response,
 			       IPP_TAG_INTEGER)) != NULL) {
     for (i = 1, *top = ippGetInteger(attr, 0), count = ippGetCount(attr);
 	 i < count; i ++)
-      if (ippGetInteger(attr, i) > *top)
+      if (i == 1 || ippGetInteger(attr, i) < *top)
         *top = ippGetInteger(attr, i);
   } else
     *top = 1270;
