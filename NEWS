@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.26.0 - 2019-12-13
 
 CHANGES IN V1.26.1
 
+	- build system: Install the "implicitclass" backend with
+	  "-rwx------" permissions, so that CUPS executes it as root,
+	  as the "ipp" CUPS backend also has to be executed as root
+	  (Issue #183).
+	- build system: Fixed setting permissions when installing the
+	  "cups-brf" backend.
 	- libcupsfilters: When using the
           "media-{bottom,left,right,top}-margin-supported" IPP
           attributes (needed if we have no "media-col-database"), use

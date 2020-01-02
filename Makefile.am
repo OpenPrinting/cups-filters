@@ -1023,8 +1023,9 @@ if RCLINKS
 endif
 	$(LN_S) -f pdf.utf-8.simple \
 		$(DESTDIR)$(pkgcharsetdir)/pdf.utf-8
+	chmod 700 $(DESTDIR)/$(pkgbackenddir)/implicitclass
 if ENABLE_BRAILLE
-	chmod g-wx,o-wx $(DESTDIR)/$(pkgbackenddir)/cups-brf
+	chmod 700 $(DESTDIR)/$(pkgbackenddir)/cups-brf
 endif
 
 
