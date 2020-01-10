@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.26.1 - 2019-01-02
 -----------------------------------------------------
 
+CHANGES IN V1.26.2
+
+	- foomatic-rip: Fixed compilation with -fno-common. Starting
+	  from the upcoming GCC 10, the default of the -fcommon option
+	  will change to -fno-common. This causes compilation errors
+	  in foomatic-rip due to missing "external" declarations.
+	  (Pull request #184).
+
 CHANGES IN V1.26.1
 
 	- build system: Install the "implicitclass" backend with
