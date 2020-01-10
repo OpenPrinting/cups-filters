@@ -105,7 +105,7 @@ jobparams_t * get_current_job()
 }
 
 
-dstr_t *postpipe;  /* command into which the output of this filter should be piped */
+dstr_t *postpipe = NULL;  /* command into which the output of this filter should be piped */
 FILE *postpipe_fh = NULL;
 
 FILE * open_postpipe()
