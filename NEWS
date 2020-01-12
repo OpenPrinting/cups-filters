@@ -3,6 +3,15 @@ NEWS - OpenPrinting CUPS Filters v1.26.1 - 2019-01-02
 
 CHANGES IN V1.26.2
 
+	- cups-browsed: Eliminated the use of the cupsGetPPD2()
+	  function of libcups in queue_overwritten(). The function
+	  actually loads the queue's PPD file if the queue is on a
+	  local CUPS on port 631.  Due to a bug the function fails if
+	  an alternative port is used.  This let queue_overwritten()
+	  always assume that the PPD got removed and therefore the
+	  queue got overwritten. So queues got released from
+	  cups-browsed if it was printed on them or if they were
+	  supposed to be removed on shutdown.
 	- foomatic-rip: Fixed compilation with -fno-common. Starting
 	  from the upcoming GCC 10, the default of the -fcommon option
 	  will change to -fno-common. This causes compilation errors
