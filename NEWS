@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.26.1 - 2019-01-02
 
 CHANGES IN V1.26.2
 
+	- cups-browsed: Set the port of the local CUPS daemon to be
+	  used according to the IPP_PORT environment variable.
 	- cups-browsed: Eliminated the use of the cupsGetPPD2()
 	  function of libcups completely, also the remaining calls
 	  in the record_printer_options() and update_cups_queues()

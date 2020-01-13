@@ -11932,6 +11932,16 @@ int main(int argc, char*argv[]) {
 
   debug_printf("main() in THREAD %ld\n", pthread_self());
 
+  /* If a port is selected via the IPP_PORT environment variable,
+     set this first */
+  if (getenv("IPP_PORT") != NULL) {
+    snprintf(local_server_str, sizeof(local_server_str) - 1,
+	     "localhost:%s", getenv("IPP_PORT"));
+    if (strlen(getenv("CUPS_SERVER")) > 1023)
+      local_server_str[1023] = '\0';
+    cupsSetServer(local_server_str);
+  }
+
   /* Point to selected CUPS server or domain socket via the CUPS_SERVER
      environment variable or DomainSocket configuration file option.
      Default to localhost:631 (and not to CUPS default to override
