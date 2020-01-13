@@ -4864,6 +4864,8 @@ log_cluster(remote_printer_t *p) {
     q = p->slave_of;
   else
     q = p;
+  if (q->queue_name == NULL)
+    return;
   debug_printf("Remote CUPS printers clustered as queue %s:\n", q->queue_name);
   for (r = (remote_printer_t *)cupsArrayFirst(remote_printers), i = 0;
        r; r = (remote_printer_t *)cupsArrayNext(remote_printers), i ++)
@@ -4887,7 +4889,8 @@ log_all_printers() {
 		 p->uri,
 		 p->host, (p->ip ? p->ip : "IP not determined"), p->queue_name,
 		 (p->netprinter ? "IPP Printer" : "Remote CUPS Printer"),
-		 ((q = p->slave_of) != NULL ? q->uri : "None"),
+		 ((q = p->slave_of) != NULL ?
+		  (q->uri ? q->uri : "Deleted Printer") : "None"),
 		 (p->status == STATUS_UNCONFIRMED ? " (Unconfirmed)" :
 		  (p->status == STATUS_DISAPPEARED ? " (Disappeared)" :
 		   (p->status == STATUS_TO_BE_RELEASED ?
@@ -6015,7 +6018,7 @@ on_job_state (CupsNotifier *object,
     /* If we hit a slave and not the master, switch to the master */
     if (q && q->slave_of)
       q = q->slave_of;
-    if (q) {
+    if (q && q->queue_name) {
       /* We have remote CUPS queue(s) and so are using the implicitclass 
 	 backend */
       debug_printf("[CUPS Notification] %s is using the \"implicitclass\" CUPS backend, so let us search for a destination for this job.\n", printer);
@@ -7390,23 +7393,25 @@ gboolean update_cups_queues(gpointer unused) {
      get removed now (if we point them to NULL, we would try to remove
      the already removed CUPS queue again when it comes to the removal
      of the slave. */
-  if (deleted_master == NULL &&
-      (deleted_master =
-       (remote_printer_t *)calloc(1, sizeof(remote_printer_t))) == NULL) {
-    debug_printf("ERROR: Unable to allocate memory.\n");
-    if (in_shutdown == 0)
-      recheck_timer ();
-    return FALSE;
+  if (deleted_master == NULL) {
+    if ((deleted_master =
+	 (remote_printer_t *)calloc(1, sizeof(remote_printer_t))) == NULL) {
+      debug_printf("ERROR: Unable to allocate memory.\n");
+      if (in_shutdown == 0)
+	recheck_timer ();
+      return FALSE;
+    }
+    memset(deleted_master, 0, sizeof(remote_printer_t));
+    deleted_master->uri = "<DELETED>";
   }
-  memset(deleted_master, 0, sizeof(remote_printer_t));
-  deleted_master->uri = "<DELETED>";
+
   /* Now redirect the slave_of pointers of the masters which get deleted now
      to this dummy entry */
   for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
        p; p = (remote_printer_t *)cupsArrayNext(remote_printers))
     if ((p->status == STATUS_DISAPPEARED ||
 	 p->status == STATUS_TO_BE_RELEASED) &&
-	(q = p->slave_of) != NULL &&
+	(q = p->slave_of) != NULL && q->queue_name &&
 	(q->status == STATUS_DISAPPEARED || q->status == STATUS_TO_BE_RELEASED))
       p->slave_of = deleted_master;
 
@@ -7631,16 +7636,23 @@ gboolean update_cups_queues(gpointer unused) {
 
       /* Do not create a queue for slaves */
       if (p->slave_of) {
-	p->status = STATUS_CONFIRMED;
 	master = p->slave_of;
-	master->status = STATUS_TO_BE_CREATED;
-	master->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-	if (p->is_legacy) {
-	  p->timeout = time(NULL) + BrowseTimeout;
-	  debug_printf("starting BrowseTimeout timer for %s (%ds)\n",
-		       p->queue_name, BrowseTimeout);
-	} else
-	  p->timeout = (time_t) -1;
+	if (master->queue_name) {
+	  p->status = STATUS_CONFIRMED;
+	  master->status = STATUS_TO_BE_CREATED;
+	  master->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	  if (p->is_legacy) {
+	    p->timeout = time(NULL) + BrowseTimeout;
+	    debug_printf("starting BrowseTimeout timer for %s (%ds)\n",
+			 p->queue_name, BrowseTimeout);
+	  } else
+	    p->timeout = (time_t) -1;
+	} else {
+	  debug_printf("Master for slave %s is invalid (deleted?)\n",
+		       p->queue_name);
+	  p->status = STATUS_DISAPPEARED;
+	  p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	}
 	break;
       }
 

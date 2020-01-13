@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.26.1 - 2019-01-02
 
 CHANGES IN V1.26.2
 
+	- cups-browsed: Added crash guards to avoid crashes in case
+	  the dummy printer entry for a deleted master entry is used.
 	- cups-browsed: Set the port of the local CUPS daemon to be
 	  used according to the IPP_PORT environment variable.
 	- cups-browsed: Eliminated the use of the cupsGetPPD2()
