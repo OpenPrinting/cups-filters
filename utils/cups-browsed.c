@@ -5237,6 +5237,40 @@ invalidate_printer_options(const char *printer) {
   return 0;
 }
 
+char*
+loadPPD(http_t *http,
+	const char *name)
+{
+  /* This function replaces cupsGetPPD2(), but is much simplified
+     (does not support classes) and works with non-standard (!= 631)
+     ports */
+
+  char uri[HTTP_MAX_URI];
+  char *resource;
+  int fd, status;
+  char tempfile[1024] = "";
+
+  /* Download URI and resource for the PPD file */
+  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "http", NULL,
+		   "localhost", ippPort(), "/printers/%s.ppd", name);
+  resource = strstr(uri, "/printers/");
+
+  /* Download the file */
+  fd = cupsTempFd(tempfile, sizeof(tempfile));
+  status = cupsGetFd(http, resource, fd);
+  close(fd);
+
+  /* Check for errors */
+  if (status == HTTP_STATUS_OK)
+  {
+    if (tempfile[0])
+      return(strdup(tempfile));
+  }
+  else if (tempfile[0])
+    unlink(tempfile);
+  return NULL;
+}
+
 int
 record_printer_options(const char *printer) {
   remote_printer_t *p;
@@ -5247,7 +5281,7 @@ record_printer_options(const char *printer) {
   ipp_attribute_t *attr;
   const char *key;
   char buf[65536], *c;
-  const char *ppdname = NULL;
+  char *ppdname = NULL;
   ppd_file_t *ppd;
   ppd_option_t *ppd_opt;
   cups_option_t *option;
@@ -5305,31 +5339,36 @@ record_printer_options(const char *printer) {
   debug_printf("Recording printer options for %s to %s\n",
 	       printer, filename);
 
-  /* If there is a PPD file for this printer, we save the local
-     settings for the PPD options. */
-  if (cups_notifier != NULL || (p && p->netprinter)) {
-    if ((ppdname = cupsGetPPD(printer)) == NULL) {
-      debug_printf("Unable to get PPD file for %s: %s\n",
-		   printer, cupsLastErrorString());
-    } else if ((ppd = ppdOpenFile(ppdname)) == NULL) {
-      unlink(ppdname);
-      debug_printf("Unable to open PPD file for %s.\n",
-		   printer);
-    } else {
-      ppdMarkDefaults(ppd);
-      for (ppd_opt = ppdFirstOption(ppd); ppd_opt; ppd_opt = ppdNextOption(ppd))
-	if (strcasecmp(ppd_opt->keyword, "PageRegion") != 0) {
-	  strncpy(buf, ppd_opt->keyword, sizeof(buf));
-	  p->num_options = cupsAddOption(buf, ppd_opt->defchoice,
-					 p->num_options, &(p->options));
-	}
-      ppdClose(ppd);
-      unlink(ppdname);
-    }
-  }
-
   conn = http_connect_local ();
   if (conn) {
+    /* If there is a PPD file for this printer, we save the local
+       settings for the PPD options. */
+    if (cups_notifier != NULL || (p && p->netprinter)) {
+      if ((ppdname = loadPPD(conn, printer)) == NULL) {
+	debug_printf("Unable to get PPD file for %s: %s\n",
+		     printer, cupsLastErrorString());
+      } else if ((ppd = ppdOpenFile(ppdname)) == NULL) {
+	unlink(ppdname);
+	debug_printf("Unable to open PPD file for %s.\n",
+		     printer);
+      } else {
+	debug_printf("Recording option settings of the PPD file for %s (%s):\n",
+		     printer, ppd->nickname);
+	ppdMarkDefaults(ppd);
+	for (ppd_opt = ppdFirstOption(ppd); ppd_opt;
+	     ppd_opt = ppdNextOption(ppd))
+	  if (strcasecmp(ppd_opt->keyword, "PageRegion") != 0) {
+	    debug_printf("   %s=%s\n",
+			 ppd_opt->keyword, ppd_opt->defchoice);
+	    strncpy(buf, ppd_opt->keyword, sizeof(buf));
+	    p->num_options = cupsAddOption(buf, ppd_opt->defchoice,
+					   p->num_options, &(p->options));
+	  }
+	ppdClose(ppd);
+	unlink(ppdname);
+      }
+    }
+
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
 		     "localhost", ippPort(), "/printers/%s", printer);
     resource = uri + (strlen(uri) - strlen(printer) - 10);
@@ -5340,6 +5379,8 @@ record_printer_options(const char *printer) {
 
     /* Write all supported printer attributes */
     if (response) {
+      debug_printf("Recording option settings from the IPP attributes for %s:\n",
+		   printer);
       attr = ippFirstAttribute(response);
       while (attr) {
 	key = ippGetName(attr);
@@ -5360,6 +5401,7 @@ record_printer_options(const char *printer) {
 		memmove(c, c + 1, strlen(c));
 	      if (*c) c ++;
 	    }
+	    debug_printf("   %s=%s\n", key, buf);
 	    p->num_options = cupsAddOption(key, buf, p->num_options,
 					   &(p->options));
 	  }
@@ -5369,9 +5411,12 @@ record_printer_options(const char *printer) {
       ippDelete(response);
     }
   } else {
-    debug_printf("Cannot connect to local CUPS to read out the IPP attributes for printer %s.\n",
+    debug_printf("Cannot connect to local CUPS to read out the IPP and PPD attributes for printer %s.\n",
 		 printer);
   }
+
+  if (ppdname)
+    free(ppdname);
 
   if (p->num_options > 0) {
     fp = fopen(filename, "w+");
@@ -7661,7 +7706,7 @@ gboolean update_cups_queues(gpointer unused) {
 	      debug_printf("Temporary queue created, grabbing the PPD.\n");
 	      cupsFreeDestInfo(dinfo);
 	      loadedppd = NULL;
-	      if ((loadedppd = cupsGetPPD2(http, p->queue_name)) == NULL)
+	      if ((loadedppd = loadPPD(http, p->queue_name)) == NULL)
 		debug_printf("Unable to load PPD from local temporary queue %s!\n",
 			     p->queue_name);
 	      else {
