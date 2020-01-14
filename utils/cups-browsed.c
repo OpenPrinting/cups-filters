@@ -9407,6 +9407,7 @@ examine_discovered_printer_record(const char *host,
 	if (p->status == STATUS_CONFIRMED)
 	  p->timeout = (time_t) -1;
       }
+      free(p->queue_name);
       free(p->location);
       free(p->info);
       free(p->make_model);
@@ -9417,6 +9418,7 @@ examine_discovered_printer_record(const char *host,
       free(p->service_name);
       free(p->type);
       free(p->domain);
+      p->queue_name = strdup(local_queue_name);
       p->location = strdup(location);
       p->info = strdup(info);
       p->make_model = (make_model != NULL ? strdup(make_model) : NULL);
@@ -10041,18 +10043,20 @@ void avahi_browser_shutdown() {
   avahi_present = 0;
 
   /* Remove all queues which we have set up based on DNS-SD discovery*/
-  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
-       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-    if (p->type && p->type[0]) {
-      if (p->status != STATUS_TO_BE_RELEASED)
-	p->status = STATUS_DISAPPEARED;
-      p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+  if (cupsArrayCount(remote_printers) > 0) {
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+      if (p->type && p->type[0]) {
+	if (p->status != STATUS_TO_BE_RELEASED)
+	  p->status = STATUS_DISAPPEARED;
+	p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+      }
     }
+    if (in_shutdown == 0)
+      recheck_timer();
+    else
+      update_cups_queues(NULL);
   }
-  if (in_shutdown == 0)
-    recheck_timer();
-  else
-    update_cups_queues(NULL);
 
   /* Free the data structures for DNS-SD browsing */
   if (sb1) {
@@ -12257,8 +12261,6 @@ fail:
     p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
   }
   update_cups_queues(NULL);
-  if (deleted_master != NULL)
-    free(deleted_master);
 
   cancel_subscription (subscription_id);
   if (cups_notifier)
@@ -12316,6 +12318,8 @@ fail:
   if (debug_logfile == 1)
     stop_debug_logging();
   
+  if (deleted_master != NULL)
+    free(deleted_master);
   if (DefaultOptions != NULL)
     free(DefaultOptions);
   if (DomainSocket != NULL)
