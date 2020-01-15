@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.26.2 - 2020-01-13
 
 CHANGES IN V1.26.3
 
+	- libcupsfilters: in the PPD generator prioritize
+	  print-color-mode-supported against
+	  pwg-raster-document-type-supported (Issue #186, Pull request
+	  #188)
+	- rastertopdf: Handle zero page jobs (Issue #117, Pull request
+          #189)
 	- cups-browsed: When restarting after a crash make sure that
 	  local queue names have same upper/lower case as before.
 	- cups-browsed: Small code improvements to reduce crash
