@@ -1404,6 +1404,16 @@ int main(int argc, char **argv)
     if (create_pdf_file(&pdf, outformat) != 0)
       die("Unable to create PDF file");
 
+    struct stat buf;
+    fstat(fd, &buf);
+    int size = buf.st_size;
+    if(size <= 4)
+    {
+      close_pdf_file(&pdf);
+      cupsRasterClose(ras);
+      return 0;
+    }
+
     /* Get PCLm attributes from PPD */
     if (ppd && outformat == OUTPUT_FORMAT_PCLM)
     {
