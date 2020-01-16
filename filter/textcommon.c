@@ -22,7 +22,6 @@
 
 #include "textcommon.h"
 #include <limits.h>
-#include "pdfutils.h"
 
 
 /*
@@ -482,6 +481,7 @@ TextMain(const char *name,	/* I - Name of filter */
   FILE		*fp;		/* Print file */
   ppd_file_t	*ppd;		/* PPD file */
   int		i,		/* Looping var */
+		empty,		/* Is the input empty? */
 		ch,		/* Current char from file */
 		lastch,		/* Previous char from file */
 		attr,		/* Current attribute */
@@ -535,21 +535,6 @@ TextMain(const char *name,	/* I - Name of filter */
       perror("DEBUG: unable to open print file - ");
       return (1);
     }
-  }
-
-  fseek(fp, 0L, SEEK_END);
-  int size = ftell(fp);
-  fseek(fp, 0L, SEEK_SET);
-
-  if(size==0)
-  {
-	if(fp!=stdin)
-	fclose(fp);
-	pdfOut *pdf=pdfOut_new();
-	pdfOut_begin_pdf(pdf);
-	pdfOut_finish_pdf(pdf);
-	pdfOut_free(pdf);
-	return 0;
   }
 
  /*
@@ -699,13 +684,11 @@ TextMain(const char *name,	/* I - Name of filter */
 
   Copies = atoi(argv[4]);
 
-  WriteProlog(argv[3], argv[2], getenv("CLASSIFICATION"),
-              cupsGetOption("page-label", num_options, options), ppd);
-
  /*
   * Read text from the specified source and print it...
   */
 
+  empty        = 1;
   lastch       = 0;
   column       = 0;
   line         = 0;
@@ -718,6 +701,14 @@ TextMain(const char *name,	/* I - Name of filter */
 
   while ((ch = getutf8(fp)) >= 0)
   {
+    if (empty)
+    {
+      /* Found the first valid character, write file header */
+      empty = 0;
+      WriteProlog(argv[3], argv[2], getenv("CLASSIFICATION"),
+		  cupsGetOption("page-label", num_options, options), ppd);
+    }
+
    /*
     * Control codes:
     *
@@ -1172,6 +1163,15 @@ TextMain(const char *name,	/* I - Name of filter */
     */
 
     lastch = ch;
+  }
+
+  /* Do not write anything if the input file is empty */
+  if (empty)
+  {
+    fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+    if (fp != stdin)
+      fclose(fp);
+    return 0;
   }
 
  /*
