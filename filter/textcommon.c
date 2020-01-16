@@ -22,6 +22,7 @@
 
 #include "textcommon.h"
 #include <limits.h>
+#include "pdfutils.h"
 
 
 /*
@@ -534,6 +535,21 @@ TextMain(const char *name,	/* I - Name of filter */
       perror("DEBUG: unable to open print file - ");
       return (1);
     }
+  }
+
+  fseek(fp, 0L, SEEK_END);
+  int size = ftell(fp);
+  fseek(fp, 0L, SEEK_SET);
+
+  if(size==0)
+  {
+	if(fp!=stdin)
+	fclose(fp);
+	pdfOut *pdf=pdfOut_new();
+	pdfOut_begin_pdf(pdf);
+	pdfOut_finish_pdf(pdf);
+	pdfOut_free(pdf);
+	return 0;
   }
 
  /*
