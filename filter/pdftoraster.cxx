@@ -2121,7 +2121,8 @@ int main(int argc, char *argv[]) {
     for (i = 1;i <= npages;i++) {
       outPage(doc,i,raster);
     }
-  }
+  } else
+    fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
 
   cupsRasterClose(raster);
 
