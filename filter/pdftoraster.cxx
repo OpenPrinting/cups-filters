@@ -2122,14 +2122,9 @@ int main(int argc, char *argv[]) {
       outPage(doc,i,raster);
     }
   }
-  else{
-    exitCode = 1;
-    goto err1;
-  }
 
   cupsRasterClose(raster);
 
-err1:
   delete doc;
   if (ppd != NULL) {
     ppdClose(ppd);
