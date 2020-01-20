@@ -366,8 +366,8 @@ main(int  argc,	   /* I - Number of command-line arguments */
   FILE                *input = NULL; /* File pointer to raster document */
   int                 fd,            /* File descriptor for raster document */
                       num_options,   /* Number of options */
-                      count,         /* count for writing the postscript */
                       Canceled = 0,  /* variable for job cancellation */
+                      empty,         /* Is the input empty? */
                       Page = 0,      /* variable for counting the pages */
                       ret;           /* Return value of deflate compression */
   ppd_file_t          *ppd;          /* PPD file */
@@ -444,16 +444,16 @@ main(int  argc,	   /* I - Number of command-line arguments */
   * Process pages as needed...
   */
   Page = 0;
-  count = 0;
+  empty = 1;
 
   while (cupsRasterReadHeader2(ras, &header))
   {
    /*
     * Write the prolog for PS only once
     */
-    if (!count)
+    if (empty)
     {
-      count++;
+      empty = 0;
       writeProlog(header.PageSize[0], header.PageSize[1]);
     }
 
@@ -486,7 +486,17 @@ main(int  argc,	   /* I - Number of command-line arguments */
       zerr(ret);
     writeEndPage();
   }
+
+  if (empty)
+  {
+     fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+     cupsRasterClose(ras);
+     return 0;
+  }
+
   writeTrailer(Page);
+
+  cupsRasterClose(ras);
 
   return 0;
 }

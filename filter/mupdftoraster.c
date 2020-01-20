@@ -62,7 +62,7 @@ typedef cups_page_header_t mupdf_page_header;
 #endif /* CUPS_RASTER_SYNCv1 */
 
 
-void
+int
 parse_doc_type(FILE *fp)
 {
   char buf[5];
@@ -71,13 +71,14 @@ parse_doc_type(FILE *fp)
   /* get the first few bytes of the file */
   rewind(fp);
   rc = fgets(buf,sizeof(buf),fp);
+  /* empty input */
   if (rc == NULL)
-    goto out;
+    return 1;
 
   /* is PDF */
   if (strncmp(buf,"%PDF",4) == 0)
-    return;
- out:
+    return 0;
+
   fprintf(stderr,"DEBUG: input file cannot be identified\n");
   exit(EXIT_FAILURE);
 }
@@ -245,6 +246,7 @@ main (int argc, char **argv, char *envp[])
   int cm_disabled;
   int n;
   int num_options;
+  int empty = 0;
   int status = 1;
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
@@ -316,7 +318,8 @@ main (int argc, char **argv, char *envp[])
   }
 
   /* If doc type is not PDF exit */
-  parse_doc_type(fp);
+  if(parse_doc_type(fp))
+     empty = 1;
 
   /*  Check status of color management in CUPS */
   cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
@@ -411,6 +414,12 @@ main (int argc, char **argv, char *envp[])
   /* call mutool */
   status = mutool_spawn (tmpstr, mupdf_args, envp);
   if (status != 0) status = 1;
+
+  if(empty)
+  {
+     fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+     status = 0;
+  }
 out:
   if (fp)
     fclose(fp);
