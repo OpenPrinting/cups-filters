@@ -7,8 +7,9 @@ CHANGES IN V1.26.3
 	  print-color-mode-supported against
 	  pwg-raster-document-type-supported (Issue #186, Pull request
 	  #188)
-	- rastertopdf, texttopdf, pdftoraster: Handle zero page jobs,
-	  corrections on zero-page job handling (Issue #117)
+	- rastertopdf, rastertops, texttopdf, pdftoraster,
+	  mupdftoraster: Handle zero page jobs, corrections on
+	  zero-page job handling (Issue #117)
 	- cups-browsed: When restarting after a crash make sure that
 	  local queue names have same upper/lower case as before.
 	- cups-browsed: Small code improvements to reduce crash
