@@ -11990,7 +11990,6 @@ int main(int argc, char*argv[]) {
     setenv("CUPS_SERVER", local_server_str, 1);
   }
   cupsSetServer(local_server_str);
-  BrowsePort = ippPort();
 
   if (BrowseLocalProtocols & BROWSE_DNSSD) {
     debug_printf("Local support for DNSSD not implemented\n");

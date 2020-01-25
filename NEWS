@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.26.2 - 2020-01-13
 
 CHANGES IN V1.26.3
 
+	- cups-browsed: Leave the port for legacy CUPS browsing and
+	  broadcasting on 631, do not use a possible alternative port
+	  of the CUPS we are attached to. The legacy CUPS servers we
+	  communicate with are always remote ones.
 	- libcupsfilters: in the PPD generator prioritize
 	  print-color-mode-supported against
 	  pwg-raster-document-type-supported (Issue #186, Pull request
