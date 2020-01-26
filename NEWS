@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.26.2 - 2020-01-13
 
 CHANGES IN V1.26.3
 
+	- cups-browsed, libcupsfilters: Identify DNS-SD-reported
+	  printers as of the local CUPS daemon via UUID and not via
+	  the port on which the local CUPS is listening, as we do not
+	  always have this port available.
 	- cups-browsed: Leave the port for legacy CUPS browsing and
 	  broadcasting on 631, do not use a possible alternative port
 	  of the CUPS we are attached to. The legacy CUPS servers we

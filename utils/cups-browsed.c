@@ -274,6 +274,7 @@ typedef struct dest_list_s {
 /* Local printer (key is name) */
 typedef struct local_printer_s {
   char *device_uri;
+  char *uuid;
   gboolean cups_browsed_controlled;
 } local_printer_t;
 
@@ -3454,10 +3455,12 @@ remove_bad_chars(const char *str_orig, /* I - Original string */
 
 static local_printer_t *
 new_local_printer (const char *device_uri,
+		   const char *uuid,
 		   gboolean cups_browsed_controlled)
 {
   local_printer_t *printer = g_malloc (sizeof (local_printer_t));
   printer->device_uri = strdup (device_uri);
+  printer->uuid = (uuid ? strdup (uuid) : NULL);
   printer->cups_browsed_controlled = cups_browsed_controlled;
   return printer;
 }
@@ -3468,6 +3471,7 @@ free_local_printer (gpointer data)
   local_printer_t *printer = data;
   debug_printf("free_local_printer() in THREAD %ld\n", pthread_self());
   free (printer->device_uri);
+  if (printer->uuid) free (printer->uuid);
   free (printer);
 }
 
@@ -3530,6 +3534,19 @@ local_printer_has_uri (gpointer key,
 }
 
 static gboolean
+local_printer_has_uuid (gpointer key,
+			gpointer value,
+			gpointer user_data)
+{
+  local_printer_t *printer = value;
+  char    *uuid = user_data;
+
+  debug_printf("local_printer_has_uuid() in THREAD %ld\n", pthread_self());
+  return (printer != NULL && printer->uuid != NULL && uuid != NULL &&
+	  g_str_equal(printer->uuid, uuid));
+}
+
+static gboolean
 local_printer_service_name_matches (gpointer key,
 				    gpointer value,
 				    gpointer user_data)
@@ -3586,10 +3603,51 @@ add_dest_cb(dest_list_t *user_data, unsigned flags, cups_dest_t *dest)
   return (1);
 }
 
+
+const char *
+get_printer_uuid(http_t *http_printer,
+		 const char* raw_uri)
+{
+  ipp_t *response = NULL;
+  ipp_attribute_t *attr;
+
+  const char * const pattrs[] = {
+    "printer-uuid",
+  };
+  const char * const req_attrs[] = {
+    "printer-uuid",
+  };
+
+  if (http_printer == NULL)
+    debug_printf ("HTTP connection for printer with URI %s not set!\n",
+		  raw_uri);
+
+  if ((response =
+       get_printer_attributes2(http_printer, raw_uri,
+			       pattrs, 1, req_attrs, 1, 0)) == NULL) {
+    debug_printf ("Printer with URI %s has no \"printer-uuid\" IPP attribute!\n",
+		  raw_uri);
+    return NULL;
+  }
+
+  attr = ippFindAttribute(response, "printer-uuid", IPP_TAG_URI);
+  if (attr)
+    return (ippGetString(attr, 0, NULL) + 9);
+  else {
+    debug_printf ("Printer with URI %s: Cannot read \"printer-uuid\" IPP attribute!\n",
+		  raw_uri);
+    return NULL;
+  }
+}
+
 static void
 get_local_printers (void)
 {
   dest_list_t dest_list = {0, NULL};
+  http_t *conn = NULL;
+
+  conn = http_connect_local ();
+
   /* We only want to have a list of actually existing CUPS queues, not of
      DNS-SD-discovered printers for which CUPS can auto-setup a driverless
      print queue */
@@ -3613,6 +3671,7 @@ get_local_printers (void)
     gboolean cups_browsed_controlled;
     gboolean is_temporary;
     gboolean is_cups_supported_remote;
+    char uri[HTTP_MAX_URI];
 
     const char *device_uri = cupsGetOption ("device-uri",
 					    dest->num_options,
@@ -3649,8 +3708,14 @@ get_local_printers (void)
     cups_browsed_controlled = val && (!strcasecmp (val, "yes") ||
 				      !strcasecmp (val, "on") ||
 				      !strcasecmp (val, "true"));
-    printer = new_local_printer (device_uri,
+    httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
+		     "localhost", ippPort(), "/printers/%s", dest->name);
+    printer = new_local_printer (device_uri, get_printer_uuid(conn, uri),
 				 cups_browsed_controlled);
+    debug_printf ("Printer %s: %s, %s%s%s\n",
+		  dest->name, device_uri, printer->uuid,
+		  cups_browsed_controlled ? ", cups_browsed" : "",
+		  is_cups_supported_remote ? ", temporary" : "");
 
     if (is_cups_supported_remote)
       g_hash_table_insert (cups_supported_remote_printers,
@@ -9662,6 +9727,8 @@ static void resolve_callback(AvahiServiceResolver *r,
 			     AvahiLookupResultFlags flags,
 			     AVAHI_GCC_UNUSED void* userdata) {
   char ifname[IF_NAMESIZE];
+  AvahiStringList *uuid_entry;
+  char *uuid_key, *uuid_value;
 
   debug_printf("resolve_callback() in THREAD %ld\n", pthread_self());
 
@@ -9677,17 +9744,24 @@ static void resolve_callback(AvahiServiceResolver *r,
 
   /* Ignore local queues on the port of the cupsd we are serving for */
   update_netifs(NULL);
-  if (port == ippPort() &&
-      ((flags & AVAHI_LOOKUP_RESULT_LOCAL) || !strcasecmp(ifname, "lo") ||
-       is_local_hostname(host_name))) {
-    debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) is from local CUPS, ignored (Avahi lookup result or host name of local machine).\n",
-		 name, type, domain, host_name, port, ifname,
-		 (address ?
-		  (address->proto == AVAHI_PROTO_INET ? "IPv4" :
-		   address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
-		   "IPv4/IPv6 Unknown") :
-		  "IPv4/IPv6 Unknown"));
-    goto ignore;
+  if ((flags & AVAHI_LOOKUP_RESULT_LOCAL) || !strcasecmp(ifname, "lo") ||
+      is_local_hostname(host_name)) {
+    update_local_printers ();
+    uuid_value = NULL;
+    if (txt && (uuid_entry = avahi_string_list_find(txt, "UUID")))
+      avahi_string_list_get_pair(uuid_entry, &uuid_key, &uuid_value, NULL);
+    if (g_hash_table_find (local_printers,
+			   local_printer_has_uuid,
+			   uuid_value)) {
+      debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) with UUID %s is from local CUPS, ignored (Avahi lookup result or host name of local machine).\n",
+		   name, type, domain, host_name, port, ifname,
+		   (address ?
+		    (address->proto == AVAHI_PROTO_INET ? "IPv4" :
+		     address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
+		     "IPv4/IPv6 Unknown") :
+		    "IPv4/IPv6 Unknown"), uuid_value);
+      goto ignore;
+    }
   }
 
   /* Called whenever a service has been resolved successfully or timed out */

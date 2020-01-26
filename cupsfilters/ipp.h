@@ -37,7 +37,8 @@ extern "C" {
 #define HAVE_CUPS_1_6 1
 #endif
 
-extern char get_printer_attributes_log[65535];
+#define LOGSIZE 4 * 65536
+char get_printer_attributes_log[LOGSIZE];
 
 const char     *resolve_uri(const char *raw_uri);
 #ifdef HAVE_CUPS_1_6
@@ -47,6 +48,13 @@ ipp_t   *get_printer_attributes(const char* raw_uri,
 				const char* const req_attrs[],
 				int req_attrs_size,
 				int debug);
+ipp_t   *get_printer_attributes2(http_t *http_printer,
+				 const char* raw_uri,
+				 const char* const pattrs[],
+				 int pattrs_size,
+				 const char* const req_attrs[],
+				 int req_attrs_size,
+				 int debug);
 #endif /* HAVE_CUPS_1_6 */
 
 #  ifdef __cplusplus

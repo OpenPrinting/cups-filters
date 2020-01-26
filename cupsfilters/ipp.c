@@ -25,14 +25,12 @@
 #include <stdlib.h>
 #include <cups/cups.h>
 #include <cups/backend.h>
+#include <cupsfilters/ipp.h>
 #include <cupsfilters/ppdgenerator.h>
 
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
 #define HAVE_CUPS_1_6 1
 #endif
-
-#define LOGSIZE 65536
-char get_printer_attributes_log[LOGSIZE];
 
 void
 log_printf(char *log,
@@ -75,6 +73,7 @@ resolve_uri(const char *raw_uri)
 }
 
 #ifdef HAVE_CUPS_1_6
+/* Get attributes of a printer specified only by URI */
 ipp_t *
 get_printer_attributes(const char* raw_uri,
 		       const char* const pattrs[],
@@ -83,9 +82,24 @@ get_printer_attributes(const char* raw_uri,
 		       int req_attrs_size,
 		       int debug)
 {
+  return get_printer_attributes2(NULL, raw_uri, pattrs, pattrs_size,
+				 req_attrs, req_attrs_size, debug);
+}
+
+/* Get attributes of a printer specified by URI and under a given HTTP
+   connection, for example via a domain socket */
+ipp_t *
+get_printer_attributes2(http_t *http_printer,
+			const char* raw_uri,
+			const char* const pattrs[],
+			int pattrs_size,
+			const char* const req_attrs[],
+			int req_attrs_size,
+			int debug)
+{
   const char *uri;
-  int uri_status, host_port, i = 0, total_attrs = 0, fallback, cap = 0;
-  http_t *http_printer = NULL;
+  int have_http, uri_status, host_port, i = 0, total_attrs = 0, fallback,
+    cap = 0;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
   ipp_t *request, *response = NULL;
   ipp_attribute_t *attr;
@@ -150,14 +164,19 @@ get_printer_attributes(const char* raw_uri,
     return NULL;
   }
 
-  if ((http_printer =
-       httpConnect2 (host_name, host_port, NULL, AF_UNSPEC, 
-		     HTTP_ENCRYPT_IF_REQUESTED, 1, 3000, NULL)) == NULL) {
-    log_printf(get_printer_attributes_log,
-	       "get-printer-attributes: Cannot connect to printer with URI %s.\n",
-	       uri);
-    return NULL;
-  }
+  /* Connect to the server if not already done */
+  if (http_printer == NULL) {
+    have_http = 0;
+    if ((http_printer =
+	 httpConnect2 (host_name, host_port, NULL, AF_UNSPEC, 
+		       HTTP_ENCRYPT_IF_REQUESTED, 1, 3000, NULL)) == NULL) {
+      log_printf(get_printer_attributes_log,
+		 "get-printer-attributes: Cannot connect to printer with URI %s.\n",
+		 uri);
+      return NULL;
+    }
+  } else
+    have_http = 1;
 
   /* If we got called without attribute list, use the attributes for polling
      a complete list of capabilities of the printer.
@@ -172,7 +191,7 @@ get_printer_attributes(const char* raw_uri,
       req_attrs_size = sizeof(req_attrs_cap) / sizeof(req_attrs_cap[0]);
     }
   }
-  
+
   /* Loop through all fallbacks until getting a successful result */
   for (fallback = 0; fallback < 2 + cap; fallback ++) {
     request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
@@ -250,7 +269,7 @@ get_printer_attributes(const char* raw_uri,
 	ippDelete(response);
       } else {
 	/* Suitable response, we are done */
-	httpClose(http_printer);
+	if (have_http == 0) httpClose(http_printer);
 	return response;
       }
     } else {
@@ -272,7 +291,7 @@ get_printer_attributes(const char* raw_uri,
     }
   }
 
-  httpClose(http_printer);
+  if (have_http == 0) httpClose(http_printer);
   return NULL;
 }
 #endif /* HAVE_CUPS_1_6 */
