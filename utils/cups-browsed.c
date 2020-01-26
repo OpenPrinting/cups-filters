@@ -1230,17 +1230,29 @@ http_timeout_cb(http_t *http, void *user_data)
 static http_t *
 http_connect_local (void)
 {
+  const char *server = cupsServer();
+  int port = ippPort();
+
   if (!local_conn) {
-    debug_printf("cups-browsed: Creating http connection to local CUPS daemon: %s:%d\n",
-		 cupsServer(), ippPort());
-    local_conn = httpConnectEncryptShortTimeout(cupsServer(), ippPort(),
+    if (server[0] == '/')
+      debug_printf("cups-browsed: Creating http connection to local CUPS daemon via domain socket: %s\n",
+		   server);
+    else
+      debug_printf("cups-browsed: Creating http connection to local CUPS daemon: %s:%d\n",
+		   server, port);
+    local_conn = httpConnectEncryptShortTimeout(server, port,
 						cupsEncryption());
   }
   if (local_conn)
     httpSetTimeout(local_conn, HttpLocalTimeout, http_timeout_cb, NULL);
-  else
-    debug_printf("cups-browsed: Failed creating http connection to local CUPS daemon: %s:%d\n",
-		 cupsServer(), ippPort());
+  else {
+    if (server[0] == '/')
+      debug_printf("cups-browsed: Failed creating http connection to local CUPS daemon via domain socket: %s\n",
+		   server);
+    else
+      debug_printf("cups-browsed: Failed creating http connection to local CUPS daemon: %s:%d\n",
+		   server, port);
+  }
 
   return local_conn;
 }
@@ -3092,7 +3104,7 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
   };
 
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		   "localhost", ippPort(), "/printers/%s", printer);
+		   "localhost", 0, "/printers/%s", printer);
 
   /* Getting the resource */
   resource = uri + (strlen(uri) - strlen(printer) - 10);
@@ -3709,7 +3721,7 @@ get_local_printers (void)
 				      !strcasecmp (val, "on") ||
 				      !strcasecmp (val, "true"));
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		     "localhost", ippPort(), "/printers/%s", dest->name);
+		     "localhost", 0, "/printers/%s", dest->name);
     printer = new_local_printer (device_uri, get_printer_uuid(conn, uri),
 				 cups_browsed_controlled);
     debug_printf ("Printer %s: %s, %s%s%s\n",
@@ -5092,7 +5104,7 @@ enable_printer (const char *printer) {
   }
 
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		   "localhost", ippPort(), "/printers/%s", printer);
+		   "localhost", 0, "/printers/%s", printer);
   request = ippNewRequest (IPP_RESUME_PRINTER);
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		"printer-uri", NULL, uri);
@@ -5122,7 +5134,7 @@ disable_printer (const char *printer, const char *reason) {
   if (reason == NULL)
     reason = "Disabled by cups-browsed";
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		   "localhost", ippPort(), "/printers/%s", printer);
+		   "localhost", 0, "/printers/%s", printer);
   request = ippNewRequest (IPP_PAUSE_PRINTER);
   ippAddString (request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		"printer-uri", NULL, uri);
@@ -5154,7 +5166,7 @@ set_cups_default_printer(const char *printer) {
   if (printer == NULL)
     return 0;
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-                   "localhost", ippPort(), "/printers/%s", printer);
+                   "localhost", 0, "/printers/%s", printer);
   request = ippNewRequest(IPP_OP_CUPS_SET_DEFAULT);
   ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
                "printer-uri", NULL, uri);
@@ -5320,7 +5332,7 @@ loadPPD(http_t *http,
 
   /* Download URI and resource for the PPD file */
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "http", NULL,
-		   "localhost", ippPort(), "/printers/%s.ppd", name);
+		   "localhost", 0, "/printers/%s.ppd", name);
   resource = strstr(uri, "/printers/");
 
   /* Download the file */
@@ -5438,7 +5450,7 @@ record_printer_options(const char *printer) {
     }
 
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		     "localhost", ippPort(), "/printers/%s", printer);
+		     "localhost", 0, "/printers/%s", printer);
     resource = uri + (strlen(uri) - strlen(printer) - 10);
     request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
@@ -6381,7 +6393,7 @@ on_job_state (CupsNotifier *object,
 
       request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
       httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		       "localhost", ippPort(), "/printers/%s", printer);
+		       "localhost", 0, "/printers/%s", printer);
       ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		   "printer-uri", NULL, uri);
       ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
@@ -6496,6 +6508,7 @@ on_printer_deleted (CupsNotifier *object,
 static int
 queue_overwritten (remote_printer_t *p)
 {
+  http_t        *conn = NULL;
   ipp_t         *response = NULL;       /* IPP Response */
   ipp_attribute_t *attr;                /* Current attribute */
   const char    *printername,           /* Print queue name */
@@ -6535,15 +6548,22 @@ queue_overwritten (remote_printer_t *p)
      get-printer-attributes IPP response as "printer-make-and-model",
      we go the IPP way here and do not download the printer's PPD. */
 
+  conn = http_connect_local ();
+  if (conn == NULL) {
+    debug_printf("Cannot connect to local CUPS to see whether queue %s got overwritten.\n",
+		 p->queue_name);
+    return 0;
+  }
+
   /* URI of the local CUPS queue (not the device URI */
   httpAssembleURIf(HTTP_URI_CODING_ALL, local_queue_uri,
 		   sizeof(local_queue_uri),
-		   "ipp", NULL, "localhost", ippPort(),
+		   "ipp", NULL, "localhost", 0,
 		   "/printers/%s", p->queue_name);
-  response = get_printer_attributes(local_queue_uri,
-				    pattrs, sizeof(pattrs) / sizeof(pattrs[0]),
-				    pattrs, sizeof(pattrs) / sizeof(pattrs[0]),
-				    1);
+  response = get_printer_attributes2(conn, local_queue_uri,
+				     pattrs, sizeof(pattrs) / sizeof(pattrs[0]),
+				     pattrs, sizeof(pattrs) / sizeof(pattrs[0]),
+				     1);
   debug_log_out(get_printer_attributes_log);
   if (!response || cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
     debug_printf("lpstat: %s\n", cupsLastErrorString());
@@ -6662,10 +6682,10 @@ on_printer_modified (CupsNotifier *object,
 	debug_printf("Browse send failed to connect to localhost\n");
       else {
 	request = ippNewRequest(IPP_OP_CUPS_ADD_MODIFY_PRINTER);
-	/* Printer URI: ipp://localhost:631/printers/<queue name> */
+	/* Printer URI: ipp://localhost/printers/<queue name> */
 	httpAssembleURIf(HTTP_URI_CODING_ALL, local_queue_uri,
 			 sizeof(local_queue_uri),
-			 "ipp", NULL, "localhost", ippPort(),
+			 "ipp", NULL, "localhost", 0,
 			 "/printers/%s", p->queue_name);
 	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		     "printer-uri", NULL, local_queue_uri);
@@ -6953,7 +6973,7 @@ create_remote_printer_entry (const char *queue_name,
 
   p->ip = (ip != NULL ? strdup (ip) : NULL);
 
-  p->port = (port != 0 ? port : ippPort());
+  p->port = (port != 0 ? port : 631);
 
   p->service_name = strdup (service_name);
   if (!p->service_name)
@@ -7620,9 +7640,9 @@ gboolean update_cups_queues(gpointer unused) {
 	  debug_printf("Removing local CUPS queue %s (%s).\n", p->queue_name,
 		       p->uri);
 	  request = ippNewRequest(CUPS_DELETE_PRINTER);
-	  /* Printer URI: ipp://localhost:631/printers/<queue name> */
+	  /* Printer URI: ipp://localhost/printers/<queue name> */
 	  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-			   "localhost", ippPort(), "/printers/%s",
+			   "localhost", 0, "/printers/%s",
 			   p->queue_name);
 	  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI,
 		       "printer-uri", NULL, uri);
@@ -7749,9 +7769,9 @@ gboolean update_cups_queues(gpointer unused) {
 	 process */
       p->no_autosave = 1;
 
-      /* Printer URI: ipp://localhost:631/printers/<queue name> */
+      /* Printer URI: ipp://localhost/printers/<queue name> */
       httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-		       "localhost", ippPort(), "/printers/%s", p->queue_name);
+		       "localhost", 0, "/printers/%s", p->queue_name);
 
       ifscript = NULL;
       ppdfile = NULL;

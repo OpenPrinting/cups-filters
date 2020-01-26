@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.26.2 - 2020-01-13
 
 CHANGES IN V1.26.3
 
+	- cups-browsed: Eliminate the use of the local CUPS daemon's
+	  (the CUPS we are attached to) port number completely, so
+	  that for attaching to an arbitrary local CUPS daemon
+	  listening on an arbitrary port (or even not listening on
+	  localhost at all) it is enough to tell cups-browsed the
+	  domain socket the CUPS daemon is listening on.
 	- cups-browsed, libcupsfilters: Identify DNS-SD-reported
 	  printers as of the local CUPS daemon via UUID and not via
 	  the port on which the local CUPS is listening, as we do not
