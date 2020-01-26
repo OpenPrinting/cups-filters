@@ -1,7 +1,7 @@
-NEWS - OpenPrinting CUPS Filters v1.26.2 - 2020-01-13
+NEWS - OpenPrinting CUPS Filters v1.27.0 - 2020-01-26
 -----------------------------------------------------
 
-CHANGES IN V1.26.3
+CHANGES IN V1.27.0
 
 	- cups-browsed: Eliminate the use of the local CUPS daemon's
 	  (the CUPS we are attached to) port number completely, so
