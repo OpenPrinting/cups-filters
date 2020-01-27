@@ -1,6 +1,10 @@
 NEWS - OpenPrinting CUPS Filters v1.27.0 - 2020-01-26
 -----------------------------------------------------
 
+CHANGES IN V1.27.1
+
+	- pdftopdf: Handle zero page jobs (Issue #117).
+
 CHANGES IN V1.27.0
 
 	- cups-browsed: Eliminate the use of the local CUPS daemon's
