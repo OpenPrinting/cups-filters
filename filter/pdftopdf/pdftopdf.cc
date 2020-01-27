@@ -1107,6 +1107,7 @@ int main(int argc,char **argv)
        external utilities pdftocairo or Ghostscript, but these make
        the processing slower, especially due to extra piping of the
        data between processes. */
+    int empty = 0;
     int qpdf_flatten = 1;
     int pdftocairo_flatten = 0;
     int gs_flatten = 0;
@@ -1138,15 +1139,21 @@ int main(int argc,char **argv)
     if (argc==7) {
       if (!proc->loadFilename(argv[6],qpdf_flatten)) {
         ppdClose(ppd);
-        return 1;
+        empty = 1;
       }
     } else {
       tmpfile = copy_stdin_to_temp();
       if ((!tmpfile)||
 	  (!proc->loadFile(tmpfile,WillStayAlive,qpdf_flatten))) {
         ppdClose(ppd);
-        return 1;
+        empty = 1;
       }
+    }
+
+    if(empty)
+    {
+      fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+      return 0;
     }
 
     /* If the input file contains a PDF form and we opted for not
