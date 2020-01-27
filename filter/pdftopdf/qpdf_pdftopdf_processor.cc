@@ -737,7 +737,12 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name) // {{{
     out.setExtraHeaderText(extraheader);
   }
   out.setPreserveEncryption(false);
+  std::vector<QPDFObjectHandle> pages=pdf->getAllPages();
+  int len=pages.size();
+  if (len)
   out.write();
+  else
+  fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
 }
 // }}}
 
