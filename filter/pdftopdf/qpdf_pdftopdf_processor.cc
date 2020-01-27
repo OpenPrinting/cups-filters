@@ -742,7 +742,7 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name) // {{{
   if (len)
   out.write();
   else
-  fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+  fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
 }
 // }}}
 
