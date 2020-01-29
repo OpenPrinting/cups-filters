@@ -84,6 +84,24 @@ extern "C" void pdf_free(pdf_t *pdf)
   delete pdf;
 }
 
+/*
+ * 'pdf_pages()' - Count number of pages in file
+ *                         using QPDF.
+ * I - Filename to open
+ * O - Number of pages or -1 on error
+ */
+int pdf_pages(const char *filename)
+{
+  QPDF *pdf = new QPDF();
+  try{
+  pdf->processFile(filename);
+  }catch(...) {
+    return -1;
+  }
+  int pages = (pdf->getAllPages()).size();
+  return pages;
+}
+
 
 /**
  * 'pdf_prepend_stream' - Prepend a stream to the contents of a specified

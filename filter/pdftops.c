@@ -23,6 +23,7 @@
  * Include necessary headers...
  */
 
+#include "pdf.h"
 #include <config.h>
 #include <cups/cups.h>
 #include <cups/ppd.h>
@@ -225,6 +226,42 @@ void remove_options(char *options_str, const char **option_list)
 
 
 /*
+ * Check whether given file is empty
+ */
+
+int is_empty(char *filename)
+{
+  FILE *fp = NULL;
+  fp = fopen(filename, "rb");
+  if (fp == NULL)
+  {
+    fprintf(stderr, "ERROR: pdftops - cannot open print file \"%s\"\n",
+            filename);
+    exit(1);
+  }
+  else
+  {
+    char buf[1];
+    rewind(fp);
+    if (fread(buf, 1, 1, fp) == 0) {
+      fclose(fp);
+      fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+      return 1;
+    }
+    fclose(fp);
+    int pages = pdf_pages(filename);
+    if (pages == 0) {
+      fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
+      return 1;
+    }
+    if (pages > 0)
+      return 0;
+    exit(1);
+  }
+}
+
+
+/*
  * Before calling any command line utility, log its command line in CUPS'
  * debug mode
  */
@@ -380,6 +417,9 @@ main(int  argc,				/* I - Number of command-line args */
     filename    = argv[6];
     tempfile[0] = '\0';
   }
+
+  if (is_empty(filename))
+    return 0;
 
  /*
   * Read out copy counts and collate setting passed over by pdftopdf

@@ -789,10 +789,17 @@ texttotext_DEPENDENCIES = $(STRCASESTR)
 pdftops_SOURCES = \
 	filter/common.c \
 	filter/common.h \
-	filter/pdftops.c
+	filter/pdftops.c \
+	filter/pdf.cxx \
+	filter/pdf.h
 EXTRA_pdftops_SOURCES = filter/strcasestr.c
-pdftops_CFLAGS = $(CUPS_CFLAGS)
-pdftops_LDADD = $(STRCASESTR) $(CUPS_LIBS)
+pdftops_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	$(LIBQPDF_CFLAGS)
+pdftops_LDADD = \
+	$(STRCASESTR) \
+	$(CUPS_LIBS) \
+	$(LIBQPDF_LIBS)
 pdftops_DEPENDENCIES = $(STRCASESTR)
 
 pdftoraster_SOURCES = \

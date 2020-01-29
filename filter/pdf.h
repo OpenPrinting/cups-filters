@@ -45,6 +45,7 @@ void pdf_add_type1_font(pdf_t *doc, unsigned page, const char *name);
 void pdf_resize_page(pdf_t *doc, unsigned page, float width, float length, float *scale);
 void pdf_duplicate_page (pdf_t *doc, unsigned page, unsigned count);
 int pdf_fill_form(pdf_t *doc, opt_t *opt);
+int pdf_pages(const char *filename);
 
 #ifdef __cplusplus
 }
