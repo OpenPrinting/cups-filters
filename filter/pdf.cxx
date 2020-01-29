@@ -93,13 +93,18 @@ extern "C" void pdf_free(pdf_t *pdf)
 int pdf_pages(const char *filename)
 {
   QPDF *pdf = new QPDF();
-  try{
-  pdf->processFile(filename);
-  }catch(...) {
+  if (pdf) {
+    try{
+      pdf->processFile(filename);
+    } catch(...) {
+      pdf_free(pdf);
+      return -1;
+    }
+    int pages = (pdf->getAllPages()).size();
+    pdf_free(pdf);
+    return pages;
+  } else
     return -1;
-  }
-  int pages = (pdf->getAllPages()).size();
-  return pages;
 }
 
 
