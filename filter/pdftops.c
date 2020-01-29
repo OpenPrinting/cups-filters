@@ -71,6 +71,8 @@ char                    make_model[128] = "";
  */
 
 const char *pstops_exclude_general[] = {
+  "crop-to-fit",
+  "fill",
   "fitplot",
   "fit-to-page",
   "landscape",

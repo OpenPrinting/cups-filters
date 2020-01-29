@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.0 - 2020-01-26
 
 CHANGES IN V1.27.1
 
+	- pdftops: Added options "crop-to-fit" and "fill" to the
+	  pdftopdf options which the pstops called by pdftops should
+	  not apply a second time.
 	- pdftops: Added missing "-sstdout=%stderr" to Ghostscript
 	  command line, to assure that all messages are redirected to
 	  stderr and do not mix up with the output data.
