@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.0 - 2020-01-26
 
 CHANGES IN V1.27.1
 
+	- pdftops: Added missing "-sstdout=%stderr" to Ghostscript
+	  command line, to assure that all messages are redirected to
+	  stderr and do not mix up with the output data.
 	- pdftopdf: Handle zero page jobs (Issue #117).
 
 CHANGES IN V1.27.0

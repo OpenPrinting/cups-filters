@@ -592,22 +592,23 @@ main(int  argc,				/* I - Number of command-line args */
     pdf_argv[3] = (char *)"-dBATCH";
     pdf_argv[4] = (char *)"-dSAFER";
     pdf_argv[5] = (char *)"-dNOMEDIAATTRS";
+    pdf_argv[6] = (char *)"-sstdout=%stderr";
 #    ifdef HAVE_GHOSTSCRIPT_PS2WRITE
-    pdf_argv[6] = (char *)"-sDEVICE=ps2write";
+    pdf_argv[7] = (char *)"-sDEVICE=ps2write";
 #    else
-    pdf_argv[6] = (char *)"-sDEVICE=pswrite";
+    pdf_argv[7] = (char *)"-sDEVICE=pswrite";
 #    endif /* HAVE_GHOSTSCRIPT_PS2WRITE */
-    pdf_argv[7] = (char *)"-dShowAcroForm";
-    pdf_argv[8] = (char *)"-sOUTPUTFILE=%stdout";
+    pdf_argv[8] = (char *)"-dShowAcroForm";
+    pdf_argv[9] = (char *)"-sOUTPUTFILE=%stdout";
     if (gray_output == 1) /* Checking for monochrome/grayscale PostScript
 			     output */
     {
-      pdf_argv[9] = (char *)"-sProcessColorModel=DeviceGray";
-      pdf_argv[10] = (char *)"-sColorConversionStrategy=Gray";
-      pdf_argc = 11;
+      pdf_argv[10] = (char *)"-sProcessColorModel=DeviceGray";
+      pdf_argv[11] = (char *)"-sColorConversionStrategy=Gray";
+      pdf_argc = 12;
     }
     else
-      pdf_argc = 9;
+      pdf_argc = 10;
   }
   else if (renderer == MUPDF)
   {
