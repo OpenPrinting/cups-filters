@@ -418,7 +418,10 @@ main(int  argc,	   /* I - Number of command-line arguments */
   if (argc == 7)
   {
     input = fopen(argv[6], "rb");
-    if (input == NULL) fprintf(stderr, "Unable to open PWG Raster file");
+    if (input == NULL) {
+      fprintf(stderr, "Unable to open PWG Raster file\n");
+      exit(1);
+    }
   }
   else
     input = stdin;
