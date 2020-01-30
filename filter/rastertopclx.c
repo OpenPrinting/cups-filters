@@ -1795,6 +1795,7 @@ main(int  argc,				/* I - Number of command-line arguments */
      char *argv[])			/* I - Command-line arguments */
 {
   int			fd;		/* File descriptor */
+  int empty = 1;
   cups_raster_t		*ras;		/* Raster stream for printing */
   cups_page_header2_t	header;		/* Page header from file */
   int			y;		/* Current line */
@@ -1899,6 +1900,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     * Write a status message with the page number and number of copies.
     */
 
+    if (empty)
+      empty = 0;
+
     if (Canceled)
       break;
 
@@ -1949,7 +1953,8 @@ main(int  argc,				/* I - Number of command-line arguments */
       break;
   }
 
-  Shutdown(ppd, job_id, argv[2], argv[3], num_options, options);
+  if (!empty)
+    Shutdown(ppd, job_id, argv[2], argv[3], num_options, options);
 
   cupsFreeOptions(num_options, options);
 
@@ -1958,6 +1963,11 @@ main(int  argc,				/* I - Number of command-line arguments */
   if (fd != 0)
     close(fd);
 
+  if (empty)
+  {
+    fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+    return 0;
+  }
   return (Page == 0);
 }
 
