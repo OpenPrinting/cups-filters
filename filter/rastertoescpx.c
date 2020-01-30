@@ -1915,9 +1915,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   if (fd != 0)
     close(fd);
   
-  for (int i = 0; i < 7; i++)
-    if (DotBuffers[i] != NULL)
-      free(DotBuffers[i]);
+  if (DotBuffers[0] != NULL)
+    free(DotBuffers[0]);
 
   if (empty)
   {

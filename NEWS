@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.27.0 - 2020-01-26
 
 CHANGES IN V1.27.1
 
+	- rastertoescpx: Fixed wrong freeing of a buffer.
 	- pdftops: Added options "crop-to-fit" and "fill" to the
 	  pdftopdf options which the pstops called by pdftops should
 	  not apply a second time.
