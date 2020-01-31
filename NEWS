@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.0 - 2020-01-26
 
 CHANGES IN V1.27.1
 
+	- cups-browsed: Switched default for "CreateIPPPrinterQueues"
+	  from "local-only" to "All". The configure script options
+	  "--enable-auto-setup-local-only" and
+	  "--enable-auto-setup-driverless-only" can be used to change
+	  this default (Debian bug #921252).
 	- rastertoescpx, rastertopclx: Handle zero page jobs (Issue
 	  #117, Pull request #197).
 	- rastertoescpx: Fixed wrong freeing of a buffer.

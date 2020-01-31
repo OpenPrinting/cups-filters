@@ -445,10 +445,14 @@ static unsigned int OnlyUnsupportedByCUPS = 0;
 static unsigned int UseCUPSGeneratedPPDs = 0;
 static unsigned int CreateRemoteRawPrinterQueues = 0;
 static unsigned int CreateRemoteCUPSPrinterQueues = 1;
-#ifdef DRIVERLESS_IPP_PRINTERS_AUTO_SETUP
+#ifdef ONLY_LOCAL_IPP_PRINTERS_AUTO_SETUP
+static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_LOCAL_ONLY;
+#else
+#ifdef ONLY_DRIVERLESS_IPP_PRINTERS_AUTO_SETUP
 static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_DRIVERLESS;
 #else
-static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_LOCAL_ONLY;
+static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_ALL;
+#endif
 #endif
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static int NewIPPPrinterQueuesShared = 0;

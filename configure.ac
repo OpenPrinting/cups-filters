@@ -150,12 +150,31 @@ AC_SUBST(APPLE_RASTER_FILTER)
 AC_DEFINE(PDFTOPDF, [], [Needed for pdftopdf filter compilation])
 AC_DEFINE_DIR(BANNERTOPDF_DATADIR, "{CUPS_DATADIR}/data", [Directory where bannertopdf finds its data files (PDF templates)])
 
-AC_ARG_ENABLE([auto-setup-driverless], [AS_HELP_STRING([--enable-auto-setup-driverless], [enable automatic setup of IPP network printers with driverless printing support.])],
-        [enable_auto_setup_driverless="$enableval"],
-        [enable_auto_setup_driverless=no]
+AC_ARG_ENABLE([auto-setup-local-only], [AS_HELP_STRING([--enable-auto-setup-local-only], [enable automatic setup of only local IPP printers.])],
+        [enable_auto_setup_local_only="$enableval"],
+        [enable_auto_setup_local_only=no]
 )
-if test "x$enable_auto_setup_driverless" != "xno"; then
-	AC_DEFINE([DRIVERLESS_IPP_PRINTERS_AUTO_SETUP], [], [Auto-setup driverless IPP network printers?])
+if test "x$enable_auto_setup_local_only" != "xno"; then
+	AC_DEFINE([ONLY_LOCAL_IPP_PRINTERS_AUTO_SETUP], [], [Auto-setup only local IPP network printers?])
+fi
+
+AC_ARG_ENABLE([auto-setup-driverless-only], [AS_HELP_STRING([--enable-auto-setup-driverless-only], [enable automatic setup of only IPP network printers with driverless printing support.])],
+        [enable_auto_setup_driverless_only="$enableval"],
+        [enable_auto_setup_driverless_only=no]
+)
+if test "x$enable_auto_setup_driverless_only" != "xno"; then
+	AC_DEFINE([ONLY_DRIVERLESS_IPP_PRINTERS_AUTO_SETUP], [], [Auto-setup only driverless IPP network printers?])
+fi
+
+if test "x$enable_auto_setup_local_only" != "xno"; then
+	enable_auto_setup_driverless_only=no
+	enable_auto_setup_all=no
+else
+	if test "x$enable_auto_setup_driverless_only" != "xno"; then
+		enable_auto_setup_all=no
+	else
+		enable_auto_setup_all=yes
+	fi
 fi
 
 AC_SEARCH_LIBS([dlopen],
@@ -893,6 +912,8 @@ Build configuration:
 	driverless:      ${enable_driverless}
 	apple-raster:    ${APPLE_RASTER_FILTER}
 	pclm:            ${enable_pclm}
-	driverless auto-setup: ${enable_auto_setup_driverless}
+	all ipp printer auto-setup: ${enable_auto_setup_all}
+	only driverless auto-setup: ${enable_auto_setup_driverless_only}
+	only local auto-setup: ${enable_auto_setup_local_only}
 ==============================================================================
 ])
