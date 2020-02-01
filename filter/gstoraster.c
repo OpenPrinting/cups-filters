@@ -666,9 +666,7 @@ main (int argc, char **argv, char *envp[])
       goto out;
     }
 
-    filename = buf;
-    /* remove name */
-    unlink(buf);
+    filename = strdup(buf);
 
     /* copy stdin to the tmp file */
     while ((n = read(0,buf,BUFSIZ)) > 0) {
@@ -735,8 +733,8 @@ main (int argc, char **argv, char *envp[])
     char output[31] = "";
     int pagecount;
     size_t bytes;
-    snprintf(gscommand, 65536, "yes | gs -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | grep -c HiResBoundingBox",
-	      filename);
+    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | grep -c HiResBoundingBox",
+	     CUPS_GHOSTSCRIPT, filename);
 
     FILE *pd = popen(gscommand, "r");
     if (!pd) {
@@ -761,6 +759,12 @@ main (int argc, char **argv, char *envp[])
       fprintf(stderr, "DEBUG: Unexpected page count\n");
       goto out;
     }
+  }
+  if (argc == 6) {
+    /* input from stdin */
+    /* remove name of temp file*/
+    unlink(filename);
+    free(filename);
   }
 
   /*  Check status of color management in CUPS */
