@@ -48,6 +48,7 @@ MIT Open Source License  -  http://www.opensource.org/
 #include <sys/wait.h>
 #include <signal.h>
 #include <errno.h>
+#include "pdf.h"
 
 #define PDF_MAX_CHECK_COMMENT_LINES	20
 
@@ -587,6 +588,7 @@ main (int argc, char **argv, char *envp[])
   char *outformat_env = NULL;
   OutFormatType outformat;
   char buf[BUFSIZ];
+  char *filename;
   char *icc_profile = NULL;
   /*char **qualifier = NULL;*/
   char *tmp;
@@ -663,6 +665,8 @@ main (int argc, char **argv, char *envp[])
       fprintf(stderr, "ERROR: Can't create temporary file\n");
       goto out;
     }
+
+    filename = buf;
     /* remove name */
     unlink(buf);
 
@@ -692,13 +696,71 @@ main (int argc, char **argv, char *envp[])
         fprintf(stderr, "ERROR: Can't open input file %s\n",argv[6]);
         goto out;
     }
+    filename = argv[6];
   }
 
   /* find out file type */
   doc_type = parse_doc_type(fp);
   if (doc_type == GS_DOC_TYPE_UNKNOWN) {
+    char buf[1];
+    rewind(fp);
+    if (fread(buf, 1, 1, fp) == 0) {
+      fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+      status = 0;
+      if (outformat == OUTPUT_FORMAT_RASTER)
+        fprintf(stdout, "RaS2");
+      goto out;
+    }
     fprintf(stderr, "ERROR: Can't detect file type\n");
     goto out;
+  }
+
+  if (doc_type == GS_DOC_TYPE_PDF) {  
+    int pages = pdf_pages(filename);
+
+    if (pages == 0) {
+      fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
+      status = 0;
+      if (outformat == OUTPUT_FORMAT_RASTER)
+        fprintf(stdout, "RaS2");
+      goto out;
+    }
+    if (pages < 0) {
+      fprintf(stderr, "DEBUG: Unexpected page count\n");
+      goto out;
+    }
+  }
+  else {
+    char gscommand[65536];
+    char output[31] = "";
+    int pagecount;
+    size_t bytes;
+    snprintf(gscommand, 65536, "yes | gs -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | grep -c HiResBoundingBox",
+	      filename);
+
+    FILE *pd = popen(gscommand, "r");
+    if (!pd) {
+      fprintf(stderr, "Failed to execute ghostscript to determine number of input pages!\n");
+      goto out;
+    }
+
+    bytes = fread(output, 1, 31, pd);
+    pclose(pd);
+
+    if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
+      pagecount = -1;
+
+    if (pagecount == 0) {
+      fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
+      status = 0;
+      if (outformat == OUTPUT_FORMAT_RASTER)
+        fprintf(stdout, "RaS2");
+      goto out;
+    }
+    if (pagecount < 0) {
+      fprintf(stderr, "DEBUG: Unexpected page count\n");
+      goto out;
+    }
   }
 
   /*  Check status of color management in CUPS */

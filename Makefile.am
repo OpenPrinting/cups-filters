@@ -689,12 +689,16 @@ foomatic_rip_LDADD = \
 gstoraster_SOURCES = \
 	filter/gstoraster.c \
 	cupsfilters/colord.h \
-	cupsfilters/raster.h
+	cupsfilters/raster.h \
+	filter/pdf.cxx \
+	filter/pdf.h
 gstoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
+	$(LIBQPDF_CFLAGS) \
 	-I$(srcdir)/cupsfilters/
 gstoraster_LDADD = \
 	$(CUPS_LIBS) \
+	$(LIBQPDF_LIBS) \
 	libcupsfilters.la
 
 imagetopdf_SOURCES = \
