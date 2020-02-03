@@ -39,9 +39,9 @@
 int     UTF8 = 1;               /* Use UTF-8 encoding? */
 #endif /* CUPS_1_4 */
 
-EMB_PARAMS *font_load(const char *font);
+EMB_PARAMS *font_load(const char *font, int fontwidth);
 
-EMB_PARAMS *font_load(const char *font)
+EMB_PARAMS *font_load(const char *font, int fontwidth)
 {
   OTF_FILE *otf;
 
@@ -74,7 +74,7 @@ EMB_PARAMS *font_load(const char *font)
 	FcPatternGetString  (candidates->fonts[i], FC_FONTFORMAT, 0, &fontformat);
 	FcPatternGetInteger (candidates->fonts[i], FC_SPACING,    0, &spacing);
 
-	if ( (fontformat)&&(spacing == FC_MONO) ) {
+	if ( (fontformat)&&((spacing == FC_MONO) || (fontwidth == 2)) ) {    // check for monospace or double width fonts
 	  if (strcmp((const char *)fontformat, "TrueType") == 0) {
 	    fontname = FcPatternFormat (candidates->fonts[i], (const FcChar8 *)"%{file|cescape}/%{index}");
 	    break;
@@ -554,7 +554,7 @@ WriteProlog(const char *title,		/* I - Title of job */
               }
 
             if (k==num_fonts) {  // not found
-	      fonts[num_fonts] = Fonts[NumFonts][i] = font_load(valptr);
+	      fonts[num_fonts] = Fonts[NumFonts][i] = font_load(valptr, Widths[NumFonts]);
               if (!fonts[num_fonts]) { // font missing/corrupt, replace by first
                 fprintf(stderr,"WARNING: Ignored bad font \"%s\"\n",valptr);
                 break;
@@ -738,7 +738,7 @@ WriteProlog(const char *title,		/* I - Title of job */
               }
 
             if (k==num_fonts) {  // not found
-	      fonts[num_fonts] = Fonts[NumFonts][i] = font_load(valptr);
+	      fonts[num_fonts] = Fonts[NumFonts][i] = font_load(valptr, Widths[NumFonts]);
               if (!fonts[num_fonts]) { // font missing/corrupt, replace by first
                 fprintf(stderr,"WARNING: Ignored bad font \"%s\"\n",valptr);
                 break;

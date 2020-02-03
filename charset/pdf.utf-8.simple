@@ -30,3 +30,4 @@ charset utf8
 
 0000 04FF ltor single monospace monospace:bold monospace:oblique monospace:bold:oblique
 0500 05FF rtol single monospace
+3000 9FFF ltor double ARPLUmingCN
