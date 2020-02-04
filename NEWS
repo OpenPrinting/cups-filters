@@ -3,8 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.0 - 2020-01-26
 
 CHANGES IN V1.27.1
 
+	- foomatic-rip: Handle zero page jobs (Issue #117, Pull
+	  request #200).
 	- texttopdf: Added support for CJK (double-width) fonts (Issue
-	  #135).
+	  #135, Pull request #199).
 	- gstoraster, gstopdf, gstopxl: Handle zero page jobs (Issue
 	  #117, Pull request #198).
 	- cups-browsed: Switched default for "CreateIPPPrinterQueues"
