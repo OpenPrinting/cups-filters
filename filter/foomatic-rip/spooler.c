@@ -47,6 +47,7 @@ void init_cups(list_t *arglist, dstr_t *filelist, jobparams_t *job)
     char cups_copies [128];
     int cups_options_len;
     char *cups_options;
+    const char *pname;
     char cups_filename [256];
 
     if (getenv("CUPS_FONTPATH"))
@@ -93,7 +94,10 @@ void init_cups(list_t *arglist, dstr_t *filelist, jobparams_t *job)
     /* On which queue are we printing?
        CUPS puts the print queue name into the PRINTER environment variable
        when calling filters. */
-    strncpy(job->printer, getenv("PRINTER"), 256);
+    pname = getenv("PRINTER");
+    if (pname == NULL)
+      pname = "unknown";
+    strncpy(job->printer, pname, 256);
     job->printer[255] = '\0';
 
     free(cups_options);
