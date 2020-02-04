@@ -322,6 +322,7 @@ void _print_ps(stream_t *stream)
     pid_t rendererpid = 0;
     FILE *rendererhandle = NULL;
 
+    int empty = 1;
     int retval;
 
     dstr_t *tmp = create_dstr();
@@ -1009,6 +1010,7 @@ void _print_ps(stream_t *stream)
                         /* No renderer running, start it */
                         dstrcpy(tmp, psheader->data);
                         dstrcat(tmp, psfifo->data);
+                        empty = 0;
                         get_renderer_handle(tmp, &rendererhandle, &rendererpid);
                         /* psfifo is sent out, flush it */
                         dstrclear(psfifo);
@@ -1072,6 +1074,12 @@ void _print_ps(stream_t *stream)
         }
 
     } while ((maxlines == 0 || linect < maxlines) && more_stuff != 0);
+
+    if (empty)
+    {
+        _log("No pages left, outputting empty file.\n");
+        return;
+    }
 
     /* Some buffer still containing data? Send it out to the renderer */
     if (more_stuff || inheader || !isempty(psfifo->data)) {
