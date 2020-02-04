@@ -576,6 +576,10 @@ int print_file(const char *filename, int convert)
     }
 
     n = fread_or_die(buf, 1, sizeof(buf) - 1, file);
+    if (!n){
+        _log("Input is empty, outputting empty file.\n");
+        return 1;
+    }
     buf[n] = '\0';
     type = guess_file_type(buf, n, &startpos);
     /* We do not use any JCL preceeded to the inputr data, as it is simply
