@@ -45,6 +45,7 @@ static int pdf_count_pages(const char *filename)
     char output[63] = "";
     int pagecount;
     size_t bytes;
+    char *p;
 
     snprintf(gscommand, CMDLINE_MAX, "%s -dNODISPLAY -q -c "
 	     "'/pdffile (%s) (r) file runpdfbegin (PageCount: ) print "
@@ -58,10 +59,16 @@ static int pdf_count_pages(const char *filename)
     bytes = fread_or_die(output, 1, 63, pd);
     pclose(pd);
 
-    if (bytes <= 0 || sscanf(output, "PageCount: %d", &pagecount) < 1)
-    {
-        if(bytes <= 0 || sscanf(output, "   **** Error: Too many pages in Page tree.\nPageCount: %d", &pagecount) < 1)
-        pagecount = -1;
+    p = output;
+    pagecount = -1;
+    while (bytes > 0) {
+      if (sscanf(p, "PageCount: %d", &pagecount) >= 1)
+	break;
+      p = memchr(p, '\n', bytes);
+      if (p == NULL)
+	break;
+      p ++;
+      bytes = output + bytes - p;
     }
 
     return pagecount;
@@ -247,12 +254,12 @@ static int print_pdf_file(const char *filename)
 
     if (page_count < 0)
         rip_die(EXIT_JOBERR, "Unable to determine number of pages, page count: %d\n", page_count);
+    _log("File contains %d pages\n", page_count);
     if (page_count == 0)
     {
         _log("No pages left, outputting empty file.\n");
         return 1;
     }
-    _log("File contains %d pages\n", page_count);
 
     optionset_copy_values(optionset("header"), optionset("currentpage"));
     optionset_copy_values(optionset("currentpage"), optionset("previouspage"));
