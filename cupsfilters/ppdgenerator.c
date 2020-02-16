@@ -4297,9 +4297,10 @@ pwg_ppdize_name(const char *ipp,	/* I - IPP keyword */
   *name = (char)toupper(*ipp++);
 
   for (ptr = name + 1, end = name + namesize - 1; *ipp && ptr < end;) {
-    if (*ipp == '-' && _cups_isalpha(ipp[1])) {
+    if (*ipp == '-') {
       ipp ++;
-      *ptr++ = (char)toupper(*ipp++ & 255);
+      if (_cups_isalpha(*ipp))
+	*ptr++ = (char)toupper(*ipp++ & 255);
     } else
       *ptr++ = *ipp++;
   }

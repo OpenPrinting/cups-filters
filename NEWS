@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.27.0 - 2020-01-26
 
 CHANGES IN V1.27.1
 
+	- libcupsfilters: Let the PPD generator not put any dashes
+	  into the PPD option and choice names when translating them
+	  from IPP attribute names, to avoid that on the
+	  back-translation by CUPS no double-dashes are
+	  generated. This broke paper tray selections with tray names
+	  like "tray-1", "tray-2", ... (Issue #192, Issue #201, Debian
+	  bug #949315).
 	- foomatic-rip: Fixed segfault when PRINTER environment
 	  variable is not supplied.
 	- foomatic-rip: Handle zero page jobs (Issue #117, Pull
