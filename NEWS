@@ -12,29 +12,24 @@ CHANGES IN V1.27.1
 	  bug #949315).
 	- foomatic-rip: Fixed segfault when PRINTER environment
 	  variable is not supplied.
-	- foomatic-rip: Handle zero page jobs (Issue #117, Pull
-	  request #200).
+	- pdftopdf, pdftops, gstoraster, gstopdf, gstopxl,
+	  rastertoescpx, rastertopclx, foomatic-rip: Handle zero-page
+	  jobs (Issue #117, Pull request #196, Pull request #197, Pull
+	  request #198, Pull request #200).
 	- texttopdf: Added support for CJK (double-width) fonts (Issue
 	  #135, Pull request #199).
-	- gstoraster, gstopdf, gstopxl: Handle zero page jobs (Issue
-	  #117, Pull request #198).
 	- cups-browsed: Switched default for "CreateIPPPrinterQueues"
 	  from "local-only" to "All". The configure script options
 	  "--enable-auto-setup-local-only" and
 	  "--enable-auto-setup-driverless-only" can be used to change
 	  this default (Debian bug #921252).
-	- rastertoescpx, rastertopclx: Handle zero page jobs (Issue
-	  #117, Pull request #197).
 	- rastertoescpx: Fixed wrong freeing of a buffer.
 	- pdftops: Added options "crop-to-fit" and "fill" to the
 	  pdftopdf options which the pstops called by pdftops should
 	  not apply a second time.
-	- pdftops: Handle zero page jobs (Issue #117, Pull request
-	  #196).
 	- pdftops: Added missing "-sstdout=%stderr" to Ghostscript
 	  command line, to assure that all messages are redirected to
 	  stderr and do not mix up with the output data.
-	- pdftopdf: Handle zero page jobs (Issue #117).
 
 CHANGES IN V1.27.0
 
@@ -57,7 +52,7 @@ CHANGES IN V1.27.0
 	  pwg-raster-document-type-supported (Issue #186, Pull request
 	  #188)
 	- rastertopdf, rastertops, texttopdf, pdftoraster,
-	  mupdftoraster: Handle zero page jobs, corrections on
+	  mupdftoraster: Handle zero-page jobs, corrections on
 	  zero-page job handling (Issue #117)
 	- cups-browsed: When restarting after a crash make sure that
 	  local queue names have same upper/lower case as before.
