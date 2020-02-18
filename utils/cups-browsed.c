@@ -9134,13 +9134,17 @@ int
 is_local_hostname(const char *host_name) {
   char *host;
 
+  if (host_name == NULL)
+    return 0;
+
   for (host = (char *)cupsArrayFirst (local_hostnames);
        host != NULL;
        host = (char *)cupsArrayNext (local_hostnames))
     if (strncasecmp(host_name, host, strlen(host)) == 0 &&
 	(strlen(host_name) == strlen(host) ||
-	 strcasecmp(host_name + strlen(host), ".local") == 0 ||
-	 strcasecmp(host_name + strlen(host), ".local.") == 0))
+	 (strlen(host_name) > strlen(host) &&
+	  (strcasecmp(host_name + strlen(host), ".local") == 0 ||
+	   strcasecmp(host_name + strlen(host), ".local.") == 0))))
       return 1;
 
   return 0;

@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.27.1 - 2020-02-16
 -----------------------------------------------------
 
+CHANGES IN V1.27.2
+
+	- cups-browsed: Additional checks against crashes in the
+	  is_local_hostname() function (Ubuntu bug #1863716)
+
 CHANGES IN V1.27.1
 
 	- libcupsfilters: Let the PPD generator not put any dashes
