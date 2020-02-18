@@ -9770,7 +9770,8 @@ static void resolve_callback(AvahiServiceResolver *r,
     strncpy(ifname, "Unknown", sizeof(ifname) - 1);
   }
 
-  /* Ignore local queues on the port of the cupsd we are serving for */
+  /* Ignore local queues of the cupsd we are serving for, identifying them
+     via UUID */
   update_netifs(NULL);
   if ((flags & AVAHI_LOOKUP_RESULT_LOCAL) || !strcasecmp(ifname, "lo") ||
       is_local_hostname(host_name)) {
