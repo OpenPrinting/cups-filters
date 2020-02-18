@@ -2495,18 +2495,35 @@ int check_printer_with_options(char* cluster_name, int idx_option1,
   remote_printer_t     *p;
   cups_array_t         *first_attributes_value;
   cups_array_t         *second_attributes_value;
-  char                 *borderless_pagesize;
+  char                 *borderless_pagesize = NULL;
   int                  option1_is_size = 0, option2_is_size = 0;
+  unsigned long int    max_length = 0, option1_len = 0, option2_len = 0, t_len = 0; 
   char  t[] = ".Borderless";
+  
+  t_len = strlen(t);
+  if (option1)
+    option1_len = strlen(option1);
+  if (option2)
+    option2_len = strlen(option2);
 
-  borderless_pagesize = malloc(sizeof(char) * 32);
+  /* Seems to be possible to have both options...*/
+  max_length = option1_len + option2_len + (2 * t_len) + 1;
+
+  borderless_pagesize = (char *)malloc(sizeof(char) * max_length);
+  if (borderless_pagesize == NULL)
+  {
+    debug_printf("check_printer_with_options: Run out of memory.\n");
+    return 0;
+  }
+  memset(borderless_pagesize, 0, max_length);
+
   if (!strcmp(ppd_keywords[idx_option1], "PageSize") ||
       !strcmp(ppd_keywords[idx_option1], "PageRegion")) {
     /* Check that we are generating .Borderless for the correct size, i.e We
        are generating 4x5.Borderless for 4x5 and not generating 
        4x5.Borderless.Borderless for 4x5.Borderless */
-    if (strlen(option1) >= 11 &&
-	!strcmp(&option1[strlen(option1) - strlen(t)], t))
+    if (option1_len >= 11 &&
+	!strcmp(&option1[option1_len - t_len], t))
       ;
     else {
       strcat(borderless_pagesize, option1);
@@ -2516,8 +2533,8 @@ int check_printer_with_options(char* cluster_name, int idx_option1,
   }
   if (!strcmp(ppd_keywords[idx_option2], "PageSize") ||
       !strcmp(ppd_keywords[idx_option2], "PageRegion")) {
-    if(strlen(option2) >=11 &&
-       !strcmp(&option2[strlen(option2) - strlen(t)], t))
+    if(option2_len >=11 &&
+       !strcmp(&option2[option2_len - t_len], t))
       ;
     else {
       strcat(borderless_pagesize, option2);
@@ -2540,7 +2557,10 @@ int check_printer_with_options(char* cluster_name, int idx_option1,
       if (cupsArrayFind(second_attributes_value,(void*)option2) ||
 	  (option2_is_size && cupsArrayFind(second_attributes_value,
 					    (void*)borderless_pagesize)))
+      {
+        free(borderless_pagesize);
         return 1;
+      }
     }
   }
   free(borderless_pagesize);
