@@ -1078,7 +1078,6 @@ void _print_ps(stream_t *stream)
     if (empty)
     {
         _log("No pages left, outputting empty file.\n");
-        return;
     }
 
     /* Some buffer still containing data? Send it out to the renderer */
