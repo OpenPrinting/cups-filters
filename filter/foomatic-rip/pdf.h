@@ -25,6 +25,7 @@
 #define pdf_h
 
 int print_pdf(FILE *s, const char *alreadyread, size_t len, const char *filename, size_t startpos);
+int pdf_count_pages(const char *filemame);
 
 #endif
 
