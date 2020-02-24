@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.27.1 - 2020-02-16
 
 CHANGES IN V1.27.2
 
+	- foomatic-rip: Zero-page-job handling changes made the last
+	  page of PostScript files not printed, also turning one-page
+	  jobs into zero-page jobs (Issue #200, Issue #206, Issue
+	  #208, Pull request #209).
+	- cups-browsed: check_printer_with_option() function:
+	  Initialize the value, add further checks, freeing memory and
+	  stop allocating magic numbers (Pull request #204).
 	- cups-browsed: Additional checks against crashes in the
 	  is_local_hostname() function (Ubuntu bug #1863716)
 
