@@ -668,6 +668,16 @@ int print_file(const char *filename, int convert)
                             "Couldn't dup stdout of pdf-to-ps\n");
 
                 clearerr(stdin);
+                int pagecount = pdf_count_pages(filename);
+                _log("File contains %d pages.\n", pagecount);
+                if (pagecount < 0) {
+                    _log("Unexpected page_count\n");
+                    return 0;
+                }
+                if (pagecount == 0) {
+                  _log("No pages left, outputting empty file.\n");
+                  return 1;
+                }
                 ret = print_file("<STDIN>", 0);
 
                 wait_for_process(renderer_pid);
@@ -687,7 +697,68 @@ int print_file(const char *filename, int convert)
         case PS_FILE:
             _log("Filetype: PostScript\n");
             if (file == stdin)
-                return print_ps(stdin, buf, n, filename);
+            {
+                if (convert)
+                {
+                    int fd;
+                    FILE *tmpfile;
+                    char tmpfilename[4096];
+
+                    snprintf(tmpfilename, PATH_MAX, "%s/foomatic-XXXXXX", temp_dir());
+                    fd = mkstemp(tmpfilename);
+                    if (fd < 0) {
+                        _log("Could not create temporary file: %s\n", strerror(errno));
+                        return EXIT_PRNERR_NORETRY_BAD_SETTINGS;
+                    }
+
+                    if (write(fd,buf,n) != n) {
+                        _log("ERROR: Can't copy stdin to temporary file\n");
+                        close(fd);
+                    }
+                    /* copy stdin to the tmp file */
+                    while ((n = read(0,buf,BUFSIZ)) > 0) {
+                        if (write(fd,buf,n) != n) {
+                            _log("ERROR: Can't copy stdin to temporary file\n");
+                            close(fd);
+                        }
+                    }
+                    if (lseek(fd,0,SEEK_SET) < 0) {
+                        _log("ERROR: Can't rewind temporary file\n");
+                        close(fd);
+                    }
+                    FILE *fp;
+
+                    if ((fp = fdopen(fd,"rb")) == 0) {
+                        _log("ERROR: Can't fdopen temporary file\n");
+                        close(fd);
+                    }
+                    char gscommand[65536];
+                    char output[31] = "";
+                    int pagecount;
+                    size_t bytes;
+                    filename = strdup(tmpfilename);
+                    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | grep -c HiResBoundingBox",
+                            CUPS_GHOSTSCRIPT, filename);
+                    FILE *pd = popen(gscommand, "r");
+                    bytes = fread(output, 1, 31, pd);
+                    pclose(pd);
+
+                    if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
+                    pagecount = -1;
+                    _log("File contains %d pages.\n", pagecount);
+                    if (pagecount < 0) {
+                        _log("Unexpected page_count\n");
+                        return 0;
+                    }
+                    if (pagecount == 0) {
+                        _log("No pages left, outputting empty file.\n");
+                        return 1;
+                    }
+                    return print_ps(fp, NULL, 0, filename);
+                }
+                else
+                    return print_ps(stdin, buf, n, filename);
+            }
             else
                 return print_ps(file, NULL, 0, filename);
 

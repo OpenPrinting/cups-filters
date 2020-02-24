@@ -39,7 +39,7 @@
 static int wait_for_renderer();
 
 
-static int pdf_count_pages(const char *filename)
+int pdf_count_pages(const char *filename)
 {
     char gscommand[CMDLINE_MAX];
     char output[63] = "";
