@@ -716,24 +716,14 @@ int print_file(const char *filename, int convert)
                         close(fd);
                         return 0;
                     }
-                    /* Copy already read data to the tmp file */
-                    if (write(fd,buf,n) != n) {
-                        _log("ERROR: Can't copy already read data to temporary file\n");
-                        close(fd);
-                    }
 
                     /* Copy stdin to the tmp file */
-                    copy_file(tmpfile, stdin, NULL, 0);
+                    copy_file(tmpfile, stdin, buf, n);
+                    if (fflush(tmpfile) == EOF)
+                      _log("ERROR: Cannot flush buffer: %s\n", strerror(errno));
+                    rewind(tmpfile);
 
-                    /* Rewind tmp file to read it again */
-                    if (lseek(fd,0,SEEK_SET) < 0) {
-                        _log("ERROR: Can't rewind temporary file\n");
-                        close(fd);
-                    }
-
-                    filename = strdup(tmpfilename);
-
-                    ret = print_ps(tmpfile, NULL, 0, filename);
+                    ret = print_ps(tmpfile, NULL, 0, tmpfilename);
                     fclose(tmpfile);
                     unlink(tmpfilename);
                     return ret;

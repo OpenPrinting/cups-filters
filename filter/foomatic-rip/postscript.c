@@ -204,13 +204,8 @@ int print_ps(FILE *file, const char *alreadyread, size_t len, const char *filena
         _log("File contains %d pages.\n", pagecount);
     }
 
-    if (file != stdin && (dup2(fileno(file), fileno(stdin)) < 0)) {
-        _log("Could not dup %s to stdin.\n", filename);
-        return 0;
-    }
-
     stream.pos = 0;
-    stream.file = stdin;
+    stream.file = file;
     stream.alreadyread = alreadyread;
     stream.len = len;
     _print_ps(&stream);
