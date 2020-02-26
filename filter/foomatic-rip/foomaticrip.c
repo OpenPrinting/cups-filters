@@ -711,54 +711,28 @@ int print_file(const char *filename, int convert)
                         return EXIT_PRNERR_NORETRY_BAD_SETTINGS;
                     }
 
+                    if ((tmpfile = fdopen(fd,"r+")) == 0) {
+                        _log("ERROR: Can't fdopen temporary file\n");
+                        close(fd);
+                        return 0;
+                    }
                     /* Copy already read data to the tmp file */
                     if (write(fd,buf,n) != n) {
                         _log("ERROR: Can't copy already read data to temporary file\n");
                         close(fd);
                     }
+
                     /* Copy stdin to the tmp file */
-                    while ((n = read(0,buf,BUFSIZ)) > 0) {
-                        if (write(fd,buf,n) != n) {
-                            _log("ERROR: Can't copy stdin to temporary file\n");
-                            close(fd);
-                        }
-                    }
+                    copy_file(tmpfile, stdin, NULL, 0);
+
                     /* Rewind tmp file to read it again */
                     if (lseek(fd,0,SEEK_SET) < 0) {
                         _log("ERROR: Can't rewind temporary file\n");
                         close(fd);
                     }
 
-                    char gscommand[65536];
-                    char output[31] = "";
-                    int pagecount;
-                    size_t bytes;
                     filename = strdup(tmpfilename);
-                    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | grep -c HiResBoundingBox",
-                            CUPS_GHOSTSCRIPT, filename);
-                    FILE *pd = popen(gscommand, "r");
-                    bytes = fread(output, 1, 31, pd);
-                    pclose(pd);
 
-                    if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
-                      pagecount = -1;
-
-                    if (pagecount < 0) {
-                        _log("Unexpected page_count\n");
-                        return 0;
-                    }
-
-                    if (pagecount == 0) {
-                        _log("No pages left, outputting empty file.\n");
-                        return 1;
-                    }
-
-                    _log("File contains %d pages.\n", pagecount);
-
-                    if ((tmpfile = fdopen(fd,"rb")) == 0) {
-                        _log("ERROR: Can't fdopen temporary file\n");
-                        close(fd);
-                    }
                     ret = print_ps(tmpfile, NULL, 0, filename);
                     fclose(tmpfile);
                     unlink(tmpfilename);

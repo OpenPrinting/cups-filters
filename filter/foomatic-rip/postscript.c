@@ -168,9 +168,41 @@ int stream_next_line(dstr_t *line, stream_t *s)
     return cnt;
 }
 
+int ps_pages(const char *filename)
+{
+    char gscommand[65536];
+    char output[31] = "";
+    int pagecount;
+    size_t bytes;
+    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | grep -c HiResBoundingBox",
+              CUPS_GHOSTSCRIPT, filename);
+    FILE *pd = popen(gscommand, "r");
+    bytes = fread(output, 1, 31, pd);
+    pclose(pd);
+
+    if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
+        pagecount = -1;
+
+    return pagecount;
+}
+
 int print_ps(FILE *file, const char *alreadyread, size_t len, const char *filename)
 {
     stream_t stream;
+
+    if (file != stdin)
+    {
+        int pagecount = ps_pages(filename);
+        if (pagecount < 0) {
+            _log("Unexpected page count\n");
+            return 0;
+        }
+        if (pagecount == 0) {
+            _log("No pages left, outputting empty file.\n");
+            return 1;
+        }
+        _log("File contains %d pages.\n", pagecount);
+    }
 
     if (file != stdin && (dup2(fileno(file), fileno(stdin)) < 0)) {
         _log("Could not dup %s to stdin.\n", filename);
