@@ -950,11 +950,11 @@ void _print_ps(stream_t *stream)
                                 the beginning of the job or after the last valid
                                 section */
                                 dstrclear(tmp);
-                                if (prologfound)
+                                if (!prologfound)
                                     append_prolog_section(tmp, optset, 1);
-                                if (setupfound)
+                                if (!setupfound)
                                     append_setup_section(tmp, optset, 1);
-                                if (pagesetupfound)
+                                if (!pagesetupfound)
                                     append_page_setup_section(tmp, optset, 1);
                                 dstrinsert(psheader, line_start(psheader->data, insertoptions), tmp->data);
 
@@ -1121,11 +1121,11 @@ void _print_ps(stream_t *stream)
             /* If not done yet, insert defaults and command line settings
             in the beginning of the job or after the last valid section */
             dstrclear(tmp);
-            if (prologfound)
+            if (!prologfound)
                 append_prolog_section(tmp, optset, 1);
-            if (setupfound)
+            if (!setupfound)
                 append_setup_section(tmp, optset, 1);
-            if (pagesetupfound)
+            if (!pagesetupfound)
                 append_page_setup_section(tmp, optset, 1);
             dstrinsert(psheader, line_start(psheader->data, insertoptions), tmp->data);
 

@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.1 - 2020-02-16
 
 CHANGES IN V1.27.2
 
+	- foomatic-rip: In some PostScript input files it was possible
+	  that option settings did not get inserted (Pull request
+	  #210).
 	- foomatic-rip: For the PDF page count call Ghostscript in
 	  sandbox mode and fix pointer arithmetics (Pull request
 	  #212).
