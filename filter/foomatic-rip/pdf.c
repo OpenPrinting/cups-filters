@@ -56,7 +56,7 @@ int pdf_count_pages(const char *filename)
     if (!pd)
       rip_die(EXIT_STARVED, "Failed to execute ghostscript to determine number of input pages!\n");
 
-    bytes = fread_or_die(output, 1, 63, pd);
+    bytes = fread_or_die(output, 1, sizeof(output), pd);
     pclose(pd);
 
     p = output;
@@ -68,7 +68,7 @@ int pdf_count_pages(const char *filename)
       if (p == NULL)
 	break;
       p ++;
-      bytes = output + bytes - p;
+      bytes = sizeof(output) - (p - output);
     }
 
     return pagecount;
