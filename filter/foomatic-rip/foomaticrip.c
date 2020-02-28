@@ -630,6 +630,17 @@ int print_file(const char *filename, int convert)
 		    filename = tmpfilename;
 		}
 
+                pagecount = pdf_count_pages(filename);
+                _log("File contains %d pages.\n", pagecount);
+                if (pagecount < 0) {
+                    _log("Unexpected page_count\n");
+                    return 0;
+                }
+                if (pagecount == 0) {
+                  _log("No pages left, outputting empty file.\n");
+                  return 1;
+                }
+
 		/* If the spooler is CUPS we use the pdftops filter of CUPS,
 		   to have always the same PDF->PostScript conversion method
 		   in the whole printing environment, including incompatibility
@@ -669,16 +680,7 @@ int print_file(const char *filename, int convert)
                             "Couldn't dup stdout of pdf-to-ps\n");
 
                 clearerr(stdin);
-                pagecount = pdf_count_pages(filename);
-                _log("File contains %d pages.\n", pagecount);
-                if (pagecount < 0) {
-                    _log("Unexpected page_count\n");
-                    return 0;
-                }
-                if (pagecount == 0) {
-                  _log("No pages left, outputting empty file.\n");
-                  return 1;
-                }
+
                 ret = print_file("<STDIN>", 0);
 
                 wait_for_process(renderer_pid);
