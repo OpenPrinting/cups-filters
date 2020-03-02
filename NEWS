@@ -1,6 +1,17 @@
 NEWS - OpenPrinting CUPS Filters v1.27.2 - 2020-02-28
 -----------------------------------------------------
 
+CHANGES IN V1.27.3
+
+	- libfontembed: Add checks to the test programs to not
+	  segfault if the test font file is not found (Pull request
+	  #214).
+	- Build System: Let ./configure fail if the supplied test font
+	  file path (or the default) does not exist (Pull request
+	  #214), also use the "find" command to find the test font
+	  file DejaVuSans.ttf under /usr/share/fonts, as every
+	  distribution has it somewhere else.
+
 CHANGES IN V1.27.2
 
 	- foomatic-rip: In some PostScript input files it was possible
