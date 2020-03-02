@@ -45,10 +45,16 @@ static inline void write_string(FILE *f,EMB_PARAMS *emb,const char *str) // {{{
 int main(int argc,char **argv)
 {
   const char *fn=TESTFONT;
+  OTF_FILE *otf=NULL;
   if (argc==2) {
     fn=argv[1];
   }
-  OTF_FILE *otf=otf_load(fn);
+  otf=otf_load(fn);
+  if (!otf)
+  {
+    printf("Font %s was not loaded, exiting.\n", TESTFONT);
+    return 1;
+  }
   assert(otf);
   FONTFILE *ff=fontfile_open_sfnt(otf);
   EMB_PARAMS *emb=emb_new(ff,
