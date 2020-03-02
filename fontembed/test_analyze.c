@@ -183,10 +183,17 @@ void show_hmtx(OTF_FILE *otf) // {{{
 int main(int argc,char **argv)
 {
   const char *fn=TESTFONT;
+  OTF_FILE *otf=NULL;
   if (argc==2) {
     fn=argv[1];
   }
-  OTF_FILE *otf=otf_load(fn);
+  otf=otf_load(fn);
+  if (!otf)
+  {
+    printf("Font %s was not loaded, exiting.\n", TESTFONT);
+    return 1;
+  }
+
   assert(otf);
   if (otf->numTTC) {
     printf("TTC has %d fonts, using %d\n",otf->numTTC,otf->useTTC);
