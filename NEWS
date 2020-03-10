@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.27.2 - 2020-02-28
 
 CHANGES IN V1.27.3
 
+	- foomatic-rip: PDF page count side-loads the PDF file to
+	  count the pages in, so it cannot be run in -dSAFER mode. Run
+	  even in -dNOSAFER mode to override the -dSAFER default of
+	  newer Ghostscript versions. This should not cause a security
+	  problem as we do not take an input file which could do
+	  arbitrary side-loads but we run hard-coded PostScript
+	  commands instead (Issue #216).
 	- libfontembed: Add checks to the test programs to not
 	  segfault if the test font file is not found (Pull request
 	  #214).

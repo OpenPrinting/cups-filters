@@ -47,7 +47,7 @@ int pdf_count_pages(const char *filename)
     size_t bytes;
     char *p;
 
-    snprintf(gscommand, CMDLINE_MAX, "%s -dNODISPLAY -dSAFER -dNOPAUSE -q -c "
+    snprintf(gscommand, CMDLINE_MAX, "%s -dNODISPLAY -dNOSAFER -dNOPAUSE -q -c "
 	     "'/pdffile (%s) (r) file runpdfbegin (PageCount: ) print "
 	     "pdfpagecount = quit'",
 	     gspath, filename);
