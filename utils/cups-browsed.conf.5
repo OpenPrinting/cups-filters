@@ -468,6 +468,31 @@ this timeout if no further broadcast from the server happens.
 
 .fam T
 .fi
+The AllowResharingRemoteCUPSPrinters directive determines whether a
+print queue pointing to a remote CUPS queue will be re-shared to the
+local network or not. Since the queues generated using the BrowsePoll
+directive are also pointing to remote queues, they are also shared
+automatically if the following option is set. Default is not to share
+remote queues.
+.PP
+.nf
+.fam C
+        AllowResharingRemoteCUPSPrinters Yes
+
+.fam T
+.fi
+The NewBrowsePollQueuesShared directive determines whether a print
+queue for a newly discovered printer (discovered by the BrowsePoll directive)
+will be shared to the local network or not. This directive will only work
+if AllowResharingRemoteCUPSPrinters is set to yes. Default is
+not to share printers discovered using BrowsePoll.
+.PP
+.nf
+.fam C
+        NewBrowsePollQueuesShared Yes
+
+.fam T
+.fi
 Set OnlyUnsupportedByCUPS to "Yes" will make cups-browsed not create
 local queues for remote printers for which CUPS creates queues by
 itself.  These printers are printers advertised via DNS-SD and doing
