@@ -6278,6 +6278,7 @@ on_job_state (CupsNotifier *object,
 	    }
 
 	    ippDelete(response);
+            response = NULL;
 	  } else
 	    debug_printf("IPP request to %s:%d failed.\n", p->host,
 			 p->port);
@@ -8070,7 +8071,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    debug_printf("Default page size: %s\n",
 			 default_page_size);
 	    p->num_options = cupsAddOption("media-default",
-					   strdup(default_page_size),
+					   default_page_size,
 					   p->num_options, &(p->options));
 	  } else {
 	    attr = ippFindAttribute(p->prattrs,
@@ -8081,7 +8082,7 @@ gboolean update_cups_queues(gpointer unused) {
 	      debug_printf("Default page size: %s\n",
 			   default_page_size);
 	      p->num_options = cupsAddOption("media-default",
-					     strdup(default_page_size),
+					     default_page_size,
 					     p->num_options, &(p->options));
 	    } else
 	      debug_printf("No default page size found!\n");
@@ -8101,7 +8102,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    bottom = 1270;
 	  snprintf(buffer, sizeof(buffer), "%d", bottom);
 	  p->num_options = cupsAddOption("media-bottom-margin-default",
-					 strdup(buffer),
+					 buffer,
 					 p->num_options, &(p->options));
 
 	  if ((attr = ippFindAttribute(p->prattrs,
@@ -8117,7 +8118,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    left = 635;
 	  snprintf(buffer, sizeof(buffer), "%d", left);
 	  p->num_options = cupsAddOption("media-left-margin-default",
-					 strdup(buffer),
+					 buffer,
 					 p->num_options, &(p->options));
 
 	  if ((attr = ippFindAttribute(p->prattrs,
@@ -8133,7 +8134,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    right = 635;
 	  snprintf(buffer, sizeof(buffer), "%d", right);
 	  p->num_options = cupsAddOption("media-right-margin-default",
-					 strdup(buffer),
+					 buffer,
 					 p->num_options, &(p->options));
 
 	  if ((attr = ippFindAttribute(p->prattrs,
@@ -8149,7 +8150,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    top = 1270;
 	  snprintf(buffer, sizeof(buffer), "%d", top);
 	  p->num_options = cupsAddOption("media-top-margin-default",
-					 strdup(buffer),
+					 buffer,
 					 p->num_options, &(p->options));
 
 	  debug_printf("Margins: Left: %d, Right: %d, Top: %d, Bottom: %d\n",
@@ -8170,7 +8171,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    debug_printf("Best color space: %s\n",
 			 best_color_space);
 	    p->num_options = cupsAddOption("print-color-mode-default",
-					   strdup(best_color_space),
+					   best_color_space,
 					   p->num_options, &(p->options));
 	  } else {
 	    debug_printf("No info about supported color spaces found!\n");
@@ -8185,7 +8186,7 @@ gboolean update_cups_queues(gpointer unused) {
 					   p->num_options, &(p->options));
 
 	  p->num_options = cupsAddOption("output-format-default",
-					 strdup(p->pdl),
+					 p->pdl,
 					 p->num_options, &(p->options));
 	  p->num_options = cupsAddOption("make-and-model-default",
 					 remove_bad_chars(p->make_model, 0),
@@ -8527,8 +8528,8 @@ gboolean update_cups_queues(gpointer unused) {
       /* Default option settings from printer entry */
       for (i = 0; i < p->num_options; i ++)
 	if (strcasecmp(p->options[i].name, "printer-is-shared"))
-	  num_options = cupsAddOption(strdup(p->options[i].name),
-				      strdup(p->options[i].value),
+	  num_options = cupsAddOption(p->options[i].name,
+				      p->options[i].value,
 				      num_options, &options);
       /* Encode option list into IPP attributes */
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
