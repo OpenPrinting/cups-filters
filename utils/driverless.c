@@ -548,7 +548,7 @@ generate_ppd (const char *uri)
   while ((bytes = read(fd, buffer, sizeof(buffer))) > 0)
     bytes = fwrite(buffer, 1, bytes, stdout);
   close(fd);
-  unlink(buffer);
+  unlink(ppdname);
 
   return 0;
   
