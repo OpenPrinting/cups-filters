@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.27.2 - 2020-02-28
 
 CHANGES IN V1.27.3
 
+	- cups-browsed: Fixed memory leaks (Pull request #219).
 	- foomatic-rip: PDF page count side-loads the PDF file to
 	  count the pages in, so it cannot be run in -dSAFER mode. Run
 	  even in -dNOSAFER mode to override the -dSAFER default of
