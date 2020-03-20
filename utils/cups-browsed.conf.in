@@ -125,7 +125,6 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 
 # BrowseTimeout 300
 
-
 # Filtering of remote printers by other properties than IP addresses
 # of their servers
 
@@ -436,6 +435,22 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # IPBasedDeviceURIs IPv4
 # IPBasedDeviceURIs IPv6
 
+# The AllowResharingRemoteCUPSPrinters directive determines whether a
+# print queue pointing to a remote CUPS queue will be re-shared to the
+# local network or not. Since the queues generated using the BrowsePoll
+# directive are also pointing to remote queues, they are also shared
+# automatically if the following option is set. Default is not to share
+# remote printers.
+
+# AllowResharingRemoteCUPSPrinters Yes
+
+# The NewBrowsePollQueuesShared directive determines whether a print
+# queue for a newly discovered printer (discovered by the BrowsePoll directive)
+# will be shared to the local network or not. This directive will only work
+# if AllowResharingRemoteCUPSPrinters is set to yes. Default is
+# not to share printers discovered using BrowsePoll.
+
+# NewBrowsePollQueuesShared Yes
 
 # Set CreateRemoteRawPrinterQueues to "Yes" to let cups-browsed also
 # create local queues pointing to remote raw CUPS queues. Normally,
