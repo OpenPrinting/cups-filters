@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.27.2 - 2020-02-28
 
 CHANGES IN V1.27.3
 
+	- cups-browsed: Allow sharing local queues pointing to remote
+	  CUPS queues and re-sharing printers discovered via
+	  BrowsePoll by default, using
+	  AllowResharingRemoteCUPSPrinters and
+	  NewBrowsePollQueuesShared directives in cups-browsed.conf
+	  (Pull request #218).
 	- driverless: Correctly unlink temporary file when generating
 	  PPD file (Pull request #220).
 	- cups-browsed: Fixed memory leaks (Pull request #219).
