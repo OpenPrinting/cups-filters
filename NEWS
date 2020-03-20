@@ -8,7 +8,7 @@ CHANGES IN V1.27.3
 	  BrowsePoll by default, using
 	  AllowResharingRemoteCUPSPrinters and
 	  NewBrowsePollQueuesShared directives in cups-browsed.conf
-	  (Pull request #218).
+	  (Issue #101, Pull request #218).
 	- driverless: Correctly unlink temporary file when generating
 	  PPD file (Pull request #220).
 	- cups-browsed: Fixed memory leaks (Pull request #219).
