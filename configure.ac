@@ -144,7 +144,7 @@ AS_CASE([x$with_apple_raster_filter],
 	[AC_MSG_ERROR([Unknown value of with-apple-raster-filter provided: $with_apple_raster_filter])]
 )
 AM_CONDITIONAL([ENABLE_URFTOPDF],
-	       [test "x$APPLE_RASTER_FILTER" == "xurftopdf"])
+	       [test "x$APPLE_RASTER_FILTER" = "xurftopdf"])
 AC_SUBST(APPLE_RASTER_FILTER)
 
 AC_DEFINE(PDFTOPDF, [], [Needed for pdftopdf filter compilation])
