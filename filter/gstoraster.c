@@ -791,7 +791,7 @@ main (int argc, char **argv, char *envp[])
   cupsArrayAdd(gs_args, strdup(tmpstr));
   cupsArrayAdd(gs_args, strdup("-dQUIET"));
   /*cupsArrayAdd(gs_args, strdup("-dDEBUG"));*/
-  cupsArrayAdd(gs_args, strdup("-dPARANOIDSAFER"));
+  cupsArrayAdd(gs_args, strdup("-dSAFER"));
   cupsArrayAdd(gs_args, strdup("-dNOPAUSE"));
   cupsArrayAdd(gs_args, strdup("-dBATCH"));
   cupsArrayAdd(gs_args, strdup("-dNOINTERPOLATE"));
