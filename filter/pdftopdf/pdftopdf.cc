@@ -1245,7 +1245,7 @@ int main(int argc,char **argv)
 	args = cupsArrayNew(NULL, NULL);
 	cupsArrayAdd(args, strdup(command));
 	cupsArrayAdd(args, strdup("-dQUIET"));
-	cupsArrayAdd(args, strdup("-dPARANOIDSAFER"));
+	cupsArrayAdd(args, strdup("-dSAFER"));
 	cupsArrayAdd(args, strdup("-dNOPAUSE"));
 	cupsArrayAdd(args, strdup("-dBATCH"));
 	cupsArrayAdd(args, strdup("-dNOINTERPOLATE"));
