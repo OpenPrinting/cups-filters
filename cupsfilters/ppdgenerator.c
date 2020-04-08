@@ -435,7 +435,7 @@ const char *
 _searchDirForCatalog(const char *dirname)
 {
   const char *catalog = NULL, *c1, *c2;
-  cups_dir_t *dir, *subdir;
+  cups_dir_t *dir = NULL, *subdir;
   cups_dentry_t *subdirentry, *catalogentry;
   char subdirpath[1024], catalogpath[2048], lang[8];
   int i;
@@ -499,6 +499,7 @@ _searchDirForCatalog(const char *dirname)
 	break;
       }
       cupsDirClose(subdir);
+      subdir = NULL;
       if (catalog != NULL)
 	break;
     }
@@ -749,13 +750,18 @@ load_opt_strings_catalog(const char *location, cups_array_t *options)
 		     2: "..." = "..."
 		    10: EOF, save last entry */
   int digit;
+  int found_in_catalog = 0;
 
   if (location == NULL || (strncasecmp(location, "http:", 5) &&
 			   strncasecmp(location, "https:", 6))) {
     if (location == NULL ||
 	(stat(location, &statbuf) == 0 &&
 	 S_ISDIR(statbuf.st_mode))) /* directory? */
+    {
       filename = _findCUPSMessageCatalog(location);
+      if (filename)
+        found_in_catalog = 1;
+    }
     else
       filename = location;
   } else {
@@ -939,6 +945,8 @@ load_opt_strings_catalog(const char *location, cups_array_t *options)
     free(opt_name);
   if (filename == tmpfile)
     unlink(filename);
+  if (found_in_catalog)
+    free(filename);
 }
 
 
@@ -1948,10 +1956,16 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       } else {
 	if ((current_res = resolutionArrayNew()) != NULL) {
 	  if ((current_def = resolutionNew(lowdpi, lowdpi)) != NULL)
+          {
 	    cupsArrayAdd(current_res, current_def);
+            free_resolution(current_def, NULL);
+          }
 	  if (hidpi != lowdpi &&
 	      (current_def = resolutionNew(hidpi, hidpi)) != NULL)
+          {
 	    cupsArrayAdd(current_res, current_def);
+            free_resolution(current_def, NULL);
+          }
 	  current_def = NULL;
 	  if (cupsArrayCount(current_res) > 0 &&
 	      joinResolutionArrays(&common_res, &current_res, &common_def,
@@ -2069,7 +2083,10 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
   if (common_res == NULL) {
     if ((common_res = resolutionArrayNew()) != NULL) {
       if ((current_def = resolutionNew(300, 300)) != NULL)
+      {
 	cupsArrayAdd(common_res, current_def);
+        free_resolution(current_def, NULL);
+      }
       current_def = NULL;
     } else
       goto bad_ppd;

@@ -7481,7 +7481,7 @@ gboolean update_cups_queues(gpointer unused) {
                 *color_space;
 #endif
   const char    *loadedppd = NULL;
-  ppd_file_t    *ppd;
+  ppd_file_t    *ppd = NULL;
   ppd_choice_t  *choice;
   cups_file_t   *in, *out;
   char          keyword[1024], *keyptr;
@@ -8413,6 +8413,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  p->timeout = current_time + TIMEOUT_RETRY;
 	  p->no_autosave = 0;
 	  ppdClose(ppd);
+          ppd = NULL;
 	  unlink(loadedppd);
 	  break;
 	}
@@ -8423,6 +8424,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  p->no_autosave = 0;
 	  cupsFileClose(out);
 	  ppdClose(ppd);
+          ppd = NULL;
 	  unlink(loadedppd);
 	  break;
 	}
@@ -8493,10 +8495,14 @@ gboolean update_cups_queues(gpointer unused) {
 	cupsFileClose(in);
 	cupsFileClose(out);
 	ppdClose(ppd);
+        ppd = NULL;
 	unlink(loadedppd);
 	loadedppd = NULL;
 	if (ppdfile)
+        {
 	  free(ppdfile);
+          ppdfile = NULL;
+        }
 	ppdfile = strdup(buf);
       }
 
@@ -12438,6 +12444,9 @@ fail:
 
   if (local_printers_context) {
     browse_poll_cancel_subscription (local_printers_context);
+#ifdef HAVE_CUPS_2_0
+    free(local_printers_context->server);
+#endif
     g_list_free_full (local_printers_context->printers,
 		      browsepoll_printer_free);
     free (local_printers_context);
