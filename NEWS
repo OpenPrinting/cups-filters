@@ -1,6 +1,18 @@
 NEWS - OpenPrinting CUPS Filters v1.27.3 - 2020-03-20
 -----------------------------------------------------
 
+CHANGES IN V1.27.4
+
+	- libcupsfilters, cups-browsed: Fix memory issues in
+          ppdgenerator and cups-browsed (Pull request #226).
+	- pdftops: Mention cups-filters README, CUPS README in debug
+          log (Pull request #225).
+	- pdftopdf, gstoraster, foomatic-rip: Use "-dSAFER"
+          Ghostscript option, instead of the deprecated
+          "-dPARANOIDSAFER" (Pull request #224).
+	- Build System: Replace '==' in configure.ac test with '=', as
+	  the former is a bashism (Pull request #222).
+
 CHANGES IN V1.27.3
 
 	- cups-browsed: Allow sharing local queues pointing to remote
