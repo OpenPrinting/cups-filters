@@ -12112,9 +12112,10 @@ int main(int argc, char*argv[]) {
   if (getenv("IPP_PORT") != NULL) {
     snprintf(local_server_str, sizeof(local_server_str) - 1,
 	     "localhost:%s", getenv("IPP_PORT"));
-    if (strlen(getenv("CUPS_SERVER")) > 1023)
-      local_server_str[1023] = '\0';
+    local_server_str[sizeof(local_server_str) - 1] = '\0';
     cupsSetServer(local_server_str);
+    debug_printf("Set port on which CUPS is listening via env variable: IPP_PORT=%s\n",
+		 getenv("IPP_PORT"));
   }
 
   /* Point to selected CUPS server or domain socket via the CUPS_SERVER
@@ -12122,33 +12123,35 @@ int main(int argc, char*argv[]) {
      Default to localhost:631 (and not to CUPS default to override
      client.conf files as cups-browsed works only with a local CUPS
      daemon, not with remote ones. */
+  local_server_str[0] = '\0';
   if (getenv("CUPS_SERVER") != NULL) {
     strncpy(local_server_str, getenv("CUPS_SERVER"),
 	    sizeof(local_server_str) - 1);
-    if (strlen(getenv("CUPS_SERVER")) > 1023)
-      local_server_str[1023] = '\0';
+    local_server_str[sizeof(local_server_str) - 1] = '\0';
+    cupsSetServer(local_server_str);
+    debug_printf("Set host/port/domain socket which CUPS is listening via env variable: CUPS_SERVER=%s\n",
+		 getenv("CUPS_SERVER"));
   } else {
-#ifdef CUPS_DEFAULT_DOMAINSOCKET
-    if (DomainSocket == NULL)
-      DomainSocket = strdup(CUPS_DEFAULT_DOMAINSOCKET);
-#endif
     if (DomainSocket != NULL) {
+      debug_printf("Set host/port/domain socket on which CUPS is listening via cups-browsed directive DomainSocket: %s\n",
+		   DomainSocket);
       struct stat sockinfo;               /* Domain socket information */
       if (strcasecmp(DomainSocket, "None") != 0 &&
 	  strcasecmp(DomainSocket, "Off") != 0 &&
 	  !stat(DomainSocket, &sockinfo) &&
 	  (sockinfo.st_mode & S_IROTH) != 0 &&
-	  (sockinfo.st_mode & S_IWOTH) != 0)
+	  (sockinfo.st_mode & S_IWOTH) != 0) {
 	strncpy(local_server_str, DomainSocket,
 		sizeof(local_server_str) - 1);
-      else
-	strncpy(local_server_str, "localhost:631",
-		sizeof(local_server_str) - 1);
-    } else
-      strncpy(local_server_str, "localhost:631", sizeof(local_server_str));
-    setenv("CUPS_SERVER", local_server_str, 1);
+	local_server_str[sizeof(local_server_str) - 1] = '\0';
+	cupsSetServer(local_server_str);
+      } else
+	debug_printf("DomainSocket %s not accessible: %s\n",
+		     DomainSocket, strerror(errno));
+    }
   }
-  cupsSetServer(local_server_str);
+  if (local_server_str[0])
+    setenv("CUPS_SERVER", local_server_str, 1);
 
   if (BrowseLocalProtocols & BROWSE_DNSSD) {
     debug_printf("Local support for DNSSD not implemented\n");

@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.27.4 - 2020-04-09
 
 CHANGES IN V1.27.5
 
+	- cups-browsed: Cleaned up code for determining to which CUPS
+	  server (host/port/domain socket) to connect, so that
+	  connection via DomainSocket cups-browsed.conf directive,
+	  CUPS_SERVER and IPP_PORT environment variables and all
+	  defaults and methods of libcups, including CUPS' client.conf
+	  work.
 	- gstoraster, rastertopdf: Do not pass NULL to fprintf() (Pull
           request #230).
 	- libcupsfilters: Silence compiler warning (Pull request #229).
