@@ -1343,7 +1343,8 @@ int main(int argc, char **argv)
     outformat = OUTPUT_FORMAT_PDF;
 #endif
     fprintf(stderr, "DEBUG: OUTFORMAT=\"%s\", output format will be %s\n",
-	    outformat_env, (outformat == OUTPUT_FORMAT_PDF ? "PDF" : "PCLM"));
+	    (outformat_env ? outformat_env : "<none>"),
+	    (outformat == OUTPUT_FORMAT_PDF ? "PDF" : "PCLM"));
   
     num_options = cupsParseOptions(argv[5], 0, &options);  
 

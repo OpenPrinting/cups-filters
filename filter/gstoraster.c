@@ -639,7 +639,7 @@ main (int argc, char **argv, char *envp[])
     goto out;
   }
   fprintf(stderr, "DEBUG: OUTFORMAT=\"%s\", so output format will be %s\n",
-	  outformat_env,
+	  (outformat_env ? outformat_env : "<none>"),
 	  (outformat == OUTPUT_FORMAT_RASTER ? "CUPS/PWG Raster" :
 	   (outformat == OUTPUT_FORMAT_PDF ? "PDF" :
 	    "PCL XL")));
