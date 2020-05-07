@@ -946,7 +946,7 @@ load_opt_strings_catalog(const char *location, cups_array_t *options)
   if (filename == tmpfile)
     unlink(filename);
   if (found_in_catalog)
-    free(filename);
+    free((char *)filename);
 }
 
 
