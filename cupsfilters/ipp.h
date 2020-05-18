@@ -42,6 +42,23 @@ char get_printer_attributes_log[LOGSIZE];
 
 const char     *resolve_uri(const char *raw_uri);
 #ifdef HAVE_CUPS_1_6
+                                /* Enum of possible driverless options */
+enum driverless_support_modes {
+  DRVLESS_CHECKERR,             /* Unable to get get-printer-attributes response*/
+  FULL_DRVLESS,                 /* Standard IPP Everywhere support, works with 'everywhere' model */
+  DRVLESS_IPP11,                /* Driverless support via IPP 1.1 request */
+  DRVLESS_INCOMPLETEIPP         /* Driverless support without media-col-database attribute */
+};
+
+/* Array of text strings explaining available driverless support */
+const char * driverless_support_strs[] = {
+  "driverless - cannot check driverless status",
+  "fully driverless",
+  "driverless via IPP 1.1",
+  "driverless with incomplete IPP request"
+};
+
+int check_driverless_support(const char* uri);
 ipp_t   *get_printer_attributes(const char* raw_uri,
 				const char* const pattrs[],
 				int pattrs_size,
@@ -55,6 +72,14 @@ ipp_t   *get_printer_attributes2(http_t *http_printer,
 				 const char* const req_attrs[],
 				 int req_attrs_size,
 				 int debug);
+ipp_t   *get_printer_attributes3(http_t *http_printer,
+				 const char* raw_uri,
+				 const char* const pattrs[],
+				 int pattrs_size,
+				 const char* const req_attrs[],
+				 int req_attrs_size,
+				 int debug,
+				 int* driverless_support);
 #endif /* HAVE_CUPS_1_6 */
 
 #  ifdef __cplusplus
