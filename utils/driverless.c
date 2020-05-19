@@ -46,7 +46,8 @@ static void		cancel_job(int sig);
 int
 list_printers (int mode)
 {
-  int		ippfind_pid,		/* Process ID for ippfind */
+  int		driverless_support = 0,	/* Process ID for ippfind */
+		ippfind_pid,	        /* Process ID of ippfind */
 		post_proc_pid = 0,	/* Process ID of post-processing */
 		post_proc_pipe[2],	/* Pipe to post-processing */
 		wait_children,		/* Number of child processes left */
@@ -75,6 +76,7 @@ list_printers (int mode)
                 make[512],              /* Manufacturer */
 		model[256],		/* Model */
 		pdl[256],		/* PDL */
+		driverless_info[256],	/* Driverless info string */
 		device_id[2048];	/* 1284 device ID */
 
   /* 
@@ -362,14 +364,34 @@ list_printers (int mode)
 	else
 	  strncpy(make_and_model, model, sizeof(make_and_model) - 1);
 
+	/* Check which driverless support is available for the found device:
+	 * 0) DRVLESS_CHECKERR - the device failed to respond
+	 *    to any get-printer-attributes request versions available.
+	 * 1) FULL_DRVLESS - the device responded correctly to IPP 2.0 get-printer-attributes request.
+	 *    The device is compatible with CUPS 'everywhere' model.
+	 * 2) DRVLESS_IPP11 - the device responded correctly to IPP 1.1 get-printer-attributes request.
+	 * 3) DRVLESS_INCOMPLETEIPP - the device responded correctly to IPP get-printer-attributes request
+	 *    without media-col-database attribute
+	 *
+	 * If we know which driverless support is available, we can divide which devices can be supported
+	 * by CUPS temporary queues and which devices need cups-browsed to run.
+	 */
+	driverless_support = check_driverless_support(service_uri);
+
+	if (driverless_support == DRVLESS_CHECKERR)
+	  fprintf(stderr, "Failed to get info about driverless support.");
+
+	snprintf(driverless_info, 255, "%s", driverless_support_strs[driverless_support]);
+	driverless_info[255] = '\0';
+
 	if (mode == 1)
 	  /* Call with "list" argument (PPD generator in list mode */
-	  printf("\"driverless:%s\" en \"%s\" \"%s, driverless, cups-filters " VERSION
-		 "\" \"%s\"\n", service_uri, make, make_and_model, device_id);
+	  printf("\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
+		 "\" \"%s\"\n", service_uri, make, make_and_model, driverless_info, device_id);
 	else
 	  /* Call without arguments and env variable "SOFTWARE" starting
 	     with "CUPS" (Backend in discovery mode) */
-	  printf("network %s \"%s\" \"%s (driverless)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, device_id);
+	  printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
 
       read_error:
 	continue;

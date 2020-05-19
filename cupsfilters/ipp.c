@@ -73,6 +73,20 @@ resolve_uri(const char *raw_uri)
 }
 
 #ifdef HAVE_CUPS_1_6
+/* Check how the driverless support is provided */
+int
+check_driverless_support(const char* uri)
+{
+  int support_status = DRVLESS_CHECKERR;
+  ipp_t *response = NULL;
+
+  response = get_printer_attributes3(NULL, uri, NULL, 0, NULL, 0, 1, &support_status);
+  if (response != NULL)
+    ippDelete(response);
+
+  return support_status;
+}
+
 /* Get attributes of a printer specified only by URI */
 ipp_t *
 get_printer_attributes(const char* raw_uri,
@@ -96,6 +110,23 @@ get_printer_attributes2(http_t *http_printer,
 			const char* const req_attrs[],
 			int req_attrs_size,
 			int debug)
+{
+  return get_printer_attributes3(http_printer, raw_uri, pattrs, pattrs_size,
+				 req_attrs, req_attrs_size, debug, NULL);
+}
+
+/* Get attributes of a printer specified by URI and under a given HTTP
+   connection, for example via a domain socket, and give info about used
+   fallbacks */
+ipp_t *
+get_printer_attributes3(http_t *http_printer,
+			const char* raw_uri,
+			const char* const pattrs[],
+			int pattrs_size,
+			const char* const req_attrs[],
+			int req_attrs_size,
+			int debug,
+                        int* driverless_info)
 {
   const char *uri;
   int have_http, uri_status, host_port, i = 0, total_attrs = 0, fallback,
@@ -138,6 +169,10 @@ get_printer_attributes2(http_t *http_printer,
     "uri-authentication-supported",
     "uri-security-supported"
   };
+
+  /* Expect a device capable of standard IPP Everywhere*/
+  if (driverless_info != NULL)
+    *driverless_info = FULL_DRVLESS;
 
   /* Request printer properties via IPP, for example to
       - generate a PPD file for the printer
@@ -282,12 +317,18 @@ get_printer_attributes2(http_t *http_printer,
     if (fallback == 1 + cap) {
       log_printf(get_printer_attributes_log,
 		 "No further fallback available, giving up\n");
+      if (driverless_info != NULL)
+        *driverless_info = DRVLESS_CHECKERR;
     } else if (cap && fallback == 1) {
       log_printf(get_printer_attributes_log,
 		 "The server doesn't support the standard IPP request, trying request without media-col\n");
+      if (driverless_info != NULL)
+        *driverless_info = DRVLESS_INCOMPLETEIPP;
     } else if (fallback == 0) {
       log_printf(get_printer_attributes_log,
 		 "The server doesn't support IPP2.0 request, trying IPP1.1 request\n");
+      if (driverless_info != NULL)
+        *driverless_info = DRVLESS_IPP11;
     }
   }
 
