@@ -401,7 +401,7 @@ void process_cmdline_options()
                             if ((opt2 = find_option("Binding")))
                                 option_set_value(opt2, optset, "ShortEdge");
                             else
-                                option_set_value(opt, optset, "DuplexNoTumble");
+                                option_set_value(opt, optset, "DuplexTumble");
                         }
                     }
                 }
