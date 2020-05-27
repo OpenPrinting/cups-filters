@@ -788,10 +788,11 @@ AC_ARG_WITH([test-font-path],
 	[with_test_font_path="$withval"],
 	[with_test_font_path=`find /usr/share/fonts -name DejaVuSans.ttf || echo /usr/share/fonts/dejavu/DejaVuSans.ttf`]
 )
-AC_CHECK_FILE("$with_test_font_path", [], [
-	AC_MSG_ERROR([Requested font file is missing. Please install a package providing it.])
-])
-AC_DEFINE_UNQUOTED([TESTFONT], ["$with_test_font_path"], [Path to font used in tests])
+
+AS_IF([test -f "$with_test_font_path"],
+	[AC_DEFINE_UNQUOTED([TESTFONT], ["$with_test_font_path"], [Path to font used in tests])],
+	[AC_MSG_ERROR(DejaVuSans.ttf font file is missing. Please install a package providing it.)]
+)
 
 # ================
 # Check for cflags
