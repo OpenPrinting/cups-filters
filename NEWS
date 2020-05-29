@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.4 - 2020-04-09
 
 CHANGES IN V1.27.5
 
+	- foomatic-rip: Map two-sided-short-edge to DuplexTumble (Pull
+          request #236)
 	- Build system: In configure.ac use AS_IF instead of
           AC_CHECK_FILE for font check (Issue #239, Pull request #240)
 	- cups-browsed: Cleaned up code for determining to which CUPS
