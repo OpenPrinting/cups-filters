@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.27.4 - 2020-04-09
 
 CHANGES IN V1.27.5
 
+	- cups-browsed: Do not accept DNS-SD broadcasts of IPPS type
+	  of "remote" CUPS queues of another CUPS instance on the
+	  local machine. This way we get a local queue pointing to
+	  such a printer only in unencrypted version (IPP). For some
+	  reason printing from one CUPS server to another on the same
+	  machine works only unencrypted.
 	- foomatic-rip: Map two-sided-short-edge to DuplexTumble (Pull
           request #236)
 	- Build system: In configure.ac use AS_IF instead of

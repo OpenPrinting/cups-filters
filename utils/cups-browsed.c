@@ -9791,7 +9791,7 @@ static void resolve_callback(AvahiServiceResolver *r,
 			     AvahiLookupResultFlags flags,
 			     AVAHI_GCC_UNUSED void* userdata) {
   char ifname[IF_NAMESIZE];
-  AvahiStringList *uuid_entry;
+  AvahiStringList *uuid_entry, *printer_type_entry;
   char *uuid_key, *uuid_value;
 
   debug_printf("resolve_callback() in THREAD %ld\n", pthread_self());
@@ -9815,9 +9815,9 @@ static void resolve_callback(AvahiServiceResolver *r,
     uuid_value = NULL;
     if (txt && (uuid_entry = avahi_string_list_find(txt, "UUID")))
       avahi_string_list_get_pair(uuid_entry, &uuid_key, &uuid_value, NULL);
-    if (g_hash_table_find (local_printers,
-			   local_printer_has_uuid,
-			   uuid_value)) {
+    if (uuid_value && g_hash_table_find (local_printers,
+					 local_printer_has_uuid,
+					 uuid_value)) {
       debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) with UUID %s is from local CUPS, ignored (Avahi lookup result or host name of local machine).\n",
 		   name, type, domain, host_name, port, ifname,
 		   (address ?
@@ -9825,6 +9825,19 @@ static void resolve_callback(AvahiServiceResolver *r,
 		     address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
 		     "IPv4/IPv6 Unknown") :
 		    "IPv4/IPv6 Unknown"), uuid_value);
+      goto ignore;
+    }
+    if (txt &&
+	(printer_type_entry = avahi_string_list_find(txt, "printer-type")) &&
+	strcasestr(type, "_ipps")) {
+      debug_printf("Avahi Resolver: Service '%s' of type '%s' in domain '%s' with host name '%s' and port %d on interface '%s' (%s) with UUID %s is from another CUPS instance on the local system and uses IPPS, the local CUPS has problems to print on this printer, so we ignore it (Avahi lookup result or host name of local machine).\n",
+		   name, type, domain, host_name, port, ifname,
+		   (address ?
+		    (address->proto == AVAHI_PROTO_INET ? "IPv4" :
+		     address->proto == AVAHI_PROTO_INET6 ? "IPv6" :
+		     "IPv4/IPv6 Unknown") :
+		    "IPv4/IPv6 Unknown"),
+		   (uuid_value ? uuid_value : "(unknown)"));
       goto ignore;
     }
   }
