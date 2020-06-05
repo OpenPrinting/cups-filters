@@ -147,6 +147,13 @@
 *Duplex DuplexTumble/Short-Edge binding: "@PJL SET DUPLEX=ON<0A>@PJL SET BINDING=SHORTEDGE<0A>"
 *JCLCloseUI: *Duplex
 
+*JCLOpenUI *ColorModel/Color: PickOne
+*OrderDependency: 100 JCLSetup *ColorModel
+*DefaultColorModel: color
+*ColorModel color/Color: "@PJL SET RENDERMODE=COLOR<0A>"
+*ColorModel grayscale/Black and White: "@PJL SET RENDERMODE=GRAYSCALE<0A>"
+*JCLCloseUI: *ColorModel
+
 *JCLOpenUI *Resolution/Resolution: PickOne
 *OrderDependency: 100 JCLSetup *Resolution
 *DefaultResolution: 600dpi
