@@ -8,7 +8,7 @@ CHANGES IN V1.27.5
 	  desktops get no cluttered with notifications of new queues
 	  being created. One can return to the old behavior via
 	  "KeepGeneratedQueuesOnShutdown No" in cups-browsed.conf
-	  (Ubuntu bug #1869981).
+	  (Ubuntu bug #1869981, #1878241).
 	- cups-browsed: Do not accept DNS-SD broadcasts of IPPS type
 	  of "remote" CUPS queues of another CUPS instance on the
 	  local machine. This way we get a local queue pointing to
