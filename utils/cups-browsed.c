@@ -456,6 +456,7 @@ static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_DRIVERL
 static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_ALL;
 #endif
 #endif
+static unsigned int KeepGeneratedQueuesOnShutdown = 1;
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static int NewIPPPrinterQueuesShared = 0;
 static int AutoClustering = 1;
@@ -10199,9 +10200,17 @@ void avahi_browser_shutdown() {
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
       if (p->type && p->type[0]) {
-	if (p->status != STATUS_TO_BE_RELEASED)
-	  p->status = STATUS_DISAPPEARED;
-	p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	if (KeepGeneratedQueuesOnShutdown) {
+	  if (p->status != STATUS_TO_BE_RELEASED &&
+	      p->status != STATUS_DISAPPEARED) {
+	    p->status = STATUS_UNCONFIRMED;
+	    p->timeout = time(NULL) + TIMEOUT_CONFIRM;
+	  }
+	} else {
+	  if (p->status != STATUS_TO_BE_RELEASED)
+	    p->status = STATUS_DISAPPEARED;
+	  p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+	}
       }
     }
     if (in_shutdown == 0)
@@ -11636,6 +11645,13 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	       !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	NewBrowsePollQueuesShared = 0;
+    } else if (!strcasecmp(line, "KeepGeneratedQueuesOnShutdown") && value) {
+      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
+	KeepGeneratedQueuesOnShutdown = 1;
+      else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+	       !strcasecmp(value, "off") || !strcasecmp(value, "0"))
+	KeepGeneratedQueuesOnShutdown = 0;
     } else if (!strcasecmp(line, "AutoClustering") && value) {
       if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
@@ -12428,12 +12444,13 @@ fail:
     g_object_unref (proxy);
 
   /* Remove all queues which we have set up */
-  for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
-       p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-    if (p->status != STATUS_TO_BE_RELEASED)
-      p->status = STATUS_DISAPPEARED;
-    p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
-  }
+  if (KeepGeneratedQueuesOnShutdown == 0)
+    for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+      if (p->status != STATUS_TO_BE_RELEASED)
+	p->status = STATUS_DISAPPEARED;
+      p->timeout = time(NULL) + TIMEOUT_IMMEDIATELY;
+    }
   update_cups_queues(NULL);
 
   cancel_subscription (subscription_id);

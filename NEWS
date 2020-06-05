@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.27.4 - 2020-04-09
 
 CHANGES IN V1.27.5
 
+	- cups-browsed: Do not remove the created local queues on
+	  shutdown, to avoid their re-creation on restart, so that
+	  desktops get no cluttered with notifications of new queues
+	  being created. One can return to the old behavior via
+	  "KeepGeneratedQueuesOnShutdown No" in cups-browsed.conf
+	  (Ubuntu bug #1869981).
 	- cups-browsed: Do not accept DNS-SD broadcasts of IPPS type
 	  of "remote" CUPS queues of another CUPS instance on the
 	  local machine. This way we get a local queue pointing to

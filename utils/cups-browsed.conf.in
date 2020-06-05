@@ -552,6 +552,23 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # NewIPPPrinterQueuesShared Yes
 
 
+# How to handle the print queues cups-browsed creates when
+# cups-browsed is shut down:
+
+# "KeepGeneratedQueuesOnShutdown No" makes the queues being
+# removed. This makes sense as these queues only work while
+# cups-browsed is running. cups-browsed has to determine to which
+# member printer of a cluster to pass on the job.
+
+# "KeepGeneratedQueuesOnShutdown Yes" (the default) makes the queues
+# not being removed. This is the recommended setting for a system
+# where cups-browsed is permanently running and only stopped for short
+# times (like log rotation) or on shutdown. This avoids the
+# re-creation of the queues when cups-browsed is restarted, which
+# often causes a clutter of CUPS notifications on the desktop.
+
+# KeepGeneratedQueuesOnShutdown No
+
 # If there is more than one remote CUPS printer whose local queue
 # would get the same name and AutoClustering is set to "Yes" (the
 # default) only one local queue is created which makes up a
@@ -647,7 +664,7 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 
 # As DNS-SD service names are unique in a network you can create a
 # cluster from exactly specified printers (spaces replaced by
-# underscors):
+# underscores):
 
 # Cluster hrdep: oldlaser_@_hr-server1 newlaser_@_hr-server2
 
