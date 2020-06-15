@@ -565,7 +565,8 @@ pkgfilter_PROGRAMS += \
 	texttopdf \
 	rastertopdf \
 	bannertopdf \
-	rastertops
+	rastertops \
+	pclmtoraster
 if ENABLE_URFTOPDF
 pkgfilter_PROGRAMS += \
 	urftopdf
@@ -741,6 +742,19 @@ urftopdf_CXXFLAGS = \
 	$(LIBQPDF_CFLAGS)
 urftopdf_LDADD = \
 	$(LIBQPDF_LIBS)
+
+pclmtoraster_SOURCES = \
+	filter/pclmtoraster.cxx \
+	cupsfilters/raster.h \
+	filter/unirast.h
+pclmtoraster_CXXFLAGS = \
+	$(CUPS_CFLAGS) \
+	$(LIBQPDF_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
+pclmtoraster_LDADD = \
+	$(CUPS_LIBS) \
+	$(LIBQPDF_LIBS) \
+	libcupsfilters.la
 
 rastertopdf_SOURCES = \
 	filter/rastertopdf.cpp
