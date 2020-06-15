@@ -85,6 +85,7 @@ application/vnd.cups-pdf	application/vnd.cups-postscript	100	pdftops
 # Raster filters...
 #
 
+application/PCLm			application/vnd.cups-raster 32 pclmtoraster
 image/gif			application/vnd.cups-raster	100	imagetoraster
 image/png			application/vnd.cups-raster	100	imagetoraster
 image/jpeg			application/vnd.cups-raster	100	imagetoraster
