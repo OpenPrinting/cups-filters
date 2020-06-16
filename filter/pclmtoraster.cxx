@@ -14,40 +14,20 @@
  *
  * @brief Decode PCLm to a Raster file
  * @file pclmtoraster.cxx
+ * @author Vikrant Malik <vikrantmalik051@gmail.com> (c) 2020
  */
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
-#include <limits>
-#include <errno.h>
 #include <cups/raster.h>
-#include <cupsfilters/image.h>
-#include <ppd/ppd.h>
-#include <arpa/inet.h>   // ntohl
-
-#include <vector>
-#include <qpdf/QPDF.hh>
-#include <qpdf/QPDFWriter.hh>
-#include <qpdf/QUtil.hh>
-#include <qpdf/QPDFPageDocumentHelper.hh>
-#include <qpdf/QPDFObjectHandle.hh>
-#include <qpdf/QPDFPageObjectHelper.hh>
-#include <cupsfilters/raster.h>
-
-
-#include <qpdf/Pl_Flate.hh>
-#include <qpdf/Pl_DCT.hh>
-#include <qpdf/Pl_Buffer.hh>
-
-#include "unirast.h"
-
 #include <cups/cups.h>
+#include <ppd/ppd.h>
+
+#include <qpdf/QPDF.hh>
+#include <qpdf/QPDFObjectHandle.hh>
+#include <cupsfilters/raster.h>
+#include <cupsfilters/image.h>
+
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
 #endif
@@ -55,6 +35,8 @@
 #define MAX_BYTES_PER_PIXEL 32
 
 namespace {
+  typedef unsigned char *(*ConvertLineFunc)(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels);
+  ConvertLineFunc convertLine;
   int deviceCopies = 1;
   bool deviceCollate = false;
   int pwgraster = 1;
@@ -90,29 +72,9 @@ namespace {
     {63,191,31,159,55,183,23,151,61,189,29,157,53,181,21,149},
     {255,127,223,95,247,119,215,87,253,125,221,93,245,117,213,85}
   };
-  unsigned char revTable[256] = {
-0x00,0x80,0x40,0xc0,0x20,0xa0,0x60,0xe0,0x10,0x90,0x50,0xd0,0x30,0xb0,0x70,0xf0,
-0x08,0x88,0x48,0xc8,0x28,0xa8,0x68,0xe8,0x18,0x98,0x58,0xd8,0x38,0xb8,0x78,0xf8,
-0x04,0x84,0x44,0xc4,0x24,0xa4,0x64,0xe4,0x14,0x94,0x54,0xd4,0x34,0xb4,0x74,0xf4,
-0x0c,0x8c,0x4c,0xcc,0x2c,0xac,0x6c,0xec,0x1c,0x9c,0x5c,0xdc,0x3c,0xbc,0x7c,0xfc,
-0x02,0x82,0x42,0xc2,0x22,0xa2,0x62,0xe2,0x12,0x92,0x52,0xd2,0x32,0xb2,0x72,0xf2,
-0x0a,0x8a,0x4a,0xca,0x2a,0xaa,0x6a,0xea,0x1a,0x9a,0x5a,0xda,0x3a,0xba,0x7a,0xfa,
-0x06,0x86,0x46,0xc6,0x26,0xa6,0x66,0xe6,0x16,0x96,0x56,0xd6,0x36,0xb6,0x76,0xf6,
-0x0e,0x8e,0x4e,0xce,0x2e,0xae,0x6e,0xee,0x1e,0x9e,0x5e,0xde,0x3e,0xbe,0x7e,0xfe,
-0x01,0x81,0x41,0xc1,0x21,0xa1,0x61,0xe1,0x11,0x91,0x51,0xd1,0x31,0xb1,0x71,0xf1,
-0x09,0x89,0x49,0xc9,0x29,0xa9,0x69,0xe9,0x19,0x99,0x59,0xd9,0x39,0xb9,0x79,0xf9,
-0x05,0x85,0x45,0xc5,0x25,0xa5,0x65,0xe5,0x15,0x95,0x55,0xd5,0x35,0xb5,0x75,0xf5,
-0x0d,0x8d,0x4d,0xcd,0x2d,0xad,0x6d,0xed,0x1d,0x9d,0x5d,0xdd,0x3d,0xbd,0x7d,0xfd,
-0x03,0x83,0x43,0xc3,0x23,0xa3,0x63,0xe3,0x13,0x93,0x53,0xd3,0x33,0xb3,0x73,0xf3,
-0x0b,0x8b,0x4b,0xcb,0x2b,0xab,0x6b,0xeb,0x1b,0x9b,0x5b,0xdb,0x3b,0xbb,0x7b,0xfb,
-0x07,0x87,0x47,0xc7,0x27,0xa7,0x67,0xe7,0x17,0x97,0x57,0xd7,0x37,0xb7,0x77,0xf7,
-0x0f,0x8f,0x4f,0xcf,0x2f,0xaf,0x6f,0xef,0x1f,0x9f,0x5f,0xdf,0x3f,0xbf,0x7f,0xff
-  };
-
 }
 
-static void
-parsePDFTOPDFComment(FILE *fp)
+static void parsePDFTOPDFComment(FILE *fp)
 {
   char buf[4096];
   int i;
@@ -144,8 +106,7 @@ parsePDFTOPDFComment(FILE *fp)
   }
 }
 
-int
-parse_doc_type(FILE *fp)
+int parse_doc_type(FILE *fp)
 {
   char line1[5];
   char *rc;
@@ -165,8 +126,7 @@ parse_doc_type(FILE *fp)
   exit(EXIT_FAILURE);
 }
 
-static void
-parseOpts(int argc, char **argv)
+static void parseOpts(int argc, char **argv)
 {
   int           num_options = 0;
   cups_option_t*options = NULL;
@@ -273,9 +233,7 @@ parseOpts(int argc, char **argv)
   fprintf(stderr, "DEBUG: Page size requested: %s\n", header.cupsPageSizeName);
 }
 
-static bool dict_lookup_rect(QPDFObjectHandle object,
-                             std::string const& key,
-                             float rect[4])
+static bool dict_lookup_rect(QPDFObjectHandle object, std::string const& key, float rect[4])
 {
   // preliminary checks
   if (!object.isDictionary() || !object.hasKey(key))
@@ -300,15 +258,16 @@ static bool dict_lookup_rect(QPDFObjectHandle object,
 }
 
 static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
-     unsigned int rotate, unsigned int height, unsigned int width, int rowsize)
+     unsigned int rotate, unsigned int height, unsigned int width, int rowsize, std::string colorspace)
 {
   unsigned char *bp = src;
   unsigned char *dp = dst;
   unsigned char *temp = dst;
 
-  if (rotate == 180) {
-    switch (header.cupsColorSpace) {
-     case CUPS_CSPACE_SW:
+  if (rotate == 0) {
+    return src;
+  } else if (rotate == 180) {
+    if (colorspace == "/DeviceGray") {
       bp = src + height * rowsize - 1;
       dp = dst;
       for (unsigned int h = 0; h < height; h++) {
@@ -316,8 +275,7 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
           *dp = *bp;
         }
       }
-      break;
-     case CUPS_CSPACE_CMYK:
+    } else if (colorspace == "/DeviceCMYK") {
       bp = src + height * rowsize - 4;
       dp = dst;
       for (unsigned int h = 0; h < height; h++) {
@@ -328,11 +286,7 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
           dp[3] = bp[3];
         }
       }
-      break;
-     case CUPS_CSPACE_RGB:
-     case CUPS_CSPACE_ADOBERGB:
-     case CUPS_CSPACE_SRGB:
-     default:
+    } else if (colorspace == "/DeviceRGB") {
       bp = src + height * rowsize - 3;
       dp = dst;
       for (unsigned int h = 0; h < height; h++) {
@@ -342,12 +296,10 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
           dp[2] = bp[2];
         }
       }
-      break;
     }
   }
   else if (rotate == 270) {
-    switch (header.cupsColorSpace) {
-     case CUPS_CSPACE_SW:
+    if (colorspace == "/DeviceGray") {
       bp = src;
       dp = dst;
       for (unsigned int h = 0; h < height; h++) {
@@ -356,8 +308,7 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
           *dp = *bp;
         }
       }
-      break;
-     case CUPS_CSPACE_CMYK:
+    } else if (colorspace == "/DeviceCMYK") {
       for (unsigned int h = 0; h < height; h++) {
         bp = src + (height - h)*4 - 4;
         for (unsigned int i = 0; i < width; i++, bp += height*4 , dp += 4) {
@@ -367,11 +318,7 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
           dp[3] = bp[3];
         }
       }
-      break;
-     case CUPS_CSPACE_RGB:
-     case CUPS_CSPACE_ADOBERGB:
-     case CUPS_CSPACE_SRGB:
-     default:
+    } else if (colorspace == "/DeviceRGB") {
       bp = src;
       dp = dst;
       for (unsigned int h = 0; h < height; h++) {
@@ -382,20 +329,17 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
           dp[2] = bp[2];
         }
       }
-      break;
     }
   }
   else if (rotate == 90) {
-    switch (header.cupsColorSpace) {
-    case CUPS_CSPACE_SW:
+    if (colorspace == "/DeviceGray") {
       for (unsigned int h = 0; h < height; h++) {
         bp = src + (width - 1) * height + h;
         for (unsigned int i = 0; i < width; i++, bp -= height , dp ++) {
           *dp = *bp;
         }
       }
-      break;
-    case CUPS_CSPACE_CMYK:
+    } else if (colorspace == "/DeviceCMYK") {
       for (unsigned int h = 0; h < height; h++) {
         bp = src + (width - 1) * height * 4 + 4*h;
         for (unsigned int i = 0; i < width; i++, bp -= height*4 , dp += 4) {
@@ -405,11 +349,7 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
           dp[3] = bp[3];
         }
       }
-      break;
-    case CUPS_CSPACE_RGB:
-    case CUPS_CSPACE_ADOBERGB:
-    case CUPS_CSPACE_SRGB:
-    default:
+    } else if (colorspace == "/DeviceRGB") {
       for (unsigned int h = 0; h < height; h++) {
        bp = src + (width - 1) * height * 3 + 3*h;
         for (unsigned int i = 0; i < width; i++, bp -= height*3 , dp += 3) {
@@ -418,7 +358,6 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
           dp[2] = bp[2];
         }
       }
-      break;
     }
   }
   else {
@@ -429,83 +368,114 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
   return temp;
 }
 
-static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width,
-     unsigned int height, unsigned int rotate, unsigned int rowsize) {
-  unsigned char *bp = src;
-  unsigned char *dp = dst;
-  unsigned char *temp = dst;
-  if (rotate == 0){
-    for(unsigned int h = 0; h < height; h++){
-      for(unsigned int w = 0; w < width; w+=8){
-        *dp = 0;
-        for(int k=0;k<8;k++){
-            *dp <<= 1;
-            if(*bp > dither1[h & 0xf][(w+k) & 0xf]){
-              *dp |= 0x1;
-            }
-            bp +=1;
+void onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width,
+     unsigned int height, unsigned int row, unsigned int rowsize) {
+  unsigned char t = 0;
+  for(unsigned int w = 0; w < width; w+=8){
+    t = 0;
+    for(int k = 0; k < 8; k++){
+        t <<= 1;
+        if(*src > dither1[row & 0xf][(w+k) & 0xf]){
+          t |= 0x1;
         }
-        dp+=1;
-      }
+        src +=1;
     }
+    *dst = t;
+    dst += 1;
   }
-  else if (rotate == 180) {
-    dp = src;
-    for(unsigned int h = 0; h < height; h++){
-      for(unsigned int w = 0; w < width; w+=8){
-        *dp = 0;
-        for(int k=0;k<8;k++){
-            *dp <<= 1;
-            if(*bp > dither1[h & 0xf][(w+k) & 0xf]){
-              *dp |= 0x1;
-            }
-            bp +=1;
-        }
-        dp+=1;
-      }
-    }
-    bp = src + height * rowsize - 1;
-    dp = dst;
-    for (unsigned int h = 0; h < height; h++) {
-      for (unsigned int w = 0; w < rowsize; w++, bp --, dp ++) {
-        *dp = ~revTable[(unsigned char)(~*bp)];
-      }
-    }
-    return dst;
+}
+
+static unsigned char *RGBtoCMYKLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  cupsImageRGBToCMYK(src,dst,pixels);
+  return dst;
+}
+
+static unsigned char *RGBtoCMYLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  cupsImageRGBToCMY(src,dst,pixels);
+  return dst;
+}
+
+static unsigned char *RGBtoWhiteLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  cupsImageRGBToWhite(src,dst,pixels);
+  return dst;
+}
+
+static unsigned char *RGBtoBlackLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  if (header.cupsBitsPerColor != 1) {
+    cupsImageRGBToBlack(src,dst,pixels);
+  } else {
+    cupsImageRGBToBlack(src,src,pixels);
+    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
   }
-  else if (rotate == 270) {
-    for (unsigned int h = 0; h < height; h++) {
-      bp = src + (height - h) - 1;
-      for (unsigned int w = 0; w < width; w+=8) {
-        *dst=0;
-        for (int k = 0; k < 8; k++) {
-          *dst <<=1;
-          if(*bp > dither1[h & 0xf][(w+k) & 0xf]){
-            *dst |= 0x1;
-          }
-          bp += height;
-        }
-      dst+=1;
-      }
-    }
+  return dst;
+}
+
+static unsigned char *CMYKtoRGBLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  cupsImageCMYKToRGB(src,dst,pixels);
+  return dst;
+}
+
+static unsigned char *CMYKtoCMYLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  // Converted first to rgb and then to cmy for better outputs.
+  cupsImageCMYKToRGB(src,src,pixels);
+  cupsImageRGBToCMY(src,dst,pixels);
+  return dst;
+}
+
+static unsigned char *CMYKtoWhiteLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  cupsImageCMYKToWhite(src,dst,pixels);
+  return dst;
+}
+
+static unsigned char *CMYKtoBlackLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  if (header.cupsBitsPerColor != 1) {
+    cupsImageCMYKToBlack(src,dst,pixels);
+  } else {
+    cupsImageCMYKToWhite(src,src,pixels);
+    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
   }
-  else if (rotate == 90) {
-    for (unsigned int h = 0; h < height; h++) {
-      bp = src + (width - 1) * height + h;
-      for (unsigned int w = 0; w < width; w+=8) {
-        *dst=0;
-        for (int k = 0; k < 8; k++) {
-          *dst <<=1;
-          if(*bp > dither1[h & 0xf][(w+k) & 0xf]){
-            *dst |= 0x1;
-          }
-          bp -= height;
-        }
-      dst+=1;
-      }
-    }
+  return dst;
+}
+
+static unsigned char *GraytoRGBLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  cupsImageWhiteToRGB(src,dst,pixels);
+  return dst;
+}
+
+static unsigned char *GraytoCMYKLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  cupsImageWhiteToCMYK(src,dst,pixels);
+  return dst;
+}
+
+static unsigned char *GraytoCMYLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  cupsImageWhiteToCMY(src,dst,pixels);
+  return dst;
+}
+
+static unsigned char *GraytoBlackLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+  if (header.cupsBitsPerColor != 1) {
+    cupsImageWhiteToBlack(src, dst, pixels);
+  } else {
+    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
   }
-  return temp;
+  return dst;
+}
+
+static unsigned char *convertLineNoop(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+{
+    return src;
 }
 
 static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
@@ -518,11 +488,13 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
   int              rowsize = 0, bufsize = 0, pixel_count = 0, temp;
   float            mediaBox[4];
   unsigned char    *bitmap = NULL;
-  unsigned char    *bitmap2 = NULL;
-  unsigned char    *graydata = NULL;
   unsigned char    *colordata = NULL;
-  unsigned char    *onebitdata = NULL;
+  QPDFObjectHandle colorspace_obj;
+  unsigned char    *lineBuf = NULL;
+  unsigned char    *dp = NULL;
+  std::string      colorspace;
 
+  convertLine = convertLineNoop;
 
   if (page.getKey("/Rotate").isInteger())
     rotate = page.getKey("/Rotate").getIntValueAsInt();
@@ -557,6 +529,7 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
     PointerHolder<Buffer> actual_data = image.getStreamData(qpdf_dl_all);
     width = imgdict.getKey("/Width").getIntValue();
     height = imgdict.getKey("/Height").getIntValue();
+    colorspace_obj = imgdict.getKey("/ColorSpace");
     header.cupsHeight += height;
     bufsize = actual_data->getSize();
 
@@ -584,65 +557,68 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
     exit(1);
   }
 
-  switch (header.cupsColorSpace) {
-   case CUPS_CSPACE_K:
-   case CUPS_CSPACE_SW:
-    if (header.cupsBitsPerColor == 1) {
-      onebitdata=(unsigned char *)malloc(sizeof(char)*header.cupsWidth*header.cupsHeight);
-      rowsize=bytesPerLine;
-      onebitpixel(bitmap, onebitdata, header.cupsWidth, header.cupsHeight, rotate, rowsize);
-      colordata=onebitdata;
-    }
-    else {
-      graydata=(unsigned char *)malloc(sizeof(char)*header.cupsWidth*header.cupsHeight);
-      cupsImageRGBToWhite(bitmap,graydata,header.cupsWidth*header.cupsHeight);
-      rowsize = header.cupsWidth;
-      colordata = graydata;
-      if (rotate) {
-        bitmap2 = (unsigned char *) malloc(pixel_count);
-        bitmap2 = rotatebitmap(graydata, bitmap2, rotate, header.cupsHeight, header.cupsWidth, rowsize);
-        free(bitmap);
-        bitmap = bitmap2;
-        colordata = bitmap;
-      }
-    }
-    break;
+  colorspace = (colorspace_obj.isName() ? colorspace_obj.getName() : std::string());
 
-   case CUPS_CSPACE_CMYK:
-    rowsize = header.cupsWidth*4;
-    if (rotate) {
-        bitmap2 = (unsigned char *) malloc(pixel_count);
-        bitmap2 = rotatebitmap(bitmap, bitmap2, rotate, header.cupsHeight, header.cupsWidth, rowsize);
-        free(bitmap);
-        bitmap = bitmap2;
-    }
-    colordata = bitmap;
-    break;
-   case CUPS_CSPACE_RGB:
-   case CUPS_CSPACE_ADOBERGB:
-   case CUPS_CSPACE_SRGB:
-   default:
+  if (colorspace == "/DeviceRGB") {
     rowsize = header.cupsWidth*3;
-    if (rotate) {
-        bitmap2 = (unsigned char *) malloc(pixel_count);
-        bitmap2 = rotatebitmap(bitmap, bitmap2, rotate, header.cupsHeight, header.cupsWidth, rowsize);
-        free(bitmap);
-        bitmap = bitmap2;
-    }
-    colordata = bitmap;
-
+  } else if (colorspace == "/DeviceCMYK") {
+     rowsize = header.cupsWidth*4;
+  } else if (colorspace == "/DeviceGray") {
+     rowsize = header.cupsWidth;
+  } else {
+    fprintf(stderr, "ERROR: Colorspace %s not supported\n", colorspace.c_str());
+    exit(1);
   }
 
+  if(rotate) {
+    unsigned char *bitmap2 = (unsigned char *) malloc(pixel_count);
+    bitmap2 = rotatebitmap(bitmap, bitmap2, rotate, header.cupsHeight, header.cupsWidth, rowsize, colorspace);
+    free(bitmap);
+    bitmap = bitmap2;
+  }
+
+  colordata = bitmap;
+
+   switch (header.cupsColorSpace) {
+    case CUPS_CSPACE_K:
+      if (colorspace == "/DeviceRGB") convertLine = RGBtoBlackLine;
+      if (colorspace == "/DeviceCMYK") convertLine = CMYKtoBlackLine;
+      if (colorspace == "/DeviceGray") convertLine = GraytoBlackLine;
+     break;
+    case CUPS_CSPACE_SW:
+     if (colorspace == "/DeviceRGB") convertLine = RGBtoWhiteLine;
+     if (colorspace == "/DeviceCMYK") convertLine = CMYKtoWhiteLine;
+     break;
+    case CUPS_CSPACE_CMY:
+     if (colorspace == "/DeviceRGB") convertLine = RGBtoCMYLine;
+     else if (colorspace == "/DeviceCMYK") convertLine = CMYKtoCMYLine;
+     else if (colorspace == "/DeviceGray") convertLine = GraytoCMYLine;
+     break;
+    case CUPS_CSPACE_CMYK:
+     if (colorspace == "/DeviceRGB") convertLine = RGBtoCMYKLine;
+     else if (colorspace == "/DeviceGray") convertLine = GraytoCMYKLine;
+     break;
+    case CUPS_CSPACE_RGB:
+    case CUPS_CSPACE_ADOBERGB:
+    case CUPS_CSPACE_SRGB:
+    default:
+     if (colorspace == "/DeviceCMYK") convertLine = CMYKtoRGBLine;
+     else if (colorspace == "/DeviceGray") convertLine = GraytoRGBLine;
+   }
+
+  lineBuf = new unsigned char [bytesPerLine];
   for (unsigned int plane = 0; plane < nplanes ; plane++) {
     unsigned char *bp = colordata;
     for (unsigned int h = 0; h < header.cupsHeight; h++) {
       for (unsigned int band = 0; band < nbands; band++) {
-        cupsRasterWritePixels(raster, bp, bytesPerLine);
+         dp = convertLine(bp, lineBuf, h, header.cupsWidth);
+        cupsRasterWritePixels(raster, dp, bytesPerLine);
       }
     bp += rowsize;
     }
   }
 
+  delete[] lineBuf;
   free(bitmap);
 }
 
