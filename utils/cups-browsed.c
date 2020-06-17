@@ -7807,6 +7807,7 @@ gboolean update_cups_queues(gpointer unused) {
 #ifdef HAVE_CUPS_1_6
       /* Check whether there is a temporary CUPS queue which we would
          overwrite */
+      dest = NULL;
       ipp_t *response =  NULL;
       const char const *pattrs[] =
                 {
