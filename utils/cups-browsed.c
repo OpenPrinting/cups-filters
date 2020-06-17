@@ -7833,10 +7833,10 @@ gboolean update_cups_queues(gpointer unused) {
         else {
           debug_printf ("CUPS queue with URI %s found, but with \"printer-name\" %s", uri, ippGetString(attr, 0, NULL));
         }
+
+        ippDelete(response);
       }
 
-      ippDelete(response);
-   
       if (dest) {
 	/* CUPS has found a queue with this name.
 	   Either CUPS generates a temporary queue here or we have already
