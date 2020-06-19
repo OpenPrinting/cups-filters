@@ -7920,6 +7920,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    num_options = cupsAddOption("printer-is-shared",
 					(i == 0 ? "true" : "false"),
 					num_options, &options);
+	    num_options = cupsAddOption(CUPS_BROWSED_MARK "-default", "true", num_options, &options);
 	    cupsEncodeOptions2(request, num_options, options,
 			       IPP_TAG_OPERATION);
 	    cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
