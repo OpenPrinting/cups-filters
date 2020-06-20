@@ -7807,36 +7807,7 @@ gboolean update_cups_queues(gpointer unused) {
 #ifdef HAVE_CUPS_1_6
       /* Check whether there is a temporary CUPS queue which we would
          overwrite */
-      dest = NULL;
-      ipp_t *response =  NULL;
-      const char const *pattrs[] =
-                {
-                  "printer-name"
-                };
-
-      const char const *req_attrs[] =
-                {
-                  "printer-name"
-                };
-
-      if ((response = 
-           get_printer_attributes2(http, uri, 
-                       pattrs, 1, req_attrs, 1, 0)) == NULL) {
-        debug_printf ("No CUPS queue with URI %s found\n", uri);
-      }
-      else {
-        attr = ippFindAttribute(response, "printer-name", IPP_TAG_NAME);
-        if(!strcmp(ippGetString(attr, 0, NULL), p->queue_name)){
-          dest = cupsGetNamedDest(http, p->queue_name, NULL);
-          debug_printf ("CUPS queue %s with URI %s found", p->queue_name, uri);
-        }
-        else {
-          debug_printf ("CUPS queue with URI %s found, but with \"printer-name\" %s", uri, ippGetString(attr, 0, NULL));
-        }
-
-        ippDelete(response);
-      }
-
+      dest = cupsGetNamedDest(http, p->queue_name, NULL);
       if (dest) {
 	/* CUPS has found a queue with this name.
 	   Either CUPS generates a temporary queue here or we have already
