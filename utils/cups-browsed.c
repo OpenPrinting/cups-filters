@@ -7807,7 +7807,9 @@ gboolean update_cups_queues(gpointer unused) {
 #ifdef HAVE_CUPS_1_6
       /* Check whether there is a temporary CUPS queue which we would
          overwrite */
-      dest = cupsGetNamedDest(http, p->queue_name, NULL);
+      dest = NULL;
+      if (OnlyUnsupportedByCUPS == 0)
+        dest = cupsGetNamedDest(http, p->queue_name, NULL);
       if (dest) {
 	/* CUPS has found a queue with this name.
 	   Either CUPS generates a temporary queue here or we have already
