@@ -974,14 +974,14 @@ CLEANFILES = $(BUILT_SOURCES) $(GENERATED_DEFS)
 # ===
 ppddir = $(datadir)/ppd/cupsfilters
 genppdfiles = \
-	ppd/Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd \
-	ppd/Generic-PDF_Printer-PDF.ppd \
-	ppd/HP-Color_LaserJet_CM3530_MFP-PDF.ppd \
-	ppd/Ricoh-PDF_Printer-PDF.ppd
+	ppdfiles/Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd \
+	ppdfiles/Generic-PDF_Printer-PDF.ppd \
+	ppdfiles/HP-Color_LaserJet_CM3530_MFP-PDF.ppd \
+	ppdfiles/Ricoh-PDF_Printer-PDF.ppd
 ppd_DATA = $(genppdfiles)
 gsppdfiles = \
-	ppd/pxlcolor.ppd \
-	ppd/pxlmono.ppd
+	ppdfiles/pxlcolor.ppd \
+	ppdfiles/pxlmono.ppd
 if ENABLE_GHOSTSCRIPT
 ppd_DATA += $(gsppdfiles)
 endif

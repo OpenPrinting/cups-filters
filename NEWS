@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.27.6
 
+	- Sample PPDs: Renamed source directory from "ppd/" to
+          "ppdfiles/"
 	- cups-browsed: Call cupsGetNamedDest() only if
 	  "OnlyUnsupportedByCUPS No"
 	- Sample PPDs: Corrected ColorModel default for Generic PWG
