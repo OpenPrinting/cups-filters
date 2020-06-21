@@ -1,6 +1,23 @@
 NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 -----------------------------------------------------
 
+CHANGES IN V1.27.6
+
+	- cups-browsed: Call cupsGetNamedDest() only if
+	  "OnlyUnsupportedByCUPS No"
+	- Sample PPDs: Corrected ColorModel default for Generic PWG
+	  Raster PPD to Color (Pull request #247).
+	- cups-browsed: Mark the temp queue as cups-browsed-generated
+          during setting printer-is-shared (Pull request #246).
+	- cups-browsed: Remove mentions of README and AUTHORS files in
+          the man page (Pull request #244).
+	- pclmtoraster: Added new filter to extract Raster data from
+	  raster-only PDF files, here for the special case of PCLm
+	  files (Pull request #243).
+	- Sample PPDs: In Generic-PDF_Printer-PDF.ppd add option to
+	  switch between color and grayscale printing (Pull request
+	  #237).
+
 CHANGES IN V1.27.5
 
 	- cups-browsed: Do not remove the created local queues on
