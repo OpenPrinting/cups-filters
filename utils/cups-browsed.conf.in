@@ -570,7 +570,7 @@ LocalQueueNamingRemoteCUPS @REMOTE_CUPS_LOCAL_QUEUE_NAMING@
 # re-creation of the queues when cups-browsed is restarted, which
 # often causes a clutter of CUPS notifications on the desktop.
 
-# KeepGeneratedQueuesOnShutdown No
+KeepGeneratedQueuesOnShutdown @SAVING_CREATED_QUEUES@
 
 # If there is more than one remote CUPS printer whose local queue
 # would get the same name and AutoClustering is set to "Yes" (the
