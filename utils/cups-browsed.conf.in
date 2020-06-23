@@ -390,6 +390,9 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # LocalQueueNamingRemoteCUPS DNS-SD
 # LocalQueueNamingRemoteCUPS MakeModel
 # LocalQueueNamingRemoteCUPS RemoteName
+
+LocalQueueNamingRemoteCUPS @REMOTE_CUPS_LOCAL_QUEUE_NAMING@
+
 # LocalQueueNamingIPPPrinter DNS-SD
 # LocalQueueNamingIPPPrinter MakeModel
 

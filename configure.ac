@@ -840,6 +840,30 @@ PKG_CHECK_EXISTS([liblouis], [
 AM_CONDITIONAL(ENABLE_BRAILLE, test "x$enable_braille" = xyes)
 AC_SUBST(TABLESDIR)
 
+# =========================================
+# Local queue naming for remote CUPS queues
+# =========================================
+AC_ARG_WITH([remote-cups-local-queue-naming],
+	[AS_HELP_STRING([--with-remote-cups-local-queue-naming=DNS-SD|MakeModel|RemoteName], [Choose the origin of local queue naming for remote CUPS queues, default based on DNS-SD ID])],
+	[case "x$withval" in
+		"xDNS-SD")
+			REMOTE_CUPS_LOCAL_QUEUE_NAMING="DNS-SD"
+			;;
+		"xMakeModel")
+			REMOTE_CUPS_LOCAL_QUEUE_NAMING="MakeModel"
+			;;
+		"xRemoteName")
+			REMOTE_CUPS_LOCAL_QUEUE_NAMING="RemoteName"
+			;;
+		*)
+			REMOTE_CUPS_LOCAL_QUEUE_NAMING="DNS-SD"
+			;;
+	esac],
+	[REMOTE_CUPS_LOCAL_QUEUE_NAMING="DNS-SD"]
+)
+
+AC_SUBST(REMOTE_CUPS_LOCAL_QUEUE_NAMING)
+
 # =========================================================
 # Select a different shell instead of the default /bin/bash
 # =========================================================
@@ -909,43 +933,44 @@ AC_OUTPUT
 AC_MSG_NOTICE([
 ==============================================================================
 Environment settings:
-	CFLAGS:          ${CFLAGS}
-	CXXFLAGS:        ${CXXFLAGS}
-	LDFLAGS:         ${LDFLAGS}
+	CFLAGS:                                    ${CFLAGS}
+	CXXFLAGS:                                  ${CXXFLAGS}
+	LDFLAGS:                                   ${LDFLAGS}
 Build configuration:
-	cups-config:     ${with_cups_config}
-	font directory:  ${sysconfdir}/${FONTDIR}
-	foomatic:        ${enable_foomatic}
-	init directory:  ${INITDDIR}
-	cups dom socket: ${CUPS_DEFAULT_DOMAINSOCKET}
-	poppler:         ${enable_poppler}
-	ghostscript:     ${enable_ghostscript}
-	gs-path:         ${with_gs_path}
-	mutool:          ${enable_mutool}
-	mutool-path:     ${with_mutool_path}
-	ippfind-path:    ${with_ippfind_path}
-	imagefilters:    ${enable_imagefilters}
-	jpeg:            ${with_jpeg}
-	pdftocairo-path: ${with_pdftocairo_path}
-	pdftops:         ${with_pdftops}
-	pdftops-path:    ${with_pdftops_path}
-	png:             ${with_png}
-	php:             ${with_php}
-	php-config:      ${with_php_config}
-	shell:           ${with_shell}
-	test-font:       ${with_test_font_path}
-	tiff:            ${with_tiff}
-	avahi:           ${enable_avahi}
-	dbus:            ${enable_dbus}
-	browsing:        ${with_browseremoteprotocols}
-	werror:          ${enable_werror}
-	braille:	 ${enable_braille}
-	braille tables:  ${TABLESDIR}
-	driverless:      ${enable_driverless}
-	apple-raster:    ${APPLE_RASTER_FILTER}
-	pclm:            ${enable_pclm}
-	all ipp printer auto-setup: ${enable_auto_setup_all}
-	only driverless auto-setup: ${enable_auto_setup_driverless_only}
-	only local auto-setup: ${enable_auto_setup_local_only}
+	cups-config:                               ${with_cups_config}
+	font directory:                            ${sysconfdir}/${FONTDIR}
+	foomatic:                                  ${enable_foomatic}
+	init directory:                            ${INITDDIR}
+	cups dom socket:                           ${CUPS_DEFAULT_DOMAINSOCKET}
+	poppler:                                   ${enable_poppler}
+	ghostscript:                               ${enable_ghostscript}
+	gs-path:                                   ${with_gs_path}
+	mutool:                                    ${enable_mutool}
+	mutool-path:                               ${with_mutool_path}
+	ippfind-path:                              ${with_ippfind_path}
+	imagefilters:                              ${enable_imagefilters}
+	jpeg:                                      ${with_jpeg}
+	pdftocairo-path:                           ${with_pdftocairo_path}
+	pdftops:                                   ${with_pdftops}
+	pdftops-path:                              ${with_pdftops_path}
+	png:                                       ${with_png}
+	php:                                       ${with_php}
+	php-config:                                ${with_php_config}
+	shell:                                     ${with_shell}
+	test-font:                                 ${with_test_font_path}
+	tiff:                                      ${with_tiff}
+	avahi:                                     ${enable_avahi}
+	dbus:                                      ${enable_dbus}
+	browsing:                                  ${with_browseremoteprotocols}
+	werror:                                    ${enable_werror}
+	braille:                                   ${enable_braille}
+	braille tables:                            ${TABLESDIR}
+	driverless:                                ${enable_driverless}
+	apple-raster:                              ${APPLE_RASTER_FILTER}
+	pclm:                                      ${enable_pclm}
+	local queue naming for remote CUPS queues: ${REMOTE_CUPS_LOCAL_QUEUE_NAMING}
+	all ipp printer auto-setup:                ${enable_auto_setup_all}
+	only driverless auto-setup:                ${enable_auto_setup_driverless_only}
+	only local auto-setup:                     ${enable_auto_setup_local_only}
 ==============================================================================
 ])
