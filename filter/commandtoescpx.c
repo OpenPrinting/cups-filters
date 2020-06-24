@@ -20,7 +20,7 @@
  */
 
 #include <cups/cups.h>
-#include <cups/ppd.h>
+#include <ppd/ppd.h>
 #include <cupsfilters/driver.h>
 #include <string.h>
 #include <ctype.h>

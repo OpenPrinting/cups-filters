@@ -1,8 +1,18 @@
 NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 -----------------------------------------------------
 
-CHANGES IN V1.27.6
+CHANGES IN V1.28.0
 
+	- libppd: Added the new libppd library overtaking all the PPD
+	  handling functions from libcups as they are deprecated there
+	  and will probably get removed with the next CUPS
+	  version. This form of conservation is mainly intended for
+	  converting classic printer drivers which use PPDs into
+	  Printer Applications without completely rewriting them. Side
+	  effect that all the compiler warnings about deprecated
+	  libcups functions went away and so cups-filters is free of
+	  warnings again. The library still needs some testing and
+	  optimization.
 	- Sample PPDs: Renamed source directory from "ppd/" to
           "ppdfiles/"
 	- cups-browsed: Call cupsGetNamedDest() only if

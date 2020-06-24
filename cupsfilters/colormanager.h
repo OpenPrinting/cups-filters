@@ -38,7 +38,7 @@ extern "C" {
 
 
 #include <cups/raster.h>
-#include <cups/ppd.h>
+#include <ppd/ppd.h>
 
 
 

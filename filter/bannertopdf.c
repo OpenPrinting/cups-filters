@@ -29,7 +29,7 @@
 #endif
 
 #include <cups/cups.h>
-#include <cups/ppd.h>
+#include <ppd/ppd.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
 #endif

@@ -27,7 +27,7 @@
 
 #include <config.h>
 #include <cups/cups.h>
-#include <cups/ppd.h>
+#include <ppd/ppd.h>
 #include <cups/file.h>
 #include <signal.h>
 #include <sys/wait.h>

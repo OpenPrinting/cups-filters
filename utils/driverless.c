@@ -34,7 +34,7 @@
 #include <sys/wait.h>
 
 #include <cups/cups.h>
-#include <cups/ppd.h>
+#include <ppd/ppd.h>
 #include <cups/raster.h>
 #include <cupsfilters/ipp.h>
 #include <cupsfilters/ppdgenerator.h>

@@ -41,7 +41,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifdef HAVE_CPP_POPPLER_VERSION_H
 #include <poppler/cpp/poppler-version.h>
 #endif
-#include <cups/ppd.h>
+#include <ppd/ppd.h>
 #include <stdarg.h>
 #include <cups/raster.h>
 #include <cupsfilters/image.h>

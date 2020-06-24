@@ -1,6 +1,6 @@
 #include <ctype.h>
 #include "pdftopdf_processor.h"
-#include <cups/ppd.h>
+#include <ppd/ppd.h>
 
 #include <string.h>
 

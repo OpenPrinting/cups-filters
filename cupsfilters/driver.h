@@ -25,7 +25,7 @@ extern "C" {
 #  include <stdlib.h>
 #  include <time.h>
 #  include <math.h>
-#  include <cups/ppd.h>
+#  include <ppd/ppd.h>
 
 #  if defined(WIN32) || defined(__EMX__)
 #    include <io.h>

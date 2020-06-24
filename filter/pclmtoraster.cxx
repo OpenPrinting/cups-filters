@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <cups/raster.h>
 #include <cupsfilters/image.h>
-#include <cups/ppd.h>
+#include <ppd/ppd.h>
 #include <arpa/inet.h>   // ntohl
 
 #include <vector>

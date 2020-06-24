@@ -16,7 +16,7 @@
 
 #include <config.h>
 #include <cups/cups.h>
-#include <cups/ppd.h>
+#include <ppd/ppd.h>
 #include <time.h>
 #include <string.h>
 #include <ctype.h>

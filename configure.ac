@@ -231,8 +231,6 @@ AC_SUBST(CUPS_DEFAULT_DOMAINSOCKET)
 # ======================
 # Check system functions
 # ======================
-AC_CHECK_FUNCS(strlcat)
-AC_CHECK_FUNCS(strlcpy)
 AC_CHECK_FUNCS(sigaction)
 AC_CHECK_FUNCS(waitpid wait3)
 AC_CHECK_FUNCS(strtoll)
@@ -240,6 +238,13 @@ AC_CHECK_FUNCS(open_memstream)
 AC_CHECK_FUNCS(getline,[],AC_SUBST([GETLINE],['bannertopdf-getline.$(OBJEXT)']))
 AC_CHECK_FUNCS(strcasestr,[],AC_SUBST([STRCASESTR],['pdftops-strcasestr.$(OBJEXT)']))
 AC_SEARCH_LIBS(pow, m)
+dnl Checks for string functions.
+AC_CHECK_FUNCS(strdup strlcat strlcpy)
+if test "$host_os_name" = "hp-ux" -a "$host_os_version" = "1020"; then
+        echo Forcing snprintf emulation for HP-UX.
+else
+        AC_CHECK_FUNCS(snprintf vsnprintf)
+fi
 
 # ========================
 # Check for system headers
@@ -252,6 +257,8 @@ AC_CHECK_HEADERS([zlib.h])
 AC_CHECK_HEADERS([endian.h])
 AC_CHECK_HEADERS([dirent.h])
 AC_CHECK_HEADERS([sys/ioctl.h])
+AC_CHECK_HEADER(string.h,AC_DEFINE(HAVE_STRING_H))
+AC_CHECK_HEADER(strings.h,AC_DEFINE(HAVE_STRINGS_H))
 
 # =============
 # Image options
@@ -843,11 +850,32 @@ AC_ARG_WITH([shell],
 )
 AC_DEFINE_UNQUOTED([SHELL], "$with_shell", [Path for a modern shell])
 
+# ============================
+# Debugging options for libppd
+# ============================
+AC_ARG_ENABLE(debug_guards, [  --enable-debug-guards   build libppd with memory allocat
+ion guards])
+AC_ARG_ENABLE(debug_printfs, [  --enable-debug-printfs  build libppd with CUPS_DEBUG_LOG support])
+
+dnl Debug printfs can slow things down, so provide a separate option for that
+if test x$enable_debug_printfs = xyes; then
+        CFLAGS="$CFLAGS -DDEBUG"
+        CXXFLAGS="$CXXFLAGS -DDEBUG"
+fi
+
+dnl Debug guards use an extra 4 bytes for some structures like strings in the
+dnl string pool, so provide a separate option for that
+if test x$enable_debug_guards = xyes; then
+        CFLAGS="$CFLAGS -DDEBUG_GUARDS"
+        CXXFLAGS="$CXXFLAGS -DDEBUG_GUARDS"
+fi
+
 # =====================
 # Prepare all .in files
 # =====================
 AC_CONFIG_FILES([
 	libcupsfilters.pc
+	libppd.pc
 	libfontembed.pc
 	Makefile
 	utils/cups-browsed

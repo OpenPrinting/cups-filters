@@ -996,15 +996,7 @@ int main(int argc, char** argv)
     /* PPD File */
     /* Load the PPD file and build a data structure for the renderer's
        command line and the options */
-    if (spooler == SPOOLER_CUPS && job->printer && strlen(job->printer) > 0) {
-      str = cupsGetPPD(job->printer);
-      if (str) {
-        read_ppd_file(str);
-        unlink(str);
-      } else
-        read_ppd_file(job->ppdfile);
-    } else 
-      read_ppd_file(job->ppdfile);
+    read_ppd_file(job->ppdfile);
 
     /* We do not need to parse the PostScript job when we don't have
        any options. If we have options, we must check whether the

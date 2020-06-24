@@ -3,6 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 pkgconfdir = $(libdir)/pkgconfig
 pkgconf_DATA = \
 	libcupsfilters.pc \
+	libppd.pc \
 	libfontembed.pc
 
 doc_DATA = \
@@ -19,6 +20,7 @@ EXTRA_DIST = \
 	config.rpath \
 	ln-srf \
 	libcupsfilters.pc.in \
+	libppd.pc.in \
 	libfontembed.pc.in \
 	utils/cups-browsed.service \
 	utils/cups-browsed-upstart.conf \
@@ -53,35 +55,55 @@ parallel_SOURCES = \
 	backend/backend-private.h \
 	backend/ieee1284.c \
 	backend/parallel.c
-parallel_LDADD = $(CUPS_LIBS)
-parallel_CFLAGS = $(CUPS_CFLAGS)
+parallel_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+parallel_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
 
 serial_SOURCES = \
 	backend/backend-private.h \
 	backend/serial.c
-serial_LDADD = $(CUPS_LIBS)
-serial_CFLAGS = $(CUPS_CFLAGS)
+serial_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+serial_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
 
 beh_SOURCES = \
 	backend/backend-private.h \
 	backend/beh.c
-beh_LDADD = $(CUPS_LIBS)
-beh_CFLAGS = $(CUPS_CFLAGS)
+beh_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+beh_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
 
 implicitclass_SOURCES = \
 	backend/backend-private.h \
 	backend/implicitclass.c
-implicitclass_LDADD = $(CUPS_LIBS)\
-	libcupsfilters.la
-implicitclass_CFLAGS = $(CUPS_CFLAGS)\
-	 -I$(srcdir)/cupsfilters/
+implicitclass_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
+	$(CUPS_LIBS)
+implicitclass_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
 
 test1284_SOURCES = \
 	backend/backend-private.h \
 	backend/ieee1284.c \
 	backend/test1284.c
-test1284_LDADD = $(CUPS_LIBS)
-test1284_CFLAGS = $(CUPS_CFLAGS)
+test1284_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+test1284_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
 
 if ENABLE_BRAILLE
 pkgbackend_PROGRAMS += cups-brf
@@ -102,12 +124,14 @@ endif
 driverless_SOURCES = \
 	utils/driverless.c
 driverless_CFLAGS = \
-	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
 driverless_CXXFLAGS = $(driverless_CFLAGS)
 driverless_LDADD = \
-	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la \
+	$(CUPS_LIBS)
 
 # =======
 # Banners
@@ -208,12 +232,14 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/srgb.c \
 	$(pkgfiltersinclude_DATA)
 libcupsfilters_la_LIBADD = \
+	libppd.la \
 	$(CUPS_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
 	-lm
 libcupsfilters_la_CFLAGS = \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
@@ -265,6 +291,69 @@ EXTRA_DIST += \
 	$(pkgfiltersinclude_DATA) \
 	cupsfilters/image.pgm \
 	cupsfilters/image.ppm
+
+# ==========================
+# PPD legacy support library
+# ==========================
+pkgppdincludedir = $(includedir)/ppd
+pkgppdinclude_DATA = \
+        ppd/ppd.h
+
+lib_LTLIBRARIES += libppd.la
+
+check_PROGRAMS += \
+	testppd
+TESTS += \
+	testppd
+
+libppd_la_SOURCES = \
+	ppd/ppd-attr.c \
+	ppd/ppd.c \
+	ppd/ppd-cache.c \
+	ppd/ppd-conflicts.c \
+	ppd/ppd-custom.c \
+	ppd/ppd-emit.c \
+	ppd/ppd-localize.c \
+	ppd/ppd-mark.c \
+	ppd/ppd-page.c \
+	ppd/cups-private.h \
+	ppd/array.c \
+	ppd/array-private.h \
+	ppd/debug.c \
+	ppd/debug-internal.h \
+	ppd/debug-private.h \
+	ppd/encode.c \
+	ppd/ipp-private.h \
+	ppd/language.c \
+	ppd/language-private.h \
+	ppd/raster-interpret.c \
+	ppd/raster-interstub.c \
+	ppd/raster-error.c \
+	ppd/raster-private.h \
+	ppd/ppd-private.h \
+	ppd/string.c \
+	ppd/snprintf.c \
+	ppd/string-private.h \
+	ppd/thread.c \
+	ppd/thread-private.h \
+	$(pkgppdinclude_DATA)
+libppd_la_LIBADD = \
+	$(CUPS_LIBS)
+libppd_la_CFLAGS = \
+	$(CUPS_CFLAGS)
+libppd_la_LDFLAGS = \
+	-no-undefined \
+	-version-info 1
+
+testppd_SOURCES = ppd/testppd.c
+testppd_LDADD = libppd.la \
+		-lcups
+
+EXTRA_DIST += \
+	$(pkgppdinclude_DATA) \
+	ppd/test.ppd \
+	ppd/test2.ppd \
+	ppd/README
 
 # =========
 # CUPS Data
@@ -519,10 +608,12 @@ pdftopdf_SOURCES = \
 	filter/pdftopdf/qpdf_cm.cc \
 	filter/pdftopdf/qpdf_cm.h
 pdftopdf_CFLAGS = \
+	-I$(srcdir)/ppd/ \
 	$(LIBQPDF_CFLAGS) \
 	$(CUPS_CFLAGS)
 pdftopdf_CXXFLAGS = -std=c++0x $(pdftopdf_CFLAGS)   # -std=c++11
 pdftopdf_LDADD = \
+	libppd.la \
 	$(LIBQPDF_LIBS) \
 	$(CUPS_LIBS)
 
@@ -619,24 +710,26 @@ bannertopdf_SOURCES = \
 	fontembed/sfnt.h
 EXTRA_bannertopdf_SOURCES = filter/getline.c
 bannertopdf_CFLAGS = \
+	-I$(srcdir)/fontembed/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
 	$(LIBQPDF_CFLAGS) \
 	$(TIFF_CFLAGS) \
-	$(FONTCONFIG_CFLAGS) \
-	-I$(srcdir)/fontembed/
+	$(FONTCONFIG_CFLAGS)
 
 bannertopdf_CXXFLAGS = $(bannertopdf_CFLAGS)
 bannertopdf_LDADD = \
+	libfontembed.la \
+	libppd.la \
 	$(GETLINE) \
 	$(CUPS_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(LIBQPDF_LIBS) \
 	$(TIFF_LIBS) \
-	$(FONTCONFIG_LIBS) \
-	libfontembed.la
+	$(FONTCONFIG_LIBS)
 
 bannertopdf_DEPENDENCIES = \
 	$(GETLINE) \
@@ -646,19 +739,27 @@ commandtoescpx_SOURCES = \
 	cupsfilters/driver.h \
 	filter/commandtoescpx.c \
 	filter/pcl.h
-commandtoescpx_CFLAGS= \
-	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
-commandtoescpx_LDADD = $(CUPS_LIBS)
+commandtoescpx_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+commandtoescpx_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
+	$(CUPS_LIBS)
 
 commandtopclx_SOURCES = \
 	cupsfilters/driver.h \
 	filter/commandtopclx.c \
 	filter/pcl.h
 commandtopclx_CFLAGS = \
-	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
-commandtopclx_LDADD = $(CUPS_LIBS)
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+commandtopclx_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
+	$(CUPS_LIBS)
 
 foomatic_rip_SOURCES = \
 	filter/foomatic-rip/foomaticrip.c \
@@ -708,18 +809,20 @@ imagetopdf_SOURCES = \
 	filter/common.h \
 	filter/imagetopdf.c
 imagetopdf_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
-	$(TIFF_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	$(TIFF_CFLAGS)
 imagetopdf_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
-	-lm \
-	libcupsfilters.la
+	-lm
 
 imagetoraster_SOURCES = \
 	cupsfilters/image.h \
@@ -728,12 +831,14 @@ imagetoraster_SOURCES = \
 	filter/common.h \
 	filter/imagetoraster.c
 imagetoraster_CFLAGS = \
-	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
 imagetoraster_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS) \
-	-lm \
-	libcupsfilters.la
+	-lm
 
 urftopdf_SOURCES = \
 	filter/urftopdf.cpp \
@@ -748,13 +853,15 @@ pclmtoraster_SOURCES = \
 	cupsfilters/raster.h \
 	filter/unirast.h
 pclmtoraster_CXXFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
-	$(LIBQPDF_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	$(LIBQPDF_CFLAGS)
 pclmtoraster_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS) \
-	$(LIBQPDF_LIBS) \
-	libcupsfilters.la
+	$(LIBQPDF_LIBS)
 
 rastertopdf_SOURCES = \
 	filter/rastertopdf.cpp
@@ -793,15 +900,26 @@ sys5ippprinter_SOURCES = \
 	filter/common.h \
 	filter/sys5ippprinter.c
 EXTRA_sys5ippprinter_SOURCES = filter/strcasestr.c
-sys5ippprinter_CFLAGS = $(CUPS_CFLAGS)
-sys5ippprinter_LDADD = $(STRCASESTR) $(CUPS_LIBS)
+sys5ippprinter_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+sys5ippprinter_LDADD = \
+	libppd.la \
+	$(STRCASESTR) \
+	$(CUPS_LIBS)
 sys5ippprinter_DEPENDENCIES = $(STRCASESTR)
 
 texttotext_SOURCES = \
 	filter/texttotext.c
 EXTRA_texttotext_SOURCES = filter/strcasestr.c
-texttotext_CFLAGS = $(CUPS_CFLAGS)
-texttotext_LDADD = $(STRCASESTR) $(CUPS_LIBS) $(LIBICONV)
+texttotext_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+texttotext_LDADD = \
+	libppd.la \
+	$(STRCASESTR) \
+	$(CUPS_LIBS) \
+	$(LIBICONV)
 texttotext_DEPENDENCIES = $(STRCASESTR)
 
 pdftops_SOURCES = \
@@ -812,9 +930,11 @@ pdftops_SOURCES = \
 	filter/pdf.h
 EXTRA_pdftops_SOURCES = filter/strcasestr.c
 pdftops_CFLAGS = \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
 	$(LIBQPDF_CFLAGS)
 pdftops_LDADD = \
+	libppd.la \
 	$(STRCASESTR) \
 	$(CUPS_LIBS) \
 	$(LIBQPDF_LIBS)
@@ -823,22 +943,24 @@ pdftops_DEPENDENCIES = $(STRCASESTR)
 pdftoraster_SOURCES = \
 	filter/pdftoraster.cxx
 pdftoraster_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
 	$(LCMS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
 	$(POPPLER_CFLAGS) \
-	$(TIFF_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	$(TIFF_CFLAGS)
 pdftoraster_CXXFLAGS = $(pdftoraster_CFLAGS)
 pdftoraster_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS) \
 	$(LCMS_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(POPPLER_LIBS) \
-	$(TIFF_LIBS) \
-	libcupsfilters.la
+	$(TIFF_LIBS)
 
 rastertoescpx_SOURCES = \
 	cupsfilters/driver.h \
@@ -898,13 +1020,15 @@ texttopdf_SOURCES = \
 	fontembed/iofn.h \
 	fontembed/sfnt.h
 texttopdf_CFLAGS = \
+	-I$(srcdir)/fontembed/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
-	$(FONTCONFIG_CFLAGS) \
-	-I$(srcdir)/fontembed/
+	$(FONTCONFIG_CFLAGS)
 texttopdf_LDADD = \
+	libfontembed.la \
+	libppd.la \
 	$(CUPS_LIBS) \
-	$(FONTCONFIG_LIBS) \
-	libfontembed.la
+	$(FONTCONFIG_LIBS)
 
 # =====
 # UTILS
@@ -928,22 +1052,24 @@ cups_browsed_SOURCES = \
 nodist_cups_browsed_SOURCES = \
 	$(cups_notifier_sources)
 cups_browsed_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
 	$(AVAHI_CFLAGS) \
 	$(AVAHI_GLIB_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GIO_CFLAGS) \
-	$(GIO_UNIX_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	$(GIO_UNIX_CFLAGS)
 cups_browsed_CXXFLAGS = $(cups_browsed_CFLAGS)
 cups_browsed_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS) \
 	$(AVAHI_LIBS) \
 	$(AVAHI_GLIB_LIBS) \
 	$(GLIB_LIBS) \
 	$(GIO_LIBS) \
-	$(GIO_UNIX_LIBS) \
-	libcupsfilters.la
+	$(GIO_UNIX_LIBS)
 initrcdir = $(INITDDIR)
 initrc_SCRIPTS = utils/cups-browsed
 
