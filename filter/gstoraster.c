@@ -813,6 +813,37 @@ main (int argc, char **argv, char *envp[])
 
   /* Special Ghostscript options for PDF output */
   if (outformat == OUTPUT_FORMAT_PDF) {
+    /* If we output PDF we are running as a PostScript-to-PDF filter
+       for incoming PostScript jobs. If the client embeds a command
+       for multiple copies in the PostScript job instead of using the
+       CUPS argument for the number of copies, we need to run
+       Ghostscript with the "-dDoNumCopies" option so that it respects
+       the embedded command for the number of copies.
+
+       We always supply this option if the number of copies CUPS got
+       told about is 1, as this is the case if a client sets the
+       number of copies as embedded PostScript command, and it is also
+       not doing the wrong thing if the command is missing when the
+       client only wants a single copy, independent how the client
+       actually triggers multiple copies. If the CUPS arguments tells
+       us that the clients wants more than one copy we do not supply
+       "-dDoNumCopies" as the client does the right, modern CUPS way,
+       and if the client got a "dirty" PostScript file with an
+       embedded multi-copy setting, he does not get unwished copies.
+       also a buggy client supplying the number of copies both via
+       PostScript and CUPS will not cause an unwished number of copies
+       this way.
+
+       See https://github.com/OpenPrinting/cups-filters/issues/255
+
+       This was already correctly implemented in the former pdftops
+       shell-script-based filter but overlooked when the filter's
+       functionality got folded into this gstoraster.c filter. It was
+       not seen for long time as clients sending PostScript jobs with
+       embedded number of copies are rare. */
+    if (atoi(argv[4]) <= 1)
+      cupsArrayAdd(gs_args, strdup("-dDoNumCopies"));
+
     cupsArrayAdd(gs_args, strdup("-dCompatibilityLevel=1.3"));
     cupsArrayAdd(gs_args, strdup("-dAutoRotatePages=/None"));
     cupsArrayAdd(gs_args, strdup("-dAutoFilterColorImages=false"));
