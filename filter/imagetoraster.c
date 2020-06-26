@@ -618,8 +618,8 @@ main(int  argc,				/* I - Number of command-line arguments */
   int fidelity = 0;
   int document_large = 0;
 
-  if(ppd->custom_margins[0]||ppd->custom_margins[1]
-      ||ppd->custom_margins[2]||ppd->custom_margins[3])
+  if(ppd != NULL && (ppd->custom_margins[0]||ppd->custom_margins[1]
+                     ||ppd->custom_margins[2]||ppd->custom_margins[3]))
     margin_defined = 1;
 
   if(PageLength!=PageTop-PageBottom||PageWidth!=PageRight-PageLeft)
