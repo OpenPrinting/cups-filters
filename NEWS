@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- imagetoraster: Potential null dereference fix (when no valid
+	  PPD is supplied, Pull request #256).
 	- libppd: Added the new libppd library overtaking all the PPD
 	  handling functions from libcups as they are deprecated there
 	  and will probably get removed with the next CUPS
