@@ -14,7 +14,9 @@
  * Include necessary headers.
  */
 
-#include "cups-private.h"
+#include "string-private.h"
+#include "language-private.h"
+#include "thread-private.h"
 #include "ppd-private.h"
 #include "debug-internal.h"
 

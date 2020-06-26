@@ -11,7 +11,7 @@
  * Include necessary headers...
  */
 
-#include "cups-private.h"
+#include "string-private.h"
 #include "debug-internal.h"
 #ifdef _WIN32
 #  include <sys/timeb.h>

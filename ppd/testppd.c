@@ -12,7 +12,6 @@
  * Include necessary headers...
  */
 
-#include "cups-private.h"
 #include "ppd-private.h"
 #include "raster-private.h"
 #include <sys/stat.h>

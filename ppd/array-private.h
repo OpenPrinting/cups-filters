@@ -14,6 +14,7 @@
  */
 
 #  include <cups/array.h>
+#  include "versioning.h"
 
 
 /*

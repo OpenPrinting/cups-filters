@@ -11,7 +11,6 @@
  * Include necessary headers...
  */
 
-#include "cups-private.h"
 #include "thread-private.h"
 
 

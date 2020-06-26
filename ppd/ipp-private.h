@@ -15,7 +15,9 @@
  * Include necessary headers...
  */
 
-#  include <cups/cups.h>
+#  include <cups/file.h>
+#  include <cups/ipp.h>
+#  include "versioning.h"
 
 
 /*

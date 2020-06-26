@@ -316,7 +316,6 @@ libppd_la_SOURCES = \
 	ppd/ppd-localize.c \
 	ppd/ppd-mark.c \
 	ppd/ppd-page.c \
-	ppd/cups-private.h \
 	ppd/array.c \
 	ppd/array-private.h \
 	ppd/debug.c \

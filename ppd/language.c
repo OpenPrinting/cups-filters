@@ -11,7 +11,9 @@
  * Include necessary headers...
  */
 
-#include "cups-private.h"
+#include "string-private.h"
+#include "language-private.h"
+#include "thread-private.h"
 #include "debug-internal.h"
 #ifdef HAVE_LANGINFO_H
 #  include <langinfo.h>
@@ -24,6 +26,7 @@
 #ifdef HAVE_COREFOUNDATION_H
 #  include <CoreFoundation/CoreFoundation.h>
 #endif /* HAVE_COREFOUNDATION_H */
+#include <cups/file.h>
 
 
 /*

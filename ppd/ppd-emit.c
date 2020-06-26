@@ -14,7 +14,7 @@
  * Include necessary headers...
  */
 
-#include "cups-private.h"
+#include "string-private.h"
 #include "debug-internal.h"
 #include "ppd.h"
 #if defined(_WIN32) || defined(__EMX__)
@@ -22,6 +22,7 @@
 #else
 #  include <unistd.h>
 #endif /* _WIN32 || __EMX__ */
+#include <errno.h>
 
 
 /*

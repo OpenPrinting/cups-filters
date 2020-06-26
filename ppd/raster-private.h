@@ -25,6 +25,7 @@
 #    include <unistd.h>
 #    include <fcntl.h>
 #  endif /* _WIN32 */
+#  include "versioning.h"
 
 #  ifdef __cplusplus
 extern "C" {

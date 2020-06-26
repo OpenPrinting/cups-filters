@@ -24,7 +24,7 @@
 #  include <locale.h>
 #  include <time.h>
 
-#  include <cups/versioning.h>
+#  include "versioning.h"
 
 #  ifdef HAVE_STRING_H
 #    include <string.h>

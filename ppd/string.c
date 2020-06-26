@@ -13,7 +13,9 @@
  */
 
 #define _CUPS_STRING_C_
-#include "cups-private.h"
+#include "string-private.h"
+#include "array-private.h"
+#include "thread-private.h"
 #include "debug-internal.h"
 #include <stddef.h>
 #include <limits.h>

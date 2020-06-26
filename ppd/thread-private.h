@@ -14,6 +14,7 @@
  */
 
 #  include "config.h"
+#  include "versioning.h"
 
 
 /*

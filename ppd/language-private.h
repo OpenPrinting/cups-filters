@@ -21,6 +21,7 @@
 #  ifdef __APPLE__
 #    include <CoreFoundation/CoreFoundation.h>
 #  endif /* __APPLE__ */
+#  include "versioning.h"
 
 #  ifdef __cplusplus
 extern "C" {

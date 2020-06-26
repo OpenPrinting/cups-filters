@@ -12,7 +12,7 @@
  * Include necessary headers...
  */
 
-#include "cups-private.h"
+#include "ipp-private.h"
 #include "debug-internal.h"
 
 

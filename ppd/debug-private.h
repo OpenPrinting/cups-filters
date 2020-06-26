@@ -11,6 +11,7 @@
 #ifndef _CUPS_DEBUG_PRIVATE_H_
 #  define _CUPS_DEBUG_PRIVATE_H_
 
+#  include "versioning.h"
 
 /*
  * C++ magic...

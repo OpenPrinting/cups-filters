@@ -11,10 +11,15 @@
  * Include necessary headers...
  */
 
-#include "cups-private.h"
+#include "string-private.h"
+#include "array-private.h"
+#include "ipp-private.h"
+#include "language-private.h"
 #include "ppd-private.h"
 #include "debug-internal.h"
 #include <math.h>
+#include <limits.h>
+#include <errno.h>
 
 
 /*

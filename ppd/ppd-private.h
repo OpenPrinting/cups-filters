@@ -18,6 +18,7 @@
  */
 
 #  include "ppd.h"
+#  include "versioning.h"
 
 
 /*
