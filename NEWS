@@ -1,8 +1,10 @@
 NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 -----------------------------------------------------
 
-CHANGES IN V1.27.6
+CHANGES IN V1.28.0
 
+	- imagetoraster: Potential null dereference fix (when no valid
+	  PPD is supplied, Pull request #256).
 	- cups-browsed: Call cupsGetNamedDest() only if
 	  "OnlyUnsupportedByCUPS No"
 	- Sample PPDs: Corrected ColorModel default for Generic PWG
