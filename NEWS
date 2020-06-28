@@ -35,7 +35,7 @@ CHANGES IN V1.28.0
           the man page (Pull request #244).
 	- pclmtoraster: Added new filter to extract Raster data from
 	  raster-only PDF files, here for the special case of PCLm
-	  files (Pull request #243).
+	  files (Pull request #243, #257).
 	- Sample PPDs: In Generic-PDF_Printer-PDF.ppd add option to
 	  switch between color and grayscale printing (Pull request
 	  #237).
