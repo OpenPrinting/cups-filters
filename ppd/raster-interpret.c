@@ -1,5 +1,5 @@
 /*
- * PPD command interpreter for CUPS.
+ * PPD command interpreter for libppd.
  *
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1993-2007 by Easy Software Products.
@@ -43,11 +43,11 @@ typedef enum
   CUPS_PS_SETPAGEDEVICE,
   CUPS_PS_STOPPED,
   CUPS_PS_OTHER
-} _cups_ps_type_t;
+} _ppd_ps_type_t;
 
 typedef struct
 {
-  _cups_ps_type_t	type;		/* Object type */
+  _ppd_ps_type_t	type;		/* Object type */
   union
   {
     int		boolean;		/* Boolean value */
@@ -56,43 +56,43 @@ typedef struct
     char	other[64];		/* Other operator */
     char	string[64];		/* Sring value */
   }			value;		/* Value */
-} _cups_ps_obj_t;
+} _ppd_ps_obj_t;
 
 typedef struct
 {
   int			num_objs,	/* Number of objects on stack */
 			alloc_objs;	/* Number of allocated objects */
-  _cups_ps_obj_t	*objs;		/* Objects in stack */
-} _cups_ps_stack_t;
+  _ppd_ps_obj_t	*objs;		/* Objects in stack */
+} _ppd_ps_stack_t;
 
 
 /*
  * Local functions...
  */
 
-static int		cleartomark_stack(_cups_ps_stack_t *st);
-static int		copy_stack(_cups_ps_stack_t *st, int count);
-static void		delete_stack(_cups_ps_stack_t *st);
-static void		error_object(_cups_ps_obj_t *obj);
-static void		error_stack(_cups_ps_stack_t *st, const char *title);
-static _cups_ps_obj_t	*index_stack(_cups_ps_stack_t *st, int n);
-static _cups_ps_stack_t	*new_stack(void);
-static _cups_ps_obj_t	*pop_stack(_cups_ps_stack_t *st);
-static _cups_ps_obj_t	*push_stack(_cups_ps_stack_t *st,
-			            _cups_ps_obj_t *obj);
-static int		roll_stack(_cups_ps_stack_t *st, int c, int s);
-static _cups_ps_obj_t	*scan_ps(_cups_ps_stack_t *st, char **ptr);
-static int		setpagedevice(_cups_ps_stack_t *st,
+static int		cleartomark_stack(_ppd_ps_stack_t *st);
+static int		copy_stack(_ppd_ps_stack_t *st, int count);
+static void		delete_stack(_ppd_ps_stack_t *st);
+static void		error_object(_ppd_ps_obj_t *obj);
+static void		error_stack(_ppd_ps_stack_t *st, const char *title);
+static _ppd_ps_obj_t	*index_stack(_ppd_ps_stack_t *st, int n);
+static _ppd_ps_stack_t	*new_stack(void);
+static _ppd_ps_obj_t	*pop_stack(_ppd_ps_stack_t *st);
+static _ppd_ps_obj_t	*push_stack(_ppd_ps_stack_t *st,
+			            _ppd_ps_obj_t *obj);
+static int		roll_stack(_ppd_ps_stack_t *st, int c, int s);
+static _ppd_ps_obj_t	*scan_ps(_ppd_ps_stack_t *st, char **ptr);
+static int		setpagedevice(_ppd_ps_stack_t *st,
 			                cups_page_header2_t *h,
 			                int *preferred_bits);
 #ifdef DEBUG
-static void		DEBUG_object(const char *prefix, _cups_ps_obj_t *obj);
-static void		DEBUG_stack(const char *prefix, _cups_ps_stack_t *st);
+static void		DEBUG_object(const char *prefix, _ppd_ps_obj_t *obj);
+static void		DEBUG_stack(const char *prefix, _ppd_ps_stack_t *st);
 #endif /* DEBUG */
 
 
 /*
- * '_cupsRasterInterpretPPD()' - Interpret PPD commands to create a page header.
+ * '_ppdRasterInterpretPPD()' - Interpret PPD commands to create a page header.
  *
  * This function is used by raster image processing (RIP) filters like
  * cgpdftoraster and imagetoraster when writing CUPS raster data for a page.
@@ -122,7 +122,7 @@ static void		DEBUG_stack(const char *prefix, _cups_ps_stack_t *st);
  */
 
 int					/* O - 0 on success, -1 on failure */
-_cupsRasterInterpretPPD(
+_ppdRasterInterpretPPD(
     cups_page_header2_t *h,		/* O - Page header to create */
     ppd_file_t          *ppd,		/* I - PPD file */
     int                 num_options,	/* I - Number of options */
@@ -145,11 +145,11 @@ _cupsRasterInterpretPPD(
   * Range check input...
   */
 
-  _cupsRasterClearError();
+  _ppdRasterClearError();
 
   if (!h)
   {
-    _cupsRasterAddError("Page header cannot be NULL!\n");
+    _ppdRasterAddError("Page header cannot be NULL!\n");
     return (-1);
   }
 
@@ -200,7 +200,7 @@ _cupsRasterInterpretPPD(
     */
 
     if (ppd->patches)
-      status |= _cupsRasterExecPS(h, &preferred_bits, ppd->patches);
+      status |= _ppdRasterExecPS(h, &preferred_bits, ppd->patches);
 
    /*
     * Then apply printer options in the proper order...
@@ -208,25 +208,25 @@ _cupsRasterInterpretPPD(
 
     if ((code = ppdEmitString(ppd, PPD_ORDER_DOCUMENT, 0.0)) != NULL)
     {
-      status |= _cupsRasterExecPS(h, &preferred_bits, code);
+      status |= _ppdRasterExecPS(h, &preferred_bits, code);
       free(code);
     }
 
     if ((code = ppdEmitString(ppd, PPD_ORDER_ANY, 0.0)) != NULL)
     {
-      status |= _cupsRasterExecPS(h, &preferred_bits, code);
+      status |= _ppdRasterExecPS(h, &preferred_bits, code);
       free(code);
     }
 
     if ((code = ppdEmitString(ppd, PPD_ORDER_PROLOG, 0.0)) != NULL)
     {
-      status |= _cupsRasterExecPS(h, &preferred_bits, code);
+      status |= _ppdRasterExecPS(h, &preferred_bits, code);
       free(code);
     }
 
     if ((code = ppdEmitString(ppd, PPD_ORDER_PAGE, 0.0)) != NULL)
     {
-      status |= _cupsRasterExecPS(h, &preferred_bits, code);
+      status |= _ppdRasterExecPS(h, &preferred_bits, code);
       free(code);
     }
   }
@@ -364,7 +364,7 @@ _cupsRasterInterpretPPD(
 
   if (func && (*func)(h, preferred_bits))
   {
-    _cupsRasterAddError("Page header callback returned error.\n");
+    _ppdRasterAddError("Page header callback returned error.\n");
     return (-1);
   }
 
@@ -380,7 +380,7 @@ _cupsRasterInterpretPPD(
       h->cupsBorderlessScalingFactor < 0.1 ||
       h->cupsBorderlessScalingFactor > 2.0)
   {
-    _cupsRasterAddError("Page header uses unsupported values.\n");
+    _ppdRasterAddError("Page header uses unsupported values.\n");
     return (-1);
   }
 
@@ -497,23 +497,23 @@ _cupsRasterInterpretPPD(
 
 
 /*
- * '_cupsRasterExecPS()' - Execute PostScript code to initialize a page header.
+ * '_ppdRasterExecPS()' - Execute PostScript code to initialize a page header.
  */
 
 int					/* O - 0 on success, -1 on error */
-_cupsRasterExecPS(
+_ppdRasterExecPS(
     cups_page_header2_t *h,		/* O - Page header */
     int                 *preferred_bits,/* O - Preferred bits per color */
     const char          *code)		/* I - PS code to execute */
 {
   int			error = 0;	/* Error condition? */
-  _cups_ps_stack_t	*st;		/* PostScript value stack */
-  _cups_ps_obj_t	*obj;		/* Object from top of stack */
+  _ppd_ps_stack_t	*st;		/* PostScript value stack */
+  _ppd_ps_obj_t	*obj;		/* Object from top of stack */
   char			*codecopy,	/* Copy of code */
 			*codeptr;	/* Pointer into copy of code */
 
 
-  DEBUG_printf(("_cupsRasterExecPS(h=%p, preferred_bits=%p, code=\"%s\")\n",
+  DEBUG_printf(("_ppdRasterExecPS(h=%p, preferred_bits=%p, code=\"%s\")\n",
                 h, preferred_bits, code));
 
  /*
@@ -522,13 +522,13 @@ _cupsRasterExecPS(
 
   if ((codecopy = strdup(code)) == NULL)
   {
-    _cupsRasterAddError("Unable to duplicate code string.\n");
+    _ppdRasterAddError("Unable to duplicate code string.\n");
     return (-1);
   }
 
   if ((st = new_stack()) == NULL)
   {
-    _cupsRasterAddError("Unable to create stack.\n");
+    _ppdRasterAddError("Unable to create stack.\n");
     free(codecopy);
     return (-1);
   }
@@ -542,8 +542,8 @@ _cupsRasterExecPS(
   while ((obj = scan_ps(st, &codeptr)) != NULL)
   {
 #ifdef DEBUG
-    DEBUG_printf(("_cupsRasterExecPS: Stack (%d objects)", st->num_objs));
-    DEBUG_object("_cupsRasterExecPS", obj);
+    DEBUG_printf(("_ppdRasterExecPS: Stack (%d objects)", st->num_objs));
+    DEBUG_object("_ppdRasterExecPS", obj);
 #endif /* DEBUG */
 
     switch (obj->type)
@@ -556,11 +556,11 @@ _cupsRasterExecPS(
           pop_stack(st);
 
 	  if (cleartomark_stack(st))
-	    _cupsRasterAddError("cleartomark: Stack underflow.\n");
+	    _ppdRasterAddError("cleartomark: Stack underflow.\n");
 
 #ifdef DEBUG
           DEBUG_puts("1_cupsRasterExecPS:    dup");
-	  DEBUG_stack("_cupsRasterExecPS", st);
+	  DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
@@ -571,8 +571,8 @@ _cupsRasterExecPS(
 	    copy_stack(st, (int)obj->value.number);
 
 #ifdef DEBUG
-            DEBUG_puts("_cupsRasterExecPS: copy");
-	    DEBUG_stack("_cupsRasterExecPS", st);
+            DEBUG_puts("_ppdRasterExecPS: copy");
+	    DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           }
           break;
@@ -582,8 +582,8 @@ _cupsRasterExecPS(
 	  copy_stack(st, 1);
 
 #ifdef DEBUG
-          DEBUG_puts("_cupsRasterExecPS: dup");
-	  DEBUG_stack("_cupsRasterExecPS", st);
+          DEBUG_puts("_ppdRasterExecPS: dup");
+	  DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
@@ -594,8 +594,8 @@ _cupsRasterExecPS(
 	    index_stack(st, (int)obj->value.number);
 
 #ifdef DEBUG
-            DEBUG_puts("_cupsRasterExecPS: index");
-	    DEBUG_stack("_cupsRasterExecPS", st);
+            DEBUG_puts("_ppdRasterExecPS: index");
+	    DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           }
           break;
@@ -605,8 +605,8 @@ _cupsRasterExecPS(
           pop_stack(st);
 
 #ifdef DEBUG
-          DEBUG_puts("_cupsRasterExecPS: pop");
-	  DEBUG_stack("_cupsRasterExecPS", st);
+          DEBUG_puts("_ppdRasterExecPS: pop");
+	  DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
@@ -624,8 +624,8 @@ _cupsRasterExecPS(
 	      roll_stack(st, (int)obj->value.number, c);
 
 #ifdef DEBUG
-              DEBUG_puts("_cupsRasterExecPS: roll");
-	      DEBUG_stack("_cupsRasterExecPS", st);
+              DEBUG_puts("_ppdRasterExecPS: roll");
+	      DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
             }
 	  }
@@ -636,8 +636,8 @@ _cupsRasterExecPS(
 	  setpagedevice(st, h, preferred_bits);
 
 #ifdef DEBUG
-          DEBUG_puts("_cupsRasterExecPS: setpagedevice");
-	  DEBUG_stack("_cupsRasterExecPS", st);
+          DEBUG_puts("_ppdRasterExecPS: setpagedevice");
+	  DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
@@ -648,9 +648,9 @@ _cupsRasterExecPS(
 	  break;
 
       case CUPS_PS_OTHER :
-          _cupsRasterAddError("Unknown operator \"%s\".\n", obj->value.other);
+          _ppdRasterAddError("Unknown operator \"%s\".\n", obj->value.other);
 	  error = 1;
-          DEBUG_printf(("_cupsRasterExecPS: Unknown operator \"%s\".", obj->value.other));
+          DEBUG_printf(("_ppdRasterExecPS: Unknown operator \"%s\".", obj->value.other));
           break;
     }
 
@@ -669,8 +669,8 @@ _cupsRasterExecPS(
     error_stack(st, "Stack not empty:");
 
 #ifdef DEBUG
-    DEBUG_puts("_cupsRasterExecPS: Stack not empty");
-    DEBUG_stack("_cupsRasterExecPS", st);
+    DEBUG_puts("_ppdRasterExecPS: Stack not empty");
+    DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
 
     delete_stack(st);
@@ -693,9 +693,9 @@ _cupsRasterExecPS(
  */
 
 static int				/* O - 0 on success, -1 on error */
-cleartomark_stack(_cups_ps_stack_t *st)	/* I - Stack */
+cleartomark_stack(_ppd_ps_stack_t *st)	/* I - Stack */
 {
-  _cups_ps_obj_t	*obj;		/* Current object on stack */
+  _ppd_ps_obj_t	*obj;		/* Current object on stack */
 
 
   while ((obj = pop_stack(st)) != NULL)
@@ -711,7 +711,7 @@ cleartomark_stack(_cups_ps_stack_t *st)	/* I - Stack */
  */
 
 static int				/* O - 0 on success, -1 on error */
-copy_stack(_cups_ps_stack_t *st,	/* I - Stack */
+copy_stack(_ppd_ps_stack_t *st,	/* I - Stack */
            int              c)		/* I - Number of objects to copy */
 {
   int	n;				/* Index */
@@ -743,7 +743,7 @@ copy_stack(_cups_ps_stack_t *st,	/* I - Stack */
  */
 
 static void
-delete_stack(_cups_ps_stack_t *st)	/* I - Stack */
+delete_stack(_ppd_ps_stack_t *st)	/* I - Stack */
 {
   free(st->objs);
   free(st);
@@ -755,91 +755,91 @@ delete_stack(_cups_ps_stack_t *st)	/* I - Stack */
  */
 
 static void
-error_object(_cups_ps_obj_t *obj)	/* I - Object to add */
+error_object(_ppd_ps_obj_t *obj)	/* I - Object to add */
 {
   switch (obj->type)
   {
     case CUPS_PS_NAME :
-	_cupsRasterAddError(" /%s", obj->value.name);
+	_ppdRasterAddError(" /%s", obj->value.name);
 	break;
 
     case CUPS_PS_NUMBER :
-	_cupsRasterAddError(" %g", obj->value.number);
+	_ppdRasterAddError(" %g", obj->value.number);
 	break;
 
     case CUPS_PS_STRING :
-	_cupsRasterAddError(" (%s)", obj->value.string);
+	_ppdRasterAddError(" (%s)", obj->value.string);
 	break;
 
     case CUPS_PS_BOOLEAN :
 	if (obj->value.boolean)
-	  _cupsRasterAddError(" true");
+	  _ppdRasterAddError(" true");
 	else
-	  _cupsRasterAddError(" false");
+	  _ppdRasterAddError(" false");
 	break;
 
     case CUPS_PS_NULL :
-	_cupsRasterAddError(" null");
+	_ppdRasterAddError(" null");
 	break;
 
     case CUPS_PS_START_ARRAY :
-	_cupsRasterAddError(" [");
+	_ppdRasterAddError(" [");
 	break;
 
     case CUPS_PS_END_ARRAY :
-	_cupsRasterAddError(" ]");
+	_ppdRasterAddError(" ]");
 	break;
 
     case CUPS_PS_START_DICT :
-	_cupsRasterAddError(" <<");
+	_ppdRasterAddError(" <<");
 	break;
 
     case CUPS_PS_END_DICT :
-	_cupsRasterAddError(" >>");
+	_ppdRasterAddError(" >>");
 	break;
 
     case CUPS_PS_START_PROC :
-	_cupsRasterAddError(" {");
+	_ppdRasterAddError(" {");
 	break;
 
     case CUPS_PS_END_PROC :
-	_cupsRasterAddError(" }");
+	_ppdRasterAddError(" }");
 	break;
 
     case CUPS_PS_COPY :
-	_cupsRasterAddError(" --copy--");
+	_ppdRasterAddError(" --copy--");
         break;
 
     case CUPS_PS_CLEARTOMARK :
-	_cupsRasterAddError(" --cleartomark--");
+	_ppdRasterAddError(" --cleartomark--");
         break;
 
     case CUPS_PS_DUP :
-	_cupsRasterAddError(" --dup--");
+	_ppdRasterAddError(" --dup--");
         break;
 
     case CUPS_PS_INDEX :
-	_cupsRasterAddError(" --index--");
+	_ppdRasterAddError(" --index--");
         break;
 
     case CUPS_PS_POP :
-	_cupsRasterAddError(" --pop--");
+	_ppdRasterAddError(" --pop--");
         break;
 
     case CUPS_PS_ROLL :
-	_cupsRasterAddError(" --roll--");
+	_ppdRasterAddError(" --roll--");
         break;
 
     case CUPS_PS_SETPAGEDEVICE :
-	_cupsRasterAddError(" --setpagedevice--");
+	_ppdRasterAddError(" --setpagedevice--");
         break;
 
     case CUPS_PS_STOPPED :
-	_cupsRasterAddError(" --stopped--");
+	_ppdRasterAddError(" --stopped--");
         break;
 
     case CUPS_PS_OTHER :
-	_cupsRasterAddError(" --%s--", obj->value.other);
+	_ppdRasterAddError(" --%s--", obj->value.other);
 	break;
   }
 }
@@ -850,19 +850,19 @@ error_object(_cups_ps_obj_t *obj)	/* I - Object to add */
  */
 
 static void
-error_stack(_cups_ps_stack_t *st,	/* I - Stack */
+error_stack(_ppd_ps_stack_t *st,	/* I - Stack */
             const char       *title)	/* I - Title string */
 {
   int			c;		/* Looping var */
-  _cups_ps_obj_t	*obj;		/* Current object on stack */
+  _ppd_ps_obj_t	*obj;		/* Current object on stack */
 
 
-  _cupsRasterAddError("%s", title);
+  _ppdRasterAddError("%s", title);
 
   for (obj = st->objs, c = st->num_objs; c > 0; c --, obj ++)
     error_object(obj);
 
-  _cupsRasterAddError("\n");
+  _ppdRasterAddError("\n");
 }
 
 
@@ -870,8 +870,8 @@ error_stack(_cups_ps_stack_t *st,	/* I - Stack */
  * 'index_stack()' - Copy the Nth value on the stack.
  */
 
-static _cups_ps_obj_t	*		/* O - New object */
-index_stack(_cups_ps_stack_t *st,	/* I - Stack */
+static _ppd_ps_obj_t	*		/* O - New object */
+index_stack(_ppd_ps_stack_t *st,	/* I - Stack */
             int              n)		/* I - Object index */
 {
   if (n < 0 || (n = st->num_objs - n - 1) < 0)
@@ -885,18 +885,18 @@ index_stack(_cups_ps_stack_t *st,	/* I - Stack */
  * 'new_stack()' - Create a new stack.
  */
 
-static _cups_ps_stack_t	*		/* O - New stack */
+static _ppd_ps_stack_t	*		/* O - New stack */
 new_stack(void)
 {
-  _cups_ps_stack_t	*st;		/* New stack */
+  _ppd_ps_stack_t	*st;		/* New stack */
 
 
-  if ((st = calloc(1, sizeof(_cups_ps_stack_t))) == NULL)
+  if ((st = calloc(1, sizeof(_ppd_ps_stack_t))) == NULL)
     return (NULL);
 
   st->alloc_objs = 32;
 
-  if ((st->objs = calloc(32, sizeof(_cups_ps_obj_t))) == NULL)
+  if ((st->objs = calloc(32, sizeof(_ppd_ps_obj_t))) == NULL)
   {
     free(st);
     return (NULL);
@@ -910,8 +910,8 @@ new_stack(void)
  * 'pop_stock()' - Pop the top object off the stack.
  */
 
-static _cups_ps_obj_t	*		/* O - Object */
-pop_stack(_cups_ps_stack_t *st)		/* I - Stack */
+static _ppd_ps_obj_t	*		/* O - Object */
+pop_stack(_ppd_ps_stack_t *st)		/* I - Stack */
 {
   if (st->num_objs > 0)
   {
@@ -928,11 +928,11 @@ pop_stack(_cups_ps_stack_t *st)		/* I - Stack */
  * 'push_stack()' - Push an object on the stack.
  */
 
-static _cups_ps_obj_t	*		/* O - New object */
-push_stack(_cups_ps_stack_t *st,	/* I - Stack */
-           _cups_ps_obj_t   *obj)	/* I - Object */
+static _ppd_ps_obj_t	*		/* O - New object */
+push_stack(_ppd_ps_stack_t *st,	/* I - Stack */
+           _ppd_ps_obj_t   *obj)	/* I - Object */
 {
-  _cups_ps_obj_t	*temp;		/* New object */
+  _ppd_ps_obj_t	*temp;		/* New object */
 
 
   if (st->num_objs >= st->alloc_objs)
@@ -942,17 +942,17 @@ push_stack(_cups_ps_stack_t *st,	/* I - Stack */
     st->alloc_objs += 32;
 
     if ((temp = realloc(st->objs, (size_t)st->alloc_objs *
-                                  sizeof(_cups_ps_obj_t))) == NULL)
+                                  sizeof(_ppd_ps_obj_t))) == NULL)
       return (NULL);
 
     st->objs = temp;
-    memset(temp + st->num_objs, 0, 32 * sizeof(_cups_ps_obj_t));
+    memset(temp + st->num_objs, 0, 32 * sizeof(_ppd_ps_obj_t));
   }
 
   temp = st->objs + st->num_objs;
   st->num_objs ++;
 
-  memcpy(temp, obj, sizeof(_cups_ps_obj_t));
+  memcpy(temp, obj, sizeof(_ppd_ps_obj_t));
 
   return (temp);
 }
@@ -963,11 +963,11 @@ push_stack(_cups_ps_stack_t *st,	/* I - Stack */
  */
 
 static int				/* O - 0 on success, -1 on error */
-roll_stack(_cups_ps_stack_t *st,	/* I - Stack */
+roll_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 	   int              c,		/* I - Number of objects */
            int              s)		/* I - Amount to shift */
 {
-  _cups_ps_obj_t	*temp;		/* Temporary array of objects */
+  _ppd_ps_obj_t	*temp;		/* Temporary array of objects */
   int			n;		/* Index into array */
 
 
@@ -1002,12 +1002,12 @@ roll_stack(_cups_ps_stack_t *st,	/* I - Stack */
 
     s = -s;
 
-    if ((temp = calloc((size_t)s, sizeof(_cups_ps_obj_t))) == NULL)
+    if ((temp = calloc((size_t)s, sizeof(_ppd_ps_obj_t))) == NULL)
       return (-1);
 
-    memcpy(temp, st->objs + n, (size_t)s * sizeof(_cups_ps_obj_t));
-    memmove(st->objs + n, st->objs + n + s, (size_t)(c - s) * sizeof(_cups_ps_obj_t));
-    memcpy(st->objs + n + c - s, temp, (size_t)s * sizeof(_cups_ps_obj_t));
+    memcpy(temp, st->objs + n, (size_t)s * sizeof(_ppd_ps_obj_t));
+    memmove(st->objs + n, st->objs + n + s, (size_t)(c - s) * sizeof(_ppd_ps_obj_t));
+    memcpy(st->objs + n + c - s, temp, (size_t)s * sizeof(_ppd_ps_obj_t));
   }
   else
   {
@@ -1015,12 +1015,12 @@ roll_stack(_cups_ps_stack_t *st,	/* I - Stack */
     * Shift up...
     */
 
-    if ((temp = calloc((size_t)s, sizeof(_cups_ps_obj_t))) == NULL)
+    if ((temp = calloc((size_t)s, sizeof(_ppd_ps_obj_t))) == NULL)
       return (-1);
 
-    memcpy(temp, st->objs + n + c - s, (size_t)s * sizeof(_cups_ps_obj_t));
-    memmove(st->objs + n + s, st->objs + n, (size_t)(c - s) * sizeof(_cups_ps_obj_t));
-    memcpy(st->objs + n, temp, (size_t)s * sizeof(_cups_ps_obj_t));
+    memcpy(temp, st->objs + n + c - s, (size_t)s * sizeof(_ppd_ps_obj_t));
+    memmove(st->objs + n + s, st->objs + n, (size_t)(c - s) * sizeof(_ppd_ps_obj_t));
+    memcpy(st->objs + n, temp, (size_t)s * sizeof(_ppd_ps_obj_t));
   }
 
   free(temp);
@@ -1033,11 +1033,11 @@ roll_stack(_cups_ps_stack_t *st,	/* I - Stack */
  * 'scan_ps()' - Scan a string for the next PS object.
  */
 
-static _cups_ps_obj_t	*		/* O  - New object or NULL on EOF */
-scan_ps(_cups_ps_stack_t *st,		/* I  - Stack */
+static _ppd_ps_obj_t	*		/* O  - New object or NULL on EOF */
+scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
         char             **ptr)		/* IO - String pointer */
 {
-  _cups_ps_obj_t	obj;		/* Current object */
+  _ppd_ps_obj_t	obj;		/* Current object */
   char			*start,		/* Start of object */
 			*cur,		/* Current position */
 			*valptr,	/* Pointer into value string */
@@ -1298,7 +1298,7 @@ scan_ps(_cups_ps_stack_t *st,		/* I  - Stack */
 	  * Integer or real number...
 	  */
 
-	  obj.value.number = _cupsStrScand(start, &cur, localeconv());
+	  obj.value.number = _ppdStrScand(start, &cur, localeconv());
           break;
 	}
 	else
@@ -1384,12 +1384,12 @@ scan_ps(_cups_ps_stack_t *st,		/* I  - Stack */
 
 static int				/* O - 0 on success, -1 on error */
 setpagedevice(
-    _cups_ps_stack_t    *st,		/* I - Stack */
+    _ppd_ps_stack_t    *st,		/* I - Stack */
     cups_page_header2_t *h,		/* O - Page header */
     int                 *preferred_bits)/* O - Preferred bits per color */
 {
   int			i;		/* Index into array */
-  _cups_ps_obj_t	*obj,		/* Current object */
+  _ppd_ps_obj_t	*obj,		/* Current object */
 			*end;		/* End of dictionary */
   const char		*name;		/* Attribute name */
 
@@ -1613,7 +1613,7 @@ setpagedevice(
 
 static void
 DEBUG_object(const char *prefix,	/* I - Prefix string */
-             _cups_ps_obj_t *obj)	/* I - Object to print */
+             _ppd_ps_obj_t *obj)	/* I - Object to print */
 {
   switch (obj->type)
   {
@@ -1709,10 +1709,10 @@ DEBUG_object(const char *prefix,	/* I - Prefix string */
 
 static void
 DEBUG_stack(const char       *prefix,	/* I - Prefix string */
-            _cups_ps_stack_t *st)	/* I - Stack */
+            _ppd_ps_stack_t *st)	/* I - Stack */
 {
   int			c;		/* Looping var */
-  _cups_ps_obj_t	*obj;		/* Current object on stack */
+  _ppd_ps_obj_t	*obj;		/* Current object on stack */
 
 
   for (obj = st->objs, c = st->num_objs; c > 0; c --, obj ++)

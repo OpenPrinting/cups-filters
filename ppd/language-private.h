@@ -8,8 +8,8 @@
  * information.
  */
 
-#ifndef _CUPS_LANGUAGE_PRIVATE_H_
-#  define _CUPS_LANGUAGE_PRIVATE_H_
+#ifndef _PPD_LANGUAGE_PRIVATE_H_
+#  define _PPD_LANGUAGE_PRIVATE_H_
 
 /*
  * Include necessary headers...
@@ -39,36 +39,36 @@ extern "C" {
  * Constants...
  */
 
-#  define _CUPS_MESSAGE_PO	0	/* Message file is in GNU .po format */
-#  define _CUPS_MESSAGE_UNQUOTE	1	/* Unescape \foo in strings? */
-#  define _CUPS_MESSAGE_STRINGS	2	/* Message file is in Apple .strings format */
-#  define _CUPS_MESSAGE_EMPTY	4	/* Allow empty localized strings */
+#  define _PPD_MESSAGE_PO	0	/* Message file is in GNU .po format */
+#  define _PPD_MESSAGE_UNQUOTE	1	/* Unescape \foo in strings? */
+#  define _PPD_MESSAGE_STRINGS	2	/* Message file is in Apple .strings format */
+#  define _PPD_MESSAGE_EMPTY	4	/* Allow empty localized strings */
 
 
 /*
  * Types...
  */
 
-typedef struct _cups_message_s		/**** Message catalog entry ****/
+typedef struct _ppd_message_s		/**** Message catalog entry ****/
 {
   char	*msg,				/* Original string */
 	*str;				/* Localized string */
-} _cups_message_t;
+} _ppd_message_t;
 
 
 /*
  * Prototypes...
  */
 
-extern const char	*_cupsLangString(cups_lang_t *lang, const char *message) _CUPS_PRIVATE;
-extern void		_cupsMessageFree(cups_array_t *a) _CUPS_PRIVATE;
-extern cups_array_t	*_cupsMessageLoad(const char *filename, int flags) _CUPS_PRIVATE;
-extern const char	*_cupsMessageLookup(cups_array_t *a, const char *m) _CUPS_PRIVATE;
-extern cups_array_t	*_cupsMessageNew(void *context) _CUPS_PRIVATE;
+extern const char	*_ppdLangString(cups_lang_t *lang, const char *message) _PPD_PRIVATE;
+extern void		_ppdMessageFree(cups_array_t *a) _PPD_PRIVATE;
+extern cups_array_t	*_ppdMessageLoad(const char *filename, int flags) _PPD_PRIVATE;
+extern const char	*_ppdMessageLookup(cups_array_t *a, const char *m) _PPD_PRIVATE;
+extern cups_array_t	*_ppdMessageNew(void *context) _PPD_PRIVATE;
 
 
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
 
-#endif /* !_CUPS_LANGUAGE_PRIVATE_H_ */
+#endif /* !_PPD_LANGUAGE_PRIVATE_H_ */

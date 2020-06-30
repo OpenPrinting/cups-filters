@@ -1,5 +1,5 @@
 /*
- * I18N/language support for CUPS.
+ * I18N/language support for libppd.
  *
  * Copyright 2007-2017 by Apple Inc.
  * Copyright 1997-2007 by Easy Software Products.
@@ -33,7 +33,7 @@
  * Local globals...
  */
 
-static _cups_mutex_t	lang_mutex = _CUPS_MUTEX_INITIALIZER;
+static _ppd_mutex_t	lang_mutex = _PPD_MUTEX_INITIALIZER;
 					/* Mutex to control access to cache */
 static const char * const lang_encodings[] =
 			{		/* Encoding strings */
@@ -145,8 +145,8 @@ static const char	*appleLangDefault(void);
 static cups_array_t	*appleMessageLoad(const char *locale) CF_RETURNS_RETAINED;
 #  endif /* CUPS_BUNDLEDIR */
 #endif /* __APPLE__ */
-static int		cups_message_compare(_cups_message_t *m1, _cups_message_t *m2);
-static void		cups_message_free(_cups_message_t *m);
+static int		cups_message_compare(_ppd_message_t *m1, _ppd_message_t *m2);
+static void		cups_message_free(_ppd_message_t *m);
 static void		cups_message_load(cups_lang_t *lang);
 static int		cups_read_strings(cups_file_t *fp, int flags, cups_array_t *a);
 static void		cups_unquote(char *d, const char *s);
@@ -178,20 +178,20 @@ _cupsEncodingName(
 
 
 /*
- * '_cupsLangString()' - Get a message string.
+ * '_ppdLangString()' - Get a message string.
  *
  * The returned string is UTF-8 encoded; use cupsUTF8ToCharset() to
  * convert the string to the language encoding.
  */
 
 const char *				/* O - Localized message */
-_cupsLangString(cups_lang_t *lang,	/* I - Language */
+_ppdLangString(cups_lang_t *lang,	/* I - Language */
                 const char  *message)	/* I - Message */
 {
   const char *s;			/* Localized message */
 
 
-  DEBUG_printf(("_cupsLangString(lang=%p, message=\"%s\")", (void *)lang, message));
+  DEBUG_printf(("_ppdLangString(lang=%p, message=\"%s\")", (void *)lang, message));
 
  /*
   * Range check input...
@@ -200,7 +200,7 @@ _cupsLangString(cups_lang_t *lang,	/* I - Language */
   if (!lang || !message || !*message)
     return (message);
 
-  _cupsMutexLock(&lang_mutex);
+  _ppdMutexLock(&lang_mutex);
 
  /*
   * Load the message catalog if needed...
@@ -209,20 +209,20 @@ _cupsLangString(cups_lang_t *lang,	/* I - Language */
   if (!lang->strings)
     cups_message_load(lang);
 
-  s = _cupsMessageLookup(lang->strings, message);
+  s = _ppdMessageLookup(lang->strings, message);
 
-  _cupsMutexUnlock(&lang_mutex);
+  _ppdMutexUnlock(&lang_mutex);
 
   return (s);
 }
 
 
 /*
- * '_cupsMessageFree()' - Free a messages array.
+ * '_ppdMessageFree()' - Free a messages array.
  */
 
 void
-_cupsMessageFree(cups_array_t *a)	/* I - Message array */
+_ppdMessageFree(cups_array_t *a)	/* I - Message array */
 {
 #if defined(__APPLE__) && defined(CUPS_BUNDLEDIR)
  /*
@@ -242,16 +242,16 @@ _cupsMessageFree(cups_array_t *a)	/* I - Message array */
 
 
 /*
- * '_cupsMessageLoad()' - Load a .po or .strings file into a messages array.
+ * '_ppdMessageLoad()' - Load a .po or .strings file into a messages array.
  */
 
 cups_array_t *				/* O - New message array */
-_cupsMessageLoad(const char *filename,	/* I - Message catalog to load */
+_ppdMessageLoad(const char *filename,	/* I - Message catalog to load */
                  int        flags)	/* I - Load flags */
 {
   cups_file_t		*fp;		/* Message file */
   cups_array_t		*a;		/* Message array */
-  _cups_message_t	*m;		/* Current message */
+  _ppd_message_t	*m;		/* Current message */
   char			s[4096],	/* String buffer */
 			*ptr,		/* Pointer into buffer */
 			*temp;		/* New string */
@@ -265,7 +265,7 @@ _cupsMessageLoad(const char *filename,	/* I - Message catalog to load */
   * Create an array to hold the messages...
   */
 
-  if ((a = _cupsMessageNew(NULL)) == NULL)
+  if ((a = _ppdMessageNew(NULL)) == NULL)
   {
     DEBUG_puts("5_cupsMessageLoad: Unable to allocate array!");
     return (NULL);
@@ -282,7 +282,7 @@ _cupsMessageLoad(const char *filename,	/* I - Message catalog to load */
     return (a);
   }
 
-  if (flags & _CUPS_MESSAGE_STRINGS)
+  if (flags & _PPD_MESSAGE_STRINGS)
   {
     while (cups_read_strings(fp, flags, a));
   }
@@ -338,7 +338,7 @@ _cupsMessageLoad(const char *filename,	/* I - Message catalog to load */
       * Unquote the text...
       */
 
-      if (flags & _CUPS_MESSAGE_UNQUOTE)
+      if (flags & _PPD_MESSAGE_UNQUOTE)
 	cups_unquote(ptr, ptr);
 
      /*
@@ -353,7 +353,7 @@ _cupsMessageLoad(const char *filename,	/* I - Message catalog to load */
 
 	if (m)
 	{
-	  if (m->str && (m->str[0] || (flags & _CUPS_MESSAGE_EMPTY)))
+	  if (m->str && (m->str[0] || (flags & _PPD_MESSAGE_EMPTY)))
 	  {
 	    cupsArrayAdd(a, m);
 	  }
@@ -374,7 +374,7 @@ _cupsMessageLoad(const char *filename,	/* I - Message catalog to load */
 	* Create a new message with the given msgid string...
 	*/
 
-	if ((m = (_cups_message_t *)calloc(1, sizeof(_cups_message_t))) == NULL)
+	if ((m = (_ppd_message_t *)calloc(1, sizeof(_ppd_message_t))) == NULL)
 	  break;
 
 	if ((m->msg = strdup(ptr)) == NULL)
@@ -450,7 +450,7 @@ _cupsMessageLoad(const char *filename,	/* I - Message catalog to load */
 
     if (m)
     {
-      if (m->str && (m->str[0] || (flags & _CUPS_MESSAGE_EMPTY)))
+      if (m->str && (m->str[0] || (flags & _PPD_MESSAGE_EMPTY)))
       {
 	cupsArrayAdd(a, m);
       }
@@ -481,18 +481,18 @@ _cupsMessageLoad(const char *filename,	/* I - Message catalog to load */
 
 
 /*
- * '_cupsMessageLookup()' - Lookup a message string.
+ * '_ppdMessageLookup()' - Lookup a message string.
  */
 
 const char *				/* O - Localized message */
-_cupsMessageLookup(cups_array_t *a,	/* I - Message array */
+_ppdMessageLookup(cups_array_t *a,	/* I - Message array */
                    const char   *m)	/* I - Message */
 {
-  _cups_message_t	key,		/* Search key */
+  _ppd_message_t	key,		/* Search key */
 			*match;		/* Matching message */
 
 
-  DEBUG_printf(("_cupsMessageLookup(a=%p, m=\"%s\")", (void *)a, m));
+  DEBUG_printf(("_ppdMessageLookup(a=%p, m=\"%s\")", (void *)a, m));
 
  /*
   * Lookup the message string; if it doesn't exist in the catalog,
@@ -500,7 +500,7 @@ _cupsMessageLookup(cups_array_t *a,	/* I - Message array */
   */
 
   key.msg = (char *)m;
-  match   = (_cups_message_t *)cupsArrayFind(a, &key);
+  match   = (_ppd_message_t *)cupsArrayFind(a, &key);
 
 #if defined(__APPLE__) && defined(CUPS_BUNDLEDIR)
   if (!match && cupsArrayUserData(a))
@@ -515,7 +515,7 @@ _cupsMessageLookup(cups_array_t *a,	/* I - Message array */
 
     dict       = (CFDictionaryRef)cupsArrayUserData(a);
     cfm        = CFStringCreateWithCString(kCFAllocatorDefault, m, kCFStringEncodingUTF8);
-    match      = calloc(1, sizeof(_cups_message_t));
+    match      = calloc(1, sizeof(_ppd_message_t));
     match->msg = strdup(m);
     cfstr      = cfm ? CFDictionaryGetValue(dict, cfm) : NULL;
 
@@ -550,11 +550,11 @@ _cupsMessageLookup(cups_array_t *a,	/* I - Message array */
 
 
 /*
- * '_cupsMessageNew()' - Make a new message catalog array.
+ * '_ppdMessageNew()' - Make a new message catalog array.
  */
 
 cups_array_t *				/* O - Array */
-_cupsMessageNew(void *context)		/* I - User data */
+_ppdMessageNew(void *context)		/* I - User data */
 {
   return (cupsArrayNew3((cups_array_func_t)cups_message_compare, context,
                         (cups_ahash_func_t)NULL, 0,
@@ -569,8 +569,8 @@ _cupsMessageNew(void *context)		/* I - User data */
 
 static int				/* O - Result of comparison */
 cups_message_compare(
-    _cups_message_t *m1,		/* I - First message */
-    _cups_message_t *m2)		/* I - Second message */
+    _ppd_message_t *m1,		/* I - First message */
+    _ppd_message_t *m2)		/* I - Second message */
 {
   return (strcmp(m1->msg, m2->msg));
 }
@@ -581,7 +581,7 @@ cups_message_compare(
  */
 
 static void
-cups_message_free(_cups_message_t *m)	/* I - Message */
+cups_message_free(_ppd_message_t *m)	/* I - Message */
 {
   if (m->msg)
     free(m->msg);
@@ -647,7 +647,7 @@ cups_message_load(cups_lang_t *lang)	/* I - Language */
   * Read the strings from the file...
   */
 
-  lang->strings = _cupsMessageLoad(filename, _CUPS_MESSAGE_UNQUOTE);
+  lang->strings = _ppdMessageLoad(filename, _PPD_MESSAGE_UNQUOTE);
 #endif /* __APPLE__ && CUPS_BUNDLEDIR */
 }
 
@@ -665,7 +665,7 @@ cups_read_strings(cups_file_t  *fp,	/* I - .strings file */
 			*bufptr,	/* Pointer into buffer */
 			*msg,		/* Pointer to start of message */
 			*str;		/* Pointer to start of translation string */
-  _cups_message_t	*m;		/* New message */
+  _ppd_message_t	*m;		/* New message */
 
 
   while (cupsFileGets(fp, buffer, sizeof(buffer)))
@@ -695,7 +695,7 @@ cups_read_strings(cups_file_t  *fp,	/* I - .strings file */
 
     *bufptr++ = '\0';
 
-    if (flags & _CUPS_MESSAGE_UNQUOTE)
+    if (flags & _PPD_MESSAGE_UNQUOTE)
       cups_unquote(msg, msg);
 
    /*
@@ -729,14 +729,14 @@ cups_read_strings(cups_file_t  *fp,	/* I - .strings file */
 
     *bufptr++ = '\0';
 
-    if (flags & _CUPS_MESSAGE_UNQUOTE)
+    if (flags & _PPD_MESSAGE_UNQUOTE)
       cups_unquote(str, str);
 
    /*
     * If we get this far we have a valid pair of strings, add them...
     */
 
-    if ((m = malloc(sizeof(_cups_message_t))) == NULL)
+    if ((m = malloc(sizeof(_ppd_message_t))) == NULL)
       break;
 
     m->msg = strdup(msg);

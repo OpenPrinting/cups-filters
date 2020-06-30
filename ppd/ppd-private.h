@@ -10,8 +10,8 @@
  * PostScript is a trademark of Adobe Systems, Inc.
  */
 
-#ifndef _CUPS_PPD_PRIVATE_H_
-#  define _CUPS_PPD_PRIVATE_H_
+#ifndef _PPD_PPD_PRIVATE_H_
+#  define _PPD_PPD_PRIVATE_H_
 
 /*
  * Include necessary headers...
@@ -154,62 +154,62 @@ struct _ppd_cache_s			/**** PPD cache and PWG conversion data ****/
  * Prototypes...
  */
 
-extern int		_cupsConvertOptions(ipp_t *request, ppd_file_t *ppd, _ppd_cache_t *pc, ipp_attribute_t *media_col_sup, ipp_attribute_t *doc_handling_sup, ipp_attribute_t *print_color_mode_sup, const char *user, const char *format, int copies, int num_options, cups_option_t *options) _CUPS_PRIVATE;
-extern int		_cupsRasterExecPS(cups_page_header2_t *h, int *preferred_bits, const char *code) _CUPS_NONNULL(3) _CUPS_PRIVATE;
-extern int		_cupsRasterInterpretPPD(cups_page_header2_t *h, ppd_file_t *ppd, int num_options, cups_option_t *options, cups_interpret_cb_t func) _CUPS_PRIVATE;
+extern int		_cupsConvertOptions(ipp_t *request, ppd_file_t *ppd, _ppd_cache_t *pc, ipp_attribute_t *media_col_sup, ipp_attribute_t *doc_handling_sup, ipp_attribute_t *print_color_mode_sup, const char *user, const char *format, int copies, int num_options, cups_option_t *options) _PPD_PRIVATE;
+extern int		_ppdRasterExecPS(cups_page_header2_t *h, int *preferred_bits, const char *code) _PPD_PRIVATE;
+extern int		_ppdRasterInterpretPPD(cups_page_header2_t *h, ppd_file_t *ppd, int num_options, cups_option_t *options, cups_interpret_cb_t func) _PPD_PRIVATE;
 
 extern _ppd_cache_t	*_ppdCacheCreateWithFile(const char *filename,
-			                         ipp_t **attrs) _CUPS_PRIVATE;
-extern _ppd_cache_t	*_ppdCacheCreateWithPPD(ppd_file_t *ppd) _CUPS_PRIVATE;
-extern void		_ppdCacheDestroy(_ppd_cache_t *pc) _CUPS_PRIVATE;
+			                         ipp_t **attrs) _PPD_PRIVATE;
+extern _ppd_cache_t	*_ppdCacheCreateWithPPD(ppd_file_t *ppd) _PPD_PRIVATE;
+extern void		_ppdCacheDestroy(_ppd_cache_t *pc) _PPD_PRIVATE;
 extern const char	*_ppdCacheGetBin(_ppd_cache_t *pc,
-			                 const char *output_bin) _CUPS_PRIVATE;
+			                 const char *output_bin) _PPD_PRIVATE;
 extern int		_ppdCacheGetFinishingOptions(_ppd_cache_t *pc,
 			                             ipp_t *job,
 			                             ipp_finishings_t value,
 			                             int num_options,
-			                             cups_option_t **options) _CUPS_PRIVATE;
-extern int		_ppdCacheGetFinishingValues(ppd_file_t *ppd, _ppd_cache_t *pc, int max_values, int *values) _CUPS_PRIVATE;
+			                             cups_option_t **options) _PPD_PRIVATE;
+extern int		_ppdCacheGetFinishingValues(ppd_file_t *ppd, _ppd_cache_t *pc, int max_values, int *values) _PPD_PRIVATE;
 extern const char	*_ppdCacheGetInputSlot(_ppd_cache_t *pc, ipp_t *job,
-			                       const char *keyword) _CUPS_PRIVATE;
+			                       const char *keyword) _PPD_PRIVATE;
 extern const char	*_ppdCacheGetMediaType(_ppd_cache_t *pc, ipp_t *job,
-			                       const char *keyword) _CUPS_PRIVATE;
+			                       const char *keyword) _PPD_PRIVATE;
 extern const char	*_ppdCacheGetOutputBin(_ppd_cache_t *pc,
-			                       const char *keyword) _CUPS_PRIVATE;
+			                       const char *keyword) _PPD_PRIVATE;
 extern const char	*_ppdCacheGetPageSize(_ppd_cache_t *pc, ipp_t *job,
-			                      const char *keyword, int *exact) _CUPS_PRIVATE;
+			                      const char *keyword, int *exact) _PPD_PRIVATE;
 extern pwg_size_t	*_ppdCacheGetSize(_ppd_cache_t *pc,
-			                  const char *page_size) _CUPS_PRIVATE;
+			                  const char *page_size) _PPD_PRIVATE;
 extern const char	*_ppdCacheGetSource(_ppd_cache_t *pc,
-			                    const char *input_slot) _CUPS_PRIVATE;
+			                    const char *input_slot) _PPD_PRIVATE;
 extern const char	*_ppdCacheGetType(_ppd_cache_t *pc,
-			                  const char *media_type) _CUPS_PRIVATE;
+			                  const char *media_type) _PPD_PRIVATE;
 extern int		_ppdCacheWriteFile(_ppd_cache_t *pc,
-			                   const char *filename, ipp_t *attrs) _CUPS_PRIVATE;
-extern char		*_ppdCreateFromIPP(char *buffer, size_t bufsize, ipp_t *response) _CUPS_PRIVATE;
-extern void		_ppdFreeLanguages(cups_array_t *languages) _CUPS_PRIVATE;
-extern cups_encoding_t	_ppdGetEncoding(const char *name) _CUPS_PRIVATE;
-extern cups_array_t	*_ppdGetLanguages(ppd_file_t *ppd) _CUPS_PRIVATE;
-extern _ppd_globals_t	*_ppdGlobals(void) _CUPS_PRIVATE;
-extern unsigned		_ppdHashName(const char *name) _CUPS_PRIVATE;
+			                   const char *filename, ipp_t *attrs) _PPD_PRIVATE;
+extern char		*_ppdCreateFromIPP(char *buffer, size_t bufsize, ipp_t *response) _PPD_PRIVATE;
+extern void		_ppdFreeLanguages(cups_array_t *languages) _PPD_PRIVATE;
+extern cups_encoding_t	_ppdGetEncoding(const char *name) _PPD_PRIVATE;
+extern cups_array_t	*_ppdGetLanguages(ppd_file_t *ppd) _PPD_PRIVATE;
+extern _ppd_globals_t	*_ppdGlobals(void) _PPD_PRIVATE;
+extern unsigned		_ppdHashName(const char *name) _PPD_PRIVATE;
 extern ppd_attr_t	*_ppdLocalizedAttr(ppd_file_t *ppd, const char *keyword,
-			                   const char *spec, const char *ll_CC) _CUPS_PRIVATE;
+			                   const char *spec, const char *ll_CC) _PPD_PRIVATE;
 extern char		*_ppdNormalizeMakeAndModel(const char *make_and_model,
 			                           char *buffer,
-						   size_t bufsize) _CUPS_PRIVATE;
+						   size_t bufsize) _PPD_PRIVATE;
 extern ppd_file_t	*_ppdOpen(cups_file_t *fp,
-				  _ppd_localization_t localization) _CUPS_PRIVATE;
+				  _ppd_localization_t localization) _PPD_PRIVATE;
 extern ppd_file_t	*_ppdOpenFile(const char *filename,
-				      _ppd_localization_t localization) _CUPS_PRIVATE;
+				      _ppd_localization_t localization) _PPD_PRIVATE;
 extern int		_ppdParseOptions(const char *s, int num_options,
 			                 cups_option_t **options,
-					 _ppd_parse_t which) _CUPS_PRIVATE;
+					 _ppd_parse_t which) _PPD_PRIVATE;
 extern const char	*_pwgInputSlotForSource(const char *media_source,
-			                        char *name, size_t namesize) _CUPS_PRIVATE;
+			                        char *name, size_t namesize) _PPD_PRIVATE;
 extern const char	*_pwgMediaTypeForType(const char *media_type,
-					      char *name, size_t namesize) _CUPS_PRIVATE;
+					      char *name, size_t namesize) _PPD_PRIVATE;
 extern const char	*_pwgPageSizeForMedia(pwg_media_t *media,
-			                      char *name, size_t namesize) _CUPS_PRIVATE;
+			                      char *name, size_t namesize) _PPD_PRIVATE;
 
 
 /*
@@ -219,4 +219,4 @@ extern const char	*_pwgPageSizeForMedia(pwg_media_t *media,
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
-#endif /* !_CUPS_PPD_PRIVATE_H_ */
+#endif /* !_PPD_PPD_PRIVATE_H_ */

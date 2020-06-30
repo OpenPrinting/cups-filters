@@ -17,15 +17,15 @@
 
 
 /*
- * '_cupsArrayAddStrings()' - Add zero or more delimited strings to an array.
+ * '_ppdArrayAddStrings()' - Add zero or more delimited strings to an array.
  *
- * Note: The array MUST be created using the @link _cupsArrayNewStrings@
+ * Note: The array MUST be created using the @link _ppdArrayNewStrings@
  * function. Duplicate strings are NOT added. If the string pointer "s" is NULL
  * or the empty string, no strings are added to the array.
  */
 
 int					/* O - 1 on success, 0 on failure */
-_cupsArrayAddStrings(cups_array_t *a,	/* I - Array */
+_ppdArrayAddStrings(cups_array_t *a,	/* I - Array */
                      const char   *s,	/* I - Delimited strings or NULL */
                      char         delim)/* I - Delimiter character */
 {
@@ -35,11 +35,11 @@ _cupsArrayAddStrings(cups_array_t *a,	/* I - Array */
   int		status = 1;		/* Status of add */
 
 
-  DEBUG_printf(("_cupsArrayAddStrings(a=%p, s=\"%s\", delim='%c')", (void *)a, s, delim));
+  DEBUG_printf(("_ppdArrayAddStrings(a=%p, s=\"%s\", delim='%c')", (void *)a, s, delim));
 
   if (!a || !s || !*s)
   {
-    DEBUG_puts("1_cupsArrayAddStrings: Returning 0");
+    DEBUG_puts("1_ppdArrayAddStrings: Returning 0");
     return (0);
   }
 
@@ -49,12 +49,12 @@ _cupsArrayAddStrings(cups_array_t *a,	/* I - Array */
     * Skip leading whitespace...
     */
 
-    DEBUG_puts("1_cupsArrayAddStrings: Skipping leading whitespace.");
+    DEBUG_puts("1_ppdArrayAddStrings: Skipping leading whitespace.");
 
     while (*s && isspace(*s & 255))
       s ++;
 
-    DEBUG_printf(("1_cupsArrayAddStrings: Remaining string \"%s\".", s));
+    DEBUG_printf(("1_ppdArrayAddStrings: Remaining string \"%s\".", s));
   }
 
   if (!strchr(s, delim) &&
@@ -64,7 +64,7 @@ _cupsArrayAddStrings(cups_array_t *a,	/* I - Array */
     * String doesn't contain a delimiter, so add it as a single value...
     */
 
-    DEBUG_puts("1_cupsArrayAddStrings: No delimiter seen, adding a single "
+    DEBUG_puts("1_ppdArrayAddStrings: No delimiter seen, adding a single "
                "value.");
 
     if (!cupsArrayFind(a, (void *)s))
@@ -72,7 +72,7 @@ _cupsArrayAddStrings(cups_array_t *a,	/* I - Array */
   }
   else if ((buffer = strdup(s)) == NULL)
   {
-    DEBUG_puts("1_cupsArrayAddStrings: Unable to duplicate string.");
+    DEBUG_puts("1_ppdArrayAddStrings: Unable to duplicate string.");
     status = 0;
   }
   else
@@ -96,7 +96,7 @@ _cupsArrayAddStrings(cups_array_t *a,	/* I - Array */
       else
         end = start + strlen(start);
 
-      DEBUG_printf(("1_cupsArrayAddStrings: Adding \"%s\", end=\"%s\"", start,
+      DEBUG_printf(("1_ppdArrayAddStrings: Adding \"%s\", end=\"%s\"", start,
                     end));
 
       if (!cupsArrayFind(a, start))
@@ -106,14 +106,14 @@ _cupsArrayAddStrings(cups_array_t *a,	/* I - Array */
     free(buffer);
   }
 
-  DEBUG_printf(("1_cupsArrayAddStrings: Returning %d.", status));
+  DEBUG_printf(("1_ppdArrayAddStrings: Returning %d.", status));
 
   return (status);
 }
 
 
 /*
- * '_cupsArrayNewStrings()' - Create a new array of comma-delimited strings.
+ * '_ppdArrayNewStrings()' - Create a new array of comma-delimited strings.
  *
  * Note: The array automatically manages copies of the strings passed. If the
  * string pointer "s" is NULL or the empty string, no strings are added to the
@@ -121,16 +121,16 @@ _cupsArrayAddStrings(cups_array_t *a,	/* I - Array */
  */
 
 cups_array_t *				/* O - Array */
-_cupsArrayNewStrings(const char *s,	/* I - Delimited strings or NULL */
+_ppdArrayNewStrings(const char *s,	/* I - Delimited strings or NULL */
                      char       delim)	/* I - Delimiter character */
 {
   cups_array_t	*a;			/* Array */
 
 
   if ((a = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0,
-                         (cups_acopy_func_t)_cupsStrAlloc,
-			 (cups_afree_func_t)_cupsStrFree)) != NULL)
-    _cupsArrayAddStrings(a, s, delim);
+                         (cups_acopy_func_t)_ppdStrAlloc,
+			 (cups_afree_func_t)_ppdStrFree)) != NULL)
+    _ppdArrayAddStrings(a, s, delim);
 
   return (a);
 }

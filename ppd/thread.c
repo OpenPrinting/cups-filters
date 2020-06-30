@@ -1,5 +1,5 @@
 /*
- * Threading primitives for CUPS.
+ * Threading primitives for libppd.
  *
  * Copyright © 2009-2018 by Apple Inc.
  *
@@ -16,33 +16,33 @@
 
 #if defined(HAVE_PTHREAD_H)
 /*
- * '_cupsMutexInit()' - Initialize a mutex.
+ * '_ppdMutexInit()' - Initialize a mutex.
  */
 
 void
-_cupsMutexInit(_cups_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexInit(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   pthread_mutex_init(mutex, NULL);
 }
 
 
 /*
- * '_cupsMutexLock()' - Lock a mutex.
+ * '_ppdMutexLock()' - Lock a mutex.
  */
 
 void
-_cupsMutexLock(_cups_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexLock(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   pthread_mutex_lock(mutex);
 }
 
 
 /*
- * '_cupsMutexUnlock()' - Unlock a mutex.
+ * '_ppdMutexUnlock()' - Unlock a mutex.
  */
 
 void
-_cupsMutexUnlock(_cups_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexUnlock(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   pthread_mutex_unlock(mutex);
 }
@@ -53,11 +53,11 @@ _cupsMutexUnlock(_cups_mutex_t *mutex)	/* I - Mutex */
 
 
 /*
- * '_cupsMutexInit()' - Initialize a mutex.
+ * '_ppdMutexInit()' - Initialize a mutex.
  */
 
 void
-_cupsMutexInit(_cups_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexInit(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   InitializeCriticalSection(&mutex->m_criticalSection);
   mutex->m_init = 1;
@@ -65,11 +65,11 @@ _cupsMutexInit(_cups_mutex_t *mutex)	/* I - Mutex */
 
 
 /*
- * '_cupsMutexLock()' - Lock a mutex.
+ * '_ppdMutexLock()' - Lock a mutex.
  */
 
 void
-_cupsMutexLock(_cups_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexLock(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   if (!mutex->m_init)
   {
@@ -89,11 +89,11 @@ _cupsMutexLock(_cups_mutex_t *mutex)	/* I - Mutex */
 
 
 /*
- * '_cupsMutexUnlock()' - Unlock a mutex.
+ * '_ppdMutexUnlock()' - Unlock a mutex.
  */
 
 void
-_cupsMutexUnlock(_cups_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexUnlock(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   LeaveCriticalSection(&mutex->m_criticalSection);
 }
@@ -103,33 +103,33 @@ _cupsMutexUnlock(_cups_mutex_t *mutex)	/* I - Mutex */
 
 
 /*
- * '_cupsMutexInit()' - Initialize a mutex.
+ * '_ppdMutexInit()' - Initialize a mutex.
  */
 
 void
-_cupsMutexInit(_cups_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexInit(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   (void)mutex;
 }
 
 
 /*
- * '_cupsMutexLock()' - Lock a mutex.
+ * '_ppdMutexLock()' - Lock a mutex.
  */
 
 void
-_cupsMutexLock(_cups_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexLock(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   (void)mutex;
 }
 
 
 /*
- * '_cupsMutexUnlock()' - Unlock a mutex.
+ * '_ppdMutexUnlock()' - Unlock a mutex.
  */
 
 void
-_cupsMutexUnlock(_cups_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexUnlock(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   (void)mutex;
 }

@@ -1,5 +1,5 @@
 /*
- * Raster error handling for CUPS.
+ * Raster error handling for libppd.
  *
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 2007 by Easy Software Products.
@@ -15,21 +15,21 @@
 #include "raster-private.h"
 #include "debug-internal.h"
 
-typedef struct _cups_raster_error_s	/**** Error buffer structure ****/
+typedef struct _ppd_raster_error_s	/**** Error buffer structure ****/
 {
   char	*start,				/* Start of buffer */
 	*current,			/* Current position in buffer */
 	*end;				/* End of buffer */
-} _cups_raster_error_t;
+} _ppd_raster_error_t;
 
-static _cups_raster_error_t	*buf = NULL;
+static _ppd_raster_error_t	*buf = NULL;
 
 /*
- * '_cupsRasterAddError()' - Add an error message to the error buffer.
+ * '_ppdRasterAddError()' - Add an error message to the error buffer.
  */
 
 void
-_cupsRasterAddError(const char *f,	/* I - Printf-style error message */
+_ppdRasterAddError(const char *f,	/* I - Printf-style error message */
                     ...)		/* I - Additional arguments as needed */
 {
   va_list	ap;			/* Pointer to additional arguments */
@@ -37,7 +37,7 @@ _cupsRasterAddError(const char *f,	/* I - Printf-style error message */
   ssize_t	bytes;			/* Bytes in message string */
 
 
-  DEBUG_printf(("_cupsRasterAddError(f=\"%s\", ...)", f));
+  DEBUG_printf(("_ppdRasterAddError(f=\"%s\", ...)", f));
 
   va_start(ap, f);
   bytes = vsnprintf(s, sizeof(s), f, ap);
@@ -92,14 +92,14 @@ _cupsRasterAddError(const char *f,	/* I - Printf-style error message */
 
 
 /*
- * '_cupsRasterClearError()' - Clear the error buffer.
+ * '_ppdRasterClearError()' - Clear the error buffer.
  */
 
 void
-_cupsRasterClearError(void)
+_ppdRasterClearError(void)
 {
   if (buf == NULL) {
-    buf = malloc(sizeof(_cups_raster_error_t));
+    buf = malloc(sizeof(_ppd_raster_error_t));
     buf->start = NULL;
     buf->end = NULL;
     buf->current = NULL;
@@ -113,7 +113,7 @@ _cupsRasterClearError(void)
 
 
 /*
- * '_cupsRasterErrorString()' - Return the last error from a raster function.
+ * '_ppdRasterErrorString()' - Return the last error from a raster function.
  *
  * If there are no recent errors, NULL is returned.
  *
@@ -121,7 +121,7 @@ _cupsRasterClearError(void)
  */
 
 const char *				/* O - Last error */
-_cupsRasterErrorString(void)
+_ppdRasterErrorString(void)
 {
   if (buf->current == buf->start)
     return (NULL);

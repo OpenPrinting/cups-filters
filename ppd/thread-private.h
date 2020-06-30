@@ -6,8 +6,8 @@
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
 
-#ifndef _CUPS_THREAD_PRIVATE_H_
-#  define _CUPS_THREAD_PRIVATE_H_
+#ifndef _PPD_THREAD_PRIVATE_H_
+#  define _PPD_THREAD_PRIVATE_H_
 
 /*
  * Include necessary headers...
@@ -28,35 +28,35 @@ extern "C" {
 
 #  ifdef HAVE_PTHREAD_H			/* POSIX threading */
 #    include <pthread.h>
-typedef pthread_mutex_t _cups_mutex_t;
-typedef pthread_key_t	_cups_threadkey_t;
-#    define _CUPS_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
-#    define _CUPS_THREADKEY_INITIALIZER 0
-#    define _cupsThreadGetData(k) pthread_getspecific(k)
-#    define _cupsThreadSetData(k,p) pthread_setspecific(k,p)
+typedef pthread_mutex_t _ppd_mutex_t;
+typedef pthread_key_t	_ppd_threadkey_t;
+#    define _PPD_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
+#    define _PPD_THREADKEY_INITIALIZER 0
+#    define _ppdThreadGetData(k) pthread_getspecific(k)
+#    define _ppdThreadSetData(k,p) pthread_setspecific(k,p)
 
 #  elif defined(_WIN32)			/* Windows threading */
 #    include <winsock2.h>
 #    include <windows.h>
-typedef struct _cups_mutex_s
+typedef struct _ppd_mutex_s
 {
   int			m_init;		/* Flag for on-demand initialization */
   CRITICAL_SECTION	m_criticalSection;
 					/* Win32 Critical Section */
-} _cups_mutex_t;
-typedef DWORD	_cups_threadkey_t;
-#    define _CUPS_MUTEX_INITIALIZER { 0, 0 }
-#    define _CUPS_THREADKEY_INITIALIZER 0
-#    define _cupsThreadGetData(k) TlsGetValue(k)
-#    define _cupsThreadSetData(k,p) TlsSetValue(k,p)
+} _ppd_mutex_t;
+typedef DWORD	_ppd_threadkey_t;
+#    define _PPD_MUTEX_INITIALIZER { 0, 0 }
+#    define _PPD_THREADKEY_INITIALIZER 0
+#    define _ppdThreadGetData(k) TlsGetValue(k)
+#    define _ppdThreadSetData(k,p) TlsSetValue(k,p)
 
 #  else					/* No threading */
-typedef char	_cups_mutex_t;
-typedef void	*_cups_threadkey_t;
-#    define _CUPS_MUTEX_INITIALIZER 0
-#    define _CUPS_THREADKEY_INITIALIZER (void *)0
-#    define _cupsThreadGetData(k) k
-#    define _cupsThreadSetData(k,p) k=p
+typedef char	_ppd_mutex_t;
+typedef void	*_ppd_threadkey_t;
+#    define _PPD_MUTEX_INITIALIZER 0
+#    define _PPD_THREADKEY_INITIALIZER (void *)0
+#    define _ppdThreadGetData(k) k
+#    define _ppdThreadSetData(k,p) k=p
 #  endif /* HAVE_PTHREAD_H */
 
 
@@ -64,11 +64,11 @@ typedef void	*_cups_threadkey_t;
  * Functions...
  */
 
-extern void	_cupsMutexInit(_cups_mutex_t *mutex) _CUPS_PRIVATE;
-extern void	_cupsMutexLock(_cups_mutex_t *mutex) _CUPS_PRIVATE;
-extern void	_cupsMutexUnlock(_cups_mutex_t *mutex) _CUPS_PRIVATE;
+extern void	_ppdMutexInit(_ppd_mutex_t *mutex) _PPD_PRIVATE;
+extern void	_ppdMutexLock(_ppd_mutex_t *mutex) _PPD_PRIVATE;
+extern void	_ppdMutexUnlock(_ppd_mutex_t *mutex) _PPD_PRIVATE;
 
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
-#endif /* !_CUPS_THREAD_PRIVATE_H_ */
+#endif /* !_PPD_THREAD_PRIVATE_H_ */

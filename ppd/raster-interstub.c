@@ -1,5 +1,5 @@
 /*
- * cupsRasterInterpretPPD stub for CUPS.
+ * cupsRasterInterpretPPD stub for libppd.
  *
  * Copyright © 2018 by Apple Inc.
  *
@@ -15,7 +15,7 @@
 
 
 /*
- * This stub wraps the _cupsRasterInterpretPPD function in libcups - this allows
+ * This stub wraps the _ppdRasterInterpretPPD function in libcups - this allows
  * one library to provide all of the CUPS API functions while still supporting
  * the old split library organization...
  */
@@ -59,5 +59,5 @@ cupsRasterInterpretPPD(
     cups_option_t       *options,	/* I - Options */
     cups_interpret_cb_t func)		/* I - Optional page header callback (@code NULL@ for none) */
 {
-  return (_cupsRasterInterpretPPD(h, ppd, num_options, options, func));
+  return (_ppdRasterInterpretPPD(h, ppd, num_options, options, func));
 }

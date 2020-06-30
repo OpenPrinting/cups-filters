@@ -1,5 +1,5 @@
 /*
- * PPD localization routines for CUPS.
+ * PPD localization routines for libppd.
  *
  * Copyright 2007-2018 by Apple Inc.
  * Copyright 1997-2007 by Easy Software Products, all rights reserved.
@@ -282,11 +282,11 @@ ppdLocalizeIPPReason(
       if ((ptr = strrchr(msgid, '-')) != NULL && (!strcmp(ptr, "-error") || !strcmp(ptr, "-report") || !strcmp(ptr, "-warning")))
         *ptr = '\0';
 
-      message = _cupsLangString(lang, msgid);
+      message = _ppdLangString(lang, msgid);
 
       if (message && strcmp(message, msgid))
       {
-        strlcpy(buffer, _cupsLangString(lang, message), bufsize);
+        strlcpy(buffer, _ppdLangString(lang, message), bufsize);
 	return (buffer);
       }
     }
@@ -319,7 +319,7 @@ ppdLocalizeIPPReason(
 
 	valptr += 5;
 
-        while (*valptr && !_cups_isspace(*valptr) && bufptr < bufend)
+        while (*valptr && !_ppd_isspace(*valptr) && bufptr < bufend)
 	{
 	  if (*valptr == '%' && isxdigit(valptr[1] & 255) &&
 	      isxdigit(valptr[2] & 255))
@@ -357,7 +357,7 @@ ppdLocalizeIPPReason(
         * Skip this URI...
 	*/
 
-        while (*valptr && !_cups_isspace(*valptr))
+        while (*valptr && !_ppd_isspace(*valptr))
           valptr++;
       }
 
@@ -365,7 +365,7 @@ ppdLocalizeIPPReason(
       * Skip whitespace...
       */
 
-      while (_cups_isspace(*valptr))
+      while (_ppd_isspace(*valptr))
 	valptr ++;
     }
 
@@ -393,7 +393,7 @@ ppdLocalizeIPPReason(
         * Copy URI...
 	*/
 
-        while (*valptr && !_cups_isspace(*valptr) && bufptr < bufend)
+        while (*valptr && !_ppd_isspace(*valptr) && bufptr < bufend)
 	  *bufptr++ = *valptr++;
 
 	*bufptr = '\0';
@@ -406,7 +406,7 @@ ppdLocalizeIPPReason(
         * Skip this URI...
 	*/
 
-	while (*valptr && !_cups_isspace(*valptr))
+	while (*valptr && !_ppd_isspace(*valptr))
 	  valptr++;
       }
 
@@ -414,7 +414,7 @@ ppdLocalizeIPPReason(
       * Skip whitespace...
       */
 
-      while (_cups_isspace(*valptr))
+      while (_ppd_isspace(*valptr))
 	valptr ++;
     }
 
@@ -528,7 +528,7 @@ _ppdGetLanguages(ppd_file_t *ppd)	/* I - PPD file */
     * Skip leading whitespace...
     */
 
-    while (_cups_isspace(*ptr))
+    while (_ppd_isspace(*ptr))
       ptr ++;
 
     if (!*ptr)
@@ -538,7 +538,7 @@ _ppdGetLanguages(ppd_file_t *ppd)	/* I - PPD file */
     * Find the end of this language name...
     */
 
-    for (start = ptr; *ptr && !_cups_isspace(*ptr); ptr ++);
+    for (start = ptr; *ptr && !_ppd_isspace(*ptr); ptr ++);
 
     if (*ptr)
       *ptr++ = '\0';

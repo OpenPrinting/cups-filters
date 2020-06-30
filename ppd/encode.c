@@ -1,5 +1,5 @@
 /*
- * Option encoding routines for CUPS.
+ * Option encoding routines for libppd.
  *
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
@@ -76,7 +76,7 @@ static const ipp_op_t cups_ppd_name[] =
   IPP_OP_CUPS_NONE
 };
 
-static const _ipp_option_t ipp_options[] =
+static const _ppd_ipp_option_t ipp_options[] =
 {
   { 1, "auth-info",		IPP_TAG_TEXT,		IPP_TAG_JOB },
   { 1, "auth-info-default",	IPP_TAG_TEXT,		IPP_TAG_PRINTER },
@@ -356,17 +356,17 @@ static const _ipp_option_t ipp_options[] =
  * Local functions...
  */
 
-static int	compare_ipp_options(_ipp_option_t *a, _ipp_option_t *b);
+static int	compare_ipp_options(_ppd_ipp_option_t *a, _ppd_ipp_option_t *b);
 
 
 /*
- * '_ippFindOption()' - Find the attribute information for an option.
+ * '_ppdIppFindOption()' - Find the attribute information for an option.
  */
 
-_ipp_option_t *				/* O - Attribute information */
-_ippFindOption(const char *name)	/* I - Option/attribute name */
+_ppd_ipp_option_t *				/* O - Attribute information */
+_ppdIppFindOption(const char *name)	/* I - Option/attribute name */
 {
-  _ipp_option_t	key;			/* Search key */
+  _ppd_ipp_option_t	key;			/* Search key */
 
 
  /*
@@ -375,7 +375,7 @@ _ippFindOption(const char *name)	/* I - Option/attribute name */
 
   key.name = name;
 
-  return ((_ipp_option_t *)bsearch(&key, ipp_options,
+  return ((_ppd_ipp_option_t *)bsearch(&key, ipp_options,
                                    sizeof(ipp_options) / sizeof(ipp_options[0]),
 				   sizeof(ipp_options[0]),
 				   (int (*)(const void *, const void *))
@@ -388,8 +388,8 @@ _ippFindOption(const char *name)	/* I - Option/attribute name */
  */
 
 static int				/* O - Result of comparison */
-compare_ipp_options(_ipp_option_t *a,	/* I - First option */
-                    _ipp_option_t *b)	/* I - Second option */
+compare_ipp_options(_ppd_ipp_option_t *a,	/* I - First option */
+                    _ppd_ipp_option_t *b)	/* I - Second option */
 {
   return (strcmp(a->name, b->name));
 }

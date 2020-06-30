@@ -1,5 +1,5 @@
 /*
- * PPD test program for CUPS.
+ * PPD test program for libppd.
  *
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2006 by Easy Software Products.
@@ -289,12 +289,12 @@ static const char	*default2_code =
 
 
 /*
- * '_cupsRasterColorSpaceString()' - Return the colorspace name for a
+ * '_ppdRasterColorSpaceString()' - Return the colorspace name for a
  *                                   cupsColorSpace value.
  */
 
 const char *
-_cupsRasterColorSpaceString(
+_ppdRasterColorSpaceString(
     cups_cspace_t cspace)		/* I - cupsColorSpace value */
 {
   static const char * const cups_color_spaces[] =
@@ -545,9 +545,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     num_options = cupsGetConflicts(ppd, "InputSlot", "Envelope", &options);
     if (num_options != 2 ||
         (val = cupsGetOption("PageRegion", num_options, options)) == NULL ||
-	_cups_strcasecmp(val, "Letter") ||
+	_ppd_strcasecmp(val, "Letter") ||
 	(val = cupsGetOption("PageSize", num_options, options)) == NULL ||
-	_cups_strcasecmp(val, "Letter"))
+	_ppd_strcasecmp(val, "Letter"))
     {
       printf("FAIL (%d options:", num_options);
       for (i = 0; i < num_options; i ++)
@@ -596,8 +596,8 @@ main(int  argc,				/* I - Number of command-line arguments */
     num_options = 0;
     options     = NULL;
     if (cupsResolveConflicts(ppd, NULL, NULL, &num_options, &options) &&
-        num_options == 1 && !_cups_strcasecmp(options[0].name, "InputSlot") &&
-	!_cups_strcasecmp(options[0].value, "Tray"))
+        num_options == 1 && !_ppd_strcasecmp(options[0].name, "InputSlot") &&
+	!_ppd_strcasecmp(options[0].value, "Tray"))
       puts("PASS (Resolved by changing InputSlot)");
     else if (num_options > 0)
     {
@@ -955,8 +955,8 @@ main(int  argc,				/* I - Number of command-line arguments */
     num_options = 0;
     options     = NULL;
     if (cupsResolveConflicts(ppd, NULL, NULL, &num_options, &options) &&
-        num_options == 1 && !_cups_strcasecmp(options->name, "Quality") &&
-	!_cups_strcasecmp(options->value, "Normal"))
+        num_options == 1 && !_ppd_strcasecmp(options->name, "Quality") &&
+	!_ppd_strcasecmp(options->value, "Normal"))
       puts("PASS");
     else if (num_options > 0)
     {
@@ -1450,7 +1450,7 @@ do_ppd_tests(const char    *filename,	/* I - PPD file */
   if (cupsRasterInterpretPPD(&header, ppd, 0, NULL, NULL))
   {
     puts("FAIL (error from function)");
-    puts(_cupsRasterErrorString());
+    puts(_ppdRasterErrorString());
 
     return (1);
   }
@@ -1479,17 +1479,17 @@ do_ps_tests(void)
   * Test PS exec code...
   */
 
-  fputs("_cupsRasterExecPS(\"setpagedevice\"): ", stdout);
+  fputs("_ppdRasterExecPS(\"setpagedevice\"): ", stdout);
   fflush(stdout);
 
   memset(&header, 0, sizeof(header));
   header.Collate = CUPS_TRUE;
   preferred_bits = 0;
 
-  if (_cupsRasterExecPS(&header, &preferred_bits, setpagedevice_code))
+  if (_ppdRasterExecPS(&header, &preferred_bits, setpagedevice_code))
   {
     puts("FAIL (error from function)");
-    puts(_cupsRasterErrorString());
+    puts(_ppdRasterErrorString());
     errors ++;
   }
   else if (preferred_bits != 17 ||
@@ -1507,17 +1507,17 @@ do_ps_tests(void)
   else
     puts("PASS");
 
-  fputs("_cupsRasterExecPS(\"roll\"): ", stdout);
+  fputs("_ppdRasterExecPS(\"roll\"): ", stdout);
   fflush(stdout);
 
-  if (_cupsRasterExecPS(&header, &preferred_bits,
+  if (_ppdRasterExecPS(&header, &preferred_bits,
                         "792 612 0 0 0\n"
 			"pop pop pop\n"
 			"<</PageSize[5 -2 roll]/ImagingBBox null>>"
 			"setpagedevice\n"))
   {
     puts("FAIL (error from function)");
-    puts(_cupsRasterErrorString());
+    puts(_ppdRasterErrorString());
     errors ++;
   }
   else if (header.PageSize[0] != 792 || header.PageSize[1] != 612)
@@ -1529,10 +1529,10 @@ do_ps_tests(void)
   else
     puts("PASS");
 
-  fputs("_cupsRasterExecPS(\"dup index\"): ", stdout);
+  fputs("_ppdRasterExecPS(\"dup index\"): ", stdout);
   fflush(stdout);
 
-  if (_cupsRasterExecPS(&header, &preferred_bits,
+  if (_ppdRasterExecPS(&header, &preferred_bits,
                         "true false dup\n"
 			"<</Collate 4 index"
 			"/Duplex 5 index"
@@ -1540,7 +1540,7 @@ do_ps_tests(void)
 			"pop pop pop"))
   {
     puts("FAIL (error from function)");
-    puts(_cupsRasterErrorString());
+    puts(_ppdRasterErrorString());
     errors ++;
   }
   else
@@ -1567,13 +1567,13 @@ do_ps_tests(void)
       puts("PASS");
   }
 
-  fputs("_cupsRasterExecPS(\"%%Begin/EndFeature code\"): ", stdout);
+  fputs("_ppdRasterExecPS(\"%%Begin/EndFeature code\"): ", stdout);
   fflush(stdout);
 
-  if (_cupsRasterExecPS(&header, &preferred_bits, dsc_code))
+  if (_ppdRasterExecPS(&header, &preferred_bits, dsc_code))
   {
     puts("FAIL (error from function)");
-    puts(_cupsRasterErrorString());
+    puts(_ppdRasterErrorString());
     errors ++;
   }
   else if (header.PageSize[0] != 792 || header.PageSize[1] != 1224)
@@ -1754,8 +1754,8 @@ print_changes(
            expected->cupsColorOrder);
 
   if (header->cupsColorSpace != expected->cupsColorSpace)
-    printf("    cupsColorSpace %s, expected %s\n", _cupsRasterColorSpaceString(header->cupsColorSpace),
-           _cupsRasterColorSpaceString(expected->cupsColorSpace));
+    printf("    cupsColorSpace %s, expected %s\n", _ppdRasterColorSpaceString(header->cupsColorSpace),
+           _ppdRasterColorSpaceString(expected->cupsColorSpace));
 
   if (header->cupsCompression != expected->cupsCompression)
     printf("    cupsCompression %d, expected %d\n", header->cupsCompression,

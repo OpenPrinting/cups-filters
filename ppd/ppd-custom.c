@@ -1,5 +1,5 @@
 /*
- * PPD custom option routines for CUPS.
+ * PPD custom option routines for libppd.
  *
  * Copyright 2007-2015 by Apple Inc.
  * Copyright 1997-2006 by Easy Software Products, all rights reserved.
@@ -59,7 +59,7 @@ ppdFindCustomParam(ppd_coption_t *opt,	/* I - Custom option */
   for (param = (ppd_cparam_t *)cupsArrayFirst(opt->params);
        param;
        param = (ppd_cparam_t *)cupsArrayNext(opt->params))
-    if (!_cups_strcasecmp(param->name, name))
+    if (!_ppd_strcasecmp(param->name, name))
       break;
 
   return (param);

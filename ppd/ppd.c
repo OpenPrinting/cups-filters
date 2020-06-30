@@ -1,5 +1,5 @@
 /*
- * PPD file routines for CUPS.
+ * PPD file routines for libppd.
  *
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
@@ -48,7 +48,7 @@ typedef struct _ppd_line_s
  * Local globals...
  */
 
-static _cups_threadkey_t ppd_globals_key = _CUPS_THREADKEY_INITIALIZER;
+static _ppd_threadkey_t ppd_globals_key = _PPD_THREADKEY_INITIALIZER;
 					/* Thread local storage key */
 #ifdef HAVE_PTHREAD_H
 static pthread_once_t	ppd_globals_key_once = PTHREAD_ONCE_INIT;
@@ -312,9 +312,9 @@ ppdErrorString(ppd_status_t status)	/* I - PPD status */
 
 
   if (status < PPD_OK || status >= PPD_MAX_STATUS)
-    return (_cupsLangString(cupsLangDefault(), _("Unknown")));
+    return (_ppdLangString(cupsLangDefault(), _("Unknown")));
   else
-    return (_cupsLangString(cupsLangDefault(), messages[status]));
+    return (_ppdLangString(cupsLangDefault(), messages[status]));
 }
 
 
@@ -326,17 +326,17 @@ ppdErrorString(ppd_status_t status)	/* I - PPD status */
 cups_encoding_t				/* O - CUPS encoding value */
 _ppdGetEncoding(const char *name)	/* I - LanguageEncoding string */
 {
-  if (!_cups_strcasecmp(name, "ISOLatin1"))
+  if (!_ppd_strcasecmp(name, "ISOLatin1"))
     return (CUPS_ISO8859_1);
-  else if (!_cups_strcasecmp(name, "ISOLatin2"))
+  else if (!_ppd_strcasecmp(name, "ISOLatin2"))
     return (CUPS_ISO8859_2);
-  else if (!_cups_strcasecmp(name, "ISOLatin5"))
+  else if (!_ppd_strcasecmp(name, "ISOLatin5"))
     return (CUPS_ISO8859_5);
-  else if (!_cups_strcasecmp(name, "JIS83-RKSJ"))
+  else if (!_ppd_strcasecmp(name, "JIS83-RKSJ"))
     return (CUPS_JIS_X0213);
-  else if (!_cups_strcasecmp(name, "MacStandard"))
+  else if (!_ppd_strcasecmp(name, "MacStandard"))
     return (CUPS_MAC_ROMAN);
-  else if (!_cups_strcasecmp(name, "WindowsANSI"))
+  else if (!_ppd_strcasecmp(name, "WindowsANSI"))
     return (CUPS_WINDOWS_1252);
   else
     return (CUPS_UTF8);
@@ -365,14 +365,14 @@ _ppdGlobals(void)
   * See if we have allocated the data yet...
   */
 
-  if ((pg = (_ppd_globals_t *)_cupsThreadGetData(ppd_globals_key)) == NULL)
+  if ((pg = (_ppd_globals_t *)_ppdThreadGetData(ppd_globals_key)) == NULL)
   {
    /*
     * No, allocate memory as set the pointer for the key...
     */
 
     if ((pg = ppd_globals_alloc()) != NULL)
-      _cupsThreadSetData(ppd_globals_key, pg);
+      _ppdThreadSetData(ppd_globals_key, pg);
   }
 
  /*
@@ -695,11 +695,11 @@ _ppdOpen(
     if (localization != _PPD_LOCALIZATION_ALL &&
         (temp = strchr(keyword, '.')) != NULL &&
         ((temp - keyword) == 2 || (temp - keyword) == 5) &&
-        _cups_isalpha(keyword[0]) &&
-        _cups_isalpha(keyword[1]) &&
+        _ppd_isalpha(keyword[0]) &&
+        _ppd_isalpha(keyword[1]) &&
         (keyword[2] == '.' ||
-         (keyword[2] == '_' && _cups_isalpha(keyword[3]) &&
-          _cups_isalpha(keyword[4]) && keyword[5] == '.')))
+         (keyword[2] == '_' && _ppd_isalpha(keyword[3]) &&
+          _ppd_isalpha(keyword[4]) && keyword[5] == '.')))
     {
       if (localization == _PPD_LOCALIZATION_NONE ||
 	  (localization == _PPD_LOCALIZATION_DEFAULT &&
@@ -721,7 +721,7 @@ _ppdOpen(
 	     i < (int)(sizeof(color_keywords) / sizeof(color_keywords[0]));
 	     i ++)
 	{
-	  if (!_cups_strcasecmp(temp, color_keywords[i]))
+	  if (!_ppd_strcasecmp(temp, color_keywords[i]))
 	    break;
 	}
 
@@ -906,17 +906,17 @@ _ppdOpen(
       strlcpy(profile->resolution, name, sizeof(profile->resolution));
       strlcpy(profile->media_type, text, sizeof(profile->media_type));
 
-      profile->density      = (float)_cupsStrScand(string, &sptr, loc);
-      profile->gamma        = (float)_cupsStrScand(sptr, &sptr, loc);
-      profile->matrix[0][0] = (float)_cupsStrScand(sptr, &sptr, loc);
-      profile->matrix[0][1] = (float)_cupsStrScand(sptr, &sptr, loc);
-      profile->matrix[0][2] = (float)_cupsStrScand(sptr, &sptr, loc);
-      profile->matrix[1][0] = (float)_cupsStrScand(sptr, &sptr, loc);
-      profile->matrix[1][1] = (float)_cupsStrScand(sptr, &sptr, loc);
-      profile->matrix[1][2] = (float)_cupsStrScand(sptr, &sptr, loc);
-      profile->matrix[2][0] = (float)_cupsStrScand(sptr, &sptr, loc);
-      profile->matrix[2][1] = (float)_cupsStrScand(sptr, &sptr, loc);
-      profile->matrix[2][2] = (float)_cupsStrScand(sptr, &sptr, loc);
+      profile->density      = (float)_ppdStrScand(string, &sptr, loc);
+      profile->gamma        = (float)_ppdStrScand(sptr, &sptr, loc);
+      profile->matrix[0][0] = (float)_ppdStrScand(sptr, &sptr, loc);
+      profile->matrix[0][1] = (float)_ppdStrScand(sptr, &sptr, loc);
+      profile->matrix[0][2] = (float)_ppdStrScand(sptr, &sptr, loc);
+      profile->matrix[1][0] = (float)_ppdStrScand(sptr, &sptr, loc);
+      profile->matrix[1][1] = (float)_ppdStrScand(sptr, &sptr, loc);
+      profile->matrix[1][2] = (float)_ppdStrScand(sptr, &sptr, loc);
+      profile->matrix[2][0] = (float)_ppdStrScand(sptr, &sptr, loc);
+      profile->matrix[2][1] = (float)_ppdStrScand(sptr, &sptr, loc);
+      profile->matrix[2][2] = (float)_ppdStrScand(sptr, &sptr, loc);
     }
     else if (!strcmp(keyword, "cupsFilter"))
     {
@@ -1019,8 +1019,8 @@ _ppdOpen(
       if (!strcmp(ctype, "curve"))
       {
         cparam->type = PPD_CUSTOM_CURVE;
-	cparam->minimum.custom_curve = (float)_cupsStrScand(cminimum, NULL, loc);
-	cparam->maximum.custom_curve = (float)_cupsStrScand(cmaximum, NULL, loc);
+	cparam->minimum.custom_curve = (float)_ppdStrScand(cminimum, NULL, loc);
+	cparam->maximum.custom_curve = (float)_ppdStrScand(cmaximum, NULL, loc);
       }
       else if (!strcmp(ctype, "int"))
       {
@@ -1031,8 +1031,8 @@ _ppdOpen(
       else if (!strcmp(ctype, "invcurve"))
       {
         cparam->type = PPD_CUSTOM_INVCURVE;
-	cparam->minimum.custom_invcurve = (float)_cupsStrScand(cminimum, NULL, loc);
-	cparam->maximum.custom_invcurve = (float)_cupsStrScand(cmaximum, NULL, loc);
+	cparam->minimum.custom_invcurve = (float)_ppdStrScand(cminimum, NULL, loc);
+	cparam->maximum.custom_invcurve = (float)_ppdStrScand(cmaximum, NULL, loc);
       }
       else if (!strcmp(ctype, "passcode"))
       {
@@ -1049,14 +1049,14 @@ _ppdOpen(
       else if (!strcmp(ctype, "points"))
       {
         cparam->type = PPD_CUSTOM_POINTS;
-	cparam->minimum.custom_points = (float)_cupsStrScand(cminimum, NULL, loc);
-	cparam->maximum.custom_points = (float)_cupsStrScand(cmaximum, NULL, loc);
+	cparam->minimum.custom_points = (float)_ppdStrScand(cminimum, NULL, loc);
+	cparam->maximum.custom_points = (float)_ppdStrScand(cmaximum, NULL, loc);
       }
       else if (!strcmp(ctype, "real"))
       {
         cparam->type = PPD_CUSTOM_REAL;
-	cparam->minimum.custom_real = (float)_cupsStrScand(cminimum, NULL, loc);
-	cparam->maximum.custom_real = (float)_cupsStrScand(cmaximum, NULL, loc);
+	cparam->minimum.custom_real = (float)_ppdStrScand(cminimum, NULL, loc);
+	cparam->maximum.custom_real = (float)_ppdStrScand(cmaximum, NULL, loc);
       }
       else if (!strcmp(ctype, "string"))
       {
@@ -1092,7 +1092,7 @@ _ppdOpen(
     else if (!strcmp(keyword, "HWMargins"))
     {
       for (i = 0, sptr = string; i < 4; i ++)
-        ppd->custom_margins[i] = (float)_cupsStrScand(sptr, &sptr, loc);
+        ppd->custom_margins[i] = (float)_ppdStrScand(sptr, &sptr, loc);
     }
     else if (!strncmp(keyword, "Custom", 6) && !strcmp(name, "True") && !option)
     {
@@ -1111,7 +1111,7 @@ _ppdOpen(
 	goto error;
       }
 
-      if (option && !_cups_strcasecmp(option->keyword, keyword + 6))
+      if (option && !_ppd_strcasecmp(option->keyword, keyword + 6))
         custom_option = option;
       else
         custom_option = ppdFindOption(ppd, keyword + 6);
@@ -1155,7 +1155,7 @@ _ppdOpen(
 
 	ppd_add_size(ppd, "Custom");
 
-	if (option && !_cups_strcasecmp(option->keyword, "PageRegion"))
+	if (option && !_ppd_strcasecmp(option->keyword, "PageRegion"))
 	  custom_option = option;
 	else
 	  custom_option = ppdFindOption(ppd, "PageRegion");
@@ -1273,9 +1273,9 @@ _ppdOpen(
       DEBUG_printf(("2_ppdOpen: name=\"%s\" (%d)", name, (int)strlen(name)));
 
       if (name[0] == '*')
-        _cups_strcpy(name, name + 1); /* Eliminate leading asterisk */
+        _ppd_strcpy(name, name + 1); /* Eliminate leading asterisk */
 
-      for (i = (int)strlen(name) - 1; i > 0 && _cups_isspace(name[i]); i --)
+      for (i = (int)strlen(name) - 1; i > 0 && _ppd_isspace(name[i]); i --)
         name[i] = '\0'; /* Eliminate trailing spaces */
 
       DEBUG_printf(("2_ppdOpen: OpenUI of %s in group %s...", name,
@@ -1363,7 +1363,7 @@ _ppdOpen(
       * attribute...
       */
 
-      if (!_cups_strcasecmp(name, "PageRegion"))
+      if (!_ppd_strcasecmp(name, "PageRegion"))
         strlcpy(custom_name, "CustomPageSize", sizeof(custom_name));
       else
         snprintf(custom_name, sizeof(custom_name), "Custom%.34s", name);
@@ -1413,7 +1413,7 @@ _ppdOpen(
       */
 
       if (name[0] == '*')
-        _cups_strcpy(name, name + 1);
+        _ppd_strcpy(name, name + 1);
 
       option = ppd_get_option(group, name);
 
@@ -1573,7 +1573,7 @@ _ppdOpen(
     }
     else if (!strcmp(keyword, "OrderDependency"))
     {
-      order = (float)_cupsStrScand(string, &sptr, loc);
+      order = (float)_ppdStrScand(string, &sptr, loc);
 
       if (!sptr || sscanf(sptr, "%40s%40s", name, keyword) != 2)
       {
@@ -1583,7 +1583,7 @@ _ppdOpen(
       }
 
       if (keyword[0] == '*')
-        _cups_strcpy(keyword, keyword + 1);
+        _ppd_strcpy(keyword, keyword + 1);
 
       if (!strcmp(name, "ExitServer"))
         section = PPD_ORDER_EXIT;
@@ -1744,7 +1744,7 @@ _ppdOpen(
 	    */
 
 	    if (constraint->option1[0] == '*')
-	      _cups_strcpy(constraint->option1, constraint->option1 + 1);
+	      _ppd_strcpy(constraint->option1, constraint->option1 + 1);
 	    else if (pg->ppd_conform == PPD_CONFORM_STRICT)
 	    {
 	      pg->ppd_status = PPD_BAD_UI_CONSTRAINTS;
@@ -1752,7 +1752,7 @@ _ppdOpen(
 	    }
 
 	    if (constraint->choice1[0] == '*')
-	      _cups_strcpy(constraint->option2, constraint->choice1 + 1);
+	      _ppd_strcpy(constraint->option2, constraint->choice1 + 1);
 	    else if (pg->ppd_conform == PPD_CONFORM_STRICT)
 	    {
 	      pg->ppd_status = PPD_BAD_UI_CONSTRAINTS;
@@ -1778,12 +1778,12 @@ _ppdOpen(
 	    }
 
 	   /*
-	    * The following _cups_strcpy's are safe, as optionN and
+	    * The following _ppd_strcpy's are safe, as optionN and
 	    * choiceN are all the same size (size defined by PPD spec...)
 	    */
 
 	    if (constraint->option1[0] == '*')
-	      _cups_strcpy(constraint->option1, constraint->option1 + 1);
+	      _ppd_strcpy(constraint->option1, constraint->option1 + 1);
 	    else if (pg->ppd_conform == PPD_CONFORM_STRICT)
 	    {
 	      pg->ppd_status = PPD_BAD_UI_CONSTRAINTS;
@@ -1799,14 +1799,14 @@ _ppdOpen(
 		goto error;
 	      }
 
-	      _cups_strcpy(constraint->choice2, constraint->option2);
-	      _cups_strcpy(constraint->option2, constraint->choice1 + 1);
+	      _ppd_strcpy(constraint->choice2, constraint->option2);
+	      _ppd_strcpy(constraint->option2, constraint->choice1 + 1);
               constraint->choice1[0] = '\0';
 	    }
 	    else
 	    {
 	      if (constraint->option2[0] == '*')
-  	        _cups_strcpy(constraint->option2, constraint->option2 + 1);
+  	        _ppd_strcpy(constraint->option2, constraint->option2 + 1);
 	      else if (pg->ppd_conform == PPD_CONFORM_STRICT)
 	      {
 		pg->ppd_status = PPD_BAD_UI_CONSTRAINTS;
@@ -1833,7 +1833,7 @@ _ppdOpen(
 	    }
 
 	    if (constraint->option1[0] == '*')
-	      _cups_strcpy(constraint->option1, constraint->option1 + 1);
+	      _ppd_strcpy(constraint->option1, constraint->option1 + 1);
 	    else if (pg->ppd_conform == PPD_CONFORM_STRICT)
 	    {
 	      pg->ppd_status = PPD_BAD_UI_CONSTRAINTS;
@@ -1848,7 +1848,7 @@ _ppdOpen(
 	    }
 
 	    if (constraint->option2[0] == '*')
-  	      _cups_strcpy(constraint->option2, constraint->option2 + 1);
+  	      _ppd_strcpy(constraint->option2, constraint->option2 + 1);
 	    else if (pg->ppd_conform == PPD_CONFORM_STRICT)
 	    {
 	      pg->ppd_status = PPD_BAD_UI_CONSTRAINTS;
@@ -1873,7 +1873,7 @@ _ppdOpen(
     }
     else if (!strcmp(keyword, "PaperDimension"))
     {
-      if (!_cups_strcasecmp(name, "custom") || !_cups_strncasecmp(name, "custom.", 7))
+      if (!_ppd_strcasecmp(name, "custom") || !_ppd_strncasecmp(name, "custom.", 7))
       {
         char cname[PPD_MAX_NAME];	/* Rewrite with a leading underscore */
         snprintf(cname, sizeof(cname), "_%.39s", name);
@@ -1894,15 +1894,15 @@ _ppdOpen(
 	goto error;
       }
 
-      size->width  = (float)_cupsStrScand(string, &sptr, loc);
-      size->length = (float)_cupsStrScand(sptr, NULL, loc);
+      size->width  = (float)_ppdStrScand(string, &sptr, loc);
+      size->length = (float)_ppdStrScand(sptr, NULL, loc);
 
       free(string);
       string = NULL;
     }
     else if (!strcmp(keyword, "ImageableArea"))
     {
-      if (!_cups_strcasecmp(name, "custom") || !_cups_strncasecmp(name, "custom.", 7))
+      if (!_ppd_strcasecmp(name, "custom") || !_ppd_strncasecmp(name, "custom.", 7))
       {
         char cname[PPD_MAX_NAME];	/* Rewrite with a leading underscore */
         snprintf(cname, sizeof(cname), "_%.39s", name);
@@ -1923,10 +1923,10 @@ _ppdOpen(
 	goto error;
       }
 
-      size->left   = (float)_cupsStrScand(string, &sptr, loc);
-      size->bottom = (float)_cupsStrScand(sptr, &sptr, loc);
-      size->right  = (float)_cupsStrScand(sptr, &sptr, loc);
-      size->top    = (float)_cupsStrScand(sptr, NULL, loc);
+      size->left   = (float)_ppdStrScand(string, &sptr, loc);
+      size->bottom = (float)_ppdStrScand(sptr, &sptr, loc);
+      size->right  = (float)_ppdStrScand(sptr, &sptr, loc);
+      size->top    = (float)_ppdStrScand(sptr, NULL, loc);
 
       free(string);
       string = NULL;
@@ -1938,7 +1938,7 @@ _ppdOpen(
     {
       DEBUG_printf(("2_ppdOpen: group=%p, subgroup=%p", group, subgroup));
 
-      if (!_cups_strcasecmp(name, "custom") || !_cups_strncasecmp(name, "custom.", 7))
+      if (!_ppd_strcasecmp(name, "custom") || !_ppd_strncasecmp(name, "custom.", 7))
       {
         char cname[PPD_MAX_NAME];	/* Rewrite with a leading underscore */
         snprintf(cname, sizeof(cname), "_%.39s", name);
@@ -2424,7 +2424,7 @@ static int				/* O - Result of comparison */
 ppd_compare_attrs(ppd_attr_t *a,	/* I - First attribute */
                   ppd_attr_t *b)	/* I - Second attribute */
 {
-  return (_cups_strcasecmp(a->name, b->name));
+  return (_ppd_strcasecmp(a->name, b->name));
 }
 
 
@@ -2448,7 +2448,7 @@ static int				/* O - Result of comparison */
 ppd_compare_coptions(ppd_coption_t *a,	/* I - First option */
                      ppd_coption_t *b)	/* I - Second option */
 {
-  return (_cups_strcasecmp(a->keyword, b->keyword));
+  return (_ppd_strcasecmp(a->keyword, b->keyword));
 }
 
 
@@ -2460,7 +2460,7 @@ static int				/* O - Result of comparison */
 ppd_compare_options(ppd_option_t *a,	/* I - First option */
                     ppd_option_t *b)	/* I - Second option */
 {
-  return (_cups_strcasecmp(a->keyword, b->keyword));
+  return (_ppd_strcasecmp(a->keyword, b->keyword));
 }
 
 
@@ -2488,7 +2488,7 @@ ppd_decode(char *string)		/* I - String to decode */
       inptr ++;
       while (isxdigit(*inptr & 255))
       {
-	if (_cups_isalpha(*inptr))
+	if (_ppd_isalpha(*inptr))
 	  *outptr = (char)((tolower(*inptr) - 'a' + 10) << 4);
 	else
 	  *outptr = (char)((*inptr - '0') << 4);
@@ -2498,7 +2498,7 @@ ppd_decode(char *string)		/* I - String to decode */
         if (!isxdigit(*inptr & 255))
 	  break;
 
-	if (_cups_isalpha(*inptr))
+	if (_ppd_isalpha(*inptr))
 	  *outptr |= (char)(tolower(*inptr) - 'a' + 10);
 	else
 	  *outptr |= (char)(*inptr - '0');
@@ -3193,7 +3193,7 @@ ppd_read(cups_file_t    *fp,		/* I - File to read from */
       */
 
       for (lineptr = line->buffer; *lineptr; lineptr ++)
-        if (*lineptr && !_cups_isspace(*lineptr))
+        if (*lineptr && !_ppd_isspace(*lineptr))
 	  break;
 
       if (*lineptr)
@@ -3213,7 +3213,7 @@ ppd_read(cups_file_t    *fp,		/* I - File to read from */
 
     keyptr = keyword;
 
-    while (*lineptr && *lineptr != ':' && !_cups_isspace(*lineptr))
+    while (*lineptr && *lineptr != ':' && !_ppd_isspace(*lineptr))
     {
       if (*lineptr <= ' ' || *lineptr > 126 || *lineptr == '/' ||
           (keyptr - keyword) >= (PPD_MAX_NAME - 1))
@@ -3232,18 +3232,18 @@ ppd_read(cups_file_t    *fp,		/* I - File to read from */
 
     mask |= PPD_KEYWORD;
 
-    if (_cups_isspace(*lineptr))
+    if (_ppd_isspace(*lineptr))
     {
      /*
       * Get an option name...
       */
 
-      while (_cups_isspace(*lineptr))
+      while (_ppd_isspace(*lineptr))
         lineptr ++;
 
       optptr = option;
 
-      while (*lineptr && !_cups_isspace(*lineptr) && *lineptr != ':' &&
+      while (*lineptr && !_ppd_isspace(*lineptr) && *lineptr != ':' &&
              *lineptr != '/')
       {
 	if (*lineptr <= ' ' || *lineptr > 126 ||
@@ -3258,13 +3258,13 @@ ppd_read(cups_file_t    *fp,		/* I - File to read from */
 
       *optptr = '\0';
 
-      if (_cups_isspace(*lineptr) && pg->ppd_conform == PPD_CONFORM_STRICT)
+      if (_ppd_isspace(*lineptr) && pg->ppd_conform == PPD_CONFORM_STRICT)
       {
         pg->ppd_status = PPD_ILLEGAL_WHITESPACE;
 	return (0);
       }
 
-      while (_cups_isspace(*lineptr))
+      while (_ppd_isspace(*lineptr))
 	lineptr ++;
 
       mask |= PPD_OPTION;
@@ -3304,13 +3304,13 @@ ppd_read(cups_file_t    *fp,		/* I - File to read from */
       }
     }
 
-    if (_cups_isspace(*lineptr) && pg->ppd_conform == PPD_CONFORM_STRICT)
+    if (_ppd_isspace(*lineptr) && pg->ppd_conform == PPD_CONFORM_STRICT)
     {
       pg->ppd_status = PPD_ILLEGAL_WHITESPACE;
       return (0);
     }
 
-    while (_cups_isspace(*lineptr))
+    while (_ppd_isspace(*lineptr))
       lineptr ++;
 
     if (*lineptr == ':')
@@ -3320,11 +3320,11 @@ ppd_read(cups_file_t    *fp,		/* I - File to read from */
       */
 
       lineptr ++;
-      while (_cups_isspace(*lineptr))
+      while (_ppd_isspace(*lineptr))
         lineptr ++;
 
       strptr = lineptr + strlen(lineptr) - 1;
-      while (strptr >= lineptr && _cups_isspace(*strptr))
+      while (strptr >= lineptr && _ppd_isspace(*strptr))
         *strptr-- = '\0';
 
       if (*strptr == '\"')
@@ -3421,10 +3421,10 @@ ppd_update_filters(ppd_file_t     *ppd,	/* I - PPD file */
       DEBUG_puts("5ppd_update_filters: Found maxsize(nnn).");
 
       ptr ++;
-      while (_cups_isspace(*ptr))
+      while (_ppd_isspace(*ptr))
 	ptr ++;
 
-      _cups_strcpy(program, ptr);
+      _ppd_strcpy(program, ptr);
       DEBUG_printf(("5ppd_update_filters: New program=\"%s\"", program));
     }
 

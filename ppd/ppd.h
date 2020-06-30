@@ -13,8 +13,8 @@
  * PostScript is a trademark of Adobe Systems, Inc.
  */
 
-#ifndef _CUPS_PPD_H_
-#  define _CUPS_PPD_H_
+#ifndef _PPD_PPD_H_
+#  define _PPD_PPD_H_
 
 /*
  * Include necessary headers...
@@ -68,14 +68,14 @@ typedef int (*cups_interpret_cb_t)(cups_page_header2_t *header, int preferred_bi
 					 * dictionary and is 0 if undefined.
 					 ****/
 
-typedef enum ppd_ui_e			/**** UI Types @deprecated@ ****/
+typedef enum ppd_ui_e			/**** UI Types ****/
 {
   PPD_UI_BOOLEAN,			/* True or False option */
   PPD_UI_PICKONE,			/* Pick one from a list */
   PPD_UI_PICKMANY			/* Pick zero or more from a list */
 } ppd_ui_t;
 
-typedef enum ppd_section_e		/**** Order dependency sections @deprecated@ ****/
+typedef enum ppd_section_e		/**** Order dependency sections ****/
 {
   PPD_ORDER_ANY,			/* Option code can be anywhere in the file */
   PPD_ORDER_DOCUMENT,			/* ... must be in the DocumentSetup section */
@@ -85,7 +85,7 @@ typedef enum ppd_section_e		/**** Order dependency sections @deprecated@ ****/
   PPD_ORDER_PROLOG			/* ... must be in the Prolog section */
 } ppd_section_t;
 
-typedef enum ppd_cs_e			/**** Colorspaces @deprecated@ ****/
+typedef enum ppd_cs_e			/**** Colorspaces ****/
 {
   PPD_CS_CMYK = -4,			/* CMYK colorspace */
   PPD_CS_CMY,				/* CMY colorspace */
@@ -95,7 +95,7 @@ typedef enum ppd_cs_e			/**** Colorspaces @deprecated@ ****/
   PPD_CS_N				/* DeviceN colorspace */
 } ppd_cs_t;
 
-typedef enum ppd_status_e		/**** Status Codes @deprecated@ ****/
+typedef enum ppd_status_e		/**** Status Codes ****/
 {
   PPD_OK = 0,				/* OK */
   PPD_FILE_OPEN_ERROR,			/* Unable to open PPD file */
@@ -126,16 +126,16 @@ typedef enum ppd_status_e		/**** Status Codes @deprecated@ ****/
   PPD_MAX_STATUS			/* @private@ */
 } ppd_status_t;
 
-enum ppd_conform_e			/**** Conformance Levels @deprecated@ ****/
+enum ppd_conform_e			/**** Conformance Levels ****/
 {
   PPD_CONFORM_RELAXED,			/* Relax whitespace and control char */
   PPD_CONFORM_STRICT			/* Require strict conformance */
 };
 
 typedef enum ppd_conform_e ppd_conform_t;
-					/**** Conformance Levels @deprecated@ ****/
+					/**** Conformance Levels ****/
 
-typedef struct ppd_attr_s		/**** PPD Attribute Structure @deprecated@ ****/
+typedef struct ppd_attr_s		/**** PPD Attribute Structure ****/
 {
   char		name[PPD_MAX_NAME];	/* Name of attribute (cupsXYZ) */
   char		spec[PPD_MAX_NAME];	/* Specifier string, if any */
@@ -144,9 +144,9 @@ typedef struct ppd_attr_s		/**** PPD Attribute Structure @deprecated@ ****/
 } ppd_attr_t;
 
 typedef struct ppd_option_s ppd_option_t;
-					/**** Options @deprecated@ ****/
+					/**** Options ****/
 
-typedef struct ppd_choice_s		/**** Option choices @deprecated@ ****/
+typedef struct ppd_choice_s		/**** Option choices ****/
 {
   char		marked;			/* 0 if not selected, 1 otherwise */
   char		choice[PPD_MAX_NAME];	/* Computer-readable option name */
@@ -155,7 +155,7 @@ typedef struct ppd_choice_s		/**** Option choices @deprecated@ ****/
   ppd_option_t	*option;		/* Pointer to parent option structure */
 } ppd_choice_t;
 
-struct ppd_option_s			/**** Options @deprecated@ ****/
+struct ppd_option_s			/**** Options ****/
 {
   char		conflicted;		/* 0 if no conflicts exist, 1 otherwise */
   char		keyword[PPD_MAX_NAME];	/* Option keyword name ("PageSize", etc.) */
@@ -168,7 +168,7 @@ struct ppd_option_s			/**** Options @deprecated@ ****/
   ppd_choice_t	*choices;		/* Option choices */
 };
 
-typedef struct ppd_group_s		/**** Groups @deprecated@ ****/
+typedef struct ppd_group_s		/**** Groups ****/
 {
   /**** Group text strings are limited to 39 chars + nul in order to
    **** preserve binary compatibility and allow applications to get
@@ -183,7 +183,7 @@ typedef struct ppd_group_s		/**** Groups @deprecated@ ****/
   struct ppd_group_s *subgroups;	/* Sub-groups (max depth = 1) */
 } ppd_group_t;
 
-typedef struct ppd_const_s		/**** Constraints @deprecated@ ****/
+typedef struct ppd_const_s		/**** Constraints ****/
 {
   char		option1[PPD_MAX_NAME];	/* First keyword */
   char		choice1[PPD_MAX_NAME];	/* First option/choice (blank for all) */
@@ -191,7 +191,7 @@ typedef struct ppd_const_s		/**** Constraints @deprecated@ ****/
   char		choice2[PPD_MAX_NAME];	/* Second option/choice (blank for all) */
 } ppd_const_t;
 
-typedef struct ppd_size_s		/**** Page Sizes @deprecated@ ****/
+typedef struct ppd_size_s		/**** Page Sizes ****/
 {
   int		marked;			/* Page size selected? */
   char		name[PPD_MAX_NAME];	/* Media size option */
@@ -203,14 +203,14 @@ typedef struct ppd_size_s		/**** Page Sizes @deprecated@ ****/
   float		top;			/* Top printable margin in points */
 } ppd_size_t;
 
-typedef struct ppd_emul_s		/**** Emulators @deprecated@ ****/
+typedef struct ppd_emul_s		/**** Emulators ****/
 {
   char		name[PPD_MAX_NAME];	/* Emulator name */
   char		*start;			/* Code to switch to this emulation */
   char		*stop;			/* Code to stop this emulation */
 } ppd_emul_t;
 
-typedef struct ppd_profile_s		/**** sRGB Color Profiles @deprecated@ ****/
+typedef struct ppd_profile_s		/**** sRGB Color Profiles ****/
 {
   char		resolution[PPD_MAX_NAME];
   					/* Resolution or "-" */
@@ -222,7 +222,7 @@ typedef struct ppd_profile_s		/**** sRGB Color Profiles @deprecated@ ****/
 } ppd_profile_t;
 
 /**** New in CUPS 1.2/macOS 10.5 ****/
-typedef enum ppd_cptype_e		/**** Custom Parameter Type @deprecated@ ****/
+typedef enum ppd_cptype_e		/**** Custom Parameter Type ****/
 {
   PPD_CUSTOM_UNKNOWN = -1,		/* Unknown type (error) */
   PPD_CUSTOM_CURVE,			/* Curve value for f(x) = x^value */
@@ -235,7 +235,7 @@ typedef enum ppd_cptype_e		/**** Custom Parameter Type @deprecated@ ****/
   PPD_CUSTOM_STRING			/* String of characters */
 } ppd_cptype_t;
 
-typedef union ppd_cplimit_u		/**** Custom Parameter Limit @deprecated@ ****/
+typedef union ppd_cplimit_u		/**** Custom Parameter Limit ****/
 {
   float		custom_curve;		/* Gamma value */
   int		custom_int;		/* Integer value */
@@ -247,7 +247,7 @@ typedef union ppd_cplimit_u		/**** Custom Parameter Limit @deprecated@ ****/
   int		custom_string;		/* String length */
 } ppd_cplimit_t;
 
-typedef union ppd_cpvalue_u		/**** Custom Parameter Value @deprecated@ ****/
+typedef union ppd_cpvalue_u		/**** Custom Parameter Value ****/
 {
   float		custom_curve;		/* Gamma value */
   int		custom_int;		/* Integer value */
@@ -259,7 +259,7 @@ typedef union ppd_cpvalue_u		/**** Custom Parameter Value @deprecated@ ****/
   char		*custom_string;		/* String value */
 } ppd_cpvalue_t;
 
-typedef struct ppd_cparam_s		/**** Custom Parameter @deprecated@ ****/
+typedef struct ppd_cparam_s		/**** Custom Parameter ****/
 {
   char		name[PPD_MAX_NAME];	/* Parameter name */
   char		text[PPD_MAX_TEXT];	/* Human-readable text */
@@ -270,7 +270,7 @@ typedef struct ppd_cparam_s		/**** Custom Parameter @deprecated@ ****/
   ppd_cpvalue_t	current;		/* Current value */
 } ppd_cparam_t;
 
-typedef struct ppd_coption_s		/**** Custom Option @deprecated@ ****/
+typedef struct ppd_coption_s		/**** Custom Option ****/
 {
   char		keyword[PPD_MAX_NAME];	/* Name of option that is being extended... */
   ppd_option_t	*option;		/* Option that is being extended... */
@@ -279,9 +279,9 @@ typedef struct ppd_coption_s		/**** Custom Option @deprecated@ ****/
 } ppd_coption_t;
 
 typedef struct _ppd_cache_s _ppd_cache_t;
-					/**** PPD cache and mapping data @deprecated@ ****/
+					/**** PPD cache and mapping data ****/
 
-typedef struct ppd_file_s		/**** PPD File @deprecated@ ****/
+typedef struct ppd_file_s		/**** PPD File ****/
 {
   int		language_level;		/* Language level of device */
   int		color_device;		/* 1 = color device, 0 = grayscale */
@@ -318,13 +318,13 @@ typedef struct ppd_file_s		/**** PPD File @deprecated@ ****/
   ppd_const_t	*consts;		/* UI/Non-UI constraints */
   int		num_fonts;		/* Number of pre-loaded fonts */
   char		**fonts;		/* Pre-loaded fonts */
-  int		num_profiles;		/* Number of sRGB color profiles @deprecated@ */
-  ppd_profile_t	*profiles;		/* sRGB color profiles @deprecated@ */
+  int		num_profiles;		/* Number of sRGB color profiles */
+  ppd_profile_t	*profiles;		/* sRGB color profiles */
   int		num_filters;		/* Number of filters */
   char		**filters;		/* Filter strings... */
 
   /**** New in CUPS 1.1 ****/
-  int		flip_duplex;		/* 1 = Flip page for back sides @deprecated@ */
+  int		flip_duplex;		/* 1 = Flip page for back sides */
 
   /**** New in CUPS 1.1.19 ****/
   char		*protocols;		/* Protocols (BCP, TBCP) string @since CUPS 1.1.19/macOS 10.3@ */
@@ -452,4 +452,4 @@ extern int		ppdPageSizeLimits(ppd_file_t *ppd,
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
-#endif /* !_CUPS_PPD_H_ */
+#endif /* !_PPD_PPD_H_ */

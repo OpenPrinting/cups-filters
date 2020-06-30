@@ -1,5 +1,5 @@
 /*
- * String functions for CUPS.
+ * String functions for libppd.
  *
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
@@ -12,7 +12,7 @@
  * Include necessary headers...
  */
 
-#define _CUPS_STRING_C_
+#define _PPD_STRING_C_
 #include "string-private.h"
 #include "array-private.h"
 #include "thread-private.h"
@@ -25,7 +25,7 @@
  * Local globals...
  */
 
-static _cups_mutex_t	sp_mutex = _CUPS_MUTEX_INITIALIZER;
+static _ppd_mutex_t	sp_mutex = _PPD_MUTEX_INITIALIZER;
 					/* Mutex to control access to pool */
 static cups_array_t	*stringpool = NULL;
 					/* Global string pool */
@@ -35,18 +35,18 @@ static cups_array_t	*stringpool = NULL;
  * Local functions...
  */
 
-static int	compare_sp_items(_cups_sp_item_t *a, _cups_sp_item_t *b);
+static int	compare_sp_items(_ppd_sp_item_t *a, _ppd_sp_item_t *b);
 
 
 /*
- * '_cupsStrAlloc()' - Allocate/reference a string.
+ * '_ppdStrAlloc()' - Allocate/reference a string.
  */
 
 char *					/* O - String pointer */
-_cupsStrAlloc(const char *s)		/* I - String */
+_ppdStrAlloc(const char *s)		/* I - String */
 {
   size_t		slen;		/* Length of string */
-  _cups_sp_item_t	*item,		/* String pool item */
+  _ppd_sp_item_t	*item,		/* String pool item */
 			*key;		/* Search key */
 
 
@@ -61,14 +61,14 @@ _cupsStrAlloc(const char *s)		/* I - String */
   * Get the string pool...
   */
 
-  _cupsMutexLock(&sp_mutex);
+  _ppdMutexLock(&sp_mutex);
 
   if (!stringpool)
     stringpool = cupsArrayNew((cups_array_func_t)compare_sp_items, NULL);
 
   if (!stringpool)
   {
-    _cupsMutexUnlock(&sp_mutex);
+    _ppdMutexUnlock(&sp_mutex);
 
     return (NULL);
   }
@@ -77,9 +77,9 @@ _cupsStrAlloc(const char *s)		/* I - String */
   * See if the string is already in the pool...
   */
 
-  key = (_cups_sp_item_t *)(s - offsetof(_cups_sp_item_t, str));
+  key = (_ppd_sp_item_t *)(s - offsetof(_ppd_sp_item_t, str));
 
-  if ((item = (_cups_sp_item_t *)cupsArrayFind(stringpool, key)) != NULL)
+  if ((item = (_ppd_sp_item_t *)cupsArrayFind(stringpool, key)) != NULL)
   {
    /*
     * Found it, return the cached string...
@@ -92,11 +92,11 @@ _cupsStrAlloc(const char *s)		/* I - String */
                   "ref_count=%d", item, item->str, s, item->guard,
 		  item->ref_count));
 
-    if (item->guard != _CUPS_STR_GUARD)
+    if (item->guard != _PPD_STR_GUARD)
       abort();
 #endif /* DEBUG_GUARDS */
 
-    _cupsMutexUnlock(&sp_mutex);
+    _ppdMutexUnlock(&sp_mutex);
 
     return (item->str);
   }
@@ -106,10 +106,10 @@ _cupsStrAlloc(const char *s)		/* I - String */
   */
 
   slen = strlen(s);
-  item = (_cups_sp_item_t *)calloc(1, sizeof(_cups_sp_item_t) + slen);
+  item = (_ppd_sp_item_t *)calloc(1, sizeof(_ppd_sp_item_t) + slen);
   if (!item)
   {
-    _cupsMutexUnlock(&sp_mutex);
+    _ppdMutexUnlock(&sp_mutex);
 
     return (NULL);
   }
@@ -118,7 +118,7 @@ _cupsStrAlloc(const char *s)		/* I - String */
   memcpy(item->str, s, slen + 1);
 
 #ifdef DEBUG_GUARDS
-  item->guard = _CUPS_STR_GUARD;
+  item->guard = _PPD_STR_GUARD;
 
   DEBUG_printf(("5_cupsStrAlloc: Created string %p(%s) for \"%s\", guard=%08x, "
 		"ref_count=%d", item, item->str, s, item->guard,
@@ -131,45 +131,45 @@ _cupsStrAlloc(const char *s)		/* I - String */
 
   cupsArrayAdd(stringpool, item);
 
-  _cupsMutexUnlock(&sp_mutex);
+  _ppdMutexUnlock(&sp_mutex);
 
   return (item->str);
 }
 
 
 /*
- * '_cupsStrFlush()' - Flush the string pool.
+ * '_ppdStrFlush()' - Flush the string pool.
  */
 
 void
-_cupsStrFlush(void)
+_ppdStrFlush(void)
 {
-  _cups_sp_item_t	*item;		/* Current item */
+  _ppd_sp_item_t	*item;		/* Current item */
 
 
   DEBUG_printf(("4_cupsStrFlush: %d strings in array",
                 cupsArrayCount(stringpool)));
 
-  _cupsMutexLock(&sp_mutex);
+  _ppdMutexLock(&sp_mutex);
 
-  for (item = (_cups_sp_item_t *)cupsArrayFirst(stringpool);
+  for (item = (_ppd_sp_item_t *)cupsArrayFirst(stringpool);
        item;
-       item = (_cups_sp_item_t *)cupsArrayNext(stringpool))
+       item = (_ppd_sp_item_t *)cupsArrayNext(stringpool))
     free(item);
 
   cupsArrayDelete(stringpool);
   stringpool = NULL;
 
-  _cupsMutexUnlock(&sp_mutex);
+  _ppdMutexUnlock(&sp_mutex);
 }
 
 
 /*
- * '_cupsStrFormatd()' - Format a floating-point number.
+ * '_ppdStrFormatd()' - Format a floating-point number.
  */
 
 char *					/* O - Pointer to end of string */
-_cupsStrFormatd(char         *buf,	/* I - String */
+_ppdStrFormatd(char         *buf,	/* I - String */
                 char         *bufend,	/* I - End of string buffer */
 		double       number,	/* I - Number to format */
                 struct lconv *loc)	/* I - Locale data */
@@ -245,13 +245,13 @@ _cupsStrFormatd(char         *buf,	/* I - String */
 
 
 /*
- * '_cupsStrFree()' - Free/dereference a string.
+ * '_ppdStrFree()' - Free/dereference a string.
  */
 
 void
-_cupsStrFree(const char *s)		/* I - String to free */
+_ppdStrFree(const char *s)		/* I - String to free */
 {
-  _cups_sp_item_t	*item,		/* String pool item */
+  _ppd_sp_item_t	*item,		/* String pool item */
 			*key;		/* Search key */
 
 
@@ -277,11 +277,11 @@ _cupsStrFree(const char *s)		/* I - String to free */
   * See if the string is already in the pool...
   */
 
-  _cupsMutexLock(&sp_mutex);
+  _ppdMutexLock(&sp_mutex);
 
-  key = (_cups_sp_item_t *)(s - offsetof(_cups_sp_item_t, str));
+  key = (_ppd_sp_item_t *)(s - offsetof(_ppd_sp_item_t, str));
 
-  if ((item = (_cups_sp_item_t *)cupsArrayFind(stringpool, key)) != NULL &&
+  if ((item = (_ppd_sp_item_t *)cupsArrayFind(stringpool, key)) != NULL &&
       item == key)
   {
    /*
@@ -289,7 +289,7 @@ _cupsStrFree(const char *s)		/* I - String to free */
     */
 
 #ifdef DEBUG_GUARDS
-    if (key->guard != _CUPS_STR_GUARD)
+    if (key->guard != _PPD_STR_GUARD)
     {
       DEBUG_printf(("5_cupsStrFree: Freeing string %p(%s), guard=%08x, ref_count=%d", key, key->str, key->guard, key->ref_count));
       abort();
@@ -310,12 +310,12 @@ _cupsStrFree(const char *s)		/* I - String to free */
     }
   }
 
-  _cupsMutexUnlock(&sp_mutex);
+  _ppdMutexUnlock(&sp_mutex);
 }
 
 
 /*
- * '_cupsStrRetain()' - Increment the reference count of a string.
+ * '_ppdStrRetain()' - Increment the reference count of a string.
  *
  * Note: This function does not verify that the passed pointer is in the
  *       string pool, so any calls to it MUST know they are passing in a
@@ -323,17 +323,17 @@ _cupsStrFree(const char *s)		/* I - String to free */
  */
 
 char *					/* O - Pointer to string */
-_cupsStrRetain(const char *s)		/* I - String to retain */
+_ppdStrRetain(const char *s)		/* I - String to retain */
 {
-  _cups_sp_item_t	*item;		/* Pointer to string pool item */
+  _ppd_sp_item_t	*item;		/* Pointer to string pool item */
 
 
   if (s)
   {
-    item = (_cups_sp_item_t *)(s - offsetof(_cups_sp_item_t, str));
+    item = (_ppd_sp_item_t *)(s - offsetof(_ppd_sp_item_t, str));
 
 #ifdef DEBUG_GUARDS
-    if (item->guard != _CUPS_STR_GUARD)
+    if (item->guard != _PPD_STR_GUARD)
     {
       DEBUG_printf(("5_cupsStrRetain: Retaining string %p(%s), guard=%08x, "
                     "ref_count=%d", item, s, item->guard, item->ref_count));
@@ -341,11 +341,11 @@ _cupsStrRetain(const char *s)		/* I - String to retain */
     }
 #endif /* DEBUG_GUARDS */
 
-    _cupsMutexLock(&sp_mutex);
+    _ppdMutexLock(&sp_mutex);
 
     item->ref_count ++;
 
-    _cupsMutexUnlock(&sp_mutex);
+    _ppdMutexUnlock(&sp_mutex);
   }
 
   return ((char *)s);
@@ -353,14 +353,14 @@ _cupsStrRetain(const char *s)		/* I - String to retain */
 
 
 /*
- * '_cupsStrScand()' - Scan a string for a floating-point number.
+ * '_ppdStrScand()' - Scan a string for a floating-point number.
  *
  * This function handles the locale-specific BS so that a decimal
  * point is always the period (".")...
  */
 
 double					/* O - Number */
-_cupsStrScand(const char   *buf,	/* I - Pointer to number */
+_ppdStrScand(const char   *buf,	/* I - Pointer to number */
               char         **bufptr,	/* O - New pointer or NULL on error */
               struct lconv *loc)	/* I - Locale data */
 {
@@ -379,7 +379,7 @@ _cupsStrScand(const char   *buf,	/* I - Pointer to number */
   * Skip leading whitespace...
   */
 
-  while (_cups_isspace(*buf))
+  while (_ppd_isspace(*buf))
     buf ++;
 
  /*
@@ -491,30 +491,30 @@ _cupsStrScand(const char   *buf,	/* I - Pointer to number */
 
 
 /*
- * '_cupsStrStatistics()' - Return allocation statistics for string pool.
+ * '_ppdStrStatistics()' - Return allocation statistics for string pool.
  */
 
 size_t					/* O - Number of strings */
-_cupsStrStatistics(size_t *alloc_bytes,	/* O - Allocated bytes */
+_ppdStrStatistics(size_t *alloc_bytes,	/* O - Allocated bytes */
                    size_t *total_bytes)	/* O - Total string bytes */
 {
   size_t		count,		/* Number of strings */
 			abytes,		/* Allocated string bytes */
 			tbytes,		/* Total string bytes */
 			len;		/* Length of string */
-  _cups_sp_item_t	*item;		/* Current item */
+  _ppd_sp_item_t	*item;		/* Current item */
 
 
  /*
   * Loop through strings in pool, counting everything up...
   */
 
-  _cupsMutexLock(&sp_mutex);
+  _ppdMutexLock(&sp_mutex);
 
   for (count = 0, abytes = 0, tbytes = 0,
-           item = (_cups_sp_item_t *)cupsArrayFirst(stringpool);
+           item = (_ppd_sp_item_t *)cupsArrayFirst(stringpool);
        item;
-       item = (_cups_sp_item_t *)cupsArrayNext(stringpool))
+       item = (_ppd_sp_item_t *)cupsArrayNext(stringpool))
   {
    /*
     * Count allocated memory, using a 64-bit aligned buffer as a basis.
@@ -522,11 +522,11 @@ _cupsStrStatistics(size_t *alloc_bytes,	/* O - Allocated bytes */
 
     count  += item->ref_count;
     len    = (strlen(item->str) + 8) & (size_t)~7;
-    abytes += sizeof(_cups_sp_item_t) + len;
+    abytes += sizeof(_ppd_sp_item_t) + len;
     tbytes += item->ref_count * len;
   }
 
-  _cupsMutexUnlock(&sp_mutex);
+  _ppdMutexUnlock(&sp_mutex);
 
  /*
   * Return values...
@@ -543,11 +543,11 @@ _cupsStrStatistics(size_t *alloc_bytes,	/* O - Allocated bytes */
 
 
 /*
- * '_cups_strcpy()' - Copy a string allowing for overlapping strings.
+ * '_ppd_strcpy()' - Copy a string allowing for overlapping strings.
  */
 
 void
-_cups_strcpy(char       *dst,		/* I - Destination string */
+_ppd_strcpy(char       *dst,		/* I - Destination string */
              const char *src)		/* I - Source string */
 {
   while (*src)
@@ -558,12 +558,12 @@ _cups_strcpy(char       *dst,		/* I - Destination string */
 
 
 /*
- * '_cups_strdup()' - Duplicate a string.
+ * '_ppd_strdup()' - Duplicate a string.
  */
 
 #ifndef HAVE_STRDUP
 char 	*				/* O - New string pointer */
-_cups_strdup(const char *s)		/* I - String to duplicate */
+_ppd_strdup(const char *s)		/* I - String to duplicate */
 {
   char		*t;			/* New string pointer */
   size_t	slen;			/* Length of string */
@@ -582,18 +582,18 @@ _cups_strdup(const char *s)		/* I - String to duplicate */
 
 
 /*
- * '_cups_strcasecmp()' - Do a case-insensitive comparison.
+ * '_ppd_strcasecmp()' - Do a case-insensitive comparison.
  */
 
 int				/* O - Result of comparison (-1, 0, or 1) */
-_cups_strcasecmp(const char *s,	/* I - First string */
+_ppd_strcasecmp(const char *s,	/* I - First string */
                  const char *t)	/* I - Second string */
 {
   while (*s != '\0' && *t != '\0')
   {
-    if (_cups_tolower(*s) < _cups_tolower(*t))
+    if (_ppd_tolower(*s) < _ppd_tolower(*t))
       return (-1);
-    else if (_cups_tolower(*s) > _cups_tolower(*t))
+    else if (_ppd_tolower(*s) > _ppd_tolower(*t))
       return (1);
 
     s ++;
@@ -609,19 +609,19 @@ _cups_strcasecmp(const char *s,	/* I - First string */
 }
 
 /*
- * '_cups_strncasecmp()' - Do a case-insensitive comparison on up to N chars.
+ * '_ppd_strncasecmp()' - Do a case-insensitive comparison on up to N chars.
  */
 
 int					/* O - Result of comparison (-1, 0, or 1) */
-_cups_strncasecmp(const char *s,	/* I - First string */
+_ppd_strncasecmp(const char *s,	/* I - First string */
                   const char *t,	/* I - Second string */
 		  size_t     n)		/* I - Maximum number of characters to compare */
 {
   while (*s != '\0' && *t != '\0' && n > 0)
   {
-    if (_cups_tolower(*s) < _cups_tolower(*t))
+    if (_ppd_tolower(*s) < _ppd_tolower(*t))
       return (-1);
-    else if (_cups_tolower(*s) > _cups_tolower(*t))
+    else if (_ppd_tolower(*s) > _ppd_tolower(*t))
       return (1);
 
     s ++;
@@ -642,11 +642,11 @@ _cups_strncasecmp(const char *s,	/* I - First string */
 
 #ifndef HAVE_STRLCAT
 /*
- * '_cups_strlcat()' - Safely concatenate two strings.
+ * '_ppd_strlcat()' - Safely concatenate two strings.
  */
 
 size_t					/* O - Length of string */
-_cups_strlcat(char       *dst,		/* O - Destination string */
+_ppd_strlcat(char       *dst,		/* O - Destination string */
               const char *src,		/* I - Source string */
 	      size_t     size)		/* I - Size of destination string buffer */
 {
@@ -688,11 +688,11 @@ _cups_strlcat(char       *dst,		/* O - Destination string */
 
 #ifndef HAVE_STRLCPY
 /*
- * '_cups_strlcpy()' - Safely copy two strings.
+ * '_ppd_strlcpy()' - Safely copy two strings.
  */
 
 size_t					/* O - Length of string */
-_cups_strlcpy(char       *dst,		/* O - Destination string */
+_ppd_strlcpy(char       *dst,		/* O - Destination string */
               const char *src,		/* I - Source string */
 	      size_t      size)		/* I - Size of destination string buffer */
 {
@@ -727,8 +727,8 @@ _cups_strlcpy(char       *dst,		/* O - Destination string */
  */
 
 static int				/* O - Result of comparison */
-compare_sp_items(_cups_sp_item_t *a,	/* I - First item */
-                 _cups_sp_item_t *b)	/* I - Second item */
+compare_sp_items(_ppd_sp_item_t *a,	/* I - First item */
+                 _ppd_sp_item_t *b)	/* I - Second item */
 {
   return (strcmp(a->str, b->str));
 }

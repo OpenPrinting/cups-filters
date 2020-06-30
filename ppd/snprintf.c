@@ -1,5 +1,5 @@
 /*
- * snprintf functions for CUPS.
+ * snprintf functions for libppd.
  *
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
@@ -17,11 +17,11 @@
 
 #ifndef HAVE_VSNPRINTF
 /*
- * '_cups_vsnprintf()' - Format a string into a fixed size buffer.
+ * '_ppd_vsnprintf()' - Format a string into a fixed size buffer.
  */
 
 int					/* O - Number of bytes formatted */
-_cups_vsnprintf(char       *buffer,	/* O - Output buffer */
+_ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
                 size_t     bufsize,	/* O - Size of output buffer */
 	        const char *format,	/* I - printf-style format string */
 	        va_list    ap)		/* I - Pointer to additional arguments */
@@ -321,11 +321,11 @@ _cups_vsnprintf(char       *buffer,	/* O - Output buffer */
 
 #ifndef HAVE_SNPRINTF
 /*
- * '_cups_snprintf()' - Format a string into a fixed size buffer.
+ * '_ppd_snprintf()' - Format a string into a fixed size buffer.
  */
 
 int					/* O - Number of bytes formatted */
-_cups_snprintf(char       *buffer,	/* O - Output buffer */
+_ppd_snprintf(char       *buffer,	/* O - Output buffer */
                size_t     bufsize,	/* O - Size of output buffer */
                const char *format,	/* I - printf-style format string */
 	       ...)			/* I - Additional arguments as needed */

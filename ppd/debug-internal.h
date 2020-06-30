@@ -8,8 +8,8 @@
  * information.
  */
 
-#ifndef _CUPS_DEBUG_INTERNAL_H_
-#  define _CUPS_DEBUG_INTERNAL_H_
+#ifndef _PPD_DEBUG_INTERNAL_H_
+#  define _PPD_DEBUG_INTERNAL_H_
 
 
 /*
@@ -58,8 +58,8 @@ extern "C" {
  */
 
 #  ifdef DEBUG
-#    define DEBUG_puts(x) _cups_debug_puts(x)
-#    define DEBUG_printf(x) _cups_debug_printf x
+#    define DEBUG_puts(x) _ppd_debug_puts(x)
+#    define DEBUG_printf(x) _ppd_debug_printf x
 #  else
 #    define DEBUG_puts(x)
 #    define DEBUG_printf(x)
@@ -71,14 +71,14 @@ extern "C" {
  */
 
 #  ifdef DEBUG
-extern int	_cups_debug_fd _CUPS_INTERNAL;
-extern int	_cups_debug_level _CUPS_INTERNAL;
-extern void	_cups_debug_printf(const char *format, ...) _CUPS_FORMAT(1,2) _CUPS_INTERNAL;
-extern void	_cups_debug_puts(const char *s) _CUPS_INTERNAL;
+extern int	_ppd_debug_fd _PPD_INTERNAL;
+extern int	_ppd_debug_level _PPD_INTERNAL;
+extern void	_ppd_debug_printf(const char *format, ...) _PPD_INTERNAL;
+extern void	_ppd_debug_puts(const char *s) _PPD_INTERNAL;
 #  endif /* DEBUG */
 
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
 
-#endif /* !_CUPS_DEBUG_INTERNAL_H_ */
+#endif /* !_PPD_DEBUG_INTERNAL_H_ */

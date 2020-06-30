@@ -8,8 +8,8 @@
  * information.
  */
 
-#ifndef _CUPS_DEBUG_PRIVATE_H_
-#  define _CUPS_DEBUG_PRIVATE_H_
+#ifndef _PPD_DEBUG_PRIVATE_H_
+#  define _PPD_DEBUG_PRIVATE_H_
 
 #  include "versioning.h"
 
@@ -30,13 +30,13 @@ extern "C" {
  *   DEBUG_set("logfile", "level", "filter", 1)
  *
  * The DEBUG_set macro allows an application to programmatically enable (or
- * disable) debug logging.  The arguments correspond to the CUPS_DEBUG_LOG,
- * CUPS_DEBUG_LEVEL, and CUPS_DEBUG_FILTER environment variables.  The 1 on the
+ * disable) debug logging.  The arguments correspond to the PPD_DEBUG_LOG,
+ * PPD_DEBUG_LEVEL, and PPD_DEBUG_FILTER environment variables.  The 1 on the
  * end forces the values to override the environment.
  */
 
 #  ifdef DEBUG
-#    define DEBUG_set(logfile,level,filter) _cups_debug_set(logfile,level,filter,1)
+#    define DEBUG_set(logfile,level,filter) _ppd_debug_set(logfile,level,filter,1)
 #  else
 #    define DEBUG_set(logfile,level,filter)
 #  endif /* DEBUG */
@@ -46,14 +46,14 @@ extern "C" {
  * Prototypes...
  */
 
-extern void	_cups_debug_set(const char *logfile, const char *level, const char *filter, int force) _CUPS_PRIVATE;
+extern void	_ppd_debug_set(const char *logfile, const char *level, const char *filter, int force) _PPD_PRIVATE;
 #  ifdef _WIN32
-extern int	_cups_gettimeofday(struct timeval *tv, void *tz) _CUPS_PRIVATE;
-#    define gettimeofday(a,b) _cups_gettimeofday(a, b)
+extern int	_ppd_gettimeofday(struct timeval *tv, void *tz) _PPD_PRIVATE;
+#    define gettimeofday(a,b) _ppd_gettimeofday(a, b)
 #  endif /* _WIN32 */
 
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
 
-#endif /* !_CUPS_DEBUG_PRIVATE_H_ */
+#endif /* !_PPD_DEBUG_PRIVATE_H_ */
