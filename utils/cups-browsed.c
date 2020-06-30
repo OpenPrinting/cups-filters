@@ -6559,6 +6559,12 @@ queue_overwritten (remote_printer_t *p)
        so we do not repeat the tests and exit positively */
     return 1;
 
+  if (p->uri[0] == '\0')
+    /* Also skip unconfirmed printer entries from queues of the
+       previous session, they do not have a PPD file registered, so we
+       cannot compare */
+    return 0;
+
   /* Get the device URI which our CUPS queue actually has now, a
      change of the URI means a modification or replacement of the
      print queue by something user-defined. So we schedule this queue

@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- cups-browsed: Left-over local queues from the previous
+	  session for which the corresponding did not appear again did
+	  not get removed as they were considered externally
+	  overwritten.
 	- gstoraster, gstopdf: Add option "-dDoNumCopies" to
 	  Ghostscript command line if we are outputting PDF (called
 	  via gstopdf wrapper) and the number of copies supplied to
