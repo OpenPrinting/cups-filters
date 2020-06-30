@@ -11929,7 +11929,7 @@ find_previous_queue (gpointer key,
       p->status = STATUS_UNCONFIRMED;
 
       if (BrowseRemoteProtocols & BROWSE_CUPS)
-	p->timeout = time(NULL) + BrowseTimeout;
+	p->timeout = time(NULL) + BrowseInterval * 3 / 2;
       else
 	p->timeout = time(NULL) + TIMEOUT_CONFIRM;
 
