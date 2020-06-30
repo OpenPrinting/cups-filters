@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- cups-browsed: Remove left-over local queues from the
+	  previous session more quickly when CUPS legacy browsing is
+	  turned on.
 	- cups-browsed: Left-over local queues from the previous
 	  session for which the corresponding did not appear again did
 	  not get removed as they were considered externally
