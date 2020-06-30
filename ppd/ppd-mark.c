@@ -160,25 +160,25 @@ cupsMarkOptions(
       * Map output-mode and print-quality to a preset...
       */
 
-      _pwg_print_color_mode_t	pwg_pcm;/* print-color-mode index */
-      _pwg_print_quality_t	pwg_pq;	/* print-quality index */
+      _ppd_pwg_print_color_mode_t	pwg_pcm;/* print-color-mode index */
+      _ppd_pwg_print_quality_t	pwg_pq;	/* print-quality index */
       cups_option_t		*preset;/* Current preset option */
 
       if (print_color_mode && !strcmp(print_color_mode, "monochrome"))
-	pwg_pcm = _PWG_PRINT_COLOR_MODE_MONOCHROME;
+	pwg_pcm = _PPD_PWG_PRINT_COLOR_MODE_MONOCHROME;
       else
-	pwg_pcm = _PWG_PRINT_COLOR_MODE_COLOR;
+	pwg_pcm = _PPD_PWG_PRINT_COLOR_MODE_COLOR;
 
       if (print_quality)
       {
-	pwg_pq = (_pwg_print_quality_t)(atoi(print_quality) - IPP_QUALITY_DRAFT);
-	if (pwg_pq < _PWG_PRINT_QUALITY_DRAFT)
-	  pwg_pq = _PWG_PRINT_QUALITY_DRAFT;
-	else if (pwg_pq > _PWG_PRINT_QUALITY_HIGH)
-	  pwg_pq = _PWG_PRINT_QUALITY_HIGH;
+	pwg_pq = (_ppd_pwg_print_quality_t)(atoi(print_quality) - IPP_QUALITY_DRAFT);
+	if (pwg_pq < _PPD_PWG_PRINT_QUALITY_DRAFT)
+	  pwg_pq = _PPD_PWG_PRINT_QUALITY_DRAFT;
+	else if (pwg_pq > _PPD_PWG_PRINT_QUALITY_HIGH)
+	  pwg_pq = _PPD_PWG_PRINT_QUALITY_HIGH;
       }
       else
-	pwg_pq = _PWG_PRINT_QUALITY_NORMAL;
+	pwg_pq = _PPD_PWG_PRINT_QUALITY_NORMAL;
 
       if (cache->num_presets[pwg_pcm][pwg_pq] == 0)
       {
@@ -187,14 +187,14 @@ cupsMarkOptions(
 	* getting a good print using IPP attributes.
 	*/
 
-	if (cache->num_presets[pwg_pcm][_PWG_PRINT_QUALITY_NORMAL] > 0)
-	  pwg_pq = _PWG_PRINT_QUALITY_NORMAL;
-	else if (cache->num_presets[_PWG_PRINT_COLOR_MODE_COLOR][pwg_pq] > 0)
-	  pwg_pcm = _PWG_PRINT_COLOR_MODE_COLOR;
+	if (cache->num_presets[pwg_pcm][_PPD_PWG_PRINT_QUALITY_NORMAL] > 0)
+	  pwg_pq = _PPD_PWG_PRINT_QUALITY_NORMAL;
+	else if (cache->num_presets[_PPD_PWG_PRINT_COLOR_MODE_COLOR][pwg_pq] > 0)
+	  pwg_pcm = _PPD_PWG_PRINT_COLOR_MODE_COLOR;
 	else
 	{
-	  pwg_pq  = _PWG_PRINT_QUALITY_NORMAL;
-	  pwg_pcm = _PWG_PRINT_COLOR_MODE_COLOR;
+	  pwg_pq  = _PPD_PWG_PRINT_QUALITY_NORMAL;
+	  pwg_pcm = _PPD_PWG_PRINT_COLOR_MODE_COLOR;
 	}
       }
 

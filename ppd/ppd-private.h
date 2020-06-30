@@ -83,28 +83,28 @@ typedef struct _ppd_cups_uiconsts_s	/**** cupsUIConstraints ****/
   _ppd_cups_uiconst_t *constraints;	/* Constraints */
 } _ppd_cups_uiconsts_t;
 
-typedef enum _pwg_print_color_mode_e	/**** PWG print-color-mode indices ****/
+typedef enum _ppd_pwg_print_color_mode_e	/**** PWG print-color-mode indices ****/
 {
-  _PWG_PRINT_COLOR_MODE_MONOCHROME = 0,	/* print-color-mode=monochrome */
-  _PWG_PRINT_COLOR_MODE_COLOR,		/* print-color-mode=color */
+  _PPD_PWG_PRINT_COLOR_MODE_MONOCHROME = 0,	/* print-color-mode=monochrome */
+  _PPD_PWG_PRINT_COLOR_MODE_COLOR,		/* print-color-mode=color */
   /* Other values are not supported by CUPS yet. */
-  _PWG_PRINT_COLOR_MODE_MAX
-} _pwg_print_color_mode_t;
+  _PPD_PWG_PRINT_COLOR_MODE_MAX
+} _ppd_pwg_print_color_mode_t;
 
-typedef enum _pwg_print_quality_e	/**** PWG print-quality values ****/
+typedef enum _ppd_pwg_print_quality_e	/**** PWG print-quality values ****/
 {
-  _PWG_PRINT_QUALITY_DRAFT = 0,		/* print-quality=3 */
-  _PWG_PRINT_QUALITY_NORMAL,		/* print-quality=4 */
-  _PWG_PRINT_QUALITY_HIGH,		/* print-quality=5 */
-  _PWG_PRINT_QUALITY_MAX
-} _pwg_print_quality_t;
+  _PPD_PWG_PRINT_QUALITY_DRAFT = 0,		/* print-quality=3 */
+  _PPD_PWG_PRINT_QUALITY_NORMAL,		/* print-quality=4 */
+  _PPD_PWG_PRINT_QUALITY_HIGH,		/* print-quality=5 */
+  _PPD_PWG_PRINT_QUALITY_MAX
+} _ppd_pwg_print_quality_t;
 
-typedef struct _pwg_finishings_s	/**** PWG finishings mapping data ****/
+typedef struct _ppd_pwg_finishings_s	/**** PWG finishings mapping data ****/
 {
   ipp_finishings_t	value;		/* finishings value */
   int			num_options;	/* Number of options to apply */
   cups_option_t		*options;	/* Options to apply */
-} _pwg_finishings_t;
+} _ppd_pwg_finishings_t;
 
 struct _ppd_cache_s			/**** PPD cache and PWG conversion data ****/
 {
@@ -125,9 +125,9 @@ struct _ppd_cache_s			/**** PPD cache and PWG conversion data ****/
   pwg_map_t	*sources;		/* Media sources */
   int		num_types;		/* Number of media types */
   pwg_map_t	*types;			/* Media types */
-  int		num_presets[_PWG_PRINT_COLOR_MODE_MAX][_PWG_PRINT_QUALITY_MAX];
+  int		num_presets[_PPD_PWG_PRINT_COLOR_MODE_MAX][_PPD_PWG_PRINT_QUALITY_MAX];
 					/* Number of print-color-mode/print-quality options */
-  cups_option_t	*presets[_PWG_PRINT_COLOR_MODE_MAX][_PWG_PRINT_QUALITY_MAX];
+  cups_option_t	*presets[_PPD_PWG_PRINT_COLOR_MODE_MAX][_PPD_PWG_PRINT_QUALITY_MAX];
 					/* print-color-mode/print-quality options */
   char		*sides_option,		/* PPD option for sides */
 		*sides_1sided,		/* Choice for one-sided */
@@ -154,7 +154,7 @@ struct _ppd_cache_s			/**** PPD cache and PWG conversion data ****/
  * Prototypes...
  */
 
-extern int		_cupsConvertOptions(ipp_t *request, ppd_file_t *ppd, _ppd_cache_t *pc, ipp_attribute_t *media_col_sup, ipp_attribute_t *doc_handling_sup, ipp_attribute_t *print_color_mode_sup, const char *user, const char *format, int copies, int num_options, cups_option_t *options) _PPD_PRIVATE;
+extern int		_ppdConvertOptions(ipp_t *request, ppd_file_t *ppd, _ppd_cache_t *pc, ipp_attribute_t *media_col_sup, ipp_attribute_t *doc_handling_sup, ipp_attribute_t *print_color_mode_sup, const char *user, const char *format, int copies, int num_options, cups_option_t *options) _PPD_PRIVATE;
 extern int		_ppdRasterExecPS(cups_page_header2_t *h, int *preferred_bits, const char *code) _PPD_PRIVATE;
 extern int		_ppdRasterInterpretPPD(cups_page_header2_t *h, ppd_file_t *ppd, int num_options, cups_option_t *options, cups_interpret_cb_t func) _PPD_PRIVATE;
 

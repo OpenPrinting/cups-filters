@@ -51,6 +51,9 @@ _ppdMutexUnlock(_ppd_mutex_t *mutex)	/* I - Mutex */
 #elif defined(_WIN32)
 #  include <process.h>
 
+static _ppd_mutex_t    ppd_global_mutex = _CUPS_MUTEX_INITIALIZER;
+                                        /* Global critical section */
+
 
 /*
  * '_ppdMutexInit()' - Initialize a mutex.
@@ -73,7 +76,7 @@ _ppdMutexLock(_ppd_mutex_t *mutex)	/* I - Mutex */
 {
   if (!mutex->m_init)
   {
-    _cupsGlobalLock();
+    EnterCriticalSection(&ppd_global_mutex.m_criticalSection);
 
     if (!mutex->m_init)
     {
@@ -81,7 +84,7 @@ _ppdMutexLock(_ppd_mutex_t *mutex)	/* I - Mutex */
       mutex->m_init = 1;
     }
 
-    _cupsGlobalUnlock();
+    LeaveCriticalSection(&ppd_global_mutex.m_criticalSection);
   }
 
   EnterCriticalSection(&mutex->m_criticalSection);

@@ -23,26 +23,26 @@
 
 typedef enum
 {
-  CUPS_PS_NAME,
-  CUPS_PS_NUMBER,
-  CUPS_PS_STRING,
-  CUPS_PS_BOOLEAN,
-  CUPS_PS_NULL,
-  CUPS_PS_START_ARRAY,
-  CUPS_PS_END_ARRAY,
-  CUPS_PS_START_DICT,
-  CUPS_PS_END_DICT,
-  CUPS_PS_START_PROC,
-  CUPS_PS_END_PROC,
-  CUPS_PS_CLEARTOMARK,
-  CUPS_PS_COPY,
-  CUPS_PS_DUP,
-  CUPS_PS_INDEX,
-  CUPS_PS_POP,
-  CUPS_PS_ROLL,
-  CUPS_PS_SETPAGEDEVICE,
-  CUPS_PS_STOPPED,
-  CUPS_PS_OTHER
+  PPD_PS_NAME,
+  PPD_PS_NUMBER,
+  PPD_PS_STRING,
+  PPD_PS_BOOLEAN,
+  PPD_PS_NULL,
+  PPD_PS_START_ARRAY,
+  PPD_PS_END_ARRAY,
+  PPD_PS_START_DICT,
+  PPD_PS_END_DICT,
+  PPD_PS_START_PROC,
+  PPD_PS_END_PROC,
+  PPD_PS_CLEARTOMARK,
+  PPD_PS_COPY,
+  PPD_PS_DUP,
+  PPD_PS_INDEX,
+  PPD_PS_POP,
+  PPD_PS_ROLL,
+  PPD_PS_SETPAGEDEVICE,
+  PPD_PS_STOPPED,
+  PPD_PS_OTHER
 } _ppd_ps_type_t;
 
 typedef struct
@@ -70,24 +70,24 @@ typedef struct
  * Local functions...
  */
 
-static int		cleartomark_stack(_ppd_ps_stack_t *st);
-static int		copy_stack(_ppd_ps_stack_t *st, int count);
-static void		delete_stack(_ppd_ps_stack_t *st);
-static void		error_object(_ppd_ps_obj_t *obj);
-static void		error_stack(_ppd_ps_stack_t *st, const char *title);
-static _ppd_ps_obj_t	*index_stack(_ppd_ps_stack_t *st, int n);
-static _ppd_ps_stack_t	*new_stack(void);
-static _ppd_ps_obj_t	*pop_stack(_ppd_ps_stack_t *st);
-static _ppd_ps_obj_t	*push_stack(_ppd_ps_stack_t *st,
+static int		ppd_cleartomark_stack(_ppd_ps_stack_t *st);
+static int		ppd_copy_stack(_ppd_ps_stack_t *st, int count);
+static void		ppd_delete_stack(_ppd_ps_stack_t *st);
+static void		ppd_error_object(_ppd_ps_obj_t *obj);
+static void		ppd_error_stack(_ppd_ps_stack_t *st, const char *title);
+static _ppd_ps_obj_t	*ppd_index_stack(_ppd_ps_stack_t *st, int n);
+static _ppd_ps_stack_t	*ppd_new_stack(void);
+static _ppd_ps_obj_t	*ppd_pop_stack(_ppd_ps_stack_t *st);
+static _ppd_ps_obj_t	*ppd_push_stack(_ppd_ps_stack_t *st,
 			            _ppd_ps_obj_t *obj);
-static int		roll_stack(_ppd_ps_stack_t *st, int c, int s);
-static _ppd_ps_obj_t	*scan_ps(_ppd_ps_stack_t *st, char **ptr);
-static int		setpagedevice(_ppd_ps_stack_t *st,
+static int		ppd_roll_stack(_ppd_ps_stack_t *st, int c, int s);
+static _ppd_ps_obj_t	*ppd_scan_ps(_ppd_ps_stack_t *st, char **ptr);
+static int		ppd_setpagedevice(_ppd_ps_stack_t *st,
 			                cups_page_header2_t *h,
 			                int *preferred_bits);
 #ifdef DEBUG
-static void		DEBUG_object(const char *prefix, _ppd_ps_obj_t *obj);
-static void		DEBUG_stack(const char *prefix, _ppd_ps_stack_t *st);
+static void		ppd_DEBUG_object(const char *prefix, _ppd_ps_obj_t *obj);
+static void		ppd_DEBUG_stack(const char *prefix, _ppd_ps_stack_t *st);
 #endif /* DEBUG */
 
 
@@ -526,7 +526,7 @@ _ppdRasterExecPS(
     return (-1);
   }
 
-  if ((st = new_stack()) == NULL)
+  if ((st = ppd_new_stack()) == NULL)
   {
     _ppdRasterAddError("Unable to create stack.\n");
     free(codecopy);
@@ -539,11 +539,11 @@ _ppdRasterExecPS(
 
   codeptr = codecopy;
 
-  while ((obj = scan_ps(st, &codeptr)) != NULL)
+  while ((obj = ppd_scan_ps(st, &codeptr)) != NULL)
   {
 #ifdef DEBUG
     DEBUG_printf(("_ppdRasterExecPS: Stack (%d objects)", st->num_objs));
-    DEBUG_object("_ppdRasterExecPS", obj);
+    ppd_DEBUG_object("_ppdRasterExecPS", obj);
 #endif /* DEBUG */
 
     switch (obj->type)
@@ -552,102 +552,102 @@ _ppdRasterExecPS(
           /* Do nothing for regular values */
 	  break;
 
-      case CUPS_PS_CLEARTOMARK :
-          pop_stack(st);
+      case PPD_PS_CLEARTOMARK :
+          ppd_pop_stack(st);
 
-	  if (cleartomark_stack(st))
+	  if (ppd_cleartomark_stack(st))
 	    _ppdRasterAddError("cleartomark: Stack underflow.\n");
 
 #ifdef DEBUG
           DEBUG_puts("1_cupsRasterExecPS:    dup");
-	  DEBUG_stack("_ppdRasterExecPS", st);
+	  ppd_DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
-      case CUPS_PS_COPY :
-          pop_stack(st);
-	  if ((obj = pop_stack(st)) != NULL)
+      case PPD_PS_COPY :
+          ppd_pop_stack(st);
+	  if ((obj = ppd_pop_stack(st)) != NULL)
 	  {
-	    copy_stack(st, (int)obj->value.number);
+	    ppd_copy_stack(st, (int)obj->value.number);
 
 #ifdef DEBUG
             DEBUG_puts("_ppdRasterExecPS: copy");
-	    DEBUG_stack("_ppdRasterExecPS", st);
+	    ppd_DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           }
           break;
 
-      case CUPS_PS_DUP :
-          pop_stack(st);
-	  copy_stack(st, 1);
+      case PPD_PS_DUP :
+          ppd_pop_stack(st);
+	  ppd_copy_stack(st, 1);
 
 #ifdef DEBUG
           DEBUG_puts("_ppdRasterExecPS: dup");
-	  DEBUG_stack("_ppdRasterExecPS", st);
+	  ppd_DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
-      case CUPS_PS_INDEX :
-          pop_stack(st);
-	  if ((obj = pop_stack(st)) != NULL)
+      case PPD_PS_INDEX :
+          ppd_pop_stack(st);
+	  if ((obj = ppd_pop_stack(st)) != NULL)
 	  {
-	    index_stack(st, (int)obj->value.number);
+	    ppd_index_stack(st, (int)obj->value.number);
 
 #ifdef DEBUG
             DEBUG_puts("_ppdRasterExecPS: index");
-	    DEBUG_stack("_ppdRasterExecPS", st);
+	    ppd_DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           }
           break;
 
-      case CUPS_PS_POP :
-          pop_stack(st);
-          pop_stack(st);
+      case PPD_PS_POP :
+          ppd_pop_stack(st);
+          ppd_pop_stack(st);
 
 #ifdef DEBUG
           DEBUG_puts("_ppdRasterExecPS: pop");
-	  DEBUG_stack("_ppdRasterExecPS", st);
+	  ppd_DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
-      case CUPS_PS_ROLL :
-          pop_stack(st);
-	  if ((obj = pop_stack(st)) != NULL)
+      case PPD_PS_ROLL :
+          ppd_pop_stack(st);
+	  if ((obj = ppd_pop_stack(st)) != NULL)
 	  {
             int		c;		/* Count */
 
 
             c = (int)obj->value.number;
 
-	    if ((obj = pop_stack(st)) != NULL)
+	    if ((obj = ppd_pop_stack(st)) != NULL)
 	    {
-	      roll_stack(st, (int)obj->value.number, c);
+	      ppd_roll_stack(st, (int)obj->value.number, c);
 
 #ifdef DEBUG
               DEBUG_puts("_ppdRasterExecPS: roll");
-	      DEBUG_stack("_ppdRasterExecPS", st);
+	      ppd_DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
             }
 	  }
           break;
 
-      case CUPS_PS_SETPAGEDEVICE :
-          pop_stack(st);
-	  setpagedevice(st, h, preferred_bits);
+      case PPD_PS_SETPAGEDEVICE :
+          ppd_pop_stack(st);
+	  ppd_setpagedevice(st, h, preferred_bits);
 
 #ifdef DEBUG
           DEBUG_puts("_ppdRasterExecPS: setpagedevice");
-	  DEBUG_stack("_ppdRasterExecPS", st);
+	  ppd_DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
-      case CUPS_PS_START_PROC :
-      case CUPS_PS_END_PROC :
-      case CUPS_PS_STOPPED :
-          pop_stack(st);
+      case PPD_PS_START_PROC :
+      case PPD_PS_END_PROC :
+      case PPD_PS_STOPPED :
+          ppd_pop_stack(st);
 	  break;
 
-      case CUPS_PS_OTHER :
+      case PPD_PS_OTHER :
           _ppdRasterAddError("Unknown operator \"%s\".\n", obj->value.other);
 	  error = 1;
           DEBUG_printf(("_ppdRasterExecPS: Unknown operator \"%s\".", obj->value.other));
@@ -666,19 +666,19 @@ _ppdRasterExecPS(
 
   if (st->num_objs > 0)
   {
-    error_stack(st, "Stack not empty:");
+    ppd_error_stack(st, "Stack not empty:");
 
 #ifdef DEBUG
     DEBUG_puts("_ppdRasterExecPS: Stack not empty");
-    DEBUG_stack("_ppdRasterExecPS", st);
+    ppd_DEBUG_stack("_ppdRasterExecPS", st);
 #endif /* DEBUG */
 
-    delete_stack(st);
+    ppd_delete_stack(st);
 
     return (-1);
   }
 
-  delete_stack(st);
+  ppd_delete_stack(st);
 
  /*
   * Return success...
@@ -689,17 +689,17 @@ _ppdRasterExecPS(
 
 
 /*
- * 'cleartomark_stack()' - Clear to the last mark ([) on the stack.
+ * 'ppd_cleartomark_stack()' - Clear to the last mark ([) on the stack.
  */
 
 static int				/* O - 0 on success, -1 on error */
-cleartomark_stack(_ppd_ps_stack_t *st)	/* I - Stack */
+ppd_cleartomark_stack(_ppd_ps_stack_t *st)	/* I - Stack */
 {
   _ppd_ps_obj_t	*obj;		/* Current object on stack */
 
 
-  while ((obj = pop_stack(st)) != NULL)
-    if (obj->type == CUPS_PS_START_ARRAY)
+  while ((obj = ppd_pop_stack(st)) != NULL)
+    if (obj->type == PPD_PS_START_ARRAY)
       break;
 
   return (obj ? 0 : -1);
@@ -707,11 +707,11 @@ cleartomark_stack(_ppd_ps_stack_t *st)	/* I - Stack */
 
 
 /*
- * 'copy_stack()' - Copy the top N stack objects.
+ * 'ppd_copy_stack()' - Copy the top N stack objects.
  */
 
 static int				/* O - 0 on success, -1 on error */
-copy_stack(_ppd_ps_stack_t *st,	/* I - Stack */
+ppd_copy_stack(_ppd_ps_stack_t *st,	/* I - Stack */
            int              c)		/* I - Number of objects to copy */
 {
   int	n;				/* Index */
@@ -727,7 +727,7 @@ copy_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 
   while (c > 0)
   {
-    if (!push_stack(st, st->objs + n))
+    if (!ppd_push_stack(st, st->objs + n))
       return (-1);
 
     n ++;
@@ -739,11 +739,11 @@ copy_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 
 
 /*
- * 'delete_stack()' - Free memory used by a stack.
+ * 'ppd_delete_stack()' - Free memory used by a stack.
  */
 
 static void
-delete_stack(_ppd_ps_stack_t *st)	/* I - Stack */
+ppd_delete_stack(_ppd_ps_stack_t *st)	/* I - Stack */
 {
   free(st->objs);
   free(st);
@@ -751,94 +751,94 @@ delete_stack(_ppd_ps_stack_t *st)	/* I - Stack */
 
 
 /*
- * 'error_object()' - Add an object's value to the current error message.
+ * 'ppd_error_object()' - Add an object's value to the current error message.
  */
 
 static void
-error_object(_ppd_ps_obj_t *obj)	/* I - Object to add */
+ppd_error_object(_ppd_ps_obj_t *obj)	/* I - Object to add */
 {
   switch (obj->type)
   {
-    case CUPS_PS_NAME :
+    case PPD_PS_NAME :
 	_ppdRasterAddError(" /%s", obj->value.name);
 	break;
 
-    case CUPS_PS_NUMBER :
+    case PPD_PS_NUMBER :
 	_ppdRasterAddError(" %g", obj->value.number);
 	break;
 
-    case CUPS_PS_STRING :
+    case PPD_PS_STRING :
 	_ppdRasterAddError(" (%s)", obj->value.string);
 	break;
 
-    case CUPS_PS_BOOLEAN :
+    case PPD_PS_BOOLEAN :
 	if (obj->value.boolean)
 	  _ppdRasterAddError(" true");
 	else
 	  _ppdRasterAddError(" false");
 	break;
 
-    case CUPS_PS_NULL :
+    case PPD_PS_NULL :
 	_ppdRasterAddError(" null");
 	break;
 
-    case CUPS_PS_START_ARRAY :
+    case PPD_PS_START_ARRAY :
 	_ppdRasterAddError(" [");
 	break;
 
-    case CUPS_PS_END_ARRAY :
+    case PPD_PS_END_ARRAY :
 	_ppdRasterAddError(" ]");
 	break;
 
-    case CUPS_PS_START_DICT :
+    case PPD_PS_START_DICT :
 	_ppdRasterAddError(" <<");
 	break;
 
-    case CUPS_PS_END_DICT :
+    case PPD_PS_END_DICT :
 	_ppdRasterAddError(" >>");
 	break;
 
-    case CUPS_PS_START_PROC :
+    case PPD_PS_START_PROC :
 	_ppdRasterAddError(" {");
 	break;
 
-    case CUPS_PS_END_PROC :
+    case PPD_PS_END_PROC :
 	_ppdRasterAddError(" }");
 	break;
 
-    case CUPS_PS_COPY :
+    case PPD_PS_COPY :
 	_ppdRasterAddError(" --copy--");
         break;
 
-    case CUPS_PS_CLEARTOMARK :
+    case PPD_PS_CLEARTOMARK :
 	_ppdRasterAddError(" --cleartomark--");
         break;
 
-    case CUPS_PS_DUP :
+    case PPD_PS_DUP :
 	_ppdRasterAddError(" --dup--");
         break;
 
-    case CUPS_PS_INDEX :
+    case PPD_PS_INDEX :
 	_ppdRasterAddError(" --index--");
         break;
 
-    case CUPS_PS_POP :
+    case PPD_PS_POP :
 	_ppdRasterAddError(" --pop--");
         break;
 
-    case CUPS_PS_ROLL :
+    case PPD_PS_ROLL :
 	_ppdRasterAddError(" --roll--");
         break;
 
-    case CUPS_PS_SETPAGEDEVICE :
+    case PPD_PS_SETPAGEDEVICE :
 	_ppdRasterAddError(" --setpagedevice--");
         break;
 
-    case CUPS_PS_STOPPED :
+    case PPD_PS_STOPPED :
 	_ppdRasterAddError(" --stopped--");
         break;
 
-    case CUPS_PS_OTHER :
+    case PPD_PS_OTHER :
 	_ppdRasterAddError(" --%s--", obj->value.other);
 	break;
   }
@@ -846,11 +846,11 @@ error_object(_ppd_ps_obj_t *obj)	/* I - Object to add */
 
 
 /*
- * 'error_stack()' - Add a stack to the current error message...
+ * 'ppd_error_stack()' - Add a stack to the current error message...
  */
 
 static void
-error_stack(_ppd_ps_stack_t *st,	/* I - Stack */
+ppd_error_stack(_ppd_ps_stack_t *st,	/* I - Stack */
             const char       *title)	/* I - Title string */
 {
   int			c;		/* Looping var */
@@ -860,33 +860,33 @@ error_stack(_ppd_ps_stack_t *st,	/* I - Stack */
   _ppdRasterAddError("%s", title);
 
   for (obj = st->objs, c = st->num_objs; c > 0; c --, obj ++)
-    error_object(obj);
+    ppd_error_object(obj);
 
   _ppdRasterAddError("\n");
 }
 
 
 /*
- * 'index_stack()' - Copy the Nth value on the stack.
+ * 'ppd_index_stack()' - Copy the Nth value on the stack.
  */
 
 static _ppd_ps_obj_t	*		/* O - New object */
-index_stack(_ppd_ps_stack_t *st,	/* I - Stack */
+ppd_index_stack(_ppd_ps_stack_t *st,	/* I - Stack */
             int              n)		/* I - Object index */
 {
   if (n < 0 || (n = st->num_objs - n - 1) < 0)
     return (NULL);
 
-  return (push_stack(st, st->objs + n));
+  return (ppd_push_stack(st, st->objs + n));
 }
 
 
 /*
- * 'new_stack()' - Create a new stack.
+ * 'ppd_new_stack()' - Create a new stack.
  */
 
 static _ppd_ps_stack_t	*		/* O - New stack */
-new_stack(void)
+ppd_new_stack(void)
 {
   _ppd_ps_stack_t	*st;		/* New stack */
 
@@ -911,7 +911,7 @@ new_stack(void)
  */
 
 static _ppd_ps_obj_t	*		/* O - Object */
-pop_stack(_ppd_ps_stack_t *st)		/* I - Stack */
+ppd_pop_stack(_ppd_ps_stack_t *st)		/* I - Stack */
 {
   if (st->num_objs > 0)
   {
@@ -925,11 +925,11 @@ pop_stack(_ppd_ps_stack_t *st)		/* I - Stack */
 
 
 /*
- * 'push_stack()' - Push an object on the stack.
+ * 'ppd_push_stack()' - Push an object on the stack.
  */
 
 static _ppd_ps_obj_t	*		/* O - New object */
-push_stack(_ppd_ps_stack_t *st,	/* I - Stack */
+ppd_push_stack(_ppd_ps_stack_t *st,	/* I - Stack */
            _ppd_ps_obj_t   *obj)	/* I - Object */
 {
   _ppd_ps_obj_t	*temp;		/* New object */
@@ -959,11 +959,11 @@ push_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 
 
 /*
- * 'roll_stack()' - Rotate stack objects.
+ * 'ppd_roll_stack()' - Rotate stack objects.
  */
 
 static int				/* O - 0 on success, -1 on error */
-roll_stack(_ppd_ps_stack_t *st,	/* I - Stack */
+ppd_roll_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 	   int              c,		/* I - Number of objects */
            int              s)		/* I - Amount to shift */
 {
@@ -1030,11 +1030,11 @@ roll_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 
 
 /*
- * 'scan_ps()' - Scan a string for the next PS object.
+ * 'ppd_scan_ps()' - Scan a string for the next PS object.
  */
 
 static _ppd_ps_obj_t	*		/* O  - New object or NULL on EOF */
-scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
+ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
         char             **ptr)		/* IO - String pointer */
 {
   _ppd_ps_obj_t	obj;		/* Current object */
@@ -1082,7 +1082,7 @@ scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
   switch (*cur)
   {
     case '(' :				/* (string) */
-        obj.type = CUPS_PS_STRING;
+        obj.type = PPD_PS_STRING;
 	start    = cur;
 
 	for (cur ++, parens = 1, valptr = obj.value.string,
@@ -1164,24 +1164,24 @@ scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
         break;
 
     case '[' :				/* Start array */
-        obj.type = CUPS_PS_START_ARRAY;
+        obj.type = PPD_PS_START_ARRAY;
 	cur ++;
         break;
 
     case ']' :				/* End array */
-        obj.type = CUPS_PS_END_ARRAY;
+        obj.type = PPD_PS_END_ARRAY;
 	cur ++;
         break;
 
     case '<' :				/* Start dictionary or hex string */
         if (cur[1] == '<')
 	{
-	  obj.type = CUPS_PS_START_DICT;
+	  obj.type = PPD_PS_START_DICT;
 	  cur += 2;
 	}
 	else
 	{
-          obj.type = CUPS_PS_STRING;
+          obj.type = PPD_PS_STRING;
 	  start    = cur;
 
 	  for (cur ++, valptr = obj.value.string,
@@ -1232,12 +1232,12 @@ scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
     case '>' :				/* End dictionary? */
         if (cur[1] == '>')
 	{
-	  obj.type = CUPS_PS_END_DICT;
+	  obj.type = PPD_PS_END_DICT;
 	  cur += 2;
 	}
 	else
 	{
-	  obj.type           = CUPS_PS_OTHER;
+	  obj.type           = PPD_PS_OTHER;
 	  obj.value.other[0] = *cur;
 
 	  cur ++;
@@ -1245,12 +1245,12 @@ scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
         break;
 
     case '{' :				/* Start procedure */
-        obj.type = CUPS_PS_START_PROC;
+        obj.type = PPD_PS_START_PROC;
 	cur ++;
         break;
 
     case '}' :				/* End procedure */
-        obj.type = CUPS_PS_END_PROC;
+        obj.type = PPD_PS_END_PROC;
 	cur ++;
         break;
 
@@ -1258,7 +1258,7 @@ scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
     case '+' :
         if (!isdigit(cur[1] & 255) && cur[1] != '.')
 	{
-	  obj.type           = CUPS_PS_OTHER;
+	  obj.type           = PPD_PS_OTHER;
 	  obj.value.other[0] = *cur;
 
 	  cur ++;
@@ -1276,7 +1276,7 @@ scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
     case '8' :
     case '9' :
     case '.' :
-        obj.type = CUPS_PS_NUMBER;
+        obj.type = PPD_PS_NUMBER;
 
         start = cur;
 	for (cur ++; *cur; cur ++)
@@ -1309,14 +1309,14 @@ scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 
 	if (*cur == '/')
 	{
-	  obj.type = CUPS_PS_NAME;
+	  obj.type = PPD_PS_NAME;
           valptr   = obj.value.name;
           valend   = obj.value.name + sizeof(obj.value.name) - 1;
 	  cur ++;
 	}
 	else
 	{
-	  obj.type = CUPS_PS_OTHER;
+	  obj.type = PPD_PS_OTHER;
           valptr   = obj.value.other;
           valend   = obj.value.other + sizeof(obj.value.other) - 1;
 	}
@@ -1334,36 +1334,36 @@ scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 	  }
 	}
 
-        if (obj.type == CUPS_PS_OTHER)
+        if (obj.type == PPD_PS_OTHER)
 	{
           if (!strcmp(obj.value.other, "true"))
 	  {
-	    obj.type          = CUPS_PS_BOOLEAN;
+	    obj.type          = PPD_PS_BOOLEAN;
 	    obj.value.boolean = 1;
 	  }
 	  else if (!strcmp(obj.value.other, "false"))
 	  {
-	    obj.type          = CUPS_PS_BOOLEAN;
+	    obj.type          = PPD_PS_BOOLEAN;
 	    obj.value.boolean = 0;
 	  }
 	  else if (!strcmp(obj.value.other, "null"))
-	    obj.type = CUPS_PS_NULL;
+	    obj.type = PPD_PS_NULL;
 	  else if (!strcmp(obj.value.other, "cleartomark"))
-	    obj.type = CUPS_PS_CLEARTOMARK;
+	    obj.type = PPD_PS_CLEARTOMARK;
 	  else if (!strcmp(obj.value.other, "copy"))
-	    obj.type = CUPS_PS_COPY;
+	    obj.type = PPD_PS_COPY;
 	  else if (!strcmp(obj.value.other, "dup"))
-	    obj.type = CUPS_PS_DUP;
+	    obj.type = PPD_PS_DUP;
 	  else if (!strcmp(obj.value.other, "index"))
-	    obj.type = CUPS_PS_INDEX;
+	    obj.type = PPD_PS_INDEX;
 	  else if (!strcmp(obj.value.other, "pop"))
-	    obj.type = CUPS_PS_POP;
+	    obj.type = PPD_PS_POP;
 	  else if (!strcmp(obj.value.other, "roll"))
-	    obj.type = CUPS_PS_ROLL;
+	    obj.type = PPD_PS_ROLL;
 	  else if (!strcmp(obj.value.other, "setpagedevice"))
-	    obj.type = CUPS_PS_SETPAGEDEVICE;
+	    obj.type = PPD_PS_SETPAGEDEVICE;
 	  else if (!strcmp(obj.value.other, "stopped"))
-	    obj.type = CUPS_PS_STOPPED;
+	    obj.type = PPD_PS_STOPPED;
 	}
 	break;
   }
@@ -1374,16 +1374,16 @@ scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 
   *ptr = cur;
 
-  return (push_stack(st, &obj));
+  return (ppd_push_stack(st, &obj));
 }
 
 
 /*
- * 'setpagedevice()' - Simulate the PostScript setpagedevice operator.
+ * 'ppd_setpagedevice()' - Simulate the PostScript setpagedevice operator.
  */
 
 static int				/* O - 0 on success, -1 on error */
-setpagedevice(
+ppd_setpagedevice(
     _ppd_ps_stack_t    *st,		/* I - Stack */
     cups_page_header2_t *h,		/* O - Page header */
     int                 *preferred_bits)/* O - Preferred bits per color */
@@ -1403,14 +1403,14 @@ setpagedevice(
 
   obj = end = st->objs + st->num_objs - 1;
 
-  if (obj->type != CUPS_PS_END_DICT)
+  if (obj->type != PPD_PS_END_DICT)
     return (-1);
 
   obj --;
 
   while (obj > st->objs)
   {
-    if (obj->type == CUPS_PS_START_DICT)
+    if (obj->type == PPD_PS_START_DICT)
       break;
 
     obj --;
@@ -1429,7 +1429,7 @@ setpagedevice(
   * Now pull /name and value pairs from the dictionary...
   */
 
-  DEBUG_puts("3setpagedevice: Dictionary:");
+  DEBUG_puts("3ppd_setpagedevice: Dictionary:");
 
   for (obj ++; obj < end; obj ++)
   {
@@ -1437,43 +1437,43 @@ setpagedevice(
     * Grab the name...
     */
 
-    if (obj->type != CUPS_PS_NAME)
+    if (obj->type != PPD_PS_NAME)
       return (-1);
 
     name = obj->value.name;
     obj ++;
 
 #ifdef DEBUG
-    DEBUG_printf(("4setpagedevice: /%s ", name));
-    DEBUG_object("setpagedevice", obj);
+    DEBUG_printf(("4ppd_setpagedevice: /%s ", name));
+    ppd_DEBUG_object("setpagedevice", obj);
 #endif /* DEBUG */
 
    /*
     * Then grab the value...
     */
 
-    if (!strcmp(name, "MediaClass") && obj->type == CUPS_PS_STRING)
+    if (!strcmp(name, "MediaClass") && obj->type == PPD_PS_STRING)
       strlcpy(h->MediaClass, obj->value.string, sizeof(h->MediaClass));
-    else if (!strcmp(name, "MediaColor") && obj->type == CUPS_PS_STRING)
+    else if (!strcmp(name, "MediaColor") && obj->type == PPD_PS_STRING)
       strlcpy(h->MediaColor, obj->value.string, sizeof(h->MediaColor));
-    else if (!strcmp(name, "MediaType") && obj->type == CUPS_PS_STRING)
+    else if (!strcmp(name, "MediaType") && obj->type == PPD_PS_STRING)
       strlcpy(h->MediaType, obj->value.string, sizeof(h->MediaType));
-    else if (!strcmp(name, "OutputType") && obj->type == CUPS_PS_STRING)
+    else if (!strcmp(name, "OutputType") && obj->type == PPD_PS_STRING)
       strlcpy(h->OutputType, obj->value.string, sizeof(h->OutputType));
-    else if (!strcmp(name, "AdvanceDistance") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "AdvanceDistance") && obj->type == PPD_PS_NUMBER)
       h->AdvanceDistance = (unsigned)obj->value.number;
-    else if (!strcmp(name, "AdvanceMedia") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "AdvanceMedia") && obj->type == PPD_PS_NUMBER)
       h->AdvanceMedia = (unsigned)obj->value.number;
-    else if (!strcmp(name, "Collate") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "Collate") && obj->type == PPD_PS_BOOLEAN)
       h->Collate = (unsigned)obj->value.boolean;
-    else if (!strcmp(name, "CutMedia") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "CutMedia") && obj->type == PPD_PS_NUMBER)
       h->CutMedia = (cups_cut_t)(unsigned)obj->value.number;
-    else if (!strcmp(name, "Duplex") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "Duplex") && obj->type == PPD_PS_BOOLEAN)
       h->Duplex = (unsigned)obj->value.boolean;
-    else if (!strcmp(name, "HWResolution") && obj->type == CUPS_PS_START_ARRAY)
+    else if (!strcmp(name, "HWResolution") && obj->type == PPD_PS_START_ARRAY)
     {
-      if (obj[1].type == CUPS_PS_NUMBER && obj[2].type == CUPS_PS_NUMBER &&
-          obj[3].type == CUPS_PS_END_ARRAY)
+      if (obj[1].type == PPD_PS_NUMBER && obj[2].type == PPD_PS_NUMBER &&
+          obj[3].type == PPD_PS_END_ARRAY)
       {
         h->HWResolution[0] = (unsigned)obj[1].value.number;
 	h->HWResolution[1] = (unsigned)obj[2].value.number;
@@ -1482,16 +1482,16 @@ setpagedevice(
       else
         return (-1);
     }
-    else if (!strcmp(name, "InsertSheet") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "InsertSheet") && obj->type == PPD_PS_BOOLEAN)
       h->InsertSheet = (unsigned)obj->value.boolean;
-    else if (!strcmp(name, "Jog") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "Jog") && obj->type == PPD_PS_NUMBER)
       h->Jog = (unsigned)obj->value.number;
-    else if (!strcmp(name, "LeadingEdge") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "LeadingEdge") && obj->type == PPD_PS_NUMBER)
       h->LeadingEdge = (unsigned)obj->value.number;
-    else if (!strcmp(name, "ManualFeed") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "ManualFeed") && obj->type == PPD_PS_BOOLEAN)
       h->ManualFeed = (unsigned)obj->value.boolean;
     else if ((!strcmp(name, "cupsMediaPosition") ||
-              !strcmp(name, "MediaPosition")) && obj->type == CUPS_PS_NUMBER)
+              !strcmp(name, "MediaPosition")) && obj->type == PPD_PS_NUMBER)
     {
      /*
       * cupsMediaPosition is supported for backwards compatibility only.
@@ -1503,22 +1503,22 @@ setpagedevice(
 
       h->MediaPosition = (unsigned)obj->value.number;
     }
-    else if (!strcmp(name, "MediaWeight") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "MediaWeight") && obj->type == PPD_PS_NUMBER)
       h->MediaWeight = (unsigned)obj->value.number;
-    else if (!strcmp(name, "MirrorPrint") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "MirrorPrint") && obj->type == PPD_PS_BOOLEAN)
       h->MirrorPrint = (unsigned)obj->value.boolean;
-    else if (!strcmp(name, "NegativePrint") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "NegativePrint") && obj->type == PPD_PS_BOOLEAN)
       h->NegativePrint = (unsigned)obj->value.boolean;
-    else if (!strcmp(name, "NumCopies") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "NumCopies") && obj->type == PPD_PS_NUMBER)
       h->NumCopies = (unsigned)obj->value.number;
-    else if (!strcmp(name, "Orientation") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "Orientation") && obj->type == PPD_PS_NUMBER)
       h->Orientation = (unsigned)obj->value.number;
-    else if (!strcmp(name, "OutputFaceUp") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "OutputFaceUp") && obj->type == PPD_PS_BOOLEAN)
       h->OutputFaceUp = (unsigned)obj->value.boolean;
-    else if (!strcmp(name, "PageSize") && obj->type == CUPS_PS_START_ARRAY)
+    else if (!strcmp(name, "PageSize") && obj->type == PPD_PS_START_ARRAY)
     {
-      if (obj[1].type == CUPS_PS_NUMBER && obj[2].type == CUPS_PS_NUMBER &&
-          obj[3].type == CUPS_PS_END_ARRAY)
+      if (obj[1].type == PPD_PS_NUMBER && obj[2].type == PPD_PS_NUMBER &&
+          obj[3].type == PPD_PS_END_ARRAY)
       {
         h->cupsPageSize[0] = (float)obj[1].value.number;
 	h->cupsPageSize[1] = (float)obj[2].value.number;
@@ -1531,62 +1531,62 @@ setpagedevice(
       else
         return (-1);
     }
-    else if (!strcmp(name, "Separations") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "Separations") && obj->type == PPD_PS_BOOLEAN)
       h->Separations = (unsigned)obj->value.boolean;
-    else if (!strcmp(name, "TraySwitch") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "TraySwitch") && obj->type == PPD_PS_BOOLEAN)
       h->TraySwitch = (unsigned)obj->value.boolean;
-    else if (!strcmp(name, "Tumble") && obj->type == CUPS_PS_BOOLEAN)
+    else if (!strcmp(name, "Tumble") && obj->type == PPD_PS_BOOLEAN)
       h->Tumble = (unsigned)obj->value.boolean;
-    else if (!strcmp(name, "cupsMediaType") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "cupsMediaType") && obj->type == PPD_PS_NUMBER)
       h->cupsMediaType = (unsigned)obj->value.number;
-    else if (!strcmp(name, "cupsBitsPerColor") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "cupsBitsPerColor") && obj->type == PPD_PS_NUMBER)
       h->cupsBitsPerColor = (unsigned)obj->value.number;
     else if (!strcmp(name, "cupsPreferredBitsPerColor") &&
-             obj->type == CUPS_PS_NUMBER)
+             obj->type == PPD_PS_NUMBER)
       *preferred_bits = (int)obj->value.number;
-    else if (!strcmp(name, "cupsColorOrder") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "cupsColorOrder") && obj->type == PPD_PS_NUMBER)
       h->cupsColorOrder = (cups_order_t)(unsigned)obj->value.number;
-    else if (!strcmp(name, "cupsColorSpace") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "cupsColorSpace") && obj->type == PPD_PS_NUMBER)
       h->cupsColorSpace = (cups_cspace_t)(unsigned)obj->value.number;
-    else if (!strcmp(name, "cupsCompression") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "cupsCompression") && obj->type == PPD_PS_NUMBER)
       h->cupsCompression = (unsigned)obj->value.number;
-    else if (!strcmp(name, "cupsRowCount") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "cupsRowCount") && obj->type == PPD_PS_NUMBER)
       h->cupsRowCount = (unsigned)obj->value.number;
-    else if (!strcmp(name, "cupsRowFeed") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "cupsRowFeed") && obj->type == PPD_PS_NUMBER)
       h->cupsRowFeed = (unsigned)obj->value.number;
-    else if (!strcmp(name, "cupsRowStep") && obj->type == CUPS_PS_NUMBER)
+    else if (!strcmp(name, "cupsRowStep") && obj->type == PPD_PS_NUMBER)
       h->cupsRowStep = (unsigned)obj->value.number;
     else if (!strcmp(name, "cupsBorderlessScalingFactor") &&
-             obj->type == CUPS_PS_NUMBER)
+             obj->type == PPD_PS_NUMBER)
       h->cupsBorderlessScalingFactor = (float)obj->value.number;
-    else if (!strncmp(name, "cupsInteger", 11) && obj->type == CUPS_PS_NUMBER)
+    else if (!strncmp(name, "cupsInteger", 11) && obj->type == PPD_PS_NUMBER)
     {
       if ((i = atoi(name + 11)) < 0 || i > 15)
         return (-1);
 
       h->cupsInteger[i] = (unsigned)obj->value.number;
     }
-    else if (!strncmp(name, "cupsReal", 8) && obj->type == CUPS_PS_NUMBER)
+    else if (!strncmp(name, "cupsReal", 8) && obj->type == PPD_PS_NUMBER)
     {
       if ((i = atoi(name + 8)) < 0 || i > 15)
         return (-1);
 
       h->cupsReal[i] = (float)obj->value.number;
     }
-    else if (!strncmp(name, "cupsString", 10) && obj->type == CUPS_PS_STRING)
+    else if (!strncmp(name, "cupsString", 10) && obj->type == PPD_PS_STRING)
     {
       if ((i = atoi(name + 10)) < 0 || i > 15)
         return (-1);
 
       strlcpy(h->cupsString[i], obj->value.string, sizeof(h->cupsString[i]));
     }
-    else if (!strcmp(name, "cupsMarkerType") && obj->type == CUPS_PS_STRING)
+    else if (!strcmp(name, "cupsMarkerType") && obj->type == PPD_PS_STRING)
       strlcpy(h->cupsMarkerType, obj->value.string, sizeof(h->cupsMarkerType));
-    else if (!strcmp(name, "cupsPageSizeName") && obj->type == CUPS_PS_STRING)
+    else if (!strcmp(name, "cupsPageSizeName") && obj->type == PPD_PS_STRING)
       strlcpy(h->cupsPageSizeName, obj->value.string,
               sizeof(h->cupsPageSizeName));
     else if (!strcmp(name, "cupsRenderingIntent") &&
-             obj->type == CUPS_PS_STRING)
+             obj->type == PPD_PS_STRING)
       strlcpy(h->cupsRenderingIntent, obj->value.string,
               sizeof(h->cupsRenderingIntent));
     else
@@ -1595,9 +1595,9 @@ setpagedevice(
       * Ignore unknown name+value...
       */
 
-      DEBUG_printf(("4setpagedevice: Unknown name (\"%s\") or value...\n", name));
+      DEBUG_printf(("4ppd_setpagedevice: Unknown name (\"%s\") or value...\n", name));
 
-      while (obj[1].type != CUPS_PS_NAME && obj < end)
+      while (obj[1].type != PPD_PS_NAME && obj < end)
         obj ++;
     }
   }
@@ -1608,95 +1608,95 @@ setpagedevice(
 
 #ifdef DEBUG
 /*
- * 'DEBUG_object()' - Print an object's value...
+ * 'ppd_DEBUG_object()' - Print an object's value...
  */
 
 static void
-DEBUG_object(const char *prefix,	/* I - Prefix string */
+ppd_DEBUG_object(const char *prefix,	/* I - Prefix string */
              _ppd_ps_obj_t *obj)	/* I - Object to print */
 {
   switch (obj->type)
   {
-    case CUPS_PS_NAME :
+    case PPD_PS_NAME :
 	DEBUG_printf(("4%s: /%s\n", prefix, obj->value.name));
 	break;
 
-    case CUPS_PS_NUMBER :
+    case PPD_PS_NUMBER :
 	DEBUG_printf(("4%s: %g\n", prefix, obj->value.number));
 	break;
 
-    case CUPS_PS_STRING :
+    case PPD_PS_STRING :
 	DEBUG_printf(("4%s: (%s)\n", prefix, obj->value.string));
 	break;
 
-    case CUPS_PS_BOOLEAN :
+    case PPD_PS_BOOLEAN :
 	if (obj->value.boolean)
 	  DEBUG_printf(("4%s: true", prefix));
 	else
 	  DEBUG_printf(("4%s: false", prefix));
 	break;
 
-    case CUPS_PS_NULL :
+    case PPD_PS_NULL :
 	DEBUG_printf(("4%s: null", prefix));
 	break;
 
-    case CUPS_PS_START_ARRAY :
+    case PPD_PS_START_ARRAY :
 	DEBUG_printf(("4%s: [", prefix));
 	break;
 
-    case CUPS_PS_END_ARRAY :
+    case PPD_PS_END_ARRAY :
 	DEBUG_printf(("4%s: ]", prefix));
 	break;
 
-    case CUPS_PS_START_DICT :
+    case PPD_PS_START_DICT :
 	DEBUG_printf(("4%s: <<", prefix));
 	break;
 
-    case CUPS_PS_END_DICT :
+    case PPD_PS_END_DICT :
 	DEBUG_printf(("4%s: >>", prefix));
 	break;
 
-    case CUPS_PS_START_PROC :
+    case PPD_PS_START_PROC :
 	DEBUG_printf(("4%s: {", prefix));
 	break;
 
-    case CUPS_PS_END_PROC :
+    case PPD_PS_END_PROC :
 	DEBUG_printf(("4%s: }", prefix));
 	break;
 
-    case CUPS_PS_CLEARTOMARK :
+    case PPD_PS_CLEARTOMARK :
 	DEBUG_printf(("4%s: --cleartomark--", prefix));
         break;
 
-    case CUPS_PS_COPY :
+    case PPD_PS_COPY :
 	DEBUG_printf(("4%s: --copy--", prefix));
         break;
 
-    case CUPS_PS_DUP :
+    case PPD_PS_DUP :
 	DEBUG_printf(("4%s: --dup--", prefix));
         break;
 
-    case CUPS_PS_INDEX :
+    case PPD_PS_INDEX :
 	DEBUG_printf(("4%s: --index--", prefix));
         break;
 
-    case CUPS_PS_POP :
+    case PPD_PS_POP :
 	DEBUG_printf(("4%s: --pop--", prefix));
         break;
 
-    case CUPS_PS_ROLL :
+    case PPD_PS_ROLL :
 	DEBUG_printf(("4%s: --roll--", prefix));
         break;
 
-    case CUPS_PS_SETPAGEDEVICE :
+    case PPD_PS_SETPAGEDEVICE :
 	DEBUG_printf(("4%s: --setpagedevice--", prefix));
         break;
 
-    case CUPS_PS_STOPPED :
+    case PPD_PS_STOPPED :
 	DEBUG_printf(("4%s: --stopped--", prefix));
         break;
 
-    case CUPS_PS_OTHER :
+    case PPD_PS_OTHER :
 	DEBUG_printf(("4%s: --%s--", prefix, obj->value.other));
 	break;
   }
@@ -1704,11 +1704,11 @@ DEBUG_object(const char *prefix,	/* I - Prefix string */
 
 
 /*
- * 'DEBUG_stack()' - Print a stack...
+ * 'ppd_DEBUG_stack()' - Print a stack...
  */
 
 static void
-DEBUG_stack(const char       *prefix,	/* I - Prefix string */
+ppd_DEBUG_stack(const char       *prefix,	/* I - Prefix string */
             _ppd_ps_stack_t *st)	/* I - Stack */
 {
   int			c;		/* Looping var */
@@ -1716,6 +1716,6 @@ DEBUG_stack(const char       *prefix,	/* I - Prefix string */
 
 
   for (obj = st->objs, c = st->num_objs; c > 0; c --, obj ++)
-    DEBUG_object(prefix, obj);
+    ppd_DEBUG_object(prefix, obj);
 }
 #endif /* DEBUG */

@@ -356,7 +356,8 @@ static const _ppd_ipp_option_t ipp_options[] =
  * Local functions...
  */
 
-static int	compare_ipp_options(_ppd_ipp_option_t *a, _ppd_ipp_option_t *b);
+static int	ppd_compare_ipp_options(_ppd_ipp_option_t *a,
+					_ppd_ipp_option_t *b);
 
 
 /*
@@ -379,17 +380,17 @@ _ppdIppFindOption(const char *name)	/* I - Option/attribute name */
                                    sizeof(ipp_options) / sizeof(ipp_options[0]),
 				   sizeof(ipp_options[0]),
 				   (int (*)(const void *, const void *))
-				       compare_ipp_options));
+				       ppd_compare_ipp_options));
 }
 
 
 /*
- * 'compare_ipp_options()' - Compare two IPP options.
+ * 'ppd_compare_ipp_options()' - Compare two IPP options.
  */
 
-static int				/* O - Result of comparison */
-compare_ipp_options(_ppd_ipp_option_t *a,	/* I - First option */
-                    _ppd_ipp_option_t *b)	/* I - Second option */
+static int					/* O - Result of comparison */
+ppd_compare_ipp_options(_ppd_ipp_option_t *a,	/* I - First option */
+			_ppd_ipp_option_t *b)	/* I - Second option */
 {
   return (strcmp(a->name, b->name));
 }

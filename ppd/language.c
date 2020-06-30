@@ -35,76 +35,6 @@
 
 static _ppd_mutex_t	lang_mutex = _PPD_MUTEX_INITIALIZER;
 					/* Mutex to control access to cache */
-static const char * const lang_encodings[] =
-			{		/* Encoding strings */
-			  "us-ascii",		"iso-8859-1",
-			  "iso-8859-2",		"iso-8859-3",
-			  "iso-8859-4",		"iso-8859-5",
-			  "iso-8859-6",		"iso-8859-7",
-			  "iso-8859-8",		"iso-8859-9",
-			  "iso-8859-10",	"utf-8",
-			  "iso-8859-13",	"iso-8859-14",
-			  "iso-8859-15",	"cp874",
-			  "cp1250",		"cp1251",
-			  "cp1252",		"cp1253",
-			  "cp1254",		"cp1255",
-			  "cp1256",		"cp1257",
-			  "cp1258",		"koi8-r",
-			  "koi8-u",		"iso-8859-11",
-			  "iso-8859-16",	"mac",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "cp932",		"cp936",
-			  "cp949",		"cp950",
-			  "cp1361",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "unknown",		"unknown",
-			  "euc-cn",		"euc-jp",
-			  "euc-kr",		"euc-tw",
-			  "shift_jisx0213"
-			};
 
 #ifdef __APPLE__
 typedef struct
@@ -145,36 +75,11 @@ static const char	*appleLangDefault(void);
 static cups_array_t	*appleMessageLoad(const char *locale) CF_RETURNS_RETAINED;
 #  endif /* CUPS_BUNDLEDIR */
 #endif /* __APPLE__ */
-static int		cups_message_compare(_ppd_message_t *m1, _ppd_message_t *m2);
-static void		cups_message_free(_ppd_message_t *m);
-static void		cups_message_load(cups_lang_t *lang);
-static int		cups_read_strings(cups_file_t *fp, int flags, cups_array_t *a);
-static void		cups_unquote(char *d, const char *s);
-
-
-/*
- * '_cupsEncodingName()' - Return the character encoding name string
- *                         for the given encoding enumeration.
- */
-
-const char *				/* O - Character encoding */
-_cupsEncodingName(
-    cups_encoding_t encoding)		/* I - Encoding value */
-{
-  if (encoding < CUPS_US_ASCII ||
-      encoding >= (cups_encoding_t)(sizeof(lang_encodings) / sizeof(lang_encodings[0])))
-  {
-    DEBUG_printf(("1_cupsEncodingName(encoding=%d) = out of range (\"%s\")",
-                  encoding, lang_encodings[0]));
-    return (lang_encodings[0]);
-  }
-  else
-  {
-    DEBUG_printf(("1_cupsEncodingName(encoding=%d) = \"%s\"",
-                  encoding, lang_encodings[encoding]));
-    return (lang_encodings[encoding]);
-  }
-}
+static int		ppd_message_compare(_ppd_message_t *m1, _ppd_message_t *m2);
+static void		ppd_message_free(_ppd_message_t *m);
+static void		ppd_message_load(cups_lang_t *lang);
+static int		ppd_read_strings(cups_file_t *fp, int flags, cups_array_t *a);
+static void		ppd_unquote(char *d, const char *s);
 
 
 /*
@@ -207,7 +112,7 @@ _ppdLangString(cups_lang_t *lang,	/* I - Language */
   */
 
   if (!lang->strings)
-    cups_message_load(lang);
+    ppd_message_load(lang);
 
   s = _ppdMessageLookup(lang->strings, message);
 
@@ -284,7 +189,7 @@ _ppdMessageLoad(const char *filename,	/* I - Message catalog to load */
 
   if (flags & _PPD_MESSAGE_STRINGS)
   {
-    while (cups_read_strings(fp, flags, a));
+    while (ppd_read_strings(fp, flags, a));
   }
   else
   {
@@ -339,7 +244,7 @@ _ppdMessageLoad(const char *filename,	/* I - Message catalog to load */
       */
 
       if (flags & _PPD_MESSAGE_UNQUOTE)
-	cups_unquote(ptr, ptr);
+	ppd_unquote(ptr, ptr);
 
      /*
       * Create or add to a message...
@@ -556,19 +461,19 @@ _ppdMessageLookup(cups_array_t *a,	/* I - Message array */
 cups_array_t *				/* O - Array */
 _ppdMessageNew(void *context)		/* I - User data */
 {
-  return (cupsArrayNew3((cups_array_func_t)cups_message_compare, context,
+  return (cupsArrayNew3((cups_array_func_t)ppd_message_compare, context,
                         (cups_ahash_func_t)NULL, 0,
 			(cups_acopy_func_t)NULL,
-			(cups_afree_func_t)cups_message_free));
+			(cups_afree_func_t)ppd_message_free));
 }
 
 
 /*
- * 'cups_message_compare()' - Compare two messages.
+ * 'ppd_message_compare()' - Compare two messages.
  */
 
 static int				/* O - Result of comparison */
-cups_message_compare(
+ppd_message_compare(
     _ppd_message_t *m1,		/* I - First message */
     _ppd_message_t *m2)		/* I - Second message */
 {
@@ -577,11 +482,11 @@ cups_message_compare(
 
 
 /*
- * 'cups_message_free()' - Free a message.
+ * 'ppd_message_free()' - Free a message.
  */
 
 static void
-cups_message_free(_ppd_message_t *m)	/* I - Message */
+ppd_message_free(_ppd_message_t *m)	/* I - Message */
 {
   if (m->msg)
     free(m->msg);
@@ -594,11 +499,11 @@ cups_message_free(_ppd_message_t *m)	/* I - Message */
 
 
 /*
- * 'cups_message_load()' - Load the message catalog for a language.
+ * 'ppd_message_load()' - Load the message catalog for a language.
  */
 
 static void
-cups_message_load(cups_lang_t *lang)	/* I - Language */
+ppd_message_load(cups_lang_t *lang)	/* I - Language */
 {
 #if defined(__APPLE__) && defined(CUPS_BUNDLEDIR)
   lang->strings = appleMessageLoad(lang->language);
@@ -636,7 +541,7 @@ cups_message_load(cups_lang_t *lang)	/* I - Language */
       * No generic localization, so use POSIX...
       */
 
-      DEBUG_printf(("4cups_message_load: access(\"%s\", 0): %s", filename,
+      DEBUG_printf(("4ppd_message_load: access(\"%s\", 0): %s", filename,
                     strerror(errno)));
 
       snprintf(filename, sizeof(filename), "%s/C/cups_C.po", localedir);
@@ -653,11 +558,11 @@ cups_message_load(cups_lang_t *lang)	/* I - Language */
 
 
 /*
- * 'cups_read_strings()' - Read a pair of strings from a .strings file.
+ * 'ppd_read_strings()' - Read a pair of strings from a .strings file.
  */
 
 static int				/* O - 1 on success, 0 on failure */
-cups_read_strings(cups_file_t  *fp,	/* I - .strings file */
+ppd_read_strings(cups_file_t  *fp,	/* I - .strings file */
                   int          flags,	/* I - CUPS_MESSAGE_xxx flags */
 		  cups_array_t *a)	/* I - Message catalog array */
 {
@@ -696,7 +601,7 @@ cups_read_strings(cups_file_t  *fp,	/* I - .strings file */
     *bufptr++ = '\0';
 
     if (flags & _PPD_MESSAGE_UNQUOTE)
-      cups_unquote(msg, msg);
+      ppd_unquote(msg, msg);
 
    /*
     * Find the start of the translation...
@@ -730,7 +635,7 @@ cups_read_strings(cups_file_t  *fp,	/* I - .strings file */
     *bufptr++ = '\0';
 
     if (flags & _PPD_MESSAGE_UNQUOTE)
-      cups_unquote(str, str);
+      ppd_unquote(str, str);
 
    /*
     * If we get this far we have a valid pair of strings, add them...
@@ -770,11 +675,11 @@ cups_read_strings(cups_file_t  *fp,	/* I - .strings file */
 
 
 /*
- * 'cups_unquote()' - Unquote characters in strings...
+ * 'ppd_unquote()' - Unquote characters in strings...
  */
 
 static void
-cups_unquote(char       *d,		/* O - Unquoted string */
+ppd_unquote(char       *d,		/* O - Unquoted string */
              const char *s)		/* I - Original string */
 {
   while (*s)

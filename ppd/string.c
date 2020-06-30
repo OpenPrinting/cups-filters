@@ -35,7 +35,7 @@ static cups_array_t	*stringpool = NULL;
  * Local functions...
  */
 
-static int	compare_sp_items(_ppd_sp_item_t *a, _ppd_sp_item_t *b);
+static int	ppd_compare_sp_items(_ppd_sp_item_t *a, _ppd_sp_item_t *b);
 
 
 /*
@@ -64,7 +64,7 @@ _ppdStrAlloc(const char *s)		/* I - String */
   _ppdMutexLock(&sp_mutex);
 
   if (!stringpool)
-    stringpool = cupsArrayNew((cups_array_func_t)compare_sp_items, NULL);
+    stringpool = cupsArrayNew((cups_array_func_t)ppd_compare_sp_items, NULL);
 
   if (!stringpool)
   {
@@ -723,11 +723,11 @@ _ppd_strlcpy(char       *dst,		/* O - Destination string */
 
 
 /*
- * 'compare_sp_items()' - Compare two string pool items...
+ * 'ppd_compare_sp_items()' - Compare two string pool items...
  */
 
 static int				/* O - Result of comparison */
-compare_sp_items(_ppd_sp_item_t *a,	/* I - First item */
+ppd_compare_sp_items(_ppd_sp_item_t *a,	/* I - First item */
                  _ppd_sp_item_t *b)	/* I - Second item */
 {
   return (strcmp(a->str, b->str));
