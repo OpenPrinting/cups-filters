@@ -129,14 +129,14 @@ ppdFindNextAttr(ppd_file_t *ppd,	/* I - PPD file data */
 
 
 /*
- * '_ppdNormalizeMakeAndModel()' - Normalize a product/make-and-model string.
+ * 'ppdNormalizeMakeAndModel()' - Normalize a product/make-and-model string.
  *
  * This function tries to undo the mistakes made by many printer manufacturers
  * to produce a clean make-and-model string we can use.
  */
 
 char *					/* O - Normalized make-and-model string or NULL on error */
-_ppdNormalizeMakeAndModel(
+ppdNormalizeMakeAndModel(
     const char *make_and_model,		/* I - Original make-and-model string */
     char       *buffer,			/* I - String buffer */
     size_t     bufsize)			/* I - Size of string buffer */

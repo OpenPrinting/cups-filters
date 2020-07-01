@@ -92,7 +92,7 @@ static void		ppd_DEBUG_stack(const char *prefix, _ppd_ps_stack_t *st);
 
 
 /*
- * '_ppdRasterInterpretPPD()' - Interpret PPD commands to create a page header.
+ * 'ppdRasterInterpretPPD()' - Interpret PPD commands to create a page header.
  *
  * This function is used by raster image processing (RIP) filters like
  * cgpdftoraster and imagetoraster when writing CUPS raster data for a page.
@@ -122,7 +122,7 @@ static void		ppd_DEBUG_stack(const char *prefix, _ppd_ps_stack_t *st);
  */
 
 int					/* O - 0 on success, -1 on failure */
-_ppdRasterInterpretPPD(
+ppdRasterInterpretPPD(
     cups_page_header2_t *h,		/* O - Page header to create */
     ppd_file_t          *ppd,		/* I - PPD file */
     int                 num_options,	/* I - Number of options */
@@ -200,7 +200,7 @@ _ppdRasterInterpretPPD(
     */
 
     if (ppd->patches)
-      status |= _ppdRasterExecPS(h, &preferred_bits, ppd->patches);
+      status |= ppdRasterExecPS(h, &preferred_bits, ppd->patches);
 
    /*
     * Then apply printer options in the proper order...
@@ -208,25 +208,25 @@ _ppdRasterInterpretPPD(
 
     if ((code = ppdEmitString(ppd, PPD_ORDER_DOCUMENT, 0.0)) != NULL)
     {
-      status |= _ppdRasterExecPS(h, &preferred_bits, code);
+      status |= ppdRasterExecPS(h, &preferred_bits, code);
       free(code);
     }
 
     if ((code = ppdEmitString(ppd, PPD_ORDER_ANY, 0.0)) != NULL)
     {
-      status |= _ppdRasterExecPS(h, &preferred_bits, code);
+      status |= ppdRasterExecPS(h, &preferred_bits, code);
       free(code);
     }
 
     if ((code = ppdEmitString(ppd, PPD_ORDER_PROLOG, 0.0)) != NULL)
     {
-      status |= _ppdRasterExecPS(h, &preferred_bits, code);
+      status |= ppdRasterExecPS(h, &preferred_bits, code);
       free(code);
     }
 
     if ((code = ppdEmitString(ppd, PPD_ORDER_PAGE, 0.0)) != NULL)
     {
-      status |= _ppdRasterExecPS(h, &preferred_bits, code);
+      status |= ppdRasterExecPS(h, &preferred_bits, code);
       free(code);
     }
   }
@@ -497,11 +497,11 @@ _ppdRasterInterpretPPD(
 
 
 /*
- * '_ppdRasterExecPS()' - Execute PostScript code to initialize a page header.
+ * 'ppdRasterExecPS()' - Execute PostScript code to initialize a page header.
  */
 
 int					/* O - 0 on success, -1 on error */
-_ppdRasterExecPS(
+ppdRasterExecPS(
     cups_page_header2_t *h,		/* O - Page header */
     int                 *preferred_bits,/* O - Preferred bits per color */
     const char          *code)		/* I - PS code to execute */
@@ -513,7 +513,7 @@ _ppdRasterExecPS(
 			*codeptr;	/* Pointer into copy of code */
 
 
-  DEBUG_printf(("_ppdRasterExecPS(h=%p, preferred_bits=%p, code=\"%s\")\n",
+  DEBUG_printf(("ppdRasterExecPS(h=%p, preferred_bits=%p, code=\"%s\")\n",
                 h, preferred_bits, code));
 
  /*
@@ -542,8 +542,8 @@ _ppdRasterExecPS(
   while ((obj = ppd_scan_ps(st, &codeptr)) != NULL)
   {
 #ifdef DEBUG
-    DEBUG_printf(("_ppdRasterExecPS: Stack (%d objects)", st->num_objs));
-    ppd_DEBUG_object("_ppdRasterExecPS", obj);
+    DEBUG_printf(("ppdRasterExecPS: Stack (%d objects)", st->num_objs));
+    ppd_DEBUG_object("ppdRasterExecPS", obj);
 #endif /* DEBUG */
 
     switch (obj->type)
@@ -560,7 +560,7 @@ _ppdRasterExecPS(
 
 #ifdef DEBUG
           DEBUG_puts("1_cupsRasterExecPS:    dup");
-	  ppd_DEBUG_stack("_ppdRasterExecPS", st);
+	  ppd_DEBUG_stack("ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
@@ -571,8 +571,8 @@ _ppdRasterExecPS(
 	    ppd_copy_stack(st, (int)obj->value.number);
 
 #ifdef DEBUG
-            DEBUG_puts("_ppdRasterExecPS: copy");
-	    ppd_DEBUG_stack("_ppdRasterExecPS", st);
+            DEBUG_puts("ppdRasterExecPS: copy");
+	    ppd_DEBUG_stack("ppdRasterExecPS", st);
 #endif /* DEBUG */
           }
           break;
@@ -582,8 +582,8 @@ _ppdRasterExecPS(
 	  ppd_copy_stack(st, 1);
 
 #ifdef DEBUG
-          DEBUG_puts("_ppdRasterExecPS: dup");
-	  ppd_DEBUG_stack("_ppdRasterExecPS", st);
+          DEBUG_puts("ppdRasterExecPS: dup");
+	  ppd_DEBUG_stack("ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
@@ -594,8 +594,8 @@ _ppdRasterExecPS(
 	    ppd_index_stack(st, (int)obj->value.number);
 
 #ifdef DEBUG
-            DEBUG_puts("_ppdRasterExecPS: index");
-	    ppd_DEBUG_stack("_ppdRasterExecPS", st);
+            DEBUG_puts("ppdRasterExecPS: index");
+	    ppd_DEBUG_stack("ppdRasterExecPS", st);
 #endif /* DEBUG */
           }
           break;
@@ -605,8 +605,8 @@ _ppdRasterExecPS(
           ppd_pop_stack(st);
 
 #ifdef DEBUG
-          DEBUG_puts("_ppdRasterExecPS: pop");
-	  ppd_DEBUG_stack("_ppdRasterExecPS", st);
+          DEBUG_puts("ppdRasterExecPS: pop");
+	  ppd_DEBUG_stack("ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
@@ -624,8 +624,8 @@ _ppdRasterExecPS(
 	      ppd_roll_stack(st, (int)obj->value.number, c);
 
 #ifdef DEBUG
-              DEBUG_puts("_ppdRasterExecPS: roll");
-	      ppd_DEBUG_stack("_ppdRasterExecPS", st);
+              DEBUG_puts("ppdRasterExecPS: roll");
+	      ppd_DEBUG_stack("ppdRasterExecPS", st);
 #endif /* DEBUG */
             }
 	  }
@@ -636,8 +636,8 @@ _ppdRasterExecPS(
 	  ppd_setpagedevice(st, h, preferred_bits);
 
 #ifdef DEBUG
-          DEBUG_puts("_ppdRasterExecPS: setpagedevice");
-	  ppd_DEBUG_stack("_ppdRasterExecPS", st);
+          DEBUG_puts("ppdRasterExecPS: setpagedevice");
+	  ppd_DEBUG_stack("ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;
 
@@ -650,7 +650,7 @@ _ppdRasterExecPS(
       case PPD_PS_OTHER :
           _ppdRasterAddError("Unknown operator \"%s\".\n", obj->value.other);
 	  error = 1;
-          DEBUG_printf(("_ppdRasterExecPS: Unknown operator \"%s\".", obj->value.other));
+          DEBUG_printf(("ppdRasterExecPS: Unknown operator \"%s\".", obj->value.other));
           break;
     }
 
@@ -669,8 +669,8 @@ _ppdRasterExecPS(
     ppd_error_stack(st, "Stack not empty:");
 
 #ifdef DEBUG
-    DEBUG_puts("_ppdRasterExecPS: Stack not empty");
-    ppd_DEBUG_stack("_ppdRasterExecPS", st);
+    DEBUG_puts("ppdRasterExecPS: Stack not empty");
+    ppd_DEBUG_stack("ppdRasterExecPS", st);
 #endif /* DEBUG */
 
     ppd_delete_stack(st);

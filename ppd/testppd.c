@@ -422,7 +422,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 
     fputs("ppdOpenFile(test.ppd): ", stdout);
 
-    if ((ppd = _ppdOpenFile("test.ppd", _PPD_LOCALIZATION_ALL)) != NULL)
+    if ((ppd = ppdOpenFileWithLocalization("test.ppd", _PPD_LOCALIZATION_ALL)) != NULL)
       puts("PASS");
     else
     {
@@ -1172,7 +1172,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD, "requested-attributes", sizeof(pattrs) / sizeof(pattrs[0]), NULL, pattrs);
     response = cupsDoRequest(http, request, resource);
 
-    if (_ppdCreateFromIPP(buffer, sizeof(buffer), response))
+    if (ppdCreateFromIPPCUPS(buffer, sizeof(buffer), response))
       printf("Created PPD: %s\n", buffer);
     else
       puts("Unable to create PPD.");
@@ -1383,11 +1383,11 @@ main(int  argc,				/* I - Number of command-line arguments */
 	       attr->text, attr->value ? attr->value : "");
 
       puts("\nPPD Cache:");
-      if ((pc = _ppdCacheCreateWithPPD(ppd)) == NULL)
+      if ((pc = ppdCacheCreateWithPPD(ppd)) == NULL)
         printf("    Unable to create: %s\n", cupsLastErrorString());
       else
       {
-        _ppdCacheWriteFile(pc, "t.cache", NULL);
+        ppdCacheWriteFile(pc, "t.cache", NULL);
         puts("    Wrote t.cache.");
       }
     }
@@ -1479,14 +1479,14 @@ do_ps_tests(void)
   * Test PS exec code...
   */
 
-  fputs("_ppdRasterExecPS(\"setpagedevice\"): ", stdout);
+  fputs("ppdRasterExecPS(\"setpagedevice\"): ", stdout);
   fflush(stdout);
 
   memset(&header, 0, sizeof(header));
   header.Collate = CUPS_TRUE;
   preferred_bits = 0;
 
-  if (_ppdRasterExecPS(&header, &preferred_bits, setpagedevice_code))
+  if (ppdRasterExecPS(&header, &preferred_bits, setpagedevice_code))
   {
     puts("FAIL (error from function)");
     puts(_ppdRasterErrorString());
@@ -1507,10 +1507,10 @@ do_ps_tests(void)
   else
     puts("PASS");
 
-  fputs("_ppdRasterExecPS(\"roll\"): ", stdout);
+  fputs("ppdRasterExecPS(\"roll\"): ", stdout);
   fflush(stdout);
 
-  if (_ppdRasterExecPS(&header, &preferred_bits,
+  if (ppdRasterExecPS(&header, &preferred_bits,
                         "792 612 0 0 0\n"
 			"pop pop pop\n"
 			"<</PageSize[5 -2 roll]/ImagingBBox null>>"
@@ -1529,10 +1529,10 @@ do_ps_tests(void)
   else
     puts("PASS");
 
-  fputs("_ppdRasterExecPS(\"dup index\"): ", stdout);
+  fputs("ppdRasterExecPS(\"dup index\"): ", stdout);
   fflush(stdout);
 
-  if (_ppdRasterExecPS(&header, &preferred_bits,
+  if (ppdRasterExecPS(&header, &preferred_bits,
                         "true false dup\n"
 			"<</Collate 4 index"
 			"/Duplex 5 index"
@@ -1567,10 +1567,10 @@ do_ps_tests(void)
       puts("PASS");
   }
 
-  fputs("_ppdRasterExecPS(\"%%Begin/EndFeature code\"): ", stdout);
+  fputs("ppdRasterExecPS(\"%%Begin/EndFeature code\"): ", stdout);
   fflush(stdout);
 
-  if (_ppdRasterExecPS(&header, &preferred_bits, dsc_code))
+  if (ppdRasterExecPS(&header, &preferred_bits, dsc_code))
   {
     puts("FAIL (error from function)");
     puts(_ppdRasterErrorString());

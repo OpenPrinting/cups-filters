@@ -96,7 +96,7 @@ cupsMarkOptions(
     * Load PPD cache and mapping data as needed...
     */
 
-    ppd->cache = _ppdCacheCreateWithPPD(ppd);
+    ppd->cache = ppdCacheCreateWithPPD(ppd);
   }
 
   cache = ppd->cache;
@@ -134,17 +134,17 @@ cupsMarkOptions(
       {
         if (!_ppd_strncasecmp(s, "Custom.", 7) || ppdPageSize(ppd, s))
           ppd_mark_option(ppd, "PageSize", s);
-        else if ((ppd_keyword = _ppdCacheGetPageSize(cache, NULL, s, NULL)) != NULL)
+        else if ((ppd_keyword = ppdCacheGetPageSize(cache, NULL, s, NULL)) != NULL)
 	  ppd_mark_option(ppd, "PageSize", ppd_keyword);
       }
 
       if (cache && cache->source_option &&
           !cupsGetOption(cache->source_option, num_options, options) &&
-	  (ppd_keyword = _ppdCacheGetInputSlot(cache, NULL, s)) != NULL)
+	  (ppd_keyword = ppdCacheGetInputSlot(cache, NULL, s)) != NULL)
 	ppd_mark_option(ppd, cache->source_option, ppd_keyword);
 
       if (!cupsGetOption("MediaType", num_options, options) &&
-	  (ppd_keyword = _ppdCacheGetMediaType(cache, NULL, s)) != NULL)
+	  (ppd_keyword = ppdCacheGetMediaType(cache, NULL, s)) != NULL)
 	ppd_mark_option(ppd, "MediaType", ppd_keyword);
     }
   }
@@ -217,7 +217,7 @@ cupsMarkOptions(
     }
 
     if (output_bin && !cupsGetOption("OutputBin", num_options, options) &&
-	(ppd_keyword = _ppdCacheGetOutputBin(cache, output_bin)) != NULL)
+	(ppd_keyword = ppdCacheGetOutputBin(cache, output_bin)) != NULL)
     {
      /*
       * Map output-bin to OutputBin...
@@ -603,7 +603,7 @@ ppdNextOption(ppd_file_t *ppd)		/* I - PPD file */
 
 
 /*
- * '_ppdParseOptions()' - Parse options from a PPD file.
+ * 'ppdParseOptions()' - Parse options from a PPD file.
  *
  * This function looks for strings of the form:
  *
@@ -614,7 +614,7 @@ ppdNextOption(ppd_file_t *ppd)		/* I - PPD file */
  */
 
 int					/* O  - Number of options */
-_ppdParseOptions(
+ppdParseOptions(
     const char    *s,			/* I  - String to parse */
     int           num_options,		/* I  - Number of options */
     cups_option_t **options,		/* IO - Options */
@@ -750,7 +750,7 @@ ppd_mark_choices(ppd_file_t *ppd,	/* I - PPD file */
     return;
 
   options     = NULL;
-  num_options = _ppdParseOptions(s, 0, &options, 0);
+  num_options = ppdParseOptions(s, 0, &options, 0);
 
   for (i = num_options, option = options; i > 0; i --, option ++)
     ppd_mark_option(ppd, option->name, option->value);

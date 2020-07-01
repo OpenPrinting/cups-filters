@@ -261,7 +261,7 @@ ppdClose(ppd_file_t *ppd)		/* I - PPD file record */
   */
 
   if (ppd->cache)
-    _ppdCacheDestroy(ppd->cache);
+    ppdCacheDestroy(ppd->cache);
 
  /*
   * Free the whole record...
@@ -319,12 +319,12 @@ ppdErrorString(ppd_status_t status)	/* I - PPD status */
 
 
 /*
- * '_ppdGetEncoding()' - Get the CUPS encoding value for the given
+ * 'ppdGetEncoding()' - Get the CUPS encoding value for the given
  *                       LanguageEncoding.
  */
 
 cups_encoding_t				/* O - CUPS encoding value */
-_ppdGetEncoding(const char *name)	/* I - LanguageEncoding string */
+ppdGetEncoding(const char *name)	/* I - LanguageEncoding string */
 {
   if (!_ppd_strcasecmp(name, "ISOLatin1"))
     return (CUPS_ISO8859_1);
@@ -344,11 +344,11 @@ _ppdGetEncoding(const char *name)	/* I - LanguageEncoding string */
 
 
 /*
- * '_ppdGlobals()' - Return a pointer to thread local storage
+ * 'ppdGlobals()' - Return a pointer to thread local storage
  */
 
 _ppd_globals_t *			/* O - Pointer to global data */
-_ppdGlobals(void)
+ppdGlobals(void)
 {
   _ppd_globals_t *pg;			/* Pointer to global data */
 
@@ -392,7 +392,7 @@ _ppdGlobals(void)
 ppd_status_t				/* O - Status code */
 ppdLastError(int *line)			/* O - Line number */
 {
-  _ppd_globals_t	*pg = _ppdGlobals();
+  _ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
 
 
@@ -404,13 +404,13 @@ ppdLastError(int *line)			/* O - Line number */
 
 
 /*
- * '_ppdOpen()' - Read a PPD file into memory.
+ * 'ppdOpenWithLocalization()' - Read a PPD file into memory.
  *
  * @since CUPS 1.2/macOS 10.5@
  */
 
 ppd_file_t *				/* O - PPD file record or @code NULL@ if the PPD file could not be opened. */
-_ppdOpen(
+ppdOpenWithLocalization(
     cups_file_t		*fp,		/* I - File to read from */
     _ppd_localization_t	localization)	/* I - Localization to load */
 {
@@ -442,7 +442,7 @@ _ppdOpen(
   int			ui_keyword;	/* Is this line a UI keyword? */
   cups_lang_t		*lang;		/* Language data */
   cups_encoding_t	encoding;	/* Encoding of PPD file */
-  _ppd_globals_t	*pg = _ppdGlobals();
+  _ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
   char			custom_name[PPD_MAX_NAME];
 					/* CustomFoo attribute name */
@@ -519,7 +519,7 @@ _ppdOpen(
 			};
 
 
-  DEBUG_printf(("_ppdOpen(fp=%p)", fp));
+  DEBUG_printf(("ppdOpenWithLocalization(fp=%p)", fp));
 
  /*
   * Default to "OK" status...
@@ -579,7 +579,7 @@ _ppdOpen(
     ll_CC_len = strlen(ll_CC);
     ll_len    = strlen(ll);
 
-    DEBUG_printf(("2_ppdOpen: Loading localizations matching \"%s\" and \"%s\"",
+    DEBUG_printf(("2ppdOpenWithLocalization: Loading localizations matching \"%s\" and \"%s\"",
                   ll_CC, ll));
   }
 
@@ -592,7 +592,7 @@ _ppdOpen(
 
   mask = ppd_read(fp, &line, keyword, name, text, &string, 0, pg);
 
-  DEBUG_printf(("2_ppdOpen: mask=%x, keyword=\"%s\"...", mask, keyword));
+  DEBUG_printf(("2ppdOpenWithLocalization: mask=%x, keyword=\"%s\"...", mask, keyword));
 
   if (mask == 0 ||
       strcmp(keyword, "PPD-Adobe") ||
@@ -611,7 +611,7 @@ _ppdOpen(
     return (NULL);
   }
 
-  DEBUG_printf(("2_ppdOpen: keyword=%s, string=%p", keyword, string));
+  DEBUG_printf(("2ppdOpenWithLocalization: keyword=%s, string=%p", keyword, string));
 
  /*
   * Allocate memory for the PPD file record...
@@ -650,7 +650,7 @@ _ppdOpen(
 
   while ((mask = ppd_read(fp, &line, keyword, name, text, &string, 1, pg)) != 0)
   {
-    DEBUG_printf(("2_ppdOpen: mask=%x, keyword=\"%s\", name=\"%s\", "
+    DEBUG_printf(("2ppdOpenWithLocalization: mask=%x, keyword=\"%s\", name=\"%s\", "
                   "text=\"%s\", string=%d chars...", mask, keyword, name, text,
 		  string ? (int)strlen(string) : 0));
 
@@ -706,7 +706,7 @@ _ppdOpen(
 	   strncmp(ll_CC, keyword, ll_CC_len) &&
 	   strncmp(ll, keyword, ll_len)))
       {
-	DEBUG_printf(("2_ppdOpen: Ignoring localization: \"%s\"\n", keyword));
+	DEBUG_printf(("2ppdOpenWithLocalization: Ignoring localization: \"%s\"\n", keyword));
 	free(string);
 	string = NULL;
 	continue;
@@ -727,7 +727,7 @@ _ppdOpen(
 
 	if (i >= (int)(sizeof(color_keywords) / sizeof(color_keywords[0])))
 	{
-	  DEBUG_printf(("2_ppdOpen: Ignoring localization: \"%s\"\n", keyword));
+	  DEBUG_printf(("2ppdOpenWithLocalization: Ignoring localization: \"%s\"\n", keyword));
 	  free(string);
 	  string = NULL;
 	  continue;
@@ -751,7 +751,7 @@ _ppdOpen(
 
         ui_keyword = 1;
 
-        DEBUG_printf(("2_ppdOpen: FOUND ADOBE UI KEYWORD %s WITHOUT OPENUI!",
+        DEBUG_printf(("2ppdOpenWithLocalization: FOUND ADOBE UI KEYWORD %s WITHOUT OPENUI!",
 	              keyword));
 
         if (!group)
@@ -760,7 +760,7 @@ _ppdOpen(
 	                             encoding)) == NULL)
 	    goto error;
 
-          DEBUG_printf(("2_ppdOpen: Adding to group %s...", group->text));
+          DEBUG_printf(("2ppdOpenWithLocalization: Adding to group %s...", group->text));
           option = ppd_get_option(group, keyword);
 	  group  = NULL;
 	}
@@ -795,7 +795,7 @@ _ppdOpen(
 	      !strcmp(ppd->attrs[j]->name + 7, keyword) &&
 	      ppd->attrs[j]->value)
 	  {
-	    DEBUG_printf(("2_ppdOpen: Setting Default%s to %s via attribute...",
+	    DEBUG_printf(("2ppdOpenWithLocalization: Setting Default%s to %s via attribute...",
 	                  option->keyword, ppd->attrs[j]->value));
 	    strlcpy(option->defchoice, ppd->attrs[j]->value,
 	            sizeof(option->defchoice));
@@ -826,7 +826,7 @@ _ppdOpen(
       */
 
       ppd->lang_encoding = strdup("UTF-8");
-      encoding           = _ppdGetEncoding(string);
+      encoding           = ppdGetEncoding(string);
     }
     else if (!strcmp(keyword, "LanguageVersion"))
       ppd->lang_version = string;
@@ -1098,7 +1098,7 @@ _ppdOpen(
     {
       ppd_option_t	*custom_option;	/* Custom option */
 
-      DEBUG_puts("2_ppdOpen: Processing Custom option...");
+      DEBUG_puts("2ppdOpenWithLocalization: Processing Custom option...");
 
      /*
       * Get the option and custom option...
@@ -1125,7 +1125,7 @@ _ppdOpen(
         if ((choice = ppdFindChoice(custom_option, "Custom")) == NULL)
 	  if ((choice = ppd_add_choice(custom_option, "Custom")) == NULL)
 	  {
-	    DEBUG_puts("1_ppdOpen: Unable to add Custom choice!");
+	    DEBUG_puts("1ppdOpenWithLocalization: Unable to add Custom choice!");
 
 	    pg->ppd_status = PPD_ALLOC_ERROR;
 
@@ -1165,7 +1165,7 @@ _ppdOpen(
 	  if ((choice = ppdFindChoice(custom_option, "Custom")) == NULL)
 	    if ((choice = ppd_add_choice(custom_option, "Custom")) == NULL)
 	    {
-	      DEBUG_puts("1_ppdOpen: Unable to add Custom choice!");
+	      DEBUG_puts("1ppdOpenWithLocalization: Unable to add Custom choice!");
 
 	      pg->ppd_status = PPD_ALLOC_ERROR;
 
@@ -1270,7 +1270,7 @@ _ppdOpen(
       * Add an option record to the current sub-group, group, or file...
       */
 
-      DEBUG_printf(("2_ppdOpen: name=\"%s\" (%d)", name, (int)strlen(name)));
+      DEBUG_printf(("2ppdOpenWithLocalization: name=\"%s\" (%d)", name, (int)strlen(name)));
 
       if (name[0] == '*')
         _ppd_strcpy(name, name + 1); /* Eliminate leading asterisk */
@@ -1278,7 +1278,7 @@ _ppdOpen(
       for (i = (int)strlen(name) - 1; i > 0 && _ppd_isspace(name[i]); i --)
         name[i] = '\0'; /* Eliminate trailing spaces */
 
-      DEBUG_printf(("2_ppdOpen: OpenUI of %s in group %s...", name,
+      DEBUG_printf(("2ppdOpenWithLocalization: OpenUI of %s in group %s...", name,
                     group ? group->text : "(null)"));
 
       if (subgroup != NULL)
@@ -1289,7 +1289,7 @@ _ppdOpen(
 	                           encoding)) == NULL)
 	  goto error;
 
-        DEBUG_printf(("2_ppdOpen: Adding to group %s...", group->text));
+        DEBUG_printf(("2ppdOpenWithLocalization: Adding to group %s...", group->text));
         option = ppd_get_option(group, name);
 	group  = NULL;
       }
@@ -1327,7 +1327,7 @@ _ppdOpen(
 	    !strcmp(ppd->attrs[j]->name + 7, name) &&
 	    ppd->attrs[j]->value)
 	{
-	  DEBUG_printf(("2_ppdOpen: Setting Default%s to %s via attribute...",
+	  DEBUG_printf(("2ppdOpenWithLocalization: Setting Default%s to %s via attribute...",
 	                option->keyword, ppd->attrs[j]->value));
 	  strlcpy(option->defchoice, ppd->attrs[j]->value,
 	          sizeof(option->defchoice));
@@ -1373,7 +1373,7 @@ _ppdOpen(
         if ((choice = ppdFindChoice(option, "Custom")) == NULL)
 	  if ((choice = ppd_add_choice(option, "Custom")) == NULL)
 	  {
-	    DEBUG_puts("1_ppdOpen: Unable to add Custom choice!");
+	    DEBUG_puts("1ppdOpenWithLocalization: Unable to add Custom choice!");
 
 	    pg->ppd_status = PPD_ALLOC_ERROR;
 
@@ -1446,7 +1446,7 @@ _ppdOpen(
 	    !strcmp(ppd->attrs[j]->name + 7, name) &&
 	    ppd->attrs[j]->value)
 	{
-	  DEBUG_printf(("2_ppdOpen: Setting Default%s to %s via attribute...",
+	  DEBUG_printf(("2ppdOpenWithLocalization: Setting Default%s to %s via attribute...",
 	                option->keyword, ppd->attrs[j]->value));
 	  strlcpy(option->defchoice, ppd->attrs[j]->value,
 	          sizeof(option->defchoice));
@@ -1476,7 +1476,7 @@ _ppdOpen(
       {
 	if ((choice = ppd_add_choice(option, "Custom")) == NULL)
 	{
-	  DEBUG_puts("1_ppdOpen: Unable to add Custom choice!");
+	  DEBUG_puts("1ppdOpenWithLocalization: Unable to add Custom choice!");
 
 	  pg->ppd_status = PPD_ALLOC_ERROR;
 
@@ -1670,11 +1670,11 @@ _ppdOpen(
         * Set the default as part of the current option...
 	*/
 
-        DEBUG_printf(("2_ppdOpen: Setting %s to %s...", keyword, string));
+        DEBUG_printf(("2ppdOpenWithLocalization: Setting %s to %s...", keyword, string));
 
         strlcpy(option->defchoice, string, sizeof(option->defchoice));
 
-        DEBUG_printf(("2_ppdOpen: %s is now %s...", keyword, option->defchoice));
+        DEBUG_printf(("2ppdOpenWithLocalization: %s is now %s...", keyword, option->defchoice));
       }
       else
       {
@@ -1687,7 +1687,7 @@ _ppdOpen(
 
         if ((toption = ppdFindOption(ppd, keyword + 7)) != NULL)
 	{
-	  DEBUG_printf(("2_ppdOpen: Setting %s to %s...", keyword, string));
+	  DEBUG_printf(("2ppdOpenWithLocalization: Setting %s to %s...", keyword, string));
 	  strlcpy(toption->defchoice, string, sizeof(toption->defchoice));
 	}
       }
@@ -1936,7 +1936,7 @@ _ppdOpen(
 	         (PPD_KEYWORD | PPD_OPTION | PPD_STRING) &&
 	     !strcmp(keyword, option->keyword))
     {
-      DEBUG_printf(("2_ppdOpen: group=%p, subgroup=%p", group, subgroup));
+      DEBUG_printf(("2ppdOpenWithLocalization: group=%p, subgroup=%p", group, subgroup));
 
       if (!_ppd_strcasecmp(name, "custom") || !_ppd_strncasecmp(name, "custom.", 7))
       {
@@ -2022,7 +2022,7 @@ _ppdOpen(
 
 #ifdef DEBUG
   if (!cupsFileEOF(fp))
-    DEBUG_printf(("1_ppdOpen: Premature EOF at %lu...\n",
+    DEBUG_printf(("1ppdOpenWithLocalization: Premature EOF at %lu...\n",
                   (unsigned long)cupsFileTell(fp)));
 #endif /* DEBUG */
 
@@ -2127,7 +2127,7 @@ ppdOpen(FILE *fp)			/* I - File to read from */
   * Load the PPD file using the newer API...
   */
 
-  ppd = _ppdOpen(cf, _PPD_LOCALIZATION_DEFAULT);
+  ppd = ppdOpenWithLocalization(cf, _PPD_LOCALIZATION_DEFAULT);
 
  /*
   * Close the CUPS file and return the PPD...
@@ -2148,7 +2148,7 @@ ppdOpen(FILE *fp)			/* I - File to read from */
 ppd_file_t *				/* O - PPD file record or @code NULL@ if the PPD file could not be opened. */
 ppdOpen2(cups_file_t *fp)		/* I - File to read from */
 {
-  return _ppdOpen(fp, _PPD_LOCALIZATION_DEFAULT);
+  return ppdOpenWithLocalization(fp, _PPD_LOCALIZATION_DEFAULT);
 }
 
 
@@ -2161,7 +2161,7 @@ ppdOpenFd(int fd)			/* I - File to read from */
 {
   cups_file_t		*fp;		/* CUPS file pointer */
   ppd_file_t		*ppd;		/* PPD file record */
-  _ppd_globals_t	*pg = _ppdGlobals();
+  _ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
 
 
@@ -2203,16 +2203,16 @@ ppdOpenFd(int fd)			/* I - File to read from */
 
 
 /*
- * '_ppdOpenFile()' - Read a PPD file into memory.
+ * 'ppdOpenFileWithLocalization()' - Read a PPD file into memory.
  */
 
 ppd_file_t *				/* O - PPD file record or @code NULL@ if the PPD file could not be opened. */
-_ppdOpenFile(const char		  *filename,	/* I - File to read from */
+ppdOpenFileWithLocalization(const char		  *filename,	/* I - File to read from */
 	     _ppd_localization_t  localization)	/* I - Localization to load */
 {
   cups_file_t		*fp;		/* File pointer */
   ppd_file_t		*ppd;		/* PPD file record */
-  _ppd_globals_t	*pg = _ppdGlobals();
+  _ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
 
 
@@ -2239,7 +2239,7 @@ _ppdOpenFile(const char		  *filename,	/* I - File to read from */
 
   if ((fp = cupsFileOpen(filename, "r")) != NULL)
   {
-    ppd = _ppdOpen(fp, localization);
+    ppd = ppdOpenWithLocalization(fp, localization);
 
     cupsFileClose(fp);
   }
@@ -2260,7 +2260,7 @@ _ppdOpenFile(const char		  *filename,	/* I - File to read from */
 ppd_file_t *				/* O - PPD file record or @code NULL@ if the PPD file could not be opened. */
 ppdOpenFile(const char *filename)	/* I - File to read from */
 {
-  return _ppdOpenFile(filename, _PPD_LOCALIZATION_DEFAULT);
+  return ppdOpenFileWithLocalization(filename, _PPD_LOCALIZATION_DEFAULT);
 }
 
 
@@ -2273,7 +2273,7 @@ ppdOpenFile(const char *filename)	/* I - File to read from */
 void
 ppdSetConformance(ppd_conform_t c)	/* I - Conformance level */
 {
-  _ppd_globals_t	*pg = _ppdGlobals();
+  _ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
 
 

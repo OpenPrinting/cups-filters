@@ -296,7 +296,7 @@ typedef struct _ppd_globals_s		/**** CUPS PPD global state data ****/
 					/* PPD filename */
 } _ppd_globals_t;
 
-typedef enum _ppd_localization_e	/**** Selector for _ppdOpen ****/
+typedef enum _ppd_localization_e	/**** Selector for ppdOpenWithLocalization ****/
 {
   _PPD_LOCALIZATION_DEFAULT,		/* Load only the default localization */
   _PPD_LOCALIZATION_ICC_PROFILES,	/* Load only the color profile localization */
@@ -304,7 +304,7 @@ typedef enum _ppd_localization_e	/**** Selector for _ppdOpen ****/
   _PPD_LOCALIZATION_ALL			/* Load all localizations */
 } _ppd_localization_t;
 
-typedef enum _ppd_parse_e		/**** Selector for _ppdParseOptions ****/
+typedef enum _ppd_parse_e		/**** Selector for ppdParseOptions ****/
 {
   _PPD_PARSE_OPTIONS,			/* Parse only the options */
   _PPD_PARSE_PROPERTIES,		/* Parse only the properties */
@@ -560,62 +560,61 @@ extern int		ppdPageSizeLimits(ppd_file_t *ppd,
 /**** New in libppd (cups-filters) ****/
 
 /**** New in cups-filters 1.0.28 ****/
-extern int		_ppdConvertOptions(ipp_t *request, ppd_file_t *ppd, _ppd_cache_t *pc, ipp_attribute_t *media_col_sup, ipp_attribute_t *doc_handling_sup, ipp_attribute_t *print_color_mode_sup, const char *user, const char *format, int copies, int num_options, cups_option_t *options);
-extern int		_ppdRasterExecPS(cups_page_header2_t *h, int *preferred_bits, const char *code);
-extern int		_ppdRasterInterpretPPD(cups_page_header2_t *h, ppd_file_t *ppd, int num_options, cups_option_t *options, cups_interpret_cb_t func);
+extern int		ppdConvertOptions(ipp_t *request, ppd_file_t *ppd, _ppd_cache_t *pc, ipp_attribute_t *media_col_sup, ipp_attribute_t *doc_handling_sup, ipp_attribute_t *print_color_mode_sup, const char *user, const char *format, int copies, int num_options, cups_option_t *options);
+extern int		ppdRasterExecPS(cups_page_header2_t *h, int *preferred_bits, const char *code);
+extern int		ppdRasterInterpretPPD(cups_page_header2_t *h, ppd_file_t *ppd, int num_options, cups_option_t *options, cups_interpret_cb_t func);
 
-extern _ppd_cache_t	*_ppdCacheCreateWithFile(const char *filename,
+extern _ppd_cache_t	*ppdCacheCreateWithFile(const char *filename,
 			                         ipp_t **attrs);
-extern _ppd_cache_t	*_ppdCacheCreateWithPPD(ppd_file_t *ppd);
-extern void		_ppdCacheDestroy(_ppd_cache_t *pc);
-extern const char	*_ppdCacheGetBin(_ppd_cache_t *pc,
+extern _ppd_cache_t	*ppdCacheCreateWithPPD(ppd_file_t *ppd);
+extern void		ppdCacheDestroy(_ppd_cache_t *pc);
+extern const char	*ppdCacheGetBin(_ppd_cache_t *pc,
 			                 const char *output_bin);
-extern int		_ppdCacheGetFinishingOptions(_ppd_cache_t *pc,
+extern int		ppdCacheGetFinishingOptions(_ppd_cache_t *pc,
 			                             ipp_t *job,
 			                             ipp_finishings_t value,
 			                             int num_options,
 			                             cups_option_t **options);
-extern int		_ppdCacheGetFinishingValues(ppd_file_t *ppd, _ppd_cache_t *pc, int max_values, int *values);
-extern const char	*_ppdCacheGetInputSlot(_ppd_cache_t *pc, ipp_t *job,
+extern int		ppdCacheGetFinishingValues(ppd_file_t *ppd, _ppd_cache_t *pc, int max_values, int *values);
+extern const char	*ppdCacheGetInputSlot(_ppd_cache_t *pc, ipp_t *job,
 			                       const char *keyword);
-extern const char	*_ppdCacheGetMediaType(_ppd_cache_t *pc, ipp_t *job,
+extern const char	*ppdCacheGetMediaType(_ppd_cache_t *pc, ipp_t *job,
 			                       const char *keyword);
-extern const char	*_ppdCacheGetOutputBin(_ppd_cache_t *pc,
+extern const char	*ppdCacheGetOutputBin(_ppd_cache_t *pc,
 			                       const char *keyword);
-extern const char	*_ppdCacheGetPageSize(_ppd_cache_t *pc, ipp_t *job,
+extern const char	*ppdCacheGetPageSize(_ppd_cache_t *pc, ipp_t *job,
 			                      const char *keyword, int *exact);
-extern pwg_size_t	*_ppdCacheGetSize(_ppd_cache_t *pc,
+extern pwg_size_t	*ppdCacheGetSize(_ppd_cache_t *pc,
 			                  const char *page_size);
-extern const char	*_ppdCacheGetSource(_ppd_cache_t *pc,
+extern const char	*ppdCacheGetSource(_ppd_cache_t *pc,
 			                    const char *input_slot);
-extern const char	*_ppdCacheGetType(_ppd_cache_t *pc,
+extern const char	*ppdCacheGetType(_ppd_cache_t *pc,
 			                  const char *media_type);
-extern int		_ppdCacheWriteFile(_ppd_cache_t *pc,
+extern int		ppdCacheWriteFile(_ppd_cache_t *pc,
 			                   const char *filename, ipp_t *attrs);
-extern char		*_ppdCreateFromIPP(char *buffer, size_t bufsize, ipp_t *response);
-extern void		_ppdFreeLanguages(cups_array_t *languages);
-extern cups_encoding_t	_ppdGetEncoding(const char *name);
-extern cups_array_t	*_ppdGetLanguages(ppd_file_t *ppd);
-extern _ppd_globals_t	*_ppdGlobals(void);
-extern unsigned		_ppdHashName(const char *name);
-extern ppd_attr_t	*_ppdLocalizedAttr(ppd_file_t *ppd, const char *keyword,
+extern char		*ppdCreateFromIPPCUPS(char *buffer, size_t bufsize, ipp_t *response);
+extern void		ppdFreeLanguages(cups_array_t *languages);
+extern cups_encoding_t	ppdGetEncoding(const char *name);
+extern cups_array_t	*ppdGetLanguages(ppd_file_t *ppd);
+extern _ppd_globals_t	*ppdGlobals(void);
+extern unsigned		ppdHashName(const char *name);
+extern ppd_attr_t	*ppdLocalizedAttr(ppd_file_t *ppd, const char *keyword,
 			                   const char *spec, const char *ll_CC);
-extern char		*_ppdNormalizeMakeAndModel(const char *make_and_model,
+extern char		*ppdNormalizeMakeAndModel(const char *make_and_model,
 			                           char *buffer,
 						   size_t bufsize);
-extern ppd_file_t	*_ppdOpen(cups_file_t *fp,
-				  _ppd_localization_t localization); /* XXX */
-extern ppd_file_t	*_ppdOpenFile(const char *filename,
+extern ppd_file_t	*ppdOpenWithLocalization(cups_file_t *fp,
+				  _ppd_localization_t localization);
+extern ppd_file_t	*ppdOpenFileWithLocalization(const char *filename,
 				      _ppd_localization_t localization);
-                                      /* XXX */
-extern int		_ppdParseOptions(const char *s, int num_options,
+extern int		ppdParseOptions(const char *s, int num_options,
 			                 cups_option_t **options,
 					 _ppd_parse_t which);
-extern const char	*_pwgInputSlotForSource(const char *media_source,
+extern const char	*ppdPwgInputSlotForSource(const char *media_source,
 			                        char *name, size_t namesize);
-extern const char	*_pwgMediaTypeForType(const char *media_type,
+extern const char	*ppdPwgMediaTypeForType(const char *media_type,
 					      char *name, size_t namesize);
-extern const char	*_pwgPageSizeForMedia(pwg_media_t *media,
+extern const char	*ppdPwgPageSizeForMedia(pwg_media_t *media,
 			                      char *name, size_t namesize);
 
 

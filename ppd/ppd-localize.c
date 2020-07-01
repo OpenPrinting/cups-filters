@@ -73,13 +73,13 @@ ppdLocalize(ppd_file_t *ppd)		/* I - PPD file */
 
   for (i = ppd->num_groups, group = ppd->groups; i > 0; i --, group ++)
   {
-    if ((locattr = _ppdLocalizedAttr(ppd, "Translation", group->name,
+    if ((locattr = ppdLocalizedAttr(ppd, "Translation", group->name,
                                      ll_CC)) != NULL)
       strlcpy(group->text, locattr->text, sizeof(group->text));
 
     for (j = group->num_options, option = group->options; j > 0; j --, option ++)
     {
-      if ((locattr = _ppdLocalizedAttr(ppd, "Translation", option->keyword,
+      if ((locattr = ppdLocalizedAttr(ppd, "Translation", option->keyword,
                                        ll_CC)) != NULL)
 	strlcpy(option->text, locattr->text, sizeof(option->text));
 
@@ -89,13 +89,13 @@ ppdLocalize(ppd_file_t *ppd)		/* I - PPD file */
       {
         if (strcmp(choice->choice, "Custom") ||
 	    !ppdFindCustomOption(ppd, option->keyword))
-	  locattr = _ppdLocalizedAttr(ppd, option->keyword, choice->choice,
+	  locattr = ppdLocalizedAttr(ppd, option->keyword, choice->choice,
 	                              ll_CC);
 	else
 	{
 	  snprintf(ckeyword, sizeof(ckeyword), "Custom%s", option->keyword);
 
-	  locattr = _ppdLocalizedAttr(ppd, ckeyword, "True", ll_CC);
+	  locattr = ppdLocalizedAttr(ppd, ckeyword, "True", ll_CC);
 	}
 
         if (locattr)
@@ -119,7 +119,7 @@ ppdLocalize(ppd_file_t *ppd)		/* I - PPD file */
       snprintf(ckeyword, sizeof(ckeyword), "ParamCustom%.29s",
 	       coption->keyword);
 
-      if ((locattr = _ppdLocalizedAttr(ppd, ckeyword, cparam->name,
+      if ((locattr = ppdLocalizedAttr(ppd, ckeyword, cparam->name,
                                        ll_CC)) != NULL)
         strlcpy(cparam->text, locattr->text, sizeof(cparam->text));
     }
@@ -131,7 +131,7 @@ ppdLocalize(ppd_file_t *ppd)		/* I - PPD file */
 
   if ((attr = ppdFindAttr(ppd, "APCustomColorMatchingName", NULL)) != NULL)
   {
-    if ((locattr = _ppdLocalizedAttr(ppd, "APCustomColorMatchingName",
+    if ((locattr = ppdLocalizedAttr(ppd, "APCustomColorMatchingName",
                                      attr->spec, ll_CC)) != NULL)
       strlcpy(attr->text, locattr->text, sizeof(attr->text));
   }
@@ -142,7 +142,7 @@ ppdLocalize(ppd_file_t *ppd)		/* I - PPD file */
   {
     cupsArraySave(ppd->sorted_attrs);
 
-    if ((locattr = _ppdLocalizedAttr(ppd, "cupsICCProfile", attr->spec,
+    if ((locattr = ppdLocalizedAttr(ppd, "cupsICCProfile", attr->spec,
                                      ll_CC)) != NULL)
       strlcpy(attr->text, locattr->text, sizeof(attr->text));
 
@@ -159,7 +159,7 @@ ppdLocalize(ppd_file_t *ppd)		/* I - PPD file */
   {
     cupsArraySave(ppd->sorted_attrs);
 
-    if ((locattr = _ppdLocalizedAttr(ppd, "APPrinterPreset", attr->spec,
+    if ((locattr = ppdLocalizedAttr(ppd, "APPrinterPreset", attr->spec,
                                      ll_CC)) != NULL)
       strlcpy(attr->text, locattr->text, sizeof(attr->text));
 
@@ -198,9 +198,9 @@ ppdLocalizeAttr(ppd_file_t *ppd,	/* I - PPD file */
   */
 
   if (spec)
-    locattr = _ppdLocalizedAttr(ppd, keyword, spec, ll_CC);
+    locattr = ppdLocalizedAttr(ppd, keyword, spec, ll_CC);
   else
-    locattr = _ppdLocalizedAttr(ppd, "Translation", keyword, ll_CC);
+    locattr = ppdLocalizedAttr(ppd, "Translation", keyword, ll_CC);
 
   if (!locattr)
     locattr = ppdFindAttr(ppd, keyword, spec);
@@ -262,7 +262,7 @@ ppdLocalizeIPPReason(
   * Find the localized attribute...
   */
 
-  if ((locattr = _ppdLocalizedAttr(ppd, "cupsIPPReason", reason,
+  if ((locattr = ppdLocalizedAttr(ppd, "cupsIPPReason", reason,
                                    ll_CC)) == NULL)
     locattr = ppdFindAttr(ppd, "cupsIPPReason", reason);
 
@@ -460,7 +460,7 @@ ppdLocalizeMarkerName(
   * Find the localized attribute...
   */
 
-  if ((locattr = _ppdLocalizedAttr(ppd, "cupsMarkerName", name,
+  if ((locattr = ppdLocalizedAttr(ppd, "cupsMarkerName", name,
                                    ll_CC)) == NULL)
     locattr = ppdFindAttr(ppd, "cupsMarkerName", name);
 
@@ -469,11 +469,11 @@ ppdLocalizeMarkerName(
 
 
 /*
- * '_ppdFreeLanguages()' - Free an array of languages from _ppdGetLanguages.
+ * 'ppdFreeLanguages()' - Free an array of languages from ppdGetLanguages.
  */
 
 void
-_ppdFreeLanguages(
+ppdFreeLanguages(
     cups_array_t *languages)		/* I - Languages array */
 {
   char	*language;			/* Current language */
@@ -489,11 +489,11 @@ _ppdFreeLanguages(
 
 
 /*
- * '_ppdGetLanguages()' - Get an array of languages from a PPD file.
+ * 'ppdGetLanguages()' - Get an array of languages from a PPD file.
  */
 
 cups_array_t *				/* O - Languages array */
-_ppdGetLanguages(ppd_file_t *ppd)	/* I - PPD file */
+ppdGetLanguages(ppd_file_t *ppd)	/* I - PPD file */
 {
   cups_array_t	*languages;		/* Languages array */
   ppd_attr_t	*attr;			/* cupsLanguages attribute */
@@ -567,14 +567,14 @@ _ppdGetLanguages(ppd_file_t *ppd)	/* I - PPD file */
 
 
 /*
- * '_ppdHashName()' - Generate a hash value for a device or profile name.
+ * 'ppdHashName()' - Generate a hash value for a device or profile name.
  *
  * This function is primarily used on macOS, but is generally accessible
  * since cupstestppd needs to check for profile name collisions in PPD files...
  */
 
 unsigned				/* O - Hash value */
-_ppdHashName(const char *name)		/* I - Name to hash */
+ppdHashName(const char *name)		/* I - Name to hash */
 {
   unsigned	mult,			/* Multiplier */
 		hash = 0;		/* Hash value */
@@ -588,11 +588,11 @@ _ppdHashName(const char *name)		/* I - Name to hash */
 
 
 /*
- * '_ppdLocalizedAttr()' - Find a localized attribute.
+ * 'ppdLocalizedAttr()' - Find a localized attribute.
  */
 
 ppd_attr_t *				/* O - Localized attribute or NULL */
-_ppdLocalizedAttr(ppd_file_t *ppd,	/* I - PPD file */
+ppdLocalizedAttr(ppd_file_t *ppd,	/* I - PPD file */
 		  const char *keyword,	/* I - Main keyword */
 		  const char *spec,	/* I - Option keyword */
 		  const char *ll_CC)	/* I - Language + country locale */
