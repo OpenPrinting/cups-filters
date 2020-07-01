@@ -28,6 +28,15 @@
 
 #define _PPD_PWG_EQUIVALENT(x, y)	(abs((x)-(y)) < 2)
 
+/*
+ * Macros to work around typos in older libcups version
+ */
+
+#if (CUPS_VERSION_MAJOR < 2) || ((CUPS_VERSION_MAJOR == 2) && ((CUPS_VERSION_MINOR < 3) || ((CUPS_VERSION_MINOR == 3) && (CUPS_VERSION_PATCH < 1))))
+#define IPP_FINISHINGS_CUPS_FOLD_ACCORDION IPP_FINISHINGS_CUPS_FOLD_ACCORDIAN
+#define IPP_FINISHINGS_FOLD_ACCORDION IPP_FINISHINGS_FOLD_ACCORDIAN
+#endif
+
 
 /*
  * Local functions...
