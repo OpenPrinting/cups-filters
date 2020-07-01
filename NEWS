@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- libcupsfilters, libppd: Older versions of libcups (< 2.3.1)
+	  had the enum name for fold-accordion finishings mistyped.
+	  Added a workaround.
 	- cups-browsed: Remove left-over local queues from the
 	  previous session more quickly when CUPS legacy browsing is
 	  turned on.

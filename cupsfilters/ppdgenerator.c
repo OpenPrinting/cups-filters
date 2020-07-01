@@ -48,6 +48,17 @@
 #include <cups/pwg.h>
 #endif /* HAVE_CUPS_1_7 */
 
+
+/*
+ * Macros to work around typos in older libcups version
+ */
+
+#if (CUPS_VERSION_MAJOR < 2) || ((CUPS_VERSION_MAJOR == 2) && ((CUPS_VERSION_MINOR < 3) || ((CUPS_VERSION_MINOR == 3) && (CUPS_VERSION_PATCH < 1))))
+#define IPP_FINISHINGS_CUPS_FOLD_ACCORDION IPP_FINISHINGS_CUPS_FOLD_ACCORDIAN
+#define IPP_FINISHINGS_FOLD_ACCORDION IPP_FINISHINGS_FOLD_ACCORDIAN
+#endif
+
+
 #ifdef HAVE_CUPS_1_6
 /* The following code uses a lot of CUPS >= 1.6 specific stuff.
    It needed for create_local_queue() in cups-browsed
