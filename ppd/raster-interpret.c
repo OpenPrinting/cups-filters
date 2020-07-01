@@ -13,7 +13,7 @@
  */
 
 #include "raster-private.h"
-#include "ppd-private.h"
+#include "ppd.h"
 #include "debug-internal.h"
 
 

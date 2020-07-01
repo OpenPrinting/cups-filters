@@ -11,7 +11,7 @@
  * Include necessary headers...
  */
 
-#include "ppd-private.h"
+#include "ppd.h"
 
 
 /*

@@ -15,7 +15,7 @@
 #include "array-private.h"
 #include "ipp-private.h"
 #include "language-private.h"
-#include "ppd-private.h"
+#include "ppd.h"
 #include "debug-internal.h"
 #include <math.h>
 #include <limits.h>

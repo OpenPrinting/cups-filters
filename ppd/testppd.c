@@ -12,7 +12,7 @@
  * Include necessary headers...
  */
 
-#include "ppd-private.h"
+#include "ppd.h"
 #include "raster-private.h"
 #include <sys/stat.h>
 #ifdef _WIN32

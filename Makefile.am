@@ -199,7 +199,6 @@ libppd_la_SOURCES = \
 	ppd/raster-interstub.c \
 	ppd/raster-error.c \
 	ppd/raster-private.h \
-	ppd/ppd-private.h \
 	ppd/string.c \
 	ppd/snprintf.c \
 	ppd/string-private.h \
