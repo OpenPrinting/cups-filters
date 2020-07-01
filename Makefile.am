@@ -162,6 +162,68 @@ pkgcharset_DATA = \
 
 EXTRA_DIST += $(pkgcharset_DATA)
 
+# ==========================
+# PPD legacy support library
+# ==========================
+pkgppdincludedir = $(includedir)/ppd
+pkgppdinclude_DATA = \
+        ppd/ppd.h
+
+lib_LTLIBRARIES = libppd.la
+
+check_PROGRAMS += \
+	testppd
+TESTS = \
+	testppd
+
+libppd_la_SOURCES = \
+	ppd/ppd-attr.c \
+	ppd/ppd.c \
+	ppd/ppd-cache.c \
+	ppd/ppd-conflicts.c \
+	ppd/ppd-custom.c \
+	ppd/ppd-emit.c \
+	ppd/ppd-localize.c \
+	ppd/ppd-mark.c \
+	ppd/ppd-page.c \
+	ppd/array.c \
+	ppd/array-private.h \
+	ppd/debug.c \
+	ppd/debug-internal.h \
+	ppd/debug-private.h \
+	ppd/encode.c \
+	ppd/ipp-private.h \
+	ppd/language.c \
+	ppd/language-private.h \
+	ppd/raster-interpret.c \
+	ppd/raster-interstub.c \
+	ppd/raster-error.c \
+	ppd/raster-private.h \
+	ppd/ppd-private.h \
+	ppd/string.c \
+	ppd/snprintf.c \
+	ppd/string-private.h \
+	ppd/thread.c \
+	ppd/thread-private.h \
+	$(pkgppdinclude_DATA)
+libppd_la_LIBADD = \
+	$(CUPS_LIBS)
+libppd_la_CFLAGS = \
+	$(CUPS_CFLAGS)
+libppd_la_LDFLAGS = \
+	-no-undefined \
+	-version-info 1
+
+testppd_SOURCES = ppd/testppd.c
+testppd_LDADD = libppd.la \
+		-lcups
+
+EXTRA_DIST += \
+	$(pkgppdinclude_DATA) \
+	ppd/test.ppd \
+	ppd/test2.ppd \
+	ppd/README
+
 # ====================
 # CUPS Filters library
 # ====================
@@ -176,14 +238,14 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/ppdgenerator.h \
 	cupsfilters/pdftoippprinter.h
 
-lib_LTLIBRARIES = libcupsfilters.la
+lib_LTLIBRARIES += libcupsfilters.la
 
 check_PROGRAMS += \
 	testcmyk \
 	testdither \
 	testimage \
 	testrgb
-TESTS = \
+TESTS += \
 	testdither
 #	testcmyk # fails as it opens some image.ppm which is nowerhe to be found.
 #	testimage # requires also some ppm file as argument
@@ -291,68 +353,6 @@ EXTRA_DIST += \
 	$(pkgfiltersinclude_DATA) \
 	cupsfilters/image.pgm \
 	cupsfilters/image.ppm
-
-# ==========================
-# PPD legacy support library
-# ==========================
-pkgppdincludedir = $(includedir)/ppd
-pkgppdinclude_DATA = \
-        ppd/ppd.h
-
-lib_LTLIBRARIES += libppd.la
-
-check_PROGRAMS += \
-	testppd
-TESTS += \
-	testppd
-
-libppd_la_SOURCES = \
-	ppd/ppd-attr.c \
-	ppd/ppd.c \
-	ppd/ppd-cache.c \
-	ppd/ppd-conflicts.c \
-	ppd/ppd-custom.c \
-	ppd/ppd-emit.c \
-	ppd/ppd-localize.c \
-	ppd/ppd-mark.c \
-	ppd/ppd-page.c \
-	ppd/array.c \
-	ppd/array-private.h \
-	ppd/debug.c \
-	ppd/debug-internal.h \
-	ppd/debug-private.h \
-	ppd/encode.c \
-	ppd/ipp-private.h \
-	ppd/language.c \
-	ppd/language-private.h \
-	ppd/raster-interpret.c \
-	ppd/raster-interstub.c \
-	ppd/raster-error.c \
-	ppd/raster-private.h \
-	ppd/ppd-private.h \
-	ppd/string.c \
-	ppd/snprintf.c \
-	ppd/string-private.h \
-	ppd/thread.c \
-	ppd/thread-private.h \
-	$(pkgppdinclude_DATA)
-libppd_la_LIBADD = \
-	$(CUPS_LIBS)
-libppd_la_CFLAGS = \
-	$(CUPS_CFLAGS)
-libppd_la_LDFLAGS = \
-	-no-undefined \
-	-version-info 1
-
-testppd_SOURCES = ppd/testppd.c
-testppd_LDADD = libppd.la \
-		-lcups
-
-EXTRA_DIST += \
-	$(pkgppdinclude_DATA) \
-	ppd/test.ppd \
-	ppd/test2.ppd \
-	ppd/README
 
 # =========
 # CUPS Data
