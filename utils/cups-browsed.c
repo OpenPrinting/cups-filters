@@ -8416,7 +8416,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  break;
 	}
 	ppdMarkDefaults(ppd);
-	cupsMarkOptions(ppd, p->num_options, p->options);
+	ppdMarkOptions(ppd, p->num_options, p->options);
 	if ((out = cupsTempFile2(buf, sizeof(buf))) == NULL) {
 	  debug_printf("Unable to create temporary file!\n");
           current_time = time(NULL);

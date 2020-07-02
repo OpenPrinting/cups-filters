@@ -1363,7 +1363,7 @@ int main(int argc, char **argv)
     if (ppd)
     {
       ppdMarkDefaults(ppd);
-      cupsMarkOptions(ppd, num_options, options);
+      ppdMarkOptions(ppd, num_options, options);
     }
     else
     {

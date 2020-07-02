@@ -1104,7 +1104,7 @@ int main(int argc,char **argv)
     ppd=ppdOpenFile(getenv("PPD")); // getenv (and thus ppd) may be null. This will not cause problems.
     ppdMarkDefaults(ppd);
 
-    cupsMarkOptions(ppd,num_options,options);
+    ppdMarkOptions(ppd,num_options,options);
 
     getParameters(ppd,num_options,options,param);
     calculate(ppd,param);

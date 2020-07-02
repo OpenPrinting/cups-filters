@@ -167,7 +167,7 @@ EXTRA_DIST += $(pkgcharset_DATA)
 # ==========================
 pkgppdincludedir = $(includedir)/ppd
 pkgppdinclude_DATA = \
-        ppd/ppd.h
+	ppd/ppd.h
 
 lib_LTLIBRARIES = libppd.la
 
@@ -196,7 +196,6 @@ libppd_la_SOURCES = \
 	ppd/language.c \
 	ppd/language-private.h \
 	ppd/raster-interpret.c \
-	ppd/raster-interstub.c \
 	ppd/raster-error.c \
 	ppd/raster-private.h \
 	ppd/string.c \
@@ -514,11 +513,11 @@ endif
 # =================
 pkgfontembedincludedir = $(includedir)/fontembed
 pkgfontembedinclude_DATA = \
-        fontembed/bitset.h \
-        fontembed/embed.h \
-        fontembed/fontfile.h \
-        fontembed/iofn.h \
-        fontembed/sfnt.h
+	fontembed/bitset.h \
+	fontembed/embed.h \
+	fontembed/fontfile.h \
+	fontembed/iofn.h \
+	fontembed/sfnt.h
 
 lib_LTLIBRARIES += libfontembed.la
 
@@ -795,11 +794,13 @@ gstoraster_SOURCES = \
 gstoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LIBQPDF_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 gstoraster_LDADD = \
 	$(CUPS_LIBS) \
 	$(LIBQPDF_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 imagetopdf_SOURCES = \
 	cupsfilters/image.h \
@@ -867,31 +868,37 @@ rastertopdf_CXXFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LCMS_CFLAGS) \
 	$(LIBQPDF_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertopdf_LDADD = \
 	$(CUPS_LIBS) \
 	$(LCMS_LIBS) \
 	$(LIBQPDF_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 mupdftoraster_SOURCES = \
-        filter/mupdftoraster.c
+	filter/mupdftoraster.c
 mupdftoraster_CFLAGS = \
-        $(CUPS_CFLAGS) \
-        -I$(srcdir)/cupsfilters/
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 mupdftoraster_LDADD = \
-        $(CUPS_LIBS) \
-        libcupsfilters.la
+	$(CUPS_LIBS) \
+	libcupsfilters.la \
+	libppd.la
 
 rastertops_SOURCES = \
 	filter/rastertops.c
 rastertops_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertops_LDADD = \
 	$(CUPS_LIBS) \
 	-lz \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 sys5ippprinter_SOURCES = \
 	filter/common.c \
@@ -966,10 +973,12 @@ rastertoescpx_SOURCES = \
 	filter/rastertoescpx.c
 rastertoescpx_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertoescpx_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 rastertopclx_SOURCES = \
 	cupsfilters/driver.h \
@@ -980,11 +989,13 @@ rastertopclx_SOURCES = \
 rastertopclx_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertopclx_LDADD = \
 	$(CUPS_LIBS) \
 	$(LIBPNG_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 test_pdf1_SOURCES = \
 	filter/pdfutils.c \

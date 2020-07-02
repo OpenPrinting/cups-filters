@@ -1800,7 +1800,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
 
   ppdMarkDefaults(ppd);
-  cupsMarkOptions(ppd, num_options, options);
+  ppdMarkOptions(ppd, num_options, options);
 
  /*
   * Open the page stream...

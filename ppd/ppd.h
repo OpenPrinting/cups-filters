@@ -466,7 +466,11 @@ typedef struct ppd_file_s		/**** PPD File ****/
  * Prototypes...
  */
 
-extern int		cupsMarkOptions(ppd_file_t *ppd, int num_options, cups_option_t *options);
+/* cupsMarkOptions replaced by ppdMarkOptions in libppd */
+/* extern int		cupsMarkOptions(ppd_file_t *ppd, int num_options,
+                                        cups_option_t *options); */
+/* Definition for backward compatibility, will be removed soon */
+#define cupsMarkOptions cupsMarkOptions_USE_ppdMarkOptions_INSTEAD
 
 extern void		ppdClose(ppd_file_t *ppd);
 extern int		ppdCollect(ppd_file_t *ppd, ppd_section_t section,
@@ -506,11 +510,15 @@ extern ppd_status_t	ppdLastError(int *line);
 extern void		ppdSetConformance(ppd_conform_t c);
 
 /**** New in CUPS 1.2 ****/
-extern int		cupsRasterInterpretPPD(cups_page_header2_t *h,
+/* cupsRasterInterpretPPD replaced by ppdRasterInterpretPPD in libppd */
+/* extern int		cupsRasterInterpretPPD(cups_page_header2_t *h,
 			                       ppd_file_t *ppd,
 					       int num_options,
 					       cups_option_t *options,
-					       cups_interpret_cb_t func);
+					       cups_interpret_cb_t func); */
+/* Definition for backward compatibility, will be removed soon */
+#define cupsRasterInterpretPPD cupsRasterInterpretPPD_USE_ppdRasterInterpretPPD_INSTEAD
+
 extern int		ppdCollect2(ppd_file_t *ppd, ppd_section_t section,
 			            float min_order, ppd_choice_t  ***choices);
 extern int		ppdEmitAfterOrder(ppd_file_t *ppd, FILE *fp,
@@ -538,14 +546,22 @@ extern const char	*ppdLocalizeIPPReason(ppd_file_t *ppd,
 					      size_t bufsize);
 
 /**** New in CUPS 1.4/macOS 10.6 ****/
-extern int		cupsGetConflicts(ppd_file_t *ppd, const char *option,
+/* cupsGetConflicts replaced by ppdGetConflicts in libppd */
+/* extern int		cupsGetConflicts(ppd_file_t *ppd, const char *option,
 					 const char *choice,
-					 cups_option_t **options);
-extern int		cupsResolveConflicts(ppd_file_t *ppd,
+					 cups_option_t **options); */
+/* Definition for backward compatibility, will be removed soon */
+#define cupsGetConflicts cupsGetConflicts_USE_ppdGetConflicts_INSTEAD
+
+/* cupsResolveConflicts replaced by ppdResolveConflicts in libppd */
+/* extern int		cupsResolveConflicts(ppd_file_t *ppd,
 			                     const char *option,
 			                     const char *choice,
 					     int *num_options,
-					     cups_option_t **options);
+					     cups_option_t **options); */
+/* Definition for backward compatibility, will be removed soon */
+#define cupsResolveConflicts cupsResolveConflicts_USE_ppdResolveConflicts_INSTEAD
+
 extern int		ppdInstallableConflict(ppd_file_t *ppd,
 			                       const char *option,
 					       const char *choice);
@@ -559,7 +575,23 @@ extern int		ppdPageSizeLimits(ppd_file_t *ppd,
 
 /**** New in libppd (cups-filters) ****/
 
-/**** New in cups-filters 1.0.28 ****/
+/**** New in cups-filters 1.0.28: Renamed functions from original CUPS API ****/
+extern int		ppdMarkOptions(ppd_file_t *ppd, int num_options, cups_option_t *options);
+extern int		ppdRasterInterpretPPD(cups_page_header2_t *h,
+			                       ppd_file_t *ppd,
+					       int num_options,
+					       cups_option_t *options,
+					       cups_interpret_cb_t func);
+extern int		ppdGetConflicts(ppd_file_t *ppd, const char *option,
+					 const char *choice,
+					 cups_option_t **options);
+extern int		ppdResolveConflicts(ppd_file_t *ppd,
+			                     const char *option,
+			                     const char *choice,
+					     int *num_options,
+					     cups_option_t **options);
+
+/**** New in cups-filters 1.0.28: Formerly CUPS-private functions ****/
 extern int		ppdConvertOptions(ipp_t *request, ppd_file_t *ppd, ppd_cache_t *pc, ipp_attribute_t *media_col_sup, ipp_attribute_t *doc_handling_sup, ipp_attribute_t *print_color_mode_sup, const char *user, const char *format, int copies, int num_options, cups_option_t *options);
 extern int		ppdRasterExecPS(cups_page_header2_t *h, int *preferred_bits, const char *code);
 extern int		ppdRasterInterpretPPD(cups_page_header2_t *h, ppd_file_t *ppd, int num_options, cups_option_t *options, cups_interpret_cb_t func);

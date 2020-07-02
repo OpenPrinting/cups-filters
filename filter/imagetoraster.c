@@ -390,7 +390,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Set the needed options in the page header...
   */
 
-  if (cupsRasterInterpretPPD(&header, ppd, num_options, options, raster_cb))
+  if (ppdRasterInterpretPPD(&header, ppd, num_options, options, raster_cb))
   {
     fputs("ERROR: The page setup information was not valid.\n", stderr);
     fprintf(stderr, "DEBUG: %s\n", cupsRasterErrorString());

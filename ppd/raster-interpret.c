@@ -100,9 +100,9 @@ static void		ppd_DEBUG_stack(const char *prefix, _ppd_ps_stack_t *st);
  * raster data.
  *
  *
- * @code cupsRasterInterpretPPD@ does not mark the options in the PPD using
+ * @code ppdRasterInterpretPPD@ does not mark the options in the PPD using
  * the "num_options" and "options" arguments.  Instead, mark the options with
- * @code cupsMarkOptions@ and @code ppdMarkOption@ prior to calling it -
+ * @code ppdMarkOptions@ and @code ppdMarkOption@ prior to calling it -
  * this allows for per-page options without manipulating the options array.
  *
  * The "func" argument specifies an optional callback function that is
@@ -112,7 +112,7 @@ static void		ppd_DEBUG_stack(const char *prefix, _ppd_ps_stack_t *st);
  * requested attributes cannot be supported.
  *
  *
- * @code cupsRasterInterpretPPD@ supports a subset of the PostScript language.
+ * @code ppdRasterInterpretPPD@ supports a subset of the PostScript language.
  * Currently only the @code [@, @code ]@, @code <<@, @code >>@, @code {@,
  * @code }@, @code cleartomark@, @code copy@, @code dup@, @code index@,
  * @code pop@, @code roll@, @code setpagedevice@, and @code stopped@ operators

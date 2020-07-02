@@ -551,7 +551,7 @@ int main(int argc, char *argv[])
     noptions = cupsParseOptions(argv[5], 0, &options);
     if (ppd) {
       ppdMarkDefaults(ppd);
-      cupsMarkOptions(ppd, noptions, options);
+      ppdMarkOptions(ppd, noptions, options);
     }
 
     banner = banner_new_from_file(argc == 7 ? argv[6] : "-", &noptions, &options);

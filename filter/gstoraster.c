@@ -654,7 +654,7 @@ main (int argc, char **argv, char *envp[])
       
   if (ppd) {
     ppdMarkDefaults (ppd);
-    cupsMarkOptions (ppd, num_options, options);
+    ppdMarkOptions (ppd, num_options, options);
   }
 
   if (argc == 6) {
@@ -864,7 +864,7 @@ main (int argc, char **argv, char *envp[])
     
   if (ppd)
   {
-    cupsRasterInterpretPPD(&h,ppd,num_options,options,0);
+    ppdRasterInterpretPPD(&h,ppd,num_options,options,0);
 #ifdef HAVE_CUPS_1_7
     if (outformat == OUTPUT_FORMAT_RASTER)
     {

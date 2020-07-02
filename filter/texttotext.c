@@ -261,7 +261,7 @@ main(int  argc,				/* I - Number of command-line args */
   if (ppd)
   {
     ppdMarkDefaults(ppd);
-    cupsMarkOptions(ppd, num_options, options);
+    ppdMarkOptions(ppd, num_options, options);
   }
 
  /*

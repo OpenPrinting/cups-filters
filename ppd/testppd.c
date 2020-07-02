@@ -539,10 +539,10 @@ main(int  argc,				/* I - Number of command-line arguments */
     * Test constraints...
     */
 
-    fputs("cupsGetConflicts(InputSlot=Envelope): ", stdout);
+    fputs("ppdGetConflicts(InputSlot=Envelope): ", stdout);
     ppdMarkOption(ppd, "PageSize", "Letter");
 
-    num_options = cupsGetConflicts(ppd, "InputSlot", "Envelope", &options);
+    num_options = ppdGetConflicts(ppd, "InputSlot", "Envelope", &options);
     if (num_options != 2 ||
         (val = cupsGetOption("PageRegion", num_options, options)) == NULL ||
 	_ppd_strcasecmp(val, "Letter") ||
@@ -569,10 +569,10 @@ main(int  argc,				/* I - Number of command-line arguments */
       status ++;
     }
 
-    fputs("cupsResolveConflicts(InputSlot=Envelope): ", stdout);
+    fputs("ppdResolveConflicts(InputSlot=Envelope): ", stdout);
     num_options = 0;
     options     = NULL;
-    if (!cupsResolveConflicts(ppd, "InputSlot", "Envelope", &num_options,
+    if (!ppdResolveConflicts(ppd, "InputSlot", "Envelope", &num_options,
                              &options))
     {
       puts("FAIL (Unable to resolve)");
@@ -592,10 +592,10 @@ main(int  argc,				/* I - Number of command-line arguments */
 
     cupsFreeOptions(num_options, options);
 
-    fputs("cupsResolveConflicts(No option/choice): ", stdout);
+    fputs("ppdResolveConflicts(No option/choice): ", stdout);
     num_options = 0;
     options     = NULL;
-    if (cupsResolveConflicts(ppd, NULL, NULL, &num_options, &options) &&
+    if (ppdResolveConflicts(ppd, NULL, NULL, &num_options, &options) &&
         num_options == 1 && !_ppd_strcasecmp(options[0].name, "InputSlot") &&
 	!_ppd_strcasecmp(options[0].value, "Tray"))
       puts("PASS (Resolved by changing InputSlot)");
@@ -654,12 +654,12 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
 
    /*
-    * cupsMarkOptions with PWG and IPP size names.
+    * ppdMarkOptions with PWG and IPP size names.
     */
 
-    fputs("cupsMarkOptions(media=iso-a4): ", stdout);
+    fputs("ppdMarkOptions(media=iso-a4): ", stdout);
     num_options = cupsAddOption("media", "iso-a4", 0, &options);
-    cupsMarkOptions(ppd, num_options, options);
+    ppdMarkOptions(ppd, num_options, options);
     cupsFreeOptions(num_options, options);
 
     size = ppdPageSize(ppd, NULL);
@@ -671,9 +671,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     else
       puts("PASS");
 
-    fputs("cupsMarkOptions(media=na_letter_8.5x11in): ", stdout);
+    fputs("ppdMarkOptions(media=na_letter_8.5x11in): ", stdout);
     num_options = cupsAddOption("media", "na_letter_8.5x11in", 0, &options);
-    cupsMarkOptions(ppd, num_options, options);
+    ppdMarkOptions(ppd, num_options, options);
     cupsFreeOptions(num_options, options);
 
     size = ppdPageSize(ppd, NULL);
@@ -685,10 +685,10 @@ main(int  argc,				/* I - Number of command-line arguments */
     else
       puts("PASS");
 
-    fputs("cupsMarkOptions(media=oe_letter-fullbleed_8.5x11in): ", stdout);
+    fputs("ppdMarkOptions(media=oe_letter-fullbleed_8.5x11in): ", stdout);
     num_options = cupsAddOption("media", "oe_letter-fullbleed_8.5x11in", 0,
                                 &options);
-    cupsMarkOptions(ppd, num_options, options);
+    ppdMarkOptions(ppd, num_options, options);
     cupsFreeOptions(num_options, options);
 
     size = ppdPageSize(ppd, NULL);
@@ -700,9 +700,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     else
       puts("PASS");
 
-    fputs("cupsMarkOptions(media=A4): ", stdout);
+    fputs("ppdMarkOptions(media=A4): ", stdout);
     num_options = cupsAddOption("media", "A4", 0, &options);
-    cupsMarkOptions(ppd, num_options, options);
+    ppdMarkOptions(ppd, num_options, options);
     cupsFreeOptions(num_options, options);
 
     size = ppdPageSize(ppd, NULL);
@@ -718,9 +718,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     * Custom sizes...
     */
 
-    fputs("cupsMarkOptions(media=Custom.8x10in): ", stdout);
+    fputs("ppdMarkOptions(media=Custom.8x10in): ", stdout);
     num_options = cupsAddOption("media", "Custom.8x10in", 0, &options);
-    cupsMarkOptions(ppd, num_options, options);
+    ppdMarkOptions(ppd, num_options, options);
     cupsFreeOptions(num_options, options);
 
     size = ppdPageSize(ppd, NULL);
@@ -935,10 +935,10 @@ main(int  argc,				/* I - Number of command-line arguments */
       status ++;
     }
 
-    fputs("cupsResolveConflicts(Quality=Photo): ", stdout);
+    fputs("ppdResolveConflicts(Quality=Photo): ", stdout);
     num_options = 0;
     options     = NULL;
-    if (cupsResolveConflicts(ppd, "Quality", "Photo", &num_options,
+    if (ppdResolveConflicts(ppd, "Quality", "Photo", &num_options,
                              &options))
     {
       printf("FAIL (%d options:", num_options);
@@ -951,10 +951,10 @@ main(int  argc,				/* I - Number of command-line arguments */
       puts("PASS (Unable to resolve)");
     cupsFreeOptions(num_options, options);
 
-    fputs("cupsResolveConflicts(No option/choice): ", stdout);
+    fputs("ppdResolveConflicts(No option/choice): ", stdout);
     num_options = 0;
     options     = NULL;
-    if (cupsResolveConflicts(ppd, NULL, NULL, &num_options, &options) &&
+    if (ppdResolveConflicts(ppd, NULL, NULL, &num_options, &options) &&
         num_options == 1 && !_ppd_strcasecmp(options->name, "Quality") &&
 	!_ppd_strcasecmp(options->value, "Normal"))
       puts("PASS");
@@ -973,13 +973,13 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
     cupsFreeOptions(num_options, options);
 
-    fputs("cupsResolveConflicts(loop test): ", stdout);
+    fputs("ppdResolveConflicts(loop test): ", stdout);
     ppdMarkOption(ppd, "PageSize", "A4");
     ppdMarkOption(ppd, "InputSlot", "Tray");
     ppdMarkOption(ppd, "Quality", "Photo");
     num_options = 0;
     options     = NULL;
-    if (!cupsResolveConflicts(ppd, NULL, NULL, &num_options, &options))
+    if (!ppdResolveConflicts(ppd, NULL, NULL, &num_options, &options))
       puts("PASS");
     else if (num_options > 0)
     {
@@ -1445,9 +1445,9 @@ do_ppd_tests(const char    *filename,	/* I - PPD file */
   }
 
   ppdMarkDefaults(ppd);
-  cupsMarkOptions(ppd, num_options, options);
+  ppdMarkOptions(ppd, num_options, options);
 
-  if (cupsRasterInterpretPPD(&header, ppd, 0, NULL, NULL))
+  if (ppdRasterInterpretPPD(&header, ppd, 0, NULL, NULL))
   {
     puts("FAIL (error from function)");
     puts(_ppdRasterErrorString());

@@ -1,5 +1,5 @@
 /*
- * cupsRasterInterpretPPD stub for libppd.
+ * ppdRasterInterpretPPD stub for libppd.
  *
  * Copyright © 2018 by Apple Inc.
  *
@@ -22,7 +22,7 @@
 
 
 /*
- * 'cupsRasterInterpretPPD()' - Interpret PPD commands to create a page header.
+ * 'ppdRasterInterpretPPD()' - Interpret PPD commands to create a page header.
  *
  * This function is used by raster image processing (RIP) filters like
  * cgpdftoraster and imagetoraster when writing CUPS raster data for a page.
@@ -30,9 +30,9 @@
  * raster data.
  *
  *
- * @code cupsRasterInterpretPPD@ does not mark the options in the PPD using
+ * @code ppdRasterInterpretPPD@ does not mark the options in the PPD using
  * the "num_options" and "options" arguments.  Instead, mark the options with
- * @code cupsMarkOptions@ and @code ppdMarkOption@ prior to calling it -
+ * @code ppdMarkOptions@ and @code ppdMarkOption@ prior to calling it -
  * this allows for per-page options without manipulating the options array.
  *
  * The "func" argument specifies an optional callback function that is
@@ -42,7 +42,7 @@
  * requested attributes cannot be supported.
  *
  *
- * @code cupsRasterInterpretPPD@ supports a subset of the PostScript language.
+ * @code ppdRasterInterpretPPD@ supports a subset of the PostScript language.
  * Currently only the @code [@, @code ]@, @code <<@, @code >>@, @code {@,
  * @code }@, @code cleartomark@, @code copy@, @code dup@, @code index@,
  * @code pop@, @code roll@, @code setpagedevice@, and @code stopped@ operators
@@ -52,7 +52,7 @@
  */
 
 int					/* O - 0 on success, -1 on failure */
-cupsRasterInterpretPPD(
+ppdRasterInterpretPPD(
     cups_page_header2_t *h,		/* O - Page header to create */
     ppd_file_t          *ppd,		/* I - PPD file */
     int                 num_options,	/* I - Number of options */

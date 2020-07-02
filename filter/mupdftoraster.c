@@ -276,7 +276,7 @@ main (int argc, char **argv, char *envp[])
 
   if (ppd) {
     ppdMarkDefaults (ppd);
-    cupsMarkOptions (ppd, num_options, options);
+    ppdMarkOptions (ppd, num_options, options);
   }
 
   if (argc == 6) {
@@ -355,10 +355,10 @@ main (int argc, char **argv, char *envp[])
      calls.
      Make also sure that the width and height of the page in pixels is
      the size of the full page (as PWG Raster and MuPDF require it) and not
-     only the printable area (as cupsRasterInterpretPPD() sets, to fulfill
+     only the printable area (as ppdRasterInterpretPPD() sets, to fulfill
      CUPS Raster standard) */
   if (ppd) {
-    cupsRasterInterpretPPD(&h, ppd, num_options, options, 0);
+    ppdRasterInterpretPPD(&h, ppd, num_options, options, 0);
     h.cupsWidth = h.HWResolution[0] * h.PageSize[0] / 72;
     h.cupsHeight = h.HWResolution[1] * h.PageSize[1] / 72;
 #ifdef HAVE_CUPS_1_7

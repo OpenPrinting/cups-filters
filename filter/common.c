@@ -67,7 +67,7 @@ SetCommonOptions(
   ppd = ppdOpenFile(getenv("PPD"));
 
   ppdMarkDefaults(ppd);
-  cupsMarkOptions(ppd, num_options, options);
+  ppdMarkOptions(ppd, num_options, options);
 
   if ((pagesize = ppdPageSize(ppd, NULL)) != NULL)
   {

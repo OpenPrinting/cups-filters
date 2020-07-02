@@ -359,9 +359,9 @@ static void parseOpts(int argc, char **argv)
   options = NULL;
   num_options = cupsParseOptions(argv[5],0,&options);
   if (ppd) {
-    cupsMarkOptions(ppd,num_options,options);
+    ppdMarkOptions(ppd,num_options,options);
     handleRqeuiresPageRegion();
-    cupsRasterInterpretPPD(&header,ppd,num_options,options,0);
+    ppdRasterInterpretPPD(&header,ppd,num_options,options,0);
     attr = ppdFindAttr(ppd,"pdftorasterRenderingIntent",NULL);
     if (attr != NULL && attr->value != NULL) {
       if (strcasecmp(attr->value,"PERCEPTUAL") != 0) {

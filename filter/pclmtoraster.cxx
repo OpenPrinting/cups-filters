@@ -149,9 +149,9 @@ static void parseOpts(int argc, char **argv)
   num_options = cupsParseOptions(argv[5],0,&options);
   if (ppd) {
     ppdMarkDefaults(ppd);
-    cupsMarkOptions(ppd,num_options,options);
+    ppdMarkOptions(ppd,num_options,options);
 //     handleRqeuiresPageRegion();
-    cupsRasterInterpretPPD(&header,ppd,num_options,options,0);
+    ppdRasterInterpretPPD(&header,ppd,num_options,options,0);
     if (header.Duplex) {
       /* analyze options relevant to Duplex */
       const char *backside = "";

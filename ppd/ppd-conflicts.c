@@ -47,7 +47,7 @@ static cups_array_t	*ppd_test_constraints(ppd_file_t *ppd,
 
 
 /*
- * 'cupsGetConflicts()' - Get a list of conflicting options in a marked PPD.
+ * 'ppdGetConflicts()' - Get a list of conflicting options in a marked PPD.
  *
  * This function gets a list of options that would conflict if "option" and
  * "choice" were marked in the PPD.  You would typically call this function
@@ -62,7 +62,7 @@ static cups_array_t	*ppd_test_constraints(ppd_file_t *ppd,
  */
 
 int					/* O - Number of conflicting options */
-cupsGetConflicts(
+ppdGetConflicts(
     ppd_file_t    *ppd,			/* I - PPD file */
     const char    *option,		/* I - Option to test */
     const char    *choice,		/* I - Choice to test */
@@ -124,7 +124,7 @@ cupsGetConflicts(
 
 
 /*
- * 'cupsResolveConflicts()' - Resolve conflicts in a marked PPD.
+ * 'ppdResolveConflicts()' - Resolve conflicts in a marked PPD.
  *
  * This function attempts to resolve any conflicts in a marked PPD, returning
  * a list of option changes that are required to resolve them.  On input,
@@ -139,14 +139,14 @@ cupsGetConflicts(
  * If option conflicts cannot be resolved, "num_options" and "options" are not
  * changed and 0 is returned.
  *
- * When resolving conflicts, @code cupsResolveConflicts@ does not consider
+ * When resolving conflicts, @code ppdResolveConflicts@ does not consider
  * changes to the current page size (@code media@, @code PageSize@, and
  * @code PageRegion@) or to the most recent option specified in "option".
  * Thus, if the only way to resolve a conflict is to change the page size
- * or the option the user most recently changed, @code cupsResolveConflicts@
+ * or the option the user most recently changed, @code ppdResolveConflicts@
  * will return 0 to indicate it was unable to resolve the conflicts.
  *
- * The @code cupsResolveConflicts@ function uses one of two sources of option
+ * The @code ppdResolveConflicts@ function uses one of two sources of option
  * constraint information.  The preferred constraint information is defined by
  * @code cupsUIConstraints@ and @code cupsUIResolver@ attributes - in this
  * case, the PPD file provides constraint resolution actions.
@@ -161,7 +161,7 @@ cupsGetConflicts(
  */
 
 int					/* O  - 1 on success, 0 on failure */
-cupsResolveConflicts(
+ppdResolveConflicts(
     ppd_file_t    *ppd,			/* I  - PPD file */
     const char    *option,		/* I  - Newly selected option or @code NULL@ for none */
     const char    *choice,		/* I  - Newly selected choice or @code NULL@ for none */
@@ -249,7 +249,7 @@ cupsResolveConflicts(
 	  * Resolver loop!
 	  */
 
-	  DEBUG_printf(("1cupsResolveConflicts: Resolver loop with %s!",
+	  DEBUG_printf(("1ppdResolveConflicts: Resolver loop with %s!",
 	                consts->resolver));
           goto error;
 	}
@@ -257,14 +257,14 @@ cupsResolveConflicts(
         if ((resolver = ppdFindAttr(ppd, "cupsUIResolver",
 	                            consts->resolver)) == NULL)
         {
-	  DEBUG_printf(("1cupsResolveConflicts: Resolver %s not found!",
+	  DEBUG_printf(("1ppdResolveConflicts: Resolver %s not found!",
 	                consts->resolver));
 	  goto error;
 	}
 
         if (!resolver->value)
 	{
-	  DEBUG_printf(("1cupsResolveConflicts: Resolver %s has no value!",
+	  DEBUG_printf(("1ppdResolveConflicts: Resolver %s has no value!",
 	                consts->resolver));
 	  goto error;
 	}
@@ -486,7 +486,7 @@ cupsResolveConflicts(
 
     if (!changed)
     {
-      DEBUG_puts("1cupsResolveConflicts: Unable to automatically resolve "
+      DEBUG_puts("1ppdResolveConflicts: Unable to automatically resolve "
 		 "constraint!");
       goto error;
     }
@@ -528,10 +528,10 @@ cupsResolveConflicts(
 
   cupsArrayRestore(ppd->sorted_attrs);
 
-  DEBUG_printf(("1cupsResolveConflicts: Returning %d options:", num_newopts));
+  DEBUG_printf(("1ppdResolveConflicts: Returning %d options:", num_newopts));
 #ifdef DEBUG
   for (i = 0; i < num_newopts; i ++)
-    DEBUG_printf(("1cupsResolveConflicts: options[%d]: %s=%s", i,
+    DEBUG_printf(("1ppdResolveConflicts: options[%d]: %s=%s", i,
                   newopts[i].name, newopts[i].value));
 #endif /* DEBUG */
 
@@ -551,7 +551,7 @@ cupsResolveConflicts(
 
   cupsArrayRestore(ppd->sorted_attrs);
 
-  DEBUG_puts("1cupsResolveConflicts: Unable to resolve conflicts!");
+  DEBUG_puts("1ppdResolveConflicts: Unable to resolve conflicts!");
 
   return (0);
 }

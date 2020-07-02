@@ -443,7 +443,7 @@ main(int  argc,				/* I - Number of command-line args */
   if (ppd)
   {
     ppdMarkDefaults(ppd);
-    cupsMarkOptions(ppd, num_options, options);
+    ppdMarkOptions(ppd, num_options, options);
   }
 
   if ((val = cupsGetOption("make-and-model", num_options, options)) != NULL)
@@ -803,9 +803,9 @@ main(int  argc,				/* I - Number of command-line args */
 
   if (ppd)
   {
-    /* Ignore error exits of cupsRasterInterpretPPD(), if it found a resolution
+    /* Ignore error exits of ppdRasterInterpretPPD(), if it found a resolution
        setting before erroring it is OK for us */
-    cupsRasterInterpretPPD(&header, ppd, num_options, options, NULL);
+    ppdRasterInterpretPPD(&header, ppd, num_options, options, NULL);
     /* 100 dpi is default, this means that if we have 100 dpi here this
        method failed to find the printing resolution */
     if (header.HWResolution[0] > 100 && header.HWResolution[1] > 100)

@@ -35,7 +35,7 @@ static void	ppd_mark_option(ppd_file_t *ppd, const char *option,
 
 
 /*
- * 'cupsMarkOptions()' - Mark command-line options in a PPD file.
+ * 'ppdMarkOptions()' - Mark command-line options in a PPD file.
  *
  * This function maps the IPP "finishings", "media", "mirror",
  * "multiple-document-handling", "output-bin", "print-color-mode",
@@ -44,7 +44,7 @@ static void	ppd_mark_option(ppd_file_t *ppd, const char *option,
  */
 
 int					/* O - 1 if conflicts exist, 0 otherwise */
-cupsMarkOptions(
+ppdMarkOptions(
     ppd_file_t    *ppd,			/* I - PPD file */
     int           num_options,		/* I - Number of options */
     cups_option_t *options)		/* I - Options */
@@ -700,12 +700,12 @@ ppd_debug_marked(ppd_file_t *ppd,		/* I - PPD file data */
   ppd_choice_t	*c;			/* Current choice */
 
 
-  DEBUG_printf(("2cupsMarkOptions: %s", title));
+  DEBUG_printf(("2ppdMarkOptions: %s", title));
 
   for (c = (ppd_choice_t *)cupsArrayFirst(ppd->marked);
        c;
        c = (ppd_choice_t *)cupsArrayNext(ppd->marked))
-    DEBUG_printf(("2cupsMarkOptions: %s=%s", c->option->keyword, c->choice));
+    DEBUG_printf(("2ppdMarkOptions: %s=%s", c->option->keyword, c->choice));
 }
 #endif /* DEBUG */
 
