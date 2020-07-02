@@ -88,7 +88,7 @@ _ppdStrAlloc(const char *s)		/* I - String */
     item->ref_count ++;
 
 #ifdef DEBUG_GUARDS
-    DEBUG_printf(("5_cupsStrAlloc: Using string %p(%s) for \"%s\", guard=%08x, "
+    DEBUG_printf(("5_ppdStrAlloc: Using string %p(%s) for \"%s\", guard=%08x, "
                   "ref_count=%d", item, item->str, s, item->guard,
 		  item->ref_count));
 
@@ -120,7 +120,7 @@ _ppdStrAlloc(const char *s)		/* I - String */
 #ifdef DEBUG_GUARDS
   item->guard = _PPD_STR_GUARD;
 
-  DEBUG_printf(("5_cupsStrAlloc: Created string %p(%s) for \"%s\", guard=%08x, "
+  DEBUG_printf(("5_ppdStrAlloc: Created string %p(%s) for \"%s\", guard=%08x, "
 		"ref_count=%d", item, item->str, s, item->guard,
 		item->ref_count));
 #endif /* DEBUG_GUARDS */
@@ -147,7 +147,7 @@ _ppdStrFlush(void)
   _ppd_sp_item_t	*item;		/* Current item */
 
 
-  DEBUG_printf(("4_cupsStrFlush: %d strings in array",
+  DEBUG_printf(("4_ppdStrFlush: %d strings in array",
                 cupsArrayCount(stringpool)));
 
   _ppdMutexLock(&sp_mutex);
@@ -291,7 +291,7 @@ _ppdStrFree(const char *s)		/* I - String to free */
 #ifdef DEBUG_GUARDS
     if (key->guard != _PPD_STR_GUARD)
     {
-      DEBUG_printf(("5_cupsStrFree: Freeing string %p(%s), guard=%08x, ref_count=%d", key, key->str, key->guard, key->ref_count));
+      DEBUG_printf(("5_ppdStrFree: Freeing string %p(%s), guard=%08x, ref_count=%d", key, key->str, key->guard, key->ref_count));
       abort();
     }
 #endif /* DEBUG_GUARDS */
@@ -335,7 +335,7 @@ _ppdStrRetain(const char *s)		/* I - String to retain */
 #ifdef DEBUG_GUARDS
     if (item->guard != _PPD_STR_GUARD)
     {
-      DEBUG_printf(("5_cupsStrRetain: Retaining string %p(%s), guard=%08x, "
+      DEBUG_printf(("5_ppdStrRetain: Retaining string %p(%s), guard=%08x, "
                     "ref_count=%d", item, s, item->guard, item->ref_count));
       abort();
     }

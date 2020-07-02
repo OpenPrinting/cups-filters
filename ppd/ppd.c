@@ -79,12 +79,12 @@ static ppd_cparam_t	*ppd_get_cparam(ppd_coption_t *opt,
 			                const char *param,
 					const char *text);
 static ppd_group_t	*ppd_get_group(ppd_file_t *ppd, const char *name,
-			               const char *text, _ppd_globals_t *pg,
+			               const char *text, ppd_globals_t *pg,
 				       cups_encoding_t encoding);
 static ppd_option_t	*ppd_get_option(ppd_group_t *group, const char *name);
-static _ppd_globals_t	*ppd_globals_alloc(void);
+static ppd_globals_t	*ppd_globals_alloc(void);
 #if defined(HAVE_PTHREAD_H) || defined(_WIN32)
-static void		ppd_globals_free(_ppd_globals_t *g);
+static void		ppd_globals_free(ppd_globals_t *g);
 #endif /* HAVE_PTHREAD_H || _WIN32 */
 #ifdef HAVE_PTHREAD_H
 static void		ppd_globals_init(void);
@@ -93,9 +93,9 @@ static int		ppd_hash_option(ppd_option_t *option);
 static int		ppd_read(cups_file_t *fp, _ppd_line_t *line,
 			         char *keyword, char *option, char *text,
 				 char **string, int ignoreblank,
-				 _ppd_globals_t *pg);
+				 ppd_globals_t *pg);
 static int		ppd_update_filters(ppd_file_t *ppd,
-			                   _ppd_globals_t *pg);
+			                   ppd_globals_t *pg);
 
 
 /*
@@ -242,12 +242,12 @@ ppdClose(ppd_file_t *ppd)		/* I - PPD file record */
 
   if (ppd->cups_uiconstraints)
   {
-    _ppd_cups_uiconsts_t *consts;	/* Current constraints */
+    ppd_cups_uiconsts_t *consts;	/* Current constraints */
 
 
-    for (consts = (_ppd_cups_uiconsts_t *)cupsArrayFirst(ppd->cups_uiconstraints);
+    for (consts = (ppd_cups_uiconsts_t *)cupsArrayFirst(ppd->cups_uiconstraints);
          consts;
-	 consts = (_ppd_cups_uiconsts_t *)cupsArrayNext(ppd->cups_uiconstraints))
+	 consts = (ppd_cups_uiconsts_t *)cupsArrayNext(ppd->cups_uiconstraints))
     {
       free(consts->constraints);
       free(consts);
@@ -347,10 +347,10 @@ ppdGetEncoding(const char *name)	/* I - LanguageEncoding string */
  * 'ppdGlobals()' - Return a pointer to thread local storage
  */
 
-_ppd_globals_t *			/* O - Pointer to global data */
+ppd_globals_t *			/* O - Pointer to global data */
 ppdGlobals(void)
 {
-  _ppd_globals_t *pg;			/* Pointer to global data */
+  ppd_globals_t *pg;			/* Pointer to global data */
 
 
 #ifdef HAVE_PTHREAD_H
@@ -365,7 +365,7 @@ ppdGlobals(void)
   * See if we have allocated the data yet...
   */
 
-  if ((pg = (_ppd_globals_t *)_ppdThreadGetData(ppd_globals_key)) == NULL)
+  if ((pg = (ppd_globals_t *)_ppdThreadGetData(ppd_globals_key)) == NULL)
   {
    /*
     * No, allocate memory as set the pointer for the key...
@@ -392,7 +392,7 @@ ppdGlobals(void)
 ppd_status_t				/* O - Status code */
 ppdLastError(int *line)			/* O - Line number */
 {
-  _ppd_globals_t	*pg = ppdGlobals();
+  ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
 
 
@@ -412,7 +412,7 @@ ppdLastError(int *line)			/* O - Line number */
 ppd_file_t *				/* O - PPD file record or @code NULL@ if the PPD file could not be opened. */
 ppdOpenWithLocalization(
     cups_file_t		*fp,		/* I - File to read from */
-    _ppd_localization_t	localization)	/* I - Localization to load */
+    ppd_localization_t	localization)	/* I - Localization to load */
 {
   int			i, j, k;	/* Looping vars */
   _ppd_line_t		line;		/* Line buffer */
@@ -442,7 +442,7 @@ ppdOpenWithLocalization(
   int			ui_keyword;	/* Is this line a UI keyword? */
   cups_lang_t		*lang;		/* Language data */
   cups_encoding_t	encoding;	/* Encoding of PPD file */
-  _ppd_globals_t	*pg = ppdGlobals();
+  ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
   char			custom_name[PPD_MAX_NAME];
 					/* CustomFoo attribute name */
@@ -542,7 +542,7 @@ ppdOpenWithLocalization(
   * If only loading a single localization set up the strings to match...
   */
 
-  if (localization == _PPD_LOCALIZATION_DEFAULT)
+  if (localization == PPD_LOCALIZATION_DEFAULT)
   {
     if ((lang = cupsLangDefault()) == NULL)
       return (NULL);
@@ -692,7 +692,7 @@ ppdOpenWithLocalization(
     * be used...
     */
 
-    if (localization != _PPD_LOCALIZATION_ALL &&
+    if (localization != PPD_LOCALIZATION_ALL &&
         (temp = strchr(keyword, '.')) != NULL &&
         ((temp - keyword) == 2 || (temp - keyword) == 5) &&
         _ppd_isalpha(keyword[0]) &&
@@ -701,8 +701,8 @@ ppdOpenWithLocalization(
          (keyword[2] == '_' && _ppd_isalpha(keyword[3]) &&
           _ppd_isalpha(keyword[4]) && keyword[5] == '.')))
     {
-      if (localization == _PPD_LOCALIZATION_NONE ||
-	  (localization == _PPD_LOCALIZATION_DEFAULT &&
+      if (localization == PPD_LOCALIZATION_NONE ||
+	  (localization == PPD_LOCALIZATION_DEFAULT &&
 	   strncmp(ll_CC, keyword, ll_CC_len) &&
 	   strncmp(ll, keyword, ll_len)))
       {
@@ -711,7 +711,7 @@ ppdOpenWithLocalization(
 	string = NULL;
 	continue;
       }
-      else if (localization == _PPD_LOCALIZATION_ICC_PROFILES)
+      else if (localization == PPD_LOCALIZATION_ICC_PROFILES)
       {
        /*
         * Only load localizations for the color profile related keywords...
@@ -2127,7 +2127,7 @@ ppdOpen(FILE *fp)			/* I - File to read from */
   * Load the PPD file using the newer API...
   */
 
-  ppd = ppdOpenWithLocalization(cf, _PPD_LOCALIZATION_DEFAULT);
+  ppd = ppdOpenWithLocalization(cf, PPD_LOCALIZATION_DEFAULT);
 
  /*
   * Close the CUPS file and return the PPD...
@@ -2148,7 +2148,7 @@ ppdOpen(FILE *fp)			/* I - File to read from */
 ppd_file_t *				/* O - PPD file record or @code NULL@ if the PPD file could not be opened. */
 ppdOpen2(cups_file_t *fp)		/* I - File to read from */
 {
-  return ppdOpenWithLocalization(fp, _PPD_LOCALIZATION_DEFAULT);
+  return ppdOpenWithLocalization(fp, PPD_LOCALIZATION_DEFAULT);
 }
 
 
@@ -2161,7 +2161,7 @@ ppdOpenFd(int fd)			/* I - File to read from */
 {
   cups_file_t		*fp;		/* CUPS file pointer */
   ppd_file_t		*ppd;		/* PPD file record */
-  _ppd_globals_t	*pg = ppdGlobals();
+  ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
 
 
@@ -2208,11 +2208,11 @@ ppdOpenFd(int fd)			/* I - File to read from */
 
 ppd_file_t *				/* O - PPD file record or @code NULL@ if the PPD file could not be opened. */
 ppdOpenFileWithLocalization(const char		  *filename,	/* I - File to read from */
-	     _ppd_localization_t  localization)	/* I - Localization to load */
+	     ppd_localization_t  localization)	/* I - Localization to load */
 {
   cups_file_t		*fp;		/* File pointer */
   ppd_file_t		*ppd;		/* PPD file record */
-  _ppd_globals_t	*pg = ppdGlobals();
+  ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
 
 
@@ -2260,7 +2260,7 @@ ppdOpenFileWithLocalization(const char		  *filename,	/* I - File to read from */
 ppd_file_t *				/* O - PPD file record or @code NULL@ if the PPD file could not be opened. */
 ppdOpenFile(const char *filename)	/* I - File to read from */
 {
-  return ppdOpenFileWithLocalization(filename, _PPD_LOCALIZATION_DEFAULT);
+  return ppdOpenFileWithLocalization(filename, PPD_LOCALIZATION_DEFAULT);
 }
 
 
@@ -2273,7 +2273,7 @@ ppdOpenFile(const char *filename)	/* I - File to read from */
 void
 ppdSetConformance(ppd_conform_t c)	/* I - Conformance level */
 {
-  _ppd_globals_t	*pg = ppdGlobals();
+  ppd_globals_t	*pg = ppdGlobals();
 					/* Global data */
 
 
@@ -2695,7 +2695,7 @@ static ppd_group_t *			/* O - Named group */
 ppd_get_group(ppd_file_t      *ppd,	/* I - PPD file */
               const char      *name,	/* I - Name of group */
 	      const char      *text,	/* I - Text for group */
-              _ppd_globals_t  *pg,	/* I - Global data */
+              ppd_globals_t  *pg,	/* I - Global data */
 	      cups_encoding_t encoding)	/* I - Encoding of text */
 {
   int		i;			/* Looping var */
@@ -2792,10 +2792,10 @@ ppd_get_option(ppd_group_t *group,	/* I - Group */
  * 'ppd_globals_alloc()' - Allocate and initialize global data.
  */
 
-static _ppd_globals_t *		/* O - Pointer to global data */
+static ppd_globals_t *		/* O - Pointer to global data */
 ppd_globals_alloc(void)
 {
-  return ((_ppd_globals_t *)calloc(1, sizeof(_ppd_globals_t)));
+  return ((ppd_globals_t *)calloc(1, sizeof(ppd_globals_t)));
 }
 
 
@@ -2805,7 +2805,7 @@ ppd_globals_alloc(void)
 
 #if defined(HAVE_PTHREAD_H) || defined(_WIN32)
 static void
-ppd_globals_free(_ppd_globals_t *pg)	/* I - Pointer to global data */
+ppd_globals_free(ppd_globals_t *pg)	/* I - Pointer to global data */
 {
   free(pg);
 }
@@ -2860,7 +2860,7 @@ ppd_read(cups_file_t    *fp,		/* I - File to read from */
          char           *text,		/* O - Human-readable text from line */
 	 char           **string,	/* O - Code/string data */
          int            ignoreblank,	/* I - Ignore blank lines? */
-	 _ppd_globals_t *pg)		/* I - Global data */
+	 ppd_globals_t *pg)		/* I - Global data */
 {
   int		ch,			/* Character from file */
 		col,			/* Column in line */
@@ -3359,7 +3359,7 @@ ppd_read(cups_file_t    *fp,		/* I - File to read from */
 
 static int				/* O - 1 on success, 0 on failure */
 ppd_update_filters(ppd_file_t     *ppd,	/* I - PPD file */
-                   _ppd_globals_t *pg)	/* I - Global data */
+                   ppd_globals_t *pg)	/* I - Global data */
 {
   ppd_attr_t	*attr;			/* Current cupsFilter2 value */
   char		srcsuper[16],		/* Source MIME media type */

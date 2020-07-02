@@ -71,8 +71,8 @@ cupsGetConflicts(
   int			i,		/* Looping var */
 			num_options;	/* Number of conflicting options */
   cups_array_t		*active;	/* Active conflicts */
-  _ppd_cups_uiconsts_t	*c;		/* Current constraints */
-  _ppd_cups_uiconst_t	*cptr;		/* Current constraint */
+  ppd_cups_uiconsts_t	*c;		/* Current constraints */
+  ppd_cups_uiconst_t	*cptr;		/* Current constraint */
   ppd_choice_t		*marked;	/* Marked choice */
 
 
@@ -97,9 +97,9 @@ cupsGetConflicts(
   * Loop through all of the UI constraints and add any options that conflict...
   */
 
-  for (num_options = 0, c = (_ppd_cups_uiconsts_t *)cupsArrayFirst(active);
+  for (num_options = 0, c = (ppd_cups_uiconsts_t *)cupsArrayFirst(active);
        c;
-       c = (_ppd_cups_uiconsts_t *)cupsArrayNext(active))
+       c = (ppd_cups_uiconsts_t *)cupsArrayNext(active))
   {
     for (i = c->num_constraints, cptr = c->constraints;
          i > 0;
@@ -176,8 +176,8 @@ cupsResolveConflicts(
 			*pass,		/* Resolvers for this pass */
 			*resolvers,	/* Resolvers we have used */
 			*test;		/* Test array for conflicts */
-  _ppd_cups_uiconsts_t	*consts;	/* Current constraints */
-  _ppd_cups_uiconst_t	*constptr;	/* Current constraint */
+  ppd_cups_uiconsts_t	*consts;	/* Current constraints */
+  ppd_cups_uiconst_t	*constptr;	/* Current constraint */
   ppd_attr_t		*resolver;	/* Current resolver */
   const char		*resval;	/* Pointer into resolver value */
   char			resoption[PPD_MAX_NAME],
@@ -230,9 +230,9 @@ cupsResolveConflicts(
     if (!resolvers)
       resolvers = cupsArrayNew((cups_array_func_t)_ppd_strcasecmp, NULL);
 
-    for (consts = (_ppd_cups_uiconsts_t *)cupsArrayFirst(active), changed = 0;
+    for (consts = (ppd_cups_uiconsts_t *)cupsArrayFirst(active), changed = 0;
          consts;
-	 consts = (_ppd_cups_uiconsts_t *)cupsArrayNext(active))
+	 consts = (ppd_cups_uiconsts_t *)cupsArrayNext(active))
     {
       if (consts->resolver[0])
       {
@@ -570,8 +570,8 @@ ppdConflicts(ppd_file_t *ppd)		/* I - PPD to check */
   int			i,		/* Looping variable */
 			conflicts;	/* Number of conflicts */
   cups_array_t		*active;	/* Active conflicts */
-  _ppd_cups_uiconsts_t	*c;		/* Current constraints */
-  _ppd_cups_uiconst_t	*cptr;		/* Current constraint */
+  ppd_cups_uiconsts_t	*c;		/* Current constraints */
+  ppd_cups_uiconst_t	*cptr;		/* Current constraint */
   ppd_option_t	*o;			/* Current option */
 
 
@@ -602,9 +602,9 @@ ppdConflicts(ppd_file_t *ppd)		/* I - PPD to check */
   * that conflict...
   */
 
-  for (c = (_ppd_cups_uiconsts_t *)cupsArrayFirst(active);
+  for (c = (ppd_cups_uiconsts_t *)cupsArrayFirst(active);
        c;
-       c = (_ppd_cups_uiconsts_t *)cupsArrayNext(active))
+       c = (ppd_cups_uiconsts_t *)cupsArrayNext(active))
   {
     for (i = c->num_constraints, cptr = c->constraints;
          i > 0;
@@ -701,8 +701,8 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
   int		i;			/* Looping var */
   ppd_const_t	*oldconst;		/* Current UIConstraints data */
   ppd_attr_t	*constattr;		/* Current cupsUIConstraints attribute */
-  _ppd_cups_uiconsts_t	*consts;	/* Current cupsUIConstraints data */
-  _ppd_cups_uiconst_t	*constptr;	/* Current constraint */
+  ppd_cups_uiconsts_t	*consts;	/* Current cupsUIConstraints data */
+  ppd_cups_uiconst_t	*constptr;	/* Current constraint */
   ppd_group_t	*installable;		/* Installable options group */
   const char	*vptr;			/* Pointer into constraint value */
   char		option[PPD_MAX_NAME],	/* Option name/MainKeyword */
@@ -753,14 +753,14 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
     * Allocate memory...
     */
 
-    if ((consts = calloc(1, sizeof(_ppd_cups_uiconsts_t))) == NULL)
+    if ((consts = calloc(1, sizeof(ppd_cups_uiconsts_t))) == NULL)
     {
       DEBUG_puts("8ppd_load_constraints: Unable to allocate memory for "
 		 "UIConstraints!");
       return;
     }
 
-    if ((constptr = calloc(2, sizeof(_ppd_cups_uiconst_t))) == NULL)
+    if ((constptr = calloc(2, sizeof(ppd_cups_uiconst_t))) == NULL)
     {
       free(consts);
       DEBUG_puts("8ppd_load_constraints: Unable to allocate memory for "
@@ -858,14 +858,14 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
       continue;
     }
 
-    if ((consts = calloc(1, sizeof(_ppd_cups_uiconsts_t))) == NULL)
+    if ((consts = calloc(1, sizeof(ppd_cups_uiconsts_t))) == NULL)
     {
       DEBUG_puts("8ppd_load_constraints: Unable to allocate memory for "
 		 "cupsUIConstraints!");
       return;
     }
 
-    if ((constptr = calloc((size_t)i, sizeof(_ppd_cups_uiconst_t))) == NULL)
+    if ((constptr = calloc((size_t)i, sizeof(ppd_cups_uiconst_t))) == NULL)
     {
       free(consts);
       DEBUG_puts("8ppd_load_constraints: Unable to allocate memory for "
@@ -950,8 +950,8 @@ ppd_test_constraints(
     int           which)		/* I - Which constraints to test */
 {
   int			i;		/* Looping var */
-  _ppd_cups_uiconsts_t	*consts;	/* Current constraints */
-  _ppd_cups_uiconst_t	*constptr;	/* Current constraint */
+  ppd_cups_uiconsts_t	*consts;	/* Current constraints */
+  ppd_cups_uiconst_t	*constptr;	/* Current constraint */
   ppd_choice_t		key,		/* Search key */
 			*marked;	/* Marked choice */
   cups_array_t		*active = NULL;	/* Active constraints */
@@ -972,9 +972,9 @@ ppd_test_constraints(
 
   cupsArraySave(ppd->marked);
 
-  for (consts = (_ppd_cups_uiconsts_t *)cupsArrayFirst(ppd->cups_uiconstraints);
+  for (consts = (ppd_cups_uiconsts_t *)cupsArrayFirst(ppd->cups_uiconstraints);
        consts;
-       consts = (_ppd_cups_uiconsts_t *)cupsArrayNext(ppd->cups_uiconstraints))
+       consts = (ppd_cups_uiconsts_t *)cupsArrayNext(ppd->cups_uiconstraints))
   {
     DEBUG_printf(("9ppd_test_constraints: installable=%d, resolver=\"%s\", "
                   "num_constraints=%d option1=\"%s\", choice1=\"%s\", "

@@ -601,7 +601,7 @@ ppdLocalizedAttr(ppd_file_t *ppd,	/* I - PPD file */
   ppd_attr_t	*attr;			/* Current attribute */
 
 
-  DEBUG_printf(("4_ppdLocalizedAttr(ppd=%p, keyword=\"%s\", spec=\"%s\", "
+  DEBUG_printf(("4ppdLocalizedAttr(ppd=%p, keyword=\"%s\", spec=\"%s\", "
                 "ll_CC=\"%s\")", ppd, keyword, spec, ll_CC));
 
  /*
@@ -670,10 +670,10 @@ ppdLocalizedAttr(ppd_file_t *ppd,	/* I - PPD file */
 
 #ifdef DEBUG
   if (attr)
-    DEBUG_printf(("5_ppdLocalizedAttr: *%s %s/%s: \"%s\"\n", attr->name,
+    DEBUG_printf(("5ppdLocalizedAttr: *%s %s/%s: \"%s\"\n", attr->name,
                   attr->spec, attr->text, attr->value ? attr->value : ""));
   else
-    DEBUG_puts("5_ppdLocalizedAttr: NOT FOUND");
+    DEBUG_puts("5ppdLocalizedAttr: NOT FOUND");
 #endif /* DEBUG */
 
   return (attr);

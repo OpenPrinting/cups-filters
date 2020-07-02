@@ -164,7 +164,7 @@ _ppdMessageLoad(const char *filename,	/* I - Message catalog to load */
 			ptrlen;		/* Length of string */
 
 
-  DEBUG_printf(("4_cupsMessageLoad(filename=\"%s\")", filename));
+  DEBUG_printf(("4_ppdMessageLoad(filename=\"%s\")", filename));
 
  /*
   * Create an array to hold the messages...
@@ -172,7 +172,7 @@ _ppdMessageLoad(const char *filename,	/* I - Message catalog to load */
 
   if ((a = _ppdMessageNew(NULL)) == NULL)
   {
-    DEBUG_puts("5_cupsMessageLoad: Unable to allocate array!");
+    DEBUG_puts("5_ppdMessageLoad: Unable to allocate array!");
     return (NULL);
   }
 
@@ -182,7 +182,7 @@ _ppdMessageLoad(const char *filename,	/* I - Message catalog to load */
 
   if ((fp = cupsFileOpen(filename, "r")) == NULL)
   {
-    DEBUG_printf(("5_cupsMessageLoad: Unable to open file: %s",
+    DEBUG_printf(("5_ppdMessageLoad: Unable to open file: %s",
                   strerror(errno)));
     return (a);
   }
@@ -379,7 +379,7 @@ _ppdMessageLoad(const char *filename,	/* I - Message catalog to load */
 
   cupsFileClose(fp);
 
-  DEBUG_printf(("5_cupsMessageLoad: Returning %d messages...", cupsArrayCount(a)));
+  DEBUG_printf(("5_ppdMessageLoad: Returning %d messages...", cupsArrayCount(a)));
 
   return (a);
 }
@@ -431,13 +431,13 @@ _ppdMessageLookup(cups_array_t *a,	/* I - Message array */
       CFStringGetCString(cfstr, buffer, sizeof(buffer), kCFStringEncodingUTF8);
       match->str = strdup(buffer);
 
-      DEBUG_printf(("1_cupsMessageLookup: Found \"%s\" as \"%s\"...", m, buffer));
+      DEBUG_printf(("1_ppdMessageLookup: Found \"%s\" as \"%s\"...", m, buffer));
     }
     else
     {
       match->str = strdup(m);
 
-      DEBUG_printf(("1_cupsMessageLookup: Did not find \"%s\"...", m));
+      DEBUG_printf(("1_ppdMessageLookup: Did not find \"%s\"...", m));
     }
 
     cupsArrayAdd(a, match);

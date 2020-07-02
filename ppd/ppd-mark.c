@@ -62,7 +62,7 @@ cupsMarkOptions(
 		*sides;			/* sides option */
   cups_option_t	*optptr;		/* Current option */
   ppd_attr_t	*attr;			/* PPD attribute */
-  _ppd_cache_t	*cache;			/* PPD cache and mapping data */
+  ppd_cache_t	*cache;			/* PPD cache and mapping data */
 
 
  /*
@@ -160,25 +160,25 @@ cupsMarkOptions(
       * Map output-mode and print-quality to a preset...
       */
 
-      _ppd_pwg_print_color_mode_t	pwg_pcm;/* print-color-mode index */
-      _ppd_pwg_print_quality_t	pwg_pq;	/* print-quality index */
+      ppd_pwg_print_color_mode_t	pwg_pcm;/* print-color-mode index */
+      ppd_pwg_print_quality_t	pwg_pq;	/* print-quality index */
       cups_option_t		*preset;/* Current preset option */
 
       if (print_color_mode && !strcmp(print_color_mode, "monochrome"))
-	pwg_pcm = _PPD_PWG_PRINT_COLOR_MODE_MONOCHROME;
+	pwg_pcm = PPD_PWG_PRINT_COLOR_MODE_MONOCHROME;
       else
-	pwg_pcm = _PPD_PWG_PRINT_COLOR_MODE_COLOR;
+	pwg_pcm = PPD_PWG_PRINT_COLOR_MODE_COLOR;
 
       if (print_quality)
       {
-	pwg_pq = (_ppd_pwg_print_quality_t)(atoi(print_quality) - IPP_QUALITY_DRAFT);
-	if (pwg_pq < _PPD_PWG_PRINT_QUALITY_DRAFT)
-	  pwg_pq = _PPD_PWG_PRINT_QUALITY_DRAFT;
-	else if (pwg_pq > _PPD_PWG_PRINT_QUALITY_HIGH)
-	  pwg_pq = _PPD_PWG_PRINT_QUALITY_HIGH;
+	pwg_pq = (ppd_pwg_print_quality_t)(atoi(print_quality) - IPP_QUALITY_DRAFT);
+	if (pwg_pq < PPD_PWG_PRINT_QUALITY_DRAFT)
+	  pwg_pq = PPD_PWG_PRINT_QUALITY_DRAFT;
+	else if (pwg_pq > PPD_PWG_PRINT_QUALITY_HIGH)
+	  pwg_pq = PPD_PWG_PRINT_QUALITY_HIGH;
       }
       else
-	pwg_pq = _PPD_PWG_PRINT_QUALITY_NORMAL;
+	pwg_pq = PPD_PWG_PRINT_QUALITY_NORMAL;
 
       if (cache->num_presets[pwg_pcm][pwg_pq] == 0)
       {
@@ -187,14 +187,14 @@ cupsMarkOptions(
 	* getting a good print using IPP attributes.
 	*/
 
-	if (cache->num_presets[pwg_pcm][_PPD_PWG_PRINT_QUALITY_NORMAL] > 0)
-	  pwg_pq = _PPD_PWG_PRINT_QUALITY_NORMAL;
-	else if (cache->num_presets[_PPD_PWG_PRINT_COLOR_MODE_COLOR][pwg_pq] > 0)
-	  pwg_pcm = _PPD_PWG_PRINT_COLOR_MODE_COLOR;
+	if (cache->num_presets[pwg_pcm][PPD_PWG_PRINT_QUALITY_NORMAL] > 0)
+	  pwg_pq = PPD_PWG_PRINT_QUALITY_NORMAL;
+	else if (cache->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR][pwg_pq] > 0)
+	  pwg_pcm = PPD_PWG_PRINT_COLOR_MODE_COLOR;
 	else
 	{
-	  pwg_pq  = _PPD_PWG_PRINT_QUALITY_NORMAL;
-	  pwg_pcm = _PPD_PWG_PRINT_COLOR_MODE_COLOR;
+	  pwg_pq  = PPD_PWG_PRINT_QUALITY_NORMAL;
+	  pwg_pcm = PPD_PWG_PRINT_COLOR_MODE_COLOR;
 	}
       }
 
@@ -618,7 +618,7 @@ ppdParseOptions(
     const char    *s,			/* I  - String to parse */
     int           num_options,		/* I  - Number of options */
     cups_option_t **options,		/* IO - Options */
-    _ppd_parse_t  which)		/* I  - What to parse */
+    ppd_parse_t  which)		/* I  - What to parse */
 {
   char	option[PPD_MAX_NAME * 2 + 1],	/* Current option/property */
 	choice[PPD_MAX_NAME],		/* Current choice/value */
@@ -678,9 +678,9 @@ ppdParseOptions(
     * Add it to the options array...
     */
 
-    if (option[0] == '*' && which != _PPD_PARSE_PROPERTIES)
+    if (option[0] == '*' && which != PPD_PARSE_PROPERTIES)
       num_options = cupsAddOption(option + 1, choice, num_options, options);
-    else if (option[0] != '*' && which != _PPD_PARSE_OPTIONS)
+    else if (option[0] != '*' && which != PPD_PARSE_OPTIONS)
       num_options = cupsAddOption(option, choice, num_options, options);
   }
 

@@ -559,7 +559,7 @@ ppdRasterExecPS(
 	    _ppdRasterAddError("cleartomark: Stack underflow.\n");
 
 #ifdef DEBUG
-          DEBUG_puts("1_cupsRasterExecPS:    dup");
+          DEBUG_puts("1_ppdRasterExecPS:    dup");
 	  ppd_DEBUG_stack("ppdRasterExecPS", st);
 #endif /* DEBUG */
           break;

@@ -45,10 +45,10 @@
 static int	ppd_get_url(http_t **http, const char *url, char *name, size_t namesize);
 static void	ppd_pwg_add_finishing(cups_array_t *finishings, ipp_finishings_t template, const char *name, const char *value);
 static void	ppd_pwg_add_message(cups_array_t *a, const char *msg, const char *str);
-static int	ppd_pwg_compare_finishings(_ppd_pwg_finishings_t *a, _ppd_pwg_finishings_t *b);
+static int	ppd_pwg_compare_finishings(ppd_pwg_finishings_t *a, ppd_pwg_finishings_t *b);
 static int	ppd_pwg_compare_sizes(cups_size_t *a, cups_size_t *b);
 static cups_size_t *ppd_pwg_copy_size(cups_size_t *size);
-static void	ppd_pwg_free_finishings(_ppd_pwg_finishings_t *f);
+static void	ppd_pwg_free_finishings(ppd_pwg_finishings_t *f);
 static void	ppd_pwg_ppdize_name(const char *ipp, char *name, size_t namesize);
 static void	ppd_pwg_ppdize_resolution(ipp_attribute_t *attr, int element, int *xres, int *yres, char *name, size_t namesize);
 static void	ppd_pwg_unppdize_name(const char *ppd, char *name, size_t namesize,
@@ -109,7 +109,7 @@ int					/* O - New number of copies */
 ppdConvertOptions(
     ipp_t           *request,		/* I - IPP request */
     ppd_file_t      *ppd,		/* I - PPD file */
-    _ppd_cache_t    *pc,		/* I - PPD cache info */
+    ppd_cache_t    *pc,		/* I - PPD cache info */
     ipp_attribute_t *media_col_sup,	/* I - media-col-supported values */
     ipp_attribute_t *doc_handling_sup,	/* I - multiple-document-handling-supported values */
     ipp_attribute_t *print_color_mode_sup,
@@ -485,16 +485,16 @@ ppdConvertOptions(
  * file.
  */
 
-_ppd_cache_t *				/* O  - PPD cache and mapping data */
+ppd_cache_t *				/* O  - PPD cache and mapping data */
 ppdCacheCreateWithFile(
     const char *filename,		/* I  - File to read */
     ipp_t      **attrs)			/* IO - IPP attributes, if any */
 {
   cups_file_t	*fp;			/* File */
-  _ppd_cache_t	*pc;			/* PWG mapping data */
+  ppd_cache_t	*pc;			/* PWG mapping data */
   pwg_size_t	*size;			/* Current size */
   pwg_map_t	*map;			/* Current map */
-  _ppd_pwg_finishings_t *finishings;	/* Current finishings option */
+  ppd_pwg_finishings_t *finishings;	/* Current finishings option */
   int		linenum,		/* Current line number */
 		num_bins,		/* Number of bins in file */
 		num_sizes,		/* Number of sizes in file */
@@ -506,9 +506,9 @@ ppdCacheCreateWithFile(
 		pwg_keyword[128],	/* PWG keyword */
 		ppd_keyword[PPD_MAX_NAME];
 					/* PPD keyword */
-  _ppd_pwg_print_color_mode_t print_color_mode;
+  ppd_pwg_print_color_mode_t print_color_mode;
 					/* Print color mode for preset */
-  _ppd_pwg_print_quality_t print_quality;	/* Print quality for preset */
+  ppd_pwg_print_quality_t print_quality;	/* Print quality for preset */
 
 
   DEBUG_printf(("ppdCacheCreateWithFile(filename=\"%s\")", filename));
@@ -556,11 +556,11 @@ ppdCacheCreateWithFile(
     return (NULL);
   }
 
-  if (atoi(line + 16) != _PPD_CACHE_VERSION)
+  if (atoi(line + 16) != PPD_CACHE_VERSION)
   {
     set_error(_("Out of date PPD cache file."), 1);
     DEBUG_printf(("ppdCacheCreateWithFile: Cache file has version %s, "
-                  "expected %d.", line + 16, _PPD_CACHE_VERSION));
+                  "expected %d.", line + 16, PPD_CACHE_VERSION));
     cupsFileClose(fp);
     return (NULL);
   }
@@ -569,10 +569,10 @@ ppdCacheCreateWithFile(
   * Allocate the mapping data structure...
   */
 
-  if ((pc = calloc(1, sizeof(_ppd_cache_t))) == NULL)
+  if ((pc = calloc(1, sizeof(ppd_cache_t))) == NULL)
   {
     set_error(strerror(errno), 0);
-    DEBUG_puts("ppdCacheCreateWithFile: Unable to allocate _ppd_cache_t.");
+    DEBUG_puts("ppdCacheCreateWithFile: Unable to allocate ppd_cache_t.");
     goto create_error;
   }
 
@@ -915,13 +915,13 @@ ppdCacheCreateWithFile(
       * Preset output-mode print-quality name=value ...
       */
 
-      print_color_mode = (_ppd_pwg_print_color_mode_t)strtol(value, &valueptr, 10);
-      print_quality    = (_ppd_pwg_print_quality_t)strtol(valueptr, &valueptr, 10);
+      print_color_mode = (ppd_pwg_print_color_mode_t)strtol(value, &valueptr, 10);
+      print_quality    = (ppd_pwg_print_quality_t)strtol(valueptr, &valueptr, 10);
 
-      if (print_color_mode < _PPD_PWG_PRINT_COLOR_MODE_MONOCHROME ||
-          print_color_mode >= _PPD_PWG_PRINT_COLOR_MODE_MAX ||
-	  print_quality < _PPD_PWG_PRINT_QUALITY_DRAFT ||
-	  print_quality >= _PPD_PWG_PRINT_QUALITY_MAX ||
+      if (print_color_mode < PPD_PWG_PRINT_COLOR_MODE_MONOCHROME ||
+          print_color_mode >= PPD_PWG_PRINT_COLOR_MODE_MAX ||
+	  print_quality < PPD_PWG_PRINT_QUALITY_DRAFT ||
+	  print_quality >= PPD_PWG_PRINT_QUALITY_MAX ||
 	  valueptr == value || !*valueptr)
       {
         DEBUG_printf(("ppdCacheCreateWithFile: Bad Preset on line %d.",
@@ -950,7 +950,7 @@ ppdCacheCreateWithFile(
 			  NULL, NULL, 0, NULL,
 			  (cups_afree_func_t)ppd_pwg_free_finishings);
 
-      if ((finishings = calloc(1, sizeof(_ppd_pwg_finishings_t))) == NULL)
+      if ((finishings = calloc(1, sizeof(ppd_pwg_finishings_t))) == NULL)
         goto create_error;
 
       finishings->value       = (ipp_finishings_t)strtol(value, &valueptr, 10);
@@ -1048,11 +1048,11 @@ ppdCacheCreateWithFile(
  * 'ppdCacheCreateWithPPD()' - Create PWG mapping data from a PPD file.
  */
 
-_ppd_cache_t *				/* O - PPD cache and mapping data */
+ppd_cache_t *				/* O - PPD cache and mapping data */
 ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 {
   int			i, j, k;	/* Looping vars */
-  _ppd_cache_t		*pc;		/* PWG mapping data */
+  ppd_cache_t		*pc;		/* PWG mapping data */
   ppd_option_t		*input_slot,	/* InputSlot option */
 			*media_type,	/* MediaType option */
 			*output_bin,	/* OutputBin option */
@@ -1072,9 +1072,9 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 					/* Normalized PPD name */
   const char		*pwg_name;	/* Standard PWG media name */
   pwg_media_t		*pwg_media;	/* PWG media data */
-  _ppd_pwg_print_color_mode_t pwg_print_color_mode;
+  ppd_pwg_print_color_mode_t pwg_print_color_mode;
 					/* print-color-mode index */
-  _ppd_pwg_print_quality_t	pwg_print_quality;
+  ppd_pwg_print_quality_t	pwg_print_quality;
 					/* print-quality index */
   int			similar;	/* Are the old and new size similar? */
   pwg_size_t		*old_size;	/* Current old size */
@@ -1092,7 +1092,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 			new_known_pwg;	/* New PWG name is well-known */
   pwg_size_t		*new_size;	/* New size to add, if any */
   const char		*filter;	/* Current filter */
-  _ppd_pwg_finishings_t	*finishings;	/* Current finishings value */
+  ppd_pwg_finishings_t	*finishings;	/* Current finishings value */
   char			msg_id[256];	/* Message identifier */
 
 
@@ -1109,9 +1109,9 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
   * Allocate memory...
   */
 
-  if ((pc = calloc(1, sizeof(_ppd_cache_t))) == NULL)
+  if ((pc = calloc(1, sizeof(ppd_cache_t))) == NULL)
   {
-    DEBUG_puts("ppdCacheCreateWithPPD: Unable to allocate _ppd_cache_t.");
+    DEBUG_puts("ppdCacheCreateWithPPD: Unable to allocate ppd_cache_t.");
     goto create_error;
   }
 
@@ -1494,7 +1494,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
       */
 
       num_options = ppdParseOptions(ppd_attr->value, 0, &options,
-                                     _PPD_PARSE_ALL);
+                                     PPD_PARSE_ALL);
 
       if ((quality = cupsGetOption("com.apple.print.preset.quality",
                                    num_options, options)) != NULL)
@@ -1504,11 +1504,11 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	*/
 
 	if (!strcmp(quality, "low"))
-	  pwg_print_quality = _PPD_PWG_PRINT_QUALITY_DRAFT;
+	  pwg_print_quality = PPD_PWG_PRINT_QUALITY_DRAFT;
 	else if (!strcmp(quality, "high"))
-	  pwg_print_quality = _PPD_PWG_PRINT_QUALITY_HIGH;
+	  pwg_print_quality = PPD_PWG_PRINT_QUALITY_HIGH;
 	else
-	  pwg_print_quality = _PPD_PWG_PRINT_QUALITY_NORMAL;
+	  pwg_print_quality = PPD_PWG_PRINT_QUALITY_NORMAL;
 
        /*
 	* Ignore graphicsType "Photo" presets that are not high quality.
@@ -1517,7 +1517,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	graphicsType = cupsGetOption("com.apple.print.preset.graphicsType",
 				      num_options, options);
 
-	if (pwg_print_quality != _PPD_PWG_PRINT_QUALITY_HIGH && graphicsType &&
+	if (pwg_print_quality != PPD_PWG_PRINT_QUALITY_HIGH && graphicsType &&
 	    !strcmp(graphicsType, "Photo"))
 	  continue;
 
@@ -1530,7 +1530,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	                          "com.apple.print.preset.media-front-coating",
 			          num_options, options);
 
-        if (pwg_print_quality != _PPD_PWG_PRINT_QUALITY_HIGH &&
+        if (pwg_print_quality != PPD_PWG_PRINT_QUALITY_HIGH &&
 	    media_front_coating &&
 	    strcmp(media_front_coating, "none") &&
 	    strcmp(media_front_coating, "autodetect"))
@@ -1547,19 +1547,19 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
         if (output_mode)
 	{
 	  if (!strcmp(output_mode, "monochrome"))
-	    pwg_print_color_mode = _PPD_PWG_PRINT_COLOR_MODE_MONOCHROME;
+	    pwg_print_color_mode = PPD_PWG_PRINT_COLOR_MODE_MONOCHROME;
 	  else
-	    pwg_print_color_mode = _PPD_PWG_PRINT_COLOR_MODE_COLOR;
+	    pwg_print_color_mode = PPD_PWG_PRINT_COLOR_MODE_COLOR;
 	}
 	else if (color_model_val)
 	{
 	  if (!_ppd_strcasecmp(color_model_val, "Gray"))
-	    pwg_print_color_mode = _PPD_PWG_PRINT_COLOR_MODE_MONOCHROME;
+	    pwg_print_color_mode = PPD_PWG_PRINT_COLOR_MODE_MONOCHROME;
 	  else
-	    pwg_print_color_mode = _PPD_PWG_PRINT_COLOR_MODE_COLOR;
+	    pwg_print_color_mode = PPD_PWG_PRINT_COLOR_MODE_COLOR;
 	}
 	else
-	  pwg_print_color_mode = _PPD_PWG_PRINT_COLOR_MODE_COLOR;
+	  pwg_print_color_mode = PPD_PWG_PRINT_COLOR_MODE_COLOR;
 
        /*
         * Save the options for this combination as needed...
@@ -1569,7 +1569,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	  pc->num_presets[pwg_print_color_mode][pwg_print_quality] =
 	      ppdParseOptions(ppd_attr->value, 0,
 	                       pc->presets[pwg_print_color_mode] +
-			           pwg_print_quality, _PPD_PARSE_OPTIONS);
+			           pwg_print_quality, PPD_PARSE_OPTIONS);
       }
 
       cupsFreeOptions(num_options, options);
@@ -1577,9 +1577,9 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
     while ((ppd_attr = ppdFindNextAttr(ppd, "APPrinterPreset", NULL)) != NULL);
   }
 
-  if (!pc->num_presets[_PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][_PPD_PWG_PRINT_QUALITY_DRAFT] &&
-      !pc->num_presets[_PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][_PPD_PWG_PRINT_QUALITY_NORMAL] &&
-      !pc->num_presets[_PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][_PPD_PWG_PRINT_QUALITY_HIGH])
+  if (!pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][PPD_PWG_PRINT_QUALITY_DRAFT] &&
+      !pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][PPD_PWG_PRINT_QUALITY_NORMAL] &&
+      !pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][PPD_PWG_PRINT_QUALITY_HIGH])
   {
    /*
     * Try adding some common color options to create grayscale presets.  These
@@ -1629,24 +1629,24 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
       cups_option_t	*coption,	/* Color option */
 			  *moption;	/* Monochrome option */
 
-      for (pwg_print_quality = _PPD_PWG_PRINT_QUALITY_DRAFT;
-	   pwg_print_quality < _PPD_PWG_PRINT_QUALITY_MAX;
+      for (pwg_print_quality = PPD_PWG_PRINT_QUALITY_DRAFT;
+	   pwg_print_quality < PPD_PWG_PRINT_QUALITY_MAX;
 	   pwg_print_quality ++)
       {
-	if (pc->num_presets[_PPD_PWG_PRINT_COLOR_MODE_COLOR][pwg_print_quality])
+	if (pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR][pwg_print_quality])
 	{
 	 /*
 	  * Copy the color options...
 	  */
 
-	  num_options = pc->num_presets[_PPD_PWG_PRINT_COLOR_MODE_COLOR]
+	  num_options = pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
 					[pwg_print_quality];
 	  options     = calloc(sizeof(cups_option_t), (size_t)num_options);
 
 	  if (options)
 	  {
 	    for (i = num_options, moption = options,
-		     coption = pc->presets[_PPD_PWG_PRINT_COLOR_MODE_COLOR]
+		     coption = pc->presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
 					   [pwg_print_quality];
 		 i > 0;
 		 i --, moption ++, coption ++)
@@ -1655,24 +1655,24 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	      moption->value = _ppdStrRetain(coption->value);
 	    }
 
-	    pc->num_presets[_PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
+	    pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
 		num_options;
-	    pc->presets[_PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
+	    pc->presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
 		options;
 	  }
 	}
-	else if (pwg_print_quality != _PPD_PWG_PRINT_QUALITY_NORMAL)
+	else if (pwg_print_quality != PPD_PWG_PRINT_QUALITY_NORMAL)
 	  continue;
 
        /*
 	* Add the grayscale option to the preset...
 	*/
 
-	pc->num_presets[_PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
+	pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
 	    cupsAddOption(color_option, gray_choice,
-			  pc->num_presets[_PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+			  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
 					  [pwg_print_quality],
-			  pc->presets[_PPD_PWG_PRINT_COLOR_MODE_MONOCHROME] +
+			  pc->presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME] +
 			      pwg_print_quality);
       }
     }
@@ -1807,13 +1807,13 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 
     do
     {
-      if ((finishings = calloc(1, sizeof(_ppd_pwg_finishings_t))) == NULL)
+      if ((finishings = calloc(1, sizeof(ppd_pwg_finishings_t))) == NULL)
         goto create_error;
 
       finishings->value       = (ipp_finishings_t)atoi(ppd_attr->spec);
       finishings->num_options = ppdParseOptions(ppd_attr->value, 0,
                                                  &(finishings->options),
-                                                 _PPD_PARSE_OPTIONS);
+                                                 PPD_PARSE_OPTIONS);
 
       cupsArrayAdd(pc->finishings, finishings);
     }
@@ -2013,7 +2013,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
  */
 
 void
-ppdCacheDestroy(_ppd_cache_t *pc)	/* I - PPD cache and mapping data */
+ppdCacheDestroy(ppd_cache_t *pc)	/* I - PPD cache and mapping data */
 {
   int		i;			/* Looping var */
   pwg_map_t	*map;			/* Current map */
@@ -2105,7 +2105,7 @@ ppdCacheDestroy(_ppd_cache_t *pc)	/* I - PPD cache and mapping data */
 
 const char *				/* O - output-bin or NULL */
 ppdCacheGetBin(
-    _ppd_cache_t *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t *pc,			/* I - PPD cache and mapping data */
     const char   *output_bin)		/* I - PPD OutputBin string */
 {
   int	i;				/* Looping var */
@@ -2138,14 +2138,14 @@ ppdCacheGetBin(
 
 int					/* O  - New number of options */
 ppdCacheGetFinishingOptions(
-    _ppd_cache_t     *pc,		/* I  - PPD cache and mapping data */
+    ppd_cache_t     *pc,		/* I  - PPD cache and mapping data */
     ipp_t            *job,		/* I  - Job attributes or NULL */
     ipp_finishings_t value,		/* I  - IPP finishings value of IPP_FINISHINGS_NONE */
     int              num_options,	/* I  - Number of options */
     cups_option_t    **options)		/* IO - Options */
 {
   int			i;		/* Looping var */
-  _ppd_pwg_finishings_t	*f,		/* PWG finishings options */
+  ppd_pwg_finishings_t	*f,		/* PWG finishings options */
 			key;		/* Search key */
   ipp_attribute_t	*attr;		/* Finishings attribute */
   cups_option_t		*option;	/* Current finishings option */
@@ -2207,13 +2207,13 @@ ppdCacheGetFinishingOptions(
 int					/* O - Number of finishings values */
 ppdCacheGetFinishingValues(
     ppd_file_t    *ppd,			/* I - Marked PPD file */
-    _ppd_cache_t  *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t  *pc,			/* I - PPD cache and mapping data */
     int           max_values,		/* I - Maximum number of finishings values */
     int           *values)		/* O - Finishings values */
 {
   int			i,		/* Looping var */
 			num_values = 0;	/* Number of values */
-  _ppd_pwg_finishings_t	*f;		/* Current finishings option */
+  ppd_pwg_finishings_t	*f;		/* Current finishings option */
   cups_option_t		*option;	/* Current option */
   ppd_choice_t		*choice;	/* Marked PPD choice */
 
@@ -2239,9 +2239,9 @@ ppdCacheGetFinishingValues(
   * Go through the finishings options and see what is set...
   */
 
-  for (f = (_ppd_pwg_finishings_t *)cupsArrayFirst(pc->finishings);
+  for (f = (ppd_pwg_finishings_t *)cupsArrayFirst(pc->finishings);
        f;
-       f = (_ppd_pwg_finishings_t *)cupsArrayNext(pc->finishings))
+       f = (ppd_pwg_finishings_t *)cupsArrayNext(pc->finishings))
   {
     DEBUG_printf(("ppdCacheGetFinishingValues: Checking %d (%s)", (int)f->value, ippEnumString("finishings", (int)f->value)));
 
@@ -2291,7 +2291,7 @@ ppdCacheGetFinishingValues(
 
 const char *				/* O - PPD InputSlot or NULL */
 ppdCacheGetInputSlot(
-    _ppd_cache_t *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t *pc,			/* I - PPD cache and mapping data */
     ipp_t        *job,			/* I - Job attributes or NULL */
     const char   *keyword)		/* I - Keyword string or NULL */
 {
@@ -2356,7 +2356,7 @@ ppdCacheGetInputSlot(
 
 const char *				/* O - PPD MediaType or NULL */
 ppdCacheGetMediaType(
-    _ppd_cache_t *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t *pc,			/* I - PPD cache and mapping data */
     ipp_t        *job,			/* I - Job attributes or NULL */
     const char   *keyword)		/* I - Keyword string or NULL */
 {
@@ -2410,7 +2410,7 @@ ppdCacheGetMediaType(
 
 const char *				/* O - PPD OutputBin or NULL */
 ppdCacheGetOutputBin(
-    _ppd_cache_t *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t *pc,			/* I - PPD cache and mapping data */
     const char   *output_bin)		/* I - Keyword string */
 {
   int	i;				/* Looping var */
@@ -2443,7 +2443,7 @@ ppdCacheGetOutputBin(
 
 const char *				/* O - PPD PageSize or NULL */
 ppdCacheGetPageSize(
-    _ppd_cache_t *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t *pc,			/* I - PPD cache and mapping data */
     ipp_t        *job,			/* I - Job attributes or NULL */
     const char   *keyword,		/* I - Keyword string or NULL */
     int          *exact)		/* O - 1 if exact match, 0 otherwise */
@@ -2493,10 +2493,10 @@ ppdCacheGetPageSize(
 
 #ifdef DEBUG
     if (attr)
-      DEBUG_printf(("1_ppdCacheGetPageSize: Found attribute %s (%s)",
+      DEBUG_printf(("1ppdCacheGetPageSize: Found attribute %s (%s)",
                     attr->name, ippTagString(attr->value_tag)));
     else
-      DEBUG_puts("1_ppdCacheGetPageSize: Did not find media attribute.");
+      DEBUG_puts("1ppdCacheGetPageSize: Did not find media attribute.");
 #endif /* DEBUG */
 
     if (attr && (ippGetValueTag(attr) == IPP_TAG_NAME ||
@@ -2504,7 +2504,7 @@ ppdCacheGetPageSize(
       ppd_name = ippGetString(attr, 0, NULL);
   }
 
-  DEBUG_printf(("1_ppdCacheGetPageSize: ppd_name=\"%s\"", ppd_name));
+  DEBUG_printf(("1ppdCacheGetPageSize: ppd_name=\"%s\"", ppd_name));
 
   if (ppd_name)
   {
@@ -2514,7 +2514,7 @@ ppdCacheGetPageSize(
 
     for (i = pc->num_sizes, size = pc->sizes; i > 0; i --, size ++)
     {
-      DEBUG_printf(("2_ppdCacheGetPageSize: size[%d]=[\"%s\" \"%s\"]",
+      DEBUG_printf(("2ppdCacheGetPageSize: size[%d]=[\"%s\" \"%s\"]",
                     (int)(size - pc->sizes), size->map.pwg, size->map.ppd));
 
       if (!_ppd_strcasecmp(ppd_name, size->map.ppd) ||
@@ -2523,7 +2523,7 @@ ppdCacheGetPageSize(
 	if (exact)
 	  *exact = 1;
 
-        DEBUG_printf(("1_ppdCacheGetPageSize: Returning \"%s\"", ppd_name));
+        DEBUG_printf(("1ppdCacheGetPageSize: Returning \"%s\"", ppd_name));
 
         return (size->map.ppd);
       }
@@ -2616,7 +2616,7 @@ ppdCacheGetPageSize(
       if (exact)
 	*exact = 1;
 
-      DEBUG_printf(("1_ppdCacheGetPageSize: Returning \"%s\"", size->map.ppd));
+      DEBUG_printf(("1ppdCacheGetPageSize: Returning \"%s\"", size->map.ppd));
 
       return (size->map.ppd);
     }
@@ -2624,7 +2624,7 @@ ppdCacheGetPageSize(
 
   if (closest)
   {
-    DEBUG_printf(("1_ppdCacheGetPageSize: Returning \"%s\" (closest)",
+    DEBUG_printf(("1ppdCacheGetPageSize: Returning \"%s\" (closest)",
                   closest->map.ppd));
 
     return (closest->map.ppd);
@@ -2660,7 +2660,7 @@ ppdCacheGetPageSize(
     else if (exact)
       *exact = 1;
 
-    DEBUG_printf(("1_ppdCacheGetPageSize: Returning \"%s\" (custom)",
+    DEBUG_printf(("1ppdCacheGetPageSize: Returning \"%s\" (custom)",
                   pc->custom_ppd_size));
 
     return (pc->custom_ppd_size);
@@ -2670,7 +2670,7 @@ ppdCacheGetPageSize(
   * No custom page size support or the size is out of range - return NULL.
   */
 
-  DEBUG_puts("1_ppdCacheGetPageSize: Returning NULL");
+  DEBUG_puts("1ppdCacheGetPageSize: Returning NULL");
 
   return (NULL);
 }
@@ -2682,7 +2682,7 @@ ppdCacheGetPageSize(
 
 pwg_size_t *				/* O - PWG size or NULL */
 ppdCacheGetSize(
-    _ppd_cache_t *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t *pc,			/* I - PPD cache and mapping data */
     const char   *page_size)		/* I - PPD PageSize */
 {
   int		i;			/* Looping var */
@@ -2796,7 +2796,7 @@ ppdCacheGetSize(
 
 const char *				/* O - PWG media-source keyword */
 ppdCacheGetSource(
-    _ppd_cache_t *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t *pc,			/* I - PPD cache and mapping data */
     const char   *input_slot)		/* I - PPD InputSlot */
 {
   int		i;			/* Looping var */
@@ -2825,7 +2825,7 @@ ppdCacheGetSource(
 
 const char *				/* O - PWG media-type keyword */
 ppdCacheGetType(
-    _ppd_cache_t *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t *pc,			/* I - PPD cache and mapping data */
     const char   *media_type)		/* I - PPD MediaType */
 {
   int		i;			/* Looping var */
@@ -2853,7 +2853,7 @@ ppdCacheGetType(
 
 int					/* O - 1 on success, 0 on failure */
 ppdCacheWriteFile(
-    _ppd_cache_t *pc,			/* I - PPD cache and mapping data */
+    ppd_cache_t *pc,			/* I - PPD cache and mapping data */
     const char   *filename,		/* I - File to write */
     ipp_t        *attrs)		/* I - Attributes to write, if any */
 {
@@ -2861,7 +2861,7 @@ ppdCacheWriteFile(
   cups_file_t		*fp;		/* Output file */
   pwg_size_t		*size;		/* Current size */
   pwg_map_t		*map;		/* Current map */
-  _ppd_pwg_finishings_t	*f;		/* Current finishing option */
+  ppd_pwg_finishings_t	*f;		/* Current finishing option */
   cups_option_t		*option;	/* Current option */
   const char		*value;		/* String value */
   char			newfile[1024];	/* New filename */
@@ -2892,7 +2892,7 @@ ppdCacheWriteFile(
   * Standard header...
   */
 
-  cupsFilePrintf(fp, "#CUPS-PPD-CACHE-%d\n", _PPD_CACHE_VERSION);
+  cupsFilePrintf(fp, "#CUPS-PPD-CACHE-%d\n", PPD_CACHE_VERSION);
 
  /*
   * Output bins...
@@ -2950,8 +2950,8 @@ ppdCacheWriteFile(
   * Presets...
   */
 
-  for (i = _PPD_PWG_PRINT_COLOR_MODE_MONOCHROME; i < _PPD_PWG_PRINT_COLOR_MODE_MAX; i ++)
-    for (j = _PPD_PWG_PRINT_QUALITY_DRAFT; j < _PPD_PWG_PRINT_QUALITY_MAX; j ++)
+  for (i = PPD_PWG_PRINT_COLOR_MODE_MONOCHROME; i < PPD_PWG_PRINT_COLOR_MODE_MAX; i ++)
+    for (j = PPD_PWG_PRINT_QUALITY_DRAFT; j < PPD_PWG_PRINT_QUALITY_MAX; j ++)
       if (pc->num_presets[i][j])
       {
 	cupsFilePrintf(fp, "Preset %d %d", i, j);
@@ -3001,9 +3001,9 @@ ppdCacheWriteFile(
   * Finishing options...
   */
 
-  for (f = (_ppd_pwg_finishings_t *)cupsArrayFirst(pc->finishings);
+  for (f = (ppd_pwg_finishings_t *)cupsArrayFirst(pc->finishings);
        f;
-       f = (_ppd_pwg_finishings_t *)cupsArrayNext(pc->finishings))
+       f = (ppd_pwg_finishings_t *)cupsArrayNext(pc->finishings))
   {
     cupsFilePrintf(fp, "Finishings %d", f->value);
     for (i = f->num_options, option = f->options; i > 0; i --, option ++)
@@ -5039,10 +5039,10 @@ ppd_pwg_add_finishing(
     const char       *name,		/* I - PPD option */
     const char       *value)		/* I - PPD choice */
 {
-  _ppd_pwg_finishings_t	*f;		/* New finishings value */
+  ppd_pwg_finishings_t	*f;		/* New finishings value */
 
 
-  if ((f = (_ppd_pwg_finishings_t *)calloc(1, sizeof(_ppd_pwg_finishings_t))) != NULL)
+  if ((f = (ppd_pwg_finishings_t *)calloc(1, sizeof(ppd_pwg_finishings_t))) != NULL)
   {
     f->value       = template;
     f->num_options = cupsAddOption(name, value, 0, &f->options);
@@ -5079,8 +5079,8 @@ ppd_pwg_add_message(cups_array_t *a,	/* I - Message catalog */
 
 static int				/* O - Result of comparison */
 ppd_pwg_compare_finishings(
-    _ppd_pwg_finishings_t *a,		/* I - First finishings value */
-    _ppd_pwg_finishings_t *b)		/* I - Second finishings value */
+    ppd_pwg_finishings_t *a,		/* I - First finishings value */
+    ppd_pwg_finishings_t *b)		/* I - Second finishings value */
 {
   return ((int)b->value - (int)a->value);
 }
@@ -5121,7 +5121,7 @@ ppd_pwg_copy_size(cups_size_t *size)	/* I - Media size to copy */
 
 static void
 ppd_pwg_free_finishings(
-    _ppd_pwg_finishings_t *f)		/* I - Finishings value */
+    ppd_pwg_finishings_t *f)		/* I - Finishings value */
 {
   cupsFreeOptions(f->num_options, f->options);
   free(f);

@@ -46,7 +46,7 @@ _ppdRasterAddError(const char *f,	/* I - Printf-style error message */
   if (bytes <= 0)
     return;
 
-  DEBUG_printf(("1_cupsRasterAddError: %s", s));
+  DEBUG_printf(("1_ppdRasterAddError: %s", s));
 
   bytes ++;
 

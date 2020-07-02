@@ -393,7 +393,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 		maxsize,		/* Maximum size */
 		*size;			/* Current size */
   ppd_attr_t	*attr;			/* Current attribute */
-  _ppd_cache_t	*pc;			/* PPD cache */
+  ppd_cache_t	*pc;			/* PPD cache */
 
 
   status = 0;
@@ -422,7 +422,7 @@ main(int  argc,				/* I - Number of command-line arguments */
 
     fputs("ppdOpenFile(test.ppd): ", stdout);
 
-    if ((ppd = ppdOpenFileWithLocalization("test.ppd", _PPD_LOCALIZATION_ALL)) != NULL)
+    if ((ppd = ppdOpenFileWithLocalization("test.ppd", PPD_LOCALIZATION_ALL)) != NULL)
       puts("PASS");
     else
     {
