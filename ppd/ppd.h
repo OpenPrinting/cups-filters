@@ -649,6 +649,10 @@ extern const char	*ppdPwgMediaTypeForType(const char *media_type,
 extern const char	*ppdPwgPageSizeForMedia(pwg_media_t *media,
 			                      char *name, size_t namesize);
 
+/**** New in cups-filters 1.0.28: Overtaken from ippeveprinter ****/
+extern ipp_t		*ppdLoadAttributes(const char *ppdfile,
+					   cups_array_t *docformats);
+
 
 /*
  * C++ magic...
