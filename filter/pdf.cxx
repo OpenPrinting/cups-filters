@@ -217,14 +217,25 @@ extern "C" void pdf_add_type1_font(pdf_t *pdf,
  */
 static bool dict_lookup_rect(QPDFObjectHandle object,
                              std::string const& key,
-                             float rect[4])
+                             float rect[4],
+                             bool inheritable)
 {
   // preliminary checks
-  if (!object.isDictionary() || !object.hasKey(key))
+  if (!object.isDictionary())
     return false;
+  
+  QPDFObjectHandle value;
+  if (!object.hasKey(key) && inheritable){
+    QPDFFormFieldObjectHelper helper(object);
+    value = helper.getInheritableFieldValue(key);
+    if (value.isNull()) {
+      return false;
+    }
+  } else {
+    value = object.getKey(key);
+  }
 
   // check if the key is array or some other type
-  QPDFObjectHandle value = object.getKey(key);
   if (!value.isArray())
     return false;
   
@@ -289,7 +300,7 @@ extern "C" void pdf_resize_page (pdf_t *pdf,
   float old_mediabox[4];
   QPDFObjectHandle media_box;
 
-  if (!dict_lookup_rect(page, "/MediaBox", old_mediabox)) {
+  if (!dict_lookup_rect(page, "/MediaBox", old_mediabox, true)) {
     fprintf(stderr, "ERROR: pdf doesn't contain a valid mediabox\n");
     return;
   }
