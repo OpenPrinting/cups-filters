@@ -613,7 +613,13 @@ pdftopdf_CXXFLAGS = -std=c++0x $(pdftopdf_CFLAGS)   # -std=c++11
 pdftopdf_LDADD = \
 	libppd.la \
 	$(LIBQPDF_LIBS) \
-	$(CUPS_LIBS)
+	$(CUPS_LIBS) \
+	-lz \
+	-lgnutls \
+	-lpthread \
+	$(AVAHI_LIBS)
+	
+	
 
 # ======================
 # Simple filter binaries
@@ -727,7 +733,11 @@ bannertopdf_LDADD = \
 	$(LIBPNG_LIBS) \
 	$(LIBQPDF_LIBS) \
 	$(TIFF_LIBS) \
-	$(FONTCONFIG_LIBS)
+	$(FONTCONFIG_LIBS) \
+	-lz \
+	-lgnutls \
+	-lpthread \
+	$(AVAHI_LIBS)
 
 bannertopdf_DEPENDENCIES = \
 	$(GETLINE) \
@@ -801,7 +811,11 @@ gstoraster_LDADD = \
 	$(CUPS_LIBS) \
 	$(LIBQPDF_LIBS) \
 	libcupsfilters.la \
-	libppd.la
+	libppd.la \
+	-lz \
+	-lgnutls \
+	-lpthread \
+	$(AVAHI_LIBS)
 
 imagetopdf_SOURCES = \
 	cupsfilters/image.h \
@@ -861,7 +875,11 @@ pclmtoraster_LDADD = \
 	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS) \
-	$(LIBQPDF_LIBS)
+	$(LIBQPDF_LIBS) \
+	-lz \
+	-lgnutls \
+	-lpthread \
+	$(AVAHI_LIBS)
 
 rastertopdf_SOURCES = \
 	filter/rastertopdf.cpp
@@ -876,7 +894,11 @@ rastertopdf_LDADD = \
 	$(LCMS_LIBS) \
 	$(LIBQPDF_LIBS) \
 	libcupsfilters.la \
-	libppd.la
+	libppd.la \
+	-lz \
+	-lgnutls \
+	-lpthread \
+	$(AVAHI_LIBS)
 
 mupdftoraster_SOURCES = \
 	filter/mupdftoraster.c
@@ -943,7 +965,11 @@ pdftops_LDADD = \
 	libppd.la \
 	$(STRCASESTR) \
 	$(CUPS_LIBS) \
-	$(LIBQPDF_LIBS)
+	$(LIBQPDF_LIBS) \
+	-lz \
+	-lgnutls \
+	-lpthread \
+	$(AVAHI_LIBS)
 pdftops_DEPENDENCIES = $(STRCASESTR)
 
 pdftoraster_SOURCES = \
