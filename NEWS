@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- Build system: Remove '-D_PPD_DEPRECATED=""' from the
+	  compiling command lines of the source files which use
+	  libcups. The flag is not supported any more for longer times
+	  already and all the PPD-related functions deprecated by CUPS
+	  have moved into libppd now.
 	- libcupsfilters, libppd: Older versions of libcups (< 2.3.1)
 	  had the enum name for fold-accordion finishings mistyped.
 	  Added a workaround.
