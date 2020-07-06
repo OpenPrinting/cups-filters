@@ -15,9 +15,9 @@ CHANGES IN V1.28.0
 	  previous session more quickly when CUPS legacy browsing is
 	  turned on.
 	- cups-browsed: Left-over local queues from the previous
-	  session for which the corresponding did not appear again did
-	  not get removed as they were considered externally
-	  overwritten.
+	  session for which the corresponding remote printer did not
+	  appear again did not get removed as they were considered
+	  externally overwritten.
 	- gstoraster, gstopdf: Add option "-dDoNumCopies" to
 	  Ghostscript command line if we are outputting PDF (called
 	  via gstopdf wrapper) and the number of copies supplied to
