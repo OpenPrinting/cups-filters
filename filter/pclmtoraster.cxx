@@ -35,11 +35,9 @@
 #define MAX_BYTES_PER_PIXEL 32
 
 namespace {
-  typedef unsigned char *(*ConvertLineFunc)(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels);
-  ConvertLineFunc convertLine;
-  int deviceCopies = 1;
-  bool deviceCollate = false;
-  int pwgraster = 1;
+  typedef unsigned char *(*ConvertCSpace)(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels);
+  ConvertCSpace convertcspace;
+  int pwgraster = 0;
   cups_page_header2_t header;
   ppd_file_t *ppd = 0;
   char pageSizeRequested[64];
@@ -72,38 +70,6 @@ namespace {
     {63,191,31,159,55,183,23,151,61,189,29,157,53,181,21,149},
     {255,127,223,95,247,119,215,87,253,125,221,93,245,117,213,85}
   };
-}
-
-static void parsePDFTOPDFComment(FILE *fp)
-{
-  char buf[4096];
-  int i;
-
-  /* skip until PDF start header */
-  while (fgets(buf,sizeof(buf),fp) != 0) {
-    if (strncmp(buf,"%PDF",4) == 0) {
-      break;
-    }
-  }
-  for (i = 0;i < MAX_CHECK_COMMENT_LINES;i++) {
-    if (fgets(buf,sizeof(buf),fp) == 0) break;
-    if (strncmp(buf,"%%PDFTOPDFNumCopies",19) == 0) {
-      char *p;
-
-      p = strchr(buf+19,':');
-      deviceCopies = atoi(p+1);
-    } else if (strncmp(buf,"%%PDFTOPDFCollate",17) == 0) {
-      char *p;
-
-      p = strchr(buf+17,':');
-      while (*p == ' ' || *p == '\t') p++;
-      if (strncasecmp(p,"true",4) == 0) {
-        deviceCollate = true;
-      } else {
-        deviceCollate = false;
-      }
-    }
-  }
 }
 
 int parse_doc_type(FILE *fp)
@@ -473,9 +439,33 @@ static unsigned char *GraytoBlackLine(unsigned char *src, unsigned char *dst, un
   return dst;
 }
 
-static unsigned char *convertLineNoop(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
+static unsigned char *convertcspaceNoop(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
 {
     return src;
+}
+
+static unsigned char *convertLine(unsigned char *src, unsigned char *dst,
+     unsigned int row, unsigned int plane, unsigned int pixels)
+{
+  /* Assumed that BitsPerColor is 8 */
+  unsigned char pixelBuf1[MAX_BYTES_PER_PIXEL];
+  unsigned char *pb;
+
+  switch (header.cupsColorOrder)
+  {
+  case CUPS_ORDER_BANDED:
+  case CUPS_ORDER_PLANAR:
+   pb = convertcspace(src, pixelBuf1, row, pixels);
+   for (unsigned int i = 0; i < pixels; i++, pb += header.cupsNumColors)
+     dst[i] = pb[plane];
+   break;
+  case CUPS_ORDER_CHUNKED:
+  default:
+    pb = convertcspace(src, dst, row, pixels);
+    dst = pb;
+   break;
+  }
+  return dst;
 }
 
 static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
@@ -494,7 +484,8 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
   unsigned char    *dp = NULL;
   std::string      colorspace;
 
-  convertLine = convertLineNoop;
+
+  convertcspace = convertcspaceNoop;
 
   if (page.getKey("/Rotate").isInteger())
     rotate = page.getKey("/Rotate").getIntValueAsInt();
@@ -552,6 +543,10 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
   }
 
   bytesPerLine = header.cupsBytesPerLine = (header.cupsBitsPerPixel * header.cupsWidth + 7) / 8;
+  if (header.cupsColorOrder == CUPS_ORDER_BANDED) {
+    header.cupsBytesPerLine *= header.cupsNumColors;
+  }
+
   if (!cupsRasterWriteHeader2(raster,&header)) {
     fprintf(stderr, "ERROR: Can't write page %d header\n", pgno + 1);
     exit(1);
@@ -579,31 +574,32 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
 
   colordata = bitmap;
 
-   switch (header.cupsColorSpace) {
+  switch (header.cupsColorSpace) {
     case CUPS_CSPACE_K:
-      if (colorspace == "/DeviceRGB") convertLine = RGBtoBlackLine;
-      if (colorspace == "/DeviceCMYK") convertLine = CMYKtoBlackLine;
-      if (colorspace == "/DeviceGray") convertLine = GraytoBlackLine;
+     if (colorspace == "/DeviceRGB") convertcspace = RGBtoBlackLine;
+     else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoBlackLine;
+     else if (colorspace == "/DeviceGray") convertcspace = GraytoBlackLine;
      break;
     case CUPS_CSPACE_SW:
-     if (colorspace == "/DeviceRGB") convertLine = RGBtoWhiteLine;
-     if (colorspace == "/DeviceCMYK") convertLine = CMYKtoWhiteLine;
+     if (colorspace == "/DeviceRGB") convertcspace = RGBtoWhiteLine;
+     else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoWhiteLine;
      break;
     case CUPS_CSPACE_CMY:
-     if (colorspace == "/DeviceRGB") convertLine = RGBtoCMYLine;
-     else if (colorspace == "/DeviceCMYK") convertLine = CMYKtoCMYLine;
-     else if (colorspace == "/DeviceGray") convertLine = GraytoCMYLine;
+     if (colorspace == "/DeviceRGB") convertcspace = RGBtoCMYLine;
+     else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoCMYLine;
+     else if (colorspace == "/DeviceGray") convertcspace = GraytoCMYLine;
      break;
     case CUPS_CSPACE_CMYK:
-     if (colorspace == "/DeviceRGB") convertLine = RGBtoCMYKLine;
-     else if (colorspace == "/DeviceGray") convertLine = GraytoCMYKLine;
+     if (colorspace == "/DeviceRGB") convertcspace = RGBtoCMYKLine;
+     else if (colorspace == "/DeviceGray") convertcspace = GraytoCMYKLine;
      break;
     case CUPS_CSPACE_RGB:
     case CUPS_CSPACE_ADOBERGB:
     case CUPS_CSPACE_SRGB:
     default:
-     if (colorspace == "/DeviceCMYK") convertLine = CMYKtoRGBLine;
-     else if (colorspace == "/DeviceGray") convertLine = GraytoRGBLine;
+     if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoRGBLine;
+     else if (colorspace == "/DeviceGray") convertcspace = GraytoRGBLine;
+     break;
    }
 
   lineBuf = new unsigned char [bytesPerLine];
@@ -611,8 +607,8 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
     unsigned char *bp = colordata;
     for (unsigned int h = 0; h < header.cupsHeight; h++) {
       for (unsigned int band = 0; band < nbands; band++) {
-         dp = convertLine(bp, lineBuf, h, header.cupsWidth);
-        cupsRasterWritePixels(raster, dp, bytesPerLine);
+       dp = convertLine(bp, lineBuf, h, plane + band, header.cupsWidth);
+       cupsRasterWritePixels(raster, dp, bytesPerLine);
       }
     bp += rowsize;
     }
@@ -646,15 +642,7 @@ int main(int argc, char **argv)
      fclose(fp);
      exit(1);
   }
-  parsePDFTOPDFComment(fp);
   fclose(fp);
-
-  /* fix NumCopies, Collate ccording to PDFTOPDFComments */
-  header.NumCopies = deviceCopies;
-  header.Collate = deviceCollate ? CUPS_TRUE : CUPS_FALSE;
-  /* fixed other values that pdftopdf handles */
-  header.MirrorPrint = CUPS_FALSE;
-  header.Orientation = CUPS_ORIENT_0;
 
   if (header.cupsBitsPerColor != 1
      && header.cupsBitsPerColor != 2
