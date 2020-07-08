@@ -47,6 +47,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <cupsfilters/image.h>
 #include <cupsfilters/raster.h>
 #include <cupsfilters/colormanager.h>
+#include <cupsfilters/bitmap.h>
 #include <strings.h>
 #include <math.h>
 #include <poppler/cpp/poppler-document.h>
@@ -99,9 +100,9 @@ namespace {
   typedef unsigned char *(*ConvertCSpaceFunc)(unsigned char *src,
     unsigned char *pixelBuf, unsigned int x, unsigned int y);
   typedef unsigned char *(*ConvertBitsFunc)(unsigned char *src,
-    unsigned char *dst, unsigned int x, unsigned int y);
+    unsigned char *dst, unsigned int x, unsigned int y, unsigned int numcolors);
   typedef void (*WritePixelFunc)(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf);
+    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf, unsigned int numcolors);
 
   int exitCode = 0;
   int pwgraster = 0;
@@ -166,23 +167,6 @@ namespace {
     {63,191,31,159,55,183,23,151,61,189,29,157,53,181,21,149},
     {255,127,223,95,247,119,215,87,253,125,221,93,245,117,213,85}
   };
-  unsigned int dither2[8][8] = {
-    {0,32,8,40,2,34,10,42},
-    {48,16,56,24,50,18,58,26},
-    {12,44,4,36,14,46,6,38},
-    {60,28,52,20,62,30,54,22},
-    {3,35,11,43,1,33,9,41},
-    {51,19,59,27,49,17,57,25},
-    {15,47,7,39,13,45,5,37},
-    {63,31,55,23,61,29,53,21}
-  };
-  unsigned int dither4[4][4] = {
-    {0,8,2,10},
-    {12,4,14,6},
-    {3,11,1,9},
-    {15,7,13,5}
-  };
-
   /* for color profiles */
   cmsHPROFILE colorProfile = NULL;
   cmsHPROFILE popplerColorProfile = NULL;
@@ -940,205 +924,6 @@ static unsigned char *W8toK8(unsigned char *src, unsigned char *pixelBuf,
   return pixelBuf;
 }
 
-static unsigned char *convertBitsNoop(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y)
-{
-    return src;
-}
-
-static unsigned char *convert8to1(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y)
-{
-  unsigned char c = 0;
-  /* assumed that max number of colors is 4 */
-  for (unsigned int i = 0;i < header.cupsNumColors;i++) {
-    c <<= 1;
-    /* ordered dithering */
-    if (src[i] > dither1[y & 0xf][x & 0xf]) {
-      c |= 0x1;
-    }
-  }
-  *dst = c;
-  return dst;
-}
-
-static unsigned char *convert8to2(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y)
-{
-  unsigned char c = 0;
-  /* assumed that max number of colors is 4 */
-  for (unsigned int i = 0;i < header.cupsNumColors;i++) {
-    unsigned int d;
-
-    c <<= 2;
-    /* ordered dithering */
-    d = src[i] + dither2[y & 0x7][x & 0x7];
-    if (d > 255) d = 255;
-    c |= d >> 6;
-  }
-  *dst = c;
-  return dst;
-}
-
-static unsigned char *convert8to4(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y)
-{
-  unsigned short c = 0;
-
-  /* assumed that max number of colors is 4 */
-  for (unsigned int i = 0;i < header.cupsNumColors;i++) {
-    unsigned int d;
-
-    c <<= 4;
-    /* ordered dithering */
-    d = src[i] + dither4[y & 0x3][x & 0x3];
-    if (d > 255) d = 255;
-    c |= d >> 4;
-  }
-  if (header.cupsNumColors < 3) {
-    dst[0] = c;
-  } else {
-    dst[0] = c >> 8;
-    dst[1] = c;
-  }
-  return dst;
-}
-
-static unsigned char *convert8to16(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y)
-{
-  /* assumed that max number of colors is 4 */
-  for (unsigned int i = 0;i < header.cupsNumColors;i++) {
-    dst[i*2] = src[i];
-    dst[i*2+1] = src[i];
-  }
-  return dst;
-}
-
-static void writePixel1(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  switch (header.cupsNumColors) {
-  case 1:
-    {
-      unsigned int bo = pixeli & 0x7;
-      if ((pixeli & 7) == 0) dst[pixeli/8] = 0;
-      dst[pixeli/8] |= *pixelBuf << (7-bo);
-    }
-    break;
-  case 6:
-    dst[pixeli] = *pixelBuf;
-    break;
-  case 3:
-  case 4:
-  default:
-    {
-      unsigned int qo = (pixeli & 0x1)*4;
-      if ((pixeli & 1) == 0) dst[pixeli/2] = 0;
-      dst[pixeli/2] |= *pixelBuf << (4-qo);
-    }
-    break;
-  }
-}
-
-static void writePlanePixel1(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  unsigned int bo = pixeli & 0x7;
-  unsigned char so = header.cupsNumColors - plane - 1;
-  if ((pixeli & 7) == 0) dst[pixeli/8] = 0;
-  dst[pixeli/8] |= ((*pixelBuf >> so) & 1) << (7-bo);
-}
-
-static void writePixel2(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  switch (header.cupsNumColors) {
-  case 1:
-    {
-      unsigned int bo = (pixeli & 0x3)*2;
-      if ((pixeli & 3) == 0) dst[pixeli/4] = 0;
-      dst[pixeli/4] |= *pixelBuf << (6-bo);
-    }
-    break;
-  case 3:
-  case 4:
-  default:
-    dst[pixeli] = *pixelBuf;
-    break;
-  }
-}
-
-static void writePlanePixel2(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  unsigned int bo = (pixeli & 0x3)*2;
-  unsigned char so = (header.cupsNumColors - plane - 1)*2;
-  if ((pixeli & 3) == 0) dst[pixeli/4] = 0;
-  dst[pixeli/4] |= ((*pixelBuf >> so) & 3) << (6-bo);
-}
-
-static void writePixel4(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  switch (header.cupsNumColors) {
-  case 1:
-    {
-      unsigned int bo = (pixeli & 0x1)*4;
-      if ((pixeli & 1) == 0) dst[pixeli/2] = 0;
-      dst[pixeli/2] |= *pixelBuf << (4-bo);
-    }
-    break;
-  case 3:
-  case 4:
-  default:
-    dst[pixeli*2] = pixelBuf[0];
-    dst[pixeli*2+1] = pixelBuf[1];
-    break;
-  }
-}
-
-static void writePlanePixel4(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  unsigned short c = (pixelBuf[0] << 8) | pixelBuf[1];
-  unsigned int bo = (pixeli & 0x1)*4;
-  unsigned char so = (header.cupsNumColors - plane - 1)*4;
-  if ((pixeli & 1) == 0) dst[pixeli/2] = 0;
-  dst[pixeli/2] |= ((c >> so) & 0xf) << (4-bo);
-}
-
-static void writePixel8(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  unsigned char *dp = dst + pixeli*header.cupsNumColors;
-  for (unsigned int i = 0;i < header.cupsNumColors;i++) {
-    dp[i] = pixelBuf[i];
-  }
-}
-
-static void writePlanePixel8(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  dst[pixeli] = pixelBuf[plane];
-}
-
-static void writePixel16(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  unsigned char *dp = dst + pixeli*header.cupsNumColors*2;
-  for (unsigned int i = 0;i < header.cupsNumColors*2;i++) {
-    dp[i] = pixelBuf[i];
-  }
-}
-
-static void writePlanePixel16(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf)
-{
-  dst[pixeli*2] = pixelBuf[plane*2];
-  dst[pixeli*2+1] = pixelBuf[plane*2+1];
-}
-
 static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
      unsigned int size)
@@ -1150,8 +935,8 @@ static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
       unsigned char *pb;
 
       pb = convertCSpace(src+i*popplerNumColors,pixelBuf1,i,row);
-      pb = convertBits(pb,pixelBuf2,i,row);
-      writePixel(dst,0,i,pb);
+      pb = convertBits(pb,pixelBuf2,i,row,header.cupsNumColors);
+      writePixel(dst,0,i,pb,header.cupsNumColors);
   }
   return dst;
 }
@@ -1167,8 +952,8 @@ static unsigned char *convertLineChunkedSwap(unsigned char *src,
       unsigned char *pb;
 
       pb = convertCSpace(src+(pixels-i-1)*popplerNumColors,pixelBuf1,i,row);
-      pb = convertBits(pb,pixelBuf2,i,row);
-      writePixel(dst,0,i,pb);
+      pb = convertBits(pb,pixelBuf2,i,row,header.cupsNumColors);
+      writePixel(dst,0,i,pb,header.cupsNumColors);
   }
   return dst;
 }
@@ -1184,8 +969,8 @@ static unsigned char *convertLinePlane(unsigned char *src, unsigned char *dst,
       unsigned char *pb;
 
       pb = convertCSpace(src+i*popplerNumColors,pixelBuf1,i,row);
-      pb = convertBits(pb,pixelBuf2,i,row);
-      writePixel(dst,plane,i,pb);
+      pb = convertBits(pb,pixelBuf2,i,row,header.cupsNumColors);
+      writePixel(dst,plane,i,pb,header.cupsNumColors);
   }
   return dst;
 }
@@ -1200,8 +985,8 @@ static unsigned char *convertLinePlaneSwap(unsigned char *src,
       unsigned char *pb;
 
       pb = convertCSpace(src+(pixels-i-1)*popplerNumColors,pixelBuf1,i,row);
-      pb = convertBits(pb,pixelBuf2,i,row);
-      writePixel(dst,plane,i,pb);
+      pb = convertBits(pb,pixelBuf2,i,row,header.cupsNumColors);
+      writePixel(dst,plane,i,pb,header.cupsNumColors);
   }
   return dst;
 }

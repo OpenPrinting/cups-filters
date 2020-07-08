@@ -27,17 +27,22 @@
 #include <qpdf/QPDFObjectHandle.hh>
 #include <cupsfilters/raster.h>
 #include <cupsfilters/image.h>
+#include <cupsfilters/bitmap.h>
 
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
 #endif
-#define MAX_CHECK_COMMENT_LINES	20
 #define MAX_BYTES_PER_PIXEL 32
 
 namespace {
   typedef unsigned char *(*ConvertCSpace)(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels);
+  typedef void (*WritePixelFunc)(unsigned char *dst, unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
+  typedef unsigned char *(*ConvertBitsFunc)(unsigned char *src, unsigned char *dst, unsigned int x, unsigned int y, unsigned int cupsNumColors);
   ConvertCSpace convertcspace;
+  ConvertBitsFunc convertbits;
+  WritePixelFunc writePixel;
   int pwgraster = 0;
+  int numcolors = 0;
   cups_page_header2_t header;
   ppd_file_t *ppd = 0;
   char pageSizeRequested[64];
@@ -365,7 +370,14 @@ static unsigned char *RGBtoCMYLine(unsigned char *src, unsigned char *dst, unsig
 
 static unsigned char *RGBtoWhiteLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
 {
-  cupsImageRGBToWhite(src,dst,pixels);
+  // cupsImageRGBToWhite(src,dst,pixels);
+  if (header.cupsBitsPerColor != 1) {
+    cupsImageRGBToWhite(src,dst,pixels);
+  } else {
+    cupsImageRGBToWhite(src,src,pixels);
+    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
+  }
+
   return dst;
 }
 
@@ -396,7 +408,13 @@ static unsigned char *CMYKtoCMYLine(unsigned char *src, unsigned char *dst, unsi
 
 static unsigned char *CMYKtoWhiteLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
 {
-  cupsImageCMYKToWhite(src,dst,pixels);
+  // cupsImageCMYKToWhite(src,dst,pixels);
+  if (header.cupsBitsPerColor != 1) {
+    cupsImageCMYKToWhite(src,dst,pixels);
+  } else {
+    cupsImageCMYKToWhite(src,src,pixels);
+    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
+  }
   return dst;
 }
 
@@ -405,7 +423,7 @@ static unsigned char *CMYKtoBlackLine(unsigned char *src, unsigned char *dst, un
   if (header.cupsBitsPerColor != 1) {
     cupsImageCMYKToBlack(src,dst,pixels);
   } else {
-    cupsImageCMYKToWhite(src,src,pixels);
+    cupsImageCMYKToBlack(src,src,pixels);
     onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
   }
   return dst;
@@ -447,25 +465,117 @@ static unsigned char *convertcspaceNoop(unsigned char *src, unsigned char *dst, 
 static unsigned char *convertLine(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels)
 {
-  /* Assumed that BitsPerColor is 8 */
-  unsigned char pixelBuf1[MAX_BYTES_PER_PIXEL];
-  unsigned char *pb;
-
-  switch (header.cupsColorOrder)
-  {
-  case CUPS_ORDER_BANDED:
-  case CUPS_ORDER_PLANAR:
-   pb = convertcspace(src, pixelBuf1, row, pixels);
-   for (unsigned int i = 0; i < pixels; i++, pb += header.cupsNumColors)
-     dst[i] = pb[plane];
-   break;
-  case CUPS_ORDER_CHUNKED:
-  default:
-    pb = convertcspace(src, dst, row, pixels);
-    dst = pb;
-   break;
+  if (header.cupsBitsPerColor == 1 && header.cupsNumColors == 1) {
+    convertcspace(src, dst, row, pixels);
+  } else {
+    for (unsigned int i = 0;i < pixels;i++) {
+      unsigned char pixelBuf1[MAX_BYTES_PER_PIXEL];
+      unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
+      unsigned char *pb;
+      pb = convertcspace(src + i*numcolors, pixelBuf1, row, 1);
+      pb = convertbits(pb, pixelBuf2, i, row, header.cupsNumColors);
+      writePixel(dst, plane, i, pb, header.cupsNumColors);
+    }
   }
   return dst;
+}
+
+static void selectConvertFunc(std::string colorspace) {
+
+  switch (header.cupsColorSpace) {
+    case CUPS_CSPACE_K:
+     if (colorspace == "/DeviceRGB") convertcspace = RGBtoBlackLine;
+     else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoBlackLine;
+     else if (colorspace == "/DeviceGray") convertcspace = GraytoBlackLine;
+     break;
+    case CUPS_CSPACE_SW:
+     if (colorspace == "/DeviceRGB") convertcspace = RGBtoWhiteLine;
+     else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoWhiteLine;
+     break;
+    case CUPS_CSPACE_CMY:
+     if (colorspace == "/DeviceRGB") convertcspace = RGBtoCMYLine;
+     else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoCMYLine;
+     else if (colorspace == "/DeviceGray") convertcspace = GraytoCMYLine;
+     break;
+    case CUPS_CSPACE_CMYK:
+     if (colorspace == "/DeviceRGB") convertcspace = RGBtoCMYKLine;
+     else if (colorspace == "/DeviceGray") convertcspace = GraytoCMYKLine;
+     break;
+    case CUPS_CSPACE_RGB:
+    case CUPS_CSPACE_ADOBERGB:
+    case CUPS_CSPACE_SRGB:
+    default:
+     if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoRGBLine;
+     else if (colorspace == "/DeviceGray") convertcspace = GraytoRGBLine;
+     break;
+   }
+
+  switch (header.cupsBitsPerColor) {
+    case 2:
+      convertbits = convert8to2;
+      break;
+    case 4:
+      convertbits = convert8to4;
+      break;
+    case 16:
+      convertbits = convert8to16;
+      break;
+    case 1:
+      if (header.cupsNumColors == 1) {
+          convertbits = convertBitsNoop;
+      } else {
+          convertbits = convert8to1;
+      }
+      break;
+    case 8:
+    default:
+      convertbits = convertBitsNoop;
+      break;
+    }
+
+  switch (header.cupsBitsPerColor) {
+  case 2:
+    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
+        || header.cupsNumColors == 1) {
+      writePixel = writePixel2;
+    } else {
+      writePixel = writePlanePixel2;
+    }
+    break;
+  case 4:
+    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
+        || header.cupsNumColors == 1) {
+      writePixel = writePixel4;
+    } else {
+      writePixel = writePlanePixel4;
+    }
+    break;
+  case 16:
+    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
+        || header.cupsNumColors == 1) {
+      writePixel = writePixel16;
+    } else {
+      writePixel = writePlanePixel16;
+    }
+    break;
+  case 1:
+    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
+        || header.cupsNumColors == 1) {
+      writePixel = writePixel1;
+    } else {
+      writePixel = writePlanePixel1;
+    }
+    break;
+  case 8:
+  default:
+    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
+        || header.cupsNumColors == 1) {
+      writePixel = writePixel8;
+    } else {
+      writePixel = writePlanePixel8;
+    }
+    break;
+  }
 }
 
 static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
@@ -473,19 +583,20 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
                    height,
                    width;
   double           l;
+  int              rowsize = 0, bufsize = 0, pixel_count = 0, temp = 0;
+  float            mediaBox[4];
+  unsigned char    *bitmap = NULL,
+                   *colordata = NULL,
+                   *lineBuf = NULL,
+                   *dp = NULL;
+  std::string      colorspace;
   QPDFObjectHandle image;
   QPDFObjectHandle imgdict;
-  int              rowsize = 0, bufsize = 0, pixel_count = 0, temp;
-  float            mediaBox[4];
-  unsigned char    *bitmap = NULL;
-  unsigned char    *colordata = NULL;
   QPDFObjectHandle colorspace_obj;
-  unsigned char    *lineBuf = NULL;
-  unsigned char    *dp = NULL;
-  std::string      colorspace;
 
 
   convertcspace = convertcspaceNoop;
+  convertbits = convertBitsNoop;
 
   if (page.getKey("/Rotate").isInteger())
     rotate = page.getKey("/Rotate").getIntValueAsInt();
@@ -552,14 +663,17 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
     exit(1);
   }
 
-  colorspace = (colorspace_obj.isName() ? colorspace_obj.getName() : std::string());
+  colorspace = (colorspace_obj.isName() ? colorspace_obj.getName() : "/DeviceRGB"); /* Default for pclm files in DeviceRGB */
 
   if (colorspace == "/DeviceRGB") {
     rowsize = header.cupsWidth*3;
+    numcolors = 3;
   } else if (colorspace == "/DeviceCMYK") {
-     rowsize = header.cupsWidth*4;
+    rowsize = header.cupsWidth*4;
+    numcolors = 4;
   } else if (colorspace == "/DeviceGray") {
-     rowsize = header.cupsWidth;
+    rowsize = header.cupsWidth;
+    numcolors = 1;
   } else {
     fprintf(stderr, "ERROR: Colorspace %s not supported\n", colorspace.c_str());
     exit(1);
@@ -574,33 +688,7 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
 
   colordata = bitmap;
 
-  switch (header.cupsColorSpace) {
-    case CUPS_CSPACE_K:
-     if (colorspace == "/DeviceRGB") convertcspace = RGBtoBlackLine;
-     else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoBlackLine;
-     else if (colorspace == "/DeviceGray") convertcspace = GraytoBlackLine;
-     break;
-    case CUPS_CSPACE_SW:
-     if (colorspace == "/DeviceRGB") convertcspace = RGBtoWhiteLine;
-     else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoWhiteLine;
-     break;
-    case CUPS_CSPACE_CMY:
-     if (colorspace == "/DeviceRGB") convertcspace = RGBtoCMYLine;
-     else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoCMYLine;
-     else if (colorspace == "/DeviceGray") convertcspace = GraytoCMYLine;
-     break;
-    case CUPS_CSPACE_CMYK:
-     if (colorspace == "/DeviceRGB") convertcspace = RGBtoCMYKLine;
-     else if (colorspace == "/DeviceGray") convertcspace = GraytoCMYKLine;
-     break;
-    case CUPS_CSPACE_RGB:
-    case CUPS_CSPACE_ADOBERGB:
-    case CUPS_CSPACE_SRGB:
-    default:
-     if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoRGBLine;
-     else if (colorspace == "/DeviceGray") convertcspace = GraytoRGBLine;
-     break;
-   }
+  selectConvertFunc(colorspace);
 
   lineBuf = new unsigned char [bytesPerLine];
   for (unsigned int plane = 0; plane < nplanes ; plane++) {
@@ -610,7 +698,7 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
        dp = convertLine(bp, lineBuf, h, plane + band, header.cupsWidth);
        cupsRasterWritePixels(raster, dp, bytesPerLine);
       }
-    bp += rowsize;
+     bp += rowsize;
     }
   }
 
