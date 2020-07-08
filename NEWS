@@ -24,8 +24,8 @@ CHANGES IN V1.28.0
 	  CUPS is 1 (4th command line argument). In this case we
 	  convert incoming PostScript to PDF and need to respect
 	  embedded PostScript commands to implement the number of
-	  copies (Issue #255, Issue #242, CUPS Issue #5796, OpenSUSE
-	  bug #1173345).
+	  copies (Issue #255, CUPS Issue #5796, OpenSUSE bug
+	  #1173345).
 	- imagetoraster: Potential null dereference fix (when no valid
 	  PPD is supplied, Pull request #256).
 	- libppd: Added the new libppd library overtaking all the PPD
