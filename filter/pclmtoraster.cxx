@@ -39,13 +39,14 @@ namespace {
   typedef void (*WritePixelFunc)(unsigned char *dst, unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
   typedef unsigned char *(*ConvertBitsFunc)(unsigned char *src, unsigned char *dst, unsigned int x, unsigned int y, unsigned int cupsNumColors);
   ConvertCSpace convertcspace;
-  ConvertBitsFunc convertbits;
+  ConvertBitsFunc convertBits;
   WritePixelFunc writePixel;
   int pwgraster = 0;
   int numcolors = 0;
   cups_page_header2_t header;
   ppd_file_t *ppd = 0;
   char pageSizeRequested[64];
+  int bilevel = 0;
   /* image swapping */
   bool swap_image_x = false;
   bool swap_image_y = false;
@@ -110,6 +111,11 @@ static void parseOpts(int argc, char **argv)
   if (t && strcasestr(t, "pwg"))
     pwgraster = 1;
 #endif /* HAVE_CUPS_1_7 */
+  t = getenv("BILEVEL");
+  if (t && (!strcasecmp(t, "true")
+        || !strcasecmp(t, "on")
+        || !strcasecmp(t, "yes")))
+    bilevel = 1;
 
   ppd = ppdOpenFile(getenv("PPD"));
   if (ppd == NULL)
@@ -342,11 +348,14 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
 void onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width,
      unsigned int height, unsigned int row, unsigned int rowsize) {
   unsigned char t = 0;
+  unsigned int threshold = 0;
   for(unsigned int w = 0; w < width; w+=8){
     t = 0;
     for(int k = 0; k < 8; k++){
         t <<= 1;
-        if(*src > dither1[row & 0xf][(w+k) & 0xf]){
+        if (bilevel) threshold = 128;
+        else threshold = dither1[row & 0xf][(w+k) & 0xf];
+        if(*src > threshold) {
           t |= 0x1;
         }
         src +=1;
@@ -452,6 +461,7 @@ static unsigned char *GraytoBlackLine(unsigned char *src, unsigned char *dst, un
   if (header.cupsBitsPerColor != 1) {
     cupsImageWhiteToBlack(src, dst, pixels);
   } else {
+    cupsImageWhiteToBlack(src, src, pixels);
     onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
   }
   return dst;
@@ -473,7 +483,7 @@ static unsigned char *convertLine(unsigned char *src, unsigned char *dst,
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
       pb = convertcspace(src + i*numcolors, pixelBuf1, row, 1);
-      pb = convertbits(pb, pixelBuf2, i, row, header.cupsNumColors);
+      pb = convertBits(pb, pixelBuf2, i, row, header.cupsNumColors);
       writePixel(dst, plane, i, pb, header.cupsNumColors);
     }
   }
@@ -488,6 +498,7 @@ static void selectConvertFunc(std::string colorspace) {
      else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoBlackLine;
      else if (colorspace == "/DeviceGray") convertcspace = GraytoBlackLine;
      break;
+    case CUPS_CSPACE_W:
     case CUPS_CSPACE_SW:
      if (colorspace == "/DeviceRGB") convertcspace = RGBtoWhiteLine;
      else if (colorspace == "/DeviceCMYK") convertcspace = CMYKtoWhiteLine;
@@ -512,24 +523,24 @@ static void selectConvertFunc(std::string colorspace) {
 
   switch (header.cupsBitsPerColor) {
     case 2:
-      convertbits = convert8to2;
+      convertBits = convert8to2;
       break;
     case 4:
-      convertbits = convert8to4;
+      convertBits = convert8to4;
       break;
     case 16:
-      convertbits = convert8to16;
+      convertBits = convert8to16;
       break;
     case 1:
       if (header.cupsNumColors == 1) {
-          convertbits = convertBitsNoop;
+          convertBits = convertBitsNoop;
       } else {
-          convertbits = convert8to1;
+          convertBits = convert8to1;
       }
       break;
     case 8:
     default:
-      convertbits = convertBitsNoop;
+      convertBits = convertBitsNoop;
       break;
     }
 
@@ -596,7 +607,7 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
 
 
   convertcspace = convertcspaceNoop;
-  convertbits = convertBitsNoop;
+  convertBits = convertBitsNoop;
 
   if (page.getKey("/Rotate").isInteger())
     rotate = page.getKey("/Rotate").getIntValueAsInt();
@@ -701,7 +712,6 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
      bp += rowsize;
     }
   }
-
   delete[] lineBuf;
   free(bitmap);
 }
