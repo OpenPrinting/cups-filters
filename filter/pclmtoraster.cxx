@@ -36,11 +36,7 @@
 
 namespace {
   typedef unsigned char *(*ConvertCSpace)(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels);
-  typedef void (*WritePixelFunc)(unsigned char *dst, unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-  typedef unsigned char *(*ConvertBitsFunc)(unsigned char *src, unsigned char *dst, unsigned int x, unsigned int y, unsigned int cupsNumColors);
   ConvertCSpace convertcspace;
-  ConvertBitsFunc convertBits;
-  WritePixelFunc writePixel;
   int pwgraster = 0;
   int numcolors = 0;
   cups_page_header2_t header;
@@ -483,8 +479,8 @@ static unsigned char *convertLine(unsigned char *src, unsigned char *dst,
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
       pb = convertcspace(src + i*numcolors, pixelBuf1, row, 1);
-      pb = convertBits(pb, pixelBuf2, i, row, header.cupsNumColors);
-      writePixel(dst, plane, i, pb, header.cupsNumColors);
+      pb = convertbits(pb, pixelBuf2, i, row, header.cupsNumColors, header.cupsBitsPerColor);
+      writepixel(dst, plane, i, pb, header.cupsNumColors, header.cupsBitsPerColor, header.cupsColorOrder);
     }
   }
   return dst;
@@ -520,73 +516,6 @@ static void selectConvertFunc(std::string colorspace) {
      else if (colorspace == "/DeviceGray") convertcspace = GraytoRGBLine;
      break;
    }
-
-  switch (header.cupsBitsPerColor) {
-    case 2:
-      convertBits = convert8to2;
-      break;
-    case 4:
-      convertBits = convert8to4;
-      break;
-    case 16:
-      convertBits = convert8to16;
-      break;
-    case 1:
-      if (header.cupsNumColors == 1) {
-          convertBits = convertBitsNoop;
-      } else {
-          convertBits = convert8to1;
-      }
-      break;
-    case 8:
-    default:
-      convertBits = convertBitsNoop;
-      break;
-    }
-
-  switch (header.cupsBitsPerColor) {
-  case 2:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel2;
-    } else {
-      writePixel = writePlanePixel2;
-    }
-    break;
-  case 4:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel4;
-    } else {
-      writePixel = writePlanePixel4;
-    }
-    break;
-  case 16:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel16;
-    } else {
-      writePixel = writePlanePixel16;
-    }
-    break;
-  case 1:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel1;
-    } else {
-      writePixel = writePlanePixel1;
-    }
-    break;
-  case 8:
-  default:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel8;
-    } else {
-      writePixel = writePlanePixel8;
-    }
-    break;
-  }
 }
 
 static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
@@ -607,7 +536,6 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
 
 
   convertcspace = convertcspaceNoop;
-  convertBits = convertBitsNoop;
 
   if (page.getKey("/Rotate").isInteger())
     rotate = page.getKey("/Rotate").getIntValueAsInt();

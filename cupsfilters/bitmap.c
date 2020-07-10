@@ -25,6 +25,7 @@ MIT Open Source License  -  http://www.opensource.org/
 */
 
 #include <stdio.h>
+#include <cups/raster.h>
 
 unsigned int dither1[16][16] = {
   {0,128,32,160,8,136,40,168,2,130,34,162,10,138,42,170},
@@ -61,202 +62,191 @@ unsigned int dither4[4][4] = {
   {15,7,13,5}
 };
 
-
-unsigned char *convertBitsNoop(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y, unsigned int cupsNumColors)
+unsigned char *convertbits(unsigned char *src, unsigned char *dst,
+    unsigned int x, unsigned int y, unsigned int cupsNumColors, unsigned int bitspercolor)
 {
-  return src;
-}
-
-unsigned char *convert8to1(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y, unsigned int cupsNumColors)
-{
+  /* assumed that max number of colors is 4 */
   unsigned char c = 0;
-  /* assumed that max number of colors is 4 */
-  for (unsigned int i = 0;i < cupsNumColors; i++) {
-    c <<= 1;
-    /* ordered dithering */
-    if (src[i] > dither1[y & 0xf][x & 0xf]) {
-      c |= 0x1;
-    }
-  }
-  *dst = c;
-  return dst;
-}
-
-unsigned char *convert8to2(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y, unsigned int cupsNumColors)
-{
-  unsigned char c = 0;
-  /* assumed that max number of colors is 4 */
-  for (unsigned int i = 0;i < cupsNumColors;i++) {
-    unsigned int d;
-
-    c <<= 2;
-    /* ordered dithering */
-    d = src[i] + dither2[y & 0x7][x & 0x7];
-    if (d > 255) d = 255;
-    c |= d >> 6;
-  }
-  *dst = c;
-  return dst;
-}
-
-unsigned char *convert8to4(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y, unsigned int cupsNumColors)
-{
-  unsigned short c = 0;
-
-  /* assumed that max number of colors is 4 */
-  for (unsigned int i = 0;i < cupsNumColors;i++) {
-    unsigned int d;
-
-    c <<= 4;
-    /* ordered dithering */
-    d = src[i] + dither4[y & 0x3][x & 0x3];
-    if (d > 255) d = 255;
-    c |= d >> 4;
-  }
-  if (cupsNumColors < 3) {
-    dst[0] = c;
-  } else {
-    dst[0] = c >> 8;
-    dst[1] = c;
-  }
-  return dst;
-}
-
-unsigned char *convert8to16(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y, unsigned int cupsNumColors)
-{
-  /* assumed that max number of colors is 4 */
-  for (unsigned int i = 0;i < cupsNumColors;i++) {
-    dst[i*2] = src[i];
-    dst[i*2+1] = src[i];
-  }
-  return dst;
-}
-
-void writePixel1(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
-{
-  switch (cupsNumColors) {
+  unsigned short s = 0;
+  switch (bitspercolor) {
   case 1:
-    {
-      unsigned int bo = pixeli & 0x7;
-      if ((pixeli & 7) == 0) dst[pixeli/8] = 0;
-      dst[pixeli/8] |= *pixelBuf << (7-bo);
-    }
-    break;
-  case 6:
-    dst[pixeli] = *pixelBuf;
-    break;
-  case 3:
+   if (cupsNumColors != 1) {
+     for (unsigned int i = 0;i < cupsNumColors; i++) {
+       c <<= 1;
+       /* ordered dithering */
+       if (src[i] > dither1[y & 0xf][x & 0xf]) {
+         c |= 0x1;
+       }
+     }
+     *dst = c;
+   }
+   else {
+     return src; /*Do not convert bits if both bitspercolor and numcolors are 1*/
+   }
+   break;
+  case 2:
+   for (unsigned int i = 0;i < cupsNumColors;i++) {
+     unsigned int d;
+     c <<= 2;
+     /* ordered dithering */
+     d = src[i] + dither2[y & 0x7][x & 0x7];
+     if (d > 255) d = 255;
+     c |= d >> 6;
+   }
+   *dst = c;
+   break;
   case 4:
+   for (unsigned int i = 0;i < cupsNumColors;i++) {
+     unsigned int d;
+     s <<= 4;
+     /* ordered dithering */
+     d = src[i] + dither4[y & 0x3][x & 0x3];
+     if (d > 255) d = 255;
+     s |= d >> 4;
+   }
+   if (cupsNumColors < 3) {
+     dst[0] = s;
+   } else {
+     dst[0] = s >> 8;
+     dst[1] = s;
+   }
+   break;
+  case 16:
+   for (unsigned int i = 0;i < cupsNumColors;i++) {
+     dst[i*2] = src[i];
+     dst[i*2+1] = src[i];
+   }
+   break;
+  case 8:
+  case 0:
   default:
-    {
-      unsigned int qo = (pixeli & 0x1)*4;
-      if ((pixeli & 1) == 0) dst[pixeli/2] = 0;
-      dst[pixeli/2] |= *pixelBuf << (4-qo);
-    }
-    break;
+   return src;
+   break;
   }
+  return dst;
 }
 
-void writePlanePixel1(unsigned char *dst, unsigned int plane, 
-    unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
+void writepixel(unsigned char *dst,
+    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf,
+    unsigned int cupsNumColors, unsigned int bitspercolor, cups_order_t colororder)
 {
-  unsigned int bo = pixeli & 0x7;
-  unsigned char so = cupsNumColors - plane - 1;
-  if ((pixeli & 7) == 0) dst[pixeli/8] = 0;
-  dst[pixeli/8] |= ((*pixelBuf >> so) & 1) << (7-bo);
-}
-
-void writePixel2(unsigned char *dst, unsigned int plane, 
-    unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
-{
-  switch (cupsNumColors) {
-  case 1:
-    {
-      unsigned int bo = (pixeli & 0x3)*2;
-      if ((pixeli & 3) == 0) dst[pixeli/4] = 0;
-      dst[pixeli/4] |= *pixelBuf << (6-bo);
-    }
-    break;
-  case 3:
-  case 4:
+  unsigned int bo;
+  unsigned char so;
+  switch (colororder) {
+  case CUPS_ORDER_PLANAR:
+  case CUPS_ORDER_BANDED:
+   if (cupsNumColors != 1) {
+     switch (bitspercolor) {
+     case 1:
+       bo = pixeli & 0x7;
+       so = cupsNumColors - plane - 1;
+       if ((pixeli & 7) == 0) dst[pixeli/8] = 0;
+       dst[pixeli/8] |= ((*pixelBuf >> so) & 1) << (7-bo);
+      break;
+     case 2:
+       bo = (pixeli & 0x3)*2;
+       so = (cupsNumColors - plane - 1)*2;
+       if ((pixeli & 3) == 0) dst[pixeli/4] = 0;
+       dst[pixeli/4] |= ((*pixelBuf >> so) & 3) << (6-bo);
+      break;
+     case 4:
+       {
+         unsigned short c = (pixelBuf[0] << 8) | pixelBuf[1];
+         bo = (pixeli & 0x1)*4;
+         so = (cupsNumColors - plane - 1)*4;
+         if ((pixeli & 1) == 0) dst[pixeli/2] = 0;
+         dst[pixeli/2] |= ((c >> so) & 0xf) << (4-bo);
+       }
+      break;
+     case 8:
+       dst[pixeli] = pixelBuf[plane];
+      break;
+     case 16:
+     default:
+       dst[pixeli*2] = pixelBuf[plane*2];
+       dst[pixeli*2+1] = pixelBuf[plane*2+1];
+      break;
+     }
+     break;
+   }
+  case CUPS_ORDER_CHUNKED:
   default:
-    dst[pixeli] = *pixelBuf;
-    break;
-  }
-}
-
-void writePlanePixel2(unsigned char *dst, unsigned int plane, 
-    unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
-{
-  unsigned int bo = (pixeli & 0x3)*2;
-  unsigned char so = (cupsNumColors - plane - 1)*2;
-  if ((pixeli & 3) == 0) dst[pixeli/4] = 0;
-  dst[pixeli/4] |= ((*pixelBuf >> so) & 3) << (6-bo);
-}
-
-void writePixel4(unsigned char *dst, unsigned int plane, 
-    unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
-{
-  switch (cupsNumColors) {
-  case 1:
+    switch (bitspercolor)
     {
-      unsigned int bo = (pixeli & 0x1)*4;
-      if ((pixeli & 1) == 0) dst[pixeli/2] = 0;
-      dst[pixeli/2] |= *pixelBuf << (4-bo);
+    case 1:
+      switch (cupsNumColors) {
+      case 1:
+        {
+          unsigned int bo = pixeli & 0x7;
+          if ((pixeli & 7) == 0) dst[pixeli/8] = 0;
+          dst[pixeli/8] |= *pixelBuf << (7-bo);
+        }
+        break;
+      case 6:
+        dst[pixeli] = *pixelBuf;
+        break;
+      case 3:
+      case 4:
+      default:
+        {
+          unsigned int qo = (pixeli & 0x1)*4;
+          if ((pixeli & 1) == 0) dst[pixeli/2] = 0;
+          dst[pixeli/2] |= *pixelBuf << (4-qo);
+        }
+        break;
+      }
+     break;
+    case 2:
+      switch (cupsNumColors) {
+      case 1:
+        {
+          unsigned int bo = (pixeli & 0x3)*2;
+          if ((pixeli & 3) == 0) dst[pixeli/4] = 0;
+          dst[pixeli/4] |= *pixelBuf << (6-bo);
+        }
+        break;
+      case 3:
+      case 4:
+      default:
+        dst[pixeli] = *pixelBuf;
+        break;
+      }
+     break;
+    case 4:
+      switch (cupsNumColors) {
+      case 1:
+        {
+          unsigned int bo = (pixeli & 0x1)*4;
+          if ((pixeli & 1) == 0) dst[pixeli/2] = 0;
+          dst[pixeli/2] |= *pixelBuf << (4-bo);
+        }
+        break;
+      case 3:
+      case 4:
+      default:
+        dst[pixeli*2] = pixelBuf[0];
+        dst[pixeli*2+1] = pixelBuf[1];
+        break;
+      }
+     break;
+    case 8:
+      {
+        unsigned char *dp = dst + pixeli*cupsNumColors;
+        for (unsigned int i = 0;i < cupsNumColors;i++) {
+          dp[i] = pixelBuf[i];
+        }
+      }
+     break;
+    case 16:
+    default:
+      {
+        unsigned char *dp = dst + pixeli*cupsNumColors*2;
+        for (unsigned int i = 0;i < cupsNumColors*2;i++) {
+          dp[i] = pixelBuf[i];
+        }
+      }
+     break;
     }
-    break;
-  case 3:
-  case 4:
-  default:
-    dst[pixeli*2] = pixelBuf[0];
-    dst[pixeli*2+1] = pixelBuf[1];
-    break;
+   break;
   }
-}
-
-void writePlanePixel4(unsigned char *dst, unsigned int plane, 
-    unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
-{
-  unsigned short c = (pixelBuf[0] << 8) | pixelBuf[1];
-  unsigned int bo = (pixeli & 0x1)*4;
-  unsigned char so = (cupsNumColors - plane - 1)*4;
-  if ((pixeli & 1) == 0) dst[pixeli/2] = 0;
-  dst[pixeli/2] |= ((c >> so) & 0xf) << (4-bo);
-}
-
-void writePixel8(unsigned char *dst, unsigned int plane, 
-    unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
-{
-  unsigned char *dp = dst + pixeli*cupsNumColors;
-  for (unsigned int i = 0;i < cupsNumColors;i++) {
-    dp[i] = pixelBuf[i];
-  }
-}
-
-void writePlanePixel8(unsigned char *dst, unsigned int plane, 
-    unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
-{
-  dst[pixeli] = pixelBuf[plane];
-}
-
-void writePixel16(unsigned char *dst, unsigned int plane, 
-    unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
-{
-  unsigned char *dp = dst + pixeli*cupsNumColors*2;
-  for (unsigned int i = 0;i < cupsNumColors*2;i++) {
-    dp[i] = pixelBuf[i];
-  }
-}
-
-void writePlanePixel16(unsigned char *dst, unsigned int plane, 
-    unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors)
-{
-  dst[pixeli*2] = pixelBuf[plane*2];
-  dst[pixeli*2+1] = pixelBuf[plane*2+1];
 }

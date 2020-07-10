@@ -99,10 +99,6 @@ namespace {
     unsigned int pixels, unsigned int size);
   typedef unsigned char *(*ConvertCSpaceFunc)(unsigned char *src,
     unsigned char *pixelBuf, unsigned int x, unsigned int y);
-  typedef unsigned char *(*ConvertBitsFunc)(unsigned char *src,
-    unsigned char *dst, unsigned int x, unsigned int y, unsigned int numcolors);
-  typedef void (*WritePixelFunc)(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf, unsigned int numcolors);
 
   int exitCode = 0;
   int pwgraster = 0;
@@ -114,6 +110,7 @@ namespace {
   unsigned int bitmapoffset[2];
   unsigned int popplerBitsPerPixel;
   unsigned int popplerNumColors;
+  unsigned int bitspercolor;
   /* image swapping */
   bool swap_image_x = false;
   bool swap_image_y = false;
@@ -124,8 +121,6 @@ namespace {
   ConvertLineFunc convertLineOdd;
   ConvertLineFunc convertLineEven;
   ConvertCSpaceFunc convertCSpace;
-  ConvertBitsFunc convertBits;
-  WritePixelFunc writePixel;
   unsigned int nplanes;
   unsigned int nbands;
   unsigned int bytesPerLine; /* number of bytes per line */
@@ -935,8 +930,8 @@ static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
       unsigned char *pb;
 
       pb = convertCSpace(src+i*popplerNumColors,pixelBuf1,i,row);
-      pb = convertBits(pb,pixelBuf2,i,row,header.cupsNumColors);
-      writePixel(dst,0,i,pb,header.cupsNumColors);
+      pb = convertbits(pb,pixelBuf2,i,row, header.cupsNumColors, bitspercolor);
+      writepixel(dst,0,i,pb, header.cupsNumColors, header.cupsBitsPerColor, header.cupsColorOrder);
   }
   return dst;
 }
@@ -952,8 +947,8 @@ static unsigned char *convertLineChunkedSwap(unsigned char *src,
       unsigned char *pb;
 
       pb = convertCSpace(src+(pixels-i-1)*popplerNumColors,pixelBuf1,i,row);
-      pb = convertBits(pb,pixelBuf2,i,row,header.cupsNumColors);
-      writePixel(dst,0,i,pb,header.cupsNumColors);
+      pb = convertbits(pb,pixelBuf2,i,row, header.cupsNumColors, bitspercolor);
+      writepixel(dst,0,i,pb, header.cupsNumColors, header.cupsBitsPerColor, header.cupsColorOrder);
   }
   return dst;
 }
@@ -969,8 +964,8 @@ static unsigned char *convertLinePlane(unsigned char *src, unsigned char *dst,
       unsigned char *pb;
 
       pb = convertCSpace(src+i*popplerNumColors,pixelBuf1,i,row);
-      pb = convertBits(pb,pixelBuf2,i,row,header.cupsNumColors);
-      writePixel(dst,plane,i,pb,header.cupsNumColors);
+      pb = convertbits(pb,pixelBuf2,i,row, header.cupsNumColors, bitspercolor);
+      writepixel(dst,plane,i,pb, header.cupsNumColors, header.cupsBitsPerColor, header.cupsColorOrder);
   }
   return dst;
 }
@@ -985,8 +980,8 @@ static unsigned char *convertLinePlaneSwap(unsigned char *src,
       unsigned char *pb;
 
       pb = convertCSpace(src+(pixels-i-1)*popplerNumColors,pixelBuf1,i,row);
-      pb = convertBits(pb,pixelBuf2,i,row,header.cupsNumColors);
-      writePixel(dst,plane,i,pb,header.cupsNumColors);
+      pb = convertbits(pb,pixelBuf2,i,row, header.cupsNumColors, bitspercolor);
+      writepixel(dst,plane,i,pb, header.cupsNumColors, header.cupsBitsPerColor, header.cupsColorOrder);
   }
   return dst;
 }
@@ -1140,7 +1135,7 @@ static void selectConvertFunc(cups_raster_t *raster)
       bytes = header.cupsBitsPerColor/8;
       break;
     }
-    convertBits = convertBitsNoop; /* convert bits in convertCSpace */
+    bitspercolor = 0; /* convert bits in convertCSpace */
     if (popplerColorProfile == NULL) {
       popplerColorProfile = cmsCreate_sRGBProfile();
     }
@@ -1226,75 +1221,15 @@ static void selectConvertFunc(cups_raster_t *raster)
       exit(1);
       break;
     }
-    /* select convertBits function */
-    switch (header.cupsBitsPerColor) {
-    case 2:
-      convertBits = convert8to2;
-      break;
-    case 4:
-      convertBits = convert8to4;
-      break;
-    case 16:
-      convertBits = convert8to16;
-      break;
-    case 1:
-      if (header.cupsNumColors == 1
-          || header.cupsColorSpace == CUPS_CSPACE_KCMYcm) {
-          convertBits = convertBitsNoop;
-      } else {
-          convertBits = convert8to1;
-      }
-      break;
-    case 8:
-    default:
-      convertBits = convertBitsNoop;
-      break;
-    }
   }
-  /* select writePixel function */
-  switch (header.cupsBitsPerColor) {
-  case 2:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel2;
-    } else {
-      writePixel = writePlanePixel2;
-    }
-    break;
-  case 4:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel4;
-    } else {
-      writePixel = writePlanePixel4;
-    }
-    break;
-  case 16:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel16;
-    } else {
-      writePixel = writePlanePixel16;
-    }
-    break;
-  case 1:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel1;
-    } else {
-      writePixel = writePlanePixel1;
-    }
-    break;
-  case 8:
-  default:
-    if (header.cupsColorOrder == CUPS_ORDER_CHUNKED
-        || header.cupsNumColors == 1) {
-      writePixel = writePixel8;
-    } else {
-      writePixel = writePlanePixel8;
-    }
-    break;
-  }
+
+  if (header.cupsBitsPerColor == 1 &&
+     (header.cupsNumColors == 1 ||
+     header.cupsColorSpace == CUPS_CSPACE_KCMYcm ))
+    bitspercolor = 0; /*Do not convertbits*/
+  else
+    bitspercolor = header.cupsBitsPerColor;
+
 }
 
 static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height){

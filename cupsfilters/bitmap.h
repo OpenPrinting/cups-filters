@@ -30,39 +30,12 @@ MIT Open Source License  -  http://www.opensource.org/
 extern "C" {
 #  endif /* __cplusplus */
 
-/* Common routines for accessing the colord CMS framework */
+#include <cups/raster.h>
 
-unsigned char 	*convertBitsNoop			(unsigned char *src, unsigned char *dst,
-    							unsigned int x, unsigned int y, unsigned int cupsNumColors);
-unsigned char 	*convert8to1				(unsigned char *src, unsigned char *dst,
-    							unsigned int x, unsigned int y, unsigned int cupsNumColors);
-unsigned char 	*convert8to2				(unsigned char *src, unsigned char *dst,
-    							unsigned int x, unsigned int y, unsigned int cupsNumColors);
-unsigned char 	*convert8to4				(unsigned char *src, unsigned char *dst,
-    							unsigned int x, unsigned int y, unsigned int cupsNumColors);
-unsigned char 	*convert8to16				(unsigned char *src, unsigned char *dst,
-    							unsigned int x, unsigned int y, unsigned int cupsNumColors);
-void 		writePixel1				(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-void 		writePlanePixel1			(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-void 		writePixel2				(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-void 		writePlanePixel2			(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-void 		writePixel4				(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-void 		writePlanePixel4			(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-void 		writePixel8				(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-void 		writePlanePixel8			(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-void 		writePixel16				(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-void 		writePlanePixel16			(unsigned char *dst, unsigned int plane, 
-							unsigned int pixeli, unsigned char *pixelBuf, unsigned int cupsNumColors);
-
+unsigned char 	*convertbits	(unsigned char *src, unsigned char *dst,
+				unsigned int x, unsigned int y, unsigned int cupsNumColors,unsigned int m);
+void 		writepixel	(unsigned char *dst, unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf,
+				unsigned int cupsNumColors, unsigned int bits, cups_order_t colororder);
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
