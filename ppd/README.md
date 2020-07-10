@@ -1,4 +1,4 @@
-##libppd
+# libppd
 
 One important point for the CUPS Snap is that it does not support classic printer drivers, consisting of PPD files and filters. So for using it as default CUPS implementation in a Linux distribution, all existing printer drivers need to get turned into Printer Applications, and this with a minimum effort of coding.
 
