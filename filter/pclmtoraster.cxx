@@ -471,8 +471,15 @@ static unsigned char *convertcspaceNoop(unsigned char *src, unsigned char *dst, 
 static unsigned char *convertLine(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels)
 {
-  if (header.cupsBitsPerColor == 1 && header.cupsNumColors == 1) {
-    convertcspace(src, dst, row, pixels);
+  /*
+   Use only convertcspace if conversion of bits and conversion of color order
+   is not required, or if dithering is required, for faster processing of raster output.
+   */
+  if ((header.cupsBitsPerColor == 1
+	&& header.cupsNumColors == 1)
+	|| (header.cupsBitsPerColor == 8
+	&& header.cupsColorOrder == CUPS_ORDER_CHUNKED)) {
+    dst = convertcspace(src, dst, row, pixels);
   } else {
     for (unsigned int i = 0;i < pixels;i++) {
       unsigned char pixelBuf1[MAX_BYTES_PER_PIXEL];
