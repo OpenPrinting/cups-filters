@@ -42,7 +42,7 @@ namespace {
   cups_page_header2_t header;
   ppd_file_t *ppd = 0;
   char pageSizeRequested[64];
-  int bilevel = 0;
+  int bi_level = 0;
   /* image swapping */
   bool swap_image_x = false;
   bool swap_image_y = false;
@@ -101,17 +101,13 @@ static void parseOpts(int argc, char **argv)
 //   char*         profile = 0;
   const char*   t = NULL;
   ppd_attr_t*   attr;
+  const char	*val;
 
 #ifdef HAVE_CUPS_1_7
   t = getenv("FINAL_CONTENT_TYPE");
   if (t && strcasestr(t, "pwg"))
     pwgraster = 1;
 #endif /* HAVE_CUPS_1_7 */
-  t = getenv("BILEVEL");
-  if (t && (!strcasecmp(t, "true")
-        || !strcasecmp(t, "on")
-        || !strcasecmp(t, "yes")))
-    bilevel = 1;
 
   ppd = ppdOpenFile(getenv("PPD"));
   if (ppd == NULL)
@@ -202,6 +198,10 @@ static void parseOpts(int argc, char **argv)
     exit(1);
 #endif /* HAVE_CUPS_1_7 */
   }
+  if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
+                           && !strncasecmp(val, "bi-level", 8))
+    bi_level = 1;
+
   strncpy(pageSizeRequested, header.cupsPageSizeName, 64);
   fprintf(stderr, "DEBUG: Page size requested: %s\n", header.cupsPageSizeName);
 }
@@ -349,7 +349,7 @@ void onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width,
     t = 0;
     for(int k = 0; k < 8; k++){
         t <<= 1;
-        if (bilevel) threshold = 128;
+        if (bi_level) threshold = 128;
         else threshold = dither1[row & 0xf][(w+k) & 0xf];
         if(*src > threshold) {
           t |= 0x1;
