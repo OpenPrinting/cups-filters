@@ -35,14 +35,18 @@
 #define MAX_BYTES_PER_PIXEL 32
 
 namespace {
-  typedef unsigned char *(*ConvertCSpace)(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels);
+  typedef unsigned char *(*ConvertCSpace)(unsigned char *src, unsigned char *dst, unsigned int row,
+					unsigned int pixels);
+  typedef unsigned char *(*ConvertLine)(unsigned char *src, unsigned char *dst, unsigned char *buf,
+					unsigned int row, unsigned int plane, unsigned int pixels);
   ConvertCSpace convertcspace;
+  ConvertLine convertline;
   int pwgraster = 0;
   int numcolors = 0;
   cups_page_header2_t header;
   ppd_file_t *ppd = 0;
   char pageSizeRequested[64];
-  int bi_level = 0;
+  bool bi_level = false;
   /* image swapping */
   bool swap_image_x = false;
   bool swap_image_y = false;
@@ -98,7 +102,6 @@ static void parseOpts(int argc, char **argv)
 {
   int           num_options = 0;
   cups_option_t*options = NULL;
-//   char*         profile = 0;
   const char*   t = NULL;
   ppd_attr_t*   attr;
   const char	*val;
@@ -200,7 +203,7 @@ static void parseOpts(int argc, char **argv)
   }
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
-    bi_level = 1;
+    bi_level = true;
 
   strncpy(pageSizeRequested, header.cupsPageSizeName, 64);
   fprintf(stderr, "DEBUG: Page size requested: %s\n", header.cupsPageSizeName);
@@ -465,11 +468,11 @@ static unsigned char *GraytoBlackLine(unsigned char *src, unsigned char *dst, un
 
 static unsigned char *convertcspaceNoop(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
 {
-    return src;
+  return src;
 }
 
 static unsigned char *convertLine(unsigned char *src, unsigned char *dst,
-     unsigned int row, unsigned int plane, unsigned int pixels)
+     unsigned char *buf, unsigned int row, unsigned int plane, unsigned int pixels)
 {
   /*
    Use only convertcspace if conversion of bits and conversion of color order
@@ -486,6 +489,33 @@ static unsigned char *convertLine(unsigned char *src, unsigned char *dst,
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
       pb = convertcspace(src + i*numcolors, pixelBuf1, row, 1);
+      pb = convertbits(pb, pixelBuf2, i, row, header.cupsNumColors, header.cupsBitsPerColor);
+      writepixel(dst, plane, i, pb, header.cupsNumColors, header.cupsBitsPerColor, header.cupsColorOrder);
+    }
+  }
+  return dst;
+}
+
+static unsigned char *convertReverseLine(unsigned char *src, unsigned char *dst,
+     unsigned char *buf, unsigned int row, unsigned int plane, unsigned int pixels)
+{
+  if (header.cupsBitsPerColor == 1 && header.cupsNumColors == 1) {
+    buf = convertcspace(src, buf, row, pixels);
+    dst = reverseOneBitLine(buf, dst, pixels, bytesPerLine);
+  } else if (header.cupsBitsPerColor == 8 && header.cupsColorOrder == CUPS_ORDER_CHUNKED) {
+    unsigned char *dp = dst;
+    buf = convertcspace(src, buf, row, pixels) + (header.cupsWidth - 1)*header.cupsNumColors;
+    for (unsigned int i = 0; i < pixels; i++, buf-=header.cupsNumColors, dp+=header.cupsNumColors) {
+      for (unsigned int j = 0; j < header.cupsNumColors; j++) {
+	dp[j] = buf[j];
+      }
+    }
+  } else {
+    for (unsigned int i = 0;i < pixels;i++) {
+      unsigned char pixelBuf1[MAX_BYTES_PER_PIXEL];
+      unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
+      unsigned char *pb;
+      pb = convertcspace(src + (pixels - i - 1)*numcolors, pixelBuf1, row, 1);
       pb = convertbits(pb, pixelBuf2, i, row, header.cupsNumColors, header.cupsBitsPerColor);
       writepixel(dst, plane, i, pb, header.cupsNumColors, header.cupsBitsPerColor, header.cupsColorOrder);
     }
@@ -535,6 +565,7 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
   unsigned char    *bitmap = NULL,
                    *colordata = NULL,
                    *lineBuf = NULL,
+                   *line = NULL,
                    *dp = NULL;
   std::string      colorspace;
   QPDFObjectHandle image;
@@ -625,7 +656,13 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
     exit(1);
   }
 
-  if(rotate) {
+  if (header.Duplex && (pgno & 1) && swap_image_y && swap_image_x) {
+    rotate = (rotate + 180) % 360;
+    swap_image_y = false;
+    swap_image_x = false;
+  }
+
+  if (rotate) {
     unsigned char *bitmap2 = (unsigned char *) malloc(pixel_count);
     bitmap2 = rotatebitmap(bitmap, bitmap2, rotate, header.cupsHeight, header.cupsWidth, rowsize, colorspace);
     free(bitmap);
@@ -636,18 +673,39 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
 
   selectConvertFunc(colorspace);
 
-  lineBuf = new unsigned char [bytesPerLine];
-  for (unsigned int plane = 0; plane < nplanes ; plane++) {
-    unsigned char *bp = colordata;
-    for (unsigned int h = 0; h < header.cupsHeight; h++) {
-      for (unsigned int band = 0; band < nbands; band++) {
-       dp = convertLine(bp, lineBuf, h, plane + band, header.cupsWidth);
-       cupsRasterWritePixels(raster, dp, bytesPerLine);
+  if (header.Duplex && (pgno & 1) && swap_image_x) {
+    lineBuf = new unsigned char [bytesPerLine];
+    convertline = convertReverseLine;
+  } else {
+    convertline = convertLine;
+  }
+
+  line = new unsigned char [bytesPerLine];
+  if (header.Duplex && (pgno & 1) && swap_image_y) {
+    for (unsigned int plane = 0; plane < nplanes ; plane++) {
+      unsigned char *bp = colordata + (header.cupsHeight - 1) * rowsize;
+      for (unsigned int h = header.cupsHeight; h > 0; h--) {
+        for (unsigned int band = 0; band < nbands; band++) {
+         dp = convertline(bp, line, lineBuf, h - 1, plane + band, header.cupsWidth);
+         cupsRasterWritePixels(raster, dp, bytesPerLine);
+        }
+       bp -= rowsize;
       }
-     bp += rowsize;
+    }
+  } else {
+    for (unsigned int plane = 0; plane < nplanes ; plane++) {
+      unsigned char *bp = colordata;
+      for (unsigned int h = 0; h < header.cupsHeight; h++) {
+        for (unsigned int band = 0; band < nbands; band++) {
+         dp = convertline(bp, line, lineBuf, h, plane + band, header.cupsWidth);
+         cupsRasterWritePixels(raster, dp, bytesPerLine);
+        }
+       bp += rowsize;
+      }
     }
   }
   delete[] lineBuf;
+  delete[] line;
   free(bitmap);
 }
 
