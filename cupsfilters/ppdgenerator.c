@@ -2073,7 +2073,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
      format, we need to create multiple copies on the client. We add a line to
      the PPD which tells the pdftopdf filter to generate the copies */
   if (manual_copies == 1)
-    cupsFilePuts(fp, "*cupsManualCopies: true\n");
+    cupsFilePuts(fp, "*cupsManualCopies: True\n");
 
   /* No resolution requirements by any of the supported PDLs? 
      Use "printer-resolution-supported" attribute */
