@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- libcupsfilters: Respect the fact that PPD keywords
+	  are case-sensitive when adding "*cupsManualCopies: True" in
+	  PPD file (Issue #242).
 	- libcupsfilters: Older versions of libcups (< 2.3.1)
 	  had the enum name for fold-accordion finishings mistyped.
 	  Added a workaround.
