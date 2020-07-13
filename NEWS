@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- libcupsfilters, libppd: Respect the fact that PPD keywords
+	  are case-sensitive when adding "*cupsManualCopies: True" in
+	  PPD file (Issue #242).
 	- Build system: Remove '-D_PPD_DEPRECATED=""' from the
 	  compiling command lines of the source files which use
 	  libcups. The flag is not supported any more for longer times
