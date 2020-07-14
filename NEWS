@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- Build system: Fix cross-compilation without DejaVu test font
+	  in configure.ac (Issue #262, Pull request #263).
 	- libcupsfilters, libppd: Respect the fact that PPD keywords
 	  are case-sensitive when adding "*cupsManualCopies: True" in
 	  PPD file (Issue #242).
