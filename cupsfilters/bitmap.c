@@ -80,8 +80,18 @@ unsigned char revTable[256] = {
   0x0f,0x8f,0x4f,0xcf,0x2f,0xaf,0x6f,0xef,0x1f,0x9f,0x5f,0xdf,0x3f,0xbf,0x7f,0xff
 };
 
-unsigned char *convertbits(unsigned char *src, unsigned char *dst,
-    unsigned int x, unsigned int y, unsigned int cupsNumColors, unsigned int bitspercolor)
+/*
+ * 'convertbits()' - Convert 8 bit raster data to bitspercolor raster data using
+ *                   ordered dithering.
+ */
+
+unsigned char *                        /* O - Output string */
+convertbits(unsigned char *src,        /* I - Input string */
+	    unsigned char *dst,        /* I - Destination string */
+	    unsigned int x,            /* I - Column */
+	    unsigned int y,            /* I - Row */
+	    unsigned int cupsNumColors,/* I - Number of color components of output data */
+	    unsigned int bitspercolor) /* I - Bitspercolor of output data */
 {
   /* assumed that max number of colors is 4 */
   unsigned char c = 0;
@@ -144,9 +154,18 @@ unsigned char *convertbits(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-void writepixel(unsigned char *dst,
-    unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf,
-    unsigned int cupsNumColors, unsigned int bitspercolor, cups_order_t colororder)
+/*
+ * 'writepixel()' - Write a pixel from pixelBuf to dst based on color order.
+ */
+
+void                                  /* O - Exit status */
+writepixel(unsigned char *dst,        /* I - Destination string */
+	   unsigned int plane,        /* I - Plane/Band */
+	   unsigned int pixeli,       /* I - Pixel */
+	   unsigned char *pixelBuf,   /* I - Input string */
+	   unsigned int cupsNumColors,/* I - Number of color components of output data */
+	   unsigned int bitspercolor, /* I - Bitspercolor of output data */
+	   cups_order_t colororder)   /* I - Color Order of output data */
 {
   unsigned int bo;
   unsigned char so;
@@ -269,8 +288,15 @@ void writepixel(unsigned char *dst,
   }
 }
 
-unsigned char *reverseOneBitLine(unsigned char *src,
-  unsigned char *dst, unsigned int pixels, unsigned int size)
+/*
+ * 'reverseOneBitLine()' - Reverse the order of pixels in one line of raster data.
+ */
+
+unsigned char *                       /* O - Output string */
+reverseOneBitLine(unsigned char *src, /* I - Input line */
+		  unsigned char *dst, /* I - Destination string */
+		  unsigned int pixels,/* I - Number of pixels */
+		  unsigned int size)  /* I - Bytesperline */
 {
   unsigned char *bp;
   unsigned char *dp;
