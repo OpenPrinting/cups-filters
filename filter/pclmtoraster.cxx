@@ -43,6 +43,7 @@ namespace {
   ConvertLine convertline;
   int pwgraster = 0;
   int numcolors = 0;
+  int rowsize = 0;
   cups_page_header2_t header;
   ppd_file_t *ppd = 0;
   char pageSizeRequested[64];
@@ -209,28 +210,19 @@ static void parseOpts(int argc, char **argv)
   fprintf(stderr, "DEBUG: Page size requested: %s\n", header.cupsPageSizeName);
 }
 
-static bool dict_lookup_rect(QPDFObjectHandle object, std::string const& key, float rect[4])
+static bool mediaboxlookup(QPDFObjectHandle object, float rect[4])
 {
   // preliminary checks
-  if (!object.isDictionary() || !object.hasKey(key))
+  if (!object.isDictionary() || !object.hasKey("/MediaBox"))
     return false;
 
-  // check if the key is array or some other type
-  QPDFObjectHandle value = object.getKey(key);
-  if (!value.isArray())
-    return false;
-  
-  // get values in a vector and assign it to rect
-  std::vector<QPDFObjectHandle> array = value.getArrayAsVector();
+  // assign mediabox values to rect
+  std::vector<QPDFObjectHandle> mediabox = object.getKey("/MediaBox").getArrayAsVector();
   for (int i = 0; i < 4; ++i) {
-    // if the value in the array is not real, we have an invalid array 
-    if (!array[i].isReal() && !array[i].isInteger())
-      return false;
-    
-    rect[i] = array[i].getNumericValue();
+    rect[i] = mediabox[i].getNumericValue();
   }
 
-  return array.size() == 4;
+  return mediabox.size() == 4;
 }
 
 static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
@@ -346,6 +338,8 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
 
 void onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width,
      unsigned int height, unsigned int row, unsigned int rowsize) {
+  // If bi_level is true, do threshold dithering to produce black and white output
+  // else, do ordered dithering.
   unsigned char t = 0;
   unsigned int threshold = 0;
   for(unsigned int w = 0; w < width; w+=8){
@@ -378,7 +372,6 @@ static unsigned char *RGBtoCMYLine(unsigned char *src, unsigned char *dst, unsig
 
 static unsigned char *RGBtoWhiteLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
 {
-  // cupsImageRGBToWhite(src,dst,pixels);
   if (header.cupsBitsPerColor != 1) {
     cupsImageRGBToWhite(src,dst,pixels);
   } else {
@@ -416,7 +409,6 @@ static unsigned char *CMYKtoCMYLine(unsigned char *src, unsigned char *dst, unsi
 
 static unsigned char *CMYKtoWhiteLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
 {
-  // cupsImageCMYKToWhite(src,dst,pixels);
   if (header.cupsBitsPerColor != 1) {
     cupsImageCMYKToWhite(src,dst,pixels);
   } else {
@@ -499,11 +491,14 @@ static unsigned char *convertLine(unsigned char *src, unsigned char *dst,
 static unsigned char *convertReverseLine(unsigned char *src, unsigned char *dst,
      unsigned char *buf, unsigned int row, unsigned int plane, unsigned int pixels)
 {
+  // Use only convertcspace if conversion of bits and conversion of color order
+  // is not required, or if dithering is required, for faster processing of raster output.
   if (header.cupsBitsPerColor == 1 && header.cupsNumColors == 1) {
     buf = convertcspace(src, buf, row, pixels);
     dst = reverseOneBitLine(buf, dst, pixels, bytesPerLine);
   } else if (header.cupsBitsPerColor == 8 && header.cupsColorOrder == CUPS_ORDER_CHUNKED) {
     unsigned char *dp = dst;
+    // Assign each pixel of buf to dst in the reverse order.
     buf = convertcspace(src, buf, row, pixels) + (header.cupsWidth - 1)*header.cupsNumColors;
     for (unsigned int i = 0; i < pixels; i++, buf-=header.cupsNumColors, dp+=header.cupsNumColors) {
       for (unsigned int j = 0; j < header.cupsNumColors; j++) {
@@ -523,8 +518,25 @@ static unsigned char *convertReverseLine(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-static void selectConvertFunc(std::string colorspace) {
+static void selectConvertFunc (std::string colorspace, int pgno) {
 
+  /* Set rowsize and numcolors based on colorspace of raster data */
+  if (colorspace == "/DeviceRGB") {
+    rowsize = header.cupsWidth*3;
+    numcolors = 3;
+  } else if (colorspace == "/DeviceCMYK") {
+    rowsize = header.cupsWidth*4;
+    numcolors = 4;
+  } else if (colorspace == "/DeviceGray") {
+    rowsize = header.cupsWidth;
+    numcolors = 1;
+  } else {
+    fprintf(stderr, "ERROR: Colorspace %s not supported\n", colorspace.c_str());
+    exit(1);
+  }
+
+  convertcspace = convertcspaceNoop; //Default function
+  /* Select convertcspace function */
   switch (header.cupsColorSpace) {
     case CUPS_CSPACE_K:
      if (colorspace == "/DeviceRGB") convertcspace = RGBtoBlackLine;
@@ -553,53 +565,21 @@ static void selectConvertFunc(std::string colorspace) {
      else if (colorspace == "/DeviceGray") convertcspace = GraytoRGBLine;
      break;
    }
-}
 
-static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
-  long long		rotate = 0,
-			height,
-			width;
-  double		l, paperdimensions[2], margins[4], swap;
-  int			rowsize = 0, bufsize = 0, pixel_count = 0,
-			temp = 0, i = 0, landscape = 0;
-  float 		mediaBox[4];
-  unsigned char 	*bitmap = NULL,
-			*colordata = NULL,
-			*lineBuf = NULL,
-			*line = NULL,
-			*dp = NULL;
-  std::string		colorspace;
-  QPDFObjectHandle	image;
-  QPDFObjectHandle	imgdict;
-  QPDFObjectHandle	colorspace_obj;
-  ppd_size_t		*size;		/* Page size */
-  ppd_size_t		*size_matched = NULL;
-
-
-  convertcspace = convertcspaceNoop;
-
-  if (page.getKey("/Rotate").isInteger())
-    rotate = page.getKey("/Rotate").getIntValueAsInt();
-
-  if (!dict_lookup_rect(page, "/MediaBox", mediaBox)){
-    fprintf(stderr, "ERROR: pdf page %d doesn't contain a valid mediaBox\n", pgno + 1);
-    return;
+  /* Select convertline function */
+  if (header.Duplex && (pgno & 1) && swap_image_x) {
+    convertline = convertReverseLine;
   } else {
-    fprintf(stderr, "DEBUG: mediaBox = [%f %f %f %f];\n", mediaBox[0], mediaBox[1], mediaBox[2], mediaBox[3]);
-    l = mediaBox[2] - mediaBox[0];
-    if (l < 0) l = -l;
-    if (rotate == 90 || rotate == 270)
-      header.PageSize[1] = (unsigned)l;
-    else
-      header.PageSize[0] = (unsigned)l;
-    l = mediaBox[3] - mediaBox[1];
-    if (l < 0) l = -l;
-    if (rotate == 90 || rotate == 270)
-      header.PageSize[0] = (unsigned)l;
-    else
-      header.PageSize[1] = (unsigned)l;
+    convertline = convertLine;
   }
 
+}
+
+static void selectPageSize (int pgno) {
+  double	paperdimensions[2], margins[4], swap;
+  int		i = 0, landscape = 0;
+  ppd_size_t	*size;		/* Page size */
+  ppd_size_t	*size_matched = NULL;
 
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
@@ -739,13 +719,61 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
       header.ImagingBoundingBox[i] = 0;
     }
 
+}
+
+static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
+  long long		rotate = 0,
+			height,
+			width;
+  double		l;
+  int			bufsize = 0, pixel_count = 0,
+			temp = 0;
+  float 		mediaBox[4];
+  unsigned char 	*bitmap = NULL,
+			*colordata = NULL,
+			*lineBuf = NULL,
+			*line = NULL,
+			*dp = NULL;
+  std::string		colorspace;
+  QPDFObjectHandle	image;
+  QPDFObjectHandle	imgdict;
+  QPDFObjectHandle	colorspace_obj;
+
+  // Check if page is rotated.
+  if (page.getKey("/Rotate").isInteger())
+    rotate = page.getKey("/Rotate").getIntValueAsInt();
+
+  // Get pagesize by the mediabox key of the page.
+  if (!mediaboxlookup(page, mediaBox)){
+    fprintf(stderr, "ERROR: pdf page %d doesn't contain a valid mediaBox\n", pgno + 1);
+    return;
+  } else {
+    fprintf(stderr, "DEBUG: mediaBox = [%f %f %f %f];\n", mediaBox[0], mediaBox[1], mediaBox[2], mediaBox[3]);
+    l = mediaBox[2] - mediaBox[0];
+    if (l < 0) l = -l;
+    if (rotate == 90 || rotate == 270)
+      header.PageSize[1] = (unsigned)l;
+    else
+      header.PageSize[0] = (unsigned)l;
+    l = mediaBox[3] - mediaBox[1];
+    if (l < 0) l = -l;
+    if (rotate == 90 || rotate == 270)
+      header.PageSize[0] = (unsigned)l;
+    else
+      header.PageSize[1] = (unsigned)l;
+  }
+
+  // Adjust header page size and margins according to the ppd file.
+  selectPageSize(pgno);
+
   header.cupsWidth = 0;
   header.cupsHeight = 0;
 
+  /* Loop over all raster images in a page and store them in bitmap. */
   std::map<std::string, QPDFObjectHandle> images = page.getPageImages();
-  for (auto const& iter2: images) {
-    image = iter2.second;
-    imgdict = image.getDict();
+  for (auto const& iter: images) {
+    image = iter.second;
+    imgdict = image.getDict(); //XObject dictionary
 
     PointerHolder<Buffer> actual_data = image.getStreamData(qpdf_dl_all);
     width = imgdict.getKey("/Width").getIntValue();
@@ -766,6 +794,7 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
     if (width > header.cupsWidth) header.cupsWidth = width;
   }
 
+  // Swap width and height in landscape images
   if (rotate == 270 || rotate == 90) {
     temp = header.cupsHeight;
     header.cupsHeight = header.cupsWidth;
@@ -782,28 +811,16 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
     exit(1);
   }
 
-  colorspace = (colorspace_obj.isName() ? colorspace_obj.getName() : "/DeviceRGB"); /* Default for pclm files in DeviceRGB */
+  colorspace = (colorspace_obj.isName() ? colorspace_obj.getName() : "/DeviceRGB"); // Default for pclm files in DeviceRGB
 
-  if (colorspace == "/DeviceRGB") {
-    rowsize = header.cupsWidth*3;
-    numcolors = 3;
-  } else if (colorspace == "/DeviceCMYK") {
-    rowsize = header.cupsWidth*4;
-    numcolors = 4;
-  } else if (colorspace == "/DeviceGray") {
-    rowsize = header.cupsWidth;
-    numcolors = 1;
-  } else {
-    fprintf(stderr, "ERROR: Colorspace %s not supported\n", colorspace.c_str());
-    exit(1);
-  }
-
+  // If page is to be swapped in both x and y, rotate it by 180 degress
   if (header.Duplex && (pgno & 1) && swap_image_y && swap_image_x) {
     rotate = (rotate + 180) % 360;
     swap_image_y = false;
     swap_image_x = false;
   }
 
+  /* Rotate Bitmap */
   if (rotate) {
     unsigned char *bitmap2 = (unsigned char *) malloc(pixel_count);
     bitmap2 = rotatebitmap(bitmap, bitmap2, rotate, header.cupsHeight, header.cupsWidth, rowsize, colorspace);
@@ -813,15 +830,11 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
 
   colordata = bitmap;
 
-  selectConvertFunc(colorspace);
+  /* Select convertline and convertscpace function */
+  selectConvertFunc(colorspace, pgno);
 
-  if (header.Duplex && (pgno & 1) && swap_image_x) {
-    lineBuf = new unsigned char [bytesPerLine];
-    convertline = convertReverseLine;
-  } else {
-    convertline = convertLine;
-  }
-
+  /* Write page image */
+  lineBuf = new unsigned char [bytesPerLine];
   line = new unsigned char [bytesPerLine];
   if (header.Duplex && (pgno & 1) && swap_image_y) {
     for (unsigned int plane = 0; plane < nplanes ; plane++) {
@@ -853,9 +866,9 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
 
 int main(int argc, char **argv)
 {
-  int npages=0;
-  QPDF *pdf;
-  FILE *fp = NULL;
+  int   	npages=0;
+  QPDF  	*pdf;
+  FILE  	*fp = NULL;
   cups_raster_t *raster;
 
 
