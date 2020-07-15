@@ -7782,7 +7782,7 @@ gboolean update_cups_queues(gpointer unused) {
       /* cups-browsed tried to add this print queue unsuccessfully for too
 	 many times due to timeouts - Skip print queue creation for this one */
       if (p->timeouted >= HttpMaxRetries) {
-	fprintf(stderr, "Max number of retries (%d) for creating print queue %s reached, skipping it.\n",
+	debug_printf("Max number of retries (%d) for creating print queue %s reached, skipping it.\n",
 		HttpMaxRetries, p->queue_name);
 	continue;
       }
@@ -8708,7 +8708,8 @@ gboolean update_cups_queues(gpointer unused) {
 	 to STATUS_CONFIRMED and experience the timeout */
       /* If no timeout has happened, clear p->timeouted */
       if (timeout_reached == 1) {
-	fprintf(stderr, "Timeout happened during creation of the queue %s, turn on DebugLogging for more info.\n", p->queue_name);
+	debug_printf("Timeout happened during creation of the queue %s.\n",
+		     p->queue_name);
 	p->timeouted ++;
 	debug_printf("The queue %s already timeouted %d times in a row.\n",
 		     p->queue_name, p->timeouted);
