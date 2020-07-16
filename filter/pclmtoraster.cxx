@@ -47,7 +47,7 @@ namespace {
   cups_page_header2_t header;
   ppd_file_t *ppd = 0;
   char pageSizeRequested[64];
-  bool bi_level = false;
+  int bi_level = 0;
   /* image swapping */
   bool swap_image_x = false;
   bool swap_image_y = false;
@@ -59,24 +59,6 @@ namespace {
   unsigned int bytesPerLine; /* number of bytes per line */
                         /* Note: When CUPS_ORDER_BANDED,
                            cupsBytesPerLine = bytesPerLine*cupsNumColors */
-  unsigned int dither1[16][16] = {
-    {0,128,32,160,8,136,40,168,2,130,34,162,10,138,42,170},
-    {192,64,224,96,200,72,232,104,194,66,226,98,202,74,234,106},
-    {48,176,16,144,56,184,24,152,50,178,18,146,58,186,26,154},
-    {240,112,208,80,248,120,216,88,242,114,210,82,250,122,218,90},
-    {12,140,44,172,4,132,36,164,14,142,46,174,6,134,38,166},
-    {204,76,236,108,196,68,228,100,206,78,238,110,198,70,230,102},
-    {60,188,28,156,52,180,20,148,62,190,30,158,54,182,22,150},
-    {252,124,220,92,244,116,212,84,254,126,222,94,246,118,214,86},
-    {3,131,35,163,11,139,43,171,1,129,33,161,9,137,41,169},
-    {195,67,227,99,203,75,235,107,193,65,225,97,201,73,233,105},
-    {51,179,19,147,59,187,27,155,49,177,17,145,57,185,25,153},
-    {243,115,211,83,251,123,219,91,241,113,209,81,249,121,217,89},
-    {15,143,47,175,7,135,39,167,13,141,45,173,5,133,37,165},
-    {207,79,239,111,199,71,231,103,205,77,237,109,197,69,229,101},
-    {63,191,31,159,55,183,23,151,61,189,29,157,53,181,21,149},
-    {255,127,223,95,247,119,215,87,253,125,221,93,245,117,213,85}
-  };
 }
 
 int parse_doc_type(FILE *fp)
@@ -204,7 +186,7 @@ static void parseOpts(int argc, char **argv)
   }
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
-    bi_level = true;
+    bi_level = 1;
 
   strncpy(pageSizeRequested, header.cupsPageSizeName, 64);
   fprintf(stderr, "DEBUG: Page size requested: %s\n", header.cupsPageSizeName);
@@ -336,28 +318,6 @@ static unsigned char *rotatebitmap(unsigned char *src, unsigned char *dst,
   return temp;
 }
 
-void onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width,
-     unsigned int height, unsigned int row, unsigned int rowsize) {
-  // If bi_level is true, do threshold dithering to produce black and white output
-  // else, do ordered dithering.
-  unsigned char t = 0;
-  unsigned int threshold = 0;
-  for(unsigned int w = 0; w < width; w+=8){
-    t = 0;
-    for(int k = 0; k < 8; k++){
-        t <<= 1;
-        if (bi_level) threshold = 128;
-        else threshold = dither1[row & 0xf][(w+k) & 0xf];
-        if(*src > threshold) {
-          t |= 0x1;
-        }
-        src +=1;
-    }
-    *dst = t;
-    dst += 1;
-  }
-}
-
 static unsigned char *RGBtoCMYKLine(unsigned char *src, unsigned char *dst, unsigned int row, unsigned int pixels)
 {
   cupsImageRGBToCMYK(src,dst,pixels);
@@ -376,7 +336,7 @@ static unsigned char *RGBtoWhiteLine(unsigned char *src, unsigned char *dst, uns
     cupsImageRGBToWhite(src,dst,pixels);
   } else {
     cupsImageRGBToWhite(src,src,pixels);
-    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
+    oneBitLine(src, dst, header.cupsWidth, row, bi_level);
   }
 
   return dst;
@@ -388,7 +348,7 @@ static unsigned char *RGBtoBlackLine(unsigned char *src, unsigned char *dst, uns
     cupsImageRGBToBlack(src,dst,pixels);
   } else {
     cupsImageRGBToBlack(src,src,pixels);
-    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
+    oneBitLine(src, dst, header.cupsWidth, row, bi_level);
   }
   return dst;
 }
@@ -413,7 +373,7 @@ static unsigned char *CMYKtoWhiteLine(unsigned char *src, unsigned char *dst, un
     cupsImageCMYKToWhite(src,dst,pixels);
   } else {
     cupsImageCMYKToWhite(src,src,pixels);
-    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
+    oneBitLine(src, dst, header.cupsWidth, row, bi_level);
   }
   return dst;
 }
@@ -424,7 +384,7 @@ static unsigned char *CMYKtoBlackLine(unsigned char *src, unsigned char *dst, un
     cupsImageCMYKToBlack(src,dst,pixels);
   } else {
     cupsImageCMYKToBlack(src,src,pixels);
-    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
+    oneBitLine(src, dst, header.cupsWidth, row, bi_level);
   }
   return dst;
 }
@@ -453,7 +413,7 @@ static unsigned char *GraytoBlackLine(unsigned char *src, unsigned char *dst, un
     cupsImageWhiteToBlack(src, dst, pixels);
   } else {
     cupsImageWhiteToBlack(src, src, pixels);
-    onebitpixel(src, dst, header.cupsWidth, header.cupsHeight, row, pixels);
+    oneBitLine(src, dst, header.cupsWidth, row, bi_level);
   }
   return dst;
 }

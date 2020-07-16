@@ -289,7 +289,7 @@ writepixel(unsigned char *dst,        /* I - Destination string */
 }
 
 /*
- * 'reverseOneBitLine()' - Reverse the order of pixels in one line of raster data.
+ * 'reverseOneBitLine()' - Reverse the order of pixels in one line of 1-bit raster data.
  */
 
 unsigned char *                       /* O - Output string */
@@ -325,5 +325,119 @@ reverseOneBitLine(unsigned char *src, /* I - Input line */
     }
     *dp = revTable[(pd >> sw) & 0xff];
   }
+  return dst;
+}
+
+
+/*
+ * 'reverseOneBitLineSwap()' - Reverse the order of pixels in one line of 1-bit raster data
+ *                             and invert the colors.
+ */
+
+unsigned char *                           /* O - Output string */
+reverseOneBitLineSwap(unsigned char *src, /* I - Input line */
+		      unsigned char *dst, /* I - Destination string */
+		      unsigned int pixels,/* I - Number of pixels */
+		      unsigned int size)  /* I - Bytesperline */
+{
+  unsigned char *bp;
+  unsigned char *dp;
+  unsigned int npadbits = (size*8)-pixels;
+
+  if (npadbits == 0) {
+    bp = src+size-1;
+    dp = dst;
+    for (unsigned int j = 0;j < size;j++,bp--,dp++) {
+      *dp = revTable[(unsigned char)(~*bp)];
+    }
+  } else {
+    unsigned int pd,d;
+    unsigned int sw;
+
+    size = (pixels+7)/8;
+    sw = (size*8)-pixels;
+    bp = src+size-1;
+    dp = dst;
+
+    pd = *bp--;
+    for (unsigned int j = 1;j < size;j++,bp--,dp++) {
+      d = *bp;
+      *dp = ~revTable[(((d << 8) | pd) >> sw) & 0xff];
+      pd = d;
+    }
+    *dp = ~revTable[(pd >> sw) & 0xff];
+  }
+  return dst;
+}
+
+/*
+ * 'oneBitLine()' - Convert one line of 8-bit raster data to 1-bit raster data using ordered dithering.
+ */
+
+void    			/* O - Output line */
+oneBitLine(unsigned char *src,  /* I - Input line */
+	   unsigned char *dst,  /* O - Destination line */
+	   unsigned int width,  /* I - Width of raster image in pixels */
+	   unsigned int row,    /* I - Current Row */
+	   int bi_level)	/* I - Bi-level option */
+{
+  // If bi_level is true, do threshold dithering to produce black and white output
+  // else, do ordered dithering.
+  unsigned char t = 0;
+  unsigned int threshold = 0;
+  for(unsigned int w = 0; w < width; w+=8){
+    t = 0;
+    for(int k = 0; k < 8; k++){
+        t <<= 1;
+        if (bi_level) threshold = 128;
+        else threshold = dither1[row & 0xf][(w+k) & 0xf];
+        if(*src > threshold) {
+          t |= 0x1;
+        }
+        src +=1;
+    }
+    *dst = t;
+    dst += 1;
+  }
+}
+
+/*
+ * 'RGB8toKCMYcm()' - Convert one pixel of 8-bit RGB data to KCMYcm raster data.
+ */
+
+unsigned char *RGB8toKCMYcm(unsigned char *src,
+			    unsigned char *dst,
+			    unsigned int x,
+			    unsigned int y)
+{
+  unsigned char cmyk[4];
+  unsigned char c;
+  unsigned char d;
+
+  cupsImageRGBToCMYK(src,cmyk,1);
+  c = 0;
+  d = dither1[y & 0xf][x & 0xf];
+  /* K */
+  if (cmyk[3] > d) {
+    c |= 0x20;
+  }
+  /* C */
+  if (cmyk[0] > d) {
+    c |= 0x10;
+  }
+  /* M */
+  if (cmyk[1] > d) {
+    c |= 0x08;
+  }
+  /* Y */
+  if (cmyk[2] > d) {
+    c |= 0x04;
+  }
+  if (c == 0x18) { /* Blue */
+    c = 0x11; /* cyan + light magenta */
+  } else if (c == 0x14) { /* Green */
+    c = 0x06; /* light cyan + yellow */
+  }
+  *dst = c;
   return dst;
 }

@@ -102,6 +102,7 @@ namespace {
 
   int exitCode = 0;
   int pwgraster = 0;
+  int bi_level = 0;
   int deviceCopies = 1;
   bool deviceCollate = false;
   cups_page_header2_t header;
@@ -125,42 +126,6 @@ namespace {
   unsigned int bytesPerLine; /* number of bytes per line */
                         /* Note: When CUPS_ORDER_BANDED,
                            cupsBytesPerLine = bytesPerLine*cupsNumColors */
-  unsigned char revTable[256] = {
-0x00,0x80,0x40,0xc0,0x20,0xa0,0x60,0xe0,0x10,0x90,0x50,0xd0,0x30,0xb0,0x70,0xf0,
-0x08,0x88,0x48,0xc8,0x28,0xa8,0x68,0xe8,0x18,0x98,0x58,0xd8,0x38,0xb8,0x78,0xf8,
-0x04,0x84,0x44,0xc4,0x24,0xa4,0x64,0xe4,0x14,0x94,0x54,0xd4,0x34,0xb4,0x74,0xf4,
-0x0c,0x8c,0x4c,0xcc,0x2c,0xac,0x6c,0xec,0x1c,0x9c,0x5c,0xdc,0x3c,0xbc,0x7c,0xfc,
-0x02,0x82,0x42,0xc2,0x22,0xa2,0x62,0xe2,0x12,0x92,0x52,0xd2,0x32,0xb2,0x72,0xf2,
-0x0a,0x8a,0x4a,0xca,0x2a,0xaa,0x6a,0xea,0x1a,0x9a,0x5a,0xda,0x3a,0xba,0x7a,0xfa,
-0x06,0x86,0x46,0xc6,0x26,0xa6,0x66,0xe6,0x16,0x96,0x56,0xd6,0x36,0xb6,0x76,0xf6,
-0x0e,0x8e,0x4e,0xce,0x2e,0xae,0x6e,0xee,0x1e,0x9e,0x5e,0xde,0x3e,0xbe,0x7e,0xfe,
-0x01,0x81,0x41,0xc1,0x21,0xa1,0x61,0xe1,0x11,0x91,0x51,0xd1,0x31,0xb1,0x71,0xf1,
-0x09,0x89,0x49,0xc9,0x29,0xa9,0x69,0xe9,0x19,0x99,0x59,0xd9,0x39,0xb9,0x79,0xf9,
-0x05,0x85,0x45,0xc5,0x25,0xa5,0x65,0xe5,0x15,0x95,0x55,0xd5,0x35,0xb5,0x75,0xf5,
-0x0d,0x8d,0x4d,0xcd,0x2d,0xad,0x6d,0xed,0x1d,0x9d,0x5d,0xdd,0x3d,0xbd,0x7d,0xfd,
-0x03,0x83,0x43,0xc3,0x23,0xa3,0x63,0xe3,0x13,0x93,0x53,0xd3,0x33,0xb3,0x73,0xf3,
-0x0b,0x8b,0x4b,0xcb,0x2b,0xab,0x6b,0xeb,0x1b,0x9b,0x5b,0xdb,0x3b,0xbb,0x7b,0xfb,
-0x07,0x87,0x47,0xc7,0x27,0xa7,0x67,0xe7,0x17,0x97,0x57,0xd7,0x37,0xb7,0x77,0xf7,
-0x0f,0x8f,0x4f,0xcf,0x2f,0xaf,0x6f,0xef,0x1f,0x9f,0x5f,0xdf,0x3f,0xbf,0x7f,0xff
-  };
-  unsigned int dither1[16][16] = {
-    {0,128,32,160,8,136,40,168,2,130,34,162,10,138,42,170},
-    {192,64,224,96,200,72,232,104,194,66,226,98,202,74,234,106},
-    {48,176,16,144,56,184,24,152,50,178,18,146,58,186,26,154},
-    {240,112,208,80,248,120,216,88,242,114,210,82,250,122,218,90},
-    {12,140,44,172,4,132,36,164,14,142,46,174,6,134,38,166},
-    {204,76,236,108,196,68,228,100,206,78,238,110,198,70,230,102},
-    {60,188,28,156,52,180,20,148,62,190,30,158,54,182,22,150},
-    {252,124,220,92,244,116,212,84,254,126,222,94,246,118,214,86},
-    {3,131,35,163,11,139,43,171,1,129,33,161,9,137,41,169},
-    {195,67,227,99,203,75,235,107,193,65,225,97,201,73,233,105},
-    {51,179,19,147,59,187,27,155,49,177,17,145,57,185,25,153},
-    {243,115,211,83,251,123,219,91,241,113,209,81,249,121,217,89},
-    {15,143,47,175,7,135,39,167,13,141,45,173,5,133,37,165},
-    {207,79,239,111,199,71,231,103,205,77,237,109,197,69,229,101},
-    {63,191,31,159,55,183,23,151,61,189,29,157,53,181,21,149},
-    {255,127,223,95,247,119,215,87,253,125,221,93,245,117,213,85}
-  };
   /* for color profiles */
   cmsHPROFILE colorProfile = NULL;
   cmsHPROFILE popplerColorProfile = NULL;
@@ -316,6 +281,7 @@ static void parseOpts(int argc, char **argv)
   char *profile = 0;
   const char *t = NULL;
   ppd_attr_t *attr;
+  const char *val;
 
   if (argc < 6 || argc > 7) {
     fprintf(stderr, "ERROR: Usage: %s job-id user title copies options [file]\n",
@@ -445,6 +411,10 @@ static void parseOpts(int argc, char **argv)
     exit(1);
 #endif /* HAVE_CUPS_1_7 */
   }
+  if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
+                           && !strncasecmp(val, "bi-level", 8))
+    bi_level = 1;
+
   fprintf(stderr, "DEBUG: Page size requested: %s\n",
 	  header.cupsPageSizeName);
 }
@@ -511,33 +481,7 @@ static unsigned char *reverseLineSwapBit(unsigned char *src,
   unsigned char *dst, unsigned int row, unsigned int plane,
   unsigned int pixels, unsigned int size)
 {
-  unsigned char *bp;
-  unsigned char *dp;
-  unsigned int npadbits = (size*8)-pixels;
-
-  if (npadbits == 0) {
-    bp = src+size-1;
-    dp = dst;
-    for (unsigned int j = 0;j < size;j++,bp--,dp++) {
-      *dp = revTable[(unsigned char)(~*bp)];
-    }
-  } else {
-    unsigned int pd,d;
-    unsigned int sw;
-
-    size = (pixels+7)/8;
-    sw = (size*8)-pixels;
-    bp = src+size-1;
-    dp = dst;
-
-    pd = *bp--;
-    for (unsigned int j = 1;j < size;j++,bp--,dp++) {
-      d = *bp;
-      *dp = ~revTable[(((d << 8) | pd) >> sw) & 0xff];
-      pd = d;
-    }
-    *dp = ~revTable[(pd >> sw) & 0xff];
-  }
+  dst = reverseOneBitLineSwap(src, dst, pixels, size);
   return dst;
 }
 
@@ -663,33 +607,7 @@ static unsigned char *lineSwapBit(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
      unsigned int size)
 {
-  unsigned char *bp;
-  unsigned char *dp;
-  unsigned int npadbits = (size*8)-pixels;
-
-  if (npadbits == 0) {
-    bp = src+size-1;
-    dp = dst;
-    for (unsigned int j = 0;j < size;j++,bp--,dp++) {
-      *dp = revTable[*bp];
-    }
-  } else {
-    unsigned int pd,d;
-    unsigned int sw;
-
-    size = (pixels+7)/8;
-    sw = (size*8)-pixels;
-    bp = src+size-1;
-    dp = dst;
-
-    pd = *bp--;
-    for (unsigned int j = 1;j < size;j++,bp--,dp++) {
-      d = *bp;
-      *dp = revTable[(((d << 8) | pd) >> sw) & 0xff];
-      pd = d;
-    }
-    *dp = revTable[(pd >> sw) & 0xff];
-  }
+  dst = reverseOneBitLine(src, dst, pixels, size);
   return dst;
 }
 
@@ -861,41 +779,6 @@ static unsigned char *RGB8toKCMY(unsigned char *src, unsigned char *pixelBuf,
   pixelBuf[2] = pixelBuf[1];
   pixelBuf[1] = pixelBuf[0];
   pixelBuf[0] = d;
-  return pixelBuf;
-}
-
-static unsigned char *RGB8toKCMYcm(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y)
-{
-  unsigned char cmyk[4];
-  unsigned char c;
-  unsigned char d;
-
-  cupsImageRGBToCMYK(src,cmyk,1);
-  c = 0;
-  d = dither1[y & 0xf][x & 0xf];
-  /* K */
-  if (cmyk[3] > d) {
-    c |= 0x20;
-  }
-  /* C */
-  if (cmyk[0] > d) {
-    c |= 0x10;
-  }
-  /* M */
-  if (cmyk[1] > d) {
-    c |= 0x08;
-  }
-  /* Y */
-  if (cmyk[2] > d) {
-    c |= 0x04;
-  }
-  if (c == 0x18) { /* Blue */
-    c = 0x11; /* cyan + light magenta */
-  } else if (c == 0x14) { /* Green */
-    c = 0x06; /* light cyan + yellow */
-  }
-  *pixelBuf = c;
   return pixelBuf;
 }
 
@@ -1233,22 +1116,8 @@ static void selectConvertFunc(cups_raster_t *raster)
 static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height){
   unsigned char *temp;
   temp=dst;
-  int cnt=0;
   for(unsigned int i=0;i<height;i++){
-    for(unsigned int j=0;j<width;j+=8){
-      unsigned char tem=0;
-      for(int k=0;k<8;k++){
-        cnt++;
-          tem <<=1;
-          unsigned int var=*src;
-          if(var > dither1[i & 0xf][(j+k) & 0xf]){
-            tem |= 0x1;
-          }
-          src +=1;
-      }
-      *dst=tem;
-      dst+=1;
-    }
+    oneBitLine(src + bytesPerLine*8*i, dst + bytesPerLine*i, header.cupsWidth, i, bi_level);
   }
   return temp;
 }

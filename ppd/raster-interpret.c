@@ -521,7 +521,7 @@ ppdRasterMatchPPDSize(
   }
   if (!ppd)
   {
-    _ppdRasterAddError("PPD file not found!\n");
+    _ppdRasterAddError("PPD info not supplied!\n");
     return (-1);
   }
 
