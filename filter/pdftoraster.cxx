@@ -1372,8 +1372,6 @@ static void outPage(poppler::document *doc, int pageNo,
   int rotate = 0;
   double paperdimensions[2], /* Physical size of the paper */
     margins[4];	/* Physical margins of print */
-  ppd_size_t *size;		/* Page size */
-  ppd_size_t *size_matched = NULL;
   double l, swap;
   int imageable_area_fit = 0;
   int i;

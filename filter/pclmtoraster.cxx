@@ -618,9 +618,26 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
   }
 
   // Adjust header page size and margins according to the ppd file.
-  ppdRasterMatchPPDSize(&header, ppd, margins, paperdimensions, NULL, NULL);
-  if (pwgraster == 1)
-    memset(margins, 0, sizeof(margins));
+  if (ppd) {
+    ppdRasterMatchPPDSize(&header, ppd, margins, paperdimensions, NULL, NULL);
+    if (pwgraster == 1)
+      memset(margins, 0, sizeof(margins));
+  } else {
+    for (int i = 0; i < 2; i ++)
+      paperdimensions[i] = header.PageSize[i];
+    if (header.cupsImagingBBox[3] > 0.0) {
+      /* Set margins if we have a bounding box defined ... */
+      if (pwgraster == 0) {
+	margins[0] = header.cupsImagingBBox[0];
+	margins[1] = header.cupsImagingBBox[1];
+	margins[2] = paperdimensions[0] - header.cupsImagingBBox[2];
+	margins[3] = paperdimensions[1] - header.cupsImagingBBox[3];
+      }
+    } else
+      /* ... otherwise use zero margins */
+      for (int i = 0; i < 4; i ++)
+	margins[i] = 0.0;
+  }
 
   if (header.Duplex && (pgno & 1)) {
     /* backside: change margin if needed */

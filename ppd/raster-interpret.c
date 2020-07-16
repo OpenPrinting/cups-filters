@@ -15,6 +15,7 @@
 #include "raster-private.h"
 #include "ppd.h"
 #include "debug-internal.h"
+#include <math.h>
 
 
 /*
@@ -511,11 +512,11 @@ ppdRasterMatchPPDSize(
   ppd_size_t	*size,  		/* Current size */
 		*size_matched = NULL;	/* Matched size */
   int		i = 0;			/* Loop variable */
-  char		pageSizeRequested[64];  /* Requested PageSize */
+  char  	pageSizeRequested[64];  /* Requested PageSize */
 
   strncpy(pageSizeRequested, header->cupsPageSizeName, 64); /* Prefer user-selected page size. */
-  memset(dimensions, 0, sizeof(dimensions));
-  memset(margins, 0, sizeof(margins));
+  memset(dimensions, 0, sizeof(double)*2);
+  memset(margins, 0, sizeof(double)*4);
   size_matched = NULL;
 
   for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
@@ -541,7 +542,7 @@ ppdRasterMatchPPDSize(
 	fabs(header->PageSize[0] - size->right + size->left) / size->width < 0.01 &&
 	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
     {
-      DEBUG_printf("DEBUG: Imageable area fit\n");
+      DEBUG_printf("Imageable area fit");
       size_matched = size;
       if (landscape) *landscape = 0;
       if (image_fit) *image_fit = 1;
@@ -553,7 +554,7 @@ ppdRasterMatchPPDSize(
     /*
     * Standard size...
     */
-    DEBUG_printf(("DEBUG: size = %s\n", size_matched->name));
+    DEBUG_printf(("PPD matched size = %s", size_matched->name));
     size = size_matched;
     dimensions[0] = size->width;
     dimensions[1] = size->length;
@@ -589,7 +590,7 @@ ppdRasterMatchPPDSize(
 	fabs(header->PageSize[1] - size->right + size->left) / size->width < 0.01 &&
 	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
       {
-	DEBUG_printf("DEBUG: Imageable area fit\n");
+	DEBUG_printf("Imageable area fit");
 	size_matched = size;
 	if (landscape) *landscape = 1;
 	if (image_fit) *image_fit = 1;
@@ -603,7 +604,7 @@ ppdRasterMatchPPDSize(
      * Standard size in landscape orientation...
      */
     size = size_matched;
-    DEBUG_printf(("DEBUG: landscape size = %s\n", size->name));
+    DEBUG_printf(("landscape size = %s", size->name));
     dimensions[0] = size->width;
     dimensions[1] = size->length;
     margins[0] = size->left;
@@ -617,7 +618,7 @@ ppdRasterMatchPPDSize(
     /*
      * Custom size...
      */
-    DEBUG_printf("DEBUG: size = Custom\n");
+    DEBUG_printf("size = Custom");
     for (i = 0; i < 2; i ++)
       dimensions[i] = header->PageSize[i];
     for (i = 0; i < 4; i ++)
