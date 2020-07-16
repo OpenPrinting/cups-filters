@@ -575,157 +575,11 @@ static void selectConvertFunc (std::string colorspace, int pgno) {
 
 }
 
-static void selectPageSize (int pgno) {
-  double	paperdimensions[2], margins[4], swap;
-  int		i = 0, landscape = 0;
-  ppd_size_t	*size;		/* Page size */
-  ppd_size_t	*size_matched = NULL;
-
-  memset(paperdimensions, 0, sizeof(paperdimensions));
-  memset(margins, 0, sizeof(margins));
-  if (ppd) {
-    size_matched = NULL;
-    for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
-      /* Skip page sizes which conflict with settings of the other options */
-      /* Find size of document's page under the PPD page sizes */
-      if (fabs(header.PageSize[1] - size->length) / size->length < 0.01 &&
-	  fabs(header.PageSize[0] - size->width) / size->width < 0.01 &&
-	  (size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
-	size_matched = size;
-    if (size_matched == NULL)
-      /* Input page size does not fit any of the PPD's sizes, try to fit
-	 the input page size into the imageable areas of the PPD's sizes */
-      for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
-	if (fabs(header.PageSize[1] - size->top + size->bottom) / size->length < 0.01 &&
-	    fabs(header.PageSize[0] - size->right + size->left) / size->width < 0.01 &&
-	    (size_matched == NULL || !strcasecmp(pageSizeRequested, size->name))) {
-	  fprintf(stderr, "DEBUG: Imageable area fit\n");
-	  size_matched = size;
-	}
-    if (size_matched == NULL)
-      /*
-       * No matching portrait size; look for a matching size in
-       * landscape orientation...
-       */
-      for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
-	if (fabs(header.PageSize[0] - size->length) / size->length < 0.01 &&
-	    fabs(header.PageSize[1] - size->width) / size->width < 0.01 &&
-	    (size_matched == NULL || !strcasecmp(pageSizeRequested, size->name))) {
-	  size_matched = size;
-	  landscape = 1;
-	}
-    if (size_matched == NULL)
-	/* Input page size does not fit any of the PPD's sizes, try to fit
-	   the input page size into the imageable areas of the PPD's sizes */
-      for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
-	if (fabs(header.PageSize[0] - size->top + size->bottom) / size->length < 0.01 &&
-	    fabs(header.PageSize[1] - size->right + size->left) / size->width < 0.01 &&
-	    (size_matched == NULL || !strcasecmp(pageSizeRequested, size->name))) {
-	  fprintf(stderr, "DEBUG: Imageable area fit\n");
-	  size_matched = size;
-	}
-
-    if (size_matched) {
-      if (landscape) {
-	/*
-	 * Standard size in landscape orientation...
-	 */
-	size = size_matched;
-	fprintf(stderr, "DEBUG: landscape size = %s\n", size->name);
-	paperdimensions[0] = size->width;
-	paperdimensions[1] = size->length;
-	if (pwgraster == 0) {
-	  margins[0] = size->left;
-	  margins[1] = size->bottom;
-	  margins[2] = size->width - size->right;
-	  margins[3] = size->length - size->top;
-	}
-	strncpy(header.cupsPageSizeName, size->name, 64);
-      } else {
-	/*
-	 * Standard size...
-	 */
-	size = size_matched;
-	fprintf(stderr, "DEBUG: size = %s\n", size->name);
-	paperdimensions[0] = size->width;
-	paperdimensions[1] = size->length;
-	if (pwgraster == 0) {
-	  margins[0] = size->left;
-	  margins[1] = size->bottom;
-	  margins[2] = size->width - size->right;
-	  margins[3] = size->length - size->top;
-	}
-	strncpy(header.cupsPageSizeName, size->name, 64);
-      }
-    } else {
-      /*
-       * Custom size...
-       */
-      fprintf(stderr, "DEBUG: size = Custom\n");
-      paperdimensions[1] = size->length;
-      for (i = 0; i < 2; i ++)
-        paperdimensions[i] = header.PageSize[i];
-      if (pwgraster == 0)
-        for (i = 0; i < 4; i ++)
-          margins[i] = ppd->custom_margins[i];
-      snprintf(header.cupsPageSizeName, 64, "Custom.%dx%d", header.PageSize[0], header.PageSize[1]);
-    }
-  } else {
-    for (i = 0; i < 2; i ++)
-      paperdimensions[i] = header.PageSize[i];
-    if (header.cupsImagingBBox[3] > 0.0) {
-      /* Set margins if we have a bounding box defined ... */
-      if (pwgraster == 0) {
-	margins[0] = header.cupsImagingBBox[0];
-	margins[1] = header.cupsImagingBBox[1];
-	margins[2] = paperdimensions[0] - header.cupsImagingBBox[2];
-	margins[3] = paperdimensions[1] - header.cupsImagingBBox[3];
-      }
-    } else
-      /* ... otherwise use zero margins */
-      for (i = 0; i < 4; i ++)
-	margins[i] = 0.0;
-  }
-
-  if (header.Duplex && (pgno & 1)) {
-    /* backside: change margin if needed */
-    if (swap_margin_x) {
-      swap = margins[2]; margins[2] = margins[0]; margins[0] = swap;
-    }
-    if (swap_margin_y) {
-      swap = margins[3]; margins[3] = margins[1]; margins[1] = swap;
-    }
-  }
-
-  /* write page header */
-  for (i = 0; i < 2; i ++) {
-    header.cupsPageSize[i] = paperdimensions[i];
-    header.PageSize[i] = (unsigned int)(header.cupsPageSize[i] + 0.5);
-    if (pwgraster == 0)
-      header.Margins[i] = margins[i] + 0.5;
-    else
-      header.Margins[i] = 0;
-  }
-  if (pwgraster == 0) {
-    header.cupsImagingBBox[0] = margins[0];
-    header.cupsImagingBBox[1] = margins[1];
-    header.cupsImagingBBox[2] = paperdimensions[0] - margins[2];
-    header.cupsImagingBBox[3] = paperdimensions[1] - margins[3];
-    for (i = 0; i < 4; i ++)
-      header.ImagingBoundingBox[i] = (unsigned int)(header.cupsImagingBBox[i] + 0.5);
-  } else
-    for (i = 0; i < 4; i ++) {
-      header.cupsImagingBBox[i] = 0.0;
-      header.ImagingBoundingBox[i] = 0;
-    }
-
-}
-
 static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
   long long		rotate = 0,
 			height,
 			width;
-  double		l;
+  double		paperdimensions[2], margins[4], l, swap;
   int			bufsize = 0, pixel_count = 0,
 			temp = 0;
   float 		mediaBox[4];
@@ -764,7 +618,41 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
   }
 
   // Adjust header page size and margins according to the ppd file.
-  selectPageSize(pgno);
+  ppdRasterMatchPPDSize(&header, ppd, margins, paperdimensions, NULL, NULL);
+  if (pwgraster == 1)
+    memset(margins, 0, sizeof(margins));
+
+  if (header.Duplex && (pgno & 1)) {
+    /* backside: change margin if needed */
+    if (swap_margin_x) {
+      swap = margins[2]; margins[2] = margins[0]; margins[0] = swap;
+    }
+    if (swap_margin_y) {
+      swap = margins[3]; margins[3] = margins[1]; margins[1] = swap;
+    }
+  }
+
+  /* write page header */
+  for (int i = 0; i < 2; i ++) {
+    header.cupsPageSize[i] = paperdimensions[i];
+    header.PageSize[i] = (unsigned int)(header.cupsPageSize[i] + 0.5);
+    if (pwgraster == 0)
+      header.Margins[i] = margins[i] + 0.5;
+    else
+      header.Margins[i] = 0;
+  }
+  if (pwgraster == 0) {
+    header.cupsImagingBBox[0] = margins[0];
+    header.cupsImagingBBox[1] = margins[1];
+    header.cupsImagingBBox[2] = paperdimensions[0] - margins[2];
+    header.cupsImagingBBox[3] = paperdimensions[1] - margins[3];
+    for (int i = 0; i < 4; i ++)
+      header.ImagingBoundingBox[i] = (unsigned int)(header.cupsImagingBBox[i] + 0.5);
+  } else
+    for (int i = 0; i < 4; i ++) {
+      header.cupsImagingBBox[i] = 0.0;
+      header.ImagingBoundingBox[i] = 0;
+    }
 
   header.cupsWidth = 0;
   header.cupsHeight = 0;

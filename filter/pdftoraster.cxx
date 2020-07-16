@@ -106,7 +106,6 @@ namespace {
   bool deviceCollate = false;
   cups_page_header2_t header;
   ppd_file_t *ppd = 0;
-  char pageSizeRequested[64];
   unsigned int bitmapoffset[2];
   unsigned int popplerBitsPerPixel;
   unsigned int popplerNumColors;
@@ -446,7 +445,6 @@ static void parseOpts(int argc, char **argv)
     exit(1);
 #endif /* HAVE_CUPS_1_7 */
   }
-  strncpy(pageSizeRequested, header.cupsPageSizeName, 64);
   fprintf(stderr, "DEBUG: Page size requested: %s\n",
 	  header.cupsPageSizeName);
 }
@@ -1411,113 +1409,9 @@ static void outPage(poppler::document *doc, int pageNo,
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
   if (ppd) {
-    imageable_area_fit = 0;
-    size_matched = NULL;
-    for (i = ppd->num_sizes, size = ppd->sizes;
-	 i > 0;
-	 i --, size ++)
-      /* Skip page sizes which conflict with settings of the other options */
-      /* TODO XXX */
-      /* Find size of document's page under the PPD page sizes */
-      if (fabs(header.PageSize[1] - size->length) / size->length < 0.01 &&
-	  fabs(header.PageSize[0] - size->width) / size->width < 0.01 &&
-	  (size_matched == NULL ||
-	   !strcasecmp(pageSizeRequested, size->name)))
-	size_matched = size;
-    if (size_matched == NULL)
-      /* Input page size does not fit any of the PPD's sizes, try to fit
-	 the input page size into the imageable areas of the PPD's sizes */
-      for (i = ppd->num_sizes, size = ppd->sizes;
-	   i > 0;
-	   i --, size ++)
-	if (fabs(header.PageSize[1] - size->top + size->bottom) /
-	    size->length < 0.01 &&
-	    fabs(header.PageSize[0] - size->right + size->left) /
-	    size->width < 0.01 &&
-	    (size_matched == NULL ||
-	     !strcasecmp(pageSizeRequested, size->name))) {
-	  fprintf(stderr, "DEBUG: Imageable area fit\n");
-	  imageable_area_fit = 1;
-	  size_matched = size;
-	}
-    if (size_matched) {
-      /*
-       * Standard size...
-       */
-      size = size_matched;
-      fprintf(stderr, "DEBUG: size = %s\n", size->name);
-      paperdimensions[0] = size->width;
-      paperdimensions[1] = size->length;
-      if (pwgraster == 0) {
-	margins[0] = size->left;
-	margins[1] = size->bottom;
-	margins[2] = size->width - size->right;
-	margins[3] = size->length - size->top;
-      }
-      strncpy(header.cupsPageSizeName, size->name, 64);
-    } else {
-      /*
-       * No matching portrait size; look for a matching size in
-       * landscape orientation...
-       */
-
-      imageable_area_fit = 0;
-      size_matched = 0;
-      for (i = ppd->num_sizes, size = ppd->sizes;
-	   i > 0;
-	   i --, size ++)
-	if (fabs(header.PageSize[0] - size->length) / size->length < 0.01 &&
-	    fabs(header.PageSize[1] - size->width) / size->width < 0.01 &&
-	    (size_matched == NULL ||
-	     !strcasecmp(pageSizeRequested, size->name)))
-	  size_matched = size;
-      if (size_matched == NULL)
-	/* Input page size does not fit any of the PPD's sizes, try to fit
-	   the input page size into the imageable areas of the PPD's sizes */
-	for (i = ppd->num_sizes, size = ppd->sizes;
-	     i > 0;
-	     i --, size ++)
-	  if (fabs(header.PageSize[0] - size->top + size->bottom) /
-	      size->length < 0.01 &&
-	      fabs(header.PageSize[1] - size->right + size->left) /
-	      size->width < 0.01 &&
-	      (size_matched == NULL ||
-	       !strcasecmp(pageSizeRequested, size->name))) {
-	    fprintf(stderr, "DEBUG: Imageable area fit\n");
-	    imageable_area_fit = 1;
-	    size_matched = size;
-	  }
-      if (size_matched) {
-	/*
-	 * Standard size in landscape orientation...
-	 */
-	size = size_matched;
-	fprintf(stderr, "DEBUG: landscape size = %s\n", size->name);
-	paperdimensions[0] = size->width;
-	paperdimensions[1] = size->length;
-	if (pwgraster == 0) {
-	  margins[0] = size->left;
-	  margins[1] = size->bottom;
-	  margins[2] = size->width - size->right;
-	  margins[3] = size->length - size->top;
-	}
-	strncpy(header.cupsPageSizeName, size->name, 64);
-      } else {
-	/*
-	 * Custom size...
-	 */
-	fprintf(stderr, "DEBUG: size = Custom\n");
-	paperdimensions[1] = size->length;
-	for (i = 0; i < 2; i ++)
-	  paperdimensions[i] = header.PageSize[i];
-	if (pwgraster == 0)
-	  for (i = 0; i < 4; i ++)
-	    margins[i] = ppd->custom_margins[i];
-	snprintf(header.cupsPageSizeName, 64,
-		 "Custom.%dx%d",
-		 header.PageSize[0], header.PageSize[1]);
-      }
-    }
+    ppdRasterMatchPPDSize(&header, ppd, margins, paperdimensions, &imageable_area_fit, NULL);
+    if (pwgraster == 1)
+      memset(margins, 0, sizeof(margins));
   } else {
     for (i = 0; i < 2; i ++)
       paperdimensions[i] = header.PageSize[i];
