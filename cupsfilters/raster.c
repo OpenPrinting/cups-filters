@@ -747,9 +747,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 			   options)) != NULL ||
       (val = cupsGetOption("PwgRasterDocumentType", num_options,
 			   options)) != NULL ||
-      (val = cupsGetOption("print-color-mode", num_options,
-			   options)) != NULL ||
-      (val = cupsGetOption("PrintColorMode", num_options, options)) != NULL ||
       (val = cupsGetOption("color-space", num_options, options)) != NULL ||
       (val = cupsGetOption("ColorSpace", num_options, options)) != NULL ||
       (val = cupsGetOption("color-model", num_options, options)) != NULL ||

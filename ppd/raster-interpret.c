@@ -15,6 +15,7 @@
 #include "raster-private.h"
 #include "ppd.h"
 #include "debug-internal.h"
+#include <math.h>
 
 
 /*
@@ -495,6 +496,149 @@ ppdRasterInterpretPPD(
   return (status);
 }
 
+/*
+ * 'ppdRasterMatchPageSize()' - Match PPD page size to header page size.
+ */
+
+int     				/* O - 0 on success, -1 on failure */
+ppdRasterMatchPPDSize(
+    cups_page_header2_t *header,	/* I - Page header to match */
+    ppd_file_t  	*ppd,   	/* I - PPD file */
+    double		margins[4],	/* O - Margins of media in points */
+    double		dimensions[2],	/* O - Width and Length of media in points */
+    int 		*image_fit,	/* O - Imageable Area Fit */
+    int 		*landscape)	/* O - Landscape / Portrait Fit */
+{
+  ppd_size_t	*size,  		/* Current size */
+		*size_matched = NULL;	/* Matched size */
+  int		i = 0;			/* Loop variable */
+  char  	pageSizeRequested[64];  /* Requested PageSize */
+
+  if (!header)
+  {
+    _ppdRasterAddError("Page header cannot be NULL!\n");
+    return (-1);
+  }
+  if (!ppd)
+  {
+    _ppdRasterAddError("PPD info not supplied!\n");
+    return (-1);
+  }
+
+  strncpy(pageSizeRequested, header->cupsPageSizeName, 64); /* Prefer user-selected page size. */
+  memset(dimensions, 0, sizeof(double)*2);
+  memset(margins, 0, sizeof(double)*4);
+  size_matched = NULL;
+
+  for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
+  {
+    /* Skip page sizes which conflict with settings of the other options */
+    /* Find size of document's page under the PPD page sizes */
+    if (fabs(header->PageSize[1] - size->length) / size->length < 0.01 &&
+	fabs(header->PageSize[0] - size->width) / size->width < 0.01 &&
+	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
+    {
+      size_matched = size;
+      if (landscape) *landscape = 0;
+      if (image_fit) *image_fit = 0;
+    }
+  }
+
+  if (size_matched == NULL)
+  /* Input page size does not fit any of the PPD's sizes, try to fit
+     the input page size into the imageable areas of the PPD's sizes */
+  for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
+  {
+    if (fabs(header->PageSize[1] - size->top + size->bottom) / size->length < 0.01 &&
+	fabs(header->PageSize[0] - size->right + size->left) / size->width < 0.01 &&
+	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
+    {
+      DEBUG_printf("Imageable area fit");
+      size_matched = size;
+      if (landscape) *landscape = 0;
+      if (image_fit) *image_fit = 1;
+    }
+  }
+
+  if (size_matched)
+  {
+    /*
+    * Standard size...
+    */
+    DEBUG_printf(("PPD matched size = %s", size_matched->name));
+    size = size_matched;
+    dimensions[0] = size->width;
+    dimensions[1] = size->length;
+    margins[0] = size->left;
+    margins[1] = size->bottom;
+    margins[2] = size->width - size->right;
+    margins[3] = size->length - size->top;
+    strncpy(header->cupsPageSizeName, size->name, 64);
+  }
+  else
+  {
+    /*
+    * No matching portrait size; look for a matching size in
+    * landscape orientation...
+    */
+    size_matched = 0;
+    for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
+    if (fabs(header->PageSize[0] - size->length) / size->length < 0.01 &&
+        fabs(header->PageSize[1] - size->width) / size->width < 0.01 &&
+        (size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
+    {
+      size_matched = size;
+      if (landscape) *landscape = 1;
+      if (image_fit) *image_fit = 0;
+    }
+
+    if (size_matched == NULL)
+    /* Input page size does not fit any of the PPD's sizes, try to fit
+	the input page size into the imageable areas of the PPD's sizes */
+    for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
+    {
+      if (fabs(header->PageSize[0] - size->top + size->bottom) / size->length < 0.01 &&
+	fabs(header->PageSize[1] - size->right + size->left) / size->width < 0.01 &&
+	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
+      {
+	DEBUG_printf("Imageable area fit");
+	size_matched = size;
+	if (landscape) *landscape = 1;
+	if (image_fit) *image_fit = 1;
+      }
+    }
+  }
+
+  if (size_matched)
+  {
+    /*
+     * Standard size in landscape orientation...
+     */
+    size = size_matched;
+    DEBUG_printf(("landscape size = %s", size->name));
+    dimensions[0] = size->width;
+    dimensions[1] = size->length;
+    margins[0] = size->left;
+    margins[1] = size->bottom;
+    margins[2] = size->width - size->right;
+    margins[3] = size->length - size->top;
+    strncpy(header->cupsPageSizeName, size->name, 64);
+  }
+  else
+  {
+    /*
+     * Custom size...
+     */
+    DEBUG_printf("size = Custom");
+    for (i = 0; i < 2; i ++)
+      dimensions[i] = header->PageSize[i];
+    for (i = 0; i < 4; i ++)
+      margins[i] = ppd->custom_margins[i];
+    snprintf(header->cupsPageSizeName, 64, "Custom.%dx%d", header->PageSize[0], header->PageSize[1]);
+  }
+
+  return 0;
+}
 
 /*
  * 'ppdRasterExecPS()' - Execute PostScript code to initialize a page header.

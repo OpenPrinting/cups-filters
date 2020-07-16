@@ -228,6 +228,7 @@ EXTRA_DIST += \
 # ====================
 pkgfiltersincludedir = $(includedir)/cupsfilters
 pkgfiltersinclude_DATA = \
+	cupsfilters/bitmap.h \
 	cupsfilters/colord.h \
 	cupsfilters/colormanager.h \
 	cupsfilters/driver.h \
@@ -262,6 +263,7 @@ TESTS += \
 
 libcupsfilters_la_SOURCES = \
 	cupsfilters/attr.c \
+	cupsfilters/bitmap.c \
 	cupsfilters/check.c \
 	cupsfilters/cmyk.c \
 	cupsfilters/colord.c \
@@ -850,6 +852,7 @@ urftopdf_LDADD = \
 
 pclmtoraster_SOURCES = \
 	filter/pclmtoraster.cxx \
+	cupsfilters/bitmap.h \
 	cupsfilters/raster.h \
 	filter/unirast.h
 pclmtoraster_CXXFLAGS = \
@@ -947,6 +950,7 @@ pdftops_LDADD = \
 pdftops_DEPENDENCIES = $(STRCASESTR)
 
 pdftoraster_SOURCES = \
+ cupsfilters/bitmap.h \
 	filter/pdftoraster.cxx
 pdftoraster_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
