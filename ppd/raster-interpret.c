@@ -500,7 +500,7 @@ ppdRasterInterpretPPD(
  * 'ppdRasterMatchPageSize()' - Match PPD page size to header page size.
  */
 
-ppd_size_t *				/* O - Matched Size on success, NULL on failure */
+int     				/* O - 0 on success, -1 on failure */
 ppdRasterMatchPPDSize(
     cups_page_header2_t *header,	/* I - Page header to match */
     ppd_file_t  	*ppd,   	/* I - PPD file */
@@ -513,6 +513,17 @@ ppdRasterMatchPPDSize(
 		*size_matched = NULL;	/* Matched size */
   int		i = 0;			/* Loop variable */
   char  	pageSizeRequested[64];  /* Requested PageSize */
+
+  if (!header)
+  {
+    _ppdRasterAddError("Page header cannot be NULL!\n");
+    return (-1);
+  }
+  if (!ppd)
+  {
+    _ppdRasterAddError("PPD file not found!\n");
+    return (-1);
+  }
 
   strncpy(pageSizeRequested, header->cupsPageSizeName, 64); /* Prefer user-selected page size. */
   memset(dimensions, 0, sizeof(double)*2);
@@ -626,7 +637,7 @@ ppdRasterMatchPPDSize(
     snprintf(header->cupsPageSizeName, 64, "Custom.%dx%d", header->PageSize[0], header->PageSize[1]);
   }
 
-  return size_matched;
+  return 0;
 }
 
 /*

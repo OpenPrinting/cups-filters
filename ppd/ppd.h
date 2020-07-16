@@ -574,7 +574,7 @@ extern int		ppdPageSizeLimits(ppd_file_t *ppd,
 					  ppd_size_t *maximum);
 
 /**** New in libppd (cups-filters) ****/
-extern ppd_size_t	*ppdRasterMatchPPDSize(cups_page_header2_t *header,
+extern int		ppdRasterMatchPPDSize(cups_page_header2_t *header,
 						ppd_file_t *ppd,
 						double margins[4],
 						double dimensions[4],
