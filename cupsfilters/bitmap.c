@@ -24,6 +24,7 @@ MIT Open Source License  -  http://www.opensource.org/
 
 */
 
+#include "image.h"
 #include <stdio.h>
 #include <cups/raster.h>
 
