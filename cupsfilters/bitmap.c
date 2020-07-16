@@ -26,6 +26,7 @@ MIT Open Source License  -  http://www.opensource.org/
 
 #include <stdio.h>
 #include <cups/raster.h>
+#include "image.h"
 
 unsigned int dither1[16][16] = {
   {0,128,32,160,8,136,40,168,2,130,34,162,10,138,42,170},
