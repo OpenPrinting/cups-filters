@@ -61,26 +61,6 @@ namespace {
                            cupsBytesPerLine = bytesPerLine*cupsNumColors */
 }
 
-int parse_doc_type(FILE *fp)
-{
-  char line1[5];
-  char *rc;
-
-  /* get the first few bytes of the file */
-  rewind(fp);
-  rc = fgets(line1,sizeof(line1),fp);
-  /* empty input */
-  if (rc == NULL)
-    return 1;
-
-  /* is PDF/PCLm */
-  if (strncmp(line1,"%PDF",4) == 0 || strncmp(line1,"%PCLm",4) == 0)
-    return 0;
-
-  fprintf(stderr,"DEBUG: input file is not of PCLm format\n");
-  exit(EXIT_FAILURE);
-}
-
 static void parseOpts(int argc, char **argv)
 {
   int           num_options = 0;
@@ -732,28 +712,50 @@ static void outPage(cups_raster_t *raster, QPDFObjectHandle page, int pgno) {
 int main(int argc, char **argv)
 {
   int   	npages=0;
-  QPDF  	*pdf;
-  FILE  	*fp = NULL;
+  QPDF  	*pdf = new QPDF();
   cups_raster_t *raster;
 
 
-  if (argc != 7) {
-    fprintf(stderr, "ERROR: Usage: %s job-id user title copies options [file]\n",
-            argv[0]);
-    exit(1);
-  }
-  parseOpts(argc, argv);
+  if (argc == 6) {
+    /* stdin input, copy to temporary file */
+    int fd;
+    char name[BUFSIZ];
+    char buf[BUFSIZ];
+    int n;
 
+    fd = cupsTempFd(name,sizeof(name));
+    if (fd < 0) {
+      fprintf(stderr, "ERROR: Can't create temporary file\n");
+      exit(1);
+    }
+
+    /* copy stdin to the tmp file */
+    while ((n = read(0,buf,BUFSIZ)) > 0) {
+      if (write(fd,buf,n) != n) {
+        fprintf(stderr, "ERROR: Can't copy stdin to temporary file\n" );
+        close(fd);
+	exit(1);
+      }
+    }
+    close(fd);
+    pdf->processFile(name);
+    /* remove name */
+    unlink(name);
+  } else if (argc == 7) {
+    FILE *fp;
     if ((fp = fopen(argv[6],"rb")) == 0) {
         fprintf(stderr, "ERROR: Can't open input file %s\n",argv[6]);
         exit(1);
     }
-
-  if(parse_doc_type(fp)) {
-     fclose(fp);
-     exit(1);
+    pdf->processFile(argv[6]);
+    fclose(fp);
+  } else {
+    fprintf(stderr, "ERROR: Usage: %s job-id user title copies options [file]\n",
+            argv[0]);
+    exit(1);
   }
-  fclose(fp);
+
+  parseOpts(argc, argv);
 
   if (header.cupsBitsPerColor != 1
      && header.cupsBitsPerColor != 2
@@ -781,8 +783,6 @@ int main(int argc, char **argv)
         exit(1);
   }
 
-  pdf = new QPDF();
-  pdf->processFile(argv[6]);
   std::vector<QPDFObjectHandle> pages = pdf->getAllPages();
   npages = pages.size();
 
