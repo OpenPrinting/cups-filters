@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- gstoraster, gstopdf: Do not apply margis when output format
+	  is PDF, as then we convert an incoming PostScript file to
+	  PDF (pre-pdftopdf) and do not prepare the pages for the
+	  printer (post-pdftopdf, Issue #250).
 	- cups-browsed: Do not write any log messages directly to
 	  stderr, there were some concerning timeouts on queue
 	  creation (Issue #260).

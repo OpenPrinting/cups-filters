@@ -960,8 +960,14 @@ main (int argc, char **argv, char *envp[])
   /* Switch to taking PostScript commands on the Ghostscript command line */
   cupsArrayAdd(gs_args, strdup("-c"));
 
-  /* Set margins if we have a bounding box defined */
-  if (h.cupsImagingBBox[3] > 0.0) {
+  /* Set margins if we have a bounding box defined and output format
+     is not PDF, as PDF output we have only in the PostScript-to-PDF
+     filtering case which happens for converting PostScript input
+     files before pdftopdf so margins will be handled later, whereas
+     the other output formats for PDF-to-something filtering after
+     pdftopdf, to format the pages for the printer, so margins are
+     important. */
+  if (h.cupsImagingBBox[3] > 0.0 && outformat != OUTPUT_FORMAT_PDF) {
     snprintf(tmpstr, sizeof(tmpstr),
 	     "<</.HWMargins[%f %f %f %f] /Margins[0 0]>>setpagedevice",
 	     h.cupsImagingBBox[0], h.cupsImagingBBox[1],
