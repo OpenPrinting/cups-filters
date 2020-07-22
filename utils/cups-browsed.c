@@ -153,6 +153,8 @@ static int  ldap_rebind_proc(LDAP *RebindLDAPHandle,
 #define REMOTE_DEFAULT_PRINTER_FILE "/cups-browsed-remote-default-printer"
 #define SAVE_OPTIONS_FILE "/cups-browsed-options-%s"
 #define DEBUG_LOG_FILE "/cups-browsed_log"
+#define DEBUG_LOG_FILE_2 "/cups-browsed_previous_logs"
+#define MAX_LOG_SIZE 30
 
 /* Status of remote printer */
 typedef enum printer_status_e {
@@ -486,6 +488,7 @@ static char local_default_printer_file[2048];
 static char remote_default_printer_file[2048];
 static char save_options_file[2048];
 static char debug_log_file[2048];
+static char debug_log_file_bckp[2048];
 
 /*Contains ppd keywords which are written by ppdgenerator.c in the ppd file.*/
 static char* ppd_keywords[] = 
@@ -694,6 +697,27 @@ stop_debug_logging()
   lfp = NULL;
 }
 
+// returns the size of debug log file
+long int findLogFileSize() 
+{ 
+    FILE* fp = fopen(debug_log_file, "r"); 
+    if (fp == NULL) { 
+        return -1; 
+    } 
+    fseek(fp, 0L, SEEK_END); 
+    long int res = ftell(fp); 
+    fclose(fp); 
+    return res; 
+}
+
+void copyToFile(FILE **fp1, FILE **fp2){
+  char ch;
+  while((ch = getc(*fp1)) != EOF)
+    putc(ch, *fp2);
+  fclose(*fp1);
+  fclose(*fp2);
+}
+
 void
 debug_printf(const char *format, ...) {
   if (debug_stderr || debug_logfile) {
@@ -716,7 +740,16 @@ debug_printf(const char *format, ...) {
       fflush(lfp);
       va_end(arglist);
     }
-  }
+
+    long int log_file_size = findLogFileSize(); 
+    if(log_file_size>(long int)MAX_LOG_SIZE*1024){
+      fclose(lfp);
+      FILE *fp1 = fopen(debug_log_file, "r");
+      FILE *fp2 = fopen(debug_log_file_bckp, "w");
+      copyToFile(&fp1,&fp2);
+      lfp = fopen(debug_log_file, "w");
+    }
+}
 }
 
 void
@@ -12141,6 +12174,13 @@ int main(int argc, char*argv[]) {
   strncpy(debug_log_file + strlen(logdir),
 	  DEBUG_LOG_FILE,
 	  sizeof(debug_log_file) - strlen(logdir) - 1);
+
+  strncpy(debug_log_file_bckp, logdir,
+	  sizeof(debug_log_file_bckp) - 1);
+  strncpy(debug_log_file_bckp + strlen(logdir),
+	  DEBUG_LOG_FILE_2,
+	  sizeof(debug_log_file_bckp) - strlen(logdir) - 1);
+  
   if (debug_logfile == 1)
     start_debug_logging();
 
