@@ -154,7 +154,6 @@ static int  ldap_rebind_proc(LDAP *RebindLDAPHandle,
 #define SAVE_OPTIONS_FILE "/cups-browsed-options-%s"
 #define DEBUG_LOG_FILE "/cups-browsed_log"
 #define DEBUG_LOG_FILE_2 "/cups-browsed_previous_logs"
-#define MAX_LOG_SIZE 30
 
 /* Status of remote printer */
 typedef enum printer_status_e {
@@ -434,6 +433,7 @@ static uint16_t BrowsePort = 631;
 static browsepoll_t **BrowsePoll = NULL;
 static unsigned int NewBrowsePollQueuesShared = 0;
 static unsigned int AllowResharingRemoteCUPSPrinters = 0;
+static unsigned int DebugLogFileSize = 30;
 static size_t NumBrowsePoll = 0;
 static guint update_netifs_sourceid = 0;
 static char local_server_str[1024];
@@ -714,8 +714,6 @@ void copyToFile(FILE **fp1, FILE **fp2){
   char ch;
   while((ch = getc(*fp1)) != EOF)
     putc(ch, *fp2);
-  fclose(*fp1);
-  fclose(*fp2);
 }
 
 void
@@ -742,11 +740,13 @@ debug_printf(const char *format, ...) {
     }
 
     long int log_file_size = findLogFileSize(); 
-    if(log_file_size>(long int)MAX_LOG_SIZE*1024){
+    if(log_file_size>(long int)DebugLogFileSize*1024){
       fclose(lfp);
       FILE *fp1 = fopen(debug_log_file, "r");
       FILE *fp2 = fopen(debug_log_file_bckp, "w");
       copyToFile(&fp1,&fp2);
+      fclose(fp1);
+      fclose(fp2);
       lfp = fopen(debug_log_file, "w");
     }
 }
