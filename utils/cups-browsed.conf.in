@@ -758,3 +758,11 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # shutdown.
 
 # AutoShutdownTimeout 30
+
+# DebugLogFileSize defines the maximum size possible (in KBytes)
+# of the log files (cups-browsed_log and cups-browsed_previous_logs)
+# that is created using cups-browsed in the debugging mode.
+# Setting its value to 0 would turn off any restriction
+# on the size of the file.
+
+# DebugLogFileSize 300

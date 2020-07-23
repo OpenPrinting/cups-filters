@@ -153,6 +153,7 @@ static int  ldap_rebind_proc(LDAP *RebindLDAPHandle,
 #define REMOTE_DEFAULT_PRINTER_FILE "/cups-browsed-remote-default-printer"
 #define SAVE_OPTIONS_FILE "/cups-browsed-options-%s"
 #define DEBUG_LOG_FILE "/cups-browsed_log"
+#define DEBUG_LOG_FILE_2 "/cups-browsed_previous_logs"
 
 /* Status of remote printer */
 typedef enum printer_status_e {
@@ -432,6 +433,7 @@ static uint16_t BrowsePort = 631;
 static browsepoll_t **BrowsePoll = NULL;
 static unsigned int NewBrowsePollQueuesShared = 0;
 static unsigned int AllowResharingRemoteCUPSPrinters = 0;
+static unsigned int DebugLogFileSize = 300;
 static size_t NumBrowsePoll = 0;
 static guint update_netifs_sourceid = 0;
 static char local_server_str[1024];
@@ -486,6 +488,7 @@ static char local_default_printer_file[2048];
 static char remote_default_printer_file[2048];
 static char save_options_file[2048];
 static char debug_log_file[2048];
+static char debug_log_file_bckp[2048];
 
 /*Contains ppd keywords which are written by ppdgenerator.c in the ppd file.*/
 static char* ppd_keywords[] = 
@@ -694,6 +697,35 @@ stop_debug_logging()
   lfp = NULL;
 }
 
+// returns the size of debug log file
+long int findLogFileSize() 
+{ 
+    FILE* fp = fopen(debug_log_file, "r"); 
+    if (fp == NULL) { 
+        return -1; 
+    } 
+    fseek(fp, 0L, SEEK_END); 
+    long int res = ftell(fp); 
+    fclose(fp); 
+    return res; 
+}
+
+void copyToFile(FILE **fp1, FILE **fp2){
+  int buffer_size = 2048;
+  char *buf = (char*) malloc(sizeof(char)*buffer_size);
+  if(!buf){
+    fprintf(stderr,"Error creating buffer for debug logging\n");
+    return;
+  }
+  fseek(*fp1, 0, SEEK_SET);
+  size_t r;
+  do {
+    r = fread(buf, sizeof(char), buffer_size, *fp1);
+    fwrite(buf, sizeof(char), r, *fp2);
+  } while(r==buffer_size);
+
+}
+
 void
 debug_printf(const char *format, ...) {
   if (debug_stderr || debug_logfile) {
@@ -716,7 +748,18 @@ debug_printf(const char *format, ...) {
       fflush(lfp);
       va_end(arglist);
     }
-  }
+
+    long int log_file_size = findLogFileSize(); 
+    if(DebugLogFileSize>0 && log_file_size>(long int)DebugLogFileSize*1024){
+      fclose(lfp);
+      FILE *fp1 = fopen(debug_log_file, "r");
+      FILE *fp2 = fopen(debug_log_file_bckp, "w");
+      copyToFile(&fp1,&fp2);
+      fclose(fp1);
+      fclose(fp2);
+      lfp = fopen(debug_log_file, "w");
+    }
+}
 }
 
 void
@@ -11641,6 +11684,12 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	       !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	NewIPPPrinterQueuesShared = 0;
+    } else if(!strcasecmp(line, "DebugLogFileSize") && value) {
+      int val = atoi(value);
+      if(val<=0){
+        DebugLogFileSize=0;
+      }
+      else DebugLogFileSize=val;
     } else if (!strcasecmp(line, "AllowResharingRemoteCUPSPrinters") && value) {
       if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
@@ -12141,6 +12190,13 @@ int main(int argc, char*argv[]) {
   strncpy(debug_log_file + strlen(logdir),
 	  DEBUG_LOG_FILE,
 	  sizeof(debug_log_file) - strlen(logdir) - 1);
+
+  strncpy(debug_log_file_bckp, logdir,
+	  sizeof(debug_log_file_bckp) - 1);
+  strncpy(debug_log_file_bckp + strlen(logdir),
+	  DEBUG_LOG_FILE_2,
+	  sizeof(debug_log_file_bckp) - strlen(logdir) - 1);
+  
   if (debug_logfile == 1)
     start_debug_logging();
 
