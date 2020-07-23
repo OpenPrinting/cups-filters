@@ -433,7 +433,7 @@ static uint16_t BrowsePort = 631;
 static browsepoll_t **BrowsePoll = NULL;
 static unsigned int NewBrowsePollQueuesShared = 0;
 static unsigned int AllowResharingRemoteCUPSPrinters = 0;
-static unsigned int DebugLogFileSize = 30;
+static unsigned int DebugLogFileSize = 300;
 static size_t NumBrowsePoll = 0;
 static guint update_netifs_sourceid = 0;
 static char local_server_str[1024];
@@ -718,12 +718,12 @@ void copyToFile(FILE **fp1, FILE **fp2){
     return;
   }
   fseek(*fp1, 0, SEEK_SET);
-  size_t r = fread(buf, sizeof(char), sizeof(buffer_size)-1, *fp1);
-  while(r == sizeof(buffer_size)-1){
-    fwrite(buf, sizeof(char), sizeof(buffer_size)-1, *fp2);
-    r = fread(buf, sizeof(char), sizeof(buffer_size)-1, *fp1);
-  }
-  fwrite(buf, sizeof(char), r, *fp2);
+  size_t r;
+  do {
+    r = fread(buf, sizeof(char), buffer_size, *fp1);
+    fwrite(buf, sizeof(char), r, *fp2);
+  } while(r==buffer_size);
+
 }
 
 void
@@ -750,7 +750,7 @@ debug_printf(const char *format, ...) {
     }
 
     long int log_file_size = findLogFileSize(); 
-    if(log_file_size>(long int)DebugLogFileSize*1024){
+    if(DebugLogFileSize>0 && log_file_size>(long int)DebugLogFileSize*1024){
       fclose(lfp);
       FILE *fp1 = fopen(debug_log_file, "r");
       FILE *fp2 = fopen(debug_log_file_bckp, "w");
@@ -11684,6 +11684,12 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	       !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	NewIPPPrinterQueuesShared = 0;
+    } else if(!strcasecmp(line, "DebugLogFileSize") && value) {
+      int val = atoi(value);
+      if(val<=0){
+        DebugLogFileSize=0;
+      }
+      else DebugLogFileSize=val;
     } else if (!strcasecmp(line, "AllowResharingRemoteCUPSPrinters") && value) {
       if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
