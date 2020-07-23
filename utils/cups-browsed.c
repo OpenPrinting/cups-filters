@@ -711,9 +711,19 @@ long int findLogFileSize()
 }
 
 void copyToFile(FILE **fp1, FILE **fp2){
-  char ch;
-  while((ch = getc(*fp1)) != EOF)
-    putc(ch, *fp2);
+  int buffer_size = 2048;
+  char *buf = (char*) malloc(sizeof(char)*buffer_size);
+  if(!buf){
+    fprintf(stderr,"Error creating buffer for debug logging\n");
+    return;
+  }
+  fseek(*fp1, 0, SEEK_SET);
+  size_t r = fread(buf, sizeof(char), sizeof(buffer_size)-1, *fp1);
+  while(r == sizeof(buffer_size)-1){
+    fwrite(buf, sizeof(char), sizeof(buffer_size)-1, *fp2);
+    r = fread(buf, sizeof(char), sizeof(buffer_size)-1, *fp1);
+  }
+  fwrite(buf, sizeof(char), r, *fp2);
 }
 
 void
