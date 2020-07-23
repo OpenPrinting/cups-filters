@@ -970,6 +970,16 @@ without jobs.
 
 .fam T
 .fi
+The MAX_LOG_SIZE defines the maximum size possible (in KBytes)
+of the log files (cups-browsed_log and cups-browsed_previous_logs)
+that is created using cups-browsed in the debugging mode.
+.PP
+.nf
+.fam C
+        DebugLogFileSize 30
+
+.fam T
+.fi
 The AutoShutdownTimeout directive specifies after how many seconds
 without local raw queues set up pointing to any discovered remote
 printers or jobs on these queues cups-browsed should actually shut
