@@ -3,7 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
-	- gstoraster, gstopdf: Do not apply margis when output format
+	- cups-browsed: Limit log file size and add backup file for
+	  previous log entries. Introduced the configuration option
+	  DebugLogFileSize in cups-browsed.conf to set the actual
+	  limit in kilobytes or 0 to get the old behavior of an
+	  unlimited size for the log file (Issue #260, Pull request
+	  #267).
+	- gstoraster, gstopdf: Do not apply margins when output format
 	  is PDF, as then we convert an incoming PostScript file to
 	  PDF (pre-pdftopdf) and do not prepare the pages for the
 	  printer (post-pdftopdf, Issue #250).
