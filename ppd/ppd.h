@@ -573,14 +573,6 @@ extern int		ppdPageSizeLimits(ppd_file_t *ppd,
 			                  ppd_size_t *minimum,
 					  ppd_size_t *maximum);
 
-/**** New in libppd (cups-filters) ****/
-extern int		ppdRasterMatchPPDSize(cups_page_header2_t *header,
-						ppd_file_t *ppd,
-						double margins[4],
-						double dimensions[4],
-						int *image_fit,
-						int *landscape);
-
 /**** New in cups-filters 1.28.0: Renamed functions from original CUPS API ****/
 extern int		ppdMarkOptions(ppd_file_t *ppd, int num_options, cups_option_t *options);
 extern int		ppdRasterInterpretPPD(cups_page_header2_t *h,
@@ -664,6 +656,14 @@ extern int		ppdGetOptions(cups_option_t **options,
 				      ipp_t *printer_attrs,
 				      ipp_t *job_attrs,
 				      ppd_file_t *ppd);
+
+/**** New in cups-filters 1.28.0: Added for pclmtoraster filter ****/
+extern int		ppdRasterMatchPPDSize(cups_page_header2_t *header,
+					      ppd_file_t *ppd,
+					      double margins[4],
+					      double dimensions[4],
+					      int *image_fit,
+					      int *landscape);
 
 
 /*
