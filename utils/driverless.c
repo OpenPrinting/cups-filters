@@ -90,6 +90,8 @@ list_printers (int mode)
 
   i = 0;
   ippfind_argv[i++] = "ippfind";
+  if(mode == 3)
+    ippfind_argv[i++] = "_ipps._tcp";
   ippfind_argv[i++] = "-T";               /* Bonjour poll timeout */
   ippfind_argv[i++] = "3";                /* 3 seconds */
   ippfind_argv[i++] = "!";                /* ! --txt printer-type */
@@ -384,8 +386,8 @@ list_printers (int mode)
 	snprintf(driverless_info, 255, "%s", driverless_support_strs[driverless_support]);
 	driverless_info[255] = '\0';
 
-	if (mode == 1)
-	  /* Call with "list" argument (PPD generator in list mode */
+	if (mode == 1 || mode == 3)
+	  /* Call with "list" argument or with "_ipps._tcp" argument (PPD generator in list mode)   */
 	  printf("\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
 		 "\" \"%s\"\n", service_uri, make, make_and_model, driverless_info, device_id);
 	else
@@ -630,6 +632,11 @@ int main(int argc, char*argv[]) {
 	   driverless printing */
 	debug = 1;
 	exit(list_printers(1));
+      } else if (!strcasecmp(argv[i], "_ipps._tcp")) {
+	/* List a driver URI and metadata for "IPPS" printer suitable for
+	   driverless printing */
+	debug = 1;
+	exit(list_printers(3));
       } else if (!strncasecmp(argv[i], "cat", 3)) {
 	/* Generate the PPD file for the given driver URI */
 	debug = 1;
@@ -687,6 +694,9 @@ int main(int argc, char*argv[]) {
 	  "  --debug                 Debug/verbose mode.\n"
 	  "  list                    List the driver URIs and metadata for all available\n"
 	  "                          IPP printers supporting driverless printing (to be\n"
+	  "                          used by CUPS).\n"
+    "  _ipps._tcp              List the driver URIs and metadata for all available\n"
+	  "                          IPPS printers supporting driverless printing (to be\n"
 	  "                          used by CUPS).\n"
 	  "  cat <driver URI>        Generate the PPD file for the driver URI\n"
 	  "                          <driver URI> (to be used by CUPS).\n"
