@@ -858,6 +858,7 @@ pclmtoraster_SOURCES = \
 pclmtoraster_CXXFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/ \
+	-std=c++11 \
 	$(CUPS_CFLAGS) \
 	$(LIBQPDF_CFLAGS)
 pclmtoraster_LDADD = \
