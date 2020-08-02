@@ -5,7 +5,7 @@
 .SH SYNOPSIS
 .nf
 .fam C
-\fBdriverless\fP [\fB-h\fP | \fB--help\fP | \fB--version\fP] [\fB-d\fP | \fB-v\fP | \fB--debug\fP] [\fBlist\fP] [\fB_ipps._tcp\fP] | [\fBcat\fP \fIdriver URI\fP] | [\fIIPP printer URI\fP]
+\fBdriverless\fP [\fB-h\fP | \fB--help\fP | \fB--version\fP] [\fB-d\fP | \fB-v\fP | \fB--debug\fP] [\fBlist\fP] [\fB_ipps._tcp\fP] [\fB_ipp._tcp\fP] | [\fBcat\fP \fIdriver URI\fP] | [\fIIPP printer URI\fP]
 
 .fam T
 .fi
@@ -48,13 +48,16 @@ Debug mode, verbose logging to stderr.
 .TP
 .B
 \fBlist\fP
-List the driver URIs and metadata for all available IPP printers suitable
+List the driver URIs and metadata for all available IPP/IPPS printers suitable
 for driverless PPD file generation (to be used by CUPS).
 .TP
 .B
 \fB_ipps._tcp\fP
-List the driver URIs and metadata for all available IPPS printers suitable
-for driverless PPD file generation (to be used by CUPS).
+List the Printer URIs for all available IPPS printers supporting driverless printing.
+.TP
+.B
+\fB_ipp._tcp\fP
+List the Printer URIs for all available IPP printers supporting driverless printing.
 .TP
 .B
 \fBcat\fP \fIdriver URI\fP

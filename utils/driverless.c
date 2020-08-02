@@ -44,7 +44,7 @@ static int		job_canceled = 0;
 static void		cancel_job(int sig);
 
 int
-list_printers (int mode)
+list_printers (int mode ,int reg_type_no)
 {
   int		driverless_support = 0,	/* Process ID for ippfind */
 		ippfind_pid,	        /* Process ID of ippfind */
@@ -78,6 +78,8 @@ list_printers (int mode)
 		pdl[256],		/* PDL */
 		driverless_info[256],	/* Driverless info string */
 		device_id[2048];	/* 1284 device ID */
+  FILE *fptr1,   /*service_name_file */
+       *fptr2;     /* service_uri_file */
 
   /* 
    * Use CUPS' ippfind utility to discover all printers designed for
@@ -90,8 +92,10 @@ list_printers (int mode)
 
   i = 0;
   ippfind_argv[i++] = "ippfind";
-  if(mode == 3)
-    ippfind_argv[i++] = "_ipps._tcp";
+  if(reg_type_no == 1)                    
+    ippfind_argv[i++] = "_ipps._tcp";     /* list IPPS entries */
+  else
+    ippfind_argv[i++] = "_ipp._tcp";      /* list IPP entries */
   ippfind_argv[i++] = "-T";               /* Bonjour poll timeout */
   ippfind_argv[i++] = "3";                /* 3 seconds */
   ippfind_argv[i++] = "!";                /* ! --txt printer-type */
@@ -125,8 +129,7 @@ list_printers (int mode)
     ippfind_argv[i++] = "{service_scheme}\t{service_name}\t{service_domain}\t\n";
   ippfind_argv[i++] = ";";
   ippfind_argv[i++] = NULL;
-  /*for (i = 0; ippfind_argv[i]; i++) fprintf(stderr, "%s ", ippfind_argv[i]);
-    fprintf(stderr, "\n");*/
+ 
 
  /*
   * Create a pipe for passing the ippfind output to post-processing
@@ -182,7 +185,19 @@ list_printers (int mode)
     close(post_proc_pipe[1]);
 
     fp = cupsFileStdin();
-
+    
+    if(reg_type_no == 1){
+      if((fptr1 = fopen("service_name_file_ipps","w"))==NULL)
+        fprintf(stderr,"Unable to write to service_name_file_ipps");
+      if((fptr2 = fopen("service_uri_file_ipps","w"))==NULL)
+        fprintf(stderr,"Unable to write to service_name_file_ipps");
+      }
+    else{
+      if((fptr1 = fopen("service_name_file_ipp","w"))==NULL)
+        fprintf(stderr,"Unable to write to service_name_file_ipp");
+      if((fptr2 = fopen("service_uri_file_ipp","w"))==NULL)
+        fprintf(stderr,"Unable to write to service_name_file_ipp");
+    }
     while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0)
     {
       /* Mark all the fields of the output of ippfind */
@@ -190,20 +205,21 @@ list_printers (int mode)
       /* First, build the DNS-SD-service-name-based URI ... */
       while (ptr && !isalnum(*ptr & 255)) ptr ++;
       if (!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t') {
-	scheme = ptr;
-	ptr += 3;
-	*ptr = '\0';
-	ptr ++;
-	reg_type = "_ipp._tcp";
+        scheme = ptr;
+        ptr += 3;
+        *ptr = '\0';
+        ptr ++;
+        reg_type = "_ipp._tcp";
       } else if (!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t') {
-	scheme = ptr;
-	ptr += 4;
-	*ptr = '\0';
-	ptr ++;
-	reg_type = "_ipps._tcp";
+        scheme = ptr;
+        ptr += 4;
+        *ptr = '\0';
+        ptr ++;
+        reg_type = "_ipps._tcp";
       } else
-	goto read_error;
-      service_name = ptr;
+	      goto read_error;
+      service_name = ptr; 
+      fprintf(fptr1 ,"%s\n",service_name);
       ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
       if (!ptr) goto read_error;
       *ptr = '\0';
@@ -223,7 +239,7 @@ list_printers (int mode)
 	 extra info for CUPS */
       if (mode == 0)
 	/* Manual call on the command line */
-	printf("%s\n", service_uri);
+  fprintf(fptr2,"%s\n",service_uri);
       else {
 	/* Call by CUPS, either as PPD generator
 	   (/usr/lib/cups/driver/, with "list" command line argument)
@@ -386,16 +402,16 @@ list_printers (int mode)
 	snprintf(driverless_info, 255, "%s", driverless_support_strs[driverless_support]);
 	driverless_info[255] = '\0';
 
-	if (mode == 1 || mode == 3)
-	  /* Call with "list" argument or with "_ipps._tcp" argument (PPD generator in list mode)   */
-	  printf("\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
-		 "\" \"%s\"\n", service_uri, make, make_and_model, driverless_info, device_id);
+	if (mode == 1)
+	  /* Call with "list" argument  (PPD generator in list mode)   */   
+      fprintf(fptr2,"\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
+      "\" \"%s\"\n", service_uri, make, make_and_model, driverless_info, device_id);
 	else
 	  /* Call without arguments and env variable "SOFTWARE" starting
 	     with "CUPS" (Backend in discovery mode) */
-	  printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
+      fprintf(fptr2,"network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
 
-      read_error:
+    read_error:
 	continue;
       }
     }
@@ -406,6 +422,9 @@ list_printers (int mode)
 
     while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
       fwrite(buffer, 1, bytes, stdout);
+    
+    fclose(fptr1);
+    fclose(fptr2);
 
     exit(0);
   }
@@ -519,7 +538,114 @@ list_printers (int mode)
   error:
 
   return (exit_status);
+}
 
+void
+copyFromFile(FILE **fptr,int *len_array,char *array[101]){
+    int i=0;
+    while(!feof(*fptr)){
+        array[i]= (char *)malloc(1024*sizeof(char));
+        fscanf(*fptr,"%[^\n]\n",array[i]);
+        i++;
+    }
+    *len_array = i ;
+    return;
+  
+}
+int
+print_list_printers(int mode,int type){
+  
+  char  *service_name_list_ipp[101],
+        *service_name_list_ipps[101];
+  int   len_service_name_list_ipp = 0,
+        len_service_name_list_ipps = 0,
+        reg_type_no = 1 ;              /* reg_type = 1 for IPPS and 0 for IPP */ 
+  int   exit_status1 = 0,
+        exit_status2 = 0;
+  FILE  *fptr1;
+
+  
+      exit_status1 = list_printers(mode, reg_type_no);
+    fprintf(stderr," DEBUG: Exit status for IPPS entries: %d\n",exit_status1);
+  
+  reg_type_no = 0;
+ 
+      exit_status2 = list_printers(mode, reg_type_no);
+    fprintf(stderr," DEBUG: Exit status for IPP entries: %d\n",exit_status2);
+  
+  
+  
+  if ((fptr1 = fopen("service_name_file_ipps", "r")) != NULL){
+    copyFromFile(&fptr1,&len_service_name_list_ipps,service_name_list_ipps);
+    fclose(fptr1);
+  }
+  else
+    fprintf(stderr,"Error: Unable to open service_name_file_ipps");
+  
+  if ((fptr1 = fopen("service_name_file_ipp", "r")) != NULL){ 
+    copyFromFile(&fptr1,&len_service_name_list_ipp,service_name_list_ipp);
+    fclose(fptr1);
+  }
+  else
+    fprintf(stderr,"Error: Unable to open service_name_file_ipp");
+    
+    
+ if(type == 0 || type == 1){
+   /* type 0 for both IPPS and IPP 
+          1 for IPPS only
+          2 for IPP only*/
+  if ((fptr1 = fopen("service_uri_file_ipps", "r")) != NULL){
+    while(!feof(fptr1)){
+        char read[10240];
+        fscanf(fptr1,"%[^\n]\n",read);
+        printf("%s\n",read);
+    }
+      fclose(fptr1);
+  }
+  else
+    fprintf(stderr,"Error: Unable to open service_uri_file_ipps");
+ }
+ if(type == 2){
+  if ((fptr1 = fopen("service_uri_file_ipp", "r")) != NULL){
+    while(!feof(fptr1)){
+        char read[10240];
+        fscanf(fptr1,"%[^\n]\n",read);
+        printf("%s\n",read);
+    }
+      fclose(fptr1);
+  }
+  else
+    fprintf(stderr,"Error: Unable to open service_uri_file_ipp");
+ }
+if(type == 0 ){
+    int i=0;
+    int j = 0;          /* counter variable to iterate over service_uri_list_ipps array */
+
+    if ((fptr1 = fopen("service_uri_file_ipp", "r")) == NULL)
+      fprintf(stderr,"Error: Unable to open service_uri_file_ipp");
+    else{
+      while(i < len_service_name_list_ipp){
+        j = 0;
+        int isPresent = 0;      //not present in service_name_list_ipps array
+        while(j < len_service_name_list_ipps){
+          if(!strcasecmp(service_name_list_ipp[i], service_name_list_ipps[j])){
+            isPresent = 1;    //present in service_name_list_ipps array
+            break;
+          }
+          j++;
+        } 
+        char read[10240];
+        fscanf(fptr1,"%[^\n]\n",read);
+        
+        if(!isPresent)
+          printf("%s\n",read);
+
+        i++;
+
+      }
+    }
+}
+  return (exit_status1 || exit_status2);
 }
 
 int
@@ -631,13 +757,16 @@ int main(int argc, char*argv[]) {
 	/* List a driver URI and metadata for each printer suitable for
 	   driverless printing */
 	debug = 1;
-	exit(list_printers(1));
+	exit(print_list_printers(1,0));
       } else if (!strcasecmp(argv[i], "_ipps._tcp")) {
-	/* List a driver URI and metadata for "IPPS" printer suitable for
-	   driverless printing */
+	/* list IPPS printer URIs for all IPPS suitable printers */
 	debug = 1;
-	exit(list_printers(3));
-      } else if (!strncasecmp(argv[i], "cat", 3)) {
+	exit(print_list_printers(0,1));
+      }else if (!strcasecmp(argv[i], "_ipp._tcp")) {
+	/* list IPPS printer URIs for all IPPS suitable printers */
+	debug = 1;
+	exit(print_list_printers(0,2));
+      }else if (!strncasecmp(argv[i], "cat", 3)) {
 	/* Generate the PPD file for the given driver URI */
 	debug = 1;
 	val = argv[i] + 3;
@@ -675,10 +804,10 @@ int main(int argc, char*argv[]) {
       strncasecmp(val, "CUPS", 4) == 0) {
     /* CUPS backend in discovery mode */
     debug = 1;
-    exit(list_printers(2));
+    exit(print_list_printers(2,0));
   } else
     /* Manual call */
-    exit(list_printers(0));
+    exit(print_list_printers(0,0));
 
  help:
 
@@ -693,17 +822,20 @@ int main(int argc, char*argv[]) {
 	  "  -v\n"
 	  "  --debug                 Debug/verbose mode.\n"
 	  "  list                    List the driver URIs and metadata for all available\n"
-	  "                          IPP printers supporting driverless printing (to be\n"
+	  "                          IPP/IPPS printers supporting driverless printing (to be\n"
 	  "                          used by CUPS).\n"
-    "  _ipps._tcp              List the driver URIs and metadata for all available\n"
+    "  _ipps._tcp              List the Printer URIs for all available\n"
 	  "                          IPPS printers supporting driverless printing (to be\n"
+	  "                          used by CUPS).\n"
+    "  _ipp._tcp               List the Printer URIs for all available\n"
+	  "                          IPP printers supporting driverless printing (to be\n"
 	  "                          used by CUPS).\n"
 	  "  cat <driver URI>        Generate the PPD file for the driver URI\n"
 	  "                          <driver URI> (to be used by CUPS).\n"
-	  "  <printer URI>           Generate the PPD file for the IPP printer URI\n"
+	  "  <printer URI>           Generate the PPD file for the IPP/IPPS printer URI\n"
 	  "                          <printer URI>.\n"
 	  "\n"
-	  "When called without options, the IPP printer URIs of all available IPP printers\n"
+	  "When called without options, the IPP/IPPS printer URIs of all available IPP/IPPS printers\n"
 	  "will be listed.\n\n"
 	  );
 
