@@ -759,6 +759,16 @@ AC_ARG_ENABLE([foomatic],
 )
 AM_CONDITIONAL([ENABLE_FOOMATIC], [test "x$enable_foomatic" = "xyes"])
 
+# ================
+# Check for pstops
+# ================
+AC_ARG_ENABLE([pstops],
+	[AS_HELP_STRING([--enable-pstops], [Enable our own pstops filter.])],
+	[enable_pstops="$enableval"],
+	[enable_pstops=no]
+)
+AM_CONDITIONAL([ENABLE_PSTOPS], [test "x$enable_pstops" = "xyes"])
+
 # =============
 # Check for php
 # =============
@@ -932,6 +942,7 @@ Build configuration:
 	png:             ${with_png}
 	php:             ${with_php}
 	php-config:      ${with_php_config}
+	pstops:          ${enable_pstops}
 	shell:           ${with_shell}
 	test-font:       ${with_test_font_path}
 	tiff:            ${with_tiff}

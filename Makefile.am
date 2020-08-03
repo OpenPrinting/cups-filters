@@ -661,6 +661,10 @@ pkgfilter_PROGRAMS += \
 	bannertopdf \
 	rastertops \
 	pclmtoraster
+if ENABLE_PSTOPS
+pkgfilter_PROGRAMS += \
+	pstops
+endif
 if ENABLE_URFTOPDF
 pkgfilter_PROGRAMS += \
 	urftopdf
@@ -861,7 +865,6 @@ pclmtoraster_SOURCES = \
 pclmtoraster_CXXFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/ \
-	-std=c++11 \
 	$(CUPS_CFLAGS) \
 	$(LIBQPDF_CFLAGS)
 pclmtoraster_LDADD = \
@@ -954,6 +957,17 @@ pdftops_LDADD = \
 	$(CUPS_LIBS) \
 	$(LIBQPDF_LIBS)
 pdftops_DEPENDENCIES = $(STRCASESTR)
+
+if ENABLE_PSTOPS
+pstops_SOURCES = \
+	filter/pstops.c
+pstops_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	$(CUPS_CFLAGS)
+pstops_LDADD = \
+	libcupsfilters.la \
+	$(CUPS_LIBS)
+endif
 
 pdftoraster_SOURCES = \
  cupsfilters/bitmap.h \
