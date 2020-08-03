@@ -1106,6 +1106,50 @@ created PDF data.
 in the location specified by TMPDIR environment variable. Default location
 is "/tmp".
 
+PCLMTORASTER
+===========
+
+1. INTRODUCTION
+
+"pclmtoraster" is a filter for pclm and raster-only pdf files.
+It reads the raster graphics from each page using the QPDF API and converts
+it to CUPS/PWG Raster. This filter supports all PCLm files. PDF files with
+single page bitmap for each page and one of the following colorspaces with
+8 Bits-per-component are supported DeviceGray, DeviceRGB and DeviceCMYK.
+
+2. LICENSE
+
+Almost all source files are under MIT like license.
+
+The required libqpdf is available under version 2.0 of the Apache License,
+e.g. here: https://github.com/qpdf/qpdf
+
+3. ENVIRONMENT VARIABLES
+
+This program refers the following environment variable;
+   PPD:  PPD file name of the printer.
+
+4. COMMAND OPTIONS
+
+1) Bi-Level output
+
+print-color-mode=bi-level
+
+Use "bi-level" color mode to apply threshold dithering for 1 bit B/W outputs.
+By default, ordered dithering is used.
+
+For other options, see CUPS documents for more details.
+
+5. INFORMATION FOR DEVELOPERS
+
+Following information is for developers, not for driver users.
+
+5.1 Temporally files location
+
+"pclmtoraster" creates temporally files if needed. Temporary files are created
+in the location specified by TMPDIR environment variable. Default location
+is "/tmp".
+
 
 URFTOPDF
 ========
