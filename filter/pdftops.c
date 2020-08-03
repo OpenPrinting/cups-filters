@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
+#include <cupsfilters/filter.h>
 #include <cupsfilters/image-private.h>
 
 #define MAX_CHECK_COMMENT_LINES	20
@@ -167,67 +168,6 @@ static void parsePDFTOPDFComment(char *filename)
 
 
 /*
- * Remove all options in option_list from the string option_str, including
- * option values after an "=" sign and preceded "no" before boolean options
- */
-
-void remove_options(char *options_str, const char **option_list)
-{
-  const char	**option;		/* Option to be removed now */
-  char		*option_start,		/* Start of option in string */
-		*option_end;		/* End of option in string */
-
-  for (option = option_list; *option; option ++)
-  {
-    option_start = options_str;
-
-    while ((option_start = strcasestr(option_start, *option)) != NULL)
-    {
-      if (!option_start[strlen(*option)] ||
-          isspace(option_start[strlen(*option)] & 255) ||
-          option_start[strlen(*option)] == '=')
-      {
-        /*
-         * Strip option...
-         */
-
-        option_end = option_start + strlen(*option);
-
-        /* Remove preceding "no" of boolean option */
-        if ((option_start - options_str) >= 2 &&
-            !strncasecmp(option_start - 2, "no", 2))
-          option_start -= 2;
-
-	/* Is match of the searched option name really at the beginning of
-	   the name of the option in the command line? */
-	if ((option_start > options_str) &&
-	    (!isspace(*(option_start - 1) & 255)))
-	{
-	  /* Prevent the same option to be found again. */
-	  option_start += 1;
-	  /* Skip */
-	  continue;
-	}
-
-        /* Remove "=" and value */
-        while (*option_end && !isspace(*option_end & 255))
-          option_end ++;
-
-        /* Remove spaces up to next option */
-        while (*option_end && isspace(*option_end & 255))
-          option_end ++;
-
-        memmove(option_start, option_end, strlen(option_end) + 1);
-      } else {
-        /* Prevent the same option to be found again. */
-        option_start += 1;
-      }
-    }
-  }
-}
-
-
-/*
  * Check whether given file is empty
  */
 
@@ -300,12 +240,19 @@ main(int  argc,				/* I - Number of command-line args */
 {
   renderer_t    renderer = CUPS_PDFTOPS_RENDERER; /* Renderer: gs or pdftops or acroread or pdftocairo or hybrid */
   int		fd = 0;			/* Copy file descriptor */
+  int           i, j;
   char		*filename,		/* PDF file to convert */
 		tempfile[1024];		/* Temporary file */
   char		buffer[8192];		/* Copy buffer */
   int		bytes;			/* Bytes copied */
-  int		num_options;		/* Number of options */
-  cups_option_t	*options;		/* Options */
+  int		num_options,		/* Number of options */
+                num_pstops_options;	/* Number of options for pstops */
+  cups_option_t	*options,		/* Options */
+                *pstops_options,	/* Options for pstops filter function */
+                *option;
+  const char    *exclude;
+  filter_data_t pstops_filter_data;
+  int           ret;
   const char	*val;			/* Option value */
   ppd_file_t	*ppd;			/* PPD file */
   char		resolution[128] = "";   /* Output resolution */
@@ -331,13 +278,7 @@ main(int  argc,				/* I - Number of command-line args */
 		exit_status = 0;	/* Exit status */
   int gray_output = 0; /* Checking for monochrome/grayscale PostScript output */
   char		*pdf_argv[100],		/* Arguments for pdftops/gs */
-		pstops_path[1024],	/* Path to pstops program */
-		*pstops_argv[7],	/* Arguments for pstops filter */
-		*pstops_options,	/* Options for pstops filter */
-		*pstops_end,		/* End of pstops filter option */
 		*ptr;			/* Pointer into value */
-  const char	*cups_serverbin;	/* CUPS_SERVERBIN environment
-					   variable */
   int		duplex, tumble;         /* Duplex settings for PPD-less
 					   printing */
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
@@ -533,23 +474,29 @@ main(int  argc,				/* I - Number of command-line args */
   }
 
  /*
-  * Build the pstops command-line...
+  * Create option list for pstops filter function, stripping options which
+  * "pstops" does not need to apply any more
   */
 
-  if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
-    cups_serverbin = CUPS_SERVERBIN;
-
-  snprintf(pstops_path, sizeof(pstops_path), "%s/filter/pstops",
-           cups_serverbin);
-
-  pstops_options = strdup(argv[5]);
-
-  /*
-   * Strip options which "pstops" does not need to apply any more
-   */
-  remove_options(pstops_options, pstops_exclude_general);
-  if (pdftopdfapplied)
-    remove_options(pstops_options, pstops_exclude_page_management);
+  num_pstops_options = 0;
+  pstops_options = NULL;
+  for (i = num_options, option = options; i > 0; i --, option ++)
+  {
+    for (j = 0, exclude = pstops_exclude_general[j]; exclude;
+	 j++, exclude = pstops_exclude_general[j])
+      if (!strcasecmp(options[i].name, exclude)) break;
+    if (exclude) continue;
+    if (pdftopdfapplied)
+    {
+      for (j = 0, exclude = pstops_exclude_page_management[j]; exclude;
+	   j++, exclude = pstops_exclude_page_management[j])
+	if (!strcasecmp(options[i].name, exclude)) break;
+      if (exclude) continue;
+    }
+    num_pstops_options = cupsAddOption(options[i].name,
+				       options[i].value,
+				       num_pstops_options, &pstops_options);
+  }
 
   if (pdftopdfapplied && deviceCollate)
   {
@@ -558,27 +505,30 @@ main(int  argc,				/* I - Number of command-line args */
     * printer does hardware collate.
     */
 
-    pstops_options = realloc(pstops_options, strlen(pstops_options) + 9);
-    if (!pstops_options) {
-      fprintf(stderr, "ERROR: Can't allocate pstops_options\n");
-      exit(2);
-    }   
-    pstops_end = pstops_options + strlen(pstops_options);
-    strcpy(pstops_end, " Collate");
+    num_pstops_options = cupsAddOption("Collate",
+				       "True",
+				       num_pstops_options, &pstops_options);
   }
 
-  pstops_argv[0] = argv[0];		/* Printer */
-  pstops_argv[1] = argv[1];		/* Job */
-  pstops_argv[2] = argv[2];		/* User */
-  pstops_argv[3] = argv[3];		/* Title */
-  if (pdftopdfapplied)
-    pstops_argv[4] = deviceCopies;     	/* Copies */
-  else
-    pstops_argv[4] = argv[4];		/* Copies */
-  pstops_argv[5] = pstops_options;	/* Options */
-  pstops_argv[6] = NULL;
+ /*
+  * Create data record to call the pstops filter function
+  */
 
-  log_command_line("pstops", pstops_argv);
+  pstops_filter_data.job_id = atoi(argv[1]);
+  pstops_filter_data.job_user = argv[2];
+  pstops_filter_data.job_title = argv[3];
+  if (pdftopdfapplied)
+    pstops_filter_data.copies = atoi(deviceCopies);
+  else
+    pstops_filter_data.copies = atoi(argv[4]);
+  pstops_filter_data.job_attrs = NULL;
+  pstops_filter_data.printer_attrs = NULL;
+  pstops_filter_data.num_options = num_pstops_options;
+  pstops_filter_data.options = pstops_options;
+  pstops_filter_data.ppdfile = NULL;
+  pstops_filter_data.ppd = ppd;
+  pstops_filter_data.logfunc = cups_logfunc;
+  pstops_filter_data.logdata = NULL;
 
  /*
   * Force monochrome/grayscale PostScript output 
@@ -1484,10 +1434,11 @@ main(int  argc,				/* I - Number of command-line args */
       close(post_proc_pipe[1]);
     }
 
-    execvp(pstops_path, pstops_argv);
-    perror("DEBUG: Unable to execute pstops program");
+    ret = pstops(0, 1, 0, &job_canceled, &pstops_filter_data);
 
-    exit(1);
+    fprintf(stderr, "ERROR: pstops filter function failed.");
+
+    exit(ret);
   }
   else if (pstops_pid < 0)
   {

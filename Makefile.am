@@ -232,6 +232,7 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/colord.h \
 	cupsfilters/colormanager.h \
 	cupsfilters/driver.h \
+	cupsfilters/filter.h \
 	cupsfilters/image.h \
 	cupsfilters/ipp.h \
 	cupsfilters/raster.h \
@@ -269,8 +270,8 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/colord.c \
 	cupsfilters/colormanager.c \
 	cupsfilters/dither.c \
+	cupsfilters/filter.c \
 	cupsfilters/image.c \
-	cupsfilters/pdftoippprinter.c \
 	cupsfilters/image-bmp.c \
 	cupsfilters/image-colorspace.c \
 	cupsfilters/image-gif.c \
@@ -289,7 +290,9 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/ipp.c \
 	cupsfilters/lut.c \
 	cupsfilters/pack.c \
+	cupsfilters/pdftoippprinter.c \
 	cupsfilters/ppdgenerator.c \
+	cupsfilters/pstops.c \
 	cupsfilters/raster.c \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
@@ -939,10 +942,12 @@ pdftops_SOURCES = \
 	filter/pdf.h
 EXTRA_pdftops_SOURCES = filter/strcasestr.c
 pdftops_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
 	$(LIBQPDF_CFLAGS)
 pdftops_LDADD = \
+	libcupsfilters.la \
 	libppd.la \
 	$(STRCASESTR) \
 	$(CUPS_LIBS) \

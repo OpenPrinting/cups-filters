@@ -1,8 +1,15 @@
 NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 -----------------------------------------------------
 
-CHANGES IN V1.28.0
+CHANGES IN V2.0.0
 
+	- pdftops: Replaced the external program call of CUPS' pstops
+	  filter by the pstops() filter function of libcupsfilters.
+	- lincupsfilters: Added the filter functions concept and added
+	  CUPS' pstops filter as the first working model of a filter
+	  function. All filters will get converted into filter
+	  functions to make it easier to use them in Printer
+	  Applications.
 	- cups-browsed: Limit log file size and add backup file for
 	  previous log entries. Introduced the configuration option
 	  DebugLogFileSize in cups-browsed.conf to set the actual
