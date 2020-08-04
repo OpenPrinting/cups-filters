@@ -849,7 +849,7 @@ main (int argc, char **argv, char *envp[])
     cupsArrayAdd(gs_args, strdup("-dAutoFilterColorImages=false"));
     cupsArrayAdd(gs_args, strdup("-dNOPLATFONTS"));
     cupsArrayAdd(gs_args, strdup("-dColorImageFilter=/FlateEncode"));
-    cupsArrayAdd(gs_args, strdup("-dPDFSETTINGS=/printer"));
+    cupsArrayAdd(gs_args, strdup("-dPDFSETTINGS=/default"));
     cupsArrayAdd(gs_args, strdup("-dColorConversionStrategy=/LeaveColorUnchanged"));
   }
   
