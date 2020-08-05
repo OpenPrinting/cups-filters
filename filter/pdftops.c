@@ -1434,7 +1434,7 @@ main(int  argc,				/* I - Number of command-line args */
       close(post_proc_pipe[1]);
     }
 
-    ret = pstops(0, 1, 0, &job_canceled, &pstops_filter_data);
+    ret = pstops(0, 1, 0, &job_canceled, &pstops_filter_data, NULL);
 
     fprintf(stderr, "ERROR: pstops filter function failed.");
 

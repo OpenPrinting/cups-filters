@@ -210,10 +210,11 @@ static void		write_text_comment(pstops_doc_t *doc,
 int                         /* O - Error status */
 pstops(int inputfd,         /* I - File descriptor input stream */
        int outputfd,        /* I - File descriptor output stream */
-       int inputseekable,   /* I - Is input stream seekable? */
+       int inputseekable,   /* I - Is input stream seekable? (unused) */
        int *jobcanceled,    /* I - Pointer to integer marking
 			           whether job is canceled */
-       filter_data_t *data) /* I - Job and printer data */
+       filter_data_t *data, /* I - Job and printer data */
+       void *parameters)    /* I - Filter-specific parameters (unused) */
 {
   pstops_doc_t	doc;			/* Document information */
   cups_file_t	*inputfp;		/* Print file */
@@ -223,8 +224,9 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   pstops_page_t *pageinfo;
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
-  
+
   (void)inputseekable;
+  (void)parameters;
 
  /*
   * Ignore broken pipe signals...

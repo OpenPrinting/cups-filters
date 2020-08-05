@@ -145,7 +145,7 @@ main(int  argc,				/* I - Number of command-line args */
   * Fire up the pstops() filter function (output to stdout, file descriptor 1
   */
 
-  ret = pstops(inputfd, 1, 0, &JobCanceled, &pstops_filter_data);
+  ret = pstops(inputfd, 1, 0, &JobCanceled, &pstops_filter_data, NULL);
 
   if (ret)
     fprintf(stderr, "ERROR: pstops filter function failed.\n");

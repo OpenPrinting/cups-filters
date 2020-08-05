@@ -70,7 +70,8 @@ typedef struct filter_data_s {
 } filter_data_t;
 
 typedef int (*filter_function_t)(int inputfd, int outputfd, int inputseekable,
-				 int *jobcanceled, filter_data_t *data);
+				 int *jobcanceled, filter_data_t *data,
+				 void *parameters);
 
 /*
  * Prototypes...
@@ -85,7 +86,8 @@ extern int pstops(int inputfd,
 		  int outputfd,
 		  int inputseekable,
 		  int *jobcanceled,
-		  filter_data_t *data);
+		  filter_data_t *data,
+		  void *parameters);
 
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,
