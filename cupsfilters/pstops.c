@@ -274,7 +274,9 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "pstops: The print file is empty.\n");
-    return (1);
+    /* Do not treat this an error, if a previous filter eliminated all
+       pages the job should get dequeued without anything printed. */
+    return (0);
   }
 
  /*
