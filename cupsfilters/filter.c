@@ -14,6 +14,8 @@
 #include "filter.h"
 #include <limits.h>
 #include <math.h>
+#include <errno.h>
+#include <signal.h>
 #include <cups/file.h>
 #include <cups/array.h>
 #include <ppd/ppd.h>
@@ -60,6 +62,118 @@ cups_logfunc(void *data,
   fflush(stderr);
   va_end(arglist);
 }
+
+
+/*
+ * 'filterCUPSWrapper()' - Wrapper function to use a filter function as
+ *                         classic CUPS filter
+ */
+
+int					/* O - Exit status */
+filterCUPSWrapper(
+     int  argc,				/* I - Number of command-line args */
+     char *argv[],			/* I - Command-line arguments */
+     filter_function_t filter,          /* I - Filter function */
+     void *parameters,                  /* I - Filter function parameters */
+     int *JobCanceled)                  /* I - Var set to 1 when job canceled */
+{
+  int	        inputfd;		/* Print file descriptor*/
+  int           inputseekable;          /* Is the input seekable (actual file
+					   not stdin)? */
+  int		num_options;		/* Number of print options */
+  cups_option_t	*options;		/* Print options */
+  filter_data_t filter_data;
+#if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
+  struct sigaction action;		/* Actions for POSIX signals */
+#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+
+
+ /*
+  * Make sure status messages are not buffered...
+  */
+
+  setbuf(stderr, NULL);
+
+ /*
+  * Ignore broken pipe signals...
+  */
+
+  signal(SIGPIPE, SIG_IGN);
+
+ /*
+  * Check command-line...
+  */
+
+  if (argc < 6 || argc > 7)
+  {
+    fprintf(stderr, "Usage: %s job-id user title copies options [file]",
+	    argv[0]);
+    return (1);
+  }
+
+ /*
+  * If we have 7 arguments, print the file named on the command-line.
+  * Otherwise, send stdin instead...
+  */
+
+  if (argc == 6)
+  {
+    inputfd = 0; /* stdin */
+    inputseekable = 0;
+  }
+  else
+  {
+   /*
+    * Try to open the print file...
+    */
+
+    if ((inputfd = open(argv[6], O_RDONLY)) < 0)
+    {
+      if (!JobCanceled)
+      {
+        fprintf(stderr, "DEBUG: Unable to open \"%s\": %s\n", argv[6],
+		strerror(errno));
+	fprintf(stderr, "ERROR: Unable to open print file");
+      }
+
+      return (1);
+    }
+
+    inputseekable = 1;
+  }
+
+ /*
+  * Process command-line options...
+  */
+
+  options     = NULL;
+  num_options = cupsParseOptions(argv[5], 0, &options);
+
+ /*
+  * Create data record to call filter function
+  */
+
+  filter_data.job_id = atoi(argv[1]);
+  filter_data.job_user = argv[2];
+  filter_data.job_title = argv[3];
+  filter_data.copies = atoi(argv[4]);
+  filter_data.job_attrs = NULL;      /* We use command line options */
+  filter_data.printer_attrs = NULL;  /* We use the queue's PPD file */
+  filter_data.num_options = num_options;
+  filter_data.options = options; /* Command line options from 5th arg */
+  filter_data.ppdfile = NULL;
+  filter_data.ppd = NULL;  /* Filter function will load PPD according
+				     to "PPD" environment variable. */
+  filter_data.logfunc = cups_logfunc; /* Logging scheme of CUPS */
+  filter_data.logdata = NULL;
+
+ /*
+  * Fire up the filter function (output to stdout, file descriptor 1)
+  */
+
+  return filter(inputfd, 1, inputseekable, JobCanceled, &filter_data, NULL);
+}
+
 
 /*
  * 'filterSetCommonOptions()' - Set common filter options for media size, etc.

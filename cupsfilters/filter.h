@@ -82,6 +82,12 @@ extern void cups_logfunc(void *data,
 			 const char *message,
 			 ...);
 
+extern int filterCUPSWrapper(int argc,
+			     char *argv[],
+			     filter_function_t filter,
+			     void *parameters,
+			     int *JobCanceled);
+
 extern int pstops(int inputfd,
 		  int outputfd,
 		  int inputseekable,

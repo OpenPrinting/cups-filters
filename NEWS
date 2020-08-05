@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, pstops: Added filterCUPSWrapper()
+	  convenience function to easily create a classic CUPS filter
+	  from a filter function.
 	- gstoraster, gstopdf: When converting PostScript to PDF use
 	  the "pdfwrite" output device with "-dPDFSETTINGS=/default"
 	  instead of with "-dPDFSETTINGS=/printer". This reproduces
