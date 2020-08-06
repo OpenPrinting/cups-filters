@@ -48,7 +48,7 @@ MIT Open Source License  -  http://www.opensource.org/
 #include <sys/wait.h>
 #include <signal.h>
 #include <errno.h>
-#include "pdf.h"
+#include <cupsfilters/pdf.h>
 
 #define PDF_MAX_CHECK_COMMENT_LINES	20
 

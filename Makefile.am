@@ -235,9 +235,10 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/filter.h \
 	cupsfilters/image.h \
 	cupsfilters/ipp.h \
-	cupsfilters/raster.h \
+	cupsfilters/pdf.h \
+	cupsfilters/pdftoippprinter.h \
 	cupsfilters/ppdgenerator.h \
-	cupsfilters/pdftoippprinter.h
+	cupsfilters/raster.h
 
 lib_LTLIBRARIES += libcupsfilters.la
 
@@ -290,16 +291,24 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/ipp.c \
 	cupsfilters/lut.c \
 	cupsfilters/pack.c \
+	cupsfilters/pdf.cxx \
 	cupsfilters/pdftoippprinter.c \
+	cupsfilters/pdftops.c \
 	cupsfilters/ppdgenerator.c \
 	cupsfilters/pstops.c \
 	cupsfilters/raster.c \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
 	$(pkgfiltersinclude_DATA)
+EXTRA_libcupsfilters_la_SOURCES = \
+	cupsfilters/getline.c \
+	cupsfilters/strcasestr.c
 libcupsfilters_la_LIBADD = \
 	libppd.la \
+	$(GETLINE) \
+	$(STRCASESTR) \
 	$(CUPS_LIBS) \
+	$(LIBQPDF_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
@@ -307,6 +316,7 @@ libcupsfilters_la_LIBADD = \
 libcupsfilters_la_CFLAGS = \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
+	$(LIBQPDF_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
 	$(TIFF_CFLAGS)
@@ -317,6 +327,9 @@ if BUILD_DBUS
 libcupsfilters_la_CFLAGS += $(DBUS_CFLAGS) -DHAVE_DBUS
 libcupsfilters_la_LIBADD += $(DBUS_LIBS)
 endif
+libcupsfilters_la_DEPENDENCIES = \
+	$(GETLINE) \
+	$(STRCASESTR)
 
 testcmyk_SOURCES = \
 	cupsfilters/testcmyk.c \
@@ -711,13 +724,12 @@ bannertopdf_SOURCES = \
 	filter/banner.c \
 	filter/banner.h \
 	filter/bannertopdf.c \
-	filter/pdf.cxx \
-	filter/pdf.h \
 	fontembed/embed.h \
 	fontembed/sfnt.h
-EXTRA_bannertopdf_SOURCES = filter/getline.c
+EXTRA_bannertopdf_SOURCES = cupsfilters/getline.c
 bannertopdf_CFLAGS = \
 	-I$(srcdir)/fontembed/ \
+	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
@@ -729,6 +741,7 @@ bannertopdf_CFLAGS = \
 bannertopdf_CXXFLAGS = $(bannertopdf_CFLAGS)
 bannertopdf_LDADD = \
 	libfontembed.la \
+	libcupsfilters.la \
 	libppd.la \
 	$(GETLINE) \
 	$(CUPS_LIBS) \
@@ -798,9 +811,7 @@ foomatic_rip_LDADD = \
 gstoraster_SOURCES = \
 	filter/gstoraster.c \
 	cupsfilters/colord.h \
-	cupsfilters/raster.h \
-	filter/pdf.cxx \
-	filter/pdf.h
+	cupsfilters/raster.h
 gstoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(LIBQPDF_CFLAGS) \
@@ -915,7 +926,7 @@ sys5ippprinter_SOURCES = \
 	filter/common.c \
 	filter/common.h \
 	filter/sys5ippprinter.c
-EXTRA_sys5ippprinter_SOURCES = filter/strcasestr.c
+EXTRA_sys5ippprinter_SOURCES = cupsfilters/strcasestr.c
 sys5ippprinter_CFLAGS = \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
@@ -927,7 +938,7 @@ sys5ippprinter_DEPENDENCIES = $(STRCASESTR)
 
 texttotext_SOURCES = \
 	filter/texttotext.c
-EXTRA_texttotext_SOURCES = filter/strcasestr.c
+EXTRA_texttotext_SOURCES = cupsfilters/strcasestr.c
 texttotext_CFLAGS = \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
@@ -939,24 +950,13 @@ texttotext_LDADD = \
 texttotext_DEPENDENCIES = $(STRCASESTR)
 
 pdftops_SOURCES = \
-	filter/common.c \
-	filter/common.h \
-	filter/pdftops.c \
-	filter/pdf.cxx \
-	filter/pdf.h
-EXTRA_pdftops_SOURCES = filter/strcasestr.c
+	filter/pdftops.c
 pdftops_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS) \
-	$(LIBQPDF_CFLAGS)
+	$(CUPS_CFLAGS)
 pdftops_LDADD = \
 	libcupsfilters.la \
-	libppd.la \
-	$(STRCASESTR) \
-	$(CUPS_LIBS) \
-	$(LIBQPDF_LIBS)
-pdftops_DEPENDENCIES = $(STRCASESTR)
+	$(CUPS_LIBS)
 
 if ENABLE_PSTOPS
 pstops_SOURCES = \

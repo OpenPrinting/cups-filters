@@ -38,7 +38,7 @@
 #endif /* HAVE_CUPS_1_7 */
 
 #include "banner.h"
-#include "pdf.h"
+#include <cupsfilters/pdf.h>
 
 
 static float get_float_option(const char *name,

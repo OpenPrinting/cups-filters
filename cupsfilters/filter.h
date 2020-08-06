@@ -88,6 +88,13 @@ extern int filterCUPSWrapper(int argc,
 			     void *parameters,
 			     int *JobCanceled);
 
+extern int pdftops(int inputfd,
+		  int outputfd,
+		  int inputseekable,
+		  int *jobcanceled,
+		  filter_data_t *data,
+		  void *parameters);
+
 extern int pstops(int inputfd,
 		  int outputfd,
 		  int inputseekable,

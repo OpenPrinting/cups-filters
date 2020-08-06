@@ -3,6 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, pdftops: Moved core functionality of pdftops
+	  into the pdftops() filter function.
+	- libcupsfilters, bannertopdf, gstoraster, pdftops: Moved
+	  common PDF/QPDF functions (pdf.cxx/pdf.h) into
+	  libcupsfilters.
+	- libcupsfilters, bannertopdf, sys5ippprinter, texttotext,
+	  pdftops: Moved portability implementations (getline.c,
+	  strcasestr.c) into libcupsfilters.
 	- libcupsfilters, pstops: Added filterCUPSWrapper()
 	  convenience function to easily create a classic CUPS filter
 	  from a filter function.
