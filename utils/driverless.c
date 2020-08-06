@@ -332,11 +332,11 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
 
 	    if (mode == 1){
 	      /* Call with "list" argument  (PPD generator in list mode)   */ 
-        snprintf(bufferOutput,8190,"\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
+        snprintf(bufferOutput,8191,"\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
             "\" \"%s\"\n", service_uri, make, make_and_model, driverless_info, device_id);  
         bufferOutput[8191] = '\0';
         if(reg_type_no < 1){
-          snprintf(copy_bufferOutput_ipps,8190,"\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
+          snprintf(copy_bufferOutput_ipps,8191,"\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
             "\" \"%s\"\n", copy_service_uri_ipps, make, make_and_model, driverless_info, device_id);
           copy_bufferOutput_ipps[8191] = '\0';
           if(cupsArrayFind(service_uri_list_ipps,copy_bufferOutput_ipps) == NULL){
@@ -353,10 +353,10 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
 	    else{
 	  /* Call without arguments and env variable "SOFTWARE" starting
 	     with "CUPS" (Backend in discovery mode) */
-       snprintf(bufferOutput,8190,"network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
+       snprintf(bufferOutput,8191,"network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
        bufferOutput[8191] = '\0';
         if(reg_type_no < 1){
-          snprintf(bufferOutput,8190,"network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", copy_service_uri_ipps, make_and_model, make_and_model, driverless_info, device_id);
+          snprintf(bufferOutput,8191,"network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", copy_service_uri_ipps, make_and_model, make_and_model, driverless_info, device_id);
           copy_bufferOutput_ipps[8191] = '\0';
           if(cupsArrayFind(service_uri_list_ipps,copy_bufferOutput_ipps) == NULL){
              /* IPPS version of IPP printer is not present */
@@ -830,10 +830,8 @@ int main(int argc, char*argv[]) {
 	  "  list                    List the driver URIs and metadata for all available\n"
 	  "                          IPP/IPPS printers supporting driverless printing (to be\n"
 	  "                          used by CUPS).\n"
-    "  _ipps._tcp              Check for only IPPS printers\n"
-	  "                          supporting driverless printing (to be  used by CUPS).\n"
-    "  _ipp._tcp               Check for only IPP printers\n"
-	  "                          supporting driverless printing (to be  used by CUPS).\n"
+    "  _ipps._tcp              Check for only IPPS printers supporting driverless printing\n"
+    "  _ipp._tcp               Check for only IPP printers supporting driverless printing\n"
 	  "  cat <driver URI>        Generate the PPD file for the driver URI\n"
 	  "                          <driver URI> (to be used by CUPS).\n"
 	  "  <printer URI>           Generate the PPD file for the IPP/IPPS printer URI\n"
