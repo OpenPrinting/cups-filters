@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- driverless: Added support for IPPS (use "ipps://..." URIs if
+	  possible, Issue #251, Pull request #270, #273).
 	- gstoraster, gstopdf: When converting PostScript to PDF use
 	  the "pdfwrite" output device with "-dPDFSETTINGS=/default"
 	  instead of with "-dPDFSETTINGS=/printer". This reproduces
