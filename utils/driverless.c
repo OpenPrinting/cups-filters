@@ -46,8 +46,8 @@ static void		cancel_job(int sig);
 static int				
 compare_service_uri(char *a,	char *b)		
 {
-  size_t size = sizeof(a);
-  return (memcmp(a,b, size));
+  
+  return (strcmp(a,b));
 }
 void 
 listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  int reg_type_no, int mode){
@@ -55,11 +55,8 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
         bytes;			/* Bytes copied */
         
   char	buffer[8192],		/* Copy buffer */
-        *bufferOutput, /*  service_uri along with metadata  */
-        * copy_bufferOutput_ipps;  /*  ipps scheme version of service_uri along with metadata  */
-  cups_file_t	*fp;			/* Post-processing input file */
-  char	*ptr;			/* Pointer into string */
-  char  *scheme = NULL,
+        *ptr,		/* Pointer into string */
+        *scheme = NULL,
         *copy_scheme_ipps = NULL, /*  ipps scheme version for ipp printers */
         *service_name = NULL,
         *domain = NULL,
@@ -81,8 +78,7 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
 		    pdl[256],		/* PDL */
 		    driverless_info[256],	/* Driverless info string */
 		    device_id[2048];	/* 1284 device ID */
-  
-        
+  cups_file_t	*fp;			/* Post-processing input file */ 
   dup2(post_proc_pipe[0], 0);
   close(post_proc_pipe[0]);
   close(post_proc_pipe[1]);
@@ -94,8 +90,6 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
     /* Mark all the fields of the output of ippfind */
     service_uri = (char *)malloc(2048*(sizeof(char)));
     copy_service_uri_ipps = (char *)malloc(2048*(sizeof(char)));
-    bufferOutput = (char *)malloc(8192*(sizeof(char)));
-    copy_bufferOutput_ipps = (char *)malloc(8192*(sizeof(char)));
 
     ptr = buffer;
     /* First, build the DNS-SD-service-name-based URI ... */
@@ -151,6 +145,7 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
 		  copy_scheme_ipps, NULL,
 		  copy_service_host_name_ipps, 0, "/");
     }
+    
    
     /* ... second, complete the output line, either URI-only or with
 	  extra info for CUPS */
@@ -332,42 +327,23 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
 
 	    if (mode == 1){
 	      /* Call with "list" argument  (PPD generator in list mode)   */ 
-        snprintf(bufferOutput,8191,"\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
-            "\" \"%s\"\n", service_uri, make, make_and_model, driverless_info, device_id);  
-        bufferOutput[8191] = '\0';
-        if(reg_type_no < 1){
-          snprintf(copy_bufferOutput_ipps,8191,"\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
-            "\" \"%s\"\n", copy_service_uri_ipps, make, make_and_model, driverless_info, device_id);
-          copy_bufferOutput_ipps[8191] = '\0';
-          if(cupsArrayFind(service_uri_list_ipps,copy_bufferOutput_ipps) == NULL){
-            /* IPPS version of IPP printer is not present */
-            printf("%s",bufferOutput);
-          }
-        }
-        else{
-         
-          cupsArrayAdd(service_uri_list_ipps , bufferOutput);
-          printf("%s",bufferOutput);
-        }
+        printf("\"driverless:%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
+            "\" \"%s\"\n", service_uri, make, make_and_model, driverless_info, device_id);
       }
 	    else{
 	  /* Call without arguments and env variable "SOFTWARE" starting
 	     with "CUPS" (Backend in discovery mode) */
-       snprintf(bufferOutput,8191,"network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
-       bufferOutput[8191] = '\0';
         if(reg_type_no < 1){
-          snprintf(bufferOutput,8191,"network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", copy_service_uri_ipps, make_and_model, make_and_model, driverless_info, device_id);
-          copy_bufferOutput_ipps[8191] = '\0';
-          if(cupsArrayFind(service_uri_list_ipps,copy_bufferOutput_ipps) == NULL){
-             /* IPPS version of IPP printer is not present */
-            printf("%s",bufferOutput);
+          if(cupsArrayFind(service_uri_list_ipps,copy_service_uri_ipps) == NULL){
+        /* IPPS version of IPP printer is not present */
+          printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
           }
         }
         else{
-          cupsArrayAdd(service_uri_list_ipps , bufferOutput);
-          printf("%s",bufferOutput);
+        cupsArrayAdd(service_uri_list_ipps , service_uri);
+        printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
         }
-      
+        
       }
 
      read_error:
@@ -764,11 +740,9 @@ int main(int argc, char*argv[]) {
 	exit(list_printers(1,reg_type_no));
       } else if (!strcasecmp(argv[i], "_ipps._tcp")) {
 	/* reg_type_no = 2 for IPPS entries only*/
-	debug = 1;
 	reg_type_no = 2;
       }else if (!strcasecmp(argv[i], "_ipp._tcp")) {
 	/* reg_type_no = 0 for IPP entries only*/
-	debug = 1;
 	reg_type_no = 0;
       }else if (!strncasecmp(argv[i], "cat", 3)) {
 	/* Generate the PPD file for the given driver URI */
@@ -811,7 +785,6 @@ int main(int argc, char*argv[]) {
     exit(list_printers(2,reg_type_no));
   } else{
     /* Manual call */
-    debug = 1;
     exit(list_printers(0,reg_type_no));
   }
 
