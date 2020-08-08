@@ -46,10 +46,8 @@ static void		cancel_job(int sig);
 static int				
 compare_service_uri(char *a,	char *b)		
 {
-  size_t size_a = strlen(a);
-  size_t size_b = strlen(b);
-  size_t size = (size_a>size_b ? size_b+1 :size_a +1);
-  return (memcmp(a,b, size));
+  
+  return (strcmp(a,b));
 }
 void 
 listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  int reg_type_no, int mode){
@@ -335,7 +333,17 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
 	    else{
 	  /* Call without arguments and env variable "SOFTWARE" starting
 	     with "CUPS" (Backend in discovery mode) */
-        printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", copy_service_uri_ipps, make_and_model, make_and_model, driverless_info, device_id);
+        if(reg_type_no < 1){
+          if(cupsArrayFind(service_uri_list_ipps,copy_service_uri_ipps) == NULL){
+        /* IPPS version of IPP printer is not present */
+          printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
+          }
+        }
+        else{
+        cupsArrayAdd(service_uri_list_ipps , service_uri);
+        printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n", service_uri, make_and_model, make_and_model, driverless_info, device_id);
+        }
+        
       }
 
      read_error:
@@ -773,6 +781,7 @@ int main(int argc, char*argv[]) {
   if ((val = getenv("SOFTWARE")) != NULL &&
       strncasecmp(val, "CUPS", 4) == 0) {
     /* CUPS backend in discovery mode */
+    debug = 1;
     exit(list_printers(2,reg_type_no));
   } else{
     /* Manual call */
