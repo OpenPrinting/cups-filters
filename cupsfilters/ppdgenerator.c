@@ -28,13 +28,7 @@
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
 #endif
-/* In CUPS < 2.3.x "ACCORDION" was mistyped "ACCORDIAN" */
-#ifndef IPP_FINISHINGS_FOLD_ACCORDION
-#define IPP_FINISHINGS_FOLD_ACCORDION 90
-#endif
-#ifndef IPP_FINISHINGS_CUPS_FOLD_ACCORDION
-#define IPP_FINISHINGS_CUPS_FOLD_ACCORDION 0x4000005A
-#endif
+
 
 /*
  * Include necessary headers.
