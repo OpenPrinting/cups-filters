@@ -648,7 +648,7 @@ int otf_get_width(OTF_FILE *otf,unsigned short gid) // {{{  -1 on error
   // ensure hmtx is there
   if (!otf->hmtx) {
     if (otf_load_more(otf)!=0) {
-      assert(0);
+      fprintf(stderr,"Unsupported OTF font / cmap table \n");
       return -1;
     }
   }

@@ -254,7 +254,7 @@ EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_widths(OTF_FILE *otf,const unsigned short *e
   // ensure hmtx is there
   if (!otf->hmtx) {
     if (otf_load_more(otf)!=0) {
-      assert(0);
+      fprintf(stderr,"Unsupported OTF font / cmap table \n");
       return NULL;
     }
   }
@@ -299,7 +299,7 @@ EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_cidwidths(OTF_FILE *otf,const BITSET glyphs)
   // ensure hmtx is there
   if (!otf->hmtx) {
     if (otf_load_more(otf)!=0) {
-      assert(0);
+      fprintf(stderr,"Unsupported OTF font / cmap table \n");
       return NULL;
     }
   }
