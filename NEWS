@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libfontembed: Removed assert() calls which cause crashes
+	  when unsupported emoji fonts are installed (Issue #254, Pull
+	  request #276).
 	- driverless: Added support for IPPS (use "ipps://..." URIs if
 	  possible, Issue #251, Pull request #270, #273).
 	- libcupsfilters, pdftops: Moved core functionality of pdftops
