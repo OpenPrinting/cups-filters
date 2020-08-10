@@ -795,7 +795,7 @@ int main(int argc, char*argv[]) {
       }else if (!strcasecmp(argv[i], "_ipp._tcp")) {
 	/* reg_type_no = 0 for IPP entries only*/
 	reg_type_no = 0;
-      }else if (!strcasecmp(argv[i], "dns-sd-off")) {
+      }else if (!strcasecmp(argv[i], "--std-ipp-uris")) {
 	/* Show URIS in standard form */
 	exit(list_printers(-1,reg_type_no));
       }else if (!strncasecmp(argv[i], "cat", 3)) {
@@ -859,7 +859,7 @@ int main(int argc, char*argv[]) {
 	  "                          used by CUPS).\n"
     "  _ipps._tcp              Check for only IPPS printers supporting driverless printing\n"
     "  _ipp._tcp               Check for only IPP printers supporting driverless printing\n"
-    "  dns-sd-off              Show URIS in standard form\n"
+    "  --std-ipp-uris          Show URIS in standard form\n"
 	  "  cat <driver URI>        Generate the PPD file for the driver URI\n"
 	  "                          <driver URI> (to be used by CUPS).\n"
 	  "  <printer URI>           Generate the PPD file for the IPP/IPPS printer URI\n"
