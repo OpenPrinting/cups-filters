@@ -46,12 +46,21 @@ static void		cancel_job(int sig);
 static int				
 compare_service_uri(char *a,	char *b)		
 {
-  
   return (strcmp(a,b));
+}
+static int				
+convert_to_port(char *a)		
+{
+  int port = 0;
+  for( int i = 0; i<strlen(a); i++)
+    port = port*10 + (a[i] - '0');
+  
+  return (port);
 }
 void 
 listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  int reg_type_no, int mode){
   int		driverless_support = 0, /*process id for ippfind */
+        port,
         bytes;			/* Bytes copied */
         
   char	buffer[8192],		/* Copy buffer */
@@ -60,7 +69,9 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
         *copy_scheme_ipps = NULL, /*  ipps scheme version for ipp printers */
         *service_name = NULL,
         *domain = NULL,
+        *ptr_to_port = NULL, /*pointer to port */
         *reg_type = NULL,
+        *service_hostname = NULL,
         *copy_reg_type_ipps = NULL, /* ipps reg_type version for ipp printers */
         *txt_usb_mfg = NULL,
         *txt_usb_mdl = NULL,
@@ -107,50 +118,88 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
       
       copy_reg_type_ipps = "_ipps._tcp";
       
-      }else if ( (!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t')) {
+    }else if ( (!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t')) {
         scheme = ptr;
         ptr += 4;
         *ptr = '\0';
         ptr ++;
         reg_type = "_ipps._tcp";
-      }else
+    }else
 	      goto read_error;
 
-    service_name = ptr; 
-      
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-    if (!ptr) goto read_error;
-    *ptr = '\0';
-    ptr ++;
-    domain = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-    if (!ptr) goto read_error;
-    *ptr = '\0';
-    ptr ++;
-    snprintf(service_host_name, sizeof(service_host_name) - 1, "%s.%s.%s",
-	    service_name, reg_type, domain);
-
-    if(reg_type_no < 1 ){
-      snprintf(copy_service_host_name_ipps, sizeof(copy_service_host_name_ipps) - 1, "%s.%s.%s",
-	    service_name, copy_reg_type_ipps, domain);
-    }
-    httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
-		  2047,
-		  scheme, NULL,
-		  service_host_name, 0, "/");
-
-    if( reg_type_no < 1 ){
-      httpAssembleURIf(HTTP_URI_CODING_ALL, copy_service_uri_ipps,
-		  2047,
-		  copy_scheme_ipps, NULL,
-		  copy_service_host_name_ipps, 0, "/");
-    }
-    
-   
     /* ... second, complete the output line, either URI-only or with
 	  extra info for CUPS */
-    if (mode == 0){
-	    /* Manual call on the command line */
+
+    if( mode == -1){
+      /* Show URIS in standard form */
+      service_hostname = ptr; 
+        
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr) goto read_error;
+      *ptr = '\0';
+      ptr ++;
+      ptr_to_port = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr) goto read_error;
+      *ptr = '\0';
+      ptr ++;
+      port = convert_to_port(ptr_to_port);
+      httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
+        2047,
+        scheme, NULL,
+        service_hostname, port, "/ipp/print");
+
+      if( reg_type_no < 1 ){
+        httpAssembleURIf(HTTP_URI_CODING_ALL, copy_service_uri_ipps,
+        2047,
+        copy_scheme_ipps, NULL,
+        service_hostname, port, "/ipp/print");
+      }
+	    
+      if(reg_type_no < 1){
+        if(cupsArrayFind(service_uri_list_ipps,copy_service_uri_ipps) == NULL){
+        /* IPPS version of IPP printer is not present */
+          printf("%s\n",service_uri);
+        }
+      }
+      else{
+        cupsArrayAdd(service_uri_list_ipps , service_uri);
+        printf("%s\n",service_uri);
+      }
+    }else if (mode == 0){
+      /* Manual call on the command line */
+      service_name = ptr; 
+        
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr) goto read_error;
+      *ptr = '\0';
+      ptr ++;
+      domain = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr) goto read_error;
+      *ptr = '\0';
+      ptr ++;
+      snprintf(service_host_name, sizeof(service_host_name) - 1, "%s.%s.%s",
+        service_name, reg_type, domain);
+
+      if(reg_type_no < 1 ){
+        snprintf(copy_service_host_name_ipps, sizeof(copy_service_host_name_ipps) - 1, "%s.%s.%s",
+        service_name, copy_reg_type_ipps, domain);
+      }
+      httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
+        2047,
+        scheme, NULL,
+        service_host_name, 0, "/");
+
+      if( reg_type_no < 1 ){
+        httpAssembleURIf(HTTP_URI_CODING_ALL, copy_service_uri_ipps,
+        2047,
+        copy_scheme_ipps, NULL,
+        copy_service_host_name_ipps, 0, "/");
+      }
+
+    
+	    
       if(reg_type_no < 1){
         if(cupsArrayFind(service_uri_list_ipps,copy_service_uri_ipps) == NULL){
         /* IPPS version of IPP printer is not present */
@@ -418,7 +467,9 @@ list_printers (int mode ,int reg_type_no)
   ippfind_argv[i++] = "-x";
   ippfind_argv[i++] = "echo";             /* Output the needed data fields */
   ippfind_argv[i++] = "-en";              /* separated by tab characters */
-  if (mode > 0)
+  if(mode < 0)
+    ippfind_argv[i++] = "{service_scheme}\t{service_hostname}\t{service_port}\t\n";
+  else if (mode > 0)
     ippfind_argv[i++] = "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
   else
     ippfind_argv[i++] = "{service_scheme}\t{service_name}\t{service_domain}\t\n";
@@ -744,6 +795,9 @@ int main(int argc, char*argv[]) {
       }else if (!strcasecmp(argv[i], "_ipp._tcp")) {
 	/* reg_type_no = 0 for IPP entries only*/
 	reg_type_no = 0;
+      }else if (!strcasecmp(argv[i], "--std-ipp-uris")) {
+	/* Show URIS in standard form */
+	exit(list_printers(-1,reg_type_no));
       }else if (!strncasecmp(argv[i], "cat", 3)) {
 	/* Generate the PPD file for the given driver URI */
 	debug = 1;
@@ -805,6 +859,7 @@ int main(int argc, char*argv[]) {
 	  "                          used by CUPS).\n"
     "  _ipps._tcp              Check for only IPPS printers supporting driverless printing\n"
     "  _ipp._tcp               Check for only IPP printers supporting driverless printing\n"
+    "  --std-ipp-uris          Show URIS in standard form\n"
 	  "  cat <driver URI>        Generate the PPD file for the driver URI\n"
 	  "                          <driver URI> (to be used by CUPS).\n"
 	  "  <printer URI>           Generate the PPD file for the IPP/IPPS printer URI\n"
