@@ -5,7 +5,7 @@
 .SH SYNOPSIS
 .nf
 .fam C
-\fBdriverless\fP [\fB-h\fP | \fB--help\fP | \fB--version\fP] [\fB-d\fP | \fB-v\fP | \fB--debug\fP] [\fBlist\fP] [\fB_ipps._tcp\fP] [\fB_ipp._tcp\fP] | [\fBcat\fP \fIdriver URI\fP] | [\fIIPP printer URI\fP]
+\fBdriverless\fP [\fB-h\fP | \fB--help\fP | \fB--version\fP] [\fB-d\fP | \fB-v\fP | \fB--debug\fP] [\fBlist\fP] [\fB_ipps._tcp\fP] [\fB_ipp._tcp\fP] [\fB--std-ipp-uris\fP] | [\fBcat\fP \fIdriver URI\fP] | [\fIIPP printer URI\fP]
 
 .fam T
 .fi
@@ -58,6 +58,10 @@ Check for only IPPS printers supporting driverless printing .
 .B
 \fB_ipp._tcp\fP
 Check for only IPP printers supporting driverless printing .
+.TP
+.B
+\fB--std-ipp-uris\fP
+Show URIS in standard form
 .TP
 .B
 \fBcat\fP \fIdriver URI\fP
