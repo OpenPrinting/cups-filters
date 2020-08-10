@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- driverless: Added "--std-ipp-uris" command line option to
+	  show listed URIs in standard hostname-based form (not the
+	  CUPS DNS-SD-service-name-based form. Only for manual call of
+	  the utility, for debugging purposes (Pull request #277).
 	- libfontembed: Removed assert() calls which cause crashes
 	  when unsupported emoji fonts are installed (Issue #254, Pull
 	  request #276).
