@@ -116,9 +116,12 @@ cups_brf_SOURCES = \
 # PPD Generators
 # ==============
 pkgppdgendir = $(CUPS_SERVERBIN)/driver
-
+driverlessfaxscripts = \
+	utils/driverless-fax
 if ENABLE_DRIVERLESS
 pkgppdgen_PROGRAMS = driverless
+pkgppdgen_SCRIPTS = \
+	$(driverlessfaxscripts)
 endif
 
 driverless_SOURCES = \
@@ -132,6 +135,11 @@ driverless_LDADD = \
 	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS)
+
+
+EXTRA_DIST += \
+	$(driverlessfaxscripts)
+
 
 # =======
 # Banners
@@ -1183,6 +1191,8 @@ endif
 if ENABLE_DRIVERLESS
 	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless $(DESTDIR)$(bindir)
 	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless $(DESTDIR)$(pkgbackenddir)
+	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless-fax $(DESTDIR)$(bindir)
+	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless-fax $(DESTDIR)$(pkgbackenddir)
 endif
 if ENABLE_BRAILLE
 	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
@@ -1228,6 +1238,8 @@ endif
 if ENABLE_DRIVERLESS
 	$(RM) $(DESTDIR)$(bindir)/driverless
 	$(RM) $(DESTDIR)$(pkgbackenddir)/driverless
+	$(RM) $(DESTDIR)$(bindir)/driverless-fax
+	$(RM) $(DESTDIR)$(pkgbackenddir)/driverless-fax
 endif
 if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/imagetoubrl
