@@ -128,7 +128,7 @@ get_printer_attributes3(http_t *http_printer,
 			int debug,
                         int* driverless_info)
 {
-  const char *uri;
+ 
   int have_http, uri_status, host_port, i = 0, total_attrs = 0, fallback,
     cap = 0;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
@@ -182,10 +182,8 @@ get_printer_attributes3(http_t *http_printer,
 
   get_printer_attributes_log[0] = '\0';
   
-  /* Convert DNS-SD-service-name-based URIs to host-name-based URIs */
-  uri = resolve_uri(raw_uri);
   /* Extract URI componants needed for the IPP request */
-  uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
+  uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, raw_uri,
 			       scheme, sizeof(scheme),
 			       userpass, sizeof(userpass),
 			       host_name, sizeof(host_name),
@@ -195,7 +193,7 @@ get_printer_attributes3(http_t *http_printer,
     /* Invalid URI */
     log_printf(get_printer_attributes_log,
 	       "get-printer-attributes: Cannot parse the printer URI: %s\n",
-	       uri);
+	       raw_uri);
     return NULL;
   }
 
@@ -207,7 +205,7 @@ get_printer_attributes3(http_t *http_printer,
 		       HTTP_ENCRYPT_IF_REQUESTED, 1, 3000, NULL)) == NULL) {
       log_printf(get_printer_attributes_log,
 		 "get-printer-attributes: Cannot connect to printer with URI %s.\n",
-		 uri);
+		 raw_uri);
       return NULL;
     }
   } else
@@ -241,7 +239,7 @@ get_printer_attributes3(http_t *http_printer,
 	sizeof(pattrs_cap_fallback[0]);
     }
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL,
-		 uri);
+		 raw_uri);
     ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
 		  "requested-attributes", pattrs_size,
 		  NULL, pattrs);
@@ -252,7 +250,7 @@ get_printer_attributes3(http_t *http_printer,
     if (response) {
       log_printf(get_printer_attributes_log,
 		 "Requested IPP attributes (get-printer-attributes) for printer with URI %s\n",
-		 uri);
+		 raw_uri);
       /* Log all printer attributes for debugging and count them */
       if (debug)
 	log_printf(get_printer_attributes_log,
@@ -310,7 +308,7 @@ get_printer_attributes3(http_t *http_printer,
     } else {
       log_printf(get_printer_attributes_log,
 		 "Request for IPP attributes (get-printer-attributes) for printer with URI %s failed: %s\n",
-		 uri, cupsLastErrorString());
+		 raw_uri, cupsLastErrorString());
       log_printf(get_printer_attributes_log, "get-printer-attributes IPP request failed:\n");
       log_printf(get_printer_attributes_log, "  - No response\n");
     }
