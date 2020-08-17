@@ -20,7 +20,6 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#include <time.h>
 #include <ctype.h>
 #include <errno.h>
 #if defined(__OpenBSD__)
@@ -32,7 +31,6 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/wait.h>
-
 #include <cups/cups.h>
 #include <cups/ppd.h>
 #include <cups/raster.h>
@@ -68,6 +66,7 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
         *scheme = NULL,
         *copy_scheme_ipps = NULL, /*  ipps scheme version for ipp printers */
         *service_name = NULL,
+        *resource = NULL,
         *domain = NULL,
         *ptr_to_port = NULL, /*pointer to port */
         *reg_type = NULL,
@@ -133,27 +132,34 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
     if( mode == -1){
       /* Show URIS in standard form */
       service_hostname = ptr; 
-        
       ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
       if (!ptr) goto read_error;
       *ptr = '\0';
       ptr ++;
+
+      resource = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr) goto read_error;
+      *ptr = '\0';
+      ptr ++;
+
       ptr_to_port = ptr;
       ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
       if (!ptr) goto read_error;
       *ptr = '\0';
       ptr ++;
       port = convert_to_port(ptr_to_port);
+
       httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
         2047,
         scheme, NULL,
-        service_hostname, port, ((isFax)? "/ipp/faxout" : "/ipp/print"));
+        service_hostname, port, "/%s",resource);
 
       if( reg_type_no < 1 ){
         httpAssembleURIf(HTTP_URI_CODING_ALL, copy_service_uri_ipps,
         2047,
         copy_scheme_ipps, NULL,
-        service_hostname, port, ((isFax)? "/ipp/faxout" : "/ipp/print"));
+        service_hostname, port, "/%s",resource);
       }
 	    
       if(reg_type_no < 1){
@@ -168,17 +174,18 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,  
       }
     }else {
       /* Manual call on the command line */
-      service_name = ptr; 
-        
+      service_name = ptr;   
       ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
       if (!ptr) goto read_error;
       *ptr = '\0';
       ptr ++;
+
       domain = ptr;
       ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
       if (!ptr) goto read_error;
       *ptr = '\0';
       ptr ++;
+      
       snprintf(service_host_name, sizeof(service_host_name) - 1, "%s.%s.%s",
         service_name, reg_type, domain);
 
@@ -473,8 +480,12 @@ list_printers (int mode ,int reg_type_no ,int isFax)
   ippfind_argv[i++] = "-x";
   ippfind_argv[i++] = "echo";             /* Output the needed data fields */
   ippfind_argv[i++] = "-en";              /* separated by tab characters */
-  if(mode < 0)
-    ippfind_argv[i++] = "{service_scheme}\t{service_hostname}\t{service_port}\t\n";
+  if(mode < 0){
+    if(isFax)
+      ippfind_argv[i++] = "{service_scheme}\t{service_hostname}\t{txt_rfo}\t{service_port}\t\n";
+    else
+      ippfind_argv[i++] = "{service_scheme}\t{service_hostname}\t{txt_rp}\t{service_port}\t\n";
+  }
   else if (mode > 0)
     ippfind_argv[i++] = "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
   else
@@ -679,220 +690,21 @@ list_printers (int mode ,int reg_type_no ,int isFax)
   return (exit_status);
 }
 
-int
-ippfind_based_uri_converter (char *uri ,char *service_uri, int isFax){
-  int		
-      ippfind_pid = 0,	        /* Process ID of ippfind for IPP */
-      post_proc_pipe[2],  /* Pipe to post-processing for IPP */
-      wait_children,		/* Number of child processes left */
-      wait_pid,		/* Process ID from wait() */
-      wait_status,		/* Status from child */
-      exit_status = 0,	/* Exit status */
-      bytes,
-      port,
-      i;
-  char
-      *ippfind_argv[100],	/* Arguments for ippfind */
-      *ptr_to_port = NULL,
-      *ptr3,
-      * service_hostname = NULL,
-    /* URI components... */
-			scheme[32],	
-			userpass[256],
-			hostname[1024],
-      reg_type[64],
-			resource[1024],
-      buffer[8192],		/* Copy buffer */
-      *ptr;		/* Pointer into string */;
-  cups_file_t
-    	*fp;			/* Post-processing input file */ 
-  int		status;		/* Status of GET request */
-  
-  status = httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme,sizeof(scheme), userpass, sizeof(userpass),
-		      hostname, sizeof(hostname), &port, resource,sizeof(resource));
-  if (status != HTTP_URI_OK) {
-    /* Invalid URI */
-    fprintf(stderr,"Error:get-printer-attributes: Cannot parse the printer URI: %s\n",uri);
-    exit(1);
-  }
-
-  snprintf(reg_type,63,"._%s._tcp",scheme);
-  reg_type[63] = '\0';
-  if ((ptr3 = strstr(hostname, reg_type)))
-      *ptr3++ = '\0';
-  
-  i = 0;
-  ippfind_argv[i++] = "ippfind";
-  ippfind_argv[i++] = reg_type+1;     /* list IPPS entries */
-  ippfind_argv[i++] = "-T";               /* Bonjour poll timeout */
-  ippfind_argv[i++] = "3";                /* 3 seconds */
-  ippfind_argv[i++] = "-N";
-  ippfind_argv[i++] = hostname;
-  if(isFax){
-    ippfind_argv[i++] = "--txt";
-    ippfind_argv[i++] = "rfo"; 
-  } 
-  ippfind_argv[i++] = "-x";
-  ippfind_argv[i++] = "echo";             /* Output the needed data fields */
-  ippfind_argv[i++] = "-en";              /* separated by tab characters */
-  ippfind_argv[i++] = "{service_hostname}\t{service_port}\t\n";
-  ippfind_argv[i++] = ";";
-  ippfind_argv[i++] = NULL;
-
-   /*
-  * Create a pipe for passing the ippfind output to post-processing
-  */
-  
-  if (pipe(post_proc_pipe)){
-    perror("ERROR: Unable to create pipe to post-processing");
-    exit_status = 1;
-    goto error;
-  }
-
-  if ((ippfind_pid = fork()) == 0){
-   /*
-    * Child comes here...
-    */
-
-    dup2(post_proc_pipe[1], 1);
-    close(post_proc_pipe[0]);
-    close(post_proc_pipe[1]);
-
-    execvp(CUPS_IPPFIND, ippfind_argv);
-    perror("ERROR: Unable to execute ippfind utility");
-
-    exit(1);
-  }
-  else if (ippfind_pid < 0){
-   /*
-    * Unable to fork!
-    */
-
-    perror("ERROR: Unable to execute ippfind utility");
-    exit_status = 1;
-    goto error;
-  }
-
-  if (debug)
-    fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
-	    ippfind_pid);
-
-  dup2(post_proc_pipe[0], 0);
-  close(post_proc_pipe[0]);
-  close(post_proc_pipe[1]);
-
-  fp = cupsFileStdin();
-
-  while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0){
-    /* Mark all the fields of the output of ippfind */
-    ptr = buffer;
-    /* First, build the DNS-SD-service-name-based URI ... */
-      while (ptr && !isalnum(*ptr & 255)) ptr ++;
-      
-    service_hostname = ptr; 
-        
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-    if (!ptr) goto read_error;
-    *ptr = '\0';
-    ptr ++;
-    ptr_to_port = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-    if (!ptr) goto read_error;
-    *ptr = '\0';
-    ptr ++;
-    port = convert_to_port(ptr_to_port);
-    httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
-      2047,scheme, NULL,service_hostname, port, (isFax?"/ipp/faxout":"/ipp/print"));
-   
-  read_error:
-      continue;
-  }
-
-/*
-  * Wait for the child processes to exit...
-  */
-
-  wait_children = 1;
-
-  while (wait_children > 0){
-   /*
-    * Wait until we get a valid process ID or the job is canceled...
-    */
-
-    while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR){
-      if (job_canceled){
-      	kill(ippfind_pid, SIGTERM);
-	      job_canceled = 0;
-      }
-    }
-
-    if (wait_pid < 0)
-      break;
-
-    wait_children --;
-   /*
-    * Report child status...
-    */
-
-    if (wait_status){
-      if (WIFEXITED(wait_status)){
-	      exit_status = WEXITSTATUS(wait_status);
-
-        if (debug)
-          fprintf(stderr, "DEBUG: PID %d (%s) stopped with status %d!\n",
-          wait_pid,(wait_pid == ippfind_pid ? "ippfind" :"Unknown process"),exit_status);
-       
-        if (wait_pid == ippfind_pid && exit_status <= 2)
-          exit_status = 0;	  
-      }
-      else if (WTERMSIG(wait_status) == SIGTERM){
-        if(debug)
-          fprintf(stderr,"DEBUG: PID %d (%s) was terminated normally with signal %d!\n",
-            wait_pid,(wait_pid == ippfind_pid ? "ippfind" :"Unknown process"),exit_status);
-      }
-      else{
-	      exit_status = WTERMSIG(wait_status);
-        if (debug)
-          fprintf(stderr, "DEBUG: PID %d (%s) crashed on signal %d!\n",wait_pid,
-            (wait_pid == ippfind_pid ? "ippfind":"Unknown process"),exit_status);
-      }
-    }
-    else{
-      if (debug)
-	      fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n",wait_pid,
-		    (wait_pid == ippfind_pid ? "ippfind" :"Unknown process"));
-    }
-  }
-
- /*
-  * Exit...
-  */
-
-  error:
-    return (exit_status);
-  }
 
 int
-generate_ppd ( char *uri ,int isFax){
+generate_ppd (const char *uri ,int isFax){
 
   ipp_t *response = NULL;
   char buffer[65536], ppdname[1024];
   int 
     fd, 
-    bytes,
-    exit_status_uri_converter = 0;
+    bytes;
   char *ptr1, 
-       *ptr2,
-       *std_uri = NULL;
+       *ptr2;
    /* Request printer properties via IPP to generate a PPD file for the
      printer */
-  std_uri = (char *)malloc(2048*(sizeof(char)));
-  exit_status_uri_converter = ippfind_based_uri_converter(uri, std_uri ,isFax);
-
-  if(debug)
-    fprintf(stderr,"DEBUG : ippfind_based_uri_converter exit status: %d \n",exit_status_uri_converter);
-
-  response = get_printer_attributes(std_uri, NULL, 0, NULL, 0, 1);
+  
+  response = get_printer_attributes4(uri, NULL, 0, NULL, 0, 1,isFax);
 
   if (debug) {
     ptr1 = get_printer_attributes_log;
