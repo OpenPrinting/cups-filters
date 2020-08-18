@@ -41,7 +41,7 @@ extern "C" {
 char get_printer_attributes_log[LOGSIZE];
 
 const char     *resolve_uri(const char *raw_uri);
-const char     *ippfind_based_uri_converter(const char *uri );
+const char     *ippfind_based_uri_converter(const char *uri ,int is_fax);
 #ifdef HAVE_CUPS_1_6
                                 /* Enum of possible driverless options */
 enum driverless_support_modes {

@@ -146,7 +146,7 @@ get_printer_attributes3(http_t *http_printer,
                         int* driverless_info)
 {
   return get_printer_attributes5(http_printer, raw_uri, pattrs, pattrs_size,
-				 req_attrs, req_attrs_size, debug, driverless_info,0);
+				 req_attrs, req_attrs_size, debug, driverless_info,-1);
 }
 /* Get attributes of a printer specified only by URI and given info about fax-support*/
 ipp_t   *get_printer_attributes4(const char* raw_uri,
@@ -155,7 +155,7 @@ ipp_t   *get_printer_attributes4(const char* raw_uri,
 				const char* const req_attrs[],
 				int req_attrs_size,
 				int debug,
-        int isFax)
+        int is_fax)
 {
   #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
@@ -190,7 +190,7 @@ ipp_t   *get_printer_attributes4(const char* raw_uri,
 #endif /* HAVE_SIGSET */
 
   return get_printer_attributes5(NULL, raw_uri, pattrs, pattrs_size,
-				 req_attrs, req_attrs_size, debug,NULL,isFax);
+				 req_attrs, req_attrs_size, debug,NULL,is_fax);
 }
 /* Get attributes of a printer specified by URI and under a given HTTP
    connection, for example via a domain socket, and give info about used
@@ -204,7 +204,7 @@ get_printer_attributes5(http_t *http_printer,
 			int req_attrs_size,
 			int debug,
       int* driverless_info,
-      int isFax )
+      int is_fax )
 {
   
   const char *uri;
@@ -262,10 +262,10 @@ get_printer_attributes5(http_t *http_printer,
   get_printer_attributes_log[0] = '\0';
 
   /* Convert DNS-SD-service-name-based URIs to host-name-based URIs */
-  if(!isFax)
+  if(is_fax == -1)
     uri = resolve_uri(raw_uri);
   else
-    uri = ippfind_based_uri_converter(raw_uri);
+    uri = ippfind_based_uri_converter(raw_uri,is_fax);
    
   /* Extract URI componants needed for the IPP request */
   uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
@@ -419,7 +419,7 @@ get_printer_attributes5(http_t *http_printer,
   return NULL;
 }
 const char*
-ippfind_based_uri_converter (const char *uri ){
+ippfind_based_uri_converter (const char *uri ,int is_fax){
   int		
       ippfind_pid = 0,	        /* Process ID of ippfind for IPP */
       post_proc_pipe[2],  /* Pipe to post-processing for IPP */
@@ -469,13 +469,14 @@ ippfind_based_uri_converter (const char *uri ){
   ippfind_argv[i++] = "-T";               /* Bonjour poll timeout */
   ippfind_argv[i++] = "3";                /* 3 seconds */
   ippfind_argv[i++] = "-N";
-  ippfind_argv[i++] = hostname;  
-  ippfind_argv[i++] = "--txt";
-  ippfind_argv[i++] = "rfo"; 
+  ippfind_argv[i++] = hostname; 
   ippfind_argv[i++] = "-x";
   ippfind_argv[i++] = "echo";             /* Output the needed data fields */
   ippfind_argv[i++] = "-en";              /* separated by tab characters */
-  ippfind_argv[i++] = "{service_hostname}\t{txt_rfo}\t{service_port}\t\n";
+  if(is_fax)
+    ippfind_argv[i++] = "{service_hostname}\t{txt_rfo}\t{service_port}\t\n";
+  else
+    ippfind_argv[i++] = "{service_hostname}\t{txt_rp}\t{service_port}\t\n";
   ippfind_argv[i++] = ";";
   ippfind_argv[i++] = NULL;
 
