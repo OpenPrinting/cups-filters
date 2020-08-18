@@ -297,6 +297,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/ppdgenerator.c \
 	cupsfilters/pstops.c \
 	cupsfilters/raster.c \
+	cupsfilters/rastertops.c \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
 	$(pkgfiltersinclude_DATA)
