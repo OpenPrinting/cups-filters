@@ -1409,9 +1409,15 @@ void add_mimetype_attributes(char* cluster_name, ipp_t **merged_attributes)
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER,IPP_TAG_MIMETYPE,
 		    attributes[attr_no], num_value, NULL,
 		    (const char * const *)values);
+
+      for (int k = 0; k < i; k++) {
+        free(values[k]);
+        values[k] = NULL;
+      }
     }
+    cupsArrayDelete(list);
+    list = NULL;
   }
-  cupsArrayDelete(list);
 }
 
 /*add_tagzero_attributes - Adds attribute to the merged_attribute variable for
@@ -1476,9 +1482,15 @@ void add_tagzero_attributes(char* cluster_name, ipp_t **merged_attributes)
 		    IPP_CONST_TAG(IPP_TAG_KEYWORD),
                     attributes[attr_no], num_value, NULL,
                     (const char * const *)values);
+
+      for (int k = 0; k < i; k++) {
+        free(values[k]);
+        values[k] = NULL;
+      }
     }
+    cupsArrayDelete(list);
+    list = NULL;
   }
-  cupsArrayDelete(list);
 }
 
 /*add_keyword_attributes - Adds attributes to the merged_attribute variable for
@@ -1540,9 +1552,15 @@ void add_keyword_attributes(char* cluster_name, ipp_t **merged_attributes)
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
 		    attributes[attr_no], num_value, NULL,
 		    (const char * const *)values);
+
+      for (int k = 0; k < i; k++) {
+        free(values[k]);
+        values[k] = NULL;
+      }
     }
+    cupsArrayDelete(list);
+    list = NULL;
   }
-  cupsArrayDelete(list);
 }
 
 /*add_enum_attributes - Adds attributes to the merged_attribute variable for
@@ -1552,7 +1570,7 @@ void add_enum_attributes(char* cluster_name, ipp_t **merged_attributes)
 {
   int                  count, i, value;
   remote_printer_t     *p;
-  char                 *str;
+  char                 *str = NULL;
   char                 *q;
   cups_array_t         *list;
   ipp_attribute_t      *attr;
@@ -1600,8 +1618,14 @@ void add_enum_attributes(char* cluster_name, ipp_t **merged_attributes)
       ippAddIntegers(*merged_attributes, IPP_TAG_PRINTER,IPP_TAG_ENUM,
 		     attributes[attr_no], num_value,values);
     }
+
+    if (str != NULL) {
+      free(str);
+      str = NULL;
+    }
+    cupsArrayDelete(list);
+    list = NULL;
   }
-  cupsArrayDelete(list);
 }
 
 /*add_margin_attribute - Adds margin attributes to the merged_attribute variable for the cluster.*/
@@ -1657,8 +1681,14 @@ void add_margin_attributes(char* cluster_name, ipp_t **merged_attributes)
       ippAddIntegers(*merged_attributes, IPP_TAG_PRINTER,IPP_TAG_INTEGER,
 		     attributes[attr_no], num_value,values);
     }
+
+    if (str != NULL) {
+      free(str);
+      str = NULL;
+    }
+    cupsArrayDelete(list);
+    list = NULL;
   }
-  cupsArrayDelete(list);
 }
 
 /*add_resolution_attributes - Adds resolution attributes to the merged_attribute
@@ -1710,8 +1740,9 @@ void add_resolution_attributes(char* cluster_name, ipp_t **merged_attributes)
 			attributes[attr_no], num_resolution,
 			IPP_RES_PER_INCH, xres, yres);
     }
+    cupsArrayDelete(res_array);
+    res_array = NULL;
   }
-  cupsArrayDelete(res_array);
 }
 
 /*add_mediasize_attribute - Adds media sizes to the merged_attribute for the
@@ -1810,7 +1841,11 @@ void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
       }
     }
   }
+
+  free(temp);
+  free(temp_range);
   cupsArrayDelete(sizes);
+  cupsArrayDelete(size_ranges);
 }
 
 /*add_mediadatabase_attribute - Adds media-col-database attributes for the
@@ -1928,6 +1963,8 @@ add_mediadatabase_attributes(char* cluster_name, ipp_t **merged_attributes)
       }
     }
   }
+
+  free(temp);
   cupsArrayDelete(media_database);
 }
 
@@ -1974,8 +2011,11 @@ void add_jobpresets_attribute(char* cluster_name, ipp_t ** merged_attributes)
     }
   }
 
-  if (num_preset == 0)
+  if (num_preset == 0) {
+    cupsArrayDelete(list);
+    cupsArrayDelete(added_presets);
     return;
+  }
 
   preset_attribute = ippAddCollections(*merged_attributes, IPP_TAG_PRINTER,
 				       "job-presets-supported", num_preset,
@@ -1998,6 +2038,9 @@ void add_jobpresets_attribute(char* cluster_name, ipp_t ** merged_attributes)
       }
     }
   }
+
+  cupsArrayDelete(list);
+  cupsArrayDelete(added_presets);
 }
 
 /* get_pagesize: Function returns the standard/custom page size using
@@ -2029,6 +2072,8 @@ static cups_array_t* get_pagesize(ipp_t *printer_attributes)
     cupsArrayAdd(page_media, ppdsizename);
   }
   free(ppdsizename);
+  cupsArrayDelete(sizes);
+
   return page_media;
 }
 
@@ -2669,8 +2714,14 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
 	  }
         }
       }
+
+      cupsArrayDelete(sizes);
+      sizes = NULL;
     }
   }
+
+  cupsArrayDelete(sizes_ppdname);
+
   return cluster_sizes;
 }
 
@@ -2718,6 +2769,9 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
         cupsArrayAdd(pagesizes, ppdsizename);
       }
       cluster_options[i] = pagesizes;
+
+      cupsArrayDelete(sizes);
+      sizes = NULL;
     }
   }
 
@@ -2774,10 +2828,21 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
 		cupsArrayAdd(conflict_pairs, constraint);
 	      }
 	    }
+
+	    cupsArrayDelete(printer_second_options);
+	    printer_second_options = NULL;
 	  }
 	}
+
+	cupsArrayDelete(printer_first_options);
+	printer_first_options = NULL;
     }
   }
+
+  for(i = 0; i < no_of_ppd_keywords; i ++) {
+    cupsArrayDelete(cluster_options[i]);
+  }
+
   free(ppdsizename);
   return conflict_pairs;
 }
@@ -3010,6 +3075,8 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
 				     temp->bottom_margin,
 				     temp->media_source, temp->media_type);
     ippSetCollection(*merged_attributes, &media_col_default, 0, current_media);
+
+    free(temp);
   }
 
   /*Finding the default colormodel for the cluster*/
@@ -3691,7 +3758,8 @@ get_printer_uuid(http_t *http_printer,
 		 const char* raw_uri)
 {
   ipp_t *response = NULL;
-  ipp_attribute_t *attr;
+  ipp_attribute_t *attr = NULL;
+  char * uuid = NULL;
 
   const char * const pattrs[] = {
     "printer-uuid",
@@ -3713,13 +3781,18 @@ get_printer_uuid(http_t *http_printer,
   }
 
   attr = ippFindAttribute(response, "printer-uuid", IPP_TAG_URI);
+
+
   if (attr)
-    return (ippGetString(attr, 0, NULL) + 9);
+    uuid = ippGetString(attr, 0, NULL) + 9;
   else {
     debug_printf ("Printer with URI %s: Cannot read \"printer-uuid\" IPP attribute!\n",
 		  raw_uri);
-    return NULL;
   }
+
+  ippDelete(response);
+
+  return uuid;
 }
 
 static void
@@ -8114,6 +8187,19 @@ gboolean update_cups_queues(gpointer unused) {
 	      ppdfile = strdup(buffer);
 	    }
 	  }
+
+	  if (num_cluster_printers != 1) {
+	    free(default_pagesize);
+	    default_pagesize = NULL;
+	    free(make_model);
+	    make_model = NULL;
+	    cupsArrayDelete(conflicts);
+	    conflicts = NULL;
+	    ippDelete(printer_attributes);
+	    printer_attributes = NULL;
+	    cupsArrayDelete(sizes);
+	    sizes = NULL;
+	  }
 	} else if (IPPPrinterQueueType == PPD_NO) {
 	  ppdfile = NULL;
 
@@ -8430,6 +8516,19 @@ gboolean update_cups_queues(gpointer unused) {
 	    }
 	  }
 	}
+
+	if (num_cluster_printers != 1) {
+	  free(default_pagesize);
+	  default_pagesize = NULL;
+	  free(make_model);
+	  make_model = NULL;
+	  cupsArrayDelete(conflicts);
+	  conflicts = NULL;
+	  ippDelete(printer_attributes);
+	  printer_attributes = NULL;
+	  cupsArrayDelete(sizes);
+	  sizes = NULL;
+	}
       } else {
 	/* Device URI: using implicitclass backend for IPP network printer */
 	httpAssembleURI(HTTP_URI_CODING_ALL, device_uri, sizeof(device_uri),
@@ -8531,8 +8630,9 @@ gboolean update_cups_queues(gpointer unused) {
 	    cupsFilePrintf(out, "%s\n", line);
 	  }
 	  /* Save the NickName of the PPD to check whether external
-	     manipulations of the print queue have replaced the PPD */
-	  if (!strncmp(line, "*NickName:", 10)) {
+	     manipulations of the print queue have replaced the PPD.
+	     Check whether nickname is defined too */
+	  if (!strncmp(line, "*NickName:", 10) && p->nickname == NULL) {
 	    ptr = strchr(line, '"');
 	    if (ptr) {
 	      ptr ++;
