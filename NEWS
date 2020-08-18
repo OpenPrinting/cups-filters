@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Started adding functions to read out IPP
+	  attributes from the job and check them against the IPP
+	  attributes (capabilities) of the printer:
+	  ippAttrEnumValForPrinter(), ippAttrIntValForPrinter()
 	- driverless: Added "--std-ipp-uris" command line option to
 	  show listed URIs in standard hostname-based form (not the
 	  CUPS DNS-SD-service-name-based form. Only for manual call of

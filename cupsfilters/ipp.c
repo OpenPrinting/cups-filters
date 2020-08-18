@@ -336,3 +336,118 @@ get_printer_attributes3(http_t *http_printer,
   return NULL;
 }
 #endif /* HAVE_CUPS_1_6 */
+
+const char* /* O - Attribute value as string */
+ippAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
+						      as to respond
+						      get-printer-attributes,
+						      or NULL to not consider */
+			 ipp_t *job_attrs,     /* I - Job attributes */
+			 const char *attr_name)/* I - Attribute name */
+{
+  ipp_attribute_t *attr;
+  char valuebuffer[65536],
+       printer_attr_name[256];
+  int  i;
+
+  if (job_attrs == NULL || attr_name == NULL)
+    return NULL;
+
+  /* Check whether job got supplied the named attribute and read out its value
+     as string */
+  if ((attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
+    valuebuffer[0] = '\0';
+  else
+    ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+
+  /* Check the printer properties if supplied to see whether the job attribute
+     value is valid or if the job attribute was not supplied. Use printer
+     default value of job attribute is invalid or not supplied 
+     If no printer attributes are supplied (NULL), simply accept the job
+     attribute value */
+  if (printer_attrs) {
+    if (valuebuffer[0]) {
+      /* Check whether value is valid according to printer attributes */
+      snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
+	       "%s-supported", attr_name);
+      if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
+				   IPP_TAG_ZERO)) != NULL) {
+	for (i = 0; i < ippGetCount(attr); i ++)
+	  if (strcasecmp(valuebuffer, ippGetString(attr, i, NULL)) == 0)
+	    break; /* Job attribute value is valid */
+	if (i ==  ippGetCount(attr))
+	  valuebuffer[0] = '\0'; /* Job attribute value is not valid */
+      }
+    }
+    if (!valuebuffer[0]) {
+      /* Use default value from printer attributes */
+      snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
+	       "%s-default", attr_name);
+      if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
+				   IPP_TAG_ZERO)) != NULL)
+	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+    }
+  }
+
+  return (valuebuffer[0] ? strdup(valuebuffer) : NULL);
+}
+
+int                 /* O - 1: Success; 0: Error */
+ippAttrIntValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
+						     as to respond
+						     get-printer-attributes,
+						     or NULL to not consider */
+			ipp_t *job_attrs,     /* I - Job attributes */
+			const char *attr_name,/* I - Attribute name */
+			int   *value)         /* O - Attribute value as
+						     integer */
+{
+  ipp_attribute_t *attr;
+  char printer_attr_name[256];
+  int  retval, val, min, max;
+
+  if (job_attrs == NULL || attr_name == NULL)
+    return 0;
+
+  /* Check whether job got supplied the named attribute and read out its value
+     as integer */
+  if ((attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
+    retval = 0;
+  else {
+    retval = 1;
+    val = ippGetInteger(attr, 0);
+  }
+
+  /* Check the printer properties if supplied to see whether the job attribute
+     value is valid or if the job attribute was not supplied. Use printer
+     default value of job attribute is invalid or not supplied 
+     If no printer attributes are supplied (NULL), simply accept the job
+     attribute value */
+  if (printer_attrs) {
+    if (retval == 1) {
+      /* Check whether value is valid according to printer attributes */
+      snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
+	       "%s-supported", attr_name);
+      if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
+				   IPP_TAG_RANGE)) != NULL) {
+	min = ippGetRange(attr, 0, &max);
+	if (val < min || val > max)
+	  retval = 0; /* Job attribute value out of range */
+      }
+    }
+    if (retval == 0) {
+      /* Use default value from printer attributes */
+      snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
+	       "%s-default", attr_name);
+      if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
+				   IPP_TAG_ZERO)) != NULL) {
+	retval = 1;
+	val = ippGetInteger(attr, 0);
+      }
+    }
+  }
+
+  if (retval == 1)
+    *value = val;
+  return retval;
+}

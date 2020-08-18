@@ -82,6 +82,14 @@ ipp_t   *get_printer_attributes3(http_t *http_printer,
 				 int* driverless_support);
 #endif /* HAVE_CUPS_1_6 */
 
+const char* ippAttrEnumValForPrinter(ipp_t *printer_attrs,
+				     ipp_t *job_attrs,
+				     const char *attr_name);
+int ippAttrIntValForPrinter(ipp_t *printer_attrs,
+			    ipp_t *job_attrs,
+			    const char *attr_name,
+			    int   *value);
+
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
