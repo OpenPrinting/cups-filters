@@ -2834,8 +2834,8 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
 	  }
 	}
 
-	cupsArrayDelete(printer_first_options);
-	printer_first_options = NULL;
+      cupsArrayDelete(printer_first_options);
+      printer_first_options = NULL;
     }
   }
 
@@ -3759,7 +3759,7 @@ get_printer_uuid(http_t *http_printer,
 {
   ipp_t *response = NULL;
   ipp_attribute_t *attr = NULL;
-  char * uuid = NULL;
+  const char * uuid = NULL;
 
   const char * const pattrs[] = {
     "printer-uuid",
@@ -7616,11 +7616,11 @@ gboolean update_cups_queues(gpointer unused) {
   ipp_t         *printer_attributes = NULL;
   cups_array_t  *sizes=NULL;
   ipp_t         *printer_ipp_response; 
-  char    *make_model;
+  char          *make_model = NULL;
   const char    *pdl=NULL;
   int           color;
   int           duplex;
-  char          *default_pagesize;
+  char          *default_pagesize = NULL;
   const char    *default_color = NULL;
   int           cups_queues_updated = 0;
 
@@ -8189,16 +8189,26 @@ gboolean update_cups_queues(gpointer unused) {
 	  }
 
 	  if (num_cluster_printers != 1) {
-	    free(default_pagesize);
-	    default_pagesize = NULL;
-	    free(make_model);
-	    make_model = NULL;
-	    cupsArrayDelete(conflicts);
-	    conflicts = NULL;
-	    ippDelete(printer_attributes);
-	    printer_attributes = NULL;
-	    cupsArrayDelete(sizes);
-	    sizes = NULL;
+	    if (default_pagesize != NULL) {
+	      free(default_pagesize);
+	      default_pagesize = NULL;
+	    }
+	    if (make_model != NULL) {
+	      free(make_model);
+	      make_model = NULL;
+	    }
+	    if (conflicts != NULL) {
+	      cupsArrayDelete(conflicts);
+	      conflicts = NULL;
+	    }
+	    if (printer_attributes != NULL) {
+	      ippDelete(printer_attributes);
+	      printer_attributes = NULL;
+	    }
+	    if (sizes != NULL) {
+	      cupsArrayDelete(sizes);
+	      sizes = NULL;
+	    }
 	  }
 	} else if (IPPPrinterQueueType == PPD_NO) {
 	  ppdfile = NULL;
@@ -8518,16 +8528,26 @@ gboolean update_cups_queues(gpointer unused) {
 	}
 
 	if (num_cluster_printers != 1) {
-	  free(default_pagesize);
-	  default_pagesize = NULL;
-	  free(make_model);
-	  make_model = NULL;
-	  cupsArrayDelete(conflicts);
-	  conflicts = NULL;
-	  ippDelete(printer_attributes);
-	  printer_attributes = NULL;
-	  cupsArrayDelete(sizes);
-	  sizes = NULL;
+	  if (default_pagesize != NULL) {
+	    free(default_pagesize);
+	    default_pagesize = NULL;
+	  }
+	  if (make_model != NULL) {
+	    free(make_model);
+	    make_model = NULL;
+	  }
+	  if (conflicts != NULL) {
+	    cupsArrayDelete(conflicts);
+	    conflicts = NULL;
+	  }
+	  if (printer_attributes != NULL) {
+	    ippDelete(printer_attributes);
+	    printer_attributes = NULL;
+	  }
+	  if (sizes != NULL) {
+	    cupsArrayDelete(sizes);
+	    sizes = NULL;
+	  }
 	}
       } else {
 	/* Device URI: using implicitclass backend for IPP network printer */
