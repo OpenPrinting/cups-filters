@@ -291,6 +291,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/ipp.c \
 	cupsfilters/lut.c \
 	cupsfilters/pack.c \
+	cupsfilters/pclmtoraster.cxx \
 	cupsfilters/pdf.cxx \
 	cupsfilters/pdftoippprinter.c \
 	cupsfilters/pdftops.c \
@@ -870,20 +871,13 @@ urftopdf_LDADD = \
 	$(LIBQPDF_LIBS)
 
 pclmtoraster_SOURCES = \
-	filter/pclmtoraster.cxx \
-	cupsfilters/bitmap.h \
-	cupsfilters/raster.h \
-	filter/unirast.h
+	filter/pclmtoraster.c
 pclmtoraster_CXXFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS) \
-	$(LIBQPDF_CFLAGS)
+	$(CUPS_CFLAGS)
 pclmtoraster_LDADD = \
 	libcupsfilters.la \
-	libppd.la \
-	$(CUPS_LIBS) \
-	$(LIBQPDF_LIBS)
+	$(CUPS_LIBS)
 
 rastertopdf_SOURCES = \
 	filter/rastertopdf.cpp

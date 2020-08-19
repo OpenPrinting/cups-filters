@@ -7,8 +7,8 @@
  *   which should have been included with this file.
  */
 
-#ifndef _CUPS_FILTERS_RASTER_H_
-#  define _CUPS_FILTERS_RASTER_H_
+#ifndef _CUPS_FILTERS_FILTER_H_
+#  define _CUPS_FILTERS_FILTER_H_
 
 #  ifdef __cplusplus
 extern "C" {
@@ -88,6 +88,13 @@ extern int filterCUPSWrapper(int argc,
 			     void *parameters,
 			     int *JobCanceled);
 
+extern int pclmtoraster(int inputfd,
+			int outputfd,
+			int inputseekable,
+			int *jobcanceled,
+			filter_data_t *data,
+			void *parameters);
+
 extern int pdftops(int inputfd,
 		  int outputfd,
 		  int inputseekable,
@@ -135,7 +142,7 @@ extern void filterUpdatePageVars(int Orientation,
 }
 #  endif /* __cplusplus */
 
-#endif /* !_CUPS_FILTERS_RASTER_H_ */
+#endif /* !_CUPS_FILTERS_FILTER_H_ */
 
 /*
  * End

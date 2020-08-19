@@ -33,7 +33,7 @@ extern "C" {
 #include <cups/raster.h>
 
 unsigned char 	*convertbits		(unsigned char *src, unsigned char *dst,
-					unsigned int x, unsigned int y, unsigned int cupsNumColors,unsigned int m);
+					unsigned int x, unsigned int y, unsigned int cupsNumColors,unsigned int bits);
 void 		writepixel		(unsigned char *dst, unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf,
 					unsigned int cupsNumColors, unsigned int bits, cups_order_t colororder);
 unsigned char	*reverseOneBitLine	(unsigned char *src, unsigned char *dst, unsigned int pixels, unsigned int size);
