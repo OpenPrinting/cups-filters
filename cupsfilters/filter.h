@@ -102,6 +102,13 @@ extern int pstops(int inputfd,
 		  filter_data_t *data,
 		  void *parameters);
 
+extern int rastertops(int inputfd,
+		  int outputfd,
+		  int inputseekable,
+		  int *jobcanceled,
+		  filter_data_t *data,
+		  void *parameters);
+
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,
 				   cups_option_t *options,
