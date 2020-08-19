@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, rastertops: Moved core functionality of
+	  rastertops into the rastertops() filter function (Pull
+	  request #282).
+	- cups-browsed: Fixed several memory leaks, mainly from the
+	  code to merge printer IPP attributes for clusters (Pull
+	  request #281).
 	- libcupsfilters: Started adding functions to read out IPP
 	  attributes from the job and check them against the IPP
 	  attributes (capabilities) of the printer:
