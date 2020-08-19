@@ -5,7 +5,7 @@ CHANGES IN V1.28.0
 
 	- cups-browsed: Fixed several memory leaks, mainly from the
 	  code to merge printer IPP attributes for clusters (Pull
-	  request #281).
+	  request #281, #283).
 	- driverless: Added "--std-ipp-uris" command line option to
 	  show listed URIs in standard hostname-based form (not the
 	  CUPS DNS-SD-service-name-based form. Only for manual call of
