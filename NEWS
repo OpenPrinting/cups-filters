@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, pclmtoraster: Moved core functionality of
+	  pclmtoraster into the pclmtoraster() filter function (Pull
+	  request #275).
 	- libcupsfilters, rastertops: Moved core functionality of
 	  rastertops into the rastertops() filter function (Pull
 	  request #282).
