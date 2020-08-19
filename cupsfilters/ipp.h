@@ -96,7 +96,7 @@ ipp_t   *get_printer_attributes5(http_t *http_printer,
 				 int req_attrs_size,
 				 int debug,
 				 int* driverless_support,
-         int isFax);
+         		 int resolve_uri_type);
 
 
 #endif /* HAVE_CUPS_1_6 */
