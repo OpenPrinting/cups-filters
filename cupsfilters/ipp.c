@@ -40,6 +40,12 @@ static int    debug = 0;
 static int		job_canceled = 0;
 static void		cancel_job(int sig);
 
+enum resolve_uri_converter_type	/**** Resolving DNS-SD based URI ****/
+{
+  CUPS_BACKEND_URI_CONVERTER = -1,
+  IPPFIND_BASED_CONVERTER_FOR_PRINT_URI = 0,
+  IPPFIND_BASED_CONVERTER_FOR_FAX_URI = 1
+} ;
 static int				
 convert_to_port(char *a)		
 {
@@ -146,7 +152,7 @@ get_printer_attributes3(http_t *http_printer,
                         int* driverless_info)
 {
   return get_printer_attributes5(http_printer, raw_uri, pattrs, pattrs_size,
-				 req_attrs, req_attrs_size, debug, driverless_info,-1);
+				 req_attrs, req_attrs_size, debug, driverless_info,CUPS_BACKEND_URI_CONVERTER);
 }
 /* Get attributes of a printer specified only by URI and given info about fax-support*/
 ipp_t   *get_printer_attributes4(const char* raw_uri,
@@ -188,9 +194,13 @@ ipp_t   *get_printer_attributes4(const char* raw_uri,
 #else
   signal(SIGTERM, cancel_job);
 #endif /* HAVE_SIGSET */
-
-  return get_printer_attributes5(NULL, raw_uri, pattrs, pattrs_size,
-				 req_attrs, req_attrs_size, debug,NULL,is_fax);
+  if(is_fax)
+    return get_printer_attributes5(NULL, raw_uri, pattrs, pattrs_size,
+				 req_attrs, req_attrs_size, debug,NULL,IPPFIND_BASED_CONVERTER_FOR_FAX_URI);
+  else
+    return get_printer_attributes5(NULL, raw_uri, pattrs, pattrs_size,
+				 req_attrs, req_attrs_size, debug,NULL,IPPFIND_BASED_CONVERTER_FOR_PRINT_URI);
+  
 }
 /* Get attributes of a printer specified by URI and under a given HTTP
    connection, for example via a domain socket, and give info about used
@@ -204,7 +214,7 @@ get_printer_attributes5(http_t *http_printer,
 			int req_attrs_size,
 			int debug,
       int* driverless_info,
-      int is_fax )
+      int resolve_uri_type )
 {
   
   const char *uri;
@@ -262,10 +272,10 @@ get_printer_attributes5(http_t *http_printer,
   get_printer_attributes_log[0] = '\0';
 
   /* Convert DNS-SD-service-name-based URIs to host-name-based URIs */
-  if(is_fax == -1)
+  if(resolve_uri_type == CUPS_BACKEND_URI_CONVERTER)
     uri = resolve_uri(raw_uri);
   else
-    uri = ippfind_based_uri_converter(raw_uri,is_fax);
+    uri = ippfind_based_uri_converter(raw_uri,resolve_uri_type);
    
   /* Extract URI componants needed for the IPP request */
   uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
@@ -429,7 +439,8 @@ ippfind_based_uri_converter (const char *uri ,int is_fax){
       exit_status = 0,	/* Exit status */
       bytes,
       port,
-      i;
+      i,
+      output_of_fax_uri = 0;   
   char
       *ippfind_argv[100],	/* Arguments for ippfind */
       *ptr_to_port = NULL,
@@ -468,6 +479,10 @@ ippfind_based_uri_converter (const char *uri ,int is_fax){
   ippfind_argv[i++] = reg_type+1;     /* list IPPS entries */
   ippfind_argv[i++] = "-T";               /* Bonjour poll timeout */
   ippfind_argv[i++] = "3";                /* 3 seconds */
+  if(is_fax){
+    ippfind_argv[i++] = "--txt";
+    ippfind_argv[i++] = "rfo";
+  }
   ippfind_argv[i++] = "-N";
   ippfind_argv[i++] = hostname; 
   ippfind_argv[i++] = "-x";
@@ -525,6 +540,8 @@ ippfind_based_uri_converter (const char *uri ,int is_fax){
   fp = cupsFileStdin();
 
   while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0){
+    if(is_fax)
+      output_of_fax_uri = 1; /* fax-uri requested is from fax-capable device */
     /* Mark all the fields of the output of ippfind */
     ptr = buffer;
     /* First, build the DNS-SD-service-name-based URI ... */
@@ -611,6 +628,10 @@ ippfind_based_uri_converter (const char *uri ,int is_fax){
 	      fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n",wait_pid,
 		    (wait_pid == ippfind_pid ? "ippfind" :"Unknown process"));
     }
+  }
+  if(is_fax && !output_of_fax_uri){
+    fprintf(stderr,"fax URI requested from not fax-capable device\n");
+    exit(1);
   }
 
   
