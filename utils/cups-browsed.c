@@ -5424,7 +5424,7 @@ record_default_printer(const char *printer, int local) {
   return 0;
 }
 
-const char*
+char*
 retrieve_default_printer(int local) {
   FILE *fp = NULL;
   const char *filename = local ? local_default_printer_file :
@@ -5447,7 +5447,7 @@ retrieve_default_printer(int local) {
   }
   fclose(fp);
   
-  return printer;
+  return (printer ? strdup(printer) : NULL);
 }
 
 int
@@ -5720,9 +5720,12 @@ queue_creation_handle_default(const char *printer) {
   /* If this queue is recorded as the former default queue (and the current
      default is local), set it as default (the CUPS notification handler
      will record the local default printer then) */
-  const char *recorded_default = retrieve_default_printer(0);
-  if (recorded_default == NULL || strcasecmp(recorded_default, printer))
+  char *recorded_default = retrieve_default_printer(0);
+  if (recorded_default == NULL || strcasecmp(recorded_default, printer)) {
+    if (recorded_default) free(recorded_default);
     return 0;
+  }
+  free(recorded_default);
   char *current_default = get_cups_default_printer();
   if (current_default == NULL || !is_created_by_cups_browsed(current_default)) {
     if (set_cups_default_printer(printer) < 0) {
@@ -5763,14 +5766,16 @@ queue_removal_handle_default(const char *printer) {
     debug_printf("Recorded the fact that the current printer (%s) is the default printer before deleting the queue and returning to the local default printer.\n",
 		 printer);
   /* Switch back to a recorded local printer, if available */
-  const char *local_default = retrieve_default_printer(1);
+  char *local_default = retrieve_default_printer(1);
   if (local_default != NULL) {
-    if (set_cups_default_printer(local_default) >= 0)
+    if (set_cups_default_printer(local_default) >= 0) {
       debug_printf("Switching back to %s as default printer.\n",
 		   local_default);
-    else {
+      free(local_default);
+    } else {
       debug_printf("ERROR: Unable to switch back to %s as default printer.\n",
 		   local_default);
+      free(local_default);
       return -1;
     }
   }
@@ -6586,7 +6591,7 @@ on_printer_deleted (CupsNotifier *object,
 		    gpointer user_data)
 {
   remote_printer_t *p;
-  const char* r;
+  char *r;
   char *local_queue_name_lower = NULL;
   local_printer_t *local_printer = NULL;
 
@@ -6633,7 +6638,7 @@ on_printer_deleted (CupsNotifier *object,
       if ((r = retrieve_default_printer(1)) != NULL) {
 	if (default_printer != NULL)
 	  free((void *)default_printer);
-	default_printer = strdup(r);
+	default_printer = r;
       }
     }
     /* Schedule for immediate creation of the CUPS queue */
