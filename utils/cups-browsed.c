@@ -466,7 +466,11 @@ static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_DRIVERL
 static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_ALL;
 #endif
 #endif
+#ifdef SAVING_CREATED_QUEUES
 static unsigned int KeepGeneratedQueuesOnShutdown = 1;
+#else
+static unsigned int KeepGeneratedQueuesOnShutdown = 0;
+#endif
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static int NewIPPPrinterQueuesShared = 0;
 static int AutoClustering = 1;
