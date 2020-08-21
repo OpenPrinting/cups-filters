@@ -443,7 +443,15 @@ static unsigned int HttpRemoteTimeout = 10;
 static unsigned int HttpMaxRetries = 5;
 static unsigned int DNSSDBasedDeviceURIs = 1;
 static ip_based_uris_t IPBasedDeviceURIs = IP_BASED_URIS_NO;
-static local_queue_naming_t LocalQueueNamingRemoteCUPS=LOCAL_QUEUE_NAMING_DNSSD;
+#ifdef NAMING_MAKE_MODEL
+static local_queue_naming_t LocalQueueNamingRemoteCUPS = LOCAL_QUEUE_NAMING_MAKE_MODEL;
+#else
+# ifdef NAMING_REMOTE_NAME
+static local_queue_naming_t LocalQueueNamingRemoteCUPS = LOCAL_QUEUE_NAMING_REMOTE_NAME;
+# else
+static local_queue_naming_t LocalQueueNamingRemoteCUPS = LOCAL_QUEUE_NAMING_DNSSD;
+# endif
+#endif
 static local_queue_naming_t LocalQueueNamingIPPPrinter=LOCAL_QUEUE_NAMING_DNSSD;
 static unsigned int OnlyUnsupportedByCUPS = 0;
 static unsigned int UseCUPSGeneratedPPDs = 0;
@@ -458,7 +466,11 @@ static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_DRIVERL
 static create_ipp_printer_queues_t CreateIPPPrinterQueues = IPP_PRINTERS_ALL;
 #endif
 #endif
+#ifdef SAVING_CREATED_QUEUES
 static unsigned int KeepGeneratedQueuesOnShutdown = 1;
+#else
+static unsigned int KeepGeneratedQueuesOnShutdown = 0;
+#endif
 static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static int NewIPPPrinterQueuesShared = 0;
 static int AutoClustering = 1;
