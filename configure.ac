@@ -850,6 +850,29 @@ PKG_CHECK_EXISTS([liblouis], [
 AM_CONDITIONAL(ENABLE_BRAILLE, test "x$enable_braille" = xyes)
 AC_SUBST(TABLESDIR)
 
+# =========================================
+# Local queue naming for remote CUPS queues
+# =========================================
+AC_ARG_WITH([remote-cups-local-queue-naming],
+	[AS_HELP_STRING([--with-remote-cups-local-queue-naming=DNS-SD|MakeModel|RemoteName], [Choose the origin of local queue naming for remote CUPS queues, default based on DNS-SD ID])],
+	[case "x$withval" in
+		"xMakeModel")
+			REMOTE_CUPS_LOCAL_QUEUE_NAMING="MakeModel"
+	                AC_DEFINE([NAMING_MAKE_MODEL], [1], [Define that we create local queues for remote CUPS queues based on printer Make-Model])
+			;;
+		"xRemoteName")
+			REMOTE_CUPS_LOCAL_QUEUE_NAMING="RemoteName"
+	                AC_DEFINE([NAMING_REMOTE_NAME], [1], [Define that we create local queues for remote CUPS queues based on their print queue name on the server])
+			;;
+		*)
+			REMOTE_CUPS_LOCAL_QUEUE_NAMING="DNS-SD"
+	                AC_DEFINE([NAMING_DNSSD], [1], [Define that we create local queues for remote CUPS queues based on DNS-SD name])
+			;;
+	esac],
+	[REMOTE_CUPS_LOCAL_QUEUE_NAMING="DNS-SD"
+	 AC_DEFINE([NAMING_DNSSD], [1], [Define that we create local queues for remote CUPS queues based on DNS-SD name])]
+)
+
 # =========================================================
 # Select a different shell instead of the default /bin/bash
 # =========================================================
@@ -919,9 +942,9 @@ AC_OUTPUT
 AC_MSG_NOTICE([
 ==============================================================================
 Environment settings:
-	CFLAGS:          ${CFLAGS}
-	CXXFLAGS:        ${CXXFLAGS}
-	LDFLAGS:         ${LDFLAGS}
+	CFLAGS:                                    ${CFLAGS}
+	CXXFLAGS:                                  ${CXXFLAGS}
+	LDFLAGS:                                   ${LDFLAGS}
 Build configuration:
 	cups-config:     ${with_cups_config}
 	font directory:  ${sysconfdir}/${FONTDIR}
@@ -955,6 +978,7 @@ Build configuration:
 	driverless:      ${enable_driverless}
 	apple-raster:    ${APPLE_RASTER_FILTER}
 	pclm:            ${enable_pclm}
+	local queue naming for remote CUPS queues: ${REMOTE_CUPS_LOCAL_QUEUE_NAMING}
 	all ipp printer auto-setup: ${enable_auto_setup_all}
 	only driverless auto-setup: ${enable_auto_setup_driverless_only}
 	only local auto-setup: ${enable_auto_setup_local_only}
