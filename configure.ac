@@ -850,6 +850,16 @@ PKG_CHECK_EXISTS([liblouis], [
 AM_CONDITIONAL(ENABLE_BRAILLE, test "x$enable_braille" = xyes)
 AC_SUBST(TABLESDIR)
 
+# ===============================================
+# Should we keep generated queues after shutdown?
+# ===============================================
+AC_ARG_ENABLE(saving-created-queues, AS_HELP_STRING([--enable-saving-created-queues], [enable saving created queues during shutdown]),
+	      [SAVING_CREATED_QUEUES=$enableval],[SAVING_CREATED_QUEUES="no"])
+
+AS_IF([test "x$SAVING_CREATED_QUEUES" != "xno"],
+      [AC_DEFINE([SAVING_CREATED_QUEUES], [1], [Define whether we save queues during shutdown])]
+)
+
 # =========================================
 # Local queue naming for remote CUPS queues
 # =========================================
@@ -979,6 +989,7 @@ Build configuration:
 	apple-raster:    ${APPLE_RASTER_FILTER}
 	pclm:            ${enable_pclm}
 	local queue naming for remote CUPS queues: ${REMOTE_CUPS_LOCAL_QUEUE_NAMING}
+	keep generated queues during shutdown:     ${SAVING_CREATED_QUEUES}
 	all ipp printer auto-setup: ${enable_auto_setup_all}
 	only driverless auto-setup: ${enable_auto_setup_driverless_only}
 	only local auto-setup: ${enable_auto_setup_local_only}
