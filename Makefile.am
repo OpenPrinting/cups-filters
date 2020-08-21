@@ -299,6 +299,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pstops.c \
 	cupsfilters/raster.c \
 	cupsfilters/rastertops.c \
+	cupsfilters/rastertopdf.cpp \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
 	$(pkgfiltersinclude_DATA)
@@ -310,6 +311,7 @@ libcupsfilters_la_LIBADD = \
 	$(GETLINE) \
 	$(STRCASESTR) \
 	$(CUPS_LIBS) \
+	$(LCMS_LIBS) \
 	$(LIBQPDF_LIBS) \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
@@ -318,6 +320,7 @@ libcupsfilters_la_LIBADD = \
 libcupsfilters_la_CFLAGS = \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
+	$(LCMS_CFLAGS) \
 	$(LIBQPDF_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
@@ -640,8 +643,7 @@ pdftopdf_LDADD = \
 # ======================
 genfilterscripts = \
 	filter/imagetops \
-	filter/texttops  \
-	filter/rastertopclm
+	filter/texttops
 pkgfilter_SCRIPTS = $(genfilterscripts)
 gsfilterscripts = \
 	filter/gstopxl \
@@ -672,6 +674,7 @@ pkgfilter_PROGRAMS += \
 	rastertoescpx \
 	rastertopclx \
 	texttopdf \
+	rastertopclm \
 	rastertopdf \
 	bannertopdf \
 	rastertops \
@@ -879,20 +882,23 @@ pclmtoraster_LDADD = \
 	libcupsfilters.la \
 	$(CUPS_LIBS)
 
-rastertopdf_SOURCES = \
-	filter/rastertopdf.cpp
-rastertopdf_CXXFLAGS = \
+rastertopclm_SOURCES = \
+	filter/rastertopclm.c
+rastertopclm_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	$(LCMS_CFLAGS) \
-	$(LIBQPDF_CFLAGS) \
-	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/
+	-I$(srcdir)/cupsfilters/
+rastertopclm_LDADD = \
+	$(CUPS_LIBS) \
+	libcupsfilters.la
+
+rastertopdf_SOURCES = \
+	filter/rastertopdf.c
+rastertopdf_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
 rastertopdf_LDADD = \
 	$(CUPS_LIBS) \
-	$(LCMS_LIBS) \
-	$(LIBQPDF_LIBS) \
-	libcupsfilters.la \
-	libppd.la
+	libcupsfilters.la
 
 mupdftoraster_SOURCES = \
 	filter/mupdftoraster.c
