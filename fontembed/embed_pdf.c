@@ -125,6 +125,13 @@ static EMB_PDF_FONTDESCR *emb_pdf_fd_new(const char *fontname,
   ret->fontname=ret->data+len;
   len+=strlen(fontname)+1;
   if (subset_tag) {
+    //Allocate new array and copy in data
+    char *newArray = new char[7];
+    memcpy(newArray, ret->fontname,1);
+    //Delete old array
+    delete [] ret->fontname;
+    //Swap pointers and new size
+    ret->fontname = newArray;
     strncpy(ret->fontname,subset_tag,6);
     ret->fontname[6]='+';
     strcpy(ret->fontname+7,fontname);
