@@ -5,7 +5,7 @@ CHANGES IN V2.0.0
 
 	- libcupsfilters, rastertopdf, rastertopclm: Moved core
 	  functionality of rastertopdf into the rastertopdf() filter
-	  function (Pull request #288).
+	  function (Pull request #288, #289).
 	- cups-browsed: Added ./configure options
 	  --enable-saving-created-queues and
 	  --with-remote-cups-local-queue-naming (Pull request: #253,
@@ -15,7 +15,7 @@ CHANGES IN V2.0.0
 	  request #275).
 	- libcupsfilters, rastertops: Moved core functionality of
 	  rastertops into the rastertops() filter function (Pull
-	  request #282).
+	  request #282, #290).
 	- cups-browsed: Fixed several memory leaks, mainly from the
 	  code to merge printer IPP attributes for clusters (Pull
 	  request #281, #283).
