@@ -73,6 +73,12 @@ typedef int (*filter_function_t)(int inputfd, int outputfd, int inputseekable,
 				 int *jobcanceled, filter_data_t *data,
 				 void *parameters);
 
+typedef enum {				 /* Possible formats for rastertopdf filter */ 
+  OUTPUT_FORMAT_PDF,	/* PDF */
+  OUTPUT_FORMAT_PCLM	/* PCLM */
+} OutFormatType;
+
+
 /*
  * Prototypes...
  */
@@ -103,6 +109,13 @@ extern int pdftops(int inputfd,
 		  void *parameters);
 
 extern int pstops(int inputfd,
+		  int outputfd,
+		  int inputseekable,
+		  int *jobcanceled,
+		  filter_data_t *data,
+		  void *parameters);
+
+extern int rastertopdf(int inputfd,
 		  int outputfd,
 		  int inputseekable,
 		  int *jobcanceled,

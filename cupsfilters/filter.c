@@ -171,7 +171,7 @@ filterCUPSWrapper(
   * Fire up the filter function (output to stdout, file descriptor 1)
   */
 
-  return filter(inputfd, 1, inputseekable, JobCanceled, &filter_data, NULL);
+  return filter(inputfd, 1, inputseekable, JobCanceled, &filter_data, parameters);
 }
 
 
