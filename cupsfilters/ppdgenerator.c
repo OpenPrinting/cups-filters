@@ -1863,6 +1863,25 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     cupsFilePrintf(fp, "*cupsJobPassword: \"%s\"\n", pattern);
   }
 
+  /*
+   * Fax specific options
+   */
+  
+  if ((attr = ippFindAttribute(response, "ipp-features-supported",
+				     IPP_TAG_KEYWORD))!= NULL && ippContainsString(attr, "faxout")){
+    
+    cupsFilePuts(fp, "*cupsIPPFaxOut: True\n");
+    human_readable = lookup_option("Phone", opt_strings_catalog,
+				   printer_opt_strings_catalog);
+
+    cupsFilePrintf(fp, "*OpenUI Phone/Phone Number: PickOne\n"
+		   "*OrderDependency: 10 AnySetup *Phone\n"
+		   "*DefaultPhone: None\n" "*Phone None: %s\n" "CloseUI: *Phone\n",(human_readable ? human_readable : ""));
+    cupsFilePrintf(fp,"*CustomPhone True: %s\n" "*ParamCustomPhone Text: 1 string 0 64\n","");
+    
+
+  }
+
  /*
   * PDLs and common resolutions ...
   */
