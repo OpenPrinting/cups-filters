@@ -41,6 +41,7 @@ extern "C" {
 char get_printer_attributes_log[LOGSIZE];
 
 const char     *resolve_uri(const char *raw_uri);
+const char     *ippfind_based_uri_converter(const char *uri ,int is_fax);
 #ifdef HAVE_CUPS_1_6
                                 /* Enum of possible driverless options */
 enum driverless_support_modes {
@@ -80,6 +81,24 @@ ipp_t   *get_printer_attributes3(http_t *http_printer,
 				 int req_attrs_size,
 				 int debug,
 				 int* driverless_support);
+ipp_t   *get_printer_attributes4(const char* raw_uri,
+				const char* const pattrs[],
+				int pattrs_size,
+				const char* const req_attrs[],
+				int req_attrs_size,
+				int debug,
+        int isFax);
+ipp_t   *get_printer_attributes5(http_t *http_printer,
+				 const char* raw_uri,
+				 const char* const pattrs[],
+				 int pattrs_size,
+				 const char* const req_attrs[],
+				 int req_attrs_size,
+				 int debug,
+				 int* driverless_support,
+         		 int resolve_uri_type);
+
+
 #endif /* HAVE_CUPS_1_6 */
 
 const char* ippAttrEnumValForPrinter(ipp_t *printer_attrs,
