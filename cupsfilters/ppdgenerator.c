@@ -1632,7 +1632,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
   int			outputorderinfofound = 0,
 			faceupdown = 1,
 			firsttolast = 1;
-  int			manual_copies = -1;
+  int			manual_copies = -1,
+          is_fax = 0;
 
  /*
   * Range check input...
@@ -1863,24 +1864,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     cupsFilePrintf(fp, "*cupsJobPassword: \"%s\"\n", pattern);
   }
 
-  /*
-   * Fax specific options
-   */
   
-  if ((attr = ippFindAttribute(response, "ipp-features-supported",
-				     IPP_TAG_KEYWORD))!= NULL && ippContainsString(attr, "faxout")){
-    
-    cupsFilePuts(fp, "*cupsIPPFaxOut: True\n");
-    human_readable = lookup_option("Phone", opt_strings_catalog,
-				   printer_opt_strings_catalog);
-
-    cupsFilePrintf(fp, "*OpenUI Phone/Phone Number: PickOne\n"
-		   "*OrderDependency: 10 AnySetup *Phone\n"
-		   "*DefaultPhone: None\n" "*Phone None: %s\n" "CloseUI: *Phone\n",(human_readable ? human_readable : ""));
-    cupsFilePrintf(fp,"*CustomPhone True: %s\n" "*ParamCustomPhone Text: 1 string 0 64\n","");
-    
-
-  }
 
  /*
   * PDLs and common resolutions ...
@@ -1927,6 +1911,16 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 	  format ++;
       }
     }
+  }
+  /*
+   * Fax 
+   */
+  
+  if ((attr = ippFindAttribute(response, "ipp-features-supported",
+				     IPP_TAG_KEYWORD))!= NULL && ippContainsString(attr, "faxout")){
+    
+    cupsFilePuts(fp, "*cupsIPPFaxOut: True\n");
+    is_fax = 1;
   }
 
   /* Check for each CUPS/cups-filters-supported PDL, starting with the
@@ -3964,6 +3958,23 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       }
       cupsFilePuts(fp, "*CloseUI: *print-scaling\n");
     }
+  }
+   /*
+  * Phone Option for Fax..
+  */
+
+  if(is_fax){
+    human_readable = lookup_option("Phone", opt_strings_catalog,
+				   printer_opt_strings_catalog);
+
+    cupsFilePrintf(fp, "*OpenUI *phone/%s: PickOne\n"
+		   "*OrderDependency: 10 AnySetup *phone\n"
+		   "*Defaultphone: None\n" 
+       "*phone None: \"\"\n" 
+       "*CloseUI: *phone\n",
+       (human_readable ? human_readable : "Phone Number"));
+    cupsFilePrintf(fp,"*Customphone True: \"\"\n" 
+      "*ParamCustomphone Text: 1 string 0 64\n");
   }
 
  /*
