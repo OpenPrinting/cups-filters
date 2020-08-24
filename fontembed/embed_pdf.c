@@ -88,11 +88,12 @@ const char *emb_pdf_get_fontfile_subtype(EMB_PARAMS *emb) // {{{
 // }}}
 
 // {{{ static EMB_PDF_FONTDESCR *emb_pdf_fd_new(fontname,subset_tag,cid_registry,cid_ordering,cid_supplement,panose)
-static EMB_PDF_FONTDESCR *emb_pdf_fd_new(const char *fontname,
+static EMB_PDF_FONTDESCR *emb_pdf_fd_new(
                                   const char *subset_tag,
                                   const char *cid_registry, // or supplement==-1
                                   const char *cid_ordering, // or supplement==-1
-                                  int cid_supplement) // -1 for non-cid
+                                  int cid_supplement,
+                                  const char *fontname) // -1 for non-cid
 {
   assert(fontname);
   EMB_PDF_FONTDESCR *ret;
@@ -125,14 +126,8 @@ static EMB_PDF_FONTDESCR *emb_pdf_fd_new(const char *fontname,
   ret->fontname=ret->data+len;
   len+=strlen(fontname)+1;
   if (subset_tag) {
-    //Allocate new array and copy in data
-    char *newArray = new char[7];
-    memcpy(newArray, ret->fontname,1);
-    //Delete old array
-    delete [] ret->fontname;
-    //Swap pointers and new size
-    ret->fontname = newArray;
-    strncpy(ret->fontname,subset_tag,6);
+    //strncpy(ret->fontname,subset_tag,6);
+    snprintf(ret->fontname, 6, "%s", subset_tag);
     ret->fontname[6]='+';
     strcpy(ret->fontname+7,fontname);
     len+=7;
