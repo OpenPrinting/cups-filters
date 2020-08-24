@@ -1,14 +1,14 @@
 #!/bin/sh
 #
-# Note: This is only a wrapper for driverless-fax, the real work is done by driverless
+# Note: This is only a wrapper for driverless-fax, the real work is done by
+# driverless
 #
-# (C) 2012 Till Kamppeter <till.kamppeter@gmail.com>
+# (C) 2020 Nidhi Jain
+# (C) 2012-2020 Till Kamppeter <till.kamppeter@gmail.com>
 #
 # Released under GPL 2 or later
 #
 
-echo "DEBUG: driverless-fax argv[$#] = $@" >&2
- 
 if [ $# -eq "0" ]; then
     DEVICE_TYPE=FAX /usr/lib/cups/backend/driverless
     elif [ $# -eq "1" ]; then
@@ -16,6 +16,5 @@ if [ $# -eq "0" ]; then
     elif [ $# -eq "2" ]; then
         DEVICE_TYPE=FAX /usr/lib/cups/driver/driverless "$1" "$2"
     else
-        echo "ERROR : Too many arguments"
+        echo "ERROR: Too many arguments"
 fi
-
