@@ -399,30 +399,40 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
 		 driverless_support_strs[driverless_support]);
         driverless_info[255] = '\0';
 
-        if (mode == 1) {
-          /* Call with "list" argument  (PPD generator in list mode)   */ 
-          printf("\"%s%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
-		 "\" \"%s\"\n",
-		 ((isFax) ? "driverless-fax:" : "driverless:"),
-		 service_uri, make, make_and_model, driverless_info, device_id);
-        } else {
-	  /* Call without arguments and env variable "SOFTWARE" starting
-	     with "CUPS" (Backend in discovery mode) */
-          if (reg_type_no < 1) {
-            if (cupsArrayFind(service_uri_list_ipps, copy_service_uri_ipps) ==
-		NULL) {
-	      /* IPPS version of IPP printer is not present */
+	if (reg_type_no < 1) {
+	  if (cupsArrayFind(service_uri_list_ipps, copy_service_uri_ipps) ==
+	      NULL) {
+	    /* IPPS version of IPP printer is not present */
+	    if  (mode == 1)
+	      /* Call with "list" argument  (PPD generator in list mode)   */ 
+	      printf("\"%s%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
+		     "\" \"%s\"\n",
+		     ((isFax) ? "driverless-fax:" : "driverless:"),
+		     service_uri, make, make_and_model, driverless_info,
+		     device_id);
+	    else
+	      /* Call without arguments and env variable "SOFTWARE" starting
+		 with "CUPS" (Backend in discovery mode) */
 	      printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n",
 		     service_uri, make_and_model, make_and_model,
 		     driverless_info, device_id);
-            }
-          } else {
-	    cupsArrayAdd(service_uri_list_ipps, service_uri);
+	  }
+	} else {
+	  cupsArrayAdd(service_uri_list_ipps, service_uri);
+	  if  (mode == 1)
+	    /* Call with "list" argument  (PPD generator in list mode)   */ 
+	    printf("\"%s%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
+		   "\" \"%s\"\n",
+		   ((isFax) ? "driverless-fax:" : "driverless:"),
+		   service_uri, make, make_and_model, driverless_info,
+		   device_id);
+	  else
+	    /* Call without arguments and env variable "SOFTWARE" starting
+	       with "CUPS" (Backend in discovery mode) */
 	    printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n",
 		   service_uri, make_and_model, make_and_model,
 		   driverless_info, device_id);
-          }
-        }
+	}
 
       read_error:
 	continue;
