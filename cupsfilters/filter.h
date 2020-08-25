@@ -101,6 +101,13 @@ extern int pclmtoraster(int inputfd,
 			filter_data_t *data,
 			void *parameters);
 
+extern int pdftopdf(int inputfd,
+		  int outputfd,
+		  int inputseekable,
+		  int *jobcanceled,
+		  filter_data_t *data,
+		  void *parameters);
+
 extern int pdftops(int inputfd,
 		  int outputfd,
 		  int inputseekable,

@@ -12,7 +12,7 @@ class QPDF_PDFTOPDF_PageHandle : public PDFTOPDF_PageHandle {
   virtual void mirror();
   virtual void rotate(Rotation rot);
   virtual void add_label(const PageRect &rect, const std::string label);
-  virtual Rotation crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos,bool scale);
+  virtual Rotation crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos,bool scale,pdftopdf_doc_t *doc);
   virtual bool is_landscape(Rotation orientation);
   void debug(const PageRect &rect,float xpos,float ypos);
  private:
@@ -35,16 +35,16 @@ class QPDF_PDFTOPDF_PageHandle : public PDFTOPDF_PageHandle {
 
 class QPDF_PDFTOPDF_Processor : public PDFTOPDF_Processor {
  public:
-  virtual bool loadFile(FILE *f,ArgOwnership take=WillStayAlive,int flatten_forms=1);
-  virtual bool loadFilename(const char *name,int flatten_forms=1);
+  virtual bool loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership take=WillStayAlive,int flatten_forms=1);
+  virtual bool loadFilename(const char *name,pdftopdf_doc_t *doc,int flatten_forms=1);
 
   // TODO: virtual bool may_modify/may_print/?
-  virtual bool check_print_permissions();
+  virtual bool check_print_permissions(pdftopdf_doc_t *doc);
 
   // virtual bool setProcess(const ProcessingParameters &param) =0;
 
-  virtual std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> get_pages();
-  virtual std::shared_ptr<PDFTOPDF_PageHandle> new_page(float width,float height);
+  virtual std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> get_pages(pdftopdf_doc_t *doc);
+  virtual std::shared_ptr<PDFTOPDF_PageHandle> new_page(float width,float height,pdftopdf_doc_t *doc);
 
   virtual void add_page(std::shared_ptr<PDFTOPDF_PageHandle> page,bool front);
 
@@ -55,13 +55,12 @@ class QPDF_PDFTOPDF_Processor : public PDFTOPDF_Processor {
 
   virtual void setComments(const std::vector<std::string> &comments);
 
-  virtual void emitFile(FILE *dst,ArgOwnership take=WillStayAlive);
-  virtual void emitFilename(const char *name);
+  virtual void emitFile(FILE *dst,pdftopdf_doc_t *doc,ArgOwnership take=WillStayAlive);
+  virtual void emitFilename(const char *name,pdftopdf_doc_t *doc);
 
   virtual bool hasAcroForm();
  private:
   void closeFile();
-  void error(const char *fmt,...);
   void start(int flatten_forms);
  private:
   std::unique_ptr<QPDF> pdf;

@@ -301,6 +301,28 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pack.c \
 	cupsfilters/pclmtoraster.cxx \
 	cupsfilters/pdf.cxx \
+	cupsfilters/pdftopdf/pdftopdf.cc \
+	cupsfilters/pdftopdf/pdftopdf.h \
+	cupsfilters/pdftopdf/pdftopdf_jcl.cc \
+	cupsfilters/pdftopdf/pdftopdf_jcl.h \
+	cupsfilters/pdftopdf/pdftopdf_processor.cc \
+	cupsfilters/pdftopdf/pdftopdf_processor.h \
+	cupsfilters/pdftopdf/qpdf_pdftopdf_processor.cc \
+	cupsfilters/pdftopdf/qpdf_pdftopdf_processor.h \
+	cupsfilters/pdftopdf/pptypes.cc \
+	cupsfilters/pdftopdf/pptypes.h \
+	cupsfilters/pdftopdf/nup.cc \
+	cupsfilters/pdftopdf/nup.h \
+	cupsfilters/pdftopdf/intervalset.cc \
+	cupsfilters/pdftopdf/intervalset.h \
+	cupsfilters/pdftopdf/qpdf_tools.cc \
+	cupsfilters/pdftopdf/qpdf_tools.h \
+	cupsfilters/pdftopdf/qpdf_xobject.cc \
+	cupsfilters/pdftopdf/qpdf_xobject.h \
+	cupsfilters/pdftopdf/qpdf_pdftopdf.cc \
+	cupsfilters/pdftopdf/qpdf_pdftopdf.h \
+	cupsfilters/pdftopdf/qpdf_cm.cc \
+	cupsfilters/pdftopdf/qpdf_cm.h \
 	cupsfilters/pdftoippprinter.c \
 	cupsfilters/pdftops.c \
 	cupsfilters/ppdgenerator.c \
@@ -338,6 +360,7 @@ libcupsfilters_la_LDFLAGS = \
 	-version-info 1
 if BUILD_DBUS
 libcupsfilters_la_CFLAGS += $(DBUS_CFLAGS) -DHAVE_DBUS
+libcupsfilters_CXXFLAGS = -std=c++0x $(libcupsfilters_CFLAGS)   # -std=c++11
 libcupsfilters_la_LIBADD += $(DBUS_LIBS)
 endif
 libcupsfilters_la_DEPENDENCIES = \
@@ -615,35 +638,14 @@ pkgfilterdir = $(CUPS_SERVERBIN)/filter
 pkgfilter_PROGRAMS += pdftopdf
 
 pdftopdf_SOURCES = \
-	filter/pdftopdf/pdftopdf.cc \
-	filter/pdftopdf/pdftopdf_jcl.cc \
-	filter/pdftopdf/pdftopdf_jcl.h \
-	filter/pdftopdf/pdftopdf_processor.cc \
-	filter/pdftopdf/pdftopdf_processor.h \
-	filter/pdftopdf/qpdf_pdftopdf_processor.cc \
-	filter/pdftopdf/qpdf_pdftopdf_processor.h \
-	filter/pdftopdf/pptypes.cc \
-	filter/pdftopdf/pptypes.h \
-	filter/pdftopdf/nup.cc \
-	filter/pdftopdf/nup.h \
-	filter/pdftopdf/intervalset.cc \
-	filter/pdftopdf/intervalset.h \
-	filter/pdftopdf/qpdf_tools.cc \
-	filter/pdftopdf/qpdf_tools.h \
-	filter/pdftopdf/qpdf_xobject.cc \
-	filter/pdftopdf/qpdf_xobject.h \
-	filter/pdftopdf/qpdf_pdftopdf.cc \
-	filter/pdftopdf/qpdf_pdftopdf.h \
-	filter/pdftopdf/qpdf_cm.cc \
-	filter/pdftopdf/qpdf_cm.h
+	filter/pdftopdf.c
 pdftopdf_CFLAGS = \
 	-I$(srcdir)/ppd/ \
-	$(LIBQPDF_CFLAGS) \
+	-I$(srcdir)/cupsfilters/ \
 	$(CUPS_CFLAGS)
-pdftopdf_CXXFLAGS = -std=c++0x $(pdftopdf_CFLAGS)   # -std=c++11
 pdftopdf_LDADD = \
 	libppd.la \
-	$(LIBQPDF_LIBS) \
+	libcupsfilters.la \
 	$(CUPS_LIBS)
 
 # ======================

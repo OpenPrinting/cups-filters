@@ -21,23 +21,13 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include "pdftopdf.h"
 
 #include "pdftopdf_processor.h"
 #include "pdftopdf_jcl.h"
 
 #include <stdarg.h>
-static void error(const char *fmt,...) // {{{
-{
-  va_list ap;
-  va_start(ap,fmt);
 
-  fputs("ERROR: ",stderr);
-  vfprintf(stderr,fmt,ap);
-  fputs("\n",stderr);
-
-  va_end(ap);
-}
-// }}}
 
 // namespace {}
 
@@ -149,7 +139,7 @@ static bool ppdGetDuplex(ppd_file_t *ppd) // {{{
 // }}}
 
 // TODO: enum
-static bool ppdDefaultOrder(ppd_file_t *ppd) // {{{  -- is reverse?
+static bool ppdDefaultOrder(ppd_file_t *ppd, pdftopdf_doc_t *doc) // {{{  -- is reverse?
 {
   ppd_choice_t *choice;
   ppd_attr_t *attr;
@@ -169,7 +159,9 @@ static bool ppdDefaultOrder(ppd_file_t *ppd) // {{{  -- is reverse?
   } else if (strcasecmp(val,"Reverse")==0||(strcasecmp(val,"reverse-order")==0)) {
     return true;
   }
-  error("Unsupported output-order value %s, using 'normal'!",val);
+
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unsupported output-order value %s, using 'normal'!",val);
   return false;
 }
 // }}}
@@ -301,7 +293,7 @@ static bool parseBorder(const char *val,BorderType &ret) // {{{
 }
 // }}}
 
-void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,ProcessingParameters &param) // {{{
+void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,ProcessingParameters &param,char *final_content_type,pdftopdf_doc_t *doc) // {{{
 {
   const char *val;
 
@@ -376,7 +368,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
      *   3: 0 degrees,  4: 90 degrees,  5: -90 degrees,  6: 180 degrees
      */
     if ((ipprot<3)||(ipprot>6)) {
-      error("Bad value (%d) for orientation-requested, using 0 degrees",ipprot);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Bad value (%d) for orientation-requested, using 0 degrees",ipprot);
     } else {
       static const Rotation ipp2rot[4]={ROT_0, ROT_90, ROT_270, ROT_180};
       param.orientation=ipp2rot[ipprot-3];
@@ -402,7 +395,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 	(val = cupsGetOption("page-size", num_options, options)) != NULL ||
 	(val = cupsGetOption("PageSize", num_options, options)) != NULL) {
       pwg_media_t *size_found = NULL;
-      fprintf(stderr, "DEBUG: Page size from command line: %s\n", val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG, "pdftopdf: Page size from command line: %s\n", val);
       if ((size_found = pwgMediaForPWG(val)) == NULL)
 	if ((size_found = pwgMediaForPPD(val)) == NULL)
 	  size_found = pwgMediaForLegacy(val);
@@ -413,10 +406,10 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 	param.page.right=param.page.left=18.0;
 	param.page.right=param.page.width-param.page.right;
 	param.page.top=param.page.height-param.page.top;
-	fprintf(stderr, "DEBUG: Width: %f, Length: %f\n", param.page.width, param.page.height);
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG, "pdftopdf: Width: %f, Length: %f\n", param.page.width, param.page.height);
       }
       else
-	fprintf(stderr, "DEBUG: Unsupported page size %s.\n", val);
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG, "pdftopdf: Unsupported page size %s.\n", val);
     }
   }
 #endif /* HAVE_CUPS_1_7 */
@@ -467,7 +460,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
       param.duplex=true;
       param.setDuplex=true;
     } else if (strcasecmp(val,"one-sided")!=0) {
-      error("Unsupported sides value %s, using sides=one-sided!",val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unsupported sides value %s, using sides=one-sided!",val);
     }
   }
 
@@ -475,7 +469,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   int nup=1;
   if (optGetInt("number-up",num_options,options,&nup)) {
     if (!NupParameters::possible(nup)) {
-      error("Unsupported number-up value %d, using number-up=1!",nup);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unsupported number-up value %d, using number-up=1!",nup);
       nup=1;
     }
 // TODO   ;  TODO? nup enabled? ... fitplot
@@ -485,7 +480,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 
   if ((val=cupsGetOption("number-up-layout",num_options,options)) != NULL) {
     if (!parseNupLayout(val,param.nup)) {
-      error("Unsupported number-up-layout %s, using number-up-layout=lrtb!",val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unsupported number-up-layout %s, using number-up-layout=lrtb!",val);
       param.nup.first=Axis::X;
       param.nup.xstart=Position::LEFT;
       param.nup.ystart=Position::TOP;
@@ -494,7 +490,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 
   if ((val=cupsGetOption("page-border",num_options,options)) != NULL) {
     if (!parseBorder(val,param.border)) {
-      error("Unsupported page-border value %s, using page-border=none!",val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unsupported page-border value %s, using page-border=none!",val);
       param.border=BorderType::NONE;
     }
   }
@@ -505,7 +502,7 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     param.reverse = (strcasecmp(val, "Reverse") == 0 ||
 		     strcasecmp(val, "reverse-order") == 0);
   } else if (ppd) {
-    param.reverse=ppdDefaultOrder(ppd);
+    param.reverse=ppdDefaultOrder(ppd, doc);
   }
 
   std::string rawlabel;
@@ -536,7 +533,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     } else if (strcasecmp(val,"odd")==0) {
       param.evenPages=false;
     } else if (strcasecmp(val,"all")!=0) {
-      error("Unsupported page-set value %s, using page-set=all!",val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unsupported page-set value %s, using page-set=all!",val);
     }
   }
 
@@ -563,20 +561,23 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     } else if (is_true(val)) {
       param.booklet=BookletMode::BOOKLET_ON;
     } else if (!is_false(val)) {
-      error("Unsupported booklet value %s, using booklet=off!",val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unsupported booklet value %s, using booklet=off!",val);
     }
   }
   param.bookSignature=-1;
   if (optGetInt("booklet-signature",num_options,options,&param.bookSignature)) {
     if (param.bookSignature==0) {
-      error("Unsupported booklet-signature value, using booklet-signature=-1 (all)!",val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unsupported booklet-signature value, using booklet-signature=-1 (all)!",val);
       param.bookSignature=-1;
     }
   }
 
   if ((val=cupsGetOption("position",num_options,options)) != NULL) {
     if (!parsePosition(val,param.xpos,param.ypos)) {
-      error("Unrecognized position value %s, using position=center!",val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unrecognized position value %s, using position=center!",val);
       param.xpos=Position::CENTER;
       param.ypos=Position::CENTER;
     }
@@ -652,18 +653,19 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
   if ((val=cupsGetOption("page-logging",num_options,options)) != NULL) {
     if (strcasecmp(val,"auto") == 0) {
       param.page_logging = -1;
-      fprintf(stderr,
-	      "DEBUG: pdftopdf: Automatic page logging selected by command line.\n");
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: Automatic page logging selected by command line.\n");
     } else if (is_true(val)) {
       param.page_logging = 1;
-      fprintf(stderr,
-	      "DEBUG: pdftopdf: Forced page logging selected by command line.\n");
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: Forced page logging selected by command line.\n");
     } else if (is_false(val)) {
       param.page_logging = 0;
-      fprintf(stderr,
-	      "DEBUG: pdftopdf: Suppressed page logging selected by command line.\n");
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: Suppressed page logging selected by command line.\n");
     } else {
-      error("Unsupported page-logging value %s, using page-logging=auto!",val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unsupported page-logging value %s, using page-logging=auto!",val);
       param.page_logging = -1;
     }
   }
@@ -674,17 +676,16 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
     if (!ppd) {
       // If there is no PPD do not log when not requested by command line
       param.page_logging = 0;
-      fprintf(stderr,
-	      "DEBUG: pdftopdf: No PPD file specified, could not determine whether to log pages or not, so turned off page logging.\n");
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: No PPD file specified, could not determine whether to log pages or not, so turned off page logging.\n");
     } else {
-      char *final_content_type = getenv("FINAL_CONTENT_TYPE");
       char *lastfilter = NULL;
       if (final_content_type == NULL) {
 	// No FINAL_CONTENT_TYPE env variable set, we cannot determine
 	// whether we have to log pages, so do not log.
 	param.page_logging = 0;
-	fprintf(stderr,
-		"DEBUG: pdftopdf: No FINAL_CONTENT_TYPE environment variable, could not determine whether to log pages or not, so turned off page logging.\n");
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+        "pdftopdf: No FINAL_CONTENT_TYPE environment variable, could not determine whether to log pages or not, so turned off page logging.\n");
       // Proceed depending on number of cupsFilter(2) lines in PPD
       } else if (ppd->num_filters == 0) {
 	// No filter line, manufacturer-supplied PostScript PPD
@@ -775,12 +776,13 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 	    param.page_logging = 0;
 	  }
 	} else {
-	  error("pdftopdf: Last filter could not get determined, page logging turned off.");
+	  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Last filter could not get determined, page logging turned off.");
 	  param.page_logging = 0;
 	}
       }
-      fprintf(stderr,
-	      "DEBUG: pdftopdf: Last filter determined by the PPD: %s; FINAL_CONTENT_TYPE: %s => pdftopdf will %slog pages in page_log.\n",
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: Last filter determined by the PPD: %s; FINAL_CONTENT_TYPE: %s => pdftopdf will %slog pages in page_log.\n",
 	      (lastfilter ? lastfilter : "None"), final_content_type,
 	      (param.page_logging == 0 ? "not " : ""));
     }
@@ -803,7 +805,7 @@ static bool printerWillCollate(ppd_file_t *ppd) // {{{
 }
 // }}}
 
-void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
+void calculate(ppd_file_t *ppd,ProcessingParameters &param,char *final_content_type) // {{{
 {
   if (param.reverse)
     // Enable evenDuplex or the first page may be empty.
@@ -822,7 +824,6 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
       // of a driverless IPP printer (PDF, Apple Raster, PWG Raster, PCLm).
       // These printers do always hardware collate if they do hardware copies.
       // https://github.com/apple/cups/issues/5433
-      char *final_content_type = getenv("FINAL_CONTENT_TYPE");
       if (final_content_type &&
 	  (strcasestr(final_content_type, "/pdf") ||
 	   strcasestr(final_content_type, "/vnd.cups-pdf") ||
@@ -869,7 +870,7 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param) // {{{
 // }}}
 
 // reads from stdin into temporary file. returns FILE *  or NULL on error
-FILE *copy_stdin_to_temp() // {{{
+FILE *copy_stdin_to_temp(pdftopdf_doc_t *doc) // {{{
 {
   char buf[BUFSIZ];
   int n;
@@ -877,7 +878,8 @@ FILE *copy_stdin_to_temp() // {{{
   // FIXME:  what does >buf mean here?
   int fd=cupsTempFd(buf,sizeof(buf));
   if (fd<0) {
-    error("Can't create temporary file");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Can't create temporary file");
     return NULL;
   }
   // remove name
@@ -886,20 +888,23 @@ FILE *copy_stdin_to_temp() // {{{
   // copy stdin to the tmp file
   while ((n=read(0,buf,BUFSIZ)) > 0) {
     if (write(fd,buf,n) != n) {
-      error("Can't copy stdin to temporary file");
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Can't copy stdin to temporary file");
       close(fd);
       return NULL;
     }
   }
   if (lseek(fd,0,SEEK_SET) < 0) {
-    error("Can't rewind temporary file");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Can't rewind temporary file");
     close(fd);
     return NULL;
   }
 
   FILE *f;
   if ((f=fdopen(fd,"rb")) == 0) {
-    error("Can't fdopen temporary file");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Can't fdopen temporary file");
     close(fd);
     return NULL;
   }
@@ -922,368 +927,105 @@ bool is_empty(FILE *f) // {{{
 }
 // }}}
 
-static int
-sub_process_spawn (const char *filename,
-          cups_array_t *sub_process_args,
-          FILE *fp) // {{{
+
+int                         /* O - Error status */
+pdftopdf(int inputfd,         /* I - File descriptor input stream */
+       int outputfd,        /* I - File descriptor output stream */
+       int inputseekable,   /* I - Is input stream seekable? (unused) */
+       int *jobcanceled,    /* I - Pointer to integer marking
+			           whether job is canceled */
+       filter_data_t *data, /* I - Job and printer data */
+       void *parameters)    /* I - Filter-specific parameters (unused) */
 {
-  char *argument;
-  char buf[BUFSIZ];
-  char **sub_process_argv;
-  const char* apos;
-  int fds[2];
-  int i;
-  int n;
-  int numargs;
-  int pid;
-  int status = 65536;
-  int wstatus;
+  pdftopdf_doc_t     doc;         /* Document information */
+  filter_logfunc_t     log = data->logfunc;
+  void          *ld = data->logdata;
+  char *final_content_type = NULL;
 
-  /* Put sub-process command line argument into an array for the "exec()"
-     call */
-  numargs = cupsArrayCount(sub_process_args);
-  sub_process_argv = (char **)calloc(numargs + 1, sizeof(char *));
-  for (argument = (char *)cupsArrayFirst(sub_process_args), i = 0; argument;
-       argument = (char *)cupsArrayNext(sub_process_args), i++) {
-    sub_process_argv[i] = argument;
-  }
-  sub_process_argv[i] = NULL;
+  (void)inputseekable;
 
-  /* Debug output: Full sub-process command line */
-  fprintf(stderr, "DEBUG: PDF form flattening command line:");
-  for (i = 0; sub_process_argv[i]; i ++) {
-    if ((strchr(sub_process_argv[i],' ')) || (strchr(sub_process_argv[i],'\t')))
-      apos = "'";
-    else
-      apos = "";
-    fprintf(stderr, " %s%s%s", apos, sub_process_argv[i], apos);
-  }
-  fprintf(stderr, "\n");
-
-  /* Create a pipe for feeding the job into sub-process */
-  if (pipe(fds))
-  {
-    fds[0] = -1;
-    fds[1] = -1;
-    fprintf(stderr, "ERROR: Unable to establish pipe for sub-process call\n");
-    goto out;
-  }
-
-  /* Set the "close on exec" flag on each end of the pipe... */
-  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC))
-  {
-    close(fds[0]);
-    close(fds[1]);
-    fds[0] = -1;
-    fds[1] = -1;
-    fprintf(stderr, "ERROR: Unable to set \"close on exec\" flag on read end of the pipe for sub-process call\n");
-    goto out;
-  }
-  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC))
-  {
-    close(fds[0]);
-    close(fds[1]);
-    fprintf(stderr, "ERROR: Unable to set \"close on exec\" flag on write end of the pipe for sub-process call\n");
-    goto out;
-  }
-
-  if ((pid = fork()) == 0)
-  {
-    /* Couple pipe with STDIN of sub-process */
-    if (fds[0] != 0) {
-      close(0);
-      if (fds[0] > 0) {
-        if (dup(fds[0]) < 0) {
-	  fprintf(stderr, "ERROR: Unable to couple pipe with STDIN of sub-process\n");
-	  goto out;
-	}
-      } else {
-        fprintf(stderr, "ERROR: Unable to couple pipe with STDIN of sub-process\n");
-        goto out;
-      }
-    }
-    close(fds[1]);
-
-    /* Execute sub-process command line ... */
-    execvp(filename, sub_process_argv);
-    perror(filename);
-    close(fds[0]);
-    goto out;
-  }
-
-  close(fds[0]);
-  /* Feed job data into the sub-process */
-  while ((n = fread(buf, 1, BUFSIZ, fp)) > 0) {
-    int count;
-retry_write:
-    count = write(fds[1], buf, n);
-    if (count != n) {
-      if (count == -1) {
-        if (errno == EINTR) {
-          goto retry_write;
-	}
-        fprintf(stderr, "ERROR: write failed: %s\n", strerror(errno));
-      }
-      fprintf(stderr, "ERROR: Can't feed job data into the sub-process\n");
-      goto out;
-    }
-  }
-  close (fds[1]);
-
-retry_wait:
-  if (waitpid (pid, &wstatus, 0) == -1) {
-    if (errno == EINTR)
-      goto retry_wait;
-    perror ("sub-process");
-    goto out;
-  }
-
-  /* How did the sub-process terminate */
-  if (WIFEXITED(wstatus))
-    /* Via exit() anywhere or return() in the main() function */
-    status = WEXITSTATUS(wstatus);
-  else if (WIFSIGNALED(wstatus))
-    /* Via signal */
-    status = 256 * WTERMSIG(wstatus);
-
-out:
-  free(sub_process_argv);
-  return status;
-}
-// }}}
-
-int main(int argc,char **argv)
-{
-  if ((argc<6)||(argc>7)) {
-    fprintf(stderr,"Usage: %s job-id user title copies options [file]\n",argv[0]);
-#ifdef DEBUG
-    ProcessingParameters param;
-    std::unique_ptr<PDFTOPDF_Processor> proc1(PDFTOPDF_Factory::processor());
-    param.page.width=595.276; // A4
-    param.page.height=841.89;
-
-    param.page.top=param.page.bottom=36.0;
-    param.page.right=param.page.left=18.0;
-    param.page.right=param.page.width-param.page.right;
-    param.page.top=param.page.height-param.page.top;
-
-    //param.nup.calculate(4,0.707,0.707,param.nup);
-    param.nup.nupX=2;
-    param.nup.nupY=2;
-    //param.nup.yalign=TOP;
-    param.border=BorderType::NONE;
-    //param.fillprint = true;
-    //param.mirror=true;
-    //param.reverse=true;
-    //param.numCopies=3;
-    if (!proc1->loadFilename("in.pdf",1)) return 2;
-    param.dump();
-    if (!processPDFTOPDF(*proc1,param)) return 3;
-    emitComment(*proc1,param);
-    proc1->emitFilename("out.pdf");
-#endif
-    return 1;
-  }
+  if (parameters)
+    final_content_type = (char *)parameters;
 
   try {
     ProcessingParameters param;
 
-    param.jobId=atoi(argv[1]);
-    param.user=argv[2];
-    param.title=argv[3];
-    param.numCopies=atoi(argv[4]);
-    param.copies_to_be_logged=atoi(argv[4]);
+    param.jobId=data->job_id;
+    param.user=data->job_user;
+    param.title=data->job_title;
+    param.numCopies=data->copies;
+    param.copies_to_be_logged=data->copies;
 
     // TODO?! sanity checks
 
-    int num_options=0;
-    cups_option_t *options=NULL;
-    num_options=cupsParseOptions(argv[5],num_options,&options);
+    doc.JobCanceled = jobcanceled;
+    doc.logdata = ld;
+    doc.logfunc = log;
 
-    ppd_file_t *ppd=NULL;
-    ppd=ppdOpenFile(getenv("PPD")); // getenv (and thus ppd) may be null. This will not cause problems.
-    ppdMarkDefaults(ppd);
+    if (data->ppdfile == NULL && data->ppd == NULL)
+    {
+      char *p = getenv("PPD");
 
-    ppdMarkOptions(ppd,num_options,options);
-
-    getParameters(ppd,num_options,options,param);
-    calculate(ppd,param);
-
-#ifdef DEBUG
-    param.dump();
-#endif
-
-    /* Check with which method we will flatten interactive PDF forms
-       and annotations so that they get printed also after page
-       manipulations (scaling, N-up, ...). Flattening means to
-       integrate the filled in data and the printable annotations into
-       the pages themselves instead of holding them in an extra
-       layer. Default method is using QPDF, alternatives are the
-       external utilities pdftocairo or Ghostscript, but these make
-       the processing slower, especially due to extra piping of the
-       data between processes. */
-    int empty = 0;
-    int qpdf_flatten = 1;
-    int pdftocairo_flatten = 0;
-    int gs_flatten = 0;
-    int external_auto_flatten = 0;
-    const char	*val;
-    if ((val = cupsGetOption("pdftopdf-form-flattening", num_options, options)) != NULL) {
-      if (strcasecmp(val, "qpdf") == 0 || strcasecmp(val, "internal") == 0 ||
-	  strcasecmp(val, "auto") == 0) {
-	qpdf_flatten = 1;
-      } else if (strcasecmp(val, "external") == 0) {
-	qpdf_flatten = 0;
-	external_auto_flatten = 1;
-      } else if (strcasecmp(val, "pdftocairo") == 0) {
-	qpdf_flatten = 0;
-	pdftocairo_flatten = 1;
-      } else if (strcasecmp(val, "ghostscript") == 0 || strcasecmp(val, "gs") == 0) {
-	qpdf_flatten = 0;
-	gs_flatten = 1;
-      } else
-	fprintf(stderr,
-		"WARNING: Invalid value for \"pdftopdf-form-flattening\": \"%s\"\n", val);
+      if (p)
+        data->ppdfile = strdup(p);
     }
 
-    cupsFreeOptions(num_options,options);
+    if (data->ppdfile)
+      data->ppd = ppdOpenFile(data->ppdfile);
+
+    ppdMarkDefaults(data->ppd);
+
+    ppdMarkOptions(data->ppd,data->num_options,data->options);
+
+    getParameters(data->ppd,data->num_options,data->options,param,final_content_type,&doc);
+    calculate(data->ppd,param,final_content_type);
+
+#ifdef DEBUG
+    param.dump(&doc);
+#endif
+
+    int empty = 0;
 
     std::unique_ptr<PDFTOPDF_Processor> proc(PDFTOPDF_Factory::processor());
 
     FILE *tmpfile = NULL;
-    if (argc==7) {
+
+    if (inputfd == 0)
+    {
+      tmpfile = copy_stdin_to_temp(&doc);
+      if (tmpfile && is_empty(tmpfile)) {
+        fclose(tmpfile);
+        // ppdClose(ppd);
+        empty = 1;
+      } else if ((!tmpfile)||
+      (!proc->loadFile(tmpfile, &doc, WillStayAlive, 1)))
+      {
+        // ppdClose(ppd);
+        return 1;
+      }
+    }
+    else
+    {
       FILE *f = NULL;
-      if ((f = fopen(argv[6], "rb")) == NULL) {
-        ppdClose(ppd);
+      if ((f = fdopen(inputfd, "rb")) == NULL) {
+        // ppdClose(ppd);
         return 1;
       } else if (is_empty(f)) {
 	fclose(f);
-	ppdClose(ppd);
+	// ppdClose(ppd);
 	empty = 1;
-      } else if (!proc->loadFilename(argv[6],qpdf_flatten)) {
+      } else if (!proc->loadFile(f, &doc, WillStayAlive, 1)) {
 	fclose(f);
-        ppdClose(ppd);
+        // ppdClose(ppd);
         return 1;
-      } else
-	fclose(f);
-    } else {
-      tmpfile = copy_stdin_to_temp();
-      if (tmpfile && is_empty(tmpfile)) {
-	fclose(tmpfile);
-	ppdClose(ppd);
-	empty = 1;
-      } else if ((!tmpfile)||
-		 (!proc->loadFile(tmpfile,WillStayAlive,qpdf_flatten))) {
-        ppdClose(ppd);
-	return 1;
       }
     }
 
     if(empty)
     {
-      fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG, "pdftopdf: Input is empty, outputting empty file.\n");
       return 0;
     }
-
-    /* If the input file contains a PDF form and we opted for not
-       using QPDF for flattening the form, we pipe the PDF through
-       pdftocairo or Ghostscript here */
-    if (!qpdf_flatten && proc->hasAcroForm()) {
-      /* Prepare the input file for being read by the form flattening
-	 process */
-      FILE *infile = NULL;
-      if (argc == 7) {
-	/* We read from a named file */
-	infile = fopen(argv[6], "r");
-      } else {
-	/* We read from a temporary file */
-	if (tmpfile) rewind(tmpfile);
-	infile = tmpfile;
-      }
-      if (infile == NULL) {
-	error("Could not open the input file for flattening the PDF form!");
-	return 1;
-      }
-      /* Create a temporary file for the output of the flattened PDF */
-      char buf[BUFSIZ];
-      int fd = cupsTempFd(buf,sizeof(buf));
-      if (fd<0) {
-	error("Can't create temporary file for flattened PDF form!");
-	return 1;
-      }
-      FILE *outfile = NULL;
-      if ((outfile=fdopen(fd,"rb")) == 0) {
-	error("Can't fdopen temporary file for the flattened PDF form!");
-	close(fd);
-	return 1;
-      }
-      int flattening_done = 0;
-      const char *command;
-      cups_array_t *args;
-      /* Choose the utility to be used and create its command line */
-      if (pdftocairo_flatten || external_auto_flatten) {
-	/* Try pdftocairo first, the preferred utility for form-flattening */
-	command = CUPS_POPPLER_PDFTOCAIRO;
-	args = cupsArrayNew(NULL, NULL);
-	cupsArrayAdd(args, strdup(command));
-	cupsArrayAdd(args, strdup("-pdf"));
-	cupsArrayAdd(args, strdup("-"));
-	cupsArrayAdd(args, strdup(buf));
-	/* Run the pdftocairo form flattening process */
-	rewind(infile);
-	int status = sub_process_spawn (command, args, infile);
-	cupsArrayDelete(args);
-	if (status == 0)
-	  flattening_done = 1;
-	else
-	  error("Unable to execute pdftocairo for form flattening!");
-      }
-      if (flattening_done == 0 &&
-	  (gs_flatten || external_auto_flatten)) {
-	/* Try Ghostscript */
-	command = CUPS_GHOSTSCRIPT;
-	args = cupsArrayNew(NULL, NULL);
-	cupsArrayAdd(args, strdup(command));
-	cupsArrayAdd(args, strdup("-dQUIET"));
-	cupsArrayAdd(args, strdup("-dSAFER"));
-	cupsArrayAdd(args, strdup("-dNOPAUSE"));
-	cupsArrayAdd(args, strdup("-dBATCH"));
-	cupsArrayAdd(args, strdup("-dNOINTERPOLATE"));
-	cupsArrayAdd(args, strdup("-dNOMEDIAATTRS"));
-	cupsArrayAdd(args, strdup("-sDEVICE=pdfwrite"));
-	cupsArrayAdd(args, strdup("-dShowAcroForm"));
-	cupsArrayAdd(args, strdup("-sstdout=%stderr"));
-	memmove(buf + 13, buf, sizeof(buf) - 13);
-	memcpy(buf, "-sOutputFile=", 13);
-	cupsArrayAdd(args, strdup(buf));
-	cupsArrayAdd(args, strdup("-"));
-	/* Run the Ghostscript form flattening process */
-	rewind(infile);
-	int status = sub_process_spawn (command, args, infile);
-	cupsArrayDelete(args);
-	if (status == 0)
-	  flattening_done = 1;
-	else
-	  error("Unable to execute Ghostscript for form flattening!");
-      }
-      if (flattening_done == 0) {
-	error("No suitable utility for flattening filled PDF forms available, no flattening performed. Filled in content will possibly not be printed.");
-	rewind(infile);
-      }
-      /* Clean up */
-      if (infile != tmpfile)
-	fclose(infile);
-      /* Load the flattened PDF file into our PDF processor */
-      if (flattening_done) {
-	rewind(outfile);
-	unlink(buf);
-	if (!proc->loadFile(outfile,TakeOwnership,0)) {
-	  error("Unable to create a PDF processor on the flattened form!"); 
-	  return 1;
-	}
-      }
-    } else if (qpdf_flatten)
-      fprintf(stderr, "DEBUG: PDF interactive form and annotation flattening done via QPDF\n");
 
 /* TODO
     // color management
@@ -1298,27 +1040,32 @@ int main(int argc,char **argv)
     }
 */
 
-    if (!processPDFTOPDF(*proc,param)) {
-      ppdClose(ppd);
+    if (!processPDFTOPDF(*proc,param,&doc)) {
+      // ppdClose(ppd);
       return 2;
     }
 
-    emitPreamble(ppd,param); // ppdEmit, JCL stuff
+    emitPreamble(data->ppd,param); // ppdEmit, JCL stuff
     emitComment(*proc,param); // pass information to subsequent filters via PDF comments
 
-    //proc->emitFile(stdout);
-    proc->emitFilename(NULL);
+    FILE *outputfp;
+    outputfp = fdopen(outputfd, "w");
+    if(outputfp == NULL) return 1;
+    proc->emitFile(outputfp, &doc, TakeOwnership);
+    // proc->emitFilename(NULL);
 
-    emitPostamble(ppd,param);
-    ppdClose(ppd);
+    emitPostamble(data->ppd,param);
+    // ppdClose(ppd);
     if (tmpfile)
       fclose(tmpfile);
   } catch (std::exception &e) {
     // TODO? exception type
-    error("Exception: %s",e.what());
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Exception: %s",e.what());
     return 5;
   } catch (...) {
-    error("Unknown exception caught. Exiting.");
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	      "pdftopdf: Unknown exception caught. Exiting.");
     return 6;
   }
 

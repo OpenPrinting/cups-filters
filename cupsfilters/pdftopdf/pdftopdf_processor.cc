@@ -4,13 +4,15 @@
 #include <assert.h>
 #include <numeric>
 
-void BookletMode_dump(BookletMode bkm) // {{{
+void BookletMode_dump(BookletMode bkm,pdftopdf_doc_t *doc) // {{{
 {
   static const char *bstr[3]={"Off","On","Shuffle-Only"};
   if ((bkm<BOOKLET_OFF) || (bkm>BOOKLET_JUSTSHUFFLE)) {
-    fprintf(stderr,"(bad booklet mode: %d)",bkm);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "(bad booklet mode: %d)",bkm);
   } else {
-    fputs(bstr[bkm],stderr);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "%s",bstr[bkm]);
   }
 }
 // }}}
@@ -28,76 +30,102 @@ bool ProcessingParameters::withPage(int outno) const // {{{
 }
 // }}}
 
-void ProcessingParameters::dump() const // {{{
+void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 {
-  fprintf(stderr,"jobId: %d, numCopies: %d\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: jobId: %d, numCopies: %d\n",
 	  jobId,numCopies);
-  fprintf(stderr,"user: %s, title: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: user: %s, title: %s\n",
 	  (user)?user:"(null)",(title)?title:"(null)");
-  fprintf(stderr,"fitplot: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: fitplot: %s\n",
 	  (fitplot)?"true":"false");
 
-  page.dump();
+  page.dump(doc);
 
-  fprintf(stderr,"Rotation(CCW): ");
-  Rotation_dump(orientation);
-  fprintf(stderr,"\n");
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Rotation(CCW): ");
+  Rotation_dump(orientation,doc);
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: \n");
 
-  fprintf(stderr,"paper_is_landscape: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: paper_is_landscape: %s\n",
 	  (paper_is_landscape)?"true":"false");
 
-  fprintf(stderr,"duplex: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: duplex: %s\n",
 	  (duplex)?"true":"false");
 
-  fprintf(stderr,"Border: ");
-  BorderType_dump(border);
-  fprintf(stderr,"\n");
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Border: ");
+  BorderType_dump(border,doc);
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: \n");
 
-  nup.dump();
+  nup.dump(doc);
 
-  fprintf(stderr,"reverse: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: reverse: %s\n",
 	  (reverse)?"true":"false");
 
-  fprintf(stderr,"evenPages: %s, oddPages: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: evenPages: %s, oddPages: %s\n",
 	  (evenPages)?"true":"false",
 	  (oddPages)?"true":"false");
 
-  fprintf(stderr,"page range: ");
-  pageRange.dump();
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: page range: ");
+  pageRange.dump(doc);
 
-  fprintf(stderr,"mirror: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: mirror: %s\n",
 	  (mirror)?"true":"false");
 
-  fprintf(stderr,"Position: ");
-  Position_dump(xpos,Axis::X);
-  fprintf(stderr,"/");
-  Position_dump(ypos,Axis::Y);
-  fprintf(stderr,"\n");
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Position: ");
+  Position_dump(xpos,Axis::X,doc);
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "/");
+  Position_dump(ypos,Axis::Y,doc);
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "\n");
 
-  fprintf(stderr,"collate: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: collate: %s\n",
 	  (collate)?"true":"false");
 
-  fprintf(stderr,"evenDuplex: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: evenDuplex: %s\n",
 	  (evenDuplex)?"true":"false");
 
-  fprintf(stderr,"pageLabel: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: pageLabel: %s\n",
 	  pageLabel.empty () ? "(none)" : pageLabel.c_str());
 
-  fprintf(stderr,"bookletMode: ");
-  BookletMode_dump(booklet);
-  fprintf(stderr,"\nbooklet signature: %d\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: bookletMode: ");
+  BookletMode_dump(booklet,doc);
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "\nbooklet signature: %d\n",
 	  bookSignature);
 
-  fprintf(stderr,"autoRotate: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: autoRotate: %s\n",
 	  (autoRotate)?"true":"false");
 
-  fprintf(stderr,"emitJCL: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: emitJCL: %s\n",
 	  (emitJCL)?"true":"false");
-  fprintf(stderr,"deviceCopies: %d\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: deviceCopies: %d\n",
 	  deviceCopies);
-  fprintf(stderr,"deviceCollate: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: deviceCollate: %s\n",
 	  (deviceCollate)?"true":"false");
-  fprintf(stderr,"setDuplex: %s\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: setDuplex: %s\n",
 	  (setDuplex)?"true":"false");
 }
 // }}}
@@ -142,10 +170,11 @@ std::vector<int> bookletShuffle(int numPages,int signature) // {{{
 }
 // }}}
 
-bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{{
+bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftopdf_doc_t *doc) // {{{
 {
-  if (!proc.check_print_permissions()) {
-    fprintf(stderr,"Not allowed to print\n");
+  if (!proc.check_print_permissions(doc)) {
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: Not allowed to print\n");
     return false;
   }
 
@@ -156,7 +185,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     proc.autoRotateAll(dst_lscape,param.normal_landscape);
   }
 
-  std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> pages=proc.get_pages();
+  std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> pages=proc.get_pages(doc);
   const int numOrigPages=pages.size();
 
   // TODO FIXME? elsewhere
@@ -216,7 +245,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
   }
 
   if(param.fillprint||param.cropfit){
-    fprintf(stderr,"[DEBUG]: Cropping input pdf and Enabling fitplot.\n");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: Cropping input pdf and Enabling fitplot.\n");
     if(param.noOrientation&&pages.size())
     {
       bool land = pages[0]->is_landscape(param.orientation);
@@ -226,7 +256,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     for(int i=0;i<(int)pages.size();i++)
     {
       std::shared_ptr<PDFTOPDF_PageHandle> page = pages[i];
-      page->crop(param.page,param.orientation,param.xpos,param.ypos,!param.cropfit);
+      page->crop(param.page,param.orientation,param.xpos,param.ypos,!param.cropfit,doc);
     }
     param.fitplot = 1;
   }
@@ -249,11 +279,12 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
 
       // Log page in /var/log/cups/page_log
       if (param.page_logging == 1)
-	fprintf(stderr, "PAGE: %d %d\n", iA + 1, param.copies_to_be_logged);
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: PAGE: %d %d\n", iA + 1, param.copies_to_be_logged);
 
       if (shuffle[iA]>=numOrigPages) {
         // add empty page as filler
-        proc.add_page(proc.new_page(param.page.width,param.page.height),param.reverse);
+        proc.add_page(proc.new_page(param.page.width,param.page.height,doc),param.reverse);
 	outputno++;
         continue; // no border, etc.
       }
@@ -318,7 +349,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
       std::shared_ptr<PDFTOPDF_PageHandle> page;
       if (shuffle[iA]>=numOrigPages) {
         // add empty page as filler
-        page=proc.new_page(param.page.width,param.page.height);
+        page=proc.new_page(param.page.width,param.page.height,doc);
       } else {
         page=pages[shuffle[iA]];
       }
@@ -354,10 +385,11 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
 	  // Log page in /var/log/cups/page_log
 	  outputno++;
 	  if (param.page_logging == 1)
-	    fprintf(stderr, "PAGE: %d %d\n", outputno,
+	    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: PAGE: %d %d\n", outputno,
 		    param.copies_to_be_logged);
         }
-        curpage=proc.new_page(param.page.width,param.page.height);
+        curpage=proc.new_page(param.page.width,param.page.height,doc);
         outputpage++;
       }
       if (shuffle[iA]>=numOrigPages) {
@@ -411,16 +443,18 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
       // Log page in /var/log/cups/page_log
       outputno ++;
       if (param.page_logging == 1)
-	fprintf(stderr, "PAGE: %d %d\n", outputno, param.copies_to_be_logged);
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: PAGE: %d %d\n", outputno, param.copies_to_be_logged);
     }
   }
 
   if ((param.evenDuplex || !param.oddPages) && (outputno & 1)) {
     // need to output empty page to not confuse duplex
-    proc.add_page(proc.new_page(param.page.width,param.page.height),param.reverse);
+    proc.add_page(proc.new_page(param.page.width,param.page.height,doc),param.reverse);
     // Log page in /var/log/cups/page_log
     if (param.page_logging == 1)
-      fprintf(stderr, "PAGE: %d %d\n", outputno + 1, param.copies_to_be_logged);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: PAGE: %d %d\n", outputno + 1, param.copies_to_be_logged);
   }
 
   proc.multiply(param.numCopies,param.collate);

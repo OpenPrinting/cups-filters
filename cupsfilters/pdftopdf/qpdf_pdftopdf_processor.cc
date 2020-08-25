@@ -10,6 +10,7 @@
 #include "qpdf_tools.h"
 #include "qpdf_xobject.h"
 #include "qpdf_pdftopdf.h"
+#include "pdftopdf.h"
 
 // Use: content.append(debug_box(pe.sub,xpos,ypos));
 static std::string debug_box(const PageRect &box,float xshift,float yshift) // {{{
@@ -176,7 +177,7 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
  *  Trim Box is used for trimming the page in required size.
  *  scale tells if we need to scale input file.
  */
-Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos,bool scale)
+Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos,bool scale,pdftopdf_doc_t *doc)
 {
   page.assertInitialized();
   if(orientation==ROT_0||orientation==ROT_180)
@@ -212,7 +213,8 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
     final_w = std::min(width,pageWidth);
     final_h = std::min(height,pageHeight);
   }
-  fprintf(stderr,"After Cropping: %lf %lf %lf %lf\n",width,height,final_w,final_h);
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: After Cropping: %lf %lf %lf %lf\n",width,height,final_w,final_h);
   double posw = (width-final_w)/2,
         posh = (height-final_h)/2;
   // posw, posh : Position along width and height respectively.
@@ -450,21 +452,9 @@ void QPDF_PDFTOPDF_Processor::closeFile() // {{{
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::error(const char *fmt,...) // {{{
-{
-  va_list ap;
-
-  va_start(ap,fmt);
-  fputs("ERROR: ",stderr);
-  vfprintf(stderr,fmt,ap);
-  fputs("\n",stderr);
-  va_end(ap);
-}
-// }}}
-
 // TODO?  try/catch for PDF parsing errors?
 
-bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,ArgOwnership take,int flatten_forms) // {{{
+bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership take,int flatten_forms) // {{{
 {
   closeFile();
   if (!f) {
@@ -483,7 +473,8 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,ArgOwnership take,int flatten_for
     try {
       pdf->processFile("temp file",f,false);
     } catch (const std::exception &e) {
-      error("loadFile failed: %s",e.what());
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+        "pdftopdf: loadFile failed: %s",e.what());
       return false;
     }
     break;
@@ -491,12 +482,14 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,ArgOwnership take,int flatten_for
     try {
       pdf->processFile("temp file",f,true);
     } catch (const std::exception &e) {
-      error("loadFile failed: %s",e.what());
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+        "pdftopdf: loadFile failed: %s",e.what());
       return false;
     }
     break;
   case MustDuplicate:
-    error("loadFile with MustDuplicate is not supported");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+        "pdftopdf: loadFile with MustDuplicate is not supported");
     return false;
   }
   start(flatten_forms);
@@ -504,14 +497,15 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,ArgOwnership take,int flatten_for
 }
 // }}}
 
-bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name,int flatten_forms) // {{{
+bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name,pdftopdf_doc_t *doc,int flatten_forms) // {{{
 {
   closeFile();
   try {
     pdf.reset(new QPDF);
     pdf->processFile(name);
   } catch (const std::exception &e) {
-    error("loadFilename failed: %s",e.what());
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+        "pdftopdf: loadFilename failed: %s",e.what());
     return false;
   }
   start(flatten_forms);
@@ -548,21 +542,23 @@ void QPDF_PDFTOPDF_Processor::start(int flatten_forms) // {{{
 }
 // }}}
 
-bool QPDF_PDFTOPDF_Processor::check_print_permissions() // {{{
+bool QPDF_PDFTOPDF_Processor::check_print_permissions(pdftopdf_doc_t *doc) // {{{
 {
   if (!pdf) {
-    error("No PDF loaded");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+        "pdftopdf: No PDF loaded");
     return false;
   }
   return pdf->allowPrintHighRes() || pdf->allowPrintLowRes(); // from legacy pdftopdf
 }
 // }}}
 
-std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> QPDF_PDFTOPDF_Processor::get_pages() // {{{
+std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> QPDF_PDFTOPDF_Processor::get_pages(pdftopdf_doc_t *doc) // {{{
 {
   std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> ret;
   if (!pdf) {
-    error("No PDF loaded");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+        "pdftopdf: No PDF loaded");
     assert(0);
     return ret;
   }
@@ -575,10 +571,11 @@ std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> QPDF_PDFTOPDF_Processor::get_p
 }
 // }}}
 
-std::shared_ptr<PDFTOPDF_PageHandle> QPDF_PDFTOPDF_Processor::new_page(float width,float height) // {{{
+std::shared_ptr<PDFTOPDF_PageHandle> QPDF_PDFTOPDF_Processor::new_page(float width,float height,pdftopdf_doc_t *doc) // {{{
 {
   if (!pdf) {
-    error("No PDF loaded");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+        "pdftopdf: No PDF loaded");
     assert(0);
     return std::shared_ptr<PDFTOPDF_PageHandle>();
   }
@@ -691,7 +688,7 @@ void QPDF_PDFTOPDF_Processor::setComments(const std::vector<std::string> &commen
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,ArgOwnership take) // {{{
+void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership take) // {{{
 {
   if (!pdf) {
     return;
@@ -705,7 +702,8 @@ void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,ArgOwnership take) // {{{
     out.setOutputFile("temp file",f,true);
     break;
   case MustDuplicate:
-    error("emitFile with MustDuplicate is not supported");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+        "pdftopdf: emitFile with MustDuplicate is not supported");
     return;
   }
   if (hasCM) {
@@ -721,7 +719,7 @@ void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,ArgOwnership take) // {{{
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::emitFilename(const char *name) // {{{
+void QPDF_PDFTOPDF_Processor::emitFilename(const char *name,pdftopdf_doc_t *doc) // {{{
 {
   if (!pdf) {
     return;
@@ -742,7 +740,8 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name) // {{{
   if (len)
   out.write();
   else
-  fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: No pages left, outputting empty file.\n");
 }
 // }}}
 

@@ -101,21 +101,27 @@ void IntervalSet::unite(value_t &aret,const value_t &b) const // {{{
 }
 // }}}
 
-void IntervalSet::dump() const // {{{
+void IntervalSet::dump(pdftopdf_doc_t *doc) const // {{{
 {
   int len=data.size();
   if (len==0) {
-    fprintf(stderr,"(empty)\n");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: (empty)\n");
     return;
   }
   len--;
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: ");
   for (int iA=0;iA<len;iA++) {
-    fprintf(stderr,"[%d,%d),",data[iA].first,data[iA].second);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+	      "[%d,%d),",data[iA].first,data[iA].second);
   }
   if (data[len].second==npos) {
-    fprintf(stderr,"[%d,inf)\n",data[len].first);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+	      "[%d,inf)\n",data[len].first);
   } else {
-    fprintf(stderr,"[%d,%d)\n",data[len].first,data[len].second);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+	      "[%d,%d)\n",data[len].first,data[len].second);
   }
 }
 // }}}
