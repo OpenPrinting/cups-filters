@@ -274,12 +274,12 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
 		   "MFG:%s;", txt_usb_mfg);
         }
         if (txt_usb_mdl[0] != '\0') {
-          snprintf(model, sizeof(model) - 1, "%s%s",
-                   txt_usb_mdl, (isFax ? " Fax" : ""));
-          model[255] = '\0';
+          strncpy(model, txt_usb_mdl, sizeof(model) - 1);
+          if (strlen(txt_usb_mdl) > 255)
+            model[255] = '\0';
           ptr = device_id + strlen(device_id);
           snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
-		   "MDL:%s;", model);
+		   "MDL:%s;", txt_usb_mdl);
         } else if (txt_product[0] != '\0') {
           if (txt_product[0] == '(') {
             /* Strip parenthesis... */
@@ -305,9 +305,6 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
         }
 
         if (!device_id[0] && strcasecmp(model, "Unknown")) {
-	  if (isFax)
-	    strncpy(model + strlen(model), " Fax",
-		    sizeof(model) - strlen(model) - 1);
           if (make[0])
             snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
 		     make, model);
@@ -405,11 +402,12 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
 	    /* IPPS version of IPP printer is not present */
 	    if  (mode == 1)
 	      /* Call with "list" argument  (PPD generator in list mode)   */ 
-	      printf("\"%s%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
+	      printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
 		     "\" \"%s\"\n",
 		     ((isFax) ? "driverless-fax:" : "driverless:"),
-		     service_uri, make, make_and_model, driverless_info,
-		     device_id);
+		     service_uri, make, make_and_model,
+		     ((isFax) ? "Fax, " : ""),
+		     driverless_info, device_id);
 	    else
 	      /* Call without arguments and env variable "SOFTWARE" starting
 		 with "CUPS" (Backend in discovery mode) */
@@ -421,10 +419,12 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
 	  cupsArrayAdd(service_uri_list_ipps, service_uri);
 	  if  (mode == 1)
 	    /* Call with "list" argument  (PPD generator in list mode)   */ 
-	    printf("\"%s%s\" en \"%s\" \"%s, %s, cups-filters " VERSION
+	    printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
 		   "\" \"%s\"\n",
 		   ((isFax) ? "driverless-fax:" : "driverless:"),
-		   service_uri, make, make_and_model, driverless_info,
+		   service_uri, make, make_and_model,
+		   ((isFax) ? "Fax, " : ""),
+		   driverless_info,
 		   device_id);
 	  else
 	    /* Call without arguments and env variable "SOFTWARE" starting

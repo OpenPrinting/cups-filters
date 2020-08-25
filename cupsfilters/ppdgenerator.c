@@ -1699,14 +1699,11 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     model = make;
 
   cupsFilePrintf(fp, "*Manufacturer: \"%s\"\n", make);
-  cupsFilePrintf(fp, "*ModelName: \"%s %s%s\"\n",
-		 make, model, (is_fax ? " Fax" : ""));
-  cupsFilePrintf(fp, "*Product: \"(%s %s%s)\"\n",
-		 make, model, (is_fax ? " Fax" : ""));
-  cupsFilePrintf(fp, "*NickName: \"%s %s%s, driverless, cups-filters %s\"\n",
-		 make, model, (is_fax ? " Fax" : ""), VERSION);
-  cupsFilePrintf(fp, "*ShortNickName: \"%s %s%s\"\n",
-		 make, model, (is_fax ? " Fax" : ""));
+  cupsFilePrintf(fp, "*ModelName: \"%s %s\"\n", make, model);
+  cupsFilePrintf(fp, "*Product: \"(%s %s)\"\n", make, model);
+  cupsFilePrintf(fp, "*NickName: \"%s %s, %sdriverless, cups-filters %s\"\n",
+		 make, model, (is_fax ? "Fax, " : ""), VERSION);
+  cupsFilePrintf(fp, "*ShortNickName: \"%s %s\"\n", make, model);
 
   /* Which is the default output bin? */
   if ((attr = ippFindAttribute(response, "output-bin-default", IPP_TAG_ZERO))
