@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libfontembed: Silenced warning with gcc 10.x (Pull request
+	  #287).
 	- libcupsfilters, rastertopdf, rastertopclm: Moved core
 	  functionality of rastertopdf into the rastertopdf() filter
 	  function (Pull request #288, #289).

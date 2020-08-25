@@ -125,7 +125,7 @@ static EMB_PDF_FONTDESCR *emb_pdf_fd_new(const char *fontname,
   ret->fontname=ret->data+len;
   len+=strlen(fontname)+1;
   if (subset_tag) {
-    strncpy(ret->fontname,subset_tag,6);
+    snprintf(ret->fontname, 6, "%s", subset_tag);
     ret->fontname[6]='+';
     strcpy(ret->fontname+7,fontname);
     len+=7;
