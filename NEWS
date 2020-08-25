@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V1.28.0
 
+	- libfontembed: Silenced warning with gcc 10.x (Pull request
+	  #287).
 	- cups-browsed: Added ./configure options
 	  --enable-saving-created-queues and
 	  --with-remote-cups-local-queue-naming (Pull request: #253,
