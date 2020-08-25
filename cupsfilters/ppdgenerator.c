@@ -1675,6 +1675,11 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
   cupsFilePuts(fp, "*FileSystem: False\n");
   cupsFilePuts(fp, "*PCFileName: \"drvless.ppd\"\n");
 
+  if ((attr = ippFindAttribute(response, "ipp-features-supported",
+			       IPP_TAG_KEYWORD))!= NULL &&
+      ippContainsString(attr, "faxout"))
+    is_fax = 1;
+
   if ((attr = ippFindAttribute(response, "printer-make-and-model",
 			       IPP_TAG_TEXT)) != NULL)
     strlcpy(make, ippGetString(attr, 0, NULL), sizeof(make));
@@ -1694,11 +1699,14 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     model = make;
 
   cupsFilePrintf(fp, "*Manufacturer: \"%s\"\n", make);
-  cupsFilePrintf(fp, "*ModelName: \"%s %s\"\n", make, model);
-  cupsFilePrintf(fp, "*Product: \"(%s %s)\"\n", make, model);
-  cupsFilePrintf(fp, "*NickName: \"%s %s, driverless, cups-filters %s\"\n",
-		 make, model, VERSION);
-  cupsFilePrintf(fp, "*ShortNickName: \"%s %s\"\n", make, model);
+  cupsFilePrintf(fp, "*ModelName: \"%s %s%s\"\n",
+		 make, model, (is_fax ? " Fax" : ""));
+  cupsFilePrintf(fp, "*Product: \"(%s %s%s)\"\n",
+		 make, model, (is_fax ? " Fax" : ""));
+  cupsFilePrintf(fp, "*NickName: \"%s %s%s, driverless, cups-filters %s\"\n",
+		 make, model, (is_fax ? " Fax" : ""), VERSION);
+  cupsFilePrintf(fp, "*ShortNickName: \"%s %s%s\"\n",
+		 make, model, (is_fax ? " Fax" : ""));
 
   /* Which is the default output bin? */
   if ((attr = ippFindAttribute(response, "output-bin-default", IPP_TAG_ZERO))
@@ -1912,16 +1920,13 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       }
     }
   }
+
   /*
    * Fax 
    */
-  
-  if ((attr = ippFindAttribute(response, "ipp-features-supported",
-				     IPP_TAG_KEYWORD))!= NULL && ippContainsString(attr, "faxout")){
-    
+
+  if (is_fax)
     cupsFilePuts(fp, "*cupsIPPFaxOut: True\n");
-    is_fax = 1;
-  }
 
   /* Check for each CUPS/cups-filters-supported PDL, starting with the
      most desirable going to the least desirable. If a PDL requires a
