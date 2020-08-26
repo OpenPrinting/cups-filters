@@ -851,14 +851,12 @@ main(int argc, char*argv[]) {
 	}
 	if (val) {
 	  /* Generate PPD file */
-	  if (!strncasecmp(val, "driverless:", 11)){
+	  if (!strncasecmp(val, "driverless:", 11))
 	    val += 11;
-	    exit(generate_ppd(val,isFax));
-	  }
-	  if (!strncasecmp(val, "driverless-fax:", 15)){
+	  else if (!strncasecmp(val, "driverless-fax:", 15))
 	    val += 15;
-	    exit(generate_ppd(val,isFax));
-	  }
+
+	  exit(generate_ppd(val,isFax));
 	} else {
 	  fprintf(stderr,
 		  "Reading command line option \"cat\", no driver URI supplied.\n\n");
