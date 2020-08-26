@@ -480,8 +480,8 @@ list_printers (int mode, int reg_type_no, int isFax)
   i = 0;
   ippfind_argv[i++] = "ippfind";
   ippfind_argv[i++] = "_ipps._tcp";       /* list IPPS entries */
-  ippfind_argv[i++] = "-T";               /* Bonjour poll timeout */
-  ippfind_argv[i++] = "3";                /* 3 seconds */
+  ippfind_argv[i++] = "-T";               /* DNS-SD poll timeout */
+  ippfind_argv[i++] = "0";                /* Minimum time required */
   ippfind_argv[i++] = "!";                /* ! --txt printer-type */
   ippfind_argv[i++] = "--txt";            /* No remote CUPS queues */
   ippfind_argv[i++] = "printer-type";     /* (no "printer-type" in TXT
