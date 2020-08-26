@@ -1633,7 +1633,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 			faceupdown = 1,
 			firsttolast = 1;
   int			manual_copies = -1,
-          is_fax = 0;
+			is_fax = 0;
 
  /*
   * Range check input...
@@ -3961,22 +3961,35 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       cupsFilePuts(fp, "*CloseUI: *print-scaling\n");
     }
   }
-   /*
-  * Phone Option for Fax..
+
+ /*
+  * Phone Options for Fax..
   */
 
-  if(is_fax){
+  if (is_fax) {
     human_readable = lookup_option("Phone", opt_strings_catalog,
 				   printer_opt_strings_catalog);
 
     cupsFilePrintf(fp, "*OpenUI *phone/%s: PickOne\n"
 		   "*OrderDependency: 10 AnySetup *phone\n"
-		   "*Defaultphone: None\n" 
-       "*phone None: \"\"\n" 
-       "*CloseUI: *phone\n",
-       (human_readable ? human_readable : "Phone Number"));
-    cupsFilePrintf(fp,"*Customphone True: \"\"\n" 
-      "*ParamCustomphone Text: 1 string 0 64\n");
+		   "*Defaultphone: None\n"
+		   "*phone None: \"\"\n"
+		   "*CloseUI: *phone\n",
+		   (human_readable ? human_readable : "Phone Number"));
+    cupsFilePrintf(fp,"*Customphone True: \"\"\n"
+		   "*ParamCustomphone Text: 1 string 0 64\n");
+
+    human_readable = lookup_option("faxPrefix", opt_strings_catalog,
+				   printer_opt_strings_catalog);
+
+    cupsFilePrintf(fp, "*OpenUI *faxPrefix/%s: PickOne\n"
+		   "*OrderDependency: 10 AnySetup *faxPrefix\n"
+		   "*DefaultfaxPrefix: None\n"
+		   "*faxPrefix None: \"\"\n"
+		   "*CloseUI: *faxPrefix\n",
+		   (human_readable ? human_readable : "Pre-Dial Number"));
+    cupsFilePrintf(fp,"*CustomfaxPrefix True: \"\"\n"
+		   "*ParamCustomfaxPrefix Text: 1 string 0 64\n");
   }
 
  /*
