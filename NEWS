@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.28.0 - 2020-08-25
 -----------------------------------------------------
 
+CHANGES IN V1.28.1
+
+	- driverless-fax: Do not use fixed path for call of driverless
+	  itself (Pull request #293).
+
 CHANGES IN V1.28.0
 
 	- driverless, driverless-fax, libcupsfilters: Added IPP Fax
