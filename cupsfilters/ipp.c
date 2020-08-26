@@ -445,7 +445,8 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
        bytes,
        port,
        i,
-       output_of_fax_uri = 0;
+       output_of_fax_uri = 0,
+       is_local;
   char *ippfind_argv[100],	/* Arguments for ippfind */
        *ptr_to_port = NULL,
        *reg_type,
@@ -492,8 +493,8 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
   i = 0;
   ippfind_argv[i++] = "ippfind";
   ippfind_argv[i++] = reg_type;           /* list IPP(S) entries */
-  ippfind_argv[i++] = "-T";               /* Bonjour poll timeout */
-  ippfind_argv[i++] = "3";                /* 3 seconds */
+  ippfind_argv[i++] = "-T";               /* DNS-SD poll timeout */
+  ippfind_argv[i++] = "0";                /* Minimum time required */
   if (is_fax) {
     ippfind_argv[i++] = "--txt";
     ippfind_argv[i++] = "rfo";
@@ -504,9 +505,15 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
   ippfind_argv[i++] = "echo";             /* Output the needed data fields */
   ippfind_argv[i++] = "-en";              /* separated by tab characters */
   if(is_fax)
-    ippfind_argv[i++] = "{service_hostname}\t{txt_rfo}\t{service_port}\t\n";
+    ippfind_argv[i++] = "\n{service_hostname}\t{txt_rfo}\t{service_port}\t";
   else
-    ippfind_argv[i++] = "{service_hostname}\t{txt_rp}\t{service_port}\t\n";
+    ippfind_argv[i++] = "\n{service_hostname}\t{txt_rp}\t{service_port}\t";
+  ippfind_argv[i++] = ";";
+  ippfind_argv[i++] = "--local";          /* Rest only if local service */
+  ippfind_argv[i++] = "-x";
+  ippfind_argv[i++] = "echo";             /* Output an 'L' at the end of the */
+  ippfind_argv[i++] = "-en";              /* line */
+  ippfind_argv[i++] = "L";
   ippfind_argv[i++] = ";";
   ippfind_argv[i++] = NULL;
 
@@ -553,8 +560,6 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
   fp = cupsFileStdin();
 
   while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) {
-    if (is_fax)
-      output_of_fax_uri = 1; /* fax-uri requested from fax-capable device */
     /* Mark all the fields of the output of ippfind */
     ptr = buffer;
     /* First, build the DNS-SD-service-name-based URI ... */
@@ -578,6 +583,10 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
     *ptr = '\0';
     ptr ++;
 
+    /* Do we have a local service so that we have to set the host name to
+       "localhost"? */
+    is_local = (*ptr == 'L');
+
     ptr = strchr(reg_type, '.');
     if (!ptr) goto read_error;
     *ptr = '\0';
@@ -585,8 +594,12 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
     port = convert_to_port(ptr_to_port);
 
     httpAssembleURIf(HTTP_URI_CODING_ALL, resolved_uri,
-		     2047, reg_type + 1, NULL, service_hostname, port, "/%s",
+		     2047, reg_type + 1, NULL,
+		     (is_local ? "localhost" : service_hostname), port, "/%s",
 		     resource_field);
+
+    if (is_fax)
+      output_of_fax_uri = 1; /* fax-uri requested from fax-capable device */
 
   read_error:
     continue;
