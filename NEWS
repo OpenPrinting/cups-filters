@@ -3,6 +3,16 @@ NEWS - OpenPrinting CUPS Filters v1.28.0 - 2020-08-25
 
 CHANGES IN V1.28.1
 
+	- COPYING: Fixed several typos
+	- libcupsfilters: Fixed typo in log message of
+	  get_printer_attributes functions.
+	- cups-browsed: Fixed typos in configuration file and man page
+	- libcupsfilters: Let the PPD generator not suffix page size
+	  names with ".Borderless" if all page sizes would get this
+	  suffix, for example for printers which generally print
+	  borderless.
+	- driverless: Accept clean IPP URIs also for 'driverless cat
+	  ...' (Pull request #296).
 	- driverless-fax: Do not use fixed path for call of driverless
 	  itself (Pull request #293).
 
