@@ -143,10 +143,6 @@ driverless_LDADD = \
 	$(CUPS_LIBS)
 
 
-EXTRA_DIST += \
-	$(driverlessfaxscripts)
-
-
 # =======
 # Banners
 # =======
