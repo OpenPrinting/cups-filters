@@ -62,6 +62,7 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
 		    int reg_type_no, int mode, int isFax) {
   int	driverless_support = 0, /*process id for ippfind */
         port,
+        is_local,
         bytes;			/* Bytes copied */
 
   char	buffer[8192],		/* Copy buffer */
@@ -155,10 +156,15 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
       ptr ++;
       port = convert_to_port(ptr_to_port);
 
+      /* Do we have a local service so that we have to set the host name to
+	 "localhost"? */
+      is_local = (*ptr == 'L');
+
       httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
 		       2047,
 		       scheme, NULL,
-		       service_hostname, port, "/%s", resource);
+		       (is_local ? "localhost" : service_hostname),
+		       port, "/%s", resource);
 
       if (reg_type_no < 1) {
         httpAssembleURIf(HTTP_URI_CODING_ALL, copy_service_uri_ipps,
@@ -515,10 +521,10 @@ list_printers (int mode, int reg_type_no, int isFax)
   if (mode < 0) {
     if (isFax)
       ippfind_argv[i++] =
-	"{service_scheme}\t{service_hostname}\t{txt_rfo}\t{service_port}\t\n";
+	"\n{service_scheme}\t{service_hostname}\t{txt_rfo}\t{service_port}\t";
     else
       ippfind_argv[i++] =
-	"{service_scheme}\t{service_hostname}\t{txt_rp}\t{service_port}\t\n";
+	"\n{service_scheme}\t{service_hostname}\t{txt_rp}\t{service_port}\t";
   } else if (mode > 0)
     ippfind_argv[i++] =
       "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
@@ -526,6 +532,14 @@ list_printers (int mode, int reg_type_no, int isFax)
     ippfind_argv[i++] =
       "{service_scheme}\t{service_name}\t{service_domain}\t\n";
   ippfind_argv[i++] = ";";
+  if (mode < 0) {
+    ippfind_argv[i++] = "--local";        /* Rest only if local service */
+    ippfind_argv[i++] = "-x";
+    ippfind_argv[i++] = "echo";           /* Output an 'L' at the end of the */
+    ippfind_argv[i++] = "-en";            /* line */
+    ippfind_argv[i++] = "L";
+    ippfind_argv[i++] = ";";
+  }
   ippfind_argv[i++] = NULL;
 
  /*
