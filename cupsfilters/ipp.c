@@ -353,7 +353,7 @@ get_printer_attributes5(http_t *http_printer,
       /* Log all printer attributes for debugging and count them */
       if (debug)
 	log_printf(get_printer_attributes_log,
-		   "Full list of all IPP atttributes:\n");
+		   "Full list of all IPP attributes:\n");
       attr = ippFirstAttribute(response);
       while (attr) {
 	total_attrs ++;
