@@ -279,8 +279,8 @@ get_printer_attributes5(http_t *http_printer,
   if(resolve_uri_type == CUPS_BACKEND_URI_CONVERTER)
     uri = resolve_uri(raw_uri);
   else
-    uri = ippfind_based_uri_converter(raw_uri,resolve_uri_type);
-   
+    uri = ippfind_based_uri_converter(raw_uri, resolve_uri_type);
+
   /* Extract URI componants needed for the IPP request */
   uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
 			       scheme, sizeof(scheme),
@@ -434,7 +434,7 @@ get_printer_attributes5(http_t *http_printer,
 }
 
 const char*
-ippfind_based_uri_converter (const char *uri ,int is_fax)
+ippfind_based_uri_converter (const char *uri, int is_fax)
 {
   int  ippfind_pid = 0,	        /* Process ID of ippfind for IPP */
        post_proc_pipe[2],	/* Pipe to post-processing for IPP */
@@ -448,7 +448,7 @@ ippfind_based_uri_converter (const char *uri ,int is_fax)
        output_of_fax_uri = 0;
   char *ippfind_argv[100],	/* Arguments for ippfind */
        *ptr_to_port = NULL,
-       *ptr3,
+       *reg_type,
        *resolved_uri,		/*  Buffer for resolved URI */
        *resource_field = NULL,
        *service_hostname = NULL,
@@ -456,7 +456,6 @@ ippfind_based_uri_converter (const char *uri ,int is_fax)
        scheme[32],
        userpass[256],
        hostname[1024],
-       reg_type[64],
        resource[1024],
        buffer[8192],		/* Copy buffer */
        *ptr;			/* Pointer into string */;
@@ -469,28 +468,38 @@ ippfind_based_uri_converter (const char *uri ,int is_fax)
 			   userpass, sizeof(userpass),
 			   hostname, sizeof(hostname), &port, resource,
 			   sizeof(resource));
-  if (status != HTTP_URI_OK) {
+  if (status < HTTP_URI_OK) {
     /* Invalid URI */
     fprintf(stderr, "ERROR: Could not parse URI: %s\n", uri);
     goto error;
   }
 
-  snprintf(reg_type, 63, "._%s._tcp", scheme);
-  reg_type[63] = '\0';
-  if ((ptr3 = strstr(hostname, reg_type)))
-    *ptr3++ = '\0';
+  /* URI is not DNS-SD-based, so do not resolve */
+  if ((reg_type = strstr(hostname, "._tcp")) == NULL) {
+    free(resolved_uri);
+    return strdup(uri);
+  }
+
+  reg_type --;
+  while (reg_type >= hostname && *reg_type != '.')
+    reg_type --;
+  if (reg_type < hostname) {
+    fprintf(stderr, "ERROR: Invalid DNS-SD service name: %s\n", hostname);
+    goto error;
+  }
+  *reg_type++ = '\0';
 
   i = 0;
   ippfind_argv[i++] = "ippfind";
-  ippfind_argv[i++] = reg_type+1;         /* list IPPS entries */
+  ippfind_argv[i++] = reg_type;           /* list IPP(S) entries */
   ippfind_argv[i++] = "-T";               /* Bonjour poll timeout */
   ippfind_argv[i++] = "3";                /* 3 seconds */
-  if(is_fax){
+  if (is_fax) {
     ippfind_argv[i++] = "--txt";
     ippfind_argv[i++] = "rfo";
   }
   ippfind_argv[i++] = "-N";
-  ippfind_argv[i++] = hostname; 
+  ippfind_argv[i++] = hostname;
   ippfind_argv[i++] = "-x";
   ippfind_argv[i++] = "echo";             /* Output the needed data fields */
   ippfind_argv[i++] = "-en";              /* separated by tab characters */
@@ -544,8 +553,8 @@ ippfind_based_uri_converter (const char *uri ,int is_fax)
   fp = cupsFileStdin();
 
   while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) {
-    if(is_fax)
-      output_of_fax_uri = 1; /* fax-uri requested is from fax-capable device */
+    if (is_fax)
+      output_of_fax_uri = 1; /* fax-uri requested from fax-capable device */
     /* Mark all the fields of the output of ippfind */
     ptr = buffer;
     /* First, build the DNS-SD-service-name-based URI ... */
@@ -569,10 +578,14 @@ ippfind_based_uri_converter (const char *uri ,int is_fax)
     *ptr = '\0';
     ptr ++;
 
+    ptr = strchr(reg_type, '.');
+    if (!ptr) goto read_error;
+    *ptr = '\0';
+
     port = convert_to_port(ptr_to_port);
 
     httpAssembleURIf(HTTP_URI_CODING_ALL, resolved_uri,
-		     2047, scheme, NULL, service_hostname, port, "/%s",
+		     2047, reg_type + 1, NULL, service_hostname, port, "/%s",
 		     resource_field);
 
   read_error:
