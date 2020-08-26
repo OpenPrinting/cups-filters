@@ -156,44 +156,13 @@ get_printer_attributes3(http_t *http_printer,
 }
 /* Get attributes of a printer specified only by URI and given info about fax-support*/
 ipp_t   *get_printer_attributes4(const char* raw_uri,
-				const char* const pattrs[],
-				int pattrs_size,
-				const char* const req_attrs[],
-				int req_attrs_size,
-				int debug,
-        int is_fax)
+				 const char* const pattrs[],
+				 int pattrs_size,
+				 const char* const req_attrs[],
+				 int req_attrs_size,
+				 int debug,
+				 int is_fax)
 {
-  #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
-
- /*
-  * Make sure status messages are not buffered...
-  */
-
-  setbuf(stderr, NULL);
-
- /*
-  * Ignore broken pipe signals...
-  */
-
-  signal(SIGPIPE, SIG_IGN);
-
- /*
-  * Register a signal handler to cleanly cancel a job.
-  */
-
-#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
-  sigset(SIGTERM, cancel_job);
-#elif defined(HAVE_SIGACTION)
-  memset(&action, 0, sizeof(action));
-
-  sigemptyset(&action.sa_mask);
-  action.sa_handler = cancel_job;
-  sigaction(SIGTERM, &action, NULL);
-#else
-  signal(SIGTERM, cancel_job);
-#endif /* HAVE_SIGSET */
   if(is_fax)
     return get_printer_attributes5(NULL, raw_uri, pattrs, pattrs_size,
 				 req_attrs, req_attrs_size, debug,NULL,IPPFIND_BASED_CONVERTER_FOR_FAX_URI);
@@ -202,6 +171,7 @@ ipp_t   *get_printer_attributes4(const char* raw_uri,
 				 req_attrs, req_attrs_size, debug,NULL,IPPFIND_BASED_CONVERTER_FOR_PRINT_URI);
   
 }
+
 /* Get attributes of a printer specified by URI and under a given HTTP
    connection, for example via a domain socket, and give info about used
    fallbacks */
@@ -213,8 +183,8 @@ get_printer_attributes5(http_t *http_printer,
 			const char* const req_attrs[],
 			int req_attrs_size,
 			int debug,
-      int* driverless_info,
-      int resolve_uri_type )
+			int* driverless_info,
+			int resolve_uri_type )
 {
   
   const char *uri;
@@ -258,6 +228,37 @@ get_printer_attributes5(http_t *http_printer,
     "uri-authentication-supported",
     "uri-security-supported"
   };
+
+#if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
+  struct sigaction action;		/* Actions for POSIX signals */
+#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+
+ /*
+  * Make sure status messages are not buffered...
+  */
+
+  setbuf(stderr, NULL);
+
+ /*
+  * Ignore broken pipe signals...
+  */
+
+  signal(SIGPIPE, SIG_IGN);
+
+ /*
+  * Register a signal handler to cleanly cancel a job.
+  */
+
+#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
+  sigset(SIGTERM, cancel_job);
+#elif defined(HAVE_SIGACTION)
+  memset(&action, 0, sizeof(action));
+  sigemptyset(&action.sa_mask);
+  action.sa_handler = cancel_job;
+  sigaction(SIGTERM, &action, NULL);
+#else
+  signal(SIGTERM, cancel_job);
+#endif /* HAVE_SIGSET */
 
   /* Expect a device capable of standard IPP Everywhere*/
   if (driverless_info != NULL)
