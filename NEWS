@@ -3,11 +3,20 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- COPYING: Fixed several typos
+	- libcupsfilters: Fixed typo in log message of
+	  get_printer_attributes functions.
+	- cups-browsed: Fixed typos in configuration file and man page
+	- libcupsfilters: Let the PPD generator not suffix page size
+	  names with ".Borderless" if all page sizes would get this
+	  suffix, for example for printers which generally print
+	  borderless.
 	- driverless, driverless-fax, libcupsfilters: Added IPP Fax
 	  Out support. Now printer setup tools list an additional fax
 	  "driver".  A fax queue is created by selecting this
 	  driver. Jobs have to be sent with "-o phone=12345" to supply
-	  the destination phone number (Pull request #280, #293).
+	  the destination phone number (Pull request #280, #293,
+	  #296).
 	- libfontembed: Silenced warning with gcc 10.x (Pull request
 	  #287).
 	- libcupsfilters, rastertopdf, rastertopclm: Moved core
