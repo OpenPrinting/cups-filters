@@ -2209,7 +2209,24 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		twidth[256],		/* Width string */
 		tlength[256],		/* Length string */
 		ppdsizename[128];
-    char        *ippsizename;
+    char        *ippsizename,
+                *suffix;
+    int         all_borderless = 1;
+
+    /* Find a page size without ".Borderless" suffix */
+    /* (if all are ".Borderless" we drop the suffix in the PPD) */
+    for (size = (cups_size_t *)cupsArrayFirst(sizes); size;
+	 size = (cups_size_t *)cupsArrayNext(sizes))
+      if (strcasestr(size->media, ".Borderless") == NULL)
+	break;
+    if (size)
+      all_borderless = 0;
+
+    if (all_borderless) {
+      suffix = strcasestr(ppdname, ".Borderless");
+      *suffix = '\0';
+    }
+
     cupsFilePrintf(fp, "*OpenUI *PageSize/%s: PickOne\n"
 		   "*OrderDependency: 10 AnySetup *PageSize\n"
 		   "*DefaultPageSize: %s\n", "Media Size", ppdname);
@@ -2238,6 +2255,12 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 					 opt_strings_catalog,
 					 printer_opt_strings_catalog);
       }
+
+      if (all_borderless) {
+	suffix = strcasestr(ppdsizename, ".Borderless");
+	*suffix = '\0';
+      }
+
       cupsFilePrintf(fp, "*PageSize %s%s%s%s: \"<</PageSize[%s %s]>>setpagedevice\"\n",
 		     ppdsizename,
 		     (human_readable ? "/" : ""),
@@ -2276,6 +2299,12 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 					 opt_strings_catalog,
 					 printer_opt_strings_catalog);
       }
+
+      if (all_borderless) {
+	suffix = strcasestr(ppdsizename, ".Borderless");
+	*suffix = '\0';
+      }
+
       cupsFilePrintf(fp, "*PageRegion %s%s%s%s: \"<</PageSize[%s %s]>>setpagedevice\"\n",
 		     ppdsizename,
 		     (human_readable ? "/" : ""),
@@ -2306,6 +2335,11 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       strlcpy(ppdsizename, size->media, sizeof(ppdsizename));
       if ((ippsizename = strchr(ppdsizename, ' ')) != NULL)
 	*ippsizename = '\0';
+
+      if (all_borderless) {
+	suffix = strcasestr(ppdsizename, ".Borderless");
+	*suffix = '\0';
+      }
 
       cupsFilePrintf(fp, "*ImageableArea %s: \"%s %s %s %s\"\n", ppdsizename,
 		     tleft, tbottom, tright, ttop);
