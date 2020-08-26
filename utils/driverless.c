@@ -714,6 +714,17 @@ generate_ppd (const char *uri, int isFax)
   char *ptr1, 
        *ptr2;
 
+  /* Tread prefixes (CUPS PPD/driver URIs) */
+
+  if (!strncasecmp(uri, "driverless:", 11)) {
+    uri += 11;
+    isFax = 0;
+  }
+  else if (!strncasecmp(uri, "driverless-fax:", 15)) {
+    uri += 15;
+    isFax = 1;
+  }
+
   /* Request printer properties via IPP to generate a PPD file for the
      printer */
 
@@ -851,11 +862,6 @@ main(int argc, char*argv[]) {
 	}
 	if (val) {
 	  /* Generate PPD file */
-	  if (!strncasecmp(val, "driverless:", 11))
-	    val += 11;
-	  else if (!strncasecmp(val, "driverless-fax:", 15))
-	    val += 15;
-
 	  exit(generate_ppd(val,isFax));
 	} else {
 	  fprintf(stderr,
