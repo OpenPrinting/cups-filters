@@ -24,6 +24,7 @@ EXTRA_DIST = \
 	libfontembed.pc.in \
 	utils/cups-browsed.service \
 	utils/cups-browsed-upstart.conf \
+	utils/driverless-fax.in \
 	filter/braille/drivers/index/ubrlto4dot.c \
 	filter/braille/filters/TODO.txt
 
@@ -115,6 +116,11 @@ cups_brf_SOURCES = \
 # ==============
 # PPD Generators
 # ==============
+utils/driverless-fax: utils/driverless-fax.in Makefile
+	sed \
+	  -e "s|\@CUPS_SERVERBIN\@|$(CUPS_SERVERBIN)|" \
+	  $< >$@
+
 pkgppdgendir = $(CUPS_SERVERBIN)/driver
 driverlessfaxscripts = \
 	utils/driverless-fax
