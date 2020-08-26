@@ -119,10 +119,6 @@ driverless_LDADD = \
 	libcupsfilters.la
 
 
-EXTRA_DIST += \
-	$(driverlessfaxscripts)
-
-
 # =======
 # Banners
 # =======
