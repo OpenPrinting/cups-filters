@@ -7,7 +7,7 @@ CHANGES IN V2.0.0
 	  Out support. Now printer setup tools list an additional fax
 	  "driver".  A fax queue is created by selecting this
 	  driver. Jobs have to be sent with "-o phone=12345" to supply
-	  the destination phone number (Pull request #280).
+	  the destination phone number (Pull request #280, #293).
 	- libfontembed: Silenced warning with gcc 10.x (Pull request
 	  #287).
 	- libcupsfilters, rastertopdf, rastertopclm: Moved core
