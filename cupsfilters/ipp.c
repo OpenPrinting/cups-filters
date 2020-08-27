@@ -36,25 +36,24 @@
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
 #define HAVE_CUPS_1_6 1
 #endif
-static int    debug = 0;
-static int		job_canceled = 0;
-static void		cancel_job(int sig);
 
 enum resolve_uri_converter_type	/**** Resolving DNS-SD based URI ****/
 {
   CUPS_BACKEND_URI_CONVERTER = -1,
   IPPFIND_BASED_CONVERTER_FOR_PRINT_URI = 0,
   IPPFIND_BASED_CONVERTER_FOR_FAX_URI = 1
-} ;
+};
+
 static int				
 convert_to_port(char *a)		
 {
   int port = 0;
-  for( int i = 0; i<strlen(a); i++)
+  for (int i = 0; i<strlen(a); i++)
     port = port*10 + (a[i] - '0');
-  
+
   return (port);
 }
+
 void
 log_printf(char *log,
 	   const char *format, ...)
@@ -232,38 +231,7 @@ get_printer_attributes5(http_t *http_printer,
     "uri-security-supported"
   };
 
-#if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
-
- /*
-  * Make sure status messages are not buffered...
-  */
-
-  setbuf(stderr, NULL);
-
- /*
-  * Ignore broken pipe signals...
-  */
-
-  signal(SIGPIPE, SIG_IGN);
-
- /*
-  * Register a signal handler to cleanly cancel a job.
-  */
-
-#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
-  sigset(SIGTERM, cancel_job);
-#elif defined(HAVE_SIGACTION)
-  memset(&action, 0, sizeof(action));
-  sigemptyset(&action.sa_mask);
-  action.sa_handler = cancel_job;
-  sigaction(SIGTERM, &action, NULL);
-#else
-  signal(SIGTERM, cancel_job);
-#endif /* HAVE_SIGSET */
-
-  /* Expect a device capable of standard IPP Everywhere*/
+  /* Expect a device capable of standard IPP Everywhere */
   if (driverless_info != NULL)
     *driverless_info = FULL_DRVLESS;
 
@@ -549,10 +517,6 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
     goto error;
   }
 
-  if (debug)
-    fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
-	    ippfind_pid);
-
   dup2(post_proc_pipe[0], 0);
   close(post_proc_pipe[0]);
   close(post_proc_pipe[1]);
@@ -617,10 +581,6 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
     */
 
     while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR) {
-      if (job_canceled) {
-      	kill(ippfind_pid, SIGTERM);
-	job_canceled = 0;
-      }
     }
 
     if (wait_pid < 0)
@@ -635,34 +595,12 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
     if (wait_status) {
       if (WIFEXITED(wait_status)) {
 	exit_status = WEXITSTATUS(wait_status);
-
-        if (debug)
-          fprintf(stderr, "DEBUG: PID %d (%s) stopped with status %d!\n",
-		  wait_pid,
-		  (wait_pid == ippfind_pid ? "ippfind" : "Unknown process"),
-		  exit_status);
-
         if (wait_pid == ippfind_pid && exit_status <= 2)
           exit_status = 0;	  
       } else if (WTERMSIG(wait_status) == SIGTERM) {
-        if (debug)
-          fprintf(stderr,
-		  "DEBUG: PID %d (%s) was terminated normally with signal %d!\n",
-		  wait_pid,
-		  (wait_pid == ippfind_pid ? "ippfind" : "Unknown process"),
-		  exit_status);
       } else {
 	exit_status = WTERMSIG(wait_status);
-        if (debug)
-          fprintf(stderr, "DEBUG: PID %d (%s) crashed on signal %d!\n",
-		  wait_pid,
-		  (wait_pid == ippfind_pid ? "ippfind" : "Unknown process"),
-		  exit_status);
       }
-    } else {
-      if (debug)
-	fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n",wait_pid,
-		(wait_pid == ippfind_pid ? "ippfind" :"Unknown process"));
     }
   }
   if (is_fax && !output_of_fax_uri) {
@@ -678,18 +616,6 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
 
  error:
   return (NULL);
-}
-  
-/*
- * 'cancel_job()' - Flag the job as canceled.
- */
-
-static void
-cancel_job(int sig)			/* I - Signal number (unused) */
-{
-  (void)sig;
-
-  job_canceled = 1;
 }
 
 
