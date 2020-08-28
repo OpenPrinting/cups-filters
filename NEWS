@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- cups-browsed: Crash when a remote printer set as default
+	  gets removed, due to missing variable in printf() call
+	  (Issue #299).
 	- COPYING: Fixed several typos
 	- libcupsfilters: Fixed typo in log message of
 	  get_printer_attributes functions.

@@ -6644,7 +6644,8 @@ on_printer_deleted (CupsNotifier *object,
 	debug_printf("ERROR: Failed recording remote default printer. Removing the file with possible old recording.\n");
 	invalidate_default_printer(0);
       } else
-	debug_printf("Recorded %s as remote default printer so that it gets set as default after re-creating.\n");
+	debug_printf("Recorded %s as remote default printer so that it gets set as default after re-creating.\n",
+		     printer);
       /* Make sure that a recorded local default printer does not get lost
 	 during the recovery operation */
       if ((r = retrieve_default_printer(1)) != NULL) {
