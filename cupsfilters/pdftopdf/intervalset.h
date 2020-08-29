@@ -1,6 +1,7 @@
 #ifndef INTERVALSET_H_
 #define INTERVALSET_H_
 
+#include "pdftopdf.h"
 #include <stddef.h>
 #include <vector>
 
@@ -22,7 +23,7 @@ class IntervalSet {
   bool contains(key_t val) const;
   key_t next(key_t val) const;
 
-  void dump() const;
+  void dump(pdftopdf_doc_t *doc) const;
  private:
   // currently not used
   bool intersect(const value_t &a,const value_t &b) const;

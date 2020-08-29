@@ -3,41 +3,48 @@
 #include <stdio.h>
 #include <assert.h>
 
-void Position_dump(Position pos) // {{{
+void Position_dump(Position pos,pdftopdf_doc_t *doc) // {{{
 {
   static const char *pstr[3]={"Left/Bottom","Center","Right/Top"};
   if ((pos < LEFT) || (pos > RIGHT)) {
-    fprintf(stderr,"(bad position: %d)",pos);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: (bad position: %d)\n",pos);
   } else {
-    fputs(pstr[pos+1],stderr);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: %s\n",pstr[pos+1]);
   }
 }
 // }}}
 
-void Position_dump(Position pos,Axis axis) // {{{
+void Position_dump(Position pos,Axis axis,pdftopdf_doc_t *doc) // {{{
 {
   assert((axis == Axis::X) || (axis == Axis::Y));
   if ((pos < LEFT) || (pos > RIGHT)) {
-    fprintf(stderr,"(bad position: %d)",pos);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "(bad position: %d)",pos);
     return;
   }
   if (axis==Axis::X) {
     static const char *pxstr[3]={"Left","Center","Right"};
-    fputs(pxstr[pos+1],stderr);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "%s", pxstr[pos+1]);
   } else {
     static const char *pystr[3]={"Bottom","Center","Top"};
-    fputs(pystr[pos+1],stderr);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "%s",pystr[pos+1]);
   }
 }
 // }}}
 
-void Rotation_dump(Rotation rot) // {{{
+void Rotation_dump(Rotation rot,pdftopdf_doc_t *doc) // {{{
 {
   static const char *rstr[4]={"0 deg","90 deg","180 deg","270 deg"}; // CCW
   if ((rot < ROT_0) || (rot > ROT_270)) {
-    fprintf(stderr,"(bad rotation: %d)",rot);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "(bad rotation: %d)",rot);
   } else {
-    fputs(rstr[rot],stderr);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "%s",rstr[rot]);
   }
 }
 // }}}
@@ -60,13 +67,15 @@ Rotation operator-(Rotation rhs) // {{{
 }
 // }}}
 
-void BorderType_dump(BorderType border) // {{{
+void BorderType_dump(BorderType border,pdftopdf_doc_t *doc) // {{{
 {
   if ((border < NONE) || (border == 1) || (border > TWO_THICK)) {
-    fprintf(stderr,"(bad border: %d)",border);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "(bad border: %d)",border);
   } else {
     static const char *bstr[6]={"None",NULL,"one thin","one thick","two thin","two thick"};
-    fputs(bstr[border],stderr);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "%s",bstr[border]);
   }
 }
 // }}}
@@ -167,9 +176,10 @@ void PageRect::set(const PageRect &rhs) // {{{
 }
 // }}}
 
-void PageRect::dump() const // {{{
+void PageRect::dump(pdftopdf_doc_t *doc) const // {{{
 {
-  fprintf(stderr,"top: %f, left: %f, right: %f, bottom: %f\n"
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: top: %f, left: %f, right: %f, bottom: %f\n"
 	  "width: %f, height: %f\n",
 	  top,left,right,bottom,
 	  width,height);

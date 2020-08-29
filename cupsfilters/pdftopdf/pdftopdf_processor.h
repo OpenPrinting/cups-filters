@@ -3,6 +3,7 @@
 
 #include "pptypes.h"
 #include "nup.h"
+#include "pdftopdf.h"
 #include "intervalset.h"
 #include <vector>
 #include <string>
@@ -103,7 +104,7 @@ ProcessingParameters()
 
   // helper functions
   bool withPage(int outno) const; // 1 based
-  void dump() const;
+  void dump(pdftopdf_doc_t *doc) const;
 };
 
 #include <stdio.h>
@@ -118,7 +119,7 @@ class PDFTOPDF_PageHandle {
   // fscale:  inverse_scale (from nup, fitplot)
   virtual void add_border_rect(const PageRect &rect,BorderType border,float fscale) =0;
   // TODO?! add standalone crop(...) method (not only for subpages)
-  virtual Rotation crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos,bool scale) =0;
+  virtual Rotation crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos,bool scale,pdftopdf_doc_t *doc) =0;
   virtual bool is_landscape(Rotation orientation) =0 ;
   virtual void add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop=NULL) =0;
   virtual void mirror() =0;
@@ -132,15 +133,15 @@ class PDFTOPDF_Processor { // abstract interface
   virtual ~PDFTOPDF_Processor() {}
 
   // TODO: ... qpdf wants password at load time
-  virtual bool loadFile(FILE *f,ArgOwnership take=WillStayAlive,int flatten_forms=1) =0;
-  virtual bool loadFilename(const char *name,int flatten_forms=1) =0;
+  virtual bool loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership take=WillStayAlive,int flatten_forms=1) =0;
+  virtual bool loadFilename(const char *name,pdftopdf_doc_t *doc,int flatten_forms=1) =0;
 
   // TODO? virtual bool may_modify/may_print/?
-  virtual bool check_print_permissions() =0;
+  virtual bool check_print_permissions(pdftopdf_doc_t *doc) =0;
 
-  virtual std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> get_pages() =0; // shared_ptr because of type erasure (deleter)
+  virtual std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> get_pages(pdftopdf_doc_t *doc) =0; // shared_ptr because of type erasure (deleter)
 
-  virtual std::shared_ptr<PDFTOPDF_PageHandle> new_page(float width,float height) =0;
+  virtual std::shared_ptr<PDFTOPDF_PageHandle> new_page(float width,float height,pdftopdf_doc_t *doc) =0;
 
   virtual void add_page(std::shared_ptr<PDFTOPDF_PageHandle> page,bool front) =0; // at back/front -- either from get_pages() or new_page()+add_subpage()-calls  (or [also allowed]: empty)
 
@@ -153,8 +154,8 @@ class PDFTOPDF_Processor { // abstract interface
 
   virtual void setComments(const std::vector<std::string> &comments) =0;
 
-  virtual void emitFile(FILE *dst,ArgOwnership take=WillStayAlive) =0;
-  virtual void emitFilename(const char *name) =0; // NULL -> stdout
+  virtual void emitFile(FILE *dst,pdftopdf_doc_t *doc,ArgOwnership take=WillStayAlive) =0;
+  virtual void emitFilename(const char *name,pdftopdf_doc_t *doc) =0; // NULL -> stdout
 
   virtual bool hasAcroForm() =0;
 };
@@ -169,6 +170,6 @@ class PDFTOPDF_Factory {
 std::vector<int> bookletShuffle(int numPages,int signature=-1);
 
 // This is all we want:
-bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param);
+bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftopdf_doc_t *doc);
 
 #endif

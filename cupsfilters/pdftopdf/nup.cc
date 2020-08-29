@@ -4,9 +4,10 @@
 #include <string.h>
 #include <utility>
 
-void NupParameters::dump() const // {{{
+void NupParameters::dump(pdftopdf_doc_t *doc) const // {{{
 {
-  fprintf(stderr,"NupX: %d, NupY: %d\n"
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: NupX: %d, NupY: %d\n"
                  "width: %f, height: %f\n",
                  nupX,nupY,
                  width,height);
@@ -23,28 +24,35 @@ void NupParameters::dump() const // {{{
     spos=1;
   }
   if (first==Axis::X) {
-    fprintf(stderr,"First Axis: X\n");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: First Axis: X\n");
     opos=0;
   } else if (first==Axis::Y) {
-    fprintf(stderr,"First Axis: Y\n");
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: First Axis: Y\n");
     opos=2;
     std::swap(fpos,spos);
   }
 
   if ( (opos==-1)||(fpos==-1)||(spos==-1) ) {
-    fprintf(stderr,"Bad Spec: %d; start: %d, %d\n\n",
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Bad Spec: %d; start: %d, %d\n\n",
                    first,xstart,ystart);
   } else {
     static const char *order[4]={"lr","rl","bt","tb"};
-    fprintf(stderr,"Order: %s%s\n",
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Order: %s%s\n",
                    order[opos+fpos],order[(opos+2)%4+spos]);
   }
 
-  fputs("Alignment: ",stderr);
-  Position_dump(xalign,Axis::X);
-  fputs("/",stderr); 
-  Position_dump(yalign,Axis::Y);
-  fputs("\n",stderr);
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Alignment: ");
+  Position_dump(xalign,Axis::X,doc);
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "/");
+  Position_dump(yalign,Axis::Y,doc);
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      "\n");
 }
 // }}}
 
@@ -133,11 +141,12 @@ void NupState::reset() // {{{
 }
 // }}}
 
-void NupPageEdit::dump() const // {{{
+void NupPageEdit::dump(pdftopdf_doc_t *doc) const // {{{
 {
-  fprintf(stderr,"xpos: %f, ypos: %f, scale: %f\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: xpos: %f, ypos: %f, scale: %f\n",
                  xpos,ypos,scale);
-  sub.dump();
+  sub.dump(doc);
 }
 // }}}
 

@@ -31,7 +31,7 @@ struct NupParameters {
   static void preset(int nup,NupParameters &ret);
   static float calculate(int nup, float in_ratio, float out_ratio,NupParameters &ret); // returns "quality", 1 is best
 
-  void dump() const;
+  void dump(pdftopdf_doc_t *doc) const;
 };
 
 // you get this
@@ -47,7 +47,7 @@ struct NupPageEdit {
   // everything in "outer"-page coordinates
   PageRect sub;
 
-  void dump() const;
+  void dump(pdftopdf_doc_t *doc) const;
 };
 
 /*
