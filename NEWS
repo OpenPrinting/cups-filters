@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- Build system: Let ./configure not error out when there is
+	  more than one DejaVuSans.ttf test font candidate (Issue
+	  #300).
 	- cups-browsed: Crash when a remote printer set as default
 	  gets removed, due to missing variable in printf() call
 	  (Issue #299).
