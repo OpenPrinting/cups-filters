@@ -292,10 +292,10 @@ struct pdf_info
     cups_cspace_t color_space;
     PointerHolder<Buffer> page_data;
     double page_width,page_height;
-    OutFormatType outformat;
+    filter_out_format_t outformat;
 };
 
-int create_pdf_file(struct pdf_info * info, const OutFormatType & outformat)
+int create_pdf_file(struct pdf_info * info, const filter_out_format_t & outformat)
 {
     try {
         info->pdf.emptyPDF();
@@ -1319,7 +1319,7 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
   FILE          *outputfp;              /* Output data stream */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
-  OutFormatType outformat; /* Output format */
+  filter_out_format_t outformat; /* Output format */
   int Page, empty = 1;
   cm_calibration_t    cm_calibrate;   /* Status of CUPS color management ("on" or "off") */
   struct pdf_info pdf;
@@ -1333,7 +1333,7 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
 #ifdef QPDF_HAVE_PCLM
   if (parameters)
   {
-    outformat = *(OutFormatType *)parameters;
+    outformat = *(filter_out_format_t *)parameters;
     if (outformat != OUTPUT_FORMAT_PCLM)
       outformat = OUTPUT_FORMAT_PDF;
   }

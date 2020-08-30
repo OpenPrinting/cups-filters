@@ -57,7 +57,7 @@ main(int  argc,				/* I - Number of command-line args */
    * Fire up the rastertopdf() filter function.
    */
 
-  OutFormatType outformat = OUTPUT_FORMAT_PCLM;
+  filter_out_format_t outformat = OUTPUT_FORMAT_PCLM;
   ret = filterCUPSWrapper(argc, argv, rastertopdf, &outformat, &JobCanceled);
 
   if (ret)

@@ -76,7 +76,7 @@ typedef int (*filter_function_t)(int inputfd, int outputfd, int inputseekable,
 typedef enum {				 /* Possible formats for rastertopdf filter */ 
   OUTPUT_FORMAT_PDF,	/* PDF */
   OUTPUT_FORMAT_PCLM	/* PCLM */
-} OutFormatType;
+} filter_out_format_t;
 
 
 /*
