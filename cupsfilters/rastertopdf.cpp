@@ -1178,18 +1178,16 @@ void pdf_set_line(struct pdf_info * info, unsigned line_n, unsigned char *line, 
         return;
     }
 
-    switch(info->outformat)
-    {
-      case OUTPUT_FORMAT_PDF:
-        memcpy((info->page_data->getBuffer()+(line_n*info->line_bytes)), line, info->line_bytes);
-        break;
-      case OUTPUT_FORMAT_PCLM:
-        // copy line data into appropriate pclm strip
-        size_t strip_num = line_n / info->pclm_strip_height_preferred;
-        unsigned line_strip = line_n - strip_num*info->pclm_strip_height_preferred;
-        memcpy(((info->pclm_strip_data[strip_num])->getBuffer() + (line_strip*info->line_bytes)),
-               line, info->line_bytes);
-        break;
+    if (info->outformat == OUTPUT_FORMAT_PCLM) {
+      // copy line data into appropriate pclm strip
+      size_t strip_num = line_n / info->pclm_strip_height_preferred;
+      unsigned line_strip = line_n -
+	strip_num * info->pclm_strip_height_preferred;
+      memcpy(((info->pclm_strip_data[strip_num])->getBuffer() +
+	      (line_strip*info->line_bytes)), line, info->line_bytes);
+    } else {
+      memcpy((info->page_data->getBuffer() + (line_n * info->line_bytes)),
+	     line, info->line_bytes);
     }
 }
 
