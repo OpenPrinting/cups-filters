@@ -79,6 +79,8 @@ typedef enum filter_out_format_e { /* Possible output formats for rastertopdf()
 				      filter function */
   OUTPUT_FORMAT_PDF,	/* PDF */
   OUTPUT_FORMAT_PCLM	/* PCLM */
+  OUTPUT_FORMAT_RASTER, /* CUPS/PWG Raster */
+  OUTPUT_FORMAT_PXL     /* PCL-XL */
 } filter_out_format_t;
 
 typedef struct filter_filter_in_chain_s { /* filter entry for CUPS array to
