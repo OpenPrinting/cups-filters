@@ -16,9 +16,21 @@
 #include <math.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/wait.h>
 #include <cups/file.h>
 #include <cups/array.h>
 #include <ppd/ppd.h>
+
+
+/*
+ * Type definitions
+ */
+
+typedef struct filter_function_pid_s    /* Filter in filter chain */
+{
+  char          *name;                  /* Filter executable name */
+  int           pid;                    /* PID of filter process */
+} filter_function_pid_t;
 
 
 /*
@@ -173,6 +185,272 @@ filterCUPSWrapper(
 
   return filter(inputfd, 1, inputseekable, JobCanceled, &filter_data, parameters);
 }
+
+
+/*
+ * 'open_pipe()' - Create a pipe which is closed on exec.
+ */
+
+static int				/* O - 0 on success, -1 on error */
+open_pipe(int *fds)			/* O - Pipe file descriptors (2) */
+{
+ /*
+  * Create the pipe...
+  */
+
+  if (pipe(fds)) {
+    fds[0] = -1;
+    fds[1] = -1;
+
+    return (-1);
+  }
+
+ /*
+  * Set the "close on exec" flag on each end of the pipe...
+  */
+
+  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC)) {
+    close(fds[0]);
+    close(fds[1]);
+
+    fds[0] = -1;
+    fds[1] = -1;
+
+    return (-1);
+  }
+
+  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC)) {
+    close(fds[0]);
+    close(fds[1]);
+
+    fds[0] = -1;
+    fds[1] = -1;
+
+    return (-1);
+  }
+
+ /*
+  * Return 0 indicating success...
+  */
+
+  return (0);
+}
+
+
+/*
+ * 'compare_filter_pids()' - Compare two filter PIDs...
+ */
+
+static int					/* O - Result of comparison */
+compare_filter_pids(filter_function_pid_t *a,	/* I - First filter */
+		    filter_function_pid_t *b)	/* I - Second filter */
+{
+  return (a->pid - b->pid);
+}
+
+
+/*
+ * 'filterChain()' - Call filter functions in a chain to do a data
+ *                   format conversion which non of the individual
+ *                   filter functions does
+ */
+
+int                              /* O - Error status */
+filterChain(int inputfd,         /* I - File descriptor input stream */
+	    int outputfd,        /* I - File descriptor output stream */
+	    int inputseekable,   /* I - Is input stream seekable? */
+	    int *jobcanceled,    /* I - Pointer to integer marking
+				        whether job is canceled */
+	    filter_data_t *data, /* I - Job and printer data */
+	    void *parameters)    /* I - Filter-specific parameters */
+{
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
+  cups_array_t  *filter_chain = (cups_array_t *)parameters;
+  filter_filter_in_chain_t *filter,  /* Current filter */
+		*next;		     /* Next filter */
+  int		current,	     /* Current filter */
+		filterfds[2][2],     /* Pipes for filters */
+		pid,		     /* Process ID of filter */
+		status,		     /* Exit status */
+		retval,		     /* Return value */
+		ret;
+  int		infd, outfd;         /* Temporary file descriptors */
+  cups_array_t	*pids;		     /* Executed filters array */
+  filter_function_pid_t	*pid_entry,  /* Entry in executed filters array */
+		key;		     /* Search key for filters */
+
+
+ /*
+  * Ignore broken pipe signals...
+  */
+
+  signal(SIGPIPE, SIG_IGN);
+
+
+ /*
+  * Remove NULL filters...
+  */
+
+  for (filter = (filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);
+       filter;
+       filter = (filter_filter_in_chain_t *)cupsArrayNext(filter_chain)) {
+    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		 "filterChain: Running filter: %s\n",
+		 filter->name ? filter->name : "Unspecified");
+    if (!filter->function)
+      cupsArrayRemove(filter_chain, filter);
+  }
+
+ /*
+  * Execute all of the filters...
+  */
+
+  pids            = cupsArrayNew((cups_array_func_t)compare_filter_pids, NULL);
+  current         = 0;
+  filterfds[0][0] = inputfd;
+  filterfds[0][1] = -1;
+  filterfds[1][0] = -1;
+  filterfds[1][1] = -1;
+
+  for (filter = (filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);
+       filter;
+       filter = next, current = 1 - current) {
+    next = (filter_filter_in_chain_t *)cupsArrayNext(filter_chain);
+
+    if (filterfds[!current][1] > 1) {
+      close(filterfds[1 - current][0]);
+      close(filterfds[1 - current][1]);
+
+      filterfds[1 - current][0] = -1;
+      filterfds[1 - current][0] = -1;
+    }
+
+    if (next)
+      open_pipe(filterfds[1 - current]);
+    else
+      filterfds[1 - current][1] = outputfd;
+
+    infd = filterfds[current][0];
+    outfd = filterfds[1 - current][1];
+
+    if ((pid = fork()) == 0) {
+     /*
+      * Child process goes here...
+      *
+      * Update stdin/stdout/stderr as needed...
+      */
+
+      if (infd != 0) {
+	if (infd < 0)
+	  infd = open("/dev/null", O_RDONLY);
+
+	if (infd > 0) {
+	  dup2(infd, 0);
+	  close(infd);
+	}
+      }
+
+      if (outfd != 1) {
+	if (outfd < 0)
+	  outfd = open("/dev/null", O_WRONLY);
+
+	if (outfd > 1) {
+	  dup2(outfd, 1);
+	  close(outfd);
+	}
+      }
+
+     /*
+      * Execute command...
+      */
+
+      ret = filter->function(0, 1, inputseekable, jobcanceled, data,
+			     filter->parameters);
+
+      exit(ret);
+
+    } else if (pid > 0) {
+      if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		   "filterChain: %s (PID %d) started.\n",
+		   filter->name ? filter->name : "Unspecified filter", pid);
+
+      pid_entry = malloc(sizeof(filter_function_pid_t));
+      pid_entry->pid = pid;
+      pid_entry->name = filter->name ? filter->name : "Unspecified filter";
+      cupsArrayAdd(pids, pid_entry);
+    } else
+      break;
+
+    inputseekable = 0;
+  }
+
+ /*
+  * Close remaining pipes...
+  */
+
+  if (filterfds[0][1] > 1) {
+    close(filterfds[0][0]);
+    close(filterfds[0][1]);
+  }
+
+  if (filterfds[1][1] > 1) {
+    close(filterfds[1][0]);
+    close(filterfds[1][1]);
+  }
+
+ /*
+  * Wait for the children to exit...
+  */
+
+  retval = 0;
+
+  while (cupsArrayCount(pids) > 0) {
+    if ((pid = wait(&status)) < 0) {
+      if (errno == EINTR && *jobcanceled) {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "filterChain: Job canceled, killing filters ...\n");
+	for (pid_entry = (filter_function_pid_t *)cupsArrayFirst(pids);
+	     pid_entry;
+	     pid_entry = (filter_function_pid_t *)cupsArrayNext(pids))
+	  kill(pid_entry->pid, SIGTERM);
+	*jobcanceled = 0;
+      } else
+	continue;
+    }
+
+    key.pid = pid;
+    if ((pid_entry = (filter_function_pid_t *)cupsArrayFind(pids, &key)) !=
+	NULL) {
+      cupsArrayRemove(pids, pid_entry);
+
+      if (status) {
+	if (WIFEXITED(status)) {
+	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		       "filterChain: %s (PID %d) stopped with status %d\n",
+		       pid_entry->name, pid, WEXITSTATUS(status));
+	} else {
+	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		       "filterChain: %s (PID %d) crashed on signal %d\n",
+		       pid_entry->name, pid, WTERMSIG(status));
+	}
+	retval = 1;
+      } else {
+	if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		       "filterChain: %s (PID %d) exited with no errors.\n",
+		       pid_entry->name, pid);
+      }
+
+      free(pid_entry);
+    }
+  }
+
+  cupsArrayDelete(pids);
+
+  return (retval);
+}
+
+
 
 
 /*

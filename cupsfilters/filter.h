@@ -75,11 +75,19 @@ typedef int (*filter_function_t)(int inputfd, int outputfd, int inputseekable,
 				 int *jobcanceled, filter_data_t *data,
 				 void *parameters);
 
-typedef enum {		/* Possible formats for rastertopdf filter */ 
+typedef enum filter_out_format_e { /* Possible output formats for rastertopdf()
+				      filter function */
   OUTPUT_FORMAT_PDF,	/* PDF */
   OUTPUT_FORMAT_PCLM	/* PCLM */
 } filter_out_format_t;
 
+typedef struct filter_filter_in_chain_s { /* filter entry for CUPS array to
+					     be supplied to filterChain()
+					     filter function */
+  filter_function_t function; /* Filter function to be called */
+  void *parameters;           /* Parameters for this filter function call */
+  char *name;                 /* Name/comment, only for logging */
+} filter_filter_in_chain_t;
 
 /*
  * Prototypes...
@@ -90,11 +98,26 @@ extern void cups_logfunc(void *data,
 			 const char *message,
 			 ...);
 
+
 extern int filterCUPSWrapper(int argc,
 			     char *argv[],
 			     filter_function_t filter,
 			     void *parameters,
 			     int *JobCanceled);
+
+
+extern int filterChain(int inputfd,
+		       int outputfd,
+		       int inputseekable,
+		       int *jobcanceled,
+		       filter_data_t *data,
+		       void *parameters);
+
+/* Parameters: Unsorted (!) CUPS array of filter_filter_in_chain_t*
+   List of filters to execute in a chain, next filter takes output of
+   previous filter as input, all get the same filter data, parameters
+   from the array */
+
 
 extern int pclmtoraster(int inputfd,
 			int outputfd,
@@ -103,12 +126,17 @@ extern int pclmtoraster(int inputfd,
 			filter_data_t *data,
 			void *parameters);
 
+/* Parameters: filter_out_format_t*
+   Ouput format */
+
+
 extern int pdftopdf(int inputfd,
 		    int outputfd,
 		    int inputseekable,
 		    int *jobcanceled,
 		    filter_data_t *data,
 		    void *parameters);
+
 
 extern int pdftops(int inputfd,
 		   int outputfd,
@@ -117,12 +145,14 @@ extern int pdftops(int inputfd,
 		   filter_data_t *data,
 		   void *parameters);
 
+
 extern int pstops(int inputfd,
 		  int outputfd,
 		  int inputseekable,
 		  int *jobcanceled,
 		  filter_data_t *data,
 		  void *parameters);
+
 
 extern int rastertopdf(int inputfd,
 		       int outputfd,
@@ -131,12 +161,14 @@ extern int rastertopdf(int inputfd,
 		       filter_data_t *data,
 		       void *parameters);
 
+
 extern int rastertops(int inputfd,
 		      int outputfd,
 		      int inputseekable,
 		      int *jobcanceled,
 		      filter_data_t *data,
 		      void *parameters);
+
 
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,
@@ -154,6 +186,7 @@ extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   float *PageLength,
 				   filter_logfunc_t log,
 				   void *ld);
+
 
 extern void filterUpdatePageVars(int Orientation,
 				 float *PageLeft, float *PageRight,
