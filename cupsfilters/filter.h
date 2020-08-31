@@ -78,7 +78,7 @@ typedef int (*filter_function_t)(int inputfd, int outputfd, int inputseekable,
 typedef enum filter_out_format_e { /* Possible output formats for rastertopdf()
 				      filter function */
   OUTPUT_FORMAT_PDF,	/* PDF */
-  OUTPUT_FORMAT_PCLM	/* PCLM */
+  OUTPUT_FORMAT_PCLM,	/* PCLM */
   OUTPUT_FORMAT_RASTER, /* CUPS/PWG Raster */
   OUTPUT_FORMAT_PXL     /* PCL-XL */
 } filter_out_format_t;
