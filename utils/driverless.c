@@ -58,24 +58,21 @@ convert_to_port(char *a)
 }
 
 void 
-listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
-		    int reg_type_no, int mode, int isFax) {
+listPrintersInArray(int reg_type_no, int mode, int isFax, char* ippfind_output ) {
   int	driverless_support = 0, /*process id for ippfind */
         port,
-        is_local,
-        bytes;			/* Bytes copied */
+        is_local;
+        
 
   char	buffer[8192],		/* Copy buffer */
         *ptr,		        /* Pointer into string */
         *scheme = NULL,
-        *copy_scheme_ipps = NULL, /* ipps scheme version for ipp printers */
         *service_name = NULL,
         *resource = NULL,
         *domain = NULL,
         *ptr_to_port = NULL,    /* pointer to port */
         *reg_type = NULL,
         *service_hostname = NULL,
-        *copy_reg_type_ipps = NULL, /* ipps reg_type version for ipp printers */
         *txt_usb_mfg = NULL,
         *txt_usb_mdl = NULL,
         *txt_product = NULL,
@@ -83,53 +80,23 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
         *txt_pdl = NULL,
         value[256],             /* Value string */
         *service_uri,           /* URI to list for this service */
-        *copy_service_uri_ipps, /* ipps service_uri version for ipp printers */
         service_host_name[1024],/* "Host name" for assembling URI */
-        copy_service_host_name_ipps[1024], /* ipps service_host_name version
-					      for ipp printers */
         make_and_model[1024],	/* Manufacturer and model */
         make[512],              /* Manufacturer */
-	model[256],		/* Model */
+      	model[256],		/* Model */
         pdl[256],		/* PDL */
-	driverless_info[256],	/* Driverless info string */
-	device_id[2048];	/* 1284 device ID */
-  cups_file_t *fp;		/* Post-processing input file */
-
-  dup2(post_proc_pipe[0], 0);
-  close(post_proc_pipe[0]);
-  close(post_proc_pipe[1]);
-
-  fp = cupsFileStdin();
- 
-  while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) {
+	      driverless_info[256],	/* Driverless info string */
+	      device_id[2048];	/* 1284 device ID */
+  service_uri = (char *)malloc(2048*(sizeof(char)));
     /* Mark all the fields of the output of ippfind */
-    service_uri = (char *)malloc(2048*(sizeof(char)));
-    copy_service_uri_ipps = (char *)malloc(2048*(sizeof(char)));
-
-    ptr = buffer;
-    /* First, build the DNS-SD-service-name-based URI ... */
-    while (ptr && !isalnum(*ptr & 255)) ptr ++;
-
-    if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t')) {
-      scheme = ptr;
-
-      copy_scheme_ipps = "ipps\0";
-      ptr += 3;
-      *ptr = '\0';
-
-      ptr ++;
-      reg_type = "_ipp._tcp";
-
-      copy_reg_type_ipps = "_ipps._tcp";
-
-    } else if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t')) {
-      scheme = ptr;
-      ptr += 4;
-      *ptr = '\0';
-      ptr ++;
+    ptr = ippfind_output;
+    if (reg_type_no < 1) {
+      scheme = "ipp";
+      reg_type = "_ipp._tcp"; 
+    } else if (reg_type_no > 1) {
+      scheme = "ipps";
       reg_type = "_ipps._tcp";
-    } else
-      goto read_error;
+    } 
 
     /* ... second, complete the output line, either URI-only or with
        extra info for CUPS */
@@ -166,23 +133,8 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
 		       (is_local ? "localhost" : service_hostname),
 		       port, "/%s", resource);
 
-      if (reg_type_no < 1) {
-        httpAssembleURIf(HTTP_URI_CODING_ALL, copy_service_uri_ipps,
-			 2047,
-			 copy_scheme_ipps, NULL,
-			 service_hostname, port, "/%s", resource);
-      }
-	    
-      if (reg_type_no < 1) {
-        if (cupsArrayFind(service_uri_list_ipps, copy_service_uri_ipps)
-	    == NULL) {
-	  /* IPPS version of IPP printer is not present */
-          printf("%s\n", service_uri);
-        }
-      } else {
-        cupsArrayAdd(service_uri_list_ipps, service_uri);
-        printf("%s\n", service_uri);
-      }
+      printf("%s\n", service_uri);
+      
     } else {
       /* Manual call on the command line */
       service_name = ptr;   
@@ -202,35 +154,17 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
       snprintf(service_host_name, sizeof(service_host_name) - 1, "%s.%s.%s",
 	       service_name, reg_type, domain);
 
-      if (reg_type_no < 1) {
-        snprintf(copy_service_host_name_ipps,
-		 sizeof(copy_service_host_name_ipps) - 1, "%s.%s.%s",
-		 service_name, copy_reg_type_ipps, domain);
-      }
+      
       httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
 		       2047,
 		       scheme, NULL,
 		       service_host_name, 0, "/");
 
-      if (reg_type_no < 1) {
-        httpAssembleURIf(HTTP_URI_CODING_ALL, copy_service_uri_ipps,
-			 2047,
-			 copy_scheme_ipps, NULL,
-			 copy_service_host_name_ipps, 0, "/");
-      }
-    
-      if (mode == 0) {
-        if (reg_type_no < 1) {
-          if (cupsArrayFind(service_uri_list_ipps, copy_service_uri_ipps) ==
-	      NULL) {
-	    /* IPPS version of IPP printer is not present */
-            printf("%s\n", service_uri);
-          }
-        } else {
-          cupsArrayAdd(service_uri_list_ipps, service_uri);
+      
+      if (mode == 0) 
           printf("%s\n", service_uri);
-        }
-      } else {
+        
+      else {
         /* Call by CUPS, either as PPD generator
 	   (/usr/lib/cups/driver/, with "list" command line argument)
 	   or as backend in discovery mode (/usr/lib/cups/backend/,
@@ -402,10 +336,7 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
 		 driverless_support_strs[driverless_support]);
         driverless_info[255] = '\0';
 
-	if (reg_type_no < 1) {
-	  if (cupsArrayFind(service_uri_list_ipps, copy_service_uri_ipps) ==
-	      NULL) {
-	    /* IPPS version of IPP printer is not present */
+
 	    if  (mode == 1)
 	      /* Call with "list" argument  (PPD generator in list mode)   */ 
 	      printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
@@ -420,38 +351,12 @@ listPrintersInArray(int post_proc_pipe[], cups_array_t *service_uri_list_ipps,
 	      printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n",
 		     service_uri, make_and_model, make_and_model,
 		     driverless_info, device_id);
-	  }
-	} else {
-	  cupsArrayAdd(service_uri_list_ipps, service_uri);
-	  if  (mode == 1)
-	    /* Call with "list" argument  (PPD generator in list mode)   */ 
-	    printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
-		   "\" \"%s\"\n",
-		   ((isFax) ? "driverless-fax:" : "driverless:"),
-		   service_uri, make, make_and_model,
-		   ((isFax) ? "Fax, " : ""),
-		   driverless_info,
-		   device_id);
-	  else
-	    /* Call without arguments and env variable "SOFTWARE" starting
-	       with "CUPS" (Backend in discovery mode) */
-	    printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n",
-		   service_uri, make_and_model, make_and_model,
-		   driverless_info, device_id);
-	}
+	  
+	} 
 
       read_error:
-	continue;
+        return;
       }
-    }
-  }
-
- /*
-  * Copy the rest of the file
-  */
-
-  while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
-    fwrite(buffer, 1, bytes, stdout);
 
   return;
 }
@@ -469,10 +374,19 @@ list_printers (int mode, int reg_type_no, int isFax)
   	        exit_status = 0,	/* Exit status */
                 i;
   char		*ippfind_argv[100];	/* Arguments for ippfind */
-  cups_array_t  *service_uri_list_ipps; /* Array to store ippfind output */
+  cups_array_t  *service_uri_list_ipps, /* Array to store ippfind output for IPPS */
+                *service_uri_list_ipp;  /* Array to store ippfind output for IPP */
 
   service_uri_list_ipps =
     cupsArrayNew((cups_array_func_t)compare_service_uri, NULL);
+  service_uri_list_ipp =
+    cupsArrayNew((cups_array_func_t)compare_service_uri, NULL);
+  char *ippfind_output;
+
+  cups_file_t *fp;		/* Post-processing input file */
+  int bytes;
+  char *ptr;
+  char	buffer[8192];	/* Copy buffer */
 
  /*
   * Use CUPS' ippfind utility to discover all printers designed for
@@ -527,7 +441,7 @@ list_printers (int mode, int reg_type_no, int isFax)
 	"\n{service_scheme}\t{service_hostname}\t{txt_rp}\t{service_port}\t";
   } else if (mode > 0)
     ippfind_argv[i++] =
-      "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\n";
+      "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\t\n";
   else
     ippfind_argv[i++] =
       "{service_scheme}\t{service_name}\t{service_domain}\t\n";
@@ -557,8 +471,10 @@ list_printers (int mode, int reg_type_no, int isFax)
      /*
       * Child comes here...
       */
+     
 
       dup2(post_proc_pipe_ipps[1], 1);
+     
       close(post_proc_pipe_ipps[0]);
       close(post_proc_pipe_ipps[1]);
 
@@ -579,12 +495,11 @@ list_printers (int mode, int reg_type_no, int isFax)
     if (debug)
       fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
 	      ippfind_ipps_pid);
-
-    listPrintersInArray(post_proc_pipe_ipps, service_uri_list_ipps, 2, mode,
-			isFax);
+        
+    
   }
-  close(post_proc_pipe_ipps[0]);
-  close(post_proc_pipe_ipps[1]);
+
+    
 
  /*
   * Create a pipe for passing the ippfind output to post-processing for IPP
@@ -602,7 +517,6 @@ list_printers (int mode, int reg_type_no, int isFax)
      /*
       * Child comes here...
       */
-
       ippfind_argv[1] = "_ipp._tcp"; 
 
       dup2(post_proc_pipe_ipp[1], 1);
@@ -626,13 +540,85 @@ list_printers (int mode, int reg_type_no, int isFax)
     if (debug)
       fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
 	      ippfind_ipp_pid);
-    listPrintersInArray(post_proc_pipe_ipp, service_uri_list_ipps, 0, mode,
-			isFax);
   }
+  /*
+  Reading the ippfind output in CUPS Array
+  */
+  if(reg_type_no >=1)
+  {
+    dup2(post_proc_pipe_ipps[0], 0);
+    close(post_proc_pipe_ipps[0]);
+    close(post_proc_pipe_ipps[1]);
 
-  close(post_proc_pipe_ipp[0]);
-  close(post_proc_pipe_ipp[1]);
+    fp = cupsFileStdin();
 
+    while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
+    {
+      ippfind_output = (char *)malloc(8192*(sizeof(char)));
+      ptr = buffer;
+
+      while (ptr && !isalnum(*ptr & 255)) ptr ++;
+
+      if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t'))
+      {
+        ptr += 4;
+        *ptr = '\0';
+        ptr ++;
+      } else
+      continue;
+      snprintf(ippfind_output,8191,"%s",ptr);
+      cupsArrayAdd(service_uri_list_ipps,ippfind_output);
+      
+    }
+ /*
+  * Copy the rest of the file
+  */
+    while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
+      fwrite(buffer, 1, bytes, stdout);
+  }
+  if(reg_type_no <=1)
+  {
+    dup2(post_proc_pipe_ipp[0], 0);
+    close(post_proc_pipe_ipp[0]);
+    close(post_proc_pipe_ipp[1]);
+
+    fp = cupsFileStdin();
+    while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
+    {
+      ippfind_output = (char *)malloc(8192*(sizeof(char)));
+      ptr = buffer;
+      
+      while (ptr && !isalnum(*ptr & 255)) ptr ++;
+
+      if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t')) 
+      {
+        ptr += 3;
+        *ptr = '\0';
+        ptr ++;
+      } else
+        continue;
+      snprintf(ippfind_output,8191,"%s",ptr);
+      cupsArrayAdd(service_uri_list_ipp,ippfind_output);
+    }
+    /*
+  * Copy the rest of the file
+  */
+     while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
+      fwrite(buffer, 1, bytes, stdout);
+  }
+  
+  
+  for(int j = 0 ; j< cupsArrayCount(service_uri_list_ipp);j++)
+  {
+    if(cupsArrayFind(service_uri_list_ipps,(char*)cupsArrayIndex(service_uri_list_ipp,j)) 
+      == NULL)
+      listPrintersInArray(0, mode, isFax, (char *)cupsArrayIndex(service_uri_list_ipp,j));
+  }
+  for(int j = 0;j< cupsArrayCount(service_uri_list_ipps);j++)
+  {
+     listPrintersInArray(2, mode, isFax, (char *)cupsArrayIndex(service_uri_list_ipps,j));
+  }
+  
  /*
   * Wait for the child processes to exit...
   */
@@ -708,6 +694,7 @@ list_printers (int mode, int reg_type_no, int isFax)
   }
 
   cupsArrayDelete(service_uri_list_ipps);
+  cupsArrayDelete(service_uri_list_ipp);
 
  /*
   * Exit...
