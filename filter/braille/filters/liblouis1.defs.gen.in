@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 
-# Copyright (c) 2015, 2017-2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015, 2017-2018, 2020 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -101,6 +101,7 @@ echo '  Choice "HyphLocale/Default hyphenation rules for language" ""'
 	"en-ueb-math")	LANGUAGE=English TYPE="Unified math definitions" ;;
 	"en-us-comp6")	LANGUAGE=English LOCATION=U.S. TYPE="computer 6 dots" ;;
 	"en-us-comp8")	LANGUAGE=English LOCATION=U.S. TYPE="computer 8 dots" ;;
+	"en-us-comp8-ext")	LANGUAGE=English LOCATION=U.S. TYPE="computer 8 dots extended" ;;
 	"en-us-compbrl")	LANGUAGE=English LOCATION=U.S. TYPE="computer" ;;
 	"en-us-g1")	LANGUAGE=English LOCATION=U.S. TYPE="grade 1" ;;
 	"en-us-g2")	LANGUAGE=English LOCATION=U.S. TYPE="grade 2" ;;
@@ -217,6 +218,7 @@ echo '  Choice "HyphLocale/Default hyphenation rules for language" ""'
 	"ta-ta-g1")	LANGUAGE=Tamil TYPE="grade 1" ;;
 	"te-in-g1")	LANGUAGE=Telugu TYPE="grade 1" ;;
 	"tr"|"tr-g1")	LANGUAGE=Turkish TYPE="grade 1" ;;
+	"tr-g2")	LANGUAGE=Turkish TYPE="grade 2" ;;
 	"tsn-za-g1")	LANGUAGE=Tswana TYPE="grade 1" ;;
 	"UEBC-g1")	LANGUAGE=English TYPE="Unified grade 1" ;;
 	"UEBC-g2")	LANGUAGE=English TYPE="Unified grade 2" ;;
