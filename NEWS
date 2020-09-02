@@ -5,6 +5,8 @@ CHANGES IN V1.28.2
 
 	- driverless: Free allocated memory, use MAX_OUTPUT_LEN (Pull
 	  request #304).
+	- driverless: driverless: Make the two ippfind tasks(for IPP
+	  and IPPS) run in parallel (Pull request #302).
 	- braille: Support new liblouis tables not containing a
 	  display name (Pull request #303)
 	- Build system: Let ./configure not error out when there is
