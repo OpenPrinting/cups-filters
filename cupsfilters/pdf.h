@@ -46,6 +46,7 @@ void pdf_resize_page(pdf_t *doc, unsigned page, float width, float length, float
 void pdf_duplicate_page (pdf_t *doc, unsigned page, unsigned count);
 int pdf_fill_form(pdf_t *doc, opt_t *opt);
 int pdf_pages(const char *filename);
+int pdf_pages_fp(FILE *file);
 
 #ifdef __cplusplus
 }

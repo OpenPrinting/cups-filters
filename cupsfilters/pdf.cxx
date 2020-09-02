@@ -107,6 +107,29 @@ int pdf_pages(const char *filename)
     return -1;
 }
 
+/*
+ * 'pdf_pages_fp()' - Count number of pages in file
+ *                    using QPDF.
+ * I - Pointer to opened PDF file (stdio FILE*)
+ * O - Number of pages or -1 on error
+ */
+int pdf_pages_fp(FILE *file)
+{
+  QPDF *pdf = new QPDF();
+  if (pdf) {
+    try{
+      pdf->processFile("", file, false);
+    } catch(...) {
+      pdf_free(pdf);
+      return -1;
+    }
+    int pages = (pdf->getAllPages()).size();
+    pdf_free(pdf);
+    return pages;
+  } else
+    return -1;
+}
+
 
 /**
  * 'pdf_prepend_stream' - Prepend a stream to the contents of a specified
