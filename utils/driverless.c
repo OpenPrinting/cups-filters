@@ -37,6 +37,8 @@
 #include <cupsfilters/ipp.h>
 #include <cupsfilters/ppdgenerator.h>
 
+#define MAX_OUTPUT_LEN 8192
+
 static int              debug = 0;
 static int		job_canceled = 0;
 static void		cancel_job(int sig);
@@ -554,7 +556,13 @@ list_printers (int mode, int reg_type_no, int isFax)
 
     while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
     {
-      ippfind_output = (char *)malloc(8192*(sizeof(char)));
+      ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
+      if (ippfind_output == NULL)
+      {
+        exit_status = 1;
+        goto error;
+      }
+
       ptr = buffer;
 
       while (ptr && !isalnum(*ptr & 255)) ptr ++;
@@ -565,10 +573,12 @@ list_printers (int mode, int reg_type_no, int isFax)
         *ptr = '\0';
         ptr ++;
       } else
-      continue;
-      snprintf(ippfind_output,8191,"%s",ptr);
+        continue;
+      snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
       cupsArrayAdd(service_uri_list_ipps,ippfind_output);
-      
+
+      free(ippfind_output);
+      ippfind_output = NULL;
     }
  /*
   * Copy the rest of the file
@@ -585,7 +595,13 @@ list_printers (int mode, int reg_type_no, int isFax)
     fp = cupsFileStdin();
     while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
     {
-      ippfind_output = (char *)malloc(8192*(sizeof(char)));
+      ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
+      if (ippfind_output == NULL)
+      {
+        exit_status = 1;
+        goto error;
+      }
+
       ptr = buffer;
       
       while (ptr && !isalnum(*ptr & 255)) ptr ++;
@@ -597,8 +613,11 @@ list_printers (int mode, int reg_type_no, int isFax)
         ptr ++;
       } else
         continue;
-      snprintf(ippfind_output,8191,"%s",ptr);
+      snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
       cupsArrayAdd(service_uri_list_ipp,ippfind_output);
+
+      free(ippfind_output);
+      ippfind_output = NULL;
     }
     /*
   * Copy the rest of the file
