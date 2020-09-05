@@ -58,14 +58,104 @@ convert_to_port(char *a)
 
   return (port);
 }
+/*
+ * 'copy_output()' - copy ippfind output data .
+ */
+
+static int				/* O - 0 on success, -1 on error */
+copy_output(int read_fd,		/* I - Print file descriptor */
+             int write_fd)		/* I - Device file descriptor */
+{
+  int		nfds;			/* Maximum file descriptor value + 1 */
+  fd_set	input;			/* Input set for reading */
+  ssize_t	print_bytes,		/* Print bytes read */
+		bytes;			/* Bytes written */
+  char		print_buffer[MAX_OUTPUT_LEN],	/* Print data buffer */
+		*print_ptr;		/* Pointer into print data buffer */
+  struct timeval timeout;		/* Timeout for read... */
+
+
+ /*
+  * Figure out the maximum file descriptor value to use with select()...
+  */
+  nfds = (read_fd > write_fd ? read_fd : write_fd) + 1;
+
+ /*
+  * Now loop until we are out of data from read_fd...
+  */
+
+  for (;;)
+  {
+   /*
+    * Use select() to determine whether we have data to copy around...
+    */
+
+    FD_ZERO(&input);
+    FD_SET(read_fd, &input);
+    timeout.tv_sec  = 2;
+    timeout.tv_usec = 0;
+
+    if (select(nfds, &input, NULL, NULL, &timeout) < 0)
+      return (-1);
+    if (!FD_ISSET(read_fd, &input))
+     {
+      return (0);
+     } 
+
+    if ((print_bytes = read(read_fd, print_buffer,
+			    sizeof(print_buffer))) < 0)
+    {
+     /*
+      * Read error - bail if we don't see EAGAIN or EINTR...
+      */
+
+      if (errno != EAGAIN && errno != EINTR)
+      {
+        perror("ERROR: Unable to read print data");
+	      return (-1);
+      }
+
+      print_bytes = 0;
+    }
+    else if (print_bytes == 0)
+    {
+     /*
+      * End of file, return...
+      */
+      
+      return (0);
+    }
+    
+    for (print_ptr = print_buffer; print_bytes > 0;)
+    {
+      if ((bytes = write(write_fd, print_ptr, print_bytes)) < 0)
+      {
+       /*
+        * Write error - bail if we don't see an error we can retry...
+	    */
+
+        if (errno != ENOSPC && errno != ENXIO && errno != EAGAIN &&
+	       errno != EINTR && errno != ENOTTY)
+          {
+            perror("ERROR: Unable to write print data");
+            return (-1);
+          }
+      }
+      else
+      {
+        print_bytes -= bytes;
+	      print_ptr   += bytes;
+      }
+    }
+  }
+}
 
 void 
 listPrintersInArray(int reg_type_no, int mode, int isFax, char* ippfind_output ) {
   int	driverless_support = 0, /*process id for ippfind */
         port,
         is_local;
-        
-
+  
   char	buffer[8192],		/* Copy buffer */
         *ptr,		        /* Pointer into string */
         *scheme = NULL,
@@ -543,14 +633,87 @@ list_printers (int mode, int reg_type_no, int isFax)
       fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
 	      ippfind_ipp_pid);
   }
+
+
+  /*
+    Copy data to pipe
+  */
+  int read_data_pipe_ipp[2],
+      read_data_pipe_ipps[2];
+  int read_data_pid_ipp = 0,
+      read_data_pid_ipps = 0;
+  int read_status_ipp ,
+      read_status_ipps;
+
+  if (pipe(read_data_pipe_ipp)) {
+    perror("ERROR: Unable to create pipe to copy data for ipp ");
+    exit_status = 1;
+    goto error;
+  }
+  if (reg_type_no <= 1) {
+    if ((read_data_pid_ipp = fork()) == 0) 
+    {
+     /*
+      * Child comes here...
+      */
+      close(post_proc_pipe_ipp[1]);
+      close(read_data_pipe_ipp[0]);
+      read_status_ipp = copy_output(post_proc_pipe_ipp[0],read_data_pipe_ipp[1]);
+      if(read_status_ipp < 0)
+        exit(1);
+      exit(0);
+    } else if (read_data_pid_ipp < 0) {
+     /*
+      * Unable to fork!
+      */
+      perror("ERROR: Unable to read ipp data");
+      exit_status = 1;
+      goto error;
+    }
+    if (debug)
+      fprintf(stderr, "DEBUG: Started reading ipp data (PID %d)\n",
+	      read_data_pid_ipp);
+  }
+  
+
+  if (pipe(read_data_pipe_ipps)) {
+    perror("ERROR: Unable to create pipe to copy data for ipps ");
+    exit_status = 1;
+    goto error;
+  }
+  if (reg_type_no >= 1) {
+    if ((read_data_pid_ipps = fork()) == 0) 
+    {
+     /*
+      * Child comes here...
+      */
+      close(post_proc_pipe_ipps[1]);
+      close(read_data_pipe_ipps[0]);
+      read_status_ipps = copy_output(post_proc_pipe_ipps[0],read_data_pipe_ipps[1]);
+      if(read_status_ipps < 0)
+        exit(1);
+      exit(0);
+    } else if (read_data_pid_ipps < 0) {
+     /*
+      * Unable to fork!
+      */
+      perror("ERROR: Unable to read ipps data");
+      exit_status = 1;
+      goto error;
+    }
+    if (debug)
+      fprintf(stderr, "DEBUG: Started reading ipps data (PID %d)\n",
+	      read_data_pid_ipps);
+  }
+  
   /*
   Reading the ippfind output in CUPS Array
   */
   if(reg_type_no >=1)
   {
-    dup2(post_proc_pipe_ipps[0], 0);
-    close(post_proc_pipe_ipps[0]);
-    close(post_proc_pipe_ipps[1]);
+    dup2(read_data_pipe_ipps[0], 0);
+    close(read_data_pipe_ipps[0]);
+    close(read_data_pipe_ipps[1]);
 
     fp = cupsFileStdin();
 
@@ -576,9 +739,6 @@ list_printers (int mode, int reg_type_no, int isFax)
         continue;
       snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
       cupsArrayAdd(service_uri_list_ipps,ippfind_output);
-
-      free(ippfind_output);
-      ippfind_output = NULL;
     }
  /*
   * Copy the rest of the file
@@ -588,9 +748,9 @@ list_printers (int mode, int reg_type_no, int isFax)
   }
   if(reg_type_no <=1)
   {
-    dup2(post_proc_pipe_ipp[0], 0);
-    close(post_proc_pipe_ipp[0]);
-    close(post_proc_pipe_ipp[1]);
+    dup2(read_data_pipe_ipp[0], 0);
+    close(read_data_pipe_ipp[0]);
+    close(read_data_pipe_ipp[1]);
 
     fp = cupsFileStdin();
     while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
@@ -615,9 +775,6 @@ list_printers (int mode, int reg_type_no, int isFax)
         continue;
       snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
       cupsArrayAdd(service_uri_list_ipp,ippfind_output);
-
-      free(ippfind_output);
-      ippfind_output = NULL;
     }
     /*
   * Copy the rest of the file
@@ -642,7 +799,7 @@ list_printers (int mode, int reg_type_no, int isFax)
   * Wait for the child processes to exit...
   */
 
-  wait_children = 2;
+  wait_children = 4;
 
   while (wait_children > 0) {
    /*
@@ -653,7 +810,8 @@ list_printers (int mode, int reg_type_no, int isFax)
       if (job_canceled) {
 	kill(ippfind_ipps_pid, SIGTERM);
 	kill(ippfind_ipp_pid, SIGTERM);
-
+  kill(read_data_pid_ipp, SIGTERM);
+  kill(read_data_pid_ipps, SIGTERM);
 	job_canceled = 0;
       }
     }
@@ -675,6 +833,8 @@ list_printers (int mode, int reg_type_no, int isFax)
 	  fprintf(stderr, "DEBUG: PID %d (%s) stopped with status %d!\n",
 		  wait_pid,
 		  wait_pid == ippfind_ipps_pid ? "ippfind _ipps._tcp" :
+      wait_pid == read_data_pid_ipp ? "read ipp data" :
+      wait_pid == read_data_pid_ipps ? "read ipps data" :
 		  (wait_pid == ippfind_ipp_pid ? "ippfind _ipp._tcp" :
 		   "Unknown process"),
 		  exit_status);
@@ -688,6 +848,8 @@ list_printers (int mode, int reg_type_no, int isFax)
 		  "DEBUG: PID %d (%s) was terminated normally with signal %d!\n",
 		  wait_pid,
 		  wait_pid == ippfind_ipps_pid ? "ippfind _ipps._tcp" :
+      wait_pid == read_data_pid_ipp ? "read ipp data" :
+      wait_pid == read_data_pid_ipps ? "read ipps data" :
 		  (wait_pid == ippfind_ipp_pid ? "ippfind _ipp._tcp" :
 		   "Unknown process"),
 		  exit_status);
@@ -698,6 +860,8 @@ list_printers (int mode, int reg_type_no, int isFax)
 	  fprintf(stderr, "DEBUG: PID %d (%s) crashed on signal %d!\n",
 		  wait_pid,
 		  wait_pid == ippfind_ipps_pid ? "ippfind _ipps._tcp" :
+      wait_pid == read_data_pid_ipp ? "read ipp data" :
+      wait_pid == read_data_pid_ipps ? "read ipps data" :
 		  (wait_pid == ippfind_ipp_pid ? "ippfind _ipp._tcp" :
 		   "Unknown process"),
 		  exit_status);
@@ -707,6 +871,8 @@ list_printers (int mode, int reg_type_no, int isFax)
 	fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n",
 		wait_pid,
 		wait_pid == ippfind_ipps_pid ? "ippfind _ipps._tcp" :
+    wait_pid == read_data_pid_ipp ? "read ipp data" :
+      wait_pid == read_data_pid_ipps ? "read ipps data" :
 		(wait_pid == ippfind_ipp_pid ? "ippfind _ipp._tcp" :
 		 "Unknown process"));
     }
