@@ -59,6 +59,142 @@ convert_to_port(char *a)
   return (port);
 }
 
+/*
+ * 'copy_output()' - copy ippfind output data .
+ */
+
+static int				/* O - 0 on success, -1 on error */
+copy_output(int read_ipp_fd,		/* I - IPP file descriptor */
+             int read_ipps_fd,		/* I - IPPS file descriptor */
+             cups_array_t  *service_uri_list_ipps, /* I - IPPS CUPS Array */
+             cups_array_t  *service_uri_list_ipp) /* I - IPP CUPS Array */
+{
+  int		nfds;			/* Maximum file descriptor value + 1 */
+  fd_set	input;			/* Input set for reading */
+  struct timeval timeout;		/* Timeout for read... */
+  cups_file_t *fp;
+  int bytes;
+  char *ptr,
+        buffer[MAX_OUTPUT_LEN],	/* Copy buffer */
+        *ippfind_output;
+  
+ /*
+  * Figure out the maximum file descriptor value to use with select()...
+  */
+  nfds = (read_ipp_fd > read_ipps_fd ? read_ipp_fd : read_ipps_fd) + 1;
+
+ /*
+  * Now loop until we are out of data from read_ipp_fd and read_ipps_fd...
+  */
+
+  for (;;)
+  {
+   /*
+    * Use select() to determine whether we have data to copy around...
+    */
+
+    FD_ZERO(&input);
+    FD_SET(read_ipp_fd, &input);
+    FD_SET(read_ipps_fd, &input);
+    timeout.tv_sec  = 2;
+    timeout.tv_usec = 0;
+
+    if (select(nfds, &input, NULL, NULL, &timeout) < 0)
+      return (-1);
+    if (!FD_ISSET(read_ipp_fd, &input) && !FD_ISSET(read_ipps_fd, &input))
+    {
+      return (0);
+    } 
+
+    
+    if(FD_ISSET(read_ipps_fd, &input))
+    {
+      dup2(read_ipps_fd, 0);
+
+      fp = cupsFileStdin();
+
+     if ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
+      {
+        ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
+        ptr = buffer;
+        while (ptr && !isalnum(*ptr & 255)) ptr ++;
+
+        if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t'))
+        {
+          ptr += 4;
+          *ptr = '\0';
+          ptr ++;
+        } else
+          continue;
+        snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
+        cupsArrayAdd(service_uri_list_ipps,ippfind_output);
+      }
+      else if (bytes < 0)
+      {
+        /*
+        * Read error - bail if we don't see EAGAIN or EINTR...
+        */
+        if (errno != EAGAIN && errno != EINTR)
+        {
+          perror("ERROR: Unable to read print data");
+          return (-1);
+        }
+      }
+      else
+      {
+        /*
+        * End of file, return...
+        */
+        return (0);
+      }
+      
+    }
+
+    if(FD_ISSET(read_ipp_fd, &input))
+    {
+      dup2(read_ipp_fd, 0);
+      fp = cupsFileStdin();
+      if ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
+      {
+        ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
+        ptr = buffer;
+        
+
+        while (ptr && !isalnum(*ptr & 255)) ptr ++;
+
+        if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t'))
+        {
+          ptr += 3;
+          *ptr = '\0';
+          ptr ++;
+        } else
+          continue;
+        snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
+        cupsArrayAdd(service_uri_list_ipp,ippfind_output);
+      }
+      else if (bytes < 0)
+      {
+        /*
+        * Read error - bail if we don't see EAGAIN or EINTR...
+        */
+        if (errno != EAGAIN && errno != EINTR)
+        {
+          perror("ERROR: Unable to read print data");
+          return (-1);
+        }
+      }
+      else
+      {
+        /*
+        * End of file, return...
+        */
+        return (0);
+      }
+  
+    }
+      
+  }
+}
 void 
 listPrintersInArray(int reg_type_no, int mode, int isFax, char* ippfind_output ) {
   int	driverless_support = 0, /*process id for ippfind */
@@ -383,12 +519,7 @@ list_printers (int mode, int reg_type_no, int isFax)
     cupsArrayNew((cups_array_func_t)compare_service_uri, NULL);
   service_uri_list_ipp =
     cupsArrayNew((cups_array_func_t)compare_service_uri, NULL);
-  char *ippfind_output;
-
-  cups_file_t *fp;		/* Post-processing input file */
-  int bytes;
-  char *ptr;
-  char	buffer[8192];	/* Copy buffer */
+  
 
  /*
   * Use CUPS' ippfind utility to discover all printers designed for
@@ -543,90 +674,22 @@ list_printers (int mode, int reg_type_no, int isFax)
       fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
 	      ippfind_ipp_pid);
   }
+
+  close(post_proc_pipe_ipp[1]);
+  close(post_proc_pipe_ipps[1]);
   /*
-  Reading the ippfind output in CUPS Array
+  * Reading the ippfind output in CUPS Array
   */
-  if(reg_type_no >=1)
-  {
-    dup2(post_proc_pipe_ipps[0], 0);
-    close(post_proc_pipe_ipps[0]);
-    close(post_proc_pipe_ipps[1]);
-
-    fp = cupsFileStdin();
-
-    while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
-    {
-      ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
-      if (ippfind_output == NULL)
-      {
-        exit_status = 1;
-        goto error;
-      }
-
-      ptr = buffer;
-
-      while (ptr && !isalnum(*ptr & 255)) ptr ++;
-
-      if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t'))
-      {
-        ptr += 4;
-        *ptr = '\0';
-        ptr ++;
-      } else
-        continue;
-      snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
-      cupsArrayAdd(service_uri_list_ipps,ippfind_output);
-
-      free(ippfind_output);
-      ippfind_output = NULL;
-    }
- /*
-  * Copy the rest of the file
-  */
-    while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
-      fwrite(buffer, 1, bytes, stdout);
-  }
-  if(reg_type_no <=1)
-  {
-    dup2(post_proc_pipe_ipp[0], 0);
-    close(post_proc_pipe_ipp[0]);
-    close(post_proc_pipe_ipp[1]);
-
-    fp = cupsFileStdin();
-    while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
-    {
-      ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
-      if (ippfind_output == NULL)
-      {
-        exit_status = 1;
-        goto error;
-      }
-
-      ptr = buffer;
-      
-      while (ptr && !isalnum(*ptr & 255)) ptr ++;
-
-      if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t')) 
-      {
-        ptr += 3;
-        *ptr = '\0';
-        ptr ++;
-      } else
-        continue;
-      snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
-      cupsArrayAdd(service_uri_list_ipp,ippfind_output);
-
-      free(ippfind_output);
-      ippfind_output = NULL;
-    }
-    /*
-  * Copy the rest of the file
-  */
-     while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
-      fwrite(buffer, 1, bytes, stdout);
-  }
+  int copy_output_exit_status = 0;
+  copy_output_exit_status = copy_output(post_proc_pipe_ipp[0],post_proc_pipe_ipps[0],service_uri_list_ipps,service_uri_list_ipp);
   
-  
+  if(copy_output_exit_status < 0)
+  { 
+    exit_status = copy_output_exit_status;
+    goto error;
+  }
+
+
   for(int j = 0 ; j< cupsArrayCount(service_uri_list_ipp);j++)
   {
     if(cupsArrayFind(service_uri_list_ipps,(char*)cupsArrayIndex(service_uri_list_ipp,j)) 
@@ -720,8 +783,9 @@ list_printers (int mode, int reg_type_no, int isFax)
   */
 
   error:
-
-  return (exit_status);
+    cupsArrayDelete(service_uri_list_ipps);
+    cupsArrayDelete(service_uri_list_ipp);
+    return (exit_status);
 }
 
 int
