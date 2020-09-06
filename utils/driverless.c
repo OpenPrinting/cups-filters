@@ -96,17 +96,14 @@ copy_output(int read_ipp_fd,		/* I - IPP file descriptor */
     FD_ZERO(&input);
     FD_SET(read_ipp_fd, &input);
     FD_SET(read_ipps_fd, &input);
-    timeout.tv_sec  = 2;
-    timeout.tv_usec = 0;
+    timeout.tv_sec  = 0;
+    timeout.tv_usec = 200000;
 
     if (select(nfds, &input, NULL, NULL, &timeout) < 0)
       return (-1);
     if (!FD_ISSET(read_ipp_fd, &input) && !FD_ISSET(read_ipps_fd, &input))
-    {
-      return (0);
-    } 
+      continue;
 
-    
     if(FD_ISSET(read_ipps_fd, &input))
     {
       dup2(read_ipps_fd, 0);
@@ -147,7 +144,7 @@ copy_output(int read_ipp_fd,		/* I - IPP file descriptor */
         */
         return (0);
       }
-      
+
     }
 
     if(FD_ISSET(read_ipp_fd, &input))
@@ -158,7 +155,6 @@ copy_output(int read_ipp_fd,		/* I - IPP file descriptor */
       {
         ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
         ptr = buffer;
-        
 
         while (ptr && !isalnum(*ptr & 255)) ptr ++;
 
@@ -190,11 +186,12 @@ copy_output(int read_ipp_fd,		/* I - IPP file descriptor */
         */
         return (0);
       }
-  
+
     }
-      
+
   }
 }
+
 void 
 listPrintersInArray(int reg_type_no, int mode, int isFax, char* ippfind_output ) {
   int	driverless_support = 0, /*process id for ippfind */
@@ -774,9 +771,6 @@ list_printers (int mode, int reg_type_no, int isFax)
 		 "Unknown process"));
     }
   }
-
-  cupsArrayDelete(service_uri_list_ipps);
-  cupsArrayDelete(service_uri_list_ipp);
 
  /*
   * Exit...
