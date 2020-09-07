@@ -490,9 +490,11 @@ listPrintersInArray(int reg_type_no, int mode, int isFax, char* ippfind_output )
 	} 
 
       read_error:
+        free(service_uri);
         return;
       }
 
+  free(service_uri);
   return;
 }
 
@@ -513,9 +515,9 @@ list_printers (int mode, int reg_type_no, int isFax)
                 *service_uri_list_ipp;  /* Array to store ippfind output for IPP */
 
   service_uri_list_ipps =
-    cupsArrayNew((cups_array_func_t)compare_service_uri, NULL);
+    cupsArrayNew3((cups_array_func_t)compare_service_uri, NULL, NULL, 0, NULL, (cups_afree_func_t)free);
   service_uri_list_ipp =
-    cupsArrayNew((cups_array_func_t)compare_service_uri, NULL);
+    cupsArrayNew3((cups_array_func_t)compare_service_uri, NULL, NULL, 0, NULL, (cups_afree_func_t)free);
   
 
  /*
