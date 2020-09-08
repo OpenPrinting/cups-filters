@@ -282,6 +282,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/colormanager.c \
 	cupsfilters/dither.c \
 	cupsfilters/filter.c \
+	cupsfilters/ghostscript.c \
 	cupsfilters/image.c \
 	cupsfilters/image-bmp.c \
 	cupsfilters/image-colorspace.c \

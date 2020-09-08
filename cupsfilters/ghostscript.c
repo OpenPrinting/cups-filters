@@ -1,34 +1,15 @@
 /*
-
-Copyright (c) 2008-2016, Till Kamppeter
-Copyright (c) 2011, Tim Waugh
-Copyright (c) 2011-2013, Richard Hughes
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-MIT Open Source License  -  http://www.opensource.org/
-
-*/
-
-
-/* PS/PDF to CUPS Raster filter based on Ghostscript */
+ * Ghostscript filter function for cups-filters.
+ *
+ * Used for PostScript -> PDF, PDF -> Raster, PDF -> PCL-XL
+ *
+ * Copyright (c) 2008-2020, Till Kamppeter
+ * Copyright (c) 2011, Tim Waugh
+ * Copyright (c) 2011-2013, Richard Hughes
+ *
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
+ */
 
 #include <config.h>
 #include <cups/cups.h>
@@ -48,21 +29,17 @@ MIT Open Source License  -  http://www.opensource.org/
 #include <sys/wait.h>
 #include <signal.h>
 #include <errno.h>
-#include <cupsfilters/pdf.h>
+#include "filter.h"
+#include "pdf.h"
 
 #define PDF_MAX_CHECK_COMMENT_LINES	20
 
 typedef enum {
   GS_DOC_TYPE_PDF,
   GS_DOC_TYPE_PS,
+  GS_DOC_TYPE_EMPTY,
   GS_DOC_TYPE_UNKNOWN
 } GsDocType;
-
-typedef enum {
-  OUTPUT_FORMAT_RASTER,
-  OUTPUT_FORMAT_PDF,
-  OUTPUT_FORMAT_PXL
-} OutFormatType;
 
 #ifdef CUPS_RASTER_SYNCv1
 typedef cups_page_header2_t gs_page_header;
@@ -74,15 +51,20 @@ static GsDocType
 parse_doc_type(FILE *fp)
 {
   char buf[5];
+  int is_empty = 1;
+  GsDocType type = GS_DOC_TYPE_UNKNOWN;
 
   /* get the first few bytes of the file */
   rewind(fp);
-/* skip until PDF/PS start header */
- while (fgets(buf,sizeof(buf),fp) != 0) {
-   if (strncmp(buf,"%PDF",4) == 0) return GS_DOC_TYPE_PDF;
-   if (strncmp(buf,"%!",2) == 0) return GS_DOC_TYPE_PS;
+  /* skip until PDF/PS start header */
+  while (fgets(buf,sizeof(buf),fp) != 0) {
+    if (is_empty && buf[0] != '\n') is_empty = 0;
+    if (strncmp(buf,"%PDF",4) == 0) type = GS_DOC_TYPE_PDF;
+    if (strncmp(buf,"%!",2) == 0) type = GS_DOC_TYPE_PS;
   }
-  return GS_DOC_TYPE_UNKNOWN;
+  if (is_empty) type = GS_DOC_TYPE_EMPTY;
+  rewind(fp);
+  return type;
 }
 
 static void
@@ -121,13 +103,14 @@ parse_pdf_header_options(FILE *fp, gs_page_header *h)
 
 static void
 add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
-		       OutFormatType outformat, int pxlcolor)
+		       filter_out_format_t outformat, int pxlcolor)
 {
   int i;
   char tmpstr[1024];
 
   /* Simple boolean, enumerated choice, numerical, and string parameters */
-  if (outformat == OUTPUT_FORMAT_RASTER) {
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER) {
     if (h->MediaClass[0] |= '\0') {
       snprintf(tmpstr, sizeof(tmpstr), "-sMediaClass=%s", h->MediaClass);
       cupsArrayAdd(gs_args, strdup(tmpstr));
@@ -163,7 +146,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup(tmpstr));
     }
   }
-  if (outformat == OUTPUT_FORMAT_RASTER ||
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
       outformat == OUTPUT_FORMAT_PXL) {
     /* PDF output is only for turning PostScript input data into PDF
        not for sending PDF to a PDF printer (this is done by pdftopdf)
@@ -174,7 +158,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
   }
   snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",h->HWResolution[0], h->HWResolution[1]);
   cupsArrayAdd(gs_args, strdup(tmpstr));
-  if (outformat == OUTPUT_FORMAT_RASTER) {
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER) {
     if (h->InsertSheet) {
       cupsArrayAdd(gs_args, strdup("-dInsertSheet"));
     }
@@ -192,7 +177,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup("-dManualFeed"));
     }
   }
-  if (outformat == OUTPUT_FORMAT_RASTER ||
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
       outformat == OUTPUT_FORMAT_PXL) {
     if (h->MediaPosition) {
       int mediapos;
@@ -233,7 +219,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup(tmpstr));
     }
   }
-  if (outformat == OUTPUT_FORMAT_RASTER) {
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER) {
     if (h->MediaWeight) {
       snprintf(tmpstr, sizeof(tmpstr), "-dMediaWeight=%d",
 	       (unsigned)(h->MediaWeight));
@@ -263,7 +250,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
   cupsArrayAdd(gs_args, strdup(tmpstr));
   snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEHEIGHTPOINTS=%d",h->PageSize[1]);
   cupsArrayAdd(gs_args, strdup(tmpstr));
-  if (outformat == OUTPUT_FORMAT_RASTER) {
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER) {
     if (h->Separations) {
       cupsArrayAdd(gs_args, strdup("-dSeparations"));
     }
@@ -271,7 +259,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup("-dTraySwitch"));
     }
   }
-  if (outformat == OUTPUT_FORMAT_RASTER ||
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
       outformat == OUTPUT_FORMAT_PXL) {
     /* PDF output is only for turning PostScript input data into PDF
        not for sending PDF to a PDF printer (this is done by pdftopdf)
@@ -280,7 +269,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup("-dTumble"));
     }
   }
-  if (outformat == OUTPUT_FORMAT_RASTER) {
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER) {
     if (h->cupsMediaType) {
       snprintf(tmpstr, sizeof(tmpstr), "-dcupsMediaType=%d",
 	       (unsigned)(h->cupsMediaType));
@@ -310,7 +300,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
     else
       cupsArrayAdd(gs_args, strdup("-sDEVICE=pxlmono"));
   }
-  if (outformat == OUTPUT_FORMAT_RASTER) {
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER) {
     if (h->cupsCompression) {
       snprintf(tmpstr, sizeof(tmpstr), "-dcupsCompression=%d",
 	       (unsigned)(h->cupsCompression));
@@ -333,7 +324,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
     }
   }
 #ifdef CUPS_RASTER_SYNCv1
-  if (outformat == OUTPUT_FORMAT_RASTER) {
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER) {
     if (h->cupsBorderlessScalingFactor != 1.0f) {
       snprintf(tmpstr, sizeof(tmpstr), "-dcupsBorderlessScalingFactor=%.4f",
 	       h->cupsBorderlessScalingFactor);
@@ -380,19 +372,28 @@ static int
 gs_spawn (const char *filename,
           cups_array_t *gs_args,
           char **envp,
-          FILE *fp)
+          FILE *fp,
+	  int outputfd,
+	  int *jobcanceled,
+	  filter_logfunc_t log,
+	  void *ld)
 {
   char *argument;
   char buf[BUFSIZ];
   char **gsargv;
   const char* apos;
-  int fds[2];
+  int infds[2],
+      errfds[2];
+  FILE* errfp;
   int i;
   int n;
   int numargs;
-  int pid;
+  int gspid,
+      errpid;
   int status = 65536;
-  int wstatus;
+  int wait_children,	/* Number of child processes left */
+      wait_pid,		/* Process ID from wait() */
+      wait_status;	/* Status from child */
 
   /* Put Ghostscript command line argument into an array for the "exec()"
      call */
@@ -404,101 +405,272 @@ gs_spawn (const char *filename,
   }
   gsargv[i] = NULL;
 
-  /* Debug output: Full Ghostscript command line and environment variables */
-  fprintf(stderr, "DEBUG: Ghostscript command line:");
-  for (i = 0; gsargv[i]; i ++) {
-    if ((strchr(gsargv[i],' ')) || (strchr(gsargv[i],'\t')))
-      apos = "'";
-    else
-      apos = "";
-    fprintf(stderr, " %s%s%s", apos, gsargv[i], apos);
-  }
-  fprintf(stderr, "\n");
+  if (log) {
+    /* Debug output: Full Ghostscript command line and environment variables */
+    snprintf(buf, sizeof(buf), "ghostscript: Ghostscript command line:");
+    for (i = 0; gsargv[i]; i ++) {
+      if ((strchr(gsargv[i],' ')) || (strchr(gsargv[i],'\t')))
+	apos = "'";
+      else
+	apos = "";
+      snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+	       " %s%s%s", apos, gsargv[i], apos);
+    }
+    log(ld, FILTER_LOGLEVEL_DEBUG, "%s\n", buf);
 
-  for (i = 0; envp[i]; i ++)
-    fprintf(stderr, "DEBUG: envp[%d]=\"%s\"\n", i, envp[i]);
+    for (i = 0; envp[i]; i ++)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "ghostscript: envp[%d]=\"%s\"\n", i, envp[i]);
+  }
 
   /* Create a pipe for feeding the job into Ghostscript */
-  if (pipe(fds))
+  if (pipe(infds))
   {
-    fds[0] = -1;
-    fds[1] = -1;
-    fprintf(stderr, "ERROR: Unable to establish pipe for Ghostscript call\n");
+    infds[0] = -1;
+    infds[1] = -1;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to establish stdin pipe for Ghostscript call\n");
     goto out;
   }
 
   /* Set the "close on exec" flag on each end of the pipe... */
-  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC))
+  if (fcntl(infds[0], F_SETFD, fcntl(infds[0], F_GETFD) | FD_CLOEXEC))
   {
-    close(fds[0]);
-    close(fds[1]);
-    fds[0] = -1;
-    fds[1] = -1;
-    fprintf(stderr, "ERROR: Unable to set \"close on exec\" flag on read end of the pipe for Ghostscript call\n");
+    close(infds[0]);
+    close(infds[1]);
+    infds[0] = -1;
+    infds[1] = -1;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to set \"close on exec\" flag on read end of the stdin pipe for Ghostscript call\n");
     goto out;
   }
-  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC))
+  if (fcntl(infds[1], F_SETFD, fcntl(infds[1], F_GETFD) | FD_CLOEXEC))
   {
-    close(fds[0]);
-    close(fds[1]);
-    fprintf(stderr, "ERROR: Unable to set \"close on exec\" flag on write end of the pipe for Ghostscript call\n");
+    close(infds[0]);
+    close(infds[1]);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to set \"close on exec\" flag on write end of the stdin pipe for Ghostscript call\n");
     goto out;
   }
 
-  if ((pid = fork()) == 0)
+  /* Create a pipe for directing Ghostscript's stderr into the log function */
+  if (pipe(errfds))
   {
-    /* Couple pipe with STDIN of Ghostscript process */
-    if (fds[0] != 0) {
-      close(0);
-      if (fds[0] > 0) {
-        if (dup(fds[0]) < 0) {
-	  fprintf(stderr, "ERROR: Unable to couple pipe with STDIN of Ghostscript process\n");
-	  goto out;
-	}
-      } else {
-        fprintf(stderr, "ERROR: Unable to couple pipe with STDIN of Ghostscript process\n");
-        goto out;
+    errfds[0] = -1;
+    errfds[1] = -1;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to establish stderr pipe for Ghostscript call\n");
+    goto out;
+  }
+
+  /* Set the "close on exec" flag on each end of the pipe... */
+  if (fcntl(errfds[0], F_SETFD, fcntl(errfds[0], F_GETFD) | FD_CLOEXEC))
+  {
+    close(errfds[0]);
+    close(errfds[1]);
+    errfds[0] = -1;
+    errfds[1] = -1;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to set \"close on exec\" flag on read end of the stderr pipe for Ghostscript call\n");
+    goto out;
+  }
+  if (fcntl(errfds[1], F_SETFD, fcntl(errfds[1], F_GETFD) | FD_CLOEXEC))
+  {
+    close(errfds[0]);
+    close(errfds[1]);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to set \"close on exec\" flag on write end of the stderr pipe for Ghostscript call\n");
+    goto out;
+  }
+
+  if ((gspid = fork()) == 0)
+  {
+    /* Couple pipe with stdin of Ghostscript process */
+    if (infds[0] >= 0) {
+      if (dup2(infds[0], 0) < 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unable to couple pipe with stdin of Ghostscript process\n");
+	exit(1);
       }
+      close(infds[0]);
+      close(infds[1]);
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: invalid pipe file descriptor to couple with stdin of Ghostscript process\n");
+      exit(1);
+    }
+
+    /* Couple pipe with stderr of Ghostscript process */
+    if (errfds[1] >= 1) {
+      if (dup2(errfds[1], 2) < 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unable to couple pipe with stderr of Ghostscript process\n");
+	exit(1);
+      }
+      close(errfds[0]);
+      close(errfds[1]);
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: Invalid pipe file descriptor to couple with stderr of Ghostscript process\n");
+      exit(1);
+    }
+
+    /* Couple stdout of Ghostscript process */
+    if (outputfd >= 1) {
+      if (dup2(outputfd, 1) < 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unable to couple stdout of Ghostscript process\n");
+	exit(1);
+      }
+      close(outputfd);
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: Invalid file descriptor to couple with stdout of Ghostscript process\n");
+      exit(1);
     }
 
     /* Execute Ghostscript command line ... */
     execvpe(filename, gsargv, envp);
-    fprintf(stderr, "ERROR: Unable to launch Ghostscript: %s: %s\n", filename, strerror(errno));
-    goto out;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to launch Ghostscript: %s: %s\n", filename, strerror(errno));
+    exit(1);
   }
 
+  if ((errpid = fork()) == 0)
+  {
+    /* Couple pipe with stderr of Ghostscript process */
+    if (errfds[0] < 0) {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: Invalid pipe file descriptor to receive stderr of Ghostscript process\n");
+      exit(1);
+    }
+    close(errfds[1]);
+
+    /* Collect stderr output of Ghostscript and send it to the log function */
+    if ((errfp = fdopen(errfds[0], "r")) == NULL)
+    {
+      if (!*jobcanceled)
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unable to open stderr stream from Ghostscript.\n"); 
+      }
+
+      close(errfds[0]);
+      exit(1);
+    }
+
+    while (fgets(buf, sizeof(buf), errfp)) {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "ghostscript: |%s", buf);    
+    }
+
+    fclose(errfp);
+    close(errfds[0]);
+
+    exit(0);
+  }
+
+  close(infds[0]);
+  close(errfds[0]);
+  close(errfds[1]);
+  
   /* Feed job data into Ghostscript */
   while ((n = fread(buf, 1, BUFSIZ, fp)) > 0) {
     int count;
-retry_write:
-    count = write(fds[1], buf, n);
+  retry_write:
+    count = write(infds[1], buf, n);
     if (count != n) {
       if (count == -1) {
         if (errno == EINTR)
           goto retry_write;
-        fprintf(stderr, "ERROR: write failed: %s\n", strerror(errno));
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: write failed: %s\n", strerror(errno));
       }
-      fprintf(stderr, "ERROR: Can't feed job data into Ghostscript\n");
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: Can't feed job data into Ghostscript\n");
       goto out;
     }
   }
-  close (fds[1]);
+  close (infds[1]);
 
-retry_wait:
-  if (waitpid (pid, &wstatus, 0) == -1) {
-    if (errno == EINTR)
-      goto retry_wait;
-    perror ("gs");
-    goto out;
+ /*
+  * Wait for the child processes to exit...
+  */
+
+  wait_children = 2;
+
+  while (wait_children > 0)
+  {
+   /*
+    * Wait until we get a valid process ID or the job is canceled...
+    */
+
+    while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR)
+    {
+      if (*jobcanceled)
+      {
+	kill(gspid, SIGTERM);
+	kill(errpid, SIGTERM);
+	*jobcanceled = 0;
+      }
+    }
+
+    if (wait_pid < 0)
+      break;
+
+    wait_children --;
+
+   /*
+    * Report child status...
+    */
+
+    if (wait_status)
+    {
+      if (WIFEXITED(wait_status))
+      {
+	status = WEXITSTATUS(wait_status);
+
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "ghostscript: PID %d (%s) stopped with status %d!\n",
+		     wait_pid,
+		     wait_pid == gspid ? "Ghostscript" :
+		     (wait_pid == errpid ? "stderr logging" :
+		      "Unknown process"),
+		     status);
+      }
+      else if (WTERMSIG(wait_status) == SIGTERM)
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "ghostscript: PID %d (%s) was terminated normally with signal %d!\n",
+		     wait_pid,
+		     wait_pid == gspid ? "Ghostscript" :
+		     (wait_pid == errpid ? "stderr logging" :
+		      "Unknown process"),
+		     SIGTERM);
+      }
+      else
+      {
+	status = WTERMSIG(wait_status);
+
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: PID %d (%s) crashed on signal %d!\n",
+		     wait_pid,
+		     wait_pid == gspid ? "Ghostscript" :
+		     (wait_pid == errpid ? "stderr logging" :
+		      "Unknown process"),
+		     status);
+      }
+    }
+    else
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "ghostscript: PID %d (%s) exited with no errors.\n",
+		     wait_pid,
+		     wait_pid == gspid ? "Ghostscript" :
+		     (wait_pid == errpid ? "stderr logging" :
+		      "Unknown process"));
+    }
   }
-
-  /* How did Ghostscript terminate */
-  if (WIFEXITED(wstatus))
-    /* Via exit() anywhere or return() in the main() function */
-    status = WEXITSTATUS(wstatus);
-  else if (WIFSIGNALED(wstatus))
-    /* Via signal */
-    status = 256 * WTERMSIG(wstatus);
 
 out:
   free(gsargv);
@@ -507,7 +679,10 @@ out:
 
 #if 0
 static char *
-get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
+get_ppd_icc_fallback (ppd_file_t *ppd,
+		      char **qualifier,
+		      filter_logfunc_t log,
+		      void *ld)
 {
   char full_path[1024];
   char *icc_profile = NULL;
@@ -533,7 +708,8 @@ get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
 
   /* neither */
   if (attr == NULL) {
-    fprintf(stderr, "INFO: no profiles specified in PPD\n");
+    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		 "ghostscript: no profiles specified in PPD\n");
     goto out;
   }
 
@@ -542,8 +718,9 @@ get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
 
   /* try to find a profile that matches the qualifier exactly */
   for (;attr != NULL; attr = ppdFindNextAttr(ppd, profile_key, NULL)) {
-    fprintf(stderr, "INFO: found profile %s in PPD with qualifier '%s'\n",
-            attr->value, attr->spec);
+    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		 "ghostscript: found profile %s in PPD with qualifier '%s'\n",
+		 attr->value, attr->spec);
 
     /* invalid entry */
     if (attr->spec == NULL || attr->value == NULL)
@@ -558,8 +735,9 @@ get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
 
     /* check the file exists */
     if (access(full_path, 0)) {
-      fprintf(stderr, "INFO: found profile %s in PPD that does not exist\n",
-              full_path);
+      if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		   "ghostscript: found profile %s in PPD that does not exist\n",
+		   full_path);
       continue;
     }
 
@@ -572,36 +750,51 @@ get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
 
   /* no match */
   if (attr == NULL) {
-    fprintf(stderr, "INFO: no profiles in PPD for qualifier '%s'\n",
-            qualifer_tmp);
+    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		 "ghostscript: no profiles in PPD for qualifier '%s'\n",
+		 qualifer_tmp);
     goto out;
   }
 
 out:
   return icc_profile;
 }
-#endif
+#endif /* 0 */
 
-int
-main (int argc, char **argv, char *envp[])
+/*
+ * 'ghostscript()' - Filter function to use Ghostscript for print
+ *                   data conversions
+ */
+
+int                              /* O - Error status */
+ghostscript(int inputfd,         /* I - File descriptor input stream */
+	    int outputfd,        /* I - File descriptor output stream */
+	    int inputseekable,   /* I - Is input stream seekable? */
+	    int *jobcanceled,    /* I - Pointer to integer marking
+				        whether job is canceled */
+	    filter_data_t *data, /* I - Job and printer data */
+	    void *parameters)    /* I - Filter-specific parameters */
 {
-  char *outformat_env = NULL;
-  OutFormatType outformat;
+  filter_out_format_t outformat;
   char buf[BUFSIZ];
   char *filename;
   char *icc_profile = NULL;
   /*char **qualifier = NULL;*/
   char *tmp;
-  char tmpstr[1024];
+  char tmpstr[1024],
+       tempfile[1024];
   const char *t = NULL;
+  char *envp[3];
+  int num_env = 0;
   cups_array_t *gs_args = NULL;
   cups_option_t *options = NULL;
   FILE *fp = NULL;
   GsDocType doc_type;
   gs_page_header h;
+  int bytes;
   int fd;
   int cm_disabled;
-  int n;
+  int i;
   int num_options;
   int status = 1;
   ppd_file_t *ppd = NULL;
@@ -612,123 +805,187 @@ main (int argc, char **argv, char *envp[])
   int pwgraster = 0;
   ppd_attr_t *attr;
 #endif /* HAVE_CUPS_1_7 */
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
 
-  if (argc < 6 || argc > 7) {
-    fprintf(stderr, "ERROR: %s job-id user title copies options [file]\n",
-      argv[0]);
-    goto out;
-  }
 
+  if (parameters) {
+    outformat = *(filter_out_format_t *)parameters;
+    if (outformat != OUTPUT_FORMAT_PDF &&
+	outformat != OUTPUT_FORMAT_CUPS_RASTER &&
+	outformat != OUTPUT_FORMAT_PWG_RASTER &&
+	outformat != OUTPUT_FORMAT_PXL)
+      outformat = OUTPUT_FORMAT_PWG_RASTER;
+  } else
+    outformat = OUTPUT_FORMAT_PWG_RASTER;
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "ghostscript: Output format: %s\n",
+	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+		 (outformat == OUTPUT_FORMAT_PDF ? "PDF" :
+		  "PCL XL"))));
+  
   memset(&sa, 0, sizeof(sa));
   /* Ignore SIGPIPE and have write return an error instead */
   sa.sa_handler = SIG_IGN;
   sigaction(SIGPIPE, &sa, NULL);
 
-  /* Determine the output format via an environment variable set by a wrapper
-     script */
-  outformat_env = getenv("OUTFORMAT");
-  if (outformat_env == NULL || strcasestr(outformat_env, "raster"))
-    outformat = OUTPUT_FORMAT_RASTER;
-  else if (strcasestr(outformat_env, "pdf"))
-    outformat = OUTPUT_FORMAT_PDF;
-  else if (strcasestr(outformat_env, "xl"))
-    outformat = OUTPUT_FORMAT_PXL;
-  else {
-    fprintf(stderr, "ERROR: OUTFORMAT=\"%s\", cannot determine output format\n",
-      outformat_env);
-    goto out;
-  }
-  fprintf(stderr, "DEBUG: OUTFORMAT=\"%s\", so output format will be %s\n",
-	  (outformat_env ? outformat_env : "<none>"),
-	  (outformat == OUTPUT_FORMAT_RASTER ? "CUPS/PWG Raster" :
-	   (outformat == OUTPUT_FORMAT_PDF ? "PDF" :
-	    "PCL XL")));
-  
-  num_options = cupsParseOptions(argv[5], 0, &options);
+ /*
+  * CUPS option list
+  */
 
-  t = getenv("PPD");
-  if (t && t[0] != '\0')
-    if ((ppd = ppdOpenFile(t)) == NULL) {
-      fprintf(stderr, "ERROR: Failed to open PPD: %s\n", t);
-    }
-      
-  if (ppd) {
-    ppdMarkDefaults (ppd);
-    ppdMarkOptions (ppd, num_options, options);
+  num_options = data->num_options;
+  options = data->options;
+
+ /*
+  * Load PPD file if needed...
+  */
+
+  if (data->ppdfile == NULL && data->ppd == NULL)
+  {
+    char *p = getenv("PPD");
+    if (p)
+      data->ppdfile = strdup(p);
+    else
+      data->ppdfile = NULL;
   }
 
-  if (argc == 6) {
-    /* stdin */
+  if (data->ppd == NULL && data->ppdfile)
+    data->ppd = ppdOpenFile(data->ppdfile);
 
-    fd = cupsTempFd(buf,BUFSIZ);
-    if (fd < 0) {
-      fprintf(stderr, "ERROR: Can't create temporary file\n");
-      goto out;
+  ppd = data->ppd;
+
+ /*
+  * Process job options ...
+  */
+
+  if (ppd)
+  {
+    ppdMarkDefaults(ppd);
+    ppdMarkOptions(ppd, num_options, options);
+  }
+
+ /*
+  * Environment variables for Ghostscript call ...
+  */
+
+  if (data->ppdfile)
+  {
+    snprintf(tmpstr, sizeof(tmpstr), "PPD=%s", data->ppdfile);
+    envp[num_env] = strdup(tmpstr);
+    num_env ++;
+  }
+
+  if ((t = getenv("RIP_MAX_CACHE")) != NULL)
+  {
+    snprintf(tmpstr, sizeof(tmpstr), "RIP_MAX_CACHE=%s", t);
+    envp[num_env] = strdup(tmpstr);
+    num_env ++;
+  }
+
+  envp[num_env] = NULL;
+
+ /*
+  * Open the input data stream specified by the inputfd ...
+  */
+
+  if ((fp = fdopen(inputfd, "r")) == NULL)
+  {
+    if (!*jobcanceled)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "ghostscript: Unable to open input data stream.\n"); 
     }
 
-    filename = strdup(buf);
+    return (1);
+  }
 
-    /* copy stdin to the tmp file */
-    while ((n = read(0,buf,BUFSIZ)) > 0) {
-      if (write(fd,buf,n) != n) {
-        fprintf(stderr, "ERROR: Can't copy stdin to temporary file\n");
-        close(fd);
-        goto out;
+ /*
+  * Find out file type ...
+  */
+
+  if (inputseekable)
+    doc_type = parse_doc_type(fp);
+
+ /*
+  * Copy input into temporary file if needed ...
+  * (If the input is not seekable or if it is PostScript, to be able
+  *  to count the pages)
+  */
+
+  if (!inputseekable || doc_type == GS_DOC_TYPE_PS) {
+    if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: Unable to copy PDF file: %s\n", strerror(errno));
+      return (1);
+    }
+
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Copying input to temp file \"%s\"\n",
+		 tempfile);
+
+    while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
+      bytes = write(fd, buf, bytes);
+
+    fclose(fp);
+    close(fd);
+
+    filename = tempfile;
+
+   /*
+    * Open the temporary file to read it instead of the original input ...
+    */
+
+    if ((fp = fopen(filename, "r")) == NULL)
+    {
+      if (!*jobcanceled)
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "ghostscript: Unable to open temporary file.\n"); 
       }
-    }
-    if (lseek(fd,0,SEEK_SET) < 0) {
-        fprintf(stderr, "ERROR: Can't rewind temporary file\n");
-        close(fd);
-        goto out;
-    }
 
-    if ((fp = fdopen(fd,"rb")) == 0) {
-        fprintf(stderr, "ERROR: Can't fdopen temporary file\n");
-        close(fd);
-        goto out;
-    }
-  } else {
-    /* argc == 7 filename is specified */
-
-    if ((fp = fopen(argv[6],"rb")) == 0) {
-        fprintf(stderr, "ERROR: Can't open input file %s\n",argv[6]);
-        goto out;
-    }
-    filename = argv[6];
-  }
-
-  /* find out file type */
-  doc_type = parse_doc_type(fp);
-  if (doc_type == GS_DOC_TYPE_UNKNOWN) {
-    char buf[1];
-    rewind(fp);
-    if (fread(buf, 1, 1, fp) == 0) {
-      fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
-      status = 0;
-      if (outformat == OUTPUT_FORMAT_RASTER)
-        fprintf(stdout, "RaS2");
       goto out;
     }
-    fprintf(stderr, "ERROR: Can't detect file type\n");
+  } else
+    filename = NULL;
+
+  if (!inputseekable)
+    doc_type = parse_doc_type(fp);
+
+  if (doc_type == GS_DOC_TYPE_EMPTY) {
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Input is empty, outputting empty file.\n");
+    status = 0;
+    if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+	outformat == OUTPUT_FORMAT_PWG_RASTER)
+      fprintf(stdout, "RaS2");
+    goto out;
+  } if (doc_type == GS_DOC_TYPE_UNKNOWN) {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Can't detect file type\n");
     goto out;
   }
 
-  if (doc_type == GS_DOC_TYPE_PDF) {  
-    int pages = pdf_pages(filename);
+  if (doc_type == GS_DOC_TYPE_PDF) {
+    int pages = pdf_pages_fp(fp);
 
     if (pages == 0) {
-      fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "ghostscript: No pages left, outputting empty file.\n");
       status = 0;
-      if (outformat == OUTPUT_FORMAT_RASTER)
+      if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+	  outformat == OUTPUT_FORMAT_PWG_RASTER)
         fprintf(stdout, "RaS2");
       goto out;
     }
     if (pages < 0) {
-      fprintf(stderr, "DEBUG: Unexpected page count\n");
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: Unexpected page count\n");
       goto out;
     }
-  }
-  else {
+  } else {
     char gscommand[65536];
     char output[31] = "";
     int pagecount;
@@ -738,7 +995,8 @@ main (int argc, char **argv, char *envp[])
 
     FILE *pd = popen(gscommand, "r");
     if (!pd) {
-      fprintf(stderr, "Failed to execute ghostscript to determine number of input pages!\n");
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: Failed to execute ghostscript to determine number of input pages!\n");
       goto out;
     }
 
@@ -749,22 +1007,25 @@ main (int argc, char **argv, char *envp[])
       pagecount = -1;
 
     if (pagecount == 0) {
-      fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "ghostscript: No pages left, outputting empty file.\n");
       status = 0;
-      if (outformat == OUTPUT_FORMAT_RASTER)
+      if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+	  outformat == OUTPUT_FORMAT_PWG_RASTER)
         fprintf(stdout, "RaS2");
       goto out;
     }
     if (pagecount < 0) {
-      fprintf(stderr, "DEBUG: Unexpected page count\n");
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: Unexpected page count\n");
       goto out;
     }
   }
-  if (argc == 6) {
-    /* input from stdin */
-    /* remove name of temp file*/
+  if (filename) {
+    /* Remove name of temp file*/
     unlink(filename);
     free(filename);
+    filename = NULL;
   }
 
   /*  Check status of color management in CUPS */
@@ -781,7 +1042,8 @@ main (int argc, char **argv, char *envp[])
   /* Ghostscript parameters */
   gs_args = cupsArrayNew(NULL, NULL);
   if (!gs_args) {
-    fprintf(stderr, "ERROR: Unable to allocate memory for Ghostscript arguments array\n");
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to allocate memory for Ghostscript arguments array\n");
     goto out;
   }
 
@@ -804,7 +1066,8 @@ main (int argc, char **argv, char *envp[])
   cupsArrayAdd(gs_args, strdup("-sOutputFile=%stdout"));
 
   /* Ghostscript output device */
-  if (outformat == OUTPUT_FORMAT_RASTER)
+  if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+      outformat == OUTPUT_FORMAT_PWG_RASTER)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=cups"));
   else if (outformat == OUTPUT_FORMAT_PDF)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfwrite"));
@@ -841,7 +1104,7 @@ main (int argc, char **argv, char *envp[])
        functionality got folded into this gstoraster.c filter. It was
        not seen for long time as clients sending PostScript jobs with
        embedded number of copies are rare. */
-    if (atoi(argv[4]) <= 1)
+    if (data->copies <= 1)
       cupsArrayAdd(gs_args, strdup("-dDoNumCopies"));
 
     cupsArrayAdd(gs_args, strdup("-dCompatibilityLevel=1.3"));
@@ -854,19 +1117,16 @@ main (int argc, char **argv, char *envp[])
   }
   
 #ifdef HAVE_CUPS_1_7
-  if (outformat == OUTPUT_FORMAT_RASTER)
-  {
-    t = getenv("FINAL_CONTENT_TYPE");
-    if (t && strcasestr(t, "pwg"))
-      pwgraster = 1;
-  }
+  if (outformat == OUTPUT_FORMAT_PWG_RASTER)
+    pwgraster = 1;
 #endif /* HAVE_CUPS_1_7 */
     
   if (ppd)
   {
-    ppdRasterInterpretPPD(&h,ppd,num_options,options,0);
+    ppdRasterInterpretPPD(&h, ppd, num_options, options, 0);
 #ifdef HAVE_CUPS_1_7
-    if (outformat == OUTPUT_FORMAT_RASTER)
+    if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+	outformat == OUTPUT_FORMAT_PWG_RASTER)
     {
       if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
 	  (!strcasecmp(attr->value, "true") ||
@@ -890,9 +1150,9 @@ main (int argc, char **argv, char *envp[])
   else
   {
 #ifdef HAVE_CUPS_1_7
-    if (outformat == OUTPUT_FORMAT_RASTER)
+    if (outformat == OUTPUT_FORMAT_CUPS_RASTER)
     {
-      pwgraster = 1;
+      pwgraster = 0;
       t = cupsGetOption("media-class", num_options, options);
       if (t == NULL)
 	t = cupsGetOption("MediaClass", num_options, options);
@@ -906,7 +1166,8 @@ main (int argc, char **argv, char *envp[])
     }
     cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 1);
 #else
-    fprintf(stderr, "ERROR: No PPD file specified.\n");
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: No PPD file specified.\n");
     goto out;
 #endif /* HAVE_CUPS_1_7 */
   }
@@ -997,16 +1258,18 @@ main (int argc, char **argv, char *envp[])
 	!strcasecmp(attr->value, "yes"))) ||
       (t && (!strcasecmp(t, "true") || !strcasecmp(t, "on") ||
 	     !strcasecmp(t, "yes")))) {
-    fprintf(stderr, "DEBUG: Ghostscript using Center-of-Pixel method to fill paths.\n");
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Ghostscript using Center-of-Pixel method to fill paths.\n");
     cupsArrayAdd(gs_args, strdup("0 0 .setfilladjust2"));
   } else
-    fprintf(stderr, "DEBUG: Ghostscript using Any-Part-of-Pixel method to fill paths.\n");
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Ghostscript using Any-Part-of-Pixel method to fill paths.\n");
 
   /* Mark the end of PostScript commands supplied on the Ghostscript command
      line (with the "-c" option), so that we can supply the input file name */
   cupsArrayAdd(gs_args, strdup("-f"));
 
-  /* Let Ghostscript read from STDIN */
+  /* Let Ghostscript read from stdin */
   cupsArrayAdd(gs_args, strdup("-_"));
 
   /* Execute Ghostscript command line ... */
@@ -1014,9 +1277,11 @@ main (int argc, char **argv, char *envp[])
 
   /* call Ghostscript */
   rewind(fp);
-  status = gs_spawn (tmpstr, gs_args, envp, fp);
+  status = gs_spawn (tmpstr, gs_args, envp, fp, outputfd, jobcanceled, log, ld);
   if (status != 0) status = 1;
 out:
+  for (i = 0; envp[i]; i ++)
+    free(envp[i]);
   if (fp)
     fclose(fp);
   if (gs_args) {

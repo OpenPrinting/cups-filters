@@ -77,10 +77,11 @@ typedef int (*filter_function_t)(int inputfd, int outputfd, int inputseekable,
 
 typedef enum filter_out_format_e { /* Possible output formats for rastertopdf()
 				      filter function */
-  OUTPUT_FORMAT_PDF,	/* PDF */
-  OUTPUT_FORMAT_PCLM,	/* PCLM */
-  OUTPUT_FORMAT_RASTER, /* CUPS/PWG Raster */
-  OUTPUT_FORMAT_PXL     /* PCL-XL */
+  OUTPUT_FORMAT_PDF,	     /* PDF */
+  OUTPUT_FORMAT_PCLM,	     /* PCLM */
+  OUTPUT_FORMAT_CUPS_RASTER, /* CUPS Raster */
+  OUTPUT_FORMAT_PWG_RASTER,  /* PWG Raster */
+  OUTPUT_FORMAT_PXL          /* PCL-XL */
 } filter_out_format_t;
 
 typedef struct filter_filter_in_chain_s { /* filter entry for CUPS array to
@@ -121,15 +122,23 @@ extern int filterChain(int inputfd,
    from the array */
 
 
+extern int ghostscript(int inputfd,
+		       int outputfd,
+		       int inputseekable,
+		       int *jobcanceled,
+		       filter_data_t *data,
+		       void *parameters);
+
+/* Parameters: filter_out_format_t*
+   Ouput format: PostScript, CUPS Raster, PWG Raster, PCL-XL */
+
+
 extern int pclmtoraster(int inputfd,
 			int outputfd,
 			int inputseekable,
 			int *jobcanceled,
 			filter_data_t *data,
 			void *parameters);
-
-/* Parameters: filter_out_format_t*
-   Ouput format */
 
 
 extern int pdftopdf(int inputfd,
@@ -162,6 +171,9 @@ extern int rastertopdf(int inputfd,
 		       int *jobcanceled,
 		       filter_data_t *data,
 		       void *parameters);
+
+/* Parameters: filter_out_format_t*
+   Ouput format: PDF, PCLm */
 
 
 extern int rastertops(int inputfd,
