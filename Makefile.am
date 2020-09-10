@@ -658,12 +658,6 @@ genfilterscripts = \
 	filter/imagetops \
 	filter/texttops
 pkgfilter_SCRIPTS = $(genfilterscripts)
-gsfilterscripts = \
-	filter/gstopxl \
-	filter/gstopdf
-if ENABLE_GHOSTSCRIPT
-pkgfilter_SCRIPTS += $(gsfilterscripts)
-endif
 if ENABLE_BRAILLE
 nodist_pkgfilter_SCRIPTS = \
 	filter/braille/drivers/generic/brftoembosser \
@@ -706,7 +700,9 @@ pkgfilter_PROGRAMS += \
 endif
 if ENABLE_GHOSTSCRIPT
 pkgfilter_PROGRAMS += \
-	gstoraster
+	gstoraster \
+	gstopdf \
+	gstopxl
 endif
 if ENABLE_MUTOOL
 pkgfilter_PROGRAMS += \
@@ -735,7 +731,6 @@ TESTS += \
 
 EXTRA_DIST += \
 	$(genfilterscripts) \
-	$(gsfilterscripts) \
 	filter/test.sh
 
 bannertopdf_SOURCES = \
@@ -827,19 +822,31 @@ foomatic_rip_LDADD = \
 	libcupsfilters.la
 
 gstoraster_SOURCES = \
-	filter/gstoraster.c \
-	cupsfilters/colord.h \
-	cupsfilters/raster.h
+	filter/gstoraster.c
 gstoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	$(LIBQPDF_CFLAGS) \
-	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/
+	-I$(srcdir)/cupsfilters/
 gstoraster_LDADD = \
 	$(CUPS_LIBS) \
-	$(LIBQPDF_LIBS) \
-	libcupsfilters.la \
-	libppd.la
+	libcupsfilters.la
+
+gstopdf_SOURCES = \
+	filter/gstopdf.c
+gstopdf_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
+gstopdf_LDADD = \
+	$(CUPS_LIBS) \
+	libcupsfilters.la
+
+gstopxl_SOURCES = \
+	filter/gstopxl.c
+gstopxl_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
+gstopxl_LDADD = \
+	$(CUPS_LIBS) \
+	libcupsfilters.la
 
 imagetopdf_SOURCES = \
 	cupsfilters/image.h \
@@ -928,13 +935,10 @@ rastertops_SOURCES = \
 	filter/rastertops.c
 rastertops_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/
+	-I$(srcdir)/cupsfilters/
 rastertops_LDADD = \
 	$(CUPS_LIBS) \
-	-lz \
-	libcupsfilters.la \
-	libppd.la
+	libcupsfilters.la
 
 sys5ippprinter_SOURCES = \
 	filter/common.c \

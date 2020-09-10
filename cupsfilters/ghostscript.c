@@ -382,18 +382,13 @@ gs_spawn (const char *filename,
   char buf[BUFSIZ];
   char **gsargv;
   const char* apos;
-  int infds[2],
-      errfds[2];
-  FILE* errfp;
+  int fds[2], nullfd;
   int i;
   int n;
   int numargs;
-  int gspid,
-      errpid;
+  int pid;
   int status = 65536;
-  int wait_children,	/* Number of child processes left */
-      wait_pid,		/* Process ID from wait() */
-      wait_status;	/* Status from child */
+  int wstatus;
 
   /* Put Ghostscript command line argument into an array for the "exec()"
      call */
@@ -424,105 +419,75 @@ gs_spawn (const char *filename,
   }
 
   /* Create a pipe for feeding the job into Ghostscript */
-  if (pipe(infds))
+  if (pipe(fds))
   {
-    infds[0] = -1;
-    infds[1] = -1;
+    fds[0] = -1;
+    fds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "ghostscript: Unable to establish stdin pipe for Ghostscript call\n");
     goto out;
   }
 
   /* Set the "close on exec" flag on each end of the pipe... */
-  if (fcntl(infds[0], F_SETFD, fcntl(infds[0], F_GETFD) | FD_CLOEXEC))
+  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC))
   {
-    close(infds[0]);
-    close(infds[1]);
-    infds[0] = -1;
-    infds[1] = -1;
+    close(fds[0]);
+    close(fds[1]);
+    fds[0] = -1;
+    fds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "ghostscript: Unable to set \"close on exec\" flag on read end of the stdin pipe for Ghostscript call\n");
     goto out;
   }
-  if (fcntl(infds[1], F_SETFD, fcntl(infds[1], F_GETFD) | FD_CLOEXEC))
+  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC))
   {
-    close(infds[0]);
-    close(infds[1]);
+    close(fds[0]);
+    close(fds[1]);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "ghostscript: Unable to set \"close on exec\" flag on write end of the stdin pipe for Ghostscript call\n");
     goto out;
   }
 
-  /* Create a pipe for directing Ghostscript's stderr into the log function */
-  if (pipe(errfds))
-  {
-    errfds[0] = -1;
-    errfds[1] = -1;
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Unable to establish stderr pipe for Ghostscript call\n");
-    goto out;
-  }
-
-  /* Set the "close on exec" flag on each end of the pipe... */
-  if (fcntl(errfds[0], F_SETFD, fcntl(errfds[0], F_GETFD) | FD_CLOEXEC))
-  {
-    close(errfds[0]);
-    close(errfds[1]);
-    errfds[0] = -1;
-    errfds[1] = -1;
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Unable to set \"close on exec\" flag on read end of the stderr pipe for Ghostscript call\n");
-    goto out;
-  }
-  if (fcntl(errfds[1], F_SETFD, fcntl(errfds[1], F_GETFD) | FD_CLOEXEC))
-  {
-    close(errfds[0]);
-    close(errfds[1]);
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Unable to set \"close on exec\" flag on write end of the stderr pipe for Ghostscript call\n");
-    goto out;
-  }
-
-  if ((gspid = fork()) == 0)
+  if ((pid = fork()) == 0)
   {
     /* Couple pipe with stdin of Ghostscript process */
-    if (infds[0] >= 0) {
-      if (dup2(infds[0], 0) < 0) {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "ghostscript: Unable to couple pipe with stdin of Ghostscript process\n");
-	exit(1);
+    if (fds[0] >= 0) {
+      if (fds[0] != 0) {
+	if (dup2(fds[0], 0) < 0) {
+	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		       "ghostscript: Unable to couple pipe with stdin of Ghostscript process\n");
+	  exit(1);
+	}
+	close(fds[0]);
       }
-      close(infds[0]);
-      close(infds[1]);
+      close(fds[1]);
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "ghostscript: invalid pipe file descriptor to couple with stdin of Ghostscript process\n");
       exit(1);
     }
 
-    /* Couple pipe with stderr of Ghostscript process */
-    if (errfds[1] >= 1) {
-      if (dup2(errfds[1], 2) < 0) {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "ghostscript: Unable to couple pipe with stderr of Ghostscript process\n");
-	exit(1);
-      }
-      close(errfds[0]);
-      close(errfds[1]);
-    } else {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Invalid pipe file descriptor to couple with stderr of Ghostscript process\n");
-      exit(1);
+    /* Send Ghostscript's stderr to the Nirwana, as it does not contain
+       anything useful for us */
+    if ((nullfd = open("/dev/null", O_RDWR)) > 2)
+    {
+      dup2(nullfd, 2);
+      close(nullfd);
     }
+    else
+      close(nullfd);
+    fcntl(2, F_SETFL, O_NDELAY);
 
     /* Couple stdout of Ghostscript process */
     if (outputfd >= 1) {
-      if (dup2(outputfd, 1) < 0) {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "ghostscript: Unable to couple stdout of Ghostscript process\n");
-	exit(1);
+      if (outputfd != 1) {
+	if (dup2(outputfd, 1) < 0) {
+	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		       "ghostscript: Unable to couple stdout of Ghostscript process\n");
+	  exit(1);
+	}
+	close(outputfd);
       }
-      close(outputfd);
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "ghostscript: Invalid file descriptor to couple with stdout of Ghostscript process\n");
@@ -535,50 +500,16 @@ gs_spawn (const char *filename,
 		 "ghostscript: Unable to launch Ghostscript: %s: %s\n", filename, strerror(errno));
     exit(1);
   }
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "ghostscript: Started Ghostscript (PID %d)\n", pid);
 
-  if ((errpid = fork()) == 0)
-  {
-    /* Couple pipe with stderr of Ghostscript process */
-    if (errfds[0] < 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Invalid pipe file descriptor to receive stderr of Ghostscript process\n");
-      exit(1);
-    }
-    close(errfds[1]);
+  close(fds[0]);
 
-    /* Collect stderr output of Ghostscript and send it to the log function */
-    if ((errfp = fdopen(errfds[0], "r")) == NULL)
-    {
-      if (!*jobcanceled)
-      {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "ghostscript: Unable to open stderr stream from Ghostscript.\n"); 
-      }
-
-      close(errfds[0]);
-      exit(1);
-    }
-
-    while (fgets(buf, sizeof(buf), errfp)) {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "ghostscript: |%s", buf);    
-    }
-
-    fclose(errfp);
-    close(errfds[0]);
-
-    exit(0);
-  }
-
-  close(infds[0]);
-  close(errfds[0]);
-  close(errfds[1]);
-  
   /* Feed job data into Ghostscript */
   while ((n = fread(buf, 1, BUFSIZ, fp)) > 0) {
     int count;
   retry_write:
-    count = write(infds[1], buf, n);
+    count = write(fds[1], buf, n);
     if (count != n) {
       if (count == -1) {
         if (errno == EINTR)
@@ -591,86 +522,30 @@ gs_spawn (const char *filename,
       goto out;
     }
   }
-  close (infds[1]);
+  close (fds[1]);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "ghostscript: Input data feed completed\n");
 
- /*
-  * Wait for the child processes to exit...
-  */
-
-  wait_children = 2;
-
-  while (wait_children > 0)
-  {
-   /*
-    * Wait until we get a valid process ID or the job is canceled...
-    */
-
-    while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR)
-    {
-      if (*jobcanceled)
-      {
-	kill(gspid, SIGTERM);
-	kill(errpid, SIGTERM);
-	*jobcanceled = 0;
-      }
-    }
-
-    if (wait_pid < 0)
-      break;
-
-    wait_children --;
-
-   /*
-    * Report child status...
-    */
-
-    if (wait_status)
-    {
-      if (WIFEXITED(wait_status))
-      {
-	status = WEXITSTATUS(wait_status);
-
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "ghostscript: PID %d (%s) stopped with status %d!\n",
-		     wait_pid,
-		     wait_pid == gspid ? "Ghostscript" :
-		     (wait_pid == errpid ? "stderr logging" :
-		      "Unknown process"),
-		     status);
-      }
-      else if (WTERMSIG(wait_status) == SIGTERM)
-      {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "ghostscript: PID %d (%s) was terminated normally with signal %d!\n",
-		     wait_pid,
-		     wait_pid == gspid ? "Ghostscript" :
-		     (wait_pid == errpid ? "stderr logging" :
-		      "Unknown process"),
-		     SIGTERM);
-      }
-      else
-      {
-	status = WTERMSIG(wait_status);
-
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "ghostscript: PID %d (%s) crashed on signal %d!\n",
-		     wait_pid,
-		     wait_pid == gspid ? "Ghostscript" :
-		     (wait_pid == errpid ? "stderr logging" :
-		      "Unknown process"),
-		     status);
-      }
-    }
-    else
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "ghostscript: PID %d (%s) exited with no errors.\n",
-		     wait_pid,
-		     wait_pid == gspid ? "Ghostscript" :
-		     (wait_pid == errpid ? "stderr logging" :
-		      "Unknown process"));
-    }
+ retry_wait:
+  if (waitpid (pid, &wstatus, 0) == -1) {
+    if (errno == EINTR)
+      goto retry_wait;
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Ghostscript (PID %d) stopped with an error: %s!\n",
+		 pid, strerror(errno));
+    goto out;
   }
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "ghostscript: Ghostscript (PID %d) exited with no errors.\n",
+	       pid);
+
+  /* How did Ghostscript terminate */
+  if (WIFEXITED(wstatus))
+    /* Via exit() anywhere or return() in the main() function */
+    status = WEXITSTATUS(wstatus);
+  else if (WIFSIGNALED(wstatus))
+    /* Via signal */
+    status = 256 * WTERMSIG(wstatus);
 
 out:
   free(gsargv);
@@ -1024,7 +899,6 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   if (filename) {
     /* Remove name of temp file*/
     unlink(filename);
-    free(filename);
     filename = NULL;
   }
 
