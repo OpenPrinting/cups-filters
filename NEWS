@@ -3,8 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
-	- libcupsfilters, gstoraster: Moved core functionality of
-	  gstoraster into the ghostscript() filter function.
+	- libcupsfilters, gstoraster, gstopdf, gstopxl: Moved core
+	  functionality of gstoraster into the ghostscript() filter
+	  function.
 	- braille: Support new liblouis tables not containing a
           display name (Pull request #303)
 	- libcupsfilters: Added filterChain() filter function to run
