@@ -1,7 +1,8 @@
-NEWS - OpenPrinting CUPS Filters v1.28.1 - 2020-08-26
+NEWS - OpenPrinting CUPS Filters v1.28.2 - 2020-09-10
 -----------------------------------------------------
 
 CHANGES IN V1.28.2
+
 	- driverless: Free allocated memory, use MAX_OUTPUT_LEN (Pull
 	  request #304).
 	- driverless: driverless: Make the two ippfind tasks(for IPP
