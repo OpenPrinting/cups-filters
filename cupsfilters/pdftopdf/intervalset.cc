@@ -110,18 +110,16 @@ void IntervalSet::dump(pdftopdf_doc_t *doc) const // {{{
     return;
   }
   len--;
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: ");
   for (int iA=0;iA<len;iA++) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-	      "[%d,%d),",data[iA].first,data[iA].second);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: [%d,%d)\n,",data[iA].first,data[iA].second);
   }
   if (data[len].second==npos) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-	      "[%d,inf)\n",data[len].first);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: [%d,inf)\n",data[len].first);
   } else {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-	      "[%d,%d)\n",data[len].first,data[len].second);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	      "pdftopdf: [%d,%d)\n",data[len].first,data[len].second);
   }
 }
 // }}}

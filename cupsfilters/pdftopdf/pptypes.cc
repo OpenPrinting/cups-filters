@@ -20,18 +20,18 @@ void Position_dump(Position pos,Axis axis,pdftopdf_doc_t *doc) // {{{
 {
   assert((axis == Axis::X) || (axis == Axis::Y));
   if ((pos < LEFT) || (pos > RIGHT)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "(bad position: %d)",pos);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Position %s: (bad position: %d)", (axis == Axis::X) ? "X" : "Y", pos);
     return;
   }
   if (axis==Axis::X) {
     static const char *pxstr[3]={"Left","Center","Right"};
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "%s", pxstr[pos+1]);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Position X: %s\n", pxstr[pos+1]);
   } else {
     static const char *pystr[3]={"Bottom","Center","Top"};
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "%s",pystr[pos+1]);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Position Y: %s\n",pystr[pos+1]);
   }
 }
 // }}}
@@ -40,11 +40,11 @@ void Rotation_dump(Rotation rot,pdftopdf_doc_t *doc) // {{{
 {
   static const char *rstr[4]={"0 deg","90 deg","180 deg","270 deg"}; // CCW
   if ((rot < ROT_0) || (rot > ROT_270)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "(bad rotation: %d)",rot);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Rotation(CCW): (bad rotation: %d)\n",rot);
   } else {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "%s",rstr[rot]);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Rotation(CCW): %s\n",rstr[rot]);
   }
 }
 // }}}
@@ -70,12 +70,12 @@ Rotation operator-(Rotation rhs) // {{{
 void BorderType_dump(BorderType border,pdftopdf_doc_t *doc) // {{{
 {
   if ((border < NONE) || (border == 1) || (border > TWO_THICK)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "(bad border: %d)",border);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Border: (bad border: %d)\n",border);
   } else {
     static const char *bstr[6]={"None",NULL,"one thin","one thick","two thin","two thick"};
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "%s",bstr[border]);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: Border: %s\n",bstr[border]);
   }
 }
 // }}}

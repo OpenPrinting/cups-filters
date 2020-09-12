@@ -46,13 +46,9 @@ void NupParameters::dump(pdftopdf_doc_t *doc) const // {{{
   }
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: Alignment: ");
+      "pdftopdf: Alignment:\n");
   Position_dump(xalign,Axis::X,doc);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "/");
   Position_dump(yalign,Axis::Y,doc);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "\n");
 }
 // }}}
 

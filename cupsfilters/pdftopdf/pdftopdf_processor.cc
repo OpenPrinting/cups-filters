@@ -8,11 +8,11 @@ void BookletMode_dump(BookletMode bkm,pdftopdf_doc_t *doc) // {{{
 {
   static const char *bstr[3]={"Off","On","Shuffle-Only"};
   if ((bkm<BOOKLET_OFF) || (bkm>BOOKLET_JUSTSHUFFLE)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "(bad booklet mode: %d)",bkm);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: bookletMode: (bad booklet mode: %d)\n",bkm);
   } else {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "%s",bstr[bkm]);
+    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: bookletMode: %s\n",bstr[bkm]);
   }
 }
 // }}}
@@ -44,11 +44,7 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 
   page.dump(doc);
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: Rotation(CCW): ");
   Rotation_dump(orientation,doc);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: \n");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
       "pdftopdf: paper_is_landscape: %s\n",
@@ -58,11 +54,7 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
       "pdftopdf: duplex: %s\n",
 	  (duplex)?"true":"false");
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: Border: ");
   BorderType_dump(border,doc);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: \n");
 
   nup.dump(doc);
 
@@ -76,7 +68,7 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 	  (oddPages)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: page range: ");
+      "pdftopdf: page range: \n");
   pageRange.dump(doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
@@ -84,13 +76,9 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 	  (mirror)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: Position: ");
+      "pdftopdf: Position:\n");
   Position_dump(xpos,Axis::X,doc);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "/");
   Position_dump(ypos,Axis::Y,doc);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "\n");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
       "pdftopdf: collate: %s\n",
@@ -104,11 +92,9 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
       "pdftopdf: pageLabel: %s\n",
 	  pageLabel.empty () ? "(none)" : pageLabel.c_str());
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: bookletMode: ");
   BookletMode_dump(booklet,doc);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-      "\nbooklet signature: %d\n",
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      "pdftopdf: booklet signature: %d\n",
 	  bookSignature);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
