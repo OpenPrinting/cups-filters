@@ -12,7 +12,7 @@ CHANGES IN V2.0.0
 	  several filter functions in a chain.
 	- libcupsfilters, pdftopdf: Moved core functionality of
 	  pdftopdf into the pdftopdf() filter function (Pull request
-	  #301).
+	  #301, #307).
 	- Build system: Let ./configure not error out when there is
 	  more than one DejaVuSans.ttf test font candidate (Issue
 	  #300).
