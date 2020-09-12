@@ -265,8 +265,9 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 
       // Log page in /var/log/cups/page_log
       if (param.page_logging == 1)
-	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: PAGE: %d %d\n", iA + 1, param.copies_to_be_logged);
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+				       "PAGE: %d %d\n", iA + 1,
+				       param.copies_to_be_logged);
 
       if (shuffle[iA]>=numOrigPages) {
         // add empty page as filler
@@ -371,9 +372,10 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 	  // Log page in /var/log/cups/page_log
 	  outputno++;
 	  if (param.page_logging == 1)
-	    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: PAGE: %d %d\n", outputno,
-		    param.copies_to_be_logged);
+	    if (doc->logfunc) doc->logfunc(doc->logdata,
+					   FILTER_LOGLEVEL_CONTROL,
+					   "PAGE: %d %d\n", outputno,
+					   param.copies_to_be_logged);
         }
         curpage=proc.new_page(param.page.width,param.page.height,doc);
         outputpage++;
@@ -429,8 +431,9 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
       // Log page in /var/log/cups/page_log
       outputno ++;
       if (param.page_logging == 1)
-	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: PAGE: %d %d\n", outputno, param.copies_to_be_logged);
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+				       "PAGE: %d %d\n", outputno,
+				       param.copies_to_be_logged);
     }
   }
 
@@ -439,8 +442,9 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
     proc.add_page(proc.new_page(param.page.width,param.page.height,doc),param.reverse);
     // Log page in /var/log/cups/page_log
     if (param.page_logging == 1)
-      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: PAGE: %d %d\n", outputno + 1, param.copies_to_be_logged);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+				     "PAGE: %d %d\n", outputno + 1,
+				     param.copies_to_be_logged);
   }
 
   proc.multiply(param.numCopies,param.collate);
