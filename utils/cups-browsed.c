@@ -324,12 +324,6 @@ typedef enum create_ipp_printer_queues_e {
   IPP_PRINTERS_ALL
 } create_ipp_printer_queues_t;
 
-/* Ways how to set up a queue for an IPP network printer */
-typedef enum ipp_queue_type_e {
-  PPD_YES,
-  PPD_NO
-} ipp_queue_type_t;
-
 /* Ways how we can do load balancing on remote queues with the same name */
 typedef enum load_balancing_type_e {
   QUEUE_ON_CLIENT,
@@ -471,7 +465,6 @@ static unsigned int KeepGeneratedQueuesOnShutdown = 1;
 #else
 static unsigned int KeepGeneratedQueuesOnShutdown = 0;
 #endif
-static ipp_queue_type_t IPPPrinterQueueType = PPD_YES;
 static int NewIPPPrinterQueuesShared = 0;
 static int AutoClustering = 1;
 static cups_array_t *clusters;
@@ -7610,16 +7603,9 @@ gboolean update_cups_queues(gpointer unused) {
                 want_raw, num_cluster_printers = 0;
   char          *disabled_str, *ptr;
   char          *ppdfile, *ifscript;
-  int           fd = 0;  /* Script file descriptor */
-  char          tempfile[1024];  /* Temporary file */
   char          buffer[8192];  /* Buffer for creating script */
-  int           bytes;
-  const char    *cups_serverbin;  /* CUPS_SERVERBIN environment variable */
 #ifdef HAVE_CUPS_1_6
   ipp_attribute_t *attr;
-  int           count, left, right, bottom, top;
-  const char    *default_page_size = NULL, *best_color_space = NULL,
-                *color_space;
 #endif
   const char    *loadedppd = NULL;
   ppd_file_t    *ppd = NULL;
@@ -7955,8 +7941,7 @@ gboolean update_cups_queues(gpointer unused) {
 	   Either CUPS generates a temporary queue here or we have already
 	   made this queue permanent. In any case, load the PPD from this
 	   queue to conserve the PPD which CUPS has originally generated. */
-	if (p->netprinter == 1 && IPPPrinterQueueType == PPD_YES &&
-	    UseCUPSGeneratedPPDs) {
+	if (p->netprinter == 1 && UseCUPSGeneratedPPDs) {
 	  if (LocalQueueNamingIPPPrinter != LOCAL_QUEUE_NAMING_DNSSD) {
 	    debug_printf("Local queue %s: We can replace temporary CUPS queues and keep their PPD file only when we name our queues like them, to avoid duplicate queues to the same printer.\n",
 			 p->queue_name);
@@ -8121,288 +8106,111 @@ gboolean update_cups_queues(gpointer unused) {
 	  p->timeout = current_time + TIMEOUT_IMMEDIATELY;
 	  goto cannot_create;
 	}
-	if (IPPPrinterQueueType == PPD_YES) {
-	  num_cluster_printers = 0;
-	  for (s = (remote_printer_t *)cupsArrayFirst(remote_printers);
-	       s; s = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-	    if (!strcmp(s->queue_name, p->queue_name)) {
-	      if (s->status == STATUS_DISAPPEARED ||
-		  s->status == STATUS_UNCONFIRMED ||
-		  s->status == STATUS_TO_BE_RELEASED )
-		continue;
-	      num_cluster_printers ++;
+	num_cluster_printers = 0;
+	for (s = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	     s; s = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+	  if (!strcmp(s->queue_name, p->queue_name)) {
+	    if (s->status == STATUS_DISAPPEARED ||
+		s->status == STATUS_UNCONFIRMED ||
+		s->status == STATUS_TO_BE_RELEASED )
+	      continue;
+	    num_cluster_printers ++;
+	  }
+	}
+
+	if (num_cluster_printers == 1) {
+	  printer_attributes = p->prattrs;
+	  conflicts = NULL;
+	  default_pagesize = NULL;
+	  default_color = NULL;
+	  make_model = p->make_model;
+	  pdl = p->pdl;
+	  color = p->color;
+	  duplex = p->duplex;
+	  sizes = NULL;
+	} else {
+	  make_model = (char*)malloc(sizeof(char) * 256);
+	  if ((attr = ippFindAttribute(printer_attributes,
+				       "printer-make-and-model",
+				       IPP_TAG_TEXT)) != NULL)
+	    strncpy(make_model, ippGetString(attr, 0, NULL),
+		    sizeof(make_model) - 1);
+	  color = 0;
+	  duplex = 0;
+	  for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
+	       r; r = (remote_printer_t *)cupsArrayNext(remote_printers)) {
+	    if (!strcmp(p->queue_name, r->queue_name)) {
+	      if (r->color == 1)
+		color = 1;
+	      if (r->duplex == 1)
+		duplex = 1;
 	    }
 	  }
+	  default_pagesize = (char *)malloc(sizeof(char)*32);
+	  printer_attributes = get_cluster_attributes(p->queue_name);
+	  debug_printf("Generated Merged Attributes for local queue %s\n",
+		       p->queue_name);
+	  conflicts = generate_cluster_conflicts(p->queue_name,
+						 printer_attributes);
+	  debug_printf("Generated Constraints for queue %s\n",
+		       p->queue_name);
+	  sizes = get_cluster_sizes(p->queue_name);
+	  get_cluster_default_attributes(&printer_attributes,
+					 p->queue_name, default_pagesize,
+					 &default_color);
+	  debug_printf("Generated Default Attributes for local queue %s\n",
+		       p->queue_name);
+	}
+	p->nickname = NULL;
+	if (ppdfile == NULL) {
+	  /* If we do not want CUPS-generated PPDs or we cannot obtain a
+	     CUPS-generated PPD, for example if CUPS does not create a 
+	     temporary queue for this printer, we generate a PPD by
+	     ourselves */
+	  printer_ipp_response = (num_cluster_printers == 1) ? p->prattrs :
+	    printer_attributes; 
+	  if (!ppdCreateFromIPP2(buffer, sizeof(buffer), printer_ipp_response,
+				 make_model,
+				 pdl, color, duplex, conflicts, sizes,
+				 default_pagesize, default_color)) {
+	    if (errno != 0)
+	      debug_printf("Unable to create PPD file: %s\n",
+			   strerror(errno));
+	    else
+	      debug_printf("Unable to create PPD file: %s\n",
+			   ppdgenerator_msg);
+	    p->status = STATUS_DISAPPEARED;
+	    current_time = time(NULL);
+	    p->timeout = current_time + TIMEOUT_IMMEDIATELY;
+	    goto cannot_create;
+	  } else {
+	    debug_printf("PPD generation successful: %s\n", ppdgenerator_msg);
+	    debug_printf("Created temporary PPD file: %s\n", buffer);
+	    ppdfile = strdup(buffer);
+	  }
+	}
 
-	  if (num_cluster_printers == 1) {
-	    printer_attributes = p->prattrs;
-	    conflicts = NULL;
+	if (num_cluster_printers != 1) {
+	  if (default_pagesize != NULL) {
+	    free(default_pagesize);
 	    default_pagesize = NULL;
-	    default_color = NULL;
-	    make_model = p->make_model;
-	    pdl = p->pdl;
-	    color = p->color;
-	    duplex = p->duplex;
+	  }
+	  if (make_model != NULL) {
+	    free(make_model);
+	    make_model = NULL;
+	  }
+	  if (conflicts != NULL) {
+	    cupsArrayDelete(conflicts);
+	    conflicts = NULL;
+	  }
+	  if (printer_attributes != NULL) {
+	    ippDelete(printer_attributes);
+	    printer_attributes = NULL;
+	  }
+	  if (sizes != NULL) {
+	    cupsArrayDelete(sizes);
 	    sizes = NULL;
-	  } else {
-	    make_model = (char*)malloc(sizeof(char) * 256);
-	    if ((attr = ippFindAttribute(printer_attributes,
-					 "printer-make-and-model",
-					 IPP_TAG_TEXT)) != NULL)
-	      strncpy(make_model, ippGetString(attr, 0, NULL),
-		      sizeof(make_model) - 1);
-	    color = 0;
-	    duplex = 0;
-	    for (r = (remote_printer_t *)cupsArrayFirst(remote_printers);
-		 r; r = (remote_printer_t *)cupsArrayNext(remote_printers)) {
-	      if (!strcmp(p->queue_name, r->queue_name)) {
-		if (r->color == 1)
-		  color = 1;
-		if (r->duplex == 1)
-		  duplex = 1;
-	      }
-	    }
-	    default_pagesize = (char *)malloc(sizeof(char)*32);
-	    printer_attributes = get_cluster_attributes(p->queue_name);
-	    debug_printf("Generated Merged Attributes for local queue %s\n",
-			 p->queue_name);
-	    conflicts = generate_cluster_conflicts(p->queue_name,
-						   printer_attributes);
-	    debug_printf("Generated Constraints for queue %s\n",
-			 p->queue_name);
-	    sizes = get_cluster_sizes(p->queue_name);
-	    get_cluster_default_attributes(&printer_attributes,
-					   p->queue_name, default_pagesize,
-					   &default_color);
-	    debug_printf("Generated Default Attributes for local queue %s\n",
-			 p->queue_name);
 	  }
-	  p->nickname = NULL;
-	  if (ppdfile == NULL) {
-	    /* If we do not want CUPS-generated PPDs or we cannot obtain a
-	       CUPS-generated PPD, for example if CUPS does not create a 
-	       temporary queue for this printer, we generate a PPD by
-	       ourselves */
-	    printer_ipp_response = (num_cluster_printers == 1) ? p->prattrs :
-	      printer_attributes; 
-	    if (!ppdCreateFromIPP2(buffer, sizeof(buffer), printer_ipp_response,
-				   make_model,
-				   pdl, color, duplex, conflicts, sizes,
-				   default_pagesize, default_color)) {
-	      if (errno != 0)
-		debug_printf("Unable to create PPD file: %s\n",
-			     strerror(errno));
-	      else
-		debug_printf("Unable to create PPD file: %s\n",
-			     ppdgenerator_msg);
-	      p->status = STATUS_DISAPPEARED;
-              current_time = time(NULL);
-	      p->timeout = current_time + TIMEOUT_IMMEDIATELY;
-	      goto cannot_create;
-	    } else {
-	      debug_printf("PPD generation successful: %s\n", ppdgenerator_msg);
-	      debug_printf("Created temporary PPD file: %s\n", buffer);
-	      ppdfile = strdup(buffer);
-	    }
-	  }
-
-	  if (num_cluster_printers != 1) {
-	    if (default_pagesize != NULL) {
-	      free(default_pagesize);
-	      default_pagesize = NULL;
-	    }
-	    if (make_model != NULL) {
-	      free(make_model);
-	      make_model = NULL;
-	    }
-	    if (conflicts != NULL) {
-	      cupsArrayDelete(conflicts);
-	      conflicts = NULL;
-	    }
-	    if (printer_attributes != NULL) {
-	      ippDelete(printer_attributes);
-	      printer_attributes = NULL;
-	    }
-	    if (sizes != NULL) {
-	      cupsArrayDelete(sizes);
-	      sizes = NULL;
-	    }
-	  }
-	} else if (IPPPrinterQueueType == PPD_NO) {
-	  ppdfile = NULL;
-
-	  /* Find default page size of the printer */
-	  attr = ippFindAttribute(p->prattrs,
-				  "media-default",
-				  IPP_TAG_ZERO);
-	  if (attr) {
-	    default_page_size = ippGetString(attr, 0, NULL);
-	    debug_printf("Default page size: %s\n",
-			 default_page_size);
-	    p->num_options = cupsAddOption("media-default",
-					   default_page_size,
-					   p->num_options, &(p->options));
-	  } else {
-	    attr = ippFindAttribute(p->prattrs,
-				    "media-ready",
-				    IPP_TAG_ZERO);
-	    if (attr) {
-	      default_page_size = ippGetString(attr, 0, NULL);
-	      debug_printf("Default page size: %s\n",
-			   default_page_size);
-	      p->num_options = cupsAddOption("media-default",
-					     default_page_size,
-					     p->num_options, &(p->options));
-	    } else
-	      debug_printf("No default page size found!\n");
-	  }
-
-	  /* Find maximum unprintable margins of the printer */
-	  if ((attr = ippFindAttribute(p->prattrs,
-				       "media-bottom-margin-supported",
-				       IPP_TAG_INTEGER)) != NULL) {
-	    for (i = 1, bottom = ippGetInteger(attr, 0),
-		   count = ippGetCount(attr);
-		 i < count;
-		 i ++)
-	      if (ippGetInteger(attr, i) > bottom)
-		bottom = ippGetInteger(attr, i);
-	  } else
-	    bottom = 1270;
-	  snprintf(buffer, sizeof(buffer), "%d", bottom);
-	  p->num_options = cupsAddOption("media-bottom-margin-default",
-					 buffer,
-					 p->num_options, &(p->options));
-
-	  if ((attr = ippFindAttribute(p->prattrs,
-				       "media-left-margin-supported",
-				       IPP_TAG_INTEGER)) != NULL) {
-	    for (i = 1, left = ippGetInteger(attr, 0),
-		   count = ippGetCount(attr);
-		 i < count;
-		 i ++)
-	      if (ippGetInteger(attr, i) > left)
-		left = ippGetInteger(attr, i);
-	  } else
-	    left = 635;
-	  snprintf(buffer, sizeof(buffer), "%d", left);
-	  p->num_options = cupsAddOption("media-left-margin-default",
-					 buffer,
-					 p->num_options, &(p->options));
-
-	  if ((attr = ippFindAttribute(p->prattrs,
-				       "media-right-margin-supported",
-				       IPP_TAG_INTEGER)) != NULL) {
-	    for (i = 1, right = ippGetInteger(attr, 0),
-		   count = ippGetCount(attr);
-		 i < count;
-		 i ++)
-	      if (ippGetInteger(attr, i) > right)
-		right = ippGetInteger(attr, i);
-	  } else
-	    right = 635;
-	  snprintf(buffer, sizeof(buffer), "%d", right);
-	  p->num_options = cupsAddOption("media-right-margin-default",
-					 buffer,
-					 p->num_options, &(p->options));
-
-	  if ((attr = ippFindAttribute(p->prattrs,
-				       "media-top-margin-supported",
-				       IPP_TAG_INTEGER)) != NULL) {
-	    for (i = 1, top = ippGetInteger(attr, 0),
-		   count = ippGetCount(attr);
-		 i < count;
-		 i ++)
-	      if (ippGetInteger(attr, i) > top)
-		top = ippGetInteger(attr, i);
-	  } else
-	    top = 1270;
-	  snprintf(buffer, sizeof(buffer), "%d", top);
-	  p->num_options = cupsAddOption("media-top-margin-default",
-					 buffer,
-					 p->num_options, &(p->options));
-
-	  debug_printf("Margins: Left: %d, Right: %d, Top: %d, Bottom: %d\n",
-		       left, right, top, bottom);
-
-	  /* Find best color space of the printer */
-	  attr = ippFindAttribute(p->prattrs,
-				  "pwg-raster-document-type-supported",
-				  IPP_TAG_ZERO);
-	  if (attr) {
-	    for (i = 0; i < ippGetCount(attr); i ++) {
-	      color_space = ippGetString(attr, i, NULL);
-	      debug_printf("Supported color space: %s\n", color_space);
-	      if (color_space_score(color_space) >
-		  color_space_score(best_color_space))
-		best_color_space = color_space;
-	    }
-	    debug_printf("Best color space: %s\n",
-			 best_color_space);
-	    p->num_options = cupsAddOption("print-color-mode-default",
-					   best_color_space,
-					   p->num_options, &(p->options));
-	  } else {
-	    debug_printf("No info about supported color spaces found!\n");
-	    p->num_options = cupsAddOption("print-color-mode-default",
-					   p->color == 1 ? "rgb" : "black",
-					   p->num_options, &(p->options));
-	  }
-
-	  if (p->duplex)
-	    p->num_options = cupsAddOption("sides-default",
-					   "two-sided-long-edge",
-					   p->num_options, &(p->options));
-
-	  p->num_options = cupsAddOption("output-format-default",
-					 p->pdl,
-					 p->num_options, &(p->options));
-	  p->num_options = cupsAddOption("make-and-model-default",
-					 remove_bad_chars(p->make_model, 0),
-					 p->num_options, &(p->options));
-
-	  if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
-	    cups_serverbin = CUPS_SERVERBIN;
-
-	  if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0) {
-	    debug_printf("Unable to create interface script file\n");
-	    p->status = STATUS_DISAPPEARED;
-            current_time = time(NULL);
-	    p->timeout = current_time + TIMEOUT_IMMEDIATELY;
-	    goto cannot_create;
-	  }
-
-	  debug_printf("Creating temp script file \"%s\"\n", tempfile);
-
-	  snprintf(buffer, sizeof(buffer),
-		   "#!/bin/sh\n"
-		   "# System V interface script for printer %s generated by cups-browsed\n"
-		   "\n"
-		   "if [ $# -lt 5 -o $# -gt 6 ]; then\n"
-		   "  echo \"ERROR: $0 job-id user title copies options [file]\" >&2\n"
-		   "  exit 1\n"
-		   "fi\n"
-		   "\n"
-		   "# Read from given file\n"
-		   "if [ -n \"$6\" ]; then\n"
-		   "  exec \"$0\" \"$1\" \"$2\" \"$3\" \"$4\" \"$5\" < \"$6\"\n"
-		   "fi\n"
-		   "\n"
-		   "%s/filter/sys5ippprinter \"$1\" \"$2\" \"$3\" \"$4\" \"$5\"\n",
-		   p->queue_name, cups_serverbin);
-
-	  bytes = write(fd, buffer, strlen(buffer));
-	  if (bytes != strlen(buffer)) {
-	    debug_printf("Unable to write interface script into the file\n");
-	    p->status = STATUS_DISAPPEARED;
-            current_time = time(NULL);
-	    p->timeout = current_time + TIMEOUT_IMMEDIATELY;
-	    goto cannot_create;
-	  }
-
-	  close(fd);
-
-	  ifscript = strdup(tempfile);
 	}
       }
 #endif /* HAVE_CUPS_1_6 */
@@ -11806,15 +11614,6 @@ read_configuration (const char *filename)
 	CreateIPPPrinterQueues = IPP_PRINTERS_PCLM;
       else if (strcasestr(value, "pdf"))
 	CreateIPPPrinterQueues = IPP_PRINTERS_PDF;
-    } else if (!strcasecmp(line, "IPPPrinterQueueType") && value) {
-      if (!strncasecmp(value, "Auto", 4))
-	IPPPrinterQueueType = PPD_YES;
-      else if (!strncasecmp(value, "PPD", 3))
-	IPPPrinterQueueType = PPD_YES;
-      else if (!strncasecmp(value, "NoPPD", 5))
-	IPPPrinterQueueType = PPD_NO;
-      else if (!strncasecmp(value, "Interface", 9))
-	IPPPrinterQueueType = PPD_NO;
     } else if (!strcasecmp(line, "NewIPPPrinterQueuesShared") && value) {
       if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
 	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))

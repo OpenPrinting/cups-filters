@@ -219,7 +219,7 @@ main(int  argc,				/* I - Number of command-line args */
       goto error;
     }
 
-    fprintf(stderr, "DEBUG: sys5ippprinter - copying to temp print file \"%s\"\n",
+    fprintf(stderr, "DEBUG: texttotext - Copying stdin to temp print file \"%s\"\n",
             tempfile);
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)

@@ -675,7 +675,6 @@ endif
 pkgfilter_PROGRAMS += \
 	commandtoescpx \
 	commandtopclx \
-	sys5ippprinter \
 	texttotext \
 	pdftops \
 	rastertoescpx \
@@ -939,20 +938,6 @@ rastertops_CFLAGS = \
 rastertops_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
-
-sys5ippprinter_SOURCES = \
-	filter/common.c \
-	filter/common.h \
-	filter/sys5ippprinter.c
-EXTRA_sys5ippprinter_SOURCES = cupsfilters/strcasestr.c
-sys5ippprinter_CFLAGS = \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS)
-sys5ippprinter_LDADD = \
-	libppd.la \
-	$(STRCASESTR) \
-	$(CUPS_LIBS)
-sys5ippprinter_DEPENDENCIES = $(STRCASESTR)
 
 texttotext_SOURCES = \
 	filter/texttotext.c

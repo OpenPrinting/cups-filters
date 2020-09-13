@@ -218,7 +218,7 @@ apply_filters(int argc, char *argv[])
     }
 
     fprintf(stderr,
-	    "DEBUG: sys5ippprinter - copying to temp print file \"%s\"\n",
+	    "DEBUG: Copying stdin to temp print file \"%s\"\n",
             tempfile);
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)
