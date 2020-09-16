@@ -94,7 +94,7 @@ _cupsImageReadSunRaster(
   * checks this) so we don't need to check the magic number again.
   */
 
-  fputs("DEBUG: Reading Sun Raster image...\n", stderr);
+  DEBUG_puts("DEBUG: Reading Sun Raster image...\n");
 
   read_unsigned(fp); /* Skip magic */
   img->xsize    = read_unsigned(fp);
@@ -105,15 +105,15 @@ _cupsImageReadSunRaster(
   /* ras_maptype*/read_unsigned(fp);
   ras_maplength = read_unsigned(fp);
 
-  fprintf(stderr, "DEBUG: ras_width=%d, ras_height=%d, ras_depth=%d, ras_type=%d, ras_maplength=%d\n",
-          img->xsize, img->ysize, ras_depth, ras_type, ras_maplength);
+  DEBUG_printf(("DEBUG: ras_width=%d, ras_height=%d, ras_depth=%d, ras_type=%d, ras_maplength=%d\n",
+		img->xsize, img->ysize, ras_depth, ras_type, ras_maplength));
 
   if (ras_maplength > 768 ||
       img->xsize == 0 || img->xsize > CUPS_IMAGE_MAX_WIDTH ||
       img->ysize == 0 || img->ysize > CUPS_IMAGE_MAX_HEIGHT ||
       ras_depth == 0 || ras_depth > 32)
   {
-    fputs("DEBUG: Raster image cannot be loaded!\n", stderr);
+    DEBUG_puts("DEBUG: Raster image cannot be loaded!\n");
     fclose(fp);
     return (1);
   }
@@ -153,7 +153,7 @@ _cupsImageReadSunRaster(
 
   if (!in)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     return (1);
   }
@@ -162,7 +162,7 @@ _cupsImageReadSunRaster(
 
   if ((out = malloc(img->xsize * bpp)) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     free(in);
     return (1);
@@ -170,7 +170,7 @@ _cupsImageReadSunRaster(
 
   if ((scanline = malloc(scanwidth)) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     free(in);
     free(out);
@@ -180,7 +180,7 @@ _cupsImageReadSunRaster(
   run_count = 0;
   run_value = 0;
 
-  fprintf(stderr, "DEBUG: bpp=%d, scanwidth=%d\n", bpp, scanwidth);
+  DEBUG_printf(("DEBUG: bpp=%d, scanwidth=%d\n", bpp, scanwidth));
 
   for (y = 0; y < img->ysize; y ++)
   {

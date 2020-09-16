@@ -299,6 +299,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/image-sun.c \
 	cupsfilters/image-tiff.c \
 	cupsfilters/image-zoom.c \
+	cupsfilters/imagetoraster.c \
 	cupsfilters/ipp.c \
 	cupsfilters/lut.c \
 	cupsfilters/pack.c \
@@ -869,20 +870,13 @@ imagetopdf_LDADD = \
 	-lm
 
 imagetoraster_SOURCES = \
-	cupsfilters/image.h \
-	cupsfilters/image-private.h \
-	filter/common.c \
-	filter/common.h \
 	filter/imagetoraster.c
 imagetoraster_CFLAGS = \
-	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS)
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
 imagetoraster_LDADD = \
-	libcupsfilters.la \
-	libppd.la \
 	$(CUPS_LIBS) \
-	-lm
+	libcupsfilters.la
 
 urftopdf_SOURCES = \
 	filter/urftopdf.cpp \

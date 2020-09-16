@@ -97,14 +97,14 @@ _cupsImageReadPhotoCD(
 
   if ((in = malloc(768 * 3)) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     return (1);
   }
 
   if ((out = malloc(768 * bpp)) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     free(in);
     return (1);
@@ -114,7 +114,7 @@ _cupsImageReadPhotoCD(
   {
     if ((rgb = malloc(768 * 3)) == NULL)
     {
-      fputs("DEBUG: Unable to allocate memory!\n", stderr);
+      DEBUG_puts("DEBUG: Unable to allocate memory!\n");
       fclose(fp);
       free(in);
       free(out);

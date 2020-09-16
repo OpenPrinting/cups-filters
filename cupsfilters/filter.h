@@ -133,6 +133,14 @@ extern int ghostscript(int inputfd,
    Ouput format: PostScript, CUPS Raster, PWG Raster, PCL-XL */
 
 
+extern int imagetoraster(int inputfd,
+			 int outputfd,
+			 int inputseekable,
+			 int *jobcanceled,
+			 filter_data_t *data,
+			 void *parameters);
+
+
 extern int pclmtoraster(int inputfd,
 			int outputfd,
 			int inputseekable,

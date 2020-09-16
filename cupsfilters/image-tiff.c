@@ -86,14 +86,14 @@ _cupsImageReadTIFF(
 
   if ((tif = TIFFFdOpen(fileno(fp), "", "r")) == NULL)
   {
-    fputs("DEBUG: TIFFFdOpen() failed!\n", stderr);
+    DEBUG_puts("DEBUG: TIFFFdOpen() failed!\n");
     fclose(fp);
     return (-1);
   }
 
   if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width))
   {
-    fputs("DEBUG: No image width tag in the file!\n", stderr);
+    DEBUG_puts("DEBUG: No image width tag in the file!\n");
     TIFFClose(tif);
     fclose(fp);
     return (-1);
@@ -101,7 +101,7 @@ _cupsImageReadTIFF(
 
   if (!TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height))
   {
-    fputs("DEBUG: No image height tag in the file!\n", stderr);
+    DEBUG_puts("DEBUG: No image height tag in the file!\n");
     TIFFClose(tif);
     fclose(fp);
     return (-1);
@@ -109,7 +109,7 @@ _cupsImageReadTIFF(
 
   if (!TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric))
   {
-    fputs("DEBUG: No photometric tag in the file!\n", stderr);
+    DEBUG_puts("DEBUG: No photometric tag in the file!\n");
     TIFFClose(tif);
     fclose(fp);
     return (-1);
@@ -117,7 +117,7 @@ _cupsImageReadTIFF(
 
   if (!TIFFGetField(tif, TIFFTAG_COMPRESSION, &compression))
   {
-    fputs("DEBUG: No compression tag in the file!\n", stderr);
+    DEBUG_puts("DEBUG: No compression tag in the file!\n");
     TIFFClose(tif);
     fclose(fp);
     return (-1);
@@ -162,14 +162,14 @@ _cupsImageReadTIFF(
 
     if (img->xppi == 0 || img->yppi == 0)
     {
-      fputs("DEBUG: Bad TIFF resolution.\n", stderr);
+      DEBUG_puts("DEBUG: Bad TIFF resolution.\n");
       img->xppi = img->yppi = 128;
     }
 
-    fprintf(stderr, "DEBUG: TIFF resolution = %fx%f, units=%d\n",
-            xres, yres, resunit);
-    fprintf(stderr, "DEBUG: Stored resolution = %dx%d PPI\n",
-            img->xppi, img->yppi);
+    DEBUG_printf(("DEBUG: TIFF resolution = %fx%f, units=%d\n",
+		  xres, yres, resunit));
+    DEBUG_printf(("DEBUG: Stored resolution = %dx%d PPI\n",
+		  img->xppi, img->yppi));
   }
 
  /*
@@ -190,9 +190,9 @@ _cupsImageReadTIFF(
       (bits != 1 && bits != 2 && bits != 4 && bits != 8) ||
       samples < 1 || samples > 4)
   {
-    fprintf(stderr, "DEBUG: Bad TIFF dimensions %ux%ux%ux%u!\n",
-            (unsigned)width, (unsigned)height, (unsigned)bits,
-	    (unsigned)samples);
+    DEBUG_printf(("DEBUG: Bad TIFF dimensions %ux%ux%ux%u!\n",
+		  (unsigned)width, (unsigned)height, (unsigned)bits,
+		  (unsigned)samples));
     TIFFClose(tif);
     fclose(fp);
     return (1);
@@ -214,7 +214,7 @@ _cupsImageReadTIFF(
   else
     img->colorspace = primary;
 
-  fprintf(stderr, "DEBUG: img->colorspace = %d\n", img->colorspace);
+  DEBUG_printf(("DEBUG: img->colorspace = %d\n", img->colorspace));
 
   bpp = cupsImageGetDepth(img);
 
@@ -227,29 +227,29 @@ _cupsImageReadTIFF(
   switch (orientation)
   {
     case ORIENTATION_TOPRIGHT :
-        fputs("DEBUG: orientation = top-right\n", stderr);
+        DEBUG_puts("DEBUG: orientation = top-right\n");
         break;
     case ORIENTATION_RIGHTTOP :
-        fputs("DEBUG: orientation = right-top\n", stderr);
+        DEBUG_puts("DEBUG: orientation = right-top\n");
         break;
     default :
     case ORIENTATION_TOPLEFT :
-        fputs("DEBUG: orientation = top-left\n", stderr);
+        DEBUG_puts("DEBUG: orientation = top-left\n");
         break;
     case ORIENTATION_LEFTTOP :
-        fputs("DEBUG: orientation = left-top\n", stderr);
+        DEBUG_puts("DEBUG: orientation = left-top\n");
         break;
     case ORIENTATION_BOTLEFT :
-        fputs("DEBUG: orientation = bottom-left\n", stderr);
+        DEBUG_puts("DEBUG: orientation = bottom-left\n");
         break;
     case ORIENTATION_LEFTBOT :
-        fputs("DEBUG: orientation = left-bottom\n", stderr);
+        DEBUG_puts("DEBUG: orientation = left-bottom\n");
         break;
     case ORIENTATION_BOTRIGHT :
-        fputs("DEBUG: orientation = bottom-right\n", stderr);
+        DEBUG_puts("DEBUG: orientation = bottom-right\n");
         break;
     case ORIENTATION_RIGHTBOT :
-        fputs("DEBUG: orientation = right-bottom\n", stderr);
+        DEBUG_puts("DEBUG: orientation = right-bottom\n");
         break;
   }
 
@@ -324,8 +324,8 @@ _cupsImageReadTIFF(
   * each which must be handled separately...
   */
 
-  fprintf(stderr, "DEBUG: photometric = %d\n", photometric);
-  fprintf(stderr, "DEBUG: compression = %d\n", compression);
+  DEBUG_printf(("DEBUG: photometric = %d\n", photometric));
+  DEBUG_printf(("DEBUG: compression = %d\n", compression));
 
   switch (photometric)
   {
@@ -655,7 +655,7 @@ _cupsImageReadTIFF(
 	  free(out);
 
 	  TIFFClose(tif);
-	  fputs("DEBUG: No colormap tag in the file!\n", stderr);
+	  DEBUG_puts("DEBUG: No colormap tag in the file!\n");
 	  fclose(fp);
 	  return (-1);
 	}
@@ -1233,7 +1233,7 @@ _cupsImageReadTIFF(
         if (!TIFFGetField(tif, TIFFTAG_INKSET, &inkset))
 #endif /* TIFFTAG_NUMBEROFINKS */
 	{
-          fputs("WARNING: No inkset or number-of-inks tag in the file!\n", stderr);
+          DEBUG_puts("WARNING: No inkset or number-of-inks tag in the file!\n");
 	}
 
 	if (inkset == INKSET_CMYK || numinks == 4)
@@ -1692,7 +1692,7 @@ _cupsImageReadTIFF(
 	free(out);
 
 	TIFFClose(tif);
-	fputs("DEBUG: Unknown TIFF photometric value!\n", stderr);
+	DEBUG_puts("DEBUG: Unknown TIFF photometric value!\n");
 	return (-1);
   }
 

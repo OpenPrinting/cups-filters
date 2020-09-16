@@ -241,8 +241,8 @@ _cupsImageReadGIF(
 
           if (img->xsize == 0 || img->ysize == 0)
 	  {
-	    fprintf(stderr, "DEBUG: Bad GIF image dimensions: %dx%d\n",
-	            img->xsize, img->ysize);
+	    DEBUG_printf(("DEBUG: Bad GIF image dimensions: %dx%d\n",
+			  img->xsize, img->ysize));
 	    fclose(fp);
 	    return (1);
 	  }

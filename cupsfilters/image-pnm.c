@@ -64,7 +64,7 @@ _cupsImageReadPNM(
 
   if ((lineptr = fgets(line, sizeof(line), fp)) == NULL)
   {
-    fputs("DEBUG: Bad PNM header!\n", stderr);
+    DEBUG_puts("DEBUG: Bad PNM header!\n");
     fclose(fp);
     return (1);
   }
@@ -127,15 +127,15 @@ _cupsImageReadPNM(
   if (img->xsize == 0 || img->xsize > CUPS_IMAGE_MAX_WIDTH ||
       img->ysize == 0 || img->ysize > CUPS_IMAGE_MAX_HEIGHT)
   {
-    fprintf(stderr, "DEBUG: Bad PNM dimensions %dx%d!\n",
-            img->xsize, img->ysize);
+    DEBUG_printf(("DEBUG: Bad PNM dimensions %dx%d!\n",
+		  img->xsize, img->ysize));
     fclose(fp);
     return (1);
   }
 
   if (maxval == 0)
   {
-    fprintf(stderr, "DEBUG: Bad PNM max value %d!\n", maxval);
+    DEBUG_printf(("DEBUG: Bad PNM max value %d!\n", maxval));
     fclose(fp);
     return (1);
   }
@@ -151,14 +151,14 @@ _cupsImageReadPNM(
 
   if ((in = malloc(img->xsize * 3)) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     return (1);
   }
 
   if ((out = malloc(img->xsize * bpp)) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     free(in);
     return (1);

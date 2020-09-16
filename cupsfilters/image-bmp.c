@@ -81,6 +81,10 @@ _cupsImageReadBMP(
 
   (void)secondary;
 
+  (void)planes;
+  (void)image_size;
+  (void)colors_important;
+
  /*
   * Get the header...
   */
@@ -92,11 +96,11 @@ _cupsImageReadBMP(
   read_word(fp);
   offset = read_dword(fp);
 
-  fprintf(stderr, "DEBUG: offset = %d\n", offset);
+  DEBUG_printf(("DEBUG: offset = %d\n", offset));
 
   if (offset < 0)
   {
-    fprintf(stderr, "DEBUG: Bad BMP offset %d\n", offset);
+    DEBUG_printf(("DEBUG: Bad BMP offset %d\n", offset));
     fclose(fp);
     return (1);
   }
@@ -121,23 +125,23 @@ _cupsImageReadBMP(
       img->ysize == 0 || img->ysize > CUPS_IMAGE_MAX_HEIGHT ||
       (depth != 1 && depth != 4 && depth != 8 && depth != 24))
   {
-    fprintf(stderr, "DEBUG: Bad BMP dimensions %ux%ux%d\n",
-            img->xsize, img->ysize, depth);
+    DEBUG_printf(("DEBUG: Bad BMP dimensions %ux%ux%d\n",
+		  img->xsize, img->ysize, depth));
     fclose(fp);
     return (1);
   }
 
   if (colors_used < 0 || colors_used > 256)
   {
-    fprintf(stderr, "DEBUG: Bad BMP colormap size %d\n", colors_used);
+    DEBUG_printf(("DEBUG: Bad BMP colormap size %d\n", colors_used));
     fclose(fp);
     return (1);
   }
 
   if (img->xppi == 0 || img->yppi == 0)
   {
-    fprintf(stderr, "DEBUG: Bad BMP resolution %dx%d PPI.\n",
-            img->xppi, img->yppi);
+    DEBUG_printf(("DEBUG: Bad BMP resolution %dx%d PPI.\n",
+		  img->xppi, img->yppi));
     img->xppi = img->yppi = 128;
   }
 
@@ -145,12 +149,12 @@ _cupsImageReadBMP(
   * Make sure the resolution info is valid...
   */
 
-  fprintf(stderr, "info_size = %d, xsize = %d, ysize = %d, planes = %d, depth = %d\n",
-          info_size, img->xsize, img->ysize, planes, depth);
-  fprintf(stderr, "compression = %d, image_size = %d, xppi = %d, yppi = %d\n",
-          compression, image_size, img->xppi, img->yppi);
-  fprintf(stderr, "colors_used = %d, colors_important = %d\n", colors_used,
-          colors_important);
+  DEBUG_printf(("info_size = %d, xsize = %d, ysize = %d, planes = %d, depth = %d\n",
+		info_size, img->xsize, img->ysize, planes, depth));
+  DEBUG_printf(("compression = %d, image_size = %d, xppi = %d, yppi = %d\n",
+		compression, image_size, img->xppi, img->yppi));
+  DEBUG_printf(("colors_used = %d, colors_important = %d\n", colors_used,
+		colors_important));
 
   if (info_size > 40)
     for (info_size -= 40; info_size > 0; info_size --)
@@ -181,14 +185,14 @@ _cupsImageReadBMP(
 
   if ((in = malloc(img->xsize * 3)) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     return (1);
   }
 
   if ((out = malloc(img->xsize * bpp)) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     free(in);
     fclose(fp);
     return (1);

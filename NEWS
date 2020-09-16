@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, imagetoraster: Moved core functionality of
+	  imagetoraster into the imagetoraster() filter function.
 	- sys5ippprinter, cups-browsed: Removed sys5ippprinter, as
 	  CUPS does not support System V interface scripts any
 	  more. This first approach of PPD-less printing was also not

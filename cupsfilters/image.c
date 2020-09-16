@@ -300,21 +300,45 @@ cupsImageOpen(
     const cups_ib_t *lut)		/* I - RGB gamma/brightness LUT */
 {
   FILE		*fp;			/* File pointer */
+
+  DEBUG_printf(("cupsImageOpen(\"%s\", %d, %d, %d, %d, %p)\n",
+		filename ? filename : "(null)", primary, secondary,
+		saturation, hue, lut));
+
+  if ((fp = fopen(filename, "r")) == NULL)
+    return (NULL);
+
+  return cupsImageOpenFP(fp, primary, secondary, saturation, hue, lut);
+}
+
+
+/*
+ * 'cupsImageOpenFP()' - Open an image file and read it into memory.
+ */
+
+cups_image_t *				/* O - New image */
+cupsImageOpenFP(
+    FILE            *fp,		/* I - File pointer of image */
+    cups_icspace_t  primary,		/* I - Primary colorspace needed */
+    cups_icspace_t  secondary,		/* I - Secondary colorspace if primary no good */
+    int             saturation,		/* I - Color saturation level */
+    int             hue,		/* I - Color hue adjustment */
+    const cups_ib_t *lut)		/* I - RGB gamma/brightness LUT */
+{
   unsigned char	header[16],		/* First 16 bytes of file */
 		header2[16];		/* Bytes 2048-2064 (PhotoCD) */
   cups_image_t	*img;			/* New image buffer */
   int		status;			/* Status of load... */
 
 
-  DEBUG_printf(("cupsImageOpen(\"%s\", %d, %d, %d, %d, %p)\n",
-        	filename ? filename : "(null)", primary, secondary,
-		saturation, hue, lut));
+  DEBUG_printf(("cupsImageOpen2(%p, %d, %d, %d, %d, %p)\n",
+        	fp, primary, secondary, saturation, hue, lut));
 
  /*
   * Figure out the file type...
   */
 
-  if ((fp = fopen(filename, "r")) == NULL)
+  if (fp == NULL)
     return (NULL);
 
   if (fread(header, 1, sizeof(header), fp) == 0)

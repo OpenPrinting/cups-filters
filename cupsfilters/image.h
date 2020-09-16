@@ -86,6 +86,11 @@ extern cups_image_t	*cupsImageOpen(const char *filename,
 				       cups_icspace_t secondary,
 			               int saturation, int hue,
 				       const cups_ib_t *lut) _CUPS_API_1_2;
+extern cups_image_t	*cupsImageOpenFP(FILE *fp,
+					 cups_icspace_t primary,
+					 cups_icspace_t secondary,
+					 int saturation, int hue,
+					 const cups_ib_t *lut) _CUPS_API_1_2;
 extern void		cupsImageRGBAdjust(cups_ib_t *pixels, int count,
 			                   int saturation, int hue) _CUPS_API_1_2;
 extern void		cupsImageRGBToBlack(const cups_ib_t *in,

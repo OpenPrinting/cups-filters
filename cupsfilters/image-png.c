@@ -81,11 +81,11 @@ _cupsImageReadPNG(
   png_get_IHDR(pp, info, &width, &height, &bit_depth, &color_type,
                &interlace_type, &compression_type, &filter_type);
 
-  fprintf(stderr, "DEBUG: PNG image: %dx%dx%d, color_type=%x (%s%s%s)\n",
-          (int)width, (int)height, bit_depth, color_type,
-	  (color_type & PNG_COLOR_MASK_COLOR) ? "RGB" : "GRAYSCALE",
-	  (color_type & PNG_COLOR_MASK_ALPHA) ? "+ALPHA" : "",
-	  (color_type & PNG_COLOR_MASK_PALETTE) ? "+PALETTE" : "");
+  DEBUG_printf(("DEBUG: PNG image: %dx%dx%d, color_type=%x (%s%s%s)\n",
+		(int)width, (int)height, bit_depth, color_type,
+		(color_type & PNG_COLOR_MASK_COLOR) ? "RGB" : "GRAYSCALE",
+		(color_type & PNG_COLOR_MASK_ALPHA) ? "+ALPHA" : "",
+		(color_type & PNG_COLOR_MASK_PALETTE) ? "+PALETTE" : ""));
 
   if (color_type & PNG_COLOR_MASK_PALETTE)
     png_set_expand(pp);
@@ -106,8 +106,8 @@ _cupsImageReadPNG(
   if (width == 0 || width > CUPS_IMAGE_MAX_WIDTH ||
       height == 0 || height > CUPS_IMAGE_MAX_HEIGHT)
   {
-    fprintf(stderr, "DEBUG: PNG image has invalid dimensions %ux%u!\n",
-            (unsigned)width, (unsigned)height);
+    DEBUG_printf(("DEBUG: PNG image has invalid dimensions %ux%u!\n",
+		  (unsigned)width, (unsigned)height));
     fclose(fp);
     return (1);
   }
@@ -123,8 +123,8 @@ _cupsImageReadPNG(
 
     if (img->xppi == 0 || img->yppi == 0)
     {
-      fprintf(stderr, "DEBUG: PNG image has invalid resolution %dx%d PPI\n",
-              img->xppi, img->yppi);
+      DEBUG_printf(("DEBUG: PNG image has invalid resolution %dx%d PPI\n",
+		    img->xppi, img->yppi));
 
       img->xppi = img->yppi = 128;
     }
@@ -175,8 +175,8 @@ _cupsImageReadPNG(
 
       if ((bufsize / img->xsize) != img->ysize)
       {
-	fprintf(stderr, "DEBUG: PNG image dimensions (%ux%u) too large!\n",
-		(unsigned)width, (unsigned)height);
+	DEBUG_printf(("DEBUG: PNG image dimensions (%ux%u) too large!\n",
+		      (unsigned)width, (unsigned)height));
 	fclose(fp);
 	return (1);
       }
@@ -187,8 +187,8 @@ _cupsImageReadPNG(
 
       if ((bufsize / (img->xsize * 3)) != img->ysize)
       {
-	fprintf(stderr, "DEBUG: PNG image dimensions (%ux%u) too large!\n",
-		(unsigned)width, (unsigned)height);
+	DEBUG_printf(("DEBUG: PNG image dimensions (%ux%u) too large!\n",
+		      (unsigned)width, (unsigned)height));
 	fclose(fp);
 	return (1);
       }
@@ -202,7 +202,7 @@ _cupsImageReadPNG(
 
   if (!in || !out)
   {
-    fputs("DEBUG: Unable to allocate memory for PNG image!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory for PNG image!\n");
 
     if (in)
       free(in);

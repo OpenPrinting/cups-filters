@@ -54,6 +54,7 @@ _cupsImageReadJPEG(
 			  "JCS_YCCK"
 			};
 
+  (void)cspaces;
 
  /*
   * Read the JPEG header...
@@ -75,20 +76,19 @@ _cupsImageReadJPEG(
     if (marker->marker == (JPEG_APP0 + 14) && marker->data_length >= 12 &&
         !memcmp(marker->data, "Adobe", 5))
     {
-      fputs("DEBUG: Adobe CMYK JPEG detected (inverting color values)\n",
-	    stderr);
+      DEBUG_puts("DEBUG: Adobe CMYK JPEG detected (inverting color values)\n");
       psjpeg = 1;
     }
 
   cinfo.quantize_colors = 0;
 
-  fprintf(stderr, "DEBUG: num_components = %d\n", cinfo.num_components);
-  fprintf(stderr, "DEBUG: jpeg_color_space = %s\n",
-          cspaces[cinfo.jpeg_color_space]);
+  DEBUG_printf(("DEBUG: num_components = %d\n", cinfo.num_components));
+  DEBUG_printf(("DEBUG: jpeg_color_space = %s\n",
+		cspaces[cinfo.jpeg_color_space]));
 
   if (cinfo.num_components == 1)
   {
-    fputs("DEBUG: Converting image to grayscale...\n", stderr);
+    DEBUG_puts("DEBUG: Converting image to grayscale...\n");
 
     cinfo.out_color_space      = JCS_GRAYSCALE;
     cinfo.out_color_components = 1;
@@ -98,7 +98,7 @@ _cupsImageReadJPEG(
   }
   else if (cinfo.num_components == 4)
   {
-    fputs("DEBUG: Converting image to CMYK...\n", stderr);
+    DEBUG_puts("DEBUG: Converting image to CMYK...\n");
 
     cinfo.out_color_space      = JCS_CMYK;
     cinfo.out_color_components = 4;
@@ -108,7 +108,7 @@ _cupsImageReadJPEG(
   }
   else
   {
-    fputs("DEBUG: Converting image to RGB...\n", stderr);
+    DEBUG_puts("DEBUG: Converting image to RGB...\n");
 
     cinfo.out_color_space      = JCS_RGB;
     cinfo.out_color_components = 3;
@@ -122,8 +122,8 @@ _cupsImageReadJPEG(
   if (cinfo.output_width <= 0 || cinfo.output_width > CUPS_IMAGE_MAX_WIDTH ||
       cinfo.output_height <= 0 || cinfo.output_height > CUPS_IMAGE_MAX_HEIGHT)
   {
-    fprintf(stderr, "DEBUG: Bad JPEG dimensions %dx%d!\n",
-            cinfo.output_width, cinfo.output_height);
+    DEBUG_printf(("DEBUG: Bad JPEG dimensions %dx%d!\n",
+		  cinfo.output_width, cinfo.output_height));
 
     jpeg_destroy_decompress(&cinfo);
 
@@ -149,15 +149,15 @@ _cupsImageReadJPEG(
 
     if (img->xppi == 0 || img->yppi == 0)
     {
-      fprintf(stderr, "DEBUG: Bad JPEG image resolution %dx%d PPI.\n",
-              img->xppi, img->yppi);
+      DEBUG_printf(("DEBUG: Bad JPEG image resolution %dx%d PPI.\n",
+		    img->xppi, img->yppi));
       img->xppi = img->yppi = 128;
     }
   }
 
-  fprintf(stderr, "DEBUG: JPEG image %dx%dx%d, %dx%d PPI\n",
-          img->xsize, img->ysize, cinfo.output_components,
-	  img->xppi, img->yppi);
+  DEBUG_printf(("DEBUG: JPEG image %dx%dx%d, %dx%d PPI\n",
+		img->xsize, img->ysize, cinfo.output_components,
+		img->xppi, img->yppi));
 
   cupsImageSetMaxTiles(img, 0);
 
@@ -195,18 +195,18 @@ _cupsImageReadJPEG(
       cups_ib_t	*ptr;
 
 
-      fputs("DEBUG: Direct Data...\n", stderr);
+      DEBUG_puts("DEBUG: Direct Data...\n");
 
-      fputs("DEBUG:", stderr);
+      DEBUG_puts("DEBUG:");
 
       for (i = 0, ptr = in; i < img->xsize; i ++)
       {
-        putc(' ', stderr);
+        DEBUG_puts(" ");
 	for (j = 0; j < cinfo.output_components; j ++, ptr ++)
-	  fprintf(stderr, "%02X", *ptr & 255);
+	  DEBUG_printf(("%02X", *ptr & 255));
       }
 
-      putc('\n', stderr);
+      DEBUG_puts("\n");
 #endif /* DEBUG */
 
       if (lut)
@@ -271,7 +271,7 @@ _cupsImageReadJPEG(
     }
     else /* JCS_CMYK */
     {
-      fputs("DEBUG: JCS_CMYK\n", stderr);
+      DEBUG_puts("DEBUG: JCS_CMYK\n");
 
       switch (img->colorspace)
       {

@@ -74,8 +74,8 @@ _cupsImageReadPIX(
   if (width <= 0 || height <= 0 ||
       (depth != 8 && depth != 24))
   {
-    fprintf(stderr, "DEBUG: Bad PIX image dimensions %dx%dx%d\n",
-            width, height, depth);
+    DEBUG_printf(("DEBUG: Bad PIX image dimensions %dx%dx%d\n",
+		  width, height, depth));
     fclose(fp);
     return (1);
   }
@@ -94,14 +94,14 @@ _cupsImageReadPIX(
 
   if ((in = malloc(img->xsize * (depth / 8))) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     return (1);
   }
 
   if ((out = malloc(img->xsize * bpp)) == NULL)
   {
-    fputs("DEBUG: Unable to allocate memory!\n", stderr);
+    DEBUG_puts("DEBUG: Unable to allocate memory!\n");
     fclose(fp);
     free(in);
     return (1);
