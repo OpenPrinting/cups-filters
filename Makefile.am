@@ -1037,8 +1037,6 @@ test_pdf2_CFLAGS = -I$(srcdir)/fontembed/
 test_pdf2_LDADD = libfontembed.la
 
 texttopdf_SOURCES = \
-	filter/common.c \
-	filter/common.h \
 	filter/pdfutils.c \
 	filter/pdfutils.h \
 	filter/textcommon.c \
@@ -1051,11 +1049,13 @@ texttopdf_SOURCES = \
 	fontembed/sfnt.h
 texttopdf_CFLAGS = \
 	-I$(srcdir)/fontembed/ \
+	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
 	$(FONTCONFIG_CFLAGS)
 texttopdf_LDADD = \
 	libfontembed.la \
+	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS) \
 	$(FONTCONFIG_LIBS)

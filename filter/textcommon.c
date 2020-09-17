@@ -14,6 +14,9 @@
  *   TextMain()         - Standard main entry for text filters.
  *   compare_keywords() - Compare two C/C++ keywords.
  *   getutf8()          - Get a UTF-8 encoded wide character...
+ *   SetCommonOptions() - Set common filter options for media size,
+ *                        etc.
+ *   UpdatePageVars()   - Update the page variables for the orientation.
  */
 
 /*
@@ -42,6 +45,16 @@ float	CharsPerInch = 10;	/* Number of character columns per inch */
 float	LinesPerInch = 6;	/* Number of lines per inch */
 int	NumKeywords = 0;	/* Number of known keywords */
 char	**Keywords = NULL;	/* List of known keywords */
+int	Orientation = 0,	/* 0 = portrait, 1 = landscape, etc. */
+	Duplex = 0,		/* Duplexed? */
+	LanguageLevel = 1,	/* Language level of printer */
+	ColorDevice = 1;	/* Do color text? */
+float	PageLeft = 18.0f,	/* Left margin */
+	PageRight = 594.0f,	/* Right margin */
+	PageBottom = 36.0f,	/* Bottom margin */
+	PageTop = 756.0f,	/* Top margin */
+	PageWidth = 612.0f,	/* Total page width */
+	PageLength = 792.0f;	/* Total page length */
 
 
 /*
@@ -467,6 +480,9 @@ static char *code_keywords[] =	/* List of known C/C++ keywords... */
 
 static int	compare_keywords(const void *, const void *);
 static int	getutf8(FILE *fp);
+static ppd_file_t *SetCommonOptions(int num_options, cups_option_t *options,
+		                    int change_size);
+static void	UpdatePageVars(void);
 
 
 /*
@@ -480,6 +496,9 @@ TextMain(const char *name,	/* I - Name of filter */
 {
   FILE		*fp;		/* Print file */
   ppd_file_t	*ppd;		/* PPD file */
+  cups_page_header2_t h;        /* CUPS Raster page header, to */
+                                /* accommodate results of command */
+                                /* line parsing for PPD-less queue */
   int		i,		/* Looping var */
 		empty,		/* Is the input empty? */
 		ch,		/* Current char from file */
@@ -594,6 +613,26 @@ TextMain(const char *name,	/* I - Name of filter */
   }
 
   ppd = SetCommonOptions(num_options, options, 1);
+
+  if (!ppd) {
+    cupsRasterParseIPPOptions(&h, num_options, options, 0, 1);
+    Orientation = h.Orientation;
+    Duplex = h.Duplex;
+    ColorDevice = h.cupsNumColors <= 1 ? 0 : 1;
+    PageWidth = h.cupsPageSize[0] != 0.0 ? h.cupsPageSize[0] :
+      (float)h.PageSize[0];
+    PageLength = h.cupsPageSize[1] != 0.0 ? h.cupsPageSize[1] :
+      (float)h.PageSize[1];
+    PageLeft = h.cupsImagingBBox[0] != 0.0 ? h.cupsImagingBBox[0] :
+      (float)h.ImagingBoundingBox[0];
+    PageBottom = h.cupsImagingBBox[1] != 0.0 ? h.cupsImagingBBox[1] :
+      (float)h.ImagingBoundingBox[1];
+    PageRight = h.cupsImagingBBox[2] != 0.0 ? h.cupsImagingBBox[2] :
+      (float)h.ImagingBoundingBox[2];
+    PageTop = h.cupsImagingBBox[3] != 0.0 ? h.cupsImagingBBox[3] :
+      (float)h.ImagingBoundingBox[3];
+    Copies = h.NumCopies;
+  }
 
   if ((val = cupsGetOption("wrap", num_options, options)) == NULL)
     WrapLines = 1;
@@ -1285,3 +1324,334 @@ getutf8(FILE *fp)	/* I - File to read from */
   }
 }
 
+/*
+ * 'SetCommonOptions()' - Set common filter options for media size, etc.
+ */
+
+ppd_file_t *				/* O - PPD file */
+SetCommonOptions(
+    int           num_options,		/* I - Number of options */
+    cups_option_t *options,		/* I - Options */
+    int           change_size)		/* I - Change page size? */
+{
+  ppd_file_t	*ppd;			/* PPD file */
+  ppd_size_t	*pagesize;		/* Current page size */
+  const char	*val;			/* Option value */
+
+
+#ifdef LC_TIME
+  setlocale(LC_TIME, "");
+#endif /* LC_TIME */
+
+  ppd = ppdOpenFile(getenv("PPD"));
+
+  ppdMarkDefaults(ppd);
+  ppdMarkOptions(ppd, num_options, options);
+
+  if ((pagesize = ppdPageSize(ppd, NULL)) != NULL)
+  {
+    int corrected = 0;
+    if (pagesize->width > 0)
+      PageWidth = pagesize->width;
+    else
+    {
+      fprintf(stderr, "ERROR: Invalid value for page width: %.0f\n",
+	      pagesize->width);
+      corrected = 1;
+    }
+    if (pagesize->length > 0)
+      PageLength = pagesize->length;
+    else
+    {
+      fprintf(stderr, "ERROR: Invalid value for page length: %.0f\n",
+	      pagesize->length);
+      corrected = 1;
+    }
+    if (pagesize->top >= 0 && pagesize->top <= PageLength)
+      PageTop = pagesize->top;
+    else
+    {
+      fprintf(stderr, "ERROR: Invalid value for page top margin: %.0f\n",
+	      pagesize->top);
+      if (PageLength >= PageBottom)
+	PageTop = PageLength - PageBottom;
+      else
+	PageTop = PageLength;
+      corrected = 1;
+    }
+    if (pagesize->bottom >= 0 && pagesize->bottom <= PageLength)
+      PageBottom = pagesize->bottom;
+    else
+    {
+      fprintf(stderr, "ERROR: Invalid value for page bottom margin: %.0f\n",
+	      pagesize->bottom);
+      if (PageLength <= PageBottom)
+	PageBottom = 0.0f;
+      corrected = 1;
+    }
+    if (PageBottom == PageTop)
+    {
+      fprintf(stderr, "ERROR: Invalid values for page margins: Bottom: %.0f; Top: %.0f\n",
+	      PageBottom, PageTop);
+      PageTop = PageLength - PageBottom;
+      if (PageBottom == PageTop)
+      {
+	PageBottom = 0.0f;
+	PageTop = PageLength;
+      }
+      corrected = 1;
+    }
+    if (PageBottom > PageTop)
+    {
+      fprintf(stderr, "ERROR: Invalid values for page margins: Bottom: %.0f; Top: %.0f\n",
+	      PageBottom, PageTop);
+      float swap = PageBottom;
+      PageBottom = PageTop;
+      PageTop = swap;
+      corrected = 1;
+    }
+
+    if (pagesize->left >= 0 && pagesize->left <= PageWidth)
+      PageLeft = pagesize->left;
+    else
+    {
+      fprintf(stderr, "ERROR: Invalid value for page left margin: %.0f\n",
+	      pagesize->left);
+      if (PageWidth <= PageLeft)
+	PageLeft = 0.0f;
+      corrected = 1;
+    }
+    if (pagesize->right >= 0 && pagesize->right <= PageWidth)
+      PageRight = pagesize->right;
+    else
+    {
+      fprintf(stderr, "ERROR: Invalid value for page right margin: %.0f\n",
+	      pagesize->right);
+      if (PageWidth >= PageLeft)
+	PageRight = PageWidth - PageLeft;
+      else
+	PageRight = PageWidth;
+      corrected = 1;
+    }
+    if (PageLeft == PageRight)
+    {
+      fprintf(stderr, "ERROR: Invalid values for page margins: Left: %.0f; Right: %.0f\n",
+	      PageLeft, PageRight);
+      PageRight = PageWidth - PageLeft;
+      if (PageLeft == PageRight)
+      {
+	PageLeft = 0.0f;
+	PageRight = PageWidth;
+      }
+      corrected = 1;
+    }
+    if (PageLeft > PageRight)
+    {
+      fprintf(stderr, "ERROR: Invalid values for page margins: Left: %.0f; Right: %.0f\n",
+	      PageLeft, PageRight);
+      float swap = PageLeft;
+      PageLeft = PageRight;
+      PageRight = swap;
+      corrected = 1;
+    }
+
+    if (corrected)
+    {
+      fprintf(stderr, "ERROR: PPD Page = %.0fx%.0f; %.0f,%.0f to %.0f,%.0f\n",
+	      pagesize->width, pagesize->length, pagesize->left, pagesize->bottom, pagesize->right, pagesize->top);
+      fprintf(stderr, "ERROR: Corrected Page = %.0fx%.0f; %.0f,%.0f to %.0f,%.0f\n",
+	      PageWidth, PageLength, PageLeft, PageBottom, PageRight, PageTop);
+    }
+    else
+      fprintf(stderr, "DEBUG: Page = %.0fx%.0f; %.0f,%.0f to %.0f,%.0f\n",
+	      pagesize->width, pagesize->length, pagesize->left, pagesize->bottom, pagesize->right, pagesize->top);
+  }
+
+  if (ppd != NULL)
+  {
+    ColorDevice   = ppd->color_device;
+    LanguageLevel = ppd->language_level;
+  }
+
+  if ((val = cupsGetOption("landscape", num_options, options)) != NULL)
+  {
+    if (strcasecmp(val, "no") != 0 && strcasecmp(val, "off") != 0 &&
+        strcasecmp(val, "false") != 0)
+    {
+      if (ppd && ppd->landscape > 0)
+        Orientation = 1;
+      else
+        Orientation = 3;
+    }
+  }
+  else if ((val = cupsGetOption("orientation-requested", num_options, options)) != NULL)
+  {
+   /*
+    * Map IPP orientation values to 0 to 3:
+    *
+    *   3 = 0 degrees   = 0
+    *   4 = 90 degrees  = 1
+    *   5 = -90 degrees = 3
+    *   6 = 180 degrees = 2
+    */
+
+    Orientation = atoi(val) - 3;
+    if (Orientation >= 2)
+      Orientation ^= 1;
+  }
+
+  if ((val = cupsGetOption("page-left", num_options, options)) != NULL)
+  {
+    switch (Orientation & 3)
+    {
+      case 0 :
+          PageLeft = (float)atof(val);
+	  break;
+      case 1 :
+          PageBottom = (float)atof(val);
+	  break;
+      case 2 :
+          PageRight = PageWidth - (float)atof(val);
+	  break;
+      case 3 :
+          PageTop = PageLength - (float)atof(val);
+	  break;
+    }
+  }
+
+  if ((val = cupsGetOption("page-right", num_options, options)) != NULL)
+  {
+    switch (Orientation & 3)
+    {
+      case 0 :
+          PageRight = PageWidth - (float)atof(val);
+	  break;
+      case 1 :
+          PageTop = PageLength - (float)atof(val);
+	  break;
+      case 2 :
+          PageLeft = (float)atof(val);
+	  break;
+      case 3 :
+          PageBottom = (float)atof(val);
+	  break;
+    }
+  }
+
+  if ((val = cupsGetOption("page-bottom", num_options, options)) != NULL)
+  {
+    switch (Orientation & 3)
+    {
+      case 0 :
+          PageBottom = (float)atof(val);
+	  break;
+      case 1 :
+          PageLeft = (float)atof(val);
+	  break;
+      case 2 :
+          PageTop = PageLength - (float)atof(val);
+	  break;
+      case 3 :
+          PageRight = PageWidth - (float)atof(val);
+	  break;
+    }
+  }
+
+  if ((val = cupsGetOption("page-top", num_options, options)) != NULL)
+  {
+    switch (Orientation & 3)
+    {
+      case 0 :
+          PageTop = PageLength - (float)atof(val);
+	  break;
+      case 1 :
+          PageRight = PageWidth - (float)atof(val);
+	  break;
+      case 2 :
+          PageBottom = (float)atof(val);
+	  break;
+      case 3 :
+          PageLeft = (float)atof(val);
+	  break;
+    }
+  }
+
+  if (change_size)
+    UpdatePageVars();
+
+  if (ppdIsMarked(ppd, "Duplex", "DuplexNoTumble") ||
+      ppdIsMarked(ppd, "Duplex", "DuplexTumble") ||
+      ppdIsMarked(ppd, "JCLDuplex", "DuplexNoTumble") ||
+      ppdIsMarked(ppd, "JCLDuplex", "DuplexTumble") ||
+      ppdIsMarked(ppd, "EFDuplex", "DuplexNoTumble") ||
+      ppdIsMarked(ppd, "EFDuplex", "DuplexTumble") ||
+      ppdIsMarked(ppd, "KD03Duplex", "DuplexNoTumble") ||
+      ppdIsMarked(ppd, "KD03Duplex", "DuplexTumble"))
+    Duplex = 1;
+
+  return (ppd);
+}
+
+
+/*
+ * 'UpdatePageVars()' - Update the page variables for the orientation.
+ */
+
+void
+UpdatePageVars(void)
+{
+  float		temp;			/* Swapping variable */
+
+
+  switch (Orientation & 3)
+  {
+    case 0 : /* Portait */
+        break;
+
+    case 1 : /* Landscape */
+	temp       = PageLeft;
+	PageLeft   = PageBottom;
+	PageBottom = temp;
+
+	temp       = PageRight;
+	PageRight  = PageTop;
+	PageTop    = temp;
+
+	temp       = PageWidth;
+	PageWidth  = PageLength;
+	PageLength = temp;
+	break;
+
+    case 2 : /* Reverse Portrait */
+	temp       = PageWidth - PageLeft;
+	PageLeft   = PageWidth - PageRight;
+	PageRight  = temp;
+
+	temp       = PageLength - PageBottom;
+	PageBottom = PageLength - PageTop;
+	PageTop    = temp;
+        break;
+
+    case 3 : /* Reverse Landscape */
+	temp       = PageWidth - PageLeft;
+	PageLeft   = PageWidth - PageRight;
+	PageRight  = temp;
+
+	temp       = PageLength - PageBottom;
+	PageBottom = PageLength - PageTop;
+	PageTop    = temp;
+
+	temp       = PageLeft;
+	PageLeft   = PageBottom;
+	PageBottom = temp;
+
+	temp       = PageRight;
+	PageRight  = PageTop;
+	PageTop    = temp;
+
+	temp       = PageWidth;
+	PageWidth  = PageLength;
+	PageLength = temp;
+	break;
+  }
+}

@@ -14,7 +14,14 @@
  * Include necessary headers...
  */
 
-#include "common.h"
+#include <config.h>
+#include <cups/cups.h>
+#include <cupsfilters/raster.h>
+#include <ppd/ppd.h>
+#include <time.h>
+#include <string.h>
+#include <ctype.h>
+#include <errno.h>
 
 
 /*
@@ -81,6 +88,16 @@ extern float	CharsPerInch,	/* Number of character columns per inch */
 extern int	UTF8,		/* Use UTF-8 encoding? */
 		NumKeywords;	/* Number of known keywords */
 extern char	**Keywords;	/* List of known keywords... */
+extern int	Orientation,	/* 0 = portrait, 1 = landscape, etc. */
+		Duplex,		/* Duplexed? */
+		LanguageLevel,	/* Language level of printer */
+		ColorDevice;	/* Do color text? */
+extern float	PageLeft,	/* Left margin */
+		PageRight,	/* Right margin */
+		PageBottom,	/* Bottom margin */
+		PageTop,	/* Top margin */
+		PageWidth,	/* Total page width */
+		PageLength;	/* Total page length */
 
 
 /*
