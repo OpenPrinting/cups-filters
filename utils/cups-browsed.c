@@ -3653,6 +3653,7 @@ local_printer_has_uri (gpointer key,
           dusername[64];           /* Discovered printer: URI's username */
   int     lport = 0,               /* Local printer: URI's port number */
           dport = 0;               /* Discovered printer: URI's port number */
+  char    *resolved_uri;
 
   debug_printf("local_printer_has_uri() in THREAD %ld\n", pthread_self());
   /* Separate the two URIs to be compared into their components */
@@ -3664,20 +3665,26 @@ local_printer_has_uri (gpointer key,
   memset(dusername, 0, sizeof(dusername));
   memset(dhost, 0, sizeof(dhost));
   memset(dresource, 0, sizeof(dresource));
-  if (printer && printer->device_uri)
-    httpSeparateURI (HTTP_URI_CODING_ALL, resolve_uri(printer->device_uri),
+  if (printer && printer->device_uri &&
+      (resolved_uri = resolve_uri(printer->device_uri)) != NULL) {
+    httpSeparateURI (HTTP_URI_CODING_ALL, resolved_uri,
 		     lscheme, sizeof(lscheme) - 1,
 		     lusername, sizeof(lusername) - 1,
 		     lhost, sizeof(lhost) - 1,
 		     &lport,
 		     lresource, sizeof(lresource) - 1);
-  if (device_uri)
-    httpSeparateURI (HTTP_URI_CODING_ALL, resolve_uri(device_uri),
+    free(resolved_uri);
+  }
+  if (device_uri &&
+      (resolved_uri = resolve_uri(device_uri)) != NULL) {
+    httpSeparateURI (HTTP_URI_CODING_ALL, resolved_uri,
 		     dscheme, sizeof(dscheme) - 1,
 		     dusername, sizeof(dusername) - 1,
 		     dhost, sizeof(dhost) - 1,
 		     &dport,
 		     dresource, sizeof(dresource) - 1);
+    free(resolved_uri);
+  }
   /* Consider not only absolutely equal URIs as equal
      but alo URIs which differ only by use of IPP or
      IPPS and/or have the IPP standard port 631
@@ -6815,6 +6822,7 @@ on_printer_modified (CupsNotifier *object,
   char          *new_queue_name;
   cups_array_t  *to_be_renamed;
   char          local_queue_uri[1024];
+  char          *resolved_uri = NULL;
 
   debug_printf("on_printer_modified() in THREAD %ld\n", pthread_self());
 
@@ -6894,9 +6902,10 @@ on_printer_modified (CupsNotifier *object,
 	  debug_printf("Printer with URI %s (or IPP/IPPS equivalent) already exists, no replacement queue to be created.\n",
 		       p->uri);
 	  re_create = 0;
-	} else if ((new_queue_name = /* Try to find a new queue name */
+	} else if ((resolved_uri = resolve_uri(p->uri)) == NULL ||
+		   (new_queue_name = /* Try to find a new queue name */
 		    get_local_queue_name(p->service_name, p->make_model,
-					 resolve_uri(p->uri), p->host,
+					 resolved_uri, p->host,
 					 &is_cups_queue,
 					 p->queue_name)) == NULL) {
 	  /* Not able to find a new name for the queue */
@@ -6914,6 +6923,7 @@ on_printer_modified (CupsNotifier *object,
 	    re_create = 0;
 	  }
 	}
+	if (resolved_uri) free(resolved_uri);
 	if (re_create) {
 	  p->overwritten = 0;
 	  p->status = STATUS_TO_BE_CREATED;
