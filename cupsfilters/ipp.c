@@ -67,7 +67,7 @@ log_printf(char *log,
   va_end(arglist);
 }
 
-const char *
+char *
 resolve_uri(const char *raw_uri)
 {
   char *pseudo_argv[2];
@@ -91,7 +91,7 @@ resolve_uri(const char *raw_uri)
   dup2(fd1, 2);
   close(fd1);
 
-  return uri;
+  return (uri ? strdup(uri) : NULL);
 }
 
 #ifdef HAVE_CUPS_1_6
@@ -189,9 +189,9 @@ get_printer_attributes5(http_t *http_printer,
 			int* driverless_info,
 			int resolve_uri_type )
 {
-  const char *uri;
+  char *uri;
   int have_http, uri_status, host_port, i = 0, total_attrs = 0, fallback,
-    cap = 0, uri_alloc = 0;
+    cap = 0;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
   ipp_t *request, *response = NULL;
   ipp_attribute_t *attr;
@@ -247,11 +247,7 @@ get_printer_attributes5(http_t *http_printer,
   if(resolve_uri_type == CUPS_BACKEND_URI_CONVERTER)
     uri = resolve_uri(raw_uri);
   else
-  {
     uri = ippfind_based_uri_converter(raw_uri, resolve_uri_type);
-    if (uri != NULL)
-      uri_alloc = 1;
-  }
 
   if (uri == NULL)
   {
@@ -272,7 +268,7 @@ get_printer_attributes5(http_t *http_printer,
     log_printf(get_printer_attributes_log,
 	       "get-printer-attributes: Cannot parse the printer URI: %s\n",
 	       uri);
-    if (uri_alloc == 1) free(uri);
+    if (uri) free(uri);
     return NULL;
   }
 
@@ -285,7 +281,7 @@ get_printer_attributes5(http_t *http_printer,
       log_printf(get_printer_attributes_log,
 		 "get-printer-attributes: Cannot connect to printer with URI %s.\n",
 		 uri);
-      if (uri_alloc == 1) free(uri);
+      if (uri) free(uri);
       return NULL;
     }
   } else
@@ -383,7 +379,7 @@ get_printer_attributes5(http_t *http_printer,
       } else {
 	/* Suitable response, we are done */
 	if (have_http == 0) httpClose(http_printer);
-  if (uri_alloc == 1) free(uri);
+	if (uri) free(uri);
 	return response;
       }
     } else {
@@ -412,11 +408,11 @@ get_printer_attributes5(http_t *http_printer,
   }
 
   if (have_http == 0) httpClose(http_printer);
-  if (uri_alloc == 1) free(uri);
+  if (uri) free(uri);
   return NULL;
 }
 
-const char*
+char*
 ippfind_based_uri_converter (const char *uri, int is_fax)
 {
   int  ippfind_pid = 0,	        /* Process ID of ippfind for IPP */
