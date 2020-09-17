@@ -300,6 +300,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/image-tiff.c \
 	cupsfilters/image-zoom.c \
 	cupsfilters/imagetopdf.c \
+	cupsfilters/imagetops.c \
 	cupsfilters/imagetoraster.c \
 	cupsfilters/ipp.c \
 	cupsfilters/lut.c \
@@ -657,7 +658,6 @@ pdftopdf_LDADD = \
 # Simple filter binaries
 # ======================
 genfilterscripts = \
-	filter/imagetops \
 	filter/texttops
 pkgfilter_SCRIPTS = $(genfilterscripts)
 if ENABLE_BRAILLE
@@ -716,6 +716,7 @@ endif
 if ENABLE_IMAGEFILTERS
 pkgfilter_PROGRAMS += \
 	imagetopdf \
+	imagetops \
 	imagetoraster
 endif
 
@@ -855,6 +856,15 @@ imagetopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	-I$(srcdir)/cupsfilters/
 imagetopdf_LDADD = \
+	$(CUPS_LIBS) \
+	libcupsfilters.la
+
+imagetops_SOURCES = \
+	filter/imagetops.c
+imagetops_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
+imagetops_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
 

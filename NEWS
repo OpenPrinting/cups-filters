@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, imagetops: Introduced imagetops() filter
+	  function for Printer Application to print on PostScript
+	  printers. It is used to print images (IPP standard requires
+	  at least JPEG to be accepted) without need of a PDF renderer
+	  (imagetopdf -> pdftops) and without need to convert to
+	  Raster (imagetoraster -> rastertops). The CUPS filter
+	  imagetops uses this filter function now, too.
 	- libcupsfilters, imagetopdf: Moved core functionality of
 	  imagetopdf into the imagetopdf() filter function.
 	- libcupsfilters, imagetoraster: Moved core functionality of

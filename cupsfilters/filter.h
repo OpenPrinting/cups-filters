@@ -141,6 +141,14 @@ extern int imagetopdf(int inputfd,
 		      void *parameters);
 
 
+extern int imagetops(int inputfd,
+		     int outputfd,
+		     int inputseekable,
+		     int *jobcanceled,
+		     filter_data_t *data,
+		     void *parameters);
+
+
 extern int imagetoraster(int inputfd,
 			 int outputfd,
 			 int inputseekable,
