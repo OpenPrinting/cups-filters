@@ -573,7 +573,7 @@ extern int		ppdPageSizeLimits(ppd_file_t *ppd,
 			                  ppd_size_t *minimum,
 					  ppd_size_t *maximum);
 
-/**** New in cups-filters 1.28.0: Renamed functions from original CUPS API ****/
+/**** New in cups-filters 2.0.0: Renamed functions from original CUPS API ****/
 extern int		ppdMarkOptions(ppd_file_t *ppd, int num_options, cups_option_t *options);
 extern int		ppdRasterInterpretPPD(cups_page_header2_t *h,
 			                       ppd_file_t *ppd,
@@ -589,7 +589,7 @@ extern int		ppdResolveConflicts(ppd_file_t *ppd,
 					     int *num_options,
 					     cups_option_t **options);
 
-/**** New in cups-filters 1.28.0: Formerly CUPS-private functions ****/
+/**** New in cups-filters 2.0.0: Formerly CUPS-private functions ****/
 extern int		ppdConvertOptions(ipp_t *request, ppd_file_t *ppd, ppd_cache_t *pc, ipp_attribute_t *media_col_sup, ipp_attribute_t *doc_handling_sup, ipp_attribute_t *print_color_mode_sup, const char *user, const char *format, int copies, int num_options, cups_option_t *options);
 extern int		ppdRasterExecPS(cups_page_header2_t *h, int *preferred_bits, const char *code);
 extern int		ppdRasterInterpretPPD(cups_page_header2_t *h, ppd_file_t *ppd, int num_options, cups_option_t *options, cups_interpret_cb_t func);
@@ -647,17 +647,17 @@ extern const char	*ppdPwgMediaTypeForType(const char *media_type,
 extern const char	*ppdPwgPageSizeForMedia(pwg_media_t *media,
 			                      char *name, size_t namesize);
 
-/**** New in cups-filters 1.28.0: Overtaken from ippeveprinter ****/
+/**** New in cups-filters 2.0.0: Overtaken from ippeveprinter ****/
 extern ipp_t		*ppdLoadAttributes(ppd_file_t   *ppd,
 					   cups_array_t *docformats);
 
-/**** New in cups-filters 1.28.0: Overtaken from ippeveps ****/
+/**** New in cups-filters 2.0.0: Overtaken from ippeveps ****/
 extern int		ppdGetOptions(cups_option_t **options,
 				      ipp_t *printer_attrs,
 				      ipp_t *job_attrs,
 				      ppd_file_t *ppd);
 
-/**** New in cups-filters 1.28.0: Added for pclmtoraster filter ****/
+/**** New in cups-filters 2.0.0: Added for pclmtoraster filter ****/
 extern int		ppdRasterMatchPPDSize(cups_page_header2_t *header,
 					      ppd_file_t *ppd,
 					      double margins[4],
