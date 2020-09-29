@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.28.3 - 2020-09-24
 -----------------------------------------------------
 
+CHANGES IN V1.28.4
+
+	- Sample PPDs: Corrected manufacturer name in
+	  Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd.
+
 CHANGES IN V1.28.3
 
 	- libcupsfilters, cups-browsed: Fixed inconsistency between
@@ -15,7 +20,7 @@ CHANGES IN V1.28.2
 
 	- driverless: Free allocated memory, use MAX_OUTPUT_LEN (Pull
 	  request #304).
-	- driverless: driverless: Make the two ippfind tasks(for IPP
+	- driverless: Make the two ippfind tasks(for IPP
 	  and IPPS) run in parallel (Pull request #302, #305, #306).
 	- braille: Support new liblouis tables not containing a
 	  display name (Pull request #303)
