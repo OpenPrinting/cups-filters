@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- Sample PPDs: Corrected manufacturer name in
+	  Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd.
 	- texttopdf: Added support for PPD-less use.
 	- libcupsfilters, imagetops: Introduced imagetops() filter
 	  function for Printer Application to print on PostScript
