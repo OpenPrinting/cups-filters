@@ -119,7 +119,7 @@ cups_brf_SOURCES = \
 utils/driverless-fax: utils/driverless-fax.in Makefile
 	sed \
 	  -e "s|\@CUPS_SERVERBIN\@|$(CUPS_SERVERBIN)|" \
-	  $< >$@
+	  $< > $@
 
 pkgppdgendir = $(CUPS_SERVERBIN)/driver
 driverlessfaxscripts = \
@@ -177,7 +177,8 @@ EXTRA_DIST += $(pkgcharset_DATA)
 # ==========================
 pkgppdincludedir = $(includedir)/ppd
 pkgppdinclude_DATA = \
-	ppd/ppd.h
+	ppd/ppd.h \
+	cupsfilters/log.h
 
 lib_LTLIBRARIES = libppd.la
 
@@ -190,6 +191,7 @@ libppd_la_SOURCES = \
 	ppd/ppd-attr.c \
 	ppd/ppd.c \
 	ppd/ppd-cache.c \
+	ppd/ppd-collection.c \
 	ppd/ppd-conflicts.c \
 	ppd/ppd-custom.c \
 	ppd/ppd-emit.c \
@@ -203,6 +205,8 @@ libppd_la_SOURCES = \
 	ppd/debug-internal.h \
 	ppd/debug-private.h \
 	ppd/encode.c \
+	ppd/file.c \
+	ppd/file-private.h \
 	ppd/ipp-private.h \
 	ppd/language.c \
 	ppd/language-private.h \
@@ -231,7 +235,7 @@ EXTRA_DIST += \
 	$(pkgppdinclude_DATA) \
 	ppd/test.ppd \
 	ppd/test2.ppd \
-	ppd/README
+	ppd/README.md
 
 # ====================
 # CUPS Filters library
@@ -245,6 +249,7 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/filter.h \
 	cupsfilters/image.h \
 	cupsfilters/ipp.h \
+	cupsfilters/log.h \
 	cupsfilters/pdf.h \
 	cupsfilters/pdftoippprinter.h \
 	cupsfilters/ppdgenerator.h \

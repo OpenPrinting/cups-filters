@@ -19,6 +19,8 @@ extern "C" {
  * Include necessary headers...
  */
 
+#  include "log.h"
+
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <time.h>
@@ -39,20 +41,6 @@ extern "C" {
 /*
  * Types and structures...
  */
-
-typedef enum filter_loglevel_e {        /* Log levels, same as PAPPL, similar
-					   to CUPS */
- FILTER_LOGLEVEL_UNSPEC = -1,           /* Not specified */
- FILTER_LOGLEVEL_DEBUG,                 /* Debug message */
- FILTER_LOGLEVEL_INFO,                  /* Informational message */
- FILTER_LOGLEVEL_WARN,                  /* Warning message */
- FILTER_LOGLEVEL_ERROR,                 /* Error message */
- FILTER_LOGLEVEL_FATAL,                 /* Fatal message */
- FILTER_LOGLEVEL_CONTROL                /* Control message */
-} filter_loglevel_t;
-
-typedef void (*filter_logfunc_t)(void *data, filter_loglevel_t level,
-				 const char *message, ...);
 
 typedef struct filter_data_s {
   int job_id;                /* Job ID or 0 */

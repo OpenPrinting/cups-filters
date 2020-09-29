@@ -13,6 +13,7 @@
  */
 
 #include "ppd.h"
+#include "array-private.h"
 #include "raster-private.h"
 #include <sys/stat.h>
 #ifdef _WIN32
@@ -368,6 +369,37 @@ _ppdRasterColorSpaceString(
     return ("Unknown");
   else
     return (cups_color_spaces[cspace]);
+}
+
+/*
+ * '_log()' - Simple log function
+ */
+
+void
+_log(void *data,
+     filter_loglevel_t level,
+     const char *message,
+     ...)
+{
+  va_list arglist;
+
+  (void)data; /* No extra data needed */
+
+  switch(level)
+  {
+    default:
+      break;
+    case FILTER_LOGLEVEL_ERROR:
+      printf("ERROR: ");
+      break;
+    case FILTER_LOGLEVEL_FATAL:
+      printf("FATAL: ");
+      break;
+  }
+  va_start(arglist, message);
+  vprintf(message, arglist);
+  fflush(stdout);
+  va_end(arglist);
 }
 
 
@@ -1181,12 +1213,143 @@ main(int  argc,				/* I - Number of command-line arguments */
     httpClose(http);
     return (0);
   }
+  else if (!strcmp(argv[1], "dump") && argc == 3)
+  {
+    ppdCollectionDumpCache(argv[2], _log, NULL);
+  }
+  else if (strchr(argv[1], ',') ||
+	   (s = strcasestr(argv[1], ".ppd")) == NULL ||
+	   s[4] != '\0')
+  {
+    /* First argument is not FILE.ppd but DIR or DIR,DIR,... ->
+       PPD directory list -> See whether we have valid PPD collection */
+
+    cups_array_t *dirlist = _ppdArrayNewStrings(argv[1], ',');
+    cups_array_t *ppd_collections = cupsArrayNew(NULL, NULL);
+    ppd_collection_t *col;
+    cups_option_t *options = NULL;
+    int num_options = 0;
+    int i;
+    char *testname = NULL;
+
+    for (s = (char *)cupsArrayFirst(dirlist), i = 1;
+	 s;
+	 s = (char *)cupsArrayNext(dirlist), i ++)
+    {
+      col = (ppd_collection_t *)calloc(1, sizeof(ppd_collection_t));
+      col->path = s;
+      printf("Searching directory %d, %s ...\n", i, col->path); 
+      col->name = (char *)calloc(20, sizeof(char));
+      snprintf(col->name, 19, "%d", i);
+      cupsArrayAdd(ppd_collections, col);
+    }
+
+    for (i = 2; i < argc; i ++)
+      if (strlen(argv[i]) > 0 && argv[i][0] != '=')
+      {
+	if ((s = strchr(argv[i], '=')) == NULL)
+	  s = "";
+	else
+	{
+	  *s = '\0';
+	  s ++;
+	}
+	num_options = cupsAddOption(argv[i], s, num_options, &options);
+      }
+
+    cups_array_t *ppds =
+      ppdCollectionListPPDs(ppd_collections, 0, num_options, options,
+			    _log, NULL);
+
+    if (ppds)
+    {
+      if (cupsGetOption("only-makes", num_options, options))
+      {
+	printf("Found %d manufacturers.\n\n", cupsArrayCount(ppds));
+	for (s = (char *)cupsArrayFirst(ppds);
+	     s;
+	     s = (char *)cupsArrayNext(ppds))
+	  puts(s);
+      }
+      else
+      {
+	ppd_info_t *ppd;
+	printf("Found %d PPD files.\n\n", cupsArrayCount(ppds));
+	puts("mtime,size,model_number,type,filename,name,languages0,products0,"
+	     "psversions0,make,make_and_model,device_id,scheme");
+	for (ppd = (ppd_info_t *)cupsArrayFirst(ppds);
+	     ppd;
+	     ppd = (ppd_info_t *)cupsArrayNext(ppds))
+	{
+	  printf("%d,%ld,%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\","
+		 "\"%s\",\"%s\"\n",
+		 (int)ppd->record.mtime, (long)ppd->record.size,
+		 ppd->record.model_number, ppd->record.type,
+		 ppd->record.filename,
+		 ppd->record.name, ppd->record.languages[0],
+		 ppd->record.products[0],
+		 ppd->record.psversions[0], ppd->record.make,
+		 ppd->record.make_and_model, ppd->record.device_id,
+		 ppd->record.scheme);
+	  testname = ppd->record.name;
+	}
+      }
+    }
+
+    if (testname)
+    {
+      if ((ppd = ppdOpen2(ppdCollectionGetPPD(testname, ppd_collections,
+					      _log, NULL))) == NULL)
+      {
+	ppd_status_t	err;		/* Last error in file */
+	int		line;		/* Line number in file */
+
+	status ++;
+	err = ppdLastError(&line);
+
+	printf("%s: %s on line %d\n", argv[1], ppdErrorString(err), line);
+      }
+      else
+      {
+	printf("PPD %s: %s\n", testname, ppd->nickname);
+	ppdClose(ppd);
+      }
+    }
+    else
+      printf("%s: No PPD files found.\n", argv[1]);
+
+    cupsArrayDelete(dirlist);
+    for (col = (ppd_collection_t *)cupsArrayFirst(ppd_collections);
+	 col;
+	 col = (ppd_collection_t *)cupsArrayNext(ppd_collections))
+    {
+      free(col->name);
+      free(col);
+    }
+    cupsArrayDelete(ppd_collections);
+    if (ppds)
+    {
+      for (s = (char *)cupsArrayFirst(ppds);
+	   s;
+	   s = (char *)cupsArrayNext(ppds))
+	free(s);
+      cupsArrayDelete(ppds);
+    }
+    if (num_options)
+      cupsFreeOptions(num_options, options);
+
+    return (0);
+  }
   else
   {
-    const char	*filename;		/* PPD filename */
+    const char	*name;			/* PPD name */
+    char	*filename;		/* Name of actual file containing PPD */
     struct stat	fileinfo;		/* File information */
 
-    filename = argv[1];
+    name = argv[1];
+    filename = strdup(name);
+    if ((s = strchr(filename, ':')) != NULL)
+      *s = '\0';
 
     if (lstat(filename, &fileinfo))
     {
@@ -1215,7 +1378,14 @@ main(int  argc,				/* I - Number of command-line arguments */
     else
       printf("%s: regular file, %ld bytes\n", filename, (long)fileinfo.st_size);
 
-    if ((ppd = ppdOpenFile(filename)) == NULL)
+    if (s)
+      printf("\nPPD file %s from %s:\n\n", s + 1, filename);
+    else
+      printf("\nPPD file %s:\n\n", filename);
+    free(filename);
+
+    if ((ppd = ppdOpen2(ppdCollectionGetPPD(name, NULL, _log, NULL))) ==
+	NULL)
     {
       ppd_status_t	err;		/* Last error in file */
       int		line;		/* Line number in file */

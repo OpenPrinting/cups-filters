@@ -20,6 +20,11 @@
  * Include necessary headers...
  */
 
+/* We do not depend on libcupsfilters here, we only share the call scheme
+   for log functions, so that the same log functions can be used with all
+   libraries of the cups-filters project */
+#  include <cupsfilters/log.h>
+
 #  include <stdio.h>
 #  include <cups/raster.h>
 #  include "versioning.h"
@@ -44,7 +49,8 @@ extern "C" {
  * PPD version...
  */
 
-#  define PPD_VERSION	4.3		/* Kept in sync with Adobe version number */
+#  define PPD_VERSION	4.3		/* Kept in sync with Adobe version
+					   number */
 
 
 /*
@@ -56,12 +62,32 @@ extern "C" {
 #  define PPD_MAX_LINE	256		/* Maximum size of line + 1 for nul */
 
 
+/**** New in cups-filters 2.0.0: Ovetaken from cups-driverd ****/
+/*
+ * PPD collection entry data
+ */
+
+#  define PPD_SYNC	0x50504441	/* Sync word for ppds.dat (PPDA) */
+#  define PPD_MAX_LANG	32		/* Maximum languages */
+#  define PPD_MAX_PROD	32		/* Maximum products */
+#  define PPD_MAX_VERS	32		/* Maximum versions */
+
+#  define PPD_TYPE_POSTSCRIPT	0	/* PostScript PPD */
+#  define PPD_TYPE_PDF		1	/* PDF PPD */
+#  define PPD_TYPE_RASTER	2	/* CUPS raster PPD */
+#  define PPD_TYPE_FAX		3	/* Facsimile/MFD PPD */
+#  define PPD_TYPE_UNKNOWN	4	/* Other/hybrid PPD */
+#  define PPD_TYPE_DRV		5	/* Driver info file */
+#  define PPD_TYPE_ARCHIVE	6	/* Archive file */
+
+
 /*
  * Types and structures...
  */
 
 typedef int (*cups_interpret_cb_t)(cups_page_header2_t *header, int preferred_bits);
-					/**** cupsRasterInterpretPPD callback function
+					/**** cupsRasterInterpretPPD callback
+					      function
 					 *
 					 * This function is called by
 					 * @link cupsRasterInterpretPPD@ to
@@ -83,11 +109,15 @@ typedef enum ppd_ui_e			/**** UI Types ****/
 
 typedef enum ppd_section_e		/**** Order dependency sections ****/
 {
-  PPD_ORDER_ANY,			/* Option code can be anywhere in the file */
-  PPD_ORDER_DOCUMENT,			/* ... must be in the DocumentSetup section */
-  PPD_ORDER_EXIT,			/* ... must be sent prior to the document */
+  PPD_ORDER_ANY,			/* Option code can be anywhere in the
+					   file */
+  PPD_ORDER_DOCUMENT,			/* ... must be in the DocumentSetup
+					   section */
+  PPD_ORDER_EXIT,			/* ... must be sent prior to the
+					   document */
   PPD_ORDER_JCL,			/* ... must be sent as a JCL command */
-  PPD_ORDER_PAGE,			/* ... must be in the PageSetup section */
+  PPD_ORDER_PAGE,			/* ... must be in the PageSetup
+					   section */
   PPD_ORDER_PROLOG			/* ... must be in the Prolog section */
 } ppd_section_t;
 
@@ -111,9 +141,11 @@ typedef enum ppd_status_e		/**** Status Codes ****/
   PPD_MISSING_VALUE,			/* Missing value string */
   PPD_INTERNAL_ERROR,			/* Internal error */
   PPD_BAD_OPEN_GROUP,			/* Bad OpenGroup */
-  PPD_NESTED_OPEN_GROUP,		/* OpenGroup without a CloseGroup first */
+  PPD_NESTED_OPEN_GROUP,		/* OpenGroup without a CloseGroup
+					   first */
   PPD_BAD_OPEN_UI,			/* Bad OpenUI/JCLOpenUI */
-  PPD_NESTED_OPEN_UI,			/* OpenUI/JCLOpenUI without a CloseUI/JCLCloseUI first */
+  PPD_NESTED_OPEN_UI,			/* OpenUI/JCLOpenUI without a
+					   CloseUI/JCLCloseUI first */
   PPD_BAD_ORDER_DEPENDENCY,		/* Bad OrderDependency */
   PPD_BAD_UI_CONSTRAINTS,		/* Bad UIConstraints */
   PPD_MISSING_ASTERISK,			/* Missing asterisk in column 0 */
@@ -163,8 +195,10 @@ typedef struct ppd_choice_s		/**** Option choices ****/
 
 struct ppd_option_s			/**** Options ****/
 {
-  char		conflicted;		/* 0 if no conflicts exist, 1 otherwise */
-  char		keyword[PPD_MAX_NAME];	/* Option keyword name ("PageSize", etc.) */
+  char		conflicted;		/* 0 if no conflicts exist, 1
+					   otherwise */
+  char		keyword[PPD_MAX_NAME];	/* Option keyword name ("PageSize",
+					   etc.) */
   char		defchoice[PPD_MAX_NAME];/* Default option choice */
   char		text[PPD_MAX_TEXT];	/* Human-readable text */
   ppd_ui_t	ui;			/* Type of UI option */
@@ -182,7 +216,8 @@ typedef struct ppd_group_s		/**** Groups ****/
    ****/
   char		text[PPD_MAX_TEXT - PPD_MAX_NAME];
   					/* Human-readable group name */
-  char		name[PPD_MAX_NAME];	/* Group name @since CUPS 1.1.18/macOS 10.3@ */
+  char		name[PPD_MAX_NAME];	/* Group name @since CUPS 1.1.18/macOS
+					   10.3@ */
   int		num_options;		/* Number of options */
   ppd_option_t	*options;		/* Options */
   int		num_subgroups;		/* Number of sub-groups */
@@ -278,7 +313,8 @@ typedef struct ppd_cparam_s		/**** Custom Parameter ****/
 
 typedef struct ppd_coption_s		/**** Custom Option ****/
 {
-  char		keyword[PPD_MAX_NAME];	/* Name of option that is being extended... */
+  char		keyword[PPD_MAX_NAME];	/* Name of option that is being
+					   extended... */
   ppd_option_t	*option;		/* Option that is being extended... */
   int		marked;			/* Extended option is marked */
   cups_array_t	*params;		/* Parameters */
@@ -299,7 +335,8 @@ typedef struct ppd_globals_s		/**** CUPS PPD global state data ****/
 typedef enum ppd_localization_e	/**** Selector for ppdOpenWithLocalization ****/
 {
   PPD_LOCALIZATION_DEFAULT,		/* Load only the default localization */
-  PPD_LOCALIZATION_ICC_PROFILES,	/* Load only the color profile localization */
+  PPD_LOCALIZATION_ICC_PROFILES,	/* Load only the color profile
+					   localization */
   PPD_LOCALIZATION_NONE,		/* Load no localizations */
   PPD_LOCALIZATION_ALL			/* Load all localizations */
 } ppd_localization_t;
@@ -307,8 +344,8 @@ typedef enum ppd_localization_e	/**** Selector for ppdOpenWithLocalization ****/
 typedef enum ppd_parse_e		/**** Selector for ppdParseOptions ****/
 {
   PPD_PARSE_OPTIONS,			/* Parse only the options */
-  PPD_PARSE_PROPERTIES,		/* Parse only the properties */
-  PPD_PARSE_ALL			/* Parse everything */
+  PPD_PARSE_PROPERTIES,			/* Parse only the properties */
+  PPD_PARSE_ALL				/* Parse everything */
 } ppd_parse_t;
 
 typedef struct ppd_cups_uiconst_s	/**** Constraint from cupsUIConstraints ****/
@@ -321,14 +358,15 @@ typedef struct ppd_cups_uiconst_s	/**** Constraint from cupsUIConstraints ****/
 typedef struct ppd_cups_uiconsts_s	/**** cupsUIConstraints ****/
 {
   char		resolver[PPD_MAX_NAME];	/* Resolver name */
-  int		installable,		/* Constrained against any installable options? */
+  int		installable,		/* Constrained against any installable
+					   options? */
 		num_constraints;	/* Number of constraints */
   ppd_cups_uiconst_t *constraints;	/* Constraints */
 } ppd_cups_uiconsts_t;
 
 typedef enum ppd_pwg_print_color_mode_e	/**** PWG print-color-mode indices ****/
 {
-  PPD_PWG_PRINT_COLOR_MODE_MONOCHROME = 0,	/* print-color-mode=monochrome */
+  PPD_PWG_PRINT_COLOR_MODE_MONOCHROME = 0,	/* print-color-mode=monochrome*/
   PPD_PWG_PRINT_COLOR_MODE_COLOR,		/* print-color-mode=color */
   /* Other values are not supported by CUPS yet. */
   PPD_PWG_PRINT_COLOR_MODE_MAX
@@ -336,7 +374,7 @@ typedef enum ppd_pwg_print_color_mode_e	/**** PWG print-color-mode indices ****/
 
 typedef enum ppd_pwg_print_quality_e	/**** PWG print-quality values ****/
 {
-  PPD_PWG_PRINT_QUALITY_DRAFT = 0,		/* print-quality=3 */
+  PPD_PWG_PRINT_QUALITY_DRAFT = 0,	/* print-quality=3 */
   PPD_PWG_PRINT_QUALITY_NORMAL,		/* print-quality=4 */
   PPD_PWG_PRINT_QUALITY_HIGH,		/* print-quality=5 */
   PPD_PWG_PRINT_QUALITY_MAX
@@ -349,7 +387,7 @@ typedef struct ppd_pwg_finishings_s	/**** PWG finishings mapping data ****/
   cups_option_t		*options;	/* Options to apply */
 } ppd_pwg_finishings_t;
 
-struct ppd_cache_s			/**** PPD cache and PWG conversion data ****/
+struct ppd_cache_s		   /**** PPD cache and PWG conversion data ****/
 {
   int		num_bins;		/* Number of output bins */
   pwg_map_t	*bins;			/* Output bins */
@@ -398,26 +436,35 @@ typedef struct ppd_file_s		/**** PPD File ****/
 {
   int		language_level;		/* Language level of device */
   int		color_device;		/* 1 = color device, 0 = grayscale */
-  int		variable_sizes;		/* 1 = supports variable sizes, 0 = doesn't */
-  int		accurate_screens;	/* 1 = supports accurate screens, 0 = not */
+  int		variable_sizes;		/* 1 = supports variable sizes,
+					   0 = doesn't */
+  int		accurate_screens;	/* 1 = supports accurate screens,
+					   0 = not */
   int		contone_only;		/* 1 = continuous tone only, 0 = not */
   int		landscape;		/* -90 or 90 */
   int		model_number;		/* Device-specific model number */
-  int		manual_copies;		/* 1 = Copies done manually, 0 = hardware */
+  int		manual_copies;		/* 1 = Copies done manually,
+					   0 = hardware */
   int		throughput;		/* Pages per minute */
   ppd_cs_t	colorspace;		/* Default colorspace */
-  char		*patches;		/* Patch commands to be sent to printer */
-  int		num_emulations;		/* Number of emulations supported (no longer supported) @private@ */
-  ppd_emul_t	*emulations;		/* Emulations and the code to invoke them (no longer supported) @private@ */
+  char		*patches;		/* Patch commands to be sent to
+					   printer */
+  int		num_emulations;		/* Number of emulations supported
+					   (no longer supported) @private@ */
+  ppd_emul_t	*emulations;		/* Emulations and the code to invoke
+					   them (no longer supported)
+					   @private@ */
   char		*jcl_begin;		/* Start JCL commands */
   char		*jcl_ps;		/* Enter PostScript interpreter */
   char		*jcl_end;		/* End JCL commands */
   char		*lang_encoding;		/* Language encoding */
-  char		*lang_version;		/* Language version (English, Spanish, etc.) */
+  char		*lang_version;		/* Language version (English, Spanish,
+					   etc.) */
   char		*modelname;		/* Model name (general) */
   char		*ttrasterizer;		/* Truetype rasterizer */
   char		*manufacturer;		/* Manufacturer name */
-  char		*product;		/* Product name (from PS RIP/interpreter) */
+  char		*product;		/* Product name (from PS
+					   RIP/interpreter) */
   char		*nickname;		/* Nickname (specific) */
   char		*shortnickname;		/* Short version of nickname */
   int		num_groups;		/* Number of UI groups */
@@ -440,26 +487,74 @@ typedef struct ppd_file_s		/**** PPD File ****/
   int		flip_duplex;		/* 1 = Flip page for back sides */
 
   /**** New in CUPS 1.1.19 ****/
-  char		*protocols;		/* Protocols (BCP, TBCP) string @since CUPS 1.1.19/macOS 10.3@ */
-  char		*pcfilename;		/* PCFileName string @since CUPS 1.1.19/macOS 10.3@ */
-  int		num_attrs;		/* Number of attributes @since CUPS 1.1.19/macOS 10.3@ @private@ */
-  int		cur_attr;		/* Current attribute @since CUPS 1.1.19/macOS 10.3@ @private@ */
-  ppd_attr_t	**attrs;		/* Attributes @since CUPS 1.1.19/macOS 10.3@ @private@ */
+  char		*protocols;		/* Protocols (BCP, TBCP) string
+					   @since CUPS 1.1.19/macOS 10.3@ */
+  char		*pcfilename;		/* PCFileName string @since
+					   CUPS 1.1.19/macOS 10.3@ */
+  int		num_attrs;		/* Number of attributes @since
+					   CUPS 1.1.19/macOS 10.3@ @private@ */
+  int		cur_attr;		/* Current attribute @since
+					   CUPS 1.1.19/macOS 10.3@ @private@ */
+  ppd_attr_t	**attrs;		/* Attributes @since CUPS 1.1.19/macOS
+					   10.3@ @private@ */
 
   /**** New in CUPS 1.2/macOS 10.5 ****/
-  cups_array_t	*sorted_attrs;		/* Attribute lookup array @since CUPS 1.2/macOS 10.5@ @private@ */
-  cups_array_t	*options;		/* Option lookup array @since CUPS 1.2/macOS 10.5@ @private@ */
-  cups_array_t	*coptions;		/* Custom options array @since CUPS 1.2/macOS 10.5@ @private@ */
+  cups_array_t	*sorted_attrs;		/* Attribute lookup array @since
+					   CUPS 1.2/macOS 10.5@ @private@ */
+  cups_array_t	*options;		/* Option lookup array @since
+					   CUPS 1.2/macOS 10.5@ @private@ */
+  cups_array_t	*coptions;		/* Custom options array @since
+					   CUPS 1.2/macOS 10.5@ @private@ */
 
   /**** New in CUPS 1.3/macOS 10.5 ****/
-  cups_array_t	*marked;		/* Marked choices @since CUPS 1.3/macOS 10.5@ @private@ */
+  cups_array_t	*marked;		/* Marked choices
+					   @since CUPS 1.3/macOS 10.5@
+					   @private@ */
 
   /**** New in CUPS 1.4/macOS 10.6 ****/
-  cups_array_t	*cups_uiconstraints;	/* cupsUIConstraints @since CUPS 1.4/macOS 10.6@ @private@ */
+  cups_array_t	*cups_uiconstraints;	/* cupsUIConstraints @since
+					   CUPS 1.4/macOS 10.6@ @private@ */
 
   /**** New in CUPS 1.5 ****/
-  ppd_cache_t	*cache;			/* PPD cache and mapping data @since CUPS 1.5/macOS 10.7@ @private@ */
+  ppd_cache_t	*cache;			/* PPD cache and mapping data @since
+					   CUPS 1.5/macOS 10.7@ @private@ */
 } ppd_file_t;
+
+/**** New in cups-filters 2.0.0: Ovetaken from cups-driverd ****/
+typedef struct				/**** PPD record ****/
+{
+  time_t	mtime;			/* Modification time */
+  off_t		size;			/* Size in bytes */
+  int		model_number;		/* cupsModelNumber */
+  int		type;			/* ppd-type */
+  char		filename[512],		/* Filename */
+		name[256],		/* PPD name */
+		languages[PPD_MAX_LANG][6],
+					/* LanguageVersion/cupsLanguages */
+		products[PPD_MAX_PROD][128],
+					/* Product strings */
+		psversions[PPD_MAX_VERS][32],
+					/* PSVersion strings */
+		make[128],		/* Manufacturer */
+		make_and_model[128],	/* NickName/ModelName */
+		device_id[256],		/* IEEE 1284 Device ID */
+		scheme[128];		/* PPD scheme */
+} ppd_rec_t;
+
+typedef struct				/**** In-memory record ****/
+{
+  int		found;			/* 1 if PPD is found */
+  int		matches;		/* Match count */
+  ppd_rec_t	record;			/* PPDs.dat record */
+} ppd_info_t;
+
+typedef struct
+{
+  char		*name;			/* Name for PPD collection */
+  char		*path;			/* Directory where PPD collection is
+					   located */
+} ppd_collection_t;
+
 
 
 /*
@@ -574,78 +669,100 @@ extern int		ppdPageSizeLimits(ppd_file_t *ppd,
 					  ppd_size_t *maximum);
 
 /**** New in cups-filters 2.0.0: Renamed functions from original CUPS API ****/
-extern int		ppdMarkOptions(ppd_file_t *ppd, int num_options, cups_option_t *options);
+extern int		ppdMarkOptions(ppd_file_t *ppd,
+				       int num_options,
+				       cups_option_t *options);
 extern int		ppdRasterInterpretPPD(cups_page_header2_t *h,
-			                       ppd_file_t *ppd,
-					       int num_options,
-					       cups_option_t *options,
-					       cups_interpret_cb_t func);
+					      ppd_file_t *ppd,
+					      int num_options,
+					      cups_option_t *options,
+					      cups_interpret_cb_t func);
 extern int		ppdGetConflicts(ppd_file_t *ppd, const char *option,
-					 const char *choice,
-					 cups_option_t **options);
+					const char *choice,
+					cups_option_t **options);
 extern int		ppdResolveConflicts(ppd_file_t *ppd,
-			                     const char *option,
-			                     const char *choice,
-					     int *num_options,
-					     cups_option_t **options);
+					    const char *option,
+					    const char *choice,
+					    int *num_options,
+					    cups_option_t **options);
 
 /**** New in cups-filters 2.0.0: Formerly CUPS-private functions ****/
-extern int		ppdConvertOptions(ipp_t *request, ppd_file_t *ppd, ppd_cache_t *pc, ipp_attribute_t *media_col_sup, ipp_attribute_t *doc_handling_sup, ipp_attribute_t *print_color_mode_sup, const char *user, const char *format, int copies, int num_options, cups_option_t *options);
-extern int		ppdRasterExecPS(cups_page_header2_t *h, int *preferred_bits, const char *code);
-extern int		ppdRasterInterpretPPD(cups_page_header2_t *h, ppd_file_t *ppd, int num_options, cups_option_t *options, cups_interpret_cb_t func);
-
+extern int		ppdConvertOptions(ipp_t *request,
+					  ppd_file_t *ppd,
+					  ppd_cache_t *pc,
+					  ipp_attribute_t *media_col_sup,
+					  ipp_attribute_t *doc_handling_sup,
+					  ipp_attribute_t *print_color_mode_sup,
+					  const char *user,
+					  const char *format,
+					  int copies,
+					  int num_options,
+					  cups_option_t *options);
+extern int		ppdRasterExecPS(cups_page_header2_t *h,
+					int *preferred_bits,
+					const char *code);
+extern int		ppdRasterInterpretPPD(cups_page_header2_t *h,
+					      ppd_file_t *ppd,
+					      int num_options,
+					      cups_option_t *options,
+					      cups_interpret_cb_t func);
 extern ppd_cache_t	*ppdCacheCreateWithFile(const char *filename,
-			                         ipp_t **attrs);
+						ipp_t **attrs);
 extern ppd_cache_t	*ppdCacheCreateWithPPD(ppd_file_t *ppd);
 extern void		ppdCacheDestroy(ppd_cache_t *pc);
 extern const char	*ppdCacheGetBin(ppd_cache_t *pc,
-			                 const char *output_bin);
+					const char *output_bin);
 extern int		ppdCacheGetFinishingOptions(ppd_cache_t *pc,
-			                             ipp_t *job,
-			                             ipp_finishings_t value,
-			                             int num_options,
-			                             cups_option_t **options);
-extern int		ppdCacheGetFinishingValues(ppd_file_t *ppd, ppd_cache_t *pc, int max_values, int *values);
+						    ipp_t *job,
+						    ipp_finishings_t value,
+						    int num_options,
+						    cups_option_t **options);
+extern int		ppdCacheGetFinishingValues(ppd_file_t *ppd,
+						   ppd_cache_t *pc,
+						   int max_values,
+						   int *values);
 extern const char	*ppdCacheGetInputSlot(ppd_cache_t *pc, ipp_t *job,
-			                       const char *keyword);
+					      const char *keyword);
 extern const char	*ppdCacheGetMediaType(ppd_cache_t *pc, ipp_t *job,
-			                       const char *keyword);
+					      const char *keyword);
 extern const char	*ppdCacheGetOutputBin(ppd_cache_t *pc,
-			                       const char *keyword);
+					      const char *keyword);
 extern const char	*ppdCacheGetPageSize(ppd_cache_t *pc, ipp_t *job,
-			                      const char *keyword, int *exact);
+					     const char *keyword, int *exact);
 extern pwg_size_t	*ppdCacheGetSize(ppd_cache_t *pc,
-			                  const char *page_size);
+					 const char *page_size);
 extern const char	*ppdCacheGetSource(ppd_cache_t *pc,
-			                    const char *input_slot);
+					   const char *input_slot);
 extern const char	*ppdCacheGetType(ppd_cache_t *pc,
-			                  const char *media_type);
+					 const char *media_type);
 extern int		ppdCacheWriteFile(ppd_cache_t *pc,
-			                   const char *filename, ipp_t *attrs);
-extern char		*ppdCreateFromIPPCUPS(char *buffer, size_t bufsize, ipp_t *response);
+					  const char *filename, ipp_t *attrs);
+extern char		*ppdCreateFromIPPCUPS(char *buffer,
+					      size_t bufsize,
+					      ipp_t *response);
 extern void		ppdFreeLanguages(cups_array_t *languages);
 extern cups_encoding_t	ppdGetEncoding(const char *name);
 extern cups_array_t	*ppdGetLanguages(ppd_file_t *ppd);
 extern ppd_globals_t	*ppdGlobals(void);
 extern unsigned		ppdHashName(const char *name);
 extern ppd_attr_t	*ppdLocalizedAttr(ppd_file_t *ppd, const char *keyword,
-			                   const char *spec, const char *ll_CC);
+					  const char *spec, const char *ll_CC);
 extern char		*ppdNormalizeMakeAndModel(const char *make_and_model,
-			                           char *buffer,
-						   size_t bufsize);
+						  char *buffer,
+						  size_t bufsize);
 extern ppd_file_t	*ppdOpenWithLocalization(cups_file_t *fp,
 				  ppd_localization_t localization);
 extern ppd_file_t	*ppdOpenFileWithLocalization(const char *filename,
 				      ppd_localization_t localization);
 extern int		ppdParseOptions(const char *s, int num_options,
-			                 cups_option_t **options,
-					 ppd_parse_t which);
+					cups_option_t **options,
+					ppd_parse_t which);
 extern const char	*ppdPwgInputSlotForSource(const char *media_source,
-			                        char *name, size_t namesize);
+						  char *name, size_t namesize);
 extern const char	*ppdPwgMediaTypeForType(const char *media_type,
-					      char *name, size_t namesize);
+						char *name, size_t namesize);
 extern const char	*ppdPwgPageSizeForMedia(pwg_media_t *media,
-			                      char *name, size_t namesize);
+						char *name, size_t namesize);
 
 /**** New in cups-filters 2.0.0: Overtaken from ippeveprinter ****/
 extern ipp_t		*ppdLoadAttributes(ppd_file_t   *ppd,
@@ -664,6 +781,21 @@ extern int		ppdRasterMatchPPDSize(cups_page_header2_t *header,
 					      double dimensions[4],
 					      int *image_fit,
 					      int *landscape);
+
+/**** New in cups-filters 2.0.0: Ovetaken from cups-driverd ****/
+extern cups_array_t	*ppdCollectionListPPDs(cups_array_t *ppd_collections,
+					       int limit,
+					       int num_options,
+					       cups_option_t *options,
+					       filter_logfunc_t log,
+					       void *ld);
+extern cups_file_t	*ppdCollectionGetPPD(const char *name,
+					     cups_array_t *ppd_collections,
+					     filter_logfunc_t log,
+					     void *ld);
+extern int		ppdCollectionDumpCache(const char *filename,
+					       filter_logfunc_t log,
+					       void *ld);
 
 
 /*
