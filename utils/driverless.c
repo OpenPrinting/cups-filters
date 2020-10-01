@@ -43,14 +43,14 @@ static int              debug = 0;
 static int		job_canceled = 0;
 static void		cancel_job(int sig);
 
-static int				
-compare_service_uri(char *a,	char *b)		
+static int
+compare_service_uri(char *a,	char *b)
 {
   return (strcmp(a,b));
 }
 
-static int				
-convert_to_port(char *a)		
+static int
+convert_to_port(char *a)
 {
   int port = 0;
   for( int i = 0; i<strlen(a); i++)
@@ -59,13 +59,12 @@ convert_to_port(char *a)
   return (port);
 }
 
-void 
-listPrintersInArray(int reg_type_no, int mode, int isFax, char* ippfind_output ) {
+void
+listPrintersInArray(int reg_type_no, int mode, int isFax,
+		    char* ippfind_output ) {
   int	driverless_support = 0, /*process id for ippfind */
         port,
         is_local;
-        
-
   char	buffer[8192],		/* Copy buffer */
         *ptr,		        /* Pointer into string */
         *scheme = NULL,
@@ -87,279 +86,273 @@ listPrintersInArray(int reg_type_no, int mode, int isFax, char* ippfind_output )
         make[512],              /* Manufacturer */
       	model[256],		/* Model */
         pdl[256],		/* PDL */
-	      driverless_info[256],	/* Driverless info string */
-	      device_id[2048];	/* 1284 device ID */
+        driverless_info[256],	/* Driverless info string */
+        device_id[2048];	/* 1284 device ID */
+
   service_uri = (char *)malloc(2048*(sizeof(char)));
-    /* Mark all the fields of the output of ippfind */
-    ptr = ippfind_output;
-    if (reg_type_no < 1) {
-      scheme = "ipp";
-      reg_type = "_ipp._tcp"; 
-    } else if (reg_type_no > 1) {
-      scheme = "ipps";
-      reg_type = "_ipps._tcp";
-    } 
+  /* Mark all the fields of the output of ippfind */
+  ptr = ippfind_output;
+  if (reg_type_no < 1) {
+    scheme = "ipp";
+    reg_type = "_ipp._tcp";
+  } else if (reg_type_no > 1) {
+    scheme = "ipps";
+    reg_type = "_ipps._tcp";
+  }
 
-    /* ... second, complete the output line, either URI-only or with
-       extra info for CUPS */
+  /* ... second, complete the output line, either URI-only or with
+     extra info for CUPS */
 
-    if (mode == -1) {
-      /* Show URIS in standard form */
-      service_hostname = ptr; 
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr)
-	goto read_error;
-      *ptr = '\0';
-      ptr ++;
+  if (mode == -1) {
+    /* Standard IPP URI (only manual call) */
+    service_hostname = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr)
+      goto read_error;
+    *ptr = '\0';
+    ptr ++;
 
-      resource = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr) goto read_error;
-      *ptr = '\0';
-      ptr ++;
+    resource = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr) goto read_error;
+    *ptr = '\0';
+    ptr ++;
 
-      ptr_to_port = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr) goto read_error;
-      *ptr = '\0';
-      ptr ++;
-      port = convert_to_port(ptr_to_port);
+    ptr_to_port = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr) goto read_error;
+    *ptr = '\0';
+    ptr ++;
+    port = convert_to_port(ptr_to_port);
 
-      /* Do we have a local service so that we have to set the host name to
-	 "localhost"? */
-      is_local = (*ptr == 'L');
+    /* Do we have a local service so that we have to set the host name to
+       "localhost"? */
+    is_local = (*ptr == 'L');
 
-      httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
-		       2047,
-		       scheme, NULL,
-		       (is_local ? "localhost" : service_hostname),
-		       port, "/%s", resource);
+    httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
+		     2047,
+		     scheme, NULL,
+		     (is_local ? "localhost" : service_hostname),
+		     port, "/%s", resource);
+    printf("%s\n", service_uri);
+  } else {
+    /* DNS-SD-service-name-based URI */
+    service_name = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr)
+      goto read_error;
+    *ptr = '\0';
+    ptr ++;
 
+    domain = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr)
+      goto read_error;
+    *ptr = '\0';
+    ptr ++;
+
+    snprintf(service_host_name, sizeof(service_host_name) - 1, "%s.%s.%s",
+	     service_name, reg_type, domain);
+    httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
+		     2047,
+		     scheme, NULL,
+		     service_host_name, 0, "/");
+
+    if (mode == 0)
+      /* Manual call, only show URI, nothing more */
       printf("%s\n", service_uri);
-      
-    } else {
-      /* Manual call on the command line */
-      service_name = ptr;   
+    else {
+      /* Call by CUPS, either as PPD generator
+	 (/usr/lib/cups/driver/, with "list" command line argument)
+	 or as backend in discovery mode (/usr/lib/cups/backend/,
+	 env variable "SOFTWARE" starts with "CUPS") */
+      txt_usb_mfg = ptr;
       ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
       ptr ++;
-
-      domain = ptr;
+      txt_usb_mdl = ptr;
       ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
       ptr ++;
+      txt_product = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+	goto read_error;
+      *ptr = '\0';
+      ptr ++;
+      txt_ty = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+	goto read_error;
+      *ptr = '\0';
+      ptr ++;
+      txt_pdl = ptr;
+      ptr = memchr(ptr, '\n', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+	goto read_error;
+      *ptr = '\0';
 
-      snprintf(service_host_name, sizeof(service_host_name) - 1, "%s.%s.%s",
-	       service_name, reg_type, domain);
+      make_and_model[0] = '\0';
+      make[0] = '\0';
+      pdl[0] = '\0';
+      device_id[0] = '\0';
+      strncpy(model, "Unknown", sizeof(model) - 1);
 
-      
-      httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
-		       2047,
-		       scheme, NULL,
-		       service_host_name, 0, "/");
-
-      
-      if (mode == 0) 
-          printf("%s\n", service_uri);
-        
-      else {
-        /* Call by CUPS, either as PPD generator
-	   (/usr/lib/cups/driver/, with "list" command line argument)
-	   or as backend in discovery mode (/usr/lib/cups/backend/,
-	   env variable "SOFTWARE" starts with "CUPS") */
-        txt_usb_mfg = ptr;
-        ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-        if (!ptr)
-	  goto read_error;
-        *ptr = '\0';
-        ptr ++;
-        txt_usb_mdl = ptr;
-        ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-        if (!ptr)
-	  goto read_error;
-        *ptr = '\0';
-        ptr ++;
-        txt_product = ptr;
-        ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-        if (!ptr)
-	  goto read_error;
-        *ptr = '\0';
-        ptr ++;
-        txt_ty = ptr;
-        ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-        if (!ptr)
-	  goto read_error;
-        *ptr = '\0';
-        ptr ++;
-        txt_pdl = ptr;
-        ptr = memchr(ptr, '\n', sizeof(buffer) - (ptr - buffer));
-        if (!ptr)
-	  goto read_error;
-        *ptr = '\0';
-
-        make_and_model[0] = '\0';
-        make[0] = '\0';
-        pdl[0] = '\0';
-        device_id[0] = '\0';
-        strncpy(model, "Unknown", sizeof(model) - 1);
-
-        if (txt_usb_mfg[0] != '\0') {
-          strncpy(make, txt_usb_mfg, sizeof(make) - 1);
-          if (strlen(txt_usb_mfg) > 511)
-            make[511] = '\0';
-          ptr = device_id + strlen(device_id);
-          snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
-		   "MFG:%s;", txt_usb_mfg);
-        }
-        if (txt_usb_mdl[0] != '\0') {
-          strncpy(model, txt_usb_mdl, sizeof(model) - 1);
-          if (strlen(txt_usb_mdl) > 255)
-            model[255] = '\0';
-          ptr = device_id + strlen(device_id);
-          snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
-		   "MDL:%s;", txt_usb_mdl);
-        } else if (txt_product[0] != '\0') {
-          if (txt_product[0] == '(') {
-            /* Strip parenthesis... */
-            if ((ptr = txt_product + strlen(txt_product) - 1) > txt_product &&
-		*ptr == ')')
-              *ptr = '\0';
-            strncpy(model, txt_product + 1, sizeof(model) - 1);
-            if ((strlen(txt_product) + 1) > 255)
-              model[255] = '\0';
-          } else
-	    strncpy(model, txt_product, sizeof(model) - 1);
-        } else if (txt_ty[0] != '\0') {
-          strncpy(model, txt_ty, sizeof(model) - 1);
-          if (strlen(txt_ty) > 255)
-	    model[255] = '\0';
-          if ((ptr = strchr(model, ',')) != NULL)
-	    *ptr = '\0';
-        }
-        if (txt_pdl[0] != '\0') {
-          strncpy(pdl, txt_pdl, sizeof(pdl) - 1);
-          if (strlen(txt_pdl) > 255)
-            pdl[255] = '\0';
-        }
-
-        if (!device_id[0] && strcasecmp(model, "Unknown")) {
-          if (make[0])
-            snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
-		     make, model);
-          else if (!strncasecmp(model, "designjet ", 10))
-            snprintf(device_id, sizeof(device_id), "MFG:HP;MDL:%s;",
-		     model + 10);
-          else if (!strncasecmp(model, "stylus ", 7))
-            snprintf(device_id, sizeof(device_id), "MFG:EPSON;MDL:%s;",
-		     model + 7);
-          else if ((ptr = strchr(model, ' ')) != NULL) {
-            /* Assume the first word is the make...*/
-            memcpy(make, model, (size_t)(ptr - model));
-            make[ptr - model] = '\0';
-            snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
-		     make, ptr + 1);
-          }
-        }
-
-        if (device_id[0] &&
-            !strcasestr(device_id, "CMD:") &&
-            !strcasestr(device_id, "COMMAND SET:") &&
-            (strcasestr(pdl, "application/pdf") ||
-	     strcasestr(pdl, "application/postscript") ||
-	     strcasestr(pdl, "application/vnd.hp-PCL") ||
-	     strcasestr(pdl, "application/PCLm") ||
-	     strcasestr(pdl, "image/"))) {
-          value[0] = '\0';
-          if (strcasestr(pdl, "application/pdf"))
-            strncat(value, ",PDF", sizeof(value));
-          if (strcasestr(pdl, "application/PCLm"))
-            strncat(value, ",PCLM", sizeof(value));
-          if (strcasestr(pdl, "application/postscript"))
-            strncat(value, ",PS", sizeof(value));
-          if (strcasestr(pdl, "application/vnd.hp-PCL"))
-            strncat(value, ",PCL", sizeof(value));
-          if (strcasestr(pdl, "image/pwg-raster"))
-            strncat(value, ",PWGRaster", sizeof(value));
-          if (strcasestr(pdl, "image/urf"))
-            strncat(value, ",AppleRaster", sizeof(value));
-          for (ptr = strcasestr(pdl, "image/"); ptr;
-	       ptr = strcasestr(ptr, "image/")) {
-            char *valptr = value + strlen(value);
-            if (valptr < (value + sizeof(value) - 1))
-              *valptr++ = ',';
-            ptr += 6;
-            while (isalnum(*ptr & 255) || *ptr == '-' || *ptr == '.') {
-              if (isalnum(*ptr & 255) && valptr < (value + sizeof(value) - 1))
-		*valptr++ = (char)toupper(*ptr++ & 255);
-              else
-		break;
-            }
-            *valptr = '\0';
-          }
-          ptr = device_id + strlen(device_id);
-          snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
-		   "CMD:%s;", value + 1);
-        }
-
-        if (make[0] &&
-            (strncasecmp(model, make, strlen(make)) ||
-	     !isspace(model[strlen(make)])))
-          snprintf(make_and_model, sizeof(make_and_model), "%s %s",
-		   make, model);
-        else
-          strncpy(make_and_model, model, sizeof(make_and_model) - 1);
-
-	/* Check which driverless support is available for the found device:
-	 * 0) DRVLESS_CHECKERR - the device failed to respond to any
-	 *    get-printer-attributes request versions available.
-	 * 1) FULL_DRVLESS - the device responded correctly to IPP 2.0
-	 *    get-printer-attributes request.
-	 *    The device is compatible with CUPS 'everywhere' model.
-	 * 2) DRVLESS_IPP11 - the device responded correctly to IPP 1.1
-	 *    get-printer-attributes request.
-	 * 3) DRVLESS_INCOMPLETEIPP - the device responded correctly to IPP
-	 *    get-printer-attributes request without media-col-database
-	 *    attribute
-	 *
-	 * If we know which driverless support is available, we can divide
-	 * which devices can be supported by CUPS temporary queues and which
-	 * devices need cups-browsed to run.
-	 */
-        driverless_support = check_driverless_support(service_uri);
-
-        if (driverless_support == DRVLESS_CHECKERR)
-          fprintf(stderr, "Failed to get info about driverless support.\n");
-
-        snprintf(driverless_info, 255, "%s",
-		 driverless_support_strs[driverless_support]);
-        driverless_info[255] = '\0';
-
-
-	    if  (mode == 1)
-	      /* Call with "list" argument  (PPD generator in list mode)   */ 
-	      printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
-		     "\" \"%s\"\n",
-		     ((isFax) ? "driverless-fax:" : "driverless:"),
-		     service_uri, make, make_and_model,
-		     ((isFax) ? "Fax, " : ""),
-		     driverless_info, device_id);
-	    else
-	      /* Call without arguments and env variable "SOFTWARE" starting
-		 with "CUPS" (Backend in discovery mode) */
-	      printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n",
-		     service_uri, make_and_model, make_and_model,
-		     driverless_info, device_id);
-	  
-	} 
-
-      read_error:
-        free(service_uri);
-        return;
+      if (txt_usb_mfg[0] != '\0') {
+	strncpy(make, txt_usb_mfg, sizeof(make) - 1);
+	if (strlen(txt_usb_mfg) > 511)
+	  make[511] = '\0';
+	ptr = device_id + strlen(device_id);
+	snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
+		 "MFG:%s;", txt_usb_mfg);
       }
+      if (txt_usb_mdl[0] != '\0') {
+	strncpy(model, txt_usb_mdl, sizeof(model) - 1);
+	if (strlen(txt_usb_mdl) > 255)
+	  model[255] = '\0';
+	ptr = device_id + strlen(device_id);
+	snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
+		 "MDL:%s;", txt_usb_mdl);
+      } else if (txt_product[0] != '\0') {
+	if (txt_product[0] == '(') {
+	  /* Strip parenthesis... */
+	  if ((ptr = txt_product + strlen(txt_product) - 1) > txt_product &&
+	      *ptr == ')')
+	    *ptr = '\0';
+	  strncpy(model, txt_product + 1, sizeof(model) - 1);
+	  if ((strlen(txt_product) + 1) > 255)
+	    model[255] = '\0';
+	} else
+	  strncpy(model, txt_product, sizeof(model) - 1);
+      } else if (txt_ty[0] != '\0') {
+	strncpy(model, txt_ty, sizeof(model) - 1);
+	if (strlen(txt_ty) > 255)
+	  model[255] = '\0';
+	if ((ptr = strchr(model, ',')) != NULL)
+	  *ptr = '\0';
+      }
+      if (txt_pdl[0] != '\0') {
+	strncpy(pdl, txt_pdl, sizeof(pdl) - 1);
+	if (strlen(txt_pdl) > 255)
+	  pdl[255] = '\0';
+      }
+
+      if (!device_id[0] && strcasecmp(model, "Unknown")) {
+	if (make[0])
+	  snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
+		   make, model);
+	else if (!strncasecmp(model, "designjet ", 10))
+	  snprintf(device_id, sizeof(device_id), "MFG:HP;MDL:%s;",
+		   model + 10);
+	else if (!strncasecmp(model, "stylus ", 7))
+	  snprintf(device_id, sizeof(device_id), "MFG:EPSON;MDL:%s;",
+		   model + 7);
+	else if ((ptr = strchr(model, ' ')) != NULL) {
+	  /* Assume the first word is the make...*/
+	  memcpy(make, model, (size_t)(ptr - model));
+	  make[ptr - model] = '\0';
+	  snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
+		   make, ptr + 1);
+	}
+      }
+
+      if (device_id[0] &&
+	  !strcasestr(device_id, "CMD:") &&
+	  !strcasestr(device_id, "COMMAND SET:") &&
+	  (strcasestr(pdl, "application/pdf") ||
+	   strcasestr(pdl, "application/postscript") ||
+	   strcasestr(pdl, "application/vnd.hp-PCL") ||
+	   strcasestr(pdl, "application/PCLm") ||
+	   strcasestr(pdl, "image/"))) {
+	value[0] = '\0';
+	if (strcasestr(pdl, "application/pdf"))
+	  strncat(value, ",PDF", sizeof(value));
+	if (strcasestr(pdl, "application/PCLm"))
+	  strncat(value, ",PCLM", sizeof(value));
+	if (strcasestr(pdl, "application/postscript"))
+	  strncat(value, ",PS", sizeof(value));
+	if (strcasestr(pdl, "application/vnd.hp-PCL"))
+	  strncat(value, ",PCL", sizeof(value));
+	if (strcasestr(pdl, "image/pwg-raster"))
+	  strncat(value, ",PWGRaster", sizeof(value));
+	if (strcasestr(pdl, "image/urf"))
+	  strncat(value, ",AppleRaster", sizeof(value));
+	for (ptr = strcasestr(pdl, "image/"); ptr;
+	     ptr = strcasestr(ptr, "image/")) {
+	  char *valptr = value + strlen(value);
+	  if (valptr < (value + sizeof(value) - 1))
+	    *valptr++ = ',';
+	  ptr += 6;
+	  while (isalnum(*ptr & 255) || *ptr == '-' || *ptr == '.') {
+	    if (isalnum(*ptr & 255) && valptr < (value + sizeof(value) - 1))
+	      *valptr++ = (char)toupper(*ptr++ & 255);
+	    else
+	      break;
+	  }
+	  *valptr = '\0';
+	}
+	ptr = device_id + strlen(device_id);
+	snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
+		 "CMD:%s;", value + 1);
+      }
+
+      if (make[0] &&
+	  (strncasecmp(model, make, strlen(make)) ||
+	   !isspace(model[strlen(make)])))
+	snprintf(make_and_model, sizeof(make_and_model), "%s %s",
+		 make, model);
+      else
+	strncpy(make_and_model, model, sizeof(make_and_model) - 1);
+
+     /* Check which driverless support is available for the found device:
+      * 0) DRVLESS_CHECKERR - the device failed to respond to any
+      *    get-printer-attributes request versions available.
+      * 1) FULL_DRVLESS - the device responded correctly to IPP 2.0
+      *    get-printer-attributes request.
+      *    The device is compatible with CUPS 'everywhere' model.
+      * 2) DRVLESS_IPP11 - the device responded correctly to IPP 1.1
+      *    get-printer-attributes request.
+      * 3) DRVLESS_INCOMPLETEIPP - the device responded correctly to IPP
+      *    get-printer-attributes request without media-col-database
+      *    attribute
+      *
+      * If we know which driverless support is available, we can divide
+      * which devices can be supported by CUPS temporary queues and which
+      * devices need cups-browsed to run.
+      */
+      driverless_support = check_driverless_support(service_uri);
+
+      if (driverless_support == DRVLESS_CHECKERR)
+	fprintf(stderr, "Failed to get info about driverless support.\n");
+
+      snprintf(driverless_info, 255, "%s",
+	       driverless_support_strs[driverless_support]);
+      driverless_info[255] = '\0';
+
+      if  (mode == 1)
+	/* Call with "list" argument  (PPD generator in list mode)   */
+	printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
+		 "\" \"%s\"\n",
+	       ((isFax) ? "driverless-fax:" : "driverless:"),
+	       service_uri, make, make_and_model,
+	       ((isFax) ? "Fax, " : ""),
+	       driverless_info, device_id);
+      else
+	/* Call without arguments and env variable "SOFTWARE" starting
+	   with "CUPS" (Backend in discovery mode) */
+	printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n",
+	       service_uri, make_and_model, make_and_model,
+	       driverless_info, device_id);
+    }
+
+  read_error:
+    free(service_uri);
+    return;
+  }
 
   free(service_uri);
   return;
@@ -386,10 +379,11 @@ list_printers (int mode, int reg_type_no, int isFax)
 		*ippfind_output;
 
   service_uri_list_ipps =
-    cupsArrayNew3((cups_array_func_t)compare_service_uri, NULL, NULL, 0, NULL, (cups_afree_func_t)free);
+    cupsArrayNew3((cups_array_func_t)compare_service_uri, NULL, NULL, 0, NULL,
+		  (cups_afree_func_t)free);
   service_uri_list_ipp =
-    cupsArrayNew3((cups_array_func_t)compare_service_uri, NULL, NULL, 0, NULL, (cups_afree_func_t)free);
-  
+    cupsArrayNew3((cups_array_func_t)compare_service_uri, NULL, NULL, 0, NULL,
+		  (cups_afree_func_t)free);
 
  /*
   * Use CUPS' ippfind utility to discover all printers designed for
@@ -447,7 +441,8 @@ list_printers (int mode, int reg_type_no, int isFax)
 	"\n{service_scheme}\t{service_hostname}\t{txt_rp}\t{service_port}\t";
   } else if (mode > 0)
     ippfind_argv[i++] =
-      "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\t\n";
+      "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t"
+      "{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\t\n";
   else
     ippfind_argv[i++] =
       "{service_scheme}\t{service_name}\t{service_domain}\t\n";
@@ -465,7 +460,7 @@ list_printers (int mode, int reg_type_no, int isFax)
  /*
   * Create a pipe for passing the ippfind output to post-processing
   */
-  
+
   if (pipe(post_proc_pipe)) {
     perror("ERROR: Unable to create pipe to post-processing");
 
@@ -546,7 +541,7 @@ list_printers (int mode, int reg_type_no, int isFax)
   for (int j = 0; j < cupsArrayCount(service_uri_list_ipp); j ++)
   {
     if (cupsArrayFind(service_uri_list_ipps,
-		      (char*)cupsArrayIndex(service_uri_list_ipp, j)) 
+		      (char*)cupsArrayIndex(service_uri_list_ipp, j))
 	== NULL)
       listPrintersInArray(0, mode, isFax,
 			  (char *)cupsArrayIndex(service_uri_list_ipp, j));
@@ -604,7 +599,7 @@ generate_ppd (const char *uri, int isFax)
   char buffer[65536], ppdname[1024];
   int  fd,
        bytes;
-  char *ptr1, 
+  char *ptr1,
        *ptr2;
 
   /* Tread prefixes (CUPS PPD/driver URIs) */
@@ -634,7 +629,8 @@ generate_ppd (const char *uri, int isFax)
     }
   }
   if (response == NULL) {
-    fprintf(stderr, "ERROR: Unable to create PPD file: Could not poll sufficient capability info from the printer (%s, %s) via IPP!\n",
+    fprintf(stderr, "ERROR: Unable to create PPD file: Could not poll "
+	    "sufficient capability info from the printer (%s, %s) via IPP!\n",
 	    uri, resolve_uri(uri));
     goto fail;
   }
@@ -678,7 +674,7 @@ int
 main(int argc, char*argv[]) {
   int i,
       reg_type_no = 1, /* reg_type 0 for only IPP
-                                   1 for both IPPS/IPP 
+                                   1 for both IPPS/IPP
                                    2 for only IPPS        Default is 1*/
       isFax = 0;       /* if driverless-fax is called  0 - not called
 			                               1 - called */
@@ -758,7 +754,8 @@ main(int argc, char*argv[]) {
 	  exit(generate_ppd(val,isFax));
 	} else {
 	  fprintf(stderr,
-		  "Reading command line option \"cat\", no driver URI supplied.\n\n");
+		  "Reading command line option \"cat\", no driver URI "
+		  "supplied.\n\n");
 	  goto help;
 	}
       } else if (!strcasecmp(argv[i], "--version") ||
@@ -797,20 +794,26 @@ main(int argc, char*argv[]) {
 	  "  -d\n"
 	  "  -v\n"
 	  "  --debug                 Debug/verbose mode.\n"
-	  "  list                    List the driver URIs and metadata for all available\n"
-	  "                          IPP/IPPS printers supporting driverless printing\n"
+	  "  list                    List the driver URIs and metadata for "
+	                            "all available\n"
+	  "                          IPP/IPPS printers supporting driverless "
+	                            "printing\n"
 	  "                          (to be used by CUPS).\n"
-	  "  _ipps._tcp              Check for only IPPS printers supporting driverless\n"
+	  "  _ipps._tcp              Check for only IPPS printers supporting "
+	                            "driverless\n"
 	  "                          printing\n"
-	  "  _ipp._tcp               Check for only IPP printers supporting driverless\n"
+	  "  _ipp._tcp               Check for only IPP printers supporting "
+	                            "driverless\n"
 	  "                          printing\n"
 	  "  --std-ipp-uris          Show URIS in standard form\n"
 	  "  cat <driver URI>        Generate the PPD file for the driver URI\n"
 	  "                          <driver URI> (to be used by CUPS).\n"
-	  "  <printer URI>           Generate the PPD file for the IPP/IPPS printer URI\n"
+	  "  <printer URI>           Generate the PPD file for the IPP/IPPS "
+	                            "printer URI\n"
 	  "                          <printer URI>.\n"
 	  "\n"
-	  "When called without options, the IPP/IPPS printer URIs of all available\n"
+	  "When called without options, the IPP/IPPS printer URIs of all "
+	  "available\n"
 	  "IPP/IPPS printers will be listed.\n\n"
 	  );
 
