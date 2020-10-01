@@ -59,139 +59,6 @@ convert_to_port(char *a)
   return (port);
 }
 
-/*
- * 'copy_output()' - copy ippfind output data .
- */
-
-static int				/* O - 0 on success, -1 on error */
-copy_output(int read_ipp_fd,		/* I - IPP file descriptor */
-             int read_ipps_fd,		/* I - IPPS file descriptor */
-             cups_array_t  *service_uri_list_ipps, /* I - IPPS CUPS Array */
-             cups_array_t  *service_uri_list_ipp) /* I - IPP CUPS Array */
-{
-  int		nfds;			/* Maximum file descriptor value + 1 */
-  fd_set	input;			/* Input set for reading */
-  struct timeval timeout;		/* Timeout for read... */
-  cups_file_t *fp;
-  int bytes;
-  char *ptr,
-        buffer[MAX_OUTPUT_LEN],	/* Copy buffer */
-        *ippfind_output;
-  
- /*
-  * Figure out the maximum file descriptor value to use with select()...
-  */
-  nfds = (read_ipp_fd > read_ipps_fd ? read_ipp_fd : read_ipps_fd) + 1;
-
- /*
-  * Now loop until we are out of data from read_ipp_fd and read_ipps_fd...
-  */
-
-  for (;;)
-  {
-   /*
-    * Use select() to determine whether we have data to copy around...
-    */
-
-    FD_ZERO(&input);
-    FD_SET(read_ipp_fd, &input);
-    FD_SET(read_ipps_fd, &input);
-    timeout.tv_sec  = 0;
-    timeout.tv_usec = 200000;
-
-    if (select(nfds, &input, NULL, NULL, &timeout) < 0)
-      return (-1);
-    if (!FD_ISSET(read_ipp_fd, &input) && !FD_ISSET(read_ipps_fd, &input))
-      continue;
-
-    if(FD_ISSET(read_ipps_fd, &input))
-    {
-      dup2(read_ipps_fd, 0);
-
-      fp = cupsFileStdin();
-
-     if ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
-      {
-        ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
-        ptr = buffer;
-        while (ptr && !isalnum(*ptr & 255)) ptr ++;
-
-        if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t'))
-        {
-          ptr += 4;
-          *ptr = '\0';
-          ptr ++;
-        } else
-          continue;
-        snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
-        cupsArrayAdd(service_uri_list_ipps,ippfind_output);
-      }
-      else if (bytes < 0)
-      {
-        /*
-        * Read error - bail if we don't see EAGAIN or EINTR...
-        */
-        if (errno != EAGAIN && errno != EINTR)
-        {
-          perror("ERROR: Unable to read print data");
-          return (-1);
-        }
-      }
-      else
-      {
-        /*
-        * End of file, return...
-        */
-        return (0);
-      }
-
-    }
-
-    if(FD_ISSET(read_ipp_fd, &input))
-    {
-      dup2(read_ipp_fd, 0);
-      fp = cupsFileStdin();
-      if ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0) 
-      {
-        ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
-        ptr = buffer;
-
-        while (ptr && !isalnum(*ptr & 255)) ptr ++;
-
-        if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t'))
-        {
-          ptr += 3;
-          *ptr = '\0';
-          ptr ++;
-        } else
-          continue;
-        snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
-        cupsArrayAdd(service_uri_list_ipp,ippfind_output);
-      }
-      else if (bytes < 0)
-      {
-        /*
-        * Read error - bail if we don't see EAGAIN or EINTR...
-        */
-        if (errno != EAGAIN && errno != EINTR)
-        {
-          perror("ERROR: Unable to read print data");
-          return (-1);
-        }
-      }
-      else
-      {
-        /*
-        * End of file, return...
-        */
-        return (0);
-      }
-
-    }
-
-  }
-}
-
 void 
 listPrintersInArray(int reg_type_no, int mode, int isFax, char* ippfind_output ) {
   int	driverless_support = 0, /*process id for ippfind */
@@ -501,18 +368,22 @@ listPrintersInArray(int reg_type_no, int mode, int isFax, char* ippfind_output )
 int
 list_printers (int mode, int reg_type_no, int isFax)
 {
-  int		ippfind_ipp_pid = 0,	/* Process ID of ippfind for IPP */
-		ippfind_ipps_pid = 0,	/* Process ID of ippfind for IPPS */
-		post_proc_pipe_ipps[2],	/* Pipe to post-processing for IPPS */
-                post_proc_pipe_ipp[2],  /* Pipe to post-processing for IPP */
-		wait_children,		/* Number of child processes left */
-		wait_pid,		/* Process ID from wait() */
+  int		ippfind_pid = 0,	/* Process ID of ippfind for IPP */
+                post_proc_pipe[2],	/* Pipe to post-processing for IPP */
+		wait_res,		/* Process ID from wait() */
 		wait_status,		/* Status from child */
   	        exit_status = 0,	/* Exit status */
                 i;
   char		*ippfind_argv[100];	/* Arguments for ippfind */
-  cups_array_t  *service_uri_list_ipps, /* Array to store ippfind output for IPPS */
-                *service_uri_list_ipp;  /* Array to store ippfind output for IPP */
+  cups_array_t  *service_uri_list_ipps, /* Array to store ippfind output for
+					   IPPS */
+                *service_uri_list_ipp;  /* Array to store ippfind output for
+					   IPP */
+  cups_file_t	*fp;
+  int		bytes;
+  char		*ptr,
+		buffer[MAX_OUTPUT_LEN],	/* Copy buffer */
+		*ippfind_output;
 
   service_uri_list_ipps =
     cupsArrayNew3((cups_array_func_t)compare_service_uri, NULL, NULL, 0, NULL, (cups_afree_func_t)free);
@@ -527,13 +398,16 @@ list_printers (int mode, int reg_type_no, int isFax)
   * for our desired output.
   */
 
-  /* ippfind ! --txt printer-type --and \( --txt-pdl image/pwg-raster --or --txt-pdl image/urf \) -x echo -en '{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{service_name}\t{txt_pdl}\n' \; */
+  /* ippfind -T 0 _ipps._tcp _ipp._tcp ! --txt printer-type --and \( --txt-pdl image/pwg-raster --or --txt-pdl application/PCLm --or --txt-pdl image/urf --or --txt-pdl application/pdf \) -x echo -en '\n{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{service_name}\t{txt_pdl}\t' \; --local -x echo -en L \;*/
 
   i = 0;
   ippfind_argv[i++] = "ippfind";
-  ippfind_argv[i++] = "_ipps._tcp";       /* list IPPS entries */
   ippfind_argv[i++] = "-T";               /* DNS-SD poll timeout */
   ippfind_argv[i++] = "0";                /* Minimum time required */
+  if (reg_type_no >= 1)
+    ippfind_argv[i++] = "_ipps._tcp";     /* list IPPS entries */
+  if (reg_type_no <= 1)
+    ippfind_argv[i++] = "_ipp._tcp";     /* list IPPS entries */
   ippfind_argv[i++] = "!";                /* ! --txt printer-type */
   ippfind_argv[i++] = "--txt";            /* No remote CUPS queues */
   ippfind_argv[i++] = "printer-type";     /* (no "printer-type" in TXT
@@ -589,199 +463,138 @@ list_printers (int mode, int reg_type_no, int isFax)
   ippfind_argv[i++] = NULL;
 
  /*
-  * Create a pipe for passing the ippfind output to post-processing for IPPS
+  * Create a pipe for passing the ippfind output to post-processing
   */
   
-  if (pipe(post_proc_pipe_ipps)) {
+  if (pipe(post_proc_pipe)) {
     perror("ERROR: Unable to create pipe to post-processing");
 
     exit_status = 1;
     goto error;
   }
-  if (reg_type_no >= 1) {
-    if ((ippfind_ipps_pid = fork()) == 0) {
-     /*
-      * Child comes here...
-      */
-     
 
-      dup2(post_proc_pipe_ipps[1], 1);
-     
-      close(post_proc_pipe_ipps[0]);
-      close(post_proc_pipe_ipps[1]);
+  if ((ippfind_pid = fork()) == 0) {
+   /*
+    * Child comes here...
+    */
 
-      execvp(CUPS_IPPFIND, ippfind_argv);
-      perror("ERROR: Unable to execute ippfind utility");
+    dup2(post_proc_pipe[1], 1);
 
-      exit(1);
-    } else if (ippfind_ipps_pid < 0) {
-     /*
-      * Unable to fork!
-      */
+    close(post_proc_pipe[0]);
+    close(post_proc_pipe[1]);
 
-      perror("ERROR: Unable to execute ippfind utility");
+    execvp(CUPS_IPPFIND, ippfind_argv);
+    perror("ERROR: Unable to execute ippfind utility");
 
-      exit_status = 1;
-      goto error;
-    }
-    if (debug)
-      fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
-	      ippfind_ipps_pid);
-        
-    
+    exit(1);
+  } else if (ippfind_pid < 0) {
+   /*
+    * Unable to fork!
+    */
+
+    perror("ERROR: Unable to execute ippfind utility");
+
+    exit_status = 1;
+    goto error;
   }
+  if (debug)
+    fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
+	    ippfind_pid);
 
-    
+  close(post_proc_pipe[1]);
 
  /*
-  * Create a pipe for passing the ippfind output to post-processing for IPP
-  */
-
-  if (pipe(post_proc_pipe_ipp)) {
-    perror("ERROR: Unable to create pipe to post-processing");
-
-    exit_status = 1;
-    goto error;
-  }
-  if (reg_type_no <= 1) {
-    if ((ippfind_ipp_pid = fork()) == 0) {
-
-     /*
-      * Child comes here...
-      */
-      ippfind_argv[1] = "_ipp._tcp"; 
-
-      dup2(post_proc_pipe_ipp[1], 1);
-      close(post_proc_pipe_ipp[0]);
-      close(post_proc_pipe_ipp[1]);
-
-      execvp(CUPS_IPPFIND, ippfind_argv);
-      perror("ERROR: Unable to execute ippfind utility");
-
-      exit(1);
-    } else if (ippfind_ipp_pid < 0) {
-     /*
-      * Unable to fork!
-      */
-
-      perror("ERROR: Unable to execute ippfind utility");
-
-      exit_status = 1;
-      goto error;
-    }
-    if (debug)
-      fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
-	      ippfind_ipp_pid);
-  }
-
-  close(post_proc_pipe_ipp[1]);
-  close(post_proc_pipe_ipps[1]);
-  /*
   * Reading the ippfind output in CUPS Array
   */
-  int copy_output_exit_status = 0;
-  copy_output_exit_status = copy_output(post_proc_pipe_ipp[0],post_proc_pipe_ipps[0],service_uri_list_ipps,service_uri_list_ipp);
-  
-  if(copy_output_exit_status < 0)
-  { 
-    exit_status = copy_output_exit_status;
+  fp = cupsFileOpenFd(post_proc_pipe[0], "r");
+  if (fp) {
+    while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 ||
+	   (bytes < 0 && (errno == EAGAIN || errno == EINTR))) {
+      ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
+      ptr = buffer;
+      while (ptr && !isalnum(*ptr & 255)) ptr ++;
+      if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t')) {
+	ptr += 4;
+	*ptr = '\0';
+	ptr ++;
+	snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
+	cupsArrayAdd(service_uri_list_ipps, ippfind_output);
+      } else if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t')) {
+	ptr += 3;
+	*ptr = '\0';
+	ptr ++;
+	snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
+	cupsArrayAdd(service_uri_list_ipp, ippfind_output);
+      } else
+	continue;
+    }
+    if (bytes < 0) {
+      /* Read error - bail if we don't see EAGAIN or EINTR... */
+      if (errno != EAGAIN && errno != EINTR)
+      {
+	perror("ERROR: Unable to read print data");
+	exit_status = -1;
+	goto error;
+      }
+    }
+  } else {
+    perror("ERROR: Unable to open ippfind output data stream");
+    exit_status = -1;
     goto error;
   }
 
+  for (int j = 0; j < cupsArrayCount(service_uri_list_ipp); j ++)
+  {
+    if (cupsArrayFind(service_uri_list_ipps,
+		      (char*)cupsArrayIndex(service_uri_list_ipp, j)) 
+	== NULL)
+      listPrintersInArray(0, mode, isFax,
+			  (char *)cupsArrayIndex(service_uri_list_ipp, j));
+  }
 
-  for(int j = 0 ; j< cupsArrayCount(service_uri_list_ipp);j++)
+  for (int j = 0; j < cupsArrayCount(service_uri_list_ipps); j++)
   {
-    if(cupsArrayFind(service_uri_list_ipps,(char*)cupsArrayIndex(service_uri_list_ipp,j)) 
-      == NULL)
-      listPrintersInArray(0, mode, isFax, (char *)cupsArrayIndex(service_uri_list_ipp,j));
+     listPrintersInArray(2, mode, isFax,
+			 (char *)cupsArrayIndex(service_uri_list_ipps, j));
   }
-  for(int j = 0;j< cupsArrayCount(service_uri_list_ipps);j++)
-  {
-     listPrintersInArray(2, mode, isFax, (char *)cupsArrayIndex(service_uri_list_ipps,j));
-  }
-  
+
  /*
-  * Wait for the child processes to exit...
+  * Wait for the child process to exit...
   */
 
-  wait_children = 2;
-
-  while (wait_children > 0) {
-   /*
-    * Wait until we get a valid process ID or the job is canceled...
-    */
-
-    while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR) {
-      if (job_canceled) {
-	kill(ippfind_ipps_pid, SIGTERM);
-	kill(ippfind_ipp_pid, SIGTERM);
-
-	job_canceled = 0;
-      }
-    }
-
-    if (wait_pid < 0)
-      break;
-
-    wait_children --;
-
-   /*
-    * Report child status...
-    */
-
-    if (wait_status) {
-      if (WIFEXITED(wait_status)) {
-	exit_status = WEXITSTATUS(wait_status);
-
-	if (debug)
-	  fprintf(stderr, "DEBUG: PID %d (%s) stopped with status %d!\n",
-		  wait_pid,
-		  wait_pid == ippfind_ipps_pid ? "ippfind _ipps._tcp" :
-		  (wait_pid == ippfind_ipp_pid ? "ippfind _ipp._tcp" :
-		   "Unknown process"),
-		  exit_status);
-	/* When run by CUPS do not exit with an error status if there is 
-	   simply no driverless printer available or no Avahi present */
-	if (mode != 0 && wait_pid == ippfind_ipps_pid && exit_status <= 2)
-	  exit_status = 0;	  
-      } else if (WTERMSIG(wait_status) == SIGTERM) {
-	if (debug)
-	  fprintf(stderr,
-		  "DEBUG: PID %d (%s) was terminated normally with signal %d!\n",
-		  wait_pid,
-		  wait_pid == ippfind_ipps_pid ? "ippfind _ipps._tcp" :
-		  (wait_pid == ippfind_ipp_pid ? "ippfind _ipp._tcp" :
-		   "Unknown process"),
-		  exit_status);
-      } else {
-	exit_status = WTERMSIG(wait_status);
-
-	if (debug)
-	  fprintf(stderr, "DEBUG: PID %d (%s) crashed on signal %d!\n",
-		  wait_pid,
-		  wait_pid == ippfind_ipps_pid ? "ippfind _ipps._tcp" :
-		  (wait_pid == ippfind_ipp_pid ? "ippfind _ipp._tcp" :
-		   "Unknown process"),
-		  exit_status);
-      }
-    } else {
-      if (debug)
-	fprintf(stderr, "DEBUG: PID %d (%s) exited with no errors.\n",
-		wait_pid,
-		wait_pid == ippfind_ipps_pid ? "ippfind _ipps._tcp" :
-		(wait_pid == ippfind_ipp_pid ? "ippfind _ipp._tcp" :
-		 "Unknown process"));
-    }
+  while ((wait_res = waitpid(ippfind_pid, &wait_status, 0)) == -1 &&
+	 errno == EINTR);
+  if (wait_res == -1) {
+    fprintf(stderr, "ERROR: ippfind (PID %d) stopped with an error: %s\n",
+	    ippfind_pid, strerror(errno));
+    exit_status = errno;
+    goto error;
   }
+  /* How did ippfind terminate */
+  if (WIFEXITED(wait_status)) {
+    /* Via exit() anywhere or return() in the main() function */
+    exit_status = WEXITSTATUS(wait_status);
+    if (exit_status)
+      fprintf(stderr, "ERROR: ippfind (PID %d) stopped with status %d!\n",
+	      ippfind_pid, exit_status);
+  } else if (WIFSIGNALED(wait_status) && WTERMSIG(wait_status) != SIGTERM) {
+    /* Via signal */
+    exit_status = 256 * WTERMSIG(wait_status);
+    if (exit_status)
+      fprintf(stderr, "ERROR: ippfind (PID %d) stopped on signal %d!\n",
+	      ippfind_pid, exit_status);
+  } else if (debug)
+    fprintf(stderr, "DEBUG: ippfind (PID %d) exited with no errors.\n",
+	    ippfind_pid);
 
  /*
   * Exit...
   */
 
-  error:
-    cupsArrayDelete(service_uri_list_ipps);
-    cupsArrayDelete(service_uri_list_ipp);
-    return (exit_status);
+ error:
+  cupsArrayDelete(service_uri_list_ipps);
+  cupsArrayDelete(service_uri_list_ipp);
+  return (exit_status);
 }
 
 int
