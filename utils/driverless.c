@@ -191,7 +191,15 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
       *ptr = '\0';
       ptr ++;
       txt_pdl = ptr;
-      ptr = memchr(ptr, '\n', sizeof(buffer) - (ptr - buffer));
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+	goto read_error;
+      *ptr = '\0';
+      /* We check only for a fax resource (rfo) here, if there is none,
+	 resource will stay blank meaning device does not support fax */
+      ptr ++;
+      resource = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
@@ -333,7 +341,7 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
 	       driverless_support_strs[driverless_support]);
       driverless_info[255] = '\0';
 
-      if  (mode == 1)
+      if  (mode == 1) {
 	/* Call with "list" argument  (PPD generator in list mode)   */
 	printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
 		 "\" \"%s\"\n",
@@ -341,12 +349,19 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
 	       service_uri, make, make_and_model,
 	       ((isFax) ? "Fax, " : ""),
 	       driverless_info, device_id);
-      else
+	if (resource[0]) /* We have also fax on this device */
+	  printf("\"%s%s\" en \"%s\" \"%s, Fax, %s, cups-filters " VERSION
+		 "\" \"%s\"\n",
+		 "driverless-fax:",
+		 service_uri, make, make_and_model,
+		 driverless_info, device_id);
+      } else {
 	/* Call without arguments and env variable "SOFTWARE" starting
 	   with "CUPS" (Backend in discovery mode) */
 	printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n",
 	       service_uri, make_and_model, make_and_model,
 	       driverless_info, device_id);
+      }
     }
 
   read_error:
@@ -442,7 +457,7 @@ list_printers (int mode, int reg_type_no, int isFax)
   } else if (mode > 0)
     ippfind_argv[i++] =
       "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t"
-      "{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\t\n";
+      "{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\t{txt_rfo}\t\n";
   else
     ippfind_argv[i++] =
       "{service_scheme}\t{service_name}\t{service_domain}\t\n";
@@ -499,7 +514,7 @@ list_printers (int mode, int reg_type_no, int isFax)
   close(post_proc_pipe[1]);
 
  /*
-  * Reading the ippfind output in CUPS Array
+  * Reading the ippfind output into CUPS Arrays
   */
   fp = cupsFileOpenFd(post_proc_pipe[0], "r");
   if (fp) {
@@ -527,7 +542,7 @@ list_printers (int mode, int reg_type_no, int isFax)
       /* Read error - bail if we don't see EAGAIN or EINTR... */
       if (errno != EAGAIN && errno != EINTR)
       {
-	perror("ERROR: Unable to read print data");
+	perror("ERROR: Unable to read ippfind output");
 	exit_status = -1;
 	goto error;
       }
@@ -727,8 +742,12 @@ main(int argc, char*argv[]) {
       } else if (!strcasecmp(argv[i], "list")) {
 	/* List a driver URI and metadata for each printer suitable for
 	   driverless printing */
+	/* Exit immediatly when called as "driverless-fax", as CUPS always
+	   also calls "driverless" and we list the fax PPDs already there,
+	   to reduce the number of "ippfind" calls. */
+	if (isFax) exit(0);
 	debug = 1;
-	exit(list_printers(1,reg_type_no,isFax));
+	exit(list_printers(1, reg_type_no, 0));
       } else if (!strcasecmp(argv[i], "_ipps._tcp")) {
 	/* reg_type_no = 2 for IPPS entries only*/
 	reg_type_no = 2;
@@ -737,7 +756,7 @@ main(int argc, char*argv[]) {
 	reg_type_no = 0;
       } else if (!strcasecmp(argv[i], "--std-ipp-uris")) {
 	/* Show URIS in standard form */
-	exit(list_printers(-1,reg_type_no,isFax));
+	exit(list_printers(-1, reg_type_no, isFax));
       } else if (!strncasecmp(argv[i], "cat", 3)) {
 	/* Generate the PPD file for the given driver URI */
 	debug = 1;
@@ -751,7 +770,7 @@ main(int argc, char*argv[]) {
 	}
 	if (val) {
 	  /* Generate PPD file */
-	  exit(generate_ppd(val,isFax));
+	  exit(generate_ppd(val, isFax));
 	} else {
 	  fprintf(stderr,
 		  "Reading command line option \"cat\", no driver URI "
@@ -765,7 +784,7 @@ main(int argc, char*argv[]) {
 	goto help;
       } else {
 	/* Unknown option, consider as IPP printer URI */
-	exit(generate_ppd(argv[i],isFax));
+	exit(generate_ppd(argv[i], isFax));
       }
   }
 
@@ -775,8 +794,13 @@ main(int argc, char*argv[]) {
   if ((val = getenv("SOFTWARE")) != NULL &&
       strncasecmp(val, "CUPS", 4) == 0) {
     /* CUPS backend in discovery mode */
+    /* Exit immediatly when called as "driverless-fax", as CUPS always
+       also calls "driverless" and the DNS-SD-service-name-based URIs
+       are the same for both printer and fax. This way we reduce the
+       number of "ippfind" calls. */
+    if (isFax) exit(0);
     debug = 1;
-    exit(list_printers(2, reg_type_no, isFax));
+    exit(list_printers(2, reg_type_no, 0));
   } else {
     /* Manual call */
     exit(list_printers(0, reg_type_no, isFax));
