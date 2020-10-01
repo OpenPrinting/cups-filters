@@ -608,7 +608,8 @@ list_printers (int mode, int reg_type_no, int isFax)
     if (exit_status)
       fprintf(stderr, "ERROR: ippfind (PID %d) stopped on signal %d!\n",
 	      ippfind_pid, exit_status);
-  } else if (debug)
+  }
+  if (!exit_status && debug)
     fprintf(stderr, "DEBUG: ippfind (PID %d) exited with no errors.\n",
 	    ippfind_pid);
 
