@@ -42,6 +42,7 @@
 static int              debug = 0;
 static int		job_canceled = 0;
 static void		cancel_job(int sig);
+static cups_array_t     *uuids = NULL;
 
 static int
 compare_service_uri(char *a,	char *b)
@@ -61,7 +62,7 @@ convert_to_port(char *a)
 
 void
 listPrintersInArray(int reg_type_no, int mode, int isFax,
-		    char* ippfind_output ) {
+		    char* ippfind_output) {
   int	driverless_support = 0, /*process id for ippfind */
         port,
         is_local;
@@ -79,6 +80,7 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
         *txt_product = NULL,
         *txt_ty = NULL,
         *txt_pdl = NULL,
+        *txt_uuid = NULL,
         value[256],             /* Value string */
         *service_uri,           /* URI to list for this service */
         service_host_name[1024],/* "Host name" for assembling URI */
@@ -191,6 +193,12 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
       *ptr = '\0';
       ptr ++;
       txt_pdl = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+	goto read_error;
+      *ptr = '\0';
+      ptr ++;
+      txt_uuid = ptr;
       ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
       if (!ptr)
 	goto read_error;
@@ -341,20 +349,26 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
 	       driverless_support_strs[driverless_support]);
       driverless_info[255] = '\0';
 
-      if  (mode == 1) {
-	/* Call with "list" argument  (PPD generator in list mode)   */
-	printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
+      if (mode == 1) {
+	/* Only output the entry if we had this UUID not already */
+	if (!txt_uuid[0] || !cupsArrayFind(uuids, txt_uuid)) {
+	  /* Save UUID as if an entry with the same UUID appears again, it
+	     is the the same pair of print and fax PPDs */
+	  if (txt_uuid[0]) cupsArrayAdd(uuids, strdup(txt_uuid));
+	  /* Call with "list" argument  (PPD generator in list mode)   */
+	  printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
 		 "\" \"%s\"\n",
-	       ((isFax) ? "driverless-fax:" : "driverless:"),
-	       service_uri, make, make_and_model,
-	       ((isFax) ? "Fax, " : ""),
-	       driverless_info, device_id);
-	if (resource[0]) /* We have also fax on this device */
-	  printf("\"%s%s\" en \"%s\" \"%s, Fax, %s, cups-filters " VERSION
-		 "\" \"%s\"\n",
-		 "driverless-fax:",
+		 ((isFax) ? "driverless-fax:" : "driverless:"),
 		 service_uri, make, make_and_model,
+		 ((isFax) ? "Fax, " : ""),
 		 driverless_info, device_id);
+	  if (resource[0]) /* We have also fax on this device */
+	    printf("\"%s%s\" en \"%s\" \"%s, Fax, %s, cups-filters " VERSION
+		   "\" \"%s\"\n",
+		   "driverless-fax:",
+		   service_uri, make, make_and_model,
+		   driverless_info, device_id);
+	}
       } else {
 	/* Call without arguments and env variable "SOFTWARE" starting
 	   with "CUPS" (Backend in discovery mode) */
@@ -407,7 +421,7 @@ list_printers (int mode, int reg_type_no, int isFax)
   * for our desired output.
   */
 
-  /* ippfind -T 0 _ipps._tcp _ipp._tcp ! --txt printer-type --and \( --txt-pdl image/pwg-raster --or --txt-pdl application/PCLm --or --txt-pdl image/urf --or --txt-pdl application/pdf \) -x echo -en '\n{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{service_name}\t{txt_pdl}\t' \; --local -x echo -en L \;*/
+  /* ippfind -T 0 _ipps._tcp _ipp._tcp ! --txt printer-type --and \( --txt-pdl image/pwg-raster --or --txt-pdl application/PCLm --or --txt-pdl image/urf --or --txt-pdl application/pdf \) -x echo -en '\n{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{service_name}\t{txt_pdl}\t{txt_UUID}\t{txt_rfo}\t' \; --local -x echo -en L \;*/
 
   i = 0;
   ippfind_argv[i++] = "ippfind";
@@ -457,7 +471,8 @@ list_printers (int mode, int reg_type_no, int isFax)
   } else if (mode > 0)
     ippfind_argv[i++] =
       "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t"
-      "{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\t{txt_rfo}\t\n";
+      "{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\t{txt_UUID}\t"
+      "{txt_rfo}\t\n";
   else
     ippfind_argv[i++] =
       "{service_scheme}\t{service_name}\t{service_domain}\t\n";
@@ -746,6 +761,7 @@ main(int argc, char*argv[]) {
 	   also calls "driverless" and we list the fax PPDs already there,
 	   to reduce the number of "ippfind" calls. */
 	if (isFax) exit(0);
+	uuids = cupsArrayNew((cups_array_func_t)strcmp, NULL);
 	debug = 1;
 	exit(list_printers(1, reg_type_no, 0));
       } else if (!strcasecmp(argv[i], "_ipps._tcp")) {
