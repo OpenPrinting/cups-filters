@@ -78,7 +78,7 @@ CHANGES IN V2.0.0
 	  request #282, #290).
 	- cups-browsed: Fixed several memory leaks, mainly from the
 	  code to merge printer IPP attributes for clusters (Pull
-	  request #281, #283).
+	  request #281, #283, #311).
 	- libcupsfilters: Started adding functions to read out IPP
 	  attributes from the job and check them against the IPP
 	  attributes (capabilities) of the printer:
