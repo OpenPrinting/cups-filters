@@ -3621,7 +3621,7 @@ new_local_printer (const char *device_uri,
 {
   local_printer_t *printer = g_malloc (sizeof (local_printer_t));
   printer->device_uri = strdup (device_uri);
-  printer->uuid = (uuid ? strdup (uuid) : NULL);
+  printer->uuid = uuid;
   printer->cups_browsed_controlled = cups_browsed_controlled;
   return printer;
 }
@@ -3803,7 +3803,7 @@ get_printer_uuid(http_t *http_printer,
 
 
   if (attr)
-    uuid = ippGetString(attr, 0, NULL) + 9;
+    uuid = strdup(ippGetString(attr, 0, NULL) + 9);
   else {
     debug_printf ("Printer with URI %s: Cannot read \"printer-uuid\" IPP attribute!\n",
 		  raw_uri);
