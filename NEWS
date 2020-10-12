@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.28.4 - 2020-10-08
 -----------------------------------------------------
 
+CHANGES IN V1.28.5
+
+	- cups-browsed: UUID from IPP response was used after its
+	  pointer was freed by ippDelete() (Pull request #311).
+
 CHANGES IN V1.28.4
 
 	- driverless: Avoid duplicate PPD list entries from the same
