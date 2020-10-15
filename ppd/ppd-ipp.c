@@ -424,7 +424,7 @@ ppdLoadAttributes(
     default_source = ppdCacheGetSource(pc, ppd_choice->choice);
 
   if ((ppd_choice = ppdFindMarkedChoice(ppd, "MediaType")) != NULL)
-    default_source = ppdCacheGetType(pc, ppd_choice->choice);
+    default_type = ppdCacheGetType(pc, ppd_choice->choice);
 
   if ((ppd_attr = ppdFindAttr(ppd, "DefaultResolution", NULL)) != NULL)
   {
