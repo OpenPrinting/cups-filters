@@ -422,8 +422,10 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   //cupsFreeOptions(data->num_options, data->options);
 
   cupsFileClose(inputfp);
+  close(inputfd);
 
   fclose(outputfp);
+  close(outputfd);
 
   return (0);
 }
