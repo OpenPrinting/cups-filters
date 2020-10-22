@@ -188,56 +188,6 @@ filterCUPSWrapper(
 
 
 /*
- * 'open_pipe()' - Create a pipe which is closed on exec.
- */
-
-static int				/* O - 0 on success, -1 on error */
-open_pipe(int *fds)			/* O - Pipe file descriptors (2) */
-{
- /*
-  * Create the pipe...
-  */
-
-  if (pipe(fds)) {
-    fds[0] = -1;
-    fds[1] = -1;
-
-    return (-1);
-  }
-
- /*
-  * Set the "close on exec" flag on each end of the pipe...
-  */
-
-  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC)) {
-    close(fds[0]);
-    close(fds[1]);
-
-    fds[0] = -1;
-    fds[1] = -1;
-
-    return (-1);
-  }
-
-  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC)) {
-    close(fds[0]);
-    close(fds[1]);
-
-    fds[0] = -1;
-    fds[1] = -1;
-
-    return (-1);
-  }
-
- /*
-  * Return 0 indicating success...
-  */
-
-  return (0);
-}
-
-
-/*
  * 'compare_filter_pids()' - Compare two filter PIDs...
  */
 
@@ -287,7 +237,6 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 
   signal(SIGPIPE, SIG_IGN);
 
-
  /*
   * Remove NULL filters...
   */
@@ -295,11 +244,15 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
   for (filter = (filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);
        filter;
        filter = (filter_filter_in_chain_t *)cupsArrayNext(filter_chain)) {
-    if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "filterChain: Running filter: %s\n",
-		 filter->name ? filter->name : "Unspecified");
-    if (!filter->function)
+    if (!filter->function) {
+      if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		   "filterChain: Invalid filter: %s - Removing...\n",
+		   filter->name ? filter->name : "Unspecified");
       cupsArrayRemove(filter_chain, filter);
+    } else
+      if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		   "filterChain: Running filter: %s\n",
+		   filter->name ? filter->name : "Unspecified");
   }
 
  /*
@@ -318,56 +271,53 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
        filter = next, current = 1 - current) {
     next = (filter_filter_in_chain_t *)cupsArrayNext(filter_chain);
 
-    if (filterfds[!current][1] > 1) {
+    if (filterfds[1 - current][1] > 1) {
       close(filterfds[1 - current][0]);
       close(filterfds[1 - current][1]);
-
       filterfds[1 - current][0] = -1;
-      filterfds[1 - current][0] = -1;
+      filterfds[1 - current][1] = -1;
     }
 
-    if (next)
-      open_pipe(filterfds[1 - current]);
-    else
+    if (next) {
+      if (pipe(filterfds[1 - current]) < 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "filterChain: Could not create pipe for output of %s: %s\n",
+		     strerror(errno));
+	return (1);
+      }
+    } else
       filterfds[1 - current][1] = outputfd;
-
-    infd = filterfds[current][0];
-    outfd = filterfds[1 - current][1];
 
     if ((pid = fork()) == 0) {
      /*
       * Child process goes here...
       *
-      * Update stdin/stdout/stderr as needed...
+      * Update imput and output FDs as needed...
       */
 
-      if (infd != 0) {
-	if (infd < 0)
-	  infd = open("/dev/null", O_RDONLY);
+      infd = filterfds[current][0];
+      outfd = filterfds[1 - current][1];
+      close(filterfds[current][1]);
+      close(filterfds[1 - current][0]);
 
-	if (infd > 0) {
-	  dup2(infd, 0);
-	  close(infd);
-	}
-      }
+      if (infd < 0)
+	infd = open("/dev/null", O_RDONLY);
 
-      if (outfd != 1) {
-	if (outfd < 0)
-	  outfd = open("/dev/null", O_WRONLY);
-
-	if (outfd > 1) {
-	  dup2(outfd, 1);
-	  close(outfd);
-	}
-      }
+      if (outfd < 0)
+	outfd = open("/dev/null", O_WRONLY);
 
      /*
       * Execute command...
       */
 
-      ret = filter->function(0, 1, inputseekable, jobcanceled, data,
-			     filter->parameters);
+      ret = (filter->function)(infd, outfd, inputseekable, jobcanceled, data,
+			       filter->parameters);
 
+      close(infd);
+      close(outfd);
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "filterChain: %s completed with status %d.\n",
+		   filter->name ? filter->name : "Unspecified filter", ret);
       exit(ret);
 
     } else if (pid > 0) {
@@ -412,9 +362,12 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 		     "filterChain: Job canceled, killing filters ...\n");
 	for (pid_entry = (filter_function_pid_t *)cupsArrayFirst(pids);
 	     pid_entry;
-	     pid_entry = (filter_function_pid_t *)cupsArrayNext(pids))
+	     pid_entry = (filter_function_pid_t *)cupsArrayNext(pids)) {
 	  kill(pid_entry->pid, SIGTERM);
+	  free(pid_entry);
+	}
 	*jobcanceled = 0;
+	break;
       } else
 	continue;
     }
