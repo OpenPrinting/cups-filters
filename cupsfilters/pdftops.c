@@ -501,17 +501,17 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   {
     for (j = 0, exclude = pstops_exclude_general[j]; exclude;
 	 j++, exclude = pstops_exclude_general[j])
-      if (!strcasecmp(options[i].name, exclude)) break;
+      if (!strcasecmp(option->name, exclude)) break;
     if (exclude) continue;
     if (pdftopdfapplied)
     {
       for (j = 0, exclude = pstops_exclude_page_management[j]; exclude;
 	   j++, exclude = pstops_exclude_page_management[j])
-	if (!strcasecmp(options[i].name, exclude)) break;
+	if (!strcasecmp(option->name, exclude)) break;
       if (exclude) continue;
     }
-    num_pstops_options = cupsAddOption(options[i].name,
-				       options[i].value,
+    num_pstops_options = cupsAddOption(option->name,
+				       option->value,
 				       num_pstops_options, &pstops_options);
   }
 
@@ -1654,6 +1654,9 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   */
 
   error:
+
+  close(inputfd);
+  close(outputfd);
 
   if (tempfile[0])
     unlink(tempfile);
