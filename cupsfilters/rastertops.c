@@ -60,6 +60,8 @@ writeStartPage(int  page,   /* I - Page to write */
                int  length, /* I - Page length in points */
                rastertops_doc_t *doc) /* I - Document information */
 {
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+				 "PAGE: %d %d\n", page, 1);
   fprintf(doc->outputfp, "%%%%Page: %d %d\n", page, page);
   fprintf(doc->outputfp, "%%%%BeginPageSetup\n");
   fprintf(doc->outputfp, "<< /PageSize[%d %d] >> setpagedevice\n", width, length);
