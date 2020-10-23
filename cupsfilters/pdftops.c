@@ -234,7 +234,7 @@ log_command_line(const char* file,     /* I - Program to be executed */
   }
   buf[sizeof(buf) - 1] = '\0';
 
-  log(ld, FILTER_LOGLEVEL_DEBUG, "pdftops: %s\n", buf);
+  log(ld, FILTER_LOGLEVEL_DEBUG, "%s\n", buf);
 }
 
 
@@ -545,7 +545,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   pstops_filter_data.ppdfile = NULL;
   pstops_filter_data.ppd = ppd;
   pstops_filter_data.logfunc = log;
-  pstops_filter_data.logdata = NULL;
+  pstops_filter_data.logdata = ld;
 
  /*
   * Force monochrome/grayscale PostScript output 

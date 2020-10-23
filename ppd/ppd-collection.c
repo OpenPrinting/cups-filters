@@ -1806,8 +1806,8 @@ load_ppds(const char *d,		/* I - Actual directory */
   * Check permissions...
   */
 
-  if (_ppdFileCheck(d, _PPD_FILE_CHECK_DIRECTORY, !geteuid(), log, ld))
-    return (0);
+  //if (_ppdFileCheck(d, _PPD_FILE_CHECK_DIRECTORY, !geteuid(), log, ld))
+  //  return (0);
 
   if ((dir = cupsDirOpen(d)) == NULL)
   {
@@ -1872,9 +1872,9 @@ load_ppds(const char *d,		/* I - Actual directory */
 
       continue;
     }
-    else if (_ppdFileCheck(filename, _PPD_FILE_CHECK_FILE_ONLY, !geteuid(),
-			   log, ld))
-      continue;
+    //else if (_ppdFileCheck(filename, _PPD_FILE_CHECK_FILE_ONLY, !geteuid(),
+    //			   log, ld))
+    //   continue;
 
    /*
     * See if this file has been scanned before...
