@@ -214,7 +214,8 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
     final_h = std::min(height,pageHeight);
   }
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: After Cropping: %lf %lf %lf %lf\n",width,height,final_w,final_h);
+	      "pdftopdf: After Cropping: %lf %lf %lf %lf",
+	      width,height,final_w,final_h);
   double posw = (width-final_w)/2,
         posh = (height-final_h)/2;
   // posw, posh : Position along width and height respectively.
@@ -474,7 +475,7 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership 
       pdf->processFile("temp file",f,false);
     } catch (const std::exception &e) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: loadFile failed: %s",e.what());
+        "pdftopdf: loadFile failed: %s", e.what());
       return false;
     }
     break;
@@ -483,7 +484,7 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership 
       pdf->processFile("temp file",f,true);
     } catch (const std::exception &e) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: loadFile failed: %s",e.what());
+        "pdftopdf: loadFile failed: %s", e.what());
       return false;
     }
     break;
@@ -741,7 +742,7 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name,pdftopdf_doc_t *doc)
   out.write();
   else
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: No pages left, outputting empty file.\n");
+	      "pdftopdf: No pages left, outputting empty file.");
 }
 // }}}
 

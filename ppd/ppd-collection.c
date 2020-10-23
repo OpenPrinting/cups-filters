@@ -272,7 +272,7 @@ ppdCollectionListPPDs(
     */
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "libppd: [PPD Collections] ChangedPPD=%d\n",
+		 "libppd: [PPD Collections] ChangedPPD=%d",
 		 ppdlist.ChangedPPD);
 
     if (ppdlist.ChangedPPD)
@@ -297,22 +297,22 @@ ppdCollectionListPPDs(
 	if (rename(newname, cachename))
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "libppd: [PPD Collections] Unable to rename \"%s\" - %s\n",
+		       "libppd: [PPD Collections] Unable to rename \"%s\" - %s",
 		       newname, strerror(errno));
 	}
 	else
 	  if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		       "libppd: [PPD Collections] Wrote \"%s\", %d PPDs...\n",
+		       "libppd: [PPD Collections] Wrote \"%s\", %d PPDs...",
 		       cachename, cupsArrayCount(ppdlist.PPDsByName));
       }
       else
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "libppd: [PPD Collections] Unable to write \"%s\" - %s\n",
+		     "libppd: [PPD Collections] Unable to write \"%s\" - %s",
 		     cachename, strerror(errno));
     }
     else
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "libppd: [PPD Collections] No new or changed PPDs...\n");
+		   "libppd: [PPD Collections] No new or changed PPDs...");
   }
 
  /*
@@ -364,7 +364,7 @@ ppdCollectionListPPDs(
     if (type >= (int)(sizeof(PPDTypes) / sizeof(PPDTypes[0])))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "libppd: [PPD Collections] Bad ppd-type=\"%s\" ignored!\n",
+		   "libppd: [PPD Collections] Bad ppd-type=\"%s\" ignored!",
 		   type_str);
       type_str = NULL;
     }
@@ -374,7 +374,7 @@ ppdCollectionListPPDs(
 
   for (i = 0; i < num_options; i ++)
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "libppd: [PPD Collections] %s=\"%s\"\n", options[i].name,
+		 "libppd: [PPD Collections] %s=\"%s\"", options[i].name,
 		 options[i].value);
 
   if (limit <= 0 || limit > cupsArrayCount(ppdlist.PPDsByMakeModel))
@@ -507,7 +507,7 @@ ppdCollectionListPPDs(
       if (ppd->matches)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "libppd: [PPD Collections] %s matches with score %d!\n",
+		     "libppd: [PPD Collections] %s matches with score %d!",
 		     ppd->record.name, ppd->matches);
         cupsArrayAdd(matches, ppd);
       }
@@ -563,7 +563,7 @@ ppdCollectionListPPDs(
     */
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "libppd: [PPD Collections] Sending %s (%s)...\n",
+		 "libppd: [PPD Collections] Sending %s (%s)...",
 		 ppd->record.name, ppd->record.make_and_model);
 
     count --;
@@ -639,7 +639,7 @@ ppdCollectionGetPPD(
   if (strstr(name, "../"))
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "libppd: [PPD Collections] Invalid PPD name.\n");
+		 "libppd: [PPD Collections] Invalid PPD name.");
     return(NULL);
   }
 
@@ -682,7 +682,8 @@ ppdCollectionGetPPD(
     if (col == NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "libppd: [PPD Collections] Requested PPD %s is in none of the collections\n",
+		   "libppd: [PPD Collections] Requested PPD %s is in none of "
+		   "the collections",
 		   name);      
       return(NULL);
     }
@@ -702,7 +703,7 @@ ppdCollectionGetPPD(
     if (access(realname, R_OK))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "libppd: [PPD Collections] Cannot access file %s - %s\n",
+		   "libppd: [PPD Collections] Cannot access file %s - %s",
 		   realname, strerror(errno));      
       return(NULL);
     }
@@ -731,7 +732,7 @@ ppdCollectionGetPPD(
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "libppd: [PPD Collections] Unable to access \"%s\" - %s\n",
+		   "libppd: [PPD Collections] Unable to access \"%s\" - %s",
 		   realname, strerror(errno));
 
       return(NULL);
@@ -751,7 +752,8 @@ ppdCollectionGetPPD(
       if ((fd = cupsTempFd(tempname, sizeof(tempname))) < 0)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "libppd: [PPD Collections] Unable to copy PPD to temp file: %s\n",
+		     "libppd: [PPD Collections] Unable to copy PPD to temp "
+		     "file: %s",
 		     strerror(errno));
 	return (NULL);
       }
@@ -765,7 +767,7 @@ ppdCollectionGetPPD(
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_WARN,
-		   "libppd: [PPD Collections] Unable to execute \"%s\": %s\n",
+		   "libppd: [PPD Collections] Unable to execute \"%s\": %s",
 		   tempname, strerror(errno));
       return(NULL);
     }
@@ -865,7 +867,8 @@ add_ppd(const char *filename,		/* I - PPD filename */
   if ((ppd = (ppd_info_t *)calloc(1, sizeof(ppd_info_t))) == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "libppd: [PPD Collections] Ran out of memory for %d PPD files!\n",
+		 "libppd: [PPD Collections] Ran out of memory for %d PPD "
+		 "files!",
 		 cupsArrayCount(ppdlist->PPDsByName));
     return (NULL);
   }
@@ -922,7 +925,7 @@ cat_static(const char *name,		/* I - PPD name */
   if ((fp = cupsFileOpen(name, "r")) == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "libppd: [PPD Collections] Unable to open \"%s\" - %s\n",
+		 "libppd: [PPD Collections] Unable to open \"%s\" - %s",
 		 name, strerror(errno));
 
     return (NULL);
@@ -960,7 +963,7 @@ cat_tar(const char *filename,		/* I - Archive name */
   if ((fp = cupsFileOpen(filename, "r")) == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "libppd: [PPD Collections] Unable to open \"%s\" - %s\n",
+		 "libppd: [PPD Collections] Unable to open \"%s\" - %s",
 		 filename, strerror(errno));
 
     return (NULL);
@@ -980,7 +983,8 @@ cat_tar(const char *filename,		/* I - Archive name */
       if ((fd = cupsTempFd(tempname, sizeof(tempname))) < 0)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "libppd: [PPD Collections] Unable to copy PPD to temp file: %s\n",
+		     "libppd: [PPD Collections] Unable to copy PPD to temp "
+		     "file: %s",
 		     strerror(errno));
 	return (NULL);
       }
@@ -998,7 +1002,7 @@ cat_tar(const char *filename,		/* I - Archive name */
           else
           {
 	    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-			 "libppd: [PPD Collections] Read error - %s\n",
+			 "libppd: [PPD Collections] Read error - %s",
 			 strerror(errno));
 	    cupsFileClose(fp);
 	    close(fd);
@@ -1009,7 +1013,7 @@ cat_tar(const char *filename,		/* I - Archive name */
         else if (bytes > 0 && write(fd, buffer, bytes) != bytes)
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "libppd: [PPD Collections] Write error - %s\n",
+		       "libppd: [PPD Collections] Write error - %s",
 		       strerror(errno));
 	  cupsFileClose(fp);
 	  close(fd);
@@ -1033,7 +1037,7 @@ cat_tar(const char *filename,		/* I - Archive name */
   cupsFileClose(fp);
 
   if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-	       "libppd: [PPD Collections] PPD \"%s\" not found.\n", ppdname);
+	       "libppd: [PPD Collections] PPD \"%s\" not found.", ppdname);
 
   return (NULL);
 }
@@ -1231,7 +1235,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
 	  line[strlen(line) - 1] = '\0';
 
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "libppd: [PPD Collections] Bad line from \"%s\": %s\n",
+		     "libppd: [PPD Collections] Bad line from \"%s\": %s",
 		     filename, line);
 	break;
       }
@@ -1253,7 +1257,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
 	if (type >= (int)(sizeof(PPDTypes) / sizeof(PPDTypes[0])))
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "libppd: [PPD Collections] Bad ppd-type \"%s\" ignored!\n",
+		       "libppd: [PPD Collections] Bad ppd-type \"%s\" ignored!",
 		       type_str);
 	  type = PPD_TYPE_UNKNOWN;
 	}
@@ -1303,7 +1307,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
 	}
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "libppd: [PPD Collections] Adding PPD \"%s\"...\n",
+		     "libppd: [PPD Collections] Adding PPD \"%s\"...",
 		     ppd_name);
       }
     }
@@ -1312,7 +1316,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
   }
   else
     if (log) log(ld, FILTER_LOGLEVEL_WARN,
-		 "libppd: [PPD Collections] Unable to execute \"%s\": %s\n",
+		 "libppd: [PPD Collections] Unable to execute \"%s\": %s",
 		 filename, strerror(errno));
 
   return (1);
@@ -1540,17 +1544,18 @@ load_ppd(const char  *filename,		/* I - Real filename */
 
     if (!make_model[0])
       if (log) log(ld, FILTER_LOGLEVEL_WARN,
-		   "libppd: [PPD Collections] Missing NickName and ModelName in %s!\n",
+		   "libppd: [PPD Collections] Missing NickName and ModelName "
+		   "in %s!",
 		   filename);
 
     if (cupsArrayCount(products) == 0)
       if (log) log(ld, FILTER_LOGLEVEL_WARN,
-		   "libppd: [PPD Collections] Missing Product in %s!\n",
+		   "libppd: [PPD Collections] Missing Product in %s!",
 		   filename);
 
     if (cupsArrayCount(psversions) == 0)
       if (log) log(ld, FILTER_LOGLEVEL_WARN,
-		   "libppd: [PPD Collections] Missing PSVersion in %s!\n",
+		   "libppd: [PPD Collections] Missing PSVersion in %s!",
 		   filename);
 
     free_array(products);
@@ -1671,7 +1676,7 @@ load_ppd(const char  *filename,		/* I - Real filename */
     */
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "libppd: [PPD Collections] Adding PPD \"%s\"...\n", name);
+		 "libppd: [PPD Collections] Adding PPD \"%s\"...", name);
 
     ppd = add_ppd(filename, name, lang_version, manufacturer, make_model,
 		  device_id, (char *)cupsArrayFirst(products),
@@ -1689,7 +1694,7 @@ load_ppd(const char  *filename,		/* I - Real filename */
     */
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "libppd: [PPD Collections] Updating ppd \"%s\"...\n", name);
+		 "libppd: [PPD Collections] Updating ppd \"%s\"...", name);
 
     memset(ppd, 0, sizeof(ppd_info_t));
 
@@ -1781,7 +1786,7 @@ load_ppds(const char *d,		/* I - Actual directory */
   {
     if (errno != ENOENT)
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "libppd: [PPD Collections] Unable to stat \"%s\": %s\n", d,
+		   "libppd: [PPD Collections] Unable to stat \"%s\": %s", d,
 		   strerror(errno));
 
     return (0);
@@ -1789,7 +1794,7 @@ load_ppds(const char *d,		/* I - Actual directory */
   else if (cupsArrayFind(ppdlist->Inodes, &dinfo))
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "libppd: [PPD Collections] Skipping \"%s\": loop detected!\n",
+		 "libppd: [PPD Collections] Skipping \"%s\": loop detected!",
 		 d);
     return (1);
   }
@@ -1813,14 +1818,15 @@ load_ppds(const char *d,		/* I - Actual directory */
   {
     if (errno != ENOENT)
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "libppd: [PPD Collections] Unable to open PPD directory \"%s\": %s\n",
+		   "libppd: [PPD Collections] Unable to open PPD directory "
+		   "\"%s\": %s\n",
 		   d, strerror(errno));
 
     return (0);
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "libppd: [PPD Collections] Loading \"%s\"...\n", d);
+	       "libppd: [PPD Collections] Loading \"%s\"...", d);
 
   while ((dent = cupsDirRead(dir)) != NULL)
   {
@@ -2011,7 +2017,8 @@ load_ppds_dat(const char *filename,	/* I - Filename */
 	{
 	  if (verbose)
 	    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-			 "libppd: [PPD Collections] Unable to allocate memory for PPD!\n");
+			 "libppd: [PPD Collections] Unable to allocate memory "
+			 "for PPD!");
 	  return(1);
 	}
 
@@ -2029,7 +2036,7 @@ load_ppds_dat(const char *filename,	/* I - Filename */
 
       if (verbose)
 	if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		     "libppd: [PPD Collections] Read \"%s\", %d PPDs...\n",
+		     "libppd: [PPD Collections] Read \"%s\", %d PPDs...",
 		     filename, cupsArrayCount(ppdlist->PPDsByName));
     }
 
@@ -2125,7 +2132,7 @@ read_tar(cups_file_t *fp,		/* I - Archive to read */
       if (record.header.magic[0] ||
           memcmp(record.header.magic, record.header.magic + 1, 5))
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "libppd: [PPD Collections] Bad tar magic/version.\n");
+		     "libppd: [PPD Collections] Bad tar magic/version.");
       break;
     }
 
@@ -2174,7 +2181,7 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
 
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "libppd: [PPD Collections] regex_device_id(\"%s\")\n",
+	       "libppd: [PPD Collections] regex_device_id(\"%s\")",
 	       device_id);
 
  /*
@@ -2246,7 +2253,7 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
   *ptr = '\0';
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "libppd: [PPD Collections] regex_device_id: \"%s\"\n", res);
+	       "libppd: [PPD Collections] regex_device_id: \"%s\"", res);
 
  /*
   * Compile the regular expression and return...
@@ -2257,7 +2264,7 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
     if (!regcomp(re, res, REG_EXTENDED | REG_ICASE))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "libppd: [PPD Collections] regex_device_id: OK\n");
+		   "libppd: [PPD Collections] regex_device_id: OK");
       return (re);
     }
 
@@ -2283,7 +2290,7 @@ regex_string(const char *s,		/* I - String to compare */
 
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "libppd: [PPD Collections] regex_string(\"%s\")\n", s);
+	       "libppd: [PPD Collections] regex_string(\"%s\")", s);
 
  /*
   * Convert the string to a regular expression, escaping special characters
@@ -2303,7 +2310,7 @@ regex_string(const char *s,		/* I - String to compare */
   *ptr = '\0';
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "libppd: [PPD Collections] regex_string: \"%s\"\n", res);
+	       "libppd: [PPD Collections] regex_string: \"%s\"", res);
 
  /*
   * Create a case-insensitive regular expression...
@@ -2314,7 +2321,7 @@ regex_string(const char *s,		/* I - String to compare */
     if (!regcomp(re, res, REG_ICASE))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "libppd: [PPD Collections] regex_string: OK\n");
+		   "libppd: [PPD Collections] regex_string: OK");
       return (re);
     }
 

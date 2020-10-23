@@ -161,7 +161,9 @@ static bool ppdDefaultOrder(ppd_file_t *ppd, pdftopdf_doc_t *doc) // {{{  -- is 
   }
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unsupported output-order value %s, using 'normal'!",val);
+				 "pdftopdf: Unsupported output-order "
+				 "value %s, using 'normal'!",
+				 val);
   return false;
 }
 // }}}
@@ -369,7 +371,9 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
      */
     if ((ipprot<3)||(ipprot>6)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Bad value (%d) for orientation-requested, using 0 degrees",ipprot);
+				     "pdftopdf: Bad value (%d) for "
+				     "orientation-requested, using 0 degrees",
+				     ipprot);
     } else {
       static const Rotation ipp2rot[4]={ROT_0, ROT_90, ROT_270, ROT_180};
       param.orientation=ipp2rot[ipprot-3];
@@ -395,7 +399,9 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 	(val = cupsGetOption("page-size", num_options, options)) != NULL ||
 	(val = cupsGetOption("PageSize", num_options, options)) != NULL) {
       pwg_media_t *size_found = NULL;
-      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG, "pdftopdf: Page size from command line: %s\n", val);
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+				     "pdftopdf: Page size from command "
+				     "line: %s", val);
       if ((size_found = pwgMediaForPWG(val)) == NULL)
 	if ((size_found = pwgMediaForPPD(val)) == NULL)
 	  size_found = pwgMediaForLegacy(val);
@@ -406,10 +412,14 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
 	param.page.right=param.page.left=18.0;
 	param.page.right=param.page.width-param.page.right;
 	param.page.top=param.page.height-param.page.top;
-	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG, "pdftopdf: Width: %f, Length: %f\n", param.page.width, param.page.height);
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+				       "pdftopdf: Width: %f, Length: %f",
+				       param.page.width, param.page.height);
       }
       else
-	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG, "pdftopdf: Unsupported page size %s.\n", val);
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+				       "pdftopdf: Unsupported page size %s.",
+				       val);
     }
   }
 #endif /* HAVE_CUPS_1_7 */
@@ -461,7 +471,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
       param.setDuplex=true;
     } else if (strcasecmp(val,"one-sided")!=0) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unsupported sides value %s, using sides=one-sided!",val);
+				     "pdftopdf: Unsupported sides value %s, "
+				     "using sides=one-sided!", val);
     }
   }
 
@@ -470,7 +481,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   if (optGetInt("number-up",num_options,options,&nup)) {
     if (!NupParameters::possible(nup)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unsupported number-up value %d, using number-up=1!",nup);
+				     "pdftopdf: Unsupported number-up value "
+				     "%d, using number-up=1!", nup);
       nup=1;
     }
 // TODO   ;  TODO? nup enabled? ... fitplot
@@ -481,7 +493,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   if ((val=cupsGetOption("number-up-layout",num_options,options)) != NULL) {
     if (!parseNupLayout(val,param.nup)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unsupported number-up-layout %s, using number-up-layout=lrtb!",val);
+				     "pdftopdf: Unsupported number-up-layout "
+				     "%s, using number-up-layout=lrtb!" ,val);
       param.nup.first=Axis::X;
       param.nup.xstart=Position::LEFT;
       param.nup.ystart=Position::TOP;
@@ -491,7 +504,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   if ((val=cupsGetOption("page-border",num_options,options)) != NULL) {
     if (!parseBorder(val,param.border)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unsupported page-border value %s, using page-border=none!",val);
+				     "pdftopdf: Unsupported page-border value "
+				     "%s, using page-border=none!", val);
       param.border=BorderType::NONE;
     }
   }
@@ -534,7 +548,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
       param.evenPages=false;
     } else if (strcasecmp(val,"all")!=0) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unsupported page-set value %s, using page-set=all!",val);
+				     "pdftopdf: Unsupported page-set value %s, "
+				     "using page-set=all!", val);
     }
   }
 
@@ -562,14 +577,17 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
       param.booklet=BookletMode::BOOKLET_ON;
     } else if (!is_false(val)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unsupported booklet value %s, using booklet=off!",val);
+				     "pdftopdf: Unsupported booklet value %s, "
+				     "using booklet=off!", val);
     }
   }
   param.bookSignature=-1;
   if (optGetInt("booklet-signature",num_options,options,&param.bookSignature)) {
     if (param.bookSignature==0) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unsupported booklet-signature value, using booklet-signature=-1 (all)!",val);
+				     "pdftopdf: Unsupported booklet-signature "
+				     "value, using booklet-signature=-1 "
+				     "(all)!", val);
       param.bookSignature=-1;
     }
   }
@@ -577,7 +595,8 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   if ((val=cupsGetOption("position",num_options,options)) != NULL) {
     if (!parsePosition(val,param.xpos,param.ypos)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unrecognized position value %s, using position=center!",val);
+				     "pdftopdf: Unrecognized position value "
+				     "%s, using position=center!", val);
       param.xpos=Position::CENTER;
       param.ypos=Position::CENTER;
     }
@@ -654,18 +673,22 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
     if (strcasecmp(val,"auto") == 0) {
       param.page_logging = -1;
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: Automatic page logging selected by command line.\n");
+				     "pdftopdf: Automatic page logging "
+				     "selected by command line.");
     } else if (is_true(val)) {
       param.page_logging = 1;
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: Forced page logging selected by command line.\n");
+				     "pdftopdf: Forced page logging selected "
+				     "by command line.");
     } else if (is_false(val)) {
       param.page_logging = 0;
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: Suppressed page logging selected by command line.\n");
+				     "pdftopdf: Suppressed page logging "
+				     "selected by command line.");
     } else {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unsupported page-logging value %s, using page-logging=auto!",val);
+				     "pdftopdf: Unsupported page-logging "
+				     "value %s, using page-logging=auto!",val);
       param.page_logging = -1;
     }
   }
@@ -677,7 +700,9 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
       // If there is no PPD do not log when not requested by command line
       param.page_logging = 0;
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: No PPD file specified, could not determine whether to log pages or not, so turned off page logging.\n");
+				     "pdftopdf: No PPD file specified, could "
+				     "not determine whether to log pages or "
+				     "not, so turned off page logging.");
     } else {
       char *lastfilter = NULL;
       if (final_content_type == NULL) {
@@ -685,7 +710,10 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 	// whether we have to log pages, so do not log.
 	param.page_logging = 0;
 	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-        "pdftopdf: No FINAL_CONTENT_TYPE environment variable, could not determine whether to log pages or not, so turned off page logging.\n");
+				       "pdftopdf: No FINAL_CONTENT_TYPE "
+				       "environment variable, could not "
+				       "determine whether to log pages or "
+				       "not, so turned off page logging.");
       // Proceed depending on number of cupsFilter(2) lines in PPD
       } else if (ppd->num_filters == 0) {
 	// No filter line, manufacturer-supplied PostScript PPD
@@ -777,14 +805,20 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 	  }
 	} else {
 	  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Last filter could not get determined, page logging turned off.");
+					 "pdftopdf: Last filter could not "
+					 "get determined, page logging turned "
+					 "off.");
 	  param.page_logging = 0;
 	}
       }
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: Last filter determined by the PPD: %s; FINAL_CONTENT_TYPE: %s => pdftopdf will %slog pages in page_log.\n",
-	      (lastfilter ? lastfilter : "None"), final_content_type,
-	      (param.page_logging == 0 ? "not " : ""));
+				     "pdftopdf: Last filter determined by the "
+				     "PPD: %s; FINAL_CONTENT_TYPE: "
+				     "%s => pdftopdf will %slog pages in "
+				     "page_log.",
+				     (lastfilter ? lastfilter : "None"),
+				     final_content_type,
+				     (param.page_logging == 0 ? "not " : ""));
     }
   }
 }
@@ -879,7 +913,7 @@ FILE *copy_stdin_to_temp(pdftopdf_doc_t *doc) // {{{
   int fd=cupsTempFd(buf,sizeof(buf));
   if (fd<0) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Can't create temporary file");
+				   "pdftopdf: Can't create temporary file");
     return NULL;
   }
   // remove name
@@ -889,14 +923,15 @@ FILE *copy_stdin_to_temp(pdftopdf_doc_t *doc) // {{{
   while ((n=read(0,buf,BUFSIZ)) > 0) {
     if (write(fd,buf,n) != n) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Can't copy stdin to temporary file");
+				     "pdftopdf: Can't copy stdin to temporary "
+				     "file");
       close(fd);
       return NULL;
     }
   }
   if (lseek(fd,0,SEEK_SET) < 0) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Can't rewind temporary file");
+				   "pdftopdf: Can't rewind temporary file");
     close(fd);
     return NULL;
   }
@@ -904,7 +939,7 @@ FILE *copy_stdin_to_temp(pdftopdf_doc_t *doc) // {{{
   FILE *f;
   if ((f=fdopen(fd,"rb")) == 0) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Can't fdopen temporary file");
+				   "pdftopdf: Can't fdopen temporary file");
     close(fd);
     return NULL;
   }
@@ -1023,7 +1058,8 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
 
     if(empty)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG, "pdftopdf: Input is empty, outputting empty file.\n");
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "pdftopdf: Input is empty, outputting empty file.");
       return 0;
     }
 
@@ -1061,11 +1097,11 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
   } catch (std::exception &e) {
     // TODO? exception type
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Exception: %s",e.what());
+		 "pdftopdf: Exception: %s",e.what());
     return 5;
   } catch (...) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-	      "pdftopdf: Unknown exception caught. Exiting.");
+		 "pdftopdf: Unknown exception caught. Exiting.");
     return 6;
   }
 

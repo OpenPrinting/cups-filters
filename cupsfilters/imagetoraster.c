@@ -296,7 +296,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Unable to open input data stream.\n"); 
+		   "imagetoraster: Unable to open input data stream.");
     }
 
     return (1);
@@ -310,13 +310,13 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetoraster: Unable to copy input: %s\n",
+		   "imagetoraster: Unable to copy input: %s",
 		   strerror(errno));
       return (1);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Copying input to temp file \"%s\"\n",
+		 "imagetoraster: Copying input to temp file \"%s\"",
 		 tempfile);
 
     while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
@@ -334,7 +334,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       if (!*jobcanceled)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Unable to open temporary file.\n"); 
+		     "imagetoraster: Unable to open temporary file.");
       }
 
       return (1);
@@ -516,9 +516,9 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   {
     if (log) {
       log(ld, FILTER_LOGLEVEL_ERROR,
-	  "imagetoraster: The page setup information was not valid.\n");
+	  "imagetoraster: The page setup information was not valid.");
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "imagetoraster: %s\n", cupsRasterErrorString());
+	  "imagetoraster: %s", cupsRasterErrorString());
     }
     return (1);
   }
@@ -648,7 +648,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     case CUPS_CSPACE_DEVICEE :
     case CUPS_CSPACE_DEVICEF :
         if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Colorspace %d not supported.\n",
+		     "imagetoraster: Colorspace %d not supported.",
 		     header.cupsColorSpace);
 	return(1);
 	break;
@@ -686,13 +686,14 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   else if (ppd != NULL && !cm_disabled)
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Searching for profile \"%s/%s\"...\n",
+		 "imagetoraster: Searching for profile \"%s/%s\"...",
 		 resolution, media_type);
 
-    for (i = 0, profile = ppd->profiles; i < ppd->num_profiles; i ++, profile ++)
+    for (i = 0, profile = ppd->profiles; i < ppd->num_profiles;
+	 i ++, profile ++)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: \"%s/%s\" = \n", profile->resolution,
+		   "imagetoraster: \"%s/%s\" = ", profile->resolution,
 		   profile->media_type);
 
       if ((strcmp(profile->resolution, resolution) == 0 ||
@@ -701,12 +702,12 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
            profile->media_type[0] == '-'))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster:    MATCH\n");
+		     "imagetoraster:    MATCH");
 	break;
       }
       else
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster:    no.\n");
+		     "imagetoraster:    no.");
     }
 
    /*
@@ -735,7 +736,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   */
 
   if (log) log(ld, FILTER_LOGLEVEL_INFO,
-	       "imagetoraster: Loading print file.\n");
+	       "imagetoraster: Loading print file.");
 
   if (header.cupsColorSpace == CUPS_CSPACE_CIEXYZ ||
       header.cupsColorSpace == CUPS_CSPACE_CIELab ||
@@ -750,16 +751,18 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   int fidelity = 0;
   int document_large = 0;
 
-  if(ppd != NULL && (ppd->custom_margins[0]||ppd->custom_margins[1]
-                     ||ppd->custom_margins[2]||ppd->custom_margins[3]))
+  if (ppd != NULL && (ppd->custom_margins[0] || ppd->custom_margins[1] ||
+                      ppd->custom_margins[2] || ppd->custom_margins[3]))
     margin_defined = 1;
 
-  if(doc.PageLength!=doc.PageTop-doc.PageBottom||doc.PageWidth!=doc.PageRight-doc.PageLeft)
+  if (doc.PageLength != doc.PageTop - doc.PageBottom ||
+      doc.PageWidth != doc.PageRight - doc.PageLeft)
   {
     margin_defined = 1;
   }
 
-  if((val = cupsGetOption("ipp-attribute-fidelity",num_options,options)) != NULL)
+  if ((val = cupsGetOption("ipp-attribute-fidelity",
+			   num_options, options)) != NULL)
   {
     if(!strcasecmp(val,"true")||!strcasecmp(val,"yes")||
         !strcasecmp(val,"on"))
@@ -843,7 +846,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     else
       zoom = 0.0;
   }
-  else if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
+  else if ((val = cupsGetOption("natural-scaling", num_options, options))
+	   != NULL)
     zoom = 0.0;
 
   if((val = cupsGetOption("fill",num_options,options))!=0) {
@@ -871,7 +875,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       const char *val;
       int tempOrientation = doc.Orientation;
       int flag =3;
-      if((val = cupsGetOption("orientation-requested",num_options,options))!=NULL)
+      if ((val = cupsGetOption("orientation-requested",
+			       num_options, options)) != NULL)
       {
         tempOrientation = atoi(val);
       }
@@ -914,7 +919,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
           final_w = h*pw/ph;
           final_h = h;
         }
-        // posw and posh are position of the cropped image along width and height.
+        // posw and posh are position of the cropped image along width and
+	// height.
         float posw=(w-final_w)/2,posh=(h-final_h)/2;
         posw = (1+doc.XPosition)*posw;
         posh = (1-doc.YPosition)*posh;
@@ -935,7 +941,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
         if((fabs(final_w-w)>0.5*w)||(fabs(final_h-h)>0.5*h))
         {
 	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "imagetoraster: Ignoring crop-to-fit option!\n");
+		       "imagetoraster: Ignoring crop-to-fit option!");
           cropfit=0;
         }
         else{
@@ -970,7 +976,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   if (img == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "imagetoraster: The print file could not be opened.\n");
+		 "imagetoraster: The print file could not be opened.");
     ppdClose(ppd);
     return (1);
   }
@@ -989,7 +995,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     yppi = xppi;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: Before scaling: xppi=%d, yppi=%d, zoom=%.2f\n",
+	       "imagetoraster: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
 	       xppi, yppi, zoom);
 
   if (xppi > 0)
@@ -1010,14 +1016,14 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Before scaling: xprint=%.1f, yprint=%.1f\n",
+		 "imagetoraster: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
     xinches = (float)img->xsize / (float)xppi;
     yinches = (float)img->ysize / (float)yppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Image size is %.1f x %.1f inches...\n",
+		 "imagetoraster: Image size is %.1f x %.1f inches...",
 		 xinches, yinches);
 
     if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
@@ -1034,7 +1040,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Auto orientation...\n");
+		   "imagetoraster: Auto orientation...");
 
       if ((xinches > xprint || yinches > yprint) &&
           xinches <= yprint && yinches <= xprint)
@@ -1044,7 +1050,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Using landscape orientation...\n");
+		     "imagetoraster: Using landscape orientation...");
 
 	doc.Orientation = (doc.Orientation + 1) & 3;
 	xsize       = yprint;
@@ -1064,11 +1070,11 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     aspect = (float)img->yppi / (float)img->xppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Before scaling: xprint=%.1f, yprint=%.1f\n",
+		 "imagetoraster: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: img->xppi = %d, img->yppi = %d, aspect = %f\n",
+		 "imagetoraster: img->xppi = %d, img->yppi = %d, aspect = %f",
 		 img->xppi, img->yppi, aspect);
 
     xsize = xprint * zoom;
@@ -1090,10 +1096,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Portrait size is %.2f x %.2f inches\n",
+		 "imagetoraster: Portrait size is %.2f x %.2f inches",
 		 xsize, ysize);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Landscape size is %.2f x %.2f inches\n",
+		 "imagetoraster: Landscape size is %.2f x %.2f inches",
 		 xsize2, ysize2);
 
     if (cupsGetOption("orientation-requested", num_options, options) == NULL &&
@@ -1105,7 +1111,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Auto orientation...\n");
+		   "imagetoraster: Auto orientation...");
 
       if ((xsize * ysize) < (xsize2 * ysize2))
       {
@@ -1114,7 +1120,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Using landscape orientation...\n");
+		     "imagetoraster: Using landscape orientation...");
 
 	doc.Orientation = 1;
 	xinches     = xsize2;
@@ -1129,7 +1135,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Using portrait orientation...\n");
+		     "imagetoraster: Using portrait orientation...");
 
 	doc.Orientation = 0;
 	xinches     = xsize;
@@ -1139,7 +1145,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     else if (doc.Orientation & 1)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Using landscape orientation...\n");
+		   "imagetoraster: Using landscape orientation...");
 
       xinches     = xsize2;
       yinches     = ysize2;
@@ -1149,7 +1155,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Using portrait orientation...\n");
+		   "imagetoraster: Using portrait orientation...");
 
       xinches     = xsize;
       yinches     = ysize;
@@ -1170,7 +1176,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   yprint = yinches / ypages;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: xpages = %dx%.2fin, ypages = %dx%.2fin\n",
+	       "imagetoraster: xpages = %dx%.2fin, ypages = %dx%.2fin",
 	       xpages, xprint, ypages, yprint);
 
  /*
@@ -1217,7 +1223,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       length = ppd->custom_min[1];
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Updated custom page size to %.2f x %.2f inches...\n",
+		 "imagetoraster: Updated custom page size to %.2f x %.2f "
+		 "inches...",
 		 width / 72.0, length / 72.0);
 
    /*
@@ -1275,10 +1282,11 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   header.Margins[1] = doc.PageBottom;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: PageSize = [%d %d]\n", header.PageSize[0],
+	       "imagetoraster: PageSize = [%d %d]", header.PageSize[0],
 	       header.PageSize[1]);
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: PageLeft = %f, PageRight = %f, PageBottom = %f, PageTop = %f\n",
+	       "imagetoraster: PageLeft = %f, PageRight = %f, "
+	       "PageBottom = %f, PageTop = %f",
 	       doc.PageLeft, doc.PageRight, doc.PageBottom, doc.PageTop);
 
   switch (doc.Orientation)
@@ -1291,8 +1299,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      header.cupsImagingBBox[2] = doc.PageLeft + xprint * 72;
 	      break;
 	  default :
-              header.cupsImagingBBox[0] = (doc.PageRight + doc.PageLeft - xprint * 72) / 2;
-	      header.cupsImagingBBox[2] = (doc.PageRight + doc.PageLeft + xprint * 72) / 2;
+              header.cupsImagingBBox[0] = (doc.PageRight + doc.PageLeft -
+					   xprint * 72) / 2;
+	      header.cupsImagingBBox[2] = (doc.PageRight + doc.PageLeft +
+					   xprint * 72) / 2;
 	      break;
 	  case 1 :
               header.cupsImagingBBox[0] = doc.PageRight - xprint * 72;
@@ -1307,8 +1317,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      header.cupsImagingBBox[3] = doc.PageBottom + yprint * 72;
 	      break;
 	  default :
-              header.cupsImagingBBox[1] = (doc.PageTop + doc.PageBottom - yprint * 72) / 2;
-	      header.cupsImagingBBox[3] = (doc.PageTop + doc.PageBottom + yprint * 72) / 2;
+              header.cupsImagingBBox[1] = (doc.PageTop + doc.PageBottom -
+					   yprint * 72) / 2;
+	      header.cupsImagingBBox[3] = (doc.PageTop + doc.PageBottom +
+					   yprint * 72) / 2;
 	      break;
 	  case 1 :
               header.cupsImagingBBox[1] = doc.PageTop - yprint * 72;
@@ -1325,8 +1337,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      header.cupsImagingBBox[2] = doc.PageLeft + yprint * 72;
 	      break;
 	  default :
-              header.cupsImagingBBox[0] = (doc.PageRight + doc.PageLeft - yprint * 72) / 2;
-	      header.cupsImagingBBox[2] = (doc.PageRight + doc.PageLeft + yprint * 72) / 2;
+              header.cupsImagingBBox[0] = (doc.PageRight + doc.PageLeft -
+					   yprint * 72) / 2;
+	      header.cupsImagingBBox[2] = (doc.PageRight + doc.PageLeft +
+					   yprint * 72) / 2;
 	      break;
 	  case 1 :
               header.cupsImagingBBox[0] = doc.PageRight - yprint * 72;
@@ -1341,8 +1355,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      header.cupsImagingBBox[3] = doc.PageBottom + xprint * 72;
 	      break;
 	  default :
-              header.cupsImagingBBox[1] = (doc.PageTop + doc.PageBottom - xprint * 72) / 2;
-	      header.cupsImagingBBox[3] = (doc.PageTop + doc.PageBottom + xprint * 72) / 2;
+              header.cupsImagingBBox[1] = (doc.PageTop + doc.PageBottom -
+					   xprint * 72) / 2;
+	      header.cupsImagingBBox[3] = (doc.PageTop + doc.PageBottom +
+					   xprint * 72) / 2;
 	      break;
 	  case 1 :
               header.cupsImagingBBox[1] = doc.PageTop - xprint * 72;
@@ -1359,8 +1375,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      header.cupsImagingBBox[2] = doc.PageLeft + xprint * 72;
 	      break;
 	  default :
-              header.cupsImagingBBox[0] = (doc.PageRight + doc.PageLeft - xprint * 72) / 2;
-	      header.cupsImagingBBox[2] = (doc.PageRight + doc.PageLeft + xprint * 72) / 2;
+              header.cupsImagingBBox[0] = (doc.PageRight + doc.PageLeft -
+					   xprint * 72) / 2;
+	      header.cupsImagingBBox[2] = (doc.PageRight + doc.PageLeft +
+					   xprint * 72) / 2;
 	      break;
 	  case -1 :
               header.cupsImagingBBox[0] = doc.PageRight - xprint * 72;
@@ -1375,8 +1393,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      header.cupsImagingBBox[3] = doc.PageBottom + yprint * 72;
 	      break;
 	  default :
-              header.cupsImagingBBox[1] = (doc.PageTop + doc.PageBottom - yprint * 72) / 2;
-	      header.cupsImagingBBox[3] = (doc.PageTop + doc.PageBottom + yprint * 72) / 2;
+              header.cupsImagingBBox[1] = (doc.PageTop + doc.PageBottom -
+					   yprint * 72) / 2;
+	      header.cupsImagingBBox[3] = (doc.PageTop + doc.PageBottom +
+					   yprint * 72) / 2;
 	      break;
 	  case -1 :
               header.cupsImagingBBox[1] = doc.PageTop - yprint * 72;
@@ -1393,8 +1413,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      header.cupsImagingBBox[2] = doc.PageLeft + yprint * 72;
 	      break;
 	  default :
-              header.cupsImagingBBox[0] = (doc.PageRight + doc.PageLeft - yprint * 72) / 2;
-	      header.cupsImagingBBox[2] = (doc.PageRight + doc.PageLeft + yprint * 72) / 2;
+              header.cupsImagingBBox[0] = (doc.PageRight + doc.PageLeft -
+					   yprint * 72) / 2;
+	      header.cupsImagingBBox[2] = (doc.PageRight + doc.PageLeft +
+					   yprint * 72) / 2;
 	      break;
 	  case -1 :
               header.cupsImagingBBox[0] = doc.PageRight - yprint * 72;
@@ -1409,8 +1431,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      header.cupsImagingBBox[3] = doc.PageBottom + xprint * 72;
 	      break;
 	  default :
-              header.cupsImagingBBox[1] = (doc.PageTop + doc.PageBottom - xprint * 72) / 2;
-	      header.cupsImagingBBox[3] = (doc.PageTop + doc.PageBottom + xprint * 72) / 2;
+              header.cupsImagingBBox[1] = (doc.PageTop + doc.PageBottom -
+					   xprint * 72) / 2;
+	      header.cupsImagingBBox[3] = (doc.PageTop + doc.PageBottom +
+					   xprint * 72) / 2;
 	      break;
 	  case -1 :
               header.cupsImagingBBox[1] = doc.PageTop - xprint * 72;
@@ -1426,7 +1450,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   header.ImagingBoundingBox[3] = header.cupsImagingBBox[3];
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: Orientation: %d, XPosition: %d, YPosition: %d, ImagingBoundingBox = [%d %d %d %d]\n",
+	       "imagetoraster: Orientation: %d, XPosition: %d, YPosition: %d, "
+	       "ImagingBoundingBox = [%d %d %d %d]",
 	       doc.Orientation, doc.XPosition, doc.YPosition,
 	       header.ImagingBoundingBox[0], header.ImagingBoundingBox[1],
 	       header.ImagingBoundingBox[2], header.ImagingBoundingBox[3]);
@@ -1497,21 +1522,21 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsWidth = %d\n", header.cupsWidth);
+	"imagetoraster: cupsWidth = %d", header.cupsWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsHeight = %d\n", header.cupsHeight);
+	"imagetoraster: cupsHeight = %d", header.cupsHeight);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsBitsPerColor = %d\n", header.cupsBitsPerColor);
+	"imagetoraster: cupsBitsPerColor = %d", header.cupsBitsPerColor);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsBitsPerPixel = %d\n", header.cupsBitsPerPixel);
+	"imagetoraster: cupsBitsPerPixel = %d", header.cupsBitsPerPixel);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsBytesPerLine = %d\n", header.cupsBytesPerLine);
+	"imagetoraster: cupsBytesPerLine = %d", header.cupsBytesPerLine);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsColorOrder = %d\n", header.cupsColorOrder);
+	"imagetoraster: cupsColorOrder = %d", header.cupsColorOrder);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsColorSpace = %d\n", header.cupsColorSpace);
+	"imagetoraster: cupsColorSpace = %d", header.cupsColorSpace);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: img->colorspace = %d\n", img->colorspace);
+	"imagetoraster: img->colorspace = %d", img->colorspace);
   }
 
   row = malloc(2 * header.cupsBytesPerLine);
@@ -1522,7 +1547,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       for (ypage = 0; ypage < ypages; ypage ++, page ++)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		     "imagetoraster: Formatting page %d.\n", page);
+		     "imagetoraster: Formatting page %d.", page);
 
 	if (doc.Orientation & 1)
 	{
@@ -1573,7 +1598,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      y /= 2;
 
 	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			 "imagetoraster: Writing %d leading blank lines...\n",
+			 "imagetoraster: Writing %d leading blank lines...",
 			 y);
 
 	    for (; y > 0; y --)
@@ -1582,7 +1607,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	              header.cupsBytesPerLine)
 	      {
 		if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-			     "imagetoraster: Unable to send raster data.\n");
+			     "imagetoraster: Unable to send raster data.");
 		cupsImageClose(img);
 		return (1);
 	      }
@@ -1678,7 +1703,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	                              header.cupsBytesPerLine)
 	    {
 	      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			   "imagetoraster: Unable to send raster data.\n");
+			   "imagetoraster: Unable to send raster data.");
 	      cupsImageClose(img);
 	      return (1);
 	    }
@@ -1711,7 +1736,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      y = y - y / 2;
 
 	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			 "imagetoraster: Writing %d trailing blank lines...\n",
+			 "imagetoraster: Writing %d trailing blank lines...",
 			 y);
 
 	    for (; y > 0; y --)
@@ -1720,7 +1745,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	              header.cupsBytesPerLine)
 	      {
 		if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-			     "imagetoraster: Unable to send raster data.\n");
+			     "imagetoraster: Unable to send raster data.");
 		cupsImageClose(img);
 		return (1);
 	      }
@@ -1854,7 +1879,8 @@ format_CMY(imagetoraster_doc_t *doc,
         bitoffset = 0;
 	break;
     default :
-        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+        bitoffset = header->cupsBitsPerPixel *
+	  ((header->cupsWidth - xsize) / 2);
 	break;
     case 1 :
         bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
@@ -2231,7 +2257,8 @@ format_CMYK(imagetoraster_doc_t *doc,
         bitoffset = 0;
 	break;
     default :
-        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+        bitoffset = header->cupsBitsPerPixel *
+	  ((header->cupsWidth - xsize) / 2);
 	break;
     case 1 :
         bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
@@ -2623,7 +2650,8 @@ format_K(imagetoraster_doc_t *doc,
         bitoffset = 0;
 	break;
     default :
-        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+        bitoffset = header->cupsBitsPerPixel *
+	  ((header->cupsWidth - xsize) / 2);
 	break;
     case 1 :
         bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
@@ -2746,7 +2774,8 @@ format_KCMY(imagetoraster_doc_t *doc,
         bitoffset = 0;
 	break;
     default :
-        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+        bitoffset = header->cupsBitsPerPixel *
+	  ((header->cupsWidth - xsize) / 2);
 	break;
     case 1 :
         bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
@@ -3155,7 +3184,8 @@ format_KCMYcm(
     cups_ib_t           *r0,		/* I - Primary image data */
     cups_ib_t           *r1)		/* I - Image data for interpolation */
 {
-  int		pc, pm, py, pk;		/* Cyan, magenta, yellow, and black values */
+  int		pc, pm, py, pk;		/* Cyan, magenta, yellow, and
+					   black values */
   cups_ib_t	*ptr,			/* Pointer into row */
 		*cptr,			/* Pointer into cyan */
 		*mptr,			/* Pointer into magenta */
@@ -3176,7 +3206,8 @@ format_KCMYcm(
         bitoffset = 0;
 	break;
     default :
-        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+        bitoffset = header->cupsBitsPerPixel *
+	  ((header->cupsWidth - xsize) / 2);
 	break;
     case 1 :
         bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
@@ -3347,7 +3378,8 @@ format_RGBA(imagetoraster_doc_t *doc,
         bitoffset = 0;
 	break;
     default :
-        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+        bitoffset = header->cupsBitsPerPixel *
+	  ((header->cupsWidth - xsize) / 2);
 	break;
     case 1 :
         bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
@@ -3746,7 +3778,8 @@ format_W(imagetoraster_doc_t *doc,
         bitoffset = 0;
 	break;
     default :
-        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+        bitoffset = header->cupsBitsPerPixel *
+	  ((header->cupsWidth - xsize) / 2);
 	break;
     case 1 :
         bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
@@ -3867,7 +3900,8 @@ format_YMC(imagetoraster_doc_t *doc,
         bitoffset = 0;
 	break;
     default :
-        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+        bitoffset = header->cupsBitsPerPixel *
+	  ((header->cupsWidth - xsize) / 2);
 	break;
     case 1 :
         bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
@@ -4259,7 +4293,8 @@ format_YMCK(imagetoraster_doc_t *doc,
         bitoffset = 0;
 	break;
     default :
-        bitoffset = header->cupsBitsPerPixel * ((header->cupsWidth - xsize) / 2);
+        bitoffset = header->cupsBitsPerPixel *
+	  ((header->cupsWidth - xsize) / 2);
 	break;
     case 1 :
         bitoffset = header->cupsBitsPerPixel * (header->cupsWidth - xsize);
@@ -4708,4 +4743,3 @@ raster_cb(
 
   return (0);
 }
-

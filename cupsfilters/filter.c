@@ -73,6 +73,7 @@ cups_logfunc(void *data,
   vfprintf(stderr, message, arglist);
   fflush(stderr);
   va_end(arglist);
+  fputc('\n', stderr);
 }
 
 
@@ -183,7 +184,8 @@ filterCUPSWrapper(
   * Fire up the filter function (output to stdout, file descriptor 1)
   */
 
-  return filter(inputfd, 1, inputseekable, JobCanceled, &filter_data, parameters);
+  return filter(inputfd, 1, inputseekable, JobCanceled, &filter_data,
+		parameters);
 }
 
 
@@ -246,12 +248,12 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
        filter = (filter_filter_in_chain_t *)cupsArrayNext(filter_chain)) {
     if (!filter->function) {
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "filterChain: Invalid filter: %s - Removing...\n",
+		   "filterChain: Invalid filter: %s - Removing...",
 		   filter->name ? filter->name : "Unspecified");
       cupsArrayRemove(filter_chain, filter);
     } else
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "filterChain: Running filter: %s\n",
+		   "filterChain: Running filter: %s",
 		   filter->name ? filter->name : "Unspecified");
   }
 
@@ -281,7 +283,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
     if (next) {
       if (pipe(filterfds[1 - current]) < 0) {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "filterChain: Could not create pipe for output of %s: %s\n",
+		     "filterChain: Could not create pipe for output of %s: %s",
 		     strerror(errno));
 	return (1);
       }
@@ -316,13 +318,13 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
       close(infd);
       close(outfd);
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "filterChain: %s completed with status %d.\n",
+		   "filterChain: %s completed with status %d.",
 		   filter->name ? filter->name : "Unspecified filter", ret);
       exit(ret);
 
     } else if (pid > 0) {
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "filterChain: %s (PID %d) started.\n",
+		   "filterChain: %s (PID %d) started.",
 		   filter->name ? filter->name : "Unspecified filter", pid);
 
       pid_entry = malloc(sizeof(filter_function_pid_t));
@@ -359,7 +361,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
     if ((pid = wait(&status)) < 0) {
       if (errno == EINTR && *jobcanceled) {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "filterChain: Job canceled, killing filters ...\n");
+		     "filterChain: Job canceled, killing filters ...");
 	for (pid_entry = (filter_function_pid_t *)cupsArrayFirst(pids);
 	     pid_entry;
 	     pid_entry = (filter_function_pid_t *)cupsArrayNext(pids)) {
@@ -380,17 +382,17 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
       if (status) {
 	if (WIFEXITED(status)) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "filterChain: %s (PID %d) stopped with status %d\n",
+		       "filterChain: %s (PID %d) stopped with status %d",
 		       pid_entry->name, pid, WEXITSTATUS(status));
 	} else {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "filterChain: %s (PID %d) crashed on signal %d\n",
+		       "filterChain: %s (PID %d) crashed on signal %d",
 		       pid_entry->name, pid, WTERMSIG(status));
 	}
 	retval = 1;
       } else {
 	if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		       "filterChain: %s (PID %d) exited with no errors.\n",
+		       "filterChain: %s (PID %d) exited with no errors.",
 		       pid_entry->name, pid);
       }
 
@@ -455,7 +457,7 @@ filterSetCommonOptions(
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid value for page width: %.0f\n",
+		   "Invalid value for page width: %.0f",
 		   pagesize->width);
       corrected = 1;
     }
@@ -464,7 +466,7 @@ filterSetCommonOptions(
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid value for page length: %.0f\n",
+		   "Invalid value for page length: %.0f",
 		   pagesize->length);
       corrected = 1;
     }
@@ -473,7 +475,7 @@ filterSetCommonOptions(
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid value for page top margin: %.0f\n",
+		   "Invalid value for page top margin: %.0f",
 		   pagesize->top);
       if (*PageLength >= *PageBottom)
 	*PageTop = *PageLength - *PageBottom;
@@ -486,7 +488,7 @@ filterSetCommonOptions(
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid value for page bottom margin: %.0f\n",
+		   "Invalid value for page bottom margin: %.0f",
 		   pagesize->bottom);
       if (*PageLength <= *PageBottom)
 	*PageBottom = 0.0f;
@@ -495,7 +497,7 @@ filterSetCommonOptions(
     if (*PageBottom == *PageTop)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid values for page margins: Bottom: %.0f; Top: %.0f\n",
+		   "Invalid values for page margins: Bottom: %.0f; Top: %.0f",
 		   *PageBottom, *PageTop);
       *PageTop = *PageLength - *PageBottom;
       if (*PageBottom == *PageTop)
@@ -508,7 +510,7 @@ filterSetCommonOptions(
     if (*PageBottom > *PageTop)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid values for page margins: Bottom: %.0f; Top: %.0f\n",
+		   "Invalid values for page margins: Bottom: %.0f; Top: %.0f",
 		   *PageBottom, *PageTop);
       float swap = *PageBottom;
       *PageBottom = *PageTop;
@@ -521,7 +523,7 @@ filterSetCommonOptions(
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid value for page left margin: %.0f\n",
+		   "Invalid value for page left margin: %.0f",
 		   pagesize->left);
       if (*PageWidth <= *PageLeft)
 	*PageLeft = 0.0f;
@@ -532,7 +534,7 @@ filterSetCommonOptions(
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid value for page right margin: %.0f\n",
+		   "Invalid value for page right margin: %.0f",
 		   pagesize->right);
       if (*PageWidth >= *PageLeft)
 	*PageRight = *PageWidth - *PageLeft;
@@ -543,7 +545,7 @@ filterSetCommonOptions(
     if (*PageLeft == *PageRight)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid values for page margins: Left: %.0f; Right: %.0f\n",
+		   "Invalid values for page margins: Left: %.0f; Right: %.0f",
 		   *PageLeft, *PageRight);
       *PageRight = *PageWidth - *PageLeft;
       if (*PageLeft == *PageRight)
@@ -556,7 +558,7 @@ filterSetCommonOptions(
     if (*PageLeft > *PageRight)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Invalid values for page margins: Left: %.0f; Right: %.0f\n",
+		   "Invalid values for page margins: Left: %.0f; Right: %.0f",
 		   *PageLeft, *PageRight);
       float swap = *PageLeft;
       *PageLeft = *PageRight;
@@ -567,17 +569,17 @@ filterSetCommonOptions(
     if (corrected)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "PPD Page = %.0fx%.0f; %.0f,%.0f to %.0f,%.0f\n",
+		   "PPD Page = %.0fx%.0f; %.0f,%.0f to %.0f,%.0f",
 		   pagesize->width, pagesize->length, pagesize->left,
 		   pagesize->bottom, pagesize->right, pagesize->top);
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "Corrected Page = %.0fx%.0f; %.0f,%.0f to %.0f,%.0f\n",
+		   "Corrected Page = %.0fx%.0f; %.0f,%.0f to %.0f,%.0f",
 		   *PageWidth, *PageLength, *PageLeft,
 		   *PageBottom, *PageRight, *PageTop);
     }
     else
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "Page = %.0fx%.0f; %.0f,%.0f to %.0f,%.0f\n",
+		   "Page = %.0fx%.0f; %.0f,%.0f to %.0f,%.0f",
 		   pagesize->width, pagesize->length, pagesize->left,
 		   pagesize->bottom, pagesize->right, pagesize->top);
   }
@@ -599,7 +601,8 @@ filterSetCommonOptions(
         *Orientation = 3;
     }
   }
-  else if ((val = cupsGetOption("orientation-requested", num_options, options)) != NULL)
+  else if ((val = cupsGetOption("orientation-requested",
+				num_options, options)) != NULL)
   {
    /*
     * Map IPP orientation values to 0 to 3:
@@ -774,4 +777,3 @@ filterUpdatePageVars(int Orientation,
 	break;
   }
 }
-

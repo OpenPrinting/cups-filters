@@ -61,10 +61,11 @@ writeStartPage(int  page,   /* I - Page to write */
                rastertops_doc_t *doc) /* I - Document information */
 {
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-				 "PAGE: %d %d\n", page, 1);
+				 "PAGE: %d %d", page, 1);
   fprintf(doc->outputfp, "%%%%Page: %d %d\n", page, page);
   fprintf(doc->outputfp, "%%%%BeginPageSetup\n");
-  fprintf(doc->outputfp, "<< /PageSize[%d %d] >> setpagedevice\n", width, length);
+  fprintf(doc->outputfp, "<< /PageSize[%d %d] >> setpagedevice\n", width,
+	  length);
   fprintf(doc->outputfp, "%%%%EndPageSetup\n");
 }
 
@@ -159,12 +160,14 @@ writeImage(int           pagewidth,  /* I - width of page in points */
   }     
 	
   if(bpc==16)
-    fprintf(doc->outputfp, "/DataSource {3 string 0 1 2 {1 index exch Input read {pop}"
+    fprintf(doc->outputfp,
+	    "/DataSource {3 string 0 1 2 {1 index exch Input read {pop}"
 	   "if Input read pop put } for} bind\n");
   else
     fprintf(doc->outputfp, "/DataSource currentfile /FlateDecode filter\n");
 	
-  fprintf(doc->outputfp, "/ImageMatrix [%d 0 0 %d 0 %d]\n", pixwidth, -1*pixheight, pixheight);
+  fprintf(doc->outputfp, "/ImageMatrix [%d 0 0 %d 0 %d]\n", pixwidth,
+	  -1*pixheight, pixheight);
   fprintf(doc->outputfp, ">> image\n");
 }
 
@@ -312,23 +315,23 @@ zerr(int ret, /* I - Return status of deflate */
   switch (ret) {
   case Z_ERRNO:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - error in source data or output file\n");
+		  "rastertops: zpipe - error in source data or output file");
     break;
   case Z_STREAM_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - invalid compression level\n");
+		  "rastertops: zpipe - invalid compression level");
     break;
   case Z_DATA_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - invalid or incomplete deflate data\n");
+		  "rastertops: zpipe - invalid or incomplete deflate data");
     break;
   case Z_MEM_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - out of memory\n");
+		  "rastertops: zpipe - out of memory");
     break;
   case Z_VERSION_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - zlib version mismatch!\n");
+		  "rastertops: zpipe - zlib version mismatch!");
   }
 }
 
@@ -394,7 +397,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertops: Unable to open input data stream.\n"); 
+		   "rastertops: Unable to open input data stream.");
     }
 
     return (1);
@@ -409,7 +412,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertops: Unable to open output data stream.\n"); 
+		   "rastertops: Unable to open output data stream.");
     }
 
     cupsFileClose(inputfp);
@@ -444,10 +447,11 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
     int          linenum; /* Line number */
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-     "rastertops: The PPD file could not be opened.\n");
+		 "rastertops: The PPD file could not be opened.");
     status = ppdLastError(&linenum);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-     "rastertops: %s on line %d.\n", ppdErrorString(status), linenum);
+		 "rastertops: %s on line %d.", ppdErrorString(status),
+		 linenum);
   }
 
   doc.JobCanceled = jobcanceled;
@@ -485,7 +489,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
     Page ++;
 
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-     "rastertops: Starting page %d.\n", Page);
+     "rastertops: Starting page %d.", Page);
 
    /*
     *	Write the starting of the page
@@ -510,7 +514,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
   if (empty)
   {
      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-      "rastertops: Input is empty, outputting empty file.\n");
+      "rastertops: Input is empty, outputting empty file.");
      cupsRasterClose(ras);
      return 0;
   }

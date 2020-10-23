@@ -57,14 +57,19 @@ typedef struct pclmtoraster_data_s
   unsigned int nplanes;
   unsigned int nbands;
   unsigned int bytesPerLine; /* number of bytes per line */
-  /* Note: When CUPS_ORDER_BANDED, cupsBytesPerLine = bytesPerLine*cupsNumColors */
+  /* Note: When CUPS_ORDER_BANDED,
+     cupsBytesPerLine = bytesPerLine*cupsNumColors */
   std::string colorspace; /* Colorspace of raster data */
 } pclmtoraster_data_t;
 
-typedef unsigned char *(*ConvertCSpace)(unsigned char *src, unsigned char *dst, unsigned int row,
-					unsigned int pixels, pclmtoraster_data_t *data);
-typedef unsigned char *(*ConvertLine)  (unsigned char *src, unsigned char *dst, unsigned char *buf,
-					unsigned int row, unsigned int plane, pclmtoraster_data_t *data,
+typedef unsigned char *(*ConvertCSpace)(unsigned char *src, unsigned char *dst,
+					unsigned int row,
+					unsigned int pixels,
+					pclmtoraster_data_t *data);
+typedef unsigned char *(*ConvertLine)  (unsigned char *src, unsigned char *dst,
+					unsigned char *buf,
+					unsigned int row, unsigned int plane,
+					pclmtoraster_data_t *data,
 					ConvertCSpace convertcspace);
 
 typedef struct conversion_function_s
@@ -73,7 +78,7 @@ typedef struct conversion_function_s
   ConvertLine convertline;	/* Function tom modify raster data of a line */
 } conversion_function_t;
 
-static void
+static int
 parseOpts(filter_data_t *data,
 	  pclmtoraster_data_t *pclmtoraster_data)
 {
@@ -119,7 +124,7 @@ parseOpts(filter_data_t *data,
 
   if (ppd == NULL && log)
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pclmtoraster: PPD file is not specified.\n");
+	  "pclmtoraster: PPD file is not specified.");
   if (ppd)
     ppdMarkDefaults(ppd);
 
@@ -162,8 +167,10 @@ parseOpts(filter_data_t *data,
       }
       if (strcasecmp(backside,"ManualTumble") == 0 && header->Tumble)
       {
-        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y = true;
-        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y = true;
+        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
+	  true;
+        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
+	  true;
         if (flippedMargin == FM_TRUE)
 	{
           pclmtoraster_data->swap_margin_y = false;
@@ -171,8 +178,10 @@ parseOpts(filter_data_t *data,
       }
       else if (strcasecmp(backside,"Rotated") == 0 && !header->Tumble)
       {
-        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y = true;
-        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y = true;
+        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
+	  true;
+        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
+	  true;
         if (flippedMargin == FM_TRUE)
 	{
           pclmtoraster_data->swap_margin_y = false;
@@ -183,7 +192,8 @@ parseOpts(filter_data_t *data,
         if (header->Tumble)
 	{
           pclmtoraster_data->swap_image_x = true;
-          pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y = true;
+          pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
+	    true;
         }
 	else
 	{
@@ -191,7 +201,8 @@ parseOpts(filter_data_t *data,
         }
         if (flippedMargin == FM_FALSE)
 	{
-          pclmtoraster_data->swap_margin_y = !(pclmtoraster_data->swap_margin_y);
+          pclmtoraster_data->swap_margin_y =
+	    !(pclmtoraster_data->swap_margin_y);
         }
       }
     }
@@ -203,7 +214,8 @@ parseOpts(filter_data_t *data,
          !strcasecmp(attr->value, "yes")))
       pclmtoraster_data->pwgraster = 1;
     if (pclmtoraster_data->pwgraster == 1)
-      cupsRasterParseIPPOptions(header, num_options, options, pclmtoraster_data->pwgraster, 0);
+      cupsRasterParseIPPOptions(header, num_options, options,
+				pclmtoraster_data->pwgraster, 0);
 #endif /* HAVE_CUPS_1_7 */
   } else {
 #ifdef HAVE_CUPS_1_7
@@ -218,11 +230,12 @@ parseOpts(filter_data_t *data,
       else
         pclmtoraster_data->pwgraster = 0;
     }
-    cupsRasterParseIPPOptions(header,num_options,options,pclmtoraster_data->pwgraster,1);
+    cupsRasterParseIPPOptions(header, num_options, options,
+			      pclmtoraster_data->pwgraster, 1);
 #else
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		"pclmtoraster: No PPD file specified: %s\n", strerror(errno));
-    exit(1);
+		"pclmtoraster: No PPD file specified: %s", strerror(errno));
+    return (1);
 #endif /* HAVE_CUPS_1_7 */
   }
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
@@ -231,7 +244,9 @@ parseOpts(filter_data_t *data,
 
   strncpy(pclmtoraster_data->pageSizeRequested, header->cupsPageSizeName, 64);
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		"pclmtoraster: Page size requested: %s.\n", header->cupsPageSizeName);
+		"pclmtoraster: Page size requested: %s.",
+	       header->cupsPageSizeName);
+  return(0);
 }
 
 static bool
@@ -243,7 +258,8 @@ mediaboxlookup(QPDFObjectHandle object,
     return false;
 
   // assign mediabox values to rect
-  std::vector<QPDFObjectHandle> mediabox = object.getKey("/MediaBox").getArrayAsVector();
+  std::vector<QPDFObjectHandle> mediabox =
+    object.getKey("/MediaBox").getArrayAsVector();
   for (int i = 0; i < 4; ++i)
   {
     rect[i] = mediabox[i].getNumericValue();
@@ -274,7 +290,7 @@ rotatebitmap(unsigned char *src,    /* I - Input string */
 
   if (rotate == 0)
   {
-    return src;
+    return (src);
   }
   else if (rotate == 180)
   {
@@ -409,11 +425,12 @@ rotatebitmap(unsigned char *src,    /* I - Input string */
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: Incorrect Rotate Value %d\n", rotate);
-    exit(1);
+		 "pclmtoraster: Incorrect Rotate Value %d, not rotating",
+		 rotate);
+    return (src);
   }
 
-  return temp;
+  return (temp);
 }
 
 static unsigned char *
@@ -602,7 +619,8 @@ convertLine(unsigned char 	*src,	/* I - Input line */
 {
   /*
    Use only convertcspace if conversion of bits and conversion of color order
-   is not required, or if dithering is required, for faster processing of raster output.
+   is not required, or if dithering is required, for faster processing of
+   raster output.
    */
   unsigned int pixels = data->header.cupsWidth;
   if ((data->header.cupsBitsPerColor == 1
@@ -620,8 +638,10 @@ convertLine(unsigned char 	*src,	/* I - Input line */
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
       pb = convertcspace(src + i*(data->numcolors), pixelBuf1, row, 1, data);
-      pb = convertbits(pb, pixelBuf2, i, row, data->header.cupsNumColors, data->header.cupsBitsPerColor);
-      writepixel(dst, plane, i, pb, data->header.cupsNumColors, data->header.cupsBitsPerColor, data->header.cupsColorOrder);
+      pb = convertbits(pb, pixelBuf2, i, row, data->header.cupsNumColors,
+		       data->header.cupsBitsPerColor);
+      writepixel(dst, plane, i, pb, data->header.cupsNumColors,
+		 data->header.cupsBitsPerColor, data->header.cupsColorOrder);
     }
   }
   return dst;
@@ -629,21 +649,27 @@ convertLine(unsigned char 	*src,	/* I - Input line */
 
 /*
  * 'convertReverseLine()' - Function to convert colorspace and bits-per-pixel
- *                          of a single line of raster data and reverse the line.
+ *                          of a single line of raster data and reverse the
+ *                          line.
  */
 
 static unsigned char *					/* O - Output string */
 convertReverseLine(unsigned char	*src,		/* I - Input line */
-		   unsigned char	*dst,		/* O - Destination string */
+		   unsigned char	*dst,		/* O - Destination
+							       string */
 		   unsigned char	*buf,		/* I - Buffer string */
 		   unsigned int		row,		/* I - Current Row */
 		   unsigned int		plane,		/* I - Plane/Band */
-		   pclmtoraster_data_t *data,		/* I - pclmtoraster filter data */
-		   ConvertCSpace	convertcspace)	/* I - Function for conversion of colorspace */
+		   pclmtoraster_data_t *data,		/* I - pclmtoraster
+							       filter data */
+		   ConvertCSpace	convertcspace)	/* I - Function for
+							       conversion of
+							       colorspace */
 {
   /*
    Use only convertcspace if conversion of bits and conversion of color order
-   is not required, or if dithering is required, for faster processing of raster output.
+   is not required, or if dithering is required, for faster processing of
+   raster output.
   */
   unsigned int pixels = data->header.cupsWidth;
   if (data->header.cupsBitsPerColor == 1 && data->header.cupsNumColors == 1)
@@ -651,12 +677,15 @@ convertReverseLine(unsigned char	*src,		/* I - Input line */
     buf = convertcspace(src, buf, row, pixels, data);
     dst = reverseOneBitLine(buf, dst, pixels, data->bytesPerLine);
   }
-  else if (data->header.cupsBitsPerColor == 8 && data->header.cupsColorOrder == CUPS_ORDER_CHUNKED)
+  else if (data->header.cupsBitsPerColor == 8 &&
+	   data->header.cupsColorOrder == CUPS_ORDER_CHUNKED)
   {
     unsigned char *dp = dst;
     // Assign each pixel of buf to dst in the reverse order.
-    buf = convertcspace(src, buf, row, pixels, data) + (data->header.cupsWidth - 1)*data->header.cupsNumColors;
-    for (unsigned int i = 0; i < pixels; i++, buf-=data->header.cupsNumColors, dp+=data->header.cupsNumColors)
+    buf = convertcspace(src, buf, row, pixels, data) +
+      (data->header.cupsWidth - 1)*data->header.cupsNumColors;
+    for (unsigned int i = 0; i < pixels; i++, buf-=data->header.cupsNumColors,
+	   dp+=data->header.cupsNumColors)
     {
       for (unsigned int j = 0; j < data->header.cupsNumColors; j++)
       {
@@ -671,9 +700,12 @@ convertReverseLine(unsigned char	*src,		/* I - Input line */
       unsigned char pixelBuf1[MAX_BYTES_PER_PIXEL];
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
-      pb = convertcspace(src + (pixels - i - 1)*(data->numcolors), pixelBuf1, row, 1, data);
-      pb = convertbits(pb, pixelBuf2, i, row, data->header.cupsNumColors, data->header.cupsBitsPerColor);
-      writepixel(dst, plane, i, pb, data->header.cupsNumColors, data->header.cupsBitsPerColor, data->header.cupsColorOrder);
+      pb = convertcspace(src + (pixels - i - 1)*(data->numcolors), pixelBuf1,
+			 row, 1, data);
+      pb = convertbits(pb, pixelBuf2, i, row, data->header.cupsNumColors,
+		       data->header.cupsBitsPerColor);
+      writepixel(dst, plane, i, pb, data->header.cupsNumColors,
+		 data->header.cupsBitsPerColor, data->header.cupsColorOrder);
     }
   }
   return dst;
@@ -682,8 +714,10 @@ convertReverseLine(unsigned char	*src,		/* I - Input line */
 static void					 /* O - Exit status */
 selectConvertFunc(int			pgno,	 /* I - Page number */
 		  filter_logfunc_t	log,	 /* I - Log function */
-		  void			*ld,	 /* I - Aux. data for log function */
-		  pclmtoraster_data_t	*data,	 /* I - pclmtoraster filter data */
+		  void			*ld,	 /* I - Aux. data for log
+						        function */
+		  pclmtoraster_data_t	*data,	 /* I - pclmtoraster filter
+						        data */
 		  conversion_function_t	*convert)/* I - Conversion functions */
 {
   /* Set rowsize and numcolors based on colorspace of raster data */
@@ -707,8 +741,12 @@ selectConvertFunc(int			pgno,	 /* I - Page number */
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: Colorspace %s not supported\n", colorspace.c_str());
-    exit(1);
+		 "pclmtoraster: Colorspace %s not supported, "
+		 "defaulting to /deviceRGB",
+		 colorspace.c_str());
+    data->colorspace = "/DeviceRGB";
+    data->rowsize = header.cupsWidth*3;
+    data->numcolors = 3;
   }
 
   convert->convertcspace = convertcspaceNoop; //Default function
@@ -717,29 +755,36 @@ selectConvertFunc(int			pgno,	 /* I - Page number */
   {
     case CUPS_CSPACE_K:
      if (colorspace == "/DeviceRGB") convert->convertcspace = RGBtoBlackLine;
-     else if (colorspace == "/DeviceCMYK") convert->convertcspace = CMYKtoBlackLine;
-     else if (colorspace == "/DeviceGray") convert->convertcspace = GraytoBlackLine;
+     else if (colorspace == "/DeviceCMYK") convert->convertcspace =
+					     CMYKtoBlackLine;
+     else if (colorspace == "/DeviceGray") convert->convertcspace =
+					     GraytoBlackLine;
      break;
     case CUPS_CSPACE_W:
     case CUPS_CSPACE_SW:
      if (colorspace == "/DeviceRGB") convert->convertcspace = RGBtoWhiteLine;
-     else if (colorspace == "/DeviceCMYK") convert->convertcspace = CMYKtoWhiteLine;
+     else if (colorspace == "/DeviceCMYK") convert->convertcspace =
+					     CMYKtoWhiteLine;
      break;
     case CUPS_CSPACE_CMY:
      if (colorspace == "/DeviceRGB") convert->convertcspace = RGBtoCMYLine;
-     else if (colorspace == "/DeviceCMYK") convert->convertcspace = CMYKtoCMYLine;
-     else if (colorspace == "/DeviceGray") convert->convertcspace = GraytoCMYLine;
+     else if (colorspace == "/DeviceCMYK") convert->convertcspace =
+					     CMYKtoCMYLine;
+     else if (colorspace == "/DeviceGray") convert->convertcspace =
+					     GraytoCMYLine;
      break;
     case CUPS_CSPACE_CMYK:
      if (colorspace == "/DeviceRGB") convert->convertcspace = RGBtoCMYKLine;
-     else if (colorspace == "/DeviceGray") convert->convertcspace = GraytoCMYKLine;
+     else if (colorspace == "/DeviceGray") convert->convertcspace =
+					     GraytoCMYKLine;
      break;
     case CUPS_CSPACE_RGB:
     case CUPS_CSPACE_ADOBERGB:
     case CUPS_CSPACE_SRGB:
     default:
      if (colorspace == "/DeviceCMYK") convert->convertcspace = CMYKtoRGBLine;
-     else if (colorspace == "/DeviceGray") convert->convertcspace = GraytoRGBLine;
+     else if (colorspace == "/DeviceGray") convert->convertcspace =
+					     GraytoRGBLine;
      break;
    }
 
@@ -756,11 +801,11 @@ selectConvertFunc(int			pgno,	 /* I - Page number */
 }
 
 /*
- * 'outPage()' - Function to convert a single page of raster-only PDF/PCLm input to
- *		 CUPS/PWG Raster.
+ * 'outPage()' - Function to convert a single page of raster-only PDF/PCLm
+ *               input to CUPS/PWG Raster.
  */
 
-static void				/* O - Exit status */
+static int				/* O - Exit status */
 outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
 	QPDFObjectHandle page,		/* I - QPDF Page Object */
 	int		 pgno,		/* I - Page number */
@@ -794,13 +839,15 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   if (!mediaboxlookup(page, mediaBox))
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: PDF page %d doesn't contain a valid mediaBox\n", pgno + 1);
-    return;
+		 "pclmtoraster: PDF page %d doesn't contain a valid mediaBox",
+		 pgno + 1);
+    return (1);
   }
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pclmtoraster: mediaBox = [%f %f %f %f]: \n", mediaBox[0], mediaBox[1], mediaBox[2], mediaBox[3]);
+		 "pclmtoraster: mediaBox = [%f %f %f %f]: ",
+		 mediaBox[0], mediaBox[1], mediaBox[2], mediaBox[3]);
     l = mediaBox[2] - mediaBox[0];
     if (l < 0) l = -l;
     if (rotate == 90 || rotate == 270)
@@ -818,7 +865,8 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   // Adjust header page size and margins according to the ppd file.
   if (ppd)
   {
-    ppdRasterMatchPPDSize(&(data->header), ppd, margins, paperdimensions, NULL, NULL);
+    ppdRasterMatchPPDSize(&(data->header), ppd, margins, paperdimensions, NULL,
+			  NULL);
     if (data->pwgraster == 1)
       memset(margins, 0, sizeof(margins));
   }
@@ -860,7 +908,8 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   for (int i = 0; i < 2; i ++)
   {
     data->header.cupsPageSize[i] = paperdimensions[i];
-    data->header.PageSize[i] = (unsigned int)(data->header.cupsPageSize[i] + 0.5);
+    data->header.PageSize[i] = (unsigned int)(data->header.cupsPageSize[i] +
+					      0.5);
     if (data->pwgraster == 0)
       data->header.Margins[i] = margins[i] + 0.5;
     else
@@ -873,7 +922,8 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
     data->header.cupsImagingBBox[2] = paperdimensions[0] - margins[2];
     data->header.cupsImagingBBox[3] = paperdimensions[1] - margins[3];
     for (int i = 0; i < 4; i ++)
-      data->header.ImagingBoundingBox[i] = (unsigned int)(data->header.cupsImagingBBox[i] + 0.5);
+      data->header.ImagingBoundingBox[i] =
+	(unsigned int)(data->header.cupsImagingBBox[i] + 0.5);
   }
   else
   {
@@ -924,24 +974,28 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
     data->header.cupsWidth = temp;
   }
 
-  data->bytesPerLine = data->header.cupsBytesPerLine = (data->header.cupsBitsPerPixel * data->header.cupsWidth + 7) / 8;
+  data->bytesPerLine = data->header.cupsBytesPerLine =
+    (data->header.cupsBitsPerPixel * data->header.cupsWidth + 7) / 8;
   if (data->header.cupsColorOrder == CUPS_ORDER_BANDED)
     data->header.cupsBytesPerLine *= data->header.cupsNumColors;
 
   if (!cupsRasterWriteHeader2(raster,&(data->header)))
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: Can't write page %d header\n", pgno + 1);
-    exit(1);
+		 "pclmtoraster: Can't write page %d header", pgno + 1);
+    return (1);
   }
 
-  data->colorspace = (colorspace_obj.isName() ? colorspace_obj.getName() : "/DeviceRGB"); // Default for pclm files in DeviceRGB
+  data->colorspace = (colorspace_obj.isName() ?
+		      colorspace_obj.getName() : "/DeviceRGB");
+                         // Default for pclm files in DeviceRGB
 
   /* Select convertline and convertscpace function */
   selectConvertFunc(pgno, log, ld, data, convert);
 
   // If page is to be swapped in both x and y, rotate it by 180 degress
-  if (data->header.Duplex && (pgno & 1) && data->swap_image_y && data->swap_image_x)
+  if (data->header.Duplex && (pgno & 1) && data->swap_image_y &&
+      data->swap_image_x)
   {
     rotate = (rotate + 180) % 360;
     data->swap_image_y = false;
@@ -952,7 +1006,9 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   if (rotate)
   {
     unsigned char *bitmap2 = (unsigned char *) malloc(pixel_count);
-    bitmap2 = rotatebitmap(bitmap, bitmap2, rotate, data->header.cupsHeight, data->header.cupsWidth, data->rowsize, data->colorspace, log, ld);
+    bitmap2 = rotatebitmap(bitmap, bitmap2, rotate, data->header.cupsHeight,
+			   data->header.cupsWidth, data->rowsize,
+			   data->colorspace, log, ld);
     free(bitmap);
     bitmap = bitmap2;
   }
@@ -966,7 +1022,8 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   {
     for (unsigned int plane = 0; plane < data->nplanes ; plane++)
     {
-      unsigned char *bp = colordata + (data->header.cupsHeight - 1) * (data->rowsize);
+      unsigned char *bp = colordata +
+	(data->header.cupsHeight - 1) * (data->rowsize);
       for (unsigned int h = data->header.cupsHeight; h > 0; h--)
       {
         for (unsigned int band = 0; band < data->nbands; band++)
@@ -999,6 +1056,8 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   delete[] lineBuf;
   delete[] line;
   free(bitmap);
+
+  return (0);
 }
 
 /*
@@ -1038,7 +1097,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
     if (!*job_canceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pclmtoraster: Unable to open input data stream.\n");
+		   "pclmtoraster: Unable to open input data stream.");
     }
 
     return (1);
@@ -1047,12 +1106,14 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
   if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: Unable to copy PDF file: %s\n", strerror(errno));
+		 "pclmtoraster: Unable to copy PDF file: %s",
+		 strerror(errno));
+    fclose(inputfp);
     return (1);
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pclmtoraster: Copying input to temp file \"%s\"\n",
+	       "pclmtoraster: Copying input to temp file \"%s\"",
 	       tempfile);
 
   while ((bytes = fread(buffer, 1, sizeof(buffer), inputfp)) > 0)
@@ -1064,7 +1125,11 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
   filename = tempfile;
   pdf->processFile(filename);
 
-  parseOpts(data, &pclmtoraster_data);
+  if (parseOpts(data, &pclmtoraster_data) != 0)
+  {
+    delete(pdf);
+    return (1);
+  }
 
   if (pclmtoraster_data.header.cupsBitsPerColor != 1
      && pclmtoraster_data.header.cupsBitsPerColor != 2
@@ -1073,8 +1138,11 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
      && pclmtoraster_data.header.cupsBitsPerColor != 16)
   {
     if(log) log(ld, FILTER_LOGLEVEL_ERROR,
-    		"pclmtoraster: Specified color format is not supported: %s\n", strerror(errno));
-    exit(1);
+		"pclmtoraster: Specified color format is not supported: %s",
+		strerror(errno));
+    delete(pdf);
+    if (pclmtoraster_data.ppd != NULL)  ppdClose(pclmtoraster_data.ppd);
+    return (1);
   }
 
   if (pclmtoraster_data.header.cupsColorOrder == CUPS_ORDER_PLANAR)
@@ -1094,12 +1162,16 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
     pclmtoraster_data.nbands = 1;
   }
 
-  if ((raster = cupsRasterOpen(outputfd, pclmtoraster_data.pwgraster ? CUPS_RASTER_WRITE_PWG :
+  if ((raster = cupsRasterOpen(outputfd, pclmtoraster_data.pwgraster ?
+			       CUPS_RASTER_WRITE_PWG :
                                CUPS_RASTER_WRITE)) == 0)
   {
-	if(log) log(ld, FILTER_LOGLEVEL_ERROR,
-			"pclmtoraster: Can't open raster stream: %s\n", strerror(errno));
-        exit(1);
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		"pclmtoraster: Can't open raster stream: %s",
+		strerror(errno));
+    delete(pdf);
+    if (pclmtoraster_data.ppd != NULL)  ppdClose(pclmtoraster_data.ppd);
+    return (1);
   }
 
   std::vector<QPDFObjectHandle> pages = pdf->getAllPages();
@@ -1107,9 +1179,11 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 
   for (int i = 0; i < npages; ++i)
   {
-      if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "pclmtoraster: Starting page %d.\n", i+1);
-       outPage(raster, pages[i], i, log, ld, &pclmtoraster_data, &convert);
+    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		 "pclmtoraster: Starting page %d.", i+1);
+    if (outPage(raster, pages[i], i, log, ld, &pclmtoraster_data,
+		&convert) != 0)
+      break;
   }
 
   cupsRasterClose(raster);

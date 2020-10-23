@@ -596,7 +596,8 @@ static int outImage(imagetopdf_doc_t *doc, int imgObj)
   /* out ascii85 needs multiple of 4bytes */
   for (y = doc->yc0, out_offset = 0; y <= doc->yc1; y ++)
   {
-    cupsImageGetRow(doc->img, doc->xc0, y, doc->xc1 - doc->xc0 + 1, doc->row + out_offset);
+    cupsImageGetRow(doc->img, doc->xc0, y, doc->xc1 - doc->xc0 + 1,
+		    doc->row + out_offset);
 
     out_length = (doc->xc1 - doc->xc0 + 1) * abs(doc->colorspace) + out_offset;
     out_offset = out_length & 3;
@@ -764,7 +765,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Unable to open input data stream.\n"); 
+		   "imagetopdf: Unable to open input data stream.");
     }
 
     return (1);
@@ -778,13 +779,13 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Unable to copy input: %s\n",
+		   "imagetopdf: Unable to copy input: %s",
 		   strerror(errno));
       return (1);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Copying input to temp file \"%s\"\n",
+		 "imagetopdf: Copying input to temp file \"%s\"",
 		 tempfile);
 
     while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
@@ -802,7 +803,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       if (!*jobcanceled)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "imagetopdf: Unable to open temporary file.\n"); 
+		     "imagetopdf: Unable to open temporary file.");
       }
 
       return (1);
@@ -818,7 +819,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Unable to open output data stream.\n"); 
+		   "imagetopdf: Unable to open output data stream.");
     }
 
     fclose(fp);
@@ -957,7 +958,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     doc.EvenDuplex = 1;
   }
 
-  if ((val = cupsGetOption("multiple-document-handling", num_options, options)) != NULL)
+  if ((val = cupsGetOption("multiple-document-handling",
+			   num_options, options)) != NULL)
   {
    /*
     * This IPP attribute is unnecessarily complicated...
@@ -1071,22 +1073,26 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
   doc.colorspace = doc.ColorDevice ? CUPS_IMAGE_RGB_CMYK : CUPS_IMAGE_WHITE;
 
-  doc.img = cupsImageOpenFP(fp, doc.colorspace, CUPS_IMAGE_WHITE, sat, hue, NULL);
+  doc.img = cupsImageOpenFP(fp, doc.colorspace, CUPS_IMAGE_WHITE, sat, hue,
+			    NULL);
   if (doc.img != NULL) {
 
   int margin_defined = 0;
   int fidelity = 0;
   int document_large = 0;
 
-  if(doc.ppd && (doc.ppd->custom_margins[0]||doc.ppd->custom_margins[1]||
-      doc.ppd->custom_margins[2]||doc.ppd->custom_margins[3]))   // In case of custom margins
+  if (doc.ppd && (doc.ppd->custom_margins[0] || doc.ppd->custom_margins[1] ||
+		  doc.ppd->custom_margins[2] || doc.ppd->custom_margins[3]))
+                                            // In case of custom margins
     margin_defined = 1;
-  if(doc.PageLength!=doc.PageTop-doc.PageBottom||doc.PageWidth!=doc.PageRight-doc.PageLeft)
+  if (doc.PageLength != doc.PageTop - doc.PageBottom ||
+      doc.PageWidth != doc.PageRight - doc.PageLeft)
     margin_defined = 1;
 
-  if((val = cupsGetOption("ipp-attribute-fidelity",num_options,options)) != NULL) {
-    if(!strcasecmp(val,"true")||!strcasecmp(val,"yes")||
-        !strcasecmp(val,"on")) {
+  if ((val = cupsGetOption("ipp-attribute-fidelity",num_options,options)) !=
+      NULL) {
+    if(!strcasecmp(val, "true") || !strcasecmp(val, "yes") ||
+        !strcasecmp(val, "on")) {
       fidelity = 1;
     }
   }
@@ -1155,7 +1161,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     else
       zoom = 0.0;
   }
-  else if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
+  else if ((val = cupsGetOption("natural-scaling", num_options, options)) !=
+	   NULL)
     zoom = 0.0;
 
   if((val = cupsGetOption("fill",num_options,options))!=0) {
@@ -1240,7 +1247,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       if((fabs(final_w-w)>0.5*w)||(fabs(final_h-h)>0.5*h))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetopdf: Ignoring crop-to-fit option!\n");
+		     "imagetopdf: Ignoring crop-to-fit option!");
         cropfit=0;
       }
       else{
@@ -1275,7 +1282,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   if (doc.img == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "imagetopdf: Unable to open image file for printing!\n");
+		 "imagetopdf: Unable to open image file for printing!");
     ppdClose(doc.ppd);
     fclose(doc.outputfp);
     close(outputfd);
@@ -1298,7 +1305,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     yppi = xppi;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetopdf: Before scaling: xppi=%d, yppi=%d, zoom=%.2f\n",
+	       "imagetopdf: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
 	       xppi, yppi, zoom);
 
   if (xppi > 0)
@@ -1319,14 +1326,14 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Before scaling: xprint=%.1f, yprint=%.1f\n",
+		 "imagetopdf: Before scaling: xprint=%.1f, yprint=%.1f",
 		 doc.xprint, doc.yprint);
 
     doc.xinches = (float)cupsImageGetWidth(doc.img) / (float)xppi;
     doc.yinches = (float)cupsImageGetHeight(doc.img) / (float)yppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Image size is %.1f x %.1f inches...\n",
+		 "imagetopdf: Image size is %.1f x %.1f inches...",
 		 doc.xinches, doc.yinches);
 
     if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
@@ -1343,7 +1350,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetopdf: Auto orientation...\n");
+		   "imagetopdf: Auto orientation...");
 
       if ((doc.xinches > doc.xprint || doc.yinches > doc.yprint) &&
           doc.xinches <= doc.yprint && doc.yinches <= doc.xprint)
@@ -1353,7 +1360,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetopdf: Using landscape orientation...\n");
+		     "imagetopdf: Using landscape orientation...");
 
 	doc.Orientation = (doc.Orientation + 1) & 3;
 	doc.xsize       = doc.yprint;
@@ -1370,14 +1377,16 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
     doc.xprint = (doc.PageRight - doc.PageLeft) / 72.0;
     doc.yprint = (doc.PageTop - doc.PageBottom) / 72.0;
-    doc.aspect = (float)cupsImageGetYPPI(doc.img) / (float)cupsImageGetXPPI(doc.img);
+    doc.aspect = (float)cupsImageGetYPPI(doc.img) /
+      (float)cupsImageGetXPPI(doc.img);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Before scaling: xprint=%.1f, yprint=%.1f\n",
+		 "imagetopdf: Before scaling: xprint=%.1f, yprint=%.1f",
 		 doc.xprint, doc.yprint);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: cupsImageGetXPPI(img) = %d, cupsImageGetYPPI(img) = %d, aspect = %f\n",
+		 "imagetopdf: cupsImageGetXPPI(img) = %d, "
+		 "cupsImageGetYPPI(img) = %d, aspect = %f",
 		 cupsImageGetXPPI(doc.img), cupsImageGetYPPI(doc.img),
 		 doc.aspect);
 
@@ -1404,10 +1413,10 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Portrait size is %.2f x %.2f inches\n",
+		 "imagetopdf: Portrait size is %.2f x %.2f inches",
 		 doc.xsize, doc.ysize);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Landscape size is %.2f x %.2f inches\n",
+		 "imagetopdf: Landscape size is %.2f x %.2f inches",
 		 doc.xsize2, doc.ysize2);
 
     if (cupsGetOption("orientation-requested", num_options, options) == NULL &&
@@ -1419,7 +1428,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetopdf: Auto orientation...\n");
+		   "imagetopdf: Auto orientation...");
 
       if ((doc.xsize * doc.ysize) < (doc.xsize2 * doc.xsize2))
       {
@@ -1428,7 +1437,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetopdf: Using landscape orientation...\n");
+		     "imagetopdf: Using landscape orientation...");
 
 	doc.Orientation = 1;
 	doc.xinches     = doc.xsize2;
@@ -1443,7 +1452,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetopdf: Using portrait orientation...\n");
+		     "imagetopdf: Using portrait orientation...");
 
 	doc.Orientation = 0;
 	doc.xinches     = doc.xsize;
@@ -1453,7 +1462,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     else if (doc.Orientation & 1)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetopdf: Using landscape orientation...\n");
+		   "imagetopdf: Using landscape orientation...");
 
       doc.xinches     = doc.xsize2;
       doc.yinches     = doc.ysize2;
@@ -1463,7 +1472,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetopdf: Using portrait orientation...\n");
+		   "imagetopdf: Using portrait orientation...");
 
       doc.xinches     = doc.xsize;
       doc.yinches     = doc.ysize;
@@ -1492,7 +1501,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   doc.yprint = doc.yinches / doc.ypages;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetopdf: xpages = %dx%.2fin, ypages = %dx%.2fin\n",
+	       "imagetopdf: xpages = %dx%.2fin, ypages = %dx%.2fin",
 	       doc.xpages, doc.xprint, doc.ypages, doc.yprint);
 
  /*
@@ -1540,7 +1549,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       length = doc.ppd->custom_min[1];
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Updated custom page size to %.2f x %.2f inches...\n",
+		 "imagetopdf: Updated custom page size to %.2f x %.2f "
+		 "inches...",
 		 width / 72.0, length / 72.0);
 
    /*
@@ -1710,7 +1720,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       doc.ppd->jcl_ps = NULL;
       pdf_printer = 0;
     }
-    ppdEmitJCL(doc.ppd, doc.outputfp, data->job_id, data->job_user, data->job_title);
+    ppdEmitJCL(doc.ppd, doc.outputfp, data->job_id, data->job_user,
+	       data->job_title);
     emitJCLOptions(&doc, doc.outputfp, deviceCopies);
     free(doc.ppd->jcl_ps);
     doc.ppd->jcl_ps = old_jcl_ps; /* cups uses pool allocator, not free() */
@@ -1720,7 +1731,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   * Start sending the document with any commands needed...
   */
 
-  if (outPrologue(&doc, doc.Copies * doc.xpages * doc.ypages + (doc.EvenDuplex ? 1 : 0)) < 0)
+  if (outPrologue(&doc, doc.Copies * doc.xpages * doc.ypages +
+		  (doc.EvenDuplex ? 1 : 0)) < 0)
     goto out_of_memory;
 
  /*
@@ -1731,15 +1743,15 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetopdf: XPosition=%d, YPosition=%d, Orientation=%d\n",
+	"imagetopdf: XPosition=%d, YPosition=%d, Orientation=%d",
 	doc.XPosition, doc.YPosition, doc.Orientation);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetopdf: xprint=%.2f, yprint=%.2f\n", doc.xprint, doc.yprint);
+	"imagetopdf: xprint=%.2f, yprint=%.2f", doc.xprint, doc.yprint);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetopdf: PageLeft=%.0f, PageRight=%.0f, PageWidth=%.0f\n",
+	"imagetopdf: PageLeft=%.0f, PageRight=%.0f, PageWidth=%.0f",
 	doc.PageLeft, doc.PageRight, doc.PageWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetopdf: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f\n",
+	"imagetopdf: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f",
 	doc.PageBottom, doc.PageTop, doc.PageLength);
   }
 
@@ -1867,7 +1879,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetopdf: left=%.2f, top=%.2f\n", doc.left, doc.top);
+	       "imagetopdf: left=%.2f, top=%.2f", doc.left, doc.top);
 
   if (doc.Collate)
   {
@@ -1877,13 +1889,13 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     if ((contentsObjs = malloc(sizeof(int)*doc.xpages*doc.ypages)) == NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Can't allocate contentsObjs\n");
+		   "imagetopdf: Can't allocate contentsObjs");
       goto out_of_memory;
     }
     if ((imgObjs = malloc(sizeof(int)*doc.xpages*doc.ypages)) == NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Can't allocate imgObjs\n");
+		   "imagetopdf: Can't allocate imgObjs");
       goto out_of_memory;
     }
     for (doc.xpage = 0; doc.xpage < doc.xpages; doc.xpage ++)
@@ -2003,7 +2015,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
  out_of_memory:
 
   if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-	       "imagetopdf: Cannot allocate any more memory.\n");
+	       "imagetopdf: Cannot allocate any more memory.");
   freeAllObj(&doc);
   cupsImageClose(doc.img);
   ppdClose(doc.ppd);

@@ -7,10 +7,10 @@
 void NupParameters::dump(pdftopdf_doc_t *doc) const // {{{
 {
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: NupX: %d, NupY: %d\n"
-                 "width: %f, height: %f\n",
-                 nupX,nupY,
-                 width,height);
+				 "pdftopdf: NupX: %d, NupY: %d, "
+				 "width: %f, height: %f",
+				 nupX,nupY,
+				 width,height);
 
   int opos=-1,fpos=-1,spos=-1;
   if (xstart==Position::LEFT) { // or Bottom
@@ -25,28 +25,28 @@ void NupParameters::dump(pdftopdf_doc_t *doc) const // {{{
   }
   if (first==Axis::X) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: First Axis: X\n");
+				   "pdftopdf: First Axis: X");
     opos=0;
   } else if (first==Axis::Y) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: First Axis: Y\n");
+				   "pdftopdf: First Axis: Y");
     opos=2;
     std::swap(fpos,spos);
   }
 
   if ( (opos==-1)||(fpos==-1)||(spos==-1) ) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: Bad Spec: %d; start: %d, %d\n\n",
-                   first,xstart,ystart);
+				   "pdftopdf: Bad Spec: %d; start: %d, %d",
+				   first,xstart,ystart);
   } else {
     static const char *order[4]={"lr","rl","bt","tb"};
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: Order: %s%s\n",
-                   order[opos+fpos],order[(opos+2)%4+spos]);
+				   "pdftopdf: Order: %s%s",
+				   order[opos+fpos],order[(opos+2)%4+spos]);
   }
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: Alignment:\n");
+				 "pdftopdf: Alignment:");
   Position_dump(xalign,Axis::X,doc);
   Position_dump(yalign,Axis::Y,doc);
 }
@@ -140,8 +140,8 @@ void NupState::reset() // {{{
 void NupPageEdit::dump(pdftopdf_doc_t *doc) const // {{{
 {
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: xpos: %f, ypos: %f, scale: %f\n",
-                 xpos,ypos,scale);
+				 "pdftopdf: xpos: %f, ypos: %f, scale: %f",
+				 xpos,ypos,scale);
   sub.dump(doc);
 }
 // }}}

@@ -156,7 +156,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup("-dDuplex"));
     }
   }
-  snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",h->HWResolution[0], h->HWResolution[1]);
+  snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",h->HWResolution[0],
+	   h->HWResolution[1]);
   cupsArrayAdd(gs_args, strdup(tmpstr));
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
       outformat == OUTPUT_FORMAT_PWG_RASTER) {
@@ -276,11 +277,12 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
 	       (unsigned)(h->cupsMediaType));
       cupsArrayAdd(gs_args, strdup(tmpstr));
     }
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsBitsPerColor=%d",h->cupsBitsPerColor);
+    snprintf(tmpstr, sizeof(tmpstr), "-dcupsBitsPerColor=%d",
+	     h->cupsBitsPerColor);
     cupsArrayAdd(gs_args, strdup(tmpstr));
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorOrder=%d",h->cupsColorOrder);
+    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorOrder=%d", h->cupsColorOrder);
     cupsArrayAdd(gs_args, strdup(tmpstr));
-    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorSpace=%d",h->cupsColorSpace);
+    snprintf(tmpstr, sizeof(tmpstr), "-dcupsColorSpace=%d", h->cupsColorSpace);
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
   
@@ -411,11 +413,11 @@ gs_spawn (const char *filename,
       snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
 	       " %s%s%s", apos, gsargv[i], apos);
     }
-    log(ld, FILTER_LOGLEVEL_DEBUG, "%s\n", buf);
+    log(ld, FILTER_LOGLEVEL_DEBUG, "%s", buf);
 
     for (i = 0; envp[i]; i ++)
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "ghostscript: envp[%d]=\"%s\"\n", i, envp[i]);
+	  "ghostscript: envp[%d]=\"%s\"", i, envp[i]);
   }
 
   /* Create a pipe for feeding the job into Ghostscript */
@@ -424,7 +426,8 @@ gs_spawn (const char *filename,
     fds[0] = -1;
     fds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Unable to establish stdin pipe for Ghostscript call\n");
+		 "ghostscript: Unable to establish stdin pipe for Ghostscript "
+		 "call");
     goto out;
   }
 
@@ -436,7 +439,8 @@ gs_spawn (const char *filename,
     fds[0] = -1;
     fds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Unable to set \"close on exec\" flag on read end of the stdin pipe for Ghostscript call\n");
+		 "ghostscript: Unable to set \"close on exec\" flag on read "
+		 "end of the stdin pipe for Ghostscript call");
     goto out;
   }
   if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC))
@@ -444,7 +448,8 @@ gs_spawn (const char *filename,
     close(fds[0]);
     close(fds[1]);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Unable to set \"close on exec\" flag on write end of the stdin pipe for Ghostscript call\n");
+		 "ghostscript: Unable to set \"close on exec\" flag on write "
+		 "end of the stdin pipe for Ghostscript call");
     goto out;
   }
 
@@ -455,7 +460,8 @@ gs_spawn (const char *filename,
       if (fds[0] != 0) {
 	if (dup2(fds[0], 0) < 0) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "ghostscript: Unable to couple pipe with stdin of Ghostscript process\n");
+		       "ghostscript: Unable to couple pipe with stdin of "
+		       "Ghostscript process");
 	  exit(1);
 	}
 	close(fds[0]);
@@ -463,7 +469,8 @@ gs_spawn (const char *filename,
       close(fds[1]);
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: invalid pipe file descriptor to couple with stdin of Ghostscript process\n");
+		   "ghostscript: invalid pipe file descriptor to couple with "
+		   "stdin of Ghostscript process");
       exit(1);
     }
 
@@ -483,25 +490,28 @@ gs_spawn (const char *filename,
       if (outputfd != 1) {
 	if (dup2(outputfd, 1) < 0) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "ghostscript: Unable to couple stdout of Ghostscript process\n");
+		       "ghostscript: Unable to couple stdout of Ghostscript "
+		       "process");
 	  exit(1);
 	}
 	close(outputfd);
       }
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Invalid file descriptor to couple with stdout of Ghostscript process\n");
+		   "ghostscript: Invalid file descriptor to couple with "
+		   "stdout of Ghostscript process");
       exit(1);
     }
 
     /* Execute Ghostscript command line ... */
     execvpe(filename, gsargv, envp);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Unable to launch Ghostscript: %s: %s\n", filename, strerror(errno));
+		 "ghostscript: Unable to launch Ghostscript: %s: %s", filename,
+		 strerror(errno));
     exit(1);
   }
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "ghostscript: Started Ghostscript (PID %d)\n", pid);
+	       "ghostscript: Started Ghostscript (PID %d)", pid);
 
   close(fds[0]);
 
@@ -515,28 +525,28 @@ gs_spawn (const char *filename,
         if (errno == EINTR)
           goto retry_write;
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "ghostscript: write failed: %s\n", strerror(errno));
+		     "ghostscript: write failed: %s", strerror(errno));
       }
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Can't feed job data into Ghostscript\n");
+		   "ghostscript: Can't feed job data into Ghostscript");
       goto out;
     }
   }
   close (fds[1]);
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "ghostscript: Input data feed completed\n");
+	       "ghostscript: Input data feed completed");
 
  retry_wait:
   if (waitpid (pid, &wstatus, 0) == -1) {
     if (errno == EINTR)
       goto retry_wait;
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Ghostscript (PID %d) stopped with an error: %s!\n",
+		 "ghostscript: Ghostscript (PID %d) stopped with an error: %s!",
 		 pid, strerror(errno));
     goto out;
   }
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "ghostscript: Ghostscript (PID %d) exited with no errors.\n",
+	       "ghostscript: Ghostscript (PID %d) exited with no errors.",
 	       pid);
 
   /* How did Ghostscript terminate */
@@ -584,7 +594,7 @@ get_ppd_icc_fallback (ppd_file_t *ppd,
   /* neither */
   if (attr == NULL) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "ghostscript: no profiles specified in PPD\n");
+		 "ghostscript: no profiles specified in PPD");
     goto out;
   }
 
@@ -594,7 +604,7 @@ get_ppd_icc_fallback (ppd_file_t *ppd,
   /* try to find a profile that matches the qualifier exactly */
   for (;attr != NULL; attr = ppdFindNextAttr(ppd, profile_key, NULL)) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "ghostscript: found profile %s in PPD with qualifier '%s'\n",
+		 "ghostscript: found profile %s in PPD with qualifier '%s'",
 		 attr->value, attr->spec);
 
     /* invalid entry */
@@ -611,7 +621,7 @@ get_ppd_icc_fallback (ppd_file_t *ppd,
     /* check the file exists */
     if (access(full_path, 0)) {
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "ghostscript: found profile %s in PPD that does not exist\n",
+		   "ghostscript: found profile %s in PPD that does not exist",
 		   full_path);
       continue;
     }
@@ -626,7 +636,7 @@ get_ppd_icc_fallback (ppd_file_t *ppd,
   /* no match */
   if (attr == NULL) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "ghostscript: no profiles in PPD for qualifier '%s'\n",
+		 "ghostscript: no profiles in PPD for qualifier '%s'",
 		 qualifer_tmp);
     goto out;
   }
@@ -695,7 +705,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     outformat = OUTPUT_FORMAT_PWG_RASTER;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "ghostscript: Output format: %s\n",
+	       "ghostscript: Output format: %s",
 	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
 		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
 		 (outformat == OUTPUT_FORMAT_PDF ? "PDF" :
@@ -770,7 +780,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "ghostscript: Unable to open input data stream.\n"); 
+		   "ghostscript: Unable to open input data stream.");
     }
 
     return (1);
@@ -793,12 +803,12 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Unable to copy PDF file: %s\n", strerror(errno));
+		   "ghostscript: Unable to copy PDF file: %s", strerror(errno));
       return (1);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Copying input to temp file \"%s\"\n",
+		 "ghostscript: Copying input to temp file \"%s\"",
 		 tempfile);
 
     while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
@@ -818,7 +828,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
       if (!*jobcanceled)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "ghostscript: Unable to open temporary file.\n"); 
+		     "ghostscript: Unable to open temporary file.");
       }
 
       goto out;
@@ -831,7 +841,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 
   if (doc_type == GS_DOC_TYPE_EMPTY) {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Input is empty, outputting empty file.\n");
+		 "ghostscript: Input is empty, outputting empty file.");
     status = 0;
     if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
 	outformat == OUTPUT_FORMAT_PWG_RASTER)
@@ -839,7 +849,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     goto out;
   } if (doc_type == GS_DOC_TYPE_UNKNOWN) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Can't detect file type\n");
+		 "ghostscript: Can't detect file type");
     goto out;
   }
 
@@ -848,7 +858,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 
     if (pages == 0) {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "ghostscript: No pages left, outputting empty file.\n");
+		   "ghostscript: No pages left, outputting empty file.");
       status = 0;
       if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
 	  outformat == OUTPUT_FORMAT_PWG_RASTER)
@@ -857,7 +867,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     }
     if (pages < 0) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Unexpected page count\n");
+		   "ghostscript: Unexpected page count");
       goto out;
     }
   } else {
@@ -865,13 +875,16 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     char output[31] = "";
     int pagecount;
     size_t bytes;
-    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | grep -c HiResBoundingBox",
+    snprintf(gscommand, 65536,
+	     "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | "
+	     "grep -c HiResBoundingBox",
 	     CUPS_GHOSTSCRIPT, filename);
 
     FILE *pd = popen(gscommand, "r");
     if (!pd) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Failed to execute ghostscript to determine number of input pages!\n");
+		   "ghostscript: Failed to execute ghostscript to determine "
+		   "number of input pages!");
       goto out;
     }
 
@@ -883,7 +896,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 
     if (pagecount == 0) {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "ghostscript: No pages left, outputting empty file.\n");
+		   "ghostscript: No pages left, outputting empty file.");
       status = 0;
       if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
 	  outformat == OUTPUT_FORMAT_PWG_RASTER)
@@ -892,7 +905,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     }
     if (pagecount < 0) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Unexpected page count\n");
+		   "ghostscript: Unexpected page count");
       goto out;
     }
   }
@@ -917,7 +930,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   gs_args = cupsArrayNew(NULL, NULL);
   if (!gs_args) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Unable to allocate memory for Ghostscript arguments array\n");
+		 "ghostscript: Unable to allocate memory for Ghostscript "
+		 "arguments array");
     goto out;
   }
 
@@ -987,7 +1001,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     cupsArrayAdd(gs_args, strdup("-dNOPLATFONTS"));
     cupsArrayAdd(gs_args, strdup("-dColorImageFilter=/FlateEncode"));
     cupsArrayAdd(gs_args, strdup("-dPDFSETTINGS=/default"));
-    cupsArrayAdd(gs_args, strdup("-dColorConversionStrategy=/LeaveColorUnchanged"));
+    cupsArrayAdd(gs_args,
+		 strdup("-dColorConversionStrategy=/LeaveColorUnchanged"));
   }
   
 #ifdef HAVE_CUPS_1_7
@@ -1041,7 +1056,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 1);
 #else
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: No PPD file specified.\n");
+		 "ghostscript: No PPD file specified.");
     goto out;
 #endif /* HAVE_CUPS_1_7 */
   }
@@ -1133,11 +1148,13 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
       (t && (!strcasecmp(t, "true") || !strcasecmp(t, "on") ||
 	     !strcasecmp(t, "yes")))) {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Ghostscript using Center-of-Pixel method to fill paths.\n");
+		 "ghostscript: Ghostscript using Center-of-Pixel method to "
+		 "fill paths.");
     cupsArrayAdd(gs_args, strdup("0 0 .setfilladjust2"));
   } else
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Ghostscript using Any-Part-of-Pixel method to fill paths.\n");
+		 "ghostscript: Ghostscript using Any-Part-of-Pixel method to "
+		 "fill paths.");
 
   /* Mark the end of PostScript commands supplied on the Ghostscript command
      line (with the "-c" option), so that we can supply the input file name */

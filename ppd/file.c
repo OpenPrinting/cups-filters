@@ -184,13 +184,13 @@ _ppdFileCheck(
 	  if (filetype == _PPD_FILE_CHECK_DIRECTORY)
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("Directory \"%s\" permissions OK "
-					     "(0%o/uid=%d/gid=%d).\n")),
+					     "(0%o/uid=%d/gid=%d).")),
 		     filename, fileinfo.st_mode, (int)fileinfo.st_uid,
 		     (int)fileinfo.st_gid);
 	  else
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("File \"%s\" permissions OK "
-					     "(0%o/uid=%d/gid=%d).\n")),
+					     "(0%o/uid=%d/gid=%d).")),
 		     filename, fileinfo.st_mode, (int)fileinfo.st_uid,
 		     (int)fileinfo.st_gid);
           break;
@@ -200,11 +200,11 @@ _ppdFileCheck(
 	  if (filetype == _PPD_FILE_CHECK_DIRECTORY)
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("Directory \"%s\" not available: "
-					     "%s\n")),
+					     "%s")),
 		     filename, strerror(errno));
 	  else
 	    snprintf(message, sizeof(message),
-		     _ppdLangString(lang, _("File \"%s\" not available: %s\n")),
+		     _ppdLangString(lang, _("File \"%s\" not available: %s")),
 		     filename, strerror(errno));
           break;
 
@@ -214,14 +214,14 @@ _ppdFileCheck(
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("Directory \"%s\" has insecure "
 					     "permissions "
-					     "(0%o/uid=%d/gid=%d).\n")),
+					     "(0%o/uid=%d/gid=%d).")),
 		     filename, fileinfo.st_mode, (int)fileinfo.st_uid,
 		     (int)fileinfo.st_gid);
 	  else
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("File \"%s\" has insecure "
 		                             "permissions "
-					     "(0%o/uid=%d/gid=%d).\n")),
+					     "(0%o/uid=%d/gid=%d).")),
 		     filename, fileinfo.st_mode, (int)fileinfo.st_uid,
 		     (int)fileinfo.st_gid);
           break;
@@ -230,11 +230,11 @@ _ppdFileCheck(
 	  loglevel = FILTER_LOGLEVEL_ERROR;
 	  if (filetype == _PPD_FILE_CHECK_DIRECTORY)
 	    snprintf(message, sizeof(message),
-		     _ppdLangString(lang, _("Directory \"%s\" is a file.\n")),
+		     _ppdLangString(lang, _("Directory \"%s\" is a file.")),
 		     filename);
 	  else
 	    snprintf(message, sizeof(message),
-		     _ppdLangString(lang, _("File \"%s\" is a directory.\n")),
+		     _ppdLangString(lang, _("File \"%s\" is a directory.")),
 		     filename);
           break;
 
@@ -243,11 +243,11 @@ _ppdFileCheck(
 	  if (filetype == _PPD_FILE_CHECK_DIRECTORY)
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("Directory \"%s\" contains a "
-					     "relative path.\n")), filename);
+					     "relative path.")), filename);
 	  else
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("File \"%s\" contains a relative "
-					     "path.\n")), filename);
+					     "path.")), filename);
           break;
     }
 

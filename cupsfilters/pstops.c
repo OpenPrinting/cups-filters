@@ -100,7 +100,8 @@ typedef struct				/**** Document information ****/
 		*page_size;		/* PageSize value */
   int		mirror,			/* doc->mirror/mirror pages */
 		number_up,		/* Number of pages on each sheet */
-		number_up_layout,	/* doc->number_up_layout of N-up pages */
+		number_up_layout,	/* doc->number_up_layout of N-up
+					   pages */
 		output_order,		/* Requested reverse output order? */
 		page_border;		/* doc->page_border around pages */
   const char	*page_label,		/* page-label option, if any */
@@ -179,7 +180,7 @@ static int		include_feature(pstops_doc_t *doc, ppd_file_t *ppd,
 					cups_option_t **options);
 static char		*parse_text(const char *start, char **end, char *buffer,
 			            size_t bufsize);
-static void		set_pstops_options(pstops_doc_t *doc, ppd_file_t *ppd,
+static int		set_pstops_options(pstops_doc_t *doc, ppd_file_t *ppd,
 			                   int job_id, char *job_user,
 					   char *job_title, int copies,
 					   int num_options,
@@ -243,7 +244,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: Unable to open input data stream.\n"); 
+		   "pstops: Unable to open input data stream.");
     }
 
     return (1);
@@ -258,7 +259,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: Unable to open output data stream.\n"); 
+		   "pstops: Unable to open output data stream.");
     }
 
     cupsFileClose(inputfp);
@@ -273,7 +274,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   if ((len = (ssize_t)cupsFileGetLine(inputfp, line, sizeof(line))) == 0)
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pstops: The print file is empty.\n");
+		 "pstops: The print file is empty.");
     /* Do not treat this an error, if a previous filter eliminated all
        pages the job should get dequeued without anything printed. */
     return (0);
@@ -301,9 +302,20 @@ pstops(int inputfd,         /* I - File descriptor input stream */
 
   ppdMarkDefaults(data->ppd);
   ppdMarkOptions(data->ppd, data->num_options, data->options);
-  set_pstops_options(&doc, data->ppd, data->job_id, data->job_user,
-		     data->job_title, data->copies,
-		     data->num_options, data->options, jobcanceled, log, ld);
+  if (set_pstops_options(&doc, data->ppd, data->job_id, data->job_user,
+			 data->job_title, data->copies,
+			 data->num_options, data->options, jobcanceled,
+			 log, ld) == 1)
+  {
+    cupsFileClose(inputfp);
+    close(inputfd);
+
+    fclose(outputfp);
+    close(outputfd);
+
+    return (1);
+  }
+
   doc.inputfp = inputfp;
   doc.outputfp = outputfp;
   
@@ -338,7 +350,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
     */
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pstops: Skipping PJL header...\n");
+		 "pstops: Skipping PJL header...");
 
     while (strstr(line, "ENTER LANGUAGE") == NULL && strncmp(line, "%!", 2))
       if ((len = (ssize_t)cupsFileGetLine(inputfp, line, sizeof(line))) == 0)
@@ -449,16 +461,16 @@ add_page(pstops_doc_t *doc,		/* I - Document information */
 
   if (!doc->pages)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_FATAL,
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "pstops: Unable to allocate memory for pages array");
-    exit(1);
+    return (NULL);
   }
 
   if ((pageinfo = calloc(1, sizeof(pstops_page_t))) == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_FATAL,
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "pstops: Unable to allocate memory for page info");
-    exit(1);
+    return (NULL);
   }
 
   pageinfo->label  = strdup(label);
@@ -559,7 +571,7 @@ copy_bytes(pstops_doc_t *doc,		/* I - Document info */
   if (cupsFileSeek(doc->temp, offset) < 0)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "Unable to seek in file\n");
+		 "Unable to seek in file");
     return;
   }
 
@@ -632,7 +644,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
     */
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pstops: %s\n", line);
+		 "pstops: %s", line);
 
    /*
     * Pull the headers out...
@@ -644,7 +656,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 
       if (saw_pages && log)
 	log(ld, FILTER_LOGLEVEL_DEBUG,
-	    "pstops: A duplicate %%Pages: comment was seen.\n");
+	    "pstops: A duplicate %%Pages: comment was seen.");
 
       saw_pages = 1;
 
@@ -694,7 +706,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
       if (saw_bounding_box)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "pstops: A duplicate %%BoundingBox: comment was seen.\n");
+		     "pstops: A duplicate %%BoundingBox: comment was seen.");
       }
       else if (strstr(line + 14, "(atend)"))
       {
@@ -707,7 +719,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 		      doc->bounding_box + 3) != 4)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "pstops: A bad %%BoundingBox: comment was seen.\n");
+		     "pstops: A bad %%BoundingBox: comment was seen.");
 
 	doc->bounding_box[0] = (int)(doc->PageLeft);
 	doc->bounding_box[1] = (int)(doc->PageBottom);
@@ -763,11 +775,11 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 
   if (!saw_bounding_box && log)
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pstops: There wasn't a %%BoundingBox: comment in the header.\n");
+	"pstops: There wasn't a %%BoundingBox: comment in the header.");
 
   if (!saw_pages && log)
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pstops: There wasn't a %%Pages: comment in the header.\n");
+	"pstops: There wasn't a %%Pages: comment in the header.");
 
   if (!saw_for)
     write_text_comment(doc, "For", doc->user);
@@ -899,13 +911,13 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
     if (check_range(doc, (number - 1) / doc->number_up + 1))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: Copying page %d...\n", number);
+		   "pstops: Copying page %d...", number);
       linelen = copy_page(doc, ppd, number, line, linelen, linesize);
     }
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: Skipping page %d...\n", number);
+		   "pstops: Skipping page %d...", number);
       linelen = skip_page(doc, line, linelen, linesize);
     }
   }
@@ -933,12 +945,14 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
     */
 
     pageinfo = add_page(doc, "(filler)");
+    if (pageinfo == NULL)
+      return;
 
     if (!doc->slow_order)
     {
       if ((!ppd || !ppd->num_filters) && log)
 	log(ld, FILTER_LOGLEVEL_CONTROL,
-	    "PAGE: %d %d\n", doc->page,
+	    "PAGE: %d %d", doc->page,
 	    doc->slow_collate ? 1 : doc->copies);
 
       fprintf(doc->outputfp, "%%%%Page: (filler) %d\n", doc->page);
@@ -1044,7 +1058,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
 	if ((!ppd || !ppd->num_filters) && log)
 	  log(ld, FILTER_LOGLEVEL_CONTROL,
-	      "PAGE: %d %d\n", number,
+	      "PAGE: %d %d", number,
 	      doc->slow_collate ? 1 : doc->copies);
 
 	if (doc->number_up > 1)
@@ -1063,8 +1077,9 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
 	copy_bytes(doc, pageinfo->offset, (size_t)pageinfo->length);
 
-	pageinfo = doc->slow_order ? (pstops_page_t *)cupsArrayPrev(doc->pages) :
-                                     (pstops_page_t *)cupsArrayNext(doc->pages);
+	pageinfo = doc->slow_order ?
+	  (pstops_page_t *)cupsArrayPrev(doc->pages) :
+	  (pstops_page_t *)cupsArrayNext(doc->pages);
       }
     }
   }
@@ -1114,7 +1129,7 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 	       "pstops: This document does not conform to the Adobe Document "
-	       "Structuring Conventions and may not print correctly.\n");
+	       "Structuring Conventions and may not print correctly.");
 
  /*
   * Then write a standard DSC comment section...
@@ -1192,7 +1207,7 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   if ((!ppd || !ppd->num_filters) && log)
     log(ld, FILTER_LOGLEVEL_CONTROL,
-	"PAGE: 1 %d\n", doc->temp ? 1 : doc->copies);
+	"PAGE: 1 %d", doc->temp ? 1 : doc->copies);
 
   fputs("%%Page: 1 1\n", doc->outputfp);
   fputs("%%BeginPageSetup\n", doc->outputfp);
@@ -1242,7 +1257,7 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
 
       if ((!ppd || !ppd->num_filters) && log)
 	log(ld, FILTER_LOGLEVEL_CONTROL,
-	    "PAGE: 1 1\n");
+	    "PAGE: 1 1");
 
       fprintf(doc->outputfp, "%%%%Page: %d %d\n", copy + 1, copy + 1);
       fputs("%%BeginPageSetup\n", doc->outputfp);
@@ -1291,7 +1306,8 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
   int		level;			/* Embedded document level */
   pstops_page_t	*pageinfo;		/* Page information */
   int		first_page;		/* First page on N-up output? */
-  int		has_page_setup = 0;	/* Does the page have %%Begin/EndPageSetup? */
+  int		has_page_setup = 0;	/* Does the page have
+					   %%Begin/EndPageSetup? */
   int		bounding_box[4];	/* PageBoundingBox */
   filter_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
@@ -1306,14 +1322,14 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
   if (!parse_text(line + 7, &ptr, label, sizeof(label)))
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pstops: There was a bad %%Page: comment in the file.\n");
+		 "pstops: There was a bad %%Page: comment in the file.");
     label[0] = '\0';
     number   = doc->page;
   }
   else if (strtol(ptr, &ptr, 10) == LONG_MAX || !isspace(*ptr & 255))
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pstops: There was a bad %%Page: comment in the file.\n");
+		 "pstops: There was a bad %%Page: comment in the file.");
     number = doc->page;
   }
 
@@ -1322,7 +1338,11 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
   */
 
   if (first_page)
+  {
     pageinfo = add_page(doc, label);
+    if (pageinfo == NULL)
+      return (0);
+  }
   else
     pageinfo = (pstops_page_t *)cupsArrayLast(doc->pages);
 
@@ -1410,7 +1430,8 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
       {
 	if (log)
 	  log(ld, FILTER_LOGLEVEL_DEBUG,
-	      "pstops: There was a bad %%PageBoundingBox: comment in the file.\n");
+	      "pstops: There was a bad %%PageBoundingBox: comment in the "
+	      "file.");
         memcpy(bounding_box, doc->bounding_box,
 	       sizeof(bounding_box));
       }
@@ -1424,13 +1445,13 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 	if (log)
 	{
 	  log(ld, FILTER_LOGLEVEL_DEBUG,
-	      "pstops: Orientation = %d\n", doc->Orientation);
+	      "pstops: Orientation = %d", doc->Orientation);
 	  log(ld, FILTER_LOGLEVEL_DEBUG,
-	      "pstops: original bounding_box = [ %d %d %d %d ]\n",
+	      "pstops: original bounding_box = [ %d %d %d %d ]",
 	      bounding_box[0], bounding_box[1],
 	      bounding_box[2], bounding_box[3]);
 	  log(ld, FILTER_LOGLEVEL_DEBUG,
-	      "pstops: PageWidth = %.1f, PageLength = %.1f\n",
+	      "pstops: PageWidth = %.1f, PageLength = %.1f",
 	      doc->PageWidth, doc->PageLength);
 	}
 
@@ -1459,7 +1480,7 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 	}
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "pstops: updated bounding_box = [ %d %d %d %d ]\n",
+		     "pstops: updated bounding_box = [ %d %d %d %d ]",
 		     bounding_box[0], bounding_box[1],
 		     bounding_box[2], bounding_box[3]);
       }
@@ -1560,7 +1581,7 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
   {
     if ((!ppd || !ppd->num_filters) && log)
       log(ld, FILTER_LOGLEVEL_CONTROL,
-	  "PAGE: %d %d\n", doc->page,
+	  "PAGE: %d %d", doc->page,
 	  doc->slow_collate ? 1 : doc->copies);
 
     if (doc->number_up > 1)
@@ -1795,7 +1816,7 @@ copy_prolog(pstops_doc_t *doc,		/* I - Document info */
       linelen = (ssize_t)cupsFileGetLine(doc->inputfp, line, linesize);
     else
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: The %%EndProlog comment is missing.\n");
+		   "pstops: The %%EndProlog comment is missing.");
   }
 
   doc_puts(doc, "%%EndProlog\n");
@@ -1869,7 +1890,7 @@ copy_setup(pstops_doc_t *doc,		/* I - Document info */
       linelen = (ssize_t)cupsFileGetLine(doc->inputfp, line, linesize);
     else
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: The %%EndSetup comment is missing.\n");
+		   "pstops: The %%EndSetup comment is missing.");
   }
 
   if (num_options > 0)
@@ -1924,7 +1945,7 @@ copy_trailer(pstops_doc_t *doc,		/* I - Document info */
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pstops: Wrote %d pages...\n", number);
+	       "pstops: Wrote %d pages...", number);
 
   fprintf(doc->outputfp, "%%%%Pages: %d\n", number);
   if (doc->number_up > 1 || doc->fit_to_page)
@@ -2117,9 +2138,9 @@ doc_printf(pstops_doc_t *doc,		/* I - Document information */
 
   if ((size_t)bytes > sizeof(buffer))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_FATAL,
-		 "pstops: Buffer overflow detected, aborting.\n");
-    exit(1);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "pstops: Buffer overflow detected, truncating.");
+    bytes = sizeof(buffer);
   }
 
   doc_write(doc, buffer, (size_t)bytes);
@@ -2252,7 +2273,7 @@ include_feature(
   if (sscanf(line + 17, "%254s%254s", name, value) != 2)
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pstops: The %%IncludeFeature: comment is not valid.\n");
+		 "pstops: The %%IncludeFeature: comment is not valid.");
     return (num_options);
   }
 
@@ -2385,7 +2406,7 @@ parse_text(const char *start,		/* I - Start of text value */
  * 'set_pstops_options()' - Set pstops options.
  */
 
-static void
+static int
 set_pstops_options(
     pstops_doc_t  *doc,			/* I - Document information */
     ppd_file_t    *ppd,			/* I - PPD file */
@@ -2492,7 +2513,8 @@ set_pstops_options(
   * collate, multiple-document-handling
   */
 
-  if ((val = cupsGetOption("multiple-document-handling", num_options, options)) != NULL)
+  if ((val = cupsGetOption("multiple-document-handling",
+			   num_options, options)) != NULL)
   {
    /*
     * This IPP attribute is unnecessarily complicated...
@@ -2766,10 +2788,10 @@ set_pstops_options(
     if ((doc->temp = cupsTempFile2(doc->tempfile,
                                    sizeof(doc->tempfile))) == NULL)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_FATAL,
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pstops: Unable to create temporary file: %s",
 		   strerror(errno));
-      exit(1);
+      return (1);
     }
   }
 
@@ -2788,8 +2810,10 @@ set_pstops_options(
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pstops: slow_collate=%d, slow_duplex=%d, slow_order=%d\n",
+	       "pstops: slow_collate=%d, slow_duplex=%d, slow_order=%d",
 	       doc->slow_collate, doc->slow_duplex, doc->slow_order);
+
+  return(0);
 }
 
 
@@ -2909,18 +2933,18 @@ start_nup(pstops_doc_t *doc,		/* I - Document information */
   if (log)
   {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pstops: pagew = %.1f, pagel = %.1f\n", pagew, pagel);
+	"pstops: pagew = %.1f, pagel = %.1f", pagew, pagel);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pstops: bboxx = %d, bboxy = %d, bboxw = %d, bboxl = %d\n",
+	"pstops: bboxx = %d, bboxy = %d, bboxw = %d, bboxl = %d",
 	bboxx, bboxy, bboxw, bboxl);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pstops: PageLeft = %.1f, PageRight = %.1f\n",
+	"pstops: PageLeft = %.1f, PageRight = %.1f",
 	doc->PageLeft, doc->PageRight);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pstops: PageTop = %.1f, PageBottom = %.1f\n",
+	"pstops: PageTop = %.1f, PageBottom = %.1f",
 	doc->PageTop, doc->PageBottom);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pstops: PageWidth = %.1f, PageLength = %.1f\n",
+	"pstops: PageWidth = %.1f, PageLength = %.1f",
 	doc->PageWidth, doc->PageLength);
   }
 
@@ -3319,7 +3343,8 @@ write_label_prolog(pstops_doc_t *doc,	/* I - Document info */
 		   float        top,	/* I - Top position in points */
 		   float        width)	/* I - Width in points */
 {
-  const char	*classification;	/* CLASSIFICATION environment variable */
+  const char	*classification;	/* CLASSIFICATION environment
+					   variable */
   const char	*ptr;			/* Temporary string pointer */
 
 
@@ -3665,4 +3690,3 @@ write_text_comment(pstops_doc_t *doc,	/* I - Document */
 
   fputs(")\n", doc->outputfp);
 }
-

@@ -9,10 +9,11 @@ void BookletMode_dump(BookletMode bkm,pdftopdf_doc_t *doc) // {{{
   static const char *bstr[3]={"Off","On","Shuffle-Only"};
   if ((bkm<BOOKLET_OFF) || (bkm>BOOKLET_JUSTSHUFFLE)) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: bookletMode: (bad booklet mode: %d)\n",bkm);
+				   "pdftopdf: bookletMode: (bad booklet mode: "
+				   "%d)", bkm);
   } else {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: bookletMode: %s\n",bstr[bkm]);
+				   "pdftopdf: bookletMode: %s", bstr[bkm]);
   }
 }
 // }}}
@@ -33,86 +34,87 @@ bool ProcessingParameters::withPage(int outno) const // {{{
 void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 {
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: jobId: %d, numCopies: %d\n",
-	  jobId,numCopies);
+				 "pdftopdf: jobId: %d, numCopies: %d",
+				 jobId,numCopies);
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: user: %s, title: %s\n",
-	  (user)?user:"(null)",(title)?title:"(null)");
+				 "pdftopdf: user: %s, title: %s",
+				 (user)?user:"(null)",(title)?title:"(null)");
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: fitplot: %s\n",
-	  (fitplot)?"true":"false");
+				 "pdftopdf: fitplot: %s",
+				 (fitplot)?"true":"false");
 
   page.dump(doc);
 
   Rotation_dump(orientation,doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: paper_is_landscape: %s\n",
-	  (paper_is_landscape)?"true":"false");
+				 "pdftopdf: paper_is_landscape: %s",
+				 (paper_is_landscape)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: duplex: %s\n",
-	  (duplex)?"true":"false");
+				 "pdftopdf: duplex: %s",
+				 (duplex)?"true":"false");
 
   BorderType_dump(border,doc);
 
   nup.dump(doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: reverse: %s\n",
-	  (reverse)?"true":"false");
+				 "pdftopdf: reverse: %s",
+				 (reverse)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: evenPages: %s, oddPages: %s\n",
-	  (evenPages)?"true":"false",
-	  (oddPages)?"true":"false");
+				 "pdftopdf: evenPages: %s, oddPages: %s",
+				 (evenPages)?"true":"false",
+				 (oddPages)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: page range: \n");
+				 "pdftopdf: page range:");
   pageRange.dump(doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: mirror: %s\n",
-	  (mirror)?"true":"false");
+				 "pdftopdf: mirror: %s",
+				 (mirror)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: Position:\n");
+				 "pdftopdf: Position:");
   Position_dump(xpos,Axis::X,doc);
   Position_dump(ypos,Axis::Y,doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: collate: %s\n",
-	  (collate)?"true":"false");
+				 "pdftopdf: collate: %s",
+				 (collate)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: evenDuplex: %s\n",
-	  (evenDuplex)?"true":"false");
+				 "pdftopdf: evenDuplex: %s",
+				 (evenDuplex)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: pageLabel: %s\n",
-	  pageLabel.empty () ? "(none)" : pageLabel.c_str());
+				 "pdftopdf: pageLabel: %s",
+				 pageLabel.empty () ? "(none)" :
+				 pageLabel.c_str());
 
   BookletMode_dump(booklet,doc);
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: booklet signature: %d\n",
-	  bookSignature);
+				 "pdftopdf: booklet signature: %d",
+				 bookSignature);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: autoRotate: %s\n",
-	  (autoRotate)?"true":"false");
+				 "pdftopdf: autoRotate: %s",
+				 (autoRotate)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: emitJCL: %s\n",
-	  (emitJCL)?"true":"false");
+				 "pdftopdf: emitJCL: %s",
+				 (emitJCL)?"true":"false");
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: deviceCopies: %d\n",
-	  deviceCopies);
+				 "pdftopdf: deviceCopies: %d",
+				 deviceCopies);
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: deviceCollate: %s\n",
-	  (deviceCollate)?"true":"false");
+				 "pdftopdf: deviceCollate: %s",
+				 (deviceCollate)?"true":"false");
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-      "pdftopdf: setDuplex: %s\n",
-	  (setDuplex)?"true":"false");
+				 "pdftopdf: setDuplex: %s",
+				 (setDuplex)?"true":"false");
 }
 // }}}
 
@@ -160,7 +162,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 {
   if (!proc.check_print_permissions(doc)) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: Not allowed to print\n");
+				   "pdftopdf: Not allowed to print");
     return false;
   }
 
@@ -232,7 +234,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 
   if(param.fillprint||param.cropfit){
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: Cropping input pdf and Enabling fitplot.\n");
+				   "pdftopdf: Cropping input pdf and Enabling "
+				   "fitplot.");
     if(param.noOrientation&&pages.size())
     {
       bool land = pages[0]->is_landscape(param.orientation);
@@ -266,7 +269,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
       // Log page in /var/log/cups/page_log
       if (param.page_logging == 1)
 	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-				       "PAGE: %d %d\n", iA + 1,
+				       "PAGE: %d %d", iA + 1,
 				       param.copies_to_be_logged);
 
       if (shuffle[iA]>=numOrigPages) {
@@ -374,7 +377,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 	  if (param.page_logging == 1)
 	    if (doc->logfunc) doc->logfunc(doc->logdata,
 					   FILTER_LOGLEVEL_CONTROL,
-					   "PAGE: %d %d\n", outputno,
+					   "PAGE: %d %d", outputno,
 					   param.copies_to_be_logged);
         }
         curpage=proc.new_page(param.page.width,param.page.height,doc);
@@ -432,7 +435,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
       outputno ++;
       if (param.page_logging == 1)
 	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-				       "PAGE: %d %d\n", outputno,
+				       "PAGE: %d %d", outputno,
 				       param.copies_to_be_logged);
     }
   }
@@ -443,7 +446,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
     // Log page in /var/log/cups/page_log
     if (param.page_logging == 1)
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-				     "PAGE: %d %d\n", outputno + 1,
+				     "PAGE: %d %d", outputno + 1,
 				     param.copies_to_be_logged);
   }
 

@@ -175,7 +175,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetops: Unable to open input data stream.\n"); 
+		   "imagetops: Unable to open input data stream.");
     }
 
     return (1);
@@ -189,13 +189,13 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetops: Unable to copy input: %s\n",
+		   "imagetops: Unable to copy input: %s",
 		   strerror(errno));
       return (1);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Copying input to temp file \"%s\"\n",
+		 "imagetops: Copying input to temp file \"%s\"",
 		 tempfile);
 
     while ((bytes = fread(buf, 1, sizeof(buf), inputfp)) > 0)
@@ -213,7 +213,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       if (!*jobcanceled)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "imagetops: Unable to open temporary file.\n"); 
+		     "imagetops: Unable to open temporary file.");
       }
 
       return (1);
@@ -229,7 +229,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     if (!*jobcanceled)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetops: Unable to open output data stream.\n"); 
+		   "imagetops: Unable to open output data stream.");
     }
 
     fclose(inputfp);
@@ -613,7 +613,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	if ((fabs(final_w - w) > 0.5 * w) || (fabs(final_h - h) > 0.5 * h))
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "imagetops: Ignoring crop-to-fit option!\n");
+		       "imagetops: Ignoring crop-to-fit option!");
 	  cropfit = 0;
 	}
 	else
@@ -673,7 +673,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     yppi = xppi;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetops: Before scaling: xppi=%d, yppi=%d, zoom=%.2f\n",
+	       "imagetops: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
 	       xppi, yppi, zoom);
 
   if (xppi > 0)
@@ -694,14 +694,14 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Before scaling: xprint=%.1f, yprint=%.1f\n",
+		 "imagetops: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
     xinches = (float)cupsImageGetWidth(img) / (float)xppi;
     yinches = (float)cupsImageGetHeight(img) / (float)yppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Image size is %.1f x %.1f inches...\n",
+		 "imagetops: Image size is %.1f x %.1f inches...",
 		 xinches, yinches);
 
     if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
@@ -718,7 +718,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetops: Auto orientation...\n");
+		   "imagetops: Auto orientation...");
 
       if ((xinches > xprint || yinches > yprint) &&
           xinches <= yprint && yinches <= xprint)
@@ -728,7 +728,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetops: Using landscape orientation...\n");
+		     "imagetops: Using landscape orientation...");
 
 	doc.Orientation = (doc.Orientation + 1) & 3;
 	xsize       = yprint;
@@ -748,11 +748,12 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     aspect = (float)cupsImageGetYPPI(img) / (float)cupsImageGetXPPI(img);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Before scaling: xprint=%.1f, yprint=%.1f\n",
+		 "imagetops: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: cupsImageGetXPPI(img) = %d, cupsImageGetYPPI(img) = %d, aspect = %f\n",
+		 "imagetops: cupsImageGetXPPI(img) = %d, "
+		 "cupsImageGetYPPI(img) = %d, aspect = %f",
 		 cupsImageGetXPPI(img), cupsImageGetYPPI(img), aspect);
 
     xsize = xprint * zoom;
@@ -761,23 +762,26 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     if (ysize > (yprint * zoom))
     {
       ysize = yprint * zoom;
-      xsize = ysize * cupsImageGetWidth(img) * aspect / cupsImageGetHeight(img);
+      xsize = ysize * cupsImageGetWidth(img) * aspect /
+	cupsImageGetHeight(img);
     }
 
     xsize2 = yprint * zoom;
-    ysize2 = xsize2 * cupsImageGetHeight(img) / cupsImageGetWidth(img) / aspect;
+    ysize2 = xsize2 * cupsImageGetHeight(img) / cupsImageGetWidth(img) /
+      aspect;
 
     if (ysize2 > (xprint * zoom))
     {
       ysize2 = xprint * zoom;
-      xsize2 = ysize2 * cupsImageGetWidth(img) * aspect / cupsImageGetHeight(img);
+      xsize2 = ysize2 * cupsImageGetWidth(img) * aspect /
+	cupsImageGetHeight(img);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Portrait size is %.2f x %.2f inches\n",
+		 "imagetops: Portrait size is %.2f x %.2f inches",
 		 xsize, ysize);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Landscape size is %.2f x %.2f inches\n",
+		 "imagetops: Landscape size is %.2f x %.2f inches",
 		 xsize2, ysize2);
 
     if (cupsGetOption("orientation-requested", num_options, options) == NULL &&
@@ -789,7 +793,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetops: Auto orientation...\n");
+		   "imagetops: Auto orientation...");
 
       if ((xsize * ysize) < (xsize2 * xsize2))
       {
@@ -798,7 +802,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetops: Using landscape orientation...\n");
+		     "imagetops: Using landscape orientation...");
 
 	doc.Orientation = 1;
 	xinches     = xsize2;
@@ -813,7 +817,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetops: Using portrait orientation...\n");
+		     "imagetops: Using portrait orientation...");
 
 	doc.Orientation = 0;
 	xinches     = xsize;
@@ -823,7 +827,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     else if (doc.Orientation & 1)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetops: Using landscape orientation...\n");
+		   "imagetops: Using landscape orientation...");
 
       xinches     = xsize2;
       yinches     = ysize2;
@@ -833,7 +837,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetops: Using portrait orientation...\n");
+		   "imagetops: Using portrait orientation...");
 
       xinches     = xsize;
       yinches     = ysize;
@@ -854,7 +858,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   yprint = yinches / ypages;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetops: xpages = %dx%.2fin, ypages = %dx%.2fin\n",
+	       "imagetops: xpages = %dx%.2fin, ypages = %dx%.2fin",
 	       xpages, xprint, ypages, yprint);
 
  /*
@@ -902,7 +906,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       length = ppd->custom_min[1];
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Updated custom page size to %.2f x %.2f inches...\n",
+		 "imagetops: Updated custom page size to %.2f x %.2f inches...",
 		 width / 72.0, length / 72.0);
 
    /*
@@ -952,7 +956,8 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   */
 
   if (emit_jcl)
-    ppdEmitJCL(ppd, doc.outputfp, data->job_id, data->job_user, data->job_title);
+    ppdEmitJCL(ppd, doc.outputfp, data->job_id, data->job_user,
+	       data->job_title);
 
  /*
   * Start sending the document with any commands needed...
@@ -991,7 +996,8 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   ppdEmit(ppd, doc.outputfp, PPD_ORDER_PROLOG);
 
   if (g != 1.0 || b != 1.0)
-    fprintf(doc.outputfp, "{ neg 1 add dup 0 lt { pop 1 } { %.3f exp neg 1 add } "
+    fprintf(doc.outputfp,
+	    "{ neg 1 add dup 0 lt { pop 1 } { %.3f exp neg 1 add } "
 	    "ifelse %.3f mul } bind settransfer\n", g, b);
 
   WriteCommon(&doc);
@@ -1012,14 +1018,16 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     case 2 :
         WriteLabelProlog(&doc, cupsGetOption("page-label", num_options,
 					     options),
-			 doc.PageLength - doc.PageTop, doc.PageLength - doc.PageBottom,
+			 doc.PageLength - doc.PageTop,
+			 doc.PageLength - doc.PageBottom,
 			 doc.PageWidth);
         break;
 
     case 3 :
 	WriteLabelProlog(&doc, cupsGetOption("page-label", num_options,
 					     options),
-                	 doc.PageWidth - doc.PageRight, doc.PageWidth - doc.PageLeft,
+			 doc.PageWidth - doc.PageRight,
+			 doc.PageWidth - doc.PageLeft,
 			 doc.PageLength);
         break;
   }
@@ -1042,7 +1050,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   if (row == NULL)
   {
     log(ld, FILTER_LOGLEVEL_ERROR,
-	"imagetops: Could not allocate memory.\n");
+	"imagetops: Could not allocate memory.");
     cupsImageClose(img);
     ppdClose(ppd);
     return (2);
@@ -1051,15 +1059,15 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   if (log)
   {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetops: XPosition=%d, YPosition=%d, Orientation=%d\n",
+	"imagetops: XPosition=%d, YPosition=%d, Orientation=%d",
 	XPosition, YPosition, doc.Orientation);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetops: xprint=%.1f, yprint=%.1f\n", xprint, yprint);
+	"imagetops: xprint=%.1f, yprint=%.1f", xprint, yprint);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetops: PageLeft=%.0f, PageRight=%.0f, PageWidth=%.0f\n",
+	"imagetops: PageLeft=%.0f, PageRight=%.0f, PageWidth=%.0f",
 	doc.PageLeft, doc.PageRight, doc.PageWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetops: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f\n",
+	"imagetops: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f",
 	doc.PageBottom, doc.PageTop, doc.PageLength);
   }
 
@@ -1179,7 +1187,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetops: left=%.2f, top=%.2f\n", left, top);
+	       "imagetops: left=%.2f, top=%.2f", left, top);
 
   for (page = 1; Copies > 0; Copies --)
     for (xpage = 0; xpage < xpages; xpage ++)
@@ -1187,10 +1195,10 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       {
         if (log && ppd && ppd->num_filters == 0)
 	  log(ld, FILTER_LOGLEVEL_CONTROL,
-	      "PAGE: %d %d\n", page, realcopies);
+	      "PAGE: %d %d", page, realcopies);
 
 	if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		     "imagetops: Printing page %d.\n", page);
+		     "imagetops: Printing page %d.", page);
 
         fprintf(doc.outputfp, "%%%%Page: %d %d\n", page, page);
 
@@ -1204,7 +1212,8 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	switch (doc.Orientation)
 	{
 	  case 1 : /* Landscape */
-	      fprintf(doc.outputfp, "%.0f 0 translate 90 rotate\n", doc.PageWidth);
+	      fprintf(doc.outputfp, "%.0f 0 translate 90 rotate\n",
+		      doc.PageWidth);
               break;
 	  case 2 : /* Reverse Portrait */
 	      fprintf(doc.outputfp, "%.0f %.0f translate 180 rotate\n",
@@ -1237,16 +1246,19 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 		  (xc1 - xc0 + 1), (yc1 - yc0 + 1));
 
           if (colorspace == CUPS_IMAGE_WHITE)
-            fputs("{currentfile picture readhexstring pop} image\n", doc.outputfp);
+            fputs("{currentfile picture readhexstring pop} image\n",
+		  doc.outputfp);
           else
             fprintf(doc.outputfp,
-		    "{currentfile picture readhexstring pop} false %d colorimage\n",
+		    "{currentfile picture readhexstring pop} false %d "
+		    "colorimage\n",
 		    abs(colorspace));
 
           for (y = yc0; y <= yc1; y ++)
           {
             cupsImageGetRow(img, xc0, y, xc1 - xc0 + 1, row);
-            ps_hex(doc.outputfp, row, (xc1 - xc0 + 1) * abs(colorspace), y == yc1);
+            ps_hex(doc.outputfp, row, (xc1 - xc0 + 1) * abs(colorspace),
+		   y == yc1);
           }
 	}
 	else
@@ -1349,15 +1361,18 @@ WriteCommon(imagetops_doc_t *doc)
   fputs("% x y w h ESPrc - Clip to a rectangle.\n"
         "userdict/ESPrc/rectclip where{pop/rectclip load}\n"
         "{{newpath 4 2 roll moveto 1 index 0 rlineto 0 exch rlineto\n"
-        "neg 0 rlineto closepath clip newpath}bind}ifelse put\n", doc->outputfp);
+        "neg 0 rlineto closepath clip newpath}bind}ifelse put\n",
+	doc->outputfp);
   fputs("% x y w h ESPrf - Fill a rectangle.\n"
         "userdict/ESPrf/rectfill where{pop/rectfill load}\n"
         "{{gsave newpath 4 2 roll moveto 1 index 0 rlineto 0 exch rlineto\n"
-        "neg 0 rlineto closepath fill grestore}bind}ifelse put\n", doc->outputfp);
+        "neg 0 rlineto closepath fill grestore}bind}ifelse put\n",
+	doc->outputfp);
   fputs("% x y w h ESPrs - Stroke a rectangle.\n"
         "userdict/ESPrs/rectstroke where{pop/rectstroke load}\n"
         "{{gsave newpath 4 2 roll moveto 1 index 0 rlineto 0 exch rlineto\n"
-        "neg 0 rlineto closepath stroke grestore}bind}ifelse put\n", doc->outputfp);
+        "neg 0 rlineto closepath stroke grestore}bind}ifelse put\n",
+	doc->outputfp);
 }
 
 
@@ -1373,7 +1388,7 @@ WriteLabelProlog(imagetops_doc_t *doc,
 		 float      top,	/* I - Top position in points */
 		 float      width)	/* I - Width in points */
 {
-  const char	*classification;	/* CLASSIFICATION environment variable */
+  const char	*classification;	/* CLASSIFICATION environment variable*/
   const char	*ptr;			/* Temporary string pointer */
 
 
@@ -1513,7 +1528,8 @@ WriteLabels(imagetops_doc_t *doc,
         fprintf(doc->outputfp, "%.1f 0.0 translate 90 rotate\n", length);
         break;
     case 2 : /* Reverse Portrait */
-        fprintf(doc->outputfp, "%.1f %.1f translate 180 rotate\n", width, length);
+        fprintf(doc->outputfp, "%.1f %.1f translate 180 rotate\n", width,
+		length);
         break;
     case 3 : /* Reverse Landscape */
         fprintf(doc->outputfp, "0.0 %.1f translate -90 rotate\n", width);
