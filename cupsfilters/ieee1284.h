@@ -62,15 +62,19 @@ extern "C" {
  * Prototypes...
  */
 
-extern int		backendGetDeviceID(int fd, char *device_id,
-			                   int device_id_size,
-			                   char *make_model,
-					   int make_model_size,
-					   const char *scheme, char *uri,
-					   int uri_size);
-extern int		backendGetMakeModel(const char *device_id,
-			                    char *make_model,
-				            int make_model_size);
+extern int	ieee1284GetDeviceID(int fd, char *device_id,
+				    int device_id_size,
+				    char *make_model,
+				    int make_model_size,
+				    const char *scheme, char *uri,
+				    int uri_size);
+extern int	ieee1284GetMakeModel(const char *device_id,
+				     char *make_model,
+				     int make_model_size);
+extern int	ieee1284GetValues(const char *device_id,
+				  cups_option_t **values);
+extern char	*ieee1284NormalizeMakeAndModel(const char *make_and_model,
+					       char *buffer, size_t bufsize);
 
 
 #  ifdef __cplusplus

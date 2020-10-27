@@ -419,9 +419,9 @@ list_devices(void)
 
       snprintf(uri, sizeof(uri), "parallel:%s", device);
 
-      if (!backendGetDeviceID(fd, device_id, sizeof(device_id),
-                              make_model, sizeof(make_model),
-			      NULL, uri, sizeof(uri)))
+      if (!ieee1284GetDeviceID(fd, device_id, sizeof(device_id),
+			       make_model, sizeof(make_model),
+			       NULL, uri, sizeof(uri)))
       {
         snprintf(info, sizeof(info), "%s LPT #%d", make_model, i + 1);
 	cupsBackendReport("direct", uri, make_model, info, device_id, NULL);
@@ -838,8 +838,8 @@ side_cb(int         print_fd,		/* I - Print file */
     case CUPS_SC_CMD_GET_DEVICE_ID :
         memset(data, 0, sizeof(data));
 
-        if (backendGetDeviceID(device_fd, data, sizeof(data) - 1,
-	                       NULL, 0, NULL, NULL, 0))
+        if (ieee1284GetDeviceID(device_fd, data, sizeof(data) - 1,
+				NULL, 0, NULL, NULL, 0))
         {
 	  status  = CUPS_SC_STATUS_NOT_IMPLEMENTED;
 	  datalen = 0;

@@ -11,12 +11,13 @@
  *
  * Contents:
  *
- *   backendGetDeviceID()       - Get the IEEE-1284 device ID string and
- *                                corresponding URI.
- *   backendGetMakeModel()      - Get the make and model string from the device
- *                                ID.
- *   get_1284_values()          - Get 1284 device ID keys and values.
- *   normalize_make_and_model() - Normalize a product/make-and-model string.
+ *   ieee1284GetDeviceID()           - Get the IEEE-1284 device ID string and
+ *                                     corresponding URI.
+ *   ieee1284GetMakeModel()          - Get the make and model string from the 
+ *                                     device ID.
+ *   ieee1284GetValues()             - Get 1284 device ID keys and values.
+ *   ieee1284NormalizeMakeAndModel() - Normalize a product/make-and-model
+ *                                     string.
  */
 
 /*
@@ -35,21 +36,12 @@
 
 
 /*
- * Local functions...
- */
-
-static int	get_1284_values(const char *device_id, cups_option_t **values);
-static char	*normalize_make_and_model(const char *make_and_model,
-		                          char *buffer, size_t bufsize);
-
-
-/*
- * 'backendGetDeviceID()' - Get the IEEE-1284 device ID string and
- *                          corresponding URI.
+ * 'ieee1284GetDeviceID()' - Get the IEEE-1284 device ID string and
+ *                           corresponding URI.
  */
 
 int					/* O - 0 on success, -1 on failure */
-backendGetDeviceID(
+ieee1284GetDeviceID(
     int        fd,			/* I - File descriptor */
     char       *device_id,		/* O - 1284 device ID */
     int        device_id_size,		/* I - Size of buffer */
@@ -82,7 +74,7 @@ backendGetDeviceID(
   char	*ptr;				/* Pointer into device ID */
 
 
-  DEBUG_printf(("backendGetDeviceID(fd=%d, device_id=%p, device_id_size=%d, "
+  DEBUG_printf(("ieee1284GetDeviceID(fd=%d, device_id=%p, device_id_size=%d, "
                 "make_model=%p, make_model_size=%d, scheme=\"%s\", "
 		"uri=%p, uri_size=%d)\n", fd, device_id, device_id_size,
 		make_model, make_model_size, scheme ? scheme : "(null)",
@@ -94,7 +86,7 @@ backendGetDeviceID(
 
   if (!device_id || device_id_size < 32)
   {
-    DEBUG_puts("backendGetDeviceID: Bad args!");
+    DEBUG_puts("ieee1284GetDeviceID: Bad args!");
     return (-1);
   }
 
@@ -241,7 +233,7 @@ backendGetDeviceID(
     }
     else
     {
-      DEBUG_printf(("backendGetDeviceID: ioctl failed - %s\n",
+      DEBUG_printf(("ieee1284GetDeviceID: ioctl failed - %s\n",
                     strerror(errno)));
       *device_id = '\0';
     }
@@ -266,7 +258,7 @@ backendGetDeviceID(
     }
 #    ifdef DEBUG
     else
-      DEBUG_printf(("backendGetDeviceID: ioctl failed - %s\n",
+      DEBUG_printf(("ieee1284GetDeviceID: ioctl failed - %s\n",
                     strerror(errno)));
 #    endif /* DEBUG */
 #  endif /* __sun && ECPPIOC_GETDEVID */
@@ -282,13 +274,13 @@ backendGetDeviceID(
       *ptr = ' ';
     else if ((*ptr & 255) < ' ' || *ptr == 127)
     {
-      DEBUG_printf(("backendGetDeviceID: Bad device_id character %d.",
+      DEBUG_printf(("ieee1284GetDeviceID: Bad device_id character %d.",
                     *ptr & 255));
       *device_id = '\0';
       break;
     }
 
-  DEBUG_printf(("backendGetDeviceID: device_id=\"%s\"\n", device_id));
+  DEBUG_printf(("ieee1284GetDeviceID: device_id=\"%s\"\n", device_id));
 
   if (scheme && uri)
     *uri = '\0';
@@ -301,7 +293,7 @@ backendGetDeviceID(
   */
 
   if (make_model)
-    backendGetMakeModel(device_id, make_model, make_model_size);
+    ieee1284GetMakeModel(device_id, make_model, make_model_size);
 
  /*
   * Then generate a device URI...
@@ -322,7 +314,7 @@ backendGetDeviceID(
     * Get the make, model, and serial numbers...
     */
 
-    num_values = get_1284_values(device_id, &values);
+    num_values = ieee1284GetValues(device_id, &values);
 
     if ((sern = cupsGetOption("SERIALNUMBER", num_values, values)) == NULL)
       if ((sern = cupsGetOption("SERN", num_values, values)) == NULL)
@@ -380,11 +372,11 @@ backendGetDeviceID(
 
 
 /*
- * 'backendGetMakeModel()' - Get the make and model string from the device ID.
+ * 'ieee1284GetMakeModel()' - Get the make and model string from the device ID.
  */
 
 int					/* O - 0 on success, -1 on failure */
-backendGetMakeModel(
+ieee1284GetMakeModel(
     const char *device_id,		/* O - 1284 device ID */
     char       *make_model,		/* O - Make/model */
     int        make_model_size)		/* I - Size of buffer */
@@ -396,7 +388,7 @@ backendGetMakeModel(
 		*des;			/* Description string */
 
 
-  DEBUG_printf(("backendGetMakeModel(device_id=\"%s\", "
+  DEBUG_printf(("ieee1284GetMakeModel(device_id=\"%s\", "
                 "make_model=%p, make_model_size=%d)\n", device_id,
 		make_model, make_model_size));
 
@@ -406,7 +398,7 @@ backendGetMakeModel(
 
   if (!device_id || !*device_id || !make_model || make_model_size < 32)
   {
-    DEBUG_puts("backendGetMakeModel: Bad args!");
+    DEBUG_puts("ieee1284GetMakeModel: Bad args!");
     return (-1);
   }
 
@@ -416,7 +408,7 @@ backendGetMakeModel(
   * Look for the description field...
   */
 
-  num_values = get_1284_values(device_id, &values);
+  num_values = ieee1284GetValues(device_id, &values);
 
   if ((mdl = cupsGetOption("MODEL", num_values, values)) == NULL)
     mdl = cupsGetOption("MDL", num_values, values);
@@ -436,7 +428,7 @@ backendGetMakeModel(
       * Just copy the model string, since it has the manufacturer...
       */
 
-      normalize_make_and_model(mdl, make_model, make_model_size);
+      ieee1284NormalizeMakeAndModel(mdl, make_model, make_model_size);
     }
     else
     {
@@ -448,7 +440,7 @@ backendGetMakeModel(
 
       snprintf(temp, sizeof(temp), "%s %s", mfg, mdl);
 
-      normalize_make_and_model(temp, make_model, make_model_size);
+      ieee1284NormalizeMakeAndModel(temp, make_model, make_model_size);
     }
   }
   else if ((des = cupsGetOption("DESCRIPTION", num_values, values)) != NULL ||
@@ -482,7 +474,7 @@ backendGetMakeModel(
       }
 
       if (spaces && letters)
-        normalize_make_and_model(des, make_model, make_model_size);
+        ieee1284NormalizeMakeAndModel(des, make_model, make_model_size);
     }
   }
 
@@ -503,14 +495,14 @@ backendGetMakeModel(
 
 
 /*
- * 'get_1284_values()' - Get 1284 device ID keys and values.
+ * 'ieee1284GetValues()' - Get 1284 device ID keys and values.
  *
  * The returned dictionary is a CUPS option array that can be queried with
  * cupsGetOption and freed with cupsFreeOptions.
  */
 
-static int				/* O - Number of key/value pairs */
-get_1284_values(
+int					/* O - Number of key/value pairs */
+ieee1284GetValues(
     const char *device_id,		/* I - IEEE-1284 device ID string */
     cups_option_t **values)		/* O - Array of key/value pairs */
 {
@@ -586,14 +578,16 @@ get_1284_values(
 
 
 /*
- * 'normalize_make_and_model()' - Normalize a product/make-and-model string.
+ * 'ieee1284NormalizeMakeAndModel()' - Normalize a product/make-and-model
+ *                                     string.
  *
  * This function tries to undo the mistakes made by many printer manufacturers
  * to produce a clean make-and-model string we can use.
  */
 
-static char *				/* O - Normalized make-and-model string or NULL on error */
-normalize_make_and_model(
+char *					/* O - Normalized make-and-model string
+                                           or NULL on error */
+ieee1284NormalizeMakeAndModel(
     const char *make_and_model,		/* I - Original make-and-model string */
     char       *buffer,			/* I - String buffer */
     size_t     bufsize)			/* I - Size of string buffer */
