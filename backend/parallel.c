@@ -22,7 +22,7 @@
  * Include necessary headers.
  */
 
-#include "backend-private.h"
+#include <cupsfilters/ieee1284.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>

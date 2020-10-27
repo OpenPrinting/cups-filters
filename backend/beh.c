@@ -19,9 +19,15 @@
  * Include necessary headers.
  */
 
-#include "backend-private.h"
+#include <config.h>
+#include <cups/cups.h>
+#include <cups/backend.h>
 #include <cups/array.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <signal.h>
+#include <string.h>
+#include <errno.h>
 
 /*
  * Local globals...

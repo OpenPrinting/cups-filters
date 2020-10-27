@@ -53,18 +53,17 @@ check_PROGRAMS = test1284
 #TESTS = test1284
 
 parallel_SOURCES = \
-	backend/backend-private.h \
-	backend/ieee1284.c \
 	backend/parallel.c
 parallel_LDADD = \
+	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS)
 parallel_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 
 serial_SOURCES = \
-	backend/backend-private.h \
 	backend/serial.c
 serial_LDADD = \
 	libppd.la \
@@ -74,7 +73,6 @@ serial_CFLAGS = \
 	$(CUPS_CFLAGS)
 
 beh_SOURCES = \
-	backend/backend-private.h \
 	backend/beh.c
 beh_LDADD = \
 	libppd.la \
@@ -84,7 +82,6 @@ beh_CFLAGS = \
 	$(CUPS_CFLAGS)
 
 implicitclass_SOURCES = \
-	backend/backend-private.h \
 	backend/implicitclass.c
 implicitclass_LDADD = \
 	libcupsfilters.la \
@@ -96,13 +93,13 @@ implicitclass_CFLAGS = \
 	$(CUPS_CFLAGS)
 
 test1284_SOURCES = \
-	backend/backend-private.h \
-	backend/ieee1284.c \
 	backend/test1284.c
 test1284_LDADD = \
+	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS)
 test1284_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 
@@ -247,6 +244,7 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/colormanager.h \
 	cupsfilters/driver.h \
 	cupsfilters/filter.h \
+	cupsfilters/ieee1284.h \
 	cupsfilters/image.h \
 	cupsfilters/ipp.h \
 	cupsfilters/log.h \
@@ -288,6 +286,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/dither.c \
 	cupsfilters/filter.c \
 	cupsfilters/ghostscript.c \
+	cupsfilters/ieee1284.c \
 	cupsfilters/image.c \
 	cupsfilters/image-bmp.c \
 	cupsfilters/image-colorspace.c \

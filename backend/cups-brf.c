@@ -24,10 +24,11 @@
  * THE SOFTWARE.
  */
 
-#include "backend-private.h"
+#include <cups/backend.h>
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/stat.h>

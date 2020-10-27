@@ -20,12 +20,14 @@
  * Include necessary headers.
  */
 
-#include "backend-private.h"
-#include <cups/array.h>
-#include <ctype.h>
-#include <cups/array.h>
-#include <ctype.h>
+#include <config.h>
 #include <cups/cups.h>
+#include <cups/backend.h>
+#include <cups/array.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <cupsfilters/pdftoippprinter.h>

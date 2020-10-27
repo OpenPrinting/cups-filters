@@ -1,5 +1,5 @@
 /*
- *   IEEE-1284 support functions for CUPS.
+ *   IEEE-1284 Device ID support functions for OpenPrinting CUPS Filters.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2007 by Easy Software Products, all rights reserved.
@@ -23,7 +23,7 @@
  * Include necessary headers.
  */
 
-#include "backend-private.h"
+#include "ieee1284.h"
 #include <cups/cups.h>
 #include <string.h>
 #include <ctype.h>

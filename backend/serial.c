@@ -20,12 +20,17 @@
  * Include necessary headers.
  */
 
-#include "backend-private.h"
+#include <config.h>
+#include <cups/cups.h>
+#include <cups/backend.h>
+#include <cups/sidechannel.h>
+#include <stdlib.h>
 #include <stdio.h>
-
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <errno.h>
+#include <signal.h>
 #include <sys/select.h>
 #ifdef HAVE_SYS_IOCTL_H
 #  include <sys/ioctl.h>

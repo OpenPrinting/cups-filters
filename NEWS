@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, parallel, test1284: Moved
+	  IEEE1284-device-ID-related functions into the public API of
+	  libcupsfilters.
 	- foomatic-rip: Remove temporary file created during pdf-to-ps
 	  conversion (Pull request #313).
 	- libppd: Added PPD collection handling functions (based on

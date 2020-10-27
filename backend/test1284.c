@@ -28,7 +28,7 @@
 #  include <fcntl.h>
 #endif /* WIN32 */
 
-#include "backend-private.h"
+#include <cupsfilters/ieee1284.h>
 
 
 /*

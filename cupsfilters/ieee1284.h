@@ -1,5 +1,5 @@
 /*
- *   Backend support definitions for OpenPrinting CUPS Filters.
+ *   IEEE1284 Device ID support definitions for OpenPrinting CUPS Filters.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2007 by Easy Software Products, all rights reserved.
@@ -10,8 +10,8 @@
  *   which should have been included with this file.
  */
 
-#ifndef _CUPSFILTERS_BACKEND_PRIVATE_H_
-#  define _CUPSFILTERS_BACKEND_PRIVATE_H_
+#ifndef _CUPSFILTERS_IEEE1284_H_
+#  define _CUPSFILTERS_IEEE1284_H_
 
 
 /*
@@ -62,7 +62,6 @@ extern "C" {
  * Prototypes...
  */
 
-extern int		backendDrainOutput(int print_fd, int device_fd);
 extern int		backendGetDeviceID(int fd, char *device_id,
 			                   int device_id_size,
 			                   char *make_model,
@@ -77,5 +76,4 @@ extern int		backendGetMakeModel(const char *device_id,
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
-#endif /* !_CUPSFILTERS_BACKEND_PRIVATE_H_ */
-
+#endif /* !_CUPSFILTERS_IEEE1284_H_ */
