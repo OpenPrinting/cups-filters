@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.28.5 - 2020-10-13
 -----------------------------------------------------
 
+CHANGES IN V1.28.6
+
+	- foomatic-rip: Remove temporary file created during pdf-to-ps
+	  conversion (Pull request #313).
+
 CHANGES IN V1.28.5
 
 	- cups-browsed: UUID from IPP response was used after its
