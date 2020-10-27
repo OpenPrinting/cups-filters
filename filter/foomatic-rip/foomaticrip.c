@@ -560,7 +560,7 @@ int print_file(const char *filename, int convert)
 {
     FILE *file;
     char buf[8192];
-    char tmpfilename[PATH_MAX];
+    char tmpfilename[PATH_MAX] = "";
     int type;
     int startpos;
     int pagecount;
@@ -688,6 +688,10 @@ int print_file(const char *filename, int convert)
                   fclose(in);
                 if (out != NULL)
                   fclose(out);
+
+                // Delete temp file if we created one
+                if ( *tmpfilename )
+                    unlink(tmpfilename);
 
                 return ret;
             }
