@@ -47,11 +47,6 @@ EXTRA_DIST += \
 pkgbackenddir = $(CUPS_SERVERBIN)/backend
 pkgbackend_PROGRAMS = parallel serial beh implicitclass
 
-check_PROGRAMS = test1284
-# We need ieee1284 up and running.
-# Leave it to the user to run if they have the bus.
-#TESTS = test1284
-
 parallel_SOURCES = \
 	backend/parallel.c
 parallel_LDADD = \
@@ -88,17 +83,6 @@ implicitclass_LDADD = \
 	libppd.la \
 	$(CUPS_LIBS)
 implicitclass_CFLAGS = \
-	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS)
-
-test1284_SOURCES = \
-	backend/test1284.c
-test1284_LDADD = \
-	libcupsfilters.la \
-	libppd.la \
-	$(CUPS_LIBS)
-test1284_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
@@ -179,7 +163,7 @@ pkgppdinclude_DATA = \
 
 lib_LTLIBRARIES = libppd.la
 
-check_PROGRAMS += \
+check_PROGRAMS = \
 	testppd
 TESTS = \
 	testppd
@@ -259,7 +243,8 @@ check_PROGRAMS += \
 	testcmyk \
 	testdither \
 	testimage \
-	testrgb
+	testrgb \
+	test1284
 TESTS += \
 	testdither
 #	testcmyk # fails as it opens some image.ppm which is nowerhe to be found.
@@ -275,6 +260,9 @@ TESTS += \
 #	./testdither 0 510 > test/0-510.pgm 2>test/0-510.log
 #	./testdither 0 1020 > test/0-1020.pgm 2>test/0-1020.log
 
+# We need ieee1284 up and running.
+# Leave it to the user to run if they have the bus.
+#TESTS += test1284
 
 libcupsfilters_la_SOURCES = \
 	cupsfilters/attr.c \
@@ -416,6 +404,17 @@ EXTRA_DIST += \
 	$(pkgfiltersinclude_DATA) \
 	cupsfilters/image.pgm \
 	cupsfilters/image.ppm
+
+test1284_SOURCES = \
+	cupsfilters/test1284.c
+test1284_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
+	$(CUPS_LIBS)
+test1284_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
 
 # =========
 # CUPS Data

@@ -1,5 +1,5 @@
 /*
- *   IEEE-1284 support functions test program for CUPS.
+ *   IEEE-1284 support functions test program for OpenPrinting CUPS Filters.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2006 by Easy Software Products, all rights reserved.
