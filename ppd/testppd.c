@@ -400,7 +400,7 @@ _log(void *data,
   vprintf(message, arglist);
   fflush(stdout);
   va_end(arglist);
-  fputc('\n', stderr);
+  putchar('\n');
 }
 
 
