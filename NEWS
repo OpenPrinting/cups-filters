@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- foomatic-rip: Remove temporary file created during pdf-to-ps
+	  conversion (Pull request #313).
 	- libppd: Added PPD collection handling functions (based on
 	  the code of cups-driverd in CUPS), for listing collections
 	  of PPD files and picking a PPD out of the collection.  PPDs
