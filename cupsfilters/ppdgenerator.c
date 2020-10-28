@@ -2226,7 +2226,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 
     if (all_borderless) {
       suffix = strcasestr(ppdname, ".Borderless");
-      *suffix = '\0';
+      if (suffix)
+	*suffix = '\0';
     }
 
     cupsFilePrintf(fp, "*OpenUI *PageSize/%s: PickOne\n"
@@ -2260,7 +2261,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 
       if (all_borderless) {
 	suffix = strcasestr(ppdsizename, ".Borderless");
-	*suffix = '\0';
+	if (suffix)
+	  *suffix = '\0';
       }
 
       cupsFilePrintf(fp, "*PageSize %s%s%s%s: \"<</PageSize[%s %s]>>setpagedevice\"\n",
@@ -2304,7 +2306,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 
       if (all_borderless) {
 	suffix = strcasestr(ppdsizename, ".Borderless");
-	*suffix = '\0';
+	if (suffix)
+	  *suffix = '\0';
       }
 
       cupsFilePrintf(fp, "*PageRegion %s%s%s%s: \"<</PageSize[%s %s]>>setpagedevice\"\n",
@@ -2340,7 +2343,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 
       if (all_borderless) {
 	suffix = strcasestr(ppdsizename, ".Borderless");
-	*suffix = '\0';
+	if (suffix)
+	  *suffix = '\0';
       }
 
       cupsFilePrintf(fp, "*ImageableArea %s: \"%s %s %s %s\"\n", ppdsizename,
