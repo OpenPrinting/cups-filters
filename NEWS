@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Added NULL check when removing ".Borderless"
+	  suffixes from page size names (Issue #314).
 	- libcupsfilters, parallel, test1284: Moved
 	  IEEE1284-device-ID-related functions into the public API of
 	  libcupsfilters, also made the internal functions public and
