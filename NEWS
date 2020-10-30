@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Extended ieee1284NormalizeMakeAndModel() to
+	  a universal function to clean up and normalize make/model
+	  strings (also device IDs) to get human-readable,
+	  machine-readable, or easily sortable make/model strings.
 	- libcupsfilters: Added NULL check when removing ".Borderless"
 	  suffixes from page size names (Issue #314).
 	- libcupsfilters, parallel, test1284: Moved
