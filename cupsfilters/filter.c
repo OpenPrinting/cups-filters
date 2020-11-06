@@ -190,6 +190,196 @@ filterCUPSWrapper(
 
 
 /*
+ * 'filterPOpen()' - Pipe a stream to or from a filter function
+ *                   Can be the input to or the output from the
+ *                   filter function.
+ */
+
+int                              /* O - File decriptor */
+filterPOpen(filter_function_t filter_func, /* I - Filter function */
+	    int inputfd,         /* I - File descriptor input stream or -1 */
+	    int outputfd,        /* I - File descriptor output stream or -1 */
+	    int inputseekable,   /* I - Is input stream seekable? */
+	    int *jobcanceled,    /* I - Pointer to integer marking
+				        whether job is canceled */
+	    filter_data_t *data, /* I - Job and printer data */
+	    void *parameters,    /* I - Filter-specific parameters */
+	    int *filter_pid)     /* O - PID of forked filter process */
+{
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
+  int		pipefds[2],          /* Pipes for filters */
+		pid,		     /* Process ID of filter */
+                ret,
+                infd, outfd;         /* Temporary file descriptors */
+
+ /*
+  * Check file descriptors...
+  */
+
+  if (inputfd < 0 && outputfd < 0)
+  {
+    if (log)
+      log(ld, FILTER_LOGLEVEL_ERROR,
+	  "filterPOpen: Either inputfd or outputfd must be < 0, not both");
+    return (-1);
+  }
+
+  if (inputfd > 0 && outputfd > 0)
+  {
+    if (log)
+      log(ld, FILTER_LOGLEVEL_ERROR,
+	  "filterPOpen: One of inputfd or outputfd must be < 0");
+    return (-1);
+  }
+
+ /*
+  * Ignore broken pipe signals...
+  */
+
+  signal(SIGPIPE, SIG_IGN);
+
+ /*
+  * Open a pipe ...
+  */
+
+  if (pipe(pipefds) < 0) {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "filterPOpen: Could not create pipe for %s: %s",
+		 inputfd < 0 ? "input" : "output",
+		 strerror(errno));
+    return (-1);
+  }
+
+  if ((pid = fork()) == 0) {
+   /*
+    * Child process goes here...
+    *
+    * Update input and output FDs as needed...
+    */
+
+    if (inputfd < 0) {
+      inputseekable = 0;
+      infd = pipefds[0];
+      outfd = outputfd;
+      close(pipefds[1]);
+    } else {
+      infd = inputfd;
+      outfd = pipefds[1];
+      close(pipefds[0]);
+    }
+
+   /*
+    * Execute filter function...
+    */
+
+    ret = (filter_func)(infd, outfd, inputseekable, jobcanceled, data,
+			parameters);
+
+   /*
+    * Close file descriptor and terminate the sub-process...
+    */
+
+    close(infd);
+    close(outfd);
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "filterPOpen: Filter function completed with status %d.",
+		 ret);
+    exit(ret);
+
+  } else if (pid > 0) {
+    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		 "filterPOpen: Filter function (PID %d) started.", pid);
+
+   /*
+    * Save PID for waiting for or terminating the sub-process
+    */
+
+    *filter_pid = pid;
+
+    /*
+     * Return file descriptor to stream to or from
+     */
+
+    if (inputfd < 0) {
+      close(pipefds[0]);
+      return (pipefds[1]);
+    } else {
+      close(pipefds[1]);
+      return (pipefds[0]);
+    }
+
+  } else {
+
+    /*
+     * fork() error
+     */
+
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "filterPOpen: Could not fork to start filter function: %s",
+		 strerror(errno));
+    return (-1);
+  }
+}
+
+
+/*
+ * 'filterPClose()' - Close a piped stream created with
+ *                    filterPOpen().
+ */
+
+int                              /* O - Error status */
+filterPClose(int fd,             /* I - Pipe file descriptor */
+	     int filter_pid,     /* I - PID of forked filter process */
+	     filter_data_t *data)
+{
+  int		status,		 /* Exit status */
+                retval;		 /* Return value */
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
+
+
+ /*
+  * close the stream...
+  */
+
+  close(fd);
+
+ /*
+  * Wait for the child process to exit...
+  */
+
+  retval = 0;
+
+ retry_wait:
+  if (waitpid (filter_pid, &status, 0) == -1) {
+    if (errno == EINTR)
+      goto retry_wait;
+    if (log)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "filterPClose: Filter function (PID %d) stopped with an error: %s!",
+	  filter_pid, strerror(errno));
+    goto out;
+  }
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+               "filterPClose: Filter function (PID %d) exited with no errors.",
+               filter_pid);
+
+  /* How did the filter function terminate */
+  if (WIFEXITED(status))
+    /* Via exit() anywhere or return() in the main() function */
+    retval = WEXITSTATUS(status);
+  else if (WIFSIGNALED(status))
+    /* Via signal */
+    retval = 256 * WTERMSIG(status);
+
+ out:
+  return(retval);
+}
+
+
+/*
  * 'compare_filter_pids()' - Compare two filter PIDs...
  */
 
@@ -284,6 +474,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
       if (pipe(filterfds[1 - current]) < 0) {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		     "filterChain: Could not create pipe for output of %s: %s",
+		     filter->name ? filter->name : "Unspecified filter",
 		     strerror(errno));
 	return (1);
       }
@@ -294,7 +485,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
      /*
       * Child process goes here...
       *
-      * Update imput and output FDs as needed...
+      * Update input and output FDs as needed...
       */
 
       infd = filterfds[current][0];
@@ -309,7 +500,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 	outfd = open("/dev/null", O_WRONLY);
 
      /*
-      * Execute command...
+      * Execute filter function...
       */
 
       ret = (filter->function)(infd, outfd, inputseekable, jobcanceled, data,
@@ -331,8 +522,13 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
       pid_entry->pid = pid;
       pid_entry->name = filter->name ? filter->name : "Unspecified filter";
       cupsArrayAdd(pids, pid_entry);
-    } else
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "filterChain: Could not fork to start %s: %s",
+		   filter->name ? filter->name : "Unspecified filter",
+		   strerror(errno));
       break;
+    }
 
     inputseekable = 0;
   }

@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Added filterPOpen() and filterPClose()
+	  functions which similar to popen() and pclose() create a
+	  file descriptor which either takes data to feed into a
+	  filter function or provides data coming out of a filter
+	  function.
 	- libcupsfilters: Extended ieee1284NormalizeMakeAndModel() to
 	  a universal function to clean up and normalize make/model
 	  strings (also device IDs) to get human-readable,

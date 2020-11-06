@@ -97,6 +97,21 @@ extern int filterCUPSWrapper(int argc,
 			     int *JobCanceled);
 
 
+extern int filterPOpen(filter_function_t filter_func, /* I - Filter function */
+		       int inputfd,
+		       int outputfd,
+		       int inputseekable,
+		       int *jobcanceled,
+		       filter_data_t *data,
+		       void *parameters,
+		       int *filter_pid);
+
+
+extern int filterPClose(int fd,
+			int filter_pid,
+			filter_data_t *data);
+
+
 extern int filterChain(int inputfd,
 		       int outputfd,
 		       int inputseekable,
