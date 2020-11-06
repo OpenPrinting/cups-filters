@@ -1340,12 +1340,17 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       fputc(0x04, doc.outputfp);
   }
 
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "imagetops: Printing completed.", page);
+
  /*
   * Close files...
   */
 
   cupsImageClose(img);
   ppdClose(ppd);
+  fclose(doc.outputfp);
+  close(outputfd);
 
   return (0);
 }

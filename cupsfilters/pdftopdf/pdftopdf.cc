@@ -1105,5 +1105,6 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     return 6;
   }
 
+  close(outputfd);
   return 0;
 }

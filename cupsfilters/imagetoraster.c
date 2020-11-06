@@ -1768,6 +1768,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   cupsRasterClose(ras);
   cupsImageClose(img);
   ppdClose(ppd);
+  close(outputfd);
 
   return (0);
 }

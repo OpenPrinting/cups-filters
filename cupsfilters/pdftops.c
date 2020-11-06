@@ -1550,6 +1550,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
     if (ret && log) log(ld, FILTER_LOGLEVEL_ERROR,
 			"pdftops: pstops filter function failed.");
 
+    close(outputfd);
     exit(ret);
   }
   else if (pstops_pid < 0)

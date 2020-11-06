@@ -526,6 +526,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
   cupsFileClose(inputfp);
   
   fclose(outputfp);
+  close(outputfd);
 
   return 0;
 }

@@ -1185,5 +1185,6 @@ out:
   free(icc_profile);
   if (ppd)
     ppdClose(ppd);
+  close(outputfd);
   return status;
 }
