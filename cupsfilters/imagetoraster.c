@@ -53,7 +53,7 @@ typedef struct {                /**** Document information ****/
   int   Orientation,    	/* 0 = portrait, 1 = landscape, etc. */
         Duplex,         	/* Duplexed? */
         LanguageLevel,  	/* Language level of printer */
-        ColorDevice;    	/* Do color text? */
+        Color;    		/* Print in color? */
   float PageLeft,       	/* Left margin */
         PageRight,      	/* Right margin */
         PageBottom,     	/* Bottom margin */
@@ -381,7 +381,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   ppdMarkOptions(ppd, num_options, options);
   filterSetCommonOptions(ppd, num_options, options, 0,
 			 &doc.Orientation, &doc.Duplex,
-			 &doc.LanguageLevel, &doc.ColorDevice,
+			 &doc.LanguageLevel, &doc.Color,
 			 &doc.PageLeft, &doc.PageRight,
 			 &doc.PageTop, &doc.PageBottom,
 			 &doc.PageWidth, &doc.PageLength,

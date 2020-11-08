@@ -111,7 +111,7 @@ typedef struct				/**** Document information ****/
   int           Orientation,            /* 0 = portrait, 1 = landscape, etc. */
                 Duplex,                 /* Duplexed? */
                 LanguageLevel,          /* PS Language level of printer */
-                ColorDevice;            /* Do color text? */
+                ColorDevice;            /* Color printer? */
   float         PageLeft,               /* Left margin */
                 PageRight,              /* Right margin */
                 PageBottom,             /* Bottom margin */

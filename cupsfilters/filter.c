@@ -637,7 +637,7 @@ filterSetCommonOptions(
   *Orientation = 0;		/* 0 = portrait, 1 = landscape, etc. */
   *Duplex = 0;			/* Duplexed? */
   *LanguageLevel = 1;		/* Language level of printer */
-  *ColorDevice = 1;		/* Do color text? */
+  *ColorDevice = 1;		/* Color printer? */
   *PageLeft = 18.0f;		/* Left margin */
   *PageRight = 594.0f;		/* Right margin */
   *PageBottom = 36.0f;		/* Bottom margin */

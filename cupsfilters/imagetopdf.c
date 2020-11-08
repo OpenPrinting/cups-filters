@@ -83,7 +83,7 @@ typedef struct {                	/**** Document information ****/
   int   	Orientation,    	/* 0 = portrait, 1 = landscape, etc. */
         	Duplex,         	/* Duplexed? */
         	LanguageLevel,  	/* Language level of printer */
-        	ColorDevice;    	/* Do color text? */
+        	Color;    	 	/* Print in color? */
   float 	PageLeft,       	/* Left margin */
         	PageRight,      	/* Right margin */
         	PageBottom,     	/* Bottom margin */
@@ -873,17 +873,22 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   ppdMarkOptions(doc.ppd, num_options, options);
   filterSetCommonOptions(doc.ppd, num_options, options, 0,
 			 &doc.Orientation, &doc.Duplex,
-			 &doc.LanguageLevel, &doc.ColorDevice,
+			 &doc.LanguageLevel, &doc.Color,
 			 &doc.PageLeft, &doc.PageRight,
 			 &doc.PageTop, &doc.PageBottom,
 			 &doc.PageWidth, &doc.PageLength,
 			 log, ld);
 
+  /* The filterSetCommonOptions() does not set doc.Color
+     according to option settings (user's demand for color/gray),
+     so we parse the options and set the mode here */
+  cupsRasterParseIPPOptions(&h, num_options, options, 0, 1);
+  if (doc.Color)
+    doc.Color = h.cupsNumColors <= 1 ? 0 : 1;
   if (!doc.ppd) {
-    cupsRasterParseIPPOptions(&h, num_options, options, 0, 1);
+    /* Without PPD use also the other findings of cupsRasterParseIPPOptions() */
     doc.Orientation = h.Orientation;
     doc.Duplex = h.Duplex;
-    doc.ColorDevice = h.cupsNumColors <= 1 ? 0 : 1;
     doc.PageWidth = h.cupsPageSize[0] != 0.0 ? h.cupsPageSize[0] :
       (float)h.PageSize[0];
     doc.PageLength = h.cupsPageSize[1] != 0.0 ? h.cupsPageSize[1] :
@@ -1071,7 +1076,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   * Open the input image to print...
   */
 
-  doc.colorspace = doc.ColorDevice ? CUPS_IMAGE_RGB_CMYK : CUPS_IMAGE_WHITE;
+  doc.colorspace = doc.Color ? CUPS_IMAGE_RGB_CMYK : CUPS_IMAGE_WHITE;
 
   doc.img = cupsImageOpenFP(fp, doc.colorspace, CUPS_IMAGE_WHITE, sat, hue,
 			    NULL);
