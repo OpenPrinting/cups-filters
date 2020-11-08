@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: In cupsRasterParseIPPOptions() (called from
+	  filters used without PPD file) improved understanding of
+	  color mode options. Options "output-mode", "OutputMode",
+	  "print-color-mode", and choices "auto", "color",
+	  "auto-monochrome", "process-monochrome", and "bi-level" are
+	  supported now and default color mode is RGB 8-bit color and
+	  not 1-bit grayscale.
 	- libcupsfilters: Added filterPOpen() and filterPClose()
 	  functions which similar to popen() and pclose() create a
 	  file descriptor which either takes data to feed into a
