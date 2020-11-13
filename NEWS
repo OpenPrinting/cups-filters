@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libppd: Correct conversion between PPD option names and IPP
+	  attribute names, duplicate dashes like "Tray-2" -> "tray--2"
+	  (OpenPrinting CUPS pull request #23).
 	- cups-browsed: Silenced compiler warning.
 	- foomatic-rip: Fix infinite loop and input from file on raw
 	  printing (Pull request #318).

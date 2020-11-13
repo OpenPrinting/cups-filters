@@ -5210,6 +5210,8 @@ ppd_pwg_unppdize_name(const char *ppd,	/* I - PPD keyword */
 {
   char	*ptr,				/* Pointer into name buffer */
 	*end;				/* End of name buffer */
+  int   nodash = 1;                     /* Next char in IPP name cannot be a
+                                           dash (first char or after a dash) */
 
 
   if (_ppd_islower(*ppd))
@@ -5221,7 +5223,9 @@ ppd_pwg_unppdize_name(const char *ppd,	/* I - PPD keyword */
     const char *ppdptr;			/* Pointer into PPD keyword */
 
     for (ppdptr = ppd + 1; *ppdptr; ppdptr ++)
-      if (_ppd_isupper(*ppdptr) || strchr(dashchars, *ppdptr))
+      if (_ppd_isupper(*ppdptr) || strchr(dashchars, *ppdptr) ||
+	  (*ppdptr == '-' && *(ppdptr - 1) == '-') ||
+	  (*ppdptr == '-' && *(ppdptr + 1) == '\0'))
         break;
 
     if (!*ppdptr)
@@ -5233,19 +5237,44 @@ ppd_pwg_unppdize_name(const char *ppd,	/* I - PPD keyword */
 
   for (ptr = name, end = name + namesize - 1; *ppd && ptr < end; ppd ++)
   {
-    if (_ppd_isalnum(*ppd) || *ppd == '-')
+    if (_ppd_isalnum(*ppd))
+    {
       *ptr++ = (char)tolower(*ppd & 255);
-    else if (strchr(dashchars, *ppd))
-      *ptr++ = '-';
+      nodash = 0;
+    }
+    else if (*ppd == '-' || strchr(dashchars, *ppd))
+    {
+      if (nodash == 0)
+      {
+	*ptr++ = '-';
+	nodash = 1;
+      }
+    }
     else
+    {
       *ptr++ = *ppd;
+      nodash = 0;
+    }
 
-    if (!_ppd_isupper(*ppd) && _ppd_isalnum(*ppd) &&
-	_ppd_isupper(ppd[1]) && ptr < end)
-      *ptr++ = '-';
-    else if (!isdigit(*ppd & 255) && isdigit(ppd[1] & 255))
-      *ptr++ = '-';
+    if (nodash == 0)
+    {
+      if (!_ppd_isupper(*ppd) && _ppd_isalnum(*ppd) &&
+	  _ppd_isupper(ppd[1]) && ptr < end)
+      {
+	*ptr++ = '-';
+	nodash = 1;
+      }
+      else if (!isdigit(*ppd & 255) && isdigit(ppd[1] & 255))
+      {
+	*ptr++ = '-';
+	nodash = 1;
+      }
+    }
   }
+
+  /* Remove trailing dashes */
+  while (ptr > name && *(ptr - 1) == '-')
+    ptr --;
 
   *ptr = '\0';
 }
