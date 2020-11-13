@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- cups-browsed: Silenced compiler warning.
 	- foomatic-rip: Fix infinite loop and input from file on raw
 	  printing (Pull request #318).
 	- libcupsfilters: In cupsRasterParseIPPOptions() (called from
