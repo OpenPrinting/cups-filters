@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.28.5 - 2020-10-13
 
 CHANGES IN V1.28.6
 
+	- cups-browsed: Silenced compiler warning.
 	- foomatic-rip: Fix infinite loop and input from file on raw
 	  printing (Pull request #318).
 	- foomatic-rip: Remove temporary file created during pdf-to-ps
