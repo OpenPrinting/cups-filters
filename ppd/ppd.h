@@ -763,6 +763,15 @@ extern const char	*ppdPwgMediaTypeForType(const char *media_type,
 						char *name, size_t namesize);
 extern const char	*ppdPwgPageSizeForMedia(pwg_media_t *media,
 						char *name, size_t namesize);
+extern void		ppdPwgPpdizeName(const char *ipp, char *name,
+					 size_t namesize);
+extern void		ppdPwgPpdizeResolution(ipp_attribute_t *attr,
+					       int element, int *xres,
+					       int *yres, char *name,
+					       size_t namesize);
+extern void		ppdPwgUnppdizeName(const char *ppd, char *name,
+					   size_t namesize,
+					   const char *dashchars);
 
 /**** New in cups-filters 2.0.0: Overtaken from ippeveprinter ****/
 extern ipp_t		*ppdLoadAttributes(ppd_file_t   *ppd,

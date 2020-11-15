@@ -49,10 +49,6 @@ static int	ppd_pwg_compare_finishings(ppd_pwg_finishings_t *a, ppd_pwg_finishing
 static int	ppd_pwg_compare_sizes(cups_size_t *a, cups_size_t *b);
 static cups_size_t *ppd_pwg_copy_size(cups_size_t *size);
 static void	ppd_pwg_free_finishings(ppd_pwg_finishings_t *f);
-static void	ppd_pwg_ppdize_name(const char *ipp, char *name, size_t namesize);
-static void	ppd_pwg_ppdize_resolution(ipp_attribute_t *attr, int element, int *xres, int *yres, char *name, size_t namesize);
-static void	ppd_pwg_unppdize_name(const char *ppd, char *name, size_t namesize,
-		                  const char *dashchars);
 
 char            *ppd_cache_status_message = NULL; /* Last PPD cache error */
 
@@ -1179,7 +1175,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	pwg_name      = pwg_keyword;
 	new_known_pwg = 0;
 
-	ppd_pwg_unppdize_name(ppd_size->name, ppd_name, sizeof(ppd_name), "_.");
+	ppdPwgUnppdizeName(ppd_size->name, ppd_name, sizeof(ppd_name), "_.");
 	pwgFormatSizeName(pwg_keyword, sizeof(pwg_keyword), NULL, ppd_name,
 			  PWG_FROM_POINTS(ppd_size->width),
 			  PWG_FROM_POINTS(ppd_size->length), NULL);
@@ -1347,7 +1343,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	*/
 
         pwg_name = pwg_keyword;
-	ppd_pwg_unppdize_name(choice->choice, pwg_keyword, sizeof(pwg_keyword),
+	ppdPwgUnppdizeName(choice->choice, pwg_keyword, sizeof(pwg_keyword),
 	                  "_");
       }
 
@@ -1418,7 +1414,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	*/
 
         pwg_name = pwg_keyword;
-	ppd_pwg_unppdize_name(choice->choice, pwg_keyword, sizeof(pwg_keyword),
+	ppdPwgUnppdizeName(choice->choice, pwg_keyword, sizeof(pwg_keyword),
 	                  "_");
       }
 
@@ -1454,7 +1450,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	 i > 0;
 	 i --, choice ++, map ++)
     {
-      ppd_pwg_unppdize_name(choice->choice, pwg_keyword, sizeof(pwg_keyword), "_");
+      ppdPwgUnppdizeName(choice->choice, pwg_keyword, sizeof(pwg_keyword), "_");
 
       map->pwg = strdup(pwg_keyword);
       map->ppd = strdup(choice->choice);
@@ -3688,7 +3684,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
   */
 
   if ((attr = ippFindAttribute(ippGetCollection(defattr, 0), "media-source", IPP_TAG_ZERO)) != NULL)
-    ppd_pwg_ppdize_name(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
+    ppdPwgPpdizeName(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
   else
     strlcpy(ppdname, "Unknown", sizeof(ppdname));
 
@@ -3755,7 +3751,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
     {
       keyword = ippGetString(attr, i, NULL);
 
-      ppd_pwg_ppdize_name(keyword, ppdname, sizeof(ppdname));
+      ppdPwgPpdizeName(keyword, ppdname, sizeof(ppdname));
 
       for (j = 0; j < (int)(sizeof(sources) / sizeof(sources[0])); j ++)
         if (!strcmp(sources[j], keyword))
@@ -3774,7 +3770,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
   */
 
   if ((attr = ippFindAttribute(ippGetCollection(defattr, 0), "media-type", IPP_TAG_ZERO)) != NULL)
-    ppd_pwg_ppdize_name(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
+    ppdPwgPpdizeName(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
   else
     strlcpy(ppdname, "Unknown", sizeof(ppdname));
 
@@ -3787,7 +3783,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
     {
       keyword = ippGetString(attr, i, NULL);
 
-      ppd_pwg_ppdize_name(keyword, ppdname, sizeof(ppdname));
+      ppdPwgPpdizeName(keyword, ppdname, sizeof(ppdname));
 
       snprintf(msgid, sizeof(msgid), "media-type.%s", keyword);
       if ((msgstr = _ppdLangString(lang, msgid)) == msgid || !strcmp(msgid, msgstr))
@@ -3990,7 +3986,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
   */
 
   if ((attr = ippFindAttribute(response, "output-bin-default", IPP_TAG_ZERO)) != NULL)
-    ppd_pwg_ppdize_name(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
+    ppdPwgPpdizeName(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
   else
     strlcpy(ppdname, "Unknown", sizeof(ppdname));
 
@@ -4015,7 +4011,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
     {
       keyword = ippGetString(attr, i, NULL);
 
-      ppd_pwg_ppdize_name(keyword, ppdname, sizeof(ppdname));
+      ppdPwgPpdizeName(keyword, ppdname, sizeof(ppdname));
 
       snprintf(msgid, sizeof(msgid), "output-bin.%s", keyword);
       if ((msgstr = _ppdLangString(lang, msgid)) == msgid || !strcmp(msgid, msgstr))
@@ -4592,7 +4588,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
     * Generate print quality options...
     */
 
-    ppd_pwg_ppdize_resolution(attr, resolutions[count / 2], &xres, &yres, ppdname, sizeof(ppdname));
+    ppdPwgPpdizeResolution(attr, resolutions[count / 2], &xres, &yres, ppdname, sizeof(ppdname));
     cupsFilePrintf(fp, "*DefaultResolution: %s\n", ppdname);
 
     cupsFilePrintf(fp, "*OpenUI *cupsPrintQuality: PickOne\n"
@@ -4601,18 +4597,18 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
 		       "*DefaultcupsPrintQuality: Normal\n", lang->language, _ppdLangString(lang, _("Print Quality")));
     if (count > 2 || ippContainsInteger(quality, IPP_QUALITY_DRAFT))
     {
-      ppd_pwg_ppdize_resolution(attr, resolutions[0], &xres, &yres, NULL, 0);
+      ppdPwgPpdizeResolution(attr, resolutions[0], &xres, &yres, NULL, 0);
       cupsFilePrintf(fp, "*cupsPrintQuality Draft: \"<</HWResolution[%d %d]>>setpagedevice\"\n", xres, yres);
       cupsFilePrintf(fp, "*%s.cupsPrintQuality Draft/%s: \"\"\n", lang->language, _ppdLangString(lang, _("Draft")));
     }
 
-    ppd_pwg_ppdize_resolution(attr, resolutions[count / 2], &xres, &yres, NULL, 0);
+    ppdPwgPpdizeResolution(attr, resolutions[count / 2], &xres, &yres, NULL, 0);
     cupsFilePrintf(fp, "*cupsPrintQuality Normal: \"<</HWResolution[%d %d]>>setpagedevice\"\n", xres, yres);
     cupsFilePrintf(fp, "*%s.cupsPrintQuality Normal/%s: \"\"\n", lang->language, _ppdLangString(lang, _("Normal")));
 
     if (count > 1 || ippContainsInteger(quality, IPP_QUALITY_HIGH))
     {
-      ppd_pwg_ppdize_resolution(attr, resolutions[count - 1], &xres, &yres, NULL, 0);
+      ppdPwgPpdizeResolution(attr, resolutions[count - 1], &xres, &yres, NULL, 0);
       cupsFilePrintf(fp, "*cupsPrintQuality High: \"<</HWResolution[%d %d]>>setpagedevice\"\n", xres, yres);
       cupsFilePrintf(fp, "*%s.cupsPrintQuality High/%s: \"\"\n", lang->language, _ppdLangString(lang, _("High")));
     }
@@ -4625,7 +4621,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
   {
     if ((attr = ippFindAttribute(response, "printer-resolution-default", IPP_TAG_RESOLUTION)) != NULL)
     {
-      ppd_pwg_ppdize_resolution(attr, 0, &xres, &yres, ppdname, sizeof(ppdname));
+      ppdPwgPpdizeResolution(attr, 0, &xres, &yres, ppdname, sizeof(ppdname));
     }
     else
     {
@@ -4736,13 +4732,13 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
 
           if ((keyword = ippGetString(ippFindAttribute(media_col, "media-source", IPP_TAG_ZERO), 0, NULL)) != NULL)
           {
-            ppd_pwg_ppdize_name(keyword, ppdname, sizeof(ppdname));
+            ppdPwgPpdizeName(keyword, ppdname, sizeof(ppdname));
             cupsFilePrintf(fp, "*InputSlot %s\n", keyword);
 	  }
 
           if ((keyword = ippGetString(ippFindAttribute(media_col, "media-type", IPP_TAG_ZERO), 0, NULL)) != NULL)
           {
-            ppd_pwg_ppdize_name(keyword, ppdname, sizeof(ppdname));
+            ppdPwgPpdizeName(keyword, ppdname, sizeof(ppdname));
             cupsFilePrintf(fp, "*MediaType %s\n", keyword);
 	  }
         }
@@ -4762,7 +4758,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
         }
         else if (!strcmp(member_name, "output-bin"))
         {
-          ppd_pwg_ppdize_name(ippGetString(member, 0, NULL), ppdname, sizeof(ppdname));
+          ppdPwgPpdizeName(ippGetString(member, 0, NULL), ppdname, sizeof(ppdname));
           cupsFilePrintf(fp, "*OutputBin %s\n", ppdname);
         }
         else if (!strcmp(member_name, "sides"))
@@ -4858,7 +4854,7 @@ ppdPwgInputSlotForSource(
   else if (_ppd_strcasecmp(media_source, "alternate-roll"))
     strlcpy(name, "Roll2", namesize);
   else
-    ppd_pwg_ppdize_name(media_source, name, namesize);
+    ppdPwgPpdizeName(media_source, name, namesize);
 
   return (name);
 }
@@ -4907,7 +4903,7 @@ ppdPwgMediaTypeForType(
   else if (_ppd_strcasecmp(media_type, "transparency"))
     strlcpy(name, "Transparency", namesize);
   else
-    ppd_pwg_ppdize_name(media_type, name, namesize);
+    ppdPwgPpdizeName(media_type, name, namesize);
 
   return (name);
 }
@@ -5129,13 +5125,13 @@ ppd_pwg_free_finishings(
 
 
 /*
- * 'ppd_pwg_ppdize_name()' - Convert an IPP keyword to a PPD keyword.
+ * 'ppdPwgPpdizeName()' - Convert an IPP keyword to a PPD keyword.
  */
 
-static void
-ppd_pwg_ppdize_name(const char *ipp,	/* I - IPP keyword */
-                char       *name,	/* I - Name buffer */
-		size_t     namesize)	/* I - Size of name buffer */
+void
+ppdPwgPpdizeName(const char *ipp,	/* I - IPP keyword */
+		 char       *name,	/* I - Name buffer */
+		 size_t     namesize)	/* I - Size of name buffer */
 {
   char	*ptr,				/* Pointer into name buffer */
 	*end;				/* End of name buffer */
@@ -5165,11 +5161,11 @@ ppd_pwg_ppdize_name(const char *ipp,	/* I - IPP keyword */
 
 
 /*
- * 'ppd_pwg_ppdize_resolution()' - Convert PWG resolution values to PPD values.
+ * 'ppdPwgPpdizeResolution()' - Convert PWG resolution values to PPD values.
  */
 
-static void
-ppd_pwg_ppdize_resolution(
+void
+ppdPwgPpdizeResolution(
     ipp_attribute_t *attr,		/* I - Attribute to convert */
     int             element,		/* I - Element to convert */
     int             *xres,		/* O - X resolution in DPI */
@@ -5199,14 +5195,16 @@ ppd_pwg_ppdize_resolution(
 
 
 /*
- * 'ppd_pwg_unppdize_name()' - Convert a PPD keyword to a lowercase IPP keyword.
+ * 'ppdPwgUnppdizeName()' - Convert a PPD keyword to a lowercase IPP keyword.
  */
 
-static void
-ppd_pwg_unppdize_name(const char *ppd,	/* I - PPD keyword */
-		  char       *name,	/* I - Name buffer */
-                  size_t     namesize,	/* I - Size of name buffer */
-                  const char *dashchars)/* I - Characters to be replaced by dashes */
+void
+ppdPwgUnppdizeName(const char *ppd,	 /* I - PPD keyword */
+		   char       *name,	 /* I - Name buffer */
+		   size_t     namesize,	 /* I - Size of name buffer */
+		   const char *dashchars)/* I - Characters to be replaced by
+					        dashes or NULL to replace all
+					        non-alphanumeric characters */
 {
   char	*ptr,				/* Pointer into name buffer */
 	*end;				/* End of name buffer */
@@ -5223,7 +5221,9 @@ ppd_pwg_unppdize_name(const char *ppd,	/* I - PPD keyword */
     const char *ppdptr;			/* Pointer into PPD keyword */
 
     for (ppdptr = ppd + 1; *ppdptr; ppdptr ++)
-      if (_ppd_isupper(*ppdptr) || strchr(dashchars, *ppdptr) ||
+      if (_ppd_isupper(*ppdptr) ||
+	  (dashchars && strchr(dashchars, *ppdptr)) ||
+	  (!dashchars && !_ppd_isalnum(*ppdptr)) ||
 	  (*ppdptr == '-' && *(ppdptr - 1) == '-') ||
 	  (*ppdptr == '-' && *(ppdptr + 1) == '\0'))
         break;
@@ -5242,7 +5242,8 @@ ppd_pwg_unppdize_name(const char *ppd,	/* I - PPD keyword */
       *ptr++ = (char)tolower(*ppd & 255);
       nodash = 0;
     }
-    else if (*ppd == '-' || strchr(dashchars, *ppd))
+    else if (*ppd == '-' || (dashchars && strchr(dashchars, *ppd)) ||
+	     (!dashchars && !_ppd_isalnum(*ppd)))
     {
       if (nodash == 0)
       {

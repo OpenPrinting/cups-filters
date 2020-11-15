@@ -3,6 +3,13 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libppd: Move the functions ppdPwgUnppdizeName(),
+	  ppdPwgPpdizeName(), and ppdPwgPpdizeResolution() into the
+	  public API.
+	- libppd: In the ppdPwgUnppdizeName() allow to supply NULL as
+	  the list of characters to replace by dashes. Then all non-
+	  alpha-numeric characters get replaced, to result in IPP-
+	  conforming keyword strings.
 	- libppd: Correct conversion between PPD option names and IPP
 	  attribute names, duplicate dashes like "Tray-2" -> "tray--2"
 	  (OpenPrinting CUPS pull request #23).
