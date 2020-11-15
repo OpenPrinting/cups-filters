@@ -1682,7 +1682,8 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
     if ((duplex = ppdFindOption(ppd, "JCLDuplex")) == NULL)
       if ((duplex = ppdFindOption(ppd, "EFDuplex")) == NULL)
         if ((duplex = ppdFindOption(ppd, "EFDuplexing")) == NULL)
-	  duplex = ppdFindOption(ppd, "KD03Duplex");
+	  if ((duplex = ppdFindOption(ppd, "ARDuplex")) == NULL)
+	    duplex = ppdFindOption(ppd, "KD03Duplex");
 
   if (duplex)
   {

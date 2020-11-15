@@ -686,6 +686,10 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 	  doc->num_options = cupsAddOption("EFDuplexing", "False",
 	                                   doc->num_options, &(doc->options));
 
+	if (cupsGetOption("ARDuplex", doc->num_options, doc->options))
+	  doc->num_options = cupsAddOption("ARDuplex", "None",
+	                                   doc->num_options, &(doc->options));
+
 	if (cupsGetOption("KD03Duplex", doc->num_options, doc->options))
 	  doc->num_options = cupsAddOption("KD03Duplex", "None",
 	                                   doc->num_options, &(doc->options));
@@ -697,6 +701,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 	ppdMarkOption(ppd, "Duplex", "None");
 	ppdMarkOption(ppd, "EFDuplex", "None");
 	ppdMarkOption(ppd, "EFDuplexing", "False");
+	ppdMarkOption(ppd, "ARDuplex", "None");
 	ppdMarkOption(ppd, "KD03Duplex", "None");
 	ppdMarkOption(ppd, "JCLDuplex", "None");
       }

@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libppd, libcupsfilters, bannertopdf, texttopdf: Added
+	  support for Sharp-proprietary "ARDuplex" PPD option name for
+	  double-sided printing.
 	- libppd: Move the functions ppdPwgUnppdizeName(),
 	  ppdPwgPpdizeName(), and ppdPwgPpdizeResolution() into the
 	  public API.

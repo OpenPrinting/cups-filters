@@ -160,6 +160,10 @@ static int duplex_marked(ppd_file_t *ppd,
         ppdIsMarked(ppd, "JCLDuplex", "DuplexTumble") ||
         ppdIsMarked(ppd, "EFDuplex", "DuplexNoTumble") ||
         ppdIsMarked(ppd, "EFDuplex", "DuplexTumble") ||
+        ppdIsMarked(ppd, "EFDuplexing", "DuplexNoTumble") ||
+        ppdIsMarked(ppd, "EFDuplexing", "DuplexTumble") ||
+        ppdIsMarked(ppd, "ARDuplex", "DuplexNoTumble") ||
+        ppdIsMarked(ppd, "ARDuplex", "DuplexTumble") ||
         ppdIsMarked(ppd, "KD03Duplex", "DuplexNoTumble") ||
         ppdIsMarked(ppd, "KD03Duplex", "DuplexTumble"))) ||
       ((val = cupsGetOption("Duplex", noptions, options))

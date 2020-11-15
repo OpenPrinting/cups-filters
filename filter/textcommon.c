@@ -1585,6 +1585,10 @@ SetCommonOptions(
       ppdIsMarked(ppd, "JCLDuplex", "DuplexTumble") ||
       ppdIsMarked(ppd, "EFDuplex", "DuplexNoTumble") ||
       ppdIsMarked(ppd, "EFDuplex", "DuplexTumble") ||
+      ppdIsMarked(ppd, "EFDuplexing", "DuplexNoTumble") ||
+      ppdIsMarked(ppd, "EFDuplexing", "DuplexTumble") ||
+      ppdIsMarked(ppd, "ARDuplex", "DuplexNoTumble") ||
+      ppdIsMarked(ppd, "ARDuplex", "DuplexTumble") ||
       ppdIsMarked(ppd, "KD03Duplex", "DuplexNoTumble") ||
       ppdIsMarked(ppd, "KD03Duplex", "DuplexTumble"))
     Duplex = 1;
