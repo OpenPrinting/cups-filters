@@ -453,9 +453,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     * Do tests with test.ppd...
     */
 
-    fputs("ppdOpenFile(test.ppd): ", stdout);
+    fputs("ppdOpenFile(\"ppd/test.ppd\"): ", stdout);
 
-    if ((ppd = ppdOpenFileWithLocalization("test.ppd", PPD_LOCALIZATION_ALL)) != NULL)
+    if ((ppd = ppdOpenFileWithLocalization("ppd/test.ppd", PPD_LOCALIZATION_ALL)) != NULL)
       puts("PASS");
     else
     {
@@ -911,9 +911,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     * Test new constraints...
     */
 
-    fputs("ppdOpenFile(test2.ppd): ", stdout);
+    fputs("ppdOpenFile(\"ppd/test2.ppd\"): ", stdout);
 
-    if ((ppd = ppdOpenFile("test2.ppd")) != NULL)
+    if ((ppd = ppdOpenFile("ppd/test2.ppd")) != NULL)
       puts("PASS");
     else
     {
