@@ -362,6 +362,7 @@ libcupsfilters_CXXFLAGS = -std=c++0x $(libcupsfilters_CFLAGS)   # -std=c++11
 libcupsfilters_la_LIBADD += $(DBUS_LIBS)
 endif
 libcupsfilters_la_DEPENDENCIES = \
+	libppd.la \
 	$(GETLINE) \
 	$(STRCASESTR)
 
