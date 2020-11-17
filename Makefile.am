@@ -772,7 +772,8 @@ bannertopdf_LDADD = \
 
 bannertopdf_DEPENDENCIES = \
 	$(GETLINE) \
-	libfontembed.la
+	libfontembed.la \
+	libcupsfilters.la
 
 commandtoescpx_SOURCES = \
 	cupsfilters/driver.h \
@@ -947,7 +948,9 @@ texttotext_LDADD = \
 	$(STRCASESTR) \
 	$(CUPS_LIBS) \
 	$(LIBICONV)
-texttotext_DEPENDENCIES = $(STRCASESTR)
+texttotext_DEPENDENCIES = \
+	$(STRCASESTR) \
+	libppd.la
 
 pdftops_SOURCES = \
 	filter/pdftops.c
