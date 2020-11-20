@@ -117,11 +117,12 @@ ppd_decode(char *string)		/* I - String to decode */
 }
 // }}}
 
-void emitPreamble(ppd_file_t *ppd,const ProcessingParameters &param) // {{{
+void emitPreamble(FILE *fp, ppd_file_t *ppd,
+		  const ProcessingParameters &param) // {{{
 {
   if (ppd == 0) return;
 
-  ppdEmit(ppd,stdout,PPD_ORDER_EXIT);
+  ppdEmit(ppd, fp, PPD_ORDER_EXIT);
 
   if (param.emitJCL) {
     /* pdftopdf only adds JCL to the job if the printer is a native PDF
@@ -161,18 +162,19 @@ void emitPreamble(ppd_file_t *ppd,const ProcessingParameters &param) // {{{
     } else {
       ppd->jcl_ps=NULL;
     }
-    ppdEmitJCL(ppd,stdout,param.jobId,param.user,param.title);
-    emitJCLOptions(stdout,ppd,param.deviceCopies);
+    ppdEmitJCL(ppd, fp, param.jobId, param.user, param.title);
+    emitJCLOptions(fp, ppd, param.deviceCopies);
     free(ppd->jcl_ps);
     ppd->jcl_ps = old_jcl_ps; // cups uses pool allocator, not free()
   }
 }
 // }}}
 
-void emitPostamble(ppd_file_t *ppd,const ProcessingParameters &param) // {{{
+void emitPostamble(FILE *fp, ppd_file_t *ppd,
+		   const ProcessingParameters &param) // {{{
 {
   if (param.emitJCL) { 
-    ppdEmitJCLEnd(ppd,stdout);
+    ppdEmitJCLEnd(ppd, fp);
   }
 }
 // }}}

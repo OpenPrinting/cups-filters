@@ -1083,16 +1083,16 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
       return 2;
     }
 
-    emitPreamble(data->ppd,param); // ppdEmit, JCL stuff
-    emitComment(*proc,param); // pass information to subsequent filters via PDF comments
-
     FILE *outputfp;
     outputfp = fdopen(outputfd, "w");
     if(outputfp == NULL) return 1;
+
+    emitPreamble(outputfp, data->ppd,param); // ppdEmit, JCL stuff
+    emitComment(*proc,param); // pass information to subsequent filters via PDF comments
     proc->emitFile(outputfp, &doc, TakeOwnership);
     // proc->emitFilename(NULL);
 
-    emitPostamble(data->ppd,param);
+    emitPostamble(outputfp, data->ppd,param);
     // ppdClose(ppd);
     if (tmpfile)
       fclose(tmpfile);
