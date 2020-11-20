@@ -697,8 +697,6 @@ int                             /* O - Error status */
 imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	   int outputfd,        /* I - File descriptor output stream */
 	   int inputseekable,   /* I - Is input stream seekable? (unused) */
-	   int *jobcanceled,    /* I - Pointer to integer marking
-				       whether job is canceled */
 	   filter_data_t *data, /* I - Job and printer data */
 	   void *parameters)    /* I - Filter-specific parameters (unused) */
 {
@@ -729,6 +727,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   int		cropfit = 0;		/* -o crop-to-fit = true */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void          *icd = data->iscanceleddata;
 
 
  /*
@@ -762,7 +762,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
   if ((fp = fdopen(inputfd, "r")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "imagetopdf: Unable to open input data stream.");
@@ -800,7 +800,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
     if ((fp = fopen(tempfile, "r")) == NULL)
     {
-      if (!*jobcanceled)
+      if (!iscanceled || !iscanceled(icd))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		     "imagetopdf: Unable to open temporary file.");
@@ -816,7 +816,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
   if ((doc.outputfp = fdopen(outputfd, "w")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "imagetopdf: Unable to open output data stream.");
@@ -1909,6 +1909,13 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	int imgObj;
 	int contentsObj;
 
+	if (iscanceled && iscanceled(icd))
+	{
+	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		       "imagetopdf: Job canceled");
+	  goto canceled;
+	}
+
 	if ((contentsObj = contentsObjs[doc.ypages*doc.xpage+doc.ypage] =
 	     newObj(&doc)) < 0)
 	  goto out_of_memory;
@@ -1928,6 +1935,13 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       for (doc.xpage = 0; doc.xpage < doc.xpages; doc.xpage ++)
 	for (doc.ypage = 0; doc.ypage < doc.ypages; doc.ypage ++, doc.page ++)
 	{
+	  if (iscanceled && iscanceled(icd))
+	  {
+	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "imagetopdf: Job canceled");
+	    goto canceled;
+	  }
+
 	  /* out Page Object */
 	  if (outPageObject(&doc, doc.pageObjects[doc.page],
 			    contentsObjs[doc.ypages * doc.xpage + doc.ypage],
@@ -1949,13 +1963,21 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     free(contentsObjs);
     free(imgObjs);
   }
-  else {
+  else
+  {
     for (doc.page = 0, doc.xpage = 0; doc.xpage < doc.xpages; doc.xpage ++)
       for (doc.ypage = 0; doc.ypage < doc.ypages; doc.ypage ++)
       {
 	int imgObj;
 	int contentsObj;
 	int p;
+
+	if (iscanceled && iscanceled(icd))
+	{
+	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		       "imagetopdf: Job canceled");
+	  goto canceled;
+	}
 
 	if ((imgObj = newObj(&doc)) < 0)
 	  goto out_of_memory;
@@ -1972,6 +1994,13 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
 	for (p = 0;p < doc.Copies;p++, doc.page++)
 	{
+	  if (iscanceled && iscanceled(icd))
+	  {
+	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "imagetopdf: Job canceled");
+	    goto canceled;
+	  }
+
 	  /* out Page Object */
 	  if (outPageObject(&doc, doc.pageObjects[doc.page], contentsObj,
 			    imgObj) < 0)
@@ -1987,6 +2016,13 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
       for (p = 0;p < doc.Copies;p++, doc.page++)
       {
+	if (iscanceled && iscanceled(icd))
+	{
+	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		       "imagetopdf: Job canceled");
+	  goto canceled;
+	}
+
 	if (outPageObject(&doc, doc.pageObjects[doc.page], -1, -1) < 0)
 	  goto out_of_memory;
 	if (pdf_printer && log)
@@ -1996,6 +2032,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     }
   }
 
+ canceled:
   outXref(&doc);
   outTrailer(&doc);
   freeAllObj(&doc);

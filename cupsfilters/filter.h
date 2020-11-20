@@ -42,6 +42,8 @@ extern "C" {
  * Types and structures...
  */
 
+typedef int (*filter_iscanceledfunc_t)(void *data);
+
 typedef struct filter_data_s {
   int job_id;                /* Job ID or 0 */
   char *job_user;            /* Job user or NULL */
@@ -57,11 +59,15 @@ typedef struct filter_data_s {
   ppd_file_t *ppd;           /* PPD file data */
   filter_logfunc_t logfunc;  /* Logging function, NULL for no logging */
   void *logdata;             /* User data for logging function, can be NULL */
+  filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
+					     job is canceled, NULL for not
+					     supporting stop on cancel */
+  void *iscanceleddata;      /* User data for is-canceled function, can be
+				NULL */
 } filter_data_t;
 
 typedef int (*filter_function_t)(int inputfd, int outputfd, int inputseekable,
-				 int *jobcanceled, filter_data_t *data,
-				 void *parameters);
+				 filter_data_t *data, void *parameters);
 
 typedef enum filter_out_format_e { /* Possible output formats for rastertopdf()
 				      filter function */
@@ -90,6 +96,9 @@ extern void cups_logfunc(void *data,
 			 ...);
 
 
+extern int cups_iscanceledfunc(void *data);
+
+
 extern int filterCUPSWrapper(int argc,
 			     char *argv[],
 			     filter_function_t filter,
@@ -101,7 +110,6 @@ extern int filterPOpen(filter_function_t filter_func, /* I - Filter function */
 		       int inputfd,
 		       int outputfd,
 		       int inputseekable,
-		       int *jobcanceled,
 		       filter_data_t *data,
 		       void *parameters,
 		       int *filter_pid);
@@ -115,7 +123,6 @@ extern int filterPClose(int fd,
 extern int filterChain(int inputfd,
 		       int outputfd,
 		       int inputseekable,
-		       int *jobcanceled,
 		       filter_data_t *data,
 		       void *parameters);
 
@@ -128,7 +135,6 @@ extern int filterChain(int inputfd,
 extern int ghostscript(int inputfd,
 		       int outputfd,
 		       int inputseekable,
-		       int *jobcanceled,
 		       filter_data_t *data,
 		       void *parameters);
 
@@ -139,7 +145,6 @@ extern int ghostscript(int inputfd,
 extern int imagetopdf(int inputfd,
 		      int outputfd,
 		      int inputseekable,
-		      int *jobcanceled,
 		      filter_data_t *data,
 		      void *parameters);
 
@@ -147,7 +152,6 @@ extern int imagetopdf(int inputfd,
 extern int imagetops(int inputfd,
 		     int outputfd,
 		     int inputseekable,
-		     int *jobcanceled,
 		     filter_data_t *data,
 		     void *parameters);
 
@@ -155,7 +159,6 @@ extern int imagetops(int inputfd,
 extern int imagetoraster(int inputfd,
 			 int outputfd,
 			 int inputseekable,
-			 int *jobcanceled,
 			 filter_data_t *data,
 			 void *parameters);
 
@@ -163,7 +166,6 @@ extern int imagetoraster(int inputfd,
 extern int pclmtoraster(int inputfd,
 			int outputfd,
 			int inputseekable,
-			int *jobcanceled,
 			filter_data_t *data,
 			void *parameters);
 
@@ -171,7 +173,6 @@ extern int pclmtoraster(int inputfd,
 extern int pdftopdf(int inputfd,
 		    int outputfd,
 		    int inputseekable,
-		    int *jobcanceled,
 		    filter_data_t *data,
 		    void *parameters);
 
@@ -179,7 +180,6 @@ extern int pdftopdf(int inputfd,
 extern int pdftops(int inputfd,
 		   int outputfd,
 		   int inputseekable,
-		   int *jobcanceled,
 		   filter_data_t *data,
 		   void *parameters);
 
@@ -187,7 +187,6 @@ extern int pdftops(int inputfd,
 extern int pstops(int inputfd,
 		  int outputfd,
 		  int inputseekable,
-		  int *jobcanceled,
 		  filter_data_t *data,
 		  void *parameters);
 
@@ -195,7 +194,6 @@ extern int pstops(int inputfd,
 extern int rastertopdf(int inputfd,
 		       int outputfd,
 		       int inputseekable,
-		       int *jobcanceled,
 		       filter_data_t *data,
 		       void *parameters);
 
@@ -206,7 +204,6 @@ extern int rastertopdf(int inputfd,
 extern int rastertops(int inputfd,
 		      int outputfd,
 		      int inputseekable,
-		      int *jobcanceled,
 		      filter_data_t *data,
 		      void *parameters);
 

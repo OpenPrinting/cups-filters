@@ -80,8 +80,6 @@ int                             /* O - Error status */
 imagetops(int inputfd,         /* I - File descriptor input stream */
 	  int outputfd,        /* I - File descriptor output stream */
 	  int inputseekable,   /* I - Is input stream seekable? (unused) */
-	  int *jobcanceled,    /* I - Pointer to integer marking
-				      whether job is canceled */
 	  filter_data_t *data, /* I - Job and printer data */
 	  void *parameters)    /* I - Filter-specific parameters (unused) */
 {
@@ -142,6 +140,8 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   int           bytes;
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void          *icd = data->iscanceleddata;
 
 
  /*
@@ -172,7 +172,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 
   if ((inputfp = fdopen(inputfd, "r")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "imagetops: Unable to open input data stream.");
@@ -210,7 +210,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 
     if ((inputfp = fopen(tempfile, "r")) == NULL)
     {
-      if (!*jobcanceled)
+      if (!iscanceled || !iscanceled(icd))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		     "imagetops: Unable to open temporary file.");
@@ -226,7 +226,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 
   if ((doc.outputfp = fdopen(outputfd, "w")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "imagetops: Unable to open output data stream.");
@@ -1198,6 +1198,13 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     for (xpage = 0; xpage < xpages; xpage ++)
       for (ypage = 0; ypage < ypages; ypage ++, page ++)
       {
+	if (iscanceled && iscanceled(icd))
+	{
+	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		       "imagetops: Job canceled");
+	  goto canceled;
+	}
+
         if (log && ppd && ppd->num_filters == 0)
 	  log(ld, FILTER_LOGLEVEL_CONTROL,
 	      "PAGE: %d %d", page, realcopies);
@@ -1329,6 +1336,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	fputs("showpage\n", doc.outputfp);
       }
 
+ canceled:
   fputs("%%EOF\n", doc.outputfp);
 
   free(row);

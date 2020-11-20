@@ -1069,8 +1069,6 @@ int				  /* O - Error status */
 pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 	     int outputfd,        /* I - File descriptor output stream */
 	     int inputseekable,   /* I - Is input stream seekable? (unused) */
-	     int *job_canceled,   /* I - Pointer to integer marking
-					 whether job is canceled (unused) */
 	     filter_data_t *data, /* I - Job and printer data */
 	     void *parameters)    /* I - Filter-specific parameters (unused) */
 {
@@ -1080,13 +1078,15 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 			tempfile[1024];		/* Temporary file */
   char			buffer[8192];		/* Copy buffer */
   int			bytes;			/* Bytes copied */
-  filter_logfunc_t	log = data->logfunc;
-  void			*ld = data->logdata;
   int			npages = 0;
   QPDF			*pdf = new QPDF();
   cups_raster_t		*raster;
   pclmtoraster_data_t	pclmtoraster_data;
   conversion_function_t convert;
+  filter_logfunc_t	log = data->logfunc;
+  void			*ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void                  *icd = data->iscanceleddata;
 
  /*
   * Open the input data stream specified by the inputfd...
@@ -1094,7 +1094,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 
   if ((inputfp = fdopen(inputfd, "r")) == NULL)
   {
-    if (!*job_canceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "pclmtoraster: Unable to open input data stream.");
@@ -1179,6 +1179,13 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 
   for (int i = 0; i < npages; ++i)
   {
+    if (iscanceled && iscanceled(icd))
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "pclmtoraster: Job canceled");
+      break;
+    }
+
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
 		 "pclmtoraster: Starting page %d.", i+1);
     if (outPage(raster, pages[i], i, log, ld, &pclmtoraster_data,

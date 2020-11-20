@@ -113,14 +113,17 @@ typedef struct                                 /**** Document information ****/
   convertFunction     conversion_function;     /* Raster color conversion
 						  function */
   bitFunction         bit_function;            /* Raster bit function */
-  int		      *JobCanceled;            /* Caller sets to 1 when job
-						  canceled */
+  cups_file_t	      *inputfp;		       /* Temporary file, if any */
+  FILE		      *outputfp;	       /* Temporary file, if any */
   filter_logfunc_t    logfunc;                 /* Logging function, NULL for no
 						  logging */
   void                *logdata;                /* User data for logging
 						  function, can be NULL */
-  cups_file_t	      *inputfp;		       /* Temporary file, if any */
-  FILE		      *outputfp;	       /* Temporary file, if any */
+  filter_iscanceledfunc_t iscanceledfunc;      /* Function returning 1 when
+                                                  job is canceled, NULL for not
+                                                  supporting stop on cancel */
+  void *iscanceleddata;                        /* User data for is-canceled
+						  function, can be NULL */
 } rastertopdf_doc_t;
 
 // PDF color conversion function
@@ -1390,16 +1393,12 @@ int                         /* O - Error status */
 rastertopdf(int inputfd,         /* I - File descriptor input stream */
        int outputfd,        /* I - File descriptor output stream */
        int inputseekable,   /* I - Is input stream seekable? (unused) */
-       int *jobcanceled,    /* I - Pointer to integer marking
-			           whether job is canceled */
        filter_data_t *data, /* I - Job and printer data */
        void *parameters)    /* I - Filter-specific parameters (outformat) */
 {
   rastertopdf_doc_t	doc;			/* Document information */
   cups_file_t	*inputfp;		/* Print file */
   FILE          *outputfp;              /* Output data stream */
-  filter_logfunc_t log = data->logfunc;
-  void          *ld = data->logdata;
   filter_out_format_t outformat; /* Output format */
   int Page, empty = 1;
   cm_calibration_t    cm_calibrate;   /* Status of CUPS color management
@@ -1408,7 +1407,12 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
   cups_raster_t	*ras;		/* Raster stream for printing */
   cups_page_header2_t	header;		/* Page header from file */
   ppd_attr_t    *attr;  /* PPD attribute */
-  const char*         profile_name;	/* IPP Profile Name */
+  const char*         profile_name = NULL;	/* IPP Profile Name */
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void          *icd = data->iscanceleddata;
+
 
   (void)inputseekable;
 
@@ -1434,7 +1438,7 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
 
   if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "rastertopdf: Unable to open input data stream.");
@@ -1449,7 +1453,7 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
 
   if ((outputfp = fdopen(outputfd, "w")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "rastertopdf: Unable to open output data stream.");
@@ -1460,12 +1464,14 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
     return (1);
   }
 
-  doc.JobCanceled = jobcanceled;
   doc.inputfp = inputfp;
   doc.outputfp = outputfp;
   /* Logging function */
-  doc.logdata = ld;
   doc.logfunc = log;
+  doc.logdata = ld;
+  /* Job-is-canceled function */
+  doc.iscanceledfunc = iscanceled;
+  doc.iscanceleddata = icd;
 
   /* support the CUPS "cm-calibration" option */ 
   cm_calibrate = cmGetCupsColorCalibrateMode(data->options, data->num_options);
@@ -1611,6 +1617,13 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
 
   while (cupsRasterReadHeader2(ras, &header))
   {
+    if (iscanceled && iscanceled(icd))
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "rastertopdf: Job canceled");
+      break;
+    }
+
     if (empty)
     {
       empty = 0;

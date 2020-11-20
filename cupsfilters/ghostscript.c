@@ -376,9 +376,10 @@ gs_spawn (const char *filename,
           char **envp,
           FILE *fp,
 	  int outputfd,
-	  int *jobcanceled,
 	  filter_logfunc_t log,
-	  void *ld)
+	  void *ld,
+	  filter_iscanceledfunc_t iscanceled,
+	  void *icd)
 {
   char *argument;
   char buf[BUFSIZ];
@@ -516,7 +517,8 @@ gs_spawn (const char *filename,
   close(fds[0]);
 
   /* Feed job data into Ghostscript */
-  while ((n = fread(buf, 1, BUFSIZ, fp)) > 0) {
+  while ((!iscanceled || !iscanceled(icd)) &&
+	 (n = fread(buf, 1, BUFSIZ, fp)) > 0) {
     int count;
   retry_write:
     count = write(fds[1], buf, n);
@@ -655,8 +657,6 @@ int                              /* O - Error status */
 ghostscript(int inputfd,         /* I - File descriptor input stream */
 	    int outputfd,        /* I - File descriptor output stream */
 	    int inputseekable,   /* I - Is input stream seekable? */
-	    int *jobcanceled,    /* I - Pointer to integer marking
-				        whether job is canceled */
 	    filter_data_t *data, /* I - Job and printer data */
 	    void *parameters)    /* I - Filter-specific parameters */
 {
@@ -692,6 +692,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 #endif /* HAVE_CUPS_1_7 */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void          *icd = data->iscanceleddata;
 
 
   if (parameters) {
@@ -777,7 +779,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 
   if ((fp = fdopen(inputfd, "r")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "ghostscript: Unable to open input data stream.");
@@ -825,7 +827,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 
     if ((fp = fopen(filename, "r")) == NULL)
     {
-      if (!*jobcanceled)
+      if (!iscanceled || !iscanceled(icd))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		     "ghostscript: Unable to open temporary file.");
@@ -1168,7 +1170,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 
   /* call Ghostscript */
   rewind(fp);
-  status = gs_spawn (tmpstr, gs_args, envp, fp, outputfd, jobcanceled, log, ld);
+  status = gs_spawn (tmpstr, gs_args, envp, fp, outputfd, log, ld,
+		     iscanceled, icd);
   if (status != 0) status = 1;
 out:
   for (i = 0; envp[i]; i ++)

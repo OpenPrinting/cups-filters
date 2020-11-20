@@ -963,19 +963,20 @@ bool is_empty(FILE *f) // {{{
 // }}}
 
 
-int                         /* O - Error status */
+int                           /* O - Error status */
 pdftopdf(int inputfd,         /* I - File descriptor input stream */
-       int outputfd,        /* I - File descriptor output stream */
-       int inputseekable,   /* I - Is input stream seekable? (unused) */
-       int *jobcanceled,    /* I - Pointer to integer marking
-			           whether job is canceled */
-       filter_data_t *data, /* I - Job and printer data */
-       void *parameters)    /* I - Filter-specific parameters (unused) */
+	 int outputfd,        /* I - File descriptor output stream */
+	 int inputseekable,   /* I - Is input stream seekable? (unused) */
+	 filter_data_t *data, /* I - Job and printer data */
+	 void *parameters)    /* I - Filter-specific parameters */
 {
   pdftopdf_doc_t     doc;         /* Document information */
-  filter_logfunc_t     log = data->logfunc;
-  void          *ld = data->logdata;
-  char *final_content_type = NULL;
+  char               *final_content_type = NULL;
+  filter_logfunc_t   log = data->logfunc;
+  void               *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void               *icd = data->iscanceleddata;
+
 
   (void)inputseekable;
 
@@ -993,9 +994,10 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
 
     // TODO?! sanity checks
 
-    doc.JobCanceled = jobcanceled;
-    doc.logdata = ld;
     doc.logfunc = log;
+    doc.logdata = ld;
+    doc.iscanceledfunc = iscanceled;
+    doc.iscanceleddata = icd;
 
     if (data->ppdfile == NULL && data->ppd == NULL)
     {

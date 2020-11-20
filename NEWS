@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Added the possibility to define a callback
+	  function to tell the filter function when the job got
+	  canceled. Before, a pointer to an integer was used. This
+	  change is to get more flexibility and especially to support
+	  the papplJobIsCanceled() of PAPPL.
 	- Build system: Added missing library dependencies to the
 	  filters to make parallel builds work (Issue #319).
 	- libppd, libcupsfilters, bannertopdf, texttopdf: Added

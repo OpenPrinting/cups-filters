@@ -19,13 +19,17 @@
  * Types...
  */
 typedef struct {                /**** Document information ****/
-  int         *JobCanceled;            /* Caller sets to 1 when job canceled */
-  filter_logfunc_t logfunc;             /* Logging function, NULL for no
-					   logging */
-  void          *logdata;               /* User data for logging function, can
-					   be NULL */
-  cups_file_t	*inputfp;		/* Temporary file, if any */
-  FILE		*outputfp;		/* Temporary file, if any */
+  cups_file_t	*inputfp;		  /* Temporary file, if any */
+  FILE		*outputfp;		  /* Temporary file, if any */
+  filter_logfunc_t logfunc;               /* Logging function, NULL for no
+					     logging */
+  void          *logdata;                 /* User data for logging function, can
+					     be NULL */
+  filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
+					     job is canceled, NULL for not
+					     supporting stop on cancel */
+  void *iscanceleddata;                   /* User data for is-canceled
+					     function, can be NULL */
 } rastertops_doc_t;
 
 
@@ -369,8 +373,6 @@ int                         /* O - Error status */
 rastertops(int inputfd,         /* I - File descriptor input stream */
        int outputfd,        /* I - File descriptor output stream */
        int inputseekable,   /* I - Is input stream seekable? (unused) */
-       int *jobcanceled,    /* I - Pointer to integer marking
-			           whether job is canceled */
        filter_data_t *data, /* I - Job and printer data */
        void *parameters)    /* I - Filter-specific parameters (unused) */
 {
@@ -379,11 +381,14 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
   FILE                 *outputfp;   /* Output data stream */
   cups_raster_t	       *ras;        /* Raster stream for printing */
   cups_page_header2_t  header;      /* Page header from file */
-  filter_logfunc_t     log = data->logfunc;
-  void          *ld = data->logdata;
   int           empty,         /* Is the input empty? */
                 Page = 0,      /* variable for counting the pages */
                 ret;           /* Return value of deflate compression */
+  filter_logfunc_t     log = data->logfunc;
+  void                 *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void                 *icd = data->iscanceleddata;
+
 
   (void)inputseekable;
   (void)parameters;
@@ -394,7 +399,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
 
   if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "rastertops: Unable to open input data stream.");
@@ -409,7 +414,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
 
   if ((outputfp = fdopen(outputfd, "w")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "rastertops: Unable to open output data stream.");
@@ -454,13 +459,15 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
 		 linenum);
   }
 
-  doc.JobCanceled = jobcanceled;
   doc.inputfp = inputfp;
   doc.outputfp = outputfp;
   /* Logging function */
-  doc.logdata = ld;
   doc.logfunc = log;
-
+  doc.logdata = ld;
+  /* Job-is-canceled function */
+  doc.iscanceledfunc = iscanceled;
+  doc.iscanceleddata = icd;
+ 
   ras = cupsRasterOpen(inputfd, CUPS_RASTER_READ);
 
   /*
@@ -471,9 +478,17 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
 
   while (cupsRasterReadHeader2(ras, &header))
   {
+    if (iscanceled && iscanceled(icd))
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+                  "rastertops: Job canceled");
+      break;
+    }
+
    /*
     * Write the prolog for PS only once
     */
+
     if (empty)
     {
       empty = 0;
@@ -483,8 +498,6 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
    /*
     * Write a status message with the page number and number of copies.
     */
-    if (*jobcanceled)
-      break;
 
     Page ++;
 

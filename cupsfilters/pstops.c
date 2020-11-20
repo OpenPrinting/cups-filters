@@ -118,13 +118,17 @@ typedef struct				/**** Document information ****/
                 PageTop,                /* Top margin */
                 PageWidth,              /* Total page width */
                 PageLength;             /* Total page length */
-  int		*JobCanceled;           /* Caller sets to 1 when job canceled */
+  cups_file_t	*inputfp;		/* Temporary file, if any */
+  FILE		*outputfp;		/* Temporary file, if any */
   filter_logfunc_t logfunc;             /* Logging function, NULL for no
 					   logging */
   void          *logdata;               /* User data for logging function, can
 					   be NULL */
-  cups_file_t	*inputfp;		/* Temporary file, if any */
-  FILE		*outputfp;		/* Temporary file, if any */
+  filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
+                                           job is canceled, NULL for not
+                                           supporting stop on cancel */
+  void *iscanceleddata;                 /* User data for is-canceled function,
+					   can be NULL */
 } pstops_doc_t;
 
 
@@ -185,9 +189,11 @@ static int		set_pstops_options(pstops_doc_t *doc, ppd_file_t *ppd,
 					   char *job_title, int copies,
 					   int num_options,
 					   cups_option_t *options,
-					   int *job_canceled,
 					   filter_logfunc_t logfunc,
-					   void *logdata);
+					   void *logdata,
+					   filter_iscanceledfunc_t
+					   iscanceledfunc,
+					   void *iscanceleddata);
 static ssize_t		skip_page(pstops_doc_t *doc,
 				  char *line, ssize_t linelen, size_t linesize);
 static void		start_nup(pstops_doc_t *doc, int number,
@@ -212,8 +218,6 @@ int                         /* O - Error status */
 pstops(int inputfd,         /* I - File descriptor input stream */
        int outputfd,        /* I - File descriptor output stream */
        int inputseekable,   /* I - Is input stream seekable? (unused) */
-       int *jobcanceled,    /* I - Pointer to integer marking
-			           whether job is canceled */
        filter_data_t *data, /* I - Job and printer data */
        void *parameters)    /* I - Filter-specific parameters (unused) */
 {
@@ -225,6 +229,9 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   pstops_page_t *pageinfo;
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void          *icd = data->iscanceleddata;
+
 
   (void)inputseekable;
   (void)parameters;
@@ -241,7 +248,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
 
   if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "pstops: Unable to open input data stream.");
@@ -256,7 +263,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
 
   if ((outputfp = fdopen(outputfd, "w")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "pstops: Unable to open output data stream.");
@@ -304,8 +311,8 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   ppdMarkOptions(data->ppd, data->num_options, data->options);
   if (set_pstops_options(&doc, data->ppd, data->job_id, data->job_user,
 			 data->job_title, data->copies,
-			 data->num_options, data->options, jobcanceled,
-			 log, ld) == 1)
+			 data->num_options, data->options,
+			 log, ld, iscanceled, icd) == 1)
   {
     cupsFileClose(inputfp);
     close(inputfd);
@@ -850,6 +857,8 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
   pstops_page_t	*pageinfo;		/* Page information */
   filter_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
+  filter_iscanceledfunc_t iscanceled = doc->iscanceledfunc;
+  void          *icd = doc->iscanceleddata;
 
 
  /*
@@ -908,8 +917,12 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 	       "pstops: Before page loop - %s", line);
   while (!strncmp(line, "%%Page:", 7))
   {
-    if (*(doc->JobCanceled))
+    if (iscanceled && iscanceled(icd))
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+                  "pstops: Job canceled");
       break;
+    }
 
     number ++;
 
@@ -976,7 +989,8 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   number = doc->slow_order ? 0 : doc->page;
 
-  if (doc->temp && !*(doc->JobCanceled) && cupsArrayCount(doc->pages) > 0)
+  if (doc->temp && (!iscanceled || !iscanceled(icd)) &&
+      cupsArrayCount(doc->pages) > 0)
   {
     int	copy;				/* Current copy */
 
@@ -1000,8 +1014,12 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
     for (; copy < doc->copies; copy ++)
     {
-      if (*(doc->JobCanceled))
+      if (iscanceled && iscanceled(icd))
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "pstops: Job canceled");
 	break;
+      }
 
      /*
       * Send end-of-job stuff followed by any start-of-job stuff required
@@ -1056,8 +1074,13 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
       while (pageinfo)
       {
-        if (*(doc->JobCanceled))
-	  break;
+
+	if (iscanceled && iscanceled(icd))
+	  {
+	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "pstops: Job canceled");
+	    break;
+	  }
 
         number ++;
 
@@ -1100,7 +1123,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
   * Write/copy the trailer...
   */
 
-  if (!*(doc->JobCanceled))
+  if (!iscanceled || !iscanceled(icd))
     copy_trailer(doc, ppd, number, line, linelen, linesize);
 }
 
@@ -1123,6 +1146,8 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
   ssize_t	bytes;			/* Number of bytes copied */
   filter_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
+  filter_iscanceledfunc_t iscanceled = doc->iscanceledfunc;
+  void          *icd = doc->iscanceleddata;
 
 
   (void)linesize;
@@ -1241,7 +1266,7 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
     fputs("ESPshowpage\n", doc->outputfp);
   }
 
-  if (doc->temp && !*(doc->JobCanceled))
+  if (doc->temp && (!iscanceled || !iscanceled(icd)))
   {
    /*
     * Reopen the temporary file for reading...
@@ -1257,8 +1282,12 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
 
     for (copy = 1; copy < doc->copies; copy ++)
     {
-      if (*(doc->JobCanceled))
+      if (iscanceled && iscanceled(icd))
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "pstops: Job canceled");
 	break;
+      }
 
       if ((!ppd || !ppd->num_filters) && log)
 	log(ld, FILTER_LOGLEVEL_CONTROL,
@@ -2421,12 +2450,15 @@ set_pstops_options(
     int           copies,               /* I - Number of copies */
     int           num_options,		/* I - Number of options */
     cups_option_t *options,		/* I - Options */
-    int           *job_canceled,        /* I - Pointer to cancel-job
-					       variable of caller */
     filter_logfunc_t logfunc,           /* I - Logging function,
 					       NULL for no logging */
-    void *logdata)                      /* I - User data for logging function,
+    void *logdata,                      /* I - User data for logging function,
 					       can be NULL */
+    filter_iscanceledfunc_t iscanceledfunc, /* I - Function returning 1 when
+					       job is canceled, NULL for not
+					       supporting stop on cancel */
+    void *iscanceleddata)               /* I - User data for is-canceled
+					       function, can be NULL */
 {
   const char	*val;			/* Option value */
   int		intval;			/* Integer option value */
@@ -2435,9 +2467,10 @@ set_pstops_options(
   ppd_choice_t	*choice;		/* PPD choice */
   const char	*content_type;		/* Original content type */
   int		max_copies;		/* Maximum number of copies supported */
-  int           never_canceled = 0;
   filter_logfunc_t log = logfunc;
   void          *ld = logdata;
+  filter_iscanceledfunc_t iscanceled = iscanceledfunc;
+  void          *icd = iscanceleddata;
 
 
  /*
@@ -2454,13 +2487,13 @@ set_pstops_options(
   /* Number of copies, 1 if this filter should not handle copies */
   doc->copies = (copies > 0 ? copies : 1);
 
-  /* Pointer to a variable where the caller can mark that the job is
-     canceled */
-  doc->JobCanceled = (job_canceled ? job_canceled : &never_canceled);
-
   /* Logging function */
   doc->logfunc = log;
   doc->logdata = ld;
+
+  /* Job-is-canceled function */
+  doc->iscanceledfunc = iscanceled;
+  doc->iscanceleddata = icd;
 
   /* Set some common values */
   filterSetCommonOptions(ppd, num_options, options, 1,

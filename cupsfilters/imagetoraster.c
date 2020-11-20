@@ -183,8 +183,6 @@ int                                /* O - Error status */
 imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      int outputfd,        /* I - File descriptor output stream */
 	      int inputseekable,   /* I - Is input stream seekable? (unused) */
-	      int *jobcanceled,    /* I - Pointer to integer marking
-				          whether job is canceled */
 	      filter_data_t *data, /* I - Job and printer data */
 	      void *parameters)    /* I - Filter-specific parameters (unused) */
 {
@@ -255,6 +253,9 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   int                   cropfit = 0;	/* -o crop-to-fit */
   filter_logfunc_t      log = data->logfunc;
   void                  *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void                  *icd = data->iscanceleddata;
+
 
  /*
   * Make sure status messages are not buffered...
@@ -293,7 +294,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 
   if ((fp = fdopen(inputfd, "r")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "imagetoraster: Unable to open input data stream.");
@@ -331,7 +332,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 
     if ((fp = fopen(tempfile, "r")) == NULL)
     {
-      if (!*jobcanceled)
+      if (!iscanceled || !iscanceled(icd))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		     "imagetoraster: Unable to open temporary file.");
@@ -1546,6 +1547,13 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     for (xpage = 0; xpage < xpages; xpage ++)
       for (ypage = 0; ypage < ypages; ypage ++, page ++)
       {
+	if (iscanceled && iscanceled(icd))
+        {
+	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		       "imagetoraster: Job canceled");
+	  goto canceled;
+	}
+
 	if (log) log(ld, FILTER_LOGLEVEL_INFO,
 		     "imagetoraster: Formatting page %d.", page);
 
@@ -1764,6 +1772,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   * Close files...
   */
 
+ canceled:
   free(row);
   cupsRasterClose(ras);
   cupsImageClose(img);

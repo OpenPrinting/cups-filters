@@ -47,6 +47,7 @@ cups_logfunc(void *data,
 {
   va_list arglist;
 
+
   (void)data; /* No extra data needed */
 
   switch(level)
@@ -74,6 +75,19 @@ cups_logfunc(void *data,
   fflush(stderr);
   va_end(arglist);
   fputc('\n', stderr);
+}
+
+
+/*
+ * 'cups_iscanceledfunc()' - Return 1 if the job is canceled, which is
+ *                           the case when the integer pointed at by data
+ *                           is not zero.
+ */
+
+int
+cups_iscanceledfunc(void *data)
+{
+  return (*((int *)data) != 0 ? 1 : 0);
 }
 
 
@@ -179,13 +193,15 @@ filterCUPSWrapper(
 				     to "PPD" environment variable. */
   filter_data.logfunc = cups_logfunc; /* Logging scheme of CUPS */
   filter_data.logdata = NULL;
+  filter_data.iscanceledfunc = cups_iscanceledfunc; /* Job-is-canceled
+						       function */
+  filter_data.iscanceleddata = JobCanceled;
 
  /*
   * Fire up the filter function (output to stdout, file descriptor 1)
   */
 
-  return filter(inputfd, 1, inputseekable, JobCanceled, &filter_data,
-		parameters);
+  return filter(inputfd, 1, inputseekable, &filter_data, parameters);
 }
 
 
@@ -200,18 +216,17 @@ filterPOpen(filter_function_t filter_func, /* I - Filter function */
 	    int inputfd,         /* I - File descriptor input stream or -1 */
 	    int outputfd,        /* I - File descriptor output stream or -1 */
 	    int inputseekable,   /* I - Is input stream seekable? */
-	    int *jobcanceled,    /* I - Pointer to integer marking
-				        whether job is canceled */
 	    filter_data_t *data, /* I - Job and printer data */
 	    void *parameters,    /* I - Filter-specific parameters */
 	    int *filter_pid)     /* O - PID of forked filter process */
 {
-  filter_logfunc_t log = data->logfunc;
-  void          *ld = data->logdata;
   int		pipefds[2],          /* Pipes for filters */
 		pid,		     /* Process ID of filter */
                 ret,
                 infd, outfd;         /* Temporary file descriptors */
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
+
 
  /*
   * Check file descriptors...
@@ -273,8 +288,7 @@ filterPOpen(filter_function_t filter_func, /* I - Filter function */
     * Execute filter function...
     */
 
-    ret = (filter_func)(infd, outfd, inputseekable, jobcanceled, data,
-			parameters);
+    ret = (filter_func)(infd, outfd, inputseekable, data, parameters);
 
    /*
     * Close file descriptor and terminate the sub-process...
@@ -352,7 +366,8 @@ filterPClose(int fd,             /* I - Pipe file descriptor */
   retval = 0;
 
  retry_wait:
-  if (waitpid (filter_pid, &status, 0) == -1) {
+  if (waitpid (filter_pid, &status, 0) == -1)
+  {
     if (errno == EINTR)
       goto retry_wait;
     if (log)
@@ -401,13 +416,9 @@ int                              /* O - Error status */
 filterChain(int inputfd,         /* I - File descriptor input stream */
 	    int outputfd,        /* I - File descriptor output stream */
 	    int inputseekable,   /* I - Is input stream seekable? */
-	    int *jobcanceled,    /* I - Pointer to integer marking
-				        whether job is canceled */
 	    filter_data_t *data, /* I - Job and printer data */
 	    void *parameters)    /* I - Filter-specific parameters */
 {
-  filter_logfunc_t log = data->logfunc;
-  void          *ld = data->logdata;
   cups_array_t  *filter_chain = (cups_array_t *)parameters;
   filter_filter_in_chain_t *filter,  /* Current filter */
 		*next;		     /* Next filter */
@@ -421,6 +432,10 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
   cups_array_t	*pids;		     /* Executed filters array */
   filter_function_pid_t	*pid_entry,  /* Entry in executed filters array */
 		key;		     /* Search key for filters */
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void          *icd = data->iscanceleddata;
 
 
  /*
@@ -503,7 +518,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
       * Execute filter function...
       */
 
-      ret = (filter->function)(infd, outfd, inputseekable, jobcanceled, data,
+      ret = (filter->function)(infd, outfd, inputseekable, data,
 			       filter->parameters);
 
       close(infd);
@@ -555,7 +570,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 
   while (cupsArrayCount(pids) > 0) {
     if ((pid = wait(&status)) < 0) {
-      if (errno == EINTR && *jobcanceled) {
+      if (errno == EINTR && iscanceled && iscanceled(icd)) {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		     "filterChain: Job canceled, killing filters ...");
 	for (pid_entry = (filter_function_pid_t *)cupsArrayFirst(pids);
@@ -564,7 +579,6 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 	  kill(pid_entry->pid, SIGTERM);
 	  free(pid_entry);
 	}
-	*jobcanceled = 0;
 	break;
       } else
 	continue;
@@ -600,8 +614,6 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 
   return (retval);
 }
-
-
 
 
 /*

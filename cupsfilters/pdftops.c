@@ -248,8 +248,6 @@ int                          /* O - Error status */
 pdftops(int inputfd,         /* I - File descriptor input stream */
 	int outputfd,        /* I - File descriptor output stream */
 	int inputseekable,   /* I - Is input stream seekable? (unused) */
-	int *job_canceled,   /* I - Pointer to integer marking
-				    whether job is canceled */
 	filter_data_t *data, /* I - Job and printer data */
 	void *parameters)    /* I - Filter-specific parameters (unused) */
 {
@@ -305,6 +303,9 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 					   printing */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void          *icd = data->iscanceleddata;
+
 
   (void)inputseekable;
   (void)parameters;
@@ -321,7 +322,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 
   if ((inputfp = fdopen(inputfd, "r")) == NULL)
   {
-    if (!*job_canceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "pdftops: Unable to open input data stream.");
@@ -349,6 +350,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
     bytes = write(fd, buffer, bytes);
 
   fclose(inputfp);
+  close(inputfd);
   close(fd);
 
   filename = tempfile;
@@ -558,6 +560,8 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   pstops_filter_data.ppd = ppd;
   pstops_filter_data.logfunc = log;
   pstops_filter_data.logdata = ld;
+  pstops_filter_data.iscanceledfunc = iscanceled;
+  pstops_filter_data.iscanceleddata = icd;
 
  /*
   * Force monochrome/grayscale PostScript output 
@@ -1545,7 +1549,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
       close(post_proc_pipe[1]);
     }
 
-    ret = pstops(0, outputfd, 0, job_canceled, &pstops_filter_data, NULL);
+    ret = pstops(0, outputfd, 0, &pstops_filter_data, NULL);
 
     if (ret && log) log(ld, FILTER_LOGLEVEL_ERROR,
 			"pdftops: pstops filter function failed.");
@@ -1592,14 +1596,12 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 
     while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR)
     {
-      if (*job_canceled)
+      if (iscanceled && iscanceled(icd))
       {
 	kill(pdf_pid, SIGTERM);
 	if (need_post_proc)
 	  kill(post_proc_pid, SIGTERM);
 	kill(pstops_pid, SIGTERM);
-
-	*job_canceled = 0;
       }
     }
 
@@ -1695,11 +1697,10 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 
   error:
 
-  close(inputfd);
   close(outputfd);
 
-  if (tempfile[0])
-    unlink(tempfile);
+  //if (tempfile[0])
+  //unlink(tempfile);
 
   return (exit_status);
 }
