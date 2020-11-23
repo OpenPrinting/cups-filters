@@ -3230,15 +3230,15 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
   ipp_attribute_t       *attr, *attr1;
   ipp_t                 *request, *response = NULL;
   const char            *str, *side, *resource;
-  cups_array_t          *job_sheet_supported,
-                        *multiple_doc_supported, *print_qualities,
-                        *media_type_supported, *staplelocation_supported,
-                        *foldtype_supported, *punchmedia_supported,
-                        *color_supported;
+  cups_array_t          *job_sheet_supported = NULL,
+                        *multiple_doc_supported = NULL, *print_qualities = NULL,
+                        *media_type_supported = NULL, *staplelocation_supported = NULL,
+                        *foldtype_supported = NULL, *punchmedia_supported = NULL,
+                        *color_supported = NULL;
   remote_printer_t      *p;
   int                   i, count, side_found, orien_req, orien,
                         orien_found;
-  cups_array_t          *sizes;
+  cups_array_t          *sizes = NULL;
   int                   ret = 1;
 
   p = (remote_printer_t *)cupsArrayIndex(remote_printers, printer_index);
@@ -3508,7 +3508,26 @@ int supports_job_attributes_requested(const gchar* printer, int printer_index,
   }
 
   cleanup:
-    ippDelete(response);
+    if (response != NULL)
+      ippDelete(response);
+    if (job_sheet_supported != NULL)
+      cupsArrayDelete(job_sheet_supported);
+    if (multiple_doc_supported)
+      cupsArrayDelete(multiple_doc_supported);
+    if (media_type_supported != NULL)
+      cupsArrayDelete(media_type_supported);
+    if (staplelocation_supported != NULL)
+      cupsArrayDelete(staplelocation_supported);
+    if (foldtype_supported != NULL)
+      cupsArrayDelete(foldtype_supported);
+    if (punchmedia_supported != NULL)
+      cupsArrayDelete(punchmedia_supported);
+    if (color_supported != NULL)
+      cupsArrayDelete(color_supported);
+    if (print_qualities != NULL)
+      cupsArrayDelete(print_qualities);
+    if (sizes != NULL)
+      cupsArrayDelete(sizes);
 
   return ret;
 }
