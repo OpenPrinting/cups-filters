@@ -3079,6 +3079,8 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
 				     temp->media_source, temp->media_type);
     ippSetCollection(*merged_attributes, &media_col_default, 0, current_media);
 
+    free(temp->media_source);
+    free(temp->media_type);
     free(temp);
   }
 
