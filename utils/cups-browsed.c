@@ -1726,12 +1726,14 @@ void add_resolution_attributes(char* cluster_name, ipp_t **merged_attributes)
       if ((attr = ippFindAttribute(p->prattrs, attributes[attr_no],
 				   IPP_TAG_RESOLUTION)) != NULL) {
         for (i = 0, count = ippGetCount(attr); i < count; i ++) {
-          if ((res = ippResolutionToRes(attr, i)) != NULL &&
-	      cupsArrayFind(res_array, res) == NULL) {
-            cupsArrayAdd(res_array, res);
-            num_resolution ++;
-	  }
-        }
+          if ((res = ippResolutionToRes(attr, i)) != NULL) {
+	          if (cupsArrayFind(res_array, res) == NULL) {
+	            cupsArrayAdd(res_array, res);
+	            num_resolution ++;
+	          }
+	          free_resolution(res, NULL);
+	        }
+	      }
       }
     }
     if (num_resolution) {
@@ -3212,6 +3214,7 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
 		       "printer-resolution-default",
 		       IPP_RES_PER_INCH, xres, yres);
       debug_printf("Default Resolution : %dx%d\n", xres, yres);
+      free_resolution(res, NULL);
     }
   }
 
@@ -6150,7 +6153,7 @@ on_job_state (CupsNotifier *object,
   const char *pdl = NULL;
   cups_array_t *pdl_list;
   char         resolution[32];
-  res_t        *max_res = NULL, *min_res = NULL, *res;
+  res_t        *max_res = NULL, *min_res = NULL, *res = NULL;
   int          xres, yres;
   int          got_printer_info;
   static const char *pattrs[] =
@@ -6497,6 +6500,10 @@ on_job_state (CupsNotifier *object,
 
       /* Deciding the resolution to be sent with the job */
       /* Finding the minimum and maximum resolution supported by the printer */
+
+      max_res = resolutionNew(0, 0);
+      min_res = resolutionNew(0, 0);
+
       if (s &&
 	  ((attr = ippFindAttribute(s->prattrs, "printer-resolution-supported",
 				    IPP_TAG_RESOLUTION)) != NULL)) {
@@ -6504,14 +6511,20 @@ on_job_state (CupsNotifier *object,
 	  if ((res = ippResolutionToRes(attr, i)) != NULL) {
 	    debug_printf("%d %d\n",res->x,res->y);
 	    if (i == 0) {
-	      max_res = res;
-	      min_res = res;
+	      max_res->x = res->x;
+	      max_res->y = res->y;
+	      min_res->x = res->x;
+	      min_res->y = res->y;
 	    } else {
 	      if(compare_resolutions((void *)res,(void *)max_res,NULL) > 0)
-		max_res = res;
+		max_res->x = res->x;
+		max_res->y = res->y;
 	      if(compare_resolutions((void *)res,(void *)min_res,NULL) < 0)
-		min_res = res;
+		min_res->x = res->x;
+		min_res->y = res->y;
 	    }
+	    free_resolution(res, NULL);
+	    res = NULL;
 	  }
 	}
       }
@@ -6548,9 +6561,13 @@ on_job_state (CupsNotifier *object,
 	      snprintf(resolution, sizeof(resolution), "%ddpi", xres);
 	    else
 	      snprintf(resolution, sizeof(resolution), "%dx%ddpi", xres, yres);
+	    free_resolution(res, NULL);
 	  }
 	}
       }
+
+      free_resolution(max_res, NULL);
+      free_resolution(min_res, NULL);
 
       request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
       httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,

@@ -1059,9 +1059,11 @@ ippResolutionListToArray(ipp_attribute_t *attr)
       res_array = resolutionArrayNew();
       if (res_array) {
 	for (i = 0; i < count; i ++)
-	  if ((res = ippResolutionToRes(attr, i)) != NULL &&
-	      cupsArrayFind(res_array, res) == NULL)
-	    cupsArrayAdd(res_array, res);
+	  if ((res = ippResolutionToRes(attr, i)) != NULL) {
+	    if (cupsArrayFind(res_array, res) == NULL)
+	      cupsArrayAdd(res_array, res);
+	    free_resolution(res, NULL);
+	  }
       }
       if (cupsArrayCount(res_array) == 0) {
 	cupsArrayDelete(res_array);
