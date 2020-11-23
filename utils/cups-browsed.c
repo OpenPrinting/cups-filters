@@ -6597,7 +6597,10 @@ on_job_state (CupsNotifier *object,
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_PRINTER);
       ippDelete(cupsDoRequest(conn, request, "/admin/"));
+
       cupsFreeOptions(num_options, options);
+      free(document_format);
+
       if (cupsLastError() > IPP_STATUS_OK_EVENTS_COMPLETE) {
 	debug_printf("ERROR: Unable to set \"" CUPS_BROWSED_DEST_PRINTER
 		     "-default\" option to communicate the destination server for this job (%s)!\n",
