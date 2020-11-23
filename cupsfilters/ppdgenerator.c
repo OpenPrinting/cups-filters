@@ -2353,8 +2353,6 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		     twidth, tlength);
     }
 
-    cupsArrayDelete(sizes);
-
    /*
     * Custom size support...
     */
@@ -2393,7 +2391,6 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       cupsFilePuts(fp, "*CustomPageSize True: \"pop pop pop <</PageSize[5 -2 roll]/ImagingBBox null>>setpagedevice\"\n");
     }
   } else {
-    cupsArrayDelete(sizes);
     cupsFilePrintf(fp,
 		   "*%% Printer did not supply page size info via IPP, using defaults\n"
 		   "*OpenUI *PageSize/Media Size: PickOne\n"
@@ -2459,6 +2456,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		   "*PaperDimension EnvDL/Envelope DL: \"312 624\"\n"
 		   "*PaperDimension EnvMonarch/Envelope Monarch: \"279 540\"\n");
   }
+
+  cupsArrayDelete(printer_sizes);
 
  /*
   * InputSlot...
