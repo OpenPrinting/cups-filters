@@ -1408,8 +1408,8 @@ void add_mimetype_attributes(char* cluster_name, ipp_t **merged_attributes)
       for (q = (char *)cupsArrayFirst(list),i=0;
 	   q;
 	   q = (char *)cupsArrayNext(list),i++) {
-        values[i]=malloc(sizeof(char)*strlen(q)+1);
-        strncpy(values[i], q, sizeof(values[i]) - 1);
+        values[i]=malloc(sizeof(char) * (strlen(q) + 1));
+        snprintf(values[i], strlen(q) + 1, "%s", q);
       }
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER,IPP_TAG_MIMETYPE,
 		    attributes[attr_no], num_value, NULL,
@@ -1480,8 +1480,8 @@ void add_tagzero_attributes(char* cluster_name, ipp_t **merged_attributes)
       /* Transferring attributes value from cups Array to char* array*/
       for (q = (char *)cupsArrayFirst(list), i = 0; q;
            q = (char *)cupsArrayNext(list), i ++) {
-        values[i] = malloc(sizeof(char) * strlen(q) + 1);
-        strncpy(values[i], q, sizeof(values[i]) - 1);
+        values[i] = malloc(sizeof(char) * (strlen(q) + 1));
+        snprintf(values[i], strlen(q) + 1, "%s", q);
       }
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER,
                     IPP_TAG_KEYWORD, attributes[attr_no],
@@ -1551,8 +1551,8 @@ void add_keyword_attributes(char* cluster_name, ipp_t **merged_attributes)
       for (q = (char *)cupsArrayFirst(list), i=0;
 	   q;
 	   q = (char *)cupsArrayNext(list), i ++) {
-        values[i] = malloc(sizeof(char) * strlen(q) + 1);
-        strncpy(values[i], q, sizeof(values[i]) - 1);
+        values[i] = malloc(sizeof(char) * (strlen(q) + 1));
+        snprintf(values[i], strlen(q) + 1, "%s", q);
       }
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
 		    attributes[attr_no], num_value, NULL,
