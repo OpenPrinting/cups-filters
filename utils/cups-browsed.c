@@ -1763,7 +1763,7 @@ void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
   ipp_t                *media_size;
   cups_array_t         *sizes, *size_ranges;
   media_size_t         *temp, *media_s;
-  pagesize_range_t     *temp_range;
+  pagesize_range_t     *temp_range = NULL, *range = NULL;
   char* attributes[] = {
                          "media-size-supported",
                        };
@@ -1836,12 +1836,12 @@ void add_mediasize_attributes(char* cluster_name, ipp_t **merged_attributes)
       }
     }
     if (num_ranges) {
-      for (temp_range = cupsArrayFirst(size_ranges); temp_range;
-	   i++, temp_range = cupsArrayNext(size_ranges)) {
-        ipp_t *size_range = create_media_range(temp_range->x_dim_min,
-					       temp_range->x_dim_max,
-					       temp_range->y_dim_min,
-					       temp_range->y_dim_max);
+      for (range = cupsArrayFirst(size_ranges); range;
+	   i++, range = cupsArrayNext(size_ranges)) {
+        ipp_t *size_range = create_media_range(range->x_dim_min,
+					       range->x_dim_max,
+					       range->y_dim_min,
+					       range->y_dim_max);
         ippSetCollection(*merged_attributes, &media_size_supported, i,
 			 size_range);
         ippDelete(size_range);
