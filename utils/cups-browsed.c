@@ -6167,7 +6167,7 @@ on_job_state (CupsNotifier *object,
   cups_option_t *options;
   int num_of_printers;
   char* document_format;
-  int  print_quality;
+  int  print_quality = 0;
   const char *pdl = NULL;
   cups_array_t *pdl_list;
   char         resolution[32];
