@@ -8771,6 +8771,21 @@ gboolean update_cups_queues(gpointer unused) {
 	p->timeout = current_time + pause_between_cups_queue_updates;
 
  cannot_create:
+  if (printer_attributes != NULL && num_cluster_printers != 1)
+    ippDelete(printer_attributes);
+
+  if (default_pagesize != NULL && num_cluster_printers != 1)
+    free(default_pagesize);
+
+  if (conflicts != NULL && num_cluster_printers != 1)
+    cupsArrayDelete(conflicts);
+
+  if (make_model != NULL && num_cluster_printers != 1)
+    free(make_model);
+
+  if (sizes != NULL && num_cluster_printers != 1)
+    cupsArrayDelete(sizes);
+
   if (p && !in_shutdown)
     remove_printer_entry(p);
 
