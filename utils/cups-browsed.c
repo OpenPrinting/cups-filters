@@ -1484,8 +1484,8 @@ void add_tagzero_attributes(char* cluster_name, ipp_t **merged_attributes)
         strncpy(values[i], q, sizeof(values[i]) - 1);
       }
       ippAddStrings(*merged_attributes, IPP_TAG_PRINTER,
-		    IPP_CONST_TAG(IPP_TAG_KEYWORD),
-                    attributes[attr_no], num_value, NULL,
+                    IPP_TAG_KEYWORD, attributes[attr_no],
+                    num_value, NULL,
                     (const char * const *)values);
 
       for (int k = 0; k < i; k++) {
