@@ -73,6 +73,7 @@ int             compare_resolutions(void *resolution_a, void *resolution_b,
 				    void *user_data);
 void            free_resolution(void *resolution, void *user_data);
 res_t *         ippResolutionToRes(ipp_attribute_t *attr, int index);
+res_t *         resolutionNew(int x, int y);
 cups_array_t *  resolutionArrayNew();
 cups_array_t*   generate_sizes(ipp_t *response,
 			       ipp_attribute_t **defattr,
