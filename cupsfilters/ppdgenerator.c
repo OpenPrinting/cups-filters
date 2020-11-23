@@ -1059,9 +1059,11 @@ ippResolutionListToArray(ipp_attribute_t *attr)
       res_array = resolutionArrayNew();
       if (res_array) {
 	for (i = 0; i < count; i ++)
-	  if ((res = ippResolutionToRes(attr, i)) != NULL &&
-	      cupsArrayFind(res_array, res) == NULL)
-	    cupsArrayAdd(res_array, res);
+	  if ((res = ippResolutionToRes(attr, i)) != NULL) {
+	    if (cupsArrayFind(res_array, res) == NULL)
+	      cupsArrayAdd(res_array, res);
+	    free_resolution(res, NULL);
+	  }
       }
       if (cupsArrayCount(res_array) == 0) {
 	cupsArrayDelete(res_array);
@@ -2351,8 +2353,6 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		     twidth, tlength);
     }
 
-    cupsArrayDelete(sizes);
-
    /*
     * Custom size support...
     */
@@ -2391,7 +2391,6 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       cupsFilePuts(fp, "*CustomPageSize True: \"pop pop pop <</PageSize[5 -2 roll]/ImagingBBox null>>setpagedevice\"\n");
     }
   } else {
-    cupsArrayDelete(sizes);
     cupsFilePrintf(fp,
 		   "*%% Printer did not supply page size info via IPP, using defaults\n"
 		   "*OpenUI *PageSize/Media Size: PickOne\n"
@@ -2457,6 +2456,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		   "*PaperDimension EnvDL/Envelope DL: \"312 624\"\n"
 		   "*PaperDimension EnvMonarch/Envelope Monarch: \"279 540\"\n");
   }
+
+  cupsArrayDelete(printer_sizes);
 
  /*
   * InputSlot...
