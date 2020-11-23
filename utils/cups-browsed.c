@@ -2672,7 +2672,6 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
   cups_array_t         *cluster_sizes = NULL,
                        *sizes_ppdname;
   cups_size_t          *size;
-  pagesize_count_t     *temp;
   remote_printer_t     *p;
   ipp_attribute_t      *defattr;
   char                 ppdname[41], pagesize[128];
@@ -2680,7 +2679,6 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
   int                  min_length, min_width, max_length, max_width,
                        bottom, left, right, top;
 
-  temp = (pagesize_count_t *)malloc(sizeof(pagesize_count_t));
   cluster_sizes = cupsArrayNew3((cups_array_func_t)pwg_compare_sizes,
 				NULL, NULL, 0,
 				(cups_acopy_func_t)pwg_copy_size,
@@ -2706,8 +2704,6 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
       sizes = generate_sizes(p->prattrs, &defattr, &min_length, &min_width,
 			     &max_length, &max_width,
 			     &bottom, &left, &right, &top, ppdname);
-      temp->pagesize = ppdname;
-      temp->count = 1;
       for (size = (cups_size_t *)cupsArrayFirst(sizes);
 	   size; size = (cups_size_t *)cupsArrayNext(sizes)) {
 	if (!cupsArrayFind(cluster_sizes, size)) {
