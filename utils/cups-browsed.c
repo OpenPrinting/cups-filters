@@ -6410,13 +6410,14 @@ on_job_state (CupsNotifier *object,
 	      }
 	      break;
 	    }
+
+	    ippDelete(response);
+	    response = NULL;
+
 	    if (pstate == IPP_PRINTER_IDLE && paccept) {
 	      q->last_printer = i;
 	      break;
 	    }
-
-	    ippDelete(response);
-            response = NULL;
 	  } else
 	    debug_printf("IPP request to %s:%d failed.\n", p->host,
 			 p->port);
