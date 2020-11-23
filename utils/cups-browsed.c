@@ -6535,12 +6535,14 @@ on_job_state (CupsNotifier *object,
 	      min_res->x = res->x;
 	      min_res->y = res->y;
 	    } else {
-	      if(compare_resolutions((void *)res,(void *)max_res,NULL) > 0)
+	      if(compare_resolutions((void *)res,(void *)max_res,NULL) > 0) {
 		max_res->x = res->x;
 		max_res->y = res->y;
-	      if(compare_resolutions((void *)res,(void *)min_res,NULL) < 0)
+	      }
+	      if(compare_resolutions((void *)res,(void *)min_res,NULL) < 0) {
 		min_res->x = res->x;
 		min_res->y = res->y;
+	      }
 	    }
 	    free_resolution(res, NULL);
 	    res = NULL;
