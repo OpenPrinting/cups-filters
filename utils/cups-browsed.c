@@ -3089,6 +3089,7 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
     free(temp->media_source);
     free(temp->media_type);
     free(temp);
+    ippDelete(current_media);
   }
 
   /*Finding the default colormodel for the cluster*/
