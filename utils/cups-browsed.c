@@ -7207,6 +7207,10 @@ create_remote_printer_entry (const char *queue_name,
      in a row during creation of this printer's queue */
   p->timeouted = 0;
 
+  /* Initialize nickname array for *Nickname directive from PPD
+   * - either from CUPS server or from our PPD generator */
+  p->nickname = NULL;
+
   /* Remote CUPS printer or local queue remaining from previous cups-browsed
      session */
   /* is_cups_queue: -1: Unknown, 0: IPP printer, 1: Remote CUPS queue,
@@ -7222,7 +7226,6 @@ create_remote_printer_entry (const char *queue_name,
        remote CUPS server gets used. So we will not generate a PPD file
        or interface script at this point. */
     p->netprinter = 0;
-    p->nickname = NULL;
     if (p->uri[0] != '\0') {
       p->prattrs = get_printer_attributes(p->uri, NULL, 0, NULL, 0, 1);
       debug_log_out(get_printer_attributes_log);
@@ -7627,7 +7630,7 @@ gboolean update_cups_queues(gpointer unused) {
   time_t        current_time;
   int           i, ap_remote_queue_id_line_inserted,
                 want_raw, num_cluster_printers = 0;
-  char          *disabled_str, *ptr;
+  char          *disabled_str;
   char          *ppdfile, *ifscript;
   char          buffer[8192];  /* Buffer for creating script */
 #ifdef HAVE_CUPS_1_6
@@ -8187,7 +8190,6 @@ gboolean update_cups_queues(gpointer unused) {
 	  debug_printf("Generated Default Attributes for local queue %s\n",
 		       p->queue_name);
 	}
-	p->nickname = NULL;
 	if (ppdfile == NULL) {
 	  /* If we do not want CUPS-generated PPDs or we cannot obtain a
 	     CUPS-generated PPD, for example if CUPS does not create a 
@@ -8298,7 +8300,6 @@ gboolean update_cups_queues(gpointer unused) {
 			 p->queue_name, p->uri);
 	    goto cannot_create;
 	  }
-	  p->nickname = NULL;
 	  num_cluster_printers = 0;
 	  for (s = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	       s; s = (remote_printer_t *)cupsArrayNext(remote_printers)) {
@@ -8505,14 +8506,48 @@ gboolean update_cups_queues(gpointer unused) {
 	     manipulations of the print queue have replaced the PPD.
 	     Check whether nickname is defined too */
 	  if (!strncmp(line, "*NickName:", 10) && p->nickname == NULL) {
+	    char *ptr = NULL;
+	    char *end_ptr = NULL;
+	    int nickname_len = 0;
+
 	    ptr = strchr(line, '"');
-	    if (ptr) {
-	      ptr ++;
-	      p->nickname = strdup(ptr);
-	      ptr = strchr(p->nickname, '"');
-	      if (ptr)
-		*ptr = '\0';
+
+	    if (ptr == NULL)
+	    {
+	      debug_printf("Malformed *Nickname directive in PPD - no double quote in line.\n");
+	      continue;
 	    }
+
+	    ptr ++;
+	    end_ptr = strchr(ptr, '"');
+
+	    if (end_ptr == NULL)
+	    {
+	      debug_printf("Malformed *Nickname directive in PPD - no ending double quote\n");
+	      continue;
+	    }
+
+	    /* both pointers are null terminated, because cupsFileGets() puts
+	     * a null terminator into returned buffer with one line
+	     * here as 'line' array) and those two pointers points on two places
+	     * in the 'line' array.
+	     */
+	    nickname_len = strlen(ptr) - strlen(end_ptr);
+
+	    if (nickname_len == 0)
+	    {
+	      debug_printf("Malformed *Nickname directive in PPD - empty nickname.\n");
+	      continue;
+	    }
+
+	    /* alloc one more space for null terminator, calloc() will initialize
+	     * it to null automatically, so then we only copy a string with 'nickname_len'
+	     * length to get a proper null terminated p->nickname.
+	     */
+	    p->nickname = (char*)calloc(nickname_len + 1, sizeof(char));
+
+	    if (p->nickname != NULL)
+	      strncpy(p->nickname, ptr, nickname_len);
 	  }
 	}
 	cupsFilePrintf(out,"*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
