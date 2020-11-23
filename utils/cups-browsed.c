@@ -8155,6 +8155,7 @@ gboolean update_cups_queues(gpointer unused) {
 	  sizes = NULL;
 	} else {
 	  make_model = (char*)malloc(sizeof(char) * 256);
+	  printer_attributes = get_cluster_attributes(p->queue_name);
 	  if ((attr = ippFindAttribute(printer_attributes,
 				       "printer-make-and-model",
 				       IPP_TAG_TEXT)) != NULL)
@@ -8172,7 +8173,6 @@ gboolean update_cups_queues(gpointer unused) {
 	    }
 	  }
 	  default_pagesize = (char *)malloc(sizeof(char)*32);
-	  printer_attributes = get_cluster_attributes(p->queue_name);
 	  debug_printf("Generated Merged Attributes for local queue %s\n",
 		       p->queue_name);
 	  conflicts = generate_cluster_conflicts(p->queue_name,
@@ -8321,6 +8321,7 @@ gboolean update_cups_queues(gpointer unused) {
 	    sizes = NULL;
 	  } else {
 	    make_model = (char*)malloc(sizeof(char)*256);
+	    printer_attributes = get_cluster_attributes(p->queue_name);
 	    if((attr = ippFindAttribute(printer_attributes,
 					"printer-make-and-model",
 					IPP_TAG_TEXT)) != NULL)
@@ -8338,7 +8339,6 @@ gboolean update_cups_queues(gpointer unused) {
 	      }
 	    }
 	    default_pagesize = (char *)malloc(sizeof(char)*32);
-	    printer_attributes = get_cluster_attributes(p->queue_name);
 	    debug_printf("Generated Merged Attributes for local queue %s\n",
 			 p->queue_name);
 	    conflicts = generate_cluster_conflicts(p->queue_name,
