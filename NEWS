@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.28.5 - 2020-10-13
 
 CHANGES IN V1.28.6
 
+	- cups-browsed: Fixed several memory leaks, mainly from the
+	  code to merge printer IPP attributes for clusters (Pull
+	  request #322).
 	- cups-browsed: Silenced compiler warning.
 	- foomatic-rip: Fix infinite loop and input from file on raw
 	  printing (Pull request #318).
