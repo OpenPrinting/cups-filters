@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.28.5 - 2020-10-13
 
 CHANGES IN V1.28.6
 
+	- cups-browsed: Removed all calls of the resolve_uri() function
+	  of libcupsfilters, as these are not actually needed and in case
+	  the supplied DNS-SD-based URI is not resolvable, the function
+	  gets stuck for ~5 seconds.
 	- cups-browsed: Fixed several memory leaks, mainly from the
 	  code to merge printer IPP attributes for clusters (Pull
 	  request #322).
