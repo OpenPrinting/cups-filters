@@ -193,6 +193,7 @@ typedef struct remote_printer_s {
   char *host;
   char *ip;
   int port;
+  char *resource;
   char *service_name;
   char *type;
   char *domain;
@@ -3651,68 +3652,62 @@ free_local_printer (gpointer data)
 }
 
 static gboolean
-local_printer_has_uri (gpointer key,
-		       gpointer value,
-		       gpointer user_data)
+local_printer_is_same_device (gpointer key,
+			      gpointer value,
+			      gpointer user_data)
 {
-  local_printer_t *printer = value;
-  char    *device_uri = user_data;
+  local_printer_t *lprinter = value;
+  remote_printer_t *p = user_data;
   char    lhost[HTTP_MAX_URI],     /* Local printer: Hostname */
           lresource[HTTP_MAX_URI], /* Local printer: Resource path */
           lscheme[32],             /* Local printer: URI's scheme */
           lusername[64],           /* Local printer: URI's username */
-          dhost[HTTP_MAX_URI],     /* Discovered printer: Hostname */
-          dresource[HTTP_MAX_URI], /* Discovered printer: Resource path */
-          dscheme[32],             /* Discovered printer: URI's scheme */
-          dusername[64];           /* Discovered printer: URI's username */
-  int     lport = 0,               /* Local printer: URI's port number */
-          dport = 0;               /* Discovered printer: URI's port number */
-  char    *resolved_uri;
+          *ltype = NULL,           /* Local printer: If URI DNS-SD-based */
+          *ldomain = NULL;         /* pointers into lhost for components*/ 
+  int     lport = 0;               /* Local printer: URI's port number */
 
-  debug_printf("local_printer_has_uri() in THREAD %ld\n", pthread_self());
-  /* Separate the two URIs to be compared into their components */
+  debug_printf("local_printer_is_same_device() in THREAD %ld\n",
+	       pthread_self());
+  if (!lprinter || !lprinter->device_uri || !p)
+    return (0);
+  /* Separate the local printer's URI into their components */
   memset(lscheme, 0, sizeof(lscheme));
   memset(lusername, 0, sizeof(lusername));
   memset(lhost, 0, sizeof(lhost));
   memset(lresource, 0, sizeof(lresource));
-  memset(dscheme, 0, sizeof(dscheme));
-  memset(dusername, 0, sizeof(dusername));
-  memset(dhost, 0, sizeof(dhost));
-  memset(dresource, 0, sizeof(dresource));
-  if (printer && printer->device_uri &&
-      (resolved_uri = resolve_uri(printer->device_uri)) != NULL) {
-    httpSeparateURI (HTTP_URI_CODING_ALL, resolved_uri,
-		     lscheme, sizeof(lscheme) - 1,
-		     lusername, sizeof(lusername) - 1,
-		     lhost, sizeof(lhost) - 1,
-		     &lport,
-		     lresource, sizeof(lresource) - 1);
-    free(resolved_uri);
-  }
-  if (device_uri &&
-      (resolved_uri = resolve_uri(device_uri)) != NULL) {
-    httpSeparateURI (HTTP_URI_CODING_ALL, resolved_uri,
-		     dscheme, sizeof(dscheme) - 1,
-		     dusername, sizeof(dusername) - 1,
-		     dhost, sizeof(dhost) - 1,
-		     &dport,
-		     dresource, sizeof(dresource) - 1);
-    free(resolved_uri);
+  httpSeparateURI(HTTP_URI_CODING_ALL, lprinter->device_uri,
+		  lscheme, sizeof(lscheme) - 1,
+		  lusername, sizeof(lusername) - 1,
+		  lhost, sizeof(lhost) - 1,
+		  &lport,
+		  lresource, sizeof(lresource) - 1);
+  if ((ltype = strstr(lhost, "._ipp._tcp.")) != NULL ||
+      (ltype = strstr(lhost, "._ipps._tcp.")) != NULL) {
+    *ltype = '\0';
+    ltype ++;
+    ldomain = strchr(ltype + 9, '.');
+    *ldomain = '\0';
+    ldomain ++;
+    if (*ldomain && ldomain[strlen(ldomain) - 1] == '.')
+      ldomain[strlen(ldomain) - 1] = '\0';
   }
   /* Consider not only absolutely equal URIs as equal
      but alo URIs which differ only by use of IPP or
      IPPS and/or have the IPP standard port 631
      replaced by the HTTPS standard port 443, as this
      is common on network printers */
-  return ((g_str_equal(lscheme, dscheme) ||
-	   (g_str_equal(lscheme, "ipp") && g_str_equal(dscheme, "ipps")) ||
-	   (g_str_equal(dscheme, "ipp") && g_str_equal(lscheme, "ipps"))) &&
-	  g_str_equal(lusername, dusername) &&
-	  g_str_equal(lhost, dhost) &&
-	  (lport == dport ||
-	   (lport == 631 && dport == 443) ||
-	   (dport == 631 && lport == 443)) &&
-	  g_str_equal(lresource, dresource));
+  return ((ltype && p->service_name && p->domain &&
+	   g_str_equal(lhost, p->service_name) &&
+	   !strncmp(ldomain, p->domain, strlen(ldomain))) ||
+	  (!ltype && p->host && p->resource &&
+	   (g_str_equal(lscheme, "ipp") || g_str_equal(lscheme, "ipps")) &&
+	   !lusername[0] &&
+	   g_str_equal(lhost, p->host) &&
+	   ((!p->port && (lport == 631 || lport == 443)) ||
+	    lport == p->port ||
+	    (lport == 631 && p->port == 443) ||
+	    (lport == 443 && p->port == 631)) &&
+	   g_str_equal(lresource, p->resource)));
 }
 
 static gboolean
@@ -6929,17 +6924,15 @@ on_printer_modified (CupsNotifier *object,
 	re_create = 1;
 	/* Is there a local queue with the same URI as the remote queue? */
 	if (g_hash_table_find (local_printers,
-			       local_printer_has_uri,
-			       p->uri)) {
+			       local_printer_is_same_device, p)) {
 	  /* Found a local queue with the same URI as our discovered printer
 	     would get, so ignore this remote printer */
 	  debug_printf("Printer with URI %s (or IPP/IPPS equivalent) already exists, no replacement queue to be created.\n",
 		       p->uri);
 	  re_create = 0;
-	} else if ((resolved_uri = resolve_uri(p->uri)) == NULL ||
-		   (new_queue_name = /* Try to find a new queue name */
+	} else if ((new_queue_name = /* Try to find a new queue name */
 		    get_local_queue_name(p->service_name, p->make_model,
-					 resolved_uri, p->host,
+					 p->resource, p->host,
 					 &is_cups_queue,
 					 p->queue_name)) == NULL) {
 	  /* Not able to find a new name for the queue */
@@ -7102,6 +7095,7 @@ create_remote_printer_entry (const char *queue_name,
 			     const char *host,
 			     const char *ip,
 			     int port,
+			     const char *resource,
 			     const char *service_name,
 			     const char *type,
 			     const char *domain,
@@ -7126,8 +7120,8 @@ create_remote_printer_entry (const char *queue_name,
   int is_pdf = 0;
 #endif /* HAVE_CUPS_1_6 */
 
-  if (!queue_name || !location || !info || !uri || !host || !service_name ||
-      !type || !domain) {
+  if (!queue_name || !location || !info || !uri || !host || !resource ||
+      !service_name || !type || !domain) {
     debug_printf("ERROR: create_remote_printer_entry(): Input value missing!\n");
     return NULL;
   }
@@ -7186,6 +7180,10 @@ create_remote_printer_entry (const char *queue_name,
   p->ip = (ip != NULL ? strdup (ip) : NULL);
 
   p->port = (port != 0 ? port : 631);
+
+  p->resource = strdup (resource);
+  if (!p->resource)
+    goto fail;
 
   p->service_name = strdup (service_name);
   if (!p->service_name)
@@ -7575,6 +7573,7 @@ create_remote_printer_entry (const char *queue_name,
   if (p->type) free (p->type);
   if (p->service_name) free (p->service_name);
   if (p->host) free (p->host);
+  if (p->resource) free (p->resource);
   if (p->domain) free (p->domain);
   cupsArrayDelete(p->ipp_discoveries);
   if (p->ip) free (p->ip);
@@ -7897,6 +7896,7 @@ gboolean update_cups_queues(gpointer unused) {
       cupsFreeOptions(p->num_options, p->options);
       if (p->host) free (p->host);
       if (p->ip) free (p->ip);
+      if (p->resource) free (p->resource);
       if (p->service_name) free (p->service_name);
       if (p->type) free (p->type);
       if (p->domain) free (p->domain);
@@ -9312,7 +9312,7 @@ examine_discovered_printer_record(const char *host,
   char *note_value = NULL;
   char service_host_name[1024];
 #endif /* HAVE_AVAHI */
-  remote_printer_t *p = NULL;
+  remote_printer_t *p = NULL, key_rec;
   char *local_queue_name = NULL;
   int is_cups_queue;
   int raw_queue = 0;
@@ -9542,17 +9542,32 @@ examine_discovered_printer_record(const char *host,
       break;
 
   /* Is there a local queue with the same URI as the remote queue? */
-  if (!p && g_hash_table_find (local_printers,
-			       local_printer_has_uri,
-			       uri)) {
-    /* Found a local queue with the same URI as our discovered printer
-       would get, so ignore this remote printer */
-    debug_printf("Printer with URI %s (or IPP/IPPS equivalent) already exists, printer ignored.\n",
-		 uri);
-    goto fail;
-  }
+  if (!p) {
+    memset(&key_rec, 0, sizeof(key_rec));
+    key_rec.uri = uri;
+    key_rec.host = remote_host;
+    key_rec.port = port;
+    key_rec.resource = resource;
+    key_rec.service_name = (char *)service_name;
+    key_rec.type = (char *)type;
+    key_rec.domain = (char *)domain;
+    if (g_hash_table_find (local_printers,
+			   local_printer_is_same_device, &key_rec)) {
+      /* Found a local queue with the same URI as our discovered printer
+	 would get, so ignore this remote printer */
+      debug_printf("Printer with URI %s (or IPP/IPPS equivalent) already exists, printer ignored.\n",
+		   uri);
+      goto fail;
+    }
 
-  if (p) {
+    /* We need to create a local queue pointing to the
+       discovered printer */
+    p = create_remote_printer_entry (local_queue_name, location, info, uri,
+				     remote_host, ip, port, resource,
+				     service_name ? service_name : "", type,
+				     domain, interface, family, pdl, color,
+				     duplex, make_model, is_cups_queue);
+  } else {
     debug_printf("Entry for %s (URI: %s) already exists.\n",
 		 p->queue_name, p->uri);
     /* We have already created a local queue, check whether the
@@ -9645,6 +9660,7 @@ examine_discovered_printer_record(const char *host,
       free(p->uri);
       free(p->host);
       free(p->ip);
+      free(p->resource);
       free(p->service_name);
       free(p->type);
       free(p->domain);
@@ -9661,6 +9677,7 @@ examine_discovered_printer_record(const char *host,
       p->host = strdup(remote_host);
       p->ip = (ip != NULL ? strdup(ip) : NULL);
       p->port = port;
+      p->resource = strdup(resource);
       p->service_name = strdup(service_name);
       p->type = strdup(type);
       p->domain = strdup(domain);
@@ -9728,6 +9745,10 @@ examine_discovered_printer_record(const char *host,
       free (p->service_name);
       p->service_name = strdup(service_name);
     }
+    if (p->resource[0] == '\0') {
+      free (p->resource);
+      p->resource = strdup(resource);
+    }
     if (p->type[0] == '\0' && type) {
       free (p->type);
       p->type = strdup(type);
@@ -9740,15 +9761,6 @@ examine_discovered_printer_record(const char *host,
 	type != NULL && type[0] != '\0')
       ipp_discoveries_add(p->ipp_discoveries, interface, type, family);
     p->netprinter = is_cups_queue ? 0 : 1;
-  } else {
-
-    /* We need to create a local queue pointing to the
-       discovered printer */
-    p = create_remote_printer_entry (local_queue_name, location, info, uri,
-				     remote_host, ip, port,
-				     service_name ? service_name : "", type,
-				     domain, interface, family, pdl, color,
-				     duplex, make_model, is_cups_queue);
   }
 
  fail:
@@ -12009,7 +12021,7 @@ find_previous_queue (gpointer key,
   if (printer->cups_browsed_controlled) {
     /* Queue found, add to our list */
     p = create_remote_printer_entry (name, "", "", "", "", "",
-				     0, "", "", "", "", 0, NULL, 0, 0, NULL,
+				     0, "", "", "", "", "", 0, NULL, 0, 0, NULL,
 				     -1);
     if (p) {
       /* Mark as unconfirmed, if no Avahi report of this queue appears

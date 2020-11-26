@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- cups-browsed: Removed all calls of the resolve_uri() function
+	  of libcupsfilters, as these are not actually needed and in case
+	  the supplied DNS-SD-based URI is not resolvable, the function
+	  gets stuck for ~5 seconds.
 	- libcupsfilters: Added the possibility to define a callback
 	  function to tell the filter function when the job got
 	  canceled. Before, a pointer to an integer was used. This
