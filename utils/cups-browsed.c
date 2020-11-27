@@ -8603,9 +8603,6 @@ gboolean update_cups_queues(gpointer unused) {
 		    IPP_PRINTER_IDLE);
       /* ... and accepting jobs */
       ippAddBoolean(request, IPP_TAG_PRINTER, "printer-is-accepting-jobs", 1);
-      /* Location */
-      ippAddString(request, IPP_TAG_PRINTER, IPP_TAG_TEXT,
-		   "printer-location", NULL, p->location);
       num_options = 0;
       options = NULL;
       /* Device URI: ipp(s)://<remote host>:631/printers/<remote queue>
@@ -8615,10 +8612,6 @@ gboolean update_cups_queues(gpointer unused) {
       /* Option cups-browsed=true, marking that we have created this queue */
       num_options = cupsAddOption(CUPS_BROWSED_MARK "-default", "true",
 				  num_options, &options);
-      /* Description */
-      num_options = cupsAddOption("printer-info", p->info,
-				  num_options, &options);
-
       /* Default option settings from printer entry */
       for (i = 0; i < p->num_options; i ++)
 	if (strcasecmp(p->options[i].name, "printer-is-shared"))
