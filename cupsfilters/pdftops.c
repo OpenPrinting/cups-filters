@@ -349,8 +349,11 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   while ((bytes = fread(buffer, 1, sizeof(buffer), inputfp)) > 0)
     bytes = write(fd, buffer, bytes);
 
-  fclose(inputfp);
-  close(inputfd);
+  if (inputfd)
+  {
+    fclose(inputfp);
+    close(inputfd);
+  }
   close(fd);
 
   filename = tempfile;
@@ -1696,6 +1699,9 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   */
 
   error:
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "pdftops: Closing files ...");
 
   close(outputfd);
 
