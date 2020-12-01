@@ -2874,6 +2874,18 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 			_cupsLangString(lang, _("Color"))));
 
 	default_color = "RGB";
+
+	if (ippGetCount(attr) == 1 ||
+	    (!ippContainsString(attr, "sgray_8") &&
+	     !ippContainsString(attr, "black_1") &&
+	     !ippContainsString(attr, "black_8"))) {
+	  human_readable2 = lookup_choice("monochrome", "print-color-mode",
+					  opt_strings_catalog,
+					  printer_opt_strings_catalog);
+	  cupsFilePrintf(fp, "*ColorModel Gray/%s: \"<</cupsColorSpace 18/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+			 (human_readable2 ? human_readable2 :
+			  _cupsLangString(lang, _("Grayscale"))));
+	}
       } else if (!strcasecmp(keyword, "adobe-rgb_16") ||
 		 !strncmp(keyword, "ADOBERGB48", 10) ||
 		 !strncmp(keyword, "ADOBERGB24-48", 13)) {

@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: In generated PPDs add a grayscale mode if
+	  there are only color printing modes (from OpenPrinting
+	  CUPS).
 	- libcupsfilters, libppd: In generated PPDs add an "OutputBin"
 	  option also if it has only one choice (from OpenPrinting
 	  CUPS).
