@@ -3096,7 +3096,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 
   if ((attr = ippFindAttribute(response, "output-bin-supported",
 			       IPP_TAG_ZERO)) != NULL &&
-      (count = ippGetCount(attr)) > 1) {
+      (count = ippGetCount(attr)) > 0) {
     static const char * const output_bins[][2] =
     {					/* "output-bin" strings */
       { "auto", _("Automatic") },
