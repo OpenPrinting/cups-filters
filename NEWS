@@ -3,8 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
-	- libcupsfilters: In generated PPDs add an "OutputBin" option
-	  also if it has only one choice (from OpenPrinting CUPS).
+	- libcupsfilters, libppd: In generated PPDs add an "OutputBin"
+	  option also if it has only one choice (from OpenPrinting
+	  CUPS).
 	- libcupsfilters, libppd: Generated PPDs could have an
 	  "Unknown" default InputSlot (OpenPrinting CUPS issue #44).
 	- cups-browsed: Removed unneeded IPP attribute additions
