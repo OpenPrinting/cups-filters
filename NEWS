@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Generated PPDs could have an "Unknown"
+	  default InputSlot (OpenPrinting CUPS issue #44).
 	- cups-browsed: Removed unneeded IPP attribute additions
 	  preventing the created local queues from preserving a
 	  location or description the user assigns to them (Issue

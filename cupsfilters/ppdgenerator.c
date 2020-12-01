@@ -2467,11 +2467,13 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 			       IPP_TAG_KEYWORD)) != NULL)
     pwg_ppdize_name(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
   else
-    strlcpy(ppdname, "Unknown", sizeof(ppdname));
+    ppdname[0] = '\0';
 
   if ((attr = ippFindAttribute(response, "media-source-supported",
 			       IPP_TAG_KEYWORD)) != NULL &&
       (count = ippGetCount(attr)) > 1) {
+    int have_default = ppdname[0] != '\0';
+					/* Do we have a default InputSlot? */
     static const char * const sources[][2] =
     {					/* "media-source" strings */
       { "Auto", _("Automatic") },
@@ -2529,14 +2531,17 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     human_readable = lookup_option("media-source", opt_strings_catalog,
 				   printer_opt_strings_catalog);
     cupsFilePrintf(fp, "*OpenUI *InputSlot/%s: PickOne\n"
-		   "*OrderDependency: 10 AnySetup *InputSlot\n"
-		   "*DefaultInputSlot: %s\n",
-		   (human_readable ? human_readable : "Media Source"),
-		   ppdname);
+		   "*OrderDependency: 10 AnySetup *InputSlot\n",
+		   (human_readable ? human_readable : "Media Source"));
+    if (have_default)
+      cupsFilePrintf(fp, "*DefaultInputSlot: %s\n", ppdname);
     for (i = 0, count = ippGetCount(attr); i < count; i ++) {
       keyword = ippGetString(attr, i, NULL);
 
       pwg_ppdize_name(keyword, ppdname, sizeof(ppdname));
+
+      if (i == 0 && !have_default)
+	cupsFilePrintf(fp, "*DefaultInputSlot: %s\n", ppdname);
 
       human_readable = lookup_choice((char *)keyword, "media-source",
 				     opt_strings_catalog,
