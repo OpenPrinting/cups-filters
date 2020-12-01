@@ -7,8 +7,8 @@ CHANGES IN V2.0.0
 	  mode if there are only color printing modes (from
 	  OpenPrinting CUPS).
 	- libcupsfilters, libppd: In generated PPDs add an "OutputBin"
-	  option also if it has only one choice (from OpenPrinting
-	  CUPS).
+	  option also if it has only one choice (OpenPrinting CUPS
+	  pull request #18).
 	- libcupsfilters, libppd: Generated PPDs could have an
 	  "Unknown" default InputSlot (OpenPrinting CUPS issue #44).
 	- cups-browsed: Removed unneeded IPP attribute additions
