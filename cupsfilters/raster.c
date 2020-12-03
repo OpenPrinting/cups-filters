@@ -854,7 +854,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     {
       if (*(val + 4) == '_' || *(val + 4) == '-')
 	ptr = val + 5;
-      colorspace = 3;
+      colorspace = 18;
       numcolors = 1;
     }
     else if (!strncasecmp(val, "Srgb", 4))
