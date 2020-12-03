@@ -2773,6 +2773,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       have_bi_level = 0,
       have_mono = 0;
 
+    cupsFilePrintf(fp, "*%% ColorModel from %s\n", ippGetName(attr));
+
     for (i = 0, count = ippGetCount(attr); i < count; i ++) {
       keyword = ippGetString(attr, i, NULL); /* Keyword for color/bit depth */
 
@@ -2875,10 +2877,13 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 
 	default_color = "RGB";
 
-	if (ippGetCount(attr) == 1 ||
-	    (!ippContainsString(attr, "sgray_8") &&
-	     !ippContainsString(attr, "black_1") &&
-	     !ippContainsString(attr, "black_8"))) {
+	/* Apparently some printers only advertise color support, so make sure
+           we also do grayscale for these printers... */
+	if (!ippContainsString(attr, "sgray_8") &&
+	    !ippContainsString(attr, "black_1") &&
+	    !ippContainsString(attr, "black_8") &&
+	    !ippContainsString(attr, "W8") &&
+	    !ippContainsString(attr, "W8-16")) {
 	  human_readable2 = lookup_choice("monochrome", "print-color-mode",
 					  opt_strings_catalog,
 					  printer_opt_strings_catalog);
