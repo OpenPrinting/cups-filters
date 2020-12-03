@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: In the cupsRasterParseIPPOptions() map the
+	  color spaces the same way as in the PPD generator (Issue
+	  #326, Pull request #327).	
 	- libcupsfilters, libppd: In generated PPDs add a grayscale
 	  mode if there are only color printing modes (from
 	  OpenPrinting CUPS).
