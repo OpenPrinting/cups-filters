@@ -771,6 +771,25 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       colorspace = 20;
       numcolors = 3;
     }
+    else if (!strncasecmp(val, "adobe-rgb", 9))
+    {
+      if (*(val + 9) == '_' || *(val + 9) == '-')
+	ptr = val + 10;
+      colorspace = 20;
+      numcolors = 3;
+    }
+    else if (!strcasecmp(val, "auto-monochrome"))
+    {
+      colorspace = 18;
+      numcolors = 1;
+    }
+    else if (!strcasecmp(val, "bi-level") ||
+	     !strcasecmp(val, "process-bi-level"))
+    {
+      bitspercolor = 1;
+      colorspace = 3;
+      numcolors = 1;
+    }
     else if (!strncasecmp(val, "Black", 5))
     {
       if (*(val + 5) == '_' || *(val + 5) == '-')
@@ -779,21 +798,29 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       colorspace = 3;
       numcolors = 1;
     }
+    else if (!strcasecmp(val, "process-monochrome"))
+    {
+      colorspace = 18;
+      numcolors = 1;
+    }
     else if (!strncasecmp(val, "Monochrome", 10))
     {
       if (*(val + 10) == '_' || *(val + 10) == '-')
 	ptr = val + 11;
-      bitspercolor = 1;
-      colorspace = 3;
+      colorspace = 18;
       numcolors = 1;
     }
     else if (!strncasecmp(val, "Mono", 4))
     {
       if (*(val + 4) == '_' || *(val + 4) == '-')
 	ptr = val + 5;
-      bitspercolor = 1;
-      colorspace = 3;
+      colorspace = 18;
       numcolors = 1;
+    }
+    else if (!strcasecmp(val, "color"))
+    {
+      colorspace = 19;
+      numcolors = 3;
     }
     else if (!strncasecmp(val, "Cmyk", 4))
     {
@@ -835,7 +862,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     {
       if (*(val + 4) == '_' || *(val + 4) == '-')
 	ptr = val + 5;
-      colorspace = 3;
+      colorspace = 18;
       numcolors = 1;
     }
     else if (!strncasecmp(val, "Srgb", 4))
@@ -859,6 +886,17 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       colorspace = 1;
       numcolors = 3;
     }
+    else if (!strcasecmp(val, "auto"))
+    {
+      /* Let "auto" not look like an error */
+      if (set_defaults)
+      {
+	fprintf(stderr,
+		"DEBUG: \"Auto\" mode, using default RGB color space.\n");
+	colorspace = 19;
+	numcolors = 3;
+      }
+    }
     if (numcolors > 0)
     {
       if (ptr)
@@ -879,19 +917,19 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       fprintf(stderr, "DEBUG: Bad color space value \"%s\".\n", val);
       if (set_defaults)
       {
-	h->cupsBitsPerColor = 1;
-	h->cupsBitsPerPixel = 1;
-	h->cupsColorSpace = 3;
-	h->cupsNumColors = 1;
+	h->cupsBitsPerColor = 8;
+	h->cupsBitsPerPixel = 24;
+	h->cupsColorSpace = 19;
+	h->cupsNumColors = 3;
       }
     }
   }
   else if (set_defaults)
   {
-    h->cupsBitsPerColor = 1;
-    h->cupsBitsPerPixel = 1;
-    h->cupsColorSpace = 3;
-    h->cupsNumColors = 1;
+    h->cupsBitsPerColor = 8;
+    h->cupsBitsPerPixel = 24;
+    h->cupsColorSpace = 19;
+    h->cupsNumColors = 3;
   }
 
   h->cupsBytesPerLine = (h->cupsWidth * h->cupsBitsPerPixel + 7) / 8;
