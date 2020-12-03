@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.28.6 - 2020-12-02
 -----------------------------------------------------
 
+CHANGES IN V1.28.7
+
+	- libcupsfilters: Fixed addition of grayscale mode in
+	  generated PPD files, to avoid duplicate entries
+	  (OpenPrinting CUPS issue #59).
+
 CHANGES IN V1.28.6
 
 	- libcupsfilters: In generated PPDs add a grayscale mode if
