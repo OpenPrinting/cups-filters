@@ -9,6 +9,8 @@ CHANGES IN V1.28.7
 	- libcupsfilters: Fixed addition of grayscale mode in
 	  generated PPD files, to avoid duplicate entries
 	  (OpenPrinting CUPS issue #59).
+	- libcupsfilters: Added NULL check when removing ".Borderless"
+	  suffixes from page size names (Issue #314).
 
 CHANGES IN V1.28.6
 
