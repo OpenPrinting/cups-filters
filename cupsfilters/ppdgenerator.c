@@ -1951,7 +1951,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     formatfound = 1;
     is_pdf = 1;
   } else if (cupsArrayFind(pdl_list, "application/pdf")) {
-    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
+    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 100 -\"\n");
     manual_copies = 0;
     formatfound = 1;
     is_pdf = 1;
@@ -1992,7 +1992,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 	  if (cupsArrayCount(current_res) > 0 &&
 	      joinResolutionArrays(&common_res, &current_res, &common_def,
 				   &current_def)) {
-	    cupsFilePuts(fp, "*cupsFilter2: \"image/urf image/urf 100 -\"\n");
+	    cupsFilePuts(fp, "*cupsFilter2: \"image/urf image/urf 0 -\"\n");
 	    if (formatfound == 0) manual_copies = 1;
 	    formatfound = 1;
 	    is_apple = 1;
@@ -2010,7 +2010,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       if ((current_res = ippResolutionListToArray(attr)) != NULL &&
 	  joinResolutionArrays(&common_res, &current_res, &common_def,
 			       &current_def)) {
-	cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 0 -\"\n");
+	cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 10 -\"\n");
 	if (formatfound == 0) manual_copies = 1;
 	formatfound = 1;
 	is_pwg = 1;

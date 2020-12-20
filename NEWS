@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, libppd: In the PPD generators give priority
+	  to Apple Raster against PDF (Issue #331).
 	- libcupsfilters: In the cupsRasterParseIPPOptions() map the
 	  color spaces the same way as in the PPD generator (Issue
 	  #326, Pull request #327).	
