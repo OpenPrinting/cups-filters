@@ -288,27 +288,9 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   }
 
  /*
-  * Load PPD file if needed...
-  */
-
-  if (data->ppdfile == NULL && data->ppd == NULL)
-  {
-    char *p = getenv("PPD");
-    if (p)
-      data->ppdfile = strdup(p);
-    else
-      data->ppdfile = NULL;
-  }
-
-  if (data->ppd == NULL && data->ppdfile)
-    data->ppd = ppdOpenFile(data->ppdfile);
-
- /*
   * Process job options...
   */
 
-  ppdMarkDefaults(data->ppd);
-  ppdMarkOptions(data->ppd, data->num_options, data->options);
   if (set_pstops_options(&doc, data->ppd, data->job_id, data->job_user,
 			 data->job_title, data->copies,
 			 data->num_options, data->options,
@@ -2051,12 +2033,6 @@ do_setup(pstops_doc_t *doc,		/* I - Document information */
 
   doc_puts(doc, "% Disable CTRL-D as an end-of-file marker...\n");
   doc_puts(doc, "userdict dup(\\004)cvn{}put (\\004\\004)cvn{}put\n");
-
- /*
-  * Mark job options...
-  */
-
-  ppdMarkOptions(ppd, doc->num_options, doc->options);
 
  /*
   * Send all the printer-specific setup commands...

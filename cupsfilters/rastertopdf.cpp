@@ -1482,43 +1482,16 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
   else
     doc.cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
 
-  // Open the PPD file...
-  if (data->ppdfile == NULL && data->ppd == NULL)
-  {
-    char *p = getenv("PPD");
-    if (p)
-      data->ppdfile = strdup(p);
-  }
-
-  if (data->ppdfile)
-  data->ppd = ppdOpenFile(data->ppdfile);
-
-  if (data->ppd)
-  {
-    ppdMarkDefaults(data->ppd);
-    ppdMarkOptions(data->ppd, data->num_options, data->options);
-  }
-  else
-  {
-    ppd_status_t	status;		/* PPD error */
-    int		linenum;	/* Line number */
-
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopdf: The PPD file could not be opened.");
-
-    status = ppdLastError(&linenum);
-    
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopdf: %s on line %d.", ppdErrorString(status),
-		 linenum);
 #ifdef QPDF_HAVE_PCLM
+  if (data->ppd == NULL)
+  {
     if (outformat == OUTPUT_FORMAT_PCLM) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "rastertopdf: PCLm output only possible with PPD file.");
       return 1;
     }
-#endif
   }
+#endif
 
   // Transform
   ras = cupsRasterOpen(inputfd, CUPS_RASTER_READ);

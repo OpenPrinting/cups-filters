@@ -848,29 +848,10 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   num_options = data->num_options;
 
  /*
-  * Load PPD file if needed...
-  */
-
-  if (data->ppdfile == NULL && data->ppd == NULL)
-  {
-    char *p = getenv("PPD");
-    if (p)
-      data->ppdfile = strdup(p);
-    else
-      data->ppdfile = NULL;
-  }
-
-  if (data->ppd == NULL && data->ppdfile)
-    data->ppd = ppdOpenFile(data->ppdfile);
-
-  doc.ppd = data->ppd;
-
- /*
   * Process job options...
   */
 
-  ppdMarkDefaults(doc.ppd);
-  ppdMarkOptions(doc.ppd, num_options, options);
+  doc.ppd = data->ppd;
   filterSetCommonOptions(doc.ppd, num_options, options, 0,
 			 &doc.Orientation, &doc.Duplex,
 			 &doc.LanguageLevel, &doc.Color,

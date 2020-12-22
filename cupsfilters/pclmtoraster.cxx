@@ -104,35 +104,15 @@ parseOpts(filter_data_t *data,
   num_options = data->num_options;
   options = data->options;
 
- /*
-  * Load PPD file if needed...
-  */
-
-  if (data->ppdfile == NULL && data->ppd == NULL)
-  {
-    char *p = getenv("PPD");
-    if (p)
-      data->ppdfile = strdup(p);
-    else
-      data->ppdfile = NULL;
-  }
-
-  if (data->ppd == NULL && data->ppdfile)
-    data->ppd = ppdOpenFile(data->ppdfile);
-
   ppd = data->ppd;
 
   if (ppd == NULL && log)
       log(ld, FILTER_LOGLEVEL_DEBUG,
 	  "pclmtoraster: PPD file is not specified.");
-  if (ppd)
-    ppdMarkDefaults(ppd);
 
   if (ppd)
   {
-    ppdMarkDefaults(ppd);
-    ppdMarkOptions(ppd,num_options,options);
-    ppdRasterInterpretPPD(header,ppd,num_options,options,0);
+    ppdRasterInterpretPPD(header, ppd, num_options, options, 0);
     if (header->Duplex)
     {
       /* analyze options relevant to Duplex */

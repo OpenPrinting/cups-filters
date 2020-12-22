@@ -425,40 +425,6 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
     return (1);
   }
 
-  /*
-  * Load PPD file if needed...
-  */
-
-  if (data->ppdfile == NULL && data->ppd == NULL)
-  {
-    char *p = getenv("PPD");
-    if (p)
-      data->ppdfile = strdup(p);
-    else
-      data->ppdfile = NULL;
-  }
-
-  if (data->ppd == NULL && data->ppdfile)
-    data->ppd = ppdOpenFile(data->ppdfile);
-
-  if (data->ppd)
-  {
-    ppdMarkDefaults(data->ppd);
-    ppdMarkOptions(data->ppd, data->num_options, data->options);
-  }
-  else
-  {
-    ppd_status_t status;  /* PPD error */
-    int          linenum; /* Line number */
-
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertops: The PPD file could not be opened.");
-    status = ppdLastError(&linenum);
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertops: %s on line %d.", ppdErrorString(status),
-		 linenum);
-  }
-
   doc.inputfp = inputfp;
   doc.outputfp = outputfp;
   /* Logging function */

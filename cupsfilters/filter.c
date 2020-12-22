@@ -177,25 +177,34 @@ filterCUPSWrapper(
   num_options = cupsParseOptions(argv[5], 0, &options);
 
  /*
-  * Create data record to call filter function
+  * Create data record to call filter function and load PPD file
   */
 
   filter_data.job_id = atoi(argv[1]);
   filter_data.job_user = argv[2];
   filter_data.job_title = argv[3];
   filter_data.copies = atoi(argv[4]);
-  filter_data.job_attrs = NULL;      /* We use command line options */
-  filter_data.printer_attrs = NULL;  /* We use the queue's PPD file */
+  filter_data.job_attrs = NULL;        /* We use command line options */
+  filter_data.printer_attrs = NULL;    /* We use the queue's PPD file */
   filter_data.num_options = num_options;
-  filter_data.options = options; /* Command line options from 5th arg */
-  filter_data.ppdfile = NULL;
-  filter_data.ppd = NULL;  /* Filter function will load PPD according
-				     to "PPD" environment variable. */
-  filter_data.logfunc = cups_logfunc; /* Logging scheme of CUPS */
+  filter_data.options = options;       /* Command line options from 5th arg */
+  filter_data.ppdfile = getenv("PPD"); /* PPD file name in the "PPD"
+					  environment variable. */
+  filter_data.ppd = filter_data.ppdfile ?
+                    ppdOpenFile(filter_data.ppdfile) : NULL;
+                                       /* Load PPD file */
+  filter_data.logfunc = cups_logfunc;  /* Logging scheme of CUPS */
   filter_data.logdata = NULL;
   filter_data.iscanceledfunc = cups_iscanceledfunc; /* Job-is-canceled
 						       function */
   filter_data.iscanceleddata = JobCanceled;
+
+ /*
+  * Prepare PPD file
+  */
+
+  ppdMarkDefaults(filter_data.ppd);
+  ppdMarkOptions(filter_data.ppd, filter_data.num_options, filter_data.options);
 
  /*
   * Fire up the filter function (output to stdout, file descriptor 1)

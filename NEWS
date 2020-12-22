@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Let the filter functions not load the PPD
+	  and not mark options in the PPD files to make them better
+	  usable with Printer Applications and to avoid race
+	  conditions in filter chains. To keep the behavior of CUPS
+	  filters, changed the filterCUPSWrapper() function
+	  appropriately.
 	- libcupsfilters, libppd: In the PPD generators give priority
 	  to Apple Raster against PDF (Issue #331).
 	- libcupsfilters: In the cupsRasterParseIPPOptions() map the

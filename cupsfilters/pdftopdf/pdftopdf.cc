@@ -999,21 +999,6 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     doc.iscanceledfunc = iscanceled;
     doc.iscanceleddata = icd;
 
-    if (data->ppdfile == NULL && data->ppd == NULL)
-    {
-      char *p = getenv("PPD");
-
-      if (p)
-        data->ppdfile = strdup(p);
-    }
-
-    if (data->ppdfile)
-      data->ppd = ppdOpenFile(data->ppdfile);
-
-    ppdMarkDefaults(data->ppd);
-
-    ppdMarkOptions(data->ppd,data->num_options,data->options);
-
     getParameters(data->ppd,data->num_options,data->options,param,final_content_type,&doc);
     calculate(data->ppd,param,final_content_type);
 
