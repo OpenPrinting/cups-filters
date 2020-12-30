@@ -52,9 +52,8 @@ main(int  argc,				/* I - Number of command-line args */
 #else
   signal(SIGTERM, cancel_job);
 #endif /* HAVE_SIGSET */
-  filter_out_format_t outformat = OUTPUT_FORMAT_PDF;
-  ret = filterCUPSWrapper(argc, argv, pdftopdf, &outformat, &JobCanceled);
-
+  char *t = getenv("FINAL_CONTENT_TYPE");
+  ret = filterCUPSWrapper(argc, argv, pdftopdf, t, &JobCanceled);
   if (ret)
     fprintf(stderr, "ERROR: pdftopdf filter function failed.\n");
 
