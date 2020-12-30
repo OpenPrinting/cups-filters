@@ -176,6 +176,11 @@ extern int pdftopdf(int inputfd,
 		    filter_data_t *data,
 		    void *parameters);
 
+/* Parameters: const char*
+   For CUPS value of FINAL_CONTENT_TYPE environment variable, generally
+   MIME type of the final output format of the filter chain for this job
+   (not the output of the pdftopdf() filter function) */
+
 
 extern int pdftops(int inputfd,
 		   int outputfd,
