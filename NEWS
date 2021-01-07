@@ -9,7 +9,7 @@ CHANGES IN V2.0.0
 	- driverless: Removed the support quality check from Pull
 	  request #235 as it takes significant time for each printer
 	  being listed, making cups-driverd (`lpinfo -m`) timing out
-	  when there are many printers (OP CUPS Issue #65).
+	  when there are many printers (OpenPrinting CUPS issue #65).
 	- libcupsfilters: Let the filter functions not load the PPD
 	  and not mark options in the PPD files to make them better
 	  usable with Printer Applications and to avoid race
