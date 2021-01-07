@@ -14,7 +14,6 @@
  */
 
 #  include <cups/array.h>
-#  include "versioning.h"
 
 
 /*
@@ -31,9 +30,8 @@ extern "C" {
  */
 
 extern int		_ppdArrayAddStrings(cups_array_t *a, const char *s,
-			                     char delim) _PPD_PRIVATE;
-extern cups_array_t	*_ppdArrayNewStrings(const char *s, char delim)
-			                      _PPD_PRIVATE;
+			                     char delim);
+extern cups_array_t	*_ppdArrayNewStrings(const char *s, char delim);
 
 #  ifdef __cplusplus
 }

@@ -14,7 +14,6 @@
  */
 
 #  include "config.h"
-#  include "versioning.h"
 
 
 /*
@@ -64,9 +63,9 @@ typedef void	*_ppd_threadkey_t;
  * Functions...
  */
 
-extern void	_ppdMutexInit(_ppd_mutex_t *mutex) _PPD_PRIVATE;
-extern void	_ppdMutexLock(_ppd_mutex_t *mutex) _PPD_PRIVATE;
-extern void	_ppdMutexUnlock(_ppd_mutex_t *mutex) _PPD_PRIVATE;
+extern void	_ppdMutexInit(_ppd_mutex_t *mutex);
+extern void	_ppdMutexLock(_ppd_mutex_t *mutex);
+extern void	_ppdMutexUnlock(_ppd_mutex_t *mutex);
 
 #  ifdef __cplusplus
 }

@@ -21,7 +21,6 @@
 #  ifdef __APPLE__
 #    include <CoreFoundation/CoreFoundation.h>
 #  endif /* __APPLE__ */
-#  include "versioning.h"
 
 #  ifdef __cplusplus
 extern "C" {
@@ -60,11 +59,11 @@ typedef struct _ppd_message_s		/**** Message catalog entry ****/
  * Prototypes...
  */
 
-extern const char	*_ppdLangString(cups_lang_t *lang, const char *message) _PPD_PRIVATE;
-extern void		_ppdMessageFree(cups_array_t *a) _PPD_PRIVATE;
-extern cups_array_t	*_ppdMessageLoad(const char *filename, int flags) _PPD_PRIVATE;
-extern const char	*_ppdMessageLookup(cups_array_t *a, const char *m) _PPD_PRIVATE;
-extern cups_array_t	*_ppdMessageNew(void *context) _PPD_PRIVATE;
+extern const char	*_ppdLangString(cups_lang_t *lang, const char *message);
+extern void		_ppdMessageFree(cups_array_t *a);
+extern cups_array_t	*_ppdMessageLoad(const char *filename, int flags);
+extern const char	*_ppdMessageLookup(cups_array_t *a, const char *m);
+extern cups_array_t	*_ppdMessageNew(void *context);
 
 
 #  ifdef __cplusplus

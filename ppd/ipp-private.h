@@ -17,7 +17,6 @@
 
 #  include <cups/file.h>
 #  include <cups/ipp.h>
-#  include "versioning.h"
 
 
 /*
@@ -49,7 +48,7 @@ typedef struct _ppd_ipp_option_s		/**** Attribute mapping data ****/
  */
 
 /* encode.c */
-extern _ppd_ipp_option_t	*_ppdIppFindOption(const char *name) _PPD_PRIVATE;
+extern _ppd_ipp_option_t	*_ppdIppFindOption(const char *name);
 
 
 /*

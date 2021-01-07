@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libppd: Removed versioning.h and the macros defined in this
+          file (Issue #334).
 	- driverless: Removed the support quality check from Pull
 	  request #235 as it takes significant time for each printer
 	  being listed, making cups-driverd (`lpinfo -m`) timing out

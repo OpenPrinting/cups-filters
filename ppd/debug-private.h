@@ -11,8 +11,6 @@
 #ifndef _PPD_DEBUG_PRIVATE_H_
 #  define _PPD_DEBUG_PRIVATE_H_
 
-#  include "versioning.h"
-
 /*
  * C++ magic...
  */
@@ -46,9 +44,9 @@ extern "C" {
  * Prototypes...
  */
 
-extern void	_ppd_debug_set(const char *logfile, const char *level, const char *filter, int force) _PPD_PRIVATE;
+extern void	_ppd_debug_set(const char *logfile, const char *level, const char *filter, int force);
 #  ifdef _WIN32
-extern int	_ppd_gettimeofday(struct timeval *tv, void *tz) _PPD_PRIVATE;
+extern int	_ppd_gettimeofday(struct timeval *tv, void *tz);
 #    define gettimeofday(a,b) _ppd_gettimeofday(a, b)
 #  endif /* _WIN32 */
 

@@ -71,10 +71,10 @@ extern "C" {
  */
 
 #  ifdef DEBUG
-extern int	_ppd_debug_fd _PPD_INTERNAL;
-extern int	_ppd_debug_level _PPD_INTERNAL;
-extern void	_ppd_debug_printf(const char *format, ...) _PPD_INTERNAL;
-extern void	_ppd_debug_puts(const char *s) _PPD_INTERNAL;
+extern int	_ppd_debug_fd;
+extern int	_ppd_debug_level;
+extern void	_ppd_debug_printf(const char *format, ...);
+extern void	_ppd_debug_puts(const char *s);
 #  endif /* DEBUG */
 
 #  ifdef __cplusplus

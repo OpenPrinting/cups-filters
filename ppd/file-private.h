@@ -68,7 +68,7 @@ extern _ppd_fc_result_t	_ppdFileCheck(const char *filename,
 				      _ppd_fc_filetype_t filetype,
 				      int dorootchecks,
 				      filter_logfunc_t log,
-				      void *ld) _PPD_PRIVATE;
+				      void *ld);
 
 #  ifdef __cplusplus
 }

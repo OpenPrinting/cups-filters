@@ -25,7 +25,6 @@
 #    include <unistd.h>
 #    include <fcntl.h>
 #  endif /* _WIN32 */
-#  include "versioning.h"
 
 #  ifdef __cplusplus
 extern "C" {
@@ -36,9 +35,9 @@ extern "C" {
  * Prototypes...
  */
 
-extern void		_ppdRasterAddError(const char *f, ...) _PPD_PRIVATE;
-extern void		_ppdRasterClearError(void) _PPD_PRIVATE;
-extern const char	*_ppdRasterErrorString(void) _PPD_PRIVATE;
+extern void		_ppdRasterAddError(const char *f, ...);
+extern void		_ppdRasterClearError(void);
+extern const char	*_ppdRasterErrorString(void);
 
 #  ifdef __cplusplus
 }

@@ -27,7 +27,6 @@
 
 #  include <stdio.h>
 #  include <cups/raster.h>
-#  include "versioning.h"
 
 
 /*

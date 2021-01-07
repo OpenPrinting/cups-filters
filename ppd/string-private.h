@@ -24,8 +24,6 @@
 #  include <locale.h>
 #  include <time.h>
 
-#  include "versioning.h"
-
 #  ifdef HAVE_STRING_H
 #    include <string.h>
 #  endif /* HAVE_STRING_H */
@@ -148,35 +146,35 @@ extern int _ppd_toupper(int ch);
  * Prototypes...
  */
 
-extern ssize_t	_ppd_safe_vsnprintf(char *buffer, size_t bufsize, const char *format, va_list args) _PPD_PRIVATE;
-extern void	_ppd_strcpy(char *dst, const char *src) _PPD_PRIVATE;
+extern ssize_t	_ppd_safe_vsnprintf(char *buffer, size_t bufsize, const char *format, va_list args);
+extern void	_ppd_strcpy(char *dst, const char *src);
 
 #  ifndef HAVE_STRDUP
-extern char	*_ppd_strdup(const char *) _PPD_PRIVATE;
+extern char	*_ppd_strdup(const char *);
 #    define strdup _ppd_strdup
 #  endif /* !HAVE_STRDUP */
 
-extern int	_ppd_strcasecmp(const char *, const char *) _PPD_PRIVATE;
+extern int	_ppd_strcasecmp(const char *, const char *);
 
-extern int	_ppd_strncasecmp(const char *, const char *, size_t n) _PPD_PRIVATE;
+extern int	_ppd_strncasecmp(const char *, const char *, size_t n);
 
 #  ifndef HAVE_STRLCAT
-extern size_t _ppd_strlcat(char *, const char *, size_t) _PPD_PRIVATE;
+extern size_t _ppd_strlcat(char *, const char *, size_t);
 #    define strlcat _ppd_strlcat
 #  endif /* !HAVE_STRLCAT */
 
 #  ifndef HAVE_STRLCPY
-extern size_t _ppd_strlcpy(char *, const char *, size_t) _PPD_PRIVATE;
+extern size_t _ppd_strlcpy(char *, const char *, size_t);
 #    define strlcpy _ppd_strlcpy
 #  endif /* !HAVE_STRLCPY */
 
 #  ifndef HAVE_SNPRINTF
-extern int	_ppd_snprintf(char *, size_t, const char *, ...) _PPD_PRIVATE;
+extern int	_ppd_snprintf(char *, size_t, const char *, ...);
 #    define snprintf _ppd_snprintf
 #  endif /* !HAVE_SNPRINTF */
 
 #  ifndef HAVE_VSNPRINTF
-extern int	_ppd_vsnprintf(char *, size_t, const char *, va_list) _PPD_PRIVATE;
+extern int	_ppd_vsnprintf(char *, size_t, const char *, va_list);
 #    define vsnprintf _ppd_vsnprintf
 #  endif /* !HAVE_VSNPRINTF */
 
@@ -184,11 +182,11 @@ extern int	_ppd_vsnprintf(char *, size_t, const char *, va_list) _PPD_PRIVATE;
  * String pool functions...
  */
 
-extern char	*_ppdStrAlloc(const char *s) _PPD_PRIVATE;
-extern void	_ppdStrFlush(void) _PPD_PRIVATE;
-extern void	_ppdStrFree(const char *s) _PPD_PRIVATE;
-extern char	*_ppdStrRetain(const char *s) _PPD_PRIVATE;
-extern size_t	_ppdStrStatistics(size_t *alloc_bytes, size_t *total_bytes) _PPD_PRIVATE;
+extern char	*_ppdStrAlloc(const char *s);
+extern void	_ppdStrFlush(void);
+extern void	_ppdStrFree(const char *s);
+extern char	*_ppdStrRetain(const char *s);
+extern size_t	_ppdStrStatistics(size_t *alloc_bytes, size_t *total_bytes);
 
 
 /*
@@ -196,9 +194,9 @@ extern size_t	_ppdStrStatistics(size_t *alloc_bytes, size_t *total_bytes) _PPD_P
  */
 
 extern char	*_ppdStrFormatd(char *buf, char *bufend, double number,
-		                 struct lconv *loc) _PPD_PRIVATE;
+		                 struct lconv *loc);
 extern double	_ppdStrScand(const char *buf, char **bufptr,
-		              struct lconv *loc) _PPD_PRIVATE;
+		              struct lconv *loc);
 
 
 /*
