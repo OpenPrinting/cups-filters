@@ -54,14 +54,6 @@ enum driverless_support_modes {
   DRVLESS_INCOMPLETEIPP         /* Driverless support without media-col-database attribute */
 };
 
-/* Array of text strings explaining available driverless support */
-const char * driverless_support_strs[] = {
-  "driverless - cannot check driverless status",
-  "fully driverless",
-  "driverless via IPP 1.1",
-  "driverless with incomplete IPP request"
-};
-
 int check_driverless_support(const char* uri);
 ipp_t   *get_printer_attributes(const char* raw_uri,
 				const char* const pattrs[],
