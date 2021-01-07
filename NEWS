@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.28.6 - 2020-12-02
 
 CHANGES IN V1.28.7
 
+	- driverless: Removed the support quality check from Pull
+	  request #235 as it takes significant time for each printer
+	  being listed, making cups-driverd (`lpinfo -m`) timing out
+	  when there are many printers (OP CUPS Issue #65).
 	- libcupsfilters: In the PPD generator give priority to Apple
 	  Raster against PDF (Issue #331).
 	- libcupsfilters: Added NULL check when removing ".Borderless"

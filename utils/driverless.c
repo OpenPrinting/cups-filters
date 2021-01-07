@@ -63,8 +63,7 @@ convert_to_port(char *a)
 void
 listPrintersInArray(int reg_type_no, int mode, int isFax,
 		    char* ippfind_output) {
-  int	driverless_support = 0, /*process id for ippfind */
-        port,
+  int	port,
         is_local;
   char	buffer[8192],		/* Copy buffer */
         *ptr,		        /* Pointer into string */
@@ -88,7 +87,6 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
         make[512],              /* Manufacturer */
       	model[256],		/* Model */
         pdl[256],		/* PDL */
-        driverless_info[256],	/* Driverless info string */
         device_id[2048];	/* 1284 device ID */
 
   service_uri = (char *)malloc(2048*(sizeof(char)));
@@ -324,31 +322,6 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
       else
 	strncpy(make_and_model, model, sizeof(make_and_model) - 1);
 
-     /* Check which driverless support is available for the found device:
-      * 0) DRVLESS_CHECKERR - the device failed to respond to any
-      *    get-printer-attributes request versions available.
-      * 1) FULL_DRVLESS - the device responded correctly to IPP 2.0
-      *    get-printer-attributes request.
-      *    The device is compatible with CUPS 'everywhere' model.
-      * 2) DRVLESS_IPP11 - the device responded correctly to IPP 1.1
-      *    get-printer-attributes request.
-      * 3) DRVLESS_INCOMPLETEIPP - the device responded correctly to IPP
-      *    get-printer-attributes request without media-col-database
-      *    attribute
-      *
-      * If we know which driverless support is available, we can divide
-      * which devices can be supported by CUPS temporary queues and which
-      * devices need cups-browsed to run.
-      */
-      driverless_support = check_driverless_support(service_uri);
-
-      if (driverless_support == DRVLESS_CHECKERR)
-	fprintf(stderr, "Failed to get info about driverless support.\n");
-
-      snprintf(driverless_info, 255, "%s",
-	       driverless_support_strs[driverless_support]);
-      driverless_info[255] = '\0';
-
       if (mode == 1) {
 	/* Only output the entry if we had this UUID not already */
 	if (!txt_uuid[0] || !cupsArrayFind(uuids, txt_uuid)) {
@@ -356,25 +329,25 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
 	     is the the same pair of print and fax PPDs */
 	  if (txt_uuid[0]) cupsArrayAdd(uuids, strdup(txt_uuid));
 	  /* Call with "list" argument  (PPD generator in list mode)   */
-	  printf("\"%s%s\" en \"%s\" \"%s, %s%s, cups-filters " VERSION
-		 "\" \"%s\"\n",
+	  printf("\"%s%s\" en \"%s\" \"%s, %sdriverless, cups-filters "
+		 VERSION "\" \"%s\"\n",
 		 ((isFax) ? "driverless-fax:" : "driverless:"),
 		 service_uri, make, make_and_model,
 		 ((isFax) ? "Fax, " : ""),
-		 driverless_info, device_id);
+		 device_id);
 	  if (resource[0]) /* We have also fax on this device */
-	    printf("\"%s%s\" en \"%s\" \"%s, Fax, %s, cups-filters " VERSION
-		   "\" \"%s\"\n",
+	    printf("\"%s%s\" en \"%s\" \"%s, Fax, driverless, cups-filters "
+		   VERSION "\" \"%s\"\n",
 		   "driverless-fax:",
 		   service_uri, make, make_and_model,
-		   driverless_info, device_id);
+		   device_id);
 	}
       } else {
 	/* Call without arguments and env variable "SOFTWARE" starting
 	   with "CUPS" (Backend in discovery mode) */
-	printf("network %s \"%s\" \"%s (%s)\" \"%s\" \"\"\n",
+	printf("network %s \"%s\" \"%s (driverless)\" \"%s\" \"\"\n",
 	       service_uri, make_and_model, make_and_model,
-	       driverless_info, device_id);
+	       device_id);
       }
     }
 
