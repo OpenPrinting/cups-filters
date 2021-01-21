@@ -3292,7 +3292,7 @@ ppdCreateFromIPPCUPS(char   *buffer,	/* I - Filename buffer */
       if (ippContainsString(attr, "application/vnd.cups-pdf"))
         cupsFilePuts(fp, "*cupsFilter2: \"application/pdf application/pdf 0 -\"\n");
       else
-        cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 100 -\"\n");
+        cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 200 -\"\n");
     }
     else
       cupsFilePuts(fp, "*cupsManualCopies: True\n");
