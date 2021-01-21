@@ -1100,6 +1100,16 @@ ieee1284NormalizeMakeAndModel(
 	*bufptr = sepchr;
 	rightsidemoved += 1;
       }
+      else if (*bufptr == '+') /* Model names sometimes differ only by a '+' */
+      {
+	/* Replace with the word "plus" */
+	moverightpart(buffer, bufsize, bufptr, 3);
+	*bufptr = 'p';
+	*(bufptr + 1) = 'l';
+	*(bufptr + 2) = 'u';
+	*(bufptr + 3) = 's';
+	rightsidemoved += 3;
+      }
       else if (!isalnum(*bufptr)) /* Space or punctuation character */
       {
 	if (bufptr == buffer || !isalnum(*(bufptr - 1)))
