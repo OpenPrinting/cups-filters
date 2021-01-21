@@ -5225,6 +5225,7 @@ ppdPwgUnppdizeName(const char *ppd,	 /* I - PPD keyword */
 	*end;				/* End of name buffer */
   int   nodash = 1;                     /* Next char in IPP name cannot be a
                                            dash (first char or after a dash) */
+  int   firstchar = 1;
 
 
   if (_ppd_islower(*ppd))
@@ -5260,7 +5261,9 @@ ppdPwgUnppdizeName(const char *ppd,	 /* I - PPD keyword */
     else if (*ppd == '-' || (dashchars && strchr(dashchars, *ppd)) ||
 	     (!dashchars && !_ppd_isalnum(*ppd)))
     {
-      if (nodash == 0)
+      // Set a dash only if previous char is no dash, and as the first
+      // character only if it is the sign of a negative number
+      if (nodash == 0 || (firstchar && *ppd == '-' && isdigit(*(ppd + 1))))
       {
 	*ptr++ = '-';
 	nodash = 1;
@@ -5286,6 +5289,8 @@ ppdPwgUnppdizeName(const char *ppd,	 /* I - PPD keyword */
 	nodash = 1;
       }
     }
+
+    firstchar = 0;
   }
 
   /* Remove trailing dashes */
