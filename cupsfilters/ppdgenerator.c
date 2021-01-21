@@ -1951,7 +1951,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     formatfound = 1;
     is_pdf = 1;
   } else if (cupsArrayFind(pdl_list, "application/pdf")) {
-    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 100 -\"\n");
+    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 200 -\"\n");
     manual_copies = 0;
     formatfound = 1;
     is_pdf = 1;
@@ -2030,7 +2030,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       if ((current_res = ippResolutionListToArray(attr)) != NULL &&
 	  joinResolutionArrays(&common_res, &current_res, &common_def,
 			       &current_def)) {
-	cupsFilePuts(fp, "*cupsFilter2: \"application/PCLm application/PCLm 200 -\"\n");
+	cupsFilePuts(fp, "*cupsFilter2: \"application/PCLm application/PCLm 300 -\"\n");
 	if (formatfound == 0) manual_copies = 1;
 	formatfound = 1;
 	is_pclm = 1;
@@ -2049,7 +2049,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       /* We put a high cost factor here as if a printer supports also
 	 another format, like PWG or Apple Raster, we prefer it, as some
 	 PCL-XL printers have bugs in their PCL-XL interpreters */
-      cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 300 gstopxl\"\n");
+      cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 400 gstopxl\"\n");
       if (formatfound == 0) manual_copies = 1;
       formatfound = 1;
     }
@@ -2058,7 +2058,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     /* We put a high cost factor here as if a printer supports also
        another format, like PWG or Apple Raster, we prefer it, as many
        PostScript printers have bugs in their PostScript interpreters */
-    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 500 -\"\n");
+    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 600 -\"\n");
     if (formatfound == 0) manual_copies = 0;
     formatfound = 1;
   }
@@ -2067,7 +2067,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
        another format, like PWG or Apple Raster, we prefer it, as there
        are some printers, like HP inkjets which report to accept PCL
        but do not support PCL 5c/e or PCL-XL */
-    cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 700 rastertopclx\"\n");
+    cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 800 rastertopclx\"\n");
     if (formatfound == 0) manual_copies = 1;
     formatfound = 1;
   }
