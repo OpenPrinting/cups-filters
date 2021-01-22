@@ -37,7 +37,8 @@ int main(int argc, char **argv)
   * Fire up the pclmtoraster() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, pclmtoraster, NULL, &JobCanceled);
+  char *t = getenv("FINAL_CONTENT_TYPE");
+  ret = filterCUPSWrapper(argc, argv, pclmtoraster, t , &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: pclmtoraster filter function failed.\n");

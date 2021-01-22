@@ -64,7 +64,8 @@ main(int  argc,				/* I - Number of command-line args */
   * Fire up the imagetopdf() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, imagetopdf, NULL, &JobCanceled);
+  char *t = getenv("FINAL_CONTENT_TYPE");
+  ret = filterCUPSWrapper(argc, argv, imagetopdf, t , &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: imagetopdf filter function failed.\n");

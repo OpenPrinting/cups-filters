@@ -64,7 +64,8 @@ main(int  argc,				/* I - Number of command-line args */
   * Fire up the imagetoraster() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, imagetoraster, NULL, &JobCanceled);
+  char *t = getenv("FINAL_CONTENT_TYPE");
+  ret = filterCUPSWrapper(argc, argv, imagetoraster, t , &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: imagetoraster filter function failed.\n");
