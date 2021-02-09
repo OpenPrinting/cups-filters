@@ -915,6 +915,15 @@ ieee1284NormalizeMakeAndModel(
 	  snprintf(buffer, bufsize, "HP %s", make_and_model);
 	  modelptr = buffer + 3;
 	}
+	else if (!strncasecmp(make_and_model, "ecosys", 6))
+        {
+         /*
+	  * Kyocera...
+	  */
+
+	  snprintf(buffer, bufsize, "Kyocera %s", make_and_model);
+	  modelptr = buffer + 8;
+	}
 
        /*
 	* Known make names with space
@@ -929,6 +938,9 @@ ieee1284NormalizeMakeAndModel(
 	else if (strncasecmp(buffer, "lexmark international", 21) &&
 		 isspace(buffer[21]))
 	  modelptr = buffer + 22;
+	else if (strncasecmp(buffer, "kyocera mita", 12) &&
+		 isspace(buffer[12]))
+	  modelptr = buffer + 13;
 
        /*
 	* Consider the first space as separation between make and model
@@ -1035,6 +1047,19 @@ ieee1284NormalizeMakeAndModel(
       if (modelptr >= bufptr + 8)
 	modelptr -= 4;
       bufptr += 4;
+    }
+
+    bufptr = buffer;
+    while ((bufptr = strcasestr(bufptr, "TOSHIBA TEC Corp.")) != NULL)
+    {
+     /*
+      * Strip "TEC Corp."...
+      */
+
+      moverightpart(buffer, bufsize, bufptr + 7, -10);
+      if (modelptr >= bufptr + 17)
+	modelptr -= 10;
+      bufptr += 7;
     }
 
    /*
