@@ -216,6 +216,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 		     "imagetops: Unable to open temporary file.");
       }
 
+      unlink(tempfile);
       return (1);
     }
   }
@@ -234,6 +235,8 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 
     fclose(inputfp);
 
+    if (!inputseekable)
+      unlink(tempfile);
     return (1);
   }
 

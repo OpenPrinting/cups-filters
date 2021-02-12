@@ -338,6 +338,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 		     "imagetoraster: Unable to open temporary file.");
       }
 
+      unlink(tempfile);
       return (1);
     }
   }
@@ -502,6 +503,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       log(ld, FILTER_LOGLEVEL_DEBUG,
 	  "imagetoraster: %s", cupsRasterErrorString());
     }
+    if (!inputseekable)
+      unlink(tempfile);
     return (1);
   }
 
@@ -632,6 +635,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
         if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		     "imagetoraster: Colorspace %d not supported.",
 		     header.cupsColorSpace);
+	if (!inputseekable)
+	  unlink(tempfile);
 	return(1);
 	break;
   }

@@ -806,6 +806,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 		     "imagetopdf: Unable to open temporary file.");
       }
 
+      unlink(tempfile);
       return (1);
     }
   }
@@ -823,6 +824,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     }
 
     fclose(fp);
+    if (!inputseekable)
+      unlink(tempfile);
 
     return (1);
   }

@@ -1152,6 +1152,9 @@ out:
     free(envp[i]);
   if (fp)
     fclose(fp);
+  if (filename)
+    /* Remove name of temp file*/
+    unlink(filename);
   if (gs_args) {
     while ((tmp = cupsArrayFirst(gs_args)) != NULL) {
       cupsArrayRemove(gs_args,tmp);

@@ -1108,6 +1108,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
   if (parseOpts(data, &pclmtoraster_data) != 0)
   {
     delete(pdf);
+    unlink(tempfile);
     return (1);
   }
 
@@ -1121,6 +1122,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 		"pclmtoraster: Specified color format is not supported: %s",
 		strerror(errno));
     delete(pdf);
+    unlink(tempfile);
     if (pclmtoraster_data.ppd != NULL)  ppdClose(pclmtoraster_data.ppd);
     return (1);
   }
@@ -1150,6 +1152,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 		"pclmtoraster: Can't open raster stream: %s",
 		strerror(errno));
     delete(pdf);
+    unlink(tempfile);
     if (pclmtoraster_data.ppd != NULL)  ppdClose(pclmtoraster_data.ppd);
     return (1);
   }
@@ -1175,6 +1178,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 
   cupsRasterClose(raster);
   delete pdf;
+  unlink(tempfile);
   if (pclmtoraster_data.ppd != NULL)  ppdClose(pclmtoraster_data.ppd);
   return 0;
 }

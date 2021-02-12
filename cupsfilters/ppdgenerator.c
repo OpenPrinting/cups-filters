@@ -777,7 +777,11 @@ load_opt_strings_catalog(const char *location, cups_array_t *options)
     return;
 
   if ((fp = cupsFileOpen(filename, "r")) == NULL)
+  {
+    if (filename == tmpfile)
+      unlink(filename);
     return;
+  }
 
   while (cupsFileGets(fp, line, sizeof(line)) || (part = 10)) {
     /* Find a pair of quotes delimiting a string in each line

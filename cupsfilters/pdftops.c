@@ -364,7 +364,10 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   */
 
   if (is_empty(filename, log, ld))
+  {
+    unlink(tempfile);
     return 0;
+  }
 
  /*
   * Read out copy counts and collate setting passed over by pdftopdf
@@ -1683,8 +1686,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 
   close(outputfd);
 
-  //if (tempfile[0])
-  //unlink(tempfile);
+  unlink(tempfile);
 
   return (exit_status);
 }
