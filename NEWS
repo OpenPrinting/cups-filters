@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.28.7 - 2021-01-07
 
 CHANGES IN V1.28.8
 
+	- implicitclass: Raise timeout for cups-browsed's answer from
+	  20s to 60s (Pull request #346).
 	- libcupsfilters: In the PPD generator really give priority to
 	  Apple Raster against PDF (Issue #331).
 
