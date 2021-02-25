@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- implicitclass: Raise timeout for cups-browsed's answer from
+	  20s to 60s (Pull request #346).
 	- libppd: In the ppdPwgUnppdizeName() function support
 	  negative numbers
 	- libcupsfilters: When normalizing printer model name replace
