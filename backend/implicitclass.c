@@ -154,8 +154,8 @@ main(int  argc,				/* I - Number of command-line args */
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
 		     "localhost", ippPort(), "/printers/%s", queue_name);
     job_id = argv[1];
-    for (i = 0; i < 40; i++) {
-      /* Wait up to 20 sec for cups-browsed to supply the destination host */
+    for (i = 0; i < 120; i++) {
+      /* Wait up to 60 sec for cups-browsed to supply the destination host */
       /* Try reading the option in which cups-browsed has deposited the
 	 destination host */
       request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
@@ -218,7 +218,7 @@ main(int  argc,				/* I - Number of command-line args */
       usleep(500000);
     }
 
-    if (i >= 40) {
+    if (i >= 120) {
       /* Timeout, no useful data from cups-browsed received */
       fprintf(stderr, "ERROR: No destination host name supplied by cups-browsed for printer \"%s\", is cups-browsed running?\n",
 	      queue_name);
