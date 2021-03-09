@@ -241,8 +241,8 @@ char * extract_next_option(char *str, char **pagerange, char **key, char **value
     if (!str)
         return NULL;
 
-    /* skip whitespace and commas */
-    while (*p && (isspace(*p) || *p == ',')) p++;
+    /* skip whitespace */
+    while (*p && isspace(*p)) p++;
 
     if (!*p)
         return NULL;
@@ -267,7 +267,7 @@ char * extract_next_option(char *str, char **pagerange, char **key, char **value
     }
     else {
         *key = p;
-        while (*p && *p != ':' && *p != '=' && *p != ' ') p++;
+        while (*p && *p != ':' && *p != '=' && !isspace(*p)) p++;
     }
 
     if (*p != ':' && *p != '=') { /* no value for this option */
@@ -293,7 +293,7 @@ char * extract_next_option(char *str, char **pagerange, char **key, char **value
     }
     else {
         *value = p;
-        while (*p && *p != ' ' && *p != ',') p++;
+        while (*p && !isspace(*p)) p++;
         if (*p == '\0')
             return NULL;
         *p = '\0';

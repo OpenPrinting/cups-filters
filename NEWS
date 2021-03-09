@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- foomatic-rip: Options in the 5th command line argument of
+	  the CUPS filter command line are separated only by white
+	  space and not by comma, also make sure that an option "none"
+	  is not considered a custom page size (Issue #348).
 	- libppd: Make "True" in boolean options case-insensitive
 	  (OpenPrinting CUPS pull request #106).
 	- implicitclass: Raise timeout for cups-browsed's answer from
