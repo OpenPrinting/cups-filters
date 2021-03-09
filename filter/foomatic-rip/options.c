@@ -956,6 +956,10 @@ int option_get_command(dstr_t *cmd, option_t *opt, int optionset, int section)
         return 1;
     }
 
+    /* Consider "None" as "not set" for enumerated choice options */
+    if (opt->type == TYPE_ENUM && !strcasecmp(valstr, "None"))
+        return 0;
+
     /* Consider "None" as the empty string for string and password options */
     if ((opt->type == TYPE_STRING || opt->type == TYPE_PASSWORD) &&
 	!strcasecmp(valstr, "None"))
