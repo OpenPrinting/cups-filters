@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Made check whether the driverless PPD to
+	  generate should be a fax out PPD more reliable (Issue #343).
 	- foomatic-rip: Options in the 5th command line argument of
 	  the CUPS filter command line are separated only by white
 	  space and not by comma, also make sure that an option "none"

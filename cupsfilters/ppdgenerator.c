@@ -1682,9 +1682,18 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
   cupsFilePuts(fp, "*PCFileName: \"drvless.ppd\"\n");
 
   if ((attr = ippFindAttribute(response, "ipp-features-supported",
-			       IPP_TAG_KEYWORD))!= NULL &&
+			       IPP_TAG_KEYWORD)) != NULL &&
       ippContainsString(attr, "faxout"))
-    is_fax = 1;
+  {
+    attr = ippFindAttribute(response, "printer-uri-supported",
+			    IPP_TAG_URI);
+    if (attr)
+    {
+      ippAttributeString(attr, buf, sizeof(buf));
+      if (strcasestr(buf, "faxout"))
+	is_fax = 1;
+    }
+  }
 
   if ((attr = ippFindAttribute(response, "printer-make-and-model",
 			       IPP_TAG_TEXT)) != NULL)
@@ -4224,12 +4233,13 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
   free(max_res);
 
   snprintf(ppdgenerator_msg, sizeof(ppdgenerator_msg),
-	   "%s PPD generated.",
-	   (is_pdf ? "PDF" :
+	   "%s %sPPD generated.",
+	   (is_apple ? "Apple Raster" :
 	    (is_pwg ? "PWG Raster" :
-	     (is_apple ? "Apple Raster" :
+	     (is_pdf ? "PDF" :
 	      (is_pclm ? "PCLm" :
-	       "Legacy IPP printer")))));
+	       "Legacy IPP printer")))),
+	   (is_fax ? "Fax " : ""));
 
   cupsFileClose(fp);
   if (printer_opt_strings_catalog)
