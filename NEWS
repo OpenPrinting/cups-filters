@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libppd: Fixed PPD memory leak caused by "emulators" field
+	  not freed (OpenPrinting CUPS issue #124).
 	- libcupsfilters: Made check whether the driverless PPD to
 	  generate should be a fax out PPD more reliable (Issue #343).
 	- foomatic-rip: Options in the 5th command line argument of
