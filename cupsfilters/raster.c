@@ -594,6 +594,9 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   else if (set_defaults)
   {
     /* TODO: Automatic A4/Letter, like in scheduler/conf.c in CUPS. */
+    h->cupsPageSize[0] = 612.0f;
+    h->cupsPageSize[1] = 792.0f;
+    
     h->PageSize[0] = 612;
     h->PageSize[1] = 792;
     _strlcpy(h->cupsPageSizeName, "na_letter_8.5x11in",
@@ -638,7 +641,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     {
       h->Margins[0] = 0;
       h->ImagingBoundingBox[0] = 0;
-      h->cupsImagingBBox[0] = 0.0;
+      h->cupsImagingBBox[0] = 18.0f;
     }
     if ((val = cupsGetOption("media-bottom-margin", num_options, options))
 	!= NULL)
@@ -652,7 +655,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     {
       h->Margins[1] = 0;
       h->ImagingBoundingBox[1] = 0;
-      h->cupsImagingBBox[1] = 0.0;
+      h->cupsImagingBBox[1] = 36.0f;
     }
     if ((val = cupsGetOption("media-right-margin", num_options, options))
 	!= NULL)
@@ -664,7 +667,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     else if (set_defaults)
     {
       h->ImagingBoundingBox[2] = h->PageSize[0];
-      h->cupsImagingBBox[2] = h->cupsPageSize[0];
+      h->cupsImagingBBox[2] = 594.0f;
     }
     if ((val = cupsGetOption("media-top-margin", num_options, options))
 	!= NULL)
@@ -676,7 +679,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     else if (set_defaults)
     {
       h->ImagingBoundingBox[3] = h->PageSize[1];
-      h->cupsImagingBBox[3] = h->cupsPageSize[1];
+      h->cupsImagingBBox[3] = 756.0f;
     }
   }
 
