@@ -5643,7 +5643,7 @@ record_printer_options(const char *printer) {
 	if (*ptr != NULL) {
 	  if (strcasecmp(key, CUPS_BROWSED_DEST_PRINTER "-default") != 0 &&
 	      (ppdname == NULL ||
-	       strncasecmp(key + strlen(key) - 8, "-default", 8))) {
+	       strncasecmp(key + strlen(key) - 8, "-default", 8) == 0)) {
 	    ippAttributeString(attr, buf, sizeof(buf));
 	    buf[sizeof(buf) - 1] = '\0';
 	    c = buf;
