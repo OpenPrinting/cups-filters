@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.28.8 - 2021-03-25
 -----------------------------------------------------
 
+CHANGES IN V1.28.9
+
+	- cups-browsed: Start after network-online.target (Pull
+	  request #360).
+
 CHANGES IN V1.28.8
 
 	- libcupsfilters: Made check whether the driverless PPD to
@@ -228,7 +233,6 @@ CHANGES IN V1.28.0
 	- Sample PPDs: In Generic-PDF_Printer-PDF.ppd add option to
 	  switch between color and grayscale printing (Pull request
 	  #237).
-	- cups-browsed.service: Start after network-online.target
 
 CHANGES IN V1.27.5
 
