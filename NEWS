@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- cups-browsed: Always save "...-default" option entries
+	  from printers.conf, regardless of presence or absense
+	  of PPD file (Pull request #359).
 	- cups-browsed: Start after network-online.target (Pull
 	  request #360).
 	- libppd: Fixed PPD memory leak caused by "emulators" field
