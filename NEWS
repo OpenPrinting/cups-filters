@@ -286,6 +286,7 @@ CHANGES IN V2.0.0
 	- Sample PPDs: In Generic-PDF_Printer-PDF.ppd add option to
 	  switch between color and grayscale printing (Pull request
 	  #237).
+	- cups-browsed.service: Start after network-online.target
 
 CHANGES IN V1.27.5
 

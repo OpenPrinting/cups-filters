@@ -1,8 +1,8 @@
 [Unit]
 Description=Make remote CUPS printers available locally
 Requires=cups.service
-After=cups.service avahi-daemon.service
-Wants=avahi-daemon.service
+After=cups.service avahi-daemon.service network-online.target
+Wants=avahi-daemon.service network-online.target
 
 [Service]
 ExecStart=/usr/sbin/cups-browsed
