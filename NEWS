@@ -8,6 +8,8 @@ CHANGES IN V2.0.0
 	  of PPD file (Pull request #359).
 	- cups-browsed: Start after network-online.target (Pull
 	  request #360).
+	- texttopdf: Set default margins when no PPD file is used
+	  (Pull request #356).
 	- libppd: Fixed PPD memory leak caused by "emulators" field
 	  not freed (OpenPrinting CUPS issue #124).
 	- libcupsfilters: Made check whether the driverless PPD to
