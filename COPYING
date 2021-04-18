@@ -237,13 +237,14 @@ License: GPL-2+
 
 Files: utils/cups-browsed*
  utils/org.cups.cupsd.Notifier.xml
-Copyright: 2012-2019 Till Kamppeter
+Copyright: 2012-2021 Till Kamppeter
  2013-2015 Tim Waugh
  2018-2019 Deepak Patankar
+ 2020 Mohit Mohan
 License: LGPL-2.1+
 
 Files: utils/driverless*
-Copyright: 2012-2016 Till Kamppeter
+Copyright: 2012-2021 Till Kamppeter
  2007-2016 Apple Inc.
  2017 Sahil Arora
 License: LGPL-2.1+

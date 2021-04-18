@@ -3,6 +3,16 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- cups-browsed: Added multi-threaded operation, the Avahi
+	  resolver callback (which examines the remote printer,
+	  registers it, checks whether we want a local queue for it,
+	  adds it to a cluster, ...) and the creation/modification of
+	  a local CUPS queue is now done in separate threads, so that
+	  these processes can get executed in parallel to keep the
+	  local queues up-to-date more timely and to not overload the
+	  system's resources.  Thanks a lot to Mohit Mohan who did
+	  this work as Google Summer of Code 2020 project
+	  (https://github.com/mohitmo/GSoC-2020-Documentation).
 	- cups-browsed: Always save "...-default" option entries
 	  from printers.conf, regardless of presence or absense
 	  of PPD file (Pull request #359).
