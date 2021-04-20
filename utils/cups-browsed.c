@@ -7705,8 +7705,8 @@ void create_queue(void* arg) {
   int           i, ap_remote_queue_id_line_inserted,
                 want_raw, num_cluster_printers = 0;
   char          *disabled_str;
-  char          *ppdfile, *ifscript;
-  char          buffer[8192];  /* Buffer for creating script */
+  char          *ppdfile;
+  char          ppdname[1024];
 #ifdef HAVE_CUPS_1_6
   ipp_attribute_t *attr;
 #endif
@@ -7801,7 +7801,6 @@ void create_queue(void* arg) {
   httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
 		   "localhost", 0, "/printers/%s", p->queue_name);
 
-  ifscript = NULL;
   ppdfile = NULL;
 
 #ifdef HAVE_CUPS_1_6
@@ -8045,7 +8044,7 @@ void create_queue(void* arg) {
          ourselves */
       printer_ipp_response = (num_cluster_printers == 1) ? p->prattrs :
         printer_attributes;
-      if (!ppdCreateFromIPP2(buffer, sizeof(buffer), printer_ipp_response,
+      if (!ppdCreateFromIPP2(ppdname, sizeof(ppdname), printer_ipp_response,
 			     make_model,
 			     pdl, color, duplex, conflicts, sizes,
 			     default_pagesize, default_color)) {
@@ -8062,8 +8061,8 @@ void create_queue(void* arg) {
         goto end;
       } else {
         debug_printf("PPD generation successful: %s\n", ppdgenerator_msg);
-        debug_printf("Created temporary PPD file: %s\n", buffer);
-        ppdfile = strdup(buffer);
+        debug_printf("Created temporary PPD file: %s\n", ppdname);
+        ppdfile = strdup(ppdname);
       }
     }
 
@@ -8126,7 +8125,7 @@ void create_queue(void* arg) {
 		    "implicitclass", NULL, p->queue_name, 0, NULL);
     debug_printf("Print queue %s is for remote CUPS queue(s) and we get notifications from CUPS, using implicit class device URI %s\n",
 		 p->queue_name, device_uri);
-    if (!ppdfile && !ifscript) {
+    if (!ppdfile) {
       /* Having another backend than the CUPS "ipp" backend the
 	 options from the PPD of the queue on the server are not
 	 automatically used on the client any more, so we have to
@@ -8210,7 +8209,7 @@ void create_queue(void* arg) {
 	   ourselves */
 	printer_ipp_response = (num_cluster_printers == 1) ? p->prattrs :
 	  printer_attributes;
-	if (!ppdCreateFromIPP2(buffer, sizeof(buffer), printer_ipp_response,
+	if (!ppdCreateFromIPP2(ppdname, sizeof(ppdname), printer_ipp_response,
 			       make_model,
 			       pdl, color, duplex, conflicts, sizes,
 			       default_pagesize, default_color)) {
@@ -8226,8 +8225,8 @@ void create_queue(void* arg) {
 	  goto end;
 	} else {
 	  debug_printf("PPD generation successful: %s\n", ppdgenerator_msg);
-	  debug_printf("Created temporary PPD file: %s\n", buffer);
-	  ppdfile = strdup(buffer);
+	  debug_printf("Created temporary PPD file: %s\n", ppdname);
+	  ppdfile = strdup(ppdname);
 	}
       }
     }
@@ -8463,13 +8462,6 @@ void create_queue(void* arg) {
     unlink(ppdfile);
     free(ppdfile);
     ppdfile = NULL;
-  } else if (ifscript) {
-    debug_printf("Non-raw queue %s with interface script: %s\n", p->queue_name, ifscript);
-    ippDelete(cupsDoFileRequest(http, request, "/admin/", ifscript));
-    want_raw = 0;
-    unlink(ifscript);
-    free(ifscript);
-    ifscript = NULL;
   } else {
     if (p->netprinter == 0) {
       debug_printf("Raw queue %s\n", p->queue_name);
