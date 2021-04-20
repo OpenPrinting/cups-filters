@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- imagetopdf, imagetops, imagetoraster: Removed support for
+	  asymmetric image resolutions ("ppi=XXXxYYY") as CUPS does
+	  not support this (Issue #347, Pull request #361,
+	  OpenPrinting CUPS issue #115).
 	- cups-browsed: Added multi-threaded operation, the Avahi
 	  resolver callback (which examines the remote printer,
 	  registers it, checks whether we want a local queue for it,
