@@ -1231,6 +1231,7 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc,
         bp += rowsize;
       }
     }
+    free(colordata);
   }
   if (allocLineBuf) delete[] lineBuf;
 }
