@@ -4833,9 +4833,11 @@ cupsdUpdateLDAPBrowse(void)
     debug_printf("LDAP: Remote host: %s; Port: %d; Remote queue name: %s; Service Name: %s\n",
 		 host, port, strchr(local_resource, '/') + 1, service_name);
 
+    pthread_rwlock_wrlock(&lock);
     examine_discovered_printer_record(host, NULL, port, local_resource,
 				      service_name, location, info, "", "",
 				      "", 0, NULL);
+    pthread_rwlock_unlock(&lock);
 
   }
 
@@ -6899,7 +6901,7 @@ on_printer_modified (CupsNotifier *object,
 
   debug_printf("[CUPS Notification] Printer modified: %s\n",
 	       text);
-  pthread_rwlock_wrlock(&(lock));
+  pthread_rwlock_wrlock(&lock);
   if (is_created_by_cups_browsed(printer)) {
     p = printer_record(printer);
     if (p->overwritten)
@@ -7744,7 +7746,7 @@ void create_queue(void* arg) {
   if (!p || (p && p->status!=STATUS_TO_BE_CREATED))
     return;
 
-  pthread_rwlock_wrlock(&(lock));
+  pthread_rwlock_wrlock(&lock);
 
   current_time = time(NULL);
 
@@ -8618,7 +8620,7 @@ void create_queue(void* arg) {
 
  end:
   p->called = 0;
-  pthread_rwlock_unlock(&(lock));
+  pthread_rwlock_unlock(&lock);
   free(a->uri);
   free(a->queue);
   free(a);
@@ -8652,6 +8654,7 @@ gboolean update_cups_queues(gpointer unused) {
       debug_printf("ERROR: Unable to allocate memory.\n");
       if (in_shutdown == 0)
 	recheck_timer ();
+      pthread_rwlock_unlock(&update_lock);
       return FALSE;
     }
     memset(deleted_master, 0, sizeof(remote_printer_t));
@@ -10768,11 +10771,13 @@ found_cups_printer (const char *remote_host, const char *uri,
   debug_printf("CUPS browsing: Remote host: %s; Port: %d; Remote queue name: %s; Service Name: %s\n",
 	       host, port, strchr(local_resource, '/') + 1, service_name);
 
+  pthread_rwlock_wrlock(&lock);
   printer = examine_discovered_printer_record(host, NULL, port, local_resource,
 					      service_name,
 					      location ? location : "",
 					      info ? info : "", "", "", "", 0,
 					      NULL);
+  pthread_rwlock_unlock(&lock);
 
   if (printer &&
       (printer->domain == NULL || printer->domain[0] == '\0' ||
