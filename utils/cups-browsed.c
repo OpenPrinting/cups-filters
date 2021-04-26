@@ -362,7 +362,7 @@ typedef struct default_str_attribute_s{
 }default_str_attribute_t;
 
 typedef struct resolution_count_s{
-  res_t *res;
+  cf_res_t *res;
   int count;
 }resolution_count_t;
 
@@ -1155,7 +1155,7 @@ copy_counted_res(void *data, void *user_data)
 
   copy = (resolution_count_t *)calloc(1, sizeof(resolution_count_t));
   if (copy) {
-    copy->res = (res_t *)malloc(sizeof(res_t));
+    copy->res = (cf_res_t *)malloc(sizeof(cf_res_t));
     copy->res->x = prev->res->x;
     copy->res->y = prev->res->y;
     copy->count = prev->count;
@@ -1171,7 +1171,7 @@ compare_counted_res(void *defres_a, void *defres_b,
   resolution_count_t  *a=(resolution_count_t *)defres_a;
   resolution_count_t  *b=(resolution_count_t *)defres_b;
 
-  return compare_resolutions(a->res, b->res, NULL);
+  return cfCompareResolutions(a->res, b->res, NULL);
 }
 
 /*
@@ -1746,7 +1746,7 @@ void add_resolution_attributes(char* cluster_name, ipp_t **merged_attributes)
   ipp_attribute_t      *attr;
   int                  num_resolution, attr_no;
   cups_array_t         *res_array;
-  res_t                *res, *resolution;
+  cf_res_t             *res, *resolution;
   char* attributes[] = {
                          "printer-resolution-supported",
                          "pwg-raster-document-resolution-supported",
@@ -1755,7 +1755,7 @@ void add_resolution_attributes(char* cluster_name, ipp_t **merged_attributes)
 
   for (attr_no = 0; attr_no < 3; attr_no ++) {
     res_array = NULL;
-    res_array = resolutionArrayNew();
+    res_array = cfNewResolutionArray();
     num_resolution = 0;
     for (p = (remote_printer_t *)cupsArrayFirst(remote_printers);
 	 p; p = (remote_printer_t *)cupsArrayNext(remote_printers)) {
@@ -1767,14 +1767,14 @@ void add_resolution_attributes(char* cluster_name, ipp_t **merged_attributes)
       if ((attr = ippFindAttribute(p->prattrs, attributes[attr_no],
 				   IPP_TAG_RESOLUTION)) != NULL) {
         for (i = 0, count = ippGetCount(attr); i < count; i ++) {
-          if ((res = ippResolutionToRes(attr, i)) != NULL) {
-	          if (cupsArrayFind(res_array, res) == NULL) {
-	            cupsArrayAdd(res_array, res);
-	            num_resolution ++;
-	          }
-	          free_resolution(res, NULL);
-	        }
-	      }
+          if ((res = cfIPPResToResolution(attr, i)) != NULL) {
+	    if (cupsArrayFind(res_array, res) == NULL) {
+	      cupsArrayAdd(res_array, res);
+	      num_resolution ++;
+	    }
+	    cfFreeResolution(res, NULL);
+	  }
+	}
       }
     }
     if (num_resolution) {
@@ -2092,7 +2092,7 @@ void add_jobpresets_attribute(char* cluster_name, ipp_t ** merged_attributes)
 }
 
 /* get_pagesize: Function returns the standard/custom page size using
-                 generate_sizes function from ppdgenerator.c*/
+                 the cfGenerateSizes() function from libcupsfilters */
 static cups_array_t* get_pagesize(ipp_t *printer_attributes)
 {
   cups_array_t            *sizes, *page_media;
@@ -2105,9 +2105,9 @@ static cups_array_t* get_pagesize(ipp_t *printer_attributes)
   char                    ppdname[41];
 
   ppdsizename = (char *)malloc(sizeof(char) * 128);
-  sizes = generate_sizes(printer_attributes, &defattr, &min_length, &min_width,
-			 &max_length, &max_width,
-                         &bottom, &left, &right, &top,ppdname);
+  sizes = cfGenerateSizes(printer_attributes, &defattr, &min_length, &min_width,
+			  &max_length, &max_width,
+			  &bottom, &left, &right, &top,ppdname);
   if ((page_media = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
 				  (cups_acopy_func_t)strdup,
 				  (cups_afree_func_t)free)) == NULL)
@@ -2742,9 +2742,9 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
       left = 0;
       right = 0;
       top = 0;
-      sizes = generate_sizes(p->prattrs, &defattr, &min_length, &min_width,
-			     &max_length, &max_width,
-			     &bottom, &left, &right, &top, ppdname);
+      sizes = cfGenerateSizes(p->prattrs, &defattr, &min_length, &min_width,
+			      &max_length, &max_width,
+			      &bottom, &left, &right, &top, ppdname);
       for (size = (cups_size_t *)cupsArrayFirst(sizes);
 	   size; size = (cups_size_t *)cupsArrayNext(sizes)) {
 	if (!cupsArrayFind(cluster_sizes, size)) {
@@ -2893,7 +2893,7 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
 
 /*get_cluster_attributes - Returns ipp_t* containing the options supplied by
                            all the printers in the cluster, which can be sent
-                           to ppdCreateFromIPP2() to generate the ppd file */
+                           to cfCreatePPDFromIPP2() to generate the PPD file */
 ipp_t* get_cluster_attributes(char* cluster_name)
 {
   remote_printer_t     *p;
@@ -2990,7 +2990,7 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
   const char              *str;
   media_col_t             *temp;
   const char              *keyword;
-  res_t                   *res;
+  cf_res_t                *res;
   int                     xres, yres;
   int                     min_length = INT_MAX, min_width = INT_MAX,
                           max_length = 0, max_width = 0,
@@ -3036,9 +3036,9 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
   debug_printf("Default Attributes of the cluster %s are : \n", cluster_name);
 
   /* Generating the default pagesize for the cluster*/
-  sizes = generate_sizes(def_printer->prattrs, &defattr, &min_length,
-			 &min_width, &max_length, &max_width,
-                         &bottom, &left, &right, &top, ppdname);
+  sizes = cfGenerateSizes(def_printer->prattrs, &defattr, &min_length,
+			  &min_width, &max_length, &max_width,
+			  &bottom, &left, &right, &top, ppdname);
   strcpy(default_pagesize, ppdname);
   debug_printf("Default PageSize : %s\n", default_pagesize);
 
@@ -3247,14 +3247,14 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
   if ((attr = ippFindAttribute(def_printer->prattrs,
 			       "printer-resolution-default",
 			       IPP_TAG_ZERO)) != NULL) {
-    if ((res = ippResolutionToRes(attr, 0)) != NULL) {
+    if ((res = cfIPPResToResolution(attr, 0)) != NULL) {
       xres = res->x;
       yres = res->y;
       ippAddResolution(*merged_attributes, IPP_TAG_PRINTER,
 		       "printer-resolution-default",
 		       IPP_RES_PER_INCH, xres, yres);
       debug_printf("Default Resolution : %dx%d\n", xres, yres);
-      free_resolution(res, NULL);
+      cfFreeResolution(res, NULL);
     }
   }
 
@@ -6210,7 +6210,7 @@ on_job_state (CupsNotifier *object,
   const char *pdl = NULL;
   cups_array_t *pdl_list;
   char         resolution[32];
-  res_t        *max_res = NULL, *min_res = NULL, *res = NULL;
+  cf_res_t     *max_res = NULL, *min_res = NULL, *res = NULL;
   int          xres, yres;
   int          got_printer_info;
   static const char *pattrs[] =
@@ -6559,14 +6559,14 @@ on_job_state (CupsNotifier *object,
       /* Deciding the resolution to be sent with the job */
       /* Finding the minimum and maximum resolution supported by the printer */
 
-      max_res = resolutionNew(0, 0);
-      min_res = resolutionNew(0, 0);
+      max_res = cfNewResolution(0, 0);
+      min_res = cfNewResolution(0, 0);
 
       if (s &&
 	  ((attr = ippFindAttribute(s->prattrs, "printer-resolution-supported",
 				    IPP_TAG_RESOLUTION)) != NULL)) {
 	for (i = 0, count = ippGetCount(attr); i < count; i ++) {
-	  if ((res = ippResolutionToRes(attr, i)) != NULL) {
+	  if ((res = cfIPPResToResolution(attr, i)) != NULL) {
 	    debug_printf("%d %d\n",res->x,res->y);
 	    if (i == 0) {
 	      max_res->x = res->x;
@@ -6574,16 +6574,16 @@ on_job_state (CupsNotifier *object,
 	      min_res->x = res->x;
 	      min_res->y = res->y;
 	    } else {
-	      if(compare_resolutions((void *)res,(void *)max_res,NULL) > 0) {
+	      if(cfCompareResolutions((void *)res,(void *)max_res,NULL) > 0) {
 		max_res->x = res->x;
 		max_res->y = res->y;
 	      }
-	      if(compare_resolutions((void *)res,(void *)min_res,NULL) < 0) {
+	      if(cfCompareResolutions((void *)res,(void *)min_res,NULL) < 0) {
 		min_res->x = res->x;
 		min_res->y = res->y;
 	      }
 	    }
-	    free_resolution(res, NULL);
+	    cfFreeResolution(res, NULL);
 	    res = NULL;
 	  }
 	}
@@ -6614,20 +6614,20 @@ on_job_state (CupsNotifier *object,
       } else if (s) {
 	if ((attr = ippFindAttribute(s->prattrs, "printer-resolution-default",
 				     IPP_TAG_ZERO)) != NULL) {
-	  if ((res = ippResolutionToRes(attr, 0)) != NULL) {
+	  if ((res = cfIPPResToResolution(attr, 0)) != NULL) {
 	    xres = res->x;
 	    yres = res->y;
 	    if (xres == yres)
 	      snprintf(resolution, sizeof(resolution), "%ddpi", xres);
 	    else
 	      snprintf(resolution, sizeof(resolution), "%dx%ddpi", xres, yres);
-	    free_resolution(res, NULL);
+	    cfFreeResolution(res, NULL);
 	  }
 	}
       }
 
-      free_resolution(max_res, NULL);
-      free_resolution(min_res, NULL);
+      cfFreeResolution(max_res, NULL);
+      cfFreeResolution(min_res, NULL);
 
       request = ippNewRequest(CUPS_ADD_MODIFY_PRINTER);
       httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
@@ -7707,6 +7707,7 @@ void create_queue(void* arg) {
   int           i, ap_remote_queue_id_line_inserted,
                 want_raw, num_cluster_printers = 0;
   char          *disabled_str;
+  char          ppdgenerator_msg[1024];
   char          *ppdfile;
   char          ppdname[1024];
 #ifdef HAVE_CUPS_1_6
@@ -7724,7 +7725,7 @@ void create_queue(void* arg) {
   cups_array_t  *conflicts = NULL;
   ipp_t         *printer_attributes = NULL;
   cups_array_t  *sizes=NULL;
-  ipp_t         *printer_ipp_response; 
+  ipp_t         *printer_ipp_response;
   char          *make_model = NULL;
   const char    *pdl=NULL;
   int           color;
@@ -8046,10 +8047,11 @@ void create_queue(void* arg) {
          ourselves */
       printer_ipp_response = (num_cluster_printers == 1) ? p->prattrs :
         printer_attributes;
-      if (!ppdCreateFromIPP2(ppdname, sizeof(ppdname), printer_ipp_response,
-			     make_model,
-			     pdl, color, duplex, conflicts, sizes,
-			     default_pagesize, default_color)) {
+      if (!cfCreatePPDFromIPP2(ppdname, sizeof(ppdname), printer_ipp_response,
+			       make_model,
+			       pdl, color, duplex, conflicts, sizes,
+			       default_pagesize, default_color,
+			       ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
         if (errno != 0)
 	  debug_printf("Unable to create PPD file: %s\n",
 		       strerror(errno));
@@ -8211,10 +8213,11 @@ void create_queue(void* arg) {
 	   ourselves */
 	printer_ipp_response = (num_cluster_printers == 1) ? p->prattrs :
 	  printer_attributes;
-	if (!ppdCreateFromIPP2(ppdname, sizeof(ppdname), printer_ipp_response,
-			       make_model,
-			       pdl, color, duplex, conflicts, sizes,
-			       default_pagesize, default_color)) {
+	if (!cfCreatePPDFromIPP2(ppdname, sizeof(ppdname), printer_ipp_response,
+				 make_model,
+				 pdl, color, duplex, conflicts, sizes,
+				 default_pagesize, default_color,
+				 ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
 	  if (errno != 0)
 	    debug_printf("Unable to create PPD file: %s\n",
 			 strerror(errno));

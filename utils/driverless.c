@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 #include <cups/cups.h>
 #include <ppd/ppd.h>
@@ -600,7 +601,7 @@ int
 generate_ppd (const char *uri, int isFax)
 {
   ipp_t *response = NULL;
-  char buffer[65536], ppdname[1024];
+  char buffer[65536], ppdname[1024], ppdgenerator_msg[1024];
   int  fd,
        bytes;
   char *ptr1,
@@ -640,8 +641,8 @@ generate_ppd (const char *uri, int isFax)
   }
 
   /* Generate the PPD file */
-  if (!ppdCreateFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0,
-			0)) {
+  if (!cfCreatePPDFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0,
+			  0, ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
     if (strlen(ppdgenerator_msg) > 0)
       fprintf(stderr, "ERROR: Unable to create PPD file: %s\n",
 	      ppdgenerator_msg);

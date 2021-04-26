@@ -53,39 +53,45 @@ extern "C" {
 
 #ifdef HAVE_CUPS_1_6
 
-extern char ppdgenerator_msg[1024];
-
 /* Data structure for resolution (X x Y dpi) */
-typedef struct res_s {
+typedef struct cf_res_s {
   int x, y;
-} res_t;
+} cf_res_t;
 
-char            *ppdCreateFromIPP(char *buffer, size_t bufsize,
-				  ipp_t *response, const char *make_model,
-				  const char *pdl, int color, int duplex);
-char            *ppdCreateFromIPP2(char *buffer, size_t bufsize,
-				   ipp_t *response, const char *make_model,
-				   const char *pdl, int color, int duplex,
-				   cups_array_t* conflicts,
-				   cups_array_t *sizes,char* default_pagesize,
-				   const char *default_cluster_color);
-int             compare_resolutions(void *resolution_a, void *resolution_b,
-				    void *user_data);
-void            free_resolution(void *resolution, void *user_data);
-res_t *         ippResolutionToRes(ipp_attribute_t *attr, int index);
-res_t *         resolutionNew(int x, int y);
-cups_array_t *  resolutionArrayNew();
-cups_array_t*   generate_sizes(ipp_t *response,
-			       ipp_attribute_t **defattr,
-			       int *min_length,
-			       int* min_width,
-			       int* max_length,
-			       int* max_width,
-			       int* bottom,
-			       int* left,
-			       int* right,
-			       int* top,
-			       char* ppdname);
+char            *cfCreatePPDFromIPP(char *buffer, size_t bufsize,
+				    ipp_t *response, const char *make_model,
+				    const char *pdl, int color, int duplex,
+				    char *status_msg, size_t status_msg_size);
+char            *cfCreatePPDFromIPP2(char *buffer, size_t bufsize,
+				     ipp_t *response, const char *make_model,
+				     const char *pdl, int color, int duplex,
+				     cups_array_t* conflicts,
+				     cups_array_t *sizes,char* default_pagesize,
+				     const char *default_cluster_color,
+				     char *status_msg, size_t status_msg_size);
+int             cfCompareResolutions(void *resolution_a, void *resolution_b,
+				     void *user_data);
+void            *cfCopyResolution(void *resolution, void *user_data);
+void            cfFreeResolution(void *resolution, void *user_data);
+cf_res_t        *cfNewResolution(int x, int y);
+cups_array_t    *cfNewResolutionArray();
+cf_res_t        *cfIPPResToResolution(ipp_attribute_t *attr, int index);
+cups_array_t    *cfIPPAttrToResolutionArray(ipp_attribute_t *attr);
+int             cfJoinResolutionArrays(cups_array_t **current,
+				       cups_array_t **new,
+				       cf_res_t **current_default,
+				       cf_res_t **new_default);
+cups_array_t    *cfGenerateSizes(ipp_t *response,
+				ipp_attribute_t **defattr,
+				int *min_length,
+				int* min_width,
+				int* max_length,
+				int* max_width,
+				int* bottom,
+				int* left,
+				int* right,
+				int* top,
+				char* ppdname);
 #endif /* HAVE_CUPS_1_6 */
 
 #  ifdef __cplusplus
