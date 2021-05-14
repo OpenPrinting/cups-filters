@@ -851,11 +851,11 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     char output[31] = "";
     int pagecount;
     size_t bytes;
-    snprintf(gscommand, 65536,
-	     "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | "
-	     "grep -c HiResBoundingBox",
-	     CUPS_GHOSTSCRIPT, filename);
-
+    // Ghostscript runs too long while converting djvu files to Xerox`s 3210 format
+    // Using -dDEVICEWIDTHPOINTS -dDEVICEHEIGHTPOINTS params solves the problem
+    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 %s 2>&1 | grep -c HiResBoundingBox",
+    CUPS_GHOSTSCRIPT, filename);
+    
     FILE *pd = popen(gscommand, "r");
     if (!pd) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
