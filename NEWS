@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: In the ghostscript() filter function fixed
+	  Ghostscript command line for counting pages as it took too
+	  long on PDFs from evince when printing DjVu files (Issue
+	  #354, Pull request #371, Ubuntu bug #1920730).
 	- imagetopdf, imagetops, imagetoraster: Removed support for
 	  asymmetric image resolutions ("ppi=XXXxYYY") as CUPS does
 	  not support this (Issue #347, Pull request #361,
