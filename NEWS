@@ -7,6 +7,16 @@ CHANGES IN V2.0.0
 	  Ghostscript command line for counting pages as it took too
 	  long on PDFs from evince when printing DjVu files (Issue
 	  #354, Pull request #371, Ubuntu bug #1920730).
+	- cups-browsed: Renamed ldap_connect() due to conflict in
+	  new openldap (Issue #367, Pull request #370).
+	- libcupsfilters: Clean-up of human-readable string handling
+	  in the PPD generator.
+	- libcupsfilters: Function name clean-up for the PPD
+	  generator.
+	- libppd: Removed ppdCreateFromIPPCUPS(), we have a better one
+	  in libcupsfilters.
+	- pdftoraster: Free color data after processing of each page
+	  (Pull request #363).
 	- imagetopdf, imagetops, imagetoraster: Removed support for
 	  asymmetric image resolutions ("ppi=XXXxYYY") as CUPS does
 	  not support this (Issue #347, Pull request #361,
