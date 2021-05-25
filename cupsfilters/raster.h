@@ -18,6 +18,7 @@ extern "C" {
  * Include necessary headers...
  */
 
+#  include "filter.h"
 #  include <stdio.h>
 #  include <stdlib.h>
 #  include <time.h>
@@ -37,6 +38,16 @@ extern "C" {
  * Prototypes...
  */
 
+extern int              cupsRasterPrepareHeader(cups_page_header2_t *h,
+						filter_data_t *data,
+						filter_out_format_t
+						final_content_type,
+						cups_cspace_t *cspace);
+extern int              cupsRasterSetColorSpace(cups_page_header2_t *h,
+						const char *available,
+						const char *color_mode,
+						cups_cspace_t *cspace,
+						int *high_depth);
 extern int              cupsRasterParseIPPOptions(cups_page_header2_t *h,
 						  int num_options,
 						  cups_option_t *options,

@@ -13,9 +13,6 @@
 
 #include <config.h>
 #include <cups/cups.h>
-#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
-#define HAVE_CUPS_1_7 1
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -110,7 +107,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
 
   /* Simple boolean, enumerated choice, numerical, and string parameters */
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-      outformat == OUTPUT_FORMAT_PWG_RASTER) {
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER) {
     if (h->MediaClass[0] |= '\0') {
       snprintf(tmpstr, sizeof(tmpstr), "-sMediaClass=%s", h->MediaClass);
       cupsArrayAdd(gs_args, strdup(tmpstr));
@@ -148,6 +146,7 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
   }
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
       outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER ||
       outformat == OUTPUT_FORMAT_PXL) {
     /* PDF output is only for turning PostScript input data into PDF
        not for sending PDF to a PDF printer (this is done by pdftopdf)
@@ -160,7 +159,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
 	   h->HWResolution[1]);
   cupsArrayAdd(gs_args, strdup(tmpstr));
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-      outformat == OUTPUT_FORMAT_PWG_RASTER) {
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER) {
     if (h->InsertSheet) {
       cupsArrayAdd(gs_args, strdup("-dInsertSheet"));
     }
@@ -180,6 +180,7 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
   }
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
       outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER ||
       outformat == OUTPUT_FORMAT_PXL) {
     if (h->MediaPosition) {
       int mediapos;
@@ -221,7 +222,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
     }
   }
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-      outformat == OUTPUT_FORMAT_PWG_RASTER) {
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER) {
     if (h->MediaWeight) {
       snprintf(tmpstr, sizeof(tmpstr), "-dMediaWeight=%d",
 	       (unsigned)(h->MediaWeight));
@@ -252,7 +254,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
   snprintf(tmpstr, sizeof(tmpstr), "-dDEVICEHEIGHTPOINTS=%d",h->PageSize[1]);
   cupsArrayAdd(gs_args, strdup(tmpstr));
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-      outformat == OUTPUT_FORMAT_PWG_RASTER) {
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER) {
     if (h->Separations) {
       cupsArrayAdd(gs_args, strdup("-dSeparations"));
     }
@@ -262,6 +265,7 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
   }
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
       outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER ||
       outformat == OUTPUT_FORMAT_PXL) {
     /* PDF output is only for turning PostScript input data into PDF
        not for sending PDF to a PDF printer (this is done by pdftopdf)
@@ -271,7 +275,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
     }
   }
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-      outformat == OUTPUT_FORMAT_PWG_RASTER) {
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER) {
     if (h->cupsMediaType) {
       snprintf(tmpstr, sizeof(tmpstr), "-dcupsMediaType=%d",
 	       (unsigned)(h->cupsMediaType));
@@ -303,7 +308,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup("-sDEVICE=pxlmono"));
   }
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-      outformat == OUTPUT_FORMAT_PWG_RASTER) {
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER) {
     if (h->cupsCompression) {
       snprintf(tmpstr, sizeof(tmpstr), "-dcupsCompression=%d",
 	       (unsigned)(h->cupsCompression));
@@ -327,7 +333,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
   }
 #ifdef CUPS_RASTER_SYNCv1
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-      outformat == OUTPUT_FORMAT_PWG_RASTER) {
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER) {
     if (h->cupsBorderlessScalingFactor != 1.0f) {
       snprintf(tmpstr, sizeof(tmpstr), "-dcupsBorderlessScalingFactor=%.4f",
 	       h->cupsBorderlessScalingFactor);
@@ -664,7 +671,6 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   char buf[BUFSIZ];
   char *filename;
   char *icc_profile = NULL;
-  /*char **qualifier = NULL;*/
   char *tmp;
   char tmpstr[1024],
        tempfile[1024];
@@ -676,6 +682,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   FILE *fp = NULL;
   GsDocType doc_type;
   gs_page_header h;
+  cups_cspace_t cspace;
   int bytes;
   int fd;
   int cm_disabled;
@@ -686,21 +693,28 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   struct sigaction sa;
   cm_calibration_t cm_calibrate;
   int pxlcolor = 1;
-#ifdef HAVE_CUPS_1_7
   int pwgraster = 0;
   ppd_attr_t *attr;
-#endif /* HAVE_CUPS_1_7 */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
 
 
+  /* Note: With the OUTPUT_FORMAT_APPLE_RASTER selection the output is
+     actually CUPS Raster but information about available color spaces
+     and depths is taken from the urf-supported printer IPP attribute
+     or appropriate PPD file attribute. This mode is for further
+     processing with rastertopwg. This can change in the future when
+     we add Apple Raster output support to Ghostscript's "cups" output
+     device. */
+
   if (parameters) {
     outformat = *(filter_out_format_t *)parameters;
     if (outformat != OUTPUT_FORMAT_PDF &&
 	outformat != OUTPUT_FORMAT_CUPS_RASTER &&
 	outformat != OUTPUT_FORMAT_PWG_RASTER &&
+	outformat != OUTPUT_FORMAT_APPLE_RASTER &&
 	outformat != OUTPUT_FORMAT_PXL)
       outformat = OUTPUT_FORMAT_PWG_RASTER;
   } else
@@ -710,8 +724,9 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 	       "ghostscript: Output format: %s",
 	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
 		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
-		 (outformat == OUTPUT_FORMAT_PDF ? "PDF" :
-		  "PCL XL"))));
+		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
+		  (outformat == OUTPUT_FORMAT_PDF ? "PDF" :
+		   "PCL XL")))));
   
   memset(&sa, 0, sizeof(sa));
   /* Ignore SIGPIPE and have write return an error instead */
@@ -820,7 +835,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 		 "ghostscript: Input is empty, outputting empty file.");
     status = 0;
     if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-	outformat == OUTPUT_FORMAT_PWG_RASTER)
+	outformat == OUTPUT_FORMAT_PWG_RASTER ||
+	outformat == OUTPUT_FORMAT_APPLE_RASTER)
       fprintf(stdout, "RaS2");
     goto out;
   } if (doc_type == GS_DOC_TYPE_UNKNOWN) {
@@ -837,7 +853,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 		   "ghostscript: No pages left, outputting empty file.");
       status = 0;
       if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-	  outformat == OUTPUT_FORMAT_PWG_RASTER)
+	  outformat == OUTPUT_FORMAT_PWG_RASTER ||
+	  outformat == OUTPUT_FORMAT_APPLE_RASTER)
         fprintf(stdout, "RaS2");
       goto out;
     }
@@ -875,7 +892,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 		   "ghostscript: No pages left, outputting empty file.");
       status = 0;
       if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-	  outformat == OUTPUT_FORMAT_PWG_RASTER)
+	  outformat == OUTPUT_FORMAT_PWG_RASTER ||
+	  outformat == OUTPUT_FORMAT_APPLE_RASTER)
         fprintf(stdout, "RaS2");
       goto out;
     }
@@ -924,14 +942,15 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   cupsArrayAdd(gs_args, strdup("-dNOMEDIAATTRS"));
   if (cm_disabled)
     cupsArrayAdd(gs_args, strdup("-dUseFastColor"));
-  if (doc_type == GS_DOC_TYPE_PDF)
-    cupsArrayAdd(gs_args, strdup("-dShowAcroForm"));
+  else
+    cupsArrayAdd(gs_args, strdup("-dUsePDFX3Profile"));
   cupsArrayAdd(gs_args, strdup("-sstdout=%stderr"));
   cupsArrayAdd(gs_args, strdup("-sOutputFile=%stdout"));
 
   /* Ghostscript output device */
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-      outformat == OUTPUT_FORMAT_PWG_RASTER)
+      outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      outformat == OUTPUT_FORMAT_APPLE_RASTER)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=cups"));
   else if (outformat == OUTPUT_FORMAT_PDF)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfwrite"));
@@ -971,6 +990,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     if (data->copies <= 1)
       cupsArrayAdd(gs_args, strdup("-dDoNumCopies"));
 
+    cupsArrayAdd(gs_args, strdup("-dShowAcroForm"));
     cupsArrayAdd(gs_args, strdup("-dCompatibilityLevel=1.3"));
     cupsArrayAdd(gs_args, strdup("-dAutoRotatePages=/None"));
     cupsArrayAdd(gs_args, strdup("-dAutoFilterColorImages=false"));
@@ -980,28 +1000,15 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     cupsArrayAdd(gs_args,
 		 strdup("-dColorConversionStrategy=/LeaveColorUnchanged"));
   }
-  
-#ifdef HAVE_CUPS_1_7
+
   if (outformat == OUTPUT_FORMAT_PWG_RASTER)
     pwgraster = 1;
-#endif /* HAVE_CUPS_1_7 */
-    
+
+  cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
+  cupsRasterPrepareHeader(&h, data, outformat, &cspace);
+
   if (ppd)
   {
-    ppdRasterInterpretPPD(&h, ppd, num_options, options, 0);
-#ifdef HAVE_CUPS_1_7
-    if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-	outformat == OUTPUT_FORMAT_PWG_RASTER)
-    {
-      if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
-	  (!strcasecmp(attr->value, "true") ||
-	   !strcasecmp(attr->value, "on") ||
-	   !strcasecmp(attr->value, "yes")))
-	pwgraster = 1;
-      if (pwgraster == 1)
-	cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 0);
-    }
-#endif /* HAVE_CUPS_1_7 */
     if (outformat == OUTPUT_FORMAT_PXL)
     {
       if ((attr = ppdFindAttr(ppd,"ColorDevice",0)) != 0 &&
@@ -1011,52 +1018,6 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 	/* Monochrome PCL XL printer, according to PPD */
 	pxlcolor = 0;
     }
-  }
-  else
-  {
-#ifdef HAVE_CUPS_1_7
-    if (outformat == OUTPUT_FORMAT_CUPS_RASTER)
-    {
-      pwgraster = 0;
-      t = cupsGetOption("media-class", num_options, options);
-      if (t == NULL)
-	t = cupsGetOption("MediaClass", num_options, options);
-      if (t != NULL)
-      {
-	if (strcasestr(t, "pwg"))
-	  pwgraster = 1;
-	else
-	  pwgraster = 0; 
-      }
-    }
-    cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 1);
-#else
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: No PPD file specified.");
-    goto out;
-#endif /* HAVE_CUPS_1_7 */
-  }
-
-  if ((h.HWResolution[0] == 100) && (h.HWResolution[1] == 100)) {
-    /* No "Resolution" option */
-    if (ppd && (attr = ppdFindAttr(ppd, "DefaultResolution", 0)) != NULL) {
-      /* "*DefaultResolution" keyword in the PPD */
-      const char *p = attr->value;
-      h.HWResolution[0] = atoi(p);
-      if ((p = strchr(p, 'x')) != NULL)
-	h.HWResolution[1] = atoi(p);
-      else
-	h.HWResolution[1] = h.HWResolution[0];
-      if (h.HWResolution[0] <= 0)
-	h.HWResolution[0] = 300;
-      if (h.HWResolution[1] <= 0)
-	h.HWResolution[1] = h.HWResolution[0];
-    } else {
-      h.HWResolution[0] = 300;
-      h.HWResolution[1] = 300;
-    }
-    h.cupsWidth = h.HWResolution[0] * h.PageSize[0] / 72;
-    h.cupsHeight = h.HWResolution[1] * h.PageSize[1] / 72;
   }
 
   /* set PDF-specific options */
@@ -1078,9 +1039,20 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   cupsArrayAdd(gs_args, strdup(tmpstr));
 
   /* set the device output ICC profile */
-  if(icc_profile != NULL && icc_profile[0] != '\0') {
+  if (icc_profile != NULL && icc_profile[0] != '\0') {
     snprintf(tmpstr, sizeof(tmpstr), "-sOutputICCProfile=%s", icc_profile);
     cupsArrayAdd(gs_args, strdup(tmpstr));
+  } else if (!cm_disabled &&
+	     (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+	      outformat == OUTPUT_FORMAT_PWG_RASTER ||
+	      outformat == OUTPUT_FORMAT_APPLE_RASTER)) {
+    /* Set standard output ICC profile sGray/sRGB/AdobeRGB */
+    if (h.cupsColorSpace == CUPS_CSPACE_SW)
+      cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=sgray.icc"));
+    else if (h.cupsColorSpace == CUPS_CSPACE_SRGB)
+      cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=srgb.icc"));
+    else if (h.cupsColorSpace == CUPS_CSPACE_ADOBERGB)
+      cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=a98.icc"));
   }
 
   /* Switch to taking PostScript commands on the Ghostscript command line */

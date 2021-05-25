@@ -2090,60 +2090,61 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
   max_res = cfCopyResolution(cupsArrayLast(common_res), NULL);
   cupsArrayDelete(common_res);
 
-#ifdef QPDF_HAVE_PCLM
  /*
-  * Generically check for PCLm attributes in IPP response
-  * and ppdize them one by one
+  * Generically check for Raster-format-related attributes in IPP
+  * response and ppdize them one by one
   */
 
-  if (is_pclm) {
-    attr = ippFirstAttribute(response); /* first attribute */
-    while (attr) {                      /* loop through all the attributes */
-      if (strncasecmp(ippGetName(attr), "pclm", 4) == 0) {
-	ppdPwgPpdizeName(ippGetName(attr), ppdname, sizeof(ppdname));
-	cupsFilePrintf(fp, "*cups%s: ", ppdname);
-	ipp_tag_t tag = ippGetValueTag(attr);
-	count = ippGetCount(attr);
-
-	if (tag == IPP_TAG_RESOLUTION) { /* ppdize values of type resolution */
-	  if ((current_res = cfIPPAttrToResolutionArray(attr)) != NULL) {
-	    count = cupsArrayCount(current_res);
-	    if (count > 1)
-	      cupsFilePuts(fp, "\"");
-	    for (i = 0, current_def = cupsArrayFirst(current_res);
-		 current_def;
-		 i ++, current_def = cupsArrayNext(current_res)) {
-	      int x = current_def->x;
-	      int y = current_def->y;
-	      if (x == y)
-		cupsFilePrintf(fp, "%ddpi", x);
-	      else
-		cupsFilePrintf(fp, "%dx%ddpi", x, y);
-	      if (i < count - 1)
-		cupsFilePuts(fp, ",");
-	    }
-	    if (count > 1)
-	      cupsFilePuts(fp, "\"");
-	    cupsFilePuts(fp, "\n");
-	  } else
-	    cupsFilePuts(fp, "\"\"\n");
-	  cupsArrayDelete(current_res);
-	} else {
-	  ippAttributeString(attr, ppdname, sizeof(ppdname));
-	  if (count > 1 || /* quotes around multi-valued and string
-			      attributes */
-	      tag == IPP_TAG_STRING ||
-	      tag == IPP_TAG_TEXT ||
-	      tag == IPP_TAG_TEXTLANG)
-	    cupsFilePrintf(fp, "\"%s\"\n", ppdname);
-	  else
-	    cupsFilePrintf(fp, "%s\n", ppdname);
-	}
-      }
-      attr = ippNextAttribute(response);
-    }
-  }
+  attr = ippFirstAttribute(response); /* first attribute */
+  while (attr) {                      /* loop through all the attributes */
+    if ((is_apple && strncasecmp(ippGetName(attr), "urf-", 4) == 0) ||
+	(is_pwg && strncasecmp(ippGetName(attr), "pwg-raster-", 11) == 0)
+#ifdef QPDF_HAVE_PCLM
+	|| (is_pclm && strncasecmp(ippGetName(attr), "pclm-", 5) == 0)
 #endif
+	) {
+      ppdPwgPpdizeName(ippGetName(attr), ppdname, sizeof(ppdname));
+      cupsFilePrintf(fp, "*cups%s: ", ppdname);
+      ipp_tag_t tag = ippGetValueTag(attr);
+      count = ippGetCount(attr);
+
+      if (tag == IPP_TAG_RESOLUTION) { /* ppdize values of type resolution */
+	if ((current_res = cfIPPAttrToResolutionArray(attr)) != NULL) {
+	  count = cupsArrayCount(current_res);
+	  if (count > 1)
+	    cupsFilePuts(fp, "\"");
+	  for (i = 0, current_def = cupsArrayFirst(current_res);
+	       current_def;
+	       i ++, current_def = cupsArrayNext(current_res)) {
+	    int x = current_def->x;
+	    int y = current_def->y;
+	    if (x == y)
+	      cupsFilePrintf(fp, "%ddpi", x);
+	    else
+	      cupsFilePrintf(fp, "%dx%ddpi", x, y);
+	    if (i < count - 1)
+	      cupsFilePuts(fp, ",");
+	  }
+	  if (count > 1)
+	    cupsFilePuts(fp, "\"");
+	  cupsFilePuts(fp, "\n");
+	} else
+	  cupsFilePuts(fp, "\"\"\n");
+	cupsArrayDelete(current_res);
+      } else {
+	ippAttributeString(attr, buf, sizeof(buf));
+	if (count > 1 || /* quotes around multi-valued and string
+			    attributes */
+	    tag == IPP_TAG_STRING ||
+	    tag == IPP_TAG_TEXT ||
+	    tag == IPP_TAG_TEXTLANG)
+	  cupsFilePrintf(fp, "\"%s\"\n", buf);
+	else
+	  cupsFilePrintf(fp, "%s\n", buf);
+      }
+    }
+    attr = ippNextAttribute(response);
+  }
 
  /*
   * PageSize/PageRegion/ImageableArea/PaperDimension
@@ -2561,32 +2562,38 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
   * ColorModel...
   */
 
-  if ((attr = ippFindAttribute(response, "urf-supported", IPP_TAG_KEYWORD)) ==
-      NULL)
-    if ((attr = ippFindAttribute(response, "print-color-mode-supported",
-				 IPP_TAG_KEYWORD)) == NULL)
-      if ((attr = ippFindAttribute(response, "pwg-raster-document-type-supported",
-				   IPP_TAG_KEYWORD)) == NULL)
-        attr = ippFindAttribute(response, "output-mode-supported",
-				IPP_TAG_KEYWORD);
+  if ((attr = ippFindAttribute(response, "print-color-mode-supported",
+			       IPP_TAG_KEYWORD)) == NULL)
+    attr = ippFindAttribute(response, "output-mode-supported",
+			    IPP_TAG_KEYWORD);
 
   human_readable = lookup_option("print-color-mode", opt_strings_catalog,
 				 printer_opt_strings_catalog);
   if (attr && ippGetCount(attr) > 0) {
     const char *default_color = NULL;	/* Default */
-    int first_choice = 1,
-      have_bi_level = 0,
-      have_mono = 0;
+    int first_choice = 1;
 
     cupsFilePrintf(fp, "*%% ColorModel from %s\n", ippGetName(attr));
 
     for (i = 0, count = ippGetCount(attr); i < count; i ++) {
       keyword = ippGetString(attr, i, NULL); /* Keyword for color/bit depth */
 
-      if (!have_bi_level &&
-	  (!strcasecmp(keyword, "black_1") || !strcmp(keyword, "bi-level") ||
-	   !strcmp(keyword, "process-bi-level"))) {
-	have_bi_level = 1;
+      if (!strcmp(keyword, "auto")) {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			 "*OrderDependency: 10 AnySetup *ColorModel\n",
+			 (human_readable ? human_readable : "Color Mode"));
+	}
+
+	human_readable2 = lookup_choice("auto", "print-color-mode",
+					opt_strings_catalog,
+					printer_opt_strings_catalog);
+        cupsFilePrintf(fp, "*ColorModel Auto/%s: \"\"\n",
+		       (human_readable2 ? human_readable2 : "Automatic"));
+
+	default_color = "Auto";
+      } else if (!strcmp(keyword, "bi-level")) {
         if (first_choice) {
 	  first_choice = 0;
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
@@ -2597,17 +2604,38 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 	human_readable2 = lookup_choice("bi-level", "print-color-mode",
 					opt_strings_catalog,
 					printer_opt_strings_catalog);
-        cupsFilePrintf(fp, "*ColorModel FastGray/%s: \"<</cupsColorSpace 3/cupsBitsPerColor 1/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+        cupsFilePrintf(fp, "*ColorModel FastGray/%s: \"\"\n",
 		       (human_readable2 ? human_readable2 : "Text"));
 
         if (!default_color)
 	  default_color = "FastGray";
-      } else if (!have_mono &&
-		 (!strcasecmp(keyword, "sgray_8") ||
-		  !strncmp(keyword, "W8", 2) ||
-		  !strcmp(keyword, "monochrome") ||
-		  !strcmp(keyword, "process-monochrome"))) {
-	have_mono = 1;
+      } else if (!strcmp(keyword, "process-bi-level")) {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			 "*OrderDependency: 10 AnySetup *ColorModel\n",
+			 (human_readable ? human_readable : "Color Mode"));
+	}
+
+	human_readable2 = lookup_choice("process-bi-level", "print-color-mode",
+					opt_strings_catalog,
+					printer_opt_strings_catalog);
+        cupsFilePrintf(fp, "*ColorModel ProcessFastGray/%s: \"\"\n",
+		       (human_readable2 ? human_readable2 : "Process Text"));
+      } else if (!strcmp(keyword, "auto-monochrome")) {
+        if (first_choice) {
+	  first_choice = 0;
+	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
+			 "*OrderDependency: 10 AnySetup *ColorModel\n",
+			 (human_readable ? human_readable : "Color Mode"));
+	}
+
+	human_readable2 = lookup_choice("auto-monochrome", "print-color-mode",
+					opt_strings_catalog,
+					printer_opt_strings_catalog);
+        cupsFilePrintf(fp, "*ColorModel AutoGray/%s: \"\"\n",
+		       (human_readable2 ? human_readable2 : "Auto Monochrome"));
+      } else if (!strcmp(keyword, "monochrome")) {
         if (first_choice) {
 	  first_choice = 0;
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
@@ -2618,14 +2646,12 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 	human_readable2 = lookup_choice("monochrome", "print-color-mode",
 					opt_strings_catalog,
 					printer_opt_strings_catalog);
-        cupsFilePrintf(fp, "*ColorModel Gray/%s: \"<</cupsColorSpace 18/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+        cupsFilePrintf(fp, "*ColorModel Gray/%s: \"\"\n",
 		       (human_readable2 ? human_readable2 : "Monochrome"));
 
         if (!default_color || !strcmp(default_color, "FastGray"))
 	  default_color = "Gray";
-      } else if (!strcasecmp(keyword, "sgray_16") ||
-		 !strncmp(keyword, "W8-16", 5) ||
-		 !strncmp(keyword, "W16", 3)) {
+      } else if (!strcmp(keyword, "process-monochrome")) {
         if (first_choice) {
 	  first_choice = 0;
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
@@ -2633,14 +2659,14 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 			 (human_readable ? human_readable : "Color Mode"));
 	}
 
-        cupsFilePrintf(fp, "*ColorModel Gray16/%s: \"<</cupsColorSpace 18/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       "Deep Gray (High Definition Grayscale)");
-
-        if (!default_color || !strcmp(default_color, "FastGray"))
-	  default_color = "Gray16";
-      } else if (!strcasecmp(keyword, "srgb_8") ||
-		 !strncmp(keyword, "SRGB24", 6) ||
-		 !strcmp(keyword, "color")) {
+	human_readable2 = lookup_choice("process-monochrome",
+					"print-color-mode",
+					opt_strings_catalog,
+					printer_opt_strings_catalog);
+        cupsFilePrintf(fp, "*ColorModel ProcessGray/%s: \"\"\n",
+		       (human_readable2 ? human_readable2 :
+			"Process Monochrome"));
+      } else if (!strcmp(keyword, "color")) {
         if (first_choice) {
 	  first_choice = 0;
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
@@ -2651,143 +2677,25 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 	human_readable2 = lookup_choice("color", "print-color-mode",
 					opt_strings_catalog,
 					printer_opt_strings_catalog);
-        cupsFilePrintf(fp, "*ColorModel RGB/%s: \"<</cupsColorSpace 19/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+        cupsFilePrintf(fp, "*ColorModel RGB/%s: \"\"\n",
 		       (human_readable2 ? human_readable2 : "Color"));
 
-	default_color = "RGB";
-      } else if ((!strcasecmp(keyword, "srgb_16") ||
-		  !strncmp(keyword, "SRGB48", 6)) &&
-		 !ippContainsString(attr, "srgb_8")) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-	human_readable2 = lookup_choice("color", "print-color-mode",
-					opt_strings_catalog,
-					printer_opt_strings_catalog);
-        cupsFilePrintf(fp, "*ColorModel RGB/%s: \"<</cupsColorSpace 19/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       (human_readable2 ? human_readable2 : "Color"));
-
-	default_color = "RGB";
+        if (!default_color || strcmp(default_color, "Auto"))
+	  default_color = "RGB";
 
 	/* Apparently some printers only advertise color support, so make sure
            we also do grayscale for these printers... */
-	if (!ippContainsString(attr, "sgray_8") &&
-	    !ippContainsString(attr, "black_1") &&
-	    !ippContainsString(attr, "black_8") &&
-	    !ippContainsString(attr, "W8") &&
-	    !ippContainsString(attr, "W8-16")) {
+	if (!ippContainsString(attr, "monochrome") &&
+	    !ippContainsString(attr, "auto-monochrome") &&
+	    !ippContainsString(attr, "process-monochrome") &&
+	    !ippContainsString(attr, "bi-level") &&
+	    !ippContainsString(attr, "process-bi-level")) {
 	  human_readable2 = lookup_choice("monochrome", "print-color-mode",
 					  opt_strings_catalog,
 					  printer_opt_strings_catalog);
-	  cupsFilePrintf(fp, "*ColorModel Gray/%s: \"<</cupsColorSpace 18/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
+	  cupsFilePrintf(fp, "*ColorModel Gray/%s: \"\"\n",
 			 (human_readable2 ? human_readable2 : "Grayscale"));
 	}
-      } else if (!strcasecmp(keyword, "adobe-rgb_16") ||
-		 !strncmp(keyword, "ADOBERGB48", 10) ||
-		 !strncmp(keyword, "ADOBERGB24-48", 13)) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-        cupsFilePrintf(fp, "*ColorModel AdobeRGB/%s: \"<</cupsColorSpace 20/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       "Deep Color (Wide Color Gamut, AdobeRGB)");
-
-        if (!default_color)
-	  default_color = "AdobeRGB";
-      } else if ((!strcasecmp(keyword, "adobe-rgb_8") ||
-		  !strcmp(keyword, "ADOBERGB24")) &&
-		 !ippContainsString(attr, "adobe-rgb_16")) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-        cupsFilePrintf(fp, "*ColorModel AdobeRGB/%s: \"<</cupsColorSpace 20/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       "Deep Color (Wide Color Gamut, AdobeRGB)");
-
-        if (!default_color)
-	  default_color = "AdobeRGB";
-      } else if ((!strcasecmp(keyword, "black_8") &&
-		  !ippContainsString(attr, "black_16")) ||
-		 !strcmp(keyword, "DEVW8")) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-        cupsFilePrintf(fp, "*ColorModel DeviceGray/%s: \"<</cupsColorSpace 0/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       "Device Gray");
-      } else if (!strcasecmp(keyword, "black_16") ||
-		 !strcmp(keyword, "DEVW16") ||
-		 !strcmp(keyword, "DEVW8-16")) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-        cupsFilePrintf(fp, "*ColorModel DeviceGray/%s: \"<</cupsColorSpace 0/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       "Device Gray");
-      } else if ((!strcasecmp(keyword, "cmyk_8") &&
-		  !ippContainsString(attr, "cmyk_16")) ||
-		 !strcmp(keyword, "DEVCMYK32")) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-        cupsFilePrintf(fp, "*ColorModel CMYK/%s: \"<</cupsColorSpace 6/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       "Device CMYK");
-      } else if (!strcasecmp(keyword, "cmyk_16") ||
-		 !strcmp(keyword, "DEVCMYK32-64") ||
-		 !strcmp(keyword, "DEVCMYK64")) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-        cupsFilePrintf(fp, "*ColorModel CMYK/%s: \"<</cupsColorSpace 6/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       "Device CMYK");
-      } else if ((!strcasecmp(keyword, "rgb_8") &&
-		  !ippContainsString(attr, "rgb_16")) ||
-		 !strcmp(keyword, "DEVRGB24")) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-        cupsFilePrintf(fp, "*ColorModel DeviceRGB/%s: \"<</cupsColorSpace 1/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       "Device RGB");
-      } else if (!strcasecmp(keyword, "rgb_16") ||
-		 !strcmp(keyword, "DEVRGB24-48") ||
-		 !strcmp(keyword, "DEVRGB48")) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-        cupsFilePrintf(fp, "*ColorModel DeviceRGB/%s: \"<</cupsColorSpace 1/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
-		       "Device RGB");
       }
     }
 
@@ -2809,11 +2717,11 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 		   "*OrderDependency: 10 AnySetup *ColorModel\n",
 		   (human_readable ? human_readable : "Color Mode"));
     cupsFilePrintf(fp, "*DefaultColorModel: Gray\n");
-    cupsFilePuts(fp, "*ColorModel FastGray/Fast Grayscale: \"<</cupsColorSpace 3/cupsBitsPerColor 1/cupsColorOrder 0/cupsCompression 0/ProcessColorModel /DeviceGray>>setpagedevice\"\n");
-    cupsFilePuts(fp, "*ColorModel Gray/Grayscale: \"<</cupsColorSpace 18/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0/ProcessColorModel /DeviceGray>>setpagedevice\"\n");
+    cupsFilePuts(fp, "*ColorModel FastGray/Fast Grayscale: \"\"\n");
+    cupsFilePuts(fp, "*ColorModel Gray/Grayscale: \"\"\n");
     if (color) {
       /* Color printer according to DNS-SD (or unknown) */
-      cupsFilePuts(fp, "*ColorModel RGB/Color: \"<</cupsColorSpace 19/cupsBitsPerColor 8/cupsColorOrder 0/cupsCompression 0/ProcessColorModel /DeviceRGB>>setpagedevice\"\n");
+      cupsFilePuts(fp, "*ColorModel RGB/Color: \"\"\n");
     }
     cupsFilePuts(fp, "*CloseUI: *ColorModel\n");
   }

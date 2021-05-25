@@ -3,6 +3,20 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Changed "ColorModel" option in the PPDs from
+	  the PPD generator to mirror the print-color-mode IPP
+	  attribute instead of providing all color space/depth combos
+	  for manual selection. Color space and depth are now
+	  auto-selected by the urf-supported and
+	  pwg-raster-document-type-supported printer IPP attributes
+	  and the settings of print-color-mode and print-quality.
+	  This is now implemented in the ghostscript() filter function
+	  both for use of the auto-generated PPD file for driverless
+	  iPP printers and use without PPD, based on IPP attributes.
+	  For this the new library functions cupsRasterPrepareHeader()
+	  to create a header for Raster output and
+	  cupsRasterSetColorSpace() to auto-select color space and
+	  depth were created.
 	- libcupsfilters: In the ghostscript() filter function fixed
 	  Ghostscript command line for counting pages as it took too
 	  long on PDFs from evince when printing DjVu files (Issue

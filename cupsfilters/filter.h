@@ -75,6 +75,7 @@ typedef enum filter_out_format_e { /* Possible output formats for rastertopdf()
   OUTPUT_FORMAT_PCLM,	     /* PCLM */
   OUTPUT_FORMAT_CUPS_RASTER, /* CUPS Raster */
   OUTPUT_FORMAT_PWG_RASTER,  /* PWG Raster */
+  OUTPUT_FORMAT_APPLE_RASTER,/* Apple Raster */
   OUTPUT_FORMAT_PXL          /* PCL-XL */
 } filter_out_format_t;
 
@@ -139,7 +140,14 @@ extern int ghostscript(int inputfd,
 		       void *parameters);
 
 /* Parameters: filter_out_format_t*
-   Ouput format: PostScript, CUPS Raster, PWG Raster, PCL-XL */
+   Ouput format: PostScript, CUPS Raster, PWG Raster, Apple Raster, PCL-XL
+   Note: On the Apple Raster selection the output is actually CUPS Raster
+   but information about available color spaces and depths is taken from
+   the urf-supported printer IPP attribute or appropriate PPD file
+   attribute. This mode is for further processing with rastertopwg. This can
+   change in the future when we add Apple Raster output support to
+   Ghostscript's "cups" output
+   device.*/
 
 
 extern int imagetopdf(int inputfd,
