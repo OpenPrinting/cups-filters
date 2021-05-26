@@ -505,13 +505,18 @@ cupsRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 	*cspace = -1;
 	return (-1);
       }
-      /* Fallback 1: sRGB if we peinr in color and sGray if we print monochrome
-         Fallback 2: sRGB always (if printer does not advertise mono mode) */
+      /* Fallback 1: sRGB if we print in color and sGray if we print monochrome
+         Fallback 2: sRGB always (if printer does not advertise mono mode)
+         AdobeRGB instead of sRGB only if available in 16 bit per color and
+         high color depth is requested */
       if ((cspace_fallback == 1 &&
 	   (!strcasecmp(color_mode, "auto") ||
 	    !strcasecmp(color_mode, "color"))) ||
 	  cspace_fallback == 2) {
-	if (strstr(available, "ADOBERGB") || strstr(available, "adobe-rgb_"))
+	if (high_depth && *high_depth &&
+	    (strstr(available, "ADOBERGB24-48") ||
+	     strstr(available, "ADOBERGB48") ||
+	     strstr(available, "adobe-rgb_16")))
 	  *cspace = CUPS_CSPACE_ADOBERGB;
 	else
 	  *cspace = CUPS_CSPACE_SRGB;
