@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- foomatic-rip: The fixes for zero-page-job handling (Pull
+	  request #209) broke PostScript streaming support. Changed
+	  method to check whether a PostScript input file is non-empty
+	  to only need to read and buffer the input up to the first
+	  page.
 	- libcupsfilters: Changed "ColorModel" option in the PPDs from
 	  the PPD generator to mirror the print-color-mode IPP
 	  attribute instead of providing all color space/depth combos
