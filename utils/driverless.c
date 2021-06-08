@@ -572,7 +572,7 @@ list_printers (int mode, int reg_type_no, int isFax)
   if (WIFEXITED(wait_status)) {
     /* Via exit() anywhere or return() in the main() function */
     exit_status = WEXITSTATUS(wait_status);
-    if (exit_status)
+    if (exit_status > 1)
       fprintf(stderr, "ERROR: ippfind (PID %d) stopped with status %d!\n",
 	      ippfind_pid, exit_status);
   } else if (WIFSIGNALED(wait_status) && WTERMSIG(wait_status) != SIGTERM) {
@@ -582,7 +582,7 @@ list_printers (int mode, int reg_type_no, int isFax)
       fprintf(stderr, "ERROR: ippfind (PID %d) stopped on signal %d!\n",
 	      ippfind_pid, exit_status);
   }
-  if (!exit_status && debug)
+  if (exit_status < 2 && debug)
     fprintf(stderr, "DEBUG: ippfind (PID %d) exited with no errors.\n",
 	    ippfind_pid);
 
@@ -593,7 +593,7 @@ list_printers (int mode, int reg_type_no, int isFax)
  error:
   cupsArrayDelete(service_uri_list_ipps);
   cupsArrayDelete(service_uri_list_ipp);
-  return (exit_status);
+  return (exit_status < 2 ? 0 : exit_status);
 }
 
 int

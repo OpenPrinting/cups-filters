@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.28.8 - 2021-03-25
 
 CHANGES IN V1.28.9
 
+	- driverless: If there are no driverless IPP printers
+	  available let "driverless" terminate with exit code 0 and
+	  not 1, to follow CUPS' standard of backends in discovery
+	  mode terminating with 0 if there are no appropriate printers
+	  found (Issue #375).
 	- gstoraster, foomatic-rip: Fixed Ghostscript command line for
 	  counting pages as it took too long on PDFs from evince when
 	  printing DjVu files (Issue #354, Pull request #371, Ubuntu
