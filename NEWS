@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- driverless: If there are no driverless IPP printers
+	  available let "driverless" terminate with exit code 0 and
+	  not 1, to follow CUPS' standard of backends in discovery
+	  mode terminating with 0 if there are no appropriate printers
+	  found (Issue #375).
 	- foomatic-rip: The fixes for zero-page-job handling (Pull
 	  request #209) broke PostScript streaming support. Changed
 	  method to check whether a PostScript input file is non-empty
