@@ -531,13 +531,13 @@ list_printers (int mode, int reg_type_no, int isFax)
       if (errno != EAGAIN && errno != EINTR)
       {
 	perror("ERROR: Unable to read ippfind output");
-	exit_status = -1;
+	exit_status = 1;
 	goto error;
       }
     }
   } else {
     perror("ERROR: Unable to open ippfind output data stream");
-    exit_status = -1;
+    exit_status = 1;
     goto error;
   }
 
@@ -572,7 +572,11 @@ list_printers (int mode, int reg_type_no, int isFax)
   if (WIFEXITED(wait_status)) {
     /* Via exit() anywhere or return() in the main() function */
     exit_status = WEXITSTATUS(wait_status);
-    if (exit_status > 1)
+    /* if we get 1 from ippfind, it is actually a correct value, not an error,
+     * because CUPS backends return 0 if they don't find any queues */
+    if (exit_status == 1)
+      exit_status = 0;
+    if (exit_status)
       fprintf(stderr, "ERROR: ippfind (PID %d) stopped with status %d!\n",
 	      ippfind_pid, exit_status);
   } else if (WIFSIGNALED(wait_status) && WTERMSIG(wait_status) != SIGTERM) {
@@ -582,7 +586,7 @@ list_printers (int mode, int reg_type_no, int isFax)
       fprintf(stderr, "ERROR: ippfind (PID %d) stopped on signal %d!\n",
 	      ippfind_pid, exit_status);
   }
-  if (exit_status < 2 && debug)
+  if (!exit_status && debug)
     fprintf(stderr, "DEBUG: ippfind (PID %d) exited with no errors.\n",
 	    ippfind_pid);
 
@@ -593,7 +597,7 @@ list_printers (int mode, int reg_type_no, int isFax)
  error:
   cupsArrayDelete(service_uri_list_ipps);
   cupsArrayDelete(service_uri_list_ipp);
-  return (exit_status < 2 ? 0 : exit_status);
+  return (exit_status);
 }
 
 int
