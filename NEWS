@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Added new filterExternalCUPS() filter
+	  function which calls an external CUPS filter executable
+	  specified in the parameters, for example a legacy or
+	  proprietary printer driver which cannot be converted into a
+	  filter function.
 	- driverless: If there are no driverless IPP printers
 	  available let "driverless" terminate with exit code 0 and
 	  not 1, to follow CUPS' standard of backends in discovery

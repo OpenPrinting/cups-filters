@@ -45,6 +45,7 @@ extern "C" {
 typedef int (*filter_iscanceledfunc_t)(void *data);
 
 typedef struct filter_data_s {
+  char *printer;             /* Print queue name or NULL */
   int job_id;                /* Job ID or 0 */
   char *job_user;            /* Job user or NULL */
   char *job_title;           /* Job title or NULL */
@@ -78,6 +79,19 @@ typedef enum filter_out_format_e { /* Possible output formats for rastertopdf()
   OUTPUT_FORMAT_APPLE_RASTER,/* Apple Raster */
   OUTPUT_FORMAT_PXL          /* PCL-XL */
 } filter_out_format_t;
+
+typedef struct filter_external_cups_s { /* Parameters for the
+					   filterExternalCUPS() filter
+					   function */
+  const char *filter;        /* Path/Name of the CUPS filter to be called by
+				this filter function, required */
+  int num_options;           /* Extra options for the 5th command line */
+  cups_option_t *options;    /* argument, options of filter_data have
+                                priority, 0/NULL if none */
+  char **envp;               /* Additional environment variables, the already
+                                defined ones stay valid but can be overwritten
+                                by these ones, NULL if none */
+} filter_external_cups_t;
 
 typedef struct filter_filter_in_chain_s { /* filter entry for CUPS array to
 					     be supplied to filterChain()
@@ -131,6 +145,18 @@ extern int filterChain(int inputfd,
    List of filters to execute in a chain, next filter takes output of
    previous filter as input, all get the same filter data, parameters
    from the array */
+
+
+extern int filterExternalCUPS(int inputfd,
+			      int outputfd,
+			      int inputseekable,
+			      filter_data_t *data,
+			      void *parameters);
+
+/* Parameters: filter_external_cups_t*
+   Path/Name of the CUPS filter to be called by this filter function,
+   extra options for the 5th command line argument, and extra environment
+   variables */
 
 
 extern int ghostscript(int inputfd,
