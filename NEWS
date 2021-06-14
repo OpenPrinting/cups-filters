@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Removed duplicate code in the
+	  apply_filters() function.
 	- libcupsfilters: Added new filterExternalCUPS() filter
 	  function which calls an external CUPS filter executable
 	  specified in the parameters, for example a legacy or
