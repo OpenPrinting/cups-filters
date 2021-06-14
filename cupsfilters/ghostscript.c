@@ -693,7 +693,6 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   struct sigaction sa;
   cm_calibration_t cm_calibrate;
   int pxlcolor = 1;
-  int pwgraster = 0;
   ppd_attr_t *attr;
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
@@ -1000,9 +999,6 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     cupsArrayAdd(gs_args,
 		 strdup("-dColorConversionStrategy=/LeaveColorUnchanged"));
   }
-
-  if (outformat == OUTPUT_FORMAT_PWG_RASTER)
-    pwgraster = 1;
 
   cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
   cupsRasterPrepareHeader(&h, data, outformat, &cspace);
