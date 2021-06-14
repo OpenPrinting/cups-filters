@@ -415,20 +415,6 @@ apply_filters(int argc, char *argv[])
 	  exit_status = 1;
 	  goto error;
 	}
-      }
-      if (!strcasecmp(p, "pclxl")) {
-	output_format = PCLXL;
-	if (filter_present("gstopxl") && access(CUPS_GHOSTSCRIPT, X_OK) == 0) {
-	  cupsArrayAdd(filter_chain, "gstopxl");
-	  /* Page logging into page_log is not done by gstopxl,
-	     so let it be done by pdftopdf */
-	  set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
-	} else {
-	  fprintf(stderr,
-		  "DEBUG: Filter gstopxl or Ghostscript (%s) missing for \"output-format=%s\", falling back to PCL 5c/e.\n",
-		  CUPS_GHOSTSCRIPT, val);
-	  output_format = PCL;
-	}
       } else {
 	output_format = PCL;
       }
