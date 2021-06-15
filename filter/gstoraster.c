@@ -733,7 +733,10 @@ main (int argc, char **argv, char *envp[])
     char output[31] = "";
     int pagecount;
     size_t bytes;
-    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox %s 2>&1 | grep -c HiResBoundingBox",
+    /* Ghostscript runs too long while printing PDF fikes converted from
+       djvu files. Using -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1
+       solves the problem */
+    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 %s 2>&1 | grep -c HiResBoundingBox",
 	     CUPS_GHOSTSCRIPT, filename);
 
     FILE *pd = popen(gscommand, "r");

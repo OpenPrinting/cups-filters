@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.28.8 - 2021-03-25
 
 CHANGES IN V1.28.9
 
+	- gstoraster, foomatic-rip: Fixed Ghostscript command line for
+	  counting pages as it took too long on PDFs from evince when
+	  printing DjVu files (Issue #354, Pull request #371, Ubuntu
+	  bug #1920730).
 	- cups-browsed: Renamed ldap_connect() due to conflict in
 	  new openldap (Issue #367, Pull request #370).
 	- pdftoraster: Free color data after processing of each page
