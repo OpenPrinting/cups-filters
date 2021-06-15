@@ -3,7 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.28.8 - 2021-03-25
 
 CHANGES IN V1.28.9
 
-	
+	- cups-browsed: Renamed ldap_connect() due to conflict in
+	  new openldap (Issue #367, Pull request #370).
 	- pdftoraster: Free color data after processing of each page
 	  (Pull request #363).
 	- cups-browsed: Always save "...-default" option entries
