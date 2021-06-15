@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.28.8 - 2021-03-25
 
 CHANGES IN V1.28.9
 
+	
+	- pdftoraster: Free color data after processing of each page
+	  (Pull request #363).
 	- cups-browsed: Always save "...-default" option entries
 	  from printers.conf, regardless of presence or absense
 	  of PPD file (Pull request #359).
