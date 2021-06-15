@@ -44,6 +44,8 @@ enum resolve_uri_converter_type	/**** Resolving DNS-SD based URI ****/
   IPPFIND_BASED_CONVERTER_FOR_FAX_URI = 1
 };
 
+char get_printer_attributes_log[LOGSIZE];
+
 static int				
 convert_to_port(char *a)		
 {

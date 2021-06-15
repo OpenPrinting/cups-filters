@@ -3,6 +3,7 @@ NEWS - OpenPrinting CUPS Filters v1.28.8 - 2021-03-25
 
 CHANGES IN V1.28.9
 
+	- libcupsfilters: Silenced compiler warnings
 	- libcupsfilters: Removed duplicate code in the
 	  apply_filters() function.
 	- driverless: If there are no driverless IPP printers
