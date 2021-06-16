@@ -45,7 +45,8 @@ CHANGES IN V2.0.0
 	- libcupsfilters: Function name clean-up for the PPD
 	  generator.
 	- libppd: Removed ppdCreateFromIPPCUPS(), we have a better one
-	  in libcupsfilters.
+	  in libcupsfilters. Also removed corresponding test in
+	  testppd.
 	- pdftoraster: Free color data after processing of each page
 	  (Pull request #363).
 	- imagetopdf, imagetops, imagetoraster: Removed support for
