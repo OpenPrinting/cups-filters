@@ -196,6 +196,13 @@ extern int pstops(int inputfd,
 		  void *parameters);
 
 
+extern int pdftoraster(int inputfd,
+				int outputfd,
+				int inputseekable,
+				filter_data_t *data,
+				void* parameters);
+
+
 extern int rastertopdf(int inputfd,
 		       int outputfd,
 		       int inputseekable,
