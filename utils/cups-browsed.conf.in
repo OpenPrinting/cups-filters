@@ -766,3 +766,11 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # on the size of the file.
 
 # DebugLogFileSize 300
+
+# NotifLeaseDuration defines how long the D-BUS subscription created by cups-browsed
+# in cupsd will last before cupsd cancels it. The default value is 1 day
+# in seconds - 86400. The subscription renewal is set to happen after half of
+# NotifLeaseDuration passed. The D-BUS notifications are used for watching over queues
+# and doing specific actions when a D-BUS notification comes.
+
+# NotifLeaseDuration 86400

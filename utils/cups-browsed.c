@@ -142,7 +142,6 @@ static int  ldap_rebind_proc(LDAP *RebindLDAPHandle,
 #define TIMEOUT_REMOVE      -1
 #define TIMEOUT_CHECK_LIST   2
 
-#define NOTIFY_LEASE_DURATION (24 * 60 * 60)
 #define CUPS_DBUS_NAME "org.cups.cupsd.Notifier"
 #define CUPS_DBUS_PATH "/org/cups/cupsd/Notifier"
 #define CUPS_DBUS_INTERFACE "org.cups.cupsd.Notifier"
@@ -490,6 +489,7 @@ static int autoshutdown_timeout = 30;
 static autoshutdown_inactivity_type_t autoshutdown_on = NO_QUEUES;
 static guint autoshutdown_exec_id = 0;
 static const char *default_printer = NULL;
+static unsigned int notify_lease_duration = 86400;
 
 static int debug_stderr = 0;
 static int debug_logfile = 0;
@@ -4978,7 +4978,7 @@ create_subscription ()
   ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_URI,
 		"notify-recipient-uri", NULL, "dbus://");
   ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
-		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
+		 "notify-lease-duration", notify_lease_duration);
 
   resp = cupsDoRequest (conn, req, "/");
   if (!resp || cupsLastError() != IPP_STATUS_OK) {
@@ -5021,7 +5021,7 @@ renew_subscription (int id)
   ippAddString (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_URI,
 		"notify-recipient-uri", NULL, "dbus://");
   ippAddInteger (req, IPP_TAG_SUBSCRIPTION, IPP_TAG_INTEGER,
-		 "notify-lease-duration", NOTIFY_LEASE_DURATION);
+		 "notify-lease-duration", notify_lease_duration);
 
   resp = cupsDoRequest (conn, req, "/");
   if (!resp || cupsLastError() != IPP_STATUS_OK) {
@@ -11820,6 +11820,15 @@ read_configuration (const char *filename)
       } else
 	debug_printf("Invalid %s value: %d\n",
 		     line, t);
+    } else if (!strcasecmp(line, "NotifLeaseDuration") && value) {
+      int t = atoi(value);
+      if (t >= 300) {
+	  notify_lease_duration = t;
+	debug_printf("Set %s to %d sec.\n",
+		     line, t);
+      } else
+	debug_printf("Invalid %s value: %d\n",
+		     line, t);
     } else if (!strcasecmp(line, "HttpMaxRetries") && value) {
       int t = atoi(value);
       if (t > 0) {
@@ -12700,7 +12709,7 @@ int main(int argc, char*argv[]) {
   /* Subscribe to CUPS' D-Bus notifications and create a proxy to receive
      the notifications */
   subscription_id = create_subscription ();
-  g_timeout_add_seconds (NOTIFY_LEASE_DURATION - 60,
+  g_timeout_add_seconds (notify_lease_duration / 2,
 			 renew_subscription_timeout,
 			 &subscription_id);
   cups_notifier = cups_notifier_proxy_new_for_bus_sync (G_BUS_TYPE_SYSTEM,
