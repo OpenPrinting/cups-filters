@@ -302,15 +302,7 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
   const char *val;
   filter_logfunc_t log = data->logfunc;
   void *ld = data ->logdata;
-/*
-  if (argc < 6 || argc > 7) {
-    if(doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		        "pdftoraster: Unable to convert PDF from profile.\n");
-    fprintf(stderr, "ERROR: Usage: %s job-id user title copies options [file]\n",
-	    argv[0]);
-    exit(1);
-  }
-*/
+
 #ifdef HAVE_CUPS_1_7
   t = getenv("FINAL_CONTENT_TYPE");
   if (t && strcasestr(t, "pwg"))
@@ -321,7 +313,7 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
   if (doc->ppd == NULL)
     if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
       "pdftoraster: PPD file is not specified.\n");
-   // fprintf(stderr, "DEBUG: PPD file is not specified.\n");
+
   if (doc->ppd)
     ppdMarkDefaults(doc->ppd);
   options = NULL;
@@ -431,16 +423,16 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
     }
     cupsRasterParseIPPOptions(&(doc->header),num_options,options,doc->pwgraster,1);
 #else
-    fprintf(stderr, "ERROR: No PPD file specified.\n");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+        "pdftoraster: No PPD file specified.\n");
     exit(1);
 #endif /* HAVE_CUPS_1_7 */
   }
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
     doc->bi_level = 1;
-
-  fprintf(stderr, "DEBUG: Page size requested: %s\n",
-	  doc->header.cupsPageSizeName);
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    "pdftoraster: Page size requested: %s\n", doc->header.cupsPageSizeName);
 }
 
 static void parsePDFTOPDFComment(FILE *fp, int* deviceCopies, bool* deviceCollate)
@@ -977,7 +969,7 @@ static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
 }
 
 /* select convertLine function */
-static void selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conversion_function_t *convert)
+static void selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conversion_function_t *convert, filter_logfunc_t log, void* ld)
 {
   if ((doc->colour_profile->colorProfile == NULL || doc->colour_profile->popplerColorProfile == doc->colour_profile->colorProfile)
       && (doc->header.cupsColorOrder == CUPS_ORDER_CHUNKED
@@ -1057,7 +1049,8 @@ static void selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, con
             COLORSPACE_SH(dcst) |
             CHANNELS_SH(doc->header.cupsNumColors) | BYTES_SH(bytes),
             doc->colour_profile->renderingIntent,0)) == 0) {
-      fprintf(stderr, "ERROR: Can't create color transform");
+            if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+              "pdftoraster: Can't create color transform.");
       exit(1);
     }
   } else {
@@ -1128,7 +1121,8 @@ static void selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, con
       convert->convertCSpace = W8toK8;
       break;
     default:
-      fprintf(stderr, "ERROR: Specified ColorSpace is not supported\n" );
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+      "pdftoraster: Specified ColorSpace is not supported\n");
       exit(1);
       break;
     }
@@ -1267,7 +1261,7 @@ static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
 }
 
 static void outPage(pdftoraster_doc_t *doc, int pageNo,
-  cups_raster_t *raster, conversion_function_t *convert)
+  cups_raster_t *raster, conversion_function_t *convert, filter_logfunc_t log, void* ld)
 {
   int rotate = 0;
   double paperdimensions[2], /* Physical size of the paper */
@@ -1289,8 +1283,8 @@ static void outPage(pdftoraster_doc_t *doc, int pageNo,
      break;
      default:rotate=0;
   }
-  fprintf(stderr, "DEBUG: mediaBox = [ %f %f %f %f ]; rotate = %d\n",
-	  mediaBox.left(), mediaBox.top(), mediaBox.right(), mediaBox.bottom(), rotate);
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"pdftoraster: mediabox = [ %f %f %f %f ]; rotate = %d\n",
+    mediaBox.left(), mediaBox.top(), mediaBox.right(), mediaBox.bottom(), rotate);
   l = mediaBox.width();
   if (l < 0) l = -l;
   if (rotate == 90 || rotate == 270)
@@ -1389,7 +1383,7 @@ static void outPage(pdftoraster_doc_t *doc, int pageNo,
     doc->header.cupsBytesPerLine *= doc->header.cupsNumColors;
   }
   if (!cupsRasterWriteHeader2(raster,&(doc->header))) {
-      fprintf(stderr, "ERROR: Can't write page %d header\n",pageNo );
+    if(log) log(ld,FILTER_LOGLEVEL_ERROR,"pdftoraster: Can't write page %d header\n", pageNo);
       exit(1);
   }
 
@@ -1397,7 +1391,7 @@ static void outPage(pdftoraster_doc_t *doc, int pageNo,
   writePageImage(raster,doc,pageNo, convert);
 }
 
-static void setPopplerColorProfile(pdftoraster_doc_t *doc)
+static void setPopplerColorProfile(pdftoraster_doc_t *doc, filter_logfunc_t log, void *ld)
 {
   if (doc->header.cupsBitsPerColor != 8 && doc->header.cupsBitsPerColor != 16) {
     /* color Profile is not supported */
@@ -1476,17 +1470,17 @@ static void setPopplerColorProfile(pdftoraster_doc_t *doc)
     doc->colour_profile->popplerColorProfile = NULL;
     break;
   default:
-    fprintf(stderr, "ERROR: Specified ColorSpace is not supported\n" );
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR,"pdftoraster: Specified ColorSpace is not supported\n");
     exit(1);
     break;
   }
 }
 
 int pdftoraster(int inputfd,         /* I - File descriptor input stream */
-       int outputfd,        /* I - File descriptor output stream */
-       int inputseekable,   /* I - Is input stream seekable? (unused) */
-       filter_data_t *data, /* I - Job and printer data */
-       void *parameters)   /* I - Filter-specific parameters (unused) */
+       int outputfd,                 /* I - File descriptor output stream */
+       int inputseekable,            /* I - Is input stream seekable? (unused) */
+       filter_data_t *data,          /* I - Job and printer data */
+       void *parameters)             /* I - Filter-specific parameters (unused) */
 {
   pdftoraster_doc_t *doc;
   int i;
@@ -1500,16 +1494,17 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   bool deviceCollate = false;
   unsigned int popplerBitsPerPixel;
   conversion_function_t convert;
-
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void                 *icd = data->iscanceleddata;
 
   cmsSetLogErrorHandler(lcmsErrorHandler);
   parseOpts(data, doc);
     /* 
-   *Open the input data stream specified by inputfd ...
+   * Open the input data stream specified by inputfd ...
    */
     if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Unable to open input data stream.\n"); 
@@ -1524,7 +1519,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
 
   if ((outputfp = fdopen(outputfd, "w")) == NULL)
   {
-    if (!*jobcanceled)
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Unable to open output data stream.\n"); 
@@ -1563,20 +1558,42 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
       }
     }
     close(fd);
-    doc->popp_doc=poppler::document::load_from_file(name,"","");
+    doc->popp_doc = poppler::document::load_from_file(name,"","");
     /* remove name */
     unlink(name);
   } else {
     //make a temprorary file if file name is specified ...
+    int fd;
+    char name[BUFSIZ];
+    char buf[BUFSIZ];
+    int n;
     FILE *fp;
     if ((fp = fdopen(inputfd,"rb")) == 0) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Can't open input file.\n"); 
-	exit(1);
+	  exit(1);
     }
     parsePDFTOPDFComment(fp, &deviceCopies, &deviceCollate);
     fclose(fp);
-    doc->popp_doc=poppler::document::load_from_file(filename,"","");
+
+    fd = cupsTempFd(name,sizeof(name));
+    if (fd < 0) {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Can't create temprorary file.\n"); 
+      exit(1);
+    }
+        /* copy input data to the tmp file */
+    while ((n = read(inputfd,buf,BUFSIZ)) > 0) {
+      if (write(fd,buf,n) != n) {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Can't copy input data to temprorary file.\n"); 
+        close(fd);
+	exit(1);
+      }
+    }
+    close(fd);
+    doc->popp_doc = poppler::document::load_from_file(name,"","");
+    unlink(name);
   }
 
   if(doc->popp_doc != NULL)
@@ -1673,7 +1690,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   }
 
   if (!(doc->colour_profile->cm_disabled)) {
-    setPopplerColorProfile(doc);
+    setPopplerColorProfile(doc, log, ld);
   }
 
   if ((raster = cupsRasterOpen(1, doc->pwgraster ? CUPS_RASTER_WRITE_PWG :
@@ -1682,10 +1699,10 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
 		   "pdftoraster: Can't open raster stream.\n"); 
 	exit(1);
   }
-  selectConvertFunc(raster, doc, &convert);
+  selectConvertFunc(raster, doc, &convert, log, ld);
   if(doc->popp_doc != NULL){    
     for (i = 1;i <= npages;i++) {
-      outPage(doc,i,raster, &convert);
+      outPage(doc,i,raster, &convert, log, ld);
     }
   } else
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
