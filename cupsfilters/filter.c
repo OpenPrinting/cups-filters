@@ -11,6 +11,7 @@
  * Include necessary headers...
  */
 
+#include "config.h"
 #include "filter.h"
 #include <limits.h>
 #include <math.h>
@@ -21,6 +22,7 @@
 #include <cups/array.h>
 #include <ppd/ppd.h>
 
+extern char **environ;
 
 /*
  * Type definitions
@@ -72,9 +74,9 @@ cups_logfunc(void *data,
   }      
   va_start(arglist, message);
   vfprintf(stderr, message, arglist);
-  fflush(stderr);
   va_end(arglist);
   fputc('\n', stderr);
+  fflush(stderr);
 }
 
 
@@ -110,9 +112,6 @@ filterCUPSWrapper(
   int		num_options;		/* Number of print options */
   cups_option_t	*options;		/* Print options */
   filter_data_t filter_data;
-#if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
 
 
  /*
@@ -180,6 +179,8 @@ filterCUPSWrapper(
   * Create data record to call filter function and load PPD file
   */
 
+  if ((filter_data.printer = getenv("PRINTER")) == NULL)
+    filter_data.printer = argv[0];
   filter_data.job_id = atoi(argv[1]);
   filter_data.job_user = argv[2];
   filter_data.job_title = argv[3];
@@ -622,6 +623,336 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
   cupsArrayDelete(pids);
 
   return (retval);
+}
+
+
+/*
+ * 'add_env_var()' - Auxiliary function for filterExternalCUPS(), adds/sets
+ *                   an environment variable in a list of environment variables
+ *                   as used by the execve() function
+ */
+
+int                       /* O - Index of where the new value got inserted in
+			         the list */
+add_env_var(char *name,   /* I - Name of environment variable to set */
+	    char *value,  /* I - Value of environment variable to set */
+	    char ***env)  /* I - List of environment variable serttings */
+{
+  char *p;
+  int i = 0,
+      name_len;
+
+
+  if (!name || !env)
+    return (-1);
+
+  /* Assemble a "VAR=VALUE" string and the string length of "VAR" */
+  if ((p = strchr(name, '=')) != NULL)
+  {
+    /* User supplied "VAR=VALUE" as name and NULL as value */
+    if (value)
+      return (-1);
+    name_len = p - name;
+    p = strdup(name);
+  }
+  else
+  {
+    /* User supplied variable name and value as the name and as the value */
+    name_len = strlen(name);
+    p = (char *)calloc(strlen(name) + (value ? strlen(value) : 0) + 2,
+		       sizeof(char));
+    sprintf(p, "%s=%s", name, (value ? value : ""));
+  }
+
+  /* Check whether we already have this variable in the list and update its
+     value if it is there */
+  if (*env)
+    for (i = 0; (*env)[i]; i ++)
+      if (strncmp((*env)[i], p, name_len) == 0)
+      {
+	free((*env)[i]);
+	(*env)[i] = p;
+	return (i);
+      }
+
+  /* Add the variable as new item to the list */
+  *env = (char **)realloc(*env, (i + 2) * sizeof(char *));
+  (*env)[i] = p;
+  (*env)[i + 1] = NULL;
+  return (i);
+}
+
+
+/*
+ * 'filterExternalCUPS()' - Filter function which calls an external,
+ *                          classic CUPS filter, for example a
+ *                          (proprietary) printer driver which cannot
+ *                          be converted to a filter function or is to
+ *                          awkward or risky to convert for example
+ *                          when the printer hardware is not available
+ *                          for testing
+ */
+
+int                                     /* O - Error status */
+filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
+		   int outputfd,        /* I - File descriptor output stream */
+		   int inputseekable,   /* I - Is input stream seekable? */
+		   filter_data_t *data, /* I - Job and printer data */
+		   void *parameters)    /* I - Filter-specific parameters */
+{
+  filter_external_cups_t *params = (filter_external_cups_t *)parameters;
+  int           i;
+  int		pid;		     /* Process ID of filter */
+  int		fd;		     /* Temporary file descriptor */
+  char          **argv,		     /* Command line args for filter */
+                **envp = NULL;       /* Environment variables for filter */
+  int           num_all_options = 0;
+  cups_option_t *all_options = NULL;
+  char          job_id_str[16],
+                copies_str[16],
+                *options_str = NULL;
+  cups_option_t *opt;
+  int status = 65536;
+  int wstatus;
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
+  /*filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+    void          *icd = data->iscanceleddata;*/
+
+  if (!params->filter || !params->filter[0]) {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "filterExternalCUPS: Filter executable path/command not specified");
+    return (1);
+  }
+
+ /*
+  * Ignore broken pipe signals...
+  */
+
+  signal(SIGPIPE, SIG_IGN);
+
+ /*
+  * Join the options from the filter data and from the parameters
+  * If an option is present in both filter data and parameters, the
+  * value in the filter data has priority
+  */
+
+  for (i = 0, opt = params->options; i < params->num_options; i ++, opt ++)
+    num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
+				    &all_options);
+  for (i = 0, opt = data->options; i < data->num_options; i ++, opt ++)
+    num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
+				    &all_options);
+
+ /*
+  * Create command line arguments for the CUPS filter
+  */
+
+  argv = (char **)calloc(6, sizeof(char *));
+
+  /* Numeric parameters */
+  snprintf(job_id_str, sizeof(job_id_str) - 1, "%d", data->job_id);
+  snprintf(copies_str, sizeof(copies_str) - 1, "%d", data->copies);
+
+  /* Options, buid string of "Name1=Value1 Name2=Value2 ..." but use
+     "Name" and "noName" instead for boolean options */
+  for (i = 0, opt = all_options; i < num_all_options; i ++, opt ++) {
+    if (strcasecmp(opt->value, "true") == 0 ||
+	strcasecmp(opt->value, "false") == 0) {
+      options_str =
+	(char *)realloc(options_str,
+			((options_str ? strlen(options_str) : 0) +
+			 strlen(opt->name) +
+			 (strcasecmp(opt->value, "false") == 0 ? 2 : 0) + 2) *
+			sizeof(char));
+      if (i == 0)
+	options_str[0] = '\0';
+      sprintf(options_str + strlen(options_str), " %s%s",
+	      (strcasecmp(opt->value, "false") == 0 ? "no" : ""), opt->name);
+    } else {
+      options_str =
+	(char *)realloc(options_str,
+			((options_str ? strlen(options_str) : 0) +
+			 strlen(opt->name) + strlen(opt->value) + 3) *
+			sizeof(char));
+      if (i == 0)
+	options_str[0] = '\0';
+      sprintf(options_str + strlen(options_str), " %s=%s", opt->name, opt->value);
+    }
+  }
+
+  /* Add items to array */
+  argv[0] = data->printer ? data->printer : (char *)params->filter;
+  argv[1] = job_id_str;
+  argv[2] = data->job_user;
+  argv[3] = data->job_title;
+  argv[4] = copies_str;
+  argv[5] = options_str ? options_str + 1 : "";
+  argv[6] = NULL;
+
+  /* Log the arguments */
+  if (log)
+    for (i = 0; argv[i]; i ++)
+      log(ld, FILTER_LOGLEVEL_DEBUG, "argv[%d]: %s", i, argv[i]);
+
+ /*
+  * Copy the current environment variables and add some important ones
+  * needed for correct execution of the CUPS filter (which is not running
+  * out of CUPS here)
+  */
+
+  /* Some default environment variables from CUPS, will get overwritten
+     if also defined in the environment in which the caller is started
+     or in the parameters */
+  add_env_var("CUPS_DATADIR", CUPS_DATADIR, &envp);
+  add_env_var("CUPS_SERVERBIN", CUPS_SERVERBIN, &envp);
+  add_env_var("CUPS_SERVERROOT", CUPS_SERVERROOT, &envp);
+  add_env_var("CUPS_STATEDIR", CUPS_STATEDIR, &envp);
+  add_env_var("SOFTWARE", "CUPS/2.4.99", &envp); /* Last CUPS with PPDs */
+
+  /* Copy the environment variables in which the caller got started */
+  if (environ)
+    for (i = 0; environ[i]; i ++)
+      add_env_var(environ[i], NULL, &envp);
+
+  /* Set the environment variables given by the parameters */
+  if (params->envp)
+    for (i = 0; params->envp[i]; i ++)
+      add_env_var(params->envp[i], NULL, &envp);
+
+  /* Print queue name from filter data */
+  if (data->printer)
+    add_env_var("PRINTER", data->printer, &envp);
+
+  /* PPD file path/name from filter data, required for most CUPS filters */
+  if (data->ppdfile)
+    add_env_var("PPD", data->ppdfile, &envp);
+
+  /* Log the resulting list of environment variable settings */
+  if (log)
+    for (i = 0; envp[i]; i ++)
+      log(ld, FILTER_LOGLEVEL_DEBUG, "envp[%d]: %s", i, envp[i]);
+
+ /*
+  * Execute the filter
+  */
+
+  if ((pid = fork()) == 0) {
+   /*
+    * Child process goes here...
+    *
+    * Update stdin/stdout/stderr as needed...
+    */
+
+    if (inputfd != 0) {
+      if (inputfd < 0)
+        inputfd = open("/dev/null", O_RDONLY);
+
+      if (inputfd > 0) {
+        dup2(inputfd, 0);
+	close(inputfd);
+      }
+    }
+
+    if (outputfd != 1) {
+      if (outputfd < 0)
+        outputfd = open("/dev/null", O_WRONLY);
+
+      if (outputfd > 1) {
+	dup2(outputfd, 1);
+	close(outputfd);
+      }
+    }
+
+    /* Send stderr to the Nirwana if we are running gziptoany, as
+       gziptoany emits a false "PAGE: 1 1" */
+    if (strcasestr(params->filter, "gziptoany")) {
+      if ((fd = open("/dev/null", O_RDWR)) > 2) {
+	dup2(fd, 2);
+	close(fd);
+      } else
+        close(fd);
+      fcntl(2, F_SETFL, O_NDELAY);
+    }
+
+    if ((fd = open("/dev/null", O_RDWR)) > 3) {
+      dup2(fd, 3);
+      close(fd);
+    }
+    else
+      close(fd);
+    fcntl(3, F_SETFL, O_NDELAY);
+
+    if ((fd = open("/dev/null", O_RDWR)) > 4) {
+      dup2(fd, 4);
+      close(fd);
+    } else
+      close(fd);
+    fcntl(4, F_SETFL, O_NDELAY);
+
+   /*
+    * Execute command...
+    */
+
+    execve(params->filter, argv, envp);
+
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "filterExternalCUPS: Execution of filter %s failed - %s",
+		 params->filter, strerror(errno));
+
+    exit(errno);
+  } else if (pid > 0) {
+    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		 "filterExternalCUPS: %s (PID %d) started.",
+		 params->filter, pid);
+  } else {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "filterExternalCUPS: Unable to fork process for filter %s",
+		 params->filter);
+    status = 1;
+    goto out;
+  }
+
+ /*
+  * Wait for filter process to finish
+  */
+
+ retry_wait:
+  if (waitpid (pid, &wstatus, 0) == -1) {
+    if (errno == EINTR)
+      goto retry_wait;
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "filterExternalCUPS: The filter %s (PID %d) stopped with an error: %s!",
+		 params->filter, pid, strerror(errno));
+    status = 1;
+    goto out;
+  }
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "filterExternalCUPS: The filter %s (PID %d) exited with no errors.",
+	       params->filter, pid);
+
+  /* How did the filter terminate */
+  if (WIFEXITED(wstatus))
+    /* Via exit() anywhere or return() in the main() function */
+    status = WEXITSTATUS(wstatus);
+  else if (WIFSIGNALED(wstatus))
+    /* Via signal */
+    status = 256 * WTERMSIG(wstatus);
+
+ /*
+  * Clean up
+  */
+
+ out:
+  cupsFreeOptions(num_all_options, all_options);
+  if (options_str)
+    free(options_str);
+  free(argv);
+  for (i = 0; envp[i]; i ++)
+    free(envp[i]);
+  free(envp);
+
+  return (status);
 }
 
 

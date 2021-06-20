@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 #include <cups/cups.h>
 #include <ppd/ppd.h>
@@ -531,13 +532,13 @@ list_printers (int mode, int reg_type_no, int isFax)
       if (errno != EAGAIN && errno != EINTR)
       {
 	perror("ERROR: Unable to read ippfind output");
-	exit_status = -1;
+	exit_status = 1;
 	goto error;
       }
     }
   } else {
     perror("ERROR: Unable to open ippfind output data stream");
-    exit_status = -1;
+    exit_status = 1;
     goto error;
   }
 
@@ -572,6 +573,10 @@ list_printers (int mode, int reg_type_no, int isFax)
   if (WIFEXITED(wait_status)) {
     /* Via exit() anywhere or return() in the main() function */
     exit_status = WEXITSTATUS(wait_status);
+    /* if we get 1 from ippfind, it is actually a correct value, not an error,
+     * because CUPS backends return 0 if they don't find any queues */
+    if (exit_status == 1)
+      exit_status = 0;
     if (exit_status)
       fprintf(stderr, "ERROR: ippfind (PID %d) stopped with status %d!\n",
 	      ippfind_pid, exit_status);
@@ -600,7 +605,7 @@ int
 generate_ppd (const char *uri, int isFax)
 {
   ipp_t *response = NULL;
-  char buffer[65536], ppdname[1024];
+  char buffer[65536], ppdname[1024], ppdgenerator_msg[1024];
   int  fd,
        bytes;
   char *ptr1,
@@ -640,8 +645,8 @@ generate_ppd (const char *uri, int isFax)
   }
 
   /* Generate the PPD file */
-  if (!ppdCreateFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0,
-			0)) {
+  if (!cfCreatePPDFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0,
+			  0, ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
     if (strlen(ppdgenerator_msg) > 0)
       fprintf(stderr, "ERROR: Unable to create PPD file: %s\n",
 	      ppdgenerator_msg);

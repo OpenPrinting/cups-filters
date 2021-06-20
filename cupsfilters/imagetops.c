@@ -350,8 +350,8 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 
   if ((val = cupsGetOption("ppi", num_options, options)) != NULL)
   {
-    if (sscanf(val, "%dx%d", &xppi, &yppi) < 2)
-      yppi = xppi;
+    sscanf(val, "%d", &xppi);
+    yppi = xppi;
     zoom = 0.0;
   }
 

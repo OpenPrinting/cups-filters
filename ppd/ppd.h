@@ -736,9 +736,6 @@ extern const char	*ppdCacheGetType(ppd_cache_t *pc,
 					 const char *media_type);
 extern int		ppdCacheWriteFile(ppd_cache_t *pc,
 					  const char *filename, ipp_t *attrs);
-extern char		*ppdCreateFromIPPCUPS(char *buffer,
-					      size_t bufsize,
-					      ipp_t *response);
 extern void		ppdFreeLanguages(cups_array_t *languages);
 extern cups_encoding_t	ppdGetEncoding(const char *name);
 extern cups_array_t	*ppdGetLanguages(ppd_file_t *ppd);

@@ -563,7 +563,6 @@ int print_file(const char *filename, int convert)
     char tmpfilename[PATH_MAX] = "";
     int type;
     int startpos;
-    int pagecount;
     size_t n;
     int ret;
 
@@ -630,17 +629,6 @@ int print_file(const char *filename, int convert)
 		    filename = tmpfilename;
 		}
 
-                pagecount = pdf_count_pages(filename);
-                _log("File contains %d pages.\n", pagecount);
-                if (pagecount < 0) {
-                    _log("Unexpected page_count\n");
-                    return 0;
-                }
-                if (pagecount == 0) {
-                  _log("No pages left, outputting empty file.\n");
-                  return 1;
-                }
-
 		/* If the spooler is CUPS we use the pdftops filter of CUPS,
 		   to have always the same PDF->PostScript conversion method
 		   in the whole printing environment, including incompatibility
@@ -704,39 +692,7 @@ int print_file(const char *filename, int convert)
         case PS_FILE:
             _log("Filetype: PostScript\n");
             if (file == stdin)
-            {
-                if (convert)
-                {
-                    int fd;
-                    FILE *tmpfile;
-
-                    snprintf(tmpfilename, PATH_MAX, "%s/foomatic-XXXXXX", temp_dir());
-                    fd = mkstemp(tmpfilename);
-                    if (fd < 0) {
-                        _log("Could not create temporary file: %s\n", strerror(errno));
-                        return EXIT_PRNERR_NORETRY_BAD_SETTINGS;
-                    }
-
-                    if ((tmpfile = fdopen(fd,"r+")) == 0) {
-                        _log("ERROR: Can't fdopen temporary file\n");
-                        close(fd);
-                        return 0;
-                    }
-
-                    /* Copy stdin to the tmp file */
-                    copy_file(tmpfile, stdin, buf, n);
-                    if (fflush(tmpfile) == EOF)
-                      _log("ERROR: Cannot flush buffer: %s\n", strerror(errno));
-                    rewind(tmpfile);
-
-                    ret = print_ps(tmpfile, NULL, 0, tmpfilename);
-                    fclose(tmpfile);
-                    unlink(tmpfilename);
-                    return ret;
-                }
-                else
-                    return print_ps(stdin, buf, n, filename);
-            }
+                return print_ps(stdin, buf, n, filename);
             else
                 return print_ps(file, NULL, 0, filename);
 

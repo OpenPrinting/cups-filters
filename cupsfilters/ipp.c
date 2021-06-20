@@ -44,6 +44,8 @@ enum resolve_uri_converter_type	/**** Resolving DNS-SD based URI ****/
   IPPFIND_BASED_CONVERTER_FOR_FAX_URI = 1
 };
 
+char get_printer_attributes_log[LOGSIZE];
+
 static int				
 convert_to_port(char *a)		
 {
@@ -666,12 +668,13 @@ ippAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
        printer_attr_name[256];
   int  i;
 
-  if (job_attrs == NULL || attr_name == NULL)
+  if ((printer_attrs == NULL && job_attrs == NULL) || attr_name == NULL)
     return NULL;
 
   /* Check whether job got supplied the named attribute and read out its value
      as string */
-  if ((attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
+  if (job_attrs == NULL ||
+      (attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
     valuebuffer[0] = '\0';
   else
     ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
@@ -722,12 +725,13 @@ ippAttrIntValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
   char printer_attr_name[256];
   int  retval, val, min, max;
 
-  if (job_attrs == NULL || attr_name == NULL)
+  if ((printer_attrs == NULL && job_attrs == NULL) || attr_name == NULL)
     return 0;
 
   /* Check whether job got supplied the named attribute and read out its value
      as integer */
-  if ((attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
+  if (job_attrs == NULL ||
+      (attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
     retval = 0;
   else {
     retval = 1;
