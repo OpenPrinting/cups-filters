@@ -59,8 +59,12 @@ main(int  argc,				/* I - Number of command-line args */
 
   filter_out_format_t outformat = OUTPUT_FORMAT_CUPS_RASTER;
   char *t = getenv("FINAL_CONTENT_TYPE");
-  if (t && strcasestr(t, "pwg"))
-    outformat = OUTPUT_FORMAT_PWG_RASTER;
+  if (t) {
+    if (strcasestr(t, "pwg"))
+      outformat = OUTPUT_FORMAT_PWG_RASTER;
+    else if (strcasestr(t, "urf"))
+      outformat = OUTPUT_FORMAT_APPLE_RASTER;
+  }
 
   ret = filterCUPSWrapper(argc, argv, ghostscript, &outformat, &JobCanceled);
 

@@ -3,6 +3,78 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- cups-browsed: Make NotifLeaseDuration configurable and renew
+	  after half the lease duration not 60 sec before end. The
+	  early renewal improves reliability on busy systems a
+	  lot. For easier development and debugging short durations
+	  from 300 sec on can get selected (Pull request #378).
+	- libcupsfilters: Removed duplicate code in the
+	  apply_filters() function.
+	- libcupsfilters: Added new filterExternalCUPS() filter
+	  function which calls an external CUPS filter executable
+	  specified in the parameters, for example a legacy or
+	  proprietary printer driver which cannot be converted into a
+	  filter function.
+	- driverless: If there are no driverless IPP printers
+	  available let "driverless" terminate with exit code 0 and
+	  not 1, to follow CUPS' standard of backends in discovery
+	  mode terminating with 0 if there are no appropriate printers
+	  found (Issue #375).
+	- foomatic-rip: The fixes for zero-page-job handling (Pull
+	  request #209) broke PostScript streaming support. Changed
+	  method to check whether a PostScript input file is non-empty
+	  to only need to read and buffer the input up to the first
+	  page.
+	- libcupsfilters: Changed "ColorModel" option in the PPDs from
+	  the PPD generator to mirror the print-color-mode IPP
+	  attribute instead of providing all color space/depth combos
+	  for manual selection. Color space and depth are now
+	  auto-selected by the urf-supported and
+	  pwg-raster-document-type-supported printer IPP attributes
+	  and the settings of print-color-mode and print-quality.
+	  This is now implemented in the ghostscript() filter function
+	  both for use of the auto-generated PPD file for driverless
+	  iPP printers and use without PPD, based on IPP attributes.
+	  For this the new library functions cupsRasterPrepareHeader()
+	  to create a header for Raster output and
+	  cupsRasterSetColorSpace() to auto-select color space and
+	  depth were created.
+	- libcupsfilters: In the ghostscript() filter function fixed
+	  Ghostscript command line for counting pages as it took too
+	  long on PDFs from evince when printing DjVu files (Issue
+	  #354, Pull request #371, Ubuntu bug #1920730).
+	- cups-browsed: Renamed ldap_connect() due to conflict in
+	  new openldap (Issue #367, Pull request #370).
+	- libcupsfilters: Clean-up of human-readable string handling
+	  in the PPD generator.
+	- libcupsfilters: Function name clean-up for the PPD
+	  generator.
+	- libppd: Removed ppdCreateFromIPPCUPS(), we have a better one
+	  in libcupsfilters. Also removed corresponding test in
+	  testppd.
+	- pdftoraster: Free color data after processing of each page
+	  (Pull request #363).
+	- imagetopdf, imagetops, imagetoraster: Removed support for
+	  asymmetric image resolutions ("ppi=XXXxYYY") as CUPS does
+	  not support this (Issue #347, Pull request #361,
+	  OpenPrinting CUPS issue #115).
+	- cups-browsed: Added multi-threaded operation, the Avahi
+	  resolver callback (which examines the remote printer,
+	  registers it, checks whether we want a local queue for it,
+	  adds it to a cluster, ...) and the creation/modification of
+	  a local CUPS queue is now done in separate threads, so that
+	  these processes can get executed in parallel to keep the
+	  local queues up-to-date more timely and to not overload the
+	  system's resources.  Thanks a lot to Mohit Mohan who did
+	  this work as Google Summer of Code 2020 project
+	  (https://github.com/mohitmo/GSoC-2020-Documentation).
+	- cups-browsed: Always save "...-default" option entries
+	  from printers.conf, regardless of presence or absense
+	  of PPD file (Pull request #359).
+	- cups-browsed: Start after network-online.target (Pull
+	  request #360).
+	- texttopdf: Set default margins when no PPD file is used
+	  (Pull request #356).
 	- libppd: Fixed PPD memory leak caused by "emulators" field
 	  not freed (OpenPrinting CUPS issue #124).
 	- libcupsfilters: Made check whether the driverless PPD to
