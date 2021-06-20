@@ -104,7 +104,8 @@ typedef unsigned char *(*ConvertLineFunc)(unsigned char *src,
 typedef unsigned char *(*ConvertCSpaceFunc)(unsigned char *src,
     unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t* convert);
 
-typedef struct cms_profile_s{
+typedef struct cms_profile_s
+{
     /* for color profiles */
   cmsHPROFILE colorProfile = NULL;
   cmsHPROFILE popplerColorProfile = NULL;
@@ -113,7 +114,7 @@ typedef struct cms_profile_s{
   int renderingIntent = INTENT_PERCEPTUAL;
   int cm_disabled = 0;
   cm_calibration_t cm_calibrate;
-}cms_profile_t;
+} cms_profile_t;
 
 typedef struct pdftoraster_doc_s
 {                /**** Document information ****/
@@ -291,7 +292,7 @@ static void  handleRqeuiresPageRegion(pdftoraster_doc_t*doc) {
   }
 }
 
-static void parseOpts(int argc, char **argv, pdftoraster_doc_t*doc)
+static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
 {
   int num_options = 0;
   cups_option_t *options = 0;
@@ -299,13 +300,17 @@ static void parseOpts(int argc, char **argv, pdftoraster_doc_t*doc)
   const char *t = NULL;
   ppd_attr_t *attr;
   const char *val;
-
+  filter_logfunc_t log = data->logfunc;
+  void *ld = data ->logdata;
+/*
   if (argc < 6 || argc > 7) {
+    if(doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+		        "pdftoraster: Unable to convert PDF from profile.\n");
     fprintf(stderr, "ERROR: Usage: %s job-id user title copies options [file]\n",
 	    argv[0]);
     exit(1);
   }
-
+*/
 #ifdef HAVE_CUPS_1_7
   t = getenv("FINAL_CONTENT_TYPE");
   if (t && strcasestr(t, "pwg"))
@@ -314,11 +319,13 @@ static void parseOpts(int argc, char **argv, pdftoraster_doc_t*doc)
 
   doc->ppd = ppdOpenFile(getenv("PPD"));
   if (doc->ppd == NULL)
-    fprintf(stderr, "DEBUG: PPD file is not specified.\n");
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      "pdftoraster: PPD file is not specified.\n");
+   // fprintf(stderr, "DEBUG: PPD file is not specified.\n");
   if (doc->ppd)
     ppdMarkDefaults(doc->ppd);
   options = NULL;
-  num_options = cupsParseOptions(argv[5],0,&options);
+  num_options = data->num_options;
   if (doc->ppd) {
     ppdMarkOptions(doc->ppd,num_options,options);
     handleRqeuiresPageRegion(doc);
@@ -1478,11 +1485,8 @@ static void setPopplerColorProfile(pdftoraster_doc_t *doc)
 int pdftoraster(int inputfd,         /* I - File descriptor input stream */
        int outputfd,        /* I - File descriptor output stream */
        int inputseekable,   /* I - Is input stream seekable? (unused) */
-       int *jobcanceled,    /* I - Pointer to integer marking
-			           whether job is canceled */
        filter_data_t *data, /* I - Job and printer data */
-       void *parameters,    /* I - Filter-specific parameters (unused) */
-       char* filename)      /* I - Filename or path */
+       void *parameters)   /* I - Filter-specific parameters (unused) */
 {
   pdftoraster_doc_t *doc;
   int i;
@@ -1499,7 +1503,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
 
 
   cmsSetLogErrorHandler(lcmsErrorHandler);
-
+  parseOpts(data, doc);
     /* 
    *Open the input data stream specified by inputfd ...
    */
@@ -1507,7 +1511,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   {
     if (!*jobcanceled)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Unable to open input data stream.\n"); 
     }
 
@@ -1522,7 +1526,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   {
     if (!*jobcanceled)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Unable to open output data stream.\n"); 
     }
 
@@ -1544,7 +1548,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
 
     fd = cupsTempFd(name,sizeof(name));
     if (fd < 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Can't create temprorary file.\n"); 
       exit(1);
     }
@@ -1552,8 +1556,8 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
     /* copy stdin to the tmp file */
     while ((n = read(0,buf,BUFSIZ)) > 0) {
       if (write(fd,buf,n) != n) {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pdftoraster: Can't create temprorary file.\n"); 
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Can't copy stdin to temprorary file.\n"); 
         close(fd);
 	exit(1);
       }
@@ -1563,10 +1567,11 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
     /* remove name */
     unlink(name);
   } else {
-    /* argc == 7 filename is specified */
+    //make a temprorary file if file name is specified ...
     FILE *fp;
     if ((fp = fdopen(inputfd,"rb")) == 0) {
-        fprintf(stderr, "ERROR: Can't open input file\n");
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Can't open input file.\n"); 
 	exit(1);
     }
     parsePDFTOPDFComment(fp, &deviceCopies, &deviceCollate);
@@ -1589,7 +1594,8 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
      && doc->header.cupsBitsPerColor != 4
      && doc->header.cupsBitsPerColor != 8
      && doc->header.cupsBitsPerColor != 16) {
-    fprintf(stderr, "ERROR: Specified color format is not supported\n");
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Specified color format is not supported.\n"); 
     exit(1);
   }
   if (doc->header.cupsColorOrder == CUPS_ORDER_PLANAR) {
@@ -1624,7 +1630,8 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
     if (doc->header.cupsColorOrder != CUPS_ORDER_CHUNKED
        || (doc->header.cupsBitsPerColor != 8
           && doc->header.cupsBitsPerColor != 16)) {
-      fprintf(stderr, "ERROR: Specified color format is not supported\n");
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Specified color format is not supported.\n"); 
       exit(1);
     }
   case CUPS_CSPACE_RGB:
@@ -1659,7 +1666,8 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
     doc->popplerNumColors = 1;
     break;
   default:
-    fprintf(stderr, "ERROR: Specified ColorSpace is not supported\n");
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Specified ColorSpace is not supported.\n"); 
     exit(1);
     break;
   }
@@ -1670,7 +1678,8 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
 
   if ((raster = cupsRasterOpen(1, doc->pwgraster ? CUPS_RASTER_WRITE_PWG :
 			       CUPS_RASTER_WRITE)) == 0) {
-        fprintf(stderr, "ERROR: Can't open raster stream\n");
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Can't open raster stream.\n"); 
 	exit(1);
   }
   selectConvertFunc(raster, doc, &convert);
@@ -1679,7 +1688,8 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
       outPage(doc,i,raster, &convert);
     }
   } else
-    fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "pdftoraster: Input is empty outputting empty file.\n"); 
 
   cupsRasterClose(raster);
 
