@@ -98,12 +98,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define MAX_CHECK_COMMENT_LINES	20
 #define MAX_BYTES_PER_PIXEL 32
 
-typedef unsigned char *(*ConvertLineFunc)(unsigned char *src,
-    unsigned char *dst, unsigned int row, unsigned int plane,
-    unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert);
-typedef unsigned char *(*ConvertCSpaceFunc)(unsigned char *src,
-    unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t* convert);
-
 typedef struct cms_profile_s
 {
     /* for color profiles */
@@ -146,6 +140,20 @@ typedef struct pdftoraster_doc_s
                            cupsBytesPerLine = bytesPerLine*cupsNumColors */
   cms_profile_t *colour_profile;
 } pdftoraster_doc_t;
+
+typedef unsigned char *(*ConvertCSpaceFunc)(unsigned char *src,
+                        unsigned char *pixelBuf,
+                        unsigned int x,
+                        unsigned int y,
+                        pdftoraster_doc_t* doc);
+typedef unsigned char *(*ConvertLineFunc)(unsigned char *src,
+                        unsigned char *dst, 
+                        unsigned int row, 
+                        unsigned int plane,
+                        unsigned int pixels, 
+                        unsigned int size, 
+                        pdftoraster_doc_t* doc,
+                        ConvertCSpaceFunc convertCSpace);
 
 typedef struct conversion_function_s
 {
@@ -469,7 +477,7 @@ static void parsePDFTOPDFComment(FILE *fp, int* deviceCopies, bool* deviceCollat
 
 static unsigned char *reverseLine(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   unsigned char *p = src;
 
@@ -481,7 +489,7 @@ static unsigned char *reverseLine(unsigned char *src, unsigned char *dst,
 
 static unsigned char *reverseLineSwapByte(unsigned char *src,
     unsigned char *dst, unsigned int row, unsigned int plane,
-    unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+    unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   unsigned char *bp = src+size-1;
   unsigned char *dp = dst;
@@ -495,7 +503,7 @@ static unsigned char *reverseLineSwapByte(unsigned char *src,
 
 static unsigned char *reverseLineSwapBit(unsigned char *src,
   unsigned char *dst, unsigned int row, unsigned int plane,
-  unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+  unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   dst = reverseOneBitLineSwap(src, dst, pixels, size);
   return dst;
@@ -503,7 +511,7 @@ static unsigned char *reverseLineSwapBit(unsigned char *src,
 
 static unsigned char *rgbToCMYKLine(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   cupsImageRGBToCMYK(src,dst,pixels);
   return dst;
@@ -511,7 +519,7 @@ static unsigned char *rgbToCMYKLine(unsigned char *src, unsigned char *dst,
 
 static unsigned char *rgbToCMYKLineSwap(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   unsigned char *bp = src+(pixels-1)*3;
   unsigned char *dp = dst;
@@ -524,7 +532,7 @@ static unsigned char *rgbToCMYKLineSwap(unsigned char *src, unsigned char *dst,
 
 static unsigned char *rgbToCMYLine(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   cupsImageRGBToCMY(src,dst,pixels);
   return dst;
@@ -532,7 +540,7 @@ static unsigned char *rgbToCMYLine(unsigned char *src, unsigned char *dst,
 
 static unsigned char *rgbToCMYLineSwap(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   unsigned char *bp = src+size-3;
   unsigned char *dp = dst;
@@ -545,7 +553,7 @@ static unsigned char *rgbToCMYLineSwap(unsigned char *src, unsigned char *dst,
 
 static unsigned char *rgbToKCMYLine(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   unsigned char *bp = src;
   unsigned char *dp = dst;
@@ -565,7 +573,7 @@ static unsigned char *rgbToKCMYLine(unsigned char *src, unsigned char *dst,
 
 static unsigned char *rgbToKCMYLineSwap(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   unsigned char *bp = src+(pixels-1)*3;
   unsigned char *dp = dst;
@@ -585,7 +593,7 @@ static unsigned char *rgbToKCMYLineSwap(unsigned char *src, unsigned char *dst,
 
 static unsigned char *lineNoop(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   /* do nothing */
   return src;
@@ -593,7 +601,7 @@ static unsigned char *lineNoop(unsigned char *src, unsigned char *dst,
 
 static unsigned char *lineSwap24(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   unsigned char *bp = src+size-3;
   unsigned char *dp = dst;
@@ -608,7 +616,7 @@ static unsigned char *lineSwap24(unsigned char *src, unsigned char *dst,
 
 static unsigned char *lineSwapByte(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t *doc, ConvertCSpaceFunc convertCSpace)
 {
   unsigned char *bp = src+size-1;
   unsigned char *dp = dst;
@@ -621,7 +629,7 @@ static unsigned char *lineSwapByte(unsigned char *src, unsigned char *dst,
 
 static unsigned char *lineSwapBit(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, conversion_function_t*convert)
+     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   dst = reverseOneBitLine(src, dst, pixels, size);
   return dst;
@@ -660,20 +668,20 @@ static FuncTable specialCaseFuncs[] = {
 };
 
 static unsigned char *convertCSpaceNone(unsigned char *src,
-  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc, conversion_function_t *convert)
+  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   return src;
 }
 
 static unsigned char *convertCSpaceWithProfiles(unsigned char *src,
-  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc, conversion_function_t *convert)
+  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   cmsDoTransform(doc->colour_profile->colorTransform,src,pixelBuf,1);
   return pixelBuf;
 }
 
 static unsigned char *convertCSpaceXYZ8(unsigned char *src,
-  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc, conversion_function_t *convert)
+  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double alab[3];
 
@@ -693,7 +701,7 @@ static unsigned char *convertCSpaceXYZ8(unsigned char *src,
 }
 
 static unsigned char *convertCSpaceXYZ16(unsigned char *src,
-  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc, conversion_function_t *convert)
+  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double alab[3];
   unsigned short *sd = (unsigned short *)pixelBuf;
@@ -714,7 +722,7 @@ static unsigned char *convertCSpaceXYZ16(unsigned char *src,
 }
 
 static unsigned char *convertCSpaceLab8(unsigned char *src,
-  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc, conversion_function_t *convert)
+  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double lab[3];
   cmsDoTransform(doc->colour_profile->colorTransform ,src,lab,1);
@@ -725,7 +733,7 @@ static unsigned char *convertCSpaceLab8(unsigned char *src,
 }
 
 static unsigned char *convertCSpaceLab16(unsigned char *src,
-  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc, conversion_function_t *convert)
+  unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double lab[3];
   cmsDoTransform(doc->colour_profile->colorTransform,src,lab,1);
@@ -737,7 +745,7 @@ static unsigned char *convertCSpaceLab16(unsigned char *src,
 }
 
 static unsigned char *RGB8toRGBA(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t *convert)
+  unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   unsigned char *dp = pixelBuf;
 
@@ -749,7 +757,7 @@ static unsigned char *RGB8toRGBA(unsigned char *src, unsigned char *pixelBuf,
 }
 
 static unsigned char *RGB8toRGBW(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t *convert)
+  unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   unsigned char cmyk[4];
   unsigned char *dp = pixelBuf;
@@ -762,21 +770,21 @@ static unsigned char *RGB8toRGBW(unsigned char *src, unsigned char *pixelBuf,
 }
 
 static unsigned char *RGB8toCMYK(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t *convert)
+  unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cupsImageRGBToCMYK(src,pixelBuf,1);
   return pixelBuf;
 }
 
 static unsigned char *RGB8toCMY(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t *convert)
+  unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cupsImageRGBToCMY(src,pixelBuf,1);
   return pixelBuf;
 }
 
 static unsigned char *RGB8toYMC(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t *convert)
+  unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cupsImageRGBToCMY(src,pixelBuf,1);
   /* swap C and Y */
@@ -787,7 +795,7 @@ static unsigned char *RGB8toYMC(unsigned char *src, unsigned char *pixelBuf,
 }
 
 static unsigned char *RGB8toKCMY(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t *convert)
+  unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cupsImageRGBToCMYK(src,pixelBuf,1);
   unsigned char d = pixelBuf[3];
@@ -799,13 +807,13 @@ static unsigned char *RGB8toKCMY(unsigned char *src, unsigned char *pixelBuf,
 }
 
 static unsigned char *RGB8toKCMYcmTemp(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t *convert)
+  unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   return RGB8toKCMYcm(src, pixelBuf, x, y);
 }
 
 static unsigned char *RGB8toYMCK(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y, pdftoraster_doc_t* doc, conversion_function_t *convert)
+  unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cupsImageRGBToCMYK(src,pixelBuf,1);
   /* swap C and Y */
@@ -816,7 +824,7 @@ static unsigned char *RGB8toYMCK(unsigned char *src, unsigned char *pixelBuf,
 }
 
 static unsigned char *W8toK8(unsigned char *src, unsigned char *pixelBuf,
-  unsigned int x, unsigned int y, pdftoraster_doc_t *doc, conversion_function_t *convert)
+  unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   *pixelBuf = ~(*src);
   return pixelBuf;
@@ -824,7 +832,7 @@ static unsigned char *W8toK8(unsigned char *src, unsigned char *pixelBuf,
 
 static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t *doc, conversion_function_t *convert)
+     unsigned int size, pdftoraster_doc_t *doc, ConvertCSpaceFunc convertCSpace)
 {
   /* Assumed that BitsPerColor is 8 */
   for (unsigned int i = 0;i < pixels;i++) {
@@ -832,7 +840,7 @@ static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
 
-      pb = convert->convertCSpace(src+i*(doc->popplerNumColors),pixelBuf1,i,row, doc, convert);
+      pb = convertCSpace(src+i*(doc->popplerNumColors),pixelBuf1,i,row, doc);
       pb = convertbits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
       writepixel(dst,0,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
   }
@@ -841,7 +849,7 @@ static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
 
 static unsigned char *convertLineChunkedSwap(unsigned char *src,
      unsigned char *dst, unsigned int row, unsigned int plane,
-     unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, conversion_function_t *convert)
+     unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
   /* Assumed that BitsPerColor is 8 */
   for (unsigned int i = 0;i < pixels;i++) {
@@ -849,7 +857,7 @@ static unsigned char *convertLineChunkedSwap(unsigned char *src,
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
 
-      pb = convert->convertCSpace(src+(pixels-i-1)*(doc->popplerNumColors),pixelBuf1,i,row, doc, convert);
+      pb = convertCSpace(src+(pixels-i-1)*(doc->popplerNumColors),pixelBuf1,i,row, doc);
       pb = convertbits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
       writepixel(dst,0,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
   }
@@ -858,7 +866,7 @@ static unsigned char *convertLineChunkedSwap(unsigned char *src,
 
 static unsigned char *convertLinePlane(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t *doc, conversion_function_t *convert)
+     unsigned int size, pdftoraster_doc_t *doc, ConvertCSpaceFunc convertCSpace)
 {
   /* Assumed that BitsPerColor is 8 */
   for (unsigned int i = 0;i < pixels;i++) {
@@ -866,7 +874,7 @@ static unsigned char *convertLinePlane(unsigned char *src, unsigned char *dst,
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
 
-      pb = convert->convertCSpace(src+i*(doc->popplerNumColors),pixelBuf1,i,row, doc, convert);
+      pb = convertCSpace(src+i*(doc->popplerNumColors),pixelBuf1,i,row, doc);
       pb = convertbits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
       writepixel(dst,plane,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
   }
@@ -875,14 +883,14 @@ static unsigned char *convertLinePlane(unsigned char *src, unsigned char *dst,
 
 static unsigned char *convertLinePlaneSwap(unsigned char *src,
     unsigned char *dst, unsigned int row, unsigned int plane,
-    unsigned int pixels, unsigned int size, pdftoraster_doc_t *doc, conversion_function_t* convert)
+    unsigned int pixels, unsigned int size, pdftoraster_doc_t *doc, ConvertCSpaceFunc convertCSpace)
 {
   for (unsigned int i = 0;i < pixels;i++) {
       unsigned char pixelBuf1[MAX_BYTES_PER_PIXEL];
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
 
-      pb = convert->convertCSpace(src+(pixels-i-1)*(doc->popplerNumColors),pixelBuf1,i,row, doc, convert);
+      pb = convertCSpace(src+(pixels-i-1)*(doc->popplerNumColors),pixelBuf1,i,row, doc);
       pb = convertbits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
       writepixel(dst,plane,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
   }
@@ -1236,7 +1244,7 @@ static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
       for (unsigned int h = doc->header.cupsHeight;h > 0;h--) {
         for (unsigned int band = 0;band < doc->nbands;band++) {
           dp = convertLine(bp,lineBuf,h - 1,plane+band,doc->header.cupsWidth,
-                 doc->bytesPerLine, doc, convert);
+                 doc->bytesPerLine, doc, convert->convertCSpace);
           cupsRasterWritePixels(raster,dp,doc->bytesPerLine);
         }
         bp -= rowsize;
@@ -1249,7 +1257,7 @@ static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
       for (unsigned int h = 0;h < doc->header.cupsHeight;h++) {
         for (unsigned int band = 0;band < doc->nbands;band++) {
           dp = convertLine(bp,lineBuf,h,plane+band,doc->header.cupsWidth,
-                 doc->bytesPerLine, doc, convert);
+                 doc->bytesPerLine, doc, convert->convertCSpace);
           cupsRasterWritePixels(raster,dp,doc->bytesPerLine);
         }
         bp += rowsize;

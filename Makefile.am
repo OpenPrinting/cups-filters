@@ -323,6 +323,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pdftopdf/qpdf_cm.h \
 	cupsfilters/pdftoippprinter.c \
 	cupsfilters/pdftops.c \
+	cupsfilters/pdftoraster.cxx \
 	cupsfilters/ppdgenerator.c \
 	cupsfilters/pstops.c \
 	cupsfilters/raster.c \
