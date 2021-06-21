@@ -976,10 +976,16 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 	  log_level = FILTER_LOGLEVEL_DEBUG;
 	  msg = buf;
 	}
-	log(ld, log_level, "filterExternalCUPS (%s): %s", filter_name, msg);
+	if (log_level == FILTER_LOGLEVEL_CONTROL)
+	  log(ld, log_level, msg);
+	else
+	  log(ld, log_level, "filterExternalCUPS (%s): %s", filter_name, msg);
       }
-    close(stderrpipe[0]);
-    exit(errno);
+    cupsFileClose(fp);
+    /* No need to close the fd stderrpipe[0], as cupsFileClose(fp) does this
+       already */
+    /* Ignore errors of the logging process */
+    exit(0);
   } else if (stderrpid > 0) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
 		 "filterExternalCUPS (%s): Logging (PID %d) started.",
