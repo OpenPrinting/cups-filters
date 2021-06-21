@@ -392,11 +392,14 @@ gs_spawn (const char *filename,
   char buf[BUFSIZ];
   char **gsargv;
   const char* apos;
-  int fds[2], nullfd;
+  int infds[2], errfds[2];
   int i;
   int n;
   int numargs;
-  int pid;
+  int pid, gspid, errpid;
+  cups_file_t *logfp;
+  filter_loglevel_t log_level;
+  char *msg;
   int status = 65536;
   int wstatus;
 
@@ -429,52 +432,83 @@ gs_spawn (const char *filename,
   }
 
   /* Create a pipe for feeding the job into Ghostscript */
-  if (pipe(fds))
+  if (pipe(infds))
   {
-    fds[0] = -1;
-    fds[1] = -1;
+    infds[0] = -1;
+    infds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "ghostscript: Unable to establish stdin pipe for Ghostscript "
 		 "call");
     goto out;
   }
 
-  /* Set the "close on exec" flag on each end of the pipe... */
-  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC))
+  /* Create a pipe for stderr output of Ghostscript */
+  if (pipe(errfds))
   {
-    close(fds[0]);
-    close(fds[1]);
-    fds[0] = -1;
-    fds[1] = -1;
+    errfds[0] = -1;
+    errfds[1] = -1;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to establish stderr pipe for Ghostscript "
+		 "call");
+    goto out;
+  }
+
+  /* Set the "close on exec" flag on each end of the pipes... */
+  if (fcntl(infds[0], F_SETFD, fcntl(infds[0], F_GETFD) | FD_CLOEXEC))
+  {
+    close(infds[0]);
+    close(infds[1]);
+    infds[0] = -1;
+    infds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "ghostscript: Unable to set \"close on exec\" flag on read "
 		 "end of the stdin pipe for Ghostscript call");
     goto out;
   }
-  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC))
+  if (fcntl(infds[1], F_SETFD, fcntl(infds[1], F_GETFD) | FD_CLOEXEC))
   {
-    close(fds[0]);
-    close(fds[1]);
+    close(infds[0]);
+    close(infds[1]);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "ghostscript: Unable to set \"close on exec\" flag on write "
 		 "end of the stdin pipe for Ghostscript call");
     goto out;
   }
-
-  if ((pid = fork()) == 0)
+  if (fcntl(errfds[0], F_SETFD, fcntl(errfds[0], F_GETFD) | FD_CLOEXEC))
   {
-    /* Couple pipe with stdin of Ghostscript process */
-    if (fds[0] >= 0) {
-      if (fds[0] != 0) {
-	if (dup2(fds[0], 0) < 0) {
+    close(errfds[0]);
+    close(errfds[1]);
+    errfds[0] = -1;
+    errfds[1] = -1;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to set \"close on exec\" flag on read "
+		 "end of the stderr pipe for Ghostscript call");
+    goto out;
+  }
+  if (fcntl(errfds[1], F_SETFD, fcntl(errfds[1], F_GETFD) | FD_CLOEXEC))
+  {
+    close(errfds[0]);
+    close(errfds[1]);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "ghostscript: Unable to set \"close on exec\" flag on write "
+		 "end of the stderr pipe for Ghostscript call");
+    goto out;
+  }
+
+  if ((gspid = fork()) == 0)
+  {
+    /* Couple infds pipe with stdin of Ghostscript process */
+    if (infds[0] >= 0) {
+      if (infds[0] != 0) {
+	if (dup2(infds[0], 0) < 0) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		       "ghostscript: Unable to couple pipe with stdin of "
 		       "Ghostscript process");
 	  exit(1);
 	}
-	close(fds[0]);
+	close(infds[0]);
       }
-      close(fds[1]);
+      close(infds[1]);
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "ghostscript: invalid pipe file descriptor to couple with "
@@ -482,16 +516,24 @@ gs_spawn (const char *filename,
       exit(1);
     }
 
-    /* Send Ghostscript's stderr to the Nirwana, as it does not contain
-       anything useful for us */
-    if ((nullfd = open("/dev/null", O_RDWR)) > 2)
-    {
-      dup2(nullfd, 2);
-      close(nullfd);
+    /* Couple errfds pipe with stdin of Ghostscript process */
+    if (errfds[1] >= 2) {
+      if (errfds[1] != 2) {
+	if (dup2(errfds[1], 2) < 0) {
+	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		       "ghostscript: Unable to couple pipe with stderr of "
+		       "Ghostscript process");
+	  exit(1);
+	}
+	close(errfds[1]);
+      }
+      close(errfds[0]);
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "ghostscript: invalid pipe file descriptor to couple with "
+		   "stderr of Ghostscript process");
+      exit(1);
     }
-    else
-      close(nullfd);
-    fcntl(2, F_SETFL, O_NDELAY);
 
     /* Couple stdout of Ghostscript process */
     if (outputfd >= 1) {
@@ -519,16 +561,53 @@ gs_spawn (const char *filename,
     exit(1);
   }
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "ghostscript: Started Ghostscript (PID %d)", pid);
+	       "ghostscript: Started Ghostscript (PID %d)", gspid);
 
-  close(fds[0]);
+  close(infds[0]);
+  close(errfds[1]);
+
+  if ((errpid = fork()) == 0)
+  {
+    close(infds[1]);
+    logfp = cupsFileOpenFd(errfds[0], "r");
+    while (cupsFileGets(logfp, buf, sizeof(buf)))
+      if (log) {
+	if (strncmp(buf, "DEBUG: ", 7) == 0) {
+	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  msg = buf + 7;
+	} else if (strncmp(buf, "DEBUG2: ", 8) == 0) {
+	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  msg = buf + 8;
+	} else if (strncmp(buf, "INFO: ", 6) == 0) {
+	  log_level = FILTER_LOGLEVEL_INFO;
+	  msg = buf + 6;
+	} else if (strncmp(buf, "WARNING: ", 9) == 0) {
+	  log_level = FILTER_LOGLEVEL_WARN;
+	  msg = buf + 9;
+	} else if (strncmp(buf, "ERROR: ", 7) == 0) {
+	  log_level = FILTER_LOGLEVEL_ERROR;
+	  msg = buf + 7;
+	} else {
+	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  msg = buf;
+	}
+	log(ld, log_level, "ghostscript: %s", msg);
+      }
+    cupsFileClose(logfp);
+    close(errfds[0]);
+    exit(0);
+  }
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "ghostscript: Started logging (PID %d)", errpid);
+
+  close(errfds[0]);
 
   /* Feed job data into Ghostscript */
   while ((!iscanceled || !iscanceled(icd)) &&
 	 (n = fread(buf, 1, BUFSIZ, fp)) > 0) {
     int count;
   retry_write:
-    count = write(fds[1], buf, n);
+    count = write(infds[1], buf, n);
     if (count != n) {
       if (count == -1) {
         if (errno == EINTR)
@@ -541,30 +620,52 @@ gs_spawn (const char *filename,
       goto out;
     }
   }
-  close (fds[1]);
+  close (infds[1]);
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 	       "ghostscript: Input data feed completed");
 
- retry_wait:
-  if (waitpid (pid, &wstatus, 0) == -1) {
-    if (errno == EINTR)
-      goto retry_wait;
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Ghostscript (PID %d) stopped with an error: %s!",
-		 pid, strerror(errno));
-    goto out;
-  }
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "ghostscript: Ghostscript (PID %d) exited with no errors.",
-	       pid);
+  while (gspid > 0 || errpid > 0) {
+    if ((pid = wait(&wstatus)) < 0) {
+      if (errno == EINTR && iscanceled && iscanceled(icd)) {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "ghostscript: Job canceled, killing Ghostscript ...");
+	kill(gspid, SIGTERM);
+	gspid = -1;
+	kill(errpid, SIGTERM);
+	errpid = -1;
+	break;
+      } else
+	continue;
+    }
 
-  /* How did Ghostscript terminate */
-  if (WIFEXITED(wstatus))
-    /* Via exit() anywhere or return() in the main() function */
-    status = WEXITSTATUS(wstatus);
-  else if (WIFSIGNALED(wstatus))
-    /* Via signal */
-    status = 256 * WTERMSIG(wstatus);
+    /* How did the filter terminate */
+    if (wstatus) {
+      if (WIFEXITED(wstatus)) {
+	/* Via exit() anywhere or return() in the main() function */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: %s (PID %d) stopped with status %d",
+		     (pid == gspid ? "Ghostscript" : "Logging"), pid,
+		     WEXITSTATUS(wstatus));
+	status = WEXITSTATUS(wstatus);
+      } else {
+	/* Via signal */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: %s (PID %d) crashed on signal %d",
+		     (pid == gspid ? "Ghostscript" : "Logging"), pid,
+		     WTERMSIG(wstatus));
+	status = 256 * WTERMSIG(wstatus);
+      }
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "ghostscript: %s (PID %d) exited with no errors.",
+		   (pid == gspid ? "Ghostscript" : "Logging"), pid);
+      status = 0;
+    }
+    if (pid == gspid)
+      gspid = -1;
+    else  if (pid == errpid)
+      errpid = -1;
+  }
 
 out:
   free(gsargv);
