@@ -594,7 +594,9 @@ gs_spawn (const char *filename,
 	log(ld, log_level, "ghostscript: %s", msg);
       }
     cupsFileClose(logfp);
-    close(errfds[0]);
+    /* No need to close the fd errfds[0], as cupsFileClose(fp) does this
+       already */
+    /* Ignore errors of the logging process */
     exit(0);
   }
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
