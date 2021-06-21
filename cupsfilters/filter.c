@@ -702,8 +702,16 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 {
   filter_external_cups_t *params = (filter_external_cups_t *)parameters;
   int           i;
-  int		pid;		     /* Process ID of filter */
+  int		pid,		     /* Process ID of filter */
+                stderrpid,           /* Process ID for stderr logging process */
+                wpid;                /* PID reported as terminated */
   int		fd;		     /* Temporary file descriptor */
+  int           stderrpipe[2];       /* Pipe to log stderr */
+  cups_file_t   *fp;                 /* File pointer to read log lines */
+  char          buf[2048];           /* Log line buffer */
+  filter_loglevel_t log_level;       /* Log level of filter's log message */
+  char          *msg,                /* Filter log message */
+                *filter_name;        /* Filter name for logging */
   char          **argv,		     /* Command line args for filter */
                 **envp = NULL;       /* Environment variables for filter */
   int           num_all_options = 0;
@@ -716,14 +724,19 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   int wstatus;
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
-  /*filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
-    void          *icd = data->iscanceleddata;*/
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void          *icd = data->iscanceleddata;
 
   if (!params->filter || !params->filter[0]) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "filterExternalCUPS: Filter executable path/command not specified");
     return (1);
   }
+
+  if ((filter_name = strrchr(params->filter, '/')) != NULL)
+    filter_name ++;
+  else
+    filter_name = (char *)params->filter;
 
  /*
   * Ignore broken pipe signals...
@@ -754,7 +767,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   snprintf(job_id_str, sizeof(job_id_str) - 1, "%d", data->job_id);
   snprintf(copies_str, sizeof(copies_str) - 1, "%d", data->copies);
 
-  /* Options, buid string of "Name1=Value1 Name2=Value2 ..." but use
+  /* Options, build string of "Name1=Value1 Name2=Value2 ..." but use
      "Name" and "noName" instead for boolean options */
   for (i = 0, opt = all_options; i < num_all_options; i ++, opt ++) {
     if (strcasecmp(opt->value, "true") == 0 ||
@@ -793,7 +806,8 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   /* Log the arguments */
   if (log)
     for (i = 0; argv[i]; i ++)
-      log(ld, FILTER_LOGLEVEL_DEBUG, "argv[%d]: %s", i, argv[i]);
+      log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): argv[%d]: %s",
+	  filter_name, i, argv[i]);
 
  /*
   * Copy the current environment variables and add some important ones
@@ -831,11 +845,19 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   /* Log the resulting list of environment variable settings */
   if (log)
     for (i = 0; envp[i]; i ++)
-      log(ld, FILTER_LOGLEVEL_DEBUG, "envp[%d]: %s", i, envp[i]);
+      log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: %s",
+	  filter_name, i, envp[i]);
 
  /*
   * Execute the filter
   */
+
+  if (pipe(stderrpipe) < 0) {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "filterExternalCUPS (%s): Could not create pipe for stderr: %s",
+		 filter_name, strerror(errno));
+    return (1);
+  }
 
   if ((pid = fork()) == 0) {
    /*
@@ -864,16 +886,20 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
       }
     }
 
-    /* Send stderr to the Nirwana if we are running gziptoany, as
-       gziptoany emits a false "PAGE: 1 1" */
     if (strcasestr(params->filter, "gziptoany")) {
+      /* Send stderr to the Nirwana if we are running gziptoany, as
+	 gziptoany emits a false "PAGE: 1 1" */
       if ((fd = open("/dev/null", O_RDWR)) > 2) {
 	dup2(fd, 2);
 	close(fd);
       } else
         close(fd);
-      fcntl(2, F_SETFL, O_NDELAY);
-    }
+    } else
+      /* Send stderr into pipe for logging */
+      dup2(stderrpipe[1], 2);
+    fcntl(2, F_SETFL, O_NDELAY);
+    close(stderrpipe[0]);
+    close(stderrpipe[1]);
 
     if ((fd = open("/dev/null", O_RDWR)) > 3) {
       dup2(fd, 3);
@@ -897,47 +923,128 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     execve(params->filter, argv, envp);
 
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterExternalCUPS: Execution of filter %s failed - %s",
-		 params->filter, strerror(errno));
+		 "filterExternalCUPS (%s): Execution of filter %s failed - %s",
+		 filter_name, params->filter, strerror(errno));
 
     exit(errno);
   } else if (pid > 0) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "filterExternalCUPS: %s (PID %d) started.",
-		 params->filter, pid);
+		 "filterExternalCUPS (%s): %s (PID %d) started.",
+		 filter_name, params->filter, pid);
   } else {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterExternalCUPS: Unable to fork process for filter %s",
-		 params->filter);
+		 "filterExternalCUPS (%s): Unable to fork process for filter %s",
+		 filter_name, params->filter);
+    close(stderrpipe[0]);
+    close(stderrpipe[1]);
     status = 1;
     goto out;
   }
 
  /*
-  * Wait for filter process to finish
+  * Log the filter's stderr
   */
 
- retry_wait:
-  if (waitpid (pid, &wstatus, 0) == -1) {
-    if (errno == EINTR)
-      goto retry_wait;
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "filterExternalCUPS: The filter %s (PID %d) stopped with an error: %s!",
-		 params->filter, pid, strerror(errno));
+  if ((stderrpid = fork()) == 0) {
+   /*
+    * Child process goes here...
+    */
+
+    close(stderrpipe[1]);
+    fp = cupsFileOpenFd(stderrpipe[0], "r");
+    while (cupsFileGets(fp, buf, sizeof(buf)))
+      if (log) {
+	if (strncmp(buf, "DEBUG: ", 7) == 0) {
+	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  msg = buf + 7;
+	} else if (strncmp(buf, "DEBUG2: ", 8) == 0) {
+	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  msg = buf + 8;
+	} else if (strncmp(buf, "INFO: ", 6) == 0) {
+	  log_level = FILTER_LOGLEVEL_INFO;
+	  msg = buf + 6;
+	} else if (strncmp(buf, "WARNING: ", 9) == 0) {
+	  log_level = FILTER_LOGLEVEL_WARN;
+	  msg = buf + 9;
+	} else if (strncmp(buf, "ERROR: ", 7) == 0) {
+	  log_level = FILTER_LOGLEVEL_ERROR;
+	  msg = buf + 7;
+	} else if (strncmp(buf, "PAGE: ", 6) == 0) {
+	  log_level = FILTER_LOGLEVEL_CONTROL;
+	  msg = buf;
+	} else {
+	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  msg = buf;
+	}
+	log(ld, log_level, "filterExternalCUPS (%s): %s", filter_name, msg);
+      }
+    close(stderrpipe[0]);
+    exit(errno);
+  } else if (stderrpid > 0) {
+    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		 "filterExternalCUPS (%s): Logging (PID %d) started.",
+		 filter_name, stderrpid);
+  } else {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "filterExternalCUPS (%s): Unable to fork process for logging",
+		 filter_name);
+    close(stderrpipe[0]);
+    close(stderrpipe[1]);
     status = 1;
     goto out;
   }
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "filterExternalCUPS: The filter %s (PID %d) exited with no errors.",
-	       params->filter, pid);
 
-  /* How did the filter terminate */
-  if (WIFEXITED(wstatus))
-    /* Via exit() anywhere or return() in the main() function */
-    status = WEXITSTATUS(wstatus);
-  else if (WIFSIGNALED(wstatus))
-    /* Via signal */
-    status = 256 * WTERMSIG(wstatus);
+  close(stderrpipe[0]);
+  close(stderrpipe[1]);
+
+ /*
+  * Wait for filter and logging processes to finish
+  */
+
+  status = 0;
+
+  while (pid > 0 || stderrpid > 0) {
+    if ((wpid = wait(&wstatus)) < 0) {
+      if (errno == EINTR && iscanceled && iscanceled(icd)) {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "filterExternalCUPS (%s): Job canceled, killing filter ...",
+		     filter_name);
+	kill(pid, SIGTERM);
+	pid = -1;
+	kill(stderrpid, SIGTERM);
+	stderrpid = -1;
+	break;
+      } else
+	continue;
+    }
+
+    /* How did the filter terminate */
+    if (wstatus) {
+      if (WIFEXITED(wstatus)) {
+	/* Via exit() anywhere or return() in the main() function */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "filterExternalCUPS (%s): %s (PID %d) stopped with status %d",
+		     filter_name, (wpid == pid ? "Filter" : "Logging"), wpid,
+		     WEXITSTATUS(wstatus));
+	status = WEXITSTATUS(wstatus);
+      } else {
+	/* Via signal */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "filterExternalCUPS (%s): %s (PID %d) crashed on signal %d",
+		     filter_name, (wpid == pid ? "Filter" : "Logging"), wpid,
+		     WTERMSIG(wstatus));
+	status = 256 * WTERMSIG(wstatus);
+      }
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		   "filterExternalCUPS (%s): %s (PID %d) exited with no errors.",
+		   filter_name, (wpid == pid ? "Filter" : "Logging"), wpid);
+    }
+    if (wpid == pid)
+      pid = -1;
+    else  if (wpid == stderrpid)
+      stderrpid = -1;
+  }
 
  /*
   * Clean up
