@@ -1396,6 +1396,7 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
        filter_data_t *data, /* I - Job and printer data */
        void *parameters)    /* I - Filter-specific parameters (outformat) */
 {
+  int i;
   rastertopdf_doc_t	doc;			/* Document information */
   cups_file_t	*inputfp;		/* Print file */
   FILE          *outputfp;              /* Output data stream */
@@ -1407,11 +1408,16 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
   cups_raster_t	*ras;		/* Raster stream for printing */
   cups_page_header2_t	header;		/* Page header from file */
   ppd_attr_t    *attr;  /* PPD attribute */
+  ipp_t *printer_attrs = data->printer_attrs; /* Printer attributes from printer data*/
+  ipp_attribute_t *ipp_attr; /* Printer attribute*/
   const char*         profile_name = NULL;	/* IPP Profile Name */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
+  int total_attrs;
+  char buf[1024];
+  const char *kw;
 
 
   (void)inputseekable;
@@ -1483,13 +1489,12 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
     doc.cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
 
 #ifdef QPDF_HAVE_PCLM
-  if (data->ppd == NULL)
+  if (outformat == OUTPUT_FORMAT_PCLM && data->ppd == NULL
+        && printer_attrs == NULL )
   {
-    if (outformat == OUTPUT_FORMAT_PCLM) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "rastertopdf: PCLm output only possible with PPD file.");
-      return 1;
-    }
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      "rastertopdf: PCLm output:  Neither a PPD file nor printer IPP attributes are supplied, PCLm output not possible.");
+    return 1;
   }
 #endif
 
@@ -1586,6 +1591,116 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
 		   "Using FLATE for encoding image streams.", attr_name);
       pdf.pclm_compression_method_preferred.push_back(FLATE_DECODE);
     }
+  }
+  else if(outformat == OUTPUT_FORMAT_PCLM && printer_attrs)
+  {
+    if (log)
+    {
+      log(ld, FILTER_LOGLEVEL_DEBUG, "PCLm-related printer IPP attributes:");
+      total_attrs = 0;
+      ipp_attr = ippFirstAttribute(printer_attrs);
+      while (ipp_attr)
+      {
+        if (strncmp(ippGetName(ipp_attr), "pclm-", 5) == 0)
+        {
+          total_attrs ++;
+          ippAttributeString(ipp_attr, buf, sizeof(buf));
+          log(ld, FILTER_LOGLEVEL_DEBUG, "  Attr: %s",ippGetName(ipp_attr));
+          log(ld, FILTER_LOGLEVEL_DEBUG, "  Value: %s", buf);
+          for (i = 0; i < ippGetCount(ipp_attr); i ++)
+            if ((kw = ippGetString(ipp_attr, i, NULL)) != NULL)
+	          log(ld, FILTER_LOGLEVEL_DEBUG, "  Keyword: %s", kw);
+	      }
+	      ipp_attr = ippNextAttribute(printer_attrs);
+      }
+      log(ld, FILTER_LOGLEVEL_DEBUG, "  %d attributes", total_attrs);
+    }
+
+    char *attr_name = (char *)"pclm-strip-height-preferred";
+    if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		  "rastertopdf: Printer PCLm attribute \"%s\" with value %d",
+		  attr_name, ippGetInteger(ipp_attr, 0));
+      pdf.pclm_strip_height_preferred = ippGetInteger(ipp_attr, 0);
+    }
+    else
+      pdf.pclm_strip_height_preferred = 16; /* default strip height */
+
+    attr_name = (char *)"pclm-strip-height-supported";
+    if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      "rastertopdf: Printer PCLm attribute \"%s\"",
+      attr_name);
+      pdf.pclm_strip_height_supported.clear();  // remove default value = 16
+      for (int i = 0; i < ippGetCount(ipp_attr); i ++)
+        pdf.pclm_strip_height_supported.push_back(ippGetInteger(ipp_attr, i));
+    }
+
+    attr_name = (char *)"pclm-raster-back-side";
+    if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
+      attr_name, ippGetString(ipp_attr, 0, NULL));
+      pdf.pclm_raster_back_side = ippGetString(ipp_attr, 0, NULL);
+    }
+
+    attr_name = (char *)"pclm-source-resolution-default";
+    if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
+    {
+      ippAttributeString(ipp_attr, buf, sizeof(buf));
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
+		   attr_name, buf);
+      pdf.pclm_source_resolution_default = buf;
+    }
+
+    attr_name = (char *)"pclm-source-resolution-supported";
+    if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
+    {
+      ippAttributeString(ipp_attr, buf, sizeof(buf));
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
+		   attr_name, buf);
+      pdf.pclm_source_resolution_supported = split_strings(buf, ",");
+    }
+
+    attr_name = (char *)"pclm-compression-method-preferred";
+    if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
+    {
+      ippAttributeString(ipp_attr, buf, sizeof(buf));
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
+		   attr_name, buf);
+      std::vector<std::string> vec = split_strings(buf, ",");
+
+      // get all compression methods supported by the printer
+      for (std::vector<std::string>::iterator it = vec.begin();
+            it != vec.end(); ++it)
+      {
+        std::string compression_method = *it;
+        for (char& x: compression_method)
+          x = tolower(x);
+        if (compression_method == "flate")
+          pdf.pclm_compression_method_preferred.push_back(FLATE_DECODE);
+        else if (compression_method == "rle")
+          pdf.pclm_compression_method_preferred.push_back(RLE_DECODE);
+        else if (compression_method == "jpeg")
+          pdf.pclm_compression_method_preferred.push_back(DCT_DECODE);
+      }
+
+    }
+    // If the compression methods is none of the above or is erreneous
+    // use FLATE as compression method and show a warning.
+    if (pdf.pclm_compression_method_preferred.empty())
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+		   "(rastertopclm) Unable parse Printer attribute \"%s\". "
+		   "Using FLATE for encoding image streams.", attr_name);
+      pdf.pclm_compression_method_preferred.push_back(FLATE_DECODE);
+      }
   }
 
   while (cupsRasterReadHeader2(ras, &header))
