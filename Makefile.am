@@ -345,6 +345,7 @@ libcupsfilters_la_LIBADD = \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
+	$(POPPLER_LIBS)
 	-lm
 libcupsfilters_la_CFLAGS = \
 	-I$(srcdir)/ppd/ \
