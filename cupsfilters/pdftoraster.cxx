@@ -119,7 +119,7 @@ typedef struct pdftoraster_doc_s
   unsigned int popplerNumColors; 
   unsigned int bitmapoffset[2];
   ppd_file_t *ppd = 0;
-  poppler::document *popp_doc;
+  poppler::document *poppler_doc;
   cups_page_header2_t header;
   int         *JobCanceled;            /* Caller sets to 1 when job canceled */
   filter_logfunc_t logfunc;             /* Logging function, NULL for no
@@ -1178,7 +1178,7 @@ static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
   unsigned char *dp;
   unsigned int rowsize;
 
-  poppler::page *current_page =doc->popp_doc->create_page(pageNo-1);
+  poppler::page *current_page =doc->poppler_doc->create_page(pageNo-1);
   poppler::page_renderer pr;
   pr.set_render_hint(poppler::page_renderer::antialiasing, true);
   pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
@@ -1278,7 +1278,7 @@ static void outPage(pdftoraster_doc_t *doc, int pageNo,
   int imageable_area_fit = 0;
   int i;
 
-  poppler::page *current_page =doc->popp_doc->create_page(pageNo-1);
+  poppler::page *current_page =doc->poppler_doc->create_page(pageNo-1);
   poppler::page_box_enum box = poppler::page_box_enum::media_box;
   poppler::rectf mediaBox = current_page->page_rect(box);
   poppler::page::orientation_enum orient = current_page->orientation();
@@ -1568,7 +1568,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
       }
     }
     close(fd);
-    doc.popp_doc = poppler::document::load_from_file(name,"","");
+    doc.poppler_doc = poppler::document::load_from_file(name,"","");
     /* remove name */
     unlink(name);
   } else {
@@ -1594,7 +1594,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
       }
     }
     close(fd);
-    doc.popp_doc = poppler::document::load_from_file(name,"","");
+    doc.poppler_doc = poppler::document::load_from_file(name,"","");
     unlink(name);
   
       FILE *fp;
@@ -1608,8 +1608,8 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
     fclose(fp);
   }
 
-  if(doc.popp_doc != NULL)
-    npages = doc.popp_doc->pages();
+  if(doc.poppler_doc != NULL)
+    npages = doc.poppler_doc->pages();
 
   /* fix NumCopies, Collate ccording to PDFTOPDFComments */
   doc.header.NumCopies = deviceCopies;
@@ -1713,7 +1713,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
 	exit(1);
   }
   selectConvertFunc(raster, &doc, &convert, log, ld);
-  if(doc.popp_doc != NULL){    
+  if(doc.poppler_doc != NULL){    
     for (i = 1;i <= npages;i++) {
       outPage(&doc,i,raster, &convert, log, ld);
     }
