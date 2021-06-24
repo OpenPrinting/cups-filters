@@ -1,0 +1,50 @@
+%PDF-1.3
+2 0 obj
+<</Type/Font
+  /Subtype /Type1
+  /BaseFont /Courier
+>>
+endobj
+3 0 obj
+<</Length 23
+>>
+stream
+BT /a 10 Tf (abc) Tj ET
+endstream
+endobj
+4 0 obj
+<</Type/Page
+  /Parent 1 0 R
+  /MediaBox [0 0 595 842]
+  /Contents 3 0 R
+  /Resources << /Font << /a 2 0 R >> >>
+>>
+endobj
+1 0 obj
+<</Type/Pages
+  /Count 1
+  /Kids [4 0 R ]
+>>
+endobj
+5 0 obj
+<</Type/Catalog
+  /Pages 1 0 R
+>>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000282 00000 n 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000151 00000 n 
+0000000342 00000 n 
+trailer
+<<
+  /Size 6
+  /Root 5 0 R
+>>
+startxref
+391
+%%EOF
+PASS test_pdf1 (exit status: 0)

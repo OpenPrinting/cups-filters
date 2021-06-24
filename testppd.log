@@ -1,0 +1,46 @@
+ppdOpenFile("ppd/test.ppd"): PASS
+ppdFindAttr(wildcard): PASS
+ppdFindNextAttr(wildcard): PASS
+ppdFindAttr(Foo): PASS
+ppdFindNextAttr(Foo): PASS
+ppdMarkDefaults: PASS
+ppdEmitString (defaults): PASS
+ppdEmitString (custom size and string): PASS
+ppdGetConflicts(InputSlot=Envelope): PASS
+ppdConflicts(): PASS (2)
+ppdResolveConflicts(InputSlot=Envelope): PASS (Resolved by changing PageSize)
+ppdResolveConflicts(No option/choice): PASS (Resolved by changing InputSlot)
+ppdInstallableConflict(): PASS
+ppdPageSizeLimits: PASS
+ppdMarkOptions(media=iso-a4): PASS
+ppdMarkOptions(media=na_letter_8.5x11in): PASS
+ppdMarkOptions(media=oe_letter-fullbleed_8.5x11in): PASS
+ppdMarkOptions(media=A4): PASS
+ppdMarkOptions(media=Custom.8x10in): PASS
+ppdLocalizeIPPReason(text): PASS
+ppdLocalizeIPPReason(http): PASS
+ppdLocalizeIPPReason(help): PASS
+ppdLocalizeIPPReason(file): PASS
+ppdLocalizeIPPReason(fr text): PASS
+ppdLocalizeIPPReason(zh_TW text): PASS
+ppdLocalizeMarkerName(bogus): PASS
+ppdLocalizeMarkerName(cyan): PASS
+ppdLocalizeMarkerName(fr cyan): PASS
+ppdLocalizeMarkerName(zh_TW cyan): PASS
+ppdOpenFile("ppd/test2.ppd"): PASS
+ppdMarkDefaults: PASS
+ppdEmitString (defaults): PASS
+ppdConflicts(): PASS (1)
+ppdResolveConflicts(Quality=Photo): PASS (Unable to resolve)
+ppdResolveConflicts(No option/choice): PASS
+ppdResolveConflicts(loop test): PASS
+ppdInstallableConflict(): PASS
+ppdPageSizeLimits(default): PASS
+ppdPageSizeLimits(InputSlot=Manual): PASS
+ppdPageSizeLimits(Quality=Photo): PASS
+ppdPageSizeLimits(Quality=Photo): PASS
+ppdRasterExecPS("setpagedevice"): PASS
+ppdRasterExecPS("roll"): PASS
+ppdRasterExecPS("dup index"): PASS
+ppdRasterExecPS("%%Begin/EndFeature code"): PASS
+PASS testppd (exit status: 0)

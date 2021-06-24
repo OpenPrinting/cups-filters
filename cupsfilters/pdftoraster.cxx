@@ -138,7 +138,7 @@ typedef struct pdftoraster_doc_s
   unsigned int bytesPerLine; /* number of bytes per line */
                         /* Note: When CUPS_ORDER_BANDED,
                            cupsBytesPerLine = bytesPerLine*cupsNumColors */
-  cms_profile_t *colour_profile;
+  cms_profile_t colour_profile;
 } pdftoraster_doc_t;
 
 typedef unsigned char *(*ConvertCSpaceFunc)(unsigned char *src,
@@ -333,13 +333,13 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
     attr = ppdFindAttr(doc->ppd,"pdftorasterRenderingIntent",NULL);
     if (attr != NULL && attr->value != NULL) {
       if (strcasecmp(attr->value,"PERCEPTUAL") != 0) {
-	doc->colour_profile->renderingIntent = INTENT_PERCEPTUAL;
+	doc->colour_profile.renderingIntent = INTENT_PERCEPTUAL;
       } else if (strcasecmp(attr->value,"RELATIVE_COLORIMETRIC") != 0) {
-	doc->colour_profile->renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
+	doc->colour_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
       } else if (strcasecmp(attr->value,"SATURATION") != 0) {
-	doc->colour_profile->renderingIntent = INTENT_SATURATION;
+	doc->colour_profile.renderingIntent = INTENT_SATURATION;
       } else if (strcasecmp(attr->value,"ABSOLUTE_COLORIMETRIC") != 0) {
-	doc->colour_profile->renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
+	doc->colour_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
       }
     }
     if (doc->header.Duplex) {
@@ -392,18 +392,18 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
     }
 
     /* support the CUPS "cm-calibration" option */
-    doc->colour_profile->cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+    doc->colour_profile.cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
 
-    if (doc->colour_profile->cm_calibrate == CM_CALIBRATION_ENABLED)
-      doc->colour_profile->cm_disabled = 1;
+    if (doc->colour_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
+      doc->colour_profile.cm_disabled = 1;
     else
-      doc->colour_profile->cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
+      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
 
-    if (!doc->colour_profile->cm_disabled)
+    if (!doc->colour_profile.cm_disabled)
       cmGetPrinterIccProfile(getenv("PRINTER"), &profile, doc->ppd);
 
     if (profile != NULL) {
-      doc->colour_profile->colorProfile = cmsOpenProfileFromFile(profile,"r");
+      doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
       free(profile);
     }
 
@@ -676,7 +676,7 @@ static unsigned char *convertCSpaceNone(unsigned char *src,
 static unsigned char *convertCSpaceWithProfiles(unsigned char *src,
   unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
-  cmsDoTransform(doc->colour_profile->colorTransform,src,pixelBuf,1);
+  cmsDoTransform(doc->colour_profile.colorTransform,src,pixelBuf,1);
   return pixelBuf;
 }
 
@@ -685,7 +685,7 @@ static unsigned char *convertCSpaceXYZ8(unsigned char *src,
 {
   double alab[3];
 
-  cmsDoTransform(doc->colour_profile->colorTransform,src,alab,1);
+  cmsDoTransform(doc->colour_profile.colorTransform,src,alab,1);
   cmsCIELab lab;
   cmsCIEXYZ xyz;
 
@@ -693,7 +693,7 @@ static unsigned char *convertCSpaceXYZ8(unsigned char *src,
   lab.a = alab[1];
   lab.b = alab[2];
 
-  cmsLab2XYZ(&(doc->colour_profile->D65WhitePoint),&xyz,&lab);
+  cmsLab2XYZ(&(doc->colour_profile.D65WhitePoint),&xyz,&lab);
   pixelBuf[0] = 231.8181*xyz.X+0.5;
   pixelBuf[1] = 231.8181*xyz.Y+0.5;
   pixelBuf[2] = 231.8181*xyz.Z+0.5;
@@ -706,7 +706,7 @@ static unsigned char *convertCSpaceXYZ16(unsigned char *src,
   double alab[3];
   unsigned short *sd = (unsigned short *)pixelBuf;
 
-  cmsDoTransform(doc->colour_profile->colorTransform,src,alab,1);
+  cmsDoTransform(doc->colour_profile.colorTransform,src,alab,1);
   cmsCIELab lab;
   cmsCIEXYZ xyz;
 
@@ -714,7 +714,7 @@ static unsigned char *convertCSpaceXYZ16(unsigned char *src,
   lab.a = alab[1];
   lab.b = alab[2];
 
-  cmsLab2XYZ(&(doc->colour_profile->D65WhitePoint),&xyz,&lab);
+  cmsLab2XYZ(&(doc->colour_profile.D65WhitePoint),&xyz,&lab);
   sd[0] = 59577.2727*xyz.X+0.5;
   sd[1] = 59577.2727*xyz.Y+0.5;
   sd[2] = 59577.2727*xyz.Z+0.5;
@@ -725,7 +725,7 @@ static unsigned char *convertCSpaceLab8(unsigned char *src,
   unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double lab[3];
-  cmsDoTransform(doc->colour_profile->colorTransform ,src,lab,1);
+  cmsDoTransform(doc->colour_profile.colorTransform ,src,lab,1);
   pixelBuf[0] = 2.55*lab[0]+0.5;
   pixelBuf[1] = lab[1]+128.5;
   pixelBuf[2] = lab[2]+128.5;
@@ -736,7 +736,7 @@ static unsigned char *convertCSpaceLab16(unsigned char *src,
   unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double lab[3];
-  cmsDoTransform(doc->colour_profile->colorTransform,src,lab,1);
+  cmsDoTransform(doc->colour_profile.colorTransform,src,lab,1);
   unsigned short *sd = (unsigned short *)pixelBuf;
   sd[0] = 655.35*lab[0]+0.5;
   sd[1] = 256*(lab[1]+128)+0.5;
@@ -979,7 +979,7 @@ static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
 /* select convertLine function */
 static void selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conversion_function_t *convert, filter_logfunc_t log, void* ld)
 {
-  if ((doc->colour_profile->colorProfile == NULL || doc->colour_profile->popplerColorProfile == doc->colour_profile->colorProfile)
+  if ((doc->colour_profile.colorProfile == NULL || doc->colour_profile.popplerColorProfile == doc->colour_profile.colorProfile)
       && (doc->header.cupsColorOrder == CUPS_ORDER_CHUNKED
        || doc->header.cupsNumColors == 1)) {
     if (selectSpecialCase(doc, convert)) return;
@@ -1004,7 +1004,7 @@ static void selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, con
   }
   doc->allocLineBuf = true;
 
-  if (doc->colour_profile->colorProfile != NULL && doc->colour_profile->popplerColorProfile != doc->colour_profile->colorProfile) {
+  if (doc->colour_profile.colorProfile != NULL && doc->colour_profile.popplerColorProfile != doc->colour_profile.colorProfile) {
     unsigned int bytes;
 
     switch (doc->header.cupsColorSpace) {
@@ -1047,16 +1047,16 @@ static void selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, con
       break;
     }
     doc->bitspercolor = 0; /* convert bits in convertCSpace */
-    if (doc->colour_profile->popplerColorProfile == NULL) {
-      doc->colour_profile->popplerColorProfile = cmsCreate_sRGBProfile();
+    if (doc->colour_profile.popplerColorProfile == NULL) {
+      doc->colour_profile.popplerColorProfile = cmsCreate_sRGBProfile();
     }
-    unsigned int dcst = getCMSColorSpaceType(cmsGetColorSpace(doc->colour_profile->colorProfile));
-    if ((doc->colour_profile->colorTransform = cmsCreateTransform(doc->colour_profile->popplerColorProfile,
+    unsigned int dcst = getCMSColorSpaceType(cmsGetColorSpace(doc->colour_profile.colorProfile));
+    if ((doc->colour_profile.colorTransform = cmsCreateTransform(doc->colour_profile.popplerColorProfile,
             COLORSPACE_SH(PT_RGB) |CHANNELS_SH(3) | BYTES_SH(1),
-            doc->colour_profile->colorProfile,
+            doc->colour_profile.colorProfile,
             COLORSPACE_SH(dcst) |
             CHANNELS_SH(doc->header.cupsNumColors) | BYTES_SH(bytes),
-            doc->colour_profile->renderingIntent,0)) == 0) {
+            doc->colour_profile.renderingIntent,0)) == 0) {
             if(log) log(ld, FILTER_LOGLEVEL_ERROR,
               "pdftoraster: Can't create color transform.");
       exit(1);
@@ -1423,18 +1423,18 @@ static void setPopplerColorProfile(pdftoraster_doc_t *doc, filter_logfunc_t log,
   case CUPS_CSPACE_ICCD:
   case CUPS_CSPACE_ICCE:
   case CUPS_CSPACE_ICCF:
-    if (doc->colour_profile->colorProfile == NULL) {
+    if (doc->colour_profile.colorProfile == NULL) {
       cmsCIExyY wp;
 #ifdef USE_LCMS1
       cmsWhitePointFromTemp(6504,&wp); /* D65 White point */
 #else
       cmsWhitePointFromTemp(&wp,6504); /* D65 White point */
 #endif
-      doc->colour_profile->colorProfile  = cmsCreateLab4Profile(&wp);
+      doc->colour_profile.colorProfile  = cmsCreateLab4Profile(&wp);
     }
     break;
   case CUPS_CSPACE_CIEXYZ:
-    if (doc->colour_profile->colorProfile  == NULL) {
+    if (doc->colour_profile.colorProfile  == NULL) {
       /* tansform color space via CIELab */
       cmsCIExyY wp;
 #ifdef USE_LCMS1
@@ -1442,18 +1442,18 @@ static void setPopplerColorProfile(pdftoraster_doc_t *doc, filter_logfunc_t log,
 #else
       cmsWhitePointFromTemp(&wp,6504); /* D65 White point */
 #endif
-      cmsxyY2XYZ(&(doc->colour_profile->D65WhitePoint),&wp);
-      doc->colour_profile->colorProfile  = cmsCreateLab4Profile(&wp);
+      cmsxyY2XYZ(&(doc->colour_profile.D65WhitePoint),&wp);
+      doc->colour_profile.colorProfile  = cmsCreateLab4Profile(&wp);
     }
     break;
   case CUPS_CSPACE_SRGB:
-    doc->colour_profile->colorProfile  = cmsCreate_sRGBProfile();
+    doc->colour_profile.colorProfile  = cmsCreate_sRGBProfile();
     break;
   case CUPS_CSPACE_ADOBERGB:
-    doc->colour_profile->colorProfile  = adobergb_profile();
+    doc->colour_profile.colorProfile  = adobergb_profile();
     break;
   case CUPS_CSPACE_SW:
-    doc->colour_profile->colorProfile  = sgray_profile();
+    doc->colour_profile.colorProfile  = sgray_profile();
     break;
   case CUPS_CSPACE_RGB:
   case CUPS_CSPACE_K:
@@ -1462,7 +1462,7 @@ static void setPopplerColorProfile(pdftoraster_doc_t *doc, filter_logfunc_t log,
   case CUPS_CSPACE_GOLD:
   case CUPS_CSPACE_SILVER:
     /* We can set specified profile to poppler profile */
-    doc->colour_profile->popplerColorProfile  = doc->colour_profile->colorProfile ;
+    doc->colour_profile.popplerColorProfile  = doc->colour_profile.colorProfile ;
     break;
   case CUPS_CSPACE_CMYK:
   case CUPS_CSPACE_KCMY:
@@ -1475,7 +1475,7 @@ static void setPopplerColorProfile(pdftoraster_doc_t *doc, filter_logfunc_t log,
   case CUPS_CSPACE_CMY:
   case CUPS_CSPACE_YMC:
     /* use standard RGB */
-    doc->colour_profile->popplerColorProfile = NULL;
+    doc->colour_profile.popplerColorProfile = NULL;
     break;
   default:
     if(log) log(ld, FILTER_LOGLEVEL_ERROR,"pdftoraster: Specified ColorSpace is not supported\n");
@@ -1490,7 +1490,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
        filter_data_t *data,          /* I - Job and printer data */
        void *parameters)             /* I - Filter-specific parameters (unused) */
 {
-  pdftoraster_doc_t *doc;
+  pdftoraster_doc_t doc;
   int i;
   int npages = 0;
   cups_raster_t *raster;
@@ -1504,13 +1504,15 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   conversion_function_t convert;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
-
+  
   cmsSetLogErrorHandler(lcmsErrorHandler);
-  parseOpts(data, doc);
+  parseOpts(data, &doc);
+
     /* 
    * Open the input data stream specified by inputfd ...
    */
-    if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
+  
+  if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
     if (!iscanceled || !iscanceled(icd))
     {
@@ -1566,23 +1568,15 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
       }
     }
     close(fd);
-    doc->popp_doc = poppler::document::load_from_file(name,"","");
+    doc.popp_doc = poppler::document::load_from_file(name,"","");
     /* remove name */
     unlink(name);
   } else {
-    //make a temprorary file if file name is specified ...
+    //make a temprorary file and save input data in it...
     int fd;
     char name[BUFSIZ];
     char buf[BUFSIZ];
     int n;
-    FILE *fp;
-    if ((fp = fdopen(inputfd,"rb")) == 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pdftoraster: Can't open input file.\n"); 
-	  exit(1);
-    }
-    parsePDFTOPDFComment(fp, &deviceCopies, &deviceCollate);
-    fclose(fp);
 
     fd = cupsTempFd(name,sizeof(name));
     if (fd < 0) {
@@ -1600,41 +1594,52 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
       }
     }
     close(fd);
-    doc->popp_doc = poppler::document::load_from_file(name,"","");
+    doc.popp_doc = poppler::document::load_from_file(name,"","");
     unlink(name);
+  
+      FILE *fp;
+    if ((fp = fdopen(inputfd,"rb")) == 0) {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Can't open input file.\n"); 
+	  exit(1);
+    }
+    
+    parsePDFTOPDFComment(fp, &deviceCopies, &deviceCollate);
+    fclose(fp);
   }
 
-  if(doc->popp_doc != NULL)
-    npages = doc->popp_doc->pages();
+  if(doc.popp_doc != NULL)
+    npages = doc.popp_doc->pages();
 
   /* fix NumCopies, Collate ccording to PDFTOPDFComments */
-  doc->header.NumCopies = deviceCopies;
-  doc->header.Collate = deviceCollate ? CUPS_TRUE : CUPS_FALSE;
+  doc.header.NumCopies = deviceCopies;
+  doc.header.Collate = deviceCollate ? CUPS_TRUE : CUPS_FALSE;
   /* fixed other values that pdftopdf handles */
-  doc->header.MirrorPrint = CUPS_FALSE;
-  doc->header.Orientation = CUPS_ORIENT_0;
+  doc.header.MirrorPrint = CUPS_FALSE;
+  doc.header.Orientation = CUPS_ORIENT_0;
 
-  if (doc->header.cupsBitsPerColor != 1
-     && doc->header.cupsBitsPerColor != 2
-     && doc->header.cupsBitsPerColor != 4
-     && doc->header.cupsBitsPerColor != 8
-     && doc->header.cupsBitsPerColor != 16) {
+  if (doc.header.cupsBitsPerColor != 1
+     && doc.header.cupsBitsPerColor != 2
+     && doc.header.cupsBitsPerColor != 4
+     && doc.header.cupsBitsPerColor != 8
+     && doc.header.cupsBitsPerColor != 16) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Specified color format is not supported.\n"); 
     exit(1);
   }
-  if (doc->header.cupsColorOrder == CUPS_ORDER_PLANAR) {
-    doc->nplanes = doc->header.cupsNumColors;
+  
+  if (doc.header.cupsColorOrder == CUPS_ORDER_PLANAR) {
+    doc.nplanes = doc.header.cupsNumColors;
   } else {
-    doc->nplanes = 1;
+    doc.nplanes = 1;
   }
-  if (doc->header.cupsColorOrder == CUPS_ORDER_BANDED) {
-    doc->nbands = doc->header.cupsNumColors;
+  if (doc.header.cupsColorOrder == CUPS_ORDER_BANDED) {
+    doc.nbands = doc.header.cupsNumColors;
   } else {
-    doc->nbands = 1;
+    doc.nbands = 1;
   }
   /* set image's values */
-  switch (doc->header.cupsColorSpace) {
+  switch (doc.header.cupsColorSpace) {
   case CUPS_CSPACE_CIELab:
   case CUPS_CSPACE_ICC1:
   case CUPS_CSPACE_ICC2:
@@ -1652,9 +1657,9 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   case CUPS_CSPACE_ICCE:
   case CUPS_CSPACE_ICCF:
   case CUPS_CSPACE_CIEXYZ:
-    if (doc->header.cupsColorOrder != CUPS_ORDER_CHUNKED
-       || (doc->header.cupsBitsPerColor != 8
-          && doc->header.cupsBitsPerColor != 16)) {
+    if (doc.header.cupsColorOrder != CUPS_ORDER_CHUNKED
+       || (doc.header.cupsBitsPerColor != 8
+          && doc.header.cupsBitsPerColor != 16)) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Specified color format is not supported.\n"); 
       exit(1);
@@ -1673,7 +1678,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   case CUPS_CSPACE_GMCK:
   case CUPS_CSPACE_GMCS:
     popplerBitsPerPixel = 24;
-    doc->popplerNumColors = 3;
+    doc.popplerNumColors = 3;
     break;
   case CUPS_CSPACE_K:
   case CUPS_CSPACE_W:
@@ -1681,14 +1686,14 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   case CUPS_CSPACE_WHITE:
   case CUPS_CSPACE_GOLD:
   case CUPS_CSPACE_SILVER:
-    if (doc->header.cupsBitsPerColor == 1
-       && doc->header.cupsBitsPerPixel == 1) {
+    if (doc.header.cupsBitsPerColor == 1
+       && doc.header.cupsBitsPerPixel == 1) {
       popplerBitsPerPixel = 1;
     } else {
       popplerBitsPerPixel = 8;
     }
     /* set paper color white */
-    doc->popplerNumColors = 1;
+    doc.popplerNumColors = 1;
     break;
   default:
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
@@ -1696,21 +1701,21 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
     exit(1);
     break;
   }
-
-  if (!(doc->colour_profile->cm_disabled)) {
-    setPopplerColorProfile(doc, log, ld);
+//if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "pdftoraster: reaching this point2\n");
+  if (!(doc.colour_profile.cm_disabled)) {
+    setPopplerColorProfile(&doc, log, ld);
   }
 
-  if ((raster = cupsRasterOpen(1, doc->pwgraster ? CUPS_RASTER_WRITE_PWG :
+  if ((raster = cupsRasterOpen(1, doc.pwgraster ? CUPS_RASTER_WRITE_PWG :
 			       CUPS_RASTER_WRITE)) == 0) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Can't open raster stream.\n"); 
 	exit(1);
   }
-  selectConvertFunc(raster, doc, &convert, log, ld);
-  if(doc->popp_doc != NULL){    
+  selectConvertFunc(raster, &doc, &convert, log, ld);
+  if(doc.popp_doc != NULL){    
     for (i = 1;i <= npages;i++) {
-      outPage(doc,i,raster, &convert, log, ld);
+      outPage(&doc,i,raster, &convert, log, ld);
     }
   } else
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -1718,18 +1723,18 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
 
   cupsRasterClose(raster);
 
-  delete doc;
-  if (doc->ppd != NULL) {
-    ppdClose(doc->ppd);
+  //delete doc;
+  if (doc.ppd != NULL) {
+    ppdClose(doc.ppd);
   }
-  if (doc->colour_profile->colorProfile != NULL) {
-    cmsCloseProfile(doc->colour_profile->colorProfile);
+  if (doc.colour_profile.colorProfile != NULL) {
+    cmsCloseProfile(doc.colour_profile.colorProfile);
   }
-  if (doc->colour_profile->popplerColorProfile != NULL && doc->colour_profile->popplerColorProfile != doc->colour_profile->colorProfile) {
-    cmsCloseProfile(doc->colour_profile->popplerColorProfile);
+  if (doc.colour_profile.popplerColorProfile != NULL && doc.colour_profile.popplerColorProfile != doc.colour_profile.colorProfile) {
+    cmsCloseProfile(doc.colour_profile.popplerColorProfile);
   }
-  if (doc->colour_profile->colorTransform != NULL) {
-    cmsDeleteTransform(doc->colour_profile->colorTransform);
+  if (doc.colour_profile.colorTransform != NULL) {
+    cmsDeleteTransform(doc.colour_profile.colorTransform);
   }
 
   return 0;
@@ -1756,8 +1761,9 @@ void * operator new[](size_t size) _GLIBCXX_THROW (std::bad_alloc)
 {
   return malloc(size);
 }
-
+/*
 void operator delete[](void *p) throw ()
 {
   free(p);
 }
+*/
