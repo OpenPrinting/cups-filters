@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, pdftoraster: Moved core functionality of
+	  pdftoraster into the pdftoraster() filter function (Pull
+	  request #381, #382).
 	- cups-browsed: Make NotifLeaseDuration configurable and renew
 	  after half the lease duration not 60 sec before end. The
 	  early renewal improves reliability on busy systems a
