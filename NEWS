@@ -1,13 +1,16 @@
 NEWS - OpenPrinting CUPS Filters v1.28.9 - 2021-06-15
 -----------------------------------------------------
 
-CHANGES IN V1.28.9
+CHANGES IN V1.28.10
 
 	- cups-browsed: Make NotifLeaseDuration configurable and renew
 	  after half the lease duration not 60 sec before end. The
 	  early renewal improves reliability on busy systems a
 	  lot. For easier development and debugging short durations
 	  from 300 sec on can get selected (Pull request #378).
+
+CHANGES IN V1.28.9
+
 	- libcupsfilters: Silenced compiler warnings
 	- libcupsfilters: Removed duplicate code in the
 	  apply_filters() function.
