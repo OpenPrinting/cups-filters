@@ -25,7 +25,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 /*
- pdftoraster.cc
+ pdftoraster.cxx
  pdf to raster filter function
 */
 
@@ -100,7 +100,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 typedef struct cms_profile_s
 {
-    /* for color profiles */
+  /* for color profiles */
   cmsHPROFILE colorProfile = NULL;
   cmsHPROFILE popplerColorProfile = NULL;
   cmsHTRANSFORM colorTransform = NULL;
@@ -1497,7 +1497,6 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   void          *ld = data->logdata;
   int deviceCopies = 1;
   bool deviceCollate = false;
-  unsigned int popplerBitsPerPixel;
   conversion_function_t convert;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
@@ -1505,9 +1504,9 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   cmsSetLogErrorHandler(lcmsErrorHandler);
   parseOpts(data, &doc);
 
-    /* 
-   * Open the input data stream specified by inputfd ...
-   */
+ /*
+  * Open the input data stream specified by inputfd ...
+  */
   
   if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
@@ -1520,7 +1519,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
     return (1);
   }
 
-  /*
+ /*
   * Open the output data stream specified by the outputfd...
   */
 
@@ -1538,8 +1537,8 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   }
 
  /*
- * Make a temprorary file if input is stdin...
- */
+  * Make a temprorary file if input is stdin...
+  */
 
   if (inputseekable == 0) {
     /* stdin */
@@ -1674,7 +1673,6 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   case CUPS_CSPACE_RGBW:
   case CUPS_CSPACE_GMCK:
   case CUPS_CSPACE_GMCS:
-    popplerBitsPerPixel = 24;
     doc.popplerNumColors = 3;
     break;
   case CUPS_CSPACE_K:
@@ -1683,12 +1681,6 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   case CUPS_CSPACE_WHITE:
   case CUPS_CSPACE_GOLD:
   case CUPS_CSPACE_SILVER:
-    if (doc.header.cupsBitsPerColor == 1
-       && doc.header.cupsBitsPerPixel == 1) {
-      popplerBitsPerPixel = 1;
-    } else {
-      popplerBitsPerPixel = 8;
-    }
     /* set paper color white */
     doc.popplerNumColors = 1;
     break;
@@ -1708,6 +1700,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
 		   "pdftoraster: Can't open raster stream.\n"); 
 	exit(1);
   }
+  memset(&convert, 0, sizeof(conversion_function_t));
   selectConvertFunc(raster, &doc, &convert, log, ld);
   if(doc.poppler_doc != NULL){    
     for (i = 1;i <= npages;i++) {
