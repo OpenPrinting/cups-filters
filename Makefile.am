@@ -323,6 +323,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pdftopdf/qpdf_cm.h \
 	cupsfilters/pdftoippprinter.c \
 	cupsfilters/pdftops.c \
+	cupsfilters/pdftoraster.cxx \
 	cupsfilters/ppdgenerator.c \
 	cupsfilters/pstops.c \
 	cupsfilters/raster.c \
@@ -344,6 +345,7 @@ libcupsfilters_la_LIBADD = \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
+	$(POPPLER_LIBS)
 	-lm
 libcupsfilters_la_CFLAGS = \
 	-I$(srcdir)/ppd/ \
@@ -973,27 +975,13 @@ pstops_LDADD = \
 endif
 
 pdftoraster_SOURCES = \
- cupsfilters/bitmap.h \
-	filter/pdftoraster.cxx
+	filter/pdftoraster.c
 pdftoraster_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS) \
-	$(LCMS_CFLAGS) \
-	$(LIBJPEG_CFLAGS) \
-	$(LIBPNG_CFLAGS) \
-	$(POPPLER_CFLAGS) \
-	$(TIFF_CFLAGS)
-pdftoraster_CXXFLAGS = $(pdftoraster_CFLAGS)
+	$(CUPS_CFLAGS)
 pdftoraster_LDADD = \
 	libcupsfilters.la \
-	libppd.la \
-	$(CUPS_LIBS) \
-	$(LCMS_LIBS) \
-	$(LIBJPEG_LIBS) \
-	$(LIBPNG_LIBS) \
-	$(POPPLER_LIBS) \
-	$(TIFF_LIBS)
+	$(CUPS_LIBS)
 
 rastertoescpx_SOURCES = \
 	cupsfilters/driver.h \
