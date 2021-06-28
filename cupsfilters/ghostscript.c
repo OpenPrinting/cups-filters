@@ -1193,7 +1193,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
         }
         else if(!strncasecmp(val, "Device", 6))
         {
-          char *ptr = val+6;
+          const char *ptr = val + 6;
           if(strtol(ptr, (char **)&ptr, 10)>1)  /*  Printer seems to support more then 1 color  */
           {
             pxlcolor = 1;
