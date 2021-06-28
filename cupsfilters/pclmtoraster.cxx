@@ -194,7 +194,7 @@ parseOpts(filter_data_t *data,
          !strcasecmp(attr->value, "yes")))
       pclmtoraster_data->pwgraster = 1;
     if (pclmtoraster_data->pwgraster == 1)
-      cupsRasterParseIPPOptions(header, num_options, options,
+      cupsRasterParseIPPOptions(header, data,
 				pclmtoraster_data->pwgraster, 0);
 #endif /* HAVE_CUPS_1_7 */
   } else {
@@ -210,7 +210,7 @@ parseOpts(filter_data_t *data,
       else
         pclmtoraster_data->pwgraster = 0;
     }
-    cupsRasterParseIPPOptions(header, num_options, options,
+    cupsRasterParseIPPOptions(header, data,
 			      pclmtoraster_data->pwgraster, 1);
 #else
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,

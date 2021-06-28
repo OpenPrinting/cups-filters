@@ -411,7 +411,7 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
 	 !strcasecmp(attr->value, "yes")))
       doc->pwgraster = 1;
     if (doc->pwgraster == 1)
-      cupsRasterParseIPPOptions(&(doc->header), num_options, options, doc->pwgraster, 0);
+      cupsRasterParseIPPOptions(&(doc->header), data, doc->pwgraster, 0);
 #endif /* HAVE_CUPS_1_7 */
   } else {
 #ifdef HAVE_CUPS_1_7
@@ -426,7 +426,7 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
       else
 	doc->pwgraster = 0;
     }
-    cupsRasterParseIPPOptions(&(doc->header),num_options,options,doc->pwgraster,1);
+    cupsRasterParseIPPOptions(&(doc->header),data,doc->pwgraster,1);
 #else
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
         "pdftoraster: No PPD file specified.");

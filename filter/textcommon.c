@@ -517,6 +517,7 @@ TextMain(const char *name,	/* I - Name of filter */
   		cmntState;	/* Inside a comment */
   enum	{StrBeg=-1, NoStr, StrEnd}	
   		strState;	/* Inside a dbl-quoted string */
+	filter_data_t data;
 
 
  /*
@@ -555,6 +556,7 @@ TextMain(const char *name,	/* I - Name of filter */
       return (1);
     }
   }
+  
 
  /*
   * Process command-line options and write the prolog...
@@ -562,6 +564,30 @@ TextMain(const char *name,	/* I - Name of filter */
 
   options     = NULL;
   num_options = cupsParseOptions(argv[5], 0, &options);
+	if ((data.printer = getenv("PRINTER")) == NULL)
+    data.printer = argv[0];
+  data.job_id = atoi(argv[1]);
+  data.job_user = argv[2];
+  data.job_title = argv[3];
+  data.copies = atoi(argv[4]);
+  data.job_attrs = NULL;        /* We use command line options */
+  data.printer_attrs = NULL;    /* We use the queue's PPD file */
+  data.num_options = num_options;
+  data.options = options;       /* Command line options from 5th arg */
+  data.ppdfile = getenv("PPD"); /* PPD file name in the "PPD"
+					  environment variable. */
+  data.ppd = data.ppdfile ?
+                    ppdOpenFile(data.ppdfile) : NULL;
+                                       /* Load PPD file */
+  data.logfunc = cups_logfunc;  /* Logging scheme of CUPS */
+  data.logdata = NULL;
+  data.iscanceledfunc = cups_iscanceledfunc; /* Job-is-canceled
+						       function */
+  data.iscanceleddata = NULL;
+  if(data.ppd){
+	  ppdMarkDefaults(data.ppd);
+	  ppdMarkOptions(data.ppd, data.num_options, data.options);
+  }
 
   if ((val = cupsGetOption("prettyprint", num_options, options)) != NULL &&
       strcasecmp(val, "no") && strcasecmp(val, "off") &&
@@ -615,7 +641,7 @@ TextMain(const char *name,	/* I - Name of filter */
   ppd = SetCommonOptions(num_options, options, 1);
 
   if (!ppd) {
-    cupsRasterParseIPPOptions(&h, num_options, options, 0, 1);
+    cupsRasterParseIPPOptions(&h, &data, 0, 1);
     Orientation = h.Orientation;
     Duplex = h.Duplex;
     ColorDevice = h.cupsNumColors <= 1 ? 0 : 1;

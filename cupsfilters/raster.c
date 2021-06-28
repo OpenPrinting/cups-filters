@@ -103,7 +103,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 {
   ppd_file_t *ppd;
   ipp_t *printer_attrs, *job_attrs;
-  int num_options;
+  int num_options = 0;
   cups_option_t *options = NULL;
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
@@ -118,10 +118,12 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   ppd_choice_t *choice;
   char valuebuffer[2048];
   int res = 1;
+  int xres = -1; int yres = -1;
+  
+  printer_attrs = data->printer_attrs;
+  job_attrs = data->job_attrs;
 
-
-  num_options = data->num_options;
-  options = data->options;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
   ppd = data->ppd;
   printer_attrs = data->printer_attrs;
   job_attrs = data->job_attrs;
@@ -132,6 +134,50 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     appleraster = 1;
   else
     cupsraster = 1;
+    /*  These values will be used in case we don't find supported resolutions
+        for given OUTFORMAT */
+  if((attr = ippFindAttribute(printer_attrs, "printer-resolution-default", IPP_TAG_RESOLUTION))!=NULL)
+  {
+    ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+    const char *p = valuebuffer;
+    xres = atoi(p);
+    if((p = strchr(p, 'x'))!=NULL) yres = atoi(p+1);
+    else yres = xres;
+  }
+  /*  Finding supported resolution for given outFormat  */
+  if(pwgraster){
+    if((attr = ippFindAttribute(printer_attrs, "pwg-raster-document-resolution-supported",
+     IPP_TAG_RESOLUTION))!=NULL)
+    {
+      strncpy(valuebuffer, ippGetString(attr, 0, NULL), 
+        sizeof(valuebuffer)-1);
+      const char *p = valuebuffer;
+      xres = atoi(p);
+      if((p = strchr(p, 'x'))!=NULL)
+        yres = atoi(p+1);
+      else 
+        yres = xres;
+    }
+  }
+  else if(appleraster){
+    if((attr = ippFindAttribute(printer_attrs, "urf-supported",
+     IPP_TAG_KEYWORD))!=NULL)
+    {
+      for(int i =0; i<ippGetCount(attr); i++){
+        const char *p = ippGetString(attr, i, NULL);
+        if(strncasecmp(p, "RS", 2)) continue;
+        int lo; int hi;
+        lo = atoi(p+2);
+        if(lo==0) lo = -1;
+        p = strchr(p, '-');
+        if(p) hi = atoi(p+1);
+        else hi = lo;
+        xres = hi;
+        yres = hi;
+      }
+    }
+  }
+
   if (log) {
     if (*cspace == -1)
       log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -161,7 +207,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	    "PWG Raster output requested (via \"PWGRaster\" PPD attribute)");
     }
     if (pwgraster || appleraster) {
-      cupsRasterParseIPPOptions(h, num_options, options, pwgraster, 0);
+      cupsRasterParseIPPOptions(h, data, pwgraster, 0);
       if ((pwgraster &&
 	   (ppd_attr = ppdFindAttr(ppd, "cupsPwgRasterDocumentTypeSupported",
 				   NULL)) != NULL) ||
@@ -224,7 +270,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	  pwgraster = 0;
       }
     }
-    cupsRasterParseIPPOptions(h, num_options, options, pwgraster, 1);
+    cupsRasterParseIPPOptions(h, data, pwgraster, 1);
     if (printer_attrs &&
 	((pwgraster &&
 	  (attr = ippFindAttribute(printer_attrs,
@@ -289,20 +335,29 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       const char *p = ppd_attr->value;
       h->HWResolution[0] = atoi(p);
       if ((p = strchr(p, 'x')) != NULL)
-	h->HWResolution[1] = atoi(p);
+	h->HWResolution[1] = atoi(p+1);   /*  Since p now points to a pointer such that *p = 'x', 
+                                        therefore using p+1, cause p+1 points to a numeric value  */
       else
 	h->HWResolution[1] = h->HWResolution[0];
       if (h->HWResolution[0] <= 0)
 	h->HWResolution[0] = 300;
       if (h->HWResolution[1] <= 0)
 	h->HWResolution[1] = h->HWResolution[0];
-    } else {
+  } else {
+    if(xres!=-1){
+      h->HWResolution[0] = xres;
+      h->HWResolution[1] = yres;  
+    }
+    else{
       h->HWResolution[0] = 300;
       h->HWResolution[1] = 300;
     }
+  }
     h->cupsWidth = h->HWResolution[0] * h->PageSize[0] / 72;
     h->cupsHeight = h->HWResolution[1] * h->PageSize[1] / 72;
   }
+
+  cupsFreeOptions(num_options, options);
 
   return (0);
 }
@@ -543,9 +598,8 @@ cupsRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 
 int                                          /* O - -1 on error, 0 on success */
 cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
-			  int num_options,        /* I - Number of options */
-			  cups_option_t *options, /* I - Options */
-			  int pwg_raster,         /* I - 1 if PWG Raster */
+			  filter_data_t *data,
+        int pwg_raster,         /* I - 1 if PWG Raster */
 			  int set_defaults)       /* I - If 1, se default values
 						     for all fields for which
 						     we did not get an option */
@@ -561,6 +615,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
                 *media_type;		/* Media type */
   pwg_media_t   *size_found;            /* page size found for given name */
   float         size;                   /* page size dimension */
+  int num_options = 0;          /*  number of options */
+  cups_option_t *options = NULL;  /*  Options */
 
  /*
   * Range check input...
@@ -575,6 +631,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   * and media type ("media-type") and if so, put these list elements into
   * their dedicated options.
   */
+
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
 
   page_size = NULL;
   media_source = NULL;
@@ -1641,9 +1699,32 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   if (page_size != NULL)
     free(page_size);
 
+  cupsFreeOptions(num_options, options);
+
   return (0);
 }
 
+
+/*  Function for storing job-attrs in options */
+int joinJobOptionsAndAttrs(filter_data_t* data, int num_options, cups_option_t **options)
+{
+  ipp_t *job_attrs = data->job_attrs;   /*  Job attributes  */
+  ipp_attribute_t *ipp_attr;            /*  IPP attribute   */
+  int i = 0;                            /*  Looping variable*/
+  char buf[2048];                       /*  Buffer for storing value of ipp attr  */
+  cups_option_t *opt;
+
+  for(i = 0, opt=data->options; i<data->num_options; i++, opt++){
+    num_options = cupsAddOption(opt->name, opt->value, num_options, options);
+  }
+
+  for(ipp_attr = ippFirstAttribute(job_attrs); ipp_attr; ipp_attr = ippNextAttribute(job_attrs)){
+    ippAttributeString(ipp_attr, buf, sizeof(buf));
+    num_options = cupsAddOption(ippGetName(ipp_attr), buf, num_options, options);
+  }
+
+  return num_options;
+}
 
 /*
  * End
