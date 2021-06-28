@@ -49,10 +49,12 @@ extern int              cupsRasterSetColorSpace(cups_page_header2_t *h,
 						cups_cspace_t *cspace,
 						int *high_depth);
 extern int              cupsRasterParseIPPOptions(cups_page_header2_t *h,
-						  int num_options,
-						  cups_option_t *options,
+						  filter_data_t *data,
 						  int pwg_raster,
 						  int set_defaults);
+extern int				joinJobOptionsAndAttrs(filter_data_t *data, 
+						int num_options, 
+						cups_option_t **options);
 
 #  ifdef __cplusplus
 }

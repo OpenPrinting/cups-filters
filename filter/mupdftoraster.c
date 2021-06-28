@@ -251,6 +251,7 @@ main (int argc, char **argv, char *envp[])
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
   cm_calibration_t cm_calibrate;
+  filter_data_t data;
 #ifdef HAVE_CUPS_1_7
   ppd_attr_t *attr;
 #endif /* HAVE_CUPS_1_7 */
@@ -316,6 +317,26 @@ main (int argc, char **argv, char *envp[])
     }
     strncpy(infilename, argv[6], sizeof(infilename) - 1);
   }
+  if ((data.printer = getenv("PRINTER")) == NULL)
+    data.printer = argv[0];
+  data.job_id = atoi(argv[1]);
+  data.job_user = argv[2];
+  data.job_title = argv[3];
+  data.copies = atoi(argv[4]);
+  data.job_attrs = NULL;        /* We use command line options */
+  data.printer_attrs = NULL;    /* We use the queue's PPD file */
+  data.num_options = num_options;
+  data.options = options;       /* Command line options from 5th arg */
+  data.ppdfile = getenv("PPD"); /* PPD file name in the "PPD"
+					  environment variable. */
+  data.ppd = ppd;
+                                       /* Load PPD file */
+  data.logfunc = cups_logfunc;  /* Logging scheme of CUPS */
+  data.logdata = NULL;
+  data.iscanceledfunc = cups_iscanceledfunc; /* Job-is-canceled
+						       function */
+  data.iscanceleddata = NULL;
+
 
   /* If doc type is not PDF exit */
   if(parse_doc_type(fp))
@@ -362,11 +383,11 @@ main (int argc, char **argv, char *envp[])
     h.cupsWidth = h.HWResolution[0] * h.PageSize[0] / 72;
     h.cupsHeight = h.HWResolution[1] * h.PageSize[1] / 72;
 #ifdef HAVE_CUPS_1_7
-    cupsRasterParseIPPOptions(&h, num_options, options, 1, 0);
+    cupsRasterParseIPPOptions(&h, &data, 1, 0);
 #endif /* HAVE_CUPS_1_7 */
   } else {
 #ifdef HAVE_CUPS_1_7
-    cupsRasterParseIPPOptions(&h, num_options, options, 1, 1);
+    cupsRasterParseIPPOptions(&h, &data, 1, 1);
 #else
     fprintf(stderr, "ERROR: No PPD file specified.\n");
     goto out;

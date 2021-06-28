@@ -866,7 +866,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   /* The filterSetCommonOptions() does not set doc.Color
      according to option settings (user's demand for color/gray),
      so we parse the options and set the mode here */
-  cupsRasterParseIPPOptions(&h, num_options, options, 0, 1);
+  cupsRasterParseIPPOptions(&h, data, 0, 1);
   if (doc.Color)
     doc.Color = h.cupsNumColors <= 1 ? 0 : 1;
   if (!doc.ppd) {
