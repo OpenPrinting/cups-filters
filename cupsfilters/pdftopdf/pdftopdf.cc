@@ -904,14 +904,14 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param,char *final_content_t
 // }}}
 
 // reads from stdin into temporary file. returns FILE *  or NULL on error
-FILE *copy_stdin_to_temp(pdftopdf_doc_t *doc) // {{{
+FILE *copy_fd_to_temp(int infd, pdftopdf_doc_t *doc) // {{{
 {
   char buf[BUFSIZ];
   int n;
 
   // FIXME:  what does >buf mean here?
-  int fd=cupsTempFd(buf,sizeof(buf));
-  if (fd<0) {
+  int outfd=cupsTempFd(buf,sizeof(buf));
+  if (outfd<0) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
 				   "pdftopdf: Can't create temporary file");
     return NULL;
@@ -920,27 +920,27 @@ FILE *copy_stdin_to_temp(pdftopdf_doc_t *doc) // {{{
   unlink(buf);
 
   // copy stdin to the tmp file
-  while ((n=read(0,buf,BUFSIZ)) > 0) {
-    if (write(fd,buf,n) != n) {
+  while ((n=read(infd,buf,BUFSIZ)) > 0) {
+    if (write(outfd,buf,n) != n) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
 				     "pdftopdf: Can't copy stdin to temporary "
 				     "file");
-      close(fd);
+      close(outfd);
       return NULL;
     }
   }
-  if (lseek(fd,0,SEEK_SET) < 0) {
+  if (lseek(outfd,0,SEEK_SET) < 0) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
 				   "pdftopdf: Can't rewind temporary file");
-    close(fd);
+    close(outfd);
     return NULL;
   }
 
   FILE *f;
-  if ((f=fdopen(fd,"rb")) == 0) {
+  if ((f=fdopen(outfd,"rb")) == 0) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
 				   "pdftopdf: Can't fdopen temporary file");
-    close(fd);
+    close(outfd);
     return NULL;
   }
   return f;
@@ -966,7 +966,7 @@ bool is_empty(FILE *f) // {{{
 int                           /* O - Error status */
 pdftopdf(int inputfd,         /* I - File descriptor input stream */
 	 int outputfd,        /* I - File descriptor output stream */
-	 int inputseekable,   /* I - Is input stream seekable? (unused) */
+	 int inputseekable,   /* I - Is input stream seekable? */
 	 filter_data_t *data, /* I - Job and printer data */
 	 void *parameters)    /* I - Filter-specific parameters */
 {
@@ -977,8 +977,6 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void               *icd = data->iscanceleddata;
 
-
-  (void)inputseekable;
 
   if (parameters)
     final_content_type = (char *)parameters;
@@ -1012,35 +1010,26 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
 
     FILE *tmpfile = NULL;
 
-    if (inputfd == 0)
-    {
-      tmpfile = copy_stdin_to_temp(&doc);
-      if (tmpfile && is_empty(tmpfile)) {
-        fclose(tmpfile);
-        // ppdClose(ppd);
-        empty = 1;
-      } else if ((!tmpfile)||
-      (!proc->loadFile(tmpfile, &doc, WillStayAlive, 1)))
-      {
-        // ppdClose(ppd);
-        return 1;
+    FILE *f = NULL;
+    if (inputseekable && inputfd > 0) {
+      if ((f = fdopen(inputfd, "rb")) == NULL) {
+	// ppdClose(ppd);
+	return 1;
+      }
+    } else {
+      if ((f = copy_fd_to_temp(inputfd, &doc)) == NULL) {
+	// ppdClose(ppd);
+	return 1;
       }
     }
-    else
-    {
-      FILE *f = NULL;
-      if ((f = fdopen(inputfd, "rb")) == NULL) {
-        // ppdClose(ppd);
-        return 1;
-      } else if (is_empty(f)) {
-	fclose(f);
-	// ppdClose(ppd);
-	empty = 1;
-      } else if (!proc->loadFile(f, &doc, WillStayAlive, 1)) {
-	fclose(f);
-        // ppdClose(ppd);
-        return 1;
-      }
+    if (is_empty(f)) {
+      fclose(f);
+      // ppdClose(ppd);
+      empty = 1;
+    } else if (!proc->loadFile(f, &doc, WillStayAlive, 1)) {
+      fclose(f);
+      // ppdClose(ppd);
+      return 1;
     }
 
     if(empty)
