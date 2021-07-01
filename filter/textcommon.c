@@ -489,6 +489,12 @@ static void	UpdatePageVars(void);
  * 'TextMain()' - Standard main entry for text filters.
  */
 
+/*	Already PPD file independent, although a little scope of improvement
+	1)	Default language level of IPP printers in 3 instead of 1
+	2)	Adding support of job-attrs
+	3)	finding default page-size using IPP attrs(probably using cfGenerateSizes fucntion)
+														 instead of predefined values.	*/
+
 int				/* O - Exit status */
 TextMain(const char *name,	/* I - Name of filter */
          int        argc,	/* I - Number of command-line arguments */

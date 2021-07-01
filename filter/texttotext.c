@@ -94,7 +94,9 @@ main(int  argc,				/* I - Number of command-line args */
   int           page_left = 0,          /* Page margins */
                 page_right = 0,
                 page_top = 0,
-                page_bottom = 0;
+                page_bottom = 0,
+                num_lines_per_inch = 6,
+                num_chars_per_inch = 10;
   int           text_width,             /* Width of the text area on the page */
                 text_height;            /* Height of the text area on the
 					   page */
@@ -160,6 +162,12 @@ main(int  argc,				/* I - Number of command-line args */
 					   to the next line */
   int           num_pages = 0;          /* Number of pages which get actually
 					   printed */
+  ipp_t *printer_attrs;   
+  ipp_t *job_attrs ;
+  ipp_attribute_t *ipp;
+  ipp_t *defsize;
+  char buf[2048];
+  
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
@@ -268,29 +276,83 @@ main(int  argc,				/* I - Number of command-line args */
   * Parse the options
   */
 
+  /*  Default page size attributes as per printer attributes  */
+  defsize = ippGetCollection(ippFindAttribute(printer_attrs,       
+                          "media-col-default", IPP_TAG_ZERO), 0);
+  
+  if((val = cupsGetOption("NumLinesPerInch", num_options, options))!= NULL         ||
+    (ipp = ippFindAttribute(job_attrs,"num-lines-per-inch", IPP_TAG_INTEGER)) != NULL ||
+    (ipp = ippFindAttribute(printer_attrs,"num-lines-per-inch-default", IPP_TAG_INTEGER)) != NULL ||
+    (ppd_attr = ppdFindAttr(ppd, "DefaultNumLinesPerInch",NULL))!=NULL){
+      if(val == NULL && ipp!=NULL){
+        ippAttributeString(ipp, buf, sizeof(buf));
+        val = buf;
+      }
+      if(val == NULL){
+        val = ppd_attr->value;
+      }
+      num_lines_per_inch = atoi(val);
+    }
+
+  if((val = cupsGetOption("NumCharsPerInch", num_options, options))!= NULL          ||
+    (ipp = ippFindAttribute(job_attrs,"num-chars-per-inch", IPP_TAG_INTEGER)) != NULL  ||
+    (ipp = ippFindAttribute(printer_attrs,"num-chars-per-inch-default", IPP_TAG_INTEGER)) != NULL  ||
+    (ppd_attr = ppdFindAttr(ppd, "DefautlNumCharsPerInch", NULL))!=NULL){
+      if(val == NULL && ipp!=NULL){
+        ippAttributeString(ipp, buf, sizeof(buf));
+        val = buf;
+      }
+      if(val == NULL){
+        val = ppd_attr->value;
+      }
+      num_chars_per_inch = atoi(val);
+    }
+    fprintf(stderr, "Debug: num of lines per inch = %d\n",num_lines_per_inch);
+    fprintf(stderr, "Debug: num of chars per inch = %d\n",num_chars_per_inch);
+
   /* With the "PageSize"/"PageRegion" options we only determine the number
      of lines and columns of a page, we do not use the geometry defined by
      "PaperDimension" and "ImageableArea" in the PPD */
-  if ((val = cupsGetOption("PageSize", num_options, options)) != NULL ||
-      (val = cupsGetOption("PageRegion", num_options, options)) != NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultPageSize", NULL)) != NULL ||
+  if ((val = cupsGetOption("PageSize", num_options, options)) != NULL       ||
+      (val = cupsGetOption("PageRegion", num_options, options)) != NULL     ||
+      (ipp = ippFindAttribute(job_attrs, "page-size", IPP_TAG_ZERO ))!=NULL ||
+      (ipp = ippFindAttribute(job_attrs, "page-region", IPP_TAG_ZERO))!=NULL||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultPageSize", NULL)) != NULL        ||
       (ppd_attr = ppdFindAttr(ppd, "DefaultPageRegion", NULL)) != NULL) {
-    if (val == NULL)
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val==NULL)
       val = ppd_attr->value;
     fprintf(stderr, "DEBUG: PageSize: %s\n", val);
     snprintf(buffer, sizeof(buffer), "Default%sNumLines", val);
     if ((val2 = cupsGetOption(buffer + 7, num_options, options)) != NULL ||
-	(ppd_attr = ppdFindAttr(ppd, buffer, NULL)) != NULL) {
-      if (val2 == NULL)
-	val2 = ppd_attr->value;
+  (ipp = ippFindAttribute(job_attrs, buffer+7, IPP_TAG_ZERO))!= NULL   ||
+  (ipp = ippFindAttribute(printer_attrs, buffer, IPP_TAG_ZERO))!=NULL ||
+  (ppd_attr = ppdFindAttr(ppd, buffer, NULL)) != NULL) {
+    char buf2[2048];
+      if (val2 == NULL && ipp!=NULL){
+        ippAttributeString(ipp, buf2, sizeof(buf2));
+        val2 = buf2;
+      }
+      if(val2==NULL)
+	      val2 = ppd_attr->value;
       if (!strncasecmp(val2, "Custom.", 7))
 	val2 += 7;
       num_lines = atoi(val2);
     }
     snprintf(buffer, sizeof(buffer), "Default%sNumColumns", val);
     if ((val2 = cupsGetOption(buffer + 7, num_options, options)) != NULL ||
-	(ppd_attr = ppdFindAttr(ppd, buffer, NULL)) != NULL) {
-      if (val2 == NULL)
+      (ipp = ippFindAttribute(job_attrs, buffer+7, IPP_TAG_ZERO))!=NULL  ||
+      (ipp = ippFindAttribute(printer_attrs, buffer, IPP_TAG_ZERO))!=NULL ||
+      (ppd_attr = ppdFindAttr(ppd, buffer, NULL))!=NULL) {
+    char buf2[2048];
+      if (val2 == NULL && ipp!=NULL){
+        ippAttributeString(ipp, buf2, sizeof(buf2));
+        val2 = buf2;
+      }
+if(val2==NULL)
 	val2 = ppd_attr->value;
       if (!strncasecmp(val2, "Custom.", 7))
 	val2 += 7;
@@ -307,10 +369,40 @@ main(int  argc,				/* I - Number of command-line args */
       num_columns = 80;
     }
   }
+  else if((ipp = ippFindAttribute(defsize, "media-size", IPP_TAG_ZERO))!= NULL){
+    ipp_t *media_size = ippGetCollection(ipp, 0);
+    int x_dim = ippGetInteger(ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO),0);
+    int y_dim = ippGetInteger(ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO),0);
+    num_lines = (int)((y_dim/72.0)*(num_lines_per_inch));         /*  Since y_dim and x_dim are in points, 
+                                                                      divide them by 72 to convert in inch  */
+    num_columns = (int)((x_dim/72.0)*(num_chars_per_inch));
+  }
+  else if((ipp = ippFindAttribute(printer_attrs, "media-default", IPP_TAG_ZERO))!=NULL){
+    pwg_media_t *pwg = pwgMediaForPWG(ippGetString(ipp, 0, NULL));
+    int x_dim = pwg->width;
+    int y_dim = pwg->length;
+    num_lines = (int)((y_dim/72.0)*(num_lines_per_inch));
+    num_columns = (int)((x_dim/72.0)*(num_chars_per_inch));
+  }
+  if (num_lines <= 0) {
+    fprintf(stderr, "DEBUG: Invalid number of lines %d, using default: 66\n",
+      num_lines);
+    num_lines = 66;
+  }
+  if (num_columns <= 0) {
+    fprintf(stderr, "DEBUG: Invalid number of columns %d, using default: 80\n",
+      num_columns);
+    num_columns = 80;
+  }
 
   /* Direct specification of number of lines/columns, mainly for debugging
      and development */
-  if ((val = cupsGetOption("page-height", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("page-height", num_options, options)) != NULL  ||
+      (ipp = ippFindAttribute(job_attrs, "page-height", IPP_TAG_INTEGER))!=NULL) {
+        if(val == NULL){
+          ippAttributeString(ipp, buf, sizeof(buf));
+          val = buf;
+        }
     i = atoi(val);
     if (i > 0)
       num_lines = i;
@@ -318,7 +410,12 @@ main(int  argc,				/* I - Number of command-line args */
       fprintf(stderr, "DEBUG: Invalid number of lines %d, using default value: %d\n",
 	      i, num_lines);
   }
-  if ((val = cupsGetOption("page-width", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("page-width", num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "page-width", IPP_TAG_INTEGER))!=NULL) {
+    if(val == NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
     i = atoi(val);
     if (i > 0)
       num_columns = i;
@@ -331,8 +428,14 @@ main(int  argc,				/* I - Number of command-line args */
 	  num_lines, num_columns);
   
   if ((val = cupsGetOption("page-left", num_options, options)) != NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-left", NULL)) != NULL) {
-    if (val == NULL)
+      (ipp = ippFindAttribute(job_attrs, "page-left", IPP_TAG_INTEGER))!=NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-left", NULL)) != NULL ||
+      (ipp = ippFindAttribute(defsize, "media-left-margin", IPP_TAG_INTEGER))!=NULL) {
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val == NULL && ppd_attr!=NULL)
       val = ppd_attr->value;
     if (!strncasecmp(val, "Custom.", 7))
       val += 7;
@@ -344,8 +447,14 @@ main(int  argc,				/* I - Number of command-line args */
     }
   }
   if ((val = cupsGetOption("page-right", num_options, options)) != NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-right", NULL)) != NULL) {
-    if (val == NULL)
+      (ipp = ippFindAttribute(job_attrs, "page-right", IPP_TAG_INTEGER))!=NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-right", NULL)) != NULL  ||
+        (ipp = ippFindAttribute(defsize, "media-right-margin", IPP_TAG_INTEGER))!=NULL) {
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val == NULL && ppd_attr!=NULL)
       val = ppd_attr->value;
     if (!strncasecmp(val, "Custom.", 7))
       val += 7;
@@ -357,9 +466,16 @@ main(int  argc,				/* I - Number of command-line args */
     }
   }
   if ((val = cupsGetOption("page-top", num_options, options)) != NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-top", NULL)) != NULL) {
-    if (val == NULL)
+      (ipp = ippFindAttribute(job_attrs,"page-top", IPP_TAG_INTEGER))!=NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-top", NULL)) != NULL  ||
+      (ipp = ippFindAttribute(defsize, "media-top-margin", IPP_TAG_INTEGER))!=NULL) {
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val == NULL && ppd_attr!=NULL)
       val = ppd_attr->value;
+    
     if (!strncasecmp(val, "Custom.", 7))
       val += 7;
     page_top = atoi(val);
@@ -370,8 +486,14 @@ main(int  argc,				/* I - Number of command-line args */
     }
   }
   if ((val = cupsGetOption("page-bottom", num_options, options)) != NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-bottom", NULL)) != NULL) {
-    if (val == NULL)
+      (ipp = ippFindAttribute(job_attrs,"page-bottom",IPP_TAG_INTEGER))!=NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-bottom", NULL)) != NULL ||
+      (ipp = ippFindAttribute(defsize, "media-bottom-margin", IPP_TAG_INTEGER))!=NULL) {
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val==NULL && ppd_attr!=NULL)
       val = ppd_attr->value;
     if (!strncasecmp(val, "Custom.", 7))
       val += 7;
@@ -392,8 +514,14 @@ main(int  argc,				/* I - Number of command-line args */
 
   strcpy(encoding, "ASCII//IGNORE");
   if ((val = cupsGetOption("PrinterEncoding", num_options, options)) != NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultPrinterEncoding", NULL)) != NULL) {
-    if (val == NULL)
+      (ipp = ippFindAttribute(job_attrs, "printer-encoding", IPP_TAG_ZERO))!=NULL ||
+      (ppd_attr = ppdFindAttr(ppd, "DefaultPrinterEncoding", NULL)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "printer-encoding-default", IPP_TAG_ZERO))!= NULL) {
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val == NULL && ppd_attr!=NULL)
       val = ppd_attr->value;
     if (!strncasecmp(val, "Custom.", 7))
       val += 7;
@@ -406,8 +534,14 @@ main(int  argc,				/* I - Number of command-line args */
   fprintf(stderr, "DEBUG: Output encoding: %s\n", encoding);
   
   if ((val = cupsGetOption("OverlongLines", num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "overlong-lines", IPP_TAG_ENUM))!=NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "overlong-lines-default", IPP_TAG_ENUM))!=NULL ||
       (ppd_attr = ppdFindAttr(ppd, "DefaultOverlongLines", NULL)) != NULL) {
-    if (val == NULL)
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val == NULL)
       val = ppd_attr->value;
     if (!strcasecmp(val, "Truncate"))
       overlong_lines = TRUNCATE;
@@ -425,8 +559,14 @@ main(int  argc,				/* I - Number of command-line args */
 	    "Wrap exactly at maximum width")));
 
   if ((val = cupsGetOption("TabWidth", num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs,"tab-width", IPP_TAG_INTEGER))!=NULL ||
+      (ipp = ippFindAttribute(printer_attrs,"tab-width-default",  IPP_TAG_INTEGER ))!=NULL  ||
       (ppd_attr = ppdFindAttr(ppd, "DefaultTabWidth", NULL)) != NULL) {
-    if (val == NULL)
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val == NULL && ppd_attr!=NULL)
       val = ppd_attr->value;
     if (!strncasecmp(val, "Custom.", 7))
       val += 7;
@@ -440,8 +580,14 @@ main(int  argc,				/* I - Number of command-line args */
   fprintf(stderr, "DEBUG: Tab width: %d\n", tab_width);
 
   if ((val = cupsGetOption("Pagination", num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "pagination", IPP_TAG_BOOLEAN))!=NULL  ||
+      (ipp = ippFindAttribute(printer_attrs, "pagination-default", IPP_TAG_BOOLEAN))!=NULL  ||
       (ppd_attr = ppdFindAttr(ppd, "DefaultPagination", NULL)) != NULL) {
-    if (val == NULL)
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf,sizeof(buf));
+      val = buf;
+    }
+    if(val == NULL && ppd_attr!=NULL)
       val = ppd_attr->value;
     if (is_true(val))
       pagination = 1;
@@ -455,8 +601,14 @@ main(int  argc,				/* I - Number of command-line args */
 	  (pagination ? "Yes" : "No"));
 
   if ((val = cupsGetOption("SendFF", num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "sendff", IPP_TAG_BOOLEAN))!=NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "sendff-default", IPP_TAG_BOOLEAN))!=NULL ||
       (ppd_attr = ppdFindAttr(ppd, "DefaultSendFF", NULL)) != NULL) {
-    if (val == NULL)
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val==NULL && ppd_attr!=NULL)
       val = ppd_attr->value;
     if (is_true(val))
       send_ff = 1;
@@ -471,8 +623,14 @@ main(int  argc,				/* I - Number of command-line args */
 
   if ((val = cupsGetOption("NewlineCharacters", num_options, options)) !=
       NULL ||
+      (ipp = ippFindAttribute(job_attrs, "newline-characters", IPP_TAG_ENUM))!=NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "newline-characters-default", IPP_TAG_ENUM))!=NULL ||
       (ppd_attr = ppdFindAttr(ppd, "DefaultNewlineCharacters", NULL)) != NULL) {
-    if (val == NULL)
+    if (val == NULL && ipp!=NULL){
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
+    }
+    if(val == NULL && ppd_attr!=NULL)
       val = ppd_attr->value;
     if (!strcasecmp(val, "LF"))
       newline_char = LF;
@@ -490,7 +648,12 @@ main(int  argc,				/* I - Number of command-line args */
 	    "Carriage Return (CR) and Line Feed (LF)")));
 
   if ((val = cupsGetOption("page-ranges", num_options, options)) !=
-      NULL) {
+      NULL  ||
+      (ipp = ippFindAttribute(job_attrs, "page-ranges", IPP_TAG_ZERO))!=NULL) {
+        if(val == NULL){
+          ippAttributeString(ipp, buf, sizeof(buf));
+          val = buf;
+        }
     if (val[0] != '\0')
       page_ranges = strdup(val);
   }
@@ -498,7 +661,12 @@ main(int  argc,				/* I - Number of command-line args */
     fprintf(stderr, "DEBUG: Page selection: %s\n", page_ranges);
 
   if ((val = cupsGetOption("page-set", num_options, options)) !=
-      NULL) {
+      NULL  ||
+      (ipp = ippFindAttribute(job_attrs, "page-set", IPP_TAG_ZERO))!=NULL) {
+        if(val == NULL){
+          ippAttributeString(ipp, buf, sizeof(buf));
+          val = buf;
+        }
     if (!strcasecmp(val, "even")) {
       even_pages = 1;
       odd_pages = 0;
@@ -519,7 +687,12 @@ main(int  argc,				/* I - Number of command-line args */
 	      "no pages")));
   
   if ((val = cupsGetOption("output-order", num_options, options)) !=
-      NULL) {
+      NULL  ||
+      (ipp = ippFindAttribute(job_attrs,"output-order", IPP_TAG_ZERO))!=NULL) {
+        if(val == NULL){
+          ippAttributeString(ipp, buf, sizeof(buf));
+          val = buf;
+        }
     if (!strcasecmp(val, "reverse"))
       reverse_order = 1;
     else
@@ -529,7 +702,12 @@ main(int  argc,				/* I - Number of command-line args */
   fprintf(stderr, "DEBUG: Print pages in reverse order: %s\n",
 	  (reverse_order ? "Yes" : "No"));
 
-  if ((val = cupsGetOption("Collate", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("Collate", num_options, options)) != NULL  ||
+    (ipp = ippFindAttribute(job_attrs, "collate", IPP_TAG_ZERO))!=NULL) {
+      if(val == NULL){
+        ippAttributeString(ipp, buf, sizeof(buf));
+        val = buf;
+      }
     if (is_true(val))
       collate = 1;
     else if (is_false(val))
