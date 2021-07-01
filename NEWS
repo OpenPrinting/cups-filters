@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- texttotext: Made the filter also work when instead of PPDs
+	  and CUPS options printer and job IPP attributes are used
+	  (Pull request #385).
 	- libcupsfilters: Made ghostscript() filter function also work
 	  when instead of PPDs and CUPS options printer and job IPP
 	  attributes are used (Pull request #383).
