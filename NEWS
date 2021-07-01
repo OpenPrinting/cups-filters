@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.28.9 - 2021-06-15
 
 CHANGES IN V1.28.10
 
+	- libfontembed: Removed unneeded fontembed/main.c and ttfread
+	  executable (Issue #386).
 	- gstoraster: Refactor the filter a little to clarify handling
 	  of page counts and set job-impressions for TotalPageCount in
 	  PWG-Raster header (Pull request #394).
