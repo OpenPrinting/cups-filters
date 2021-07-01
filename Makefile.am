@@ -588,8 +588,6 @@ pkgfontembedinclude_DATA = \
 
 lib_LTLIBRARIES += libfontembed.la
 
-bin_PROGRAMS = ttfread
-
 check_PROGRAMS += \
 	test_analyze \
 	test_pdf \
@@ -624,9 +622,6 @@ libfontembed_la_SOURCES = \
 libfontembed_la_LDFLAGS = \
 	-no-undefined \
 	-version-info 1
-
-ttfread_SOURCES = fontembed/main.c
-ttfread_LDADD = libfontembed.la
 
 test_analyze_SOURCES = fontembed/test_analyze.c
 test_analyze_LDADD = libfontembed.la
