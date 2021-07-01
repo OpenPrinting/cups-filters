@@ -162,8 +162,8 @@ main(int  argc,				/* I - Number of command-line args */
 					   to the next line */
   int           num_pages = 0;          /* Number of pages which get actually
 					   printed */
-  ipp_t *printer_attrs;   
-  ipp_t *job_attrs ;
+  ipp_t *printer_attrs = NULL;
+  ipp_t *job_attrs = NULL;
   ipp_attribute_t *ipp;
   ipp_t *defsize;
   char buf[2048];
@@ -526,7 +526,7 @@ if(val2==NULL)
     if (!strncasecmp(val, "Custom.", 7))
       val += 7;
     if (val[0] != '\0') {
-      snprintf(encoding, sizeof(encoding), "%s//IGNORE", val);
+      snprintf(encoding, sizeof(encoding), "%.55s//IGNORE", val);
       for (p = encoding; *p; p ++)
 	*p = toupper(*p);
     }
