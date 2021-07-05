@@ -32,10 +32,9 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
 {			/* I - Command-line arguments */
 cups_file_t	         *inputfp;		/* Print file */
   FILE                 *outputfp;   /* Output data stream */
-  const char		*final_content_type;
-					/* FINAL_CONTENT_TYPE env var */
-  cups_raster_t		*inras,		/* Input raster stream */
-			*outras;	/* Output raster stream */
+
+  cups_raster_t		*inras;		/* Input raster stream */
+			cups_raster_t *outras;	/* Output raster stream */
   cups_page_header2_t	inheader,	/* Input raster page header */
 			outheader;	/* Output raster page header */
   unsigned		y;		/* Current line */
@@ -63,10 +62,11 @@ cups_file_t	         *inputfp;		/* Print file */
   void                 *icd = data->iscanceleddata;
   filter_logfunc_t     log = data->logfunc;
   void          *ld = data->logdata;
+  filter_out_format_t output_format;
 /*
   * Open the input data stream specified by inputfd ...
   */
-  
+
   if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
     if (!iscanceled || !iscanceled(icd))
@@ -95,20 +95,16 @@ cups_file_t	         *inputfp;		/* Print file */
     return (1);
   }
 
-
-  if ((final_content_type = getenv("FINAL_CONTENT_TYPE")) == NULL)
-    final_content_type = "image/pwg-raster";
-
   inras  = cupsRasterOpen(inputfd, CUPS_RASTER_READ);
-  outras = cupsRasterOpen(1, !strcmp(final_content_type, "image/pwg-raster") ? CUPS_RASTER_WRITE_PWG : CUPS_RASTER_WRITE_APPLE);
 
-    if (data->ppdfile == NULL && data->ppd == NULL)
-  {
-    char *p = getenv("PPD");
-    if (p)
-      data->ppdfile = strdup(p);
-    else
-      data->ppdfile = NULL;
+  if (parameters){
+    output_format = *(filter_out_format_t *)parameters;
+      if(output_format == OUTPUT_FORMAT_PWG_RASTER)
+        outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_PWG);
+      else outras = cupsRasterOpen( outputfd, CUPS_RASTER_WRITE_APPLE);
+  } else{
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, " rastertopwg: Output format not specified.");
+    exit(1);
   }
 
   if (data->ppd == NULL && data->ppdfile)
@@ -124,14 +120,8 @@ cups_file_t	         *inputfp;		/* Print file */
   }
   else
   {
-    ppd_status_t status;  /* PPD error */
-    int          linenum; /* Line number */
-
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-     "rastertopwg: The PPD file could not be opened.");
-    status = ppdLastError(&linenum);
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-     "rastertopwg: %s on line %d.", ppdErrorString(status), linenum);
+     "rastertopwg: PPD file is not specified.");
   }
 
   cache = data->ppd ? data->ppd->cache : NULL;

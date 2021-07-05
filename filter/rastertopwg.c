@@ -51,8 +51,15 @@ main(int  argc,	   /* I - Number of command-line arguments */
  /*
   * Fire up the pdftoraster() filter function
   */
-
-  ret = filterCUPSWrapper(argc, argv, rastertopwg, NULL, &JobCanceled);
+  filter_out_format_t outformat = OUTPUT_FORMAT_CUPS_RASTER;
+  char *t = getenv("FINAL_CONTENT_TYPE");
+  if (t) {
+    if (strcasestr(t, "pwg"))
+      outformat = OUTPUT_FORMAT_PWG_RASTER;
+    else if (strcasestr(t, "urf"))
+      outformat = OUTPUT_FORMAT_APPLE_RASTER;
+  }
+  ret = filterCUPSWrapper(argc, argv, rastertopwg, &outformat, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: rastertopwg filter function failed.\n");
