@@ -210,14 +210,14 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 			xc1, yc1;
   ppd_file_t		*ppd;		/* PPD file */
   ppd_choice_t		*choice;	/* PPD option choice */
-  char			*resolution,	/* Output resolution */
+  char			*resolution = "",	/* Output resolution */
 			*media_type;	/* Media type */
   ppd_profile_t		*profile;	/* Color profile */
   ppd_profile_t		userprofile;	/* User-specified profile */
   cups_raster_t		*ras;		/* Raster stream */
   cups_page_header2_t	header;		/* Page header */
-  int			num_options;	/* Number of print options */
-  cups_option_t		*options;	/* Print options */
+  int			num_options = 0;	/* Number of print options */
+  cups_option_t		*options = NULL;	/* Print options */
   const char		*val;		/* Option value */
   int			slowcollate,	/* Collate copies the slow way */
 			slowcopies;	/* Make copies the "slow" way? */
@@ -255,7 +255,28 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   void                  *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                  *icd = data->iscanceleddata;
+  ipp_t *printer_attrs = data->printer_attrs;
+  ipp_t *job_attrs = data->job_attrs;
+  ipp_attribute_t *ipp;
+  int min_length = __INT32_MAX__,		 	/*  ppd->custom_min[1]	*/
+			min_width = __INT32_MAX__, 	/*  ppd->custom_min[0]	*/
+			max_length=0, 			/*  ppd->custom_max[1]	*/
+			max_width=0;			/*  ppd->custom_max[0]	*/
+  float customLeft = 0.0,		/*  ppd->custom_margin[0]  */
+		customBottom = 0.0,	/*  ppd->custom_margin[1]  */
+		customRight = 0.0,	/*  ppd->custom_margin[2]  */
+		customTop = 0.0;	/*  ppd->custom_margin[3]  */
+	char defSize[41];
 
+	if(printer_attrs!=NULL){
+		int left, right, top, bottom;
+		cfGenerateSizes(printer_attrs, &ipp, &min_length, &min_width,
+			&max_length, &max_width, &bottom, &left, &right, &top, defSize);
+		customLeft = left*72.0/2540.0;
+		customRight = right*72.0/2540.0;
+		customTop = top*72.0/2540.0;
+		customBottom = bottom*72.0/2540.0;
+	}
 
  /*
   * Make sure status messages are not buffered...
@@ -285,8 +306,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   * Option list...
   */
 
-  options     = data->options;
-  num_options = data->num_options;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
 
  /*
   * Open the input data stream specified by the inputfd ...
@@ -362,14 +382,35 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   */
 
   ppd = data->ppd;
-  filterSetCommonOptions(ppd, num_options, options, 0,
+  if(ppd)
+  {
+  	filterSetCommonOptions(ppd, num_options, options, 0,
 			 &doc.Orientation, &doc.Duplex,
 			 &doc.LanguageLevel, &doc.Color,
 			 &doc.PageLeft, &doc.PageRight,
 			 &doc.PageTop, &doc.PageBottom,
 			 &doc.PageWidth, &doc.PageLength,
 			 log, ld);
-
+	}
+	else{
+	  cupsRasterParseIPPOptions(&header, data, 0, 1);
+      	  doc.Orientation = header.Orientation;
+	  doc.Duplex = header.Duplex;
+	  doc.LanguageLevel = 1;	
+	  doc.Color = header.cupsNumColors>1?1:0;
+	  doc.PageLeft = header.cupsImagingBBox[0] != 0.0 ? header.cupsImagingBBox[0] :
+	  (float)header.ImagingBoundingBox[0];
+  	  doc.PageRight = header.cupsImagingBBox[2] != 0.0 ? header.cupsImagingBBox[2] :
+	  (float)header.ImagingBoundingBox[2];
+  	  doc.PageTop = header.cupsImagingBBox[3] != 0.0 ? header.cupsImagingBBox[3] :
+	  (float)header.ImagingBoundingBox[3];
+  	  doc.PageBottom = header.cupsImagingBBox[1] != 0.0 ? header.cupsImagingBBox[1] :
+	  (float)header.ImagingBoundingBox[1];
+  	  doc.PageWidth = header.cupsPageSize[0] != 0.0 ? header.cupsPageSize[0] :
+	  (float)header.PageSize[0];
+  	  doc.PageLength = header.cupsPageSize[1] != 0.0 ? header.cupsPageSize[1] :
+	  (float)header.PageSize[1];
+	}
   if ((val = cupsGetOption("multiple-document-handling",
 			   num_options, options)) != NULL)
   {
@@ -479,10 +520,22 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   if ((val = cupsGetOption("hue", num_options, options)) != NULL)
     hue = atoi(val);
 
-  if ((choice = ppdFindMarkedChoice(ppd, "MirrorPrint")) != NULL)
+  if ((choice = ppdFindMarkedChoice(ppd, "MirrorPrint")) != NULL	||
+  	((val = cupsGetOption("MirrorPrint", num_options, options))!=NULL)	||
+		(ipp = ippFindAttribute(job_attrs, "mirror-print", IPP_TAG_ZERO))!=NULL ||
+		(ipp = ippFindAttribute(printer_attrs, "mirror-print-default", IPP_TAG_ZERO))!=NULL)
   {
-    val = choice->choice;
-    choice->marked = 0;
+	  if(val!=NULL){
+		  /*  We already found the value  */
+	  }
+	  else if(ipp!=NULL){
+		  ippAttributeString(ipp, buf, sizeof(buf));
+		  val = strdup(buf);
+	  }
+	  else{
+	    val = choice->choice;
+	    choice->marked = 0;
+	  }
   }
   else
     val = cupsGetOption("mirror", num_options, options);
@@ -512,15 +565,54 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   * Get the media type and resolution that have been chosen...
   */
 
-  if ((choice = ppdFindMarkedChoice(ppd, "MediaType")) != NULL)
-    media_type = choice->choice;
+  if ((choice = ppdFindMarkedChoice(ppd, "MediaType")) != NULL               ||
+  	(val = cupsGetOption("MediaType", num_options, options))!=NULL	||
+	  (ipp = ippFindAttribute(job_attrs, "media-type", IPP_TAG_ZERO))!=NULL	||
+	  (ipp = ippFindAttribute(printer_attrs, "media-type-supported", IPP_TAG_ZERO))!=NULL)
+    {
+	if(val!=NULL){
+		media_type = strdup(val);
+	}
+	else if(choice!=NULL)
+		media_type = choice->choice;
+	else if(ipp!=NULL){
+		media_type = ippGetString(ipp, 0, NULL);
+	}
+    }
   else
     media_type = "";
 
   if ((choice = ppdFindMarkedChoice(ppd, "Resolution")) != NULL)
     resolution = choice->choice;
-  else
-    resolution = "";
+  else if((val = cupsGetOption("Resolution", num_options, options))!=NULL	||
+  	(ipp = ippFindAttribute(job_attrs, "printer-resolution", IPP_TAG_ZERO))!=NULL)
+	{
+	  if(val == NULL){
+		ippAttributeString(ipp, buf, sizeof(buf));
+		resolution = strdup(buf);
+	  }
+	  else{
+		resolution = strdup(val);
+	  }
+	}
+	else if((ipp = ippFindAttribute(printer_attrs, "printer-resolution-default", IPP_TAG_ZERO))!=NULL){
+		ippAttributeString(ipp, buf, sizeof(buf));
+		resolution = strdup(buf);
+	}
+	else if((ipp = ippFindAttribute(printer_attrs, "printer-resolution-supported", IPP_TAG_ZERO))!=NULL){
+	  ippAttributeString(ipp, buf, sizeof(buf));
+	  resolution = strdup(buf);
+	  for(i=0;resolution[i]!='\0';i++){
+		if(resolution[i]==' ' ||
+		  resolution[i]==','){
+			resolution[i]='\0';
+			break;
+		}
+	  }
+		
+	}
+  	else
+    	resolution = "";
 
   /* support the "cm-calibration" option */
   cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
@@ -741,6 +833,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   if (ppd != NULL && (ppd->custom_margins[0] || ppd->custom_margins[1] ||
                       ppd->custom_margins[2] || ppd->custom_margins[3]))
     margin_defined = 1;
+	else{
+		if(customLeft!=0 || customRight!=0 || customBottom!=0 || customTop!=0)
+			margin_defined = 1;
+	}
 
   if (doc.PageLength != doc.PageTop - doc.PageBottom ||
       doc.PageWidth != doc.PageRight - doc.PageLeft)
@@ -1170,8 +1266,22 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   * Compute the bitmap size...
   */
 
-  if ((choice = ppdFindMarkedChoice(ppd, "PageSize")) != NULL &&
-      strcasecmp(choice->choice, "Custom") == 0)
+ 	/*	If size if specified by user, use it, else default size from printer_attrs*/
+ 	if ((ipp = ippFindAttribute(job_attrs, "media-size", IPP_TAG_ZERO)) != NULL ||
+      (val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "page-size", IPP_TAG_ZERO)) != NULL ||
+      (val = cupsGetOption("PageSize", num_options, options)) != NULL ){
+		  if(val==NULL){
+			  ippAttributeString(ipp, buf, sizeof(buf));
+			  val = strdup(buf);
+		  }
+		  snprintf(defSize, sizeof(defSize), "%s", val);		
+	  }
+
+
+  if (((choice = ppdFindMarkedChoice(ppd, "PageSize")) != NULL &&
+      strcasecmp(choice->choice, "Custom") == 0)	||
+	  (strncasecmp(defSize, "Custom", 6))==0)
   {
     float	width,		/* New width in points */
 		length;		/* New length in points */
@@ -1195,19 +1305,33 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
    /*
     * Add margins to page size...
     */
-
-    width  += ppd->custom_margins[0] + ppd->custom_margins[2];
-    length += ppd->custom_margins[1] + ppd->custom_margins[3];
-
+   if(ppd!=NULL){
+    	width  += ppd->custom_margins[0] + ppd->custom_margins[2];
+    	length += ppd->custom_margins[1] + ppd->custom_margins[3];
+	}
+	else{
+	  width  += customLeft + customRight;
+	  length += customBottom + customTop;
+	}
    /*
     * Enforce minimums...
     */
-
-    if (width < ppd->custom_min[0])
-      width = ppd->custom_min[0];
-
-    if (length < ppd->custom_min[1])
-      length = ppd->custom_min[1];
+   if(ppd!=NULL){
+    	if (width < ppd->custom_min[0])
+      	width = ppd->custom_min[0];
+	}
+	else{
+		if(width < min_width)
+		width = min_width;
+	}
+	if(ppd!=NULL){
+    	if (length < ppd->custom_min[1])
+      	length = ppd->custom_min[1];
+	}
+	else{
+		if(length < min_length)
+			length = min_length;
+	}
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "imagetoraster: Updated custom page size to %.2f x %.2f "
@@ -1231,18 +1355,33 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 
     doc.PageWidth  = width;
     doc.PageLength = length;
-    doc.PageLeft   = ppd->custom_margins[0];
-    doc.PageRight  = width - ppd->custom_margins[2];
-    doc.PageBottom = ppd->custom_margins[1];
-    doc.PageTop    = length - ppd->custom_margins[3];
-
+	if(ppd!=NULL)
+    	  doc.PageLeft   = ppd->custom_margins[0];
+    	else
+	  doc.PageLeft = customLeft;
+	if(ppd!=NULL)
+	  doc.PageRight  = width - ppd->custom_margins[2];
+    	else
+	  doc.PageRight = width - customRight;
+	if(ppd!=NULL)
+	  doc.PageBottom = ppd->custom_margins[1];
+    	else
+	  doc.PageBottom = customBottom;
+	if(ppd!=NULL)
+	  doc.PageTop    = length - ppd->custom_margins[3];
+	else
+	  doc.PageTop = length - customTop;
    /*
     * Remove margins from page size...
     */
-
-    width  -= ppd->custom_margins[0] + ppd->custom_margins[2];
-    length -= ppd->custom_margins[1] + ppd->custom_margins[3];
-
+   if(ppd!=NULL){
+    	width  -= ppd->custom_margins[0] + ppd->custom_margins[2];
+    	length -= ppd->custom_margins[1] + ppd->custom_margins[3];
+	}
+	else{
+	  width -= customLeft + customRight;
+	  length -= customTop + customBottom;
+	}
    /*
     * Set the bitmap size...
     */
