@@ -216,8 +216,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   ppd_profile_t		userprofile;	/* User-specified profile */
   cups_raster_t		*ras;		/* Raster stream */
   cups_page_header2_t	header;		/* Page header */
-  int			num_options;	/* Number of print options */
-  cups_option_t		*options;	/* Print options */
+  int			num_options = 0;	/* Number of print options */
+  cups_option_t		*options = NULL;	/* Print options */
   const char		*val;		/* Option value */
   int			slowcollate,	/* Collate copies the slow way */
 			slowcopies;	/* Make copies the "slow" way? */
@@ -306,8 +306,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   * Option list...
   */
 
-  options     = data->options;
-  num_options = data->num_options;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
 
  /*
   * Open the input data stream specified by the inputfd ...
@@ -1282,7 +1281,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 
   if (((choice = ppdFindMarkedChoice(ppd, "PageSize")) != NULL &&
       strcasecmp(choice->choice, "Custom") == 0)	||
-	  (strcasecmp(defSize, "Custom"))==0)
+	  (strncasecmp(defSize, "Custom", 6))==0)
   {
     float	width,		/* New width in points */
 		length;		/* New length in points */
