@@ -265,9 +265,9 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 		tempfile[1024];		/* Temporary file */
   char		buffer[8192];		/* Copy buffer */
   int		bytes;			/* Bytes copied */
-  int		num_options,		/* Number of options */
+  int		num_options = 0,		/* Number of options */
                 num_pstops_options;	/* Number of options for pstops */
-  cups_option_t	*options,		/* Options */
+  cups_option_t	*options = NULL,		/* Options */
                 *pstops_options,	/* Options for pstops filter function */
                 *option;
   const char    *exclude;
@@ -383,8 +383,8 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   * CUPS option list
   */
 
-  num_options = data->num_options;
-  options = data->options;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  
 
   ppd = data->ppd;
 
