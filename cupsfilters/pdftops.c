@@ -265,9 +265,9 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 		tempfile[1024];		/* Temporary file */
   char		buffer[8192];		/* Copy buffer */
   int		bytes;			/* Bytes copied */
-  int		num_options,		/* Number of options */
+  int		num_options = 0,		/* Number of options */
                 num_pstops_options;	/* Number of options for pstops */
-  cups_option_t	*options,		/* Options */
+  cups_option_t	*options = NULL,		/* Options */
                 *pstops_options,	/* Options for pstops filter function */
                 *option;
   const char    *exclude;
@@ -305,6 +305,9 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   void          *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
+  ipp_t *printer_attrs = data->printer_attrs;
+  ipp_t *job_attrs = data->job_attrs;
+  ipp_attribute_t *ipp;
 
 
   (void)inputseekable;
@@ -380,8 +383,8 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   * CUPS option list
   */
 
-  num_options = data->num_options;
-  options = data->options;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  
 
   ppd = data->ppd;
 
@@ -396,6 +399,23 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
       make_model[127] = '\0';
     for (ptr = make_model; *ptr; ptr ++)
       if (*ptr == '-') *ptr = ' ';
+  }
+  else if(printer_attrs){
+    if((ipp = ippFindAttribute(printer_attrs, "printer-make-and-model", IPP_TAG_ZERO))!=NULL){
+      char make[56];
+      char* model;
+      ippAttributeString(ipp, make, sizeof(make));
+      if (!strncasecmp(make, "Hewlett Packard ", 16) ||
+        !strncasecmp(make, "Hewlett-Packard ", 16)) {
+          model = make + 16;
+          strncpy(make, "HP", sizeof(make));
+      }
+      else if ((model = strchr(make, ' ')) != NULL)
+        *model++ = '\0';
+      else
+        model = make;
+      snprintf(make_model, sizeof(make_model), "%s %s", make, model);
+    }
   }
   else if (ppd)
   {
@@ -580,6 +600,22 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 	      strcasestr(val, "Gray") ||
 	      strcasestr(val, "Mono"))
             gray_output = 1;
+      }
+      else{
+        if(job_attrs!=NULL){
+          if((ipp = ippFindAttribute(job_attrs, "pwg-raster-document-type", IPP_TAG_ZERO))!=NULL ||
+            (ipp = ippFindAttribute(job_attrs, "color-space", IPP_TAG_ZERO))!=NULL ||
+            (ipp = ippFindAttribute(job_attrs, "color-model", IPP_TAG_ZERO))!=NULL ||
+            (ipp = ippFindAttribute(job_attrs, "print-color-mode", IPP_TAG_ZERO))!=NULL ||
+            (ipp = ippFindAttribute(job_attrs, "output-mode", IPP_TAG_ZERO))){
+              ippAttributeString(ipp, buffer, sizeof(buffer));
+              val = buffer;
+              if(strcasestr(val, "Black") ||
+                (strcasestr(val, "Gray")) ||
+                (strcasestr(val, "Mono")))
+                  gray_output = 1;
+            }
+        }
       }
   }
 
@@ -802,6 +838,39 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 	((numvalues = sscanf(resolution, "%dx%d", &xres, &yres)) <= 0))
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "pdftops: No resolution information found in the PPD file.");
+  }
+  else{
+    cupsRasterParseIPPOptions(&header, data, 0, 1);
+    if (header.HWResolution[0] > 100 && header.HWResolution[1] > 100)
+    {
+      xres = header.HWResolution[0];
+      yres = header.HWResolution[1];
+    }
+    else if((ipp = ippFindAttribute(printer_attrs, "printer-resolution-default", IPP_TAG_ZERO))!=NULL){
+      ippAttributeString(ipp, buffer, sizeof(buffer));
+      const char *p = buffer;
+      xres = atoi(p);
+      if((p = strchr(p, 'x'))!=NULL){
+        yres = atoi(p+1);
+      }
+      else yres = xres;
+    }
+    else if((ipp = ippFindAttribute(printer_attrs, "printer-resolution-supported", IPP_TAG_ZERO))!=NULL){
+      ippAttributeString(ipp, buffer, sizeof(buffer));
+      for(i=0; buffer[i]!='\0';i++){
+        if(buffer[i]==' ' ||
+          buffer[i]==','){
+            buffer[i]='\0';
+            break;
+          }
+      }
+      const char *p = buffer;
+      xres = atoi(p);
+      if((p = strchr(p, 'x'))!=NULL){
+        yres = atoi(p+1);
+      }
+      else yres = xres;
+    }
   }
   if ((xres == 0) && (yres == 0))
   {
