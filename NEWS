@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, rastertopwg: Converted CUPS' rastertopwg
+	  filter into the rastertopwg() filter function.
 	- libfontembed: Removed unneeded fontembed/main.c and ttfread
 	  executable (Issue #386).
 	- texttotext: Made the filter also work when instead of PPDs
