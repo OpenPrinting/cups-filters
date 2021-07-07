@@ -259,15 +259,15 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   ipp_t                 *printer_attrs = data->printer_attrs;
   ipp_t                 *job_attrs = data->job_attrs;
   ipp_attribute_t *ipp;
-  int min_length = __INT32_MAX__,       /*  ppd->custom_min[1]	*/
-      min_width = __INT32_MAX__,        /*  ppd->custom_min[0]	*/
-      max_length = 0, 		        /*  ppd->custom_max[1]	*/
-      max_width=0;			/*  ppd->custom_max[0]	*/
-  float customLeft = 0.0,		/*  ppd->custom_margin[0]  */
-        customBottom = 0.0,	        /*  ppd->custom_margin[1]  */
-	customRight = 0.0,	        /*  ppd->custom_margin[2]  */
-	customTop = 0.0;	        /*  ppd->custom_margin[3]  */
-  char defSize[41];
+  int 			min_length = __INT32_MAX__,       /*  ppd->custom_min[1]	*/
+      			min_width = __INT32_MAX__,        /*  ppd->custom_min[0]	*/
+      			max_length = 0, 		  /*  ppd->custom_max[1]	*/
+      			max_width=0;			/*  ppd->custom_max[0]	*/
+  float 		customLeft = 0.0,		/*  ppd->custom_margin[0]  */
+        		customBottom = 0.0,	        /*  ppd->custom_margin[1]  */
+			customRight = 0.0,	        /*  ppd->custom_margin[2]  */
+			customTop = 0.0;	        /*  ppd->custom_margin[3]  */
+  char 			defSize[41];
 
   if (printer_attrs != NULL) {
     int left, right, top, bottom;
@@ -542,7 +542,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     }
     else if (ipp != NULL) {
       ippAttributeString(ipp, buf, sizeof(buf));
-      val = strdup(buf);
+      val = buf;
     }
     else
     {
@@ -589,16 +589,16 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       media_type = strdup(val);
     }
     else if(choice!=NULL)
-      media_type = choice->choice;
+      media_type = strdup(choice->choice);
     else if(ipp!=NULL){
-      media_type = ippGetString(ipp, 0, NULL);
+      media_type = strdup(ippGetString(ipp, 0, NULL));
     }
   }
   else
-    media_type = "";
+    media_type = strdup("");
 
   if ((choice = ppdFindMarkedChoice(ppd, "Resolution")) != NULL)
-    resolution = choice->choice;
+    resolution = strdup(choice->choice);
   else if ((val = cupsGetOption("Resolution", num_options, options)) != NULL ||
 	   (ipp = ippFindAttribute(job_attrs, "printer-resolution",
 				   IPP_TAG_ZERO))!=NULL)
@@ -635,7 +635,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     }
   }
   else
-    resolution = "";
+    resolution = strdup("");
 
   /* support the "cm-calibration" option */
   cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
@@ -1297,9 +1297,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       (val = cupsGetOption("PageSize", num_options, options)) != NULL ) {
     if (val == NULL) {
       ippAttributeString(ipp, buf, sizeof(buf));
-      val = strdup(buf);
+      strcpy(defSize, buf);
     }
-    snprintf(defSize, sizeof(defSize), "%s", val);
+    else
+	snprintf(defSize, sizeof(defSize), "%s", val);
   }
 
   if (((choice = ppdFindMarkedChoice(ppd, "PageSize")) != NULL &&
@@ -1918,7 +1919,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
          /*
 	  * Free memory used for the "zoom" engine...
 	  */
-
+	  free(resolution);
+	  free(media_type);
           _cupsImageZoomDelete(z);
         }
       }
@@ -1928,6 +1930,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   */
 
  canceled:
+  free(resolution);
+  free(media_type);
   free(row);
   cupsRasterClose(ras);
   cupsImageClose(img);
