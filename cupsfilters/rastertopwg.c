@@ -321,7 +321,7 @@ cups_file_t	         *inputfp;		/* Print file */
     if (inheader.cupsPageSizeName[0] && (pwg_size = ppdCacheGetSize(cache, inheader.cupsPageSizeName)) != NULL && pwg_size->map.pwg)
     {
       strncpy(outheader.cupsPageSizeName, pwg_size->map.pwg,
-	      sizeof(outheader.cupsPageSizeName));
+	      sizeof(outheader.cupsPageSizeName) - 1);
     }
     else
     {
@@ -330,7 +330,7 @@ cups_file_t	         *inputfp;		/* Print file */
 
       if (pwg_media)
         strncpy(outheader.cupsPageSizeName, pwg_media->pwg,
-                sizeof(outheader.cupsPageSizeName));
+                sizeof(outheader.cupsPageSizeName) - 1);
       else
       {
         if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "rastertopwg: Unsupported PageSize %.2fx%.2f.",
