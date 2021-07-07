@@ -410,7 +410,7 @@ main(int  argc,				/* I - Number of command-line args */
     }
   } else if (argc != 1) {
     fprintf(stderr,
-	    "Usage: %s job-id user title copies options [file]",
+	    "Usage: %s job-id user title copies options [file]\n",
 	    argv[0]);
     return (CUPS_BACKEND_FAILED);
   }
