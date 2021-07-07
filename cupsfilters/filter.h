@@ -254,6 +254,13 @@ extern int rastertops(int inputfd,
 		      void *parameters);
 
 
+extern int rastertopwg(int inputfd,
+				int outputfd,
+				int inputseekable,
+				filter_data_t *data,
+				void *parameters);
+
+
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,
 				   cups_option_t *options,
