@@ -542,6 +542,9 @@ cups_file_t	         *inputfp;		/* Print file */
   if (inputfd)
     close(inputfd);
 
+  cupsFileClose(inputfp);
+  fclose(outputfp);
+
   cupsRasterClose(outras);
 
   return (0);
