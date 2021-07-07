@@ -21,6 +21,7 @@
  */
 
 #include "filter.h"
+#include "raster.h"
 #include "pdf.h"
 #include <config.h>
 #include <cups/cups.h>
