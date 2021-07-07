@@ -769,6 +769,16 @@ AC_ARG_ENABLE([pstops],
 )
 AM_CONDITIONAL([ENABLE_PSTOPS], [test "x$enable_pstops" = "xyes"])
 
+# =====================
+# Check for rastertopwg
+# =====================
+AC_ARG_ENABLE([rastertopwg],
+	[AS_HELP_STRING([--enable-rastertopwg], [Enable our own rastertopwg filter.])],
+	[enable_rastertopwg="$enableval"],
+	[enable_rastertopwg=no]
+)
+AM_CONDITIONAL([ENABLE_RASTERTOPWG], [test "x$enable_rastertopwg" = "xyes"])
+
 # =============
 # Check for php
 # =============
@@ -976,6 +986,7 @@ Build configuration:
 	php:             ${with_php}
 	php-config:      ${with_php_config}
 	pstops:          ${enable_pstops}
+	rastertopwg:     ${enable_rastertopwg}
 	shell:           ${with_shell}
 	test-font:       ${with_test_font_path}
 	tiff:            ${with_tiff}

@@ -688,8 +688,11 @@ pkgfilter_PROGRAMS += \
 	rastertopdf \
 	bannertopdf \
 	rastertops \
-	rastertopwg \
 	pclmtoraster
+if ENABLE_RASTERTOPWG
+pkgfilter_PROGRAMS += \
+	rastertopwg
+endif
 if ENABLE_PSTOPS
 pkgfilter_PROGRAMS += \
 	pstops
@@ -936,6 +939,7 @@ rastertops_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
 
+if ENABLE_RASTERTOPWG
 rastertopwg_SOURCES = \
 	filter/rastertopwg.c
 rastertopwg_CFLAGS = \
@@ -944,7 +948,8 @@ rastertopwg_CFLAGS = \
 rastertopwg_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
-	
+endif
+
 texttotext_SOURCES = \
 	filter/texttotext.c
 EXTRA_texttotext_SOURCES = cupsfilters/strcasestr.c
