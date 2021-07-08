@@ -113,12 +113,7 @@ cups_file_t	         *inputfp;		/* Print file */
 
   back  = ppdFindAttr(data->ppd, "cupsBackSide", NULL);
 
-  if (data->ppd)
-  {
-    ppdMarkDefaults(data->ppd);
-    ppdMarkOptions(data->ppd, data->num_options, data->options);
-  }
-  else
+  if (!data->ppd)
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
      "rastertopwg: PPD file is not specified.");
