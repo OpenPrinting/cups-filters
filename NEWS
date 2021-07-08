@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.28.9 - 2021-06-15
 
 CHANGES IN V1.28.10
 
+	- gstoraster: Refactor the filter a little to clarify handling
+	  of page counts and set job-impressions for TotalPageCount in
+	  PWG-Raster header (Pull request #394).
 	- cups-browsed: Make NotifLeaseDuration configurable and renew
 	  after half the lease duration not 60 sec before end. The
 	  early renewal improves reliability on busy systems a
