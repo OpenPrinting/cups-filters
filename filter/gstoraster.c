@@ -916,8 +916,8 @@ main (int argc, char **argv, char *envp[])
      * cupsRasterParseIPPOptions() would populate the TotalPageCount field
      * (h.cupsInteger[0]) if CUPS passed "job-impressions" to this filter.
      * CUPS does not do so, so we set it manually here. */
-    if (pages > 0 && pwgraster) {
-      h.cupsInteger[0] = pages;
+    if (pagecount > 0 && pwgraster) {
+      h.cupsInteger[0] = pagecount;
     }
 #else
     fprintf(stderr, "ERROR: No PPD file specified.\n");
