@@ -582,6 +582,40 @@ out:
 }
 #endif
 
+// Returns the number of pages in the document |filename|. Returns -1 if there was an error.
+static int
+count_pages(char* filename, GsDocType doc_type) {
+  int pagecount = 0;
+
+  if (doc_type == GS_DOC_TYPE_PDF) {
+    return pdf_pages(filename);
+  }
+
+  // All other content needs to be rendered.
+  char gscommand[65536];
+  char output[31] = "";
+  size_t bytes;
+  /* Ghostscript runs too long while printing PDF fikes converted from
+     djvu files. Using -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1
+     solves the problem */
+  snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 %s 2>&1 | grep -c HiResBoundingBox",
+      CUPS_GHOSTSCRIPT, filename);
+
+  FILE *pd = popen(gscommand, "r");
+  if (!pd) {
+    fprintf(stderr, "Failed to execute ghostscript to determine number of input pages!\n");
+    return -1;
+  }
+
+  bytes = fread(output, 1, 31, pd);
+  pclose(pd);
+
+  if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
+    return -1;
+
+  return pagecount;
+}
+
 int
 main (int argc, char **argv, char *envp[])
 {
@@ -713,56 +747,25 @@ main (int argc, char **argv, char *envp[])
     goto out;
   }
 
-  if (doc_type == GS_DOC_TYPE_PDF) {  
-    int pages = pdf_pages(filename);
-
-    if (pages == 0) {
-      fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
-      status = 0;
-      if (outformat == OUTPUT_FORMAT_RASTER)
-        fprintf(stdout, "RaS2");
-      goto out;
-    }
-    if (pages < 0) {
-      fprintf(stderr, "DEBUG: Unexpected page count\n");
-      goto out;
-    }
+  // Determine how many pages we have and if we have something valid to print.
+  int pagecount = count_pages(filename, doc_type);
+  if (pagecount == 0) {
+    fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
+    status = 0;
+    if (outformat == OUTPUT_FORMAT_RASTER)
+      fprintf(stdout, "RaS2");
+    goto out;
   }
-  else {
-    char gscommand[65536];
-    char output[31] = "";
-    int pagecount;
-    size_t bytes;
-    /* Ghostscript runs too long while printing PDF fikes converted from
-       djvu files. Using -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1
-       solves the problem */
-    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 %s 2>&1 | grep -c HiResBoundingBox",
-	     CUPS_GHOSTSCRIPT, filename);
-
-    FILE *pd = popen(gscommand, "r");
-    if (!pd) {
-      fprintf(stderr, "Failed to execute ghostscript to determine number of input pages!\n");
-      goto out;
-    }
-
-    bytes = fread(output, 1, 31, pd);
-    pclose(pd);
-
-    if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
-      pagecount = -1;
-
-    if (pagecount == 0) {
-      fprintf(stderr, "DEBUG: No pages left, outputting empty file.\n");
-      status = 0;
-      if (outformat == OUTPUT_FORMAT_RASTER)
-        fprintf(stdout, "RaS2");
-      goto out;
-    }
-    if (pagecount < 0) {
-      fprintf(stderr, "DEBUG: Unexpected page count\n");
-      goto out;
-    }
+  if (pagecount < 0) {
+    fprintf(stderr, "DEBUG: Unexpected page count\n");
+    goto out;
   }
+
+  if (pwgraster) {
+    // Set job-impressions for later embedding as TotalPageCount.
+    num_options = cupsAddIntegerOption("job-impressions", pagecount, num_options, &options);
+  }
+
   if (argc == 6) {
     /* input from stdin */
     /* remove name of temp file*/
@@ -908,6 +911,14 @@ main (int argc, char **argv, char *envp[])
       }
     }
     cupsRasterParseIPPOptions(&h, num_options, options, pwgraster, 1);
+
+    /*
+     * cupsRasterParseIPPOptions() would populate the TotalPageCount field
+     * (h.cupsInteger[0]) if CUPS passed "job-impressions" to this filter.
+     * CUPS does not do so, so we set it manually here. */
+    if (pages > 0 && pwgraster) {
+      h.cupsInteger[0] = pages;
+    }
 #else
     fprintf(stderr, "ERROR: No PPD file specified.\n");
     goto out;
