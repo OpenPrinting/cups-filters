@@ -21,6 +21,7 @@
 #include "config.h"
 #include <cupsfilters/filter.h>
 #include <cupsfilters/image.h>
+#include <cupsfilters/ppdgenerator.h>
 #include <cupsfilters/raster.h>
 #include <math.h>
 #include <ctype.h>
@@ -705,8 +706,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
                                         /* accommodate results of command */
                                         /* line parsing for PPD-less queue */
   ppd_choice_t	*choice;		/* PPD option choice */
-  int		num_options;		/* Number of print options */
-  cups_option_t	*options;		/* Print options */
+  int		num_options = 0;		/* Number of print options */
+  cups_option_t	*options = NULL;		/* Print options */
   const char	*val;			/* Option value */
   float		zoom;			/* Zoom facter */
   int		xppi, yppi;		/* Pixels-per-inch */
@@ -729,6 +730,18 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   void          *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
+  ipp_t *printer_attrs = data->printer_attrs;
+  ipp_t *job_attrs = data->job_attrs;
+  ipp_attribute_t *ipp;
+  int 			min_length = __INT32_MAX__,       /*  ppd->custom_min[1]	*/
+      			min_width = __INT32_MAX__,        /*  ppd->custom_min[0]	*/
+      			max_length = 0, 		  /*  ppd->custom_max[1]	*/
+      			max_width=0;			  /*  ppd->custom_max[0]	*/
+  float 		customLeft = 0.0,		/*  ppd->custom_margin[0]  */
+        		customBottom = 0.0,	        /*  ppd->custom_margin[1]  */
+			customRight = 0.0,	        /*  ppd->custom_margin[2]  */
+			customTop = 0.0;	        /*  ppd->custom_margin[3]  */
+  char 			defSize[41];
 
 
  /*
@@ -845,10 +858,26 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
  /*
   * Option list...
+  * Also add job-attrs in options list itself. 
   */
 
-  options     = data->options;
-  num_options = data->num_options;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+
+ /* 
+  * Compute custom margins and min_width and min_length of the page... 
+  */
+
+  if (printer_attrs != NULL) {
+    int left, right, top, bottom;
+    cfGenerateSizes(printer_attrs, &ipp, &min_length, &min_width,
+		    &max_length, &max_width, &bottom, &left, &right, &top,
+		    defSize);
+    customLeft = left*72.0/2540.0;
+    customRight = right*72.0/2540.0;
+    customTop = top*72.0/2540.0;
+    customBottom = bottom*72.0/2540.0;
+  }
+
 
  /*
   * Process job options...
@@ -915,7 +944,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       }
   }
 
-  if ((val = cupsGetOption("OutputOrder",num_options,options)) != 0) {
+  if ((val = cupsGetOption("OutputOrder",num_options,options)) != 0	||
+	(val = cupsGetOption("outputorder", num_options, options))!=NULL) {
     if (!strcasecmp(val, "Reverse")) {
       doc.Reverse = 1;
     }
@@ -935,6 +965,59 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       doc.Reverse = !strcasecmp(attr->value,"Reverse");
     }
   }
+    else if(printer_attrs){
+	/*	If PPD file is NULL, we use printer attrs to determine if we need to print in reverse order */
+	char *defaultoutbin = strdup("");
+	const char* outbin;
+	if ((ipp = ippFindAttribute(printer_attrs, "output-bin-default", IPP_TAG_ZERO))
+      	!= NULL)
+    		defaultoutbin = strdup(ippGetString(ipp, 0, NULL));
+	/* Find out on which position of the list of output bins the default one is,
+	if there is no default bin, take the first of this list */
+  	int i = 0;
+	if ((ipp = ippFindAttribute(printer_attrs, "output-bin-supported",
+				IPP_TAG_ZERO)) != NULL) {
+	    int count = ippGetCount(ipp);
+		for (i = 0; i < count; i ++) {
+		    outbin = ippGetString(ipp, i, NULL);
+			if (outbin == NULL)
+			    continue;
+			if (defaultoutbin == NULL) {
+			    defaultoutbin = strdup(outbin);
+			    break;
+			} else if (strcasecmp(outbin, defaultoutbin) == 0)
+			break;
+		}
+	}
+	void *outbin_properties_octet;
+	int octet_str_len;
+	char outbin_properties[1024];
+	int outputorderinfofound = 0;
+	int faceupdown = 0;
+	int firsttolast = 0;
+	if ((ipp = ippFindAttribute(printer_attrs, "printer-output-tray",
+		IPP_TAG_STRING)) != NULL &&
+			i < ippGetCount(ipp)) {
+	    outbin_properties_octet = ippGetOctetString(ipp, i, &octet_str_len);
+	    memset(outbin_properties, 0, sizeof(outbin_properties));
+	    memcpy(outbin_properties, outbin_properties_octet,
+		((size_t)octet_str_len < sizeof(outbin_properties) - 1 ?
+		(size_t)octet_str_len : sizeof(outbin_properties) - 1));
+		if (strcasestr(outbin_properties, "pagedelivery=faceUp")) {
+		    outputorderinfofound = 1;
+		    faceupdown = -1;
+		}
+		if (strcasestr(outbin_properties, "stackingorder=lastToFirst"))
+		firsttolast = -1;
+	}
+	if (outputorderinfofound == 0 && defaultoutbin &&
+	strcasestr(defaultoutbin, "face-up"))
+	    faceupdown = -1;
+	if (defaultoutbin)
+	    free (defaultoutbin);
+	if (firsttolast * faceupdown < 0)
+	    doc.Reverse = 1;;
+    }
 
   /* adjust to even page when duplex */
   if (((val = cupsGetOption("cupsEvenDuplex",num_options,options)) != 0 &&
@@ -962,7 +1045,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     doc.Collate = strcasecmp(val, "separate-documents-uncollated-copies") != 0;
   }
 
-  if ((val = cupsGetOption("Collate", num_options, options)) != NULL) {
+  if ((val = cupsGetOption("Collate", num_options, options)) != NULL  ||
+	(val = cupsGetOption("collate", num_options, options))) {
     if (strcasecmp(val, "True") == 0) {
       doc.Collate = 1;
     }
@@ -972,6 +1056,27 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
         || !strcasecmp(choice->choice, "on")
 	|| !strcasecmp(choice->choice, "yes"))) {
       doc.Collate = 1;
+    }
+    else if((ipp = ippFindAttribute(printer_attrs, "multiple-document-handling-default", 
+		IPP_TAG_ZERO))!=NULL){
+	ippAttributeString(ipp, buf, sizeof(buf));
+	val = buf;
+	doc.Collate = strcasecmp(val, "separate-documents-uncollated-copies") != 0;
+    }
+    /*	Still if we are having no clue about collate, pick any random value(1st in this case)
+	from supported options	*/
+    else if((ipp = ippFindAttribute(printer_attrs, "multiple-document-handling-supported", 
+			IPP_TAG_ZERO))!=NULL){
+	ippAttributeString(ipp, buf, sizeof(buf));
+	int i=0;
+	for(i=0; buf[i]!='\0';i++){
+	    if(buf[i]==' ' || buf[i]==','){
+	    	buf[i] = '\0';
+		break;
+	    }
+	}
+	val = buf;
+	doc.Collate = strcasecmp(val, "separate-documents-uncollated-copies") != 0;
     }
   }
 
@@ -1074,6 +1179,8 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 		  doc.ppd->custom_margins[2] || doc.ppd->custom_margins[3]))
                                             // In case of custom margins
     margin_defined = 1;
+  else if(customBottom!=0 || customLeft!=0 || customRight!=0 || customTop!=0)
+	margin_defined = 1;
   if (doc.PageLength != doc.PageTop - doc.PageBottom ||
       doc.PageWidth != doc.PageRight - doc.PageLeft)
     margin_defined = 1;
@@ -1497,8 +1604,25 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   * Update the page size for custom sizes...
   */
 
-  if ((choice = ppdFindMarkedChoice(doc.ppd, "PageSize")) != NULL &&
-      strcasecmp(choice->choice, "Custom") == 0)
+  /* If size if specified by user, use it, else default size from
+     printer_attrs*/
+  if ((ipp = ippFindAttribute(job_attrs, "media-size", IPP_TAG_ZERO)) != NULL ||
+      (val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "page-size", IPP_TAG_ZERO)) != NULL ||
+      (val = cupsGetOption("PageSize", num_options, options)) != NULL ) {
+    if (val == NULL) {
+      ippAttributeString(ipp, buf, sizeof(buf));
+      strcpy(defSize, buf);
+    }
+    else
+	snprintf(defSize, sizeof(defSize), "%s", val);
+  }
+
+
+
+  if (((choice = ppdFindMarkedChoice(doc.ppd, "PageSize")) != NULL &&
+      strcasecmp(choice->choice, "Custom") == 0) ||
+	strncasecmp(defSize, "custom", 6)==0)
   {
     float	width,		/* New width in points */
 		length;		/* New length in points */
@@ -1523,19 +1647,31 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
    /*
     * Add margins to page size...
     */
-
-    width  += doc.ppd->custom_margins[0] + doc.ppd->custom_margins[2];
-    length += doc.ppd->custom_margins[1] + doc.ppd->custom_margins[3];
-
+    if(doc.ppd!=NULL){
+    	width  += doc.ppd->custom_margins[0] + doc.ppd->custom_margins[2];
+    	length += doc.ppd->custom_margins[1] + doc.ppd->custom_margins[3];
+    }
+    else{
+	width += customLeft + customRight;
+	length += customTop + customBottom;
+    }
    /*
     * Enforce minimums...
     */
 
-    if (width < doc.ppd->custom_min[0])
-      width = doc.ppd->custom_min[0];
-
-    if (length < doc.ppd->custom_min[1])
-      length = doc.ppd->custom_min[1];
+    if(doc.ppd!=NULL)
+    {
+	if(width<doc.ppd->custom_min[0])
+	  width = doc.ppd->custom_min[0];
+	if(length<doc.ppd->custom_min[1])
+	  length = doc.ppd->custom_min[1];
+    }
+    else{
+	if(width<min_width)
+	  width = min_width;
+	if(length<min_length)
+	  length = min_length;
+    }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "imagetopdf: Updated custom page size to %.2f x %.2f "
@@ -1555,10 +1691,22 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
     doc.PageWidth  = width;
     doc.PageLength = length;
-    doc.PageLeft   = doc.ppd->custom_margins[0];
-    doc.PageRight  = width - doc.ppd->custom_margins[2];
-    doc.PageBottom = doc.ppd->custom_margins[1];
-    doc.PageTop    = length - doc.ppd->custom_margins[3];
+    if (doc.ppd != NULL)
+      doc.PageLeft   = doc.ppd->custom_margins[0];
+    else
+      doc.PageLeft = customLeft;
+    if (doc.ppd != NULL)
+      doc.PageRight  = width - doc.ppd->custom_margins[2];
+    else
+      doc.PageRight = width - customRight;
+    if (doc.ppd != NULL)
+      doc.PageBottom = doc.ppd->custom_margins[1];
+    else
+      doc.PageBottom = customBottom;
+    if (doc.ppd != NULL)
+      doc.PageTop    = length - doc.ppd->custom_margins[3];
+    else
+      doc.PageTop = length - customTop;
   }
 
   if (doc.Copies == 1) {
