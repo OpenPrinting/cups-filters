@@ -211,8 +211,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 			xc1, yc1;
   ppd_file_t		*ppd;		/* PPD file */
   ppd_choice_t		*choice;	/* PPD option choice */
-  char			*resolution = "",	/* Output resolution */
-			*media_type;	/* Media type */
+  char			*resolution = strdup("300dpi") ,	/* Output resolution */
+			*media_type ;	/* Media type */
   ppd_profile_t		*profile;	/* Color profile */
   ppd_profile_t		userprofile;	/* User-specified profile */
   cups_raster_t		*ras;		/* Raster stream */
@@ -420,6 +420,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       header.cupsPageSize[1] :
       (float)header.PageSize[1];
   }
+if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
   if ((val = cupsGetOption("multiple-document-handling",
 			   num_options, options)) != NULL)
   {
@@ -560,7 +561,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
  /*
   * Set the needed options in the page header...
   */
-
+  if(ppd!=NULL)
   if (ppdRasterInterpretPPD(&header, ppd, num_options, options, raster_cb))
   {
     if (log) {
@@ -635,7 +636,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     }
   }
   else
-    resolution = strdup("");
+    resolution = strdup("300dpi");
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Resolution = %s", resolution);
 
   /* support the "cm-calibration" option */
   cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
@@ -1919,19 +1921,29 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
          /*
 	  * Free memory used for the "zoom" engine...
 	  */
-	  free(resolution);
-	  free(media_type);
           _cupsImageZoomDelete(z);
         }
       }
-
+	if(resolution){
+		free(resolution);
+		resolution = NULL;
+	}
+	if(media_type){
+		free(media_type);
+		media_type = NULL;
+	}
  /*
   * Close files...
   */
 
  canceled:
-  free(resolution);
-  free(media_type);
+  if(resolution){
+    free(resolution);
+    resolution = NULL;}
+  if(media_type){
+    free(media_type);
+    media_type = NULL;
+   }
   free(row);
   cupsRasterClose(ras);
   cupsImageClose(img);
