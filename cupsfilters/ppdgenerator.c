@@ -2578,13 +2578,13 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
   */
 
   if ((attr = ippFindAttribute(ippGetCollection(defattr, 0), "media-type",
-			       IPP_TAG_KEYWORD)) != NULL)
+			       IPP_TAG_ZERO)) != NULL)
     pwg_ppdize_name(ippGetString(attr, 0, NULL), ppdname, sizeof(ppdname));
   else
     strlcpy(ppdname, "Unknown", sizeof(ppdname));
 
   if ((attr = ippFindAttribute(response, "media-type-supported",
-			       IPP_TAG_KEYWORD)) != NULL &&
+			       IPP_TAG_ZERO)) != NULL &&
       (count = ippGetCount(attr)) > 1) {
     static const char * const media_types[][2] =
     {					/* "media-type" strings */
