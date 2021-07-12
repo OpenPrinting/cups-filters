@@ -211,8 +211,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 			xc1, yc1;
   ppd_file_t		*ppd;		/* PPD file */
   ppd_choice_t		*choice;	/* PPD option choice */
-  char			*resolution = strdup("300dpi") ,	/* Output resolution */
-			*media_type ;	/* Media type */
+  char			*resolution,	/* Output resolution */
+			*media_type;	/* Media type */
   ppd_profile_t		*profile;	/* Color profile */
   ppd_profile_t		userprofile;	/* User-specified profile */
   cups_raster_t		*ras;		/* Raster stream */
@@ -1924,26 +1924,13 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
           _cupsImageZoomDelete(z);
         }
       }
-	if(resolution){
-		free(resolution);
-		resolution = NULL;
-	}
-	if(media_type){
-		free(media_type);
-		media_type = NULL;
-	}
  /*
   * Close files...
   */
 
  canceled:
-  if(resolution){
-    free(resolution);
-    resolution = NULL;}
-  if(media_type){
-    free(media_type);
-    media_type = NULL;
-   }
+  free(resolution);
+  free(media_type);
   free(row);
   cupsRasterClose(ras);
   cupsImageClose(img);
