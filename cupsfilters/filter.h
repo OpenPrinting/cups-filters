@@ -224,10 +224,13 @@ extern int pdftops(int inputfd,
 
 
 extern int pdftoraster(int inputfd,
-				int outputfd,
-				int inputseekable,
-				filter_data_t *data,
-				void* parameters);
+		       int outputfd,
+		       int inputseekable,
+		       filter_data_t *data,
+		       void* parameters);
+
+/* Parameters: filter_out_format_t*
+   Ouput format: CUPS Raster or PWG Raster */
 
 
 extern int pstops(int inputfd,
@@ -255,10 +258,13 @@ extern int rastertops(int inputfd,
 
 
 extern int rastertopwg(int inputfd,
-				int outputfd,
-				int inputseekable,
-				filter_data_t *data,
-				void *parameters);
+		       int outputfd,
+		       int inputseekable,
+		       filter_data_t *data,
+		       void *parameters);
+
+/* Parameters: filter_out_format_t*
+   Ouput format: Apple Raster or PWG Raster */
 
 
 extern void filterSetCommonOptions(ppd_file_t *ppd,
