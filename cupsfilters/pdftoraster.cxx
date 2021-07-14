@@ -121,7 +121,6 @@ typedef struct pdftoraster_doc_s
   ppd_file_t *ppd = 0;
   poppler::document *poppler_doc;
   cups_page_header2_t header;
-  int         *JobCanceled;            /* Caller sets to 1 when job canceled */
   filter_logfunc_t logfunc;             /* Logging function, NULL for no
 					   logging */
   void          *logdata;               /* User data for logging function, can
@@ -297,11 +296,16 @@ static void  handleRqeuiresPageRegion(pdftoraster_doc_t*doc) {
   }
 }
 
-static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
+static void parseOpts(filter_data_t *data,
+		      void *parameters,
+		      pdftoraster_doc_t *doc)
 {
+#ifdef HAVE_CUPS_1_7
+  filter_out_format_t outformat;
+#endif /* HAVE_CUPS_1_7 */
   int num_options = 0;
-  cups_option_t *options = 0;
-  char *profile = 0;
+  cups_option_t *options = NULL;
+  char *profile = NULL;
   const char *t = NULL;
   ppd_attr_t *attr;
   const char *val;
@@ -309,19 +313,33 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
   void *ld = data ->logdata;
 
 #ifdef HAVE_CUPS_1_7
-  t = getenv("FINAL_CONTENT_TYPE");
-  if (t && strcasestr(t, "pwg"))
+  if (parameters) {
+    outformat = *(filter_out_format_t *)parameters;
+    if (outformat != OUTPUT_FORMAT_CUPS_RASTER &&
+	outformat != OUTPUT_FORMAT_PWG_RASTER)
+      outformat = OUTPUT_FORMAT_CUPS_RASTER;
+  } else
+    outformat = OUTPUT_FORMAT_CUPS_RASTER;
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "pdftoraster: Output format: %s",
+	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		"PWG Raster"));
+
+  if (outformat == OUTPUT_FORMAT_PWG_RASTER)
     doc->pwgraster = 1;
 #endif /* HAVE_CUPS_1_7 */
 
-  doc->ppd = ppdOpenFile(getenv("PPD"));
+  if (data->ppd)
+    doc->ppd = data->ppd;
+  else if (data->ppdfile)
+    doc->ppd = ppdOpenFile(data->ppdfile);
+
   if (doc->ppd == NULL)
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
       "pdftoraster: PPD file is not specified.");
 
-  if (doc->ppd)
-    ppdMarkDefaults(doc->ppd);
-  options = NULL;
+  options = data->options;
   num_options = data->num_options;
   if (doc->ppd) {
     ppdMarkOptions(doc->ppd,num_options,options);
@@ -329,13 +347,13 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
     ppdRasterInterpretPPD(&(doc->header),doc->ppd,num_options,options,0);
     attr = ppdFindAttr(doc->ppd,"pdftorasterRenderingIntent",NULL);
     if (attr != NULL && attr->value != NULL) {
-      if (strcasecmp(attr->value,"PERCEPTUAL") != 0) {
+      if (strcasecmp(attr->value,"PERCEPTUAL") == 0) {
 	doc->colour_profile.renderingIntent = INTENT_PERCEPTUAL;
-      } else if (strcasecmp(attr->value,"RELATIVE_COLORIMETRIC") != 0) {
+      } else if (strcasecmp(attr->value,"RELATIVE_COLORIMETRIC") == 0) {
 	doc->colour_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
-      } else if (strcasecmp(attr->value,"SATURATION") != 0) {
+      } else if (strcasecmp(attr->value,"SATURATION") == 0) {
 	doc->colour_profile.renderingIntent = INTENT_SATURATION;
-      } else if (strcasecmp(attr->value,"ABSOLUTE_COLORIMETRIC") != 0) {
+      } else if (strcasecmp(attr->value,"ABSOLUTE_COLORIMETRIC") == 0) {
 	doc->colour_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
       }
     }
@@ -394,10 +412,10 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
     if (doc->colour_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
       doc->colour_profile.cm_disabled = 1;
     else
-      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
+      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data->printer);
 
     if (!doc->colour_profile.cm_disabled)
-      cmGetPrinterIccProfile(getenv("PRINTER"), &profile, doc->ppd);
+      cmGetPrinterIccProfile(data->printer, &profile, doc->ppd);
 
     if (profile != NULL) {
       doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
@@ -427,6 +445,15 @@ static void parseOpts(filter_data_t *data, pdftoraster_doc_t *doc)
 	doc->pwgraster = 0;
     }
     cupsRasterParseIPPOptions(&(doc->header),data,doc->pwgraster,1);
+    if (strcasecmp(doc->header.cupsRenderingIntent, "Perceptual") == 0) {
+      doc->colour_profile.renderingIntent = INTENT_PERCEPTUAL;
+    } else if (strcasecmp(doc->header.cupsRenderingIntent, "Relative") == 0) {
+      doc->colour_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
+    } else if (strcasecmp(doc->header.cupsRenderingIntent, "Saturation") == 0) {
+      doc->colour_profile.renderingIntent = INTENT_SATURATION;
+    } else if (strcasecmp(doc->header.cupsRenderingIntent, "Absolute") == 0) {
+      doc->colour_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
+    }
 #else
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
         "pdftoraster: No PPD file specified.");
@@ -1171,12 +1198,15 @@ static unsigned char *removeAlpha(unsigned char *src, unsigned char *dst, unsign
 }
 
 static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
-  int pageNo, conversion_function_t* convert)
+  int pageNo, conversion_function_t* convert, filter_iscanceledfunc_t iscanceled, void *icd)
 {
   ConvertLineFunc convertLine;
   unsigned char *lineBuf = NULL;
   unsigned char *dp;
   unsigned int rowsize;
+
+  if (iscanceled && iscanceled(icd))
+    return;
 
   poppler::page *current_page =doc->poppler_doc->create_page(pageNo-1);
   poppler::page_renderer pr;
@@ -1269,7 +1299,7 @@ static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
 }
 
 static void outPage(pdftoraster_doc_t *doc, int pageNo,
-  cups_raster_t *raster, conversion_function_t *convert, filter_logfunc_t log, void* ld)
+  cups_raster_t *raster, conversion_function_t *convert, filter_logfunc_t log, void* ld, filter_iscanceledfunc_t iscanceled, void *icd)
 {
   int rotate = 0;
   double paperdimensions[2], /* Physical size of the paper */
@@ -1277,6 +1307,9 @@ static void outPage(pdftoraster_doc_t *doc, int pageNo,
   double l, swap;
   int imageable_area_fit = 0;
   int i;
+
+  if (iscanceled && iscanceled(icd))
+    return;
 
   poppler::page *current_page =doc->poppler_doc->create_page(pageNo-1);
   poppler::page_box_enum box = poppler::page_box_enum::media_box;
@@ -1399,7 +1432,7 @@ static void outPage(pdftoraster_doc_t *doc, int pageNo,
   }
 
   /* write page image */
-  writePageImage(raster,doc,pageNo, convert);
+  writePageImage(raster,doc,pageNo, convert, iscanceled, icd);
 }
 
 static void setPopplerColorProfile(pdftoraster_doc_t *doc, filter_logfunc_t log, void *ld)
@@ -1438,7 +1471,7 @@ static void setPopplerColorProfile(pdftoraster_doc_t *doc, filter_logfunc_t log,
     break;
   case CUPS_CSPACE_CIEXYZ:
     if (doc->colour_profile.colorProfile  == NULL) {
-      /* tansform color space via CIELab */
+      /* transform color space via CIELab */
       cmsCIExyY wp;
 #ifdef USE_LCMS1
       cmsWhitePointFromTemp(6504,&wp); /* D65 White point */
@@ -1490,16 +1523,15 @@ static void setPopplerColorProfile(pdftoraster_doc_t *doc, filter_logfunc_t log,
 
 int pdftoraster(int inputfd,         /* I - File descriptor input stream */
        int outputfd,                 /* I - File descriptor output stream */
-       int inputseekable,            /* I - Is input stream seekable? (unused) */
+       int inputseekable,            /* I - Is input stream seekable? (unused)*/
        filter_data_t *data,          /* I - Job and printer data */
-       void *parameters)             /* I - Filter-specific parameters (unused) */
+       void *parameters)             /* I - Filter-specific parameters */
 {
   pdftoraster_doc_t doc;
   int i;
   int npages = 0;
   cups_raster_t *raster;
   cups_file_t	         *inputfp;		/* Print file */
-  FILE                 *outputfp;   /* Output data stream */
   filter_logfunc_t     log = data->logfunc;
   void          *ld = data->logdata;
   int deviceCopies = 1;
@@ -1509,7 +1541,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   void                 *icd = data->iscanceleddata;
   
   cmsSetLogErrorHandler(lcmsErrorHandler);
-  parseOpts(data, &doc);
+  parseOpts(data, parameters, &doc);
 
  /*
   * Open the input data stream specified by inputfd ...
@@ -1522,23 +1554,6 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pdftoraster: Unable to open input data stream.");
     }
-
-    return (1);
-  }
-
- /*
-  * Open the output data stream specified by the outputfd...
-  */
-
-  if ((outputfp = fdopen(outputfd, "w")) == NULL)
-  {
-    if (!iscanceled || !iscanceled(icd))
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pdftoraster: Unable to open output data stream.");
-    }
-
-    cupsFileClose(inputfp);
 
     return (1);
   }
@@ -1701,7 +1716,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
     setPopplerColorProfile(&doc, log, ld);
   }
 
-  if ((raster = cupsRasterOpen(1, doc.pwgraster ? CUPS_RASTER_WRITE_PWG :
+  if ((raster = cupsRasterOpen(outputfd, doc.pwgraster ? CUPS_RASTER_WRITE_PWG :
 			       CUPS_RASTER_WRITE)) == 0) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "pdftoraster: Can't open raster stream.");
@@ -1711,13 +1726,14 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   selectConvertFunc(raster, &doc, &convert, log, ld);
   if(doc.poppler_doc != NULL){    
     for (i = 1;i <= npages;i++) {
-      outPage(&doc,i,raster, &convert, log, ld);
+      outPage(&doc,i,raster, &convert, log, ld, iscanceled, icd);
     }
   } else
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "pdftoraster: Input is empty outputting empty file.");
 
   cupsRasterClose(raster);
+  close(outputfd);
 
   // Delete doc
   if (doc.ppd != NULL) {
