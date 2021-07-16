@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Fixed pdftopdf() filter function to
+	  correctly support page ranges without upper limit, like
+	  "10-" (Pull request #399).
 	- libcupsfilters, pwgtoraster: Created new pwgtoraster()
 	  filter function primarily to print raster input (PWG Raster,
 	  Apple Raster, images) to CUPS Raster drivers in
