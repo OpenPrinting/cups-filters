@@ -388,17 +388,42 @@ oneBitLine(unsigned char *src,  /* I - Input line */
   unsigned int threshold = 0;
   for(unsigned int w = 0; w < width; w+=8){
     t = 0;
-    for(int k = 0; k < 8; k++){
-        t <<= 1;
-        if (bi_level) threshold = 128;
-        else threshold = dither1[row & 0xf][(w+k) & 0xf];
-        if(*src > threshold) {
+    for (int k = 0; k < 8; k++) {
+      t <<= 1;
+      if (w + k < width) {
+	if (bi_level)
+	  threshold = 128;
+        else
+	  threshold = dither1[row & 0xf][(w + k) & 0xf];
+        if (*src > threshold)
           t |= 0x1;
-        }
-        src +=1;
+        src += 1;
+      }
     }
     *dst = t;
     dst += 1;
+  }
+}
+
+/*
+ * 'oneBitToGrayLine()' - Convert one line of 1-bit raster data to 8-bit
+ *                        raster data.
+ */
+
+void    			      /* O - Output line */
+oneBitToGrayLine(unsigned char *src,  /* I - Input line */
+		 unsigned char *dst,  /* O - Destination line */
+		 unsigned int width)  /* I - Width of raster image in pixels */
+{
+  unsigned char mask = 0x80;
+  for (unsigned int w = 0; w < width; w += 1) {
+    if (mask == 0) {
+      mask = 0x80;
+      src ++;
+    }
+    *dst = (*src & mask) ? 0xff : 0;
+    mask >>= 1;
+    dst ++;
   }
 }
 

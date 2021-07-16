@@ -3,6 +3,15 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, pwgtoraster: Created new pwgtoraster()
+	  filter function primarily to print raster input (PWG Raster,
+	  Apple Raster, images) to CUPS Raster drivers in
+	  driver-retro-fitting Printer Applications.
+	- libcupsfilters: Added new oneBitToGrayLine() API function
+	  which converts a line of 1-bit monochrome pixels into 8-bit
+	  grayscale format (cupsfilters/bitmap.[ch]).
+	- libcupsfilters: Fixed possible crash bug in oneBitLine()
+	  function.
 	- libcupsfilters, rastertopwg: Converted CUPS' rastertopwg
 	  filter into the rastertopwg() filter function.
 	- libfontembed: Removed unneeded fontembed/main.c and ttfread

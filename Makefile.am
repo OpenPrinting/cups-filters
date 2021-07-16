@@ -326,6 +326,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pdftoraster.cxx \
 	cupsfilters/ppdgenerator.c \
 	cupsfilters/pstops.c \
+	cupsfilters/pwgtoraster.c \
 	cupsfilters/raster.c \
 	cupsfilters/rastertops.c \
 	cupsfilters/rastertopdf.cpp \
@@ -688,6 +689,7 @@ pkgfilter_PROGRAMS += \
 	rastertopdf \
 	bannertopdf \
 	rastertops \
+	pwgtoraster \
 	pclmtoraster
 if ENABLE_RASTERTOPWG
 pkgfilter_PROGRAMS += \
@@ -929,6 +931,15 @@ mupdftoraster_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la \
 	libppd.la
+
+pwgtoraster_SOURCES = \
+	filter/pwgtoraster.c
+pwgtoraster_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	-I$(srcdir)/cupsfilters/
+pwgtoraster_LDADD = \
+	$(CUPS_LIBS) \
+	libcupsfilters.la
 
 rastertops_SOURCES = \
 	filter/rastertops.c

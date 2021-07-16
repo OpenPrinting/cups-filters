@@ -40,6 +40,7 @@ unsigned char	*reverseOneBitLine	(unsigned char *src, unsigned char *dst, unsign
 unsigned char	*reverseOneBitLineSwap	(unsigned char *src, unsigned char *dst, unsigned int pixels, unsigned int size);
 void 		*oneBitLine     	(unsigned char *src, unsigned char *dst, unsigned int width,
 					unsigned int row, int bi_level);
+  void 		*oneBitToGrayLine     	(unsigned char *src, unsigned char *dst, unsigned int width);
 unsigned char	*RGB8toKCMYcm   	(unsigned char *src, unsigned char *dst, unsigned int x, unsigned int y);
 
 #  ifdef __cplusplus
