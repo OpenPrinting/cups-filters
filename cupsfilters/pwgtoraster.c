@@ -1184,9 +1184,6 @@ static bool outPage(pwgtoraster_doc_t *doc,
   doc->outheader.PageSize[0] = doc->inheader.PageSize[0];
   doc->outheader.PageSize[1] = doc->inheader.PageSize[1];
 
-  doc->outheader.HWResolution[0] = doc->inheader.HWResolution[0] * 2;
-  doc->outheader.HWResolution[1] = doc->inheader.HWResolution[1] * 2;
-
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
   if (doc->ppd)
