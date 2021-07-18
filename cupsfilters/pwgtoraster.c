@@ -104,6 +104,7 @@ typedef struct cms_profile_s
 
 typedef struct pwgtoraster_doc_s
 {                /**** Document information ****/
+  bool page_size_requested;
   int bi_level;
   bool allocLineBuf;
   unsigned int bitspercolor;
@@ -312,6 +313,15 @@ static void parseOpts(filter_data_t *data,
 
   options = data->options;
   num_options = data->num_options;
+
+  // Did the user explicitly request a certain page size? If not, overtake
+  // the page size(s) from the input pages
+  doc->page_size_requested =
+    (cupsGetOption("PageSize", num_options, options) ||
+     cupsGetOption("media", num_options, options) ||
+     cupsGetOption("media-size", num_options, options) ||
+     cupsGetOption("media-col", num_options, options));
+
   if (doc->ppd) {
     ppdMarkOptions(doc->ppd,num_options,options);
     handleRequiresPageRegion(doc);
@@ -415,8 +425,11 @@ static void parseOpts(filter_data_t *data,
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
     doc->bi_level = 1;
+
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-    "pwgtoraster: Page size requested: %s", doc->outheader.cupsPageSizeName);
+	       "pwgtoraster: Page size %s: %s",
+	       doc->page_size_requested ? "requested" : "default",
+	       doc->outheader.cupsPageSizeName);
 }
 
 static unsigned char *reverseLine(unsigned char *src, unsigned char *dst,
@@ -1112,6 +1125,9 @@ static bool outPage(pwgtoraster_doc_t *doc,
   double swap;
   int imageable_area_fit = 0;
   int landscape_fit = 0;
+  int overspray_duplicate_after_pixels = INT_MAX;
+  int next_overspray_duplicate = 0;
+  int next_line_read = 0;
   unsigned int y = 0, yin = 0;
   ConvertLineFunc convertLine;
   unsigned char *lineBuf = NULL;
@@ -1181,8 +1197,11 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	"pwgtoraster:   cupsPageSizeName = %s", doc->inheader.cupsPageSizeName);
   }
 
-  doc->outheader.PageSize[0] = doc->inheader.PageSize[0];
-  doc->outheader.PageSize[1] = doc->inheader.PageSize[1];
+  if (!doc->page_size_requested)
+  {
+    doc->outheader.PageSize[0] = doc->inheader.PageSize[0];
+    doc->outheader.PageSize[1] = doc->inheader.PageSize[1];
+  }
 
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
@@ -1321,7 +1340,30 @@ static bool outPage(pwgtoraster_doc_t *doc,
     // Canceled
     return false;
 
-  // Check for needed resolution conversions
+  // Pre-conversion of resolution and color space
+  //
+  // The resolution and color space/depth/order for the CUPS Raster
+  // data to be fed into the filter is not simply defined by options
+  // and choices with intuitive names, but by the PostScript code
+  // attached to the choices of the options in the PPD which are
+  // selected for the job, like "<</HWResolution[300 300]>>
+  // setpagedevice" or "<</cupsColorOrder 1 /cupsColorSpace 8
+  // /cupsCompression 2>> setpagedevice". The CUPS filters collect all
+  // of the selected ones and interpret them with a mini PostScript
+  // interpreter (ppdRaterInterpretPPD() in libppd) to generate the
+  // CUPS Raster header (data structure describing the raster format)
+  // for the page.
+  //
+  // Unfortunately, resolutions are not always defined in the
+  // “Resolution” option (for example in “Print Quality” instead) or
+  // the resolution values do not correspond with the human-readable
+  // choice names, same for color spaces not always defined in
+  // “ColorModel”. As with this the information the Printer
+  // Application has from the PPD often does not reflect the driver’s
+  // actual requirements, this filter function pre-converts
+  // resolutions and color spaces as needed.
+
+  // Check for needed resolution pre-conversions
   for (i = 0; i < 2; i ++)
   {
     res_down_factor[i] = 1;
@@ -1398,7 +1440,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
   {
     input_color_mode = 0;
     inlineoffset = doc->bitmapoffset[0] / 8; // Round down
-    inlinesize = (doc->outheader.cupsWidth + 7) / 8; // Round up 
+    inlinesize = (doc->outheader.cupsWidth + 7) / 8; // Round up
   }
   else
   {
@@ -1448,7 +1490,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 		 (input_color_mode == 0 ? "1-bit mono" :
 		  (input_color_mode == 1 ? "8-bit gray" :
 		   "8-bit RGB")));
-  }    
+  }
 
   // Conversion line buffer (if needed by the conversion function
   if (doc->allocLineBuf)
@@ -1461,10 +1503,20 @@ static bool outPage(pwgtoraster_doc_t *doc,
     convertLine = convert->convertLineOdd;
   }
 
-  // Inout line buffer (with space for raising horizontal resolution if needed)
+  // Input line buffer (with space for raising horizontal resolution
+  // and overspray stretch if needed)
+  //
+  // Note that the input lines can get stretched when the PPD defines
+  // paper dimensions larger than the physical paper size for
+  // overspraying on borderless printouts. Therefore we allocate the
+  // maximum of the input line size (multiplied by a resolution
+  // multiplier) and inlineoffset + inlinesize, to be sure to have
+  // enough space.
+  i = doc->inheader.cupsBytesPerLine * res_up_factor[0];
+  j = inlineoffset + inlinesize;
+  if (j > i) i = j;
   line =
-    (unsigned char *)calloc(doc->inheader.cupsBytesPerLine * res_up_factor[0],
-			    sizeof(unsigned char));
+    (unsigned char *)calloc(i, sizeof(unsigned char));
 
   // Input line averaging buffer (to reduce resolution)
   if (res_down_factor[1] > 1 && input_color_mode > 0)
@@ -1477,6 +1529,60 @@ static bool outPage(pwgtoraster_doc_t *doc,
   if (doc->nplanes > 1)
     pagebuf = (unsigned char *)calloc(doc->outheader.cupsHeight * inlinesize,
 				      sizeof(unsigned char));
+
+  // Overspray stretch of the input image If the output page
+  // dimensions are larger than the input page dimensions we have most
+  // probably a page size from the PPD where the page dimensions are
+  // defined larger than the physical paper to do an overspray when
+  // printing borderless, to avoid narrow white margins on one side if
+  // the paper is not exactly aligned in the printer. The HPLIP driver
+  // hpcups does this for example on inkjet printers.
+  //
+  // To fill this larger raster space we need to stretch the original
+  // image slightly, and to do so, we will simply repeat a line or a
+  // column in regular intervals.
+  //
+  // To keep aspect ratio we will find the (horizontal or vertical)
+  // dimension with the higher stretch percentage and stretch by this
+  // in both dimensions.
+  //
+  // Here we calculate the number of lines/columns after which we need
+  // to repeat one line/column.
+
+  if (doc->page_size_requested &&
+      (doc->outheader.PageSize[0] > doc->inheader.PageSize[0] ||
+       doc->outheader.PageSize[1] > doc->inheader.PageSize[1]))
+  {
+    int extra_points,
+        min_overspray_duplicate_after_pixels = INT_MAX;
+
+    if (doc->outheader.PageSize[0] >= 2 * doc->inheader.PageSize[0] ||
+	doc->outheader.PageSize[1] >= 2 * doc->inheader.PageSize[1])
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pwgtoraster: Difference between input and output page dimensions too large, probably the input has a wrong page size");
+      goto out;
+    }
+
+    for (i = 0; i < 2; i ++)
+    {
+      extra_points = doc->outheader.PageSize[i] - doc->inheader.PageSize[i];
+      if (extra_points > 0)
+      {
+	overspray_duplicate_after_pixels = doc->inheader.PageSize[i] /
+	  extra_points;
+	if (overspray_duplicate_after_pixels <
+	    min_overspray_duplicate_after_pixels)
+	  min_overspray_duplicate_after_pixels =
+	    overspray_duplicate_after_pixels;
+      }
+    }
+    overspray_duplicate_after_pixels = min_overspray_duplicate_after_pixels;
+    next_overspray_duplicate = overspray_duplicate_after_pixels;
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "pwgtoraster: Output page dimensions are larger for borderless printing with overspray, inserting one extra pixel after each %d pixels",
+		 overspray_duplicate_after_pixels);
+  }
 
   // Skip upper border
   for (y = 0, yin = 0; y < doc->bitmapoffset[1]; y ++)
@@ -1502,6 +1608,8 @@ static bool outPage(pwgtoraster_doc_t *doc,
   // We will be able to stream per-line if the color order in the destination
   // raster stream is chunked or banded and stream per-page if the colors are
   // arranged in planes
+  next_line_read = 0;
+  next_overspray_duplicate = overspray_duplicate_after_pixels;
   for (unsigned int plane = 0; plane < doc->nplanes; plane ++) {
     for (y = doc->bitmapoffset[1];
 	 y < doc->bitmapoffset[1] + doc->outheader.cupsHeight; y ++)
@@ -1512,190 +1620,289 @@ static bool outPage(pwgtoraster_doc_t *doc,
       {
 	// First plane or no planes
 
-	if (y % res_up_factor[1] == 0)
+	if (next_overspray_duplicate != 0)
 	{
-	  for (i = 0; i < res_down_factor[1]; i ++)
+	  if (next_line_read == 0)
 	  {
-	    if (yin < doc->inheader.cupsHeight)
+	    for (i = 0; i < res_down_factor[1]; i ++)
 	    {
-	      // Read input pixel line
-	      if (cupsRasterReadPixels(inras, line,
-				       doc->inheader.cupsBytesPerLine) !=
-		  doc->inheader.cupsBytesPerLine)
+	      if (yin < doc->inheader.cupsHeight)
 	      {
-		if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-			     "pwgtoraster: Unable to read line %d for page %d.",
-			   yin + 1, pageNo);
-		ret = false;
-		goto out;
+		// Read input pixel line
+		if (cupsRasterReadPixels(inras, line,
+					 doc->inheader.cupsBytesPerLine) !=
+		    doc->inheader.cupsBytesPerLine)
+		{
+		  if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
+			       "pwgtoraster: Unable to read line %d for page %d.",
+			       yin + 1, pageNo);
+		  ret = false;
+		  goto out;
+		}
+		yin ++;
 	      }
-	      yin ++;
-	    }
-	    else
-	    {
-	      // White lines to fill the rest of the page
-	      memset(line, 255, doc->inheader.cupsBytesPerLine);
+	      else
+		// White lines to fill the rest of the page
+		memset(line, 255, doc->inheader.cupsBytesPerLine);
+
+	      // Collect lines for averaging (when reducing vertical resolution)
+	      if (res_down_factor[1] > 1 && input_color_mode > 0)
+		memcpy(lineavg + i * doc->inheader.cupsBytesPerLine,
+		       line, doc->inheader.cupsBytesPerLine);
 	    }
 
-	    // Collect lines for averaging (when reducing vertical resolution)
+	    // Calculate average of res_down_factor[1] input lines for reducing
+	    // resolution (only for 8-bit color modes, on 1-bit only last line
+	    // of the group is used)
 	    if (res_down_factor[1] > 1 && input_color_mode > 0)
-	      memcpy(lineavg + i * doc->inheader.cupsBytesPerLine,
-		     line, doc->inheader.cupsBytesPerLine);
-	  }
+	      for (i = 0; i < doc->inheader.cupsBytesPerLine; i ++)
+	      {
+		int val = 0;
+		for (j = 0; j < res_down_factor[1]; j ++)
+		  val += (int)*(lineavg + j * doc->inheader.cupsBytesPerLine +
+				i);
+		line[i] = (unsigned char)(val / res_down_factor[1]);
+	      }
 
-	  // Calculate average of res_down_factor[1] input lines for reducing
-	  // resolution (only for 8-bit color modes, on 1-bit only last line
-	  // of the group is used)
-	  if (res_down_factor[1] > 1 && input_color_mode > 0)
-	    for (i = 0; i < doc->inheader.cupsBytesPerLine; i ++)
+	    // Converting pixel lines for horizontal resolution
+	    if (res_up_factor[0] > 1)
 	    {
-	      int val = 0;
-	      for (j = 0; j < res_down_factor[1]; j ++)
-		val += (int)*(lineavg + j * doc->inheader.cupsBytesPerLine + i);
-	      line[i] = (unsigned char)(val / res_down_factor[1]);
+	      // Repeat every pixel in the line res_up_factor[0] times
+	      if (input_color_mode == 0)
+	      {
+		unsigned char *src = line + doc->inheader.cupsBytesPerLine - 1,
+		              *dst = line + doc->inheader.cupsBytesPerLine *
+		                     res_up_factor[0] - 1;
+		unsigned char byte = 0, mask = 0x01;
+		while (src >= line)
+		{
+		  byte = *(src --);
+		  for (i = 0; i < 8; i ++)
+		  {
+		    for (j = 0; j < res_up_factor[0]; j ++)
+		    {
+		      if (mask == 0x01)
+			*dst = 0;
+		      if (byte & 0x01)
+			*dst |= mask;
+		      mask <<= 1;
+		      if (mask == 0)
+		      {
+			dst --;
+			mask = 0x01;
+		      }
+		    }
+		    byte >>= 1;
+		  }
+		}
+	      }
+	      else if (input_color_mode == 1)
+	      {
+		unsigned char *src = line + doc->inheader.cupsBytesPerLine - 1,
+		              *dst = line +
+		                       (doc->inheader.cupsBytesPerLine - 1) *
+		                       res_up_factor[0];
+		while (src >= line)
+	        {
+		  for (i = 0; i < res_up_factor[0]; i ++)
+		    *(dst + i) = *src;
+		  src -= 1;
+		  dst -= res_up_factor[0];
+		}
+	      }
+	      else if (input_color_mode == 2)
+	      {
+		unsigned char *src = line + doc->inheader.cupsBytesPerLine - 3,
+		              *dst = line +
+		                       (doc->inheader.cupsBytesPerLine - 3) *
+		                       res_up_factor[0];
+		while (src >= line)
+	        {
+		  for (i = 0; i < res_up_factor[0]; i ++)
+		    for (j = 0; j < 3; j ++)
+		      *(dst + 3 * i + j) = *(src + j);
+		  src -= 3;
+		  dst -= 3 * res_up_factor[0];
+		}
+	      }
+	    }
+	    else if (res_down_factor[0] > 1)
+	    {
+	      // Reduce the number of pixels per line to 1/res_down_factor[0]
+	      if (input_color_mode == 0)
+	      {
+		// Grab the last of every group of res_down_factor[0] pixels
+		unsigned char *src = line, *dst = line;
+		unsigned char byte = 0, mask = 0x80;
+		j = 0;
+		while (src < line + doc->inheader.cupsBytesPerLine)
+		{
+		  byte = *(src ++);
+		  for (i = 0; i < 8; i ++)
+		  {
+		    j ++;
+		    if (j == res_down_factor[0])
+		    {
+		      if (mask == 0x80)
+			*dst = 0;
+		      if (byte & 0x80)
+			*dst |= mask;
+		      mask >>= 1;
+		      if (mask == 0)
+		      {
+			dst ++;
+			mask = 0x80;
+		      }
+		      j = 0;
+		    }
+		    byte <<= 1;
+		  }
+		}
+	      }
+	      else if (input_color_mode == 1)
+	      {
+		// Average every group of res_down_factor[0] pixels
+		unsigned char *src = line, *dst = line;
+		int val = 0;
+		j = 0;
+		while (j || src < line + doc->inheader.cupsBytesPerLine)
+	        {
+		  if (src < line + doc->inheader.cupsBytesPerLine)
+		    val += (int)*(src ++);
+		  else
+		    val += 255;
+		  j ++;
+		  if (j == res_down_factor[0])
+		  {
+		    *(dst ++) = (unsigned char)(val / res_down_factor[0]);
+		    val = 0;
+		    j = 0;
+		  }
+		}
+	      }
+	      else if (input_color_mode == 2)
+	      {
+		// Average every group of res_down_factor[0] pixels
+		unsigned char *src = line, *dst = line;
+		int val[3];
+		for (i = 0; i < 3; i ++)
+		  val[i] = 0;
+		i = 0;
+		j = 0;
+		while (j || src < line + doc->inheader.cupsBytesPerLine)
+	        {
+		  if (src < line + doc->inheader.cupsBytesPerLine)
+		    val[i ++] += (int)*(src ++);
+		  else
+		    val[i ++] += 255;
+		  if (i == 3)
+		  {
+		    j ++;
+		    if (j == res_down_factor[0])
+		    {
+		      for (i = 0; i < 3; i ++)
+		      {
+			*(dst ++) = (unsigned char)(val[i] /
+						    res_down_factor[0]);
+			val[i] = 0;
+		      }
+		      j = 0;
+		    }
+		    i = 0;
+		  }
+		}
+	      }
 	    }
 
-	  // Converting pixel lines for horizontal resolution
-	  if (res_up_factor[0] > 1) {
-	    // Repeat every pixel in the line res_up_factor[0] times
-	    if (input_color_mode == 0) {
-	      unsigned char *src = line + doc->inheader.cupsBytesPerLine - 1,
-		            *dst = line + doc->inheader.cupsBytesPerLine *
-		                          res_up_factor[0] - 1;
-	      unsigned char byte = 0, mask = 0x01;
-	      while (src >= line)
+	    // Stretching pixel lines for horizontal overspray
+	    if (overspray_duplicate_after_pixels < INT_MAX)
+	    {
+	      // Repeat one pixel after each overspray_duplicate_after_pixels
+	      // pixels
+	      if (input_color_mode == 0)
 	      {
-		byte = *(src --);
-		for (i = 0; i < 8; i ++)
-		{
-		  for (j = 0; j < res_up_factor[0]; j ++)
+		unsigned char *buf =
+		  (unsigned char *)calloc(inlinesize, sizeof(unsigned char));
+		unsigned char *src = line,
+		              *dst = buf;
+		unsigned char srcmask = 0x80, dstmask = 0x80;
+		i = overspray_duplicate_after_pixels;
+		while (src < line + doc->inheader.cupsBytesPerLine)
+	        {
+		  if (*src & srcmask)
+		    *dst |= dstmask;
+		  dstmask >>= 1;
+		  if (dstmask == 0)
 		  {
-		    if (mask == 0x01)
-		      *dst = 0;
-		    if (byte & 0x01)
-		      *dst |= mask;
-		    mask <<= 1;
-		    if (mask == 0)
-		    {
-		      dst --;
-		      mask = 0x01;
-		    }
+		    dst ++;
+		    dstmask = 0x80;
 		  }
-		  byte >>= 1;
+		  if (i == 0)
+		    i = overspray_duplicate_after_pixels;
+		  else
+		  {
+		    srcmask >>= 1;
+		    if (srcmask == 0)
+		    {
+		      src ++;
+		      srcmask = 0x80;
+		    }
+		    i --;
+		  }
 		}
+		memcpy(line + inlineoffset, buf, inlinesize);
+		free(buf);
 	      }
-	    } else if (input_color_mode == 1) {
-	      unsigned char *src = line + doc->inheader.cupsBytesPerLine - 1,
-		            *dst = line + (doc->inheader.cupsBytesPerLine - 1) *
-		                          res_up_factor[0];
-	      while (src >= line)
+	      else if (input_color_mode == 1)
 	      {
-		for (i = 0; i < res_up_factor[0]; i ++)
-		  *(dst + i) = *src;
-		src -= 1;
-		dst -= res_up_factor[0];
-	      }
-	    } else if (input_color_mode == 2) {
-	      unsigned char *src = line + doc->inheader.cupsBytesPerLine - 3,
-		            *dst = line + (doc->inheader.cupsBytesPerLine - 3) *
-		                          res_up_factor[0];
-	      while (src >= line)
-	      {
-		for (i = 0; i < res_up_factor[0]; i ++)
+		unsigned char *src = line + doc->inheader.cupsBytesPerLine - 1,
+		  *dst = line + inlinesize - 1;
+		i = overspray_duplicate_after_pixels;
+		while (src >= line && dst >= line)
+	        {
+		  *dst = *src;
+		  dst --;
+		  if (i == 0)
+		    i = overspray_duplicate_after_pixels;
+		  else
+		  {
+		    src --;
+		    i --;
+		  }
+		}
+	      } else if (input_color_mode == 2) {
+		unsigned char *src = line + doc->inheader.cupsBytesPerLine - 3,
+		              *dst = line + inlinesize - 3;
+		i = overspray_duplicate_after_pixels;
+		while (src >= line && dst >= line)
+	        {
 		  for (j = 0; j < 3; j ++)
-		    *(dst + 3 * i + j) = *(src + j);
-		src -= 3;
-		dst -= 3 * res_up_factor[0];
-	      }
-	    }
-	  } else if (res_down_factor[0] > 1) {
-	    // Reduce the number of pixels per line to 1/res_down_factor[0]
-	    if (input_color_mode == 0) {
-	      // Grab the last of every group of res_down_factor[0] pixels
-	      unsigned char *src = line, *dst = line;
-	      unsigned char byte = 0, mask = 0x80;
-	      j = 0;
-	      while (src < line + doc->inheader.cupsBytesPerLine)
-	      {
-		byte = *(src ++);
-		for (i = 0; i < 8; i ++)
-		{
-		  j ++;
-		  if (j == res_down_factor[0])
+		    *(dst + j) = *(src + j);
+		  dst -= 3;
+		  if (i == 0)
+		    i = overspray_duplicate_after_pixels;
+		  else
 		  {
-		    if (mask == 0x80)
-		      *dst = 0;
-		    if (byte & 0x80)
-		      *dst |= mask;
-		    mask >>= 1;
-		    if (mask == 0)
-		    {
-		      dst ++;
-		      mask = 0x80;
-		    }
-		    j = 0;
+		    src -= 3;
+		    i --;
 		  }
-		  byte <<= 1;
-		}
-	      }
-	    } else if (input_color_mode == 1) {
-	      // Average every group of res_down_factor[0] pixels
-	      unsigned char *src = line, *dst = line;
-	      int val = 0;
-	      j = 0;
-	      while (j || src < line + doc->inheader.cupsBytesPerLine)
-	      {
-		if (src < line + doc->inheader.cupsBytesPerLine)
-		  val += (int)*(src ++);
-		else
-		  val += 255;
-		j ++;
-		if (j == res_down_factor[0])
-		{
-		  *(dst ++) = (unsigned char)(val / res_down_factor[0]);
-		  val = 0;
-		  j = 0;
-		}
-	      }
-	    } else if (input_color_mode == 2) {
-	      // Average every group of res_down_factor[0] pixels
-	      unsigned char *src = line, *dst = line;
-	      int val[3];
-	      for (i = 0; i < 3; i ++)
-		val[i] = 0;
-	      i = 0;
-	      j = 0;
-	      while (j || src < line + doc->inheader.cupsBytesPerLine)
-	      {
-		if (src < line + doc->inheader.cupsBytesPerLine)
-		  val[i ++] += (int)*(src ++);
-		else
-		  val[i ++] += 255;
-		if (i == 3)
-		{
-		  j ++;
-		  if (j == res_down_factor[0])
-		  {
-		    for (i = 0; i < 3; i ++)
-		    {
-		      *(dst ++) = (unsigned char)(val[i] / res_down_factor[0]);
-		      val[i] = 0;
-		    }
-		    j = 0;
-		  }
-		  i = 0;
 		}
 	      }
 	    }
+	    next_line_read = res_up_factor[1];
 	  }
+	  next_line_read --;
+	  next_overspray_duplicate --;
 	}
+	else
+	  next_overspray_duplicate = overspray_duplicate_after_pixels;
 	
 	// Pointer to the part of the input line we will use
 	bp = line + inlineoffset;
 
 	// Save input line for the other planes
 	if (doc->nplanes > 1)
-	  memcpy(pagebuf + (y - doc->bitmapoffset[0]) * inlinesize,
+	  memcpy(pagebuf + (y - doc->bitmapoffset[1]) * inlinesize,
 		 bp, inlinesize);
       }
       else
