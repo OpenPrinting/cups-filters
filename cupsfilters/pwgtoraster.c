@@ -1129,6 +1129,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
   int next_overspray_duplicate = 0;
   int next_line_read = 0;
   unsigned int y = 0, yin = 0;
+  unsigned char *bp = NULL;
   ConvertLineFunc convertLine;
   unsigned char *lineBuf = NULL;
   unsigned char *dp;
@@ -1614,8 +1615,6 @@ static bool outPage(pwgtoraster_doc_t *doc,
     for (y = doc->bitmapoffset[1];
 	 y < doc->bitmapoffset[1] + doc->outheader.cupsHeight; y ++)
     {
-      unsigned char *bp;
-
       if (plane == 0)
       {
 	// First plane or no planes
@@ -1819,15 +1818,15 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	    {
 	      // Repeat one pixel after each overspray_duplicate_after_pixels
 	      // pixels
+	      unsigned char *buf =
+		(unsigned char *)calloc(inlinesize, sizeof(unsigned char));
+	      unsigned char *src = line + inlineoffset,
+		            *dst = buf;
 	      if (input_color_mode == 0)
 	      {
-		unsigned char *buf =
-		  (unsigned char *)calloc(inlinesize, sizeof(unsigned char));
-		unsigned char *src = line,
-		              *dst = buf;
 		unsigned char srcmask = 0x80, dstmask = 0x80;
 		i = overspray_duplicate_after_pixels;
-		while (src < line + doc->inheader.cupsBytesPerLine)
+		while (dst < buf + inlinesize)
 	        {
 		  if (*src & srcmask)
 		    *dst |= dstmask;
@@ -1850,44 +1849,40 @@ static bool outPage(pwgtoraster_doc_t *doc,
 		    i --;
 		  }
 		}
-		memcpy(line + inlineoffset, buf, inlinesize);
-		free(buf);
 	      }
 	      else if (input_color_mode == 1)
 	      {
-		unsigned char *src = line + doc->inheader.cupsBytesPerLine - 1,
-		  *dst = line + inlinesize - 1;
 		i = overspray_duplicate_after_pixels;
-		while (src >= line && dst >= line)
+		while (dst < buf + inlinesize)
 	        {
 		  *dst = *src;
-		  dst --;
+		  dst ++;
 		  if (i == 0)
 		    i = overspray_duplicate_after_pixels;
 		  else
 		  {
-		    src --;
+		    src ++;
 		    i --;
 		  }
 		}
 	      } else if (input_color_mode == 2) {
-		unsigned char *src = line + doc->inheader.cupsBytesPerLine - 3,
-		              *dst = line + inlinesize - 3;
 		i = overspray_duplicate_after_pixels;
-		while (src >= line && dst >= line)
+		while (dst < buf + inlinesize - 2)
 	        {
 		  for (j = 0; j < 3; j ++)
 		    *(dst + j) = *(src + j);
-		  dst -= 3;
+		  dst += 3;
 		  if (i == 0)
 		    i = overspray_duplicate_after_pixels;
 		  else
 		  {
-		    src -= 3;
+		    src += 3;
 		    i --;
 		  }
 		}
 	      }
+	      memcpy(line + inlineoffset, buf, inlinesize);
+	      free(buf);
 	    }
 	    next_line_read = res_up_factor[1];
 	  }
