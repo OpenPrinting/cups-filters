@@ -3,6 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libppd: In the ppdCacheGetPageSize() function do not only
+	  check the fit of the margins with the page size matching the
+	  job's page size (like "A4") but also the margins of the
+	  variants (like "A4.Borderless"), even if the variant's size
+	  dimensions differ from the base size (and the physical paper
+	  size), for example for overspray in borderless printing mode
+	  (HPLIP does this). Also select a borderless variant only if
+	  the job requests borderless (all margins zero).
 	- libcupsfilters: Fixed pdftopdf() filter function to
 	  correctly support page ranges without upper limit, like
 	  "10-" (Pull request #399).

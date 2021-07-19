@@ -2442,8 +2442,9 @@ ppdCacheGetPageSize(
     const char   *keyword,		/* I - Keyword string or NULL */
     int          *exact)		/* O - 1 if exact match, 0 otherwise */
 {
-  int		i;			/* Looping var */
+  int		i, j;			/* Looping vars */
   pwg_size_t	*size,			/* Current size */
+		*variant,		/* Page size variant */
 		*closest,		/* Closest size */
 		jobsize;		/* Size data from job */
   int		margins_set,		/* Were the margins set? */
@@ -2559,7 +2560,7 @@ ppdCacheGetPageSize(
   */
 
   closest  = NULL;
-  dclosest = 999999999;
+  dclosest = dmin = 999999999;
 
   if (!ppd_name || _ppd_strncasecmp(ppd_name, "Custom.", 7) ||
       _ppd_strncasecmp(ppd_name, "custom_", 7))
@@ -2580,31 +2581,79 @@ ppdCacheGetPageSize(
       if (margins_set)
       {
        /*
-	* Use a tighter epsilon of 1 point (35/2540ths) for margins...
+	* Check not only the base size (like "A4") but also variants (like
+        * "A4.Borderless"). We check only the margins and orientation but do 
+	* not re-check the size.
 	*/
-
-	dleft   = size->left - jobsize.left;
-	dright  = size->right - jobsize.right;
-	dtop    = size->top - jobsize.top;
-	dbottom = size->bottom - jobsize.bottom;
-
-	if (dleft <= -35 || dleft >= 35 || dright <= -35 || dright >= 35 ||
-	    dtop <= -35 || dtop >= 35 || dbottom <= -35 || dbottom >= 35)
+	for (j = pc->num_sizes, variant = pc->sizes; j > 0; j --, variant ++)
 	{
-	  dleft   = dleft < 0 ? -dleft : dleft;
-	  dright  = dright < 0 ? -dright : dright;
-	  dbottom = dbottom < 0 ? -dbottom : dbottom;
-	  dtop    = dtop < 0 ? -dtop : dtop;
-	  dmin    = dleft + dright + dbottom + dtop;
-
-	  if (dmin < dclosest)
+	  if (!strcmp(size->map.ppd, variant->map.ppd) ||
+	      (!strncmp(size->map.ppd, variant->map.ppd,
+			strlen(size->map.ppd)) &&
+	       (strlen(variant->map.ppd) > strlen(size->map.ppd) + 1) &&
+	       variant->map.ppd[strlen(size->map.ppd)] == '.'))
 	  {
-	    dclosest = dmin;
-	    closest  = size;
-	  }
+	   /*
+	    * Found a variant (or the base size)
+	    */
 
-	  continue;
+	   /*
+	    * First check orientation (we do not want ".Transverse" variants)
+	    */
+
+	    if ((size->length - size->width) *
+		(variant->length - variant->width) < 0)
+	      continue;
+
+	   /*
+	    * Borderless page size variant, use it only if the job requests
+	    * borderless
+	    */
+
+	    if (strchr(variant->map.ppd, '.') &&
+		variant->left == 0 && variant->right == 0 &&
+		variant->top == 0 && variant->bottom == 0 &&
+		(jobsize.left != 0 || jobsize.right != 0 ||
+		 jobsize.top != 0 || jobsize.bottom != 0))
+	      continue;
+
+	   /*
+	    * Use a tighter epsilon of 1 point (35/2540ths) for margins...
+	    */
+
+	    dleft   = variant->left - jobsize.left;
+	    dright  = variant->right - jobsize.right;
+	    dtop    = variant->top - jobsize.top;
+	    dbottom = variant->bottom - jobsize.bottom;
+
+	    if (dleft <= -35 || dleft >= 35 || dright <= -35 || dright >= 35 ||
+		dtop <= -35 || dtop >= 35 || dbottom <= -35 || dbottom >= 35)
+	    {
+	      dleft   = dleft < 0 ? -dleft : dleft;
+	      dright  = dright < 0 ? -dright : dright;
+	      dbottom = dbottom < 0 ? -dbottom : dbottom;
+	      dtop    = dtop < 0 ? -dtop : dtop;
+	      /* In the sum we do a slight penalization of the variants to
+		 prefer the base if it has the same margins) */
+	      dmin    = dleft + dright + dbottom + dtop +
+		        (strchr(variant->map.ppd, '.') ? 1 : 0);
+
+	      if (dmin < dclosest)
+	      {
+		dclosest = dmin;
+		closest  = variant;
+	      }
+	    }
+	    else
+	    {
+	      dmin = 0;
+	      size = variant;
+	      break;
+	    }
+	  }
 	}
+	if (dmin)
+	  continue;
       }
 
       if (exact)
