@@ -1549,6 +1549,9 @@ static bool outPage(pwgtoraster_doc_t *doc,
   //
   // Here we calculate the number of lines/columns after which we need
   // to repeat one line/column.
+  //
+  // This facility also fixes rounding errors which lead to the input
+  // raster to be a few pixels too small for the output.
 
   if (doc->page_size_requested &&
       (doc->outheader.PageSize[0] > doc->inheader.PageSize[0] ||
@@ -1580,9 +1583,19 @@ static bool outPage(pwgtoraster_doc_t *doc,
     }
     overspray_duplicate_after_pixels = min_overspray_duplicate_after_pixels;
     next_overspray_duplicate = overspray_duplicate_after_pixels;
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pwgtoraster: Output page dimensions are larger for borderless printing with overspray, inserting one extra pixel after each %d pixels",
-		 overspray_duplicate_after_pixels);
+    if  (abs(doc->outheader.PageSize[0] - doc->inheader.PageSize[0]) > 2 ||
+	 abs(doc->outheader.PageSize[1] - doc->inheader.PageSize[1]) > 2)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "pwgtoraster: Output page dimensions are larger for borderless printing with overspray, inserting one extra pixel after each %d pixels",
+		   overspray_duplicate_after_pixels);
+    }
+    else
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "pwgtoraster: Output page dimensions are larger than input page dimensions due to rounding error, inserting one extra pixel after each %d pixels",
+		   overspray_duplicate_after_pixels);
+    }
   }
 
   // Skip upper border
