@@ -2232,6 +2232,19 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasecmp(c, "SpeedPrior") == 0)
 	    properties->sets_draft = 10;
 	}
+	else if (strcasecmp(o, "RIPrintMode") == 0) /* Ricoh & OEM */
+	{
+	  if (strcasecmp(c, "1rhit") == 0)
+	    properties->sets_high = 7;
+	  else if (strcasecmp(c, "6rhit") == 0)
+	    properties->sets_high = 10;
+	  else if (strcasecmp(c, "3rhit") == 0 ||
+		   strcasecmp(c, "4rhit") == 0 ||
+		   strcasecmp(c, "5rhit") == 0)
+	    properties->sets_draft = 10;
+	  else if (strcasecmp(c, "0rhit") == 0)
+	    properties->sets_normal = 10;
+	}
 	/* Generic boolean options which enhance quality if true */
 	else if (((p = strcasestr(o, "slow")) && strcasestr(p, "dry")) ||
 		 ((p = strcasestr(o, "color")) && strcasestr(p, "enhance")) ||
