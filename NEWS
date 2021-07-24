@@ -3,6 +3,16 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libppd: In ppdCacheCreateWithPPD() also support presets for
+	  print-ontent-optimize, not only for print-color-mode and
+	  print-quality
+	- libppd: Auto-pre-fill the presets with most suitable options
+	  from the PPD files with new ppdCacheAssignPresets() function
+	  (Only if not filled via "APPrinterPreset" in the PPD). This
+	  way we can use the IPP options print-color-mode,
+	  print-quality, and print-content-optimize in a
+	  PPD/CUPS-driver-retro-fitting Printer Application with most
+	  PPDs.
 	- libppd: In the ppdCacheGetPageSize() function do not only
 	  check the fit of the margins with the page size matching the
 	  job's page size (like "A4") but also the margins of the
