@@ -2155,11 +2155,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	   color printing */
 	if (is_color)
 	{
-	  if (strcasecmp(o, "ColorModel") == 0 &&
-	      strcasecmp(c, "KGray") == 0)
-	    /* Special case of HPLIP, to prefer against CMYGRay */
-	    properties->sets_mono = 10;
-	  else if (strcasecmp(o, "CNIJSGrayScale") == 0)
+	  if (strcasecmp(o, "CNIJSGrayScale") == 0)
 	  {
 	    if (strcasecmp(c, "1") == 0)
 	      properties->sets_mono = 2;
@@ -2188,13 +2184,13 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		((p = strcasestr(c, "Black")) && strcasestr(p, "White")) ||
 		(strncasecmp(c, "BW", 2) == 0 && !isalpha(c[2])))
 	      properties->sets_mono = 2;
-	    if (strcasestr(c, "Gray") ||
-		strcasestr(c, "Grey") ||
-		strcasecmp(c, "BlackOnly") == 0) /* Lexmark */
+	    else if (strcasestr(c, "Gray") ||
+		     strcasestr(c, "Grey") ||
+		     strcasecmp(c, "BlackOnly") == 0) /* Lexmark */
 	      properties->sets_mono = 3;
 
 	    /* Color printing */
-	    if (strcasestr(c, "CMY") ||
+	    if (((p = strcasestr(c, "CMY")) && !strcasestr(p, "Gray")) ||
 		strcasecmp(c, "ColorOnly") == 0 || /* Lexmark */
 		((p = strcasestr(c, "Adobe")) && strcasestr(p, "RGB")))
 	      properties->sets_color = 2;
@@ -2244,6 +2240,11 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	    properties->sets_draft = 10;
 	  else if (strcasecmp(c, "0rhit") == 0)
 	    properties->sets_normal = 10;
+	}
+	else if (strcasestr(o, "ColorPrecision")) /* Ricoh & OEM */
+	{
+	  if (strcasecmp(c, "best") == 0)
+	    properties->sets_high = 10;
 	}
 	/* Generic boolean options which enhance quality if true */
 	else if (((p = strcasestr(o, "slow")) && strcasestr(p, "dry")) ||
@@ -2319,6 +2320,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		   strcasecmp(c, "high") == 0 ||
 		   strcasecmp(c, "fine") == 0 ||
 		   strcasecmp(c, "HQ") == 0 ||
+		   strcasecmp(c, "CMYGray") == 0 || /* HPLIP */
 		   strcasestr(c, "unidir"))
 	    properties->sets_high = 4;
 	  else if (strcasecmp(c, "best") == 0 ||
