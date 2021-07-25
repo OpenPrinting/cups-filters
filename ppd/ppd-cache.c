@@ -2241,7 +2241,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasecmp(c, "0rhit") == 0)
 	    properties->sets_normal = 10;
 	}
-	else if (strcasestr(o, "ColorPrecision")) /* Ricoh & OEM */
+	else if (strcasestr(o, "ColorPrecision")) /* Gutenprint */
 	{
 	  if (strcasecmp(c, "best") == 0)
 	    properties->sets_high = 10;
@@ -2298,7 +2298,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		 strcasecmp(o, "ColorResType") == 0 || /* Toshiba */
 		 strcasestr(o, "MonoColor") || /* Brother */
 		 strcasestr(o, "Quality") ||
-		 strcasestr(o, "Presision") || /* ex. stpColorPrecision
+		 strcasestr(o, "Precision") || /* ex. stpColorPrecision
 						  in Gutenprint */
 		 strcasestr(o, "PrintingDirection")) /* Gutenprint */
 	{
