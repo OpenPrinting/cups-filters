@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- Sample PPDs: From the PDF PPD files removed the unneeded
+	  "*cupsFilters2: ..." line. For CUPS it does not make any
+	  difference and the PPD-retro-fitting Printer Applications do
+	  not accept the PPDs with it.
 	- libppd: In ppdCacheCreateWithPPD() also support presets for
 	  print-ontent-optimize, not only for print-color-mode and
 	  print-quality
