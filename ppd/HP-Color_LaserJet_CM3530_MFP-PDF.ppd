@@ -237,7 +237,7 @@
 *ret dark/Dark: "@PJL SET RET=DARK<0A>"
 *ret light/Light: "@PJL SET RET=LIGHT<0A>"
 *ret medium/Medium: "@PJL SET RET=MEDIUM<0A>"
-*ret notset/notset: "@PJL SET RET=NOTSET<0A>"
+*ret notset/Not Set: "@PJL SET RET=NOTSET<0A>"
 *ret off/Off: "@PJL SET RET=OFF<0A>"
 *JCLCloseUI: *ret
 
