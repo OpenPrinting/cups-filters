@@ -113,7 +113,6 @@ typedef struct                                 /**** Document information ****/
   convertFunction     conversion_function;     /* Raster color conversion
 						  function */
   bitFunction         bit_function;            /* Raster bit function */
-  cups_file_t	      *inputfp;		       /* Temporary file, if any */
   FILE		      *outputfp;	       /* Temporary file, if any */
   filter_logfunc_t    logfunc;                 /* Logging function, NULL for no
 						  logging */
@@ -1390,15 +1389,14 @@ const char * getIPPColorProfileName(const char * media_type, cups_cspace_t cs,
 }
 
 int                         /* O - Error status */
-rastertopdf(int inputfd,         /* I - File descriptor input stream */
+rastertopdf(int inputfd,    /* I - File descriptor input stream */
        int outputfd,        /* I - File descriptor output stream */
        int inputseekable,   /* I - Is input stream seekable? (unused) */
        filter_data_t *data, /* I - Job and printer data */
        void *parameters)    /* I - Filter-specific parameters (outformat) */
 {
   int i;
-  rastertopdf_doc_t	doc;			/* Document information */
-  cups_file_t	*inputfp;		/* Print file */
+  rastertopdf_doc_t	doc;		/* Document information */
   FILE          *outputfp;              /* Output data stream */
   filter_out_format_t outformat; /* Output format */
   int Page, empty = 1;
@@ -1439,21 +1437,6 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
 	       outformat == OUTPUT_FORMAT_PDF ? "PDF" : "PCLM");
 
  /*
-  * Open the input data stream specified by the inputfd...
-  */
-
-  if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
-  {
-    if (!iscanceled || !iscanceled(icd))
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: Unable to open input data stream.");
-    }
-
-    return (1);
-  }
-
- /*
   * Open the output data stream specified by the outputfd...
   */
 
@@ -1465,12 +1448,9 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
 		   "rastertopdf: Unable to open output data stream.");
     }
 
-    cupsFileClose(inputfp);
-
     return (1);
   }
 
-  doc.inputfp = inputfp;
   doc.outputfp = outputfp;
   /* Logging function */
   doc.logfunc = log;
@@ -1780,8 +1760,6 @@ rastertopdf(int inputfd,         /* I - File descriptor input stream */
   }
 
   cupsRasterClose(ras);
-
-  cupsFileClose(inputfp);
   fclose(outputfp);
 
   return (Page == 0);
