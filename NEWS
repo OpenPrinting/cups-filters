@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.28.9 - 2021-06-15
 
 CHANGES IN V1.28.10
 
+	- Sample PPDs: From the PDF PPD files removed the unneeded
+	  "*cupsFilters2: ..." line. For CUPS it does not make any
+	  difference.
 	- libcupsfilters: Fixed pdftopdf filter to correctly support
 	  page ranges without upper limit, like "10-" (Pull request
 	  #399).
