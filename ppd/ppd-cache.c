@@ -2050,18 +2050,43 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
         for_graphics,
         for_text,
         for_tg,
+        res_x,
+        res_y,
         is_default;
     long total_image_data;
   } choice_properties_t;
-  int                    i, j, k;
+  int                    i, j, k, m;
   int                    pass;
   ppd_group_t            *group;
   ppd_option_t	         *option;
   int                    is_color;
-
+  int                    base_res_x = 0,
+                         base_res_y = 0;
+  cups_page_header2_t    header,
+                         optheader;
+  int                    preferred_bits;
+  ppd_attr_t             *ppd_attr;
+  int                    res_factor = 1;   // Weight of the score for the
+  int                    name_factor = 10; // print quality
+  int                    color_factor = 1000;
 
   /* Do we have a color printer ? */
   is_color = (ppd->color_device ? 1 : 0);
+
+  /* what is the base/default resolution for this PPD? */
+  ppdMarkDefaults(ppd);
+  ppdRasterInterpretPPD(&header, ppd, 0, NULL, NULL);
+  if (header.HWResolution[0] != 100 || header.HWResolution[1] != 100)
+  {
+    base_res_x = header.HWResolution[0];
+    base_res_y = header.HWResolution[1];
+  }
+  else if ((ppd_attr = ppdFindAttr(ppd, "DefaultResolution", NULL)) != NULL)
+  {
+    // Use the PPD-defined default resolution...
+    if (sscanf(ppd_attr->value, "%dx%d", &base_res_x, &base_res_y) == 1)
+      base_res_y = base_res_x;
+  }
 
   /* Go through all options of the PPD file */
   for (i = ppd->num_groups, group = ppd->groups;
@@ -2121,8 +2146,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  strcasecmp(o, "EFDuplexing") == 0 ||
 	  strcasecmp(o, "ARDuplex") == 0 ||
 	  strcasecmp(o, "KD03Duplex") == 0 ||
-	  strcasecmp(o, "Collate") == 0 ||
-	  strcasecmp(o, "Resolution") == 0)
+	  strcasecmp(o, "Collate") == 0)
 	continue;
 
       /* Array for properties of the choices */
@@ -2212,6 +2236,9 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 
 	/* check whether this option affects print quality or content
 	   optimization */
+
+	/* Determine influence of the options and choices on the print
+	   quality by their names */
 
 	/* Vendor-specific option and choice names */
 	if (strcasecmp(o, "ARCPPriority") == 0) /* Sharp */
@@ -2373,6 +2400,121 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	    properties->sets_normal = 4;
 	}
 
+	/* Apply the weight factor for option/choice-name-related scores */
+	properties->sets_high *= name_factor;
+	properties->sets_draft *= name_factor;
+	properties->sets_normal *= name_factor;
+
+	/* Determine influence of the options and choices on the print
+	   quality by how they change the output resolution compared to
+	   the base/default resolution */
+	if (base_res_x && base_res_y)
+	{
+	  /* First, analyse the code snippet (PostScript, PJL) assigned
+	     to each choice of the option whether it sets resolution */
+	  if (option->choices[k].code && option->choices[k].code[0])
+	  {
+	    /* Assume code to be PostScript (also used for CUPS Raster) */
+	    preferred_bits = 0;
+	    optheader = header;
+	    if (ppdRasterExecPS(&optheader, &preferred_bits,
+				option->choices[k].code) == 0)
+	    {
+	      properties->res_x = optheader.HWResolution[0];
+	      properties->res_y = optheader.HWResolution[1];
+	    }
+	    else
+	      properties->res_x = properties->res_y = 0; /* invalid */
+	    if (properties->res_x == 0 || properties->res_y == 0)
+	    {
+	      /* Now try PJL */
+	      if ((p = strstr(option->choices[k].code, "SET")) &&
+		  isspace(*(p + 3)) && (p = strstr(p + 4, "RESOLUTION=")))
+	      {
+		p += 11;
+		if (sscanf(p, "%dX%d",
+			   &(properties->res_x), &(properties->res_y)) == 1)
+		    properties->res_y = properties->res_x;
+	      }
+	    }
+	    if (properties->res_x == 100 && properties->res_y == 100)
+	      properties->res_x = properties->res_y = 0; /* Code does not
+							    set resolution */
+	  }
+	  else
+	    properties->res_x = properties->res_y = 0; /* invalid */
+
+	  /* Then parse the choice name whether it contains a
+	     resolution value (Must have "dpi", as otherwise can be
+	     something else, like a page size */
+	  if ((properties->res_x == 0 || properties->res_y == 0) &&
+	      (p = strcasestr(c, "dpi")) != NULL)
+	  {
+	    if (p > c)
+	    {
+	      p --;
+	      while (p > c && isspace(*p))
+		p --;
+	      if (p > c && isdigit(*p))
+	      {
+		while (p > c && isdigit(*p))
+		  p --;
+		if (p > c && *p == 'x')
+		  p --;
+		while (p > c && isdigit(*p))
+		  p --;
+		while (!isdigit(*p))
+		  p ++;
+		if (sscanf(p, "%dx%d",
+			   &(properties->res_x), &(properties->res_y)) == 1)
+		    properties->res_y = properties->res_x;
+	      }
+	    }
+	  }
+
+	  if (properties->res_x != 0 && properties->res_y != 0)
+	  {
+	    // Choice suggests to set the resolution
+	    // Raising resolution compared to default?
+	    m = (properties->res_x * properties->res_y) /
+	        (base_res_x * base_res_y);
+	    // No or small change -> Normal quality
+	    if (m == 1)
+	      properties->sets_normal += res_factor * 4;
+	    else if (m > 1 && m < 2)
+	      properties->sets_normal += res_factor * 2;
+	    // At least double the pixels -> High quality
+	    else if (m == 2)
+	      properties->sets_high += res_factor * 3;
+	    else if (m > 2 && m <= 8)
+	      properties->sets_high += res_factor * 4;
+	    else if (m > 8 && m <= 32)
+	      properties->sets_high += res_factor * 2;
+	    else if (m > 32)
+	      properties->sets_high += res_factor * 1;
+	    else if (m < 1)
+	    {
+	      // Reducing resolution compared to default?
+	      m = (base_res_x * base_res_y) /
+		  (properties->res_x * properties->res_y);
+	      // No or small change -> Normal quality
+	      if (m == 1)
+		properties->sets_normal += res_factor * 1;
+	      else if (m > 1 && m < 2)
+		properties->sets_normal += res_factor * 1;
+	      // At most half the pixels -> Draft quality
+	      else if (m == 2)
+		properties->sets_draft += res_factor * 3;
+	      else if (m > 2 && m < 8)
+		properties->sets_draft += res_factor * 4;
+	      else if (m >= 8 && m < 32)
+		properties->sets_draft += res_factor * 2;
+	      else if (m >= 32)
+		properties->sets_draft += res_factor * 1;
+	    }
+	  }
+	}
+
 	/* This option actually sets print quality */
 	if (properties->sets_draft || properties->sets_high)
 	  sets_quality = 1;
@@ -2393,11 +2535,12 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  properties = cupsArrayIndex(choice_properties, k);
 
 	  /* presets[0][0]: Mono/Draft */
-	  if (best_mono_draft_ch < 0 &&
+	  if (best_mono_draft >= 0 &&
 	      !properties->sets_color &&
 	      (!properties->sets_high || pass > 0))
 	  {
-	    score = 100 * properties->sets_mono + properties->sets_draft;
+	    score = color_factor * properties->sets_mono +
+	      properties->sets_draft;
 	    if (score > best_mono_draft)
 	    {
 	      best_mono_draft = score;
@@ -2406,12 +2549,13 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  }
 
 	  /* presets[0][1]: Mono/Normal */
-	  if (best_mono_normal_ch < 0 &&
+	  if (best_mono_normal >= 0 &&
 	      !properties->sets_color &&
 	      (!properties->sets_draft || pass > 1) &&
 	      (!properties->sets_high  || pass > 0))
 	  {
-	    score = 100 * properties->sets_mono + properties->sets_normal;
+	    score = color_factor * properties->sets_mono +
+	      properties->sets_normal;
 	    if (score > best_mono_normal)
 	    {
 	      best_mono_normal = score;
@@ -2420,11 +2564,12 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  }
 
 	  /* presets[0][2]: Mono/High */
-	  if (best_mono_high_ch < 0 &&
+	  if (best_mono_high >= 0 &&
 	      !properties->sets_color &&
 	      (!properties->sets_draft || pass > 0))
 	  {
-	    score = 100 * properties->sets_mono + properties->sets_high;
+	    score = color_factor * properties->sets_mono +
+	      properties->sets_high;
 	    if (score > best_mono_high)
 	    {
 	      best_mono_high = score;
@@ -2433,11 +2578,12 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  }
 
 	  /* presets[1][0]: Color/Draft */
-	  if (best_color_draft_ch < 0 &&
+	  if (best_color_draft >= 0 &&
 	      !properties->sets_mono &&
 	      (!properties->sets_high || pass > 0))
 	  {
-	    score = 100 * properties->sets_color + properties->sets_draft;
+	    score = color_factor * properties->sets_color +
+	      properties->sets_draft;
 	    if (score > best_color_draft)
 	    {
 	      best_color_draft = score;
@@ -2446,12 +2592,13 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  }
 
 	  /* presets[1][1]: Color/Normal */
-	  if (best_color_normal_ch < 0 &&
+	  if (best_color_normal >= 0 &&
 	      !properties->sets_mono &&
 	      (!properties->sets_draft || pass > 1) &&
 	      (!properties->sets_high  || pass > 0))
 	  {
-	    score = 100 * properties->sets_color + properties->sets_normal;
+	    score = color_factor * properties->sets_color +
+	      properties->sets_normal;
 	    if (score > best_color_normal)
 	    {
 	      best_color_normal = score;
@@ -2460,11 +2607,12 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  }
 
 	  /* presets[1][2]: Color/High */
-	  if (best_color_high_ch < 0 &&
+	  if (best_color_high >= 0 &&
 	      !properties->sets_mono &&
 	      (!properties->sets_draft || pass > 0))
 	  {
-	    score = 100 * properties->sets_color + properties->sets_high;
+	    score = color_factor * properties->sets_color +
+	      properties->sets_high;
 	    if (score > best_color_high)
 	    {
 	      best_color_high = score;
@@ -2472,6 +2620,19 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	    }
 	  }
 	}
+	/* Block next passes for the presets where we are done */
+	if (best_mono_draft_ch >= 0)
+	  best_mono_draft = -1;
+	if (best_mono_normal_ch >= 0)
+	  best_mono_normal = -1;
+	if (best_mono_high_ch >= 0)
+	  best_mono_high = -1;
+	if (best_color_draft_ch >= 0)
+	  best_color_draft = -1;
+	if (best_color_normal_ch >= 0)
+	  best_color_normal = -1;
+	if (best_color_high_ch >= 0)
+	  best_color_high = -1;
       }
 
      /*
