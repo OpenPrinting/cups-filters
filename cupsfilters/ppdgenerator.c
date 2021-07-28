@@ -970,15 +970,15 @@ cfIPPAttrToResolutionArray(ipp_attribute_t *attr)
 
 int /* 1 on success, 0 on failure */
 cfJoinResolutionArrays(cups_array_t **current,
-		       cups_array_t **new,
+		       cups_array_t **new_arr,
 		       cf_res_t **current_default,
 		       cf_res_t **new_default)
 {
   cf_res_t *res;
   int retval;
 
-  if (current == NULL || new == NULL || *new == NULL ||
-      cupsArrayCount(*new) == 0) {
+  if (current == NULL || new_arr == NULL || *new_arr == NULL ||
+      cupsArrayCount(*new_arr) == 0) {
     retval = 0;
     goto finish;
   }
@@ -986,7 +986,7 @@ cfJoinResolutionArrays(cups_array_t **current,
   if (*current == NULL) {
     /* We are adding the very first resolution array, simply make it
        our common resolutions array */
-    *current = *new;
+    *current = *new_arr;
     if (current_default) {
       if (*current_default)
 	free(*current_default);
@@ -1002,7 +1002,7 @@ cfJoinResolutionArrays(cups_array_t **current,
      in common, if not, do not touch the original array */
   for (res = cupsArrayFirst(*current);
        res; res = cupsArrayNext(*current))
-    if (cupsArrayFind(*new, res))
+    if (cupsArrayFind(*new_arr, res))
       break;
 
   if (res) {
@@ -1011,7 +1011,7 @@ cfJoinResolutionArrays(cups_array_t **current,
        remain. */
     for (res = cupsArrayFirst(*current);
 	 res; res = cupsArrayNext(*current))
-      if (!cupsArrayFind(*new, res))
+      if (!cupsArrayFind(*new_arr, res))
 	cupsArrayRemove(*current, res);
     if (current_default) {
       /* Replace the current default by the new one if the current default
@@ -1031,9 +1031,9 @@ cfJoinResolutionArrays(cups_array_t **current,
     retval = 0;
 
  finish:
-  if (new && *new) {
-    cupsArrayDelete(*new);
-    *new = NULL;
+  if (new_arr && *new_arr) {
+    cupsArrayDelete(*new_arr);
+    *new_arr = NULL;
   }
   if (new_default && *new_default) {
     free(*new_default);
