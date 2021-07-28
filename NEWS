@@ -4,7 +4,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 CHANGES IN V2.0.0
 
 	- Sample PPDs: Add borderless page size definitions to Generic
-	  PDF and HP Color LaserJet CM3530 MFP PDF PPD files.
+	  PDF Printer, HP Color LaserJet CM3530 MFP PDF, and Ricoh PDF
+	  Printer PPD files.
 	- Sample PPDs: From the PDF PPD files removed the unneeded
 	  "*cupsFilters2: ..." line. For CUPS it does not make any
 	  difference and the PPD-retro-fitting Printer Applications do
