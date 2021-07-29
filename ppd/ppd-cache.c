@@ -2457,16 +2457,17 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		p --;
 	      if (p > c && isdigit(*p))
 	      {
+		char x;
 		while (p > c && isdigit(*p))
 		  p --;
-		if (p > c && *p == 'x')
+		if (p > c && (*p == 'x' || *p == 'X'))
 		  p --;
 		while (p > c && isdigit(*p))
 		  p --;
 		while (!isdigit(*p))
 		  p ++;
-		if (sscanf(p, "%dx%d",
-			   &(properties->res_x), &(properties->res_y)) == 1)
+		if (sscanf(p, "%d%c%d",
+			   &(properties->res_x), &x, &(properties->res_y)) == 2)
 		    properties->res_y = properties->res_x;
 	      }
 	    }
