@@ -1008,8 +1008,6 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
 
     std::unique_ptr<PDFTOPDF_Processor> proc(PDFTOPDF_Factory::processor());
 
-    FILE *tmpfile = NULL;
-
     FILE *f = NULL;
     if (inputseekable && inputfd > 0) {
       if ((f = fdopen(inputfd, "rb")) == NULL) {
@@ -1063,13 +1061,12 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
 
     emitPreamble(outputfp, data->ppd,param); // ppdEmit, JCL stuff
     emitComment(*proc,param); // pass information to subsequent filters via PDF comments
-    proc->emitFile(outputfp, &doc, TakeOwnership);
+    proc->emitFile(outputfp, &doc, WillStayAlive);
     // proc->emitFilename(NULL);
 
     emitPostamble(outputfp, data->ppd,param);
     // ppdClose(ppd);
-    if (tmpfile)
-      fclose(tmpfile);
+    fclose(outputfp);
   } catch (std::exception &e) {
     // TODO? exception type
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
@@ -1081,6 +1078,5 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     return 6;
   }
 
-  close(outputfd);
   return 0;
 }
