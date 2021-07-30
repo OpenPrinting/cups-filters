@@ -642,7 +642,6 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "imagetops: The print file could not be opened - %s",
 		 strerror(errno));
-    ppdClose(ppd);
     return (1);
   }
 
@@ -1041,7 +1040,6 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     log(ld, FILTER_LOGLEVEL_ERROR,
 	"imagetops: Could not allocate memory.");
     cupsImageClose(img);
-    ppdClose(ppd);
     return (2);
   }
 
@@ -1345,7 +1343,6 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   */
 
   cupsImageClose(img);
-  ppdClose(ppd);
   fclose(doc.outputfp);
   close(outputfd);
 

@@ -419,9 +419,6 @@ pstops(int inputfd,         /* I - File descriptor input stream */
     doc.pages = NULL;
   }
 
-  //ppdClose(data->ppd);
-  //cupsFreeOptions(data->num_options, data->options);
-
   cupsFileClose(inputfp);
   close(inputfd);
 

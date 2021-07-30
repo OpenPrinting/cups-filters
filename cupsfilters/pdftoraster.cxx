@@ -1699,9 +1699,6 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   close(outputfd);
 
   // Delete doc
-  if (doc.ppd != NULL) {
-    ppdClose(doc.ppd);
-  }
   if (doc.colour_profile.colorProfile != NULL) {
     cmsCloseProfile(doc.colour_profile.colorProfile);
   }

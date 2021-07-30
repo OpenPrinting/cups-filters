@@ -1010,23 +1010,17 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
 
     FILE *f = NULL;
     if (inputseekable && inputfd > 0) {
-      if ((f = fdopen(inputfd, "rb")) == NULL) {
-	// ppdClose(ppd);
+      if ((f = fdopen(inputfd, "rb")) == NULL)
 	return 1;
-      }
     } else {
-      if ((f = copy_fd_to_temp(inputfd, &doc)) == NULL) {
-	// ppdClose(ppd);
+      if ((f = copy_fd_to_temp(inputfd, &doc)) == NULL)
 	return 1;
-      }
     }
     if (is_empty(f)) {
       fclose(f);
-      // ppdClose(ppd);
       empty = 1;
     } else if (!proc->loadFile(f, &doc, WillStayAlive, 1)) {
       fclose(f);
-      // ppdClose(ppd);
       return 1;
     }
 
@@ -1050,10 +1044,8 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     }
 */
 
-    if (!processPDFTOPDF(*proc,param,&doc)) {
-      // ppdClose(ppd);
+    if (!processPDFTOPDF(*proc,param,&doc))
       return 2;
-    }
 
     FILE *outputfp;
     outputfp = fdopen(outputfd, "w");
@@ -1065,7 +1057,6 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     // proc->emitFilename(NULL);
 
     emitPostamble(outputfp, data->ppd,param);
-    // ppdClose(ppd);
     fclose(outputfp);
   } catch (std::exception &e) {
     // TODO? exception type

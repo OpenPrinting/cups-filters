@@ -1123,7 +1123,6 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 		strerror(errno));
     delete(pdf);
     unlink(tempfile);
-    if (pclmtoraster_data.ppd != NULL)  ppdClose(pclmtoraster_data.ppd);
     return (1);
   }
 
@@ -1153,7 +1152,6 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 		strerror(errno));
     delete(pdf);
     unlink(tempfile);
-    if (pclmtoraster_data.ppd != NULL)  ppdClose(pclmtoraster_data.ppd);
     return (1);
   }
 
@@ -1179,7 +1177,6 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
   cupsRasterClose(raster);
   delete pdf;
   unlink(tempfile);
-  if (pclmtoraster_data.ppd != NULL)  ppdClose(pclmtoraster_data.ppd);
   return 0;
 }
 

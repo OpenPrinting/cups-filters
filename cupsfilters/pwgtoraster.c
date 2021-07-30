@@ -2316,9 +2316,6 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
  /*
   * Clean up
   */
-  if (doc.ppd != NULL) {
-    ppdClose(doc.ppd);
-  }
   if (doc.color_profile.colorProfile != NULL) {
     cmsCloseProfile(doc.color_profile.colorProfile);
   }

@@ -112,6 +112,7 @@ filterCUPSWrapper(
   int		num_options;		/* Number of print options */
   cups_option_t	*options;		/* Print options */
   filter_data_t filter_data;
+  int           retval = 0;
 
 
  /*
@@ -211,7 +212,17 @@ filterCUPSWrapper(
   * Fire up the filter function (output to stdout, file descriptor 1)
   */
 
-  return filter(inputfd, 1, inputseekable, &filter_data, parameters);
+  retval = filter(inputfd, 1, inputseekable, &filter_data, parameters);
+
+ /*
+  * Clean up
+  */
+
+  cupsFreeOptions(num_options, options);
+  if (filter_data.ppd)
+    ppdClose(filter_data.ppd);
+
+  return retval;
 }
 
 

@@ -1085,7 +1085,6 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "imagetoraster: The print file could not be opened.");
-    ppdClose(ppd);
     return (1);
   }
 
@@ -1934,7 +1933,6 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
   free(row);
   cupsRasterClose(ras);
   cupsImageClose(img);
-  ppdClose(ppd);
   close(outputfd);
 
   return (0);

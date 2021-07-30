@@ -1379,7 +1379,6 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "imagetopdf: Unable to open image file for printing!");
-    ppdClose(doc.ppd);
     fclose(doc.outputfp);
     close(outputfd);
     return (1);
@@ -2181,7 +2180,6 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 #endif
 
   cupsImageClose(doc.img);
-  ppdClose(doc.ppd);
   fclose(doc.outputfp);
   close(outputfd);
   return (0);
@@ -2192,7 +2190,6 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	       "imagetopdf: Cannot allocate any more memory.");
   freeAllObj(&doc);
   cupsImageClose(doc.img);
-  ppdClose(doc.ppd);
   fclose(doc.outputfp);
   close(outputfd);
   return (2);
