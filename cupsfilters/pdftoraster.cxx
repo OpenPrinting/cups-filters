@@ -1531,100 +1531,63 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   int i;
   int npages = 0;
   cups_raster_t *raster;
-  cups_file_t	         *inputfp;		/* Print file */
   filter_logfunc_t     log = data->logfunc;
   void          *ld = data->logdata;
   int deviceCopies = 1;
   bool deviceCollate = false;
   conversion_function_t convert;
+  int fd;
+  char name[BUFSIZ];
+  char buf[BUFSIZ];
+  int n;
+  FILE *fp;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
-  
+
+
+  (void)inputseekable;
+
   cmsSetLogErrorHandler(lcmsErrorHandler);
   parseOpts(data, parameters, &doc);
 
  /*
-  * Open the input data stream specified by inputfd ...
-  */
-  
-  if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
-  {
-    if (!iscanceled || !iscanceled(icd))
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pdftoraster: Unable to open input data stream.");
-    }
-
-    return (1);
-  }
-
- /*
-  * Make a temporary file if input is stdin...
+  * Make a temporary file from the input, as Poppler can only refer
+  * to a named file, not to stdin, a pipe, or a file descriptor
   */
 
-  if (inputseekable == 0) {
-    /* stdin */
-    int fd;
-    char name[BUFSIZ];
-    char buf[BUFSIZ];
-    int n;
-
-    fd = cupsTempFd(name,sizeof(name));
-    if (fd < 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pdftoraster: Can't create temporary file.");
-      exit(1);
-    }
-
-    /* copy stdin to the tmp file */
-    while ((n = read(0,buf,BUFSIZ)) > 0) {
-      if (write(fd,buf,n) != n) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pdftoraster: Can't copy stdin to temporary file.");
-        close(fd);
-	exit(1);
-      }
-    }
-    close(fd);
-    doc.poppler_doc = poppler::document::load_from_file(name,"","");
-    /* remove name */
-    unlink(name);
-  } else {
-    // Make a temporary file and save input data in it...
-    int fd;
-    char name[BUFSIZ];
-    char buf[BUFSIZ];
-    int n;
-
-    fd = cupsTempFd(name,sizeof(name));
-    if (fd < 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pdftoraster: Can't create temporary file.");
-      exit(1);
-    }
-        /* copy input data to the tmp file */
-    while ((n = read(inputfd,buf,BUFSIZ)) > 0) {
-      if (write(fd,buf,n) != n) {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "pdftoraster: Can't copy input data to temporary file.");
-        close(fd);
-	exit(1);
-      }
-    }
-    close(fd);
-    doc.poppler_doc = poppler::document::load_from_file(name,"","");
-    unlink(name);
-
-    FILE *fp;
-    if ((fp = fdopen(inputfd,"rb")) == 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pdftoraster: Can't open input file.");
-      exit(1);
-    }
-
-    parsePDFTOPDFComment(fp, &deviceCopies, &deviceCollate);
-    fclose(fp);
+  fd = cupsTempFd(name, sizeof(name));
+  if (fd < 0) {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "pdftoraster: Cannot create temporary file.");
+    exit(1);
   }
+
+  /* copy stdin to the tmp file */
+  while ((n = read(inputfd ,buf, BUFSIZ)) > 0) {
+    if (write(fd, buf, n) != n) {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Cannot copy stdin to temporary file.");
+      close(fd);
+      exit(1);
+    }
+  }
+
+  /* Parse comments passed on from pdftopdf */
+  if ((fp = fdopen(fd,"rb")) == 0) {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "pdftoraster: Can't open input file.");
+    exit(1);
+  }
+  parsePDFTOPDFComment(fp, &deviceCopies, &deviceCollate);
+  fclose(fp);
+
+  close(fd);
+
+  /* Load input with Poppler */
+  doc.poppler_doc = poppler::document::load_from_file(name,"","");
+
+  /* remove name */
+  unlink(name);
 
   if(doc.poppler_doc != NULL)
     npages = doc.poppler_doc->pages();
