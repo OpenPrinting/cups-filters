@@ -212,7 +212,7 @@ parseOpts(filter_data_t *data,
     cupsRasterParseIPPOptions(header, data,
 			      pclmtoraster_data->pwgraster, 1);
 
-    const char *backside = getBackSideAndHeaderDuplex(printer_attrs, header);
+    int backside = getBackSideAndHeaderDuplex(printer_attrs, header);
     if(header->Duplex){
       /* analyze options relevant to Duplex */
       /* APDuplexRequiresFlippedMargin */
@@ -220,7 +220,7 @@ parseOpts(filter_data_t *data,
         FM_NO, FM_FALSE, FM_TRUE
       } flippedMargin = FM_NO;
 
-      if (strcasecmp(backside,"ManualTumble") == 0 && header->Tumble)
+      if (backside==MANUAL_TUMBLE && header->Tumble)
       {
         pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
 	  true;
@@ -231,7 +231,7 @@ parseOpts(filter_data_t *data,
           pclmtoraster_data->swap_margin_y = false;
         }
       }
-      else if (strcasecmp(backside,"Rotated") == 0 && !header->Tumble)
+      else if (backside==ROTATED && !header->Tumble)
       {
         pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
 	  true;
@@ -242,7 +242,7 @@ parseOpts(filter_data_t *data,
           pclmtoraster_data->swap_margin_y = false;
         }
       }
-      else if (strcasecmp(backside,"Flipped") == 0)
+      else if (backside==FLIPPED)
       {
         if (header->Tumble)
 	{

@@ -332,57 +332,58 @@ ippRasterMatchIPPSize(
  *  'getBackSideAndHeaderDuplex()' - This functions returns the cupsBackSide using printer attributes
  */
 
-char*							/* O - Backside obtained using printer attributes */
+int							/* O - Backside obtained using printer attributes */
 getBackSideAndHeaderDuplex(ipp_t *printer_attrs,	/* I - printer attributes using filter data */
 			cups_page_header2_t *header)	/* O - header */
 {
     ipp_attribute_t *ipp_attr;	/* IPP attribute */
     int i,			/* Looping variable */
 	count;			
-    char *backside = "";	/* backside obtained using printer attributes */
-    if((ipp_attr = ippFindAttribute(printer_attrs, "sides-supported", IPP_TAG_KEYWORD))!=NULL){
+    int backside = -1;	/* backside obtained using printer attributes */
+    if((ipp_attr = ippFindAttribute(printer_attrs, "sides-supported", IPP_TAG_ZERO))!=NULL){
 	if(ippContainsString(ipp_attr, "two-sided-long-edge")){
-	    header->Duplex = CUPS_TRUE;
+	    if(header) header->Duplex = CUPS_TRUE;
 	    if((ipp_attr = ippFindAttribute(printer_attrs, "urf-supported",
-		IPP_TAG_KEYWORD))!=NULL){
+		IPP_TAG_ZERO))!=NULL){
 		for(i = 0, count = ippGetCount(ipp_attr); i<count;i++){
 		    const char *dm = ippGetString(ipp_attr, i, NULL); /* DM value */
 		    if(!strcasecmp(dm, "DM1")){
-			backside = "Normal";
+			backside = NORMAL;
 			break;
 		    }
 		    if(!strcasecmp(dm, "DM2")){
-			backside = "Flipped";
+			backside = FLIPPED;
 			break;
 		    }
 		    if(!strcasecmp(dm, "DM3")){
-			backside = "Rotated";
+			backside = ROTATED;
 			break;
 		    }
 		    if(!strcasecmp(dm, "DM4")){
-			backside = "ManualTumble";
+			backside = MANUAL_TUMBLE;
 			break;
 		    }
 		}
 	    }
 	    if((ipp_attr = ippFindAttribute(printer_attrs, "pwg-raster-document-sheet-back",
-		IPP_TAG_KEYWORD))!=NULL){
+		IPP_TAG_ZERO))!=NULL){
 		const char *keyword;
 		keyword = ippGetString(ipp_attr, 0, NULL);
 		if (!strcmp(keyword, "flipped"))
-		    backside = "Flipped";
+		    backside = FLIPPED;
 		else if (!strcmp(keyword, "manual-tumble"))
-		    backside = "ManualTumble";
+		    backside = MANUAL_TUMBLE;
 		else if (!strcmp(keyword, "normal"))
-		    backside = "Normal";
+		    backside = NORMAL;
 		else
-		    backside = "Rotated";		
+		    backside = ROTATED;		
 	    }
 	}
     }
+    if(header)
     if(header->Duplex==CUPS_FALSE){
 	if((ipp_attr = ippFindAttribute(printer_attrs, "job-presets-supported", 
-	    IPP_TAG_BEGIN_COLLECTION))!=NULL){
+	    IPP_TAG_ZERO))!=NULL){
 	        for(i = 0, count = ippGetCount(ipp_attr); i<count; i++){
 		    ipp_t *preset = ippGetCollection(ipp_attr, i);
 		    ipp_attribute_t *member;
@@ -397,12 +398,15 @@ getBackSideAndHeaderDuplex(ipp_t *printer_attrs,	/* I - printer attributes using
 			    keyword = ippGetString(member, 0, NULL);
 			    if(keyword && !strcmp(keyword, "two-sided-short-edge"))
 			    header->Duplex = CUPS_TRUE;
+			    if(keyword && !strcmp(keyword, "two-sided-long-edge"))
+			    header->Duplex = CUPS_TRUE;
 		        }
 		    }
 	        }
 	}
     }
-
+    
+    if(header && header->Duplex==1 && backside==-1) backside = NORMAL;
     return backside;
     
 }
