@@ -1354,61 +1354,71 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     cupsArrayAdd(gs_args, strdup("-dDownScaleFactor=1"));
   }
 
-  if(outformat == OUTPUT_FORMAT_PXL)
+  if (outformat == OUTPUT_FORMAT_PXL)
   {
-    if(ppd)
+    if (ppd)
     {
       {
-        if ((attr = ppdFindAttr(ppd,"ColorDevice",0)) != 0 &&
-          (!strcasecmp(attr->value, "true") ||
-          !strcasecmp(attr->value, "on") ||
-          !strcasecmp(attr->value, "yes")))
+        if ((attr = ppdFindAttr(ppd,"ColorDevice", 0)) != 0 &&
+	    (!strcasecmp(attr->value, "true") ||
+	     !strcasecmp(attr->value, "on") ||
+	     !strcasecmp(attr->value, "yes")))
           /* Color PCL XL printer, according to PPD */
-        pxlcolor = 1;
+	  pxlcolor = 1;
       }  
     }
-    else if(printer_attrs)
+    else if (printer_attrs)
     {
-      if(((ipp_attr = ippFindAttribute(printer_attrs, 
-            "color-supported", IPP_TAG_BOOLEAN))!=NULL 
-              && ippGetBoolean(ipp_attr, 0))){
+      if (((ipp_attr =
+	    ippFindAttribute(printer_attrs,
+			     "color-supported", IPP_TAG_BOOLEAN)) != NULL &&
+	   ippGetBoolean(ipp_attr, 0))) {
         /* Color PCL XL printer, according to printer attributes */
         pxlcolor = 1;
       }
     }
 
-    if(job_attrs)
+    if (job_attrs)
     {
-      if((ipp_attr = ippFindAttribute(job_attrs, "pwg-raster-document-type", IPP_TAG_ZERO))!=NULL ||
-          (ipp_attr = ippFindAttribute(job_attrs, "color-space", IPP_TAG_ZERO))!=NULL             ||
-          (ipp_attr = ippFindAttribute(job_attrs, "color-model", IPP_TAG_ZERO))!=NULL             ||
-          (ipp_attr = ippFindAttribute(job_attrs, "print-color-mode", IPP_TAG_ZERO))!=NULL        ||
-          (ipp_attr = ippFindAttribute(job_attrs, "output-mode", IPP_TAG_ZERO))!=NULL)
+      if ((ipp_attr =
+	   ippFindAttribute(job_attrs, "pwg-raster-document-type",
+			    IPP_TAG_ZERO)) != NULL ||
+          (ipp_attr =
+	   ippFindAttribute(job_attrs, "color-space", IPP_TAG_ZERO)) != NULL ||
+          (ipp_attr =
+	   ippFindAttribute(job_attrs, "color-model", IPP_TAG_ZERO)) != NULL ||
+          (ipp_attr =
+	   ippFindAttribute(job_attrs, "print-color-mode",
+			    IPP_TAG_ZERO)) != NULL ||
+          (ipp_attr =
+	   ippFindAttribute(job_attrs, "output-mode", IPP_TAG_ZERO)) != NULL)
       {
         ippAttributeString(ipp_attr, buf, sizeof(buf));
-        if(!strncasecmp(buf, "AdobeRgb", 8)     ||
-          !strncasecmp(buf, "adobe-rgb", 9)     ||
-          !strcasecmp(buf, "color")             ||
-          !strncasecmp(buf,"Cmyk", 4)           ||
-          !strncasecmp(buf, "Cmy", 3)           ||
-          !strncasecmp(buf, "Srgb", 4)          ||
-          !strncasecmp(buf, "Rgbw", 4)          ||
-          !strcasecmp(buf, "auto")              ||
-          !strncasecmp(buf, "Rgb", 3))
+        if (!strncasecmp(buf, "AdobeRgb", 8)     ||
+	    !strncasecmp(buf, "adobe-rgb", 9)     ||
+	    !strcasecmp(buf, "color")             ||
+	    !strncasecmp(buf,"Cmyk", 4)           ||
+	    !strncasecmp(buf, "Cmy", 3)           ||
+	    !strncasecmp(buf, "Srgb", 4)          ||
+	    !strncasecmp(buf, "Rgbw", 4)          ||
+	    !strcasecmp(buf, "auto")              ||
+	    !strncasecmp(buf, "Rgb", 3))
         {
           pxlcolor = 1;
         }
         else if(!strncasecmp(buf, "Device", 6))
         {
           char* ptr = buf+6;
-          if(strtol(ptr, (char **)&ptr, 10)>1){   /* If printer seems to support more than 1 color  */
+          if (strtol(ptr, (char **)&ptr, 10) > 1) { /* If printer seems to
+						       support more than 1
+						       color  */
             pxlcolor = 1;
           }
         }
       }
     }
 
-    if(pxlcolor==0)   /*  Still printer seems to be mono */
+    if (pxlcolor == 0)   /*  Still printer seems to be mono */
     {
       const char* val;
       if ((val = cupsGetOption("pwg-raster-document-type", num_options,
@@ -1424,21 +1434,22 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
       (val = cupsGetOption("OutputMode", num_options, options)) != NULL)
       {
         if(!strncasecmp(val, "AdobeRgb", 8) ||
-          !strncasecmp(val, "adobe-rgb", 9) ||
-          !strcasecmp(val, "color")         ||
-          !strncasecmp(val, "Cmyk", 4)      ||
-          !strncasecmp(val, "Cmy", 3)       ||
-          !strncasecmp(val, "Srgb", 4)      ||
-          !strncasecmp(val, "Rgbw", 4)      ||
-          !strncasecmp(val, "Rgb", 3)       ||
-          !strcasecmp(val, "auto"))
+	   !strncasecmp(val, "adobe-rgb", 9) ||
+	   !strcasecmp(val, "color")         ||
+	   !strncasecmp(val, "Cmyk", 4)      ||
+	   !strncasecmp(val, "Cmy", 3)       ||
+	   !strncasecmp(val, "Srgb", 4)      ||
+	   !strncasecmp(val, "Rgbw", 4)      ||
+	   !strncasecmp(val, "Rgb", 3)       ||
+	   !strcasecmp(val, "auto"))
         {
           pxlcolor = 1;
         }
         else if(!strncasecmp(val, "Device", 6))
         {
           const char *ptr = val + 6;
-          if(strtol(ptr, (char **)&ptr, 10)>1)  /*  Printer seems to support more then 1 color  */
+          if(strtol(ptr, (char **)&ptr, 10)>1)  /* Printer seems to support
+						   more then 1 color  */
           {
             pxlcolor = 1;
           }
@@ -1465,7 +1476,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   snprintf(tmpstr, sizeof(tmpstr), "-I%s", t);
   cupsArrayAdd(gs_args, strdup(tmpstr));
 
-  /* set the device output ICC profile */
+  /* Set the device output ICC profile */
   if (icc_profile != NULL && icc_profile[0] != '\0') {
     snprintf(tmpstr, sizeof(tmpstr), "-sOutputICCProfile=%s", icc_profile);
     cupsArrayAdd(gs_args, strdup(tmpstr));
