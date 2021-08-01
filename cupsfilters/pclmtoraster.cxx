@@ -902,12 +902,33 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
     if (data->pwgraster == 1)
       memset(margins, 0, sizeof(margins));
   }
-  else
+  else if(filter_data!=NULL &&(filter_data->printer_attrs)!=NULL)
   {
     ippRasterMatchIPPSize(&(data->header), filter_data, margins, paperdimensions, NULL, NULL);
     if(data->pwgraster==1)
       memset(margins, 0, sizeof(margins));
   }
+  else
+  {
+    for (int i = 0; i < 2; i ++)
+      paperdimensions[i] = data->header.PageSize[i];
+    if (data->header.cupsImagingBBox[3] > 0.0)
+    {
+      /* Set margins if we have a bounding box defined ... */
+      if (data->pwgraster == 0)
+      {
+	margins[0] = data->header.cupsImagingBBox[0];
+	margins[1] = data->header.cupsImagingBBox[1];
+	margins[2] = paperdimensions[0] - data->header.cupsImagingBBox[2];
+	margins[3] = paperdimensions[1] - data->header.cupsImagingBBox[3];
+      }
+    }
+    else
+      /* ... otherwise use zero margins */
+      for (int i = 0; i < 4; i ++)
+	margins[i] = 0.0;
+  }
+
 
   if (data->header.Duplex && (pgno & 1))
   {
