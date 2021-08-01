@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Added raster-only PDF and PCLm output
+	  support to the ghostscript() filter function. Note that
+	  these are experimental and not yet suitable for using in
+	  print filter chains, as they require a seekable output file
+	  and PCLm does not support back side orientation for duples.
 	- libcupsfilters, foomatic-rip: Added new streaming mode
 	  triggered by the boolean "filter-streaming-mode" option. In
 	  this mode a filter (function) is supposed to avoid

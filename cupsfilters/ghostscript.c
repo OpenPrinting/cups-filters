@@ -19,6 +19,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <cups/raster.h>
 #include <cupsfilters/colormanager.h>
 #include <cupsfilters/raster.h>
@@ -155,9 +156,14 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup("-dDuplex"));
     }
   }
-  snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",h->HWResolution[0],
-	   h->HWResolution[1]);
-  cupsArrayAdd(gs_args, strdup(tmpstr));
+  if (outformat != OUTPUT_FORMAT_PCLM) {
+    /* In PCLM we have our own method to generate the needed
+       resolution, to respect the printer's supported resolutions for
+       PCLm, so this is only for non-PCLm output formats */
+    snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",
+	     h->HWResolution[0], h->HWResolution[1]);
+    cupsArrayAdd(gs_args, strdup(tmpstr));
+  }
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
       outformat == OUTPUT_FORMAT_PWG_RASTER ||
       outformat == OUTPUT_FORMAT_APPLE_RASTER) {
@@ -817,6 +823,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   if (parameters) {
     outformat = *(filter_out_format_t *)parameters;
     if (outformat != OUTPUT_FORMAT_PDF &&
+	outformat != OUTPUT_FORMAT_PDF_IMAGE &&
+	outformat != OUTPUT_FORMAT_PCLM &&
 	outformat != OUTPUT_FORMAT_CUPS_RASTER &&
 	outformat != OUTPUT_FORMAT_PWG_RASTER &&
 	outformat != OUTPUT_FORMAT_APPLE_RASTER &&
@@ -831,7 +839,9 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
 		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
 		  (outformat == OUTPUT_FORMAT_PDF ? "PDF" :
-		   "PCL XL")))));
+		   (outformat == OUTPUT_FORMAT_PDF_IMAGE ? "raster-only PDF" :
+		    (outformat == OUTPUT_FORMAT_PCLM ? "PCLm" :
+		     "PCL XL")))))));
   
   memset(&sa, 0, sizeof(sa));
   /* Ignore SIGPIPE and have write return an error instead */
@@ -1087,8 +1097,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     cupsArrayAdd(gs_args, strdup("-sDEVICE=cups"));
   else if (outformat == OUTPUT_FORMAT_PDF)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfwrite"));
-  /* In case of PCL XL output we determine later whether we will have
-     to use the "pxlmono" or "pxlcolor" output device */
+  /* In case of PCL XL, raster-obly PDF, or PCLm output we determine
+     the exact output device later */
 
   /* Special Ghostscript options for PDF output */
   if (outformat == OUTPUT_FORMAT_PDF) {
@@ -1137,6 +1147,212 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
   cupsRasterPrepareHeader(&h, data, outformat, &cspace);
 
+  /* Special Ghostscript options for raster-only PDF output */
+
+  /* We use PCLm instead of general raster PDF here if the printer
+     supports it, as PCLm can get streamed by the printer */
+
+  /* Note that these output formats are not fully usable yet:
+
+     1. Ghostscript needs a seekable output, so they do not work
+        in the usual print filter chains
+
+     2. In PCLm back side orientation for duplex printing is not
+        supported, making duplex printing on many printers not
+        working correctly
+
+   */
+
+  if (outformat == OUTPUT_FORMAT_PDF_IMAGE ||
+      outformat == OUTPUT_FORMAT_PCLM) {
+    int res_x, res_y,
+        sup_res_x, sup_res_y,
+        best_res_x = 0, best_res_y = 0,
+        res_diff,
+        best_res_diff = INT_MAX,
+        n;
+    const char *res_str = NULL;
+    char c;
+
+    ipp_attr = NULL;
+    attr = NULL;
+    if (outformat == OUTPUT_FORMAT_PCLM || /* PCLm forced */
+	/* PCLm supported according to printer IPP attributes */
+	(printer_attrs &&
+	 (ipp_attr =
+	  ippFindAttribute(printer_attrs, "pclm-source-resolution-supported",
+			   IPP_TAG_ZERO)) != NULL) ||
+	/* PCLm supported according to PPD file */
+	(ppd &&
+	 (attr =
+	  ppdFindAttr(ppd, "cupsPclmSourceResolutionSupported", 0)) != NULL)) {
+
+      outformat = OUTPUT_FORMAT_PCLM;
+
+      /* Resolution */
+
+      /* Check whether the job's resolution is supported pn PCLm mode and
+         correct if needed */
+      res_x = h.HWResolution[0];
+      res_y = h.HWResolution[1];
+      if (attr)
+	res_str = attr->value;
+      else if (ipp_attr) {
+	ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
+	res_str = tmpstr;
+      }
+      if (res_str)
+	while ((n = sscanf(res_str, "%d%c%d",
+			   &sup_res_x, &c, &sup_res_y)) > 0) {
+	  if (n < 3 || (c != 'x' && c != 'X'))
+	    sup_res_y = sup_res_x;
+	  if (sup_res_x > 0 && sup_res_y > 0) {
+	    if (res_x == sup_res_x && res_y == sup_res_y) {
+	      best_res_x = res_x;
+	      best_res_y = res_y;
+	      break;
+	    } else {
+	      res_diff = (res_x * res_y) / (sup_res_x * sup_res_y);
+	      if (res_diff < 1)
+		res_diff = (sup_res_x * sup_res_y) / (res_x * res_y);
+	      if (res_diff <= best_res_diff) {
+		best_res_x = sup_res_x;
+		best_res_y = sup_res_y;
+	      }
+	    }
+	  }
+	  res_str = strchr(res_str, ',');
+	  if (res_str == NULL)
+	    break;
+	}
+      if (best_res_x > 0 && best_res_y > 0) {
+	snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d", best_res_x, best_res_y);
+	cupsArrayAdd(gs_args, strdup(tmpstr));
+      } else if ((printer_attrs &&
+		  (ipp_attr =
+		   ippFindAttribute(printer_attrs,
+				    "pclm-source-resolution-default",
+				    IPP_TAG_ZERO)) != NULL) ||
+		 (ppd &&
+		  (attr =
+		   ppdFindAttr(ppd,
+			       "cupsPclmSourceResolutionDefault", 0)) != NULL)){
+	if (attr)
+	  res_str = attr->value;
+	else if (ipp_attr) {
+	  ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
+	  res_str = tmpstr;
+	}
+	if (res_str)
+	  if ((n = sscanf(res_str, "%d%c%d",
+			  &best_res_x, &c, &best_res_y)) > 0) {
+	    if (n < 3 || (c != 'x' && c != 'X'))
+	      best_res_y = best_res_x;
+	    if (best_res_x > 0 && best_res_y > 0) {
+	      snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",
+		       best_res_x, best_res_y);
+	      cupsArrayAdd(gs_args, strdup(tmpstr));
+	    }
+	  }
+      }
+      if (best_res_x <= 0 || best_res_y <= 0) {
+	snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d", res_x, res_y);
+	cupsArrayAdd(gs_args, strdup(tmpstr));
+      }
+
+      /* Ghostscript output device */
+
+      cupsArrayAdd(gs_args, strdup("-sDEVICE=pclm"));
+
+      /* Strip/Band Height */
+
+      n = 0;
+      if ((printer_attrs &&
+	   (ipp_attr =
+	    ippFindAttribute(printer_attrs,
+			     "pclm-strip-height-preferred",
+			     IPP_TAG_ZERO)) != NULL) ||
+	  (ppd &&
+	   (attr =
+	    ppdFindAttr(ppd,
+			"cupsPclmStripHeightPreferred", 0)) != NULL)) {
+	if (attr)
+	  n = atoi(attr->value);
+	else if (ipp_attr)
+	  n = ippGetInteger(ipp_attr, 0);
+      }
+      if (n <= 0) n = 16;
+      snprintf(tmpstr, sizeof(tmpstr), "-dStripHeight=%d", n);
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+
+      /* Back side orientation for Duplex not (yet) supported by Ghostscript */
+
+      /* Compression method */
+
+      if ((printer_attrs &&
+	   (ipp_attr =
+	    ippFindAttribute(printer_attrs,
+			     "pclm-compression-method-preferred",
+			     IPP_TAG_ZERO)) != NULL) ||
+	  (ppd &&
+	   (attr =
+	    ppdFindAttr(ppd,
+			"cupsPclmCompressionMethodPreferred", 0)) != NULL)) {
+	if (attr)
+	  res_str = attr->value;
+	else if (ipp_attr) {
+	  ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
+	  res_str = tmpstr;
+	}
+	if (res_str) {
+	  if (strcasestr(res_str, "flate"))
+	    cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+	  else if (strcasestr(res_str, "rle"))
+	    cupsArrayAdd(gs_args, strdup("-sCompression=RLE"));
+	  else if (strcasestr(res_str, "jpeg"))
+	    cupsArrayAdd(gs_args, strdup("-sCompression=JPEG"));
+	  else
+	    cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+	} else
+	  cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+      } else
+	cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+    } else {
+      /* No PCLm supported or requested, use general raster PDF */
+
+      /* Ghostscript output device and color/gray */
+
+      n = 0;
+      if (ppd) {
+        if ((attr = ppdFindAttr(ppd,"ColorDevice", 0)) != 0 &&
+	    (!strcasecmp(attr->value, "true") ||
+	     !strcasecmp(attr->value, "on") ||
+	     !strcasecmp(attr->value, "yes")))
+          /* Color PCL XL printer, according to PPD */
+	  n = 1;
+      } else if (printer_attrs) {
+	if (((ipp_attr =
+	      ippFindAttribute(printer_attrs,
+			       "color-supported", IPP_TAG_ZERO)) != NULL &&
+	     ippGetBoolean(ipp_attr, 0))) {
+	  /* Color PCL XL printer, according to printer attributes */
+	  n = 1;
+	}
+      }
+      if (n == 1)
+	cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfimage24"));
+      else
+	cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfimage8"));
+
+      /* Compression method */
+
+      cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+    }
+
+    /* Common option: Downscaling factor */
+
+    cupsArrayAdd(gs_args, strdup("-dDownScaleFactor=1"));
+  }
 
   if(outformat == OUTPUT_FORMAT_PXL)
   {

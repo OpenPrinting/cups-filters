@@ -73,6 +73,7 @@ typedef int (*filter_function_t)(int inputfd, int outputfd, int inputseekable,
 typedef enum filter_out_format_e { /* Possible output formats for rastertopdf()
 				      filter function */
   OUTPUT_FORMAT_PDF,	     /* PDF */
+  OUTPUT_FORMAT_PDF_IMAGE,   /* Raster-only PDF */
   OUTPUT_FORMAT_PCLM,	     /* PCLM */
   OUTPUT_FORMAT_CUPS_RASTER, /* CUPS Raster */
   OUTPUT_FORMAT_PWG_RASTER,  /* PWG Raster */
@@ -166,7 +167,8 @@ extern int ghostscript(int inputfd,
 		       void *parameters);
 
 /* Parameters: filter_out_format_t*
-   Ouput format: PostScript, CUPS Raster, PWG Raster, Apple Raster, PCL-XL
+   Ouput format: PDF, raster-only PDF, PCLm, PostScript, CUPS Raster,
+   PWG Raster, Apple Raster, PCL-XL
    Note: On the Apple Raster selection the output is actually CUPS Raster
    but information about available color spaces and depths is taken from
    the urf-supported printer IPP attribute or appropriate PPD file
