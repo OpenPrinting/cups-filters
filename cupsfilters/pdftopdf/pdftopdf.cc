@@ -972,6 +972,12 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
 {
   pdftopdf_doc_t     doc;         /* Document information */
   char               *final_content_type = NULL;
+  FILE               *inputfp,
+                     *outputfp;
+  const char         *t;
+  int                streaming = 0;
+  size_t             bytes;
+  char               buf[BUFSIZ];
   filter_logfunc_t   log = data->logfunc;
   void               *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
@@ -1004,36 +1010,57 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     param.dump(&doc);
 #endif
 
-    int empty = 0;
+    // If we are in streaming mode we only apply JCL and do not run the
+    // job through QPDL (so no page management, form flattening,
+    // page size/orientation adjustment, ...)
+    if ((t = cupsGetOption("filter-streaming-mode",
+			   data->num_options, data->options)) !=
+	NULL &&
+	(strcasecmp(t, "false") && strcasecmp(t, "off") &
+	 strcasecmp(t, "no"))) {
+      streaming = 1;
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "pdftopdf: Streaming mode: No PDF processing, only adding of JCL");
+    }
 
     std::unique_ptr<PDFTOPDF_Processor> proc(PDFTOPDF_Factory::processor());
 
-    FILE *f = NULL;
-    if (inputseekable && inputfd > 0) {
-      if ((f = fdopen(inputfd, "rb")) == NULL)
+    if ((inputseekable && inputfd > 0) || streaming) {
+      if ((inputfp = fdopen(inputfd, "rb")) == NULL)
 	return 1;
     } else {
-      if ((f = copy_fd_to_temp(inputfd, &doc)) == NULL)
+      if ((inputfp = copy_fd_to_temp(inputfd, &doc)) == NULL)
 	return 1;
     }
-    if (is_empty(f)) {
-      fclose(f);
-      empty = 1;
-    } else if (!proc->loadFile(f, &doc, WillStayAlive, 1)) {
-      fclose(f);
-      return 1;
-    }
 
-    if(empty)
-    {
+    if (!streaming) {
+      if (is_empty(inputfp)) {
+	fclose(inputfp);
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "pdftopdf: Input is empty, outputting empty file.");
+	return 0;
+      }
+
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pdftopdf: Input is empty, outputting empty file.");
-      return 0;
+		     "pdftopdf: Processing PDF input with QPDF: Page-ranges, page-set, number-up, booklet, size adjustment, ...");
+
+      // Load the PDF input data into QPDF
+      if (!proc->loadFile(inputfp, &doc, WillStayAlive, 1)) {
+	fclose(inputfp);
+	return 1;
+      }
+
+      // Process the PDF input data
+      if (!processPDFTOPDF(*proc, param, &doc))
+	return 2;
+
+      // Pass information to subsequent filters via PDF comments
+      emitComment(*proc, param);
     }
 
-/* TODO
+    /* TODO
     // color management
---- PPD:
+    --- PPD:
       copyPPDLine_(fp_dest, fp_src, "*PPD-Adobe: ");
       copyPPDLine_(fp_dest, fp_src, "*cupsICCProfile ");
       copyPPDLine_(fp_dest, fp_src, "*Manufacturer:");
@@ -1042,19 +1069,27 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     if (cupsICCProfile) {
       proc.addCM(...,...);
     }
-*/
+    */
 
-    if (!processPDFTOPDF(*proc,param,&doc))
-      return 2;
-
-    FILE *outputfp;
     outputfp = fdopen(outputfd, "w");
-    if(outputfp == NULL) return 1;
+    if (outputfp == NULL)
+      return 1;
 
-    emitPreamble(outputfp, data->ppd,param); // ppdEmit, JCL stuff
-    emitComment(*proc,param); // pass information to subsequent filters via PDF comments
-    proc->emitFile(outputfp, &doc, WillStayAlive);
-    // proc->emitFilename(NULL);
+    emitPreamble(outputfp, data->ppd, param); // ppdEmit, JCL stuff
+
+    if (!streaming) {
+      // Pass on the processed input data
+      proc->emitFile(outputfp, &doc, WillStayAlive);
+      // proc->emitFilename(NULL);
+    } else {
+      // Pass through the input data
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "pdftopdf: Passing on unchanged PDF data from input");
+      while ((bytes = fread(buf, 1, sizeof(buf), inputfp)) > 0)
+	if (fwrite(buf, 1, bytes, outputfp) != bytes)
+	  break;
+      fclose(inputfp);
+    }
 
     emitPostamble(outputfp, data->ppd,param);
     fclose(outputfp);

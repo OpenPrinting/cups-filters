@@ -883,135 +883,163 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   }
 
  /*
-  * Find out file type ...
+  * Streaming mode without pre-checking input format or zero-page jobs
   */
 
-  if (inputseekable)
-    doc_type = parse_doc_type(fp);
-
- /*
-  * Copy input into temporary file if needed ...
-  * (If the input is not seekable or if it is PostScript, to be able
-  *  to count the pages)
-  */
-
-  if (!inputseekable || doc_type == GS_DOC_TYPE_PS) {
-    if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Unable to copy PDF file: %s", strerror(errno));
-      return (1);
-    }
-
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Copying input to temp file \"%s\"",
-		 tempfile);
-
-    while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
-      bytes = write(fd, buf, bytes);
-
-    fclose(fp);
-    close(fd);
-
-    filename = tempfile;
+  if ((t = cupsGetOption("filter-streaming-mode", num_options, options)) ==
+       NULL ||
+      (!strcasecmp(t, "false") || !strcasecmp(t, "off") ||
+       !strcasecmp(t, "no")))
+  {
 
    /*
-    * Open the temporary file to read it instead of the original input ...
+    * Find out file type ...
     */
 
-    if ((fp = fopen(filename, "r")) == NULL)
-    {
-      if (!iscanceled || !iscanceled(icd))
+    if (inputseekable)
+      doc_type = parse_doc_type(fp);
+
+   /*
+    * Copy input into temporary file if needed ...
+    * (If the input is not seekable or if it is PostScript, to be able
+    *  to count the pages)
+    */
+
+    if (!inputseekable || doc_type == GS_DOC_TYPE_PS) {
+      if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "ghostscript: Unable to open temporary file.");
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unable to copy PDF file: %s", strerror(errno));
+	return (1);
       }
 
-      goto out;
-    }
-  } else
-    filename = NULL;
-
-  if (!inputseekable)
-    doc_type = parse_doc_type(fp);
-
-  if (doc_type == GS_DOC_TYPE_EMPTY) {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Input is empty, outputting empty file.");
-    status = 0;
-    if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-	outformat == OUTPUT_FORMAT_PWG_RASTER ||
-	outformat == OUTPUT_FORMAT_APPLE_RASTER)
-      fprintf(stdout, "RaS2");
-    goto out;
-  } if (doc_type == GS_DOC_TYPE_UNKNOWN) {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Can't detect file type");
-    goto out;
-  }
-
-  if (doc_type == GS_DOC_TYPE_PDF) {
-    int pages = pdf_pages_fp(fp);
-
-    if (pages == 0) {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "ghostscript: No pages left, outputting empty file.");
+		   "ghostscript: Copying input to temp file \"%s\"",
+		   tempfile);
+
+      while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
+	bytes = write(fd, buf, bytes);
+
+      fclose(fp);
+      close(fd);
+
+      filename = tempfile;
+
+     /*
+      * Open the temporary file to read it instead of the original input ...
+      */
+
+      if ((fp = fopen(filename, "r")) == NULL)
+      {
+	if (!iscanceled || !iscanceled(icd))
+        {
+	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		       "ghostscript: Unable to open temporary file.");
+	}
+
+	goto out;
+      }
+    } else
+      filename = NULL;
+
+    if (!inputseekable)
+      doc_type = parse_doc_type(fp);
+
+    if (doc_type == GS_DOC_TYPE_EMPTY) {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "ghostscript: Input is empty, outputting empty file.");
       status = 0;
       if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
 	  outformat == OUTPUT_FORMAT_PWG_RASTER ||
 	  outformat == OUTPUT_FORMAT_APPLE_RASTER)
-        fprintf(stdout, "RaS2");
+	if (write(outputfd, "RaS2", 4)) {};
       goto out;
-    }
-    if (pages < 0) {
+    } if (doc_type == GS_DOC_TYPE_UNKNOWN) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Unexpected page count");
+		   "ghostscript: Can't detect file type");
       goto out;
     }
-  } else {
-    char gscommand[65536];
-    char output[31] = "";
-    int pagecount;
-    size_t bytes;
-    // Ghostscript runs too long while converting djvu files to Xerox`s 3210 format
-    // Using -dDEVICEWIDTHPOINTS -dDEVICEHEIGHTPOINTS params solves the problem
-    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 %s 2>&1 | grep -c HiResBoundingBox",
-    CUPS_GHOSTSCRIPT, filename);
+
+    if (doc_type == GS_DOC_TYPE_PDF) {
+      int pages = pdf_pages_fp(fp);
+
+      if (pages == 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "ghostscript: No pages left, outputting empty file.");
+	status = 0;
+	if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+	    outformat == OUTPUT_FORMAT_PWG_RASTER ||
+	    outformat == OUTPUT_FORMAT_APPLE_RASTER)
+	  if (write(outputfd, "RaS2", 4)) {};
+	goto out;
+      }
+      if (pages < 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unexpected page count");
+	goto out;
+      }
+    } else {
+      char gscommand[65536];
+      char output[31] = "";
+      int pagecount;
+      size_t bytes;
+      /* Ghostscript runs too long on files converted from djvu files */
+      /* Using -dDEVICEWIDTHPOINTS -dDEVICEHEIGHTPOINTS params solves the
+	 problem */
+      snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 %s 2>&1 | grep -c HiResBoundingBox",
+	       CUPS_GHOSTSCRIPT, filename);
     
-    FILE *pd = popen(gscommand, "r");
-    if (!pd) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Failed to execute ghostscript to determine "
-		   "number of input pages!");
-      goto out;
+      FILE *pd = popen(gscommand, "r");
+      if (!pd) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Failed to execute ghostscript to determine "
+		     "number of input pages!");
+	goto out;
+      }
+
+      bytes = fread(output, 1, 31, pd);
+      pclose(pd);
+
+      if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
+	pagecount = -1;
+
+      if (pagecount == 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "ghostscript: No pages left, outputting empty file.");
+	status = 0;
+	if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+	    outformat == OUTPUT_FORMAT_PWG_RASTER ||
+	    outformat == OUTPUT_FORMAT_APPLE_RASTER)
+	  if (write(outputfd, "RaS2", 4)) {};
+	goto out;
+      }
+      if (pagecount < 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unexpected page count");
+	goto out;
+      }
     }
 
-    bytes = fread(output, 1, 31, pd);
-    pclose(pd);
-
-    if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
-      pagecount = -1;
-
-    if (pagecount == 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "ghostscript: No pages left, outputting empty file.");
-      status = 0;
-      if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-	  outformat == OUTPUT_FORMAT_PWG_RASTER ||
-	  outformat == OUTPUT_FORMAT_APPLE_RASTER)
-        fprintf(stdout, "RaS2");
-      goto out;
+    if (filename) {
+      /* Remove name of temp file*/
+      unlink(filename);
+      filename = NULL;
     }
-    if (pagecount < 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Unexpected page count");
-      goto out;
-    }
+
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Input format: %s",
+		 (doc_type == GS_DOC_TYPE_PDF ? "PDF" :
+		  (doc_type == GS_DOC_TYPE_PDF ? "PostScript" :
+		   (doc_type == GS_DOC_TYPE_PDF ? "Empty file" :
+		    "Unknown"))));
   }
-  if (filename) {
-    /* Remove name of temp file*/
-    unlink(filename);
-    filename = NULL;
+  else
+  {
+    doc_type = GS_DOC_TYPE_UNKNOWN;
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Input format: Not determined");
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Streaming mode, no checks for input format, zero-page input, instructions from previous filter");
   }
 
   /*  Check status of color management in CUPS */
@@ -1202,8 +1230,6 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
       }
     } 
   }
-
-
 
   /* set PDF-specific options */
   if (doc_type == GS_DOC_TYPE_PDF) {

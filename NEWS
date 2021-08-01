@@ -3,6 +3,21 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, foomatic-rip: Added new streaming mode
+	  triggered by the boolean "filter-streaming-mode" option. In
+	  this mode a filter (function) is supposed to avoid
+	  everything which prevents the job data from streaming, as
+	  loading the whole job (or good part of it) into a temporary
+	  file or into memory, interpreting PDF, pre-checking input
+	  file type or zero-page jobs, ... This is mainly to be used
+	  by Printer Applications when they do raster printing in
+	  streaming mode, to run with lowest resources possible.
+	  Currently foomatic-rip, ghostscript(), and pdftopdf() got a
+	  streaming mode. For the former two PostScript (not PDF) is
+	  assumed as input and no zero-page-job check is done, in the
+	  latter all QPDF processing (page management, page size
+	  adjustment, ...) is skipped and only JCL according to the
+	  PPD added.
 	- Sample PPDs: Add borderless page size definitions to Generic
 	  PDF Printer, HP Color LaserJet CM3530 MFP PDF, and Ricoh PDF
 	  Printer PPD files.
