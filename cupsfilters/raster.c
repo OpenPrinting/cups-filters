@@ -380,31 +380,6 @@ getBackSideAndHeaderDuplex(ipp_t *printer_attrs,	/* I - printer attributes using
 	    }
 	}
     }
-    if(header)
-    if(header->Duplex==CUPS_FALSE){
-	if((ipp_attr = ippFindAttribute(printer_attrs, "job-presets-supported", 
-	    IPP_TAG_ZERO))!=NULL){
-	        for(i = 0, count = ippGetCount(ipp_attr); i<count; i++){
-		    ipp_t *preset = ippGetCollection(ipp_attr, i);
-		    ipp_attribute_t *member;
-		    const char *member_name;		/* Member attribute name */
-		    for(member = ippFirstAttribute(preset); member;
-			member = ippNextAttribute(preset)){
-			member_name = ippGetName(member);
-			if (!member_name || !strcmp(member_name, "preset-name"))
-			    continue;
-		    	if(!strcmp(member_name, "sides")){
-			    const char *keyword;
-			    keyword = ippGetString(member, 0, NULL);
-			    if(keyword && !strcmp(keyword, "two-sided-short-edge"))
-			    header->Duplex = CUPS_TRUE;
-			    if(keyword && !strcmp(keyword, "two-sided-long-edge"))
-			    header->Duplex = CUPS_TRUE;
-		        }
-		    }
-	        }
-	}
-    }
     
     if(header && header->Duplex==1 && backside==-1) backside = NORMAL;
     return backside;
