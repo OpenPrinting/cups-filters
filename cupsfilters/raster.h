@@ -40,10 +40,10 @@ extern "C" {
 
 typedef enum backside_orient_e
 {
-  MANUAL_TUMBLE,
-  ROTATED,
-  FLIPPED,
-  NORMAL
+  BACKSIDE_MANUAL_TUMBLE,
+  BACKSIDE_ROTATED,
+  BACKSIDE_FLIPPED,
+  BACKSIDE_NORMAL
 } backside_orient_t;
 
 

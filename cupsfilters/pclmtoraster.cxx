@@ -220,7 +220,7 @@ parseOpts(filter_data_t *data,
         FM_NO, FM_FALSE, FM_TRUE
       } flippedMargin = FM_NO;
 
-      if (backside==MANUAL_TUMBLE && header->Tumble)
+      if (backside==BACKSIDE_MANUAL_TUMBLE && header->Tumble)
       {
         pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
 	  true;
@@ -231,7 +231,7 @@ parseOpts(filter_data_t *data,
           pclmtoraster_data->swap_margin_y = false;
         }
       }
-      else if (backside==ROTATED && !header->Tumble)
+      else if (backside==BACKSIDE_ROTATED && !header->Tumble)
       {
         pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
 	  true;
@@ -242,7 +242,7 @@ parseOpts(filter_data_t *data,
           pclmtoraster_data->swap_margin_y = false;
         }
       }
-      else if (backside==FLIPPED)
+      else if (backside==BACKSIDE_FLIPPED)
       {
         if (header->Tumble)
 	{

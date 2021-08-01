@@ -383,19 +383,19 @@ getBackSideAndHeaderDuplex(ipp_t *printer_attrs,	/* I - printer attributes using
 		for(i = 0, count = ippGetCount(ipp_attr); i<count;i++){
 		    const char *dm = ippGetString(ipp_attr, i, NULL); /* DM value */
 		    if(!strcasecmp(dm, "DM1")){
-			backside = NORMAL;
+			backside = BACKSIDE_NORMAL;
 			break;
 		    }
 		    if(!strcasecmp(dm, "DM2")){
-			backside = FLIPPED;
+			backside = BACKSIDE_FLIPPED;
 			break;
 		    }
 		    if(!strcasecmp(dm, "DM3")){
-			backside = ROTATED;
+			backside = BACKSIDE_ROTATED;
 			break;
 		    }
 		    if(!strcasecmp(dm, "DM4")){
-			backside = MANUAL_TUMBLE;
+			backside = BACKSIDE_MANUAL_TUMBLE;
 			break;
 		    }
 		}
@@ -405,18 +405,18 @@ getBackSideAndHeaderDuplex(ipp_t *printer_attrs,	/* I - printer attributes using
 		const char *keyword;
 		keyword = ippGetString(ipp_attr, 0, NULL);
 		if (!strcmp(keyword, "flipped"))
-		    backside = FLIPPED;
+		    backside = BACKSIDE_FLIPPED;
 		else if (!strcmp(keyword, "manual-tumble"))
-		    backside = MANUAL_TUMBLE;
+		    backside = BACKSIDE_MANUAL_TUMBLE;
 		else if (!strcmp(keyword, "normal"))
-		    backside = NORMAL;
+		    backside = BACKSIDE_NORMAL;
 		else
-		    backside = ROTATED;		
+		    backside = BACKSIDE_ROTATED;		
 	    }
 	}
     }
     
-    if(header && header->Duplex==1 && backside==-1) backside = NORMAL;
+    if(header && header->Duplex==1 && backside==-1) backside = BACKSIDE_NORMAL;
     return backside;
     
 }
