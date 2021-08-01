@@ -329,7 +329,42 @@ ippRasterMatchIPPSize(
 }
 
 /*
- *  'getBackSideAndHeaderDuplex()' - This functions returns the cupsBackSide using printer attributes
+ *  'getBackSideAndHeaderDuplex()' - 
+ *				This functions returns the cupsBackSide using 
+ *				printer attributes.
+ *				meaning and reason for backside orientation:-
+ *				It only makes sense if printer supports duplex,
+ * 				so, if printer reports that it supports duplex 
+ * 				printing via sides-supported IPP attribute, then
+ *				it also reports back-side orientation for each 
+ * 				PDL in PDL specific IPP attributes. Backside 
+ * 				orientation is specially needed for raster
+ * 				PDLs as raster PDLs are specially made for 
+ * 				raster printers which do not have sufficient memory 
+ *				to hold a full page bitmap(raster page). 
+ *				So they cannot build the whole page in memory 
+ *				before starting to print it. For one sided printing 
+ *				it is easy to manage. The printer's mechanism pulls 
+ *				the page in on its upper edge and starts to print,  
+ *				from top to bottom, after that it ejects the page.  
+ *				For double-sided printing it does the same for the  
+ *				front side, but for the back side the mechanics of  
+ *				the printer has to turn over the sheet, and now,  
+ *				depending on how the sheet is turned over it happens  
+ *				that the edge arriving in the printing mechanism is 
+ *				the lower edge of the back side. And if the printer  
+ *				simply prints then, the back side is the wrong way  
+ *				around. The printer reports its need via back side  
+ *				orientation in such a case, so that the client knows  
+ *				to send the back side upside down for example.  
+ *				In vector PDL, PDF and PostScript, always the full  
+ *				page's raster image is completely generated in the  
+ *				printer before the page is started, and therefore the  
+ *				printer can start to take the pixels from the lower  
+ *				edge of the raster image if needed, so back side  
+ *				orientation is always "normal" for these PDLs. 
+ *				And if a printer does not support duplex, back side 
+ * 				orientation is not needed.
  */
 
 int							/* O - Backside obtained using printer attributes */
