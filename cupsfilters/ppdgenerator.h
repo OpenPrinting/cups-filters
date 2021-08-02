@@ -78,7 +78,7 @@ cups_array_t    *cfNewResolutionArray();
 cf_res_t        *cfIPPResToResolution(ipp_attribute_t *attr, int index);
 cups_array_t    *cfIPPAttrToResolutionArray(ipp_attribute_t *attr);
 int             cfJoinResolutionArrays(cups_array_t **current,
-				       cups_array_t **new,
+				       cups_array_t **new_arr,
 				       cf_res_t **current_default,
 				       cf_res_t **new_default);
 cups_array_t    *cfGenerateSizes(ipp_t *response,

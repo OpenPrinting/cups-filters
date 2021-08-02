@@ -22,7 +22,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include "pdftopdf.h"
-
+#include "cupsfilters/raster.h"
+#include "cupsfilters/ppdgenerator.h"
 #include "pdftopdf_processor.h"
 #include "pdftopdf_jcl.h"
 
@@ -295,11 +296,18 @@ static bool parseBorder(const char *val,BorderType &ret) // {{{
 }
 // }}}
 
-void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,ProcessingParameters &param,char *final_content_type,pdftopdf_doc_t *doc) // {{{
+void getParameters(filter_data_t *data,int num_options,cups_option_t *options,ProcessingParameters &param,char *final_content_type,pdftopdf_doc_t *doc) // {{{
 {
-  const char *val;
 
-  if ((val = cupsGetOption("copies",num_options,options)) != NULL) {
+  ppd_file_t *ppd = data->ppd;
+  ipp_t *printer_attrs = data->printer_attrs;
+  ipp_attribute_t *ipp;
+  const char *val;
+   
+  if ((val = cupsGetOption("copies",num_options,options)) != NULL	||
+	(val = cupsGetOption("Copies", num_options, options))!=NULL	||
+	(val = cupsGetOption("num-copies", num_options, options))!=NULL	||
+	(val = cupsGetOption("NumCopies", num_options, options))!=NULL) {
     int copies = atoi(val);
     if (copies > 0)
       param.numCopies = copies;
@@ -392,38 +400,57 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     param.page.width=pagesize->width;
     param.page.height=pagesize->length;
   }
-#ifdef HAVE_CUPS_1_7
-  else {
-    if ((val = cupsGetOption("media-size", num_options, options)) != NULL ||
-	(val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
-	(val = cupsGetOption("page-size", num_options, options)) != NULL ||
-	(val = cupsGetOption("PageSize", num_options, options)) != NULL) {
-      pwg_media_t *size_found = NULL;
-      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				     "pdftopdf: Page size from command "
-				     "line: %s", val);
-      if ((size_found = pwgMediaForPWG(val)) == NULL)
-	if ((size_found = pwgMediaForPPD(val)) == NULL)
-	  size_found = pwgMediaForLegacy(val);
-      if (size_found != NULL) {
-	param.page.width = size_found->width * 72.0 / 2540.0;
-        param.page.height = size_found->length * 72.0 / 2540.0;
-	param.page.top=param.page.bottom=36.0;
-	param.page.right=param.page.left=18.0;
-	param.page.right=param.page.width-param.page.right;
-	param.page.top=param.page.height-param.page.top;
-	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				       "pdftopdf: Width: %f, Length: %f",
-				       param.page.width, param.page.height);
-      }
-      else
-	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				       "pdftopdf: Unsupported page size %s.",
-				       val);
-    }
-  }
-#endif /* HAVE_CUPS_1_7 */
+  else 
+  {
+	if(printer_attrs!=NULL){
+	    char defSize[41];
+	    int min_length = 99999,
+	    	max_length = 0,
+	    	min_width = 99999,
+		max_width = 0,
+		left, right,
+		top, bottom; 
+	    cfGenerateSizes(printer_attrs, &ipp, &min_length, &min_width,
+			&max_length, &max_width, &bottom, &left, &right, &top,
+			defSize);
+	    param.page.top = top* 72.0/2540.0;
+	    param.page.bottom = bottom* 72.0/2540.0;
+	    param.page.right = right * 72.0/2540.0;
+	    param.page.left = left* 72.0/2540.0;
+	    param.page.width = min_width*72.0/2540.0;
+	    param.page.height = min_length*72.0/2540.0;
+  	}
 
+    #ifdef HAVE_CUPS_1_7
+   	if ((val = cupsGetOption("media-size", num_options, options)) != NULL ||
+		(val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
+		(val = cupsGetOption("page-size", num_options, options)) != NULL ||
+		(val = cupsGetOption("PageSize", num_options, options)) != NULL) {
+	pwg_media_t *size_found = NULL;
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+					"pdftopdf: Page size from command "
+					"line: %s", val);
+	if ((size_found = pwgMediaForPWG(val)) == NULL)
+		if ((size_found = pwgMediaForPPD(val)) == NULL)
+		size_found = pwgMediaForLegacy(val);
+	if (size_found != NULL) {
+		param.page.width = size_found->width * 72.0 / 2540.0;
+		param.page.height = size_found->length * 72.0 / 2540.0;
+		param.page.top=param.page.bottom=36.0;
+		param.page.right=param.page.left=18.0;
+		param.page.right=param.page.width-param.page.right;
+		param.page.top=param.page.height-param.page.top;
+		if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+					"pdftopdf: Width: %f, Length: %f",
+					param.page.width, param.page.height);
+	}
+	else
+		if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+					"pdftopdf: Unsupported page size %s.",
+					val);
+	}
+    #endif /* HAVE_CUPS_1_7 */
+  }
   param.paper_is_landscape=(param.page.width>param.page.height);
 
   PageRect tmp; // borders (before rotation)
@@ -561,9 +588,12 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
   if ((choice=ppdFindMarkedChoice(ppd,"MirrorPrint")) != NULL) {
     val=choice->choice;
   } else {
-    val=cupsGetOption("mirror",num_options,options);
+    if((val = cupsGetOption("mirror", num_options, options))!=NULL  ||
+	(val = cupsGetOption("mirror-print", num_options, options))!=NULL	||
+	(val = cupsGetOption("MirrorPrint", num_options, options))!=NULL)
+    param.mirror=is_true(val);
   }
-  param.mirror=is_true(val);
+  
 
   if ((val=cupsGetOption("emit-jcl",num_options,options)) != NULL) {
     param.emitJCL=!is_false(val)&&(strcmp(val,"0")!=0);
@@ -697,12 +727,27 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
     // Determine the last filter in the chain via cupsFilter(2) lines of the
     // PPD file and FINAL_CONTENT_TYPE
     if (!ppd) {
-      // If there is no PPD do not log when not requested by command line
-      param.page_logging = 0;
-      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				     "pdftopdf: No PPD file specified, could "
-				     "not determine whether to log pages or "
-				     "not, so turned off page logging.");
+      // If PPD file is not specified, we determine whether to log pages or not
+      // using FINAL_CONTENT_TYPE env variable. log pages only when FINAL_CONTENT_TYPE is
+      // either pdf or raster
+	
+        if (final_content_type && (strcasestr(final_content_type, "/pdf") ||
+	strcasestr(final_content_type, "/vnd.cups-pdf") ||
+	strcasestr(final_content_type, "/pwg-raster")))
+	      param.page_logging = 1;
+	else
+	      param.page_logging = 0;   
+	// If final_content_type is not clearly available we are not sure whether to log pages or not
+	if((char*)final_content_type==NULL || 
+		sizeof(final_content_type)==0 || 
+		final_content_type[0]=='\0'){
+	    param.page_logging = -1;	 
+	}
+	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+		"pdftopdf: No PPD file specified,  "
+		"determined whether to log pages or "
+		"not using final_content_type env variable.");
+		doc->logfunc(doc->logdata,FILTER_LOGLEVEL_DEBUG,"final_content_type = %s page_logging=%d",final_content_type?final_content_type:"NULL",param.page_logging);
     } else {
       char *lastfilter = NULL;
       if (final_content_type == NULL) {
@@ -839,8 +884,12 @@ static bool printerWillCollate(ppd_file_t *ppd) // {{{
 }
 // }}}
 
-void calculate(ppd_file_t *ppd,ProcessingParameters &param,char *final_content_type) // {{{
+void calculate(filter_data_t *data,ProcessingParameters &param,char *final_content_type) // {{{
 {
+  ppd_file_t *ppd = data->ppd;
+  int num_options = 0;
+  cups_option_t *options = NULL;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
   if (param.reverse)
     // Enable evenDuplex or the first page may be empty.
     param.evenDuplex=true; // disabled later, if non-duplex
@@ -874,7 +923,16 @@ void calculate(ppd_file_t *ppd,ProcessingParameters &param,char *final_content_t
 	}
       }
     } // else: printer copies w/o collate and takes care of duplex/evenDuplex
-  } else { // sw copies
+  }
+  else if(final_content_type &&
+	((strcasestr(final_content_type, "/pdf"))  ||
+	(strcasestr(final_content_type, "/vnd.cups-pdf")))){
+    param.deviceCopies = param.numCopies;
+    if(param.collate){
+	param.deviceCollate = true;
+    }
+  }
+ else { // sw copies
     param.deviceCopies=1;
     if (param.duplex) { // &&(numCopies>1)
       // sw collate + evenDuplex must be forced to prevent copies on the backsides
@@ -982,7 +1040,9 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
   void               *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void               *icd = data->iscanceleddata;
-
+  int num_options = 0;
+  cups_option_t *options = NULL;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
 
   if (parameters)
     final_content_type = (char *)parameters;
@@ -1003,8 +1063,9 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     doc.iscanceledfunc = iscanceled;
     doc.iscanceleddata = icd;
 
-    getParameters(data->ppd,data->num_options,data->options,param,final_content_type,&doc);
-    calculate(data->ppd,param,final_content_type);
+    getParameters(data,data->num_options,data->options,param,final_content_type,&doc);
+
+calculate(data,param,final_content_type);
 
 #ifdef DEBUG
     param.dump(&doc);
