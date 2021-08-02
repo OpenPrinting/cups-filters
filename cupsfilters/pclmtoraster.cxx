@@ -91,7 +91,7 @@ parseOpts(filter_data_t *data,
   void			*ld = data->logdata;
   ppd_file_t		*ppd = pclmtoraster_data->ppd;
   cups_page_header2_t	*header = &(pclmtoraster_data->header);
-
+  ipp_t *printer_attrs = data->printer_attrs;
 #ifdef HAVE_CUPS_1_7
   t = getenv("FINAL_CONTENT_TYPE");
   if (t && strcasestr(t, "pwg"))
@@ -101,8 +101,7 @@ parseOpts(filter_data_t *data,
   * CUPS option list
   */
 
-  num_options = data->num_options;
-  options = data->options;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
 
   ppd = data->ppd;
 
@@ -212,6 +211,58 @@ parseOpts(filter_data_t *data,
     }
     cupsRasterParseIPPOptions(header, data,
 			      pclmtoraster_data->pwgraster, 1);
+
+    int backside = getBackSideAndHeaderDuplex(printer_attrs, header);
+    if(header->Duplex){
+      /* analyze options relevant to Duplex */
+      /* APDuplexRequiresFlippedMargin */
+      enum {
+        FM_NO, FM_FALSE, FM_TRUE
+      } flippedMargin = FM_NO;
+
+      if (backside==BACKSIDE_MANUAL_TUMBLE && header->Tumble)
+      {
+        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
+	  true;
+        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
+	  true;
+        if (flippedMargin == FM_TRUE)
+	{
+          pclmtoraster_data->swap_margin_y = false;
+        }
+      }
+      else if (backside==BACKSIDE_ROTATED && !header->Tumble)
+      {
+        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
+	  true;
+        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
+	  true;
+        if (flippedMargin == FM_TRUE)
+	{
+          pclmtoraster_data->swap_margin_y = false;
+        }
+      }
+      else if (backside==BACKSIDE_FLIPPED)
+      {
+        if (header->Tumble)
+	{
+          pclmtoraster_data->swap_image_x = true;
+          pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
+	    true;
+        }
+	else
+	{
+          pclmtoraster_data->swap_image_y = true;
+        }
+        if (flippedMargin == FM_FALSE)
+	{
+          pclmtoraster_data->swap_margin_y =
+	    !(pclmtoraster_data->swap_margin_y);
+        }
+      }
+
+    }
+    
 #else
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		"pclmtoraster: No PPD file specified: %s", strerror(errno));
@@ -792,6 +843,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
 	filter_logfunc_t log,		/* I - Log function */
 	void*		 ld,		/* I - Aux. data for log function */
 	pclmtoraster_data_t *data,	/* I - pclmtoraster filter data */
+	filter_data_t 	*filter_data,	/* I - filter data */
 	conversion_function_t *convert) /* I - Conversion functions */
 {
   long long		rotate = 0,
@@ -850,6 +902,12 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
     if (data->pwgraster == 1)
       memset(margins, 0, sizeof(margins));
   }
+  else if(filter_data!=NULL &&(filter_data->printer_attrs)!=NULL)
+  {
+    ippRasterMatchIPPSize(&(data->header), filter_data, margins, paperdimensions, NULL, NULL);
+    if(data->pwgraster==1)
+      memset(margins, 0, sizeof(margins));
+  }
   else
   {
     for (int i = 0; i < 2; i ++)
@@ -870,6 +928,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
       for (int i = 0; i < 4; i ++)
 	margins[i] = 0.0;
   }
+
 
   if (data->header.Duplex && (pgno & 1))
   {
@@ -1169,7 +1228,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
 		 "pclmtoraster: Starting page %d.", i+1);
-    if (outPage(raster, pages[i], i, log, ld, &pclmtoraster_data,
+    if (outPage(raster, pages[i], i, log, ld, &pclmtoraster_data,data,
 		&convert) != 0)
       break;
   }

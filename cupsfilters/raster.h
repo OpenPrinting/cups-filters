@@ -35,6 +35,19 @@ extern "C" {
 #  include <cups/raster.h>
 
 /*
+ * Types
+ */
+
+typedef enum backside_orient_e
+{
+  BACKSIDE_MANUAL_TUMBLE,
+  BACKSIDE_ROTATED,
+  BACKSIDE_FLIPPED,
+  BACKSIDE_NORMAL
+} backside_orient_t;
+
+
+/*
  * Prototypes...
  */
 
@@ -55,6 +68,14 @@ extern int              cupsRasterParseIPPOptions(cups_page_header2_t *h,
 extern int				joinJobOptionsAndAttrs(filter_data_t *data, 
 						int num_options, 
 						cups_option_t **options);
+extern int				ippRasterMatchIPPSize(cups_page_header2_t *header,
+						  filter_data_t *data,
+						  double margins[4],
+						  double dimensions[4],
+						  int *image_fit,
+						  int *landscape);
+extern int		getBackSideAndHeaderDuplex(ipp_t *printer_attrs,
+						  cups_page_header2_t *header);
 
 #  ifdef __cplusplus
 }

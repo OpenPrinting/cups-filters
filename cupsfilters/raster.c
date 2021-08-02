@@ -28,6 +28,7 @@
 #include "ipp.h"
 #include <string.h>
 #include <ctype.h>
+#include <cupsfilters/ppdgenerator.h>
 #ifdef HAVE_CUPS_1_7
 #include <cups/pwg.h>
 #endif /* HAVE_CUPS_1_7 */
@@ -65,6 +66,360 @@ _strlcpy(char       *dst,		/* O - Destination string */
   return (srclen);
 }
 
+
+/*
+ * 'ippRasterMatchIPPSize()' - Match IPP page size to header page size.
+ */
+
+int 
+ippRasterMatchIPPSize(
+    cups_page_header2_t *header,	/* I - Page header to match */
+    filter_data_t  	*data,   	/* I - printer-data file */
+    double		margins[4],	/* O - Margins of media in points */
+    double		dimensions[2],	/* O - Width and Length of media in points */
+    int 		*image_fit,	/* O - Imageable Area Fit */
+    int 		*landscape)	/* O - Landscape / Portrait Fit */
+{
+  cups_array_t		*printer_sizes;	/* Media sizes we obtained from printer-attributes */
+  cups_size_t		*size,		/* Current media size */
+			*size_matched = NULL;
+					/* Matched size */
+  filter_logfunc_t log = data->logfunc; /* logging function for debugging */
+  void          *ld = data->logdata;
+  ipp_attribute_t	*defattr;	/* default value of attr */
+  int			i,		/* looping var */
+			bottom,		/* Smallest bottom margin supported by printer */
+			left,		/* Smallest left margin supported by printer */
+			right,		/* Smallest right margin supported by printer */
+			top,		/* Smallest top margin supported by printer */
+			max_length = 0,	/* Maximum custom size */
+			max_width = 0,
+			all_borderless = 1,
+					/* if all available printer-sizes
+					from printer-ipp-attrs are borderless */
+			min_length = 2147483647,
+					/* Minimum custom size */
+			min_width = 2147483647;
+  ipp_t 		*printer_attrs;	/* Printer-attributes obtained from printer data */
+  char			defsize[41],	/* Default size */
+			*suffix,
+			ippsizename[128],
+			pageSizeRequested[64];	
+					/* Requested PageSize */
+
+  printer_attrs = data->printer_attrs;
+  printer_sizes = cfGenerateSizes(printer_attrs, &defattr, &min_length, &min_width,
+				  &max_length, &max_width,
+				  &bottom, &left, &right, &top, defsize);
+
+  if (!header)
+  {
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "Page header cannot be NULL!\n");
+    return (-1);
+  }
+  if (!printer_attrs)
+  {
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "Printer-attributes info not supplied!\n");
+    return (-1);
+  }
+
+  strncpy(pageSizeRequested, header->cupsPageSizeName, 64); /* Prefer user-selected page size. */
+  memset(dimensions, 0, sizeof(double)*2);
+  memset(margins, 0, sizeof(double)*4);
+  size_matched = NULL;
+
+    /* Find a page size without ".Borderless" suffix */
+    /* (if all are ".Borderless" we drop the suffix in the size's names) */
+    for (size = (cups_size_t *)cupsArrayFirst(printer_sizes); size;
+	 size = (cups_size_t *)cupsArrayNext(printer_sizes))
+      if (strcasestr(size->media, ".Borderless") == NULL)
+	break;
+    if (size)
+      all_borderless = 0;
+
+    if (all_borderless) {
+      suffix = strcasestr(defsize, ".Borderless");
+      if (suffix)
+	*suffix = '\0';
+    }
+
+  for(size = (cups_size_t*)cupsArrayFirst(printer_sizes); size;
+	size = cupsArrayNext(printer_sizes))
+  {
+	double length, width;
+	length = size->length * 72.0/2540.0;
+	width = size->width * 72.0/2540.0;
+	_strlcpy(ippsizename, size->media, sizeof(ippsizename));
+	if((suffix = strchr(ippsizename,' '))!=NULL){
+		*suffix = '\0';
+	}
+
+	if(all_borderless){
+		suffix = strcasestr(ippsizename, ".Borderless");
+		if(suffix){
+			*suffix = '\0';	
+		}
+	}
+
+    	/* Skip page sizes which conflict with settings of the other options */
+    	/* Find size of document's page under the IPP page sizes */
+	if(fabs(header->PageSize[1] - length) / length < 0.01	&&
+	   fabs(header->PageSize[0] - width) / width < 0.01	&&
+	   (size_matched==NULL || !strcasecmp(pageSizeRequested, ippsizename))){
+		size_matched = size;
+		if(landscape) *landscape = 0;
+		if(image_fit) *image_fit = 0;
+	}
+  }
+
+  if(size_matched==NULL)
+  /* Input page size does not fit any of the IPP's sizes, try to fit
+     the input page size into the imageable areas of the IPP's sizes */
+  for(size = (cups_size_t*)cupsArrayFirst(printer_sizes); size;
+	size = cupsArrayNext(printer_sizes))
+  {
+	_strlcpy(ippsizename, size->media, sizeof(ippsizename));
+	if((suffix = strchr(ippsizename,' '))!=NULL){
+		*suffix = '\0';
+	}
+
+	if(all_borderless){
+		suffix = strcasestr(ippsizename, ".Borderless");
+		if(suffix){
+			*suffix = '\0';	
+		}
+	}
+
+	double temptop = size->top * 72.0/2540.0, 
+		tempbottom = size->bottom * 72.0/2540.0, 
+		templeft = size->left * 72.0/ 2540.0, 
+		tempright = size->right * 72.0/2540, 
+		templength = size->length * 72.0/2540.0, 
+		tempwidth = size->width * 72.0/2540.0;
+    	/* Skip page sizes which conflict with settings of the other options */
+    	/* Find size of document's page under the IPP page sizes */
+	if(fabs(header->PageSize[1] - temptop + tempbottom) / templength < 0.01	&&
+	   fabs(header->PageSize[0] - tempright + templeft) / tempwidth < 0.01	&&
+	   (size_matched==NULL || !strcasecmp(pageSizeRequested, ippsizename))){
+		if(log)log(ld,FILTER_LOGLEVEL_DEBUG,"Imageable area fit\n");
+		size_matched = size;
+		if (landscape) *landscape = 0;
+      		if (image_fit) *image_fit = 1;
+	}
+  }
+
+  if (size_matched)
+  {
+   /*
+    * Standard size...
+    */
+    if(log)log(ld,FILTER_LOGLEVEL_DEBUG,"IPP matched size = %s\n", size_matched->media);
+    size = size_matched;
+    dimensions[0] = size->width * 72.0 / 2540.0;
+    dimensions[1] = size->length * 72.0 / 2540.0;
+    margins[0] = size->left * 72.0 / 2540.0;
+    margins[1] = size->bottom * 72.0 / 2540.0;
+    margins[2] = (size->width - size->right) * 72.0 / 2540.0;
+    margins[3] = (size->length - size->top) * 72.0 / 2540.0;
+    strncpy(header->cupsPageSizeName, size->media, 64);
+  }
+  else
+  {
+   /*
+    * No matching portrait size; look for a matching size in
+    * landscape orientation...
+    */
+	size_matched = 0;
+	for(size = (cups_size_t*)cupsArrayFirst(printer_sizes); size;
+		size = cupsArrayNext(printer_sizes))
+	{
+		double length, width;
+		length = size->length * 72.0/2540.0;
+		width = size->width * 72.0/2540.0;
+		_strlcpy(ippsizename, size->media, sizeof(ippsizename));
+		if((suffix = strchr(ippsizename,' '))!=NULL){
+			*suffix = '\0';
+		}
+
+		if(all_borderless){
+			suffix = strcasestr(ippsizename, ".Borderless");
+			if(suffix){
+				*suffix = '\0';	
+			}
+		}
+
+		/* Skip page sizes which conflict with settings of the other options */
+		/* Find size of document's page under the IPP page sizes */
+		if(fabs(header->PageSize[0] - length) / length < 0.01	&&
+		fabs(header->PageSize[1] - width) / width < 0.01	&&
+		(size_matched==NULL || !strcasecmp(pageSizeRequested, ippsizename))){
+			size_matched = size;
+			if(landscape) *landscape = 1;
+			if(image_fit) *image_fit = 0;
+		}
+	}
+	if (size_matched == NULL)
+    	/* Input page size does not fit any of the IPP's sizes, try to fit
+	the input page size into the imageable areas of the IPP's sizes */
+	for(size = (cups_size_t*)cupsArrayFirst(printer_sizes); size;
+		size = cupsArrayNext(printer_sizes))
+	{
+		_strlcpy(ippsizename, size->media, sizeof(ippsizename));
+		if((suffix = strchr(ippsizename,' '))!=NULL){
+			*suffix = '\0';
+		}
+
+		if(all_borderless){
+			suffix = strcasestr(ippsizename, ".Borderless");
+			if(suffix){
+				*suffix = '\0';	
+			}
+		}
+
+		double temptop = size->top * 72.0/2540.0, 
+			tempbottom = size->bottom * 72.0/2540.0, 
+			templeft = size->left * 72.0/ 2540.0, 
+			tempright = size->right * 72.0/2540, 
+			templength = size->length * 72.0/2540.0, 
+			tempwidth = size->width * 72.0/2540.0;
+		/* Skip page sizes which conflict with settings of the other options */
+		/* Find size of document's page under the IPP page sizes */
+		if(fabs(header->PageSize[0] - temptop + tempbottom) / templength < 0.01	&&
+		fabs(header->PageSize[1] - tempright + templeft) / tempwidth < 0.01	&&
+		(size_matched==NULL || !strcasecmp(pageSizeRequested, ippsizename))){
+			if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Imageable area fit\n");
+			size_matched = size;
+			if (landscape) *landscape = 1;
+			if (image_fit) *image_fit = 1;
+		}
+	}	
+  }
+  if (size_matched)
+  {
+    /*
+     * Standard size in landscape orientation...
+     */
+    size = size_matched;
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "landscape size = %s\n", size->media);
+    dimensions[0] = size->width * 72.0 / 2540.0;
+    dimensions[1] = size->length * 72.0 / 2540.0;
+    margins[0] = size->left * 72.0 / 2540.0;
+    margins[1] = size->bottom * 72.0 / 2540.0;
+    margins[2] = (size->width - size->right) * 72.0 / 2540.0;
+    margins[3] = (size->length - size->top) * 72.0 / 2540.0;
+    strncpy(header->cupsPageSizeName, size->media, 64);
+  }
+  else
+  {
+    /*
+     * Custom size...
+     */
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "size = custom\n");
+    for (i = 0; i < 2; i ++)
+      dimensions[i] = header->PageSize[i];
+    margins[0] = left * 72.0 / 2540.0;
+    margins[1] = bottom * 72.0 / 2540.0;
+    margins[2] = right * 72.0 / 2540.0;
+    margins[3] = bottom * 72.0 / 2540.0;
+    snprintf(header->cupsPageSizeName, 64, "Custom.%dx%d", header->PageSize[0], header->PageSize[1]);
+  }
+
+  return 0;
+
+}
+
+/*
+ *  'getBackSideAndHeaderDuplex()' - 
+ *				This functions returns the cupsBackSide using 
+ *				printer attributes.
+ *				meaning and reason for backside orientation:-
+ *				It only makes sense if printer supports duplex,
+ * 				so, if printer reports that it supports duplex 
+ * 				printing via sides-supported IPP attribute, then
+ *				it also reports back-side orientation for each 
+ * 				PDL in PDL specific IPP attributes. Backside 
+ * 				orientation is specially needed for raster
+ * 				PDLs as raster PDLs are specially made for 
+ * 				raster printers which do not have sufficient memory 
+ *				to hold a full page bitmap(raster page). 
+ *				So they cannot build the whole page in memory 
+ *				before starting to print it. For one sided printing 
+ *				it is easy to manage. The printer's mechanism pulls 
+ *				the page in on its upper edge and starts to print,  
+ *				from top to bottom, after that it ejects the page.  
+ *				For double-sided printing it does the same for the  
+ *				front side, but for the back side the mechanics of  
+ *				the printer has to turn over the sheet, and now,  
+ *				depending on how the sheet is turned over it happens  
+ *				that the edge arriving in the printing mechanism is 
+ *				the lower edge of the back side. And if the printer  
+ *				simply prints then, the back side is the wrong way  
+ *				around. The printer reports its need via back side  
+ *				orientation in such a case, so that the client knows  
+ *				to send the back side upside down for example.  
+ *				In vector PDL, PDF and PostScript, always the full  
+ *				page's raster image is completely generated in the  
+ *				printer before the page is started, and therefore the  
+ *				printer can start to take the pixels from the lower  
+ *				edge of the raster image if needed, so back side  
+ *				orientation is always "normal" for these PDLs. 
+ *				And if a printer does not support duplex, back side 
+ * 				orientation is not needed.
+ */
+
+int							/* O - Backside obtained using printer attributes */
+getBackSideAndHeaderDuplex(ipp_t *printer_attrs,	/* I - printer attributes using filter data */
+			cups_page_header2_t *header)	/* O - header */
+{
+    ipp_attribute_t *ipp_attr;	/* IPP attribute */
+    int i,			/* Looping variable */
+	count;			
+    int backside = -1;	/* backside obtained using printer attributes */
+    if((ipp_attr = ippFindAttribute(printer_attrs, "sides-supported", IPP_TAG_ZERO))!=NULL){
+	if(ippContainsString(ipp_attr, "two-sided-long-edge")){
+	    if(header) header->Duplex = CUPS_TRUE;
+	    if((ipp_attr = ippFindAttribute(printer_attrs, "urf-supported",
+		IPP_TAG_ZERO))!=NULL){
+		for(i = 0, count = ippGetCount(ipp_attr); i<count;i++){
+		    const char *dm = ippGetString(ipp_attr, i, NULL); /* DM value */
+		    if(!strcasecmp(dm, "DM1")){
+			backside = BACKSIDE_NORMAL;
+			break;
+		    }
+		    if(!strcasecmp(dm, "DM2")){
+			backside = BACKSIDE_FLIPPED;
+			break;
+		    }
+		    if(!strcasecmp(dm, "DM3")){
+			backside = BACKSIDE_ROTATED;
+			break;
+		    }
+		    if(!strcasecmp(dm, "DM4")){
+			backside = BACKSIDE_MANUAL_TUMBLE;
+			break;
+		    }
+		}
+	    }
+	    if((ipp_attr = ippFindAttribute(printer_attrs, "pwg-raster-document-sheet-back",
+		IPP_TAG_ZERO))!=NULL){
+		const char *keyword;
+		keyword = ippGetString(ipp_attr, 0, NULL);
+		if (!strcmp(keyword, "flipped"))
+		    backside = BACKSIDE_FLIPPED;
+		else if (!strcmp(keyword, "manual-tumble"))
+		    backside = BACKSIDE_MANUAL_TUMBLE;
+		else if (!strcmp(keyword, "normal"))
+		    backside = BACKSIDE_NORMAL;
+		else
+		    backside = BACKSIDE_ROTATED;		
+	    }
+	}
+    }
+    
+    if(header && header->Duplex==1 && backside==-1) backside = BACKSIDE_NORMAL;
+    return backside;
+    
+}
 
 /*
  * 'cupsRasterPrepareHeader() - This function creates a CUPS/PWG
