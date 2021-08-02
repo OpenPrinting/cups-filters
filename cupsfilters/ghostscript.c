@@ -1155,11 +1155,13 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   /* Note that these output formats are not fully usable yet:
 
      1. Ghostscript needs a seekable output, so they do not work
-        in the usual print filter chains
+	in the usual print filter chains. Bug report:
+	https://bugs.ghostscript.com/show_bug.cgi?id=704160
 
      2. In PCLm back side orientation for duplex printing is not
-        supported, making duplex printing on many printers not
-        working correctly
+	supported, making duplex printing on many printers not
+	working correctly. Bug report:
+	https://bugs.ghostscript.com/show_bug.cgi?id=704161
 
    */
 
