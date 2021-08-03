@@ -221,7 +221,8 @@ ippRasterMatchIPPSize(
     margins[1] = size->bottom * 72.0 / 2540.0;
     margins[2] = (size->width - size->right) * 72.0 / 2540.0;
     margins[3] = (size->length - size->top) * 72.0 / 2540.0;
-    strncpy(header->cupsPageSizeName, size->media, 64);
+    snprintf(header->cupsPageSizeName, sizeof(header->cupsPageSizeName),
+	     "%.63s", size->media);
   }
   else
   {
@@ -307,7 +308,8 @@ ippRasterMatchIPPSize(
     margins[1] = size->bottom * 72.0 / 2540.0;
     margins[2] = (size->width - size->right) * 72.0 / 2540.0;
     margins[3] = (size->length - size->top) * 72.0 / 2540.0;
-    strncpy(header->cupsPageSizeName, size->media, 64);
+    snprintf(header->cupsPageSizeName, sizeof(header->cupsPageSizeName),
+	     "%.63s", size->media);
   }
   else
   {
