@@ -195,6 +195,10 @@ filterCUPSWrapper(
   filter_data.ppd = filter_data.ppdfile ?
                     ppdOpenFile(filter_data.ppdfile) : NULL;
                                        /* Load PPD file */
+  filter_data.back_pipe[0] = 3;        /* CUPS uses file descriptor 3 for */
+  filter_data.back_pipe[1] = 3;        /* the back channel */
+  filter_data.side_pipe[0] = 4;        /* CUPS uses file descriptor 4 for */
+  filter_data.side_pipe[1] = 4;        /* the side channel */
   filter_data.logfunc = cups_logfunc;  /* Logging scheme of CUPS */
   filter_data.logdata = NULL;
   filter_data.iscanceledfunc = cups_iscanceledfunc; /* Job-is-canceled
@@ -713,10 +717,13 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 {
   filter_external_cups_t *params = (filter_external_cups_t *)parameters;
   int           i;
+  int           is_backend = 0;      /* Do we call a CUPS backend? */
   int		pid,		     /* Process ID of filter */
                 stderrpid,           /* Process ID for stderr logging process */
                 wpid;                /* PID reported as terminated */
   int		fd;		     /* Temporary file descriptor */
+  int           backfd, sidefd;      /* file descriptors for back and side
+                                        channels */
   int           stderrpipe[2];       /* Pipe to log stderr */
   cups_file_t   *fp;                 /* File pointer to read log lines */
   char          buf[2048];           /* Log line buffer */
@@ -738,11 +745,25 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
 
+
   if (!params->filter || !params->filter[0]) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "filterExternalCUPS: Filter executable path/command not specified");
     return (1);
   }
+
+  /* Check whether back/side channel FDs are valid and not all-zero
+     from calloc'ed filter_data */
+  if (data->back_pipe[0] == 0 && data->back_pipe[1] == 0)
+    data->back_pipe[0] = data->back_pipe[1] = -1;
+  if (data->side_pipe[0] == 0 && data->side_pipe[1] == 0)
+    data->side_pipe[0] = data->side_pipe[1] = -1;
+
+  /* Select the correct end of the back/side channel pipes:
+     [0] for filters, [1] for backends */
+  is_backend = (params->is_backend ? 1 : 0);
+  backfd = data->back_pipe[is_backend];
+  sidefd = data->side_pipe[is_backend];
 
   if ((filter_name = strrchr(params->filter, '/')) != NULL)
     filter_name ++;
@@ -912,20 +933,32 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     close(stderrpipe[0]);
     close(stderrpipe[1]);
 
-    if ((fd = open("/dev/null", O_RDWR)) > 3) {
-      dup2(fd, 3);
-      close(fd);
+    if (backfd != 3 && backfd >= 0) {
+      dup2(backfd, 3);
+      close(backfd);
+      fcntl(3, F_SETFL, O_NDELAY);
+    } else if (backfd < 0) {
+      if ((backfd = open("/dev/null", O_RDWR)) > 3) {
+	dup2(backfd, 3);
+	close(backfd);
+      }
+      else
+	close(backfd);
+      fcntl(3, F_SETFL, O_NDELAY);
     }
-    else
-      close(fd);
-    fcntl(3, F_SETFL, O_NDELAY);
 
-    if ((fd = open("/dev/null", O_RDWR)) > 4) {
-      dup2(fd, 4);
-      close(fd);
-    } else
-      close(fd);
-    fcntl(4, F_SETFL, O_NDELAY);
+    if (sidefd != 4 && sidefd >= 0) {
+      dup2(sidefd, 4);
+      close(sidefd);
+      fcntl(4, F_SETFL, O_NDELAY);
+    } else if (sidefd < 0) {
+      if ((sidefd = open("/dev/null", O_RDWR)) > 4) {
+	dup2(sidefd, 4);
+	close(sidefd);
+      } else
+	close(sidefd);
+      fcntl(4, F_SETFL, O_NDELAY);
+    }
 
    /*
     * Execute command...
@@ -980,7 +1013,10 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 	} else if (strncmp(buf, "ERROR: ", 7) == 0) {
 	  log_level = FILTER_LOGLEVEL_ERROR;
 	  msg = buf + 7;
-	} else if (strncmp(buf, "PAGE: ", 6) == 0) {
+	} else if (strncmp(buf, "PAGE: ", 6) == 0 ||
+		   strncmp(buf, "ATTR: ", 6) == 0 ||
+		   strncmp(buf, "STATE: ", 6) == 0 ||
+		   strncmp(buf, "PPD: ", 6) == 0) {
 	  log_level = FILTER_LOGLEVEL_CONTROL;
 	  msg = buf;
 	} else {
@@ -1077,6 +1113,147 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   free(envp);
 
   return (status);
+}
+
+
+/*
+ * 'filterOpenBackAndSidePipes()' - Open the pipes for the back
+ *                                  channel and the side channel, so
+ *                                  that the filter functions can
+ *                                  communicate with a backend. Only
+ *                                  needed if a CUPS backend (either
+ *                                  implemented as filter function or
+ *                                  called via filterExternalCUPS())
+ *                                  is called with the same
+ *                                  filter_data record as the
+ *                                  filters. Usually to be called when
+ *                                  populating the filter_data record.
+ */
+
+int                           /* O - 0 on success, -1 on error */
+filterOpenBackAndSidePipes(
+    filter_data_t *data)      /* O - FDs in filter_data record */
+{
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
+
+
+ /*
+  * Initialize FDs...
+  */
+
+  data->back_pipe[0] = -1;
+  data->back_pipe[1] = -1;
+  data->side_pipe[0] = -1;
+  data->side_pipe[1] = -1;
+
+ /*
+  * Create the back channel pipe...
+  */
+
+  if (pipe(data->back_pipe))
+    goto out;
+
+ /*
+  * Set the "close on exec" flag on each end of the pipe...
+  */
+
+  if (fcntl(data->back_pipe[0], F_SETFD,
+	    fcntl(data->back_pipe[0], F_GETFD) | FD_CLOEXEC))
+    goto out;
+
+  if (fcntl(data->back_pipe[1], F_SETFD,
+	    fcntl(data->back_pipe[1], F_GETFD) | FD_CLOEXEC))
+    goto out;
+
+ /*
+  * Create a socket pair as bi-directional pipe for the side channel...
+  */
+
+  if (socketpair(AF_LOCAL, SOCK_STREAM, 0, data->side_pipe))
+    goto out;
+
+ /*
+  * Make the side channel FDs non-blocking...
+  */
+
+  if (fcntl(data->side_pipe[0], F_SETFL,
+	    fcntl(data->side_pipe[0], F_GETFL) | O_NONBLOCK))
+    goto out;
+  if (fcntl(data->side_pipe[1], F_SETFL,
+	    fcntl(data->side_pipe[1], F_GETFL) | O_NONBLOCK))
+    goto out;
+
+  if (fcntl(data->side_pipe[0], F_SETFD,
+	    fcntl(data->side_pipe[0], F_GETFD) | FD_CLOEXEC))
+    goto out;
+  if (fcntl(data->side_pipe[1], F_SETFD,
+	    fcntl(data->side_pipe[1], F_GETFD) | FD_CLOEXEC))
+    goto out;
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Pipes for back and side channels opened");
+
+ /*
+  * Return 0 indicating success...
+  */
+
+  return (0);
+
+ out:
+
+ /*
+  * Clean up after failure...
+  */
+
+  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	       "Unable to open pipes for back and side channels");
+
+  filterCloseBackAndSidePipes(data);
+
+  return (-1);
+}
+
+
+/*
+ * 'filterCloseBackAndSidePipes()' - Close the pipes for the back
+ *                                   hannel and the side channel.
+ *                                   sually to be called when done
+ *                                   with the filter chain .
+ */
+
+void
+filterCloseBackAndSidePipes(
+    filter_data_t *data)      /* O - FDs in filter_data record */
+{
+  filter_logfunc_t log = data->logfunc;
+  void          *ld = data->logdata;
+
+
+ /*
+  * close all valid FDs...
+  */
+
+  if (data->back_pipe[0] >= 0)
+    close(data->back_pipe[0]);
+  if (data->back_pipe[1] >= 0)
+    close(data->back_pipe[1]);
+  if (data->side_pipe[0] >= 0)
+    close(data->side_pipe[0]);
+  if (data->side_pipe[1] >= 0)
+    close(data->side_pipe[1]);
+
+ /*
+  * ... and invalidate them
+  */
+
+  data->back_pipe[0] = -1;
+  data->back_pipe[1] = -1;
+  data->side_pipe[0] = -1;
+  data->side_pipe[1] = -1;
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Closed the pipes for back and side channels");
 }
 
 

@@ -3,6 +3,17 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Added support for the back and side channels
+	  which CUPS uses for additional communication between the
+	  filters and the backend into the filter function
+	  infrastructure. Now filter functions can use these channels
+	  and also CUPS filters or backends called via the
+	  filterExternalCUPS() function. Printer Applications can
+	  easily create the needed pipes via the new function
+	  filterOpenBackAndSidePipes() and clode them via
+	  filterCloseBackAndSidePipes() and filter functions used as
+	  classic CUPS filters get the appropriate file descriptors
+	  supplied by ihe filterCUPSWrapper() function.
 	- libcupsfilters: Added raster-only PDF and PCLm output
 	  support to the ghostscript() filter function. Note that
 	  these are experimental and not yet suitable for using in

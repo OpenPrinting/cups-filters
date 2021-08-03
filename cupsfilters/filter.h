@@ -58,6 +58,8 @@ typedef struct filter_data_s {
   cups_option_t *options;    /* Job options as key/value pairs */
   char *ppdfile;             /* PPD file name */
   ppd_file_t *ppd;           /* PPD file data */
+  int back_pipe[2];          /* File descriptors of backchannel pipe */
+  int side_pipe[2];          /* File descriptors of sidechannel pipe */
   filter_logfunc_t logfunc;  /* Logging function, NULL for no logging */
   void *logdata;             /* User data for logging function, can be NULL */
   filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
@@ -86,6 +88,7 @@ typedef struct filter_external_cups_s { /* Parameters for the
 					   function */
   const char *filter;        /* Path/Name of the CUPS filter to be called by
 				this filter function, required */
+  int is_backend;            /* 1 if we call a CUPS backend */
   int num_options;           /* Extra options for the 5th command line */
   cups_option_t *options;    /* argument, options of filter_data have
                                 priority, 0/NULL if none */
@@ -158,6 +161,12 @@ extern int filterExternalCUPS(int inputfd,
    Path/Name of the CUPS filter to be called by this filter function,
    extra options for the 5th command line argument, and extra environment
    variables */
+
+
+extern int filterOpenBackAndSidePipes(filter_data_t *data);
+
+
+extern void filterCloseBackAndSidePipes(filter_data_t *data);
 
 
 extern int ghostscript(int inputfd,
