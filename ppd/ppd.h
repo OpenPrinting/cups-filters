@@ -379,6 +379,16 @@ typedef enum ppd_pwg_print_quality_e	/**** PWG print-quality values ****/
   PPD_PWG_PRINT_QUALITY_MAX
 } ppd_pwg_print_quality_t;
 
+typedef enum ppd_pwg_print_content_optimize_e /** PWG print-content-optimize **/
+{
+  PPD_PWG_PRINT_CONTENT_OPTIMIZE_AUTO = 0, /* print-content-optimize=auto */
+  PPD_PWG_PRINT_CONTENT_OPTIMIZE_PHOTO,	/* print-content-optimize=photo */
+  PPD_PWG_PRINT_CONTENT_OPTIMIZE_GRAPHICS,/* print-content-optimize=graphics */
+  PPD_PWG_PRINT_CONTENT_OPTIMIZE_TEXT,	/* print-content-optimize=text */
+  PPD_PWG_PRINT_CONTENT_OPTIMIZE_TEXT_AND_GRAPHICS, /* ...=text-and-graphics */
+  PPD_PWG_PRINT_CONTENT_OPTIMIZE_MAX
+} ppd_pwg_print_content_optimize_t;
+
 typedef struct ppd_pwg_finishings_s	/**** PWG finishings mapping data ****/
 {
   ipp_finishings_t	value;		/* finishings value */
@@ -406,9 +416,16 @@ struct ppd_cache_s		   /**** PPD cache and PWG conversion data ****/
   int		num_types;		/* Number of media types */
   pwg_map_t	*types;			/* Media types */
   int		num_presets[PPD_PWG_PRINT_COLOR_MODE_MAX][PPD_PWG_PRINT_QUALITY_MAX];
-					/* Number of print-color-mode/print-quality options */
+					/* Number of print-color-mode/
+					   print-quality options */
   cups_option_t	*presets[PPD_PWG_PRINT_COLOR_MODE_MAX][PPD_PWG_PRINT_QUALITY_MAX];
-					/* print-color-mode/print-quality options */
+					/* print-color-mode/
+					   print-quality options */
+  int		num_optimize_presets[PPD_PWG_PRINT_CONTENT_OPTIMIZE_MAX];
+					/* Number of print-content-optimize
+					   options */
+  cups_option_t	*optimize_presets[PPD_PWG_PRINT_CONTENT_OPTIMIZE_MAX];
+					/* print-content-optimize options */
   char		*sides_option,		/* PPD option for sides */
 		*sides_1sided,		/* Choice for one-sided */
 		*sides_2sided_long,	/* Choice for two-sided-long-edge */
@@ -576,7 +593,7 @@ extern int		ppdEmitFd(ppd_file_t *ppd, int fd,
 			          ppd_section_t section);
 extern int		ppdEmitJCL(ppd_file_t *ppd, FILE *fp, int job_id,
 			           const char *user, const char *title);
-extern ppd_choice_t	*ppdFindChoice(ppd_option_t *o, const char *option);
+extern ppd_choice_t	*ppdFindChoice(ppd_option_t *o, const char *choice);
 extern ppd_choice_t	*ppdFindMarkedChoice(ppd_file_t *ppd,
 			                     const char *keyword);
 extern ppd_option_t	*ppdFindOption(ppd_file_t *ppd, const char *keyword);
@@ -801,6 +818,9 @@ extern cups_file_t	*ppdCollectionGetPPD(const char *name,
 extern int		ppdCollectionDumpCache(const char *filename,
 					       filter_logfunc_t log,
 					       void *ld);
+
+/**** New in cups-filters 2.0.0: For PPD retro-fit Printer Applications ****/
+extern void             ppdCacheAssignPresets(ppd_file_t *ppd, ppd_cache_t *pc);
 
 
 /*

@@ -1461,8 +1461,13 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
     }
   }
 
+  int preset_added = 0;
   if ((ppd_attr = ppdFindAttr(ppd, "APPrinterPreset", NULL)) != NULL)
   {
+   /*
+    * "Classic" Mac OS approach
+    */
+
    /*
     * Copy and convert APPrinterPreset (output-mode + print-quality) data...
     */
@@ -1563,112 +1568,131 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	      ppdParseOptions(ppd_attr->value, 0,
 	                       pc->presets[pwg_print_color_mode] +
 			           pwg_print_quality, PPD_PARSE_OPTIONS);
+	preset_added = 1;
       }
 
       cupsFreeOptions(num_options, options);
     }
     while ((ppd_attr = ppdFindNextAttr(ppd, "APPrinterPreset", NULL)) != NULL);
-  }
 
-  if (!pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][PPD_PWG_PRINT_QUALITY_DRAFT] &&
-      !pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][PPD_PWG_PRINT_QUALITY_NORMAL] &&
-      !pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][PPD_PWG_PRINT_QUALITY_HIGH])
-  {
-   /*
-    * Try adding some common color options to create grayscale presets.  These
-    * are listed in order of popularity...
-    */
-
-    const char	*color_option = NULL,	/* Color control option */
-		*gray_choice = NULL;	/* Choice to select grayscale */
-
-    if ((color_model = ppdFindOption(ppd, "ColorModel")) != NULL &&
-        ppdFindChoice(color_model, "Gray"))
-    {
-      color_option = "ColorModel";
-      gray_choice  = "Gray";
-    }
-    else if ((color_model = ppdFindOption(ppd, "HPColorMode")) != NULL &&
-             ppdFindChoice(color_model, "grayscale"))
-    {
-      color_option = "HPColorMode";
-      gray_choice  = "grayscale";
-    }
-    else if ((color_model = ppdFindOption(ppd, "BRMonoColor")) != NULL &&
-             ppdFindChoice(color_model, "Mono"))
-    {
-      color_option = "BRMonoColor";
-      gray_choice  = "Mono";
-    }
-    else if ((color_model = ppdFindOption(ppd, "CNIJSGrayScale")) != NULL &&
-             ppdFindChoice(color_model, "1"))
-    {
-      color_option = "CNIJSGrayScale";
-      gray_choice  = "1";
-    }
-    else if ((color_model = ppdFindOption(ppd, "HPColorAsGray")) != NULL &&
-             ppdFindChoice(color_model, "True"))
-    {
-      color_option = "HPColorAsGray";
-      gray_choice  = "True";
-    }
-
-    if (color_option && gray_choice)
+    if (preset_added &&
+	!pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][PPD_PWG_PRINT_QUALITY_DRAFT] &&
+	!pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][PPD_PWG_PRINT_QUALITY_NORMAL] &&
+	!pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][PPD_PWG_PRINT_QUALITY_HIGH])
     {
      /*
-      * Copy and convert ColorModel (output-mode) data...
+      * Try adding some common color options to create grayscale presets.  These
+      * are listed in order of popularity...
       */
 
-      cups_option_t	*coption,	/* Color option */
-			  *moption;	/* Monochrome option */
+      const char	*color_option = NULL,	/* Color control option */
+	                *gray_choice = NULL;	/* Choice to select grayscale */
 
-      for (pwg_print_quality = PPD_PWG_PRINT_QUALITY_DRAFT;
-	   pwg_print_quality < PPD_PWG_PRINT_QUALITY_MAX;
-	   pwg_print_quality ++)
+      if ((color_model = ppdFindOption(ppd, "ColorModel")) != NULL &&
+	  ppdFindChoice(color_model, "Gray"))
       {
-	if (pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR][pwg_print_quality])
-	{
-	 /*
-	  * Copy the color options...
-	  */
+	color_option = "ColorModel";
+	gray_choice  = "Gray";
+      }
+      else if ((color_model = ppdFindOption(ppd, "HPColorMode")) != NULL &&
+	       ppdFindChoice(color_model, "grayscale"))
+      {
+	color_option = "HPColorMode";
+	gray_choice  = "grayscale";
+      }
+      else if ((color_model = ppdFindOption(ppd, "BRMonoColor")) != NULL &&
+	       ppdFindChoice(color_model, "Mono"))
+      {
+	color_option = "BRMonoColor";
+	gray_choice  = "Mono";
+      }
+      else if ((color_model = ppdFindOption(ppd, "CNIJSGrayScale")) != NULL &&
+	       ppdFindChoice(color_model, "1"))
+      {
+	color_option = "CNIJSGrayScale";
+	gray_choice  = "1";
+      }
+      else if ((color_model = ppdFindOption(ppd, "HPColorAsGray")) != NULL &&
+	       ppdFindChoice(color_model, "True"))
+      {
+	color_option = "HPColorAsGray";
+	gray_choice  = "True";
+      }
 
-	  num_options = pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
-					[pwg_print_quality];
-	  options     = calloc(sizeof(cups_option_t), (size_t)num_options);
-
-	  if (options)
-	  {
-	    for (i = num_options, moption = options,
-		     coption = pc->presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
-					   [pwg_print_quality];
-		 i > 0;
-		 i --, moption ++, coption ++)
-	    {
-	      moption->name  = _ppdStrRetain(coption->name);
-	      moption->value = _ppdStrRetain(coption->value);
-	    }
-
-	    pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
-		num_options;
-	    pc->presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
-		options;
-	  }
-	}
-	else if (pwg_print_quality != PPD_PWG_PRINT_QUALITY_NORMAL)
-	  continue;
-
+      if (color_option && gray_choice)
+      {
        /*
-	* Add the grayscale option to the preset...
+	* Copy and convert ColorModel (output-mode) data...
 	*/
 
-	pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
-	    cupsAddOption(color_option, gray_choice,
-			  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
-					  [pwg_print_quality],
-			  pc->presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME] +
+	cups_option_t	*coption,	/* Color option */
+			*moption;	/* Monochrome option */
+
+	for (pwg_print_quality = PPD_PWG_PRINT_QUALITY_DRAFT;
+	     pwg_print_quality < PPD_PWG_PRINT_QUALITY_MAX;
+	     pwg_print_quality ++)
+        {
+	  if (pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR][pwg_print_quality])
+	  {
+	   /*
+	    * Copy the color options...
+	    */
+
+	    num_options = pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+	                                 [pwg_print_quality];
+	    options     = calloc(sizeof(cups_option_t), (size_t)num_options);
+
+	    if (options)
+	    {
+	      for (i = num_options, moption = options,
+		       coption = pc->presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+					    [pwg_print_quality];
+		   i > 0;
+		   i --, moption ++, coption ++)
+	      {
+		moption->name  = _ppdStrRetain(coption->name);
+		moption->value = _ppdStrRetain(coption->value);
+	      }
+
+	      pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
+		num_options;
+	      pc->presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
+		options;
+	    }
+	  }
+	  else if (pwg_print_quality != PPD_PWG_PRINT_QUALITY_NORMAL)
+	    continue;
+
+         /*
+	  * Add the grayscale option to the preset...
+	  */
+
+	  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME][pwg_print_quality] =
+	      cupsAddOption(color_option, gray_choice,
+			    pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+			                   [pwg_print_quality],
+			    pc->presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME] +
 			      pwg_print_quality);
+	}
       }
     }
+  }
+
+  if (!preset_added)
+  {
+   /*
+    * Auto-association of PPD file option settings with the IPP job attributes
+    * print-color-mode, print-quality, and print-content-optimize
+    *
+    * This is used to retro-fit PPD files and classic CUPS drivers into
+    * Printer Applications, which are IPP printers for the clients and so
+    * should get controlled by standard IPP attributes as far as possible
+    *
+    * Note that settings assigned to print-content-optimize are only used
+    * when printing with "high" print-quality
+    */
+
+    ppdCacheAssignPresets(ppd, pc);
   }
 
  /*
@@ -2003,13 +2027,917 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 
 
 /*
+ * 'ppdCacheAssignPresets()' - Go through all the options and choices in
+ *                             the PPD to find out which influence
+ *                             color/bw, print quality, and content
+ *                             optimizations to assign them to the prsets
+ *                             so that jobs can easily be controlled with
+ *                             standard IPP attributes
+ */
+
+void
+ppdCacheAssignPresets(ppd_file_t *ppd,
+		      ppd_cache_t *pc)
+{
+  typedef struct choice_properties_s
+  {
+    int sets_mono,
+        sets_color,
+        sets_draft,
+        sets_normal,
+        sets_high,
+        for_photo,
+        for_graphics,
+        for_text,
+        for_tg,
+        res_x,
+        res_y,
+        is_default;
+    long total_image_data;
+  } choice_properties_t;
+  int                    i, j, k, m;
+  int                    pass;
+  ppd_group_t            *group;
+  ppd_option_t	         *option;
+  int                    is_color;
+  int                    base_res_x = 0,
+                         base_res_y = 0;
+  cups_page_header2_t    header,
+                         optheader;
+  int                    preferred_bits;
+  ppd_attr_t             *ppd_attr;
+  int                    res_factor = 1;   // Weight of the score for the
+  int                    name_factor = 10; // print quality
+  int                    color_factor = 1000;
+
+  /* Do we have a color printer ? */
+  is_color = (ppd->color_device ? 1 : 0);
+
+  /* what is the base/default resolution for this PPD? */
+  ppdMarkDefaults(ppd);
+  ppdRasterInterpretPPD(&header, ppd, 0, NULL, NULL);
+  if (header.HWResolution[0] != 100 || header.HWResolution[1] != 100)
+  {
+    base_res_x = header.HWResolution[0];
+    base_res_y = header.HWResolution[1];
+  }
+  else if ((ppd_attr = ppdFindAttr(ppd, "DefaultResolution", NULL)) != NULL)
+  {
+    // Use the PPD-defined default resolution...
+    if (sscanf(ppd_attr->value, "%dx%d", &base_res_x, &base_res_y) == 1)
+      base_res_y = base_res_x;
+  }
+
+  /* Go through all options of the PPD file */
+  for (i = ppd->num_groups, group = ppd->groups;
+       i > 0;
+       i --, group ++)
+  {
+    /* Skip the "Installable Options" group */
+    if (strncasecmp(group->name, "Installable", 11) == 0)
+      continue;
+
+    for (j = group->num_options, option = group->options;
+         j > 0;
+         j --, option ++)
+    {
+      int sets_color_mode = 0,
+	  sets_quality = 0,
+	  sets_optimization = 0;
+      int best_mono_draft = 0,
+          best_mono_normal = 0,
+          best_mono_high = 0,
+          best_color_draft = 0,
+          best_color_normal = 0,
+          best_color_high = 0,
+          best_photo = 0,
+          best_graphics = 0,
+          best_text = 0,
+	  best_tg = 0;
+      int default_ch = -1,
+	  best_mono_draft_ch = -1,
+          best_mono_normal_ch = -1,
+          best_mono_high_ch = -1,
+          best_color_draft_ch = -1,
+          best_color_normal_ch = -1,
+          best_color_high_ch = -1,
+          best_photo_ch = -1,
+          best_graphics_ch = -1,
+          best_text_ch = -1,
+	  best_tg_ch = -1;
+      cups_array_t *choice_properties;
+      choice_properties_t *properties;
+      char *o, *c, *p;
+      int score;
+
+      o = option->keyword;
+
+      /* Skip options which do not change color mode and quality or
+         generally do not make sense in presets */
+      if (strcasecmp(o, "PageSize") == 0 ||
+	  strcasecmp(o, "PageRegion") == 0 ||
+	  strcasecmp(o, "InputSlot") == 0 ||
+	  strcasecmp(o, "MediaSource") == 0 ||
+	  strcasecmp(o, "MediaType") == 0 ||
+	  strcasecmp(o, "OutputBin") == 0 ||
+	  strcasecmp(o, "Duplex") == 0 ||
+	  strcasecmp(o, "JCLDuplex") == 0 ||
+	  strcasecmp(o, "EFDuplex") == 0 ||
+	  strcasecmp(o, "EFDuplexing") == 0 ||
+	  strcasecmp(o, "ARDuplex") == 0 ||
+	  strcasecmp(o, "KD03Duplex") == 0 ||
+	  strcasecmp(o, "Collate") == 0)
+	continue;
+
+      /* Array for properties of the choices */
+      choice_properties = cupsArrayNew(NULL, NULL);
+
+      /*
+       * Gather the data for each choice
+       */
+
+      for (k = 0; k < option->num_choices; k ++)
+      {
+	properties =
+	  (choice_properties_t *)calloc(1, sizeof(choice_properties_t));
+
+	c = option->choices[k].choice;
+
+	/* Is this the default choice? (preferred for "normal" quality,
+	   used for color if no choice name suggests being color */
+	if (strcmp(c, option->defchoice) == 0)
+	{
+	  properties->is_default = 1;
+	  default_ch = k;
+	}
+
+       /*
+	* Color/Gray - print-color-mode
+	*/
+
+	/* If we have a color device, check whether this option sets mono or
+	   color printing */
+	if (is_color)
+	{
+	  if (strcasecmp(o, "CNIJSGrayScale") == 0)
+	  {
+	    if (strcasecmp(c, "1") == 0)
+	      properties->sets_mono = 2;
+	    else
+	      properties->sets_color = 1;
+	  }
+	  else if (strcasecmp(o, "HPColorAsGray") == 0) /* HP PostScript */
+	  {
+	    if (strcasecmp(c, "True") == 0)
+	      properties->sets_mono = 2;
+	    else
+	      properties->sets_color = 1;
+	  }
+	  else if (strcasecmp(o, "ColorModel") == 0 ||
+		   strcasecmp(o, "ColorMode") == 0 ||
+		   strcasecmp(o, "OutputMode") == 0 ||
+		   strcasecmp(o, "PrintoutMode") == 0 ||
+		   strcasecmp(o, "ARCMode") == 0 || /* Sharp */
+		   strcasestr(o, "ColorMode") ||
+		   strcasecmp(o, "ColorResType") == 0 || /* Toshiba */
+		   strcasestr(o, "MonoColor")) /* Brother */
+	  {
+	    /* Monochrome/grayscale printing */
+	    if (strcasestr(c, "Mono") ||
+		strcasecmp(c, "Black") == 0 ||
+		((p = strcasestr(c, "Black")) && strcasestr(p, "White")) ||
+		(strncasecmp(c, "BW", 2) == 0 && !isalpha(c[2])))
+	      properties->sets_mono = 2;
+	    else if (strcasestr(c, "Gray") ||
+		     strcasestr(c, "Grey") ||
+		     strcasecmp(c, "BlackOnly") == 0) /* Lexmark */
+	      properties->sets_mono = 3;
+
+	    /* Color printing */
+	    if (((p = strcasestr(c, "CMY")) && !strcasestr(p, "Gray")) ||
+		strcasecmp(c, "ColorOnly") == 0 || /* Lexmark */
+		((p = strcasestr(c, "Adobe")) && strcasestr(p, "RGB")))
+	      properties->sets_color = 2;
+	    else if (strcasestr(c, "sRGB"))
+	      properties->sets_color = 4;
+	    else if (strcasestr(c, "RGB") ||
+		     strcasestr(c, "Color"))
+	      properties->sets_color = 3;
+	  }
+
+	  /* This option actually sets color mode */
+	  if (properties->sets_mono || properties->sets_color)
+	    sets_color_mode = 1;
+	}
+
+       /*
+	* Output Quality - print-quality
+	*/
+
+	/* check whether this option affects print quality or content
+	   optimization */
+
+	/* Determine influence of the options and choices on the print
+	   quality by their names */
+
+	/* Vendor-specific option and choice names */
+	if (strcasecmp(o, "ARCPPriority") == 0) /* Sharp */
+	{
+	  if (strcasecmp(c, "Quality") == 0)
+	    properties->sets_high = 10;
+	  else if (strcasecmp(c, "Speed") == 0)
+	    properties->sets_draft = 10;
+	}
+	else if (strcasecmp(o, "BRJpeg") == 0) /* Brother */
+	{
+	  if (strcasecmp(c, "QualityPrior") == 0)
+	    properties->sets_high = 10;
+	  else if (strcasecmp(c, "SpeedPrior") == 0)
+	    properties->sets_draft = 10;
+	}
+	else if (strcasecmp(o, "RIPrintMode") == 0) /* Ricoh & OEM */
+	{
+	  if (strcasecmp(c, "1rhit") == 0)
+	    properties->sets_high = 7;
+	  else if (strcasecmp(c, "6rhit") == 0)
+	    properties->sets_high = 10;
+	  else if (strcasecmp(c, "3rhit") == 0 ||
+		   strcasecmp(c, "4rhit") == 0 ||
+		   strcasecmp(c, "5rhit") == 0)
+	    properties->sets_draft = 10;
+	  else if (strcasecmp(c, "0rhit") == 0)
+	    properties->sets_normal = 10;
+	}
+	else if (strcasestr(o, "ColorPrecision")) /* Gutenprint */
+	{
+	  if (strcasecmp(c, "best") == 0)
+	    properties->sets_high = 10;
+	}
+	/* Generic boolean options which enhance quality if true */
+	else if (((p = strcasestr(o, "slow")) && strcasestr(p, "dry")) ||
+		 ((p = strcasestr(o, "color")) && strcasestr(p, "enhance")) ||
+		 ((p = strcasestr(o, "resolution")) &&
+		  !strcasestr(p, "enhance")) ||
+		 strcasecmp(o, "RET") == 0 ||
+		 ((p = strcasestr(o, "uni")) && strcasestr(p, "direction")))
+	{
+	  if (strcasecmp(c, "True") == 0 ||
+	      strcasecmp(c, "On") == 0 ||
+	      strcasecmp(c, "Yes") == 0 ||
+	      strcasecmp(c, "1") == 0 ||
+	      strcasecmp(c, "Medium") == 0) /* Resolution Enhancement/RET (HP)*/
+	    properties->sets_high = 3;
+	  else if (strcasecmp(c, "False") == 0 ||
+		   strcasecmp(c, "Off") == 0 ||
+		   strcasecmp(c, "No") == 0 ||
+		   strcasecmp(c, "0") == 0)
+	    properties->sets_draft = 3;
+	}
+	/* Generic boolean options which reduce quality if true */
+	else if (strcasestr(o, "draft") ||
+		 strcasestr(o, "economy") ||
+		 ((p = strcasestr(o, "eco")) && strcasestr(p, "mode")) ||
+		 ((p = strcasestr(o, "toner")) && strcasestr(p, "sav")) ||
+		 ((p = strcasestr(o, "bi")) && strcasestr(p, "direction")) ||
+		 strcasecmp(o, "bidi") == 0 ||
+		 strcasecmp(o, "bi-di") == 0)
+	{
+	  if (strcasecmp(c, "True") == 0 ||
+	      strcasecmp(c, "On") == 0 ||
+	      strcasecmp(c, "Yes") == 0 ||
+	      strcasecmp(c, "1") == 0 ||
+	      strcasecmp(c, "Medium") == 0) /* EconomyMode (Brother) */
+	    properties->sets_draft = 3;
+	  else if (strcasecmp(c, "False") == 0 ||
+		   strcasecmp(c, "Off") == 0 ||
+		   strcasecmp(c, "No") == 0 ||
+		   strcasecmp(c, "0") == 0)
+	    properties->sets_high = 3;
+	}
+	/* Generic enumerated choice option and choice names */
+	else if (strcasecmp(o, "ColorModel") == 0 ||
+		 strcasecmp(o, "ColorMode") == 0 ||
+		 strcasecmp(o, "OutputMode") == 0 || /* HPLIP hpcups */
+		 strcasecmp(o, "PrintoutMode") == 0 || /* Foomatic */
+		 strcasecmp(o, "PrintQuality") == 0 ||
+		 strcasecmp(o, "PrintMode") == 0 ||
+		 strcasestr(o, "ColorMode") ||
+		 strcasecmp(o, "ColorResType") == 0 || /* Toshiba */
+		 strcasestr(o, "MonoColor") || /* Brother */
+		 strcasestr(o, "Quality") ||
+		 strcasestr(o, "Precision") || /* ex. stpColorPrecision
+						  in Gutenprint */
+		 strcasestr(o, "PrintingDirection")) /* Gutenprint */
+	{
+	  /* High quality */
+	  if (strcasecmp(c, "Quality") == 0)
+	    properties->sets_high = 1;
+	  else if (strcasestr(c, "Photo") ||
+		   strcasestr(c, "Enhance") ||
+		   strcasestr(c, "slow") ||
+		   ((p = strcasestr(c, "low")) && strcasestr(p, "speed")))
+	    properties->sets_high = 2;
+	  else if (strcasestr(c, "fine") ||
+		   strcasestr(c, "deep") ||
+		   ((p = strcasestr(c, "high")) && !strcasestr(p, "speed")) ||
+		   strcasestr(c, "HQ") ||
+		   strcasecmp(c, "Enhanced") == 0)
+	    properties->sets_high = 3;
+	  else if (strcasestr(c, "best") ||
+		   strcasecmp(c, "high") == 0 ||
+		   strcasecmp(c, "fine") == 0 ||
+		   strcasecmp(c, "HQ") == 0 ||
+		   strcasecmp(c, "CMYGray") == 0 || /* HPLIP */
+		   strcasestr(c, "unidir"))
+	    properties->sets_high = 4;
+	  else if (strcasecmp(c, "best") == 0 ||
+		   strcasecmp(c, "monolowdetail") == 0) /* Toshiba */
+	    properties->sets_high = 5;
+
+	  /* Low/Draft quality */
+	  if (strcasecmp(c, "monolowdetail") == 0) /* Toshiba */
+	    properties->sets_draft = 0;
+	  else if (((p = strcasestr(c, "fast")) && strcasestr(p, "draft")) ||
+	      ((p = strcasestr(c, "high")) && strcasestr(p, "speed")) ||
+	      (strcasestr(c, "speed") && !strcasestr(c, "low")))
+	    properties->sets_draft = 2;
+	  else if (strcasestr(c, "quick") ||
+		   strcasestr(c, "fast") ||
+		   strcasestr(c, "draft") ||
+		   (strcasestr(c, "low") && !strcasestr(c, "slow")) ||
+		   strcasestr(c, "coarse"))
+	    properties->sets_draft = 3;
+	  else if (strcasecmp(c, "quick") == 0 ||
+		   strcasecmp(c, "fast") == 0 ||
+		   strcasecmp(c, "draft") == 0 ||
+		   strcasecmp(c, "low") == 0 ||
+		   strcasecmp(c, "coarse") == 0 ||
+		   strcasestr(c, "bidir"))
+	    properties->sets_draft = 4;
+
+	  /* Use high or low quality but not the extremes */
+	  if (strcasestr(c, "ultra") ||
+	      strcasestr(c, "very") ||
+	      strcasestr(c, "super"))
+	  {
+	    if (properties->sets_high > 1)
+	      properties->sets_high --;
+	    if (properties->sets_draft > 1)
+	      properties->sets_draft --;
+	  }
+
+	  /* Normal quality */
+	  if (strcasestr(c, "automatic") ||
+	      strcasecmp(c, "none") == 0)
+	    properties->sets_normal = 1;
+	  else if (strcasestr(c, "normal") ||
+	      strcasestr(c, "standard") ||
+	      strcasestr(c, "default"))
+	    properties->sets_normal = 2;
+	  else if (strcasecmp(c, "normal") == 0 ||
+		   strcasecmp(c, "standard") == 0 ||
+		   strcasecmp(c, "default") == 0)
+	    properties->sets_normal = 4;
+	}
+
+	/* Apply the weight factor for option/choice-name-related scores */
+	properties->sets_high *= name_factor;
+	properties->sets_draft *= name_factor;
+	properties->sets_normal *= name_factor;
+
+	/* Determine influence of the options and choices on the print
+	   quality by how they change the output resolution compared to
+	   the base/default resolution */
+	if (base_res_x && base_res_y)
+	{
+	  /* First, analyse the code snippet (PostScript, PJL) assigned
+	     to each choice of the option whether it sets resolution */
+	  if (option->choices[k].code && option->choices[k].code[0])
+	  {
+	    /* Assume code to be PostScript (also used for CUPS Raster) */
+	    preferred_bits = 0;
+	    optheader = header;
+	    if (ppdRasterExecPS(&optheader, &preferred_bits,
+				option->choices[k].code) == 0)
+	    {
+	      properties->res_x = optheader.HWResolution[0];
+	      properties->res_y = optheader.HWResolution[1];
+	    }
+	    else
+	      properties->res_x = properties->res_y = 0; /* invalid */
+	    if (properties->res_x == 0 || properties->res_y == 0)
+	    {
+	      /* Now try PJL */
+	      if ((p = strstr(option->choices[k].code, "SET")) &&
+		  isspace(*(p + 3)) && (p = strstr(p + 4, "RESOLUTION=")))
+	      {
+		p += 11;
+		if (sscanf(p, "%dX%d",
+			   &(properties->res_x), &(properties->res_y)) == 1)
+		    properties->res_y = properties->res_x;
+	      }
+	    }
+	    if (properties->res_x == 100 && properties->res_y == 100)
+	      properties->res_x = properties->res_y = 0; /* Code does not
+							    set resolution */
+	  }
+	  else
+	    properties->res_x = properties->res_y = 0; /* invalid */
+
+	  /* Then parse the choice name whether it contains a
+	     resolution value (Must have "dpi", as otherwise can be
+	     something else, like a page size */
+	  if ((properties->res_x == 0 || properties->res_y == 0) &&
+	      (p = strcasestr(c, "dpi")) != NULL)
+	  {
+	    if (p > c)
+	    {
+	      p --;
+	      while (p > c && isspace(*p))
+		p --;
+	      if (p > c && isdigit(*p))
+	      {
+		char x;
+		while (p > c && isdigit(*p))
+		  p --;
+		if (p > c && (*p == 'x' || *p == 'X'))
+		  p --;
+		while (p > c && isdigit(*p))
+		  p --;
+		while (!isdigit(*p))
+		  p ++;
+		if (sscanf(p, "%d%c%d",
+			   &(properties->res_x), &x, &(properties->res_y)) == 2)
+		    properties->res_y = properties->res_x;
+	      }
+	    }
+	  }
+
+	  if (properties->res_x != 0 && properties->res_y != 0)
+	  {
+	    // Choice suggests to set the resolution
+	    // Raising resolution compared to default?
+	    m = (properties->res_x * properties->res_y) /
+	        (base_res_x * base_res_y);
+	    // No or small change -> Normal quality
+	    if (m == 1)
+	      properties->sets_normal += res_factor * 4;
+	    else if (m > 1 && m < 2)
+	      properties->sets_normal += res_factor * 2;
+	    // At least double the pixels -> High quality
+	    else if (m == 2)
+	      properties->sets_high += res_factor * 3;
+	    else if (m > 2 && m <= 8)
+	      properties->sets_high += res_factor * 4;
+	    else if (m > 8 && m <= 32)
+	      properties->sets_high += res_factor * 2;
+	    else if (m > 32)
+	      properties->sets_high += res_factor * 1;
+	    else if (m < 1)
+	    {
+	      // Reducing resolution compared to default?
+	      m = (base_res_x * base_res_y) /
+		  (properties->res_x * properties->res_y);
+	      // No or small change -> Normal quality
+	      if (m == 1)
+		properties->sets_normal += res_factor * 1;
+	      else if (m > 1 && m < 2)
+		properties->sets_normal += res_factor * 1;
+	      // At most half the pixels -> Draft quality
+	      else if (m == 2)
+		properties->sets_draft += res_factor * 3;
+	      else if (m > 2 && m < 8)
+		properties->sets_draft += res_factor * 4;
+	      else if (m >= 8 && m < 32)
+		properties->sets_draft += res_factor * 2;
+	      else if (m >= 32)
+		properties->sets_draft += res_factor * 1;
+	    }
+	  }
+	}
+
+	/* This option actually sets print quality */
+	if (properties->sets_draft || properties->sets_high)
+	  sets_quality = 1;
+
+	/* Add the properties of this choice */
+	cupsArrayAdd(choice_properties, properties);
+      }
+
+     /*
+      * Find the best choice for each field of the color/quality preset
+      * grid
+      */
+
+      for (pass = 0; pass < 2; pass ++)
+      {
+	for (k = 0; k < option->num_choices; k ++)
+        {
+	  properties = cupsArrayIndex(choice_properties, k);
+
+	  /* presets[0][0]: Mono/Draft */
+	  if (best_mono_draft >= 0 &&
+	      !properties->sets_color &&
+	      (!properties->sets_high || pass > 0))
+	  {
+	    score = color_factor * properties->sets_mono +
+	      properties->sets_draft;
+	    if (score > best_mono_draft)
+	    {
+	      best_mono_draft = score;
+	      best_mono_draft_ch = k;
+	    }
+	  }
+
+	  /* presets[0][1]: Mono/Normal */
+	  if (best_mono_normal >= 0 &&
+	      !properties->sets_color &&
+	      (!properties->sets_draft || pass > 1) &&
+	      (!properties->sets_high  || pass > 0))
+	  {
+	    score = color_factor * properties->sets_mono +
+	      properties->sets_normal;
+	    if (score > best_mono_normal)
+	    {
+	      best_mono_normal = score;
+	      best_mono_normal_ch = k;
+	    }
+	  }
+
+	  /* presets[0][2]: Mono/High */
+	  if (best_mono_high >= 0 &&
+	      !properties->sets_color &&
+	      (!properties->sets_draft || pass > 0))
+	  {
+	    score = color_factor * properties->sets_mono +
+	      properties->sets_high;
+	    if (score > best_mono_high)
+	    {
+	      best_mono_high = score;
+	      best_mono_high_ch = k;
+	    }
+	  }
+
+	  /* presets[1][0]: Color/Draft */
+	  if (best_color_draft >= 0 &&
+	      !properties->sets_mono &&
+	      (!properties->sets_high || pass > 0))
+	  {
+	    score = color_factor * properties->sets_color +
+	      properties->sets_draft;
+	    if (score > best_color_draft)
+	    {
+	      best_color_draft = score;
+	      best_color_draft_ch = k;
+	    }
+	  }
+
+	  /* presets[1][1]: Color/Normal */
+	  if (best_color_normal >= 0 &&
+	      !properties->sets_mono &&
+	      (!properties->sets_draft || pass > 1) &&
+	      (!properties->sets_high  || pass > 0))
+	  {
+	    score = color_factor * properties->sets_color +
+	      properties->sets_normal;
+	    if (score > best_color_normal)
+	    {
+	      best_color_normal = score;
+	      best_color_normal_ch = k;
+	    }
+	  }
+
+	  /* presets[1][2]: Color/High */
+	  if (best_color_high >= 0 &&
+	      !properties->sets_mono &&
+	      (!properties->sets_draft || pass > 0))
+	  {
+	    score = color_factor * properties->sets_color +
+	      properties->sets_high;
+	    if (score > best_color_high)
+	    {
+	      best_color_high = score;
+	      best_color_high_ch = k;
+	    }
+	  }
+	}
+	/* Block next passes for the presets where we are done */
+	if (best_mono_draft_ch >= 0)
+	  best_mono_draft = -1;
+	if (best_mono_normal_ch >= 0)
+	  best_mono_normal = -1;
+	if (best_mono_high_ch >= 0)
+	  best_mono_high = -1;
+	if (best_color_draft_ch >= 0)
+	  best_color_draft = -1;
+	if (best_color_normal_ch >= 0)
+	  best_color_normal = -1;
+	if (best_color_high_ch >= 0)
+	  best_color_high = -1;
+      }
+
+     /*
+      * Content Optimization - print-content-optimize
+      */
+
+      for (k = 0; k < option->num_choices; k ++)
+      {
+	properties = cupsArrayIndex(choice_properties, k);
+	c = option->choices[k].choice;
+
+	/* Vendor-specific options */
+	if (strcasecmp(o, "ARCOType") == 0) /* Sharp */
+	{
+	  if (strcasecmp(c, "COTDrawing") == 0)
+	  {
+	    properties->for_text = 3;
+	    properties->for_graphics = 2;
+	    properties->for_tg = 2;
+	  }
+	  else if (strcasecmp(c, "COTGraphics") == 0)
+	  {
+	    properties->for_graphics = 3;
+	    properties->for_tg = 3;
+	  }
+	  else if (strcasecmp(c, "COTPhoto") == 0)
+	    properties->for_photo = 3;
+	}
+	else if (strcasecmp(o, "HPRGBEmulation") == 0) /* HP */
+	{
+	  if (strcasecmp(c, "DefaultSRGB") == 0)
+	    properties->for_text = 3;
+	  else if (strcasecmp(c, "VividSRGB") == 0)
+	  {
+	    properties->for_graphics = 3;
+	    properties->for_tg = 3;
+	  }
+	  else if (strcasecmp(c, "PhotoSRGB") == 0)
+	    properties->for_photo = 3;
+	}
+	else
+	/* Generic choice names */
+	{
+	  if (strcasestr(c, "photo"))
+	    properties->for_photo = 6;
+	  else if (strcasecmp(c, "photo") == 0)
+	    properties->for_photo = 7;
+
+	  if (strcasestr(c, "graphics"))
+	    properties->for_graphics = 6;
+	  else if (strcasecmp(c, "graphics") == 0)
+	    properties->for_graphics = 7;
+
+	  if (strcasestr(c, "text"))
+	  {
+	    if (strcasestr(c, "graphics"))
+	      properties->for_tg = 7;
+	    else
+	      properties->for_text = 6;
+	  }
+	  else if (strcasecmp(c, "text") == 0)
+	    properties->for_text = 7;
+
+	  if (strcasestr(c, "presentation"))
+	  {
+	    properties->for_text = 4;
+	    properties->for_graphics = 4;
+	    properties->for_tg = 4;
+	  }
+	  else if (strcasecmp(c, "presentation") == 0)
+	  {
+	    properties->for_text = 5;
+	    properties->for_graphics = 5;
+	    properties->for_tg = 5;
+	  }
+
+	  if (strcasestr(c, "lineart"))
+	  {
+	    properties->for_graphics = 2;
+	    properties->for_tg = 2;
+	  }
+	  else if (strcasecmp(c, "lineart") == 0)
+	  {
+	    properties->for_graphics = 3;
+	    properties->for_tg = 3;
+	  }
+
+	  if (strcasestr(c, "drawing"))
+	  {
+	    properties->for_graphics = 4;
+	    properties->for_tg = 4;
+	  }
+	  else if (strcasecmp(c, "drawing") == 0)
+	  {
+	    properties->for_graphics = 5;
+	    properties->for_tg = 5;
+	  }
+
+	  if (strcasestr(c, "natural"))
+	    properties->for_photo = 2;
+	  else if (strcasecmp(c, "natural") == 0)
+	    properties->for_photo = 3;
+
+	  if (strcasestr(c, "vivid"))
+	  {
+	    properties->for_text = 2;
+	    properties->for_graphics = 2;
+	    properties->for_tg = 2;
+	  }
+	  else if (strcasecmp(c, "vivid") == 0)
+	  {
+	    properties->for_text = 3;
+	    properties->for_graphics = 3;
+	    properties->for_tg = 3;
+	  }
+	}
+
+	/* We apply these optimizations only in high quality mode
+	   therefore we prefer settings for high quality */
+	if (properties->sets_high && !properties->sets_draft)
+	{
+	  if (properties->for_photo)
+	    properties->for_photo += 10;
+	  if (properties->for_graphics)
+	    properties->for_graphics += 10;
+	  if (properties->for_text)
+	    properties->for_text += 10;
+	  if (properties->for_tg)
+	    properties->for_tg += 10;
+	}
+
+       /*
+	* Find the best choice for each field of the content optimize presets
+	*/
+
+	/* Find best choice for each task */
+	/* optimize_presets[1]: Photo */
+	if (properties->for_photo > best_photo)
+	{
+	  best_photo = properties->for_photo;
+	  best_photo_ch = k;
+	}
+	/* optimize_presets[2]: Graphics */
+	if (properties->for_graphics > best_graphics)
+	{
+	  best_graphics = properties->for_graphics;
+	  best_graphics_ch = k;
+	}
+	/* optimize_presets[3]: Text */
+	if (properties->for_text > best_text)
+	{
+	  best_text = properties->for_text;
+	  best_text_ch = k;
+	}
+	/* optimize_presets[4]: Text and Graphics */
+	if (properties->for_tg > best_tg)
+	{
+	  best_tg = properties->for_tg;
+	  best_tg_ch = k;
+	}
+
+	/* This option actually does content optimization */
+	if (properties->for_text || properties->for_graphics ||
+	    properties->for_tg || properties->for_photo)
+	  sets_optimization = 1;
+      }
+
+     /*
+      * Fill in the presets
+      */
+
+      if (sets_color_mode || sets_quality)
+      {
+	/* presets[0][0]: Mono/Draft */
+	if (best_mono_draft_ch < 0)
+	  best_mono_draft_ch = default_ch;
+	if (best_mono_draft_ch >= 0)
+	  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+	                 [PPD_PWG_PRINT_QUALITY_DRAFT] =
+	    cupsAddOption(o, option->choices[best_mono_draft_ch].choice,
+			  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+			                 [PPD_PWG_PRINT_QUALITY_DRAFT],
+			  &(pc->presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+			               [PPD_PWG_PRINT_QUALITY_DRAFT]));
+
+	/* presets[0][1]: Mono/Normal */
+	if (best_mono_normal_ch < 0)
+	  best_mono_normal_ch = default_ch;
+	if (best_mono_normal_ch >= 0)
+	  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+	                 [PPD_PWG_PRINT_QUALITY_NORMAL] =
+	    cupsAddOption(o, option->choices[best_mono_normal_ch].choice,
+			  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+			                 [PPD_PWG_PRINT_QUALITY_NORMAL],
+			  &(pc->presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+			               [PPD_PWG_PRINT_QUALITY_NORMAL]));
+
+	/* presets[0][2]: Mono/High */
+	if (best_mono_high_ch < 0)
+	  best_mono_high_ch = default_ch;
+	if (best_mono_high_ch >= 0)
+	  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+	                 [PPD_PWG_PRINT_QUALITY_HIGH] =
+	    cupsAddOption(o, option->choices[best_mono_high_ch].choice,
+			  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+			                 [PPD_PWG_PRINT_QUALITY_HIGH],
+			  &(pc->presets[PPD_PWG_PRINT_COLOR_MODE_MONOCHROME]
+			               [PPD_PWG_PRINT_QUALITY_HIGH]));
+
+	/* presets[1][0]: Color/Draft */
+	if (best_color_draft_ch < 0)
+	  best_color_draft_ch = default_ch;
+	if (best_color_draft_ch >= 0)
+	  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+	                 [PPD_PWG_PRINT_QUALITY_DRAFT] =
+	    cupsAddOption(o, option->choices[best_color_draft_ch].choice,
+			  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+			                 [PPD_PWG_PRINT_QUALITY_DRAFT],
+			  &(pc->presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+			               [PPD_PWG_PRINT_QUALITY_DRAFT]));
+
+	/* presets[1][1]: Color/Normal */
+	if (best_color_normal_ch < 0)
+	  best_color_normal_ch = default_ch;
+	if (best_color_normal_ch >= 0)
+	  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+	                 [PPD_PWG_PRINT_QUALITY_NORMAL] =
+	    cupsAddOption(o, option->choices[best_color_normal_ch].choice,
+			  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+			                 [PPD_PWG_PRINT_QUALITY_NORMAL],
+			  &(pc->presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+			               [PPD_PWG_PRINT_QUALITY_NORMAL]));
+
+	/* presets[1][2]: Color/High */
+	if (best_color_high_ch < 0)
+	  best_color_high_ch = default_ch;
+	if (best_color_high_ch >= 0)
+	  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+	                 [PPD_PWG_PRINT_QUALITY_HIGH] =
+	    cupsAddOption(o, option->choices[best_color_high_ch].choice,
+			  pc->num_presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+			                 [PPD_PWG_PRINT_QUALITY_HIGH],
+			  &(pc->presets[PPD_PWG_PRINT_COLOR_MODE_COLOR]
+			               [PPD_PWG_PRINT_QUALITY_HIGH]));
+
+      }
+
+      if (sets_optimization)
+      {
+
+	/* optimize_presets[1]: Photo */
+	if (best_photo_ch >= 0)
+	  pc->num_optimize_presets[PPD_PWG_PRINT_CONTENT_OPTIMIZE_PHOTO] =
+	    cupsAddOption
+	      (o, option->choices[best_photo_ch].choice,
+	       pc->num_optimize_presets[PPD_PWG_PRINT_CONTENT_OPTIMIZE_PHOTO],
+	       &(pc->optimize_presets[PPD_PWG_PRINT_CONTENT_OPTIMIZE_PHOTO]));
+
+	/* optimize_presets[2]: Graphics */
+	if (best_graphics_ch >= 0)
+	  pc->num_optimize_presets[PPD_PWG_PRINT_CONTENT_OPTIMIZE_GRAPHICS] =
+	    cupsAddOption
+	      (o, option->choices[best_graphics_ch].choice,
+	       pc->num_optimize_presets
+	         [PPD_PWG_PRINT_CONTENT_OPTIMIZE_GRAPHICS],
+	       &(pc->optimize_presets
+		 [PPD_PWG_PRINT_CONTENT_OPTIMIZE_GRAPHICS]));
+
+	/* optimize_presets[1]: Text */
+	if (best_text_ch >= 0)
+	  pc->num_optimize_presets[PPD_PWG_PRINT_CONTENT_OPTIMIZE_TEXT] =
+	    cupsAddOption
+	      (o, option->choices[best_text_ch].choice,
+	       pc->num_optimize_presets[PPD_PWG_PRINT_CONTENT_OPTIMIZE_TEXT],
+	       &(pc->optimize_presets[PPD_PWG_PRINT_CONTENT_OPTIMIZE_TEXT]));
+
+	/* optimize_presets[1]: Text and Graphics */
+	if (best_tg_ch >= 0)
+	  pc->num_optimize_presets
+	    [PPD_PWG_PRINT_CONTENT_OPTIMIZE_TEXT_AND_GRAPHICS] =
+	    cupsAddOption
+	      (o, option->choices[best_tg_ch].choice,
+	       pc->num_optimize_presets
+	         [PPD_PWG_PRINT_CONTENT_OPTIMIZE_TEXT_AND_GRAPHICS],
+	       &(pc->optimize_presets
+		   [PPD_PWG_PRINT_CONTENT_OPTIMIZE_TEXT_AND_GRAPHICS]));
+
+      }
+
+      for (k = 0; k < option->num_choices; k ++)
+	free(cupsArrayIndex(choice_properties, k));
+      cupsArrayDelete(choice_properties);
+    }
+  }
+}
+
+/*
  * 'ppdCacheDestroy()' - Free all memory used for PWG mapping data.
  */
 
 void
 ppdCacheDestroy(ppd_cache_t *pc)	/* I - PPD cache and mapping data */
 {
-  int		i;			/* Looping var */
+  int		i, j;			/* Looping vars */
   pwg_map_t	*map;			/* Current map */
   pwg_size_t	*size;			/* Current size */
 
@@ -2087,6 +3015,15 @@ ppdCacheDestroy(ppd_cache_t *pc)	/* I - PPD cache and mapping data */
   cupsArrayDelete(pc->support_files);
 
   cupsArrayDelete(pc->strings);
+
+  for (i = PPD_PWG_PRINT_COLOR_MODE_MONOCHROME; i < PPD_PWG_PRINT_COLOR_MODE_MAX; i ++)
+    for (j = PPD_PWG_PRINT_QUALITY_DRAFT; j < PPD_PWG_PRINT_QUALITY_MAX; j ++)
+      if (pc->num_presets[i][j])
+	cupsFreeOptions(pc->num_presets[i][j], pc->presets[i][j]);
+
+  for (i = PPD_PWG_PRINT_CONTENT_OPTIMIZE_AUTO; i < PPD_PWG_PRINT_CONTENT_OPTIMIZE_MAX; i ++)
+    if (pc->num_optimize_presets[i])
+      cupsFreeOptions(pc->num_optimize_presets[i], pc->optimize_presets[i]);
 
   free(pc);
 }
@@ -2442,8 +3379,9 @@ ppdCacheGetPageSize(
     const char   *keyword,		/* I - Keyword string or NULL */
     int          *exact)		/* O - 1 if exact match, 0 otherwise */
 {
-  int		i;			/* Looping var */
+  int		i, j;			/* Looping vars */
   pwg_size_t	*size,			/* Current size */
+		*variant,		/* Page size variant */
 		*closest,		/* Closest size */
 		jobsize;		/* Size data from job */
   int		margins_set,		/* Were the margins set? */
@@ -2559,7 +3497,7 @@ ppdCacheGetPageSize(
   */
 
   closest  = NULL;
-  dclosest = 999999999;
+  dclosest = dmin = 999999999;
 
   if (!ppd_name || _ppd_strncasecmp(ppd_name, "Custom.", 7) ||
       _ppd_strncasecmp(ppd_name, "custom_", 7))
@@ -2580,31 +3518,79 @@ ppdCacheGetPageSize(
       if (margins_set)
       {
        /*
-	* Use a tighter epsilon of 1 point (35/2540ths) for margins...
+	* Check not only the base size (like "A4") but also variants (like
+        * "A4.Borderless"). We check only the margins and orientation but do 
+	* not re-check the size.
 	*/
-
-	dleft   = size->left - jobsize.left;
-	dright  = size->right - jobsize.right;
-	dtop    = size->top - jobsize.top;
-	dbottom = size->bottom - jobsize.bottom;
-
-	if (dleft <= -35 || dleft >= 35 || dright <= -35 || dright >= 35 ||
-	    dtop <= -35 || dtop >= 35 || dbottom <= -35 || dbottom >= 35)
+	for (j = pc->num_sizes, variant = pc->sizes; j > 0; j --, variant ++)
 	{
-	  dleft   = dleft < 0 ? -dleft : dleft;
-	  dright  = dright < 0 ? -dright : dright;
-	  dbottom = dbottom < 0 ? -dbottom : dbottom;
-	  dtop    = dtop < 0 ? -dtop : dtop;
-	  dmin    = dleft + dright + dbottom + dtop;
-
-	  if (dmin < dclosest)
+	  if (!strcmp(size->map.ppd, variant->map.ppd) ||
+	      (!strncmp(size->map.ppd, variant->map.ppd,
+			strlen(size->map.ppd)) &&
+	       (strlen(variant->map.ppd) > strlen(size->map.ppd) + 1) &&
+	       variant->map.ppd[strlen(size->map.ppd)] == '.'))
 	  {
-	    dclosest = dmin;
-	    closest  = size;
-	  }
+	   /*
+	    * Found a variant (or the base size)
+	    */
 
-	  continue;
+	   /*
+	    * First check orientation (we do not want ".Transverse" variants)
+	    */
+
+	    if ((size->length - size->width) *
+		(variant->length - variant->width) < 0)
+	      continue;
+
+	   /*
+	    * Borderless page size variant, use it only if the job requests
+	    * borderless
+	    */
+
+	    if (strchr(variant->map.ppd, '.') &&
+		variant->left == 0 && variant->right == 0 &&
+		variant->top == 0 && variant->bottom == 0 &&
+		(jobsize.left != 0 || jobsize.right != 0 ||
+		 jobsize.top != 0 || jobsize.bottom != 0))
+	      continue;
+
+	   /*
+	    * Use a tighter epsilon of 1 point (35/2540ths) for margins...
+	    */
+
+	    dleft   = variant->left - jobsize.left;
+	    dright  = variant->right - jobsize.right;
+	    dtop    = variant->top - jobsize.top;
+	    dbottom = variant->bottom - jobsize.bottom;
+
+	    if (dleft <= -35 || dleft >= 35 || dright <= -35 || dright >= 35 ||
+		dtop <= -35 || dtop >= 35 || dbottom <= -35 || dbottom >= 35)
+	    {
+	      dleft   = dleft < 0 ? -dleft : dleft;
+	      dright  = dright < 0 ? -dright : dright;
+	      dbottom = dbottom < 0 ? -dbottom : dbottom;
+	      dtop    = dtop < 0 ? -dtop : dtop;
+	      /* In the sum we do a slight penalization of the variants to
+		 prefer the base if it has the same margins) */
+	      dmin    = dleft + dright + dbottom + dtop +
+		        (strchr(variant->map.ppd, '.') ? 1 : 0);
+
+	      if (dmin < dclosest)
+	      {
+		dclosest = dmin;
+		closest  = variant;
+	      }
+	    }
+	    else
+	    {
+	      dmin = 0;
+	      size = variant;
+	      break;
+	    }
+	  }
 	}
+	if (dmin)
+	  continue;
       }
 
       if (exact)

@@ -140,6 +140,8 @@ int dontparse = 0;
 int jobhasjcl;
 int pdfconvertedtops;
 
+/* Streaming mode: Assume PostScript input, no zero-page job check */
+int streaming = 0;
 
 /* cm-calibration flag */
 int cm_calibrate = 0;
@@ -334,6 +336,14 @@ void process_cmdline_options()
             cm_calibrate = 1;
             continue;
         }
+        /* option to set color calibration mode */
+        if (!strcmp(key, "filter-streaming-mode") &&
+	    (!value ||
+	     (strcasecmp(value, "false") && strcasecmp(value, "off") &&
+	      strcasecmp(value, "no")))) {
+            streaming = 1;
+            continue;
+        }
         /* Solaris options that have no reason to be */
         if (!strcmp(key, "nobanner") || !strcmp(key, "dest") || !strcmp(key, "protocol"))
             continue;
@@ -434,6 +444,7 @@ void process_cmdline_options()
         cm_disabled = 1;
     }
 
+    _log("Streaming Mode: %s\n", streaming ? "Activated" : "Off");
     _log("CM Color Calibration Mode in CUPS: %s\n", cm_calibrate ? 
          "Activated" : "Off");
 
@@ -576,24 +587,30 @@ int print_file(const char *filename, int convert)
         }
     }
 
-    n = fread_or_die(buf, 1, sizeof(buf) - 1, file);
-    if (!n){
-        _log("Input is empty, outputting empty file.\n");
-        return 1;
-    }
-    buf[n] = '\0';
-    type = guess_file_type(buf, n, &startpos);
-    /* We do not use any JCL preceeded to the input data, as it is simply
-       the PJL commands from the PPD file, and these commands we can also
-       generate, end we even merge them with PJl from the driver */
-    /*if (startpos > 0) {
+    if (streaming == 0 || file != stdin) {
+      n = fread_or_die(buf, 1, sizeof(buf) - 1, file);
+      if (!n) {
+	_log("Input is empty, outputting empty file.\n");
+	return 1;
+      }
+      buf[n] = '\0';
+      type = guess_file_type(buf, n, &startpos);
+      /* We do not use any JCL preceeded to the input data, as it is simply
+	 the PJL commands from the PPD file, and these commands we can also
+	 generate, end we even merge them with PJl from the driver */
+      /*if (startpos > 0) {
         jobhasjcl = 1;
         write_output(buf, startpos);
-    }*/
-    if (file != stdin)
+	}*/
+      if (file != stdin)
         rewind(file);
 
-    if (convert) pdfconvertedtops = 0;
+      if (convert) pdfconvertedtops = 0;
+    } else {
+      n = 0;
+      buf[0] = '\n';
+      type = PS_FILE;
+    }
 
     switch (type) {
         case PDF_FILE:

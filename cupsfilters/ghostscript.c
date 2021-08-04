@@ -19,6 +19,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <cups/raster.h>
 #include <cupsfilters/colormanager.h>
 #include <cupsfilters/raster.h>
@@ -155,9 +156,14 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
       cupsArrayAdd(gs_args, strdup("-dDuplex"));
     }
   }
-  snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",h->HWResolution[0],
-	   h->HWResolution[1]);
-  cupsArrayAdd(gs_args, strdup(tmpstr));
+  if (outformat != OUTPUT_FORMAT_PCLM) {
+    /* In PCLM we have our own method to generate the needed
+       resolution, to respect the printer's supported resolutions for
+       PCLm, so this is only for non-PCLm output formats */
+    snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",
+	     h->HWResolution[0], h->HWResolution[1]);
+    cupsArrayAdd(gs_args, strdup(tmpstr));
+  }
   if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
       outformat == OUTPUT_FORMAT_PWG_RASTER ||
       outformat == OUTPUT_FORMAT_APPLE_RASTER) {
@@ -817,6 +823,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   if (parameters) {
     outformat = *(filter_out_format_t *)parameters;
     if (outformat != OUTPUT_FORMAT_PDF &&
+	outformat != OUTPUT_FORMAT_PDF_IMAGE &&
+	outformat != OUTPUT_FORMAT_PCLM &&
 	outformat != OUTPUT_FORMAT_CUPS_RASTER &&
 	outformat != OUTPUT_FORMAT_PWG_RASTER &&
 	outformat != OUTPUT_FORMAT_APPLE_RASTER &&
@@ -831,7 +839,9 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
 		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
 		  (outformat == OUTPUT_FORMAT_PDF ? "PDF" :
-		   "PCL XL")))));
+		   (outformat == OUTPUT_FORMAT_PDF_IMAGE ? "raster-only PDF" :
+		    (outformat == OUTPUT_FORMAT_PCLM ? "PCLm" :
+		     "PCL XL")))))));
   
   memset(&sa, 0, sizeof(sa));
   /* Ignore SIGPIPE and have write return an error instead */
@@ -883,135 +893,163 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   }
 
  /*
-  * Find out file type ...
+  * Streaming mode without pre-checking input format or zero-page jobs
   */
 
-  if (inputseekable)
-    doc_type = parse_doc_type(fp);
-
- /*
-  * Copy input into temporary file if needed ...
-  * (If the input is not seekable or if it is PostScript, to be able
-  *  to count the pages)
-  */
-
-  if (!inputseekable || doc_type == GS_DOC_TYPE_PS) {
-    if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Unable to copy PDF file: %s", strerror(errno));
-      return (1);
-    }
-
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Copying input to temp file \"%s\"",
-		 tempfile);
-
-    while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
-      bytes = write(fd, buf, bytes);
-
-    fclose(fp);
-    close(fd);
-
-    filename = tempfile;
+  if ((t = cupsGetOption("filter-streaming-mode", num_options, options)) ==
+       NULL ||
+      (!strcasecmp(t, "false") || !strcasecmp(t, "off") ||
+       !strcasecmp(t, "no")))
+  {
 
    /*
-    * Open the temporary file to read it instead of the original input ...
+    * Find out file type ...
     */
 
-    if ((fp = fopen(filename, "r")) == NULL)
-    {
-      if (!iscanceled || !iscanceled(icd))
+    if (inputseekable)
+      doc_type = parse_doc_type(fp);
+
+   /*
+    * Copy input into temporary file if needed ...
+    * (If the input is not seekable or if it is PostScript, to be able
+    *  to count the pages)
+    */
+
+    if (!inputseekable || doc_type == GS_DOC_TYPE_PS) {
+      if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "ghostscript: Unable to open temporary file.");
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unable to copy PDF file: %s", strerror(errno));
+	return (1);
       }
 
-      goto out;
-    }
-  } else
-    filename = NULL;
-
-  if (!inputseekable)
-    doc_type = parse_doc_type(fp);
-
-  if (doc_type == GS_DOC_TYPE_EMPTY) {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "ghostscript: Input is empty, outputting empty file.");
-    status = 0;
-    if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-	outformat == OUTPUT_FORMAT_PWG_RASTER ||
-	outformat == OUTPUT_FORMAT_APPLE_RASTER)
-      fprintf(stdout, "RaS2");
-    goto out;
-  } if (doc_type == GS_DOC_TYPE_UNKNOWN) {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "ghostscript: Can't detect file type");
-    goto out;
-  }
-
-  if (doc_type == GS_DOC_TYPE_PDF) {
-    int pages = pdf_pages_fp(fp);
-
-    if (pages == 0) {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "ghostscript: No pages left, outputting empty file.");
+		   "ghostscript: Copying input to temp file \"%s\"",
+		   tempfile);
+
+      while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
+	bytes = write(fd, buf, bytes);
+
+      fclose(fp);
+      close(fd);
+
+      filename = tempfile;
+
+     /*
+      * Open the temporary file to read it instead of the original input ...
+      */
+
+      if ((fp = fopen(filename, "r")) == NULL)
+      {
+	if (!iscanceled || !iscanceled(icd))
+        {
+	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		       "ghostscript: Unable to open temporary file.");
+	}
+
+	goto out;
+      }
+    } else
+      filename = NULL;
+
+    if (!inputseekable)
+      doc_type = parse_doc_type(fp);
+
+    if (doc_type == GS_DOC_TYPE_EMPTY) {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "ghostscript: Input is empty, outputting empty file.");
       status = 0;
       if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
 	  outformat == OUTPUT_FORMAT_PWG_RASTER ||
 	  outformat == OUTPUT_FORMAT_APPLE_RASTER)
-        fprintf(stdout, "RaS2");
+	if (write(outputfd, "RaS2", 4)) {};
       goto out;
-    }
-    if (pages < 0) {
+    } if (doc_type == GS_DOC_TYPE_UNKNOWN) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Unexpected page count");
+		   "ghostscript: Can't detect file type");
       goto out;
     }
-  } else {
-    char gscommand[65536];
-    char output[31] = "";
-    int pagecount;
-    size_t bytes;
-    // Ghostscript runs too long while converting djvu files to Xerox`s 3210 format
-    // Using -dDEVICEWIDTHPOINTS -dDEVICEHEIGHTPOINTS params solves the problem
-    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 %s 2>&1 | grep -c HiResBoundingBox",
-    CUPS_GHOSTSCRIPT, filename);
+
+    if (doc_type == GS_DOC_TYPE_PDF) {
+      int pages = pdf_pages_fp(fp);
+
+      if (pages == 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "ghostscript: No pages left, outputting empty file.");
+	status = 0;
+	if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+	    outformat == OUTPUT_FORMAT_PWG_RASTER ||
+	    outformat == OUTPUT_FORMAT_APPLE_RASTER)
+	  if (write(outputfd, "RaS2", 4)) {};
+	goto out;
+      }
+      if (pages < 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unexpected page count");
+	goto out;
+      }
+    } else {
+      char gscommand[65536];
+      char output[31] = "";
+      int pagecount;
+      size_t bytes;
+      /* Ghostscript runs too long on files converted from djvu files */
+      /* Using -dDEVICEWIDTHPOINTS -dDEVICEHEIGHTPOINTS params solves the
+	 problem */
+      snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 %s 2>&1 | grep -c HiResBoundingBox",
+	       CUPS_GHOSTSCRIPT, filename);
     
-    FILE *pd = popen(gscommand, "r");
-    if (!pd) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Failed to execute ghostscript to determine "
-		   "number of input pages!");
-      goto out;
+      FILE *pd = popen(gscommand, "r");
+      if (!pd) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Failed to execute ghostscript to determine "
+		     "number of input pages!");
+	goto out;
+      }
+
+      bytes = fread(output, 1, 31, pd);
+      pclose(pd);
+
+      if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
+	pagecount = -1;
+
+      if (pagecount == 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "ghostscript: No pages left, outputting empty file.");
+	status = 0;
+	if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
+	    outformat == OUTPUT_FORMAT_PWG_RASTER ||
+	    outformat == OUTPUT_FORMAT_APPLE_RASTER)
+	  if (write(outputfd, "RaS2", 4)) {};
+	goto out;
+      }
+      if (pagecount < 0) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "ghostscript: Unexpected page count");
+	goto out;
+      }
     }
 
-    bytes = fread(output, 1, 31, pd);
-    pclose(pd);
-
-    if (bytes <= 0 || sscanf(output, "%d", &pagecount) < 1)
-      pagecount = -1;
-
-    if (pagecount == 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "ghostscript: No pages left, outputting empty file.");
-      status = 0;
-      if (outformat == OUTPUT_FORMAT_CUPS_RASTER ||
-	  outformat == OUTPUT_FORMAT_PWG_RASTER ||
-	  outformat == OUTPUT_FORMAT_APPLE_RASTER)
-        fprintf(stdout, "RaS2");
-      goto out;
+    if (filename) {
+      /* Remove name of temp file*/
+      unlink(filename);
+      filename = NULL;
     }
-    if (pagecount < 0) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "ghostscript: Unexpected page count");
-      goto out;
-    }
+
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Input format: %s",
+		 (doc_type == GS_DOC_TYPE_PDF ? "PDF" :
+		  (doc_type == GS_DOC_TYPE_PDF ? "PostScript" :
+		   (doc_type == GS_DOC_TYPE_PDF ? "Empty file" :
+		    "Unknown"))));
   }
-  if (filename) {
-    /* Remove name of temp file*/
-    unlink(filename);
-    filename = NULL;
+  else
+  {
+    doc_type = GS_DOC_TYPE_UNKNOWN;
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Input format: Not determined");
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "ghostscript: Streaming mode, no checks for input format, zero-page input, instructions from previous filter");
   }
 
   /*  Check status of color management in CUPS */
@@ -1059,8 +1097,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     cupsArrayAdd(gs_args, strdup("-sDEVICE=cups"));
   else if (outformat == OUTPUT_FORMAT_PDF)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfwrite"));
-  /* In case of PCL XL output we determine later whether we will have
-     to use the "pxlmono" or "pxlcolor" output device */
+  /* In case of PCL XL, raster-obly PDF, or PCLm output we determine
+     the exact output device later */
 
   /* Special Ghostscript options for PDF output */
   if (outformat == OUTPUT_FORMAT_PDF) {
@@ -1109,62 +1147,280 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
   cupsRasterPrepareHeader(&h, data, outformat, &cspace);
 
+  /* Special Ghostscript options for raster-only PDF output */
 
-  if(outformat == OUTPUT_FORMAT_PXL)
+  /* We use PCLm instead of general raster PDF here if the printer
+     supports it, as PCLm can get streamed by the printer */
+
+  /* Note that these output formats are not fully usable yet:
+
+     1. Ghostscript needs a seekable output, so they do not work
+	in the usual print filter chains. Bug report:
+	https://bugs.ghostscript.com/show_bug.cgi?id=704160
+
+     2. In PCLm back side orientation for duplex printing is not
+	supported, making duplex printing on many printers not
+	working correctly. Bug report:
+	https://bugs.ghostscript.com/show_bug.cgi?id=704161
+
+   */
+
+  if (outformat == OUTPUT_FORMAT_PDF_IMAGE ||
+      outformat == OUTPUT_FORMAT_PCLM) {
+    int res_x, res_y,
+        sup_res_x, sup_res_y,
+        best_res_x = 0, best_res_y = 0,
+        res_diff,
+        best_res_diff = INT_MAX,
+        n;
+    const char *res_str = NULL;
+    char c;
+
+    ipp_attr = NULL;
+    attr = NULL;
+    if (outformat == OUTPUT_FORMAT_PCLM || /* PCLm forced */
+	/* PCLm supported according to printer IPP attributes */
+	(printer_attrs &&
+	 (ipp_attr =
+	  ippFindAttribute(printer_attrs, "pclm-source-resolution-supported",
+			   IPP_TAG_ZERO)) != NULL) ||
+	/* PCLm supported according to PPD file */
+	(ppd &&
+	 (attr =
+	  ppdFindAttr(ppd, "cupsPclmSourceResolutionSupported", 0)) != NULL)) {
+
+      outformat = OUTPUT_FORMAT_PCLM;
+
+      /* Resolution */
+
+      /* Check whether the job's resolution is supported pn PCLm mode and
+         correct if needed */
+      res_x = h.HWResolution[0];
+      res_y = h.HWResolution[1];
+      if (attr)
+	res_str = attr->value;
+      else if (ipp_attr) {
+	ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
+	res_str = tmpstr;
+      }
+      if (res_str)
+	while ((n = sscanf(res_str, "%d%c%d",
+			   &sup_res_x, &c, &sup_res_y)) > 0) {
+	  if (n < 3 || (c != 'x' && c != 'X'))
+	    sup_res_y = sup_res_x;
+	  if (sup_res_x > 0 && sup_res_y > 0) {
+	    if (res_x == sup_res_x && res_y == sup_res_y) {
+	      best_res_x = res_x;
+	      best_res_y = res_y;
+	      break;
+	    } else {
+	      res_diff = (res_x * res_y) / (sup_res_x * sup_res_y);
+	      if (res_diff < 1)
+		res_diff = (sup_res_x * sup_res_y) / (res_x * res_y);
+	      if (res_diff <= best_res_diff) {
+		best_res_x = sup_res_x;
+		best_res_y = sup_res_y;
+	      }
+	    }
+	  }
+	  res_str = strchr(res_str, ',');
+	  if (res_str == NULL)
+	    break;
+	}
+      if (best_res_x > 0 && best_res_y > 0) {
+	snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d", best_res_x, best_res_y);
+	cupsArrayAdd(gs_args, strdup(tmpstr));
+      } else if ((printer_attrs &&
+		  (ipp_attr =
+		   ippFindAttribute(printer_attrs,
+				    "pclm-source-resolution-default",
+				    IPP_TAG_ZERO)) != NULL) ||
+		 (ppd &&
+		  (attr =
+		   ppdFindAttr(ppd,
+			       "cupsPclmSourceResolutionDefault", 0)) != NULL)){
+	if (attr)
+	  res_str = attr->value;
+	else if (ipp_attr) {
+	  ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
+	  res_str = tmpstr;
+	}
+	if (res_str)
+	  if ((n = sscanf(res_str, "%d%c%d",
+			  &best_res_x, &c, &best_res_y)) > 0) {
+	    if (n < 3 || (c != 'x' && c != 'X'))
+	      best_res_y = best_res_x;
+	    if (best_res_x > 0 && best_res_y > 0) {
+	      snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",
+		       best_res_x, best_res_y);
+	      cupsArrayAdd(gs_args, strdup(tmpstr));
+	    }
+	  }
+      }
+      if (best_res_x <= 0 || best_res_y <= 0) {
+	snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d", res_x, res_y);
+	cupsArrayAdd(gs_args, strdup(tmpstr));
+      }
+
+      /* Ghostscript output device */
+
+      cupsArrayAdd(gs_args, strdup("-sDEVICE=pclm"));
+
+      /* Strip/Band Height */
+
+      n = 0;
+      if ((printer_attrs &&
+	   (ipp_attr =
+	    ippFindAttribute(printer_attrs,
+			     "pclm-strip-height-preferred",
+			     IPP_TAG_ZERO)) != NULL) ||
+	  (ppd &&
+	   (attr =
+	    ppdFindAttr(ppd,
+			"cupsPclmStripHeightPreferred", 0)) != NULL)) {
+	if (attr)
+	  n = atoi(attr->value);
+	else if (ipp_attr)
+	  n = ippGetInteger(ipp_attr, 0);
+      }
+      if (n <= 0) n = 16;
+      snprintf(tmpstr, sizeof(tmpstr), "-dStripHeight=%d", n);
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+
+      /* Back side orientation for Duplex not (yet) supported by Ghostscript */
+
+      /* Compression method */
+
+      if ((printer_attrs &&
+	   (ipp_attr =
+	    ippFindAttribute(printer_attrs,
+			     "pclm-compression-method-preferred",
+			     IPP_TAG_ZERO)) != NULL) ||
+	  (ppd &&
+	   (attr =
+	    ppdFindAttr(ppd,
+			"cupsPclmCompressionMethodPreferred", 0)) != NULL)) {
+	if (attr)
+	  res_str = attr->value;
+	else if (ipp_attr) {
+	  ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
+	  res_str = tmpstr;
+	}
+	if (res_str) {
+	  if (strcasestr(res_str, "flate"))
+	    cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+	  else if (strcasestr(res_str, "rle"))
+	    cupsArrayAdd(gs_args, strdup("-sCompression=RLE"));
+	  else if (strcasestr(res_str, "jpeg"))
+	    cupsArrayAdd(gs_args, strdup("-sCompression=JPEG"));
+	  else
+	    cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+	} else
+	  cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+      } else
+	cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+    } else {
+      /* No PCLm supported or requested, use general raster PDF */
+
+      /* Ghostscript output device and color/gray */
+
+      n = 0;
+      if (ppd) {
+        if ((attr = ppdFindAttr(ppd,"ColorDevice", 0)) != 0 &&
+	    (!strcasecmp(attr->value, "true") ||
+	     !strcasecmp(attr->value, "on") ||
+	     !strcasecmp(attr->value, "yes")))
+          /* Color PCL XL printer, according to PPD */
+	  n = 1;
+      } else if (printer_attrs) {
+	if (((ipp_attr =
+	      ippFindAttribute(printer_attrs,
+			       "color-supported", IPP_TAG_ZERO)) != NULL &&
+	     ippGetBoolean(ipp_attr, 0))) {
+	  /* Color PCL XL printer, according to printer attributes */
+	  n = 1;
+	}
+      }
+      if (n == 1)
+	cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfimage24"));
+      else
+	cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfimage8"));
+
+      /* Compression method */
+
+      cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+    }
+
+    /* Common option: Downscaling factor */
+
+    cupsArrayAdd(gs_args, strdup("-dDownScaleFactor=1"));
+  }
+
+  if (outformat == OUTPUT_FORMAT_PXL)
   {
-    if(ppd)
+    if (ppd)
     {
       {
-        if ((attr = ppdFindAttr(ppd,"ColorDevice",0)) != 0 &&
-          (!strcasecmp(attr->value, "true") ||
-          !strcasecmp(attr->value, "on") ||
-          !strcasecmp(attr->value, "yes")))
+        if ((attr = ppdFindAttr(ppd,"ColorDevice", 0)) != 0 &&
+	    (!strcasecmp(attr->value, "true") ||
+	     !strcasecmp(attr->value, "on") ||
+	     !strcasecmp(attr->value, "yes")))
           /* Color PCL XL printer, according to PPD */
-        pxlcolor = 1;
+	  pxlcolor = 1;
       }  
     }
-    else if(printer_attrs)
+    else if (printer_attrs)
     {
-      if(((ipp_attr = ippFindAttribute(printer_attrs, 
-            "color-supported", IPP_TAG_BOOLEAN))!=NULL 
-              && ippGetBoolean(ipp_attr, 0))){
+      if (((ipp_attr =
+	    ippFindAttribute(printer_attrs,
+			     "color-supported", IPP_TAG_BOOLEAN)) != NULL &&
+	   ippGetBoolean(ipp_attr, 0))) {
         /* Color PCL XL printer, according to printer attributes */
         pxlcolor = 1;
       }
     }
 
-    if(job_attrs)
+    if (job_attrs)
     {
-      if((ipp_attr = ippFindAttribute(job_attrs, "pwg-raster-document-type", IPP_TAG_ZERO))!=NULL ||
-          (ipp_attr = ippFindAttribute(job_attrs, "color-space", IPP_TAG_ZERO))!=NULL             ||
-          (ipp_attr = ippFindAttribute(job_attrs, "color-model", IPP_TAG_ZERO))!=NULL             ||
-          (ipp_attr = ippFindAttribute(job_attrs, "print-color-mode", IPP_TAG_ZERO))!=NULL        ||
-          (ipp_attr = ippFindAttribute(job_attrs, "output-mode", IPP_TAG_ZERO))!=NULL)
+      if ((ipp_attr =
+	   ippFindAttribute(job_attrs, "pwg-raster-document-type",
+			    IPP_TAG_ZERO)) != NULL ||
+          (ipp_attr =
+	   ippFindAttribute(job_attrs, "color-space", IPP_TAG_ZERO)) != NULL ||
+          (ipp_attr =
+	   ippFindAttribute(job_attrs, "color-model", IPP_TAG_ZERO)) != NULL ||
+          (ipp_attr =
+	   ippFindAttribute(job_attrs, "print-color-mode",
+			    IPP_TAG_ZERO)) != NULL ||
+          (ipp_attr =
+	   ippFindAttribute(job_attrs, "output-mode", IPP_TAG_ZERO)) != NULL)
       {
         ippAttributeString(ipp_attr, buf, sizeof(buf));
-        if(!strncasecmp(buf, "AdobeRgb", 8)     ||
-          !strncasecmp(buf, "adobe-rgb", 9)     ||
-          !strcasecmp(buf, "color")             ||
-          !strncasecmp(buf,"Cmyk", 4)           ||
-          !strncasecmp(buf, "Cmy", 3)           ||
-          !strncasecmp(buf, "Srgb", 4)          ||
-          !strncasecmp(buf, "Rgbw", 4)          ||
-          !strcasecmp(buf, "auto")              ||
-          !strncasecmp(buf, "Rgb", 3))
+        if (!strncasecmp(buf, "AdobeRgb", 8)     ||
+	    !strncasecmp(buf, "adobe-rgb", 9)     ||
+	    !strcasecmp(buf, "color")             ||
+	    !strncasecmp(buf,"Cmyk", 4)           ||
+	    !strncasecmp(buf, "Cmy", 3)           ||
+	    !strncasecmp(buf, "Srgb", 4)          ||
+	    !strncasecmp(buf, "Rgbw", 4)          ||
+	    !strcasecmp(buf, "auto")              ||
+	    !strncasecmp(buf, "Rgb", 3))
         {
           pxlcolor = 1;
         }
         else if(!strncasecmp(buf, "Device", 6))
         {
           char* ptr = buf+6;
-          if(strtol(ptr, (char **)&ptr, 10)>1){   /* If printer seems to support more than 1 color  */
+          if (strtol(ptr, (char **)&ptr, 10) > 1) { /* If printer seems to
+						       support more than 1
+						       color  */
             pxlcolor = 1;
           }
         }
       }
     }
 
-    if(pxlcolor==0)   /*  Still printer seems to be mono */
+    if (pxlcolor == 0)   /*  Still printer seems to be mono */
     {
       const char* val;
       if ((val = cupsGetOption("pwg-raster-document-type", num_options,
@@ -1180,21 +1436,22 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
       (val = cupsGetOption("OutputMode", num_options, options)) != NULL)
       {
         if(!strncasecmp(val, "AdobeRgb", 8) ||
-          !strncasecmp(val, "adobe-rgb", 9) ||
-          !strcasecmp(val, "color")         ||
-          !strncasecmp(val, "Cmyk", 4)      ||
-          !strncasecmp(val, "Cmy", 3)       ||
-          !strncasecmp(val, "Srgb", 4)      ||
-          !strncasecmp(val, "Rgbw", 4)      ||
-          !strncasecmp(val, "Rgb", 3)       ||
-          !strcasecmp(val, "auto"))
+	   !strncasecmp(val, "adobe-rgb", 9) ||
+	   !strcasecmp(val, "color")         ||
+	   !strncasecmp(val, "Cmyk", 4)      ||
+	   !strncasecmp(val, "Cmy", 3)       ||
+	   !strncasecmp(val, "Srgb", 4)      ||
+	   !strncasecmp(val, "Rgbw", 4)      ||
+	   !strncasecmp(val, "Rgb", 3)       ||
+	   !strcasecmp(val, "auto"))
         {
           pxlcolor = 1;
         }
         else if(!strncasecmp(val, "Device", 6))
         {
           const char *ptr = val + 6;
-          if(strtol(ptr, (char **)&ptr, 10)>1)  /*  Printer seems to support more then 1 color  */
+          if(strtol(ptr, (char **)&ptr, 10)>1)  /* Printer seems to support
+						   more then 1 color  */
           {
             pxlcolor = 1;
           }
@@ -1202,8 +1459,6 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
       }
     } 
   }
-
-
 
   /* set PDF-specific options */
   if (doc_type == GS_DOC_TYPE_PDF) {
@@ -1223,7 +1478,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   snprintf(tmpstr, sizeof(tmpstr), "-I%s", t);
   cupsArrayAdd(gs_args, strdup(tmpstr));
 
-  /* set the device output ICC profile */
+  /* Set the device output ICC profile */
   if (icc_profile != NULL && icc_profile[0] != '\0') {
     snprintf(tmpstr, sizeof(tmpstr), "-sOutputICCProfile=%s", icc_profile);
     cupsArrayAdd(gs_args, strdup(tmpstr));
@@ -1323,8 +1578,6 @@ out:
     cupsArrayDelete(gs_args);
   }
   free(icc_profile);
-  if (ppd)
-    ppdClose(ppd);
   close(outputfd);
   return status;
 }

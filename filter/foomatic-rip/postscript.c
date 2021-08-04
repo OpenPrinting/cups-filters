@@ -191,103 +191,111 @@ int print_ps(FILE *file, const char *alreadyread, size_t len, const char *filena
     stream.alreadyread = alreadyread;
     stream.len = len;
 
-    /* Check whether the input file is not empty
-
-       We only read the input data until discovering the first page, this
-       way we can print PostScript files streaming, allowing for very large
-       or even infinite PostScript jobs, making use of the fact that
-       PostScript is a streamable data format.
-
-       This also allows Printer Applications to work with foomatic-rip
-       as they have to support streaming Apple/PWG Raster input data and
-       infinite jobs in this format. This way we can simply encapsulate the
-       Raster data in PostScript.
-
-       Ghostscript command line to find out whether the PostScript input
-       data actually produces pages. The "bbox" output device produces two
-       lines of output per page on stderr. We suppress any general output
-       lines ("-q") an redirect the "bbox" output to stdout, where we can
-       read it.
-
-       "-dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1" saves Ghostscript
-       from needing to render the pages to find out the numbers in the input
-       lines, we only need the boolean answer whether there are pages or not */
-    snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 -_ 2>&1",
-              CUPS_GHOSTSCRIPT);
-    /* Launch Ghostscript an return file handles for stdin and stdout of the
-       Ghostscript process */
-    pid = start_system_process("Check PostScript input non-empty", gscommand, &in, &out);
-    /* We will observe Ghostscript's output with non-blocking poll(), prepare
-       data structure */
-    pfd.fd = fileno(out);
-    pfd.events = POLLIN;
-
-    /* Read input as long as we do not find a page ("showpage" action in
-       PostScript, makes the "bbox" device producing output) */
-    while ((stream_next_line(line, &stream)) > 0) {
-      /* Save what we have already read, we need to re-feed it when actually
-	 rendering the job */
-      dstrncat(data_read, line->data, line->len);
-      /* Feed read line into Ghostscript */
-      for (bytes = line->len, pos = line->data, bytes_sent = 0;
-	   bytes_sent >= 0 && bytes_sent < bytes;
-	   bytes -= bytes_sent, pos += bytes_sent)
-	bytes_sent = fwrite_or_die(pos, 1, bytes, in);
-      if (bytes_sent < 0)
-	break;
-      /* Flush to make Ghostscript operate in as close to real-time as
-	 possible */
-      fflush(in);
-      /* Check if Ghostscript produced output, but do not block if not
-         (timeout = 0) */
-      pres = poll(&pfd, 1, 0);
-      if (pres < 0) {
-	_log("Error reading Ghostscript output\n");
-	break;
-      } else if (pres && (pfd.revents & POLLIN)) {
-	/* Ghostscript produced output, meaning that the data read up to now
-	   has produced a page and so the file is not empty, stop reading
-	   further data */
-	pagefound = 1;
-	break;
-      }
-    }
-
-    /* If the input file has only a single page and the "showpage" is
-       very close to the end of the file, it cannot have been
-       discovered after the last bits of input data got
-       read. Therefore we do an extra check here. */
-    if (!pagefound) {
-      pres = poll(&pfd, 1, 1000);
-      if (pres < 0)
-	_log("Error reading Ghostscript output\n");
-      else if (pres && (pfd.revents & POLLIN))
-	pagefound = 1;
-    }
-
-    /* Clean up and make Ghostscript stop by that */
-    fclose(in);
-    fclose(out);
-    wait_for_process(pid);
-
-    if (pagefound) {
-      _log("File not empty, contains at least one page.\n");
-
-      /* Redefine stream for what we have read now */
-      if (data_read->len < len)
-	dstrncat(data_read, buf + data_read->len, len - data_read->len);
-
-      stream.pos = 0;
-      stream.file = file;
-      stream.alreadyread = data_read->data;
-      stream.len = data_read->len;
-
-      /* Print the file */
+    /* If a buffer is supplied but with zero length, we are in streaming
+       mode and do not pre-check for zero-page input, but print right away */
+    if (alreadyread && len == 0)
+      /* Simply print the file, without checking whether it has pages */
       _print_ps(&stream);
-    } else
-      _log("No pages left, outputting empty file.\n");
+    else {
+      /* Check whether the input file is not empty
 
-    free_dstr(data_read);
+	 We only read the input data until discovering the first page, this
+	 way we can print PostScript files streaming, allowing for very large
+	 or even infinite PostScript jobs, making use of the fact that
+	 PostScript is a streamable data format.
+
+	 This also allows Printer Applications to work with foomatic-rip
+	 as they have to support streaming Apple/PWG Raster input data and
+	 infinite jobs in this format. This way we can simply encapsulate the
+	 Raster data in PostScript.
+
+	 Ghostscript command line to find out whether the PostScript input
+	 data actually produces pages. The "bbox" output device produces two
+	 lines of output per page on stderr. We suppress any general output
+	 lines ("-q") an redirect the "bbox" output to stdout, where we can
+	 read it.
+
+	 "-dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1" saves Ghostscript
+	 from needing to render the pages to find out the numbers in the input
+	 lines, we only need the boolean answer whether there are pages or
+	 not */
+      snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 -_ 2>&1",
+              CUPS_GHOSTSCRIPT);
+      /* Launch Ghostscript an return file handles for stdin and stdout of the
+	 Ghostscript process */
+      pid = start_system_process("Check PostScript input non-empty", gscommand, &in, &out);
+      /* We will observe Ghostscript's output with non-blocking poll(), prepare
+	 data structure */
+      pfd.fd = fileno(out);
+      pfd.events = POLLIN;
+
+      /* Read input as long as we do not find a page ("showpage" action in
+	 PostScript, makes the "bbox" device producing output) */
+      while ((stream_next_line(line, &stream)) > 0) {
+	/* Save what we have already read, we need to re-feed it when actually
+	   rendering the job */
+	dstrncat(data_read, line->data, line->len);
+	/* Feed read line into Ghostscript */
+	for (bytes = line->len, pos = line->data, bytes_sent = 0;
+	     bytes_sent >= 0 && bytes_sent < bytes;
+	     bytes -= bytes_sent, pos += bytes_sent)
+	  bytes_sent = fwrite_or_die(pos, 1, bytes, in);
+	if (bytes_sent < 0)
+	  break;
+	/* Flush to make Ghostscript operate in as close to real-time as
+	   possible */
+	fflush(in);
+	/* Check if Ghostscript produced output, but do not block if not
+	   (timeout = 0) */
+	pres = poll(&pfd, 1, 0);
+	if (pres < 0) {
+	  _log("Error reading Ghostscript output\n");
+	  break;
+	} else if (pres && (pfd.revents & POLLIN)) {
+	  /* Ghostscript produced output, meaning that the data read up to now
+	     has produced a page and so the file is not empty, stop reading
+	     further data */
+	  pagefound = 1;
+	  break;
+	}
+      }
+
+      /* If the input file has only a single page and the "showpage" is
+	 very close to the end of the file, it cannot have been
+	 discovered after the last bits of input data got
+	 read. Therefore we do an extra check here. */
+      if (!pagefound) {
+	pres = poll(&pfd, 1, 1000);
+	if (pres < 0)
+	  _log("Error reading Ghostscript output\n");
+	else if (pres && (pfd.revents & POLLIN))
+	  pagefound = 1;
+      }
+
+      /* Clean up and make Ghostscript stop by that */
+      fclose(in);
+      fclose(out);
+      wait_for_process(pid);
+
+      if (pagefound) {
+	_log("File not empty, contains at least one page.\n");
+
+	/* Redefine stream for what we have read now */
+	if (data_read->len < len)
+	  dstrncat(data_read, buf + data_read->len, len - data_read->len);
+
+	stream.pos = 0;
+	stream.file = file;
+	stream.alreadyread = data_read->data;
+	stream.len = data_read->len;
+
+	/* Print the file */
+	_print_ps(&stream);
+      } else
+	_log("No pages left, outputting empty file.\n");
+
+      free_dstr(data_read);
+    }
 
     return 1;
 }

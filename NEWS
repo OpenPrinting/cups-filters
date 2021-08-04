@@ -3,6 +3,62 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Added support for the back and side channels
+	  which CUPS uses for additional communication between the
+	  filters and the backend into the filter function
+	  infrastructure. Now filter functions can use these channels
+	  and also CUPS filters or backends called via the
+	  filterExternalCUPS() function. Printer Applications can
+	  easily create the needed pipes via the new function
+	  filterOpenBackAndSidePipes() and clode them via
+	  filterCloseBackAndSidePipes() and filter functions used as
+	  classic CUPS filters get the appropriate file descriptors
+	  supplied by ihe filterCUPSWrapper() function.
+	- libcupsfilters: Added raster-only PDF and PCLm output
+	  support to the ghostscript() filter function. Note that
+	  these are experimental and not yet suitable for using in
+	  print filter chains, as they require a seekable output file
+	  and PCLm does not support back side orientation for duples.
+	- libcupsfilters, foomatic-rip: Added new streaming mode
+	  triggered by the boolean "filter-streaming-mode" option. In
+	  this mode a filter (function) is supposed to avoid
+	  everything which prevents the job data from streaming, as
+	  loading the whole job (or good part of it) into a temporary
+	  file or into memory, interpreting PDF, pre-checking input
+	  file type or zero-page jobs, ... This is mainly to be used
+	  by Printer Applications when they do raster printing in
+	  streaming mode, to run with lowest resources possible.
+	  Currently foomatic-rip, ghostscript(), and pdftopdf() got a
+	  streaming mode. For the former two PostScript (not PDF) is
+	  assumed as input and no zero-page-job check is done, in the
+	  latter all QPDF processing (page management, page size
+	  adjustment, ...) is skipped and only JCL according to the
+	  PPD added.
+	- Sample PPDs: Add borderless page size definitions to Generic
+	  PDF Printer, HP Color LaserJet CM3530 MFP PDF, and Ricoh PDF
+	  Printer PPD files.
+	- Sample PPDs: From the PDF PPD files removed the unneeded
+	  "*cupsFilters2: ..." line. For CUPS it does not make any
+	  difference and the PPD-retro-fitting Printer Applications do
+	  not accept the PPDs with it.
+	- libppd: In ppdCacheCreateWithPPD() also support presets for
+	  print-ontent-optimize, not only for print-color-mode and
+	  print-quality
+	- libppd: Auto-pre-fill the presets with most suitable options
+	  from the PPD files with new ppdCacheAssignPresets() function
+	  (Only if not filled via "APPrinterPreset" in the PPD). This
+	  way we can use the IPP options print-color-mode,
+	  print-quality, and print-content-optimize in a
+	  PPD/CUPS-driver-retro-fitting Printer Application with most
+	  PPDs.
+	- libppd: In the ppdCacheGetPageSize() function do not only
+	  check the fit of the margins with the page size matching the
+	  job's page size (like "A4") but also the margins of the
+	  variants (like "A4.Borderless"), even if the variant's size
+	  dimensions differ from the base size (and the physical paper
+	  size), for example for overspray in borderless printing mode
+	  (HPLIP does this). Also select a borderless variant only if
+	  the job requests borderless (all margins zero).
 	- libcupsfilters: Fixed pdftopdf() filter function to
 	  correctly support page ranges without upper limit, like
 	  "10-" (Pull request #399).
