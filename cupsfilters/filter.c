@@ -776,70 +776,84 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 
   signal(SIGPIPE, SIG_IGN);
 
- /*
-  * Join the options from the filter data and from the parameters
-  * If an option is present in both filter data and parameters, the
-  * value in the filter data has priority
-  */
+  if (params->is_backend < 2) {
+   /*
+    * Filter or backend for job execution
+    */
 
-  for (i = 0, opt = params->options; i < params->num_options; i ++, opt ++)
-    num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
-				    &all_options);
-  for (i = 0, opt = data->options; i < data->num_options; i ++, opt ++)
-    num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
-				    &all_options);
+   /*
+    * Join the options from the filter data and from the parameters
+    * If an option is present in both filter data and parameters, the
+    * value in the filter data has priority
+    */
 
- /*
-  * Create command line arguments for the CUPS filter
-  */
+    for (i = 0, opt = params->options; i < params->num_options; i ++, opt ++)
+      num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
+				      &all_options);
+    for (i = 0, opt = data->options; i < data->num_options; i ++, opt ++)
+      num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
+				      &all_options);
 
-  argv = (char **)calloc(6, sizeof(char *));
+   /*
+    * Create command line arguments for the CUPS filter
+    */
 
-  /* Numeric parameters */
-  snprintf(job_id_str, sizeof(job_id_str) - 1, "%d", data->job_id);
-  snprintf(copies_str, sizeof(copies_str) - 1, "%d", data->copies);
+    argv = (char **)calloc(7, sizeof(char *));
 
-  /* Options, build string of "Name1=Value1 Name2=Value2 ..." but use
-     "Name" and "noName" instead for boolean options */
-  for (i = 0, opt = all_options; i < num_all_options; i ++, opt ++) {
-    if (strcasecmp(opt->value, "true") == 0 ||
-	strcasecmp(opt->value, "false") == 0) {
-      options_str =
-	(char *)realloc(options_str,
-			((options_str ? strlen(options_str) : 0) +
-			 strlen(opt->name) +
-			 (strcasecmp(opt->value, "false") == 0 ? 2 : 0) + 2) *
-			sizeof(char));
-      if (i == 0)
-	options_str[0] = '\0';
-      sprintf(options_str + strlen(options_str), " %s%s",
-	      (strcasecmp(opt->value, "false") == 0 ? "no" : ""), opt->name);
-    } else {
-      options_str =
-	(char *)realloc(options_str,
-			((options_str ? strlen(options_str) : 0) +
-			 strlen(opt->name) + strlen(opt->value) + 3) *
-			sizeof(char));
-      if (i == 0)
-	options_str[0] = '\0';
-      sprintf(options_str + strlen(options_str), " %s=%s", opt->name, opt->value);
+    /* Numeric parameters */
+    snprintf(job_id_str, sizeof(job_id_str) - 1, "%d", data->job_id);
+    snprintf(copies_str, sizeof(copies_str) - 1, "%d", data->copies);
+
+    /* Options, build string of "Name1=Value1 Name2=Value2 ..." but use
+       "Name" and "noName" instead for boolean options */
+    for (i = 0, opt = all_options; i < num_all_options; i ++, opt ++) {
+      if (strcasecmp(opt->value, "true") == 0 ||
+	  strcasecmp(opt->value, "false") == 0) {
+	options_str =
+	  (char *)realloc(options_str,
+			  ((options_str ? strlen(options_str) : 0) +
+			   strlen(opt->name) +
+			   (strcasecmp(opt->value, "false") == 0 ? 2 : 0) + 2) *
+			  sizeof(char));
+	if (i == 0)
+	  options_str[0] = '\0';
+	sprintf(options_str + strlen(options_str), " %s%s",
+		(strcasecmp(opt->value, "false") == 0 ? "no" : ""), opt->name);
+      } else {
+	options_str =
+	  (char *)realloc(options_str,
+			  ((options_str ? strlen(options_str) : 0) +
+			   strlen(opt->name) + strlen(opt->value) + 3) *
+			  sizeof(char));
+	if (i == 0)
+	  options_str[0] = '\0';
+	sprintf(options_str + strlen(options_str), " %s=%s", opt->name, opt->value);
+      }
     }
+
+    /* Add items to array */
+    argv[0] = data->printer ? data->printer : (char *)params->filter;
+    argv[1] = job_id_str;
+    argv[2] = data->job_user;
+    argv[3] = data->job_title;
+    argv[4] = copies_str;
+    argv[5] = options_str ? options_str + 1 : "";
+    argv[6] = NULL;
+
+    /* Log the arguments */
+    if (log)
+      for (i = 0; argv[i]; i ++)
+	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): argv[%d]: %s",
+	    filter_name, i, argv[i]);
+  } else {
+   /*
+    * Backend in device discovery mode
+    */
+
+    argv = (char **)calloc(2, sizeof(char *));
+    argv[0] = (char *)params->filter;
+    argv[1] = NULL;
   }
-
-  /* Add items to array */
-  argv[0] = data->printer ? data->printer : (char *)params->filter;
-  argv[1] = job_id_str;
-  argv[2] = data->job_user;
-  argv[3] = data->job_title;
-  argv[4] = copies_str;
-  argv[5] = options_str ? options_str + 1 : "";
-  argv[6] = NULL;
-
-  /* Log the arguments */
-  if (log)
-    for (i = 0; argv[i]; i ++)
-      log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): argv[%d]: %s",
-	  filter_name, i, argv[i]);
 
  /*
   * Copy the current environment variables and add some important ones
@@ -866,13 +880,16 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     for (i = 0; params->envp[i]; i ++)
       add_env_var(params->envp[i], NULL, &envp);
 
-  /* Print queue name from filter data */
-  if (data->printer)
-    add_env_var("PRINTER", data->printer, &envp);
+  if (params->is_backend < 2) /* Not needed in discovery mode of backend */
+  {
+    /* Print queue name from filter data */
+    if (data->printer)
+      add_env_var("PRINTER", data->printer, &envp);
 
-  /* PPD file path/name from filter data, required for most CUPS filters */
-  if (data->ppdfile)
-    add_env_var("PPD", data->ppdfile, &envp);
+    /* PPD file path/name from filter data, required for most CUPS filters */
+    if (data->ppdfile)
+      add_env_var("PPD", data->ppdfile, &envp);
+  }
 
   /* Log the resulting list of environment variable settings */
   if (log)
@@ -933,31 +950,35 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     close(stderrpipe[0]);
     close(stderrpipe[1]);
 
-    if (backfd != 3 && backfd >= 0) {
-      dup2(backfd, 3);
-      close(backfd);
-      fcntl(3, F_SETFL, O_NDELAY);
-    } else if (backfd < 0) {
-      if ((backfd = open("/dev/null", O_RDWR)) > 3) {
+    if (params->is_backend < 2) { /* Not needed in discovery mode of backend */
+      /* Back channel */
+      if (backfd != 3 && backfd >= 0) {
 	dup2(backfd, 3);
 	close(backfd);
+	fcntl(3, F_SETFL, O_NDELAY);
+      } else if (backfd < 0) {
+	if ((backfd = open("/dev/null", O_RDWR)) > 3) {
+	  dup2(backfd, 3);
+	  close(backfd);
+	}
+	else
+	  close(backfd);
+	fcntl(3, F_SETFL, O_NDELAY);
       }
-      else
-	close(backfd);
-      fcntl(3, F_SETFL, O_NDELAY);
-    }
 
-    if (sidefd != 4 && sidefd >= 0) {
-      dup2(sidefd, 4);
-      close(sidefd);
-      fcntl(4, F_SETFL, O_NDELAY);
-    } else if (sidefd < 0) {
-      if ((sidefd = open("/dev/null", O_RDWR)) > 4) {
+      /* Side channel */
+      if (sidefd != 4 && sidefd >= 0) {
 	dup2(sidefd, 4);
 	close(sidefd);
-      } else
-	close(sidefd);
-      fcntl(4, F_SETFL, O_NDELAY);
+	fcntl(4, F_SETFL, O_NDELAY);
+      } else if (sidefd < 0) {
+	if ((sidefd = open("/dev/null", O_RDWR)) > 4) {
+	  dup2(sidefd, 4);
+	  close(sidefd);
+	} else
+	  close(sidefd);
+	fcntl(4, F_SETFL, O_NDELAY);
+      }
     }
 
    /*
@@ -967,8 +988,9 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     execve(params->filter, argv, envp);
 
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterExternalCUPS (%s): Execution of filter %s failed - %s",
-		 filter_name, params->filter, strerror(errno));
+		 "filterExternalCUPS (%s): Execution of %s %s failed - %s",
+		 filter_name, params->is_backend ? "backend" : "filter",
+		 params->filter, strerror(errno));
 
     exit(errno);
   } else if (pid > 0) {
@@ -977,8 +999,9 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 		 filter_name, params->filter, pid);
   } else {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterExternalCUPS (%s): Unable to fork process for filter %s",
-		 filter_name, params->filter);
+		 "filterExternalCUPS (%s): Unable to fork process for %s %s",
+		 filter_name, params->is_backend ? "backend" : "filter",
+		 params->filter);
     close(stderrpipe[0]);
     close(stderrpipe[1]);
     status = 1;
@@ -1060,8 +1083,8 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     if ((wpid = wait(&wstatus)) < 0) {
       if (errno == EINTR && iscanceled && iscanceled(icd)) {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "filterExternalCUPS (%s): Job canceled, killing filter ...",
-		     filter_name);
+		     "filterExternalCUPS (%s): Job canceled, killing %s ...",
+		     filter_name, params->is_backend ? "backend" : "filter");
 	kill(pid, SIGTERM);
 	pid = -1;
 	kill(stderrpid, SIGTERM);
@@ -1077,21 +1100,30 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 	/* Via exit() anywhere or return() in the main() function */
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		     "filterExternalCUPS (%s): %s (PID %d) stopped with status %d",
-		     filter_name, (wpid == pid ? "Filter" : "Logging"), wpid,
-		     WEXITSTATUS(wstatus));
+		     filter_name,
+		     (wpid == pid ?
+		      (params->is_backend ? "Backend" : "Filter") :
+		      "Logging"),
+		     wpid, WEXITSTATUS(wstatus));
 	status = WEXITSTATUS(wstatus);
       } else {
 	/* Via signal */
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		     "filterExternalCUPS (%s): %s (PID %d) crashed on signal %d",
-		     filter_name, (wpid == pid ? "Filter" : "Logging"), wpid,
-		     WTERMSIG(wstatus));
+		     filter_name,
+		     (wpid == pid ?
+		      (params->is_backend ? "Backend" : "Filter") :
+		      "Logging"),
+		     wpid, WTERMSIG(wstatus));
 	status = 256 * WTERMSIG(wstatus);
       }
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
 		   "filterExternalCUPS (%s): %s (PID %d) exited with no errors.",
-		   filter_name, (wpid == pid ? "Filter" : "Logging"), wpid);
+		   filter_name,
+		   (wpid == pid ?
+		    (params->is_backend ? "Backend" : "Filter") : "Logging"),
+		   wpid);
     }
     if (wpid == pid)
       pid = -1;

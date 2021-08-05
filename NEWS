@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: The filterExternalCUPS() function. now
+	  supports also to run CUPS backends in discovery mode
+	  (without command line arguments and without input stream,
+	  list of discovered printers in output stream).
 	- libcupsfilters: Added support for the back and side channels
 	  which CUPS uses for additional communication between the
 	  filters and the backend into the filter function
