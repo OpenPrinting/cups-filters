@@ -50,6 +50,7 @@ pkgbackend_PROGRAMS = parallel serial beh implicitclass
 parallel_SOURCES = \
 	backend/parallel.c
 parallel_LDADD = \
+	libfontembed.la \
 	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS)
@@ -234,6 +235,7 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/log.h \
 	cupsfilters/pdf.h \
 	cupsfilters/pdftoippprinter.h \
+	cupsfilters/pdfutils.h \
 	cupsfilters/ppdgenerator.h \
 	cupsfilters/raster.h
 
@@ -324,6 +326,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pdftoippprinter.c \
 	cupsfilters/pdftops.c \
 	cupsfilters/pdftoraster.cxx \
+	cupsfilters/pdfutils.c \
 	cupsfilters/ppdgenerator.c \
 	cupsfilters/pstops.c \
 	cupsfilters/pwgtoraster.c \
@@ -333,12 +336,15 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/rastertopwg.c \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
+	cupsfilters/texttopdf.c \
 	$(pkgfiltersinclude_DATA)
 EXTRA_libcupsfilters_la_SOURCES = \
 	cupsfilters/getline.c \
 	cupsfilters/strcasestr.c
 libcupsfilters_la_LIBADD = \
 	libppd.la \
+	libfontembed.la \
+	$(FONTCONFIG_LIBS) \
 	$(GETLINE) \
 	$(STRCASESTR) \
 	$(CUPS_LIBS) \
@@ -351,6 +357,8 @@ libcupsfilters_la_LIBADD = \
 	-lm
 libcupsfilters_la_CFLAGS = \
 	-I$(srcdir)/ppd/ \
+	-I$(srcdir)/fontembed/ \
+	$(FONTCONFIG_CFLAGS) \
 	$(CUPS_CFLAGS) \
 	$(LCMS_CFLAGS) \
 	$(LIBQPDF_CFLAGS) \
@@ -976,6 +984,22 @@ texttotext_DEPENDENCIES = \
 	$(STRCASESTR) \
 	libppd.la
 
+texttopdf_SOURCES = \
+	filter/texttopdf.c \
+	fontembed/embed.h \
+	fontembed/sfnt.h
+texttopdf_CFLAGS = \
+	-I$(srcdir)/fontembed/ \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS) \
+	$(FONTCONFIG_CFLAGS)
+texttopdf_LDADD = \
+	libfontembed.la \
+	libcupsfilters.la \
+	$(CUPS_LIBS) \
+	$(FONTCONFIG_LIBS)
+
 pdftops_SOURCES = \
 	filter/pdftops.c
 pdftops_CFLAGS = \
@@ -1053,29 +1077,6 @@ test_pdf2_SOURCES = \
 test_pdf2_CFLAGS = -I$(srcdir)/fontembed/
 test_pdf2_LDADD = libfontembed.la
 
-texttopdf_SOURCES = \
-	filter/pdfutils.c \
-	filter/pdfutils.h \
-	filter/textcommon.c \
-	filter/textcommon.h \
-	filter/texttopdf.c \
-	fontembed/bitset.h \
-	fontembed/embed.h \
-	fontembed/fontfile.h \
-	fontembed/iofn.h \
-	fontembed/sfnt.h
-texttopdf_CFLAGS = \
-	-I$(srcdir)/fontembed/ \
-	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS) \
-	$(FONTCONFIG_CFLAGS)
-texttopdf_LDADD = \
-	libfontembed.la \
-	libcupsfilters.la \
-	libppd.la \
-	$(CUPS_LIBS) \
-	$(FONTCONFIG_LIBS)
 
 # =====
 # UTILS
