@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, texttopdf: Moved core functionality of
+	  texttopdf into the texttopdf() filter function (Pull request
+	  #404).
 	- libcupsfilters: The filterExternalCUPS() function. now
 	  supports also to run CUPS backends in discovery mode
 	  (without command line arguments and without input stream,
