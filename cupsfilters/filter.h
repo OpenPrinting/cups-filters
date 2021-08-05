@@ -107,13 +107,13 @@ typedef struct filter_filter_in_chain_s { /* filter entry for CUPS array to
   char *name;                 /* Name/comment, only for logging */
 } filter_filter_in_chain_t;
 
-typedef struct texttopdf_parameter_s{	/* parameters container of environemnt
-											variables needed by texttopdf
-											filter function */
-  const char* content_type;				
-  const char* classification;
-  const char* data_dir;
-  char* char_set;
+typedef struct texttopdf_parameter_s {  /* parameters container of environemnt
+					   variables needed by texttopdf
+					   filter function */
+  const char *data_dir;
+  const char *char_set;
+  const char *content_type;
+  const char *classification;
 } texttopdf_parameter_t;
 
 /*
@@ -295,14 +295,17 @@ extern int rastertopwg(int inputfd,
 /* Parameters: filter_out_format_t*
    Ouput format: Apple Raster or PWG Raster */
 
+
 extern int texttopdf(int inputfd,
-		       int outputfd,
-		       int inputseekable,
-		       filter_data_t *data,
-		       void *parameters);
+		     int outputfd,
+		     int inputseekable,
+		     filter_data_t *data,
+		     void *parameters);
 
 /* Parameters: texttopdf_parameter_t*
-   Ouput format: PDF */
+   Data directory (fonts, charsets), charset, content type (for prettyprint),
+   classification (for overprint/watermark) */
+
 
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,
@@ -326,6 +329,7 @@ extern void filterUpdatePageVars(int Orientation,
 				 float *PageLeft, float *PageRight,
 				 float *PageTop, float *PageBottom,
 				 float *PageWidth, float *PageLength);
+
 
 #  ifdef __cplusplus
 }

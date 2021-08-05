@@ -1627,7 +1627,7 @@ WriteProlog(const char *title,		/* I - Title of job */
             void *ld)	
 {
   int		i, j, k;	/* Looping vars */
-  char		*charset;	/* Character set string */
+  const char	*charset;	/* Character set string */
   char		filename[1024];	/* Glyph filenames */
   FILE		*fp;		/* Glyph files */
   const char	*datadir;	/* CUPS_DATADIR environment variable */
