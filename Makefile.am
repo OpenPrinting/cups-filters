@@ -50,7 +50,6 @@ pkgbackend_PROGRAMS = parallel serial beh implicitclass
 parallel_SOURCES = \
 	backend/parallel.c
 parallel_LDADD = \
-	libfontembed.la \
 	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS)
@@ -985,20 +984,13 @@ texttotext_DEPENDENCIES = \
 	libppd.la
 
 texttopdf_SOURCES = \
-	filter/texttopdf.c \
-	fontembed/embed.h \
-	fontembed/sfnt.h
+	filter/texttopdf.c
 texttopdf_CFLAGS = \
-	-I$(srcdir)/fontembed/ \
 	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS) \
-	$(FONTCONFIG_CFLAGS)
+	$(CUPS_CFLAGS)
 texttopdf_LDADD = \
-	libfontembed.la \
 	libcupsfilters.la \
-	$(CUPS_LIBS) \
-	$(FONTCONFIG_LIBS)
+	$(CUPS_LIBS)
 
 pdftops_SOURCES = \
 	filter/pdftops.c
