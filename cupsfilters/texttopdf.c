@@ -23,17 +23,19 @@
 /*
  * Include necessary headers...
  */
-#include "filter.h"
-#include <cupsfilters/pdfutils.h>
-#include "fontembed/embed.h"
+
 #include <assert.h>
-#include <fontconfig/fontconfig.h>
-#include <errno.h>
 #include <config.h>
-#include <cupsfilters/raster.h>
-#include "fontembed/sfnt.h"
+#include "cupsfilters/pdfutils.h"
+#include "cupsfilters/raster.h"
 #include <ctype.h>
+#include <errno.h>
+#include "filter.h"
+#include "fontconfig/fontconfig.h"
+#include "fontembed/embed.h"
+#include "fontembed/sfnt.h"
 #include "fontembed/fontfile.h"
+
 /*
  * Constants...
  */
@@ -798,7 +800,6 @@ texttopdf(int inputfd,         /* I - File descriptor input stream */
 	doc.PageLength = 792.0f;	/* Total page length */
   doc.pdf  = NULL;
 
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement");
   setbuf(stderr, NULL);
 
    /*
@@ -829,7 +830,6 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
     fclose(fp);
     return (1);
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement2");
 
  /*
   * Process command-line options and write the prolog...
@@ -839,7 +839,7 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
   if(data->ppd){
 	  ppdMarkOptions(data->ppd, data->num_options, data->options);
   }
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement3");
+
   if ((val = cupsGetOption("prettyprint", data->num_options, data->options)) != NULL &&
       strcasecmp(val, "no") && strcasecmp(val, "off") &&
       strcasecmp(val, "false"))
@@ -892,12 +892,12 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement3");
       doc.Keywords    = NULL;
     }
   }
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement4");
+
   filterSetCommonOptions(data->ppd, data->num_options, data->options, 1,
                           &(doc.Orientation), &(doc.Duplex), &(doc.LanguageLevel), &(doc.ColorDevice), &(doc.PageLeft),
                           &(doc.PageRight), &(doc.PageTop), &(doc.PageBottom), &(doc.PageWidth), &(doc.PageLength),
                           log, ld);
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement5");
+
   if (!data->ppd) {
     cupsRasterParseIPPOptions(&(doc.h), data, 0, 1);
     doc.Orientation = doc.h.Orientation;
@@ -917,13 +917,13 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement5");
       (float)doc.h.ImagingBoundingBox[3];
     doc.Copies = doc.h.NumCopies;
   }
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement6");
+
   if ((val = cupsGetOption("wrap", data->num_options, data->options)) == NULL)
     doc.WrapLines = 1;
   else
     doc.WrapLines = !strcasecmp(val, "true") || !strcasecmp(val, "on") ||
                 !strcasecmp(val, "yes");
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement7");
+
   if ((val = cupsGetOption("columns", data->num_options, data->options)) != NULL)
   {
     doc.PageColumns = atoi(val);
@@ -936,7 +936,7 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement7");
       return (1);
     }
   }
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement8");
+
   if ((val = cupsGetOption("cpi", data->num_options, data->options)) != NULL)
   {
     doc.CharsPerInch = atof(val);
@@ -949,7 +949,7 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement8");
       return (1);
     }
   }
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement9");
+
   if ((val = cupsGetOption("lpi", data->num_options, data->options)) != NULL)
   {
     doc.LinesPerInch = atof(val);
@@ -962,7 +962,7 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement9");
       return (1);
     }
   }
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement10");
+
   if (doc.PrettyPrint)
     doc.PageTop -= 216.0f / doc.LinesPerInch;
 
@@ -1021,7 +1021,7 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement10");
   keycol       = 0;
   cmntState     = NoCmnt;
   strState      = NoStr;
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement11");
+
   while ((ch = getutf8(fp)) >= 0)
   {
     if (empty)
@@ -1031,7 +1031,7 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement11");
       WriteProlog(data->job_title, data->job_user, doc.env_vars.classification,
 		  cupsGetOption("page-label", data->num_options, data->options), data->ppd, &doc, log, ld);
     }
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement12");
+
    /*
     * Control codes:
     *
@@ -1150,7 +1150,6 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement11");
 	      }
 	    }
 	  }
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement13");
 
           line ++;
           column = 0;
@@ -1488,7 +1487,7 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement11");
 
     lastch = ch;
   }
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"log-statement12");
+  
   /* Do not write anything if the input file is empty */
   if (empty)
   {

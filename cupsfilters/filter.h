@@ -105,8 +105,10 @@ typedef struct filter_filter_in_chain_s { /* filter entry for CUPS array to
   char *name;                 /* Name/comment, only for logging */
 } filter_filter_in_chain_t;
 
-typedef struct texttopdf_parameter_s{
-  const char* content_type;
+typedef struct texttopdf_parameter_s{	/* parameters container of environemnt
+											variables needed by texttopdf
+											filter function */
+  const char* content_type;				
   const char* classification;
   const char* data_dir;
   char* char_set;
@@ -296,6 +298,9 @@ extern int texttopdf(int inputfd,
 		       int inputseekable,
 		       filter_data_t *data,
 		       void *parameters);
+
+/* Parameters: texttopdf_parameter_t*
+   Ouput format: PDF */
 
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,
