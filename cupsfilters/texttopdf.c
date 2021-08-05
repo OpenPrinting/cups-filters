@@ -499,7 +499,6 @@ typedef struct texttopdf_doc_s{
                                 /* line parsing for PPD-less queue */
   texttopdf_parameter_t env_vars;
   int NumKeywords;
-  float CharsPerInch;
   float	PageLeft,	/* Left margin */
 		PageRight,	/* Right margin */
 		PageBottom,	/* Bottom margin */
@@ -515,7 +514,7 @@ typedef struct texttopdf_doc_s{
 		ColumnWidth,	/* Width of each column */
 		PrettyPrint,	/* Do pretty code formatting? */
 		Copies;		/* Number of copies to produce */
-  float	//CharsPerInch,	/* Number of character columns per inch */
+  float	CharsPerInch,	/* Number of character columns per inch */
 		LinesPerInch;	/* Number of lines per inch */
   int	UTF8;
   char	**Keywords;	/* List of known keywords... */
@@ -697,20 +696,6 @@ getutf8(FILE *fp)	/* I - File to read from */
     return (EOF);
   }
 }
-/*
- * Globals...
- */
-
-//int		NumFonts;	/* Number of fonts to use */
-//EMB_PARAMS	*Fonts[256][4];	/* Fonts to use */
-//unsigned short	Chars[256];	/* Input char to unicode */
-//unsigned char	Codes[65536];	/* Unicode glyph mapping to font */
-//int		Widths[256];	/* Widths of each font */
-//int		Directions[256];/* Text directions for each font */
-//pdfOut *pdf;
-//int    FontResource;   /* Object number of font resource dictionary */
-//float  FontScaleX,FontScaleY;  /* The font matrix */
-//lchar_t *Title,*Date;   /* The title and date strings */
 
 /*
  * Local functions...
@@ -721,10 +706,10 @@ static void	write_string(int col, int row, int len, lchar_t *s, texttopdf_doc_t 
 static lchar_t *make_wide(const char *buf, texttopdf_doc_t *doc);
 static void     write_font_str(float x,float y,int fontid, lchar_t *str, int len, texttopdf_doc_t *doc);
 static void     write_pretty_header();
-void WriteProlog(const char *title, const char *user, const char *classification, const char *label, 
+void            WriteProlog(const char *title, const char *user, const char *classification, const char *label, 
                   ppd_file_t *ppd, texttopdf_doc_t *doc, filter_logfunc_t log, void *ld);
-void WritePage(texttopdf_doc_t *doc);
-void WriteEpilogue(texttopdf_doc_t *doc);
+void            WritePage(texttopdf_doc_t *doc);
+void            WriteEpilogue(texttopdf_doc_t *doc);
 /*
  * 'texttopdf()' - Main entry for text to PDF filter.
  */
@@ -745,10 +730,8 @@ texttopdf(int inputfd,         /* I - File descriptor input stream */
 		lastch,		/* Previous char from file */
 		attr,		/* Current attribute */
 		line,		/* Current line */
-  		column,		/* Current column */
-  		page_column;	/* Current page column */
- // int		num_options;	/* Number of print options */
- // cups_option_t	*options;	/* Print options */
+  	column,		/* Current column */
+  	page_column;	/* Current page column */
 
   const char	*val;		/* Option value */
   char		keyword[64],	/* Keyword string */
@@ -763,7 +746,6 @@ texttopdf(int inputfd,         /* I - File descriptor input stream */
   void                 *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
-  //cups_file_t *inputfp;		/* Print file */
   FILE *outputfp;   /* Output data stream */
   FILE		*fp;		/* Print file */
   
@@ -799,6 +781,15 @@ texttopdf(int inputfd,         /* I - File descriptor input stream */
 	doc.PageWidth = 612.0f,	/* Total page width */
 	doc.PageLength = 792.0f;	/* Total page length */
   doc.pdf  = NULL;
+
+  if (parameters) {
+    doc.env_vars = *((texttopdf_parameter_t *)parameters);
+  } else {
+    doc.env_vars.data_dir = CUPS_DATADIR;
+    doc.env_vars.char_set = NULL;
+    doc.env_vars.content_type = NULL;
+    doc.env_vars.classification = NULL;
+ }
 
   setbuf(stderr, NULL);
 
@@ -850,10 +841,6 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
     doc.PageTop      = doc.PageLength - 36.0f;
     doc.CharsPerInch = 12;
     doc.LinesPerInch = 8;
-
-   if(parameters){
-    doc.env_vars = *(texttopdf_parameter_t *)parameters;
-   }
 
     if ((val = doc.env_vars.content_type) == NULL)
     {
@@ -970,7 +957,7 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
   * Allocate memory for the page...
   */
 
-  doc.SizeColumns = (doc.PageRight - doc.PageLeft) / (72.0 * (doc.CharsPerInch));
+  doc.SizeColumns = (doc.PageRight - doc.PageLeft) / 72.0 * doc.CharsPerInch;
   doc.SizeLines   = (doc.PageTop - doc.PageBottom) / 72.0 * doc.LinesPerInch;
 
  /*
@@ -1512,9 +1499,6 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
 
   if (fp != stdin)
     fclose(fp);
-
-  if (data->ppd != NULL)
-    ppdClose(data->ppd);
 
   free(doc.Page[0]);
   free(doc.Page);

@@ -53,13 +53,24 @@ main(int  argc,	   /* I - Number of command-line arguments */
   * Fire up the texttopdf() filter function
   */
  texttopdf_parameter_t parameters;
- 
- if ((parameters.data_dir = getenv("CUPS_DATADIR")) == NULL)
-    parameters.data_dir = CUPS_DATADIR;
+ char *p;
 
-  parameters.char_set = getenv("CHARSET");
-  parameters.content_type = getenv("CONTENT_TYPE");
-  parameters.classification = getenv("CLASSIFICATION");
+ if ((p = getenv("CUPS_DATADIR")) != NULL)
+   parameters.data_dir = p;
+ else
+   parameters.data_dir = CUPS_DATADIR;
+ if ((p = getenv("CHARSET")) != NULL)
+   parameters.char_set = p;
+ else
+   parameters.char_set = NULL;
+ if ((p = getenv("CONTENT_TYPE")) != NULL)
+   parameters.content_type = p;
+ else
+   parameters.content_type = NULL;
+ if ((p = getenv("CLASSIFICATION")) != NULL)
+   parameters.classification = p;
+ else
+   parameters.classification = NULL;
 
   ret = filterCUPSWrapper(argc, argv, texttopdf, &parameters, &JobCanceled);
 
