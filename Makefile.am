@@ -50,6 +50,7 @@ pkgbackend_PROGRAMS = parallel serial beh implicitclass
 parallel_SOURCES = \
 	backend/parallel.c
 parallel_LDADD = \
+	libfontembed.la \
 	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS)
@@ -267,6 +268,7 @@ TESTS += \
 
 libcupsfilters_la_SOURCES = \
 	cupsfilters/attr.c \
+	cupsfilters/bannertopdf.c \
 	cupsfilters/bitmap.c \
 	cupsfilters/check.c \
 	cupsfilters/cmyk.c \
