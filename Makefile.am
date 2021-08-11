@@ -374,6 +374,7 @@ libcupsfilters_la_LIBADD += $(DBUS_LIBS)
 endif
 libcupsfilters_la_DEPENDENCIES = \
 	libppd.la \
+	libfontembed.la \
 	$(GETLINE) \
 	$(STRCASESTR)
 
