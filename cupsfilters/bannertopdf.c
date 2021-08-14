@@ -38,36 +38,38 @@
 #include <cups/pwg.h>
 #endif /* HAVE_CUPS_1_7 */
 
-
 #include "filter.h"
 #include <cupsfilters/pdf.h>
 
-enum banner_info {
-    INFO_IMAGEABLE_AREA            = 1,
-    INFO_JOB_BILLING               = 1 << 1,
-    INFO_JOB_ID                    = 1 << 2,
-    INFO_JOB_NAME                  = 1 << 3,
+enum banner_info
+{
+    INFO_IMAGEABLE_AREA = 1,
+    INFO_JOB_BILLING = 1 << 1,
+    INFO_JOB_ID = 1 << 2,
+    INFO_JOB_NAME = 1 << 3,
     INFO_JOB_ORIGINATING_HOST_NAME = 1 << 4,
     INFO_JOB_ORIGINATING_USER_NAME = 1 << 5,
-    INFO_JOB_UUID                  = 1 << 6,
-    INFO_OPTIONS                   = 1 << 7,
-    INFO_PAPER_NAME                = 1 << 8,
-    INFO_PAPER_SIZE                = 1 << 9,
-    INFO_PRINTER_DRIVER_NAME       = 1 << 10,
-    INFO_PRINTER_DRIVER_VERSION    = 1 << 11,
-    INFO_PRINTER_INFO              = 1 << 12,
-    INFO_PRINTER_LOCATION          = 1 << 13,
-    INFO_PRINTER_MAKE_AND_MODEL    = 1 << 14,
-    INFO_PRINTER_NAME              = 1 << 15,
-    INFO_TIME_AT_CREATION          = 1 << 16,
-    INFO_TIME_AT_PROCESSING        = 1 << 17
+    INFO_JOB_UUID = 1 << 6,
+    INFO_OPTIONS = 1 << 7,
+    INFO_PAPER_NAME = 1 << 8,
+    INFO_PAPER_SIZE = 1 << 9,
+    INFO_PRINTER_DRIVER_NAME = 1 << 10,
+    INFO_PRINTER_DRIVER_VERSION = 1 << 11,
+    INFO_PRINTER_INFO = 1 << 12,
+    INFO_PRINTER_LOCATION = 1 << 13,
+    INFO_PRINTER_MAKE_AND_MODEL = 1 << 14,
+    INFO_PRINTER_NAME = 1 << 15,
+    INFO_TIME_AT_CREATION = 1 << 16,
+    INFO_TIME_AT_PROCESSING = 1 << 17
 };
 
-typedef struct bannertopdf_doc_s{
+typedef struct bannertopdf_doc_s
+{
 
 } bannertopdf_doc_t;
 
-typedef struct {
+typedef struct
+{
     char *template_file;
     char *header, *footer;
     unsigned infos;
@@ -75,20 +77,23 @@ typedef struct {
 
 void banner_free(banner_t *banner)
 {
-    if (banner) {
+    if (banner)
+    {
         free(banner->template_file);
         free(banner->header);
         free(banner->footer);
         free(banner);
     }
 }
+
 static int parse_line(char *line, char **key, char **value)
 {
     char *p = line;
 
     *key = *value = NULL;
 
-    while (isspace(*p)) p++;
+    while (isspace(*p))
+        p++;
     if (!*p || *p == '#')
         return 0;
 
@@ -100,7 +105,8 @@ static int parse_line(char *line, char **key, char **value)
 
     *p++ = '\0';
 
-    while (isspace(*p)) p++;
+    while (isspace(*p))
+        p++;
     if (!*p)
         return 1;
 
@@ -119,9 +125,10 @@ static unsigned parse_show(char *s, filter_logfunc_t log, void *ld)
     unsigned info = 0;
     char *tok;
 
-    for (tok = strtok(s, " \t"); tok; tok = strtok(NULL, " \t")) {
+    for (tok = strtok(s, " \t"); tok; tok = strtok(NULL, " \t"))
+    {
         if (!strcasecmp(tok, "imageable-area"))
-             info |= INFO_IMAGEABLE_AREA;
+            info |= INFO_IMAGEABLE_AREA;
         else if (!strcasecmp(tok, "job-billing"))
             info |= INFO_JOB_BILLING;
         else if (!strcasecmp(tok, "job-id"))
@@ -156,32 +163,34 @@ static unsigned parse_show(char *s, filter_logfunc_t log, void *ld)
             info |= INFO_TIME_AT_CREATION;
         else if (!strcasecmp(tok, "time-at-processing"))
             info |= INFO_TIME_AT_PROCESSING;
-        else
-            if(log) log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: error: unknown value for 'Show': %s\n", tok);
+        else if (log)
+            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: error: unknown value for 'Show': %s\n", tok);
     }
     return info;
 }
 
-
-static char * template_path(const char *name)
+static char *template_path(const char *name)
 {
     char *datadir, *result;
 
     if (name[0] == '/')
         return strdup(name);
 
-    if ((datadir = getenv("CUPS_DATADIR")) == NULL) {
+    if ((datadir = getenv("CUPS_DATADIR")) == NULL)
+    {
         result = malloc(strlen(BANNERTOPDF_DATADIR) + strlen(name) + 2);
         sprintf(result, "%s/%s", BANNERTOPDF_DATADIR, name);
-    } else {
+    }
+    else
+    {
         result = malloc(strlen(datadir) + strlen(name) + 7);
         sprintf(result, "%s/data/%s", datadir, name);
-    }  
+    }
 
     return result;
 }
-banner_t * banner_new_from_file_descriptor(int inputfd,
-        int *num_options, cups_option_t **options, filter_logfunc_t log,  void *ld)
+banner_t *banner_new_from_file_descriptor(int inputfd,
+                                          int *num_options, cups_option_t **options, filter_logfunc_t log, void *ld)
 {
     FILE *f;
     char *line = NULL;
@@ -189,8 +198,8 @@ banner_t * banner_new_from_file_descriptor(int inputfd,
     int linenr = 0;
     banner_t *banner = NULL;
 
- 
-    if(!(f = fdopen(inputfd, "r"))) {
+    if (!(f = fdopen(inputfd, "r")))
+    {
         perror("Error opening banner file");
         goto out;
     }
@@ -201,15 +210,18 @@ banner_t * banner_new_from_file_descriptor(int inputfd,
 
     banner = calloc(1, sizeof *banner);
 
-    while (getline(&line, &len, f) != -1) {
+    while (getline(&line, &len, f) != -1)
+    {
         char *key, *value;
 
         linenr++;
         if (!parse_line(line, &key, &value))
             continue;
 
-        if (!value) {
-            if(log) log(ld, FILTER_LOGLEVEL_ERROR, "line %d is missing a value", linenr);
+        if (!value)
+        {
+            if (log)
+                log(ld, FILTER_LOGLEVEL_ERROR, "line %d is missing a value", linenr);
             continue;
         }
 
@@ -219,31 +231,38 @@ banner_t * banner_new_from_file_descriptor(int inputfd,
             banner->header = strdup(value);
         else if (!strcasecmp(key, "footer"))
             banner->header = strdup(value);
-        else if (!strcasecmp(key, "font")) {
+        else if (!strcasecmp(key, "font"))
+        {
             *num_options = cupsAddOption("banner-font",
-                    strdup(value), *num_options, options);
+                                         strdup(value), *num_options, options);
         }
-        else if (!strcasecmp(key, "font-size")) {
+        else if (!strcasecmp(key, "font-size"))
+        {
             *num_options = cupsAddOption("banner-font-size",
-                    strdup(value), *num_options, options);
+                                         strdup(value), *num_options, options);
         }
         else if (!strcasecmp(key, "show"))
             banner->infos = parse_show(value, log, ld);
         else if (!strcasecmp(key, "image") ||
-                 !strcasecmp(key, "notice")){
-            if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+                 !strcasecmp(key, "notice"))
+        {
+            if (log)
+                log(ld, FILTER_LOGLEVEL_ERROR,
                     "bannertopdf: note:%d: bannertopdf does not support '%s'",
                     linenr, key);
-                 }
+        }
         else
-            {if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+        {
+            if (log)
+                log(ld, FILTER_LOGLEVEL_ERROR,
                     "error:%d: unknown keyword '%s'",
-                    linenr, key);}
+                    linenr, key);
+        }
     }
 
     /* load default template if none was specified */
     if (!banner->template_file)
-        banner->template_file = template_path ("default.pdf");
+        banner->template_file = template_path("default.pdf");
 
 out:
     free(line);
@@ -261,7 +280,6 @@ static float get_float_option(const char *name,
     return value ? atof(value) : def;
 }
 
-
 static int get_int_option(const char *name,
                           int noptions,
                           cups_option_t *options,
@@ -271,7 +289,6 @@ static int get_int_option(const char *name,
     return value ? atoi(value) : def;
 }
 
-
 static void get_pagesize(ppd_file_t *ppd,
                          int noptions,
                          cups_option_t *options,
@@ -280,22 +297,22 @@ static void get_pagesize(ppd_file_t *ppd,
                          float media_limits[4])
 {
     static const ppd_size_t defaultsize = {
-        0,          /* marked */
-        "",         /* name */
-        612.0,      /* width */
-        792.0,      /* length */
-        18.0,       /* left */
-        36.0,       /* bottom */
-        594.0,      /* right */
-        756.0,      /* top */
+        0,     /* marked */
+        "",    /* name */
+        612.0, /* width */
+        792.0, /* length */
+        18.0,  /* left */
+        36.0,  /* bottom */
+        594.0, /* right */
+        756.0, /* top */
     };
     const ppd_size_t *pagesize;
 #ifdef HAVE_CUPS_1_7
-    pwg_media_t      *size_found;          /* page size found for given name */
-    const char       *val;                 /* Pointer into value */
-    char             *ptr1, *ptr2,         /* Pointer into string */
-                     s[255];               /* Temporary string */
-#endif /* HAVE_CUPS_1_7 */
+    pwg_media_t *size_found; /* page size found for given name */
+    const char *val;         /* Pointer into value */
+    char *ptr1, *ptr2,       /* Pointer into string */
+        s[255];              /* Temporary string */
+#endif                       /* HAVE_CUPS_1_7 */
 
     if (!ppd || !(pagesize = ppdPageSize(ppd, NULL)))
         pagesize = &defaultsize;
@@ -317,76 +334,71 @@ static void get_pagesize(ppd_file_t *ppd,
                                        fabs(pagesize->top));
 
 #ifdef HAVE_CUPS_1_7
-    if (!ppd) {
-      if ((val = cupsGetOption("media-size", noptions, options)) != NULL ||
-	  (val = cupsGetOption("MediaSize", noptions, options)) != NULL ||
-	  (val = cupsGetOption("page-size", noptions, options)) != NULL ||
-	  (val = cupsGetOption("PageSize", noptions, options)) != NULL ||
-	  (val = cupsGetOption("media", noptions, options)) != NULL) {
-	for (ptr1 = (char *)val; *ptr1;) {
-	  for (ptr2 = s; *ptr1 && *ptr1 != ',' && (ptr2 - s) < (sizeof(s) - 1);)
-	    *ptr2++ = *ptr1++;
-	  *ptr2++ = '\0';
-	  if (*ptr1 == ',')
-	    ptr1 ++;
-	  size_found = NULL;
-	  if ((size_found = pwgMediaForPWG(s)) == NULL)
-	    if ((size_found = pwgMediaForPPD(s)) == NULL)
-	      size_found = pwgMediaForLegacy(s);
-	  if (size_found != NULL) {
-	    *width = size_found->width * 72.0 / 2540.0;
-	    *length = size_found->length * 72.0 / 2540.0;
-	    media_limits[2] += (*width - 612.0);
-	    media_limits[3] += (*length - 792.0);
-	  }
-	}
-      }
-      if ((val = cupsGetOption("media-left-margin", noptions, options))
-	  != NULL)
-	media_limits[0] = atol(val) * 72.0 / 2540.0; 
-      if ((val = cupsGetOption("media-bottom-margin", noptions, options))
-	  != NULL)
-	media_limits[1] = atol(val) * 72.0 / 2540.0; 
-      if ((val = cupsGetOption("media-right-margin", noptions, options))
-	  != NULL)
-	media_limits[2] = *width - atol(val) * 72.0 / 2540.0; 
-      if ((val = cupsGetOption("media-top-margin", noptions, options))
-	  != NULL)
-	media_limits[3] = *length - atol(val) * 72.0 / 2540.0; 
+    if (!ppd)
+    {
+        if ((val = cupsGetOption("media-size", noptions, options)) != NULL ||
+            (val = cupsGetOption("MediaSize", noptions, options)) != NULL ||
+            (val = cupsGetOption("page-size", noptions, options)) != NULL ||
+            (val = cupsGetOption("PageSize", noptions, options)) != NULL ||
+            (val = cupsGetOption("media", noptions, options)) != NULL)
+        {
+            for (ptr1 = (char *)val; *ptr1;)
+            {
+                for (ptr2 = s; *ptr1 && *ptr1 != ',' && (ptr2 - s) < (sizeof(s) - 1);)
+                    *ptr2++ = *ptr1++;
+                *ptr2++ = '\0';
+                if (*ptr1 == ',')
+                    ptr1++;
+                size_found = NULL;
+                if ((size_found = pwgMediaForPWG(s)) == NULL)
+                    if ((size_found = pwgMediaForPPD(s)) == NULL)
+                        size_found = pwgMediaForLegacy(s);
+                if (size_found != NULL)
+                {
+                    *width = size_found->width * 72.0 / 2540.0;
+                    *length = size_found->length * 72.0 / 2540.0;
+                    media_limits[2] += (*width - 612.0);
+                    media_limits[3] += (*length - 792.0);
+                }
+            }
+        }
+        if ((val = cupsGetOption("media-left-margin", noptions, options)) != NULL)
+            media_limits[0] = atol(val) * 72.0 / 2540.0;
+        if ((val = cupsGetOption("media-bottom-margin", noptions, options)) != NULL)
+            media_limits[1] = atol(val) * 72.0 / 2540.0;
+        if ((val = cupsGetOption("media-right-margin", noptions, options)) != NULL)
+            media_limits[2] = *width - atol(val) * 72.0 / 2540.0;
+        if ((val = cupsGetOption("media-top-margin", noptions, options)) != NULL)
+            media_limits[3] = *length - atol(val) * 72.0 / 2540.0;
     }
 #endif /* HAVE_CUPS_1_7 */
 }
-
 
 static int duplex_marked(ppd_file_t *ppd,
                          int noptions,
                          cups_option_t *options)
 {
-    const char       *val;                 /* Pointer into value */
-    return
-      (ppd &&
-       (ppdIsMarked(ppd, "Duplex", "DuplexNoTumble") ||
-        ppdIsMarked(ppd, "Duplex", "DuplexTumble") ||
-        ppdIsMarked(ppd, "JCLDuplex", "DuplexNoTumble") ||
-        ppdIsMarked(ppd, "JCLDuplex", "DuplexTumble") ||
-        ppdIsMarked(ppd, "EFDuplex", "DuplexNoTumble") ||
-        ppdIsMarked(ppd, "EFDuplex", "DuplexTumble") ||
-        ppdIsMarked(ppd, "EFDuplexing", "DuplexNoTumble") ||
-        ppdIsMarked(ppd, "EFDuplexing", "DuplexTumble") ||
-        ppdIsMarked(ppd, "ARDuplex", "DuplexNoTumble") ||
-        ppdIsMarked(ppd, "ARDuplex", "DuplexTumble") ||
-        ppdIsMarked(ppd, "KD03Duplex", "DuplexNoTumble") ||
-        ppdIsMarked(ppd, "KD03Duplex", "DuplexTumble"))) ||
-      ((val = cupsGetOption("Duplex", noptions, options))
-       != NULL &&
-       (!strcasecmp(val, "DuplexNoTumble") ||
-	!strcasecmp(val, "DuplexTumble"))) ||
-      ((val = cupsGetOption("sides", noptions, options))
-       != NULL &&
-       (!strcasecmp(val, "two-sided-long-edge") ||
-	!strcasecmp(val, "two-sided-short-edge")));
+    const char *val; /* Pointer into value */
+    return (ppd &&
+            (ppdIsMarked(ppd, "Duplex", "DuplexNoTumble") ||
+             ppdIsMarked(ppd, "Duplex", "DuplexTumble") ||
+             ppdIsMarked(ppd, "JCLDuplex", "DuplexNoTumble") ||
+             ppdIsMarked(ppd, "JCLDuplex", "DuplexTumble") ||
+             ppdIsMarked(ppd, "EFDuplex", "DuplexNoTumble") ||
+             ppdIsMarked(ppd, "EFDuplex", "DuplexTumble") ||
+             ppdIsMarked(ppd, "EFDuplexing", "DuplexNoTumble") ||
+             ppdIsMarked(ppd, "EFDuplexing", "DuplexTumble") ||
+             ppdIsMarked(ppd, "ARDuplex", "DuplexNoTumble") ||
+             ppdIsMarked(ppd, "ARDuplex", "DuplexTumble") ||
+             ppdIsMarked(ppd, "KD03Duplex", "DuplexNoTumble") ||
+             ppdIsMarked(ppd, "KD03Duplex", "DuplexTumble"))) ||
+           ((val = cupsGetOption("Duplex", noptions, options)) != NULL &&
+            (!strcasecmp(val, "DuplexNoTumble") ||
+             !strcasecmp(val, "DuplexTumble"))) ||
+           ((val = cupsGetOption("sides", noptions, options)) != NULL &&
+            (!strcasecmp(val, "two-sided-long-edge") ||
+             !strcasecmp(val, "two-sided-short-edge")));
 }
-
 
 static void info_linef(FILE *s,
                        const char *key,
@@ -401,7 +413,6 @@ static void info_linef(FILE *s,
     va_end(ap);
 }
 
-
 static void info_line(FILE *s,
                       const char *key,
                       const char *value)
@@ -409,15 +420,15 @@ static void info_line(FILE *s,
     info_linef(s, key, "%s", value);
 }
 
-
 static void info_line_time(FILE *s,
-                      const char *key,
-                      const char *timestamp)
+                           const char *key,
+                           const char *timestamp)
 {
     char buf[40];
     time_t time;
 
-    if (timestamp) {
+    if (timestamp)
+    {
         time = (time_t)atoll(timestamp);
         strftime(buf, sizeof buf, "%c", localtime(&time));
         info_line(s, key, buf);
@@ -433,7 +444,8 @@ static const char *human_time(const char *timestamp)
     char *buf = malloc(size);
     strcpy(buf, "unknown");
 
-    if (timestamp) {
+    if (timestamp)
+    {
         time = (time_t)atoll(timestamp);
         strftime(buf, size, "%c", localtime(&time));
     }
@@ -444,17 +456,21 @@ static const char *human_time(const char *timestamp)
 /*
  * Add new key & value.
  */
-static opt_t* add_opt(opt_t *in_opt, const char *key, const char *val) {
-    if ( ! key || ! val ) {
+static opt_t *add_opt(opt_t *in_opt, const char *key, const char *val)
+{
+    if (!key || !val)
+    {
         return in_opt;
     }
 
-    if ( !strlen(key) || !strlen(val) ) {
+    if (!strlen(key) || !strlen(val))
+    {
         return in_opt;
     }
 
     opt_t *entry = malloc(sizeof(opt_t));
-    if ( ! entry ) {
+    if (!entry)
+    {
         return in_opt;
     }
 
@@ -472,12 +488,13 @@ static opt_t* add_opt(opt_t *in_opt, const char *key, const char *val) {
  * Create PDF form's field names according above.
  */
 opt_t *get_known_opts(
-        ppd_file_t *ppd,
-        const char *jobid,
-        const char *user,
-        const char *jobtitle,
-        int noptions,
-        cups_option_t *options) {
+    ppd_file_t *ppd,
+    const char *jobid,
+    const char *user,
+    const char *jobtitle,
+    int noptions,
+    cups_option_t *options)
+{
 
     ppd_attr_t *attr;
     opt_t *opt = NULL;
@@ -499,71 +516,72 @@ opt_t *get_known_opts(
 
     /* Time at creation */
     opt = add_opt(opt, "time-at-creation",
-            human_time(cupsGetOption("time-at-creation", noptions, options)));
+                  human_time(cupsGetOption("time-at-creation", noptions, options)));
 
     /* Processing time */
     opt = add_opt(opt, "time-at-processing",
-            human_time(cupsGetOption("time-at-processing", noptions, options)));
+                  human_time(cupsGetOption("time-at-processing", noptions, options)));
 
     /* Billing information */
     opt = add_opt(opt, "job-billing",
-            cupsGetOption("job-billing", noptions, options));
+                  cupsGetOption("job-billing", noptions, options));
 
     /* Source hostname */
     opt = add_opt(opt, "job-originating-host-name",
-            cupsGetOption("job-originating-host-name", noptions, options));
+                  cupsGetOption("job-originating-host-name", noptions, options));
 
     /* Banner font */
     opt = add_opt(opt, "banner-font",
-            cupsGetOption("banner-font", noptions, options));
+                  cupsGetOption("banner-font", noptions, options));
 
     /* Banner font size */
     opt = add_opt(opt, "banner-font-size",
-            cupsGetOption("banner-font-size", noptions, options));
+                  cupsGetOption("banner-font-size", noptions, options));
 
     /* Job UUID */
     opt = add_opt(opt, "job-uuid",
-            cupsGetOption("job-uuid", noptions, options));
+                  cupsGetOption("job-uuid", noptions, options));
 
     /* Security context */
     opt = add_opt(opt, "security-context",
-            cupsGetOption("security-context", noptions, options));
+                  cupsGetOption("security-context", noptions, options));
 
     /* Security context range part */
     opt = add_opt(opt, "security-context-range",
-            cupsGetOption("security-context-range", noptions, options));
+                  cupsGetOption("security-context-range", noptions, options));
 
     /* Security context current range part */
-    const char * full_range = cupsGetOption("security-context-range", noptions, options);
-    if ( full_range ) {
+    const char *full_range = cupsGetOption("security-context-range", noptions, options);
+    if (full_range)
+    {
         size_t cur_size = strcspn(full_range, "-");
-        char * cur_range = strndup(full_range, cur_size);
+        char *cur_range = strndup(full_range, cur_size);
         opt = add_opt(opt, "security-context-range-cur", cur_range);
     }
 
     /* Security context type part */
     opt = add_opt(opt, "security-context-type",
-            cupsGetOption("security-context-type", noptions, options));
+                  cupsGetOption("security-context-type", noptions, options));
 
     /* Security context role part */
     opt = add_opt(opt, "security-context-role",
-            cupsGetOption("security-context-role", noptions, options));
+                  cupsGetOption("security-context-role", noptions, options));
 
     /* Security context user part */
     opt = add_opt(opt, "security-context-user",
-            cupsGetOption("security-context-user", noptions, options));
+                  cupsGetOption("security-context-user", noptions, options));
 
-    if (ppd) {
-      /* Driver */
-      opt = add_opt(opt, "driver", ppd->pcfilename);
+    if (ppd)
+    {
+        /* Driver */
+        opt = add_opt(opt, "driver", ppd->pcfilename);
 
-      /* Driver version */
-      opt = add_opt(opt, "driver-version", 
-		    (attr = ppdFindAttr(ppd, "FileVersion", NULL)) ? 
-		    attr->value : "");
+        /* Driver version */
+        opt = add_opt(opt, "driver-version",
+                      (attr = ppdFindAttr(ppd, "FileVersion", NULL)) ? attr->value : "");
 
-      /* Make and model */
-      opt = add_opt(opt, "make-and-model", ppd->nickname);
+        /* Make and model */
+        opt = add_opt(opt, "make-and-model", ppd->nickname);
     }
 
     return opt;
@@ -577,7 +595,8 @@ static int generate_banner_pdf(banner_t *banner,
                                int noptions,
                                cups_option_t *options,
                                filter_logfunc_t log,
-                               void *ld)
+                               void *ld,
+                               FILE *outputfp)
 {
     char *buf;
     size_t len;
@@ -598,26 +617,29 @@ static int generate_banner_pdf(banner_t *banner,
     get_pagesize(ppd, noptions, options,
                  &page_width, &page_length, media_limits);
 
-    pdf_resize_page (doc, 1, page_width, page_length, &page_scale);
+    pdf_resize_page(doc, 1, page_width, page_length, &page_scale);
 
     pdf_add_type1_font(doc, 1, "Courier");
 
 #ifdef HAVE_OPEN_MEMSTREAM
     s = open_memstream(&buf, &len);
 #else
-    if ((s = tmpfile()) == NULL) {
-        if(log) log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: cannot create temp file: %s\n", strerror (errno));
+    if ((s = tmpfile()) == NULL)
+    {
+        if (log)
+            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: cannot create temp file: %s\n", strerror(errno));
         return 1;
     }
 #endif
 
-    if (banner->infos & INFO_IMAGEABLE_AREA) {
+    if (banner->infos & INFO_IMAGEABLE_AREA)
+    {
         fprintf(s, "q\n");
         fprintf(s, "0 0 0 RG\n");
         fprintf(s, "%f %f %f %f re S\n", media_limits[0] + 1.0,
-                                         media_limits[1] + 1.0,
-                                         media_limits[2] - media_limits[0] - 2.0,
-                                         media_limits[3] - media_limits[1] - 2.0);
+                media_limits[1] + 1.0,
+                media_limits[2] - media_limits[0] - 2.0,
+                media_limits[3] - media_limits[1] - 2.0);
         fprintf(s, "Q\n");
     }
 
@@ -687,59 +709,63 @@ static int generate_banner_pdf(banner_t *banner,
 
     fprintf(s, "ET\n");
 #ifndef HAVE_OPEN_MEMSTREAM
-    fflush (s);
-    if (fstat (fileno (s), &st) < 0) {
-        if(log) log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: cannot fstat(): %s\n", , strerror(errno));
-        return 1 ;
+    fflush(s);
+    if (fstat(fileno(s), &st) < 0)
+    {
+        if (log)
+            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: cannot fstat(): %s\n", , strerror(errno));
+        return 1;
     }
-    fseek (s, 0L, SEEK_SET);
-    if ((buf = malloc(st.st_size + 1)) == NULL) {
-        if(log) log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: cannot malloc(): %s\n", , strerror(errno));
-        return 1 ;
+    fseek(s, 0L, SEEK_SET);
+    if ((buf = malloc(st.st_size + 1)) == NULL)
+    {
+        if (log)
+            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: cannot malloc(): %s\n", , strerror(errno));
+        return 1;
     }
-    size_t nbytes = fread (buf, 1, st.st_size, s);
+    size_t nbytes = fread(buf, 1, st.st_size, s);
     buf[st.st_size] = '\0';
-    len = strlen (buf);
+    len = strlen(buf);
 #endif /* !HAVE_OPEN_MEMSTREAM */
     fclose(s);
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "form error comming");
-    opt_t * known_opts = get_known_opts(ppd,
-            jobid,
-            user,
-            jobtitle,
-            noptions,
-            options);
+
+    opt_t *known_opts = get_known_opts(ppd,
+                                       jobid,
+                                       user,
+                                       jobtitle,
+                                       noptions,
+                                       options);
 
     /*
      * Try to find a PDF form in PDF template and fill it.
      */
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "form error comming2");
     int ret = pdf_fill_form(doc, known_opts);
 
     /*
      * Could we fill a PDF form? If no, just add PDF stream.
      */
-    if ( ! ret ) {
+    if (!ret)
+    {
         pdf_prepend_stream(doc, 1, buf, len);
     }
 
     copies = get_int_option("number-up", noptions, options, 1);
-    
+
     if (duplex_marked(ppd, noptions, options))
         copies *= 2;
 
     if (copies > 1)
         pdf_duplicate_page(doc, 1, copies - 1);
 
-    pdf_write(doc, stdout);
+    pdf_write(doc, outputfp);
 
-    opt_t * opt_current = known_opts;
-    opt_t * opt_next = NULL;
+    opt_t *opt_current = known_opts;
+    opt_t *opt_next = NULL;
     while (opt_current != NULL)
     {
-      opt_next = opt_current->next;
-      free(opt_current);
-      opt_current = opt_next;
+        opt_next = opt_current->next;
+        free(opt_current);
+        opt_current = opt_next;
     }
 
     free(buf);
@@ -747,12 +773,11 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "form error comming");
     return 0;
 }
 
-
 int bannertopdf(int inputfd,         /* I - File descriptor input stream */
-       int outputfd,        /* I - File descriptor output stream */
-       int inputseekable,   /* I - Is input stream seekable? (unused) */
-       filter_data_t *data, /* I - Job and printer data */
-       void *parameters)	  /* I - Filter-specific parameters (unused) */
+                int outputfd,        /* I - File descriptor output stream */
+                int inputseekable,   /* I - Is input stream seekable? (unused) */
+                filter_data_t *data, /* I - Job and printer data */
+                void *parameters)    /* I - Filter-specific parameters (unused) */
 {
     banner_t *banner;
     int noptions;
@@ -761,38 +786,47 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
     cups_file_t *inputfp;
     FILE *outputfp;
     cups_option_t *options = NULL;
+
     filter_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
     filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
-    void                 *icd = data->iscanceleddata;
+    void *icd = data->iscanceleddata;
     char jobid[50];
 
-    if((inputfp = cupsFileOpenFd(inputfd, "rb"))== NULL)
+    options = (cups_option_t *)malloc(sizeof(cups_option_t));
+
+    options->name = (char*)malloc(sizeof(char) * 1000);
+    options->value = (char*)malloc(sizeof(char) * 1000);
+
+    memcpy(options->name, data->options->name, strlen(data->options->name));
+    memcpy(options->value, data->options->value, strlen(data->options->value));
+
+    if ((inputfp = cupsFileOpenFd(inputfd, "rb")) == NULL)
     {
-    if (!iscanceled || !iscanceled(icd))
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "bannertopdf: Unable to open input data stream.");
+        if (!iscanceled || !iscanceled(icd))
+        {
+            if (log)
+                log(ld, FILTER_LOGLEVEL_DEBUG,
+                    "bannertopdf: Unable to open input data stream.");
+        }
+        return (1);
     }
-    return (1);
-}
-  /*
+    /*
   * Open the output data stream specified by the outputfd...
   */
 
-  if ((outputfp = fdopen(outputfd, "w")) == NULL)
-  {
-    if (!iscanceled || !iscanceled(icd))
+    if ((outputfp = fdopen(outputfd, "w")) == NULL)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "bannertopdf: Unable to open output data stream.");
-    }
+        if (!iscanceled || !iscanceled(icd))
+        {
+            if (log)
+                log(ld, FILTER_LOGLEVEL_DEBUG,
+                    "bannertopdf: Unable to open output data stream.");
+        }
 
-    cupsFileClose(inputfp);
-    return (1);
-  }
-    
-    options = data->options;
+        cupsFileClose(inputfp);
+        return (1);
+    }
 
     if (data->ppd)
         ppd = data->ppd;
@@ -801,21 +835,23 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
 
     noptions = data->num_options;
 
-    if (!ppd){
-        if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "bannertopdf: Could not open PPD file '%s'", ppd);
-    }else{
-        ppdMarkOptions(ppd, noptions, options);
+    if (!ppd)
+    {
+        if (log)
+            log(ld, FILTER_LOGLEVEL_DEBUG, "bannertopdf: Could not open PPD file '%s'", ppd);
     }
-
+   
     banner = banner_new_from_file_descriptor(inputfd, &noptions, &options, log, ld);
 
-    if (!banner) {
-        if(log) log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: Could not read banner file");
+    if (!banner)
+    {
+        if (log)
+            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: Could not read banner file");
         return 1;
     }
 
     sprintf(jobid, "%d", data->job_id);
-    
+
     ret = generate_banner_pdf(banner,
                               ppd,
                               jobid,
@@ -824,8 +860,11 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
                               noptions,
                               options,
                               log,
-                              ld);
+                              ld,
+                              outputfp);
     banner_free(banner);
 
+    if(options) free(options);
+    
     return ret;
 }
