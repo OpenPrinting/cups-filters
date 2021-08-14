@@ -119,8 +119,6 @@ typedef struct pwgtoraster_doc_s
 					   be NULL */
   cups_file_t	*inputfp;		/* Temporary file, if any */
   FILE		*outputfp;		/* Temporary file, if any */
-  bool swap_image_x;
-  bool swap_image_y;
   /* margin swapping */
   bool swap_margin_x;
   bool swap_margin_y;
@@ -363,23 +361,18 @@ static void parseOpts(filter_data_t *data,
 	}
       }
       if (strcasecmp(backside,"ManualTumble") == 0 && doc->outheader.Tumble) {
-	doc->swap_image_x = doc->swap_image_y = true;
 	doc->swap_margin_x = doc->swap_margin_y = true;
 	if (flippedMargin == FM_TRUE) {
 	  doc->swap_margin_y = false;
 	}
       } else if (strcasecmp(backside,"Rotated") == 0 && !doc->outheader.Tumble) {
-	doc->swap_image_x = doc->swap_image_y = true;
 	doc->swap_margin_x = doc->swap_margin_y = true;
 	if (flippedMargin == FM_TRUE) {
 	  doc->swap_margin_y = false;
 	}
       } else if (strcasecmp(backside,"Flipped") == 0) {
 	if (doc->outheader.Tumble) {
-	  doc->swap_image_x = true;
 	  doc->swap_margin_x = doc->swap_margin_y = true;
-	} else {
-	  doc->swap_image_y = true;
 	}
 	if (flippedMargin == FM_FALSE) {
 	  doc->swap_margin_y = !doc->swap_margin_y;
@@ -864,13 +857,8 @@ static bool selectSpecialCase(pwgtoraster_doc_t* doc, conversion_function_t* con
        && doc->outheader.cupsBitsPerPixel == specialCaseFuncs[i].bitsPerPixel
        && doc->outheader.cupsBitsPerColor == specialCaseFuncs[i].bitsPerColor) {
       convert->convertLineOdd = specialCaseFuncs[i].convertLine;
-      if (doc->outheader.Duplex && doc->swap_image_x) {
-        convert->convertLineEven = specialCaseFuncs[i].convertLineSwap;
-        doc->allocLineBuf = specialCaseFuncs[i].allocLineBufSwap;
-      } else {
-        convert->convertLineEven = specialCaseFuncs[i].convertLine;
-        doc->allocLineBuf = specialCaseFuncs[i].allocLineBuf;
-      }
+      convert->convertLineEven = specialCaseFuncs[i].convertLine;
+      doc->allocLineBuf = specialCaseFuncs[i].allocLineBuf;
       return true; /* found */
     }
   }
@@ -960,9 +948,7 @@ static void selectConvertFunc(cups_raster_t *raster,
     convert->convertLineOdd = convertLineChunked;
     break;
   }
-  if (!doc->outheader.Duplex || !doc->swap_image_x) {
-    convert->convertLineEven = convert->convertLineOdd;
-  }
+  convert->convertLineEven = convert->convertLineOdd;
   doc->allocLineBuf = true;
 
   if (doc->color_profile.colorProfile != NULL && doc->color_profile.outputColorProfile != doc->color_profile.colorProfile) {
