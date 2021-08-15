@@ -854,6 +854,8 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     /* Print queue name from filter data */
     if (data->printer)
       add_env_var("PRINTER", data->printer, &envp);
+    else
+      add_env_var("PRINTER", "Unknown", &envp);
 
     /* PPD file path/name from filter data, required for most CUPS filters */
     if (data->ppdfile)
@@ -906,8 +908,10 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     argv = (char **)calloc(7, sizeof(char *));
 
     /* Numeric parameters */
-    snprintf(job_id_str, sizeof(job_id_str) - 1, "%d", data->job_id);
-    snprintf(copies_str, sizeof(copies_str) - 1, "%d", data->copies);
+    snprintf(job_id_str, sizeof(job_id_str) - 1, "%d",
+	     data->job_id > 0 ? data->job_id : 1);
+    snprintf(copies_str, sizeof(copies_str) - 1, "%d",
+	     data->copies > 0 ? data->copies : 1);
 
     /* Options, build string of "Name1=Value1 Name2=Value2 ..." but use
        "Name" and "noName" instead for boolean options */
@@ -952,8 +956,8 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 		       (data->printer ? data->printer :
 			(char *)params->filter))));
     argv[1] = job_id_str;
-    argv[2] = data->job_user;
-    argv[3] = data->job_title;
+    argv[2] = data->job_user ? data->job_user : "Unknown";
+    argv[3] = data->job_title ? data->job_title : "Untitled";
     argv[4] = copies_str;
     argv[5] = options_str ? options_str + 1 : "";
     argv[6] = NULL;
