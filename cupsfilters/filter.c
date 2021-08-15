@@ -699,6 +699,54 @@ add_env_var(char *name,   /* I - Name of environment variable to set */
 
 
 /*
+ * 'sanitize_device_uri()' - Remove authentication info from a device URI
+ */
+
+char *                                  /* O - Sanitized URI */
+sanitize_device_uri(const char *uri,	/* I - Device URI */
+		    char *buf,          /* I - Buffer for output */
+		    size_t bufsize)     /* I - Size of buffer */
+{
+  char	*start,				/* Start of data after scheme */
+	*slash,				/* First slash after scheme:// */
+	*ptr;				/* Pointer into user@host:port part */
+
+
+  /* URI not supplied */
+  if (!uri)
+    return (NULL);
+
+  /* Copy the device URI to a temporary buffer so we can sanitize any auth
+   * info in it... */
+  strncpy(buf, uri, bufsize);
+
+  /* Find the end of the scheme:// part... */
+  if ((ptr = strchr(buf, ':')) != NULL)
+  {
+    for (start = ptr + 1; *start; start ++)
+      if (*start != '/')
+        break;
+
+    /* Find the next slash (/) in the URI... */
+    if ((slash = strchr(start, '/')) == NULL)
+      slash = start + strlen(start);	/* No slash, point to the end */
+
+    /* Check for an @ sign before the slash... */
+    if ((ptr = strchr(start, '@')) != NULL && ptr < slash)
+    {
+      /* Found an @ sign and it is before the resource part, so we have
+	 an authentication string.  Copy the remaining URI over the
+	 authentication string... */
+      memmove(start, ptr + 1, strlen(ptr + 1) + 1);
+    }
+  }
+
+  /* Return the sanitized URI... */
+  return (buf);
+}
+
+
+/*
  * 'filterExternalCUPS()' - Filter function which calls an external,
  *                          classic CUPS filter, for example a
  *                          (proprietary) printer driver which cannot
@@ -776,6 +824,63 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 
   signal(SIGPIPE, SIG_IGN);
 
+ /*
+  * Copy the current environment variables and add some important ones
+  * needed for correct execution of the CUPS filter (which is not running
+  * out of CUPS here)
+  */
+
+  /* Some default environment variables from CUPS, will get overwritten
+     if also defined in the environment in which the caller is started
+     or in the parameters */
+  add_env_var("CUPS_DATADIR", CUPS_DATADIR, &envp);
+  add_env_var("CUPS_SERVERBIN", CUPS_SERVERBIN, &envp);
+  add_env_var("CUPS_SERVERROOT", CUPS_SERVERROOT, &envp);
+  add_env_var("CUPS_STATEDIR", CUPS_STATEDIR, &envp);
+  add_env_var("SOFTWARE", "CUPS/2.4.99", &envp); /* Last CUPS with PPDs */
+
+  /* Copy the environment variables in which the caller got started */
+  if (environ)
+    for (i = 0; environ[i]; i ++)
+      add_env_var(environ[i], NULL, &envp);
+
+  /* Set the environment variables given by the parameters */
+  if (params->envp)
+    for (i = 0; params->envp[i]; i ++)
+      add_env_var(params->envp[i], NULL, &envp);
+
+  if (params->is_backend < 2) /* Not needed in discovery mode of backend */
+  {
+    /* Print queue name from filter data */
+    if (data->printer)
+      add_env_var("PRINTER", data->printer, &envp);
+
+    /* PPD file path/name from filter data, required for most CUPS filters */
+    if (data->ppdfile)
+      add_env_var("PPD", data->ppdfile, &envp);
+
+    /* Device URI from parameters */
+    if (params->is_backend && params->device_uri)
+      add_env_var("DEVICE_URI", (char *)params->device_uri, &envp);
+  }
+
+  /* Log the resulting list of environment variable settings
+     (with any authentication info removed)*/
+  if (log)
+  {
+    for (i = 0; envp[i]; i ++)
+      if (!strncmp(envp[i], "AUTH_", 5))
+	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: AUTH_%c****",
+	    filter_name, i, envp[i][5]);
+      else if (!strncmp(envp[i], "DEVICE_URI=", 11))
+	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: DEVICE_URI=%s",
+	    filter_name, i, sanitize_device_uri(envp[i] + 11,
+						buf, sizeof(buf)));
+      else
+	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: %s",
+	    filter_name, i, envp[i]);
+  }
+
   if (params->is_backend < 2) {
    /*
     * Filter or backend for job execution
@@ -831,8 +936,21 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
       }
     }
 
+    /* Find DEVICE_URI environment variable */
+    if (params->is_backend && !params->device_uri)
+      for (i = 0; envp[i]; i ++)
+	if (strncmp(envp[i], "DEVICE_URI=", 11) == 0)
+	  break;
+
     /* Add items to array */
-    argv[0] = data->printer ? data->printer : (char *)params->filter;
+    argv[0] = strdup((params->is_backend && params->device_uri ?
+		      (char *)sanitize_device_uri(params->device_uri,
+						  buf, sizeof(buf)) :
+		      (params->is_backend && envp[i] ?
+		       (char *)sanitize_device_uri(envp[i] + 11,
+						   buf, sizeof(buf)) :
+		       (data->printer ? data->printer :
+			(char *)params->filter))));
     argv[1] = job_id_str;
     argv[2] = data->job_user;
     argv[3] = data->job_title;
@@ -851,51 +969,9 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     */
 
     argv = (char **)calloc(2, sizeof(char *));
-    argv[0] = (char *)params->filter;
+    argv[0] = strdup((char *)params->filter);
     argv[1] = NULL;
   }
-
- /*
-  * Copy the current environment variables and add some important ones
-  * needed for correct execution of the CUPS filter (which is not running
-  * out of CUPS here)
-  */
-
-  /* Some default environment variables from CUPS, will get overwritten
-     if also defined in the environment in which the caller is started
-     or in the parameters */
-  add_env_var("CUPS_DATADIR", CUPS_DATADIR, &envp);
-  add_env_var("CUPS_SERVERBIN", CUPS_SERVERBIN, &envp);
-  add_env_var("CUPS_SERVERROOT", CUPS_SERVERROOT, &envp);
-  add_env_var("CUPS_STATEDIR", CUPS_STATEDIR, &envp);
-  add_env_var("SOFTWARE", "CUPS/2.4.99", &envp); /* Last CUPS with PPDs */
-
-  /* Copy the environment variables in which the caller got started */
-  if (environ)
-    for (i = 0; environ[i]; i ++)
-      add_env_var(environ[i], NULL, &envp);
-
-  /* Set the environment variables given by the parameters */
-  if (params->envp)
-    for (i = 0; params->envp[i]; i ++)
-      add_env_var(params->envp[i], NULL, &envp);
-
-  if (params->is_backend < 2) /* Not needed in discovery mode of backend */
-  {
-    /* Print queue name from filter data */
-    if (data->printer)
-      add_env_var("PRINTER", data->printer, &envp);
-
-    /* PPD file path/name from filter data, required for most CUPS filters */
-    if (data->ppdfile)
-      add_env_var("PPD", data->ppdfile, &envp);
-  }
-
-  /* Log the resulting list of environment variable settings */
-  if (log)
-    for (i = 0; envp[i]; i ++)
-      log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: %s",
-	  filter_name, i, envp[i]);
 
  /*
   * Execute the filter
@@ -1139,6 +1215,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   cupsFreeOptions(num_all_options, all_options);
   if (options_str)
     free(options_str);
+  free(argv[0]);
   free(argv);
   for (i = 0; envp[i]; i ++)
     free(envp[i]);
