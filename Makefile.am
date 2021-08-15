@@ -50,7 +50,6 @@ pkgbackend_PROGRAMS = parallel serial beh implicitclass
 parallel_SOURCES = \
 	backend/parallel.c
 parallel_LDADD = \
-	libfontembed.la \
 	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS)
