@@ -201,6 +201,11 @@ extern int ghostscript(int inputfd,
    Ghostscript's "cups" output
    device.*/
 
+extern int bannertopdf(int inputfd,
+		      int outputfd,
+		      int inputseekable,
+		      filter_data_t *data,
+		      void *parameters);
 
 extern int imagetopdf(int inputfd,
 		      int outputfd,

@@ -267,6 +267,7 @@ TESTS += \
 
 libcupsfilters_la_SOURCES = \
 	cupsfilters/attr.c \
+	cupsfilters/bannertopdf.c \
 	cupsfilters/bitmap.c \
 	cupsfilters/check.c \
 	cupsfilters/cmyk.c \
