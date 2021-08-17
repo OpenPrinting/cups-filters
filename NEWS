@@ -18,7 +18,8 @@ CHANGES IN V1.28.10
 	- implicitclass, parallel: Added missing newlines at error
 	  messages.
 	- libfontembed: Removed unneeded fontembed/main.c and ttfread
-	  executable (Issue #386).
+	  executable. Eliminates the dependency on DejaVuSans.ttf
+	  (Issue #386).
 	- gstoraster: Refactor the filter a little to clarify handling
 	  of page counts and set job-impressions for TotalPageCount in
 	  PWG-Raster header (Pull request #394).
