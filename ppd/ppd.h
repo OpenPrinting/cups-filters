@@ -800,7 +800,7 @@ extern int		ppdGetOptions(cups_option_t **options,
 extern int		ppdRasterMatchPPDSize(cups_page_header2_t *header,
 					      ppd_file_t *ppd,
 					      double margins[4],
-					      double dimensions[4],
+					      double dimensions[2],
 					      int *image_fit,
 					      int *landscape);
 
