@@ -2330,7 +2330,8 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		 strcasestr(o, "PrintingDirection")) /* Gutenprint */
 	{
 	  /* High quality */
-	  if (strcasecmp(c, "Quality") == 0)
+	  if (strcasecmp(c, "Quality") == 0 ||
+	      strcasecmp(c, "5") == 0)
 	    properties->sets_high = 1;
 	  else if (strcasestr(c, "Photo") ||
 		   strcasestr(c, "Enhance") ||
@@ -2355,11 +2356,12 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	    properties->sets_high = 5;
 
 	  /* Low/Draft quality */
-	  if (strcasecmp(c, "monolowdetail") == 0) /* Toshiba */
-	    properties->sets_draft = 0;
+	  if (strcasecmp(c, "monolowdetail") == 0 || /* Toshiba */
+	      strcasecmp(c, "3") == 0)
+	    properties->sets_draft = 1;
 	  else if (((p = strcasestr(c, "fast")) && strcasestr(p, "draft")) ||
-	      ((p = strcasestr(c, "high")) && strcasestr(p, "speed")) ||
-	      (strcasestr(c, "speed") && !strcasestr(c, "low")))
+		   ((p = strcasestr(c, "high")) && strcasestr(p, "speed")) ||
+		   (strcasestr(c, "speed") && !strcasestr(c, "low")))
 	    properties->sets_draft = 2;
 	  else if (strcasestr(c, "quick") ||
 		   strcasestr(c, "fast") ||
@@ -2388,7 +2390,8 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 
 	  /* Normal quality */
 	  if (strcasestr(c, "automatic") ||
-	      strcasecmp(c, "none") == 0)
+	      strcasecmp(c, "none") == 0 ||
+	      strcasecmp(c, "4") == 0)
 	    properties->sets_normal = 1;
 	  else if (strcasestr(c, "normal") ||
 	      strcasestr(c, "standard") ||
