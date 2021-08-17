@@ -262,7 +262,7 @@ static void parseRanges(const char *range,IntervalSet &ret) // {{{
         } else {
           upper=strtol(range,(char **)&range,10);
           if (upper>=2147483647) {
-            ret.add(1);
+            ret.add(lower);
           } else {
             ret.add(lower,upper+1);
           }
