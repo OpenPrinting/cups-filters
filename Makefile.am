@@ -753,39 +753,12 @@ EXTRA_DIST += \
 	filter/test.sh
 
 bannertopdf_SOURCES = \
-	filter/banner.c \
-	filter/banner.h \
-	filter/bannertopdf.c \
-	fontembed/embed.h \
-	fontembed/sfnt.h
-EXTRA_bannertopdf_SOURCES = cupsfilters/getline.c
+	filter/bannertopdf.c
 bannertopdf_CFLAGS = \
-	-I$(srcdir)/fontembed/ \
-	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS) \
-	$(LIBJPEG_CFLAGS) \
-	$(LIBPNG_CFLAGS) \
-	$(LIBQPDF_CFLAGS) \
-	$(TIFF_CFLAGS) \
-	$(FONTCONFIG_CFLAGS)
-
-bannertopdf_CXXFLAGS = $(bannertopdf_CFLAGS)
+	-I$(srcdir)/cupsfilters/
 bannertopdf_LDADD = \
-	libfontembed.la \
-	libcupsfilters.la \
-	libppd.la \
-	$(GETLINE) \
 	$(CUPS_LIBS) \
-	$(LIBJPEG_LIBS) \
-	$(LIBPNG_LIBS) \
-	$(LIBQPDF_LIBS) \
-	$(TIFF_LIBS) \
-	$(FONTCONFIG_LIBS)
-
-bannertopdf_DEPENDENCIES = \
-	$(GETLINE) \
-	libfontembed.la \
 	libcupsfilters.la
 
 commandtoescpx_SOURCES = \
