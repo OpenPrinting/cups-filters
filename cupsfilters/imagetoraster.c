@@ -257,6 +257,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                  *icd = data->iscanceleddata;
   ipp_t                 *printer_attrs = data->printer_attrs;
+  ipp_attribute_t	*ipp_attr;
   ipp_t                 *job_attrs = data->job_attrs;
   ipp_attribute_t *ipp;
   int 			min_length = __INT32_MAX__,       /*  ppd->custom_min[1]	*/
@@ -421,6 +422,80 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       (float)header.PageSize[1];
   }
 if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
+/*  Find print-rendering-intent */
+  if ((val = cupsGetOption("print-rendering-intent", num_options,
+			   options)) != NULL ||
+      (val = cupsGetOption("PrintRenderingIntent", num_options,
+			   options)) != NULL ||
+      (val = cupsGetOption("RenderingIntent", num_options,
+			   options)) != NULL)
+  {
+    if (!strcmp(val, "absolute"))
+      snprintf(header.cupsRenderingIntent, sizeof(header.cupsRenderingIntent),
+	"%s","Absolute");
+    else if (!strcmp(val, "automatic"))
+      snprintf(header.cupsRenderingIntent,sizeof(header.cupsRenderingIntent),
+	      "%s", "Automatic");
+    else if (!strcmp(val, "perceptual"))
+      snprintf(header.cupsRenderingIntent, sizeof(header.cupsRenderingIntent),
+		"%s", "Perceptual");
+    else if (!strcmp(val, "relative"))
+      snprintf(header.cupsRenderingIntent, sizeof(header.cupsRenderingIntent),
+	      "%s",  "Relative");
+    else if (!strcmp(val, "relative-bpc"))
+      snprintf(header.cupsRenderingIntent, sizeof(header.cupsRenderingIntent),
+		"%s", "RelativeBpc");
+    else if (!strcmp(val, "saturation"))
+      snprintf(header.cupsRenderingIntent, sizeof(header.cupsRenderingIntent),
+	      "%s",  "Saturation");
+    else
+      fprintf(stderr, "DEBUG: Unsupported print-rendering-intent \"%s\".\n",
+	      val);
+  }
+  else 
+  {
+	header.cupsRenderingIntent[0] = '\0';
+  }
+    if((ipp_attr = ippFindAttribute(printer_attrs, "print-rendering-intent-supported",
+    							IPP_TAG_ZERO))!=NULL){
+	int autoRender = 0;int count;
+        if((count = ippGetCount(ipp_attr))>0){
+    	    char temp[41] = "auto";
+    	    if(header.cupsRenderingIntent[0]!='\0'){		/* User is willing to supply some option */
+    	        for(i=0; i<count; i++){
+    		    const char *temp2 = ippGetString(ipp_attr, i, NULL);
+		    if(!strcasecmp(temp2, "auto")) autoRender = 1;
+    		    if(!strcasecmp(header.cupsRenderingIntent, temp2)){
+    		        break;
+    		    }
+    	        }
+    	    	if(i==count){
+    		    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    				"User specified print-rendering-intent not supported by printer,"
+    					"using default print rendering intent.");
+    		    header.cupsRenderingIntent[0] = '\0';
+    	    	}
+    	    }
+    	    if(header.cupsRenderingIntent[0]=='\0'){		/* Either user has not supplied any option
+								   or user supplied value is not supported by printer */
+    	    	if((ipp_attr = ippFindAttribute(printer_attrs, "print-rendering-intent-default",
+    	    						IPP_TAG_ZERO))!=NULL){
+    	            snprintf(temp,sizeof(temp),"%s",ippGetString(ipp_attr, 0, NULL));
+		    snprintf(header.cupsRenderingIntent, sizeof(header.cupsRenderingIntent),
+				"%s",ippGetString(ipp_attr, 0, NULL));
+    	    	}
+		else if(autoRender==1){
+    	            snprintf(temp,sizeof(temp),"%s","auto");
+		    snprintf(header.cupsRenderingIntent, sizeof(header.cupsRenderingIntent),
+				"%s","auto");
+
+		}
+    	    }
+        }
+    }
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    	"Print rendering intent = %s", header.cupsRenderingIntent);
+
   if ((val = cupsGetOption("multiple-document-handling",
 			   num_options, options)) != NULL)
   {
