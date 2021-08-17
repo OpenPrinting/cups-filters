@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.28.9 - 2021-06-15
 
 CHANGES IN V1.28.10
 
+	- libcupsfilters: Use wildcard tag (IPP_TAG_ZERO) search for
+	  "media-type" and "media-type-supported" in the PPD
+	  generator (Pull request #398).
 	- implicitclass, parallel: Added missing newlines at error
 	  messages.
 	- libfontembed: Removed unneeded fontembed/main.c and ttfread
