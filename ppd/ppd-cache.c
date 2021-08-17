@@ -934,7 +934,7 @@ ppdCacheCreateWithFile(
       * Preset print_content_optimize name=value ...
       */
 
-      print_content_optimize = (ppd_pwg_print_color_mode_t)strtol(value, &valueptr, 10);
+      print_content_optimize = (ppd_pwg_print_content_optimize_t)strtol(value, &valueptr, 10);
 
       if (print_content_optimize < PPD_PWG_PRINT_CONTENT_OPTIMIZE_AUTO ||
           print_content_optimize >= PPD_PWG_PRINT_CONTENT_OPTIMIZE_MAX ||
@@ -2073,17 +2073,18 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
         for_graphics,
         for_text,
         for_tg,
-        res_x,
-        res_y,
         is_default;
+    unsigned int  res_x,
+                  res_y;
     long total_image_data;
   } choice_properties_t;
-  int                    i, j, k, m;
+  int                    i, j, k;
+  unsigned int           m;
   int                    pass;
   ppd_group_t            *group;
   ppd_option_t	         *option;
   int                    is_color;
-  int                    base_res_x = 0,
+  unsigned int           base_res_x = 0,
                          base_res_y = 0;
   cups_page_header2_t    header,
                          optheader;
@@ -2708,14 +2709,15 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasecmp(c, "photo") == 0)
 	    properties->for_photo = 7;
 
-	  if (strcasestr(c, "graphics"))
+	  if (strcasestr(c, "graphic"))
 	    properties->for_graphics = 6;
-	  else if (strcasecmp(c, "graphics") == 0)
+	  else if (strcasecmp(c, "graphic") == 0 ||
+		   strcasecmp(c, "graphics") == 0)
 	    properties->for_graphics = 7;
 
 	  if (strcasestr(c, "text"))
 	  {
-	    if (strcasestr(c, "graphics"))
+	    if (strcasestr(c, "graphic"))
 	      properties->for_tg = 7;
 	    else
 	      properties->for_text = 6;
