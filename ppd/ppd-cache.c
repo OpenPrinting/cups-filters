@@ -501,8 +501,9 @@ ppdCacheCreateWithFile(
 					/* PPD keyword */
   ppd_pwg_print_color_mode_t print_color_mode;
 					/* Print color mode for preset */
-  ppd_pwg_print_quality_t print_quality;	/* Print quality for preset */
-
+  ppd_pwg_print_quality_t print_quality;/* Print quality for preset */
+  ppd_pwg_print_content_optimize_t print_content_optimize;
+                                        /* Content optimize for preset */
 
   DEBUG_printf(("ppdCacheCreateWithFile(filename=\"%s\")", filename));
 
@@ -927,6 +928,28 @@ ppdCacheCreateWithFile(
           cupsParseOptions(valueptr, 0,
 	                   pc->presets[print_color_mode] + print_quality);
     }
+    else if (!_ppd_strcasecmp(line, "OptimizePreset"))
+    {
+     /*
+      * Preset print_content_optimize name=value ...
+      */
+
+      print_content_optimize = (ppd_pwg_print_color_mode_t)strtol(value, &valueptr, 10);
+
+      if (print_content_optimize < PPD_PWG_PRINT_CONTENT_OPTIMIZE_AUTO ||
+          print_content_optimize >= PPD_PWG_PRINT_CONTENT_OPTIMIZE_MAX ||
+	  valueptr == value || !*valueptr)
+      {
+        DEBUG_printf(("ppdCacheCreateWithFile: Bad Optimize Preset on line %d.",
+	              linenum));
+	set_error(_("Bad PPD cache file."), 1);
+	goto create_error;
+      }
+
+      pc->num_optimize_presets[print_content_optimize] =
+          cupsParseOptions(valueptr, 0,
+	                   pc->optimize_presets + print_content_optimize);
+    }
     else if (!_ppd_strcasecmp(line, "SidesOption"))
       pc->sides_option = strdup(value);
     else if (!_ppd_strcasecmp(line, "Sides1Sided"))
@@ -1054,6 +1077,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 			*ppd_option;	/* Other PPD option */
   ppd_choice_t		*choice;	/* Current InputSlot/MediaType */
   pwg_map_t		*map;		/* Current source/type map */
+  int                   preset_added = 0; /* Preset definition found in PPD? */
   ppd_attr_t		*ppd_attr;	/* Current PPD preset attribute */
   int			num_options;	/* Number of preset options and props */
   cups_option_t		*options;	/* Preset options and properties */
@@ -1461,7 +1485,6 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
     }
   }
 
-  int preset_added = 0;
   if ((ppd_attr = ppdFindAttr(ppd, "APPrinterPreset", NULL)) != NULL)
   {
    /*
@@ -3944,6 +3967,21 @@ ppdCacheWriteFile(
 	  cupsFilePrintf(fp, " %s=%s", option->name, option->value);
 	cupsFilePutChar(fp, '\n');
       }
+
+ /*
+  * Optimization Presets...
+  */
+
+  for (i = PPD_PWG_PRINT_CONTENT_OPTIMIZE_AUTO; i < PPD_PWG_PRINT_CONTENT_OPTIMIZE_MAX; i ++)
+    if (pc->num_optimize_presets[i])
+    {
+      cupsFilePrintf(fp, "OptimizePreset %d", i);
+      for (k = pc->num_optimize_presets[i], option = pc->optimize_presets[i];
+	   k > 0;
+	   k --, option ++)
+	cupsFilePrintf(fp, " %s=%s", option->name, option->value);
+      cupsFilePutChar(fp, '\n');
+    }
 
  /*
   * Duplex/sides...
