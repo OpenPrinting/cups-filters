@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (c) 2015-2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015-2018, 2021 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -79,7 +79,7 @@ then
       # Make sure there is nothing else we don't process
       if [ -n "$LINE" ]
       then
-	if [ -z "${LINE/*[$'\000'-$'\037'$'\177']*}" ]
+	if [ -z "${LINE/*[$'\000'$'\001'-$'\037'$'\177']*}" ]
 	then
 	  echo "ERROR: unsupported control character in BRF file" >&2
 	fi
