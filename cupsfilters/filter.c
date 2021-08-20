@@ -699,6 +699,54 @@ add_env_var(char *name,   /* I - Name of environment variable to set */
 
 
 /*
+ * 'sanitize_device_uri()' - Remove authentication info from a device URI
+ */
+
+char *                                  /* O - Sanitized URI */
+sanitize_device_uri(const char *uri,	/* I - Device URI */
+		    char *buf,          /* I - Buffer for output */
+		    size_t bufsize)     /* I - Size of buffer */
+{
+  char	*start,				/* Start of data after scheme */
+	*slash,				/* First slash after scheme:// */
+	*ptr;				/* Pointer into user@host:port part */
+
+
+  /* URI not supplied */
+  if (!uri)
+    return (NULL);
+
+  /* Copy the device URI to a temporary buffer so we can sanitize any auth
+   * info in it... */
+  strncpy(buf, uri, bufsize);
+
+  /* Find the end of the scheme:// part... */
+  if ((ptr = strchr(buf, ':')) != NULL)
+  {
+    for (start = ptr + 1; *start; start ++)
+      if (*start != '/')
+        break;
+
+    /* Find the next slash (/) in the URI... */
+    if ((slash = strchr(start, '/')) == NULL)
+      slash = start + strlen(start);	/* No slash, point to the end */
+
+    /* Check for an @ sign before the slash... */
+    if ((ptr = strchr(start, '@')) != NULL && ptr < slash)
+    {
+      /* Found an @ sign and it is before the resource part, so we have
+	 an authentication string.  Copy the remaining URI over the
+	 authentication string... */
+      memmove(start, ptr + 1, strlen(ptr + 1) + 1);
+    }
+  }
+
+  /* Return the sanitized URI... */
+  return (buf);
+}
+
+
+/*
  * 'filterExternalCUPS()' - Filter function which calls an external,
  *                          classic CUPS filter, for example a
  *                          (proprietary) printer driver which cannot
@@ -776,85 +824,6 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 
   signal(SIGPIPE, SIG_IGN);
 
-  if (params->is_backend < 2) {
-   /*
-    * Filter or backend for job execution
-    */
-
-   /*
-    * Join the options from the filter data and from the parameters
-    * If an option is present in both filter data and parameters, the
-    * value in the filter data has priority
-    */
-
-    for (i = 0, opt = params->options; i < params->num_options; i ++, opt ++)
-      num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
-				      &all_options);
-    for (i = 0, opt = data->options; i < data->num_options; i ++, opt ++)
-      num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
-				      &all_options);
-
-   /*
-    * Create command line arguments for the CUPS filter
-    */
-
-    argv = (char **)calloc(7, sizeof(char *));
-
-    /* Numeric parameters */
-    snprintf(job_id_str, sizeof(job_id_str) - 1, "%d", data->job_id);
-    snprintf(copies_str, sizeof(copies_str) - 1, "%d", data->copies);
-
-    /* Options, build string of "Name1=Value1 Name2=Value2 ..." but use
-       "Name" and "noName" instead for boolean options */
-    for (i = 0, opt = all_options; i < num_all_options; i ++, opt ++) {
-      if (strcasecmp(opt->value, "true") == 0 ||
-	  strcasecmp(opt->value, "false") == 0) {
-	options_str =
-	  (char *)realloc(options_str,
-			  ((options_str ? strlen(options_str) : 0) +
-			   strlen(opt->name) +
-			   (strcasecmp(opt->value, "false") == 0 ? 2 : 0) + 2) *
-			  sizeof(char));
-	if (i == 0)
-	  options_str[0] = '\0';
-	sprintf(options_str + strlen(options_str), " %s%s",
-		(strcasecmp(opt->value, "false") == 0 ? "no" : ""), opt->name);
-      } else {
-	options_str =
-	  (char *)realloc(options_str,
-			  ((options_str ? strlen(options_str) : 0) +
-			   strlen(opt->name) + strlen(opt->value) + 3) *
-			  sizeof(char));
-	if (i == 0)
-	  options_str[0] = '\0';
-	sprintf(options_str + strlen(options_str), " %s=%s", opt->name, opt->value);
-      }
-    }
-
-    /* Add items to array */
-    argv[0] = data->printer ? data->printer : (char *)params->filter;
-    argv[1] = job_id_str;
-    argv[2] = data->job_user;
-    argv[3] = data->job_title;
-    argv[4] = copies_str;
-    argv[5] = options_str ? options_str + 1 : "";
-    argv[6] = NULL;
-
-    /* Log the arguments */
-    if (log)
-      for (i = 0; argv[i]; i ++)
-	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): argv[%d]: %s",
-	    filter_name, i, argv[i]);
-  } else {
-   /*
-    * Backend in device discovery mode
-    */
-
-    argv = (char **)calloc(2, sizeof(char *));
-    argv[0] = (char *)params->filter;
-    argv[1] = NULL;
-  }
-
  /*
   * Copy the current environment variables and add some important ones
   * needed for correct execution of the CUPS filter (which is not running
@@ -885,17 +854,128 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     /* Print queue name from filter data */
     if (data->printer)
       add_env_var("PRINTER", data->printer, &envp);
+    else
+      add_env_var("PRINTER", "Unknown", &envp);
 
     /* PPD file path/name from filter data, required for most CUPS filters */
     if (data->ppdfile)
       add_env_var("PPD", data->ppdfile, &envp);
+
+    /* Device URI from parameters */
+    if (params->is_backend && params->device_uri)
+      add_env_var("DEVICE_URI", (char *)params->device_uri, &envp);
   }
 
-  /* Log the resulting list of environment variable settings */
+  /* Log the resulting list of environment variable settings
+     (with any authentication info removed)*/
   if (log)
+  {
     for (i = 0; envp[i]; i ++)
-      log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: %s",
-	  filter_name, i, envp[i]);
+      if (!strncmp(envp[i], "AUTH_", 5))
+	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: AUTH_%c****",
+	    filter_name, i, envp[i][5]);
+      else if (!strncmp(envp[i], "DEVICE_URI=", 11))
+	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: DEVICE_URI=%s",
+	    filter_name, i, sanitize_device_uri(envp[i] + 11,
+						buf, sizeof(buf)));
+      else
+	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: %s",
+	    filter_name, i, envp[i]);
+  }
+
+  if (params->is_backend < 2) {
+   /*
+    * Filter or backend for job execution
+    */
+
+   /*
+    * Join the options from the filter data and from the parameters
+    * If an option is present in both filter data and parameters, the
+    * value in the filter data has priority
+    */
+
+    for (i = 0, opt = params->options; i < params->num_options; i ++, opt ++)
+      num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
+				      &all_options);
+    for (i = 0, opt = data->options; i < data->num_options; i ++, opt ++)
+      num_all_options = cupsAddOption(opt->name, opt->value, num_all_options,
+				      &all_options);
+
+   /*
+    * Create command line arguments for the CUPS filter
+    */
+
+    argv = (char **)calloc(7, sizeof(char *));
+
+    /* Numeric parameters */
+    snprintf(job_id_str, sizeof(job_id_str) - 1, "%d",
+	     data->job_id > 0 ? data->job_id : 1);
+    snprintf(copies_str, sizeof(copies_str) - 1, "%d",
+	     data->copies > 0 ? data->copies : 1);
+
+    /* Options, build string of "Name1=Value1 Name2=Value2 ..." but use
+       "Name" and "noName" instead for boolean options */
+    for (i = 0, opt = all_options; i < num_all_options; i ++, opt ++) {
+      if (strcasecmp(opt->value, "true") == 0 ||
+	  strcasecmp(opt->value, "false") == 0) {
+	options_str =
+	  (char *)realloc(options_str,
+			  ((options_str ? strlen(options_str) : 0) +
+			   strlen(opt->name) +
+			   (strcasecmp(opt->value, "false") == 0 ? 2 : 0) + 2) *
+			  sizeof(char));
+	if (i == 0)
+	  options_str[0] = '\0';
+	sprintf(options_str + strlen(options_str), " %s%s",
+		(strcasecmp(opt->value, "false") == 0 ? "no" : ""), opt->name);
+      } else {
+	options_str =
+	  (char *)realloc(options_str,
+			  ((options_str ? strlen(options_str) : 0) +
+			   strlen(opt->name) + strlen(opt->value) + 3) *
+			  sizeof(char));
+	if (i == 0)
+	  options_str[0] = '\0';
+	sprintf(options_str + strlen(options_str), " %s=%s", opt->name, opt->value);
+      }
+    }
+
+    /* Find DEVICE_URI environment variable */
+    if (params->is_backend && !params->device_uri)
+      for (i = 0; envp[i]; i ++)
+	if (strncmp(envp[i], "DEVICE_URI=", 11) == 0)
+	  break;
+
+    /* Add items to array */
+    argv[0] = strdup((params->is_backend && params->device_uri ?
+		      (char *)sanitize_device_uri(params->device_uri,
+						  buf, sizeof(buf)) :
+		      (params->is_backend && envp[i] ?
+		       (char *)sanitize_device_uri(envp[i] + 11,
+						   buf, sizeof(buf)) :
+		       (data->printer ? data->printer :
+			(char *)params->filter))));
+    argv[1] = job_id_str;
+    argv[2] = data->job_user ? data->job_user : "Unknown";
+    argv[3] = data->job_title ? data->job_title : "Untitled";
+    argv[4] = copies_str;
+    argv[5] = options_str ? options_str + 1 : "";
+    argv[6] = NULL;
+
+    /* Log the arguments */
+    if (log)
+      for (i = 0; argv[i]; i ++)
+	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): argv[%d]: %s",
+	    filter_name, i, argv[i]);
+  } else {
+   /*
+    * Backend in device discovery mode
+    */
+
+    argv = (char **)calloc(2, sizeof(char *));
+    argv[0] = strdup((char *)params->filter);
+    argv[1] = NULL;
+  }
 
  /*
   * Execute the filter
@@ -1139,6 +1219,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   cupsFreeOptions(num_all_options, all_options);
   if (options_str)
     free(options_str);
+  free(argv[0]);
   free(argv);
   for (i = 0; envp[i]; i ++)
     free(envp[i]);

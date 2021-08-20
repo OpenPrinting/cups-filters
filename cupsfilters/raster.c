@@ -1081,14 +1081,17 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     if (!strcasecmp(val, "automatic"))
       _strlcpy(h->OutputType, "Automatic",
 	      sizeof(h->OutputType));
-    else if (!strcasecmp(val, "graphics"))
+    else if (!strcasecmp(val, "graphics") ||
+	     !strcasecmp(val, "graphic"))
       _strlcpy(h->OutputType, "Graphics", sizeof(h->OutputType));
     else if (!strcasecmp(val, "photo"))
       _strlcpy(h->OutputType, "Photo", sizeof(h->OutputType));
     else if (!strcasecmp(val, "text"))
       _strlcpy(h->OutputType, "Text", sizeof(h->OutputType));
     else if (!strcasecmp(val, "text-and-graphics") ||
-	     !strcasecmp(val, "TextAndGraphics"))
+	     !strcasecmp(val, "text-and-graphic") ||
+	     !strcasecmp(val, "TextAndGraphics") ||
+	     !strcasecmp(val, "TextAndGraphic"))
       _strlcpy(h->OutputType, "TextAndGraphics",
 	      sizeof(h->OutputType));
     else if (pwg_raster)

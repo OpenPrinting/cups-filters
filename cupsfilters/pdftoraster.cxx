@@ -311,7 +311,10 @@ static void parseOpts(filter_data_t *data,
   const char *val;
   filter_logfunc_t log = data->logfunc;
   void *ld = data ->logdata;
-
+  ipp_t *printer_attrs = data->printer_attrs;
+  ipp_attribute_t *ipp_attr;
+  int i,
+  	count = 0;
 #ifdef HAVE_CUPS_1_7
   if (parameters) {
     outformat = *(filter_out_format_t *)parameters;
@@ -339,8 +342,7 @@ static void parseOpts(filter_data_t *data,
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
       "pdftoraster: PPD file is not specified.");
 
-  options = data->options;
-  num_options = data->num_options;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
   if (doc->ppd) {
     ppdMarkOptions(doc->ppd,num_options,options);
     handleRqeuiresPageRegion(doc);
@@ -454,6 +456,105 @@ static void parseOpts(filter_data_t *data,
     } else if (strcasecmp(doc->header.cupsRenderingIntent, "Absolute") == 0) {
       doc->colour_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
     }
+    
+    if((ipp_attr = ippFindAttribute(printer_attrs, "print-rendering-intent-supported",
+    							IPP_TAG_ZERO))!=NULL){
+	int autoRender = 0;
+        if((count = ippGetCount(ipp_attr))>0){
+    	    char temp[41] = "auto";
+    	    if(doc->header.cupsRenderingIntent[0]!='\0'){		/* User is willing to supply some option */
+    	        for(i=0; i<count; i++){
+    		    const char *temp2 = ippGetString(ipp_attr, i, NULL);
+		    if(!strcasecmp(temp2, "auto")) autoRender = 1;
+    		    if(!strcasecmp(doc->header.cupsRenderingIntent, temp2)){
+    		        break;
+    		    }
+    	        }
+    	    	if(i==count){
+    		    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    				"User specified print-rendering-intent not supported by printer,"
+    					"using default print rendering intent.");
+    		    doc->header.cupsRenderingIntent[0] = '\0';
+    	    	}
+    	    }
+    	    if(doc->header.cupsRenderingIntent[0]=='\0'){		/* Either user has not supplied any option
+									   or user supplied value is not supported by printer */
+    	    	if((ipp_attr = ippFindAttribute(printer_attrs, "print-rendering-intent-default",
+    	    						IPP_TAG_ZERO))!=NULL){
+    	            snprintf(temp,sizeof(temp),"%s",ippGetString(ipp_attr, 0, NULL));
+		    snprintf(doc->header.cupsRenderingIntent, sizeof(doc->header.cupsRenderingIntent),
+				"%s",ippGetString(ipp_attr, 0, NULL));
+    	    	}
+		else if(autoRender==1){
+    	            snprintf(temp,sizeof(temp),"%s","auto");
+		    snprintf(doc->header.cupsRenderingIntent, sizeof(doc->header.cupsRenderingIntent),
+				"%s","auto");
+
+		}
+    	    	if(strcasecmp(temp, "PERCEPTUAL")==0){
+    	            doc->colour_profile.renderingIntent = INTENT_PERCEPTUAL;
+    	    	} else if (strcasecmp(temp,"RELATIVE_COLORIMETRIC") == 0) {
+    	    	    doc->colour_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
+    	    	} else if (strcasecmp(temp,"SATURATION") == 0) {
+    	    	    doc->colour_profile.renderingIntent = INTENT_SATURATION;
+    	    	} else if (strcasecmp(temp,"ABSOLUTE_COLORIMETRIC") == 0) {
+    	    	    doc->colour_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
+    	        }
+    	    }
+        }
+    }
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    	"Print rendering intent = %s", doc->header.cupsRenderingIntent);
+    
+    int backside = getBackSideAndHeaderDuplex(printer_attrs, &(doc->header));
+    if (doc->header.Duplex) {
+      /* analyze options relevant to Duplex */
+      /* APDuplexRequiresFlippedMargin */
+      enum {
+	FM_NO, FM_FALSE, FM_TRUE
+      } flippedMargin = FM_NO;
+
+      if (backside == BACKSIDE_MANUAL_TUMBLE && doc->header.Tumble) {
+	doc->swap_image_x = doc->swap_image_y = true;
+	doc->swap_margin_x = doc->swap_margin_y = true;
+	if (flippedMargin == FM_TRUE) {
+	  doc->swap_margin_y = false;
+	}
+      } else if (backside==BACKSIDE_ROTATED && !doc->header.Tumble) {
+	doc->swap_image_x = doc->swap_image_y = true;
+	doc->swap_margin_x = doc->swap_margin_y = true;
+	if (flippedMargin == FM_TRUE) {
+	  doc->swap_margin_y = false;
+	}
+      } else if (backside==BACKSIDE_FLIPPED) {
+	if (doc->header.Tumble) {
+	  doc->swap_image_x = true;
+	  doc->swap_margin_x = doc->swap_margin_y = true;
+	} else {
+	  doc->swap_image_y = true;
+	}
+	if (flippedMargin == FM_FALSE) {
+	  doc->swap_margin_y = !doc->swap_margin_y;
+	}
+      }
+    }
+
+    /* support the CUPS "cm-calibration" option */
+    doc->colour_profile.cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+
+    if (doc->colour_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
+      doc->colour_profile.cm_disabled = 1;
+    else
+      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data->printer);
+
+    if (!doc->colour_profile.cm_disabled)
+      cmGetPrinterIccProfile(data->printer, &profile, doc->ppd);
+
+    if (profile != NULL) {
+      doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
+      free(profile);
+    }
+
 #else
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
         "pdftoraster: No PPD file specified.");
@@ -1298,7 +1399,7 @@ static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
   if (doc->allocLineBuf) delete[] lineBuf;
 }
 
-static void outPage(pdftoraster_doc_t *doc, int pageNo,
+static void outPage(pdftoraster_doc_t *doc, int pageNo, filter_data_t *data,
   cups_raster_t *raster, conversion_function_t *convert, filter_logfunc_t log, void* ld, filter_iscanceledfunc_t iscanceled, void *icd)
 {
   int rotate = 0;
@@ -1347,7 +1448,13 @@ static void outPage(pdftoraster_doc_t *doc, int pageNo,
     ppdRasterMatchPPDSize(&(doc->header), doc->ppd, margins, paperdimensions, &imageable_area_fit, NULL);
     if (doc->pwgraster == 1)
       memset(margins, 0, sizeof(margins));
-  } else {
+  } else if(data!=NULL && (data->printer_attrs)!=NULL) {
+	ippRasterMatchIPPSize(&(doc->header), data, margins, paperdimensions, &imageable_area_fit, NULL);
+	if(doc->pwgraster==1){
+	  memset(margins, 0, sizeof(margins));
+	}
+  }
+  else {
     for (i = 0; i < 2; i ++)
       paperdimensions[i] = doc->header.PageSize[i];
     if (doc->header.cupsImagingBBox[3] > 0.0) {
@@ -1367,7 +1474,6 @@ static void outPage(pdftoraster_doc_t *doc, int pageNo,
     margins[2] = header.PageSize[0];
     margins[3] = header.PageSize[1];*/
   }
-
   if (doc->header.Duplex && (pageNo & 1) == 0) {
     /* backside: change margin if needed */
     if (doc->swap_margin_x) {
@@ -1531,63 +1637,100 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   int i;
   int npages = 0;
   cups_raster_t *raster;
+  cups_file_t	         *inputfp;		/* Print file */
   filter_logfunc_t     log = data->logfunc;
   void          *ld = data->logdata;
   int deviceCopies = 1;
   bool deviceCollate = false;
   conversion_function_t convert;
-  int fd;
-  char name[BUFSIZ];
-  char buf[BUFSIZ];
-  int n;
-  FILE *fp;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
-
-
-  (void)inputseekable;
-
+  
   cmsSetLogErrorHandler(lcmsErrorHandler);
   parseOpts(data, parameters, &doc);
 
  /*
-  * Make a temporary file from the input, as Poppler can only refer
-  * to a named file, not to stdin, a pipe, or a file descriptor
+  * Open the input data stream specified by inputfd ...
+  */
+  
+  if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
+  {
+    if (!iscanceled || !iscanceled(icd))
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Unable to open input data stream.");
+    }
+
+    return (1);
+  }
+
+ /*
+  * Make a temporary file if input is stdin...
   */
 
-  fd = cupsTempFd(name, sizeof(name));
-  if (fd < 0) {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pdftoraster: Cannot create temporary file.");
-    exit(1);
-  }
+  if (inputseekable == 0) {
+    /* stdin */
+    int fd;
+    char name[BUFSIZ];
+    char buf[BUFSIZ];
+    int n;
 
-  /* copy stdin to the tmp file */
-  while ((n = read(inputfd ,buf, BUFSIZ)) > 0) {
-    if (write(fd, buf, n) != n) {
+    fd = cupsTempFd(name,sizeof(name));
+    if (fd < 0) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pdftoraster: Cannot copy stdin to temporary file.");
-      close(fd);
+		   "pdftoraster: Can't create temporary file.");
       exit(1);
     }
+
+    /* copy stdin to the tmp file */
+    while ((n = read(0,buf,BUFSIZ)) > 0) {
+      if (write(fd,buf,n) != n) {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Can't copy stdin to temporary file.");
+        close(fd);
+	exit(1);
+      }
+    }
+    close(fd);
+    doc.poppler_doc = poppler::document::load_from_file(name,"","");
+    /* remove name */
+    unlink(name);
+  } else {
+    // Make a temporary file and save input data in it...
+    int fd;
+    char name[BUFSIZ];
+    char buf[BUFSIZ];
+    int n;
+
+    fd = cupsTempFd(name,sizeof(name));
+    if (fd < 0) {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Can't create temporary file.");
+      exit(1);
+    }
+        /* copy input data to the tmp file */
+    while ((n = read(inputfd,buf,BUFSIZ)) > 0) {
+      if (write(fd,buf,n) != n) {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "pdftoraster: Can't copy input data to temporary file.");
+        close(fd);
+	exit(1);
+      }
+    }
+    close(fd);
+    doc.poppler_doc = poppler::document::load_from_file(name,"","");
+    unlink(name);
+
+    FILE *fp;
+    if ((fp = fdopen(inputfd,"rb")) == 0) {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftoraster: Can't open input file.");
+      exit(1);
+    }
+
+    parsePDFTOPDFComment(fp, &deviceCopies, &deviceCollate);
+    fclose(fp);
   }
-
-  /* Parse comments passed on from pdftopdf */
-  if ((fp = fdopen(fd,"rb")) == 0) {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pdftoraster: Can't open input file.");
-    exit(1);
-  }
-  parsePDFTOPDFComment(fp, &deviceCopies, &deviceCollate);
-  fclose(fp);
-
-  close(fd);
-
-  /* Load input with Poppler */
-  doc.poppler_doc = poppler::document::load_from_file(name,"","");
-
-  /* remove name */
-  unlink(name);
 
   if(doc.poppler_doc != NULL)
     npages = doc.poppler_doc->pages();
@@ -1689,7 +1832,7 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   selectConvertFunc(raster, &doc, &convert, log, ld);
   if(doc.poppler_doc != NULL){    
     for (i = 1;i <= npages;i++) {
-      outPage(&doc,i,raster, &convert, log, ld, iscanceled, icd);
+      outPage(&doc,i,data,raster, &convert, log, ld, iscanceled, icd);
     }
   } else
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -1699,6 +1842,9 @@ int pdftoraster(int inputfd,         /* I - File descriptor input stream */
   close(outputfd);
 
   // Delete doc
+  if (doc.ppd != NULL) {
+    ppdClose(doc.ppd);
+  }
   if (doc.colour_profile.colorProfile != NULL) {
     cmsCloseProfile(doc.colour_profile.colorProfile);
   }
