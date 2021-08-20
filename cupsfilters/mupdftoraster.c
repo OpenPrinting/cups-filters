@@ -63,7 +63,7 @@ typedef cups_page_header_t mupdf_page_header;
 
 
 int
-parse_doc_type(FILE *fp)
+parse_doc_type(FILE *fp, filter_logfunc_t log, void *ld)
 {
   char buf[5];
   char *rc;
@@ -79,7 +79,7 @@ parse_doc_type(FILE *fp)
   if (strncmp(buf,"%PDF",4) == 0)
     return 0;
 
-  fprintf(stderr,"DEBUG: input file cannot be identified\n");
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: input file cannot be identified");
   exit(EXIT_FAILURE);
 }
 
@@ -166,7 +166,9 @@ add_pdf_header_options(mupdf_page_header *h,
 static int
 mutool_spawn (const char *filename,
 	      cups_array_t *mupdf_args,
-	      char **envp)
+	      char **envp,
+        filter_logfunc_t log,
+        void *ld)
 {
   char *argument;
   char **mutoolargv;
@@ -188,18 +190,17 @@ mutool_spawn (const char *filename,
   mutoolargv[i] = NULL;
 
   /* Debug output: Full mutool command line and environment variables */
-  fprintf(stderr, "DEBUG: mutool command line:");
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: mutool command line:");
   for (i = 0; mutoolargv[i]; i ++) {
     if ((strchr(mutoolargv[i],' ')) || (strchr(mutoolargv[i],'\t')))
       apos = "'";
     else
       apos = "";
-    fprintf(stderr, " %s%s%s", apos, mutoolargv[i], apos);
+    if(log) log(ld, FILTER_LOGLEVEL_INFO, "mupdftoraster: %s%s%s", apos, mutoolargv[i], apos);
   }
-  fprintf(stderr, "\n");
 
   for (i = 0; envp[i]; i ++)
-    fprintf(stderr, "DEBUG: envp[%d]=\"%s\"\n", i, envp[i]);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: envp[%d]=\"%s\"\n", i, envp[i]);
 
   if ((pid = fork()) == 0) {
     /* Execute mutool command line ... */
@@ -223,7 +224,7 @@ mutool_spawn (const char *filename,
   else if (WIFSIGNALED(wstatus))
     /* Via signal */
     status = 256 * WTERMSIG(wstatus);
-  fprintf(stderr, "DEBUG: mutool completed, status: %d\n", status);
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: mutool completed, status: %d\n", status);
 
  out:
   free(mutoolargv);
@@ -240,7 +241,6 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   char buf[BUFSIZ];
   char *icc_profile = NULL;
   char tmpstr[1024];
-  const char *t = NULL;
   cups_array_t *mupdf_args = NULL;
   cups_option_t *options = NULL;
   FILE *fp = NULL;
@@ -255,96 +255,91 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
   cm_calibration_t cm_calibrate;
-  filter_data_t data;
-  
+  filter_data_t curr_data;
+   filter_logfunc_t     log = data->logfunc;
+  void          *ld = data->logdata;
+  char **envp;
+
 #ifdef HAVE_CUPS_1_7
   ppd_attr_t *attr;
 #endif /* HAVE_CUPS_1_7 */
 
-  if (argc < 6 || argc > 7) {
-    fprintf(stderr, "ERROR: %s job-id user title copies options [file]\n",
-	    argv[0]);
-    goto out;
-  }
+  if(parameters)
+    envp = (char**)(parameters);
+  else
+    envp = NULL;
 
   memset(&sa, 0, sizeof(sa));
   /* Ignore SIGPIPE and have write return an error instead */
   sa.sa_handler = SIG_IGN;
   sigaction(SIGPIPE, &sa, NULL);
 
-  num_options = cupsParseOptions(argv[5], 0, &options);
+  num_options = data->num_options;
 
-  t = getenv("PPD");
-  if (t && t[0] != '\0')
-    if ((ppd = ppdOpenFile(t)) == NULL) {
-      fprintf(stderr, "ERROR: Failed to open PPD: %s\n", t);
-    }
-
+  ppd = data->ppd;
   if (ppd) {
-    ppdMarkDefaults (ppd);
     ppdMarkOptions (ppd, num_options, options);
   }
 
-  if (argc == 6) {
-    /* stdin */
-
-    fd = cupsTempFd(infilename, 1024);
+  fd = cupsTempFd(infilename, 1024);
     if (fd < 0) {
-      fprintf(stderr, "ERROR: Can't create temporary file\n");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't create temporary file");
       goto out;
     }
 
-    /* copy stdin to the tmp file */
-    while ((n = read(0,buf,BUFSIZ)) > 0) {
+    /* copy input file to the tmp file */
+    while ((n = read(inputfd, buf, BUFSIZ)) > 0) {
       if (write(fd,buf,n) != n) {
-        fprintf(stderr, "ERROR: Can't copy stdin to temporary file\n");
+        if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't copy input to temporary file");
         close(fd);
         goto out;
       }
     }
+
+  if (!inputfd) {
+
     if (lseek(fd,0,SEEK_SET) < 0) {
-      fprintf(stderr, "ERROR: Can't rewind temporary file\n");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't rewind temporary file");
       close(fd);
       goto out;
     }
 
     if ((fp = fdopen(fd,"rb")) == 0) {
-      fprintf(stderr, "ERROR: Can't fdopen temporary file\n");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't open temporary file");
       close(fd);
       goto out;
     }
   } else {
-    /* argc == 7 filename is specified */
+    /* filename is specified */
 
-    if ((fp = fopen(argv[6],"rb")) == 0) {
-      fprintf(stderr, "ERROR: Can't open input file %s\n",argv[6]);
+    if ((fp = fdopen(fd,"rb")) == 0) {
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't open temporary file");
       goto out;
     }
-    strncpy(infilename, argv[6], sizeof(infilename) - 1);
   }
-  if ((data.printer = getenv("PRINTER")) == NULL)
-    data.printer = argv[0];
-  data.job_id = atoi(argv[1]);
-  data.job_user = argv[2];
-  data.job_title = argv[3];
-  data.copies = atoi(argv[4]);
-  data.job_attrs = NULL;        /* We use command line options */
-  data.printer_attrs = NULL;    /* We use the queue's PPD file */
-  data.num_options = num_options;
-  data.options = options;       /* Command line options from 5th arg */
-  data.ppdfile = getenv("PPD"); /* PPD file name in the "PPD"
+
+  curr_data.printer = data->printer;
+  curr_data.job_id = data->job_id;
+  curr_data.job_user = data->job_user;
+  curr_data.job_title = data->job_title;
+  curr_data.copies = data->copies;
+  curr_data.job_attrs = data->job_attrs;        /* We use command line options */
+  curr_data.printer_attrs = data->printer_attrs;    /* We use the queue's PPD file */
+  curr_data.num_options = data->num_options;
+  curr_data.options = data->options;       /* Command line options from 5th arg */
+  curr_data.ppdfile = data->ppdfile; /* PPD file name in the "PPD"
 					  environment variable. */
-  data.ppd = ppd;
+  curr_data.ppd = data->ppd;
                                        /* Load PPD file */
-  data.logfunc = cups_logfunc;  /* Logging scheme of CUPS */
-  data.logdata = NULL;
-  data.iscanceledfunc = cups_iscanceledfunc; /* Job-is-canceled
+  curr_data.logfunc = log;  /* Logging scheme of CUPS */
+  curr_data.logdata = data->logdata;
+  curr_data.iscanceledfunc = data->iscanceledfunc; /* Job-is-canceled
 						       function */
-  data.iscanceleddata = NULL;
+  curr_data.iscanceleddata = data->iscanceleddata;
 
 
   /* If doc type is not PDF exit */
-  if(parse_doc_type(fp))
+  if(parse_doc_type(fp, log, ld))
      empty = 1;
 
   /*  Check status of color management in CUPS */
@@ -361,11 +356,11 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   /* mutool parameters */
   mupdf_args = cupsArrayNew(NULL, NULL);
   if (!mupdf_args) {
-    fprintf(stderr, "ERROR: Unable to allocate memory for mutool arguments array\n");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Unable to allocate memory for mutool arguments array");
     goto out;
   }
 
-  fprintf(stderr,"command: %s\n",CUPS_MUTOOL);
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: command: %s\n",CUPS_MUTOOL);
   snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_MUTOOL);
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
   cupsArrayAdd(mupdf_args, strdup("draw"));
@@ -388,13 +383,13 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
     h.cupsWidth = h.HWResolution[0] * h.PageSize[0] / 72;
     h.cupsHeight = h.HWResolution[1] * h.PageSize[1] / 72;
 #ifdef HAVE_CUPS_1_7
-    cupsRasterParseIPPOptions(&h, &data, 1, 0);
+    cupsRasterParseIPPOptions(&h, &curr_data, 1, 0);
 #endif /* HAVE_CUPS_1_7 */
   } else {
 #ifdef HAVE_CUPS_1_7
-    cupsRasterParseIPPOptions(&h, &data, 1, 1);
+    cupsRasterParseIPPOptions(&h, &curr_data, 1, 1);
 #else
-    fprintf(stderr, "ERROR: No PPD file specified.\n");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: No PPD file specified.");
     goto out;
 #endif /* HAVE_CUPS_1_7 */
   }
@@ -438,12 +433,12 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_MUTOOL);
 		
   /* call mutool */
-  status = mutool_spawn (tmpstr, mupdf_args, envp);
+  status = mutool_spawn (tmpstr, mupdf_args, envp, log, ld);
   if (status != 0) status = 1;
 
   if(empty)
   {
-     fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Input is empty, outputting empty file.");
      status = 0;
   }
 out:
