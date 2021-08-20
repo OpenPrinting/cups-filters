@@ -501,8 +501,9 @@ ppdCacheCreateWithFile(
 					/* PPD keyword */
   ppd_pwg_print_color_mode_t print_color_mode;
 					/* Print color mode for preset */
-  ppd_pwg_print_quality_t print_quality;	/* Print quality for preset */
-
+  ppd_pwg_print_quality_t print_quality;/* Print quality for preset */
+  ppd_pwg_print_content_optimize_t print_content_optimize;
+                                        /* Content optimize for preset */
 
   DEBUG_printf(("ppdCacheCreateWithFile(filename=\"%s\")", filename));
 
@@ -927,6 +928,28 @@ ppdCacheCreateWithFile(
           cupsParseOptions(valueptr, 0,
 	                   pc->presets[print_color_mode] + print_quality);
     }
+    else if (!_ppd_strcasecmp(line, "OptimizePreset"))
+    {
+     /*
+      * Preset print_content_optimize name=value ...
+      */
+
+      print_content_optimize = (ppd_pwg_print_content_optimize_t)strtol(value, &valueptr, 10);
+
+      if (print_content_optimize < PPD_PWG_PRINT_CONTENT_OPTIMIZE_AUTO ||
+          print_content_optimize >= PPD_PWG_PRINT_CONTENT_OPTIMIZE_MAX ||
+	  valueptr == value || !*valueptr)
+      {
+        DEBUG_printf(("ppdCacheCreateWithFile: Bad Optimize Preset on line %d.",
+	              linenum));
+	set_error(_("Bad PPD cache file."), 1);
+	goto create_error;
+      }
+
+      pc->num_optimize_presets[print_content_optimize] =
+          cupsParseOptions(valueptr, 0,
+	                   pc->optimize_presets + print_content_optimize);
+    }
     else if (!_ppd_strcasecmp(line, "SidesOption"))
       pc->sides_option = strdup(value);
     else if (!_ppd_strcasecmp(line, "Sides1Sided"))
@@ -1054,6 +1077,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 			*ppd_option;	/* Other PPD option */
   ppd_choice_t		*choice;	/* Current InputSlot/MediaType */
   pwg_map_t		*map;		/* Current source/type map */
+  int                   preset_added = 0; /* Preset definition found in PPD? */
   ppd_attr_t		*ppd_attr;	/* Current PPD preset attribute */
   int			num_options;	/* Number of preset options and props */
   cups_option_t		*options;	/* Preset options and properties */
@@ -1461,7 +1485,6 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
     }
   }
 
-  int preset_added = 0;
   if ((ppd_attr = ppdFindAttr(ppd, "APPrinterPreset", NULL)) != NULL)
   {
    /*
@@ -2050,17 +2073,18 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
         for_graphics,
         for_text,
         for_tg,
-        res_x,
-        res_y,
         is_default;
+    unsigned int  res_x,
+                  res_y;
     long total_image_data;
   } choice_properties_t;
-  int                    i, j, k, m;
+  int                    i, j, k;
+  unsigned int           m;
   int                    pass;
   ppd_group_t            *group;
   ppd_option_t	         *option;
   int                    is_color;
-  int                    base_res_x = 0,
+  unsigned int           base_res_x = 0,
                          base_res_y = 0;
   cups_page_header2_t    header,
                          optheader;
@@ -2330,7 +2354,8 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		 strcasestr(o, "PrintingDirection")) /* Gutenprint */
 	{
 	  /* High quality */
-	  if (strcasecmp(c, "Quality") == 0)
+	  if (strcasecmp(c, "Quality") == 0 ||
+	      strcasecmp(c, "5") == 0)
 	    properties->sets_high = 1;
 	  else if (strcasestr(c, "Photo") ||
 		   strcasestr(c, "Enhance") ||
@@ -2355,11 +2380,12 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	    properties->sets_high = 5;
 
 	  /* Low/Draft quality */
-	  if (strcasecmp(c, "monolowdetail") == 0) /* Toshiba */
-	    properties->sets_draft = 0;
+	  if (strcasecmp(c, "monolowdetail") == 0 || /* Toshiba */
+	      strcasecmp(c, "3") == 0)
+	    properties->sets_draft = 1;
 	  else if (((p = strcasestr(c, "fast")) && strcasestr(p, "draft")) ||
-	      ((p = strcasestr(c, "high")) && strcasestr(p, "speed")) ||
-	      (strcasestr(c, "speed") && !strcasestr(c, "low")))
+		   ((p = strcasestr(c, "high")) && strcasestr(p, "speed")) ||
+		   (strcasestr(c, "speed") && !strcasestr(c, "low")))
 	    properties->sets_draft = 2;
 	  else if (strcasestr(c, "quick") ||
 		   strcasestr(c, "fast") ||
@@ -2388,7 +2414,8 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 
 	  /* Normal quality */
 	  if (strcasestr(c, "automatic") ||
-	      strcasecmp(c, "none") == 0)
+	      strcasecmp(c, "none") == 0 ||
+	      strcasecmp(c, "4") == 0)
 	    properties->sets_normal = 1;
 	  else if (strcasestr(c, "normal") ||
 	      strcasestr(c, "standard") ||
@@ -2682,14 +2709,15 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasecmp(c, "photo") == 0)
 	    properties->for_photo = 7;
 
-	  if (strcasestr(c, "graphics"))
+	  if (strcasestr(c, "graphic"))
 	    properties->for_graphics = 6;
-	  else if (strcasecmp(c, "graphics") == 0)
+	  else if (strcasecmp(c, "graphic") == 0 ||
+		   strcasecmp(c, "graphics") == 0)
 	    properties->for_graphics = 7;
 
 	  if (strcasestr(c, "text"))
 	  {
-	    if (strcasestr(c, "graphics"))
+	    if (strcasestr(c, "graphic"))
 	      properties->for_tg = 7;
 	    else
 	      properties->for_text = 6;
@@ -3941,6 +3969,21 @@ ppdCacheWriteFile(
 	  cupsFilePrintf(fp, " %s=%s", option->name, option->value);
 	cupsFilePutChar(fp, '\n');
       }
+
+ /*
+  * Optimization Presets...
+  */
+
+  for (i = PPD_PWG_PRINT_CONTENT_OPTIMIZE_AUTO; i < PPD_PWG_PRINT_CONTENT_OPTIMIZE_MAX; i ++)
+    if (pc->num_optimize_presets[i])
+    {
+      cupsFilePrintf(fp, "OptimizePreset %d", i);
+      for (k = pc->num_optimize_presets[i], option = pc->optimize_presets[i];
+	   k > 0;
+	   k --, option ++)
+	cupsFilePrintf(fp, " %s=%s", option->name, option->value);
+      cupsFilePutChar(fp, '\n');
+    }
 
  /*
   * Duplex/sides...

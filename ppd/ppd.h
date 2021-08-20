@@ -41,7 +41,7 @@ extern "C" {
  * Constants...
  */
 
-#  define PPD_CACHE_VERSION	9	/* Version number in cache file */
+#  define PPD_CACHE_VERSION    20	/* Version number in cache file */
 
 
 /*
@@ -800,7 +800,7 @@ extern int		ppdGetOptions(cups_option_t **options,
 extern int		ppdRasterMatchPPDSize(cups_page_header2_t *header,
 					      ppd_file_t *ppd,
 					      double margins[4],
-					      double dimensions[4],
+					      double dimensions[2],
 					      int *image_fit,
 					      int *landscape);
 

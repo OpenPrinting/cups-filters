@@ -274,13 +274,15 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
       if (!strcmp(val, "automatic"))
         strncpy(outheader.OutputType, "Automatic",
                 sizeof(outheader.OutputType));
-      else if (!strcmp(val, "graphics"))
+      else if (!strcmp(val, "graphics") ||
+	       !strcmp(val, "graphic"))
         strncpy(outheader.OutputType, "Graphics", sizeof(outheader.OutputType));
       else if (!strcmp(val, "photo"))
         strncpy(outheader.OutputType, "Photo", sizeof(outheader.OutputType));
       else if (!strcmp(val, "text"))
         strncpy(outheader.OutputType, "Text", sizeof(outheader.OutputType));
-      else if (!strcmp(val, "text-and-graphics"))
+      else if (!strcmp(val, "text-and-graphics") ||
+	       !strcmp(val, "text-and-graphic"))
         strncpy(outheader.OutputType, "TextAndGraphics",
                 sizeof(outheader.OutputType));
       else
