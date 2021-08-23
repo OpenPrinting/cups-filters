@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <math.h>
+#include <cupsfilters/ppdgenerator.h>
+#include "raster.h"
 
 #ifndef HAVE_OPEN_MEMSTREAM
 #include <fcntl.h>
@@ -289,13 +291,15 @@ static int get_int_option(const char *name,
     return value ? atoi(value) : def;
 }
 
-static void get_pagesize(ppd_file_t *ppd,
+static void get_pagesize(filter_data_t *data,
                          int noptions,
                          cups_option_t *options,
                          float *width,
                          float *length,
                          float media_limits[4])
 {
+    ppd_file_t *ppd = data->ppd;
+    ipp_t *printer_attrs = data->printer_attrs;
     static const ppd_size_t defaultsize = {
         0,     /* marked */
         "",    /* name */
@@ -314,8 +318,43 @@ static void get_pagesize(ppd_file_t *ppd,
         s[255];              /* Temporary string */
 #endif                       /* HAVE_CUPS_1_7 */
 
-    if (!ppd || !(pagesize = ppdPageSize(ppd, NULL)))
-        pagesize = &defaultsize;
+    if (!ppd || !(pagesize = ppdPageSize(ppd, NULL))) {
+	int sizeFound = 0;
+	if(printer_attrs!=NULL){
+	    int left,
+	    right,
+	    top,
+	    bottom,
+	    min_length = 2147483647,
+	    min_width = 2147483647,
+	    max_length = 0,
+	    max_width = 0;
+	    char defsize[41];
+	    ipp_attribute_t *defattr;
+	    cups_array_t *printer_sizes;
+	    printer_sizes = cfGenerateSizes(printer_attrs, &defattr, &min_length, &min_width,
+					    &max_length, &max_width, 
+					    &bottom, &left, &right, &top, defsize);
+	    for(cups_size_t *size = (cups_size_t*)cupsArrayFirst(printer_sizes); size;
+		size = (cups_size_t*)cupsArrayNext(printer_sizes)){
+		    if(!strcmp(size->media, defsize)){
+			ppd_size_t temp;
+			sizeFound = 1;
+			snprintf(temp.name, sizeof(temp.name),"%s", defsize);
+			temp.top = size->top *72.0 / 2540.0;
+			temp.bottom = size->bottom *72.0 / 2540.0;
+			temp.left = size->left *72.0 / 2540.0;
+			temp.right = size->right *72.0 / 2540.0;
+			temp.width = size->width *72.0 / 2540.0;
+			temp.length = size->length *72.0 / 2540.0;
+			pagesize = &temp;
+			break;
+		    }
+		}
+	}
+	if(sizeFound == 0)
+	    pagesize = &defaultsize;
+    }
 
     *width = pagesize->width;
     *length = pagesize->length;
@@ -488,17 +527,21 @@ static opt_t *add_opt(opt_t *in_opt, const char *key, const char *val)
  * Create PDF form's field names according above.
  */
 opt_t *get_known_opts(
-    ppd_file_t *ppd,
+    filter_data_t *data,
     const char *jobid,
     const char *user,
     const char *jobtitle,
     int noptions,
+    
     cups_option_t *options)
 {
 
+    ppd_file_t *ppd = data->ppd;
     ppd_attr_t *attr;
     opt_t *opt = NULL;
-
+    ipp_t *printer_attrs = data->printer_attrs;
+    ipp_attribute_t *ipp_attr;
+    char buf[1024];
     /* Job ID */
     opt = add_opt(opt, "job-id", jobid);
 
@@ -583,12 +626,58 @@ opt_t *get_known_opts(
         /* Make and model */
         opt = add_opt(opt, "make-and-model", ppd->nickname);
     }
+    else
+    {
+	/* Driver */
+	opt = add_opt(opt, "driver", "drvless.ppd");
+
+	/* Driver version */
+        opt = add_opt(opt, "driver-version", VERSION);
+
+	/* Make and model */
+	int is_fax = 0;
+	char make[256];
+	char *model;
+	if ((ipp_attr = ippFindAttribute(printer_attrs, "ipp-features-supported",
+				IPP_TAG_ZERO)) != NULL &&
+		ippContainsString(ipp_attr, "faxout"))
+	{
+	    ipp_attr = ippFindAttribute(printer_attrs, "printer-uri-supported",
+		IPP_TAG_ZERO);
+	    if (ipp_attr)
+	    {
+	    	ippAttributeString(ipp_attr, buf, sizeof(buf));
+	    	if (strcasestr(buf, "faxout"))
+		    is_fax = 1;
+	    }
+	}
+
+	if ((ipp_attr = ippFindAttribute(printer_attrs, "printer-make-and-model",
+			    	IPP_TAG_ZERO)) != NULL)
+	    snprintf(make, sizeof(make), "%s", ippGetString(ipp_attr, 0, NULL));
+	else
+	    snprintf(make, sizeof(make), "%s", "Unknown Printer");
+	if (!strncasecmp(make, "Hewlett Packard ", 16) ||
+	    !strncasecmp(make, "Hewlett-Packard ", 16)) {
+		model = make + 16;
+		snprintf(make, sizeof(make), "%s", "HP");
+	}
+	else if ((model = strchr(make, ' ')) != NULL)
+	    *model++ = '\0';
+	else
+	    model = make;
+	snprintf(buf, sizeof(buf), "%s %s, %sdriverless, cups-filters %s",
+		make, model, (is_fax ? "Fax, " : ""), VERSION);
+	char *nickname = buf;
+	opt = add_opt(opt, "make-and-model", nickname);
+    }
+
 
     return opt;
 }
 
 static int generate_banner_pdf(banner_t *banner,
-                               ppd_file_t *ppd,
+                               filter_data_t *data,
                                const char *jobid,
                                const char *user,
                                const char *jobtitle,
@@ -607,6 +696,10 @@ static int generate_banner_pdf(banner_t *banner,
     float page_scale;
     ppd_attr_t *attr;
     unsigned copies;
+    ipp_t *printer_attrs = data->printer_attrs;
+    ipp_attribute_t *ipp_attr;
+    ppd_file_t *ppd = data->ppd;
+    char buf2[1024];
 #ifndef HAVE_OPEN_MEMSTREAM
     struct stat st;
 #endif
@@ -614,7 +707,7 @@ static int generate_banner_pdf(banner_t *banner,
     if (!(doc = pdf_load_template(banner->template_file)))
         return 1;
 
-    get_pagesize(ppd, noptions, options,
+    get_pagesize(data, noptions, options,
                  &page_width, &page_length, media_limits);
 
     pdf_resize_page(doc, 1, page_width, page_length, &page_scale);
@@ -680,21 +773,78 @@ static int generate_banner_pdf(banner_t *banner,
         info_line(s, "Job UUID",
                   cupsGetOption("job-uuid", noptions, options));
 
-    if (ppd && banner->infos & INFO_PRINTER_DRIVER_NAME)
-        info_line(s, "Driver", ppd->pcfilename);
-
-    if (ppd && banner->infos & INFO_PRINTER_DRIVER_VERSION)
-        info_line(s, "Driver Version",
+    if(ppd)
+    {
+	if (banner->infos & INFO_PRINTER_DRIVER_NAME)
+            info_line(s, "Driver", ppd->pcfilename);
+    }
+    else
+    {
+	if (banner->infos & INFO_PRINTER_DRIVER_NAME)
+            info_line(s, "Driver", "drvless.ppd");
+    }
+    if(ppd){
+    	if (banner->infos & INFO_PRINTER_DRIVER_VERSION)
+            info_line(s, "Driver Version",
                   (attr = ppdFindAttr(ppd, "FileVersion", NULL)) ? attr->value : "");
-
+    }
+    else{
+    	if (banner->infos & INFO_PRINTER_DRIVER_VERSION)
+            info_line(s, "Driver Version",
+                  VERSION);
+    }
     if (banner->infos & INFO_PRINTER_INFO)
         info_line(s, "Description", getenv("PRINTER_INFO"));
 
     if (banner->infos & INFO_PRINTER_LOCATION)
         info_line(s, "Printer Location", getenv("PRINTER_LOCATION"));
 
-    if (ppd && banner->infos & INFO_PRINTER_MAKE_AND_MODEL)
-        info_line(s, "Make and Model", ppd->nickname);
+    if(ppd){
+    	if ( banner->infos & INFO_PRINTER_MAKE_AND_MODEL)
+            info_line(s, "Make and Model", ppd->nickname);
+    }
+    else
+    {
+	int is_fax = 0;
+	char make[256];
+	char *model;
+	if ((ipp_attr = ippFindAttribute(printer_attrs, "ipp-features-supported",
+				IPP_TAG_ZERO)) != NULL &&
+		ippContainsString(ipp_attr, "faxout"))
+	{
+	    ipp_attr = ippFindAttribute(printer_attrs, "printer-uri-supported",
+		IPP_TAG_ZERO);
+	    if (ipp_attr)
+	    {
+	    	ippAttributeString(ipp_attr, buf2, sizeof(buf2));
+	    	if (strcasestr(buf2, "faxout"))
+		    is_fax = 1;
+	    }
+	}
+
+	if ((ipp_attr = ippFindAttribute(printer_attrs, "printer-make-and-model",
+			    	IPP_TAG_ZERO)) != NULL)
+	    snprintf(make, sizeof(make), "%s", ippGetString(ipp_attr, 0, NULL));
+	else
+	    snprintf(make, sizeof(make), "%s", "Unknown Printer");
+
+	if (!strncasecmp(make, "Hewlett Packard ", 16) ||
+	    !strncasecmp(make, "Hewlett-Packard ", 16)) {
+		model = make + 16;
+		snprintf(make, sizeof(make), "%s", "HP");
+	}
+	else if ((model = strchr(make, ' ')) != NULL)
+	    *model++ = '\0';
+	else
+	    model = make;
+	snprintf(buf2, sizeof(buf2), "%s %s, %sdriverless, cups-filters %s",
+		make, model, (is_fax ? "Fax, " : ""), VERSION);
+	char *nickname = buf2;
+    	if ( banner->infos & INFO_PRINTER_MAKE_AND_MODEL)
+            info_line(s, "Make and Model", nickname);
+	
+    }
+
 
     if (banner->infos & INFO_PRINTER_NAME)
         info_line(s, "Printer", getenv("PRINTER"));
@@ -729,7 +879,7 @@ static int generate_banner_pdf(banner_t *banner,
 #endif /* !HAVE_OPEN_MEMSTREAM */
     fclose(s);
 
-    opt_t *known_opts = get_known_opts(ppd,
+    opt_t *known_opts = get_known_opts(data,
                                        jobid,
                                        user,
                                        jobtitle,
@@ -780,7 +930,7 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
                 void *parameters)    /* I - Filter-specific parameters (unused) */
 {
     banner_t *banner;
-    int noptions;
+    int num_options = 0;
     ppd_file_t *ppd = NULL;
     int ret;
     cups_file_t *inputfp;
@@ -793,13 +943,7 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
     void *icd = data->iscanceleddata;
     char jobid[50];
 
-    options = (cups_option_t *)malloc(sizeof(cups_option_t));
-
-    options->name = (char*)malloc(sizeof(char) * 1000);
-    options->value = (char*)malloc(sizeof(char) * 1000);
-
-    memcpy(options->name, data->options->name, strlen(data->options->name));
-    memcpy(options->value, data->options->value, strlen(data->options->value));
+    num_options = joinJobOptionsAndAttrs(data, num_options, &options);
 
     if ((inputfp = cupsFileOpenFd(inputfd, "rb")) == NULL)
     {
@@ -833,7 +977,6 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
     else if (data->ppdfile)
         ppd = ppdOpenFile(data->ppdfile);
 
-    noptions = data->num_options;
 
     if (!ppd)
     {
@@ -841,7 +984,7 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
             log(ld, FILTER_LOGLEVEL_DEBUG, "bannertopdf: Could not open PPD file '%s'", ppd);
     }
    
-    banner = banner_new_from_file_descriptor(inputfd, &noptions, &options, log, ld);
+    banner = banner_new_from_file_descriptor(inputfd, &num_options, &options, log, ld);
 
     if (!banner)
     {
@@ -853,11 +996,11 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
     sprintf(jobid, "%d", data->job_id);
 
     ret = generate_banner_pdf(banner,
-                              ppd,
+                              data,
                               jobid,
                               data->job_user,
                               data->job_title,
-                              noptions,
+                              num_options,
                               options,
                               log,
                               ld,
