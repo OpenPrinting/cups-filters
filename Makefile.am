@@ -298,6 +298,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/imagetoraster.c \
 	cupsfilters/ipp.c \
 	cupsfilters/lut.c \
+	cupsfilters/mupdftoraster.c \
 	cupsfilters/pack.c \
 	cupsfilters/pclmtoraster.cxx \
 	cupsfilters/pdf.cxx \

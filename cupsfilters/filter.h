@@ -227,6 +227,11 @@ extern int imagetoraster(int inputfd,
 			 filter_data_t *data,
 			 void *parameters);
 
+extern int mupdftoraster(int inputfd,
+		     int outputfd,
+		     int inputseekable,
+		     filter_data_t *data,
+		     void *parameters);
 
 extern int pclmtoraster(int inputfd,
 			int outputfd,
