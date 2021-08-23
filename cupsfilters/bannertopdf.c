@@ -300,7 +300,7 @@ static void get_pagesize(filter_data_t *data,
 {
     ppd_file_t *ppd = data->ppd;
     ipp_t *printer_attrs = data->printer_attrs;
-    static const ppd_size_t defaultsize = {
+    static ppd_size_t defaultsize = {
         0,     /* marked */
         "",    /* name */
         612.0, /* width */
@@ -310,7 +310,7 @@ static void get_pagesize(filter_data_t *data,
         594.0, /* right */
         756.0, /* top */
     };
-    const ppd_size_t *pagesize;
+    ppd_size_t *pagesize = &defaultsize;
 #ifdef HAVE_CUPS_1_7
     pwg_media_t *size_found; /* page size found for given name */
     const char *val;         /* Pointer into value */
@@ -319,7 +319,7 @@ static void get_pagesize(filter_data_t *data,
 #endif                       /* HAVE_CUPS_1_7 */
 
     if (!ppd || !(pagesize = ppdPageSize(ppd, NULL))) {
-	int sizeFound = 0;
+	pagesize = &defaultsize;
 	if(printer_attrs!=NULL){
 	    int left,
 	    right,
@@ -339,7 +339,6 @@ static void get_pagesize(filter_data_t *data,
 		size = (cups_size_t*)cupsArrayNext(printer_sizes)){
 		    if(!strcmp(size->media, defsize)){
 			ppd_size_t temp;
-			sizeFound = 1;
 			snprintf(temp.name, sizeof(temp.name),"%s", defsize);
 			temp.top = size->top *72.0 / 2540.0;
 			temp.bottom = size->bottom *72.0 / 2540.0;
@@ -352,8 +351,6 @@ static void get_pagesize(filter_data_t *data,
 		    }
 		}
 	}
-	if(sizeFound == 0)
-	    pagesize = &defaultsize;
     }
 
     *width = pagesize->width;
