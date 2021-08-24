@@ -810,7 +810,6 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   void          *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
-  const char *val;
 
 
   /* Note: With the OUTPUT_FORMAT_APPLE_RASTER selection the output is
@@ -1053,76 +1052,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 		 "ghostscript: Streaming mode, no checks for input format, zero-page input, instructions from previous filter");
   }
 /*  Find print-rendering-intent */
-  if ((val = cupsGetOption("print-rendering-intent", num_options,
-			   options)) != NULL ||
-      (val = cupsGetOption("PrintRenderingIntent", num_options,
-			   options)) != NULL ||
-      (val = cupsGetOption("RenderingIntent", num_options,
-			   options)) != NULL)
-  {
-    if (!strcmp(val, "absolute"))
-      snprintf(h.cupsRenderingIntent, sizeof(h.cupsRenderingIntent),
-	"%s","Absolute");
-    else if (!strcmp(val, "automatic"))
-      snprintf(h.cupsRenderingIntent,sizeof(h.cupsRenderingIntent),
-	      "%s", "Automatic");
-    else if (!strcmp(val, "perceptual"))
-      snprintf(h.cupsRenderingIntent, sizeof(h.cupsRenderingIntent),
-		"%s", "Perceptual");
-    else if (!strcmp(val, "relative"))
-      snprintf(h.cupsRenderingIntent, sizeof(h.cupsRenderingIntent),
-	      "%s",  "Relative");
-    else if (!strcmp(val, "relative-bpc"))
-      snprintf(h.cupsRenderingIntent, sizeof(h.cupsRenderingIntent),
-		"%s", "RelativeBpc");
-    else if (!strcmp(val, "saturation"))
-      snprintf(h.cupsRenderingIntent, sizeof(h.cupsRenderingIntent),
-	      "%s",  "Saturation");
-    else
-      fprintf(stderr, "DEBUG: Unsupported print-rendering-intent \"%s\".\n",
-	      val);
-  }
-  else 
-  {
-	h.cupsRenderingIntent[0] = '\0';
-  }
-    if((ipp_attr = ippFindAttribute(printer_attrs, "print-rendering-intent-supported",
-    							IPP_TAG_ZERO))!=NULL){
-	int autoRender = 0;int count;
-        if((count = ippGetCount(ipp_attr))>0){
-    	    char temp[41] = "auto";
-    	    if(h.cupsRenderingIntent[0]!='\0'){		/* User is willing to supply some option */
-    	        for(i=0; i<count; i++){
-    		    const char *temp2 = ippGetString(ipp_attr, i, NULL);
-		    if(!strcasecmp(temp2, "auto")) autoRender = 1;
-    		    if(!strcasecmp(h.cupsRenderingIntent, temp2)){
-    		        break;
-    		    }
-    	        }
-    	    	if(i==count){
-    		    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
-    				"User specified print-rendering-intent not supported by printer,"
-    					"using default print rendering intent.");
-    		    h.cupsRenderingIntent[0] = '\0';
-    	    	}
-    	    }
-    	    if(h.cupsRenderingIntent[0]=='\0'){		/* Either user has not supplied any option
-							   or user supplied value is not supported by printer */
-    	    	if((ipp_attr = ippFindAttribute(printer_attrs, "print-rendering-intent-default",
-    	    						IPP_TAG_ZERO))!=NULL){
-    	            snprintf(temp,sizeof(temp),"%s",ippGetString(ipp_attr, 0, NULL));
-		    snprintf(h.cupsRenderingIntent, sizeof(h.cupsRenderingIntent),
-				"%s",ippGetString(ipp_attr, 0, NULL));
-    	    	}
-		else if(autoRender==1){
-    	            snprintf(temp,sizeof(temp),"%s","auto");
-		    snprintf(h.cupsRenderingIntent, sizeof(h.cupsRenderingIntent),
-				"%s","auto");
 
-		}
-    	    }
-        }
-    }
+    getPrintRenderIntent(data, &h);
     if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
     	"Print rendering intent = %s", h.cupsRenderingIntent);
 
