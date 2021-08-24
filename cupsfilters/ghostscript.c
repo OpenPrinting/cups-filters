@@ -1051,6 +1051,11 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "ghostscript: Streaming mode, no checks for input format, zero-page input, instructions from previous filter");
   }
+/*  Find print-rendering-intent */
+
+    getPrintRenderIntent(data, &h);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    	"Print rendering intent = %s", h.cupsRenderingIntent);
 
   /*  Check status of color management in CUPS */
   cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);

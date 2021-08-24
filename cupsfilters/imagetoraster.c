@@ -421,6 +421,12 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       (float)header.PageSize[1];
   }
 if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
+/*  Find print-rendering-intent */
+
+    getPrintRenderIntent(data, &header);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    	"Print rendering intent = %s", header.cupsRenderingIntent);
+
   if ((val = cupsGetOption("multiple-document-handling",
 			   num_options, options)) != NULL)
   {
