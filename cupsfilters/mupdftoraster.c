@@ -353,6 +353,13 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   if (!cm_disabled)
     cmGetPrinterIccProfile(getenv("PRINTER"), &icc_profile, ppd);
 
+/*  Find print-rendering-intent */
+
+    getPrintRenderIntent(data, &h);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    	"Print rendering intent = %s", h.cupsRenderingIntent);
+
+
   /* mutool parameters */
   mupdf_args = cupsArrayNew(NULL, NULL);
   if (!mupdf_args) {
