@@ -426,8 +426,9 @@ ieee1284GetMakeModel(
       * Just copy the model string, since it has the manufacturer...
       */
 
-      ieee1284NormalizeMakeAndModel(mdl, NULL, IEEE1284_NORMALIZE_HUMAN,
-				    make_model, make_model_size, NULL, NULL);
+      ieee1284NormalizeMakeAndModel(mdl, NULL, IEEE1284_NORMALIZE_HUMAN, NULL,
+				    make_model, make_model_size, NULL, NULL,
+				    NULL);
     }
     else
     {
@@ -439,8 +440,9 @@ ieee1284GetMakeModel(
 
       snprintf(temp, sizeof(temp), "%s %s", mfg, mdl);
 
-      ieee1284NormalizeMakeAndModel(temp, NULL, IEEE1284_NORMALIZE_HUMAN,
-				    make_model, make_model_size, NULL, NULL);
+      ieee1284NormalizeMakeAndModel(temp, NULL, IEEE1284_NORMALIZE_HUMAN, NULL,
+				    make_model, make_model_size, NULL, NULL,
+				    NULL);
     }
   }
   else if ((des = cupsGetOption("DESCRIPTION", num_values, values)) != NULL ||
@@ -474,8 +476,9 @@ ieee1284GetMakeModel(
       }
 
       if (spaces && letters)
-        ieee1284NormalizeMakeAndModel(des, NULL, IEEE1284_NORMALIZE_HUMAN,
-				      make_model, make_model_size, NULL, NULL);
+        ieee1284NormalizeMakeAndModel(des, NULL, IEEE1284_NORMALIZE_HUMAN, NULL,
+				      make_model, make_model_size, NULL, NULL,
+				      NULL);
     }
   }
 
@@ -638,14 +641,31 @@ ieee1284NormalizeMakeAndModel(
 					       field or for NO_MAKE_MODEL */
     ieee1284_normalize_modes_t mode,	/* I - Bit field to describe how to
 					       normalize */
-    char       *buffer,			/* O - String buffer */
+    regex_t    *extra_regex,            /* I - Compiled regex to determine
+					       where the extra info after
+					       the driver name starts, also
+					       mark with parentheses which
+					       sub string should be the
+					       driver name */
+    char       *buffer,			/* O - String buffer, to hold the
+					       normalized input string, plus,
+					       after the terminating zero, the
+					       driver name if an appropriate
+					       extra_regex is supplied 
+					       (*drvname will point to it) */
     size_t     bufsize,			/* O - Size of string buffer */
     char       **model,                 /* O - Pointer to where model name
 					       starts in buffer or NULL */
-    char       **extra)                 /* O - Pointer to where extra info
+    char       **extra,                 /* O - Pointer to where extra info
 					       starts in buffer (after comma,
-					       semicolon, parenthese) or NULL */
+					       semicolon, parenthese, or
+					       start of extra_regex
+					       match) or NULL */
+    char       **drvname)               /* O - Driver name, string of the first
+					       matching parenthese expression
+					       in the extra_regex */
 {
+  int   i;
   char	*bufptr;			/* Pointer into buffer */
   char  sepchr = ' ';                   /* Word separator character */
   int   compare = 0,                    /* Format for comparing */
@@ -657,9 +677,14 @@ ieee1284NormalizeMakeAndModel(
         nomakemodel = 0;                /* No make/model/extra separation */
   char  *makeptr = NULL,                /* Manufacturer name in buffer */
         *modelptr = NULL,               /* Model name in buffer */
-        *extraptr = NULL;               /* Extra info in buffer */
+        *extraptr = NULL,               /* Extra info in buffer */
+        *drvptr = NULL;                 /* Driver name in buffer */
   int   numdigits = 0,
         rightsidemoved = 0;
+  regmatch_t re_matches[10];            /* Regular expression matches,
+					   first entry for the whole regex,
+					   following entries for each
+					   parenthese pair */
 
   if (!make_and_model || !buffer || bufsize < 1)
   {
@@ -791,6 +816,7 @@ ieee1284NormalizeMakeAndModel(
     else
       modelptr = NULL;
     extraptr = NULL;
+    drvptr = NULL;
   }
   else
   {
@@ -801,6 +827,7 @@ ieee1284NormalizeMakeAndModel(
 
     modelptr = NULL;
     extraptr = NULL;
+    drvptr = NULL;
     strncpy(buffer, make_and_model, bufsize - 1);
     buffer[bufsize - 1] = '\0';
 
@@ -1073,19 +1100,74 @@ ieee1284NormalizeMakeAndModel(
     * Find extra info...
     */
 
-    /* We consider comma, semicolon, or parenthese as the end of the
-       model name and the rest of the string as extra info. So we set
-       a pointer to this extra info if we find such a character */
-    if ((extraptr = strchr(buffer, ',')) == NULL)
-      if ((extraptr = strchr(buffer, ';')) == NULL)
-	extraptr = strchr(buffer, '(');
-    if (extraptr)
+    /* If an appropriate regular expression is supplied we consider
+       the end of the model name where the match of the whole regular
+       expression begins. The rest of the string is considered extra
+       info. To extract a driver name from it, the regular expression
+       can contain parantheses, where the content of the first
+       matching parenthese pair is considered the driver name */
+    if (extra_regex)
     {
-      if (!human && *extraptr == '(' &&
-	  (bufptr = strchr(extraptr, ')')) != NULL)
-	*bufptr = '\0';
-      while(!isalnum(*extraptr) && *extraptr != '\0')
-	extraptr ++;
+      if (!regexec(extra_regex, buffer,
+		   (size_t)(sizeof(re_matches) / sizeof(re_matches[0])),
+		   re_matches, 0))
+      {
+	// Regular expression matches
+	extraptr = buffer + re_matches[0].rm_so;
+	if (strlen(buffer) < bufsize - 3)
+	  for (i = 1; i < (int)(sizeof(re_matches) / sizeof(re_matches[0]));
+	       i ++)
+	    if (re_matches[i].rm_so >= 0 && re_matches[i].rm_eo >= 0)
+	    {
+	      /* We have a driver name (matching parentheses). Copy
+		 the driver name to the end of the output buffer, so
+		 it does not interfere with the output string and does
+		 not need to get moved when the length of the output
+		 string changes. Point drvptr to it for easy access */
+	      drvptr = buffer + bufsize - 1;
+	      *drvptr = '\0';
+	      drvptr --;
+	      for (bufptr = buffer + re_matches[i].rm_eo - 1;
+		   bufptr >= buffer + re_matches[i].rm_so &&
+		     drvptr > buffer + strlen(buffer) + 1;
+		   bufptr --, drvptr --)
+		*drvptr = *bufptr;
+	      if (bufptr < buffer + re_matches[i].rm_so)
+		drvptr ++;
+	      else
+		drvptr = NULL;
+	      break;
+	    }
+      }
+    }
+    else
+    {
+      /* Not having a regular expression we consider comma, semicolon,
+	 or parenthese as the end of the model name and the rest of
+	 the string as extra info. So we set a pointer to this extra
+	 info if we find such a character */
+      if ((extraptr = strchr(buffer, ',')) == NULL)
+	if ((extraptr = strchr(buffer, ';')) == NULL)
+	  extraptr = strchr(buffer, '(');
+      if (extraptr)
+      {
+	if (human)
+	  /* Include separator characters between model and extra info, pointer
+	     will be on first character after model */
+	  while (extraptr > buffer && isspace(*(extraptr - 1)))
+	    extraptr --;
+	else
+	{
+	  /* If extra info starts with parenthese and a closing parenthese is
+	     also present, take only what is in the parentheses */
+	  if (*extraptr == '(' &&
+	      (bufptr = strchr(extraptr, ')')) != NULL)
+	    *bufptr = '\0';
+	  /* Let extra info start at first alphanumeric character */
+	  while(!isalnum(*extraptr) && *extraptr != '\0')
+	    extraptr ++;
+	}
+      }
     }
   }
 
@@ -1219,7 +1301,10 @@ ieee1284NormalizeMakeAndModel(
   * Return resulting string and pointers
   */
 
+  if (drvptr <= buffer + strlen(buffer) + 1)
+    drvptr = NULL;
   if (model) *model = modelptr;
   if (extra) *extra = extraptr;
+  if (drvname) *drvname = drvptr;
   return (buffer[0] ? buffer : NULL);
 }
