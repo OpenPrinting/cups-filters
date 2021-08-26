@@ -2329,6 +2329,17 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasecmp(c, "0rhit") == 0)
 	    properties->sets_normal = 10;
 	}
+	else if (strcasecmp(o, "EconoMode") == 0 || /* Foomatic */
+		 strcasecmp(o, "EconoFast") == 0)   /* Foomatic (HP PPA) */
+	{
+	  if (strcasecmp(c, "Off") == 0)
+	    properties->sets_high = 1;
+	  else if (strcasecmp(c, "On") == 0 ||
+		   strcasecmp(c, "Low") == 0)
+	    properties->sets_draft = 10;
+	  else if (strcasecmp(c, "High") == 0)
+	    properties->sets_draft = 11;
+	}
 	else if (strcasestr(o, "ColorPrecision")) /* Gutenprint */
 	{
 	  if (strcasecmp(c, "best") == 0)
@@ -2360,6 +2371,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		 ((p = strcasestr(o, "eco")) && strcasestr(p, "mode")) ||
 		 ((p = strcasestr(o, "toner")) && strcasestr(p, "sav")) ||
 		 ((p = strcasestr(o, "bi")) && strcasestr(p, "direction")) ||
+		 strcasecmp(o, "EcoBlack") == 0 || /* Foomatic (Alps) */
 		 strcasecmp(o, "bidi") == 0 ||
 		 strcasecmp(o, "bi-di") == 0)
 	{
