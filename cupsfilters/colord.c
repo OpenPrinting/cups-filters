@@ -239,7 +239,7 @@ get_profile_for_device_path ( filter_data_t *data,
                                                     -1,
                                                     &error);
   if (reply == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "DEBUG: Failed to send: %s:%s",
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Failed to send: %s:%s",
            error.name, error.message);
     dbus_error_free(&error);
     goto out;
@@ -299,7 +299,7 @@ get_device_path_for_device_id ( filter_data_t *data,
                 -1,
                 &error);
   if (reply == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "DEBUG: Failed to send: %s:%s",
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Failed to send: %s:%s",
             error.name, error.message);
     dbus_error_free(&error);
     goto out;
@@ -430,7 +430,7 @@ get_profile_inhibitors ( filter_data_t *data,
   while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
     dbus_message_iter_get_basic(&sub, &tmp);
     if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		"DEBUG: Inhibitor %s exists", tmp);
+		"Inhibitor %s exists", tmp);
     dbus_message_iter_next(&sub);
     inhibitors++;
   }
