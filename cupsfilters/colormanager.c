@@ -28,6 +28,7 @@ MIT Open Source License  -  http://www.opensource.org/
 
 #include "colormanager.h"
 #include <cupsfilters/colord.h>
+#include <cupsfilters/filter.h>
 //#include <cupsfilters/kmdevices.h>
 
 
@@ -35,12 +36,16 @@ MIT Open Source License  -  http://www.opensource.org/
 
 
 /* Private function prototypes */
-static int      _get_colord_printer_cm_status   (const char *printer_name);
-static char    *_get_colord_printer_id          (const char *printer_name);
-static int      _get_colord_profile             (const char *printer_name, 
+static int      _get_colord_printer_cm_status   (filter_data_t *data,
+						 const char *printer_name);
+static char    *_get_colord_printer_id          (filter_data_t *data, 
+						 const char *printer_name);
+static int      _get_colord_profile             (filter_data_t *data, 
+						 const char *printer_name, 
                                                  char **profile,
                                                  ppd_file_t *ppd);
-static char    *_get_ppd_icc_fallback           (ppd_file_t *ppd, 
+static char    *_get_ppd_icc_fallback           (filter_data_t *data, 
+						 ppd_file_t *ppd, 
                                                  char **qualifier);
 
 
@@ -66,17 +71,20 @@ double    blackpoint_default[3] = {0.0, 0.0, 0.0};
 
 /* Get printer color management status from the system's color manager */
 int          
-cmIsPrinterCmDisabled(const char *printer_name)    /* dest name */
+cmIsPrinterCmDisabled( filter_data_t *data,
+		const char *printer_name)    /* dest name */
 {
-
+    filter_logfunc_t log = data->logfunc;
+    void *ld = data->logdata;
     int is_cm_off = 0;          /* color management status flag */
 
 
     /* Request color management status from colord */
-    is_cm_off = _get_colord_printer_cm_status(printer_name);
+    is_cm_off = _get_colord_printer_cm_status(data, printer_name);
 
     if (is_cm_off)
-      fprintf(stderr,"DEBUG: Color Manager: Color management disabled by OS.\n");
+	if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		"Color Manager: Color management disabled by OS.");
 
     return is_cm_off;      
 
@@ -85,18 +93,20 @@ cmIsPrinterCmDisabled(const char *printer_name)    /* dest name */
 
 /* Get printer ICC profile from the system's color manager */
 int 
-cmGetPrinterIccProfile(const char *printer_name,  /* Printer name (usually "dest" name) */
+cmGetPrinterIccProfile(filter_data_t *data,
+		       const char *printer_name,  /* Printer name (usually "dest" name) */
                        char **icc_profile,        /* ICC Profile Path */
                        ppd_file_t *ppd)           /* Optional PPD file for fallback profile */
 {
-
+    filter_logfunc_t log = data->logfunc;
+    void *ld = data->logdata;
     int profile_set = 0;        /* 'is profile found' flag */
 
 
     /* Request a profile from colord */
-    profile_set = _get_colord_profile(printer_name, icc_profile, ppd);
-
-    fprintf(stderr, "DEBUG: Color Manager: ICC Profile: %s\n", *icc_profile ?
+    profile_set = _get_colord_profile(data, printer_name, icc_profile, ppd);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		"DEBUG: Color Manager: ICC Profile: %s\n", *icc_profile ?
         *icc_profile : "None");
 
     return profile_set;
@@ -106,10 +116,13 @@ cmGetPrinterIccProfile(const char *printer_name,  /* Printer name (usually "dest
 
 /* Find the "cm-calibration" CUPS option */
 cm_calibration_t    
-cmGetCupsColorCalibrateMode(cups_option_t *options,    /* Options from CUPS */
+cmGetCupsColorCalibrateMode(filter_data_t *data,
+			    cups_option_t *options,    /* Options from CUPS */
                             int num_options)           /* Options from CUPS */
 {
 
+    filter_logfunc_t log = data->logfunc;
+    void *ld = data->logdata;
     cm_calibration_t status;     /* color management status */
 
 
@@ -119,7 +132,8 @@ cmGetCupsColorCalibrateMode(cups_option_t *options,    /* Options from CUPS */
     else
       status = CM_CALIBRATION_DISABLED;
 
-    fprintf(stderr, "DEBUG: Color Manager: %s\n", status ?
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		"DEBUG: Color Manager: %s", status ?
            "Calibration Mode/Enabled" : "Calibration Mode/Off");
 
     return status;
@@ -178,11 +192,15 @@ double *cmBlackPointDefault(void)
 
 
 char * 
-_get_colord_printer_id(const char *printer_name)         /* Dest name */
+_get_colord_printer_id( filter_data_t *data,
+			const char *printer_name)         /* Dest name */
 {
 
+    filter_logfunc_t log = data->logfunc;
+    void *ld = data->logdata;
     if (printer_name == NULL) {
-      fprintf(stderr, "DEBUG: Color Manager: Invalid printer name.\n");
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		"Color Manager: Invalid printer name.");
       return 0;
     }
 
@@ -196,12 +214,17 @@ _get_colord_printer_id(const char *printer_name)         /* Dest name */
 
 
 int 
-_get_colord_printer_cm_status(const char *printer_name)  /* Dest name */
+_get_colord_printer_cm_status( filter_data_t *data,
+		const char *printer_name)  /* Dest name */
 {
+
+    filter_logfunc_t log = data->logfunc;
+    void *ld = data->logdata;
 
     /* If invalid input, we leave color management alone */
     if (printer_name == NULL) {
-      fprintf(stderr, "DEBUG: Color Manager: Invalid printer name.\n");
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		"Color Manager: Invalid printer name.");
       return 0;
     } else if (!strcmp(printer_name, "(null)"))
       return 0;
@@ -211,8 +234,8 @@ _get_colord_printer_cm_status(const char *printer_name)  /* Dest name */
 
 
     /* Check if device is inhibited/disabled in colord  */
-    printer_id = _get_colord_printer_id(printer_name);
-    is_printer_cm_disabled = colord_get_inhibit_for_device_id (printer_id);
+    printer_id = _get_colord_printer_id(data, printer_name);
+    is_printer_cm_disabled = colord_get_inhibit_for_device_id (data, printer_id);
 
     if (printer_id != NULL)
       free(printer_id);
@@ -222,13 +245,18 @@ _get_colord_printer_cm_status(const char *printer_name)  /* Dest name */
 }
 
 int 
-_get_colord_profile(const char   *printer_name,     /* Dest name */
+_get_colord_profile(filter_data_t *data,
+		    const char   *printer_name,     /* Dest name */
                     char         **profile,         /* Requested icc profile path */      
                     ppd_file_t   *ppd)              /* PPD file */
 {
 
+    filter_logfunc_t log = data->logfunc;
+    void *ld = data->logdata;
+
     if (printer_name == NULL || profile == 0) {
-      fprintf(stderr, "DEBUG: Color Manager: Invalid input - Unable to find profile.\n"); 
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		"Color Manager: Invalid input - Unable to find profile."); 
       return -1;
     }
  
@@ -242,9 +270,10 @@ _get_colord_profile(const char   *printer_name,     /* Dest name */
     qualifier = colord_get_qualifier_for_ppd(ppd);
 
     if (qualifier != NULL) {
-      printer_id = _get_colord_printer_id(printer_name);
+      printer_id = _get_colord_printer_id(data, printer_name);
       /* Get profile from colord using qualifiers */
-      icc_profile = colord_get_profile_for_device_id ((const char *)printer_id,
+      icc_profile = colord_get_profile_for_device_id (data,
+						      (const char *)printer_id,
 						      (const char **)qualifier);
     }
 
@@ -252,7 +281,7 @@ _get_colord_profile(const char   *printer_name,     /* Dest name */
       is_profile_set = 1; 
     else if (ppd) {
     /* Get optional fallback PPD profile */
-      icc_profile = _get_ppd_icc_fallback(ppd, qualifier);
+      icc_profile = _get_ppd_icc_fallback(data, ppd, qualifier);
       if (icc_profile)
         is_profile_set = 1;
     }
@@ -286,8 +315,11 @@ _get_colord_profile(const char   *printer_name,     /* Dest name */
 
 /* From gstoraster */
 char *
-_get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
+_get_ppd_icc_fallback (filter_data_t *data, ppd_file_t *ppd, char **qualifier)
 {
+
+  filter_logfunc_t log = data->logfunc;
+  void *ld = data->logdata;
   char full_path[1024];
   char *icc_profile = NULL;
   char qualifer_tmp[1024];
@@ -311,14 +343,17 @@ _get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
 
   /* neither */
   if (attr == NULL) {
-    fprintf(stderr, "INFO: Color Manager: no profiles specified in PPD\n");
+    if(log) log(ld, FILTER_LOGLEVEL_INFO,
+		"Color Manager: no profiles specified in PPD");
+		
     goto out;
   }
 
   /* try to find a profile that matches the qualifier exactly */
   for (;attr != NULL; attr = ppdFindNextAttr(ppd, profile_key, NULL)) {
-    fprintf(stderr, "INFO: Color Manager: found profile %s in PPD with qualifier '%s'\n",
-            attr->value, attr->spec);
+    if(log) log(ld, FILTER_LOGLEVEL_INFO,
+		"Color Manager: found profile %s in PPD with qualifier '%s'\n",
+			attr->value, attr->spec);
 
     /* invalid entry */
     if (attr->spec == NULL || attr->value == NULL)
@@ -336,7 +371,8 @@ _get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
 
     /* check the file exists */
     if (access(full_path, 0)) {
-      fprintf(stderr, "INFO: Color Manager: found profile %s in PPD that does not exist\n",
+      if(log) log(ld, FILTER_LOGLEVEL_INFO,
+		"Color Manager: found profile %s in PPD that does not exist\n",
               full_path);
       continue;
     }
@@ -350,7 +386,8 @@ _get_ppd_icc_fallback (ppd_file_t *ppd, char **qualifier)
 
   /* no match */
   if (attr == NULL) {
-    fprintf(stderr, "INFO: Color Manager: no profiles in PPD for qualifier '%s'\n",
+    if(log) log(ld, FILTER_LOGLEVEL_INFO,
+		"Color Manager: no profiles in PPD for qualifier '%s'\n",
             qualifer_tmp);
     goto out;
   }

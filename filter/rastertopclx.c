@@ -30,7 +30,7 @@
 #include <cupsfilters/driver.h>
 #include "pcl-common.h"
 #include <signal.h>
-
+#include <cupsfilters/filter.h>
 
 /*
  * Output modes...
@@ -86,7 +86,7 @@ int		Canceled;		/* Is the job canceled? */
  * Prototypes...
  */
 
-void	StartPage(ppd_file_t *ppd, cups_page_header2_t *header, int job_id,
+void	StartPage(filter_data_t *data, ppd_file_t *ppd, cups_page_header2_t *header, int job_id,
 	          const char *user, const char *title, int num_options,
 		  cups_option_t *options);
 void	EndPage(ppd_file_t *ppd, cups_page_header2_t *header);
@@ -105,7 +105,8 @@ int	ReadLine(cups_raster_t *ras, cups_page_header2_t *header);
  */
 
 void
-StartPage(ppd_file_t         *ppd,	/* I - PPD file */
+StartPage(filter_data_t *data,		/* I - filter data */
+	  ppd_file_t         *ppd,	/* I - PPD file */
           cups_page_header2_t *header,	/* I - Page header */
 	  int                job_id,	/* I - Job ID */
 	  const char         *user,	/* I - User printing job */
@@ -344,12 +345,12 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     fprintf(stderr, "DEBUG: Resolution = %s\n", resolution);
 
     /* support the "cm-calibration" option */
-    cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+    cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
 
     if (cm_calibrate == CM_CALIBRATION_ENABLED)
       cm_disabled = 1;
     else
-      cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
+      cm_disabled = cmIsPrinterCmDisabled(data, getenv("PRINTER"));
 
     if (ppd && !cm_disabled)
     {
@@ -1817,7 +1818,10 @@ main(int  argc,				/* I - Number of command-line arguments */
  /*
   * Check command-line...
   */
-
+  filter_data_t temp;
+  filter_data_t *data = &temp;
+  data->logdata = NULL;
+  data->logfunc = cups_logfunc;
   if (argc < 6 || argc > 7)
   {
     fprintf(stderr, "Usage: %s job-id user title copies options [file]\n",
@@ -1911,7 +1915,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     fprintf(stderr, "PAGE: %d %d\n", Page, header.NumCopies);
     fprintf(stderr, "INFO: Starting page %d.\n", Page);
 
-    StartPage(ppd, &header, atoi(argv[1]), argv[2], argv[3],
+    StartPage(data, ppd, &header, atoi(argv[1]), argv[2], argv[3],
               num_options, options);
 
     for (y = 0; y < (int)header.cupsHeight; y ++)

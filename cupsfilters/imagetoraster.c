@@ -646,12 +646,12 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
   if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Resolution = %s", resolution);
 
   /* support the "cm-calibration" option */
-  cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+  cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
 
   if (cm_calibrate == CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
   else
-    cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
+    cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
 
  /*
   * Choose the appropriate colorspace...

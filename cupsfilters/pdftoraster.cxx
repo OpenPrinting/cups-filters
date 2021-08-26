@@ -406,15 +406,15 @@ static void parseOpts(filter_data_t *data,
     }
 
     /* support the CUPS "cm-calibration" option */
-    doc->colour_profile.cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+    doc->colour_profile.cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
 
     if (doc->colour_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
       doc->colour_profile.cm_disabled = 1;
     else
-      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data->printer);
+      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
 
     if (!doc->colour_profile.cm_disabled)
-      cmGetPrinterIccProfile(data->printer, &profile, doc->ppd);
+      cmGetPrinterIccProfile(data, data->printer, &profile, doc->ppd);
 
     if (profile != NULL) {
       doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
@@ -491,15 +491,15 @@ static void parseOpts(filter_data_t *data,
     }
 
     /* support the CUPS "cm-calibration" option */
-    doc->colour_profile.cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+    doc->colour_profile.cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
 
     if (doc->colour_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
       doc->colour_profile.cm_disabled = 1;
     else
-      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data->printer);
+      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
 
     if (!doc->colour_profile.cm_disabled)
-      cmGetPrinterIccProfile(data->printer, &profile, doc->ppd);
+      cmGetPrinterIccProfile(data, data->printer, &profile, doc->ppd);
 
     if (profile != NULL) {
       doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");

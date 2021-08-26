@@ -381,15 +381,15 @@ static void parseOpts(filter_data_t *data,
     }
 
     /* support the CUPS "cm-calibration" option */
-    doc->color_profile.cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+    doc->color_profile.cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
 
     if (doc->color_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
       doc->color_profile.cm_disabled = 1;
     else
-      doc->color_profile.cm_disabled = cmIsPrinterCmDisabled(data->printer);
+      doc->color_profile.cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
 
     if (!doc->color_profile.cm_disabled)
-      cmGetPrinterIccProfile(data->printer, &profile, doc->ppd);
+      cmGetPrinterIccProfile(data, data->printer, &profile, doc->ppd);
 
     if (profile != NULL) {
       doc->color_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
