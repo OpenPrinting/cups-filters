@@ -39,7 +39,7 @@ extern "C" {
 
 #include <cups/raster.h>
 #include <ppd/ppd.h>
-
+#include <cupsfilters/filter.h>
 
 
 #define CM_CALIBRATION_STRING "cm-calibration"       /* String for "Color Calibration Mode" */
@@ -60,14 +60,17 @@ typedef enum cm_calibration_e
 
 
 extern 
-cm_calibration_t    cmGetCupsColorCalibrateMode       (cups_option_t *options,
+cm_calibration_t    cmGetCupsColorCalibrateMode       ( filter_data_t *data,
+                    				       cups_option_t *options,
                                                        int num_options);
 
-extern int          cmGetPrinterIccProfile            (const char *printer_id,
+extern int          cmGetPrinterIccProfile            (filter_data_t *data,
+						       const char *printer_id,
                                                        char **icc_profile,
                                                        ppd_file_t *ppd);
 
-extern int          cmIsPrinterCmDisabled             (const char *printer_id);
+extern int          cmIsPrinterCmDisabled             (filter_data_t *data,
+							const char *printer_id);
 
 extern double*      cmGammaAdobeRgb                   (void);
 extern double*      cmGammaSGray                      (void);

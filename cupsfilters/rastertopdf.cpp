@@ -1460,13 +1460,13 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
   doc.iscanceleddata = icd;
 
   /* support the CUPS "cm-calibration" option */ 
-  cm_calibrate = cmGetCupsColorCalibrateMode(data->options, data->num_options);
+  cm_calibrate = cmGetCupsColorCalibrateMode(data, data->options, data->num_options);
 
   if (outformat == OUTPUT_FORMAT_PCLM ||
       cm_calibrate == CM_CALIBRATION_ENABLED)
     doc.cm_disabled = 1;
   else
-    doc.cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
+    doc.cm_disabled = cmIsPrinterCmDisabled(data, getenv("PRINTER"));
 
 #ifdef QPDF_HAVE_PCLM
   if (outformat == OUTPUT_FORMAT_PCLM && data->ppd == NULL

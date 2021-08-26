@@ -343,15 +343,15 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
      empty = 1;
 
   /*  Check status of color management in CUPS */
-  cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+  cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
 
   if (cm_calibrate == CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
   else 
-    cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
+    cm_disabled = cmIsPrinterCmDisabled(data, getenv("PRINTER"));
 
   if (!cm_disabled)
-    cmGetPrinterIccProfile(getenv("PRINTER"), &icc_profile, ppd);
+    cmGetPrinterIccProfile(data, getenv("PRINTER"), &icc_profile, ppd);
 
 /*  Find print-rendering-intent */
 

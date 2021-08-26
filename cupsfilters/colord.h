@@ -36,11 +36,14 @@ extern "C" {
 
 #include <cups/raster.h>
 #include <ppd/ppd.h>
+#include <cupsfilters/filter.h>
 
 char  **colord_get_qualifier_for_ppd      (ppd_file_t *ppd);
-char   *colord_get_profile_for_device_id  (const char *device_id,
+char   *colord_get_profile_for_device_id  (filter_data_t *data,
+                                           const char *device_id,
                                            const char **qualifier_tuple);
-int     colord_get_inhibit_for_device_id  (const char *device_id);
+int     colord_get_inhibit_for_device_id  ( filter_data_t *data,
+                                            const char *device_id);
 
 #  ifdef __cplusplus
 }
