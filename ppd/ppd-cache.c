@@ -2078,7 +2078,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
                   res_y;
     long total_image_data;
   } choice_properties_t;
-  int                    i, j, k;
+  int                    i, j, k, l;
   unsigned int           m;
   int                    pass;
   ppd_group_t            *group;
@@ -2172,6 +2172,43 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  strcasecmp(o, "KD03Duplex") == 0 ||
 	  strcasecmp(o, "Collate") == 0)
 	continue;
+
+      /* Set members options of composite options in Foomatic to stay
+         controlled by the composite option */
+
+      /* Composite options in Foomaticar options which set a number of
+	 other options, so each choice of them is the same as a preset
+	 in CUPS.  In addition, some PPDs in Foomatic have a composite
+	 option named "PrintoutMode" with 6 choices, exactly the 6 of
+	 the grid of CUPS presets, color/mono in draft, mediaum, and
+	 high quality. The composite options are created by hand, so
+	 they surely do for what they are intended for and so they are
+	 safer as this preset auto-generation algorithm. Therefore we
+	 only let the composite option be set in our presets and set
+	 the members options to leave the control at the composite
+	 option */
+
+      if (strstr(ppd->nickname, "Foomatic") &&
+	  !strncmp(option->choices[0].choice, "From", 4) &&
+	  ppdFindOption(ppd, option->choices[0].choice + 4))
+      {
+	for (k = 0; k < 2; k ++)
+	  for (l = 0; l < 3; l ++)
+	    if (cupsGetOption(option->choices[0].choice + 4,
+			      pc->num_presets[k][l], pc->presets[k][l]))
+	      pc->num_presets[k][l] =
+		cupsAddOption(o, option->choices[0].choice,
+			      pc->num_presets[k][l], &(pc->presets[k][l]));
+	for (k = 0; k < 5; k ++)
+	  if (cupsGetOption(option->choices[0].choice + 4,
+			    pc->num_optimize_presets[k],
+			    pc->optimize_presets[k]))
+	    pc->num_optimize_presets[k] =
+	      cupsAddOption(o, option->choices[0].choice,
+			    pc->num_optimize_presets[k],
+			    &(pc->optimize_presets[k]));
+	continue;
+      }
 
       /* Array for properties of the choices */
       choice_properties = cupsArrayNew(NULL, NULL);
@@ -2292,6 +2329,17 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasecmp(c, "0rhit") == 0)
 	    properties->sets_normal = 10;
 	}
+	else if (strcasecmp(o, "EconoMode") == 0 || /* Foomatic */
+		 strcasecmp(o, "EconoFast") == 0)   /* Foomatic (HP PPA) */
+	{
+	  if (strcasecmp(c, "Off") == 0)
+	    properties->sets_high = 1;
+	  else if (strcasecmp(c, "On") == 0 ||
+		   strcasecmp(c, "Low") == 0)
+	    properties->sets_draft = 10;
+	  else if (strcasecmp(c, "High") == 0)
+	    properties->sets_draft = 11;
+	}
 	else if (strcasestr(o, "ColorPrecision")) /* Gutenprint */
 	{
 	  if (strcasecmp(c, "best") == 0)
@@ -2323,6 +2371,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		 ((p = strcasestr(o, "eco")) && strcasestr(p, "mode")) ||
 		 ((p = strcasestr(o, "toner")) && strcasestr(p, "sav")) ||
 		 ((p = strcasestr(o, "bi")) && strcasestr(p, "direction")) ||
+		 strcasecmp(o, "EcoBlack") == 0 || /* Foomatic (Alps) */
 		 strcasecmp(o, "bidi") == 0 ||
 		 strcasecmp(o, "bi-di") == 0)
 	{

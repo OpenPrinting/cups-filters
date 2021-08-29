@@ -28,6 +28,7 @@
 #  include <signal.h>
 #  include <unistd.h>
 #  include <fcntl.h>
+#  include <regex.h>
 
 #  ifdef __linux
 #    include <sys/ioctl.h>
@@ -119,8 +120,10 @@ extern int	ieee1284GetValues(const char *device_id,
 extern char	*ieee1284NormalizeMakeAndModel(const char *make_and_model,
 					       const char *make,
 					       ieee1284_normalize_modes_t mode,
+					       regex_t *extra_regex,
 					       char *buffer, size_t bufsize,
-					       char **model, char **extra);
+					       char **model, char **extra,
+					       char **drvname);
 
 
 #  ifdef __cplusplus

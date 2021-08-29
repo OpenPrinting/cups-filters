@@ -77,6 +77,9 @@ extern int		ippRasterMatchIPPSize(cups_page_header2_t *header,
 extern int		getBackSideAndHeaderDuplex(ipp_t *printer_attrs,
 						  cups_page_header2_t *header);
 
+extern int 		getPrintRenderIntent(filter_data_t *data,
+				cups_page_header2_t *header);
+
 #  ifdef __cplusplus
 }
 #  endif /* __cplusplus */
