@@ -338,6 +338,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
 	cupsfilters/texttopdf.c \
+	cupsfilters/texttotext.c \
 	$(pkgfiltersinclude_DATA)
 EXTRA_libcupsfilters_la_SOURCES = \
 	cupsfilters/getline.c \
@@ -948,9 +949,11 @@ texttotext_SOURCES = \
 	filter/texttotext.c
 EXTRA_texttotext_SOURCES = cupsfilters/strcasestr.c
 texttotext_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 texttotext_LDADD = \
+	libcupsfilters.la \
 	libppd.la \
 	$(STRCASESTR) \
 	$(CUPS_LIBS) \
