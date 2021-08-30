@@ -68,7 +68,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
   int		i, j;			/* Looping vars */
   char          *p;
   int		exit_status = 0;	/* Exit status */
-  int		fd = 0;			/* Copy file descriptor */
+  int		fd;			/* Copy file descriptor */
   char		*filename,		/* Text file to convert */
 		tempfile[1024];		/* Temporary file */
   char		buffer[8192];		/* Copy buffer */
@@ -151,6 +151,8 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
 					   to the next line */
   int           num_pages = 0;          /* Number of pages which get actually
 					   printed */
+  int n;
+  char buff[BUFSIZ];
   ipp_t *printer_attrs = NULL;
   ipp_t *job_attrs = NULL;
   ipp_attribute_t *ipp;
@@ -162,6 +164,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
 
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
+  cups_file_t *outputfp;
 
  /*
   * Make sure status messages are not buffered...
@@ -169,10 +172,20 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
 
   setbuf(stderr, NULL);
 
+
+  if ((outputfp = cupsFileOpenFd(outputfd, "w")) == NULL)
+  {
+    if (!iscanceled || !iscanceled(icd))
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+                    "bannertopdf: Unable to open output data stream.");
+    }
+    return (1);
+  }
+
  /*
   * Copy stdin to a temp file...
   */
-
   if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
   {
     if(log) log(ld, FILTER_LOGLEVEL_ERROR,"texttotext: Unable to make temprorary file");
@@ -181,8 +194,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
     if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: Copying input to temp print file \"%s\"",
             tempfile);
 
-    int n;
-    char buff[BUFSIZ];
+
   if (!inputfd)
   {
     
@@ -1005,12 +1017,15 @@ if(val2==NULL)
     }
     cupsArrayDelete(page_array);
   }
-
+  cupsFilePuts(outputfp, out_page);
  /*
   * Cleanup and exit...
   */
 
  error:
+
+  if(outputfp)
+    cupsFileClose(outputfp);
 
   free(page_ranges);
   free(out_page);
