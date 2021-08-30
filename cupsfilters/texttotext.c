@@ -157,7 +157,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
   ipp_t *defsize;
   char buf[2048];
 
-    filter_logfunc_t     log = data->logfunc;
+  filter_logfunc_t     log = data->logfunc;
   void          *ld = data->logdata;
 
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
@@ -173,12 +173,12 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
   * Copy stdin to a temp file...
   */
 
-    if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
-    {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR,"texttotext: Unable to copy input text file");
-      goto error;
-    }
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: Copying stdin to temp print file \"%s\"\n",
+  if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
+  {
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR,"texttotext: Unable to make temprorary file");
+    goto error;
+  }
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: Copying input to temp print file \"%s\"",
             tempfile);
 
     int n;
@@ -217,7 +217,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
       }
     }
     filename  = tempfile;
-    //tempfile[0] = '\0';
+  //  tempfile[0] = '\0';
   }
 
  /*
@@ -299,7 +299,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
     if(val==NULL)
       val = ppd_attr->value;
 
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: PageSize: %s\n", val);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: PageSize: %s", val);
     snprintf(buffer, sizeof(buffer), "Default%sNumLines", val);
     if ((val2 = cupsGetOption(buffer + 7, num_options, options)) != NULL ||
   (ipp = ippFindAttribute(job_attrs, buffer+7, IPP_TAG_ZERO))!= NULL   ||
@@ -478,7 +478,7 @@ if(val2==NULL)
       page_bottom = 0;
     }
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Margins: Left (Columns): %d; Right (Columns): %d; Top (Lines): %d; Bottom (Lines): %d\n",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Margins: Left (Columns): %d; Right (Columns): %d; Top (Lines): %d; Bottom (Lines): %d",
 	  page_left, page_right, page_top, page_bottom);
 
   text_width = num_columns - page_left - page_right;
@@ -766,8 +766,9 @@ if(val2==NULL)
 	 characters in the inbuf, meaning that the file
          ends with an incomplete UTF-8 character. Log
          this fact. */
-      if (insize > 0 && incomplete_char)
-	if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Input text file ends with incomplete UTF-8 character sequence, file possibly incomplete, but printing the successfully read part anyway");
+      if (insize > 0 && incomplete_char){
+	      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Input text file ends with incomplete UTF-8 character sequence, file possibly incomplete, but printing the successfully read part anyway");
+      }
 
       /* Now write out the byte sequence to get into the
 	 initial state if this is necessary.  */
@@ -872,7 +873,9 @@ if(val2==NULL)
 	    /* Log the page output (only once, when printing the first buffer
 	       load) */
 	    if (num_pages == 1)
+      {
 	     if(log) log(ld, FILTER_LOGLEVEL_INFO, "texttotext: 1 1");
+      }
 	  } else if ((num_copies == 1 || !collate) && !reverse_order) {
 	    /* Send out the page */
 	    for (i = 0; i < num_copies; i ++)
@@ -974,7 +977,7 @@ if(val2==NULL)
   close(fd);
   
   if (iconv_close (cd) != 0)
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Error closing iconv encoding conversion session\n");
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Error closing iconv encoding conversion session");
 
   /* Error out on an illegal UTF-8 sequence in the input file */
   if (result < 0)
