@@ -1051,17 +1051,22 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "ghostscript: Streaming mode, no checks for input format, zero-page input, instructions from previous filter");
   }
+/*  Find print-rendering-intent */
+
+    getPrintRenderIntent(data, &h);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    	"Print rendering intent = %s", h.cupsRenderingIntent);
 
   /*  Check status of color management in CUPS */
-  cm_calibrate = cmGetCupsColorCalibrateMode(options, num_options);
+  cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
 
   if (cm_calibrate == CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
   else 
-    cm_disabled = cmIsPrinterCmDisabled(data->printer);
+    cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
 
   if (!cm_disabled)
-    cmGetPrinterIccProfile(data->printer, &icc_profile, ppd);
+    cmGetPrinterIccProfile(data, data->printer, &icc_profile, ppd);
 
   /* Ghostscript parameters */
   gs_args = cupsArrayNew(NULL, NULL);

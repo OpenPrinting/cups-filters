@@ -44,6 +44,7 @@
 #include <signal.h>
 #include <pwd.h>
 #include <cupsfilters/colormanager.h>
+#include <cupsfilters/filter.h>
 
 /* Logging */
 FILE* logh = NULL;
@@ -763,7 +764,10 @@ int main(int argc, char** argv)
     int havefilter, havegstoraster;
     dstr_t *filelist;
     list_t * arglist;
-
+    filter_data_t temp;
+    filter_data_t *data = &temp;
+    data->logdata = NULL;
+    data->logfunc = cups_logfunc;
     arglist = list_create_from_array(argc -1, (void**)&argv[1]);
 
     if (argc == 2 && (arglist_find(arglist, "--version") || arglist_find(arglist, "--help") ||
@@ -857,7 +861,7 @@ int main(int argc, char** argv)
     }
 
     /* Check status of printer color management from the color manager */
-    cm_disabled = cmIsPrinterCmDisabled(getenv("PRINTER"));
+    cm_disabled = cmIsPrinterCmDisabled(data, getenv("PRINTER"));
 
     /* CUPS calls foomatic-rip only with 5 or 6 positional parameters,
        not with named options, like for example "-p <string>". */
@@ -1036,7 +1040,7 @@ int main(int argc, char** argv)
                   _log("INFO: Using qualifer: '%s.%s.%s'\n",
                         qualifier[0], qualifier[1], qualifier[2]);
 
-                  cmGetPrinterIccProfile(getenv("PRINTER"),
+                  cmGetPrinterIccProfile(data, getenv("PRINTER"),
 					 (char **)&icc_profile, 0);
 
                   /* fall back to PPD */
