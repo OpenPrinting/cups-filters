@@ -2332,9 +2332,11 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	else if (strcasecmp(o, "EconoMode") == 0 || /* Foomatic */
 		 strcasecmp(o, "EconoFast") == 0)   /* Foomatic (HP PPA) */
 	{
-	  if (strcasecmp(c, "Off") == 0)
+	  if (strcasecmp(c, "Off") == 0 ||
+	      strcasecmp(c, "False") == 0)
 	    properties->sets_high = 1;
 	  else if (strcasecmp(c, "On") == 0 ||
+		   strcasecmp(c, "True") == 0 ||
 		   strcasecmp(c, "Low") == 0)
 	    properties->sets_draft = 10;
 	  else if (strcasecmp(c, "High") == 0)
@@ -2409,12 +2411,14 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasestr(c, "Photo") ||
 		   strcasestr(c, "Enhance") ||
 		   strcasestr(c, "slow") ||
+		   strncasecmp(c, "ImageREt", 8) == 0 || /* HPLIP */
 		   ((p = strcasestr(c, "low")) && strcasestr(p, "speed")))
 	    properties->sets_high = 2;
 	  else if (strcasestr(c, "fine") ||
 		   strcasestr(c, "deep") ||
 		   ((p = strcasestr(c, "high")) && !strcasestr(p, "speed")) ||
 		   strcasestr(c, "HQ") ||
+		   strcasecmp(c, "ImageREt1200") == 0 || /* HPLIP */
 		   strcasecmp(c, "Enhanced") == 0)
 	    properties->sets_high = 3;
 	  else if (strcasestr(c, "best") ||
@@ -2422,6 +2426,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		   strcasecmp(c, "fine") == 0 ||
 		   strcasecmp(c, "HQ") == 0 ||
 		   strcasecmp(c, "CMYGray") == 0 || /* HPLIP */
+		   strcasecmp(c, "ImageREt2400") == 0 || /* HPLIP */
 		   strcasestr(c, "unidir"))
 	    properties->sets_high = 4;
 	  else if (strcasecmp(c, "best") == 0 ||
@@ -2437,18 +2442,21 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		   (strcasestr(c, "speed") && !strcasestr(c, "low")))
 	    properties->sets_draft = 2;
 	  else if (strcasestr(c, "quick") ||
-		   strcasestr(c, "fast") ||
-		   strcasestr(c, "draft") ||
-		   (strcasestr(c, "low") && !strcasestr(c, "slow")) ||
-		   strcasestr(c, "coarse"))
+		   (strcasestr(c, "fast") &&
+		    !(strncasecmp(c, "FastRes", 7) == 0 && isdigit(*(c + 7)))))
+	    /* HPLIP has FastRes600, FastRes1200, ... which are not draft */
 	    properties->sets_draft = 3;
 	  else if (strcasecmp(c, "quick") == 0 ||
 		   strcasecmp(c, "fast") == 0 ||
-		   strcasecmp(c, "draft") == 0 ||
+		   strcasestr(c, "draft") ||
+		   (strcasestr(c, "low") && !strcasestr(c, "slow")) ||
+		   strcasestr(c, "coarse"))
+	    properties->sets_draft = 4;
+	  else if (strcasecmp(c, "draft") == 0 ||
 		   strcasecmp(c, "low") == 0 ||
 		   strcasecmp(c, "coarse") == 0 ||
 		   strcasestr(c, "bidir"))
-	    properties->sets_draft = 4;
+	    properties->sets_draft = 5;
 
 	  /* Use high or low quality but not the extremes */
 	  if (strcasestr(c, "ultra") ||
@@ -2464,11 +2472,13 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  /* Normal quality */
 	  if (strcasestr(c, "automatic") ||
 	      strcasecmp(c, "none") == 0 ||
-	      strcasecmp(c, "4") == 0)
+	      strcasecmp(c, "4") == 0 ||
+	      strcasecmp(c, "FastRes1200") == 0) /* HPLIP */
 	    properties->sets_normal = 1;
 	  else if (strcasestr(c, "normal") ||
-	      strcasestr(c, "standard") ||
-	      strcasestr(c, "default"))
+		   strcasestr(c, "standard") ||
+		   strcasestr(c, "default") ||
+		   strcasecmp(c, "FastRes600") == 0) /* HPLIP */
 	    properties->sets_normal = 2;
 	  else if (strcasecmp(c, "normal") == 0 ||
 		   strcasecmp(c, "standard") == 0 ||
