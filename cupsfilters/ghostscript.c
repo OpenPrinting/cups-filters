@@ -784,7 +784,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   char tmpstr[1024],
        tempfile[1024];
   const char *t = NULL;
-  char *envp[3];
+  char *envp[4];
   int num_env = 0;
   cups_array_t *gs_args = NULL;
   cups_option_t *options = NULL;
@@ -860,6 +860,13 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
  /*
   * Environment variables for Ghostscript call ...
   */
+
+  if ((t = getenv("LD_LIBRARY_PATH")) != NULL)
+  {
+    snprintf(tmpstr, sizeof(tmpstr), "LD_LIBRARY_PATH=%s", t);
+    envp[num_env] = strdup(tmpstr);
+    num_env ++;
+  }
 
   if (data->ppdfile)
   {
