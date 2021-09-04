@@ -338,6 +338,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
 	cupsfilters/texttopdf.c \
+	cupsfilters/universal.c \
 	$(pkgfiltersinclude_DATA)
 EXTRA_libcupsfilters_la_SOURCES = \
 	cupsfilters/getline.c \
@@ -700,7 +701,8 @@ pkgfilter_PROGRAMS += \
 	bannertopdf \
 	rastertops \
 	pwgtoraster \
-	pclmtoraster
+	pclmtoraster \
+	universal
 if ENABLE_RASTERTOPWG
 pkgfilter_PROGRAMS += \
 	rastertopwg
@@ -1045,6 +1047,14 @@ test_pdf2_SOURCES = \
 test_pdf2_CFLAGS = -I$(srcdir)/fontembed/
 test_pdf2_LDADD = libfontembed.la
 
+universal_SOURCES = \
+	filter/universal.c
+universal_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	$(CUPS_CFLAGS)
+universal_LDADD = \
+	libcupsfilters.la \
+	$(CUPS_LIBS)
 
 # =====
 # UTILS
