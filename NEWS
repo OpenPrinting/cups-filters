@@ -1,6 +1,11 @@
 NEWS - OpenPrinting CUPS Filters v1.28.10 - 2021-08-17
 ------------------------------------------------------
 
+CHANGES IN V1.28.11
+
+	- foomatic-rip: Debug message was wrongly sent to stdout and
+	  not to log (Issue #422).
+
 CHANGES IN V1.28.10
 
 	- Sample PPDs: Add borderless page size definitions to Generic

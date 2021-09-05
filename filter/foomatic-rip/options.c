@@ -2161,7 +2161,7 @@ static page_range_t * parse_page_ranges(const char *ranges)
             }
         }
         else {
-            printf("Invalid page range: %s\n", tok);
+            _log("Invalid page range: %s\n", tok);
             free(pr);
             continue;
         }
