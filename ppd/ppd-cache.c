@@ -2247,9 +2247,11 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	    else
 	      properties->sets_color = 1;
 	  }
-	  else if (strcasecmp(o, "HPColorAsGray") == 0) /* HP PostScript */
+	  else if (strcasecmp(o, "HPColorAsGray") == 0 ||  /* HP PostScript */
+		   strcasecmp(o, "HPPJLColorAsGray") == 0) /* HP PostScript */
 	  {
-	    if (strcasecmp(c, "True") == 0)
+	    if (strcasecmp(c, "True") == 0 ||
+		strcasecmp(c, "yes") == 0)
 	      properties->sets_mono = 2;
 	    else
 	      properties->sets_color = 1;
