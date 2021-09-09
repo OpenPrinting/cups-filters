@@ -2355,6 +2355,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		 ((p = strcasestr(o, "resolution")) &&
 		  !strcasestr(p, "enhance")) ||
 		 strcasecmp(o, "RET") == 0 ||
+		 strcasecmp(o, "Smoothing") == 0 || /* HPLIP */
 		 ((p = strcasestr(o, "uni")) && strcasestr(p, "direction")))
 	{
 	  if (strcasecmp(c, "True") == 0 ||
@@ -2399,9 +2400,11 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		 strcasecmp(o, "PrintQuality") == 0 ||
 		 strcasecmp(o, "PrintMode") == 0 ||
 		 strcasestr(o, "ColorMode") ||
+		 strcasestr(o, "HalfTone") || /* HPLIP */
 		 strcasecmp(o, "ColorResType") == 0 || /* Toshiba */
 		 strcasestr(o, "MonoColor") || /* Brother */
 		 strcasestr(o, "Quality") ||
+		 strcasestr(o, "Resolution") ||
 		 strcasestr(o, "Precision") || /* ex. stpColorPrecision
 						  in Gutenprint */
 		 strcasestr(o, "PrintingDirection")) /* Gutenprint */
@@ -2413,6 +2416,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasestr(c, "Photo") ||
 		   strcasestr(c, "Enhance") ||
 		   strcasestr(c, "slow") ||
+		   strncasecmp(c, "ProRes", 6) == 0 || /* HPLIP */
 		   strncasecmp(c, "ImageREt", 8) == 0 || /* HPLIP */
 		   ((p = strcasestr(c, "low")) && strcasestr(p, "speed")))
 	    properties->sets_high = 2;
@@ -2420,6 +2424,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		   strcasestr(c, "deep") ||
 		   ((p = strcasestr(c, "high")) && !strcasestr(p, "speed")) ||
 		   strcasestr(c, "HQ") ||
+		   strcasecmp(c, "ProRes600") == 0 || /* HPLIP */
 		   strcasecmp(c, "ImageREt1200") == 0 || /* HPLIP */
 		   strcasecmp(c, "Enhanced") == 0)
 	    properties->sets_high = 3;
@@ -2428,10 +2433,12 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		   strcasecmp(c, "fine") == 0 ||
 		   strcasecmp(c, "HQ") == 0 ||
 		   strcasecmp(c, "CMYGray") == 0 || /* HPLIP */
+		   strcasecmp(c, "ProRes1200") == 0 || /* HPLIP */
 		   strcasecmp(c, "ImageREt2400") == 0 || /* HPLIP */
 		   strcasestr(c, "unidir"))
 	    properties->sets_high = 4;
 	  else if (strcasecmp(c, "best") == 0 ||
+		   strcasecmp(c, "ProRes2400") == 0 || /* HPLIP */
 		   strcasecmp(c, "monolowdetail") == 0) /* Toshiba */
 	    properties->sets_high = 5;
 
