@@ -25,7 +25,7 @@ universal(int inputfd,         /* I - File descriptor input stream */
     char *output_super = malloc(16);
     char *output_type = malloc(256);
     filter_out_format_t *outformat;
-    filter_filter_in_chain_t *filter;
+    filter_filter_in_chain_t *filter , *next;
     filter_input_output_format_t input_output_format;
 
     input_output_format = *(filter_input_output_format_t *)parameters;
@@ -230,5 +230,14 @@ universal(int inputfd,         /* I - File descriptor input stream */
     
     int ret = filterChain(inputfd , outputfd , inputseekable , data , filter_chain);
 
+    free(input_super);
+    free(input_type);
+    free(output_super);
+    free(output_type);
+    for (filter = (filter_filter_in_chain_t *)cupsArrayFirst(filter_chain); filter; filter = next){
+        next = (filter_filter_in_chain_t *)cupsArrayNext(filter_chain);
+        free(filter->parameters);
+        free(filter);
+    }
     return ret;
 }
