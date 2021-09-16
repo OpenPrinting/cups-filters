@@ -5,6 +5,23 @@ CHANGES IN V2.0.0
 
 	- foomatic-rip: Debug message was wrongly sent to stdout and
 	  not to log (Issue #422).
+	- libcupsfilters: In ghostscript() pass on LD_LIBRARY_PATH to
+	  Ghostscript
+	- libcupsfilters: In color-management-related functions use
+	  the log function instead of logging right to stderr.
+	- libcupsfilters: In ieee1284NormalizeMakeAndModel() extract
+	  driver info with regular expression.
+	- libcupsfilters: Support print-rendering-intent IPP attribute
+	  in ghostscript(), mupdftoraster(), and pdftoraster() filter
+	  functions.
+	- libcupsfilters, mupdftoraster: Moved core functionality of
+	  mupdftoraster into the mupdftoraster() filter function (Pull
+	  request #412).
+	- textbrftoindex: Fix control character filtering (Pull
+          request #409)
+	- libcupsfilters, bannertopdf: Moved core functionality of
+	  bannertopdf into the bannertopdf() filter function (Pull
+	  request #407).
 	- libcupsfilters, texttopdf: Moved core functionality of
 	  texttopdf into the texttopdf() filter function (Pull request
 	  #404).
