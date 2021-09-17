@@ -880,8 +880,6 @@ if(val2==NULL)
 	  /* Count pages which will actually get printed */
 	  num_pages ++;
 	  if (!pagination) {
-	    /* Send out the output page buffer content */
-	    printf("%s", out_page);
 	    /* Log the page output (only once, when printing the first buffer
 	       load) */
 	    if (num_pages == 1)
@@ -889,9 +887,7 @@ if(val2==NULL)
 	     if(log) log(ld, FILTER_LOGLEVEL_INFO, "texttotext: 1 1");
       }
 	  } else if ((num_copies == 1 || !collate) && !reverse_order) {
-	    /* Send out the page */
-	    for (i = 0; i < num_copies; i ++)
-	      printf("%s", out_page);
+      
 	    /* Log the page output */
 	    if(log) log(ld, FILTER_LOGLEVEL_INFO, "texttotext: %d %d", num_pages, num_copies);
 	  } else {
@@ -984,6 +980,7 @@ if(val2==NULL)
 	}
       }
     }
+    cupsFilePuts(outputfp, out_page);
   } while (outbuf[0] != '\0'); /* End of input file */
 
   close(fd);
@@ -1006,8 +1003,6 @@ if(val2==NULL)
 	   (reverse_order ? (page >= 1) : (page <= num_pages));
 	   page += (reverse_order ? -1 : 1)) {
 	p = (char *)cupsArrayIndex(page_array, page - 1);
-	for (j = 0; j < (collate ? 1 : num_copies); j ++)
-	  printf("%s", p);
 	if(log) log(ld, FILTER_LOGLEVEL_INFO, "texttotext: %d %d", page, (collate ? 1 : num_copies));
       }
     /* Clean up */
@@ -1017,7 +1012,7 @@ if(val2==NULL)
     }
     cupsArrayDelete(page_array);
   }
-  cupsFilePuts(outputfp, out_page);
+
  /*
   * Cleanup and exit...
   */
