@@ -2233,7 +2233,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	}
 
        /*
-	* Color/Gray - print-color-mode
+	* Color/Monochrome - print-color-mode
 	*/
 
 	/* If we have a color device, check whether this option sets mono or
@@ -2247,15 +2247,17 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	    else
 	      properties->sets_color = 1;
 	  }
-	  else if (strcasecmp(o, "HPColorAsGray") == 0) /* HP PostScript */
+	  else if (strcasecmp(o, "HPColorAsGray") == 0 ||  /* HP PostScript */
+		   strcasecmp(o, "HPPJLColorAsGray") == 0) /* HP PostScript */
 	  {
-	    if (strcasecmp(c, "True") == 0)
+	    if (strcasecmp(c, "True") == 0 ||
+		strcasecmp(c, "yes") == 0)
 	      properties->sets_mono = 2;
 	    else
 	      properties->sets_color = 1;
 	  }
 	  else if (strcasecmp(o, "ColorModel") == 0 ||
-		   strcasecmp(o, "ColorMode") == 0 ||
+		   strcasestr(o, "ColorMode") ||
 		   strcasecmp(o, "OutputMode") == 0 ||
 		   strcasecmp(o, "PrintoutMode") == 0 ||
 		   strcasecmp(o, "ARCMode") == 0 || /* Sharp */
@@ -2332,9 +2334,11 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	else if (strcasecmp(o, "EconoMode") == 0 || /* Foomatic */
 		 strcasecmp(o, "EconoFast") == 0)   /* Foomatic (HP PPA) */
 	{
-	  if (strcasecmp(c, "Off") == 0)
+	  if (strcasecmp(c, "Off") == 0 ||
+	      strcasecmp(c, "False") == 0)
 	    properties->sets_high = 1;
 	  else if (strcasecmp(c, "On") == 0 ||
+		   strcasecmp(c, "True") == 0 ||
 		   strcasecmp(c, "Low") == 0)
 	    properties->sets_draft = 10;
 	  else if (strcasecmp(c, "High") == 0)
@@ -2351,6 +2355,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		 ((p = strcasestr(o, "resolution")) &&
 		  !strcasestr(p, "enhance")) ||
 		 strcasecmp(o, "RET") == 0 ||
+		 strcasecmp(o, "Smoothing") == 0 || /* HPLIP */
 		 ((p = strcasestr(o, "uni")) && strcasestr(p, "direction")))
 	{
 	  if (strcasecmp(c, "True") == 0 ||
@@ -2389,15 +2394,17 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	}
 	/* Generic enumerated choice option and choice names */
 	else if (strcasecmp(o, "ColorModel") == 0 ||
-		 strcasecmp(o, "ColorMode") == 0 ||
+		 strcasestr(o, "ColorMode") ||
 		 strcasecmp(o, "OutputMode") == 0 || /* HPLIP hpcups */
 		 strcasecmp(o, "PrintoutMode") == 0 || /* Foomatic */
 		 strcasecmp(o, "PrintQuality") == 0 ||
 		 strcasecmp(o, "PrintMode") == 0 ||
 		 strcasestr(o, "ColorMode") ||
+		 strcasestr(o, "HalfTone") || /* HPLIP */
 		 strcasecmp(o, "ColorResType") == 0 || /* Toshiba */
 		 strcasestr(o, "MonoColor") || /* Brother */
 		 strcasestr(o, "Quality") ||
+		 strcasestr(o, "Resolution") ||
 		 strcasestr(o, "Precision") || /* ex. stpColorPrecision
 						  in Gutenprint */
 		 strcasestr(o, "PrintingDirection")) /* Gutenprint */
@@ -2409,12 +2416,16 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasestr(c, "Photo") ||
 		   strcasestr(c, "Enhance") ||
 		   strcasestr(c, "slow") ||
+		   strncasecmp(c, "ProRes", 6) == 0 || /* HPLIP */
+		   strncasecmp(c, "ImageREt", 8) == 0 || /* HPLIP */
 		   ((p = strcasestr(c, "low")) && strcasestr(p, "speed")))
 	    properties->sets_high = 2;
 	  else if (strcasestr(c, "fine") ||
 		   strcasestr(c, "deep") ||
 		   ((p = strcasestr(c, "high")) && !strcasestr(p, "speed")) ||
 		   strcasestr(c, "HQ") ||
+		   strcasecmp(c, "ProRes600") == 0 || /* HPLIP */
+		   strcasecmp(c, "ImageREt1200") == 0 || /* HPLIP */
 		   strcasecmp(c, "Enhanced") == 0)
 	    properties->sets_high = 3;
 	  else if (strcasestr(c, "best") ||
@@ -2422,9 +2433,12 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		   strcasecmp(c, "fine") == 0 ||
 		   strcasecmp(c, "HQ") == 0 ||
 		   strcasecmp(c, "CMYGray") == 0 || /* HPLIP */
+		   strcasecmp(c, "ProRes1200") == 0 || /* HPLIP */
+		   strcasecmp(c, "ImageREt2400") == 0 || /* HPLIP */
 		   strcasestr(c, "unidir"))
 	    properties->sets_high = 4;
 	  else if (strcasecmp(c, "best") == 0 ||
+		   strcasecmp(c, "ProRes2400") == 0 || /* HPLIP */
 		   strcasecmp(c, "monolowdetail") == 0) /* Toshiba */
 	    properties->sets_high = 5;
 
@@ -2437,18 +2451,21 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		   (strcasestr(c, "speed") && !strcasestr(c, "low")))
 	    properties->sets_draft = 2;
 	  else if (strcasestr(c, "quick") ||
-		   strcasestr(c, "fast") ||
-		   strcasestr(c, "draft") ||
-		   (strcasestr(c, "low") && !strcasestr(c, "slow")) ||
-		   strcasestr(c, "coarse"))
+		   (strcasestr(c, "fast") &&
+		    !(strncasecmp(c, "FastRes", 7) == 0 && isdigit(*(c + 7)))))
+	    /* HPLIP has FastRes600, FastRes1200, ... which are not draft */
 	    properties->sets_draft = 3;
 	  else if (strcasecmp(c, "quick") == 0 ||
 		   strcasecmp(c, "fast") == 0 ||
-		   strcasecmp(c, "draft") == 0 ||
+		   strcasestr(c, "draft") ||
+		   (strcasestr(c, "low") && !strcasestr(c, "slow")) ||
+		   strcasestr(c, "coarse"))
+	    properties->sets_draft = 4;
+	  else if (strcasecmp(c, "draft") == 0 ||
 		   strcasecmp(c, "low") == 0 ||
 		   strcasecmp(c, "coarse") == 0 ||
 		   strcasestr(c, "bidir"))
-	    properties->sets_draft = 4;
+	    properties->sets_draft = 5;
 
 	  /* Use high or low quality but not the extremes */
 	  if (strcasestr(c, "ultra") ||
@@ -2464,11 +2481,13 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  /* Normal quality */
 	  if (strcasestr(c, "automatic") ||
 	      strcasecmp(c, "none") == 0 ||
-	      strcasecmp(c, "4") == 0)
+	      strcasecmp(c, "4") == 0 ||
+	      strcasecmp(c, "FastRes1200") == 0) /* HPLIP */
 	    properties->sets_normal = 1;
 	  else if (strcasestr(c, "normal") ||
-	      strcasestr(c, "standard") ||
-	      strcasestr(c, "default"))
+		   strcasestr(c, "standard") ||
+		   strcasestr(c, "default") ||
+		   strcasecmp(c, "FastRes600") == 0) /* HPLIP */
 	    properties->sets_normal = 2;
 	  else if (strcasecmp(c, "normal") == 0 ||
 		   strcasecmp(c, "standard") == 0 ||
@@ -2558,8 +2577,6 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	    // No or small change -> Normal quality
 	    if (m == 1)
 	      properties->sets_normal += res_factor * 4;
-	    else if (m > 1 && m < 2)
-	      properties->sets_normal += res_factor * 2;
 	    // At least double the pixels -> High quality
 	    else if (m == 2)
 	      properties->sets_high += res_factor * 3;
@@ -2576,8 +2593,6 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		  (properties->res_x * properties->res_y);
 	      // No or small change -> Normal quality
 	      if (m == 1)
-		properties->sets_normal += res_factor * 1;
-	      else if (m > 1 && m < 2)
 		properties->sets_normal += res_factor * 1;
 	      // At most half the pixels -> Draft quality
 	      else if (m == 2)
@@ -2605,7 +2620,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
       * grid
       */
 
-      for (pass = 0; pass < 2; pass ++)
+      for (pass = 0; pass < 3; pass ++)
       {
 	for (k = 0; k < option->num_choices; k ++)
         {
