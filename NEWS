@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.28.10 - 2021-08-17
 
 CHANGES IN V1.28.11
 
+	- libcupsfilters: Let colord_get_profile_for_device_id() not
+	  return empty file name, to avoid error messages in CUPS
+	  error_log.
 	- foomatic-rip: Debug message was wrongly sent to stdout and
 	  not to log (Issue #422).
 

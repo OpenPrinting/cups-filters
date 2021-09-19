@@ -327,7 +327,7 @@ colord_get_profile_for_device_id (const char *device_id,
   con = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
   if (con == NULL) {
     // If D-Bus is not reachable, gracefully leave and ignore error
-    //fprintf(stderr, "ERROR: Failed to connect to system bus\n");
+    fprintf(stderr, "DEBUG: Failed to connect to system bus\n");
     goto out;
   }
 
@@ -340,7 +340,7 @@ colord_get_profile_for_device_id (const char *device_id,
 
   /* get the best profile for the device */
   filename = get_profile_for_device_path(con, device_path, qualifier_tuple);
-  if (filename == NULL) {
+  if (filename == NULL || !filename[0]) {
     fprintf(stderr, "DEBUG: Failed to get profile filename for %s\n", device_id);
     goto out;
   }
