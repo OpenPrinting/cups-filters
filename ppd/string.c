@@ -93,7 +93,10 @@ _ppdStrAlloc(const char *s)		/* I - String */
 		  item->ref_count));
 
     if (item->guard != _PPD_STR_GUARD)
+    {
+      _ppdMutexUnlock(&sp_mutex);
       abort();
+    }
 #endif /* DEBUG_GUARDS */
 
     _ppdMutexUnlock(&sp_mutex);
@@ -292,6 +295,7 @@ _ppdStrFree(const char *s)		/* I - String to free */
     if (key->guard != _PPD_STR_GUARD)
     {
       DEBUG_printf(("5_ppdStrFree: Freeing string %p(%s), guard=%08x, ref_count=%d", key, key->str, key->guard, key->ref_count));
+      _ppdMutexUnlock(&sp_mutex);
       abort();
     }
 #endif /* DEBUG_GUARDS */
