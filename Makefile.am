@@ -218,6 +218,70 @@ EXTRA_DIST += \
 	ppd/test2.ppd \
 	ppd/README.md
 
+# =================
+# Fontembed library
+# =================
+pkgfontembedincludedir = $(includedir)/fontembed
+pkgfontembedinclude_DATA = \
+	fontembed/bitset.h \
+	fontembed/embed.h \
+	fontembed/fontfile.h \
+	fontembed/iofn.h \
+	fontembed/sfnt.h
+
+lib_LTLIBRARIES += libfontembed.la
+
+check_PROGRAMS += \
+	test_analyze \
+	test_pdf \
+	test_ps
+TESTS += \
+	test_analyze \
+	test_pdf \
+	test_ps
+
+libfontembed_la_SOURCES = \
+	fontembed/aglfn13.c \
+	fontembed/bitset.h \
+	fontembed/dynstring.c \
+	fontembed/dynstring.h \
+	fontembed/embed.c \
+	fontembed/embed.h \
+	fontembed/embed_sfnt.c \
+	fontembed/embed_sfnt_int.h \
+	fontembed/embed_pdf.c \
+	fontembed/embed_pdf.h \
+	fontembed/embed_pdf_int.h \
+	fontembed/fontfile.c \
+	fontembed/fontfile.h \
+	fontembed/frequent.c \
+	fontembed/frequent.h \
+	fontembed/iofn.h \
+	fontembed/macroman.h \
+	fontembed/sfnt.c \
+	fontembed/sfnt.h \
+	fontembed/sfnt_int.h \
+	fontembed/sfnt_subset.c
+libfontembed_la_LDFLAGS = \
+	-no-undefined \
+	-version-info 1
+
+test_analyze_SOURCES = fontembed/test_analyze.c
+test_analyze_LDADD = libfontembed.la
+
+test_pdf_SOURCES = fontembed/test_pdf.c
+test_pdf_LDADD = libfontembed.la
+
+test_ps_SOURCES = fontembed/test_ps.c
+test_ps_LDADD = libfontembed.la
+
+EXTRA_DIST += \
+	$(pkgfontembedinclude_DATA) \
+	fontembed/README
+
+pkgfilter_PROGRAMS =
+pkgfilterdir = $(CUPS_SERVERBIN)/filter
+
 # ====================
 # CUPS Filters library
 # ====================
@@ -354,7 +418,7 @@ libcupsfilters_la_LIBADD = \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
-	$(POPPLER_LIBS)
+	$(POPPLER_LIBS) \
 	-lm
 libcupsfilters_la_CFLAGS = \
 	-I$(srcdir)/ppd/ \
@@ -586,70 +650,6 @@ nodist_pkgbraille_SCRIPTS = \
 	filter/braille/drivers/index/index.sh \
 	filter/braille/filters/cups-braille.sh
 endif
-
-# =================
-# Fontembed library
-# =================
-pkgfontembedincludedir = $(includedir)/fontembed
-pkgfontembedinclude_DATA = \
-	fontembed/bitset.h \
-	fontembed/embed.h \
-	fontembed/fontfile.h \
-	fontembed/iofn.h \
-	fontembed/sfnt.h
-
-lib_LTLIBRARIES += libfontembed.la
-
-check_PROGRAMS += \
-	test_analyze \
-	test_pdf \
-	test_ps
-TESTS += \
-	test_analyze \
-	test_pdf \
-	test_ps
-
-libfontembed_la_SOURCES = \
-	fontembed/aglfn13.c \
-	fontembed/bitset.h \
-	fontembed/dynstring.c \
-	fontembed/dynstring.h \
-	fontembed/embed.c \
-	fontembed/embed.h \
-	fontembed/embed_sfnt.c \
-	fontembed/embed_sfnt_int.h \
-	fontembed/embed_pdf.c \
-	fontembed/embed_pdf.h \
-	fontembed/embed_pdf_int.h \
-	fontembed/fontfile.c \
-	fontembed/fontfile.h \
-	fontembed/frequent.c \
-	fontembed/frequent.h \
-	fontembed/iofn.h \
-	fontembed/macroman.h \
-	fontembed/sfnt.c \
-	fontembed/sfnt.h \
-	fontembed/sfnt_int.h \
-	fontembed/sfnt_subset.c
-libfontembed_la_LDFLAGS = \
-	-no-undefined \
-	-version-info 1
-
-test_analyze_SOURCES = fontembed/test_analyze.c
-test_analyze_LDADD = libfontembed.la
-
-test_pdf_SOURCES = fontembed/test_pdf.c
-test_pdf_LDADD = libfontembed.la
-
-test_ps_SOURCES = fontembed/test_ps.c
-test_ps_LDADD = libfontembed.la
-
-EXTRA_DIST += \
-	$(pkgfontembedinclude_DATA) \
-	fontembed/README
-
-pkgfilter_PROGRAMS =
-pkgfilterdir = $(CUPS_SERVERBIN)/filter
 
 # ==========
 # PDF to PDF 
