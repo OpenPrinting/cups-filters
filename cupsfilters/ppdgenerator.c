@@ -1726,6 +1726,45 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 				     IPP_TAG_BOOLEAN), 0))
     cupsFilePuts(fp, "*cupsJobAccountingUserId: True\n");
 
+  if ((attr = ippFindAttribute(response, "printer-privacy-policy-uri", IPP_TAG_URI)) != NULL)
+    cupsFilePrintf(fp, "*cupsPrivacyURI: \"%s\"\n", ippGetString(attr, 0, NULL));
+
+  if ((attr = ippFindAttribute(response, "printer-mandatory-job-attributes", IPP_TAG_KEYWORD)) != NULL)
+  {
+    char	prefix = '\"';		// Prefix for string
+
+    cupsFilePuts(fp, "*cupsMandatory: \"");
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      keyword = ippGetString(attr, i, NULL);
+
+      if (strcmp(keyword, "attributes-charset") && strcmp(keyword, "attributes-natural-language") && strcmp(keyword, "printer-uri"))
+      {
+        cupsFilePrintf(fp, "%c%s", prefix, keyword);
+        prefix = ',';
+      }
+    }
+    cupsFilePuts(fp, "\"\n");
+  }
+
+  if ((attr = ippFindAttribute(response, "printer-requested-job-attributes", IPP_TAG_KEYWORD)) != NULL)
+  {
+    char	prefix = '\"';		// Prefix for string
+
+    cupsFilePuts(fp, "*cupsRequested: \"");
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      keyword = ippGetString(attr, i, NULL);
+
+      if (strcmp(keyword, "attributes-charset") && strcmp(keyword, "attributes-natural-language") && strcmp(keyword, "printer-uri"))
+      {
+        cupsFilePrintf(fp, "%c%s", prefix, keyword);
+        prefix = ',';
+      }
+    }
+    cupsFilePuts(fp, "\"\n");
+  }
+
  /*
   * Password/PIN printing...
   */
@@ -3043,7 +3082,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 	"TriplePortrait",
 	"TripleLandscape",
 	"TripleRevPortrait",
-	"TripleRevLandscape",
+	"TripleRevLandscape"
 	"QuadPortrait",
 	"QuadLandscape",
 	"QuadRevPortrait",

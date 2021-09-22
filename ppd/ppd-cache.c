@@ -3171,7 +3171,7 @@ ppdCacheGetBin(
 
 
   for (i = 0; i < pc->num_bins; i ++)
-    if (!_ppd_strcasecmp(output_bin, pc->bins[i].ppd))
+    if (!_ppd_strcasecmp(output_bin, pc->bins[i].ppd) || !_ppd_strcasecmp(output_bin, pc->bins[i].pwg))
       return (pc->bins[i].pwg);
 
   return (NULL);
@@ -3907,7 +3907,7 @@ ppdCacheGetSource(
     return (NULL);
 
   for (i = pc->num_sources, source = pc->sources; i > 0; i --, source ++)
-    if (!_ppd_strcasecmp(input_slot, source->ppd))
+    if (!_ppd_strcasecmp(input_slot, source->ppd) || !_ppd_strcasecmp(input_slot, source->pwg))
       return (source->pwg);
 
   return (NULL);
@@ -3936,7 +3936,7 @@ ppdCacheGetType(
     return (NULL);
 
   for (i = pc->num_types, type = pc->types; i > 0; i --, type ++)
-    if (!_ppd_strcasecmp(media_type, type->ppd))
+    if (!_ppd_strcasecmp(media_type, type->ppd) || !_ppd_strcasecmp(media_type, type->pwg))
       return (type->pwg);
 
   return (NULL);
