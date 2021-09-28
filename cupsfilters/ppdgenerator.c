@@ -3082,7 +3082,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 	"TriplePortrait",
 	"TripleLandscape",
 	"TripleRevPortrait",
-	"TripleRevLandscape"
+	"TripleRevLandscape",
 	"QuadPortrait",
 	"QuadLandscape",
 	"QuadRevPortrait",
