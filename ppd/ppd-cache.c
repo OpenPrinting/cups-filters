@@ -1176,7 +1176,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	  }
       }
 
-      if (pwg_media)
+      if (pwg_media && strncmp(pwg_media->pwg, "custom_", 7) != 0)
       {
        /*
 	* Standard name and no conflicts, use it!
@@ -1290,6 +1290,30 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
     pwgFormatSizeName(pwg_keyword, sizeof(pwg_keyword), "custom", "max",
 		      PWG_FROM_POINTS(ppd->custom_max[0]),
 		      PWG_FROM_POINTS(ppd->custom_max[1]), NULL);
+
+    /* Some PPD files have upper limits too large to be treated with
+       int numbers, if we have an overflow (negative result for one
+       dimension) use a fixed, large value instead */
+    char *p1, *p2;
+    char *newmax = (pwg_keyword[strlen(pwg_keyword) - 1] == 'n' ?
+		    "10000" : "100000");
+    p1 = strrchr(pwg_keyword, '_');
+    p1 ++;
+    if (*p1 == '-')
+    {
+      for (p2 = p1; *p2 != 'x'; p2 ++);
+      memmove(p1 + strlen(newmax), p2, strlen(p2) + 1);
+      memmove(p1, newmax, strlen(newmax));
+    }
+    p1 = strrchr(pwg_keyword, 'x');
+    p1 ++;
+    if (*p1 == '-')
+    {
+      for (p2 = p1; *p2 != 'm' && *p2 != 'i'; p2 ++);
+      memmove(p1 + strlen(newmax), p2, strlen(p2) + 1);
+      memmove(p1, newmax, strlen(newmax));
+    }
+
     pc->custom_max_keyword = strdup(pwg_keyword);
     pc->custom_max_width   = PWG_FROM_POINTS(ppd->custom_max[0]);
     pc->custom_max_length  = PWG_FROM_POINTS(ppd->custom_max[1]);
@@ -3147,7 +3171,7 @@ ppdCacheGetBin(
 
 
   for (i = 0; i < pc->num_bins; i ++)
-    if (!_ppd_strcasecmp(output_bin, pc->bins[i].ppd))
+    if (!_ppd_strcasecmp(output_bin, pc->bins[i].ppd) || !_ppd_strcasecmp(output_bin, pc->bins[i].pwg))
       return (pc->bins[i].pwg);
 
   return (NULL);
@@ -3883,7 +3907,7 @@ ppdCacheGetSource(
     return (NULL);
 
   for (i = pc->num_sources, source = pc->sources; i > 0; i --, source ++)
-    if (!_ppd_strcasecmp(input_slot, source->ppd))
+    if (!_ppd_strcasecmp(input_slot, source->ppd) || !_ppd_strcasecmp(input_slot, source->pwg))
       return (source->pwg);
 
   return (NULL);
@@ -3912,7 +3936,7 @@ ppdCacheGetType(
     return (NULL);
 
   for (i = pc->num_types, type = pc->types; i > 0; i --, type ++)
-    if (!_ppd_strcasecmp(media_type, type->ppd))
+    if (!_ppd_strcasecmp(media_type, type->ppd) || !_ppd_strcasecmp(media_type, type->pwg))
       return (type->pwg);
 
   return (NULL);
