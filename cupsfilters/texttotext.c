@@ -69,8 +69,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
   char          *p;
   int		exit_status = 0;	/* Exit status */
   int		fd;			/* Copy file descriptor */
-  char		*filename,		/* Text file to convert */
-		tempfile[1024];		/* Temporary file */
+
   char		buffer[8192];		/* Copy buffer */
   int           num_copies;             /* Number of copies */
   ppd_file_t	*ppd;			/* PPD file */
@@ -151,8 +150,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
 					   to the next line */
   int           num_pages = 0;          /* Number of pages which get actually
 					   printed */
-  int n;
-  char buff[BUFSIZ];
+ 
   ipp_t *printer_attrs = NULL;
   ipp_t *job_attrs = NULL;
   ipp_attribute_t *ipp;
@@ -181,55 +179,6 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
                     "bannertopdf: Unable to open output data stream.");
     }
     return (1);
-  }
-
- /*
-  * Copy stdin to a temp file...
-  */
-  if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
-  {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR,"texttotext: Unable to make temprorary file");
-    goto error;
-  }
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: Copying input to temp print file \"%s\"",
-            tempfile);
-
-
-  if (!inputfd)
-  {
-    
-   /*
-    * Copy stdin to a temp file...
-    */
-
-    while ((n = read(0,buff,BUFSIZ)) > 0) {
-      if (write(fd,buff,n) != n) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "texttotext: Can't copy stdin to temporary file.");
-        close(fd);
-	exit(1);
-      }
-    }
-    close(fd);
-
-    filename = tempfile;
-  }
-  else
-  {
-    /*
-     *copy data in temp file and use the tempfile name...
-     */
-    
-    while ((n = read(inputfd,buff,BUFSIZ)) > 0) {
-      if (write(fd,buff,n) != n) {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "texttotext: Can't copy input data to temporary file.");
-        close(fd);
-	goto error;
-      }
-    }
-    filename  = tempfile;
-  //  tempfile[0] = '\0';
   }
 
  /*
@@ -739,9 +688,9 @@ if(val2==NULL)
   }
 
   /* Open the input file */
-  fd = open(filename, O_RDONLY);
+  fd = inputfd;
   if (fd < 0) {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttotext: Unable to open input text file %s", filename);
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttotext: Unable to open input text file");
     goto error;
   }
 
@@ -1024,9 +973,6 @@ if(val2==NULL)
 
   free(page_ranges);
   free(out_page);
-  
-  if (tempfile[0])
-    unlink(tempfile);
 
   return (exit_status);
 }

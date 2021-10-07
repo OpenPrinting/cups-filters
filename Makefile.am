@@ -947,20 +947,12 @@ endif
 
 texttotext_SOURCES = \
 	filter/texttotext.c
-EXTRA_texttotext_SOURCES = cupsfilters/strcasestr.c
 texttotext_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 texttotext_LDADD = \
 	libcupsfilters.la \
-	libppd.la \
-	$(STRCASESTR) \
-	$(CUPS_LIBS) \
-	$(LIBICONV)
-texttotext_DEPENDENCIES = \
-	$(STRCASESTR) \
-	libppd.la
+	$(CUPS_LIBS)
 
 texttopdf_SOURCES = \
 	filter/texttopdf.c
