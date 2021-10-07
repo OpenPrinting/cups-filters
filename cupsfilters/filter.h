@@ -320,6 +320,11 @@ extern int texttopdf(int inputfd,
    Data directory (fonts, charsets), charset, content type (for prettyprint),
    classification (for overprint/watermark) */
 
+extern int texttotext(int inputfd,
+		     int outputfd,
+		     int inputseekable,
+		     filter_data_t *data,
+		     void *parameters);
 
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,
