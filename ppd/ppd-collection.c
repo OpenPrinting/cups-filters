@@ -724,7 +724,9 @@ ppdCollectionGetPPD(
     ptr = strrchr(realname, '/');
     if (ptr == NULL)
       ptr = realname;
-    ptr = strstr(ppduri, ptr);
+    else
+      ptr ++;
+    ptr = ppduri + (ptr - realname);
     if (access(realname, X_OK))
     {
      /*
@@ -741,6 +743,9 @@ ppdCollectionGetPPD(
    /*
     * Yes, let it cat the PPD file...
     */
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "libppd: [PPD Collections] Grabbing PPD via command: \"%s cat %s\"",
+		 realname, ptr);
 
     argv[0] = realname;
     argv[1] = (char *)"cat";
