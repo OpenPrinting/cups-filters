@@ -1043,10 +1043,11 @@ cupsRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 int                                          /* O - -1 on error, 0 on success */
 cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 			  filter_data_t *data,
-        int pwg_raster,         /* I - 1 if PWG Raster */
-			  int set_defaults)       /* I - If 1, se default values
-						     for all fields for which
-						     we did not get an option */
+			  int pwg_raster,         /* I - 1 if PWG Raster */
+			  int set_defaults)       /* I - If 1, set default
+						     values for all fields for
+						     which we did not get an
+						     option */
 {
 #ifdef HAVE_CUPS_1_7
   int		i;			/* Looping var */
@@ -1061,6 +1062,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   float         size;                   /* page size dimension */
   int num_options = 0;          /*  number of options */
   cups_option_t *options = NULL;  /*  Options */
+  ppd_option_t  *option;
+
 
  /*
   * Range check input...
@@ -1070,13 +1073,44 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     return (-1);
 
  /*
+  * Join the IPP attributes and the CUPS options in a single list
+  */
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+
+ /*
+  * If we have a PPD file in the filter data, take it into account, by
+  * not parsing options which are in the PPD file here.
+  *
+  * They should get parsed and applied separately via the
+  * ppdRasterInterpretPPD() as that function parses the embedded
+  * PostScript code. This way weird things like Gutenprint's
+  * "Resolution" option (choice name is something odd, like
+  * 301x300dpi, and actual resolution can be completely different)
+  * will get treated correctly.
+  *
+  * We mark the option settings in the PPD and call ppdRasterInterpretPPD()
+  * only when we are called with set_defaults = 1. In any case we remove
+  * the options of the PPD from our option list before we start parsing. 
+  */
+
+  if (data->ppd)
+  {
+    if (set_defaults)
+    {
+      ppdMarkOptions(data->ppd, num_options, options);
+      ppdRasterInterpretPPD(h, data->ppd, num_options, options, NULL);
+    }
+    for (option = ppdFirstOption(data->ppd); option;
+	 option = ppdNextOption(data->ppd))
+      num_options = cupsRemoveOption(option->keyword, num_options, &options);
+  }
+
+ /*
   * Check if the supplied "media" option is a comma-separated list of any
   * combination of page size ("media"), media source ("media-position"),
   * and media type ("media-type") and if so, put these list elements into
   * their dedicated options.
   */
-
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
 
   page_size = NULL;
   media_source = NULL;
@@ -2137,7 +2171,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   }
   else if (set_defaults)
     h->cupsRenderingIntent[0] = '\0';
-#endif /* HAVE_CUPS_1_7 */
 
   if (media_source != NULL)
     free(media_source);
@@ -2145,8 +2178,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     free(media_type);
   if (page_size != NULL)
     free(page_size);
-
   cupsFreeOptions(num_options, options);
+#endif /* HAVE_CUPS_1_7 */
 
   return (0);
 }
