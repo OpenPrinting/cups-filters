@@ -3,6 +3,14 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Make cupsRasterParseIPPOptions() work
+	  correctly together with PPDs, by not parsing options
+	  which are in the printer's PPD and using
+	  ppdRasterInterpretPPD() when set_defaults = 1 is set.
+	  Without PPD the function behaves as before.
+	- libcupsfilters: Let the ieee1284NormalizeMakeAndModel()
+	  function Clean up "Kodak" manufacturer name, as it is
+	  sometimes reported as "Eastman Kodak Company".
 	- libcupsfilters, texttotext: Moved core functionality of
 	  texttotext into the texttotext() filter function (Pull
 	  request #425).
