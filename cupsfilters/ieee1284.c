@@ -1029,6 +1029,26 @@ ieee1284NormalizeMakeAndModel(
     }
 
     bufptr = buffer;
+    while ((bufptr = strcasestr(bufptr, "eastman kodak company")) != NULL &&
+	   (bufptr == buffer || !isalnum(*(bufptr - 1))) &&
+	   !isalnum(*(bufptr + 21)))
+    {
+     /*
+      * Replace with Kodak...
+      */
+
+      bufptr[0] = 'K';
+      bufptr[1] = 'o';
+      bufptr[2] = 'd';
+      bufptr[3] = 'a';
+      bufptr[4] = 'k';
+      moverightpart(buffer, bufsize, bufptr + 5, -16);
+      if (modelptr >= bufptr + 21)
+	modelptr -= 16;
+      bufptr += 5;
+    }
+
+    bufptr = buffer;
     while ((bufptr = strcasestr(bufptr, "Lexmark International")) != NULL)
     {
      /*
