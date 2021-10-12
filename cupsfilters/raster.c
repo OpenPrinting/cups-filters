@@ -14,6 +14,7 @@
 
 #include <config.h>
 #include <cups/cups.h>
+#include <cups/ppd.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
 #endif
@@ -87,6 +88,10 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
                 *media_type;		/* Media type */
   pwg_media_t   *size_found;            /* page size found for given name */
   float         size;                   /* page size dimension */
+  int           num_non_ppd_options = 0;/* Number of options which are not
+                                           in the PPD */
+  cups_option_t *non_ppd_options = NULL;/* Options not in the PPD */
+  ppd_file_t    *ppd = NULL;
 
  /*
   * Range check input...
@@ -94,6 +99,40 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 
   if (!h)
     return (-1);
+
+ /*
+  * If we have a PPD file (PPD environment variable), take it into
+  * account, by not parsing options which are in the PPD file here.
+  *
+  * They should get parsed and applied separately via the
+  * ppdRasterInterpretPPD() as that function parses the embedded
+  * PostScript code. This way weird things like Gutenprint's
+  * "Resolution" option (choice name is something odd, like
+  * 301x300dpi, and actual resolution can be completely different)
+  * will get treated correctly.
+  *
+  * We mark the option settings in the PPD and call
+  * ppdRasterInterpretPPD() only when we are called with set_defaults
+  * = 1. In any case we replace the option list we parse by a copy
+  * without the options of the PPD file.
+  */
+
+  ptr = getenv("PPD");
+  if (ptr && ptr[0] != '\0' && (ppd = ppdOpenFile(ptr)) != NULL)
+  {
+    if (set_defaults)
+    {
+      cupsMarkOptions(ppd, num_options, options);
+      cupsRasterInterpretPPD(h, ppd, num_options, options, NULL);
+    }
+    for (i = 0; i < num_options; i ++)
+      if (ppdFindOption(ppd, options[i].name) == NULL)
+	num_non_ppd_options =
+	  cupsAddOption(options[i].name, options[i].value,
+			num_non_ppd_options, &non_ppd_options);
+    num_options = num_non_ppd_options;
+    options = non_ppd_options;
+  }
 
  /*
   * Check if the supplied "media" option is a comma-separated list of any
@@ -1158,7 +1197,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   }
   else if (set_defaults)
     h->cupsRenderingIntent[0] = '\0';
-#endif /* HAVE_CUPS_1_7 */
 
   if (media_source != NULL)
     free(media_source);
@@ -1166,6 +1204,9 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     free(media_type);
   if (page_size != NULL)
     free(page_size);
+  if (num_non_ppd_options)
+    cupsFreeOptions(num_non_ppd_options, non_ppd_options);
+#endif /* HAVE_CUPS_1_7 */
 
   return (0);
 }
