@@ -1236,7 +1236,6 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 		      (params->is_backend ? "Backend" : "Filter") :
 		      "Logging"),
 		     wpid, WEXITSTATUS(wstatus));
-	status = WEXITSTATUS(wstatus);
       } else {
 	/* Via signal */
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
@@ -1246,8 +1245,8 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 		      (params->is_backend ? "Backend" : "Filter") :
 		      "Logging"),
 		     wpid, WTERMSIG(wstatus));
-	status = 256 * WTERMSIG(wstatus);
       }
+      status = 1;
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
 		   "filterExternalCUPS (%s): %s (PID %d) exited with no errors.",
