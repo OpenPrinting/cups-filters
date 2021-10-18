@@ -642,6 +642,30 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 
 
 /*
+ * 'get_env_var()' - Auxiliary function for filterExternalCUPS(), gets value of
+ *                   an environment variable in a list of environment variables
+ *                   as used by the execve() function
+ */
+
+char *                    /* O - The value, NULL if variable is not in list */
+get_env_var(char *name,   /* I - Name of environment variable to read */
+	    char **env)   /* I - List of environment variable serttings */
+{
+  int i = 0;
+
+
+  if (env)
+    for (i = 0; env[i]; i ++)
+      if (strncmp(env[i], name, strlen(name)) == 0 &&
+	  strlen(env[i]) > strlen(name) &&
+	  env[i][strlen(name)] == '=')
+	return (env[i] + strlen(name) + 1);
+
+  return (NULL);
+}
+
+
+/*
  * 'add_env_var()' - Auxiliary function for filterExternalCUPS(), adds/sets
  *                   an environment variable in a list of environment variables
  *                   as used by the execve() function
@@ -776,8 +800,10 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   cups_file_t   *fp;                 /* File pointer to read log lines */
   char          buf[2048];           /* Log line buffer */
   filter_loglevel_t log_level;       /* Log level of filter's log message */
-  char          *msg,                /* Filter log message */
+  char          *ptr1, *ptr2,
+                *msg,                /* Filter log message */
                 *filter_name;        /* Filter name for logging */
+  char          filter_path[1024];   /* Full path of the filter */
   char          **argv,		     /* Command line args for filter */
                 **envp = NULL;       /* Environment variables for filter */
   int           num_all_options = 0;
@@ -813,6 +839,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   backfd = data->back_pipe[is_backend];
   sidefd = data->side_pipe[is_backend];
 
+  /* Filter name for logging */
   if ((filter_name = strrchr(params->filter, '/')) != NULL)
     filter_name ++;
   else
@@ -839,7 +866,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   add_env_var("CUPS_STATEDIR", CUPS_STATEDIR, &envp);
   add_env_var("SOFTWARE", "CUPS/2.4.99", &envp); /* Last CUPS with PPDs */
 
-  /* Copy the environment variables in which the caller got started */
+  /* Copy the environment in which the caller got started */
   if (environ)
     for (i = 0; environ[i]; i ++)
       add_env_var(environ[i], NULL, &envp);
@@ -848,6 +875,22 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   if (params->envp)
     for (i = 0; params->envp[i]; i ++)
       add_env_var(params->envp[i], NULL, &envp);
+
+  /* Add CUPS_SERVERBIN to the beginning of PATH */
+  ptr1 = get_env_var("PATH", envp);
+  ptr2 = get_env_var("CUPS_SERVERBIN", envp);
+  if (ptr2 && ptr2[0])
+  {
+    if (ptr1 && ptr1[0])
+    {
+      snprintf(buf, sizeof(buf), "%s/%s:%s",
+	       ptr2, params->is_backend ? "backend" : "filter", ptr1);
+      ptr1 = buf;
+    }
+    else
+      ptr1 = ptr2;
+    add_env_var("PATH", ptr1, &envp);
+  }
 
   if (params->is_backend < 2) /* Not needed in discovery mode of backend */
   {
@@ -865,6 +908,14 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     if (params->is_backend && params->device_uri)
       add_env_var("DEVICE_URI", (char *)params->device_uri, &envp);
   }
+
+  /* Determine full path for the filter */
+  if (params->filter[0] == '/' ||
+      (ptr1 = get_env_var("CUPS_SERVERBIN", envp)) == NULL || !ptr1[0])
+    strncpy(filter_path, params->filter, sizeof(filter_path) - 1);
+  else
+    snprintf(filter_path, sizeof(filter_path), "%s/%s/%s", ptr1,
+	     params->is_backend ? "backend" : "filter", params->filter);
 
   /* Log the resulting list of environment variable settings
      (with any authentication info removed)*/
@@ -1065,23 +1116,23 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     * Execute command...
     */
 
-    execve(params->filter, argv, envp);
+    execve(filter_path, argv, envp);
 
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "filterExternalCUPS (%s): Execution of %s %s failed - %s",
 		 filter_name, params->is_backend ? "backend" : "filter",
-		 params->filter, strerror(errno));
+		 filter_path, strerror(errno));
 
     exit(errno);
   } else if (pid > 0) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
 		 "filterExternalCUPS (%s): %s (PID %d) started.",
-		 filter_name, params->filter, pid);
+		 filter_name, filter_path, pid);
   } else {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "filterExternalCUPS (%s): Unable to fork process for %s %s",
 		 filter_name, params->is_backend ? "backend" : "filter",
-		 params->filter);
+		 filter_path);
     close(stderrpipe[0]);
     close(stderrpipe[1]);
     status = 1;
