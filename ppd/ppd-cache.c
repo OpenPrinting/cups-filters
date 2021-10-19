@@ -2342,6 +2342,15 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasecmp(c, "SpeedPrior") == 0)
 	    properties->sets_draft = 10;
 	}
+	else if (strcasecmp(o, "FXOutputMode") == 0) /* Fuji Xerox */
+	{
+	  if (strcasecmp(c, "Quality2") == 0)
+	    properties->sets_high = 10;
+	  else if (strcasecmp(c, "Speed") == 0)
+	    properties->sets_draft = 10;
+	  else if (strcasecmp(c, "Standard") == 0)
+	    properties->sets_normal = 10;
+	}
 	else if (strcasecmp(o, "RIPrintMode") == 0) /* Ricoh & OEM */
 	{
 	  if (strcasecmp(c, "1rhit") == 0)
