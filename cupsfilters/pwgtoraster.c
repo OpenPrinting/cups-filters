@@ -321,6 +321,8 @@ static void parseOpts(filter_data_t *data,
      cupsGetOption("media-col", num_options, options));
 
   if (doc->ppd) {
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "pwgtoraster: Using PPD file: %s", doc->ppd->nickname);
     ppdMarkOptions(doc->ppd,num_options,options);
     handleRequiresPageRegion(doc);
     ppdRasterInterpretPPD(&(doc->outheader),doc->ppd,num_options,options,0);
@@ -395,8 +397,6 @@ static void parseOpts(filter_data_t *data,
       doc->color_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
       free(profile);
     }
-
-    cupsRasterParseIPPOptions(&(doc->outheader), data, 0, 0);
   } else {
 #ifdef HAVE_CUPS_1_7
     cupsRasterParseIPPOptions(&(doc->outheader), data, 0, 1);
