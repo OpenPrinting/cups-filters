@@ -787,6 +787,7 @@ ieee1284NormalizeMakeAndModel(
     bufptr = buffer;
     while (*makeptr != ':') makeptr ++;
     makeptr ++;
+    while (isspace(*makeptr)) makeptr ++;
     while (*makeptr != ';' && *makeptr != '\0' &&
 	   bufptr < buffer + bufsize - 1)
     {
@@ -794,6 +795,7 @@ ieee1284NormalizeMakeAndModel(
       makeptr ++;
       bufptr ++;
     }
+    while (isspace(*(bufptr - 1))) bufptr --;
     if (bufptr < buffer + bufsize - 1)
     {
       *bufptr = ' ';
@@ -803,6 +805,7 @@ ieee1284NormalizeMakeAndModel(
     makeptr = bufptr;
     while (*modelptr != ':') modelptr ++;
     modelptr ++;
+    while (isspace(*modelptr)) modelptr ++;
     while (*modelptr != ';' && *modelptr != '\0' &&
 	   bufptr < buffer + bufsize - 1)
     {
@@ -810,6 +813,7 @@ ieee1284NormalizeMakeAndModel(
       modelptr ++;
       bufptr ++;
     }
+    while (isspace(*(bufptr - 1))) bufptr --;
     *bufptr = '\0';
     if (!nomakemodel && makeptr != bufptr)
       modelptr = makeptr;
