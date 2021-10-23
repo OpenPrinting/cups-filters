@@ -481,32 +481,32 @@ typedef struct			/**** Character/attribute structure... ****/
 		attr;		/* Any attributes */
 } lchar_t;
 
-typedef struct texttopdf_doc_s{
-
+typedef struct texttopdf_doc_s
+{
   int		NumFonts;	/* Number of fonts to use */
   EMB_PARAMS	*Fonts[256][4];	/* Fonts to use */
-  unsigned short	Chars[256];	/* Input char to unicode */
+  unsigned short Chars[256];	/* Input char to unicode */
   unsigned char	Codes[65536];	/* Unicode glyph mapping to font */
   int		Widths[256];	/* Widths of each font */
   int		Directions[256];/* Text directions for each font */
-  pdfOut *pdf;
-  int    FontResource;   /* Object number of font resource dictionary */
-  float  FontScaleX,FontScaleY;  /* The font matrix */
-  lchar_t *Title,*Date;   /* The title and date strings */
-  
-   cups_page_header2_t h;        /* CUPS Raster page header, to */
+  pdfOut	*pdf;
+  int		FontResource;   /* Object number of font resource dictionary */
+  float		FontScaleX, FontScaleY; /* The font matrix */
+  lchar_t	*Title, *Date;	/* The title and date strings */
+
+  cups_page_header2_t h;        /* CUPS Raster page header, to */
                                 /* accommodate results of command */
                                 /* line parsing for PPD-less queue */
   texttopdf_parameter_t env_vars;
-  int NumKeywords;
-  float	PageLeft,	/* Left margin */
+  int		NumKeywords;
+  float		PageLeft,	/* Left margin */
 		PageRight,	/* Right margin */
 		PageBottom,	/* Bottom margin */
 		PageTop,	/* Top margin */
 		PageWidth,	/* Total page width */
 		PageLength;
-  int	NumPages;
-  int	WrapLines,	/* Wrap text in lines */
+  int		NumPages;
+  int		WrapLines,	/* Wrap text in lines */
 		SizeLines,	/* Number of lines on a page */
 		SizeColumns,	/* Number of columns on a line */
 		PageColumns,	/* Number of columns on a page */
@@ -514,24 +514,21 @@ typedef struct texttopdf_doc_s{
 		ColumnWidth,	/* Width of each column */
 		PrettyPrint,	/* Do pretty code formatting? */
 		Copies;		/* Number of copies to produce */
-  float	CharsPerInch,	/* Number of character columns per inch */
+  float		CharsPerInch,	/* Number of character columns per inch */
 		LinesPerInch;	/* Number of lines per inch */
-  int	UTF8;
-  char	**Keywords;	/* List of known keywords... */
+  int		UTF8;
+  char		**Keywords;	/* List of known keywords... */
 
-  int	Orientation,	/* 0 = portrait, 1 = landscape, etc. */
+  int		Orientation,	/* 0 = portrait, 1 = landscape, etc. */
 		Duplex,		/* Duplexed? */
 		LanguageLevel,	/* Language level of printer */
 		ColorDevice;
   lchar_t	**Page;
-
-}texttopdf_doc_t;
-
+} texttopdf_doc_t;
 
 
-EMB_PARAMS *font_load(const char *font, int fontwidth, filter_logfunc_t log, void *ld);
-
-EMB_PARAMS *font_load(const char *font, int fontwidth, filter_logfunc_t log, void *ld)
+EMB_PARAMS *font_load(const char *font, int fontwidth, filter_logfunc_t log,
+		      void *ld)
 {
   OTF_FILE *otf;
 
@@ -541,13 +538,17 @@ EMB_PARAMS *font_load(const char *font, int fontwidth, filter_logfunc_t log, voi
   FcResult   result;
   int i;
 
-  if ( (font[0]=='/')||(font[0]=='.') ) {
+  if ((font[0] == '/') || (font[0] == '.'))
+  {
     candidates = NULL;
-    fontname=(FcChar8 *)strdup(font);
-  } else {
-    FcInit ();
+    fontname = (FcChar8 *)strdup(font);
+  }
+  else
+  {
+    FcInit();
     pattern = FcNameParse ((const FcChar8 *)font);
-    FcPatternAddInteger (pattern, FC_SPACING, FC_MONO); // guide fc, in case substitution becomes necessary
+    FcPatternAddInteger(pattern, FC_SPACING, FC_MONO);
+                      // guide fc, in case substitution becomes necessary
     FcConfigSubstitute (0, pattern, FcMatchPattern);
     FcDefaultSubstitute (pattern);
 
@@ -555,21 +556,33 @@ EMB_PARAMS *font_load(const char *font, int fontwidth, filter_logfunc_t log, voi
     candidates = FcFontSort (0, pattern, FcFalse, 0, &result);
     FcPatternDestroy (pattern);
 
-    if (candidates) {
+    if (candidates)
+    {
       /* In the list of fonts returned by FcFontSort()
 	 find the first one that is both in TrueType format and monospaced */
-      for (i = 0; i < candidates->nfont; i++) {
-	FcChar8 *fontformat=NULL; // TODO? or just try?
-	int spacing=0; // sane default, as FC_MONO == 100
-	FcPatternGetString  (candidates->fonts[i], FC_FONTFORMAT, 0, &fontformat);
-	FcPatternGetInteger (candidates->fonts[i], FC_SPACING,    0, &spacing);
+      for (i = 0; i < candidates->nfont; i ++)
+      {
+	FcChar8 *fontformat = NULL; // TODO? or just try?
+	int spacing = 0; // sane default, as FC_MONO == 100
+	FcPatternGetString(candidates->fonts[i], FC_FONTFORMAT, 0, &fontformat);
+	FcPatternGetInteger(candidates->fonts[i], FC_SPACING, 0, &spacing);
 
-	if ( (fontformat)&&((spacing == FC_MONO) || (fontwidth == 2)) ) {    // check for monospace or double width fonts
-	  if (strcmp((const char *)fontformat, "TrueType") == 0) {
-	    fontname = FcPatternFormat (candidates->fonts[i], (const FcChar8 *)"%{file|cescape}/%{index}");
+	if ((fontformat) && ((spacing == FC_MONO) || (fontwidth == 2)))
+	{
+	  // check for monospace or double width fonts
+	  if (strcmp((const char *)fontformat, "TrueType") == 0)
+	  {
+	    fontname =
+	      FcPatternFormat(candidates->fonts[i],
+			      (const FcChar8 *)"%{file|cescape}/%{index}");
 	    break;
-	  } else if (strcmp((const char *)fontformat, "CFF") == 0) {
-	    fontname = FcPatternFormat (candidates->fonts[i], (const FcChar8 *)"%{file|cescape}"); // TTC only possible with non-cff glyphs!
+	  }
+	  else if (strcmp((const char *)fontformat, "CFF") == 0)
+	  {
+	    fontname =
+	      FcPatternFormat (candidates->fonts[i],
+			       (const FcChar8 *)"%{file|cescape}");
+	                          // TTC only possible with non-cff glyphs!
 	    break;
 	  }
 	}
@@ -578,7 +591,8 @@ EMB_PARAMS *font_load(const char *font, int fontwidth, filter_logfunc_t log, voi
     }
   }
 
-  if (!fontname) {
+  if (!fontname)
+  {
     // TODO: try /usr/share/fonts/*/*/%s.ttf
     if(log) log(ld, FILTER_LOGLEVEL_ERROR,"texttopdf: No viable font found.");
     return NULL;
@@ -586,16 +600,17 @@ EMB_PARAMS *font_load(const char *font, int fontwidth, filter_logfunc_t log, voi
 
   otf = otf_load((const char *)fontname);
   free(fontname);
-  if (!otf) {
+  if (!otf)
+  {
     return NULL;
   }
 
-  FONTFILE *ff=fontfile_open_sfnt(otf);
+  FONTFILE *ff = fontfile_open_sfnt(otf);
   assert(ff);
-  EMB_PARAMS *emb=emb_new(ff,
-                          EMB_DEST_PDF16,
-                          EMB_C_FORCE_MULTIBYTE|
-                          EMB_C_TAKE_FONTFILE);
+  EMB_PARAMS *emb = emb_new(ff,
+			    EMB_DEST_PDF16,
+			    EMB_C_FORCE_MULTIBYTE|
+			    EMB_C_TAKE_FONTFILE);
   assert(emb);
   assert(emb->plan&EMB_A_MULTIBYTE);
   return emb;
@@ -603,14 +618,15 @@ EMB_PARAMS *font_load(const char *font, int fontwidth, filter_logfunc_t log, voi
 
 EMB_PARAMS *font_std(const char *name)
 {
-  FONTFILE *ff=fontfile_open_std(name);
+  FONTFILE *ff = fontfile_open_std(name);
   assert(ff);
-  EMB_PARAMS *emb=emb_new(ff,
-                          EMB_DEST_PDF16,
-                          EMB_C_TAKE_FONTFILE);
+  EMB_PARAMS *emb = emb_new(ff,
+			    EMB_DEST_PDF16,
+			    EMB_C_TAKE_FONTFILE);
   assert(emb);
   return emb;
 }
+
 
 /*
  * 'compare_keywords()' - Compare two C/C++ keywords.
@@ -622,6 +638,7 @@ compare_keywords(const void *k1,	/* I - First keyword */
 {
   return (strcmp(*((const char **)k1), *((const char **)k2)));
 }
+
 
 /*
  * 'getutf8()' - Get a UTF-8 encoded wide character...
@@ -697,32 +714,37 @@ getutf8(FILE *fp)	/* I - File to read from */
   }
 }
 
+
 /*
  * Local functions...
  */
 
 static void	write_line(int row, lchar_t *line, texttopdf_doc_t *doc);
-static void	write_string(int col, int row, int len, lchar_t *s, texttopdf_doc_t *doc);
+static void	write_string(int col, int row, int len, lchar_t *s,
+			     texttopdf_doc_t *doc);
 static lchar_t *make_wide(const char *buf, texttopdf_doc_t *doc);
-static void     write_font_str(float x,float y,int fontid, lchar_t *str, int len, texttopdf_doc_t *doc);
+static void     write_font_str(float x,float y,int fontid, lchar_t *str,
+			       int len, texttopdf_doc_t *doc);
 static void     write_pretty_header();
-void            WriteProlog(const char *title, const char *user, const char *classification, const char *label, 
-                  ppd_file_t *ppd, texttopdf_doc_t *doc, filter_logfunc_t log, void *ld);
+void            WriteProlog(const char *title, const char *user,
+			    const char *classification, const char *label, 
+			    ppd_file_t *ppd, texttopdf_doc_t *doc,
+			    filter_logfunc_t log, void *ld);
 void            WritePage(texttopdf_doc_t *doc);
 void            WriteEpilogue(texttopdf_doc_t *doc);
+
+
 /*
  * 'texttopdf()' - Main entry for text to PDF filter.
  */
 
-int			/* O - Exit status */
-texttopdf(int inputfd,         /* I - File descriptor input stream */
-       int outputfd,        /* I - File descriptor output stream */
-       int inputseekable,   /* I - Is input stream seekable? (unused) */
-       filter_data_t *data, /* I - Job and printer data */
-       void *parameters)	  /* I - Filter-specific parameters (unused) */
+int				/* O - Exit status */
+texttopdf(int inputfd,  	/* I - File descriptor input stream */
+	  int outputfd, 	/* I - File descriptor output stream */
+	  int inputseekable,	/* I - Is input stream seekable? (unused) */
+	  filter_data_t *data,	/* I - Job and printer data */
+	  void *parameters)	/* I - Filter-specific parameters (unused) */
 {
-
-
   texttopdf_doc_t doc;
   int		i,		/* Looping var */
 		empty,		/* Is the input empty? */
