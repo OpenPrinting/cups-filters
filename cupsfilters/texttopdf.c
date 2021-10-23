@@ -730,8 +730,8 @@ texttopdf(int inputfd,         /* I - File descriptor input stream */
 		lastch,		/* Previous char from file */
 		attr,		/* Current attribute */
 		line,		/* Current line */
-  	column,		/* Current column */
-  	page_column;	/* Current page column */
+		column,		/* Current column */
+		page_column;	/* Current page column */
 
   const char	*val;		/* Option value */
   char		keyword[64],	/* Keyword string */
@@ -742,45 +742,45 @@ texttopdf(int inputfd,         /* I - File descriptor input stream */
   enum	{StrBeg=-1, NoStr, StrEnd}	
   		strState;	/* Inside a dbl-quoted string */
 
-  filter_logfunc_t     log = data->logfunc;
-  void                 *ld = data->logdata;
+  filter_logfunc_t log = data->logfunc;
+  void		*ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
-  void                 *icd = data->iscanceleddata;
-  FILE *outputfp;   /* Output data stream */
+  void		*icd = data->iscanceleddata;
+  FILE		*outputfp;	/* Output data stream */
   FILE		*fp;		/* Print file */
   
  /*
   * Make sure status messages are not buffered...
   */
   #ifdef CUPS_1_4 /* CUPS 1.4.x or newer: only UTF8 is supported */
-      doc.UTF8 = 1;               /* Use UTF-8 encoding? */
+  doc.UTF8 = 1;               /* Use UTF-8 encoding? */
   #endif /* CUPS_1_4 */
 
-  doc.WrapLines = 1,		/* Wrap text in lines */
-	doc.SizeLines = 60,		/* Number of lines on a page */
-	doc.SizeColumns = 80,	/* Number of columns on a line */
-	doc.PageColumns = 1,	/* Number of columns on a page */
-	doc.ColumnGutter = 0,	/* Number of characters between text columns */
-	doc.ColumnWidth = 80,	/* Width of each column */
-	doc.PrettyPrint = 0,	/* Do pretty code formatting */
-	doc.Copies = 1;		/* Number of copies */
+  doc.WrapLines = 1;		/* Wrap text in lines */
+  doc.SizeLines = 60;		/* Number of lines on a page */
+  doc.SizeColumns = 80;		/* Number of columns on a line */
+  doc.PageColumns = 1;		/* Number of columns on a page */
+  doc.ColumnGutter = 0;		/* Number of characters between text columns */
+  doc.ColumnWidth = 80;		/* Width of each column */
+  doc.PrettyPrint = 0;		/* Do pretty code formatting */
+  doc.Copies = 1;		/* Number of copies */
   doc.Page = NULL;		/* Page characters */
   doc.NumPages = 0;		/* Number of pages in document */
   doc.CharsPerInch = 10;	/* Number of character columns per inch */
-  doc.LinesPerInch = 6;	/* Number of lines per inch */
-  doc.NumKeywords = 0;	/* Number of known keywords */
-  doc.Keywords = NULL;	/* List of known keywords */
-  doc.Orientation = 0,	/* 0 = portrait, 1 = landscape, etc. */
-	doc.Duplex = 0,		/* Duplexed? */
-	doc.LanguageLevel = 1,	/* Language level of printer */
-	doc.ColorDevice = 1;	/* Do color text? */
-  doc.PageLeft = 18.0f,	/* Left margin */
-	doc.PageRight = 594.0f,	/* Right margin */
-	doc.PageBottom = 36.0f,	/* Bottom margin */
-	doc.PageTop = 756.0f,	/* Top margin */
-	doc.PageWidth = 612.0f,	/* Total page width */
-	doc.PageLength = 792.0f;	/* Total page length */
-  doc.pdf  = NULL;
+  doc.LinesPerInch = 6;		/* Number of lines per inch */
+  doc.NumKeywords = 0;		/* Number of known keywords */
+  doc.Keywords = NULL;		/* List of known keywords */
+  doc.Orientation = 0;		/* 0 = portrait, 1 = landscape, etc. */
+  doc.Duplex = 0;		/* Duplexed? */
+  doc.LanguageLevel = 1;	/* Language level of printer */
+  doc.ColorDevice = 1;		/* Do color text? */
+  doc.PageLeft = 18.0f;		/* Left margin */
+  doc.PageRight = 594.0f;	/* Right margin */
+  doc.PageBottom = 36.0f;	/* Bottom margin */
+  doc.PageTop = 756.0f;		/* Top margin */
+  doc.PageWidth = 612.0f;	/* Total page width */
+  doc.PageLength = 792.0f;	/* Total page length */
+  doc.pdf = NULL;
 
   if (parameters) {
     doc.env_vars = *((texttopdf_parameter_t *)parameters);
@@ -789,24 +789,25 @@ texttopdf(int inputfd,         /* I - File descriptor input stream */
     doc.env_vars.char_set = NULL;
     doc.env_vars.content_type = NULL;
     doc.env_vars.classification = NULL;
- }
+  }
 
   setbuf(stderr, NULL);
 
-   /*
+ /*
   * Open the input data stream specified by the inputfd...
   */
 
-if((fp=fdopen(inputfd, "rb"))== NULL)
-{
-  if (!iscanceled || !iscanceled(icd))
+  if((fp=fdopen(inputfd, "rb"))== NULL)
+  {
+    if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "textopdf: Unable to open input data stream.");
     }
     return (1);
-}
-  /*
+  }
+
+ /*
   * Open the output data stream specified by the outputfd...
   */
 
@@ -826,12 +827,12 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
   * Process command-line options and write the prolog...
   */
 
-
   if(data->ppd){
 	  ppdMarkOptions(data->ppd, data->num_options, data->options);
   }
 
-  if ((val = cupsGetOption("prettyprint", data->num_options, data->options)) != NULL &&
+  if ((val = cupsGetOption("prettyprint",
+			   data->num_options, data->options)) != NULL &&
       strcasecmp(val, "no") && strcasecmp(val, "off") &&
       strcasecmp(val, "false"))
   {
@@ -881,9 +882,11 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
   }
 
   filterSetCommonOptions(data->ppd, data->num_options, data->options, 1,
-                          &(doc.Orientation), &(doc.Duplex), &(doc.LanguageLevel), &(doc.ColorDevice), &(doc.PageLeft),
-                          &(doc.PageRight), &(doc.PageTop), &(doc.PageBottom), &(doc.PageWidth), &(doc.PageLength),
-                          log, ld);
+			 &(doc.Orientation), &(doc.Duplex),
+			 &(doc.LanguageLevel), &(doc.ColorDevice),
+			 &(doc.PageLeft), &(doc.PageRight), &(doc.PageTop),
+			 &(doc.PageBottom), &(doc.PageWidth), &(doc.PageLength),
+			 log, ld);
 
   if (!data->ppd) {
     cupsRasterParseIPPOptions(&(doc.h), data, 0, 1);
@@ -896,8 +899,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
       (float)doc.h.PageSize[1];
     doc.PageLeft = doc.h.cupsImagingBBox[0] != 0.0 ? doc.h.cupsImagingBBox[0] :
       (float)doc.h.ImagingBoundingBox[0];
-    doc.PageBottom = doc.h.cupsImagingBBox[1] != 0.0 ? doc.h.cupsImagingBBox[1] :
-      (float)doc.h.ImagingBoundingBox[1];
+    doc.PageBottom = doc.h.cupsImagingBBox[1] != 0.0 ?
+      doc.h.cupsImagingBBox[1] : (float)doc.h.ImagingBoundingBox[1];
     doc.PageRight = doc.h.cupsImagingBBox[2] != 0.0 ? doc.h.cupsImagingBBox[2] :
       (float)doc.h.ImagingBoundingBox[2];
     doc.PageTop = doc.h.cupsImagingBBox[3] != 0.0 ? doc.h.cupsImagingBBox[3] :
@@ -911,7 +914,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
     doc.WrapLines = !strcasecmp(val, "true") || !strcasecmp(val, "on") ||
                 !strcasecmp(val, "yes");
 
-  if ((val = cupsGetOption("columns", data->num_options, data->options)) != NULL)
+  if ((val = cupsGetOption("columns", data->num_options,
+			   data->options)) != NULL)
   {
     doc.PageColumns = atoi(val);
 
@@ -919,7 +923,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
     {
       if (fp != stdin)
         fclose(fp);
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad columns value %d", doc.PageColumns);
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		  "texttopdf: Bad columns value %d", doc.PageColumns);
       return (1);
     }
   }
@@ -932,7 +937,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
     {
       if (fp != stdin)
         fclose(fp);
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad cpi value %f", doc.CharsPerInch);
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		  "texttopdf: Bad cpi value %f", doc.CharsPerInch);
       return (1);
     }
   }
@@ -945,7 +951,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
     {
       if (fp != stdin)
         fclose(fp);
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad lpi value %f", doc.LinesPerInch);
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		  "texttopdf: Bad lpi value %f", doc.LinesPerInch);
       return (1);
     }
   }
@@ -977,7 +984,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
   doc.Page    = calloc(sizeof(lchar_t *), doc.SizeLines);
   if (!doc.Page)
   {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: cannot allocate memory for page");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		"texttopdf: cannot allocate memory for page");
     exit(1);
   }
 
@@ -985,7 +993,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
   if (!doc.Page[0])
   {
     free(doc.Page);
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: cannot allocate memory for page");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		"texttopdf: cannot allocate memory for page");
     exit(1);
   }
 
@@ -1016,7 +1025,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
       /* Found the first valid character, write file header */
       empty = 0;
       WriteProlog(data->job_title, data->job_user, doc.env_vars.classification,
-		  cupsGetOption("page-label", data->num_options, data->options), data->ppd, &doc, log, ld);
+		  cupsGetOption("page-label", data->num_options, data->options),
+		  data->ppd, &doc, log, ld);
     }
 
    /*
@@ -1146,7 +1156,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
 	  	cmntState = NoCmnt;
 
           if (!cmntState && !strState)
-	    attr &= ~(ATTR_ITALIC | ATTR_BOLD | ATTR_RED | ATTR_GREEN | ATTR_BLUE);
+	    attr &= ~(ATTR_ITALIC | ATTR_BOLD | ATTR_RED | ATTR_GREEN |
+		      ATTR_BLUE);
 
           if (line >= doc.SizeLines)
           {
@@ -1172,7 +1183,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
 	  	cmntState = NoCmnt;
 
           if (!cmntState && !strState)
-	    attr &= ~(ATTR_ITALIC | ATTR_BOLD | ATTR_RED | ATTR_GREEN | ATTR_BLUE);
+	    attr &= ~(ATTR_ITALIC | ATTR_BOLD | ATTR_RED | ATTR_GREEN |
+		      ATTR_BLUE);
           break;
 
       case 0x0c :		/* FF - eject current page... */
@@ -1207,7 +1219,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
 	  	cmntState = NoCmnt;
 
           if (!cmntState && !strState)
-	    attr &= ~(ATTR_ITALIC | ATTR_BOLD | ATTR_RED | ATTR_GREEN | ATTR_BLUE);
+	    attr &= ~(ATTR_ITALIC | ATTR_BOLD | ATTR_RED | ATTR_GREEN |
+		      ATTR_BLUE);
 
           if (page_column >= doc.PageColumns)
           {
@@ -1289,8 +1302,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
 	      *keyptr = '\0';
 	      keyptr  = keyword;
 
-	      if (bsearch(&keyptr, doc.Keywords, doc.NumKeywords, sizeof(char *),
-	                  compare_keywords))
+	      if (bsearch(&keyptr, doc.Keywords, doc.NumKeywords,
+			  sizeof(char *), compare_keywords))
               {
 	       /*
 	        * Put keywords in boldface...
@@ -1433,7 +1446,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
 	      doc.Page[line][column].attr |= ATTR_BOLD;
 	    }
 	    else if ((ch == '/' || ch == '*') && lastch == '/' &&
-	             column < doc.ColumnWidth && doc.PrettyPrint != PRETTY_SHELL)
+	             column < doc.ColumnWidth &&
+		     doc.PrettyPrint != PRETTY_SHELL)
 	    {
 	     /*
 	      * Highlight first comment character...
@@ -1441,7 +1455,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
 
 	      doc.Page[line][column - 1].attr = attr;
 	    }
-	    else if (ch == '\"' && lastch != '\\' && !cmntState && strState == StrEnd)
+	    else if (ch == '\"' && lastch != '\\' && !cmntState &&
+		     strState == StrEnd)
 	    {
 	     /*
 	      * End a dbl-quote string constant...
@@ -1478,7 +1493,8 @@ if((fp=fdopen(inputfd, "rb"))== NULL)
   /* Do not write anything if the input file is empty */
   if (empty)
   {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Input is empty, outputting empty file");
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		"Input is empty, outputting empty file");
     if (fp != stdin)
       fclose(fp);
     return 0;
@@ -1518,14 +1534,18 @@ WriteEpilogue(texttopdf_doc_t *doc)
   int i,j;
 
   // embed fonts
-  for (i = doc->PrettyPrint ? 3 : 1; i >= 0; i --) {
+  for (i = doc->PrettyPrint ? 3 : 1; i >= 0; i --)
+  {
     for (j = 0; j < doc->NumFonts; j ++) 
     {
       EMB_PARAMS *emb=doc->Fonts[j][i];
-      if (emb->font->fobj) { // already embedded
+      if (emb->font->fobj) // already embedded
+      {
         continue;
       }
-      if ( (!emb->subset)||(bits_used(emb->subset,emb->font->sfnt->numGlyphs)) ) {
+      if ((!emb->subset) ||
+	  (bits_used(emb->subset, emb->font->sfnt->numGlyphs)))
+      {
         emb->font->fobj=pdfOut_write_font(doc->pdf,emb);
         assert(emb->font->fobj);
       }
@@ -1542,10 +1562,13 @@ WriteEpilogue(texttopdf_doc_t *doc)
                     "<<\n",
                     doc->FontResource);
 
-  for (i = doc->PrettyPrint ? 3 : 1; i >= 0; i --) {
-    for (j = 0; j < doc->NumFonts; j ++) {
+  for (i = doc->PrettyPrint ? 3 : 1; i >= 0; i --)
+  {
+    for (j = 0; j < doc->NumFonts; j ++)
+    {
       EMB_PARAMS *emb=doc->Fonts[j][i];
-      if (emb->font->fobj) { // used
+      if (emb->font->fobj) // used
+      {
         pdfOut_printf(doc->pdf,"  /%s%02x %d 0 R\n",names[i],j,emb->font->fobj);
       }
     }
@@ -1570,11 +1593,11 @@ WritePage(texttopdf_doc_t *doc)
 
   int content=pdfOut_add_xref(doc->pdf);
   pdfOut_printf(doc->pdf,"%d 0 obj\n"
-                    "<</Length %d 0 R\n"
-                    ">>\n"
-                    "stream\n"
-                    "q\n"
-                    ,content,content+1);
+		"<</Length %d 0 R\n"
+		">>\n"
+		"stream\n"
+		"q\n",
+		content, content+1);
   long size=-((doc->pdf->filepos)-2);
 
   (doc->NumPages)++;
@@ -1586,29 +1609,31 @@ WritePage(texttopdf_doc_t *doc)
 
   size+= ((doc->pdf->filepos)+2);
   pdfOut_printf(doc->pdf,"Q\n"
-                    "endstream\n"
-                    "endobj\n");
+		"endstream\n"
+		"endobj\n");
   
   int len_obj=pdfOut_add_xref(doc->pdf);
   assert(len_obj==content+1);
   pdfOut_printf(doc->pdf,"%d 0 obj\n"
-                    "%ld\n"
-                    "endobj\n",
-                    len_obj,size);
+		"%ld\n"
+		"endobj\n",
+		len_obj,size);
 
   int obj=pdfOut_add_xref(doc->pdf);
   pdfOut_printf(doc->pdf,"%d 0 obj\n"
-                    "<</Type/Page\n"
-                    "  /Parent 1 0 R\n"
-                    "  /MediaBox [0 0 %.0f %.0f]\n"
-                    "  /Contents %d 0 R\n"
-                    "  /Resources << /Font %d 0 R >>\n"
-                    ">>\n"
-                    "endobj\n",
-                    obj,doc->PageWidth,doc->PageLength,content,doc->FontResource);
+		"<</Type/Page\n"
+		"  /Parent 1 0 R\n"
+		"  /MediaBox [0 0 %.0f %.0f]\n"
+		"  /Contents %d 0 R\n"
+		"  /Resources << /Font %d 0 R >>\n"
+		">>\n"
+		"endobj\n",
+		obj,doc->PageWidth, doc->PageLength, content,
+		doc->FontResource);
   pdfOut_add_page(doc->pdf,obj);
 
-  memset(doc->Page[0], 0, sizeof(lchar_t) * (doc->SizeColumns) * (doc->SizeLines));
+  memset(doc->Page[0], 0,
+	 sizeof(lchar_t) * (doc->SizeColumns) * (doc->SizeLines));
 }
 // }}}
 
@@ -1679,8 +1704,9 @@ WriteProlog(const char *title,		/* I - Title of job */
   if (doc->PageColumns > 1)
   {
     doc->ColumnGutter = doc->CharsPerInch / 2;
-    doc->ColumnWidth  = (doc->SizeColumns - doc->ColumnGutter * (doc->PageColumns - 1)) /
-                   doc->PageColumns;
+    doc->ColumnWidth  = (doc->SizeColumns - doc->ColumnGutter *
+			 (doc->PageColumns - 1)) /
+                        doc->PageColumns;
   }
   else
     doc->ColumnWidth = doc->SizeColumns;
@@ -1694,7 +1720,8 @@ WriteProlog(const char *title,		/* I - Title of job */
   assert(doc->pdf);
 
   pdfOut_begin_pdf(doc->pdf);
-  pdfOut_printf(doc->pdf,"%%cupsRotation: %d\n", (doc->Orientation & 3) * 90); // TODO?
+  pdfOut_printf(doc->pdf,"%%cupsRotation: %d\n",
+		(doc->Orientation & 3) * 90); // TODO?
 
   pdfOut_add_kv(doc->pdf,"Creator","texttopdf/" PACKAGE_VERSION);
 
@@ -1724,7 +1751,8 @@ WriteProlog(const char *title,		/* I - Title of job */
   charset = doc->env_vars.char_set;
   if (charset != NULL && strcmp(charset, "us-ascii") != 0) // {{{
   {
-    snprintf(filename, sizeof(filename), "%s/charsets/pdf.%s", datadir, charset);
+    snprintf(filename, sizeof(filename), "%s/charsets/pdf.%s", datadir,
+	     charset);
 
     if ((fp = fopen(filename, "r")) == NULL)
     {
@@ -1732,7 +1760,9 @@ WriteProlog(const char *title,		/* I - Title of job */
       * Can't open charset file!
       */
 
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Unable to open %s: %s", filename, strerror(errno));
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		  "texttopdf: Unable to open %s: %s",
+		  filename, strerror(errno));
       exit(1);
     }
 
@@ -1747,7 +1777,8 @@ WriteProlog(const char *title,		/* I - Title of job */
       */
 
       fclose(fp);
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad charset file %s", filename);
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		  "texttopdf: Bad charset file %s", filename);
       exit(1);
     }
 
@@ -1758,7 +1789,8 @@ WriteProlog(const char *title,		/* I - Title of job */
       */
 
       fclose(fp);
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad charset file %s", filename);
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		  "texttopdf: Bad charset file %s", filename);
       exit(1);
     }
 
@@ -1767,7 +1799,8 @@ WriteProlog(const char *title,		/* I - Title of job */
     */
 
     line[strlen(line) - 1] = '\0'; /* Drop \n */
-    for (lineptr = line + 7; isspace(*lineptr & 255); lineptr ++); /* Skip whitespace */
+    for (lineptr = line + 7; isspace(*lineptr & 255); lineptr ++);
+                                                   /* Skip whitespace */
 
 #ifndef CUPS_1_4 /* CUPS 1.4.x or newer: support for non-utf8 removed */
     if (strcmp(lineptr, "8bit") == 0) // {{{
@@ -1833,7 +1866,8 @@ WriteProlog(const char *title,		/* I - Title of job */
 	  doc->Directions[doc->NumFonts] = -1;
 	else
 	{
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad text direction %s", valptr);
+	  if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		      "texttopdf: Bad text direction %s", valptr);
 	  fclose(fp);
 	  exit(1);
 	}
@@ -1856,7 +1890,8 @@ WriteProlog(const char *title,		/* I - Title of job */
 	  * Can't have a font without all required values...
 	  */
 
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad font description line: %s", valptr);
+	  if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		      "texttopdf: Bad font description line: %s", valptr);
 	  fclose(fp);
 	  exit(1);
 	}
@@ -1869,7 +1904,8 @@ WriteProlog(const char *title,		/* I - Title of job */
           doc->Widths[doc->NumFonts] = 2;
 	else 
 	{
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad text width %s", valptr);
+	  if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		      "texttopdf: Bad text width %s", valptr);
 	  fclose(fp);
 	  exit(1);
 	}
@@ -1891,18 +1927,24 @@ WriteProlog(const char *title,		/* I - Title of job */
           if (*lineptr)
 	    *lineptr++ = '\0';
 
-          if (lineptr > valptr) {
+          if (lineptr > valptr)
+	  {
             // search for duplicates
             for (k = 0; k < num_fonts; k ++)
-              if (strcmp(valptr, fontnames[k]) == 0) {
+              if (strcmp(valptr, fontnames[k]) == 0)
+	      {
 	        doc->Fonts[doc->NumFonts][i] = fonts[k];
                 break;
               }
 
-            if (k==num_fonts) {  // not found
-	      fonts[num_fonts] = doc->Fonts[doc->NumFonts][i] = font_load(valptr, doc->Widths[doc->NumFonts], log, ld);
-              if (!fonts[num_fonts]) { // font missing/corrupt, replace by first
-                if(log) log(ld, FILTER_LOGLEVEL_WARN, "texttopdf: Ignored bad font \"%s\"",valptr);
+            if (k==num_fonts) // not found
+	    {
+	      fonts[num_fonts] = doc->Fonts[doc->NumFonts][i] =
+		font_load(valptr, doc->Widths[doc->NumFonts], log, ld);
+              if (!fonts[num_fonts]) // font missing/corrupt, replace by first
+	      {
+                if(log) log(ld, FILTER_LOGLEVEL_WARN,
+			    "texttopdf: Ignored bad font \"%s\"",valptr);
                 break;
               }
               fontnames[num_fonts++] = strdup(valptr);
@@ -1911,7 +1953,8 @@ WriteProlog(const char *title,		/* I - Title of job */
 	}
 
         /* ignore complete range, when the first font is not available */
-        if (i==0) {
+        if (i==0)
+	{
           continue;
         }
 
@@ -1957,7 +2000,8 @@ WriteProlog(const char *title,		/* I - Title of job */
       fclose(fp);
     } else // }}}
 #endif
-    if (strcmp(lineptr, "utf8") == 0) { // {{{
+    if (strcmp(lineptr, "utf8") == 0) // {{{
+    {
      /*
       * UTF-8 (Unicode) text...
       */
@@ -2003,7 +2047,8 @@ WriteProlog(const char *title,		/* I - Title of job */
 	 /*
 	  * Can't have a font without all required values...
 	  */
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad font description line: %s", valptr);
+	  if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		      "texttopdf: Bad font description line: %s", valptr);
 	  fclose(fp);
 	  exit(1);
 	}
@@ -2016,7 +2061,8 @@ WriteProlog(const char *title,		/* I - Title of job */
 	  doc->Directions[doc->NumFonts] = -1;
 	else
 	{
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad text direction %s", valptr);
+	  if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		      "texttopdf: Bad text direction %s", valptr);
 	  fclose(fp);
 	  exit(1);
 	}
@@ -2038,7 +2084,8 @@ WriteProlog(const char *title,		/* I - Title of job */
 	 /*
 	  * Can't have a font without all required values...
 	  */
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad font description line: %s", valptr);
+	  if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		      "texttopdf: Bad font description line: %s", valptr);
 	  fclose(fp);
 	  exit(1);
 	}
@@ -2051,7 +2098,8 @@ WriteProlog(const char *title,		/* I - Title of job */
           doc->Widths[doc->NumFonts] = 2;
 	else 
 	{
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad text width %s", valptr);
+	  if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		      "texttopdf: Bad text width %s", valptr);
 	  fclose(fp);
 	  exit(1);
 	}
@@ -2073,18 +2121,24 @@ WriteProlog(const char *title,		/* I - Title of job */
           if (*lineptr)
 	    *lineptr++ = '\0';
 
-          if (lineptr > valptr) {
+          if (lineptr > valptr)
+	  {
             // search for duplicates
             for (k = 0; k < num_fonts; k ++)
-              if (strcmp(valptr, fontnames[k]) == 0) {
+              if (strcmp(valptr, fontnames[k]) == 0)
+	      {
 	        doc->Fonts[doc->NumFonts][i] = fonts[k];
                 break;
               }
 
-            if (k==num_fonts) {  // not found
-	      fonts[num_fonts] = doc->Fonts[doc->NumFonts][i] = font_load(valptr, doc->Widths[doc->NumFonts], log, ld);
-              if (!fonts[num_fonts]) { // font missing/corrupt, replace by first
-                if(log) log(ld, FILTER_LOGLEVEL_WARN, "texttopdf: Ignored bad font \"%s\"",valptr);
+            if (k==num_fonts) // not found
+	    {
+	      fonts[num_fonts] = doc->Fonts[doc->NumFonts][i] =
+		font_load(valptr, doc->Widths[doc->NumFonts], log, ld);
+              if (!fonts[num_fonts]) // font missing/corrupt, replace by first
+	      {
+                if(log) log(ld, FILTER_LOGLEVEL_WARN,
+			    "texttopdf: Ignored bad font \"%s\"",valptr);
                 break;
               }
               fontnames[num_fonts++] = strdup(valptr);
@@ -2093,7 +2147,8 @@ WriteProlog(const char *title,		/* I - Title of job */
 	}
 
         /* ignore complete range, when the first font is not available */
-        if (i==0) {
+        if (i == 0)
+	{
           continue;
         }
 
@@ -2126,7 +2181,8 @@ WriteProlog(const char *title,		/* I - Title of job */
     } // }}}
     else // {{{
     {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad charset type %s", lineptr);
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		  "texttopdf: Bad charset type %s", lineptr);
       fclose(fp);
       exit(1);
     } // }}}
@@ -2161,7 +2217,8 @@ WriteProlog(const char *title,		/* I - Title of job */
   // }}}
 
   if (doc->NumFonts==0) {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf:No usable font available");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+		"texttopdf:No usable font available");
     exit(1);
   }
 
@@ -2241,8 +2298,8 @@ write_line(int     row,		/* I - Row number (0 to N) */
       } else {
         lastfont = doc->Codes[doc->Chars[line->ch]];
       }
-//      mono     = strncmp(Fonts[lastfont][0], "Courier", 7) == 0;
-mono=1; // TODO
+      //mono = strncmp(Fonts[lastfont][0], "Courier", 7) == 0;
+      mono = 1; // TODO
 
       col ++;
       xwid += (doc->Widths[lastfont]);
@@ -2252,9 +2309,12 @@ mono=1; // TODO
       {
 	while (col < doc->SizeColumns && line->ch != 0 && attr == line->attr)
 	{
-          if (doc->UTF8) {
+          if (doc->UTF8)
+	  {
             font = doc->Codes[line->ch];
-          } else {
+          }
+	  else
+	  {
             font = doc->Codes[doc->Chars[line->ch]];
           }
           if (/*strncmp(Fonts[font][0], "Courier", 7) != 0 ||*/ // TODO
@@ -2267,21 +2327,26 @@ mono=1; // TODO
 	}
       }
 
-      if (doc->Directions[lastfont] > 0) {
+      if (doc->Directions[lastfont] > 0)
+      {
         write_string(xcol, row, line - start, start,doc);
         xcol += xwid;
       }
       else
       {
        /*
-        * Do right-to-left text... ; assume no font change without direction change
+        * Do right-to-left text... ; assume no font change without direction
+        * change
 	*/
 
 	while (col < doc->SizeColumns && line->ch != 0 && attr == line->attr)
 	{
-          if (doc->UTF8) {
+          if (doc->UTF8)
+	  {
             font = doc->Codes[line->ch];
-          } else {
+          }
+	  else
+	  {
             font = doc->Codes[doc->Chars[line->ch]];
           }
           if (doc->Directions[font] > 0 &&
@@ -2294,10 +2359,13 @@ mono=1; // TODO
 	}
 
         for (i = 1; start < line; i ++, start ++)
-	  if (!isspace(start->ch & 255)) {
+	  if (!isspace(start->ch & 255))
+	  {
             xwid-=(doc->Widths[lastfont]);
 	    write_string(xcol + xwid, row, 1, start, doc);
-          } else {
+          }
+	  else
+	  {
             xwid--;
           }
       }
@@ -2306,7 +2374,8 @@ mono=1; // TODO
 }
 // }}}
 
-static lchar_t *make_wide(const char *buf, texttopdf_doc_t *doc)  // {{{ - convert to lchar_t
+static lchar_t *make_wide(const char *buf, texttopdf_doc_t *doc)
+                                               // {{{ - convert to lchar_t
 {
   const unsigned char	*utf8;	/* UTF8 text */
   lchar_t *ret,*out;
@@ -2420,11 +2489,12 @@ write_string(int     col,	/* I - Start column */
 // }}}
 
 // {{{ show >len characters from >str, using the right font(s) at >x,>y
-static void write_font_str(float x,float y,int fontid, lchar_t *str, int len, texttopdf_doc_t *doc)
+static void write_font_str(float x,float y,int fontid, lchar_t *str,
+			   int len, texttopdf_doc_t *doc)
 {
-  unsigned short		ch;		/* Current character */
-  static char	*names[] =	/* Font names */
-		{ "FN","FB","FI","FBI" };
+  unsigned short	ch;		/* Current character */
+  static char		*names[] =	/* Font names */
+				{ "FN","FB","FI","FBI" };
 
   if (len==-1) {
     for (len=0;str[len].ch;len++);
@@ -2449,43 +2519,62 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str, int len, te
    /*
     * Write a hex string...
     */
-    if (doc->UTF8) {
+    if (doc->UTF8)
+    {
       lastfont=doc->Codes[str->ch];
-    } else {
+    }
+    else
+    {
       lastfont=doc->Codes[doc->Chars[str->ch]];
     }
     EMB_PARAMS *emb=doc->Fonts[lastfont][fontid];
     OTF_FILE *otf=emb->font->sfnt;
 
-    if (otf) { // TODO?
+    if (otf) // TODO?
+    {
       pdfOut_printf(doc->pdf,"  %.3f Tz\n",
-                        doc->FontScaleX*600.0/(otf_get_width(otf,4)*1000.0/otf->unitsPerEm)*100.0/(doc->FontScaleY)); // TODO? 
-      // gid==4 is usually '!', the char after space. We just need "the" width for the monospaced font. gid==0 is bad, and space might also be bad.
-    } else {
+		    doc->FontScaleX * 600.0 /
+		    (otf_get_width(otf, 4) * 1000.0 /
+		     otf->unitsPerEm) * 100.0 / (doc->FontScaleY)); // TODO? 
+      // gid==4 is usually '!', the char after space. We just need "the"
+      // width for the monospaced font. gid==0 is bad, and space might also
+      // be bad.
+    }
+    else
+    {
       pdfOut_printf(doc->pdf,"  %.3f Tz\n",
-                        doc->FontScaleX*100.0/(doc->FontScaleY)); // TODO?
+		    doc->FontScaleX*100.0/(doc->FontScaleY)); // TODO?
     }
 
     pdfOut_printf(doc->pdf,"  /%s%02x %.3f Tf <",
-                      names[fontid],lastfont,doc->FontScaleY);
+		  names[fontid],lastfont,doc->FontScaleY);
 
     while (len > 0)
     {
-      if (doc->UTF8) {
-        ch=str->ch;
-      } else {
-        ch=doc->Chars[str->ch];
+      if (doc->UTF8)
+      {
+        ch = str->ch;
+      }
+      else
+      {
+        ch = doc->Chars[str->ch];
       }
 
       font = doc->Codes[ch];
-      if (lastfont != font) { // only possible, when not used via write_string (e.g. utf-8filename.txt in prettyprint)
+      if (lastfont != font) // only possible, when not used via
+	                    // write_string (e.g. utf-8filename.txt in
+	                    // prettyprint)
+      {
         break;
       }
-      if (otf) { // TODO 
+      if (otf) // TODO
+      {
         const unsigned short gid=emb_get(emb,ch);
-        pdfOut_printf(doc->pdf,"%04x", gid);
-      } else { // std 14 font with 7-bit us-ascii uses single byte encoding, TODO
-        pdfOut_printf(doc->pdf,"%02x",ch);
+        pdfOut_printf(doc->pdf, "%04x", gid);
+      }
+      else // std 14 font with 7-bit us-ascii uses single byte encoding, TODO
+      {
+        pdfOut_printf(doc->pdf, "%02x", ch);
       }
 
       len --;
@@ -2511,32 +2600,39 @@ static void write_pretty_header(texttopdf_doc_t *doc) // {{{
 {
   float x,y;
   pdfOut_printf(doc->pdf,"q\n"
-                    "0.9 g\n");
+		"0.9 g\n");
 
-  if (doc->Duplex && (doc->NumPages & 1) == 0) {
+  if (doc->Duplex && (doc->NumPages & 1) == 0)
+  {
     x = doc->PageWidth - doc->PageRight;
     y = doc->PageTop + 72.0f / (doc->LinesPerInch);
-  } else {
+  }
+  else
+  {
     x = doc->PageLeft;
     y = doc->PageTop + 72.0f / (doc->LinesPerInch);
   }
 
   pdfOut_printf(doc->pdf,"1 0 0 1 %.3f %.3f cm\n",x,y); // translate
   pdfOut_printf(doc->pdf,"0 0 %.3f %.3f re f\n",
-                    doc->PageRight - doc->PageLeft, 144.0f / (doc->LinesPerInch));
+		doc->PageRight - doc->PageLeft, 144.0f / (doc->LinesPerInch));
   pdfOut_printf(doc->pdf,"0 g 0 G\n");
 
-  if (doc->Duplex && (doc->NumPages & 1) == 0) {
-      x = doc->PageRight - doc->PageLeft - 36.0f / doc->LinesPerInch - stringwidth_x(doc->Title, doc);
-      y = (0.5f + 0.157f) * 72.0f / doc->LinesPerInch;
-  } else {
-      x = 36.0f / doc->LinesPerInch;
-      y = (0.5f + 0.157f) * 72.0f / doc->LinesPerInch;
+  if (doc->Duplex && (doc->NumPages & 1) == 0)
+  {
+    x = doc->PageRight - doc->PageLeft - 36.0f /
+        doc->LinesPerInch - stringwidth_x(doc->Title, doc);
+    y = (0.5f + 0.157f) * 72.0f / doc->LinesPerInch;
   }
-  write_font_str(x,y,ATTR_BOLD,doc->Title,-1,doc);
+  else
+  {
+    x = 36.0f / doc->LinesPerInch;
+    y = (0.5f + 0.157f) * 72.0f / doc->LinesPerInch;
+  }
+  write_font_str(x, y, ATTR_BOLD, doc->Title, -1, doc);
 
   x = (-stringwidth_x(doc->Date, doc) + doc->PageRight - doc->PageLeft) * 0.5;
-  write_font_str(x,y,ATTR_BOLD,doc->Date,-1,doc);
+  write_font_str(x, y, ATTR_BOLD, doc->Date, -1, doc);
 
   // convert pagenumber to string
   char tmp[20];
@@ -2544,15 +2640,18 @@ static void write_pretty_header(texttopdf_doc_t *doc) // {{{
   snprintf(tmp,19,"%d",doc->NumPages);
   lchar_t *pagestr=make_wide(tmp, doc);
 
-  if (doc->Duplex && (doc->NumPages & 1) == 0) {
-      x = 36.0f / doc->LinesPerInch;
-  } else {
-      x = doc->PageRight - doc->PageLeft - 36.0f / doc->LinesPerInch - stringwidth_x(pagestr, doc);
+  if (doc->Duplex && (doc->NumPages & 1) == 0)
+  {
+    x = 36.0f / doc->LinesPerInch;
   }
-  write_font_str(x,y,ATTR_BOLD,pagestr,-1, doc);
+  else
+  {
+    x = doc->PageRight - doc->PageLeft -
+        36.0f / doc->LinesPerInch - stringwidth_x(pagestr, doc);
+  }
+  write_font_str(x, y, ATTR_BOLD, pagestr, -1, doc);
   free(pagestr);
 
-  pdfOut_printf(doc->pdf,"Q\n");
+  pdfOut_printf(doc->pdf, "Q\n");
 }
 // }}}
-
