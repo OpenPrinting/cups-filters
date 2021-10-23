@@ -1023,22 +1023,22 @@ rastertopclx_LDADD = \
 	libppd.la
 
 test_pdf1_SOURCES = \
-	filter/pdfutils.c \
-	filter/pdfutils.h \
 	filter/test_pdf1.c \
 	fontembed/embed.h \
 	fontembed/sfnt.h
-test_pdf1_CFLAGS = -I$(srcdir)/fontembed/
-test_pdf1_LDADD = libfontembed.la
+test_pdf1_CFLAGS = -I$(srcdir)/fontembed/ \
+	-I$(srcdir)/cupsfilters/
+test_pdf1_LDADD = libfontembed.la \
+	libcupsfilters.la
 
 test_pdf2_SOURCES = \
-	filter/pdfutils.c \
-	filter/pdfutils.h \
 	filter/test_pdf2.c \
 	fontembed/embed.h \
 	fontembed/sfnt.h
-test_pdf2_CFLAGS = -I$(srcdir)/fontembed/
-test_pdf2_LDADD = libfontembed.la
+test_pdf2_CFLAGS = -I$(srcdir)/fontembed/ \
+	-I$(srcdir)/cupsfilters/
+test_pdf2_LDADD = libfontembed.la \
+	libcupsfilters.la
 
 
 # =====
