@@ -5,6 +5,10 @@ pkgconf_DATA = \
 	libcupsfilters.pc \
 	libppd.pc \
 	libfontembed.pc
+if ENABLE_LIBPPDC
+pkgconf_DATA += \
+	libppdc.pc
+endif
 
 doc_DATA = \
 	ABOUT-NLS \
@@ -21,6 +25,7 @@ EXTRA_DIST = \
 	ln-srf \
 	libcupsfilters.pc.in \
 	libppd.pc.in \
+	libppdc.pc.in \
 	libfontembed.pc.in \
 	utils/cups-browsed.service \
 	utils/cups-browsed-upstart.conf \
@@ -40,6 +45,13 @@ EXTRA_DIST += \
 	data/topsecret.ps \
 	data/unclassified.ps \
 	drv/custom-media-lines
+
+# =========
+# utilities
+# =========
+
+pkgutilsdir = $(bindir)
+pkgutils_PROGRAMS =
 
 # ========
 # Backends
@@ -217,6 +229,83 @@ EXTRA_DIST += \
 	ppd/test.ppd \
 	ppd/test2.ppd \
 	ppd/README.md
+
+# ===========================
+# PPDC legacy support library
+# ===========================
+pkgppdcincludefiles = \
+	ppdc/ppdc.h
+
+pkgppdcdefsfiles = \
+	ppdc/epson.h \
+	ppdc/hp.h \
+	ppdc/label.h \
+	ppdc/font.defs \
+	ppdc/media.defs \
+	ppdc/raster.defs
+
+if ENABLE_LIBPPDC
+pkgppdcincludedir = $(includedir)/ppdc
+pkgppdcinclude_DATA = \
+	$(pkgppdcincludefiles)
+pkgppdcdefsdir = $(datadir)/ppdc
+pkgppdcdefs_DATA = \
+	$(pkgppdcdefsfiles)
+lib_LTLIBRARIES += libppdc.la
+endif
+
+libppdc_la_SOURCES = \
+	ppdc/ppdc-array.cxx \
+	ppdc/ppdc-attr.cxx \
+	ppdc/ppdc-catalog.cxx \
+	ppdc/ppdc-choice.cxx \
+	ppdc/ppdc-constraint.cxx \
+	ppdc/ppdc-driver.cxx \
+	ppdc/ppdc-file.cxx \
+	ppdc/ppdc-filter.cxx \
+	ppdc/ppdc-font.cxx \
+	ppdc/ppdc-group.cxx \
+	ppdc/ppdc-import.cxx \
+	ppdc/ppdc-mediasize.cxx \
+	ppdc/ppdc-message.cxx \
+	ppdc/ppdc-option.cxx \
+	ppdc/ppdc-private.h \
+	ppdc/ppdc-profile.cxx \
+	ppdc/ppdc-shared.cxx \
+	ppdc/ppdc-source.cxx \
+	ppdc/ppdc-string.cxx \
+	ppdc/ppdc-variable.cxx \
+	$(pkgppdcincludefiles) \
+	$(pkgppdcdefsfiles)
+libppdc_la_LIBADD = \
+	libcupsfilters.la \
+	libppd.la \
+	$(CUPS_LIBS)
+libppdc_la_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+libppdc_la_LDFLAGS = \
+	-no-undefined \
+	-version-info 1
+
+EXTRA_DIST += \
+	$(pkgppdcincludefiles) \
+	$(pkgppdcdefsfiles)
+
+if ENABLE_PPDC
+pkgutils_PROGRAMS += \
+	drv2ppd
+endif
+
+drv2ppd_SOURCES = \
+	ppdc/drv2ppd.cxx
+drv2ppd_LDADD = \
+	libppdc.la \
+	$(CUPS_LIBS)
+drv2ppd_CFLAGS = \
+	-I$(srcdir)/ppdc/ \
+	$(CUPS_CFLAGS)
 
 # =================
 # Fontembed library
@@ -1163,6 +1252,11 @@ if ENABLE_DRIVERLESS
 	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless-fax $(DESTDIR)$(bindir)
 	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless-fax $(DESTDIR)$(pkgbackenddir)
 endif
+if ENABLE_LIBPPDC
+if ENABLE_PPDC
+	$(LN_SRF) $(DESTDIR)$(bindir)/drv2ppd $(DESTDIR)$(bindir)/ppdc
+endif
+endif
 if ENABLE_BRAILLE
 	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
 	$(LN_S) -f vectortopdf $(DESTDIR)$(pkgfilterdir)/svgtopdf
@@ -1209,6 +1303,11 @@ if ENABLE_DRIVERLESS
 	$(RM) $(DESTDIR)$(pkgbackenddir)/driverless
 	$(RM) $(DESTDIR)$(bindir)/driverless-fax
 	$(RM) $(DESTDIR)$(pkgbackenddir)/driverless-fax
+endif
+if ENABLE_LIBPPDC
+if ENABLE_PPDC
+	$(RM) $(DESTDIR)$(bindir)/ppdc
+endif
 endif
 if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/imagetoubrl
