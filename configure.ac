@@ -177,19 +177,11 @@ else
 	fi
 fi
 
-# Do not overwrite a ppdc which is already there from CUPS, in this case
-# default to not include a ppdc utility
-if test ! -e "$bindir/ppdc" || test -h "$bindir/ppdc"; then
-        no_cups_ppdc=yes
-else
-        no_cups_ppdc=no
-fi
-AC_ARG_ENABLE([ppdc], [AS_HELP_STRING([--enable-ppdc], [enable ppdc utility, to build PPD files from driver information files (*.drv).])],
-        [enable_ppdc="$enableval"],
-        [enable_ppdc="$no_cups_ppdc"]
-)
-AM_CONDITIONAL([ENABLE_PPDC],
-[test "x$enable_ppdc" != "xno"])
+AC_ARG_ENABLE([ppdc-utils], [AS_HELP_STRING([--enable-ppdc-utils], [enable ppdc utilities, to build PPD files from driver information files (*.drv).])],
+        [enable_ppdc_utils="$enableval"],
+        [enable_ppdc_utils="no"])
+AM_CONDITIONAL([ENABLE_PPDC_UTILS],
+[test "x$enable_ppdc_utils" != "xno"])
 
 PPDC_DATADIR="$datadir/ppdc"
 AC_DEFINE_UNQUOTED(PPDC_DATADIR, "$PPDC_DATADIR", [ppdc include dir])
@@ -1017,7 +1009,7 @@ Build configuration:
 	driverless:      ${enable_driverless}
 	apple-raster:    ${APPLE_RASTER_FILTER}
 	pclm:            ${enable_pclm}
-	ppdc:            ${enable_ppdc}
+	ppdc utilities:  ${enable_ppdc_utils}
 	local queue naming for remote CUPS queues: ${REMOTE_CUPS_LOCAL_QUEUE_NAMING}
 	keep generated queues during shutdown:     ${SAVING_CREATED_QUEUES}
 	all ipp printer auto-setup: ${enable_auto_setup_all}

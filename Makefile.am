@@ -257,21 +257,71 @@ EXTRA_DIST += \
 	ppd/test2.ppd \
 	ppd/README.md
 
-# =========================
-# ppdc PPD compiler utility
-# =========================
+# ===========================
+# ppdc PPD compiler utilities
+# ===========================
 
-if ENABLE_PPDC
+if ENABLE_PPDC_UTILS
 pkgutils_PROGRAMS += \
-	drv2ppd
+	genstrings \
+	ppdc \
+	ppdhtml \
+	ppdi \
+	ppdmerge \
+	ppdpo
 endif
 
-drv2ppd_SOURCES = \
-	ppd/drv2ppd.cxx
-drv2ppd_LDADD = \
+genstrings_SOURCES = \
+	ppd/genstrings.cxx
+genstrings_LDADD = \
 	libppd.la \
 	$(CUPS_LIBS)
-drv2ppd_CFLAGS = \
+genstrings_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdc_SOURCES = \
+	ppd/ppdc.cxx
+ppdc_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdc_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdhtml_SOURCES = \
+	ppd/ppdhtml.cxx
+ppdhtml_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdhtml_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdi_SOURCES = \
+	ppd/ppdi.cxx
+ppdi_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdi_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdmerge_SOURCES = \
+	ppd/ppdmerge.cxx
+ppdmerge_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdmerge_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdpo_SOURCES = \
+	ppd/ppdpo.cxx
+ppdpo_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdpo_CFLAGS = \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 
@@ -1220,9 +1270,6 @@ if ENABLE_DRIVERLESS
 	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless-fax $(DESTDIR)$(bindir)
 	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless-fax $(DESTDIR)$(pkgbackenddir)
 endif
-if ENABLE_PPDC
-	$(LN_SRF) $(DESTDIR)$(bindir)/drv2ppd $(DESTDIR)$(bindir)/ppdc
-endif
 if ENABLE_BRAILLE
 	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
 	$(LN_S) -f vectortopdf $(DESTDIR)$(pkgfilterdir)/svgtopdf
@@ -1269,9 +1316,6 @@ if ENABLE_DRIVERLESS
 	$(RM) $(DESTDIR)$(pkgbackenddir)/driverless
 	$(RM) $(DESTDIR)$(bindir)/driverless-fax
 	$(RM) $(DESTDIR)$(pkgbackenddir)/driverless-fax
-endif
-if ENABLE_PPDC
-	$(RM) $(DESTDIR)$(bindir)/ppdc
 endif
 if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/imagetoubrl
