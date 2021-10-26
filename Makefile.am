@@ -252,6 +252,7 @@ testppd_LDADD = libppd.la \
 
 EXTRA_DIST += \
 	$(pkgppdinclude_DATA) \
+	$(pkgppddefs_DATA) \
 	ppd/test.ppd \
 	ppd/test2.ppd \
 	ppd/README.md
