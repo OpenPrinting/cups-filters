@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libppd: Ported CUPS' PPD compiler into libppd. Now the
+	  functions for PPD file collections also take driver
+	  information files (*.drv) into account, allowing easy
+	  retro-fit of ALL CUPS drivers. In addition, the API of CUPS'
+	  PPD compiler is available (ppd/ppdc.h) and everything stays
+	  available when CUPS drops PPD support.
 	- libcupsfilters: Make cupsRasterParseIPPOptions() work
 	  correctly together with PPDs, by not parsing options
 	  which are in the printer's PPD and using
