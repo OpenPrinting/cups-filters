@@ -5,10 +5,6 @@ pkgconf_DATA = \
 	libcupsfilters.pc \
 	libppd.pc \
 	libfontembed.pc
-if ENABLE_LIBPPDC
-pkgconf_DATA += \
-	libppdc.pc
-endif
 
 doc_DATA = \
 	ABOUT-NLS \
@@ -25,7 +21,6 @@ EXTRA_DIST = \
 	ln-srf \
 	libcupsfilters.pc.in \
 	libppd.pc.in \
-	libppdc.pc.in \
 	libfontembed.pc.in \
 	utils/cups-browsed.service \
 	utils/cups-browsed-upstart.conf \
@@ -171,7 +166,17 @@ EXTRA_DIST += $(pkgcharset_DATA)
 pkgppdincludedir = $(includedir)/ppd
 pkgppdinclude_DATA = \
 	ppd/ppd.h \
+	ppd/ppdc.h \
 	cupsfilters/log.h
+
+pkgppddefsdir = $(datadir)/ppdc
+pkgppddefs_DATA = \
+	ppd/epson.h \
+	ppd/hp.h \
+	ppd/label.h \
+	ppd/font.defs \
+	ppd/media.defs \
+	ppd/raster.defs
 
 lib_LTLIBRARIES = libppd.la
 
@@ -184,7 +189,7 @@ libppd_la_SOURCES = \
 	ppd/ppd-attr.c \
 	ppd/ppd.c \
 	ppd/ppd-cache.c \
-	ppd/ppd-collection.c \
+	ppd/ppd-collection.cxx \
 	ppd/ppd-conflicts.c \
 	ppd/ppd-custom.c \
 	ppd/ppd-emit.c \
@@ -211,7 +216,28 @@ libppd_la_SOURCES = \
 	ppd/string-private.h \
 	ppd/thread.c \
 	ppd/thread-private.h \
-	$(pkgppdinclude_DATA)
+	ppd/ppdc-array.cxx \
+	ppd/ppdc-attr.cxx \
+	ppd/ppdc-catalog.cxx \
+	ppd/ppdc-choice.cxx \
+	ppd/ppdc-constraint.cxx \
+	ppd/ppdc-driver.cxx \
+	ppd/ppdc-file.cxx \
+	ppd/ppdc-filter.cxx \
+	ppd/ppdc-font.cxx \
+	ppd/ppdc-group.cxx \
+	ppd/ppdc-import.cxx \
+	ppd/ppdc-mediasize.cxx \
+	ppd/ppdc-message.cxx \
+	ppd/ppdc-option.cxx \
+	ppd/ppdc-private.h \
+	ppd/ppdc-profile.cxx \
+	ppd/ppdc-shared.cxx \
+	ppd/ppdc-source.cxx \
+	ppd/ppdc-string.cxx \
+	ppd/ppdc-variable.cxx \
+	$(pkgppdinclude_DATA) \
+	$(pkgppddefs_DATA)
 libppd_la_LIBADD = \
 	$(CUPS_LIBS)
 libppd_la_CFLAGS = \
@@ -230,68 +256,9 @@ EXTRA_DIST += \
 	ppd/test2.ppd \
 	ppd/README.md
 
-# ===========================
-# PPDC legacy support library
-# ===========================
-pkgppdcincludefiles = \
-	ppdc/ppdc.h
-
-pkgppdcdefsfiles = \
-	ppdc/epson.h \
-	ppdc/hp.h \
-	ppdc/label.h \
-	ppdc/font.defs \
-	ppdc/media.defs \
-	ppdc/raster.defs
-
-if ENABLE_LIBPPDC
-pkgppdcincludedir = $(includedir)/ppdc
-pkgppdcinclude_DATA = \
-	$(pkgppdcincludefiles)
-pkgppdcdefsdir = $(datadir)/ppdc
-pkgppdcdefs_DATA = \
-	$(pkgppdcdefsfiles)
-lib_LTLIBRARIES += libppdc.la
-endif
-
-libppdc_la_SOURCES = \
-	ppdc/ppdc-array.cxx \
-	ppdc/ppdc-attr.cxx \
-	ppdc/ppdc-catalog.cxx \
-	ppdc/ppdc-choice.cxx \
-	ppdc/ppdc-constraint.cxx \
-	ppdc/ppdc-driver.cxx \
-	ppdc/ppdc-file.cxx \
-	ppdc/ppdc-filter.cxx \
-	ppdc/ppdc-font.cxx \
-	ppdc/ppdc-group.cxx \
-	ppdc/ppdc-import.cxx \
-	ppdc/ppdc-mediasize.cxx \
-	ppdc/ppdc-message.cxx \
-	ppdc/ppdc-option.cxx \
-	ppdc/ppdc-private.h \
-	ppdc/ppdc-profile.cxx \
-	ppdc/ppdc-shared.cxx \
-	ppdc/ppdc-source.cxx \
-	ppdc/ppdc-string.cxx \
-	ppdc/ppdc-variable.cxx \
-	$(pkgppdcincludefiles) \
-	$(pkgppdcdefsfiles)
-libppdc_la_LIBADD = \
-	libcupsfilters.la \
-	libppd.la \
-	$(CUPS_LIBS)
-libppdc_la_CFLAGS = \
-	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS)
-libppdc_la_LDFLAGS = \
-	-no-undefined \
-	-version-info 1
-
-EXTRA_DIST += \
-	$(pkgppdcincludefiles) \
-	$(pkgppdcdefsfiles)
+# =========================
+# ppdc PPD compiler utility
+# =========================
 
 if ENABLE_PPDC
 pkgutils_PROGRAMS += \
@@ -299,12 +266,12 @@ pkgutils_PROGRAMS += \
 endif
 
 drv2ppd_SOURCES = \
-	ppdc/drv2ppd.cxx
+	ppd/drv2ppd.cxx
 drv2ppd_LDADD = \
-	libppdc.la \
+	libppd.la \
 	$(CUPS_LIBS)
 drv2ppd_CFLAGS = \
-	-I$(srcdir)/ppdc/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 
 # =================
@@ -1252,10 +1219,8 @@ if ENABLE_DRIVERLESS
 	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless-fax $(DESTDIR)$(bindir)
 	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless-fax $(DESTDIR)$(pkgbackenddir)
 endif
-if ENABLE_LIBPPDC
 if ENABLE_PPDC
 	$(LN_SRF) $(DESTDIR)$(bindir)/drv2ppd $(DESTDIR)$(bindir)/ppdc
-endif
 endif
 if ENABLE_BRAILLE
 	$(LN_S) -f imagetobrf $(DESTDIR)$(pkgfilterdir)/imagetoubrl
@@ -1304,10 +1269,8 @@ if ENABLE_DRIVERLESS
 	$(RM) $(DESTDIR)$(bindir)/driverless-fax
 	$(RM) $(DESTDIR)$(pkgbackenddir)/driverless-fax
 endif
-if ENABLE_LIBPPDC
 if ENABLE_PPDC
 	$(RM) $(DESTDIR)$(bindir)/ppdc
-endif
 endif
 if ENABLE_BRAILLE
 	$(RM) $(DESTDIR)$(pkgfilterdir)/imagetoubrl

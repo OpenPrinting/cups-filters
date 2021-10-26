@@ -19,6 +19,7 @@
 #include <cups/dir.h>
 #include <cups/transcode.h>
 #include "ppd.h"
+#include "ppdc.h"
 #include "file-private.h"
 #include "array-private.h"
 #include <regex.h>
@@ -118,6 +119,8 @@ static ppd_info_t	*add_ppd(const char *filename, const char *name,
 				 size_t size, int model_number, int type,
 				 const char *scheme, ppd_list_t *ppdlist,
 				 filter_logfunc_t log, void *ld);
+static cups_file_t	*cat_drv(const char *name, char *ppdname,
+				 filter_logfunc_t log, void *ld);
 static cups_file_t	*cat_static(const char *name,
 				    filter_logfunc_t log, void *ld);
 static cups_file_t	*cat_tar(const char *name, char *ppdname,
@@ -135,6 +138,10 @@ static int		load_driver(const char *filename,
 				    const char *name,
 				    ppd_list_t *ppdlist,
 				    filter_logfunc_t log, void *ld);
+static int		load_drv(const char *filename, const char *name,
+			         cups_file_t *fp, time_t mtime, off_t size,
+				 ppd_list_t *ppdlist,
+				 filter_logfunc_t log, void *ld);
 static void		load_ppd(const char *filename, const char *name,
 			         const char *scheme, struct stat *fileinfo,
 			         ppd_info_t *ppd, cups_file_t *fp, off_t end,
@@ -624,6 +631,7 @@ ppdCollectionGetPPD(
   int		pid;
   int		bytes;
   int           is_archive = 0;
+  int           is_drv = 0;
   char		realname[1024],		/* Scheme from PPD name */
 		buffer[8192],		/* Copy buffer */
 		tempname[1024],		/* Temp file name */
@@ -645,6 +653,8 @@ ppdCollectionGetPPD(
 
   if (strstr(name, ".tar:") || strstr(name, ".tar.gz:"))
     is_archive = 1;
+  else if (strstr(name, ".drv:"))
+    is_drv = 1;
 
   if (ppd_collections)
   {
@@ -671,7 +681,7 @@ ppdCollectionGetPPD(
 	ppdname = NULL;
       else
       {
-	if (!is_archive)
+	if (!is_archive && !is_drv)
 	  strlcpy(ppduri, realname, sizeof(ppduri));
 	*ptr = '\0';
 	ppdname = ptr + 1;
@@ -695,7 +705,7 @@ ppdCollectionGetPPD(
       ppdname = NULL;
     else
     {
-      if (!is_archive)
+      if (!is_archive && !is_drv)
 	strlcpy(ppduri, realname, sizeof(ppduri));
       *ptr = '\0';
       ppdname = ptr + 1;
@@ -711,6 +721,8 @@ ppdCollectionGetPPD(
 
   if (is_archive)
     return(cat_tar(realname, ppdname, log, ld));
+  else if (is_drv)
+    return(cat_drv(realname, ppdname, log, ld));
   else if (ppdname == NULL)
     return(cat_static(realname, log, ld));
   else
@@ -917,6 +929,96 @@ add_ppd(const char *filename,		/* I - PPD filename */
 
 
 /*
+ * 'cat_drv()' - Generate a PPD from a driver info file.
+ */
+
+static cups_file_t *			/* O - Pointer to PPD file */
+cat_drv(const char *filename,		/* I - *.drv file name */
+	char *ppdname,			/* I - PPD name in the *.drv file */
+	filter_logfunc_t log,		/* I - Log function */
+	void *ld)			/* I - Aux. data for log function */
+{
+  cups_file_t	*fp;			// File pointer
+  int		fd;
+  char		tempname[1024];		// Name for the temporary file
+  ppdcSource	*src;			// PPD source file data
+  ppdcDriver	*d;			// Current driver
+  cups_file_t	*out;			// PPD output to temp file
+
+  if ((fp = cupsFileOpen(filename, "r")) == NULL)
+  {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "libppd: [PPD Collections] Unable to open \"%s\" - %s\n",
+		 filename, strerror(errno));
+
+    return (NULL);
+  }
+
+  src = new ppdcSource(filename, fp);
+
+  for (d = (ppdcDriver *)src->drivers->first();
+       d;
+       d = (ppdcDriver *)src->drivers->next())
+    if (!strcmp(ppdname, d->pc_file_name->value) ||
+        (d->file_name && !strcmp(ppdname, d->file_name->value)))
+      break;
+
+  if (d)
+  {
+    ppdcArray	*locales;		// Locale names
+    ppdcCatalog	*catalog;		// Message catalog in .drv file
+
+
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "libppd: [PPD Collections] %u locales defined in \"%s\"...\n",
+		 (unsigned)src->po_files->count, filename);
+
+    locales = new ppdcArray();
+    for (catalog = (ppdcCatalog *)src->po_files->first();
+         catalog;
+	 catalog = (ppdcCatalog *)src->po_files->next())
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "libppd: [PPD Collections] Adding locale \"%s\"...\n",
+		   catalog->locale->value);
+      catalog->locale->retain();
+      locales->add(catalog->locale);
+    }
+
+    if ((fd = cupsTempFd(tempname, sizeof(tempname))) < 0)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "libppd: [PPD Collections] Unable to copy PPD to temp "
+		   "file: %s",
+		   strerror(errno));
+      return (NULL);
+    }
+    out = cupsFileOpenFd(fd, "w");
+    d->write_ppd_file(out, NULL, locales, src, PPDC_LFONLY);
+    cupsFileClose(out);
+    close(fd);
+    locales->release();
+    src->release();
+    cupsFileClose(fp);
+
+    out = cupsFileOpen(tempname, "r");
+    unlink(tempname);
+
+    return(out);
+
+  }
+  else
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "libppd: [PPD Collections] PPD \"%s\" not found.\n", ppdname);
+
+  src->release();
+  cupsFileClose(fp);
+
+  return (NULL);
+}
+
+
+/*
  * 'cat_static()' - Return pointer to static PPD file
  */
 
@@ -941,7 +1043,7 @@ cat_static(const char *name,		/* I - PPD name */
 
 
 /*
- * 'cat_tar()' - Copy an archived PPD file to stdout.
+ * 'cat_tar()' - Copy an archived PPD file to temp file.
  */
 
 static cups_file_t *			/* O - Pointer to PPD file */
@@ -1323,6 +1425,139 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
     if (log) log(ld, FILTER_LOGLEVEL_WARN,
 		 "libppd: [PPD Collections] Unable to execute \"%s\": %s",
 		 filename, strerror(errno));
+
+  return (1);
+}
+
+
+/*
+ * 'load_drv()' - Load the PPDs from a driver information file.
+ */
+
+static int				/* O - 1 on success, 0 on failure */
+load_drv(const char  *filename,		/* I - Actual filename */
+         const char  *name,		/* I - Name to the rest of the world */
+         cups_file_t *fp,		/* I - File to read from */
+	 time_t      mtime,		/* I - Mod time of driver info file */
+	 off_t       size,		/* I - Size of driver info file */
+	 ppd_list_t  *ppdlist,
+	 filter_logfunc_t log,		/* I - Log function */
+	 void *ld)			/* I - Aux. data for log function */
+{
+  ppdcSource	*src;			// Driver information file
+  ppdcDriver	*d;			// Current driver
+  ppdcAttr	*device_id,		// 1284DeviceID attribute
+		*product,		// Current product value
+		*ps_version,		// PSVersion attribute
+		*cups_fax,		// cupsFax attribute
+		*nick_name;		// NickName attribute
+  ppdcFilter	*filter;		// Current filter
+  ppd_info_t	*ppd;			// Current PPD
+  int		products_found;		// Number of products found
+  char		uri[2048],		// Driver URI
+		make_model[1024];	// Make and model
+  int		type;			// Driver type
+
+
+ /*
+  * Load the driver info file...
+  */
+
+  src = new ppdcSource(filename, fp);
+
+  if (src->drivers->count == 0)
+  {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "libppd: [PPD Collections] Bad driver information file \"%s\"!\n",
+		 filename);
+    src->release();
+    return (0);
+  }
+
+ /*
+  * Add a dummy entry for the file...
+  */
+
+  add_ppd(filename, name, "", "", "", "", "", "", mtime, (size_t)size, 0,
+	  PPD_TYPE_DRV, "drv", ppdlist, log, ld);
+
+ /*
+  * Then the drivers in the file...
+  */
+
+  for (d = (ppdcDriver *)src->drivers->first();
+       d;
+       d = (ppdcDriver *)src->drivers->next())
+  {
+    snprintf(uri, sizeof(uri), "%s:%s", name,
+	     d->file_name ? d->file_name->value :
+	     d->pc_file_name->value);
+
+    device_id  = d->find_attr("1284DeviceID", NULL);
+    ps_version = d->find_attr("PSVersion", NULL);
+    nick_name  = d->find_attr("NickName", NULL);
+
+    if (nick_name)
+      strncpy(make_model, nick_name->value->value, sizeof(make_model) - 1);
+    else if (strncasecmp(d->model_name->value, d->manufacturer->value,
+                         strlen(d->manufacturer->value)))
+      snprintf(make_model, sizeof(make_model), "%s %s, %s",
+               d->manufacturer->value, d->model_name->value,
+	       d->version->value);
+    else
+      snprintf(make_model, sizeof(make_model), "%s, %s", d->model_name->value,
+               d->version->value);
+
+    if ((cups_fax = d->find_attr("cupsFax", NULL)) != NULL &&
+        !strcasecmp(cups_fax->value->value, "true"))
+      type = PPD_TYPE_FAX;
+    else if (d->type == PPDC_DRIVER_PS)
+      type = PPD_TYPE_POSTSCRIPT;
+    else if (d->type != PPDC_DRIVER_CUSTOM)
+      type = PPD_TYPE_RASTER;
+    else
+    {
+      for (filter = (ppdcFilter *)d->filters->first(),
+               type = PPD_TYPE_POSTSCRIPT;
+	   filter;
+	   filter = (ppdcFilter *)d->filters->next())
+        if (strcasecmp(filter->mime_type->value, "application/vnd.cups-raster"))
+	  type = PPD_TYPE_RASTER;
+        else if (strcasecmp(filter->mime_type->value,
+	                    "application/vnd.cups-pdf"))
+	  type = PPD_TYPE_PDF;
+    }
+
+    for (product = (ppdcAttr *)d->attrs->first(), products_found = 0,
+             ppd = NULL;
+         product;
+	 product = (ppdcAttr *)d->attrs->next())
+      if (!strcmp(product->name->value, "Product"))
+      {
+        if (!products_found)
+	  ppd = add_ppd(filename, uri, "en", d->manufacturer->value,
+			make_model, device_id ? device_id->value->value : "",
+			product->value->value,
+			ps_version ? ps_version->value->value : "(3010) 0",
+			mtime, (size_t)size, d->model_number, type, "drv",
+			ppdlist, log, ld);
+	else if (products_found < PPD_MAX_PROD)
+	  strncpy(ppd->record.products[products_found], product->value->value,
+		  sizeof(ppd->record.products[0]));
+	else
+	  break;
+
+	products_found ++;
+      }
+
+    if (!products_found)
+      add_ppd(filename, uri, "en", d->manufacturer->value, make_model,
+	      device_id ? device_id->value->value : "", d->model_name->value,
+	      ps_version ? ps_version->value->value : "(3010) 0", mtime,
+	      (size_t)size, d->model_number, type, "drv", ppdlist, log, ld);
+  }
+
+  src->release();
 
   return (1);
 }
@@ -1944,7 +2179,8 @@ load_ppds(const char *d,		/* I - Actual directory */
     else
     {
      /*
-      * Nope, treat it as a an archive or PPD-generating executable...
+      * Nope, treat it as a an archive, a PPD-generating executable, or a
+      * driver information file...
       */
 
       cupsFileRewind(fp);
@@ -1953,6 +2189,9 @@ load_ppds(const char *d,		/* I - Actual directory */
           (!strcmp(ptr, ".tar") || !strcmp(ptr, ".tar.gz")))
         load_tar(filename, name, fp, dent->fileinfo.st_mtime,
                  dent->fileinfo.st_size, ppdlist, log, ld);
+      else if ((ptr = strstr(filename, ".drv")) != NULL && !strcmp(ptr, ".drv"))
+	load_drv(filename, name, fp, dent->fileinfo.st_mtime,
+		 dent->fileinfo.st_size, ppdlist, log, ld);
       else if ((dent->fileinfo.st_mode & 0111) &&
 	       S_ISREG(dent->fileinfo.st_mode))
       {

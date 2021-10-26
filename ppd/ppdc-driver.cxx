@@ -13,7 +13,7 @@
 //
 
 #include "ppdc-private.h"
-#include <cupsfilters/ppdgenerator.h>
+#include "string-private.h"
 
 
 //
@@ -603,8 +603,7 @@ ppdcDriver::write_ppd_file(
     if ((a = find_attr("cupsVersion", NULL)) != NULL)
       cupsFilePrintf(fp, "*cupsVersion: %s%s", a->value->value, lf);
     else
-      cupsFilePrintf(fp, "*cupsVersion: %d.%d%s", CUPS_VERSION_MAJOR,
-		     CUPS_VERSION_MINOR, lf);
+      cupsFilePrintf(fp, "*cupsVersion: %s%s", PACKAGE_VERSION, lf);
     cupsFilePrintf(fp, "*cupsModelNumber: %d%s", model_number, lf);
     cupsFilePrintf(fp, "*cupsManualCopies: %s%s",
                    manual_copies ? "True" : "False", lf);
@@ -661,11 +660,11 @@ ppdcDriver::write_ppd_file(
     {
       char density[255], gamma[255], profile[9][255];
 
-      cfStrFormatd(density, density + sizeof(density), p->density, loc);
-      cfStrFormatd(gamma, gamma + sizeof(gamma), p->gamma, loc);
+      _ppdStrFormatd(density, density + sizeof(density), p->density, loc);
+      _ppdStrFormatd(gamma, gamma + sizeof(gamma), p->gamma, loc);
 
       for (int i = 0; i < 9; i ++)
-	cfStrFormatd(profile[i], profile[i] + sizeof(profile[0]),
+	_ppdStrFormatd(profile[i], profile[i] + sizeof(profile[0]),
 	                p->profile[i], loc);
 
       cupsFilePrintf(fp,
@@ -864,10 +863,10 @@ ppdcDriver::write_ppd_file(
        m;
        m = (ppdcMediaSize *)sizes->next())
   {
-    cfStrFormatd(left, left + sizeof(left), m->left, loc);
-    cfStrFormatd(bottom, bottom + sizeof(bottom), m->bottom, loc);
-    cfStrFormatd(right, right + sizeof(right), m->width - m->right, loc);
-    cfStrFormatd(top, top + sizeof(top), m->length - m->top, loc);
+    _ppdStrFormatd(left, left + sizeof(left), m->left, loc);
+    _ppdStrFormatd(bottom, bottom + sizeof(bottom), m->bottom, loc);
+    _ppdStrFormatd(right, right + sizeof(right), m->width - m->right, loc);
+    _ppdStrFormatd(top, top + sizeof(top), m->length - m->top, loc);
 
     cupsFilePrintf(fp, "*ImageableArea %s/%s: \"%s %s %s %s\"%s",
                    m->name->value, catalog->find_message(m->text->value),
@@ -893,8 +892,8 @@ ppdcDriver::write_ppd_file(
        m;
        m = (ppdcMediaSize *)sizes->next())
   {
-    cfStrFormatd(width, width + sizeof(width), m->width, loc);
-    cfStrFormatd(length, length + sizeof(length), m->length, loc);
+    _ppdStrFormatd(width, width + sizeof(width), m->width, loc);
+    _ppdStrFormatd(length, length + sizeof(length), m->length, loc);
 
     cupsFilePrintf(fp, "*PaperDimension %s/%s: \"%s %s\"%s",
                    m->name->value, catalog->find_message(m->text->value),
@@ -913,13 +912,13 @@ ppdcDriver::write_ppd_file(
   // Custom size support...
   if (variable_paper_size)
   {
-    cfStrFormatd(width, width + sizeof(width), max_width, loc);
-    cfStrFormatd(length, length + sizeof(length), max_length, loc);
+    _ppdStrFormatd(width, width + sizeof(width), max_width, loc);
+    _ppdStrFormatd(length, length + sizeof(length), max_length, loc);
 
-    cfStrFormatd(left, left + sizeof(left), left_margin, loc);
-    cfStrFormatd(bottom, bottom + sizeof(bottom), bottom_margin, loc);
-    cfStrFormatd(right, right + sizeof(right), right_margin, loc);
-    cfStrFormatd(top, top + sizeof(top), top_margin, loc);
+    _ppdStrFormatd(left, left + sizeof(left), left_margin, loc);
+    _ppdStrFormatd(bottom, bottom + sizeof(bottom), bottom_margin, loc);
+    _ppdStrFormatd(right, right + sizeof(right), right_margin, loc);
+    _ppdStrFormatd(top, top + sizeof(top), top_margin, loc);
 
     cupsFilePrintf(fp, "*MaxMediaWidth: \"%s\"%s", width, lf);
     cupsFilePrintf(fp, "*MaxMediaHeight: \"%s\"%s", length, lf);
@@ -947,8 +946,8 @@ ppdcDriver::write_ppd_file(
     {
       char width0[255];
 
-      cfStrFormatd(width0, width0 + sizeof(width0), min_width, loc);
-      cfStrFormatd(width, width + sizeof(width), max_width, loc);
+      _ppdStrFormatd(width0, width0 + sizeof(width0), min_width, loc);
+      _ppdStrFormatd(width, width + sizeof(width), max_width, loc);
 
       cupsFilePrintf(fp, "*ParamCustomPageSize Width: 1 points %s %s%s",
                      width0, width, lf);
@@ -961,8 +960,8 @@ ppdcDriver::write_ppd_file(
     {
       char length0[255];
 
-      cfStrFormatd(length0, length0 + sizeof(length0), min_length, loc);
-      cfStrFormatd(length, length + sizeof(length), max_length, loc);
+      _ppdStrFormatd(length0, length0 + sizeof(length0), min_length, loc);
+      _ppdStrFormatd(length, length + sizeof(length), max_length, loc);
 
       cupsFilePrintf(fp, "*ParamCustomPageSize Height: 2 points %s %s%s",
                      length0, length, lf);
@@ -1034,7 +1033,7 @@ ppdcDriver::write_ppd_file(
       }
 
       char order[255];
-      cfStrFormatd(order, order + sizeof(order), o->order, loc);
+      _ppdStrFormatd(order, order + sizeof(order), o->order, loc);
 
       cupsFilePrintf(fp, "*OrderDependency: %s ", order);
       switch (o->section)

@@ -177,13 +177,6 @@ else
 	fi
 fi
 
-AC_ARG_ENABLE([libppdc], [AS_HELP_STRING([--enable-libppdc], [enable libppdc, to handle driver information files (*.drv).])],
-        [enable_libppdc="$enableval"],
-        [enable_libppdc=yes]
-)
-AM_CONDITIONAL([ENABLE_LIBPPDC],
-[test "x$enable_libppdc" != "xno"])
-
 # Do not overwrite a ppdc which is already there from CUPS, in this case
 # default to not include a ppdc utility
 if test ! -e "$bindir/ppdc" || test -h "$bindir/ppdc"; then
@@ -195,9 +188,6 @@ AC_ARG_ENABLE([ppdc], [AS_HELP_STRING([--enable-ppdc], [enable ppdc utility, to 
         [enable_ppdc="$enableval"],
         [enable_ppdc="$no_cups_ppdc"]
 )
-if test "x$enable_libppdc" = "xno"; then
-	enable_ppdc=no
-fi
 AM_CONDITIONAL([ENABLE_PPDC],
 [test "x$enable_ppdc" != "xno"])
 
@@ -957,7 +947,6 @@ fi
 AC_CONFIG_FILES([
 	libcupsfilters.pc
 	libppd.pc
-	libppdc.pc
 	libfontembed.pc
 	Makefile
 	utils/cups-browsed
@@ -1028,7 +1017,6 @@ Build configuration:
 	driverless:      ${enable_driverless}
 	apple-raster:    ${APPLE_RASTER_FILTER}
 	pclm:            ${enable_pclm}
-	libppdc:         ${enable_libppdc}
 	ppdc:            ${enable_ppdc}
 	local queue naming for remote CUPS queues: ${REMOTE_CUPS_LOCAL_QUEUE_NAMING}
 	keep generated queues during shutdown:     ${SAVING_CREATED_QUEUES}
