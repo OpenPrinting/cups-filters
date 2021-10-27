@@ -1176,7 +1176,7 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
 	  }
       }
 
-      if (pwg_media)
+      if (pwg_media && strncmp(pwg_media->pwg, "custom_", 7) != 0)
       {
        /*
 	* Standard name and no conflicts, use it!
@@ -1290,6 +1290,30 @@ ppdCacheCreateWithPPD(ppd_file_t *ppd)	/* I - PPD file */
     pwgFormatSizeName(pwg_keyword, sizeof(pwg_keyword), "custom", "max",
 		      PWG_FROM_POINTS(ppd->custom_max[0]),
 		      PWG_FROM_POINTS(ppd->custom_max[1]), NULL);
+
+    /* Some PPD files have upper limits too large to be treated with
+       int numbers, if we have an overflow (negative result for one
+       dimension) use a fixed, large value instead */
+    char *p1, *p2;
+    char *newmax = (pwg_keyword[strlen(pwg_keyword) - 1] == 'n' ?
+		    "10000" : "100000");
+    p1 = strrchr(pwg_keyword, '_');
+    p1 ++;
+    if (*p1 == '-')
+    {
+      for (p2 = p1; *p2 != 'x'; p2 ++);
+      memmove(p1 + strlen(newmax), p2, strlen(p2) + 1);
+      memmove(p1, newmax, strlen(newmax));
+    }
+    p1 = strrchr(pwg_keyword, 'x');
+    p1 ++;
+    if (*p1 == '-')
+    {
+      for (p2 = p1; *p2 != 'm' && *p2 != 'i'; p2 ++);
+      memmove(p1 + strlen(newmax), p2, strlen(p2) + 1);
+      memmove(p1, newmax, strlen(newmax));
+    }
+
     pc->custom_max_keyword = strdup(pwg_keyword);
     pc->custom_max_width   = PWG_FROM_POINTS(ppd->custom_max[0]);
     pc->custom_max_length  = PWG_FROM_POINTS(ppd->custom_max[1]);
@@ -2233,7 +2257,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	}
 
        /*
-	* Color/Gray - print-color-mode
+	* Color/Monochrome - print-color-mode
 	*/
 
 	/* If we have a color device, check whether this option sets mono or
@@ -2247,15 +2271,17 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	    else
 	      properties->sets_color = 1;
 	  }
-	  else if (strcasecmp(o, "HPColorAsGray") == 0) /* HP PostScript */
+	  else if (strcasecmp(o, "HPColorAsGray") == 0 ||  /* HP PostScript */
+		   strcasecmp(o, "HPPJLColorAsGray") == 0) /* HP PostScript */
 	  {
-	    if (strcasecmp(c, "True") == 0)
+	    if (strcasecmp(c, "True") == 0 ||
+		strcasecmp(c, "yes") == 0)
 	      properties->sets_mono = 2;
 	    else
 	      properties->sets_color = 1;
 	  }
 	  else if (strcasecmp(o, "ColorModel") == 0 ||
-		   strcasecmp(o, "ColorMode") == 0 ||
+		   strcasestr(o, "ColorMode") ||
 		   strcasecmp(o, "OutputMode") == 0 ||
 		   strcasecmp(o, "PrintoutMode") == 0 ||
 		   strcasecmp(o, "ARCMode") == 0 || /* Sharp */
@@ -2316,6 +2342,15 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasecmp(c, "SpeedPrior") == 0)
 	    properties->sets_draft = 10;
 	}
+	else if (strcasecmp(o, "FXOutputMode") == 0) /* Fuji Xerox */
+	{
+	  if (strcasecmp(c, "Quality2") == 0)
+	    properties->sets_high = 10;
+	  else if (strcasecmp(c, "Speed") == 0)
+	    properties->sets_draft = 10;
+	  else if (strcasecmp(c, "Standard") == 0)
+	    properties->sets_normal = 10;
+	}
 	else if (strcasecmp(o, "RIPrintMode") == 0) /* Ricoh & OEM */
 	{
 	  if (strcasecmp(c, "1rhit") == 0)
@@ -2353,6 +2388,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		 ((p = strcasestr(o, "resolution")) &&
 		  !strcasestr(p, "enhance")) ||
 		 strcasecmp(o, "RET") == 0 ||
+		 strcasecmp(o, "Smoothing") == 0 || /* HPLIP */
 		 ((p = strcasestr(o, "uni")) && strcasestr(p, "direction")))
 	{
 	  if (strcasecmp(c, "True") == 0 ||
@@ -2391,15 +2427,17 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	}
 	/* Generic enumerated choice option and choice names */
 	else if (strcasecmp(o, "ColorModel") == 0 ||
-		 strcasecmp(o, "ColorMode") == 0 ||
+		 strcasestr(o, "ColorMode") ||
 		 strcasecmp(o, "OutputMode") == 0 || /* HPLIP hpcups */
 		 strcasecmp(o, "PrintoutMode") == 0 || /* Foomatic */
 		 strcasecmp(o, "PrintQuality") == 0 ||
 		 strcasecmp(o, "PrintMode") == 0 ||
 		 strcasestr(o, "ColorMode") ||
+		 strcasestr(o, "HalfTone") || /* HPLIP */
 		 strcasecmp(o, "ColorResType") == 0 || /* Toshiba */
 		 strcasestr(o, "MonoColor") || /* Brother */
 		 strcasestr(o, "Quality") ||
+		 strcasestr(o, "Resolution") ||
 		 strcasestr(o, "Precision") || /* ex. stpColorPrecision
 						  in Gutenprint */
 		 strcasestr(o, "PrintingDirection")) /* Gutenprint */
@@ -2411,6 +2449,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 	  else if (strcasestr(c, "Photo") ||
 		   strcasestr(c, "Enhance") ||
 		   strcasestr(c, "slow") ||
+		   strncasecmp(c, "ProRes", 6) == 0 || /* HPLIP */
 		   strncasecmp(c, "ImageREt", 8) == 0 || /* HPLIP */
 		   ((p = strcasestr(c, "low")) && strcasestr(p, "speed")))
 	    properties->sets_high = 2;
@@ -2418,6 +2457,7 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		   strcasestr(c, "deep") ||
 		   ((p = strcasestr(c, "high")) && !strcasestr(p, "speed")) ||
 		   strcasestr(c, "HQ") ||
+		   strcasecmp(c, "ProRes600") == 0 || /* HPLIP */
 		   strcasecmp(c, "ImageREt1200") == 0 || /* HPLIP */
 		   strcasecmp(c, "Enhanced") == 0)
 	    properties->sets_high = 3;
@@ -2426,10 +2466,12 @@ ppdCacheAssignPresets(ppd_file_t *ppd,
 		   strcasecmp(c, "fine") == 0 ||
 		   strcasecmp(c, "HQ") == 0 ||
 		   strcasecmp(c, "CMYGray") == 0 || /* HPLIP */
+		   strcasecmp(c, "ProRes1200") == 0 || /* HPLIP */
 		   strcasecmp(c, "ImageREt2400") == 0 || /* HPLIP */
 		   strcasestr(c, "unidir"))
 	    properties->sets_high = 4;
 	  else if (strcasecmp(c, "best") == 0 ||
+		   strcasecmp(c, "ProRes2400") == 0 || /* HPLIP */
 		   strcasecmp(c, "monolowdetail") == 0) /* Toshiba */
 	    properties->sets_high = 5;
 
@@ -3138,7 +3180,7 @@ ppdCacheGetBin(
 
 
   for (i = 0; i < pc->num_bins; i ++)
-    if (!_ppd_strcasecmp(output_bin, pc->bins[i].ppd))
+    if (!_ppd_strcasecmp(output_bin, pc->bins[i].ppd) || !_ppd_strcasecmp(output_bin, pc->bins[i].pwg))
       return (pc->bins[i].pwg);
 
   return (NULL);
@@ -3874,7 +3916,7 @@ ppdCacheGetSource(
     return (NULL);
 
   for (i = pc->num_sources, source = pc->sources; i > 0; i --, source ++)
-    if (!_ppd_strcasecmp(input_slot, source->ppd))
+    if (!_ppd_strcasecmp(input_slot, source->ppd) || !_ppd_strcasecmp(input_slot, source->pwg))
       return (source->pwg);
 
   return (NULL);
@@ -3903,7 +3945,7 @@ ppdCacheGetType(
     return (NULL);
 
   for (i = pc->num_types, type = pc->types; i > 0; i --, type ++)
-    if (!_ppd_strcasecmp(media_type, type->ppd))
+    if (!_ppd_strcasecmp(media_type, type->ppd) || !_ppd_strcasecmp(media_type, type->pwg))
       return (type->pwg);
 
   return (NULL);

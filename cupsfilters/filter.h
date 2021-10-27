@@ -326,6 +326,12 @@ extern int texttopdf(int inputfd,
    Data directory (fonts, charsets), charset, content type (for prettyprint),
    classification (for overprint/watermark) */
 
+extern int texttotext(int inputfd,
+			int outputfd,
+			int inputseekable,
+			filter_data_t *data,
+			void *parameters);
+
 extern int universal(int inputfd,
 		      int outputfd,
 		      int inputseekable,
@@ -335,7 +341,7 @@ extern int universal(int inputfd,
 /*
 	Parameters: filter_input_output_format_t
 	Contains : Input_type : CONTENT_TYPE environment variable
-						Output type : FINAL_CONTENT TYPE environment variable */
+			   Output type : FINAL_CONTENT TYPE environment variable */
 						
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,

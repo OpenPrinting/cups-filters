@@ -1164,18 +1164,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   /* We use PCLm instead of general raster PDF here if the printer
      supports it, as PCLm can get streamed by the printer */
 
-  /* Note that these output formats are not fully usable yet:
-
-     1. Ghostscript needs a seekable output, so they do not work
-	in the usual print filter chains. Bug report:
-	https://bugs.ghostscript.com/show_bug.cgi?id=704160
-
-     2. In PCLm back side orientation for duplex printing is not
-	supported, making duplex printing on many printers not
-	working correctly. Bug report:
-	https://bugs.ghostscript.com/show_bug.cgi?id=704161
-
-   */
+  /* Note that these output formats require Ghostscript 9.55.0 or later */
 
   if (outformat == OUTPUT_FORMAT_PDF_IMAGE ||
       outformat == OUTPUT_FORMAT_PCLM) {

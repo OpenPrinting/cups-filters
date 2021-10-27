@@ -69,6 +69,8 @@ char            *cfCreatePPDFromIPP2(char *buffer, size_t bufsize,
 				     cups_array_t *sizes,char* default_pagesize,
 				     const char *default_cluster_color,
 				     char *status_msg, size_t status_msg_size);
+char            *cfStrFormatd(char *buf, char *bufend, double number,
+			      struct lconv *loc);
 int             cfCompareResolutions(void *resolution_a, void *resolution_b,
 				     void *user_data);
 void            *cfCopyResolution(void *resolution, void *user_data);

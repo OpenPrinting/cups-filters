@@ -141,14 +141,14 @@ strlcpy(char       *dst,		/* O - Destination string */
 #endif /* !HAVE_STRLCPY */
 
 /*
- * 'str_formatd()' - Format a floating-point number.
+ * 'cfStrFormatd()' - Format a floating-point number.
  */
 
 char *					/* O - Pointer to end of string */
-str_formatd(char         *buf,	/* I - String */
-                char         *bufend,	/* I - End of string buffer */
-		double       number,	/* I - Number to format */
-                struct lconv *loc)	/* I - Locale data */
+cfStrFormatd(char         *buf,	/* I - String */
+	     char         *bufend,	/* I - End of string buffer */
+	     double       number,	/* I - Number to format */
+	     struct lconv *loc)	/* I - Locale data */
 {
   char		*bufptr,		/* Pointer into buffer */
 		temp[1024],		/* Temporary string */
@@ -1726,6 +1726,45 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 				     IPP_TAG_BOOLEAN), 0))
     cupsFilePuts(fp, "*cupsJobAccountingUserId: True\n");
 
+  if ((attr = ippFindAttribute(response, "printer-privacy-policy-uri", IPP_TAG_URI)) != NULL)
+    cupsFilePrintf(fp, "*cupsPrivacyURI: \"%s\"\n", ippGetString(attr, 0, NULL));
+
+  if ((attr = ippFindAttribute(response, "printer-mandatory-job-attributes", IPP_TAG_KEYWORD)) != NULL)
+  {
+    char	prefix = '\"';		// Prefix for string
+
+    cupsFilePuts(fp, "*cupsMandatory: \"");
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      keyword = ippGetString(attr, i, NULL);
+
+      if (strcmp(keyword, "attributes-charset") && strcmp(keyword, "attributes-natural-language") && strcmp(keyword, "printer-uri"))
+      {
+        cupsFilePrintf(fp, "%c%s", prefix, keyword);
+        prefix = ',';
+      }
+    }
+    cupsFilePuts(fp, "\"\n");
+  }
+
+  if ((attr = ippFindAttribute(response, "printer-requested-job-attributes", IPP_TAG_KEYWORD)) != NULL)
+  {
+    char	prefix = '\"';		// Prefix for string
+
+    cupsFilePuts(fp, "*cupsRequested: \"");
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      keyword = ippGetString(attr, i, NULL);
+
+      if (strcmp(keyword, "attributes-charset") && strcmp(keyword, "attributes-natural-language") && strcmp(keyword, "printer-uri"))
+      {
+        cupsFilePrintf(fp, "%c%s", prefix, keyword);
+        prefix = ',';
+      }
+    }
+    cupsFilePuts(fp, "\"\n");
+  }
+
  /*
   * Password/PIN printing...
   */
@@ -2123,9 +2162,9 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 		   "*DefaultPageSize: %s\n", "Media Size", ppdname);
     for (size = (cups_size_t *)cupsArrayFirst(sizes); size;
 	 size = (cups_size_t *)cupsArrayNext(sizes)) {
-      str_formatd(twidth, twidth + sizeof(twidth),
+      cfStrFormatd(twidth, twidth + sizeof(twidth),
 		      size->width * 72.0 / 2540.0, loc);
-      str_formatd(tlength, tlength + sizeof(tlength),
+      cfStrFormatd(tlength, tlength + sizeof(tlength),
 		      size->length * 72.0 / 2540.0, loc);
       strlcpy(ppdsizename, size->media, sizeof(ppdsizename));
       if ((ippsizename = strchr(ppdsizename, ' ')) != NULL) {
@@ -2168,9 +2207,9 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 		   "*DefaultPageRegion: %s\n", "Media Size", ppdname);
     for (size = (cups_size_t *)cupsArrayFirst(sizes); size;
 	 size = (cups_size_t *)cupsArrayNext(sizes)) {
-      str_formatd(twidth, twidth + sizeof(twidth),
+      cfStrFormatd(twidth, twidth + sizeof(twidth),
 		      size->width * 72.0 / 2540.0, loc);
-      str_formatd(tlength, tlength + sizeof(tlength),
+      cfStrFormatd(tlength, tlength + sizeof(tlength),
 		      size->length * 72.0 / 2540.0, loc);
       strlcpy(ppdsizename, size->media, sizeof(ppdsizename));
       if ((ippsizename = strchr(ppdsizename, ' ')) != NULL) {
@@ -2213,17 +2252,17 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 
     for (size = (cups_size_t *)cupsArrayFirst(sizes); size;
 	 size = (cups_size_t *)cupsArrayNext(sizes)) {
-      str_formatd(tleft, tleft + sizeof(tleft),
+      cfStrFormatd(tleft, tleft + sizeof(tleft),
 		      size->left * 72.0 / 2540.0, loc);
-      str_formatd(tbottom, tbottom + sizeof(tbottom),
+      cfStrFormatd(tbottom, tbottom + sizeof(tbottom),
 		      size->bottom * 72.0 / 2540.0, loc);
-      str_formatd(tright, tright + sizeof(tright),
+      cfStrFormatd(tright, tright + sizeof(tright),
 		      (size->width - size->right) * 72.0 / 2540.0, loc);
-      str_formatd(ttop, ttop + sizeof(ttop),
+      cfStrFormatd(ttop, ttop + sizeof(ttop),
 		      (size->length - size->top) * 72.0 / 2540.0, loc);
-      str_formatd(twidth, twidth + sizeof(twidth),
+      cfStrFormatd(twidth, twidth + sizeof(twidth),
 		      size->width * 72.0 / 2540.0, loc);
-      str_formatd(tlength, tlength + sizeof(tlength),
+      cfStrFormatd(tlength, tlength + sizeof(tlength),
 		      size->length * 72.0 / 2540.0, loc);
       strlcpy(ppdsizename, size->media, sizeof(ppdsizename));
       if ((ippsizename = strchr(ppdsizename, ' ')) != NULL)
@@ -2249,26 +2288,26 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 	min_length < INT_MAX) {
       char	tmax[256], tmin[256];	/* Min/max values */
 
-      str_formatd(tleft, tleft + sizeof(tleft), left * 72.0 / 2540.0, loc);
-      str_formatd(tbottom, tbottom + sizeof(tbottom),
+      cfStrFormatd(tleft, tleft + sizeof(tleft), left * 72.0 / 2540.0, loc);
+      cfStrFormatd(tbottom, tbottom + sizeof(tbottom),
 		      bottom * 72.0 / 2540.0, loc);
-      str_formatd(tright, tright + sizeof(tright), right * 72.0 / 2540.0,
+      cfStrFormatd(tright, tright + sizeof(tright), right * 72.0 / 2540.0,
 		      loc);
-      str_formatd(ttop, ttop + sizeof(ttop), top * 72.0 / 2540.0, loc);
+      cfStrFormatd(ttop, ttop + sizeof(ttop), top * 72.0 / 2540.0, loc);
 
       cupsFilePrintf(fp, "*HWMargins: \"%s %s %s %s\"\n", tleft, tbottom,
 		     tright, ttop);
 
-      str_formatd(tmax, tmax + sizeof(tmax), max_width * 72.0 / 2540.0,
+      cfStrFormatd(tmax, tmax + sizeof(tmax), max_width * 72.0 / 2540.0,
 		      loc);
-      str_formatd(tmin, tmin + sizeof(tmin), min_width * 72.0 / 2540.0,
+      cfStrFormatd(tmin, tmin + sizeof(tmin), min_width * 72.0 / 2540.0,
 		      loc);
       cupsFilePrintf(fp, "*ParamCustomPageSize Width: 1 points %s %s\n", tmin,
 		     tmax);
 
-      str_formatd(tmax, tmax + sizeof(tmax), max_length * 72.0 / 2540.0,
+      cfStrFormatd(tmax, tmax + sizeof(tmax), max_length * 72.0 / 2540.0,
 		      loc);
-      str_formatd(tmin, tmin + sizeof(tmin), min_length * 72.0 / 2540.0,
+      cfStrFormatd(tmin, tmin + sizeof(tmin), min_length * 72.0 / 2540.0,
 		      loc);
       cupsFilePrintf(fp, "*ParamCustomPageSize Height: 2 points %s %s\n", tmin,
 		     tmax);

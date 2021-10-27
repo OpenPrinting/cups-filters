@@ -345,8 +345,8 @@ colord_get_profile_for_device_id (filter_data_t *data,
   con = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
   if (con == NULL) {
     // If D-Bus is not reachable, gracefully leave and ignore error
-//     if(log) log(ld, FILTER_LOGLEVEL_ERROR, 
-// 		"Failed to connect to system bus");
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		"Failed to connect to system bus");
     goto out;
   }
 
@@ -360,7 +360,7 @@ colord_get_profile_for_device_id (filter_data_t *data,
 
   /* get the best profile for the device */
   filename = get_profile_for_device_path(data, con, device_path, qualifier_tuple);
-  if (filename == NULL) {
+  if (filename == NULL || !filename[0]) {
     if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		"Failed to get profile filename for %s", device_id);
     goto out;

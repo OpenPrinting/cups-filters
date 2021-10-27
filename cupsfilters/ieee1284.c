@@ -787,6 +787,7 @@ ieee1284NormalizeMakeAndModel(
     bufptr = buffer;
     while (*makeptr != ':') makeptr ++;
     makeptr ++;
+    while (isspace(*makeptr)) makeptr ++;
     while (*makeptr != ';' && *makeptr != '\0' &&
 	   bufptr < buffer + bufsize - 1)
     {
@@ -794,6 +795,7 @@ ieee1284NormalizeMakeAndModel(
       makeptr ++;
       bufptr ++;
     }
+    while (isspace(*(bufptr - 1))) bufptr --;
     if (bufptr < buffer + bufsize - 1)
     {
       *bufptr = ' ';
@@ -803,6 +805,7 @@ ieee1284NormalizeMakeAndModel(
     makeptr = bufptr;
     while (*modelptr != ':') modelptr ++;
     modelptr ++;
+    while (isspace(*modelptr)) modelptr ++;
     while (*modelptr != ';' && *modelptr != '\0' &&
 	   bufptr < buffer + bufsize - 1)
     {
@@ -810,6 +813,7 @@ ieee1284NormalizeMakeAndModel(
       modelptr ++;
       bufptr ++;
     }
+    while (isspace(*(bufptr - 1))) bufptr --;
     *bufptr = '\0';
     if (!nomakemodel && makeptr != bufptr)
       modelptr = makeptr;
@@ -1026,6 +1030,26 @@ ieee1284NormalizeMakeAndModel(
       if (modelptr >= bufptr + 15)
 	modelptr -= 13;
       bufptr += 2;
+    }
+
+    bufptr = buffer;
+    while ((bufptr = strcasestr(bufptr, "eastman kodak company")) != NULL &&
+	   (bufptr == buffer || !isalnum(*(bufptr - 1))) &&
+	   !isalnum(*(bufptr + 21)))
+    {
+     /*
+      * Replace with Kodak...
+      */
+
+      bufptr[0] = 'K';
+      bufptr[1] = 'o';
+      bufptr[2] = 'd';
+      bufptr[3] = 'a';
+      bufptr[4] = 'k';
+      moverightpart(buffer, bufsize, bufptr + 5, -16);
+      if (modelptr >= bufptr + 21)
+	modelptr -= 16;
+      bufptr += 5;
     }
 
     bufptr = buffer;

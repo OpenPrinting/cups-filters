@@ -99,30 +99,30 @@ universal(int inputfd,         /* I - File descriptor input stream */
         }
         else if(!strcmp(input_super , "text") || (!strcmp(input_super , "application") && input_type[0] == 'x')){
             filter = malloc(sizeof(filter_filter_in_chain_t));
-            texttopdf_parameter_t parameters;
+            texttopdf_parameter_t* parameters = (texttopdf_parameter_t *) malloc(sizeof(texttopdf_parameter_t));
             char *p;
             if ((p = getenv("CUPS_DATADIR")) != NULL)
-                parameters.data_dir = p;
+                parameters->data_dir = p;
             else
-                parameters.data_dir = CUPS_DATADIR;
+                parameters->data_dir = CUPS_DATADIR;
 
             if ((p = getenv("CHARSET")) != NULL)
-                parameters.char_set = p;
+                parameters->char_set = p;
             else
-                parameters.char_set = NULL;
+                parameters->char_set = NULL;
 
             if ((p = getenv("CONTENT_TYPE")) != NULL)
-                parameters.content_type = p;
+                parameters->content_type = p;
             else
-                parameters.content_type = NULL;
+                parameters->content_type = NULL;
 
             if ((p = getenv("CLASSIFICATION")) != NULL)
-                parameters.classification = p;
+                parameters->classification = p;
             else
-                parameters.classification = NULL;
+                parameters->classification = NULL;
 
             filter->function = texttopdf;
-            filter->parameters = &parameters;
+            filter->parameters = parameters;
             filter->name = "texttopdf";
             fprintf(stderr , "Adding %s to chain \n" , filter->name);
             cupsArrayAdd(filter_chain , filter);

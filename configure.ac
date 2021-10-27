@@ -177,6 +177,16 @@ else
 	fi
 fi
 
+AC_ARG_ENABLE([ppdc-utils], [AS_HELP_STRING([--enable-ppdc-utils], [enable ppdc utilities, to build PPD files from driver information files (*.drv).])],
+        [enable_ppdc_utils="$enableval"],
+        [enable_ppdc_utils="no"])
+AM_CONDITIONAL([ENABLE_PPDC_UTILS],
+[test "x$enable_ppdc_utils" != "xno"])
+
+PPDC_DATADIR="$datadir/ppdc"
+AC_DEFINE_UNQUOTED(PPDC_DATADIR, "$PPDC_DATADIR", [ppdc include dir])
+AC_SUBST(PPDC_DATADIR)
+
 AC_SEARCH_LIBS([dlopen],
 	[dl],
 	[AS_IF([test "$ac_cv_search_dlopen" != "none required"], [
@@ -999,6 +1009,7 @@ Build configuration:
 	driverless:      ${enable_driverless}
 	apple-raster:    ${APPLE_RASTER_FILTER}
 	pclm:            ${enable_pclm}
+	ppdc utilities:  ${enable_ppdc_utils}
 	local queue naming for remote CUPS queues: ${REMOTE_CUPS_LOCAL_QUEUE_NAMING}
 	keep generated queues during shutdown:     ${SAVING_CREATED_QUEUES}
 	all ipp printer auto-setup: ${enable_auto_setup_all}

@@ -41,6 +41,13 @@ EXTRA_DIST += \
 	data/unclassified.ps \
 	drv/custom-media-lines
 
+# =========
+# utilities
+# =========
+
+pkgutilsdir = $(bindir)
+pkgutils_PROGRAMS =
+
 # ========
 # Backends
 # ========
@@ -159,7 +166,17 @@ EXTRA_DIST += $(pkgcharset_DATA)
 pkgppdincludedir = $(includedir)/ppd
 pkgppdinclude_DATA = \
 	ppd/ppd.h \
+	ppd/ppdc.h \
 	cupsfilters/log.h
+
+pkgppddefsdir = $(datadir)/ppdc
+pkgppddefs_DATA = \
+	ppd/epson.h \
+	ppd/hp.h \
+	ppd/label.h \
+	ppd/font.defs \
+	ppd/media.defs \
+	ppd/raster.defs
 
 lib_LTLIBRARIES = libppd.la
 
@@ -172,7 +189,7 @@ libppd_la_SOURCES = \
 	ppd/ppd-attr.c \
 	ppd/ppd.c \
 	ppd/ppd-cache.c \
-	ppd/ppd-collection.c \
+	ppd/ppd-collection.cxx \
 	ppd/ppd-conflicts.c \
 	ppd/ppd-custom.c \
 	ppd/ppd-emit.c \
@@ -199,7 +216,28 @@ libppd_la_SOURCES = \
 	ppd/string-private.h \
 	ppd/thread.c \
 	ppd/thread-private.h \
-	$(pkgppdinclude_DATA)
+	ppd/ppdc-array.cxx \
+	ppd/ppdc-attr.cxx \
+	ppd/ppdc-catalog.cxx \
+	ppd/ppdc-choice.cxx \
+	ppd/ppdc-constraint.cxx \
+	ppd/ppdc-driver.cxx \
+	ppd/ppdc-file.cxx \
+	ppd/ppdc-filter.cxx \
+	ppd/ppdc-font.cxx \
+	ppd/ppdc-group.cxx \
+	ppd/ppdc-import.cxx \
+	ppd/ppdc-mediasize.cxx \
+	ppd/ppdc-message.cxx \
+	ppd/ppdc-option.cxx \
+	ppd/ppdc-private.h \
+	ppd/ppdc-profile.cxx \
+	ppd/ppdc-shared.cxx \
+	ppd/ppdc-source.cxx \
+	ppd/ppdc-string.cxx \
+	ppd/ppdc-variable.cxx \
+	$(pkgppdinclude_DATA) \
+	$(pkgppddefs_DATA)
 libppd_la_LIBADD = \
 	$(CUPS_LIBS)
 libppd_la_CFLAGS = \
@@ -214,9 +252,142 @@ testppd_LDADD = libppd.la \
 
 EXTRA_DIST += \
 	$(pkgppdinclude_DATA) \
+	$(pkgppddefs_DATA) \
 	ppd/test.ppd \
 	ppd/test2.ppd \
 	ppd/README.md
+
+# ===========================
+# ppdc PPD compiler utilities
+# ===========================
+
+if ENABLE_PPDC_UTILS
+pkgutils_PROGRAMS += \
+	genstrings \
+	ppdc \
+	ppdhtml \
+	ppdi \
+	ppdmerge \
+	ppdpo
+endif
+
+genstrings_SOURCES = \
+	ppd/genstrings.cxx
+genstrings_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+genstrings_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdc_SOURCES = \
+	ppd/ppdc.cxx
+ppdc_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdc_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdhtml_SOURCES = \
+	ppd/ppdhtml.cxx
+ppdhtml_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdhtml_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdi_SOURCES = \
+	ppd/ppdi.cxx
+ppdi_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdi_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdmerge_SOURCES = \
+	ppd/ppdmerge.cxx
+ppdmerge_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdmerge_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+ppdpo_SOURCES = \
+	ppd/ppdpo.cxx
+ppdpo_LDADD = \
+	libppd.la \
+	$(CUPS_LIBS)
+ppdpo_CFLAGS = \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+
+# =================
+# Fontembed library
+# =================
+pkgfontembedincludedir = $(includedir)/fontembed
+pkgfontembedinclude_DATA = \
+	fontembed/bitset.h \
+	fontembed/embed.h \
+	fontembed/fontfile.h \
+	fontembed/iofn.h \
+	fontembed/sfnt.h
+
+lib_LTLIBRARIES += libfontembed.la
+
+check_PROGRAMS += \
+	test_analyze \
+	test_pdf \
+	test_ps
+TESTS += \
+	test_analyze \
+	test_pdf \
+	test_ps
+
+libfontembed_la_SOURCES = \
+	fontembed/aglfn13.c \
+	fontembed/bitset.h \
+	fontembed/dynstring.c \
+	fontembed/dynstring.h \
+	fontembed/embed.c \
+	fontembed/embed.h \
+	fontembed/embed_sfnt.c \
+	fontembed/embed_sfnt_int.h \
+	fontembed/embed_pdf.c \
+	fontembed/embed_pdf.h \
+	fontembed/embed_pdf_int.h \
+	fontembed/fontfile.c \
+	fontembed/fontfile.h \
+	fontembed/frequent.c \
+	fontembed/frequent.h \
+	fontembed/iofn.h \
+	fontembed/macroman.h \
+	fontembed/sfnt.c \
+	fontembed/sfnt.h \
+	fontembed/sfnt_int.h \
+	fontembed/sfnt_subset.c
+libfontembed_la_LDFLAGS = \
+	-no-undefined \
+	-version-info 1
+
+test_analyze_SOURCES = fontembed/test_analyze.c
+test_analyze_LDADD = libfontembed.la
+
+test_pdf_SOURCES = fontembed/test_pdf.c
+test_pdf_LDADD = libfontembed.la
+
+test_ps_SOURCES = fontembed/test_ps.c
+test_ps_LDADD = libfontembed.la
+
+EXTRA_DIST += \
+	$(pkgfontembedinclude_DATA) \
+	fontembed/README
+
+pkgfilter_PROGRAMS =
+pkgfilterdir = $(CUPS_SERVERBIN)/filter
 
 # ====================
 # CUPS Filters library
@@ -338,6 +509,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
 	cupsfilters/texttopdf.c \
+	cupsfilters/texttotext.c \
 	cupsfilters/universal.c \
 	$(pkgfiltersinclude_DATA)
 EXTRA_libcupsfilters_la_SOURCES = \
@@ -355,7 +527,7 @@ libcupsfilters_la_LIBADD = \
 	$(LIBJPEG_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
-	$(POPPLER_LIBS)
+	$(POPPLER_LIBS) \
 	-lm
 libcupsfilters_la_CFLAGS = \
 	-I$(srcdir)/ppd/ \
@@ -587,70 +759,6 @@ nodist_pkgbraille_SCRIPTS = \
 	filter/braille/drivers/index/index.sh \
 	filter/braille/filters/cups-braille.sh
 endif
-
-# =================
-# Fontembed library
-# =================
-pkgfontembedincludedir = $(includedir)/fontembed
-pkgfontembedinclude_DATA = \
-	fontembed/bitset.h \
-	fontembed/embed.h \
-	fontembed/fontfile.h \
-	fontembed/iofn.h \
-	fontembed/sfnt.h
-
-lib_LTLIBRARIES += libfontembed.la
-
-check_PROGRAMS += \
-	test_analyze \
-	test_pdf \
-	test_ps
-TESTS += \
-	test_analyze \
-	test_pdf \
-	test_ps
-
-libfontembed_la_SOURCES = \
-	fontembed/aglfn13.c \
-	fontembed/bitset.h \
-	fontembed/dynstring.c \
-	fontembed/dynstring.h \
-	fontembed/embed.c \
-	fontembed/embed.h \
-	fontembed/embed_sfnt.c \
-	fontembed/embed_sfnt_int.h \
-	fontembed/embed_pdf.c \
-	fontembed/embed_pdf.h \
-	fontembed/embed_pdf_int.h \
-	fontembed/fontfile.c \
-	fontembed/fontfile.h \
-	fontembed/frequent.c \
-	fontembed/frequent.h \
-	fontembed/iofn.h \
-	fontembed/macroman.h \
-	fontembed/sfnt.c \
-	fontembed/sfnt.h \
-	fontembed/sfnt_int.h \
-	fontembed/sfnt_subset.c
-libfontembed_la_LDFLAGS = \
-	-no-undefined \
-	-version-info 1
-
-test_analyze_SOURCES = fontembed/test_analyze.c
-test_analyze_LDADD = libfontembed.la
-
-test_pdf_SOURCES = fontembed/test_pdf.c
-test_pdf_LDADD = libfontembed.la
-
-test_ps_SOURCES = fontembed/test_ps.c
-test_ps_LDADD = libfontembed.la
-
-EXTRA_DIST += \
-	$(pkgfontembedinclude_DATA) \
-	fontembed/README
-
-pkgfilter_PROGRAMS =
-pkgfilterdir = $(CUPS_SERVERBIN)/filter
 
 # ==========
 # PDF to PDF 
@@ -948,18 +1056,12 @@ endif
 
 texttotext_SOURCES = \
 	filter/texttotext.c
-EXTRA_texttotext_SOURCES = cupsfilters/strcasestr.c
 texttotext_CFLAGS = \
-	-I$(srcdir)/ppd/ \
+	-I$(srcdir)/cupsfilters/ \
 	$(CUPS_CFLAGS)
 texttotext_LDADD = \
-	libppd.la \
-	$(STRCASESTR) \
-	$(CUPS_LIBS) \
-	$(LIBICONV)
-texttotext_DEPENDENCIES = \
-	$(STRCASESTR) \
-	libppd.la
+	libcupsfilters.la \
+	$(CUPS_LIBS)
 
 texttopdf_SOURCES = \
 	filter/texttopdf.c
@@ -1030,22 +1132,22 @@ rastertopclx_LDADD = \
 	libppd.la
 
 test_pdf1_SOURCES = \
-	filter/pdfutils.c \
-	filter/pdfutils.h \
 	filter/test_pdf1.c \
 	fontembed/embed.h \
 	fontembed/sfnt.h
-test_pdf1_CFLAGS = -I$(srcdir)/fontembed/
-test_pdf1_LDADD = libfontembed.la
+test_pdf1_CFLAGS = -I$(srcdir)/fontembed/ \
+	-I$(srcdir)/cupsfilters/
+test_pdf1_LDADD = libfontembed.la \
+	libcupsfilters.la
 
 test_pdf2_SOURCES = \
-	filter/pdfutils.c \
-	filter/pdfutils.h \
 	filter/test_pdf2.c \
 	fontembed/embed.h \
 	fontembed/sfnt.h
-test_pdf2_CFLAGS = -I$(srcdir)/fontembed/
-test_pdf2_LDADD = libfontembed.la
+test_pdf2_CFLAGS = -I$(srcdir)/fontembed/ \
+	-I$(srcdir)/cupsfilters/
+test_pdf2_LDADD = libfontembed.la \
+	libcupsfilters.la
 
 universal_SOURCES = \
 	filter/universal.c
