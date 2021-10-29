@@ -1,0 +1,2 @@
+%%#PDF-BANNER
+%%Show printer-name printer-info printer-location printer-make-and-model job-id time-at-creation time-at-processing job-originating-user-name job-name job-originating-host-name job-billing job-uuid

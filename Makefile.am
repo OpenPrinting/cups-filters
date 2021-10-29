@@ -39,6 +39,9 @@ EXTRA_DIST += \
 	data/standard.ps \
 	data/topsecret.ps \
 	data/unclassified.ps \
+	data/banner-instr-append.txt \
+	data/form-instr-append.txt \
+	data/testprint-instr-append.txt \
 	drv/custom-media-lines
 
 # =========
