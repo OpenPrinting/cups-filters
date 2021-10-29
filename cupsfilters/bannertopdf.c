@@ -65,11 +65,6 @@ enum banner_info
     INFO_TIME_AT_PROCESSING = 1 << 17
 };
 
-typedef struct bannertopdf_doc_s
-{
-
-} bannertopdf_doc_t;
-
 typedef struct
 {
     const char *template_file;
@@ -599,7 +594,7 @@ opt_t *get_known_opts(
     opt = add_opt(opt, "user", user);
 
     /* Printer name */
-    opt = add_opt(opt, "printer-name", getenv("PRINTER"));
+    opt = add_opt(opt, "printer-name", data->printer);
 
     /* Printer info */
     opt = add_opt(opt, "printer-info", getenv("PRINTER_INFO"));
@@ -793,8 +788,8 @@ static int generate_banner_pdf(banner_t *banner,
     fprintf(s, "17 TL\n");
 
     if ((banner->infos & INFO_PRINTER_NAME) &&
-	(value = getenv("PRINTER")) != NULL && value[0])
-        info_line(s, "Printer", getenv("PRINTER"));
+	data->printer && data->printer[0])
+        info_line(s, "Printer", data->printer);
 
     if ((banner->infos & INFO_PRINTER_INFO) &&
 	(value = getenv("PRINTER_INFO")) != NULL && value[0])
@@ -805,8 +800,8 @@ static int generate_banner_pdf(banner_t *banner,
         info_line(s, "Location", value);
 
     if ((banner->infos & INFO_JOB_ID) &&
-	(value = getenv("PRINTER")) != NULL && jobid && jobid[0])
-        info_linef(s, "Job ID", "%s-%s", value, jobid);
+	data->printer && data->printer[0] && jobid && jobid[0])
+        info_linef(s, "Job ID", "%s-%s", data->printer, jobid);
 
     if ((banner->infos & INFO_JOB_NAME) && jobtitle && jobtitle[0])
         info_line(s, "Job Title", jobtitle);
