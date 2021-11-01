@@ -1167,12 +1167,13 @@ ieee1284NormalizeMakeAndModel(
     else
     {
       /* Not having a regular expression we consider comma, semicolon,
-	 or parenthese as the end of the model name and the rest of
-	 the string as extra info. So we set a pointer to this extra
-	 info if we find such a character */
+	 isolated dash, or parenthese as the end of the model name and
+	 the rest of the string as extra info. So we set a pointer to
+	 this extra info if we find such a character */
       if ((extraptr = strchr(buffer, ',')) == NULL)
 	if ((extraptr = strchr(buffer, ';')) == NULL)
-	  extraptr = strchr(buffer, '(');
+	  if ((extraptr = strstr(buffer, " - ")) == NULL)
+	    extraptr = strchr(buffer, '(');
       if (extraptr)
       {
 	if (human)
