@@ -1121,6 +1121,20 @@ ieee1284NormalizeMakeAndModel(
       moverightpart(buffer, bufsize, modelptr, buffer - modelptr);
 
    /*
+    * Clean up the model name...
+    */
+
+    bufptr = modelptr;
+    while ((bufptr = strcasestr(bufptr, " series")) != NULL)
+    {
+     /*
+      * Strip "series"...
+      */
+
+      moverightpart(buffer, bufsize, bufptr, -7);
+    }
+
+   /*
     * Find extra info...
     */
 
