@@ -120,6 +120,12 @@ typedef struct texttopdf_parameter_s {  /* parameters container of environemnt
   const char *classification;
 } texttopdf_parameter_t;
 
+typedef struct filter_input_output_format_s { /* Contains input and output type
+					     to be supplied to the universal function */
+  char *input_format;                 
+  char *output_format;
+} filter_input_output_format_t;
+
 /*
  * Prototypes...
  */
@@ -321,11 +327,22 @@ extern int texttopdf(int inputfd,
    classification (for overprint/watermark) */
 
 extern int texttotext(int inputfd,
-		     int outputfd,
-		     int inputseekable,
-		     filter_data_t *data,
-		     void *parameters);
+			int outputfd,
+			int inputseekable,
+			filter_data_t *data,
+			void *parameters);
 
+extern int universal(int inputfd,
+		      int outputfd,
+		      int inputseekable,
+		      filter_data_t *data,
+		      void *parameters);
+
+/*
+	Parameters: filter_input_output_format_t
+	Contains : Input_type : CONTENT_TYPE environment variable
+			   Output type : FINAL_CONTENT TYPE environment variable */
+						
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,
 				   cups_option_t *options,
