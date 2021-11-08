@@ -3,6 +3,19 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters, universal: Added the universal() filter
+	  function which allows a single CUPS filter executable which
+	  auto-creates chains of filter function calls to convert any
+	  input data format into any other output data format.So CUPS
+	  can call a single filter for any conversion, taking up less
+	  resources. Thanks to Pranshu Kharkwal for this excellent
+	  GSoC project (Pull request #421).
+	- Build system, README: Require CUPS 2.2.2+ and QPDF 10.3.2+.
+	  Removed now unneeded ./configure switches for PCLm support
+	  in QPDF and for use of the urftopdf filter for old CUPS
+	  versions.
+	- urftopdf: Removed as we require CUPS 2.2.2+ now which
+	  supports Apple Raster nby itself.
 	- libppd: Ported CUPS' PPD compiler into libppd. Now the
 	  functions for PPD file collections also take driver
 	  information files (*.drv) into account, allowing easy
