@@ -218,15 +218,6 @@ Files: filter/texttops filter/imagetops filter/gstopxl filter/gstopdf
 Copyright: 2012 Till Kamppeter <till.kamppeter@gmail.com>
 License: GPL-2+
 
-Files: filter/unirast.h
-Copyright: 2010, Neil 'Superna' Armstrong <superna9999@gmail.com>
-License: GPL-3+
-
-Files: filter/urftopdf.cpp
-Copyright: 2010, Neil 'Superna' Armstrong <superna9999@gmail.com>
- 2012 Tobias Hoffmann <smilingthax@gmail.com>
-License: GPL-3+
-
 Files: fontembed/*
 Copyright: 2008,2012 Tobias Hoffmann
 License: Expat
