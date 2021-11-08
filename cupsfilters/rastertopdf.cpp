@@ -46,10 +46,8 @@
 
 #include <qpdf/Pl_Flate.hh>
 #include <qpdf/Pl_Buffer.hh>
-#ifdef QPDF_HAVE_PCLM
 #include <qpdf/Pl_RunLength.hh>
 #include <qpdf/Pl_DCT.hh>
-#endif
 
 #ifdef USE_LCMS1
 #include <lcms.h>
@@ -600,7 +598,6 @@ QPDFObjectHandle getCalGrayArray(double wp[3], double gamma[1], double bp[3])
     return ret;
 }
 
-#ifdef QPDF_HAVE_PCLM
 /**
  * 'makePclmStrips()' - return an std::vector of QPDFObjectHandle, each
  *                      containing the stream data of the various strips
@@ -711,7 +708,6 @@ makePclmStrips(QPDF &pdf, unsigned num_strips,
     }
     return ret;
 }
-#endif
 
 QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
 			   unsigned width, unsigned height,
@@ -899,7 +895,6 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
       // add it
       info->page.getKey("/Resources").getKey("/XObject").replaceKey("/I",image);
     }
-#ifdef QPDF_HAVE_PCLM
     else if (info->outformat == OUTPUT_FORMAT_PCLM)
     {
       // Finish previous PCLm page
@@ -931,7 +926,6 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
 		      int_to_fwstring(i, num_digits(info->pclm_num_strips - 1)),
 		      strips[i]);
     }
-#endif
 
     // draw it
     std::string content;
@@ -941,7 +935,6 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
                      QUtil::double_to_string(info->page_height) + " 0 0 cm\n");
       content.append("/I Do\n");
     }
-#ifdef QPDF_HAVE_PCLM
     else if (info->outformat == OUTPUT_FORMAT_PCLM)
     {
       std::string res = info->pclm_source_resolution_default;
@@ -966,24 +959,19 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
                        " Do Q\n");
       }
     }
-#endif
 
     QPDFObjectHandle page_contents = info->page.getKey("/Contents");
     if (info->outformat == OUTPUT_FORMAT_PDF)
       page_contents.replaceStreamData(content, QPDFObjectHandle::newNull(),
 				      QPDFObjectHandle::newNull());
-#ifdef QPDF_HAVE_PCLM
     else if (info->outformat == OUTPUT_FORMAT_PCLM)
       page_contents.getArrayItem(0).replaceStreamData(content,
 						   QPDFObjectHandle::newNull(),
 						   QPDFObjectHandle::newNull());
-#endif
 
     // bookkeeping
     info->page_data = PointerHolder<Buffer>();
-#ifdef QPDF_HAVE_PCLM
     info->pclm_strip_data.clear();
-#endif
 
     return 0;
 }
@@ -1233,10 +1221,8 @@ int close_pdf_file(struct pdf_info * info, rastertopdf_doc_t *doc)
         QPDFWriter output(info->pdf,NULL);
         output.setOutputFile("pdf", doc->outputfp, false);
 //        output.setMinimumPDFVersion("1.4");
-#ifdef QPDF_HAVE_PCLM
         if (info->outformat == OUTPUT_FORMAT_PCLM)
           output.setPCLm(true);
-#endif
         output.write();
     } catch (...) {
         return 1;
@@ -1420,7 +1406,6 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
 
   (void)inputseekable;
 
-#ifdef QPDF_HAVE_PCLM
   if (parameters)
   {
     outformat = *(filter_out_format_t *)parameters;
@@ -1429,9 +1414,6 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
   }
   else
     outformat = OUTPUT_FORMAT_PDF;
-#else
-  outformat = OUTPUT_FORMAT_PDF;
-#endif
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 	       "rastertopdf: OUTFORMAT=\"%s\"",
 	       outformat == OUTPUT_FORMAT_PDF ? "PDF" : "PCLM");
@@ -1468,7 +1450,6 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
   else
     doc.cm_disabled = cmIsPrinterCmDisabled(data, getenv("PRINTER"));
 
-#ifdef QPDF_HAVE_PCLM
   if (outformat == OUTPUT_FORMAT_PCLM && data->ppd == NULL
         && printer_attrs == NULL )
   {
@@ -1476,7 +1457,6 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
       "rastertopdf: PCLm output:  Neither a PPD file nor printer IPP attributes are supplied, PCLm output not possible.");
     return 1;
   }
-#endif
 
   // Transform
   ras = cupsRasterOpen(inputfd, CUPS_RASTER_READ);

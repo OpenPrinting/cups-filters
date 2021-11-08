@@ -103,3 +103,9 @@ application/vnd.cups-pdf
 application/vnd.cups-pdf-banner     string(0,'#PDF-BANNER')
 application/PCLm
 
+########################################################################
+#
+# Auxiliary input type for the universal CUPS filter...
+#
+
+application/vnd.universal-input

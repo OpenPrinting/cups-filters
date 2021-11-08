@@ -130,23 +130,6 @@ AX_COMPARE_VERSION([$CUPS_VERSION],[lt],[1.6], [
 AM_CONDITIONAL([ENABLE_DRIVERLESS],
 [test "x$enable_driverless" != "xno"])
 
-APPLE_RASTER_FILTER=rastertopdf
-AX_COMPARE_VERSION([$CUPS_VERSION],[lt],[2.2.2], [
-	APPLE_RASTER_FILTER=urftopdf
-])
-AC_ARG_WITH([apple-raster-filter],
-	[AS_HELP_STRING([--with-apple-raster-filter=rastertopdf|urftopdf], [Select filter for Apple Raster input. Default: rastertopdf for CUPS 2.2.2+, urftopdf for older CUPS])],
-	[with_apple_raster_filter="$withval"],
-	[with_apple_raster_filter="$APPLE_RASTER_FILTER"]
-)
-AS_CASE([x$with_apple_raster_filter],
-	[xrastertopdf|xurftopdf], [APPLE_RASTER_FILTER=$with_apple_raster_filter],
-	[AC_MSG_ERROR([Unknown value of with-apple-raster-filter provided: $with_apple_raster_filter])]
-)
-AM_CONDITIONAL([ENABLE_URFTOPDF],
-	       [test "x$APPLE_RASTER_FILTER" = "xurftopdf"])
-AC_SUBST(APPLE_RASTER_FILTER)
-
 AC_DEFINE(PDFTOPDF, [], [Needed for pdftopdf filter compilation])
 AC_DEFINE_DIR(BANNERTOPDF_DATADIR, "{CUPS_DATADIR}/data", [Directory where bannertopdf finds its data files (PDF templates)])
 
@@ -504,24 +487,7 @@ PKG_CHECK_MODULES([FREETYPE], [freetype2], [AC_DEFINE([HAVE_FREETYPE_H], [1], [H
 PKG_CHECK_MODULES([FONTCONFIG], [fontconfig >= 2.0.0])
 PKG_CHECK_MODULES([ZLIB], [zlib])
 AC_DEFINE([HAVE_LIBZ], [], [Define that we use zlib])
-PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 8.3.0])
-
-# ===============================
-# Check for PCLm printing support
-# ===============================
-AC_ARG_ENABLE([pclm], [AS_HELP_STRING([--enable-pclm], [enable PCLm printing.])],
-	[enable_pclm="$enableval"],
-	[enable_pclm=yes]
-)
-if test "x$enable_pclm" != "xno"; then
-	AC_DEFINE([QPDF_HAVE_PCLM], [1], [QPDF has PCLm support?])
-	QPDF_NO_PCLM=
-else
-	QPDF_NO_PCLM=\#
-fi
-AC_SUBST(QPDF_NO_PCLM)
-
-
+PKG_CHECK_MODULES([LIBQPDF], [libqpdf >= 10.3.2])
 
 # =================
 # Check for Poppler
@@ -789,6 +755,28 @@ AC_ARG_ENABLE([rastertopwg],
 )
 AM_CONDITIONAL([ENABLE_RASTERTOPWG], [test "x$enable_rastertopwg" = "xyes"])
 
+# ===============================
+# Check for universal CUPS filter
+# ===============================
+AC_ARG_ENABLE([universal-cups-filter],
+	[AS_HELP_STRING([--enable-universal-cups-filter], [Create single, universal CUPS filter executable for all filter functions.])],
+        [enable_universal_cups_filter="$enableval"],
+        [enable_universal_cups_filter=yes]
+)
+AM_CONDITIONAL([ENABLE_UNIVERSAL_CUPS_FILTER],
+[test "x$enable_universal_cups_filter" != "xno"])
+
+# =================================
+# Check for individual CUPS filters
+# =================================
+AC_ARG_ENABLE([individual-cups-filters],
+	[AS_HELP_STRING([--enable-individual-cups-filters], [Create individual CUPS filter executables for each filter function.])],
+        [enable_individual_cups_filters="$enableval"],
+        [enable_individual_cups_filters=no]
+)
+AM_CONDITIONAL([ENABLE_INDIVIDUAL_CUPS_FILTERS],
+[test "x$enable_individual_cups_filters" != "xno"])
+
 # =============
 # Check for php
 # =============
@@ -959,7 +947,6 @@ AC_CONFIG_FILES([
 	filter/braille/filters/vectortobrf
 	filter/braille/filters/musicxmltobrf
 	filter/braille/filters/liblouis1.defs.gen
-	mime/cupsfilters.convs
 ])
 AC_CONFIG_COMMANDS([executable-scripts], [
 	chmod +x filter/braille/filters/liblouis1.defs.gen
@@ -1006,8 +993,9 @@ Build configuration:
 	werror:          ${enable_werror}
 	braille:	 ${enable_braille}
 	braille tables:  ${TABLESDIR}
+	universal CUPS filter: ${enable_universal_cups_filter}
+	individual CUPS filters: ${enable_individual_cups_filters}
 	driverless:      ${enable_driverless}
-	apple-raster:    ${APPLE_RASTER_FILTER}
 	pclm:            ${enable_pclm}
 	ppdc utilities:  ${enable_ppdc_utils}
 	local queue naming for remote CUPS queues: ${REMOTE_CUPS_LOCAL_QUEUE_NAMING}

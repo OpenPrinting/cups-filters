@@ -1,0 +1,42 @@
+#
+#   MIME conversions file for OpenPrinting CUPS Filters.
+#
+#   Copyright 2007-2011 by Apple Inc.
+#   Copyright 1997-2007 by Easy Software Products.
+#   Copyright 2012-2021 by Till Kamppeter.
+#   Copyright 2017 by Sahil Arora.
+#
+#   These coded instructions, statements, and computer programs are the
+#   property of Apple Inc. and are protected by Federal copyright
+#   law.  Distribution and use rights are outlined in the file "COPYING"
+#   which should have been included with this file.
+#
+
+########################################################################
+#
+# Format of Lines:
+#
+#   source/type destination/type cost filter
+#
+# General Notes:
+#
+#   The "cost" field is used to find the least costly filters to run
+#   when converting a job file to a printable format.
+#
+#   All filters *must* accept the standard command-line arguments
+#   (job-id, user, title, copies, options, [filename or stdin]) to
+#   work with CUPS.
+#
+
+########################################################################
+#
+# Text rules (for text-only printers with texttotext filter in PPD and
+# for texttopdf, both individual or in universal filter)...
+#
+
+application/x-cshell		text/plain			0	-
+application/x-csource		text/plain			0	-
+application/x-perl		text/plain			0	-
+application/x-shell		text/plain			0	-
+text/html			text/plain			0	-
+text/css			text/plain			0	-

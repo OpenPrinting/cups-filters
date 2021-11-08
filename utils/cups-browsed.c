@@ -6533,16 +6533,12 @@ on_job_state (CupsNotifier *object,
       if (cupsArrayFind(pdl_list, "application/vnd.cups-pdf") ||
 	  cupsArrayFind(pdl_list, "application/pdf"))
 	strcpy(document_format, "pdf");
-#ifdef CUPS_RASTER_HAVE_APPLERASTER
       else if (cupsArrayFind(pdl_list, "image/urf"))
 	strcpy(document_format, "apple-raster");
-#endif
       else if (cupsArrayFind(pdl_list, "image/pwg-raster"))
 	strcpy(document_format, "raster");
-#ifdef QPDF_HAVE_PCLM
       else if (cupsArrayFind(pdl_list, "application/PCLm"))
 	strcpy(document_format, "pclm");
-#endif
       else if (cupsArrayFind(pdl_list, "application/vnd.hp-pclxl"))
 	strcpy(document_format, "pclxl");
       else if (cupsArrayFind(pdl_list, "application/vnd.cups-postscript") ||
@@ -7335,12 +7331,8 @@ create_remote_printer_entry (const char *queue_name,
 	(!strcasestr(pdl, "application/postscript") &&
 	 !strcasestr(pdl, "application/pdf") &&
 	 !strcasestr(pdl, "image/pwg-raster") &&
-#ifdef CUPS_RASTER_HAVE_APPLERASTER
 	 !strcasestr(pdl, "image/urf") &&
-#endif
-#ifdef QPDF_HAVE_PCLM
 	 !strcasestr(pdl, "application/PCLm") &&
-#endif
 	 ((!strcasestr(pdl, "application/vnd.hp-PCL") &&
 	   !strcasestr(pdl, "application/PCL") &&
 	   !strcasestr(pdl, "application/x-pcl")) ||
@@ -7353,16 +7345,8 @@ create_remote_printer_entry (const char *queue_name,
       debug_printf("Cannot create remote printer %s (URI: %s, Model: %s, Accepted data formats: %s) as its PDLs are not known, ignoring this printer.\n",
 		   p->queue_name, p->uri, make_model, pdl);
       debug_printf("Supported PDLs: PWG Raster, %s%sPostScript, PDF, PCL XL, PCL 5c/e (HP inkjets report themselves as PCL printers but their PCL is not supported)\n",
-#ifdef CUPS_RASTER_HAVE_APPLERASTER
 		   "Apple Raster, ",
-#else
-		   "",
-#endif
-#ifdef QPDF_HAVE_PCLM
 		   "PCLm, "
-#else
-		   ""
-#endif
 		   );
       goto fail;
     }
@@ -7450,7 +7434,6 @@ create_remote_printer_entry (const char *queue_name,
 		   is_pwgraster ? "supports" : "does not support");
     }
 
-#ifdef CUPS_RASTER_HAVE_APPLERASTER
     /* If we have opted for only Apple Raster printers or for only printers 
        designed for driverless use (PWG Raster + Apple Raster + PCLm + PDF)
        being set up automatically, we check whether the printer has a non-empty
@@ -7482,9 +7465,7 @@ create_remote_printer_entry (const char *queue_name,
       debug_printf("  --> Printer %s Apple Raster.\n",
 		   is_appleraster ? "supports" : "does not support");
     }
-#endif
 
-#ifdef QPDF_HAVE_PCLM
     /* If we have opted for only PCLm printers or for only printers 
        designed for driverless use (PWG Raster + Apple Raster + PCLm + PDF)
        being set up automatically, we check whether the printer has a non-empty
@@ -7518,7 +7499,6 @@ create_remote_printer_entry (const char *queue_name,
       debug_printf("  --> Printer %s PCLm.\n",
 		   is_pclm ? "supports" : "does not support");
     }
-#endif
 
     /* If we have opted for only PDF printers or for only printers 
        designed for driverless use (PWG Raster + Apple Raster + PCLm + PDF)

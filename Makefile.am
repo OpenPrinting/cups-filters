@@ -715,25 +715,41 @@ EXTRA_DIST += \
 pkgmimedir = $(CUPS_DATADIR)/mime
 
 genmimefiles = \
-	mime/cupsfilters.types
-pkgmime_DATA = \
-	$(genmimefiles) \
+	mime/cupsfilters.types \
 	mime/cupsfilters.convs
+pkgmime_DATA = \
+	$(genmimefiles)
 
+universalmimefiles = \
+	mime/cupsfilters-universal.convs
+individualmimefiles = \
+	mime/cupsfilters-individual.convs
 popplermimefiles = \
 	mime/cupsfilters-poppler.convs
+gsmimefiles = \
+	mime/cupsfilters-ghostscript.convs
+mutoolmimefiles = \
+	mime/cupsfilters-mupdf.convs
+
+if ENABLE_UNIVERSAL_CUPS_FILTER
+if ENABLE_POPPLER
+if ENABLE_GHOSTSCRIPT
+pkgmime_DATA += $(universalmimefiles)
+endif
+endif
+endif
+
+if ENABLE_INDIVIDUAL_CUPS_FILTERS
+pkgmime_DATA += $(individualmimefiles)
 if ENABLE_POPPLER
 pkgmime_DATA += $(popplermimefiles)
 endif
-gsmimefiles = \
-	mime/cupsfilters-ghostscript.convs
 if ENABLE_GHOSTSCRIPT
 pkgmime_DATA += $(gsmimefiles)
 endif
-mutoolmimefiles = \
-	mime/cupsfilters-mupdf.convs
 if ENABLE_MUTOOL
 pkgmime_DATA += $(mutoolmimefiles)
+endif
 endif
 
 brlmimefiles = \
@@ -745,11 +761,12 @@ endif
 
 EXTRA_DIST += \
 	$(genmimefiles) \
+	$(universalmimefiles) \
+	$(individualmimefiles) \
 	$(popplermimefiles) \
 	$(gsmimefiles) \
 	$(mutoolmimefiles) \
-	$(brlmimefiles) \
-	mime/cupsfilters.convs.in
+	$(brlmimefiles)
 
 # =================
 # Braille aux files
@@ -766,7 +783,9 @@ endif
 # ==========
 # PDF to PDF 
 # ==========
+if ENABLE_INDIVIDUAL_CUPS_FILTERS
 pkgfilter_PROGRAMS += pdftopdf
+endif
 
 pdftopdf_SOURCES = \
 	filter/pdftopdf.c
@@ -784,7 +803,9 @@ pdftopdf_LDADD = \
 # ======================
 genfilterscripts = \
 	filter/texttops
+if ENABLE_INDIVIDUAL_CUPS_FILTERS
 pkgfilter_SCRIPTS = $(genfilterscripts)
+endif
 if ENABLE_BRAILLE
 nodist_pkgfilter_SCRIPTS = \
 	filter/braille/drivers/generic/brftoembosser \
@@ -803,17 +824,34 @@ pkgfilter_PROGRAMS += \
 	commandtoescpx \
 	commandtopclx \
 	texttotext \
-	pdftops \
 	rastertoescpx \
-	rastertopclx \
+	rastertopclx
+if ENABLE_GHOSTSCRIPT
+pkgfilter_PROGRAMS += \
+	gstopxl
+endif
+if ENABLE_FOOMATIC
+pkgfilter_PROGRAMS += \
+	foomatic-rip
+endif
+if ENABLE_UNIVERSAL_CUPS_FILTER
+if ENABLE_POPPLER
+if ENABLE_GHOSTSCRIPT
+pkgfilter_PROGRAMS += \
+	universal
+endif
+endif
+endif
+if ENABLE_INDIVIDUAL_CUPS_FILTERS
+pkgfilter_PROGRAMS += \
+	pdftops \
 	texttopdf \
 	rastertopclm \
 	rastertopdf \
 	bannertopdf \
 	rastertops \
 	pwgtoraster \
-	pclmtoraster \
-	universal
+	pclmtoraster
 if ENABLE_RASTERTOPWG
 pkgfilter_PROGRAMS += \
 	rastertopwg
@@ -822,10 +860,6 @@ if ENABLE_PSTOPS
 pkgfilter_PROGRAMS += \
 	pstops
 endif
-if ENABLE_URFTOPDF
-pkgfilter_PROGRAMS += \
-	urftopdf
-endif
 if ENABLE_POPPLER
 pkgfilter_PROGRAMS += \
 	pdftoraster
@@ -833,22 +867,18 @@ endif
 if ENABLE_GHOSTSCRIPT
 pkgfilter_PROGRAMS += \
 	gstoraster \
-	gstopdf \
-	gstopxl
+	gstopdf
 endif
 if ENABLE_MUTOOL
 pkgfilter_PROGRAMS += \
 	mupdftoraster
-endif
-if ENABLE_FOOMATIC
-pkgfilter_PROGRAMS += \
-	foomatic-rip
 endif
 if ENABLE_IMAGEFILTERS
 pkgfilter_PROGRAMS += \
 	imagetopdf \
 	imagetops \
 	imagetoraster
+endif
 endif
 
 check_PROGRAMS += \
@@ -981,14 +1011,6 @@ imagetoraster_CFLAGS = \
 imagetoraster_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
-
-urftopdf_SOURCES = \
-	filter/urftopdf.cpp \
-	filter/unirast.h
-urftopdf_CXXFLAGS = \
-	$(LIBQPDF_CFLAGS)
-urftopdf_LDADD = \
-	$(LIBQPDF_LIBS)
 
 pclmtoraster_SOURCES = \
 	filter/pclmtoraster.c

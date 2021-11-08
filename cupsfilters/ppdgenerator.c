@@ -1949,7 +1949,6 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
       }
     }
   }
-#ifdef QPDF_HAVE_PCLM
   if (cupsArrayFind(pdl_list, "application/PCLm")) {
     if ((attr = ippFindAttribute(response, "pclm-source-resolution-supported",
 				 IPP_TAG_RESOLUTION)) != NULL) {
@@ -1969,7 +1968,6 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
       }
     }
   }
-#endif
   /* Legacy formats only if we have no driverless format */
   if (!is_pdf && !is_apple && !is_pwg && !is_pclm) {
     if (cupsArrayFind(pdl_list, "application/vnd.hp-pclxl")) {
@@ -2068,9 +2066,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
   while (attr) {                      /* loop through all the attributes */
     if ((is_apple && strncasecmp(ippGetName(attr), "urf-", 4) == 0) ||
 	(is_pwg && strncasecmp(ippGetName(attr), "pwg-raster-", 11) == 0)
-#ifdef QPDF_HAVE_PCLM
 	|| (is_pclm && strncasecmp(ippGetName(attr), "pclm-", 5) == 0)
-#endif
 	) {
       ppdPwgPpdizeName(ippGetName(attr), ppdname, sizeof(ppdname));
       cupsFilePrintf(fp, "*cups%s: ", ppdname);

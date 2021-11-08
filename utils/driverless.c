@@ -418,16 +418,12 @@ list_printers (int mode, int reg_type_no, int isFax)
   ippfind_argv[i++] = "(";
   ippfind_argv[i++] = "--txt-pdl";        /* PDL list in TXT record contains */
   ippfind_argv[i++] = "image/pwg-raster"; /* PWG Raster (IPP Everywhere) */
-#ifdef QPDF_HAVE_PCLM
   ippfind_argv[i++] = "--or";             /* or */
   ippfind_argv[i++] = "--txt-pdl";
   ippfind_argv[i++] = "application/PCLm"; /* PCLm */
-#endif
-#ifdef CUPS_RASTER_HAVE_APPLERASTER
   ippfind_argv[i++] = "--or";             /* or */
   ippfind_argv[i++] = "--txt-pdl";
   ippfind_argv[i++] = "image/urf";        /* Apple Raster */
-#endif
   ippfind_argv[i++] = "--or";             /* or */
   ippfind_argv[i++] = "--txt-pdl";
   ippfind_argv[i++] = "application/pdf";  /* PDF */
