@@ -7,33 +7,35 @@ instead...
 
 INTRODUCTION
 
-    CUPS is a standards-based, open source printing system developed
-    by Apple Inc. for Mac OS® X and other UNIX®-like operating
-    systems.  CUPS uses the Internet Printing Protocol ("IPP") and
-    provides System V and Berkeley command-line interfaces, a web
-    interface, and a C API to manage printers and print jobs.
+    CUPS is a standards-based, open source printing system used by
+    Apple's Mac OS® X and other UNIX®-like operating systems,
+    especially also Linux. CUPS uses the Internet Printing Protocol
+    ("IPP") and provides System V and Berkeley command-line
+    interfaces, a web interface, and a C API to manage printers and
+    print jobs.
 
     This package contains backends, filters, and other software that
-    was once part of the core CUPS distribution but is no longer
-    maintained by Apple Inc. In addition it contains additional
-    filters and software developed independently of Apple, especially
-    filters for the PDF-centric printing workflow introduced by
-    OpenPrinting and a daemon to browse broadcasts of remote CUPS
-    printers and IPP printers to make them available locally.
+    was once part of the core CUPS distribution, but during the time
+    when CUPS was developed at Apple, Apple stopped maintining these
+    parts as they were not needed by Mac OS.
 
-    From CUPS 1.6.0 on, this package is required for using printer
-    drivers (and also driverless printing) with CUPS under Linux. With
-    CUPS 1.5.x and 1.4.x this package can be used optionally to switch
-    over to PDF-based printing. In that case some filters are provided
-    by both CUPS and this package. Then the filters of this package
-    should be used.
+    In addition it contains more filters and software developed
+    independently of Apple, especially filters for the PDF-centric
+    printing workflow introduced by OpenPrinting and a daemon to
+    browse broadcasts of remote CUPS printers and IPP printers to make
+    them available locally.
 
-    For compiling and using this package CUPS, libqpdf (8.3.0 or
-    newer), libjpeg, libpng, libtiff, freetype, fontconfig, liblcms
-    (liblcms2 recommended), libavahi-common, libavahi-client, libdbus,
-    and glib are needed. It is highly recommended, especially if
-    non-PDF printers are used, to have at least one of Ghostscript,
-    Poppler, or MuPDF.
+    Since CUPS 1.6.0 cups-filters is required for using printer
+    drivers (and also driverless printing) with CUPS under Linux. This
+    version of cups-filters is only for CUPS 2.2.2 or newer. Please
+    use the cups-filters 1.x line for older CUPS versions.
+
+    For compiling and using this package CUPS (2.2.2 or newer),
+    libqpdf (10.3.2 or newer), libjpeg, libpng, libtiff, freetype,
+    fontconfig, liblcms (liblcms2 recommended), libavahi-common,
+    libavahi-client, libdbus, and glib are needed. It is highly
+    recommended, especially if non-PDF printers are used, to have at
+    least one of Ghostscript, Poppler, or MuPDF.
 
     The Poppler-based pdftoraster filter needs a C++ compiler which
     supports C++11 and Poppler being built with the "./configure"
@@ -45,9 +47,6 @@ INTRODUCTION
     1.15, as the older versions have bugs and so some files get not
     printed correctly.
 
-    For Apple Raster output (used by AirPrint printers) at least CUPS
-    2.2.2 is required.
-
     For Braille embosser support (see below) you will also need at
     least liblouis, ImageMagick, and poppler-utils. Recommended is to
     also have liblouisutdml, antiword, docx2txt for more sophisticated
@@ -58,7 +57,7 @@ INTRODUCTION
     printer drivers and especially the filters needed for driverless
     printing (currently PWG Raster, Apple Raster, PCLm, and PDF output
     formats, for printers supporting IPP Everywhere, AirPrint, Wi-Fi
-    Direct, and other standards), see
+    Direct, and other standards). See
     http://www.openprinting.org/drivers/ for a more comprehensive set
     of printer drivers for Linux.
 
