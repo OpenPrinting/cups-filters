@@ -1068,7 +1068,6 @@ rastertops_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
 
-if ENABLE_RASTERTOPWG
 rastertopwg_SOURCES = \
 	filter/rastertopwg.c
 rastertopwg_CFLAGS = \
@@ -1077,7 +1076,6 @@ rastertopwg_CFLAGS = \
 rastertopwg_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
-endif
 
 texttotext_SOURCES = \
 	filter/texttotext.c
@@ -1106,7 +1104,6 @@ pdftops_LDADD = \
 	libcupsfilters.la \
 	$(CUPS_LIBS)
 
-if ENABLE_PSTOPS
 pstops_SOURCES = \
 	filter/pstops.c
 pstops_CFLAGS = \
@@ -1115,7 +1112,6 @@ pstops_CFLAGS = \
 pstops_LDADD = \
 	libcupsfilters.la \
 	$(CUPS_LIBS)
-endif
 
 pdftoraster_SOURCES = \
 	filter/pdftoraster.c
