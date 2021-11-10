@@ -689,6 +689,13 @@ main(int argc, char*argv[]) {
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
 
  /*
+  * Do not run at all if the NO_DRIVERLESS_PPDS environment variable is set
+  */
+
+  if (getenv("NO_DRIVERLESS_PPDS"))
+    return (0);
+
+ /*
   * Make sure status messages are not buffered...
   */
 
