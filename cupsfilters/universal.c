@@ -11,12 +11,13 @@
 #include <signal.h>
 #include <cups/cups.h>
 
-int                         /* O - Error status */
+int                            /* O - Error status */
 universal(int inputfd,         /* I - File descriptor input stream */
-       int outputfd,        /* I - File descriptor output stream */
-       int inputseekable,   /* I - Is input stream seekable? (unused) */
-       filter_data_t *data, /* I - Job and printer data */
-       void *parameters)    /* I - Filter-specific parameters (outformat) */
+	  int outputfd,        /* I - File descriptor output stream */
+	  int inputseekable,   /* I - Is input stream seekable? */
+	  filter_data_t *data, /* I - Job and printer data */
+	  void *parameters)    /* I - Filter-specific parameters
+				      (input/output format) */
 {
     char *input;
     char *output;
@@ -27,6 +28,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
     filter_out_format_t *outformat;
     filter_filter_in_chain_t *filter , *next;
     filter_input_output_format_t input_output_format;
+    filter_logfunc_t log = data->logfunc;
+    void *ld = data->logdata;
 
     input_output_format = *(filter_input_output_format_t *)parameters;
     input = input_output_format.input_format;
@@ -43,7 +46,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
             filter->function = imagetoraster;
             filter->parameters = NULL;
             filter->name = "imagetoraster";
-            fprintf(stderr , "Adding %s to chain \n" , filter->name);
+            if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "universal: Adding %s to chain", filter->name);
             cupsArrayAdd(filter_chain , filter);
 
             if(!strcmp(output , "image/pwg-raster")){
@@ -54,7 +58,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
                 filter->parameters = outformat;
                 filter->name = "rastertopwg";
                 cupsArrayAdd(filter_chain , filter);
-                fprintf(stderr , "Adding %s to chain \n" , filter->name);
+                if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			     "universal: Adding %s to chain", filter->name);
             }
             else if(!strcmp(output , "application/PCLm")){
                 outformat = malloc(sizeof(filter_out_format_t));
@@ -63,7 +68,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
                 filter->function = rastertopdf;
                 filter->parameters = outformat;
                 filter->name = "rastertopclm";
-                fprintf(stderr , "Adding %s to chain \n" , filter->name);
+                if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			     "universal: Adding %s to chain", filter->name);
                 cupsArrayAdd(filter_chain , filter);
             }
             else if(!strcmp(output , "image/urf")){
@@ -74,7 +80,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
                 filter->parameters = outformat;
                 filter->name = "rastertopwg";
                 cupsArrayAdd(filter_chain , filter);
-                fprintf(stderr , "Adding %s to chain \n" , filter->name);
+                if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			     "universal: Adding %s to chain", filter->name);
             }
         }
         else{
@@ -82,7 +89,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
             filter->function = imagetopdf;
             filter->parameters = NULL;
             filter->name = "imagetopdf";
-            fprintf(stderr , "Adding %s to chain \n" , filter->name);
+            if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "universal: Adding %s to chain", filter->name);
             cupsArrayAdd(filter_chain , filter);
         }
     }
@@ -94,7 +102,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
             filter->function = ghostscript;
             filter->parameters = outformat;
             filter->name = "gstopdf";
-            fprintf(stderr , "Adding %s to chain \n" , filter->name);
+            if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "universal: Adding %s to chain", filter->name);
             cupsArrayAdd(filter_chain , filter);
         }
         else if(!strcmp(input_super , "text") || (!strcmp(input_super , "application") && input_type[0] == 'x')){
@@ -124,7 +133,9 @@ universal(int inputfd,         /* I - File descriptor input stream */
             filter->function = texttopdf;
             filter->parameters = parameters;
             filter->name = "texttopdf";
-            fprintf(stderr , "Adding %s to chain \n" , filter->name);
+            if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "universal: Adding %s to chain",
+			 filter->name);
             cupsArrayAdd(filter_chain , filter);
         }
         else if(!strcmp(input , "image/urf") || !strcmp(input , "image/pwg-raster") || !strcmp(input , "application/vnd.cups-raster")){
@@ -134,7 +145,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
             filter->function = rastertopdf;
             filter->parameters = outformat;
             filter->name = "rastertopdf";
-            fprintf(stderr , "Adding %s to chain \n" , filter->name);
+            if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "universal: Adding %s to chain", filter->name);
             cupsArrayAdd(filter_chain , filter);
         }
         else if(!strcmp(input_type , "vnd.adobe-reader-postscript")){
@@ -151,7 +163,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
             filter->parameters = outformat;
             filter->name = "pstoraster";
             cupsArrayAdd(filter_chain , filter);
-            fprintf(stderr , "Adding %s to chain \n" , filter->name);
+            if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "universal: Adding %s to chain", filter->name);
             
             if(strcmp(output_type , "urf") && strcmp(output_type , "pwg-raster") && strcmp(output_type , "vnd.cups-raster")){
                 outformat = malloc(sizeof(filter_out_format_t));
@@ -160,7 +173,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
                 filter->function = rastertopdf;
                 filter->parameters = outformat;
                 filter->name = "rastertopdf";
-                fprintf(stderr , "Adding %s to chain \n" , filter->name);
+                if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			     "universal: Adding %s to chain", filter->name);
                 cupsArrayAdd(filter_chain , filter);
             }
         }
@@ -171,7 +185,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
             filter->function = pdftopdf;
             filter->parameters = NULL;
             filter->name = "pdftopdf";
-            fprintf(stderr , "Adding %s to chain \n" , filter->name);
+            if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "universal: Adding %s to chain", filter->name);
             cupsArrayAdd(filter_chain , filter);
 
             if(strcmp(output_type , "vnd.cups-pdf")){
@@ -183,7 +198,9 @@ universal(int inputfd,         /* I - File descriptor input stream */
                     filter->parameters = outformat;
                     filter->name = "pdftoraster";
                     cupsArrayAdd(filter_chain , filter);
-                    fprintf(stderr , "Adding %s to chain \n" , filter->name);
+                    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+				 "universal: Adding %s to chain",
+				 filter->name);
 
                     if(!strcmp(output , "image/pwg-raster")){
                         outformat = malloc(sizeof(filter_out_format_t));
@@ -193,7 +210,9 @@ universal(int inputfd,         /* I - File descriptor input stream */
                         filter->parameters = outformat;
                         filter->name = "rastertopwg";
                         cupsArrayAdd(filter_chain , filter);
-                        fprintf(stderr , "Adding %s to chain \n" , filter->name);
+                        if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+				     "universal: Adding %s to chain",
+				     filter->name);
                     }
                     else if(!strcmp(output , "application/PCLm")){
                         outformat = malloc(sizeof(filter_out_format_t));
@@ -202,7 +221,9 @@ universal(int inputfd,         /* I - File descriptor input stream */
                         filter->function = rastertopdf;
                         filter->parameters = outformat;
                         filter->name = "rastertopclm";
-                        fprintf(stderr , "Adding %s to chain \n" , filter->name);
+                        if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+				     "universal: Adding %s to chain",
+				     filter->name);
                         cupsArrayAdd(filter_chain , filter);
                     }
                     else if(!strcmp(output , "image/urf")){
@@ -213,7 +234,9 @@ universal(int inputfd,         /* I - File descriptor input stream */
                         filter->parameters = outformat;
                         filter->name = "rastertopwg";
                         cupsArrayAdd(filter_chain , filter);
-                        fprintf(stderr , "Adding %s to chain \n" , filter->name);
+                        if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+				     "universal: Adding %s to chain",
+				     filter->name);
                     }
                 }
                 else if(!strcmp(output , "application/postscript") || !strcmp(output , "application/vnd.cups-postscript")){
@@ -221,7 +244,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
                     filter->function = pdftops;
                     filter->parameters = NULL;
                     filter->name = "pdftops";
-                    fprintf(stderr , "Adding %s to chain \n" , filter->name);
+                    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+				 "universal: Adding %s to chain", filter->name);
                     cupsArrayAdd(filter_chain , filter);
                 }
             }
