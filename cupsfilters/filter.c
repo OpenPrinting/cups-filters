@@ -454,6 +454,8 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 		retval,		     /* Return value */
 		ret;
   int		infd, outfd;         /* Temporary file descriptors */
+  char          buf[4096];
+  ssize_t       bytes;
   cups_array_t	*pids;		     /* Executed filters array */
   filter_function_pid_t	*pid_entry,  /* Entry in executed filters array */
 		key;		     /* Search key for filters */
@@ -485,6 +487,34 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
 		   "filterChain: Running filter: %s",
 		   filter->name ? filter->name : "Unspecified");
+  }
+
+ /*
+  * Empty filter chain -> Pass through the data unchanged
+  */
+
+  if (cupsArrayCount(filter_chain) == 0)
+  {
+    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+		 "filterChain: No filter at all in chain, passing through the data.");
+    retval = 0;
+    while ((bytes = read(inputfd, buf, sizeof(buf))) > 0)
+      if (write(outputfd, buf, bytes) < bytes)
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "filterChain: Data write error: %s", strerror(errno));
+	retval = 1;
+	break;
+      }
+    if (bytes < 0)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "filterChain: Data read error: %s", strerror(errno));
+      retval = 1;
+    }
+    close(inputfd);
+    close(outputfd);
+    return (retval);
   }
 
  /*
