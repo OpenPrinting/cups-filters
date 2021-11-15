@@ -33,29 +33,30 @@
 # Input formats
 #
 
-image/jpeg                   application/vnd.universal-input      0    -
-image/png                    application/vnd.universal-input      0    -
-image/gif                    application/vnd.universal-input      0    -
-image/tiff                   application/vnd.universal-input      0    -
-image/x-bitmap               application/vnd.universal-input      0    -
-image/x-photocd              application/vnd.universal-input      0    -
-image/x-portable-anymap      application/vnd.universal-input      0    -
-image/x-portable-bitmap      application/vnd.universal-input      0    -
-image/x-portable-graymap     application/vnd.universal-input      0    -
-image/x-portable-pixmap      application/vnd.universal-input      0    -
-image/x-sgi-rgb              application/vnd.universal-input      0    -
-image/x-xbitmap              application/vnd.universal-input      0    -
-image/x-xpixmap              application/vnd.universal-input      0    -
-image/x-xwindowdump          application/vnd.universal-input      0    -
-image/x-sun-raster           application/vnd.universal-input      0    -
-image/pwg-raster             application/vnd.universal-input      0    -
-application/vnd.cups-pdf     application/vnd.universal-input      0    -
-application/vnd.cups-raster  application/vnd.universal-input      0    -
-image/urf                    application/vnd.universal-input      0    -
-application/postscript       application/vnd.universal-input      0    -
-application/pdf              application/vnd.universal-input      0    -
-text/plain                   application/vnd.universal-input      0    -
-application/PCLm             application/vnd.universal-input      0    -
+image/jpeg                      application/vnd.universal-input      0    -
+image/png                       application/vnd.universal-input      0    -
+image/gif                       application/vnd.universal-input      0    -
+image/tiff                      application/vnd.universal-input      0    -
+image/x-bitmap                  application/vnd.universal-input      0    -
+image/x-photocd                 application/vnd.universal-input      0    -
+image/x-portable-anymap         application/vnd.universal-input      0    -
+image/x-portable-bitmap         application/vnd.universal-input      0    -
+image/x-portable-graymap        application/vnd.universal-input      0    -
+image/x-portable-pixmap         application/vnd.universal-input      0    -
+image/x-sgi-rgb                 application/vnd.universal-input      0    -
+image/x-xbitmap                 application/vnd.universal-input      0    -
+image/x-xpixmap                 application/vnd.universal-input      0    -
+image/x-xwindowdump             application/vnd.universal-input      0    -
+image/x-sun-raster              application/vnd.universal-input      0    -
+image/pwg-raster                application/vnd.universal-input      0    -
+application/vnd.cups-pdf        application/vnd.universal-input      0    -
+application/vnd.cups-raster     application/vnd.universal-input      0    -
+image/urf                       application/vnd.universal-input      0    -
+application/postscript          application/vnd.universal-input      0    -
+application/pdf                 application/vnd.universal-input      0    -
+text/plain                      application/vnd.universal-input      0    -
+application/PCLm                application/vnd.universal-input      0    -
+application/vnd.cups-pdf-banner application/vnd.universal-input      0    -
 
 # CUPS file conversion rules for PostScript input when we are working
 # with the PDF printing workflow: General PostScript input should be
