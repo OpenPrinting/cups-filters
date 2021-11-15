@@ -197,6 +197,16 @@ universal(int inputfd,         /* I - File descriptor input stream */
 		     "universal: Adding %s to chain", filter->name);
       }
     }
+    else if (!strcmp(input, "application/vnd.cups-pdf-banner"))
+    {
+      filter = malloc(sizeof(filter_filter_in_chain_t));
+      filter->function = bannertopdf;
+      filter->parameters = NULL;
+      filter->name = "bannertopdf";
+      cupsArrayAdd(filter_chain, filter);
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "universal: Adding %s to chain", filter->name);
+    }
   }
   if (((strcmp(input_super, "image") &&
 	strcmp(input_type, "vnd.adobe-reader-postscript")) ||
