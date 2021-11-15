@@ -203,7 +203,7 @@ banner_t *banner_new_from_file(const char *filename, int *num_options,
     {
       if (log)
 	log(ld, FILTER_LOGLEVEL_ERROR,
-	    "Error opening temporary file with input stream");
+	    "bannertopdf: Error opening temporary file with input stream");
       goto out;
     }
 
@@ -248,7 +248,7 @@ banner_t *banner_new_from_file(const char *filename, int *num_options,
 	      break;
             if (log)
                 log(ld, FILTER_LOGLEVEL_ERROR,
-		    "line %d is missing a value", linenr);
+		    "bannertopdf: Line %d is missing a value", linenr);
             continue;
         }
 
@@ -282,7 +282,7 @@ banner_t *banner_new_from_file(const char *filename, int *num_options,
         {
             if (log)
                 log(ld, FILTER_LOGLEVEL_ERROR,
-                    "bannertopdf: note:%d: bannertopdf does not support '%s'",
+                    "bannertopdf: Note: %d: bannertopdf does not support '%s'",
                     linenr, key);
         }
         else
@@ -291,7 +291,7 @@ banner_t *banner_new_from_file(const char *filename, int *num_options,
 	      break;
             if (log)
                 log(ld, FILTER_LOGLEVEL_ERROR,
-                    "error:%d: unknown keyword '%s'",
+                    "bannertopdf: Error: %d: unknown keyword '%s'",
                     linenr, key);
         }
     }
@@ -763,7 +763,7 @@ static int generate_banner_pdf(banner_t *banner,
     if ((s = tmpfile()) == NULL)
     {
         if (log)
-            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: cannot create temp file: %s\n", strerror(errno));
+            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: Cannot create temp file: %s\n", strerror(errno));
         return 1;
     }
 #endif
@@ -912,14 +912,14 @@ static int generate_banner_pdf(banner_t *banner,
     if (fstat(fileno(s), &st) < 0)
     {
         if (log)
-            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: cannot fstat(): %s\n", , strerror(errno));
+            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: Cannot fstat(): %s\n", , strerror(errno));
         return 1;
     }
     fseek(s, 0L, SEEK_SET);
     if ((buf = malloc(st.st_size + 1)) == NULL)
     {
         if (log)
-            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: cannot malloc(): %s\n", , strerror(errno));
+            log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: Cannot malloc(): %s\n", , strerror(errno));
         return 1;
     }
     size_t nbytes = fread(buf, 1, st.st_size, s);
@@ -1025,7 +1025,7 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pdftops: Copying input to temp file \"%s\"",
+		 "bannertopdf: Copying input to temp file \"%s\"",
 		 tempfile);
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), inputfp)) > 0)
