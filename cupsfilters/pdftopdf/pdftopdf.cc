@@ -1063,9 +1063,9 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     doc.iscanceledfunc = iscanceled;
     doc.iscanceleddata = icd;
 
-    getParameters(data,data->num_options,data->options,param,final_content_type,&doc);
+    getParameters(data, num_options, options, param, final_content_type, &doc);
 
-calculate(data,param,final_content_type);
+    calculate(data, param, final_content_type);
 
 #ifdef DEBUG
     param.dump(&doc);
@@ -1075,7 +1075,7 @@ calculate(data,param,final_content_type);
     // job through QPDL (so no page management, form flattening,
     // page size/orientation adjustment, ...)
     if ((t = cupsGetOption("filter-streaming-mode",
-			   data->num_options, data->options)) !=
+			   num_options, options)) !=
 	NULL &&
 	(strcasecmp(t, "false") && strcasecmp(t, "off") &
 	 strcasecmp(t, "no"))) {

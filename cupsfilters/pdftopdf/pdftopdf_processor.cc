@@ -192,31 +192,48 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
   }
   const int numPages=std::max(shuffle.size(),pages.size());
 
-  if(param.autoprint||param.autofit){
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+				 "pdftopdf: \"print-scaling\" IPP attribute: %s",
+				 (param.autoprint ? "auto" :
+				  (param.autofit ? "auto-fit" :
+				   (param.fitplot ? "fit" :
+				    (param.fillprint ? "fill" :
+				     (param.cropfit ? "none" :
+				      "Not defined, should never happen"))))));
+
+  if (param.autoprint || param.autofit) {
     bool margin_defined = true;
     bool document_large = false;
     int pw = param.page.right-param.page.left;
     int ph = param.page.top-param.page.bottom;
-    int w=0,h=0;
-    Rotation tempRot=param.orientation;
-    PageRect r= pages[0]->getRect();
-    w = r.width;
-    h = r.height;
 
-    if(tempRot==ROT_90||tempRot==ROT_270)
+    if ((param.page.width == pw) && (param.page.height == ph))
+      margin_defined = false;
+
+    for (int i = 0; i < (int)pages.size(); i ++)
     {
-      std::swap(w,h);
+      PageRect r = pages[i]->getRect();
+      int w = r.width;
+      int h = r.height;
+      if ((w > param.page.width || h > param.page.height) &&
+	  (h > param.page.width || w > param.page.height))
+      {
+	if (doc->logfunc)
+	  doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+		       "pdftopdf: Page %d too large for output page size, scaling pages to fit.",
+		       i + 1);
+	document_large = true;
+      }
     }
-    if(w>=pw||h>=ph)
+    if (param.fidelity && doc->logfunc)
+      doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+		   "pdftopdf: \"ipp-attribute-fidelity\" IPP attribute is set, scaling pages to fit.");
+
+    if (param.autoprint)
     {
-      document_large = true;
-    }
-    if((param.page.width==pw)&&
-        (param.page.height==ph))
-        margin_defined = false;
-    if(param.autoprint){
-      if(param.fidelity||document_large) {
-        if(margin_defined)
+      if (param.fidelity || document_large)
+      {
+        if (margin_defined)
           param.fitplot = true;
         else
           param.fillprint = true;
@@ -224,220 +241,178 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
       else
         param.cropfit = true;
     }
-    else{
-      if(param.fidelity||document_large)
+    else
+    {
+      if (param.fidelity || document_large)
         param.fitplot = true;
       else
         param.cropfit = true;
     }
   }
 
-  if(param.fillprint||param.cropfit){
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				   "pdftopdf: Cropping input pdf and Enabling "
-				   "fitplot.");
-    if(param.noOrientation&&pages.size())
-    {
-      bool land = pages[0]->is_landscape(param.orientation);
-      if(land)
-        param.orientation = param.normal_landscape;
-    }
-    for(int i=0;i<(int)pages.size();i++)
+  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+				 "pdftopdf: Print scaling mode: %s",
+				 (param.fitplot ?
+				  "Scale to fit printable area" :
+				  (param.fillprint ?
+				   "Scale to fill page and crop" :
+				   (param.cropfit ?
+				    "Do not scale, center, crop if needed" :
+				    "Not defined, should never happen"))));
+
+  if (param.fillprint || param.cropfit)
+  {
+    for (int i = 0; i < (int)pages.size(); i ++)
     {
       std::shared_ptr<PDFTOPDF_PageHandle> page = pages[i];
-      page->crop(param.page,param.orientation,param.xpos,param.ypos,!param.cropfit,doc);
+      Rotation orientation = param.orientation;
+      if (param.noOrientation &&
+	  page->is_landscape(param.orientation))
+	orientation = param.normal_landscape;
+      page->crop(param.page, orientation, param.xpos, param.ypos,
+		 !param.cropfit, doc);
     }
-    param.fitplot = 1;
   }
 
   std::shared_ptr<PDFTOPDF_PageHandle> curpage;
   int outputpage=0;
   int outputno=0;
 
-  if ((param.nup.nupX==1)&&(param.nup.nupY==1)&&(!param.fitplot)) {
-    // TODO? fitplot also without xobject?
-    /*
-      param.nup.width=param.page.width;
-      param.nup.height=param.page.height;
-    */
+  if ((param.nup.nupX == 1) && (param.nup.nupY == 1) && !param.fitplot)
+  {
+    param.nup.width = param.page.width;
+    param.nup.height = param.page.height;
+  }
+  else
+  {
+    param.nup.width = param.page.right - param.page.left;
+    param.nup.height = param.page.top - param.page.bottom;
+  }
 
-    for (int iA=0;iA<numPages;iA++) {
-      if (!param.withPage(iA+1)) {
-        continue;
-      }
+  if ((param.orientation == ROT_90) || (param.orientation == ROT_270))
+  {
+    std::swap(param.nup.nupX, param.nup.nupY);
+    param.nup.landscape = !param.nup.landscape;
+    param.orientation = param.orientation - param.normal_landscape;
+  }
 
-      // Log page in /var/log/cups/page_log
-      if (param.page_logging == 1)
-	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-				       "PAGE: %d %d", iA + 1,
-				       param.copies_to_be_logged);
-
-      if (shuffle[iA]>=numOrigPages) {
-        // add empty page as filler
-        proc.add_page(proc.new_page(param.page.width,param.page.height,doc),param.reverse);
-	outputno++;
-        continue; // no border, etc.
-      }
-      auto page=pages[shuffle[iA]];
-
-      page->rotate(param.orientation);
-
-      if (param.mirror) {
-        page->mirror();
-      }
-
-      if (!param.pageLabel.empty()) {
-        page->add_label(param.page, param.pageLabel);
-      }
-
-      // place border
-      if ((param.border!=BorderType::NONE)&&(iA<numOrigPages)) {
-#if 0 // would be nice, but is not possible
-        PageRect rect=page->getRect();
-
-        rect.left+=param.page.left;
-        rect.bottom+=param.page.bottom;
-        rect.top-=param.page.top;
-        rect.right-=param.page.right;
-        // width,height not needed for add_border_rect (FIXME?)
-
-        page->add_border_rect(rect,param.border,1.0);
-#else // this is what pstops does
-        page->add_border_rect(param.page,param.border,1.0);
-#endif
-      }
-
-      proc.add_page(page,param.reverse); // reverse -> insert at beginning
-      outputno++;
+  double xpos = 0, ypos = 0;
+  if (param.nup.landscape)
+  {
+    // pages[iA]->rotate(param.normal_landscape);
+    param.orientation = param.orientation + param.normal_landscape;
+    // TODO? better
+    if (param.nup.nupX != 1 || param.nup.nupY != 1 || param.fitplot)
+    {
+      xpos = param.page.bottom;
+      ypos = param.page.width - param.page.right;
     }
-  } else {
-    param.nup.width=param.page.right-param.page.left;
-    param.nup.height=param.page.top-param.page.bottom;
-
-    double xpos=param.page.left,
-      ypos=param.page.bottom; // for whole page... TODO from position...
-
-    const bool origls=param.nup.landscape;
-    if ((param.orientation==ROT_90)||(param.orientation==ROT_270)) {
-      std::swap(param.nup.nupX,param.nup.nupY);
-      param.nup.landscape=!param.nup.landscape;
-      param.orientation=param.orientation-param.normal_landscape;
+    std::swap(param.page.width, param.page.height);
+    std::swap(param.nup.width, param.nup.height);
+  }
+  else
+  {
+    if (param.nup.nupX != 1 || param.nup.nupY != 1 || param.fitplot)
+    {
+      xpos = param.page.left;
+      ypos = param.page.bottom; // for whole page... TODO from position...
     }
-    if (param.nup.landscape) {
-      // pages[iA]->rotate(param.normal_landscape);
-      param.orientation=param.orientation+param.normal_landscape;
-      // TODO? better
-      xpos=param.page.bottom;
-      ypos=param.page.width - param.page.right;
-      std::swap(param.page.width,param.page.height);
-      std::swap(param.nup.width,param.nup.height);
+  }
+
+  NupState nupstate(param.nup);
+  NupPageEdit pgedit;
+  for (int iA = 0; iA < numPages; iA ++)
+  {
+    std::shared_ptr<PDFTOPDF_PageHandle> page;
+    if (shuffle[iA] >= numOrigPages)
+      // add empty page as filler
+      page = proc.new_page(param.page.width, param.page.height, doc);
+    else
+      page = pages[shuffle[iA]];
+
+    PageRect rect;
+    rect = page->getRect();
+    //rect.dump(doc);
+
+    bool newPage = nupstate.nextPage(rect.width, rect.height, pgedit);
+    if (newPage)
+    {
+      if ((curpage) && (param.withPage(outputpage)))
+      {
+	curpage->rotate(param.orientation);
+	if (param.mirror)
+	  curpage->mirror();
+	  // TODO? update rect? --- not needed any more
+	proc.add_page(curpage, param.reverse); // reverse -> insert at beginning
+	// Log page in /var/log/cups/page_log
+	outputno ++;
+	if (param.page_logging == 1)
+	  if (doc->logfunc) doc->logfunc(doc->logdata,
+					 FILTER_LOGLEVEL_CONTROL,
+					 "PAGE: %d %d", outputno,
+					 param.copies_to_be_logged);
+      }
+      curpage = proc.new_page(param.page.width, param.page.height, doc);
+      outputpage++;
     }
 
-    NupState nupstate(param.nup);
-    NupPageEdit pgedit;
-    for (int iA=0;iA<numPages;iA++) {
-      std::shared_ptr<PDFTOPDF_PageHandle> page;
-      if (shuffle[iA]>=numOrigPages) {
-        // add empty page as filler
-        page=proc.new_page(param.page.width,param.page.height,doc);
-      } else {
-        page=pages[shuffle[iA]];
-      }
+    if (shuffle[iA] >= numOrigPages)
+      continue;
 
-      PageRect rect;
-      if (param.fitplot) {
-        rect=page->getRect();
-      } else {
-        rect.width=param.page.width;
-        rect.height=param.page.height;
+    if (param.border != BorderType::NONE)
+      // TODO FIXME... border gets cutted away, if orignal page had wrong size
+      // page->"uncrop"(rect);  // page->setMedia()
+      // Note: currently "fixed" in add_subpage(...&rect);
+      page->add_border_rect(rect, param.border, 1.0 / pgedit.scale);
 
-	// TODO? better
-        if (origls) {
-          std::swap(rect.width,rect.height);
-        }
+    if (!param.pageLabel.empty())
+      page->add_label(param.page, param.pageLabel);
 
-        rect.left=0;
-        rect.bottom=0;
-        rect.right=rect.width;
-        rect.top=rect.height;
+    if (param.cropfit)
+    {
+      if ((param.nup.nupX == 1) && (param.nup.nupY == 1))
+      {
+	double xpos2, ypos2;
+	if (param.orientation == ROT_270 || param.orientation == ROT_90)
+	{
+	  xpos2 = (param.page.width - (page->getRect().height)) / 2;
+	  ypos2 = (param.page.height - (page->getRect().width)) / 2;
+	  curpage->add_subpage(page, ypos2 + xpos, xpos2 + ypos, 1);
+	}
+	else
+	{
+	  xpos2 = (param.page.width - (page->getRect().width)) / 2;
+	  ypos2 = (param.page.height - (page->getRect().height)) / 2;
+	  curpage->add_subpage(page, xpos2 + xpos, ypos2 + ypos, 1);
+	}
       }
-      // rect.dump();
-
-      bool newPage=nupstate.nextPage(rect.width,rect.height,pgedit);
-      if (newPage) {
-        if ((curpage)&&(param.withPage(outputpage))) {
-          curpage->rotate(param.orientation);
-          if (param.mirror) {
-            curpage->mirror();
-	    // TODO? update rect? --- not needed any more
-          }
-          proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
-	  // Log page in /var/log/cups/page_log
-	  outputno++;
-	  if (param.page_logging == 1)
-	    if (doc->logfunc) doc->logfunc(doc->logdata,
-					   FILTER_LOGLEVEL_CONTROL,
-					   "PAGE: %d %d", outputno,
-					   param.copies_to_be_logged);
-        }
-        curpage=proc.new_page(param.page.width,param.page.height,doc);
-        outputpage++;
-      }
-      if (shuffle[iA]>=numOrigPages) {
-        continue;
-      }
-
-      if (param.border!=BorderType::NONE) {
-        // TODO FIXME... border gets cutted away, if orignal page had wrong size
-        // page->"uncrop"(rect);  // page->setMedia()
-        // Note: currently "fixed" in add_subpage(...&rect);
-        page->add_border_rect(rect,param.border,1.0/pgedit.scale);
-      }
-
-      if (!param.pageLabel.empty()) {
-        page->add_label(param.page, param.pageLabel);
-      }
-
-      if (!param.fitplot) {
-        curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale,&rect);
-      } else {
-        if(param.cropfit){
-          double xpos2 = (param.page.right-param.page.left-(page->getRect().width))/2;
-          double ypos2 = (param.page.top-param.page.bottom-(page->getRect().height))/2;
-          if(param.orientation==ROT_270||param.orientation==ROT_90)
-          {
-            xpos2 = (param.page.right-param.page.left-(page->getRect().height))/2;
-            ypos2 = (param.page.top-param.page.bottom-(page->getRect().width))/2;
-            curpage->add_subpage(page,ypos2+param.page.bottom,xpos2+param.page.left,1);
-          }else{
-          curpage->add_subpage(page,xpos2+param.page.left,ypos2+param.page.bottom,1);
-          }
-        }
-        else
-          curpage->add_subpage(page,pgedit.xpos+xpos,pgedit.ypos+ypos,pgedit.scale);
-      }
+      else
+	curpage->add_subpage(page, pgedit.xpos + xpos, pgedit.ypos + ypos,
+			     pgedit.scale);
+    }
+    else
+      curpage->add_subpage(page, pgedit.xpos + xpos, pgedit.ypos + ypos,
+			   pgedit.scale);
 
 #ifdef DEBUG
-      if (auto dbg=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(curpage.get())) {
-	// dbg->debug(pgedit.sub,xpos,ypos);
-      }
+    if (auto dbg=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(curpage.get()))
+      dbg->debug(pgedit.sub, xpos, ypos);
 #endif
 
-      // pgedit.dump();
-    }
-    if ((curpage)&&(param.withPage(outputpage))) {
-      curpage->rotate(param.orientation);
-      if (param.mirror) {
-        curpage->mirror();
-      }
-      proc.add_page(curpage,param.reverse); // reverse -> insert at beginning
-      // Log page in /var/log/cups/page_log
-      outputno ++;
-      if (param.page_logging == 1)
-	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
-				       "PAGE: %d %d", outputno,
-				       param.copies_to_be_logged);
-    }
+    //pgedit.dump(doc);
+  }
+  if ((curpage) && (param.withPage(outputpage)))
+  {
+    curpage->rotate(param.orientation);
+    if (param.mirror)
+      curpage->mirror();
+    proc.add_page(curpage, param.reverse); // reverse -> insert at beginning
+    // Log page in /var/log/cups/page_log
+    outputno ++;
+    if (param.page_logging == 1)
+      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+				     "PAGE: %d %d", outputno,
+				     param.copies_to_be_logged);
   }
 
   if ((param.evenDuplex || !param.oddPages) && (outputno & 1)) {
