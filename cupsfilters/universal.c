@@ -219,7 +219,7 @@ universal(int inputfd,         /* I - File descriptor input stream */
     if (strcmp(output_type, "pdf")) {
       filter = malloc(sizeof(filter_filter_in_chain_t));
       filter->function = pdftopdf;
-      filter->parameters = NULL;
+      filter->parameters = strdup(output);
       filter->name = "pdftopdf";
       cupsArrayAdd(filter_chain, filter);
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
