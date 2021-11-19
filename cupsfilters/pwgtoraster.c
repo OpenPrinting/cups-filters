@@ -286,9 +286,9 @@ static void  handleRequiresPageRegion(pwgtoraster_doc_t*doc) {
   }
 }
 
-static void parseOpts(filter_data_t *data,
-		      void *parameters,
-		      pwgtoraster_doc_t *doc)
+static int parseOpts(filter_data_t *data,
+		     void *parameters,
+		     pwgtoraster_doc_t *doc)
 {
   int num_options = 0;
   cups_option_t *options = NULL;
@@ -412,7 +412,7 @@ static void parseOpts(filter_data_t *data,
 #else
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "pwgtoraster: No PPD file specified.");
-    exit(1);
+    return (1);
 #endif /* HAVE_CUPS_1_7 */
   }
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
@@ -423,6 +423,8 @@ static void parseOpts(filter_data_t *data,
 	       "pwgtoraster: Page size %s: %s",
 	       doc->page_size_requested ? "requested" : "default",
 	       doc->outheader.cupsPageSizeName);
+
+  return (0);
 }
 
 static unsigned char *reverseLine(unsigned char *src, unsigned char *dst,
@@ -922,16 +924,17 @@ static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
 }
 
 /* select convertLine function */
-static void selectConvertFunc(cups_raster_t *raster,
-			      pwgtoraster_doc_t* doc,
-			      conversion_function_t *convert,
-			      filter_logfunc_t log,
-			      void* ld)
+static int selectConvertFunc(cups_raster_t *raster,
+			     pwgtoraster_doc_t* doc,
+			     conversion_function_t *convert,
+			     filter_logfunc_t log,
+			     void* ld)
 {
   if ((doc->color_profile.colorProfile == NULL || doc->color_profile.outputColorProfile == doc->color_profile.colorProfile)
       && (doc->outheader.cupsColorOrder == CUPS_ORDER_CHUNKED
        || doc->outheader.cupsNumColors == 1)) {
-    if (selectSpecialCase(doc, convert)) return;
+    if (selectSpecialCase(doc, convert))
+      return (0);
   }
 
   switch (doc->outheader.cupsColorOrder) {
@@ -1009,7 +1012,7 @@ static void selectConvertFunc(cups_raster_t *raster,
 			    doc->color_profile.renderingIntent,0)) == 0) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pwgtoraster: Can't create color transform.");
-      exit(1);
+      return (1);
     }
   } else {
     /* select convertCSpace function */
@@ -1081,7 +1084,7 @@ static void selectConvertFunc(cups_raster_t *raster,
     default:
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pwgtoraster: Specified ColorSpace is not supported");
-      exit(1);
+      return (1);
       break;
     }
   }
@@ -1093,6 +1096,7 @@ static void selectConvertFunc(cups_raster_t *raster,
   else
     doc->bitspercolor = doc->outheader.cupsBitsPerColor;
 
+  return (0);
 }
 
 static bool outPage(pwgtoraster_doc_t *doc,
@@ -1987,11 +1991,11 @@ static bool outPage(pwgtoraster_doc_t *doc,
   return (ret);
 }
 
-static void setColorProfile(pwgtoraster_doc_t *doc, filter_logfunc_t log, void *ld)
+static int setColorProfile(pwgtoraster_doc_t *doc, filter_logfunc_t log, void *ld)
 {
   if (doc->outheader.cupsBitsPerColor != 8 && doc->outheader.cupsBitsPerColor != 16) {
     /* color Profile is not supported */
-    return;
+    return (0);
   }
   /* set output color profile */
   switch (doc->outheader.cupsColorSpace) {
@@ -2068,9 +2072,10 @@ static void setColorProfile(pwgtoraster_doc_t *doc, filter_logfunc_t log, void *
   default:
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "pwgtoraster: Specified ColorSpace is not supported");
-    exit(1);
-    break;
+    return (1);
   }
+
+  return (0);
 }
 
 int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
@@ -2081,13 +2086,14 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
 {
   pwgtoraster_doc_t doc;
   int i;
-  cups_raster_t *inras,
-                *outras;
+  cups_raster_t *inras = NULL,
+                *outras = NULL;
   filter_logfunc_t     log = data->logfunc;
   void                 *ld = data->logdata;
   conversion_function_t convert;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                    *icd = data->iscanceleddata;
+  int ret = 0;
 
 
   (void)inputseekable;
@@ -2118,7 +2124,8 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   doc.color_profile.renderingIntent = INTENT_PERCEPTUAL;
 
   // Parse the options
-  parseOpts(data, parameters, &doc);
+  if (parseOpts(data, parameters, &doc) == 1)
+    return (1);
 
   doc.outheader.NumCopies = data->copies;
   doc.outheader.MirrorPrint = CUPS_FALSE;
@@ -2131,7 +2138,8 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
      && doc.outheader.cupsBitsPerColor != 16) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pwgtoraster: Specified color format is not supported.");
-    exit(1);
+    ret = 1;
+    goto out;
   }
 
   if (doc.outheader.cupsColorOrder == CUPS_ORDER_PLANAR) {
@@ -2172,7 +2180,8 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
           && doc.outheader.cupsBitsPerColor != 16)) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pwgtoraster: Specified color format is not supported.");
-      exit(1);
+      ret = 1;
+      goto out;
     }
   case CUPS_CSPACE_RGB:
   case CUPS_CSPACE_SRGB:
@@ -2201,11 +2210,16 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   default:
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "pwgtoraster: Specified ColorSpace is not supported.");
-    exit(1);
-    break;
+    ret = 1;
+    goto out;
   }
   if (!(doc.color_profile.cm_disabled)) {
-    setColorProfile(&doc, log, ld);
+    if (setColorProfile(&doc, log, ld) == 1) {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pwgtoraster: Cannot set color profile.");
+      ret = 1;
+      goto out;
+    }
   }
 
  /*
@@ -2215,7 +2229,8 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   if ((outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE)) == 0) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "pwgtoraster: Can't open output raster stream.");
-    exit(1);
+    ret = 1;
+    goto out;
   }
 
  /*
@@ -2223,7 +2238,13 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   */
 
   memset(&convert, 0, sizeof(conversion_function_t));
-  selectConvertFunc(outras, &doc, &convert, log, ld);
+  if (selectConvertFunc(outras, &doc, &convert, log, ld) == 1)
+  {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "pwgtoraster: Unable to select color conversion function.");
+    ret = 1;
+    goto out;
+  }
 
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -2290,13 +2311,17 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "pwgtoraster: No page printed, outputting empty file.");
 
+ out:
+
  /*
   * Close the streams
   */
-  
-  cupsRasterClose(inras);
+
+  if (inras)
+    cupsRasterClose(inras);
   close(inputfd);
-  cupsRasterClose(outras);
+  if (outras)
+    cupsRasterClose(outras);
   close(outputfd);
 
  /*
@@ -2312,5 +2337,5 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
     cmsDeleteTransform(doc.color_profile.colorTransform);
   }
 
-  return 0;
+  return (ret);
 }
