@@ -113,7 +113,7 @@ universal(int inputfd,         /* I - File descriptor input stream */
       filter = malloc(sizeof(filter_filter_in_chain_t));
       filter->function = ghostscript;
       filter->parameters = outformat;
-      filter->name = "gstopdf";
+      filter->name = "ghostscript";
       cupsArrayAdd(filter_chain, filter);
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "universal: Adding %s to chain", filter->name);
@@ -178,7 +178,7 @@ universal(int inputfd,         /* I - File descriptor input stream */
       filter = malloc(sizeof(filter_filter_in_chain_t));
       filter->function = ghostscript;
       filter->parameters = outformat;
-      filter->name = "pstoraster";
+      filter->name = "ghostscript";
       cupsArrayAdd(filter_chain, filter);
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "universal: Adding %s to chain", filter->name);
@@ -235,9 +235,9 @@ universal(int inputfd,         /* I - File descriptor input stream */
 	  outformat = malloc(sizeof(filter_out_format_t));
 	  *outformat = OUTPUT_FORMAT_CUPS_RASTER;
 	  filter = malloc(sizeof(filter_filter_in_chain_t));
-	  filter->function = pdftoraster;
+	  filter->function = ghostscript;
 	  filter->parameters = outformat;
-	  filter->name = "pdftoraster";
+	  filter->name = "ghostscript";
 	  cupsArrayAdd(filter_chain, filter);
 	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		       "universal: Adding %s to chain",
