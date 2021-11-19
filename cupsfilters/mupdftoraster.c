@@ -80,7 +80,7 @@ parse_doc_type(FILE *fp, filter_logfunc_t log, void *ld)
     return 0;
 
   if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: input file cannot be identified");
-  exit(EXIT_FAILURE);
+  return -1;
 }
 
 static void
@@ -339,8 +339,9 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
 
 
   /* If doc type is not PDF exit */
-  if(parse_doc_type(fp, log, ld))
-     empty = 1;
+  empty = parse_doc_type(fp, log, ld);
+  if (empty == -1)
+    goto out;
 
   /*  Check status of color management in CUPS */
   cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);

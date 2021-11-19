@@ -62,8 +62,6 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
   filter_out_format_t output_format;
 
 
-  inras  = cupsRasterOpen(inputfd, CUPS_RASTER_READ);
-
   if (parameters)
   {
     output_format = *(filter_out_format_t *)parameters;
@@ -74,9 +72,11 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 " rastertopwg: Output format not specified.");
-    exit(1);
+		 "rastertopwg: Output format not specified.");
+    return (1);
   }
+
+  inras  = cupsRasterOpen(inputfd, CUPS_RASTER_READ);
 
   if (data->ppd == NULL && data->ppdfile)
     data->ppd = ppdOpenFile(data->ppdfile);
