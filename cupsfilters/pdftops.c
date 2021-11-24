@@ -1594,8 +1594,6 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
     * Child comes here...
     */
 
-    dup2(pstops_pipe[0], 0);
-    close(pstops_pipe[0]);
     close(pstops_pipe[1]);
     if (need_post_proc)
     {
@@ -1603,7 +1601,8 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
       close(post_proc_pipe[1]);
     }
 
-    ret = pstops(0, outputfd, 0, &pstops_filter_data, NULL);
+    ret = pstops(pstops_pipe[0], outputfd, 0, &pstops_filter_data, NULL);
+    close(pstops_pipe[0]);
 
     if (ret && log) log(ld, FILTER_LOGLEVEL_ERROR,
 			"pdftops: pstops filter function failed.");
