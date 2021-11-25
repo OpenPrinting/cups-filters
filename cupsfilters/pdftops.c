@@ -1252,8 +1252,6 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
       * Child comes here...
       */
 
-      dup2(post_proc_pipe[0], 0);
-      close(post_proc_pipe[0]);
       close(post_proc_pipe[1]);
       if (ppd)
       {
@@ -1264,7 +1262,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
       else
 	dup2(outputfd, 1);
 
-      fp = cupsFileStdin();
+      fp = cupsFileOpenFd(post_proc_pipe[0], "r");
 
       if (renderer == ACROREAD)
       {
@@ -1579,6 +1577,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 	    fwrite(buffer, 1, bytes, stdout);
 	}
       }
+      close(post_proc_pipe[0]);
 
       exit(0);
     }
