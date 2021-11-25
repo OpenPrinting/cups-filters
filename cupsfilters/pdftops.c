@@ -288,7 +288,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   cups_file_t	*fp;			/* Post-processing input file */
   int		pdf_pid,		/* Process ID for pdftops/gs */
 		pdf_argc = 0,		/* Number of args for pdftops/gs */
-		pstops_pid,		/* Process ID of pstops filter */
+		pstops_pid = 0,		/* Process ID of pstops filter */
 		pstops_pipe[2],		/* Pipe to pstops filter */
 		need_post_proc = 0,     /* Post-processing needed? */
 		post_proc_pid = 0,	/* Process ID of post-processing */
@@ -1103,7 +1103,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
     need_post_proc = 1;
 
  /*
-  * Execute "pdftops/gs/mutool [ | PS post-processing ] | pstops"...
+  * Execute "pdftops/gs/mutool [ | PS post-processing ] [ | pstops ]"...
   */
 
 
@@ -1111,15 +1111,18 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   * Create a pipe for each pair of subsequent processes. The variables
   * are named by the receiving process.
   */
-  
-  if (pipe(pstops_pipe))
-  {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pdftops: Unable to create pipe for pstops: %s",
-		 strerror(errno));
 
-    exit_status = 1;
-    goto error;
+  if (ppd)
+  {
+    if (pipe(pstops_pipe))
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftops: Unable to create pipe for pstops: %s",
+		   strerror(errno));
+
+      exit_status = 1;
+      goto error;
+    }
   }
 
   if (need_post_proc)
@@ -1147,10 +1150,14 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
       close(post_proc_pipe[0]);
       close(post_proc_pipe[1]);
     }
-    else
+    else if (ppd)
+    {
       dup2(pstops_pipe[1], 1);
-    close(pstops_pipe[0]);
-    close(pstops_pipe[1]);
+      close(pstops_pipe[0]);
+      close(pstops_pipe[1]);
+    }
+    else
+      dup2(outputfd, 1);
 
     if (renderer == PDFTOPS)
     {
@@ -1248,9 +1255,14 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
       dup2(post_proc_pipe[0], 0);
       close(post_proc_pipe[0]);
       close(post_proc_pipe[1]);
-      dup2(pstops_pipe[1], 1);
-      close(pstops_pipe[0]);
-      close(pstops_pipe[1]);
+      if (ppd)
+      {
+	dup2(pstops_pipe[1], 1);
+	close(pstops_pipe[0]);
+	close(pstops_pipe[1]);
+      }
+      else
+	dup2(outputfd, 1);
 
       fp = cupsFileStdin();
 
@@ -1588,47 +1600,51 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 		 "pdftops: Started post-processing (PID %d)", post_proc_pid);
   }
 
-  if ((pstops_pid = fork()) == 0)
+  if (ppd)
   {
-   /*
-    * Child comes here...
-    */
-
-    close(pstops_pipe[1]);
-    if (need_post_proc)
+    if ((pstops_pid = fork()) == 0)
     {
-      close(post_proc_pipe[0]);
-      close(post_proc_pipe[1]);
+     /*
+      * Child comes here...
+      */
+
+      close(pstops_pipe[1]);
+      if (need_post_proc)
+      {
+	close(post_proc_pipe[0]);
+	close(post_proc_pipe[1]);
+      }
+
+      ret = pstops(pstops_pipe[0], outputfd, 0, &pstops_filter_data, NULL);
+      close(pstops_pipe[0]);
+
+      if (ret && log) log(ld, FILTER_LOGLEVEL_ERROR,
+			  "pdftops: pstops filter function failed.");
+
+      close(outputfd);
+      exit(ret);
+    }
+    else if (pstops_pid < 0)
+    {
+     /*
+      * Unable to fork!
+      */
+
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pdftops: Unable to execute pstops program: %s",
+		   strerror(errno));
+
+      exit_status = 1;
+      goto error;
     }
 
-    ret = pstops(pstops_pipe[0], outputfd, 0, &pstops_filter_data, NULL);
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "pdftops: Started filter pstops (PID %d)", pstops_pid);
+
     close(pstops_pipe[0]);
-
-    if (ret && log) log(ld, FILTER_LOGLEVEL_ERROR,
-			"pdftops: pstops filter function failed.");
-
-    close(outputfd);
-    exit(ret);
-  }
-  else if (pstops_pid < 0)
-  {
-   /*
-    * Unable to fork!
-    */
-
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pdftops: Unable to execute pstops program: %s",
-		 strerror(errno));
-
-    exit_status = 1;
-    goto error;
+    close(pstops_pipe[1]);
   }
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pdftops: Started filter pstops (PID %d)", pstops_pid);
-
-  close(pstops_pipe[0]);
-  close(pstops_pipe[1]);
   if (need_post_proc)
   {
     close(post_proc_pipe[0]);
@@ -1639,7 +1655,7 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
   * Wait for the child processes to exit...
   */
 
-  wait_children = 2 + need_post_proc;
+  wait_children = 1 + need_post_proc + (ppd ? 1 : 0);
 
   while (wait_children > 0)
   {
