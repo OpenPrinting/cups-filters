@@ -30,6 +30,7 @@ universal(int inputfd,         /* I - File descriptor input stream */
   filter_input_output_format_t input_output_format;
   filter_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
+  int ret = 0;
 
   input_output_format = *(filter_input_output_format_t *)parameters;
   input = input_output_format.input_format;
@@ -207,6 +208,12 @@ universal(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "universal: Adding %s to chain", filter->name);
     }
+    else if (!strstr(input_type, "pdf"))
+    {
+      // Input format is not PDF and unknown -> Error
+      ret = 1;
+      goto out;
+    }
   }
   if (((strcmp(input_super, "image") &&
 	strcmp(input_type, "vnd.adobe-reader-postscript")) ||
@@ -294,11 +301,25 @@ universal(int inputfd,         /* I - File descriptor input stream */
 		       "universal: Adding %s to chain", filter->name);
 	  cupsArrayAdd(filter_chain, filter);
 	}
+	else
+	{
+	  // Output format is not PDF and unknown -> Error
+	  ret = 1;
+	  goto out;
+	}
       }
     }
   }
 
-  int ret = filterChain(inputfd, outputfd, inputseekable, data, filter_chain);
+ out:
+
+  if (ret) {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "universal: Unsupported combination of input and output formats: %s -> %s",
+		 input, output);
+  }
+  else
+    ret = filterChain(inputfd, outputfd, inputseekable, data, filter_chain);
 
   free(input_super);
   free(input_type);
