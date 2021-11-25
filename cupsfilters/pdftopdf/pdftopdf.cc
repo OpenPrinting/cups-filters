@@ -359,6 +359,9 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
       param.cropfit=1;
     }
   }
+  if (!param.autoprint && !param.autofit && !param.fitplot &&
+      !param.fillprint && !param.cropfit)
+    param.autoprint = true;
   }
 
   if (ppd && (ppd->landscape < 0)) { // direction the printer rotates landscape (90 or -90)
