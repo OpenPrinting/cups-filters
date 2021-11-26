@@ -23,6 +23,7 @@
 #include "file-private.h"
 #include "array-private.h"
 #include <regex.h>
+#include <sys/wait.h>
 
 
 /*
@@ -169,6 +170,7 @@ static cups_array_t	*CreateStringsArray(const char *s);
 static int		ExecCommand(const char *command, char **argv);
 static cups_file_t	*PipeCommand(int *pid, const char *command,
 				     char **argv, uid_t user);
+static int		ClosePipeCommand(cups_file_t *fp, int pid);
 
 
 /*
@@ -776,7 +778,7 @@ ppdCollectionGetPPD(
       }
       while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
 	bytes = write(fd, buffer, bytes);
-      cupsFileClose(fp);
+      ClosePipeCommand(fp, pid);
       close(fd);
       fp = cupsFileOpen(tempname, "r");
       unlink(tempname);
@@ -1419,7 +1421,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
       }
     }
 
-    cupsFileClose(fp);
+    ClosePipeCommand(fp, pid);
   }
   else
     if (log) log(ld, FILTER_LOGLEVEL_WARN,
@@ -2873,4 +2875,51 @@ PipeCommand(int        *pid,		/* O - Process ID or 0 on error */
   close(fds[1]);
 
   return (cupsFileOpenFd(fds[0], "r"));
+}
+
+
+/*
+ * 'ClosePipeCommand()' - Wait for the command called with PipeCommand() to
+ *                        finish and return the status.
+ */
+
+static int
+ClosePipeCommand(cups_file_t *fp,
+		 int pid)
+{
+  int		status,		 /* Exit status */
+                retval;		 /* Return value */
+
+
+ /*
+  * close the stream...
+  */
+
+  cupsFileClose(fp);
+
+ /*
+  * Wait for the child process to exit...
+  */
+
+  retval = 0;
+
+ retry_wait:
+  if (waitpid (pid, &status, 0) == -1)
+  {
+    if (errno == EINTR)
+      goto retry_wait;
+    else
+      goto out;
+  }
+
+  /* How did the filter function terminate */
+  if (WIFEXITED(status))
+    /* Via exit() anywhere or return() in the main() function */
+    retval = WEXITSTATUS(status);
+  else if (WIFSIGNALED(status))
+    /* Via signal */
+    retval = 256 * WTERMSIG(status);
+
+ out:
+  return(retval);
 }
