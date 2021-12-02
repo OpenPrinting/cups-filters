@@ -195,6 +195,7 @@ get_printer_attributes5(http_t *http_printer,
   int have_http, uri_status, host_port, i = 0, total_attrs = 0, fallback,
     cap = 0;
   char scheme[10], userpass[1024], host_name[1024], resource[1024];
+  http_encryption_t encryption;
   ipp_t *request, *response = NULL;
   ipp_attribute_t *attr;
   char valuebuffer[65536];
@@ -274,12 +275,17 @@ get_printer_attributes5(http_t *http_printer,
     return NULL;
   }
 
+  if (!strcmp(scheme, "ipps"))
+    encryption = HTTP_ENCRYPTION_ALWAYS;
+  else
+    encryption = HTTP_ENCRYPTION_IF_REQUESTED;
+
   /* Connect to the server if not already done */
   if (http_printer == NULL) {
     have_http = 0;
     if ((http_printer =
 	 httpConnect2 (host_name, host_port, NULL, AF_UNSPEC, 
-		       HTTP_ENCRYPT_IF_REQUESTED, 1, 3000, NULL)) == NULL) {
+		       encryption, 1, 3000, NULL)) == NULL) {
       log_printf(get_printer_attributes_log,
 		 "get-printer-attributes: Cannot connect to printer with URI %s.\n",
 		 uri);
