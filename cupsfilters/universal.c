@@ -224,13 +224,16 @@ universal(int inputfd,         /* I - File descriptor input stream */
        !strcmp(input_type, "pwg-raster")))
   {
     if (strcmp(output_type, "pdf")) {
-      filter = malloc(sizeof(filter_filter_in_chain_t));
-      filter->function = pdftopdf;
-      filter->parameters = strdup(output);
-      filter->name = "pdftopdf";
-      cupsArrayAdd(filter_chain, filter);
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "universal: Adding %s to chain", filter->name);
+      if (strcmp(input_type, "vnd.cups-pdf"))
+      {
+	filter = malloc(sizeof(filter_filter_in_chain_t));
+	filter->function = pdftopdf;
+	filter->parameters = strdup(output);
+	filter->name = "pdftopdf";
+	cupsArrayAdd(filter_chain, filter);
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "universal: Adding %s to chain", filter->name);
+      }
 
       if (strcmp(output_type, "vnd.cups-pdf"))
       {
