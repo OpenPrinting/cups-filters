@@ -146,6 +146,15 @@ extern int filterCUPSWrapper(int argc,
 			     int *JobCanceled);
 
 
+extern int filterTee(int inputfd,
+		     int outputfd,
+		     int inputseekable,
+		     filter_data_t *data,
+		     void *parameters);
+
+/* Parameters: Filename/path (const char *) to copy the data to */
+
+
 extern int filterPOpen(filter_function_t filter_func, /* I - Filter function */
 		       int inputfd,
 		       int outputfd,

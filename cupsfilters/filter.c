@@ -231,6 +231,84 @@ filterCUPSWrapper(
 
 
 /*
+ * 'filterTee()' - This filter function is mainly for debugging. it
+ *                 resembles the "tee" utility, passing through the
+ *                 data unfiltered and copying it to a file. The file
+ *                 name is simply given as parameter. This makes using
+ *                 the function easy (add it as item of a filter chain
+ *                 called via filterChain()) and can even be used more
+ *                 than once in the same filter chain (using different
+ *                 file names). In case of write error to the copy
+ *                 file, copying is stopped but the rest of the job is
+ *                 passed on to the next filter. If NULL is supplied
+ *                 as file name, the data is simply passed through
+ *                 without getting copied.
+ */
+
+int                            /* O - Error status */
+filterTee(int inputfd,         /* I - File descriptor input stream */
+	  int outputfd,        /* I - File descriptor output stream */
+	  int inputseekable,   /* I - Is input stream seekable? (unused) */
+	  filter_data_t *data, /* I - Job and printer data */
+	  void *parameters)    /* I - Filter-specific parameters (File name) */
+{
+  const char           *filename = (const char *)parameters;
+  ssize_t	       bytes, total = 0;      /* Bytes read/written */
+  char	               buffer[65536];         /* Read/write buffer */
+  filter_logfunc_t     log = data->logfunc;   /* Log function */
+  void                 *ld = data->logdata;   /* log function data */
+  int                  teefd = -1;            /* File descriptor for "tee"ed
+                                                 copy */
+
+
+  (void)inputseekable;
+
+  /* Open the "tee"ed copy file */
+  if (filename)
+    teefd = open(filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+
+  while ((bytes = read(inputfd, buffer, sizeof(buffer))) > 0)
+  {
+    total += bytes;
+    if (log)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "filterTee (%s): Passing on%s %d bytes, total %d bytes.",
+	  filename, teefd >= 0 ? " and copying" : "", bytes, total);
+
+    if (teefd >= 0)
+      if (write(teefd, buffer, (size_t)bytes) != bytes)
+      {
+	if (log)
+	  log(ld, FILTER_LOGLEVEL_ERROR,
+	      "filterTee (%s): Unable to write %d bytes to the copy, stopping copy, continuing job output.",
+	      filename, (int)bytes);
+	close(teefd);
+	teefd = -1;
+      }
+
+    if (write(outputfd, buffer, (size_t)bytes) != bytes)
+    {
+      if (log)
+	log(ld, FILTER_LOGLEVEL_ERROR,
+	    "filterTee (%s): Unable to pass on %d bytes.",
+	    filename, (int)bytes);
+      if (teefd >= 0)
+	close(teefd);
+      close(inputfd);
+      close(outputfd);
+      return (1);
+    }
+  }
+
+  if (teefd >= 0)
+    close(teefd);
+  close(inputfd);
+  close(outputfd);
+  return (0);
+}
+
+
+/*
  * 'filterPOpen()' - Pipe a stream to or from a filter function
  *                   Can be the input to or the output from the
  *                   filter function.
