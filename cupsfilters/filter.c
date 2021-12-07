@@ -712,7 +712,7 @@ add_env_var(char *name,   /* I - Name of environment variable to set */
       name_len;
 
 
-  if (!name || !env)
+  if (!name || !env || !name[0])
     return (-1);
 
   /* Assemble a "VAR=VALUE" string and the string length of "VAR" */
@@ -737,7 +737,7 @@ add_env_var(char *name,   /* I - Name of environment variable to set */
      value if it is there */
   if (*env)
     for (i = 0; (*env)[i]; i ++)
-      if (strncmp((*env)[i], p, name_len) == 0)
+      if (strncmp((*env)[i], p, name_len) == 0 && (*env)[i][name_len] == '=')
       {
 	free((*env)[i]);
 	(*env)[i] = p;
