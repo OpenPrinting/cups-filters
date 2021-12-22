@@ -3620,18 +3620,16 @@ remove_bad_chars(const char *str_orig, /* I - Original string */
   /* Add terminating zero */
   str[j] = '\0';
 
+  /* Cut off trailing separators */
+  while (strlen(str) > 0 && str[strlen(str) - 1] == sep)
+    str[strlen(str) - 1] = '\0';
+
+  /* Cut off leading separators */
   i = 0;
-  if (mode != 2) {
-    /* Cut off trailing separators */
-    while (strlen(str) > 0 && str[strlen(str)-1] == sep)
-      str[strlen(str)-1] = '\0';
+  while (str[i] == sep)
+    i ++;
 
-    /* Cut off leading separators */
-    while (str[i] == sep)
-      ++i;
-  }
-
-  /* keep a free()-able string. +1 for trailing \0 */
+  /* Keep a free()-able string. +1 for trailing \0 */
   return memmove(str, str + i, strlen(str) - i + 1);
 }
 
