@@ -36,6 +36,30 @@ typedef struct filter_function_pid_s    /* Filter in filter chain */
 
 
 /*
+ * 'fcntl_add_cloexec()' - Add FD_CLOEXEC flag to the flags
+ *                         of a given file descriptor.
+ */
+
+int                       /* Return value of fcntl() */
+fcntl_add_cloexec(int fd) /* File descriptor to add FD_CLOEXEC to */
+{
+  return fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
+}
+
+
+/*
+ * 'fcntl_add_nodelay()' - Add O_NODELAY flag to the flags
+ *                         of a given file descriptor.
+ */
+
+int                        /* Return value of fcntl() */
+fcntl_add_nonblock(int fd) /* File descriptor to add O_NONBLOCK to */
+{
+  return fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+}
+
+
+/*
  * 'cups_logfunc()' - Output log messages on stderr, compatible to CUPS,
  *                    meaning that the debug level is represented by a
  *                    prefix like "DEBUG: ", "INFO: ", ...
@@ -611,10 +635,12 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
        filter = next, current = 1 - current) {
     next = (filter_filter_in_chain_t *)cupsArrayNext(filter_chain);
 
-    if (filterfds[1 - current][1] > 1) {
+    if (filterfds[1 - current][0] > 1) {
       close(filterfds[1 - current][0]);
-      close(filterfds[1 - current][1]);
       filterfds[1 - current][0] = -1;
+    }
+    if (filterfds[1 - current][1] > 1) {
+      close(filterfds[1 - current][1]);
       filterfds[1 - current][1] = -1;
     }
 
@@ -626,6 +652,8 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 		     strerror(errno));
 	return (1);
       }
+      fcntl_add_cloexec(filterfds[1 - current][0]);
+      fcntl_add_cloexec(filterfds[1 - current][1]);
     } else
       filterfds[1 - current][1] = outputfd;
 
@@ -638,8 +666,10 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 
       infd = filterfds[current][0];
       outfd = filterfds[1 - current][1];
-      close(filterfds[current][1]);
-      close(filterfds[1 - current][0]);
+      if (filterfds[current][1] > 1)
+	close(filterfds[current][1]);
+      if (filterfds[1 - current][0] > 1)
+	close(filterfds[1 - current][0]);
 
       if (infd < 0)
 	infd = open("/dev/null", O_RDONLY);
@@ -685,15 +715,14 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
   * Close remaining pipes...
   */
 
-  if (filterfds[0][1] > 1) {
+  if (filterfds[0][0] > 1)
     close(filterfds[0][0]);
+  if (filterfds[0][1] > 1)
     close(filterfds[0][1]);
-  }
-
-  if (filterfds[1][1] > 1) {
+  if (filterfds[1][0] > 1)
     close(filterfds[1][0]);
+  if (filterfds[1][1] > 1)
     close(filterfds[1][1]);
-  }
 
  /*
   * Wait for the children to exit...
@@ -1155,20 +1184,37 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     */
 
     if (inputfd != 0) {
-      if (inputfd < 0)
+      if (inputfd < 0) {
         inputfd = open("/dev/null", O_RDONLY);
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "filterExternalCUPS (%s): No input file descriptor supplied for CUPS filter - %s",
+		   filter_name, strerror(errno));
+      }
 
       if (inputfd > 0) {
-        dup2(inputfd, 0);
+	fcntl_add_cloexec(inputfd);
+        if (dup2(inputfd, 0) < 0) {
+	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		       "filterExternalCUPS (%s): Failed to connect input file descriptor with CUPS filter's stdin - %s",
+		       filter_name, strerror(errno));
+	  goto fd_error;
+	} else
+	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		       "filterExternalCUPS (%s): Connected input file descriptor %d to CUPS filter's stdin.",
+		       filter_name, inputfd);
 	close(inputfd);
       }
-    }
+    } else
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "filterExternalCUPS (%s): Input comes from stdin, letting the filter grab stdin directly",
+		   filter_name);
 
     if (outputfd != 1) {
       if (outputfd < 0)
         outputfd = open("/dev/null", O_WRONLY);
 
       if (outputfd > 1) {
+	fcntl_add_cloexec(outputfd);
 	dup2(outputfd, 1);
 	close(outputfd);
       }
@@ -1178,14 +1224,17 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
       /* Send stderr to the Nirwana if we are running gziptoany, as
 	 gziptoany emits a false "PAGE: 1 1" */
       if ((fd = open("/dev/null", O_RDWR)) > 2) {
+	fcntl_add_cloexec(fd);
 	dup2(fd, 2);
 	close(fd);
       } else
         close(fd);
-    } else
+    } else {
       /* Send stderr into pipe for logging */
+      fcntl_add_cloexec(stderrpipe[1]);
       dup2(stderrpipe[1], 2);
-    fcntl(2, F_SETFL, O_NDELAY);
+      fcntl_add_nonblock(2);
+    }
     close(stderrpipe[0]);
     close(stderrpipe[1]);
 
@@ -1194,29 +1243,28 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
       if (backfd != 3 && backfd >= 0) {
 	dup2(backfd, 3);
 	close(backfd);
-	fcntl(3, F_SETFL, O_NDELAY);
+	fcntl_add_nonblock(3);
       } else if (backfd < 0) {
 	if ((backfd = open("/dev/null", O_RDWR)) > 3) {
 	  dup2(backfd, 3);
 	  close(backfd);
-	}
-	else
+	} else
 	  close(backfd);
-	fcntl(3, F_SETFL, O_NDELAY);
+	fcntl_add_nonblock(3);
       }
 
       /* Side channel */
       if (sidefd != 4 && sidefd >= 0) {
 	dup2(sidefd, 4);
 	close(sidefd);
-	fcntl(4, F_SETFL, O_NDELAY);
+	fcntl_add_nonblock(4);
       } else if (sidefd < 0) {
 	if ((sidefd = open("/dev/null", O_RDWR)) > 4) {
 	  dup2(sidefd, 4);
 	  close(sidefd);
 	} else
 	  close(sidefd);
-	fcntl(4, F_SETFL, O_NDELAY);
+	fcntl_add_nonblock(4);
       }
     }
 
@@ -1231,6 +1279,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 		 filter_name, params->is_backend ? "backend" : "filter",
 		 filter_path, strerror(errno));
 
+  fd_error:
     exit(errno);
   } else if (pid > 0) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
@@ -1246,6 +1295,10 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     status = 1;
     goto out;
   }
+  if (inputfd >= 0)
+    close(inputfd);
+  if (outputfd >= 0)
+    close(outputfd);
 
  /*
   * Log the filter's stderr
@@ -1429,12 +1482,10 @@ filterOpenBackAndSidePipes(
   * Set the "close on exec" flag on each end of the pipe...
   */
 
-  if (fcntl(data->back_pipe[0], F_SETFD,
-	    fcntl(data->back_pipe[0], F_GETFD) | FD_CLOEXEC))
+  if (fcntl_add_cloexec(data->back_pipe[0]))
     goto out;
 
-  if (fcntl(data->back_pipe[1], F_SETFD,
-	    fcntl(data->back_pipe[1], F_GETFD) | FD_CLOEXEC))
+  if (fcntl_add_cloexec(data->back_pipe[1]))
     goto out;
 
  /*
@@ -1448,18 +1499,14 @@ filterOpenBackAndSidePipes(
   * Make the side channel FDs non-blocking...
   */
 
-  if (fcntl(data->side_pipe[0], F_SETFL,
-	    fcntl(data->side_pipe[0], F_GETFL) | O_NONBLOCK))
+  if (fcntl_add_nonblock(data->side_pipe[0]))
     goto out;
-  if (fcntl(data->side_pipe[1], F_SETFL,
-	    fcntl(data->side_pipe[1], F_GETFL) | O_NONBLOCK))
+  if (fcntl_add_nonblock(data->side_pipe[1]))
     goto out;
 
-  if (fcntl(data->side_pipe[0], F_SETFD,
-	    fcntl(data->side_pipe[0], F_GETFD) | FD_CLOEXEC))
+  if (fcntl_add_cloexec(data->side_pipe[0]))
     goto out;
-  if (fcntl(data->side_pipe[1], F_SETFD,
-	    fcntl(data->side_pipe[1], F_GETFD) | FD_CLOEXEC))
+  if (fcntl_add_cloexec(data->side_pipe[1]))
     goto out;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,

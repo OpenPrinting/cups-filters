@@ -31,7 +31,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <cupsfilters/pdftoippprinter.h>
+#include <cupsfilters/filter.h>
 
 /*
  * Local globals...
@@ -44,7 +44,8 @@
 static int		job_canceled = 0; /* Set to 1 on SIGTERM */
 
 /*
- * Local functions... */
+ * Local functions...
+ */
 
 static void		sigterm_handler(int sig);
 
@@ -92,19 +93,11 @@ main(int  argc,				/* I - Number of command-line args */
   const char *ptr1 = NULL;
   char *ptr2,*ptr3,*ptr4;
   const char *job_id;
-  char    *filename,    /* PDF file to convert */
-           tempfile[1024],
-           tempfile_filter[1024];   /* Temporary file */
   int i;
   char dest_host[1024];	/* Destination host */
   ipp_t *request, *response;
   ipp_attribute_t *attr;
-  int     bytes;      /* Bytes copied */
   char uri[HTTP_MAX_URI];
-  char    *argv_nt[8];
-  int     outbuflen, filefd, savestdout, exit_status, dup_status;
-  char buf[1024];
-  const char *serverbin;
   static const char *pattrs[] =
                 {
                   "printer-defaults"
@@ -241,11 +234,17 @@ main(int  argc,				/* I - Number of command-line args */
       return (CUPS_BACKEND_RETRY_CURRENT);
     } else {
       /* We have the destination host name now, do the job */
-      const char *title;
+      char *title;
       int num_options = 0;
       cups_option_t *options = NULL;
-      int fd;
-      char buffer[8192];
+      int fd, nullfd;
+      filter_data_t filter_data;
+      filter_input_output_format_t input_output_format;
+      filter_external_cups_t ipp_backend_params;
+      filter_filter_in_chain_t universal_in_chain,
+	                       ipp_in_chain;
+      cups_array_t *filter_chain;
+      int retval;
 
       fprintf(stderr, "DEBUG: Received destination host name from cups-browsed: printer-uri %s\n",
 	      ptr1);
@@ -290,125 +289,95 @@ main(int  argc,				/* I - Number of command-line args */
       fprintf(stderr,"DEBUG: Received job for the printer with the destination uri - %s, Final-document format for the printer - %s and requested resolution - %s\n",
 	      printer_uri, document_format, resolution);
 
-      /* We need to send modified arguments to the IPP backend */
-      if (argc == 6) {
-	/* Copy stdin to a temp file...*/
-	if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0){
-	  fprintf(stderr,"Debug: Can't Read PDF file.\n");
-	  return CUPS_BACKEND_FAILED;
-	}
-	fprintf(stderr, "Debug: implicitclass - copying to temp print file \"%s\"\n",
-		tempfile);
-	while ((bytes = fread(buffer, 1, sizeof(buffer), stdin)) > 0)
-	  bytes = write(fd, buffer, bytes);
-	close(fd);
-	filename = tempfile;
-      } else {
-	/* Use the filename on the command-line... */
-	filename    = argv[6];
-	tempfile[0] = '\0';
-      }
+      /* Adjust option list for the universal() filter function call */
+      num_options = cupsAddOption("Resolution", resolution,
+				  num_options, &options);
+      num_options = cupsRemoveOption("cups-browsed-dest-printer",
+				     num_options, &options);
+      num_options = cupsRemoveOption("cups-browsed",
+				     num_options, &options);
 
-      /* Copying the argument to a new char** which will be sent to the filter
-	 and the ipp backend */
-      argv_nt[0] = calloc(strlen(printer_uri) + 8, sizeof(char));
-      strcpy(argv_nt[0], printer_uri);
-      for (i = 1; i < 5; i++)
-	argv_nt[i] = argv[i];
+      /* Set up filter data record to be used by the filter functions to
+	 process the job */
+      filter_data.printer = calloc(strlen(printer_uri) + 8, sizeof(char));
+      strcpy(filter_data.printer, printer_uri);
+      filter_data.job_id = atoi(argv[1]);
+      filter_data.job_user = argv[2];
+      filter_data.job_title = title;
+      filter_data.copies = atoi(argv[4]);
+      filter_data.job_attrs = NULL;        /* We use command line options */
+      filter_data.printer_attrs = NULL;    /* We use the queue's PPD file */
+      filter_data.num_options = num_options;
+      filter_data.options = options;       /* Command line options from 5th arg */
+      filter_data.ppdfile = getenv("PPD"); /* PPD file name in the "PPD"
+					      environment variable. */
+      filter_data.ppd = filter_data.ppdfile ?
+	ppdOpenFile(filter_data.ppdfile) : NULL;
+      /* Load PPD file */
+      filter_data.back_pipe[0] = -1;       /* CUPS back channel not supported */
+      filter_data.back_pipe[1] = -1;
+      filter_data.side_pipe[0] = -1;       /* CUPS side channel not supported */
+      filter_data.side_pipe[1] = -1;
+      filter_data.logfunc = cups_logfunc;  /* Logging scheme of CUPS */
+      filter_data.logdata = NULL;
+      filter_data.iscanceledfunc = cups_iscanceledfunc; /* Job-is-canceled
+							   function */
+      filter_data.iscanceleddata = &job_canceled;
+      filterOpenBackAndSidePipes(&filter_data);
 
-      /* Few new options will be added to the argv[5]*/
-      outbuflen = strlen(argv[5]) + 256;
-      argv_nt[5] = calloc(outbuflen, sizeof(char));
-      strcpy(argv_nt[5], (const char*)argv[5]);
+      /* Parameters (input/output MIME types) for universal() call */
+      input_output_format.input_format = "application/vnd.cups-pdf";
+      input_output_format.output_format = document_format;
 
-      /* Filter pdftoippprinter.c will read the input from this file*/
-      argv_nt[6] = filename;
-      argv_nt[7] = NULL;
-      set_option_in_str(argv_nt[5], outbuflen, "output-format",
-			document_format);
-      set_option_in_str(argv_nt[5], outbuflen, "Resolution",resolution);
-      set_option_in_str(argv_nt[5], outbuflen, "cups-browsed-dest-printer",NULL);
-      set_option_in_str(argv_nt[5], outbuflen, "cups-browsed",NULL);
+      /* Parameters for filterExternalCUPS() call for IPP backend */
+      ipp_backend_params.filter = "ipp";
+      ipp_backend_params.is_backend = 1;
+      ipp_backend_params.device_uri = printer_uri;
+      ipp_backend_params.num_options = 0;
+      ipp_backend_params.options = NULL;
+      ipp_backend_params.envp = NULL;
+
+      /* Filter chain entry for the universal() filter function call */
+      universal_in_chain.function = universal;
+      universal_in_chain.parameters = &input_output_format;
+      universal_in_chain.name = "Filters";
+
+      /* Filter chain entry for the IPP CUPS backend call */
+      ipp_in_chain.function = filterExternalCUPS;
+      ipp_in_chain.parameters = &ipp_backend_params;
+      ipp_in_chain.name = "Backend";
+
+      filter_chain = cupsArrayNew(NULL, NULL);
+      cupsArrayAdd(filter_chain, &universal_in_chain);
+      cupsArrayAdd(filter_chain, &ipp_in_chain);
+
+      /* DEVICE_URI environment variable */
       setenv("DEVICE_URI",printer_uri, 1);
-      fprintf(stderr, "Setting the device uri to  %s\n",printer_uri);
-      fprintf(stderr, "Changed the argv[5] to %s\n",argv_nt[5]);
 
-      filefd = cupsTempFd(tempfile_filter, sizeof(tempfile_filter));
+      /* FINAL_CONTENT_TYPE environment variable */
+      setenv("FINAL_CONTENT_TYPE", document_format, 1);
 
-      /* The output of the last filter in pdftoippprinter will be
-         written to this file. We could have sent the output directly
-         to the backend, but having this temperory file will help us
-         find whether the filter worked correctly and what was the
-         document-format of the filtered output.*/
-      savestdout = dup(1);
-      dup_status = dup2(filefd, 1);
-      if(dup_status < 0) {
-        fprintf(stderr, "Could not write the output of pdftoippprinter printer to tmp file\n");
-        return CUPS_BACKEND_FAILED;
-      }
-      close(filefd);
+      /* Mark the defaults and option settings in the PPD file */
+      ppdMarkDefaults(filter_data.ppd);
+      ppdMarkOptions(filter_data.ppd, num_options, options);
 
-      /* Calling pdftoippprinter.c filter*/
-      apply_filters(7,argv_nt);
+      /* We call the IPP CUPS backend at the end of the chain, so we have
+	 no output */
+      nullfd = open("/dev/null", O_WRONLY);
 
-      /* Reset stdout to standard */
-      dup2(savestdout, 1);
-      close(savestdout);
+      /* Call the filter chain to run the needed filters and the backend */
+      retval = filterChain(fd, nullfd, fd != 0 ? 1 : 0, &filter_data,
+			   filter_chain);
 
-      /* We will send the filtered output of the pdftoippprinter.c to
-	 the IPP Backend*/
-      argv_nt[6] = tempfile_filter;
-      fprintf(stderr, "DEBUG: The filtered output of pdftoippprinter is written to file %s\n",
-	      tempfile_filter);
+      filterCloseBackAndSidePipes(&filter_data);
 
-      /* Setting the final content type to the best pdl supported by
-	 the printer.*/
-      if(!strcmp(document_format,"pdf"))
-	setenv("FINAL_CONTENT_TYPE", "application/pdf", 1);
-      else if(!strcmp(document_format,"raster"))
-	setenv("FINAL_CONTENT_TYPE", "image/pwg-raster", 1);
-      else if(!strcmp(document_format,"apple-raster"))
-	setenv("FINAL_CONTENT_TYPE", "image/urf", 1);
-      else if(!strcmp(document_format,"pclm"))
-	setenv("FINAL_CONTENT_TYPE", "application/PCLm", 1);
-      else if(!strcmp(document_format,"pclxl"))
-	setenv("FINAL_CONTENT_TYPE", "application/vnd.hp-pclxl", 1);
-      else if(!strcmp(document_format,"postscript"))
-	setenv("FINAL_CONTENT_TYPE", "application/postscript", 1);
-      else if(!strcmp(document_format,"pcl"))
-	setenv("FINAL_CONTENT_TYPE", "application/pcl", 1);
-
+      /* Clean up */
+      cupsArrayDelete(filter_chain);
       ippDelete(response);
-      fprintf(stderr, "Passing the following arguments to the ipp backend\n");
-      /* Arguments sent to the ipp backend */
-      for (i = 0; i < 7; i ++) {
-	fprintf(stderr, "argv[%d]: %s\n", i, argv_nt[i]);
-      }
 
-      /* The implicitclass backend will send the job directly to the
-	 ipp backend*/
-
-      pid_t pid = fork();
-      if (pid == 0) {
-	serverbin = getenv("CUPS_SERVERBIN");
-	if (serverbin == NULL)
-	  serverbin = CUPS_SERVERBIN;
-	snprintf(buf, sizeof(buf) - 1, "%s/backend/ipp", serverbin);
-	fprintf(stderr, "DEBUG: Started IPP Backend (%s) with pid: %d\n",
-		buf, getpid());
-	execv(buf, argv_nt);
-	fprintf(stderr, "ERROR: Could not start IPP Backend (%s): %d %s\n",
-		buf, errno, strerror(errno));
-	return CUPS_BACKEND_FAILED;
-      } else {
-	int status;
-	waitpid(pid, &status, 0);
-	if (WIFEXITED(status)) {
-	  exit_status = WEXITSTATUS(status);
-	  fprintf(stderr, "DEBUG: The IPP Backend exited with the status %d\n",
-		  exit_status);
-	}
-	return exit_status;
+      if (retval) {
+	fprintf(stderr, "ERROR: Job processing failed.\n");
+	return (CUPS_BACKEND_FAILED);
       }
     }
   } else if (argc != 1) {

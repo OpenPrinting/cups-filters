@@ -6532,22 +6532,22 @@ on_job_state (CupsNotifier *object,
       document_format = (char *)malloc(sizeof(char) * 32);
       if (cupsArrayFind(pdl_list, "application/vnd.cups-pdf") ||
 	  cupsArrayFind(pdl_list, "application/pdf"))
-	strcpy(document_format, "pdf");
+	strcpy(document_format, "application/vnd.cups-pdf");
       else if (cupsArrayFind(pdl_list, "image/urf"))
-	strcpy(document_format, "apple-raster");
+	strcpy(document_format, "image/urf");
       else if (cupsArrayFind(pdl_list, "image/pwg-raster"))
-	strcpy(document_format, "raster");
+	strcpy(document_format, "image/pwg-raster");
       else if (cupsArrayFind(pdl_list, "application/PCLm"))
-	strcpy(document_format, "pclm");
+	strcpy(document_format, "application/PCLm");
       else if (cupsArrayFind(pdl_list, "application/vnd.hp-pclxl"))
-	strcpy(document_format, "pclxl");
+	strcpy(document_format, "application/vnd.hp-pclxl");
       else if (cupsArrayFind(pdl_list, "application/vnd.cups-postscript") ||
 	       cupsArrayFind(pdl_list, "application/postscript"))
-	strcpy(document_format, "postscript");
+	strcpy(document_format, "application/postscript");
       else if (cupsArrayFind(pdl_list, "application/vnd.hp-pcl") ||
 	       cupsArrayFind(pdl_list, "application/pcl") ||
 	       cupsArrayFind(pdl_list, "application/x-pcl"))
-	strcpy(document_format, "pcl");
+	strcpy(document_format, "application/pcl");
 
       if (pdl_list)
         cupsArrayDelete(pdl_list);
@@ -7685,7 +7685,8 @@ void create_queue(void* arg) {
   ipp_t         *request;
   time_t        current_time;
   int           i, ap_remote_queue_id_line_inserted,
-                want_raw, num_cluster_printers = 0;
+                new_cupsfilter_line_inserted, want_raw,
+                num_cluster_printers = 0;
   char          *disabled_str;
   char          ppdgenerator_msg[1024];
   char          *ppdfile;
@@ -8293,9 +8294,31 @@ void create_queue(void* arg) {
 		 loadedppd, p->queue_name,
 		 " and doing client-side filtering of the job" ,
 		 buf);
+    new_cupsfilter_line_inserted = 0;
     ap_remote_queue_id_line_inserted = 0;
     while (cupsFileGets(in, line, sizeof(line))) {
-      if (!strncmp(line, "*Default", 8)) {
+      if (!strncmp(line, "*cupsFilter:", 12) ||
+	  !strncmp(line, "*cupsFilter2:", 13)) {
+	/* "*cupfFilter(2): ..." line: Remove it and replace the first
+	   one by a line which makes the data get converted to PDF
+	   (application/vnd.cups-pdf, pdftopdf filter applied) before
+	   being passed on to the backend */
+	if (new_cupsfilter_line_inserted == 0) {
+	  cupsFilePrintf(out, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
+	  new_cupsfilter_line_inserted = 1;
+	}
+	/* Find the end of the "*cupsFilter(2): ..." entry in the
+	   case it spans more than one line */
+	do {
+	  if (strlen(line) != 0) {
+	    char *ptr = line + strlen(line) - 1;
+	    while(isspace(*ptr) && ptr > line)
+	      ptr --;
+	    if (*ptr == '"')
+	      break;
+	  }
+	} while (cupsFileGets(in, line, sizeof(line)));
+      } else if (!strncmp(line, "*Default", 8)) {
 	strncpy(keyword, line + 8, sizeof(keyword) - 1);
 	if ((strlen(line) + 8) > 1023)
 	  keyword[1023] = '\0';
@@ -8386,7 +8409,8 @@ void create_queue(void* arg) {
 	  strncpy(p->nickname, ptr, nickname_len);
       }
     }
-    cupsFilePrintf(out,"*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
+    if (new_cupsfilter_line_inserted == 0)
+      cupsFilePrintf(out, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
 
     cupsFileClose(in);
     cupsFileClose(out);
