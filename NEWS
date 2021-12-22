@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- cups-browsed: Naming of local queues is matched to CUPS'
+	  current naming of temporary queues (no leading or trailing
+	  underscores), to avoid duplicates in print dialogs which
+	  support CUPS' temporary queues.
 	- libcupsfilters: Removed now obsolete apply_filters() API
 	  function to call a chain of external CUPS filter
 	  executables, as we have filter functions now and even can
