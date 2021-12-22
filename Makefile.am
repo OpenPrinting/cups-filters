@@ -407,7 +407,6 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/ipp.h \
 	cupsfilters/log.h \
 	cupsfilters/pdf.h \
-	cupsfilters/pdftoippprinter.h \
 	cupsfilters/pdfutils.h \
 	cupsfilters/ppdgenerator.h \
 	cupsfilters/raster.h
@@ -498,7 +497,6 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pdftopdf/qpdf_pdftopdf.h \
 	cupsfilters/pdftopdf/qpdf_cm.cc \
 	cupsfilters/pdftopdf/qpdf_cm.h \
-	cupsfilters/pdftoippprinter.c \
 	cupsfilters/pdftops.c \
 	cupsfilters/pdftoraster.cxx \
 	cupsfilters/pdfutils.c \

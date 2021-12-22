@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Removed now obsolete apply_filters() API
+	  function to call a chain of external CUPS filter
+	  executables, as we have filter functions now and even can
+	  call one or another filter executable (or even backend) via
+	  filterExternalCUPS().
 	- cups-browsed, implicitclass: Let the implicitclass backend
 	  use filter functions instead of calling filter executables.
 	- libcupsfilters, universal: Added the universal() filter
