@@ -552,8 +552,9 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
   int pwgraster = 0,
-    appleraster = 0,
-    cupsraster = 0;
+      appleraster = 0,
+      cupsraster = 0,
+      pclm = 0;
   const char *p;
   ppd_attr_t *ppd_attr;
   ipp_attribute_t *attr;
@@ -576,49 +577,79 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     pwgraster = 1;
   else if (final_content_type == OUTPUT_FORMAT_APPLE_RASTER)
     appleraster = 1;
+  else if (final_content_type == OUTPUT_FORMAT_PCLM)
+    pclm = 1;
   else
     cupsraster = 1;
-    /*  These values will be used in case we don't find supported resolutions
-        for given OUTFORMAT */
-  if((attr = ippFindAttribute(printer_attrs, "printer-resolution-default", IPP_TAG_RESOLUTION))!=NULL)
+
+  /* These values will be used in case we don't find supported resolutions
+     for given OUTFORMAT */
+  if ((attr = ippFindAttribute(printer_attrs, "printer-resolution-default",
+			       IPP_TAG_RESOLUTION)) != NULL)
   {
     ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
     const char *p = valuebuffer;
     xres = atoi(p);
-    if((p = strchr(p, 'x'))!=NULL) yres = atoi(p+1);
-    else yres = xres;
+    if ((p = strchr(p, 'x')) != NULL)
+      yres = atoi(p + 1);
+    else
+      yres = xres;
   }
-  /*  Finding supported resolution for given outFormat  */
-  if(pwgraster){
-    if((attr = ippFindAttribute(printer_attrs, "pwg-raster-document-resolution-supported",
-     IPP_TAG_RESOLUTION))!=NULL)
+  /* Finding supported resolution for given outFormat  */
+  if (pwgraster)
+  {
+    if ((attr = ippFindAttribute(printer_attrs,
+				 "pwg-raster-document-resolution-supported",
+				 IPP_TAG_RESOLUTION)) != NULL)
     {
-      strncpy(valuebuffer, ippGetString(attr, 0, NULL), 
-        sizeof(valuebuffer)-1);
+      strncpy(valuebuffer, ippGetString(attr, 0, NULL),
+	      sizeof(valuebuffer) - 1);
       const char *p = valuebuffer;
       xres = atoi(p);
-      if((p = strchr(p, 'x'))!=NULL)
-        yres = atoi(p+1);
-      else 
+      if ((p = strchr(p, 'x')) != NULL)
+        yres = atoi(p + 1);
+      else
         yres = xres;
     }
   }
-  else if(appleraster){
-    if((attr = ippFindAttribute(printer_attrs, "urf-supported",
-     IPP_TAG_KEYWORD))!=NULL)
+  else if (appleraster)
+  {
+    if ((attr = ippFindAttribute(printer_attrs, "urf-supported",
+				 IPP_TAG_KEYWORD))!=NULL)
     {
-      for(int i =0; i<ippGetCount(attr); i++){
+      for (int i = 0; i < ippGetCount(attr); i ++)
+      {
         const char *p = ippGetString(attr, i, NULL);
-        if(strncasecmp(p, "RS", 2)) continue;
+        if (strncasecmp(p, "RS", 2))
+	  continue;
         int lo; int hi;
-        lo = atoi(p+2);
-        if(lo==0) lo = -1;
+        lo = atoi(p + 2);
+        if (lo == 0)
+	  lo = -1;
         p = strchr(p, '-');
-        if(p) hi = atoi(p+1);
-        else hi = lo;
+        if (p)
+	  hi = atoi(p + 1);
+        else
+	  hi = lo;
         xres = hi;
         yres = hi;
       }
+    }
+  }
+  else if (pclm)
+  {
+    if ((attr = ippFindAttribute(printer_attrs,
+				 "pclm-source-resolution-default",
+				 IPP_TAG_RESOLUTION)) != NULL)
+    {
+      strncpy(valuebuffer, ippGetString(attr, 0, NULL),
+	      sizeof(valuebuffer) - 1);
+      const char *p = valuebuffer;
+      xres = atoi(p);
+      if ((p = strchr(p, 'x')) != NULL)
+        yres = atoi(p + 1);
+      else
+        yres = xres;
     }
   }
 
@@ -630,8 +661,10 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       log(ld, FILTER_LOGLEVEL_DEBUG,
 	  "Color space requested: #%d", *cspace);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"Final output format: %s Raster",
-	appleraster ? "Apple" : (cupsraster ? "CUPS" : "PWG"));
+	"Final output format: %s",
+	appleraster ? "Apple Raster" :
+	(pwgraster ? "PWG Raster" :
+	 (pclm ? "PCLm" : "CUPS Raster")));
   }
 
   if (ppd)
@@ -646,11 +679,12 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       pwgraster = 1;
       cupsraster = 0;
       appleraster = 0;
+      pclm = 0;
       if (log)
 	log(ld, FILTER_LOGLEVEL_DEBUG,
 	    "PWG Raster output requested (via \"PWGRaster\" PPD attribute)");
     }
-    if (pwgraster || appleraster) {
+    if (pwgraster || appleraster || pclm) {
       cupsRasterParseIPPOptions(h, data, pwgraster, 0);
       if ((pwgraster &&
 	   (ppd_attr = ppdFindAttr(ppd, "cupsPwgRasterDocumentTypeSupported",
@@ -689,6 +723,18 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	  res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
 					cspace, &hi_depth);
 	}
+      }
+      else if (pclm)
+      {
+	/* Color space is always SRGB 8 */
+	cspaces_available = "srgb_8";
+	color_mode = "auto";
+	hi_depth = 0;
+	if (log)
+	  log(ld, FILTER_LOGLEVEL_DEBUG,
+	      "For PCLm color mode is always SRGB 8-bit.");
+	res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
+				      cspace, &hi_depth);
       }
     }
   }
