@@ -1046,8 +1046,8 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "ghostscript: Input format: %s",
 		 (doc_type == GS_DOC_TYPE_PDF ? "PDF" :
-		  (doc_type == GS_DOC_TYPE_PDF ? "PostScript" :
-		   (doc_type == GS_DOC_TYPE_PDF ? "Empty file" :
+		  (doc_type == GS_DOC_TYPE_PS ? "PostScript" :
+		   (doc_type == GS_DOC_TYPE_EMPTY ? "Empty file" :
 		    "Unknown"))));
   }
   else
@@ -1058,11 +1058,11 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "ghostscript: Streaming mode, no checks for input format, zero-page input, instructions from previous filter");
   }
-/*  Find print-rendering-intent */
 
-    getPrintRenderIntent(data, &h);
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
-    	"Print rendering intent = %s", h.cupsRenderingIntent);
+  /* Find print-rendering-intent */
+  getPrintRenderIntent(data, &h);
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	      "Print rendering intent = %s", h.cupsRenderingIntent);
 
   /*  Check status of color management in CUPS */
   cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
