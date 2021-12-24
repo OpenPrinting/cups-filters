@@ -176,6 +176,8 @@ universal(int inputfd,         /* I - File descriptor input stream */
 	*outformat = OUTPUT_FORMAT_PWG_RASTER;
       else if(!strcmp(output_type, "urf"))
 	*outformat = OUTPUT_FORMAT_APPLE_RASTER;
+      else if(!strcmp(output_type, "PCLm"))
+	*outformat = OUTPUT_FORMAT_PCLM;
       filter = malloc(sizeof(filter_filter_in_chain_t));
       filter->function = ghostscript;
       filter->parameters = outformat;
@@ -184,8 +186,22 @@ universal(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "universal: Adding %s to chain", filter->name);
 
-      if (strcmp(output_type, "urf") && strcmp(output_type, "pwg-raster") &&
-	  strcmp(output_type, "vnd.cups-raster"))
+      if (!strcmp(output, "image/urf"))
+      {
+	filter = malloc(sizeof(filter_filter_in_chain_t));
+	outformat = malloc(sizeof(filter_out_format_t));
+	*outformat = OUTPUT_FORMAT_APPLE_RASTER;
+	filter->function = rastertopwg;
+	filter->parameters = outformat;
+	filter->name = "rastertopwg";
+	cupsArrayAdd(filter_chain, filter);
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "universal: Adding %s to chain",
+		     filter->name);
+      }
+      else if (strcmp(output_type, "pwg-raster") &&
+	       strcmp(output_type, "vnd.cups-raster") &&
+	       strcmp(output_type, "PCLm"))
       {
 	outformat = malloc(sizeof(filter_out_format_t));
 	*outformat = OUTPUT_FORMAT_PDF;
@@ -244,6 +260,12 @@ universal(int inputfd,         /* I - File descriptor input stream */
 	{
 	  outformat = malloc(sizeof(filter_out_format_t));
 	  *outformat = OUTPUT_FORMAT_CUPS_RASTER;
+	  if (!strcmp(output_type, "pwg-raster"))
+	    *outformat = OUTPUT_FORMAT_PWG_RASTER;
+	  else if(!strcmp(output_type, "urf"))
+	    *outformat = OUTPUT_FORMAT_APPLE_RASTER;
+	  else if(!strcmp(output_type, "PCLm"))
+	    *outformat = OUTPUT_FORMAT_PCLM;
 	  filter = malloc(sizeof(filter_filter_in_chain_t));
 	  filter->function = ghostscript;
 	  filter->parameters = outformat;
@@ -253,33 +275,7 @@ universal(int inputfd,         /* I - File descriptor input stream */
 		       "universal: Adding %s to chain",
 		       filter->name);
 
-	  if (!strcmp(output, "image/pwg-raster"))
-	  {
-	    outformat = malloc(sizeof(filter_out_format_t));
-	    filter = malloc(sizeof(filter_filter_in_chain_t));
-	    *outformat = OUTPUT_FORMAT_PWG_RASTER;
-	    filter->function = rastertopwg;
-	    filter->parameters = outformat;
-	    filter->name = "rastertopwg";
-	    cupsArrayAdd(filter_chain, filter);
-	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			 "universal: Adding %s to chain",
-			 filter->name);
-	  }
-	  else if (!strcmp(output, "application/PCLm"))
-	  {
-	    outformat = malloc(sizeof(filter_out_format_t));
-	    *outformat = OUTPUT_FORMAT_PCLM;
-	    filter = malloc(sizeof(filter_filter_in_chain_t));
-	    filter->function = rastertopdf;
-	    filter->parameters = outformat;
-	    filter->name = "rastertopclm";
-	    cupsArrayAdd(filter_chain, filter);
-	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			 "universal: Adding %s to chain",
-			 filter->name);
-	  }
-	  else if (!strcmp(output, "image/urf"))
+	  if (!strcmp(output, "image/urf"))
 	  {
 	    filter = malloc(sizeof(filter_filter_in_chain_t));
 	    outformat = malloc(sizeof(filter_out_format_t));
