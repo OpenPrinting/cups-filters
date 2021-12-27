@@ -792,6 +792,18 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
 				    cspace, &hi_depth);
     }
+    else if (pclm)
+    {
+      /* Color space is always SRGB 8 */
+      cspaces_available = "srgb_8";
+      color_mode = "auto";
+      hi_depth = 0;
+      if (log)
+	log(ld, FILTER_LOGLEVEL_DEBUG,
+	    "For PCLm color mode is always SRGB 8-bit.");
+      res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
+				    cspace, &hi_depth);
+    }
   }
 
   if (res != 1) {
