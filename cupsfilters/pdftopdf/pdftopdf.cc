@@ -867,7 +867,8 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 				     "%s => pdftopdf will %slog pages in "
 				     "page_log.",
 				     (lastfilter ? lastfilter : "None"),
-				     final_content_type,
+				     (final_content_type ? final_content_type :
+				      "(not supplied)"),
 				     (param.page_logging == 0 ? "not " : ""));
     }
   }
