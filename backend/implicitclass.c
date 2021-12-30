@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <cupsfilters/filter.h>
+#include <cupsfilters/ipp.h>
 
 /*
  * Local globals...
@@ -276,7 +277,7 @@ main(int  argc,				/* I - Number of command-line args */
 	ptr3++;
       }
 
-      /* Finding the resolution requested for the job*/
+      /* Finding the resolution requested for the job */
       if ((ptr4 = strchr(ptr3, ' ')) != NULL) {
 	*ptr4='\0';
 	ptr4++;
@@ -299,24 +300,26 @@ main(int  argc,				/* I - Number of command-line args */
 
       /* Set up filter data record to be used by the filter functions to
 	 process the job */
-      filter_data.printer = calloc(strlen(printer_uri) + 8, sizeof(char));
-      strcpy(filter_data.printer, printer_uri);
+      filter_data.printer = printer_uri;
       filter_data.job_id = atoi(argv[1]);
       filter_data.job_user = argv[2];
       filter_data.job_title = title;
       filter_data.copies = atoi(argv[4]);
       filter_data.job_attrs = NULL;        /* We use command line options */
-      filter_data.printer_attrs = NULL;    /* We use the queue's PPD file */
+      filter_data.printer_attrs =
+	get_printer_attributes4(printer_uri, NULL, 0, NULL, 0, 1, 0);
+                                           /* Poll the printer attributes from
+					      the printer */
       filter_data.num_options = num_options;
-      filter_data.options = options;       /* Command line options from 5th arg */
-      filter_data.ppdfile = getenv("PPD"); /* PPD file name in the "PPD"
-					      environment variable. */
-      filter_data.ppd = filter_data.ppdfile ?
-	ppdOpenFile(filter_data.ppdfile) : NULL;
-      /* Load PPD file */
-      filter_data.back_pipe[0] = -1;       /* CUPS back channel not supported */
+      filter_data.options = options;       /* Command line options from 5th
+					      arg */
+      filter_data.ppdfile = NULL;          /* We poll the IPP attributes from
+					      printer as the queue's PPD is
+					      for the cluster */
+      filter_data.ppd = NULL;
+      filter_data.back_pipe[0] = -1;
       filter_data.back_pipe[1] = -1;
-      filter_data.side_pipe[0] = -1;       /* CUPS side channel not supported */
+      filter_data.side_pipe[0] = -1;
       filter_data.side_pipe[1] = -1;
       filter_data.logfunc = cups_logfunc;  /* Logging scheme of CUPS */
       filter_data.logdata = NULL;
