@@ -545,6 +545,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 						        no suitable color space
 						        found. */
 {
+  int i;
   ppd_file_t *ppd;
   ipp_t *printer_attrs, *job_attrs;
   int num_options = 0;
@@ -564,7 +565,9 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   char valuebuffer[2048];
   int res = 1;
   int xres = -1; int yres = -1;
-  
+  double margins[4];
+  double dimensions[2];
+
   printer_attrs = data->printer_attrs;
   job_attrs = data->job_attrs;
 
@@ -671,7 +674,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   {
     if (log)
       log(ld, FILTER_LOGLEVEL_DEBUG, "PPD file present");
-    ppdRasterInterpretPPD(h, ppd, num_options, options, 0);
+    ppdRasterInterpretPPD(h, ppd, num_options, options, NULL);
     if ((ppd_attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
 	(!strcasecmp(ppd_attr->value, "true") ||
 	 !strcasecmp(ppd_attr->value, "on") ||
@@ -684,6 +687,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	log(ld, FILTER_LOGLEVEL_DEBUG,
 	    "PWG Raster output requested (via \"PWGRaster\" PPD attribute)");
     }
+
     if (pwgraster || appleraster || pclm) {
       cupsRasterParseIPPOptions(h, data, pwgraster, 0);
       if ((pwgraster &&
@@ -737,6 +741,16 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 				      cspace, &hi_depth);
       }
     }
+
+    for (i = 0; i < 2; i ++)
+      dimensions[i] = h->PageSize[i];
+    if (cupsraster) {
+      margins[0] = h->cupsImagingBBox[0];
+      margins[1] = h->cupsImagingBBox[1];
+      margins[2] = dimensions[0] - h->cupsImagingBBox[2];
+      margins[3] = dimensions[1] - h->cupsImagingBBox[3];
+    } else
+      memset(margins, 0, sizeof(margins));
   }
   else
   {
@@ -761,6 +775,14 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       }
     }
     cupsRasterParseIPPOptions(h, data, pwgraster, 1);
+    if (ippRasterMatchIPPSize(h, data, margins, dimensions, NULL, NULL) < 0) {
+      for (i = 0; i < 2; i ++)
+	dimensions[i] = h->PageSize[i];
+      memset(margins, 0, sizeof(margins));
+    }
+    if (!cupsraster)
+      memset(margins, 0, sizeof(margins));
+
     if (printer_attrs &&
 	((pwgraster &&
 	  (attr = ippFindAttribute(printer_attrs,
@@ -858,6 +880,43 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     h->cupsWidth = h->HWResolution[0] * h->PageSize[0] / 72;
     h->cupsHeight = h->HWResolution[1] * h->PageSize[1] / 72;
   }
+
+  /* Make all page geometry fields in the header consistent */
+  if (cupsraster) {
+    h->cupsWidth = ((dimensions[0] - margins[0] - margins[2]) /
+		    72.0 * h->HWResolution[0]) + 0.5;
+    h->cupsHeight = ((dimensions[1] - margins[1] - margins[3]) /
+		     72.0 * h->HWResolution[1]) + 0.5;
+  } else {
+    h->cupsWidth = (dimensions[0] /
+		    72.0 * h->HWResolution[0]) + 0.5;
+    h->cupsHeight = (dimensions[1] /
+		     72.0 * h->HWResolution[1]) + 0.5;
+  }
+  for (i = 0; i < 2; i ++) {
+    h->cupsPageSize[i] = dimensions[i];
+    h->PageSize[i] = (unsigned int)(h->cupsPageSize[i] + 0.5);
+    if (cupsraster)
+      h->Margins[i] = margins[i] + 0.5;
+    else
+      h->Margins[i] = 0;
+  }
+  if (cupsraster) {
+    h->cupsImagingBBox[0] = margins[0];
+    h->cupsImagingBBox[1] = margins[1];
+    h->cupsImagingBBox[2] = dimensions[0] - margins[2];
+    h->cupsImagingBBox[3] = dimensions[1] - margins[3];
+    for (i = 0; i < 4; i ++)
+      h->ImagingBoundingBox[i] =
+	(unsigned int)(h->cupsImagingBBox[i] + 0.5);
+  } else
+    for (i = 0; i < 4; i ++) {
+      h->cupsImagingBBox[i] = 0.0;
+      h->ImagingBoundingBox[i] = 0;
+    }
+  h->cupsBytesPerLine = (h->cupsBitsPerPixel * h->cupsWidth + 7) / 8;
+  if (h->cupsColorOrder == CUPS_ORDER_BANDED)
+    h->cupsBytesPerLine *= h->cupsNumColors;
 
   cupsFreeOptions(num_options, options);
 
@@ -1161,7 +1220,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     for (option = ppdFirstOption(data->ppd); option;
 	 option = ppdNextOption(data->ppd))
       num_options = cupsRemoveOption(option->keyword, num_options, &options);
-  }
+  } else if (set_defaults)
+    memset(h, 0, sizeof(cups_page_header2_t));
 
  /*
   * Check if the supplied "media" option is a comma-separated list of any
@@ -1591,7 +1651,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       (val = cupsGetOption("Orientation", num_options, options)) != NULL)
   {
     if (!strcasecmp(val, "Portrait") ||
-	!strcasecmp(val, "3"))
+	!strcasecmp(val, "3") ||
+	!strcasecmp(val, "0"))
       h->Orientation = CUPS_ORIENT_0;
     else if (!strcasecmp(val, "Landscape") ||
 	     !strcasecmp(val, "4"))
@@ -1604,8 +1665,8 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	     !strcasecmp(val, "ReverseLandscape") ||
 	     !strcasecmp(val, "6"))
       h->Orientation = CUPS_ORIENT_270;
-    else
-      fprintf(stderr, "DEBUG: Unsupported Orientation \"%s\".\n", val);
+    else if (set_defaults)
+      h->Orientation = CUPS_ORIENT_0;
   }
   else if (set_defaults)
     h->Orientation = CUPS_ORIENT_0;
