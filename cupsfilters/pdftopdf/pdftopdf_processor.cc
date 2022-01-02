@@ -260,6 +260,19 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 				    "Do not scale, center, crop if needed" :
 				    "Not defined, should never happen"))));
 
+  // In Crop mode we do not scale the original document, it should keep the
+  // exact same size. With N-Up it should be scaled to fit exacly the halves,
+  // quarters, ... of the sheet, regardless of unprintable margins.
+  // Therefore we remove the unprintable margins to do all the math without
+  // them.
+  if (param.cropfit)
+  {
+    param.page.left = 0;
+    param.page.bottom = 0;
+    param.page.right = param.page.width;
+    param.page.top = param.page.height;
+  }
+
   if (param.fillprint || param.cropfit)
   {
     for (int i = 0; i < (int)pages.size(); i ++)
@@ -272,6 +285,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
       page->crop(param.page, orientation, param.xpos, param.ypos,
 		 !param.cropfit, doc);
     }
+    if (param.fillprint)
+      param.fitplot = true;
   }
 
   std::shared_ptr<PDFTOPDF_PageHandle> curpage;
@@ -304,8 +319,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
     // TODO? better
     if (param.nup.nupX != 1 || param.nup.nupY != 1 || param.fitplot)
     {
-      xpos = param.page.bottom;
-      ypos = param.page.width - param.page.right;
+      xpos = param.page.height - param.page.top;
+      ypos = param.page.left;
     }
     std::swap(param.page.width, param.page.height);
     std::swap(param.nup.width, param.nup.height);

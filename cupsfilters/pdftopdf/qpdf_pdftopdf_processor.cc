@@ -210,9 +210,10 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
       final_h = height;
     }
   }
-  else{
-    final_w = std::min(width,pageWidth);
-    final_h = std::min(height,pageHeight);
+  else
+  {
+    final_w = pageWidth;
+    final_h = pageHeight;
   }
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
 	      "pdftopdf: After Cropping: %lf %lf %lf %lf",
