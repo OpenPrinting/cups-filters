@@ -1451,11 +1451,14 @@ main(int  argc,				/* I - Number of command-line arguments */
             switch (header.cupsColorSpace)
 	    {
 	      case CUPS_CSPACE_W :
+	      case CUPS_CSPACE_SW :
 	          format_W(&header, row, y, plane, z->xsize, z->ysize,
 		           yerr0, yerr1, r0, r1);
 		  break;
               default :
 	      case CUPS_CSPACE_RGB :
+	      case CUPS_CSPACE_SRGB :
+	      case CUPS_CSPACE_ADOBERGB :
 	          format_RGB(&header, row, y, plane, z->xsize, z->ysize,
 		             yerr0, yerr1, r0, r1);
 		  break;
