@@ -335,6 +335,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "imagetoraster: Unable to copy input: %s",
 		   strerror(errno));
+      fclose(fp);
       return (1);
     }
 
