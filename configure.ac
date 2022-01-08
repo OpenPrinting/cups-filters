@@ -815,7 +815,7 @@ AC_ARG_WITH([test-font-path],
 )
 
 AS_IF([test "x$cross_compiling" != "xyes" && ! test -f "$with_test_font_path"],
-	[AC_MSG_ERROR(DejaVuSans.ttf font file is missing. Please install a package providing it.)]
+	[AC_MSG_WARN(DejaVuSans.ttf font file is missing. Please install a package providing it.) && [with_test_font_path=no]]
 )
 AC_DEFINE_UNQUOTED([TESTFONT], ["$with_test_font_path"], [Path to font used in tests])
 
