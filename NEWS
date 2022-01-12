@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.28.10 - 2021-08-17
 
 CHANGES IN V1.28.11
 
+	- Build system: Make missing DejaVuSans.ttf non-fatal in
+	  ./configure as the font is only needed for test programs,
+	  not for actual use of cups-filters (Issue #411).
 	- libcupsfilters: Let colord_get_profile_for_device_id() not
 	  return empty file name, to avoid error messages in CUPS
 	  error_log.
