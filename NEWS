@@ -370,8 +370,8 @@ CHANGES IN V2.0.0
 	  pdftopdf into the pdftopdf() filter function (Pull request
 	  #301, #307).
 	- Build system: Let ./configure not error out when there is
-	  more than one DejaVuSans.ttf test font candidate (Issue
-	  #300).
+	  more than one DejaVuSans.ttf test font candidate or if there
+	  is no DejaVuSans.ttf at all installed (Issue #300, #411).
 	- cups-browsed: Crash when a remote printer set as default
 	  gets removed, due to missing variable in printf() call
 	  (Issue #299).
