@@ -1197,11 +1197,6 @@ ieee1284NormalizeMakeAndModel(
 	    extraptr --;
 	else
 	{
-	  /* If extra info starts with parenthese and a closing parenthese is
-	     also present, take only what is in the parentheses */
-	  if (*extraptr == '(' &&
-	      (bufptr = strchr(extraptr, ')')) != NULL)
-	    *bufptr = '\0';
 	  /* Let extra info start at first alphanumeric character */
 	  while(!isalnum(*extraptr) && *extraptr != '\0')
 	    extraptr ++;
