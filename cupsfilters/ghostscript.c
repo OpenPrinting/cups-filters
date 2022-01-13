@@ -927,6 +927,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		     "ghostscript: Unable to copy PDF file: %s", strerror(errno));
+	fclose(fp);
 	return (1);
       }
 
