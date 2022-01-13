@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.28.10 - 2021-08-17
 
 CHANGES IN V1.28.11
 
+	- libcupsfilters: Make cupsRasterParseIPPOptions() work correctly
+	  with PPDs (Issue #436).
 	- Build system: Make missing DejaVuSans.ttf non-fatal in
 	  ./configure as the font is only needed for test programs,
 	  not for actual use of cups-filters (Issue #411).
