@@ -2764,6 +2764,10 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
  /*
   * ColorModel...
   */
+  if ((defattr = ippFindAttribute(response, "print-color-mode-default",
+				  IPP_TAG_KEYWORD)) == NULL)
+    defattr = ippFindAttribute(response, "output-mode-default",
+			       IPP_TAG_KEYWORD);
 
   if ((attr = ippFindAttribute(response, "urf-supported", IPP_TAG_KEYWORD)) ==
       NULL)
@@ -2781,6 +2785,17 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     int first_choice = 1,
       have_bi_level = 0,
       have_mono = 0;
+
+    if ((keyword = ippGetString(defattr, 0, NULL)) != NULL)
+    {
+      if (!strcmp(keyword, "bi-level"))
+        default_color = "FastGray";
+      else if (!strcmp(keyword, "monochrome") ||
+	       !strcmp(keyword, "auto-monochrome"))
+        default_color = "Gray";
+      else
+        default_color = "RGB";
+    }
 
     cupsFilePrintf(fp, "*%% ColorModel from %s\n", ippGetName(attr));
 
@@ -2829,7 +2844,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		       (human_readable2 ? human_readable2 :
 			_cupsLangString(lang, _("Grayscale"))));
 
-        if (!default_color || !strcmp(default_color, "FastGray"))
+        if (!default_color || (!defattr && !strcmp(default_color, "FastGray")))
 	  default_color = "Gray";
       } else if (!strcasecmp(keyword, "sgray_16") ||
 		 !strncmp(keyword, "W8-16", 5) ||
@@ -2845,7 +2860,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
         cupsFilePrintf(fp, "*ColorModel Gray16/%s: \"<</cupsColorSpace 18/cupsBitsPerColor 16/cupsColorOrder 0/cupsCompression 0>>setpagedevice\"\n",
 		       _cupsLangString(lang, _("Deep Gray (High Definition Grayscale)")));
 
-        if (!default_color || !strcmp(default_color, "FastGray"))
+	if (!default_color || (!defattr && !strcmp(default_color, "FastGray")))
 	  default_color = "Gray16";
       } else if (!strcasecmp(keyword, "srgb_8") ||
 		 !strncmp(keyword, "SRGB24", 6) ||
@@ -2865,7 +2880,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		       (human_readable2 ? human_readable2 :
 			_cupsLangString(lang, _("Color"))));
 
-	default_color = "RGB";
+	if (!defattr)
+	  default_color = "RGB";
       } else if ((!strcasecmp(keyword, "srgb_16") ||
 		  !strncmp(keyword, "SRGB48", 6)) &&
 		 !ippContainsString(attr, "srgb_8")) {
@@ -2884,7 +2900,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		       (human_readable2 ? human_readable2 :
 			_cupsLangString(lang, _("Color"))));
 
-	default_color = "RGB";
+        if (!default_color)
+	  default_color = "RGB";
 
 	/* Apparently some printers only advertise color support, so make sure
            we also do grayscale for these printers... */
@@ -3016,7 +3033,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     if (default_pagesize != NULL) {
       /* Here we are dealing with a cluster, if the default cluster color
          is not supplied we set it Gray*/
-      if (default_cluster_color != NULL) {
+      if (default_cluster_color != NULL && (!default_color || !defattr)) {
 	default_color = default_cluster_color;
       } else
 	default_color = "Gray";
