@@ -6,15 +6,17 @@ CHANGES IN V1.28.11
 	- Braille: In vectortopdf check inkscape version to call
 	  inkscape with the correct command line (Issue #315, Pull
 	  request #443).
+	- Build system: Make missing DejaVuSans.ttf non-fatal in
+	  ./configure as the font is only needed for test programs,
+	  not for actual use of cups-filters (Issue #411).
+	- libcupsfilters: In imagetoraster() fixed crash with SGray
+          (Issue #435).
 	- cups-browsed: Naming of local queues is matched to CUPS'
 	  current naming of temporary queues (no leading or trailing
 	  underscores), to avoid duplicates in print dialogs which
 	  support CUPS' temporary queues.
 	- libcupsfilters: Make cupsRasterParseIPPOptions() work correctly
 	  with PPDs (Issue #436).
-	- Build system: Make missing DejaVuSans.ttf non-fatal in
-	  ./configure as the font is only needed for test programs,
-	  not for actual use of cups-filters (Issue #411).
 	- libcupsfilters: Let colord_get_profile_for_device_id() not
 	  return empty file name, to avoid error messages in CUPS
 	  error_log.
