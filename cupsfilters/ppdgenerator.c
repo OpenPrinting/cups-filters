@@ -2526,6 +2526,10 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
  /*
   * ColorModel...
   */
+  if ((defattr = ippFindAttribute(response, "print-color-mode-default",
+				  IPP_TAG_KEYWORD)) == NULL)
+    defattr = ippFindAttribute(response, "output-mode-default",
+			       IPP_TAG_KEYWORD);
 
   if ((attr = ippFindAttribute(response, "print-color-mode-supported",
 			       IPP_TAG_KEYWORD)) == NULL)
@@ -2537,6 +2541,22 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
   if (attr && ippGetCount(attr) > 0) {
     const char *default_color = NULL;	/* Default */
     int first_choice = 1;
+
+    if ((keyword = ippGetString(defattr, 0, NULL)) != NULL)
+    {
+      if (!strcmp(keyword, "bi-level"))
+        default_color = "FastGray";
+      else if (!strcmp(keyword, "process-bi-level"))
+        default_color = "ProcessFastGray";
+      else if (!strcmp(keyword, "auto-monochrome"))
+        default_color = "AutoGray";
+      else if (!strcmp(keyword, "monochrome"))
+        default_color = "Gray";
+      else if (!strcmp(keyword, "process-monochrome"))
+        default_color = "ProcessGray";
+      else
+        default_color = "RGB";
+    }
 
     cupsFilePrintf(fp, "*%% ColorModel from %s\n", ippGetName(attr));
 
@@ -2599,7 +2619,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
         cupsFilePrintf(fp, "*ColorModel Gray/%s: \"\"\n",
 		       (human_readable2 ? human_readable2 : "Monochrome"));
 
-        if (!default_color || !strcmp(default_color, "FastGray"))
+        if (!default_color || (!defattr && !strcmp(default_color, "FastGray")))
 	  default_color = "Gray";
       } else if (!strcmp(keyword, "process-monochrome")) {
         if (first_choice) {
@@ -2630,7 +2650,8 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
         cupsFilePrintf(fp, "*ColorModel RGB/%s: \"\"\n",
 		       (human_readable2 ? human_readable2 : "Color"));
 
-	default_color = "RGB";
+        if (!default_color)
+	  default_color = "RGB";
 
 	/* Apparently some printers only advertise color support, so make sure
            we also do grayscale for these printers... */
