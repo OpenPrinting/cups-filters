@@ -59,11 +59,24 @@ fi
 
 checkTool inkscape inkscape "embossing ${INPUT_FORMAT} vector images"
 
-INKSCAPE="inkscape -z --export-area-drawing"
+INKSCAPE="inkscape --export-area-drawing"
 
 echo "INFO: Converting image" 1>&2
 printf "DEBUG: Calling $INKSCAPE on '%s'\n" "$FILE_FORMAT" 1>&2
-$INKSCAPE -A "$FILE_PDF" "$FILE_FORMAT"
+
+CURR_VERSION=$(inkscape --version | awk '{print $2}')
+NEW_VERSION='1.0'
+
+printf "DEBUG: Inkscape version: '%s'\n" "$CURR_VERSION" 1>&2
+
+# Inkscape versions 1.0.x and greater do not support '-A' flag
+
+if [ $(printf '%s\n' "$NEW_VERSION" "$CURR_VERSION" | sort -V | head -n1) = "$NEW_VERSION" ]; then
+	$INKSCAPE --export-type=pdf --export-filename="$FILE_PDF" "$FILE_FORMAT"
+else
+	$INSCKAPE -z -A "$FILE_PDF" "$FILE_FORMAT"
+fi
+
 cat "$FILE_PDF"
 
 echo "INFO: Ready" >&2
