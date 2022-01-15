@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- Braille: In vectortopdf check inkscape version to call
+          inkscape with the correct command line (Issue #315, Pull
+          request #443).
 	- cups-browsed: Naming of local queues is matched to CUPS'
 	  current naming of temporary queues (no leading or trailing
 	  underscores), to avoid duplicates in print dialogs which
