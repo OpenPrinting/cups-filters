@@ -2543,22 +2543,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
     for (i = 0, count = ippGetCount(attr); i < count; i ++) {
       keyword = ippGetString(attr, i, NULL); /* Keyword for color/bit depth */
 
-      if (!strcmp(keyword, "auto")) {
-        if (first_choice) {
-	  first_choice = 0;
-	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
-			 "*OrderDependency: 10 AnySetup *ColorModel\n",
-			 (human_readable ? human_readable : "Color Mode"));
-	}
-
-	human_readable2 = lookup_choice("auto", "print-color-mode",
-					opt_strings_catalog,
-					printer_opt_strings_catalog);
-        cupsFilePrintf(fp, "*ColorModel Auto/%s: \"\"\n",
-		       (human_readable2 ? human_readable2 : "Automatic"));
-
-	default_color = "Auto";
-      } else if (!strcmp(keyword, "bi-level")) {
+      if (!strcmp(keyword, "bi-level")) {
         if (first_choice) {
 	  first_choice = 0;
 	  cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
@@ -2645,8 +2630,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
         cupsFilePrintf(fp, "*ColorModel RGB/%s: \"\"\n",
 		       (human_readable2 ? human_readable2 : "Color"));
 
-        if (!default_color || strcmp(default_color, "Auto"))
-	  default_color = "RGB";
+	default_color = "RGB";
 
 	/* Apparently some printers only advertise color support, so make sure
            we also do grayscale for these printers... */
@@ -2681,13 +2665,15 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
     cupsFilePrintf(fp, "*OpenUI *ColorModel/%s: PickOne\n"
 		   "*OrderDependency: 10 AnySetup *ColorModel\n",
 		   (human_readable ? human_readable : "Color Mode"));
-    cupsFilePrintf(fp, "*DefaultColorModel: Gray\n");
-    cupsFilePuts(fp, "*ColorModel FastGray/Fast Grayscale: \"\"\n");
-    cupsFilePuts(fp, "*ColorModel Gray/Grayscale: \"\"\n");
     if (color) {
       /* Color printer according to DNS-SD (or unknown) */
+      cupsFilePrintf(fp, "*DefaultColorModel: RGB\n");
       cupsFilePuts(fp, "*ColorModel RGB/Color: \"\"\n");
+    } else {
+      cupsFilePrintf(fp, "*DefaultColorModel: Gray\n");
     }
+    cupsFilePuts(fp, "*ColorModel FastGray/Fast Grayscale: \"\"\n");
+    cupsFilePuts(fp, "*ColorModel Gray/Grayscale: \"\"\n");
     cupsFilePuts(fp, "*CloseUI: *ColorModel\n");
   }
 
