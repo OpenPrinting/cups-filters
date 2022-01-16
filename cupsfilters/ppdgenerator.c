@@ -2650,7 +2650,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
         cupsFilePrintf(fp, "*ColorModel RGB/%s: \"\"\n",
 		       (human_readable2 ? human_readable2 : "Color"));
 
-        if (!default_color)
+        if (!defattr)
 	  default_color = "RGB";
 
 	/* Apparently some printers only advertise color support, so make sure
@@ -2669,7 +2669,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
       }
     }
 
-    if (default_pagesize != NULL) {
+    if (default_pagesize != NULL && (!default_color || !defattr)) {
       /* Here we are dealing with a cluster, if the default cluster color
          is not supplied we set it Gray*/
       if (default_cluster_color != NULL) {
