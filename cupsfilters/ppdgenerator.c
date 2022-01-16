@@ -2900,7 +2900,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 		       (human_readable2 ? human_readable2 :
 			_cupsLangString(lang, _("Color"))));
 
-        if (!default_color)
+        if (!defattr)
 	  default_color = "RGB";
 
 	/* Apparently some printers only advertise color support, so make sure
