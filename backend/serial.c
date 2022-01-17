@@ -103,6 +103,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+  char		print_sleep = 0;	/* Print first sleep flag on every transmit */
 
 
  /*
@@ -647,6 +648,16 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
             }
 	}
 
+	/*
+        * on every transmit need to wait a little
+		* even though the DSR is OK for some unknown reasons.
+	*/
+	if (print_sleep == 0)
+	{
+		usleep(10000);
+		print_sleep = 1;
+	}
+
 	if ((bytes = write(device_fd, print_ptr, print_bytes)) < 0)
 	{
 	 /*
@@ -669,6 +680,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	}
 	else
 	{
+          tcdrain(device_fd);
           fprintf(stderr, "DEBUG: Wrote %d bytes.\n", (int)bytes);
 
           print_bytes -= bytes;
