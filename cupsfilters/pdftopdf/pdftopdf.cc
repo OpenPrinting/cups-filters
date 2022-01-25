@@ -589,6 +589,10 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
     parseRanges(val,param.pageRange);
   }
 
+  if ((val=cupsGetOption("input-page-ranges",num_options,options)) !=NULL){
+    parseRanges(val,param.inputPageRange);
+  }
+
   ppd_choice_t *choice;
   if ((choice=ppdFindMarkedChoice(ppd,"MirrorPrint")) != NULL) {
     val=choice->choice;

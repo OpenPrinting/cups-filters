@@ -54,6 +54,8 @@ ProcessingParameters()
     page.right=page.width-18.0;
 
     // everything
+    inputPageRange.add(1);
+    inputPageRange.finish();
     pageRange.add(1);
     pageRange.finish();
   }
@@ -78,6 +80,7 @@ ProcessingParameters()
   std::string pageLabel;
   bool evenPages,oddPages;
   IntervalSet pageRange;
+  IntervalSet inputPageRange;
 
   bool mirror;
 
@@ -104,6 +107,7 @@ ProcessingParameters()
 
   // helper functions
   bool withPage(int outno) const; // 1 based
+  bool havePage(int pageno) const; //1 based
   void dump(pdftopdf_doc_t *doc) const;
 };
 
