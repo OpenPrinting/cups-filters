@@ -32,14 +32,7 @@ bool ProcessingParameters::withPage(int outno) const // {{{
 // }}}
 bool ProcessingParameters::havePage(int pageno) const
 {
-  if (pageno%2 == 0) { // 1-based
-    if (!evenPages) {
-      return false;
-    }
-  } else if (!oddPages) {
-    return false;
-  }
-  return origPageRange.contains(pageno);
+  return inputPageRange.contains(pageno);
 }
 
 void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
@@ -80,8 +73,8 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 				 (oddPages)?"true":"false");
   
    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: orig page range:");
-  origPageRange.dump(doc);
+				 "pdftopdf: input page range:");
+  inputPageRange.dump(doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
 				 "pdftopdf: page range:");
@@ -190,13 +183,13 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 
   std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> pages=proc.get_pages(doc);
   
-  std::vector<int> orig_page_range_list;
+  std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> input_page_range_list;
    
    for(int i=1;i<=(int)pages.size();i++)
       if(param.havePage(i))
-      orig_page_range_list.push_back(i-1);
+      input_page_range_list.push_back(pages[i-1]);
 
-  const int numOrigPages=orig_page_range_list.size(); 
+  const int numOrigPages=input_page_range_list.size(); 
 
   // TODO FIXME? elsewhere
   std::vector<int> shuffle;
@@ -212,7 +205,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
     shuffle.resize(numOrigPages);
     std::iota(shuffle.begin(),shuffle.end(),0);
   }
-  const int numPages=std::max(shuffle.size(),orig_page_range_list.size());
+  const int numPages=std::max(shuffle.size(),input_page_range_list.size());
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
 				 "pdftopdf: \"print-scaling\" IPP attribute: %s",
@@ -232,9 +225,9 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
     if ((param.page.width == pw) && (param.page.height == ph))
       margin_defined = false;
 
-    for (int i = 0; i < (int)orig_page_range_list.size(); i ++)
+    for (int i = 0; i < (int)input_page_range_list.size(); i ++)
     {
-      PageRect r = pages[orig_page_range_list[i]]->getRect();
+      PageRect r = input_page_range_list[i]->getRect();
       int w = r.width;
       int h = r.height;
       if ((w > param.page.width || h > param.page.height) &&
@@ -297,9 +290,9 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 
   if (param.fillprint || param.cropfit)
   {
-    for (int i = 0; i < (int)orig_page_range_list.size(); i ++)
+    for (int i = 0; i < (int)input_page_range_list.size(); i ++)
     {
-      std::shared_ptr<PDFTOPDF_PageHandle> page = pages[orig_page_range_list[i]];
+      std::shared_ptr<PDFTOPDF_PageHandle> page = input_page_range_list[i];
       Rotation orientation = param.orientation;
       if (param.noOrientation &&
 	  page->is_landscape(param.orientation))
@@ -365,7 +358,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
       // add empty page as filler
       page = proc.new_page(param.page.width, param.page.height, doc);
     else
-      page = pages[orig_page_range_list[shuffle[iA]]];
+      page = input_page_range_list[shuffle[iA]];
 
     PageRect rect;
     rect = page->getRect();

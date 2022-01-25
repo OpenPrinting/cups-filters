@@ -54,8 +54,8 @@ ProcessingParameters()
     page.right=page.width-18.0;
 
     // everything
-    origPageRange.add(1);
-    origPageRange.finish();
+    inputPageRange.add(1);
+    inputPageRange.finish();
     pageRange.add(1);
     pageRange.finish();
   }
@@ -80,7 +80,7 @@ ProcessingParameters()
   std::string pageLabel;
   bool evenPages,oddPages;
   IntervalSet pageRange;
-  IntervalSet origPageRange;
+  IntervalSet inputPageRange;
 
   bool mirror;
 
