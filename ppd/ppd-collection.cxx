@@ -948,7 +948,8 @@ cat_drv(const char *filename,		/* I - *.drv file name */
   char		tempname[1024];		// Name for the temporary file
   ppdcSource	*src;			// PPD source file data
   ppdcDriver	*d;			// Current driver
-  cups_file_t	*out;			// PPD output to temp file
+  cups_file_t	*out = NULL;		// PPD output to temp file
+  int           fd1, fd2;
 
   if ((fp = cupsFileOpen(filename, "r")) == NULL)
   {
@@ -958,6 +959,13 @@ cat_drv(const char *filename,		/* I - *.drv file name */
 
     return (NULL);
   }
+
+  /* Eliminate any output to stderr, to get rid of the error messages of
+     the *.drv file parser */
+  fd1 = dup(2);
+  fd2 = open("/dev/null", O_WRONLY);
+  dup2(fd2, 2);
+  close(fd2);
 
   src = new ppdcSource(filename, fp);
 
@@ -974,43 +982,40 @@ cat_drv(const char *filename,		/* I - *.drv file name */
     ppdcCatalog	*catalog;		// Message catalog in .drv file
 
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "libppd: [PPD Collections] %u locales defined in \"%s\"...\n",
-		 (unsigned)src->po_files->count, filename);
-
-    locales = new ppdcArray();
-    for (catalog = (ppdcCatalog *)src->po_files->first();
-         catalog;
-	 catalog = (ppdcCatalog *)src->po_files->next())
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "libppd: [PPD Collections] Adding locale \"%s\"...\n",
-		   catalog->locale->value);
-      catalog->locale->retain();
-      locales->add(catalog->locale);
-    }
-
     if ((fd = cupsTempFd(tempname, sizeof(tempname))) < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Unable to copy PPD to temp "
 		   "file: %s",
 		   strerror(errno));
-      return (NULL);
     }
-    out = cupsFileOpenFd(fd, "w");
-    d->write_ppd_file(out, NULL, locales, src, PPDC_LFONLY);
-    cupsFileClose(out);
-    close(fd);
-    locales->release();
-    src->release();
-    cupsFileClose(fp);
+    else
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "libppd: [PPD Collections] %u locales defined in \"%s\"...\n",
+		   (unsigned)src->po_files->count, filename);
 
-    out = cupsFileOpen(tempname, "r");
-    unlink(tempname);
+      locales = new ppdcArray();
+      for (catalog = (ppdcCatalog *)src->po_files->first();
+	   catalog;
+	   catalog = (ppdcCatalog *)src->po_files->next())
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "libppd: [PPD Collections] Adding locale \"%s\"...\n",
+		     catalog->locale->value);
+	catalog->locale->retain();
+	locales->add(catalog->locale);
+      }
 
-    return(out);
+      out = cupsFileOpenFd(fd, "w");
+      d->write_ppd_file(out, NULL, locales, src, PPDC_LFONLY);
+      cupsFileClose(out);
+      close(fd);
+      locales->release();
 
+      out = cupsFileOpen(tempname, "r");
+      unlink(tempname);
+    }
   }
   else
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
@@ -1019,7 +1024,11 @@ cat_drv(const char *filename,		/* I - *.drv file name */
   src->release();
   cupsFileClose(fp);
 
-  return (NULL);
+  /* Re-activate stderr output */
+  dup2(fd1, 2);
+  close(fd1);
+
+  return (out);
 }
 
 
@@ -1463,7 +1472,18 @@ load_drv(const char  *filename,		/* I - Actual filename */
   char		uri[2048],		// Driver URI
 		make_model[1024];	// Make and model
   int		type;			// Driver type
+  int           fd1, fd2;
 
+
+ /*
+  * Eliminate any output to stderr, to get rid of the error messages of
+  * the *.drv file parser
+  */
+
+  fd1 = dup(2);
+  fd2 = open("/dev/null", O_WRONLY);
+  dup2(fd2, 2);
+  close(fd2);
 
  /*
   * Load the driver info file...
@@ -1477,6 +1497,9 @@ load_drv(const char  *filename,		/* I - Actual filename */
 		 "libppd: [PPD Collections] Bad driver information file \"%s\"!\n",
 		 filename);
     src->release();
+    /* Re-activate stderr output */
+    dup2(fd1, 2);
+    close(fd1);
     return (0);
   }
 
@@ -1564,6 +1587,13 @@ load_drv(const char  *filename,		/* I - Actual filename */
   }
 
   src->release();
+
+ /*
+  * Re-activate stderr output
+  */
+
+  dup2(fd1, 2);
+  close(fd1);
 
   return (1);
 }
