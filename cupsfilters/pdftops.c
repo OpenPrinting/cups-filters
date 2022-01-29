@@ -82,6 +82,7 @@ const char *pstops_exclude_page_management[] = {
   "page-bottom",
   "page-label",
   "page-left",
+  "input-page-ranges",
   "page-ranges",
   "page-right",
   "page-set",

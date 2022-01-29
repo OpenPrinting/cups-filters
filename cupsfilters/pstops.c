@@ -106,6 +106,7 @@ typedef struct				/**** Document information ****/
 		page_border;		/* doc->page_border around pages */
   const char	*page_label,		/* page-label option, if any */
 		*page_ranges,		/* page-ranges option, if any */
+    *inputPageRange, /* input-page-ranges option, if any */
 		*page_set;		/* page-set option, if any */
   /* Basic settings from PPD defaults/options, global vars of original pstops */
   int           Orientation,            /* 0 = portrait, 1 = landscape, etc. */
@@ -150,6 +151,7 @@ typedef struct				/**** Document information ****/
 
 static pstops_page_t	*add_page(pstops_doc_t *doc, const char *label);
 static int		check_range(pstops_doc_t *doc, int page);
+static int		input_range_check(pstops_doc_t *doc, int page);
 static void		copy_bytes(pstops_doc_t *doc,
 				   off_t offset, size_t length);
 static ssize_t		copy_comments(pstops_doc_t *doc,
@@ -534,7 +536,53 @@ check_range(pstops_doc_t *doc,		/* I - Document information */
 
   return (0);
 }
+/*
+ * 'input_range_check()' - Check to see if the current page is selected for
+ *                   input.
+ */
+static int				/* O - 1 if selected, 0 otherwise */
+input_range_check(pstops_doc_t *doc,		/* I - Document information */
+            int          page)		/* I - Page number */
+{
+  const char	*range;			/* Pointer into range string */
+  int		lower, upper;		/* Lower and upper input page range */
+  if(!doc->inputPageRange)
+  return (1);				/* No range, input all pages... */
+  for (range = doc->inputPageRange; *range != '\0';)
+  {
+    if (*range == '-')
+    {
+      lower = 1;
+      range ++;
+      upper = (int)strtol(range, (char **)&range, 10);
+    }
+    else
+    {
+      lower = (int)strtol(range, (char **)&range, 10);
 
+      if (*range == '-')
+      {
+        range ++;
+	if (!isdigit(*range & 255))
+	  upper = 65535;
+	else
+	  upper = (int)strtol(range, (char **)&range, 10);
+      }
+      else
+        upper = lower;
+    }
+
+    if (page >= lower && page <= upper)
+      return (1);
+
+    if (*range == ',')
+      range ++;
+    else
+      break;
+  }
+
+  return (0);
+}
 
 /*
  * 'copy_bytes()' - Copy bytes from the temporary file to the output file.
@@ -889,6 +937,20 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
  /*
   * Then process pages until we have no more...
   */
+if(log) log(ld,FILTER_LOGLEVEL_DEBUG,
+    "pstops:Processing input-page-ranges");
+
+cups_array_t *input_page_range_list=cupsArrayNew(NULL,NULL);
+
+for(int i=0;i<cupsArrayCount(doc->pages);i++)
+  {
+    if(input_range_check(doc,i+1))
+    {
+      cupsArrayInsert(input_page_range_list,cupsArrayIndex(doc->pages,i));
+    }
+  }
+  doc->pages=input_page_range_list;
+
 
   number = 0;
 
