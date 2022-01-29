@@ -168,9 +168,11 @@ static regex_t		*regex_string(const char *s,
 static int		CompareNames(const char *s, const char *t);
 static cups_array_t	*CreateStringsArray(const char *s);
 static int		ExecCommand(const char *command, char **argv);
-static cups_file_t	*PipeCommand(int *pid, const char *command,
-				     char **argv, uid_t user);
-static int		ClosePipeCommand(cups_file_t *fp, int pid);
+static cups_file_t	*PipeCommand(int *cpid, int *epid, const char *command,
+				     char **argv, uid_t user,
+				     filter_logfunc_t log, void *ld);
+static int		ClosePipeCommand(cups_file_t *fp, int cpid, int epid,
+					 filter_logfunc_t log, void *ld);
 
 
 /*
@@ -630,7 +632,8 @@ ppdCollectionGetPPD(
   ppd_collection_t *col;		/* Pointer to PPD collection */
   cups_file_t	*fp;			/* Archive file pointer */
   int		fd;
-  int		pid;
+  int		cpid;			/* Process ID for driver program */
+  int		epid;			/* Process ID for logging process */
   int		bytes;
   int           is_archive = 0;
   int           is_drv = 0;
@@ -766,7 +769,7 @@ ppdCollectionGetPPD(
     argv[2] = (char *)ptr;
     argv[3] = NULL;
 
-    if ((fp = PipeCommand(&pid, realname, argv, 0)) != NULL)
+    if ((fp = PipeCommand(&cpid, &epid, realname, argv, 0, log, ld)) != NULL)
     {
       if ((fd = cupsTempFd(tempname, sizeof(tempname))) < 0)
       {
@@ -778,7 +781,7 @@ ppdCollectionGetPPD(
       }
       while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
 	bytes = write(fd, buffer, bytes);
-      ClosePipeCommand(fp, pid);
+      ClosePipeCommand(fp, cpid, epid, log, ld);
       close(fd);
       fp = cupsFileOpen(tempname, "r");
       unlink(tempname);
@@ -945,7 +948,8 @@ cat_drv(const char *filename,		/* I - *.drv file name */
   char		tempname[1024];		// Name for the temporary file
   ppdcSource	*src;			// PPD source file data
   ppdcDriver	*d;			// Current driver
-  cups_file_t	*out;			// PPD output to temp file
+  cups_file_t	*out = NULL;		// PPD output to temp file
+  int           fd1, fd2;
 
   if ((fp = cupsFileOpen(filename, "r")) == NULL)
   {
@@ -955,6 +959,13 @@ cat_drv(const char *filename,		/* I - *.drv file name */
 
     return (NULL);
   }
+
+  /* Eliminate any output to stderr, to get rid of the error messages of
+     the *.drv file parser */
+  fd1 = dup(2);
+  fd2 = open("/dev/null", O_WRONLY);
+  dup2(fd2, 2);
+  close(fd2);
 
   src = new ppdcSource(filename, fp);
 
@@ -971,43 +982,40 @@ cat_drv(const char *filename,		/* I - *.drv file name */
     ppdcCatalog	*catalog;		// Message catalog in .drv file
 
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "libppd: [PPD Collections] %u locales defined in \"%s\"...\n",
-		 (unsigned)src->po_files->count, filename);
-
-    locales = new ppdcArray();
-    for (catalog = (ppdcCatalog *)src->po_files->first();
-         catalog;
-	 catalog = (ppdcCatalog *)src->po_files->next())
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "libppd: [PPD Collections] Adding locale \"%s\"...\n",
-		   catalog->locale->value);
-      catalog->locale->retain();
-      locales->add(catalog->locale);
-    }
-
     if ((fd = cupsTempFd(tempname, sizeof(tempname))) < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Unable to copy PPD to temp "
 		   "file: %s",
 		   strerror(errno));
-      return (NULL);
     }
-    out = cupsFileOpenFd(fd, "w");
-    d->write_ppd_file(out, NULL, locales, src, PPDC_LFONLY);
-    cupsFileClose(out);
-    close(fd);
-    locales->release();
-    src->release();
-    cupsFileClose(fp);
+    else
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "libppd: [PPD Collections] %u locales defined in \"%s\"...\n",
+		   (unsigned)src->po_files->count, filename);
 
-    out = cupsFileOpen(tempname, "r");
-    unlink(tempname);
+      locales = new ppdcArray();
+      for (catalog = (ppdcCatalog *)src->po_files->first();
+	   catalog;
+	   catalog = (ppdcCatalog *)src->po_files->next())
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "libppd: [PPD Collections] Adding locale \"%s\"...\n",
+		     catalog->locale->value);
+	catalog->locale->retain();
+	locales->add(catalog->locale);
+      }
 
-    return(out);
+      out = cupsFileOpenFd(fd, "w");
+      d->write_ppd_file(out, NULL, locales, src, PPDC_LFONLY);
+      cupsFileClose(out);
+      close(fd);
+      locales->release();
 
+      out = cupsFileOpen(tempname, "r");
+      unlink(tempname);
+    }
   }
   else
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
@@ -1016,7 +1024,11 @@ cat_drv(const char *filename,		/* I - *.drv file name */
   src->release();
   cupsFileClose(fp);
 
-  return (NULL);
+  /* Re-activate stderr output */
+  dup2(fd1, 2);
+  close(fd1);
+
+  return (out);
 }
 
 
@@ -1289,7 +1301,8 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
   char		*start,			/* Start of value */
 		*ptr;			/* Pointer into string */
   const char	*scheme = NULL;		/* Scheme for this driver */
-  int		pid;			/* Process ID for driver program */
+  int		cpid;			/* Process ID for driver program */
+  int		epid;			/* Process ID for logging process */
   cups_file_t	*fp;			/* Pipe to driver program */
   char		*argv[3],		/* Arguments for command */
 		line[2048],		/* Line from driver */
@@ -1313,7 +1326,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
   argv[1] = (char *)"list";
   argv[2] = NULL;
 
-  if ((fp = PipeCommand(&pid, filename, argv, 0)) != NULL)
+  if ((fp = PipeCommand(&cpid, &epid, filename, argv, 0, log, ld)) != NULL)
   {
     while (cupsFileGets(fp, line, sizeof(line)))
     {
@@ -1421,7 +1434,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
       }
     }
 
-    ClosePipeCommand(fp, pid);
+    ClosePipeCommand(fp, cpid, epid, log, ld);
   }
   else
     if (log) log(ld, FILTER_LOGLEVEL_WARN,
@@ -1459,7 +1472,18 @@ load_drv(const char  *filename,		/* I - Actual filename */
   char		uri[2048],		// Driver URI
 		make_model[1024];	// Make and model
   int		type;			// Driver type
+  int           fd1, fd2;
 
+
+ /*
+  * Eliminate any output to stderr, to get rid of the error messages of
+  * the *.drv file parser
+  */
+
+  fd1 = dup(2);
+  fd2 = open("/dev/null", O_WRONLY);
+  dup2(fd2, 2);
+  close(fd2);
 
  /*
   * Load the driver info file...
@@ -1473,6 +1497,9 @@ load_drv(const char  *filename,		/* I - Actual filename */
 		 "libppd: [PPD Collections] Bad driver information file \"%s\"!\n",
 		 filename);
     src->release();
+    /* Re-activate stderr output */
+    dup2(fd1, 2);
+    close(fd1);
     return (0);
   }
 
@@ -1560,6 +1587,13 @@ load_drv(const char  *filename,		/* I - Actual filename */
   }
 
   src->release();
+
+ /*
+  * Re-activate stderr output
+  */
+
+  dup2(fd1, 2);
+  close(fd1);
 
   return (1);
 }
@@ -2787,69 +2821,126 @@ ExecCommand(const char *command,		/* I - Full path to program */
  */
 
 cups_file_t *				/* O - CUPS file or NULL on error */
-PipeCommand(int        *pid,		/* O - Process ID or 0 on error */
+PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
+	    int        *epid,		/* O - Log Process ID or 0 on error */
 	    const char *command,	/* I - Command to run */
 	    char       **argv,		/* I - Arguments to pass to command */
-	    uid_t      user)		/* I - User to run as or 0 for current*/
+	    uid_t      user,		/* I - User to run as or 0 for current*/
+	    filter_logfunc_t log,
+	    void       *ld)
 {
-  int	fd,				/* Temporary file descriptor */
-	fds[2];				/* Pipe file descriptors */
+  int	      fd,			/* Temporary file descriptor */
+	      cfds[2],			/* Output Pipe file descriptors */
+	      efds[2];			/* Error/Log Pipe file descriptors */
+  cups_file_t *outfp, *logfp;
+  char        buf[BUFSIZ];
+  filter_loglevel_t log_level;
+  char        *msg;
 
+
+  *cpid = *epid = 0;
+  cfds[0] = cfds[1] = efds[0] = efds[1] = -1;
 
  /*
-  * First create the pipe...
+  * First create the pipes...
   */
 
-  if (pipe(fds))
+  if (pipe(cfds))
   {
-    *pid = 0;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "libppd: [PPD Collections] Unable to establish output pipe for %s call: %s",
+		 argv[0], strerror(errno));
+    return (NULL);
+  }
+  if (log)
+    if (pipe(efds))
+    {
+      log(ld, FILTER_LOGLEVEL_ERROR,
+	  "libppd: [PPD Collections] Unable to establish error/logging pipe for %s call: %s",
+	  argv[0], strerror(errno));
+      return (NULL);
+    }
+
+ /*
+  * Set the "close on exec" flag on each end of the pipes...
+  */
+
+  if (fcntl(cfds[0], F_SETFD, fcntl(cfds[0], F_GETFD) | FD_CLOEXEC))
+  {
+    close(cfds[0]);
+    close(cfds[1]);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "libppd: [PPD Collections] Unable to set \"close on exec\" flag on read end of the output pipe for %s call: %s",
+		 argv[0], strerror(errno));
     return (NULL);
   }
 
- /*
-  * Set the "close on exec" flag on each end of the pipe...
-  */
-
-  if (fcntl(fds[0], F_SETFD, fcntl(fds[0], F_GETFD) | FD_CLOEXEC))
+  if (fcntl(cfds[1], F_SETFD, fcntl(cfds[1], F_GETFD) | FD_CLOEXEC))
   {
-    close(fds[0]);
-    close(fds[1]);
-
-    *pid = 0;
-
+    close(cfds[0]);
+    close(cfds[1]);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "libppd: [PPD Collections] Unable to set \"close on exec\" flag on write end of the output pipe for %s call: %s",
+		 argv[0], strerror(errno));
     return (NULL);
   }
 
-  if (fcntl(fds[1], F_SETFD, fcntl(fds[1], F_GETFD) | FD_CLOEXEC))
+  if (log)
   {
-    close(fds[0]);
-    close(fds[1]);
+    if (fcntl(efds[0], F_SETFD, fcntl(efds[0], F_GETFD) | FD_CLOEXEC))
+    {
+      close(cfds[0]);
+      close(cfds[1]);
+      close(efds[0]);
+      close(efds[1]);
+      log(ld, FILTER_LOGLEVEL_ERROR,
+	  "libppd: [PPD Collections] Unable to set \"close on exec\" flag on read end of the error/logging pipe for %s call: %s",
+	  argv[0], strerror(errno));
+      return (NULL);
+    }
 
-    *pid = 0;
-
-    return (NULL);
+    if (fcntl(efds[1], F_SETFD, fcntl(efds[1], F_GETFD) | FD_CLOEXEC))
+    {
+      close(cfds[0]);
+      close(cfds[1]);
+      close(efds[0]);
+      close(efds[1]);
+      log(ld, FILTER_LOGLEVEL_ERROR,
+	  "libppd: [PPD Collections] Unable to set \"close on exec\" flag on write end of the error/logging pipe for %s call: %s",
+	  argv[0], strerror(errno));
+      return (NULL);
+    }
   }
 
  /*
   * Then run the command...
   */
 
-  if ((*pid = fork()) < 0)
+  if ((*cpid = fork()) < 0)
   {
    /*
     * Unable to fork!
     */
 
-    *pid = 0;
-    close(fds[0]);
-    close(fds[1]);
+    *cpid = 0;
+    close(cfds[0]);
+    close(cfds[1]);
+    if (log)
+    {
+      close(efds[0]);
+      close(efds[1]);
+    }
+
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "libppd: [PPD Collections] Unable to fork for %s: %s", argv[0],
+		 strerror(errno));
 
     return (NULL);
   }
-  else if (!*pid)
+  else if (!*cpid)
   {
    /*
-    * Child comes here...
+    * Child (command) comes here...
     */
 
     if (!getuid() && user && setuid(user) < 0)	/* Run as restricted user */
@@ -2857,24 +2948,122 @@ PipeCommand(int        *pid,		/* O - Process ID or 0 on error */
 
     if ((fd = open("/dev/null", O_RDONLY)) > 0)
     {
-      dup2(fd, 0);			/* </dev/null */
+      dup2(fd, 0);			/* < /dev/null */
       close(fd);
     }
 
-    dup2(fds[1], 1);			/* >pipe */
-    close(fds[1]);
+    dup2(cfds[1], 1);			/* > command pipe */
+    close(cfds[1]);
+
+    if (log)
+    {
+      dup2(efds[1], 2);			/* 2> error pipe */
+      close(efds[1]);
+    }
+    else if ((fd = open("/dev/null", O_WRONLY)) > 0)
+    {
+      dup2(fd, 2);			/* 2> /dev/null */
+      close(fd);
+    }
 
     ExecCommand(command, argv);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "libppd: [PPD Collections] Unable to launch %s: %s", argv[0],
+		 strerror(errno));
     exit(errno);
   }
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "libppd: [PPD Collections] Started %s (PID %d)", argv[0], cpid);
 
  /*
-  * Parent comes here, open the input side of the pipe...
+  * Parent comes here ...
   */
 
-  close(fds[1]);
+  close(cfds[1]);
 
-  return (cupsFileOpenFd(fds[0], "r"));
+ /*
+  * Open the input side of the pipe...
+  */
+
+  outfp = cupsFileOpenFd(cfds[0], "r");
+
+ /*
+  * Fork the error logging...
+  */
+
+  if (log)
+  {
+    if ((*epid = fork()) < 0)
+    {
+     /*
+      * Unable to fork!
+      */
+
+      *epid = 0;
+      close(efds[0]);
+      close(efds[1]);
+
+      kill(*cpid, SIGTERM);
+      ClosePipeCommand(outfp, *cpid, 0, log, ld);
+
+      log(ld, FILTER_LOGLEVEL_ERROR,
+	  "libppd: [PPD Collections] Unable to fork for logging for %s: %s",
+	  argv[0], strerror(errno));
+
+      return (NULL);
+    }
+    else if (!*epid)
+    {
+     /*
+      * Child (logging) comes here...
+      */
+
+      close(cfds[0]);
+      close(efds[1]);
+      logfp = cupsFileOpenFd(efds[0], "r");
+      while (cupsFileGets(logfp, buf, sizeof(buf)))
+	if (log) {
+	  if (strncmp(buf, "DEBUG: ", 7) == 0) {
+	    log_level = FILTER_LOGLEVEL_DEBUG;
+	    msg = buf + 7;
+	  } else if (strncmp(buf, "DEBUG2: ", 8) == 0) {
+	    log_level = FILTER_LOGLEVEL_DEBUG;
+	    msg = buf + 8;
+	  } else if (strncmp(buf, "INFO: ", 6) == 0) {
+	    log_level = FILTER_LOGLEVEL_INFO;
+	    msg = buf + 6;
+	  } else if (strncmp(buf, "WARNING: ", 9) == 0) {
+	    log_level = FILTER_LOGLEVEL_WARN;
+	    msg = buf + 9;
+	  } else if (strncmp(buf, "ERROR: ", 7) == 0) {
+	    log_level = FILTER_LOGLEVEL_ERROR;
+	    msg = buf + 7;
+	  } else {
+	    log_level = FILTER_LOGLEVEL_DEBUG;
+	    msg = buf;
+	  }
+	  log(ld, log_level, "libppd: [PPD Collections] %s: %s", argv[0], msg);
+	}
+      cupsFileClose(logfp);
+      /* No need to close the fd errfds[0], as cupsFileClose(fp) does this
+	 already */
+      /* Ignore errors of the logging process */
+      exit(0);
+    }
+
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"libppd: [PPD Collections] Started logging for %s (PID %d)",
+	argv[0], cpid);
+
+   /*
+    * Parent comes here ...
+    */
+
+    close(efds[0]);
+    close(efds[1]);
+  }
+
+  return outfp;
 }
 
 
@@ -2885,10 +3074,14 @@ PipeCommand(int        *pid,		/* O - Process ID or 0 on error */
 
 static int
 ClosePipeCommand(cups_file_t *fp,
-		 int pid)
+		 int cpid,
+		 int epid,
+		 filter_logfunc_t log,
+		 void *ld)
 {
-  int		status,		 /* Exit status */
-                retval;		 /* Return value */
+  int           pid;
+  int           status = 65536;
+  int           wstatus;
 
 
  /*
@@ -2901,25 +3094,51 @@ ClosePipeCommand(cups_file_t *fp,
   * Wait for the child process to exit...
   */
 
-  retval = 0;
+  while (cpid > 0 || epid > 0) {
+    if ((pid = wait(&wstatus)) < 0) {
+      if (errno == EINTR)
+	continue;
+      else
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "libppd: [PPD Collections] Error closing sub-processes: %s - killing processes",
+		     strerror(errno));
+	kill(cpid, SIGTERM);
+	cpid = -1;
+	kill(epid, SIGTERM);
+	epid = -1;
+	break;
+      }
+    }
 
- retry_wait:
-  if (waitpid (pid, &status, 0) == -1)
-  {
-    if (errno == EINTR)
-      goto retry_wait;
-    else
-      goto out;
+    /* How did the filter terminate */
+    if (wstatus) {
+      if (WIFEXITED(wstatus)) {
+	/* Via exit() anywhere or return() in the main() function */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "libppd: [PPD Collections] %s (PID %d) stopped with status %d",
+		     (pid == cpid ? "Command" : "Logging"), pid,
+		     WEXITSTATUS(wstatus));
+	status = WEXITSTATUS(wstatus);
+      } else {
+	/* Via signal */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "libppd: [PPD Collections] %s (PID %d) crashed on signal %d",
+		     (pid == cpid ? "Command" : "Logging"), pid,
+		     WTERMSIG(wstatus));
+	status = 256 * WTERMSIG(wstatus);
+      }
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "libppd: [PPD Collections] %s (PID %d) exited with no errors.",
+		   (pid == cpid ? "Command" : "Logging"), pid);
+      status = 0;
+    }
+    if (pid == cpid)
+      cpid = -1;
+    else  if (pid == epid)
+      epid = -1;
   }
 
-  /* How did the filter function terminate */
-  if (WIFEXITED(status))
-    /* Via exit() anywhere or return() in the main() function */
-    retval = WEXITSTATUS(status);
-  else if (WIFSIGNALED(status))
-    /* Via signal */
-    retval = 256 * WTERMSIG(status);
-
- out:
-  return(retval);
+  return status;
 }
