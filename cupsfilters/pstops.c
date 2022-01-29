@@ -2769,7 +2769,13 @@ set_pstops_options(
   */
 
   doc->page_label = cupsGetOption("page-label", num_options, options);
+ 
+ /*
+ *  input-page-ranges
+ */
 
+  doc->inputPageRange=cupsGetOption("input-page-ranges",num_options,options);
+  
  /*
   * page-ranges
   */
