@@ -63,41 +63,32 @@ cupsFindAttr(ppd_file_t *ppd,		/* I - PPD file */
   */
 
   snprintf(spec, specsize, "%s.%s.%s", colormodel, media, resolution);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s.%s", colormodel, resolution);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s", colormodel);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s.%s", media, resolution);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s", media);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s", resolution);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   spec[0] = '\0';
-  fprintf(stderr, "DEBUG2: Looking for \"*%s\"...\n", name);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
-
-  fprintf(stderr, "DEBUG2: No instance of \"*%s\" found...\n", name);
 
   return (NULL);
 }
