@@ -1,6 +1,14 @@
 NEWS - OpenPrinting CUPS Filters v1.28.11 - 2022-01-15
 ------------------------------------------------------
 
+CHANGES IN V1.28.12
+
+	- pdftopdf: Fixed all combinations of print-scaling and
+	  number-up for printers with asymmetric margins (top !=
+	  bottom or left != right) and for input files containing
+	  pages with different sizes and/or orientations. Fixes
+	  backported from 2.x branch.
+
 CHANGES IN V1.28.11
 
 	- libcupsfilters: Let PPD generator take default ColorModel
