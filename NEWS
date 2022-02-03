@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.28.11 - 2022-01-15
 
 CHANGES IN V1.28.12
 
+	- libcupsfilters: Always use encryption for ipps. RFC7472
+	  requires that 'ipps' must be used over HTTPS, but the
+	  driverless utility does not enforce encryption (Pull request
+	  #433).
 	- serial: Add a 10-msec sleep and at the end add a tcdrain().
 	  For some unknown reason, every printing file need sleep a
 	  little time to make sure the serial printer receive data is
