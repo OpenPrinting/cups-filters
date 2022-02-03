@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.28.11 - 2022-01-15
 
 CHANGES IN V1.28.12
 
+	- pdftopdf: Fix orientation-requested = 0. Consider
+	  this as "automatic selection and not as error.
 	- pdftopdf: Fixed all combinations of print-scaling and
 	  number-up for printers with asymmetric margins (top !=
 	  bottom or left != right) and for input files containing

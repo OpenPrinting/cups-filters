@@ -376,7 +376,10 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
      *   3: 0 degrees,  4: 90 degrees,  5: -90 degrees,  6: 180 degrees
      */
     if ((ipprot<3)||(ipprot>6)) {
-      error("Bad value (%d) for orientation-requested, using 0 degrees",ipprot);
+      if (ipprot)
+	error("Bad value (%d) for orientation-requested, using 0 degrees",
+	      ipprot);
+      param.noOrientation = true;
     } else {
       static const Rotation ipp2rot[4]={ROT_0, ROT_90, ROT_270, ROT_180};
       param.orientation=ipp2rot[ipprot-3];
