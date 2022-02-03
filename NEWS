@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.28.11 - 2022-01-15
 
 CHANGES IN V1.28.12
 
+	- libcupsfilters: In the PPD generator for the driverless
+	  utility and cups-browsed add "*cupsFilter2: ..." lines for
+	  all supported driverless data formats (PDF, Apple/PWG
+	  Raster, PCLm), and add lines for legacy data formats (PCL,
+	  PostScript) only if no driverless formats available.
 	- libcupsfilters: Always use encryption for ipps. RFC7472
 	  requires that 'ipps' must be used over HTTPS, but the
 	  driverless utility does not enforce encryption (Pull request

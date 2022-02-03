@@ -2011,7 +2011,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     }
   }
 #endif
-  if (is_apple == 0 && cupsArrayFind(pdl_list, "image/pwg-raster")) {
+  if (cupsArrayFind(pdl_list, "image/pwg-raster")) {
     if ((attr = ippFindAttribute(response,
 				 "pwg-raster-document-resolution-supported",
 				 IPP_TAG_RESOLUTION)) != NULL) {
@@ -2047,38 +2047,41 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     }
   }
 #endif
-  if (cupsArrayFind(pdl_list, "application/vnd.hp-pclxl")) {
-    /* Check whether the gstopxl filter is installed,
-       otherwise ignore the PCL-XL support of the printer */
-    if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
-      cups_serverbin = CUPS_SERVERBIN;
-    snprintf(filter_path, sizeof(filter_path), "%s/filter/gstopxl",
-	     cups_serverbin);
-    if (access(filter_path, X_OK) == 0) {
+  /* Legacy formats only if we have no driverless format */
+  if (!is_pdf && !is_apple && !is_pwg && !is_pclm) {
+    if (cupsArrayFind(pdl_list, "application/vnd.hp-pclxl")) {
+      /* Check whether the gstopxl filter is installed,
+	 otherwise ignore the PCL-XL support of the printer */
+      if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
+	cups_serverbin = CUPS_SERVERBIN;
+      snprintf(filter_path, sizeof(filter_path), "%s/filter/gstopxl",
+	       cups_serverbin);
+      if (access(filter_path, X_OK) == 0) {
+	/* We put a high cost factor here as if a printer supports also
+	   another format, like PWG or Apple Raster, we prefer it, as some
+	   PCL-XL printers have bugs in their PCL-XL interpreters */
+	cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 400 gstopxl\"\n");
+	if (formatfound == 0) manual_copies = 1;
+	formatfound = 1;
+      }
+    }
+    if (cupsArrayFind(pdl_list, "application/postscript")) {
       /* We put a high cost factor here as if a printer supports also
-	 another format, like PWG or Apple Raster, we prefer it, as some
-	 PCL-XL printers have bugs in their PCL-XL interpreters */
-      cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 400 gstopxl\"\n");
+	 another format, like PWG or Apple Raster, we prefer it, as many
+	 PostScript printers have bugs in their PostScript interpreters */
+      cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 600 -\"\n");
+      if (formatfound == 0) manual_copies = 0;
+      formatfound = 1;
+    }
+    if (cupsArrayFind(pdl_list, "application/vnd.hp-pcl")) {
+      /* We put a high cost factor here as if a printer supports also
+	 another format, like PWG or Apple Raster, we prefer it, as there
+	 are some printers, like HP inkjets which report to accept PCL
+	 but do not support PCL 5c/e or PCL-XL */
+      cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 800 rastertopclx\"\n");
       if (formatfound == 0) manual_copies = 1;
       formatfound = 1;
     }
-  }
-  if (cupsArrayFind(pdl_list, "application/postscript")) {
-    /* We put a high cost factor here as if a printer supports also
-       another format, like PWG or Apple Raster, we prefer it, as many
-       PostScript printers have bugs in their PostScript interpreters */
-    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 600 -\"\n");
-    if (formatfound == 0) manual_copies = 0;
-    formatfound = 1;
-  }
-  if (cupsArrayFind(pdl_list, "application/vnd.hp-pcl")) {
-    /* We put a high cost factor here as if a printer supports also
-       another format, like PWG or Apple Raster, we prefer it, as there
-       are some printers, like HP inkjets which report to accept PCL
-       but do not support PCL 5c/e or PCL-XL */
-    cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 800 rastertopclx\"\n");
-    if (formatfound == 0) manual_copies = 1;
-    formatfound = 1;
   }
   if (cupsArrayFind(pdl_list, "image/jpeg"))
     cupsFilePuts(fp, "*cupsFilter2: \"image/jpeg image/jpeg 0 -\"\n");
