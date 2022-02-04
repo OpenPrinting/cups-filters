@@ -77,8 +77,8 @@ _cupsImageReadPhotoCD(
   */
 
   img->colorspace = (primary == CUPS_IMAGE_RGB_CMYK) ? CUPS_IMAGE_RGB : primary;
-  img->xppi       = 128;
-  img->yppi       = 128;
+  img->xppi       = 200;
+  img->yppi       = 200;
 
   if (rotation)
   {

@@ -126,7 +126,7 @@ _cupsImageReadPNG(
       DEBUG_printf(("DEBUG: PNG image has invalid resolution %dx%d PPI\n",
 		    img->xppi, img->yppi));
 
-      img->xppi = img->yppi = 128;
+      img->xppi = img->yppi = 200;
     }
   }
 
