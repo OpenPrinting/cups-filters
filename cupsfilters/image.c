@@ -347,8 +347,8 @@ cupsImageOpen(
 
   img->cachefile = -1;
   img->max_ics   = CUPS_TILE_MINIMUM;
-  img->xppi      = 128;
-  img->yppi      = 128;
+  img->xppi      = 200;
+  img->yppi      = 200;
 
   if (!memcmp(header, "GIF87a", 6) || !memcmp(header, "GIF89a", 6))
     status = _cupsImageReadGIF(img, fp, primary, secondary, saturation, hue,

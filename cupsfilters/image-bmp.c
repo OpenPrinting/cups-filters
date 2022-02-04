@@ -138,7 +138,7 @@ _cupsImageReadBMP(
   {
     fprintf(stderr, "DEBUG: Bad BMP resolution %dx%d PPI.\n",
             img->xppi, img->yppi);
-    img->xppi = img->yppi = 128;
+    img->xppi = img->yppi = 200;
   }
 
  /*
