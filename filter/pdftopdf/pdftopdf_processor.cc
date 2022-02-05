@@ -195,8 +195,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     for (int i = 0; i < (int)pages.size(); i ++)
     {
       PageRect r = pages[i]->getRect();
-      int w = r.width;
-      int h = r.height;
+      int w = r.width * 100 / 102; // 2% of tolerance
+      int h = r.height * 100 / 102;
       if ((w > param.page.width || h > param.page.height) &&
 	  (h > param.page.width || w > param.page.height))
       {

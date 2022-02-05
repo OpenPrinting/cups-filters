@@ -29,6 +29,12 @@ CHANGES IN V1.28.12
 	  bottom or left != right) and for input files containing
 	  pages with different sizes and/or orientations. Fixes
 	  backported from 2.x branch.
+	- pdftopdf: Add 2% tolerance for input size larger than output
+	  page when "print-scaling=auto" or "print-scaling=auto-fit"
+	  is used and too large input pages should be scaled, fitting
+	  documents not. This prevents a random-looking behavior if
+	  input and output page size seem to be equal, but in reality
+	  there are slight dependencies between size dimensions.
 
 CHANGES IN V1.28.11
 
