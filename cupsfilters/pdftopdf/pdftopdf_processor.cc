@@ -228,8 +228,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
     for (int i = 0; i < (int)input_page_range_list.size(); i ++)
     {
       PageRect r = input_page_range_list[i]->getRect();
-      int w = r.width;
-      int h = r.height;
+      int w = r.width * 100 / 102; // 2% of tolerance
+      int h = r.height * 100 / 102;
       if ((w > param.page.width || h > param.page.height) &&
 	  (h > param.page.width || w > param.page.height))
       {
