@@ -284,12 +284,12 @@ apply_filters(int argc, char *argv[])
       /* Page logging into page_log is not done by gstoraster/pdftoraster,
 	 so let it be done by pdftopdf */
       set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
-      if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
+      if (filter_present("gstoraster"))
 	cupsArrayAdd(filter_chain, "gstoraster");
       else {
 	fprintf(stderr,
-		"DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n",
-		CUPS_GHOSTSCRIPT, val);
+		"DEBUG: Filter gstoraster missing for \"output-format=%s\", using pdftoraster.\n",
+		val);
 	if (filter_present("pdftoraster"))
 	  cupsArrayAdd(filter_chain, "pdftoraster");
 	else {
@@ -309,12 +309,12 @@ apply_filters(int argc, char *argv[])
       /* Page logging into page_log is not done by gstoraster/pdftoraster,
 	 so let it be done by pdftopdf */
       set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
-      if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
+      if (filter_present("gstoraster"))
 	cupsArrayAdd(filter_chain, "gstoraster");
       else {
 	fprintf(stderr,
-		"DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n",
-		CUPS_GHOSTSCRIPT, val);
+		"DEBUG: Filter gstoraster missing for \"output-format=%s\", using pdftoraster.\n",
+		val);
 	if (filter_present("pdftoraster"))
 	  cupsArrayAdd(filter_chain, "pdftoraster");
 	else {
@@ -346,16 +346,16 @@ apply_filters(int argc, char *argv[])
       set_option_in_str(argv_nt[5], optbuflen, "page-logging", "off");
       if (filter_present("pdftops")) {
 	cupsArrayAdd(filter_chain, "pdftops");
-	if (access(CUPS_GHOSTSCRIPT, X_OK) != 0) {
+	if (!filter_present("gstoraster")) {
 	  fprintf(stderr,
-		  "DEBUG: Ghostscript (%s) missing for \"output-format=%s\", using Poppler's pdftops instead.\n",
-		  CUPS_GHOSTSCRIPT, val);
+		  "DEBUG: For \"output-format=%s\" using only Poppler's pdftops as we have no Ghostscript support.\n",
+		  val);
 	  set_option_in_str(argv_nt[5], optbuflen, "pdftops-renderer",
 			    "pdftops");
-	} else if (access(CUPS_POPPLER_PDFTOPS, X_OK) != 0) {
+	} else if (!filter_present("pdftoraster")) {
 	  fprintf(stderr,
-		  "DEBUG: Poppler's pdftops (%s) missing for \"output-format=%s\", using Ghostscript instead.\n",
-		  CUPS_POPPLER_PDFTOPS, val);
+		  "DEBUG: For \"output-format=%s\", using only Ghostscript as we have no Poppler support.\n",
+		  val);
 	  set_option_in_str(argv_nt[5], optbuflen, "pdftops-renderer",
 			    "gs");
 	} else
@@ -371,15 +371,15 @@ apply_filters(int argc, char *argv[])
     } else if ((p = strcasestr(val, "pcl")) != NULL) {
       if (!strcasecmp(p, "pclxl")) {
 	output_format = PCLXL;
-	if (filter_present("gstopxl") && access(CUPS_GHOSTSCRIPT, X_OK) == 0) {
+	if (filter_present("gstopxl")) {
 	  cupsArrayAdd(filter_chain, "gstopxl");
 	  /* Page logging into page_log is not done by gstopxl,
 	     so let it be done by pdftopdf */
 	  set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
 	} else {
 	  fprintf(stderr,
-		  "DEBUG: Filter gstopxl or Ghostscript (%s) missing for \"output-format=%s\", falling back to PCL 5c/e.\n",
-		  CUPS_GHOSTSCRIPT, val);
+		  "DEBUG: Filter gstopxl missing for \"output-format=%s\", falling back to PCL 5c/e.\n",
+		  val);
 	  output_format = PCL;
 	}
       } else if (!strcasecmp(p, "pclm")) {
@@ -390,12 +390,12 @@ apply_filters(int argc, char *argv[])
 	/* Page logging into page_log is not done by gstoraster/pdftoraster,
 	   so let it be done by pdftopdf */
 	set_option_in_str(argv_nt[5], optbuflen, "page-logging", "on");
-	if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
+	if (filter_present("gstoraster"))
 	  cupsArrayAdd(filter_chain, "gstoraster");
 	else {
 	  fprintf(stderr,
-		  "DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n",
-		  CUPS_GHOSTSCRIPT, val);
+		  "DEBUG: Filter gstoraster missing for \"output-format=%s\", using pdftoraster.\n",
+		  val);
 	  if (filter_present("pdftoraster"))
 	    cupsArrayAdd(filter_chain, "pdftoraster");
 	  else {
@@ -471,12 +471,12 @@ apply_filters(int argc, char *argv[])
       /* Set RGB as color mode */
       set_option_in_str(argv_nt[5], optbuflen, "print-color-mode", "RGB");
     }
-    if (filter_present("gstoraster") && access(CUPS_GHOSTSCRIPT, X_OK) == 0)
+    if (filter_present("gstoraster"))
       cupsArrayAdd(filter_chain, "gstoraster");
     else {
       fprintf(stderr,
-	      "DEBUG: Filter gstoraster or Ghostscript (%s) missing for \"output-format=%s\", using pdftoraster.\n",
-	      CUPS_GHOSTSCRIPT, val);
+	      "DEBUG: Filter gstoraster missing for \"output-format=%s\", using pdftoraster.\n",
+	      val);
       if (filter_present("pdftoraster"))
 	cupsArrayAdd(filter_chain, "pdftoraster");
       else {

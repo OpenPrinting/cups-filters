@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.28.11 - 2022-01-15
 
 CHANGES IN V1.28.12
 
+	- implicitclass: Do not check availability of "gs" and
+	  "pdftops" executables, instead, check by the presence of
+	  "gstoraster" and "pdftoraster" filters whether we have
+	  configured cups-filters for Ghostscript and/or Poppler use.
 	- libcupsfilters: In the PPD generator for the driverless
 	  utility and cups-browsed add "*cupsFilter2: ..." lines for
 	  all supported driverless data formats (PDF, Apple/PWG
