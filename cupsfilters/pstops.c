@@ -150,7 +150,7 @@ typedef struct				/**** Document information ****/
  */
 
 static pstops_page_t	*add_page(pstops_doc_t *doc, const char *label);
-static int		check_range(pstops_doc_t *doc, int page ,const char *Ranges,const char *pageset);
+static int		check_range(int page ,const char *Ranges,const char *pageset);
 static void		copy_bytes(pstops_doc_t *doc,
 				   off_t offset, size_t length);
 static ssize_t		copy_comments(pstops_doc_t *doc,
@@ -321,7 +321,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
 
     input_page_number ++;
 
-    if(check_range(&doc,input_page_number,doc.inputPageRange,NULL))
+    if(check_range(input_page_number,doc.inputPageRange,NULL))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "pstops: Copying page %d ...", input_page_number);
@@ -585,8 +585,7 @@ add_page(pstops_doc_t *doc,		/* I - Document information */
  */
 
 static int				/* O - 1 if selected, 0 otherwise */
-check_range(pstops_doc_t *doc,		/* I - Document information */
-            int          page,    	/* I - Page number */
+check_range(int          page,    	/* I - Page number */
             const char *Ranges,    /* I - page_ranges or inputPageRange */	
             const char *pageset ) /* I - Only provided with page_ranges else NULL */  
 {
@@ -1016,7 +1015,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
     number ++;
 
-    if (check_range(doc, (number - 1) / doc->number_up + 1,doc->page_ranges,doc->page_set))
+    if (check_range((number - 1) / doc->number_up + 1,doc->page_ranges,doc->page_set))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "pstops: Copying page %d...", number);
@@ -1035,7 +1034,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
   */
 
   if (number && is_not_last_page(number) && cupsArrayLast(doc->pages) &&
-      check_range(doc, (number - 1) / doc->number_up + 1,doc->page_ranges,doc->page_set))
+      check_range((number - 1) / doc->number_up + 1,doc->page_ranges,doc->page_set))
   {
     pageinfo = (pstops_page_t *)cupsArrayLast(doc->pages);
 
