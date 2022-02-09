@@ -205,7 +205,8 @@ mutool_spawn (const char *filename,
   if ((pid = fork()) == 0) {
     /* Execute mutool command line ... */
     execvpe(filename, mutoolargv, envp);
-    perror(filename);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "mupdftoraster: Unable to execute %s.", filename);
     goto out;
   }
 
@@ -213,7 +214,9 @@ mutool_spawn (const char *filename,
   if (waitpid (pid, &wstatus, 0) == -1) {
     if (errno == EINTR)
       goto retry_wait;
-    perror ("mutool");
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "mupdftoraster: Error while waiting for mutool to finish - %s.",
+		 strerror(errno));
     goto out;
   }
 

@@ -156,8 +156,8 @@ _cupsImageReadTIFF(
     }
     else
     {
-      img->xppi = 128;
-      img->yppi = 128;
+      img->xppi = 200;
+      img->yppi = 200;
     }
 
     if (img->xppi == 0 || img->yppi == 0)

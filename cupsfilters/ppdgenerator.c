@@ -36,7 +36,6 @@
  */
 
 #include <errno.h>
-#include "driver.h"
 #include <string.h>
 #include <ctype.h>
 #ifdef HAVE_CUPS_1_7
