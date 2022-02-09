@@ -689,7 +689,6 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     }
 
     if (pwgraster || appleraster || pclm) {
-      cupsRasterParseIPPOptions(h, data, pwgraster, 0);
       if ((pwgraster &&
 	   (ppd_attr = ppdFindAttr(ppd, "cupsPwgRasterDocumentTypeSupported",
 				   NULL)) != NULL) ||

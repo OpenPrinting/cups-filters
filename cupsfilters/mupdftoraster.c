@@ -388,14 +388,13 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
      Make also sure that the width and height of the page in pixels is
      the size of the full page (as PWG Raster and MuPDF require it) and not
      only the printable area (as ppdRasterInterpretPPD() sets, to fulfill
-     CUPS Raster standard) */
+     CUPS Raster standard)
+     From the header h only cupsWidth/cupsHeight (dimensions in pixels),
+     resolution, and color space are used here. */
   if (ppd) {
     ppdRasterInterpretPPD(&h, ppd, num_options, options, 0);
     h.cupsWidth = h.HWResolution[0] * h.PageSize[0] / 72;
     h.cupsHeight = h.HWResolution[1] * h.PageSize[1] / 72;
-#ifdef HAVE_CUPS_1_7
-    cupsRasterParseIPPOptions(&h, &curr_data, 1, 0);
-#endif /* HAVE_CUPS_1_7 */
   } else {
 #ifdef HAVE_CUPS_1_7
     cupsRasterParseIPPOptions(&h, &curr_data, 1, 1);

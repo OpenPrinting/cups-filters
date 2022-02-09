@@ -427,8 +427,6 @@ static int parseOpts(filter_data_t *data,
 	 || !strcasecmp(attr->value, "on") ||
 	 !strcasecmp(attr->value, "yes")))
       doc->pwgraster = 1;
-    if (doc->pwgraster == 1)
-      cupsRasterParseIPPOptions(&(doc->header), data, doc->pwgraster, 0);
 #endif /* HAVE_CUPS_1_7 */
   } else {
 #ifdef HAVE_CUPS_1_7

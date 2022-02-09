@@ -192,9 +192,6 @@ parseOpts(filter_data_t *data,
          || !strcasecmp(attr->value, "on") ||
          !strcasecmp(attr->value, "yes")))
       pclmtoraster_data->pwgraster = 1;
-    if (pclmtoraster_data->pwgraster == 1)
-      cupsRasterParseIPPOptions(header, data,
-				pclmtoraster_data->pwgraster, 0);
 #endif /* HAVE_CUPS_1_7 */
   } else {
 #ifdef HAVE_CUPS_1_7
