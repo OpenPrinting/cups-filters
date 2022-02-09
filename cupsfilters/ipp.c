@@ -471,11 +471,9 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
 			   userpass, sizeof(userpass),
 			   hostname, sizeof(hostname), &port, resource,
 			   sizeof(resource));
-  if (status < HTTP_URI_OK) {
+  if (status < HTTP_URI_OK)
     /* Invalid URI */
-    fprintf(stderr, "ERROR: Could not parse URI: %s\n", uri);
     goto error;
-  }
 
   /* URI is not DNS-SD-based, so do not resolve */
   if ((reg_type = strstr(hostname, "._tcp")) == NULL) {
@@ -483,19 +481,15 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
   }
 
   resolved_uri = (char *)malloc(MAX_URI_LEN * (sizeof(char)));
-  if (resolved_uri == NULL) {
-    fprintf(stderr, "resolved_uri malloc: Out of memory\n");
+  if (resolved_uri == NULL)
     goto error;
-  }
   memset(resolved_uri, 0, MAX_URI_LEN);
 
   reg_type --;
   while (reg_type >= hostname && *reg_type != '.')
     reg_type --;
-  if (reg_type < hostname) {
-    fprintf(stderr, "ERROR: Invalid DNS-SD service name: %s\n", hostname);
+  if (reg_type < hostname)
     goto error;
-  }
   *reg_type++ = '\0';
 
   i = 0;
@@ -529,10 +523,8 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
   * Create a pipe for passing the ippfind output to post-processing
   */
 
-  if (pipe(post_proc_pipe)) {
-    perror("ERROR: Unable to create pipe to post-processing");
+  if (pipe(post_proc_pipe))
     goto error;
-  }
 
   if ((ippfind_pid = fork()) == 0) {
    /*
@@ -544,7 +536,6 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
     close(post_proc_pipe[1]);
 
     execvp(CUPS_IPPFIND, ippfind_argv);
-    perror("ERROR: Unable to execute ippfind utility");
 
     exit(1);
   }
@@ -553,7 +544,6 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
     * Unable to fork!
     */
 
-    perror("ERROR: Unable to execute ippfind utility");
     goto error;
   }
 
@@ -562,10 +552,8 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
   fp = cupsFileOpenFd(post_proc_pipe[0], "r");
 
   buffer = (char*)malloc(MAX_OUTPUT_LEN * sizeof(char));
-  if (buffer == NULL) {
-    fprintf(stderr, "buffer malloc: Out of memory.\n");
+  if (buffer == NULL)
     goto error;
-  }
   memset(buffer, 0, MAX_OUTPUT_LEN);
 
   while ((bytes = cupsFileGetLine(fp, buffer, MAX_OUTPUT_LEN)) > 0) {
@@ -658,10 +646,8 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
       }
     }
   }
-  if (is_fax && !output_of_fax_uri) {
-    fprintf(stderr, "fax URI requested from not fax-capable device\n");
+  if (is_fax && !output_of_fax_uri)
     goto error;
-  }
 
   return (resolved_uri);
 

@@ -306,17 +306,44 @@ main(int  argc,				/* I - Number of command-line args */
       filter_data.job_title = title;
       filter_data.copies = atoi(argv[4]);
       filter_data.job_attrs = NULL;        /* We use command line options */
-      filter_data.printer_attrs =
-	get_printer_attributes4(printer_uri, NULL, 0, NULL, 0, 1, 0);
+      if ((filter_data.printer_attrs =
+	   get_printer_attributes4(printer_uri, NULL, 0, NULL, 0, 1, 0)) !=
+	  NULL)
                                            /* Poll the printer attributes from
 					      the printer */
+	filter_data.ppdfile = NULL;        /* We have successfully polled
+					      the IPP attributes from the
+					      printer. This is the most
+					      precise printer capability info.
+					      As the queue's PPD is only
+					      for the cluster we prefer the
+					      IPP attributes */
+      else
+	filter_data.ppdfile = getenv("PPD");/*The polling of the printer's
+					      IPP attribute failed, meaning
+					      that it is most probably not a
+					      driverless IPP printers (IPP 2.x)
+					      but a legacy IPP printer (IPP
+					      1.x) which usually has
+					      unsufficient capability info.
+					      Therefore we fall back to the
+					      PPD file here which contains
+					      some info from the printer's
+					      DNS-SD record. */
+      if (filter_data.ppdfile)
+	filter_data.ppd = ppdOpenFile(filter_data.ppdfile);
+      else
+	filter_data.ppd = NULL;
+      if (filter_data.printer_attrs == NULL && filter_data.ppd == NULL)
+      {
+	ippDelete(response);
+	fprintf(stderr, "ERROR: Unable to get sufficient capability info of the destination printer.\n");
+	return (CUPS_BACKEND_FAILED);
+      }
+
       filter_data.num_options = num_options;
       filter_data.options = options;       /* Command line options from 5th
 					      arg */
-      filter_data.ppdfile = NULL;          /* We poll the IPP attributes from
-					      printer as the queue's PPD is
-					      for the cluster */
-      filter_data.ppd = NULL;
       filter_data.back_pipe[0] = -1;
       filter_data.back_pipe[1] = -1;
       filter_data.side_pipe[0] = -1;
@@ -355,14 +382,17 @@ main(int  argc,				/* I - Number of command-line args */
       cupsArrayAdd(filter_chain, &ipp_in_chain);
 
       /* DEVICE_URI environment variable */
-      setenv("DEVICE_URI",printer_uri, 1);
+      setenv("DEVICE_URI", printer_uri, 1);
 
       /* FINAL_CONTENT_TYPE environment variable */
       setenv("FINAL_CONTENT_TYPE", document_format, 1);
 
       /* Mark the defaults and option settings in the PPD file */
-      ppdMarkDefaults(filter_data.ppd);
-      ppdMarkOptions(filter_data.ppd, num_options, options);
+      if (filter_data.ppd)
+      {
+	ppdMarkDefaults(filter_data.ppd);
+	ppdMarkOptions(filter_data.ppd, num_options, options);
+      }
 
       /* We call the IPP CUPS backend at the end of the chain, so we have
 	 no output */
