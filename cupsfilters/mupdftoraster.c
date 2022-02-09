@@ -459,8 +459,7 @@ out:
     cupsArrayDelete(mupdf_args);
 
   free(icc_profile);
-  if (ppd)
-    ppdClose(ppd);
+
   if (fd >= 0)
     unlink(infilename);
   return status;
