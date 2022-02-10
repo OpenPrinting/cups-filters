@@ -165,81 +165,232 @@ add_pdf_header_options(mupdf_page_header *h,
 
 static int
 mutool_spawn (const char *filename,
-	      cups_array_t *mupdf_args,
+	      cups_array_t *mutool_args,
 	      char **envp,
-        filter_logfunc_t log,
-        void *ld)
+	      int outputfd,
+	      filter_logfunc_t log,
+	      void *ld,
+	      filter_iscanceledfunc_t iscanceled,
+	      void *icd)
 {
   char *argument;
+  char buf[BUFSIZ];
   char **mutoolargv;
   const char* apos;
+  int errfds[2];
   int i;
   int numargs;
-  int pid;
+  int pid, mutoolpid, errpid;
+  cups_file_t *logfp;
+  filter_loglevel_t log_level;
+  char *msg;
   int status = 65536;
   int wstatus;
 
   /* Put mutool command line argument into an array for the "exec()"
      call */
-  numargs = cupsArrayCount(mupdf_args);
+  numargs = cupsArrayCount(mutool_args);
   mutoolargv = calloc(numargs + 1, sizeof(char *));
-  for (argument = (char *)cupsArrayFirst(mupdf_args), i = 0; argument;
-       argument = (char *)cupsArrayNext(mupdf_args), i++) {
+  for (argument = (char *)cupsArrayFirst(mutool_args), i = 0; argument;
+       argument = (char *)cupsArrayNext(mutool_args), i++) {
     mutoolargv[i] = argument;
   }
   mutoolargv[i] = NULL;
 
-  /* Debug output: Full mutool command line and environment variables */
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: mutool command line:");
-  for (i = 0; mutoolargv[i]; i ++) {
-    if ((strchr(mutoolargv[i],' ')) || (strchr(mutoolargv[i],'\t')))
-      apos = "'";
-    else
-      apos = "";
-    if(log) log(ld, FILTER_LOGLEVEL_INFO, "mupdftoraster: %s%s%s", apos, mutoolargv[i], apos);
+  if (log) {
+    /* Debug output: Full mutool command line and environment variables */
+    snprintf(buf, sizeof(buf), "mupdftoraster: mutool command line:");
+    for (i = 0; mutoolargv[i]; i ++) {
+      if ((strchr(mutoolargv[i],' ')) || (strchr(mutoolargv[i],'\t')))
+	apos = "'";
+      else
+	apos = "";
+      snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+	       " %s%s%s", apos, mutoolargv[i], apos);
+    }
+    log(ld, FILTER_LOGLEVEL_DEBUG, "%s", buf);
+
+    for (i = 0; envp[i]; i ++)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "mupdftoraster: envp[%d]=\"%s\"", i, envp[i]);
   }
 
-  for (i = 0; envp[i]; i ++)
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: envp[%d]=\"%s\"\n", i, envp[i]);
+  /* Create a pipe for stderr output of mutool */
+  if (pipe(errfds))
+  {
+    errfds[0] = -1;
+    errfds[1] = -1;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "mupdftoraster: Unable to establish stderr pipe for mutool "
+		 "call");
+    goto out;
+  }
 
-  if ((pid = fork()) == 0) {
+  /* Set the "close on exec" flag on each end of the pipes... */
+  if (fcntl(errfds[0], F_SETFD, fcntl(errfds[0], F_GETFD) | FD_CLOEXEC))
+  {
+    close(errfds[0]);
+    close(errfds[1]);
+    errfds[0] = -1;
+    errfds[1] = -1;
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "mupdftoraster: Unable to set \"close on exec\" flag on read "
+		 "end of the stderr pipe for mutool call");
+    goto out;
+  }
+  if (fcntl(errfds[1], F_SETFD, fcntl(errfds[1], F_GETFD) | FD_CLOEXEC))
+  {
+    close(errfds[0]);
+    close(errfds[1]);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "mupdftoraster: Unable to set \"close on exec\" flag on write "
+		 "end of the stderr pipe for mutool call");
+    goto out;
+  }
+
+  if ((mutoolpid = fork()) == 0)
+  {
+    /* Couple errfds pipe with stdin of mutool process */
+    if (errfds[1] >= 2) {
+      if (errfds[1] != 2) {
+	if (dup2(errfds[1], 2) < 0) {
+	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		       "mupdftoraster: Unable to couple pipe with stderr of "
+		       "mutool process");
+	  exit(1);
+	}
+	close(errfds[1]);
+      }
+      close(errfds[0]);
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "mupdftoraster: invalid pipe file descriptor to couple with "
+		   "stderr of mutool process");
+      exit(1);
+    }
+
+    /* Couple stdout of mutool process */
+    if (outputfd >= 1) {
+      if (outputfd != 1) {
+	if (dup2(outputfd, 1) < 0) {
+	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		       "mupdftoraster: Unable to couple stdout of mutool "
+		       "process");
+	  exit(1);
+	}
+	close(outputfd);
+      }
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "mupdftoraster: Invalid file descriptor to couple with "
+		   "stdout of mutool process");
+      exit(1);
+    }
+
     /* Execute mutool command line ... */
     execvpe(filename, mutoolargv, envp);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftoraster: Unable to execute %s.", filename);
-    goto out;
-  }
-
- retry_wait:
-  if (waitpid (pid, &wstatus, 0) == -1) {
-    if (errno == EINTR)
-      goto retry_wait;
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftoraster: Error while waiting for mutool to finish - %s.",
+		 "mupdftoraster: Unable to launch mutool: %s: %s", filename,
 		 strerror(errno));
-    goto out;
+    exit(1);
+  }
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "mupdftoraster: Started mutool (PID %d)", mutoolpid);
+
+  close(errfds[1]);
+
+  if ((errpid = fork()) == 0)
+  {
+    logfp = cupsFileOpenFd(errfds[0], "r");
+    while (cupsFileGets(logfp, buf, sizeof(buf)))
+      if (log) {
+	if (strncmp(buf, "DEBUG: ", 7) == 0) {
+	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  msg = buf + 7;
+	} else if (strncmp(buf, "DEBUG2: ", 8) == 0) {
+	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  msg = buf + 8;
+	} else if (strncmp(buf, "INFO: ", 6) == 0) {
+	  log_level = FILTER_LOGLEVEL_INFO;
+	  msg = buf + 6;
+	} else if (strncmp(buf, "WARNING: ", 9) == 0) {
+	  log_level = FILTER_LOGLEVEL_WARN;
+	  msg = buf + 9;
+	} else if (strncmp(buf, "ERROR: ", 7) == 0) {
+	  log_level = FILTER_LOGLEVEL_ERROR;
+	  msg = buf + 7;
+	} else {
+	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  msg = buf;
+	}
+	log(ld, log_level, "mupdftoraster: %s", msg);
+      }
+    cupsFileClose(logfp);
+    /* No need to close the fd errfds[0], as cupsFileClose(fp) does this
+       already */
+    /* Ignore errors of the logging process */
+    exit(0);
+  }
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "mupdftoraster: Started logging (PID %d)", errpid);
+
+  close(errfds[0]);
+
+  while (mutoolpid > 0 || errpid > 0) {
+    if ((pid = wait(&wstatus)) < 0) {
+      if (errno == EINTR && iscanceled && iscanceled(icd)) {
+	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "mupdftoraster: Job canceled, killing mutool ...");
+	kill(mutoolpid, SIGTERM);
+	mutoolpid = -1;
+	kill(errpid, SIGTERM);
+	errpid = -1;
+	break;
+      } else
+	continue;
+    }
+
+    /* How did the filter terminate */
+    if (wstatus) {
+      if (WIFEXITED(wstatus)) {
+	/* Via exit() anywhere or return() in the main() function */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "mupdftoraster: %s (PID %d) stopped with status %d",
+		     (pid == mutoolpid ? "mutool" : "Logging"), pid,
+		     WEXITSTATUS(wstatus));
+	status = WEXITSTATUS(wstatus);
+      } else {
+	/* Via signal */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "mupdftoraster: %s (PID %d) crashed on signal %d",
+		     (pid == mutoolpid ? "mutool" : "Logging"), pid,
+		     WTERMSIG(wstatus));
+	status = 256 * WTERMSIG(wstatus);
+      }
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "mupdftoraster: %s (PID %d) exited with no errors.",
+		   (pid == mutoolpid ? "mutool" : "Logging"), pid);
+      status = 0;
+    }
+    if (pid == mutoolpid)
+      mutoolpid = -1;
+    else  if (pid == errpid)
+      errpid = -1;
   }
 
-  /* How did mutool process terminate */
-  if (WIFEXITED(wstatus))
-    /* Via exit() anywhere or return() in the main() function */
-    status = WEXITSTATUS(wstatus);
-  else if (WIFSIGNALED(wstatus))
-    /* Via signal */
-    status = 256 * WTERMSIG(wstatus);
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: mutool completed, status: %d\n", status);
-
- out:
+out:
   free(mutoolargv);
   return status;
 }
 
+
 int
 mupdftoraster (int inputfd,         /* I - File descriptor input stream */
-       int outputfd,                 /* I - File descriptor output stream */
-       int inputseekable,            /* I - Is input stream seekable? (unused)*/
-       filter_data_t *data,          /* I - Job and printer data */
-       void *parameters)             /* I - Filter-specific parameters */
+	       int outputfd,        /* I - File descriptor output stream */
+	       int inputseekable,   /* I - Is input stream seekable? (unused)*/
+	       filter_data_t *data, /* I - Job and printer data */
+	       void *parameters)    /* I - Filter-specific parameters */
 {
   char buf[BUFSIZ];
   char *icc_profile = NULL;
@@ -259,8 +410,10 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   struct sigaction sa;
   cm_calibration_t cm_calibrate;
   filter_data_t curr_data;
-   filter_logfunc_t     log = data->logfunc;
-  void          *ld = data->logdata;
+  filter_logfunc_t log = data->logfunc;
+  void *ld = data->logdata;
+  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void *icd = data->iscanceleddata;
   char **envp;
 
 #ifdef HAVE_CUPS_1_7
@@ -443,7 +596,8 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_MUTOOL);
 		
   /* call mutool */
-  status = mutool_spawn (tmpstr, mupdf_args, envp, log, ld);
+  status = mutool_spawn (tmpstr, mupdf_args, envp, outputfd, log, ld,
+			 iscanceled, icd);
   if (status != 0) status = 1;
 
   if(empty)
@@ -452,6 +606,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
      status = 0;
   }
 out:
+  close(outputfd);
   if (fp)
     fclose(fp);
   if (mupdf_args) 
