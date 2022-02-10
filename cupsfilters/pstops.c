@@ -532,7 +532,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   fclose(outputfp);
   close(outputfd);
 
-  return (status ? 1:0);
+  return (status);
 }
 
 
