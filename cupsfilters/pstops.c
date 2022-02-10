@@ -238,6 +238,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
    int proc_pipe[2];
    int pstops_pid = 0; 
    int childStatus;
+   int status = 0;
 
   (void)inputseekable;
   (void)parameters;
@@ -504,9 +505,26 @@ pstops(int inputfd,         /* I - File descriptor input stream */
           "pstops: Error while waiting for input_page_ranges to finish - %s.",
           strerror(errno));
         }
-        if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "pstops: input-page-ranges completed, status: %d", childStatus);
+        /* How did the sub-process terminate */
+    if (childStatus) {
+      if (WIFEXITED(childStatus)) {
+	/* Via exit() anywhere or return() in the main() function */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "pstops: input-page-ranges filter (PID %d) stopped with status %d",
+		     pstops_pid, WEXITSTATUS(childStatus));
+      } else {
+	/* Via signal */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "pstops: imput-page-ranges filter (PID %d) crashed on signal %d",
+		     pstops_pid, WTERMSIG(childStatus));
+      }
+      status=1;
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "pstops: input-page-ranges-filter (PID %d) exited with no errors.",
+		   pstops_pid);
     }
-    
+  }
 
   cupsFileClose(inputfp);
   close(inputfd);
@@ -514,7 +532,7 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   fclose(outputfp);
   close(outputfd);
 
-  return (0);
+  return (status ? 1:0);
 }
 
 
