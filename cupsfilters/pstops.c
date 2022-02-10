@@ -22,6 +22,8 @@
 #include <cups/file.h>
 #include <cups/array.h>
 #include <ppd/ppd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 
 /*
@@ -78,7 +80,7 @@ typedef struct				/**** Document information ****/
 		use_ESPshowpage;	/* Use ESPshowpage? */
   cups_array_t	*pages;			/* Pages in document */
   cups_file_t	*temp;			/* Temporary file, if any */
-  char		tempfile[1024],input_tempfile[1024];		/* Temporary filename */
+  char		tempfile[1024];		/* Temporary filename */
   int		job_id;			/* Job ID */
   const char	*user,			/* User name */
 		*title;			/* Job name */
@@ -233,7 +235,9 @@ pstops(int inputfd,         /* I - File descriptor input stream */
   void          *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
-  int fd;                /* File Descriptor for temp file */
+   int proc_pipe[2];
+   int pstops_pid = 0; 
+   int childStatus;
 
   (void)inputseekable;
   (void)parameters;
@@ -258,115 +262,83 @@ pstops(int inputfd,         /* I - File descriptor input stream */
 
     return (1);
   }
+  
+   if(doc.inputPageRange)
+ {   
+     if(pipe(proc_pipe))
+     {
+        if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pstops: Unable to create pipe for input-page-ranges");
+		   return (1);
+     }
+    if ((pstops_pid = fork()) == 0)
+    {  
+     close(proc_pipe[0]);
 
-   if(doc.inputPageRange!=NULL)
- {
-    
-  if ((fp = cupsFileOpenFd(inputfd, "r")) == NULL)
-  {
-    if (!iscanceled || !iscanceled(icd))
-    {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: Unable to open input data stream.");
+      if ((fp = cupsFileOpenFd(inputfd, "r")) == NULL)
+     {
+        if (!iscanceled || !iscanceled(icd))
+        {
+        if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "pstops: Unable to open input data stream.");
+        }
+
+     exit (1);
     }
 
-    return (1);
-  }
+    bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
 
- /*
-  * Copy input into temporary file ...
-  */
-
-  if ((fd = cupsTempFd(doc.input_tempfile, sizeof(doc.input_tempfile))) < 0)
-  {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pstops: Unable to copy PS file: %s", strerror(errno));
-    return (1);
-  }
-
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: Processing input-page-ranges.");
-
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pstops: Copying input to temp file \"%s\"",
-	       doc.input_tempfile);
- 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pstops: Copying Headers to temp file \"%s\"",
-	       doc.input_tempfile);
-
-  bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
-
-    while (strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
-  {
-     bytes = write(fd, buffer, bytes);
-    if ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) == 0)
-      break;
-  }
-
-  int input_page_number=0;
-
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pstops: Copying Pages to temp file \"%s\"",
-	       doc.input_tempfile);
-
-   while (!strncmp(buffer, "%%Page:", 7))
-  {
-    if (iscanceled && iscanceled(icd))
+      while (strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-                  "pstops: Job canceled");
-      break;
+      bytes = write(proc_pipe[1], buffer, bytes);
+      if ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) == 0)
+        break;
     }
 
-    input_page_number ++;
+    int input_page_number=0;
 
-    if(check_range(input_page_number,doc.inputPageRange,NULL))
+    while (!strncmp(buffer, "%%Page:", 7))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: Copying page %d ...", input_page_number);
-        bytes = write(fd, buffer, bytes);
-        bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
-      while(strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
-      { bytes = write(fd, buffer, bytes);
-        bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
+      input_page_number ++;
+
+      if(check_range(input_page_number,doc.inputPageRange,NULL))
+      {
+          bytes = write(proc_pipe[1], buffer, bytes);
+          bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
+        while(strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
+        { bytes = write(proc_pipe[1], buffer, bytes);
+          bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
+        }
+      }
+      else
+      {
+        bytes = cupsFileGetLine(fp,buffer,sizeof(buffer)); 
+        while(strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
+        {
+          bytes = cupsFileGetLine(fp,buffer,sizeof(buffer)); 
+        }
       }
     }
-    else
+    while (bytes)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: Skipping page %d ...", input_page_number);
-       bytes = cupsFileGetLine(fp,buffer,sizeof(buffer)); 
-       while(strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
-       {
-         bytes = cupsFileGetLine(fp,buffer,sizeof(buffer)); 
-       }
+        bytes = write(proc_pipe[1], buffer, bytes);
+        bytes= cupsFileGetLine(fp,buffer,sizeof(buffer));
     }
-  }
-  while (bytes)
-   {
-      bytes = write(fd, buffer, bytes);
-      bytes= cupsFileGetLine(fp,buffer,sizeof(buffer));
+    close(proc_pipe[1]);
+    cupsFileClose(fp);
+    exit(0);
    }
-    close(fd);
- }
+   else
+   {
+     close(proc_pipe[1]);
+     close(inputfd);
+     inputfd=proc_pipe[0];
+   }
+  }
 
  /*
   * Open the input data stream specified by the inputfd...
   */
-  if(doc.inputPageRange!=NULL)
-  {
-     if((inputfp=cupsFileOpen(doc.input_tempfile,"r"))==NULL)
-     {
-        if (!iscanceled || !iscanceled(icd))
-       {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pstops: Unable to open input data stream.");
-    }
-   }
-  }
-  else
- { 
   if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
     if (!iscanceled || !iscanceled(icd))
@@ -377,7 +349,6 @@ pstops(int inputfd,         /* I - File descriptor input stream */
 
     return (1);
   }
- }
 
  /*
   * Open the output data stream specified by the outputfd...
@@ -508,11 +479,6 @@ pstops(int inputfd,         /* I - File descriptor input stream */
     unlink(doc.tempfile);
   }
 
-  if(doc.inputPageRange)
-  {
-    unlink(doc.input_tempfile);
-  }
-
   if (doc.pages)
   {
     for (pageinfo = (pstops_page_t *)cupsArrayFirst(doc.pages);
@@ -527,6 +493,20 @@ pstops(int inputfd,         /* I - File descriptor input stream */
     cupsArrayDelete(doc.pages);
     doc.pages = NULL;
   }
+
+  if(doc.inputPageRange)
+    { 
+      retry_wait:
+        if (waitpid (pstops_pid, &childStatus, 0) == -1) {
+          if (errno == EINTR)
+            goto retry_wait;
+          if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+          "pstops: Error while waiting for input_page_ranges to finish - %s.",
+          strerror(errno));
+        }
+        if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "pstops: input-page-ranges completed, status: %d", childStatus);
+    }
+    
 
   cupsFileClose(inputfp);
   close(inputfd);
