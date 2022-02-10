@@ -22,6 +22,8 @@
 #include <cups/file.h>
 #include <cups/array.h>
 #include <ppd/ppd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 
 /*
@@ -106,6 +108,7 @@ typedef struct				/**** Document information ****/
 		page_border;		/* doc->page_border around pages */
   const char	*page_label,		/* page-label option, if any */
 		*page_ranges,		/* page-ranges option, if any */
+    *inputPageRange, /* input-page-ranges option, if any */
 		*page_set;		/* page-set option, if any */
   /* Basic settings from PPD defaults/options, global vars of original pstops */
   int           Orientation,            /* 0 = portrait, 1 = landscape, etc. */
@@ -149,7 +152,7 @@ typedef struct				/**** Document information ****/
  */
 
 static pstops_page_t	*add_page(pstops_doc_t *doc, const char *label);
-static int		check_range(pstops_doc_t *doc, int page);
+static int		check_range(int page ,const char *Ranges,const char *pageset);
 static void		copy_bytes(pstops_doc_t *doc,
 				   off_t offset, size_t length);
 static ssize_t		copy_comments(pstops_doc_t *doc,
@@ -222,16 +225,20 @@ pstops(int inputfd,         /* I - File descriptor input stream */
        void *parameters)    /* I - Filter-specific parameters (unused) */
 {
   pstops_doc_t	doc;			/* Document information */
-  cups_file_t	*inputfp;		/* Print file */
+  cups_file_t	*inputfp,*fp;		/* Print file */
   FILE          *outputfp;              /* Output data stream */
-  char		line[8192];		/* Line buffer */
-  ssize_t	len;			/* Length of line buffer */
+  char		line[8192],
+          buffer[8192];		/* Line buffers */
+  ssize_t	len,bytes;			/* Length of line buffers */
   pstops_page_t *pageinfo;
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
-
+   int proc_pipe[2];
+   int pstops_pid = 0; 
+   int childStatus;
+   int status = 0;
 
   (void)inputseekable;
   (void)parameters;
@@ -242,10 +249,97 @@ pstops(int inputfd,         /* I - File descriptor input stream */
 
   signal(SIGPIPE, SIG_IGN);
 
+/*
+  * Process job options...
+  */
+
+  if (set_pstops_options(&doc, data->ppd, data->job_id, data->job_user,
+			 data->job_title, data->copies,
+			 data->num_options, data->options,
+			 log, ld, iscanceled, icd) == 1)
+  {
+    close(inputfd);
+    close(outputfd);
+
+    return (1);
+  }
+  
+   if(doc.inputPageRange)
+ {   
+     if(pipe(proc_pipe))
+     {
+        if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "pstops: Unable to create pipe for input-page-ranges");
+		   return (1);
+     }
+    if ((pstops_pid = fork()) == 0)
+    {  
+     close(proc_pipe[0]);
+
+      if ((fp = cupsFileOpenFd(inputfd, "r")) == NULL)
+     {
+        if (!iscanceled || !iscanceled(icd))
+        {
+        if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		     "pstops: Unable to open input data stream.");
+        }
+
+     exit (1);
+    }
+
+    bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
+
+      while (strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
+    {
+      bytes = write(proc_pipe[1], buffer, bytes);
+      if ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) == 0)
+        break;
+    }
+
+    int input_page_number=0;
+
+    while (!strncmp(buffer, "%%Page:", 7))
+    {
+      input_page_number ++;
+
+      if(check_range(input_page_number,doc.inputPageRange,NULL))
+      {
+          bytes = write(proc_pipe[1], buffer, bytes);
+          bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
+        while(strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
+        { bytes = write(proc_pipe[1], buffer, bytes);
+          bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
+        }
+      }
+      else
+      {
+        bytes = cupsFileGetLine(fp,buffer,sizeof(buffer)); 
+        while(strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
+        {
+          bytes = cupsFileGetLine(fp,buffer,sizeof(buffer)); 
+        }
+      }
+    }
+    while (bytes)
+    {
+        bytes = write(proc_pipe[1], buffer, bytes);
+        bytes= cupsFileGetLine(fp,buffer,sizeof(buffer));
+    }
+    close(proc_pipe[1]);
+    cupsFileClose(fp);
+    exit(0);
+   }
+   else
+   {
+     close(proc_pipe[1]);
+     close(inputfd);
+     inputfd=proc_pipe[0];
+   }
+  }
+
  /*
   * Open the input data stream specified by the inputfd...
   */
-
   if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
     if (!iscanceled || !iscanceled(icd))
@@ -285,24 +379,6 @@ pstops(int inputfd,         /* I - File descriptor input stream */
     /* Do not treat this an error, if a previous filter eliminated all
        pages the job should get dequeued without anything printed. */
     return (0);
-  }
-
- /*
-  * Process job options...
-  */
-
-  if (set_pstops_options(&doc, data->ppd, data->job_id, data->job_user,
-			 data->job_title, data->copies,
-			 data->num_options, data->options,
-			 log, ld, iscanceled, icd) == 1)
-  {
-    cupsFileClose(inputfp);
-    close(inputfd);
-
-    fclose(outputfp);
-    close(outputfd);
-
-    return (1);
   }
 
   doc.inputfp = inputfp;
@@ -419,13 +495,44 @@ pstops(int inputfd,         /* I - File descriptor input stream */
     doc.pages = NULL;
   }
 
+  if(doc.inputPageRange)
+    { 
+      retry_wait:
+        if (waitpid (pstops_pid, &childStatus, 0) == -1) {
+          if (errno == EINTR)
+            goto retry_wait;
+          if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+          "pstops: Error while waiting for input_page_ranges to finish - %s.",
+          strerror(errno));
+        }
+        /* How did the sub-process terminate */
+    if (childStatus) {
+      if (WIFEXITED(childStatus)) {
+	/* Via exit() anywhere or return() in the main() function */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "pstops: input-page-ranges filter (PID %d) stopped with status %d",
+		     pstops_pid, WEXITSTATUS(childStatus));
+      } else {
+	/* Via signal */
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "pstops: imput-page-ranges filter (PID %d) crashed on signal %d",
+		     pstops_pid, WTERMSIG(childStatus));
+      }
+      status=1;
+    } else {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "pstops: input-page-ranges-filter (PID %d) exited with no errors.",
+		   pstops_pid);
+    }
+  }
+
   cupsFileClose(inputfp);
   close(inputfd);
 
   fclose(outputfp);
   close(outputfd);
 
-  return (0);
+  return (status);
 }
 
 
@@ -476,30 +583,31 @@ add_page(pstops_doc_t *doc,		/* I - Document information */
  */
 
 static int				/* O - 1 if selected, 0 otherwise */
-check_range(pstops_doc_t *doc,		/* I - Document information */
-            int          page)		/* I - Page number */
+check_range(int          page,    	/* I - Page number */
+            const char *Ranges,    /* I - page_ranges or inputPageRange */	
+            const char *pageset ) /* I - Only provided with page_ranges else NULL */  
 {
   const char	*range;			/* Pointer into range string */
   int		lower, upper;		/* Lower and upper page numbers */
 
 
-  if (doc->page_set)
+  if (pageset)
   {
    /*
     * See if we only print even or odd pages...
     */
 
-    if (!strcasecmp(doc->page_set, "even") && (page & 1))
+    if (!strcasecmp(pageset, "even") && (page & 1))
       return (0);
 
-    if (!strcasecmp(doc->page_set, "odd") && !(page & 1))
+    if (!strcasecmp(pageset, "odd") && !(page & 1))
       return (0);
   }
 
-  if (!doc->page_ranges)
+  if (!Ranges)
     return (1);				/* No range, print all pages... */
 
-  for (range = doc->page_ranges; *range != '\0';)
+  for (range = Ranges; *range != '\0';)
   {
     if (*range == '-')
     {
@@ -905,7 +1013,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
     number ++;
 
-    if (check_range(doc, (number - 1) / doc->number_up + 1))
+    if (check_range((number - 1) / doc->number_up + 1,doc->page_ranges,doc->page_set))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		   "pstops: Copying page %d...", number);
@@ -924,7 +1032,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
   */
 
   if (number && is_not_last_page(number) && cupsArrayLast(doc->pages) &&
-      check_range(doc, (number - 1) / doc->number_up + 1))
+      check_range((number - 1) / doc->number_up + 1,doc->page_ranges,doc->page_set))
   {
     pageinfo = (pstops_page_t *)cupsArrayLast(doc->pages);
 
@@ -2707,7 +2815,13 @@ set_pstops_options(
   */
 
   doc->page_label = cupsGetOption("page-label", num_options, options);
+ 
+ /*
+ *  input-page-ranges
+ */
 
+  doc->inputPageRange=cupsGetOption("input-page-ranges",num_options,options);
+  
  /*
   * page-ranges
   */
