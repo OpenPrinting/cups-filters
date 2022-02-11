@@ -985,7 +985,7 @@ cupsRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
       *cspace != CUPS_CSPACE_RGB && *cspace != CUPS_CSPACE_CMYK)
     return (-1);
 
-  /* True Bi-Di only available in PWG Raster.
+  /* True Bi-Level only available in PWG Raster.
      List of properties in pwg-raster-document-type-supported IPP attribute
      is lower-case-only whereas urf-supported for Apple Raster is upper-case-
      only */
@@ -1006,7 +1006,7 @@ cupsRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
     /* Any other color space */
     for (;;) { /* Loop through fallbacks to default if requested color space
 		  not supported */
-      if (*cspace >= 0) { /* Skip if no color space specified */
+      if (*cspace != -1) { /* Skip if no color space specified */
 	for (p = available; p; p = q) {
 	  int n, dmin, dmax;
 	  /* Check whether requested color space is supported */
@@ -1096,9 +1096,9 @@ cupsRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 	    else
 	      best_depth = min_depth;
 	  } else
-	    /* No more entry for the requested color space in the attribute
-	       string, quit loop */
-	    break;
+	    /* Advance to the next color space entry */
+	    if (q && *q != '\0')
+	      q ++;
 	}
 	if (best_depth > 0) {
 	  /* The requested color space is supported, so quit the fallback
@@ -1120,23 +1120,38 @@ cupsRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 	*cspace = -1;
 	return (-1);
       }
-      /* Fallback 1: sRGB if we print in color and sGray if we print monochrome
-         Fallback 2: sRGB always (if printer does not advertise mono mode)
+      /* Fallback 1: Suitable color space for the requested color mode
+         Fallback 2: Color always (if printer does not advertise mono mode or
+	 sRGB if DeviceRGB is requested but only sRGB available)
          AdobeRGB instead of sRGB only if available in 16 bit per color and
          high color depth is requested */
       if ((cspace_fallback == 1 &&
 	   (!strcasecmp(color_mode, "auto") ||
-	    !strcasecmp(color_mode, "color"))) ||
+	    strcasestr(color_mode, "color") ||
+	    strcasestr(color_mode, "rgb") ||
+	    strcasestr(color_mode, "cmy"))) ||
 	  cspace_fallback == 2) {
-	if (high_depth && *high_depth &&
-	    (strstr(available, "ADOBERGB24-48") ||
-	     strstr(available, "ADOBERGB48") ||
-	     strstr(available, "adobe-rgb_16")))
+	if (strcasestr(color_mode, "adobe") ||
+	    (high_depth && *high_depth &&
+	     (strstr(available, "ADOBERGB24-48") ||
+	      strstr(available, "ADOBERGB48") ||
+	      strstr(available, "adobe-rgb_16"))))
 	  *cspace = CUPS_CSPACE_ADOBERGB;
-	else
+	else if (strcasestr(available, "cmyk") &&
+		 strcasestr(color_mode, "cmy"))
+	  *cspace = CUPS_CSPACE_CMYK;
+	else if ((strcasestr(available, "srgb") &&
+		  !strcasestr(color_mode, "device")) ||
+		 cspace_fallback == 2)
 	  *cspace = CUPS_CSPACE_SRGB;
-      } else
-	*cspace = CUPS_CSPACE_SW;
+	else
+	  *cspace = CUPS_CSPACE_RGB;
+      } else {
+	if (!strcasestr(color_mode, "device"))
+	  *cspace = CUPS_CSPACE_SW;
+	else
+	  *cspace = CUPS_CSPACE_W;
+      }
     }
   }
 
