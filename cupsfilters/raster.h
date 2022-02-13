@@ -57,6 +57,7 @@ extern int              cupsRasterPrepareHeader(cups_page_header2_t *h,
 						final_outformat,
 						filter_out_format_t
 						header_outformat,
+						int no_hig_depth,
 						cups_cspace_t *cspace);
 extern int              cupsRasterSetColorSpace(cups_page_header2_t *h,
 						const char *available,

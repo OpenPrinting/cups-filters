@@ -544,6 +544,8 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
                                                 /* I  - This filter's output
 						        format (determines
 							header format) */
+			int no_high_depth,      /* I  - Suppress use of
+						        > 8 bit per color */
 			cups_cspace_t *cspace)  /* IO - Color space we want to
 						        use, -1 for auto, we
 							return color space
@@ -725,7 +727,8 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	    else
 	      quality = "Normal";
 	  }
-	  hi_depth = (!strcasecmp(quality, "High") || !strcmp(quality, "5")) ?
+	  hi_depth = (!no_high_depth &&
+		      (!strcasecmp(quality, "High") || !strcmp(quality, "5"))) ?
 	    1 : 0;
 	  if (log) {
 	    log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -812,7 +815,8 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 				   options)) == NULL)
 	quality = ippAttrEnumValForPrinter(printer_attrs, job_attrs,
 					   "print-quality");
-      hi_depth = (!strcasecmp(quality, "high") || !strcmp(quality, "5")) ?
+      hi_depth = (!no_high_depth &&
+		  (!strcasecmp(quality, "high") || !strcmp(quality, "5"))) ?
 	1 : 0;
       if (log) {
 	log(ld, FILTER_LOGLEVEL_DEBUG,

@@ -1160,7 +1160,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
   cupsRasterPrepareHeader(&h, data, outformat,
 			  (outformat != OUTPUT_FORMAT_APPLE_RASTER ?
-			   outformat : OUTPUT_FORMAT_CUPS_RASTER),
+			   outformat : OUTPUT_FORMAT_CUPS_RASTER), 0,
 			  &cspace);
 
   /* Special Ghostscript options for raster-only PDF output */

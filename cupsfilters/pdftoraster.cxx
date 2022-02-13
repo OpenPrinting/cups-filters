@@ -359,7 +359,7 @@ static int parseOpts(filter_data_t *data,
 
   cupsRasterPrepareHeader(&(doc->header), data, outformat,
 			  (outformat == OUTPUT_FORMAT_PWG_RASTER ?
-			   outformat : OUTPUT_FORMAT_CUPS_RASTER),
+			   outformat : OUTPUT_FORMAT_CUPS_RASTER), 0,
 			  &cspace);
 
   if (doc->ppd) {

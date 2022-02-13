@@ -413,7 +413,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   */
 
   cupsRasterPrepareHeader(&header, data, outformat,
-			  OUTPUT_FORMAT_CUPS_RASTER, &cspace);
+			  OUTPUT_FORMAT_CUPS_RASTER, 1, &cspace);
   ppd = data->ppd;
   doc.Orientation = header.Orientation;
   doc.Duplex = header.Duplex;
