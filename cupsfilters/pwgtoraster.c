@@ -930,6 +930,8 @@ static int selectConvertFunc(cups_raster_t *raster,
 			     filter_logfunc_t log,
 			     void* ld)
 {
+  doc->bitspercolor = doc->outheader.cupsBitsPerColor;
+
   if ((doc->color_profile.colorProfile == NULL || doc->color_profile.outputColorProfile == doc->color_profile.colorProfile)
       && (doc->outheader.cupsColorOrder == CUPS_ORDER_CHUNKED
        || doc->outheader.cupsNumColors == 1)) {
@@ -1093,8 +1095,6 @@ static int selectConvertFunc(cups_raster_t *raster,
      (doc->outheader.cupsNumColors == 1 ||
      doc->outheader.cupsColorSpace == CUPS_CSPACE_KCMYcm ))
     doc->bitspercolor = 0; /*Do not convertbits*/
-  else
-    doc->bitspercolor = doc->outheader.cupsBitsPerColor;
 
   return (0);
 }

@@ -54,7 +54,9 @@ typedef enum backside_orient_e
 extern int              cupsRasterPrepareHeader(cups_page_header2_t *h,
 						filter_data_t *data,
 						filter_out_format_t
-						final_content_type,
+						final_outformat,
+						filter_out_format_t
+						header_outformat,
 						cups_cspace_t *cspace);
 extern int              cupsRasterSetColorSpace(cups_page_header2_t *h,
 						const char *available,

@@ -536,8 +536,14 @@ int                                             /* O  - 0 on success,
 						        -1 on error */
 cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 			filter_data_t *data,    /* I  - Job and printer data */
-			filter_out_format_t final_content_type,
-                                                /* I  - Job output format */
+			filter_out_format_t final_outformat,
+                                                /* I  - Job output format 
+						        (determines color space,
+						         and resolution) */
+			filter_out_format_t header_outformat,
+                                                /* I  - This filter's output
+						        format (determines
+							header format) */
 			cups_cspace_t *cspace)  /* IO - Color space we want to
 						        use, -1 for auto, we
 							return color space
@@ -556,6 +562,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       appleraster = 0,
       cupsraster = 0,
       pclm = 0;
+  int cupsrasterheader = 1;
   const char *p;
   ppd_attr_t *ppd_attr;
   ipp_attribute_t *attr;
@@ -568,6 +575,19 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   double margins[4];
   double dimensions[2];
 
+  if (final_outformat == OUTPUT_FORMAT_PWG_RASTER)
+    pwgraster = 1;
+  else if (final_outformat == OUTPUT_FORMAT_APPLE_RASTER)
+    appleraster = 1;
+  else if (final_outformat == OUTPUT_FORMAT_PCLM)
+    pclm = 1;
+  else
+    cupsraster = 1;
+
+  if (header_outformat == OUTPUT_FORMAT_PWG_RASTER ||
+      header_outformat == OUTPUT_FORMAT_APPLE_RASTER)
+    cupsrasterheader = 0;
+
   printer_attrs = data->printer_attrs;
   job_attrs = data->job_attrs;
 
@@ -576,17 +596,8 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   printer_attrs = data->printer_attrs;
   job_attrs = data->job_attrs;
 
-  if (final_content_type == OUTPUT_FORMAT_PWG_RASTER)
-    pwgraster = 1;
-  else if (final_content_type == OUTPUT_FORMAT_APPLE_RASTER)
-    appleraster = 1;
-  else if (final_content_type == OUTPUT_FORMAT_PCLM)
-    pclm = 1;
-  else
-    cupsraster = 1;
-
   /* These values will be used in case we don't find supported resolutions
-     for given OUTFORMAT */
+     for given output format */
   if ((attr = ippFindAttribute(printer_attrs, "printer-resolution-default",
 			       IPP_TAG_RESOLUTION)) != NULL)
   {
@@ -598,7 +609,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     else
       yres = xres;
   }
-  /* Finding supported resolution for given outFormat  */
+  /* Finding supported resolution for given output format */
   if (pwgraster)
   {
     if ((attr = ippFindAttribute(printer_attrs,
@@ -743,7 +754,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 
     for (i = 0; i < 2; i ++)
       dimensions[i] = h->PageSize[i];
-    if (cupsraster) {
+    if (cupsrasterheader) {
       margins[0] = h->cupsImagingBBox[0];
       margins[1] = h->cupsImagingBBox[1];
       margins[2] = dimensions[0] - h->cupsImagingBBox[2];
@@ -773,13 +784,13 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	  pwgraster = 0;
       }
     }
-    cupsRasterParseIPPOptions(h, data, pwgraster, 1);
+    cupsRasterParseIPPOptions(h, data, 1 - cupsrasterheader, 1);
     if (ippRasterMatchIPPSize(h, data, margins, dimensions, NULL, NULL) < 0) {
       for (i = 0; i < 2; i ++)
 	dimensions[i] = h->PageSize[i];
       memset(margins, 0, sizeof(margins));
     }
-    if (!cupsraster)
+    if (!cupsrasterheader)
       memset(margins, 0, sizeof(margins));
 
     if (printer_attrs &&
@@ -881,7 +892,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   }
 
   /* Make all page geometry fields in the header consistent */
-  if (cupsraster) {
+  if (cupsrasterheader) {
     h->cupsWidth = ((dimensions[0] - margins[0] - margins[2]) /
 		    72.0 * h->HWResolution[0]) + 0.5;
     h->cupsHeight = ((dimensions[1] - margins[1] - margins[3]) /
@@ -895,12 +906,12 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   for (i = 0; i < 2; i ++) {
     h->cupsPageSize[i] = dimensions[i];
     h->PageSize[i] = (unsigned int)(h->cupsPageSize[i] + 0.5);
-    if (cupsraster)
+    if (cupsrasterheader)
       h->Margins[i] = margins[i] + 0.5;
     else
       h->Margins[i] = 0;
   }
-  if (cupsraster) {
+  if (cupsrasterheader) {
     h->cupsImagingBBox[0] = margins[0];
     h->cupsImagingBBox[1] = margins[1];
     h->cupsImagingBBox[2] = dimensions[0] - margins[2];
@@ -916,6 +927,10 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   h->cupsBytesPerLine = (h->cupsBitsPerPixel * h->cupsWidth + 7) / 8;
   if (h->cupsColorOrder == CUPS_ORDER_BANDED)
     h->cupsBytesPerLine *= h->cupsNumColors;
+
+  /* Mark header as PWG Raster if it is not CUPS Raster */
+  if (!cupsrasterheader)
+    strcpy(h->MediaClass, "PwgRaster");
 
   cupsFreeOptions(num_options, options);
 

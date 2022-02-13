@@ -791,7 +791,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   FILE *fp = NULL;
   GsDocType doc_type;
   gs_page_header h;
-  cups_cspace_t cspace;
+  cups_cspace_t cspace = -1;
   int bytes;
   int fd;
   int cm_disabled;
@@ -1158,7 +1158,10 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   }
 
   cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
-  cupsRasterPrepareHeader(&h, data, outformat, &cspace);
+  cupsRasterPrepareHeader(&h, data, outformat,
+			  (outformat != OUTPUT_FORMAT_APPLE_RASTER ?
+			   outformat : OUTPUT_FORMAT_CUPS_RASTER),
+			  &cspace);
 
   /* Special Ghostscript options for raster-only PDF output */
 

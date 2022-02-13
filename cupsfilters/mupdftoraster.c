@@ -415,6 +415,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void *icd = data->iscanceleddata;
   char **envp;
+  cups_cspace_t cspace = -1;
 
 #ifdef HAVE_CUPS_1_7
   ppd_attr_t *attr;
@@ -524,7 +525,8 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
     goto out;
   }
 
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: command: %s\n",CUPS_MUTOOL);
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: command: %s",
+	      CUPS_MUTOOL);
   snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_MUTOOL);
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
   cupsArrayAdd(mupdf_args, strdup("draw"));
@@ -536,26 +538,13 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   cupsArrayAdd(mupdf_args, strdup("-Fpwg"));
 
   /* Note that MuPDF only creates PWG Raster and never CUPS Raster,
-     so we always set the PWG Raster flag in the cupsRasterParseIPPOptions()
-     calls.
-     Make also sure that the width and height of the page in pixels is
-     the size of the full page (as PWG Raster and MuPDF require it) and not
-     only the printable area (as ppdRasterInterpretPPD() sets, to fulfill
-     CUPS Raster standard)
+     so we set the PWG Raster flag in the  cupsRasterPrepareHeader() call.
+     This function takes care of generating a completely consistent PWG
+     Raster header then, no extra manipulation needed.
      From the header h only cupsWidth/cupsHeight (dimensions in pixels),
      resolution, and color space are used here. */
-  if (ppd) {
-    ppdRasterInterpretPPD(&h, ppd, num_options, options, 0);
-    h.cupsWidth = h.HWResolution[0] * h.PageSize[0] / 72;
-    h.cupsHeight = h.HWResolution[1] * h.PageSize[1] / 72;
-  } else {
-#ifdef HAVE_CUPS_1_7
-    cupsRasterParseIPPOptions(&h, &curr_data, 1, 1);
-#else
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: No PPD file specified.");
-    goto out;
-#endif /* HAVE_CUPS_1_7 */
-  }
+  cupsRasterPrepareHeader(&h, &curr_data, OUTPUT_FORMAT_PWG_RASTER,
+			  OUTPUT_FORMAT_PWG_RASTER, &cspace);
 
   if ((h.HWResolution[0] == 100) && (h.HWResolution[1] == 100)) {
     /* No "Resolution" option */

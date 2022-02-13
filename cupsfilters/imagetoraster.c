@@ -172,7 +172,6 @@ static void	format_YMCK(imagetoraster_doc_t *doc,
 			    int y, int z, int xsize, int ysize, int yerr0,
 			    int yerr1, cups_ib_t *r0, cups_ib_t *r1);
 static void	make_lut(cups_ib_t *, int, float, float);
-static int	raster_cb(cups_page_header2_t *header, int preferred_bits);
 
 
 /*
@@ -211,6 +210,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 			xc1, yc1;
   ppd_file_t		*ppd;		/* PPD file */
   ppd_choice_t		*choice;	/* PPD option choice */
+  cups_cspace_t         cspace = -1;    /* CUPS color space */
   char			*resolution,	/* Output resolution */
 			*media_type;	/* Media type */
   ppd_profile_t		*profile;	/* Color profile */
@@ -268,6 +268,34 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 			customRight = 0.0,	        /*  ppd->custom_margin[2]  */
 			customTop = 0.0;	        /*  ppd->custom_margin[3]  */
   char 			defSize[41];
+  filter_out_format_t   outformat;
+
+  /* Note: With the OUTPUT_FORMAT_APPLE_RASTER,
+     OUTPUT_FORMAT_PWG_RASTER, or OUTPUT_FORMAT_PCLM selections the
+     output is actually CUPS Raster but information about available
+     color spaces and depths are taken from the urf-supported or
+     pwg-raster-document-type-supported printer IPP attributes or
+     appropriate PPD file attributes (PCLM is always sRGB
+     8-bit). These modes are for further processing with rastertopwg
+     or rastertopclm. This can change in the future when we add Apple
+     Raster and PWG Raster output support to this filter. */
+
+  if (parameters) {
+    outformat = *(filter_out_format_t *)parameters;
+    if (outformat != OUTPUT_FORMAT_PCLM &&
+	outformat != OUTPUT_FORMAT_CUPS_RASTER &&
+	outformat != OUTPUT_FORMAT_PWG_RASTER &&
+	outformat != OUTPUT_FORMAT_APPLE_RASTER)
+      outformat = OUTPUT_FORMAT_CUPS_RASTER;
+  } else
+    outformat = OUTPUT_FORMAT_CUPS_RASTER;
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "imagetorater: Final output format: %s",
+	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
+		  "PCLm"))));
 
   if (printer_attrs != NULL) {
     int left, right, top, bottom;
@@ -384,49 +412,60 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   * Process job options...
   */
 
+  cupsRasterPrepareHeader(&header, data, outformat,
+			  OUTPUT_FORMAT_CUPS_RASTER, &cspace);
   ppd = data->ppd;
-  if (ppd)
-  {
-    filterSetCommonOptions(ppd, num_options, options, 0,
-			   &doc.Orientation, &doc.Duplex,
-			   &doc.LanguageLevel, &doc.Color,
-			   &doc.PageLeft, &doc.PageRight,
-			   &doc.PageTop, &doc.PageBottom,
-			   &doc.PageWidth, &doc.PageLength,
-			   log, ld);
-  }
-  else
-  {
-    cupsRasterParseIPPOptions(&header, data, 0, 1);
-    doc.Orientation = header.Orientation;
-    doc.Duplex = header.Duplex;
-    doc.LanguageLevel = 1;
-    doc.Color = header.cupsNumColors>1?1:0;
-    doc.PageLeft = header.cupsImagingBBox[0] != 0.0 ?
-      header.cupsImagingBBox[0] :
-      (float)header.ImagingBoundingBox[0];
-    doc.PageRight = header.cupsImagingBBox[2] != 0.0 ?
-      header.cupsImagingBBox[2] :
-      (float)header.ImagingBoundingBox[2];
-    doc.PageTop = header.cupsImagingBBox[3] != 0.0 ?
-      header.cupsImagingBBox[3] :
-      (float)header.ImagingBoundingBox[3];
-    doc.PageBottom = header.cupsImagingBBox[1] != 0.0 ?
-      header.cupsImagingBBox[1] :
-      (float)header.ImagingBoundingBox[1];
-    doc.PageWidth = header.cupsPageSize[0] != 0.0 ?
-      header.cupsPageSize[0] :
-      (float)header.PageSize[0];
-    doc.PageLength = header.cupsPageSize[1] != 0.0 ?
-      header.cupsPageSize[1] :
-      (float)header.PageSize[1];
-  }
-if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
-/*  Find print-rendering-intent */
+  doc.Orientation = header.Orientation;
+  doc.Duplex = header.Duplex;
+  doc.LanguageLevel = 1;
+  doc.Color = header.cupsNumColors>1?1:0;
+  doc.PageLeft = header.cupsImagingBBox[0] != 0.0 ?
+    header.cupsImagingBBox[0] :
+    (float)header.ImagingBoundingBox[0];
+  doc.PageRight = header.cupsImagingBBox[2] != 0.0 ?
+    header.cupsImagingBBox[2] :
+    (float)header.ImagingBoundingBox[2];
+  doc.PageTop = header.cupsImagingBBox[3] != 0.0 ?
+    header.cupsImagingBBox[3] :
+    (float)header.ImagingBoundingBox[3];
+  doc.PageBottom = header.cupsImagingBBox[1] != 0.0 ?
+    header.cupsImagingBBox[1] :
+    (float)header.ImagingBoundingBox[1];
+  doc.PageWidth = header.cupsPageSize[0] != 0.0 ?
+    header.cupsPageSize[0] :
+    (float)header.PageSize[0];
+  doc.PageLength = header.cupsPageSize[1] != 0.0 ?
+    header.cupsPageSize[1] :
+    (float)header.PageSize[1];
 
-    getPrintRenderIntent(data, &header);
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
-    	"Print rendering intent = %s", header.cupsRenderingIntent);
+  if (log)
+  {
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"imagetoraster: doc.color = %d", doc.Color);
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"imagetoraster: doc.Orientation = %d", doc.Orientation);
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"imagetoraster: doc.Duplex = %d", doc.Duplex);
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"imagetoraster: doc.PageWidth = %.1f", doc.PageWidth);
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"imagetoraster: doc.PageLength = %.1f", doc.PageLength);
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"imagetoraster: doc.PageLeft = %.1f", doc.PageLeft);
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"imagetoraster: doc.PageRight = %.1f", doc.PageRight);
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"imagetoraster: doc.PageTop = %.1f", doc.PageTop);
+    log(ld, FILTER_LOGLEVEL_DEBUG,
+	"imagetoraster: doc.PageBottom = %.1f", doc.PageBottom);
+  }
+
+  /*  Find print-rendering-intent */
+
+  getPrintRenderIntent(data, &header);
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	      "imagetoraster: Print rendering intent = %s",
+	      header.cupsRenderingIntent);
 
   if ((val = cupsGetOption("multiple-document-handling",
 			   num_options, options)) != NULL)
@@ -564,23 +603,6 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
   if (val && (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
               !strcasecmp(val, "yes")))
     doc.Flip = 1;
-
- /*
-  * Set the needed options in the page header...
-  */
-  if(ppd!=NULL)
-  if (ppdRasterInterpretPPD(&header, ppd, num_options, options, raster_cb))
-  {
-    if (log) {
-      log(ld, FILTER_LOGLEVEL_ERROR,
-	  "imagetoraster: The page setup information was not valid.");
-      log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "imagetoraster: %s", cupsRasterErrorString());
-    }
-    if (!inputseekable)
-      unlink(tempfile);
-    return (1);
-  }
 
  /*
   * Get the media type and resolution that have been chosen...
@@ -1045,43 +1067,40 @@ if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "doc.color = %d", doc.Color);
       }
       else {
         float final_w=w,final_h=h;
-        if(w>pw)
+        if (w > pw * img->xppi / 72.0)
+          final_w = pw * img->xppi / 72.0;
+        if (h > ph * img->yppi / 72.0)
+          final_h = ph * img->yppi / 72.0;
+	float posw=(w-final_w)/2,posh=(h-final_h)/2;
+        posw = (1+doc.XPosition)*posw;
+	posh = (1-doc.YPosition)*posh;
+	cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
+	cupsImageClose(img);
+	img = img2;
+	if(flag==4)
         {
-          final_w = pw;
-        }
-        if(h>ph)
-        {
-          final_h = ph;
-        }
-        if((fabs(final_w-w)>0.5*w)||(fabs(final_h-h)>0.5*h))
-        {
-	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "imagetoraster: Ignoring crop-to-fit option!");
-          cropfit=0;
-        }
-        else{
-          float posw=(w-final_w)/2,posh=(h-final_h)/2;
-          posw = (1+doc.XPosition)*posw;
-          posh = (1-doc.YPosition)*posh;
-          cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
-          cupsImageClose(img);
-          img = img2;
-          if(flag==4)
-          {
-            doc.PageBottom+=(doc.PageTop-doc.PageBottom-final_w)/2;
-            doc.PageTop = doc.PageBottom+final_w;
-            doc.PageLeft +=(doc.PageRight-doc.PageLeft-final_h)/2;
-            doc.PageRight = doc.PageLeft+final_h;
-          }
-          else{
-            doc.PageBottom+=(doc.PageTop-doc.PageBottom-final_h)/2;
-            doc.PageTop = doc.PageBottom+final_h;
-            doc.PageLeft +=(doc.PageRight-doc.PageLeft-final_w)/2;
-            doc.PageRight = doc.PageLeft+final_w;
-          }
-          if(doc.PageBottom<0) doc.PageBottom = 0;
-          if(doc.PageLeft<0) doc.PageLeft = 0;
-        }
+	  doc.PageBottom += (doc.PageTop - doc.PageBottom -
+			     final_w * 72.0 / img->xppi) / 2;
+	  doc.PageTop = doc.PageBottom +
+	                final_w * 72.0 / img->xppi;
+	  doc.PageLeft += (doc.PageRight - doc.PageLeft -
+			   final_h * 72.0 / img->yppi) / 2;
+	  doc.PageRight = doc.PageLeft +
+	                  final_h * 72.0 / img->yppi;
+	}
+	else
+	{
+	  doc.PageBottom += (doc.PageTop - doc.PageBottom -
+			     final_h * 72.0 / img->yppi) / 2;
+	  doc.PageTop = doc.PageBottom +
+	                final_h * 72.0 / img->yppi;
+	  doc.PageLeft += (doc.PageRight - doc.PageLeft -
+			   final_w * 72.0 / img->xppi) / 2;
+	  doc.PageRight = doc.PageLeft +
+	                  final_w * 72.0 / img->xppi;
+	}
+	if(doc.PageBottom<0) doc.PageBottom = 0;
+	if(doc.PageLeft<0) doc.PageLeft = 0;
       }	
     }
   }
@@ -4894,28 +4913,4 @@ make_lut(cups_ib_t  *lut,		/* I - Lookup table */
     else
       *lut++ = v;
   }
-}
-
-
-/*
- * 'raster_cb()' - Validate the page header.
- */
-
-static int				/* O - 0 if OK, -1 if not */
-raster_cb(
-    cups_page_header2_t *header,	/* IO - Raster header */
-    int                 preferred_bits)	/* I  - Preferred bits per color */
-{
- /*
-  * Ensure that colorimetric colorspaces use at least 8 bits per
-  * component...
-  */
-
-  if ((header->cupsColorSpace == CUPS_CSPACE_CIEXYZ ||
-       header->cupsColorSpace == CUPS_CSPACE_CIELab ||
-       header->cupsColorSpace >= CUPS_CSPACE_ICC1) &&
-      header->cupsBitsPerColor < 8)
-    header->cupsBitsPerColor = 8;
-
-  return (0);
 }

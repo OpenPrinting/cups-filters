@@ -23,6 +23,7 @@
 #include <cupsfilters/image.h>
 #include <cupsfilters/ppdgenerator.h>
 #include <cupsfilters/raster.h>
+#include <cupsfilters/image-private.h>
 #include <math.h>
 #include <ctype.h>
 #include <errno.h>
@@ -1333,43 +1334,40 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     }
     else {
       float final_w=w,final_h=h;
-      if(final_w>pw)
+      if (w > pw * doc.img->xppi / 72.0)
+	final_w = pw * doc.img->xppi / 72.0;
+      if (h > ph * doc.img->yppi / 72.0)
+	final_h = ph * doc.img->yppi / 72.0;
+      float posw=(w-final_w)/2,posh=(h-final_h)/2;
+      posw = (1+doc.XPosition)*posw;
+      posh = (1-doc.YPosition)*posh;
+      cups_image_t *img2 = cupsImageCrop(doc.img,posw,posh,final_w,final_h);
+      cupsImageClose(doc.img);
+      doc.img = img2;
+      if(flag==4)
       {
-        final_w = pw;
+	doc.PageBottom += (doc.PageTop - doc.PageBottom -
+			   final_w * 72.0 / doc.img->xppi) / 2;
+	doc.PageTop = doc.PageBottom +
+	              final_w * 72.0 / doc.img->xppi;
+	doc.PageLeft += (doc.PageRight - doc.PageLeft -
+			 final_h * 72.0 / doc.img->yppi) / 2;
+	doc.PageRight = doc.PageLeft +
+	                final_h * 72.0 / doc.img->yppi;
       }
-      if(final_h>ph)
+      else
       {
-        final_h = ph;
+	doc.PageBottom += (doc.PageTop - doc.PageBottom -
+			   final_h * 72.0 / doc.img->yppi) / 2;
+	doc.PageTop = doc.PageBottom +
+	              final_h * 72.0 / doc.img->yppi;
+	doc.PageLeft += (doc.PageRight - doc.PageLeft -
+			 final_w * 72.0 / doc.img->xppi) / 2;
+	doc.PageRight = doc.PageLeft +
+	                final_w * 72.0 / doc.img->xppi;
       }
-      if((fabs(final_w-w)>0.5*w)||(fabs(final_h-h)>0.5*h))
-      {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetopdf: Ignoring crop-to-fit option!");
-        cropfit=0;
-      }
-      else{
-        float posw=(w-final_w)/2,posh=(h-final_h)/2;
-        posw = (1+doc.XPosition)*posw;
-        posh = (1-doc.YPosition)*posh;
-        cups_image_t *img2 = cupsImageCrop(doc.img,posw,posh,final_w,final_h);
-        cupsImageClose(doc.img);
-        doc.img = img2;
-        if(flag==4)
-        {
-          doc.PageBottom+=(doc.PageTop-doc.PageBottom-final_w)/2;
-          doc.PageTop = doc.PageBottom+final_w;
-          doc.PageLeft +=(doc.PageRight-doc.PageLeft-final_h)/2;
-          doc.PageRight = doc.PageLeft+final_h;
-        }
-        else{
-          doc.PageBottom+=(doc.PageTop-doc.PageBottom-final_h)/2;
-          doc.PageTop = doc.PageBottom+final_h;
-          doc.PageLeft +=(doc.PageRight-doc.PageLeft-final_w)/2;
-          doc.PageRight = doc.PageLeft+final_w;
-        }
-        if(doc.PageBottom<0) doc.PageBottom = 0;
-        if(doc.PageLeft<0) doc.PageLeft = 0;
-     }
+      if(doc.PageBottom<0) doc.PageBottom = 0;
+      if(doc.PageLeft<0) doc.PageLeft = 0;
     }
   }
 

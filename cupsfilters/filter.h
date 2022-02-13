@@ -216,6 +216,7 @@ extern int ghostscript(int inputfd,
    Ghostscript's "cups" output
    device.*/
 
+
 extern int bannertopdf(int inputfd,
 		      int outputfd,
 		      int inputseekable,
@@ -242,11 +243,23 @@ extern int imagetoraster(int inputfd,
 			 filter_data_t *data,
 			 void *parameters);
 
+/* Parameters: filter_out_format_t* Ouput format: CUPS Raster, PWG
+   Raster, Apple Raster, PCLM
+   Note: On the Apple Raster, PWG Raster, and PCLm selection the
+   output is actually CUPS Raster but information about available
+   color spaces and depths is taken from the urf-supported or
+   pwg-raster-document-type-supported printer IPP attributes or
+   appropriate PPD file attributes. This mode is for further
+   processing with rastertopwg or rastertopclm. This can change in the
+   future when we add Apple Raster and PWG Raster output support to
+   this filter function. */
+
+
 extern int mupdftoraster(int inputfd,
-		     int outputfd,
-		     int inputseekable,
-		     filter_data_t *data,
-		     void *parameters);
+			 int outputfd,
+			 int inputseekable,
+			 filter_data_t *data,
+			 void *parameters);
 
 extern int pclmtoraster(int inputfd,
 			int outputfd,
@@ -281,7 +294,14 @@ extern int pdftoraster(int inputfd,
 		       void* parameters);
 
 /* Parameters: filter_out_format_t*
-   Ouput format: CUPS Raster or PWG Raster */
+   Ouput format: CUPS Raster, PWG Raster, Apple Raster, PCLm
+   Note: With Apple Raster or PCLm selections the output is actually
+   CUPS Raster but information about available color spaces and depths
+   is taken from the urf-supported printer IPP attribute or the
+   appropriate PPD file attribute (PCLM is always sRGB 8-bit). These
+   modes are for further processing with rastertopwg or
+   rastertopclm. This can change in the future when we add Apple
+   Raster output support to this filter. */
 
 
 extern int pstops(int inputfd,
@@ -335,23 +355,24 @@ extern int texttopdf(int inputfd,
    Data directory (fonts, charsets), charset, content type (for prettyprint),
    classification (for overprint/watermark) */
 
-extern int texttotext(int inputfd,
-			int outputfd,
-			int inputseekable,
-			filter_data_t *data,
-			void *parameters);
 
-extern int universal(int inputfd,
+extern int texttotext(int inputfd,
 		      int outputfd,
 		      int inputseekable,
 		      filter_data_t *data,
 		      void *parameters);
 
-/*
-	Parameters: filter_input_output_format_t
-	Contains : Input_type : CONTENT_TYPE environment variable
-			   Output type : FINAL_CONTENT TYPE environment variable */
-						
+extern int universal(int inputfd,
+		     int outputfd,
+		     int inputseekable,
+		     filter_data_t *data,
+		     void *parameters);
+
+/* Parameters: filter_input_output_format_t
+   Contains : Input_type : CONTENT_TYPE environment variable
+              Output type : FINAL_CONTENT TYPE environment variable */
+
+
 extern void filterSetCommonOptions(ppd_file_t *ppd,
 				   int num_options,
 				   cups_option_t *options,

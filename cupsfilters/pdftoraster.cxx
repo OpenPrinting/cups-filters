@@ -312,11 +312,24 @@ static int parseOpts(filter_data_t *data,
   filter_logfunc_t log = data->logfunc;
   void *ld = data ->logdata;
   ipp_t *printer_attrs = data->printer_attrs;
+  cups_cspace_t cspace = (cups_cspace_t)(-1);
+
+  /* Note: With the OUTPUT_FORMAT_APPLE_RASTER or OUTPUT_FORMAT_PCLM
+     selections the output is actually CUPS Raster but information
+     about available color spaces and depths is taken from the
+     urf-supported printer IPP attribute or the appropriate PPD file
+     attribute (PCLM is always sRGB 8-bit). These modes are for
+     further processing with rastertopwg or rastertopclm. This can
+     change in the future when we add Apple Raster output support to
+     this filter. */
+
 #ifdef HAVE_CUPS_1_7
   if (parameters) {
     outformat = *(filter_out_format_t *)parameters;
     if (outformat != OUTPUT_FORMAT_CUPS_RASTER &&
-	outformat != OUTPUT_FORMAT_PWG_RASTER)
+	outformat != OUTPUT_FORMAT_PWG_RASTER &&
+	outformat != OUTPUT_FORMAT_APPLE_RASTER &&
+	outformat != OUTPUT_FORMAT_PCLM)
       outformat = OUTPUT_FORMAT_CUPS_RASTER;
   } else
     outformat = OUTPUT_FORMAT_CUPS_RASTER;
@@ -330,20 +343,26 @@ static int parseOpts(filter_data_t *data,
     doc->pwgraster = 1;
 #endif /* HAVE_CUPS_1_7 */
 
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+
   if (data->ppd)
     doc->ppd = data->ppd;
   else if (data->ppdfile)
     doc->ppd = ppdOpenFile(data->ppdfile);
 
-  if (doc->ppd == NULL)
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-      "pdftoraster: PPD file is not specified.");
-
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
   if (doc->ppd) {
     ppdMarkOptions(doc->ppd,num_options,options);
     handleRqeuiresPageRegion(doc);
-    ppdRasterInterpretPPD(&(doc->header),doc->ppd,num_options,options,0);
+  } else
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      "pdftoraster: PPD file is not specified.");
+
+  cupsRasterPrepareHeader(&(doc->header), data, outformat,
+			  (outformat == OUTPUT_FORMAT_PWG_RASTER ?
+			   outformat : OUTPUT_FORMAT_CUPS_RASTER),
+			  &cspace);
+
+  if (doc->ppd) {
     attr = ppdFindAttr(doc->ppd,"pdftorasterRenderingIntent",NULL);
     if (attr != NULL && attr->value != NULL) {
       if (strcasecmp(attr->value,"PERCEPTUAL") == 0) {
@@ -441,7 +460,6 @@ static int parseOpts(filter_data_t *data,
       else
 	doc->pwgraster = 0;
     }
-    cupsRasterParseIPPOptions(&(doc->header),data,doc->pwgraster,1);
     getPrintRenderIntent(data, &(doc->header));
     if(strcasecmp(doc->header.cupsRenderingIntent, "PERCEPTUAL")==0){
 	doc->colour_profile.renderingIntent = INTENT_PERCEPTUAL;
@@ -1055,6 +1073,7 @@ static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
 /* select convertLine function */
 static int selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conversion_function_t *convert, filter_logfunc_t log, void* ld)
 {
+  doc->bitspercolor = doc->header.cupsBitsPerColor;
   if ((doc->colour_profile.colorProfile == NULL || doc->colour_profile.popplerColorProfile == doc->colour_profile.colorProfile)
       && (doc->header.cupsColorOrder == CUPS_ORDER_CHUNKED
        || doc->header.cupsNumColors == 1)) {
@@ -1219,8 +1238,6 @@ static int selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conv
      (doc->header.cupsNumColors == 1 ||
      doc->header.cupsColorSpace == CUPS_CSPACE_KCMYcm ))
     doc->bitspercolor = 0; /*Do not convertbits*/
-  else
-    doc->bitspercolor = doc->header.cupsBitsPerColor;
 
   return (0);
 }
