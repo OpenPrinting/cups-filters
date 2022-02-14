@@ -3,8 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
-	- pdftopdf: Introduced new "input-page-ranges" attribute
-	  (Issue #365, Pull request #444).
+	- pdftopdf, pstops: Introduced new "input-page-ranges"
+	  attribute (Issue #365, Pull request #444, #445).
 	- Braille: In vectortopdf check inkscape version to call
           inkscape with the correct command line (Issue #315, Pull
           request #443).
