@@ -3367,11 +3367,11 @@ ppd_update_filters(ppd_file_t     *ppd,	/* I - PPD file */
 		srctype[256],
 		dstsuper[16],		/* Destination MIME media type */
 		dsttype[256],
-		program[1024],		/* Command to run */
 		*ptr,			/* Pointer into command to run */
 		buffer[2048],		/* Re-written cupsFilter value */
 		**filter;		/* Current filter */
   int		cost;			/* Cost of filter */
+  char		program[1024] = { 0 };	/* Command to run */
 
 
   DEBUG_printf(("4ppd_update_filters(ppd=%p, cg=%p)", ppd, pg));
