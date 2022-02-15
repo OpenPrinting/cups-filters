@@ -3,6 +3,10 @@ NEWS - OpenPrinting CUPS Filters v1.28.11 - 2022-01-15
 
 CHANGES IN V1.28.12
 
+	- imagetoraster, imagetopdf: Fixed the "print-scaling=none"
+  	  (crop-to-fit) mode, also use crop-to-fit always when
+  	  requested, do not fall back to fit-to-page when the image
+  	  size differs significantly from the page size (Issue #362).
 	- libcupsfilters: Changed the default PPI resolution for
 	  images as input files from 128 to 200 (Pull request #446).
 	- implicitclass: Do not check availability of "gs" and

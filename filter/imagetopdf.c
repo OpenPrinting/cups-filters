@@ -22,6 +22,7 @@
 #include "common.h"
 #include <cupsfilters/image.h>
 #include <cupsfilters/raster.h>
+#include <cupsfilters/image-private.h>
 #include <math.h>
 #include <ctype.h>
 
@@ -1113,44 +1114,43 @@ main(int  argc,				/* I - Number of command-line arguments */
       cupsImageClose(img);
       img = img2;
     }
-    else {
+    else
+    {
       float final_w=w,final_h=h;
-      if(final_w>pw)
+      if (w > pw * img->xppi / 72.0)
+	final_w = pw * img->xppi / 72.0;
+      if (h > ph * img->yppi / 72.0)
+	final_h = ph * img->yppi / 72.0;
+      float posw=(w-final_w)/2,posh=(h-final_h)/2;
+      posw = (1+XPosition)*posw;
+      posh = (1-YPosition)*posh;
+      cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
+      cupsImageClose(img);
+      img = img2;
+      if(flag==4)
       {
-        final_w = pw;
+	PageBottom += (PageTop - PageBottom -
+		       final_w * 72.0 / img->xppi) / 2;
+	PageTop = PageBottom +
+	          final_w * 72.0 / img->xppi;
+	PageLeft += (PageRight - PageLeft -
+		     final_h * 72.0 / img->yppi) / 2;
+	PageRight = PageLeft +
+	            final_h * 72.0 / img->yppi;
       }
-      if(final_h>ph)
+      else
       {
-        final_h = ph;
+	PageBottom += (PageTop - PageBottom -
+		       final_h * 72.0 / img->yppi) / 2;
+	PageTop = PageBottom +
+	          final_h * 72.0 / img->yppi;
+	PageLeft += (PageRight - PageLeft -
+		     final_w * 72.0 / img->xppi) / 2;
+	PageRight = PageLeft +
+                    final_w * 72.0 / img->xppi;
       }
-      if((fabs(final_w-w)>0.5*w)||(fabs(final_h-h)>0.5*h))
-      {
-        fprintf(stderr,"[DEBUG]: Ignoring crop-to-fit option!\n");
-        cropfit=0;
-      }
-      else{
-        float posw=(w-final_w)/2,posh=(h-final_h)/2;
-        posw = (1+XPosition)*posw;
-        posh = (1-YPosition)*posh;
-        cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
-        cupsImageClose(img);
-        img = img2;
-        if(flag==4)
-        {
-          PageBottom+=(PageTop-PageBottom-final_w)/2;
-          PageTop = PageBottom+final_w;
-          PageLeft +=(PageRight-PageLeft-final_h)/2;
-          PageRight = PageLeft+final_h;
-        }
-        else{
-          PageBottom+=(PageTop-PageBottom-final_h)/2;
-          PageTop = PageBottom+final_h;
-          PageLeft +=(PageRight-PageLeft-final_w)/2;
-          PageRight = PageLeft+final_w;
-        }
-        if(PageBottom<0) PageBottom = 0;
-        if(PageLeft<0) PageLeft = 0;
-     }
+      if(PageBottom<0) PageBottom = 0;
+      if(PageLeft<0) PageLeft = 0;
     }
   }
 
