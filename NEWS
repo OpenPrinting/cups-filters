@@ -44,7 +44,7 @@ CHANGES IN V1.28.12
 	  is used and too large input pages should be scaled, fitting
 	  documents not. This prevents a random-looking behavior if
 	  input and output page size seem to be equal, but in reality
-	  there are slight dependencies between size dimensions.
+	  there are slight differences between size dimensions.
 
 CHANGES IN V1.28.11
 
