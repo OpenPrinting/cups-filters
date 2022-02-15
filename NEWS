@@ -3,6 +3,8 @@ NEWS - OpenPrinting CUPS Filters v1.28.11 - 2022-01-15
 
 CHANGES IN V1.28.12
 
+	- libcupsfilters: Changed the default PPI resolution for
+	  images as input files from 128 to 200 (Pull request #446).
 	- implicitclass: Do not check availability of "gs" and
 	  "pdftops" executables, instead, check by the presence of
 	  "gstoraster" and "pdftoraster" filters whether we have
