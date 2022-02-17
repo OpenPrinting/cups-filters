@@ -545,6 +545,17 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     }
     if (fillprint || cropfit)
     {
+      /* For cropfit do the math without the unprintable margins to get correct
+         centering */
+      if (cropfit)
+      {
+	pw = doc.PageWidth;
+	ph = doc.PageLength;
+	doc.PageBottom = 0.0;
+	doc.PageTop = doc.PageLength;
+	doc.PageLeft = 0.0;
+	doc.PageRight = doc.PageWidth;
+      }
       tempOrientation = doc.Orientation;
       int flag = 3;
       if ((val = cupsGetOption("orientation-requested", num_options,
@@ -608,25 +619,17 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	img = img2;
 	if (flag == 4)
 	{
-	  doc.PageBottom += (doc.PageTop - doc.PageBottom -
-			     final_w * 72.0 / img->xppi) / 2;
-	  doc.PageTop = doc.PageBottom +
-	                final_w * 72.0 / img->xppi;
-	  doc.PageLeft += (doc.PageRight - doc.PageLeft -
-			   final_h * 72.0 / img->yppi) / 2;
-	  doc.PageRight = doc.PageLeft +
-	                  final_h * 72.0 / img->yppi;
+	  doc.PageBottom += (doc.PageLength - final_w * 72.0 / img->xppi) / 2;
+	  doc.PageTop = doc.PageBottom + final_w * 72.0 / img->xppi;
+	  doc.PageLeft += (doc.PageWidth - final_h * 72.0 / img->yppi) / 2;
+	  doc.PageRight = doc.PageLeft + final_h * 72.0 / img->yppi;
 	}
 	else
 	{
-	  doc.PageBottom += (doc.PageTop - doc.PageBottom -
-			     final_h * 72.0 / img->yppi) / 2;
-	  doc.PageTop = doc.PageBottom +
-	                final_h * 72.0 / img->yppi;
-	  doc.PageLeft += (doc.PageRight - doc.PageLeft -
-			   final_w * 72.0 / img->xppi) / 2;
-	  doc.PageRight = doc.PageLeft +
-	                  final_w * 72.0 / img->xppi;
+	  doc.PageBottom += (doc.PageLength - final_h * 72.0 / img->yppi) / 2;
+	  doc.PageTop = doc.PageBottom + final_h * 72.0 / img->yppi;
+	  doc.PageLeft += (doc.PageWidth - final_w * 72.0 / img->xppi) / 2;
+	  doc.PageRight = doc.PageLeft + final_w * 72.0 / img->xppi;
 	}
 	if (doc.PageBottom < 0) doc.PageBottom = 0;
 	if (doc.PageLeft < 0) doc.PageLeft = 0;

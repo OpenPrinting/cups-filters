@@ -1277,6 +1277,15 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   }
   if(fillprint||cropfit)
   {
+    /* For cropfit do the math without the unprintable margins to get correct
+       centering */
+    if (cropfit)
+    {
+      doc.PageBottom = 0.0;
+      doc.PageTop = doc.PageLength;
+      doc.PageLeft = 0.0;
+      doc.PageRight = doc.PageWidth;
+    }
     float w = (float)cupsImageGetWidth(doc.img);
     float h = (float)cupsImageGetHeight(doc.img);
     float pw = doc.PageRight-doc.PageLeft;
@@ -1346,25 +1355,17 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       doc.img = img2;
       if(flag==4)
       {
-	doc.PageBottom += (doc.PageTop - doc.PageBottom -
-			   final_w * 72.0 / doc.img->xppi) / 2;
-	doc.PageTop = doc.PageBottom +
-	              final_w * 72.0 / doc.img->xppi;
-	doc.PageLeft += (doc.PageRight - doc.PageLeft -
-			 final_h * 72.0 / doc.img->yppi) / 2;
-	doc.PageRight = doc.PageLeft +
-	                final_h * 72.0 / doc.img->yppi;
+	doc.PageBottom += (doc.PageLength - final_w * 72.0 / doc.img->xppi) / 2;
+	doc.PageTop = doc.PageBottom + final_w * 72.0 / doc.img->xppi;
+	doc.PageLeft += (doc.PageWidth - final_h * 72.0 / doc.img->yppi) / 2;
+	doc.PageRight = doc.PageLeft + final_h * 72.0 / doc.img->yppi;
       }
       else
       {
-	doc.PageBottom += (doc.PageTop - doc.PageBottom -
-			   final_h * 72.0 / doc.img->yppi) / 2;
-	doc.PageTop = doc.PageBottom +
-	              final_h * 72.0 / doc.img->yppi;
-	doc.PageLeft += (doc.PageRight - doc.PageLeft -
-			 final_w * 72.0 / doc.img->xppi) / 2;
-	doc.PageRight = doc.PageLeft +
-	                final_w * 72.0 / doc.img->xppi;
+	doc.PageBottom += (doc.PageLength - final_h * 72.0 / doc.img->yppi) / 2;
+	doc.PageTop = doc.PageBottom + final_h * 72.0 / doc.img->yppi;
+	doc.PageLeft += (doc.PageWidth - final_w * 72.0 / doc.img->xppi) / 2;
+	doc.PageRight = doc.PageLeft + final_w * 72.0 / doc.img->xppi;
       }
       if(doc.PageBottom<0) doc.PageBottom = 0;
       if(doc.PageLeft<0) doc.PageLeft = 0;

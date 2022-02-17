@@ -1007,8 +1007,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     {
       float w = (float)cupsImageGetWidth(img);
       float h = (float)cupsImageGetHeight(img);
-      float pw = doc.PageRight-doc.PageLeft;
-      float ph = doc.PageTop-doc.PageBottom;
+      /* For cropfit do the math without the unprintable margins to get correct
+	 centering, for fillprint, fill the printable area */
+      float pw = (cropfit ? doc.PageWidth : doc.PageRight-doc.PageLeft);
+      float ph = (cropfit ? doc.PageLength : doc.PageTop-doc.PageBottom);
       const char *val;
       int tempOrientation = doc.Orientation;
       int flag =3;
@@ -1074,33 +1076,77 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	float posw=(w-final_w)/2,posh=(h-final_h)/2;
         posw = (1+doc.XPosition)*posw;
 	posh = (1-doc.YPosition)*posh;
-	cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
-	cupsImageClose(img);
-	img = img2;
+	/* Check whether the unprintable margins hide away a part of the image,
+	   if so, correct the image cut */
 	if(flag==4)
-        {
-	  doc.PageBottom += (doc.PageTop - doc.PageBottom -
-			     final_w * 72.0 / img->xppi) / 2;
-	  doc.PageTop = doc.PageBottom +
-	                final_w * 72.0 / img->xppi;
-	  doc.PageLeft += (doc.PageRight - doc.PageLeft -
-			   final_h * 72.0 / img->yppi) / 2;
-	  doc.PageRight = doc.PageLeft +
-	                  final_h * 72.0 / img->yppi;
+	{
+	  float margin, cutoff;
+	  margin = (doc.PageLength - final_w * 72.0 / img->xppi) / 2;
+	  if (margin >= doc.PageBottom)
+	    doc.PageBottom = margin;
+	  else
+	  {
+	    cutoff = (doc.PageBottom - margin) * img->xppi / 72.0;
+	    final_w -= cutoff;
+	    posw += cutoff;
+	  }
+	  margin = doc.PageBottom + final_w * 72.0 / img->xppi;
+	  if (margin <= doc.PageTop)
+	    doc.PageTop = margin;
+	  else
+	    final_w -= (margin - doc.PageTop) * img->xppi / 72.0;
+	  margin = (doc.PageWidth - final_h * 72.0 / img->yppi) / 2;
+	  if (margin >= doc.PageLeft)
+	    doc.PageLeft = margin;
+	  else
+	  {
+	    cutoff = (doc.PageLeft - margin) * img->yppi / 72.0;
+	    final_h -= cutoff;
+	    posh += cutoff;
+	  }
+	  margin = doc.PageLeft + final_h * 72.0 / img->yppi;
+	  if (margin <= doc.PageRight)
+	    doc.PageRight = margin;
+	  else
+	    final_h -= (margin - doc.PageRight) * img->yppi / 72.0;
 	}
 	else
 	{
-	  doc.PageBottom += (doc.PageTop - doc.PageBottom -
-			     final_h * 72.0 / img->yppi) / 2;
-	  doc.PageTop = doc.PageBottom +
-	                final_h * 72.0 / img->yppi;
-	  doc.PageLeft += (doc.PageRight - doc.PageLeft -
-			   final_w * 72.0 / img->xppi) / 2;
-	  doc.PageRight = doc.PageLeft +
-	                  final_w * 72.0 / img->xppi;
+	  float margin, cutoff;
+	  margin = (doc.PageLength - final_h * 72.0 / img->yppi) / 2;
+	  if (margin >= doc.PageBottom)
+	    doc.PageBottom = margin;
+	  else
+	  {
+	    cutoff = (doc.PageBottom - margin) * img->yppi / 72.0;
+	    final_h -= cutoff;
+	    posh += cutoff;
+	  }
+	  margin = doc.PageBottom + final_h * 72.0 / img->yppi;
+	  if (margin <= doc.PageTop)
+	    doc.PageTop = margin;
+	  else
+	    final_h -= (margin - doc.PageTop) * img->yppi / 72.0;
+	  margin = (doc.PageWidth - final_w * 72.0 / img->xppi) / 2;
+	  if (margin >= doc.PageLeft)
+	    doc.PageLeft = margin;
+	  else
+	  {
+	    cutoff = (doc.PageLeft - margin) * img->xppi / 72.0;
+	    final_w -= cutoff;
+	    posw += cutoff;
+	  }
+	  margin = doc.PageLeft + final_w * 72.0 / img->xppi;
+	  if (margin <= doc.PageRight)
+	    doc.PageRight = margin;
+	  else
+	    final_w -= (margin - doc.PageRight) * img->xppi / 72.0;
 	}
 	if(doc.PageBottom<0) doc.PageBottom = 0;
 	if(doc.PageLeft<0) doc.PageLeft = 0;
+	cups_image_t *img2 = cupsImageCrop(img,posw,posh,final_w,final_h);
+	cupsImageClose(img);
+	img = img2;
       }	
     }
   }
