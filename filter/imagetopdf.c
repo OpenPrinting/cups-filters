@@ -1059,6 +1059,15 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
   if(fillprint||cropfit)
   {
+    /* For cropfit do the math without the unprintable margins to get correct
+       centering */
+    if (cropfit)
+    {
+      PageBottom = 0.0;
+      PageTop = PageLength;
+      PageLeft = 0.0;
+      PageRight = PageWidth;
+    }
     float w = (float)cupsImageGetWidth(img);
     float h = (float)cupsImageGetHeight(img);
     float pw = PageRight-PageLeft;
@@ -1129,25 +1138,17 @@ main(int  argc,				/* I - Number of command-line arguments */
       img = img2;
       if(flag==4)
       {
-	PageBottom += (PageTop - PageBottom -
-		       final_w * 72.0 / img->xppi) / 2;
-	PageTop = PageBottom +
-	          final_w * 72.0 / img->xppi;
-	PageLeft += (PageRight - PageLeft -
-		     final_h * 72.0 / img->yppi) / 2;
-	PageRight = PageLeft +
-	            final_h * 72.0 / img->yppi;
+	PageBottom += (PageLength - final_w * 72.0 / img->xppi) / 2;
+	PageTop = PageBottom + final_w * 72.0 / img->xppi;
+	PageLeft += (PageWidth - final_h * 72.0 / img->yppi) / 2;
+	PageRight = PageLeft + final_h * 72.0 / img->yppi;
       }
       else
       {
-	PageBottom += (PageTop - PageBottom -
-		       final_h * 72.0 / img->yppi) / 2;
-	PageTop = PageBottom +
-	          final_h * 72.0 / img->yppi;
-	PageLeft += (PageRight - PageLeft -
-		     final_w * 72.0 / img->xppi) / 2;
-	PageRight = PageLeft +
-                    final_w * 72.0 / img->xppi;
+	PageBottom += (PageLength - final_h * 72.0 / img->yppi) / 2;
+	PageTop = PageBottom + final_h * 72.0 / img->yppi;
+	PageLeft += (PageWidth - final_w * 72.0 / img->xppi) / 2;
+	PageRight = PageLeft + final_w * 72.0 / img->xppi;
       }
       if(PageBottom<0) PageBottom = 0;
       if(PageLeft<0) PageLeft = 0;
