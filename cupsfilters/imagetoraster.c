@@ -937,10 +937,8 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     pw = ph;
     ph = tmp;
   }
-  if(w>pw||h>ph)
-  {
+  if (w * 72.0 / img->xppi > pw || h * 72.0 / img->yppi > ph)
     document_large = 1;
-  }
 
   if((val = cupsGetOption("print-scaling",num_options,options)) != NULL)
   {
