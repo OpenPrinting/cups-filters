@@ -743,13 +743,20 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       }
       else if (pclm)
       {
-	/* Color space is always SRGB 8 */
-	cspaces_available = "srgb_8";
-	color_mode = "auto";
+	/* Available color spaces are always SRGB 8 and SGray 8 */
+	cspaces_available = "srgb_8,sgray_8";
+	if ((color_mode = cupsGetOption("print-color-mode", num_options,
+					options)) == NULL) {
+	  choice = ppdFindMarkedChoice(ppd, "ColorModel");
+	  if (choice)
+	    color_mode = choice->choice;
+	  else
+	    color_mode = "auto";
+	}
 	hi_depth = 0;
 	if (log)
 	  log(ld, FILTER_LOGLEVEL_DEBUG,
-	      "For PCLm color mode is always SRGB 8-bit.");
+	      "For PCLm color mode is always SRGB/SGray 8-bit.");
 	res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
 				      cspace, &hi_depth);
       }
@@ -830,13 +837,16 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     }
     else if (pclm)
     {
-      /* Color space is always SRGB 8 */
-      cspaces_available = "srgb_8";
-      color_mode = "auto";
+      /* Available color spaces are always SRGB 8 and SGray 8 */
+      cspaces_available = "srgb_8,sgray_8";
+      if ((color_mode = cupsGetOption("print-color-mode", num_options,
+				      options)) == NULL)
+	color_mode = ippAttrEnumValForPrinter(printer_attrs, job_attrs,
+					      "print-color-mode");
       hi_depth = 0;
       if (log)
 	log(ld, FILTER_LOGLEVEL_DEBUG,
-	    "For PCLm color mode is always SRGB 8-bit.");
+	    "For PCLm color mode is always SRGB/SGray 8-bit.");
       res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
 				    cspace, &hi_depth);
     }
