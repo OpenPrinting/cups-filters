@@ -64,6 +64,8 @@ main(int  argc,				/* I - Number of command-line args */
       outformat = OUTPUT_FORMAT_PWG_RASTER;
     else if (strcasestr(t, "urf"))
       outformat = OUTPUT_FORMAT_APPLE_RASTER;
+    else if (strcasestr(t, "pclm"))
+      outformat = OUTPUT_FORMAT_PCLM;
   }
 
   ret = filterCUPSWrapper(argc, argv, ghostscript, &outformat, &JobCanceled);
