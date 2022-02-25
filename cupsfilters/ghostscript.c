@@ -1498,8 +1498,16 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
       cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=srgb.icc"));
     else if (h.cupsColorSpace == CUPS_CSPACE_ADOBERGB)
       cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=a98.icc"));
+  } else if (!cm_disabled &&
+	     outformat == OUTPUT_FORMAT_PCLM) {
+    /* Set standard output ICC profile sGray/sRGB */
+    if (h.cupsColorSpace == CUPS_CSPACE_SW)
+      cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=sgray.icc"));
+    else if (h.cupsColorSpace == CUPS_CSPACE_SRGB)
+      cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=srgb.icc"));
   }
-  else{
+  else if (!cm_disabled)
+  {
     cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=srgb.icc"));
   }
 
