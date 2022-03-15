@@ -759,7 +759,7 @@ AM_CONDITIONAL([ENABLE_RASTERTOPWG], [test "x$enable_rastertopwg" = "xyes"])
 # Check for universal CUPS filter
 # ===============================
 AC_ARG_ENABLE([universal-cups-filter],
-	[AS_HELP_STRING([--enable-universal-cups-filter], [Create single, universal CUPS filter executable for all filter functions.])],
+	[AS_HELP_STRING([--enable-universal-cups-filter], [Use a single, universal CUPS filter executable for all filter functions.])],
         [enable_universal_cups_filter="$enableval"],
         [enable_universal_cups_filter=yes]
 )
@@ -770,7 +770,7 @@ AM_CONDITIONAL([ENABLE_UNIVERSAL_CUPS_FILTER],
 # Check for individual CUPS filters
 # =================================
 AC_ARG_ENABLE([individual-cups-filters],
-	[AS_HELP_STRING([--enable-individual-cups-filters], [Create individual CUPS filter executables for each filter function.])],
+	[AS_HELP_STRING([--enable-individual-cups-filters], [Use individual CUPS filter executables for each filter function.])],
         [enable_individual_cups_filters="$enableval"],
         [enable_individual_cups_filters=no]
 )

@@ -781,9 +781,7 @@ endif
 # ==========
 # PDF to PDF 
 # ==========
-if ENABLE_INDIVIDUAL_CUPS_FILTERS
 pkgfilter_PROGRAMS += pdftopdf
-endif
 
 pdftopdf_SOURCES = \
 	filter/pdftopdf.c
@@ -801,9 +799,7 @@ pdftopdf_LDADD = \
 # ======================
 genfilterscripts = \
 	filter/texttops
-if ENABLE_INDIVIDUAL_CUPS_FILTERS
 pkgfilter_SCRIPTS = $(genfilterscripts)
-endif
 if ENABLE_BRAILLE
 nodist_pkgfilter_SCRIPTS = \
 	filter/braille/drivers/generic/brftoembosser \
@@ -840,7 +836,6 @@ pkgfilter_PROGRAMS += \
 endif
 endif
 endif
-if ENABLE_INDIVIDUAL_CUPS_FILTERS
 pkgfilter_PROGRAMS += \
 	pdftops \
 	texttopdf \
@@ -876,7 +871,6 @@ pkgfilter_PROGRAMS += \
 	imagetopdf \
 	imagetops \
 	imagetoraster
-endif
 endif
 
 check_PROGRAMS += \
