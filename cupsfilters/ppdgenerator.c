@@ -1856,7 +1856,10 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
    */
 
   if (is_fax)
+  {
+    cupsFilePuts(fp, "*cupsFax: True\n");
     cupsFilePuts(fp, "*cupsIPPFaxOut: True\n");
+  }
 
   /* Check for each CUPS/cups-filters-supported PDL, starting with the
      most desirable going to the least desirable. If a PDL requires a
@@ -1876,19 +1879,17 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
      "application/pdf" as input format so that pdftopdf does not also
      get executed on the client, applying option settings twice. See
      https://github.com/apple/cups/issues/5361 */
-  if (cupsArrayFind(pdl_list, "application/vnd.cups-pdf")) {
+  if (cupsArrayFind(pdl_list, "application/vnd.cups-pdf"))
+  {
+    /* Remote CUPS queue */
     cupsFilePuts(fp, "*cupsFilter2: \"application/pdf application/pdf 0 -\"\n");
-    manual_copies = 0;
-    formatfound = 1;
-    is_pdf = 1;
-  } else if (cupsArrayFind(pdl_list, "application/pdf")) {
-    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 200 -\"\n");
     manual_copies = 0;
     formatfound = 1;
     is_pdf = 1;
   }
 #ifdef CUPS_RASTER_HAVE_APPLERASTER
-  if (cupsArrayFind(pdl_list, "image/urf")) {
+  else if (cupsArrayFind(pdl_list, "image/urf"))
+  {
     if ((attr = ippFindAttribute(response, "urf-supported",
 				 IPP_TAG_KEYWORD)) != NULL) {
       int lowdpi = 0, hidpi = 0; /* Lower and higher resolution */
@@ -1924,7 +1925,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
 	      cfJoinResolutionArrays(&common_res, &current_res, &common_def,
 				     &current_def)) {
 	    cupsFilePuts(fp, "*cupsFilter2: \"image/urf image/urf 0 -\"\n");
-	    if (formatfound == 0) manual_copies = 1;
+	    manual_copies = 1;
 	    formatfound = 1;
 	    is_apple = 1;
 	  }
@@ -1933,7 +1934,16 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
     }
   }
 #endif
-  if (cupsArrayFind(pdl_list, "image/pwg-raster")) {
+  else if (cupsArrayFind(pdl_list, "application/pdf"))
+  {
+    /* PDF printer */
+    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/pdf 0 -\"\n");
+    manual_copies = 0;
+    formatfound = 1;
+    is_pdf = 1;
+  }
+  else if (cupsArrayFind(pdl_list, "image/pwg-raster"))
+  {
     if ((attr = ippFindAttribute(response,
 				 "pwg-raster-document-resolution-supported",
 				 IPP_TAG_RESOLUTION)) != NULL) {
@@ -1941,14 +1951,15 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
       if ((current_res = cfIPPAttrToResolutionArray(attr)) != NULL &&
 	  cfJoinResolutionArrays(&common_res, &current_res, &common_def,
 				 &current_def)) {
-	cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 300 -\"\n");
+	cupsFilePuts(fp, "*cupsFilter2: \"image/pwg-raster image/pwg-raster 0 -\"\n");
 	if (formatfound == 0) manual_copies = 1;
 	formatfound = 1;
 	is_pwg = 1;
       }
     }
   }
-  if (cupsArrayFind(pdl_list, "application/PCLm")) {
+  else if (cupsArrayFind(pdl_list, "application/PCLm"))
+  {
     if ((attr = ippFindAttribute(response, "pclm-source-resolution-supported",
 				 IPP_TAG_RESOLUTION)) != NULL) {
       if ((defattr = ippFindAttribute(response,
@@ -1960,7 +1971,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
       if ((current_res = cfIPPAttrToResolutionArray(attr)) != NULL &&
 	  cfJoinResolutionArrays(&common_res, &current_res, &common_def,
 				 &current_def)) {
-	cupsFilePuts(fp, "*cupsFilter2: \"application/PCLm application/PCLm 400 -\"\n");
+	cupsFilePuts(fp, "*cupsFilter2: \"application/PCLm application/PCLm 0 -\"\n");
 	if (formatfound == 0) manual_copies = 1;
 	formatfound = 1;
 	is_pclm = 1;
@@ -1968,31 +1979,32 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
     }
   }
   /* Legacy formats only if we have no driverless format */
-  if (!is_pdf && !is_apple && !is_pwg && !is_pclm) {
-    if (cupsArrayFind(pdl_list, "application/vnd.hp-pclxl")) {
-      /* Check whether the gstopxl filter is installed,
-	 otherwise ignore the PCL-XL support of the printer */
-      if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
-	cups_serverbin = CUPS_SERVERBIN;
-      snprintf(filter_path, sizeof(filter_path), "%s/filter/gstopxl",
-	       cups_serverbin);
-      if (access(filter_path, X_OK) == 0) {
-	cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 100 gstopxl\"\n");
-	if (formatfound == 0) manual_copies = 1;
-	formatfound = 1;
-      }
-    }
-    if (cupsArrayFind(pdl_list, "application/postscript")) {
-      /* Higher cost value as PostScript interpreters are often buggy */
-      cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 200 -\"\n");
-      if (formatfound == 0) manual_copies = 0;
-      formatfound = 1;
-    }
-    if (cupsArrayFind(pdl_list, "application/vnd.hp-pcl")) {
-      cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 300 rastertopclx\"\n");
+  else if (cupsArrayFind(pdl_list, "application/vnd.hp-pclxl"))
+  {
+    /* Check whether the gstopxl filter is installed,
+       otherwise ignore the PCL-XL support of the printer */
+    if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
+      cups_serverbin = CUPS_SERVERBIN;
+    snprintf(filter_path, sizeof(filter_path), "%s/filter/gstopxl",
+	     cups_serverbin);
+    if (access(filter_path, X_OK) == 0) {
+      cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 100 gstopxl\"\n");
       if (formatfound == 0) manual_copies = 1;
       formatfound = 1;
     }
+  }
+  else if (cupsArrayFind(pdl_list, "application/postscript"))
+  {
+    /* Higher cost value as PostScript interpreters are often buggy */
+    cupsFilePuts(fp, "*cupsFilter2: \"application/vnd.cups-postscript application/postscript 0 -\"\n");
+    if (formatfound == 0) manual_copies = 0;
+    formatfound = 1;
+  }
+  else if (cupsArrayFind(pdl_list, "application/vnd.hp-pcl"))
+  {
+    cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-raster application/vnd.hp-pcl 100 rastertopclx\"\n");
+    if (formatfound == 0) manual_copies = 1;
+    formatfound = 1;
   }
   if (cupsArrayFind(pdl_list, "image/jpeg"))
     cupsFilePuts(fp, "*cupsFilter2: \"image/jpeg image/jpeg 0 -\"\n");
