@@ -291,7 +291,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     outformat = OUTPUT_FORMAT_CUPS_RASTER;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetorater: Final output format: %s",
+	       "imagetoraster: Final output format: %s",
 	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
 		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
 		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
