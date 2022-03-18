@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2015-2018 Samuel Thibault <samuel.thibault@ens-lyon.org>
+# Copyright (c) 2015-2018, 2022 Samuel Thibault <samuel.thibault@ens-lyon.org>
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -356,7 +356,13 @@ getOptionLibLouis () {
       if grep -q "^#+locale:$LOUIS_LOCALE$" $table; then
 	printf "DEBUG: %s has correct locale %s\n" "$name" "$LOUIS_LOCALE" >&2
 	score=$((score + 15))
+      elif grep -q "^#+region:$LOUIS_LOCALE$" $table; then
+	printf "DEBUG: %s has correct region %s\n" "$name" "$LOUIS_LOCALE" >&2
+	score=$((score + 15))
       elif grep -q "^#+locale:$LANGUAGE$" $table; then
+	printf "DEBUG: %s has correct language %s\n" "$name" "$LANGUAGE" >&2
+	score=$((score + 10))
+      elif grep -q "^#+language:$LANGUAGE$" $table; then
 	printf "DEBUG: %s has correct language %s\n" "$name" "$LANGUAGE" >&2
 	score=$((score + 10))
       else
