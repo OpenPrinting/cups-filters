@@ -41,7 +41,7 @@
 #endif /* HAVE_CUPS_1_7 */
 
 #include "filter.h"
-#include <cupsfilters/pdf.h>
+#include "pdf.h"
 
 enum banner_info
 {
@@ -748,14 +748,31 @@ static int generate_banner_pdf(banner_t *banner,
 #endif
 
     if (!(doc = pdf_load_template(banner->template_file)))
-        return 1;
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "PDF template must contain exactly 1 page: %s",
+		   banner->template_file);
+      return (1);
+    }
 
     get_pagesize(data, noptions, options,
                  &page_width, &page_length, media_limits);
 
-    pdf_resize_page(doc, 1, page_width, page_length, &page_scale);
+    if (pdf_resize_page(doc, 1, page_width, page_length, &page_scale) != 0)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "Unable to resize requested PDF page");
+      pdf_free(doc);
+      return (1);
+    }
 
-    pdf_add_type1_font(doc, 1, "Courier");
+    if (pdf_add_type1_font(doc, 1, "Courier") != 0)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "Unable to add type1 font to requested PDF page");
+      pdf_free(doc);
+      return (1);
+    }
 
 #ifdef HAVE_OPEN_MEMSTREAM
     s = open_memstream(&buf, &len);
@@ -764,6 +781,7 @@ static int generate_banner_pdf(banner_t *banner,
     {
         if (log)
             log(ld, FILTER_LOGLEVEL_ERROR, "bannertopdf: Cannot create temp file: %s\n", strerror(errno));
+	pdf_free(doc);
         return 1;
     }
 #endif
@@ -935,17 +953,21 @@ static int generate_banner_pdf(banner_t *banner,
                                        noptions,
                                        options);
 
-    /*
-     * Try to find a PDF form in PDF template and fill it.
-     */
-    int ret = pdf_fill_form(doc, known_opts);
+   /*
+    * Try to find a PDF form in PDF template and fill it.
+    */
 
-    /*
-     * Could we fill a PDF form? If no, just add PDF stream.
-     */
-    if (!ret)
+    if (pdf_fill_form(doc, known_opts) != 0)
     {
-        pdf_prepend_stream(doc, 1, buf, len);
+     /*
+      * Could we fill a PDF form? If no, just add PDF stream.
+      */
+
+      if (pdf_prepend_stream(doc, 1, buf, len) != 0)
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "Unable to prepend stream to requested PDF page");
+      }
     }
 
     copies = get_int_option("number-up", noptions, options, 1);
@@ -954,7 +976,13 @@ static int generate_banner_pdf(banner_t *banner,
         copies *= 2;
 
     if (copies > 1)
-        pdf_duplicate_page(doc, 1, copies - 1);
+    {
+      if (pdf_duplicate_page(doc, 1, copies - 1) != 0)
+      {
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "Unable to duplicate requested PDF page");
+      }
+    }
 
     pdf_write(doc, outputfp);
 

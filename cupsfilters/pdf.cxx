@@ -65,8 +65,6 @@ extern "C" pdf_t * pdf_load_template(const char *filename)
   unsigned pages = (pdf->getAllPages()).size();
 
   if (pages != 1) {
-    fprintf(stderr, "ERROR: PDF template must contain exactly 1 page: %s\n",
-            filename);
     delete pdf;
     return NULL;
   }
@@ -139,26 +137,21 @@ int pdf_pages_fp(FILE *file)
  * I - buffer containing data to be prepended
  * I - length of buffer
  */
-extern "C" void pdf_prepend_stream(pdf_t *pdf,
-                                   unsigned page_num,
-                                   char const *buf,
-                                   size_t len)
+extern "C" int pdf_prepend_stream(pdf_t *pdf,
+				  unsigned page_num,
+				  char const *buf,
+				  size_t len)
 {
   std::vector<QPDFObjectHandle> pages = pdf->getAllPages();
-  if (pages.empty() || page_num > pages.size()) {
-    fprintf(stderr, "ERROR: Unable to prepend stream to requested PDF page\n");
-    return;
-  }
+  if (pages.empty() || page_num > pages.size())
+    return (1);
 
   QPDFObjectHandle page = pages[page_num - 1];
 
   // get page contents stream / array  
   QPDFObjectHandle contents = page.getKey("/Contents");
   if (!contents.isStream() && !contents.isArray())
-  {
-    fprintf(stderr, "ERROR: Malformed PDF.\n");
-    return;
-  }
+    return (1);
 
   // prepare the new stream which is to be prepended
   PointerHolder<Buffer> stream_data = PointerHolder<Buffer>(new Buffer(len));
@@ -177,6 +170,8 @@ extern "C" void pdf_prepend_stream(pdf_t *pdf,
 
   contents.insertItem(0, stream);
   page.replaceKey("/Contents", contents);
+
+  return (0);
 }
 
 
@@ -187,24 +182,19 @@ extern "C" void pdf_prepend_stream(pdf_t *pdf,
  * I - page number of the page to which the font is to be added
  * I - name of the font to be added
  */
-extern "C" void pdf_add_type1_font(pdf_t *pdf,
-                                   unsigned page_num,
-                                   const char *name)
+extern "C" int pdf_add_type1_font(pdf_t *pdf,
+				  unsigned page_num,
+				  const char *name)
 {
   std::vector<QPDFObjectHandle> pages = pdf->getAllPages();
-  if (pages.empty() || page_num > pages.size()) {
-    fprintf(stderr, "ERROR: Unable to add type1 font to requested PDF page\n");
-    return;
-  }
+  if (pages.empty() || page_num > pages.size())
+    return (1);
 
   QPDFObjectHandle page = pages[page_num - 1];
 
   QPDFObjectHandle resources = page.getKey("/Resources");
   if (!resources.isDictionary())
-  {
-    fprintf(stderr, "ERROR: Malformed PDF.\n");
-    return;
-  }
+    return (1);
 
   QPDFObjectHandle font = QPDFObjectHandle::newDictionary();
   font.replaceKey("/Type", QPDFObjectHandle::newName("/Font"));
@@ -218,14 +208,13 @@ extern "C" void pdf_add_type1_font(pdf_t *pdf,
     fonts = QPDFObjectHandle::newDictionary();
   }
   else if (!fonts.isDictionary())
-  {
-    fprintf(stderr, "ERROR: Can't recognize Font resource in PDF template.\n");
-    return;
-  }
+    return (1);
 
   font = pdf->makeIndirectObject(font);
   fonts.replaceKey("/bannertopdf-font", font);
   resources.replaceKey("/Font", fonts);
+
+  return (0);
 }
 
 
@@ -306,27 +295,23 @@ static void fit_rect(float oldrect[4],
  * I - Length of page to set
  * I - Scale of page to set
  */
-extern "C" void pdf_resize_page (pdf_t *pdf,
-                                 unsigned page_num,
-                                 float width,
-                                 float length,
-                                 float *scale)
+extern "C" int pdf_resize_page (pdf_t *pdf,
+				unsigned page_num,
+				float width,
+				float length,
+				float *scale)
 {
   std::vector<QPDFObjectHandle> pages = pdf->getAllPages();
-  if (pages.empty() || page_num > pages.size()) {
-    fprintf(stderr, "ERROR: Unable to resize requested PDF page\n");
-    return;
-  }
+  if (pages.empty() || page_num > pages.size())
+    return (1);
 
   QPDFObjectHandle page = pages[page_num - 1];
   float new_mediabox[4] = { 0.0, 0.0, width, length };
   float old_mediabox[4];
   QPDFObjectHandle media_box;
 
-  if (!dict_lookup_rect(page, "/MediaBox", old_mediabox, true)) {
-    fprintf(stderr, "ERROR: pdf doesn't contain a valid mediabox\n");
-    return;
-  }
+  if (!dict_lookup_rect(page, "/MediaBox", old_mediabox, true))
+    return (1);
 
   fit_rect(old_mediabox, new_mediabox, scale);
   media_box = makeRealBox(new_mediabox);
@@ -336,6 +321,8 @@ extern "C" void pdf_resize_page (pdf_t *pdf,
   page.replaceKey("/CropBox", media_box);
   page.replaceKey("/MediaBox", media_box);
   page.replaceKey("/TrimBox", media_box);
+
+  return (0);
 }
 
 
@@ -345,15 +332,13 @@ extern "C" void pdf_resize_page (pdf_t *pdf,
  * I - page number of the page to be duplicated
  * I - number of copies to be duplicated
  */
-extern "C" void pdf_duplicate_page (pdf_t *pdf,
-                                    unsigned page_num,
-                                    unsigned count)
+extern "C" int pdf_duplicate_page (pdf_t *pdf,
+				   unsigned page_num,
+				   unsigned count)
 {
   std::vector<QPDFObjectHandle> pages = pdf->getAllPages();
-  if (pages.empty() || page_num > pages.size()) {
-    fprintf(stderr, "ERROR: Unable to duplicate requested PDF page\n");
-    return;
-  }
+  if (pages.empty() || page_num > pages.size())
+    return (1);
 
   QPDFObjectHandle page = pages[page_num - 1];
   for (unsigned i = 0; i < count; ++i)
@@ -361,6 +346,8 @@ extern "C" void pdf_duplicate_page (pdf_t *pdf,
     page = pdf->makeIndirectObject(page);
     pdf->addPage(page, false);
   }
+
+  return (0);
 }
 
 
@@ -408,7 +395,7 @@ std::string lookup_opt(opt_t *opt, std::string const& key) {
  *                      3. Fill recognized fields with information.
  * I - Pointer to the QPDF structure
  * I - Pointer to the opt_t type list
- * O - status of form fill - 0 for failure, 1 for success
+ * O - status of form fill - 0 for success, 1 for failure
  */
 extern "C" int pdf_fill_form(pdf_t *doc, opt_t *opt)
 {
@@ -418,19 +405,15 @@ extern "C" int pdf_fill_form(pdf_t *doc, opt_t *opt)
     QPDFPageDocumentHelper pdh(*doc);
 
     // check if the PDF has a form or not
-    if ( !afdh.hasAcroForm() ) {
-        fprintf(stderr, "DEBUG: PDF template file doesn't have form. It's okay.\n");
-        return 0;
-    }
+    if (!afdh.hasAcroForm())
+      return 1;
 
     // get the first page from the PDF to fill the form. Since this
     // is a banner file,it must contain only a single page, and that
     // check has already been performed in the `pdf_load_template()` function
     std::vector<QPDFPageObjectHelper> pages = pdh.getAllPages();
-    if (pages.empty()) {
-        fprintf(stderr, "ERROR: Can't get page from PDF tamplate file.\n");
-        return 0;
-    }
+    if (pages.empty())
+      return 1;
     QPDFPageObjectHelper page = pages.front();
 
     // get the annotations in the page
@@ -467,7 +450,7 @@ extern "C" int pdf_fill_form(pdf_t *doc, opt_t *opt)
         }
     }
 
-    // status 1 notifies that the function successfully filled all the
+    // status 0 notifies that the function successfully filled all the
     // identifiable fields in the form
-    return 1;
+    return 0;
 }
