@@ -462,9 +462,6 @@ getPrintRenderIntent(filter_data_t *data,
     else if (!strcmp(val, "saturation"))
       snprintf(header->cupsRenderingIntent, sizeof(header->cupsRenderingIntent),
 	      "%s",  "Saturation");
-    else
-      fprintf(stderr, "DEBUG: Unsupported print-rendering-intent \"%s\".\n",
-	      val);
   }
   else 
   {
@@ -1376,9 +1373,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	     !strcasecmp(val, "TextAndGraphic"))
       _strlcpy(h->OutputType, "TextAndGraphics",
 	      sizeof(h->OutputType));
-    else if (pwg_raster)
-      fprintf(stderr, "DEBUG: Unsupported print-content-type \"%s\".\n", val);
-    else
+    else if (!pwg_raster)
       _strlcpy(h->OutputType, val, sizeof(h->OutputType));
   }
   else if (set_defaults)
@@ -1462,7 +1457,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	 strcasecmp(ptr, "dpc") &&
 	 strcasecmp(ptr, "dpcm")))
     {
-      fprintf(stderr, "DEBUG: Bad resolution value \"%s\".\n", val);
       if (set_defaults)
       {
 	h->HWResolution[0] = 600;
@@ -1508,8 +1502,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       h->LeadingEdge = CUPS_EDGE_TOP;
     else if (!strcasecmp(val, "LongEdgeFirst"))
       h->LeadingEdge = CUPS_EDGE_RIGHT;
-    else
-      fprintf(stderr, "DEBUG: Unsupported feed-orientation \"%s\".\n", val);
   }
   else if (set_defaults)
     h->LeadingEdge = CUPS_EDGE_TOP;
@@ -1628,8 +1620,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       h->MediaPosition = 48;
     else if (!strcasecmp(val, "Roll10"))
       h->MediaPosition = 49;
-    else
-      fprintf(stderr, "DEBUG: Unsupported media source \"%s\".\n", val);
   }
   else if (set_defaults)
     h->MediaPosition = 0; /* Auto */
@@ -1763,8 +1753,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	h->cupsPageSize[1] = size_found->length * 72.0 / 2540.0;
       }
     }
-    else
-      fprintf(stderr, "DEBUG: Unsupported page size %s.\n", val);
   }
   else if (set_defaults)
   {
@@ -2069,8 +2057,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       /* Let "auto" not look like an error */
       if (set_defaults)
       {
-	fprintf(stderr,
-		"DEBUG: \"Auto\" mode, using default RGB color space.\n");
 	colorspace = 19;
 	numcolors = 3;
       }
@@ -2092,7 +2078,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     }
     else
     {
-      fprintf(stderr, "DEBUG: Bad color space value \"%s\".\n", val);
       if (set_defaults)
       {
 	h->cupsBitsPerColor = 8;
@@ -2261,8 +2246,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       if (!quality ||
 	  (quality >= IPP_QUALITY_DRAFT && quality <= IPP_QUALITY_HIGH))
 	h->cupsInteger[8] = quality;
-      else
-	fprintf(stderr, "DEBUG: Unsupported print-quality %d.\n", quality);
     }
 
     /* Leave "reserved" fields (h->cupsInteger[9..13]) on 0 */
@@ -2327,9 +2310,6 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     else if (!strcmp(val, "saturation"))
       _strlcpy(h->cupsRenderingIntent, "Saturation",
 	      sizeof(h->cupsRenderingIntent));
-    else
-      fprintf(stderr, "DEBUG: Unsupported print-rendering-intent \"%s\".\n",
-	      val);
   }
   else if (set_defaults)
     h->cupsRenderingIntent[0] = '\0';
