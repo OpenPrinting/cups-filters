@@ -3,6 +3,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <config.h>
 #include <signal.h>
 
 /*
@@ -52,7 +53,13 @@ main(int  argc,	   /* I - Number of command-line arguments */
   * Fire up the pdftoraster() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, bannertopdf, NULL, &JobCanceled);
+  char buf[1024];
+  const char *datadir = getenv("CUPS_DATADIR");
+  if (!datadir)
+    datadir = CUPS_DATADIR;
+  snprintf(buf, sizeof(buf), "%s/data", datadir);
+
+  ret = filterCUPSWrapper(argc, argv, bannertopdf, buf, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: bannertopdf filter function failed.\n");

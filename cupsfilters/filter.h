@@ -223,6 +223,14 @@ extern int bannertopdf(int inputfd,
 		      filter_data_t *data,
 		      void *parameters);
 
+/* Parameters: const char*
+   Template directory: In this directory there are the PDF template files
+   for the banners and test pages. CUPS uses /usr/share/cups/data/ for that.
+   If you submit a PDF file with added banner instructions as input file
+   the template directory is not needed as the PDF input file itself is used
+   as template. */
+
+
 extern int imagetopdf(int inputfd,
 		      int outputfd,
 		      int inputseekable,

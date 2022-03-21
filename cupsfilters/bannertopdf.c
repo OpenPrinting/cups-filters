@@ -67,7 +67,7 @@ enum banner_info
 
 typedef struct
 {
-    const char *template_file;
+    char *template_file;
     char *header, *footer;
     unsigned infos;
 } banner_t;
@@ -76,6 +76,7 @@ void banner_free(banner_t *banner)
 {
     if (banner)
     {
+        free(banner->template_file);
         free(banner->header);
         free(banner->footer);
         free(banner);
@@ -166,30 +167,22 @@ static unsigned parse_show(char *s, filter_logfunc_t log, void *ld)
     return info;
 }
 
-static char *template_path(const char *name)
+static char *template_path(const char *name, const char *datadir)
 {
-    char *datadir, *result;
+    char *result;
 
     if (name[0] == '/')
         return strdup(name);
 
-    if ((datadir = getenv("CUPS_DATADIR")) == NULL)
-    {
-        result = malloc(strlen(BANNERTOPDF_DATADIR) + strlen(name) + 2);
-        sprintf(result, "%s/%s", BANNERTOPDF_DATADIR, name);
-    }
-    else
-    {
-        result = malloc(strlen(datadir) + strlen(name) + 7);
-        sprintf(result, "%s/data/%s", datadir, name);
-    }
+    result = malloc(strlen(datadir) + strlen(name) + 2);
+    sprintf(result, "%s/%s", datadir, name);
 
     return result;
 }
 
 banner_t *banner_new_from_file(const char *filename, int *num_options,
-			       cups_option_t **options, filter_logfunc_t log,
-			       void *ld)
+			       cups_option_t **options, const char *datadir,
+			       filter_logfunc_t log, void *ld)
 {
     FILE *f;
     char *line = NULL;
@@ -257,7 +250,7 @@ banner_t *banner_new_from_file(const char *filename, int *num_options,
 	    key ++;
 
         if (!strcasecmp(key, "template"))
-            banner->template_file = template_path(value);
+            banner->template_file = template_path(value, datadir);
         else if (!strcasecmp(key, "header"))
             banner->header = strdup(value);
         else if (!strcasecmp(key, "footer"))
@@ -300,9 +293,9 @@ banner_t *banner_new_from_file(const char *filename, int *num_options,
     if (!banner->template_file)
     {
       if (ispdf)
-	banner->template_file = filename;
+	banner->template_file = strdup(filename);
       else
-        banner->template_file = template_path("default.pdf");
+        banner->template_file = template_path("default.pdf", datadir);
     }
     if (!gotinfos)
     {
@@ -584,20 +577,25 @@ opt_t *get_known_opts(
     ipp_t *printer_attrs = data->printer_attrs;
     ipp_attribute_t *ipp_attr;
     char buf[1024];
+    const char *value = NULL;
+
     /* Job ID */
     opt = add_opt(opt, "job-id", jobid);
 
     /* Job title */
     opt = add_opt(opt, "job-title", jobtitle);
 
-    /* Printer by */
+    /* Printed by */
     opt = add_opt(opt, "user", user);
 
     /* Printer name */
     opt = add_opt(opt, "printer-name", data->printer);
 
     /* Printer info */
-    opt = add_opt(opt, "printer-info", getenv("PRINTER_INFO"));
+    if ((value = cupsGetOption("printer-info",
+				noptions, options)) == NULL || !value[0])
+      value =  getenv("PRINTER_INFO");
+    opt = add_opt(opt, "printer-info", value);
 
     /* Time at creation */
     opt = add_opt(opt, "time-at-creation",
@@ -750,7 +748,7 @@ static int generate_banner_pdf(banner_t *banner,
     if (!(doc = pdf_load_template(banner->template_file)))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "PDF template must contain exactly 1 page: %s",
+		   "PDF template must exist and contain exactly 1 page: %s",
 		   banner->template_file);
       return (1);
     }
@@ -810,11 +808,15 @@ static int generate_banner_pdf(banner_t *banner,
         info_line(s, "Printer", data->printer);
 
     if ((banner->infos & INFO_PRINTER_INFO) &&
-	(value = getenv("PRINTER_INFO")) != NULL && value[0])
+	(((value = cupsGetOption("printer-info",
+				 noptions, options)) != NULL && value[0]) ||
+	 ((value = getenv("PRINTER_INFO")) != NULL && value[0])))
         info_line(s, "Description", value);
 
     if ((banner->infos & INFO_PRINTER_LOCATION) &&
-	(value = getenv("PRINTER_LOCATION")) != NULL && value[0])
+	(((value = cupsGetOption("printer-location",
+				 noptions, options)) != NULL && value[0]) ||
+	 ((value = getenv("PRINTER_LOCATION")) != NULL && value[0])))
         info_line(s, "Location", value);
 
     if ((banner->infos & INFO_JOB_ID) &&
@@ -1002,9 +1004,10 @@ static int generate_banner_pdf(banner_t *banner,
 
 int bannertopdf(int inputfd,         /* I - File descriptor input stream */
                 int outputfd,        /* I - File descriptor output stream */
-                int inputseekable,   /* I - Is input stream seekable? (unused) */
+                int inputseekable,   /* I - Is input stream seekable? (unused)*/
                 filter_data_t *data, /* I - Job and printer data */
-                void *parameters)    /* I - Filter-specific parameters (unused) */
+                void *parameters)    /* I - Filter-specific parameters -
+				            Template/Banner data directory */
 {
     banner_t *banner;
     int num_options = 0;
@@ -1016,6 +1019,7 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
     cups_option_t *options = NULL;
     char tempfile[1024], buffer[1024];
     size_t bytes;
+    const char *datadir = (const char *)parameters;
 
     filter_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
@@ -1098,7 +1102,7 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
    /*
     * Parse the instructions...
     */
-    banner = banner_new_from_file(tempfile, &num_options, &options,
+    banner = banner_new_from_file(tempfile, &num_options, &options, datadir,
 				  log, ld);
 
     if (!banner)
@@ -1128,7 +1132,7 @@ int bannertopdf(int inputfd,         /* I - File descriptor input stream */
     * Clean up...
     */
     banner_free(banner);
-    if(options) free(options);
+    if (options) cupsFreeOptions(num_options, options);
     unlink(tempfile);
     
     return ret;

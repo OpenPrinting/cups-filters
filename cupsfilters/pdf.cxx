@@ -61,7 +61,13 @@ static QPDFObjectHandle makeRealBox(float values[4])
 extern "C" pdf_t * pdf_load_template(const char *filename)
 {
   QPDF *pdf = new QPDF();
-  pdf->processFile(filename);
+  try {
+    pdf->processFile(filename);
+  } catch(...) {
+    delete pdf;
+    return NULL;
+  }
+
   unsigned pages = (pdf->getAllPages()).size();
 
   if (pages != 1) {
