@@ -107,7 +107,7 @@ int	ReadLine(cups_raster_t *ras, cups_page_header2_t *header);
  */
 
 void
-StartPage(filter_data_t *data,		/* I - filter data */
+StartPage(filter_data_t      *data,	/* I - filter data */
 	  ppd_file_t         *ppd,	/* I - PPD file */
           cups_page_header2_t *header,	/* I - Page header */
 	  int                job_id,	/* I - Job ID */
@@ -352,7 +352,7 @@ StartPage(filter_data_t *data,		/* I - filter data */
     if (cm_calibrate == CM_CALIBRATION_ENABLED)
       cm_disabled = 1;
     else
-      cm_disabled = cmIsPrinterCmDisabled(data, getenv("PRINTER"));
+      cm_disabled = cmIsPrinterCmDisabled(data);
 
     if (ppd && !cm_disabled)
     {
@@ -1831,6 +1831,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   */
   filter_data_t temp;
   filter_data_t *data = &temp;
+  data->printer = getenv("PRINTER");
   data->logdata = NULL;
   data->logfunc = cups_logfunc;
   if (argc < 6 || argc > 7)

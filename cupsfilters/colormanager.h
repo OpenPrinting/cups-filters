@@ -60,17 +60,15 @@ typedef enum cm_calibration_e
 
 
 extern 
-cm_calibration_t    cmGetCupsColorCalibrateMode       ( filter_data_t *data,
+cm_calibration_t    cmGetCupsColorCalibrateMode       (filter_data_t *data,
                     				       cups_option_t *options,
                                                        int num_options);
 
 extern int          cmGetPrinterIccProfile            (filter_data_t *data,
-						       const char *printer_id,
                                                        char **icc_profile,
                                                        ppd_file_t *ppd);
 
-extern int          cmIsPrinterCmDisabled             (filter_data_t *data,
-							const char *printer_id);
+extern int          cmIsPrinterCmDisabled             (filter_data_t *data);
 
 extern double*      cmGammaAdobeRgb                   (void);
 extern double*      cmGammaSGray                      (void);

@@ -674,7 +674,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   if (cm_calibrate == CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
   else
-    cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
+    cm_disabled = cmIsPrinterCmDisabled(data);
 
  /*
   * Choose the appropriate colorspace...

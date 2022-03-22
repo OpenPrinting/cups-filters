@@ -388,10 +388,10 @@ static int parseOpts(filter_data_t *data,
     if (doc->color_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
       doc->color_profile.cm_disabled = 1;
     else
-      doc->color_profile.cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
+      doc->color_profile.cm_disabled = cmIsPrinterCmDisabled(data);
 
     if (!doc->color_profile.cm_disabled)
-      cmGetPrinterIccProfile(data, data->printer, &profile, doc->ppd);
+      cmGetPrinterIccProfile(data, &profile, doc->ppd);
 
     if (profile != NULL) {
       doc->color_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");

@@ -506,10 +506,10 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   if (cm_calibrate == CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
   else 
-    cm_disabled = cmIsPrinterCmDisabled(data, getenv("PRINTER"));
+    cm_disabled = cmIsPrinterCmDisabled(data);
 
   if (!cm_disabled)
-    cmGetPrinterIccProfile(data, getenv("PRINTER"), &icc_profile, ppd);
+    cmGetPrinterIccProfile(data, &icc_profile, ppd);
 
 /*  Find print-rendering-intent */
 

@@ -680,90 +680,6 @@ out:
   return status;
 }
 
-#if 0
-static char *
-get_ppd_icc_fallback (ppd_file_t *ppd,
-		      char **qualifier,
-		      filter_logfunc_t log,
-		      void *ld)
-{
-  char full_path[1024];
-  char *icc_profile = NULL;
-  char qualifer_tmp[1024];
-  const char *profile_key;
-  ppd_attr_t *attr;
-  char *datadir;
-
-  /* get profile attr, falling back to CUPS */
-  profile_key = "APTiogaProfile";
-  attr = ppdFindAttr(ppd, profile_key, NULL);
-  if (attr == NULL) {
-    profile_key = "cupsICCProfile";
-    attr = ppdFindAttr(ppd, profile_key, NULL);
-  }
-
-  /* create a string for a quick comparion */
-  snprintf(qualifer_tmp, sizeof(qualifer_tmp),
-           "%s.%s.%s",
-           qualifier[0],
-           qualifier[1],
-           qualifier[2]);
-
-  /* neither */
-  if (attr == NULL) {
-    if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "ghostscript: no profiles specified in PPD");
-    goto out;
-  }
-
-  if ((datadir = getenv("CUPS_DATADIR")) == NULL)
-    datadir = CUPS_DATADIR;
-
-  /* try to find a profile that matches the qualifier exactly */
-  for (;attr != NULL; attr = ppdFindNextAttr(ppd, profile_key, NULL)) {
-    if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "ghostscript: found profile %s in PPD with qualifier '%s'",
-		 attr->value, attr->spec);
-
-    /* invalid entry */
-    if (attr->spec == NULL || attr->value == NULL)
-      continue;
-
-    /* expand to a full path if not already specified */
-    if (attr->value[0] != '/')
-      snprintf(full_path, sizeof(full_path),
-               "%s/profiles/%s", datadir, attr->value);
-    else
-      strncpy(full_path, attr->value, sizeof(full_path));
-
-    /* check the file exists */
-    if (access(full_path, 0)) {
-      if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "ghostscript: found profile %s in PPD that does not exist",
-		   full_path);
-      continue;
-    }
-
-    /* matches the qualifier */
-    if (strcmp(qualifer_tmp, attr->spec) == 0) {
-      icc_profile = strdup(full_path);
-      goto out;
-    }
-  }
-
-  /* no match */
-  if (attr == NULL) {
-    if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "ghostscript: no profiles in PPD for qualifier '%s'",
-		 qualifer_tmp);
-    goto out;
-  }
-
-out:
-  return icc_profile;
-}
-#endif /* 0 */
-
 /*
  * 'ghostscript()' - Filter function to use Ghostscript for print
  *                   data conversions
@@ -1071,10 +987,10 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   if (cm_calibrate == CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
   else 
-    cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
+    cm_disabled = cmIsPrinterCmDisabled(data);
 
   if (!cm_disabled)
-    cmGetPrinterIccProfile(data, data->printer, &icc_profile, ppd);
+    cmGetPrinterIccProfile(data, &icc_profile, ppd);
 
   /* Ghostscript parameters */
   gs_args = cupsArrayNew(NULL, NULL);

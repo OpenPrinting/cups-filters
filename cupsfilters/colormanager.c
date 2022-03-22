@@ -36,12 +36,9 @@ MIT Open Source License  -  http://www.opensource.org/
 
 
 /* Private function prototypes */
-static int      _get_colord_printer_cm_status   (filter_data_t *data,
-						 const char *printer_name);
-static char    *_get_colord_printer_id          (filter_data_t *data, 
-						 const char *printer_name);
-static int      _get_colord_profile             (filter_data_t *data, 
-						 const char *printer_name, 
+static int      _get_colord_printer_cm_status   (filter_data_t *data);
+static char    *_get_colord_printer_id          (filter_data_t *data);
+static int      _get_colord_profile             (filter_data_t *data,
                                                  char **profile,
                                                  ppd_file_t *ppd);
 static char    *_get_ppd_icc_fallback           (filter_data_t *data, 
@@ -71,8 +68,7 @@ double    blackpoint_default[3] = {0.0, 0.0, 0.0};
 
 /* Get printer color management status from the system's color manager */
 int          
-cmIsPrinterCmDisabled( filter_data_t *data,
-		const char *printer_name)    /* dest name */
+cmIsPrinterCmDisabled(filter_data_t *data)
 {
     filter_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
@@ -80,7 +76,7 @@ cmIsPrinterCmDisabled( filter_data_t *data,
 
 
     /* Request color management status from colord */
-    is_cm_off = _get_colord_printer_cm_status(data, printer_name);
+    is_cm_off = _get_colord_printer_cm_status(data);
 
     if (is_cm_off)
 	if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -94,7 +90,6 @@ cmIsPrinterCmDisabled( filter_data_t *data,
 /* Get printer ICC profile from the system's color manager */
 int 
 cmGetPrinterIccProfile(filter_data_t *data,
-		       const char *printer_name,  /* Printer name (usually "dest" name) */
                        char **icc_profile,        /* ICC Profile Path */
                        ppd_file_t *ppd)           /* Optional PPD file for fallback profile */
 {
@@ -104,7 +99,7 @@ cmGetPrinterIccProfile(filter_data_t *data,
 
 
     /* Request a profile from colord */
-    profile_set = _get_colord_profile(data, printer_name, icc_profile, ppd);
+    profile_set = _get_colord_profile(data, icc_profile, ppd);
     if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		"Color Manager: ICC Profile: %s", *icc_profile ?
         *icc_profile : "None");
@@ -192,13 +187,12 @@ double *cmBlackPointDefault(void)
 
 
 char * 
-_get_colord_printer_id( filter_data_t *data,
-			const char *printer_name)         /* Dest name */
+_get_colord_printer_id( filter_data_t *data)
 {
 
     filter_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
-    if (printer_name == NULL) {
+    if (data->printer == NULL) {
       if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		"Color Manager: Invalid printer name.");
       return 0;
@@ -206,7 +200,7 @@ _get_colord_printer_id( filter_data_t *data,
 
     /* Create printer id string for colord */
     char* printer_id = (char*)malloc(CM_MAX_FILE_LENGTH);
-    snprintf (printer_id, CM_MAX_FILE_LENGTH, "cups-%s", printer_name);
+    snprintf (printer_id, CM_MAX_FILE_LENGTH, "cups-%s", data->printer);
 
     return printer_id;    
 
@@ -214,19 +208,18 @@ _get_colord_printer_id( filter_data_t *data,
 
 
 int 
-_get_colord_printer_cm_status( filter_data_t *data,
-		const char *printer_name)  /* Dest name */
+_get_colord_printer_cm_status( filter_data_t *data)
 {
 
     filter_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
 
     /* If invalid input, we leave color management alone */
-    if (printer_name == NULL) {
+    if (data->printer == NULL) {
       if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		"Color Manager: Invalid printer name.");
       return 0;
-    } else if (!strcmp(printer_name, "(null)"))
+    } else if (!strcmp(data->printer, "(null)"))
       return 0;
  
     int is_printer_cm_disabled = 0;   /* color management status flag */
@@ -234,7 +227,7 @@ _get_colord_printer_cm_status( filter_data_t *data,
 
 
     /* Check if device is inhibited/disabled in colord  */
-    printer_id = _get_colord_printer_id(data, printer_name);
+    printer_id = _get_colord_printer_id(data);
     is_printer_cm_disabled = colord_get_inhibit_for_device_id (data, printer_id);
 
     if (printer_id != NULL)
@@ -246,7 +239,6 @@ _get_colord_printer_cm_status( filter_data_t *data,
 
 int 
 _get_colord_profile(filter_data_t *data,
-		    const char   *printer_name,     /* Dest name */
                     char         **profile,         /* Requested icc profile path */      
                     ppd_file_t   *ppd)              /* PPD file */
 {
@@ -254,7 +246,7 @@ _get_colord_profile(filter_data_t *data,
     filter_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
 
-    if (printer_name == NULL || profile == 0) {
+    if (data->printer == NULL || profile == 0) {
       if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		"Color Manager: Invalid input - Unable to find profile."); 
       return -1;
@@ -270,7 +262,7 @@ _get_colord_profile(filter_data_t *data,
     qualifier = colord_get_qualifier_for_ppd(ppd);
 
     if (qualifier != NULL) {
-      printer_id = _get_colord_printer_id(data, printer_name);
+      printer_id = _get_colord_printer_id(data);
       /* Get profile from colord using qualifiers */
       icc_profile = colord_get_profile_for_device_id (data,
 						      (const char *)printer_id,

@@ -430,10 +430,10 @@ static int parseOpts(filter_data_t *data,
     if (doc->colour_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
       doc->colour_profile.cm_disabled = 1;
     else
-      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
+      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data);
 
     if (!doc->colour_profile.cm_disabled)
-      cmGetPrinterIccProfile(data, data->printer, &profile, doc->ppd);
+      cmGetPrinterIccProfile(data, &profile, doc->ppd);
 
     if (profile != NULL) {
       doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
@@ -512,10 +512,10 @@ static int parseOpts(filter_data_t *data,
     if (doc->colour_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
       doc->colour_profile.cm_disabled = 1;
     else
-      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data, data->printer);
+      doc->colour_profile.cm_disabled = cmIsPrinterCmDisabled(data);
 
     if (!doc->colour_profile.cm_disabled)
-      cmGetPrinterIccProfile(data, data->printer, &profile, doc->ppd);
+      cmGetPrinterIccProfile(data, &profile, doc->ppd);
 
     if (profile != NULL) {
       doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");

@@ -1448,7 +1448,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
       cm_calibrate == CM_CALIBRATION_ENABLED)
     doc.cm_disabled = 1;
   else
-    doc.cm_disabled = cmIsPrinterCmDisabled(data, getenv("PRINTER"));
+    doc.cm_disabled = cmIsPrinterCmDisabled(data);
 
   if (outformat == OUTPUT_FORMAT_PCLM && data->ppd == NULL
         && printer_attrs == NULL )
