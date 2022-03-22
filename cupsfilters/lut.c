@@ -45,7 +45,9 @@ cupsLutLoad(ppd_file_t *ppd,		/* I - PPD file */
             const char *colormodel,	/* I - Color model */
             const char *media,		/* I - Media type */
             const char *resolution,	/* I - Resolution */
-	    const char *ink)		/* I - Ink name */
+	    const char *ink,		/* I - Ink name */
+	    filter_logfunc_t log,       /* I - Log function */
+	    void       *ld)             /* I - Log function data */
 {
   char		name[PPD_MAX_NAME],	/* Attribute name */
 		spec[PPD_MAX_NAME];	/* Attribute spec */
@@ -68,9 +70,9 @@ cupsLutLoad(ppd_file_t *ppd,		/* I - PPD file */
   snprintf(name, sizeof(name), "cups%sDither", ink);
 
   if ((attr = cupsFindAttr(ppd, name, colormodel, media, resolution, spec,
-                           sizeof(spec))) == NULL)
+                           sizeof(spec), log, ld)) == NULL)
     attr = cupsFindAttr(ppd, "cupsAllDither", colormodel, media,
-                        resolution, spec, sizeof(spec));
+                        resolution, spec, sizeof(spec), log, ld);
 
   if (!attr)
     return (NULL);
@@ -81,10 +83,11 @@ cupsLutLoad(ppd_file_t *ppd,		/* I - PPD file */
   vals[3] = 0.0;
   nvals   = sscanf(attr->value, "%f%f%f", vals + 1, vals + 2, vals + 3) + 1;
 
-  fprintf(stderr, "DEBUG: Loaded LUT %s from PPD with values [%.3f %.3f %.3f %.3f]\n",
-          name, vals[0], vals[1], vals[2], vals[3]);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Loaded LUT %s from PPD with values [%.3f %.3f %.3f %.3f]",
+	       name, vals[0], vals[1], vals[2], vals[3]);
 
-  return (cupsLutNew(nvals, vals));
+  return (cupsLutNew(nvals, vals, log, ld));
 }
 
 
@@ -96,7 +99,9 @@ cupsLutLoad(ppd_file_t *ppd,		/* I - PPD file */
 
 cups_lut_t *				/* O - New lookup table */
 cupsLutNew(int         num_values,	/* I - Number of values */
-	   const float *values)		/* I - Lookup table values */
+	   const float *values,		/* I - Lookup table values */
+	   filter_logfunc_t log,        /* I - Log function */
+	   void        *ld)             /* I - Log function data */
 {
   int		pixel;			/* Pixel value */
   cups_lut_t	*lut;			/* Lookup table */
@@ -182,9 +187,11 @@ cupsLutNew(int         num_values,	/* I - Number of values */
   * Show the lookup table...
   */
 
-  for (start = 0; start <= CUPS_MAX_LUT; start += CUPS_MAX_LUT / 15)
-    fprintf(stderr, "DEBUG: %d = %d/%d/%d\n", start, lut[start].intensity,
-            lut[start].pixel, lut[start].error);
+  if (log)
+    for (start = 0; start <= CUPS_MAX_LUT; start += CUPS_MAX_LUT / 15)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "%d = %d/%d/%d", start, lut[start].intensity,
+	  lut[start].pixel, lut[start].error);
 
  /*
   * Return the lookup table...

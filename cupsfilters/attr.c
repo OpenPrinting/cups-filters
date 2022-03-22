@@ -37,7 +37,9 @@ cupsFindAttr(ppd_file_t *ppd,		/* I - PPD file */
              const char *media,		/* I - Media type */
              const char *resolution,	/* I - Resolution */
 	     char       *spec,		/* O - Final selection string */
-	     int        specsize)	/* I - Size of string buffer */
+	     int        specsize,	/* I - Size of string buffer */
+	     filter_logfunc_t log,      /* I - Log function */
+	     void       *ld)            /* I - Log function data */
 {
   ppd_attr_t	*attr;			/* Attribute */
 
@@ -63,41 +65,49 @@ cupsFindAttr(ppd_file_t *ppd,		/* I - PPD file */
   */
 
   snprintf(spec, specsize, "%s.%s.%s", colormodel, media, resolution);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Looking for \"*%s %s\"...", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s.%s", colormodel, resolution);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Looking for \"*%s %s\"...", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s", colormodel);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Looking for \"*%s %s\"...", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s.%s", media, resolution);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Looking for \"*%s %s\"...", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s", media);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Looking for \"*%s %s\"...", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   snprintf(spec, specsize, "%s", resolution);
-  fprintf(stderr, "DEBUG2: Looking for \"*%s %s\"...\n", name, spec);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Looking for \"*%s %s\"...", name, spec);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
   spec[0] = '\0';
-  fprintf(stderr, "DEBUG2: Looking for \"*%s\"...\n", name);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "Looking for \"*%s\"...", name);
   if ((attr = ppdFindAttr(ppd, name, spec)) != NULL && attr->value != NULL)
     return (attr);
 
-  fprintf(stderr, "DEBUG2: No instance of \"*%s\" found...\n", name);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "No instance of \"*%s\" found...", name);
 
   return (NULL);
 }

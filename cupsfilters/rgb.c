@@ -307,7 +307,9 @@ cups_rgb_t *				/* O - New color profile */
 cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
             const char *colormodel,	/* I - Color model */
             const char *media,		/* I - Media type */
-            const char *resolution)	/* I - Resolution */
+            const char *resolution,	/* I - Resolution */
+	    filter_logfunc_t log,       /* I - Log function */
+	    void       *ld)             /* I - Log function data */
 {
   int		i,			/* Looping var */
 		cube_size,		/* Size of color lookup cube */
@@ -329,17 +331,19 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
   */
 
   if ((attr = cupsFindAttr(ppd, "cupsRGBProfile", colormodel, media,
-                           resolution, spec, sizeof(spec))) == NULL)
+                           resolution, spec, sizeof(spec), log, ld)) == NULL)
   {
-    fputs("DEBUG2: No cupsRGBProfile attribute found for the current settings!\n", stderr);
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "No cupsRGBProfile attribute found for the current settings!");
     return (NULL);
   }
 
   if (!attr->value || sscanf(attr->value, "%d%d%d", &cube_size, &num_channels,
                              &num_samples) != 3)
   {
-    fprintf(stderr, "ERROR: Bad cupsRGBProfile attribute \'%s\'!\n",
-            attr->value ? attr->value : "(null)");
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "Bad cupsRGBProfile attribute \'%s\'!",
+		 attr->value ? attr->value : "(null)");
     return (NULL);
   }
 
@@ -347,8 +351,9 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
       num_channels < 1 || num_channels > CUPS_MAX_RGB ||
       num_samples != (cube_size * cube_size * cube_size))
   {
-    fprintf(stderr, "ERROR: Bad cupsRGBProfile attribute \'%s\'!\n",
-            attr->value);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "Bad cupsRGBProfile attribute \'%s\'!",
+		 attr->value);
     return (NULL);
   }
 
@@ -358,7 +363,8 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
 
   if ((samples = calloc(num_samples, sizeof(cups_sample_t))) == NULL)
   {
-    fputs("ERROR: Unable to allocate memory for RGB profile!\n", stderr);
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "Unable to allocate memory for RGB profile!");
     return (NULL);
   }
 
@@ -371,14 +377,16 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
       break;
     else if (!attr->value)
     {
-      fputs("ERROR: Bad cupsRGBSample value!\n", stderr);
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "Bad cupsRGBSample value!");
       break;
     }
     else if (sscanf(attr->value, "%f%f%f%f%f%f%f", values + 0,
                     values + 1, values + 2, values + 3, values + 4, values + 5,
                     values + 6) != (3 + num_channels))
     {
-      fputs("ERROR: Bad cupsRGBSample value!\n", stderr);
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "Bad cupsRGBSample value!");
       break;
     }
     else

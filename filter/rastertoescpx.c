@@ -83,6 +83,8 @@ cups_lut_t	*DitherLuts[7];		/* Lookup tables for dithering */
 cups_dither_t	*DitherStates[7];	/* Dither state tables */
 int		OutputFeed;		/* Number of lines to skip */
 int		Canceled;		/* Is the job canceled? */
+filter_logfunc_t logfunc;               /* Log function */
+void            *ld;                    /* Log function data */
 
 
 /*
@@ -242,11 +244,13 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
       header->cupsColorSpace == CUPS_CSPACE_W)
-    RGB = cupsRGBLoad(ppd, colormodel, header->MediaType, resolution);
+    RGB = cupsRGBLoad(ppd, colormodel, header->MediaType, resolution,
+		      logfunc, ld);
   else
     RGB = NULL;
 
-  CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution);
+  CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution,
+		      logfunc, ld);
 
   if (RGB)
     fputs("DEBUG: Loaded RGB separation from PPD.\n", stderr);
@@ -271,66 +275,66 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   {
     case 1 : /* K */
         DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Black");
+	                            resolution, "Black", logfunc, ld);
         break;
 
     case 2 : /* Kk */
         DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Black");
+	                            resolution, "Black", logfunc, ld);
         DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "LightBlack");
+	                            resolution, "LightBlack", logfunc, ld);
         break;
 
     case 3 : /* CMY */
         DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Cyan");
+	                            resolution, "Cyan", logfunc, ld);
         DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Magenta");
+	                            resolution, "Magenta", logfunc, ld);
         DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Yellow");
+	                            resolution, "Yellow", logfunc, ld);
         break;
 
     case 4 : /* CMYK */
         DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Cyan");
+	                            resolution, "Cyan", logfunc, ld);
         DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Magenta");
+	                            resolution, "Magenta", logfunc, ld);
         DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Yellow");
+	                            resolution, "Yellow", logfunc, ld);
         DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Black");
+	                            resolution, "Black", logfunc, ld);
         break;
 
     case 6 : /* CcMmYK */
         DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Cyan");
+	                            resolution, "Cyan", logfunc, ld);
         DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "LightCyan");
+	                            resolution, "LightCyan", logfunc, ld);
         DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Magenta");
+	                            resolution, "Magenta", logfunc, ld);
         DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "LightMagenta");
+	                            resolution, "LightMagenta", logfunc, ld);
         DitherLuts[4] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Yellow");
+	                            resolution, "Yellow", logfunc, ld);
         DitherLuts[5] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Black");
+	                            resolution, "Black", logfunc, ld);
         break;
 
     case 7 : /* CcMmYKk */
         DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Cyan");
+	                            resolution, "Cyan", logfunc, ld);
         DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "LightCyan");
+	                            resolution, "LightCyan", logfunc, ld);
         DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Magenta");
+	                            resolution, "Magenta", logfunc, ld);
         DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "LightMagenta");
+	                            resolution, "LightMagenta", logfunc, ld);
         DitherLuts[4] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Yellow");
+	                            resolution, "Yellow", logfunc, ld);
         DitherLuts[5] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "Black");
+	                            resolution, "Black", logfunc, ld);
         DitherLuts[6] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                            resolution, "LightBlack");
+	                            resolution, "LightBlack", logfunc, ld);
         break;
   }
 
@@ -339,7 +343,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     DitherStates[plane] = cupsDitherNew(header->cupsWidth);
 
     if (!DitherLuts[plane])
-      DitherLuts[plane] = cupsLutNew(2, default_lut);
+      DitherLuts[plane] = cupsLutNew(2, default_lut, logfunc, ld);
   }
 
   if (DitherLuts[0][4095].pixel > 1)
@@ -761,7 +765,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if ((attr = cupsFindAttr(ppd, "cupsESCPDirection", colormodel,
                            header->MediaType, resolution, spec,
-			   sizeof(spec))) != NULL)
+			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033U%c", atoi(attr->value));
 
  /*
@@ -770,7 +774,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if ((attr = cupsFindAttr(ppd, "cupsESCPMicroWeave", colormodel,
                            header->MediaType, resolution, spec,
-			   sizeof(spec))) != NULL)
+			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033(i\001%c%c", 0, atoi(attr->value));
 
  /*
@@ -779,7 +783,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if ((attr = cupsFindAttr(ppd, "cupsESCPDotSize", colormodel,
                            header->MediaType, resolution, spec,
-			   sizeof(spec))) != NULL)
+			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033(e\002%c%c%c", 0, 0, atoi(attr->value));
 
   if (ppd->model_number & ESCP_ESCK)
@@ -1759,6 +1763,13 @@ main(int  argc,				/* I - Number of command-line arguments */
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
 
+
+ /*
+  * Log function for the library functions, standard CUPS logging to stderr...
+  */
+
+  logfunc = cups_logfunc;
+  ld = NULL;
 
  /*
   * Make sure status messages are not buffered...

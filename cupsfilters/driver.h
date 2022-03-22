@@ -25,6 +25,7 @@ extern "C" {
 #  include <stdlib.h>
 #  include <time.h>
 #  include <math.h>
+#  include "filter.h"
 #  include <ppd/ppd.h>
 
 #  if defined(WIN32) || defined(__EMX__)
@@ -128,7 +129,9 @@ extern ppd_attr_t	*cupsFindAttr(ppd_file_t *ppd, const char *name,
 			              const char *colormodel,
 			              const char *media,
 				      const char *resolution,
-				      char *spec, int specsize);
+				      char *spec, int specsize,
+				      filter_logfunc_t log,
+				      void *ld);
 			       
 /*
  * Byte checking functions...
@@ -152,13 +155,16 @@ extern void		cupsDitherDelete(cups_dither_t *);
  * Lookup table functions for dithering...
  */
 
-extern cups_lut_t	*cupsLutNew(int num_vals, const float *vals);
+extern cups_lut_t	*cupsLutNew(int num_vals, const float *vals,
+				    filter_logfunc_t log, void *ld);
 extern void		cupsLutDelete(cups_lut_t *lut);
 extern cups_lut_t	*cupsLutLoad(ppd_file_t *ppd,
 			             const char *colormodel,
 				     const char *media,
 			             const char *resolution,
-				     const char *ink);
+				     const char *ink,
+				     filter_logfunc_t log,
+				     void *ld);
 
 
 /*
@@ -191,7 +197,9 @@ extern void		cupsRGBDoRGB(cups_rgb_t *rgb,
 extern cups_rgb_t	*cupsRGBLoad(ppd_file_t *ppd,
 			             const char *colormodel,
 				     const char *media,
-			             const char *resolution);
+			             const char *resolution,
+				     filter_logfunc_t log,
+				     void *ld);
 extern cups_rgb_t	*cupsRGBNew(int num_samples, cups_sample_t *samples,
 			            int cube_size, int num_channels);
 
@@ -216,17 +224,23 @@ extern void		cupsCMYKDoRGB(const cups_cmyk_t *cmyk,
 extern cups_cmyk_t	*cupsCMYKLoad(ppd_file_t *ppd,
 			              const char *colormodel,
 				      const char *media,
-			              const char *resolution);
+			              const char *resolution,
+				      filter_logfunc_t log,
+				      void *ld);
 extern void		cupsCMYKSetBlack(cups_cmyk_t *cmyk,
-			                 float lower, float upper);
+			                 float lower, float upper,
+					 filter_logfunc_t log, void *ld);
 extern void		cupsCMYKSetCurve(cups_cmyk_t *cmyk, int channel,
 			                 int num_xypoints,
-					 const float *xypoints);
+					 const float *xypoints,
+					 filter_logfunc_t log, void *ld);
 extern void		cupsCMYKSetGamma(cups_cmyk_t *cmyk, int channel,
-			                 float gamval, float density);
+			                 float gamval, float density,
+					 filter_logfunc_t log, void *ld);
 extern void		cupsCMYKSetInkLimit(cups_cmyk_t *cmyk, float limit);
 extern void		cupsCMYKSetLtDk(cups_cmyk_t *cmyk, int channel,
-			                float light, float dark);
+			                float light, float dark,
+					filter_logfunc_t log, void *ld);
 
 
 /*

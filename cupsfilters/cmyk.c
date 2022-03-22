@@ -1024,7 +1024,9 @@ cups_cmyk_t *				/* O - CMYK color separation */
 cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	     const char *colormodel,	/* I - ColorModel value */
 	     const char *media,		/* I - MediaType value */
-	     const char *resolution)	/* I - Resolution value */
+	     const char *resolution,	/* I - Resolution value */
+	     filter_logfunc_t log,      /* I - Log function */
+	     void       *ld)            /* I - Log function data */
 {
   cups_cmyk_t	*cmyk;			/* CMYK color separation */
   char		spec[PPD_MAX_NAME];	/* Profile name */
@@ -1086,7 +1088,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
   */
 
   if ((attr = cupsFindAttr(ppd, "cupsInkChannels", colormodel, media,
-                           resolution, spec, sizeof(spec))) == NULL)
+                           resolution, spec, sizeof(spec), log, ld)) == NULL)
     return (NULL);
 
   num_channels = atoi(attr->value);
@@ -1102,7 +1104,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
   */
 
   if ((attr = cupsFindAttr(ppd, "cupsInkLimit", colormodel, media,
-                           resolution, spec, sizeof(spec))) != NULL)
+                           resolution, spec, sizeof(spec), log, ld)) != NULL)
     cupsCMYKSetInkLimit(cmyk, atof(attr->value));
 
  /*
@@ -1110,10 +1112,10 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
   */
 
   if ((attr = cupsFindAttr(ppd, "cupsBlackGeneration", colormodel, media,
-                           resolution, spec, sizeof(spec))) != NULL)
+                           resolution, spec, sizeof(spec), log, ld)) != NULL)
   {
     if (sscanf(attr->value, "%f%f", &lower, &upper) == 2)
-      cupsCMYKSetBlack(cmyk, lower, upper);
+      cupsCMYKSetBlack(cmyk, lower, upper, log, ld);
   }
 
  /*
@@ -1123,7 +1125,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
   if (num_channels != 3)
   {
     if ((attr = cupsFindAttr(ppd, "cupsBlackXY", colormodel, media,
-                             resolution, spec, sizeof(spec))) != NULL)
+                             resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1138,39 +1140,40 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 1 :
 	case 2 :
-            cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
 	    break;
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 3, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 3, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 5, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 5, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
     else if ((attr = cupsFindAttr(ppd, "cupsBlackGamma", colormodel,
                                   media, resolution, spec,
-				  sizeof(spec))) != NULL)
+				  sizeof(spec), log, ld)) != NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
 	switch (num_channels)
 	{
 	  case 1 :
 	  case 2 :
-              cupsCMYKSetGamma(cmyk, 0, gamval, density);
+              cupsCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
 	      break;
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 3, gamval, density);
+              cupsCMYKSetGamma(cmyk, 3, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 5, gamval, density);
+              cupsCMYKSetGamma(cmyk, 5, gamval, density, log, ld);
 	      break;
 	}
     }
     else if ((attr = cupsFindAttr(ppd, "cupsAllXY", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1185,20 +1188,20 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 1 :
 	case 2 :
-            cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
 	    break;
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 3, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 3, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 5, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 5, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
     else if ((attr = cupsFindAttr(ppd, "cupsAllGamma", colormodel,
                                   media, resolution, spec,
-				  sizeof(spec))) != NULL &&
+				  sizeof(spec), log, ld)) != NULL &&
              num_channels != 3)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
@@ -1206,14 +1209,14 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	{
 	  case 1 :
 	  case 2 :
-              cupsCMYKSetGamma(cmyk, 0, gamval, density);
+              cupsCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
 	      break;
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 3, gamval, density);
+              cupsCMYKSetGamma(cmyk, 3, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 5, gamval, density);
+              cupsCMYKSetGamma(cmyk, 5, gamval, density, log, ld);
 	      break;
 	}
     }
@@ -1226,7 +1229,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     */
 
     if ((attr = cupsFindAttr(ppd, "cupsCyanXY", colormodel, media,
-                             resolution, spec, sizeof(spec))) != NULL)
+                             resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1237,16 +1240,18 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	  xyptr += 2;
 	}
 
-      cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints);
+      cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
     }
     else if ((attr = cupsFindAttr(ppd, "cupsCyanGamma", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
-	cupsCMYKSetGamma(cmyk, 0, gamval, density);
+	cupsCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
     }
     else if ((attr = cupsFindAttr(ppd, "cupsAllXY", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1257,13 +1262,14 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	  xyptr += 2;
 	}
 
-      cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints);
+      cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
     }
     else if ((attr = cupsFindAttr(ppd, "cupsAllGamma", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
-	cupsCMYKSetGamma(cmyk, 0, gamval, density);
+	cupsCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
     }
 
    /*
@@ -1271,7 +1277,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     */
 
     if ((attr = cupsFindAttr(ppd, "cupsMagentaXY", colormodel, media,
-                             resolution, spec, sizeof(spec))) != NULL)
+                             resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1286,32 +1292,34 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 3 :
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
     else if ((attr = cupsFindAttr(ppd, "cupsMagentaGamma", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
 	switch (num_channels)
 	{
 	  case 3 :
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 1, gamval, density);
+              cupsCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 2, gamval, density);
+              cupsCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
 	      break;
 	}
     }
     else if ((attr = cupsFindAttr(ppd, "cupsAllXY", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1326,27 +1334,28 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 3 :
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
     else if ((attr = cupsFindAttr(ppd, "cupsAllGamma", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
 	switch (num_channels)
 	{
 	  case 3 :
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 1, gamval, density);
+              cupsCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 2, gamval, density);
+              cupsCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
 	      break;
 	}
     }
@@ -1356,7 +1365,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     */
 
     if ((attr = cupsFindAttr(ppd, "cupsYellowXY", colormodel, media,
-                             resolution, spec, sizeof(spec))) != NULL)
+                             resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1371,32 +1380,34 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 3 :
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 4, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 4, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
     else if ((attr = cupsFindAttr(ppd, "cupsYellowGamma", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
 	switch (num_channels)
 	{
 	  case 3 :
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 2, gamval, density);
+              cupsCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 4, gamval, density);
+              cupsCMYKSetGamma(cmyk, 4, gamval, density, log, ld);
 	      break;
 	}
     }
     else if ((attr = cupsFindAttr(ppd, "cupsAllXY", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1411,27 +1422,28 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 3 :
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 4, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 4, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
     else if ((attr = cupsFindAttr(ppd, "cupsAllGamma", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
 	switch (num_channels)
 	{
 	  case 3 :
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 2, gamval, density);
+              cupsCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 4, gamval, density);
+              cupsCMYKSetGamma(cmyk, 4, gamval, density, log, ld);
 	      break;
 	}
     }
@@ -1445,7 +1457,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
   if (num_channels == 2 || num_channels == 7)
   {
     if ((attr = cupsFindAttr(ppd, "cupsLightBlackXY", colormodel, media,
-                             resolution, spec, sizeof(spec))) != NULL)
+                             resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1459,48 +1471,51 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       switch (num_channels)
       {
 	case 2 :
-            cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
 	    break;
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 6, num_xypoints, xypoints);
+            cupsCMYKSetCurve(cmyk, 6, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
     else if ((attr = cupsFindAttr(ppd, "cupsLightBlackGamma", colormodel,
                                   media, resolution, spec,
-				  sizeof(spec))) != NULL)
+				  sizeof(spec), log, ld)) != NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
 	switch (num_channels)
 	{
 	  case 2 :
-              cupsCMYKSetGamma(cmyk, 1, gamval, density);
+              cupsCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
 	      break;
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 6, gamval, density);
+              cupsCMYKSetGamma(cmyk, 6, gamval, density, log, ld);
 	      break;
 	}
     }
     else if ((attr = cupsFindAttr(ppd, "cupsBlackLtDk", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &light, &dark) == 2)
 	switch (num_channels)
 	{
 	  case 2 :
-              cupsCMYKSetLtDk(cmyk, 0, light, dark);
+              cupsCMYKSetLtDk(cmyk, 0, light, dark, log, ld);
 	      break;
 	  case 7 :
-              cupsCMYKSetLtDk(cmyk, 5, light, dark);
+              cupsCMYKSetLtDk(cmyk, 5, light, dark, log, ld);
 	      break;
 	}
       else
-	fprintf(stderr, "ERROR: Bad cupsBlackLtDk value \"%s\"!\n",
-        	attr->value);
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "Bad cupsBlackLtDk value \"%s\"!",
+		     attr->value);
     }
     else
-      fprintf(stderr, "WARNING: No light black attribute found for %s!\n",
-              spec);
+      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+		   "No light black attribute found for %s!",
+		   spec);
   }
 
   if (num_channels >= 6)
@@ -1511,7 +1526,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     */
 
     if ((attr = cupsFindAttr(ppd, "cupsLightCyanXY", colormodel, media,
-                             resolution, spec, sizeof(spec))) != NULL)
+                             resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1522,27 +1537,30 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	  xyptr += 2;
 	}
 
-      cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints);
+      cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
     }
     else if ((attr = cupsFindAttr(ppd, "cupsLightCyanGamma", colormodel,
                                   media, resolution, spec,
-				  sizeof(spec))) != NULL)
+				  sizeof(spec), log, ld)) != NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
-	cupsCMYKSetGamma(cmyk, 1, gamval, density);
+	cupsCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
     }
     else if ((attr = cupsFindAttr(ppd, "cupsCyanLtDk", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &light, &dark) == 2)
-	cupsCMYKSetLtDk(cmyk, 0, light, dark);
+	cupsCMYKSetLtDk(cmyk, 0, light, dark, log, ld);
       else
-	fprintf(stderr, "ERROR: Bad cupsCyanLtDk value \"%s\"!\n",
-        	attr->value);
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "Bad cupsCyanLtDk value \"%s\"!",
+		     attr->value);
     }
     else
-      fprintf(stderr, "WARNING: No light cyan attribute found for %s!\n",
-              spec);
+      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+		   "No light cyan attribute found for %s!",
+		   spec);
 
    /*
     * Get the optional cupsLightMagentaXY, cupsLightMagentaGamma, or
@@ -1550,7 +1568,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     */
 
     if ((attr = cupsFindAttr(ppd, "cupsLightMagentaXY", colormodel, media,
-                             resolution, spec, sizeof(spec))) != NULL)
+                             resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
            attr != NULL && attr->value != NULL && num_xypoints < 100;
@@ -1561,27 +1579,30 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	  xyptr += 2;
 	}
 
-      cupsCMYKSetCurve(cmyk, 3, num_xypoints, xypoints);
+      cupsCMYKSetCurve(cmyk, 3, num_xypoints, xypoints, log, ld);
     }
     else if ((attr = cupsFindAttr(ppd, "cupsLightMagentaGamma", colormodel,
                                   media, resolution, spec,
-				  sizeof(spec))) != NULL)
+				  sizeof(spec), log, ld)) != NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
-	cupsCMYKSetGamma(cmyk, 3, gamval, density);
+	cupsCMYKSetGamma(cmyk, 3, gamval, density, log, ld);
     }
     else if ((attr = cupsFindAttr(ppd, "cupsMagentaLtDk", colormodel, media,
-                                  resolution, spec, sizeof(spec))) != NULL)
+                                  resolution, spec, sizeof(spec), log, ld)) !=
+	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &light, &dark) == 2)
-	cupsCMYKSetLtDk(cmyk, 2, light, dark);
+	cupsCMYKSetLtDk(cmyk, 2, light, dark, log, ld);
       else
-	fprintf(stderr, "ERROR: Bad cupsMagentaLtDk value \"%s\"!\n",
-        	attr->value);
+	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		     "Bad cupsMagentaLtDk value \"%s\"!",
+		     attr->value);
     }
     else
-      fprintf(stderr, "WARNING: No light magenta attribute found for %s!\n",
-              spec);
+      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+		   "No light magenta attribute found for %s!",
+		   spec);
   }
 
  /*
@@ -1692,7 +1713,9 @@ cupsCMYKNew(int num_channels)		/* I - Number of color components */
 void
 cupsCMYKSetBlack(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
 		 float       lower,	/* I - No black ink */
-		 float       upper)	/* I - Only black ink */
+		 float       upper,	/* I - Only black ink */
+	         filter_logfunc_t log,  /* I - Log function */
+	         void       *ld)        /* I - Log function data */
 {
   int	i,				/* Looping var */
 	delta,				/* Difference between lower and upper */
@@ -1746,11 +1769,15 @@ cupsCMYKSetBlack(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
     cmyk->color_lut[i] = 0;
   }
 
-  fprintf(stderr, "DEBUG: cupsCMYKSetBlack(cmyk, lower=%.3f, upper=%.3f)\n", lower, upper);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "cupsCMYKSetBlack(cmyk, lower=%.3f, upper=%.3f)",
+	       lower, upper);
 
-  for (i = 0; i < 256; i += 17)
-    fprintf(stderr, "DEBUG:    %3d = %3dk + %3dc\n", i,
-            cmyk->black_lut[i], cmyk->color_lut[i]);
+  if (log)
+    for (i = 0; i < 256; i += 17)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "   %3d = %3dk + %3dc", i,
+	  cmyk->black_lut[i], cmyk->color_lut[i]);
 }
 
 
@@ -1763,7 +1790,9 @@ cupsCMYKSetCurve(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
                  int         channel,	/* I - Color channel */
 		 int         num_xypoints,
 					/* I - Number of X,Y points */
-		 const float *xypoints)	/* I - X,Y points */
+		 const float *xypoints,	/* I - X,Y points */
+	         filter_logfunc_t log,  /* I - Log function */
+	         void       *ld)        /* I - Log function data */
 {
   int	i;				/* Looping var */
   int	xstart;				/* Start position */
@@ -1806,13 +1835,17 @@ cupsCMYKSetCurve(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
   for (i = xend; i < 256; i ++)
     cmyk->channels[channel][i] = yend;
 
-  fprintf(stderr, "DEBUG: cupsCMYKSetXY(cmyk, channel=%d, num_xypoints=%d, "
-                  "xypoints=[%.3f %.3f %.3f %.3f ...])\n", channel,
-          num_xypoints, xypoints[0], xypoints[1], xypoints[2], xypoints[3]);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "cupsCMYKSetXY(cmyk, channel=%d, num_xypoints=%d, "
+	       "xypoints=[%.3f %.3f %.3f %.3f ...])", channel,
+	       num_xypoints, xypoints[0], xypoints[1], xypoints[2],
+	       xypoints[3]);
 
-  for (i = 0; i < 256; i += 17)
-    fprintf(stderr, "DEBUG:     %3d = %4d\n", i,
-            cmyk->channels[channel + 0][i]);
+  if (log)
+    for (i = 0; i < 256; i += 17)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "    %3d = %4d", i,
+	  cmyk->channels[channel + 0][i]);
 }
 
 
@@ -1824,7 +1857,9 @@ void
 cupsCMYKSetGamma(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
                  int         channel,	/* I - Ink channel */
                  float       gamval,	/* I - Gamma correction */
-		 float       density)	/* I - Maximum density */
+		 float       density,	/* I - Maximum density */
+	         filter_logfunc_t log,  /* I - Log function */
+	         void       *ld)        /* I - Log function data */
 {
   int	i;				/* Looping var */
 
@@ -1845,12 +1880,15 @@ cupsCMYKSetGamma(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
     cmyk->channels[channel][i] = (int)(density * CUPS_MAX_LUT *
                                        pow((float)i / 255.0, gamval) + 0.5);
 
-  fprintf(stderr, "DEBUG: cupsCMYKSetGamma(cmyk, channel=%d, gamval=%.3f, "
-                  "density=%.3f)\n", channel, gamval, density);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "cupsCMYKSetGamma(cmyk, channel=%d, gamval=%.3f, "
+	       "density=%.3f)", channel, gamval, density);
 
-  for (i = 0; i < 256; i += 17)
-    fprintf(stderr, "DEBUG:     %3d = %4d\n", i,
-            cmyk->channels[channel + 0][i]);
+  if (log)
+    for (i = 0; i < 256; i += 17)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "    %3d = %4d", i,
+	  cmyk->channels[channel + 0][i]);
 }
 
 
@@ -1877,7 +1915,9 @@ void
 cupsCMYKSetLtDk(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
                 int         channel,	/* I - Dark ink channel (+1 for light) */
 		float       light,	/* I - Light ink only level */
-		float       dark)	/* I - Dark ink only level */
+		float       dark,	/* I - Dark ink only level */
+	        filter_logfunc_t log,   /* I - Log function */
+	        void       *ld)         /* I - Log function data */
 {
   int	i,				/* Looping var */
 	delta,				/* Difference between lower and upper */
@@ -1940,11 +1980,14 @@ cupsCMYKSetLtDk(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
     cmyk->channels[channel + 1][i] = 0;
   }
 
-  fprintf(stderr, "DEBUG: cupsCMYKSetLtDk(cmyk, channel=%d, light=%.3f, "
-                  "dark=%.3f)\n", channel, light, dark);
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "cupsCMYKSetLtDk(cmyk, channel=%d, light=%.3f, "
+	       "dark=%.3f)", channel, light, dark);
 
-  for (i = 0; i < 256; i += 17)
-    fprintf(stderr, "DEBUG:     %3d = %4dlt + %4ddk\n", i,
-            cmyk->channels[channel + 0][i], cmyk->channels[channel + 1][i]);
+  if (log)
+    for (i = 0; i < 256; i += 17)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "    %3d = %4dlt + %4ddk", i,
+	  cmyk->channels[channel + 0][i], cmyk->channels[channel + 1][i]);
 }
 

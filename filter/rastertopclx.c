@@ -80,6 +80,8 @@ const int	ColorOrders[7][7] =	/* Order of color planes */
 		  { 5, 0, 1, 2, 3, 4, 6 }	/* KCMYcmk */
 		};
 int		Canceled;		/* Is the job canceled? */
+filter_logfunc_t logfunc;               /* Log function */
+void            *ld;                    /* Log function data */
 
 
 /*
@@ -356,9 +358,11 @@ StartPage(filter_data_t *data,		/* I - filter data */
     {
       if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
 	  header->cupsColorSpace == CUPS_CSPACE_W)
-	RGB = cupsRGBLoad(ppd, colormodel, header->MediaType, resolution);
+	RGB = cupsRGBLoad(ppd, colormodel, header->MediaType, resolution,
+			  logfunc, ld);
 
-      CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution);
+      CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution,
+			  logfunc, ld);
     }
 
     if (RGB)
@@ -390,49 +394,49 @@ StartPage(filter_data_t *data,		/* I - filter data */
     {
       case 1 : /* K */
           DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Black");
+	                              resolution, "Black", logfunc, ld);
           break;
 
       case 3 : /* CMY */
           DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Cyan");
+	                              resolution, "Cyan", logfunc, ld);
           DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Magenta");
+	                              resolution, "Magenta", logfunc, ld);
           DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Yellow");
+	                              resolution, "Yellow", logfunc, ld);
           break;
 
       case 4 : /* CMYK */
           DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Cyan");
+	                              resolution, "Cyan", logfunc, ld);
           DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Magenta");
+	                              resolution, "Magenta", logfunc, ld);
           DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Yellow");
+	                              resolution, "Yellow", logfunc, ld);
           DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Black");
+	                              resolution, "Black", logfunc, ld);
           break;
 
       case 6 : /* CcMmYK */
           DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Cyan");
+	                              resolution, "Cyan", logfunc, ld);
           DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "LightCyan");
+	                              resolution, "LightCyan", logfunc, ld);
           DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Magenta");
+	                              resolution, "Magenta", logfunc, ld);
           DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "LightMagenta");
+	                              resolution, "LightMagenta", logfunc, ld);
           DitherLuts[4] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Yellow");
+	                              resolution, "Yellow", logfunc, ld);
           DitherLuts[5] = cupsLutLoad(ppd, colormodel, header->MediaType,
-	                              resolution, "Black");
+	                              resolution, "Black", logfunc, ld);
           break;
     }
 
     for (plane = 0; plane < PrinterPlanes; plane ++)
     {
       if (!DitherLuts[plane])
-        DitherLuts[plane] = cupsLutNew(2, default_lut);
+        DitherLuts[plane] = cupsLutNew(2, default_lut, logfunc, ld);
 
       if (DitherLuts[plane][4095].pixel > 1)
 	DotBits[plane] = 2;
@@ -442,7 +446,7 @@ StartPage(filter_data_t *data,		/* I - filter data */
       DitherStates[plane] = cupsDitherNew(header->cupsWidth);
 
       if (!DitherLuts[plane])
-	DitherLuts[plane] = cupsLutNew(2, default_lut);
+	DitherLuts[plane] = cupsLutNew(2, default_lut, logfunc, ld);
     }
   }
 
@@ -664,7 +668,7 @@ StartPage(filter_data_t *data,		/* I - filter data */
 
   if (ppd && ((attr = cupsFindAttr(ppd, "cupsPCLQuality", colormodel,
 				   header->MediaType, resolution, spec,
-				   sizeof(spec))) != NULL))
+				   sizeof(spec), logfunc, ld)) != NULL))
   {
    /*
     * Set the print quality...
@@ -695,7 +699,7 @@ StartPage(filter_data_t *data,		/* I - filter data */
 
       if (ppd && ((attr = cupsFindAttr(ppd, "cupsPCLCRDMode", colormodel,
 				       header->MediaType, resolution, spec,
-				       sizeof(spec))) != NULL))
+				       sizeof(spec), logfunc, ld)) != NULL))
         i = atoi(attr->value);
       else
         i = 31;
@@ -1808,6 +1812,13 @@ main(int  argc,				/* I - Number of command-line arguments */
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
 
+
+ /*
+  * Log function for the library functions, standard CUPS logging to stderr...
+  */
+
+  logfunc = cups_logfunc;
+  ld = NULL;
 
  /*
   * Make sure status messages are not buffered...

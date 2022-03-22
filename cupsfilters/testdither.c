@@ -33,6 +33,9 @@
 #include <string.h>
 #include <ctype.h>
 
+filter_logfunc_t logfunc = cups_logfunc;    /* Log function */
+void             *ld = NULL;                /* Log function data */
+
 
 /*
  * Local functions...
@@ -107,7 +110,7 @@ main(int  argc,			/* I - Number of command-line arguments */
   * Create the lookup table and dither state...
   */
 
-  lut    = cupsLutNew(nlutvals, lutvals);
+  lut    = cupsLutNew(nlutvals, lutvals, logfunc, ld);
   dither = cupsDitherNew(512);
 
  /*

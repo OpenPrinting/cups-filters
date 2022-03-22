@@ -26,6 +26,8 @@
 #include "driver.h"
 #include <sys/stat.h>
 
+filter_logfunc_t logfunc = cups_logfunc;    /* Log function */
+void             *ld = NULL;                /* Log function data */
 
 void	test_gray(int num_comps, const char *basename);
 void	test_rgb(int num_comps, const char *basename);
@@ -117,26 +119,26 @@ test_gray(int        num_comps,		/* I - Number of components */
   switch (num_comps)
   {
     case 2 : /* Kk */
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0);
+        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
 	break;
 
     case 4 :
-	cupsCMYKSetGamma(cmyk, 2, 1.0, 0.9);
-        cupsCMYKSetBlack(cmyk, 0.5, 1.0);
+	cupsCMYKSetGamma(cmyk, 2, 1.0, 0.9, logfunc, ld);
+        cupsCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
 	break;
 
     case 6 : /* CcMmYK */
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0);
-        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0);
-	cupsCMYKSetGamma(cmyk, 4, 1.0, 0.9);
-        cupsCMYKSetBlack(cmyk, 0.5, 1.0);
+        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
+	cupsCMYKSetGamma(cmyk, 4, 1.0, 0.9, logfunc, ld);
+        cupsCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
 	break;
 
     case 7 : /* CcMmYKk */
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0);
-        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0);
-	cupsCMYKSetGamma(cmyk, 4, 1.0, 0.9);
-        cupsCMYKSetLtDk(cmyk, 5, 0.5, 1.0);
+        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
+	cupsCMYKSetGamma(cmyk, 4, 1.0, 0.9, logfunc, ld);
+        cupsCMYKSetLtDk(cmyk, 5, 0.5, 1.0, logfunc, ld);
 	break;
   }
 
@@ -296,25 +298,25 @@ test_rgb(int        num_comps,		/* I - Number of components */
 
   cmyk = cupsCMYKNew(num_comps);
 
-  cupsCMYKSetBlack(cmyk, 0.5, 1.0);
+  cupsCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
 
   switch (num_comps)
   {
     case 2 : /* Kk */
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0);
+        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
 	break;
     case 6 : /* CcMmYK */
-	cupsCMYKSetGamma(cmyk, 0, 1.0, 0.8);
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0);
-	cupsCMYKSetGamma(cmyk, 2, 1.0, 0.8);
-        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0);
+	cupsCMYKSetGamma(cmyk, 0, 1.0, 0.8, logfunc, ld);
+        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+	cupsCMYKSetGamma(cmyk, 2, 1.0, 0.8, logfunc, ld);
+        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
 	break;
     case 7 : /* CcMmYKk */
-	cupsCMYKSetGamma(cmyk, 0, 1.0, 0.8);
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0);
-	cupsCMYKSetGamma(cmyk, 2, 1.0, 0.8);
-        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0);
-        cupsCMYKSetLtDk(cmyk, 5, 0.5, 1.0);
+	cupsCMYKSetGamma(cmyk, 0, 1.0, 0.8, logfunc, ld);
+        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+	cupsCMYKSetGamma(cmyk, 2, 1.0, 0.8, logfunc, ld);
+        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
+        cupsCMYKSetLtDk(cmyk, 5, 0.5, 1.0, logfunc, ld);
 	break;
   }
 
