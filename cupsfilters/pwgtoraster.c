@@ -287,7 +287,6 @@ static void  handleRequiresPageRegion(pwgtoraster_doc_t*doc) {
 }
 
 static int parseOpts(filter_data_t *data,
-		     void *parameters,
 		     pwgtoraster_doc_t *doc)
 {
   int num_options = 0;
@@ -297,20 +296,14 @@ static int parseOpts(filter_data_t *data,
   const char *val;
   filter_logfunc_t log = data->logfunc;
   void *ld = data ->logdata;
+  cups_cspace_t         cspace = (cups_cspace_t)(-1);
 
-  (void)parameters;
+  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
   
   if (data->ppd)
     doc->ppd = data->ppd;
   else if (data->ppdfile)
-    doc->ppd = ppdOpenFile(data->ppdfile);
-
-  if (doc->ppd == NULL)
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-      "pwgtoraster: No PPD file is specified.");
-
-  options = data->options;
-  num_options = data->num_options;
+    doc->ppd = data->ppd = ppdOpenFile(data->ppdfile);
 
   // Did the user explicitly request a certain page size? If not, overtake
   // the page size(s) from the input pages
@@ -320,12 +313,14 @@ static int parseOpts(filter_data_t *data,
      cupsGetOption("media-size", num_options, options) ||
      cupsGetOption("media-col", num_options, options));
 
+  cupsRasterPrepareHeader(&(doc->outheader), data, OUTPUT_FORMAT_CUPS_RASTER,
+			  OUTPUT_FORMAT_CUPS_RASTER, 0, &cspace);
+
   if (doc->ppd) {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "pwgtoraster: Using PPD file: %s", doc->ppd->nickname);
     ppdMarkOptions(doc->ppd,num_options,options);
     handleRequiresPageRegion(doc);
-    ppdRasterInterpretPPD(&(doc->outheader),doc->ppd,num_options,options,0);
     attr = ppdFindAttr(doc->ppd,"pwgtorasterRenderingIntent",NULL);
     if (attr != NULL && attr->value != NULL) {
       if (strcasecmp(attr->value,"PERCEPTUAL") == 0) {
@@ -398,8 +393,8 @@ static int parseOpts(filter_data_t *data,
       free(profile);
     }
   } else {
-#ifdef HAVE_CUPS_1_7
-    cupsRasterParseIPPOptions(&(doc->outheader), data, 0, 1);
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      "pwgtoraster: No PPD file is specified.");
     if (strcasecmp(doc->outheader.cupsRenderingIntent, "Perceptual") == 0) {
       doc->color_profile.renderingIntent = INTENT_PERCEPTUAL;
     } else if (strcasecmp(doc->outheader.cupsRenderingIntent, "Relative") == 0) {
@@ -409,11 +404,6 @@ static int parseOpts(filter_data_t *data,
     } else if (strcasecmp(doc->outheader.cupsRenderingIntent, "Absolute") == 0) {
       doc->color_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
     }
-#else
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pwgtoraster: No PPD file specified.");
-    return (1);
-#endif /* HAVE_CUPS_1_7 */
   }
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
@@ -423,6 +413,9 @@ static int parseOpts(filter_data_t *data,
 	       "pwgtoraster: Page size %s: %s",
 	       doc->page_size_requested ? "requested" : "default",
 	       doc->outheader.cupsPageSizeName);
+
+  if (num_options)
+    cupsFreeOptions(num_options, options);
 
   return (0);
 }
@@ -2124,7 +2117,7 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   doc.color_profile.renderingIntent = INTENT_PERCEPTUAL;
 
   // Parse the options
-  if (parseOpts(data, parameters, &doc) == 1)
+  if (parseOpts(data, &doc) == 1)
     return (1);
 
   doc.outheader.NumCopies = data->copies;
