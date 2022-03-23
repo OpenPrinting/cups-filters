@@ -275,6 +275,9 @@ extern int pclmtoraster(int inputfd,
 			filter_data_t *data,
 			void *parameters);
 
+/* Parameters: filter_out_format_t*
+   Ouput format: CUPS Raster, Apple Raster, or PWG Raster */
+
 
 extern int pdftopdf(int inputfd,
 		    int outputfd,

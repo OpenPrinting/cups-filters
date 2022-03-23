@@ -41,7 +41,7 @@
 
 typedef struct pclmtoraster_data_s
 {
-  int pwgraster = 0;
+  filter_out_format_t outformat = OUTPUT_FORMAT_PWG_RASTER;
   int numcolors = 0;
   int rowsize = 0;
   cups_page_header2_t header;
@@ -79,7 +79,7 @@ typedef struct conversion_function_s
 } conversion_function_t;
 
 static int
-parseOpts(filter_data_t *data,
+parseOpts(filter_data_t *data, filter_out_format_t outformat,
 	  pclmtoraster_data_t *pclmtoraster_data)
 {
   int			num_options = 0;
@@ -91,27 +91,51 @@ parseOpts(filter_data_t *data,
   void			*ld = data->logdata;
   ppd_file_t		*ppd = pclmtoraster_data->ppd;
   cups_page_header2_t	*header = &(pclmtoraster_data->header);
-  ipp_t *printer_attrs = data->printer_attrs;
-#ifdef HAVE_CUPS_1_7
-  t = getenv("FINAL_CONTENT_TYPE");
-  if (t && strcasestr(t, "pwg"))
-    pclmtoraster_data->pwgraster = 1;
-#endif /* HAVE_CUPS_1_7 */
+  ipp_t                 *printer_attrs = data->printer_attrs;
+  cups_cspace_t         cspace = (cups_cspace_t)(-1);
+
+
+  pclmtoraster_data->outformat = outformat;
+
  /*
   * CUPS option list
   */
 
   num_options = joinJobOptionsAndAttrs(data, num_options, &options);
 
-  ppd = data->ppd;
-
-  if (ppd == NULL && log)
-      log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pclmtoraster: PPD file is not specified.");
+  if (data->ppd)
+    ppd = data->ppd;
+  else if (data->ppdfile)
+    ppd = data->ppd = ppdOpenFile(data->ppdfile);
 
   if (ppd)
   {
-    ppdRasterInterpretPPD(header, ppd, num_options, options, 0);
+    ppdMarkOptions(ppd, num_options, options);
+    if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
+        (!strcasecmp(attr->value, "true")
+         || !strcasecmp(attr->value, "on") ||
+         !strcasecmp(attr->value, "yes")))
+      pclmtoraster_data->outformat = OUTPUT_FORMAT_PWG_RASTER;
+  }
+  else
+  {
+    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		 "pclmtoraster: PPD file is not specified.");
+
+    t = cupsGetOption("media-class", num_options, options);
+    if (t == NULL)
+      t = cupsGetOption("MediaClass", num_options, options);
+    if (t != NULL)
+    {
+      if (strcasestr(t, "pwg"))
+	pclmtoraster_data->outformat = OUTPUT_FORMAT_PWG_RASTER;
+    }
+  }
+
+  cupsRasterPrepareHeader(header, data, outformat, outformat, 0, &cspace);
+
+  if (ppd)
+  {
     if (header->Duplex)
     {
       /* analyze options relevant to Duplex */
@@ -185,30 +209,7 @@ parseOpts(filter_data_t *data,
         }
       }
     }
-
-#ifdef HAVE_CUPS_1_7
-    if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
-        (!strcasecmp(attr->value, "true")
-         || !strcasecmp(attr->value, "on") ||
-         !strcasecmp(attr->value, "yes")))
-      pclmtoraster_data->pwgraster = 1;
-#endif /* HAVE_CUPS_1_7 */
   } else {
-#ifdef HAVE_CUPS_1_7
-    pclmtoraster_data->pwgraster = 1;
-    t = cupsGetOption("media-class", num_options, options);
-    if (t == NULL)
-      t = cupsGetOption("MediaClass", num_options, options);
-    if (t != NULL)
-    {
-      if (strcasestr(t, "pwg"))
-        pclmtoraster_data->pwgraster = 1;
-      else
-        pclmtoraster_data->pwgraster = 0;
-    }
-    cupsRasterParseIPPOptions(header, data,
-			      pclmtoraster_data->pwgraster, 1);
-
     int backside = getBackSideAndHeaderDuplex(printer_attrs, header);
     if(header->Duplex){
       /* analyze options relevant to Duplex */
@@ -257,14 +258,7 @@ parseOpts(filter_data_t *data,
 	    !(pclmtoraster_data->swap_margin_y);
         }
       }
-
     }
-    
-#else
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		"pclmtoraster: No PPD file specified: %s", strerror(errno));
-    return (1);
-#endif /* HAVE_CUPS_1_7 */
   }
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
@@ -896,13 +890,13 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   {
     ppdRasterMatchPPDSize(&(data->header), ppd, margins, paperdimensions, NULL,
 			  NULL);
-    if (data->pwgraster == 1)
+    if (data->outformat != OUTPUT_FORMAT_CUPS_RASTER)
       memset(margins, 0, sizeof(margins));
   }
   else if(filter_data!=NULL &&(filter_data->printer_attrs)!=NULL)
   {
     ippRasterMatchIPPSize(&(data->header), filter_data, margins, paperdimensions, NULL, NULL);
-    if(data->pwgraster==1)
+    if (data->outformat != OUTPUT_FORMAT_CUPS_RASTER)
       memset(margins, 0, sizeof(margins));
   }
   else
@@ -912,7 +906,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
     if (data->header.cupsImagingBBox[3] > 0.0)
     {
       /* Set margins if we have a bounding box defined ... */
-      if (data->pwgraster == 0)
+      if (data->outformat == OUTPUT_FORMAT_CUPS_RASTER)
       {
 	margins[0] = data->header.cupsImagingBBox[0];
 	margins[1] = data->header.cupsImagingBBox[1];
@@ -946,12 +940,12 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
     data->header.cupsPageSize[i] = paperdimensions[i];
     data->header.PageSize[i] = (unsigned int)(data->header.cupsPageSize[i] +
 					      0.5);
-    if (data->pwgraster == 0)
+    if (data->outformat == OUTPUT_FORMAT_CUPS_RASTER)
       data->header.Margins[i] = margins[i] + 0.5;
     else
       data->header.Margins[i] = 0;
   }
-  if (data->pwgraster == 0)
+  if (data->outformat == OUTPUT_FORMAT_CUPS_RASTER)
   {
     data->header.cupsImagingBBox[0] = margins[0];
     data->header.cupsImagingBBox[1] = margins[1];
@@ -1108,6 +1102,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 	     filter_data_t *data, /* I - Job and printer data */
 	     void *parameters)    /* I - Filter-specific parameters (unused) */
 {
+  filter_out_format_t   outformat;
   FILE			*inputfp;		/* Input file pointer */
   int			fd = 0;			/* Copy file descriptor */
   char			*filename,		/* PDF file to convert */
@@ -1123,6 +1118,21 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
   void			*ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                  *icd = data->iscanceleddata;
+
+  if (parameters) {
+    outformat = *(filter_out_format_t *)parameters;
+    if (outformat != OUTPUT_FORMAT_CUPS_RASTER &&
+	outformat != OUTPUT_FORMAT_PWG_RASTER &&
+	outformat != OUTPUT_FORMAT_APPLE_RASTER)
+      outformat = OUTPUT_FORMAT_PWG_RASTER;
+  } else
+    outformat = OUTPUT_FORMAT_PWG_RASTER;
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "pclmtoraster: Output format: %s",
+	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+		 "Apple Raster")));
 
  /*
   * Open the input data stream specified by the inputfd...
@@ -1161,7 +1171,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
   filename = tempfile;
   pdf->processFile(filename);
 
-  if (parseOpts(data, &pclmtoraster_data) != 0)
+  if (parseOpts(data, outformat, &pclmtoraster_data) != 0)
   {
     delete(pdf);
     unlink(tempfile);
@@ -1199,9 +1209,14 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
     pclmtoraster_data.nbands = 1;
   }
 
-  if ((raster = cupsRasterOpen(outputfd, pclmtoraster_data.pwgraster ?
-			       CUPS_RASTER_WRITE_PWG :
-                               CUPS_RASTER_WRITE)) == 0)
+  if ((raster = cupsRasterOpen(outputfd,
+			       (pclmtoraster_data.outformat ==
+				  OUTPUT_FORMAT_CUPS_RASTER ?
+				  CUPS_RASTER_WRITE :
+				(pclmtoraster_data.outformat ==
+				   OUTPUT_FORMAT_PWG_RASTER ?
+				   CUPS_RASTER_WRITE_PWG :
+				 CUPS_RASTER_WRITE_APPLE)))) == 0)
   {
     if(log) log(ld, FILTER_LOGLEVEL_ERROR,
 		"pclmtoraster: Can't open raster stream: %s",

@@ -37,7 +37,16 @@ int main(int argc, char **argv)
   * Fire up the pclmtoraster() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, pclmtoraster, NULL, &JobCanceled);
+  filter_out_format_t outformat = OUTPUT_FORMAT_PWG_RASTER;
+  char *t = getenv("FINAL_CONTENT_TYPE");
+  if (t) {
+    if (strcasestr(t, "urf"))
+      outformat = OUTPUT_FORMAT_APPLE_RASTER;
+    else if (strcasestr(t, "cups-raster"))
+      outformat = OUTPUT_FORMAT_CUPS_RASTER;
+  }
+
+  ret = filterCUPSWrapper(argc, argv, pclmtoraster, &outformat, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: pclmtoraster filter function failed.\n");
