@@ -323,7 +323,6 @@ static int parseOpts(filter_data_t *data,
      change in the future when we add Apple Raster output support to
      this filter. */
 
-#ifdef HAVE_CUPS_1_7
   if (parameters) {
     outformat = *(filter_out_format_t *)parameters;
     if (outformat != OUTPUT_FORMAT_CUPS_RASTER &&
@@ -341,7 +340,6 @@ static int parseOpts(filter_data_t *data,
 
   if (outformat == OUTPUT_FORMAT_PWG_RASTER)
     doc->pwgraster = 1;
-#endif /* HAVE_CUPS_1_7 */
 
   num_options = joinJobOptionsAndAttrs(data, num_options, &options);
 
@@ -440,15 +438,12 @@ static int parseOpts(filter_data_t *data,
       free(profile);
     }
 
-#ifdef HAVE_CUPS_1_7
     if ((attr = ppdFindAttr(doc->ppd,"PWGRaster",0)) != 0 &&
 	(!strcasecmp(attr->value, "true")
 	 || !strcasecmp(attr->value, "on") ||
 	 !strcasecmp(attr->value, "yes")))
       doc->pwgraster = 1;
-#endif /* HAVE_CUPS_1_7 */
   } else {
-#ifdef HAVE_CUPS_1_7
     doc->pwgraster = 1;
     t = cupsGetOption("media-class", num_options, options);
     if (t == NULL)
@@ -521,18 +516,15 @@ static int parseOpts(filter_data_t *data,
       doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
       free(profile);
     }
-
-#else
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pdftoraster: No PPD file specified.");
-    return (1);
-#endif /* HAVE_CUPS_1_7 */
   }
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
     doc->bi_level = 1;
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
     "pdftoraster: Page size requested: %s", doc->header.cupsPageSizeName);
+
+  if (num_options)
+    cupsFreeOptions(num_options, options);
 
   return (0);
 }
