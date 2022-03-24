@@ -1530,11 +1530,7 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
   const char		*keyword;	/* Keyword value */
   cups_array_t		*fin_options = NULL;
 					/* Finishing options */
-  char			buf[256],
-                        filter_path[1024];
-                                        /* Path to filter executable */
-  const char		*cups_serverbin;/* CUPS_SERVERBIN environment
-					   variable */
+  char			buf[256];
   char			*defaultoutbin = NULL;
   const char		*outbin;
   char			outbin_properties[1024];
@@ -1981,17 +1977,9 @@ cfCreatePPDFromIPP2(char         *buffer,          /* I - Filename buffer */
   /* Legacy formats only if we have no driverless format */
   else if (cupsArrayFind(pdl_list, "application/vnd.hp-pclxl"))
   {
-    /* Check whether the gstopxl filter is installed,
-       otherwise ignore the PCL-XL support of the printer */
-    if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
-      cups_serverbin = CUPS_SERVERBIN;
-    snprintf(filter_path, sizeof(filter_path), "%s/filter/gstopxl",
-	     cups_serverbin);
-    if (access(filter_path, X_OK) == 0) {
-      cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 100 gstopxl\"\n");
-      if (formatfound == 0) manual_copies = 1;
-      formatfound = 1;
-    }
+    cupsFilePrintf(fp, "*cupsFilter2: \"application/vnd.cups-pdf application/vnd.hp-pclxl 100 gstopxl\"\n");
+    if (formatfound == 0) manual_copies = 1;
+    formatfound = 1;
   }
   else if (cupsArrayFind(pdl_list, "application/postscript"))
   {
