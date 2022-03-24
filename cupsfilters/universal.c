@@ -1,5 +1,4 @@
 #include "filter.h"
-#include <config.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -31,16 +30,28 @@ universal(int inputfd,         /* I - File descriptor input stream */
   char output_type[256];
   filter_out_format_t *outformat;
   filter_filter_in_chain_t *filter, *next;
-  filter_input_output_format_t input_output_format;
+  universal_parameter_t universal_parameters;
   ppd_file_t *ppd;
   ppd_cache_t *cache;
   filter_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   int ret = 0;
 
-  input_output_format = *(filter_input_output_format_t *)parameters;
-  input = input_output_format.input_format;
-  final_output = input_output_format.output_format;
+  universal_parameters = *(universal_parameter_t *)parameters;
+  input = universal_parameters.input_format;
+  if (input == NULL)
+  {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "universal: No input data format supplied.");
+    return (1);
+  }
+  final_output = universal_parameters.output_format;
+  if (final_output == NULL)
+  {
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		 "universal: No output data format supplied.");
+    return (1);
+  }
   strncpy(output, final_output, sizeof(output) - 1);
 
   /* If we have a PPD, load it and its cache, so that we can access the
@@ -286,27 +297,7 @@ universal(int inputfd,         /* I - File descriptor input stream */
       filter = malloc(sizeof(filter_filter_in_chain_t));
       texttopdf_parameter_t* parameters =
 	(texttopdf_parameter_t *) malloc(sizeof(texttopdf_parameter_t));
-      char *p;
-      if ((p = getenv("CUPS_DATADIR")) != NULL)
-	parameters->data_dir = p;
-      else
-	parameters->data_dir = CUPS_DATADIR;
-
-      if ((p = getenv("CHARSET")) != NULL)
-	parameters->char_set = p;
-      else
-	parameters->char_set = NULL;
-
-      if ((p = getenv("CONTENT_TYPE")) != NULL)
-	parameters->content_type = p;
-      else
-	parameters->content_type = NULL;
-
-      if ((p = getenv("CLASSIFICATION")) != NULL)
-	parameters->classification = p;
-      else
-	parameters->classification = NULL;
-
+      *parameters = universal_parameters.texttopdf_params;
       filter->function = texttopdf;
       filter->parameters = parameters;
       filter->name = "texttopdf";

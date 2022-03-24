@@ -240,7 +240,7 @@ main(int  argc,				/* I - Number of command-line args */
       cups_option_t *options = NULL;
       int fd, nullfd;
       filter_data_t filter_data;
-      filter_input_output_format_t input_output_format;
+      universal_parameter_t universal_parameters;
       filter_external_cups_t ipp_backend_params;
       filter_filter_in_chain_t universal_in_chain,
 	                       ipp_in_chain;
@@ -356,8 +356,10 @@ main(int  argc,				/* I - Number of command-line args */
       filterOpenBackAndSidePipes(&filter_data);
 
       /* Parameters (input/output MIME types) for universal() call */
-      input_output_format.input_format = "application/vnd.cups-pdf";
-      input_output_format.output_format = document_format;
+      universal_parameters.input_format = "application/vnd.cups-pdf";
+      universal_parameters.output_format = document_format;
+      memset(&(universal_parameters.texttopdf_params), 0,
+	     sizeof(texttopdf_parameter_t));
 
       /* Parameters for filterExternalCUPS() call for IPP backend */
       ipp_backend_params.filter = "ipp";
@@ -369,7 +371,7 @@ main(int  argc,				/* I - Number of command-line args */
 
       /* Filter chain entry for the universal() filter function call */
       universal_in_chain.function = universal;
-      universal_in_chain.parameters = &input_output_format;
+      universal_in_chain.parameters = &universal_parameters;
       universal_in_chain.name = "Filters";
 
       /* Filter chain entry for the IPP CUPS backend call */

@@ -72,8 +72,8 @@ typedef struct filter_data_s {
 typedef int (*filter_function_t)(int inputfd, int outputfd, int inputseekable,
 				 filter_data_t *data, void *parameters);
 
-typedef enum filter_out_format_e { /* Possible output formats for rastertopdf()
-				      filter function */
+typedef enum filter_out_format_e { /* Possible output formats for filter
+				      functions */
   OUTPUT_FORMAT_PDF,	     /* PDF */
   OUTPUT_FORMAT_PDF_IMAGE,   /* Raster-only PDF */
   OUTPUT_FORMAT_PCLM,	     /* PCLM */
@@ -114,17 +114,21 @@ typedef struct filter_filter_in_chain_s { /* filter entry for CUPS array to
 typedef struct texttopdf_parameter_s {  /* parameters container of environemnt
 					   variables needed by texttopdf
 					   filter function */
-  const char *data_dir;
-  const char *char_set;
-  const char *content_type;
-  const char *classification;
+  char *data_dir;
+  char *char_set;
+  char *content_type;
+  char *classification;
 } texttopdf_parameter_t;
 
-typedef struct filter_input_output_format_s { /* Contains input and output type
-					     to be supplied to the universal function */
+typedef struct universal_parameter_s { /* Contains input and output
+					  type to be supplied to the
+					  universal function, and also
+					  parameters for texttopdf() */
   char *input_format;                 
   char *output_format;
-} filter_input_output_format_t;
+  texttopdf_parameter_t texttopdf_params;
+} universal_parameter_t;
+
 
 /*
  * Prototypes...
@@ -379,9 +383,10 @@ extern int universal(int inputfd,
 		     filter_data_t *data,
 		     void *parameters);
 
-/* Parameters: filter_input_output_format_t
-   Contains : Input_type : CONTENT_TYPE environment variable
-              Output type : FINAL_CONTENT TYPE environment variable */
+/* Parameters: universal_parameter_t
+   Contains : Input_type: CONTENT_TYPE environment variable of CUPS
+              Output type: FINAL_CONTENT TYPE environment variable of CUPS
+              texttopdf_params: parameters for texttopdf */
 
 
 extern void filterSetCommonOptions(ppd_file_t *ppd,

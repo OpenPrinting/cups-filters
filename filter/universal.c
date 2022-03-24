@@ -3,6 +3,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <config.h>
 #include <signal.h>
 
 
@@ -29,7 +30,8 @@ main(int  argc,				/* I - Number of command-line args */
      char *argv[])			/* I - Command-line arguments */
 {
   int           ret;
-  filter_input_output_format_t input_output_format;
+  char          *p;
+  universal_parameter_t universal_parameters;
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
@@ -50,12 +52,45 @@ main(int  argc,				/* I - Number of command-line args */
   signal(SIGTERM, cancel_job);
 #endif /* HAVE_SIGSET */
 
-  input_output_format.input_format = getenv("CONTENT_TYPE");
-  input_output_format.output_format = getenv("FINAL_CONTENT_TYPE");
-  ret = filterCUPSWrapper(argc, argv, universal, &input_output_format , &JobCanceled);
+  if ((p = getenv("CONTENT_TYPE")) != NULL)
+    universal_parameters.input_format = strdup(p);
+  else
+    universal_parameters.input_format = NULL;
+
+  if ((p = getenv("FINAL_CONTENT_TYPE")) != NULL)
+    universal_parameters.output_format = strdup(p);
+  else
+    universal_parameters.output_format = NULL;
+
+  if ((p = getenv("CUPS_DATADIR")) != NULL)
+    universal_parameters.texttopdf_params.data_dir = strdup(p);
+  else
+    universal_parameters.texttopdf_params.data_dir = strdup(CUPS_DATADIR);
+
+  if ((p = getenv("CHARSET")) != NULL)
+    universal_parameters.texttopdf_params.char_set = strdup(p);
+  else
+    universal_parameters.texttopdf_params.char_set = NULL;
+
+  universal_parameters.texttopdf_params.content_type =
+    universal_parameters.input_format;
+
+  if ((p = getenv("CLASSIFICATION")) != NULL)
+    universal_parameters.texttopdf_params.classification = strdup(p);
+  else
+    universal_parameters.texttopdf_params.classification = NULL;
+
+  ret = filterCUPSWrapper(argc, argv, universal, &universal_parameters,
+			  &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: universal filter failed.\n");
+
+  free(universal_parameters.input_format);
+  free(universal_parameters.output_format);
+  free(universal_parameters.texttopdf_params.data_dir);
+  free(universal_parameters.texttopdf_params.char_set);
+  free(universal_parameters.texttopdf_params.classification);
 
   return (ret);
 }
