@@ -1144,11 +1144,18 @@ static bool outPage(pwgtoraster_doc_t *doc,
     return (false);
   }
 
-  if (strcasecmp(doc->inheader.MediaClass, "PwgRaster") != 0)
+  if (doc->inheader.ImagingBoundingBox[0] ||
+      doc->inheader.ImagingBoundingBox[1] ||
+      doc->inheader.ImagingBoundingBox[2] ||
+      doc->inheader.ImagingBoundingBox[3])
   {
-    // Not PWG Raster
+    // Only CUPS Raster (not supported as input format by this filter
+    // function) defines margins and so an ImagingBoundingBox, for PWG
+    // Raster and Apple Raster (the input formats supported by this
+    // filter function) these values are all zero. With at least one not
+    // zero we consider the input not supported.
     log(ld, FILTER_LOGLEVEL_ERROR,
-	"pwgtoraster: Input page %d is not PWG Raster", pageNo);
+	"pwgtoraster: Input page %d is not PWG or Apple Raster", pageNo);
     return (false);
   }
   
