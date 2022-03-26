@@ -332,6 +332,13 @@ extern int pwgtoraster(int inputfd,
 		       filter_data_t *data,
 		       void *parameters);
 
+/* Parameters: filter_out_format_t*
+   Ouput format: CUPS Raster, PWG Raster, Apple Raster, PCLm
+   Note: On the PCLM selection the output is actually CUPS Raster
+   but information about available color spaces and depths is taken from
+   the pclm-... printer IPP attributes or appropriate PPD file
+   attribute. This mode is for further processing with rastertopclm. */
+
 
 extern int rastertopdf(int inputfd,
 		       int outputfd,

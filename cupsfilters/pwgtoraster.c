@@ -26,7 +26,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 /*
  pwgtoraster.c
- PWG Raster to CUPS Raster filter function
+ PWG/Apple Raster to CUPS/PWG/Apple Raster filter function
 */
 
 #include "colormanager.h"
@@ -287,6 +287,7 @@ static void  handleRequiresPageRegion(pwgtoraster_doc_t*doc) {
 }
 
 static int parseOpts(filter_data_t *data,
+		     filter_out_format_t outformat,
 		     pwgtoraster_doc_t *doc)
 {
   int num_options = 0;
@@ -313,8 +314,11 @@ static int parseOpts(filter_data_t *data,
      cupsGetOption("media-size", num_options, options) ||
      cupsGetOption("media-col", num_options, options));
 
-  cupsRasterPrepareHeader(&(doc->outheader), data, OUTPUT_FORMAT_CUPS_RASTER,
-			  OUTPUT_FORMAT_CUPS_RASTER, 0, &cspace);
+  // We can directly create CUPS Raster, PWG Raster, and Apple Raster but
+  // for PCLm we have to output CUPS Raster and feed it into rastertopdf()
+  cupsRasterPrepareHeader(&(doc->outheader), data, outformat,
+			  outformat == OUTPUT_FORMAT_PCLM ?
+			  OUTPUT_FORMAT_CUPS_RASTER : outformat, 0, &cspace);
 
   if (doc->ppd) {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -1198,9 +1202,11 @@ static bool outPage(pwgtoraster_doc_t *doc,
   memset(margins, 0, sizeof(margins));
   if (doc->ppd)
   {
-    
     ppdRasterMatchPPDSize(&(doc->outheader), doc->ppd, margins,
 			  paperdimensions, &imageable_area_fit, &landscape_fit);
+    if (doc->outheader.ImagingBoundingBox[3] == 0)
+      for (i = 0; i < 4; i ++)
+	margins[i] = 0.0;
   }
   else
   {
@@ -1251,14 +1257,17 @@ static bool outPage(pwgtoraster_doc_t *doc,
     doc->outheader.Margins[i] = margins[i] + 0.5;
   }
 
-  doc->outheader.cupsImagingBBox[0] = margins[0];
-  doc->outheader.cupsImagingBBox[1] = margins[1];
-  doc->outheader.cupsImagingBBox[2] = paperdimensions[0] - margins[2];
-  doc->outheader.cupsImagingBBox[3] = paperdimensions[1] - margins[3];
+  if (doc->outheader.ImagingBoundingBox[3] != 0)
+  {
+    doc->outheader.cupsImagingBBox[0] = margins[0];
+    doc->outheader.cupsImagingBBox[1] = margins[1];
+    doc->outheader.cupsImagingBBox[2] = paperdimensions[0] - margins[2];
+    doc->outheader.cupsImagingBBox[3] = paperdimensions[1] - margins[3];
 
-  for (i = 0; i < 4; i ++)
-    doc->outheader.ImagingBoundingBox[i] =
-      (unsigned int)(doc->outheader.cupsImagingBBox[i] + 0.5);
+    for (i = 0; i < 4; i ++)
+      doc->outheader.ImagingBoundingBox[i] =
+	(unsigned int)(doc->outheader.cupsImagingBBox[i] + 0.5);
+  }
 
   doc->bytesPerLine = doc->outheader.cupsBytesPerLine =
     (doc->outheader.cupsBitsPerPixel *
@@ -1275,28 +1284,32 @@ static bool outPage(pwgtoraster_doc_t *doc,
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster: Output page %d", pageNo);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   Duplex = %d", doc->outheader.Duplex);
+    if (doc->outheader.ImagingBoundingBox[3] > 0)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   Duplex = %d", doc->outheader.Duplex);
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster:   HWResolution = [ %d %d ]",
 	doc->outheader.HWResolution[0], doc->outheader.HWResolution[1]);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   ImagingBoundingBox = [ %d %d %d %d ]",
-	doc->outheader.ImagingBoundingBox[0],
-	doc->outheader.ImagingBoundingBox[1],
-	doc->outheader.ImagingBoundingBox[2],
-	doc->outheader.ImagingBoundingBox[3]);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   Margins = [ %d %d ]",
-	doc->outheader.Margins[0], doc->outheader.Margins[1]);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   ManualFeed = %d", doc->outheader.ManualFeed);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   MediaPosition = %d", doc->outheader.MediaPosition);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   NumCopies = %d", doc->outheader.NumCopies);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   Orientation = %d", doc->outheader.Orientation);
+    if (doc->outheader.ImagingBoundingBox[3] > 0)
+    {
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   ImagingBoundingBox = [ %d %d %d %d ]",
+	  doc->outheader.ImagingBoundingBox[0],
+	  doc->outheader.ImagingBoundingBox[1],
+	  doc->outheader.ImagingBoundingBox[2],
+	  doc->outheader.ImagingBoundingBox[3]);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   Margins = [ %d %d ]",
+	  doc->outheader.Margins[0], doc->outheader.Margins[1]);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   ManualFeed = %d", doc->outheader.ManualFeed);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   MediaPosition = %d", doc->outheader.MediaPosition);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   NumCopies = %d", doc->outheader.NumCopies);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   Orientation = %d", doc->outheader.Orientation);
+    }
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster:   PageSize = [ %d %d ]",
 	doc->outheader.PageSize[0], doc->outheader.PageSize[1]);
@@ -1304,8 +1317,9 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	"pwgtoraster:   cupsWidth = %d", doc->outheader.cupsWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster:   cupsHeight = %d", doc->outheader.cupsHeight);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsMediaType = %d", doc->outheader.cupsMediaType);
+    if (doc->outheader.ImagingBoundingBox[3] > 0)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   cupsMediaType = %d", doc->outheader.cupsMediaType);
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster:   cupsBitsPerColor = %d",
 	doc->outheader.cupsBitsPerColor);
@@ -1341,7 +1355,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
   // setpagedevice" or "<</cupsColorOrder 1 /cupsColorSpace 8
   // /cupsCompression 2>> setpagedevice". The CUPS filters collect all
   // of the selected ones and interpret them with a mini PostScript
-  // interpreter (ppdRaterInterpretPPD() in libppd) to generate the
+  // interpreter (ppdRasterInterpretPPD() in libppd) to generate the
   // CUPS Raster header (data structure describing the raster format)
   // for the page.
   //
@@ -1543,9 +1557,8 @@ static bool outPage(pwgtoraster_doc_t *doc,
   // This facility also fixes rounding errors which lead to the input
   // raster to be a few pixels too small for the output.
 
-  if (doc->page_size_requested &&
-      (doc->outheader.PageSize[0] > doc->inheader.PageSize[0] ||
-       doc->outheader.PageSize[1] > doc->inheader.PageSize[1]))
+  if (doc->outheader.PageSize[0] > doc->inheader.PageSize[0] ||
+      doc->outheader.PageSize[1] > doc->inheader.PageSize[1])
   {
     int extra_points,
         min_overspray_duplicate_after_pixels = INT_MAX;
@@ -1608,7 +1621,8 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	  yin ++;
 	}
 
-  // Convert the page from PWG Raster to CUPS Raster
+  // Convert the page from PWG/Apple Raster to CUPS/PWG/Apple Raster
+
   // We will be able to stream per-line if the color order in the destination
   // raster stream is chunked or banded and stream per-page if the colors are
   // arranged in planes
@@ -2082,8 +2096,9 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
                 int outputfd,       /* I - File descriptor output stream */
                 int inputseekable,  /* I - Is input stream seekable? (unused) */
                 filter_data_t *data,/* I - Job and printer data */
-                void *parameters)   /* I - Filter-specific parameters (unused)*/
+                void *parameters)   /* I - Filter-specific parameters */
 {
+  filter_out_format_t outformat;
   pwgtoraster_doc_t doc;
   int i;
   cups_raster_t *inras = NULL,
@@ -2097,6 +2112,23 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
 
 
   (void)inputseekable;
+
+  if (parameters) {
+    outformat = *(filter_out_format_t *)parameters;
+    if (outformat != OUTPUT_FORMAT_CUPS_RASTER &&
+	outformat != OUTPUT_FORMAT_PWG_RASTER &&
+	outformat != OUTPUT_FORMAT_APPLE_RASTER &&
+	outformat != OUTPUT_FORMAT_PCLM)
+      outformat = OUTPUT_FORMAT_CUPS_RASTER;
+  } else
+    outformat = OUTPUT_FORMAT_CUPS_RASTER;
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "pwgtoraster: Output format: %s",
+	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
+		  "PCLM"))));
 
   cmsSetLogErrorHandler(lcmsErrorHandler);
 
@@ -2124,7 +2156,7 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   doc.color_profile.renderingIntent = INTENT_PERCEPTUAL;
 
   // Parse the options
-  if (parseOpts(data, &doc) == 1)
+  if (parseOpts(data, outformat, &doc) == 1)
     return (1);
 
   doc.outheader.NumCopies = data->copies;
@@ -2226,7 +2258,17 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   * Open output raster stream
   */
 
-  if ((outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE)) == 0) {
+  if ((outras = cupsRasterOpen(outputfd, (outformat ==
+					  OUTPUT_FORMAT_CUPS_RASTER ?
+					  CUPS_RASTER_WRITE :
+					  (outformat ==
+					   OUTPUT_FORMAT_PWG_RASTER ?
+					   CUPS_RASTER_WRITE_PWG :
+					   (outformat ==
+					    OUTPUT_FORMAT_APPLE_RASTER ?
+					    CUPS_RASTER_WRITE_APPLE :
+					    CUPS_RASTER_WRITE))))) == 0)
+  {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "pwgtoraster: Can't open output raster stream.");
     ret = 1;
@@ -2249,28 +2291,32 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster: Output page header");
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   Duplex = %d", doc.outheader.Duplex);
+    if (doc.outheader.ImagingBoundingBox[3] > 0)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   Duplex = %d", doc.outheader.Duplex);
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster:   HWResolution = [ %d %d ]",
 	doc.outheader.HWResolution[0], doc.outheader.HWResolution[1]);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   ImagingBoundingBox = [ %d %d %d %d ]",
-	doc.outheader.ImagingBoundingBox[0],
-	doc.outheader.ImagingBoundingBox[1],
-	doc.outheader.ImagingBoundingBox[2],
-	doc.outheader.ImagingBoundingBox[3]);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   Margins = [ %d %d ]",
-	doc.outheader.Margins[0], doc.outheader.Margins[1]);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   ManualFeed = %d", doc.outheader.ManualFeed);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   MediaPosition = %d", doc.outheader.MediaPosition);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   NumCopies = %d", doc.outheader.NumCopies);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   Orientation = %d", doc.outheader.Orientation);
+    if (doc.outheader.ImagingBoundingBox[3] > 0)
+    {
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   ImagingBoundingBox = [ %d %d %d %d ]",
+	  doc.outheader.ImagingBoundingBox[0],
+	  doc.outheader.ImagingBoundingBox[1],
+	  doc.outheader.ImagingBoundingBox[2],
+	  doc.outheader.ImagingBoundingBox[3]);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   Margins = [ %d %d ]",
+	  doc.outheader.Margins[0], doc.outheader.Margins[1]);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   ManualFeed = %d", doc.outheader.ManualFeed);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   MediaPosition = %d", doc.outheader.MediaPosition);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   NumCopies = %d", doc.outheader.NumCopies);
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   Orientation = %d", doc.outheader.Orientation);
+    }
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster:   PageSize = [ %d %d ]",
 	doc.outheader.PageSize[0], doc.outheader.PageSize[1]);
@@ -2278,8 +2324,9 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
 	"pwgtoraster:   cupsWidth = %d", doc.outheader.cupsWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster:   cupsHeight = %d", doc.outheader.cupsHeight);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsMediaType = %d", doc.outheader.cupsMediaType);
+    if (doc.outheader.ImagingBoundingBox[3] > 0)
+      log(ld, FILTER_LOGLEVEL_DEBUG,
+	  "pwgtoraster:   cupsMediaType = %d", doc.outheader.cupsMediaType);
     log(ld, FILTER_LOGLEVEL_DEBUG,
 	"pwgtoraster:   cupsBitsPerColor = %d",
 	doc.outheader.cupsBitsPerColor);
