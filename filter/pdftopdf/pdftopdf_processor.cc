@@ -149,12 +149,14 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     return false;
   }
 
-  if (param.autoRotate) {
-    const bool dst_lscape =
-      (param.paper_is_landscape ==
-       ((param.orientation == ROT_0) || (param.orientation == ROT_180)));
+  const bool dst_lscape =
+    (param.paper_is_landscape ==
+     ((param.orientation == ROT_0) || (param.orientation == ROT_180)));
+  if (dst_lscape)
+    std::swap(param.nup.nupX, param.nup.nupY);
+
+  if (param.autoRotate)
     proc.autoRotateAll(dst_lscape,param.normal_landscape);
-  }
 
   std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> pages=proc.get_pages();
   const int numOrigPages=pages.size();
