@@ -193,7 +193,8 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
   double final_w,final_h;   //Width and height of cropped image.
 
   Rotation pageRot = getRotate(page);
-  if(pageRot==ROT_0||pageRot==ROT_180)
+  if (((pageRot == ROT_0 || pageRot == ROT_180) && pageWidth <= pageHeight) ||
+      ((pageRot == ROT_90 || pageRot == ROT_270) && pageWidth > pageHeight))
   {
     std::swap(pageHeight,pageWidth);
   }
