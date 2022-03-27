@@ -1,6 +1,16 @@
 NEWS - OpenPrinting CUPS Filters v1.28.12 - 2022-02-17
 ------------------------------------------------------
 
+CHANGES IN V1.28.13
+
+	- pdftopdf: Fix N-up printing when paper is taken
+	  long-edge-first by the printer.
+	- pdftopdf: Fix cropping ("print-scaling=none" and
+	  "print-scaling=fill") when paper is taken long-edge-first by
+	  the printer (Issue #454).
+	- pdftops: Use Poppler for all Apple LaserWriter models (Issue
+	  #452).
+
 CHANGES IN V1.28.12
 
 	- imagetoraster, imagetopdf: Fixed comparison of the image
