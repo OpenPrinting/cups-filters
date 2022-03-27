@@ -522,7 +522,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
      Raster header then, no extra manipulation needed.
      From the header h only cupsWidth/cupsHeight (dimensions in pixels),
      resolution, and color space are used here. */
-  cupsRasterPrepareHeader(&h, data, OUTPUT_FORMAT_CUPS_RASTER,
+  cupsRasterPrepareHeader(&h, data, OUTPUT_FORMAT_PWG_RASTER,
 			  OUTPUT_FORMAT_PWG_RASTER, 1, &cspace);
 
   if ((h.HWResolution[0] == 100) && (h.HWResolution[1] == 100)) {
