@@ -409,7 +409,6 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
   cm_calibration_t cm_calibrate;
-  filter_data_t curr_data;
   filter_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
@@ -475,26 +474,6 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
     }
   }
 
-  curr_data.printer = data->printer;
-  curr_data.job_id = data->job_id;
-  curr_data.job_user = data->job_user;
-  curr_data.job_title = data->job_title;
-  curr_data.copies = data->copies;
-  curr_data.job_attrs = data->job_attrs;        /* We use command line options */
-  curr_data.printer_attrs = data->printer_attrs;    /* We use the queue's PPD file */
-  curr_data.num_options = data->num_options;
-  curr_data.options = data->options;       /* Command line options from 5th arg */
-  curr_data.ppdfile = data->ppdfile; /* PPD file name in the "PPD"
-					  environment variable. */
-  curr_data.ppd = data->ppd;
-                                       /* Load PPD file */
-  curr_data.logfunc = log;  /* Logging scheme of CUPS */
-  curr_data.logdata = data->logdata;
-  curr_data.iscanceledfunc = data->iscanceledfunc; /* Job-is-canceled
-						       function */
-  curr_data.iscanceleddata = data->iscanceleddata;
-
-
   /* If doc type is not PDF exit */
   empty = parse_doc_type(fp, log, ld);
   if (empty == -1)
@@ -543,7 +522,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
      Raster header then, no extra manipulation needed.
      From the header h only cupsWidth/cupsHeight (dimensions in pixels),
      resolution, and color space are used here. */
-  cupsRasterPrepareHeader(&h, &curr_data, OUTPUT_FORMAT_PWG_RASTER,
+  cupsRasterPrepareHeader(&h, data, OUTPUT_FORMAT_CUPS_RASTER,
 			  OUTPUT_FORMAT_PWG_RASTER, 1, &cspace);
 
   if ((h.HWResolution[0] == 100) && (h.HWResolution[1] == 100)) {
