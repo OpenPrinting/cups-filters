@@ -495,13 +495,9 @@ main(int  argc,				/* I - Number of command-line args */
 	 !strncasecmp(make_model, "Dell", 4) ||
 	 strcasestr(make_model, "Minolta") ||
 	 (!strncasecmp(make_model, "Apple", 5) &&
-	  (ptr = strcasestr(make_model, "LaserWriter")) &&
-	  ((ptr = strcasestr(ptr + 11, "4")) || (ptr = strcasestr(ptr + 11, "12")) ||
-	   (ptr = strcasestr(ptr + 11, "16"))) &&
-	  ((ptr = strcasestr(ptr + 2, "600")) || (ptr = strcasestr(ptr + 2, "640")) ||
-	   (ptr = strcasestr(ptr + 2, "660"))))))
+	  (ptr = strcasestr(make_model, "LaserWriter")))))
     {
-      fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for Brother, Minolta, Konica Minolta, Dell, and Apple LaserWriter 16/600, 4/600, 12/640, 12/600, 12/660 to work around bugs in the printer's PS interpreters\n");
+      fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for Brother, Minolta, Konica Minolta, Dell, and Apple LaserWriter printers to work around bugs in the printer's PS interpreters\n");
       renderer = PDFTOPS;
     }
     else
