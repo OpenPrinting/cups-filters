@@ -1500,6 +1500,15 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
       pdf.pclm_raster_back_side = attr->value;
     }
 
+    attr_name = (char *)"cupsPclmSourceResolutionSupported";
+    if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "rastertopdf: PPD PCLm attribute \"%s\" with value \"%s\"",
+		   attr_name, attr->value);
+      pdf.pclm_source_resolution_supported = split_strings(attr->value, ",");
+    }
+
     attr_name = (char *)"cupsPclmSourceResolutionDefault";
     if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
     {
@@ -1508,14 +1517,19 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
 		   attr_name, attr->value);
       pdf.pclm_source_resolution_default = attr->value;
     }
-
-    attr_name = (char *)"cupsPclmSourceResolutionSupported";
-    if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
+    else if (pdf.pclm_source_resolution_supported.size() > 0)
     {
+      pdf.pclm_source_resolution_default =
+	pdf.pclm_source_resolution_supported[0];
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: PPD PCLm attribute \"%s\" with value \"%s\"",
-		   attr_name, attr->value);
-      pdf.pclm_source_resolution_supported = split_strings(attr->value, ",");
+		   "rastertopdf: PPD PCLm attribute \"%s\" missing, taking first item of \"cupsPclmSourceResolutionSupported\" as default resolution",
+		   attr_name);
+    }
+    else
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "rastertopdf: PCLm output: PPD file does not contain printer resolution information for PCLm.");
+      return 1;
     }
 
     attr_name = (char *)"cupsPclmCompressionMethodPreferred";
@@ -1607,6 +1621,16 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
       pdf.pclm_raster_back_side = ippGetString(ipp_attr, 0, NULL);
     }
 
+    attr_name = (char *)"pclm-source-resolution-supported";
+    if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
+    {
+      ippAttributeString(ipp_attr, buf, sizeof(buf));
+      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+		   "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
+		   attr_name, buf);
+      pdf.pclm_source_resolution_supported = split_strings(buf, ",");
+    }
+
     attr_name = (char *)"pclm-source-resolution-default";
     if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
     {
@@ -1616,15 +1640,19 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
 		   attr_name, buf);
       pdf.pclm_source_resolution_default = buf;
     }
-
-    attr_name = (char *)"pclm-source-resolution-supported";
-    if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
+    else if (pdf.pclm_source_resolution_supported.size() > 0)
     {
-      ippAttributeString(ipp_attr, buf, sizeof(buf));
+      pdf.pclm_source_resolution_default =
+	pdf.pclm_source_resolution_supported[0];
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
-		   attr_name, buf);
-      pdf.pclm_source_resolution_supported = split_strings(buf, ",");
+		   "rastertopdf: Printer PCLm attribute \"%s\" missing, taking first item of \"pclm-source-resolution-supported\" as default resolution",
+		   attr_name);
+    }
+    else
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "rastertopdf: PCLm output: Printer IPP attributes do not contain printer resolution information for PCLm.");
+      return 1;
     }
 
     attr_name = (char *)"pclm-compression-method-preferred";
