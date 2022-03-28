@@ -1434,6 +1434,14 @@ int main(int argc, char **argv)
         pdf.pclm_raster_back_side = attr->value;
       }
 
+      attr_name = (char *)"cupsPclmSourceResolutionSupported";
+      if ((attr = ppdFindAttr(ppd, attr_name, NULL)) != NULL)
+      {
+        fprintf(stderr, "DEBUG: PPD PCLm attribute \"%s\" with value \"%s\"\n",
+            attr_name, attr->value);
+        pdf.pclm_source_resolution_supported = split_strings(attr->value, ",");
+      }
+
       attr_name = (char *)"cupsPclmSourceResolutionDefault";
       if ((attr = ppdFindAttr(ppd, attr_name, NULL)) != NULL)
       {
@@ -1441,13 +1449,17 @@ int main(int argc, char **argv)
             attr_name, attr->value);
         pdf.pclm_source_resolution_default = attr->value;
       }
-
-      attr_name = (char *)"cupsPclmSourceResolutionSupported";
-      if ((attr = ppdFindAttr(ppd, attr_name, NULL)) != NULL)
+      else if (pdf.pclm_source_resolution_supported.size() > 0)
       {
-        fprintf(stderr, "DEBUG: PPD PCLm attribute \"%s\" with value \"%s\"\n",
-            attr_name, attr->value);
-        pdf.pclm_source_resolution_supported = split_strings(attr->value, ",");
+	pdf.pclm_source_resolution_default =
+	  pdf.pclm_source_resolution_supported[0];
+	fprintf(stderr, "DEBUG: PPD PCLm attribute \"%s\" missing, taking first item of \"cupsPclmSourceResolutionSupported\" as default resolution\n",
+		attr_name);
+      }
+      else
+      {
+	fprintf(stderr, "ERROR: PCLm output: PPD file does not contain printer resolution information for PCLm.\n");
+	return 1;
       }
 
       attr_name = (char *)"cupsPclmCompressionMethodPreferred";

@@ -1,6 +1,12 @@
 NEWS - OpenPrinting CUPS Filters v1.28.13 - 2022-03-27
 ------------------------------------------------------
 
+CHANGES IN V1.28.14
+
+	- rastertopdf: In PCLm output mode the filter failed to
+	  generate PCLm if the printer has no
+	  "pclm-source-resolution-default" IPP attribute.
+
 CHANGES IN V1.28.13
 
 	- pdftopdf: Fix N-up printing when paper is taken
