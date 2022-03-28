@@ -60,7 +60,6 @@ image/x-xwindowdump	application/vnd.cups-pdf		65	imagetopdf
 image/x-sun-raster	application/vnd.cups-pdf		65	imagetopdf
 application/vnd.cups-pdf-banner	application/pdf			32	bannertopdf
 image/urf		application/pdf				0	rastertopdf
-application/vnd.cups-raster application/PCLm			32	rastertopclm
 
 ########################################################################
 #
@@ -102,3 +101,10 @@ image/x-sgi-rgb			application/vnd.cups-raster	100	imagetoraster
 image/x-xbitmap			application/vnd.cups-raster	100	imagetoraster
 image/x-xpixmap			application/vnd.cups-raster	100	imagetoraster
 image/x-sun-raster		application/vnd.cups-raster	100	imagetoraster
+image/pwg-raster		application/vnd.cups-raster	100	pwgtoraster
+image/urf			application/vnd.cups-raster	100	pwgtoraster
+image/pwg-raster		image/urf			100	pwgtoraster
+image/urf			image/pwg-raster		100	pwgtoraster
+image/pwg-raster 		application/PCLm		100	rastertopclm
+image/urf 			application/PCLm		100	rastertopclm
+application/vnd.cups-raster	application/PCLm		100	rastertopclm

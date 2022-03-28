@@ -273,6 +273,17 @@ extern int mupdftoraster(int inputfd,
 			 filter_data_t *data,
 			 void *parameters);
 
+/* Parameters: filter_out_format_t*
+   Ouput format: CUPS Raster, PWG Raster, Apple Raster, PCLm
+   Note: With CUPS Raster, Apple Raster, or PCLm selections the output
+   is actually PWG Raster but information about available color spaces
+   and depths is taken from the pseudo-PostScript in the PPDs options,
+   urf-supported printer IPP attribute or the appropriate PPD file
+   attribute (PCLM is always sRGB 8-bit). These modes are for further
+   processing with pwgtoraster or rastertopclm. This can change in the
+   future when MuPDF adds further output formats. */
+
+
 extern int pclmtoraster(int inputfd,
 			int outputfd,
 			int inputseekable,

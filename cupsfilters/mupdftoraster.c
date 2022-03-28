@@ -118,8 +118,9 @@ parse_pdf_header_options(FILE *fp, mupdf_page_header *h)
 }
 
 static void
-add_pdf_header_options(mupdf_page_header *h,
-		       cups_array_t 	 *mupdf_args)
+add_pdf_header_options(mupdf_page_header   *h,
+		       filter_out_format_t outformat,
+		       cups_array_t 	   *mupdf_args)
 {
   char tmpstr[1024];
 
@@ -141,20 +142,26 @@ add_pdf_header_options(mupdf_page_header *h,
   switch (h->cupsColorSpace) {
   case CUPS_CSPACE_RGB:
   case CUPS_CSPACE_CMY:
+  case CUPS_CSPACE_RGBW:
   case CUPS_CSPACE_SRGB:
   case CUPS_CSPACE_ADOBERGB:
+  default:
     snprintf(tmpstr, sizeof(tmpstr), "-crgb");
     break;
 
   case CUPS_CSPACE_CMYK:
-    snprintf(tmpstr, sizeof(tmpstr), "-ccmyk");
+    if (outformat == OUTPUT_FORMAT_PWG_RASTER) /* No post-filtering needed */
+      snprintf(tmpstr, sizeof(tmpstr), "-ccmyk");
+    else
+      snprintf(tmpstr, sizeof(tmpstr), "-crgb"); /* Post-filtering needed, only
+						    3-color modes supported as
+						    input for the post filters*/
     break;
 
   case CUPS_CSPACE_SW:
     snprintf(tmpstr, sizeof(tmpstr), "-cgray");
     break;
 
-  default:
   case CUPS_CSPACE_K:
   case CUPS_CSPACE_W:
     snprintf(tmpstr, sizeof(tmpstr), "-cmono");
@@ -166,7 +173,6 @@ add_pdf_header_options(mupdf_page_header *h,
 static int
 mutool_spawn (const char *filename,
 	      cups_array_t *mutool_args,
-	      char **envp,
 	      int outputfd,
 	      filter_logfunc_t log,
 	      void *ld,
@@ -209,10 +215,6 @@ mutool_spawn (const char *filename,
 	       " %s%s%s", apos, mutoolargv[i], apos);
     }
     log(ld, FILTER_LOGLEVEL_DEBUG, "%s", buf);
-
-    for (i = 0; envp[i]; i ++)
-      log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "mupdftoraster: envp[%d]=\"%s\"", i, envp[i]);
   }
 
   /* Create a pipe for stderr output of mutool */
@@ -288,7 +290,7 @@ mutool_spawn (const char *filename,
     }
 
     /* Execute mutool command line ... */
-    execvpe(filename, mutoolargv, envp);
+    execvp(filename, mutoolargv);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "mupdftoraster: Unable to launch mutool: %s: %s", filename,
 		 strerror(errno));
@@ -392,6 +394,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
 	       filter_data_t *data, /* I - Job and printer data */
 	       void *parameters)    /* I - Filter-specific parameters */
 {
+  filter_out_format_t outformat;
   char buf[BUFSIZ];
   char *icc_profile = NULL;
   char tmpstr[1024];
@@ -413,17 +416,30 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   void *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void *icd = data->iscanceleddata;
-  char **envp;
   cups_cspace_t cspace = -1;
 
 #ifdef HAVE_CUPS_1_7
   ppd_attr_t *attr;
 #endif /* HAVE_CUPS_1_7 */
 
-  if(parameters)
-    envp = (char**)(parameters);
-  else
-    envp = NULL;
+  (void)inputseekable;
+
+  if (parameters) {
+    outformat = *(filter_out_format_t *)parameters;
+    if (outformat != OUTPUT_FORMAT_CUPS_RASTER &&
+	outformat != OUTPUT_FORMAT_PWG_RASTER &&
+	outformat != OUTPUT_FORMAT_APPLE_RASTER &&
+	outformat != OUTPUT_FORMAT_PCLM)
+      outformat = OUTPUT_FORMAT_PWG_RASTER;
+  } else
+    outformat = OUTPUT_FORMAT_PWG_RASTER;
+
+  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	       "mupdftoraster: Output format: %s",
+	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
+		  "PCLM"))));
 
   memset(&sa, 0, sizeof(sa));
   /* Ignore SIGPIPE and have write return an error instead */
@@ -522,7 +538,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
      Raster header then, no extra manipulation needed.
      From the header h only cupsWidth/cupsHeight (dimensions in pixels),
      resolution, and color space are used here. */
-  cupsRasterPrepareHeader(&h, data, OUTPUT_FORMAT_PWG_RASTER,
+  cupsRasterPrepareHeader(&h, data, outformat,
 			  OUTPUT_FORMAT_PWG_RASTER, 1, &cspace);
 
   if ((h.HWResolution[0] == 100) && (h.HWResolution[1] == 100)) {
@@ -555,7 +571,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   h.Orientation = CUPS_ORIENT_0;
 
   /* get all the data from the header and pass it to mutool */
-  add_pdf_header_options (&h, mupdf_args);
+  add_pdf_header_options (&h, outformat, mupdf_args);
 
   snprintf(tmpstr, sizeof(tmpstr), "%s", infilename);
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
@@ -564,7 +580,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_MUTOOL);
 		
   /* call mutool */
-  status = mutool_spawn (tmpstr, mupdf_args, envp, outputfd, log, ld,
+  status = mutool_spawn (tmpstr, mupdf_args, outputfd, log, ld,
 			 iscanceled, icd);
   if (status != 0) status = 1;
 
