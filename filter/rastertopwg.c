@@ -51,7 +51,7 @@ main(int  argc,	   /* I - Number of command-line arguments */
  /*
   * Fire up the pdftoraster() filter function
   */
-  filter_out_format_t outformat = OUTPUT_FORMAT_CUPS_RASTER;
+  filter_out_format_t outformat = OUTPUT_FORMAT_PWG_RASTER;
   char *t = getenv("FINAL_CONTENT_TYPE");
   if (t) {
     if (strcasestr(t, "pwg"))

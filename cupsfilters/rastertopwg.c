@@ -67,7 +67,14 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
     output_format = *(filter_out_format_t *)parameters;
     if (output_format == OUTPUT_FORMAT_PWG_RASTER)
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_PWG);
-    else outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_APPLE);
+    if (output_format == OUTPUT_FORMAT_APPLE_RASTER)
+      outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_APPLE);
+    else
+    {
+      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+		   "rastertopwg: Invalid output format specified. Only PWG Raster and Apple Raster/URF are supported.");
+      return (1);
+    }
   }
   else
   {

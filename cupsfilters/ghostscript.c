@@ -745,9 +745,9 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 	outformat != OUTPUT_FORMAT_PWG_RASTER &&
 	outformat != OUTPUT_FORMAT_APPLE_RASTER &&
 	outformat != OUTPUT_FORMAT_PXL)
-      outformat = OUTPUT_FORMAT_PWG_RASTER;
+      outformat = OUTPUT_FORMAT_CUPS_RASTER;
   } else
-    outformat = OUTPUT_FORMAT_PWG_RASTER;
+    outformat = OUTPUT_FORMAT_CUPS_RASTER;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 	       "ghostscript: Output format: %s",
