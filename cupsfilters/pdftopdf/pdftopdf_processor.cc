@@ -301,8 +301,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 	orientation = param.normal_landscape;
       else
 	orientation = ROT_0;
-      page->crop(param.page, orientation, param.xpos, param.ypos,
-		 !param.cropfit, doc);
+      page->crop(param.page, orientation, param.orientation, param.xpos, param.ypos,
+		 !param.cropfit, param.autoRotate, doc);
     }
     if (param.fillprint)
       param.fitplot = true;
