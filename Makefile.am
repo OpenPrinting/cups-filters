@@ -542,7 +542,7 @@ libcupsfilters_la_CFLAGS = \
 	$(TIFF_CFLAGS)
 libcupsfilters_la_LDFLAGS = \
 	-no-undefined \
-	-version-info 1
+	-version-info 2
 if BUILD_DBUS
 libcupsfilters_la_CFLAGS += $(DBUS_CFLAGS) -DHAVE_DBUS
 libcupsfilters_CXXFLAGS = -std=c++0x $(libcupsfilters_CFLAGS)   # -std=c++11
