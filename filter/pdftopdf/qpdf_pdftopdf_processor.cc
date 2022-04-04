@@ -176,7 +176,7 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
  *  Trim Box is used for trimming the page in required size.
  *  scale tells if we need to scale input file.
  */
-Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos,bool scale)
+Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orientation,Rotation param_orientation,Position xpos,Position ypos,bool scale,bool autorotate)
 {
   page.assertInitialized();
   Rotation save_rotate = getRotate(page);
@@ -193,8 +193,13 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
   double final_w,final_h;   //Width and height of cropped image.
 
   Rotation pageRot = getRotate(page);
-  if (((pageRot == ROT_0 || pageRot == ROT_180) && pageWidth <= pageHeight) ||
-      ((pageRot == ROT_90 || pageRot == ROT_270) && pageWidth > pageHeight))
+  if ((autorotate &&
+       (((pageRot == ROT_0 || pageRot == ROT_180) &&
+	 pageWidth <= pageHeight) ||
+	((pageRot == ROT_90 || pageRot == ROT_270) &&
+	 pageWidth > pageHeight))) ||
+      (!autorotate &&
+       (param_orientation == ROT_90 || param_orientation == ROT_270)))
   {
     std::swap(pageHeight,pageWidth);
   }

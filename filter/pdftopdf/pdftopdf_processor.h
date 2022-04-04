@@ -118,7 +118,7 @@ class PDFTOPDF_PageHandle {
   // fscale:  inverse_scale (from nup, fitplot)
   virtual void add_border_rect(const PageRect &rect,BorderType border,float fscale) =0;
   // TODO?! add standalone crop(...) method (not only for subpages)
-  virtual Rotation crop(const PageRect &cropRect,Rotation orientation,Position xpos,Position ypos,bool scale) =0;
+  virtual Rotation crop(const PageRect &cropRect,Rotation orientation,Rotation param_orientation,Position xpos,Position ypos,bool scale,bool autorotate) =0;
   virtual bool is_landscape(Rotation orientation) =0 ;
   virtual void add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop=NULL) =0;
   virtual void mirror() =0;

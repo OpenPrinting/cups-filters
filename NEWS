@@ -3,6 +3,9 @@ NEWS - OpenPrinting CUPS Filters v1.28.13 - 2022-03-27
 
 CHANGES IN V1.28.14
 
+	- pdftopdf: Correct the output when suppressing auto-rotation
+	  (option "nopdfAutoRotate"). Depending on the situation pages
+	  got cropped in the wrong orientation or de-centered.
 	- pdftopdf: Correct the output when the
 	  "orientation-requested" or the "landscape" option is
 	  supplied. Output could be de-centered (Issue #456),
