@@ -152,7 +152,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
   const bool dst_lscape =
     (param.paper_is_landscape ==
      ((param.orientation == ROT_0) || (param.orientation == ROT_180)));
-  if (dst_lscape)
+
+  if (param.paper_is_landscape)
     std::swap(param.nup.nupX, param.nup.nupY);
 
   if (param.autoRotate)
@@ -258,10 +259,11 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     for(int i=0;i<(int)pages.size();i++)
     {
       std::shared_ptr<PDFTOPDF_PageHandle> page = pages[i];
-      Rotation orientation = param.orientation;
-      if (param.noOrientation &&
-	  page->is_landscape(param.orientation))
+      Rotation orientation;
+      if (page->is_landscape(param.orientation))
 	orientation = param.normal_landscape;
+      else
+	orientation = ROT_0;
       page->crop(param.page, orientation, param.xpos, param.ypos,
 		 !param.cropfit);
     }
@@ -365,7 +367,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
       if ((param.nup.nupX == 1) && (param.nup.nupY == 1))
       {
 	double xpos2, ypos2;
-	if (param.orientation == ROT_270 || param.orientation == ROT_90)
+	if ((param.page.height - param.page.width) *
+	    (page->getRect().height - page->getRect().width) < 0)
 	{
 	  xpos2 = (param.page.width - (page->getRect().height)) / 2;
 	  ypos2 = (param.page.height - (page->getRect().width)) / 2;
