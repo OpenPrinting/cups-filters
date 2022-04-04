@@ -15,4 +15,4 @@
 # MuPDF-based filters...
 #
 
-application/vnd.cups-pdf	image/pwg-raster		101	mupdftoraster
+application/vnd.cups-pdf	image/pwg-raster		101	mupdftopwg

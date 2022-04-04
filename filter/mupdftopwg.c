@@ -50,7 +50,7 @@ main(int  argc,	   /* I - Number of command-line arguments */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the mupdftoraster() filter function
+  * Fire up the mupdftopwg() filter function
   */
   
   filter_out_format_t outformat = OUTPUT_FORMAT_CUPS_RASTER;
@@ -64,10 +64,10 @@ main(int  argc,	   /* I - Number of command-line arguments */
       outformat = OUTPUT_FORMAT_PCLM;
   }
 
-  ret = filterCUPSWrapper(argc, argv, mupdftoraster, &outformat, &JobCanceled);
+  ret = filterCUPSWrapper(argc, argv, mupdftopwg, &outformat, &JobCanceled);
 
   if (ret)
-    fprintf(stderr, "ERROR: mupdftoraster filter function failed.\n");
+    fprintf(stderr, "ERROR: mupdftopwg filter function failed.\n");
 
   return (ret);
 }

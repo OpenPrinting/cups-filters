@@ -471,7 +471,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/imagetoraster.c \
 	cupsfilters/ipp.c \
 	cupsfilters/lut.c \
-	cupsfilters/mupdftoraster.c \
+	cupsfilters/mupdftopwg.c \
 	cupsfilters/pack.c \
 	cupsfilters/pclmtoraster.cxx \
 	cupsfilters/pdf.cxx \
@@ -864,7 +864,7 @@ pkgfilter_PROGRAMS += \
 endif
 if ENABLE_MUTOOL
 pkgfilter_PROGRAMS += \
-	mupdftoraster
+	mupdftopwg
 endif
 if ENABLE_IMAGEFILTERS
 pkgfilter_PROGRAMS += \
@@ -1031,13 +1031,13 @@ rastertopdf_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la
 
-mupdftoraster_SOURCES = \
-	filter/mupdftoraster.c
-mupdftoraster_CFLAGS = \
+mupdftopwg_SOURCES = \
+	filter/mupdftopwg.c
+mupdftopwg_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/
-mupdftoraster_LDADD = \
+mupdftopwg_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la \
 	libppd.la

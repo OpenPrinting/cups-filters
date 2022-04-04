@@ -267,7 +267,7 @@ extern int imagetoraster(int inputfd,
    this filter function. */
 
 
-extern int mupdftoraster(int inputfd,
+extern int mupdftopwg(int inputfd,
 			 int outputfd,
 			 int inputseekable,
 			 filter_data_t *data,

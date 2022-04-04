@@ -79,7 +79,7 @@ parse_doc_type(FILE *fp, filter_logfunc_t log, void *ld)
   if (strncmp(buf,"%PDF",4) == 0)
     return 0;
 
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: input file cannot be identified");
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftopwg: input file cannot be identified");
   return -1;
 }
 
@@ -205,7 +205,7 @@ mutool_spawn (const char *filename,
 
   if (log) {
     /* Debug output: Full mutool command line and environment variables */
-    snprintf(buf, sizeof(buf), "mupdftoraster: mutool command line:");
+    snprintf(buf, sizeof(buf), "mupdftopwg: mutool command line:");
     for (i = 0; mutoolargv[i]; i ++) {
       if ((strchr(mutoolargv[i],' ')) || (strchr(mutoolargv[i],'\t')))
 	apos = "'";
@@ -223,7 +223,7 @@ mutool_spawn (const char *filename,
     errfds[0] = -1;
     errfds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftoraster: Unable to establish stderr pipe for mutool "
+		 "mupdftopwg: Unable to establish stderr pipe for mutool "
 		 "call");
     goto out;
   }
@@ -236,7 +236,7 @@ mutool_spawn (const char *filename,
     errfds[0] = -1;
     errfds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftoraster: Unable to set \"close on exec\" flag on read "
+		 "mupdftopwg: Unable to set \"close on exec\" flag on read "
 		 "end of the stderr pipe for mutool call");
     goto out;
   }
@@ -245,7 +245,7 @@ mutool_spawn (const char *filename,
     close(errfds[0]);
     close(errfds[1]);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftoraster: Unable to set \"close on exec\" flag on write "
+		 "mupdftopwg: Unable to set \"close on exec\" flag on write "
 		 "end of the stderr pipe for mutool call");
     goto out;
   }
@@ -257,7 +257,7 @@ mutool_spawn (const char *filename,
       if (errfds[1] != 2) {
 	if (dup2(errfds[1], 2) < 0) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "mupdftoraster: Unable to couple pipe with stderr of "
+		       "mupdftopwg: Unable to couple pipe with stderr of "
 		       "mutool process");
 	  exit(1);
 	}
@@ -266,7 +266,7 @@ mutool_spawn (const char *filename,
       close(errfds[0]);
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "mupdftoraster: invalid pipe file descriptor to couple with "
+		   "mupdftopwg: invalid pipe file descriptor to couple with "
 		   "stderr of mutool process");
       exit(1);
     }
@@ -276,7 +276,7 @@ mutool_spawn (const char *filename,
       if (outputfd != 1) {
 	if (dup2(outputfd, 1) < 0) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "mupdftoraster: Unable to couple stdout of mutool "
+		       "mupdftopwg: Unable to couple stdout of mutool "
 		       "process");
 	  exit(1);
 	}
@@ -284,7 +284,7 @@ mutool_spawn (const char *filename,
       }
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "mupdftoraster: Invalid file descriptor to couple with "
+		   "mupdftopwg: Invalid file descriptor to couple with "
 		   "stdout of mutool process");
       exit(1);
     }
@@ -292,12 +292,12 @@ mutool_spawn (const char *filename,
     /* Execute mutool command line ... */
     execvp(filename, mutoolargv);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftoraster: Unable to launch mutool: %s: %s", filename,
+		 "mupdftopwg: Unable to launch mutool: %s: %s", filename,
 		 strerror(errno));
     exit(1);
   }
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "mupdftoraster: Started mutool (PID %d)", mutoolpid);
+	       "mupdftopwg: Started mutool (PID %d)", mutoolpid);
 
   close(errfds[1]);
 
@@ -325,7 +325,7 @@ mutool_spawn (const char *filename,
 	  log_level = FILTER_LOGLEVEL_DEBUG;
 	  msg = buf;
 	}
-	log(ld, log_level, "mupdftoraster: %s", msg);
+	log(ld, log_level, "mupdftopwg: %s", msg);
       }
     cupsFileClose(logfp);
     /* No need to close the fd errfds[0], as cupsFileClose(fp) does this
@@ -334,7 +334,7 @@ mutool_spawn (const char *filename,
     exit(0);
   }
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "mupdftoraster: Started logging (PID %d)", errpid);
+	       "mupdftopwg: Started logging (PID %d)", errpid);
 
   close(errfds[0]);
 
@@ -342,7 +342,7 @@ mutool_spawn (const char *filename,
     if ((pid = wait(&wstatus)) < 0) {
       if (errno == EINTR && iscanceled && iscanceled(icd)) {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "mupdftoraster: Job canceled, killing mutool ...");
+		     "mupdftopwg: Job canceled, killing mutool ...");
 	kill(mutoolpid, SIGTERM);
 	mutoolpid = -1;
 	kill(errpid, SIGTERM);
@@ -357,21 +357,21 @@ mutool_spawn (const char *filename,
       if (WIFEXITED(wstatus)) {
 	/* Via exit() anywhere or return() in the main() function */
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "mupdftoraster: %s (PID %d) stopped with status %d",
+		     "mupdftopwg: %s (PID %d) stopped with status %d",
 		     (pid == mutoolpid ? "mutool" : "Logging"), pid,
 		     WEXITSTATUS(wstatus));
 	status = WEXITSTATUS(wstatus);
       } else {
 	/* Via signal */
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "mupdftoraster: %s (PID %d) crashed on signal %d",
+		     "mupdftopwg: %s (PID %d) crashed on signal %d",
 		     (pid == mutoolpid ? "mutool" : "Logging"), pid,
 		     WTERMSIG(wstatus));
 	status = 256 * WTERMSIG(wstatus);
       }
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "mupdftoraster: %s (PID %d) exited with no errors.",
+		   "mupdftopwg: %s (PID %d) exited with no errors.",
 		   (pid == mutoolpid ? "mutool" : "Logging"), pid);
       status = 0;
     }
@@ -388,7 +388,7 @@ out:
 
 
 int
-mupdftoraster (int inputfd,         /* I - File descriptor input stream */
+mupdftopwg (int inputfd,         /* I - File descriptor input stream */
 	       int outputfd,        /* I - File descriptor output stream */
 	       int inputseekable,   /* I - Is input stream seekable? (unused)*/
 	       filter_data_t *data, /* I - Job and printer data */
@@ -435,7 +435,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
     outformat = OUTPUT_FORMAT_PWG_RASTER;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "mupdftoraster: Output format: %s",
+	       "mupdftopwg: Output format: %s",
 	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
 		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
 		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
@@ -455,14 +455,14 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
 
   fd = cupsTempFd(infilename, 1024);
     if (fd < 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't create temporary file");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't create temporary file");
       goto out;
     }
 
     /* copy input file to the tmp file */
     while ((n = read(inputfd, buf, BUFSIZ)) > 0) {
       if (write(fd,buf,n) != n) {
-        if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't copy input to temporary file");
+        if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't copy input to temporary file");
         close(fd);
         goto out;
       }
@@ -471,13 +471,13 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   if (!inputfd) {
 
     if (lseek(fd,0,SEEK_SET) < 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't rewind temporary file");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't rewind temporary file");
       close(fd);
       goto out;
     }
 
     if ((fp = fdopen(fd,"rb")) == 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't open temporary file");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't open temporary file");
       close(fd);
       goto out;
     }
@@ -485,7 +485,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
     /* filename is specified */
 
     if ((fp = fdopen(fd,"rb")) == 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Can't open temporary file");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't open temporary file");
       goto out;
     }
   }
@@ -516,11 +516,11 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
   /* mutool parameters */
   mupdf_args = cupsArrayNew(NULL, NULL);
   if (!mupdf_args) {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Unable to allocate memory for mutool arguments array");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Unable to allocate memory for mutool arguments array");
     goto out;
   }
 
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftoraster: command: %s",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftopwg: command: %s",
 	      CUPS_MUTOOL);
   snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_MUTOOL);
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
@@ -586,7 +586,7 @@ mupdftoraster (int inputfd,         /* I - File descriptor input stream */
 
   if(empty)
   {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftoraster: Input is empty, outputting empty file.");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Input is empty, outputting empty file.");
      status = 0;
   }
 out:

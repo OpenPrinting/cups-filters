@@ -837,9 +837,11 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 	    // log the pages
 	    param.page_logging = 1;
 	  } else if (!strcasecmp(lastfilter + strlen(lastfilter) - 8,
-				 "toraster")) {
+				 "toraster") ||
+		     !strcasecmp(lastfilter + strlen(lastfilter) - 5,
+				 "topwg")) {
 	    // On IPP Everywhere printers which accept PWG Raster data one
-	    // of gstoraster, pdftoraster, or mupdftoraster is the last
+	    // of gstoraster, pdftoraster, or mupdftopwg is the last
 	    // filter. These filters do not log pages so pdftopdf has to
 	    // do it
 	    param.page_logging = 1;
