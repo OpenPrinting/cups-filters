@@ -5,15 +5,14 @@ AC_PREREQ([2.65])
 # ====================
 # Version informations
 # ====================
-m4_define([cups_filters_version_major],[1])
-m4_define([cups_filters_version_minor],[27])
-m4_define([cups_filters_version_micro],[5])
-m4_define([cups_filters_version],[cups_filters_version_major.cups_filters_version_minor.cups_filters_version_micro])
+AC_INIT([cups-filters], [2.0b1], [https://github.com/OpenPrinting/cups-filters/issues], [cups-filters], [https://github.com/OpenPrinting/cups-filters/])
+cups_filters_version="AC_PACKAGE_VERSION"
+cups_filters_version_major="`echo AC_PACKAGE_VERSION | awk -F. '{print $1}'`"
+cups_filters_version_major="`echo AC_PACKAGE_VERSION | awk -F. '{printf("%d\n",$2);}'`"
 
 # =============
 # Automake init
 # =============
-AC_INIT([cups-filters],[cups_filters_version])
 AC_CONFIG_MACRO_DIR([m4])
 m4_include([m4/ac_define_dir.m4])
 m4_include([m4/ax_compare_version.m4])
