@@ -491,12 +491,17 @@ pdftops(int inputfd,         /* I - File descriptor input stream */
 	if (isspace(*ptr)) continue;
 	if (isdigit(*ptr))
 	{
-	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "pdftops: Switching to Poppler's pdftops instead of "
-		       "Ghostscript for old HP LaserJet (\"LaserJet "
-		       "<number>\", no letters before <number>) printers to "
-		       "work around bugs in the printer's PS interpreters");
-	  renderer = PDFTOPS;
+	  while (*ptr && isalnum(*ptr)) ptr ++;
+	  if (!*ptr) /* End of string, no further word */
+	  {
+	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+			 "pdftops: Switching to Poppler's pdftops instead of "
+			 "Ghostscript for old HP LaserJet (\"LaserJet "
+			 "<number>\", no letters before <number>, no "
+			 "additional words after <number>) printers to "
+			 "work around bugs in the printer's PS interpreters");
+	    renderer = PDFTOPS;
+	  }
 	}
 	break;
       }
