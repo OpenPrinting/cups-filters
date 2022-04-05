@@ -520,8 +520,12 @@ main(int  argc,				/* I - Number of command-line args */
 	if (isspace(*ptr)) continue;
 	if (isdigit(*ptr))
 	{
-	  fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for old HP LaserJet (\"LaserJet <number>\", no letters before <number>) printers to work around bugs in the printer's PS interpreters\n");
-	  renderer = PDFTOPS;
+	  while (*ptr && isalnum(*ptr)) ptr ++;
+	  if (!*ptr) /* End of string, no further word */
+	  {
+	    fprintf(stderr, "DEBUG: Switching to Poppler's pdftops instead of Ghostscript for old HP LaserJet (\"LaserJet <number>\", no letters before <number>, no additional words after <number>) printers to work around bugs in the printer's PS interpreters\n");
+	    renderer = PDFTOPS;
+	  }
 	}
 	break;
       }

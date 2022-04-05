@@ -1,6 +1,13 @@
 NEWS - OpenPrinting CUPS Filters v1.28.14 - 2022-04-04
 ------------------------------------------------------
 
+CHANGES IN V1.28.15
+
+	- pdftops: In pdftops identify old LaserJets more precisely
+	  for working around PostScript interpreter bugs, older
+	  printers need Poppler, newer models need Ghostscript
+	  (Ubuntu bug #1967816).
+
 CHANGES IN V1.28.14
 
 	- pdftopdf: Correct the output when suppressing auto-rotation
