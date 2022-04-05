@@ -1388,21 +1388,11 @@ cfGenerateSizes(ipp_t *response,
  * attributes-natural-language attribute and then request an appropriate
  * language version of the files if available. The printer-specific
  * strings are downloaded from the printer following the URI in the
- * printer-strings-uri attribute and are in the slected language.
+ * printer-strings-uri attribute and are in the selected language.
  *
- * There are no human-readable strings in these files for the non-IPP
- * choices of the print color mode, for 16 bit color depth, Adobe RGB,
- * and "device" modes as advertised for Apple Raster (urf-supported)
- * and PWG Raster (pwg-raster-document-type-supported). These color
- * spaces are supposed to not be selected manually by the user but the
- * filters should instead detect the color space and depth of the input
- * file and automatically select the best color space and depth for the
- * output to the printer. As the filters do not currently do that we
- * we are allowing the manual selection as a workaround.
- *
- * It is not clear whether these issues (translated PPDs and color space
- * selection) will get fixed in the PPD generator as the need of PPDs
- * in CUPS can go away soon.
+ * It is not clear whether PPD translation will get fixed in the PPD
+ * generator as the need of PPDs in CUPS will go away with version
+ * 3.x.
  *
  * See also:
  *
