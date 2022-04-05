@@ -29,7 +29,6 @@ MIT Open Source License  -  http://www.opensource.org/
 #include "colormanager.h"
 #include <cupsfilters/colord.h>
 #include <cupsfilters/filter.h>
-//#include <cupsfilters/kmdevices.h>
 
 
 #define CM_MAX_FILE_LENGTH 1024

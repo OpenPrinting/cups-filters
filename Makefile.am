@@ -29,8 +29,6 @@ EXTRA_DIST = \
 	filter/braille/filters/TODO.txt
 
 EXTRA_DIST += \
-	cupsfilters/kmdevices.cpp \
-	cupsfilters/kmdevices.h \
 	cupsfilters/testdriver.c \
 	data/makePDFfromPS.sh \
 	data/classified.ps \
