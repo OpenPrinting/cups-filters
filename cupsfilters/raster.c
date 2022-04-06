@@ -813,11 +813,11 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       cspaces_available = valuebuffer;
       if ((color_mode = cupsGetOption("print-color-mode", num_options,
 				      options)) == NULL)
-	color_mode = ippAttrEnumValForPrinter(printer_attrs, job_attrs,
+	color_mode = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
 					      "print-color-mode");
       if ((quality = cupsGetOption("print-quality", num_options,
 				   options)) == NULL)
-	quality = ippAttrEnumValForPrinter(printer_attrs, job_attrs,
+	quality = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
 					   "print-quality");
       hi_depth = (!no_high_depth &&
 		  (!strcasecmp(quality, "high") || !strcmp(quality, "5"))) ?
@@ -838,7 +838,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       cspaces_available = "srgb_8,sgray_8";
       if ((color_mode = cupsGetOption("print-color-mode", num_options,
 				      options)) == NULL)
-	color_mode = ippAttrEnumValForPrinter(printer_attrs, job_attrs,
+	color_mode = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
 					      "print-color-mode");
       hi_depth = 0;
       if (log)

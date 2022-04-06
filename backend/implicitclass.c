@@ -307,7 +307,7 @@ main(int  argc,				/* I - Number of command-line args */
       filter_data.copies = atoi(argv[4]);
       filter_data.job_attrs = NULL;        /* We use command line options */
       if ((filter_data.printer_attrs =
-	   get_printer_attributes4(printer_uri, NULL, 0, NULL, 0, 1, 0)) !=
+	   cfGetPrinterAttributes4(printer_uri, NULL, 0, NULL, 0, 1, 0)) !=
 	  NULL)
                                            /* Poll the printer attributes from
 					      the printer */

@@ -44,7 +44,7 @@ enum resolve_uri_converter_type	/**** Resolving DNS-SD based URI ****/
   IPPFIND_BASED_CONVERTER_FOR_FAX_URI = 1
 };
 
-char get_printer_attributes_log[LOGSIZE];
+char cf_get_printer_attributes_log[CF_GET_PRINTER_ATTRIBUTES_LOGSIZE];
 
 static int				
 convert_to_port(char *a)		
@@ -63,14 +63,14 @@ log_printf(char *log,
   va_list arglist;
   va_start(arglist, format);
   vsnprintf(log + strlen(log),
-	    LOGSIZE - strlen(log) - 1,
+	    CF_GET_PRINTER_ATTRIBUTES_LOGSIZE - strlen(log) - 1,
 	    format, arglist);
-  log[LOGSIZE - 1] = '\0';
+  log[CF_GET_PRINTER_ATTRIBUTES_LOGSIZE - 1] = '\0';
   va_end(arglist);
 }
 
 char *
-resolve_uri(const char *raw_uri)
+cfResolveURI(const char *raw_uri)
 {
   char *pseudo_argv[2];
   const char *uri;
@@ -116,12 +116,12 @@ resolve_uri(const char *raw_uri)
 #ifdef HAVE_CUPS_1_6
 /* Check how the driverless support is provided */
 int
-check_driverless_support(const char* uri)
+cfCheckDriverlessSupport(const char* uri)
 {
-  int support_status = DRVLESS_CHECKERR;
+  int support_status = CF_DRVLESS_CHECKERR;
   ipp_t *response = NULL;
 
-  response = get_printer_attributes3(NULL, uri, NULL, 0, NULL, 0, 1,
+  response = cfGetPrinterAttributes3(NULL, uri, NULL, 0, NULL, 0, 1,
 				     &support_status);
   if (response != NULL)
     ippDelete(response);
@@ -131,21 +131,21 @@ check_driverless_support(const char* uri)
 
 /* Get attributes of a printer specified only by URI */
 ipp_t *
-get_printer_attributes(const char* raw_uri,
+cfGetPrinterAttributes(const char* raw_uri,
 		       const char* const pattrs[],
 		       int pattrs_size,
 		       const char* const req_attrs[],
 		       int req_attrs_size,
 		       int debug)
 {
-  return get_printer_attributes2(NULL, raw_uri, pattrs, pattrs_size,
+  return cfGetPrinterAttributes2(NULL, raw_uri, pattrs, pattrs_size,
 				 req_attrs, req_attrs_size, debug);
 }
 
 /* Get attributes of a printer specified by URI and under a given HTTP
    connection, for example via a domain socket */
 ipp_t *
-get_printer_attributes2(http_t *http_printer,
+cfGetPrinterAttributes2(http_t *http_printer,
 			const char* raw_uri,
 			const char* const pattrs[],
 			int pattrs_size,
@@ -153,7 +153,7 @@ get_printer_attributes2(http_t *http_printer,
 			int req_attrs_size,
 			int debug)
 {
-  return get_printer_attributes3(http_printer, raw_uri, pattrs, pattrs_size,
+  return cfGetPrinterAttributes3(http_printer, raw_uri, pattrs, pattrs_size,
 				 req_attrs, req_attrs_size, debug, NULL);
 }
 
@@ -161,7 +161,7 @@ get_printer_attributes2(http_t *http_printer,
    connection, for example via a domain socket, and give info about used
    fallbacks */
 ipp_t *
-get_printer_attributes3(http_t *http_printer,
+cfGetPrinterAttributes3(http_t *http_printer,
 			const char* raw_uri,
 			const char* const pattrs[],
 			int pattrs_size,
@@ -170,13 +170,13 @@ get_printer_attributes3(http_t *http_printer,
 			int debug,
                         int* driverless_info)
 {
-  return get_printer_attributes5(http_printer, raw_uri, pattrs, pattrs_size,
+  return cfGetPrinterAttributes5(http_printer, raw_uri, pattrs, pattrs_size,
 				 req_attrs, req_attrs_size, debug,
 				 driverless_info, CUPS_BACKEND_URI_CONVERTER);
 }
 
 /* Get attributes of a printer specified only by URI and given info about fax-support*/
-ipp_t   *get_printer_attributes4(const char* raw_uri,
+ipp_t   *cfGetPrinterAttributes4(const char* raw_uri,
 				 const char* const pattrs[],
 				 int pattrs_size,
 				 const char* const req_attrs[],
@@ -185,11 +185,11 @@ ipp_t   *get_printer_attributes4(const char* raw_uri,
 				 int is_fax)
 {
   if(is_fax)
-    return get_printer_attributes5(NULL, raw_uri, pattrs, pattrs_size,
+    return cfGetPrinterAttributes5(NULL, raw_uri, pattrs, pattrs_size,
 				   req_attrs, req_attrs_size, debug, NULL,
 				   IPPFIND_BASED_CONVERTER_FOR_FAX_URI);
   else
-    return get_printer_attributes5(NULL, raw_uri, pattrs, pattrs_size,
+    return cfGetPrinterAttributes5(NULL, raw_uri, pattrs, pattrs_size,
 				   req_attrs, req_attrs_size, debug, NULL,
 				   IPPFIND_BASED_CONVERTER_FOR_PRINT_URI);
 }
@@ -198,7 +198,7 @@ ipp_t   *get_printer_attributes4(const char* raw_uri,
    connection, for example via a domain socket, and give info about used
    fallbacks */
 ipp_t *
-get_printer_attributes5(http_t *http_printer,
+cfGetPrinterAttributes5(http_t *http_printer,
 			const char* raw_uri,
 			const char* const pattrs[],
 			int pattrs_size,
@@ -253,7 +253,7 @@ get_printer_attributes5(http_t *http_printer,
 
   /* Expect a device capable of standard IPP Everywhere */
   if (driverless_info != NULL)
-    *driverless_info = FULL_DRVLESS;
+    *driverless_info = CF_DRVLESS_FULL;
 
   /* Request printer properties via IPP, for example to
       - generate a PPD file for the printer
@@ -261,17 +261,17 @@ get_printer_attributes5(http_t *http_printer,
       - generally find capabilities, options, and default settinngs,
       - printers status: Accepting jobs? Busy? With how many jobs? */
 
-  get_printer_attributes_log[0] = '\0';
+  cf_get_printer_attributes_log[0] = '\0';
 
   /* Convert DNS-SD-service-name-based URIs to host-name-based URIs */
   if(resolve_uri_type == CUPS_BACKEND_URI_CONVERTER)
-    uri = resolve_uri(raw_uri);
+    uri = cfResolveURI(raw_uri);
   else
-    uri = ippfind_based_uri_converter(raw_uri, resolve_uri_type);
+    uri = cfippfindBasedURIConverter(raw_uri, resolve_uri_type);
 
   if (uri == NULL)
   {
-    log_printf(get_printer_attributes_log,
+    log_printf(cf_get_printer_attributes_log,
         "get-printer-attibutes: Cannot resolve URI: %s\n", raw_uri);
     return NULL;
   }
@@ -285,7 +285,7 @@ get_printer_attributes5(http_t *http_printer,
 			       resource, sizeof(resource));
   if (uri_status != HTTP_URI_OK) {
     /* Invalid URI */
-    log_printf(get_printer_attributes_log,
+    log_printf(cf_get_printer_attributes_log,
 	       "get-printer-attributes: Cannot parse the printer URI: %s\n",
 	       uri);
     if (uri) free(uri);
@@ -303,7 +303,7 @@ get_printer_attributes5(http_t *http_printer,
     if ((http_printer =
 	 httpConnect2 (host_name, host_port, NULL, AF_UNSPEC, 
 		       encryption, 1, 3000, NULL)) == NULL) {
-      log_printf(get_printer_attributes_log,
+      log_printf(cf_get_printer_attributes_log,
 		 "get-printer-attributes: Cannot connect to printer with URI %s.\n",
 		 uri);
       if (uri) free(uri);
@@ -349,25 +349,25 @@ get_printer_attributes5(http_t *http_printer,
     ipp_status = cupsLastError();
 
     if (response) {
-      log_printf(get_printer_attributes_log,
+      log_printf(cf_get_printer_attributes_log,
 		 "Requested IPP attributes (get-printer-attributes) for printer with URI %s\n",
 		 uri);
       /* Log all printer attributes for debugging and count them */
       if (debug)
-	log_printf(get_printer_attributes_log,
+	log_printf(cf_get_printer_attributes_log,
 		   "Full list of all IPP attributes:\n");
       attr = ippFirstAttribute(response);
       while (attr) {
 	total_attrs ++;
 	if (debug) {
 	  ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-	  log_printf(get_printer_attributes_log,
+	  log_printf(cf_get_printer_attributes_log,
 		     "  Attr: %s\n",ippGetName(attr));
-	  log_printf(get_printer_attributes_log,
+	  log_printf(cf_get_printer_attributes_log,
 		     "  Value: %s\n", valuebuffer);
 	  for (i = 0; i < ippGetCount(attr); i ++) {
 	    if ((kw = ippGetString(attr, i, NULL)) != NULL) {
-	      log_printf(get_printer_attributes_log, "  Keyword: %s\n", kw);
+	      log_printf(cf_get_printer_attributes_log, "  Keyword: %s\n", kw);
 	    }
 	  }
 	}
@@ -384,20 +384,20 @@ get_printer_attributes5(http_t *http_printer,
       if (ipp_status == IPP_STATUS_ERROR_BAD_REQUEST ||
 	  ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED ||
 	  (req_attrs && i > 0) || (cap && total_attrs < 20)) {
-	log_printf(get_printer_attributes_log,
+	log_printf(cf_get_printer_attributes_log,
 		   "get-printer-attributes IPP request failed:\n");
 	if (ipp_status == IPP_STATUS_ERROR_BAD_REQUEST)
-	  log_printf(get_printer_attributes_log,
+	  log_printf(cf_get_printer_attributes_log,
 		     "  - ipp_status == IPP_STATUS_ERROR_BAD_REQUEST\n");
 	else if (ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED)
-	  log_printf(get_printer_attributes_log,
+	  log_printf(cf_get_printer_attributes_log,
 		     "  - ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED\n");
 	if (req_attrs && i > 0)
-	  log_printf(get_printer_attributes_log,
+	  log_printf(cf_get_printer_attributes_log,
 		     "  - Required IPP attribute %s not found\n",
 		     req_attrs[i - 1]);
 	if (cap && total_attrs < 20)
-	  log_printf(get_printer_attributes_log,
+	  log_printf(cf_get_printer_attributes_log,
 		     "  - Too few IPP attributes: %d (30 or more expected)\n",
 		     total_attrs);
 	ippDelete(response);
@@ -408,27 +408,27 @@ get_printer_attributes5(http_t *http_printer,
 	return response;
       }
     } else {
-      log_printf(get_printer_attributes_log,
+      log_printf(cf_get_printer_attributes_log,
 		 "Request for IPP attributes (get-printer-attributes) for printer with URI %s failed: %s\n",
 		 uri, cupsLastErrorString());
-      log_printf(get_printer_attributes_log, "get-printer-attributes IPP request failed:\n");
-      log_printf(get_printer_attributes_log, "  - No response\n");
+      log_printf(cf_get_printer_attributes_log, "get-printer-attributes IPP request failed:\n");
+      log_printf(cf_get_printer_attributes_log, "  - No response\n");
     }
     if (fallback == 1 + cap) {
-      log_printf(get_printer_attributes_log,
+      log_printf(cf_get_printer_attributes_log,
 		 "No further fallback available, giving up\n");
       if (driverless_info != NULL)
-        *driverless_info = DRVLESS_CHECKERR;
+        *driverless_info = CF_DRVLESS_CHECKERR;
     } else if (cap && fallback == 1) {
-      log_printf(get_printer_attributes_log,
+      log_printf(cf_get_printer_attributes_log,
 		 "The server doesn't support the standard IPP request, trying request without media-col\n");
       if (driverless_info != NULL)
-        *driverless_info = DRVLESS_INCOMPLETEIPP;
+        *driverless_info = CF_DRVLESS_INCOMPLETEIPP;
     } else if (fallback == 0) {
-      log_printf(get_printer_attributes_log,
+      log_printf(cf_get_printer_attributes_log,
 		 "The server doesn't support IPP2.0 request, trying IPP1.1 request\n");
       if (driverless_info != NULL)
-        *driverless_info = DRVLESS_IPP11;
+        *driverless_info = CF_DRVLESS_IPP11;
     }
   }
 
@@ -438,7 +438,7 @@ get_printer_attributes5(http_t *http_printer,
 }
 
 char*
-ippfind_based_uri_converter (const char *uri, int is_fax)
+cfippfindBasedURIConverter (const char *uri, int is_fax)
 {
   int  ippfind_pid = 0,	        /* Process ID of ippfind for IPP */
        post_proc_pipe[2],	/* Pipe to post-processing for IPP */
@@ -480,10 +480,10 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
     return strdup(uri);
   }
 
-  resolved_uri = (char *)malloc(MAX_URI_LEN * (sizeof(char)));
+  resolved_uri = (char *)malloc(CF_GET_PRINTER_ATTRIBUTES_MAX_URI_LEN * (sizeof(char)));
   if (resolved_uri == NULL)
     goto error;
-  memset(resolved_uri, 0, MAX_URI_LEN);
+  memset(resolved_uri, 0, CF_GET_PRINTER_ATTRIBUTES_MAX_URI_LEN);
 
   reg_type --;
   while (reg_type >= hostname && *reg_type != '.')
@@ -551,12 +551,12 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
 
   fp = cupsFileOpenFd(post_proc_pipe[0], "r");
 
-  buffer = (char*)malloc(MAX_OUTPUT_LEN * sizeof(char));
+  buffer = (char*)malloc(CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN * sizeof(char));
   if (buffer == NULL)
     goto error;
-  memset(buffer, 0, MAX_OUTPUT_LEN);
+  memset(buffer, 0, CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN);
 
-  while ((bytes = cupsFileGetLine(fp, buffer, MAX_OUTPUT_LEN)) > 0) {
+  while ((bytes = cupsFileGetLine(fp, buffer, CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN)) > 0) {
     /* Mark all the fields of the output of ippfind */
     ptr = buffer;
 
@@ -568,19 +568,19 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
     while (ptr && !isalnum(*ptr & 255)) ptr ++;
 
     service_hostname = ptr; 
-    ptr = memchr(ptr, '\t', MAX_OUTPUT_LEN - (ptr - buffer));
+    ptr = memchr(ptr, '\t', CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN - (ptr - buffer));
     if (!ptr) goto read_error;
     *ptr = '\0';
     ptr ++;
 
     resource_field = ptr;
-    ptr = memchr(ptr, '\t', MAX_OUTPUT_LEN - (ptr - buffer));
+    ptr = memchr(ptr, '\t', CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN - (ptr - buffer));
     if (!ptr) goto read_error;
     *ptr = '\0';
     ptr ++;
 
     ptr_to_port = ptr;
-    ptr = memchr(ptr, '\t', MAX_OUTPUT_LEN - (ptr - buffer));
+    ptr = memchr(ptr, '\t', CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN - (ptr - buffer));
     if (!ptr) goto read_error;
     *ptr = '\0';
     ptr ++;
@@ -604,7 +604,7 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
       output_of_fax_uri = 1; /* fax-uri requested from fax-capable device */
 
   read_error:
-    memset(buffer, 0, MAX_OUTPUT_LEN);
+    memset(buffer, 0, CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN);
   }
 
   cupsFileClose(fp);
@@ -665,7 +665,7 @@ ippfind_based_uri_converter (const char *uri, int is_fax)
 #endif /* HAVE_CUPS_1_6 */
 
 const char* /* O - Attribute value as string */
-ippAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
+cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
 						      as to respond
 						      get-printer-attributes,
 						      or NULL to not consider */
@@ -721,7 +721,7 @@ ippAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
 }
 
 int                 /* O - 1: Success; 0: Error */
-ippAttrIntValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
+cfIPPAttrIntValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
 						     as to respond
 						     get-printer-attributes,
 						     or NULL to not consider */

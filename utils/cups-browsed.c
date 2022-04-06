@@ -3839,7 +3839,7 @@ get_printer_uuid(http_t *http_printer,
 		  raw_uri);
 
   if ((response =
-       get_printer_attributes2(http_printer, raw_uri,
+       cfGetPrinterAttributes2(http_printer, raw_uri,
 			       pattrs, 1, req_attrs, 1, 0)) == NULL) {
     debug_printf ("Printer with URI %s has no \"printer-uuid\" IPP attribute!\n",
 		  raw_uri);
@@ -6365,10 +6365,10 @@ on_job_state (CupsNotifier *object,
 	  /* Check whether the printer is idle, processing, or disabled */
 	  debug_printf("HTTP connection to %s:%d established.\n", p->host,
 		       p->port);
-	  response = get_printer_attributes(p->uri, pattrs,
+	  response = cfGetPrinterAttributes(p->uri, pattrs,
 					    sizeof(pattrs) / sizeof(pattrs[0]),
 					    NULL, 0, 0);
-	  debug_log_out(get_printer_attributes_log);
+	  debug_log_out(cf_get_printer_attributes_log);
 	  if (response != NULL) {
 	    debug_printf("IPP request to %s:%d successful.\n", p->host,
 			 p->port);
@@ -6802,11 +6802,11 @@ queue_overwritten (remote_printer_t *p)
 		   sizeof(local_queue_uri),
 		   "ipp", NULL, "localhost", 0,
 		   "/printers/%s", p->queue_name);
-  response = get_printer_attributes2(conn, local_queue_uri,
+  response = cfGetPrinterAttributes2(conn, local_queue_uri,
 				     pattrs, sizeof(pattrs) / sizeof(pattrs[0]),
 				     pattrs, sizeof(pattrs) / sizeof(pattrs[0]),
 				     1);
-  debug_log_out(get_printer_attributes_log);
+  debug_log_out(cf_get_printer_attributes_log);
   if (!response || cupsLastError() > IPP_STATUS_OK_CONFLICTING) {
     debug_printf("lpstat: %s\n", cupsLastErrorString());
   } else {
@@ -7292,8 +7292,8 @@ create_remote_printer_entry (const char *queue_name,
        or interface script at this point. */
     p->netprinter = 0;
     if (p->uri[0] != '\0') {
-      p->prattrs = get_printer_attributes(p->uri, NULL, 0, NULL, 0, 1);
-      debug_log_out(get_printer_attributes_log);
+      p->prattrs = cfGetPrinterAttributes(p->uri, NULL, 0, NULL, 0, 1);
+      debug_log_out(cf_get_printer_attributes_log);
       if (p->prattrs == NULL)
 	debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
 		     p->queue_name, p->uri);
@@ -7361,8 +7361,8 @@ create_remote_printer_entry (const char *queue_name,
 
     p->slave_of = NULL;
     p->netprinter = 1;
-    p->prattrs = get_printer_attributes(p->uri, NULL, 0, NULL, 0, 1);
-    debug_log_out(get_printer_attributes_log);
+    p->prattrs = cfGetPrinterAttributes(p->uri, NULL, 0, NULL, 0, 1);
+    debug_log_out(cf_get_printer_attributes_log);
     if (p->prattrs == NULL) {
       debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
 		   p->queue_name, p->uri);
@@ -7951,8 +7951,8 @@ void create_queue(void* arg) {
      for our IPP network printer, we proceed here */
   if (p->netprinter == 1) {
     if (p->prattrs == NULL) {
-      p->prattrs = get_printer_attributes(p->uri, NULL, 0, NULL, 0, 1);
-      debug_log_out(get_printer_attributes_log);
+      p->prattrs = cfGetPrinterAttributes(p->uri, NULL, 0, NULL, 0, 1);
+      debug_log_out(cf_get_printer_attributes_log);
     }
     if (p->prattrs == NULL) {
       debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",
@@ -8123,8 +8123,8 @@ void create_queue(void* arg) {
 	 is suppressed. */
       /* Generating the ppd file for the remote cups queue */
       if (p->prattrs == NULL) {
-	p->prattrs = get_printer_attributes(p->uri, NULL, 0, NULL, 0, 1);
-	debug_log_out(get_printer_attributes_log);
+	p->prattrs = cfGetPrinterAttributes(p->uri, NULL, 0, NULL, 0, 1);
+	debug_log_out(cf_get_printer_attributes_log);
       }
       if (p->prattrs == NULL) {
 	debug_printf("get-printer-attributes IPP call failed on printer %s (%s).\n",

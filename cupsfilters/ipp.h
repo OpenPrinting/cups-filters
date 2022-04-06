@@ -33,42 +33,39 @@ extern "C" {
 #include <cups/cups.h>
 #include <cups/backend.h>
 
-#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
-#define HAVE_CUPS_1_6 1
-#endif
+#define CF_GET_PRINTER_ATTRIBUTES_LOGSIZE 4 * 65536
+#define CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN 8192
+#define CF_GET_PRINTER_ATTRIBUTES_MAX_URI_LEN 2048
 
-#define LOGSIZE 4 * 65536
-#define MAX_OUTPUT_LEN 8192
-#define MAX_URI_LEN 2048
+extern char cf_get_printer_attributes_log[CF_GET_PRINTER_ATTRIBUTES_LOGSIZE];
 
-extern char get_printer_attributes_log[LOGSIZE];
-
-char     *resolve_uri(const char *raw_uri);
-char     *ippfind_based_uri_converter(const char *uri ,int is_fax);
-#ifdef HAVE_CUPS_1_6
-                                /* Enum of possible driverless options */
-enum driverless_support_modes {
-  DRVLESS_CHECKERR,             /* Unable to get get-printer-attributes response*/
-  FULL_DRVLESS,                 /* Standard IPP Everywhere support, works with 'everywhere' model */
-  DRVLESS_IPP11,                /* Driverless support via IPP 1.1 request */
-  DRVLESS_INCOMPLETEIPP         /* Driverless support without media-col-database attribute */
+/* Enum of possible driverless options */
+enum cf_driverless_support_modes_e {
+  CF_DRVLESS_CHECKERR,      /* Unable to get get-printer-attributes response*/
+  CF_DRVLESS_FULL,          /* Standard IPP Everywhere support, works with
+			       'everywhere' model */
+  CF_DRVLESS_IPP11,         /* Driverless support via IPP 1.1 request */
+  CF_DRVLESS_INCOMPLETEIPP  /* Driverless support without media-col-database
+			       attribute */
 };
 
-int check_driverless_support(const char* uri);
-ipp_t   *get_printer_attributes(const char* raw_uri,
+char    *cfResolveURI(const char *raw_uri);
+char    *cfippfindBasedURIConverter(const char *uri ,int is_fax);
+int     cfCheckDriverlessSupport(const char* uri);
+ipp_t   *cfGetPrinterAttributes(const char* raw_uri,
 				const char* const pattrs[],
 				int pattrs_size,
 				const char* const req_attrs[],
 				int req_attrs_size,
 				int debug);
-ipp_t   *get_printer_attributes2(http_t *http_printer,
+ipp_t   *cfGetPrinterAttributes2(http_t *http_printer,
 				 const char* raw_uri,
 				 const char* const pattrs[],
 				 int pattrs_size,
 				 const char* const req_attrs[],
 				 int req_attrs_size,
 				 int debug);
-ipp_t   *get_printer_attributes3(http_t *http_printer,
+ipp_t   *cfGetPrinterAttributes3(http_t *http_printer,
 				 const char* raw_uri,
 				 const char* const pattrs[],
 				 int pattrs_size,
@@ -76,14 +73,14 @@ ipp_t   *get_printer_attributes3(http_t *http_printer,
 				 int req_attrs_size,
 				 int debug,
 				 int* driverless_support);
-ipp_t   *get_printer_attributes4(const char* raw_uri,
-				const char* const pattrs[],
-				int pattrs_size,
-				const char* const req_attrs[],
-				int req_attrs_size,
-				int debug,
-        int isFax);
-ipp_t   *get_printer_attributes5(http_t *http_printer,
+ipp_t   *cfGetPrinterAttributes4(const char* raw_uri,
+				 const char* const pattrs[],
+				 int pattrs_size,
+				 const char* const req_attrs[],
+				 int req_attrs_size,
+				 int debug,
+				 int isFax);
+ipp_t   *cfGetPrinterAttributes5(http_t *http_printer,
 				 const char* raw_uri,
 				 const char* const pattrs[],
 				 int pattrs_size,
@@ -91,18 +88,15 @@ ipp_t   *get_printer_attributes5(http_t *http_printer,
 				 int req_attrs_size,
 				 int debug,
 				 int* driverless_support,
-         		 int resolve_uri_type);
+				 int resolve_uri_type);
 
-
-#endif /* HAVE_CUPS_1_6 */
-
-const char* ippAttrEnumValForPrinter(ipp_t *printer_attrs,
-				     ipp_t *job_attrs,
-				     const char *attr_name);
-int ippAttrIntValForPrinter(ipp_t *printer_attrs,
-			    ipp_t *job_attrs,
-			    const char *attr_name,
-			    int   *value);
+const char* cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs,
+				       ipp_t *job_attrs,
+				       const char *attr_name);
+int cfIPPAttrIntValForPrinter(ipp_t *printer_attrs,
+			      ipp_t *job_attrs,
+			      const char *attr_name,
+			      int   *value);
 
 #  ifdef __cplusplus
 }

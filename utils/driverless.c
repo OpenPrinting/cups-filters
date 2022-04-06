@@ -621,10 +621,10 @@ generate_ppd (const char *uri, int isFax)
   /* Request printer properties via IPP to generate a PPD file for the
      printer */
 
-  response = get_printer_attributes4(uri, NULL, 0, NULL, 0, 1, isFax);
+  response = cfGetPrinterAttributes4(uri, NULL, 0, NULL, 0, 1, isFax);
 
   if (debug) {
-    ptr1 = get_printer_attributes_log;
+    ptr1 = cf_get_printer_attributes_log;
     while(ptr1) {
       ptr2 = strchr(ptr1, '\n');
       if (ptr2) *ptr2 = '\0';
@@ -636,7 +636,7 @@ generate_ppd (const char *uri, int isFax)
   if (response == NULL) {
     fprintf(stderr, "ERROR: Unable to create PPD file: Could not poll "
 	    "sufficient capability info from the printer (%s, %s) via IPP!\n",
-	    uri, resolve_uri(uri));
+	    uri, cfResolveURI(uri));
     goto fail;
   }
 
