@@ -454,7 +454,7 @@ static unsigned char *reverseLineSwapBit(unsigned char *src,
   unsigned char *dst, unsigned int row, unsigned int plane,
   unsigned int pixels, unsigned int size, pwgtoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
-  dst = reverseOneBitLineSwap(src, dst, pixels, size);
+  dst = cfReverseOneBitLineSwap(src, dst, pixels, size);
   return dst;
 }
 
@@ -580,7 +580,7 @@ static unsigned char *lineSwapBit(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
      unsigned int size, pwgtoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
-  dst = reverseOneBitLine(src, dst, pixels, size);
+  dst = cfReverseOneBitLine(src, dst, pixels, size);
   return dst;
 }
 
@@ -758,7 +758,7 @@ static unsigned char *RGB8toKCMY(unsigned char *src, unsigned char *pixelBuf,
 static unsigned char *RGB8toKCMYcmTemp(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pwgtoraster_doc_t* doc)
 {
-  return RGB8toKCMYcm(src, pixelBuf, x, y);
+  return cfRGB8toKCMYcm(src, pixelBuf, x, y);
 }
 
 static unsigned char *RGB8toYMCK(unsigned char *src, unsigned char *pixelBuf,
@@ -790,8 +790,8 @@ static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
       unsigned char *pb;
 
       pb = convertCSpace(src+i*(doc->outputNumColors),pixelBuf1,i,row, doc);
-      pb = convertbits(pb,pixelBuf2,i,row, doc->outheader.cupsNumColors, doc->bitspercolor);
-      writepixel(dst,0,i,pb, doc->outheader.cupsNumColors, doc->outheader.cupsBitsPerColor, doc->outheader.cupsColorOrder);
+      pb = cfConvertBits(pb,pixelBuf2,i,row, doc->outheader.cupsNumColors, doc->bitspercolor);
+      cfWritePixel(dst,0,i,pb, doc->outheader.cupsNumColors, doc->outheader.cupsBitsPerColor, doc->outheader.cupsColorOrder);
   }
   return dst;
 }
@@ -807,8 +807,8 @@ static unsigned char *convertLineChunkedSwap(unsigned char *src,
       unsigned char *pb;
 
       pb = convertCSpace(src+(pixels-i-1)*(doc->outputNumColors),pixelBuf1,i,row, doc);
-      pb = convertbits(pb,pixelBuf2,i,row, doc->outheader.cupsNumColors, doc->bitspercolor);
-      writepixel(dst,0,i,pb, doc->outheader.cupsNumColors, doc->outheader.cupsBitsPerColor, doc->outheader.cupsColorOrder);
+      pb = cfConvertBits(pb,pixelBuf2,i,row, doc->outheader.cupsNumColors, doc->bitspercolor);
+      cfWritePixel(dst,0,i,pb, doc->outheader.cupsNumColors, doc->outheader.cupsBitsPerColor, doc->outheader.cupsColorOrder);
   }
   return dst;
 }
@@ -824,8 +824,8 @@ static unsigned char *convertLinePlane(unsigned char *src, unsigned char *dst,
       unsigned char *pb;
 
       pb = convertCSpace(src+i*(doc->outputNumColors),pixelBuf1,i,row, doc);
-      pb = convertbits(pb,pixelBuf2,i,row, doc->outheader.cupsNumColors, doc->bitspercolor);
-      writepixel(dst,plane,i,pb, doc->outheader.cupsNumColors, doc->outheader.cupsBitsPerColor, doc->outheader.cupsColorOrder);
+      pb = cfConvertBits(pb,pixelBuf2,i,row, doc->outheader.cupsNumColors, doc->bitspercolor);
+      cfWritePixel(dst,plane,i,pb, doc->outheader.cupsNumColors, doc->outheader.cupsBitsPerColor, doc->outheader.cupsColorOrder);
   }
   return dst;
 }
@@ -840,8 +840,8 @@ static unsigned char *convertLinePlaneSwap(unsigned char *src,
       unsigned char *pb;
 
       pb = convertCSpace(src+(pixels-i-1)*(doc->outputNumColors),pixelBuf1,i,row, doc);
-      pb = convertbits(pb,pixelBuf2,i,row, doc->outheader.cupsNumColors, doc->bitspercolor);
-      writepixel(dst,plane,i,pb, doc->outheader.cupsNumColors, doc->outheader.cupsBitsPerColor, doc->outheader.cupsColorOrder);
+      pb = cfConvertBits(pb,pixelBuf2,i,row, doc->outheader.cupsNumColors, doc->bitspercolor);
+      cfWritePixel(dst,plane,i,pb, doc->outheader.cupsNumColors, doc->outheader.cupsBitsPerColor, doc->outheader.cupsColorOrder);
   }
   return dst;
 }
@@ -1091,7 +1091,7 @@ static int selectConvertFunc(cups_raster_t *raster,
   if (doc->outheader.cupsBitsPerColor == 1 &&
      (doc->outheader.cupsNumColors == 1 ||
      doc->outheader.cupsColorSpace == CUPS_CSPACE_KCMYcm ))
-    doc->bitspercolor = 0; /*Do not convertbits*/
+    doc->bitspercolor = 0; /* Do not convert the bits */
 
   return (0);
 }
@@ -1941,7 +1941,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	{
 	  preBuf1 = (unsigned char *)calloc(doc->outheader.cupsWidth,
 					    sizeof(unsigned char));
-	  oneBitToGrayLine(bp, preBuf1, doc->outheader.cupsWidth);
+	  cfOneBitToGrayLine(bp, preBuf1, doc->outheader.cupsWidth);
 	  bp = preBuf1;
 	}
 	// We are always on color mode 1 (8-bit gray) at this point
@@ -1956,7 +1956,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	{
 	  preBuf2 = (unsigned char *)calloc((doc->outheader.cupsWidth + 7) / 8,
 					    sizeof(unsigned char));
-	  oneBitLine(bp, preBuf2, doc->outheader.cupsWidth,
+	  cfOneBitLine(bp, preBuf2, doc->outheader.cupsWidth,
 		     y - doc->bitmapoffset[1], doc->bi_level);
 	  bp = preBuf2;
 	}

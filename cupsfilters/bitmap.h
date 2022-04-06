@@ -32,16 +32,22 @@ extern "C" {
 
 #include <cups/raster.h>
 
-unsigned char 	*convertbits		(unsigned char *src, unsigned char *dst,
-					unsigned int x, unsigned int y, unsigned int cupsNumColors,unsigned int bits);
-void 		writepixel		(unsigned char *dst, unsigned int plane, unsigned int pixeli, unsigned char *pixelBuf,
-					unsigned int cupsNumColors, unsigned int bits, cups_order_t colororder);
-unsigned char	*reverseOneBitLine	(unsigned char *src, unsigned char *dst, unsigned int pixels, unsigned int size);
-unsigned char	*reverseOneBitLineSwap	(unsigned char *src, unsigned char *dst, unsigned int pixels, unsigned int size);
-void 		*oneBitLine     	(unsigned char *src, unsigned char *dst, unsigned int width,
-					unsigned int row, int bi_level);
-  void 		*oneBitToGrayLine     	(unsigned char *src, unsigned char *dst, unsigned int width);
-unsigned char	*RGB8toKCMYcm   	(unsigned char *src, unsigned char *dst, unsigned int x, unsigned int y);
+unsigned char *cfConvertBits(unsigned char *src, unsigned char *dst,
+			     unsigned int x, unsigned int y,
+			     unsigned int cupsNumColors,unsigned int bits);
+void cfWritePixel(unsigned char *dst, unsigned int plane, unsigned int pixeli,
+		  unsigned char *pixelBuf, unsigned int cupsNumColors,
+		  unsigned int bits, cups_order_t colororder);
+unsigned char *cfReverseOneBitLine(unsigned char *src, unsigned char *dst,
+				   unsigned int pixels, unsigned int size);
+unsigned char *cfReverseOneBitLineSwap(unsigned char *src, unsigned char *dst,
+				       unsigned int pixels, unsigned int size);
+void *cfOneBitLine(unsigned char *src, unsigned char *dst, unsigned int width,
+		   unsigned int row, int bi_level);
+void *cfOneBitToGrayLine(unsigned char *src, unsigned char *dst,
+			 unsigned int width);
+unsigned char *cfRGB8toKCMYcm(unsigned char *src, unsigned char *dst,
+			      unsigned int x, unsigned int y);
 
 #  ifdef __cplusplus
 }

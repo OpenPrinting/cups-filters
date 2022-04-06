@@ -488,7 +488,7 @@ RGBtoWhiteLine(unsigned char *src,
     cupsImageRGBToWhite(src,dst,pixels);
   } else {
     cupsImageRGBToWhite(src,src,pixels);
-    oneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
+    cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
 
   return dst;
@@ -505,7 +505,7 @@ RGBtoBlackLine(unsigned char *src,
     cupsImageRGBToBlack(src,dst,pixels);
   } else {
     cupsImageRGBToBlack(src,src,pixels);
-    oneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
+    cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
   return dst;
 }
@@ -545,7 +545,7 @@ CMYKtoWhiteLine(unsigned char *src,
     cupsImageCMYKToWhite(src,dst,pixels);
   } else {
     cupsImageCMYKToWhite(src,src,pixels);
-    oneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
+    cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
   return dst;
 }
@@ -561,7 +561,7 @@ CMYKtoBlackLine(unsigned char *src,
     cupsImageCMYKToBlack(src,dst,pixels);
   } else {
     cupsImageCMYKToBlack(src,src,pixels);
-    oneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
+    cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
   return dst;
 }
@@ -610,7 +610,7 @@ GraytoBlackLine(unsigned char *src,
     cupsImageWhiteToBlack(src, dst, pixels);
   } else {
     cupsImageWhiteToBlack(src, src, pixels);
-    oneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
+    cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
   return dst;
 }
@@ -660,9 +660,9 @@ convertLine(unsigned char 	*src,	/* I - Input line */
       unsigned char pixelBuf2[MAX_BYTES_PER_PIXEL];
       unsigned char *pb;
       pb = convertcspace(src + i*(data->numcolors), pixelBuf1, row, 1, data);
-      pb = convertbits(pb, pixelBuf2, i, row, data->header.cupsNumColors,
+      pb = cfConvertBits(pb, pixelBuf2, i, row, data->header.cupsNumColors,
 		       data->header.cupsBitsPerColor);
-      writepixel(dst, plane, i, pb, data->header.cupsNumColors,
+      cfWritePixel(dst, plane, i, pb, data->header.cupsNumColors,
 		 data->header.cupsBitsPerColor, data->header.cupsColorOrder);
     }
   }
@@ -697,7 +697,7 @@ convertReverseLine(unsigned char	*src,		/* I - Input line */
   if (data->header.cupsBitsPerColor == 1 && data->header.cupsNumColors == 1)
   {
     buf = convertcspace(src, buf, row, pixels, data);
-    dst = reverseOneBitLine(buf, dst, pixels, data->bytesPerLine);
+    dst = cfReverseOneBitLine(buf, dst, pixels, data->bytesPerLine);
   }
   else if (data->header.cupsBitsPerColor == 8 &&
 	   data->header.cupsColorOrder == CUPS_ORDER_CHUNKED)
@@ -724,9 +724,9 @@ convertReverseLine(unsigned char	*src,		/* I - Input line */
       unsigned char *pb;
       pb = convertcspace(src + (pixels - i - 1)*(data->numcolors), pixelBuf1,
 			 row, 1, data);
-      pb = convertbits(pb, pixelBuf2, i, row, data->header.cupsNumColors,
+      pb = cfConvertBits(pb, pixelBuf2, i, row, data->header.cupsNumColors,
 		       data->header.cupsBitsPerColor);
-      writepixel(dst, plane, i, pb, data->header.cupsNumColors,
+      cfWritePixel(dst, plane, i, pb, data->header.cupsNumColors,
 		 data->header.cupsBitsPerColor, data->header.cupsColorOrder);
     }
   }

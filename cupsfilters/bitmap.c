@@ -82,12 +82,12 @@ unsigned char revTable[256] = {
 };
 
 /*
- * 'convertbits()' - Convert 8 bit raster data to bitspercolor raster data using
+ * 'cfConvertBits()' - Convert 8 bit raster data to bitspercolor raster data using
  *                   ordered dithering.
  */
 
 unsigned char *                        /* O - Output string */
-convertbits(unsigned char *src,        /* I - Input string */
+cfConvertBits(unsigned char *src,        /* I - Input string */
 	    unsigned char *dst,        /* I - Destination string */
 	    unsigned int x,            /* I - Column */
 	    unsigned int y,            /* I - Row */
@@ -156,11 +156,11 @@ convertbits(unsigned char *src,        /* I - Input string */
 }
 
 /*
- * 'writepixel()' - Write a pixel from pixelBuf to dst based on color order.
+ * 'cfWritePixel()' - Write a pixel from pixelBuf to dst based on color order.
  */
 
 void                                  /* O - Exit status */
-writepixel(unsigned char *dst,        /* I - Destination string */
+cfWritePixel(unsigned char *dst,        /* I - Destination string */
 	   unsigned int plane,        /* I - Plane/Band */
 	   unsigned int pixeli,       /* I - Pixel */
 	   unsigned char *pixelBuf,   /* I - Input string */
@@ -290,11 +290,11 @@ writepixel(unsigned char *dst,        /* I - Destination string */
 }
 
 /*
- * 'reverseOneBitLine()' - Reverse the order of pixels in one line of 1-bit raster data.
+ * 'cfReverseOneBitLine()' - Reverse the order of pixels in one line of 1-bit raster data.
  */
 
 unsigned char *                       /* O - Output string */
-reverseOneBitLine(unsigned char *src, /* I - Input line */
+cfReverseOneBitLine(unsigned char *src, /* I - Input line */
 		  unsigned char *dst, /* I - Destination string */
 		  unsigned int pixels,/* I - Number of pixels */
 		  unsigned int size)  /* I - Bytesperline */
@@ -331,12 +331,12 @@ reverseOneBitLine(unsigned char *src, /* I - Input line */
 
 
 /*
- * 'reverseOneBitLineSwap()' - Reverse the order of pixels in one line of 1-bit raster data
+ * 'cfReverseOneBitLineSwap()' - Reverse the order of pixels in one line of 1-bit raster data
  *                             and invert the colors.
  */
 
 unsigned char *                           /* O - Output string */
-reverseOneBitLineSwap(unsigned char *src, /* I - Input line */
+cfReverseOneBitLineSwap(unsigned char *src, /* I - Input line */
 		      unsigned char *dst, /* I - Destination string */
 		      unsigned int pixels,/* I - Number of pixels */
 		      unsigned int size)  /* I - Bytesperline */
@@ -372,11 +372,11 @@ reverseOneBitLineSwap(unsigned char *src, /* I - Input line */
 }
 
 /*
- * 'oneBitLine()' - Convert one line of 8-bit raster data to 1-bit raster data using ordered dithering.
+ * 'cfOneBitLine()' - Convert one line of 8-bit raster data to 1-bit raster data using ordered dithering.
  */
 
 void    			/* O - Output line */
-oneBitLine(unsigned char *src,  /* I - Input line */
+cfOneBitLine(unsigned char *src,  /* I - Input line */
 	   unsigned char *dst,  /* O - Destination line */
 	   unsigned int width,  /* I - Width of raster image in pixels */
 	   unsigned int row,    /* I - Current Row */
@@ -406,12 +406,12 @@ oneBitLine(unsigned char *src,  /* I - Input line */
 }
 
 /*
- * 'oneBitToGrayLine()' - Convert one line of 1-bit raster data to 8-bit
+ * 'cfOneBitToGrayLine()' - Convert one line of 1-bit raster data to 8-bit
  *                        raster data.
  */
 
 void    			      /* O - Output line */
-oneBitToGrayLine(unsigned char *src,  /* I - Input line */
+cfOneBitToGrayLine(unsigned char *src,  /* I - Input line */
 		 unsigned char *dst,  /* O - Destination line */
 		 unsigned int width)  /* I - Width of raster image in pixels */
 {
@@ -428,10 +428,10 @@ oneBitToGrayLine(unsigned char *src,  /* I - Input line */
 }
 
 /*
- * 'RGB8toKCMYcm()' - Convert one pixel of 8-bit RGB data to KCMYcm raster data.
+ * 'cfRGB8toKCMYcm()' - Convert one pixel of 8-bit RGB data to KCMYcm raster data.
  */
 
-unsigned char *RGB8toKCMYcm(unsigned char *src,
+unsigned char *cfRGB8toKCMYcm(unsigned char *src,
 			    unsigned char *dst,
 			    unsigned int x,
 			    unsigned int y)

@@ -591,7 +591,7 @@ static unsigned char *reverseLineSwapBit(unsigned char *src,
   unsigned char *dst, unsigned int row, unsigned int plane,
   unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
-  dst = reverseOneBitLineSwap(src, dst, pixels, size);
+  dst = cfReverseOneBitLineSwap(src, dst, pixels, size);
   return dst;
 }
 
@@ -717,7 +717,7 @@ static unsigned char *lineSwapBit(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
      unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
-  dst = reverseOneBitLine(src, dst, pixels, size);
+  dst = cfReverseOneBitLine(src, dst, pixels, size);
   return dst;
 }
 
@@ -895,7 +895,7 @@ static unsigned char *RGB8toKCMY(unsigned char *src, unsigned char *pixelBuf,
 static unsigned char *RGB8toKCMYcmTemp(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
-  return RGB8toKCMYcm(src, pixelBuf, x, y);
+  return cfRGB8toKCMYcm(src, pixelBuf, x, y);
 }
 
 static unsigned char *RGB8toYMCK(unsigned char *src, unsigned char *pixelBuf,
@@ -927,8 +927,8 @@ static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
       unsigned char *pb;
 
       pb = convertCSpace(src+i*(doc->popplerNumColors),pixelBuf1,i,row, doc);
-      pb = convertbits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
-      writepixel(dst,0,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
+      pb = cfConvertBits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
+      cfWritePixel(dst,0,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
   }
   return dst;
 }
@@ -944,8 +944,8 @@ static unsigned char *convertLineChunkedSwap(unsigned char *src,
       unsigned char *pb;
 
       pb = convertCSpace(src+(pixels-i-1)*(doc->popplerNumColors),pixelBuf1,i,row, doc);
-      pb = convertbits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
-      writepixel(dst,0,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
+      pb = cfConvertBits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
+      cfWritePixel(dst,0,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
   }
   return dst;
 }
@@ -961,8 +961,8 @@ static unsigned char *convertLinePlane(unsigned char *src, unsigned char *dst,
       unsigned char *pb;
 
       pb = convertCSpace(src+i*(doc->popplerNumColors),pixelBuf1,i,row, doc);
-      pb = convertbits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
-      writepixel(dst,plane,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
+      pb = cfConvertBits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
+      cfWritePixel(dst,plane,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
   }
   return dst;
 }
@@ -977,8 +977,8 @@ static unsigned char *convertLinePlaneSwap(unsigned char *src,
       unsigned char *pb;
 
       pb = convertCSpace(src+(pixels-i-1)*(doc->popplerNumColors),pixelBuf1,i,row, doc);
-      pb = convertbits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
-      writepixel(dst,plane,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
+      pb = cfConvertBits(pb,pixelBuf2,i,row, doc->header.cupsNumColors, doc->bitspercolor);
+      cfWritePixel(dst,plane,i,pb, doc->header.cupsNumColors, doc->header.cupsBitsPerColor, doc->header.cupsColorOrder);
   }
   return dst;
 }
@@ -1229,7 +1229,7 @@ static int selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conv
   if (doc->header.cupsBitsPerColor == 1 &&
      (doc->header.cupsNumColors == 1 ||
      doc->header.cupsColorSpace == CUPS_CSPACE_KCMYcm ))
-    doc->bitspercolor = 0; /*Do not convertbits*/
+    doc->bitspercolor = 0; /* Do not convert the bits */
 
   return (0);
 }
@@ -1238,7 +1238,7 @@ static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsign
   unsigned char *temp;
   temp=dst;
   for(unsigned int i=0;i<height;i++){
-    oneBitLine(src + (doc->bytesPerLine)*8*i, dst + (doc->bytesPerLine)*i, doc->header.cupsWidth, i, doc->bi_level);
+    cfOneBitLine(src + (doc->bytesPerLine)*8*i, dst + (doc->bytesPerLine)*i, doc->header.cupsWidth, i, doc->bi_level);
   }
   return temp;
 }
