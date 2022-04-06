@@ -4,16 +4,16 @@
 
 int main()
 {
-  pdfOut *pdf;
+  cf_pdf_out_t *pdf;
 
-  pdf=pdfOut_new();
+  pdf=cfPDFOutNew();
   assert(pdf);
 
-  pdfOut_begin_pdf(pdf);
+  cfPDFOutBeginPDF(pdf);
 
   // bad font
-  int font_obj=pdfOut_add_xref(pdf);
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  int font_obj=cfPDFOutAddXRef(pdf);
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "<</Type/Font\n"
                     "  /Subtype /Type1\n" // /TrueType,/Type3
                     "  /BaseFont /%s\n"
@@ -22,9 +22,9 @@ int main()
                     ,font_obj,"Courier");
   // test
   const int PageWidth=595,PageLength=842;
-  int cobj=pdfOut_add_xref(pdf);
+  int cobj=cfPDFOutAddXRef(pdf);
   const char buf[]="BT /a 10 Tf (abc) Tj ET";
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "<</Length %d\n"
                     ">>\n"
                     "stream\n"
@@ -33,8 +33,8 @@ int main()
                     "endobj\n"
                     ,cobj,strlen(buf),buf);
 
-  int obj=pdfOut_add_xref(pdf);
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  int obj=cfPDFOutAddXRef(pdf);
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "<</Type/Page\n"
                     "  /Parent 1 0 R\n"
                     "  /MediaBox [0 0 %d %d]\n"
@@ -43,10 +43,10 @@ int main()
                     ">>\n"
                     "endobj\n"
                     ,obj,PageWidth,PageLength,cobj,font_obj); // TODO: into pdf->
-  pdfOut_add_page(pdf,obj);
-  pdfOut_finish_pdf(pdf);
+  cfPDFOutAddPage(pdf,obj);
+  cfPDFOutFinishPDF(pdf);
 
-  pdfOut_free(pdf);
+  cfPDFOutFree(pdf);
 
   return 0;
 }

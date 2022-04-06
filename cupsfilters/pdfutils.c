@@ -16,7 +16,7 @@
 #include "pdfutils.h"
 #include "fontembed/embed.h"
 
-void pdfOut_printf(pdfOut *pdf,const char *fmt,...) // {{{
+void cfPDFOutPrintF(cf_pdf_out_t *pdf,const char *fmt,...) // {{{
 {
   assert(pdf);
   int len;
@@ -29,7 +29,7 @@ void pdfOut_printf(pdfOut *pdf,const char *fmt,...) // {{{
 }
 // }}}
 
-void pdfOut_putString(pdfOut *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
+void cfPDFOutPutString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
 {
   assert(pdf);
   assert(str);
@@ -60,7 +60,7 @@ void pdfOut_putString(pdfOut *pdf,const char *str,int len) // {{{ - >len==-1: st
 }
 // }}}
 
-void pdfOut_putHexString(pdfOut *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
+void cfPDFOutPutHexString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
 {
   assert(pdf);
   assert(str);
@@ -76,11 +76,11 @@ void pdfOut_putHexString(pdfOut *pdf,const char *str,int len) // {{{ - >len==-1:
 }
 // }}}
 
-pdfOut *pdfOut_new() // {{{ -  NULL on error 
+cf_pdf_out_t *cfPDFOutNew() // {{{ -  NULL on error 
 {
-  pdfOut *ret=malloc(sizeof(pdfOut));
+  cf_pdf_out_t *ret=malloc(sizeof(cf_pdf_out_t));
   if (ret) {
-    memset(ret,0,sizeof(pdfOut));
+    memset(ret,0,sizeof(cf_pdf_out_t));
   }
 
   return ret;
@@ -88,7 +88,7 @@ pdfOut *pdfOut_new() // {{{ -  NULL on error
 // }}}
 
 // NOTE: uses statically allocated buffer
-const char *pdfOut_to_pdfdate(struct tm *curtm) // {{{
+const char *cfPDFOutToPDFDate(struct tm *curtm) // {{{
 {
   static char curdate[250];
   if (!curtm) {
@@ -106,7 +106,7 @@ const char *pdfOut_to_pdfdate(struct tm *curtm) // {{{
 }
 // }}}
 
-int pdfOut_add_xref(pdfOut *pdf) // {{{  -  returns obj_no
+int cfPDFOutAddXRef(cf_pdf_out_t *pdf) // {{{  -  returns obj_no
 {
   assert(pdf);
   assert(pdf->xrefsize<=pdf->xrefalloc);
@@ -126,7 +126,7 @@ int pdfOut_add_xref(pdfOut *pdf) // {{{  -  returns obj_no
 }
 // }}}
 
-int pdfOut_add_page(pdfOut *pdf,int obj) // {{{ -  returns false on error
+int cfPDFOutAddPage(cf_pdf_out_t *pdf,int obj) // {{{ -  returns false on error
 {
   assert(pdf);
   assert(obj>0);
@@ -147,15 +147,15 @@ int pdfOut_add_page(pdfOut *pdf,int obj) // {{{ -  returns false on error
 }
 // }}}
 
-int pdfOut_add_kv(pdfOut *pdf,const char *key,const char *val) // {{{ -  returns false on error
+int cfPDFOutAddKeyValue(cf_pdf_out_t *pdf,const char *key,const char *val) // {{{ -  returns false on error
 {
   assert(pdf);
   assert(pdf->kvsize<=pdf->kvalloc);
 
   if (pdf->kvsize==pdf->kvalloc) {
-    struct keyval_t *tmp;
+    struct cf_keyval_t *tmp;
     pdf->kvalloc+=10;
-    tmp=realloc(pdf->kv,sizeof(struct keyval_t)*pdf->kvalloc);
+    tmp=realloc(pdf->kv,sizeof(struct cf_keyval_t)*pdf->kvalloc);
     if (!tmp) {
       pdf->kvalloc=-1;
       return 0;
@@ -172,7 +172,7 @@ int pdfOut_add_kv(pdfOut *pdf,const char *key,const char *val) // {{{ -  returns
 }
 // }}}
 
-int pdfOut_begin_pdf(pdfOut *pdf) // ,...output_device?...) // {{{ - false on error
+int cfPDFOutBeginPDF(cf_pdf_out_t *pdf) // ,...output_device?...) // {{{ - false on error
 {
   assert(pdf);
   assert(pdf->kvsize==0); // otherwise: finish_pdf has not been called
@@ -180,16 +180,16 @@ int pdfOut_begin_pdf(pdfOut *pdf) // ,...output_device?...) // {{{ - false on er
 
   pdf->xrefsize=pdf->pagessize=0;
   pdf->filepos=0;
-  pages_obj=pdfOut_add_xref(pdf); // fixed later
+  pages_obj=cfPDFOutAddXRef(pdf); // fixed later
   if (pages_obj!=1) {
     return 0;
   }
-  pdfOut_printf(pdf,"%%PDF-1.3\n");
+  cfPDFOutPrintF(pdf,"%%PDF-1.3\n");
   return 1;
 }
 // }}}
 
-void pdfOut_finish_pdf(pdfOut *pdf) // {{{
+void cfPDFOutFinishPDF(cf_pdf_out_t *pdf) // {{{
 {
   int iA;
   int root_obj,info_obj=0,xref_start;
@@ -198,21 +198,21 @@ void pdfOut_finish_pdf(pdfOut *pdf) // {{{
   // pages 
   const int pages_obj=1;
   pdf->xref[0]=pdf->filepos; // now fix it
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "<</Type/Pages\n"
                     "  /Count %d\n"
                     "  /Kids [",
                     pages_obj,pdf->pagessize);
   for (iA=0;iA<pdf->pagessize;iA++) {
-    pdfOut_printf(pdf,"%d 0 R ",pdf->pages[iA]);
+    cfPDFOutPrintF(pdf,"%d 0 R ",pdf->pages[iA]);
   }
-  pdfOut_printf(pdf,"]\n"
+  cfPDFOutPrintF(pdf,"]\n"
                     ">>\n"
                     "endobj\n");
 
   // rootdict
-  root_obj=pdfOut_add_xref(pdf);
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  root_obj=cfPDFOutAddXRef(pdf);
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "<</Type/Catalog\n"
                     "  /Pages %d 0 R\n"
                     ">>\n"
@@ -221,40 +221,40 @@ void pdfOut_finish_pdf(pdfOut *pdf) // {{{
 
   // info 
   if (pdf->kvsize) {
-    info_obj=pdfOut_add_xref(pdf);
-    pdfOut_printf(pdf,"%d 0 obj\n"
+    info_obj=cfPDFOutAddXRef(pdf);
+    cfPDFOutPrintF(pdf,"%d 0 obj\n"
                       "<<\n",
                       info_obj);
     for (iA=0;iA<pdf->kvsize;iA++) {
-      pdfOut_printf(pdf,"  /%s ",pdf->kv[iA].key);
-      pdfOut_putString(pdf,pdf->kv[iA].value,-1);
-      pdfOut_printf(pdf,"\n");
+      cfPDFOutPrintF(pdf,"  /%s ",pdf->kv[iA].key);
+      cfPDFOutPutString(pdf,pdf->kv[iA].value,-1);
+      cfPDFOutPrintF(pdf,"\n");
     }
-    pdfOut_printf(pdf,">>\n"
+    cfPDFOutPrintF(pdf,">>\n"
                       "endobj\n");
   }
   // TODO: some return-value checking (??)
  
   // write xref
   xref_start=pdf->filepos;
-  pdfOut_printf(pdf,"xref\n"
+  cfPDFOutPrintF(pdf,"xref\n"
                     "%d %d\n"
                     "%010d 65535 f \n",
                     0,pdf->xrefsize+1,0);
   for (iA=0;iA<pdf->xrefsize;iA++) {
-    pdfOut_printf(pdf,"%010ld 00000 n \n",
+    cfPDFOutPrintF(pdf,"%010ld 00000 n \n",
                       pdf->xref[iA]);
   }
-  pdfOut_printf(pdf,"trailer\n"
+  cfPDFOutPrintF(pdf,"trailer\n"
                     "<<\n"
                     "  /Size %d\n"
                     "  /Root %d 0 R\n",
                     pdf->xrefsize+1,
                     root_obj);
   if (info_obj) {
-    pdfOut_printf(pdf,"  /Info %d 0 R\n",info_obj);
+    cfPDFOutPrintF(pdf,"  /Info %d 0 R\n",info_obj);
   }
-  pdfOut_printf(pdf,">>\n"
+  cfPDFOutPrintF(pdf,">>\n"
                     "startxref\n"
                     "%d\n"
                     "%%%%EOF\n",
@@ -270,7 +270,7 @@ void pdfOut_finish_pdf(pdfOut *pdf) // {{{
 }
 // }}}
 
-void pdfOut_free(pdfOut *pdf) // {{{
+void cfPDFOutFree(cf_pdf_out_t *pdf) // {{{
 {
   if (pdf) {
     assert(pdf->kvsize==0); // otherwise: finish_pdf has not been called
@@ -284,7 +284,7 @@ void pdfOut_free(pdfOut *pdf) // {{{
 
 static void pdfOut_outfn(const char *buf,int len,void *context) // {{{
 {
-  pdfOut *pdf=(pdfOut *)context;
+  cf_pdf_out_t *pdf=(cf_pdf_out_t *)context;
 
   if (fwrite(buf,1,len,stdout)!=len) {
     perror("Short write");
@@ -295,7 +295,7 @@ static void pdfOut_outfn(const char *buf,int len,void *context) // {{{
 }
 // }}}
 
-int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{ 
+int cfPDFOutWriteFont(cf_pdf_out_t *pdf,EMB_PARAMS *emb) // {{{ 
 {
   assert(pdf);
   assert(emb);
@@ -303,13 +303,13 @@ int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{
   EMB_PDF_FONTDESCR *fdes=emb_pdf_fontdescr(emb);
   if (!fdes) {
     if (emb->outtype==EMB_FMT_STDFONT) { // std-14 font
-      const int f_obj=pdfOut_add_xref(pdf);
+      const int f_obj=cfPDFOutAddXRef(pdf);
       char *res=emb_pdf_simple_stdfont(emb);
       if (!res) {
         return 0;
       }
 
-      pdfOut_printf(pdf,"%d 0 obj\n"
+      cfPDFOutPrintF(pdf,"%d 0 obj\n"
                         "%s"
                         "endobj\n"
                         ,f_obj,res);
@@ -319,54 +319,54 @@ int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{
     return 0;
   }
 
-  const int ff_obj=pdfOut_add_xref(pdf);
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  const int ff_obj=cfPDFOutAddXRef(pdf);
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "<</Length %d 0 R\n"
                     ,ff_obj,ff_obj+1);
   if (emb_pdf_get_fontfile_subtype(emb)) {
-    pdfOut_printf(pdf,"  /Subtype /%s\n",
+    cfPDFOutPrintF(pdf,"  /Subtype /%s\n",
                       emb_pdf_get_fontfile_subtype(emb));
   }
   if (emb->outtype==EMB_FMT_TTF) {
-    pdfOut_printf(pdf,"  /Length1 %d 0 R\n"
+    cfPDFOutPrintF(pdf,"  /Length1 %d 0 R\n"
                       ,ff_obj+2);
   } else if (emb->outtype==EMB_FMT_T1) { // TODO
-    pdfOut_printf(pdf,"  /Length1 ?\n"
+    cfPDFOutPrintF(pdf,"  /Length1 ?\n"
                       "  /Length2 ?\n"
                       "  /Length3 ?\n"
                       );
   }
-  pdfOut_printf(pdf,">>\n"
+  cfPDFOutPrintF(pdf,">>\n"
                     "stream\n");
   long streamsize=-pdf->filepos;
   const int outlen=emb_embed(emb,pdfOut_outfn,pdf);
   streamsize+=pdf->filepos;
-  pdfOut_printf(pdf,"\nendstream\n"
+  cfPDFOutPrintF(pdf,"\nendstream\n"
                     "endobj\n");
 
-  const int l0_obj=pdfOut_add_xref(pdf);
+  const int l0_obj=cfPDFOutAddXRef(pdf);
   assert(l0_obj==ff_obj+1);
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "%ld\n"
                     "endobj\n"
                     ,l0_obj,streamsize);
 
   if (emb->outtype==EMB_FMT_TTF) {
-    const int l1_obj=pdfOut_add_xref(pdf);
+    const int l1_obj=cfPDFOutAddXRef(pdf);
     assert(l1_obj==ff_obj+2);
-    pdfOut_printf(pdf,"%d 0 obj\n"
+    cfPDFOutPrintF(pdf,"%d 0 obj\n"
                       "%d\n"
                       "endobj\n"
                       ,l1_obj,outlen);
   }
 
-  const int fd_obj=pdfOut_add_xref(pdf);
+  const int fd_obj=cfPDFOutAddXRef(pdf);
   char *res=emb_pdf_simple_fontdescr(emb,fdes,ff_obj);
   if (!res) {
     free(fdes);
     return 0;
   }
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "%s"
                     "endobj\n"
                     ,fd_obj,res);
@@ -377,14 +377,14 @@ int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{
     free(fdes);
     return 0;
   }
-  const int f_obj=pdfOut_add_xref(pdf);
+  const int f_obj=cfPDFOutAddXRef(pdf);
   res=emb_pdf_simple_font(emb,fdes,fwid,fd_obj);
   if (!res) {
     free(fwid);
     free(fdes);
     return 0;
   }
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "%s"
                     "endobj\n"
                     ,f_obj,res);
@@ -397,8 +397,8 @@ int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{
       free(fdes);
       return 0;
     }
-    const int cf_obj=pdfOut_add_xref(pdf);
-    pdfOut_printf(pdf,"%d 0 obj\n"
+    const int cf_obj=cfPDFOutAddXRef(pdf);
+    cfPDFOutPrintF(pdf,"%d 0 obj\n"
                       "%s"
                       "endobj\n"
                       ,cf_obj,res);
@@ -416,7 +416,7 @@ int pdfOut_write_font(pdfOut *pdf,EMB_PARAMS *emb) // {{{
 one_page(...parent,resources,mediabox,contents);
 {
 //                    "  /Resources %d 0 R\n"
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "<</Type/Page\n"
                     "  /Parent 1 0 R\n"
                     "  /MediaBox [0 0 %d %d]\n"

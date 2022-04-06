@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-static inline void write_string(pdfOut *pdf,EMB_PARAMS *emb,const char *str) // {{{
+static inline void write_string(cf_pdf_out_t *pdf,EMB_PARAMS *emb,const char *str) // {{{
 {
   assert(pdf);
   assert(emb);
@@ -25,19 +25,19 @@ static inline void write_string(pdfOut *pdf,EMB_PARAMS *emb,const char *str) // 
       emb_get(emb,(unsigned char)str[iA]);
       // TODO: pdf: otf_from_pdf_default_encoding
     }
-    pdfOut_putString(pdf,str,-1);
+    cfPDFOutPutString(pdf,str,-1);
   }
 }
 // }}}
 
 int main()
 {
-  pdfOut *pdf;
+  cf_pdf_out_t *pdf;
 
-  pdf=pdfOut_new();
+  pdf=cfPDFOutNew();
   assert(pdf);
 
-  pdfOut_begin_pdf(pdf);
+  cfPDFOutBeginPDF(pdf);
 
   // font, pt.1 
   const char *fn=TESTFONT;
@@ -62,33 +62,33 @@ int main()
 
   // test
   const int PageWidth=595,PageLength=842;
-  const int cobj=pdfOut_add_xref(pdf);
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  const int cobj=cfPDFOutAddXRef(pdf);
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "<</Length %d 0 R\n"
                     ">>\n"
                     "stream\n"
                     ,cobj,cobj+1);
   long streamlen=-pdf->filepos;
-  pdfOut_printf(pdf,"BT /a 10 Tf ");
+  cfPDFOutPrintF(pdf,"BT /a 10 Tf ");
   write_string(pdf,emb,"Test");
-  pdfOut_printf(pdf," Tj ET");
+  cfPDFOutPrintF(pdf," Tj ET");
 
   streamlen+=pdf->filepos;
-  pdfOut_printf(pdf,"\nendstream\n"
+  cfPDFOutPrintF(pdf,"\nendstream\n"
                     "endobj\n");
-  const int clobj=pdfOut_add_xref(pdf);
+  const int clobj=cfPDFOutAddXRef(pdf);
   assert(clobj==cobj+1);
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "%d\n"
                     "endobj\n"
                     ,clobj,streamlen);
 
   // font
-  int font_obj=pdfOut_write_font(pdf,emb);
+  int font_obj=cfPDFOutWriteFont(pdf,emb);
   assert(font_obj);
 
-  int obj=pdfOut_add_xref(pdf);
-  pdfOut_printf(pdf,"%d 0 obj\n"
+  int obj=cfPDFOutAddXRef(pdf);
+  cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "<</Type/Page\n"
                     "  /Parent 1 0 R\n"
                     "  /MediaBox [0 0 %d %d]\n"
@@ -97,10 +97,10 @@ int main()
                     ">>\n"
                     "endobj\n"
                     ,obj,PageWidth,PageLength,cobj,font_obj); // TODO: into pdf->
-  pdfOut_add_page(pdf,obj);
-  pdfOut_finish_pdf(pdf);
+  cfPDFOutAddPage(pdf,obj);
+  cfPDFOutFinishPDF(pdf);
 
-  pdfOut_free(pdf);
+  cfPDFOutFree(pdf);
 
   emb_close(emb);
 

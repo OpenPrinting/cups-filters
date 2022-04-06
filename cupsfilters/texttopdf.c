@@ -489,7 +489,7 @@ typedef struct texttopdf_doc_s
   unsigned char	Codes[65536];	/* Unicode glyph mapping to font */
   int		Widths[256];	/* Widths of each font */
   int		Directions[256];/* Text directions for each font */
-  pdfOut	*pdf;
+  cf_pdf_out_t	*pdf;
   int		FontResource;   /* Object number of font resource dictionary */
   float		FontScaleX, FontScaleY; /* The font matrix */
   lchar_t	*Title, *Date;	/* The title and date strings */
@@ -1601,7 +1601,7 @@ WriteEpilogue(texttopdf_doc_t *doc)
       if ((!emb->subset) ||
 	  (bits_used(emb->subset, emb->font->sfnt->numGlyphs)))
       {
-        emb->font->fobj=pdfOut_write_font(doc->pdf,emb);
+        emb->font->fobj=cfPDFOutWriteFont(doc->pdf,emb);
         assert(emb->font->fobj);
       }
     }
@@ -1613,7 +1613,7 @@ WriteEpilogue(texttopdf_doc_t *doc)
 
   // now fix FontResource
   doc->pdf->xref[doc->FontResource-1]=doc->pdf->filepos;
-  pdfOut_printf(doc->pdf,"%d 0 obj\n"
+  cfPDFOutPrintF(doc->pdf,"%d 0 obj\n"
                     "<<\n",
                     doc->FontResource);
 
@@ -1624,17 +1624,17 @@ WriteEpilogue(texttopdf_doc_t *doc)
       EMB_PARAMS *emb=doc->Fonts[j][i];
       if (emb->font->fobj) // used
       {
-        pdfOut_printf(doc->pdf,"  /%s%02x %d 0 R\n",names[i],j,emb->font->fobj);
+        cfPDFOutPrintF(doc->pdf,"  /%s%02x %d 0 R\n",names[i],j,emb->font->fobj);
       }
     }
   }
 
-  pdfOut_printf(doc->pdf,">>\n"
+  cfPDFOutPrintF(doc->pdf,">>\n"
                     "endobj\n");
 
-  pdfOut_finish_pdf(doc->pdf);
+  cfPDFOutFinishPDF(doc->pdf);
 
-  pdfOut_free(doc->pdf);
+  cfPDFOutFree(doc->pdf);
 }
 
 /*
@@ -1646,8 +1646,8 @@ WritePage(texttopdf_doc_t *doc)
 {
   int	line;			/* Current line */
 
-  int content=pdfOut_add_xref(doc->pdf);
-  pdfOut_printf(doc->pdf,"%d 0 obj\n"
+  int content=cfPDFOutAddXRef(doc->pdf);
+  cfPDFOutPrintF(doc->pdf,"%d 0 obj\n"
 		"<</Length %d 0 R\n"
 		">>\n"
 		"stream\n"
@@ -1663,19 +1663,19 @@ WritePage(texttopdf_doc_t *doc)
     write_line(line, doc->Page[line], doc);
 
   size+= ((doc->pdf->filepos)+2);
-  pdfOut_printf(doc->pdf,"Q\n"
+  cfPDFOutPrintF(doc->pdf,"Q\n"
 		"endstream\n"
 		"endobj\n");
   
-  int len_obj=pdfOut_add_xref(doc->pdf);
+  int len_obj=cfPDFOutAddXRef(doc->pdf);
   assert(len_obj==content+1);
-  pdfOut_printf(doc->pdf,"%d 0 obj\n"
+  cfPDFOutPrintF(doc->pdf,"%d 0 obj\n"
 		"%ld\n"
 		"endobj\n",
 		len_obj,size);
 
-  int obj=pdfOut_add_xref(doc->pdf);
-  pdfOut_printf(doc->pdf,"%d 0 obj\n"
+  int obj=cfPDFOutAddXRef(doc->pdf);
+  cfPDFOutPrintF(doc->pdf,"%d 0 obj\n"
 		"<</Type/Page\n"
 		"  /Parent 1 0 R\n"
 		"  /MediaBox [0 0 %.0f %.0f]\n"
@@ -1685,7 +1685,7 @@ WritePage(texttopdf_doc_t *doc)
 		"endobj\n",
 		obj,doc->PageWidth, doc->PageLength, content,
 		doc->FontResource);
-  pdfOut_add_page(doc->pdf,obj);
+  cfPDFOutAddPage(doc->pdf,obj);
 
   memset(doc->Page[0], 0,
 	 sizeof(lchar_t) * (doc->SizeColumns) * (doc->SizeLines));
@@ -1771,22 +1771,22 @@ WriteProlog(const char *title,		/* I - Title of job */
   */
 
   assert(!(doc->pdf));
-  doc->pdf = pdfOut_new();
+  doc->pdf = cfPDFOutNew();
   assert(doc->pdf);
 
-  pdfOut_begin_pdf(doc->pdf);
-  pdfOut_printf(doc->pdf,"%%cupsRotation: %d\n",
+  cfPDFOutBeginPDF(doc->pdf);
+  cfPDFOutPrintF(doc->pdf,"%%cupsRotation: %d\n",
 		(doc->Orientation & 3) * 90); // TODO?
 
-  pdfOut_add_kv(doc->pdf,"Creator","texttopdf/" PACKAGE_VERSION);
+  cfPDFOutAddKeyValue(doc->pdf,"Creator","texttopdf/" PACKAGE_VERSION);
 
   curtime = time(NULL);
   curtm   = localtime(&curtime);
   strftime(curdate, sizeof(curdate), "%c", curtm);
 
-  pdfOut_add_kv(doc->pdf,"CreationDate",pdfOut_to_pdfdate(curtm));
-  pdfOut_add_kv(doc->pdf,"Title",title);
-  pdfOut_add_kv(doc->pdf,"Author",user); // was(PostScript): /For
+  cfPDFOutAddKeyValue(doc->pdf,"CreationDate",cfPDFOutToPDFDate(curtm));
+  cfPDFOutAddKeyValue(doc->pdf,"Title",title);
+  cfPDFOutAddKeyValue(doc->pdf,"Author",user); // was(PostScript): /For
   // }}}
 
  /*
@@ -2273,7 +2273,7 @@ WriteProlog(const char *title,		/* I - Title of job */
   doc->FontScaleY=68.0 / (doc->LinesPerInch);
 
   // allocate now, for pages to use. will be fixed in epilogue
-  doc->FontResource=pdfOut_add_xref(doc->pdf);
+  doc->FontResource=cfPDFOutAddXRef(doc->pdf);
 
   if (doc->PrettyPrint)
   {
@@ -2507,7 +2507,7 @@ write_string(int     col,	/* I - Start column */
     y -= 36.0 / (float)(doc->LinesPerInch);
 
   if (attr & ATTR_UNDERLINE)
-    pdfOut_printf(doc->pdf,"q 0.5 w 0 g %.3f %.3f m %.3f %.3f l S Q ",
+    cfPDFOutPrintF(doc->pdf,"q 0.5 w 0 g %.3f %.3f m %.3f %.3f l S Q ",
                       x, y - 6.8 / (doc->LinesPerInch),
                       x + (float)len * 72.0 / (float)(doc->CharsPerInch),
                       y - 6.8 / (doc->LinesPerInch));
@@ -2516,22 +2516,22 @@ write_string(int     col,	/* I - Start column */
   {
     if (doc->ColorDevice) {
       if (attr & ATTR_RED)
-        pdfOut_printf(doc->pdf,"0.5 0 0 rg\n");
+        cfPDFOutPrintF(doc->pdf,"0.5 0 0 rg\n");
       else if (attr & ATTR_GREEN)
-        pdfOut_printf(doc->pdf,"0 0.5 0 rg\n");
+        cfPDFOutPrintF(doc->pdf,"0 0.5 0 rg\n");
       else if (attr & ATTR_BLUE)
-        pdfOut_printf(doc->pdf,"0 0 0.5 rg\n");
+        cfPDFOutPrintF(doc->pdf,"0 0 0.5 rg\n");
       else
-        pdfOut_printf(doc->pdf,"0 g\n");
+        cfPDFOutPrintF(doc->pdf,"0 g\n");
     } else {
       if ( (attr & ATTR_RED)||(attr & ATTR_GREEN)||(attr & ATTR_BLUE) )
-        pdfOut_printf(doc->pdf,"0.2 g\n");
+        cfPDFOutPrintF(doc->pdf,"0.2 g\n");
       else
-        pdfOut_printf(doc->pdf,"0 g\n");
+        cfPDFOutPrintF(doc->pdf,"0 g\n");
     }
   }
   else
-    pdfOut_printf(doc->pdf,"0 g\n");
+    cfPDFOutPrintF(doc->pdf,"0 g\n");
   
   write_font_str(x,y,attr & ATTR_FONT,s,len, doc);
 }
@@ -2548,17 +2548,17 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str,
   if (len==-1) {
     for (len=0;str[len].ch;len++);
   }
-  pdfOut_printf(doc->pdf,"BT\n");
+  cfPDFOutPrintF(doc->pdf,"BT\n");
 
   if (x == (int)x)
-    pdfOut_printf(doc->pdf,"  %.0f ", x);
+    cfPDFOutPrintF(doc->pdf,"  %.0f ", x);
   else
-    pdfOut_printf(doc->pdf,"  %.3f ", x);
+    cfPDFOutPrintF(doc->pdf,"  %.3f ", x);
 
   if (y == (int)y)
-    pdfOut_printf(doc->pdf,"%.0f Td\n", y);
+    cfPDFOutPrintF(doc->pdf,"%.0f Td\n", y);
   else
-    pdfOut_printf(doc->pdf,"%.3f Td\n", y);
+    cfPDFOutPrintF(doc->pdf,"%.3f Td\n", y);
 
   int lastfont,font;
 
@@ -2581,7 +2581,7 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str,
 
     if (otf) // TODO?
     {
-      pdfOut_printf(doc->pdf,"  %.3f Tz\n",
+      cfPDFOutPrintF(doc->pdf,"  %.3f Tz\n",
 		    doc->FontScaleX * 600.0 /
 		    (otf_get_width(otf, 4) * 1000.0 /
 		     otf->unitsPerEm) * 100.0 / (doc->FontScaleY)); // TODO? 
@@ -2591,11 +2591,11 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str,
     }
     else
     {
-      pdfOut_printf(doc->pdf,"  %.3f Tz\n",
+      cfPDFOutPrintF(doc->pdf,"  %.3f Tz\n",
 		    doc->FontScaleX*100.0/(doc->FontScaleY)); // TODO?
     }
 
-    pdfOut_printf(doc->pdf,"  /%s%02x %.3f Tf <",
+    cfPDFOutPrintF(doc->pdf,"  /%s%02x %.3f Tf <",
 		  names[fontid],lastfont,doc->FontScaleY);
 
     while (len > 0)
@@ -2619,20 +2619,20 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str,
       if (otf) // TODO
       {
         const unsigned short gid=emb_get(emb,ch);
-        pdfOut_printf(doc->pdf, "%04x", gid);
+        cfPDFOutPrintF(doc->pdf, "%04x", gid);
       }
       else // std 14 font with 7-bit us-ascii uses single byte encoding, TODO
       {
-        pdfOut_printf(doc->pdf, "%02x", ch);
+        cfPDFOutPrintF(doc->pdf, "%02x", ch);
       }
 
       len --;
       str ++;
     }
 
-    pdfOut_printf(doc->pdf,"> Tj\n");
+    cfPDFOutPrintF(doc->pdf,"> Tj\n");
   }
-  pdfOut_printf(doc->pdf,"ET\n");
+  cfPDFOutPrintF(doc->pdf,"ET\n");
 }
 // }}}
 
@@ -2648,7 +2648,7 @@ static float stringwidth_x(lchar_t *str, texttopdf_doc_t * doc)
 static void write_pretty_header(texttopdf_doc_t *doc) // {{{
 {
   float x,y;
-  pdfOut_printf(doc->pdf,"q\n"
+  cfPDFOutPrintF(doc->pdf,"q\n"
 		"0.9 g\n");
 
   if (doc->Duplex && (doc->NumPages & 1) == 0)
@@ -2662,10 +2662,10 @@ static void write_pretty_header(texttopdf_doc_t *doc) // {{{
     y = doc->PageTop + 72.0f / (doc->LinesPerInch);
   }
 
-  pdfOut_printf(doc->pdf,"1 0 0 1 %.3f %.3f cm\n",x,y); // translate
-  pdfOut_printf(doc->pdf,"0 0 %.3f %.3f re f\n",
+  cfPDFOutPrintF(doc->pdf,"1 0 0 1 %.3f %.3f cm\n",x,y); // translate
+  cfPDFOutPrintF(doc->pdf,"0 0 %.3f %.3f re f\n",
 		doc->PageRight - doc->PageLeft, 144.0f / (doc->LinesPerInch));
-  pdfOut_printf(doc->pdf,"0 g 0 G\n");
+  cfPDFOutPrintF(doc->pdf,"0 g 0 G\n");
 
   if (doc->Duplex && (doc->NumPages & 1) == 0)
   {
@@ -2701,6 +2701,6 @@ static void write_pretty_header(texttopdf_doc_t *doc) // {{{
   write_font_str(x, y, ATTR_BOLD, pagestr, -1, doc);
   free(pagestr);
 
-  pdfOut_printf(doc->pdf, "Q\n");
+  cfPDFOutPrintF(doc->pdf, "Q\n");
 }
 // }}}
