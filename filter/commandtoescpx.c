@@ -89,19 +89,19 @@ main(int  argc,					/* I - Number of command-line arguments */
   */
 
   if (ppd->model_number & ESCP_USB)
-    cupsWritePrintData("\000\000\000\033\001@EJL 1284.4\n@EJL     \n\033@", 29);
+    cfWritePrintData("\000\000\000\033\001@EJL 1284.4\n@EJL     \n\033@", 29);
 
  /*
   * Reset the printer...
   */
 
-  cupsWritePrintData("\033@", 2);
+  cfWritePrintData("\033@", 2);
 
  /*
   * Enter remote mode...
   */
 
-  cupsWritePrintData("\033(R\010\000\000REMOTE1", 13);
+  cfWritePrintData("\033(R\010\000\000REMOTE1", 13);
   feedpage = 0;
 
  /*
@@ -141,7 +141,7 @@ main(int  argc,					/* I - Number of command-line arguments */
       * Clean heads...
       */
 
-      cupsWritePrintData("CH\002\000\000\000", 6);
+      cfWritePrintData("CH\002\000\000\000", 6);
     }
     else if (strncasecmp(lineptr, "PrintAlignmentPage", 18) == 0)
     {
@@ -153,7 +153,7 @@ main(int  argc,					/* I - Number of command-line arguments */
 
       phase = atoi(lineptr + 18);
 
-      cupsWritePrintData("DT\003\000\000", 5);
+      cfWritePrintData("DT\003\000\000", 5);
       putchar(phase & 255);
       putchar(phase >> 8);
       feedpage = 1;
@@ -164,8 +164,8 @@ main(int  argc,					/* I - Number of command-line arguments */
       * Print version info and nozzle check...
       */
 
-      cupsWritePrintData("VI\002\000\000\000", 6);
-      cupsWritePrintData("NC\002\000\000\000", 6);
+      cfWritePrintData("VI\002\000\000\000", 6);
+      cfWritePrintData("NC\002\000\000\000", 6);
       feedpage = 1;
     }
     else if (strncasecmp(lineptr, "ReportLevels", 12) == 0)
@@ -174,7 +174,7 @@ main(int  argc,					/* I - Number of command-line arguments */
       * Report ink levels...
       */
 
-      cupsWritePrintData("IQ\001\000\001", 5);
+      cfWritePrintData("IQ\001\000\001", 5);
     }
     else if (strncasecmp(lineptr, "SetAlignment", 12) == 0)
     {
@@ -190,12 +190,12 @@ main(int  argc,					/* I - Number of command-line arguments */
         continue;
       }
 
-      cupsWritePrintData("DA\004\000", 4);
+      cfWritePrintData("DA\004\000", 4);
       putchar(0);
       putchar(phase);
       putchar(0);
       putchar(x);
-      cupsWritePrintData("SV\000\000", 4);
+      cfWritePrintData("SV\000\000", 4);
     }
     else
       fprintf(stderr, "ERROR: Invalid printer command \"%s\"!\n", lineptr);
@@ -205,7 +205,7 @@ main(int  argc,					/* I - Number of command-line arguments */
   * Exit remote mode...
   */
 
-  cupsWritePrintData("\033\000\000\000", 4);
+  cfWritePrintData("\033\000\000\000", 4);
 
  /*
   * Eject the page as needed...
@@ -224,7 +224,7 @@ main(int  argc,					/* I - Number of command-line arguments */
   * Reset the printer...
   */
 
-  cupsWritePrintData("\033@", 2);
+  cfWritePrintData("\033@", 2);
 
  /*
   * Close the command file and return...

@@ -31,9 +31,9 @@
 #endif /* USE_LCMS1 */
 
 
-void	test_gray(cups_sample_t *samples, int num_samples,
+void	test_gray(cf_sample_t *samples, int num_samples,
 	          int cube_size, int num_comps, const char *basename);
-void	test_rgb(cups_sample_t *samples, int num_samples,
+void	test_rgb(cf_sample_t *samples, int num_samples,
 		 int cube_size, int num_comps,
 		 const char *basename);
 
@@ -46,7 +46,7 @@ int						/* O - Exit status */
 main(int  argc,					/* I - Number of command-line arguments */
      char *argv[])				/* I - Command-line arguments */
 {
-  static cups_sample_t	CMYK[] =		/* Basic 4-color sep */
+  static cf_sample_t	CMYK[] =		/* Basic 4-color sep */
 			{
 			  /*{ r,   g,   b   }, { C,   M,   Y,   K   }*/
 			  { { 0,   0,   0   }, { 0,   0,   0,   255 } },
@@ -87,7 +87,7 @@ main(int  argc,					/* I - Number of command-line arguments */
  */
 
 void
-test_gray(cups_sample_t *samples,	/* I - Sample values */
+test_gray(cf_sample_t *samples,	/* I - Sample values */
           int           num_samples,	/* I - Number of samples */
 	  int           cube_size,	/* I - Cube size */
           int           num_comps,	/* I - Number of components */
@@ -103,10 +103,10 @@ test_gray(cups_sample_t *samples,	/* I - Sample values */
   unsigned char		output[48000],	/* Output rgb data */
 			*outptr;	/* Pointer in output */
   FILE			*in;		/* Input PPM file */
-  FILE			*out[CUPS_MAX_CHAN];
+  FILE			*out[CF_MAX_CHAN];
 					/* Output PGM files */
   FILE			*comp;		/* Composite output */
-  cups_rgb_t		*rgb;		/* Color separation */
+  cf_rgb_t		*rgb;		/* Color separation */
 
 
  /*
@@ -126,7 +126,7 @@ test_gray(cups_sample_t *samples,	/* I - Sample values */
   * Create the color rgb...
   */
 
-  rgb = cupsRGBNew(num_samples, samples, cube_size, num_comps);
+  rgb = cfRGBNew(num_samples, samples, cube_size, num_comps);
 
  /*
   * Open the color rgb files...
@@ -153,7 +153,7 @@ test_gray(cups_sample_t *samples,	/* I - Sample values */
   {
     fread(input, width, 1, in);
 
-    cupsRGBDoGray(rgb, input, output, width);
+    cfRGBDoGray(rgb, input, output, width);
 
     for (x = 0, outptr = output; x < width; x ++, outptr += num_comps)
     {
@@ -208,7 +208,7 @@ test_gray(cups_sample_t *samples,	/* I - Sample values */
   fclose(comp);
   fclose(in);
 
-  cupsRGBDelete(rgb);
+  cfRGBDelete(rgb);
 }
 
 
@@ -217,7 +217,7 @@ test_gray(cups_sample_t *samples,	/* I - Sample values */
  */
 
 void
-test_rgb(cups_sample_t *samples,	/* I - Sample values */
+test_rgb(cf_sample_t *samples,	/* I - Sample values */
          int           num_samples,	/* I - Number of samples */
 	 int           cube_size,	/* I - Cube size */
          int           num_comps,	/* I - Number of components */
@@ -233,10 +233,10 @@ test_rgb(cups_sample_t *samples,	/* I - Sample values */
   unsigned char		output[48000],	/* Output rgb data */
 			*outptr;	/* Pointer in output */
   FILE			*in;		/* Input PPM file */
-  FILE			*out[CUPS_MAX_CHAN];
+  FILE			*out[CF_MAX_CHAN];
 					/* Output PGM files */
   FILE			*comp;		/* Composite output */
-  cups_rgb_t		*rgb;		/* Color separation */
+  cf_rgb_t		*rgb;		/* Color separation */
 
 
  /*
@@ -256,7 +256,7 @@ test_rgb(cups_sample_t *samples,	/* I - Sample values */
   * Create the color rgb...
   */
 
-  rgb = cupsRGBNew(num_samples, samples, cube_size, num_comps);
+  rgb = cfRGBNew(num_samples, samples, cube_size, num_comps);
 
  /*
   * Open the color rgb files...
@@ -283,7 +283,7 @@ test_rgb(cups_sample_t *samples,	/* I - Sample values */
   {
     fread(input, width, 3, in);
 
-    cupsRGBDoRGB(rgb, input, output, width);
+    cfRGBDoRGB(rgb, input, output, width);
 
     for (x = 0, outptr = output; x < width; x ++, outptr += num_comps)
     {
@@ -338,6 +338,6 @@ test_rgb(cups_sample_t *samples,	/* I - Sample values */
   fclose(comp);
   fclose(in);
 
-  cupsRGBDelete(rgb);
+  cfRGBDelete(rgb);
 }
 

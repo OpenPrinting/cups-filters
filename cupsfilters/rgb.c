@@ -11,11 +11,11 @@
  *
  * Contents:
  *
- *   cupsRGBDelete() - Delete a color separation.
- *   cupsRGBDoGray() - Do a grayscale separation...
- *   cupsRGBDoRGB()  - Do a RGB separation...
- *   cupsRGBLoad()   - Load a RGB color profile from a PPD file.
- *   cupsRGBNew()    - Create a new RGB color separation.
+ *   cfRGBDelete() - Delete a color separation.
+ *   cfRGBDoGray() - Do a grayscale separation...
+ *   cfRGBDoRGB()  - Do a RGB separation...
+ *   cfRGBLoad()   - Load a RGB color profile from a PPD file.
+ *   cfRGBNew()    - Create a new RGB color separation.
  */
 
 /*
@@ -26,11 +26,11 @@
 
 
 /*
- * 'cupsRGBDelete()' - Delete a color separation.
+ * 'cfRGBDelete()' - Delete a color separation.
  */
 
 void
-cupsRGBDelete(cups_rgb_t *rgbptr)	/* I - Color separation */
+cfRGBDelete(cf_rgb_t *rgbptr)	/* I - Color separation */
 {
   if (rgbptr == NULL)
     return;
@@ -44,11 +44,11 @@ cupsRGBDelete(cups_rgb_t *rgbptr)	/* I - Color separation */
 
 
 /*
- * 'cupsRGBDoGray()' - Do a grayscale separation...
+ * 'cfRGBDoGray()' - Do a grayscale separation...
  */
 
 void
-cupsRGBDoGray(cups_rgb_t          *rgbptr,
+cfRGBDoGray(cf_rgb_t          *rgbptr,
 					/* I - Color separation */
 	      const unsigned char *input,
 					/* I - Input grayscale pixels */
@@ -95,7 +95,7 @@ cupsRGBDoGray(cups_rgb_t          *rgbptr,
 
     num_pixels --;
 
-    g = cups_srgb_lut[*input++];
+    g = cf_srgb_lut[*input++];
 
     if (g == lastgray)
     {
@@ -157,11 +157,11 @@ cupsRGBDoGray(cups_rgb_t          *rgbptr,
 
 
 /*
- * 'cupsRGBDoRGB()' - Do a RGB separation...
+ * 'cfRGBDoRGB()' - Do a RGB separation...
  */
 
 void
-cupsRGBDoRGB(cups_rgb_t          *rgbptr,
+cfRGBDoRGB(cf_rgb_t          *rgbptr,
 					/* I - Color separation */
 	     const unsigned char *input,
 					/* I - Input RGB pixels */
@@ -215,9 +215,9 @@ cupsRGBDoRGB(cups_rgb_t          *rgbptr,
 
     num_pixels --;
 
-    r   = cups_srgb_lut[*input++];
-    g   = cups_srgb_lut[*input++];
-    b   = cups_srgb_lut[*input++];
+    r   = cf_srgb_lut[*input++];
+    g   = cf_srgb_lut[*input++];
+    b   = cf_srgb_lut[*input++];
     rgb = (((r << 8) | g) << 8) | b;
 
     if (rgb == lastrgb)
@@ -300,11 +300,11 @@ cupsRGBDoRGB(cups_rgb_t          *rgbptr,
 
 
 /*
- * 'cupsRGBLoad()' - Load a RGB color profile from a PPD file.
+ * 'cfRGBLoad()' - Load a RGB color profile from a PPD file.
  */
 
-cups_rgb_t *				/* O - New color profile */
-cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
+cf_rgb_t *				/* O - New color profile */
+cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
             const char *colormodel,	/* I - Color model */
             const char *media,		/* I - Media type */
             const char *resolution,	/* I - Resolution */
@@ -315,11 +315,11 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
 		cube_size,		/* Size of color lookup cube */
 		num_channels,		/* Number of color channels */
 		num_samples;		/* Number of color samples */
-  cups_sample_t	*samples;		/* Color samples */
+  cf_sample_t	*samples;		/* Color samples */
   float		values[7];		/* Color sample values */
   char		spec[PPD_MAX_NAME];	/* Profile name */
   ppd_attr_t	*attr;			/* Attribute from PPD file */
-  cups_rgb_t	*rgbptr;		/* RGB color profile */
+  cf_rgb_t	*rgbptr;		/* RGB color profile */
 
 
  /*
@@ -330,7 +330,7 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
   *    cupsRGBSample   - Specifies an RGB to CMYK color sample
   */
 
-  if ((attr = cupsFindAttr(ppd, "cupsRGBProfile", colormodel, media,
+  if ((attr = cfFindAttr(ppd, "cupsRGBProfile", colormodel, media,
                            resolution, spec, sizeof(spec), log, ld)) == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -348,7 +348,7 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
   }
 
   if (cube_size < 2 || cube_size > 16 ||
-      num_channels < 1 || num_channels > CUPS_MAX_RGB ||
+      num_channels < 1 || num_channels > CF_MAX_RGB ||
       num_samples != (cube_size * cube_size * cube_size))
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
@@ -361,7 +361,7 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
   * Allocate memory for the samples and read them...
   */
 
-  if ((samples = calloc(num_samples, sizeof(cups_sample_t))) == NULL)
+  if ((samples = calloc(num_samples, sizeof(cf_sample_t))) == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		 "Unable to allocate memory for RGB profile!");
@@ -408,7 +408,7 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
   */
 
   if (i == num_samples)
-    rgbptr = cupsRGBNew(num_samples, samples, cube_size, num_channels);
+    rgbptr = cfRGBNew(num_samples, samples, cube_size, num_channels);
   else
     rgbptr = NULL;
 
@@ -423,16 +423,16 @@ cupsRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
 
 
 /*
- * 'cupsRGBNew()' - Create a new RGB color separation.
+ * 'cfRGBNew()' - Create a new RGB color separation.
  */
 
-cups_rgb_t *				/* O - New color separation or NULL */
-cupsRGBNew(int           num_samples,	/* I - Number of samples */
-	   cups_sample_t *samples,	/* I - Samples */
+cf_rgb_t *				/* O - New color separation or NULL */
+cfRGBNew(int           num_samples,	/* I - Number of samples */
+	   cf_sample_t *samples,	/* I - Samples */
 	   int           cube_size,	/* I - Size of LUT cube */
            int           num_channels)	/* I - Number of color components */
 {
-  cups_rgb_t		*rgbptr;	/* New color separation */
+  cf_rgb_t		*rgbptr;	/* New color separation */
   int			i;		/* Looping var */
   int			r, g, b;	/* Current RGB */
   int			tempsize;	/* Sibe of main arrays */
@@ -448,14 +448,14 @@ cupsRGBNew(int           num_samples,	/* I - Number of samples */
   */
 
   if (!samples || num_samples != (cube_size * cube_size * cube_size) ||
-      num_channels <= 0 || num_channels > CUPS_MAX_RGB)
+      num_channels <= 0 || num_channels > CF_MAX_RGB)
     return (NULL);
 
  /*
   * Allocate memory for the separation...
   */
 
-  if ((rgbptr = calloc(1, sizeof(cups_rgb_t))) == NULL)
+  if ((rgbptr = calloc(1, sizeof(cf_rgb_t))) == NULL)
     return (NULL);
 
  /*
@@ -540,13 +540,13 @@ cupsRGBNew(int           num_samples,	/* I - Number of samples */
   rgb[1] = 0;
   rgb[2] = 0;
 
-  cupsRGBDoRGB(rgbptr, rgb, rgbptr->black, 1);
+  cfRGBDoRGB(rgbptr, rgb, rgbptr->black, 1);
 
   rgb[0] = 255;
   rgb[1] = 255;
   rgb[2] = 255;
 
-  cupsRGBDoRGB(rgbptr, rgb, rgbptr->white, 1);
+  cfRGBDoRGB(rgbptr, rgb, rgbptr->white, 1);
 
   rgbptr->cache_init = 1;
 

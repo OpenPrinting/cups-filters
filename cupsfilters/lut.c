@@ -11,9 +11,9 @@
  *
  * Contents:
  *
- *   cupsLutDelete() - Free the memory used by a lookup table.
- *   cupsLutLoad()   - Load a LUT from a PPD file.
- *   cupsLutNew()    - Make a lookup table from a list of pixel values.
+ *   cfLutDelete() - Free the memory used by a lookup table.
+ *   cfLutLoad()   - Load a LUT from a PPD file.
+ *   cfLutNew()    - Make a lookup table from a list of pixel values.
  */
 
 /*
@@ -25,11 +25,11 @@
 
 
 /*
- * 'cupsLutDelete()' - Free the memory used by a lookup table.
+ * 'cfLutDelete()' - Free the memory used by a lookup table.
  */
 
 void
-cupsLutDelete(cups_lut_t *lut)		/* I - Lookup table to free */
+cfLutDelete(cf_lut_t *lut)		/* I - Lookup table to free */
 {
   if (lut != NULL)
     free(lut);
@@ -37,11 +37,11 @@ cupsLutDelete(cups_lut_t *lut)		/* I - Lookup table to free */
 
 
 /*
- * 'cupsLutLoad()' - Load a LUT from a PPD file.
+ * 'cfLutLoad()' - Load a LUT from a PPD file.
  */
 
-cups_lut_t *				/* O - New lookup table */
-cupsLutLoad(ppd_file_t *ppd,		/* I - PPD file */
+cf_lut_t *				/* O - New lookup table */
+cfLutLoad(ppd_file_t *ppd,		/* I - PPD file */
             const char *colormodel,	/* I - Color model */
             const char *media,		/* I - Media type */
             const char *resolution,	/* I - Resolution */
@@ -69,9 +69,9 @@ cupsLutLoad(ppd_file_t *ppd,		/* I - PPD file */
 
   snprintf(name, sizeof(name), "cups%sDither", ink);
 
-  if ((attr = cupsFindAttr(ppd, name, colormodel, media, resolution, spec,
+  if ((attr = cfFindAttr(ppd, name, colormodel, media, resolution, spec,
                            sizeof(spec), log, ld)) == NULL)
-    attr = cupsFindAttr(ppd, "cupsAllDither", colormodel, media,
+    attr = cfFindAttr(ppd, "cupsAllDither", colormodel, media,
                         resolution, spec, sizeof(spec), log, ld);
 
   if (!attr)
@@ -87,24 +87,24 @@ cupsLutLoad(ppd_file_t *ppd,		/* I - PPD file */
 	       "Loaded LUT %s from PPD with values [%.3f %.3f %.3f %.3f]",
 	       name, vals[0], vals[1], vals[2], vals[3]);
 
-  return (cupsLutNew(nvals, vals, log, ld));
+  return (cfLutNew(nvals, vals, log, ld));
 }
 
 
 /*
- * 'cupsLutNew()' - Make a lookup table from a list of pixel values.
+ * 'cfLutNew()' - Make a lookup table from a list of pixel values.
  *
  * Returns a pointer to the lookup table on success, NULL on failure.
  */
 
-cups_lut_t *				/* O - New lookup table */
-cupsLutNew(int         num_values,	/* I - Number of values */
+cf_lut_t *				/* O - New lookup table */
+cfLutNew(int         num_values,	/* I - Number of values */
 	   const float *values,		/* I - Lookup table values */
 	   filter_logfunc_t log,        /* I - Log function */
 	   void        *ld)             /* I - Log function data */
 {
   int		pixel;			/* Pixel value */
-  cups_lut_t	*lut;			/* Lookup table */
+  cf_lut_t	*lut;			/* Lookup table */
   int		start,			/* Start value */
 		end,			/* End value */
 		maxval;			/* Maximum value */
@@ -121,8 +121,8 @@ cupsLutNew(int         num_values,	/* I - Number of values */
   * Allocate memory for the lookup table...
   */
 
-  if ((lut = (cups_lut_t *)calloc((CUPS_MAX_LUT + 1),
-                                  sizeof(cups_lut_t))) == NULL)
+  if ((lut = (cf_lut_t *)calloc((CF_MAX_LUT + 1),
+                                  sizeof(cf_lut_t))) == NULL)
     return (NULL);
 
  /*
@@ -132,10 +132,10 @@ cupsLutNew(int         num_values,	/* I - Number of values */
   * close enough for jazz.
   */
 
-  maxval = CUPS_MAX_LUT / values[num_values - 1];
+  maxval = CF_MAX_LUT / values[num_values - 1];
 
-  for (start = 0; start <= CUPS_MAX_LUT; start ++)
-    lut[start].intensity = start * maxval / CUPS_MAX_LUT;
+  for (start = 0; start <= CF_MAX_LUT; start ++)
+    lut[start].intensity = start * maxval / CF_MAX_LUT;
 
   for (pixel = 0; pixel < num_values; pixel ++)
   {
@@ -151,18 +151,18 @@ cupsLutNew(int         num_values,	/* I - Number of values */
 
     if (start < 0)
       start = 0;
-    else if (start > CUPS_MAX_LUT)
-      start = CUPS_MAX_LUT;
+    else if (start > CF_MAX_LUT)
+      start = CF_MAX_LUT;
 
     if (pixel == (num_values - 1))
-      end = CUPS_MAX_LUT;
+      end = CF_MAX_LUT;
     else
       end = (int)(0.5 * maxval * (values[pixel] + values[pixel + 1]));
 
     if (end < 0)
       end = 0;
-    else if (end > CUPS_MAX_LUT)
-      end = CUPS_MAX_LUT;
+    else if (end > CF_MAX_LUT)
+      end = CF_MAX_LUT;
 
     if (start == end)
       break;
@@ -188,7 +188,7 @@ cupsLutNew(int         num_values,	/* I - Number of values */
   */
 
   if (log)
-    for (start = 0; start <= CUPS_MAX_LUT; start += CUPS_MAX_LUT / 15)
+    for (start = 0; start <= CF_MAX_LUT; start += CF_MAX_LUT / 15)
       log(ld, FILTER_LOGLEVEL_DEBUG,
 	  "%d = %d/%d/%d", start, lut[start].intensity,
 	  lut[start].pixel, lut[start].error);

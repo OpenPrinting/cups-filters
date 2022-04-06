@@ -11,19 +11,19 @@
  *
  * Contents:
  *
- *   cupsCMYKDelete()      - Delete a color separation.
- *   cupsCMYKDoBlack()     - Do a black separation...
- *   cupsCMYKDoCMYK()      - Do a CMYK separation...
- *   cupsCMYKDoGray()      - Do a grayscale separation...
- *   cupsCMYKDoRGB()       - Do an sRGB separation...
- *   cupsCMYKLoad()        - Load a CMYK color profile from PPD attributes.
- *   cupsCMYKNew()         - Create a new CMYK color separation.
- *   cupsCMYKSetBlack()    - Set the transition range for CMY to black.
- *   cupsCMYKSetCurve()    - Set a color transform curve using points.
- *   cupsCMYKSetGamma()    - Set a color transform curve using gamma and
+ *   cfCMYKDelete()      - Delete a color separation.
+ *   cfCMYKDoBlack()     - Do a black separation...
+ *   cfCMYKDoCMYK()      - Do a CMYK separation...
+ *   cfCMYKDoGray()      - Do a grayscale separation...
+ *   cfCMYKDoRGB()       - Do an sRGB separation...
+ *   cfCMYKLoad()        - Load a CMYK color profile from PPD attributes.
+ *   cfCMYKNew()         - Create a new CMYK color separation.
+ *   cfCMYKSetBlack()    - Set the transition range for CMY to black.
+ *   cfCMYKSetCurve()    - Set a color transform curve using points.
+ *   cfCMYKSetGamma()    - Set a color transform curve using gamma and
  *                           density.
- *   cupsCMYKSetInkLimit() - Set the limit on the amount of ink.
- *   cupsCMYKSetLtDk()     - Set light/dark ink transforms.
+ *   cfCMYKSetInkLimit() - Set the limit on the amount of ink.
+ *   cfCMYKSetLtDk()     - Set light/dark ink transforms.
  */
 
 /*
@@ -37,11 +37,11 @@
 
 
 /*
- * 'cupsCMYKDelete()' - Delete a color separation.
+ * 'cfCMYKDelete()' - Delete a color separation.
  */
 
 void
-cupsCMYKDelete(cups_cmyk_t *cmyk)	/* I - Color separation */
+cfCMYKDelete(cf_cmyk_t *cmyk)	/* I - Color separation */
 {
  /*
   * Range check input...
@@ -60,11 +60,11 @@ cupsCMYKDelete(cups_cmyk_t *cmyk)	/* I - Color separation */
 
 
 /*
- * 'cupsCMYKDoBlack()' - Do a black separation...
+ * 'cfCMYKDoBlack()' - Do a black separation...
  */
 
 void
-cupsCMYKDoBlack(const cups_cmyk_t   *cmyk,
+cfCMYKDoBlack(const cf_cmyk_t   *cmyk,
 					/* I - Color separation */
 		const unsigned char *input,
 					/* I - Input grayscale pixels */
@@ -243,11 +243,11 @@ cupsCMYKDoBlack(const cups_cmyk_t   *cmyk,
 
 
 /*
- * 'cupsCMYKDoCMYK()' - Do a CMYK separation...
+ * 'cfCMYKDoCMYK()' - Do a CMYK separation...
  */
 
 void
-cupsCMYKDoCMYK(const cups_cmyk_t   *cmyk,
+cfCMYKDoCMYK(const cf_cmyk_t   *cmyk,
 					/* I - Color separation */
 	       const unsigned char *input,
 					/* I - Input grayscale pixels */
@@ -515,11 +515,11 @@ cupsCMYKDoCMYK(const cups_cmyk_t   *cmyk,
 
 
 /*
- * 'cupsCMYKDoGray()' - Do a grayscale separation...
+ * 'cfCMYKDoGray()' - Do a grayscale separation...
  */
 
 void
-cupsCMYKDoGray(const cups_cmyk_t   *cmyk,
+cfCMYKDoGray(const cf_cmyk_t   *cmyk,
 					/* I - Color separation */
 	       const unsigned char *input,
 					/* I - Input grayscale pixels */
@@ -559,7 +559,7 @@ cupsCMYKDoGray(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  k         = cups_scmy_lut[*input++];
+	  k         = cf_scmy_lut[*input++];
 	  *output++ = channels[0][k];
 
           num_pixels --;
@@ -574,7 +574,7 @@ cupsCMYKDoGray(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  k         = cups_scmy_lut[*input++];
+	  k         = cf_scmy_lut[*input++];
 	  output[0] = channels[0][k];
 	  output[1] = channels[1][k];
 
@@ -602,7 +602,7 @@ cupsCMYKDoGray(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  k         = cups_scmy_lut[*input++];
+	  k         = cf_scmy_lut[*input++];
 	  output[0] = channels[0][k];
 	  output[1] = channels[1][k];
 	  output[2] = channels[2][k];
@@ -632,7 +632,7 @@ cupsCMYKDoGray(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  k         = cups_scmy_lut[*input++];
+	  k         = cf_scmy_lut[*input++];
 	  kc        = cmyk->color_lut[k];
 	  k         = cmyk->black_lut[k];
 	  output[0] = channels[0][kc];
@@ -666,7 +666,7 @@ cupsCMYKDoGray(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  k         = cups_scmy_lut[*input++];
+	  k         = cf_scmy_lut[*input++];
 	  kc        = cmyk->color_lut[k];
 	  k         = cmyk->black_lut[k];
 	  output[0] = channels[0][kc];
@@ -705,7 +705,7 @@ cupsCMYKDoGray(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  k         = cups_scmy_lut[*input++];
+	  k         = cf_scmy_lut[*input++];
 	  kc        = cmyk->color_lut[k];
 	  k         = cmyk->black_lut[k];
 	  output[0] = channels[0][kc];
@@ -742,11 +742,11 @@ cupsCMYKDoGray(const cups_cmyk_t   *cmyk,
 
 
 /*
- * 'cupsCMYKDoRGB()' - Do an sRGB separation...
+ * 'cfCMYKDoRGB()' - Do an sRGB separation...
  */
 
 void
-cupsCMYKDoRGB(const cups_cmyk_t   *cmyk,
+cfCMYKDoRGB(const cf_cmyk_t   *cmyk,
 					/* I - Color separation */
 	      const unsigned char *input,
 					/* I - Input grayscale pixels */
@@ -790,9 +790,9 @@ cupsCMYKDoRGB(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  c = cups_scmy_lut[*input++];
-	  m = cups_scmy_lut[*input++];
-	  y = cups_scmy_lut[*input++];
+	  c = cf_scmy_lut[*input++];
+	  m = cf_scmy_lut[*input++];
+	  y = cf_scmy_lut[*input++];
 	  k = (c * 31 + m * 61 + y * 8) / 100;
 
           *output++ = channels[0][k];
@@ -809,9 +809,9 @@ cupsCMYKDoRGB(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  c = cups_scmy_lut[*input++];
-	  m = cups_scmy_lut[*input++];
-	  y = cups_scmy_lut[*input++];
+	  c = cf_scmy_lut[*input++];
+	  m = cf_scmy_lut[*input++];
+	  y = cf_scmy_lut[*input++];
 	  k = (c * 31 + m * 61 + y * 8) / 100;
 
           output[0] = channels[0][k];
@@ -841,9 +841,9 @@ cupsCMYKDoRGB(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  c = cups_scmy_lut[*input++];
-	  m = cups_scmy_lut[*input++];
-	  y = cups_scmy_lut[*input++];
+	  c = cf_scmy_lut[*input++];
+	  m = cf_scmy_lut[*input++];
+	  y = cf_scmy_lut[*input++];
 
 	  output[0] = channels[0][c];
           output[1] = channels[1][m];
@@ -874,9 +874,9 @@ cupsCMYKDoRGB(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  c  = cups_scmy_lut[*input++];
-	  m  = cups_scmy_lut[*input++];
-	  y  = cups_scmy_lut[*input++];
+	  c  = cf_scmy_lut[*input++];
+	  m  = cf_scmy_lut[*input++];
+	  y  = cf_scmy_lut[*input++];
 	  k  = min(c, min(m, y));
 
 	  if ((km = max(c, max(m, y))) > k)
@@ -919,9 +919,9 @@ cupsCMYKDoRGB(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  c  = cups_scmy_lut[*input++];
-	  m  = cups_scmy_lut[*input++];
-	  y  = cups_scmy_lut[*input++];
+	  c  = cf_scmy_lut[*input++];
+	  m  = cf_scmy_lut[*input++];
+	  y  = cf_scmy_lut[*input++];
 	  k  = min(c, min(m, y));
 
 	  if ((km = max(c, max(m, y))) > k)
@@ -969,9 +969,9 @@ cupsCMYKDoRGB(const cups_cmyk_t   *cmyk,
 	  * channel values...
 	  */
 
-	  c  = cups_scmy_lut[*input++];
-	  m  = cups_scmy_lut[*input++];
-	  y  = cups_scmy_lut[*input++];
+	  c  = cf_scmy_lut[*input++];
+	  m  = cf_scmy_lut[*input++];
+	  y  = cf_scmy_lut[*input++];
 	  k  = min(c, min(m, y));
 
 	  if ((km = max(c, max(m, y))) > k)
@@ -1017,18 +1017,18 @@ cupsCMYKDoRGB(const cups_cmyk_t   *cmyk,
 
 
 /*
- * 'cupsCMYKLoad()' - Load a CMYK color profile from PPD attributes.
+ * 'cfCMYKLoad()' - Load a CMYK color profile from PPD attributes.
  */
 
-cups_cmyk_t *				/* O - CMYK color separation */
-cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
+cf_cmyk_t *				/* O - CMYK color separation */
+cfCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	     const char *colormodel,	/* I - ColorModel value */
 	     const char *media,		/* I - MediaType value */
 	     const char *resolution,	/* I - Resolution value */
 	     filter_logfunc_t log,      /* I - Log function */
 	     void       *ld)            /* I - Log function data */
 {
-  cups_cmyk_t	*cmyk;			/* CMYK color separation */
+  cf_cmyk_t	*cmyk;			/* CMYK color separation */
   char		spec[PPD_MAX_NAME];	/* Profile name */
   ppd_attr_t	*attr;			/* Attribute from PPD file */
   int		num_channels;		/* Number of color components */
@@ -1087,7 +1087,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
   * Get the required cupsInkChannels attribute...
   */
 
-  if ((attr = cupsFindAttr(ppd, "cupsInkChannels", colormodel, media,
+  if ((attr = cfFindAttr(ppd, "cupsInkChannels", colormodel, media,
                            resolution, spec, sizeof(spec), log, ld)) == NULL)
     return (NULL);
 
@@ -1096,26 +1096,26 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
   if (num_channels < 1 || num_channels > 7 || num_channels == 5)
     return (NULL);
 
-  if ((cmyk = cupsCMYKNew(num_channels)) == NULL)
+  if ((cmyk = cfCMYKNew(num_channels)) == NULL)
     return (NULL);
 
  /*
   * Get the optional cupsInkLimit attribute...
   */
 
-  if ((attr = cupsFindAttr(ppd, "cupsInkLimit", colormodel, media,
+  if ((attr = cfFindAttr(ppd, "cupsInkLimit", colormodel, media,
                            resolution, spec, sizeof(spec), log, ld)) != NULL)
-    cupsCMYKSetInkLimit(cmyk, atof(attr->value));
+    cfCMYKSetInkLimit(cmyk, atof(attr->value));
 
  /*
   * Get the optional cupsBlackGeneration attribute...
   */
 
-  if ((attr = cupsFindAttr(ppd, "cupsBlackGeneration", colormodel, media,
+  if ((attr = cfFindAttr(ppd, "cupsBlackGeneration", colormodel, media,
                            resolution, spec, sizeof(spec), log, ld)) != NULL)
   {
     if (sscanf(attr->value, "%f%f", &lower, &upper) == 2)
-      cupsCMYKSetBlack(cmyk, lower, upper, log, ld);
+      cfCMYKSetBlack(cmyk, lower, upper, log, ld);
   }
 
  /*
@@ -1124,7 +1124,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 
   if (num_channels != 3)
   {
-    if ((attr = cupsFindAttr(ppd, "cupsBlackXY", colormodel, media,
+    if ((attr = cfFindAttr(ppd, "cupsBlackXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
@@ -1140,18 +1140,18 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 1 :
 	case 2 :
-            cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
 	    break;
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 3, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 3, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 5, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 5, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsBlackGamma", colormodel,
+    else if ((attr = cfFindAttr(ppd, "cupsBlackGamma", colormodel,
                                   media, resolution, spec,
 				  sizeof(spec), log, ld)) != NULL)
     {
@@ -1160,18 +1160,18 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	{
 	  case 1 :
 	  case 2 :
-              cupsCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
 	      break;
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 3, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 3, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 5, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 5, gamval, density, log, ld);
 	      break;
 	}
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsAllXY", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsAllXY", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
@@ -1188,18 +1188,18 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 1 :
 	case 2 :
-            cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
 	    break;
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 3, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 3, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 5, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 5, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsAllGamma", colormodel,
+    else if ((attr = cfFindAttr(ppd, "cupsAllGamma", colormodel,
                                   media, resolution, spec,
 				  sizeof(spec), log, ld)) != NULL &&
              num_channels != 3)
@@ -1209,14 +1209,14 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	{
 	  case 1 :
 	  case 2 :
-              cupsCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
 	      break;
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 3, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 3, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 5, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 5, gamval, density, log, ld);
 	      break;
 	}
     }
@@ -1228,7 +1228,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     * Get the optional cupsCyanXY or cupsCyanGamma attributes...
     */
 
-    if ((attr = cupsFindAttr(ppd, "cupsCyanXY", colormodel, media,
+    if ((attr = cfFindAttr(ppd, "cupsCyanXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
@@ -1240,16 +1240,16 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	  xyptr += 2;
 	}
 
-      cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
+      cfCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsCyanGamma", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsCyanGamma", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
-	cupsCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
+	cfCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsAllXY", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsAllXY", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
@@ -1262,21 +1262,21 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	  xyptr += 2;
 	}
 
-      cupsCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
+      cfCMYKSetCurve(cmyk, 0, num_xypoints, xypoints, log, ld);
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsAllGamma", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsAllGamma", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
-	cupsCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
+	cfCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
     }
 
    /*
     * Get the optional cupsMagentaXY or cupsMagentaGamma attributes...
     */
 
-    if ((attr = cupsFindAttr(ppd, "cupsMagentaXY", colormodel, media,
+    if ((attr = cfFindAttr(ppd, "cupsMagentaXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
@@ -1292,15 +1292,15 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 3 :
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsMagentaGamma", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsMagentaGamma", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
@@ -1309,15 +1309,15 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	{
 	  case 3 :
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
 	      break;
 	}
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsAllXY", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsAllXY", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
@@ -1334,15 +1334,15 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 3 :
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsAllGamma", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsAllGamma", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
@@ -1351,11 +1351,11 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	{
 	  case 3 :
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
 	      break;
 	}
     }
@@ -1364,7 +1364,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     * Get the optional cupsYellowXY or cupsYellowGamma attributes...
     */
 
-    if ((attr = cupsFindAttr(ppd, "cupsYellowXY", colormodel, media,
+    if ((attr = cfFindAttr(ppd, "cupsYellowXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
@@ -1380,15 +1380,15 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 3 :
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 4, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 4, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsYellowGamma", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsYellowGamma", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
@@ -1397,15 +1397,15 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	{
 	  case 3 :
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 4, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 4, gamval, density, log, ld);
 	      break;
 	}
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsAllXY", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsAllXY", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
@@ -1422,15 +1422,15 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       {
 	case 3 :
 	case 4 :
-            cupsCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 2, num_xypoints, xypoints, log, ld);
 	    break;
 	case 6 :
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 4, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 4, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsAllGamma", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsAllGamma", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
@@ -1439,11 +1439,11 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	{
 	  case 3 :
 	  case 4 :
-              cupsCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 2, gamval, density, log, ld);
 	      break;
 	  case 6 :
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 4, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 4, gamval, density, log, ld);
 	      break;
 	}
     }
@@ -1456,7 +1456,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 
   if (num_channels == 2 || num_channels == 7)
   {
-    if ((attr = cupsFindAttr(ppd, "cupsLightBlackXY", colormodel, media,
+    if ((attr = cfFindAttr(ppd, "cupsLightBlackXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
@@ -1471,14 +1471,14 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       switch (num_channels)
       {
 	case 2 :
-            cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
 	    break;
 	case 7 :
-            cupsCMYKSetCurve(cmyk, 6, num_xypoints, xypoints, log, ld);
+            cfCMYKSetCurve(cmyk, 6, num_xypoints, xypoints, log, ld);
 	    break;
       }
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsLightBlackGamma", colormodel,
+    else if ((attr = cfFindAttr(ppd, "cupsLightBlackGamma", colormodel,
                                   media, resolution, spec,
 				  sizeof(spec), log, ld)) != NULL)
     {
@@ -1486,14 +1486,14 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	switch (num_channels)
 	{
 	  case 2 :
-              cupsCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
 	      break;
 	  case 7 :
-              cupsCMYKSetGamma(cmyk, 6, gamval, density, log, ld);
+              cfCMYKSetGamma(cmyk, 6, gamval, density, log, ld);
 	      break;
 	}
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsBlackLtDk", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsBlackLtDk", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
@@ -1501,10 +1501,10 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	switch (num_channels)
 	{
 	  case 2 :
-              cupsCMYKSetLtDk(cmyk, 0, light, dark, log, ld);
+              cfCMYKSetLtDk(cmyk, 0, light, dark, log, ld);
 	      break;
 	  case 7 :
-              cupsCMYKSetLtDk(cmyk, 5, light, dark, log, ld);
+              cfCMYKSetLtDk(cmyk, 5, light, dark, log, ld);
 	      break;
 	}
       else
@@ -1525,7 +1525,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     * cupsCyanLtDk attributes...
     */
 
-    if ((attr = cupsFindAttr(ppd, "cupsLightCyanXY", colormodel, media,
+    if ((attr = cfFindAttr(ppd, "cupsLightCyanXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
@@ -1537,21 +1537,21 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	  xyptr += 2;
 	}
 
-      cupsCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
+      cfCMYKSetCurve(cmyk, 1, num_xypoints, xypoints, log, ld);
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsLightCyanGamma", colormodel,
+    else if ((attr = cfFindAttr(ppd, "cupsLightCyanGamma", colormodel,
                                   media, resolution, spec,
 				  sizeof(spec), log, ld)) != NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
-	cupsCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
+	cfCMYKSetGamma(cmyk, 1, gamval, density, log, ld);
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsCyanLtDk", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsCyanLtDk", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &light, &dark) == 2)
-	cupsCMYKSetLtDk(cmyk, 0, light, dark, log, ld);
+	cfCMYKSetLtDk(cmyk, 0, light, dark, log, ld);
       else
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		     "Bad cupsCyanLtDk value \"%s\"!",
@@ -1567,7 +1567,7 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     * cupsMagentaLtDk attributes...
     */
 
-    if ((attr = cupsFindAttr(ppd, "cupsLightMagentaXY", colormodel, media,
+    if ((attr = cfFindAttr(ppd, "cupsLightMagentaXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
     {
       for (num_xypoints = 0, xyptr = xypoints;
@@ -1579,21 +1579,21 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	  xyptr += 2;
 	}
 
-      cupsCMYKSetCurve(cmyk, 3, num_xypoints, xypoints, log, ld);
+      cfCMYKSetCurve(cmyk, 3, num_xypoints, xypoints, log, ld);
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsLightMagentaGamma", colormodel,
+    else if ((attr = cfFindAttr(ppd, "cupsLightMagentaGamma", colormodel,
                                   media, resolution, spec,
 				  sizeof(spec), log, ld)) != NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
-	cupsCMYKSetGamma(cmyk, 3, gamval, density, log, ld);
+	cfCMYKSetGamma(cmyk, 3, gamval, density, log, ld);
     }
-    else if ((attr = cupsFindAttr(ppd, "cupsMagentaLtDk", colormodel, media,
+    else if ((attr = cfFindAttr(ppd, "cupsMagentaLtDk", colormodel, media,
                                   resolution, spec, sizeof(spec), log, ld)) !=
 	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &light, &dark) == 2)
-	cupsCMYKSetLtDk(cmyk, 2, light, dark, log, ld);
+	cfCMYKSetLtDk(cmyk, 2, light, dark, log, ld);
       else
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 		     "Bad cupsMagentaLtDk value \"%s\"!",
@@ -1614,13 +1614,13 @@ cupsCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 
 
 /*
- * 'cupsCMYKNew()' - Create a new CMYK color separation.
+ * 'cfCMYKNew()' - Create a new CMYK color separation.
  */
 
-cups_cmyk_t *				/* O - New CMYK separation or NULL */
-cupsCMYKNew(int num_channels)		/* I - Number of color components */
+cf_cmyk_t *				/* O - New CMYK separation or NULL */
+cfCMYKNew(int num_channels)		/* I - Number of color components */
 {
-  cups_cmyk_t	*cmyk;			/* New color separation */
+  cf_cmyk_t	*cmyk;			/* New color separation */
   int		i;			/* Looping var */
 
 
@@ -1635,7 +1635,7 @@ cupsCMYKNew(int num_channels)		/* I - Number of color components */
   * Allocate memory for the separation...
   */
 
-  if ((cmyk = calloc(1, sizeof(cups_cmyk_t))) == NULL)
+  if ((cmyk = calloc(1, sizeof(cf_cmyk_t))) == NULL)
     return (NULL);
 
  /*
@@ -1666,34 +1666,34 @@ cupsCMYKNew(int num_channels)		/* I - Number of color components */
     case 2 : /* Kk */
 	for (i = 0; i < 256; i ++)
 	{
-	  cmyk->channels[0][i] = CUPS_MAX_LUT * i / 255;
+	  cmyk->channels[0][i] = CF_MAX_LUT * i / 255;
 	}
 	break;
     case 3 : /* CMY */
 	for (i = 0; i < 256; i ++)
 	{
-	  cmyk->channels[0][i] = CUPS_MAX_LUT * i / 255;
-	  cmyk->channels[1][i] = CUPS_MAX_LUT * i / 255;
-	  cmyk->channels[2][i] = CUPS_MAX_LUT * i / 255;
+	  cmyk->channels[0][i] = CF_MAX_LUT * i / 255;
+	  cmyk->channels[1][i] = CF_MAX_LUT * i / 255;
+	  cmyk->channels[2][i] = CF_MAX_LUT * i / 255;
 	}
 	break;
     case 4 : /* CMYK */
 	for (i = 0; i < 256; i ++)
 	{
-	  cmyk->channels[0][i] = CUPS_MAX_LUT * i / 255;
-	  cmyk->channels[1][i] = CUPS_MAX_LUT * i / 255;
-	  cmyk->channels[2][i] = CUPS_MAX_LUT * i / 255;
-	  cmyk->channels[3][i] = CUPS_MAX_LUT * i / 255;
+	  cmyk->channels[0][i] = CF_MAX_LUT * i / 255;
+	  cmyk->channels[1][i] = CF_MAX_LUT * i / 255;
+	  cmyk->channels[2][i] = CF_MAX_LUT * i / 255;
+	  cmyk->channels[3][i] = CF_MAX_LUT * i / 255;
 	}
 	break;
     case 6 : /* CcMmYK */
     case 7 : /* CcMmYKk */
 	for (i = 0; i < 256; i ++)
 	{
-	  cmyk->channels[0][i] = CUPS_MAX_LUT * i / 255;
-	  cmyk->channels[2][i] = CUPS_MAX_LUT * i / 255;
-	  cmyk->channels[4][i] = CUPS_MAX_LUT * i / 255;
-	  cmyk->channels[5][i] = CUPS_MAX_LUT * i / 255;
+	  cmyk->channels[0][i] = CF_MAX_LUT * i / 255;
+	  cmyk->channels[2][i] = CF_MAX_LUT * i / 255;
+	  cmyk->channels[4][i] = CF_MAX_LUT * i / 255;
+	  cmyk->channels[5][i] = CF_MAX_LUT * i / 255;
 	}
 	break;
   }
@@ -1707,11 +1707,11 @@ cupsCMYKNew(int num_channels)		/* I - Number of color components */
 
 
 /*
- * 'cupsCMYKSetBlack()' - Set the transition range for CMY to black.
+ * 'cfCMYKSetBlack()' - Set the transition range for CMY to black.
  */
 
 void
-cupsCMYKSetBlack(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
+cfCMYKSetBlack(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
 		 float       lower,	/* I - No black ink */
 		 float       upper,	/* I - Only black ink */
 	         filter_logfunc_t log,  /* I - Log function */
@@ -1770,7 +1770,7 @@ cupsCMYKSetBlack(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "cupsCMYKSetBlack(cmyk, lower=%.3f, upper=%.3f)",
+	       "cfCMYKSetBlack(cmyk, lower=%.3f, upper=%.3f)",
 	       lower, upper);
 
   if (log)
@@ -1782,11 +1782,11 @@ cupsCMYKSetBlack(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
 
 
 /*
- * 'cupsCMYKSetCurve()' - Set a color transform curve using points.
+ * 'cfCMYKSetCurve()' - Set a color transform curve using points.
  */
 
 void
-cupsCMYKSetCurve(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
+cfCMYKSetCurve(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
                  int         channel,	/* I - Color channel */
 		 int         num_xypoints,
 					/* I - Number of X,Y points */
@@ -1820,7 +1820,7 @@ cupsCMYKSetCurve(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
        num_xypoints --, xypoints += 2, xstart = xend, ystart = yend)
   {
     xend   = (int)(255.0 * xypoints[1] + 0.5);
-    yend   = (int)(CUPS_MAX_LUT * xypoints[0] + 0.5);
+    yend   = (int)(CF_MAX_LUT * xypoints[0] + 0.5);
     xdelta = xend - xstart;
     ydelta = yend - ystart;
 
@@ -1850,11 +1850,11 @@ cupsCMYKSetCurve(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
 
 
 /*
- * 'cupsCMYKSetGamma()' - Set a color transform curve using gamma and density.
+ * 'cfCMYKSetGamma()' - Set a color transform curve using gamma and density.
  */
 
 void
-cupsCMYKSetGamma(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
+cfCMYKSetGamma(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
                  int         channel,	/* I - Ink channel */
                  float       gamval,	/* I - Gamma correction */
 		 float       density,	/* I - Maximum density */
@@ -1877,11 +1877,11 @@ cupsCMYKSetGamma(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
   */
 
   for (i = 0; i < 256; i ++)
-    cmyk->channels[channel][i] = (int)(density * CUPS_MAX_LUT *
+    cmyk->channels[channel][i] = (int)(density * CF_MAX_LUT *
                                        pow((float)i / 255.0, gamval) + 0.5);
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "cupsCMYKSetGamma(cmyk, channel=%d, gamval=%.3f, "
+	       "cfCMYKSetGamma(cmyk, channel=%d, gamval=%.3f, "
 	       "density=%.3f)", channel, gamval, density);
 
   if (log)
@@ -1893,26 +1893,26 @@ cupsCMYKSetGamma(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
 
 
 /*
- * 'cupsCMYKSetInkLimit()' - Set the limit on the amount of ink.
+ * 'cfCMYKSetInkLimit()' - Set the limit on the amount of ink.
  */
 
 void
-cupsCMYKSetInkLimit(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
+cfCMYKSetInkLimit(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
                     float       limit)	/* I - Limit of ink */
 {
   if (!cmyk || limit < 0.0)
     return;
 
-  cmyk->ink_limit = limit * CUPS_MAX_LUT;
+  cmyk->ink_limit = limit * CF_MAX_LUT;
 }
 
 
 /*
- * 'cupsCMYKSetLtDk()' - Set light/dark ink transforms.
+ * 'cfCMYKSetLtDk()' - Set light/dark ink transforms.
  */
 
 void
-cupsCMYKSetLtDk(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
+cfCMYKSetLtDk(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
                 int         channel,	/* I - Dark ink channel (+1 for light) */
 		float       light,	/* I - Light ink only level */
 		float       dark,	/* I - Dark ink only level */
@@ -1955,7 +1955,7 @@ cupsCMYKSetLtDk(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
   for (i = 0; i < ilight; i ++)
   {
     cmyk->channels[channel + 0][i] = 0;
-    cmyk->channels[channel + 1][i] = CUPS_MAX_LUT * i / ilight;
+    cmyk->channels[channel + 1][i] = CF_MAX_LUT * i / ilight;
   }
 
  /*
@@ -1964,9 +1964,9 @@ cupsCMYKSetLtDk(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
 
   for (; i < idark; i ++)
   {
-    cmyk->channels[channel + 0][i] = CUPS_MAX_LUT * idark * (i - ilight) /
+    cmyk->channels[channel + 0][i] = CF_MAX_LUT * idark * (i - ilight) /
                                      delta / 255;
-    cmyk->channels[channel + 1][i] = CUPS_MAX_LUT - CUPS_MAX_LUT *
+    cmyk->channels[channel + 1][i] = CF_MAX_LUT - CF_MAX_LUT *
                                      (i - ilight) / delta;
   }
 
@@ -1976,12 +1976,12 @@ cupsCMYKSetLtDk(cups_cmyk_t *cmyk,	/* I - CMYK color separation */
 
   for (; i < 256; i ++)
   {
-    cmyk->channels[channel + 0][i] = CUPS_MAX_LUT * i / 255;
+    cmyk->channels[channel + 0][i] = CF_MAX_LUT * i / 255;
     cmyk->channels[channel + 1][i] = 0;
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "cupsCMYKSetLtDk(cmyk, channel=%d, light=%.3f, "
+	       "cfCMYKSetLtDk(cmyk, channel=%d, light=%.3f, "
 	       "dark=%.3f)", channel, light, dark);
 
   if (log)

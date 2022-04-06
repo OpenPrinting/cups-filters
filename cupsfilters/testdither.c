@@ -57,8 +57,8 @@ main(int  argc,			/* I - Number of command-line arguments */
   unsigned char	pixels[512],	/* Dither pixels */
 		*pixptr;	/* Pointer in line */
   int		output;		/* Output pixel */
-  cups_lut_t	*lut;		/* Dither lookup table */
-  cups_dither_t	*dither;	/* Dither state */
+  cf_lut_t	*lut;		/* Dither lookup table */
+  cf_dither_t	*dither;	/* Dither state */
   int		nlutvals;	/* Number of lookup values */
   float		lutvals[16];	/* Lookup values */
   int		pixvals[16];	/* Pixel values */
@@ -110,8 +110,8 @@ main(int  argc,			/* I - Number of command-line arguments */
   * Create the lookup table and dither state...
   */
 
-  lut    = cupsLutNew(nlutvals, lutvals, logfunc, ld);
-  dither = cupsDitherNew(512);
+  lut    = cfLutNew(nlutvals, lutvals, logfunc, ld);
+  dither = cfDitherNew(512);
 
  /*
   * Put out the PGM header for a raw 256x256x8-bit grayscale file...
@@ -136,7 +136,7 @@ main(int  argc,			/* I - Number of command-line arguments */
     * Dither the line...
     */
 
-    cupsDitherLine(dither, lut, line, 1, pixels);
+    cfDitherLine(dither, lut, line, 1, pixels);
 
     if (y == 0)
     {
@@ -165,8 +165,8 @@ main(int  argc,			/* I - Number of command-line arguments */
   * Free the dither state and lookup table...
   */
 
-  cupsDitherDelete(dither);
-  cupsLutDelete(lut);
+  cfDitherDelete(dither);
+  cfLutDelete(lut);
 
  /*
   * Return with no errors...

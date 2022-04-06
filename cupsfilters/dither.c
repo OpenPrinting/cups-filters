@@ -11,9 +11,9 @@
  *
  * Contents:
  *
- *   cupsDitherDelete() - Free a dithering buffer.
- *   cupsDitherLine()   - Dither a line of pixels...
- *   cupsDitherNew()    - Create a dithering buffer.
+ *   cfDitherDelete() - Free a dithering buffer.
+ *   cfDitherLine()   - Dither a line of pixels...
+ *   cfDitherNew()    - Create a dithering buffer.
  */
 
 /*
@@ -25,13 +25,13 @@
 
 
 /*
- * 'cupsDitherDelete()' - Free a dithering buffer.
+ * 'cfDitherDelete()' - Free a dithering buffer.
  *
  * Returns 0 on success, -1 on failure.
  */
 
 void
-cupsDitherDelete(cups_dither_t *d)	/* I - Dithering buffer */
+cfDitherDelete(cf_dither_t *d)	/* I - Dithering buffer */
 {
   if (d != NULL)
     free(d);
@@ -39,12 +39,12 @@ cupsDitherDelete(cups_dither_t *d)	/* I - Dithering buffer */
 
 
 /*
- * 'cupsDitherLine()' - Dither a line of pixels...
+ * 'cfDitherLine()' - Dither a line of pixels...
  */
 
 void
-cupsDitherLine(cups_dither_t    *d,	/* I - Dither data */
-               const cups_lut_t *lut,	/* I - Lookup table */
+cfDitherLine(cf_dither_t    *d,	/* I - Dither data */
+               const cf_lut_t *lut,	/* I - Lookup table */
 	       const short      *data,	/* I - Separation data */
 	       int              num_channels,
 					/* I - Number of components */
@@ -126,8 +126,8 @@ cupsDitherLine(cups_dither_t    *d,	/* I - Dither data */
 
       pixel = lut[*data].intensity + e0 / 128;
 
-      if (pixel > CUPS_MAX_LUT)
-	pixel = CUPS_MAX_LUT;
+      if (pixel > CF_MAX_LUT)
+	pixel = CF_MAX_LUT;
       else if (pixel < 0)
 	pixel = 0;
 
@@ -220,8 +220,8 @@ cupsDitherLine(cups_dither_t    *d,	/* I - Dither data */
 
       pixel = lut[*data].intensity + e0 / 128;
 
-      if (pixel > CUPS_MAX_LUT)
-	pixel = CUPS_MAX_LUT;
+      if (pixel > CF_MAX_LUT)
+	pixel = CF_MAX_LUT;
       else if (pixel < 0)
 	pixel = 0;
 
@@ -278,16 +278,16 @@ cupsDitherLine(cups_dither_t    *d,	/* I - Dither data */
 
 
 /*
- * 'cupsDitherNew()' - Create an error-diffusion dithering buffer.
+ * 'cfDitherNew()' - Create an error-diffusion dithering buffer.
  */
 
-cups_dither_t *			/* O - New state array */
-cupsDitherNew(int width)	/* I - Width of output in pixels */
+cf_dither_t *			/* O - New state array */
+cfDitherNew(int width)	/* I - Width of output in pixels */
 {
-  cups_dither_t	*d;		/* New dithering buffer */
+  cf_dither_t	*d;		/* New dithering buffer */
 
 
-  if ((d = (cups_dither_t *)calloc(1, sizeof(cups_dither_t) +
+  if ((d = (cf_dither_t *)calloc(1, sizeof(cf_dither_t) +
                                    2 * (width + 4) *
 				       sizeof(int))) == NULL)
     return (NULL);

@@ -21,7 +21,7 @@
  * sRGB gamma lookup table.
  */
 
-const unsigned char cups_srgb_lut[256] =
+const unsigned char cf_srgb_lut[256] =
 {
     0,  20,  28,  33,  38,  42,  46,  49,  52,  55,  58,  61,  63,  65,  68,
    70,  72,  74,  76,  78,  80,  81,  83,  85,  87,  88,  90,  91,  93,  94,
@@ -48,7 +48,7 @@ const unsigned char cups_srgb_lut[256] =
  * sRGB gamma lookup table (inverted output to map to CMYK...)
  */
 
-const unsigned char cups_scmy_lut[256] =
+const unsigned char cf_scmy_lut[256] =
 {
   255, 235, 227, 222, 217, 213, 209, 206, 203, 200, 197, 194, 192, 190, 187,
   185, 183, 181, 179, 177, 175, 174, 172, 170, 168, 167, 165, 164, 162, 161,

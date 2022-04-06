@@ -49,8 +49,8 @@ typedef enum
  * Globals...
  */
 
-cups_rgb_t	*RGB;			/* RGB color separation data */
-cups_cmyk_t	*CMYK;			/* CMYK color separation data */
+cf_rgb_t	*RGB;			/* RGB color separation data */
+cf_cmyk_t	*CMYK;			/* CMYK color separation data */
 unsigned char	*PixelBuffer,		/* Pixel buffer */
 		*CMYKBuffer,		/* CMYK buffer */
 		*OutputBuffers[6],	/* Output buffers */
@@ -59,8 +59,8 @@ unsigned char	*PixelBuffer,		/* Pixel buffer */
 		*SeedBuffer,		/* Mode 3 seed buffers */
 		BlankValue;		/* The blank value */
 short		*InputBuffer;		/* Color separation buffer */
-cups_lut_t	*DitherLuts[6];		/* Lookup tables for dithering */
-cups_dither_t	*DitherStates[6];	/* Dither state tables */
+cf_lut_t	*DitherLuts[6];		/* Lookup tables for dithering */
+cf_dither_t	*DitherStates[6];	/* Dither state tables */
 int		PrinterPlanes,		/* Number of color planes */
 		SeedInvalid,		/* Contents of seed buffer invalid? */
 		DotBits[6],		/* Number of bits per color */
@@ -358,10 +358,10 @@ StartPage(filter_data_t      *data,	/* I - filter data */
     {
       if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
 	  header->cupsColorSpace == CUPS_CSPACE_W)
-	RGB = cupsRGBLoad(ppd, colormodel, header->MediaType, resolution,
+	RGB = cfRGBLoad(ppd, colormodel, header->MediaType, resolution,
 			  logfunc, ld);
 
-      CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution,
+      CMYK = cfCMYKLoad(ppd, colormodel, header->MediaType, resolution,
 			  logfunc, ld);
     }
 
@@ -381,7 +381,7 @@ StartPage(filter_data_t      *data,	/* I - filter data */
 	PrinterPlanes = 1;
       /*fputs("DEBUG: Loading default K separation.\n", stderr);*/
       fprintf(stderr, "DEBUG: Color Space: %d; Color Planes %d\n", header->cupsColorSpace, PrinterPlanes);
-      CMYK = cupsCMYKNew(PrinterPlanes);
+      CMYK = cfCMYKNew(PrinterPlanes);
     }
 
     PrinterPlanes = CMYK->num_channels;
@@ -393,42 +393,42 @@ StartPage(filter_data_t      *data,	/* I - filter data */
     switch (PrinterPlanes)
     {
       case 1 : /* K */
-          DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Black", logfunc, ld);
           break;
 
       case 3 : /* CMY */
-          DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Cyan", logfunc, ld);
-          DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Magenta", logfunc, ld);
-          DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Yellow", logfunc, ld);
           break;
 
       case 4 : /* CMYK */
-          DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Cyan", logfunc, ld);
-          DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Magenta", logfunc, ld);
-          DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Yellow", logfunc, ld);
-          DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[3] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Black", logfunc, ld);
           break;
 
       case 6 : /* CcMmYK */
-          DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Cyan", logfunc, ld);
-          DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "LightCyan", logfunc, ld);
-          DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Magenta", logfunc, ld);
-          DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[3] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "LightMagenta", logfunc, ld);
-          DitherLuts[4] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[4] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Yellow", logfunc, ld);
-          DitherLuts[5] = cupsLutLoad(ppd, colormodel, header->MediaType,
+          DitherLuts[5] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                              resolution, "Black", logfunc, ld);
           break;
     }
@@ -436,17 +436,17 @@ StartPage(filter_data_t      *data,	/* I - filter data */
     for (plane = 0; plane < PrinterPlanes; plane ++)
     {
       if (!DitherLuts[plane])
-        DitherLuts[plane] = cupsLutNew(2, default_lut, logfunc, ld);
+        DitherLuts[plane] = cfLutNew(2, default_lut, logfunc, ld);
 
       if (DitherLuts[plane][4095].pixel > 1)
 	DotBits[plane] = 2;
       else
 	DotBits[plane] = 1;
 
-      DitherStates[plane] = cupsDitherNew(header->cupsWidth);
+      DitherStates[plane] = cfDitherNew(header->cupsWidth);
 
       if (!DitherLuts[plane])
-	DitherLuts[plane] = cupsLutNew(2, default_lut, logfunc, ld);
+	DitherLuts[plane] = cfLutNew(2, default_lut, logfunc, ld);
     }
   }
 
@@ -666,7 +666,7 @@ StartPage(filter_data_t      *data,	/* I - filter data */
     printf("\033*p0Y\033*p0X");
   }
 
-  if (ppd && ((attr = cupsFindAttr(ppd, "cupsPCLQuality", colormodel,
+  if (ppd && ((attr = cfFindAttr(ppd, "cupsPCLQuality", colormodel,
 				   header->MediaType, resolution, spec,
 				   sizeof(spec), logfunc, ld)) != NULL))
   {
@@ -697,7 +697,7 @@ StartPage(filter_data_t      *data,	/* I - filter data */
       * vertical resolutions as well as a color count...
       */
 
-      if (ppd && ((attr = cupsFindAttr(ppd, "cupsPCLCRDMode", colormodel,
+      if (ppd && ((attr = cfFindAttr(ppd, "cupsPCLCRDMode", colormodel,
 				       header->MediaType, resolution, spec,
 				       sizeof(spec), logfunc, ld)) != NULL))
         i = atoi(attr->value);
@@ -756,7 +756,7 @@ StartPage(filter_data_t      *data,	/* I - filter data */
     pcl_set_simple_resolution(header->HWResolution[0]);
 					/* Set output resolution */
 
-    cupsWritePrintData("\033*v6W\2\3\0\10\10\10", 11);
+    cfWritePrintData("\033*v6W\2\3\0\10\10\10", 11);
 					/* 24-bit sRGB */
   }
   else
@@ -876,19 +876,19 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
   {
     for (plane = 0; plane < PrinterPlanes; plane ++)
     {
-      cupsDitherDelete(DitherStates[plane]);
-      cupsLutDelete(DitherLuts[plane]);
+      cfDitherDelete(DitherStates[plane]);
+      cfLutDelete(DitherLuts[plane]);
     }
 
     free(DotBuffers[0]);
     free(InputBuffer);
     free(OutputBuffers[0]);
 
-    cupsCMYKDelete(CMYK);
+    cfCMYKDelete(CMYK);
 
     if (RGB)
     {
-      cupsRGBDelete(RGB);
+      cfRGBDelete(RGB);
       free(CMYKBuffer);
     }
   }
@@ -994,7 +994,7 @@ CompressData(unsigned char *line,	/* I - Data to compress */
 
 	line_ptr = line;
 
-        if (cupsCheckBytes(line, length))
+        if (cfCheckBytes(line, length))
           line_end = line;		/* Blank line */
         else
 	  line_end = line + length;	/* Non-blank line */
@@ -1554,7 +1554,7 @@ CompressData(unsigned char *line,	/* I - Data to compress */
   */
 
   printf("\033*b%d%c", (int)(line_end - line_ptr), pend);
-  cupsWritePrintData(line_ptr, line_end - line_ptr);
+  cfWritePrintData(line_ptr, line_end - line_ptr);
 }
 
 
@@ -1678,7 +1678,7 @@ OutputLine(ppd_file_t         *ppd,	/* I - PPD file */
 	       bit <= DotBits[plane];
 	       bit <<= 1, ptr += bytes, j ++)
 	  {
-	    cupsPackHorizontalBit(OutputBuffers[plane], DotBuffers[plane],
+	    cfPackHorizontalBit(OutputBuffers[plane], DotBuffers[plane],
 	                          width, 0, bit);
             CompressData(ptr, bytes, j,
 	                 i == (PrinterPlanes - 1) &&
@@ -1719,7 +1719,7 @@ ReadLine(cups_raster_t      *ras,	/* I - Raster stream */
   * See if it is blank; if so, return right away...
   */
 
-  if (cupsCheckValue(PixelBuffer, header->cupsBytesPerLine, BlankValue))
+  if (cfCheckValue(PixelBuffer, header->cupsBytesPerLine, BlankValue))
     return (0);
 
  /*
@@ -1740,38 +1740,38 @@ ReadLine(cups_raster_t      *ras,	/* I - Raster stream */
     case CUPS_CSPACE_W :
         if (RGB)
 	{
-	  cupsRGBDoGray(RGB, PixelBuffer, CMYKBuffer, width);
+	  cfRGBDoGray(RGB, PixelBuffer, CMYKBuffer, width);
 
 	  if (RGB->num_channels == 1)
-	    cupsCMYKDoBlack(CMYK, CMYKBuffer, InputBuffer, width);
+	    cfCMYKDoBlack(CMYK, CMYKBuffer, InputBuffer, width);
 	  else
-	    cupsCMYKDoCMYK(CMYK, CMYKBuffer, InputBuffer, width);
+	    cfCMYKDoCMYK(CMYK, CMYKBuffer, InputBuffer, width);
 	}
 	else
-          cupsCMYKDoGray(CMYK, PixelBuffer, InputBuffer, width);
+          cfCMYKDoGray(CMYK, PixelBuffer, InputBuffer, width);
 	break;
 
     case CUPS_CSPACE_K :
-        cupsCMYKDoBlack(CMYK, PixelBuffer, InputBuffer, width);
+        cfCMYKDoBlack(CMYK, PixelBuffer, InputBuffer, width);
 	break;
 
     default :
     case CUPS_CSPACE_RGB :
         if (RGB)
 	{
-	  cupsRGBDoRGB(RGB, PixelBuffer, CMYKBuffer, width);
+	  cfRGBDoRGB(RGB, PixelBuffer, CMYKBuffer, width);
 
 	  if (RGB->num_channels == 1)
-	    cupsCMYKDoBlack(CMYK, CMYKBuffer, InputBuffer, width);
+	    cfCMYKDoBlack(CMYK, CMYKBuffer, InputBuffer, width);
 	  else
-	    cupsCMYKDoCMYK(CMYK, CMYKBuffer, InputBuffer, width);
+	    cfCMYKDoCMYK(CMYK, CMYKBuffer, InputBuffer, width);
 	}
 	else
-          cupsCMYKDoRGB(CMYK, PixelBuffer, InputBuffer, width);
+          cfCMYKDoRGB(CMYK, PixelBuffer, InputBuffer, width);
 	break;
 
     case CUPS_CSPACE_CMYK :
-        cupsCMYKDoCMYK(CMYK, PixelBuffer, InputBuffer, width);
+        cfCMYKDoCMYK(CMYK, PixelBuffer, InputBuffer, width);
 	break;
   }
 
@@ -1780,7 +1780,7 @@ ReadLine(cups_raster_t      *ras,	/* I - Raster stream */
   */
 
   for (plane = 0; plane < PrinterPlanes; plane ++)
-    cupsDitherLine(DitherStates[plane], DitherLuts[plane], InputBuffer + plane,
+    cfDitherLine(DitherStates[plane], DitherLuts[plane], InputBuffer + plane,
                    PrinterPlanes, OutputBuffers[plane]);
 
  /*

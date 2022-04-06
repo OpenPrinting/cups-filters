@@ -11,7 +11,7 @@
  *
  * Contents:
  *
- *   cupsFindAttr() - Find a PPD attribute based on the colormodel,
+ *   cfFindAttr() - Find a PPD attribute based on the colormodel,
  *                    media, and resolution.
  */
 
@@ -26,12 +26,12 @@
 
 
 /*
- * 'cupsFindAttr()' - Find a PPD attribute based on the colormodel,
+ * 'cfFindAttr()' - Find a PPD attribute based on the colormodel,
  *                    media, and resolution.
  */
 
 ppd_attr_t *				/* O - Matching attribute or NULL */
-cupsFindAttr(ppd_file_t *ppd,		/* I - PPD file */
+cfFindAttr(ppd_file_t *ppd,		/* I - PPD file */
              const char *name,		/* I - Attribute name */
              const char *colormodel,	/* I - Color model */
              const char *media,		/* I - Media type */

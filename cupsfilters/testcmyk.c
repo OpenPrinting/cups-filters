@@ -91,10 +91,10 @@ test_gray(int        num_comps,		/* I - Number of components */
   short			output[48000],	/* Output separation data */
 			*outptr;	/* Pointer in output */
   FILE			*in;		/* Input PPM file */
-  FILE			*out[CUPS_MAX_CHAN];
+  FILE			*out[CF_MAX_CHAN];
 					/* Output PGM files */
   FILE			*comp;		/* Composite output */
-  cups_cmyk_t		*cmyk;		/* Color separation */
+  cf_cmyk_t		*cmyk;		/* Color separation */
 
 
  /*
@@ -114,31 +114,31 @@ test_gray(int        num_comps,		/* I - Number of components */
   * Create the color separation...
   */
 
-  cmyk = cupsCMYKNew(num_comps);
+  cmyk = cfCMYKNew(num_comps);
 
   switch (num_comps)
   {
     case 2 : /* Kk */
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
 	break;
 
     case 4 :
-	cupsCMYKSetGamma(cmyk, 2, 1.0, 0.9, logfunc, ld);
-        cupsCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
+	cfCMYKSetGamma(cmyk, 2, 1.0, 0.9, logfunc, ld);
+        cfCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
 	break;
 
     case 6 : /* CcMmYK */
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
-        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
-	cupsCMYKSetGamma(cmyk, 4, 1.0, 0.9, logfunc, ld);
-        cupsCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
+	cfCMYKSetGamma(cmyk, 4, 1.0, 0.9, logfunc, ld);
+        cfCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
 	break;
 
     case 7 : /* CcMmYKk */
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
-        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
-	cupsCMYKSetGamma(cmyk, 4, 1.0, 0.9, logfunc, ld);
-        cupsCMYKSetLtDk(cmyk, 5, 0.5, 1.0, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
+	cfCMYKSetGamma(cmyk, 4, 1.0, 0.9, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 5, 0.5, 1.0, logfunc, ld);
 	break;
   }
 
@@ -167,7 +167,7 @@ test_gray(int        num_comps,		/* I - Number of components */
   {
     fread(input, width, 1, in);
 
-    cupsCMYKDoGray(cmyk, input, output, width);
+    cfCMYKDoGray(cmyk, input, output, width);
 
     for (x = 0, outptr = output; x < width; x ++, outptr += num_comps)
     {
@@ -251,7 +251,7 @@ test_gray(int        num_comps,		/* I - Number of components */
   fclose(comp);
   fclose(in);
 
-  cupsCMYKDelete(cmyk);
+  cfCMYKDelete(cmyk);
 }
 
 
@@ -273,10 +273,10 @@ test_rgb(int        num_comps,		/* I - Number of components */
   short			output[48000],	/* Output separation data */
 			*outptr;	/* Pointer in output */
   FILE			*in;		/* Input PPM file */
-  FILE			*out[CUPS_MAX_CHAN];
+  FILE			*out[CF_MAX_CHAN];
 					/* Output PGM files */
   FILE			*comp;		/* Composite output */
-  cups_cmyk_t		*cmyk;		/* Color separation */
+  cf_cmyk_t		*cmyk;		/* Color separation */
 
 
  /*
@@ -296,27 +296,27 @@ test_rgb(int        num_comps,		/* I - Number of components */
   * Create the color separation...
   */
 
-  cmyk = cupsCMYKNew(num_comps);
+  cmyk = cfCMYKNew(num_comps);
 
-  cupsCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
+  cfCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
 
   switch (num_comps)
   {
     case 2 : /* Kk */
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
 	break;
     case 6 : /* CcMmYK */
-	cupsCMYKSetGamma(cmyk, 0, 1.0, 0.8, logfunc, ld);
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
-	cupsCMYKSetGamma(cmyk, 2, 1.0, 0.8, logfunc, ld);
-        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
+	cfCMYKSetGamma(cmyk, 0, 1.0, 0.8, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+	cfCMYKSetGamma(cmyk, 2, 1.0, 0.8, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
 	break;
     case 7 : /* CcMmYKk */
-	cupsCMYKSetGamma(cmyk, 0, 1.0, 0.8, logfunc, ld);
-        cupsCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
-	cupsCMYKSetGamma(cmyk, 2, 1.0, 0.8, logfunc, ld);
-        cupsCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
-        cupsCMYKSetLtDk(cmyk, 5, 0.5, 1.0, logfunc, ld);
+	cfCMYKSetGamma(cmyk, 0, 1.0, 0.8, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
+	cfCMYKSetGamma(cmyk, 2, 1.0, 0.8, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
+        cfCMYKSetLtDk(cmyk, 5, 0.5, 1.0, logfunc, ld);
 	break;
   }
 
@@ -345,7 +345,7 @@ test_rgb(int        num_comps,		/* I - Number of components */
   {
     fread(input, width, 3, in);
 
-    cupsCMYKDoRGB(cmyk, input, output, width);
+    cfCMYKDoRGB(cmyk, input, output, width);
 
     for (x = 0, outptr = output; x < width; x ++, outptr += num_comps)
     {
@@ -429,6 +429,6 @@ test_rgb(int        num_comps,		/* I - Number of components */
   fclose(comp);
   fclose(in);
 
-  cupsCMYKDelete(cmyk);
+  cfCMYKDelete(cmyk);
 }
 

@@ -11,8 +11,8 @@
  *
  * Contents:
  *
- *   cupsCheckBytes() - Check to see if all bytes are zero.
- *   cupsCheckValue() - Check to see if all bytes match the given value.
+ *   cfCheckBytes() - Check to see if all bytes are zero.
+ *   cfCheckValue() - Check to see if all bytes match the given value.
  */
 
 /*
@@ -23,11 +23,11 @@
 
 
 /*
- * 'cupsCheckBytes()' - Check to see if all bytes are zero.
+ * 'cfCheckBytes()' - Check to see if all bytes are zero.
  */
 
 int						/* O - 1 if they match */
-cupsCheckBytes(const unsigned char *bytes,	/* I - Bytes to check */
+cfCheckBytes(const unsigned char *bytes,	/* I - Bytes to check */
                int                 length)	/* I - Number of bytes to check */
 {
   while (length > 7)
@@ -63,11 +63,11 @@ cupsCheckBytes(const unsigned char *bytes,	/* I - Bytes to check */
 
 
 /*
- * 'cupsCheckValue()' - Check to see if all bytes match the given value.
+ * 'cfCheckValue()' - Check to see if all bytes match the given value.
  */
 
 int						/* O - 1 if they match */
-cupsCheckValue(const unsigned char *bytes,	/* I - Bytes to check */
+cfCheckValue(const unsigned char *bytes,	/* I - Bytes to check */
                int                 length,	/* I - Number of bytes to check */
 	       const unsigned char value)	/* I - Value to check */
 {

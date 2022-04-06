@@ -55,8 +55,8 @@ typedef struct cups_weave_str
  * Globals...
  */
 
-cups_rgb_t	*RGB;			/* RGB color separation data */
-cups_cmyk_t	*CMYK;			/* CMYK color separation data */
+cf_rgb_t	*RGB;			/* RGB color separation data */
+cf_cmyk_t	*CMYK;			/* CMYK color separation data */
 unsigned char	*PixelBuffer,		/* Pixel buffer */
 		*CMYKBuffer,		/* CMYK buffer */
 		*OutputBuffers[7],	/* Output buffers */
@@ -79,8 +79,8 @@ int		PrinterPlanes,		/* # of color planes */
 		BitPlanes,		/* # of bit planes per color */
 		PrinterTop,		/* Top of page */
 		PrinterLength;		/* Length of page */
-cups_lut_t	*DitherLuts[7];		/* Lookup tables for dithering */
-cups_dither_t	*DitherStates[7];	/* Dither state tables */
+cf_lut_t	*DitherLuts[7];		/* Lookup tables for dithering */
+cf_dither_t	*DitherStates[7];	/* Dither state tables */
 int		OutputFeed;		/* Number of lines to skip */
 int		Canceled;		/* Is the job canceled? */
 filter_logfunc_t logfunc;               /* Log function */
@@ -120,7 +120,7 @@ Setup(ppd_file_t *ppd)		/* I - PPD file */
   */
 
   if (ppd->model_number & ESCP_USB)
-    cupsWritePrintData("\000\000\000\033\001@EJL 1284.4\n@EJL     \n\033@", 29);
+    cfWritePrintData("\000\000\000\033\001@EJL 1284.4\n@EJL     \n\033@", 29);
 }
 
 
@@ -244,12 +244,12 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
       header->cupsColorSpace == CUPS_CSPACE_W)
-    RGB = cupsRGBLoad(ppd, colormodel, header->MediaType, resolution,
+    RGB = cfRGBLoad(ppd, colormodel, header->MediaType, resolution,
 		      logfunc, ld);
   else
     RGB = NULL;
 
-  CMYK = cupsCMYKLoad(ppd, colormodel, header->MediaType, resolution,
+  CMYK = cfCMYKLoad(ppd, colormodel, header->MediaType, resolution,
 		      logfunc, ld);
 
   if (RGB)
@@ -260,7 +260,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   else
   {
     fputs("DEBUG: Loading default CMYK separation.\n", stderr);
-    CMYK = cupsCMYKNew(4);
+    CMYK = cfCMYKNew(4);
   }
 
   PrinterPlanes = CMYK->num_channels;
@@ -274,76 +274,76 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   switch (PrinterPlanes)
   {
     case 1 : /* K */
-        DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
         break;
 
     case 2 : /* Kk */
-        DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
-        DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightBlack", logfunc, ld);
         break;
 
     case 3 : /* CMY */
-        DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
-        DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Magenta", logfunc, ld);
-        DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Yellow", logfunc, ld);
         break;
 
     case 4 : /* CMYK */
-        DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
-        DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Magenta", logfunc, ld);
-        DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Yellow", logfunc, ld);
-        DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[3] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
         break;
 
     case 6 : /* CcMmYK */
-        DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
-        DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightCyan", logfunc, ld);
-        DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Magenta", logfunc, ld);
-        DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[3] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightMagenta", logfunc, ld);
-        DitherLuts[4] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[4] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Yellow", logfunc, ld);
-        DitherLuts[5] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[5] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
         break;
 
     case 7 : /* CcMmYKk */
-        DitherLuts[0] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
-        DitherLuts[1] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightCyan", logfunc, ld);
-        DitherLuts[2] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Magenta", logfunc, ld);
-        DitherLuts[3] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[3] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightMagenta", logfunc, ld);
-        DitherLuts[4] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[4] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Yellow", logfunc, ld);
-        DitherLuts[5] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[5] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
-        DitherLuts[6] = cupsLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[6] = cfLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightBlack", logfunc, ld);
         break;
   }
 
   for (plane = 0; plane < PrinterPlanes; plane ++)
   {
-    DitherStates[plane] = cupsDitherNew(header->cupsWidth);
+    DitherStates[plane] = cfDitherNew(header->cupsWidth);
 
     if (!DitherLuts[plane])
-      DitherLuts[plane] = cupsLutNew(2, default_lut, logfunc, ld);
+      DitherLuts[plane] = cfLutNew(2, default_lut, logfunc, ld);
   }
 
   if (DitherLuts[0][4095].pixel > 1)
@@ -363,13 +363,13 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     * Go into remote mode...
     */
 
-    cupsWritePrintData("\033(R\010\000\000REMOTE1", 13);
+    cfWritePrintData("\033(R\010\000\000REMOTE1", 13);
 
    /*
     * Disable status reporting...
     */
 
-    cupsWritePrintData("ST\002\000\000\000", 6);
+    cfWritePrintData("ST\002\000\000\000", 6);
 
    /*
     * Enable borderless printing...
@@ -383,7 +383,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       i = atoi(attr->value);
 
-      cupsWritePrintData("FP\003\000\000", 5);
+      cfWritePrintData("FP\003\000\000", 5);
       putchar(i & 255);
       putchar(i >> 8);
     }
@@ -402,7 +402,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
         * Set feed sequence...
 	*/
 
-	cupsWritePrintData("SN\003\000\000\000", 6);
+	cfWritePrintData("SN\003\000\000\000", 6);
 	putchar(atoi(attr->value));
       }
 
@@ -412,7 +412,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
         * Set platten gap...
 	*/
 
-	cupsWritePrintData("SN\003\000\000\001", 6);
+	cfWritePrintData("SN\003\000\000\001", 6);
 	putchar(atoi(attr->value));
       }
 
@@ -422,7 +422,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
         * Paper feeding/ejecting sequence...
 	*/
 
-	cupsWritePrintData("SN\003\000\000\002", 6);
+	cfWritePrintData("SN\003\000\000\002", 6);
 	putchar(atoi(attr->value));
       }
 
@@ -432,7 +432,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
         * Eject delay...
 	*/
 
-        cupsWritePrintData("SN\003\000\000\006", 6);
+        cfWritePrintData("SN\003\000\000\006", 6);
         putchar(atoi(attr->value));
       }
 
@@ -442,7 +442,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
         * Set media type.
 	*/
 
-	cupsWritePrintData("MT\003\000\000\000", 6);
+	cfWritePrintData("MT\003\000\000\000", 6);
         putchar(atoi(attr->value));
       }
 
@@ -452,7 +452,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
         * Set paper thickness.
         */
 
-	cupsWritePrintData("PH\002\000\000", 5);
+	cfWritePrintData("PH\002\000\000", 5);
         putchar(atoi(attr->value));
       }
     }
@@ -467,7 +467,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	* Paper check.
 	*/
 
-	cupsWritePrintData("PC\002\000\000", 5);
+	cfWritePrintData("PC\002\000\000", 5);
         putchar(atoi(attr->value));
       }
 
@@ -482,7 +482,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
         a = b = 0;
         sscanf(attr->value, "%d%d", &a, &b);
 
-	cupsWritePrintData("PP\003\000\000", 5);
+	cfWritePrintData("PP\003\000\000", 5);
         putchar(a);
         putchar(b);
       }
@@ -493,7 +493,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	* Set media position.
 	*/
 
-	cupsWritePrintData("EX\006\000\000\000\000\000\005", 9);
+	cfWritePrintData("EX\006\000\000\000\000\000\005", 9);
         putchar(atoi(attr->value));
       }
     }
@@ -504,7 +504,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       * Set media size...
       */
 
-      cupsWritePrintData("MS\010\000\000", 5);
+      cfWritePrintData("MS\010\000\000", 5);
       putchar(atoi(attr->value));
 
       switch (header->PageSize[1])
@@ -618,7 +618,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       * Enable/disable cutter.
       */
 
-      cupsWritePrintData("AC\002\000\000", 5);
+      cfWritePrintData("AC\002\000\000", 5);
       putchar(atoi(attr->value));
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPSN80", header->MediaType)) != NULL && attr->value)
@@ -627,7 +627,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	* Cutting method...
 	*/
 
-	cupsWritePrintData("SN\003\000\000\200", 6);
+	cfWritePrintData("SN\003\000\000\200", 6);
 	putchar(atoi(attr->value));
       }
 
@@ -637,7 +637,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	* Cutting pressure...
 	*/
 
-	cupsWritePrintData("SN\003\000\000\201", 6);
+	cfWritePrintData("SN\003\000\000\201", 6);
 	putchar(atoi(attr->value));
       }
     }
@@ -648,23 +648,23 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       * Enable/disable cutter.
       */
 
-      cupsWritePrintData("CO\010\000\000\000", 6);
+      cfWritePrintData("CO\010\000\000\000", 6);
       putchar(atoi(attr->value));
-      cupsWritePrintData("\000\000\000\000\000", 5);
+      cfWritePrintData("\000\000\000\000\000", 5);
     }
 
    /*
     * Exit remote mode...
     */
 
-    cupsWritePrintData("\033\000\000\000", 4);
+    cfWritePrintData("\033\000\000\000", 4);
   }
 
  /*
   * Enter graphics mode...
   */
 
-  cupsWritePrintData("\033(G\001\000\001", 6);
+  cfWritePrintData("\033(G\001\000\001", 6);
 
  /*
   * Set the line feed increment...
@@ -675,7 +675,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if (ppd->model_number & ESCP_EXT_UNITS)
   {
-    cupsWritePrintData("\033(U\005\000", 5);
+    cfWritePrintData("\033(U\005\000", 5);
     putchar(units / header->HWResolution[1]);
     putchar(units / header->HWResolution[1]);
     putchar(units / header->HWResolution[0]);
@@ -684,7 +684,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   }
   else
   {
-    cupsWritePrintData("\033(U\001\000", 5);
+    cfWritePrintData("\033(U\001\000", 5);
     putchar(3600 / header->HWResolution[1]);
   }
 
@@ -700,7 +700,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     * Set page size (expands bottom margin)...
     */
 
-    cupsWritePrintData("\033(S\010\000", 5);
+    cfWritePrintData("\033(S\010\000", 5);
 
     i = header->PageSize[0] * header->HWResolution[1] / 72;
     putchar(i);
@@ -716,7 +716,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   }
   else
   {
-    cupsWritePrintData("\033(C\002\000", 5);
+    cfWritePrintData("\033(C\002\000", 5);
     putchar(PrinterLength & 255);
     putchar(PrinterLength >> 8);
   }
@@ -730,7 +730,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if (ppd->model_number & ESCP_EXT_MARGINS)
   {
-    cupsWritePrintData("\033(c\010\000", 5);
+    cfWritePrintData("\033(c\010\000", 5);
 
     putchar(PrinterTop);
     putchar(PrinterTop >> 8);
@@ -744,7 +744,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   }
   else
   {
-    cupsWritePrintData("\033(c\004\000", 5);
+    cfWritePrintData("\033(c\004\000", 5);
 
     putchar(PrinterTop & 255);
     putchar(PrinterTop >> 8);
@@ -757,13 +757,13 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Set the top position...
   */
 
-  cupsWritePrintData("\033(V\002\000\000\000", 7);
+  cfWritePrintData("\033(V\002\000\000\000", 7);
 
  /*
   * Enable unidirectional printing depending on the mode...
   */
 
-  if ((attr = cupsFindAttr(ppd, "cupsESCPDirection", colormodel,
+  if ((attr = cfFindAttr(ppd, "cupsESCPDirection", colormodel,
                            header->MediaType, resolution, spec,
 			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033U%c", atoi(attr->value));
@@ -772,7 +772,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Enable/disable microweaving as needed...
   */
 
-  if ((attr = cupsFindAttr(ppd, "cupsESCPMicroWeave", colormodel,
+  if ((attr = cfFindAttr(ppd, "cupsESCPMicroWeave", colormodel,
                            header->MediaType, resolution, spec,
 			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033(i\001%c%c", 0, atoi(attr->value));
@@ -781,7 +781,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Set the dot size and print speed as needed...
   */
 
-  if ((attr = cupsFindAttr(ppd, "cupsESCPDotSize", colormodel,
+  if ((attr = cfFindAttr(ppd, "cupsESCPDotSize", colormodel,
                            header->MediaType, resolution, spec,
 			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033(e\002%c%c%c", 0, 0, atoi(attr->value));
@@ -798,7 +798,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       * Fast black printing.
       */
 
-      cupsWritePrintData("\033(K\002\000\000\001", 7);
+      cfWritePrintData("\033(K\002\000\000\001", 7);
     }
     else
     {
@@ -806,7 +806,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       * Color printing.
       */
 
-      cupsWritePrintData("\033(K\002\000\000\002", 7);
+      cfWritePrintData("\033(K\002\000\000\002", 7);
     }
   }
 
@@ -1019,7 +1019,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Set the output resolution...
   */
 
-  cupsWritePrintData("\033(D\004\000", 5);
+  cfWritePrintData("\033(D\004\000", 5);
   putchar(units);
   putchar(units >> 8);
   putchar(units * DotRowStep / header->HWResolution[1]);
@@ -1162,8 +1162,8 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   for (i = 0; i < PrinterPlanes; i ++)
   {
-    cupsDitherDelete(DitherStates[i]);
-    cupsLutDelete(DitherLuts[i]);
+    cfDitherDelete(DitherStates[i]);
+    cfLutDelete(DitherLuts[i]);
   }
 
   free(OutputBuffers[0]);
@@ -1172,11 +1172,11 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
   free(InputBuffer);
   free(CompBuffer);
 
-  cupsCMYKDelete(CMYK);
+  cfCMYKDelete(CMYK);
 
   if (RGB)
   {
-    cupsRGBDelete(RGB);
+    cfRGBDelete(RGB);
     free(CMYKBuffer);
   }
 }
@@ -1201,19 +1201,19 @@ Shutdown(ppd_file_t *ppd)		/* I - PPD file */
     * Go into remote mode...
     */
 
-    cupsWritePrintData("\033(R\010\000\000REMOTE1", 13);
+    cfWritePrintData("\033(R\010\000\000REMOTE1", 13);
 
    /*
     * Load defaults...
     */
 
-    cupsWritePrintData("LD\000\000", 4);
+    cfWritePrintData("LD\000\000", 4);
 
    /*
     * Exit remote mode...
     */
 
-    cupsWritePrintData("\033\000\000\000", 4);
+    cfWritePrintData("\033\000\000\000", 4);
   }
 }
 
@@ -1425,7 +1425,7 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
   if (offset)
   {
     if (BitPlanes == 1)
-      cupsWritePrintData("\033(\\\004\000\240\005", 7);
+      cfWritePrintData("\033(\\\004\000\240\005", 7);
     else
       printf("\033\\");
 
@@ -1485,7 +1485,7 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
     putchar(bytes >> 8);
   }
 
-  cupsWritePrintData(line_ptr, line_end - line_ptr);
+  cfWritePrintData(line_ptr, line_end - line_ptr);
 }
 
 
@@ -1525,7 +1525,7 @@ OutputBand(ppd_file_t         *ppd,	/* I - PPD file */
 
   if (OutputFeed > 0)
   {
-    cupsWritePrintData("\033(v\002\000", 5);
+    cfWritePrintData("\033(v\002\000", 5);
     putchar(OutputFeed & 255);
     putchar(OutputFeed >> 8);
 
@@ -1592,30 +1592,30 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
     case CUPS_CSPACE_W :
         if (RGB)
 	{
-	  cupsRGBDoGray(RGB, PixelBuffer, CMYKBuffer, width);
-	  cupsCMYKDoCMYK(CMYK, CMYKBuffer, InputBuffer, width);
+	  cfRGBDoGray(RGB, PixelBuffer, CMYKBuffer, width);
+	  cfCMYKDoCMYK(CMYK, CMYKBuffer, InputBuffer, width);
 	}
 	else
-          cupsCMYKDoGray(CMYK, PixelBuffer, InputBuffer, width);
+          cfCMYKDoGray(CMYK, PixelBuffer, InputBuffer, width);
 	break;
 
     case CUPS_CSPACE_K :
-        cupsCMYKDoBlack(CMYK, PixelBuffer, InputBuffer, width);
+        cfCMYKDoBlack(CMYK, PixelBuffer, InputBuffer, width);
 	break;
 
     default :
     case CUPS_CSPACE_RGB :
         if (RGB)
 	{
-	  cupsRGBDoRGB(RGB, PixelBuffer, CMYKBuffer, width);
-	  cupsCMYKDoCMYK(CMYK, CMYKBuffer, InputBuffer, width);
+	  cfRGBDoRGB(RGB, PixelBuffer, CMYKBuffer, width);
+	  cfCMYKDoCMYK(CMYK, CMYKBuffer, InputBuffer, width);
 	}
 	else
-          cupsCMYKDoRGB(CMYK, PixelBuffer, InputBuffer, width);
+          cfCMYKDoRGB(CMYK, PixelBuffer, InputBuffer, width);
 	break;
 
     case CUPS_CSPACE_CMYK :
-        cupsCMYKDoCMYK(CMYK, PixelBuffer, InputBuffer, width);
+        cfCMYKDoCMYK(CMYK, PixelBuffer, InputBuffer, width);
 	break;
   }
 
@@ -1625,7 +1625,7 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
 
   for (plane = 0; plane < PrinterPlanes; plane ++)
   {
-    cupsDitherLine(DitherStates[plane], DitherLuts[plane], InputBuffer + plane,
+    cfDitherLine(DitherStates[plane], DitherLuts[plane], InputBuffer + plane,
                    PrinterPlanes, OutputBuffers[plane]);
 
     if (DotRowMax == 1)
@@ -1634,19 +1634,19 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
       * Handle microweaved output...
       */
 
-      if (cupsCheckBytes(OutputBuffers[plane], width))
+      if (cfCheckBytes(OutputBuffers[plane], width))
 	continue;
 
       if (BitPlanes == 1)
-	cupsPackHorizontal(OutputBuffers[plane], DotBuffers[plane],
+	cfPackHorizontal(OutputBuffers[plane], DotBuffers[plane],
 	                   width, 0, 1);
       else
-	cupsPackHorizontal2(OutputBuffers[plane], DotBuffers[plane],
+	cfPackHorizontal2(OutputBuffers[plane], DotBuffers[plane],
                 	    width, 1);
 
       if (OutputFeed > 0)
       {
-	cupsWritePrintData("\033(v\002\000", 5);
+	cfWritePrintData("\033(v\002\000", 5);
 	putchar(OutputFeed & 255);
 	putchar(OutputFeed >> 8);
 	OutputFeed = 0;
@@ -1674,14 +1674,14 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
 	offset = band->row * DotBufferSize;
 
         if (BitPlanes == 1)
-	  cupsPackHorizontal(OutputBuffers[plane] + pass,
+	  cfPackHorizontal(OutputBuffers[plane] + pass,
 	                     band->buffer + offset, subwidth, 0, DotColStep);
         else
-	  cupsPackHorizontal2(OutputBuffers[plane] + pass,
+	  cfPackHorizontal2(OutputBuffers[plane] + pass,
 	                      band->buffer + offset, subwidth, DotColStep);
 
         band->row ++;
-	band->dirty |= !cupsCheckBytes(band->buffer + offset, DotBufferSize);
+	band->dirty |= !cfCheckBytes(band->buffer + offset, DotBufferSize);
 	if (band->row >= band->count)
 	{
 	  if (band->dirty)

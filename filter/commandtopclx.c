@@ -87,7 +87,7 @@ main(int  argc,					/* I - Number of command-line arguments */
   * Reset the printer...
   */
 
-  cupsWritePrintData("\033E", 2);
+  cfWritePrintData("\033E", 2);
 
  /*
   * Read the commands from the file and send the appropriate commands...
@@ -129,7 +129,7 @@ main(int  argc,					/* I - Number of command-line arguments */
       * Clean heads...
       */
 
-      cupsWritePrintData("\033&b16WPML \004\000\006\001\004\001\005\001"
+      cfWritePrintData("\033&b16WPML \004\000\006\001\004\001\005\001"
                          "\001\004\001\144", 22);
     }
     else
@@ -151,7 +151,7 @@ main(int  argc,					/* I - Number of command-line arguments */
   * Reset the printer...
   */
 
-  cupsWritePrintData("\033E", 2);
+  cfWritePrintData("\033E", 2);
 
  /*
   * Close the command file and return...

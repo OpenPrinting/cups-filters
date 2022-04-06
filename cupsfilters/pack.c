@@ -11,10 +11,10 @@
  *
  * Contents:
  *
- *   cupsPackHorizontal()    - Pack pixels horizontally...
- *   cupsPackHorizontal2()   - Pack 2-bit pixels horizontally...
- *   cupsPackHorizontalBit() - Pack pixels horizontally by bit...
- *   cupsPackVertical()      - Pack pixels vertically...
+ *   cfPackHorizontal()    - Pack pixels horizontally...
+ *   cfPackHorizontal2()   - Pack 2-bit pixels horizontally...
+ *   cfPackHorizontalBit() - Pack pixels horizontally by bit...
+ *   cfPackVertical()      - Pack pixels vertically...
  */
 
 /*
@@ -25,11 +25,11 @@
 
 
 /*
- * 'cupsPackHorizontal()' - Pack pixels horizontally...
+ * 'cfPackHorizontal()' - Pack pixels horizontally...
  */
 
 void
-cupsPackHorizontal(const unsigned char *ipixels,/* I - Input pixels */
+cfPackHorizontal(const unsigned char *ipixels,/* I - Input pixels */
         	   unsigned char       *obytes,	/* O - Output bytes */
         	   int                 width,	/* I - Number of pixels */
         	   const unsigned char clearto,	/* I - Initial value of bytes */
@@ -112,11 +112,11 @@ cupsPackHorizontal(const unsigned char *ipixels,/* I - Input pixels */
 
 
 /*
- * 'cupsPackHorizontal2()' - Pack 2-bit pixels horizontally...
+ * 'cfPackHorizontal2()' - Pack 2-bit pixels horizontally...
  */
 
 void
-cupsPackHorizontal2(const unsigned char *ipixels,	/* I - Input pixels */
+cfPackHorizontal2(const unsigned char *ipixels,	/* I - Input pixels */
         	    unsigned char       *obytes,	/* O - Output bytes */
         	    int                 width,		/* I - Number of pixels */
 		    const int           step)		/* I - Stepping value */
@@ -165,11 +165,11 @@ cupsPackHorizontal2(const unsigned char *ipixels,	/* I - Input pixels */
 
 
 /*
- * 'cupsPackHorizontalBit()' - Pack pixels horizontally by bit...
+ * 'cfPackHorizontalBit()' - Pack pixels horizontally by bit...
  */
 
 void
-cupsPackHorizontalBit(const unsigned char *ipixels,	/* I - Input pixels */
+cfPackHorizontalBit(const unsigned char *ipixels,	/* I - Input pixels */
                       unsigned char       *obytes,	/* O - Output bytes */
                       int                 width,	/* I - Number of pixels */
                       const unsigned char clearto,	/* I - Initial value of bytes */
@@ -244,11 +244,11 @@ cupsPackHorizontalBit(const unsigned char *ipixels,	/* I - Input pixels */
 
 
 /*
- * 'cupsPackVertical()' - Pack pixels vertically...
+ * 'cfPackVertical()' - Pack pixels vertically...
  */
 
 void
-cupsPackVertical(const unsigned char *ipixels,	/* I - Input pixels */
+cfPackVertical(const unsigned char *ipixels,	/* I - Input pixels */
                  unsigned char       *obytes,	/* O - Output bytes */
                  int                 width,	/* I - Number of input pixels */
                  const unsigned char bit,	/* I - Output bit */
