@@ -336,7 +336,7 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   * Option list...
   */
 
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
  /*
   * Open the input data stream specified by the inputfd ...
@@ -412,7 +412,7 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   * Process job options...
   */
 
-  cupsRasterPrepareHeader(&header, data, outformat,
+  cfRasterPrepareHeader(&header, data, outformat,
 			  CF_FILTER_OUT_FORMAT_CUPS_RASTER, 1, &cspace);
   ppd = data->ppd;
   doc.Orientation = header.Orientation;
@@ -462,7 +462,7 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
 
   /*  Find print-rendering-intent */
 
-  getPrintRenderIntent(data, &header);
+  cfGetPrintRenderIntent(data, &header);
   if(log) log(ld, CF_LOGLEVEL_DEBUG,
 	      "cfFilterImageToRaster: Print rendering intent = %s",
 	      header.cupsRenderingIntent);

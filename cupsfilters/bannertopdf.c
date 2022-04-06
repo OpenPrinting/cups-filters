@@ -1027,7 +1027,7 @@ int cfFilterBannerToPDF(int inputfd,         /* I - File descriptor input stream
     void *icd = data->iscanceleddata;
     char jobid[50];
 
-    num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+    num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
    /*
     * Open the input data stream specified by the inputfd...

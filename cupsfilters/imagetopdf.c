@@ -863,7 +863,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   * Also add job-attrs in options list itself. 
   */
 
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
  /* 
   * Compute custom margins and min_width and min_length of the page... 
@@ -897,11 +897,11 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   /* The cfFilterSetCommonOptions() does not set doc.Color
      according to option settings (user's demand for color/gray),
      so we parse the options and set the mode here */
-  cupsRasterParseIPPOptions(&h, data, 0, 1);
+  cfRasterParseIPPOptions(&h, data, 0, 1);
   if (doc.Color)
     doc.Color = h.cupsNumColors <= 1 ? 0 : 1;
   if (!doc.ppd) {
-    /* Without PPD use also the other findings of cupsRasterParseIPPOptions() */
+    /* Without PPD use also the other findings of cfRasterParseIPPOptions() */
     doc.Orientation = h.Orientation;
     doc.Duplex = h.Duplex;
     doc.PageWidth = h.cupsPageSize[0] != 0.0 ? h.cupsPageSize[0] :

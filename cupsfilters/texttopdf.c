@@ -911,7 +911,7 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 			 log, ld);
 
   if (!data->ppd) {
-    cupsRasterParseIPPOptions(&(doc.h), data, 0, 1);
+    cfRasterParseIPPOptions(&(doc.h), data, 0, 1);
     doc.Orientation = doc.h.Orientation;
     doc.Duplex = doc.h.Duplex;
     doc.ColorDevice = doc.h.cupsNumColors <= 1 ? 0 : 1;

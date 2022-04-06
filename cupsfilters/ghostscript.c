@@ -970,7 +970,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   }
 
   /* Find print-rendering-intent */
-  getPrintRenderIntent(data, &h);
+  cfGetPrintRenderIntent(data, &h);
   if(log) log(ld, CF_LOGLEVEL_DEBUG,
 	      "Print rendering intent = %s", h.cupsRenderingIntent);
 
@@ -1066,7 +1066,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   }
 
   cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
-  cupsRasterPrepareHeader(&h, data, outformat,
+  cfRasterPrepareHeader(&h, data, outformat,
 			  (outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
 			   outformat : CF_FILTER_OUT_FORMAT_CUPS_RASTER), 0,
 			  &cspace);

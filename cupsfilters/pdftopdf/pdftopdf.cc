@@ -901,7 +901,7 @@ void calculate(cf_filter_data_t *data,ProcessingParameters &param,char *final_co
   ppd_file_t *ppd = data->ppd;
   int num_options = 0;
   cups_option_t *options = NULL;
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
   if (param.reverse)
     // Enable evenDuplex or the first page may be empty.
     param.evenDuplex=true; // disabled later, if non-duplex
@@ -1054,7 +1054,7 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
   void               *icd = data->iscanceleddata;
   int num_options = 0;
   cups_option_t *options = NULL;
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
   if (parameters)
     final_content_type = (char *)parameters;

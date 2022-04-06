@@ -299,7 +299,7 @@ static int parseOpts(cf_filter_data_t *data,
   void *ld = data ->logdata;
   cups_cspace_t         cspace = (cups_cspace_t)(-1);
 
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
   
   if (data->ppd)
     doc->ppd = data->ppd;
@@ -316,7 +316,7 @@ static int parseOpts(cf_filter_data_t *data,
 
   // We can directly create CUPS Raster, PWG Raster, and Apple Raster but
   // for PCLm we have to output CUPS Raster and feed it into cfFilterRasterToPDF()
-  cupsRasterPrepareHeader(&(doc->outheader), data, outformat,
+  cfRasterPrepareHeader(&(doc->outheader), data, outformat,
 			  outformat == CF_FILTER_OUT_FORMAT_PCLM ?
 			  CF_FILTER_OUT_FORMAT_CUPS_RASTER : outformat, 0, &cspace);
 

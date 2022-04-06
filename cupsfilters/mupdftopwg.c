@@ -509,7 +509,7 @@ cfFilterMuPDFToPWG(int inputfd,         /* I - File descriptor input stream */
 
 /*  Find print-rendering-intent */
 
-    getPrintRenderIntent(data, &h);
+    cfGetPrintRenderIntent(data, &h);
     if(log) log(ld, CF_LOGLEVEL_DEBUG,
     	"Print rendering intent = %s", h.cupsRenderingIntent);
 
@@ -534,12 +534,12 @@ cfFilterMuPDFToPWG(int inputfd,         /* I - File descriptor input stream */
   cupsArrayAdd(mupdf_args, strdup("-Fpwg"));
 
   /* Note that MuPDF only creates PWG Raster and never CUPS Raster,
-     so we set the PWG Raster flag in the  cupsRasterPrepareHeader() call.
+     so we set the PWG Raster flag in the  cfRasterPrepareHeader() call.
      This function takes care of generating a completely consistent PWG
      Raster header then, no extra manipulation needed.
      From the header h only cupsWidth/cupsHeight (dimensions in pixels),
      resolution, and color space are used here. */
-  cupsRasterPrepareHeader(&h, data, outformat,
+  cfRasterPrepareHeader(&h, data, outformat,
 			  CF_FILTER_OUT_FORMAT_PWG_RASTER, 1, &cspace);
 
   if ((h.HWResolution[0] == 100) && (h.HWResolution[1] == 100)) {

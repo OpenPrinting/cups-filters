@@ -341,7 +341,7 @@ static int parseOpts(cf_filter_data_t *data,
   if (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER)
     doc->pwgraster = 1;
 
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
   if (data->ppd)
     doc->ppd = data->ppd;
@@ -355,7 +355,7 @@ static int parseOpts(cf_filter_data_t *data,
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToRaster: PPD file is not specified.");
 
-  cupsRasterPrepareHeader(&(doc->header), data, outformat,
+  cfRasterPrepareHeader(&(doc->header), data, outformat,
 			  (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ?
 			   outformat : CF_FILTER_OUT_FORMAT_CUPS_RASTER), 0,
 			  &cspace);
@@ -455,7 +455,7 @@ static int parseOpts(cf_filter_data_t *data,
       else
 	doc->pwgraster = 0;
     }
-    getPrintRenderIntent(data, &(doc->header));
+    cfGetPrintRenderIntent(data, &(doc->header));
     if(strcasecmp(doc->header.cupsRenderingIntent, "PERCEPTUAL")==0){
 	doc->colour_profile.renderingIntent = INTENT_PERCEPTUAL;
     } else if (strcasecmp(doc->header.cupsRenderingIntent,"RELATIVE") == 0) {
@@ -468,7 +468,7 @@ static int parseOpts(cf_filter_data_t *data,
     if(log) log(ld, CF_LOGLEVEL_DEBUG,
     	"Print rendering intent = %s", doc->header.cupsRenderingIntent);
     
-    int backside = getBackSideAndHeaderDuplex(printer_attrs, &(doc->header));
+    int backside = cfGetBackSideAndHeaderDuplex(printer_attrs, &(doc->header));
     if (doc->header.Duplex) {
       /* analyze options relevant to Duplex */
       /* APDuplexRequiresFlippedMargin */
@@ -476,19 +476,19 @@ static int parseOpts(cf_filter_data_t *data,
 	FM_NO, FM_FALSE, FM_TRUE
       } flippedMargin = FM_NO;
 
-      if (backside == BACKSIDE_MANUAL_TUMBLE && doc->header.Tumble) {
+      if (backside == CF_BACKSIDE_MANUAL_TUMBLE && doc->header.Tumble) {
 	doc->swap_image_x = doc->swap_image_y = true;
 	doc->swap_margin_x = doc->swap_margin_y = true;
 	if (flippedMargin == FM_TRUE) {
 	  doc->swap_margin_y = false;
 	}
-      } else if (backside==BACKSIDE_ROTATED && !doc->header.Tumble) {
+      } else if (backside==CF_BACKSIDE_ROTATED && !doc->header.Tumble) {
 	doc->swap_image_x = doc->swap_image_y = true;
 	doc->swap_margin_x = doc->swap_margin_y = true;
 	if (flippedMargin == FM_TRUE) {
 	  doc->swap_margin_y = false;
 	}
-      } else if (backside==BACKSIDE_FLIPPED) {
+      } else if (backside==CF_BACKSIDE_FLIPPED) {
 	if (doc->header.Tumble) {
 	  doc->swap_image_x = true;
 	  doc->swap_margin_x = doc->swap_margin_y = true;
@@ -1410,7 +1410,7 @@ static int outPage(pdftoraster_doc_t *doc, int pageNo, cf_filter_data_t *data,
     if (doc->pwgraster == 1)
       memset(margins, 0, sizeof(margins));
   } else if(data!=NULL && (data->printer_attrs)!=NULL) {
-	ippRasterMatchIPPSize(&(doc->header), data, margins, paperdimensions, &imageable_area_fit, NULL);
+	cfRasterMatchIPPSize(&(doc->header), data, margins, paperdimensions, &imageable_area_fit, NULL);
 	if(doc->pwgraster==1){
 	  memset(margins, 0, sizeof(margins));
 	}

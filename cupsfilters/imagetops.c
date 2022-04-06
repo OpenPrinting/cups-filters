@@ -278,11 +278,11 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
   /* The cfFilterSetCommonOptions() does not set doc.Color
      according to option settings (user's demand for color/gray),
      so we parse the options and set the mode here */
-  cupsRasterParseIPPOptions(&h, data, 0, 1);
+  cfRasterParseIPPOptions(&h, data, 0, 1);
   if (doc.Color)
     doc.Color = h.cupsNumColors <= 1 ? 0 : 1;
   if (!ppd) {
-    /* Without PPD use also the other findings of cupsRasterParseIPPOptions() */
+    /* Without PPD use also the other findings of cfRasterParseIPPOptions() */
     doc.Orientation = h.Orientation;
     doc.Duplex = h.Duplex;
     doc.LanguageLevel = 2;

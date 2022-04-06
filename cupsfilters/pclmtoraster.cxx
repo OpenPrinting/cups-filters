@@ -101,7 +101,7 @@ parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
   * CUPS option list
   */
 
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
   if (data->ppd)
     ppd = data->ppd;
@@ -132,7 +132,7 @@ parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
     }
   }
 
-  cupsRasterPrepareHeader(header, data, outformat, outformat, 0, &cspace);
+  cfRasterPrepareHeader(header, data, outformat, outformat, 0, &cspace);
 
   if (ppd)
   {
@@ -210,7 +210,7 @@ parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
       }
     }
   } else {
-    int backside = getBackSideAndHeaderDuplex(printer_attrs, header);
+    int backside = cfGetBackSideAndHeaderDuplex(printer_attrs, header);
     if(header->Duplex){
       /* analyze options relevant to Duplex */
       /* APDuplexRequiresFlippedMargin */
@@ -218,7 +218,7 @@ parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
         FM_NO, FM_FALSE, FM_TRUE
       } flippedMargin = FM_NO;
 
-      if (backside==BACKSIDE_MANUAL_TUMBLE && header->Tumble)
+      if (backside==CF_BACKSIDE_MANUAL_TUMBLE && header->Tumble)
       {
         pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
 	  true;
@@ -229,7 +229,7 @@ parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
           pclmtoraster_data->swap_margin_y = false;
         }
       }
-      else if (backside==BACKSIDE_ROTATED && !header->Tumble)
+      else if (backside==CF_BACKSIDE_ROTATED && !header->Tumble)
       {
         pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
 	  true;
@@ -240,7 +240,7 @@ parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
           pclmtoraster_data->swap_margin_y = false;
         }
       }
-      else if (backside==BACKSIDE_FLIPPED)
+      else if (backside==CF_BACKSIDE_FLIPPED)
       {
         if (header->Tumble)
 	{
@@ -895,7 +895,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   }
   else if(filter_data!=NULL &&(filter_data->printer_attrs)!=NULL)
   {
-    ippRasterMatchIPPSize(&(data->header), filter_data, margins, paperdimensions, NULL, NULL);
+    cfRasterMatchIPPSize(&(data->header), filter_data, margins, paperdimensions, NULL, NULL);
     if (data->outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER)
       memset(margins, 0, sizeof(margins));
   }

@@ -385,7 +385,7 @@ cfFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   * CUPS option list
   */
 
-  num_options = joinJobOptionsAndAttrs(data, num_options, &options);
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
   
 
   ppd = data->ppd;
@@ -840,7 +840,7 @@ cfFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 		   "cfFilterPDFToPS: No resolution information found in the PPD file.");
   }
   else{
-    cupsRasterParseIPPOptions(&header, data, 0, 1);
+    cfRasterParseIPPOptions(&header, data, 0, 1);
     if (header.HWResolution[0] > 100 && header.HWResolution[1] > 100)
     {
       xres = header.HWResolution[0];
