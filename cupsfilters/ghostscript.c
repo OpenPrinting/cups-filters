@@ -888,7 +888,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
     }
 
     if (doc_type == GS_DOC_TYPE_PDF) {
-      int pages = pdf_pages_fp(fp);
+      int pages = cfPDFPagesFP(fp);
 
       if (pages == 0) {
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,

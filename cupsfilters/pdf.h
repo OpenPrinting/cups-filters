@@ -15,8 +15,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef pdf_h
-#define pdf_h
+#ifndef _CUPS_FILTERS_PDF_H_
+#define _CUPS_FILTERS_PDF_H_
 
 #include <stdio.h>
 
@@ -24,32 +24,34 @@
 extern "C" {
 #endif
 
-typedef struct QPDF pdf_t;
+typedef struct QPDF cf_pdf_t;
 
-typedef struct _opt opt_t;
+typedef struct _cf_opt cf_opt_t;
 
 /*
  * Type to bunch PDF form field name and its value.
  */
-struct _opt {
+struct _cf_opt {
     const char* key;
     const char* val;
-    opt_t *next;
+    cf_opt_t *next;
 };
 
-pdf_t * pdf_load_template(const char *filename);
-void pdf_free(pdf_t *pdf);
-void pdf_write(pdf_t *doc, FILE *file);
-int pdf_prepend_stream(pdf_t *doc, unsigned page, char const *buf, size_t len);
-int pdf_add_type1_font(pdf_t *doc, unsigned page, const char *name);
-int pdf_resize_page(pdf_t *doc, unsigned page, float width, float length, float *scale);
-int pdf_duplicate_page (pdf_t *doc, unsigned page, unsigned count);
-int pdf_fill_form(pdf_t *doc, opt_t *opt);
-int pdf_pages(const char *filename);
-int pdf_pages_fp(FILE *file);
+cf_pdf_t *cfPDFLoadTemplate(const char *filename);
+void cfPDFFree(cf_pdf_t *pdf);
+void cfPDFWrite(cf_pdf_t *doc, FILE *file);
+int cfPDFPrependStream(cf_pdf_t *doc, unsigned page, char const *buf,
+		       size_t len);
+int cfPDFAddType1Font(cf_pdf_t *doc, unsigned page, const char *name);
+int cfPDFResizePage(cf_pdf_t *doc, unsigned page, float width, float length,
+		    float *scale);
+int cfPDFDuplicatePage(cf_pdf_t *doc, unsigned page, unsigned count);
+int cfPDFFillForm(cf_pdf_t *doc, cf_opt_t *opt);
+int cfPDFPages(const char *filename);
+int cfPDFPagesFP(FILE *file);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif /* !_CUPS_FILTERS_PDF_H_ */

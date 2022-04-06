@@ -54,11 +54,11 @@ static QPDFObjectHandle makeRealBox(float values[4])
 
 
 /**
- * 'pdf_load_template()' - Load an existing PDF file and do initial parsing
+ * 'cfPDFLoadTemplate()' - Load an existing PDF file and do initial parsing
  *                         using QPDF.
  * I - Filename to open
  */
-extern "C" pdf_t * pdf_load_template(const char *filename)
+extern "C" cf_pdf_t * cfPDFLoadTemplate(const char *filename)
 {
   QPDF *pdf = new QPDF();
   try {
@@ -80,55 +80,55 @@ extern "C" pdf_t * pdf_load_template(const char *filename)
 
 
 /**
- * 'pdf_free()' - Free pointer used by PDF object
+ * 'cfPDFFree()' - Free pointer used by PDF object
  * I - Pointer to PDF object
  */
-extern "C" void pdf_free(pdf_t *pdf)
+extern "C" void cfPDFFree(cf_pdf_t *pdf)
 {
   delete pdf;
 }
 
 /*
- * 'pdf_pages()' - Count number of pages in file
+ * 'cfPDFPages()' - Count number of pages in file
  *                         using QPDF.
  * I - Filename to open
  * O - Number of pages or -1 on error
  */
-int pdf_pages(const char *filename)
+int cfPDFPages(const char *filename)
 {
   QPDF *pdf = new QPDF();
   if (pdf) {
     try{
       pdf->processFile(filename);
     } catch(...) {
-      pdf_free(pdf);
+      cfPDFFree(pdf);
       return -1;
     }
     int pages = (pdf->getAllPages()).size();
-    pdf_free(pdf);
+    cfPDFFree(pdf);
     return pages;
   } else
     return -1;
 }
 
 /*
- * 'pdf_pages_fp()' - Count number of pages in file
+ * 'cfPDFPagesFP()' - Count number of pages in file
  *                    using QPDF.
  * I - Pointer to opened PDF file (stdio FILE*)
  * O - Number of pages or -1 on error
  */
-int pdf_pages_fp(FILE *file)
+int cfPDFPagesFP(FILE *file)
 {
   QPDF *pdf = new QPDF();
   if (pdf) {
     try{
       pdf->processFile("", file, false);
     } catch(...) {
-      pdf_free(pdf);
+      cfPDFFree(pdf);
       return -1;
     }
     int pages = (pdf->getAllPages()).size();
-    pdf_free(pdf);
+    cfPDFFree(pdf);
     return pages;
   } else
     return -1;
@@ -136,14 +136,14 @@ int pdf_pages_fp(FILE *file)
 
 
 /**
- * 'pdf_prepend_stream' - Prepend a stream to the contents of a specified
+ * 'cfPDFPrependStream' - Prepend a stream to the contents of a specified
  *                        page in PDF file.
  * I - Pointer to QPDF object
  * I - page number of page to prepend stream to
  * I - buffer containing data to be prepended
  * I - length of buffer
  */
-extern "C" int pdf_prepend_stream(pdf_t *pdf,
+extern "C" int cfPDFPrependStream(cf_pdf_t *pdf,
 				  unsigned page_num,
 				  char const *buf,
 				  size_t len)
@@ -182,13 +182,13 @@ extern "C" int pdf_prepend_stream(pdf_t *pdf,
 
 
 /**
- * 'pdf_add_type1_font()' - Add the specified type1 fontface to the specified
+ * 'cfPDFAddType1Font()' - Add the specified type1 fontface to the specified
  *                          page in a PDF document.
  * I - QPDF object
  * I - page number of the page to which the font is to be added
  * I - name of the font to be added
  */
-extern "C" int pdf_add_type1_font(pdf_t *pdf,
+extern "C" int cfPDFAddType1Font(cf_pdf_t *pdf,
 				  unsigned page_num,
 				  const char *name)
 {
@@ -294,14 +294,14 @@ static void fit_rect(float oldrect[4],
 
 
 /**
- * 'pdf_resize_page()' - Resize page in a PDF with the given dimensions.
+ * 'cfPDFResizePage()' - Resize page in a PDF with the given dimensions.
  * I - Pointer to QPDF object
  * I - Page number
  * I - Width of page to set
  * I - Length of page to set
  * I - Scale of page to set
  */
-extern "C" int pdf_resize_page (pdf_t *pdf,
+extern "C" int cfPDFResizePage (cf_pdf_t *pdf,
 				unsigned page_num,
 				float width,
 				float length,
@@ -333,12 +333,12 @@ extern "C" int pdf_resize_page (pdf_t *pdf,
 
 
 /**
- * 'pdf_duplicate_page()' - Duplicate a specified pdf page in a PDF
+ * 'cfPDFDuplicatePage()' - Duplicate a specified pdf page in a PDF
  * I - Pointer to QPDF object
  * I - page number of the page to be duplicated
  * I - number of copies to be duplicated
  */
-extern "C" int pdf_duplicate_page (pdf_t *pdf,
+extern "C" int cfPDFDuplicatePage (cf_pdf_t *pdf,
 				   unsigned page_num,
 				   unsigned count)
 {
@@ -358,13 +358,13 @@ extern "C" int pdf_duplicate_page (pdf_t *pdf,
 
 
 /**
- * 'pdf_write()' - Write the contents of PDF object to an already open FILE*.
+ * 'cfPDFWrite()' - Write the contents of PDF object to an already open FILE*.
  * I - pointer to QPDF structure
  * I - File pointer to write to
  */
-extern "C" void pdf_write(pdf_t *pdf, FILE *file)
+extern "C" void cfPDFWrite(cf_pdf_t *pdf, FILE *file)
 {
-  QPDFWriter output(*pdf, "pdf_write", file, false);
+  QPDFWriter output(*pdf, "cfPDFWrite", file, false);
   output.write();
 }
 
@@ -372,12 +372,12 @@ extern "C" void pdf_write(pdf_t *pdf, FILE *file)
 
 /*
  * 'lookup_opt()' - Get value according to key in the options list.
- * I - pointer to the opt_t type list
+ * I - pointer to the cf_opt_t type list
  * I - key to be found in the list
  * O - character string which corresponds to the value of the key or
  *     NULL if key is not found in the list.
  */
-std::string lookup_opt(opt_t *opt, std::string const& key) {
+std::string lookup_opt(cf_opt_t *opt, std::string const& key) {
     if ( ! opt || key.empty() ) {
         return "";
     }
@@ -396,14 +396,14 @@ std::string lookup_opt(opt_t *opt, std::string const& key) {
 
 
 /*
- * 'pdf_fill_form()' -  1. Lookup in PDF template file for form.
+ * 'cfPDFFillForm()' -  1. Lookup in PDF template file for form.
  *                      2. Lookup for form fields' names.
  *                      3. Fill recognized fields with information.
  * I - Pointer to the QPDF structure
- * I - Pointer to the opt_t type list
+ * I - Pointer to the cf_opt_t type list
  * O - status of form fill - 0 for success, 1 for failure
  */
-extern "C" int pdf_fill_form(pdf_t *doc, opt_t *opt)
+extern "C" int cfPDFFillForm(cf_pdf_t *doc, cf_opt_t *opt)
 {
     // initialize AcroFormDocumentHelper and PageDocumentHelper objects
     // to work with forms in the PDF
@@ -416,7 +416,7 @@ extern "C" int pdf_fill_form(pdf_t *doc, opt_t *opt)
 
     // get the first page from the PDF to fill the form. Since this
     // is a banner file,it must contain only a single page, and that
-    // check has already been performed in the `pdf_load_template()` function
+    // check has already been performed in the `cfPDFLoadTemplate()` function
     std::vector<QPDFPageObjectHelper> pages = pdh.getAllPages();
     if (pages.empty())
       return 1;

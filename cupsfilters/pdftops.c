@@ -190,7 +190,7 @@ is_empty(char *filename,       /* I - Input file */
       return 1;
     }
     fclose(fp);
-    int pages = pdf_pages(filename);
+    int pages = cfPDFPages(filename);
     if (pages == 0) {
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPDFToPS: No pages left, outputting empty file.");

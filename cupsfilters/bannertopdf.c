@@ -530,7 +530,7 @@ static const char *human_time(const char *timestamp)
 /*
  * Add new key & value.
  */
-static opt_t *add_opt(opt_t *in_opt, const char *key, const char *val)
+static cf_opt_t *add_opt(cf_opt_t *in_opt, const char *key, const char *val)
 {
     if (!key || !val)
     {
@@ -542,7 +542,7 @@ static opt_t *add_opt(opt_t *in_opt, const char *key, const char *val)
         return in_opt;
     }
 
-    opt_t *entry = malloc(sizeof(opt_t));
+    cf_opt_t *entry = malloc(sizeof(cf_opt_t));
     if (!entry)
     {
         return in_opt;
@@ -561,7 +561,7 @@ static opt_t *add_opt(opt_t *in_opt, const char *key, const char *val)
  *
  * Create PDF form's field names according above.
  */
-opt_t *get_known_opts(
+cf_opt_t *get_known_opts(
     cf_filter_data_t *data,
     const char *jobid,
     const char *user,
@@ -573,7 +573,7 @@ opt_t *get_known_opts(
 
     ppd_file_t *ppd = data->ppd;
     ppd_attr_t *attr;
-    opt_t *opt = NULL;
+    cf_opt_t *opt = NULL;
     ipp_t *printer_attrs = data->printer_attrs;
     ipp_attribute_t *ipp_attr;
     char buf[1024];
@@ -730,7 +730,7 @@ static int generate_banner_pdf(banner_t *banner,
     char *buf;
     size_t len;
     FILE *s;
-    pdf_t *doc;
+    cf_pdf_t *doc;
     float page_width, page_length;
     float media_limits[4];
     float page_scale;
@@ -745,7 +745,7 @@ static int generate_banner_pdf(banner_t *banner,
     struct stat st;
 #endif
 
-    if (!(doc = pdf_load_template(banner->template_file)))
+    if (!(doc = cfPDFLoadTemplate(banner->template_file)))
     {
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "PDF template must exist and contain exactly 1 page: %s",
@@ -756,19 +756,19 @@ static int generate_banner_pdf(banner_t *banner,
     get_pagesize(data, noptions, options,
                  &page_width, &page_length, media_limits);
 
-    if (pdf_resize_page(doc, 1, page_width, page_length, &page_scale) != 0)
+    if (cfPDFResizePage(doc, 1, page_width, page_length, &page_scale) != 0)
     {
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "Unable to resize requested PDF page");
-      pdf_free(doc);
+      cfPDFFree(doc);
       return (1);
     }
 
-    if (pdf_add_type1_font(doc, 1, "Courier") != 0)
+    if (cfPDFAddType1Font(doc, 1, "Courier") != 0)
     {
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "Unable to add type1 font to requested PDF page");
-      pdf_free(doc);
+      cfPDFFree(doc);
       return (1);
     }
 
@@ -779,7 +779,7 @@ static int generate_banner_pdf(banner_t *banner,
     {
         if (log)
             log(ld, CF_LOGLEVEL_ERROR, "cfFilterBannerToPDF: Cannot create temp file: %s\n", strerror(errno));
-	pdf_free(doc);
+	cfPDFFree(doc);
         return 1;
     }
 #endif
@@ -948,7 +948,7 @@ static int generate_banner_pdf(banner_t *banner,
 #endif /* !HAVE_OPEN_MEMSTREAM */
     fclose(s);
 
-    opt_t *known_opts = get_known_opts(data,
+    cf_opt_t *known_opts = get_known_opts(data,
                                        jobid,
                                        user,
                                        jobtitle,
@@ -959,13 +959,13 @@ static int generate_banner_pdf(banner_t *banner,
     * Try to find a PDF form in PDF template and fill it.
     */
 
-    if (pdf_fill_form(doc, known_opts) != 0)
+    if (cfPDFFillForm(doc, known_opts) != 0)
     {
      /*
       * Could we fill a PDF form? If no, just add PDF stream.
       */
 
-      if (pdf_prepend_stream(doc, 1, buf, len) != 0)
+      if (cfPDFPrependStream(doc, 1, buf, len) != 0)
       {
 	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "Unable to prepend stream to requested PDF page");
@@ -979,17 +979,17 @@ static int generate_banner_pdf(banner_t *banner,
 
     if (copies > 1)
     {
-      if (pdf_duplicate_page(doc, 1, copies - 1) != 0)
+      if (cfPDFDuplicatePage(doc, 1, copies - 1) != 0)
       {
 	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "Unable to duplicate requested PDF page");
       }
     }
 
-    pdf_write(doc, outputfp);
+    cfPDFWrite(doc, outputfp);
 
-    opt_t *opt_current = known_opts;
-    opt_t *opt_next = NULL;
+    cf_opt_t *opt_current = known_opts;
+    cf_opt_t *opt_next = NULL;
     while (opt_current != NULL)
     {
         opt_next = opt_current->next;
@@ -998,7 +998,7 @@ static int generate_banner_pdf(banner_t *banner,
     }
 
     free(buf);
-    pdf_free(doc);
+    cfPDFFree(doc);
     return 0;
 }
 
