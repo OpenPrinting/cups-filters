@@ -11,12 +11,12 @@
  *
  * Contents:
  *
- *   ieee1284GetDeviceID()           - Get the IEEE-1284 device ID string and
+ *   cfIEEE1284GetDeviceID()           - Get the IEEE-1284 device ID string and
  *                                     corresponding URI.
- *   ieee1284GetMakeModel()          - Get the make and model string from the 
+ *   cfIEEE1284GetMakeModel()          - Get the make and model string from the 
  *                                     device ID.
- *   ieee1284GetValues()             - Get 1284 device ID keys and values.
- *   ieee1284NormalizeMakeAndModel() - Normalize a product/make-and-model
+ *   cfIEEE1284GetValues()             - Get 1284 device ID keys and values.
+ *   cfIEEE1284NormalizeMakeModel() - Normalize a product/make-and-model
  *                                     string.
  */
 
@@ -34,12 +34,12 @@
 
 
 /*
- * 'ieee1284GetDeviceID()' - Get the IEEE-1284 device ID string and
+ * 'cfIEEE1284GetDeviceID()' - Get the IEEE-1284 device ID string and
  *                           corresponding URI.
  */
 
 int					/* O - 0 on success, -1 on failure */
-ieee1284GetDeviceID(
+cfIEEE1284GetDeviceID(
     int        fd,			/* I - File descriptor */
     char       *device_id,		/* O - 1284 device ID */
     int        device_id_size,		/* I - Size of buffer */
@@ -72,7 +72,7 @@ ieee1284GetDeviceID(
   char	*ptr;				/* Pointer into device ID */
 
 
-  DEBUG_printf(("ieee1284GetDeviceID(fd=%d, device_id=%p, device_id_size=%d, "
+  DEBUG_printf(("cfIEEE1284GetDeviceID(fd=%d, device_id=%p, device_id_size=%d, "
                 "make_model=%p, make_model_size=%d, scheme=\"%s\", "
 		"uri=%p, uri_size=%d)\n", fd, device_id, device_id_size,
 		make_model, make_model_size, scheme ? scheme : "(null)",
@@ -84,7 +84,7 @@ ieee1284GetDeviceID(
 
   if (!device_id || device_id_size < 32)
   {
-    DEBUG_puts("ieee1284GetDeviceID: Bad args!");
+    DEBUG_puts("cfIEEE1284GetDeviceID: Bad args!");
     return (-1);
   }
 
@@ -231,7 +231,7 @@ ieee1284GetDeviceID(
     }
     else
     {
-      DEBUG_printf(("ieee1284GetDeviceID: ioctl failed - %s\n",
+      DEBUG_printf(("cfIEEE1284GetDeviceID: ioctl failed - %s\n",
                     strerror(errno)));
       *device_id = '\0';
     }
@@ -256,7 +256,7 @@ ieee1284GetDeviceID(
     }
 #    ifdef DEBUG
     else
-      DEBUG_printf(("ieee1284GetDeviceID: ioctl failed - %s\n",
+      DEBUG_printf(("cfIEEE1284GetDeviceID: ioctl failed - %s\n",
                     strerror(errno)));
 #    endif /* DEBUG */
 #  endif /* __sun && ECPPIOC_GETDEVID */
@@ -272,13 +272,13 @@ ieee1284GetDeviceID(
       *ptr = ' ';
     else if ((*ptr & 255) < ' ' || *ptr == 127)
     {
-      DEBUG_printf(("ieee1284GetDeviceID: Bad device_id character %d.",
+      DEBUG_printf(("cfIEEE1284GetDeviceID: Bad device_id character %d.",
                     *ptr & 255));
       *device_id = '\0';
       break;
     }
 
-  DEBUG_printf(("ieee1284GetDeviceID: device_id=\"%s\"\n", device_id));
+  DEBUG_printf(("cfIEEE1284GetDeviceID: device_id=\"%s\"\n", device_id));
 
   if (scheme && uri)
     *uri = '\0';
@@ -291,7 +291,7 @@ ieee1284GetDeviceID(
   */
 
   if (make_model)
-    ieee1284GetMakeModel(device_id, make_model, make_model_size);
+    cfIEEE1284GetMakeModel(device_id, make_model, make_model_size);
 
  /*
   * Then generate a device URI...
@@ -312,7 +312,7 @@ ieee1284GetDeviceID(
     * Get the make, model, and serial numbers...
     */
 
-    num_values = ieee1284GetValues(device_id, &values);
+    num_values = cfIEEE1284GetValues(device_id, &values);
 
     if ((sern = cupsGetOption("SERIALNUMBER", num_values, values)) == NULL)
       if ((sern = cupsGetOption("SERN", num_values, values)) == NULL)
@@ -370,11 +370,11 @@ ieee1284GetDeviceID(
 
 
 /*
- * 'ieee1284GetMakeModel()' - Get the make and model string from the device ID.
+ * 'cfIEEE1284GetMakeModel()' - Get the make and model string from the device ID.
  */
 
 int					/* O - 0 on success, -1 on failure */
-ieee1284GetMakeModel(
+cfIEEE1284GetMakeModel(
     const char *device_id,		/* O - 1284 device ID */
     char       *make_model,		/* O - Make/model */
     int        make_model_size)		/* I - Size of buffer */
@@ -386,7 +386,7 @@ ieee1284GetMakeModel(
 		*des;			/* Description string */
 
 
-  DEBUG_printf(("ieee1284GetMakeModel(device_id=\"%s\", "
+  DEBUG_printf(("cfIEEE1284GetMakeModel(device_id=\"%s\", "
                 "make_model=%p, make_model_size=%d)\n", device_id,
 		make_model, make_model_size));
 
@@ -396,7 +396,7 @@ ieee1284GetMakeModel(
 
   if (!device_id || !*device_id || !make_model || make_model_size < 32)
   {
-    DEBUG_puts("ieee1284GetMakeModel: Bad args!");
+    DEBUG_puts("cfIEEE1284GetMakeModel: Bad args!");
     return (-1);
   }
 
@@ -406,7 +406,7 @@ ieee1284GetMakeModel(
   * Look for the description field...
   */
 
-  num_values = ieee1284GetValues(device_id, &values);
+  num_values = cfIEEE1284GetValues(device_id, &values);
 
   if ((mdl = cupsGetOption("MODEL", num_values, values)) == NULL)
     mdl = cupsGetOption("MDL", num_values, values);
@@ -426,7 +426,7 @@ ieee1284GetMakeModel(
       * Just copy the model string, since it has the manufacturer...
       */
 
-      ieee1284NormalizeMakeAndModel(mdl, NULL, IEEE1284_NORMALIZE_HUMAN, NULL,
+      cfIEEE1284NormalizeMakeModel(mdl, NULL, CF_IEEE1284_NORMALIZE_HUMAN, NULL,
 				    make_model, make_model_size, NULL, NULL,
 				    NULL);
     }
@@ -440,7 +440,7 @@ ieee1284GetMakeModel(
 
       snprintf(temp, sizeof(temp), "%s %s", mfg, mdl);
 
-      ieee1284NormalizeMakeAndModel(temp, NULL, IEEE1284_NORMALIZE_HUMAN, NULL,
+      cfIEEE1284NormalizeMakeModel(temp, NULL, CF_IEEE1284_NORMALIZE_HUMAN, NULL,
 				    make_model, make_model_size, NULL, NULL,
 				    NULL);
     }
@@ -476,7 +476,7 @@ ieee1284GetMakeModel(
       }
 
       if (spaces && letters)
-        ieee1284NormalizeMakeAndModel(des, NULL, IEEE1284_NORMALIZE_HUMAN, NULL,
+        cfIEEE1284NormalizeMakeModel(des, NULL, CF_IEEE1284_NORMALIZE_HUMAN, NULL,
 				      make_model, make_model_size, NULL, NULL,
 				      NULL);
     }
@@ -499,14 +499,14 @@ ieee1284GetMakeModel(
 
 
 /*
- * 'ieee1284GetValues()' - Get 1284 device ID keys and values.
+ * 'cfIEEE1284GetValues()' - Get 1284 device ID keys and values.
  *
  * The returned dictionary is a CUPS option array that can be queried with
  * cupsGetOption and freed with cupsFreeOptions.
  */
 
 int					/* O - Number of key/value pairs */
-ieee1284GetValues(
+cfIEEE1284GetValues(
     const char *device_id,		/* I - IEEE-1284 device ID string */
     cups_option_t **values)		/* O - Array of key/value pairs */
 {
@@ -619,7 +619,7 @@ moverightpart(
 }
 
 /*
- * 'ieee1284NormalizeMakeAndModel()' - Normalize a product/make-and-model
+ * 'cfIEEE1284NormalizeMakeModel()' - Normalize a product/make-and-model
  *                                     string.
  *
  * This function tries to undo the mistakes made by many printer manufacturers
@@ -628,7 +628,7 @@ moverightpart(
 
 char *					/* O - Normalized make-and-model string
                                            or NULL on error */
-ieee1284NormalizeMakeAndModel(
+cfIEEE1284NormalizeMakeModel(
     const char *make_and_model,		/* I - Original make-and-model string
 					       or device ID */
     const char *make,                   /* I - Manufacturer name as hint for
@@ -639,7 +639,7 @@ ieee1284NormalizeMakeAndModel(
 					       or NULL,
 					       ignored on device ID with "MFG"
 					       field or for NO_MAKE_MODEL */
-    ieee1284_normalize_modes_t mode,	/* I - Bit field to describe how to
+    cf_ieee1284_normalize_modes_t mode,	/* I - Bit field to describe how to
 					       normalize */
     regex_t    *extra_regex,            /* I - Compiled regex to determine
 					       where the extra info after
@@ -699,44 +699,44 @@ ieee1284NormalizeMakeAndModel(
   */
 
   if (!mode)
-    mode = IEEE1284_NORMALIZE_HUMAN;
+    mode = CF_IEEE1284_NORMALIZE_HUMAN;
 
-  if (mode & IEEE1284_NORMALIZE_SEPARATOR_SPACE)
+  if (mode & CF_IEEE1284_NORMALIZE_SEPARATOR_SPACE)
     sepchr = ' ';
-  else if (mode & IEEE1284_NORMALIZE_SEPARATOR_DASH)
+  else if (mode & CF_IEEE1284_NORMALIZE_SEPARATOR_DASH)
     sepchr = '-';
-  else if (mode & IEEE1284_NORMALIZE_SEPARATOR_UNDERSCORE)
+  else if (mode & CF_IEEE1284_NORMALIZE_SEPARATOR_UNDERSCORE)
     sepchr = '_';
 
-  if (mode & IEEE1284_NORMALIZE_LOWERCASE)
+  if (mode & CF_IEEE1284_NORMALIZE_LOWERCASE)
     lower = 1;
-  if (mode & IEEE1284_NORMALIZE_UPPERCASE)
+  if (mode & CF_IEEE1284_NORMALIZE_UPPERCASE)
     upper = 1;
 
-  if (mode & IEEE1284_NORMALIZE_PAD_NUMBERS)
+  if (mode & CF_IEEE1284_NORMALIZE_PAD_NUMBERS)
     pad = 1;
 
-  if (mode & IEEE1284_NORMALIZE_SEPARATE_COMPONENTS)
+  if (mode & CF_IEEE1284_NORMALIZE_SEPARATE_COMPONENTS)
     separate = 1;
 
-  if (mode & IEEE1284_NORMALIZE_NO_MAKE_MODEL)
+  if (mode & CF_IEEE1284_NORMALIZE_NO_MAKE_MODEL)
     nomakemodel = 1;
 
-  if (mode & IEEE1284_NORMALIZE_IPP)
+  if (mode & CF_IEEE1284_NORMALIZE_IPP)
   {
     compare = 1;
     lower = 1;
     upper = 0;
     sepchr = '-';
   }
-  else if (mode & IEEE1284_NORMALIZE_ENV)
+  else if (mode & CF_IEEE1284_NORMALIZE_ENV)
   {
     compare = 1;
     lower = 0;
     upper = 1;
     sepchr = '_';
   }
-  else if (mode & IEEE1284_NORMALIZE_COMPARE)
+  else if (mode & CF_IEEE1284_NORMALIZE_COMPARE)
   {
     compare = 1;
     if (lower == 0 && upper == 0)
@@ -744,7 +744,7 @@ ieee1284NormalizeMakeAndModel(
     if (lower == 1 && upper == 1)
       upper = 0;
   }
-  else if (mode & IEEE1284_NORMALIZE_HUMAN)
+  else if (mode & CF_IEEE1284_NORMALIZE_HUMAN)
     human = 1;
 
  /*

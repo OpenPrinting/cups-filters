@@ -62,7 +62,7 @@ main(int  argc,				/* I - Number of command-line args */
 
     printf("%s:\n", argv[i]);
 
-    ieee1284GetDeviceID(fd, device_id, sizeof(device_id), make_model,
+    cfIEEE1284GetDeviceID(fd, device_id, sizeof(device_id), make_model,
 			sizeof(make_model), "test", uri, sizeof(uri));
 
     printf("    device_id=\"%s\"\n", device_id);

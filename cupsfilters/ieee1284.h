@@ -63,9 +63,9 @@ extern "C" {
  */
 
 /* Bit field to describe how to normalize make/model/device ID strings */
-enum ieee1284_normalize_modes_e
+enum cf_ieee1284_normalize_modes_e
 {
- IEEE1284_NORMALIZE_COMPARE = 0x01,           /* Optimized for comparing,
+ CF_IEEE1284_NORMALIZE_COMPARE = 0x01,        /* Optimized for comparing,
 						 replacing any sequence of
 						 non-alpha-numeric characters
 						 by a single separator char,
@@ -76,54 +76,54 @@ enum ieee1284_normalize_modes_e
 						 make/model/extra,
 						 make all letters lowercase (or
 						 uppercase) */ 
- IEEE1284_NORMALIZE_IPP = 0x02,               /* Only chars allowed in
+ CF_IEEE1284_NORMALIZE_IPP = 0x02,            /* Only chars allowed in
 						 IPP keywords */
- IEEE1284_NORMALIZE_ENV = 0x04,               /* Environment variable format
+ CF_IEEE1284_NORMALIZE_ENV = 0x04,            /* Environment variable format
 					         upparcaser and underscore */
- IEEE1284_NORMALIZE_HUMAN = 0x08,             /* Human-readable, conserves
+ CF_IEEE1284_NORMALIZE_HUMAN = 0x08,          /* Human-readable, conserves
 						 spaces and special characters
 						 but does some clean-up */
- IEEE1284_NORMALIZE_LOWERCASE = 0x10,         /* All letters lowercase */
- IEEE1284_NORMALIZE_UPPERCASE = 0x20,         /* All letters uppercase */
- IEEE1284_NORMALIZE_SEPARATOR_SPACE = 0x40,   /* Separator char is ' ' */
- IEEE1284_NORMALIZE_SEPARATOR_DASH = 0x80,    /* Separator char is '-' */
- IEEE1284_NORMALIZE_SEPARATOR_UNDERSCORE = 0x100,/* Separator char is '_' */
- IEEE1284_NORMALIZE_PAD_NUMBERS = 0x200,      /* Zero-pad numbers in stings
+ CF_IEEE1284_NORMALIZE_LOWERCASE = 0x10,      /* All letters lowercase */
+ CF_IEEE1284_NORMALIZE_UPPERCASE = 0x20,      /* All letters uppercase */
+ CF_IEEE1284_NORMALIZE_SEPARATOR_SPACE = 0x40,/* Separator char is ' ' */
+ CF_IEEE1284_NORMALIZE_SEPARATOR_DASH = 0x80, /* Separator char is '-' */
+ CF_IEEE1284_NORMALIZE_SEPARATOR_UNDERSCORE = 0x100,/* Separator char is '_' */
+ CF_IEEE1284_NORMALIZE_PAD_NUMBERS = 0x200,   /* Zero-pad numbers in stings
 					         to get better list sorting
 					         results */
- IEEE1284_NORMALIZE_SEPARATE_COMPONENTS = 0x400,/* In the output buffer put
+ CF_IEEE1284_NORMALIZE_SEPARATE_COMPONENTS = 0x400,/* In the output buffer put
                                                  '\0' bytes between make,
 						 model, and extra, to use
 						 as separate strings */
- IEEE1284_NORMALIZE_NO_MAKE_MODEL = 0x800,    /* No make/model/extra separation,
+ CF_IEEE1284_NORMALIZE_NO_MAKE_MODEL = 0x800, /* No make/model/extra separation,
 					         do not try to identify, add,
 					         or clean up manufacturer
 						 name */
 };
-typedef unsigned ieee1284_normalize_modes_t;
+typedef unsigned cf_ieee1284_normalize_modes_t;
 
 /*
  * Prototypes...
  */
 
-extern int	ieee1284GetDeviceID(int fd, char *device_id,
+extern int    cfIEEE1284GetDeviceID(int fd, char *device_id,
 				    int device_id_size,
 				    char *make_model,
 				    int make_model_size,
 				    const char *scheme, char *uri,
 				    int uri_size);
-extern int	ieee1284GetMakeModel(const char *device_id,
+extern int    cfIEEE1284GetMakeModel(const char *device_id,
 				     char *make_model,
 				     int make_model_size);
-extern int	ieee1284GetValues(const char *device_id,
+extern int    cfIEEE1284GetValues(const char *device_id,
 				  cups_option_t **values);
-extern char	*ieee1284NormalizeMakeAndModel(const char *make_and_model,
-					       const char *make,
-					       ieee1284_normalize_modes_t mode,
-					       regex_t *extra_regex,
-					       char *buffer, size_t bufsize,
-					       char **model, char **extra,
-					       char **drvname);
+extern char   *cfIEEE1284NormalizeMakeModel(const char *make_and_model,
+					    const char *make,
+					    cf_ieee1284_normalize_modes_t mode,
+					    regex_t *extra_regex,
+					    char *buffer, size_t bufsize,
+					    char **model, char **extra,
+					    char **drvname);
 
 
 #  ifdef __cplusplus
