@@ -775,12 +775,12 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
                 break;
             case CUPS_CSPACE_SW:
                 if (use_blackpoint)
-                  dict["/ColorSpace"]=getCalGrayArray(cmWhitePointSGray(),
-						      cmGammaSGray(), 
-                                                      cmBlackPointDefault());
+                  dict["/ColorSpace"]=getCalGrayArray(cfCmWhitePointSGray(),
+						      cfCmGammaSGray(), 
+                                                      cfCmBlackPointDefault());
                 else
-                  dict["/ColorSpace"]=getCalGrayArray(cmWhitePointSGray(),
-						      cmGammaSGray(), 0);
+                  dict["/ColorSpace"]=getCalGrayArray(cfCmWhitePointSGray(),
+						      cfCmGammaSGray(), 0);
                 break;
             case CUPS_CSPACE_CMYK:
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceCMYK");
@@ -797,14 +797,14 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
                 break;
             case CUPS_CSPACE_ADOBERGB:
                 if (use_blackpoint)
-                  dict["/ColorSpace"]=getCalRGBArray(cmWhitePointAdobeRgb(),
-						     cmGammaAdobeRgb(), 
-						     cmMatrixAdobeRgb(),
-						     cmBlackPointDefault());
+                  dict["/ColorSpace"]=getCalRGBArray(cfCmWhitePointAdobeRGB(),
+						     cfCmGammaAdobeRGB(), 
+						     cfCmMatrixAdobeRGB(),
+						     cfCmBlackPointDefault());
                 else
-                  dict["/ColorSpace"]=getCalRGBArray(cmWhitePointAdobeRgb(), 
-                                                     cmGammaAdobeRgb(),
-						     cmMatrixAdobeRgb(), 0);
+                  dict["/ColorSpace"]=getCalRGBArray(cfCmWhitePointAdobeRGB(), 
+                                                     cfCmGammaAdobeRGB(),
+						     cfCmMatrixAdobeRGB(), 0);
                 break;
             default:
                 if (doc->logfunc)
@@ -1386,7 +1386,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
   FILE          *outputfp;              /* Output data stream */
   filter_out_format_t outformat; /* Output format */
   int Page, empty = 1;
-  cm_calibration_t    cm_calibrate;   /* Status of CUPS color management
+  cf_cm_calibration_t    cm_calibrate;   /* Status of CUPS color management
 					 ("on" or "off") */
   struct pdf_info pdf;
   cups_raster_t	*ras;		/* Raster stream for printing */
@@ -1442,13 +1442,13 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
   doc.iscanceleddata = icd;
 
   /* support the CUPS "cm-calibration" option */ 
-  cm_calibrate = cmGetCupsColorCalibrateMode(data, data->options, data->num_options);
+  cm_calibrate = cfCmGetCupsColorCalibrateMode(data, data->options, data->num_options);
 
   if (outformat == OUTPUT_FORMAT_PCLM ||
-      cm_calibrate == CM_CALIBRATION_ENABLED)
+      cm_calibrate == CF_CM_CALIBRATION_ENABLED)
     doc.cm_disabled = 1;
   else
-    doc.cm_disabled = cmIsPrinterCmDisabled(data);
+    doc.cm_disabled = cfCmIsPrinterCmDisabled(data);
 
   if (outformat == OUTPUT_FORMAT_PCLM && data->ppd == NULL
         && printer_attrs == NULL )

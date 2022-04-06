@@ -99,7 +99,7 @@ typedef struct cms_profile_s
   cmsCIEXYZ D65WhitePoint;
   int renderingIntent;
   int cm_disabled;
-  cm_calibration_t cm_calibrate;
+  cf_cm_calibration_t cm_calibrate;
 } cms_profile_t;
 
 typedef struct pwgtoraster_doc_s
@@ -153,7 +153,7 @@ typedef struct conversion_function_s
 
 cmsCIExyY adobergb_wp_cms()
 {
-    double * xyY = cmWhitePointAdobeRgb();
+    double * xyY = cfCmWhitePointAdobeRGB();
     cmsCIExyY wp;
 
     wp.x = xyY[0];
@@ -165,7 +165,7 @@ cmsCIExyY adobergb_wp_cms()
 
 cmsCIExyY sgray_wp_cms()
 {
-    double * xyY = cmWhitePointSGray();
+    double * xyY = cfCmWhitePointSGray();
     cmsCIExyY wp;
 
     wp.x = xyY[0];
@@ -179,7 +179,7 @@ cmsCIExyYTRIPLE adobergb_matrix_cms()
 {
     cmsCIExyYTRIPLE m;
 
-    double * matrix = cmMatrixAdobeRgb();
+    double * matrix = cfCmMatrixAdobeRGB();
 
     m.Red.x = matrix[0];
     m.Red.y = matrix[1];
@@ -382,15 +382,15 @@ static int parseOpts(filter_data_t *data,
     }
 
     /* support the CUPS "cm-calibration" option */
-    doc->color_profile.cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
+    doc->color_profile.cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
 
-    if (doc->color_profile.cm_calibrate == CM_CALIBRATION_ENABLED)
+    if (doc->color_profile.cm_calibrate == CF_CM_CALIBRATION_ENABLED)
       doc->color_profile.cm_disabled = 1;
     else
-      doc->color_profile.cm_disabled = cmIsPrinterCmDisabled(data);
+      doc->color_profile.cm_disabled = cfCmIsPrinterCmDisabled(data);
 
     if (!doc->color_profile.cm_disabled)
-      cmGetPrinterIccProfile(data, &profile, doc->ppd);
+      cfCmGetPrinterIccProfile(data, &profile, doc->ppd);
 
     if (profile != NULL) {
       doc->color_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");

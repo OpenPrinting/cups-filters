@@ -42,15 +42,17 @@ extern "C" {
 #include <cupsfilters/filter.h>
 
 
-#define CM_CALIBRATION_STRING "cm-calibration"       /* String for "Color Calibration Mode" */
+#define CF_CM_CALIBRATION_STRING "cm-calibration"  /* String for "Color
+						      Calibration Mode" */
 
 
 /* Enum for status of CUPS color calibration */
-typedef enum cm_calibration_e
+typedef enum cf_cm_calibration_e
 { 
-  CM_CALIBRATION_DISABLED = 0,                       /* "cm-calibration" option not found */
-  CM_CALIBRATION_ENABLED = 1                         /* "cm-calibration" found */
-} cm_calibration_t;
+  CF_CM_CALIBRATION_DISABLED = 0,                  /* "cm-calibration" option
+						      not found */
+  CF_CM_CALIBRATION_ENABLED = 1                    /* "cm-calibration" found */
+} cf_cm_calibration_t;
 
 
 
@@ -60,25 +62,24 @@ typedef enum cm_calibration_e
 
 
 extern 
-cm_calibration_t    cmGetCupsColorCalibrateMode       (filter_data_t *data,
-                    				       cups_option_t *options,
-                                                       int num_options);
+cf_cm_calibration_t cfCmGetCupsColorCalibrateMode(filter_data_t *data,
+						  cups_option_t *options,
+						  int num_options);
 
-extern int          cmGetPrinterIccProfile            (filter_data_t *data,
-                                                       char **icc_profile,
-                                                       ppd_file_t *ppd);
+extern int cfCmGetPrinterIccProfile(filter_data_t *data,
+				    char **icc_profile,
+				    ppd_file_t *ppd);
 
-extern int          cmIsPrinterCmDisabled             (filter_data_t *data);
+extern int cfCmIsPrinterCmDisabled(filter_data_t *data);
 
-extern double*      cmGammaAdobeRgb                   (void);
-extern double*      cmGammaSGray                      (void);
+extern double* cfCmGammaAdobeRGB(void);
+extern double* cfCmGammaSGray(void);
 
-extern double*      cmWhitePointAdobeRgb              (void);
-extern double*      cmWhitePointSGray                 (void);
+extern double* cfCmWhitePointAdobeRGB(void);
+extern double* cfCmWhitePointSGray(void);
 
-extern double*      cmMatrixAdobeRgb                  (void);
-extern double*      cmBlackPointDefault               (void);
-
+extern double* cfCmMatrixAdobeRGB(void);
+extern double* cfCmBlackPointDefault(void);
 
 
 #  ifdef __cplusplus

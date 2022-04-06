@@ -718,7 +718,7 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
   ipp_t *printer_attrs = data->printer_attrs;
   ipp_t *job_attrs = data->job_attrs;
   struct sigaction sa;
-  cm_calibration_t cm_calibrate;
+  cf_cm_calibration_t cm_calibrate;
   int pxlcolor = 0; /* 1 if printer is color printer otherwise 0. */
   ppd_attr_t *attr;
   ipp_attribute_t *ipp_attr;
@@ -982,15 +982,15 @@ ghostscript(int inputfd,         /* I - File descriptor input stream */
 	      "Print rendering intent = %s", h.cupsRenderingIntent);
 
   /*  Check status of color management in CUPS */
-  cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
+  cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
 
-  if (cm_calibrate == CM_CALIBRATION_ENABLED)
+  if (cm_calibrate == CF_CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
   else 
-    cm_disabled = cmIsPrinterCmDisabled(data);
+    cm_disabled = cfCmIsPrinterCmDisabled(data);
 
   if (!cm_disabled)
-    cmGetPrinterIccProfile(data, &icc_profile, ppd);
+    cfCmGetPrinterIccProfile(data, &icc_profile, ppd);
 
   /* Ghostscript parameters */
   gs_args = cupsArrayNew(NULL, NULL);

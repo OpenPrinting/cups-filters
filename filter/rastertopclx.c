@@ -135,7 +135,7 @@ StartPage(filter_data_t      *data,	/* I - filter data */
 		  0.0,
 		  1.0
 		};
-  cm_calibration_t cm_calibrate;	/* Color calibration mode */
+  cf_cm_calibration_t cm_calibrate;	/* Color calibration mode */
 
  /*
   * Debug info...
@@ -347,12 +347,12 @@ StartPage(filter_data_t      *data,	/* I - filter data */
     fprintf(stderr, "DEBUG: Resolution = %s\n", resolution);
 
     /* support the "cm-calibration" option */
-    cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
+    cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
 
-    if (cm_calibrate == CM_CALIBRATION_ENABLED)
+    if (cm_calibrate == CF_CM_CALIBRATION_ENABLED)
       cm_disabled = 1;
     else
-      cm_disabled = cmIsPrinterCmDisabled(data);
+      cm_disabled = cfCmIsPrinterCmDisabled(data);
 
     if (ppd && !cm_disabled)
     {

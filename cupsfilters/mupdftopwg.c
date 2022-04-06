@@ -411,7 +411,7 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
   int status = 1;
   ppd_file_t *ppd = NULL;
   struct sigaction sa;
-  cm_calibration_t cm_calibrate;
+  cf_cm_calibration_t cm_calibrate;
   filter_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
@@ -496,15 +496,15 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
     goto out;
 
   /*  Check status of color management in CUPS */
-  cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
+  cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
 
-  if (cm_calibrate == CM_CALIBRATION_ENABLED)
+  if (cm_calibrate == CF_CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
   else 
-    cm_disabled = cmIsPrinterCmDisabled(data);
+    cm_disabled = cfCmIsPrinterCmDisabled(data);
 
   if (!cm_disabled)
-    cmGetPrinterIccProfile(data, &icc_profile, ppd);
+    cfCmGetPrinterIccProfile(data, &icc_profile, ppd);
 
 /*  Find print-rendering-intent */
 

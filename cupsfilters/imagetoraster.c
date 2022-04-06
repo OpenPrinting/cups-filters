@@ -247,7 +247,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   int                   fd;		/* File descriptor for temp file */
   char                  buf[BUFSIZ];
   int                   bytes;
-  cm_calibration_t      cm_calibrate;   /* Are we color calibrating the
+  cf_cm_calibration_t      cm_calibrate;   /* Are we color calibrating the
 					   device? */
   int                   cm_disabled;    /* Color management disabled? */
   int                   fillprint = 0;	/* print-scaling = fill */
@@ -669,12 +669,12 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Resolution = %s", resolution);
 
   /* support the "cm-calibration" option */
-  cm_calibrate = cmGetCupsColorCalibrateMode(data, options, num_options);
+  cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
 
-  if (cm_calibrate == CM_CALIBRATION_ENABLED)
+  if (cm_calibrate == CF_CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
   else
-    cm_disabled = cmIsPrinterCmDisabled(data);
+    cm_disabled = cfCmIsPrinterCmDisabled(data);
 
  /*
   * Choose the appropriate colorspace...

@@ -67,7 +67,7 @@ double    blackpoint_default[3] = {0.0, 0.0, 0.0};
 
 /* Get printer color management status from the system's color manager */
 int          
-cmIsPrinterCmDisabled(filter_data_t *data)
+cfCmIsPrinterCmDisabled(filter_data_t *data)
 {
     filter_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
@@ -88,7 +88,7 @@ cmIsPrinterCmDisabled(filter_data_t *data)
 
 /* Get printer ICC profile from the system's color manager */
 int 
-cmGetPrinterIccProfile(filter_data_t *data,
+cfCmGetPrinterIccProfile(filter_data_t *data,
                        char **icc_profile,        /* ICC Profile Path */
                        ppd_file_t *ppd)           /* Optional PPD file for fallback profile */
 {
@@ -109,22 +109,22 @@ cmGetPrinterIccProfile(filter_data_t *data,
 
 
 /* Find the "cm-calibration" CUPS option */
-cm_calibration_t    
-cmGetCupsColorCalibrateMode(filter_data_t *data,
+cf_cm_calibration_t    
+cfCmGetCupsColorCalibrateMode(filter_data_t *data,
 			    cups_option_t *options,    /* Options from CUPS */
                             int num_options)           /* Options from CUPS */
 {
 
     filter_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
-    cm_calibration_t status;     /* color management status */
+    cf_cm_calibration_t status;     /* color management status */
 
 
     /* Find the string in CUPS options and */
-    if (cupsGetOption(CM_CALIBRATION_STRING, num_options, options) != NULL)
-      status = CM_CALIBRATION_ENABLED;
+    if (cupsGetOption(CF_CM_CALIBRATION_STRING, num_options, options) != NULL)
+      status = CF_CM_CALIBRATION_ENABLED;
     else
-      status = CM_CALIBRATION_DISABLED;
+      status = CF_CM_CALIBRATION_DISABLED;
 
     if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		"Color Manager: %s", status ?
@@ -140,11 +140,11 @@ cmGetCupsColorCalibrateMode(filter_data_t *data,
 
 /* Gamma values */
 
-double *cmGammaAdobeRgb(void)
+double *cfCmGammaAdobeRGB(void)
 {
     return adobergb_gamma;
 }
-double *cmGammaSGray(void)
+double *cfCmGammaSGray(void)
 {
     return sgray_gamma;
 }
@@ -152,11 +152,11 @@ double *cmGammaSGray(void)
 
 /* Whitepoint values */
 
-double *cmWhitePointAdobeRgb(void)
+double *cfCmWhitePointAdobeRGB(void)
 {
     return adobergb_wp;
 }
-double *cmWhitePointSGray(void)
+double *cfCmWhitePointSGray(void)
 {
     return sgray_wp;
 }
@@ -164,7 +164,7 @@ double *cmWhitePointSGray(void)
 
 /* Adapted primaries matrix */
 
-double *cmMatrixAdobeRgb(void)
+double *cfCmMatrixAdobeRGB(void)
 {
     return adobergb_matrix;
 }
@@ -172,7 +172,7 @@ double *cmMatrixAdobeRgb(void)
 
 /* Blackpoint value */
 
-double *cmBlackPointDefault(void)
+double *cfCmBlackPointDefault(void)
 {
     return blackpoint_default;
 }

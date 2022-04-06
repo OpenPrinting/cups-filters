@@ -916,7 +916,7 @@ int main(int argc, char** argv)
 
     /* Check status of printer color management from the color manager */
     data->printer = job->printer;
-    cm_disabled = cmIsPrinterCmDisabled(data);
+    cm_disabled = cfCmIsPrinterCmDisabled(data);
 
     _log("'CM Color Calibration' Mode in SPOOLER-LESS: %s\n", cm_calibrate ? 
          "Activated" : "Off");
@@ -1042,7 +1042,7 @@ int main(int argc, char** argv)
                   _log("INFO: Using qualifer: '%s.%s.%s'\n",
                         qualifier[0], qualifier[1], qualifier[2]);
 
-                  cmGetPrinterIccProfile(data, (char **)&icc_profile, 0);
+                  cfCmGetPrinterIccProfile(data, (char **)&icc_profile, 0);
 
                   /* fall back to PPD */
                   if (icc_profile == NULL) {
