@@ -84,7 +84,7 @@ ippRasterMatchIPPSize(
   cups_size_t		*size,		/* Current media size */
 			*size_matched = NULL;
 					/* Matched size */
-  filter_logfunc_t log = data->logfunc; /* logging function for debugging */
+  cf_logfunc_t log = data->logfunc; /* logging function for debugging */
   void          *ld = data->logdata;
   ipp_attribute_t	*defattr;	/* default value of attr */
   int			i,		/* looping var */
@@ -114,12 +114,12 @@ ippRasterMatchIPPSize(
 
   if (!header)
   {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "Page header cannot be NULL!\n");
+    if(log) log(ld, CF_LOGLEVEL_ERROR, "Page header cannot be NULL!\n");
     return (-1);
   }
   if (!printer_attrs)
   {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "Printer-attributes info not supplied!\n");
+    if(log) log(ld, CF_LOGLEVEL_ERROR, "Printer-attributes info not supplied!\n");
     return (-1);
   }
 
@@ -201,7 +201,7 @@ ippRasterMatchIPPSize(
 	if(fabs(header->PageSize[1] - temptop + tempbottom) / templength < 0.01	&&
 	   fabs(header->PageSize[0] - tempright + templeft) / tempwidth < 0.01	&&
 	   (size_matched==NULL || !strcasecmp(pageSizeRequested, ippsizename))){
-		if(log)log(ld,FILTER_LOGLEVEL_DEBUG,"Imageable area fit\n");
+		if(log)log(ld,CF_LOGLEVEL_DEBUG,"Imageable area fit\n");
 		size_matched = size;
 		if (landscape) *landscape = 0;
       		if (image_fit) *image_fit = 1;
@@ -213,7 +213,7 @@ ippRasterMatchIPPSize(
    /*
     * Standard size...
     */
-    if(log)log(ld,FILTER_LOGLEVEL_DEBUG,"IPP matched size = %s\n", size_matched->media);
+    if(log)log(ld,CF_LOGLEVEL_DEBUG,"IPP matched size = %s\n", size_matched->media);
     size = size_matched;
     dimensions[0] = size->width * 72.0 / 2540.0;
     dimensions[1] = size->length * 72.0 / 2540.0;
@@ -288,7 +288,7 @@ ippRasterMatchIPPSize(
 		if(fabs(header->PageSize[0] - temptop + tempbottom) / templength < 0.01	&&
 		fabs(header->PageSize[1] - tempright + templeft) / tempwidth < 0.01	&&
 		(size_matched==NULL || !strcasecmp(pageSizeRequested, ippsizename))){
-			if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Imageable area fit\n");
+			if(log) log(ld, CF_LOGLEVEL_DEBUG, "Imageable area fit\n");
 			size_matched = size;
 			if (landscape) *landscape = 1;
 			if (image_fit) *image_fit = 1;
@@ -301,7 +301,7 @@ ippRasterMatchIPPSize(
      * Standard size in landscape orientation...
      */
     size = size_matched;
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "landscape size = %s\n", size->media);
+    if(log) log(ld, CF_LOGLEVEL_DEBUG, "landscape size = %s\n", size->media);
     dimensions[0] = size->width * 72.0 / 2540.0;
     dimensions[1] = size->length * 72.0 / 2540.0;
     margins[0] = size->left * 72.0 / 2540.0;
@@ -316,7 +316,7 @@ ippRasterMatchIPPSize(
     /*
      * Custom size...
      */
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "size = custom\n");
+    if(log) log(ld, CF_LOGLEVEL_DEBUG, "size = custom\n");
     for (i = 0; i < 2; i ++)
       dimensions[i] = header->PageSize[i];
     margins[0] = left * 72.0 / 2540.0;
@@ -432,7 +432,7 @@ getPrintRenderIntent(cf_filter_data_t *data,
   cups_option_t 	*options = NULL;
   ipp_t 		*printer_attrs = data->printer_attrs;
   ipp_attribute_t 	*ipp_attr;
-  filter_logfunc_t 	log = data->logfunc;
+  cf_logfunc_t 	log = data->logfunc;
   void                  *ld = data->logdata;
   int 			i;
   num_options = joinJobOptionsAndAttrs(data, num_options, &options);
@@ -481,7 +481,7 @@ getPrintRenderIntent(cf_filter_data_t *data,
     		    }
     	        }
     	    	if(i==count){
-    		    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    		    if(log) log(ld, CF_LOGLEVEL_DEBUG,
     				"User specified print-rendering-intent not supported by printer,"
     					"using default print rendering intent.");
     		    header->cupsRenderingIntent[0] = '\0';
@@ -555,7 +555,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   ipp_t *printer_attrs, *job_attrs;
   int num_options = 0;
   cups_option_t *options = NULL;
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
   int pwgraster = 0,
       appleraster = 0,
@@ -668,12 +668,12 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 
   if (log) {
     if (*cspace == -1)
-      log(ld, FILTER_LOGLEVEL_DEBUG,
+      log(ld, CF_LOGLEVEL_DEBUG,
 	  "Color space requested: Default");
     else
-      log(ld, FILTER_LOGLEVEL_DEBUG,
+      log(ld, CF_LOGLEVEL_DEBUG,
 	  "Color space requested: #%d", *cspace);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"Final output format: %s",
 	appleraster ? "Apple Raster" :
 	(pwgraster ? "PWG Raster" :
@@ -683,7 +683,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   if (ppd)
   {
     if (log)
-      log(ld, FILTER_LOGLEVEL_DEBUG, "PPD file present");
+      log(ld, CF_LOGLEVEL_DEBUG, "PPD file present");
     ppdRasterInterpretPPD(h, ppd, num_options, options, NULL);
     if ((ppd_attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
 	(!strcasecmp(ppd_attr->value, "true") ||
@@ -694,7 +694,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       appleraster = 0;
       pclm = 0;
       if (log)
-	log(ld, FILTER_LOGLEVEL_DEBUG,
+	log(ld, CF_LOGLEVEL_DEBUG,
 	    "PWG Raster output requested (via \"PWGRaster\" PPD attribute)");
     }
 
@@ -728,10 +728,10 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 		      (!strcasecmp(quality, "High") || !strcmp(quality, "5"))) ?
 	    1 : 0;
 	  if (log) {
-	    log(ld, FILTER_LOGLEVEL_DEBUG,
+	    log(ld, CF_LOGLEVEL_DEBUG,
 		"Color mode requested: %s; color depth requested: %s",
 		color_mode, hi_depth ? "High" : "Standard");
-	    log(ld, FILTER_LOGLEVEL_DEBUG,
+	    log(ld, CF_LOGLEVEL_DEBUG,
 		"Determining best color space/depth ...");
 	  }
 	  res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
@@ -752,7 +752,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	}
 	hi_depth = 0;
 	if (log)
-	  log(ld, FILTER_LOGLEVEL_DEBUG,
+	  log(ld, CF_LOGLEVEL_DEBUG,
 	      "For PCLm color mode is always SRGB/SGray 8-bit.");
 	res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
 				      cspace, &hi_depth);
@@ -772,7 +772,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   else
   {
     if (log)
-      log(ld, FILTER_LOGLEVEL_DEBUG, "No PPD file present");
+      log(ld, CF_LOGLEVEL_DEBUG, "No PPD file present");
     if (cupsraster)
     {
       pwgraster = 0;
@@ -785,7 +785,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	  pwgraster = 1;
 	  cupsraster = 0;
 	  if (log)
-	    log(ld, FILTER_LOGLEVEL_DEBUG,
+	    log(ld, CF_LOGLEVEL_DEBUG,
 		"PWG Raster output requested (via \"MediaClass\"/\"media-class\" option)");
 	} else
 	  pwgraster = 0;
@@ -823,10 +823,10 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 		  (!strcasecmp(quality, "high") || !strcmp(quality, "5"))) ?
 	1 : 0;
       if (log) {
-	log(ld, FILTER_LOGLEVEL_DEBUG,
+	log(ld, CF_LOGLEVEL_DEBUG,
 	    "Color mode requested: %s; color depth requested: %s",
 	    color_mode, hi_depth ? "High" : "Standard");
-	log(ld, FILTER_LOGLEVEL_DEBUG,
+	log(ld, CF_LOGLEVEL_DEBUG,
 	    "Determining best color space/depth ...");
       }
       res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
@@ -842,7 +842,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 					      "print-color-mode");
       hi_depth = 0;
       if (log)
-	log(ld, FILTER_LOGLEVEL_DEBUG,
+	log(ld, CF_LOGLEVEL_DEBUG,
 	    "For PCLm color mode is always SRGB/SGray 8-bit.");
       res = cupsRasterSetColorSpace(h, cspaces_available, color_mode,
 				    cspace, &hi_depth);
@@ -854,13 +854,13 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     if (res < 0) {
       /* failed */
       if (log) {
-	log(ld, FILTER_LOGLEVEL_ERROR,
+	log(ld, CF_LOGLEVEL_ERROR,
 	    "Unable to set color space/depth for Raster output!");
 	if (*cspace < 0)
-	  log(ld, FILTER_LOGLEVEL_ERROR,
+	  log(ld, CF_LOGLEVEL_ERROR,
 	      "Did not find a valid color space!");
 	else
-	  log(ld, FILTER_LOGLEVEL_ERROR,
+	  log(ld, CF_LOGLEVEL_ERROR,
 	      "Requested color space #%d not a valid PWG/Apple Raster color space!",
 	      *cspace);
       }
@@ -868,7 +868,7 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     } else
       /* succeeded */
       if (log)
-	log(ld, FILTER_LOGLEVEL_DEBUG,
+	log(ld, CF_LOGLEVEL_DEBUG,
 	    "Using color space #%d with %s color depth",
 	    *cspace, hi_depth ? "high" : "standard");
   }

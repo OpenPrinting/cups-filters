@@ -8,11 +8,11 @@ void BookletMode_dump(BookletMode bkm,pdftopdf_doc_t *doc) // {{{
 {
   static const char *bstr[3]={"Off","On","Shuffle-Only"};
   if ((bkm<BOOKLET_OFF) || (bkm>BOOKLET_JUSTSHUFFLE)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: bookletMode: (bad booklet mode: "
 				   "%d)", bkm);
   } else {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: bookletMode: %s", bstr[bkm]);
   }
 }
@@ -37,13 +37,13 @@ bool ProcessingParameters::havePage(int pageno) const
 
 void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 {
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: jobId: %d, numCopies: %d",
 				 jobId,numCopies);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: user: %s, title: %s",
 				 (user)?user:"(null)",(title)?title:"(null)");
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: fitplot: %s",
 				 (fitplot)?"true":"false");
 
@@ -51,11 +51,11 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 
   Rotation_dump(orientation,doc);
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: paper_is_landscape: %s",
 				 (paper_is_landscape)?"true":"false");
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: duplex: %s",
 				 (duplex)?"true":"false");
 
@@ -63,64 +63,64 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 
   nup.dump(doc);
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: reverse: %s",
 				 (reverse)?"true":"false");
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: evenPages: %s, oddPages: %s",
 				 (evenPages)?"true":"false",
 				 (oddPages)?"true":"false");
   
-   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: input page range:");
   inputPageRange.dump(doc);
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: page range:");
   pageRange.dump(doc);
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: mirror: %s",
 				 (mirror)?"true":"false");
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: Position:");
   Position_dump(xpos,Axis::X,doc);
   Position_dump(ypos,Axis::Y,doc);
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: collate: %s",
 				 (collate)?"true":"false");
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: evenDuplex: %s",
 				 (evenDuplex)?"true":"false");
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: pageLabel: %s",
 				 pageLabel.empty () ? "(none)" :
 				 pageLabel.c_str());
 
   BookletMode_dump(booklet,doc);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: booklet signature: %d",
 				 bookSignature);
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: autoRotate: %s",
 				 (autoRotate)?"true":"false");
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: emitJCL: %s",
 				 (emitJCL)?"true":"false");
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: deviceCopies: %d",
 				 deviceCopies);
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: deviceCollate: %s",
 				 (deviceCollate)?"true":"false");
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: setDuplex: %s",
 				 (setDuplex)?"true":"false");
 }
@@ -169,7 +169,7 @@ std::vector<int> bookletShuffle(int numPages,int signature) // {{{
 bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftopdf_doc_t *doc) // {{{
 {
   if (!proc.check_print_permissions(doc)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: Not allowed to print");
     return false;
   }
@@ -210,7 +210,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
   }
   const int numPages=std::max(shuffle.size(),input_page_range_list.size());
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: \"print-scaling\" IPP attribute: %s",
 				 (param.autoprint ? "auto" :
 				  (param.autofit ? "auto-fit" :
@@ -237,14 +237,14 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 	  (h > param.page.width || w > param.page.height))
       {
 	if (doc->logfunc)
-	  doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+	  doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 		       "cfFilterPDFToPDF: Page %d too large for output page size, scaling pages to fit.",
 		       i + 1);
 	document_large = true;
       }
     }
     if (param.fidelity && doc->logfunc)
-      doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+      doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPDFToPDF: \"ipp-attribute-fidelity\" IPP attribute is set, scaling pages to fit.");
 
     if (param.autoprint)
@@ -268,7 +268,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
     }
   }
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: Print scaling mode: %s",
 				 (param.fitplot ?
 				  "Scale to fit printable area" :
@@ -382,7 +382,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 	outputno ++;
 	if (param.page_logging == 1)
 	  if (doc->logfunc) doc->logfunc(doc->logdata,
-					 FILTER_LOGLEVEL_CONTROL,
+					 CF_LOGLEVEL_CONTROL,
 					 "PAGE: %d %d", outputno,
 					 param.copies_to_be_logged);
       }
@@ -445,7 +445,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
     // Log page in /var/log/cups/page_log
     outputno ++;
     if (param.page_logging == 1)
-      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_CONTROL,
 				     "PAGE: %d %d", outputno,
 				     param.copies_to_be_logged);
   }
@@ -455,7 +455,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
     proc.add_page(proc.new_page(param.page.width,param.page.height,doc),param.reverse);
     // Log page in /var/log/cups/page_log
     if (param.page_logging == 1)
-      if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+      if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_CONTROL,
 				     "PAGE: %d %d", outputno + 1,
 				     param.copies_to_be_logged);
   }

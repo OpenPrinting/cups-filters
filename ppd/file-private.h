@@ -67,7 +67,7 @@ typedef void (*_ppd_fc_func_t)(void *context, _ppd_fc_result_t result,
 extern _ppd_fc_result_t	_ppdFileCheck(const char *filename,
 				      _ppd_fc_filetype_t filetype,
 				      int dorootchecks,
-				      filter_logfunc_t log,
+				      cf_logfunc_t log,
 				      void *ld);
 
 #  ifdef __cplusplus

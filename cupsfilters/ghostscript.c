@@ -389,7 +389,7 @@ gs_spawn (const char *filename,
           char **envp,
           FILE *fp,
 	  int outputfd,
-	  filter_logfunc_t log,
+	  cf_logfunc_t log,
 	  void *ld,
 	  cf_filter_iscanceledfunc_t iscanceled,
 	  void *icd)
@@ -404,7 +404,7 @@ gs_spawn (const char *filename,
   int numargs;
   int pid, gspid, errpid;
   cups_file_t *logfp;
-  filter_loglevel_t log_level;
+  cf_loglevel_t log_level;
   char *msg;
   int status = 65536;
   int wstatus;
@@ -431,10 +431,10 @@ gs_spawn (const char *filename,
       snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
 	       " %s%s%s", apos, gsargv[i], apos);
     }
-    log(ld, FILTER_LOGLEVEL_DEBUG, "%s", buf);
+    log(ld, CF_LOGLEVEL_DEBUG, "%s", buf);
 
     for (i = 0; envp[i]; i ++)
-      log(ld, FILTER_LOGLEVEL_DEBUG,
+      log(ld, CF_LOGLEVEL_DEBUG,
 	  "cfFilterGhostscript: envp[%d]=\"%s\"", i, envp[i]);
   }
 
@@ -443,7 +443,7 @@ gs_spawn (const char *filename,
   {
     infds[0] = -1;
     infds[1] = -1;
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterGhostscript: Unable to establish stdin pipe for Ghostscript call");
     goto out;
   }
@@ -453,7 +453,7 @@ gs_spawn (const char *filename,
   {
     errfds[0] = -1;
     errfds[1] = -1;
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterGhostscript: Unable to establish stderr pipe for Ghostscript call");
     goto out;
   }
@@ -465,7 +465,7 @@ gs_spawn (const char *filename,
     close(infds[1]);
     infds[0] = -1;
     infds[1] = -1;
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterGhostscript: Unable to set \"close on exec\" flag on read end of the stdin pipe for Ghostscript call");
     goto out;
   }
@@ -473,7 +473,7 @@ gs_spawn (const char *filename,
   {
     close(infds[0]);
     close(infds[1]);
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterGhostscript: Unable to set \"close on exec\" flag on write end of the stdin pipe for Ghostscript call");
     goto out;
   }
@@ -483,7 +483,7 @@ gs_spawn (const char *filename,
     close(errfds[1]);
     errfds[0] = -1;
     errfds[1] = -1;
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterGhostscript: Unable to set \"close on exec\" flag on read end of the stderr pipe for Ghostscript call");
     goto out;
   }
@@ -491,7 +491,7 @@ gs_spawn (const char *filename,
   {
     close(errfds[0]);
     close(errfds[1]);
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterGhostscript: Unable to set \"close on exec\" flag on write end of the stderr pipe for Ghostscript call");
     goto out;
   }
@@ -502,7 +502,7 @@ gs_spawn (const char *filename,
     if (infds[0] >= 0) {
       if (infds[0] != 0) {
 	if (dup2(infds[0], 0) < 0) {
-	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "cfFilterGhostscript: Unable to couple pipe with stdin of Ghostscript process");
 	  exit(1);
 	}
@@ -510,7 +510,7 @@ gs_spawn (const char *filename,
       }
       close(infds[1]);
     } else {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterGhostscript: invalid pipe file descriptor to couple with stdin of Ghostscript process");
       exit(1);
     }
@@ -519,7 +519,7 @@ gs_spawn (const char *filename,
     if (errfds[1] >= 2) {
       if (errfds[1] != 2) {
 	if (dup2(errfds[1], 2) < 0) {
-	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "cfFilterGhostscript: Unable to couple pipe with stderr of Ghostscript process");
 	  exit(1);
 	}
@@ -527,7 +527,7 @@ gs_spawn (const char *filename,
       }
       close(errfds[0]);
     } else {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterGhostscript: invalid pipe file descriptor to couple with stderr of Ghostscript process");
       exit(1);
     }
@@ -536,26 +536,26 @@ gs_spawn (const char *filename,
     if (outputfd >= 1) {
       if (outputfd != 1) {
 	if (dup2(outputfd, 1) < 0) {
-	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "cfFilterGhostscript: Unable to couple stdout of Ghostscript process");
 	  exit(1);
 	}
 	close(outputfd);
       }
     } else {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterGhostscript: Invalid file descriptor to couple with stdout of Ghostscript process");
       exit(1);
     }
 
     /* Execute Ghostscript command line ... */
     execvpe(filename, gsargv, envp);
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterGhostscript: Unable to launch Ghostscript: %s: %s",
 		 filename, strerror(errno));
     exit(1);
   }
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterGhostscript: Started Ghostscript (PID %d)", gspid);
 
   close(infds[0]);
@@ -568,22 +568,22 @@ gs_spawn (const char *filename,
     while (cupsFileGets(logfp, buf, sizeof(buf)))
       if (log) {
 	if (strncmp(buf, "DEBUG: ", 7) == 0) {
-	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  log_level = CF_LOGLEVEL_DEBUG;
 	  msg = buf + 7;
 	} else if (strncmp(buf, "DEBUG2: ", 8) == 0) {
-	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  log_level = CF_LOGLEVEL_DEBUG;
 	  msg = buf + 8;
 	} else if (strncmp(buf, "INFO: ", 6) == 0) {
-	  log_level = FILTER_LOGLEVEL_INFO;
+	  log_level = CF_LOGLEVEL_INFO;
 	  msg = buf + 6;
 	} else if (strncmp(buf, "WARNING: ", 9) == 0) {
-	  log_level = FILTER_LOGLEVEL_WARN;
+	  log_level = CF_LOGLEVEL_WARN;
 	  msg = buf + 9;
 	} else if (strncmp(buf, "ERROR: ", 7) == 0) {
-	  log_level = FILTER_LOGLEVEL_ERROR;
+	  log_level = CF_LOGLEVEL_ERROR;
 	  msg = buf + 7;
 	} else {
-	  log_level = FILTER_LOGLEVEL_DEBUG;
+	  log_level = CF_LOGLEVEL_DEBUG;
 	  msg = buf;
 	}
 	log(ld, log_level, "cfFilterGhostscript: %s", msg);
@@ -594,7 +594,7 @@ gs_spawn (const char *filename,
     /* Ignore errors of the logging process */
     exit(0);
   }
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterGhostscript: Started logging (PID %d)", errpid);
 
   close(errfds[0]);
@@ -609,22 +609,22 @@ gs_spawn (const char *filename,
       if (count == -1) {
         if (errno == EINTR)
           goto retry_write;
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterGhostscript: write failed: %s", strerror(errno));
       }
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterGhostscript: Can't feed job data into Ghostscript");
       goto out;
     }
   }
   close (infds[1]);
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterGhostscript: Input data feed completed");
 
   while (gspid > 0 || errpid > 0) {
     if ((pid = wait(&wstatus)) < 0) {
       if (errno == EINTR && iscanceled && iscanceled(icd)) {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterGhostscript: Job canceled, killing Ghostscript ...");
 	kill(gspid, SIGTERM);
 	gspid = -1;
@@ -639,21 +639,21 @@ gs_spawn (const char *filename,
     if (wstatus) {
       if (WIFEXITED(wstatus)) {
 	/* Via exit() anywhere or return() in the main() function */
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterGhostscript: %s (PID %d) stopped with status %d",
 		     (pid == gspid ? "Ghostscript" : "Logging"), pid,
 		     WEXITSTATUS(wstatus));
 	status = WEXITSTATUS(wstatus);
       } else {
 	/* Via signal */
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterGhostscript: %s (PID %d) crashed on signal %d",
 		     (pid == gspid ? "Ghostscript" : "Logging"), pid,
 		     WTERMSIG(wstatus));
 	status = 256 * WTERMSIG(wstatus);
       }
     } else {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterGhostscript: %s (PID %d) exited with no errors.",
 		   (pid == gspid ? "Ghostscript" : "Logging"), pid);
       status = 0;
@@ -713,7 +713,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   int pxlcolor = 0; /* 1 if printer is color printer otherwise 0. */
   ppd_attr_t *attr;
   ipp_attribute_t *ipp_attr;
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
@@ -740,7 +740,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   } else
     outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterGhostscript: Output format: %s",
 	       (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
 		(outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ? "PWG Raster" :
@@ -801,7 +801,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   {
     if (!iscanceled || !iscanceled(icd))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterGhostscript: Unable to open input data stream.");
     }
 
@@ -834,13 +834,13 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
     if (!inputseekable || doc_type == GS_DOC_TYPE_PS) {
       if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
       {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterGhostscript: Unable to copy PDF file: %s", strerror(errno));
 	fclose(fp);
 	return (1);
       }
 
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterGhostscript: Copying input to temp file \"%s\"",
 		   tempfile);
 
@@ -860,7 +860,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
       {
 	if (!iscanceled || !iscanceled(icd))
         {
-	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterGhostscript: Unable to open temporary file.");
 	}
 
@@ -873,7 +873,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
       doc_type = parse_doc_type(fp);
 
     if (doc_type == GS_DOC_TYPE_EMPTY) {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterGhostscript: Input is empty, outputting empty file.");
       status = 0;
       if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
@@ -882,7 +882,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 	if (write(outputfd, "RaS2", 4)) {};
       goto out;
     } if (doc_type == GS_DOC_TYPE_UNKNOWN) {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterGhostscript: Can't detect file type");
       goto out;
     }
@@ -891,7 +891,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
       int pages = pdf_pages_fp(fp);
 
       if (pages == 0) {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterGhostscript: No pages left, outputting empty file.");
 	status = 0;
 	if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
@@ -901,7 +901,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 	goto out;
       }
       if (pages < 0) {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterGhostscript: Unexpected page count");
 	goto out;
       }
@@ -918,7 +918,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
     
       FILE *pd = popen(gscommand, "r");
       if (!pd) {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterGhostscript: Failed to execute ghostscript to determine "
 		     "number of input pages!");
 	goto out;
@@ -931,7 +931,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 	pagecount = -1;
 
       if (pagecount == 0) {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterGhostscript: No pages left, outputting empty file.");
 	status = 0;
 	if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
@@ -941,7 +941,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 	goto out;
       }
       if (pagecount < 0) {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterGhostscript: Unexpected page count");
 	goto out;
       }
@@ -953,7 +953,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
       filename = NULL;
     }
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterGhostscript: Input format: %s",
 		 (doc_type == GS_DOC_TYPE_PDF ? "PDF" :
 		  (doc_type == GS_DOC_TYPE_PS ? "PostScript" :
@@ -963,15 +963,15 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   else
   {
     doc_type = GS_DOC_TYPE_UNKNOWN;
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterGhostscript: Input format: Not determined");
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterGhostscript: Streaming mode, no checks for input format, zero-page input, instructions from previous filter");
   }
 
   /* Find print-rendering-intent */
   getPrintRenderIntent(data, &h);
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if(log) log(ld, CF_LOGLEVEL_DEBUG,
 	      "Print rendering intent = %s", h.cupsRenderingIntent);
 
   /*  Check status of color management in CUPS */
@@ -988,7 +988,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   /* Ghostscript parameters */
   gs_args = cupsArrayNew(NULL, NULL);
   if (!gs_args) {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterGhostscript: Unable to allocate memory for Ghostscript arguments array");
     goto out;
   }
@@ -1468,12 +1468,12 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 	!strcasecmp(attr->value, "yes"))) ||
       (t && (!strcasecmp(t, "true") || !strcasecmp(t, "on") ||
 	     !strcasecmp(t, "yes")))) {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterGhostscript: Ghostscript using Center-of-Pixel method to "
 		 "fill paths.");
     cupsArrayAdd(gs_args, strdup("0 0 .setfilladjust2"));
   } else
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterGhostscript: Ghostscript using Any-Part-of-Pixel method to "
 		 "fill paths.");
 

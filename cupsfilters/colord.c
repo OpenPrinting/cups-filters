@@ -116,7 +116,7 @@ get_filename_for_profile_path ( cf_filter_data_t *data,
 				DBusConnection *con,
                                const char *object_path)
 {
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   char *filename = NULL;
   const char *interface = "org.freedesktop.ColorManager.Profile";
@@ -139,14 +139,14 @@ get_filename_for_profile_path ( cf_filter_data_t *data,
 
   /* send syncronous */
   dbus_error_init(&error);
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Calling %s.Get(%s)", interface, property);
+  if(log) log(ld, CF_LOGLEVEL_DEBUG, "Calling %s.Get(%s)", interface, property);
 
   reply = dbus_connection_send_with_reply_and_block(con,
                 message,
                 -1,
                 &error);
   if (reply == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, 
+    if(log) log(ld, CF_LOGLEVEL_DEBUG, 
 		"DEBUG: Failed to send: %s:%s",
            error.name, error.message);
     dbus_error_free(&error);
@@ -156,7 +156,7 @@ get_filename_for_profile_path ( cf_filter_data_t *data,
   /* get reply data */
   dbus_message_iter_init(reply, &args);
   if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_VARIANT) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"Incorrect reply type");
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,"Incorrect reply type");
 
     goto out;
   }
@@ -178,7 +178,7 @@ get_profile_for_device_path ( cf_filter_data_t *data,
                              const char *object_path,
                              const char **split)
 {
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   char **key = NULL;
   char *profile = NULL;
@@ -233,13 +233,13 @@ get_profile_for_device_path ( cf_filter_data_t *data,
 
   /* send syncronous */
   dbus_error_init(&error);
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Calling GetProfileForQualifiers(%s...)", key[0]);
+  if(log) log(ld, CF_LOGLEVEL_DEBUG, "Calling GetProfileForQualifiers(%s...)", key[0]);
   reply = dbus_connection_send_with_reply_and_block(con,
                                                     message,
                                                     -1,
                                                     &error);
   if (reply == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Failed to send: %s:%s",
+    if(log) log(ld, CF_LOGLEVEL_DEBUG, "Failed to send: %s:%s",
            error.name, error.message);
     dbus_error_free(&error);
     goto out;
@@ -248,11 +248,11 @@ get_profile_for_device_path ( cf_filter_data_t *data,
   /* get reply data */
   dbus_message_iter_init(reply, &args);
   if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_OBJECT_PATH) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Incorrect reply type");
+    if(log) log(ld, CF_LOGLEVEL_DEBUG, "Incorrect reply type");
     goto out;
   }
   dbus_message_iter_get_basic(&args, &tmp);
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Found profile %s", tmp);
+  if(log) log(ld, CF_LOGLEVEL_DEBUG, "Found profile %s", tmp);
 
   /* get filename */
   profile = get_filename_for_profile_path(data, con, tmp);
@@ -275,7 +275,7 @@ get_device_path_for_device_id ( cf_filter_data_t *data,
 				DBusConnection *con,
                                const char *device_id)
 {
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   char *device_path = NULL;
   const char *device_path_tmp;
@@ -293,13 +293,13 @@ get_device_path_for_device_id ( cf_filter_data_t *data,
 
   /* send syncronous */
   dbus_error_init(&error);
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Calling FindDeviceById(%s)", device_id);
+  if(log) log(ld, CF_LOGLEVEL_DEBUG, "Calling FindDeviceById(%s)", device_id);
   reply = dbus_connection_send_with_reply_and_block(con,
                 message,
                 -1,
                 &error);
   if (reply == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "Failed to send: %s:%s",
+    if(log) log(ld, CF_LOGLEVEL_DEBUG, "Failed to send: %s:%s",
             error.name, error.message);
     dbus_error_free(&error);
     goto out;
@@ -308,12 +308,12 @@ get_device_path_for_device_id ( cf_filter_data_t *data,
   /* get reply data */
   dbus_message_iter_init(reply, &args);
   if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_OBJECT_PATH) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Incorrect reply type");
     goto out;
   }
   dbus_message_iter_get_basic(&args, &device_path_tmp);
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Found device %s", device_path_tmp);
   device_path = strdup(device_path_tmp);
 out:
@@ -329,14 +329,14 @@ cfColordGetProfileForDeviceID (cf_filter_data_t *data,
 				  const char *device_id,
 				  const char **qualifier_tuple)
 {
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   DBusConnection *con = NULL;
   char *device_path = NULL;
   char *filename = NULL;
 
   if (device_id == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"No colord device ID available");
     goto out;
   }
@@ -345,7 +345,7 @@ cfColordGetProfileForDeviceID (cf_filter_data_t *data,
   con = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
   if (con == NULL) {
     // If D-Bus is not reachable, gracefully leave and ignore error
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Failed to connect to system bus");
     goto out;
   }
@@ -353,7 +353,7 @@ cfColordGetProfileForDeviceID (cf_filter_data_t *data,
   /* find the device */
   device_path = get_device_path_for_device_id (data, con, device_id);
   if (device_path == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Failed to get device %s", device_id);
     goto out;
   }
@@ -361,11 +361,11 @@ cfColordGetProfileForDeviceID (cf_filter_data_t *data,
   /* get the best profile for the device */
   filename = get_profile_for_device_path(data, con, device_path, qualifier_tuple);
   if (filename == NULL || !filename[0]) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Failed to get profile filename for %s", device_id);
     goto out;
   }
-  if(log) log(ld, FILTER_LOGLEVEL_ERROR,
+  if(log) log(ld, CF_LOGLEVEL_ERROR,
 		"Use profile filename: '%s'", filename);
 out:
   free(device_path);
@@ -378,7 +378,7 @@ int
 get_profile_inhibitors ( cf_filter_data_t *data,
 			  DBusConnection *con, const char *object_path)
 {
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   char *tmp;
   const char *interface = "org.freedesktop.ColorManager.Device";
@@ -402,14 +402,14 @@ get_profile_inhibitors ( cf_filter_data_t *data,
 
   /* send syncronous */
   dbus_error_init(&error);
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Calling %s.Get(%s)", interface, property);
   reply = dbus_connection_send_with_reply_and_block(con,
                                                     message,
                                                     -1,
                                                     &error);
   if (reply == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Failed to send: %s:%s",
            error.name, error.message);
     dbus_error_free(&error);
@@ -419,7 +419,7 @@ get_profile_inhibitors ( cf_filter_data_t *data,
   /* get reply data */
   dbus_message_iter_init(reply, &args);
   if (dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_VARIANT) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, 
+    if(log) log(ld, CF_LOGLEVEL_DEBUG, 
 		"Incorrect reply type");
     goto out;
   }
@@ -429,7 +429,7 @@ get_profile_inhibitors ( cf_filter_data_t *data,
   dbus_message_iter_recurse(&sub2, &sub);
   while (dbus_message_iter_get_arg_type(&sub) != DBUS_TYPE_INVALID) {
     dbus_message_iter_get_basic(&sub, &tmp);
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Inhibitor %s exists", tmp);
     dbus_message_iter_next(&sub);
     inhibitors++;
@@ -446,7 +446,7 @@ int
 cfColordGetInhibitForDeviceID (cf_filter_data_t *data,
 			const char *device_id)
 {
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void* ld = data->logdata;
   DBusConnection *con;
   char *device_path = NULL;
@@ -456,7 +456,7 @@ cfColordGetInhibitForDeviceID (cf_filter_data_t *data,
   con = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
   if (con == NULL) {
     // If D-Bus is not reachable, gracefully leave and ignore error
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, 
+    if(log) log(ld, CF_LOGLEVEL_ERROR, 
 		"Failed to connect to system bus");
     goto out;
   }
@@ -464,7 +464,7 @@ cfColordGetInhibitForDeviceID (cf_filter_data_t *data,
   /* find the device */
   device_path = get_device_path_for_device_id (data, con, device_id);
   if (device_path == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Failed to get find device %s", device_id);
     goto out;
   }
@@ -485,9 +485,9 @@ cfColordGetProfileForDeviceID (cf_filter_data_t *data,
 				  const char *device_id,
                                   const char **qualifier_tuple)
 {
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
-  if(log) log(ld, FILTER_LOGLEVEL_WARN,
+  if(log) log(ld, CF_LOGLEVEL_WARN,
 			"not compiled with DBus support");
   return NULL;
 }
@@ -496,9 +496,9 @@ int
 cfColordGetInhibitForDeviceID (cf_filter_data_t *data,
 			const char *device_id)
 {
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
-  if(log) log(ld, FILTER_LOGLEVEL_WARN,
+  if(log) log(ld, CF_LOGLEVEL_WARN,
 			"not compiled with DBus support");
   
   return 0;

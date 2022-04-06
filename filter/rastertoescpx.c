@@ -83,7 +83,7 @@ cf_lut_t	*DitherLuts[7];		/* Lookup tables for dithering */
 cf_dither_t	*DitherStates[7];	/* Dither state tables */
 int		OutputFeed;		/* Number of lines to skip */
 int		Canceled;		/* Is the job canceled? */
-filter_logfunc_t logfunc;               /* Log function */
+cf_logfunc_t logfunc;               /* Log function */
 void            *ld;                    /* Log function data */
 
 

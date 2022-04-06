@@ -727,7 +727,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   int		pl, pr;
   int		fillprint = 0;		/* print-scaling = fill */
   int		cropfit = 0;		/* -o crop-to-fit = true */
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
@@ -778,7 +778,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   {
     if (!iscanceled || !iscanceled(icd))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterImageToPDF: Unable to open input data stream.");
     }
 
@@ -792,14 +792,14 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   if (!inputseekable) {
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterImageToPDF: Unable to copy input: %s",
 		   strerror(errno));
       fclose(fp);
       return (1);
     }
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Copying input to temp file \"%s\"",
 		 tempfile);
 
@@ -817,7 +817,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
     {
       if (!iscanceled || !iscanceled(icd))
       {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterImageToPDF: Unable to open temporary file.");
       }
 
@@ -834,7 +834,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   {
     if (!iscanceled || !iscanceled(icd))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterImageToPDF: Unable to open output data stream.");
     }
 
@@ -1376,7 +1376,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
   if (doc.img == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterImageToPDF: Unable to open image file for printing!");
     fclose(doc.outputfp);
     close(outputfd);
@@ -1398,7 +1398,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   if (yppi == 0)
     yppi = xppi;
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterImageToPDF: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
 	       xppi, yppi, zoom);
 
@@ -1419,14 +1419,14 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
       doc.yprint = (doc.PageTop - doc.PageBottom) / 72.0;
     }
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Before scaling: xprint=%.1f, yprint=%.1f",
 		 doc.xprint, doc.yprint);
 
     doc.xinches = (float)cfImageGetWidth(doc.img) / (float)xppi;
     doc.yinches = (float)cfImageGetHeight(doc.img) / (float)yppi;
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Image size is %.1f x %.1f inches...",
 		 doc.xinches, doc.yinches);
 
@@ -1443,7 +1443,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
       * Rotate the image if it will fit landscape but not portrait...
       */
 
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterImageToPDF: Auto orientation...");
 
       if ((doc.xinches > doc.xprint || doc.yinches > doc.yprint) &&
@@ -1453,7 +1453,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	* Rotate the image as needed...
 	*/
 
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterImageToPDF: Using landscape orientation...");
 
 	doc.Orientation = (doc.Orientation + 1) & 3;
@@ -1474,11 +1474,11 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
     doc.aspect = (float)cfImageGetYPPI(doc.img) /
       (float)cfImageGetXPPI(doc.img);
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Before scaling: xprint=%.1f, yprint=%.1f",
 		 doc.xprint, doc.yprint);
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: cfImageGetXPPI(img) = %d, "
 		 "cfImageGetYPPI(img) = %d, aspect = %f",
 		 cfImageGetXPPI(doc.img), cfImageGetYPPI(doc.img),
@@ -1506,10 +1506,10 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	doc.aspect / cfImageGetHeight(doc.img);
     }
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Portrait size is %.2f x %.2f inches",
 		 doc.xsize, doc.ysize);
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Landscape size is %.2f x %.2f inches",
 		 doc.xsize2, doc.ysize2);
 
@@ -1521,7 +1521,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
       * portrait if they are equal...
       */
 
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterImageToPDF: Auto orientation...");
 
       if ((doc.xsize * doc.ysize) < (doc.xsize2 * doc.xsize2))
@@ -1530,7 +1530,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	* Do landscape orientation...
 	*/
 
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterImageToPDF: Using landscape orientation...");
 
 	doc.Orientation = 1;
@@ -1545,7 +1545,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	* Do portrait orientation...
 	*/
 
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterImageToPDF: Using portrait orientation...");
 
 	doc.Orientation = 0;
@@ -1555,7 +1555,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
     }
     else if (doc.Orientation & 1)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterImageToPDF: Using landscape orientation...");
 
       doc.xinches     = doc.xsize2;
@@ -1565,7 +1565,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
     }
     else
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterImageToPDF: Using portrait orientation...");
 
       doc.xinches     = doc.xsize;
@@ -1594,7 +1594,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   doc.xprint = doc.xinches / doc.xpages;
   doc.yprint = doc.yinches / doc.ypages;
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterImageToPDF: xpages = %dx%.2fin, ypages = %dx%.2fin",
 	       doc.xpages, doc.xprint, doc.ypages, doc.yprint);
 
@@ -1671,7 +1671,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	  length = min_length;
     }
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Updated custom page size to %.2f x %.2f "
 		 "inches...",
 		 width / 72.0, length / 72.0);
@@ -1877,15 +1877,15 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   doc.row = malloc(cfImageGetWidth(doc.img) * abs(doc.colorspace) + 3);
 
   if (log) {
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterImageToPDF: XPosition=%d, YPosition=%d, Orientation=%d",
 	doc.XPosition, doc.YPosition, doc.Orientation);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterImageToPDF: xprint=%.2f, yprint=%.2f", doc.xprint, doc.yprint);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterImageToPDF: PageLeft=%.0f, PageRight=%.0f, PageWidth=%.0f",
 	doc.PageLeft, doc.PageRight, doc.PageWidth);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterImageToPDF: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f",
 	doc.PageBottom, doc.PageTop, doc.PageLength);
   }
@@ -2013,7 +2013,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	break;
   }
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterImageToPDF: left=%.2f, top=%.2f", doc.left, doc.top);
 
   if (doc.Collate)
@@ -2023,13 +2023,13 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
     if ((contentsObjs = malloc(sizeof(int)*doc.xpages*doc.ypages)) == NULL)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterImageToPDF: Can't allocate contentsObjs");
       goto out_of_memory;
     }
     if ((imgObjs = malloc(sizeof(int)*doc.xpages*doc.ypages)) == NULL)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterImageToPDF: Can't allocate imgObjs");
       goto out_of_memory;
     }
@@ -2041,7 +2041,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
 	if (iscanceled && iscanceled(icd))
 	{
-	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterImageToPDF: Job canceled");
 	  goto canceled;
 	}
@@ -2067,7 +2067,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	{
 	  if (iscanceled && iscanceled(icd))
 	  {
-	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 			 "cfFilterImageToPDF: Job canceled");
 	    goto canceled;
 	  }
@@ -2078,7 +2078,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 			    imgObjs[doc.ypages * doc.xpage + doc.ypage]) < 0)
 	    goto out_of_memory;
 	  if (pdf_printer && log)
-	    log(ld, FILTER_LOGLEVEL_CONTROL,
+	    log(ld, CF_LOGLEVEL_CONTROL,
 		"PAGE: %d %d\n", doc.page+1, 1);
 	}
       if (doc.EvenDuplex) {
@@ -2086,7 +2086,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	if (outPageObject(&doc, doc.pageObjects[doc.page], -1, -1) < 0)
 	  goto out_of_memory;
 	if (pdf_printer && log)
-	  log(ld, FILTER_LOGLEVEL_CONTROL,
+	  log(ld, CF_LOGLEVEL_CONTROL,
 	      "PAGE: %d %d\n", doc.page+1, 1);
       }
     }
@@ -2104,7 +2104,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
 	if (iscanceled && iscanceled(icd))
 	{
-	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterImageToPDF: Job canceled");
 	  goto canceled;
 	}
@@ -2126,7 +2126,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	{
 	  if (iscanceled && iscanceled(icd))
 	  {
-	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 			 "cfFilterImageToPDF: Job canceled");
 	    goto canceled;
 	  }
@@ -2136,7 +2136,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 			    imgObj) < 0)
 	    goto out_of_memory;
 	  if (pdf_printer && log)
-	    log(ld, FILTER_LOGLEVEL_CONTROL,
+	    log(ld, CF_LOGLEVEL_CONTROL,
 		"PAGE: %d %d\n", doc.page+1, 1);
 	}
       }
@@ -2148,7 +2148,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
       {
 	if (iscanceled && iscanceled(icd))
 	{
-	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterImageToPDF: Job canceled");
 	  goto canceled;
 	}
@@ -2156,7 +2156,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	if (outPageObject(&doc, doc.pageObjects[doc.page], -1, -1) < 0)
 	  goto out_of_memory;
 	if (pdf_printer && log)
-	  log(ld, FILTER_LOGLEVEL_CONTROL,
+	  log(ld, CF_LOGLEVEL_CONTROL,
 	      "PAGE: %d %d\n", doc.page+1, 1);
       }
     }
@@ -2185,7 +2185,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
  out_of_memory:
 
-  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+  if (log) log(ld, CF_LOGLEVEL_ERROR,
 	       "cfFilterImageToPDF: Cannot allocate any more memory.");
   freeAllObj(&doc);
   cfImageClose(doc.img);

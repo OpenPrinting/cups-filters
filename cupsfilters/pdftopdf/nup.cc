@@ -6,7 +6,7 @@
 
 void NupParameters::dump(pdftopdf_doc_t *doc) const // {{{
 {
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: NupX: %d, NupY: %d, "
 				 "width: %f, height: %f",
 				 nupX,nupY,
@@ -24,28 +24,28 @@ void NupParameters::dump(pdftopdf_doc_t *doc) const // {{{
     spos=1;
   }
   if (first==Axis::X) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: First Axis: X");
     opos=0;
   } else if (first==Axis::Y) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: First Axis: Y");
     opos=2;
     std::swap(fpos,spos);
   }
 
   if ( (opos==-1)||(fpos==-1)||(spos==-1) ) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: Bad Spec: %d; start: %d, %d",
 				   first,xstart,ystart);
   } else {
     static const char *order[4]={"lr","rl","bt","tb"};
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: Order: %s%s",
 				   order[opos+fpos],order[(opos+2)%4+spos]);
   }
 
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: Alignment:");
   Position_dump(xalign,Axis::X,doc);
   Position_dump(yalign,Axis::Y,doc);
@@ -139,7 +139,7 @@ void NupState::reset() // {{{
 
 void NupPageEdit::dump(pdftopdf_doc_t *doc) const // {{{
 {
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: xpos: %f, ypos: %f, scale: %f",
 				 xpos,ypos,scale);
   sub.dump(doc);

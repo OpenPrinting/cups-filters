@@ -21,7 +21,7 @@
 typedef struct {                /**** Document information ****/
   cups_file_t	*inputfp;		  /* Temporary file, if any */
   FILE		*outputfp;		  /* Temporary file, if any */
-  filter_logfunc_t logfunc;               /* Logging function, NULL for no
+  cf_logfunc_t logfunc;               /* Logging function, NULL for no
 					     logging */
   void          *logdata;                 /* User data for logging function, can
 					     be NULL */
@@ -64,7 +64,7 @@ writeStartPage(int  page,   /* I - Page to write */
                int  length, /* I - Page length in points */
                rastertops_doc_t *doc) /* I - Document information */
 {
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_CONTROL,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_CONTROL,
 				 "PAGE: %d %d", page, 1);
   fprintf(doc->outputfp, "%%%%Page: %d %d\n", page, page);
   fprintf(doc->outputfp, "%%%%BeginPageSetup\n");
@@ -318,23 +318,23 @@ zerr(int ret, /* I - Return status of deflate */
 {
   switch (ret) {
   case Z_ERRNO:
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 		  "cfFilterRasterToPS: zpipe - error in source data or output file");
     break;
   case Z_STREAM_ERROR:
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 		  "cfFilterRasterToPS: zpipe - invalid compression level");
     break;
   case Z_DATA_ERROR:
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 		  "cfFilterRasterToPS: zpipe - invalid or incomplete deflate data");
     break;
   case Z_MEM_ERROR:
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 		  "cfFilterRasterToPS: zpipe - out of memory");
     break;
   case Z_VERSION_ERROR:
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 		  "cfFilterRasterToPS: zpipe - zlib version mismatch!");
   }
 }
@@ -384,7 +384,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
   int           empty,         /* Is the input empty? */
                 Page = 0,      /* variable for counting the pages */
                 ret;           /* Return value of deflate compression */
-  filter_logfunc_t     log = data->logfunc;
+  cf_logfunc_t     log = data->logfunc;
   void                 *ld = data->logdata;
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
@@ -401,7 +401,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
   {
     if (!iscanceled || !iscanceled(icd))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterRasterToPS: Unable to open input data stream.");
     }
 
@@ -416,7 +416,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
   {
     if (!iscanceled || !iscanceled(icd))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterRasterToPS: Unable to open output data stream.");
     }
 
@@ -446,7 +446,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
   {
     if (iscanceled && iscanceled(icd))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
                   "cfFilterRasterToPS: Job canceled");
       break;
     }
@@ -467,7 +467,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
 
     Page ++;
 
-    if (log) log(ld, FILTER_LOGLEVEL_INFO,
+    if (log) log(ld, CF_LOGLEVEL_INFO,
      "cfFilterRasterToPS: Starting page %d.", Page);
 
    /*
@@ -492,7 +492,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
 
   if (empty)
   {
-     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+     if (log) log(ld, CF_LOGLEVEL_DEBUG,
       "cfFilterRasterToPS: Input is empty, outputting empty file.");
      cupsRasterClose(ras);
      return 0;

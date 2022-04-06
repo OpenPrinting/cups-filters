@@ -26,7 +26,7 @@
 #include "driver.h"
 #include <sys/stat.h>
 
-filter_logfunc_t logfunc = cfCUPSLogFunc;    /* Log function */
+cf_logfunc_t logfunc = cfCUPSLogFunc;    /* Log function */
 void             *ld = NULL;                /* Log function data */
 
 void	test_gray(int num_comps, const char *basename);

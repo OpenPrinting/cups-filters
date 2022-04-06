@@ -80,7 +80,7 @@ const int	ColorOrders[7][7] =	/* Order of color planes */
 		  { 5, 0, 1, 2, 3, 4, 6 }	/* KCMYcmk */
 		};
 int		Canceled;		/* Is the job canceled? */
-filter_logfunc_t logfunc;               /* Log function */
+cf_logfunc_t logfunc;               /* Log function */
 void            *ld;                    /* Log function data */
 
 

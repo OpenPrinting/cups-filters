@@ -60,7 +60,7 @@ typedef struct cf_filter_data_s {
   ppd_file_t *ppd;           /* PPD file data */
   int back_pipe[2];          /* File descriptors of backchannel pipe */
   int side_pipe[2];          /* File descriptors of sidechannel pipe */
-  filter_logfunc_t logfunc;  /* Logging function, NULL for no logging */
+  cf_logfunc_t logfunc;  /* Logging function, NULL for no logging */
   void *logdata;             /* User data for logging function, can be NULL */
   cf_filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
 						job is canceled, NULL for not
@@ -138,7 +138,7 @@ typedef struct cf_filter_universal_parameter_s { /* Contains input and output
  */
 
 extern void cfCUPSLogFunc(void *data,
-			  filter_loglevel_t level,
+			  cf_loglevel_t level,
 			  const char *message,
 			  ...);
 
@@ -425,7 +425,7 @@ extern void cfFilterSetCommonOptions(ppd_file_t *ppd,
 				     float *PageBottom,
 				     float *PageWidth,
 				     float *PageLength,
-				     filter_logfunc_t log,
+				     cf_logfunc_t log,
 				     void *ld);
 
 

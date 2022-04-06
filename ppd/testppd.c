@@ -377,7 +377,7 @@ _ppdRasterColorSpaceString(
 
 void
 _log(void *data,
-     filter_loglevel_t level,
+     cf_loglevel_t level,
      const char *message,
      ...)
 {
@@ -389,10 +389,10 @@ _log(void *data,
   {
     default:
       break;
-    case FILTER_LOGLEVEL_ERROR:
+    case CF_LOGLEVEL_ERROR:
       printf("ERROR: ");
       break;
-    case FILTER_LOGLEVEL_FATAL:
+    case CF_LOGLEVEL_FATAL:
       printf("FATAL: ");
       break;
   }

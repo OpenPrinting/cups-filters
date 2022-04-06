@@ -1025,7 +1025,7 @@ cfCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	     const char *colormodel,	/* I - ColorModel value */
 	     const char *media,		/* I - MediaType value */
 	     const char *resolution,	/* I - Resolution value */
-	     filter_logfunc_t log,      /* I - Log function */
+	     cf_logfunc_t log,      /* I - Log function */
 	     void       *ld)            /* I - Log function data */
 {
   cf_cmyk_t	*cmyk;			/* CMYK color separation */
@@ -1508,12 +1508,12 @@ cfCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	      break;
 	}
       else
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "Bad cupsBlackLtDk value \"%s\"!",
 		     attr->value);
     }
     else
-      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+      if (log) log(ld, CF_LOGLEVEL_WARN,
 		   "No light black attribute found for %s!",
 		   spec);
   }
@@ -1553,12 +1553,12 @@ cfCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       if (sscanf(attr->value, "%f%f", &light, &dark) == 2)
 	cfCMYKSetLtDk(cmyk, 0, light, dark, log, ld);
       else
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "Bad cupsCyanLtDk value \"%s\"!",
 		     attr->value);
     }
     else
-      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+      if (log) log(ld, CF_LOGLEVEL_WARN,
 		   "No light cyan attribute found for %s!",
 		   spec);
 
@@ -1595,12 +1595,12 @@ cfCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       if (sscanf(attr->value, "%f%f", &light, &dark) == 2)
 	cfCMYKSetLtDk(cmyk, 2, light, dark, log, ld);
       else
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "Bad cupsMagentaLtDk value \"%s\"!",
 		     attr->value);
     }
     else
-      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+      if (log) log(ld, CF_LOGLEVEL_WARN,
 		   "No light magenta attribute found for %s!",
 		   spec);
   }
@@ -1714,7 +1714,7 @@ void
 cfCMYKSetBlack(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
 		 float       lower,	/* I - No black ink */
 		 float       upper,	/* I - Only black ink */
-	         filter_logfunc_t log,  /* I - Log function */
+	         cf_logfunc_t log,  /* I - Log function */
 	         void       *ld)        /* I - Log function data */
 {
   int	i,				/* Looping var */
@@ -1769,13 +1769,13 @@ cfCMYKSetBlack(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
     cmyk->color_lut[i] = 0;
   }
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfCMYKSetBlack(cmyk, lower=%.3f, upper=%.3f)",
 	       lower, upper);
 
   if (log)
     for (i = 0; i < 256; i += 17)
-      log(ld, FILTER_LOGLEVEL_DEBUG,
+      log(ld, CF_LOGLEVEL_DEBUG,
 	  "   %3d = %3dk + %3dc", i,
 	  cmyk->black_lut[i], cmyk->color_lut[i]);
 }
@@ -1791,7 +1791,7 @@ cfCMYKSetCurve(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
 		 int         num_xypoints,
 					/* I - Number of X,Y points */
 		 const float *xypoints,	/* I - X,Y points */
-	         filter_logfunc_t log,  /* I - Log function */
+	         cf_logfunc_t log,  /* I - Log function */
 	         void       *ld)        /* I - Log function data */
 {
   int	i;				/* Looping var */
@@ -1835,7 +1835,7 @@ cfCMYKSetCurve(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
   for (i = xend; i < 256; i ++)
     cmyk->channels[channel][i] = yend;
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cupsCMYKSetXY(cmyk, channel=%d, num_xypoints=%d, "
 	       "xypoints=[%.3f %.3f %.3f %.3f ...])", channel,
 	       num_xypoints, xypoints[0], xypoints[1], xypoints[2],
@@ -1843,7 +1843,7 @@ cfCMYKSetCurve(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
 
   if (log)
     for (i = 0; i < 256; i += 17)
-      log(ld, FILTER_LOGLEVEL_DEBUG,
+      log(ld, CF_LOGLEVEL_DEBUG,
 	  "    %3d = %4d", i,
 	  cmyk->channels[channel + 0][i]);
 }
@@ -1858,7 +1858,7 @@ cfCMYKSetGamma(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
                  int         channel,	/* I - Ink channel */
                  float       gamval,	/* I - Gamma correction */
 		 float       density,	/* I - Maximum density */
-	         filter_logfunc_t log,  /* I - Log function */
+	         cf_logfunc_t log,  /* I - Log function */
 	         void       *ld)        /* I - Log function data */
 {
   int	i;				/* Looping var */
@@ -1880,13 +1880,13 @@ cfCMYKSetGamma(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
     cmyk->channels[channel][i] = (int)(density * CF_MAX_LUT *
                                        pow((float)i / 255.0, gamval) + 0.5);
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfCMYKSetGamma(cmyk, channel=%d, gamval=%.3f, "
 	       "density=%.3f)", channel, gamval, density);
 
   if (log)
     for (i = 0; i < 256; i += 17)
-      log(ld, FILTER_LOGLEVEL_DEBUG,
+      log(ld, CF_LOGLEVEL_DEBUG,
 	  "    %3d = %4d", i,
 	  cmyk->channels[channel + 0][i]);
 }
@@ -1916,7 +1916,7 @@ cfCMYKSetLtDk(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
                 int         channel,	/* I - Dark ink channel (+1 for light) */
 		float       light,	/* I - Light ink only level */
 		float       dark,	/* I - Dark ink only level */
-	        filter_logfunc_t log,   /* I - Log function */
+	        cf_logfunc_t log,   /* I - Log function */
 	        void       *ld)         /* I - Log function data */
 {
   int	i,				/* Looping var */
@@ -1980,13 +1980,13 @@ cfCMYKSetLtDk(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
     cmyk->channels[channel + 1][i] = 0;
   }
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfCMYKSetLtDk(cmyk, channel=%d, light=%.3f, "
 	       "dark=%.3f)", channel, light, dark);
 
   if (log)
     for (i = 0; i < 256; i += 17)
-      log(ld, FILTER_LOGLEVEL_DEBUG,
+      log(ld, CF_LOGLEVEL_DEBUG,
 	  "    %3d = %4dlt + %4ddk", i,
 	  cmyk->channels[channel + 0][i], cmyk->channels[channel + 1][i]);
 }

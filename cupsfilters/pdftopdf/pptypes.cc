@@ -7,10 +7,10 @@ void Position_dump(Position pos,pdftopdf_doc_t *doc) // {{{
 {
   static const char *pstr[3]={"Left/Bottom","Center","Right/Top"};
   if ((pos < LEFT) || (pos > RIGHT)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: (bad position: %d)",pos);
   } else {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: %s",pstr[pos+1]);
   }
 }
@@ -20,18 +20,18 @@ void Position_dump(Position pos,Axis axis,pdftopdf_doc_t *doc) // {{{
 {
   assert((axis == Axis::X) || (axis == Axis::Y));
   if ((pos < LEFT) || (pos > RIGHT)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Position %s: (bad position: %d)",
       (axis == Axis::X) ? "X" : "Y", pos);
     return;
   }
   if (axis==Axis::X) {
     static const char *pxstr[3]={"Left","Center","Right"};
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Position X: %s", pxstr[pos+1]);
   } else {
     static const char *pystr[3]={"Bottom","Center","Top"};
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Position Y: %s",pystr[pos+1]);
   }
 }
@@ -41,10 +41,10 @@ void Rotation_dump(Rotation rot,pdftopdf_doc_t *doc) // {{{
 {
   static const char *rstr[4]={"0 deg","90 deg","180 deg","270 deg"}; // CCW
   if ((rot < ROT_0) || (rot > ROT_270)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Rotation(CCW): (bad rotation: %d)",rot);
   } else {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Rotation(CCW): %s",rstr[rot]);
   }
 }
@@ -71,11 +71,11 @@ Rotation operator-(Rotation rhs) // {{{
 void BorderType_dump(BorderType border,pdftopdf_doc_t *doc) // {{{
 {
   if ((border < NONE) || (border == 1) || (border > TWO_THICK)) {
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Border: (bad border: %d)",border);
   } else {
     static const char *bstr[6]={"None",NULL,"one thin","one thick","two thin","two thick"};
-    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Border: %s",bstr[border]);
   }
 }
@@ -179,7 +179,7 @@ void PageRect::set(const PageRect &rhs) // {{{
 
 void PageRect::dump(pdftopdf_doc_t *doc) const // {{{
 {
-  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: top: %f, left: %f, right: %f, bottom: %f, "
 	  "width: %f, height: %f",
 	  top,left,right,bottom,

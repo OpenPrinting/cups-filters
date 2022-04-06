@@ -19,19 +19,19 @@ extern "C" {
  * Types...
  */
 
-typedef enum filter_loglevel_e {        /* Log levels, same as PAPPL, similar
-					   to CUPS */
- FILTER_LOGLEVEL_UNSPEC = -1,           /* Not specified */
- FILTER_LOGLEVEL_DEBUG,                 /* Debug message */
- FILTER_LOGLEVEL_INFO,                  /* Informational message */
- FILTER_LOGLEVEL_WARN,                  /* Warning message */
- FILTER_LOGLEVEL_ERROR,                 /* Error message */
- FILTER_LOGLEVEL_FATAL,                 /* Fatal message */
- FILTER_LOGLEVEL_CONTROL                /* Control message */
-} filter_loglevel_t;
+typedef enum cf_loglevel_e {         /* Log levels, same as PAPPL, similar
+					to CUPS */
+  CF_LOGLEVEL_UNSPEC = -1,           /* Not specified */
+  CF_LOGLEVEL_DEBUG,                 /* Debug message */
+  CF_LOGLEVEL_INFO,                  /* Informational message */
+  CF_LOGLEVEL_WARN,                  /* Warning message */
+  CF_LOGLEVEL_ERROR,                 /* Error message */
+  CF_LOGLEVEL_FATAL,                 /* Fatal message */
+  CF_LOGLEVEL_CONTROL                /* Control message */
+} cf_loglevel_t;
 
-typedef void (*filter_logfunc_t)(void *data, filter_loglevel_t level,
-				 const char *message, ...);
+typedef void (*cf_logfunc_t)(void *data, cf_loglevel_t level,
+			     const char *message, ...);
 
 #  ifdef __cplusplus
 }

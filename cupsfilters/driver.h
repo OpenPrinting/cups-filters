@@ -130,7 +130,7 @@ extern ppd_attr_t	*cfFindAttr(ppd_file_t *ppd, const char *name,
 				    const char *media,
 				    const char *resolution,
 				    char *spec, int specsize,
-				    filter_logfunc_t log,
+				    cf_logfunc_t log,
 				    void *ld);
 			       
 /*
@@ -156,14 +156,14 @@ extern void		cfDitherDelete(cf_dither_t *);
  */
 
 extern cf_lut_t		*cfLutNew(int num_vals, const float *vals,
-				  filter_logfunc_t log, void *ld);
+				  cf_logfunc_t log, void *ld);
 extern void		cfLutDelete(cf_lut_t *lut);
 extern cf_lut_t		*cfLutLoad(ppd_file_t *ppd,
 				   const char *colormodel,
 				   const char *media,
 				   const char *resolution,
 				   const char *ink,
-				   filter_logfunc_t log,
+				   cf_logfunc_t log,
 				   void *ld);
 
 
@@ -198,7 +198,7 @@ extern cf_rgb_t		*cfRGBLoad(ppd_file_t *ppd,
 				   const char *colormodel,
 				   const char *media,
 				   const char *resolution,
-				   filter_logfunc_t log,
+				   cf_logfunc_t log,
 				   void *ld);
 extern cf_rgb_t		*cfRGBNew(int num_samples, cf_sample_t *samples,
 				  int cube_size, int num_channels);
@@ -225,22 +225,22 @@ extern cf_cmyk_t	*cfCMYKLoad(ppd_file_t *ppd,
 				    const char *colormodel,
 				    const char *media,
 				    const char *resolution,
-				    filter_logfunc_t log,
+				    cf_logfunc_t log,
 				    void *ld);
   extern void		cfCMYKSetBlack(cf_cmyk_t *cmyk,
 				       float lower, float upper,
-				       filter_logfunc_t log, void *ld);
+				       cf_logfunc_t log, void *ld);
 extern void		cfCMYKSetCurve(cf_cmyk_t *cmyk, int channel,
 				       int num_xypoints,
 				       const float *xypoints,
-				       filter_logfunc_t log, void *ld);
+				       cf_logfunc_t log, void *ld);
 extern void		cfCMYKSetGamma(cf_cmyk_t *cmyk, int channel,
 				       float gamval, float density,
-				       filter_logfunc_t log, void *ld);
+				       cf_logfunc_t log, void *ld);
 extern void		cfCMYKSetInkLimit(cf_cmyk_t *cmyk, float limit);
   extern void		cfCMYKSetLtDk(cf_cmyk_t *cmyk, int channel,
 				      float light, float dark,
-				      filter_logfunc_t log, void *ld);
+				      cf_logfunc_t log, void *ld);
 
 
 /*

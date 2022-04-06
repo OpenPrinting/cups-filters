@@ -34,7 +34,7 @@ _ppdFileCheck(
     const char          *filename,	/* I - Filename to check */
     _ppd_fc_filetype_t  filetype,	/* I - Type of file checks? */
     int                 dorootchecks,	/* I - Check for root permissions? */
-    filter_logfunc_t    log,		/* I - Log function */
+    cf_logfunc_t    log,		/* I - Log function */
     void                *ld)		/* I - Data pointer for log function */
 {
   struct stat		fileinfo;	/* File information */
@@ -175,12 +175,12 @@ _ppdFileCheck(
   {
     cups_lang_t *lang = cupsLangDefault();
 					/* Localization information */
-    filter_loglevel_t loglevel;
+    cf_loglevel_t loglevel;
 
     switch (result)
     {
       case _PPD_FILE_CHECK_OK :
-	  loglevel = FILTER_LOGLEVEL_DEBUG;
+	  loglevel = CF_LOGLEVEL_DEBUG;
 	  if (filetype == _PPD_FILE_CHECK_DIRECTORY)
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("Directory \"%s\" permissions OK "
@@ -196,7 +196,7 @@ _ppdFileCheck(
           break;
 
       case _PPD_FILE_CHECK_MISSING :
-	  loglevel = FILTER_LOGLEVEL_ERROR;
+	  loglevel = CF_LOGLEVEL_ERROR;
 	  if (filetype == _PPD_FILE_CHECK_DIRECTORY)
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("Directory \"%s\" not available: "
@@ -209,7 +209,7 @@ _ppdFileCheck(
           break;
 
       case _PPD_FILE_CHECK_PERMISSIONS :
-	  loglevel = FILTER_LOGLEVEL_ERROR;
+	  loglevel = CF_LOGLEVEL_ERROR;
 	  if (filetype == _PPD_FILE_CHECK_DIRECTORY)
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("Directory \"%s\" has insecure "
@@ -227,7 +227,7 @@ _ppdFileCheck(
           break;
 
       case _PPD_FILE_CHECK_WRONG_TYPE :
-	  loglevel = FILTER_LOGLEVEL_ERROR;
+	  loglevel = CF_LOGLEVEL_ERROR;
 	  if (filetype == _PPD_FILE_CHECK_DIRECTORY)
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("Directory \"%s\" is a file.")),
@@ -239,7 +239,7 @@ _ppdFileCheck(
           break;
 
       case _PPD_FILE_CHECK_RELATIVE_PATH :
-	  loglevel = FILTER_LOGLEVEL_ERROR;
+	  loglevel = CF_LOGLEVEL_ERROR;
 	  if (filetype == _PPD_FILE_CHECK_DIRECTORY)
 	    snprintf(message, sizeof(message),
 		     _ppdLangString(lang, _("Directory \"%s\" contains a "

@@ -46,7 +46,7 @@ cfLutLoad(ppd_file_t *ppd,		/* I - PPD file */
             const char *media,		/* I - Media type */
             const char *resolution,	/* I - Resolution */
 	    const char *ink,		/* I - Ink name */
-	    filter_logfunc_t log,       /* I - Log function */
+	    cf_logfunc_t log,       /* I - Log function */
 	    void       *ld)             /* I - Log function data */
 {
   char		name[PPD_MAX_NAME],	/* Attribute name */
@@ -83,7 +83,7 @@ cfLutLoad(ppd_file_t *ppd,		/* I - PPD file */
   vals[3] = 0.0;
   nvals   = sscanf(attr->value, "%f%f%f", vals + 1, vals + 2, vals + 3) + 1;
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "Loaded LUT %s from PPD with values [%.3f %.3f %.3f %.3f]",
 	       name, vals[0], vals[1], vals[2], vals[3]);
 
@@ -100,7 +100,7 @@ cfLutLoad(ppd_file_t *ppd,		/* I - PPD file */
 cf_lut_t *				/* O - New lookup table */
 cfLutNew(int         num_values,	/* I - Number of values */
 	   const float *values,		/* I - Lookup table values */
-	   filter_logfunc_t log,        /* I - Log function */
+	   cf_logfunc_t log,        /* I - Log function */
 	   void        *ld)             /* I - Log function data */
 {
   int		pixel;			/* Pixel value */
@@ -189,7 +189,7 @@ cfLutNew(int         num_values,	/* I - Number of values */
 
   if (log)
     for (start = 0; start <= CF_MAX_LUT; start += CF_MAX_LUT / 15)
-      log(ld, FILTER_LOGLEVEL_DEBUG,
+      log(ld, CF_LOGLEVEL_DEBUG,
 	  "%d = %d/%d/%d", start, lut[start].intensity,
 	  lut[start].pixel, lut[start].error);
 

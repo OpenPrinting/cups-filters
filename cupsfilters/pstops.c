@@ -123,7 +123,7 @@ typedef struct				/**** Document information ****/
                 PageLength;             /* Total page length */
   cups_file_t	*inputfp;		/* Temporary file, if any */
   FILE		*outputfp;		/* Temporary file, if any */
-  filter_logfunc_t logfunc;             /* Logging function, NULL for no
+  cf_logfunc_t logfunc;             /* Logging function, NULL for no
 					   logging */
   void          *logdata;               /* User data for logging function, can
 					   be NULL */
@@ -192,7 +192,7 @@ static int		set_pstops_options(pstops_doc_t *doc, ppd_file_t *ppd,
 					   char *job_title, int copies,
 					   int num_options,
 					   cups_option_t *options,
-					   filter_logfunc_t logfunc,
+					   cf_logfunc_t logfunc,
 					   void *logdata,
 					   cf_filter_iscanceledfunc_t
 					   iscanceledfunc,
@@ -231,7 +231,7 @@ cfFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
           buffer[8192];		/* Line buffers */
   ssize_t	len,bytes;			/* Length of line buffers */
   pstops_page_t *pageinfo;
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
@@ -268,7 +268,7 @@ cfFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
  {   
      if(pipe(proc_pipe))
      {
-        if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+        if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterPSToPS: Unable to create pipe for input-page-ranges");
 		   return (1);
      }
@@ -280,7 +280,7 @@ cfFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
      {
         if (!iscanceled || !iscanceled(icd))
         {
-        if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+        if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterPSToPS: Unable to open input data stream.");
         }
 
@@ -344,7 +344,7 @@ cfFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
   {
     if (!iscanceled || !iscanceled(icd))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPSToPS: Unable to open input data stream.");
     }
 
@@ -359,7 +359,7 @@ cfFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
   {
     if (!iscanceled || !iscanceled(icd))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPSToPS: Unable to open output data stream.");
     }
 
@@ -374,7 +374,7 @@ cfFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
 
   if ((len = (ssize_t)cupsFileGetLine(inputfp, line, sizeof(line))) == 0)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterPSToPS: The print file is empty.");
     /* Do not treat this an error, if a previous filter eliminated all
        pages the job should get dequeued without anything printed. */
@@ -414,7 +414,7 @@ cfFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
     * with "ENTER LANGUAGE"...
     */
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterPSToPS: Skipping PJL header...");
 
     while (strstr(line, "ENTER LANGUAGE") == NULL && strncmp(line, "%!", 2))
@@ -501,7 +501,7 @@ cfFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
         if (waitpid (pstops_pid, &childStatus, 0) == -1) {
           if (errno == EINTR)
             goto retry_wait;
-          if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+          if (log) log(ld, CF_LOGLEVEL_ERROR,
           "cfFilterPSToPS: Error while waiting for input_page_ranges to finish - %s.",
           strerror(errno));
         }
@@ -509,18 +509,18 @@ cfFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
     if (childStatus) {
       if (WIFEXITED(childStatus)) {
 	/* Via exit() anywhere or return() in the main() function */
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterPSToPS: input-page-ranges filter (PID %d) stopped with status %d",
 		     pstops_pid, WEXITSTATUS(childStatus));
       } else {
 	/* Via signal */
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterPSToPS: imput-page-ranges filter (PID %d) crashed on signal %d",
 		     pstops_pid, WTERMSIG(childStatus));
       }
       status=1;
     } else {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPSToPS: input-page-ranges-filter (PID %d) exited with no errors.",
 		   pstops_pid);
     }
@@ -545,7 +545,7 @@ add_page(pstops_doc_t *doc,		/* I - Document information */
          const char   *label)		/* I - Page label */
 {
   pstops_page_t	*pageinfo;		/* New page info object */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -554,14 +554,14 @@ add_page(pstops_doc_t *doc,		/* I - Document information */
 
   if (!doc->pages)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterPSToPS: Unable to allocate memory for pages array");
     return (NULL);
   }
 
   if ((pageinfo = calloc(1, sizeof(pstops_page_t))) == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterPSToPS: Unable to allocate memory for page info");
     return (NULL);
   }
@@ -656,7 +656,7 @@ copy_bytes(pstops_doc_t *doc,		/* I - Document info */
   char		buffer[8192];		/* Data buffer */
   ssize_t	nbytes;			/* Number of bytes read */
   size_t	nleft;			/* Number of bytes left/remaining */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -664,7 +664,7 @@ copy_bytes(pstops_doc_t *doc,		/* I - Document info */
 
   if (cupsFileSeek(doc->temp, offset) < 0)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "Unable to seek in file");
     return;
   }
@@ -704,7 +704,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 	saw_for,			/* Saw %%For: comment? */
 	saw_pages,			/* Saw %%Pages: comment? */
 	saw_title;			/* Saw %%Title: comment? */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -737,7 +737,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
     * Log the header...
     */
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterPSToPS: %s", line);
 
    /*
@@ -749,7 +749,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
       int	pages;			/* Number of pages */
 
       if (saw_pages && log)
-	log(ld, FILTER_LOGLEVEL_DEBUG,
+	log(ld, CF_LOGLEVEL_DEBUG,
 	    "cfFilterPSToPS: A duplicate %%Pages: comment was seen.");
 
       saw_pages = 1;
@@ -804,7 +804,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
     {
       if (saw_bounding_box)
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterPSToPS: A duplicate %%BoundingBox: comment was seen.");
       }
       else if (strstr(line + 14, "(atend)"))
@@ -817,7 +817,7 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 	              doc->bounding_box + 1, doc->bounding_box + 2,
 		      doc->bounding_box + 3) != 4)
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterPSToPS: A bad %%BoundingBox: comment was seen.");
 
 	doc->bounding_box[0] = (int)(doc->PageLeft);
@@ -873,11 +873,11 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
   }
 
   if (!saw_bounding_box && log)
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterPSToPS: There wasn't a %%BoundingBox: comment in the header.");
 
   if (!saw_pages && log)
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterPSToPS: There wasn't a %%Pages: comment in the header.");
 
   if (!saw_for)
@@ -942,7 +942,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 {
   int		number;			/* Page number */
   pstops_page_t	*pageinfo;		/* Page information */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
   cf_filter_iscanceledfunc_t iscanceled = doc->iscanceledfunc;
   void          *icd = doc->iscanceleddata;
@@ -962,7 +962,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
   * Start sending the document with any commands needed...
   */
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterPSToPS: Before copy_comments - %s", line);
   linelen = copy_comments(doc, ppd, line, linelen, linesize);
 
@@ -970,7 +970,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
   * Now find the prolog section, if any...
   */
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterPSToPS: Before copy_prolog - %s", line);
   linelen = copy_prolog(doc, ppd, line, linelen, linesize);
 
@@ -978,7 +978,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
   * Then the document setup section...
   */
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterPSToPS: Before copy_setup - %s", line);
   linelen = copy_setup(doc, ppd, line, linelen, linesize);
 
@@ -1000,13 +1000,13 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   number = 0;
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterPSToPS: Before page loop - %s", line);
   while (!strncmp(line, "%%Page:", 7))
   {
     if (iscanceled && iscanceled(icd))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
                   "cfFilterPSToPS: Job canceled");
       break;
     }
@@ -1015,13 +1015,13 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
     if (check_range((number - 1) / doc->number_up + 1,doc->page_ranges,doc->page_set))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPSToPS: Copying page %d...", number);
       linelen = copy_page(doc, ppd, number, line, linelen, linesize);
     }
     else
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPSToPS: Skipping page %d...", number);
       linelen = skip_page(doc, line, linelen, linesize);
     }
@@ -1056,7 +1056,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
     if (!doc->slow_order)
     {
       if ((!ppd || !ppd->num_filters) && log)
-	log(ld, FILTER_LOGLEVEL_CONTROL,
+	log(ld, CF_LOGLEVEL_CONTROL,
 	    "PAGE: %d %d", doc->page,
 	    doc->slow_collate ? 1 : doc->copies);
 
@@ -1103,7 +1103,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
     {
       if (iscanceled && iscanceled(icd))
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterPSToPS: Job canceled");
 	break;
       }
@@ -1164,7 +1164,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
 	if (iscanceled && iscanceled(icd))
 	  {
-	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 			 "cfFilterPSToPS: Job canceled");
 	    break;
 	  }
@@ -1172,7 +1172,7 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
         number ++;
 
 	if ((!ppd || !ppd->num_filters) && log)
-	  log(ld, FILTER_LOGLEVEL_CONTROL,
+	  log(ld, CF_LOGLEVEL_CONTROL,
 	      "PAGE: %d %d", number,
 	      doc->slow_collate ? 1 : doc->copies);
 
@@ -1231,7 +1231,7 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
   int		copy;			/* Current copy */
   char		buffer[8192];		/* Copy buffer */
   ssize_t	bytes;			/* Number of bytes copied */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
   cf_filter_iscanceledfunc_t iscanceled = doc->iscanceledfunc;
   void          *icd = doc->iscanceleddata;
@@ -1244,7 +1244,7 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
   * that may not print correctly...
   */
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterPSToPS: This document does not conform to the Adobe Document "
 	       "Structuring Conventions and may not print correctly.");
 
@@ -1323,7 +1323,7 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
   */
 
   if ((!ppd || !ppd->num_filters) && log)
-    log(ld, FILTER_LOGLEVEL_CONTROL,
+    log(ld, CF_LOGLEVEL_CONTROL,
 	"PAGE: 1 %d", doc->temp ? 1 : doc->copies);
 
   fputs("%%Page: 1 1\n", doc->outputfp);
@@ -1371,13 +1371,13 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
     {
       if (iscanceled && iscanceled(icd))
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterPSToPS: Job canceled");
 	break;
       }
 
       if ((!ppd || !ppd->num_filters) && log)
-	log(ld, FILTER_LOGLEVEL_CONTROL,
+	log(ld, CF_LOGLEVEL_CONTROL,
 	    "PAGE: 1 1");
 
       fprintf(doc->outputfp, "%%%%Page: %d %d\n", copy + 1, copy + 1);
@@ -1430,7 +1430,7 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
   int		has_page_setup = 0;	/* Does the page have
 					   %%Begin/EndPageSetup? */
   int		bounding_box[4];	/* PageBoundingBox */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -1442,14 +1442,14 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 
   if (!parse_text(line + 7, &ptr, label, sizeof(label)))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterPSToPS: There was a bad %%Page: comment in the file.");
     label[0] = '\0';
     number   = doc->page;
   }
   else if (strtol(ptr, &ptr, 10) == LONG_MAX || !isspace(*ptr & 255))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterPSToPS: There was a bad %%Page: comment in the file.");
     number = doc->page;
   }
@@ -1550,7 +1550,7 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 		 bounding_box + 3) != 4)
       {
 	if (log)
-	  log(ld, FILTER_LOGLEVEL_DEBUG,
+	  log(ld, CF_LOGLEVEL_DEBUG,
 	      "cfFilterPSToPS: There was a bad %%PageBoundingBox: comment in the "
 	      "file.");
         memcpy(bounding_box, doc->bounding_box,
@@ -1565,13 +1565,13 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 
 	if (log)
 	{
-	  log(ld, FILTER_LOGLEVEL_DEBUG,
+	  log(ld, CF_LOGLEVEL_DEBUG,
 	      "cfFilterPSToPS: Orientation = %d", doc->Orientation);
-	  log(ld, FILTER_LOGLEVEL_DEBUG,
+	  log(ld, CF_LOGLEVEL_DEBUG,
 	      "cfFilterPSToPS: original bounding_box = [ %d %d %d %d ]",
 	      bounding_box[0], bounding_box[1],
 	      bounding_box[2], bounding_box[3]);
-	  log(ld, FILTER_LOGLEVEL_DEBUG,
+	  log(ld, CF_LOGLEVEL_DEBUG,
 	      "cfFilterPSToPS: PageWidth = %.1f, PageLength = %.1f",
 	      doc->PageWidth, doc->PageLength);
 	}
@@ -1600,7 +1600,7 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
               break;
 	}
 
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterPSToPS: updated bounding_box = [ %d %d %d %d ]",
 		     bounding_box[0], bounding_box[1],
 		     bounding_box[2], bounding_box[3]);
@@ -1701,7 +1701,7 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
   if (!doc->slow_order && first_page)
   {
     if ((!ppd || !ppd->num_filters) && log)
-      log(ld, FILTER_LOGLEVEL_CONTROL,
+      log(ld, CF_LOGLEVEL_CONTROL,
 	  "PAGE: %d %d", doc->page,
 	  doc->slow_collate ? 1 : doc->copies);
 
@@ -1858,7 +1858,7 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 	{
 	  line[0] = '\0';
 	  if (log)
-	    log(ld, FILTER_LOGLEVEL_ERROR,
+	    log(ld, CF_LOGLEVEL_ERROR,
 		"cfFilterPSToPS: Early end-of-file while reading binary data: %s",
 		strerror(errno));
 	  return (0);
@@ -1901,7 +1901,7 @@ copy_prolog(pstops_doc_t *doc,		/* I - Document info */
 	    ssize_t      linelen,	/* I - Length of initial line */
 	    size_t       linesize)	/* I - Size of line buffer */
 {
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -1936,7 +1936,7 @@ copy_prolog(pstops_doc_t *doc,		/* I - Document info */
     if (!strncmp(line, "%%EndProlog", 11))
       linelen = (ssize_t)cupsFileGetLine(doc->inputfp, line, linesize);
     else
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPSToPS: The %%EndProlog comment is missing.");
   }
 
@@ -1962,7 +1962,7 @@ copy_setup(pstops_doc_t *doc,		/* I - Document info */
 {
   int		num_options;		/* Number of options */
   cups_option_t	*options;		/* Options */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -2010,7 +2010,7 @@ copy_setup(pstops_doc_t *doc,		/* I - Document info */
     if (!strncmp(line, "%%EndSetup", 10))
       linelen = (ssize_t)cupsFileGetLine(doc->inputfp, line, linesize);
     else
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPSToPS: The %%EndSetup comment is missing.");
   }
 
@@ -2041,7 +2041,7 @@ copy_trailer(pstops_doc_t *doc,		/* I - Document info */
 	     ssize_t      linelen,	/* I - Length of initial line */
 	     size_t       linesize)	/* I - Size of line buffer */
 {
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -2065,7 +2065,7 @@ copy_trailer(pstops_doc_t *doc,		/* I - Document info */
     linelen = (ssize_t)cupsFileGetLine(doc->inputfp, line, linesize);
   }
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterPSToPS: Wrote %d pages...", number);
 
   fprintf(doc->outputfp, "%%%%Pages: %d\n", number);
@@ -2243,7 +2243,7 @@ doc_printf(pstops_doc_t *doc,		/* I - Document information */
   va_list	ap;			/* Pointer to arguments */
   char		buffer[1024];		/* Output buffer */
   ssize_t	bytes;			/* Number of bytes to write */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -2253,7 +2253,7 @@ doc_printf(pstops_doc_t *doc,		/* I - Document information */
 
   if ((size_t)bytes > sizeof(buffer))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterPSToPS: Buffer overflow detected, truncating.");
     bytes = sizeof(buffer);
   }
@@ -2377,7 +2377,7 @@ include_feature(
   char		name[255],		/* Option name */
 		value[255];		/* Option value */
   ppd_option_t	*option;		/* Option in file */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -2387,7 +2387,7 @@ include_feature(
 
   if (sscanf(line + 17, "%254s%254s", name, value) != 2)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterPSToPS: The %%IncludeFeature: comment is not valid.");
     return (num_options);
   }
@@ -2398,7 +2398,7 @@ include_feature(
 
   if ((option = ppdFindOption(ppd, name + 1)) == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_WARN,
+    if (log) log(ld, CF_LOGLEVEL_WARN,
 		 "cfFilterPSToPS: Unknown option \"%s\".", name + 1);
     return (num_options);
   }
@@ -2406,7 +2406,7 @@ include_feature(
   if (option->section == PPD_ORDER_EXIT ||
       option->section == PPD_ORDER_JCL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_WARN,
+    if (log) log(ld, CF_LOGLEVEL_WARN,
 		 "cfFilterPSToPS: Option \"%s\" cannot be included via "
 		 "%%%%IncludeFeature.", name + 1);
     return (num_options);
@@ -2414,7 +2414,7 @@ include_feature(
 
   if (!ppdFindChoice(option, value))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_WARN,
+    if (log) log(ld, CF_LOGLEVEL_WARN,
 		 "cfFilterPSToPS: Unknown choice \"%s\" for option \"%s\".",
 		 value, name + 1);
     return (num_options);
@@ -2531,7 +2531,7 @@ set_pstops_options(
     int           copies,               /* I - Number of copies */
     int           num_options,		/* I - Number of options */
     cups_option_t *options,		/* I - Options */
-    filter_logfunc_t logfunc,           /* I - Logging function,
+    cf_logfunc_t logfunc,           /* I - Logging function,
 					       NULL for no logging */
     void *logdata,                      /* I - User data for logging function,
 					       can be NULL */
@@ -2548,7 +2548,7 @@ set_pstops_options(
   ppd_choice_t	*choice;		/* PPD choice */
   const char	*content_type;		/* Original content type */
   int		max_copies;		/* Maximum number of copies supported */
-  filter_logfunc_t log = logfunc;
+  cf_logfunc_t log = logfunc;
   void          *ld = logdata;
   cf_filter_iscanceledfunc_t iscanceled = iscanceledfunc;
   void          *icd = iscanceleddata;
@@ -2716,7 +2716,7 @@ set_pstops_options(
           doc->number_up = intval;
 	  break;
       default :
-	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "cfFilterPSToPS: Unsupported number-up value %d, using "
 		       "number-up=1.", intval);
           doc->number_up = 1;
@@ -2750,7 +2750,7 @@ set_pstops_options(
       doc->number_up_layout = PSTOPS_LAYOUT_BTRL;
     else
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterPSToPS: Unsupported number-up-layout value %s, using "
 		   "number-up-layout=lrtb.", val);
       doc->number_up_layout = PSTOPS_LAYOUT_LRTB;
@@ -2801,7 +2801,7 @@ set_pstops_options(
       doc->page_border = PSTOPS_BORDERDOUBLE2;
     else
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterPSToPS: Unsupported page-border value %s, using "
 		   "page-border=none.", val);
       doc->page_border = PSTOPS_BORDERNONE;
@@ -2913,7 +2913,7 @@ set_pstops_options(
     if ((doc->temp = cupsTempFile2(doc->tempfile,
                                    sizeof(doc->tempfile))) == NULL)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterPSToPS: Unable to create temporary file: %s",
 		   strerror(errno));
       return (1);
@@ -2934,7 +2934,7 @@ set_pstops_options(
     doc->use_ESPshowpage = 1;
   }
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterPSToPS: slow_collate=%d, slow_duplex=%d, slow_order=%d",
 	       doc->slow_collate, doc->slow_duplex, doc->slow_order);
 
@@ -2953,7 +2953,7 @@ skip_page(pstops_doc_t *doc,		/* I - Document information */
           size_t      linesize)		/* I - Size of line buffer */
 {
   int	level;				/* Embedded document level */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -2993,7 +2993,7 @@ skip_page(pstops_doc_t *doc,		/* I - Document information */
 	{
 	  line[0] = '\0';
 	  if (log)
-	    log(ld, FILTER_LOGLEVEL_ERROR,
+	    log(ld, CF_LOGLEVEL_ERROR,
 		"cfFilterPSToPS: Early end-of-file while reading binary data: %s",
 		strerror(errno));
 	  return (0);
@@ -3029,7 +3029,7 @@ start_nup(pstops_doc_t *doc,		/* I - Document information */
 		bboxw,			/* BoundingBox width */
 		bboxl;			/* BoundingBox height */
   double	margin = 0;		/* Current margin for border */
-  filter_logfunc_t log = doc->logfunc;
+  cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -3057,18 +3057,18 @@ start_nup(pstops_doc_t *doc,		/* I - Document information */
 
   if (log)
   {
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterPSToPS: pagew = %.1f, pagel = %.1f", pagew, pagel);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterPSToPS: bboxx = %d, bboxy = %d, bboxw = %d, bboxl = %d",
 	bboxx, bboxy, bboxw, bboxl);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterPSToPS: PageLeft = %.1f, PageRight = %.1f",
 	doc->PageLeft, doc->PageRight);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterPSToPS: PageTop = %.1f, PageBottom = %.1f",
 	doc->PageTop, doc->PageBottom);
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterPSToPS: PageWidth = %.1f, PageLength = %.1f",
 	doc->PageWidth, doc->PageLength);
   }

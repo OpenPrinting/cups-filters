@@ -33,7 +33,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
   cf_filter_universal_parameter_t universal_parameters;
   ppd_file_t *ppd;
   ppd_cache_t *cache;
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   int ret = 0;
 
@@ -41,14 +41,14 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
   input = universal_parameters.input_format;
   if (input == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterUniversal: No input data format supplied.");
     return (1);
   }
   final_output = universal_parameters.output_format;
   if (final_output == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterUniversal: No output data format supplied.");
     return (1);
   }
@@ -90,7 +90,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
     int lowest_cost = INT_MAX;
     char *filter;
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterUniversal: \"*cupsFilter(2): ...\" lines in the PPD file:");
 
     for (filter = (char *)cupsArrayFirst(cache->filters);
@@ -104,7 +104,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	   *coststr = NULL;
       int cost;
 
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal:    %s", filter);
 
       /* String of the "*cupsfilter:" or "*cupsfilter2:" line */
@@ -150,7 +150,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	   strcasecmp(in, "application/PCLm") == 0 ||
 	   strcasecmp(in, "application/postscript") == 0))
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal:       --> Selecting this line");
 	/* Take the input format of the line as output format for us */
 	strncpy(output, in, sizeof(output));
@@ -159,7 +159,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	/* We cannot find a "better" solution ... */
 	if (lowest_cost == 0)
 	{
-	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterUniversal:    Cost value is down to zero, stopping reading further lines");
 	  break;
 	}
@@ -170,11 +170,11 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
     error:
       if (lowest_cost == INT_MAX && coststr)
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal: PPD uses \"*cupsFilter: ...\" lines, so we always convert to format given by FINAL_CONTENT_TYPE");
 	break;
       }
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterUniversal: Invalid \"*cupsFilter2: ...\" line in PPD: %s",
 		   filter);
     }
@@ -183,13 +183,13 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 
   if (strcasecmp(output, final_output) != 0)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterUniversal: Converting from %s to %s, final output will be %s",
 		 input, output, final_output);
   }
   else
   {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterUniversal: Converting from %s to %s", input, output);
   }
 
@@ -226,7 +226,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       filter->parameters = outformat;
       filter->name = "imagetoraster";
       cupsArrayAdd(filter_chain, filter);
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
 
       if (!strcmp(output, "image/pwg-raster"))
@@ -238,7 +238,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	filter->parameters = outformat;
 	filter->name = "rastertopwg";
 	cupsArrayAdd(filter_chain, filter);
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal: Adding %s to chain", filter->name);
       }
       else if (!strcmp(output, "application/PCLm"))
@@ -250,7 +250,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	filter->parameters = outformat;
 	filter->name = "rastertopclm";
 	cupsArrayAdd(filter_chain, filter);
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal: Adding %s to chain", filter->name);
       }
       else if (!strcmp(output, "image/urf"))
@@ -262,7 +262,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	filter->parameters = outformat;
 	filter->name = "rastertopwg";
 	cupsArrayAdd(filter_chain, filter);
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal: Adding %s to chain", filter->name);
       }
     }
@@ -273,7 +273,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       filter->parameters = NULL;
       filter->name = "imagetopdf";
       cupsArrayAdd(filter_chain, filter);
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
     }
   }
@@ -288,7 +288,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       filter->parameters = outformat;
       filter->name = "ghostscript";
       cupsArrayAdd(filter_chain, filter);
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
     }
     else if (!strcmp(input_super, "text") ||
@@ -302,7 +302,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       filter->parameters = parameters;
       filter->name = "texttopdf";
       cupsArrayAdd(filter_chain, filter);
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain",
 		   filter->name);
     }
@@ -317,7 +317,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       filter->parameters = outformat;
       filter->name = "rastertopdf";
       cupsArrayAdd(filter_chain, filter);
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
     }
     else if (!strcmp(input_type, "vnd.adobe-reader-postscript"))
@@ -337,7 +337,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       filter->parameters = outformat;
       filter->name = "ghostscript";
       cupsArrayAdd(filter_chain, filter);
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
 
       if (!strcmp(output, "image/urf"))
@@ -349,7 +349,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	filter->parameters = outformat;
 	filter->name = "rastertopwg";
 	cupsArrayAdd(filter_chain, filter);
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal: Adding %s to chain",
 		     filter->name);
       }
@@ -364,7 +364,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	filter->parameters = outformat;
 	filter->name = "rastertopdf";
 	cupsArrayAdd(filter_chain, filter);
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal: Adding %s to chain", filter->name);
       }
     }
@@ -375,7 +375,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       filter->parameters = NULL;
       filter->name = "bannertopdf";
       cupsArrayAdd(filter_chain, filter);
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
     }
     else if (!strstr(input_type, "pdf"))
@@ -401,7 +401,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	filter->parameters = strdup(output);
 	filter->name = "pdftopdf";
 	cupsArrayAdd(filter_chain, filter);
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal: Adding %s to chain", filter->name);
       }
 
@@ -427,7 +427,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	  filter->parameters = outformat;
 	  filter->name = "ghostscript";
 	  cupsArrayAdd(filter_chain, filter);
-	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterUniversal: Adding %s to chain",
 		       filter->name);
 
@@ -440,7 +440,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	    filter->parameters = outformat;
 	    filter->name = "rastertopwg";
 	    cupsArrayAdd(filter_chain, filter);
-	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 			 "cfFilterUniversal: Adding %s to chain",
 			 filter->name);
 	  }
@@ -452,7 +452,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	  filter->function = cfFilterPDFToPS;
 	  filter->parameters = NULL;
 	  filter->name = "pdftops";
-	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterUniversal: Adding %s to chain", filter->name);
 	  cupsArrayAdd(filter_chain, filter);
 	}
@@ -469,7 +469,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
  out:
 
   if (ret) {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterUniversal: Unsupported combination of input and output formats: %s -> %s",
 		 input, output);
   }

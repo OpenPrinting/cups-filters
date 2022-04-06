@@ -9,7 +9,7 @@
 
 typedef struct                                   /***** Document information *****/
 {
-  filter_logfunc_t logfunc;           /* Log function */
+  cf_logfunc_t logfunc;           /* Log function */
   void *logdata;                      /* Log data */
   cf_filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
                                              job is canceled, NULL for not

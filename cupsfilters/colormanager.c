@@ -69,7 +69,7 @@ double    blackpoint_default[3] = {0.0, 0.0, 0.0};
 int          
 cfCmIsPrinterCmDisabled(cf_filter_data_t *data)
 {
-    filter_logfunc_t log = data->logfunc;
+    cf_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
     int is_cm_off = 0;          /* color management status flag */
 
@@ -78,7 +78,7 @@ cfCmIsPrinterCmDisabled(cf_filter_data_t *data)
     is_cm_off = _get_colord_printer_cm_status(data);
 
     if (is_cm_off)
-	if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Color Manager: Color management disabled by OS.");
 
     return is_cm_off;      
@@ -92,14 +92,14 @@ cfCmGetPrinterIccProfile(cf_filter_data_t *data,
                        char **icc_profile,        /* ICC Profile Path */
                        ppd_file_t *ppd)           /* Optional PPD file for fallback profile */
 {
-    filter_logfunc_t log = data->logfunc;
+    cf_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
     int profile_set = 0;        /* 'is profile found' flag */
 
 
     /* Request a profile from colord */
     profile_set = _get_colord_profile(data, icc_profile, ppd);
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Color Manager: ICC Profile: %s", *icc_profile ?
         *icc_profile : "None");
 
@@ -115,7 +115,7 @@ cfCmGetCupsColorCalibrateMode(cf_filter_data_t *data,
                             int num_options)           /* Options from CUPS */
 {
 
-    filter_logfunc_t log = data->logfunc;
+    cf_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
     cf_cm_calibration_t status;     /* color management status */
 
@@ -126,7 +126,7 @@ cfCmGetCupsColorCalibrateMode(cf_filter_data_t *data,
     else
       status = CF_CM_CALIBRATION_DISABLED;
 
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Color Manager: %s", status ?
            "Calibration Mode/Enabled" : "Calibration Mode/Off");
 
@@ -189,10 +189,10 @@ char *
 _get_colord_printer_id( cf_filter_data_t *data)
 {
 
-    filter_logfunc_t log = data->logfunc;
+    cf_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
     if (data->printer == NULL) {
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Color Manager: Invalid printer name.");
       return 0;
     }
@@ -210,12 +210,12 @@ int
 _get_colord_printer_cm_status( cf_filter_data_t *data)
 {
 
-    filter_logfunc_t log = data->logfunc;
+    cf_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
 
     /* If invalid input, we leave color management alone */
     if (data->printer == NULL) {
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Color Manager: Invalid printer name.");
       return 0;
     } else if (!strcmp(data->printer, "(null)"))
@@ -242,11 +242,11 @@ _get_colord_profile(cf_filter_data_t *data,
                     ppd_file_t   *ppd)              /* PPD file */
 {
 
-    filter_logfunc_t log = data->logfunc;
+    cf_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
 
     if (data->printer == NULL || profile == 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Color Manager: Invalid input - Unable to find profile."); 
       return -1;
     }
@@ -309,7 +309,7 @@ char *
 _get_ppd_icc_fallback (cf_filter_data_t *data, ppd_file_t *ppd, char **qualifier)
 {
 
-  filter_logfunc_t log = data->logfunc;
+  cf_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
   char full_path[1024];
   char *icc_profile = NULL;
@@ -334,7 +334,7 @@ _get_ppd_icc_fallback (cf_filter_data_t *data, ppd_file_t *ppd, char **qualifier
 
   /* neither */
   if (attr == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_INFO,
+    if(log) log(ld, CF_LOGLEVEL_INFO,
 		"Color Manager: no profiles specified in PPD");
 		
     goto out;
@@ -342,7 +342,7 @@ _get_ppd_icc_fallback (cf_filter_data_t *data, ppd_file_t *ppd, char **qualifier
 
   /* try to find a profile that matches the qualifier exactly */
   for (;attr != NULL; attr = ppdFindNextAttr(ppd, profile_key, NULL)) {
-    if(log) log(ld, FILTER_LOGLEVEL_INFO,
+    if(log) log(ld, CF_LOGLEVEL_INFO,
 		"Color Manager: found profile %s in PPD with qualifier '%s'",
 			attr->value, attr->spec);
 
@@ -362,7 +362,7 @@ _get_ppd_icc_fallback (cf_filter_data_t *data, ppd_file_t *ppd, char **qualifier
 
     /* check the file exists */
     if (access(full_path, 0)) {
-      if(log) log(ld, FILTER_LOGLEVEL_INFO,
+      if(log) log(ld, CF_LOGLEVEL_INFO,
 		"Color Manager: found profile %s in PPD that does not exist",
               full_path);
       continue;
@@ -377,7 +377,7 @@ _get_ppd_icc_fallback (cf_filter_data_t *data, ppd_file_t *ppd, char **qualifier
 
   /* no match */
   if (attr == NULL) {
-    if(log) log(ld, FILTER_LOGLEVEL_INFO,
+    if(log) log(ld, CF_LOGLEVEL_INFO,
 		"Color Manager: no profiles in PPD for qualifier '%s'",
             qualifer_tmp);
     goto out;

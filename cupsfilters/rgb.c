@@ -308,7 +308,7 @@ cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
             const char *colormodel,	/* I - Color model */
             const char *media,		/* I - Media type */
             const char *resolution,	/* I - Resolution */
-	    filter_logfunc_t log,       /* I - Log function */
+	    cf_logfunc_t log,       /* I - Log function */
 	    void       *ld)             /* I - Log function data */
 {
   int		i,			/* Looping var */
@@ -333,7 +333,7 @@ cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
   if ((attr = cfFindAttr(ppd, "cupsRGBProfile", colormodel, media,
                            resolution, spec, sizeof(spec), log, ld)) == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "No cupsRGBProfile attribute found for the current settings!");
     return (NULL);
   }
@@ -341,7 +341,7 @@ cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
   if (!attr->value || sscanf(attr->value, "%d%d%d", &cube_size, &num_channels,
                              &num_samples) != 3)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "Bad cupsRGBProfile attribute \'%s\'!",
 		 attr->value ? attr->value : "(null)");
     return (NULL);
@@ -351,7 +351,7 @@ cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
       num_channels < 1 || num_channels > CF_MAX_RGB ||
       num_samples != (cube_size * cube_size * cube_size))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "Bad cupsRGBProfile attribute \'%s\'!",
 		 attr->value);
     return (NULL);
@@ -363,7 +363,7 @@ cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
 
   if ((samples = calloc(num_samples, sizeof(cf_sample_t))) == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "Unable to allocate memory for RGB profile!");
     return (NULL);
   }
@@ -377,7 +377,7 @@ cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
       break;
     else if (!attr->value)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "Bad cupsRGBSample value!");
       break;
     }
@@ -385,7 +385,7 @@ cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
                     values + 1, values + 2, values + 3, values + 4, values + 5,
                     values + 6) != (3 + num_channels))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "Bad cupsRGBSample value!");
       break;
     }

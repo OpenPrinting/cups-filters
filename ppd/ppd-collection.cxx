@@ -119,13 +119,13 @@ static ppd_info_t	*add_ppd(const char *filename, const char *name,
 				 const char *psversion, time_t mtime,
 				 size_t size, int model_number, int type,
 				 const char *scheme, ppd_list_t *ppdlist,
-				 filter_logfunc_t log, void *ld);
+				 cf_logfunc_t log, void *ld);
 static cups_file_t	*cat_drv(const char *name, char *ppdname,
-				 filter_logfunc_t log, void *ld);
+				 cf_logfunc_t log, void *ld);
 static cups_file_t	*cat_static(const char *name,
-				    filter_logfunc_t log, void *ld);
+				    cf_logfunc_t log, void *ld);
 static cups_file_t	*cat_tar(const char *name, char *ppdname,
-				 filter_logfunc_t log, void *ld);
+				 cf_logfunc_t log, void *ld);
 static int		compare_inodes(struct stat *a, struct stat *b);
 static int		compare_matches(const ppd_info_t *p0,
 			                const ppd_info_t *p1);
@@ -138,41 +138,41 @@ static void		free_ppdlist(ppd_list_t *ppdlist);
 static int		load_driver(const char *filename,
 				    const char *name,
 				    ppd_list_t *ppdlist,
-				    filter_logfunc_t log, void *ld);
+				    cf_logfunc_t log, void *ld);
 static int		load_drv(const char *filename, const char *name,
 			         cups_file_t *fp, time_t mtime, off_t size,
 				 ppd_list_t *ppdlist,
-				 filter_logfunc_t log, void *ld);
+				 cf_logfunc_t log, void *ld);
 static void		load_ppd(const char *filename, const char *name,
 			         const char *scheme, struct stat *fileinfo,
 			         ppd_info_t *ppd, cups_file_t *fp, off_t end,
 				 ppd_list_t *ppdlist,
-				 filter_logfunc_t log, void *ld);
+				 cf_logfunc_t log, void *ld);
 static int		load_ppds(const char *d, const char *p, int descend,
 				  ppd_list_t *ppdlist,
-				  filter_logfunc_t log, void *ld);
+				  cf_logfunc_t log, void *ld);
 static int		load_ppds_dat(const char *filename, int verbose,
 				      ppd_list_t *ppdlist,
-				      filter_logfunc_t log, void *ld);
+				      cf_logfunc_t log, void *ld);
 static int		load_tar(const char *filename, const char *name,
 			         cups_file_t *fp, time_t mtime, off_t size,
 				 ppd_list_t *ppdlist,
-				 filter_logfunc_t log, void *ld);
+				 cf_logfunc_t log, void *ld);
 static int		read_tar(cups_file_t *fp, char *name, size_t namesize,
 			         struct stat *info,
-				 filter_logfunc_t log, void *ld);
+				 cf_logfunc_t log, void *ld);
 static regex_t		*regex_device_id(const char *device_id,
-					 filter_logfunc_t log, void *ld);
+					 cf_logfunc_t log, void *ld);
 static regex_t		*regex_string(const char *s,
-				      filter_logfunc_t log, void *ld);
+				      cf_logfunc_t log, void *ld);
 static int		CompareNames(const char *s, const char *t);
 static cups_array_t	*CreateStringsArray(const char *s);
 static int		ExecCommand(const char *command, char **argv);
 static cups_file_t	*PipeCommand(int *cpid, int *epid, const char *command,
 				     char **argv, uid_t user,
-				     filter_logfunc_t log, void *ld);
+				     cf_logfunc_t log, void *ld);
 static int		ClosePipeCommand(cups_file_t *fp, int cpid, int epid,
-					 filter_logfunc_t log, void *ld);
+					 cf_logfunc_t log, void *ld);
 
 
 /*
@@ -186,7 +186,7 @@ ppdCollectionListPPDs(
 	int           limit,		/* I - Limit */
 	int           num_options,	/* I - Number of options */
 	cups_option_t *options,		/* I - Options */
-	filter_logfunc_t log,		/* I - Log function */
+	cf_logfunc_t log,		/* I - Log function */
 	void *ld)			/* I - Aux. data for log function */
 {
   int		i;			/* Looping var */
@@ -282,7 +282,7 @@ ppdCollectionListPPDs(
     * Write the new ppds.dat file...
     */
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] ChangedPPD=%d",
 		 ppdlist.ChangedPPD);
 
@@ -307,22 +307,22 @@ ppdCollectionListPPDs(
 
 	if (rename(newname, cachename))
 	{
-	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "libppd: [PPD Collections] Unable to rename \"%s\" - %s",
 		       newname, strerror(errno));
 	}
 	else
-	  if (log) log(ld, FILTER_LOGLEVEL_INFO,
+	  if (log) log(ld, CF_LOGLEVEL_INFO,
 		       "libppd: [PPD Collections] Wrote \"%s\", %d PPDs...",
 		       cachename, cupsArrayCount(ppdlist.PPDsByName));
       }
       else
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] Unable to write \"%s\" - %s",
 		     cachename, strerror(errno));
     }
     else
-      if (log) log(ld, FILTER_LOGLEVEL_INFO,
+      if (log) log(ld, CF_LOGLEVEL_INFO,
 		   "libppd: [PPD Collections] No new or changed PPDs...");
   }
 
@@ -374,7 +374,7 @@ ppdCollectionListPPDs(
 
     if (type >= (int)(sizeof(PPDTypes) / sizeof(PPDTypes[0])))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Bad ppd-type=\"%s\" ignored!",
 		   type_str);
       type_str = NULL;
@@ -384,7 +384,7 @@ ppdCollectionListPPDs(
     type = 0;
 
   for (i = 0; i < num_options; i ++)
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] %s=\"%s\"", options[i].name,
 		 options[i].value);
 
@@ -517,7 +517,7 @@ ppdCollectionListPPDs(
 
       if (ppd->matches)
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "libppd: [PPD Collections] %s matches with score %d!",
 		     ppd->record.name, ppd->matches);
         cupsArrayAdd(matches, ppd);
@@ -573,7 +573,7 @@ ppdCollectionListPPDs(
     * Output this PPD...
     */
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] Sending %s (%s)...",
 		 ppd->record.name, ppd->record.make_and_model);
 
@@ -626,7 +626,7 @@ ppdCollectionGetPPD(
 	const char *name,		/* I - PPD URI of the desired PPD */
 	cups_array_t *ppd_collections,	/* I - Directories to search for PPDs
 					       in */
-	filter_logfunc_t log,		/* I - Log function */
+	cf_logfunc_t log,		/* I - Log function */
 	void *ld)			/* I - Aux. data for log function */
 {
   ppd_collection_t *col;		/* Pointer to PPD collection */
@@ -651,7 +651,7 @@ ppdCollectionGetPPD(
 
   if (strstr(name, "../"))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Invalid PPD name.");
     return(NULL);
   }
@@ -696,7 +696,7 @@ ppdCollectionGetPPD(
     }
     if (col == NULL)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Requested PPD %s is in none of "
 		   "the collections",
 		   name);      
@@ -717,7 +717,7 @@ ppdCollectionGetPPD(
     }
     if (access(realname, R_OK))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Cannot access file %s - %s",
 		   realname, strerror(errno));      
       return(NULL);
@@ -750,7 +750,7 @@ ppdCollectionGetPPD(
       * File does not exist or is not executable...
       */
 
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Unable to access \"%s\" - %s",
 		   realname, strerror(errno));
 
@@ -760,7 +760,7 @@ ppdCollectionGetPPD(
    /*
     * Yes, let it cat the PPD file...
     */
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] Grabbing PPD via command: \"%s cat %s\"",
 		 realname, ptr);
 
@@ -773,7 +773,7 @@ ppdCollectionGetPPD(
     {
       if ((fd = cupsTempFd(tempname, sizeof(tempname))) < 0)
       {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] Unable to copy PPD to temp "
 		     "file: %s",
 		     strerror(errno));
@@ -788,7 +788,7 @@ ppdCollectionGetPPD(
     }
     else
     {
-      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+      if (log) log(ld, CF_LOGLEVEL_WARN,
 		   "libppd: [PPD Collections] Unable to execute \"%s\": %s",
 		   tempname, strerror(errno));
       return(NULL);
@@ -809,7 +809,7 @@ ppdCollectionGetPPD(
 
 int
 ppdCollectionDumpCache(const char *filename,	/* I - Filename */
-		       filter_logfunc_t log,	/* I - Log function */
+		       cf_logfunc_t log,	/* I - Log function */
 		       void *ld)		/* I - Aux. data for log
 						       function */
 {
@@ -876,7 +876,7 @@ add_ppd(const char *filename,		/* I - PPD filename */
 	int        type,		/* I - Driver type */
 	const char *scheme,		/* I - PPD scheme */
 	ppd_list_t *ppdlist,
-	filter_logfunc_t log,		/* I - Log function */
+	cf_logfunc_t log,		/* I - Log function */
 	void *ld)			/* I - Aux. data for log function */
 {
   ppd_info_t	*ppd;			/* PPD */
@@ -888,7 +888,7 @@ add_ppd(const char *filename,		/* I - PPD filename */
 
   if ((ppd = (ppd_info_t *)calloc(1, sizeof(ppd_info_t))) == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Ran out of memory for %d PPD "
 		 "files!",
 		 cupsArrayCount(ppdlist->PPDsByName));
@@ -940,7 +940,7 @@ add_ppd(const char *filename,		/* I - PPD filename */
 static cups_file_t *			/* O - Pointer to PPD file */
 cat_drv(const char *filename,		/* I - *.drv file name */
 	char *ppdname,			/* I - PPD name in the *.drv file */
-	filter_logfunc_t log,		/* I - Log function */
+	cf_logfunc_t log,		/* I - Log function */
 	void *ld)			/* I - Aux. data for log function */
 {
   cups_file_t	*fp;			// File pointer
@@ -953,7 +953,7 @@ cat_drv(const char *filename,		/* I - *.drv file name */
 
   if ((fp = cupsFileOpen(filename, "r")) == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Unable to open \"%s\" - %s\n",
 		 filename, strerror(errno));
 
@@ -984,14 +984,14 @@ cat_drv(const char *filename,		/* I - *.drv file name */
 
     if ((fd = cupsTempFd(tempname, sizeof(tempname))) < 0)
     {
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Unable to copy PPD to temp "
 		   "file: %s",
 		   strerror(errno));
     }
     else
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "libppd: [PPD Collections] %u locales defined in \"%s\"...\n",
 		   (unsigned)src->po_files->count, filename);
 
@@ -1000,7 +1000,7 @@ cat_drv(const char *filename,		/* I - *.drv file name */
 	   catalog;
 	   catalog = (ppdcCatalog *)src->po_files->next())
       {
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "libppd: [PPD Collections] Adding locale \"%s\"...\n",
 		     catalog->locale->value);
 	catalog->locale->retain();
@@ -1018,7 +1018,7 @@ cat_drv(const char *filename,		/* I - *.drv file name */
     }
   }
   else
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] PPD \"%s\" not found.\n", ppdname);
 
   src->release();
@@ -1038,14 +1038,14 @@ cat_drv(const char *filename,		/* I - *.drv file name */
 
 static cups_file_t *			/* O - Pointer to PPD file */
 cat_static(const char *name,		/* I - PPD name */
-	   filter_logfunc_t log,	/* I - Log function */
+	   cf_logfunc_t log,	/* I - Log function */
 	   void *ld)			/* I - Aux. data for log function */
 {
   cups_file_t	*fp;
 
   if ((fp = cupsFileOpen(name, "r")) == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Unable to open \"%s\" - %s",
 		 name, strerror(errno));
 
@@ -1063,7 +1063,7 @@ cat_static(const char *name,		/* I - PPD name */
 static cups_file_t *			/* O - Pointer to PPD file */
 cat_tar(const char *filename,		/* I - Archive name */
 	char *ppdname,			/* I - PPD name in the archive */
-	filter_logfunc_t log,		/* I - Log function */
+	cf_logfunc_t log,		/* I - Log function */
 	void *ld)			/* I - Aux. data for log function */
 {
   cups_file_t	*fp;			/* Archive file pointer */
@@ -1083,7 +1083,7 @@ cat_tar(const char *filename,		/* I - Archive name */
 
   if ((fp = cupsFileOpen(filename, "r")) == NULL)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Unable to open \"%s\" - %s",
 		 filename, strerror(errno));
 
@@ -1103,7 +1103,7 @@ cat_tar(const char *filename,		/* I - Archive name */
     {
       if ((fd = cupsTempFd(tempname, sizeof(tempname))) < 0)
       {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] Unable to copy PPD to temp "
 		     "file: %s",
 		     strerror(errno));
@@ -1122,7 +1122,7 @@ cat_tar(const char *filename,		/* I - Archive name */
           }
           else
           {
-	    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	    if (log) log(ld, CF_LOGLEVEL_ERROR,
 			 "libppd: [PPD Collections] Read error - %s",
 			 strerror(errno));
 	    cupsFileClose(fp);
@@ -1133,7 +1133,7 @@ cat_tar(const char *filename,		/* I - Archive name */
         }
         else if (bytes > 0 && write(fd, buffer, bytes) != bytes)
 	{
-	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "libppd: [PPD Collections] Write error - %s",
 		       strerror(errno));
 	  cupsFileClose(fp);
@@ -1157,7 +1157,7 @@ cat_tar(const char *filename,		/* I - Archive name */
 
   cupsFileClose(fp);
 
-  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+  if (log) log(ld, CF_LOGLEVEL_ERROR,
 	       "libppd: [PPD Collections] PPD \"%s\" not found.", ppdname);
 
   return (NULL);
@@ -1294,7 +1294,7 @@ static int				/* O - 1 on success, 0 on failure */
 load_driver(const char *filename,	/* I - Driver excutable file name */
 	    const char *name,		/* I - Name to the rest of the world */
 	    ppd_list_t *ppdlist,
-	    filter_logfunc_t log,	/* I - Log function */
+	    cf_logfunc_t log,	/* I - Log function */
 	    void *ld)			/* I - Aux. data for log function */
 {
   int		i;			/* Looping var */
@@ -1356,7 +1356,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
 	if (line[strlen(line) - 1] == '\n')
 	  line[strlen(line) - 1] = '\0';
 
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] Bad line from \"%s\": %s",
 		     filename, line);
 	break;
@@ -1378,7 +1378,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
 
 	if (type >= (int)(sizeof(PPDTypes) / sizeof(PPDTypes[0])))
 	{
-	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "libppd: [PPD Collections] Bad ppd-type \"%s\" ignored!",
 		       type_str);
 	  type = PPD_TYPE_UNKNOWN;
@@ -1428,7 +1428,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
 	  }
 	}
 
-	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "libppd: [PPD Collections] Adding PPD \"%s\"...",
 		     ppd_name);
       }
@@ -1437,7 +1437,7 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
     ClosePipeCommand(fp, cpid, epid, log, ld);
   }
   else
-    if (log) log(ld, FILTER_LOGLEVEL_WARN,
+    if (log) log(ld, CF_LOGLEVEL_WARN,
 		 "libppd: [PPD Collections] Unable to execute \"%s\": %s",
 		 filename, strerror(errno));
 
@@ -1456,7 +1456,7 @@ load_drv(const char  *filename,		/* I - Actual filename */
 	 time_t      mtime,		/* I - Mod time of driver info file */
 	 off_t       size,		/* I - Size of driver info file */
 	 ppd_list_t  *ppdlist,
-	 filter_logfunc_t log,		/* I - Log function */
+	 cf_logfunc_t log,		/* I - Log function */
 	 void *ld)			/* I - Aux. data for log function */
 {
   ppdcSource	*src;			// Driver information file
@@ -1493,7 +1493,7 @@ load_drv(const char  *filename,		/* I - Actual filename */
 
   if (src->drivers->count == 0)
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Bad driver information file \"%s\"!\n",
 		 filename);
     src->release();
@@ -1612,7 +1612,7 @@ load_ppd(const char  *filename,		/* I - Real filename */
          cups_file_t *fp,		/* I - File to read from */
          off_t       end,		/* I - End of file position or 0 */
 	 ppd_list_t  *ppdlist,
-	 filter_logfunc_t log,		/* I - Log function */
+	 cf_logfunc_t log,		/* I - Log function */
 	 void *ld)			/* I - Aux. data for log function */
 {
   int		i;			/* Looping var */
@@ -1819,18 +1819,18 @@ load_ppd(const char  *filename,		/* I - Real filename */
     */
 
     if (!make_model[0])
-      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+      if (log) log(ld, CF_LOGLEVEL_WARN,
 		   "libppd: [PPD Collections] Missing NickName and ModelName "
 		   "in %s!",
 		   filename);
 
     if (cupsArrayCount(products) == 0)
-      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+      if (log) log(ld, CF_LOGLEVEL_WARN,
 		   "libppd: [PPD Collections] Missing Product in %s!",
 		   filename);
 
     if (cupsArrayCount(psversions) == 0)
-      if (log) log(ld, FILTER_LOGLEVEL_WARN,
+      if (log) log(ld, CF_LOGLEVEL_WARN,
 		   "libppd: [PPD Collections] Missing PSVersion in %s!",
 		   filename);
 
@@ -1951,7 +1951,7 @@ load_ppd(const char  *filename,		/* I - Real filename */
     * Add new PPD file...
     */
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] Adding PPD \"%s\"...", name);
 
     ppd = add_ppd(filename, name, lang_version, manufacturer, make_model,
@@ -1969,7 +1969,7 @@ load_ppd(const char  *filename,		/* I - Real filename */
     * Update existing record...
     */
 
-    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] Updating ppd \"%s\"...", name);
 
     memset(ppd, 0, sizeof(ppd_info_t));
@@ -2038,7 +2038,7 @@ load_ppds(const char *d,		/* I - Actual directory */
           const char *p,		/* I - Virtual path in name */
 	  int        descend,		/* I - Descend into directories? */
 	  ppd_list_t *ppdlist,
-	  filter_logfunc_t log,		/* I - Log function */
+	  cf_logfunc_t log,		/* I - Log function */
 	  void *ld)			/* I - Aux. data for log function */
 {
   struct stat	dinfo,			/* Directory information */
@@ -2061,7 +2061,7 @@ load_ppds(const char *d,		/* I - Actual directory */
   if (stat(d, &dinfo))
   {
     if (errno != ENOENT)
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Unable to stat \"%s\": %s", d,
 		   strerror(errno));
 
@@ -2069,7 +2069,7 @@ load_ppds(const char *d,		/* I - Actual directory */
   }
   else if (cupsArrayFind(ppdlist->Inodes, &dinfo))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Skipping \"%s\": loop detected!",
 		 d);
     return (1);
@@ -2093,7 +2093,7 @@ load_ppds(const char *d,		/* I - Actual directory */
   if ((dir = cupsDirOpen(d)) == NULL)
   {
     if (errno != ENOENT)
-      if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Unable to open PPD directory "
 		   "\"%s\": %s\n",
 		   d, strerror(errno));
@@ -2101,7 +2101,7 @@ load_ppds(const char *d,		/* I - Actual directory */
     return (0);
   }
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] Loading \"%s\"...", d);
 
   while ((dent = cupsDirRead(dir)) != NULL)
@@ -2258,7 +2258,7 @@ static int
 load_ppds_dat(const char *filename,	/* I - Filename */
               int        verbose,	/* I - Be verbose? */
 	      ppd_list_t *ppdlist,
-	      filter_logfunc_t log,	/* I - Log function */
+	      cf_logfunc_t log,	/* I - Log function */
 	      void *ld)			/* I - Aux. data for log function */
 {
   ppd_info_t	*ppd;			/* Current PPD file */
@@ -2296,7 +2296,7 @@ load_ppds_dat(const char *filename,	/* I - Filename */
 	if ((ppd = (ppd_info_t *)calloc(1, sizeof(ppd_info_t))) == NULL)
 	{
 	  if (verbose)
-	    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	    if (log) log(ld, CF_LOGLEVEL_ERROR,
 			 "libppd: [PPD Collections] Unable to allocate memory "
 			 "for PPD!");
 	  return(1);
@@ -2315,7 +2315,7 @@ load_ppds_dat(const char *filename,	/* I - Filename */
       }
 
       if (verbose)
-	if (log) log(ld, FILTER_LOGLEVEL_INFO,
+	if (log) log(ld, CF_LOGLEVEL_INFO,
 		     "libppd: [PPD Collections] Read \"%s\", %d PPDs...",
 		     filename, cupsArrayCount(ppdlist->PPDsByName));
     }
@@ -2338,7 +2338,7 @@ load_tar(const char  *filename,		/* I - Actual filename */
 	 time_t      mtime,		/* I - Mod time of driver info file */
 	 off_t       size,		/* I - Size of driver info file */
 	 ppd_list_t  *ppdlist,
-	 filter_logfunc_t log,		/* I - Log function */
+	 cf_logfunc_t log,		/* I - Log function */
 	 void *ld)			/* I - Aux. data for log function */
 {
   char		curname[256],		/* Current archive file name */
@@ -2392,7 +2392,7 @@ read_tar(cups_file_t *fp,		/* I - Archive to read */
          char        *name,		/* I - Filename buffer */
          size_t      namesize,		/* I - Size of filename buffer */
          struct stat *info,		/* O - File information */
-	 filter_logfunc_t log,		/* I - Log function */
+	 cf_logfunc_t log,		/* I - Log function */
 	 void *ld)			/* I - Aux. data for log function */
 {
   tar_rec_t	record;			/* Record from file */
@@ -2411,7 +2411,7 @@ read_tar(cups_file_t *fp,		/* I - Archive to read */
     {
       if (record.header.magic[0] ||
           memcmp(record.header.magic, record.header.magic + 1, 5))
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] Bad tar magic/version.");
       break;
     }
@@ -2451,7 +2451,7 @@ read_tar(cups_file_t *fp,		/* I - Archive to read */
 
 static regex_t *			/* O - Regular expression */
 regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
-		filter_logfunc_t log,	/* I - Log function */
+		cf_logfunc_t log,	/* I - Log function */
 		void *ld)		/* I - Aux. data for log function */
 {
   char		res[2048],		/* Regular expression string */
@@ -2460,7 +2460,7 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
   int		cmd;			/* Command set string? */
 
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] regex_device_id(\"%s\")",
 	       device_id);
 
@@ -2532,7 +2532,7 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
 
   *ptr = '\0';
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] regex_device_id: \"%s\"", res);
 
  /*
@@ -2543,7 +2543,7 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
   {
     if (!regcomp(re, res, REG_EXTENDED | REG_ICASE))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "libppd: [PPD Collections] regex_device_id: OK");
       return (re);
     }
@@ -2561,7 +2561,7 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
 
 static regex_t *			/* O - Regular expression */
 regex_string(const char *s,		/* I - String to compare */
-	     filter_logfunc_t log,	/* I - Log function */
+	     cf_logfunc_t log,	/* I - Log function */
 	     void *ld)			/* I - Aux. data for log function */
 {
   char		res[2048],		/* Regular expression string */
@@ -2569,7 +2569,7 @@ regex_string(const char *s,		/* I - String to compare */
   regex_t	*re;			/* Regular expression */
 
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] regex_string(\"%s\")", s);
 
  /*
@@ -2589,7 +2589,7 @@ regex_string(const char *s,		/* I - String to compare */
 
   *ptr = '\0';
 
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] regex_string: \"%s\"", res);
 
  /*
@@ -2600,7 +2600,7 @@ regex_string(const char *s,		/* I - String to compare */
   {
     if (!regcomp(re, res, REG_ICASE))
     {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "libppd: [PPD Collections] regex_string: OK");
       return (re);
     }
@@ -2826,7 +2826,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
 	    const char *command,	/* I - Command to run */
 	    char       **argv,		/* I - Arguments to pass to command */
 	    uid_t      user,		/* I - User to run as or 0 for current*/
-	    filter_logfunc_t log,
+	    cf_logfunc_t log,
 	    void       *ld)
 {
   int	      fd,			/* Temporary file descriptor */
@@ -2834,7 +2834,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
 	      efds[2];			/* Error/Log Pipe file descriptors */
   cups_file_t *outfp, *logfp;
   char        buf[BUFSIZ];
-  filter_loglevel_t log_level;
+  cf_loglevel_t log_level;
   char        *msg;
 
 
@@ -2847,7 +2847,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
 
   if (pipe(cfds))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Unable to establish output pipe for %s call: %s",
 		 argv[0], strerror(errno));
     return (NULL);
@@ -2855,7 +2855,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
   if (log)
     if (pipe(efds))
     {
-      log(ld, FILTER_LOGLEVEL_ERROR,
+      log(ld, CF_LOGLEVEL_ERROR,
 	  "libppd: [PPD Collections] Unable to establish error/logging pipe for %s call: %s",
 	  argv[0], strerror(errno));
       return (NULL);
@@ -2869,7 +2869,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
   {
     close(cfds[0]);
     close(cfds[1]);
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Unable to set \"close on exec\" flag on read end of the output pipe for %s call: %s",
 		 argv[0], strerror(errno));
     return (NULL);
@@ -2879,7 +2879,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
   {
     close(cfds[0]);
     close(cfds[1]);
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Unable to set \"close on exec\" flag on write end of the output pipe for %s call: %s",
 		 argv[0], strerror(errno));
     return (NULL);
@@ -2893,7 +2893,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
       close(cfds[1]);
       close(efds[0]);
       close(efds[1]);
-      log(ld, FILTER_LOGLEVEL_ERROR,
+      log(ld, CF_LOGLEVEL_ERROR,
 	  "libppd: [PPD Collections] Unable to set \"close on exec\" flag on read end of the error/logging pipe for %s call: %s",
 	  argv[0], strerror(errno));
       return (NULL);
@@ -2905,7 +2905,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
       close(cfds[1]);
       close(efds[0]);
       close(efds[1]);
-      log(ld, FILTER_LOGLEVEL_ERROR,
+      log(ld, CF_LOGLEVEL_ERROR,
 	  "libppd: [PPD Collections] Unable to set \"close on exec\" flag on write end of the error/logging pipe for %s call: %s",
 	  argv[0], strerror(errno));
       return (NULL);
@@ -2931,7 +2931,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
       close(efds[1]);
     }
 
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Unable to fork for %s: %s", argv[0],
 		 strerror(errno));
 
@@ -2967,12 +2967,12 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
     }
 
     ExecCommand(command, argv);
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "libppd: [PPD Collections] Unable to launch %s: %s", argv[0],
 		 strerror(errno));
     exit(errno);
   }
-  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] Started %s (PID %d)", argv[0], cpid);
 
  /*
@@ -3006,7 +3006,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
       kill(*cpid, SIGTERM);
       ClosePipeCommand(outfp, *cpid, 0, log, ld);
 
-      log(ld, FILTER_LOGLEVEL_ERROR,
+      log(ld, CF_LOGLEVEL_ERROR,
 	  "libppd: [PPD Collections] Unable to fork for logging for %s: %s",
 	  argv[0], strerror(errno));
 
@@ -3024,22 +3024,22 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
       while (cupsFileGets(logfp, buf, sizeof(buf)))
 	if (log) {
 	  if (strncmp(buf, "DEBUG: ", 7) == 0) {
-	    log_level = FILTER_LOGLEVEL_DEBUG;
+	    log_level = CF_LOGLEVEL_DEBUG;
 	    msg = buf + 7;
 	  } else if (strncmp(buf, "DEBUG2: ", 8) == 0) {
-	    log_level = FILTER_LOGLEVEL_DEBUG;
+	    log_level = CF_LOGLEVEL_DEBUG;
 	    msg = buf + 8;
 	  } else if (strncmp(buf, "INFO: ", 6) == 0) {
-	    log_level = FILTER_LOGLEVEL_INFO;
+	    log_level = CF_LOGLEVEL_INFO;
 	    msg = buf + 6;
 	  } else if (strncmp(buf, "WARNING: ", 9) == 0) {
-	    log_level = FILTER_LOGLEVEL_WARN;
+	    log_level = CF_LOGLEVEL_WARN;
 	    msg = buf + 9;
 	  } else if (strncmp(buf, "ERROR: ", 7) == 0) {
-	    log_level = FILTER_LOGLEVEL_ERROR;
+	    log_level = CF_LOGLEVEL_ERROR;
 	    msg = buf + 7;
 	  } else {
-	    log_level = FILTER_LOGLEVEL_DEBUG;
+	    log_level = CF_LOGLEVEL_DEBUG;
 	    msg = buf;
 	  }
 	  log(ld, log_level, "libppd: [PPD Collections] %s: %s", argv[0], msg);
@@ -3051,7 +3051,7 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
       exit(0);
     }
 
-    log(ld, FILTER_LOGLEVEL_DEBUG,
+    log(ld, CF_LOGLEVEL_DEBUG,
 	"libppd: [PPD Collections] Started logging for %s (PID %d)",
 	argv[0], cpid);
 
@@ -3076,7 +3076,7 @@ static int
 ClosePipeCommand(cups_file_t *fp,
 		 int cpid,
 		 int epid,
-		 filter_logfunc_t log,
+		 cf_logfunc_t log,
 		 void *ld)
 {
   int           pid;
@@ -3100,7 +3100,7 @@ ClosePipeCommand(cups_file_t *fp,
 	continue;
       else
       {
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] Error closing sub-processes: %s - killing processes",
 		     strerror(errno));
 	kill(cpid, SIGTERM);
@@ -3115,21 +3115,21 @@ ClosePipeCommand(cups_file_t *fp,
     if (wstatus) {
       if (WIFEXITED(wstatus)) {
 	/* Via exit() anywhere or return() in the main() function */
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] %s (PID %d) stopped with status %d",
 		     (pid == cpid ? "Command" : "Logging"), pid,
 		     WEXITSTATUS(wstatus));
 	status = WEXITSTATUS(wstatus);
       } else {
 	/* Via signal */
-	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
+	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] %s (PID %d) crashed on signal %d",
 		     (pid == cpid ? "Command" : "Logging"), pid,
 		     WTERMSIG(wstatus));
 	status = 256 * WTERMSIG(wstatus);
       }
     } else {
-      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "libppd: [PPD Collections] %s (PID %d) exited with no errors.",
 		   (pid == cpid ? "Command" : "Logging"), pid);
       status = 0;

@@ -809,14 +809,14 @@ extern cups_array_t	*ppdCollectionListPPDs(cups_array_t *ppd_collections,
 					       int limit,
 					       int num_options,
 					       cups_option_t *options,
-					       filter_logfunc_t log,
+					       cf_logfunc_t log,
 					       void *ld);
 extern cups_file_t	*ppdCollectionGetPPD(const char *name,
 					     cups_array_t *ppd_collections,
-					     filter_logfunc_t log,
+					     cf_logfunc_t log,
 					     void *ld);
 extern int		ppdCollectionDumpCache(const char *filename,
-					       filter_logfunc_t log,
+					       cf_logfunc_t log,
 					       void *ld);
 
 /**** New in cups-filters 2.0.0: For PPD retro-fit Printer Applications ****/
