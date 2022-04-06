@@ -691,15 +691,15 @@ ppd_decode(char *string)		/* I - String to decode */
 }
 
 /*
- * 'imagetopdf()' - Filter function to convert many common image file
+ * 'cfFilterImageToPDF()' - Filter function to convert many common image file
  *                  formats into PDF
  */
 
 int                             /* O - Error status */
-imagetopdf(int inputfd,         /* I - File descriptor input stream */
+cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	   int outputfd,        /* I - File descriptor output stream */
 	   int inputseekable,   /* I - Is input stream seekable? (unused) */
-	   filter_data_t *data, /* I - Job and printer data */
+	   cf_filter_data_t *data, /* I - Job and printer data */
 	   void *parameters)    /* I - Filter-specific parameters (unused) */
 {
   imagetopdf_doc_t	doc;		/* Document information */
@@ -729,7 +729,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   int		cropfit = 0;		/* -o crop-to-fit = true */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
   ipp_t *printer_attrs = data->printer_attrs;
   ipp_t *job_attrs = data->job_attrs;
@@ -779,7 +779,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Unable to open input data stream.");
+		   "cfFilterImageToPDF: Unable to open input data stream.");
     }
 
     return (1);
@@ -793,14 +793,14 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Unable to copy input: %s",
+		   "cfFilterImageToPDF: Unable to copy input: %s",
 		   strerror(errno));
       fclose(fp);
       return (1);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Copying input to temp file \"%s\"",
+		 "cfFilterImageToPDF: Copying input to temp file \"%s\"",
 		 tempfile);
 
     while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
@@ -818,7 +818,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       if (!iscanceled || !iscanceled(icd))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "imagetopdf: Unable to open temporary file.");
+		     "cfFilterImageToPDF: Unable to open temporary file.");
       }
 
       unlink(tempfile);
@@ -835,7 +835,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Unable to open output data stream.");
+		   "cfFilterImageToPDF: Unable to open output data stream.");
     }
 
     fclose(fp);
@@ -886,7 +886,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   */
 
   doc.ppd = data->ppd;
-  filterSetCommonOptions(doc.ppd, num_options, options, 0,
+  cfFilterSetCommonOptions(doc.ppd, num_options, options, 0,
 			 &doc.Orientation, &doc.Duplex,
 			 &doc.LanguageLevel, &doc.Color,
 			 &doc.PageLeft, &doc.PageRight,
@@ -894,7 +894,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 			 &doc.PageWidth, &doc.PageLength,
 			 log, ld);
 
-  /* The filterSetCommonOptions() does not set doc.Color
+  /* The cfFilterSetCommonOptions() does not set doc.Color
      according to option settings (user's demand for color/gray),
      so we parse the options and set the mode here */
   cupsRasterParseIPPOptions(&h, data, 0, 1);
@@ -1377,7 +1377,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   if (doc.img == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "imagetopdf: Unable to open image file for printing!");
+		 "cfFilterImageToPDF: Unable to open image file for printing!");
     fclose(doc.outputfp);
     close(outputfd);
     return (1);
@@ -1399,7 +1399,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     yppi = xppi;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetopdf: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
+	       "cfFilterImageToPDF: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
 	       xppi, yppi, zoom);
 
   if (xppi > 0)
@@ -1420,14 +1420,14 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Before scaling: xprint=%.1f, yprint=%.1f",
+		 "cfFilterImageToPDF: Before scaling: xprint=%.1f, yprint=%.1f",
 		 doc.xprint, doc.yprint);
 
     doc.xinches = (float)cupsImageGetWidth(doc.img) / (float)xppi;
     doc.yinches = (float)cupsImageGetHeight(doc.img) / (float)yppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Image size is %.1f x %.1f inches...",
+		 "cfFilterImageToPDF: Image size is %.1f x %.1f inches...",
 		 doc.xinches, doc.yinches);
 
     if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
@@ -1444,7 +1444,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetopdf: Auto orientation...");
+		   "cfFilterImageToPDF: Auto orientation...");
 
       if ((doc.xinches > doc.xprint || doc.yinches > doc.yprint) &&
           doc.xinches <= doc.yprint && doc.yinches <= doc.xprint)
@@ -1454,7 +1454,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetopdf: Using landscape orientation...");
+		     "cfFilterImageToPDF: Using landscape orientation...");
 
 	doc.Orientation = (doc.Orientation + 1) & 3;
 	doc.xsize       = doc.yprint;
@@ -1475,11 +1475,11 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       (float)cupsImageGetXPPI(doc.img);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Before scaling: xprint=%.1f, yprint=%.1f",
+		 "cfFilterImageToPDF: Before scaling: xprint=%.1f, yprint=%.1f",
 		 doc.xprint, doc.yprint);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: cupsImageGetXPPI(img) = %d, "
+		 "cfFilterImageToPDF: cupsImageGetXPPI(img) = %d, "
 		 "cupsImageGetYPPI(img) = %d, aspect = %f",
 		 cupsImageGetXPPI(doc.img), cupsImageGetYPPI(doc.img),
 		 doc.aspect);
@@ -1507,10 +1507,10 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Portrait size is %.2f x %.2f inches",
+		 "cfFilterImageToPDF: Portrait size is %.2f x %.2f inches",
 		 doc.xsize, doc.ysize);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Landscape size is %.2f x %.2f inches",
+		 "cfFilterImageToPDF: Landscape size is %.2f x %.2f inches",
 		 doc.xsize2, doc.ysize2);
 
     if (cupsGetOption("orientation-requested", num_options, options) == NULL &&
@@ -1522,7 +1522,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetopdf: Auto orientation...");
+		   "cfFilterImageToPDF: Auto orientation...");
 
       if ((doc.xsize * doc.ysize) < (doc.xsize2 * doc.xsize2))
       {
@@ -1531,7 +1531,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetopdf: Using landscape orientation...");
+		     "cfFilterImageToPDF: Using landscape orientation...");
 
 	doc.Orientation = 1;
 	doc.xinches     = doc.xsize2;
@@ -1546,7 +1546,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetopdf: Using portrait orientation...");
+		     "cfFilterImageToPDF: Using portrait orientation...");
 
 	doc.Orientation = 0;
 	doc.xinches     = doc.xsize;
@@ -1556,7 +1556,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     else if (doc.Orientation & 1)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetopdf: Using landscape orientation...");
+		   "cfFilterImageToPDF: Using landscape orientation...");
 
       doc.xinches     = doc.xsize2;
       doc.yinches     = doc.ysize2;
@@ -1566,7 +1566,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetopdf: Using portrait orientation...");
+		   "cfFilterImageToPDF: Using portrait orientation...");
 
       doc.xinches     = doc.xsize;
       doc.yinches     = doc.ysize;
@@ -1595,7 +1595,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   doc.yprint = doc.yinches / doc.ypages;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetopdf: xpages = %dx%.2fin, ypages = %dx%.2fin",
+	       "cfFilterImageToPDF: xpages = %dx%.2fin, ypages = %dx%.2fin",
 	       doc.xpages, doc.xprint, doc.ypages, doc.yprint);
 
  /*
@@ -1672,7 +1672,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetopdf: Updated custom page size to %.2f x %.2f "
+		 "cfFilterImageToPDF: Updated custom page size to %.2f x %.2f "
 		 "inches...",
 		 width / 72.0, length / 72.0);
 
@@ -1878,15 +1878,15 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetopdf: XPosition=%d, YPosition=%d, Orientation=%d",
+	"cfFilterImageToPDF: XPosition=%d, YPosition=%d, Orientation=%d",
 	doc.XPosition, doc.YPosition, doc.Orientation);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetopdf: xprint=%.2f, yprint=%.2f", doc.xprint, doc.yprint);
+	"cfFilterImageToPDF: xprint=%.2f, yprint=%.2f", doc.xprint, doc.yprint);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetopdf: PageLeft=%.0f, PageRight=%.0f, PageWidth=%.0f",
+	"cfFilterImageToPDF: PageLeft=%.0f, PageRight=%.0f, PageWidth=%.0f",
 	doc.PageLeft, doc.PageRight, doc.PageWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetopdf: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f",
+	"cfFilterImageToPDF: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f",
 	doc.PageBottom, doc.PageTop, doc.PageLength);
   }
 
@@ -2014,7 +2014,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetopdf: left=%.2f, top=%.2f", doc.left, doc.top);
+	       "cfFilterImageToPDF: left=%.2f, top=%.2f", doc.left, doc.top);
 
   if (doc.Collate)
   {
@@ -2024,13 +2024,13 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
     if ((contentsObjs = malloc(sizeof(int)*doc.xpages*doc.ypages)) == NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Can't allocate contentsObjs");
+		   "cfFilterImageToPDF: Can't allocate contentsObjs");
       goto out_of_memory;
     }
     if ((imgObjs = malloc(sizeof(int)*doc.xpages*doc.ypages)) == NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetopdf: Can't allocate imgObjs");
+		   "cfFilterImageToPDF: Can't allocate imgObjs");
       goto out_of_memory;
     }
     for (doc.xpage = 0; doc.xpage < doc.xpages; doc.xpage ++)
@@ -2042,7 +2042,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	if (iscanceled && iscanceled(icd))
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "imagetopdf: Job canceled");
+		       "cfFilterImageToPDF: Job canceled");
 	  goto canceled;
 	}
 
@@ -2068,7 +2068,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	  if (iscanceled && iscanceled(icd))
 	  {
 	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			 "imagetopdf: Job canceled");
+			 "cfFilterImageToPDF: Job canceled");
 	    goto canceled;
 	  }
 
@@ -2105,7 +2105,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	if (iscanceled && iscanceled(icd))
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "imagetopdf: Job canceled");
+		       "cfFilterImageToPDF: Job canceled");
 	  goto canceled;
 	}
 
@@ -2127,7 +2127,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	  if (iscanceled && iscanceled(icd))
 	  {
 	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			 "imagetopdf: Job canceled");
+			 "cfFilterImageToPDF: Job canceled");
 	    goto canceled;
 	  }
 
@@ -2149,7 +2149,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
 	if (iscanceled && iscanceled(icd))
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "imagetopdf: Job canceled");
+		       "cfFilterImageToPDF: Job canceled");
 	  goto canceled;
 	}
 
@@ -2186,7 +2186,7 @@ imagetopdf(int inputfd,         /* I - File descriptor input stream */
  out_of_memory:
 
   if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-	       "imagetopdf: Cannot allocate any more memory.");
+	       "cfFilterImageToPDF: Cannot allocate any more memory.");
   freeAllObj(&doc);
   cupsImageClose(doc.img);
   fclose(doc.outputfp);

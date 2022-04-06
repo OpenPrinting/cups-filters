@@ -50,21 +50,21 @@ main(int  argc,	   /* I - Number of command-line arguments */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the mupdftopwg() filter function
+  * Fire up the cfFilterMuPDFToPWG() filter function
   */
   
-  filter_out_format_t outformat = OUTPUT_FORMAT_CUPS_RASTER;
+  cf_filter_out_format_t outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
   char *t = getenv("FINAL_CONTENT_TYPE");
   if (t) {
     if (strcasestr(t, "pwg"))
-      outformat = OUTPUT_FORMAT_PWG_RASTER;
+      outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
     else if (strcasestr(t, "urf"))
-      outformat = OUTPUT_FORMAT_APPLE_RASTER;
+      outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
     else if (strcasestr(t, "pclm"))
-      outformat = OUTPUT_FORMAT_PCLM;
+      outformat = CF_FILTER_OUT_FORMAT_PCLM;
   }
 
-  ret = filterCUPSWrapper(argc, argv, mupdftopwg, &outformat, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterMuPDFToPWG, &outformat, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: mupdftopwg filter function failed.\n");

@@ -33,7 +33,7 @@
 #include <string.h>
 #include <ctype.h>
 
-filter_logfunc_t logfunc = cups_logfunc;    /* Log function */
+filter_logfunc_t logfunc = cfCUPSLogFunc;    /* Log function */
 void             *ld = NULL;                /* Log function data */
 
 

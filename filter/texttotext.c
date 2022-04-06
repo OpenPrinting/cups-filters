@@ -49,11 +49,11 @@ main(int  argc,	   /* I - Number of command-line arguments */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the texttotext() filter function
+  * Fire up the cfFilterTextToText() filter function
   */
 
 
-  ret = filterCUPSWrapper(argc, argv, texttotext, NULL, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterTextToText, NULL, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: texttotext filter function failed.\n");

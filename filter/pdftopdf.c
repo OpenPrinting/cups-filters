@@ -1,5 +1,5 @@
 /*
- * Pdf to pdf filter based on pdftopdf() filter function.
+ * Pdf to pdf filter based on cfFilterPDFToPDF() filter function.
  */
 
 
@@ -53,7 +53,7 @@ main(int  argc,				/* I - Number of command-line args */
   signal(SIGTERM, cancel_job);
 #endif /* HAVE_SIGSET */
   char *t = getenv("FINAL_CONTENT_TYPE");
-  ret = filterCUPSWrapper(argc, argv, pdftopdf, t, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterPDFToPDF, t, &JobCanceled);
   if (ret)
     fprintf(stderr, "ERROR: pdftopdf filter function failed.\n");
 

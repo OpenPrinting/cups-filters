@@ -1,5 +1,5 @@
 /*
- * PDF-to-PostScript filter for CUPS (based on pdftops() filter function).
+ * PDF-to-PostScript filter for CUPS (based on cfFilterPDFToPS() filter function).
  *
  * Copyright © 2020 by Till Kamppeter
  * Copyright © 2007-2018 by Apple Inc.
@@ -61,10 +61,10 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the pstops() filter function
+  * Fire up the cfFilterPSToPS() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, pdftops, NULL, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterPDFToPS, NULL, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: pdftops filter function failed.\n");

@@ -239,10 +239,10 @@ main(int  argc,				/* I - Number of command-line args */
       int num_options = 0;
       cups_option_t *options = NULL;
       int fd, nullfd;
-      filter_data_t filter_data;
-      universal_parameter_t universal_parameters;
-      filter_external_cups_t ipp_backend_params;
-      filter_filter_in_chain_t universal_in_chain,
+      cf_filter_data_t filter_data;
+      cf_filter_universal_parameter_t universal_parameters;
+      cf_filter_external_cups_t ipp_backend_params;
+      cf_filter_filter_in_chain_t universal_in_chain,
 	                       ipp_in_chain;
       cups_array_t *filter_chain;
       int retval;
@@ -290,7 +290,7 @@ main(int  argc,				/* I - Number of command-line args */
       fprintf(stderr,"DEBUG: Received job for the printer with the destination uri - %s, Final-document format for the printer - %s and requested resolution - %s\n",
 	      printer_uri, document_format, resolution);
 
-      /* Adjust option list for the universal() filter function call */
+      /* Adjust option list for the cfFilterUniversal() filter function call */
       num_options = cupsAddOption("Resolution", resolution,
 				  num_options, &options);
       num_options = cupsRemoveOption("cups-browsed-dest-printer",
@@ -348,20 +348,20 @@ main(int  argc,				/* I - Number of command-line args */
       filter_data.back_pipe[1] = -1;
       filter_data.side_pipe[0] = -1;
       filter_data.side_pipe[1] = -1;
-      filter_data.logfunc = cups_logfunc;  /* Logging scheme of CUPS */
+      filter_data.logfunc = cfCUPSLogFunc;  /* Logging scheme of CUPS */
       filter_data.logdata = NULL;
-      filter_data.iscanceledfunc = cups_iscanceledfunc; /* Job-is-canceled
+      filter_data.iscanceledfunc = cfCUPSIsCanceledFunc; /* Job-is-canceled
 							   function */
       filter_data.iscanceleddata = &job_canceled;
-      filterOpenBackAndSidePipes(&filter_data);
+      cfFilterOpenBackAndSidePipes(&filter_data);
 
-      /* Parameters (input/output MIME types) for universal() call */
+      /* Parameters (input/output MIME types) for cfFilterUniversal() call */
       universal_parameters.input_format = "application/vnd.cups-pdf";
       universal_parameters.output_format = document_format;
       memset(&(universal_parameters.texttopdf_params), 0,
-	     sizeof(texttopdf_parameter_t));
+	     sizeof(cf_filter_texttopdf_parameter_t));
 
-      /* Parameters for filterExternalCUPS() call for IPP backend */
+      /* Parameters for cfFilterExternalCUPS() call for IPP backend */
       ipp_backend_params.filter = "ipp";
       ipp_backend_params.is_backend = 1;
       ipp_backend_params.device_uri = printer_uri;
@@ -369,13 +369,13 @@ main(int  argc,				/* I - Number of command-line args */
       ipp_backend_params.options = NULL;
       ipp_backend_params.envp = NULL;
 
-      /* Filter chain entry for the universal() filter function call */
-      universal_in_chain.function = universal;
+      /* Filter chain entry for the cfFilterUniversal() filter function call */
+      universal_in_chain.function = cfFilterUniversal;
       universal_in_chain.parameters = &universal_parameters;
       universal_in_chain.name = "Filters";
 
       /* Filter chain entry for the IPP CUPS backend call */
-      ipp_in_chain.function = filterExternalCUPS;
+      ipp_in_chain.function = cfFilterExternalCUPS;
       ipp_in_chain.parameters = &ipp_backend_params;
       ipp_in_chain.name = "Backend";
 
@@ -401,10 +401,10 @@ main(int  argc,				/* I - Number of command-line args */
       nullfd = open("/dev/null", O_WRONLY);
 
       /* Call the filter chain to run the needed filters and the backend */
-      retval = filterChain(fd, nullfd, fd != 0 ? 1 : 0, &filter_data,
+      retval = cfFilterChain(fd, nullfd, fd != 0 ? 1 : 0, &filter_data,
 			   filter_chain);
 
-      filterCloseBackAndSidePipes(&filter_data);
+      cfFilterCloseBackAndSidePipes(&filter_data);
 
       /* Clean up */
       cupsArrayDelete(filter_chain);

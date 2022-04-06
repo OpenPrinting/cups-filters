@@ -112,7 +112,7 @@ cfColordGetQualifierForPPD (ppd_file_t *ppd)
 #ifdef HAVE_DBUS
 
 static char *
-get_filename_for_profile_path ( filter_data_t *data,
+get_filename_for_profile_path ( cf_filter_data_t *data,
 				DBusConnection *con,
                                const char *object_path)
 {
@@ -173,7 +173,7 @@ out:
 }
 
 static char *
-get_profile_for_device_path ( filter_data_t *data,
+get_profile_for_device_path ( cf_filter_data_t *data,
 			     DBusConnection *con,
                              const char *object_path,
                              const char **split)
@@ -271,7 +271,7 @@ out:
 }
 
 static char *
-get_device_path_for_device_id ( filter_data_t *data,
+get_device_path_for_device_id ( cf_filter_data_t *data,
 				DBusConnection *con,
                                const char *device_id)
 {
@@ -325,7 +325,7 @@ out:
 }
 
 char *
-cfColordGetProfileForDeviceID (filter_data_t *data,
+cfColordGetProfileForDeviceID (cf_filter_data_t *data,
 				  const char *device_id,
 				  const char **qualifier_tuple)
 {
@@ -375,7 +375,7 @@ out:
 }
 
 int
-get_profile_inhibitors ( filter_data_t *data,
+get_profile_inhibitors ( cf_filter_data_t *data,
 			  DBusConnection *con, const char *object_path)
 {
   filter_logfunc_t log = data->logfunc;
@@ -443,7 +443,7 @@ out:
 }
 
 int
-cfColordGetInhibitForDeviceID (filter_data_t *data,
+cfColordGetInhibitForDeviceID (cf_filter_data_t *data,
 			const char *device_id)
 {
   filter_logfunc_t log = data->logfunc;
@@ -481,7 +481,7 @@ out:
 #else
 
 char *
-cfColordGetProfileForDeviceID (filter_data_t *data,
+cfColordGetProfileForDeviceID (cf_filter_data_t *data,
 				  const char *device_id,
                                   const char **qualifier_tuple)
 {
@@ -493,7 +493,7 @@ cfColordGetProfileForDeviceID (filter_data_t *data,
 }
 
 int
-cfColordGetInhibitForDeviceID (filter_data_t *data,
+cfColordGetInhibitForDeviceID (cf_filter_data_t *data,
 			const char *device_id)
 {
   filter_logfunc_t log = data->logfunc;

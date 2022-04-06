@@ -50,9 +50,9 @@ main(int  argc,	   /* I - Number of command-line arguments */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the texttopdf() filter function
+  * Fire up the cfFilterTextToPDF() filter function
   */
- texttopdf_parameter_t parameters;
+ cf_filter_texttopdf_parameter_t parameters;
  char *p;
 
  if ((p = getenv("CUPS_DATADIR")) != NULL)
@@ -72,7 +72,7 @@ main(int  argc,	   /* I - Number of command-line arguments */
  else
    parameters.classification = NULL;
 
-  ret = filterCUPSWrapper(argc, argv, texttopdf, &parameters, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterTextToPDF, &parameters, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: texttopdf filter function failed.\n");

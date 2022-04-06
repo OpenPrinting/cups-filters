@@ -1,5 +1,5 @@
 /*
- * Image-to-PostScript filter for CUPS (based on imagetops() filter function)
+ * Image-to-PostScript filter for CUPS (based on cfFilterImageToPS() filter function)
  *
  * Copyright © 2020 by Till Kamppeter
  * Copyright © 2007-2018 by Apple Inc.
@@ -61,10 +61,10 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the imagetops() filter function
+  * Fire up the cfFilterImageToPS() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, imagetops, NULL, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterImageToPS, NULL, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: imagetops filter function failed.\n");

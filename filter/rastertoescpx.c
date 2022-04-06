@@ -1768,7 +1768,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Log function for the library functions, standard CUPS logging to stderr...
   */
 
-  logfunc = cups_logfunc;
+  logfunc = cfCUPSLogFunc;
   ld = NULL;
 
  /*

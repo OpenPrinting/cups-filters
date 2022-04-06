@@ -14,7 +14,7 @@
  *
  * Contents:
  *
- *   imagetops()        - imagetops filter function
+ *   cfFilterImageToPS()        - imagetops filter function
  *   WriteCommon()      - Write common procedures...
  *   WriteLabelProlog() - Write the prolog with the classification
  *                        and page label.
@@ -73,15 +73,15 @@ static void	ps_ascii85(FILE *outputfp, cups_ib_t *, int, int);
 
 
 /*
- * 'imagetops()' - Filter function to convert many common image file
+ * 'cfFilterImageToPS()' - Filter function to convert many common image file
  *                 formats into PostScript
  */
 
 int                             /* O - Error status */
-imagetops(int inputfd,         /* I - File descriptor input stream */
+cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 	  int outputfd,        /* I - File descriptor output stream */
 	  int inputseekable,   /* I - Is input stream seekable? (unused) */
-	  filter_data_t *data, /* I - Job and printer data */
+	  cf_filter_data_t *data, /* I - Job and printer data */
 	  void *parameters)    /* I - Filter-specific parameters (unused) */
 {
   imagetops_doc_t	doc;		/* Document information */
@@ -141,7 +141,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   int           bytes;
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
 
 
@@ -176,7 +176,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetops: Unable to open input data stream.");
+		   "cfFilterImageToPS: Unable to open input data stream.");
     }
 
     return (1);
@@ -190,13 +190,13 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetops: Unable to copy input: %s",
+		   "cfFilterImageToPS: Unable to copy input: %s",
 		   strerror(errno));
       return (1);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Copying input to temp file \"%s\"",
+		 "cfFilterImageToPS: Copying input to temp file \"%s\"",
 		 tempfile);
 
     while ((bytes = fread(buf, 1, sizeof(buf), inputfp)) > 0)
@@ -214,7 +214,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       if (!iscanceled || !iscanceled(icd))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "imagetops: Unable to open temporary file.");
+		     "cfFilterImageToPS: Unable to open temporary file.");
       }
 
       unlink(tempfile);
@@ -231,7 +231,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetops: Unable to open output data stream.");
+		   "cfFilterImageToPS: Unable to open output data stream.");
     }
 
     fclose(inputfp);
@@ -267,7 +267,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   */
 
   ppd = data->ppd;
-  filterSetCommonOptions(ppd, num_options, options, 0,
+  cfFilterSetCommonOptions(ppd, num_options, options, 0,
 			 &doc.Orientation, &doc.Duplex,
 			 &doc.LanguageLevel, &doc.Color,
 			 &doc.PageLeft, &doc.PageRight,
@@ -275,7 +275,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 			 &doc.PageWidth, &doc.PageLength,
 			 log, ld);
 
-  /* The filterSetCommonOptions() does not set doc.Color
+  /* The cfFilterSetCommonOptions() does not set doc.Color
      according to option settings (user's demand for color/gray),
      so we parse the options and set the mode here */
   cupsRasterParseIPPOptions(&h, data, 0, 1);
@@ -643,7 +643,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   if (img == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "imagetops: The print file could not be opened - %s",
+		 "cfFilterImageToPS: The print file could not be opened - %s",
 		 strerror(errno));
     return (1);
   }
@@ -664,7 +664,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     yppi = xppi;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetops: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
+	       "cfFilterImageToPS: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
 	       xppi, yppi, zoom);
 
   if (xppi > 0)
@@ -685,14 +685,14 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Before scaling: xprint=%.1f, yprint=%.1f",
+		 "cfFilterImageToPS: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
     xinches = (float)cupsImageGetWidth(img) / (float)xppi;
     yinches = (float)cupsImageGetHeight(img) / (float)yppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Image size is %.1f x %.1f inches...",
+		 "cfFilterImageToPS: Image size is %.1f x %.1f inches...",
 		 xinches, yinches);
 
     if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
@@ -709,7 +709,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetops: Auto orientation...");
+		   "cfFilterImageToPS: Auto orientation...");
 
       if ((xinches > xprint || yinches > yprint) &&
           xinches <= yprint && yinches <= xprint)
@@ -719,7 +719,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetops: Using landscape orientation...");
+		     "cfFilterImageToPS: Using landscape orientation...");
 
 	doc.Orientation = (doc.Orientation + 1) & 3;
 	xsize       = yprint;
@@ -739,11 +739,11 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     aspect = (float)cupsImageGetYPPI(img) / (float)cupsImageGetXPPI(img);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Before scaling: xprint=%.1f, yprint=%.1f",
+		 "cfFilterImageToPS: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: cupsImageGetXPPI(img) = %d, "
+		 "cfFilterImageToPS: cupsImageGetXPPI(img) = %d, "
 		 "cupsImageGetYPPI(img) = %d, aspect = %f",
 		 cupsImageGetXPPI(img), cupsImageGetYPPI(img), aspect);
 
@@ -769,10 +769,10 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Portrait size is %.2f x %.2f inches",
+		 "cfFilterImageToPS: Portrait size is %.2f x %.2f inches",
 		 xsize, ysize);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Landscape size is %.2f x %.2f inches",
+		 "cfFilterImageToPS: Landscape size is %.2f x %.2f inches",
 		 xsize2, ysize2);
 
     if (cupsGetOption("orientation-requested", num_options, options) == NULL &&
@@ -784,7 +784,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetops: Auto orientation...");
+		   "cfFilterImageToPS: Auto orientation...");
 
       if ((xsize * ysize) < (xsize2 * xsize2))
       {
@@ -793,7 +793,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetops: Using landscape orientation...");
+		     "cfFilterImageToPS: Using landscape orientation...");
 
 	doc.Orientation = 1;
 	xinches     = xsize2;
@@ -808,7 +808,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetops: Using portrait orientation...");
+		     "cfFilterImageToPS: Using portrait orientation...");
 
 	doc.Orientation = 0;
 	xinches     = xsize;
@@ -818,7 +818,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     else if (doc.Orientation & 1)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetops: Using landscape orientation...");
+		   "cfFilterImageToPS: Using landscape orientation...");
 
       xinches     = xsize2;
       yinches     = ysize2;
@@ -828,7 +828,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetops: Using portrait orientation...");
+		   "cfFilterImageToPS: Using portrait orientation...");
 
       xinches     = xsize;
       yinches     = ysize;
@@ -849,7 +849,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   yprint = yinches / ypages;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetops: xpages = %dx%.2fin, ypages = %dx%.2fin",
+	       "cfFilterImageToPS: xpages = %dx%.2fin, ypages = %dx%.2fin",
 	       xpages, xprint, ypages, yprint);
 
  /*
@@ -897,7 +897,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
       length = ppd->custom_min[1];
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetops: Updated custom page size to %.2f x %.2f inches...",
+		 "cfFilterImageToPS: Updated custom page size to %.2f x %.2f inches...",
 		 width / 72.0, length / 72.0);
 
    /*
@@ -1041,7 +1041,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   if (row == NULL)
   {
     log(ld, FILTER_LOGLEVEL_ERROR,
-	"imagetops: Could not allocate memory.");
+	"cfFilterImageToPS: Could not allocate memory.");
     cupsImageClose(img);
     return (2);
   }
@@ -1049,15 +1049,15 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   if (log)
   {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetops: XPosition=%d, YPosition=%d, Orientation=%d",
+	"cfFilterImageToPS: XPosition=%d, YPosition=%d, Orientation=%d",
 	XPosition, YPosition, doc.Orientation);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetops: xprint=%.1f, yprint=%.1f", xprint, yprint);
+	"cfFilterImageToPS: xprint=%.1f, yprint=%.1f", xprint, yprint);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetops: PageLeft=%.0f, PageRight=%.0f, PageWidth=%.0f",
+	"cfFilterImageToPS: PageLeft=%.0f, PageRight=%.0f, PageWidth=%.0f",
 	doc.PageLeft, doc.PageRight, doc.PageWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetops: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f",
+	"cfFilterImageToPS: PageBottom=%.0f, PageTop=%.0f, PageLength=%.0f",
 	doc.PageBottom, doc.PageTop, doc.PageLength);
   }
 
@@ -1177,7 +1177,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetops: left=%.2f, top=%.2f", left, top);
+	       "cfFilterImageToPS: left=%.2f, top=%.2f", left, top);
 
   for (page = 1; Copies > 0; Copies --)
     for (xpage = 0; xpage < xpages; xpage ++)
@@ -1186,7 +1186,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	if (iscanceled && iscanceled(icd))
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "imagetops: Job canceled");
+		       "cfFilterImageToPS: Job canceled");
 	  goto canceled;
 	}
 
@@ -1195,7 +1195,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
 	      "PAGE: %d %d", page, realcopies);
 
 	if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		     "imagetops: Printing page %d.", page);
+		     "cfFilterImageToPS: Printing page %d.", page);
 
         fprintf(doc.outputfp, "%%%%Page: %d %d\n", page, page);
 
@@ -1339,7 +1339,7 @@ imagetops(int inputfd,         /* I - File descriptor input stream */
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetops: Printing completed.", page);
+	       "cfFilterImageToPS: Printing completed.", page);
 
  /*
   * Close files...

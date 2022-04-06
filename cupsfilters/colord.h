@@ -39,10 +39,10 @@ extern "C" {
 #include <cupsfilters/filter.h>
 
 char **cfColordGetQualifierForPPD(ppd_file_t *ppd);
-char *cfColordGetProfileForDeviceID(filter_data_t *data,
+char *cfColordGetProfileForDeviceID(cf_filter_data_t *data,
 				    const char *device_id,
 				    const char **qualifier_tuple);
-int cfColordGetInhibitForDeviceID(filter_data_t *data,
+int cfColordGetInhibitForDeviceID(cf_filter_data_t *data,
 				  const char *device_id);
 
 #  ifdef __cplusplus

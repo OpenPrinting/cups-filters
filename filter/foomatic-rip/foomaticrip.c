@@ -764,10 +764,10 @@ int main(int argc, char** argv)
     int havefilter, havegstoraster;
     dstr_t *filelist;
     list_t * arglist;
-    filter_data_t temp;
-    filter_data_t *data = &temp;
+    cf_filter_data_t temp;
+    cf_filter_data_t *data = &temp;
     data->logdata = NULL;
-    data->logfunc = cups_logfunc;
+    data->logfunc = cfCUPSLogFunc;
     arglist = list_create_from_array(argc -1, (void**)&argv[1]);
 
     if (argc == 2 && (arglist_find(arglist, "--version") || arglist_find(arglist, "--help") ||

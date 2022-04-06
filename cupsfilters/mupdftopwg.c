@@ -79,7 +79,7 @@ parse_doc_type(FILE *fp, filter_logfunc_t log, void *ld)
   if (strncmp(buf,"%PDF",4) == 0)
     return 0;
 
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftopwg: input file cannot be identified");
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterMuPDFToPWG: input file cannot be identified");
   return -1;
 }
 
@@ -119,7 +119,7 @@ parse_pdf_header_options(FILE *fp, mupdf_page_header *h)
 
 static void
 add_pdf_header_options(mupdf_page_header   *h,
-		       filter_out_format_t outformat,
+		       cf_filter_out_format_t outformat,
 		       cups_array_t 	   *mupdf_args)
 {
   char tmpstr[1024];
@@ -150,7 +150,7 @@ add_pdf_header_options(mupdf_page_header   *h,
     break;
 
   case CUPS_CSPACE_CMYK:
-    if (outformat == OUTPUT_FORMAT_PWG_RASTER) /* No post-filtering needed */
+    if (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER) /* No post-filtering needed */
       snprintf(tmpstr, sizeof(tmpstr), "-ccmyk");
     else
       snprintf(tmpstr, sizeof(tmpstr), "-crgb"); /* Post-filtering needed, only
@@ -176,7 +176,7 @@ mutool_spawn (const char *filename,
 	      int outputfd,
 	      filter_logfunc_t log,
 	      void *ld,
-	      filter_iscanceledfunc_t iscanceled,
+	      cf_filter_iscanceledfunc_t iscanceled,
 	      void *icd)
 {
   char *argument;
@@ -205,7 +205,7 @@ mutool_spawn (const char *filename,
 
   if (log) {
     /* Debug output: Full mutool command line and environment variables */
-    snprintf(buf, sizeof(buf), "mupdftopwg: mutool command line:");
+    snprintf(buf, sizeof(buf), "cfFilterMuPDFToPWG: mutool command line:");
     for (i = 0; mutoolargv[i]; i ++) {
       if ((strchr(mutoolargv[i],' ')) || (strchr(mutoolargv[i],'\t')))
 	apos = "'";
@@ -223,7 +223,7 @@ mutool_spawn (const char *filename,
     errfds[0] = -1;
     errfds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftopwg: Unable to establish stderr pipe for mutool "
+		 "cfFilterMuPDFToPWG: Unable to establish stderr pipe for mutool "
 		 "call");
     goto out;
   }
@@ -236,7 +236,7 @@ mutool_spawn (const char *filename,
     errfds[0] = -1;
     errfds[1] = -1;
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftopwg: Unable to set \"close on exec\" flag on read "
+		 "cfFilterMuPDFToPWG: Unable to set \"close on exec\" flag on read "
 		 "end of the stderr pipe for mutool call");
     goto out;
   }
@@ -245,7 +245,7 @@ mutool_spawn (const char *filename,
     close(errfds[0]);
     close(errfds[1]);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftopwg: Unable to set \"close on exec\" flag on write "
+		 "cfFilterMuPDFToPWG: Unable to set \"close on exec\" flag on write "
 		 "end of the stderr pipe for mutool call");
     goto out;
   }
@@ -257,7 +257,7 @@ mutool_spawn (const char *filename,
       if (errfds[1] != 2) {
 	if (dup2(errfds[1], 2) < 0) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "mupdftopwg: Unable to couple pipe with stderr of "
+		       "cfFilterMuPDFToPWG: Unable to couple pipe with stderr of "
 		       "mutool process");
 	  exit(1);
 	}
@@ -266,7 +266,7 @@ mutool_spawn (const char *filename,
       close(errfds[0]);
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "mupdftopwg: invalid pipe file descriptor to couple with "
+		   "cfFilterMuPDFToPWG: invalid pipe file descriptor to couple with "
 		   "stderr of mutool process");
       exit(1);
     }
@@ -276,7 +276,7 @@ mutool_spawn (const char *filename,
       if (outputfd != 1) {
 	if (dup2(outputfd, 1) < 0) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "mupdftopwg: Unable to couple stdout of mutool "
+		       "cfFilterMuPDFToPWG: Unable to couple stdout of mutool "
 		       "process");
 	  exit(1);
 	}
@@ -284,7 +284,7 @@ mutool_spawn (const char *filename,
       }
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "mupdftopwg: Invalid file descriptor to couple with "
+		   "cfFilterMuPDFToPWG: Invalid file descriptor to couple with "
 		   "stdout of mutool process");
       exit(1);
     }
@@ -292,12 +292,12 @@ mutool_spawn (const char *filename,
     /* Execute mutool command line ... */
     execvp(filename, mutoolargv);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "mupdftopwg: Unable to launch mutool: %s: %s", filename,
+		 "cfFilterMuPDFToPWG: Unable to launch mutool: %s: %s", filename,
 		 strerror(errno));
     exit(1);
   }
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "mupdftopwg: Started mutool (PID %d)", mutoolpid);
+	       "cfFilterMuPDFToPWG: Started mutool (PID %d)", mutoolpid);
 
   close(errfds[1]);
 
@@ -325,7 +325,7 @@ mutool_spawn (const char *filename,
 	  log_level = FILTER_LOGLEVEL_DEBUG;
 	  msg = buf;
 	}
-	log(ld, log_level, "mupdftopwg: %s", msg);
+	log(ld, log_level, "cfFilterMuPDFToPWG: %s", msg);
       }
     cupsFileClose(logfp);
     /* No need to close the fd errfds[0], as cupsFileClose(fp) does this
@@ -334,7 +334,7 @@ mutool_spawn (const char *filename,
     exit(0);
   }
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "mupdftopwg: Started logging (PID %d)", errpid);
+	       "cfFilterMuPDFToPWG: Started logging (PID %d)", errpid);
 
   close(errfds[0]);
 
@@ -342,7 +342,7 @@ mutool_spawn (const char *filename,
     if ((pid = wait(&wstatus)) < 0) {
       if (errno == EINTR && iscanceled && iscanceled(icd)) {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "mupdftopwg: Job canceled, killing mutool ...");
+		     "cfFilterMuPDFToPWG: Job canceled, killing mutool ...");
 	kill(mutoolpid, SIGTERM);
 	mutoolpid = -1;
 	kill(errpid, SIGTERM);
@@ -357,21 +357,21 @@ mutool_spawn (const char *filename,
       if (WIFEXITED(wstatus)) {
 	/* Via exit() anywhere or return() in the main() function */
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "mupdftopwg: %s (PID %d) stopped with status %d",
+		     "cfFilterMuPDFToPWG: %s (PID %d) stopped with status %d",
 		     (pid == mutoolpid ? "mutool" : "Logging"), pid,
 		     WEXITSTATUS(wstatus));
 	status = WEXITSTATUS(wstatus);
       } else {
 	/* Via signal */
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "mupdftopwg: %s (PID %d) crashed on signal %d",
+		     "cfFilterMuPDFToPWG: %s (PID %d) crashed on signal %d",
 		     (pid == mutoolpid ? "mutool" : "Logging"), pid,
 		     WTERMSIG(wstatus));
 	status = 256 * WTERMSIG(wstatus);
       }
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "mupdftopwg: %s (PID %d) exited with no errors.",
+		   "cfFilterMuPDFToPWG: %s (PID %d) exited with no errors.",
 		   (pid == mutoolpid ? "mutool" : "Logging"), pid);
       status = 0;
     }
@@ -388,13 +388,14 @@ out:
 
 
 int
-mupdftopwg (int inputfd,         /* I - File descriptor input stream */
-	       int outputfd,        /* I - File descriptor output stream */
-	       int inputseekable,   /* I - Is input stream seekable? (unused)*/
-	       filter_data_t *data, /* I - Job and printer data */
-	       void *parameters)    /* I - Filter-specific parameters */
+cfFilterMuPDFToPWG(int inputfd,         /* I - File descriptor input stream */
+		   int outputfd,        /* I - File descriptor output stream */
+		   int inputseekable,   /* I - Is input stream seekable?
+					       (unused)*/
+		   cf_filter_data_t *data, /* I - Job and printer data */
+		   void *parameters)    /* I - Filter-specific parameters */
 {
-  filter_out_format_t outformat;
+  cf_filter_out_format_t outformat;
   char buf[BUFSIZ];
   char *icc_profile = NULL;
   char tmpstr[1024];
@@ -414,7 +415,7 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
   cf_cm_calibration_t cm_calibrate;
   filter_logfunc_t log = data->logfunc;
   void *ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void *icd = data->iscanceleddata;
   cups_cspace_t cspace = -1;
 
@@ -425,20 +426,20 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
   (void)inputseekable;
 
   if (parameters) {
-    outformat = *(filter_out_format_t *)parameters;
-    if (outformat != OUTPUT_FORMAT_CUPS_RASTER &&
-	outformat != OUTPUT_FORMAT_PWG_RASTER &&
-	outformat != OUTPUT_FORMAT_APPLE_RASTER &&
-	outformat != OUTPUT_FORMAT_PCLM)
-      outformat = OUTPUT_FORMAT_PWG_RASTER;
+    outformat = *(cf_filter_out_format_t *)parameters;
+    if (outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_PCLM)
+      outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
   } else
-    outformat = OUTPUT_FORMAT_PWG_RASTER;
+    outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "mupdftopwg: Output format: %s",
-	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
-		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
-		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
+	       "cfFilterMuPDFToPWG: Output format: %s",
+	       (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+		 (outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
 		  "PCLM"))));
 
   memset(&sa, 0, sizeof(sa));
@@ -455,14 +456,14 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
 
   fd = cupsTempFd(infilename, 1024);
     if (fd < 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't create temporary file");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterMuPDFToPWG: Can't create temporary file");
       goto out;
     }
 
     /* copy input file to the tmp file */
     while ((n = read(inputfd, buf, BUFSIZ)) > 0) {
       if (write(fd,buf,n) != n) {
-        if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't copy input to temporary file");
+        if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterMuPDFToPWG: Can't copy input to temporary file");
         close(fd);
         goto out;
       }
@@ -471,13 +472,13 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
   if (!inputfd) {
 
     if (lseek(fd,0,SEEK_SET) < 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't rewind temporary file");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterMuPDFToPWG: Can't rewind temporary file");
       close(fd);
       goto out;
     }
 
     if ((fp = fdopen(fd,"rb")) == 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't open temporary file");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterMuPDFToPWG: Can't open temporary file");
       close(fd);
       goto out;
     }
@@ -485,7 +486,7 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
     /* filename is specified */
 
     if ((fp = fdopen(fd,"rb")) == 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Can't open temporary file");
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterMuPDFToPWG: Can't open temporary file");
       goto out;
     }
   }
@@ -516,11 +517,11 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
   /* mutool parameters */
   mupdf_args = cupsArrayNew(NULL, NULL);
   if (!mupdf_args) {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Unable to allocate memory for mutool arguments array");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterMuPDFToPWG: Unable to allocate memory for mutool arguments array");
     goto out;
   }
 
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "mupdftopwg: command: %s",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterMuPDFToPWG: command: %s",
 	      CUPS_MUTOOL);
   snprintf(tmpstr, sizeof(tmpstr), "%s", CUPS_MUTOOL);
   cupsArrayAdd(mupdf_args, strdup(tmpstr));
@@ -539,7 +540,7 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
      From the header h only cupsWidth/cupsHeight (dimensions in pixels),
      resolution, and color space are used here. */
   cupsRasterPrepareHeader(&h, data, outformat,
-			  OUTPUT_FORMAT_PWG_RASTER, 1, &cspace);
+			  CF_FILTER_OUT_FORMAT_PWG_RASTER, 1, &cspace);
 
   if ((h.HWResolution[0] == 100) && (h.HWResolution[1] == 100)) {
     /* No "Resolution" option */
@@ -586,7 +587,7 @@ mupdftopwg (int inputfd,         /* I - File descriptor input stream */
 
   if(empty)
   {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "mupdftopwg: Input is empty, outputting empty file.");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterMuPDFToPWG: Input is empty, outputting empty file.");
      status = 0;
   }
 out:

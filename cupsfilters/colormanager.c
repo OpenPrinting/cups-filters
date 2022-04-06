@@ -35,12 +35,12 @@ MIT Open Source License  -  http://www.opensource.org/
 
 
 /* Private function prototypes */
-static int      _get_colord_printer_cm_status   (filter_data_t *data);
-static char    *_get_colord_printer_id          (filter_data_t *data);
-static int      _get_colord_profile             (filter_data_t *data,
+static int      _get_colord_printer_cm_status   (cf_filter_data_t *data);
+static char    *_get_colord_printer_id          (cf_filter_data_t *data);
+static int      _get_colord_profile             (cf_filter_data_t *data,
                                                  char **profile,
                                                  ppd_file_t *ppd);
-static char    *_get_ppd_icc_fallback           (filter_data_t *data, 
+static char    *_get_ppd_icc_fallback           (cf_filter_data_t *data, 
 						 ppd_file_t *ppd, 
                                                  char **qualifier);
 
@@ -67,7 +67,7 @@ double    blackpoint_default[3] = {0.0, 0.0, 0.0};
 
 /* Get printer color management status from the system's color manager */
 int          
-cfCmIsPrinterCmDisabled(filter_data_t *data)
+cfCmIsPrinterCmDisabled(cf_filter_data_t *data)
 {
     filter_logfunc_t log = data->logfunc;
     void *ld = data->logdata;
@@ -88,7 +88,7 @@ cfCmIsPrinterCmDisabled(filter_data_t *data)
 
 /* Get printer ICC profile from the system's color manager */
 int 
-cfCmGetPrinterIccProfile(filter_data_t *data,
+cfCmGetPrinterIccProfile(cf_filter_data_t *data,
                        char **icc_profile,        /* ICC Profile Path */
                        ppd_file_t *ppd)           /* Optional PPD file for fallback profile */
 {
@@ -110,7 +110,7 @@ cfCmGetPrinterIccProfile(filter_data_t *data,
 
 /* Find the "cm-calibration" CUPS option */
 cf_cm_calibration_t    
-cfCmGetCupsColorCalibrateMode(filter_data_t *data,
+cfCmGetCupsColorCalibrateMode(cf_filter_data_t *data,
 			    cups_option_t *options,    /* Options from CUPS */
                             int num_options)           /* Options from CUPS */
 {
@@ -186,7 +186,7 @@ double *cfCmBlackPointDefault(void)
 
 
 char * 
-_get_colord_printer_id( filter_data_t *data)
+_get_colord_printer_id( cf_filter_data_t *data)
 {
 
     filter_logfunc_t log = data->logfunc;
@@ -207,7 +207,7 @@ _get_colord_printer_id( filter_data_t *data)
 
 
 int 
-_get_colord_printer_cm_status( filter_data_t *data)
+_get_colord_printer_cm_status( cf_filter_data_t *data)
 {
 
     filter_logfunc_t log = data->logfunc;
@@ -237,7 +237,7 @@ _get_colord_printer_cm_status( filter_data_t *data)
 }
 
 int 
-_get_colord_profile(filter_data_t *data,
+_get_colord_profile(cf_filter_data_t *data,
                     char         **profile,         /* Requested icc profile path */      
                     ppd_file_t   *ppd)              /* PPD file */
 {
@@ -306,7 +306,7 @@ _get_colord_profile(filter_data_t *data,
 
 /* From gstoraster */
 char *
-_get_ppd_icc_fallback (filter_data_t *data, ppd_file_t *ppd, char **qualifier)
+_get_ppd_icc_fallback (cf_filter_data_t *data, ppd_file_t *ppd, char **qualifier)
 {
 
   filter_logfunc_t log = data->logfunc;

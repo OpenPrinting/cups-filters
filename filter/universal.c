@@ -31,7 +31,7 @@ main(int  argc,				/* I - Number of command-line args */
 {
   int           ret;
   char          *p;
-  universal_parameter_t universal_parameters;
+  cf_filter_universal_parameter_t universal_parameters;
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
@@ -80,7 +80,7 @@ main(int  argc,				/* I - Number of command-line args */
   else
     universal_parameters.texttopdf_params.classification = NULL;
 
-  ret = filterCUPSWrapper(argc, argv, universal, &universal_parameters,
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterUniversal, &universal_parameters,
 			  &JobCanceled);
 
   if (ret)

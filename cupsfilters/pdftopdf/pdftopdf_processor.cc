@@ -9,11 +9,11 @@ void BookletMode_dump(BookletMode bkm,pdftopdf_doc_t *doc) // {{{
   static const char *bstr[3]={"Off","On","Shuffle-Only"};
   if ((bkm<BOOKLET_OFF) || (bkm>BOOKLET_JUSTSHUFFLE)) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				   "pdftopdf: bookletMode: (bad booklet mode: "
+				   "cfFilterPDFToPDF: bookletMode: (bad booklet mode: "
 				   "%d)", bkm);
   } else {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				   "pdftopdf: bookletMode: %s", bstr[bkm]);
+				   "cfFilterPDFToPDF: bookletMode: %s", bstr[bkm]);
   }
 }
 // }}}
@@ -38,13 +38,13 @@ bool ProcessingParameters::havePage(int pageno) const
 void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 {
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: jobId: %d, numCopies: %d",
+				 "cfFilterPDFToPDF: jobId: %d, numCopies: %d",
 				 jobId,numCopies);
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: user: %s, title: %s",
+				 "cfFilterPDFToPDF: user: %s, title: %s",
 				 (user)?user:"(null)",(title)?title:"(null)");
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: fitplot: %s",
+				 "cfFilterPDFToPDF: fitplot: %s",
 				 (fitplot)?"true":"false");
 
   page.dump(doc);
@@ -52,11 +52,11 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
   Rotation_dump(orientation,doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: paper_is_landscape: %s",
+				 "cfFilterPDFToPDF: paper_is_landscape: %s",
 				 (paper_is_landscape)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: duplex: %s",
+				 "cfFilterPDFToPDF: duplex: %s",
 				 (duplex)?"true":"false");
 
   BorderType_dump(border,doc);
@@ -64,64 +64,64 @@ void ProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
   nup.dump(doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: reverse: %s",
+				 "cfFilterPDFToPDF: reverse: %s",
 				 (reverse)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: evenPages: %s, oddPages: %s",
+				 "cfFilterPDFToPDF: evenPages: %s, oddPages: %s",
 				 (evenPages)?"true":"false",
 				 (oddPages)?"true":"false");
   
    if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: input page range:");
+				 "cfFilterPDFToPDF: input page range:");
   inputPageRange.dump(doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: page range:");
+				 "cfFilterPDFToPDF: page range:");
   pageRange.dump(doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: mirror: %s",
+				 "cfFilterPDFToPDF: mirror: %s",
 				 (mirror)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: Position:");
+				 "cfFilterPDFToPDF: Position:");
   Position_dump(xpos,Axis::X,doc);
   Position_dump(ypos,Axis::Y,doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: collate: %s",
+				 "cfFilterPDFToPDF: collate: %s",
 				 (collate)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: evenDuplex: %s",
+				 "cfFilterPDFToPDF: evenDuplex: %s",
 				 (evenDuplex)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: pageLabel: %s",
+				 "cfFilterPDFToPDF: pageLabel: %s",
 				 pageLabel.empty () ? "(none)" :
 				 pageLabel.c_str());
 
   BookletMode_dump(booklet,doc);
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: booklet signature: %d",
+				 "cfFilterPDFToPDF: booklet signature: %d",
 				 bookSignature);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: autoRotate: %s",
+				 "cfFilterPDFToPDF: autoRotate: %s",
 				 (autoRotate)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: emitJCL: %s",
+				 "cfFilterPDFToPDF: emitJCL: %s",
 				 (emitJCL)?"true":"false");
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: deviceCopies: %d",
+				 "cfFilterPDFToPDF: deviceCopies: %d",
 				 deviceCopies);
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: deviceCollate: %s",
+				 "cfFilterPDFToPDF: deviceCollate: %s",
 				 (deviceCollate)?"true":"false");
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: setDuplex: %s",
+				 "cfFilterPDFToPDF: setDuplex: %s",
 				 (setDuplex)?"true":"false");
 }
 // }}}
@@ -170,7 +170,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
 {
   if (!proc.check_print_permissions(doc)) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				   "pdftopdf: Not allowed to print");
+				   "cfFilterPDFToPDF: Not allowed to print");
     return false;
   }
 
@@ -211,7 +211,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
   const int numPages=std::max(shuffle.size(),input_page_range_list.size());
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: \"print-scaling\" IPP attribute: %s",
+				 "cfFilterPDFToPDF: \"print-scaling\" IPP attribute: %s",
 				 (param.autoprint ? "auto" :
 				  (param.autofit ? "auto-fit" :
 				   (param.fitplot ? "fit" :
@@ -238,14 +238,14 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
       {
 	if (doc->logfunc)
 	  doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		       "pdftopdf: Page %d too large for output page size, scaling pages to fit.",
+		       "cfFilterPDFToPDF: Page %d too large for output page size, scaling pages to fit.",
 		       i + 1);
 	document_large = true;
       }
     }
     if (param.fidelity && doc->logfunc)
       doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		   "pdftopdf: \"ipp-attribute-fidelity\" IPP attribute is set, scaling pages to fit.");
+		   "cfFilterPDFToPDF: \"ipp-attribute-fidelity\" IPP attribute is set, scaling pages to fit.");
 
     if (param.autoprint)
     {
@@ -269,7 +269,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftop
   }
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				 "pdftopdf: Print scaling mode: %s",
+				 "cfFilterPDFToPDF: Print scaling mode: %s",
 				 (param.fitplot ?
 				  "Scale to fit printable area" :
 				  (param.fillprint ?

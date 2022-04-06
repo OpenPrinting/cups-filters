@@ -60,13 +60,13 @@ fcntl_add_nonblock(int fd) /* File descriptor to add O_NONBLOCK to */
 
 
 /*
- * 'cups_logfunc()' - Output log messages on stderr, compatible to CUPS,
+ * 'cfCUPSLogFunc()' - Output log messages on stderr, compatible to CUPS,
  *                    meaning that the debug level is represented by a
  *                    prefix like "DEBUG: ", "INFO: ", ...
  */
 
 void
-cups_logfunc(void *data,
+cfCUPSLogFunc(void *data,
 	     filter_loglevel_t level,
 	     const char *message,
 	     ...)
@@ -105,28 +105,28 @@ cups_logfunc(void *data,
 
 
 /*
- * 'cups_iscanceledfunc()' - Return 1 if the job is canceled, which is
+ * 'cfCUPSIsCanceledFunc()' - Return 1 if the job is canceled, which is
  *                           the case when the integer pointed at by data
  *                           is not zero.
  */
 
 int
-cups_iscanceledfunc(void *data)
+cfCUPSIsCanceledFunc(void *data)
 {
   return (*((int *)data) != 0 ? 1 : 0);
 }
 
 
 /*
- * 'filterCUPSWrapper()' - Wrapper function to use a filter function as
+ * 'cfFilterCUPSWrapper()' - Wrapper function to use a filter function as
  *                         classic CUPS filter
  */
 
 int					/* O - Exit status */
-filterCUPSWrapper(
+cfFilterCUPSWrapper(
      int  argc,				/* I - Number of command-line args */
      char *argv[],			/* I - Command-line arguments */
-     filter_function_t filter,          /* I - Filter function */
+     cf_filter_function_t filter,          /* I - Filter function */
      void *parameters,                  /* I - Filter function parameters */
      int *JobCanceled)                  /* I - Var set to 1 when job canceled */
 {
@@ -135,7 +135,7 @@ filterCUPSWrapper(
 					   not stdin)? */
   int		num_options;		/* Number of print options */
   cups_option_t	*options;		/* Print options */
-  filter_data_t filter_data;
+  cf_filter_data_t filter_data;
   int           retval = 0;
 
 
@@ -223,9 +223,9 @@ filterCUPSWrapper(
   filter_data.back_pipe[1] = 3;        /* the back channel */
   filter_data.side_pipe[0] = 4;        /* CUPS uses file descriptor 4 for */
   filter_data.side_pipe[1] = 4;        /* the side channel */
-  filter_data.logfunc = cups_logfunc;  /* Logging scheme of CUPS */
+  filter_data.logfunc = cfCUPSLogFunc;  /* Logging scheme of CUPS */
   filter_data.logdata = NULL;
-  filter_data.iscanceledfunc = cups_iscanceledfunc; /* Job-is-canceled
+  filter_data.iscanceledfunc = cfCUPSIsCanceledFunc; /* Job-is-canceled
 						       function */
   filter_data.iscanceleddata = JobCanceled;
 
@@ -255,12 +255,12 @@ filterCUPSWrapper(
 
 
 /*
- * 'filterTee()' - This filter function is mainly for debugging. it
+ * 'cfFilterTee()' - This filter function is mainly for debugging. it
  *                 resembles the "tee" utility, passing through the
  *                 data unfiltered and copying it to a file. The file
  *                 name is simply given as parameter. This makes using
  *                 the function easy (add it as item of a filter chain
- *                 called via filterChain()) and can even be used more
+ *                 called via cfFilterChain()) and can even be used more
  *                 than once in the same filter chain (using different
  *                 file names). In case of write error to the copy
  *                 file, copying is stopped but the rest of the job is
@@ -270,10 +270,10 @@ filterCUPSWrapper(
  */
 
 int                            /* O - Error status */
-filterTee(int inputfd,         /* I - File descriptor input stream */
+cfFilterTee(int inputfd,         /* I - File descriptor input stream */
 	  int outputfd,        /* I - File descriptor output stream */
 	  int inputseekable,   /* I - Is input stream seekable? (unused) */
-	  filter_data_t *data, /* I - Job and printer data */
+	  cf_filter_data_t *data, /* I - Job and printer data */
 	  void *parameters)    /* I - Filter-specific parameters (File name) */
 {
   const char           *filename = (const char *)parameters;
@@ -296,7 +296,7 @@ filterTee(int inputfd,         /* I - File descriptor input stream */
     total += bytes;
     if (log)
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "filterTee (%s): Passing on%s %d bytes, total %d bytes.",
+	  "cfFilterTee (%s): Passing on%s %d bytes, total %d bytes.",
 	  filename, teefd >= 0 ? " and copying" : "", bytes, total);
 
     if (teefd >= 0)
@@ -304,7 +304,7 @@ filterTee(int inputfd,         /* I - File descriptor input stream */
       {
 	if (log)
 	  log(ld, FILTER_LOGLEVEL_ERROR,
-	      "filterTee (%s): Unable to write %d bytes to the copy, stopping copy, continuing job output.",
+	      "cfFilterTee (%s): Unable to write %d bytes to the copy, stopping copy, continuing job output.",
 	      filename, (int)bytes);
 	close(teefd);
 	teefd = -1;
@@ -314,7 +314,7 @@ filterTee(int inputfd,         /* I - File descriptor input stream */
     {
       if (log)
 	log(ld, FILTER_LOGLEVEL_ERROR,
-	    "filterTee (%s): Unable to pass on %d bytes.",
+	    "cfFilterTee (%s): Unable to pass on %d bytes.",
 	    filename, (int)bytes);
       if (teefd >= 0)
 	close(teefd);
@@ -333,17 +333,17 @@ filterTee(int inputfd,         /* I - File descriptor input stream */
 
 
 /*
- * 'filterPOpen()' - Pipe a stream to or from a filter function
+ * 'cfFilterPOpen()' - Pipe a stream to or from a filter function
  *                   Can be the input to or the output from the
  *                   filter function.
  */
 
 int                              /* O - File decriptor */
-filterPOpen(filter_function_t filter_func, /* I - Filter function */
+cfFilterPOpen(cf_filter_function_t filter_func, /* I - Filter function */
 	    int inputfd,         /* I - File descriptor input stream or -1 */
 	    int outputfd,        /* I - File descriptor output stream or -1 */
 	    int inputseekable,   /* I - Is input stream seekable? */
-	    filter_data_t *data, /* I - Job and printer data */
+	    cf_filter_data_t *data, /* I - Job and printer data */
 	    void *parameters,    /* I - Filter-specific parameters */
 	    int *filter_pid)     /* O - PID of forked filter process */
 {
@@ -363,7 +363,7 @@ filterPOpen(filter_function_t filter_func, /* I - Filter function */
   {
     if (log)
       log(ld, FILTER_LOGLEVEL_ERROR,
-	  "filterPOpen: Either inputfd or outputfd must be < 0, not both");
+	  "cfFilterPOpen: Either inputfd or outputfd must be < 0, not both");
     return (-1);
   }
 
@@ -371,7 +371,7 @@ filterPOpen(filter_function_t filter_func, /* I - Filter function */
   {
     if (log)
       log(ld, FILTER_LOGLEVEL_ERROR,
-	  "filterPOpen: One of inputfd or outputfd must be < 0");
+	  "cfFilterPOpen: One of inputfd or outputfd must be < 0");
     return (-1);
   }
 
@@ -387,7 +387,7 @@ filterPOpen(filter_function_t filter_func, /* I - Filter function */
 
   if (pipe(pipefds) < 0) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterPOpen: Could not create pipe for %s: %s",
+		 "cfFilterPOpen: Could not create pipe for %s: %s",
 		 inputfd < 0 ? "input" : "output",
 		 strerror(errno));
     return (-1);
@@ -424,13 +424,13 @@ filterPOpen(filter_function_t filter_func, /* I - Filter function */
     close(infd);
     close(outfd);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "filterPOpen: Filter function completed with status %d.",
+		 "cfFilterPOpen: Filter function completed with status %d.",
 		 ret);
     exit(ret);
 
   } else if (pid > 0) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "filterPOpen: Filter function (PID %d) started.", pid);
+		 "cfFilterPOpen: Filter function (PID %d) started.", pid);
 
    /*
     * Save PID for waiting for or terminating the sub-process
@@ -457,7 +457,7 @@ filterPOpen(filter_function_t filter_func, /* I - Filter function */
      */
 
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterPOpen: Could not fork to start filter function: %s",
+		 "cfFilterPOpen: Could not fork to start filter function: %s",
 		 strerror(errno));
     return (-1);
   }
@@ -465,14 +465,14 @@ filterPOpen(filter_function_t filter_func, /* I - Filter function */
 
 
 /*
- * 'filterPClose()' - Close a piped stream created with
- *                    filterPOpen().
+ * 'cfFilterPClose()' - Close a piped stream created with
+ *                    cfFilterPOpen().
  */
 
 int                              /* O - Error status */
-filterPClose(int fd,             /* I - Pipe file descriptor */
+cfFilterPClose(int fd,             /* I - Pipe file descriptor */
 	     int filter_pid,     /* I - PID of forked filter process */
-	     filter_data_t *data)
+	     cf_filter_data_t *data)
 {
   int		status,		 /* Exit status */
                 retval;		 /* Return value */
@@ -499,13 +499,13 @@ filterPClose(int fd,             /* I - Pipe file descriptor */
       goto retry_wait;
     if (log)
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "filterPClose: Filter function (PID %d) stopped with an error: %s!",
+	  "cfFilterPClose: Filter function (PID %d) stopped with an error: %s!",
 	  filter_pid, strerror(errno));
     goto out;
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-               "filterPClose: Filter function (PID %d) exited with no errors.",
+               "cfFilterPClose: Filter function (PID %d) exited with no errors.",
                filter_pid);
 
   /* How did the filter function terminate */
@@ -534,20 +534,20 @@ compare_filter_pids(filter_function_pid_t *a,	/* I - First filter */
 
 
 /*
- * 'filterChain()' - Call filter functions in a chain to do a data
+ * 'cfFilterChain()' - Call filter functions in a chain to do a data
  *                   format conversion which non of the individual
  *                   filter functions does
  */
 
 int                              /* O - Error status */
-filterChain(int inputfd,         /* I - File descriptor input stream */
+cfFilterChain(int inputfd,         /* I - File descriptor input stream */
 	    int outputfd,        /* I - File descriptor output stream */
 	    int inputseekable,   /* I - Is input stream seekable? */
-	    filter_data_t *data, /* I - Job and printer data */
+	    cf_filter_data_t *data, /* I - Job and printer data */
 	    void *parameters)    /* I - Filter-specific parameters */
 {
   cups_array_t  *filter_chain = (cups_array_t *)parameters;
-  filter_filter_in_chain_t *filter,  /* Current filter */
+  cf_filter_filter_in_chain_t *filter,  /* Current filter */
 		*next;		     /* Next filter */
   int		current,	     /* Current filter */
 		filterfds[2][2],     /* Pipes for filters */
@@ -563,7 +563,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 		key;		     /* Search key for filters */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
 
 
@@ -577,17 +577,17 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
   * Remove NULL filters...
   */
 
-  for (filter = (filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);
+  for (filter = (cf_filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);
        filter;
-       filter = (filter_filter_in_chain_t *)cupsArrayNext(filter_chain)) {
+       filter = (cf_filter_filter_in_chain_t *)cupsArrayNext(filter_chain)) {
     if (!filter->function) {
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "filterChain: Invalid filter: %s - Removing...",
+		   "cfFilterChain: Invalid filter: %s - Removing...",
 		   filter->name ? filter->name : "Unspecified");
       cupsArrayRemove(filter_chain, filter);
     } else
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "filterChain: Running filter: %s",
+		   "cfFilterChain: Running filter: %s",
 		   filter->name ? filter->name : "Unspecified");
   }
 
@@ -598,20 +598,20 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
   if (cupsArrayCount(filter_chain) == 0)
   {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "filterChain: No filter at all in chain, passing through the data.");
+		 "cfFilterChain: No filter at all in chain, passing through the data.");
     retval = 0;
     while ((bytes = read(inputfd, buf, sizeof(buf))) > 0)
       if (write(outputfd, buf, bytes) < bytes)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "filterChain: Data write error: %s", strerror(errno));
+		     "cfFilterChain: Data write error: %s", strerror(errno));
 	retval = 1;
 	break;
       }
     if (bytes < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "filterChain: Data read error: %s", strerror(errno));
+		     "cfFilterChain: Data read error: %s", strerror(errno));
       retval = 1;
     }
     close(inputfd);
@@ -630,10 +630,10 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
   filterfds[1][0] = -1;
   filterfds[1][1] = -1;
 
-  for (filter = (filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);
+  for (filter = (cf_filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);
        filter;
        filter = next, current = 1 - current) {
-    next = (filter_filter_in_chain_t *)cupsArrayNext(filter_chain);
+    next = (cf_filter_filter_in_chain_t *)cupsArrayNext(filter_chain);
 
     if (filterfds[1 - current][0] > 1) {
       close(filterfds[1 - current][0]);
@@ -647,7 +647,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
     if (next) {
       if (pipe(filterfds[1 - current]) < 0) {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "filterChain: Could not create pipe for output of %s: %s",
+		     "cfFilterChain: Could not create pipe for output of %s: %s",
 		     filter->name ? filter->name : "Unspecified filter",
 		     strerror(errno));
 	return (1);
@@ -687,13 +687,13 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
       close(infd);
       close(outfd);
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "filterChain: %s completed with status %d.",
+		   "cfFilterChain: %s completed with status %d.",
 		   filter->name ? filter->name : "Unspecified filter", ret);
       exit(ret);
 
     } else if (pid > 0) {
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "filterChain: %s (PID %d) started.",
+		   "cfFilterChain: %s (PID %d) started.",
 		   filter->name ? filter->name : "Unspecified filter", pid);
 
       pid_entry = malloc(sizeof(filter_function_pid_t));
@@ -702,7 +702,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
       cupsArrayAdd(pids, pid_entry);
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "filterChain: Could not fork to start %s: %s",
+		   "cfFilterChain: Could not fork to start %s: %s",
 		   filter->name ? filter->name : "Unspecified filter",
 		   strerror(errno));
       break;
@@ -734,7 +734,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
     if ((pid = wait(&status)) < 0) {
       if (errno == EINTR && iscanceled && iscanceled(icd)) {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "filterChain: Job canceled, killing filters ...");
+		     "cfFilterChain: Job canceled, killing filters ...");
 	for (pid_entry = (filter_function_pid_t *)cupsArrayFirst(pids);
 	     pid_entry;
 	     pid_entry = (filter_function_pid_t *)cupsArrayNext(pids)) {
@@ -754,17 +754,17 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
       if (status) {
 	if (WIFEXITED(status)) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "filterChain: %s (PID %d) stopped with status %d",
+		       "cfFilterChain: %s (PID %d) stopped with status %d",
 		       pid_entry->name, pid, WEXITSTATUS(status));
 	} else {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "filterChain: %s (PID %d) crashed on signal %d",
+		       "cfFilterChain: %s (PID %d) crashed on signal %d",
 		       pid_entry->name, pid, WTERMSIG(status));
 	}
 	retval = 1;
       } else {
 	if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		       "filterChain: %s (PID %d) exited with no errors.",
+		       "cfFilterChain: %s (PID %d) exited with no errors.",
 		       pid_entry->name, pid);
       }
 
@@ -779,7 +779,7 @@ filterChain(int inputfd,         /* I - File descriptor input stream */
 
 
 /*
- * 'get_env_var()' - Auxiliary function for filterExternalCUPS(), gets value of
+ * 'get_env_var()' - Auxiliary function for cfFilterExternalCUPS(), gets value of
  *                   an environment variable in a list of environment variables
  *                   as used by the execve() function
  */
@@ -803,7 +803,7 @@ get_env_var(char *name,   /* I - Name of environment variable to read */
 
 
 /*
- * 'add_env_var()' - Auxiliary function for filterExternalCUPS(), adds/sets
+ * 'add_env_var()' - Auxiliary function for cfFilterExternalCUPS(), adds/sets
  *                   an environment variable in a list of environment variables
  *                   as used by the execve() function
  */
@@ -908,7 +908,7 @@ sanitize_device_uri(const char *uri,	/* I - Device URI */
 
 
 /*
- * 'filterExternalCUPS()' - Filter function which calls an external,
+ * 'cfFilterExternalCUPS()' - Filter function which calls an external,
  *                          classic CUPS filter, for example a
  *                          (proprietary) printer driver which cannot
  *                          be converted to a filter function or is to
@@ -918,13 +918,13 @@ sanitize_device_uri(const char *uri,	/* I - Device URI */
  */
 
 int                                     /* O - Error status */
-filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
+cfFilterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 		   int outputfd,        /* I - File descriptor output stream */
 		   int inputseekable,   /* I - Is input stream seekable? */
-		   filter_data_t *data, /* I - Job and printer data */
+		   cf_filter_data_t *data, /* I - Job and printer data */
 		   void *parameters)    /* I - Filter-specific parameters */
 {
-  filter_external_cups_t *params = (filter_external_cups_t *)parameters;
+  cf_filter_external_cups_t *params = (cf_filter_external_cups_t *)parameters;
   int           i;
   int           is_backend = 0;      /* Do we call a CUPS backend? */
   int		pid,		     /* Process ID of filter */
@@ -953,13 +953,13 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   int wstatus;
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
 
 
   if (!params->filter || !params->filter[0]) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterExternalCUPS: Filter executable path/command not specified");
+		 "cfFilterExternalCUPS: Filter executable path/command not specified");
     return (1);
   }
 
@@ -1060,14 +1060,14 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   {
     for (i = 0; envp[i]; i ++)
       if (!strncmp(envp[i], "AUTH_", 5))
-	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: AUTH_%c****",
+	log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterExternalCUPS (%s): envp[%d]: AUTH_%c****",
 	    filter_name, i, envp[i][5]);
       else if (!strncmp(envp[i], "DEVICE_URI=", 11))
-	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: DEVICE_URI=%s",
+	log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterExternalCUPS (%s): envp[%d]: DEVICE_URI=%s",
 	    filter_name, i, sanitize_device_uri(envp[i] + 11,
 						buf, sizeof(buf)));
       else
-	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): envp[%d]: %s",
+	log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterExternalCUPS (%s): envp[%d]: %s",
 	    filter_name, i, envp[i]);
   }
 
@@ -1153,7 +1153,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     /* Log the arguments */
     if (log)
       for (i = 0; argv[i]; i ++)
-	log(ld, FILTER_LOGLEVEL_DEBUG, "filterExternalCUPS (%s): argv[%d]: %s",
+	log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterExternalCUPS (%s): argv[%d]: %s",
 	    filter_name, i, argv[i]);
   } else {
    /*
@@ -1171,7 +1171,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 
   if (pipe(stderrpipe) < 0) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterExternalCUPS (%s): Could not create pipe for stderr: %s",
+		 "cfFilterExternalCUPS (%s): Could not create pipe for stderr: %s",
 		 filter_name, strerror(errno));
     return (1);
   }
@@ -1187,7 +1187,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
       if (inputfd < 0) {
         inputfd = open("/dev/null", O_RDONLY);
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "filterExternalCUPS (%s): No input file descriptor supplied for CUPS filter - %s",
+		     "cfFilterExternalCUPS (%s): No input file descriptor supplied for CUPS filter - %s",
 		   filter_name, strerror(errno));
       }
 
@@ -1195,18 +1195,18 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 	fcntl_add_cloexec(inputfd);
         if (dup2(inputfd, 0) < 0) {
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "filterExternalCUPS (%s): Failed to connect input file descriptor with CUPS filter's stdin - %s",
+		       "cfFilterExternalCUPS (%s): Failed to connect input file descriptor with CUPS filter's stdin - %s",
 		       filter_name, strerror(errno));
 	  goto fd_error;
 	} else
 	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "filterExternalCUPS (%s): Connected input file descriptor %d to CUPS filter's stdin.",
+		       "cfFilterExternalCUPS (%s): Connected input file descriptor %d to CUPS filter's stdin.",
 		       filter_name, inputfd);
 	close(inputfd);
       }
     } else
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "filterExternalCUPS (%s): Input comes from stdin, letting the filter grab stdin directly",
+		   "cfFilterExternalCUPS (%s): Input comes from stdin, letting the filter grab stdin directly",
 		   filter_name);
 
     if (outputfd != 1) {
@@ -1275,7 +1275,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     execve(filter_path, argv, envp);
 
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterExternalCUPS (%s): Execution of %s %s failed - %s",
+		 "cfFilterExternalCUPS (%s): Execution of %s %s failed - %s",
 		 filter_name, params->is_backend ? "backend" : "filter",
 		 filter_path, strerror(errno));
 
@@ -1283,11 +1283,11 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     exit(errno);
   } else if (pid > 0) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "filterExternalCUPS (%s): %s (PID %d) started.",
+		 "cfFilterExternalCUPS (%s): %s (PID %d) started.",
 		 filter_name, filter_path, pid);
   } else {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterExternalCUPS (%s): Unable to fork process for %s %s",
+		 "cfFilterExternalCUPS (%s): Unable to fork process for %s %s",
 		 filter_name, params->is_backend ? "backend" : "filter",
 		 filter_path);
     close(stderrpipe[0]);
@@ -1341,7 +1341,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 	if (log_level == FILTER_LOGLEVEL_CONTROL)
 	  log(ld, log_level, msg);
 	else
-	  log(ld, log_level, "filterExternalCUPS (%s): %s", filter_name, msg);
+	  log(ld, log_level, "cfFilterExternalCUPS (%s): %s", filter_name, msg);
       }
     cupsFileClose(fp);
     /* No need to close the fd stderrpipe[0], as cupsFileClose(fp) does this
@@ -1350,11 +1350,11 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     exit(0);
   } else if (stderrpid > 0) {
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "filterExternalCUPS (%s): Logging (PID %d) started.",
+		 "cfFilterExternalCUPS (%s): Logging (PID %d) started.",
 		 filter_name, stderrpid);
   } else {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "filterExternalCUPS (%s): Unable to fork process for logging",
+		 "cfFilterExternalCUPS (%s): Unable to fork process for logging",
 		 filter_name);
     close(stderrpipe[0]);
     close(stderrpipe[1]);
@@ -1375,7 +1375,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
     if ((wpid = wait(&wstatus)) < 0) {
       if (errno == EINTR && iscanceled && iscanceled(icd)) {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "filterExternalCUPS (%s): Job canceled, killing %s ...",
+		     "cfFilterExternalCUPS (%s): Job canceled, killing %s ...",
 		     filter_name, params->is_backend ? "backend" : "filter");
 	kill(pid, SIGTERM);
 	pid = -1;
@@ -1391,7 +1391,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
       if (WIFEXITED(wstatus)) {
 	/* Via exit() anywhere or return() in the main() function */
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "filterExternalCUPS (%s): %s (PID %d) stopped with status %d",
+		     "cfFilterExternalCUPS (%s): %s (PID %d) stopped with status %d",
 		     filter_name,
 		     (wpid == pid ?
 		      (params->is_backend ? "Backend" : "Filter") :
@@ -1400,7 +1400,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
       } else {
 	/* Via signal */
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "filterExternalCUPS (%s): %s (PID %d) crashed on signal %d",
+		     "cfFilterExternalCUPS (%s): %s (PID %d) crashed on signal %d",
 		     filter_name,
 		     (wpid == pid ?
 		      (params->is_backend ? "Backend" : "Filter") :
@@ -1410,7 +1410,7 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
       status = 1;
     } else {
       if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		   "filterExternalCUPS (%s): %s (PID %d) exited with no errors.",
+		   "cfFilterExternalCUPS (%s): %s (PID %d) exited with no errors.",
 		   filter_name,
 		   (wpid == pid ?
 		    (params->is_backend ? "Backend" : "Filter") : "Logging"),
@@ -1441,13 +1441,13 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 
 
 /*
- * 'filterOpenBackAndSidePipes()' - Open the pipes for the back
+ * 'cfFilterOpenBackAndSidePipes()' - Open the pipes for the back
  *                                  channel and the side channel, so
  *                                  that the filter functions can
  *                                  communicate with a backend. Only
  *                                  needed if a CUPS backend (either
  *                                  implemented as filter function or
- *                                  called via filterExternalCUPS())
+ *                                  called via cfFilterExternalCUPS())
  *                                  is called with the same
  *                                  filter_data record as the
  *                                  filters. Usually to be called when
@@ -1455,8 +1455,8 @@ filterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
  */
 
 int                           /* O - 0 on success, -1 on error */
-filterOpenBackAndSidePipes(
-    filter_data_t *data)      /* O - FDs in filter_data record */
+cfFilterOpenBackAndSidePipes(
+    cf_filter_data_t *data)      /* O - FDs in filter_data record */
 {
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
@@ -1527,22 +1527,22 @@ filterOpenBackAndSidePipes(
   if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 	       "Unable to open pipes for back and side channels");
 
-  filterCloseBackAndSidePipes(data);
+  cfFilterCloseBackAndSidePipes(data);
 
   return (-1);
 }
 
 
 /*
- * 'filterCloseBackAndSidePipes()' - Close the pipes for the back
+ * 'cfFilterCloseBackAndSidePipes()' - Close the pipes for the back
  *                                   hannel and the side channel.
  *                                   sually to be called when done
  *                                   with the filter chain .
  */
 
 void
-filterCloseBackAndSidePipes(
-    filter_data_t *data)      /* O - FDs in filter_data record */
+cfFilterCloseBackAndSidePipes(
+    cf_filter_data_t *data)      /* O - FDs in filter_data record */
 {
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
@@ -1576,12 +1576,12 @@ filterCloseBackAndSidePipes(
 
 
 /*
- * 'filterSetCommonOptions()' - Set common filter options for media size, etc.
+ * 'cfFilterSetCommonOptions()' - Set common filter options for media size, etc.
  *                              based on PPD file
  */
 
 void
-filterSetCommonOptions(
+cfFilterSetCommonOptions(
     ppd_file_t    *ppd,			/* I - PPD file */
     int           num_options,          /* I - Number of options */
     cups_option_t *options,             /* I - Options */
@@ -1862,7 +1862,7 @@ filterSetCommonOptions(
   }
 
   if (change_size)
-    filterUpdatePageVars(*Orientation, PageLeft, PageRight,
+    cfFilterUpdatePageVars(*Orientation, PageLeft, PageRight,
 			 PageTop, PageBottom, PageWidth, PageLength);
 
   if (ppdIsMarked(ppd, "Duplex", "DuplexNoTumble") ||
@@ -1884,11 +1884,11 @@ filterSetCommonOptions(
 
 
 /*
- * 'filterUpdatePageVars()' - Update the page variables for the orientation.
+ * 'cfFilterUpdatePageVars()' - Update the page variables for the orientation.
  */
 
 void
-filterUpdatePageVars(int Orientation,
+cfFilterUpdatePageVars(int Orientation,
 		     float *PageLeft, float *PageRight,
 		     float *PageTop, float *PageBottom,
 		     float *PageWidth, float *PageLength)

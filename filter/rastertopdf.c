@@ -1,5 +1,5 @@
 /*
- * Raster to pdf filter(based on rastertopdf() filter function).
+ * Raster to pdf filter(based on cfFilterRasterToPDF() filter function).
  */
 
 
@@ -54,11 +54,11 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_SIGSET */
 
   /*
-   * Fire up the rastertopdf() filter function.
+   * Fire up the cfFilterRasterToPDF() filter function.
    */
 
-  filter_out_format_t outformat = OUTPUT_FORMAT_PDF;
-  ret = filterCUPSWrapper(argc, argv, rastertopdf, &outformat, &JobCanceled);
+  cf_filter_out_format_t outformat = CF_FILTER_OUT_FORMAT_PDF;
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterRasterToPDF, &outformat, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: rastertopdf filter failed.\n");

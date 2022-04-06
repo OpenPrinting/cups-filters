@@ -11,7 +11,7 @@
  *
  * Contents:
  *
- *   imagetoraster() - The image conversion filter function
+ *   cfFilterImageToRaster() - The image conversion filter function
  *   blank_line()    - Clear a line buffer to the blank value...
  *   format_CMY()    - Convert image data to CMY.
  *   format_CMYK()   - Convert image data to CMYK.
@@ -175,15 +175,15 @@ static void	make_lut(cups_ib_t *, int, float, float);
 
 
 /*
- * 'imagetoraster()' - Filter function to convert many common image file
+ * 'cfFilterImageToRaster()' - Filter function to convert many common image file
  *                     formats into CUPS Raster
  */
 
 int                                /* O - Error status */
-imagetoraster(int inputfd,         /* I - File descriptor input stream */
+cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream */
 	      int outputfd,        /* I - File descriptor output stream */
 	      int inputseekable,   /* I - Is input stream seekable? (unused) */
-	      filter_data_t *data, /* I - Job and printer data */
+	      cf_filter_data_t *data, /* I - Job and printer data */
 	      void *parameters)    /* I - Filter-specific parameters (unused) */
 {
   imagetoraster_doc_t	doc;		/* Document information */
@@ -254,7 +254,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   int                   cropfit = 0;	/* -o crop-to-fit */
   filter_logfunc_t      log = data->logfunc;
   void                  *ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                  *icd = data->iscanceleddata;
   ipp_t                 *printer_attrs = data->printer_attrs;
   ipp_t                 *job_attrs = data->job_attrs;
@@ -268,10 +268,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 			customRight = 0.0,	        /*  ppd->custom_margin[2]  */
 			customTop = 0.0;	        /*  ppd->custom_margin[3]  */
   char 			defSize[41];
-  filter_out_format_t   outformat;
+  cf_filter_out_format_t   outformat;
 
-  /* Note: With the OUTPUT_FORMAT_APPLE_RASTER,
-     OUTPUT_FORMAT_PWG_RASTER, or OUTPUT_FORMAT_PCLM selections the
+  /* Note: With the CF_FILTER_OUT_FORMAT_APPLE_RASTER,
+     CF_FILTER_OUT_FORMAT_PWG_RASTER, or CF_FILTER_OUT_FORMAT_PCLM selections the
      output is actually CUPS Raster but information about available
      color spaces and depths are taken from the urf-supported or
      pwg-raster-document-type-supported printer IPP attributes or
@@ -281,20 +281,20 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
      Raster and PWG Raster output support to this filter. */
 
   if (parameters) {
-    outformat = *(filter_out_format_t *)parameters;
-    if (outformat != OUTPUT_FORMAT_PCLM &&
-	outformat != OUTPUT_FORMAT_CUPS_RASTER &&
-	outformat != OUTPUT_FORMAT_PWG_RASTER &&
-	outformat != OUTPUT_FORMAT_APPLE_RASTER)
-      outformat = OUTPUT_FORMAT_CUPS_RASTER;
+    outformat = *(cf_filter_out_format_t *)parameters;
+    if (outformat != CF_FILTER_OUT_FORMAT_PCLM &&
+	outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER)
+      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
   } else
-    outformat = OUTPUT_FORMAT_CUPS_RASTER;
+    outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: Final output format: %s",
-	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
-		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
-		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
+	       "cfFilterImageToRaster: Final output format: %s",
+	       (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+		 (outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
 		  "PCLm"))));
 
   if (printer_attrs != NULL) {
@@ -347,7 +347,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Unable to open input data stream.");
+		   "cfFilterImageToRaster: Unable to open input data stream.");
     }
 
     return (1);
@@ -361,14 +361,14 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "imagetoraster: Unable to copy input: %s",
+		   "cfFilterImageToRaster: Unable to copy input: %s",
 		   strerror(errno));
       fclose(fp);
       return (1);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Copying input to temp file \"%s\"",
+		 "cfFilterImageToRaster: Copying input to temp file \"%s\"",
 		 tempfile);
 
     while ((bytes = fread(buf, 1, sizeof(buf), fp)) > 0)
@@ -386,7 +386,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       if (!iscanceled || !iscanceled(icd))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Unable to open temporary file.");
+		     "cfFilterImageToRaster: Unable to open temporary file.");
       }
 
       unlink(tempfile);
@@ -413,7 +413,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   */
 
   cupsRasterPrepareHeader(&header, data, outformat,
-			  OUTPUT_FORMAT_CUPS_RASTER, 1, &cspace);
+			  CF_FILTER_OUT_FORMAT_CUPS_RASTER, 1, &cspace);
   ppd = data->ppd;
   doc.Orientation = header.Orientation;
   doc.Duplex = header.Duplex;
@@ -441,30 +441,30 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   if (log)
   {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: doc.color = %d", doc.Color);
+	"cfFilterImageToRaster: doc.color = %d", doc.Color);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: doc.Orientation = %d", doc.Orientation);
+	"cfFilterImageToRaster: doc.Orientation = %d", doc.Orientation);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: doc.Duplex = %d", doc.Duplex);
+	"cfFilterImageToRaster: doc.Duplex = %d", doc.Duplex);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: doc.PageWidth = %.1f", doc.PageWidth);
+	"cfFilterImageToRaster: doc.PageWidth = %.1f", doc.PageWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: doc.PageLength = %.1f", doc.PageLength);
+	"cfFilterImageToRaster: doc.PageLength = %.1f", doc.PageLength);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: doc.PageLeft = %.1f", doc.PageLeft);
+	"cfFilterImageToRaster: doc.PageLeft = %.1f", doc.PageLeft);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: doc.PageRight = %.1f", doc.PageRight);
+	"cfFilterImageToRaster: doc.PageRight = %.1f", doc.PageRight);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: doc.PageTop = %.1f", doc.PageTop);
+	"cfFilterImageToRaster: doc.PageTop = %.1f", doc.PageTop);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: doc.PageBottom = %.1f", doc.PageBottom);
+	"cfFilterImageToRaster: doc.PageBottom = %.1f", doc.PageBottom);
   }
 
   /*  Find print-rendering-intent */
 
   getPrintRenderIntent(data, &header);
   if(log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	      "imagetoraster: Print rendering intent = %s",
+	      "cfFilterImageToRaster: Print rendering intent = %s",
 	      header.cupsRenderingIntent);
 
   if ((val = cupsGetOption("multiple-document-handling",
@@ -779,7 +779,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     case CUPS_CSPACE_DEVICEE :
     case CUPS_CSPACE_DEVICEF :
         if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Colorspace %d not supported.",
+		     "cfFilterImageToRaster: Colorspace %d not supported.",
 		     header.cupsColorSpace);
 	if (!inputseekable)
 	  unlink(tempfile);
@@ -819,14 +819,14 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   else if (ppd != NULL && !cm_disabled)
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Searching for profile \"%s/%s\"...",
+		 "cfFilterImageToRaster: Searching for profile \"%s/%s\"...",
 		 resolution, media_type);
 
     for (i = 0, profile = ppd->profiles; i < ppd->num_profiles;
 	 i ++, profile ++)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: \"%s/%s\" = ", profile->resolution,
+		   "cfFilterImageToRaster: \"%s/%s\" = ", profile->resolution,
 		   profile->media_type);
 
       if ((strcmp(profile->resolution, resolution) == 0 ||
@@ -835,12 +835,12 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
            profile->media_type[0] == '-'))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster:    MATCH");
+		     "cfFilterImageToRaster:    MATCH");
 	break;
       }
       else
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster:    no.");
+		     "cfFilterImageToRaster:    no.");
     }
 
    /*
@@ -869,7 +869,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   */
 
   if (log) log(ld, FILTER_LOGLEVEL_INFO,
-	       "imagetoraster: Loading print file.");
+	       "cfFilterImageToRaster: Loading print file.");
 
   if (header.cupsColorSpace == CUPS_CSPACE_CIEXYZ ||
       header.cupsColorSpace == CUPS_CSPACE_CIELab ||
@@ -1154,7 +1154,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   if (img == NULL)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "imagetoraster: The print file could not be opened.");
+		 "cfFilterImageToRaster: The print file could not be opened.");
     return (1);
   }
 
@@ -1172,7 +1172,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     yppi = xppi;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
+	       "cfFilterImageToRaster: Before scaling: xppi=%d, yppi=%d, zoom=%.2f",
 	       xppi, yppi, zoom);
 
   if (xppi > 0)
@@ -1193,14 +1193,14 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Before scaling: xprint=%.1f, yprint=%.1f",
+		 "cfFilterImageToRaster: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
     xinches = (float)img->xsize / (float)xppi;
     yinches = (float)img->ysize / (float)yppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Image size is %.1f x %.1f inches...",
+		 "cfFilterImageToRaster: Image size is %.1f x %.1f inches...",
 		 xinches, yinches);
 
     if ((val = cupsGetOption("natural-scaling", num_options, options)) != NULL)
@@ -1217,7 +1217,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Auto orientation...");
+		   "cfFilterImageToRaster: Auto orientation...");
 
       if ((xinches > xprint || yinches > yprint) &&
           xinches <= yprint && yinches <= xprint)
@@ -1227,7 +1227,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Using landscape orientation...");
+		     "cfFilterImageToRaster: Using landscape orientation...");
 
 	doc.Orientation = (doc.Orientation + 1) & 3;
 	xsize       = yprint;
@@ -1247,11 +1247,11 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     aspect = (float)img->yppi / (float)img->xppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Before scaling: xprint=%.1f, yprint=%.1f",
+		 "cfFilterImageToRaster: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: img->xppi = %d, img->yppi = %d, aspect = %f",
+		 "cfFilterImageToRaster: img->xppi = %d, img->yppi = %d, aspect = %f",
 		 img->xppi, img->yppi, aspect);
 
     xsize = xprint * zoom;
@@ -1273,10 +1273,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Portrait size is %.2f x %.2f inches",
+		 "cfFilterImageToRaster: Portrait size is %.2f x %.2f inches",
 		 xsize, ysize);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "imagetoraster: Landscape size is %.2f x %.2f inches",
+		 "cfFilterImageToRaster: Landscape size is %.2f x %.2f inches",
 		 xsize2, ysize2);
 
     if (cupsGetOption("orientation-requested", num_options, options) == NULL &&
@@ -1288,7 +1288,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Auto orientation...");
+		   "cfFilterImageToRaster: Auto orientation...");
 
       if ((xsize * ysize) < (xsize2 * ysize2))
       {
@@ -1297,7 +1297,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Using landscape orientation...");
+		     "cfFilterImageToRaster: Using landscape orientation...");
 
 	doc.Orientation = 1;
 	xinches     = xsize2;
@@ -1312,7 +1312,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	*/
 
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "imagetoraster: Using portrait orientation...");
+		     "cfFilterImageToRaster: Using portrait orientation...");
 
 	doc.Orientation = 0;
 	xinches     = xsize;
@@ -1322,7 +1322,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     else if (doc.Orientation & 1)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Using landscape orientation...");
+		   "cfFilterImageToRaster: Using landscape orientation...");
 
       xinches     = xsize2;
       yinches     = ysize2;
@@ -1332,7 +1332,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "imagetoraster: Using portrait orientation...");
+		   "cfFilterImageToRaster: Using portrait orientation...");
 
       xinches     = xsize;
       yinches     = ysize;
@@ -1353,7 +1353,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   yprint = yinches / ypages;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: xpages = %dx%.2fin, ypages = %dx%.2fin",
+	       "cfFilterImageToRaster: xpages = %dx%.2fin, ypages = %dx%.2fin",
 	       xpages, xprint, ypages, yprint);
 
  /*
@@ -1432,7 +1432,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
    }
 
    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		"imagetoraster: Updated custom page size to %.2f x %.2f "
+		"cfFilterImageToRaster: Updated custom page size to %.2f x %.2f "
 		"inches...",
 		width / 72.0, length / 72.0);
 
@@ -1510,10 +1510,10 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   header.Margins[1] = doc.PageBottom;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: PageSize = [%d %d]", header.PageSize[0],
+	       "cfFilterImageToRaster: PageSize = [%d %d]", header.PageSize[0],
 	       header.PageSize[1]);
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: PageLeft = %f, PageRight = %f, "
+	       "cfFilterImageToRaster: PageLeft = %f, PageRight = %f, "
 	       "PageBottom = %f, PageTop = %f",
 	       doc.PageLeft, doc.PageRight, doc.PageBottom, doc.PageTop);
 
@@ -1678,7 +1678,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
   header.ImagingBoundingBox[3] = header.cupsImagingBBox[3];
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "imagetoraster: Orientation: %d, XPosition: %d, YPosition: %d, "
+	       "cfFilterImageToRaster: Orientation: %d, XPosition: %d, YPosition: %d, "
 	       "ImagingBoundingBox = [%d %d %d %d]",
 	       doc.Orientation, doc.XPosition, doc.YPosition,
 	       header.ImagingBoundingBox[0], header.ImagingBoundingBox[1],
@@ -1750,21 +1750,21 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsWidth = %d", header.cupsWidth);
+	"cfFilterImageToRaster: cupsWidth = %d", header.cupsWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsHeight = %d", header.cupsHeight);
+	"cfFilterImageToRaster: cupsHeight = %d", header.cupsHeight);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsBitsPerColor = %d", header.cupsBitsPerColor);
+	"cfFilterImageToRaster: cupsBitsPerColor = %d", header.cupsBitsPerColor);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsBitsPerPixel = %d", header.cupsBitsPerPixel);
+	"cfFilterImageToRaster: cupsBitsPerPixel = %d", header.cupsBitsPerPixel);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsBytesPerLine = %d", header.cupsBytesPerLine);
+	"cfFilterImageToRaster: cupsBytesPerLine = %d", header.cupsBytesPerLine);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsColorOrder = %d", header.cupsColorOrder);
+	"cfFilterImageToRaster: cupsColorOrder = %d", header.cupsColorOrder);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: cupsColorSpace = %d", header.cupsColorSpace);
+	"cfFilterImageToRaster: cupsColorSpace = %d", header.cupsColorSpace);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"imagetoraster: img->colorspace = %d", img->colorspace);
+	"cfFilterImageToRaster: img->colorspace = %d", img->colorspace);
   }
 
   row = malloc(2 * header.cupsBytesPerLine);
@@ -1777,12 +1777,12 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	if (iscanceled && iscanceled(icd))
         {
 	  if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		       "imagetoraster: Job canceled");
+		       "cfFilterImageToRaster: Job canceled");
 	  goto canceled;
 	}
 
 	if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		     "imagetoraster: Formatting page %d.", page);
+		     "cfFilterImageToRaster: Formatting page %d.", page);
 
 	if (doc.Orientation & 1)
 	{
@@ -1833,7 +1833,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      y /= 2;
 
 	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			 "imagetoraster: Writing %d leading blank lines...",
+			 "cfFilterImageToRaster: Writing %d leading blank lines...",
 			 y);
 
 	    for (; y > 0; y --)
@@ -1842,7 +1842,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	              header.cupsBytesPerLine)
 	      {
 		if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-			     "imagetoraster: Unable to send raster data.");
+			     "cfFilterImageToRaster: Unable to send raster data.");
 		cupsImageClose(img);
 		return (1);
 	      }
@@ -1941,7 +1941,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	                              header.cupsBytesPerLine)
 	    {
 	      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			   "imagetoraster: Unable to send raster data.");
+			   "cfFilterImageToRaster: Unable to send raster data.");
 	      cupsImageClose(img);
 	      return (1);
 	    }
@@ -1974,7 +1974,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	      y = y - y / 2;
 
 	    if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-			 "imagetoraster: Writing %d trailing blank lines...",
+			 "cfFilterImageToRaster: Writing %d trailing blank lines...",
 			 y);
 
 	    for (; y > 0; y --)
@@ -1983,7 +1983,7 @@ imagetoraster(int inputfd,         /* I - File descriptor input stream */
 	              header.cupsBytesPerLine)
 	      {
 		if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-			     "imagetoraster: Unable to send raster data.");
+			     "cfFilterImageToRaster: Unable to send raster data.");
 		cupsImageClose(img);
 		return (1);
 	      }

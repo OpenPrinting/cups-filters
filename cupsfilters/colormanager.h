@@ -62,15 +62,15 @@ typedef enum cf_cm_calibration_e
 
 
 extern 
-cf_cm_calibration_t cfCmGetCupsColorCalibrateMode(filter_data_t *data,
+cf_cm_calibration_t cfCmGetCupsColorCalibrateMode(cf_filter_data_t *data,
 						  cups_option_t *options,
 						  int num_options);
 
-extern int cfCmGetPrinterIccProfile(filter_data_t *data,
+extern int cfCmGetPrinterIccProfile(cf_filter_data_t *data,
 				    char **icc_profile,
 				    ppd_file_t *ppd);
 
-extern int cfCmIsPrinterCmDisabled(filter_data_t *data);
+extern int cfCmIsPrinterCmDisabled(cf_filter_data_t *data);
 
 extern double* cfCmGammaAdobeRGB(void);
 extern double* cfCmGammaSGray(void);

@@ -59,10 +59,10 @@ static int              is_false(const char *value);
 static int		check_range(char *page_ranges, int even_pages,
 				    int odd_pages, int page);
 
-int texttotext(int inputfd,         /* I - File descriptor input stream */
+int cfFilterTextToText(int inputfd,         /* I - File descriptor input stream */
        int outputfd,                 /* I - File descriptor output stream */
        int inputseekable,            /* I - Is input stream seekable? (unused)*/
-       filter_data_t *data,          /* I - Job and printer data */
+       cf_filter_data_t *data,          /* I - Job and printer data */
        void *parameters)             /* I - Filter-specific parameters */
 {
   int		i, j;			/* Looping vars */
@@ -160,7 +160,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
   filter_logfunc_t     log = data->logfunc;
   void          *ld = data->logdata;
 
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
   cups_file_t *outputfp;
 
@@ -176,7 +176,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-                    "bannertopdf: Unable to open output data stream.");
+                    "cfFilterBannerToPDF: Unable to open output data stream.");
     }
     return (1);
   }
@@ -241,8 +241,8 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
       }
       num_chars_per_inch = atoi(val);
     }
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: num of lines per inch = %d",num_lines_per_inch);
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: num of chars per inch = %d",num_chars_per_inch);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"cfFilterTextToText: num of lines per inch = %d",num_lines_per_inch);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"cfFilterTextToText: num of chars per inch = %d",num_chars_per_inch);
 
   /* With the "PageSize"/"PageRegion" options we only determine the number
      of lines and columns of a page, we do not use the geometry defined by
@@ -260,7 +260,7 @@ int texttotext(int inputfd,         /* I - File descriptor input stream */
     if(val==NULL)
       val = ppd_attr->value;
 
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: PageSize: %s", val);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"cfFilterTextToText: PageSize: %s", val);
     snprintf(buffer, sizeof(buffer), "Default%sNumLines", val);
     if ((val2 = cupsGetOption(buffer + 7, num_options, options)) != NULL ||
   (ipp = ippFindAttribute(job_attrs, buffer+7, IPP_TAG_ZERO))!= NULL   ||
@@ -294,12 +294,12 @@ if(val2==NULL)
       num_columns = atoi(val2);
     }
     if (num_lines <= 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: Invalid number of lines %d, using default: 66",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"cfFilterTextToText: Invalid number of lines %d, using default: 66",
 	      num_lines);
       num_lines = 66;
     }
     if (num_columns <= 0) {
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: Invalid number of columns %d, using default: 80",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"cfFilterTextToText: Invalid number of columns %d, using default: 80",
 	      num_columns);
       num_columns = 80;
     }
@@ -320,12 +320,12 @@ if(val2==NULL)
     num_columns = (int)((x_dim/72.0)*(num_chars_per_inch));
   }
   if (num_lines <= 0) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: Invalid number of lines %d, using default: 66",
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"cfFilterTextToText: Invalid number of lines %d, using default: 66",
 	      num_lines);
     num_lines = 66;
   }
   if (num_columns <= 0) {
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"texttotext: Invalid number of columns %d, using default: 80",
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG,"cfFilterTextToText: Invalid number of columns %d, using default: 80",
 	      num_columns);
     num_columns = 80;
   }
@@ -342,7 +342,7 @@ if(val2==NULL)
     if (i > 0)
       num_lines = i;
     else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid number of lines %d, using default value: %d",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid number of lines %d, using default value: %d",
 	      i, num_lines);
   }
   if ((val = cupsGetOption("page-width", num_options, options)) != NULL ||
@@ -355,11 +355,11 @@ if(val2==NULL)
     if (i > 0)
       num_columns = i;
     else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid number of columns %d, using default value: %d",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid number of columns %d, using default value: %d",
 	      i, num_columns);
   }
 
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Lines per page: %d; Characters per line: %d",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Lines per page: %d; Characters per line: %d",
 	  num_lines, num_columns);
   
   if ((val = cupsGetOption("page-left", num_options, options)) != NULL ||
@@ -376,7 +376,7 @@ if(val2==NULL)
       val += 7;
     page_left = atoi(val);
     if (page_left < 0 || page_left > num_columns - 1) {
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid left margin %d, setting to 0",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid left margin %d, setting to 0",
 	      page_left);
       page_left = 0;
     }
@@ -395,7 +395,7 @@ if(val2==NULL)
       val += 7;
     page_right = atoi(val);
     if (page_right < 0 || page_right > num_columns - page_left - 1) {
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid right margin %d, setting to 0",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid right margin %d, setting to 0",
 	      page_right);
       page_right = 0;
     }
@@ -415,7 +415,7 @@ if(val2==NULL)
       val += 7;
     page_top = atoi(val);
     if (page_top < 0 || page_top > num_lines - 1) {
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid top margin %d, setting to 0",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid top margin %d, setting to 0",
 	      page_top);
       page_top = 0;
     }
@@ -434,17 +434,17 @@ if(val2==NULL)
       val += 7;
     page_bottom = atoi(val);
     if (page_bottom < 0 || page_bottom > num_lines - page_top - 1) {
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid bottom margin %d, setting to 0",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid bottom margin %d, setting to 0",
 	      page_bottom);
       page_bottom = 0;
     }
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Margins: Left (Columns): %d; Right (Columns): %d; Top (Lines): %d; Bottom (Lines): %d",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Margins: Left (Columns): %d; Right (Columns): %d; Top (Lines): %d; Bottom (Lines): %d",
 	  page_left, page_right, page_top, page_bottom);
 
   text_width = num_columns - page_left - page_right;
   text_height = num_lines - page_top - page_bottom;
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Text area: Lines per page: %d; Characters per line: %d",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Text area: Lines per page: %d; Characters per line: %d",
 	  text_height, text_width);
 
   strcpy(encoding, "ASCII//IGNORE");
@@ -466,7 +466,7 @@ if(val2==NULL)
 	*p = toupper(*p);
     }
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Output encoding: %s", encoding);
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Output encoding: %s", encoding);
   
   if ((val = cupsGetOption("OverlongLines", num_options, options)) != NULL ||
       (ipp = ippFindAttribute(job_attrs, "overlong-lines", IPP_TAG_ENUM))!=NULL ||
@@ -485,10 +485,10 @@ if(val2==NULL)
     else if (!strcasecmp(val, "WrapAtWidth"))
       overlong_lines = WRAPATWIDTH;
     else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid value for OverlongLines: %s, using default value",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for OverlongLines: %s, using default value",
 	      val);
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Handling of overlong lines: %s",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Handling of overlong lines: %s",
 	  (overlong_lines == TRUNCATE ? "Truncate at maximum width" :
 	   (overlong_lines == WORDWRAP ? "Word-wrap" :
 	    "Wrap exactly at maximum width")));
@@ -509,10 +509,10 @@ if(val2==NULL)
     if (i > 0)
       tab_width = i;
     else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid tab width %d, using default value: %d",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid tab width %d, using default value: %d",
 	      i, tab_width);
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Tab width: %d", tab_width);
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Tab width: %d", tab_width);
 
   if ((val = cupsGetOption("Pagination", num_options, options)) != NULL ||
       (ipp = ippFindAttribute(job_attrs, "pagination", IPP_TAG_BOOLEAN))!=NULL  ||
@@ -529,10 +529,10 @@ if(val2==NULL)
     else if (is_false(val))
       pagination = 0;
     else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid value for Pagination: %s, using default value",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for Pagination: %s, using default value",
 	      val);
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Pagination (Print in defined pages): %s",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Pagination (Print in defined pages): %s",
 	  (pagination ? "Yes" : "No"));
 
   if ((val = cupsGetOption("SendFF", num_options, options)) != NULL ||
@@ -550,10 +550,10 @@ if(val2==NULL)
     else if (is_false(val))
       send_ff = 0;
     else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid value for SendFF: %s, using default value",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for SendFF: %s, using default value",
 	      val);
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Send Form Feed character at end of page: %s",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Send Form Feed character at end of page: %s",
 	  (send_ff ? "Yes" : "No"));
 
   if ((val = cupsGetOption("NewlineCharacters", num_options, options)) !=
@@ -574,10 +574,10 @@ if(val2==NULL)
     else if (!strcasecmp(val, "CRLF"))
       newline_char = CRLF;
     else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid value for NewlineCharacters: %s, using default value",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for NewlineCharacters: %s, using default value",
 	      val);
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Characters sent to make printer start a new line: %s",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Characters sent to make printer start a new line: %s",
 	  (newline_char == LF ? "Line Feed (LF)" :
 	   (newline_char == CR ? "Carriage Return (CR)" :
 	    "Carriage Return (CR) and Line Feed (LF)")));
@@ -593,7 +593,7 @@ if(val2==NULL)
       page_ranges = strdup(val);
   }
   if (page_ranges)
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Page selection: %s", page_ranges);
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Page selection: %s", page_ranges);
 
   if ((val = cupsGetOption("page-set", num_options, options)) !=
       NULL  ||
@@ -612,11 +612,11 @@ if(val2==NULL)
       even_pages = 1;
       odd_pages = 1;
     } else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid value for page-set: %s, using default value",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for page-set: %s, using default value",
 	      val);
   }
   if (!even_pages || !odd_pages)
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Print %s",
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Print %s",
 	    (even_pages ? "only the even pages" :
 	     (odd_pages ? "only the odd pages" :
 	      "no pages")));
@@ -631,10 +631,10 @@ if(val2==NULL)
     if (!strcasecmp(val, "reverse"))
       reverse_order = 1;
     else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid value for OutputOrder: %s, using default value",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for OutputOrder: %s, using default value",
 	      val);
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Print pages in reverse order: %s",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Print pages in reverse order: %s",
 	  (reverse_order ? "Yes" : "No"));
 
   if ((val = cupsGetOption("Collate", num_options, options)) != NULL  ||
@@ -648,10 +648,10 @@ if(val2==NULL)
     else if (is_false(val))
       collate = 0;
     else
-      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Invalid value for Collate: %s, using default value",
+      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for Collate: %s, using default value",
 	      val);
   }
-  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Collate copies: %s",
+  if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Collate copies: %s",
 	  (collate ? "Yes" : "No"));
 
   /* Create a string to insert as the newline mark */
@@ -677,11 +677,11 @@ if(val2==NULL)
     /* Something went wrong.  */
     if (errno == EINVAL)
     {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttotext: Conversion from UTF-8 to %s not available",
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterTextToText: Conversion from UTF-8 to %s not available",
 	      encoding);
     }else
     {
-      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttotext: Error setting up conversion from UTF-8 to %s",
+      if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterTextToText: Error setting up conversion from UTF-8 to %s",
 	      encoding);
     }
     goto error;
@@ -690,7 +690,7 @@ if(val2==NULL)
   /* Open the input file */
   fd = inputfd;
   if (fd < 0) {
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttotext: Unable to open input text file");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterTextToText: Unable to open input text file");
     goto error;
   }
 
@@ -728,7 +728,7 @@ if(val2==NULL)
          ends with an incomplete UTF-8 character. Log
          this fact. */
       if (insize > 0 && incomplete_char){
-	      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Input text file ends with incomplete UTF-8 character sequence, file possibly incomplete, but printing the successfully read part anyway");
+	      if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Input text file ends with incomplete UTF-8 character sequence, file possibly incomplete, but printing the successfully read part anyway");
       }
 
       /* Now write out the byte sequence to get into the
@@ -756,7 +756,7 @@ if(val2==NULL)
 	} else {
 	  /* We found an illegal UTF-8 byte sequence here,
 	     so error out at this point. */
-	  if(log) log(ld, FILTER_LOGLEVEL_ERROR, "texttotext: Illegal UTF-8 sequence found. Input file perhaps not UTF-8-encoded");
+	  if(log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterTextToText: Illegal UTF-8 sequence found. Input file perhaps not UTF-8-encoded");
 	  result = -1;
 	  break;
 	}
@@ -833,12 +833,12 @@ if(val2==NULL)
 	       load) */
 	    if (num_pages == 1)
       {
-	     if(log) log(ld, FILTER_LOGLEVEL_INFO, "texttotext: 1 1");
+	     if(log) log(ld, FILTER_LOGLEVEL_INFO, "cfFilterTextToText: 1 1");
       }
 	  } else if ((num_copies == 1 || !collate) && !reverse_order) {
       
 	    /* Log the page output */
-	    if(log) log(ld, FILTER_LOGLEVEL_INFO, "texttotext: %d %d", num_pages, num_copies);
+	    if(log) log(ld, FILTER_LOGLEVEL_INFO, "cfFilterTextToText: %d %d", num_pages, num_copies);
 	  } else {
 	    /* Save the page in the page array */
 	    cupsArrayAdd(page_array, strdup(out_page));
@@ -935,7 +935,7 @@ if(val2==NULL)
   close(fd);
   
   if (iconv_close (cd) != 0)
-    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "texttotext: Error closing iconv encoding conversion session");
+    if(log) log(ld, FILTER_LOGLEVEL_DEBUG, "cfFilterTextToText: Error closing iconv encoding conversion session");
 
   /* Error out on an illegal UTF-8 sequence in the input file */
   if (result < 0)
@@ -952,7 +952,7 @@ if(val2==NULL)
 	   (reverse_order ? (page >= 1) : (page <= num_pages));
 	   page += (reverse_order ? -1 : 1)) {
 	p = (char *)cupsArrayIndex(page_array, page - 1);
-	if(log) log(ld, FILTER_LOGLEVEL_INFO, "texttotext: %d %d", page, (collate ? 1 : num_copies));
+	if(log) log(ld, FILTER_LOGLEVEL_INFO, "cfFilterTextToText: %d %d", page, (collate ? 1 : num_copies));
       }
     /* Clean up */
     for (page = 0; page < num_pages; page ++) {

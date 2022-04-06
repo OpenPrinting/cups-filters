@@ -24,10 +24,10 @@
  */
 
 int				 /* O - Exit status */
-rastertopwg(int inputfd,         /* I - File descriptor input stream */
+cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
             int outputfd,        /* I - File descriptor output stream */
             int inputseekable,   /* I - Is input stream seekable? (unused) */
-            filter_data_t *data, /* I - Job and printer data */
+            cf_filter_data_t *data, /* I - Job and printer data */
             void *parameters)    /* I - Filter-specific parameters (unused) */
 {			/* I - Command-line arguments */
   cups_raster_t		*inras;		/* Input raster stream */
@@ -55,31 +55,31 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
 	/* Number of options */
   cups_option_t		*options = NULL;/* Options */
   const char		*val;		/* Option value */
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
   filter_logfunc_t     log = data->logfunc;
   void          *ld = data->logdata;
-  filter_out_format_t output_format;
+  cf_filter_out_format_t output_format;
 
 
   if (parameters)
   {
-    output_format = *(filter_out_format_t *)parameters;
-    if (output_format == OUTPUT_FORMAT_PWG_RASTER)
+    output_format = *(cf_filter_out_format_t *)parameters;
+    if (output_format == CF_FILTER_OUT_FORMAT_PWG_RASTER)
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_PWG);
-    if (output_format == OUTPUT_FORMAT_APPLE_RASTER)
+    if (output_format == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_APPLE);
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "rastertopwg: Invalid output format specified. Only PWG Raster and Apple Raster/URF are supported.");
+		   "cfFilterRasterToPWG: Invalid output format specified. Only PWG Raster and Apple Raster/URF are supported.");
       return (1);
     }
   }
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "rastertopwg: Output format not specified.");
+		 "cfFilterRasterToPWG: Output format not specified.");
     return (1);
   }
 
@@ -93,7 +93,7 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
   if (!data->ppd)
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-     "rastertopwg: PPD file is not specified.");
+     "cfFilterRasterToPWG: PPD file is not specified.");
   }
 
   cache = data->ppd ? data->ppd->cache : NULL;
@@ -104,58 +104,58 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
     {
       /* Canceled */
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "rastertopwg: Job canceled on input page %d", page + 1);
+	  "cfFilterRasterToPWG: Job canceled on input page %d", page + 1);
     }
     
    /*
     * Show page device dictionary...
     */
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: Duplex = %d", inheader.Duplex);
+		 "cfFilterRasterToPWG: Duplex = %d", inheader.Duplex);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: HWResolution = [ %d %d ]",
+		 "cfFilterRasterToPWG: HWResolution = [ %d %d ]",
 		 inheader.HWResolution[0], inheader.HWResolution[1]);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: ImagingBoundingBox = [ %d %d %d %d ]",
+		 "cfFilterRasterToPWG: ImagingBoundingBox = [ %d %d %d %d ]",
 		 inheader.ImagingBoundingBox[0],
 		 inheader.ImagingBoundingBox[1],
 		 inheader.ImagingBoundingBox[2],
 		 inheader.ImagingBoundingBox[3]);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: Margins = [ %d %d ]",
+		 "cfFilterRasterToPWG: Margins = [ %d %d ]",
 		 inheader.Margins[0], inheader.Margins[1]);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: ManualFeed = %d", inheader.ManualFeed);
+		 "cfFilterRasterToPWG: ManualFeed = %d", inheader.ManualFeed);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: MediaPosition = %d", inheader.MediaPosition);
+		 "cfFilterRasterToPWG: MediaPosition = %d", inheader.MediaPosition);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: NumCopies = %d", inheader.NumCopies);
+		 "cfFilterRasterToPWG: NumCopies = %d", inheader.NumCopies);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: Orientation = %d", inheader.Orientation);
+		 "cfFilterRasterToPWG: Orientation = %d", inheader.Orientation);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: PageSize = [ %d %d ]",
+		 "cfFilterRasterToPWG: PageSize = [ %d %d ]",
 		 inheader.PageSize[0], inheader.PageSize[1]);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: cupsWidth = %d", inheader.cupsWidth);
+		 "cfFilterRasterToPWG: cupsWidth = %d", inheader.cupsWidth);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: cupsHeight = %d", inheader.cupsHeight);
+		 "cfFilterRasterToPWG: cupsHeight = %d", inheader.cupsHeight);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: cupsMediaType = %d", inheader.cupsMediaType);
+		 "cfFilterRasterToPWG: cupsMediaType = %d", inheader.cupsMediaType);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: cupsBitsPerColor = %d",
+		 "cfFilterRasterToPWG: cupsBitsPerColor = %d",
 		 inheader.cupsBitsPerColor);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: cupsBitsPerPixel = %d",
+		 "cfFilterRasterToPWG: cupsBitsPerPixel = %d",
 		 inheader.cupsBitsPerPixel);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: cupsBytesPerLine = %d",
+		 "cfFilterRasterToPWG: cupsBytesPerLine = %d",
 		 inheader.cupsBytesPerLine);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: cupsColorOrder = %d", inheader.cupsColorOrder);
+		 "cfFilterRasterToPWG: cupsColorOrder = %d", inheader.cupsColorOrder);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: cupsColorSpace = %d", inheader.cupsColorSpace);
+		 "cfFilterRasterToPWG: cupsColorSpace = %d", inheader.cupsColorSpace);
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: cupsCompression = %d", inheader.cupsCompression);
+		 "cfFilterRasterToPWG: cupsCompression = %d", inheader.cupsCompression);
 
    /*
     * Compute the real raster size...
@@ -164,7 +164,7 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
     page ++;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: %d %d\n", page, inheader.NumCopies);
+		 "cfFilterRasterToPWG: %d %d\n", page, inheader.NumCopies);
 
     page_width  = (unsigned)(inheader.cupsPageSize[0] *
 			    inheader.HWResolution[0] / 72.0);
@@ -194,16 +194,16 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
     lineoffset  = page_left * inheader.cupsBitsPerPixel / 8; /* Round down */
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopwg: In pixels: Width: %u  Height: %u  Left: %u  Right:  %u  Top: %u  Bottom: %u",
+		 "cfFilterRasterToPWG: In pixels: Width: %u  Height: %u  Left: %u  Right:  %u  Top: %u  Bottom: %u",
 		 page_width, page_height,
 		 page_left, page_right, page_top, page_bottom);
     if (page_left > page_width || page_top > page_height ||
 	page_bottom > page_height || page_right > page_width)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "rastertopwg: Unsupported raster data.");
+		   "cfFilterRasterToPWG: Unsupported raster data.");
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopwg: Bad bottom/left/top margin on page %d.", page);
+		   "cfFilterRasterToPWG: Bad bottom/left/top margin on page %d.", page);
       return (1);
     }
 
@@ -239,9 +239,9 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
 
       default :
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		    "rastertopwg: Unsupported raster data.");
+		    "cfFilterRasterToPWG: Unsupported raster data.");
 	if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unsupported cupsColorSpace %d on page %d.",
+		     "cfFilterRasterToPWG: Unsupported cupsColorSpace %d on page %d.",
 		     inheader.cupsColorSpace, page);
 	return (1);
     }
@@ -249,9 +249,9 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
     if (inheader.cupsColorOrder != CUPS_ORDER_CHUNKED)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "rastertopwg: Unsupported raster data.");
+		   "cfFilterRasterToPWG: Unsupported raster data.");
       if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		   "rastertopwg: Unsupported cupsColorOrder %d on page %d.",
+		   "cfFilterRasterToPWG: Unsupported cupsColorOrder %d on page %d.",
 		   inheader.cupsColorOrder, page);
       return (1);
     }
@@ -260,9 +260,9 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
         inheader.cupsBitsPerColor != 8 && inheader.cupsBitsPerColor != 16)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "rastertopwg: Unsupported raster data.");
+		   "cfFilterRasterToPWG: Unsupported raster data.");
       if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		   "rastertopwg: Unsupported cupsBitsPerColor %d on page %d.",
+		   "cfFilterRasterToPWG: Unsupported cupsBitsPerColor %d on page %d.",
 		   inheader.cupsBitsPerColor, page);
       return (1);
     }
@@ -295,7 +295,7 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
       else
       {
         if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unsupported print-content-optimize value.");
+		     "cfFilterRasterToPWG: Unsupported print-content-optimize value.");
         outheader.OutputType[0] = '\0';
       }
     }
@@ -310,7 +310,7 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
       else
       {
 	if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unsupported print-quality %d.", quality);
+		     "cfFilterRasterToPWG: Unsupported print-quality %d.", quality);
 	outheader.cupsInteger[8] = 0;
       }
     }
@@ -339,7 +339,7 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
       else
       {
         if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unsupported print-rendering-intent value.");
+		     "cfFilterRasterToPWG: Unsupported print-rendering-intent value.");
         outheader.cupsRenderingIntent[0] = '\0';
       }
     }
@@ -364,7 +364,7 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
       else
       {
         if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unsupported PageSize %.2fx%.2f.",
+		     "cfFilterRasterToPWG: Unsupported PageSize %.2fx%.2f.",
 		     inheader.cupsPageSize[0], inheader.cupsPageSize[1]);
         outheader.cupsPageSizeName[0] = '\0';
       }
@@ -474,7 +474,7 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
         */
 
         if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unsupported cupsBackSide value.");
+		     "cfFilterRasterToPWG: Unsupported cupsBackSide value.");
 
 	outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
 	outheader.cupsInteger[2] = 1;	/* FeedTransform */
@@ -507,9 +507,9 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
     if (!cupsRasterWriteHeader2(outras, &outheader))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "rastertopwg: Error sending raster data.");
+		   "cfFilterRasterToPWG: Error sending raster data.");
       if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		   "rastertopwg: Unable to write header for page %d.", page);
+		   "cfFilterRasterToPWG: Unable to write header for page %d.", page);
       return (1);
     }
 
@@ -530,9 +530,9 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
       if (!cupsRasterWritePixels(outras, line, outheader.cupsBytesPerLine))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "rastertopwg: Error sending raster data.");
+		     "cfFilterRasterToPWG: Error sending raster data.");
 	if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unable to write line %d for page %d.",
+		     "cfFilterRasterToPWG: Unable to write line %d for page %d.",
 		     page_top - y + 1, page);
 	return (1);
       }
@@ -544,9 +544,9 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
 	  inheader.cupsBytesPerLine)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "rastertopwg: Error sending raster data.");
+		     "cfFilterRasterToPWG: Error sending raster data.");
 	if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unable to read line %d for page %d.",
+		     "cfFilterRasterToPWG: Unable to read line %d for page %d.",
 		     inheader.cupsHeight - y + page_top + 1, page);
 	return (1);
       }
@@ -554,9 +554,9 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
       if (!cupsRasterWritePixels(outras, line, outheader.cupsBytesPerLine))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "rastertopwg: Error sending raster data.");
+		     "cfFilterRasterToPWG: Error sending raster data.");
 	if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unable to write line %d for page %d.",
+		     "cfFilterRasterToPWG: Unable to write line %d for page %d.",
 		     inheader.cupsHeight - y + page_top + 1, page);
 	return (1);
       }
@@ -567,9 +567,9 @@ rastertopwg(int inputfd,         /* I - File descriptor input stream */
       if (!cupsRasterWritePixels(outras, line, outheader.cupsBytesPerLine))
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "rastertopwg: Error sending raster data.");
+		     "cfFilterRasterToPWG: Error sending raster data.");
 	if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		     "rastertopwg: Unable to write line %d for page %d.",
+		     "cfFilterRasterToPWG: Unable to write line %d for page %d.",
 		     page_bottom - y + page_top + inheader.cupsHeight + 1,
 		     page);
 	return (1);

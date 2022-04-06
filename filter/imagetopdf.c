@@ -1,5 +1,5 @@
 /*
- * Image-to-PDF filter for CUPS (based on imagetopdf() filter function).
+ * Image-to-PDF filter for CUPS (based on cfFilterImageToPDF() filter function).
  *
  * Copyright © 2020 by Till Kamppeter
  * Copyright © 2007-2018 by Apple Inc.
@@ -61,10 +61,10 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the imagetopdf() filter function
+  * Fire up the cfFilterImageToPDF() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, imagetopdf, NULL, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterImageToPDF, NULL, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: imagetopdf filter function failed.\n");

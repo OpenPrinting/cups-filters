@@ -41,7 +41,7 @@
 
 typedef struct pclmtoraster_data_s
 {
-  filter_out_format_t outformat = OUTPUT_FORMAT_PWG_RASTER;
+  cf_filter_out_format_t outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
   int numcolors = 0;
   int rowsize = 0;
   cups_page_header2_t header;
@@ -79,7 +79,7 @@ typedef struct conversion_function_s
 } conversion_function_t;
 
 static int
-parseOpts(filter_data_t *data, filter_out_format_t outformat,
+parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
 	  pclmtoraster_data_t *pclmtoraster_data)
 {
   int			num_options = 0;
@@ -115,12 +115,12 @@ parseOpts(filter_data_t *data, filter_out_format_t outformat,
         (!strcasecmp(attr->value, "true")
          || !strcasecmp(attr->value, "on") ||
          !strcasecmp(attr->value, "yes")))
-      pclmtoraster_data->outformat = OUTPUT_FORMAT_PWG_RASTER;
+      pclmtoraster_data->outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
   }
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pclmtoraster: PPD file is not specified.");
+		 "cfFilterPCLmToRaster: PPD file is not specified.");
 
     t = cupsGetOption("media-class", num_options, options);
     if (t == NULL)
@@ -128,7 +128,7 @@ parseOpts(filter_data_t *data, filter_out_format_t outformat,
     if (t != NULL)
     {
       if (strcasestr(t, "pwg"))
-	pclmtoraster_data->outformat = OUTPUT_FORMAT_PWG_RASTER;
+	pclmtoraster_data->outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
     }
   }
 
@@ -266,7 +266,7 @@ parseOpts(filter_data_t *data, filter_out_format_t outformat,
 
   strncpy(pclmtoraster_data->pageSizeRequested, header->cupsPageSizeName, 64);
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		"pclmtoraster: Page size requested: %s.",
+		"cfFilterPCLmToRaster: Page size requested: %s.",
 	       header->cupsPageSizeName);
   return(0);
 }
@@ -447,7 +447,7 @@ rotatebitmap(unsigned char *src,    /* I - Input string */
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: Incorrect Rotate Value %d, not rotating",
+		 "cfFilterPCLmToRaster: Incorrect Rotate Value %d, not rotating",
 		 rotate);
     return (src);
   }
@@ -763,7 +763,7 @@ selectConvertFunc(int			pgno,	 /* I - Page number */
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: Colorspace %s not supported, "
+		 "cfFilterPCLmToRaster: Colorspace %s not supported, "
 		 "defaulting to /deviceRGB",
 		 colorspace.c_str());
     data->colorspace = "/DeviceRGB";
@@ -834,7 +834,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
 	filter_logfunc_t log,		/* I - Log function */
 	void*		 ld,		/* I - Aux. data for log function */
 	pclmtoraster_data_t *data,	/* I - pclmtoraster filter data */
-	filter_data_t 	*filter_data,	/* I - filter data */
+	cf_filter_data_t 	*filter_data,	/* I - filter data */
 	conversion_function_t *convert) /* I - Conversion functions */
 {
   long long		rotate = 0,
@@ -862,14 +862,14 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   if (!mediaboxlookup(page, mediaBox))
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: PDF page %d doesn't contain a valid mediaBox",
+		 "cfFilterPCLmToRaster: PDF page %d doesn't contain a valid mediaBox",
 		 pgno + 1);
     return (1);
   }
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pclmtoraster: mediaBox = [%f %f %f %f]: ",
+		 "cfFilterPCLmToRaster: mediaBox = [%f %f %f %f]: ",
 		 mediaBox[0], mediaBox[1], mediaBox[2], mediaBox[3]);
     l = mediaBox[2] - mediaBox[0];
     if (l < 0) l = -l;
@@ -890,13 +890,13 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   {
     ppdRasterMatchPPDSize(&(data->header), ppd, margins, paperdimensions, NULL,
 			  NULL);
-    if (data->outformat != OUTPUT_FORMAT_CUPS_RASTER)
+    if (data->outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER)
       memset(margins, 0, sizeof(margins));
   }
   else if(filter_data!=NULL &&(filter_data->printer_attrs)!=NULL)
   {
     ippRasterMatchIPPSize(&(data->header), filter_data, margins, paperdimensions, NULL, NULL);
-    if (data->outformat != OUTPUT_FORMAT_CUPS_RASTER)
+    if (data->outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER)
       memset(margins, 0, sizeof(margins));
   }
   else
@@ -906,7 +906,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
     if (data->header.cupsImagingBBox[3] > 0.0)
     {
       /* Set margins if we have a bounding box defined ... */
-      if (data->outformat == OUTPUT_FORMAT_CUPS_RASTER)
+      if (data->outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER)
       {
 	margins[0] = data->header.cupsImagingBBox[0];
 	margins[1] = data->header.cupsImagingBBox[1];
@@ -940,12 +940,12 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
     data->header.cupsPageSize[i] = paperdimensions[i];
     data->header.PageSize[i] = (unsigned int)(data->header.cupsPageSize[i] +
 					      0.5);
-    if (data->outformat == OUTPUT_FORMAT_CUPS_RASTER)
+    if (data->outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER)
       data->header.Margins[i] = margins[i] + 0.5;
     else
       data->header.Margins[i] = 0;
   }
-  if (data->outformat == OUTPUT_FORMAT_CUPS_RASTER)
+  if (data->outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER)
   {
     data->header.cupsImagingBBox[0] = margins[0];
     data->header.cupsImagingBBox[1] = margins[1];
@@ -1012,7 +1012,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   if (!cupsRasterWriteHeader2(raster,&(data->header)))
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: Can't write page %d header", pgno + 1);
+		 "cfFilterPCLmToRaster: Can't write page %d header", pgno + 1);
     return (1);
   }
 
@@ -1091,18 +1091,18 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
 }
 
 /*
- * 'pclmtoraster()' - Filter function to convert raster-only PDF/PCLm input to
+ * 'cfFilterPCLmToRaster()' - Filter function to convert raster-only PDF/PCLm input to
  *		      CUPS/PWG Raster output.
  */
 
 int				  /* O - Error status */
-pclmtoraster(int inputfd,         /* I - File descriptor input stream */
+cfFilterPCLmToRaster(int inputfd,         /* I - File descriptor input stream */
 	     int outputfd,        /* I - File descriptor output stream */
 	     int inputseekable,   /* I - Is input stream seekable? (unused) */
-	     filter_data_t *data, /* I - Job and printer data */
+	     cf_filter_data_t *data, /* I - Job and printer data */
 	     void *parameters)    /* I - Filter-specific parameters (unused) */
 {
-  filter_out_format_t   outformat;
+  cf_filter_out_format_t   outformat;
   FILE			*inputfp;		/* Input file pointer */
   int			fd = 0;			/* Copy file descriptor */
   char			*filename,		/* PDF file to convert */
@@ -1116,22 +1116,22 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
   conversion_function_t convert;
   filter_logfunc_t	log = data->logfunc;
   void			*ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                  *icd = data->iscanceleddata;
 
   if (parameters) {
-    outformat = *(filter_out_format_t *)parameters;
-    if (outformat != OUTPUT_FORMAT_CUPS_RASTER &&
-	outformat != OUTPUT_FORMAT_PWG_RASTER &&
-	outformat != OUTPUT_FORMAT_APPLE_RASTER)
-      outformat = OUTPUT_FORMAT_PWG_RASTER;
+    outformat = *(cf_filter_out_format_t *)parameters;
+    if (outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER)
+      outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
   } else
-    outformat = OUTPUT_FORMAT_PWG_RASTER;
+    outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pclmtoraster: Output format: %s",
-	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
-		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+	       "cfFilterPCLmToRaster: Output format: %s",
+	       (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ? "PWG Raster" :
 		 "Apple Raster")));
 
  /*
@@ -1143,7 +1143,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pclmtoraster: Unable to open input data stream.");
+		   "cfFilterPCLmToRaster: Unable to open input data stream.");
     }
 
     return (1);
@@ -1152,14 +1152,14 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
   if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pclmtoraster: Unable to copy PDF file: %s",
+		 "cfFilterPCLmToRaster: Unable to copy PDF file: %s",
 		 strerror(errno));
     fclose(inputfp);
     return (1);
   }
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pclmtoraster: Copying input to temp file \"%s\"",
+	       "cfFilterPCLmToRaster: Copying input to temp file \"%s\"",
 	       tempfile);
 
   while ((bytes = fread(buffer, 1, sizeof(buffer), inputfp)) > 0)
@@ -1185,7 +1185,7 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
      && pclmtoraster_data.header.cupsBitsPerColor != 16)
   {
     if(log) log(ld, FILTER_LOGLEVEL_ERROR,
-		"pclmtoraster: Specified color format is not supported: %s",
+		"cfFilterPCLmToRaster: Specified color format is not supported: %s",
 		strerror(errno));
     delete(pdf);
     unlink(tempfile);
@@ -1211,15 +1211,15 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
 
   if ((raster = cupsRasterOpen(outputfd,
 			       (pclmtoraster_data.outformat ==
-				  OUTPUT_FORMAT_CUPS_RASTER ?
+				  CF_FILTER_OUT_FORMAT_CUPS_RASTER ?
 				  CUPS_RASTER_WRITE :
 				(pclmtoraster_data.outformat ==
-				   OUTPUT_FORMAT_PWG_RASTER ?
+				   CF_FILTER_OUT_FORMAT_PWG_RASTER ?
 				   CUPS_RASTER_WRITE_PWG :
 				 CUPS_RASTER_WRITE_APPLE)))) == 0)
   {
     if(log) log(ld, FILTER_LOGLEVEL_ERROR,
-		"pclmtoraster: Can't open raster stream: %s",
+		"cfFilterPCLmToRaster: Can't open raster stream: %s",
 		strerror(errno));
     delete(pdf);
     unlink(tempfile);
@@ -1234,12 +1234,12 @@ pclmtoraster(int inputfd,         /* I - File descriptor input stream */
     if (iscanceled && iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pclmtoraster: Job canceled");
+		   "cfFilterPCLmToRaster: Job canceled");
       break;
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "pclmtoraster: Starting page %d.", i+1);
+		 "cfFilterPCLmToRaster: Starting page %d.", i+1);
     if (outPage(raster, pages[i], i, log, ld, &pclmtoraster_data,data,
 		&convert) != 0)
       break;

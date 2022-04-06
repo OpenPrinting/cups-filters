@@ -222,7 +222,7 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
     final_h = pageHeight;
   }
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: After Cropping: %lf %lf %lf %lf",
+	      "cfFilterPDFToPDF: After Cropping: %lf %lf %lf %lf",
 	      width,height,final_w,final_h);
   double posw = (width-final_w)/2,
         posh = (height-final_h)/2;
@@ -485,7 +485,7 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership 
       pdf->processFile("temp file",f,false);
     } catch (const std::exception &e) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: loadFile failed: %s", e.what());
+        "cfFilterPDFToPDF: loadFile failed: %s", e.what());
       return false;
     }
     break;
@@ -494,13 +494,13 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership 
       pdf->processFile("temp file",f,true);
     } catch (const std::exception &e) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: loadFile failed: %s", e.what());
+        "cfFilterPDFToPDF: loadFile failed: %s", e.what());
       return false;
     }
     break;
   case MustDuplicate:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: loadFile with MustDuplicate is not supported");
+        "cfFilterPDFToPDF: loadFile with MustDuplicate is not supported");
     return false;
   }
   start(flatten_forms);
@@ -516,7 +516,7 @@ bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name,pdftopdf_doc_t *doc,
     pdf->processFile(name);
   } catch (const std::exception &e) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: loadFilename failed: %s",e.what());
+        "cfFilterPDFToPDF: loadFilename failed: %s",e.what());
     return false;
   }
   start(flatten_forms);
@@ -557,7 +557,7 @@ bool QPDF_PDFTOPDF_Processor::check_print_permissions(pdftopdf_doc_t *doc) // {{
 {
   if (!pdf) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: No PDF loaded");
+        "cfFilterPDFToPDF: No PDF loaded");
     return false;
   }
   return pdf->allowPrintHighRes() || pdf->allowPrintLowRes(); // from legacy pdftopdf
@@ -569,7 +569,7 @@ std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> QPDF_PDFTOPDF_Processor::get_p
   std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> ret;
   if (!pdf) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: No PDF loaded");
+        "cfFilterPDFToPDF: No PDF loaded");
     assert(0);
     return ret;
   }
@@ -586,7 +586,7 @@ std::shared_ptr<PDFTOPDF_PageHandle> QPDF_PDFTOPDF_Processor::new_page(float wid
 {
   if (!pdf) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: No PDF loaded");
+        "cfFilterPDFToPDF: No PDF loaded");
     assert(0);
     return std::shared_ptr<PDFTOPDF_PageHandle>();
   }
@@ -714,7 +714,7 @@ void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership 
     break;
   case MustDuplicate:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-        "pdftopdf: emitFile with MustDuplicate is not supported");
+        "cfFilterPDFToPDF: emitFile with MustDuplicate is not supported");
     return;
   }
   if (hasCM) {
@@ -752,7 +752,7 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name,pdftopdf_doc_t *doc)
   out.write();
   else
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-	      "pdftopdf: No pages left, outputting empty file.");
+	      "cfFilterPDFToPDF: No pages left, outputting empty file.");
 }
 // }}}
 

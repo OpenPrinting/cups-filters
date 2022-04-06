@@ -162,7 +162,7 @@ static bool ppdDefaultOrder(ppd_file_t *ppd, pdftopdf_doc_t *doc) // {{{  -- is 
   }
 
   if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				 "pdftopdf: Unsupported output-order "
+				 "cfFilterPDFToPDF: Unsupported output-order "
 				 "value %s, using 'normal'!",
 				 val);
   return false;
@@ -296,7 +296,7 @@ static bool parseBorder(const char *val,BorderType &ret) // {{{
 }
 // }}}
 
-void getParameters(filter_data_t *data,int num_options,cups_option_t *options,ProcessingParameters &param,char *final_content_type,pdftopdf_doc_t *doc) // {{{
+void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options,ProcessingParameters &param,char *final_content_type,pdftopdf_doc_t *doc) // {{{
 {
 
   ppd_file_t *ppd = data->ppd;
@@ -383,7 +383,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
     if ((ipprot<3)||(ipprot>6)) {
       if (ipprot && doc->logfunc)
 	doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		     "pdftopdf: Bad value (%d) for "
+		     "cfFilterPDFToPDF: Bad value (%d) for "
 		     "orientation-requested, using 0 degrees",
 		     ipprot);
       param.noOrientation = true;
@@ -433,7 +433,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
 		(val = cupsGetOption("PageSize", num_options, options)) != NULL) {
 	pwg_media_t *size_found = NULL;
 	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-					"pdftopdf: Page size from command "
+					"cfFilterPDFToPDF: Page size from command "
 					"line: %s", val);
 	if ((size_found = pwgMediaForPWG(val)) == NULL)
 		if ((size_found = pwgMediaForPPD(val)) == NULL)
@@ -446,12 +446,12 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
 		param.page.right=param.page.width-param.page.right;
 		param.page.top=param.page.height-param.page.top;
 		if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-					"pdftopdf: Width: %f, Length: %f",
+					"cfFilterPDFToPDF: Width: %f, Length: %f",
 					param.page.width, param.page.height);
 	}
 	else
 		if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-					"pdftopdf: Unsupported page size %s.",
+					"cfFilterPDFToPDF: Unsupported page size %s.",
 					val);
 	}
     #endif /* HAVE_CUPS_1_7 */
@@ -503,7 +503,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
       param.setDuplex=true;
     } else if (strcasecmp(val,"one-sided")!=0) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Unsupported sides value %s, "
+				     "cfFilterPDFToPDF: Unsupported sides value %s, "
 				     "using sides=one-sided!", val);
     }
   }
@@ -513,7 +513,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
   if (optGetInt("number-up",num_options,options,&nup)) {
     if (!NupParameters::possible(nup)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Unsupported number-up value "
+				     "cfFilterPDFToPDF: Unsupported number-up value "
 				     "%d, using number-up=1!", nup);
       nup=1;
     }
@@ -525,7 +525,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
   if ((val=cupsGetOption("number-up-layout",num_options,options)) != NULL) {
     if (!parseNupLayout(val,param.nup)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Unsupported number-up-layout "
+				     "cfFilterPDFToPDF: Unsupported number-up-layout "
 				     "%s, using number-up-layout=lrtb!" ,val);
       param.nup.first=Axis::X;
       param.nup.xstart=Position::LEFT;
@@ -536,7 +536,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
   if ((val=cupsGetOption("page-border",num_options,options)) != NULL) {
     if (!parseBorder(val,param.border)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Unsupported page-border value "
+				     "cfFilterPDFToPDF: Unsupported page-border value "
 				     "%s, using page-border=none!", val);
       param.border=BorderType::NONE;
     }
@@ -580,7 +580,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
       param.evenPages=false;
     } else if (strcasecmp(val,"all")!=0) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Unsupported page-set value %s, "
+				     "cfFilterPDFToPDF: Unsupported page-set value %s, "
 				     "using page-set=all!", val);
     }
   }
@@ -616,7 +616,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
       param.booklet=BookletMode::BOOKLET_ON;
     } else if (!is_false(val)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Unsupported booklet value %s, "
+				     "cfFilterPDFToPDF: Unsupported booklet value %s, "
 				     "using booklet=off!", val);
     }
   }
@@ -624,7 +624,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
   if (optGetInt("booklet-signature",num_options,options,&param.bookSignature)) {
     if (param.bookSignature==0) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Unsupported booklet-signature "
+				     "cfFilterPDFToPDF: Unsupported booklet-signature "
 				     "value, using booklet-signature=-1 "
 				     "(all)!", val);
       param.bookSignature=-1;
@@ -634,7 +634,7 @@ void getParameters(filter_data_t *data,int num_options,cups_option_t *options,Pr
   if ((val=cupsGetOption("position",num_options,options)) != NULL) {
     if (!parsePosition(val,param.xpos,param.ypos)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Unrecognized position value "
+				     "cfFilterPDFToPDF: Unrecognized position value "
 				     "%s, using position=center!", val);
       param.xpos=Position::CENTER;
       param.ypos=Position::CENTER;
@@ -712,21 +712,21 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
     if (strcasecmp(val,"auto") == 0) {
       param.page_logging = -1;
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				     "pdftopdf: Automatic page logging "
+				     "cfFilterPDFToPDF: Automatic page logging "
 				     "selected by command line.");
     } else if (is_true(val)) {
       param.page_logging = 1;
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				     "pdftopdf: Forced page logging selected "
+				     "cfFilterPDFToPDF: Forced page logging selected "
 				     "by command line.");
     } else if (is_false(val)) {
       param.page_logging = 0;
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				     "pdftopdf: Suppressed page logging "
+				     "cfFilterPDFToPDF: Suppressed page logging "
 				     "selected by command line.");
     } else {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Unsupported page-logging "
+				     "cfFilterPDFToPDF: Unsupported page-logging "
 				     "value %s, using page-logging=auto!",val);
       param.page_logging = -1;
     }
@@ -753,7 +753,7 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 	    param.page_logging = -1;	 
 	}
 	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		"pdftopdf: No PPD file specified,  "
+		"cfFilterPDFToPDF: No PPD file specified,  "
 		"determined whether to log pages or "
 		"not using final_content_type env variable.");
 		doc->logfunc(doc->logdata,FILTER_LOGLEVEL_DEBUG,"final_content_type = %s page_logging=%d",final_content_type?final_content_type:"NULL",param.page_logging);
@@ -764,14 +764,14 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 	// whether we have to log pages, so do not log.
 	param.page_logging = 0;
 	if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				       "pdftopdf: No FINAL_CONTENT_TYPE "
+				       "cfFilterPDFToPDF: No FINAL_CONTENT_TYPE "
 				       "environment variable, could not "
 				       "determine whether to log pages or "
 				       "not, so turned off page logging.");
       // Proceed depending on number of cupsFilter(2) lines in PPD
       } else if (ppd->num_filters == 0) {
 	// No filter line, manufacturer-supplied PostScript PPD
-	// In this case pstops, called by pdftops, does the logging
+	// In this case cfFilterPSToPS, called by cfFilterPDFToPS, does the logging
 	param.page_logging = 0;
       } else if (ppd->num_filters == 1) {
 	// One filter line, so this one filter is the last filter
@@ -841,7 +841,7 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 		     !strcasecmp(lastfilter + strlen(lastfilter) - 5,
 				 "topwg")) {
 	    // On IPP Everywhere printers which accept PWG Raster data one
-	    // of gstoraster, pdftoraster, or mupdftopwg is the last
+	    // of gstoraster, cfFilterPDFToRaster, or mupdftopwg is the last
 	    // filter. These filters do not log pages so pdftopdf has to
 	    // do it
 	    param.page_logging = 1;
@@ -861,14 +861,14 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
 	  }
 	} else {
 	  if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-					 "pdftopdf: Last filter could not "
+					 "cfFilterPDFToPDF: Last filter could not "
 					 "get determined, page logging turned "
 					 "off.");
 	  param.page_logging = 0;
 	}
       }
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-				     "pdftopdf: Last filter determined by the "
+				     "cfFilterPDFToPDF: Last filter determined by the "
 				     "PPD: %s; FINAL_CONTENT_TYPE: "
 				     "%s => pdftopdf will %slog pages in "
 				     "page_log.",
@@ -896,7 +896,7 @@ static bool printerWillCollate(ppd_file_t *ppd) // {{{
 }
 // }}}
 
-void calculate(filter_data_t *data,ProcessingParameters &param,char *final_content_type) // {{{
+void calculate(cf_filter_data_t *data,ProcessingParameters &param,char *final_content_type) // {{{
 {
   ppd_file_t *ppd = data->ppd;
   int num_options = 0;
@@ -983,7 +983,7 @@ FILE *copy_fd_to_temp(int infd, pdftopdf_doc_t *doc) // {{{
   int outfd=cupsTempFd(buf,sizeof(buf));
   if (outfd<0) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				   "pdftopdf: Can't create temporary file");
+				   "cfFilterPDFToPDF: Can't create temporary file");
     return NULL;
   }
   // remove name
@@ -993,7 +993,7 @@ FILE *copy_fd_to_temp(int infd, pdftopdf_doc_t *doc) // {{{
   while ((n=read(infd,buf,BUFSIZ)) > 0) {
     if (write(outfd,buf,n) != n) {
       if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				     "pdftopdf: Can't copy stdin to temporary "
+				     "cfFilterPDFToPDF: Can't copy stdin to temporary "
 				     "file");
       close(outfd);
       return NULL;
@@ -1001,7 +1001,7 @@ FILE *copy_fd_to_temp(int infd, pdftopdf_doc_t *doc) // {{{
   }
   if (lseek(outfd,0,SEEK_SET) < 0) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				   "pdftopdf: Can't rewind temporary file");
+				   "cfFilterPDFToPDF: Can't rewind temporary file");
     close(outfd);
     return NULL;
   }
@@ -1009,7 +1009,7 @@ FILE *copy_fd_to_temp(int infd, pdftopdf_doc_t *doc) // {{{
   FILE *f;
   if ((f=fdopen(outfd,"rb")) == 0) {
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-				   "pdftopdf: Can't fdopen temporary file");
+				   "cfFilterPDFToPDF: Can't fdopen temporary file");
     close(outfd);
     return NULL;
   }
@@ -1034,10 +1034,10 @@ bool is_empty(FILE *f) // {{{
 
 
 int                           /* O - Error status */
-pdftopdf(int inputfd,         /* I - File descriptor input stream */
+cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
 	 int outputfd,        /* I - File descriptor output stream */
 	 int inputseekable,   /* I - Is input stream seekable? */
-	 filter_data_t *data, /* I - Job and printer data */
+	 cf_filter_data_t *data, /* I - Job and printer data */
 	 void *parameters)    /* I - Filter-specific parameters */
 {
   pdftopdf_doc_t     doc;         /* Document information */
@@ -1050,7 +1050,7 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
   char               buf[BUFSIZ];
   filter_logfunc_t   log = data->logfunc;
   void               *ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void               *icd = data->iscanceleddata;
   int num_options = 0;
   cups_option_t *options = NULL;
@@ -1093,7 +1093,7 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
 	 strcasecmp(t, "no"))) {
       streaming = 1;
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "pdftopdf: Streaming mode: No PDF processing, only adding of JCL");
+		     "cfFilterPDFToPDF: Streaming mode: No PDF processing, only adding of JCL");
     }
 
     std::unique_ptr<PDFTOPDF_Processor> proc(PDFTOPDF_Factory::processor());
@@ -1110,12 +1110,12 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
       if (is_empty(inputfp)) {
 	fclose(inputfp);
 	if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "pdftopdf: Input is empty, outputting empty file.");
+		     "cfFilterPDFToPDF: Input is empty, outputting empty file.");
 	return 0;
       }
 
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		     "pdftopdf: Processing PDF input with QPDF: Page-ranges, page-set, number-up, booklet, size adjustment, ...");
+		     "cfFilterPDFToPDF: Processing PDF input with QPDF: Page-ranges, page-set, number-up, booklet, size adjustment, ...");
 
       // Load the PDF input data into QPDF
       if (!proc->loadFile(inputfp, &doc, WillStayAlive, 1)) {
@@ -1157,7 +1157,7 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
     } else {
       // Pass through the input data
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pdftopdf: Passing on unchanged PDF data from input");
+		   "cfFilterPDFToPDF: Passing on unchanged PDF data from input");
       while ((bytes = fread(buf, 1, sizeof(buf), inputfp)) > 0)
 	if (fwrite(buf, 1, bytes, outputfp) != bytes)
 	  break;
@@ -1169,11 +1169,11 @@ pdftopdf(int inputfd,         /* I - File descriptor input stream */
   } catch (std::exception &e) {
     // TODO? exception type
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pdftopdf: Exception: %s",e.what());
+		 "cfFilterPDFToPDF: Exception: %s",e.what());
     return 5;
   } catch (...) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pdftopdf: Unknown exception caught. Exiting.");
+		 "cfFilterPDFToPDF: Unknown exception caught. Exiting.");
     return 6;
   }
 

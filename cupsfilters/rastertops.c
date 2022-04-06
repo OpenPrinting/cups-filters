@@ -25,7 +25,7 @@ typedef struct {                /**** Document information ****/
 					     logging */
   void          *logdata;                 /* User data for logging function, can
 					     be NULL */
-  filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
+  cf_filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
 					     job is canceled, NULL for not
 					     supporting stop on cancel */
   void *iscanceleddata;                   /* User data for is-canceled
@@ -319,23 +319,23 @@ zerr(int ret, /* I - Return status of deflate */
   switch (ret) {
   case Z_ERRNO:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - error in source data or output file");
+		  "cfFilterRasterToPS: zpipe - error in source data or output file");
     break;
   case Z_STREAM_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - invalid compression level");
+		  "cfFilterRasterToPS: zpipe - invalid compression level");
     break;
   case Z_DATA_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - invalid or incomplete deflate data");
+		  "cfFilterRasterToPS: zpipe - invalid or incomplete deflate data");
     break;
   case Z_MEM_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - out of memory");
+		  "cfFilterRasterToPS: zpipe - out of memory");
     break;
   case Z_VERSION_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_ERROR,
-		  "rastertops: zpipe - zlib version mismatch!");
+		  "cfFilterRasterToPS: zpipe - zlib version mismatch!");
   }
 }
 
@@ -365,15 +365,15 @@ writeTrailer(int  pages, /* I - Number of pages */
 }
 
 /*
- * 'rastertops()' - Filter function to convert PWG raster input
+ * 'cfFilterRasterToPS()' - Filter function to convert PWG raster input
  *                  to PostScript
  */
 
 int                         /* O - Error status */
-rastertops(int inputfd,         /* I - File descriptor input stream */
+cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
        int outputfd,        /* I - File descriptor output stream */
        int inputseekable,   /* I - Is input stream seekable? (unused) */
-       filter_data_t *data, /* I - Job and printer data */
+       cf_filter_data_t *data, /* I - Job and printer data */
        void *parameters)    /* I - Filter-specific parameters (unused) */
 {
   rastertops_doc_t     doc;         /* Document information */
@@ -386,7 +386,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
                 ret;           /* Return value of deflate compression */
   filter_logfunc_t     log = data->logfunc;
   void                 *ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
 
 
@@ -402,7 +402,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertops: Unable to open input data stream.");
+		   "cfFilterRasterToPS: Unable to open input data stream.");
     }
 
     return (1);
@@ -417,7 +417,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertops: Unable to open output data stream.");
+		   "cfFilterRasterToPS: Unable to open output data stream.");
     }
 
     cupsFileClose(inputfp);
@@ -447,7 +447,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
     if (iscanceled && iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-                  "rastertops: Job canceled");
+                  "cfFilterRasterToPS: Job canceled");
       break;
     }
 
@@ -468,7 +468,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
     Page ++;
 
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-     "rastertops: Starting page %d.", Page);
+     "cfFilterRasterToPS: Starting page %d.", Page);
 
    /*
     *	Write the starting of the page
@@ -493,7 +493,7 @@ rastertops(int inputfd,         /* I - File descriptor input stream */
   if (empty)
   {
      if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-      "rastertops: Input is empty, outputting empty file.");
+      "cfFilterRasterToPS: Input is empty, outputting empty file.");
      cupsRasterClose(ras);
      return 0;
   }

@@ -12,7 +12,7 @@
  *
  * Contents:
  *
- *   texttopdf()     - Main entry for text to PDF filter.
+ *   cfFilterTextToPDF()     - Main entry for text to PDF filter.
  *   WriteEpilogue() - Write the PDF file epilogue.
  *   WritePage()     - Write a page of text.
  *   WriteProlog()   - Write the PDF file prolog with options.
@@ -497,7 +497,7 @@ typedef struct texttopdf_doc_s
   cups_page_header2_t h;        /* CUPS Raster page header, to */
                                 /* accommodate results of command */
                                 /* line parsing for PPD-less queue */
-  texttopdf_parameter_t env_vars;
+  cf_filter_texttopdf_parameter_t env_vars;
   int		NumKeywords;
   float		PageLeft,	/* Left margin */
 		PageRight,	/* Right margin */
@@ -594,7 +594,7 @@ EMB_PARAMS *font_load(const char *font, int fontwidth, filter_logfunc_t log,
   if (!fontname)
   {
     // TODO: try /usr/share/fonts/*/*/%s.ttf
-    if(log) log(ld, FILTER_LOGLEVEL_ERROR,"texttopdf: No viable font found.");
+    if(log) log(ld, FILTER_LOGLEVEL_ERROR,"cfFilterTextToPDF: No viable font found.");
     return NULL;
   }
 
@@ -735,14 +735,14 @@ void            WriteEpilogue(texttopdf_doc_t *doc);
 
 
 /*
- * 'texttopdf()' - Main entry for text to PDF filter.
+ * 'cfFilterTextToPDF()' - Main entry for text to PDF filter.
  */
 
 int				/* O - Exit status */
-texttopdf(int inputfd,  	/* I - File descriptor input stream */
+cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	  int outputfd, 	/* I - File descriptor output stream */
 	  int inputseekable,	/* I - Is input stream seekable? (unused) */
-	  filter_data_t *data,	/* I - Job and printer data */
+	  cf_filter_data_t *data,	/* I - Job and printer data */
 	  void *parameters)	/* I - Filter-specific parameters (unused) */
 {
   texttopdf_doc_t doc;
@@ -766,7 +766,7 @@ texttopdf(int inputfd,  	/* I - File descriptor input stream */
 
   filter_logfunc_t log = data->logfunc;
   void		*ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void		*icd = data->iscanceleddata;
   FILE		*fp;		/* Print file */
   int		stdoutbackupfd;	/* The "real" stdout is backupped here while */
@@ -808,7 +808,7 @@ texttopdf(int inputfd,  	/* I - File descriptor input stream */
   doc.pdf = NULL;
 
   if (parameters) {
-    doc.env_vars = *((texttopdf_parameter_t *)parameters);
+    doc.env_vars = *((cf_filter_texttopdf_parameter_t *)parameters);
   } else {
     doc.env_vars.data_dir = CUPS_DATADIR;
     doc.env_vars.char_set = NULL;
@@ -903,7 +903,7 @@ texttopdf(int inputfd,  	/* I - File descriptor input stream */
     }
   }
 
-  filterSetCommonOptions(data->ppd, data->num_options, data->options, 1,
+  cfFilterSetCommonOptions(data->ppd, data->num_options, data->options, 1,
 			 &(doc.Orientation), &(doc.Duplex),
 			 &(doc.LanguageLevel), &(doc.ColorDevice),
 			 &(doc.PageLeft), &(doc.PageRight), &(doc.PageTop),
@@ -944,7 +944,7 @@ texttopdf(int inputfd,  	/* I - File descriptor input stream */
     if (doc.PageColumns < 1)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "texttopdf: Bad columns value %d", doc.PageColumns);
+		   "cfFilterTextToPDF: Bad columns value %d", doc.PageColumns);
       ret = 1;
       goto out;
     }
@@ -957,7 +957,7 @@ texttopdf(int inputfd,  	/* I - File descriptor input stream */
     if (doc.CharsPerInch <= 0.0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "texttopdf: Bad cpi value %f", doc.CharsPerInch);
+		   "cfFilterTextToPDF: Bad cpi value %f", doc.CharsPerInch);
       ret = 1;
       goto out;
     }
@@ -970,7 +970,7 @@ texttopdf(int inputfd,  	/* I - File descriptor input stream */
     if (doc.LinesPerInch <= 0.0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "texttopdf: Bad lpi value %f", doc.LinesPerInch);
+		   "cfFilterTextToPDF: Bad lpi value %f", doc.LinesPerInch);
       ret = 1;
       goto out;
     }
@@ -996,7 +996,7 @@ texttopdf(int inputfd,  	/* I - File descriptor input stream */
 
   if (doc.SizeLines >= INT_MAX / doc.SizeColumns / sizeof(lchar_t))
   {
-    if (log) log(ld, FILTER_LOGLEVEL_ERROR, "texttopdf: Bad page size");
+    if (log) log(ld, FILTER_LOGLEVEL_ERROR, "cfFilterTextToPDF: Bad page size");
     ret = 1;
     goto out;
   }
@@ -1005,7 +1005,7 @@ texttopdf(int inputfd,  	/* I - File descriptor input stream */
   if (!doc.Page)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "texttopdf: cannot allocate memory for page");
+		 "cfFilterTextToPDF: cannot allocate memory for page");
     ret = 1;
     goto out;
   }
@@ -1015,7 +1015,7 @@ texttopdf(int inputfd,  	/* I - File descriptor input stream */
   {
     free(doc.Page);
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "texttopdf: cannot allocate memory for page");
+		 "cfFilterTextToPDF: cannot allocate memory for page");
     ret = 1;
     goto out;
   }
@@ -1816,7 +1816,7 @@ WriteProlog(const char *title,		/* I - Title of job */
       */
 
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "texttopdf: Unable to open %s: %s",
+		   "cfFilterTextToPDF: Unable to open %s: %s",
 		   filename, strerror(errno));
       return (1);
     }
@@ -1833,7 +1833,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 
       fclose(fp);
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "texttopdf: Bad charset file %s", filename);
+		   "cfFilterTextToPDF: Bad charset file %s", filename);
       return (1);
     }
 
@@ -1845,7 +1845,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 
       fclose(fp);
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "texttopdf: Bad charset file %s", filename);
+		   "cfFilterTextToPDF: Bad charset file %s", filename);
       return (1);
     }
 
@@ -1909,7 +1909,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 	  */
 
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "texttopdf: Bad font description line: %s", valptr);
+		       "cfFilterTextToPDF: Bad font description line: %s", valptr);
 	  return (1);
 	}
 
@@ -1922,7 +1922,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 	else
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "texttopdf: Bad text direction %s", valptr);
+		       "cfFilterTextToPDF: Bad text direction %s", valptr);
 	  return (1);
 	}
 
@@ -1945,7 +1945,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 	  */
 
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "texttopdf: Bad font description line: %s", valptr);
+		       "cfFilterTextToPDF: Bad font description line: %s", valptr);
 	  return (1);
 	}
 
@@ -1958,7 +1958,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 	else 
 	{
 	  if(log) log(ld, FILTER_LOGLEVEL_ERROR,
-		      "texttopdf: Bad text width %s", valptr);
+		      "cfFilterTextToPDF: Bad text width %s", valptr);
 	  return (1);
 	}
 
@@ -1996,7 +1996,7 @@ WriteProlog(const char *title,		/* I - Title of job */
               if (!fonts[num_fonts]) // font missing/corrupt, replace by first
 	      {
                 if(log) log(ld, FILTER_LOGLEVEL_WARN,
-			    "texttopdf: Ignored bad font \"%s\"",valptr);
+			    "cfFilterTextToPDF: Ignored bad font \"%s\"",valptr);
                 break;
               }
               fontnames[num_fonts++] = strdup(valptr);
@@ -2100,7 +2100,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 	  * Can't have a font without all required values...
 	  */
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "texttopdf: Bad font description line: %s", valptr);
+		       "cfFilterTextToPDF: Bad font description line: %s", valptr);
 	  return (1);
 	}
 
@@ -2113,7 +2113,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 	else
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "texttopdf: Bad text direction %s", valptr);
+		       "cfFilterTextToPDF: Bad text direction %s", valptr);
 	  return (1);
 	}
 
@@ -2135,7 +2135,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 	  * Can't have a font without all required values...
 	  */
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "texttopdf: Bad font description line: %s", valptr);
+		       "cfFilterTextToPDF: Bad font description line: %s", valptr);
 	  return (1);
 	}
 
@@ -2148,7 +2148,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 	else 
 	{
 	  if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		       "texttopdf: Bad text width %s", valptr);
+		       "cfFilterTextToPDF: Bad text width %s", valptr);
 	  return (1);
 	}
 
@@ -2186,7 +2186,7 @@ WriteProlog(const char *title,		/* I - Title of job */
               if (!fonts[num_fonts]) // font missing/corrupt, replace by first
 	      {
                 if(log) log(ld, FILTER_LOGLEVEL_WARN,
-			    "texttopdf: Ignored bad font \"%s\"",valptr);
+			    "cfFilterTextToPDF: Ignored bad font \"%s\"",valptr);
                 break;
               }
               fontnames[num_fonts++] = strdup(valptr);
@@ -2230,7 +2230,7 @@ WriteProlog(const char *title,		/* I - Title of job */
     else // {{{
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "texttopdf: Bad charset type %s", lineptr);
+		   "cfFilterTextToPDF: Bad charset type %s", lineptr);
       return (1);
     } // }}}
   } // }}}
@@ -2265,7 +2265,7 @@ WriteProlog(const char *title,		/* I - Title of job */
 
   if (doc->NumFonts == 0) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "texttopdf:No usable font available");
+		 "cfFilterTextToPDF:No usable font available");
     return (1);
   }
 

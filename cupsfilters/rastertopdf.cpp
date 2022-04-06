@@ -116,7 +116,7 @@ typedef struct                                 /**** Document information ****/
 						  logging */
   void                *logdata;                /* User data for logging
 						  function, can be NULL */
-  filter_iscanceledfunc_t iscanceledfunc;      /* Function returning 1 when
+  cf_filter_iscanceledfunc_t iscanceledfunc;      /* Function returning 1 when
                                                   job is canceled, NULL for not
                                                   supporting stop on cancel */
   void *iscanceleddata;                        /* User data for is-canceled
@@ -283,7 +283,7 @@ struct pdf_info
         render_intent(""),
         color_space(CUPS_CSPACE_K),
         page_width(0),page_height(0),
-        outformat(OUTPUT_FORMAT_PDF)
+        outformat(CF_FILTER_OUT_FORMAT_PDF)
     {
     }
 
@@ -308,11 +308,11 @@ struct pdf_info
     cups_cspace_t color_space;
     PointerHolder<Buffer> page_data;
     double page_width,page_height;
-    filter_out_format_t outformat;
+    cf_filter_out_format_t outformat;
 };
 
 int create_pdf_file(struct pdf_info * info,
-		    const filter_out_format_t &outformat)
+		    const cf_filter_out_format_t &outformat)
 {
     try {
         info->pdf.emptyPDF();
@@ -463,7 +463,7 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf, rastertopdf_doc_t *doc)
         break;
       default:
         if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		      "rastertopdf: Failed to embed ICC Profile.");
+		      "cfFilterRasterToPDF: Failed to embed ICC Profile.");
         return QPDFObjectHandle::newNull();
     }
 
@@ -489,7 +489,7 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf, rastertopdf_doc_t *doc)
 
     free(buff);
     if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		      "rastertopdf: ICC Profile embedded in PDF.");
+		      "cfFilterRasterToPDF: ICC Profile embedded in PDF.");
 
     return ret;
 }
@@ -650,7 +650,7 @@ makePclmStrips(QPDF &pdf, unsigned num_strips,
         break;
       default:
         if (doc->logfunc) doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		      "rastertopdf: Color space not supported.");
+		      "cfFilterRasterToPDF: Color space not supported.");
         return std::vector<QPDFObjectHandle>(num_strips, QPDFObjectHandle());
     }
 
@@ -809,7 +809,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
             default:
                 if (doc->logfunc)
 		  doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-			       "rastertopdf: Color space not supported.");
+			       "cfFilterRasterToPDF: Color space not supported.");
                 return QPDFObjectHandle();
         }
     } else if (doc->cm_disabled) {
@@ -844,7 +844,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
           default:
             if (doc->logfunc)
 	      doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-			   "rastertopdf: Color space not supported.");
+			   "cfFilterRasterToPDF: Color space not supported.");
             return QPDFObjectHandle();
         }
     } else
@@ -874,7 +874,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
 
 int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
-    if (info->outformat == OUTPUT_FORMAT_PDF)
+    if (info->outformat == CF_FILTER_OUT_FORMAT_PDF)
     {
       // Finish previous PDF Page
       if(!info->page_data.getPointer())
@@ -888,14 +888,14 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
       {
         if (doc->logfunc)
 	  doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		       "rastertopdf: Unable to load image data");
+		       "cfFilterRasterToPDF: Unable to load image data");
         return 1;
       }
 
       // add it
       info->page.getKey("/Resources").getKey("/XObject").replaceKey("/I",image);
     }
-    else if (info->outformat == OUTPUT_FORMAT_PCLM)
+    else if (info->outformat == CF_FILTER_OUT_FORMAT_PCLM)
     {
       // Finish previous PCLm page
       if (info->pclm_num_strips == 0)
@@ -915,7 +915,7 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
         {
           if (doc->logfunc)
 	    doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-			 "rastertopdf: Unable to load strip data");
+			 "cfFilterRasterToPDF: Unable to load strip data");
           return 1;
         }
 
@@ -929,13 +929,13 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
 
     // draw it
     std::string content;
-    if (info->outformat == OUTPUT_FORMAT_PDF)
+    if (info->outformat == CF_FILTER_OUT_FORMAT_PDF)
     {
       content.append(QUtil::double_to_string(info->page_width) + " 0 0 " +
                      QUtil::double_to_string(info->page_height) + " 0 0 cm\n");
       content.append("/I Do\n");
     }
-    else if (info->outformat == OUTPUT_FORMAT_PCLM)
+    else if (info->outformat == CF_FILTER_OUT_FORMAT_PCLM)
     {
       std::string res = info->pclm_source_resolution_default;
 
@@ -961,10 +961,10 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
     }
 
     QPDFObjectHandle page_contents = info->page.getKey("/Contents");
-    if (info->outformat == OUTPUT_FORMAT_PDF)
+    if (info->outformat == CF_FILTER_OUT_FORMAT_PDF)
       page_contents.replaceStreamData(content, QPDFObjectHandle::newNull(),
 				      QPDFObjectHandle::newNull());
-    else if (info->outformat == OUTPUT_FORMAT_PCLM)
+    else if (info->outformat == CF_FILTER_OUT_FORMAT_PCLM)
       page_contents.getArrayItem(0).replaceStreamData(content,
 						   QPDFObjectHandle::newNull(),
 						   QPDFObjectHandle::newNull());
@@ -1003,7 +1003,7 @@ int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
     info->bpc = bpc;
     info->render_intent = render_intent;
     info->color_space = color_space;
-    if (info->outformat == OUTPUT_FORMAT_PCLM)
+    if (info->outformat == CF_FILTER_OUT_FORMAT_PCLM)
     {
       info->pclm_num_strips =
 	(height / info->pclm_strip_height_preferred) +
@@ -1058,7 +1058,7 @@ int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
         default:
           if (doc->logfunc)
 	    doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-			 "rastertopdf: Unable to convert PDF from profile.");
+			 "cfFilterRasterToPDF: Unable to convert PDF from profile.");
           doc->colorProfile = NULL;
           error = 1;
       }
@@ -1122,7 +1122,7 @@ int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
          default:
            if (doc->logfunc)
 	     doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-			  "rastertopdf: Color space not supported.");
+			  "cfFilterRasterToPDF: Color space not supported.");
            error = 1;
            break;
       }
@@ -1150,13 +1150,13 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
 			    info->line_bytes)) {
             if (doc->logfunc)
 	      doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-			   "rastertopdf: Page too big");
+			   "cfFilterRasterToPDF: Page too big");
             return 1;
         }
-        if (info->outformat == OUTPUT_FORMAT_PDF)
+        if (info->outformat == CF_FILTER_OUT_FORMAT_PDF)
           info->page_data =
 	    PointerHolder<Buffer>(new Buffer(info->line_bytes * info->height));
-        else if (info->outformat == OUTPUT_FORMAT_PCLM)
+        else if (info->outformat == CF_FILTER_OUT_FORMAT_PCLM)
         {
           // reserve space for PCLm strips
           for (size_t i = 0; i < info->pclm_num_strips; i ++)
@@ -1178,14 +1178,14 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
         // Convert to pdf units
         info->page_width=((double)info->width/xdpi)*DEFAULT_PDF_UNIT;
         info->page_height=((double)info->height/ydpi)*DEFAULT_PDF_UNIT;
-        if (info->outformat == OUTPUT_FORMAT_PDF)
+        if (info->outformat == CF_FILTER_OUT_FORMAT_PDF)
         {
           page.replaceKey("/Contents",QPDFObjectHandle::newStream(&info->pdf));
 	                                  // data will be provided later
           page.replaceKey("/MediaBox",makeRealBox(0,0,info->page_width,
 						  info->page_height));
         }
-        else if (info->outformat == OUTPUT_FORMAT_PCLM)
+        else if (info->outformat == CF_FILTER_OUT_FORMAT_PCLM)
         {
           page.replaceKey("/Contents",
             QPDFObjectHandle::newArray(std::vector<QPDFObjectHandle>
@@ -1204,7 +1204,7 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
     } catch (std::bad_alloc &ex) {
         if (doc->logfunc)
 	  doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		       "rastertopdf: Unable to allocate page data");
+		       "cfFilterRasterToPDF: Unable to allocate page data");
         return 1;
     } catch (...) {
         return 1;
@@ -1221,7 +1221,7 @@ int close_pdf_file(struct pdf_info * info, rastertopdf_doc_t *doc)
         QPDFWriter output(info->pdf,NULL);
         output.setOutputFile("pdf", doc->outputfp, false);
 //        output.setMinimumPDFVersion("1.4");
-        if (info->outformat == OUTPUT_FORMAT_PCLM)
+        if (info->outformat == CF_FILTER_OUT_FORMAT_PCLM)
           output.setPCLm(true);
         output.write();
     } catch (...) {
@@ -1238,11 +1238,11 @@ void pdf_set_line(struct pdf_info * info, unsigned line_n,
     {
         if (doc->logfunc)
 	  doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		       "rastertopdf: Bad line %d", line_n);
+		       "cfFilterRasterToPDF: Bad line %d", line_n);
         return;
     }
 
-    if (info->outformat == OUTPUT_FORMAT_PCLM) {
+    if (info->outformat == CF_FILTER_OUT_FORMAT_PCLM) {
       // copy line data into appropriate pclm strip
       size_t strip_num = line_n / info->pclm_strip_height_preferred;
       unsigned line_strip = line_n -
@@ -1312,13 +1312,13 @@ int setProfile(const char * path, rastertopdf_doc_t *doc)
     if (doc->colorProfile != NULL) {
       if (doc->logfunc)
 	doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		     "rastertopdf: Load profile successful.");
+		     "cfFilterRasterToPDF: Load profile successful.");
       return 0;
     }
     else {
       if (doc->logfunc)
 	doc->logfunc(doc->logdata, FILTER_LOGLEVEL_DEBUG,
-		     "rastertopdf: Unable to load profile.");
+		     "cfFilterRasterToPDF: Unable to load profile.");
       return 1;
     }
 }
@@ -1375,16 +1375,16 @@ const char * getIPPColorProfileName(const char * media_type, cups_cspace_t cs,
 }
 
 int                         /* O - Error status */
-rastertopdf(int inputfd,    /* I - File descriptor input stream */
+cfFilterRasterToPDF(int inputfd,    /* I - File descriptor input stream */
        int outputfd,        /* I - File descriptor output stream */
        int inputseekable,   /* I - Is input stream seekable? (unused) */
-       filter_data_t *data, /* I - Job and printer data */
+       cf_filter_data_t *data, /* I - Job and printer data */
        void *parameters)    /* I - Filter-specific parameters (outformat) */
 {
   int i;
   rastertopdf_doc_t	doc;		/* Document information */
   FILE          *outputfp;              /* Output data stream */
-  filter_out_format_t outformat; /* Output format */
+  cf_filter_out_format_t outformat; /* Output format */
   int Page, empty = 1;
   cf_cm_calibration_t    cm_calibrate;   /* Status of CUPS color management
 					 ("on" or "off") */
@@ -1397,7 +1397,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
   const char*         profile_name = NULL;	/* IPP Profile Name */
   filter_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void          *icd = data->iscanceleddata;
   int total_attrs;
   char buf[1024];
@@ -1408,15 +1408,15 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
 
   if (parameters)
   {
-    outformat = *(filter_out_format_t *)parameters;
-    if (outformat != OUTPUT_FORMAT_PCLM)
-      outformat = OUTPUT_FORMAT_PDF;
+    outformat = *(cf_filter_out_format_t *)parameters;
+    if (outformat != CF_FILTER_OUT_FORMAT_PCLM)
+      outformat = CF_FILTER_OUT_FORMAT_PDF;
   }
   else
-    outformat = OUTPUT_FORMAT_PDF;
+    outformat = CF_FILTER_OUT_FORMAT_PDF;
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "rastertopdf: OUTFORMAT=\"%s\"",
-	       outformat == OUTPUT_FORMAT_PDF ? "PDF" : "PCLM");
+	       "cfFilterRasterToPDF: OUTFORMAT=\"%s\"",
+	       outformat == CF_FILTER_OUT_FORMAT_PDF ? "PDF" : "PCLM");
 
  /*
   * Open the output data stream specified by the outputfd...
@@ -1427,7 +1427,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: Unable to open output data stream.");
+		   "cfFilterRasterToPDF: Unable to open output data stream.");
     }
 
     return (1);
@@ -1444,17 +1444,17 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
   /* support the CUPS "cm-calibration" option */ 
   cm_calibrate = cfCmGetCupsColorCalibrateMode(data, data->options, data->num_options);
 
-  if (outformat == OUTPUT_FORMAT_PCLM ||
+  if (outformat == CF_FILTER_OUT_FORMAT_PCLM ||
       cm_calibrate == CF_CM_CALIBRATION_ENABLED)
     doc.cm_disabled = 1;
   else
     doc.cm_disabled = cfCmIsPrinterCmDisabled(data);
 
-  if (outformat == OUTPUT_FORMAT_PCLM && data->ppd == NULL
+  if (outformat == CF_FILTER_OUT_FORMAT_PCLM && data->ppd == NULL
         && printer_attrs == NULL )
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-      "rastertopdf: PCLm output:  Neither a PPD file nor printer IPP attributes are supplied, PCLm output not possible.");
+      "cfFilterRasterToPDF: PCLm output:  Neither a PPD file nor printer IPP attributes are supplied, PCLm output not possible.");
     return 1;
   }
 
@@ -1465,13 +1465,13 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
   Page = 0;
 
   /* Get PCLm attributes from PPD */
-  if (data->ppd && outformat == OUTPUT_FORMAT_PCLM)
+  if (data->ppd && outformat == CF_FILTER_OUT_FORMAT_PCLM)
   {
     char *attr_name = (char *)"cupsPclmStripHeightPreferred";
     if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: PPD PCLm attribute \"%s\" with value \"%s\"",
+		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
 		   attr_name, attr->value);
       pdf.pclm_strip_height_preferred = atoi(attr->value);
     }
@@ -1482,7 +1482,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: PPD PCLm attribute \"%s\" with value \"%s\"",
+		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
 		   attr_name, attr->value);
       pdf.pclm_strip_height_supported.clear();  // remove default value = 16
       std::vector<std::string> vec = split_strings(attr->value, ",");
@@ -1495,7 +1495,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: PPD PCLm attribute \"%s\" with value \"%s\"",
+		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
 		   attr_name, attr->value);
       pdf.pclm_raster_back_side = attr->value;
     }
@@ -1504,7 +1504,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: PPD PCLm attribute \"%s\" with value \"%s\"",
+		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
 		   attr_name, attr->value);
       pdf.pclm_source_resolution_supported = split_strings(attr->value, ",");
     }
@@ -1513,7 +1513,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: PPD PCLm attribute \"%s\" with value \"%s\"",
+		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
 		   attr_name, attr->value);
       pdf.pclm_source_resolution_default = attr->value;
     }
@@ -1522,13 +1522,13 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
       pdf.pclm_source_resolution_default =
 	pdf.pclm_source_resolution_supported[0];
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: PPD PCLm attribute \"%s\" missing, taking first item of \"cupsPclmSourceResolutionSupported\" as default resolution",
+		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" missing, taking first item of \"cupsPclmSourceResolutionSupported\" as default resolution",
 		   attr_name);
     }
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "rastertopdf: PCLm output: PPD file does not contain printer resolution information for PCLm.");
+		   "cfFilterRasterToPDF: PCLm output: PPD file does not contain printer resolution information for PCLm.");
       return 1;
     }
 
@@ -1536,7 +1536,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: PPD PCLm attribute \"%s\" with value \"%s\"",
+		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
 		   attr_name, attr->value);
       std::vector<std::string> vec = split_strings(attr->value, ",");
 
@@ -1566,7 +1566,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
       pdf.pclm_compression_method_preferred.push_back(FLATE_DECODE);
     }
   }
-  else if(outformat == OUTPUT_FORMAT_PCLM && printer_attrs)
+  else if(outformat == CF_FILTER_OUT_FORMAT_PCLM && printer_attrs)
   {
     if (log)
     {
@@ -1594,7 +1594,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		  "rastertopdf: Printer PCLm attribute \"%s\" with value %d",
+		  "cfFilterRasterToPDF: Printer PCLm attribute \"%s\" with value %d",
 		  attr_name, ippGetInteger(ipp_attr, 0));
       pdf.pclm_strip_height_preferred = ippGetInteger(ipp_attr, 0);
     }
@@ -1605,7 +1605,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-      "rastertopdf: Printer PCLm attribute \"%s\"",
+      "cfFilterRasterToPDF: Printer PCLm attribute \"%s\"",
       attr_name);
       pdf.pclm_strip_height_supported.clear();  // remove default value = 16
       for (int i = 0; i < ippGetCount(ipp_attr); i ++)
@@ -1616,7 +1616,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if ((ipp_attr = ippFindAttribute(printer_attrs, attr_name, IPP_TAG_ZERO)) != NULL)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-      "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
+      "cfFilterRasterToPDF: Printer PCLm attribute \"%s\" with value \"%s\"",
       attr_name, ippGetString(ipp_attr, 0, NULL));
       pdf.pclm_raster_back_side = ippGetString(ipp_attr, 0, NULL);
     }
@@ -1626,7 +1626,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     {
       ippAttributeString(ipp_attr, buf, sizeof(buf));
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
+		   "cfFilterRasterToPDF: Printer PCLm attribute \"%s\" with value \"%s\"",
 		   attr_name, buf);
       pdf.pclm_source_resolution_supported = split_strings(buf, ",");
     }
@@ -1636,7 +1636,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     {
       ippAttributeString(ipp_attr, buf, sizeof(buf));
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
+		   "cfFilterRasterToPDF: Printer PCLm attribute \"%s\" with value \"%s\"",
 		   attr_name, buf);
       pdf.pclm_source_resolution_default = buf;
     }
@@ -1645,13 +1645,13 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
       pdf.pclm_source_resolution_default =
 	pdf.pclm_source_resolution_supported[0];
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: Printer PCLm attribute \"%s\" missing, taking first item of \"pclm-source-resolution-supported\" as default resolution",
+		   "cfFilterRasterToPDF: Printer PCLm attribute \"%s\" missing, taking first item of \"pclm-source-resolution-supported\" as default resolution",
 		   attr_name);
     }
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "rastertopdf: PCLm output: Printer IPP attributes do not contain printer resolution information for PCLm.");
+		   "cfFilterRasterToPDF: PCLm output: Printer IPP attributes do not contain printer resolution information for PCLm.");
       return 1;
     }
 
@@ -1660,7 +1660,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     {
       ippAttributeString(ipp_attr, buf, sizeof(buf));
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: Printer PCLm attribute \"%s\" with value \"%s\"",
+		   "cfFilterRasterToPDF: Printer PCLm attribute \"%s\" with value \"%s\"",
 		   attr_name, buf);
       std::vector<std::string> vec = split_strings(buf, ",");
 
@@ -1696,7 +1696,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     if (iscanceled && iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: Job canceled");
+		   "cfFilterRasterToPDF: Job canceled");
       break;
     }
 
@@ -1707,7 +1707,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
       if (create_pdf_file(&pdf, outformat) != 0)
       {
 	if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		     "rastertopdf: Unable to create PDF file");
+		     "cfFilterRasterToPDF: Unable to create PDF file");
 	return 1;
       }
     }
@@ -1715,11 +1715,11 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     // Write a status message with the page number
     Page ++;
     if (log) log(ld, FILTER_LOGLEVEL_INFO,
-		 "rastertopdf: Starting page %d.", Page);
+		 "cfFilterRasterToPDF: Starting page %d.", Page);
 
     // Use "profile=profile_name.icc" to embed 'profile_name.icc' into the PDF
     // for testing. Forces color management to enable.
-    if (outformat == OUTPUT_FORMAT_PDF &&
+    if (outformat == CF_FILTER_OUT_FORMAT_PDF &&
         (profile_name = cupsGetOption("profile", data->num_options,
 				      data->options)) != NULL) {
       setProfile(profile_name, &doc);
@@ -1727,7 +1727,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
     }
     if (doc.colorProfile != NULL)       
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "rastertopdf: TEST ICC Profile specified (color "
+		   "cfFilterRasterToPDF: TEST ICC Profile specified (color "
 		   "management forced ON): \n[%s]", profile_name);
 
     // Add a new page to PDF file
@@ -1738,7 +1738,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
           header.HWResolution[1], &doc) != 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		    "rastertopdf: Unable to start new PDF page");
+		    "cfFilterRasterToPDF: Unable to start new PDF page");
       return 1;
     }
 
@@ -1748,7 +1748,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
       &pdf, &doc) != 0)
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "rastertopdf: Failed to convert page bitmap");
+		   "cfFilterRasterToPDF: Failed to convert page bitmap");
       return 1;
     }
   }
@@ -1756,7 +1756,7 @@ rastertopdf(int inputfd,    /* I - File descriptor input stream */
   if (empty)
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "rastertopdf: Input is empty, outputting empty file.");
+		 "cfFilterRasterToPDF: Input is empty, outputting empty file.");
     cupsRasterClose(ras);
     return 0;
   }

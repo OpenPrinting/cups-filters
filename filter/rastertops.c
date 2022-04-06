@@ -71,10 +71,10 @@ main(int  argc,	   /* I - Number of command-line arguments */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the rastertops() filter function
+  * Fire up the cfFilterRasterToPS() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, rastertops, NULL, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterRasterToPS, NULL, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: rastertops filter function failed.\n");

@@ -286,8 +286,8 @@ static void  handleRequiresPageRegion(pwgtoraster_doc_t*doc) {
   }
 }
 
-static int parseOpts(filter_data_t *data,
-		     filter_out_format_t outformat,
+static int parseOpts(cf_filter_data_t *data,
+		     cf_filter_out_format_t outformat,
 		     pwgtoraster_doc_t *doc)
 {
   int num_options = 0;
@@ -315,14 +315,14 @@ static int parseOpts(filter_data_t *data,
      cupsGetOption("media-col", num_options, options));
 
   // We can directly create CUPS Raster, PWG Raster, and Apple Raster but
-  // for PCLm we have to output CUPS Raster and feed it into rastertopdf()
+  // for PCLm we have to output CUPS Raster and feed it into cfFilterRasterToPDF()
   cupsRasterPrepareHeader(&(doc->outheader), data, outformat,
-			  outformat == OUTPUT_FORMAT_PCLM ?
-			  OUTPUT_FORMAT_CUPS_RASTER : outformat, 0, &cspace);
+			  outformat == CF_FILTER_OUT_FORMAT_PCLM ?
+			  CF_FILTER_OUT_FORMAT_CUPS_RASTER : outformat, 0, &cspace);
 
   if (doc->ppd) {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pwgtoraster: Using PPD file: %s", doc->ppd->nickname);
+		 "cfFilterPWGToRaster: Using PPD file: %s", doc->ppd->nickname);
     ppdMarkOptions(doc->ppd,num_options,options);
     handleRequiresPageRegion(doc);
     attr = ppdFindAttr(doc->ppd,"pwgtorasterRenderingIntent",NULL);
@@ -398,7 +398,7 @@ static int parseOpts(filter_data_t *data,
     }
   } else {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-      "pwgtoraster: No PPD file is specified.");
+      "cfFilterPWGToRaster: No PPD file is specified.");
     if (strcasecmp(doc->outheader.cupsRenderingIntent, "Perceptual") == 0) {
       doc->color_profile.renderingIntent = INTENT_PERCEPTUAL;
     } else if (strcasecmp(doc->outheader.cupsRenderingIntent, "Relative") == 0) {
@@ -414,7 +414,7 @@ static int parseOpts(filter_data_t *data,
     doc->bi_level = 1;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pwgtoraster: Page size %s: %s",
+	       "cfFilterPWGToRaster: Page size %s: %s",
 	       doc->page_size_requested ? "requested" : "default",
 	       doc->outheader.cupsPageSizeName);
 
@@ -1010,7 +1010,7 @@ static int selectConvertFunc(cups_raster_t *raster,
 			    BYTES_SH(bytes),
 			    doc->color_profile.renderingIntent,0)) == 0) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pwgtoraster: Can't create color transform.");
+		   "cfFilterPWGToRaster: Can't create color transform.");
       return (1);
     }
   } else {
@@ -1082,7 +1082,7 @@ static int selectConvertFunc(cups_raster_t *raster,
       break;
     default:
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pwgtoraster: Specified ColorSpace is not supported");
+		   "cfFilterPWGToRaster: Specified ColorSpace is not supported");
       return (1);
       break;
     }
@@ -1103,7 +1103,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 		    conversion_function_t *convert,
 		    filter_logfunc_t log,
 		    void *ld,
-		    filter_iscanceledfunc_t iscanceled,
+		    cf_filter_iscanceledfunc_t iscanceled,
 		    void *icd)
 {
   int i, j;
@@ -1136,7 +1136,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
   {
     // Canceled
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster: Job canceled on input page %d", pageNo);
+	"cfFilterPWGToRaster: Job canceled on input page %d", pageNo);
     return (false);
   }
 
@@ -1144,7 +1144,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
   {
     // Done
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster: Job completed");
+	"cfFilterPWGToRaster: Job completed");
     return (false);
   }
 
@@ -1159,37 +1159,37 @@ static bool outPage(pwgtoraster_doc_t *doc,
     // filter function) these values are all zero. With at least one not
     // zero we consider the input not supported.
     log(ld, FILTER_LOGLEVEL_ERROR,
-	"pwgtoraster: Input page %d is not PWG or Apple Raster", pageNo);
+	"cfFilterPWGToRaster: Input page %d is not PWG or Apple Raster", pageNo);
     return (false);
   }
   
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster: Input page %d", pageNo);
+	"cfFilterPWGToRaster: Input page %d", pageNo);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   HWResolution = [ %d %d ]",
+	"cfFilterPWGToRaster:   HWResolution = [ %d %d ]",
 	doc->inheader.HWResolution[0], doc->inheader.HWResolution[1]);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   PageSize = [ %d %d ]",
+	"cfFilterPWGToRaster:   PageSize = [ %d %d ]",
 	doc->inheader.PageSize[0], doc->inheader.PageSize[1]);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsWidth = %d", doc->inheader.cupsWidth);
+	"cfFilterPWGToRaster:   cupsWidth = %d", doc->inheader.cupsWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsHeight = %d", doc->inheader.cupsHeight);
+	"cfFilterPWGToRaster:   cupsHeight = %d", doc->inheader.cupsHeight);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsBitsPerColor = %d", doc->inheader.cupsBitsPerColor);
+	"cfFilterPWGToRaster:   cupsBitsPerColor = %d", doc->inheader.cupsBitsPerColor);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsBitsPerPixel = %d", doc->inheader.cupsBitsPerPixel);
+	"cfFilterPWGToRaster:   cupsBitsPerPixel = %d", doc->inheader.cupsBitsPerPixel);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsBytesPerLine = %d", doc->inheader.cupsBytesPerLine);
+	"cfFilterPWGToRaster:   cupsBytesPerLine = %d", doc->inheader.cupsBytesPerLine);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsColorOrder = %d", doc->inheader.cupsColorOrder);
+	"cfFilterPWGToRaster:   cupsColorOrder = %d", doc->inheader.cupsColorOrder);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsColorSpace = %d", doc->inheader.cupsColorSpace);
+	"cfFilterPWGToRaster:   cupsColorSpace = %d", doc->inheader.cupsColorSpace);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsCompression = %d", doc->inheader.cupsCompression);
+	"cfFilterPWGToRaster:   cupsCompression = %d", doc->inheader.cupsCompression);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsPageSizeName = %s", doc->inheader.cupsPageSizeName);
+	"cfFilterPWGToRaster:   cupsPageSizeName = %s", doc->inheader.cupsPageSizeName);
   }
 
   if (!doc->page_size_requested)
@@ -1277,66 +1277,66 @@ static bool outPage(pwgtoraster_doc_t *doc,
 
   if (!cupsRasterWriteHeader2(outras, &(doc->outheader))) {
     if (log) log(ld,FILTER_LOGLEVEL_ERROR,
-		 "pwgtoraster: Can't write page %d header", pageNo);
+		 "cfFilterPWGToRaster: Can't write page %d header", pageNo);
     return (false);
   }
 
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster: Output page %d", pageNo);
+	"cfFilterPWGToRaster: Output page %d", pageNo);
     if (doc->outheader.ImagingBoundingBox[3] > 0)
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   Duplex = %d", doc->outheader.Duplex);
+	  "cfFilterPWGToRaster:   Duplex = %d", doc->outheader.Duplex);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   HWResolution = [ %d %d ]",
+	"cfFilterPWGToRaster:   HWResolution = [ %d %d ]",
 	doc->outheader.HWResolution[0], doc->outheader.HWResolution[1]);
     if (doc->outheader.ImagingBoundingBox[3] > 0)
     {
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   ImagingBoundingBox = [ %d %d %d %d ]",
+	  "cfFilterPWGToRaster:   ImagingBoundingBox = [ %d %d %d %d ]",
 	  doc->outheader.ImagingBoundingBox[0],
 	  doc->outheader.ImagingBoundingBox[1],
 	  doc->outheader.ImagingBoundingBox[2],
 	  doc->outheader.ImagingBoundingBox[3]);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   Margins = [ %d %d ]",
+	  "cfFilterPWGToRaster:   Margins = [ %d %d ]",
 	  doc->outheader.Margins[0], doc->outheader.Margins[1]);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   ManualFeed = %d", doc->outheader.ManualFeed);
+	  "cfFilterPWGToRaster:   ManualFeed = %d", doc->outheader.ManualFeed);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   MediaPosition = %d", doc->outheader.MediaPosition);
+	  "cfFilterPWGToRaster:   MediaPosition = %d", doc->outheader.MediaPosition);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   NumCopies = %d", doc->outheader.NumCopies);
+	  "cfFilterPWGToRaster:   NumCopies = %d", doc->outheader.NumCopies);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   Orientation = %d", doc->outheader.Orientation);
+	  "cfFilterPWGToRaster:   Orientation = %d", doc->outheader.Orientation);
     }
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   PageSize = [ %d %d ]",
+	"cfFilterPWGToRaster:   PageSize = [ %d %d ]",
 	doc->outheader.PageSize[0], doc->outheader.PageSize[1]);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsWidth = %d", doc->outheader.cupsWidth);
+	"cfFilterPWGToRaster:   cupsWidth = %d", doc->outheader.cupsWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsHeight = %d", doc->outheader.cupsHeight);
+	"cfFilterPWGToRaster:   cupsHeight = %d", doc->outheader.cupsHeight);
     if (doc->outheader.ImagingBoundingBox[3] > 0)
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   cupsMediaType = %d", doc->outheader.cupsMediaType);
+	  "cfFilterPWGToRaster:   cupsMediaType = %d", doc->outheader.cupsMediaType);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsBitsPerColor = %d",
+	"cfFilterPWGToRaster:   cupsBitsPerColor = %d",
 	doc->outheader.cupsBitsPerColor);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsBitsPerPixel = %d",
+	"cfFilterPWGToRaster:   cupsBitsPerPixel = %d",
 	doc->outheader.cupsBitsPerPixel);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsBytesPerLine = %d",
+	"cfFilterPWGToRaster:   cupsBytesPerLine = %d",
 	doc->outheader.cupsBytesPerLine);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsColorOrder = %d", doc->outheader.cupsColorOrder);
+	"cfFilterPWGToRaster:   cupsColorOrder = %d", doc->outheader.cupsColorOrder);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsColorSpace = %d", doc->outheader.cupsColorSpace);
+	"cfFilterPWGToRaster:   cupsColorSpace = %d", doc->outheader.cupsColorSpace);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsCompression = %d", doc->outheader.cupsCompression);
+	"cfFilterPWGToRaster:   cupsCompression = %d", doc->outheader.cupsCompression);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsPageSizeName = %s", doc->outheader.cupsPageSizeName);
+	"cfFilterPWGToRaster:   cupsPageSizeName = %s", doc->outheader.cupsPageSizeName);
   }
   
   // write page image
@@ -1377,7 +1377,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
     if (doc->outheader.HWResolution[i] == doc->inheader.HWResolution[i])
     {
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster: %s resolution: %d dpi",
+	  "cfFilterPWGToRaster: %s resolution: %d dpi",
 	  i == 0 ? "Horizontal" : "Vertical", doc->inheader.HWResolution[i]);
       continue;
     }
@@ -1387,7 +1387,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
       if (doc->outheader.HWResolution[i] % doc->inheader.HWResolution[i])
       {
 	log(ld, FILTER_LOGLEVEL_ERROR,
-	    "pwgtoraster: %s output resolution %d dpi is not an integer multiple of %s input resolution %d dpi",
+	    "cfFilterPWGToRaster: %s output resolution %d dpi is not an integer multiple of %s input resolution %d dpi",
 	    i == 0 ? "Horizontal" : "Vertical", doc->outheader.HWResolution[i],
 	    i == 0 ? "horizontal" : "vertical", doc->inheader.HWResolution[i]);
 	return (false);
@@ -1397,7 +1397,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	res_up_factor[i] =
 	  doc->outheader.HWResolution[i] / doc->inheader.HWResolution[i];
 	log(ld, FILTER_LOGLEVEL_DEBUG,
-	    "pwgtoraster: %s input resolution: %d dpi; %s output resolution: %d dpi -> Raising by factor %d",
+	    "cfFilterPWGToRaster: %s input resolution: %d dpi; %s output resolution: %d dpi -> Raising by factor %d",
 	    i == 0 ? "Horizontal" : "Vertical", doc->inheader.HWResolution[i],
 	    i == 0 ? "Horizontal" : "Vertical", doc->outheader.HWResolution[i],
 	    res_up_factor[i]);
@@ -1408,7 +1408,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
       if (doc->inheader.HWResolution[i] % doc->outheader.HWResolution[i])
       {
 	log(ld, FILTER_LOGLEVEL_ERROR,
-	    "pwgtoraster: %s input resolution %d dpi is not an integer multiple of %s output resolution %d dpi",
+	    "cfFilterPWGToRaster: %s input resolution %d dpi is not an integer multiple of %s output resolution %d dpi",
 	    i == 0 ? "Horizontal" : "Vertical", doc->inheader.HWResolution[i],
 	    i == 0 ? "horizontal" : "vertical", doc->outheader.HWResolution[i]);
 	return (false);
@@ -1418,7 +1418,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	res_down_factor[i] =
 	  doc->inheader.HWResolution[i] / doc->outheader.HWResolution[i];
 	log(ld, FILTER_LOGLEVEL_DEBUG,
-	    "pwgtoraster: %s input resolution: %d dpi; %s output resolution: %d dpi -> Reducing by factor %d",
+	    "cfFilterPWGToRaster: %s input resolution: %d dpi; %s output resolution: %d dpi -> Reducing by factor %d",
 	    i == 0 ? "Horizontal" : "Vertical", doc->inheader.HWResolution[i],
 	    i == 0 ? "Horizontal" : "Vertical", doc->outheader.HWResolution[i],
 	    res_down_factor[i]);
@@ -1450,7 +1450,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pwgtoraster: Unsupported input color space: Number of colors: %d; Bits per color: %d.",
+		 "cfFilterPWGToRaster: Unsupported input color space: Number of colors: %d; Bits per color: %d.",
 		 doc->inheader.cupsNumColors, doc->inheader.cupsBitsPerColor);
     return false;
   }
@@ -1480,7 +1480,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
   if (input_color_mode != color_mode_needed)
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pwgtoraster: Need to pre-convert input from %s to %s",
+		 "cfFilterPWGToRaster: Need to pre-convert input from %s to %s",
 		 (input_color_mode == 0 ? "1-bit mono" :
 		  (input_color_mode == 1 ? "8-bit gray" :
 		   "8-bit RGB")),
@@ -1491,7 +1491,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
   else
   {
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pwgtoraster: Input color mode: %s",
+		 "cfFilterPWGToRaster: Input color mode: %s",
 		 (input_color_mode == 0 ? "1-bit mono" :
 		  (input_color_mode == 1 ? "8-bit gray" :
 		   "8-bit RGB")));
@@ -1567,7 +1567,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	doc->outheader.PageSize[1] >= 2 * doc->inheader.PageSize[1])
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pwgtoraster: Difference between input and output page dimensions too large, probably the input has a wrong page size");
+		   "cfFilterPWGToRaster: Difference between input and output page dimensions too large, probably the input has a wrong page size");
       goto out;
     }
 
@@ -1590,13 +1590,13 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	 abs(doc->outheader.PageSize[1] - doc->inheader.PageSize[1]) > 2)
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pwgtoraster: Output page dimensions are larger for borderless printing with overspray, inserting one extra pixel after each %d pixels",
+		   "cfFilterPWGToRaster: Output page dimensions are larger for borderless printing with overspray, inserting one extra pixel after each %d pixels",
 		   overspray_duplicate_after_pixels);
     }
     else
     {
       if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		   "pwgtoraster: Output page dimensions are larger than input page dimensions due to rounding error, inserting one extra pixel after each %d pixels",
+		   "cfFilterPWGToRaster: Output page dimensions are larger than input page dimensions due to rounding error, inserting one extra pixel after each %d pixels",
 		   overspray_duplicate_after_pixels);
     }
   }
@@ -1613,7 +1613,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	      doc->inheader.cupsBytesPerLine)
 	  {
 	    if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-			 "pwgtoraster: Unable to read line %d for page %d.",
+			 "cfFilterPWGToRaster: Unable to read line %d for page %d.",
 			 yin + 1, pageNo);
 	    ret = false;
 	    goto out;
@@ -1650,7 +1650,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 		    doc->inheader.cupsBytesPerLine)
 		{
 		  if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-			       "pwgtoraster: Unable to read line %d for page %d.",
+			       "cfFilterPWGToRaster: Unable to read line %d for page %d.",
 			       yin + 1, pageNo);
 		  ret = false;
 		  goto out;
@@ -1986,7 +1986,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	doc->inheader.cupsBytesPerLine)
     {
       if (log) log(ld,FILTER_LOGLEVEL_DEBUG,
-		   "pwgtoraster: Unable to read line %d for page %d.",
+		   "cfFilterPWGToRaster: Unable to read line %d for page %d.",
 		   yin + 1, pageNo);
       ret = false;
       goto out;
@@ -2085,20 +2085,20 @@ static int setColorProfile(pwgtoraster_doc_t *doc, filter_logfunc_t log, void *l
     break;
   default:
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pwgtoraster: Specified ColorSpace is not supported");
+		 "cfFilterPWGToRaster: Specified ColorSpace is not supported");
     return (1);
   }
 
   return (0);
 }
 
-int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
+int cfFilterPWGToRaster(int inputfd,        /* I - File descriptor input stream */
                 int outputfd,       /* I - File descriptor output stream */
                 int inputseekable,  /* I - Is input stream seekable? (unused) */
-                filter_data_t *data,/* I - Job and printer data */
+                cf_filter_data_t *data,/* I - Job and printer data */
                 void *parameters)   /* I - Filter-specific parameters */
 {
-  filter_out_format_t outformat;
+  cf_filter_out_format_t outformat;
   pwgtoraster_doc_t doc;
   int i;
   cups_raster_t *inras = NULL,
@@ -2106,7 +2106,7 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   filter_logfunc_t     log = data->logfunc;
   void                 *ld = data->logdata;
   conversion_function_t convert;
-  filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                    *icd = data->iscanceleddata;
   int ret = 0;
 
@@ -2114,20 +2114,20 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   (void)inputseekable;
 
   if (parameters) {
-    outformat = *(filter_out_format_t *)parameters;
-    if (outformat != OUTPUT_FORMAT_CUPS_RASTER &&
-	outformat != OUTPUT_FORMAT_PWG_RASTER &&
-	outformat != OUTPUT_FORMAT_APPLE_RASTER &&
-	outformat != OUTPUT_FORMAT_PCLM)
-      outformat = OUTPUT_FORMAT_CUPS_RASTER;
+    outformat = *(cf_filter_out_format_t *)parameters;
+    if (outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_PCLM)
+      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
   } else
-    outformat = OUTPUT_FORMAT_CUPS_RASTER;
+    outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
 
   if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-	       "pwgtoraster: Output format: %s",
-	       (outformat == OUTPUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
-		(outformat == OUTPUT_FORMAT_PWG_RASTER ? "PWG Raster" :
-		 (outformat == OUTPUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
+	       "cfFilterPWGToRaster: Output format: %s",
+	       (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+		 (outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
 		  "PCLM"))));
 
   cmsSetLogErrorHandler(lcmsErrorHandler);
@@ -2141,7 +2141,7 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pwgtoraster: Unable to open input data stream.");
+		   "cfFilterPWGToRaster: Unable to open input data stream.");
     }
 
     return (1);
@@ -2169,7 +2169,7 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
      && doc.outheader.cupsBitsPerColor != 8
      && doc.outheader.cupsBitsPerColor != 16) {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pwgtoraster: Specified color format is not supported.");
+		   "cfFilterPWGToRaster: Specified color format is not supported.");
     ret = 1;
     goto out;
   }
@@ -2211,7 +2211,7 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
        || (doc.outheader.cupsBitsPerColor != 8
           && doc.outheader.cupsBitsPerColor != 16)) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pwgtoraster: Specified color format is not supported.");
+		   "cfFilterPWGToRaster: Specified color format is not supported.");
       ret = 1;
       goto out;
     }
@@ -2241,14 +2241,14 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
     break;
   default:
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pwgtoraster: Specified ColorSpace is not supported.");
+		   "cfFilterPWGToRaster: Specified ColorSpace is not supported.");
     ret = 1;
     goto out;
   }
   if (!(doc.color_profile.cm_disabled)) {
     if (setColorProfile(&doc, log, ld) == 1) {
       if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		   "pwgtoraster: Cannot set color profile.");
+		   "cfFilterPWGToRaster: Cannot set color profile.");
       ret = 1;
       goto out;
     }
@@ -2259,18 +2259,18 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   */
 
   if ((outras = cupsRasterOpen(outputfd, (outformat ==
-					  OUTPUT_FORMAT_CUPS_RASTER ?
+					  CF_FILTER_OUT_FORMAT_CUPS_RASTER ?
 					  CUPS_RASTER_WRITE :
 					  (outformat ==
-					   OUTPUT_FORMAT_PWG_RASTER ?
+					   CF_FILTER_OUT_FORMAT_PWG_RASTER ?
 					   CUPS_RASTER_WRITE_PWG :
 					   (outformat ==
-					    OUTPUT_FORMAT_APPLE_RASTER ?
+					    CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
 					    CUPS_RASTER_WRITE_APPLE :
 					    CUPS_RASTER_WRITE))))) == 0)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pwgtoraster: Can't open output raster stream.");
+		 "cfFilterPWGToRaster: Can't open output raster stream.");
     ret = 1;
     goto out;
   }
@@ -2283,67 +2283,67 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
   if (selectConvertFunc(outras, &doc, &convert, log, ld) == 1)
   {
     if (log) log(ld, FILTER_LOGLEVEL_ERROR,
-		 "pwgtoraster: Unable to select color conversion function.");
+		 "cfFilterPWGToRaster: Unable to select color conversion function.");
     ret = 1;
     goto out;
   }
 
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster: Output page header");
+	"cfFilterPWGToRaster: Output page header");
     if (doc.outheader.ImagingBoundingBox[3] > 0)
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   Duplex = %d", doc.outheader.Duplex);
+	  "cfFilterPWGToRaster:   Duplex = %d", doc.outheader.Duplex);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   HWResolution = [ %d %d ]",
+	"cfFilterPWGToRaster:   HWResolution = [ %d %d ]",
 	doc.outheader.HWResolution[0], doc.outheader.HWResolution[1]);
     if (doc.outheader.ImagingBoundingBox[3] > 0)
     {
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   ImagingBoundingBox = [ %d %d %d %d ]",
+	  "cfFilterPWGToRaster:   ImagingBoundingBox = [ %d %d %d %d ]",
 	  doc.outheader.ImagingBoundingBox[0],
 	  doc.outheader.ImagingBoundingBox[1],
 	  doc.outheader.ImagingBoundingBox[2],
 	  doc.outheader.ImagingBoundingBox[3]);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   Margins = [ %d %d ]",
+	  "cfFilterPWGToRaster:   Margins = [ %d %d ]",
 	  doc.outheader.Margins[0], doc.outheader.Margins[1]);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   ManualFeed = %d", doc.outheader.ManualFeed);
+	  "cfFilterPWGToRaster:   ManualFeed = %d", doc.outheader.ManualFeed);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   MediaPosition = %d", doc.outheader.MediaPosition);
+	  "cfFilterPWGToRaster:   MediaPosition = %d", doc.outheader.MediaPosition);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   NumCopies = %d", doc.outheader.NumCopies);
+	  "cfFilterPWGToRaster:   NumCopies = %d", doc.outheader.NumCopies);
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   Orientation = %d", doc.outheader.Orientation);
+	  "cfFilterPWGToRaster:   Orientation = %d", doc.outheader.Orientation);
     }
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   PageSize = [ %d %d ]",
+	"cfFilterPWGToRaster:   PageSize = [ %d %d ]",
 	doc.outheader.PageSize[0], doc.outheader.PageSize[1]);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsWidth = %d", doc.outheader.cupsWidth);
+	"cfFilterPWGToRaster:   cupsWidth = %d", doc.outheader.cupsWidth);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsHeight = %d", doc.outheader.cupsHeight);
+	"cfFilterPWGToRaster:   cupsHeight = %d", doc.outheader.cupsHeight);
     if (doc.outheader.ImagingBoundingBox[3] > 0)
       log(ld, FILTER_LOGLEVEL_DEBUG,
-	  "pwgtoraster:   cupsMediaType = %d", doc.outheader.cupsMediaType);
+	  "cfFilterPWGToRaster:   cupsMediaType = %d", doc.outheader.cupsMediaType);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsBitsPerColor = %d",
+	"cfFilterPWGToRaster:   cupsBitsPerColor = %d",
 	doc.outheader.cupsBitsPerColor);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsBitsPerPixel = %d",
+	"cfFilterPWGToRaster:   cupsBitsPerPixel = %d",
 	doc.outheader.cupsBitsPerPixel);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsBytesPerLine = %d",
+	"cfFilterPWGToRaster:   cupsBytesPerLine = %d",
 	doc.outheader.cupsBytesPerLine);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsColorOrder = %d", doc.outheader.cupsColorOrder);
+	"cfFilterPWGToRaster:   cupsColorOrder = %d", doc.outheader.cupsColorOrder);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsColorSpace = %d", doc.outheader.cupsColorSpace);
+	"cfFilterPWGToRaster:   cupsColorSpace = %d", doc.outheader.cupsColorSpace);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsCompression = %d", doc.outheader.cupsCompression);
+	"cfFilterPWGToRaster:   cupsCompression = %d", doc.outheader.cupsCompression);
     log(ld, FILTER_LOGLEVEL_DEBUG,
-	"pwgtoraster:   cupsPageSizeName = %s", doc.outheader.cupsPageSizeName);
+	"cfFilterPWGToRaster:   cupsPageSizeName = %s", doc.outheader.cupsPageSizeName);
   }
 
  /*
@@ -2356,7 +2356,7 @@ int pwgtoraster(int inputfd,        /* I - File descriptor input stream */
     i ++;
   if (i == 0)
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "pwgtoraster: No page printed, outputting empty file.");
+		 "cfFilterPWGToRaster: No page printed, outputting empty file.");
 
  out:
 

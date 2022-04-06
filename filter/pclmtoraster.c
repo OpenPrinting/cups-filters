@@ -34,19 +34,19 @@ int main(int argc, char **argv)
   int ret;
 
  /*
-  * Fire up the pclmtoraster() filter function
+  * Fire up the cfFilterPCLmToRaster() filter function
   */
 
-  filter_out_format_t outformat = OUTPUT_FORMAT_PWG_RASTER;
+  cf_filter_out_format_t outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
   char *t = getenv("FINAL_CONTENT_TYPE");
   if (t) {
     if (strcasestr(t, "urf"))
-      outformat = OUTPUT_FORMAT_APPLE_RASTER;
+      outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
     else if (strcasestr(t, "cups-raster"))
-      outformat = OUTPUT_FORMAT_CUPS_RASTER;
+      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
   }
 
-  ret = filterCUPSWrapper(argc, argv, pclmtoraster, &outformat, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterPCLmToRaster, &outformat, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: pclmtoraster filter function failed.\n");

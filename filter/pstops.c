@@ -1,5 +1,5 @@
 /*
- * PostScript filter for CUPS (based on pstops() filter function).
+ * PostScript filter for CUPS (based on cfFilterPSToPS() filter function).
  *
  * Copyright © 2020 by Till Kamppeter
  * Copyright © 2007-2018 by Apple Inc.
@@ -61,10 +61,10 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the pstops() filter function
+  * Fire up the cfFilterPSToPS() filter function
   */
 
-  ret = filterCUPSWrapper(argc, argv, pstops, NULL, &JobCanceled);
+  ret = cfFilterCUPSWrapper(argc, argv, cfFilterPSToPS, NULL, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: pstops filter function failed.\n");

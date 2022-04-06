@@ -88,7 +88,7 @@ void            *ld;                    /* Log function data */
  * Prototypes...
  */
 
-void	StartPage(filter_data_t *data, ppd_file_t *ppd, cups_page_header2_t *header, int job_id,
+void	StartPage(cf_filter_data_t *data, ppd_file_t *ppd, cups_page_header2_t *header, int job_id,
 	          const char *user, const char *title, int num_options,
 		  cups_option_t *options);
 void	EndPage(ppd_file_t *ppd, cups_page_header2_t *header);
@@ -107,7 +107,7 @@ int	ReadLine(cups_raster_t *ras, cups_page_header2_t *header);
  */
 
 void
-StartPage(filter_data_t      *data,	/* I - filter data */
+StartPage(cf_filter_data_t      *data,	/* I - filter data */
 	  ppd_file_t         *ppd,	/* I - PPD file */
           cups_page_header2_t *header,	/* I - Page header */
 	  int                job_id,	/* I - Job ID */
@@ -1817,7 +1817,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Log function for the library functions, standard CUPS logging to stderr...
   */
 
-  logfunc = cups_logfunc;
+  logfunc = cfCUPSLogFunc;
   ld = NULL;
 
  /*
@@ -1829,11 +1829,11 @@ main(int  argc,				/* I - Number of command-line arguments */
  /*
   * Check command-line...
   */
-  filter_data_t temp;
-  filter_data_t *data = &temp;
+  cf_filter_data_t temp;
+  cf_filter_data_t *data = &temp;
   data->printer = getenv("PRINTER");
   data->logdata = NULL;
-  data->logfunc = cups_logfunc;
+  data->logfunc = cfCUPSLogFunc;
   if (argc < 6 || argc > 7)
   {
     fprintf(stderr, "Usage: %s job-id user title copies options [file]\n",

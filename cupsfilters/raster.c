@@ -74,7 +74,7 @@ _strlcpy(char       *dst,		/* O - Destination string */
 int 
 ippRasterMatchIPPSize(
     cups_page_header2_t *header,	/* I - Page header to match */
-    filter_data_t  	*data,   	/* I - printer-data file */
+    cf_filter_data_t  	*data,   	/* I - printer-data file */
     double		margins[4],	/* O - Margins of media in points */
     double		dimensions[2],	/* O - Width and Length of media in points */
     int 		*image_fit,	/* O - Imageable Area Fit */
@@ -424,7 +424,7 @@ getBackSideAndHeaderDuplex(ipp_t *printer_attrs,	/* I - printer attributes using
 }
 
 int 
-getPrintRenderIntent(filter_data_t *data,
+getPrintRenderIntent(cf_filter_data_t *data,
 			cups_page_header2_t *header)
 {
   const char		*val;
@@ -532,12 +532,12 @@ getPrintRenderIntent(filter_data_t *data,
 int                                             /* O  - 0 on success,
 						        -1 on error */
 cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
-			filter_data_t *data,    /* I  - Job and printer data */
-			filter_out_format_t final_outformat,
+			cf_filter_data_t *data,    /* I  - Job and printer data */
+			cf_filter_out_format_t final_outformat,
                                                 /* I  - Job output format 
 						        (determines color space,
 						         and resolution) */
-			filter_out_format_t header_outformat,
+			cf_filter_out_format_t header_outformat,
                                                 /* I  - This filter's output
 						        format (determines
 							header format) */
@@ -574,17 +574,17 @@ cupsRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   double margins[4];
   double dimensions[2];
 
-  if (final_outformat == OUTPUT_FORMAT_PWG_RASTER)
+  if (final_outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER)
     pwgraster = 1;
-  else if (final_outformat == OUTPUT_FORMAT_APPLE_RASTER)
+  else if (final_outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
     appleraster = 1;
-  else if (final_outformat == OUTPUT_FORMAT_PCLM)
+  else if (final_outformat == CF_FILTER_OUT_FORMAT_PCLM)
     pclm = 1;
   else
     cupsraster = 1;
 
-  if (header_outformat == OUTPUT_FORMAT_PWG_RASTER ||
-      header_outformat == OUTPUT_FORMAT_APPLE_RASTER)
+  if (header_outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
+      header_outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
     cupsrasterheader = 0;
 
   printer_attrs = data->printer_attrs;
@@ -1199,7 +1199,7 @@ cupsRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 
 int                                          /* O - -1 on error, 0 on success */
 cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
-			  filter_data_t *data,
+			  cf_filter_data_t *data,
 			  int pwg_raster,         /* I - 1 if PWG Raster */
 			  int set_defaults)       /* I - If 1, set default
 						     values for all fields for
@@ -2328,7 +2328,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 
 
 /*  Function for storing job-attrs in options */
-int joinJobOptionsAndAttrs(filter_data_t* data, int num_options, cups_option_t **options)
+int joinJobOptionsAndAttrs(cf_filter_data_t* data, int num_options, cups_option_t **options)
 {
   ipp_t *job_attrs = data->job_attrs;   /*  Job attributes  */
   ipp_attribute_t *ipp_attr;            /*  IPP attribute   */
