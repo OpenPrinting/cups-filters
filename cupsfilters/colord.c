@@ -44,7 +44,7 @@ MIT Open Source License  -  http://www.opensource.org/
 #define QUAL_SIZE         3
 
 char **
-colord_get_qualifier_for_ppd (ppd_file_t *ppd)
+cfColordGetQualifierForPPD (ppd_file_t *ppd)
 {
   char q_keyword[PPD_MAX_NAME];
   char **tuple = NULL;
@@ -325,7 +325,7 @@ out:
 }
 
 char *
-colord_get_profile_for_device_id (filter_data_t *data,
+cfColordGetProfileForDeviceID (filter_data_t *data,
 				  const char *device_id,
 				  const char **qualifier_tuple)
 {
@@ -443,7 +443,7 @@ out:
 }
 
 int
-colord_get_inhibit_for_device_id (filter_data_t *data,
+cfColordGetInhibitForDeviceID (filter_data_t *data,
 			const char *device_id)
 {
   filter_logfunc_t log = data->logfunc;
@@ -481,7 +481,7 @@ out:
 #else
 
 char *
-colord_get_profile_for_device_id (filter_data_t *data,
+cfColordGetProfileForDeviceID (filter_data_t *data,
 				  const char *device_id,
                                   const char **qualifier_tuple)
 {
@@ -493,7 +493,7 @@ colord_get_profile_for_device_id (filter_data_t *data,
 }
 
 int
-colord_get_inhibit_for_device_id (filter_data_t *data,
+cfColordGetInhibitForDeviceID (filter_data_t *data,
 			const char *device_id)
 {
   filter_logfunc_t log = data->logfunc;

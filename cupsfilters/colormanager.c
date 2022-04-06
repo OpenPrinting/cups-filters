@@ -227,7 +227,7 @@ _get_colord_printer_cm_status( filter_data_t *data)
 
     /* Check if device is inhibited/disabled in colord  */
     printer_id = _get_colord_printer_id(data);
-    is_printer_cm_disabled = colord_get_inhibit_for_device_id (data, printer_id);
+    is_printer_cm_disabled = cfColordGetInhibitForDeviceID (data, printer_id);
 
     if (printer_id != NULL)
       free(printer_id);
@@ -258,12 +258,12 @@ _get_colord_profile(filter_data_t *data,
 
 
     /* Get color qualifier triple */
-    qualifier = colord_get_qualifier_for_ppd(ppd);
+    qualifier = cfColordGetQualifierForPPD(ppd);
 
     if (qualifier != NULL) {
       printer_id = _get_colord_printer_id(data);
       /* Get profile from colord using qualifiers */
-      icc_profile = colord_get_profile_for_device_id (data,
+      icc_profile = cfColordGetProfileForDeviceID (data,
 						      (const char *)printer_id,
 						      (const char **)qualifier);
     }
