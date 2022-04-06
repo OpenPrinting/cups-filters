@@ -11,7 +11,7 @@
  *
  * Contents:
  *
- *   _cupsImageReadTIFF() - Read a TIFF image file.
+ *   _cfImageReadTIFF() - Read a TIFF image file.
  */
 
 /*
@@ -27,18 +27,18 @@
 
 
 /*
- * '_cupsImageReadTIFF()' - Read a TIFF image file.
+ * '_cfImageReadTIFF()' - Read a TIFF image file.
  */
 
 int					/* O - Read status */
-_cupsImageReadTIFF(
-    cups_image_t    *img,		/* IO - cupsImage */
-    FILE            *fp,		/* I - cupsImage file */
-    cups_icspace_t  primary,		/* I - Primary choice for colorspace */
-    cups_icspace_t  secondary,		/* I - Secondary choice for colorspace */
+_cfImageReadTIFF(
+    cf_image_t    *img,		/* IO - Image */
+    FILE            *fp,		/* I - Image file */
+    cf_icspace_t  primary,		/* I - Primary choice for colorspace */
+    cf_icspace_t  secondary,		/* I - Secondary choice for colorspace */
     int             saturation,		/* I - Color saturation (%) */
     int             hue,		/* I - Color hue (degrees) */
-    const cups_ib_t *lut)		/* I - Lookup table for gamma/brightness */
+    const cf_ib_t *lut)		/* I - Lookup table for gamma/brightness */
 {
   TIFF		*tif;			/* TIFF file */
   uint32	width, height;		/* Size of image */
@@ -66,8 +66,8 @@ _cupsImageReadTIFF(
 		pstep,			/* Pixel step (= bpp or -2 * bpp) */
 		scanwidth,		/* Width of scanline */
 		r, g, b, k,		/* Red, green, blue, and black values */
-		alpha;			/* cupsImage includes alpha? */
-  cups_ib_t		*in,			/* Input buffer */
+		alpha;			/* Image includes alpha? */
+  cf_ib_t		*in,			/* Input buffer */
 		*out,			/* Output buffer */
 		*p,			/* Pointer into buffer */
 		*scanline,		/* Scanline buffer */
@@ -185,8 +185,8 @@ _cupsImageReadTIFF(
   * Check the size of the image...
   */
 
-  if (width == 0 || width > CUPS_IMAGE_MAX_WIDTH ||
-      height == 0 || height > CUPS_IMAGE_MAX_HEIGHT ||
+  if (width == 0 || width > CF_IMAGE_MAX_WIDTH ||
+      height == 0 || height > CF_IMAGE_MAX_HEIGHT ||
       (bits != 1 && bits != 2 && bits != 4 && bits != 8) ||
       samples < 1 || samples > 4)
   {
@@ -207,18 +207,18 @@ _cupsImageReadTIFF(
   if (photometric == PHOTOMETRIC_MINISBLACK ||
       photometric == PHOTOMETRIC_MINISWHITE)
     img->colorspace = secondary;
-  else if (photometric == PHOTOMETRIC_SEPARATED && primary == CUPS_IMAGE_RGB_CMYK)
-    img->colorspace = CUPS_IMAGE_CMYK;
-  else if (primary == CUPS_IMAGE_RGB_CMYK)
-    img->colorspace = CUPS_IMAGE_RGB;
+  else if (photometric == PHOTOMETRIC_SEPARATED && primary == CF_IMAGE_RGB_CMYK)
+    img->colorspace = CF_IMAGE_CMYK;
+  else if (primary == CF_IMAGE_RGB_CMYK)
+    img->colorspace = CF_IMAGE_RGB;
   else
     img->colorspace = primary;
 
   DEBUG_printf(("DEBUG: img->colorspace = %d\n", img->colorspace));
 
-  bpp = cupsImageGetDepth(img);
+  bpp = cfImageGetDepth(img);
 
-  cupsImageSetMaxTiles(img, 0);
+  cfImageSetMaxTiles(img, 0);
 
  /*
   * Set the X & Y start and direction according to the image orientation...
@@ -458,12 +458,12 @@ _cupsImageReadTIFF(
             else
               TIFFReadScanline(tif, in, row, 0);
 
-            if (img->colorspace == CUPS_IMAGE_WHITE)
+            if (img->colorspace == CF_IMAGE_WHITE)
 	    {
 	      if (lut)
-	        cupsImageLut(in, img->xsize, lut);
+	        cfImageLut(in, img->xsize, lut);
 
-              _cupsImagePutRow(img, 0, y, img->xsize, in);
+              _cfImagePutRow(img, 0, y, img->xsize, in);
 	    }
             else
             {
@@ -472,24 +472,24 @@ _cupsImageReadTIFF(
 		default :
 		    break;
 
-		case CUPS_IMAGE_RGB :
-		    cupsImageWhiteToRGB(in, out, img->xsize);
+		case CF_IMAGE_RGB :
+		    cfImageWhiteToRGB(in, out, img->xsize);
 		    break;
-		case CUPS_IMAGE_BLACK :
-		    cupsImageWhiteToBlack(in, out, img->xsize);
+		case CF_IMAGE_BLACK :
+		    cfImageWhiteToBlack(in, out, img->xsize);
 		    break;
-		case CUPS_IMAGE_CMY :
-		    cupsImageWhiteToCMY(in, out, img->xsize);
+		case CF_IMAGE_CMY :
+		    cfImageWhiteToCMY(in, out, img->xsize);
 		    break;
-		case CUPS_IMAGE_CMYK :
-		    cupsImageWhiteToCMYK(in, out, img->xsize);
+		case CF_IMAGE_CMYK :
+		    cfImageWhiteToCMYK(in, out, img->xsize);
 		    break;
 	      }
 
 	      if (lut)
-	        cupsImageLut(out, img->xsize * bpp, lut);
+	        cfImageLut(out, img->xsize * bpp, lut);
 
-              _cupsImagePutRow(img, 0, y, img->xsize, out);
+              _cfImagePutRow(img, 0, y, img->xsize, out);
 	    }
           }
         }
@@ -610,12 +610,12 @@ _cupsImageReadTIFF(
             else
               TIFFReadScanline(tif, in, row, 0);
 
-            if (img->colorspace == CUPS_IMAGE_WHITE)
+            if (img->colorspace == CF_IMAGE_WHITE)
 	    {
 	      if (lut)
-	        cupsImageLut(in, img->ysize, lut);
+	        cfImageLut(in, img->ysize, lut);
 
-              _cupsImagePutCol(img, x, 0, img->ysize, in);
+              _cfImagePutCol(img, x, 0, img->ysize, in);
 	    }
             else
             {
@@ -624,24 +624,24 @@ _cupsImageReadTIFF(
 		default :
 		    break;
 
-		case CUPS_IMAGE_RGB :
-		    cupsImageWhiteToRGB(in, out, img->ysize);
+		case CF_IMAGE_RGB :
+		    cfImageWhiteToRGB(in, out, img->ysize);
 		    break;
-		case CUPS_IMAGE_BLACK :
-		    cupsImageWhiteToBlack(in, out, img->ysize);
+		case CF_IMAGE_BLACK :
+		    cfImageWhiteToBlack(in, out, img->ysize);
 		    break;
-		case CUPS_IMAGE_CMY :
-		    cupsImageWhiteToCMY(in, out, img->ysize);
+		case CF_IMAGE_CMY :
+		    cfImageWhiteToCMY(in, out, img->ysize);
 		    break;
-		case CUPS_IMAGE_CMYK :
-		    cupsImageWhiteToCMYK(in, out, img->ysize);
+		case CF_IMAGE_CMYK :
+		    cfImageWhiteToCMYK(in, out, img->ysize);
 		    break;
 	      }
 
 	      if (lut)
-	        cupsImageLut(out, img->ysize * bpp, lut);
+	        cfImageLut(out, img->ysize * bpp, lut);
 
-              _cupsImagePutCol(img, x, 0, img->ysize, out);
+              _cfImagePutCol(img, x, 0, img->ysize, out);
 	    }
           }
         }
@@ -779,27 +779,27 @@ _cupsImageReadTIFF(
 	      default :
 		  break;
 
-	      case CUPS_IMAGE_WHITE :
-		  cupsImageRGBToWhite(in, out, img->xsize);
+	      case CF_IMAGE_WHITE :
+		  cfImageRGBToWhite(in, out, img->xsize);
 		  break;
-	      case CUPS_IMAGE_RGB :
-		  cupsImageRGBToRGB(in, out, img->xsize);
+	      case CF_IMAGE_RGB :
+		  cfImageRGBToRGB(in, out, img->xsize);
 		  break;
-	      case CUPS_IMAGE_BLACK :
-		  cupsImageRGBToBlack(in, out, img->xsize);
+	      case CF_IMAGE_BLACK :
+		  cfImageRGBToBlack(in, out, img->xsize);
 		  break;
-	      case CUPS_IMAGE_CMY :
-		  cupsImageRGBToCMY(in, out, img->xsize);
+	      case CF_IMAGE_CMY :
+		  cfImageRGBToCMY(in, out, img->xsize);
 		  break;
-	      case CUPS_IMAGE_CMYK :
-		  cupsImageRGBToCMYK(in, out, img->xsize);
+	      case CF_IMAGE_CMYK :
+		  cfImageRGBToCMYK(in, out, img->xsize);
 		  break;
 	    }
 
 	    if (lut)
-	      cupsImageLut(out, img->xsize * bpp, lut);
+	      cfImageLut(out, img->xsize * bpp, lut);
 
-            _cupsImagePutRow(img, 0, y, img->xsize, out);
+            _cfImagePutRow(img, 0, y, img->xsize, out);
           }
         }
         else
@@ -912,27 +912,27 @@ _cupsImageReadTIFF(
 	      default :
 		  break;
 
-	      case CUPS_IMAGE_WHITE :
-		  cupsImageRGBToWhite(in, out, img->ysize);
+	      case CF_IMAGE_WHITE :
+		  cfImageRGBToWhite(in, out, img->ysize);
 		  break;
-	      case CUPS_IMAGE_RGB :
-		  cupsImageRGBToRGB(in, out, img->ysize);
+	      case CF_IMAGE_RGB :
+		  cfImageRGBToRGB(in, out, img->ysize);
 		  break;
-	      case CUPS_IMAGE_BLACK :
-		  cupsImageRGBToBlack(in, out, img->ysize);
+	      case CF_IMAGE_BLACK :
+		  cfImageRGBToBlack(in, out, img->ysize);
 		  break;
-	      case CUPS_IMAGE_CMY :
-		  cupsImageRGBToCMY(in, out, img->ysize);
+	      case CF_IMAGE_CMY :
+		  cfImageRGBToCMY(in, out, img->ysize);
 		  break;
-	      case CUPS_IMAGE_CMYK :
-		  cupsImageRGBToCMYK(in, out, img->ysize);
+	      case CF_IMAGE_CMYK :
+		  cfImageRGBToCMYK(in, out, img->ysize);
 		  break;
 	    }
 
 	    if (lut)
-	      cupsImageLut(out, img->ysize * bpp, lut);
+	      cfImageLut(out, img->ysize * bpp, lut);
 
-            _cupsImagePutCol(img, x, 0, img->ysize, out);
+            _cfImagePutCol(img, x, 0, img->ysize, out);
 	  }
         }
         break;
@@ -1049,34 +1049,34 @@ _cupsImageReadTIFF(
               TIFFReadScanline(tif, in, row, 0);
 
             if ((saturation != 100 || hue != 0) && bpp > 1)
-              cupsImageRGBAdjust(in, img->xsize, saturation, hue);
+              cfImageRGBAdjust(in, img->xsize, saturation, hue);
 
 	    switch (img->colorspace)
 	    {
 	      default :
 		  break;
 
-	      case CUPS_IMAGE_WHITE :
-		  cupsImageRGBToWhite(in, out, img->xsize);
+	      case CF_IMAGE_WHITE :
+		  cfImageRGBToWhite(in, out, img->xsize);
 		  break;
-	      case CUPS_IMAGE_RGB :
-		  cupsImageRGBToRGB(in, out, img->xsize);
+	      case CF_IMAGE_RGB :
+		  cfImageRGBToRGB(in, out, img->xsize);
 		  break;
-	      case CUPS_IMAGE_BLACK :
-		  cupsImageRGBToBlack(in, out, img->xsize);
+	      case CF_IMAGE_BLACK :
+		  cfImageRGBToBlack(in, out, img->xsize);
 		  break;
-	      case CUPS_IMAGE_CMY :
-		  cupsImageRGBToCMY(in, out, img->xsize);
+	      case CF_IMAGE_CMY :
+		  cfImageRGBToCMY(in, out, img->xsize);
 		  break;
-	      case CUPS_IMAGE_CMYK :
-		  cupsImageRGBToCMYK(in, out, img->xsize);
+	      case CF_IMAGE_CMYK :
+		  cfImageRGBToCMYK(in, out, img->xsize);
 		  break;
 	    }
 
 	    if (lut)
-	      cupsImageLut(out, img->xsize * bpp, lut);
+	      cfImageLut(out, img->xsize * bpp, lut);
 
-            _cupsImagePutRow(img, 0, y, img->xsize, out);
+            _cfImagePutRow(img, 0, y, img->xsize, out);
           }
         }
         else
@@ -1190,34 +1190,34 @@ _cupsImageReadTIFF(
               TIFFReadScanline(tif, in, row, 0);
 
             if ((saturation != 100 || hue != 0) && bpp > 1)
-              cupsImageRGBAdjust(in, img->ysize, saturation, hue);
+              cfImageRGBAdjust(in, img->ysize, saturation, hue);
 
 	    switch (img->colorspace)
 	    {
 	      default :
 		  break;
 
-	      case CUPS_IMAGE_WHITE :
-		  cupsImageRGBToWhite(in, out, img->ysize);
+	      case CF_IMAGE_WHITE :
+		  cfImageRGBToWhite(in, out, img->ysize);
 		  break;
-	      case CUPS_IMAGE_RGB :
-		  cupsImageRGBToRGB(in, out, img->ysize);
+	      case CF_IMAGE_RGB :
+		  cfImageRGBToRGB(in, out, img->ysize);
 		  break;
-	      case CUPS_IMAGE_BLACK :
-		  cupsImageRGBToBlack(in, out, img->ysize);
+	      case CF_IMAGE_BLACK :
+		  cfImageRGBToBlack(in, out, img->ysize);
 		  break;
-	      case CUPS_IMAGE_CMY :
-		  cupsImageRGBToCMY(in, out, img->ysize);
+	      case CF_IMAGE_CMY :
+		  cfImageRGBToCMY(in, out, img->ysize);
 		  break;
-	      case CUPS_IMAGE_CMYK :
-		  cupsImageRGBToCMYK(in, out, img->ysize);
+	      case CF_IMAGE_CMYK :
+		  cfImageRGBToCMYK(in, out, img->ysize);
 		  break;
 	    }
 
 	    if (lut)
-	      cupsImageLut(out, img->ysize * bpp, lut);
+	      cfImageLut(out, img->ysize * bpp, lut);
 
-            _cupsImagePutCol(img, x, 0, img->ysize, out);
+            _cfImagePutCol(img, x, 0, img->ysize, out);
           }
         }
         break;
@@ -1380,10 +1380,10 @@ _cupsImageReadTIFF(
                   }
         	}
               }
-              else if (img->colorspace == CUPS_IMAGE_CMYK)
+              else if (img->colorspace == CF_IMAGE_CMYK)
 	      {
 	        TIFFReadScanline(tif, scanline, row, 0);
-		_cupsImagePutRow(img, 0, y, img->xsize, scanline);
+		_cfImagePutRow(img, 0, y, img->xsize, scanline);
 	      }
 	      else
               {
@@ -1430,34 +1430,34 @@ _cupsImageReadTIFF(
               }
 
               if ((saturation != 100 || hue != 0) && bpp > 1)
-        	cupsImageRGBAdjust(in, img->xsize, saturation, hue);
+        	cfImageRGBAdjust(in, img->xsize, saturation, hue);
 
 	      switch (img->colorspace)
 	      {
 		default :
 		    break;
 
-		case CUPS_IMAGE_WHITE :
-		    cupsImageRGBToWhite(in, out, img->xsize);
+		case CF_IMAGE_WHITE :
+		    cfImageRGBToWhite(in, out, img->xsize);
 		    break;
-		case CUPS_IMAGE_RGB :
-		    cupsImageRGBToRGB(in, out, img->xsize);
+		case CF_IMAGE_RGB :
+		    cfImageRGBToRGB(in, out, img->xsize);
 		    break;
-		case CUPS_IMAGE_BLACK :
-		    cupsImageRGBToBlack(in, out, img->xsize);
+		case CF_IMAGE_BLACK :
+		    cfImageRGBToBlack(in, out, img->xsize);
 		    break;
-		case CUPS_IMAGE_CMY :
-		    cupsImageRGBToCMY(in, out, img->xsize);
+		case CF_IMAGE_CMY :
+		    cfImageRGBToCMY(in, out, img->xsize);
 		    break;
-		case CUPS_IMAGE_CMYK :
-		    cupsImageRGBToCMYK(in, out, img->xsize);
+		case CF_IMAGE_CMYK :
+		    cfImageRGBToCMYK(in, out, img->xsize);
 		    break;
 	      }
 
 	      if (lut)
-	        cupsImageLut(out, img->xsize * 3, lut);
+	        cfImageLut(out, img->xsize * 3, lut);
 
-              _cupsImagePutRow(img, 0, y, img->xsize, out);
+              _cfImagePutRow(img, 0, y, img->xsize, out);
             }
           }
           else
@@ -1602,10 +1602,10 @@ _cupsImageReadTIFF(
                   }
         	}
               }
-              else if (img->colorspace == CUPS_IMAGE_CMYK)
+              else if (img->colorspace == CF_IMAGE_CMYK)
 	      {
 	        TIFFReadScanline(tif, scanline, row, 0);
-		_cupsImagePutCol(img, x, 0, img->ysize, scanline);
+		_cfImagePutCol(img, x, 0, img->ysize, scanline);
 	      }
               else
               {
@@ -1652,34 +1652,34 @@ _cupsImageReadTIFF(
               }
 
               if ((saturation != 100 || hue != 0) && bpp > 1)
-        	cupsImageRGBAdjust(in, img->ysize, saturation, hue);
+        	cfImageRGBAdjust(in, img->ysize, saturation, hue);
 
 	      switch (img->colorspace)
 	      {
 		default :
 		    break;
 
-		case CUPS_IMAGE_WHITE :
-		    cupsImageRGBToWhite(in, out, img->ysize);
+		case CF_IMAGE_WHITE :
+		    cfImageRGBToWhite(in, out, img->ysize);
 		    break;
-		case CUPS_IMAGE_RGB :
-		    cupsImageRGBToRGB(in, out, img->ysize);
+		case CF_IMAGE_RGB :
+		    cfImageRGBToRGB(in, out, img->ysize);
 		    break;
-		case CUPS_IMAGE_BLACK :
-		    cupsImageRGBToBlack(in, out, img->ysize);
+		case CF_IMAGE_BLACK :
+		    cfImageRGBToBlack(in, out, img->ysize);
 		    break;
-		case CUPS_IMAGE_CMY :
-		    cupsImageRGBToCMY(in, out, img->ysize);
+		case CF_IMAGE_CMY :
+		    cfImageRGBToCMY(in, out, img->ysize);
 		    break;
-		case CUPS_IMAGE_CMYK :
-		    cupsImageRGBToCMYK(in, out, img->ysize);
+		case CF_IMAGE_CMYK :
+		    cfImageRGBToCMYK(in, out, img->ysize);
 		    break;
 	      }
 
 	      if (lut)
-	        cupsImageLut(out, img->ysize * bpp, lut);
+	        cfImageLut(out, img->ysize * bpp, lut);
 
-              _cupsImagePutCol(img, x, 0, img->ysize, out);
+              _cfImagePutCol(img, x, 0, img->ysize, out);
             }
           }
 

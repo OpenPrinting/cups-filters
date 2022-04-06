@@ -1,5 +1,5 @@
 /*
- *   cupsImage zoom routines for CUPS.
+ *   Image zoom routines for CUPS.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1993-2006 by Easy Software Products.
@@ -11,9 +11,9 @@
  *
  * Contents:
  *
- *   _cupsImageZoomDelete() - Free a zoom record...
- *   _cupsImageZoomFill()   - Fill a zoom record...
- *   _cupsImageZoomNew()    - Allocate a pixel zoom record...
+ *   _cfImageZoomDelete() - Free a zoom record...
+ *   _cfImageZoomFill()   - Fill a zoom record...
+ *   _cfImageZoomNew()    - Allocate a pixel zoom record...
  *   zoom_bilinear()        - Fill a zoom record with image data utilizing
  *                            bilinear interpolation.
  *   zoom_nearest()         - Fill a zoom record quickly using nearest-neighbor
@@ -31,16 +31,16 @@
  * Local functions...
  */
 
-static void	zoom_bilinear(cups_izoom_t *z, int iy);
-static void	zoom_nearest(cups_izoom_t *z, int iy);
+static void	zoom_bilinear(cf_izoom_t *z, int iy);
+static void	zoom_nearest(cf_izoom_t *z, int iy);
 
 
 /*
- * '_cupsImageZoomDelete()' - Free a zoom record...
+ * '_cfImageZoomDelete()' - Free a zoom record...
  */
 
 void
-_cupsImageZoomDelete(cups_izoom_t *z)	/* I - Zoom record to free */
+_cfImageZoomDelete(cf_izoom_t *z)	/* I - Zoom record to free */
 {
   free(z->rows[0]);
   free(z->rows[1]);
@@ -50,17 +50,17 @@ _cupsImageZoomDelete(cups_izoom_t *z)	/* I - Zoom record to free */
 
 
 /*
- * '_cupsImageZoomFill()' - Fill a zoom record with image data utilizing bilinear
+ * '_cfImageZoomFill()' - Fill a zoom record with image data utilizing bilinear
  *                         interpolation.
  */
 
 void
-_cupsImageZoomFill(cups_izoom_t *z,	/* I - Zoom record to fill */
+_cfImageZoomFill(cf_izoom_t *z,	/* I - Zoom record to fill */
                    int     iy)		/* I - Zoom image row */
 {
   switch (z->type)
   {
-    case CUPS_IZOOM_FAST :
+    case CF_IZOOM_FAST :
         zoom_nearest(z, iy);
 	break;
 
@@ -72,12 +72,12 @@ _cupsImageZoomFill(cups_izoom_t *z,	/* I - Zoom record to fill */
 
 
 /*
- * '_cupsImageZoomNew()' - Allocate a pixel zoom record...
+ * '_cfImageZoomNew()' - Allocate a pixel zoom record...
  */
 
-cups_izoom_t *
-_cupsImageZoomNew(
-    cups_image_t  *img,			/* I - cupsImage to zoom */
+cf_izoom_t *
+_cfImageZoomNew(
+    cf_image_t  *img,			/* I - Image to zoom */
     int           xc0,			/* I - Upper-lefthand corner */
     int           yc0,			/* I - ... */
     int           xc1,			/* I - Lower-righthand corner */
@@ -85,24 +85,24 @@ _cupsImageZoomNew(
     int           xsize,		/* I - Final width of image */
     int           ysize,		/* I - Final height of image */
     int           rotated,		/* I - Non-zero if image is rotated 90 degs */
-    cups_iztype_t type)			/* I - Zoom type */
+    cf_iztype_t type)			/* I - Zoom type */
 {
-  cups_izoom_t	*z;			/* New zoom record */
+  cf_izoom_t	*z;			/* New zoom record */
   int		flip;			/* Flip on X axis? */
 
 
-  if (xsize > CUPS_IMAGE_MAX_WIDTH ||
-      ysize > CUPS_IMAGE_MAX_HEIGHT ||
-      (xc1 - xc0) > CUPS_IMAGE_MAX_WIDTH ||
-      (yc1 - yc0) > CUPS_IMAGE_MAX_HEIGHT)
+  if (xsize > CF_IMAGE_MAX_WIDTH ||
+      ysize > CF_IMAGE_MAX_HEIGHT ||
+      (xc1 - xc0) > CF_IMAGE_MAX_WIDTH ||
+      (yc1 - yc0) > CF_IMAGE_MAX_HEIGHT)
     return (NULL);		/* Protect against integer overflow */
 
-  if ((z = (cups_izoom_t *)calloc(1, sizeof(cups_izoom_t))) == NULL)
+  if ((z = (cf_izoom_t *)calloc(1, sizeof(cf_izoom_t))) == NULL)
     return (NULL);
 
   z->img     = img;
   z->row     = 0;
-  z->depth   = cupsImageGetDepth(img);
+  z->depth   = cfImageGetDepth(img);
   z->rotated = rotated;
   z->type    = type;
 
@@ -177,20 +177,20 @@ _cupsImageZoomNew(
     z->inincr = -z->inincr;
   }
 
-  if ((z->rows[0] = (cups_ib_t *)malloc(z->xsize * z->depth)) == NULL)
+  if ((z->rows[0] = (cf_ib_t *)malloc(z->xsize * z->depth)) == NULL)
   {
     free(z);
     return (NULL);
   }
 
-  if ((z->rows[1] = (cups_ib_t *)malloc(z->xsize * z->depth)) == NULL)
+  if ((z->rows[1] = (cf_ib_t *)malloc(z->xsize * z->depth)) == NULL)
   {
     free(z->rows[0]);
     free(z);
     return (NULL);
   }
 
-  if ((z->in = (cups_ib_t *)malloc(z->width * z->depth)) == NULL)
+  if ((z->in = (cf_ib_t *)malloc(z->width * z->depth)) == NULL)
   {
     free(z->rows[0]);
     free(z->rows[1]);
@@ -208,10 +208,10 @@ _cupsImageZoomNew(
  */
 
 static void
-zoom_bilinear(cups_izoom_t *z,		/* I - Zoom record to fill */
+zoom_bilinear(cf_izoom_t *z,		/* I - Zoom record to fill */
               int          iy)		/* I - Zoom image row */
 {
-  cups_ib_t	*r,			/* Row pointer */
+  cf_ib_t	*r,			/* Row pointer */
 		*inptr;			/* Pixel pointer */
   int		xerr0,			/* X error counter */
 		xerr1;			/* ... */
@@ -243,9 +243,9 @@ zoom_bilinear(cups_izoom_t *z,		/* I - Zoom record to fill */
   z_inincr = z->inincr;
 
   if (z->rotated)
-    cupsImageGetCol(z->img, z->xorig - iy, z->yorig, z->width, z->in);
+    cfImageGetCol(z->img, z->xorig - iy, z->yorig, z->width, z->in);
   else
-    cupsImageGetRow(z->img, z->xorig, z->yorig + iy, z->width, z->in);
+    cfImageGetRow(z->img, z->xorig, z->yorig + iy, z->width, z->in);
 
   if (z_inincr < 0)
     inptr = z->in + (z->width - 1) * z_depth;
@@ -289,10 +289,10 @@ zoom_bilinear(cups_izoom_t *z,		/* I - Zoom record to fill */
  */
 
 static void
-zoom_nearest(cups_izoom_t *z,		/* I - Zoom record to fill */
+zoom_nearest(cf_izoom_t *z,		/* I - Zoom record to fill */
              int          iy)		/* I - Zoom image row */
 {
-  cups_ib_t	*r,			/* Row pointer */
+  cf_ib_t	*r,			/* Row pointer */
 		*inptr;			/* Pixel pointer */
   int		xerr0;			/* X error counter */
   int		ix,
@@ -321,9 +321,9 @@ zoom_nearest(cups_izoom_t *z,		/* I - Zoom record to fill */
   z_inincr = z->inincr;
 
   if (z->rotated)
-    cupsImageGetCol(z->img, z->xorig - iy, z->yorig, z->width, z->in);
+    cfImageGetCol(z->img, z->xorig - iy, z->yorig, z->width, z->in);
   else
-    cupsImageGetRow(z->img, z->xorig, z->yorig + iy, z->width, z->in);
+    cfImageGetRow(z->img, z->xorig, z->yorig + iy, z->width, z->in);
 
   if (z_inincr < 0)
     inptr = z->in + (z->width - 1) * z_depth;

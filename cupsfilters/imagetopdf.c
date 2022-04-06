@@ -50,20 +50,20 @@
 #define LINEBUFSIZE 1024
 
 #ifdef CUPS_1_1
-#define cups_ib_t ib_t
-#define cups_image_t image_t
-#define CUPS_IMAGE_CMYK IMAGE_CMYK
-#define CUPS_IMAGE_WHITE IMAGE_WHITE
-#define CUPS_IMAGE_RGB IMAGE_RGB
-#define CUPS_IMAGE_RGB_CMYK IMAGE_RGB_CMYK
-#define cupsImageOpen ImageOpen
-#define cupsImageClose ImageClose
-#define cupsImageGetColorSpace(img) (img->colorspace)
-#define cupsImageGetXPPI(img) (img->xppi)
-#define cupsImageGetYPPI(img) (img->yppi)
-#define cupsImageGetWidth(img) (img->xsize)
-#define cupsImageGetHeight(img) (img->ysize)
-#define cupsImageGetRow ImageGetRow
+#define cf_ib_t ib_t
+#define cf_image_t image_t
+#define CF_IMAGE_CMYK IMAGE_CMYK
+#define CF_IMAGE_WHITE IMAGE_WHITE
+#define CF_IMAGE_RGB IMAGE_RGB
+#define CF_IMAGE_RGB_CMYK IMAGE_RGB_CMYK
+#define cfImageOpen ImageOpen
+#define cfImageClose ImageClose
+#define cfImageGetColorSpace(img) (img->colorspace)
+#define cfImageGetXPPI(img) (img->xppi)
+#define cfImageGetYPPI(img) (img->yppi)
+#define cfImageGetWidth(img) (img->xsize)
+#define cfImageGetHeight(img) (img->ysize)
+#define cfImageGetRow ImageGetRow
 #endif
 
 /*
@@ -118,9 +118,9 @@ typedef struct {                	/**** Document information ****/
 		xsize2,
 		ysize2;
   float		aspect;			/* Aspect ratio */
-  cups_image_t	*img;			/* Image to print */
+  cf_image_t	*img;			/* Image to print */
   int		colorspace;		/* Output colorspace */
-  cups_ib_t	*row;			/* Current row */
+  cf_ib_t	*row;			/* Current row */
   float		gammaval;		/* Gamma correction value */
   float		brightness;		/* Gamma correction value */
   ppd_file_t	*ppd;			/* PPD file */
@@ -133,12 +133,12 @@ typedef struct {                	/**** Document information ****/
  */
 
 #ifdef OUT_AS_HEX
-static void	out_hex(imagetopdf_doc_t *doc, cups_ib_t *, int, int);
+static void	out_hex(imagetopdf_doc_t *doc, cf_ib_t *, int, int);
 #else
 #ifdef OUT_AS_ASCII85
-static void	out_ascii85(imagetopdf_doc_t *doc, cups_ib_t *, int, int);
+static void	out_ascii85(imagetopdf_doc_t *doc, cf_ib_t *, int, int);
 #else
-static void	out_bin(imagetopdf_doc_t *doc, cups_ib_t *, int, int);
+static void	out_bin(imagetopdf_doc_t *doc, cf_ib_t *, int, int);
 #endif
 #endif
 static void	outPdf(imagetopdf_doc_t *doc, const char *str);
@@ -516,10 +516,10 @@ static int outPageContents(imagetopdf_doc_t *doc, int contentsObj)
 	break;
   }
 
-  doc->xc0 = cupsImageGetWidth(doc->img) * doc->xpage / doc->xpages;
-  doc->xc1 = cupsImageGetWidth(doc->img) * (doc->xpage + 1) / doc->xpages - 1;
-  doc->yc0 = cupsImageGetHeight(doc->img) * doc->ypage / doc->ypages;
-  doc->yc1 = cupsImageGetHeight(doc->img) * (doc->ypage + 1) / doc->ypages - 1;
+  doc->xc0 = cfImageGetWidth(doc->img) * doc->xpage / doc->xpages;
+  doc->xc1 = cfImageGetWidth(doc->img) * (doc->xpage + 1) / doc->xpages - 1;
+  doc->yc0 = cfImageGetHeight(doc->img) * doc->ypage / doc->ypages;
+  doc->yc1 = cfImageGetHeight(doc->img) * (doc->ypage + 1) / doc->ypages - 1;
 
   snprintf(doc->linebuf,LINEBUFSIZE,
     "1 0 0 1 %.1f %.1f cm\n",doc->left,doc->top);
@@ -574,15 +574,15 @@ static int outImage(imagetopdf_doc_t *doc, int imgObj)
 
   switch (doc->colorspace)
   {
-    case CUPS_IMAGE_WHITE :
+    case CF_IMAGE_WHITE :
       outPdf(doc, "/ColorSpace /DeviceGray ");
       outPdf(doc, "/Decode[0 1] ");
       break;
-    case CUPS_IMAGE_RGB :
+    case CF_IMAGE_RGB :
       outPdf(doc, "/ColorSpace /DeviceRGB ");
       outPdf(doc, "/Decode[0 1 0 1 0 1] ");
       break;
-    case CUPS_IMAGE_CMYK :
+    case CF_IMAGE_CMYK :
       outPdf(doc, "/ColorSpace /DeviceCMYK ");
       outPdf(doc, "/Decode[0 1 0 1 0 1 0 1] ");
       break;
@@ -598,7 +598,7 @@ static int outImage(imagetopdf_doc_t *doc, int imgObj)
   /* out ascii85 needs multiple of 4bytes */
   for (y = doc->yc0, out_offset = 0; y <= doc->yc1; y ++)
   {
-    cupsImageGetRow(doc->img, doc->xc0, y, doc->xc1 - doc->xc0 + 1,
+    cfImageGetRow(doc->img, doc->xc0, y, doc->xc1 - doc->xc0 + 1,
 		    doc->row + out_offset);
 
     out_length = (doc->xc1 - doc->xc0 + 1) * abs(doc->colorspace) + out_offset;
@@ -612,7 +612,7 @@ static int outImage(imagetopdf_doc_t *doc, int imgObj)
 #else
   for (y = doc->yc0; y <= doc->yc1; y ++)
   {
-    cupsImageGetRow(doc->img, doc->xc0, y, doc->xc1 - doc->xc0 + 1, doc->row);
+    cfImageGetRow(doc->img, doc->xc0, y, doc->xc1 - doc->xc0 + 1, doc->row);
 
     out_length = (doc->xc1 - doc->xc0 + 1) * abs(doc->colorspace);
 
@@ -1167,9 +1167,9 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   * Open the input image to print...
   */
 
-  doc.colorspace = doc.Color ? CUPS_IMAGE_RGB_CMYK : CUPS_IMAGE_WHITE;
+  doc.colorspace = doc.Color ? CF_IMAGE_RGB_CMYK : CF_IMAGE_WHITE;
 
-  doc.img = cupsImageOpenFP(fp, doc.colorspace, CUPS_IMAGE_WHITE, sat, hue,
+  doc.img = cfImageOpenFP(fp, doc.colorspace, CF_IMAGE_WHITE, sat, hue,
 			    NULL);
   if (doc.img != NULL) {
 
@@ -1195,8 +1195,8 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
     }
   }
 
-  float w = (float)cupsImageGetWidth(doc.img);
-  float h = (float)cupsImageGetHeight(doc.img);
+  float w = (float)cfImageGetWidth(doc.img);
+  float h = (float)cfImageGetHeight(doc.img);
   float pw = doc.PageRight-doc.PageLeft;
   float ph = doc.PageTop-doc.PageBottom;
   int tempOrientation = doc.Orientation;
@@ -1285,8 +1285,8 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
       doc.PageLeft = 0.0;
       doc.PageRight = doc.PageWidth;
     }
-    float w = (float)cupsImageGetWidth(doc.img);
-    float h = (float)cupsImageGetHeight(doc.img);
+    float w = (float)cfImageGetWidth(doc.img);
+    float h = (float)cfImageGetHeight(doc.img);
     float pw = doc.PageRight-doc.PageLeft;
     float ph = doc.PageTop-doc.PageBottom;
     int tempOrientation = doc.Orientation;
@@ -1336,8 +1336,8 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
       float posw=(w-final_w)/2,posh=(h-final_h)/2;
       posw = (1+doc.XPosition)*posw;
       posh = (1-doc.YPosition)*posh;
-      cups_image_t *img2 = cupsImageCrop(doc.img,posw,posh,final_w,final_h);
-      cupsImageClose(doc.img);
+      cf_image_t *img2 = cfImageCrop(doc.img,posw,posh,final_w,final_h);
+      cfImageClose(doc.img);
       doc.img = img2;
     }
     else {
@@ -1349,8 +1349,8 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
       float posw=(w-final_w)/2,posh=(h-final_h)/2;
       posw = (1+doc.XPosition)*posw;
       posh = (1-doc.YPosition)*posh;
-      cups_image_t *img2 = cupsImageCrop(doc.img,posw,posh,final_w,final_h);
-      cupsImageClose(doc.img);
+      cf_image_t *img2 = cfImageCrop(doc.img,posw,posh,final_w,final_h);
+      cfImageClose(doc.img);
       doc.img = img2;
       if(flag==4)
       {
@@ -1383,7 +1383,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
     return (1);
   }
 
-  doc.colorspace = cupsImageGetColorSpace(doc.img);
+  doc.colorspace = cfImageGetColorSpace(doc.img);
 
  /*
   * Scale as necessary...
@@ -1391,8 +1391,8 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
   if (zoom == 0.0 && xppi == 0)
   {
-    xppi = cupsImageGetXPPI(doc.img);
-    yppi = cupsImageGetYPPI(doc.img);
+    xppi = cfImageGetXPPI(doc.img);
+    yppi = cfImageGetYPPI(doc.img);
   }
 
   if (yppi == 0)
@@ -1423,8 +1423,8 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 		 "cfFilterImageToPDF: Before scaling: xprint=%.1f, yprint=%.1f",
 		 doc.xprint, doc.yprint);
 
-    doc.xinches = (float)cupsImageGetWidth(doc.img) / (float)xppi;
-    doc.yinches = (float)cupsImageGetHeight(doc.img) / (float)yppi;
+    doc.xinches = (float)cfImageGetWidth(doc.img) / (float)xppi;
+    doc.yinches = (float)cfImageGetHeight(doc.img) / (float)yppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Image size is %.1f x %.1f inches...",
@@ -1471,39 +1471,39 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
     doc.xprint = (doc.PageRight - doc.PageLeft) / 72.0;
     doc.yprint = (doc.PageTop - doc.PageBottom) / 72.0;
-    doc.aspect = (float)cupsImageGetYPPI(doc.img) /
-      (float)cupsImageGetXPPI(doc.img);
+    doc.aspect = (float)cfImageGetYPPI(doc.img) /
+      (float)cfImageGetXPPI(doc.img);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Before scaling: xprint=%.1f, yprint=%.1f",
 		 doc.xprint, doc.yprint);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "cfFilterImageToPDF: cupsImageGetXPPI(img) = %d, "
-		 "cupsImageGetYPPI(img) = %d, aspect = %f",
-		 cupsImageGetXPPI(doc.img), cupsImageGetYPPI(doc.img),
+		 "cfFilterImageToPDF: cfImageGetXPPI(img) = %d, "
+		 "cfImageGetYPPI(img) = %d, aspect = %f",
+		 cfImageGetXPPI(doc.img), cfImageGetYPPI(doc.img),
 		 doc.aspect);
 
     doc.xsize = doc.xprint * zoom;
-    doc.ysize = doc.xsize * cupsImageGetHeight(doc.img) /
-      cupsImageGetWidth(doc.img) / doc.aspect;
+    doc.ysize = doc.xsize * cfImageGetHeight(doc.img) /
+      cfImageGetWidth(doc.img) / doc.aspect;
 
     if (doc.ysize > (doc.yprint * zoom))
     {
       doc.ysize = doc.yprint * zoom;
-      doc.xsize = doc.ysize * cupsImageGetWidth(doc.img) *
-	doc.aspect / cupsImageGetHeight(doc.img);
+      doc.xsize = doc.ysize * cfImageGetWidth(doc.img) *
+	doc.aspect / cfImageGetHeight(doc.img);
     }
 
     doc.xsize2 = doc.yprint * zoom;
-    doc.ysize2 = doc.xsize2 * cupsImageGetHeight(doc.img) /
-      cupsImageGetWidth(doc.img) / doc.aspect;
+    doc.ysize2 = doc.xsize2 * cfImageGetHeight(doc.img) /
+      cfImageGetWidth(doc.img) / doc.aspect;
 
     if (doc.ysize2 > (doc.xprint * zoom))
     {
       doc.ysize2 = doc.xprint * zoom;
-      doc.xsize2 = doc.ysize2 * cupsImageGetWidth(doc.img) *
-	doc.aspect / cupsImageGetHeight(doc.img);
+      doc.xsize2 = doc.ysize2 * cfImageGetWidth(doc.img) *
+	doc.aspect / cfImageGetHeight(doc.img);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -1874,7 +1874,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   * Output the pages...
   */
 
-  doc.row = malloc(cupsImageGetWidth(doc.img) * abs(doc.colorspace) + 3);
+  doc.row = malloc(cfImageGetWidth(doc.img) * abs(doc.colorspace) + 3);
 
   if (log) {
     log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -2178,7 +2178,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   }
 #endif
 
-  cupsImageClose(doc.img);
+  cfImageClose(doc.img);
   fclose(doc.outputfp);
   close(outputfd);
   return (0);
@@ -2188,7 +2188,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   if (log) log(ld, FILTER_LOGLEVEL_ERROR,
 	       "cfFilterImageToPDF: Cannot allocate any more memory.");
   freeAllObj(&doc);
-  cupsImageClose(doc.img);
+  cfImageClose(doc.img);
   fclose(doc.outputfp);
   close(outputfd);
   return (2);
@@ -2201,7 +2201,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
 static void
 out_hex(imagetopdf_doc_t *doc,
-	cups_ib_t *data,		/* I - Data to print */
+	cf_ib_t *data,		/* I - Data to print */
 	int       length,		/* I - Number of bytes to print */
 	int       last_line)		/* I - Last line of raster data? */
 {
@@ -2246,7 +2246,7 @@ out_hex(imagetopdf_doc_t *doc,
 
 static void
 out_ascii85(imagetopdf_doc_t *doc,
-	    cups_ib_t *data,		/* I - Data to print */
+	    cf_ib_t *data,		/* I - Data to print */
 	    int       length,		/* I - Number of bytes to print */
 	    int       last_line)	/* I - Last line of raster data? */
 {
@@ -2323,7 +2323,7 @@ out_ascii85(imagetopdf_doc_t *doc,
 
 static void
 out_bin(imagetopdf_doc_t *doc,
-	cups_ib_t *data,		/* I - Data to print */
+	cf_ib_t *data,		/* I - Data to print */
 	int       length,		/* I - Number of bytes to print */
 	int       last_line)		/* I - Last line of raster data? */
 {

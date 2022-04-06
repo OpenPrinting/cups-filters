@@ -11,7 +11,7 @@
  *
  * Contents:
  *
- *   _cupsImageReadSGI() - Read a SGI image file.
+ *   _cfImageReadSGI() - Read a SGI image file.
  */
 
 /*
@@ -23,23 +23,23 @@
 
 
 /*
- * '_cupsImageReadSGI()' - Read a SGI image file.
+ * '_cfImageReadSGI()' - Read a SGI image file.
  */
 
 int					/* O - Read status */
-_cupsImageReadSGI(
-    cups_image_t    *img,		/* IO - cupsImage */
-    FILE            *fp,		/* I - cupsImage file */
-    cups_icspace_t  primary,		/* I - Primary choice for colorspace */
-    cups_icspace_t  secondary,		/* I - Secondary choice for colorspace */
+_cfImageReadSGI(
+    cf_image_t    *img,		/* IO - Image */
+    FILE            *fp,		/* I - Image file */
+    cf_icspace_t  primary,		/* I - Primary choice for colorspace */
+    cf_icspace_t  secondary,		/* I - Secondary choice for colorspace */
     int             saturation,		/* I - Color saturation (%) */
     int             hue,		/* I - Color hue (degrees) */
-    const cups_ib_t *lut)		/* I - Lookup table for gamma/brightness */
+    const cf_ib_t *lut)		/* I - Lookup table for gamma/brightness */
 {
   int		i, y;			/* Looping vars */
   int		bpp;			/* Bytes per pixel */
-  sgi_t		*sgip;			/* SGI image file */
-  cups_ib_t	*in,			/* Input pixels */
+  cf_sgi_t		*sgip;			/* SGI image file */
+  cf_ib_t	*in,			/* Input pixels */
 		*inptr,			/* Current input pixel */
 		*out;			/* Output pixels */
   unsigned short *rows[4],		/* Row pointers for image data */
@@ -54,7 +54,7 @@ _cupsImageReadSGI(
   * Setup the SGI file...
   */
 
-  sgip = sgiOpenFile(fp, SGI_READ, 0, 0, 0, 0, 0);
+  sgip = cfSGIOpenFile(fp, CF_SGI_READ, 0, 0, 0, 0, 0);
 
  /*
   * Get the image dimensions and load the output image...
@@ -62,8 +62,8 @@ _cupsImageReadSGI(
 
  /*
   * Check the image dimensions; since xsize and ysize are unsigned shorts,
-  * just check if they are 0 since they can't exceed CUPS_IMAGE_MAX_WIDTH or
-  * CUPS_IMAGE_MAX_HEIGHT...
+  * just check if they are 0 since they can't exceed CF_IMAGE_MAX_WIDTH or
+  * CF_IMAGE_MAX_HEIGHT...
   */
 
   if (sgip->xsize == 0 || sgip->ysize == 0 ||
@@ -71,33 +71,33 @@ _cupsImageReadSGI(
   {
     DEBUG_printf(("DEBUG: Bad SGI image dimensions %ux%ux%u!\n",
 		  sgip->xsize, sgip->ysize, sgip->zsize));
-    sgiClose(sgip);
+    cfSGIClose(sgip);
     return (1);
   }
 
   if (sgip->zsize < 3)
     img->colorspace = secondary;
   else
-    img->colorspace = (primary == CUPS_IMAGE_RGB_CMYK) ? CUPS_IMAGE_RGB : primary;
+    img->colorspace = (primary == CF_IMAGE_RGB_CMYK) ? CF_IMAGE_RGB : primary;
 
   img->xsize = sgip->xsize;
   img->ysize = sgip->ysize;
 
-  cupsImageSetMaxTiles(img, 0);
+  cfImageSetMaxTiles(img, 0);
 
-  bpp = cupsImageGetDepth(img);
+  bpp = cfImageGetDepth(img);
 
   if ((in = malloc(img->xsize * sgip->zsize)) == NULL)
   {
     DEBUG_puts("DEBUG: Unable to allocate memory!\n");
-    sgiClose(sgip);
+    cfSGIClose(sgip);
     return (1);
   }
 
   if ((out = malloc(img->xsize * bpp)) == NULL)
   {
     DEBUG_puts("DEBUG: Unable to allocate memory!\n");
-    sgiClose(sgip);
+    cfSGIClose(sgip);
     free(in);
     return (1);
   }
@@ -106,7 +106,7 @@ _cupsImageReadSGI(
                         sizeof(unsigned short))) == NULL)
   {
     DEBUG_puts("DEBUG: Unable to allocate memory!\n");
-    sgiClose(sgip);
+    cfSGIClose(sgip);
     free(in);
     free(out);
     return (1);
@@ -122,7 +122,7 @@ _cupsImageReadSGI(
   for (y = 0; y < img->ysize; y ++)
   {
     for (i = 0; i < sgip->zsize; i ++)
-      sgiGetRow(sgip, rows[i], img->ysize - 1 - y, i);
+      cfSGIGetRow(sgip, rows[i], img->ysize - 1 - y, i);
 
     switch (sgip->zsize)
     {
@@ -206,12 +206,12 @@ _cupsImageReadSGI(
 
     if (sgip->zsize < 3)
     {
-      if (img->colorspace == CUPS_IMAGE_WHITE)
+      if (img->colorspace == CF_IMAGE_WHITE)
       {
         if (lut)
-	  cupsImageLut(in, img->xsize, lut);
+	  cfImageLut(in, img->xsize, lut);
 
-        _cupsImagePutRow(img, 0, y, img->xsize, in);
+        _cfImagePutRow(img, 0, y, img->xsize, in);
       }
       else
       {
@@ -220,58 +220,58 @@ _cupsImageReadSGI(
 	  default :
 	      break;
 
-	  case CUPS_IMAGE_RGB :
-	  case CUPS_IMAGE_RGB_CMYK :
-	      cupsImageWhiteToRGB(in, out, img->xsize);
+	  case CF_IMAGE_RGB :
+	  case CF_IMAGE_RGB_CMYK :
+	      cfImageWhiteToRGB(in, out, img->xsize);
 	      break;
-	  case CUPS_IMAGE_BLACK :
-	      cupsImageWhiteToBlack(in, out, img->xsize);
+	  case CF_IMAGE_BLACK :
+	      cfImageWhiteToBlack(in, out, img->xsize);
 	      break;
-	  case CUPS_IMAGE_CMY :
-	      cupsImageWhiteToCMY(in, out, img->xsize);
+	  case CF_IMAGE_CMY :
+	      cfImageWhiteToCMY(in, out, img->xsize);
 	      break;
-	  case CUPS_IMAGE_CMYK :
-	      cupsImageWhiteToCMYK(in, out, img->xsize);
+	  case CF_IMAGE_CMYK :
+	      cfImageWhiteToCMYK(in, out, img->xsize);
 	      break;
 	}
 
         if (lut)
-	  cupsImageLut(out, img->xsize * bpp, lut);
+	  cfImageLut(out, img->xsize * bpp, lut);
 
-        _cupsImagePutRow(img, 0, y, img->xsize, out);
+        _cfImagePutRow(img, 0, y, img->xsize, out);
       }
     }
     else
     {
       if ((saturation != 100 || hue != 0) && bpp > 1)
-	cupsImageRGBAdjust(in, img->xsize, saturation, hue);
+	cfImageRGBAdjust(in, img->xsize, saturation, hue);
 
       switch (img->colorspace)
       {
 	default :
 	    break;
 
-	case CUPS_IMAGE_WHITE :
-	    cupsImageRGBToWhite(in, out, img->xsize);
+	case CF_IMAGE_WHITE :
+	    cfImageRGBToWhite(in, out, img->xsize);
 	    break;
-	case CUPS_IMAGE_RGB :
-	    cupsImageRGBToRGB(in, out, img->xsize);
+	case CF_IMAGE_RGB :
+	    cfImageRGBToRGB(in, out, img->xsize);
 	    break;
-	case CUPS_IMAGE_BLACK :
-	    cupsImageRGBToBlack(in, out, img->xsize);
+	case CF_IMAGE_BLACK :
+	    cfImageRGBToBlack(in, out, img->xsize);
 	    break;
-	case CUPS_IMAGE_CMY :
-	    cupsImageRGBToCMY(in, out, img->xsize);
+	case CF_IMAGE_CMY :
+	    cfImageRGBToCMY(in, out, img->xsize);
 	    break;
-	case CUPS_IMAGE_CMYK :
-	    cupsImageRGBToCMYK(in, out, img->xsize);
+	case CF_IMAGE_CMYK :
+	    cfImageRGBToCMYK(in, out, img->xsize);
 	    break;
       }
 
       if (lut)
-	cupsImageLut(out, img->xsize * bpp, lut);
+	cfImageLut(out, img->xsize * bpp, lut);
 
-      _cupsImagePutRow(img, 0, y, img->xsize, out);
+      _cfImagePutRow(img, 0, y, img->xsize, out);
     }
   }
 
@@ -279,7 +279,7 @@ _cupsImageReadSGI(
   free(out);
   free(rows[0]);
 
-  sgiClose(sgip);
+  cfSGIClose(sgip);
 
   return (0);
 }

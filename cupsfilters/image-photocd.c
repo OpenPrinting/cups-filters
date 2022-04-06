@@ -15,7 +15,7 @@
  *
  * Contents:
  *
- *   _cupsImageReadPhotoCD() - Read a PhotoCD image file.
+ *   _cfImageReadPhotoCD() - Read a PhotoCD image file.
  */
 
 /*
@@ -26,18 +26,18 @@
 
 
 /*
- * '_cupsImageReadPhotoCD()' - Read a PhotoCD image file.
+ * '_cfImageReadPhotoCD()' - Read a PhotoCD image file.
  */
 
 int					/* O - Read status */
-_cupsImageReadPhotoCD(
-    cups_image_t    *img,		/* IO - cupsImage */
-    FILE            *fp,		/* I - cupsImage file */
-    cups_icspace_t  primary,		/* I - Primary choice for colorspace */
-    cups_icspace_t  secondary,		/* I - Secondary choice for colorspace */
+_cfImageReadPhotoCD(
+    cf_image_t    *img,		/* IO - Image */
+    FILE            *fp,		/* I - Image file */
+    cf_icspace_t  primary,		/* I - Primary choice for colorspace */
+    cf_icspace_t  secondary,		/* I - Secondary choice for colorspace */
     int             saturation,		/* I - Color saturation (%) */
     int             hue,		/* I - Color hue (degrees) */
-    const cups_ib_t *lut)		/* I - Lookup table for gamma/brightness */
+    const cf_ib_t *lut)		/* I - Lookup table for gamma/brightness */
 {
   int		x, y;			/* Looping vars */
   int		xdir,			/* X direction */
@@ -48,7 +48,7 @@ _cupsImageReadPhotoCD(
   int		temp,			/* Adjusted luminance */
 		temp2,			/* Red, green, and blue values */
 		cb, cr;			/* Adjusted chroma values */
-  cups_ib_t	*in,			/* Input (YCC) pixels */
+  cf_ib_t	*in,			/* Input (YCC) pixels */
 		*iy,			/* Luminance */
 		*icb,			/* Blue chroma */
 		*icr,			/* Red chroma */
@@ -76,7 +76,7 @@ _cupsImageReadPhotoCD(
   * Allocate and initialize...
   */
 
-  img->colorspace = (primary == CUPS_IMAGE_RGB_CMYK) ? CUPS_IMAGE_RGB : primary;
+  img->colorspace = (primary == CF_IMAGE_RGB_CMYK) ? CF_IMAGE_RGB : primary;
   img->xppi       = 200;
   img->yppi       = 200;
 
@@ -91,9 +91,9 @@ _cupsImageReadPhotoCD(
     img->ysize = 512;
   }
 
-  cupsImageSetMaxTiles(img, 0);
+  cfImageSetMaxTiles(img, 0);
 
-  bpp = cupsImageGetDepth(img);
+  bpp = cfImageGetDepth(img);
 
   if ((in = malloc(768 * 3)) == NULL)
   {
@@ -177,7 +177,7 @@ _cupsImageReadPhotoCD(
 	* in the image...
 	*/
 
-        if (primary == CUPS_IMAGE_BLACK)
+        if (primary == CF_IMAGE_BLACK)
 	{
 	  if (rotation)
 	  {
@@ -185,18 +185,18 @@ _cupsImageReadPhotoCD(
 	      *rgbptr-- = 255 - *iy++;
 
 	    if (lut)
-	      cupsImageLut(out, 768, lut);
+	      cfImageLut(out, 768, lut);
 
-            _cupsImagePutCol(img, 511 - y - pass, 0, 768, out);
+            _cfImagePutCol(img, 511 - y - pass, 0, 768, out);
 	  }
 	  else
 	  {
-            cupsImageWhiteToBlack(iy, out, 768);
+            cfImageWhiteToBlack(iy, out, 768);
 
 	    if (lut)
-	      cupsImageLut(out, 768, lut);
+	      cfImageLut(out, 768, lut);
 
-            _cupsImagePutRow(img, 0, y + pass, 768, out);
+            _cfImagePutRow(img, 0, y + pass, 768, out);
             iy += 768;
 	  }
 	}
@@ -206,16 +206,16 @@ _cupsImageReadPhotoCD(
 	    *rgbptr-- = 255 - *iy++;
 
 	  if (lut)
-	    cupsImageLut(out, 768, lut);
+	    cfImageLut(out, 768, lut);
 
-          _cupsImagePutCol(img, 511 - y - pass, 0, 768, out);
+          _cfImagePutCol(img, 511 - y - pass, 0, 768, out);
 	}
 	else
 	{
 	  if (lut)
-	    cupsImageLut(iy, 768, lut);
+	    cfImageLut(iy, 768, lut);
 
-          _cupsImagePutRow(img, 0, y + pass, 768, iy);
+          _cfImagePutRow(img, 0, y + pass, 768, iy);
           iy += 768;
 	}
       }
@@ -276,7 +276,7 @@ _cupsImageReadPhotoCD(
 	*/
 
 	if (saturation != 100 || hue != 0)
-	  cupsImageRGBAdjust(rgb, 768, saturation, hue);
+	  cfImageRGBAdjust(rgb, 768, saturation, hue);
 
        /*
         * Then convert the RGB data to the appropriate colorspace and
@@ -288,24 +288,24 @@ _cupsImageReadPhotoCD(
 	  default :
 	      break;
 
-	  case CUPS_IMAGE_RGB :
-	      cupsImageRGBToRGB(rgb, out, 768);
+	  case CF_IMAGE_RGB :
+	      cfImageRGBToRGB(rgb, out, 768);
 	      break;
-	  case CUPS_IMAGE_CMY :
-	      cupsImageRGBToCMY(rgb, out, 768);
+	  case CF_IMAGE_CMY :
+	      cfImageRGBToCMY(rgb, out, 768);
 	      break;
-	  case CUPS_IMAGE_CMYK :
-	      cupsImageRGBToCMYK(rgb, out, 768);
+	  case CF_IMAGE_CMYK :
+	      cfImageRGBToCMYK(rgb, out, 768);
 	      break;
 	}
 
 	if (lut)
-	  cupsImageLut(out, 768 * bpp, lut);
+	  cfImageLut(out, 768 * bpp, lut);
 
 	if (rotation)
-          _cupsImagePutCol(img, 511 - y - pass, 0, 768, out);
+          _cfImagePutCol(img, 511 - y - pass, 0, 768, out);
 	else
-          _cupsImagePutRow(img, 0, y + pass, 768, out);
+          _cfImagePutRow(img, 0, y + pass, 768, out);
       }
     }
   }

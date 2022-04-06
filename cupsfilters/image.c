@@ -11,19 +11,19 @@
  *
  * Contents:
  *
- *   cupsImageClose()         - Close an image file.
- *   cupsImageGetCol()        - Get a column of pixels from an image.
- *   cupsImageGetColorSpace() - Get the image colorspace.
- *   cupsImageGetDepth()      - Get the number of bytes per pixel.
- *   cupsImageGetHeight()     - Get the height of an image.
- *   cupsImageGetRow()        - Get a row of pixels from an image.
- *   cupsImageGetWidth()      - Get the width of an image.
- *   cupsImageGetXPPI()       - Get the horizontal resolution of an image.
- *   cupsImageGetYPPI()       - Get the vertical resolution of an image.
- *   cupsImageOpen()          - Open an image file and read it into memory.
- *   _cupsImagePutCol()       - Put a column of pixels to an image.
- *   _cupsImagePutRow()       - Put a row of pixels to an image.
- *   cupsImageSetMaxTiles()   - Set the maximum number of tiles to cache.
+ *   cfImageClose()         - Close an image file.
+ *   cfImageGetCol()        - Get a column of pixels from an image.
+ *   cfImageGetColorSpace() - Get the image colorspace.
+ *   cfImageGetDepth()      - Get the number of bytes per pixel.
+ *   cfImageGetHeight()     - Get the height of an image.
+ *   cfImageGetRow()        - Get a row of pixels from an image.
+ *   cfImageGetWidth()      - Get the width of an image.
+ *   cfImageGetXPPI()       - Get the horizontal resolution of an image.
+ *   cfImageGetYPPI()       - Get the vertical resolution of an image.
+ *   cfImageOpen()          - Open an image file and read it into memory.
+ *   _cfImagePutCol()       - Put a column of pixels to an image.
+ *   _cfImagePutRow()       - Put a row of pixels to an image.
+ *   cfImageSetMaxTiles()   - Set the maximum number of tiles to cache.
  *   flush_tile()             - Flush the least-recently-used tile in the cache.
  *   get_tile()               - Get a cached tile.
  */
@@ -39,18 +39,18 @@
  * Local functions...
  */
 
-static int		flush_tile(cups_image_t *img);
-static cups_ib_t	*get_tile(cups_image_t *img, int x, int y);
+static int		flush_tile(cf_image_t *img);
+static cf_ib_t	*get_tile(cf_image_t *img, int x, int y);
 
 
 /*
- * 'cupsImageClose()' - Close an image file.
+ * 'cfImageClose()' - Close an image file.
  */
 
 void
-cupsImageClose(cups_image_t *img)	/* I - Image to close */
+cfImageClose(cf_image_t *img)	/* I - Image to close */
 {
-  cups_ic_t	*current,		/* Current cached tile */
+  cf_ic_t	*current,		/* Current cached tile */
 		*next;			/* Next cached tile */
 
 
@@ -100,20 +100,20 @@ cupsImageClose(cups_image_t *img)	/* I - Image to close */
 
 
 /*
- * 'cupsImageGetCol()' - Get a column of pixels from an image.
+ * 'cfImageGetCol()' - Get a column of pixels from an image.
  */
 
 int					/* O - -1 on error, 0 on success */
-cupsImageGetCol(cups_image_t *img,	/* I - Image */
+cfImageGetCol(cf_image_t *img,	/* I - Image */
         	int          x,		/* I - Column */
         	int          y,		/* I - Start row */
         	int          height,	/* I - Column height */
-        	cups_ib_t    *pixels)	/* O - Pixel data */
+        	cf_ib_t    *pixels)	/* O - Pixel data */
 {
   int			bpp,		/* Bytes per pixel */
 			twidth,		/* Tile width */
 			count;		/* Number of pixels to get */
-  const cups_ib_t	*ib;		/* Pointer into tile */
+  const cf_ib_t	*ib;		/* Pointer into tile */
 
 
   if (img == NULL || x < 0 || x >= img->xsize || y >= img->ysize)
@@ -131,8 +131,8 @@ cupsImageGetCol(cups_image_t *img,	/* I - Image */
   if (height < 1)
     return (-1);
 
-  bpp    = cupsImageGetDepth(img);
-  twidth = bpp * (CUPS_TILE_SIZE - 1);
+  bpp    = cfImageGetDepth(img);
+  twidth = bpp * (CF_TILE_SIZE - 1);
 
   while (height > 0)
   {
@@ -141,7 +141,7 @@ cupsImageGetCol(cups_image_t *img,	/* I - Image */
     if (ib == NULL)
       return (-1);
 
-    count = CUPS_TILE_SIZE - (y & (CUPS_TILE_SIZE - 1));
+    count = CF_TILE_SIZE - (y & (CF_TILE_SIZE - 1));
     if (count > height)
       count = height;
 
@@ -167,53 +167,53 @@ cupsImageGetCol(cups_image_t *img,	/* I - Image */
 
 
 /*
- * 'cupsImageGetColorSpace()' - Get the image colorspace.
+ * 'cfImageGetColorSpace()' - Get the image colorspace.
  */
 
-cups_icspace_t				/* O - Colorspace */
-cupsImageGetColorSpace(
-    cups_image_t *img)			/* I - Image */
+cf_icspace_t				/* O - Colorspace */
+cfImageGetColorSpace(
+    cf_image_t *img)			/* I - Image */
 {
   return (img->colorspace);
 }
 
 
 /*
- * 'cupsImageGetDepth()' - Get the number of bytes per pixel.
+ * 'cfImageGetDepth()' - Get the number of bytes per pixel.
  */
 
 int					/* O - Bytes per pixel */
-cupsImageGetDepth(cups_image_t *img)	/* I - Image */
+cfImageGetDepth(cf_image_t *img)	/* I - Image */
 {
   return (abs(img->colorspace));
 }
 
 
 /*
- * 'cupsImageGetHeight()' - Get the height of an image.
+ * 'cfImageGetHeight()' - Get the height of an image.
  */
 
 unsigned				/* O - Height in pixels */
-cupsImageGetHeight(cups_image_t *img)	/* I - Image */
+cfImageGetHeight(cf_image_t *img)	/* I - Image */
 {
   return (img->ysize);
 }
 
 
 /*
- * 'cupsImageGetRow()' - Get a row of pixels from an image.
+ * 'cfImageGetRow()' - Get a row of pixels from an image.
  */
 
 int					/* O - -1 on error, 0 on success */
-cupsImageGetRow(cups_image_t *img,	/* I - Image */
+cfImageGetRow(cf_image_t *img,	/* I - Image */
                 int          x,		/* I - Start column */
                 int          y,		/* I - Row */
                 int          width,	/* I - Width of row */
-                cups_ib_t    *pixels)	/* O - Pixel data */
+                cf_ib_t    *pixels)	/* O - Pixel data */
 {
   int			bpp,		/* Bytes per pixel */
 			count;		/* Number of pixels to get */
-  const cups_ib_t	*ib;		/* Pointer to pixels */
+  const cf_ib_t	*ib;		/* Pointer to pixels */
 
 
   if (img == NULL || y < 0 || y >= img->ysize || x >= img->xsize)
@@ -240,7 +240,7 @@ cupsImageGetRow(cups_image_t *img,	/* I - Image */
     if (ib == NULL)
       return (-1);
 
-    count = CUPS_TILE_SIZE - (x & (CUPS_TILE_SIZE - 1));
+    count = CF_TILE_SIZE - (x & (CF_TILE_SIZE - 1));
     if (count > width)
       count = width;
     memcpy(pixels, ib, count * bpp);
@@ -254,84 +254,84 @@ cupsImageGetRow(cups_image_t *img,	/* I - Image */
 
 
 /*
- * 'cupsImageGetWidth()' - Get the width of an image.
+ * 'cfImageGetWidth()' - Get the width of an image.
  */
 
 unsigned				/* O - Width in pixels */
-cupsImageGetWidth(cups_image_t *img)	/* I - Image */
+cfImageGetWidth(cf_image_t *img)	/* I - Image */
 {
   return (img->xsize);
 }
 
 
 /*
- * 'cupsImageGetXPPI()' - Get the horizontal resolution of an image.
+ * 'cfImageGetXPPI()' - Get the horizontal resolution of an image.
  */
 
 unsigned				/* O - Horizontal PPI */
-cupsImageGetXPPI(cups_image_t *img)	/* I - Image */
+cfImageGetXPPI(cf_image_t *img)	/* I - Image */
 {
   return (img->xppi);
 }
 
 
 /*
- * 'cupsImageGetYPPI()' - Get the vertical resolution of an image.
+ * 'cfImageGetYPPI()' - Get the vertical resolution of an image.
  */
 
 unsigned				/* O - Vertical PPI */
-cupsImageGetYPPI(cups_image_t *img)	/* I - Image */
+cfImageGetYPPI(cf_image_t *img)	/* I - Image */
 {
   return (img->yppi);
 }
 
 
 /*
- * 'cupsImageOpen()' - Open an image file and read it into memory.
+ * 'cfImageOpen()' - Open an image file and read it into memory.
  */
 
-cups_image_t *				/* O - New image */
-cupsImageOpen(
+cf_image_t *				/* O - New image */
+cfImageOpen(
     const char      *filename,		/* I - Filename of image */
-    cups_icspace_t  primary,		/* I - Primary colorspace needed */
-    cups_icspace_t  secondary,		/* I - Secondary colorspace if primary no good */
+    cf_icspace_t  primary,		/* I - Primary colorspace needed */
+    cf_icspace_t  secondary,		/* I - Secondary colorspace if primary no good */
     int             saturation,		/* I - Color saturation level */
     int             hue,		/* I - Color hue adjustment */
-    const cups_ib_t *lut)		/* I - RGB gamma/brightness LUT */
+    const cf_ib_t *lut)		/* I - RGB gamma/brightness LUT */
 {
   FILE		*fp;			/* File pointer */
 
-  DEBUG_printf(("cupsImageOpen(\"%s\", %d, %d, %d, %d, %p)\n",
+  DEBUG_printf(("cfImageOpen(\"%s\", %d, %d, %d, %d, %p)\n",
 		filename ? filename : "(null)", primary, secondary,
 		saturation, hue, lut));
 
   if ((fp = fopen(filename, "r")) == NULL)
     return (NULL);
 
-  return cupsImageOpenFP(fp, primary, secondary, saturation, hue, lut);
+  return cfImageOpenFP(fp, primary, secondary, saturation, hue, lut);
 }
 
 
 /*
- * 'cupsImageOpenFP()' - Open an image file and read it into memory.
+ * 'cfImageOpenFP()' - Open an image file and read it into memory.
  */
 
-cups_image_t *				/* O - New image */
-cupsImageOpenFP(
+cf_image_t *				/* O - New image */
+cfImageOpenFP(
     FILE            *fp,		/* I - File pointer of image */
-    cups_icspace_t  primary,		/* I - Primary colorspace needed */
-    cups_icspace_t  secondary,		/* I - Secondary colorspace if primary no good */
+    cf_icspace_t  primary,		/* I - Primary colorspace needed */
+    cf_icspace_t  secondary,		/* I - Secondary colorspace if primary no good */
     int             saturation,		/* I - Color saturation level */
     int             hue,		/* I - Color hue adjustment */
-    const cups_ib_t *lut)		/* I - RGB gamma/brightness LUT */
+    const cf_ib_t *lut)		/* I - RGB gamma/brightness LUT */
 {
   unsigned char	header[16],		/* First 16 bytes of file */
 		header2[16];		/* Bytes 2048-2064 (PhotoCD) */
-  cups_image_t	*img;			/* New image buffer */
+  cf_image_t	*img;			/* New image buffer */
   int		status;			/* Status of load... */
 
 
-  DEBUG_printf(("cupsImageOpen2(%p, %d, %d, %d, %d, %p)\n",
+  DEBUG_printf(("cfImageOpen2(%p, %d, %d, %d, %d, %p)\n",
         	fp, primary, secondary, saturation, hue, lut));
 
  /*
@@ -357,7 +357,7 @@ cupsImageOpenFP(
   * Allocate memory...
   */
 
-  img = calloc(sizeof(cups_image_t), 1);
+  img = calloc(sizeof(cf_image_t), 1);
 
   if (img == NULL)
   {
@@ -370,48 +370,48 @@ cupsImageOpenFP(
   */
 
   img->cachefile = -1;
-  img->max_ics   = CUPS_TILE_MINIMUM;
+  img->max_ics   = CF_TILE_MINIMUM;
   img->xppi      = 200;
   img->yppi      = 200;
 
   if (!memcmp(header, "GIF87a", 6) || !memcmp(header, "GIF89a", 6))
-    status = _cupsImageReadGIF(img, fp, primary, secondary, saturation, hue,
+    status = _cfImageReadGIF(img, fp, primary, secondary, saturation, hue,
                                lut);
   else if (!memcmp(header, "BM", 2))
-    status = _cupsImageReadBMP(img, fp, primary, secondary, saturation, hue,
+    status = _cfImageReadBMP(img, fp, primary, secondary, saturation, hue,
                                lut);
   else if (header[0] == 0x01 && header[1] == 0xda)
-    status = _cupsImageReadSGI(img, fp, primary, secondary, saturation, hue,
+    status = _cfImageReadSGI(img, fp, primary, secondary, saturation, hue,
                                lut);
   else if (header[0] == 0x59 && header[1] == 0xa6 &&
            header[2] == 0x6a && header[3] == 0x95)
-    status = _cupsImageReadSunRaster(img, fp, primary, secondary, saturation,
+    status = _cfImageReadSunRaster(img, fp, primary, secondary, saturation,
                                      hue, lut);
   else if (header[0] == 'P' && header[1] >= '1' && header[1] <= '6')
-    status = _cupsImageReadPNM(img, fp, primary, secondary, saturation, hue,
+    status = _cfImageReadPNM(img, fp, primary, secondary, saturation, hue,
                                lut);
   else if (!memcmp(header2, "PCD_IPI", 7))
-    status = _cupsImageReadPhotoCD(img, fp, primary, secondary, saturation,
+    status = _cfImageReadPhotoCD(img, fp, primary, secondary, saturation,
                                    hue, lut);
   else if (!memcmp(header + 8, "\000\010", 2) ||
            !memcmp(header + 8, "\000\030", 2))
-    status = _cupsImageReadPIX(img, fp, primary, secondary, saturation, hue,
+    status = _cfImageReadPIX(img, fp, primary, secondary, saturation, hue,
                                lut);
 #if defined(HAVE_LIBPNG) && defined(HAVE_LIBZ)
   else if (!memcmp(header, "\211PNG", 4))
-    status = _cupsImageReadPNG(img, fp, primary, secondary, saturation, hue,
+    status = _cfImageReadPNG(img, fp, primary, secondary, saturation, hue,
                                lut);
 #endif /* HAVE_LIBPNG && HAVE_LIBZ */
 #ifdef HAVE_LIBJPEG
   else if (!memcmp(header, "\377\330\377", 3) &&	/* Start-of-Image */
 	   header[3] >= 0xe0 && header[3] <= 0xef)	/* APPn */
-    status = _cupsImageReadJPEG(img, fp, primary, secondary, saturation, hue,
+    status = _cfImageReadJPEG(img, fp, primary, secondary, saturation, hue,
                                 lut);
 #endif /* HAVE_LIBJPEG */
 #ifdef HAVE_LIBTIFF
   else if (!memcmp(header, "MM\000\052", 4) ||
            !memcmp(header, "II\052\000", 4))
-    status = _cupsImageReadTIFF(img, fp, primary, secondary, saturation, hue,
+    status = _cfImageReadTIFF(img, fp, primary, secondary, saturation, hue,
                                 lut);
 #endif /* HAVE_LIBTIFF */
   else
@@ -431,23 +431,23 @@ cupsImageOpenFP(
 
 
 /*
- * '_cupsImagePutCol()' - Put a column of pixels to an image.
+ * '_cfImagePutCol()' - Put a column of pixels to an image.
  */
 
 int					/* O - -1 on error, 0 on success */
-_cupsImagePutCol(
-    cups_image_t    *img,		/* I - Image */
+_cfImagePutCol(
+    cf_image_t    *img,		/* I - Image */
     int             x,			/* I - Column */
     int             y,			/* I - Start row */
     int             height,		/* I - Column height */
-    const cups_ib_t *pixels)		/* I - Pixels to put */
+    const cf_ib_t *pixels)		/* I - Pixels to put */
 {
   int		bpp,			/* Bytes per pixel */
 		twidth,			/* Width of tile */
 		count;			/* Number of pixels to put */
   int		tilex,			/* Column within tile */
 		tiley;			/* Row within tile */
-  cups_ib_t	*ib;			/* Pointer to pixels in tile */
+  cf_ib_t	*ib;			/* Pointer to pixels in tile */
 
 
   if (img == NULL || x < 0 || x >= img->xsize || y >= img->ysize)
@@ -465,10 +465,10 @@ _cupsImagePutCol(
   if (height < 1)
     return (-1);
 
-  bpp    = cupsImageGetDepth(img);
-  twidth = bpp * (CUPS_TILE_SIZE - 1);
-  tilex  = x / CUPS_TILE_SIZE;
-  tiley  = y / CUPS_TILE_SIZE;
+  bpp    = cfImageGetDepth(img);
+  twidth = bpp * (CF_TILE_SIZE - 1);
+  tilex  = x / CF_TILE_SIZE;
+  tiley  = y / CF_TILE_SIZE;
 
   while (height > 0)
   {
@@ -480,7 +480,7 @@ _cupsImagePutCol(
     img->tiles[tiley][tilex].dirty = 1;
     tiley ++;
 
-    count = CUPS_TILE_SIZE - (y & (CUPS_TILE_SIZE - 1));
+    count = CF_TILE_SIZE - (y & (CF_TILE_SIZE - 1));
     if (count > height)
       count = height;
 
@@ -506,22 +506,22 @@ _cupsImagePutCol(
 
 
 /*
- * '_cupsImagePutRow()' - Put a row of pixels to an image.
+ * '_cfImagePutRow()' - Put a row of pixels to an image.
  */
 
 int					/* O - -1 on error, 0 on success */
-_cupsImagePutRow(
-    cups_image_t    *img,		/* I - Image */
+_cfImagePutRow(
+    cf_image_t    *img,		/* I - Image */
     int             x,			/* I - Start column */
     int             y,			/* I - Row */
     int             width,		/* I - Row width */
-    const cups_ib_t *pixels)		/* I - Pixel data */
+    const cf_ib_t *pixels)		/* I - Pixel data */
 {
   int		bpp,			/* Bytes per pixel */
 		count;			/* Number of pixels to put */
   int		tilex,			/* Column within tile */
 		tiley;			/* Row within tile */
-  cups_ib_t	*ib;			/* Pointer to pixels in tile */
+  cf_ib_t	*ib;			/* Pointer to pixels in tile */
 
 
   if (img == NULL || y < 0 || y >= img->ysize || x >= img->xsize)
@@ -540,8 +540,8 @@ _cupsImagePutRow(
     return (-1);
 
   bpp   = img->colorspace < 0 ? -img->colorspace : img->colorspace;
-  tilex = x / CUPS_TILE_SIZE;
-  tiley = y / CUPS_TILE_SIZE;
+  tilex = x / CF_TILE_SIZE;
+  tiley = y / CF_TILE_SIZE;
 
   while (width > 0)
   {
@@ -552,7 +552,7 @@ _cupsImagePutRow(
 
     img->tiles[tiley][tilex].dirty = 1;
 
-    count = CUPS_TILE_SIZE - (x & (CUPS_TILE_SIZE - 1));
+    count = CF_TILE_SIZE - (x & (CF_TILE_SIZE - 1));
     if (count > width)
       count = width;
     memcpy(ib, pixels, count * bpp);
@@ -567,15 +567,15 @@ _cupsImagePutRow(
 
 
 /*
- * 'cupsImageSetMaxTiles()' - Set the maximum number of tiles to cache.
+ * 'cfImageSetMaxTiles()' - Set the maximum number of tiles to cache.
  *
  * If the "max_tiles" argument is 0 then the maximum number of tiles is
  * computed from the image size or the RIP_CACHE environment variable.
  */
 
 void
-cupsImageSetMaxTiles(
-    cups_image_t *img,			/* I - Image to set */
+cfImageSetMaxTiles(
+    cf_image_t *img,			/* I - Image to set */
     int          max_tiles)		/* I - Number of tiles to cache */
 {
   int	cache_size,			/* Size of tile cache in bytes */
@@ -585,16 +585,16 @@ cupsImageSetMaxTiles(
 	cache_units[255];		/* Cache size units */
 
 
-  min_tiles = max(CUPS_TILE_MINIMUM,
-                  1 + max((img->xsize + CUPS_TILE_SIZE - 1) / CUPS_TILE_SIZE,
-                          (img->ysize + CUPS_TILE_SIZE - 1) / CUPS_TILE_SIZE));
+  min_tiles = max(CF_TILE_MINIMUM,
+                  1 + max((img->xsize + CF_TILE_SIZE - 1) / CF_TILE_SIZE,
+                          (img->ysize + CF_TILE_SIZE - 1) / CF_TILE_SIZE));
 
   if (max_tiles == 0)
-    max_tiles = ((img->xsize + CUPS_TILE_SIZE - 1) / CUPS_TILE_SIZE) *
-                ((img->ysize + CUPS_TILE_SIZE - 1) / CUPS_TILE_SIZE);
+    max_tiles = ((img->xsize + CF_TILE_SIZE - 1) / CF_TILE_SIZE) *
+                ((img->ysize + CF_TILE_SIZE - 1) / CF_TILE_SIZE);
 
-  cache_size = max_tiles * CUPS_TILE_SIZE * CUPS_TILE_SIZE *
-               cupsImageGetDepth(img);
+  cache_size = max_tiles * CF_TILE_SIZE * CF_TILE_SIZE *
+               cfImageGetDepth(img);
 
   if ((cache_env = getenv("RIP_MAX_CACHE")) != NULL)
   {
@@ -604,7 +604,7 @@ cupsImageSetMaxTiles(
           max_size = 32 * 1024 * 1024;
 	  break;
       case 1 :
-          max_size *= 4 * CUPS_TILE_SIZE * CUPS_TILE_SIZE;
+          max_size *= 4 * CF_TILE_SIZE * CF_TILE_SIZE;
 	  break;
       case 2 :
           if (tolower(cache_units[0] & 255) == 'g')
@@ -614,7 +614,7 @@ cupsImageSetMaxTiles(
 	  else if (tolower(cache_units[0] & 255) == 'k')
 	    max_size *= 1024;
 	  else if (tolower(cache_units[0] & 255) == 't')
-	    max_size *= 4 * CUPS_TILE_SIZE * CUPS_TILE_SIZE;
+	    max_size *= 4 * CF_TILE_SIZE * CF_TILE_SIZE;
 	  break;
     }
   }
@@ -622,8 +622,8 @@ cupsImageSetMaxTiles(
     max_size = 32 * 1024 * 1024;
 
   if (cache_size > max_size)
-    max_tiles = max_size / CUPS_TILE_SIZE / CUPS_TILE_SIZE /
-                cupsImageGetDepth(img);
+    max_tiles = max_size / CF_TILE_SIZE / CF_TILE_SIZE /
+                cfImageGetDepth(img);
 
   if (max_tiles < min_tiles)
     max_tiles = min_tiles;
@@ -639,13 +639,13 @@ cupsImageSetMaxTiles(
  */
 
 static int
-flush_tile(cups_image_t *img)		/* I - Image */
+flush_tile(cf_image_t *img)		/* I - Image */
 {
   int		bpp;			/* Bytes per pixel */
-  cups_itile_t	*tile;			/* Pointer to tile */
+  cf_itile_t	*tile;			/* Pointer to tile */
 
 
-  bpp  = cupsImageGetDepth(img);
+  bpp  = cfImageGetDepth(img);
   if(img==NULL||img->first==NULL||img->first->tile==NULL)
   {
     return -1;
@@ -691,7 +691,7 @@ flush_tile(cups_image_t *img)		/* I - Image */
   }
 
   if (write(img->cachefile, tile->ic->pixels,
-	    bpp * CUPS_TILE_SIZE * CUPS_TILE_SIZE) == -1)
+	    bpp * CF_TILE_SIZE * CF_TILE_SIZE) == -1)
     DEBUG_printf(("Error writing cache tile!"));
 
   tile->ic    = NULL;
@@ -704,8 +704,8 @@ flush_tile(cups_image_t *img)		/* I - Image */
  * 'get_tile()' - Get a cached tile.
  */
 
-static cups_ib_t *			/* O - Pointer to tile or NULL */
-get_tile(cups_image_t *img,		/* I - Image */
+static cf_ib_t *			/* O - Pointer to tile or NULL */
+get_tile(cf_image_t *img,		/* I - Image */
          int          x,		/* I - Column in image */
          int          y)		/* I - Row in image */
 {
@@ -714,21 +714,21 @@ get_tile(cups_image_t *img,		/* I - Image */
 		tiley,			/* Row within tile */
 		xtiles,			/* Number of tiles horizontally */
 		ytiles;			/* Number of tiles vertically */
-  cups_ic_t	*ic;			/* Cache pointer */
-  cups_itile_t	*tile;			/* Tile pointer */
+  cf_ic_t	*ic;			/* Cache pointer */
+  cf_itile_t	*tile;			/* Tile pointer */
 
 
   if (img->tiles == NULL)
   {
-    xtiles = (img->xsize + CUPS_TILE_SIZE - 1) / CUPS_TILE_SIZE;
-    ytiles = (img->ysize + CUPS_TILE_SIZE - 1) / CUPS_TILE_SIZE;
+    xtiles = (img->xsize + CF_TILE_SIZE - 1) / CF_TILE_SIZE;
+    ytiles = (img->ysize + CF_TILE_SIZE - 1) / CF_TILE_SIZE;
 
     DEBUG_printf(("Creating tile array (%dx%d)\n", xtiles, ytiles));
 
-    if ((img->tiles = calloc(sizeof(cups_itile_t *), ytiles)) == NULL)
+    if ((img->tiles = calloc(sizeof(cf_itile_t *), ytiles)) == NULL)
       return (NULL);
 
-    if ((tile = calloc(xtiles * sizeof(cups_itile_t), ytiles)) == NULL)
+    if ((tile = calloc(xtiles * sizeof(cf_itile_t), ytiles)) == NULL)
       return (NULL);
 
     for (tiley = 0; tiley < ytiles; tiley ++)
@@ -739,19 +739,19 @@ get_tile(cups_image_t *img,		/* I - Image */
     }
   }
 
-  bpp   = cupsImageGetDepth(img);
-  tilex = x / CUPS_TILE_SIZE;
-  tiley = y / CUPS_TILE_SIZE;
+  bpp   = cfImageGetDepth(img);
+  tilex = x / CF_TILE_SIZE;
+  tiley = y / CF_TILE_SIZE;
   tile  = img->tiles[tiley] + tilex;
-  x     &= (CUPS_TILE_SIZE - 1);
-  y     &= (CUPS_TILE_SIZE - 1);
+  x     &= (CF_TILE_SIZE - 1);
+  y     &= (CF_TILE_SIZE - 1);
 
   if ((ic = tile->ic) == NULL)
   {
     if (img->num_ics < img->max_ics)
     {
-      if ((ic = calloc(sizeof(cups_ic_t) +
-                       bpp * CUPS_TILE_SIZE * CUPS_TILE_SIZE, 1)) == NULL)
+      if ((ic = calloc(sizeof(cf_ic_t) +
+                       bpp * CF_TILE_SIZE * CF_TILE_SIZE, 1)) == NULL)
       {
         if (img->num_ics == 0)
 	  return (NULL);
@@ -761,7 +761,7 @@ get_tile(cups_image_t *img,		/* I - Image */
       }
       else
       {
-	ic->pixels = ((cups_ib_t *)ic) + sizeof(cups_ic_t);
+	ic->pixels = ((cf_ib_t *)ic) + sizeof(cf_ic_t);
 
 	img->num_ics ++;
 
@@ -790,14 +790,14 @@ get_tile(cups_image_t *img,		/* I - Image */
 
       lseek(img->cachefile, tile->pos, SEEK_SET);
       if (read(img->cachefile, ic->pixels,
-	       bpp * CUPS_TILE_SIZE * CUPS_TILE_SIZE) == -1)
+	       bpp * CF_TILE_SIZE * CF_TILE_SIZE) == -1)
 	DEBUG_printf(("Error reading cache tile!"));
     }
     else
     {
       DEBUG_puts("Clearing cache tile...");
 
-      memset(ic->pixels, 0, bpp * CUPS_TILE_SIZE * CUPS_TILE_SIZE);
+      memset(ic->pixels, 0, bpp * CF_TILE_SIZE * CF_TILE_SIZE);
     }
   }
 
@@ -837,7 +837,7 @@ get_tile(cups_image_t *img,		/* I - Image */
 
   ic->next = NULL;
 
-  return (ic->pixels + bpp * (y * CUPS_TILE_SIZE + x));
+  return (ic->pixels + bpp * (y * CF_TILE_SIZE + x));
 }
 
 /*
@@ -845,13 +845,13 @@ get_tile(cups_image_t *img,		/* I - Image */
  * (posw,posh): Position of left corner
  * (width,height): width and height of required image.
  */
-cups_image_t* cupsImageCrop(cups_image_t* img,int posw,int posh,int width,int height)
+cf_image_t* cfImageCrop(cf_image_t* img,int posw,int posh,int width,int height)
 {
-  int image_width = cupsImageGetWidth(img);
-  cups_image_t* temp=calloc(sizeof(cups_image_t),1);
-  cups_ib_t *pixels=(cups_ib_t*)malloc(img->xsize*cupsImageGetDepth(img));
+  int image_width = cfImageGetWidth(img);
+  cf_image_t* temp=calloc(sizeof(cf_image_t),1);
+  cf_ib_t *pixels=(cf_ib_t*)malloc(img->xsize*cfImageGetDepth(img));
   temp->cachefile = -1;
-  temp->max_ics = CUPS_TILE_MINIMUM;
+  temp->max_ics = CF_TILE_MINIMUM;
   temp->colorspace=img->colorspace;
   temp->xppi = img->xppi;
   temp->yppi = img->yppi;
@@ -860,9 +860,9 @@ cups_image_t* cupsImageCrop(cups_image_t* img,int posw,int posh,int width,int he
   temp->tiles = NULL;
   temp->xsize = width;
   temp->ysize = height;
-  for(int i=posh;i<min(cupsImageGetHeight(img),posh+height);i++){
-    cupsImageGetRow(img,posw,i,min(width,image_width-posw),pixels);
-    _cupsImagePutRow(temp,0,i-posh,min(width,image_width-posw),pixels);
+  for(int i=posh;i<min(cfImageGetHeight(img),posh+height);i++){
+    cfImageGetRow(img,posw,i,min(width,image_width-posw),pixels);
+    _cfImagePutRow(temp,0,i-posh,min(width,image_width-posw),pixels);
   }
   free(pixels);
   return temp;

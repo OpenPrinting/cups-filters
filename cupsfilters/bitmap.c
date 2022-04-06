@@ -440,7 +440,7 @@ unsigned char *cfRGB8toKCMYcm(unsigned char *src,
   unsigned char c;
   unsigned char d;
 
-  cupsImageRGBToCMYK(src,cmyk,1);
+  cfImageRGBToCMYK(src,cmyk,1);
   c = 0;
   d = dither1[y & 0xf][x & 0xf];
   /* K */

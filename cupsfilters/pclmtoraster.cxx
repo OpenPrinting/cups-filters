@@ -462,7 +462,7 @@ RGBtoCMYKLine(unsigned char *src,
 	      unsigned int pixels,
 	      pclmtoraster_data_t *data)
 {
-  cupsImageRGBToCMYK(src,dst,pixels);
+  cfImageRGBToCMYK(src,dst,pixels);
   return dst;
 }
 
@@ -473,7 +473,7 @@ RGBtoCMYLine(unsigned char *src,
 	     unsigned int pixels,
 	     pclmtoraster_data_t *data)
 {
-  cupsImageRGBToCMY(src,dst,pixels);
+  cfImageRGBToCMY(src,dst,pixels);
   return dst;
 }
 
@@ -485,9 +485,9 @@ RGBtoWhiteLine(unsigned char *src,
 	       pclmtoraster_data_t *data)
 {
   if (data->header.cupsBitsPerColor != 1) {
-    cupsImageRGBToWhite(src,dst,pixels);
+    cfImageRGBToWhite(src,dst,pixels);
   } else {
-    cupsImageRGBToWhite(src,src,pixels);
+    cfImageRGBToWhite(src,src,pixels);
     cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
 
@@ -502,9 +502,9 @@ RGBtoBlackLine(unsigned char *src,
 	       pclmtoraster_data_t *data)
 {
   if (data->header.cupsBitsPerColor != 1) {
-    cupsImageRGBToBlack(src,dst,pixels);
+    cfImageRGBToBlack(src,dst,pixels);
   } else {
-    cupsImageRGBToBlack(src,src,pixels);
+    cfImageRGBToBlack(src,src,pixels);
     cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
   return dst;
@@ -517,7 +517,7 @@ CMYKtoRGBLine(unsigned char *src,
 	      unsigned int pixels,
 	      pclmtoraster_data_t *data)
 {
-  cupsImageCMYKToRGB(src,dst,pixels);
+  cfImageCMYKToRGB(src,dst,pixels);
   return dst;
 }
 
@@ -529,8 +529,8 @@ CMYKtoCMYLine(unsigned char *src,
 	      pclmtoraster_data_t *data)
 {
   // Converted first to rgb and then to cmy for better outputs.
-  cupsImageCMYKToRGB(src,src,pixels);
-  cupsImageRGBToCMY(src,dst,pixels);
+  cfImageCMYKToRGB(src,src,pixels);
+  cfImageRGBToCMY(src,dst,pixels);
   return dst;
 }
 
@@ -542,9 +542,9 @@ CMYKtoWhiteLine(unsigned char *src,
 		pclmtoraster_data_t *data)
 {
   if (data->header.cupsBitsPerColor != 1) {
-    cupsImageCMYKToWhite(src,dst,pixels);
+    cfImageCMYKToWhite(src,dst,pixels);
   } else {
-    cupsImageCMYKToWhite(src,src,pixels);
+    cfImageCMYKToWhite(src,src,pixels);
     cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
   return dst;
@@ -558,9 +558,9 @@ CMYKtoBlackLine(unsigned char *src,
 		pclmtoraster_data_t *data)
 {
   if (data->header.cupsBitsPerColor != 1) {
-    cupsImageCMYKToBlack(src,dst,pixels);
+    cfImageCMYKToBlack(src,dst,pixels);
   } else {
-    cupsImageCMYKToBlack(src,src,pixels);
+    cfImageCMYKToBlack(src,src,pixels);
     cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
   return dst;
@@ -573,7 +573,7 @@ GraytoRGBLine(unsigned char *src,
 	      unsigned int pixels,
 	      pclmtoraster_data_t *data)
 {
-  cupsImageWhiteToRGB(src,dst,pixels);
+  cfImageWhiteToRGB(src,dst,pixels);
   return dst;
 }
 
@@ -584,7 +584,7 @@ GraytoCMYKLine(unsigned char *src,
 	       unsigned int pixels,
 	      pclmtoraster_data_t *data)
 {
-  cupsImageWhiteToCMYK(src,dst,pixels);
+  cfImageWhiteToCMYK(src,dst,pixels);
   return dst;
 }
 
@@ -595,7 +595,7 @@ GraytoCMYLine(unsigned char *src,
 	      unsigned int pixels,
 	      pclmtoraster_data_t *data)
 {
-  cupsImageWhiteToCMY(src,dst,pixels);
+  cfImageWhiteToCMY(src,dst,pixels);
   return dst;
 }
 
@@ -607,9 +607,9 @@ GraytoBlackLine(unsigned char *src,
 		pclmtoraster_data_t *data)
 {
   if (data->header.cupsBitsPerColor != 1) {
-    cupsImageWhiteToBlack(src, dst, pixels);
+    cfImageWhiteToBlack(src, dst, pixels);
   } else {
-    cupsImageWhiteToBlack(src, src, pixels);
+    cfImageWhiteToBlack(src, src, pixels);
     cfOneBitLine(src, dst, data->header.cupsWidth, row, data->bi_level);
   }
   return dst;

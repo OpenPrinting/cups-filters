@@ -1,5 +1,5 @@
 /*
- *   SGI image file format library definitions for CUPS.
+ *   SGI image file format library definitions for CUPS Filters.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1993-2005 by Easy Software Products.
@@ -10,8 +10,8 @@
  *   which should have been included with this file.
  */
 
-#ifndef _SGI_H_
-#  define _SGI_H_
+#ifndef _CUPS_FILTERS_SGI_H_
+#  define _CUPS_FILTERS_SGI_H_
 
 #  include <stdio.h>
 #  include <stdlib.h>
@@ -26,14 +26,14 @@ extern "C" {
  * Constants...
  */
 
-#  define SGI_MAGIC	474	/* Magic number in image file */
+#  define CF_SGI_MAGIC		474	/* Magic number in image file */
 
-#  define SGI_READ	0	/* Read from an SGI image file */
-#  define SGI_WRITE	1	/* Write to an SGI image file */
+#  define CF_SGI_READ		0	/* Read from an SGI image file */
+#  define CF_SGI_WRITE		1	/* Write to an SGI image file */
 
-#  define SGI_COMP_NONE	0	/* No compression */
-#  define SGI_COMP_RLE	1	/* Run-length encoding */
-#  define SGI_COMP_ARLE	2	/* Agressive run-length encoding */
+#  define CF_SGI_COMP_NONE	0	/* No compression */
+#  define CF_SGI_COMP_RLE	1	/* Run-length encoding */
+#  define CF_SGI_COMP_ARLE	2	/* Agressive run-length encoding */
 
 
 /*
@@ -56,23 +56,23 @@ typedef struct
   unsigned short	*arle_row;	/* Advanced RLE compression buffer */
   long			arle_offset,	/* Advanced RLE buffer offset */
 			arle_length;	/* Advanced RLE buffer length */
-} sgi_t;
+} cf_sgi_t;
 
 
 /*
  * Prototypes...
  */
 
-extern int	sgiClose(sgi_t *sgip);
-extern int	sgiGetRow(sgi_t *sgip, unsigned short *row, int y, int z);
-extern sgi_t	*sgiOpen(const char *filename, int mode, int comp, int bpp,
-		         int xsize, int ysize, int zsize);
-extern sgi_t	*sgiOpenFile(FILE *file, int mode, int comp, int bpp,
-		             int xsize, int ysize, int zsize);
-extern int	sgiPutRow(sgi_t *sgip, unsigned short *row, int y, int z);
+extern int	cfSGIClose(cf_sgi_t *sgip);
+extern int	cfSGIGetRow(cf_sgi_t *sgip, unsigned short *row, int y, int z);
+extern cf_sgi_t	*cfSGIOpen(const char *filename, int mode, int comp, int bpp,
+			   int xsize, int ysize, int zsize);
+extern cf_sgi_t	*cfSGIOpenFile(FILE *file, int mode, int comp, int bpp,
+			       int xsize, int ysize, int zsize);
+extern int	cfSGIPutRow(cf_sgi_t *sgip, unsigned short *row, int y, int z);
 
 #  ifdef __cplusplus
 }
 #  endif
-#endif /* !_SGI_H_ */
+#endif /* !_CUPS_FILTERS_SGI_H_ */
 

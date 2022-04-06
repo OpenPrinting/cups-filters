@@ -68,8 +68,8 @@ static void	WriteLabelProlog(imagetops_doc_t *doc,
 static void	WriteLabels(imagetops_doc_t *doc, int orient);
 static void	WriteTextComment(imagetops_doc_t *doc,
 				 const char *name, const char *value);
-static void	ps_hex(FILE *outputfp, cups_ib_t *, int, int);
-static void	ps_ascii85(FILE *outputfp, cups_ib_t *, int, int);
+static void	ps_hex(FILE *outputfp, cf_ib_t *, int, int);
+static void	ps_ascii85(FILE *outputfp, cf_ib_t *, int, int);
 
 
 /*
@@ -85,7 +85,7 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 	  void *parameters)    /* I - Filter-specific parameters (unused) */
 {
   imagetops_doc_t	doc;		/* Document information */
-  cups_image_t	*img;			/* Image to print */
+  cf_image_t	*img;			/* Image to print */
   float		xprint,			/* Printable area */
 		yprint,
 		xinches,		/* Total size in inches */
@@ -102,7 +102,7 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 		page;			/* Current page number */
   int		xc0, yc0,			/* Corners of the page in image coords */
 		xc1, yc1;
-  cups_ib_t	*row;			/* Current row */
+  cf_ib_t	*row;			/* Current row */
   int		y;			/* Current Y coordinate in image */
   int		colorspace;		/* Output colorspace */
   int		out_offset,		/* Offset into output buffer */
@@ -434,9 +434,9 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
   * Open the input image to print...
   */
 
-  colorspace = doc.Color ? CUPS_IMAGE_RGB_CMYK : CUPS_IMAGE_WHITE;
+  colorspace = doc.Color ? CF_IMAGE_RGB_CMYK : CF_IMAGE_WHITE;
 
-  img = cupsImageOpenFP(inputfp, colorspace, CUPS_IMAGE_WHITE, sat, hue, NULL);
+  img = cfImageOpenFP(inputfp, colorspace, CF_IMAGE_WHITE, sat, hue, NULL);
   if (img != NULL) {
 
     int margin_defined = 0;
@@ -460,8 +460,8 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
       }
     }
 
-    float w = (float)cupsImageGetWidth(img);
-    float h = (float)cupsImageGetHeight(img);
+    float w = (float)cfImageGetWidth(img);
+    float h = (float)cfImageGetHeight(img);
     float pw = doc.PageRight - doc.PageLeft;
     float ph = doc.PageTop - doc.PageBottom;
     int tempOrientation = doc.Orientation;
@@ -600,8 +600,8 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 	float posw = (w - final_w) / 2, posh = (h - final_h) / 2;
 	posw = (1 + XPosition) * posw;
 	posh = (1 - YPosition) * posh;
-	cups_image_t *img2 = cupsImageCrop(img, posw, posh, final_w, final_h);
-	cupsImageClose(img);
+	cf_image_t *img2 = cfImageCrop(img, posw, posh, final_w, final_h);
+	cfImageClose(img);
 	img = img2;
       }
       else
@@ -614,8 +614,8 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 	float posw = (w - final_w) / 2, posh = (h - final_h) / 2;
 	posw = (1 + XPosition) * posw;
 	posh = (1 - YPosition) * posh;
-	cups_image_t *img2 = cupsImageCrop(img, posw, posh, final_w, final_h);
-	cupsImageClose(img);
+	cf_image_t *img2 = cfImageCrop(img, posw, posh, final_w, final_h);
+	cfImageClose(img);
 	img = img2;
 	if (flag == 4)
 	{
@@ -648,7 +648,7 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
     return (1);
   }
 
-  colorspace = cupsImageGetColorSpace(img);
+  colorspace = cfImageGetColorSpace(img);
 
  /*
   * Scale as necessary...
@@ -656,8 +656,8 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 
   if (zoom == 0.0 && xppi == 0)
   {
-    xppi = cupsImageGetXPPI(img);
-    yppi = cupsImageGetYPPI(img);
+    xppi = cfImageGetXPPI(img);
+    yppi = cfImageGetYPPI(img);
   }
 
   if (yppi == 0)
@@ -688,8 +688,8 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 		 "cfFilterImageToPS: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
-    xinches = (float)cupsImageGetWidth(img) / (float)xppi;
-    yinches = (float)cupsImageGetHeight(img) / (float)yppi;
+    xinches = (float)cfImageGetWidth(img) / (float)xppi;
+    yinches = (float)cfImageGetHeight(img) / (float)yppi;
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPS: Image size is %.1f x %.1f inches...",
@@ -736,36 +736,36 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 
     xprint = (doc.PageRight - doc.PageLeft) / 72.0;
     yprint = (doc.PageTop - doc.PageBottom) / 72.0;
-    aspect = (float)cupsImageGetYPPI(img) / (float)cupsImageGetXPPI(img);
+    aspect = (float)cfImageGetYPPI(img) / (float)cfImageGetXPPI(img);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPS: Before scaling: xprint=%.1f, yprint=%.1f",
 		 xprint, yprint);
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
-		 "cfFilterImageToPS: cupsImageGetXPPI(img) = %d, "
-		 "cupsImageGetYPPI(img) = %d, aspect = %f",
-		 cupsImageGetXPPI(img), cupsImageGetYPPI(img), aspect);
+		 "cfFilterImageToPS: cfImageGetXPPI(img) = %d, "
+		 "cfImageGetYPPI(img) = %d, aspect = %f",
+		 cfImageGetXPPI(img), cfImageGetYPPI(img), aspect);
 
     xsize = xprint * zoom;
-    ysize = xsize * cupsImageGetHeight(img) / cupsImageGetWidth(img) / aspect;
+    ysize = xsize * cfImageGetHeight(img) / cfImageGetWidth(img) / aspect;
 
     if (ysize > (yprint * zoom))
     {
       ysize = yprint * zoom;
-      xsize = ysize * cupsImageGetWidth(img) * aspect /
-	cupsImageGetHeight(img);
+      xsize = ysize * cfImageGetWidth(img) * aspect /
+	cfImageGetHeight(img);
     }
 
     xsize2 = yprint * zoom;
-    ysize2 = xsize2 * cupsImageGetHeight(img) / cupsImageGetWidth(img) /
+    ysize2 = xsize2 * cfImageGetHeight(img) / cfImageGetWidth(img) /
       aspect;
 
     if (ysize2 > (xprint * zoom))
     {
       ysize2 = xprint * zoom;
-      xsize2 = ysize2 * cupsImageGetWidth(img) * aspect /
-	cupsImageGetHeight(img);
+      xsize2 = ysize2 * cfImageGetWidth(img) * aspect /
+	cfImageGetHeight(img);
     }
 
     if (log) log(ld, FILTER_LOGLEVEL_DEBUG,
@@ -1037,12 +1037,12 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
   * Output the pages...
   */
 
-  row = malloc(cupsImageGetWidth(img) * abs(colorspace) + 3);
+  row = malloc(cfImageGetWidth(img) * abs(colorspace) + 3);
   if (row == NULL)
   {
     log(ld, FILTER_LOGLEVEL_ERROR,
 	"cfFilterImageToPS: Could not allocate memory.");
-    cupsImageClose(img);
+    cfImageClose(img);
     return (2);
   }
 
@@ -1224,10 +1224,10 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 
         fputs("gsave\n", doc.outputfp);
 
-	xc0 = cupsImageGetWidth(img) * xpage / xpages;
-	xc1 = cupsImageGetWidth(img) * (xpage + 1) / xpages - 1;
-	yc0 = cupsImageGetHeight(img) * ypage / ypages;
-	yc1 = cupsImageGetHeight(img) * (ypage + 1) / ypages - 1;
+	xc0 = cfImageGetWidth(img) * xpage / xpages;
+	xc1 = cfImageGetWidth(img) * (xpage + 1) / xpages - 1;
+	yc0 = cfImageGetHeight(img) * ypage / ypages;
+	yc1 = cfImageGetHeight(img) * (ypage + 1) / ypages - 1;
 
         fprintf(doc.outputfp, "%.1f %.1f translate\n", left, top);
 
@@ -1242,7 +1242,7 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 	  fprintf(doc.outputfp, "%d %d 8[1 0 0 -1 0 1]",
 		  (xc1 - xc0 + 1), (yc1 - yc0 + 1));
 
-          if (colorspace == CUPS_IMAGE_WHITE)
+          if (colorspace == CF_IMAGE_WHITE)
             fputs("{currentfile picture readhexstring pop} image\n",
 		  doc.outputfp);
           else
@@ -1253,7 +1253,7 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 
           for (y = yc0; y <= yc1; y ++)
           {
-            cupsImageGetRow(img, xc0, y, xc1 - xc0 + 1, row);
+            cfImageGetRow(img, xc0, y, xc1 - xc0 + 1, row);
             ps_hex(doc.outputfp, row, (xc1 - xc0 + 1) * abs(colorspace),
 		   y == yc1);
           }
@@ -1262,13 +1262,13 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 	{
           switch (colorspace)
 	  {
-	    case CUPS_IMAGE_WHITE :
+	    case CF_IMAGE_WHITE :
 	        fputs("/DeviceGray setcolorspace\n", doc.outputfp);
 		break;
-            case CUPS_IMAGE_RGB :
+            case CF_IMAGE_RGB :
 	        fputs("/DeviceRGB setcolorspace\n", doc.outputfp);
 		break;
-            case CUPS_IMAGE_CMYK :
+            case CF_IMAGE_CMYK :
 	        fputs("/DeviceCMYK setcolorspace\n", doc.outputfp);
 		break;
           }
@@ -1283,13 +1283,13 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 
           switch (colorspace)
 	  {
-	    case CUPS_IMAGE_WHITE :
+	    case CF_IMAGE_WHITE :
                 fputs("/Decode[0 1]", doc.outputfp);
 		break;
-            case CUPS_IMAGE_RGB :
+            case CF_IMAGE_RGB :
                 fputs("/Decode[0 1 0 1 0 1]", doc.outputfp);
 		break;
-            case CUPS_IMAGE_CMYK :
+            case CF_IMAGE_CMYK :
                 fputs("/Decode[0 1 0 1 0 1 0 1]", doc.outputfp);
 		break;
           }
@@ -1303,7 +1303,7 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
 
           for (y = yc0, out_offset = 0; y <= yc1; y ++)
           {
-            cupsImageGetRow(img, xc0, y, xc1 - xc0 + 1, row + out_offset);
+            cfImageGetRow(img, xc0, y, xc1 - xc0 + 1, row + out_offset);
 
             out_length = (xc1 - xc0 + 1) * abs(colorspace) + out_offset;
             out_offset = out_length & 3;
@@ -1345,7 +1345,7 @@ cfFilterImageToPS(int inputfd,         /* I - File descriptor input stream */
   * Close files...
   */
 
-  cupsImageClose(img);
+  cfImageClose(img);
   fclose(doc.outputfp);
   close(outputfd);
 
@@ -1621,7 +1621,7 @@ WriteTextComment(imagetops_doc_t *doc,
 
 static void
 ps_hex(FILE *outputfp,
-       cups_ib_t *data,			/* I - Data to print */
+       cf_ib_t *data,			/* I - Data to print */
        int       length,		/* I - Number of bytes to print */
        int       last_line)		/* I - Last line of raster data? */
 {
@@ -1665,7 +1665,7 @@ ps_hex(FILE *outputfp,
 
 static void
 ps_ascii85(FILE *outputfp,
-	   cups_ib_t *data,		/* I - Data to print */
+	   cf_ib_t *data,		/* I - Data to print */
 	   int       length,		/* I - Number of bytes to print */
 	   int       last_line)		/* I - Last line of raster data? */
 {

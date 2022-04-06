@@ -151,42 +151,42 @@ unsigned char *noBitConversion(unsigned char *src, unsigned char *dst,
 unsigned char *rgbToCmyk(unsigned char *src, unsigned char *dst,
 			 unsigned int pixels)
 {
-    cupsImageRGBToCMYK(src,dst,pixels);
+    cfImageRGBToCMYK(src,dst,pixels);
     return dst;
 }
 
 unsigned char *whiteToCmyk(unsigned char *src, unsigned char *dst,
 			   unsigned int pixels)
 {
-    cupsImageWhiteToCMYK(src,dst,pixels);
+    cfImageWhiteToCMYK(src,dst,pixels);
     return dst;
 }
 
 unsigned char *cmykToRgb(unsigned char *src, unsigned char *dst,
 			 unsigned int pixels)
 {
-    cupsImageCMYKToRGB(src,dst,pixels);
+    cfImageCMYKToRGB(src,dst,pixels);
     return dst;
 }
 
 unsigned char *whiteToRgb(unsigned char *src, unsigned char *dst,
 			  unsigned int pixels)
 {
-    cupsImageWhiteToRGB(src,dst,pixels);
+    cfImageWhiteToRGB(src,dst,pixels);
     return dst;
 }
 
 unsigned char *rgbToWhite(unsigned char *src, unsigned char *dst,
 			  unsigned int pixels)
 {
-    cupsImageRGBToWhite(src,dst,pixels);
+    cfImageRGBToWhite(src,dst,pixels);
     return dst;
 }
 
 unsigned char *cmykToWhite(unsigned char *src, unsigned char *dst,
 			   unsigned int pixels)
 {
-    cupsImageCMYKToWhite(src,dst,pixels);
+    cfImageCMYKToWhite(src,dst,pixels);
     return dst;
 }
 

@@ -11,7 +11,7 @@
  *
  * Contents:
  *
- *   _cupsImageReadBMP() - Read a BMP image file.
+ *   _cfImageReadBMP() - Read a BMP image file.
  *   read_word()         - Read a 16-bit unsigned integer.
  *   read_dword()        - Read a 32-bit unsigned integer.
  *   read_long()         - Read a 32-bit signed integer.
@@ -44,18 +44,18 @@ static int		read_long(FILE *fp);
 
 
 /*
- * '_cupsImageReadBMP()' - Read a BMP image file.
+ * '_cfImageReadBMP()' - Read a BMP image file.
  */
 
 int					/* O - Read status */
-_cupsImageReadBMP(
-    cups_image_t    *img,		/* IO - cupsImage */
-    FILE            *fp,		/* I - cupsImage file */
-    cups_icspace_t  primary,		/* I - Primary choice for colorspace */
-    cups_icspace_t  secondary,		/* I - Secondary choice for colorspace */
+_cfImageReadBMP(
+    cf_image_t    *img,		/* IO - Image */
+    FILE            *fp,		/* I - Image file */
+    cf_icspace_t  primary,		/* I - Primary choice for colorspace */
+    cf_icspace_t  secondary,		/* I - Secondary choice for colorspace */
     int             saturation,		/* I - Color saturation (%) */
     int             hue,		/* I - Color hue (degrees) */
-    const cups_ib_t *lut)		/* I - Lookup table for gamma/brightness */
+    const cf_ib_t *lut)		/* I - Lookup table for gamma/brightness */
 {
   int		offset,			/* Offset to bitmap data */
 		info_size,		/* Size of info header */
@@ -71,12 +71,12 @@ _cupsImageReadBMP(
 		count,			/* Number of times to repeat */
 		temp,			/* Temporary color */
 		align;			/* Alignment bytes */
-  cups_ib_t	bit,			/* Bit in image */
+  cf_ib_t	bit,			/* Bit in image */
 		byte;			/* Byte in image */
-  cups_ib_t	*in,			/* Input pixels */
+  cf_ib_t	*in,			/* Input pixels */
 		*out,			/* Output pixels */
 		*ptr;			/* Pointer into pixels */
-  cups_ib_t	colormap[256][4];	/* Colormap */
+  cf_ib_t	colormap[256][4];	/* Colormap */
 
 
   (void)secondary;
@@ -121,8 +121,8 @@ _cupsImageReadBMP(
   colors_used      = read_dword(fp);
   colors_important = read_dword(fp);
 
-  if (img->xsize == 0 || img->xsize > CUPS_IMAGE_MAX_WIDTH ||
-      img->ysize == 0 || img->ysize > CUPS_IMAGE_MAX_HEIGHT ||
+  if (img->xsize == 0 || img->xsize > CF_IMAGE_MAX_WIDTH ||
+      img->ysize == 0 || img->ysize > CF_IMAGE_MAX_HEIGHT ||
       (depth != 1 && depth != 4 && depth != 8 && depth != 24))
   {
     DEBUG_printf(("DEBUG: Bad BMP dimensions %ux%ux%d\n",
@@ -177,11 +177,11 @@ _cupsImageReadBMP(
   * Setup image and buffers...
   */
 
-  img->colorspace = (primary == CUPS_IMAGE_RGB_CMYK) ? CUPS_IMAGE_RGB : primary;
+  img->colorspace = (primary == CF_IMAGE_RGB_CMYK) ? CF_IMAGE_RGB : primary;
 
-  cupsImageSetMaxTiles(img, 0);
+  cfImageSetMaxTiles(img, 0);
 
-  bpp = cupsImageGetDepth(img);
+  bpp = cfImageGetDepth(img);
 
   if ((in = malloc(img->xsize * 3)) == NULL)
   {
@@ -446,38 +446,38 @@ _cupsImageReadBMP(
     }
 
     if (saturation != 100 || hue != 0)
-      cupsImageRGBAdjust(in, img->xsize, saturation, hue);
+      cfImageRGBAdjust(in, img->xsize, saturation, hue);
 
     switch (img->colorspace)
     {
       default :
 	  break;
 
-      case CUPS_IMAGE_WHITE :
-	  cupsImageRGBToWhite(in, out, img->xsize);
+      case CF_IMAGE_WHITE :
+	  cfImageRGBToWhite(in, out, img->xsize);
 	  break;
 
-      case CUPS_IMAGE_RGB :
-	  cupsImageRGBToRGB(in, out, img->xsize);
+      case CF_IMAGE_RGB :
+	  cfImageRGBToRGB(in, out, img->xsize);
 	  break;
 
-      case CUPS_IMAGE_BLACK :
-	  cupsImageRGBToBlack(in, out, img->xsize);
+      case CF_IMAGE_BLACK :
+	  cfImageRGBToBlack(in, out, img->xsize);
 	  break;
 
-      case CUPS_IMAGE_CMY :
-	  cupsImageRGBToCMY(in, out, img->xsize);
+      case CF_IMAGE_CMY :
+	  cfImageRGBToCMY(in, out, img->xsize);
 	  break;
 
-      case CUPS_IMAGE_CMYK :
-	  cupsImageRGBToCMYK(in, out, img->xsize);
+      case CF_IMAGE_CMYK :
+	  cfImageRGBToCMYK(in, out, img->xsize);
 	  break;
     }
 
     if (lut)
-      cupsImageLut(out, img->xsize * bpp, lut);
+      cfImageLut(out, img->xsize * bpp, lut);
 
-    _cupsImagePutRow(img, 0, y, img->xsize, out);
+    _cfImagePutRow(img, 0, y, img->xsize, out);
   }
 
   fclose(fp);

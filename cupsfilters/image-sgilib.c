@@ -11,11 +11,11 @@
  *
  * Contents:
  *
- *   sgiClose()    - Close an SGI image file.
- *   sgiGetRow()   - Get a row of image data from a file.
- *   sgiOpen()     - Open an SGI image file for reading or writing.
- *   sgiOpenFile() - Open an SGI image file for reading or writing.
- *   sgiPutRow()   - Put a row of image data to a file.
+ *   cfSGIClose()    - Close an SGI image file.
+ *   cfSGIGetRow()   - Get a row of image data from a file.
+ *   cfSGIOpen()     - Open an SGI image file for reading or writing.
+ *   cfSGIOpenFile() - Open an SGI image file for reading or writing.
+ *   cfSGIPutRow()   - Put a row of image data to a file.
  *   getlong()     - Get a 32-bit big-endian integer.
  *   getshort()    - Get a 16-bit big-endian integer.
  *   putlong()     - Put a 32-bit big-endian integer.
@@ -45,11 +45,11 @@ static int	write_rle16(FILE *, unsigned short *, int);
 
 
 /*
- * 'sgiClose()' - Close an SGI image file.
+ * 'cfSGIClose()' - Close an SGI image file.
  */
 
 int					/* O - 0 on success, -1 on error */
-sgiClose(sgi_t *sgip)			/* I - SGI image */
+cfSGIClose(cf_sgi_t *sgip)			/* I - SGI image */
 {
   int	i;				/* Return status */
   long	*offset;			/* Looping var for offset table */
@@ -58,7 +58,7 @@ sgiClose(sgi_t *sgip)			/* I - SGI image */
   if (sgip == NULL)
     return (-1);
 
-  if (sgip->mode == SGI_WRITE && sgip->comp != SGI_COMP_NONE)
+  if (sgip->mode == CF_SGI_WRITE && sgip->comp != CF_SGI_COMP_NONE)
   {
    /*
     * Write the scanline offset table to the file...
@@ -91,7 +91,7 @@ sgiClose(sgi_t *sgip)			/* I - SGI image */
     free(sgip->length);
   }
 
-  if (sgip->comp == SGI_COMP_ARLE)
+  if (sgip->comp == CF_SGI_COMP_ARLE)
     free(sgip->arle_row);
 
   i = fclose(sgip->file);
@@ -102,11 +102,11 @@ sgiClose(sgi_t *sgip)			/* I - SGI image */
 
 
 /*
- * 'sgiGetRow()' - Get a row of image data from a file.
+ * 'cfSGIGetRow()' - Get a row of image data from a file.
  */
 
 int					/* O - 0 on success, -1 on error */
-sgiGetRow(sgi_t          *sgip,		/* I - SGI image */
+cfSGIGetRow(cf_sgi_t          *sgip,		/* I - SGI image */
           unsigned short *row,		/* O - Row to read */
           int            y,		/* I - Line to read */
           int            z)		/* I - Channel to read */
@@ -123,7 +123,7 @@ sgiGetRow(sgi_t          *sgip,		/* I - SGI image */
 
   switch (sgip->comp)
   {
-    case SGI_COMP_NONE :
+    case CF_SGI_COMP_NONE :
        /*
         * Seek to the image row - optimize buffering by only seeking if
         * necessary...
@@ -145,7 +145,7 @@ sgiGetRow(sgi_t          *sgip,		/* I - SGI image */
         }
         break;
 
-    case SGI_COMP_RLE :
+    case CF_SGI_COMP_RLE :
         offset = sgip->table[z][y];
         if (offset != ftell(sgip->file))
           fseek(sgip->file, offset, SEEK_SET);
@@ -161,23 +161,23 @@ sgiGetRow(sgi_t          *sgip,		/* I - SGI image */
 
 
 /*
- * 'sgiOpen()' - Open an SGI image file for reading or writing.
+ * 'cfSGIOpen()' - Open an SGI image file for reading or writing.
  */
 
-sgi_t *					/* O - New image */
-sgiOpen(const char *filename,		/* I - File to open */
-        int        mode,		/* I - Open mode (SGI_READ or SGI_WRITE) */
+cf_sgi_t *					/* O - New image */
+cfSGIOpen(const char *filename,		/* I - File to open */
+        int        mode,		/* I - Open mode (CF_SGI_READ or CF_SGI_WRITE) */
         int        comp,		/* I - Type of compression */
         int        bpp,			/* I - Bytes per pixel */
         int        xsize,		/* I - Width of image in pixels */
         int        ysize,		/* I - Height of image in pixels */
         int        zsize)		/* I - Number of channels */
 {
-  sgi_t	*sgip;				/* New SGI image file */
+  cf_sgi_t	*sgip;				/* New SGI image file */
   FILE	*file;				/* Image file pointer */
 
 
-  if (mode == SGI_READ)
+  if (mode == CF_SGI_READ)
     file = fopen(filename, "rb");
   else
     file = fopen(filename, "wb+");
@@ -185,7 +185,7 @@ sgiOpen(const char *filename,		/* I - File to open */
   if (file == NULL)
     return (NULL);
 
-  if ((sgip = sgiOpenFile(file, mode, comp, bpp, xsize, ysize, zsize)) == NULL)
+  if ((sgip = cfSGIOpenFile(file, mode, comp, bpp, xsize, ysize, zsize)) == NULL)
     fclose(file);
 
   return (sgip);
@@ -193,12 +193,12 @@ sgiOpen(const char *filename,		/* I - File to open */
 
 
 /*
- * 'sgiOpenFile()' - Open an SGI image file for reading or writing.
+ * 'cfSGIOpenFile()' - Open an SGI image file for reading or writing.
  */
 
-sgi_t *					/* O - New image */
-sgiOpenFile(FILE *file,			/* I - File to open */
-            int  mode,			/* I - Open mode (SGI_READ or SGI_WRITE) */
+cf_sgi_t *					/* O - New image */
+cfSGIOpenFile(FILE *file,			/* I - File to open */
+            int  mode,			/* I - Open mode (CF_SGI_READ or CF_SGI_WRITE) */
             int  comp,			/* I - Type of compression */
             int  bpp,			/* I - Bytes per pixel */
             int  xsize,			/* I - Width of image in pixels */
@@ -208,21 +208,21 @@ sgiOpenFile(FILE *file,			/* I - File to open */
   int	i, j;				/* Looping var */
   char	name[80];			/* Name of file in image header */
   short	magic;				/* Magic number */
-  sgi_t	*sgip;				/* New image pointer */
+  cf_sgi_t	*sgip;				/* New image pointer */
 
 
-  if ((sgip = calloc(sizeof(sgi_t), 1)) == NULL)
+  if ((sgip = calloc(sizeof(cf_sgi_t), 1)) == NULL)
     return (NULL);
 
   sgip->file = file;
 
   switch (mode)
   {
-    case SGI_READ :
-        sgip->mode = SGI_READ;
+    case CF_SGI_READ :
+        sgip->mode = CF_SGI_READ;
 
         magic = getshort(sgip->file);
-        if (magic != SGI_MAGIC)
+        if (magic != CF_SGI_MAGIC)
         {
           free(sgip);
           return (NULL);
@@ -268,20 +268,20 @@ sgiOpenFile(FILE *file,			/* I - File to open */
         }
         break;
 
-    case SGI_WRITE :
+    case CF_SGI_WRITE :
 	if (xsize < 1 ||
 	    ysize < 1 ||
 	    zsize < 1 ||
 	    bpp < 1 || bpp > 2 ||
-	    comp < SGI_COMP_NONE || comp > SGI_COMP_ARLE)
+	    comp < CF_SGI_COMP_NONE || comp > CF_SGI_COMP_ARLE)
         {
           free(sgip);
           return (NULL);
         }
 
-        sgip->mode = SGI_WRITE;
+        sgip->mode = CF_SGI_WRITE;
 
-        putshort(SGI_MAGIC, sgip->file);
+        putshort(CF_SGI_MAGIC, sgip->file);
         putc(((sgip->comp = comp) != 0) ? '1': '0', sgip->file);
         putc(sgip->bpp = bpp, sgip->file);
         putshort(3, sgip->file);		/* Dimensions */
@@ -308,7 +308,7 @@ sgiOpenFile(FILE *file,			/* I - File to open */
 
         switch (comp)
         {
-          case SGI_COMP_NONE : /* No compression */
+          case CF_SGI_COMP_NONE : /* No compression */
              /*
               * This file is uncompressed.  To avoid problems with sparse files,
               * we need to write blank pixels for the entire image...
@@ -326,11 +326,11 @@ sgiOpenFile(FILE *file,			/* I - File to open */
               }
               break;
 
-          case SGI_COMP_ARLE : /* Aggressive RLE */
+          case CF_SGI_COMP_ARLE : /* Aggressive RLE */
               sgip->arle_row    = calloc(xsize, sizeof(unsigned short));
               sgip->arle_offset = 0;
 
-          case SGI_COMP_RLE : /* Run-Length Encoding */
+          case CF_SGI_COMP_RLE : /* Run-Length Encoding */
              /*
               * This file is compressed; write the (blank) scanline tables...
               */
@@ -389,11 +389,11 @@ sgiOpenFile(FILE *file,			/* I - File to open */
 
 
 /*
- * 'sgiPutRow()' - Put a row of image data to a file.
+ * 'cfSGIPutRow()' - Put a row of image data to a file.
  */
 
 int					/* O - 0 on success, -1 on error */
-sgiPutRow(sgi_t          *sgip,		/* I - SGI image */
+cfSGIPutRow(cf_sgi_t          *sgip,		/* I - SGI image */
           unsigned short *row,		/* I - Row to write */
           int            y,		/* I - Line to write */
           int            z)		/* I - Channel to write */
@@ -410,7 +410,7 @@ sgiPutRow(sgi_t          *sgip,		/* I - SGI image */
 
   switch (sgip->comp)
   {
-    case SGI_COMP_NONE :
+    case CF_SGI_COMP_NONE :
        /*
         * Seek to the image row - optimize buffering by only seeking if
         * necessary...
@@ -432,7 +432,7 @@ sgiPutRow(sgi_t          *sgip,		/* I - SGI image */
         }
         break;
 
-    case SGI_COMP_ARLE :
+    case CF_SGI_COMP_ARLE :
         if (sgip->table[z][y] != 0)
           return (-1);
 
@@ -506,7 +506,7 @@ sgiPutRow(sgi_t          *sgip,		/* I - SGI image */
 	else
 	  fseek(sgip->file, 0, SEEK_END);	/* Clear EOF */
 
-    case SGI_COMP_RLE :
+    case CF_SGI_COMP_RLE :
         if (sgip->table[z][y] != 0)
           return (-1);
 
@@ -520,7 +520,7 @@ sgiPutRow(sgi_t          *sgip,		/* I - SGI image */
         else
           x = write_rle16(sgip->file, row, sgip->xsize);
 
-        if (sgip->comp == SGI_COMP_ARLE)
+        if (sgip->comp == CF_SGI_COMP_ARLE)
         {
           sgip->arle_offset = offset;
           sgip->arle_length = x;

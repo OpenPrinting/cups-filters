@@ -462,7 +462,7 @@ static unsigned char *rgbToCMYKLine(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
      unsigned int size, pwgtoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
-  cupsImageRGBToCMYK(src,dst,pixels);
+  cfImageRGBToCMYK(src,dst,pixels);
   return dst;
 }
 
@@ -474,7 +474,7 @@ static unsigned char *rgbToCMYKLineSwap(unsigned char *src, unsigned char *dst,
   unsigned char *dp = dst;
 
   for (unsigned int i = 0;i < pixels;i++, bp -= 3, dp += 4) {
-    cupsImageRGBToCMYK(bp,dp,1);
+    cfImageRGBToCMYK(bp,dp,1);
   }
   return dst;
 }
@@ -483,7 +483,7 @@ static unsigned char *rgbToCMYLine(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
      unsigned int size, pwgtoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
 {
-  cupsImageRGBToCMY(src,dst,pixels);
+  cfImageRGBToCMY(src,dst,pixels);
   return dst;
 }
 
@@ -495,7 +495,7 @@ static unsigned char *rgbToCMYLineSwap(unsigned char *src, unsigned char *dst,
   unsigned char *dp = dst;
 
   for (unsigned int i = 0;i < pixels;i++, bp -= 3, dp += 3) {
-    cupsImageRGBToCMY(bp,dp,1);
+    cfImageRGBToCMY(bp,dp,1);
   }
   return dst;
 }
@@ -508,7 +508,7 @@ static unsigned char *rgbToKCMYLine(unsigned char *src, unsigned char *dst,
   unsigned char *dp = dst;
   unsigned char d;
 
-  cupsImageRGBToCMYK(src,dst,pixels);
+  cfImageRGBToCMYK(src,dst,pixels);
   /* CMYK to KCMY */
   for (unsigned int i = 0;i < pixels;i++, bp += 3, dp += 4) {
     d = dp[3];
@@ -529,7 +529,7 @@ static unsigned char *rgbToKCMYLineSwap(unsigned char *src, unsigned char *dst,
   unsigned char d;
 
   for (unsigned int i = 0;i < pixels;i++, bp -= 3, dp += 4) {
-    cupsImageRGBToCMYK(bp,dp,1);
+    cfImageRGBToCMYK(bp,dp,1);
     /* CMYK to KCMY */
     d = dp[3];
     dp[3] = dp[2];
@@ -711,7 +711,7 @@ static unsigned char *RGB8toRGBW(unsigned char *src, unsigned char *pixelBuf,
   unsigned char cmyk[4];
   unsigned char *dp = pixelBuf;
 
-  cupsImageRGBToCMYK(src,cmyk,1);
+  cfImageRGBToCMYK(src,cmyk,1);
   for (int i = 0;i < 4;i++) {
     *dp++ = ~cmyk[i];
   }
@@ -721,21 +721,21 @@ static unsigned char *RGB8toRGBW(unsigned char *src, unsigned char *pixelBuf,
 static unsigned char *RGB8toCMYK(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pwgtoraster_doc_t* doc)
 {
-  cupsImageRGBToCMYK(src,pixelBuf,1);
+  cfImageRGBToCMYK(src,pixelBuf,1);
   return pixelBuf;
 }
 
 static unsigned char *RGB8toCMY(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pwgtoraster_doc_t* doc)
 {
-  cupsImageRGBToCMY(src,pixelBuf,1);
+  cfImageRGBToCMY(src,pixelBuf,1);
   return pixelBuf;
 }
 
 static unsigned char *RGB8toYMC(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pwgtoraster_doc_t* doc)
 {
-  cupsImageRGBToCMY(src,pixelBuf,1);
+  cfImageRGBToCMY(src,pixelBuf,1);
   /* swap C and Y */
   unsigned char d = pixelBuf[0];
   pixelBuf[0] = pixelBuf[2];
@@ -746,7 +746,7 @@ static unsigned char *RGB8toYMC(unsigned char *src, unsigned char *pixelBuf,
 static unsigned char *RGB8toKCMY(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pwgtoraster_doc_t* doc)
 {
-  cupsImageRGBToCMYK(src,pixelBuf,1);
+  cfImageRGBToCMYK(src,pixelBuf,1);
   unsigned char d = pixelBuf[3];
   pixelBuf[3] = pixelBuf[2];
   pixelBuf[2] = pixelBuf[1];
@@ -764,7 +764,7 @@ static unsigned char *RGB8toKCMYcmTemp(unsigned char *src, unsigned char *pixelB
 static unsigned char *RGB8toYMCK(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pwgtoraster_doc_t* doc)
 {
-  cupsImageRGBToCMYK(src,pixelBuf,1);
+  cfImageRGBToCMYK(src,pixelBuf,1);
   /* swap C and Y */
   unsigned char d = pixelBuf[0];
   pixelBuf[0] = pixelBuf[2];
@@ -1934,7 +1934,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	{
 	  preBuf1 = (unsigned char *)calloc(doc->outheader.cupsWidth,
 					    sizeof(unsigned char));
-	  cupsImageRGBToWhite(bp, preBuf1, doc->outheader.cupsWidth);
+	  cfImageRGBToWhite(bp, preBuf1, doc->outheader.cupsWidth);
 	  bp = preBuf1;
 	}
 	else if (input_color_mode == 0) // 1-bit mono
@@ -1949,7 +1949,7 @@ static bool outPage(pwgtoraster_doc_t *doc,
 	{
 	  preBuf2 = (unsigned char *)calloc(doc->outheader.cupsWidth * 3,
 					    sizeof(unsigned char));
-	  cupsImageWhiteToRGB(bp, preBuf2, doc->outheader.cupsWidth);
+	  cfImageWhiteToRGB(bp, preBuf2, doc->outheader.cupsWidth);
 	  bp = preBuf2;
 	}
 	else if (color_mode_needed == 0) // 1-bit mono
