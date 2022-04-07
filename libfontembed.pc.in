@@ -4,7 +4,7 @@ libdir=@libdir@
 includedir=@includedir@
                                                                        
 Name: libfontembed
-Description: Library for de/embedding fonts to pdf
+Description: Library for de/embedding fonts to PDF files
 Version: @VERSION@
 
 Libs: -L${libdir} -lfontembed

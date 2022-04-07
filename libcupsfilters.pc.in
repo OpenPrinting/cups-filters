@@ -4,7 +4,7 @@ libdir=@libdir@
 includedir=@includedir@
                                                                        
 Name: libcupsfilters
-Description: Library for reading and writing cups filters
+Description: Library providing everything for filtering/converting print/scan job data
 Version: @VERSION@
 
 Libs: -L${libdir} -lcupsfilters
