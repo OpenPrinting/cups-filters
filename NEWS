@@ -3,6 +3,12 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Renamed function/data type/constant names to
+	  get a consistent API: Functions start with "cf" and the name
+	  is in camel-case, data types start with "cf_" and are
+	  all-lowercase with "_" separators, constants start with
+	  "CF_" and are all-uppercase, also with "_" separators.
+	- libcupsfilters: Bumped soname to 2, as we have a new API now
 	- pdftopdf, pstops: Introduced new "input-page-ranges"
 	  attribute (Issue #365, Pull request #444, #445).
 	- Braille: In vectortopdf check inkscape version to call
