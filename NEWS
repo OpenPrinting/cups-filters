@@ -3,6 +3,11 @@ NEWS - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
 
 CHANGES IN V2.0.0
 
+	- libcupsfilters: Added new API function cfFilterLoadPPD() and
+	  cfFilterFreePPD() for easy setup of filter function (chain)
+	  calls. Call cfFilterLoadPPD() when setting up the filter
+	  data structure before calling the filter functions and call
+	  cfFilterFreePPD() when done.
 	- libcupsfilters: Renamed function/data type/constant names to
 	  get a consistent API: Functions start with "cf" and the name
 	  is in camel-case, data types start with "cf_" and are
