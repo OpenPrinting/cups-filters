@@ -465,7 +465,6 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/image-tiff.c \
 	cupsfilters/image-zoom.c \
 	cupsfilters/imagetopdf.c \
-	cupsfilters/imagetops.c \
 	cupsfilters/imagetoraster.c \
 	cupsfilters/ipp.c \
 	cupsfilters/lut.c \
@@ -499,7 +498,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pdftoraster.cxx \
 	cupsfilters/pdfutils.c \
 	cupsfilters/ppdgenerator.c \
-	cupsfilters/pstops.c \
+	cupsfilters/imagetops-pstops.c \
 	cupsfilters/pwgtoraster.c \
 	cupsfilters/raster.c \
 	cupsfilters/rastertops.c \
