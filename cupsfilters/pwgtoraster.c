@@ -301,10 +301,7 @@ static int parseOpts(cf_filter_data_t *data,
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
   
-  if (data->ppd)
-    doc->ppd = data->ppd;
-  else if (data->ppdfile)
-    doc->ppd = data->ppd = ppdOpenFile(data->ppdfile);
+  doc->ppd = data->ppd;
 
   // Did the user explicitly request a certain page size? If not, overtake
   // the page size(s) from the input pages

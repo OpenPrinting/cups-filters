@@ -330,17 +330,6 @@ main(int  argc,				/* I - Number of command-line args */
 					      PPD file here which contains
 					      some info from the printer's
 					      DNS-SD record. */
-      if (filter_data.ppdfile)
-	filter_data.ppd = ppdOpenFile(filter_data.ppdfile);
-      else
-	filter_data.ppd = NULL;
-      if (filter_data.printer_attrs == NULL && filter_data.ppd == NULL)
-      {
-	ippDelete(response);
-	fprintf(stderr, "ERROR: Unable to get sufficient capability info of the destination printer.\n");
-	return (CUPS_BACKEND_FAILED);
-      }
-
       filter_data.num_options = num_options;
       filter_data.options = options;       /* Command line options from 5th
 					      arg */
@@ -353,6 +342,15 @@ main(int  argc,				/* I - Number of command-line args */
       filter_data.iscanceledfunc = cfCUPSIsCanceledFunc; /* Job-is-canceled
 							   function */
       filter_data.iscanceleddata = &job_canceled;
+
+      cfFilterLoadPPD(&filter_data);
+      if (filter_data.printer_attrs == NULL && filter_data.ppd == NULL)
+      {
+	ippDelete(response);
+	fprintf(stderr, "ERROR: Unable to get sufficient capability info of the destination printer.\n");
+	return (CUPS_BACKEND_FAILED);
+      }
+
       cfFilterOpenBackAndSidePipes(&filter_data);
 
       /* Parameters (input/output MIME types) for cfFilterUniversal() call */
@@ -389,13 +387,6 @@ main(int  argc,				/* I - Number of command-line args */
       /* FINAL_CONTENT_TYPE environment variable */
       setenv("FINAL_CONTENT_TYPE", document_format, 1);
 
-      /* Mark the defaults and option settings in the PPD file */
-      if (filter_data.ppd)
-      {
-	ppdMarkDefaults(filter_data.ppd);
-	ppdMarkOptions(filter_data.ppd, num_options, options);
-      }
-
       /* We call the IPP CUPS backend at the end of the chain, so we have
 	 no output */
       nullfd = open("/dev/null", O_WRONLY);
@@ -409,6 +400,7 @@ main(int  argc,				/* I - Number of command-line args */
       /* Clean up */
       cupsArrayDelete(filter_chain);
       ippDelete(response);
+      cfFilterFreePPD(&filter_data);
 
       if (retval) {
 	fprintf(stderr, "ERROR: Job processing failed.\n");

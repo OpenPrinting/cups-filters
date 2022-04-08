@@ -54,13 +54,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
   }
   strncpy(output, final_output, sizeof(output) - 1);
 
-  /* If we have a PPD, load it and its cache, so that we can access the
-     "*cupsFilter(2): ..." lines */
-  if (data->ppd == NULL && data->ppdfile)
-    data->ppd = ppdOpenFile(data->ppdfile);
   ppd = data->ppd;
-  if (ppd && !ppd->cache)
-    ppd->cache = ppdCacheCreateWithPPD(ppd);
   cache = ppd ? ppd->cache : NULL;
 
   /* Check whether our output format (under CUPS it is taken from the

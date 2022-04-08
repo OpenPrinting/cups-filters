@@ -1011,7 +1011,6 @@ int cfFilterBannerToPDF(int inputfd,         /* I - File descriptor input stream
 {
     banner_t *banner;
     int num_options = 0;
-    ppd_file_t *ppd = NULL;
     int ret;
     FILE *inputfp;
     FILE *outputfp;
@@ -1085,18 +1084,6 @@ int cfFilterBannerToPDF(int inputfd,         /* I - File descriptor input stream
 
         fclose(inputfp);
         return (1);
-    }
-
-    if (data->ppd)
-        ppd = data->ppd;
-    else if (data->ppdfile)
-        ppd = ppdOpenFile(data->ppdfile);
-
-
-    if (!ppd)
-    {
-        if (log)
-            log(ld, CF_LOGLEVEL_DEBUG, "cfFilterBannerToPDF: Could not open PPD file '%s'", ppd);
     }
 
    /*

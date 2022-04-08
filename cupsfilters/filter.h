@@ -153,6 +153,12 @@ extern int cfFilterCUPSWrapper(int argc,
 			       int *JobCanceled);
 
 
+extern int cfFilterLoadPPD(cf_filter_data_t *data);
+
+
+extern void cfFilterFreePPD(cf_filter_data_t *data);
+
+
 extern int cfFilterTee(int inputfd,
 		       int outputfd,
 		       int inputseekable,
@@ -325,13 +331,10 @@ extern int cfFilterPDFToRaster(int inputfd,
 
 /* Parameters: cf_filter_out_format_t*
    Ouput format: CUPS Raster, PWG Raster, Apple Raster, PCLm
-   Note: With Apple Raster or PCLm selections the output is actually
-   CUPS Raster but information about available color spaces and depths
-   is taken from the urf-supported printer IPP attribute or the
-   appropriate PPD file attribute (PCLM is always sRGB 8-bit). These
-   modes are for further processing with rastertopwg or
-   rastertopclm. This can change in the future when we add Apple
-   Raster output support to this filter. */
+   Note: With PCLm selection the output is actually CUPS Raster but
+   color space and depth will be 8-bit sRGB or SGray, the only color
+   spaces supported by PCLm. This mode is for further processing with
+   rastertopclm. */
 
 
 extern int cfFilterPSToPS(int inputfd,

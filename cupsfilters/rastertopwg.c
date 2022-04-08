@@ -48,8 +48,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
   int			tmp;
   unsigned char		white;		/* White pixel */
 	/* PPD file */
-  ppd_attr_t		*back;		/* cupsBackSide attribute */
-  ppd_cache_t		*cache;		/* PPD cache */
+  ppd_attr_t		*back = NULL;	/* cupsBackSide attribute */
+  ppd_cache_t		*cache = NULL;	/* PPD cache */
   pwg_size_t		*pwg_size;	/* PWG media size */
   pwg_media_t		*pwg_media;	/* PWG media name */
 	/* Number of options */
@@ -67,7 +67,7 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
     output_format = *(cf_filter_out_format_t *)parameters;
     if (output_format == CF_FILTER_OUT_FORMAT_PWG_RASTER)
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_PWG);
-    if (output_format == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
+    else if (output_format == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_APPLE);
     else
     {
@@ -85,18 +85,16 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 
   inras  = cupsRasterOpen(inputfd, CUPS_RASTER_READ);
 
-  if (data->ppd == NULL && data->ppdfile)
-    data->ppd = ppdOpenFile(data->ppdfile);
-
-  back = ppdFindAttr(data->ppd, "cupsBackSide", NULL);
-
   if (!data->ppd)
   {
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
      "cfFilterRasterToPWG: PPD file is not specified.");
   }
-
-  cache = data->ppd ? data->ppd->cache : NULL;
+  else
+  {
+    back = ppdFindAttr(data->ppd, "cupsBackSide", NULL);
+    cache = data->ppd->cache;
+  }
 
   while (cupsRasterReadHeader2(inras, &inheader))
   {

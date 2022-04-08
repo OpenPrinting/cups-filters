@@ -103,17 +103,11 @@ parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
-  if (data->ppd)
-    ppd = data->ppd;
-  else if (data->ppdfile)
-    ppd = data->ppd = ppdOpenFile(data->ppdfile);
-
   if (ppd)
   {
-    ppdMarkOptions(ppd, num_options, options);
     if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
-        (!strcasecmp(attr->value, "true")
-         || !strcasecmp(attr->value, "on") ||
+	(!strcasecmp(attr->value, "true")
+	 || !strcasecmp(attr->value, "on") ||
          !strcasecmp(attr->value, "yes")))
       pclmtoraster_data->outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
   }

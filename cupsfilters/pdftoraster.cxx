@@ -297,12 +297,9 @@ static void  handleRqeuiresPageRegion(pdftoraster_doc_t*doc) {
 }
 
 static int parseOpts(cf_filter_data_t *data,
-		     void *parameters,
+		     cf_filter_out_format_t outformat,
 		     pdftoraster_doc_t *doc)
 {
-#ifdef HAVE_CUPS_1_7
-  cf_filter_out_format_t outformat;
-#endif /* HAVE_CUPS_1_7 */
   int num_options = 0;
   cups_option_t *options = NULL;
   char *profile = NULL;
@@ -314,49 +311,23 @@ static int parseOpts(cf_filter_data_t *data,
   ipp_t *printer_attrs = data->printer_attrs;
   cups_cspace_t cspace = (cups_cspace_t)(-1);
 
-  /* Note: With the CF_FILTER_OUT_FORMAT_APPLE_RASTER or CF_FILTER_OUT_FORMAT_PCLM
-     selections the output is actually CUPS Raster but information
-     about available color spaces and depths is taken from the
-     urf-supported printer IPP attribute or the appropriate PPD file
-     attribute (PCLM is always sRGB 8-bit). These modes are for
-     further processing with rastertopwg or rastertopclm. This can
-     change in the future when we add Apple Raster output support to
-     this filter. */
-
-  if (parameters) {
-    outformat = *(cf_filter_out_format_t *)parameters;
-    if (outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_PCLM)
-      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
-  } else
-    outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
-
-  if (log) log(ld, CF_LOGLEVEL_DEBUG,
-	       "cfFilterPDFToRaster: Output format: %s",
-	       (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
-		"PWG Raster"));
-
-  if (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER)
+  if (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
+      outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
     doc->pwgraster = 1;
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
-  if (data->ppd)
-    doc->ppd = data->ppd;
-  else if (data->ppdfile)
-    doc->ppd = ppdOpenFile(data->ppdfile);
+  doc->ppd = data->ppd;
 
-  if (doc->ppd) {
-    ppdMarkOptions(doc->ppd,num_options,options);
+  if (doc->ppd)
     handleRqeuiresPageRegion(doc);
-  } else
+  else
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToRaster: PPD file is not specified.");
 
   cfRasterPrepareHeader(&(doc->header), data, outformat,
-			  (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ?
+			  (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
+			   outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
 			   outformat : CF_FILTER_OUT_FORMAT_CUPS_RASTER), 0,
 			  &cspace);
 
@@ -1596,6 +1567,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
        cf_filter_data_t *data,          /* I - Job and printer data */
        void *parameters)             /* I - Filter-specific parameters */
 {
+  cf_filter_out_format_t outformat;
   pdftoraster_doc_t doc;
   int i;
   int npages = 0;
@@ -1612,6 +1584,29 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
 
   (void)inputseekable;
   cmsSetLogErrorHandler(lcmsErrorHandler);
+
+  /* Note: With the CF_FILTER_OUT_FORMAT_PCLM selection the output is
+     actually CUPS Raster but color spaces and depth are always
+     assumed to be 8-bit sRGB or sGray, the only color spaces in
+     PCLm. This mode is for further processing with rastertopclm. */
+
+  if (parameters) {
+    outformat = *(cf_filter_out_format_t *)parameters;
+    if (outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER &&
+	outformat != CF_FILTER_OUT_FORMAT_PCLM)
+      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+  } else
+    outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
+	       "cfFilterPDFToRaster: Final output format: %s",
+	       (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
+		(outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ? "PWG Raster" :
+		 (outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
+		  "Apple Raster" :
+		  "PCLm"))));
 
  /*
   * Open the input data stream specified by inputfd ...
@@ -1657,7 +1652,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
   }
   close(fd);
 
-  if (parseOpts(data, parameters, &doc) == 1)
+  if (parseOpts(data, outformat, &doc) == 1)
   {
     unlink(name);
     return (1);
@@ -1774,8 +1769,17 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
     }
   }
 
-  if ((raster = cupsRasterOpen(outputfd, doc.pwgraster ? CUPS_RASTER_WRITE_PWG :
-			       CUPS_RASTER_WRITE)) == 0) {
+  if ((raster = cupsRasterOpen(outputfd, (outformat ==
+					  CF_FILTER_OUT_FORMAT_CUPS_RASTER ?
+					  CUPS_RASTER_WRITE :
+					  (outformat ==
+					   CF_FILTER_OUT_FORMAT_PWG_RASTER ?
+					   CUPS_RASTER_WRITE_PWG :
+					   (outformat ==
+					    CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
+					    CUPS_RASTER_WRITE_APPLE :
+					    CUPS_RASTER_WRITE))))) == 0)
+  {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterPDFToRaster: Cannot open raster stream.");
     ret = 1;

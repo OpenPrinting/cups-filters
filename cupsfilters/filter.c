@@ -216,9 +216,6 @@ cfFilterCUPSWrapper(
   filter_data.options = options;       /* Command line options from 5th arg */
   filter_data.ppdfile = getenv("PPD"); /* PPD file name in the "PPD"
 					  environment variable. */
-  filter_data.ppd = filter_data.ppdfile ?
-                    ppdOpenFile(filter_data.ppdfile) : NULL;
-                                       /* Load PPD file */
   filter_data.back_pipe[0] = 3;        /* CUPS uses file descriptor 3 for */
   filter_data.back_pipe[1] = 3;        /* the back channel */
   filter_data.side_pipe[0] = 4;        /* CUPS uses file descriptor 4 for */
@@ -230,27 +227,83 @@ cfFilterCUPSWrapper(
   filter_data.iscanceleddata = JobCanceled;
 
  /*
-  * Prepare PPD file
+  * Load and prepare the PPD file
   */
 
-  ppdMarkDefaults(filter_data.ppd);
-  ppdMarkOptions(filter_data.ppd, filter_data.num_options, filter_data.options);
+  retval = cfFilterLoadPPD(&filter_data);
 
  /*
   * Fire up the filter function (output to stdout, file descriptor 1)
   */
 
-  retval = filter(inputfd, 1, inputseekable, &filter_data, parameters);
+  if (!retval)
+    retval = filter(inputfd, 1, inputseekable, &filter_data, parameters);
 
  /*
   * Clean up
   */
 
   cupsFreeOptions(num_options, options);
-  if (filter_data.ppd)
-    ppdClose(filter_data.ppd);
+  cfFilterFreePPD(&filter_data);
 
   return retval;
+}
+
+
+/*
+ * 'cfFilterLoadPPD()' - When preparing the data structure for calling
+ *                       one or more filter functions. Load the PPD
+ *                       file specified by the file name in the
+ *                       "ppdfile" field of the data structure. If the
+ *                       file name is NULL do nothing. If the PPD got
+ *                       successfully loaded also set up its cache,
+ *                       and mark default settings and if supplied in
+ *                       the data structure, also option settings.
+ */
+
+int					  /* O - Error status */
+cfFilterLoadPPD(cf_filter_data_t *data)   /* I - Job and printer data */
+{
+  cf_logfunc_t     log = data->logfunc;   /* Log function */
+  void             *ld = data->logdata;   /* log function data */
+
+  if (data->ppdfile == NULL)
+  {
+    data->ppd = NULL;
+    return (0);
+  }
+
+  if ((data->ppd = ppdOpenFile(data->ppdfile)) == NULL)
+  {
+    if (log) log(ld, CF_LOGLEVEL_ERROR,
+		 "cfFilterLoadPPD: Could not load PPD file %s: %s",
+		 data->ppdfile, strerror(errno));
+    return (1);
+  }
+
+  data->ppd->cache = ppdCacheCreateWithPPD(data->ppd);
+  ppdMarkDefaults(data->ppd);
+  ppdMarkOptions(data->ppd, data->num_options, data->options);
+
+  return (0);
+}
+
+
+/*
+ * 'cfFilterFreePPD()' - After being done with the filter functions
+ *                       Free the memory used by the PPD file data in
+ *                       the data structure. If the pomiter to the PPD
+ *                       file data "ppd" is NULL, do nothing.
+ */
+
+void
+cfFilterFreePPD(cf_filter_data_t *data) /* I - Job and printer data */
+{
+  if (data->ppd == NULL)
+    return;
+
+  /* ppdClose() frees not only the main data structure but also the cache */
+  ppdClose(data->ppd);
 }
 
 
