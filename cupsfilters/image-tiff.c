@@ -41,8 +41,8 @@ _cfImageReadTIFF(
     const cf_ib_t *lut)		/* I - Lookup table for gamma/brightness */
 {
   TIFF		*tif;			/* TIFF file */
-  uint32	width, height;		/* Size of image */
-  uint16	photometric,		/* Colorspace */
+  uint32_t	width, height;		/* Size of image */
+  uint16_t	photometric,		/* Colorspace */
 		compression,		/* Type of compression */
 		orientation,		/* Orientation */
 		resunit,		/* Units for resolution */
@@ -52,7 +52,7 @@ _cfImageReadTIFF(
 		numinks;		/* Number of inks in set */
   float		xres,			/* Horizontal resolution */
 		yres;			/* Vertical resolution */
-  uint16	*redcmap,		/* Red colormap information */
+  uint16_t	*redcmap,		/* Red colormap information */
 		*greencmap,		/* Green colormap information */
 		*bluecmap;		/* Blue colormap information */
   int		c,			/* Color index */
