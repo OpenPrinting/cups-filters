@@ -110,6 +110,9 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
   if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
       outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
       outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER) {
+#ifdef HAVE_GHOSTSCRIPT_APPLERASTER
+    if (outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER)
+#endif /* HAVE_GHOSTSCRIPT_APPLERASTER */
     if (h->MediaClass[0] |= '\0') {
       snprintf(tmpstr, sizeof(tmpstr), "-sMediaClass=%s", h->MediaClass);
       cupsArrayAdd(gs_args, strdup(tmpstr));
@@ -719,13 +722,15 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   void          *icd = data->iscanceleddata;
 
 
-  /* Note: With the CF_FILTER_OUT_FORMAT_APPLE_RASTER selection the output is
-     actually CUPS Raster but information about available color spaces
-     and depths is taken from the urf-supported printer IPP attribute
-     or appropriate PPD file attribute. This mode is for further
-     processing with rastertopwg. This can change in the future when
-     we add Apple Raster output support to Ghostscript's "cups" output
-     device. */
+  /* Note: With the CF_FILTER_OUT_FORMAT_APPLE_RASTER selection and a
+     Ghostscript version without "appleraster" output device (9.55.x
+     and older) the output is actually CUPS Raster but information
+     about available color spaces and depths is taken from the
+     urf-supported printer IPP attribute or appropriate PPD file
+     attribute. This mode is for further processing with
+     rastertopwg. With Ghostscript supporting Apple Raster output
+     (9.56.0 and newer), we actually produce Apple Raster and no
+     further filter is required. */
 
   if (parameters) {
     outformat = *(cf_filter_out_format_t *)parameters;
@@ -1013,9 +1018,15 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 
   /* Ghostscript output device */
   if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
-      outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
-      outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
+#ifndef HAVE_GHOSTSCRIPT_APPLERASTER
+      outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ||
+#endif /* !HAVE_GHOSTSCRIPT_APPLERASTER */
+      outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=cups"));
+#ifdef HAVE_GHOSTSCRIPT_APPLERASTER
+  else if (outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
+    cupsArrayAdd(gs_args, strdup("-sDEVICE=appleraster"));
+#endif /* HAVE_GHOSTSCRIPT_APPLERASTER */
   else if (outformat == CF_FILTER_OUT_FORMAT_PDF)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfwrite"));
   /* In case of PCL XL, raster-obly PDF, or PCLm output we determine
@@ -1067,9 +1078,13 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 
   cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
   cfRasterPrepareHeader(&h, data, outformat,
-			  (outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
-			   outformat : CF_FILTER_OUT_FORMAT_CUPS_RASTER), 0,
-			  &cspace);
+#ifdef HAVE_GHOSTSCRIPT_APPLERASTER
+			outformat,
+#else
+			(outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
+			 outformat : CF_FILTER_OUT_FORMAT_CUPS_RASTER),
+#endif /* HAVE_GHOSTSCRIPT_APPLERASTER */
+			0, &cspace);
 
   /* Special Ghostscript options for raster-only PDF output */
 

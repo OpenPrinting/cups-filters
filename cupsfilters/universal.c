@@ -1,3 +1,4 @@
+#include "config.h"
 #include "filter.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -320,9 +321,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       *outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
       if (!strcmp(output_type, "pwg-raster"))
 	*outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
-      else if(!strcmp(output_type, "urf") ||
-	      (!strcmp(output_type, "vnd.cups-raster") &&
-	       !strcmp(final_output, "image/urf")))
+      else if(!strcmp(output_type, "urf"))
 	*outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
       else if(!strcmp(output_type, "PCLm"))
 	*outformat = CF_FILTER_OUT_FORMAT_PCLM;
@@ -334,6 +333,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
 
+#ifndef HAVE_GHOSTSCRIPT_APPLERASTER
       if (!strcmp(output, "image/urf"))
       {
 	filter = malloc(sizeof(cf_filter_filter_in_chain_t));
@@ -347,9 +347,11 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 		     "cfFilterUniversal: Adding %s to chain",
 		     filter->name);
       }
-      else if (strcmp(output_type, "pwg-raster") &&
-	       strcmp(output_type, "vnd.cups-raster") &&
-	       strcmp(output_type, "PCLm"))
+      else
+#endif /* !HAVE_GHOSTSCRIPT_APPLERASTER */
+      if (strcmp(output_type, "pwg-raster") &&
+	  strcmp(output_type, "vnd.cups-raster") &&
+	  strcmp(output_type, "PCLm"))
       {
 	outformat = malloc(sizeof(cf_filter_out_format_t));
 	*outformat = CF_FILTER_OUT_FORMAT_PDF;
@@ -410,9 +412,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	  *outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
 	  if (!strcmp(output_type, "pwg-raster"))
 	    *outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
-	  else if (!strcmp(output_type, "urf") ||
-		   (!strcmp(output_type, "vnd.cups-raster") &&
-		    !strcmp(final_output, "image/urf")))
+	  else if (!strcmp(output_type, "urf"))
 	    *outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
 	  else if(!strcmp(output_type, "PCLm"))
 	    *outformat = CF_FILTER_OUT_FORMAT_PCLM;
@@ -425,6 +425,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 		       "cfFilterUniversal: Adding %s to chain",
 		       filter->name);
 
+#ifndef HAVE_GHOSTSCRIPT_APPLERASTER
 	  if (!strcmp(output, "image/urf"))
 	  {
 	    filter = malloc(sizeof(cf_filter_filter_in_chain_t));
@@ -438,6 +439,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 			 "cfFilterUniversal: Adding %s to chain",
 			 filter->name);
 	  }
+#endif /* !HAVE_GHOSTSCRIPT_APPLERASTER */
 	}
 	else if(!strcmp(output, "application/postscript") ||
 		!strcmp(output, "application/vnd.cups-postscript"))

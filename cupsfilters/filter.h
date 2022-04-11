@@ -222,13 +222,14 @@ extern int cfFilterGhostscript(int inputfd,
 /* Parameters: cf_filter_out_format_t*
    Ouput format: PDF, raster-only PDF, PCLm, PostScript, CUPS Raster,
    PWG Raster, Apple Raster, PCL-XL
-   Note: On the Apple Raster selection the output is actually CUPS Raster
-   but information about available color spaces and depths is taken from
-   the urf-supported printer IPP attribute or appropriate PPD file
-   attribute. This mode is for further processing with rastertopwg. This can
-   change in the future when we add Apple Raster output support to
-   Ghostscript's "cups" output
-   device.*/
+   Note: With the CF_FILTER_OUT_FORMAT_APPLE_RASTER selection and a
+   Ghostscript version without "appleraster" output device (9.55.x and
+   older) the output is actually CUPS Raster but information about
+   available color spaces and depths is taken from the urf-supported
+   printer IPP attribute or appropriate PPD file attribute. This mode
+   is for further processing with rastertopwg. With Ghostscript
+   supporting Apple Raster output (9.56.0 and newer), we actually
+   produce Apple Raster and no further filter is required. */
 
 
 extern int cfFilterBannerToPDF(int inputfd,

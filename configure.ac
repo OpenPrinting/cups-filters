@@ -598,6 +598,11 @@ AC_ARG_ENABLE([gs-ps2write],
 	[enable_gs_ps2write="$enableval"],
 	[enable_gs_ps2write=yes]
 )
+AC_ARG_ENABLE([gs-appleraster],
+	[AS_HELP_STRING([--disable-gs-appleraster], [Ghostscript doesn't support appleraster device.])],
+	[enable_gs_appleraster="$enableval"],
+	[enable_gs_appleraster=yes]
+)
 
 CUPS_GHOSTSCRIPT=""
 AS_IF([test "x$enable_ghostscript" != "xyes"], [
@@ -613,25 +618,36 @@ AS_IF([test "x$enable_ghostscript" != "xyes"], [
 		])
 	])
 	AS_IF([test "x$CUPS_GHOSTSCRIPT" = "x"], [
-		AC_MSG_ERROR([Required gs binary is missing. Please install ghostscript-gpl package.])
+		AC_MSG_ERROR([Required gs binary is missing. Please install ghostscript package.])
 	])
 	AC_DEFINE([HAVE_GHOSTSCRIPT], [], [Define that we provide ghostscript binary])
 	AS_IF([test x"$with_pdftops" = xgs], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [GS], [Define default renderer])])
 
-	AS_IF([test x"$enable_gs_ps2write" = "xyes"], [
-		AC_DEFINE([HAVE_GHOSTSCRIPT_PS2WRITE], [], [gs supports ps2write])
-	])
 	AS_IF([test "x$cross_compiling" != "xyes"], [
 		AC_MSG_CHECKING(whether gs supports the ps2write device)
 		AS_IF([`$CUPS_GHOSTSCRIPT -h 2>&1 | grep -q ps2write`], [
 			AC_MSG_RESULT([yes])
-			AC_DEFINE([HAVE_GHOSTSCRIPT_PS2WRITE], [], [gs supports ps2write])
 		], [
 			AC_MSG_RESULT([no])
+			enable_gs_ps2write=no
 		])
+		AC_MSG_CHECKING(whether gs supports the appleraster device)
+		AS_IF([`$CUPS_GHOSTSCRIPT -h 2>&1 | grep -q appleraster`], [
+			AC_MSG_RESULT([yes])
+		], [
+			AC_MSG_RESULT([no])
+			enable_gs_appleraster=no
+		])
+	])
+	AS_IF([test x"$enable_gs_ps2write" = "xyes"], [
+		AC_DEFINE([HAVE_GHOSTSCRIPT_PS2WRITE], [], [gs supports ps2write])
+	])
+	AS_IF([test x"$enable_gs_appleraster" = "xyes"], [
+		AC_DEFINE([HAVE_GHOSTSCRIPT_APPLERASTER], [], [gs supports APPLERASTER])
 	])
 ])
 AM_CONDITIONAL(ENABLE_GHOSTSCRIPT, test "x$enable_ghostscript" = xyes)
+AM_CONDITIONAL(ENABLE_GHOSTSCRIPT_APPLERASTER, test "x$enable_gs_appleraster" = xyes)
 AC_SUBST(CUPS_GHOSTSCRIPT)
 
 CUPS_MUTOOL=""
@@ -970,6 +986,8 @@ Build configuration:
 	poppler:         ${enable_poppler}
 	ghostscript:     ${enable_ghostscript}
 	gs-path:         ${with_gs_path}
+	gs ps2write:     ${enable_gs_ps2write}
+	gs appleraster:  ${enable_gs_appleraster}
 	mutool:          ${enable_mutool}
 	mutool-path:     ${with_mutool_path}
 	ippfind-path:    ${with_ippfind_path}
