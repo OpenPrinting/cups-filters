@@ -32,12 +32,12 @@
 
 #define PDF_MAX_CHECK_COMMENT_LINES	20
 
-typedef enum {
+typedef enum gs_doc_e {
   GS_DOC_TYPE_PDF,
   GS_DOC_TYPE_PS,
   GS_DOC_TYPE_EMPTY,
   GS_DOC_TYPE_UNKNOWN
-} GsDocType;
+} gs_doc_t;
 
 #ifdef CUPS_RASTER_SYNCv1
 typedef cups_page_header2_t gs_page_header;
@@ -45,12 +45,12 @@ typedef cups_page_header2_t gs_page_header;
 typedef cups_page_header_t gs_page_header;
 #endif /* CUPS_RASTER_SYNCv1 */
 
-static GsDocType
+static gs_doc_t
 parse_doc_type(FILE *fp)
 {
   char buf[5];
   int is_empty = 1;
-  GsDocType type = GS_DOC_TYPE_UNKNOWN;
+  gs_doc_t type = GS_DOC_TYPE_UNKNOWN;
 
   /* get the first few bytes of the file */
   rewind(fp);
@@ -696,7 +696,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   cups_array_t *gs_args = NULL;
   cups_option_t *options = NULL;
   FILE *fp = NULL;
-  GsDocType doc_type;
+  gs_doc_t doc_type;
   gs_page_header h;
   cups_cspace_t cspace = -1;
   int bytes;

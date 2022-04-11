@@ -28,43 +28,8 @@
 #include <ctype.h>
 #include <errno.h>
 
-#if CUPS_VERSION_MAJOR < 1 \
-  || (CUPS_VERSION_MAJOR == 1 && CUPS_VERSION_MINOR < 2)
-#ifndef CUPS_1_1
-#error Installed libs and specified source Version mismatch \
-	Libs >= 1.2 && Source < 1.2
-#define CUPS_1_1
-#endif
-#else
-#ifdef CUPS_1_1
-#error Installed libs and specified source Version mismatch \
-	Libs < 1.2 && Source >= 1.2
-#undef CUPS_1_1
-#endif
-#endif
-
-//#define OUT_AS_HEX
-//#define OUT_AS_ASCII85
-
 #define N_OBJECT_ALLOC 100
 #define LINEBUFSIZE 1024
-
-#ifdef CUPS_1_1
-#define cf_ib_t ib_t
-#define cf_image_t image_t
-#define CF_IMAGE_CMYK IMAGE_CMYK
-#define CF_IMAGE_WHITE IMAGE_WHITE
-#define CF_IMAGE_RGB IMAGE_RGB
-#define CF_IMAGE_RGB_CMYK IMAGE_RGB_CMYK
-#define cfImageOpen ImageOpen
-#define cfImageClose ImageClose
-#define cfImageGetColorSpace(img) (img->colorspace)
-#define cfImageGetXPPI(img) (img->xppi)
-#define cfImageGetYPPI(img) (img->yppi)
-#define cfImageGetWidth(img) (img->xsize)
-#define cfImageGetHeight(img) (img->ysize)
-#define cfImageGetRow ImageGetRow
-#endif
 
 /*
  * Types...
@@ -74,7 +39,7 @@ struct pdfObject {
     int offset;
 };
 
-typedef struct {                	/**** Document information ****/
+typedef struct imagetopdf_doc_s {       /**** Document information ****/
   int		Flip,			/* Flip/mirror pages */
 		XPosition,		/* Horizontal position on page */
 		YPosition,		/* Vertical position on page */
@@ -132,6 +97,7 @@ typedef struct {                	/**** Document information ****/
  * Local functions...
  */
 
+static void	emit_jcl_options(imagetopdf_doc_t *doc, FILE *fp, int copies);
 #ifdef OUT_AS_HEX
 static void	out_hex(imagetopdf_doc_t *doc, cf_ib_t *, int, int);
 #else
@@ -141,22 +107,22 @@ static void	out_ascii85(imagetopdf_doc_t *doc, cf_ib_t *, int, int);
 static void	out_bin(imagetopdf_doc_t *doc, cf_ib_t *, int, int);
 #endif
 #endif
-static void	outPdf(imagetopdf_doc_t *doc, const char *str);
-static void	putcPdf(imagetopdf_doc_t *doc, char c);
-static int	newObj(imagetopdf_doc_t *doc);
-static void	freeAllObj(imagetopdf_doc_t *doc);
-static void	outXref(imagetopdf_doc_t *doc);
-static void	outTrailer(imagetopdf_doc_t *doc);
-static void	outString(imagetopdf_doc_t *doc, const char *s);
-static int	outPrologue(imagetopdf_doc_t *doc, int nPages);
-static int	allocPageObjects(imagetopdf_doc_t *doc, int noPages);
-static void	setOffset(imagetopdf_doc_t *doc, int obj);
-static int	outPageObject(imagetopdf_doc_t *doc, int pageObj,
+static void	out_pdf(imagetopdf_doc_t *doc, const char *str);
+static void	putc_pdf(imagetopdf_doc_t *doc, char c);
+static int	new_obj(imagetopdf_doc_t *doc);
+static void	free_all_obj(imagetopdf_doc_t *doc);
+static void	out_xref(imagetopdf_doc_t *doc);
+static void	out_trailer(imagetopdf_doc_t *doc);
+static void	out_string(imagetopdf_doc_t *doc, const char *s);
+static int	out_prologue(imagetopdf_doc_t *doc, int nPages);
+static int	alloc_page_objects(imagetopdf_doc_t *doc, int noPages);
+static void	set_offset(imagetopdf_doc_t *doc, int obj);
+static int	out_page_object(imagetopdf_doc_t *doc, int pageObj,
 			      int contentsObj, int imgObj);
-static int	outPageContents(imagetopdf_doc_t *doc, int contentsObj);
-static int	outImage(imagetopdf_doc_t *doc, int imgObj);
+static int	out_page_contents(imagetopdf_doc_t *doc, int contentsObj);
+static int	out_image(imagetopdf_doc_t *doc, int imgObj);
 
-void emitJCLOptions(imagetopdf_doc_t *doc, FILE *fp, int copies)
+static void emit_jcl_options(imagetopdf_doc_t *doc, FILE *fp, int copies)
 {
   int section;
   ppd_choice_t **choices;
@@ -214,13 +180,12 @@ void emitJCLOptions(imagetopdf_doc_t *doc, FILE *fp, int copies)
   if (datawritten) fputc('\n',fp);
 }
 
-
-static void setOffset(imagetopdf_doc_t *doc, int obj)
+static void set_offset(imagetopdf_doc_t *doc, int obj)
 {
   doc->objects[obj].offset = doc->currentOffset;
 }
 
-static int allocPageObjects(imagetopdf_doc_t *doc, int nPages)
+static int alloc_page_objects(imagetopdf_doc_t *doc, int nPages)
 {
   int i, n;
 
@@ -228,7 +193,7 @@ static int allocPageObjects(imagetopdf_doc_t *doc, int nPages)
     return (-1);
   for (i = 0;i < nPages;i++)
   {
-    if ((n = newObj(doc)) >= 0)
+    if ((n = new_obj(doc)) >= 0)
       doc->pageObjects[i] = n;
     else
       return (-1);
@@ -236,7 +201,7 @@ static int allocPageObjects(imagetopdf_doc_t *doc, int nPages)
   return (0);
 }
 
-static int newObj(imagetopdf_doc_t *doc)
+static int new_obj(imagetopdf_doc_t *doc)
 {
   if (doc->objects == NULL)
   {
@@ -257,7 +222,7 @@ static int newObj(imagetopdf_doc_t *doc)
   return doc->currentObjectNo++;
 }
 
-static void freeAllObj(imagetopdf_doc_t *doc)
+static void free_all_obj(imagetopdf_doc_t *doc)
 {
   if (doc->objects != NULL)
   {
@@ -266,13 +231,13 @@ static void freeAllObj(imagetopdf_doc_t *doc)
   }
 }
 
-static void putcPdf(imagetopdf_doc_t *doc, char c)
+static void putc_pdf(imagetopdf_doc_t *doc, char c)
 {
   fputc(c, doc->outputfp);
   doc->currentOffset++;
 }
 
-static void outPdf(imagetopdf_doc_t *doc, const char *str)
+static void out_pdf(imagetopdf_doc_t *doc, const char *str)
 {
   unsigned long len = strlen(str);
 
@@ -280,38 +245,38 @@ static void outPdf(imagetopdf_doc_t *doc, const char *str)
   doc->currentOffset += len;
 }
 
-static void outXref(imagetopdf_doc_t *doc)
+static void out_xref(imagetopdf_doc_t *doc)
 {
   char buf[21];
   int i;
 
   doc->xrefOffset = doc->currentOffset;
-  outPdf(doc, "xref\n");
+  out_pdf(doc, "xref\n");
   snprintf(buf,21,"0 %d\n",doc->currentObjectNo);
-  outPdf(doc, buf);
-  outPdf(doc, "0000000000 65535 f \n");
+  out_pdf(doc, buf);
+  out_pdf(doc, "0000000000 65535 f \n");
   for (i = 1;i < doc->currentObjectNo;i++)
   {
     snprintf(buf,21,"%010d 00000 n \n",doc->objects[i].offset);
-    outPdf(doc, buf);
+    out_pdf(doc, buf);
   }
 }
 
-static void outString(imagetopdf_doc_t *doc, const char *s)
+static void out_string(imagetopdf_doc_t *doc, const char *s)
 {
   char c;
 
-  putcPdf(doc, '(');
+  putc_pdf(doc, '(');
   for (;(c = *s) != '\0';s++) {
     if (c == '\\' || c == '(' || c == ')') {
-      putcPdf(doc, '\\');
+      putc_pdf(doc, '\\');
     }
-    putcPdf(doc, c);
+    putc_pdf(doc, c);
   }
-  putcPdf(doc, ')');
+  putc_pdf(doc, ')');
 }
 
-static void outTrailer(imagetopdf_doc_t *doc)
+static void out_trailer(imagetopdf_doc_t *doc)
 {
   time_t	curtime;
   struct tm	*curtm;
@@ -321,34 +286,34 @@ static void outTrailer(imagetopdf_doc_t *doc)
   curtm = localtime(&curtime);
   strftime(curdate, sizeof(curdate),"D:%Y%m%d%H%M%S%z", curtm);
 
-  outPdf(doc, "trailer\n");
+  out_pdf(doc, "trailer\n");
   snprintf(doc->linebuf, LINEBUFSIZE,"<</Size %d ",doc->currentObjectNo);
-  outPdf(doc, doc->linebuf);
-  outPdf(doc, "/Root 1 0 R\n");
-  outPdf(doc, "/Info << /Title ");
-  outString(doc, doc->title);
-  putcPdf(doc, ' ');
+  out_pdf(doc, doc->linebuf);
+  out_pdf(doc, "/Root 1 0 R\n");
+  out_pdf(doc, "/Info << /Title ");
+  out_string(doc, doc->title);
+  putc_pdf(doc, ' ');
   snprintf(doc->linebuf,LINEBUFSIZE,"/CreationDate (%s) ",curdate);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   snprintf(doc->linebuf,LINEBUFSIZE,"/ModDate (%s) ",curdate);
-  outPdf(doc, doc->linebuf);
-  outPdf(doc, "/Producer (imagetopdf) ");
-  outPdf(doc, "/Trapped /False >>\n");
-  outPdf(doc, ">>\n");
-  outPdf(doc, "startxref\n");
+  out_pdf(doc, doc->linebuf);
+  out_pdf(doc, "/Producer (imagetopdf) ");
+  out_pdf(doc, "/Trapped /False >>\n");
+  out_pdf(doc, ">>\n");
+  out_pdf(doc, "startxref\n");
   snprintf(doc->linebuf,LINEBUFSIZE,"%d\n",doc->xrefOffset);
-  outPdf(doc, doc->linebuf);
-  outPdf(doc, "%%EOF\n");
+  out_pdf(doc, doc->linebuf);
+  out_pdf(doc, "%%EOF\n");
 }
 
-static int outPrologue(imagetopdf_doc_t *doc, int nPages)
+static int out_prologue(imagetopdf_doc_t *doc, int nPages)
 {
   int i;
 
   /* out header */
-  if (newObj(doc) < 0) /* dummy for no 0 object */
+  if (new_obj(doc) < 0) /* dummy for no 0 object */
     return (-1);
-  outPdf(doc, "%PDF-1.3\n");
+  out_pdf(doc, "%PDF-1.3\n");
   /* out binary for transfer program */
   doc->linebuf[0] = '%';
   doc->linebuf[1] = (char)129;
@@ -357,47 +322,47 @@ static int outPrologue(imagetopdf_doc_t *doc, int nPages)
   doc->linebuf[4] = (char)132;
   doc->linebuf[5] = '\n';
   doc->linebuf[6] = (char)0;
-  outPdf(doc, doc->linebuf);
-  outPdf(doc, "% This file was generated by imagetopdf\n");
+  out_pdf(doc, doc->linebuf);
+  out_pdf(doc, "% This file was generated by imagetopdf\n");
 
-  if ((doc->catalogObj = newObj(doc)) < 0)
+  if ((doc->catalogObj = new_obj(doc)) < 0)
     return (-1);
-  if ((doc->pagesObj = newObj(doc)) < 0)
+  if ((doc->pagesObj = new_obj(doc)) < 0)
     return (-1);
-  if (allocPageObjects(doc, nPages) < 0)
+  if (alloc_page_objects(doc, nPages) < 0)
     return (-1);
 
   /* out catalog */
   snprintf(doc->linebuf,LINEBUFSIZE,
     "%d 0 obj <</Type/Catalog /Pages %d 0 R ",doc->catalogObj,doc->pagesObj);
-  outPdf(doc, doc->linebuf);
-  outPdf(doc, ">> endobj\n");
+  out_pdf(doc, doc->linebuf);
+  out_pdf(doc, ">> endobj\n");
 
   /* out Pages */
-  setOffset(doc, doc->pagesObj);
+  set_offset(doc, doc->pagesObj);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "%d 0 obj <</Type/Pages /Kids [ ",doc->pagesObj);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   if (doc->Reverse) {
     for (i = nPages-1;i >= 0;i--)
     {
       snprintf(doc->linebuf,LINEBUFSIZE,"%d 0 R ",doc->pageObjects[i]);
-      outPdf(doc, doc->linebuf);
+      out_pdf(doc, doc->linebuf);
     }
   } else {
     for (i = 0;i < nPages;i++)
     {
       snprintf(doc->linebuf,LINEBUFSIZE,"%d 0 R ",doc->pageObjects[i]);
-      outPdf(doc, doc->linebuf);
+      out_pdf(doc, doc->linebuf);
     }
   }
-  outPdf(doc, "] ");
+  out_pdf(doc, "] ");
   snprintf(doc->linebuf,LINEBUFSIZE,"/Count %d >> endobj\n",nPages);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   return (0);
 }
 
-static int outPageObject(imagetopdf_doc_t *doc, int pageObj, int contentsObj,
+static int out_page_object(imagetopdf_doc_t *doc, int pageObj, int contentsObj,
 			 int imgObj)
 {
   int trfuncObj;
@@ -407,94 +372,94 @@ static int outPageObject(imagetopdf_doc_t *doc, int pageObj, int contentsObj,
   int outTrfunc = (doc->gammaval != 1.0 || doc->brightness != 1.0);
 
   /* out Page Object */
-  setOffset(doc, pageObj);
+  set_offset(doc, pageObj);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "%d 0 obj <</Type/Page /Parent %d 0 R ",
     pageObj,doc->pagesObj);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "/MediaBox [ 0 0 %f %f ] ",doc->PageWidth,doc->PageLength);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "/TrimBox [ 0 0 %f %f ] ",doc->PageWidth,doc->PageLength);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "/CropBox [ 0 0 %f %f ] ",doc->PageWidth,doc->PageLength);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   if (contentsObj >= 0) {
     snprintf(doc->linebuf,LINEBUFSIZE,
       "/Contents %d 0 R ",contentsObj);
-    outPdf(doc, doc->linebuf);
+    out_pdf(doc, doc->linebuf);
     snprintf(doc->linebuf,LINEBUFSIZE,
       "/Resources <</ProcSet [/PDF] "
       "/XObject << /Im %d 0 R >>\n",imgObj);
-    outPdf(doc, doc->linebuf);
+    out_pdf(doc, doc->linebuf);
   } else {
     /* empty page */
     snprintf(doc->linebuf,LINEBUFSIZE,
       "/Resources <</ProcSet [/PDF] \n");
-    outPdf(doc, doc->linebuf);
+    out_pdf(doc, doc->linebuf);
   }
   if (outTrfunc) {
-    if ((trfuncObj = newObj(doc)) < 0)
+    if ((trfuncObj = new_obj(doc)) < 0)
       return (-1);
-    if ((lengthObj = newObj(doc)) < 0)
+    if ((lengthObj = new_obj(doc)) < 0)
       return (-1);
     snprintf(doc->linebuf,LINEBUFSIZE,
       "/ExtGState << /GS1 << /TR %d 0 R >> >>\n",trfuncObj);
-    outPdf(doc, doc->linebuf);
+    out_pdf(doc, doc->linebuf);
   }
-  outPdf(doc, "     >>\n>>\nendobj\n");
+  out_pdf(doc, "     >>\n>>\nendobj\n");
 
   if (outTrfunc) {
     /* out translate function */
-    setOffset(doc, trfuncObj);
+    set_offset(doc, trfuncObj);
     snprintf(doc->linebuf,LINEBUFSIZE,
       "%d 0 obj <</FunctionType 4 /Domain [0 1.0]"
       " /Range [0 1.0] /Length %d 0 R >>\n",
       trfuncObj,lengthObj);
-    outPdf(doc, doc->linebuf);
-    outPdf(doc, "stream\n");
+    out_pdf(doc, doc->linebuf);
+    out_pdf(doc, "stream\n");
     startOffset = doc->currentOffset;
     snprintf(doc->linebuf,LINEBUFSIZE,
      "{ neg 1 add dup 0 lt { pop 1 } { %.3f exp neg 1 add } "
      "ifelse %.3f mul }\n", doc->gammaval, doc->brightness);
-    outPdf(doc, doc->linebuf);
+    out_pdf(doc, doc->linebuf);
     length = doc->currentOffset - startOffset;
     snprintf(doc->linebuf,LINEBUFSIZE,
      "endstream\nendobj\n");
-    outPdf(doc, doc->linebuf);
+    out_pdf(doc, doc->linebuf);
 
     /* out length object */
-    setOffset(doc, lengthObj);
+    set_offset(doc, lengthObj);
     snprintf(doc->linebuf,LINEBUFSIZE,
       "%d 0 obj %d endobj\n",lengthObj,length);
-    outPdf(doc, doc->linebuf);
+    out_pdf(doc, doc->linebuf);
   }
   return (0);
 }
 
-static int outPageContents(imagetopdf_doc_t *doc, int contentsObj)
+static int out_page_contents(imagetopdf_doc_t *doc, int contentsObj)
 {
   int startOffset;
   int lengthObj;
   int length;
 
-  setOffset(doc, contentsObj);
-  if ((lengthObj = newObj(doc)) < 0)
+  set_offset(doc, contentsObj);
+  if ((lengthObj = new_obj(doc)) < 0)
     return (-1);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "%d 0 obj <</Length %d 0 R >> stream\n",contentsObj,lengthObj);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   startOffset = doc->currentOffset;
 
   if (doc->gammaval != 1.0 || doc->brightness != 1.0)
-    outPdf(doc, "/GS1 gs\n");
+    out_pdf(doc, "/GS1 gs\n");
   if (doc->Flip)
   {
     snprintf(doc->linebuf,LINEBUFSIZE,
       "-1 0 0 1 %.0f 0 cm\n",doc->PageWidth);
-    outPdf(doc, doc->linebuf);
+    out_pdf(doc, doc->linebuf);
   }
 
   switch (doc->Orientation)
@@ -502,17 +467,17 @@ static int outPageContents(imagetopdf_doc_t *doc, int contentsObj)
     case 1:
 	snprintf(doc->linebuf,LINEBUFSIZE,
 	  "0 1 -1 0 %.0f 0 cm\n",doc->PageWidth);
-	outPdf(doc, doc->linebuf);
+	out_pdf(doc, doc->linebuf);
 	break;
     case 2:
 	snprintf(doc->linebuf,LINEBUFSIZE,
 	  "-1 0 0 -1 %.0f %.0f cm\n",doc->PageWidth, doc->PageLength);
-	outPdf(doc, doc->linebuf);
+	out_pdf(doc, doc->linebuf);
 	break;
     case 3:
 	snprintf(doc->linebuf,LINEBUFSIZE,
 	  "0 -1 1 0 0 %.0f cm\n",doc->PageLength);
-	outPdf(doc, doc->linebuf);
+	out_pdf(doc, doc->linebuf);
 	break;
   }
 
@@ -523,25 +488,25 @@ static int outPageContents(imagetopdf_doc_t *doc, int contentsObj)
 
   snprintf(doc->linebuf,LINEBUFSIZE,
     "1 0 0 1 %.1f %.1f cm\n",doc->left,doc->top);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
 
   snprintf(doc->linebuf,LINEBUFSIZE,
     "%.3f 0 0 %.3f 0 0 cm\n",
      doc->xprint * 72.0, doc->yprint * 72.0);
-  outPdf(doc, doc->linebuf);
-  outPdf(doc, "/Im Do\n");
+  out_pdf(doc, doc->linebuf);
+  out_pdf(doc, "/Im Do\n");
   length = doc->currentOffset - startOffset - 1;
-  outPdf(doc, "endstream\nendobj\n");
+  out_pdf(doc, "endstream\nendobj\n");
 
   /* out length object */
-  setOffset(doc, lengthObj);
+  set_offset(doc, lengthObj);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "%d 0 obj %d endobj\n",lengthObj,length);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   return (0);
 }
 
-static int outImage(imagetopdf_doc_t *doc, int imgObj)
+static int out_image(imagetopdf_doc_t *doc, int imgObj)
 {
   int		y;			/* Current Y coordinate in image */
 #ifdef OUT_AS_ASCII85
@@ -552,8 +517,8 @@ static int outImage(imagetopdf_doc_t *doc, int imgObj)
   int lengthObj;
   int length;
 
-  setOffset(doc, imgObj);
-  if ((lengthObj = newObj(doc)) < 0)
+  set_offset(doc, imgObj);
+  if ((lengthObj = new_obj(doc)) < 0)
     return (-1);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "%d 0 obj << /Length %d 0 R /Type /XObject "
@@ -566,32 +531,32 @@ static int outImage(imagetopdf_doc_t *doc, int imgObj)
 #endif
 #endif
     ,imgObj,lengthObj);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "/Width %d /Height %d /BitsPerComponent 8 ",
     doc->xc1 - doc->xc0 + 1, doc->yc1 - doc->yc0 + 1);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
 
   switch (doc->colorspace)
   {
     case CF_IMAGE_WHITE :
-      outPdf(doc, "/ColorSpace /DeviceGray ");
-      outPdf(doc, "/Decode[0 1] ");
+      out_pdf(doc, "/ColorSpace /DeviceGray ");
+      out_pdf(doc, "/Decode[0 1] ");
       break;
     case CF_IMAGE_RGB :
-      outPdf(doc, "/ColorSpace /DeviceRGB ");
-      outPdf(doc, "/Decode[0 1 0 1 0 1] ");
+      out_pdf(doc, "/ColorSpace /DeviceRGB ");
+      out_pdf(doc, "/Decode[0 1 0 1 0 1] ");
       break;
     case CF_IMAGE_CMYK :
-      outPdf(doc, "/ColorSpace /DeviceCMYK ");
-      outPdf(doc, "/Decode[0 1 0 1 0 1 0 1] ");
+      out_pdf(doc, "/ColorSpace /DeviceCMYK ");
+      out_pdf(doc, "/Decode[0 1 0 1 0 1 0 1] ");
       break;
   }
   if (((doc->xc1 - doc->xc0 + 1) / doc->xprint) < 100.0)
-    outPdf(doc, "/Interpolate true ");
+    out_pdf(doc, "/Interpolate true ");
 
-  outPdf(doc, ">>\n");
-  outPdf(doc, "stream\n");
+  out_pdf(doc, ">>\n");
+  out_pdf(doc, "stream\n");
   startOffset = doc->currentOffset;
 
 #ifdef OUT_AS_ASCII85
@@ -624,13 +589,13 @@ static int outImage(imagetopdf_doc_t *doc, int imgObj)
   }
 #endif
   length = doc->currentOffset - startOffset;
-  outPdf(doc, "\nendstream\nendobj\n");
+  out_pdf(doc, "\nendstream\nendobj\n");
 
   /* out length object */
-  setOffset(doc, lengthObj);
+  set_offset(doc, lengthObj);
   snprintf(doc->linebuf,LINEBUFSIZE,
     "%d 0 obj %d endobj\n",lengthObj,length);
-  outPdf(doc, doc->linebuf);
+  out_pdf(doc, doc->linebuf);
   return (0);
 }
 
@@ -1857,7 +1822,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
     }
     ppdEmitJCL(doc.ppd, doc.outputfp, data->job_id, data->job_user,
 	       data->job_title);
-    emitJCLOptions(&doc, doc.outputfp, deviceCopies);
+    emit_jcl_options(&doc, doc.outputfp, deviceCopies);
     free(doc.ppd->jcl_ps);
     doc.ppd->jcl_ps = old_jcl_ps; /* cups uses pool allocator, not free() */
   }
@@ -1866,7 +1831,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   * Start sending the document with any commands needed...
   */
 
-  if (outPrologue(&doc, doc.Copies * doc.xpages * doc.ypages +
+  if (out_prologue(&doc, doc.Copies * doc.xpages * doc.ypages +
 		  (doc.EvenDuplex ? 1 : 0)) < 0)
     goto out_of_memory;
 
@@ -2047,18 +2012,18 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	}
 
 	if ((contentsObj = contentsObjs[doc.ypages*doc.xpage+doc.ypage] =
-	     newObj(&doc)) < 0)
+	     new_obj(&doc)) < 0)
 	  goto out_of_memory;
 	if ((imgObj = imgObjs[doc.ypages*doc.xpage+doc.ypage] =
-	     newObj(&doc)) < 0)
+	     new_obj(&doc)) < 0)
 	  goto out_of_memory;
 
 	/* out contents object */
-	if (outPageContents(&doc, contentsObj) < 0)
+	if (out_page_contents(&doc, contentsObj) < 0)
 	  goto out_of_memory;
 
 	/* out image object */
-	if (outImage(&doc, imgObj) < 0)
+	if (out_image(&doc, imgObj) < 0)
 	  goto out_of_memory;
       }
     for (doc.page = 0; doc.Copies > 0 ; doc.Copies --) {
@@ -2073,7 +2038,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	  }
 
 	  /* out Page Object */
-	  if (outPageObject(&doc, doc.pageObjects[doc.page],
+	  if (out_page_object(&doc, doc.pageObjects[doc.page],
 			    contentsObjs[doc.ypages * doc.xpage + doc.ypage],
 			    imgObjs[doc.ypages * doc.xpage + doc.ypage]) < 0)
 	    goto out_of_memory;
@@ -2083,7 +2048,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	}
       if (doc.EvenDuplex) {
 	/* out empty page */
-	if (outPageObject(&doc, doc.pageObjects[doc.page], -1, -1) < 0)
+	if (out_page_object(&doc, doc.pageObjects[doc.page], -1, -1) < 0)
 	  goto out_of_memory;
 	if (pdf_printer && log)
 	  log(ld, CF_LOGLEVEL_CONTROL,
@@ -2109,17 +2074,17 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	  goto canceled;
 	}
 
-	if ((imgObj = newObj(&doc)) < 0)
+	if ((imgObj = new_obj(&doc)) < 0)
 	  goto out_of_memory;
-	if ((contentsObj = newObj(&doc)) < 0)
+	if ((contentsObj = new_obj(&doc)) < 0)
 	  goto out_of_memory;
 
 	/* out contents object */
-	if (outPageContents(&doc, contentsObj) < 0)
+	if (out_page_contents(&doc, contentsObj) < 0)
 	  goto out_of_memory;
 
 	/* out image object */
-	if (outImage(&doc, imgObj) < 0)
+	if (out_image(&doc, imgObj) < 0)
 	  goto out_of_memory;
 
 	for (p = 0;p < doc.Copies;p++, doc.page++)
@@ -2132,7 +2097,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	  }
 
 	  /* out Page Object */
-	  if (outPageObject(&doc, doc.pageObjects[doc.page], contentsObj,
+	  if (out_page_object(&doc, doc.pageObjects[doc.page], contentsObj,
 			    imgObj) < 0)
 	    goto out_of_memory;
 	  if (pdf_printer && log)
@@ -2153,7 +2118,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 	  goto canceled;
 	}
 
-	if (outPageObject(&doc, doc.pageObjects[doc.page], -1, -1) < 0)
+	if (out_page_object(&doc, doc.pageObjects[doc.page], -1, -1) < 0)
 	  goto out_of_memory;
 	if (pdf_printer && log)
 	  log(ld, CF_LOGLEVEL_CONTROL,
@@ -2163,20 +2128,18 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   }
 
  canceled:
-  outXref(&doc);
-  outTrailer(&doc);
-  freeAllObj(&doc);
+  out_xref(&doc);
+  out_trailer(&doc);
+  free_all_obj(&doc);
  /*
   * Close files...
   */
 
-#ifndef CUPS_1_1
   if (emit_jcl)
   {
     if (doc.ppd && doc.ppd->jcl_end)
       ppdEmitJCLEnd(doc.ppd, doc.outputfp);
   }
-#endif
 
   cfImageClose(doc.img);
   fclose(doc.outputfp);
@@ -2187,7 +2150,7 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
   if (log) log(ld, CF_LOGLEVEL_ERROR,
 	       "cfFilterImageToPDF: Cannot allocate any more memory.");
-  freeAllObj(&doc);
+  free_all_obj(&doc);
   cfImageClose(doc.img);
   fclose(doc.outputfp);
   close(outputfd);
@@ -2217,8 +2180,8 @@ out_hex(imagetopdf_doc_t *doc,
     * for speed reasons...
     */
 
-    putcPdf(doc, hex[*data >> 4]);
-    putcPdf(doc, hex[*data & 15]);
+    putc_pdf(doc, hex[*data >> 4]);
+    putc_pdf(doc, hex[*data & 15]);
 
     data ++;
     length --;
@@ -2226,14 +2189,14 @@ out_hex(imagetopdf_doc_t *doc,
     col += 2;
     if (col > 78)
     {
-      putcPdf(doc, '\n');
+      putc_pdf(doc, '\n');
       col = 0;
     }
   }
 
   if (last_line && col)
   {
-    putcPdf(doc, '\n');
+    putc_pdf(doc, '\n');
     col = 0;
   }
 }
@@ -2262,7 +2225,7 @@ out_ascii85(imagetopdf_doc_t *doc,
 
     if (b == 0)
     {
-      putcPdf(doc, 'z');
+      putc_pdf(doc, 'z');
       col ++;
     }
     else
@@ -2277,7 +2240,7 @@ out_ascii85(imagetopdf_doc_t *doc,
       b /= 85;
       c[0] = b + '!';
 
-      outPdf(doc, c);
+      out_pdf(doc, c);
       col += 5;
     }
 
@@ -2286,7 +2249,7 @@ out_ascii85(imagetopdf_doc_t *doc,
 
     if (col >= 75)
     {
-      putcPdf(doc, '\n');
+      putc_pdf(doc, '\n');
       col = 0;
     }
   }
@@ -2309,10 +2272,10 @@ out_ascii85(imagetopdf_doc_t *doc,
       c[0] = b + '!';
 
       c[length+1] = '\0';
-      outPdf(doc, c);
+      out_pdf(doc, c);
     }
 
-    outPdf(doc, "~>");
+    out_pdf(doc, "~>");
     col = 0;
   }
 }
@@ -2329,14 +2292,14 @@ out_bin(imagetopdf_doc_t *doc,
 {
   while (length > 0)
   {
-    putcPdf(doc, *data);
+    putc_pdf(doc, *data);
     data ++;
     length --;
   }
 
   if (last_line)
   {
-    putcPdf(doc, '\n');
+    putc_pdf(doc, '\n');
   }
 }
 #endif

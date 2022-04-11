@@ -581,7 +581,7 @@ cfIEEE1284GetValues(
 }
 
 /*
- * 'moverightpart()' - Mark a start position in a string buffer and
+ * 'move_right_part()' - Mark a start position in a string buffer and
  *                     move all characters beginning from there by
  *                     a given amount of characters. Characters will
  *                     get lost when moving to the left, there will
@@ -589,8 +589,8 @@ cfIEEE1284GetValues(
  *                     to the right.
  */
 
-void
-moverightpart(
+static void
+move_right_part(
     char       *buffer,	     /* I/O - String buffer */
     size_t     bufsize,	     /* I   - Size of string buffer */
     char       *start_pos,   /* I   - Start of part to be moved */
@@ -1026,7 +1026,7 @@ cfIEEE1284NormalizeMakeModel(
 
       bufptr[0] = 'H';
       bufptr[1] = 'P';
-      moverightpart(buffer, bufsize, bufptr + 2, -13);
+      move_right_part(buffer, bufsize, bufptr + 2, -13);
       if (modelptr >= bufptr + 15)
 	modelptr -= 13;
       bufptr += 2;
@@ -1046,7 +1046,7 @@ cfIEEE1284NormalizeMakeModel(
       bufptr[2] = 'd';
       bufptr[3] = 'a';
       bufptr[4] = 'k';
-      moverightpart(buffer, bufsize, bufptr + 5, -16);
+      move_right_part(buffer, bufsize, bufptr + 5, -16);
       if (modelptr >= bufptr + 21)
 	modelptr -= 16;
       bufptr += 5;
@@ -1059,7 +1059,7 @@ cfIEEE1284NormalizeMakeModel(
       * Strip "International"...
       */
 
-      moverightpart(buffer, bufsize, bufptr + 7, -14);
+      move_right_part(buffer, bufsize, bufptr + 7, -14);
       if (modelptr >= bufptr + 21)
 	modelptr -= 14;
       bufptr += 7;
@@ -1094,7 +1094,7 @@ cfIEEE1284NormalizeMakeModel(
       bufptr[1] = 'H';
       bufptr[2] = 'A';
       bufptr[3] = 'G';
-      moverightpart(buffer, bufsize, bufptr + 4, -4);
+      move_right_part(buffer, bufsize, bufptr + 4, -4);
       if (modelptr >= bufptr + 8)
 	modelptr -= 4;
       bufptr += 4;
@@ -1107,7 +1107,7 @@ cfIEEE1284NormalizeMakeModel(
       * Strip "TEC Corp."...
       */
 
-      moverightpart(buffer, bufsize, bufptr + 7, -10);
+      move_right_part(buffer, bufsize, bufptr + 7, -10);
       if (modelptr >= bufptr + 17)
 	modelptr -= 10;
       bufptr += 7;
@@ -1118,7 +1118,7 @@ cfIEEE1284NormalizeMakeModel(
     */
 
     while (strncasecmp(buffer, modelptr, modelptr - buffer) == 0)
-      moverightpart(buffer, bufsize, modelptr, buffer - modelptr);
+      move_right_part(buffer, bufsize, modelptr, buffer - modelptr);
 
    /*
     * Clean up the model name...
@@ -1131,7 +1131,7 @@ cfIEEE1284NormalizeMakeModel(
       * Strip "series"...
       */
 
-      moverightpart(buffer, bufsize, bufptr, -7);
+      move_right_part(buffer, bufsize, bufptr, -7);
     }
 
    /*
@@ -1237,14 +1237,14 @@ cfIEEE1284NormalizeMakeModel(
 	    isalnum(*(bufptr - 2)) && !isalnum(*(bufptr - 1)))))
       {
 	/* Insert single separator */
-	moverightpart(buffer, bufsize, bufptr, 1);
+	move_right_part(buffer, bufsize, bufptr, 1);
 	*bufptr = sepchr;
 	rightsidemoved += 1;
       }
       else if (*bufptr == '+') /* Model names sometimes differ only by a '+' */
       {
 	/* Replace with the word "plus" */
-	moverightpart(buffer, bufsize, bufptr, 3);
+	move_right_part(buffer, bufsize, bufptr, 3);
 	*bufptr = 'p';
 	*(bufptr + 1) = 'l';
 	*(bufptr + 2) = 'u';
@@ -1256,7 +1256,7 @@ cfIEEE1284NormalizeMakeModel(
 	if (bufptr == buffer || !isalnum(*(bufptr - 1)))
 	{
 	  /* The previous is already a separator, remove this one */
-	  moverightpart(buffer, bufsize, bufptr, -1);
+	  move_right_part(buffer, bufsize, bufptr, -1);
 	  rightsidemoved -= 1;
 	}
 	else
@@ -1274,7 +1274,7 @@ cfIEEE1284NormalizeMakeModel(
 	{
 	  if (numdigits < 6)
 	  {
-	    moverightpart(buffer, bufsize,
+	    move_right_part(buffer, bufsize,
 			  bufptr - numdigits, 6 - numdigits);
 	    memset(bufptr - numdigits, '0', 6 - numdigits);
 	    rightsidemoved += 6 - numdigits;
@@ -1290,7 +1290,7 @@ cfIEEE1284NormalizeMakeModel(
 	if (bufptr == buffer || isspace(*(bufptr - 1)))
 	{
 	  /* The previous is already white space, remove this one */
-	  moverightpart(buffer, bufsize, bufptr, -1);
+	  move_right_part(buffer, bufsize, bufptr, -1);
 	  rightsidemoved -= 1;
 	}
 	else

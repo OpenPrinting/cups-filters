@@ -37,19 +37,19 @@
  *   cfImageWhiteToCMYK()         - Convert luminance colors to CMYK.
  *   cfImageWhiteToRGB()          - Convert luminance data to RGB.
  *   cfImageWhiteToWhite()        - Convert luminance colors to device-
- *                                    dependent luminance.
- *   cielab()                       - Map CIE Lab transformation...
- *   huerotate()                    - Rotate the hue, maintaining luminance.
- *   ident()                        - Make an identity matrix.
- *   mult()                         - Multiply two matrices.
- *   rgb_to_lab()                   - Convert an RGB color to CIE Lab.
- *   rgb_to_xyz()                   - Convert an RGB color to CIE XYZ.
- *   saturate()                     - Make a saturation matrix.
- *   xform()                        - Transform a 3D point using a matrix...
- *   xrotate()                      - Rotate about the x (red) axis...
- *   yrotate()                      - Rotate about the y (green) axis...
- *   zrotate()                      - Rotate about the z (blue) axis...
- *   zshear()                       - Shear z using x and y...
+ *                                  dependent luminance.
+ *   cie_lab()                    - Map CIE Lab transformation...
+ *   hue_rotate()                 - Rotate the hue, maintaining luminance.
+ *   ident()                      - Make an identity matrix.
+ *   mult()                       - Multiply two matrices.
+ *   rgb_to_lab()                 - Convert an RGB color to CIE Lab.
+ *   rgb_to_xyz()                 - Convert an RGB color to CIE XYZ.
+ *   saturate()                   - Make a saturation matrix.
+ *   x_form()                     - Transform a 3D point using a matrix...
+ *   x_rotate()                   - Rotate about the x (red) axis...
+ *   y_rotate()                   - Rotate about the y (green) axis...
+ *   z_rotate()                   - Rotate about the z (blue) axis...
+ *   z_shear()                    - Shear z using x and y...
  */
 
 /*
@@ -109,18 +109,18 @@ static cups_cspace_t	cfImageColorSpace = CUPS_CSPACE_RGB;
  * Local functions...
  */
 
-static float	cielab(float x, float xn);
-static void	huerotate(float [3][3], float);
+static float	cie_lab(float x, float xn);
+static void	hue_rotate(float [3][3], float);
 static void	ident(float [3][3]);
 static void	mult(float [3][3], float [3][3], float [3][3]);
 static void	rgb_to_lab(cf_ib_t *val);
 static void	rgb_to_xyz(cf_ib_t *val);
 static void	saturate(float [3][3], float);
-static void	xform(float [3][3], float, float, float, float *, float *, float *);
-static void	xrotate(float [3][3], float, float);
-static void	yrotate(float [3][3], float, float);
-static void	zrotate(float [3][3], float, float);
-static void	zshear(float [3][3], float, float);
+static void	x_form(float [3][3], float, float, float, float *, float *, float *);
+static void	x_rotate(float [3][3], float, float);
+static void	y_rotate(float [3][3], float, float);
+static void	z_rotate(float [3][3], float, float);
+static void	z_shear(float [3][3], float, float);
 
 
 /*
@@ -510,7 +510,7 @@ cfImageRGBAdjust(cf_ib_t *pixels,	/* IO - Input/output pixels */
 
     ident(mat);
     saturate(mat, saturation * 0.01);
-    huerotate(mat, (float)hue);
+    hue_rotate(mat, (float)hue);
 
    /*
     * Allocate memory for the lookup table...
@@ -1115,11 +1115,11 @@ cfImageWhiteToWhite(
 
 
 /*
- * 'cielab()' - Map CIE Lab transformation...
+ * 'cie_lab()' - Map CIE Lab transformation...
  */
 
 static float				/* O - Adjusted color value */
-cielab(float x,				/* I - Raw color value */
+cie_lab(float x,				/* I - Raw color value */
        float xn)			/* I - Whitepoint color value */
 {
   float x_xn;				/* Fraction of whitepoint */
@@ -1135,11 +1135,11 @@ cielab(float x,				/* I - Raw color value */
 
 
 /* 
- * 'huerotate()' - Rotate the hue, maintaining luminance.
+ * 'hue_rotate()' - Rotate the hue, maintaining luminance.
  */
 
 static void
-huerotate(float mat[3][3],		/* I - Matrix to append to */
+hue_rotate(float mat[3][3],		/* I - Matrix to append to */
           float rot)			/* I - Hue rotation in degrees */
 {
   float hmat[3][3];			/* Hue matrix */
@@ -1162,20 +1162,20 @@ huerotate(float mat[3][3],		/* I - Matrix to append to */
 
   xrs = M_SQRT1_2;
   xrc = M_SQRT1_2;
-  xrotate(hmat,xrs,xrc);
+  x_rotate(hmat,xrs,xrc);
 
   yrs = -1.0 / sqrt(3.0);
   yrc = -M_SQRT2 * yrs;
-  yrotate(hmat,yrs,yrc);
+  y_rotate(hmat,yrs,yrc);
 
  /*
   * Shear the space to make the luminance plane horizontal...
   */
 
-  xform(hmat, 0.3086, 0.6094, 0.0820, &lx, &ly, &lz);
+  x_form(hmat, 0.3086, 0.6094, 0.0820, &lx, &ly, &lz);
   zsx = lx / lz;
   zsy = ly / lz;
-  zshear(hmat, zsx, zsy);
+  z_shear(hmat, zsx, zsy);
 
  /*
   * Rotate the hue...
@@ -1184,20 +1184,20 @@ huerotate(float mat[3][3],		/* I - Matrix to append to */
   zrs = sin(rot * M_PI / 180.0);
   zrc = cos(rot * M_PI / 180.0);
 
-  zrotate(hmat, zrs, zrc);
+  z_rotate(hmat, zrs, zrc);
 
  /*
   * Unshear the space to put the luminance plane back...
   */
 
-  zshear(hmat, -zsx, -zsy);
+  z_shear(hmat, -zsx, -zsy);
 
  /*
   * Rotate the grey vector back into place...
   */
 
-  yrotate(hmat, -yrs, yrc);
-  xrotate(hmat, -xrs, xrc);
+  y_rotate(hmat, -yrs, yrc);
+  x_rotate(hmat, -xrs, xrc);
 
  /*
   * Append it to the current matrix...
@@ -1304,8 +1304,8 @@ rgb_to_lab(cf_ib_t *val)		/* IO - Color value */
     ciel = 903.3 * ciey_yn;
 
 /*ciel = ciel;*/
-  ciea = 500 * (cielab(ciex, D65_X) - cielab(ciey, D65_Y));
-  cieb = 200 * (cielab(ciey, D65_Y) - cielab(ciez, D65_Z));
+  ciea = 500 * (cie_lab(ciex, D65_X) - cie_lab(ciey, D65_Y));
+  cieb = 200 * (cie_lab(ciey, D65_Y) - cie_lab(ciez, D65_Z));
 
  /*
   * Scale the L value and bias the a and b values by 128 so that all
@@ -1427,11 +1427,11 @@ saturate(float mat[3][3],		/* I - Matrix to append to */
 
 
 /* 
- * 'xform()' - Transform a 3D point using a matrix...
+ * 'x_form()' - Transform a 3D point using a matrix...
  */
 
 static void
-xform(float mat[3][3],			/* I - Matrix */
+x_form(float mat[3][3],			/* I - Matrix */
       float x,				/* I - Input X coordinate */
       float y,				/* I - Input Y coordinate */
       float z,				/* I - Input Z coordinate */
@@ -1446,11 +1446,11 @@ xform(float mat[3][3],			/* I - Matrix */
 
 
 /* 
- * 'xrotate()' - Rotate about the x (red) axis...
+ * 'x_rotate()' - Rotate about the x (red) axis...
  */
 
 static void
-xrotate(float mat[3][3],		/* I - Matrix */
+x_rotate(float mat[3][3],		/* I - Matrix */
         float rs,			/* I - Rotation angle sine */
         float rc)			/* I - Rotation angle cosine */
 {
@@ -1474,11 +1474,11 @@ xrotate(float mat[3][3],		/* I - Matrix */
 
 
 /* 
- * 'yrotate()' - Rotate about the y (green) axis...
+ * 'y_rotate()' - Rotate about the y (green) axis...
  */
 
 static void
-yrotate(float mat[3][3],		/* I - Matrix */
+y_rotate(float mat[3][3],		/* I - Matrix */
         float rs,			/* I - Rotation angle sine */
         float rc)			/* I - Rotation angle cosine */
 {
@@ -1502,11 +1502,11 @@ yrotate(float mat[3][3],		/* I - Matrix */
 
 
 /* 
- * 'zrotate()' - Rotate about the z (blue) axis...
+ * 'z_rotate()' - Rotate about the z (blue) axis...
  */
 
 static void
-zrotate(float mat[3][3],		/* I - Matrix */
+z_rotate(float mat[3][3],		/* I - Matrix */
         float rs,			/* I - Rotation angle sine */
         float rc)			/* I - Rotation angle cosine */
 {
@@ -1530,11 +1530,11 @@ zrotate(float mat[3][3],		/* I - Matrix */
 
 
 /* 
- * 'zshear()' - Shear z using x and y...
+ * 'z_shear()' - Shear z using x and y...
  */
 
 static void
-zshear(float mat[3][3],			/* I - Matrix */
+z_shear(float mat[3][3],			/* I - Matrix */
        float dx,			/* I - X shear */
        float dy)			/* I - Y shear */
 {

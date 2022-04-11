@@ -100,7 +100,8 @@ const char *pstops_exclude_page_management[] = {
  * file
  */
 
-static void parsePDFTOPDFComment(char *filename,       /* I - Input file */
+static void
+parse_pdftopdf_comment(char *filename,       /* I - Input file */
 				 int *pdftopdfapplied, /* O - Does the input
 							      data come from
 							      pdftopdf filter?*/
@@ -165,7 +166,7 @@ static void parsePDFTOPDFComment(char *filename,       /* I - Input file */
  * Check whether given file is empty
  */
 
-int                            /* O - Result: 1: Empty; 0: Contains pages */
+static int                     /* O - Result: 1: Empty; 0: Contains pages */
 is_empty(char *filename,       /* I - Input file */
 	 cf_logfunc_t log, /* I - Log function */
 	 void *ld)             /* I - Auxiliary data for log function */
@@ -378,8 +379,8 @@ cfFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   * Read out copy counts and collate setting passed over by pdftopdf
   */
 
-  parsePDFTOPDFComment(filename, &pdftopdfapplied, deviceCopies,
-		       &deviceCollate, log, ld);
+  parse_pdftopdf_comment(filename, &pdftopdfapplied, deviceCopies,
+			 &deviceCollate, log, ld);
 
  /*
   * CUPS option list

@@ -38,7 +38,7 @@ static std::string load_file(const char *filename) // {{{
 
 // TODO?
 // TODO? test
-bool hasOutputIntent(QPDF &pdf) // {{{
+bool _cfPDFToPDFHasOutputIntent(QPDF &pdf) // {{{
 {
   auto catalog=pdf.getRoot();
   if (!catalog.hasKey("/OutputIntents")) {
@@ -50,7 +50,7 @@ bool hasOutputIntent(QPDF &pdf) // {{{
 
 // TODO: test
 // TODO? find existing , replace and return  (?)
-void addOutputIntent(QPDF &pdf,const char *filename) // {{{
+void _cfPDFToPDFAddOutputIntent(QPDF &pdf,const char *filename) // {{{
 {
   std::string icc=load_file(filename);
   // TODO: check icc  fitness
@@ -103,7 +103,7 @@ void addOutputIntent(QPDF &pdf,const char *filename) // {{{
 */
 
 // TODO? test
-void addDefaultRGB(QPDF &pdf,QPDFObjectHandle srcicc) // {{{
+void _cfPDFToPDFAddDefaultRGB(QPDF &pdf,QPDFObjectHandle srcicc) // {{{
 {
   srcicc.assertStream();
 
@@ -130,7 +130,7 @@ void addDefaultRGB(QPDF &pdf,QPDFObjectHandle srcicc) // {{{
 // TODO? test
 // TODO: find existing , replace and return  (?)
 // TODO: check icc  fitness
-QPDFObjectHandle setDefaultICC(QPDF &pdf,const char *filename) // {{{
+QPDFObjectHandle _cfPDFToPDFSetDefaultICC(QPDF &pdf,const char *filename) // {{{
 {
   // TODO: find existing , replace and return  (?)
 

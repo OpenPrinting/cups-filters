@@ -39,11 +39,11 @@
 
 
 /**
- * 'makeRealBox()' - Return a QPDF array object of real values for a box.
+ * 'make_real_box()' - Return a QPDF array object of real values for a box.
  * O - QPDFObjectHandle for an array
  * I - Dimensions of the box in a float array
  */
-static QPDFObjectHandle makeRealBox(float values[4])
+static QPDFObjectHandle make_real_box(float values[4])
 {
   QPDFObjectHandle ret = QPDFObjectHandle::newArray();
   for (int i = 0; i < 4; ++i) {
@@ -320,7 +320,7 @@ extern "C" int cfPDFResizePage (cf_pdf_t *pdf,
     return (1);
 
   fit_rect(old_mediabox, new_mediabox, scale);
-  media_box = makeRealBox(new_mediabox);
+  media_box = make_real_box(new_mediabox);
 
   page.replaceKey("/ArtBox", media_box);
   page.replaceKey("/BleedBox", media_box);
@@ -377,7 +377,7 @@ extern "C" void cfPDFWrite(cf_pdf_t *pdf, FILE *file)
  * O - character string which corresponds to the value of the key or
  *     NULL if key is not found in the list.
  */
-std::string lookup_opt(cf_opt_t *opt, std::string const& key) {
+static std::string lookup_opt(cf_opt_t *opt, std::string const& key) {
     if ( ! opt || key.empty() ) {
         return "";
     }

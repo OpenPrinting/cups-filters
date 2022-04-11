@@ -1,12 +1,12 @@
 #include "qpdf_tools.h"
 
-QPDFObjectHandle getMediaBox(QPDFObjectHandle page) // {{{
+QPDFObjectHandle _cfPDFToPDFGetMediaBox(QPDFObjectHandle page) // {{{
 {
   return page.getKey("/MediaBox");
 }
 // }}}
 
-QPDFObjectHandle getCropBox(QPDFObjectHandle page) // {{{
+QPDFObjectHandle _cfPDFToPDFGetCropBox(QPDFObjectHandle page) // {{{
 {
   if (page.hasKey("/CropBox")) {
     return page.getKey("/CropBox");
@@ -15,34 +15,34 @@ QPDFObjectHandle getCropBox(QPDFObjectHandle page) // {{{
 }
 // }}}
 
-QPDFObjectHandle getBleedBox(QPDFObjectHandle page) // {{{
+QPDFObjectHandle _cfPDFToPDFGetBleedBox(QPDFObjectHandle page) // {{{
 {
   if (page.hasKey("/BleedBox")) {
     return page.getKey("/BleedBox");
   }
-  return getCropBox(page);
+  return _cfPDFToPDFGetCropBox(page);
 }
 // }}}
 
-QPDFObjectHandle getTrimBox(QPDFObjectHandle page) // {{{
+QPDFObjectHandle _cfPDFToPDFGetTrimBox(QPDFObjectHandle page) // {{{
 {
   if (page.hasKey("/TrimBox")) {
     return page.getKey("/TrimBox");
   }
-  return getCropBox(page);
+  return _cfPDFToPDFGetCropBox(page);
 }
 // }}}
 
-QPDFObjectHandle getArtBox(QPDFObjectHandle page) // {{{
+QPDFObjectHandle _cfPDFToPDFGetArtBox(QPDFObjectHandle page) // {{{
 {
   if (page.hasKey("/ArtBox")) {
     return page.getKey("/ArtBox");
   }
-  return getCropBox(page);
+  return _cfPDFToPDFGetCropBox(page);
 }
 // }}}
 
-QPDFObjectHandle makePage(QPDF &pdf,const std::map<std::string,QPDFObjectHandle> &xobjs,QPDFObjectHandle mediabox,const std::string &content) // {{{
+QPDFObjectHandle _cfPDFToPDFMakePage(QPDF &pdf,const std::map<std::string,QPDFObjectHandle> &xobjs,QPDFObjectHandle mediabox,const std::string &content) // {{{
 {
   QPDFObjectHandle ret=QPDFObjectHandle::newDictionary();
   ret.replaceKey("/Type",QPDFObjectHandle::newName("/Page"));
@@ -57,7 +57,7 @@ QPDFObjectHandle makePage(QPDF &pdf,const std::map<std::string,QPDFObjectHandle>
 }
 // }}}
 
-QPDFObjectHandle makeBox(double x1,double y1,double x2,double y2) // {{{
+QPDFObjectHandle _cfPDFToPDFMakeBox(double x1,double y1,double x2,double y2) // {{{
 {
   QPDFObjectHandle ret=QPDFObjectHandle::newArray();
   ret.appendItem(QPDFObjectHandle::newReal(x1));

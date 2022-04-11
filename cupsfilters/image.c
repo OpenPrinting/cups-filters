@@ -24,8 +24,9 @@
  *   _cfImagePutCol()       - Put a column of pixels to an image.
  *   _cfImagePutRow()       - Put a row of pixels to an image.
  *   cfImageSetMaxTiles()   - Set the maximum number of tiles to cache.
- *   flush_tile()             - Flush the least-recently-used tile in the cache.
- *   get_tile()               - Get a cached tile.
+ *   cfImageCrop()          - Crop an image.
+ *   flush_tile()           - Flush the least-recently-used tile in the cache.
+ *   get_tile()             - Get a cached tile.
  */
 
 /*
@@ -39,7 +40,7 @@
  * Local functions...
  */
 
-static int		flush_tile(cf_image_t *img);
+static int	flush_tile(cf_image_t *img);
 static cf_ib_t	*get_tile(cf_image_t *img, int x, int y);
 
 
@@ -634,6 +635,37 @@ cfImageSetMaxTiles(
 }
 
 
+
+/*
+ * 'cfImageCrop()' - Crop an image.
+ *                   (posw, posh):    Position of left corner
+ *                   (width, height): Width and height of required image.
+ */
+
+cf_image_t* cfImageCrop(cf_image_t* img,int posw,int posh,int width,int height)
+{
+  int image_width = cfImageGetWidth(img);
+  cf_image_t* temp=calloc(sizeof(cf_image_t),1);
+  cf_ib_t *pixels=(cf_ib_t*)malloc(img->xsize*cfImageGetDepth(img));
+  temp->cachefile = -1;
+  temp->max_ics = CF_TILE_MINIMUM;
+  temp->colorspace=img->colorspace;
+  temp->xppi = img->xppi;
+  temp->yppi = img->yppi;
+  temp->num_ics = 0;
+  temp->first =temp->last = NULL;
+  temp->tiles = NULL;
+  temp->xsize = width;
+  temp->ysize = height;
+  for(int i=posh;i<min(cfImageGetHeight(img),posh+height);i++){
+    cfImageGetRow(img,posw,i,min(width,image_width-posw),pixels);
+    _cfImagePutRow(temp,0,i-posh,min(width,image_width-posw),pixels);
+  }
+  free(pixels);
+  return temp;
+}
+
+
 /*
  * 'flush_tile()' - Flush the least-recently-used tile in the cache.
  */
@@ -838,32 +870,4 @@ get_tile(cf_image_t *img,		/* I - Image */
   ic->next = NULL;
 
   return (ic->pixels + bpp * (y * CF_TILE_SIZE + x));
-}
-
-/*
- * Crop a image.
- * (posw,posh): Position of left corner
- * (width,height): width and height of required image.
- */
-cf_image_t* cfImageCrop(cf_image_t* img,int posw,int posh,int width,int height)
-{
-  int image_width = cfImageGetWidth(img);
-  cf_image_t* temp=calloc(sizeof(cf_image_t),1);
-  cf_ib_t *pixels=(cf_ib_t*)malloc(img->xsize*cfImageGetDepth(img));
-  temp->cachefile = -1;
-  temp->max_ics = CF_TILE_MINIMUM;
-  temp->colorspace=img->colorspace;
-  temp->xppi = img->xppi;
-  temp->yppi = img->yppi;
-  temp->num_ics = 0;
-  temp->first =temp->last = NULL;
-  temp->tiles = NULL;
-  temp->xsize = width;
-  temp->ysize = height;
-  for(int i=posh;i<min(cfImageGetHeight(img),posh+height);i++){
-    cfImageGetRow(img,posw,i,min(width,image_width-posw),pixels);
-    _cfImagePutRow(temp,0,i-posh,min(width,image_width-posw),pixels);
-  }
-  free(pixels);
-  return temp;
 }

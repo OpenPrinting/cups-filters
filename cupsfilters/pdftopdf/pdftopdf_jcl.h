@@ -1,12 +1,15 @@
-#ifndef PDFTOPDF_JCL_H
-#define PDFTOPDF_JCL_H
+#ifndef _CUPS_FILTERS_PDFTOPDF_PDFTOPDF_JCL_H
+#define _CUPS_FILTERS_PDFTOPDF_PDFTOPDF_JCL_H
 
-struct ProcessingParameters;
-class PDFTOPDF_Processor;
+struct _cfPDFToPDFProcessingParameters;
+class _cfPDFToPDFProcessor;
 
-void emitPreamble(FILE *fp, ppd_file_t *ppd,const ProcessingParameters &param);
-void emitPostamble(FILE *fp, ppd_file_t *ppd,const ProcessingParameters &param);
+void _cfPDFToPDFEmitPreamble(FILE *fp, ppd_file_t *ppd,
+			     const _cfPDFToPDFProcessingParameters &param);
+void _cfPDFToPDFEmitPostamble(FILE *fp, ppd_file_t *ppd,
+			      const _cfPDFToPDFProcessingParameters &param);
 
-void emitComment(PDFTOPDF_Processor &proc,const ProcessingParameters &param);
+void _cfPDFToPDFEmitComment(_cfPDFToPDFProcessor &proc,
+			    const _cfPDFToPDFProcessingParameters &param);
 
 #endif

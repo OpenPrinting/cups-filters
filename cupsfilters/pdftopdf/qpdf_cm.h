@@ -1,12 +1,12 @@
-#ifndef QPDF_CM_H_
-#define QPDF_CM_H_
+#ifndef _CUPS_FILTERS_PDFTOPDF_QPDF_CM_H_
+#define _CUPS_FILTERS_PDFTOPDF_QPDF_CM_H_
 
 #include <qpdf/QPDF.hh>
 
-bool hasOutputIntent(QPDF &pdf);
-void addOutputIntent(QPDF &pdf,const char *filename);
+bool _cfPDFToPDFHasOutputIntent(QPDF &pdf);
+void _cfPDFToPDFAddOutputIntent(QPDF &pdf,const char *filename);
 
-void addDefaultRGB(QPDF &pdf,QPDFObjectHandle srcicc);
-QPDFObjectHandle setDefaultICC(QPDF &pdf,const char *filename);
+void _cfPDFToPDFAddDefaultRGB(QPDF &pdf,QPDFObjectHandle srcicc);
+QPDFObjectHandle _cfPDFToPDFSetDefaultICC(QPDF &pdf,const char *filename);
 
 #endif

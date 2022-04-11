@@ -13,7 +13,7 @@
 #include "pdftopdf.h"
 
 // Use: content.append(debug_box(pe.sub,xpos,ypos));
-static std::string debug_box(const PageRect &box,float xshift,float yshift) // {{{
+static std::string debug_box(const _cfPDFToPDFPageRect &box,float xshift,float yshift) // {{{
 {
   return std::string("q 1 w 0.1 G\n ")+
     QUtil::double_to_string(box.left+xshift)+" "+QUtil::double_to_string(box.bottom+yshift)+" m  "+
@@ -27,7 +27,7 @@ static std::string debug_box(const PageRect &box,float xshift,float yshift) // {
 }
 // }}}
 
-QPDF_PDFTOPDF_PageHandle::QPDF_PDFTOPDF_PageHandle(QPDFObjectHandle page,int orig_no) // {{{
+_cfPDFToPDFQPDFPageHandle::_cfPDFToPDFQPDFPageHandle(QPDFObjectHandle page,int orig_no) // {{{
   : page(page),
     no(orig_no),
     rotation(ROT_0)
@@ -35,7 +35,7 @@ QPDF_PDFTOPDF_PageHandle::QPDF_PDFTOPDF_PageHandle(QPDFObjectHandle page,int ori
 }
 // }}}
 
-QPDF_PDFTOPDF_PageHandle::QPDF_PDFTOPDF_PageHandle(QPDF *pdf,float width,float height) // {{{
+_cfPDFToPDFQPDFPageHandle::_cfPDFToPDFQPDFPageHandle(QPDF *pdf,float width,float height) // {{{
   : no(0),
     rotation(ROT_0)
 {
@@ -49,7 +49,7 @@ QPDF_PDFTOPDF_PageHandle::QPDF_PDFTOPDF_PageHandle(QPDF *pdf,float width,float h
     "  /MediaBox null "
     "  /Contents null "
     ">>");
-  page.replaceKey("/MediaBox",makeBox(0,0,width,height));
+  page.replaceKey("/MediaBox",_cfPDFToPDFMakeBox(0,0,width,height));
   page.replaceKey("/Contents",QPDFObjectHandle::newStream(pdf));
   // xobjects: later (in get())
   content.assign("q\n");  // TODO? different/not needed
@@ -58,36 +58,36 @@ QPDF_PDFTOPDF_PageHandle::QPDF_PDFTOPDF_PageHandle(QPDF *pdf,float width,float h
 }
 // }}}
 
-// Note: PDFTOPDF_Processor always works with "/Rotate"d and "/UserUnit"-scaled pages/coordinates/..., having 0,0 at left,bottom of the TrimBox
-PageRect QPDF_PDFTOPDF_PageHandle::getRect() const // {{{
+// Note: _cfPDFToPDFProcessor always works with "/Rotate"d and "/UserUnit"-scaled pages/coordinates/..., having 0,0 at left,bottom of the TrimBox
+_cfPDFToPDFPageRect _cfPDFToPDFQPDFPageHandle::get_rect() const // {{{
 {
   page.assertInitialized();
-  PageRect ret=getBoxAsRect(getTrimBox(page));
+  _cfPDFToPDFPageRect ret=_cfPDFToPDFGetBoxAsRect(_cfPDFToPDFGetTrimBox(page));
   ret.translate(-ret.left,-ret.bottom);
-  ret.rotate_move(getRotate(page),ret.width,ret.height);
-  ret.scale(getUserUnit(page));
+  ret.rotate_move(_cfPDFToPDFGetRotate(page),ret.width,ret.height);
+  ret.scale(_cfPDFToPDFGetUserUnit(page));
   return ret;
 }
 // }}}
 
-bool QPDF_PDFTOPDF_PageHandle::isExisting() const // {{{
+bool _cfPDFToPDFQPDFPageHandle::is_existing() const // {{{
 {
   page.assertInitialized();
   return content.empty();
 }
 // }}}
 
-QPDFObjectHandle QPDF_PDFTOPDF_PageHandle::get() // {{{
+QPDFObjectHandle _cfPDFToPDFQPDFPageHandle::get() // {{{
 {
   QPDFObjectHandle ret=page;
-  if (!isExisting()) { // finish up page
+  if (!is_existing()) { // finish up page
     page.getKey("/Resources").replaceKey("/XObject",QPDFObjectHandle::newDictionary(xobjs));
     content.append("Q\n");
     page.getKey("/Contents").replaceStreamData(content,QPDFObjectHandle::newNull(),QPDFObjectHandle::newNull());
-    page.replaceOrRemoveKey("/Rotate",makeRotate(rotation));
+    page.replaceOrRemoveKey("/Rotate",_cfPDFToPDFMakeRotate(rotation));
   } else {
-    Rotation rot=getRotate(page)+rotation;
-    page.replaceOrRemoveKey("/Rotate",makeRotate(rot));
+    pdftopdf_rotation_e rot=_cfPDFToPDFGetRotate(page)+rotation;
+    page.replaceOrRemoveKey("/Rotate",_cfPDFToPDFMakeRotate(rot));
   }
   page=QPDFObjectHandle(); // i.e. uninitialized
   return ret;
@@ -96,23 +96,23 @@ QPDFObjectHandle QPDF_PDFTOPDF_PageHandle::get() // {{{
 
 // TODO: we probably need a function "ungetRect()"  to transform to page/form space
 // TODO: as member
-static PageRect ungetRect(PageRect rect,const QPDF_PDFTOPDF_PageHandle &ph,Rotation rotation,QPDFObjectHandle page)
+static _cfPDFToPDFPageRect ungetRect(_cfPDFToPDFPageRect rect,const _cfPDFToPDFQPDFPageHandle &ph,pdftopdf_rotation_e rotation,QPDFObjectHandle page)
 {
-  PageRect pg1=ph.getRect();
-  PageRect pg2=getBoxAsRect(getTrimBox(page));
+  _cfPDFToPDFPageRect pg1=ph.get_rect();
+  _cfPDFToPDFPageRect pg2=_cfPDFToPDFGetBoxAsRect(_cfPDFToPDFGetTrimBox(page));
 
   // we have to invert /Rotate, /UserUnit and the left,bottom (TrimBox) translation
-  //Rotation_dump(rotation);
-  //Rotation_dump(getRotate(page));
+  //_cfPDFToPDFRotationDump(rotation);
+  //_cfPDFToPDFRotationDump(_cfPDFToPDFGetRotate(page));
   rect.width=pg1.width;
   rect.height=pg1.height;
   //std::swap(rect.width,rect.height);
   //rect.rotate_move(-rotation,rect.width,rect.height);
 
-  rect.rotate_move(-getRotate(page),pg1.width,pg1.height);
-  rect.scale(1.0/getUserUnit(page));
+  rect.rotate_move(-_cfPDFToPDFGetRotate(page),pg1.width,pg1.height);
+  rect.scale(1.0/_cfPDFToPDFGetUserUnit(page));
 
-  //  PageRect pg2=getBoxAsRect(getTrimBox(page));
+  //  _cfPDFToPDFPageRect pg2=_cfPDFToPDFGetBoxAsRect(_cfPDFToPDFGetTrimBox(page));
   rect.translate(pg2.left,pg2.bottom);
   //rect.dump();
 
@@ -121,10 +121,10 @@ static PageRect ungetRect(PageRect rect,const QPDF_PDFTOPDF_PageHandle &ph,Rotat
 
 // TODO FIXME rotations are strange  ... (via ungetRect)
 // TODO? for non-existing (either drop comment or facility to create split streams needed)
-void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType border,float fscale) // {{{
+void _cfPDFToPDFQPDFPageHandle::add_border_rect(const _cfPDFToPDFPageRect &_rect,pdftopdf_border_type_e border,float fscale) // {{{
 {
-  assert(isExisting());
-  assert(border!=BorderType::NONE);
+  assert(is_existing());
+  assert(border!=pdftopdf_border_type_e::NONE);
 
   // straight from pstops
   const double lw=(border&THICK)?0.5:0.24;
@@ -133,7 +133,7 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
   // (PageLeft+margin,PageBottom+margin) rect (PageRight-PageLeft-2*margin,...)   ... for nup>1: PageLeft=0,etc.
   //  if (double)  margin+=2*fscale ...rect...
 
-  PageRect rect=ungetRect(_rect,*this,rotation,page);
+  _cfPDFToPDFPageRect rect=ungetRect(_rect,*this,rotation,page);
 
   assert(rect.left<=rect.right);
   assert(rect.bottom<=rect.top);
@@ -149,7 +149,7 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
   }
   boxcmd+="Q\n";
 
-  // if (!isExisting()) {
+  // if (!is_existing()) {
   //   // TODO: only after
   //   return;
   // }
@@ -177,23 +177,23 @@ void QPDF_PDFTOPDF_PageHandle::add_border_rect(const PageRect &_rect,BorderType 
  *  Trim Box is used for trimming the page in required size.
  *  scale tells if we need to scale input file.
  */
-Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orientation,Rotation param_orientation,Position xpos,Position ypos,bool scale,bool autorotate,pdftopdf_doc_t *doc)
+pdftopdf_rotation_e _cfPDFToPDFQPDFPageHandle::crop(const _cfPDFToPDFPageRect &cropRect,pdftopdf_rotation_e orientation,pdftopdf_rotation_e param_orientation,pdftopdf_position_e xpos,pdftopdf_position_e ypos,bool scale,bool autorotate,pdftopdf_doc_t *doc)
 {
   page.assertInitialized();
-  Rotation save_rotate = getRotate(page);
+  pdftopdf_rotation_e save_rotate = _cfPDFToPDFGetRotate(page);
   if(orientation==ROT_0||orientation==ROT_180)
-    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_90));
+    page.replaceOrRemoveKey("/Rotate",_cfPDFToPDFMakeRotate(ROT_90));
   else
-    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_0));
+    page.replaceOrRemoveKey("/Rotate",_cfPDFToPDFMakeRotate(ROT_0));
 
-  PageRect currpage= getBoxAsRect(getTrimBox(page));
+  _cfPDFToPDFPageRect currpage= _cfPDFToPDFGetBoxAsRect(_cfPDFToPDFGetTrimBox(page));
   double width = currpage.right-currpage.left;
   double height = currpage.top-currpage.bottom;
   double pageWidth = cropRect.right-cropRect.left;
   double pageHeight = cropRect.top-cropRect.bottom;
   double final_w,final_h;   //Width and height of cropped image.
 
-  Rotation pageRot = getRotate(page);
+  pdftopdf_rotation_e pageRot = _cfPDFToPDFGetRotate(page);
   if ((autorotate &&
        (((pageRot == ROT_0 || pageRot == ROT_180) &&
 	 pageWidth <= pageHeight) ||
@@ -226,43 +226,43 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
 	      width,height,final_w,final_h);
   double posw = (width-final_w)/2,
         posh = (height-final_h)/2;
-  // posw, posh : Position along width and height respectively.
+  // posw, posh : pdftopdf_position_e along width and height respectively.
   // Calculating required position.  
-  if(xpos==Position::LEFT)        
+  if(xpos==pdftopdf_position_e::LEFT)        
     posw =0;
-  else if(xpos==Position::RIGHT)
+  else if(xpos==pdftopdf_position_e::RIGHT)
     posw*=2;
   
-  if(ypos==Position::TOP)
+  if(ypos==pdftopdf_position_e::TOP)
     posh*=2;
-  else if(ypos==Position::BOTTOM)
+  else if(ypos==pdftopdf_position_e::BOTTOM)
     posh=0;
 
-  // making PageRect for cropping.
+  // making _cfPDFToPDFPageRect for cropping.
   currpage.left += posw;
   currpage.bottom += posh;
   currpage.top =currpage.bottom+final_h;
   currpage.right=currpage.left+final_w;
   //Cropping.
   // TODO: Borders are covered by the image. buffer space?
-  page.replaceKey("/TrimBox",makeBox(currpage.left,currpage.bottom,currpage.right,currpage.top));
-  page.replaceOrRemoveKey("/Rotate",makeRotate(save_rotate));
-  return getRotate(page);
+  page.replaceKey("/TrimBox",_cfPDFToPDFMakeBox(currpage.left,currpage.bottom,currpage.right,currpage.top));
+  page.replaceOrRemoveKey("/Rotate",_cfPDFToPDFMakeRotate(save_rotate));
+  return _cfPDFToPDFGetRotate(page);
 }
 
-bool QPDF_PDFTOPDF_PageHandle::is_landscape(Rotation orientation)
+bool _cfPDFToPDFQPDFPageHandle::is_landscape(pdftopdf_rotation_e orientation)
 {
   page.assertInitialized();
-  Rotation save_rotate = getRotate(page);
+  pdftopdf_rotation_e save_rotate = _cfPDFToPDFGetRotate(page);
   if(orientation==ROT_0||orientation==ROT_180)
-    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_90));
+    page.replaceOrRemoveKey("/Rotate",_cfPDFToPDFMakeRotate(ROT_90));
   else
-    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_0));
+    page.replaceOrRemoveKey("/Rotate",_cfPDFToPDFMakeRotate(ROT_0));
 
-  PageRect currpage= getBoxAsRect(getTrimBox(page));
+  _cfPDFToPDFPageRect currpage= _cfPDFToPDFGetBoxAsRect(_cfPDFToPDFGetTrimBox(page));
   double width = currpage.right-currpage.left;
   double height = currpage.top-currpage.bottom;
-  page.replaceOrRemoveKey("/Rotate",makeRotate(save_rotate));
+  page.replaceOrRemoveKey("/Rotate",_cfPDFToPDFMakeRotate(save_rotate));
   if(width>height)
     return true;
   return false;
@@ -270,18 +270,18 @@ bool QPDF_PDFTOPDF_PageHandle::is_landscape(Rotation orientation)
 
 // TODO: better cropping
 // TODO: test/fix with qsub rotation
-void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop) // {{{
+void _cfPDFToPDFQPDFPageHandle::add_subpage(const std::shared_ptr<_cfPDFToPDFPageHandle> &sub,float xpos,float ypos,float scale,const _cfPDFToPDFPageRect *crop) // {{{
 {
-  auto qsub=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(sub.get());
+  auto qsub=dynamic_cast<_cfPDFToPDFQPDFPageHandle *>(sub.get());
   assert(qsub);
 
   std::string xoname="/X"+QUtil::int_to_string((qsub->no!=-1)?qsub->no:++no);
   if (crop) {
-    PageRect pg=qsub->getRect(),tmp=*crop;
+    _cfPDFToPDFPageRect pg=qsub->get_rect(),tmp=*crop;
     // we need to fix a too small cropbox.
     tmp.width=tmp.right-tmp.left;
     tmp.height=tmp.top-tmp.bottom;
-    tmp.rotate_move(-getRotate(qsub->page),tmp.width,tmp.height); // TODO TODO (pg.width? / unneeded?)
+    tmp.rotate_move(-_cfPDFToPDFGetRotate(qsub->page),tmp.width,tmp.height); // TODO TODO (pg.width? / unneeded?)
     // TODO: better
     // TODO: we need to obey page./Rotate
     if (pg.width<tmp.width) {
@@ -291,18 +291,18 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
       pg.top=pg.bottom+tmp.height;
     }
 
-    PageRect rect=ungetRect(pg,*qsub,ROT_0,qsub->page);
+    _cfPDFToPDFPageRect rect=ungetRect(pg,*qsub,ROT_0,qsub->page);
 
-    qsub->page.replaceKey("/TrimBox",makeBox(rect.left,rect.bottom,rect.right,rect.top));
+    qsub->page.replaceKey("/TrimBox",_cfPDFToPDFMakeBox(rect.left,rect.bottom,rect.right,rect.top));
     // TODO? do everything for cropping here?
   }
-  xobjs[xoname]=makeXObject(qsub->page.getOwningQPDF(),qsub->page); // trick: should be the same as page->getOwningQPDF() [only after it's made indirect]
+  xobjs[xoname]=_cfPDFToPDFMakeXObject(qsub->page.getOwningQPDF(),qsub->page); // trick: should be the same as page->getOwningQPDF() [only after it's made indirect]
 
-  Matrix mtx;
+  _cfPDFToPDFMatrix mtx;
   mtx.translate(xpos,ypos);
   mtx.scale(scale);
   mtx.rotate(qsub->rotation); // TODO? -sub.rotation ?  // TODO FIXME: this might need another translation!?
-  if (crop) { // TODO? other technique: set trim-box before makeXObject (but this modifies original page)
+  if (crop) { // TODO? other technique: set trim-box before _cfPDFToPDFMakeXObject (but this modifies original page)
     mtx.translate(crop->left,crop->bottom);
     // crop->dump();
   }
@@ -318,11 +318,11 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
 }
 // }}}
 
-void QPDF_PDFTOPDF_PageHandle::mirror() // {{{
+void _cfPDFToPDFQPDFPageHandle::mirror() // {{{
 {
-  PageRect orig=getRect();
+  _cfPDFToPDFPageRect orig=get_rect();
 
-  if (isExisting()) {
+  if (is_existing()) {
     // need to wrap in XObject to keep patterns correct
     // TODO? refactor into internal ..._subpage fn ?
     std::string xoname="/X"+QUtil::int_to_string(no);
@@ -330,14 +330,14 @@ void QPDF_PDFTOPDF_PageHandle::mirror() // {{{
     QPDFObjectHandle subpage=get();  // this->page, with rotation
 
     // replace all our data
-    *this=QPDF_PDFTOPDF_PageHandle(subpage.getOwningQPDF(),orig.width,orig.height);
+    *this=_cfPDFToPDFQPDFPageHandle(subpage.getOwningQPDF(),orig.width,orig.height);
 
-    xobjs[xoname]=makeXObject(subpage.getOwningQPDF(),subpage); // we can only now set this->xobjs
+    xobjs[xoname]=_cfPDFToPDFMakeXObject(subpage.getOwningQPDF(),subpage); // we can only now set this->xobjs
 
     // content.append(std::string("1 0 0 1 0 0 cm\n  ");
     content.append(xoname+" Do\n");
 
-    assert(!isExisting());
+    assert(!is_existing());
   }
 
   static const char *pre="%pdftopdf cm\n";
@@ -349,17 +349,17 @@ void QPDF_PDFTOPDF_PageHandle::mirror() // {{{
 }
 // }}}
 
-void QPDF_PDFTOPDF_PageHandle::rotate(Rotation rot) // {{{
+void _cfPDFToPDFQPDFPageHandle::rotate(pdftopdf_rotation_e rot) // {{{
 {
   rotation=rot; // "rotation += rot;" ?
 }
 // }}}
 
-void QPDF_PDFTOPDF_PageHandle::add_label(const PageRect &_rect, const std::string label) // {{{
+void _cfPDFToPDFQPDFPageHandle::add_label(const _cfPDFToPDFPageRect &_rect, const std::string label) // {{{
 {
-  assert(isExisting());
+  assert(is_existing());
 
-  PageRect rect = ungetRect (_rect, *this, rotation, page);
+  _cfPDFToPDFPageRect rect = ungetRect (_rect, *this, rotation, page);
 
   assert (rect.left <= rect.right);
   assert (rect.bottom <= rect.top);
@@ -449,14 +449,14 @@ void QPDF_PDFTOPDF_PageHandle::add_label(const PageRect &_rect, const std::strin
 }
 // }}}
 
-void QPDF_PDFTOPDF_PageHandle::debug(const PageRect &rect,float xpos,float ypos) // {{{
+void _cfPDFToPDFQPDFPageHandle::debug(const _cfPDFToPDFPageRect &rect,float xpos,float ypos) // {{{
 {
-  assert(!isExisting());
+  assert(!is_existing());
   content.append(debug_box(rect,xpos,ypos));
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::closeFile() // {{{
+void _cfPDFToPDFQPDFProcessor::close_file() // {{{
 {
   pdf.reset();
   hasCM=false;
@@ -465,42 +465,42 @@ void QPDF_PDFTOPDF_Processor::closeFile() // {{{
 
 // TODO?  try/catch for PDF parsing errors?
 
-bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership take,int flatten_forms) // {{{
+bool _cfPDFToPDFQPDFProcessor::load_file(FILE *f,pdftopdf_doc_t *doc,pdftopdf_arg_ownership_e take,int flatten_forms) // {{{
 {
-  closeFile();
+  close_file();
   if (!f) {
-    throw std::invalid_argument("loadFile(NULL,...) not allowed");
+    throw std::invalid_argument("load_file(NULL,...) not allowed");
   }
   try {
     pdf.reset(new QPDF);
   } catch (...) {
-    if (take==TakeOwnership) {
+    if (take==CF_PDFTOPDF_TAKE_OWNERSHIP) {
       fclose(f);
     }
     throw;
   }
   switch (take) {
-  case WillStayAlive:
+  case CF_PDFTOPDF_WILL_STAY_ALIVE:
     try {
       pdf->processFile("temp file",f,false);
     } catch (const std::exception &e) {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-        "cfFilterPDFToPDF: loadFile failed: %s", e.what());
+        "cfFilterPDFToPDF: load_file failed: %s", e.what());
       return false;
     }
     break;
-  case TakeOwnership:
+  case CF_PDFTOPDF_TAKE_OWNERSHIP:
     try {
       pdf->processFile("temp file",f,true);
     } catch (const std::exception &e) {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-        "cfFilterPDFToPDF: loadFile failed: %s", e.what());
+        "cfFilterPDFToPDF: load_file failed: %s", e.what());
       return false;
     }
     break;
-  case MustDuplicate:
+  case CF_PDFTOPDF_MUST_DUPLICATE:
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-        "cfFilterPDFToPDF: loadFile with MustDuplicate is not supported");
+        "cfFilterPDFToPDF: load_file with CF_PDFTOPDF_MUST_DUPLICATE is not supported");
     return false;
   }
   start(flatten_forms);
@@ -508,15 +508,15 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership 
 }
 // }}}
 
-bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name,pdftopdf_doc_t *doc,int flatten_forms) // {{{
+bool _cfPDFToPDFQPDFProcessor::load_filename(const char *name,pdftopdf_doc_t *doc,int flatten_forms) // {{{
 {
-  closeFile();
+  close_file();
   try {
     pdf.reset(new QPDF);
     pdf->processFile(name);
   } catch (const std::exception &e) {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-        "cfFilterPDFToPDF: loadFilename failed: %s",e.what());
+        "cfFilterPDFToPDF: load_filename failed: %s",e.what());
     return false;
   }
   start(flatten_forms);
@@ -524,7 +524,7 @@ bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name,pdftopdf_doc_t *doc,
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::start(int flatten_forms) // {{{
+void _cfPDFToPDFQPDFProcessor::start(int flatten_forms) // {{{
 {
   assert(pdf);
 
@@ -553,7 +553,7 @@ void QPDF_PDFTOPDF_Processor::start(int flatten_forms) // {{{
 }
 // }}}
 
-bool QPDF_PDFTOPDF_Processor::check_print_permissions(pdftopdf_doc_t *doc) // {{{
+bool _cfPDFToPDFQPDFProcessor::check_print_permissions(pdftopdf_doc_t *doc) // {{{
 {
   if (!pdf) {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
@@ -564,9 +564,9 @@ bool QPDF_PDFTOPDF_Processor::check_print_permissions(pdftopdf_doc_t *doc) // {{
 }
 // }}}
 
-std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> QPDF_PDFTOPDF_Processor::get_pages(pdftopdf_doc_t *doc) // {{{
+std::vector<std::shared_ptr<_cfPDFToPDFPageHandle>> _cfPDFToPDFQPDFProcessor::get_pages(pdftopdf_doc_t *doc) // {{{
 {
-  std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> ret;
+  std::vector<std::shared_ptr<_cfPDFToPDFPageHandle>> ret;
   if (!pdf) {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
         "cfFilterPDFToPDF: No PDF loaded");
@@ -576,30 +576,30 @@ std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> QPDF_PDFTOPDF_Processor::get_p
   const int len=orig_pages.size();
   ret.reserve(len);
   for (int iA=0;iA<len;iA++) {
-    ret.push_back(std::shared_ptr<PDFTOPDF_PageHandle>(new QPDF_PDFTOPDF_PageHandle(orig_pages[iA],iA+1)));
+    ret.push_back(std::shared_ptr<_cfPDFToPDFPageHandle>(new _cfPDFToPDFQPDFPageHandle(orig_pages[iA],iA+1)));
   }
   return ret;
 }
 // }}}
 
-std::shared_ptr<PDFTOPDF_PageHandle> QPDF_PDFTOPDF_Processor::new_page(float width,float height,pdftopdf_doc_t *doc) // {{{
+std::shared_ptr<_cfPDFToPDFPageHandle> _cfPDFToPDFQPDFProcessor::new_page(float width,float height,pdftopdf_doc_t *doc) // {{{
 {
   if (!pdf) {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
         "cfFilterPDFToPDF: No PDF loaded");
     assert(0);
-    return std::shared_ptr<PDFTOPDF_PageHandle>();
+    return std::shared_ptr<_cfPDFToPDFPageHandle>();
   }
-  return std::shared_ptr<QPDF_PDFTOPDF_PageHandle>(new QPDF_PDFTOPDF_PageHandle(pdf.get(),width,height));
-  // return std::make_shared<QPDF_PDFTOPDF_PageHandle>(pdf.get(),width,height);
+  return std::shared_ptr<_cfPDFToPDFQPDFPageHandle>(new _cfPDFToPDFQPDFPageHandle(pdf.get(),width,height));
+  // return std::make_shared<_cfPDFToPDFQPDFPageHandle>(pdf.get(),width,height);
   // problem: make_shared not friend
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::add_page(std::shared_ptr<PDFTOPDF_PageHandle> page,bool front) // {{{
+void _cfPDFToPDFQPDFProcessor::add_page(std::shared_ptr<_cfPDFToPDFPageHandle> page,bool front) // {{{
 {
   assert(pdf);
-  auto qpage=dynamic_cast<QPDF_PDFTOPDF_PageHandle *>(page.get());
+  auto qpage=dynamic_cast<_cfPDFToPDFQPDFPageHandle *>(page.get());
   if (qpage) {
     pdf->addPage(qpage->get(),front);
   }
@@ -614,7 +614,7 @@ pdf->getRoot().removeKey("/OpenAction");
 pdf->getRoot().removeKey("/PageLabels");
 #endif
 
-void QPDF_PDFTOPDF_Processor::multiply(int copies,bool collate) // {{{
+void _cfPDFToPDFQPDFProcessor::multiply(int copies,bool collate) // {{{
 {
   assert(pdf);
   assert(copies>0);
@@ -639,7 +639,7 @@ void QPDF_PDFTOPDF_Processor::multiply(int copies,bool collate) // {{{
 // }}}
 
 // TODO? elsewhere?
-void QPDF_PDFTOPDF_Processor::autoRotateAll(bool dst_lscape,Rotation normal_landscape) // {{{
+void _cfPDFToPDFQPDFProcessor::auto_rotate_all(bool dst_lscape,pdftopdf_rotation_e normal_landscape) // {{{
 {
   assert(pdf);
 
@@ -647,21 +647,21 @@ void QPDF_PDFTOPDF_Processor::autoRotateAll(bool dst_lscape,Rotation normal_land
   for (int iA=0;iA<len;iA++) {
     QPDFObjectHandle page=orig_pages[iA];
 
-    Rotation src_rot=getRotate(page);
+    pdftopdf_rotation_e src_rot=_cfPDFToPDFGetRotate(page);
 
-    // copy'n'paste from QPDF_PDFTOPDF_PageHandle::getRect
-    PageRect ret=getBoxAsRect(getTrimBox(page));
+    // copy'n'paste from _cfPDFToPDFQPDFPageHandle::get_rect
+    _cfPDFToPDFPageRect ret=_cfPDFToPDFGetBoxAsRect(_cfPDFToPDFGetTrimBox(page));
     // ret.translate(-ret.left,-ret.bottom);
     ret.rotate_move(src_rot,ret.width,ret.height);
-    // ret.scale(getUserUnit(page));
+    // ret.scale(_cfPDFToPDFGetUserUnit(page));
 
     const bool src_lscape=(ret.width>ret.height);
     if (src_lscape!=dst_lscape) {
-      Rotation rotation=normal_landscape;
+      pdftopdf_rotation_e rotation=normal_landscape;
       // TODO? other rotation direction, e.g. if (src_rot==ROT_0)&&(param.orientation==ROT_270) ... etc.
       // rotation=ROT_270;
 
-      page.replaceOrRemoveKey("/Rotate",makeRotate(src_rot+rotation));
+      page.replaceOrRemoveKey("/Rotate",_cfPDFToPDFMakeRotate(src_rot+rotation));
     }
   }
 }
@@ -670,24 +670,24 @@ void QPDF_PDFTOPDF_Processor::autoRotateAll(bool dst_lscape,Rotation normal_land
 #include "qpdf_cm.h"
 
 // TODO
-void QPDF_PDFTOPDF_Processor::addCM(const char *defaulticc,const char *outputicc) // {{{
+void _cfPDFToPDFQPDFProcessor::add_cm(const char *defaulticc,const char *outputicc) // {{{
 {
   assert(pdf);
 
-  if (hasOutputIntent(*pdf)) {
+  if (_cfPDFToPDFHasOutputIntent(*pdf)) {
     return; // nothing to do
   }
 
-  QPDFObjectHandle srcicc=setDefaultICC(*pdf,defaulticc); // TODO? rename to putDefaultICC?
-  addDefaultRGB(*pdf,srcicc);
+  QPDFObjectHandle srcicc=_cfPDFToPDFSetDefaultICC(*pdf,defaulticc); // TODO? rename to putDefaultICC?
+  _cfPDFToPDFAddDefaultRGB(*pdf,srcicc);
 
-  addOutputIntent(*pdf,outputicc);
+  _cfPDFToPDFAddOutputIntent(*pdf,outputicc);
 
   hasCM=true;
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::setComments(const std::vector<std::string> &comments) // {{{
+void _cfPDFToPDFQPDFProcessor::set_comments(const std::vector<std::string> &comments) // {{{
 {
   extraheader.clear();
   const int len=comments.size();
@@ -699,22 +699,22 @@ void QPDF_PDFTOPDF_Processor::setComments(const std::vector<std::string> &commen
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership take) // {{{
+void _cfPDFToPDFQPDFProcessor::emit_file(FILE *f,pdftopdf_doc_t *doc,pdftopdf_arg_ownership_e take) // {{{
 {
   if (!pdf) {
     return;
   }
   QPDFWriter out(*pdf);
   switch (take) {
-  case WillStayAlive:
+  case CF_PDFTOPDF_WILL_STAY_ALIVE:
     out.setOutputFile("temp file",f,false);
     break;
-  case TakeOwnership:
+  case CF_PDFTOPDF_TAKE_OWNERSHIP:
     out.setOutputFile("temp file",f,true);
     break;
-  case MustDuplicate:
+  case CF_PDFTOPDF_MUST_DUPLICATE:
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-        "cfFilterPDFToPDF: emitFile with MustDuplicate is not supported");
+        "cfFilterPDFToPDF: emit_file with CF_PDFTOPDF_MUST_DUPLICATE is not supported");
     return;
   }
   if (hasCM) {
@@ -730,7 +730,7 @@ void QPDF_PDFTOPDF_Processor::emitFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership 
 }
 // }}}
 
-void QPDF_PDFTOPDF_Processor::emitFilename(const char *name,pdftopdf_doc_t *doc) // {{{
+void _cfPDFToPDFQPDFProcessor::emit_filename(const char *name,pdftopdf_doc_t *doc) // {{{
 {
   if (!pdf) {
     return;
@@ -759,7 +759,7 @@ void QPDF_PDFTOPDF_Processor::emitFilename(const char *name,pdftopdf_doc_t *doc)
 // TODO:
 //   loadPDF();   success?
 
-bool QPDF_PDFTOPDF_Processor::hasAcroForm() // {{{
+bool _cfPDFToPDFQPDFProcessor::has_acro_form() // {{{
 {
   if (!pdf) {
     return false;

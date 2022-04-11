@@ -140,28 +140,28 @@ typedef struct pdftoraster_doc_s
   cms_profile_t colour_profile;
 } pdftoraster_doc_t;
 
-typedef unsigned char *(*ConvertCSpaceFunc)(unsigned char *src,
+typedef unsigned char *(*convert_cspace_func)(unsigned char *src,
                         unsigned char *pixelBuf,
                         unsigned int x,
                         unsigned int y,
                         pdftoraster_doc_t* doc);
-typedef unsigned char *(*ConvertLineFunc)(unsigned char *src,
+typedef unsigned char *(*convert_line_func)(unsigned char *src,
                         unsigned char *dst, 
                         unsigned int row, 
                         unsigned int plane,
                         unsigned int pixels, 
                         unsigned int size, 
                         pdftoraster_doc_t* doc,
-                        ConvertCSpaceFunc convertCSpace);
+                        convert_cspace_func convertCSpace);
 
 typedef struct conversion_function_s
 {
-  ConvertCSpaceFunc convertCSpace;	/* Function for conversion of colorspaces */
-  ConvertLineFunc convertLineOdd;/* Function tom modify raster data of a line */
-  ConvertLineFunc convertLineEven;
+  convert_cspace_func convertCSpace;	/* Function for conversion of colorspaces */
+  convert_line_func convertLineOdd;/* Function tom modify raster data of a line */
+  convert_line_func convertLineEven;
 } conversion_function_t;
 
-cmsCIExyY adobergb_wp()
+static cmsCIExyY adobergb_wp()
 {
     double * xyY = cfCmWhitePointAdobeRGB();
     cmsCIExyY wp;
@@ -173,7 +173,7 @@ cmsCIExyY adobergb_wp()
     return wp;
 }
 
-cmsCIExyY sgray_wp()
+static cmsCIExyY sgray_wp()
 {
     double * xyY = cfCmWhitePointSGray();
     cmsCIExyY wp;
@@ -185,7 +185,7 @@ cmsCIExyY sgray_wp()
     return wp;
 }
 
-cmsCIExyYTRIPLE adobergb_matrix()
+static cmsCIExyYTRIPLE adobergb_matrix()
 {
     cmsCIExyYTRIPLE m;
 
@@ -204,7 +204,7 @@ cmsCIExyYTRIPLE adobergb_matrix()
     return m;
 }
 
-cmsHPROFILE adobergb_profile()
+static cmsHPROFILE adobergb_profile()
 {
     cmsHPROFILE adobergb;
 
@@ -228,7 +228,7 @@ cmsHPROFILE adobergb_profile()
     return adobergb;
 }
 
-cmsHPROFILE sgray_profile()
+static cmsHPROFILE sgray_profile()
 {
     cmsHPROFILE sgray;
 
@@ -248,19 +248,19 @@ cmsHPROFILE sgray_profile()
 
 
 #ifdef USE_LCMS1
-static int lcmsErrorHandler(int ErrorCode, const char *ErrorText)
+static int lcms_error_handler(int ErrorCode, const char *ErrorText)
 {
   return 1;
 }
 #else
-static void lcmsErrorHandler(cmsContext contextId, cmsUInt32Number ErrorCode,
+static void lcms_error_handler(cmsContext contextId, cmsUInt32Number ErrorCode,
    const char *ErrorText)
 {
   return;
 }
 #endif
 
-static void  handleRqeuiresPageRegion(pdftoraster_doc_t*doc) {
+static void handle_requires_page_region(pdftoraster_doc_t*doc) {
   ppd_choice_t *mf;
   ppd_choice_t *is;
   ppd_attr_t *rregions = NULL;
@@ -296,7 +296,7 @@ static void  handleRqeuiresPageRegion(pdftoraster_doc_t*doc) {
   }
 }
 
-static int parseOpts(cf_filter_data_t *data,
+static int parse_opts(cf_filter_data_t *data,
 		     cf_filter_out_format_t outformat,
 		     pdftoraster_doc_t *doc)
 {
@@ -320,7 +320,7 @@ static int parseOpts(cf_filter_data_t *data,
   doc->ppd = data->ppd;
 
   if (doc->ppd)
-    handleRqeuiresPageRegion(doc);
+    handle_requires_page_region(doc);
   else
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToRaster: PPD file is not specified.");
@@ -500,7 +500,7 @@ static int parseOpts(cf_filter_data_t *data,
   return (0);
 }
 
-static void parsePDFTOPDFComment(FILE *fp, int* deviceCopies, bool* deviceCollate)
+static void parse_pdftopdf_comment(FILE *fp, int* deviceCopies, bool* deviceCollate)
 {
   char buf[4096];
   int i;
@@ -532,9 +532,9 @@ static void parsePDFTOPDFComment(FILE *fp, int* deviceCopies, bool* deviceCollat
   }
 }
 
-static unsigned char *reverseLine(unsigned char *src, unsigned char *dst,
+static unsigned char *reverse_line(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   unsigned char *p = src;
 
@@ -544,9 +544,9 @@ static unsigned char *reverseLine(unsigned char *src, unsigned char *dst,
   return src;
 }
 
-static unsigned char *reverseLineSwapByte(unsigned char *src,
+static unsigned char *reverse_line_swap_byte(unsigned char *src,
     unsigned char *dst, unsigned int row, unsigned int plane,
-    unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+    unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   unsigned char *bp = src+size-1;
   unsigned char *dp = dst;
@@ -558,25 +558,25 @@ static unsigned char *reverseLineSwapByte(unsigned char *src,
 }
 
 
-static unsigned char *reverseLineSwapBit(unsigned char *src,
+static unsigned char *reverse_line_swap_bit(unsigned char *src,
   unsigned char *dst, unsigned int row, unsigned int plane,
-  unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+  unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   dst = cfReverseOneBitLineSwap(src, dst, pixels, size);
   return dst;
 }
 
-static unsigned char *rgbToCMYKLine(unsigned char *src, unsigned char *dst,
+static unsigned char *rgb_to_cmyk_line(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   cfImageRGBToCMYK(src,dst,pixels);
   return dst;
 }
 
-static unsigned char *rgbToCMYKLineSwap(unsigned char *src, unsigned char *dst,
+static unsigned char *rgb_to_cmyk_line_swap(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   unsigned char *bp = src+(pixels-1)*3;
   unsigned char *dp = dst;
@@ -587,17 +587,17 @@ static unsigned char *rgbToCMYKLineSwap(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-static unsigned char *rgbToCMYLine(unsigned char *src, unsigned char *dst,
+static unsigned char *rgb_to_cmy_line(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   cfImageRGBToCMY(src,dst,pixels);
   return dst;
 }
 
-static unsigned char *rgbToCMYLineSwap(unsigned char *src, unsigned char *dst,
+static unsigned char *rgb_to_cmy_line_swap(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   unsigned char *bp = src+size-3;
   unsigned char *dp = dst;
@@ -608,9 +608,9 @@ static unsigned char *rgbToCMYLineSwap(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-static unsigned char *rgbToKCMYLine(unsigned char *src, unsigned char *dst,
+static unsigned char *rgb_to_kcmy_line(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   unsigned char *bp = src;
   unsigned char *dp = dst;
@@ -628,9 +628,9 @@ static unsigned char *rgbToKCMYLine(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-static unsigned char *rgbToKCMYLineSwap(unsigned char *src, unsigned char *dst,
+static unsigned char *rgb_to_kcmy_line_swap(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   unsigned char *bp = src+(pixels-1)*3;
   unsigned char *dp = dst;
@@ -648,17 +648,17 @@ static unsigned char *rgbToKCMYLineSwap(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-static unsigned char *lineNoop(unsigned char *src, unsigned char *dst,
+static unsigned char *line_no_op(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   /* do nothing */
   return src;
 }
 
-static unsigned char *lineSwap24(unsigned char *src, unsigned char *dst,
+static unsigned char *line_swap_24(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   unsigned char *bp = src+size-3;
   unsigned char *dp = dst;
@@ -671,9 +671,9 @@ static unsigned char *lineSwap24(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-static unsigned char *lineSwapByte(unsigned char *src, unsigned char *dst,
+static unsigned char *line_swap_byte(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t *doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t *doc, convert_cspace_func convertCSpace)
 {
   unsigned char *bp = src+size-1;
   unsigned char *dp = dst;
@@ -684,60 +684,60 @@ static unsigned char *lineSwapByte(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-static unsigned char *lineSwapBit(unsigned char *src, unsigned char *dst,
+static unsigned char *line_swap_bit(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   dst = cfReverseOneBitLine(src, dst, pixels, size);
   return dst;
 }
 
-typedef struct _funcTable {
+typedef struct func_table_s {
   enum cups_cspace_e cspace;
   unsigned int bitsPerPixel;
   unsigned int bitsPerColor;
-  ConvertLineFunc convertLine;
+  convert_line_func convertLine;
   bool allocLineBuf;
-  ConvertLineFunc convertLineSwap;
+  convert_line_func convertLineSwap;
   bool allocLineBufSwap;
-} FuncTable;
+} func_table_t;
 
-static FuncTable specialCaseFuncs[] = {
-  {CUPS_CSPACE_K,8,8,reverseLine,false,reverseLineSwapByte,true},
-  {CUPS_CSPACE_K,1,1,reverseLine,false,reverseLineSwapBit,true},
-  {CUPS_CSPACE_GOLD,8,8,reverseLine,false,reverseLineSwapByte,true},
-  {CUPS_CSPACE_GOLD,1,1,reverseLine,false,reverseLineSwapBit,true},
-  {CUPS_CSPACE_SILVER,8,8,reverseLine,false,reverseLineSwapByte,true},
-  {CUPS_CSPACE_SILVER,1,1,reverseLine,false,reverseLineSwapBit,true},
-  {CUPS_CSPACE_CMYK,32,8,rgbToCMYKLine,true,rgbToCMYKLineSwap,true},
-  {CUPS_CSPACE_KCMY,32,8,rgbToKCMYLine,true,rgbToKCMYLineSwap,true},
-  {CUPS_CSPACE_CMY,24,8,rgbToCMYLine,true,rgbToCMYLineSwap,true},
-  {CUPS_CSPACE_RGB,24,8,lineNoop,false,lineSwap24,true},
-  {CUPS_CSPACE_SRGB,24,8,lineNoop,false,lineSwap24,true},
-  {CUPS_CSPACE_ADOBERGB,24,8,lineNoop,false,lineSwap24,true},
-  {CUPS_CSPACE_W,8,8,lineNoop,false,lineSwapByte,true},
-  {CUPS_CSPACE_W,1,1,lineNoop,false,lineSwapBit,true},
-  {CUPS_CSPACE_SW,8,8,lineNoop,false,lineSwapByte,true},
-  {CUPS_CSPACE_SW,1,1,lineNoop,false,lineSwapBit,true},
-  {CUPS_CSPACE_WHITE,8,8,lineNoop,false,lineSwapByte,true},
-  {CUPS_CSPACE_WHITE,1,1,lineNoop,false,lineSwapBit,true},
+static func_table_t specialCaseFuncs[] = {
+  {CUPS_CSPACE_K,8,8,reverse_line,false,reverse_line_swap_byte,true},
+  {CUPS_CSPACE_K,1,1,reverse_line,false,reverse_line_swap_bit,true},
+  {CUPS_CSPACE_GOLD,8,8,reverse_line,false,reverse_line_swap_byte,true},
+  {CUPS_CSPACE_GOLD,1,1,reverse_line,false,reverse_line_swap_bit,true},
+  {CUPS_CSPACE_SILVER,8,8,reverse_line,false,reverse_line_swap_byte,true},
+  {CUPS_CSPACE_SILVER,1,1,reverse_line,false,reverse_line_swap_bit,true},
+  {CUPS_CSPACE_CMYK,32,8,rgb_to_cmyk_line,true,rgb_to_cmyk_line_swap,true},
+  {CUPS_CSPACE_KCMY,32,8,rgb_to_kcmy_line,true,rgb_to_kcmy_line_swap,true},
+  {CUPS_CSPACE_CMY,24,8,rgb_to_cmy_line,true,rgb_to_cmy_line_swap,true},
+  {CUPS_CSPACE_RGB,24,8,line_no_op,false,line_swap_24,true},
+  {CUPS_CSPACE_SRGB,24,8,line_no_op,false,line_swap_24,true},
+  {CUPS_CSPACE_ADOBERGB,24,8,line_no_op,false,line_swap_24,true},
+  {CUPS_CSPACE_W,8,8,line_no_op,false,line_swap_byte,true},
+  {CUPS_CSPACE_W,1,1,line_no_op,false,line_swap_bit,true},
+  {CUPS_CSPACE_SW,8,8,line_no_op,false,line_swap_byte,true},
+  {CUPS_CSPACE_SW,1,1,line_no_op,false,line_swap_bit,true},
+  {CUPS_CSPACE_WHITE,8,8,line_no_op,false,line_swap_byte,true},
+  {CUPS_CSPACE_WHITE,1,1,line_no_op,false,line_swap_bit,true},
   {CUPS_CSPACE_RGB,0,0,NULL,false,NULL,false} /* end mark */
 };
 
-static unsigned char *convertCSpaceNone(unsigned char *src,
+static unsigned char *convert_cspace_none(unsigned char *src,
   unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   return src;
 }
 
-static unsigned char *convertCSpaceWithProfiles(unsigned char *src,
+static unsigned char *convert_cspace_with_profiles(unsigned char *src,
   unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   cmsDoTransform(doc->colour_profile.colorTransform,src,pixelBuf,1);
   return pixelBuf;
 }
 
-static unsigned char *convertCSpaceXYZ8(unsigned char *src,
+static unsigned char *convert_cspace_xyz_8(unsigned char *src,
   unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double alab[3];
@@ -757,7 +757,7 @@ static unsigned char *convertCSpaceXYZ8(unsigned char *src,
   return pixelBuf;
 }
 
-static unsigned char *convertCSpaceXYZ16(unsigned char *src,
+static unsigned char *convert_cspace_xyz_16(unsigned char *src,
   unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double alab[3];
@@ -778,7 +778,7 @@ static unsigned char *convertCSpaceXYZ16(unsigned char *src,
   return pixelBuf;
 }
 
-static unsigned char *convertCSpaceLab8(unsigned char *src,
+static unsigned char *convert_cspace_lab_8(unsigned char *src,
   unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double lab[3];
@@ -789,7 +789,7 @@ static unsigned char *convertCSpaceLab8(unsigned char *src,
   return pixelBuf;
 }
 
-static unsigned char *convertCSpaceLab16(unsigned char *src,
+static unsigned char *convert_cspace_lab_16(unsigned char *src,
   unsigned char *pixelBuf, unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   double lab[3];
@@ -801,7 +801,7 @@ static unsigned char *convertCSpaceLab16(unsigned char *src,
   return pixelBuf;
 }
 
-static unsigned char *RGB8toRGBA(unsigned char *src, unsigned char *pixelBuf,
+static unsigned char *rgb_8_to_rgba(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   unsigned char *dp = pixelBuf;
@@ -813,7 +813,7 @@ static unsigned char *RGB8toRGBA(unsigned char *src, unsigned char *pixelBuf,
   return pixelBuf;
 }
 
-static unsigned char *RGB8toRGBW(unsigned char *src, unsigned char *pixelBuf,
+static unsigned char *rgb_8_to_rgbw(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   unsigned char cmyk[4];
@@ -826,21 +826,21 @@ static unsigned char *RGB8toRGBW(unsigned char *src, unsigned char *pixelBuf,
   return pixelBuf;
 }
 
-static unsigned char *RGB8toCMYK(unsigned char *src, unsigned char *pixelBuf,
+static unsigned char *rgb_8_to_cmyk(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cfImageRGBToCMYK(src,pixelBuf,1);
   return pixelBuf;
 }
 
-static unsigned char *RGB8toCMY(unsigned char *src, unsigned char *pixelBuf,
+static unsigned char *rgb_8_to_cmy(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cfImageRGBToCMY(src,pixelBuf,1);
   return pixelBuf;
 }
 
-static unsigned char *RGB8toYMC(unsigned char *src, unsigned char *pixelBuf,
+static unsigned char *rgb_8_to_ymc(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cfImageRGBToCMY(src,pixelBuf,1);
@@ -851,7 +851,7 @@ static unsigned char *RGB8toYMC(unsigned char *src, unsigned char *pixelBuf,
   return pixelBuf;
 }
 
-static unsigned char *RGB8toKCMY(unsigned char *src, unsigned char *pixelBuf,
+static unsigned char *rgb_8_to_kcmy(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cfImageRGBToCMYK(src,pixelBuf,1);
@@ -863,13 +863,13 @@ static unsigned char *RGB8toKCMY(unsigned char *src, unsigned char *pixelBuf,
   return pixelBuf;
 }
 
-static unsigned char *RGB8toKCMYcmTemp(unsigned char *src, unsigned char *pixelBuf,
+static unsigned char *rgb_8_to_kcmycm_temp(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   return cfRGB8toKCMYcm(src, pixelBuf, x, y);
 }
 
-static unsigned char *RGB8toYMCK(unsigned char *src, unsigned char *pixelBuf,
+static unsigned char *rgb_8_to_ymck(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t* doc)
 {
   cfImageRGBToCMYK(src,pixelBuf,1);
@@ -880,16 +880,16 @@ static unsigned char *RGB8toYMCK(unsigned char *src, unsigned char *pixelBuf,
   return pixelBuf;
 }
 
-static unsigned char *W8toK8(unsigned char *src, unsigned char *pixelBuf,
+static unsigned char *w_8_to_k_8(unsigned char *src, unsigned char *pixelBuf,
   unsigned int x, unsigned int y, pdftoraster_doc_t *doc)
 {
   *pixelBuf = ~(*src);
   return pixelBuf;
 }
 
-static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
+static unsigned char *convert_line_chunked(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t *doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t *doc, convert_cspace_func convertCSpace)
 {
   /* Assumed that BitsPerColor is 8 */
   for (unsigned int i = 0;i < pixels;i++) {
@@ -904,9 +904,9 @@ static unsigned char *convertLineChunked(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-static unsigned char *convertLineChunkedSwap(unsigned char *src,
+static unsigned char *convert_line_chunked_swap(unsigned char *src,
      unsigned char *dst, unsigned int row, unsigned int plane,
-     unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int pixels, unsigned int size, pdftoraster_doc_t* doc, convert_cspace_func convertCSpace)
 {
   /* Assumed that BitsPerColor is 8 */
   for (unsigned int i = 0;i < pixels;i++) {
@@ -921,9 +921,9 @@ static unsigned char *convertLineChunkedSwap(unsigned char *src,
   return dst;
 }
 
-static unsigned char *convertLinePlane(unsigned char *src, unsigned char *dst,
+static unsigned char *convert_line_plane(unsigned char *src, unsigned char *dst,
      unsigned int row, unsigned int plane, unsigned int pixels,
-     unsigned int size, pdftoraster_doc_t *doc, ConvertCSpaceFunc convertCSpace)
+     unsigned int size, pdftoraster_doc_t *doc, convert_cspace_func convertCSpace)
 {
   /* Assumed that BitsPerColor is 8 */
   for (unsigned int i = 0;i < pixels;i++) {
@@ -938,9 +938,9 @@ static unsigned char *convertLinePlane(unsigned char *src, unsigned char *dst,
   return dst;
 }
 
-static unsigned char *convertLinePlaneSwap(unsigned char *src,
+static unsigned char *convert_line_plane_swap(unsigned char *src,
     unsigned char *dst, unsigned int row, unsigned int plane,
-    unsigned int pixels, unsigned int size, pdftoraster_doc_t *doc, ConvertCSpaceFunc convertCSpace)
+    unsigned int pixels, unsigned int size, pdftoraster_doc_t *doc, convert_cspace_func convertCSpace)
 {
   for (unsigned int i = 0;i < pixels;i++) {
       unsigned char pixelBuf1[MAX_BYTES_PER_PIXEL];
@@ -954,8 +954,8 @@ static unsigned char *convertLinePlaneSwap(unsigned char *src,
   return dst;
 }
 
-/* handle special cases which are appear in gutenprint's PPDs. */
-static bool selectSpecialCase(pdftoraster_doc_t* doc, conversion_function_t* convert)
+/* Handle special cases which appear in Gutenprint's PPDs */
+static bool select_special_case(pdftoraster_doc_t* doc, conversion_function_t* convert)
 {
   int i;
 
@@ -977,7 +977,7 @@ static bool selectSpecialCase(pdftoraster_doc_t* doc, conversion_function_t* con
   return false;
 }
 
-static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
+static unsigned int get_cms_color_space_type(cmsColorSpaceSignature cs)
 {
     switch (cs) {
     case cmsSigXYZData:
@@ -1034,13 +1034,13 @@ static unsigned int getCMSColorSpaceType(cmsColorSpaceSignature cs)
 }
 
 /* select convertLine function */
-static int selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conversion_function_t *convert, cf_logfunc_t log, void* ld)
+static int select_convert_func(cups_raster_t *raster, pdftoraster_doc_t* doc, conversion_function_t *convert, cf_logfunc_t log, void* ld)
 {
   doc->bitspercolor = doc->header.cupsBitsPerColor;
   if ((doc->colour_profile.colorProfile == NULL || doc->colour_profile.popplerColorProfile == doc->colour_profile.colorProfile)
       && (doc->header.cupsColorOrder == CUPS_ORDER_CHUNKED
        || doc->header.cupsNumColors == 1)) {
-    if (selectSpecialCase(doc, convert))
+    if (select_special_case(doc, convert))
       return (0);
   }
 
@@ -1048,14 +1048,14 @@ static int selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conv
   case CUPS_ORDER_BANDED:
   case CUPS_ORDER_PLANAR:
     if (doc->header.cupsNumColors > 1) {
-      convert->convertLineEven = convertLinePlaneSwap;
-      convert->convertLineOdd = convertLinePlane;
+      convert->convertLineEven = convert_line_plane_swap;
+      convert->convertLineOdd = convert_line_plane;
       break;
     }
   default:
   case CUPS_ORDER_CHUNKED:
-    convert->convertLineEven = convertLineChunkedSwap;
-    convert->convertLineOdd = convertLineChunked;
+    convert->convertLineEven = convert_line_chunked_swap;
+    convert->convertLineOdd = convert_line_chunked;
     break;
   }
   if (!doc->header.Duplex || !doc->swap_image_x) {
@@ -1084,24 +1084,24 @@ static int selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conv
     case CUPS_CSPACE_ICCE:
     case CUPS_CSPACE_ICCF:
       if (doc->header.cupsBitsPerColor == 8) {
-        convert->convertCSpace = convertCSpaceLab8;
+        convert->convertCSpace = convert_cspace_lab_8;
       } else {
         /* 16 bits */
-        convert->convertCSpace = convertCSpaceLab16;
+        convert->convertCSpace = convert_cspace_lab_16;
       }
       bytes = 0; /* double */
       break;
     case CUPS_CSPACE_CIEXYZ:
       if (doc->header.cupsBitsPerColor == 8) {
-        convert->convertCSpace = convertCSpaceXYZ8;
+        convert->convertCSpace = convert_cspace_xyz_8;
       } else {
         /* 16 bits */
-        convert->convertCSpace = convertCSpaceXYZ16;
+        convert->convertCSpace = convert_cspace_xyz_16;
       }
       bytes = 0; /* double */
       break;
     default:
-      convert->convertCSpace = convertCSpaceWithProfiles;
+      convert->convertCSpace = convert_cspace_with_profiles;
       bytes = doc->header.cupsBitsPerColor/8;
       break;
     }
@@ -1110,7 +1110,7 @@ static int selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conv
       doc->colour_profile.popplerColorProfile = cmsCreate_sRGBProfile();
     }
     unsigned int dcst =
-      getCMSColorSpaceType(cmsGetColorSpace(doc->colour_profile.colorProfile));
+      get_cms_color_space_type(cmsGetColorSpace(doc->colour_profile.colorProfile));
     if ((doc->colour_profile.colorTransform =
 	 cmsCreateTransform(doc->colour_profile.popplerColorProfile,
 			    COLORSPACE_SH(PT_RGB) |CHANNELS_SH(3) | BYTES_SH(1),
@@ -1143,52 +1143,52 @@ static int selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conv
     case CUPS_CSPACE_ICCE:
     case CUPS_CSPACE_ICCF:
     case CUPS_CSPACE_CIEXYZ:
-      convert->convertCSpace = convertCSpaceNone;
+      convert->convertCSpace = convert_cspace_none;
       break;
     case CUPS_CSPACE_CMY:
-      convert->convertCSpace = RGB8toCMY;
+      convert->convertCSpace = rgb_8_to_cmy;
       break;
     case CUPS_CSPACE_YMC:
-      convert->convertCSpace = RGB8toYMC;
+      convert->convertCSpace = rgb_8_to_ymc;
       break;
     case CUPS_CSPACE_CMYK:
-      convert->convertCSpace = RGB8toCMYK;
+      convert->convertCSpace = rgb_8_to_cmyk;
       break;
     case CUPS_CSPACE_KCMY:
-      convert->convertCSpace = RGB8toKCMY;
+      convert->convertCSpace = rgb_8_to_kcmy;
       break;
     case CUPS_CSPACE_KCMYcm:
       if (doc->header.cupsBitsPerColor > 1) {
-        convert->convertCSpace = RGB8toKCMY;
+        convert->convertCSpace = rgb_8_to_kcmy;
       } else {
-        convert->convertCSpace = RGB8toKCMYcmTemp;
+        convert->convertCSpace = rgb_8_to_kcmycm_temp;
       }
       break;
     case CUPS_CSPACE_GMCS:
     case CUPS_CSPACE_GMCK:
     case CUPS_CSPACE_YMCK:
-      convert->convertCSpace = RGB8toYMCK;
+      convert->convertCSpace = rgb_8_to_ymck;
       break;
     case CUPS_CSPACE_RGBW:
-      convert->convertCSpace = RGB8toRGBW;
+      convert->convertCSpace = rgb_8_to_rgbw;
       break;
     case CUPS_CSPACE_RGBA:
-      convert->convertCSpace = RGB8toRGBA;
+      convert->convertCSpace = rgb_8_to_rgba;
       break;
     case CUPS_CSPACE_RGB:
     case CUPS_CSPACE_SRGB:
     case CUPS_CSPACE_ADOBERGB:
-      convert->convertCSpace = convertCSpaceNone;
+      convert->convertCSpace = convert_cspace_none;
       break;
     case CUPS_CSPACE_W:
     case CUPS_CSPACE_SW:
     case CUPS_CSPACE_WHITE:
-      convert->convertCSpace = convertCSpaceNone;
+      convert->convertCSpace = convert_cspace_none;
       break;
     case CUPS_CSPACE_K:
     case CUPS_CSPACE_GOLD:
     case CUPS_CSPACE_SILVER:
-      convert->convertCSpace = W8toK8;
+      convert->convertCSpace = w_8_to_k_8;
       break;
     default:
       if (log) log(ld, CF_LOGLEVEL_ERROR,
@@ -1205,7 +1205,7 @@ static int selectConvertFunc(cups_raster_t *raster, pdftoraster_doc_t* doc, conv
   return (0);
 }
 
-static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height, pdftoraster_doc_t* doc){
+static unsigned char *one_bit_pixel(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height, pdftoraster_doc_t* doc){
   unsigned char *temp;
   temp=dst;
   for(unsigned int i=0;i<height;i++){
@@ -1215,7 +1215,7 @@ static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsign
 }
 
 
-static unsigned char *removeAlpha(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height){
+static unsigned char *remove_alpha(unsigned char *src, unsigned char *dst, unsigned int width, unsigned int height){
   unsigned char *temp;
   temp=dst;
   for(unsigned int i=0;i<height;i++){
@@ -1230,10 +1230,10 @@ static unsigned char *removeAlpha(unsigned char *src, unsigned char *dst, unsign
   return temp;
 }
 
-static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
+static void write_page_image(cups_raster_t *raster, pdftoraster_doc_t *doc,
   int pageNo, conversion_function_t* convert, cf_filter_iscanceledfunc_t iscanceled, void *icd)
 {
-  ConvertLineFunc convertLine;
+  convert_line_func convertLine;
   unsigned char *lineBuf = NULL;
   unsigned char *dp;
   unsigned int rowsize;
@@ -1257,18 +1257,18 @@ static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
     if(doc->header.cupsBitsPerColor==1){ // Special case for 1-bit colorspaces
       im = pr.render_page(current_page,doc->header.HWResolution[0],doc->header.HWResolution[1],doc->bitmapoffset[0],doc->bitmapoffset[1],(doc->bytesPerLine)*8,doc->header.cupsHeight);
     newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
-    newdata = removeAlpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
+    newdata = remove_alpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
     graydata=(unsigned char *)malloc(sizeof(char)*im.width()*im.height());
     cfImageRGBToWhite(newdata,graydata,im.width()*im.height());
     onebitdata=(unsigned char *)malloc(sizeof(char)*(doc->bytesPerLine)*im.height());
-    onebitpixel(graydata,onebitdata,im.width(),im.height(), doc);
+    one_bit_pixel(graydata,onebitdata,im.width(),im.height(), doc);
     colordata=onebitdata;
     rowsize=doc->bytesPerLine;
     }
     else{
       im = pr.render_page(current_page,doc->header.HWResolution[0],doc->header.HWResolution[1],doc->bitmapoffset[0],doc->bitmapoffset[1],doc->header.cupsWidth,doc->header.cupsHeight);
       newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
-      newdata = removeAlpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
+      newdata = remove_alpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
       pixel_count=im.width()*im.height();
       graydata=(unsigned char *)malloc(sizeof(char)*im.width()*im.height());
       cfImageRGBToWhite(newdata,graydata,pixel_count);
@@ -1286,7 +1286,7 @@ static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
    default:
    im = pr.render_page(current_page,doc->header.HWResolution[0],doc->header.HWResolution[1],doc->bitmapoffset[0],doc->bitmapoffset[1],doc->header.cupsWidth,doc->header.cupsHeight);
    newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
-   newdata = removeAlpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
+   newdata = remove_alpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
    pixel_count=im.width()*im.height();
    rowsize=doc->header.cupsWidth*3;
    colordata=newdata;
@@ -1331,7 +1331,7 @@ static void writePageImage(cups_raster_t *raster, pdftoraster_doc_t *doc,
   if (doc->allocLineBuf) delete[] lineBuf;
 }
 
-static int outPage(pdftoraster_doc_t *doc, int pageNo, cf_filter_data_t *data,
+static int out_page(pdftoraster_doc_t *doc, int pageNo, cf_filter_data_t *data,
   cups_raster_t *raster, conversion_function_t *convert, cf_logfunc_t log, void* ld, cf_filter_iscanceledfunc_t iscanceled, void *icd)
 {
   int rotate = 0;
@@ -1470,11 +1470,11 @@ static int outPage(pdftoraster_doc_t *doc, int pageNo, cf_filter_data_t *data,
   }
 
   /* write page image */
-  writePageImage(raster,doc,pageNo, convert, iscanceled, icd);
+  write_page_image(raster,doc,pageNo, convert, iscanceled, icd);
   return (0);
 }
 
-static int setPopplerColorProfile(pdftoraster_doc_t *doc, cf_logfunc_t log, void *ld)
+static int set_poppler_color_profile(pdftoraster_doc_t *doc, cf_logfunc_t log, void *ld)
 {
   if (doc->header.cupsBitsPerColor != 8 && doc->header.cupsBitsPerColor != 16) {
     /* color Profile is not supported */
@@ -1583,7 +1583,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
   int ret = 0;
 
   (void)inputseekable;
-  cmsSetLogErrorHandler(lcmsErrorHandler);
+  cmsSetLogErrorHandler(lcms_error_handler);
 
   /* Note: With the CF_FILTER_OUT_FORMAT_PCLM selection the output is
      actually CUPS Raster but color spaces and depth are always
@@ -1652,7 +1652,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
   }
   close(fd);
 
-  if (parseOpts(data, outformat, &doc) == 1)
+  if (parse_opts(data, outformat, &doc) == 1)
   {
     unlink(name);
     return (1);
@@ -1669,7 +1669,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
     goto out;
   }
 
-  parsePDFTOPDFComment(fp, &deviceCopies, &deviceCollate);
+  parse_pdftopdf_comment(fp, &deviceCopies, &deviceCollate);
   fclose(fp);
 
   if(doc.poppler_doc != NULL)
@@ -1761,7 +1761,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
     goto out;
   }
   if (!(doc.colour_profile.cm_disabled)) {
-    if (setPopplerColorProfile(&doc, log, ld) != 0) {
+    if (set_poppler_color_profile(&doc, log, ld) != 0) {
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterPDFToRaster: Cannot set color profile.");
       ret = 1;
@@ -1786,7 +1786,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
     goto out;
   }
   memset(&convert, 0, sizeof(conversion_function_t));
-  if (selectConvertFunc(raster, &doc, &convert, log, ld) == 1)
+  if (select_convert_func(raster, &doc, &convert, log, ld) == 1)
   {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterPDFToRaster: Unable to select color conversion function.");
@@ -1795,7 +1795,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
   }
   if (doc.poppler_doc != NULL) {
     for (i = 1;i <= npages;i++) {
-      if (outPage(&doc,i,data,raster, &convert, log, ld, iscanceled, icd) == 1)
+      if (out_page(&doc,i,data,raster, &convert, log, ld, iscanceled, icd) == 1)
       {
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterPDFToRaster: Unable to output page %d.", i);

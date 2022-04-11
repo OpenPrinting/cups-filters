@@ -88,29 +88,29 @@
 #define PROGRAM "rastertopdf"
 
 // Compression method for providing data to PCLm Streams.
-typedef enum {
+typedef enum compression_method_e {
   DCT_DECODE = 0,
   FLATE_DECODE,
   RLE_DECODE
-} CompressionMethod;
+} compression_method_t;
 
 // Color conversion function
-typedef unsigned char *(*convertFunction)(unsigned char *src,
+typedef unsigned char *(*convert_function)(unsigned char *src,
   unsigned char *dst, unsigned int pixels);
 
 // Bit conversion function
-typedef unsigned char *(*bitFunction)(unsigned char *src,
+typedef unsigned char *(*bit_convert_function)(unsigned char *src,
   unsigned char *dst, unsigned int pixels);
 
-typedef struct                                 /**** Document information ****/
+typedef struct rastertopdf_doc_s               /**** Document information ****/
 {
   cmsHPROFILE         colorProfile = NULL;     /* ICC Profile to be applied to
 						  PDF */
   int                 cm_disabled = 0;         /* Flag raised if color
 						  management is disabled */
-  convertFunction     conversion_function;     /* Raster color conversion
+  convert_function     conversion_function;     /* Raster color conversion
 						  function */
-  bitFunction         bit_function;            /* Raster bit function */
+  bit_convert_function         bit_function;            /* Raster bit function */
   FILE		      *outputfp;	       /* Temporary file, if any */
   cf_logfunc_t    logfunc;                 /* Logging function, NULL for no
 						  logging */
@@ -124,13 +124,13 @@ typedef struct                                 /**** Document information ****/
 } rastertopdf_doc_t;
 
 // PDF color conversion function
-typedef void (*pdfConvertFunction)(struct pdf_info * info,
+typedef void (*pdf_convert_function)(struct pdf_info * info,
 				   rastertopdf_doc_t *doc);
 
 
 // Bit conversion functions
-unsigned char *invertBits(unsigned char *src, unsigned char *dst,
-			  unsigned int pixels)
+static unsigned char *invert_bits(unsigned char *src, unsigned char *dst,
+				  unsigned int pixels)
 { 
     unsigned int i;
 
@@ -141,56 +141,56 @@ unsigned char *invertBits(unsigned char *src, unsigned char *dst,
     return dst;
 }	
 
-unsigned char *noBitConversion(unsigned char *src, unsigned char *dst,
+static unsigned char *no_bit_conversion(unsigned char *src, unsigned char *dst,
 			       unsigned int pixels)
 {
     return src;
 }
 
 // Color conversion functions
-unsigned char *rgbToCmyk(unsigned char *src, unsigned char *dst,
+static unsigned char *rgb_to_cmyk(unsigned char *src, unsigned char *dst,
 			 unsigned int pixels)
 {
     cfImageRGBToCMYK(src,dst,pixels);
     return dst;
 }
 
-unsigned char *whiteToCmyk(unsigned char *src, unsigned char *dst,
+static unsigned char *white_to_cmyk(unsigned char *src, unsigned char *dst,
 			   unsigned int pixels)
 {
     cfImageWhiteToCMYK(src,dst,pixels);
     return dst;
 }
 
-unsigned char *cmykToRgb(unsigned char *src, unsigned char *dst,
+static unsigned char *cmyk_to_rgb(unsigned char *src, unsigned char *dst,
 			 unsigned int pixels)
 {
     cfImageCMYKToRGB(src,dst,pixels);
     return dst;
 }
 
-unsigned char *whiteToRgb(unsigned char *src, unsigned char *dst,
+static unsigned char *white_to_rgb(unsigned char *src, unsigned char *dst,
 			  unsigned int pixels)
 {
     cfImageWhiteToRGB(src,dst,pixels);
     return dst;
 }
 
-unsigned char *rgbToWhite(unsigned char *src, unsigned char *dst,
+static unsigned char *rgb_to_white(unsigned char *src, unsigned char *dst,
 			  unsigned int pixels)
 {
     cfImageRGBToWhite(src,dst,pixels);
     return dst;
 }
 
-unsigned char *cmykToWhite(unsigned char *src, unsigned char *dst,
+static unsigned char *cmyk_to_white(unsigned char *src, unsigned char *dst,
 			   unsigned int pixels)
 {
     cfImageCMYKToWhite(src,dst,pixels);
     return dst;
 }
 
-unsigned char *noColorConversion(unsigned char *src,
+static unsigned char *no_color_conversion(unsigned char *src,
 				 unsigned char *dst, unsigned int pixels)
 {
     return src;
@@ -234,7 +234,7 @@ split_strings(std::string const &str, std::string delimiters = ",")
  * O - number of digits in the input integer
  * I - the integer whose digits needs to be calculated
  */
-int num_digits(int n)
+static int num_digits(int n)
 {
   if (n == 0) return 1;
   int digits = 0;
@@ -253,7 +253,7 @@ int num_digits(int n)
  * I - the integee which needs to be converted to string
  * I - width of string required
  */
-std::string int_to_fwstring(int n, int width)
+static std::string int_to_fwstring(int n, int width)
 {
   int num_zeroes = width - num_digits(n);
   if (num_zeroes < 0)
@@ -299,7 +299,7 @@ struct pdf_info
     unsigned                  pclm_strip_height_preferred;
     std::vector<unsigned>     pclm_strip_height;
     std::vector<unsigned>     pclm_strip_height_supported;
-    std::vector<CompressionMethod> pclm_compression_method_preferred;
+    std::vector<compression_method_t> pclm_compression_method_preferred;
     std::vector<std::string>  pclm_source_resolution_supported;
     std::string               pclm_source_resolution_default;
     std::string               pclm_raster_back_side;
@@ -311,7 +311,7 @@ struct pdf_info
     cf_filter_out_format_t outformat;
 };
 
-int create_pdf_file(struct pdf_info * info,
+static int create_pdf_file(struct pdf_info * info,
 		    const cf_filter_out_format_t &outformat)
 {
     try {
@@ -323,7 +323,7 @@ int create_pdf_file(struct pdf_info * info,
     return 0;
 }
 
-QPDFObjectHandle makeRealBox(double x1, double y1, double x2, double y2)
+static QPDFObjectHandle make_real_box(double x1, double y1, double x2, double y2)
 {
     QPDFObjectHandle ret=QPDFObjectHandle::newArray();
     ret.appendItem(QPDFObjectHandle::newReal(x1));
@@ -333,7 +333,7 @@ QPDFObjectHandle makeRealBox(double x1, double y1, double x2, double y2)
     return ret;
 }
 
-QPDFObjectHandle makeIntegerBox(int x1, int y1, int x2, int y2)
+static QPDFObjectHandle make_integer_box(int x1, int y1, int x2, int y2)
 {
     QPDFObjectHandle ret = QPDFObjectHandle::newArray();
     ret.appendItem(QPDFObjectHandle::newInteger(x1));
@@ -348,8 +348,8 @@ QPDFObjectHandle makeIntegerBox(int x1, int y1, int x2, int y2)
 
 // PDF color conversion functons...
 
-void modify_pdf_color(struct pdf_info * info, int bpp, int bpc,
-		      convertFunction fn, rastertopdf_doc_t *doc)
+static void modify_pdf_color(struct pdf_info * info, int bpp, int bpc,
+		      convert_function fn, rastertopdf_doc_t *doc)
 {
     unsigned old_bpp = info->bpp;
     unsigned old_bpc = info->bpc;
@@ -367,52 +367,52 @@ void modify_pdf_color(struct pdf_info * info, int bpp, int bpc,
     return;
 }
 
-void convertPdf_NoConversion(struct pdf_info * info, rastertopdf_doc_t *doc)
+static void convert_pdf_no_conversion(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
-    doc->conversion_function = noColorConversion;
-    doc->bit_function = noBitConversion;
+    doc->conversion_function = no_color_conversion;
+    doc->bit_function = no_bit_conversion;
 }
 
-void convertPdf_Cmyk8ToWhite8(struct pdf_info * info, rastertopdf_doc_t *doc)
+static void convert_pdf_cmyk_8_to_white_8(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
-    modify_pdf_color(info, 8, 8, cmykToWhite, doc);
-    doc->bit_function = noBitConversion;
+    modify_pdf_color(info, 8, 8, cmyk_to_white, doc);
+    doc->bit_function = no_bit_conversion;
 }
 
-void convertPdf_Rgb8ToWhite8(struct pdf_info * info, rastertopdf_doc_t *doc)
+static void convert_pdf_rgb_8_to_white_8(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
-    modify_pdf_color(info, 8, 8, rgbToWhite, doc);
-    doc->bit_function = noBitConversion;
+    modify_pdf_color(info, 8, 8, rgb_to_white, doc);
+    doc->bit_function = no_bit_conversion;
 }
 
-void convertPdf_Cmyk8ToRgb8(struct pdf_info * info, rastertopdf_doc_t *doc)
+static void convert_pdf_cmyk_8_to_rgb_8(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
-    modify_pdf_color(info, 24, 8, cmykToRgb, doc);
-    doc->bit_function = noBitConversion;
+    modify_pdf_color(info, 24, 8, cmyk_to_rgb, doc);
+    doc->bit_function = no_bit_conversion;
 }
 
-void convertPdf_White8ToRgb8(struct pdf_info * info, rastertopdf_doc_t *doc)
+static void convert_pdf_white_8_to_rgb_8(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
-    modify_pdf_color(info, 24, 8, whiteToRgb, doc);
-    doc->bit_function = invertBits;
+    modify_pdf_color(info, 24, 8, white_to_rgb, doc);
+    doc->bit_function = invert_bits;
 }
 
-void convertPdf_Rgb8ToCmyk8(struct pdf_info * info, rastertopdf_doc_t *doc)
+static void convert_pdf_rgb_8_to_cmyk_8(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
-    modify_pdf_color(info, 32, 8, rgbToCmyk, doc);
-    doc->bit_function = noBitConversion;
+    modify_pdf_color(info, 32, 8, rgb_to_cmyk, doc);
+    doc->bit_function = no_bit_conversion;
 }
 
-void convertPdf_White8ToCmyk8(struct pdf_info * info, rastertopdf_doc_t *doc)
+static void convert_pdf_white_8_to_cmyk_8(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
-    modify_pdf_color(info, 32, 8, whiteToCmyk, doc);
-    doc->bit_function = invertBits;
+    modify_pdf_color(info, 32, 8, white_to_cmyk, doc);
+    doc->bit_function = invert_bits;
 }
 
-void convertPdf_InvertColors(struct pdf_info * info, rastertopdf_doc_t *doc)
+static void convert_pdf_invert_colors(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
-    doc->conversion_function = noColorConversion;
-    doc->bit_function = invertBits;
+    doc->conversion_function = no_color_conversion;
+    doc->bit_function = invert_bits;
 }
 
 
@@ -420,7 +420,7 @@ void convertPdf_InvertColors(struct pdf_info * info, rastertopdf_doc_t *doc)
 
 // Create an '/ICCBased' array and embed a previously 
 // set ICC Profile in the PDF
-QPDFObjectHandle embedIccProfile(QPDF &pdf, rastertopdf_doc_t *doc)
+static QPDFObjectHandle embed_icc_profile(QPDF &pdf, rastertopdf_doc_t *doc)
 {
     if (doc->colorProfile == NULL) {
       return QPDFObjectHandle::newNull();
@@ -494,14 +494,14 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf, rastertopdf_doc_t *doc)
     return ret;
 }
 
-QPDFObjectHandle embedSrgbProfile(QPDF &pdf, rastertopdf_doc_t *doc)
+static QPDFObjectHandle embed_srgb_profile(QPDF &pdf, rastertopdf_doc_t *doc)
 {
     QPDFObjectHandle iccbased_reference;
 
     // Create an sRGB profile from lcms
     doc->colorProfile = cmsCreate_sRGBProfile();
     // Embed it into the profile
-    iccbased_reference = embedIccProfile(pdf, doc);
+    iccbased_reference = embed_icc_profile(pdf, doc);
 
     return iccbased_reference;
 }
@@ -518,7 +518,7 @@ Output:
      >>
   ]        
 */
-QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[], 
+static QPDFObjectHandle get_calibration_array(const char * color_space, double wp[], 
                                      double gamma[], double matrix[],
 				     double bp[])
 {    
@@ -584,22 +584,22 @@ QPDFObjectHandle getCalibrationArray(const char * color_space, double wp[],
     return ret;
 }
 
-QPDFObjectHandle getCalRGBArray(double wp[3], double gamma[3],
+static QPDFObjectHandle get_cal_rgb_array(double wp[3], double gamma[3],
 				double matrix[9], double bp[3])
 {
-    QPDFObjectHandle ret = getCalibrationArray("/CalRGB", wp, gamma, matrix,
+    QPDFObjectHandle ret = get_calibration_array("/CalRGB", wp, gamma, matrix,
 					       bp);
     return ret;
 }
 
-QPDFObjectHandle getCalGrayArray(double wp[3], double gamma[1], double bp[3])
+static QPDFObjectHandle get_cal_gray_array(double wp[3], double gamma[1], double bp[3])
 {
-    QPDFObjectHandle ret = getCalibrationArray("/CalGray", wp, gamma, 0, bp);
+    QPDFObjectHandle ret = get_calibration_array("/CalGray", wp, gamma, 0, bp);
     return ret;
 }
 
 /**
- * 'makePclmStrips()' - return an std::vector of QPDFObjectHandle, each
+ * 'make_pclm_strips()' - return an std::vector of QPDFObjectHandle, each
  *                      containing the stream data of the various strips
  *                      which make up a PCLm page.
  * O - std::vector of QPDFObjectHandle
@@ -612,10 +612,10 @@ QPDFObjectHandle getCalGrayArray(double wp[3], double gamma[1], double bp[3])
  * I - bits per component
  * I - document information
  */
-std::vector<QPDFObjectHandle>
-makePclmStrips(QPDF &pdf, unsigned num_strips,
+static std::vector<QPDFObjectHandle>
+make_pclm_strips(QPDF &pdf, unsigned num_strips,
                std::vector< PointerHolder<Buffer> > &strip_data,
-               std::vector<CompressionMethod> &compression_methods,
+               std::vector<compression_method_t> &compression_methods,
                unsigned width, std::vector<unsigned>& strip_height,
 	       cups_cspace_t cs, unsigned bpc, rastertopdf_doc_t *doc)
 {
@@ -666,8 +666,8 @@ makePclmStrips(QPDF &pdf, unsigned num_strips,
     // 1        | FLATE
     // 2        | RLE
     // ------------------
-    CompressionMethod compression = compression_methods.front();
-    for (std::vector<CompressionMethod>::iterator it =
+    compression_method_t compression = compression_methods.front();
+    for (std::vector<compression_method_t>::iterator it =
 	   compression_methods.begin();
          it != compression_methods.end(); ++it)
       compression = compression > *it ? compression : *it;
@@ -709,7 +709,7 @@ makePclmStrips(QPDF &pdf, unsigned num_strips,
     return ret;
 }
 
-QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
+static QPDFObjectHandle make_image(QPDF &pdf, PointerHolder<Buffer> page_data,
 			   unsigned width, unsigned height,
 			   std::string render_intent, cups_cspace_t cs,
 			   unsigned bpc, rastertopdf_doc_t *doc)
@@ -746,7 +746,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
 
     /* Write "/ColorSpace" dictionary based on raster input */
     if (doc->colorProfile != NULL && !doc->cm_disabled) {
-      icc_ref = embedIccProfile(pdf, doc);
+      icc_ref = embed_icc_profile(pdf, doc);
 
       if (!icc_ref.isNull())
         dict["/ColorSpace"]=icc_ref;
@@ -775,11 +775,11 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
                 break;
             case CUPS_CSPACE_SW:
                 if (use_blackpoint)
-                  dict["/ColorSpace"]=getCalGrayArray(cfCmWhitePointSGray(),
+                  dict["/ColorSpace"]=get_cal_gray_array(cfCmWhitePointSGray(),
 						      cfCmGammaSGray(), 
                                                       cfCmBlackPointDefault());
                 else
-                  dict["/ColorSpace"]=getCalGrayArray(cfCmWhitePointSGray(),
+                  dict["/ColorSpace"]=get_cal_gray_array(cfCmWhitePointSGray(),
 						      cfCmGammaSGray(), 0);
                 break;
             case CUPS_CSPACE_CMYK:
@@ -789,7 +789,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
                 dict["/ColorSpace"]=QPDFObjectHandle::newName("/DeviceRGB");
                 break;
             case CUPS_CSPACE_SRGB:
-                icc_ref = embedSrgbProfile(pdf, doc);
+                icc_ref = embed_srgb_profile(pdf, doc);
                 if (!icc_ref.isNull())
                   dict["/ColorSpace"]=icc_ref;
                 else 
@@ -797,12 +797,12 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
                 break;
             case CUPS_CSPACE_ADOBERGB:
                 if (use_blackpoint)
-                  dict["/ColorSpace"]=getCalRGBArray(cfCmWhitePointAdobeRGB(),
+                  dict["/ColorSpace"]=get_cal_rgb_array(cfCmWhitePointAdobeRGB(),
 						     cfCmGammaAdobeRGB(), 
 						     cfCmMatrixAdobeRGB(),
 						     cfCmBlackPointDefault());
                 else
-                  dict["/ColorSpace"]=getCalRGBArray(cfCmWhitePointAdobeRGB(), 
+                  dict["/ColorSpace"]=get_cal_rgb_array(cfCmWhitePointAdobeRGB(), 
                                                      cfCmGammaAdobeRGB(),
 						     cfCmMatrixAdobeRGB(), 0);
                 break;
@@ -872,7 +872,7 @@ QPDFObjectHandle makeImage(QPDF &pdf, PointerHolder<Buffer> page_data,
     return ret;
 }
 
-int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
+static int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
     if (info->outformat == CF_FILTER_OUT_FORMAT_PDF)
     {
@@ -880,7 +880,7 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
       if(!info->page_data.getPointer())
           return 0;
 
-      QPDFObjectHandle image = makeImage(info->pdf, info->page_data,
+      QPDFObjectHandle image = make_image(info->pdf, info->page_data,
 					 info->width, info->height,
 					 info->render_intent,
 					 info->color_space, info->bpc, doc);
@@ -906,7 +906,7 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
           return 0;
 
       std::vector<QPDFObjectHandle> strips =
-	makePclmStrips(info->pdf, info->pclm_num_strips, info->pclm_strip_data,
+	make_pclm_strips(info->pdf, info->pclm_num_strips, info->pclm_strip_data,
 		       info->pclm_compression_method_preferred, info->width,
 		       info->pclm_strip_height, info->color_space, info->bpc,
 		       doc);
@@ -978,7 +978,7 @@ int finish_page(struct pdf_info * info, rastertopdf_doc_t *doc)
 
 
 /* Perform modifications to PDF if color space conversions are needed */      
-int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
+static int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
 		     unsigned bpl, unsigned bpp, unsigned bpc,
 		     std::string render_intent, cups_cspace_t color_space,
 		     rastertopdf_doc_t *doc)
@@ -992,7 +992,7 @@ int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
 #define IMAGE_WHITE_16 (bpp == 16 && bpc == 16)    
 
     int error = 0;
-    pdfConvertFunction fn = convertPdf_NoConversion;
+    pdf_convert_function fn = convert_pdf_no_conversion;
     cmsColorSpaceSignature css;
 
     /* Register available raster information into the PDF */
@@ -1021,7 +1021,7 @@ int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
 
     /* Invert grayscale by default */
     if (color_space == CUPS_CSPACE_K)
-      fn = convertPdf_InvertColors;
+      fn = convert_pdf_invert_colors;
 
     if (doc->colorProfile != NULL) {
       css = cmsGetColorSpace(doc->colorProfile);
@@ -1032,27 +1032,27 @@ int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
         // Convert PDF to Grayscale when using a gray profile
         case cmsSigGrayData:
           if (color_space == CUPS_CSPACE_CMYK)
-            fn = convertPdf_Cmyk8ToWhite8;
+            fn = convert_pdf_cmyk_8_to_white_8;
           else if (color_space == CUPS_CSPACE_RGB) 
-            fn = convertPdf_Rgb8ToWhite8;
+            fn = convert_pdf_rgb_8_to_white_8;
           else              
-            fn = convertPdf_InvertColors;
+            fn = convert_pdf_invert_colors;
           info->color_space = CUPS_CSPACE_K;
           break;
         // Convert PDF to RGB when using an RGB profile
         case cmsSigRgbData:
           if (color_space == CUPS_CSPACE_CMYK) 
-            fn = convertPdf_Cmyk8ToRgb8;
+            fn = convert_pdf_cmyk_8_to_rgb_8;
           else if (color_space == CUPS_CSPACE_K) 
-            fn = convertPdf_White8ToRgb8;
+            fn = convert_pdf_white_8_to_rgb_8;
           info->color_space = CUPS_CSPACE_RGB;
           break;
         // Convert PDF to CMYK when using an RGB profile
         case cmsSigCmykData:
           if (color_space == CUPS_CSPACE_RGB)
-            fn = convertPdf_Rgb8ToCmyk8;
+            fn = convert_pdf_rgb_8_to_cmyk_8;
           else if (color_space == CUPS_CSPACE_K) 
-            fn = convertPdf_White8ToCmyk8;
+            fn = convert_pdf_white_8_to_cmyk_8;
           info->color_space = CUPS_CSPACE_CMYK;
           break;
         default:
@@ -1068,38 +1068,38 @@ int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
          // Convert image to CMYK
          case CUPS_CSPACE_CMYK:
            if (IMAGE_RGB_8)
-             fn = convertPdf_Rgb8ToCmyk8;  
+             fn = convert_pdf_rgb_8_to_cmyk_8;  
            else if (IMAGE_RGB_16)
-             fn = convertPdf_NoConversion;
+             fn = convert_pdf_no_conversion;
            else if (IMAGE_WHITE_8)
-             fn = convertPdf_White8ToCmyk8;  
+             fn = convert_pdf_white_8_to_cmyk_8;  
            else if (IMAGE_WHITE_16) 
-             fn = convertPdf_NoConversion;
+             fn = convert_pdf_no_conversion;
            break;
          // Convert image to RGB
          case CUPS_CSPACE_ADOBERGB:
          case CUPS_CSPACE_RGB:
          case CUPS_CSPACE_SRGB:
            if (IMAGE_CMYK_8)
-             fn = convertPdf_Cmyk8ToRgb8;
+             fn = convert_pdf_cmyk_8_to_rgb_8;
            else if (IMAGE_CMYK_16)
-             fn = convertPdf_NoConversion;  
+             fn = convert_pdf_no_conversion;  
            else if (IMAGE_WHITE_8)
-             fn = convertPdf_White8ToRgb8;
+             fn = convert_pdf_white_8_to_rgb_8;
            else if (IMAGE_WHITE_16) 
-             fn = convertPdf_NoConversion;       
+             fn = convert_pdf_no_conversion;       
            break;
          // Convert image to Grayscale
          case CUPS_CSPACE_SW:
          case CUPS_CSPACE_K:
            if (IMAGE_CMYK_8)
-             fn = convertPdf_Cmyk8ToWhite8;
+             fn = convert_pdf_cmyk_8_to_white_8;
            else if (IMAGE_CMYK_16)
-             fn = convertPdf_NoConversion;
+             fn = convert_pdf_no_conversion;
            else if (IMAGE_RGB_8) 
-             fn = convertPdf_Rgb8ToWhite8;
+             fn = convert_pdf_rgb_8_to_white_8;
            else if (IMAGE_RGB_16) 
-             fn = convertPdf_NoConversion;
+             fn = convert_pdf_no_conversion;
            break;    
          case CUPS_CSPACE_DEVICE1:
          case CUPS_CSPACE_DEVICE2:
@@ -1117,7 +1117,7 @@ int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
          case CUPS_CSPACE_DEVICEE:
          case CUPS_CSPACE_DEVICEF:
              // No conversion for right now
-             fn = convertPdf_NoConversion;
+             fn = convert_pdf_no_conversion;
              break;
          default:
            if (doc->logfunc)
@@ -1134,7 +1134,7 @@ int prepare_pdf_page(struct pdf_info * info, unsigned width, unsigned height,
    return error;
 }
 
-int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
+static int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
 		 unsigned height, int bpp, int bpc, int bpl,
 		 std::string render_intent, cups_cspace_t color_space,
 		 unsigned xdpi, unsigned ydpi, rastertopdf_doc_t *doc)
@@ -1182,7 +1182,7 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
         {
           page.replaceKey("/Contents",QPDFObjectHandle::newStream(&info->pdf));
 	                                  // data will be provided later
-          page.replaceKey("/MediaBox",makeRealBox(0,0,info->page_width,
+          page.replaceKey("/MediaBox",make_real_box(0,0,info->page_width,
 						  info->page_height));
         }
         else if (info->outformat == CF_FILTER_OUT_FORMAT_PCLM)
@@ -1194,7 +1194,7 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
 
           // box with dimensions rounded off to the nearest integer
           page.replaceKey("/MediaBox",
-			  makeIntegerBox(0,0,info->page_width + 0.5,
+			  make_integer_box(0,0,info->page_width + 0.5,
 					 info->page_height + 0.5));
         }
     
@@ -1213,7 +1213,7 @@ int add_pdf_page(struct pdf_info * info, int pagen, unsigned width,
     return 0;
 }
 
-int close_pdf_file(struct pdf_info * info, rastertopdf_doc_t *doc)
+static int close_pdf_file(struct pdf_info * info, rastertopdf_doc_t *doc)
 {
     try {
         if (finish_page(info, doc)) // any active
@@ -1231,7 +1231,7 @@ int close_pdf_file(struct pdf_info * info, rastertopdf_doc_t *doc)
     return 0;
 }
 
-void pdf_set_line(struct pdf_info * info, unsigned line_n,
+static void pdf_set_line(struct pdf_info * info, unsigned line_n,
 		  unsigned char *line, rastertopdf_doc_t *doc)
 {
     if(line_n > info->height)
@@ -1255,7 +1255,7 @@ void pdf_set_line(struct pdf_info * info, unsigned line_n,
     }
 }
 
-int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
+static int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
 		   int bpp, int bpl, struct pdf_info * info,
 		   rastertopdf_doc_t *doc)
 {
@@ -1304,7 +1304,7 @@ int convert_raster(cups_raster_t *ras, unsigned width, unsigned height,
     return 0;
 }
 
-int setProfile(const char * path, rastertopdf_doc_t *doc) 
+static int set_profile(const char * path, rastertopdf_doc_t *doc) 
 {
     if (path != NULL) 
       doc->colorProfile = cmsOpenProfileFromFile(path,"r");
@@ -1321,57 +1321,6 @@ int setProfile(const char * path, rastertopdf_doc_t *doc)
 		     "cfFilterRasterToPDF: Unable to load profile.");
       return 1;
     }
-}
-
-/* Obtain a source profile name using color qualifiers from raster file */
-const char * getIPPColorProfileName(const char * media_type, cups_cspace_t cs,
-				    unsigned dpi)
-{
-    std::string mediaType = "";
-    std::string resolution = "";
-    std::string colorModel = "";
-   
-    std::string iccProfile = "";
-
-    // ColorModel
-    switch (cs) {
-        case CUPS_CSPACE_RGB:
-            colorModel = "rgb";
-            break;
-        case CUPS_CSPACE_SRGB:
-            colorModel = "srgb";
-            break;
-        case CUPS_CSPACE_ADOBERGB:
-            colorModel = "adobergb";
-            break;
-        case CUPS_CSPACE_K:
-            colorModel = "gray";
-            break;
-        case CUPS_CSPACE_CMYK:
-            colorModel = "cmyk";
-            break;
-        default:
-            colorModel = "";
-            break;
-     }
- 
-    if (media_type != NULL)
-      mediaType = media_type;
-    if (dpi > 0)
-      resolution = dpi;
-
-    // Requires color space and media type qualifiers
-    if (resolution != "" || colorModel != "")
-      return 0;
-
-    // profile-uri reference:
-    // http://www.server.com/colorModel-Resolution-mediaType.icc
-    if (mediaType != "")          
-      iccProfile = colorModel + "-" + resolution + ".icc";
-    else 
-      iccProfile = colorModel + "-" + resolution + "-" + mediaType + ".icc";
-
-    return strdup(iccProfile.c_str());
 }
 
 int                         /* O - Error status */
@@ -1722,7 +1671,7 @@ cfFilterRasterToPDF(int inputfd,    /* I - File descriptor input stream */
     if (outformat == CF_FILTER_OUT_FORMAT_PDF &&
         (profile_name = cupsGetOption("profile", data->num_options,
 				      data->options)) != NULL) {
-      setProfile(profile_name, &doc);
+      set_profile(profile_name, &doc);
       doc.cm_disabled = 0;
     }
     if (doc.colorProfile != NULL)       

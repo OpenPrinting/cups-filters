@@ -56,7 +56,7 @@ convert_to_port(char *a)
   return (port);
 }
 
-void
+static void
 log_printf(char *log,
 	   const char *format, ...)
 {

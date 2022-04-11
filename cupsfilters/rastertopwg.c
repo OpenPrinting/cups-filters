@@ -20,7 +20,8 @@
 
 
 /*
- * 'main()' - Main entry for filter.
+ * 'cfFilterRasterToPWG()' - Filter function to convert CUPS Raster
+ *                           into PWG or Apple Raster
  */
 
 int				 /* O - Exit status */

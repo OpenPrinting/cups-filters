@@ -4879,7 +4879,7 @@ start_nup(pstops_doc_t *doc,		/* I - Document information */
  * 'write_common()' - Write common procedures...
  */
 
-void
+static void
 write_common(pstops_doc_t *doc)
 {
   doc_puts(doc,
@@ -5193,7 +5193,7 @@ write_options(
  * 'write_text_comment()' - Write a DSC text comment.
  */
 
-void
+static void
 write_text_comment(pstops_doc_t *doc,	/* I - Document */
 		   const char *name,	/* I - Comment name ("Title", etc.) */
                    const char *value)	/* I - Comment value */

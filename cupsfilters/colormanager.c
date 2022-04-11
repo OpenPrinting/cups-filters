@@ -35,12 +35,12 @@ MIT Open Source License  -  http://www.opensource.org/
 
 
 /* Private function prototypes */
-static int      _get_colord_printer_cm_status   (cf_filter_data_t *data);
-static char    *_get_colord_printer_id          (cf_filter_data_t *data);
-static int      _get_colord_profile             (cf_filter_data_t *data,
+static int      get_colord_printer_cm_status   (cf_filter_data_t *data);
+static char    *get_colord_printer_id          (cf_filter_data_t *data);
+static int      get_colord_profile             (cf_filter_data_t *data,
                                                  char **profile,
                                                  ppd_file_t *ppd);
-static char    *_get_ppd_icc_fallback           (cf_filter_data_t *data, 
+static char    *get_ppd_icc_fallback           (cf_filter_data_t *data, 
 						 ppd_file_t *ppd, 
                                                  char **qualifier);
 
@@ -75,7 +75,7 @@ cfCmIsPrinterCmDisabled(cf_filter_data_t *data)
 
 
     /* Request color management status from colord */
-    is_cm_off = _get_colord_printer_cm_status(data);
+    is_cm_off = get_colord_printer_cm_status(data);
 
     if (is_cm_off)
 	if(log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -98,7 +98,7 @@ cfCmGetPrinterIccProfile(cf_filter_data_t *data,
 
 
     /* Request a profile from colord */
-    profile_set = _get_colord_profile(data, icc_profile, ppd);
+    profile_set = get_colord_profile(data, icc_profile, ppd);
     if(log) log(ld, CF_LOGLEVEL_DEBUG,
 		"Color Manager: ICC Profile: %s", *icc_profile ?
         *icc_profile : "None");
@@ -185,8 +185,8 @@ double *cfCmBlackPointDefault(void)
  */
 
 
-char * 
-_get_colord_printer_id( cf_filter_data_t *data)
+static char * 
+get_colord_printer_id( cf_filter_data_t *data)
 {
 
     cf_logfunc_t log = data->logfunc;
@@ -206,8 +206,8 @@ _get_colord_printer_id( cf_filter_data_t *data)
 }
 
 
-int 
-_get_colord_printer_cm_status( cf_filter_data_t *data)
+static int 
+get_colord_printer_cm_status( cf_filter_data_t *data)
 {
 
     cf_logfunc_t log = data->logfunc;
@@ -226,7 +226,7 @@ _get_colord_printer_cm_status( cf_filter_data_t *data)
 
 
     /* Check if device is inhibited/disabled in colord  */
-    printer_id = _get_colord_printer_id(data);
+    printer_id = get_colord_printer_id(data);
     is_printer_cm_disabled = cfColordGetInhibitForDeviceID (data, printer_id);
 
     if (printer_id != NULL)
@@ -236,8 +236,8 @@ _get_colord_printer_cm_status( cf_filter_data_t *data)
 
 }
 
-int 
-_get_colord_profile(cf_filter_data_t *data,
+static int 
+get_colord_profile(cf_filter_data_t *data,
                     char         **profile,         /* Requested icc profile path */      
                     ppd_file_t   *ppd)              /* PPD file */
 {
@@ -261,7 +261,7 @@ _get_colord_profile(cf_filter_data_t *data,
     qualifier = cfColordGetQualifierForPPD(ppd);
 
     if (qualifier != NULL) {
-      printer_id = _get_colord_printer_id(data);
+      printer_id = get_colord_printer_id(data);
       /* Get profile from colord using qualifiers */
       icc_profile = cfColordGetProfileForDeviceID (data,
 						      (const char *)printer_id,
@@ -272,7 +272,7 @@ _get_colord_profile(cf_filter_data_t *data,
       is_profile_set = 1; 
     else if (ppd) {
     /* Get optional fallback PPD profile */
-      icc_profile = _get_ppd_icc_fallback(data, ppd, qualifier);
+      icc_profile = get_ppd_icc_fallback(data, ppd, qualifier);
       if (icc_profile)
         is_profile_set = 1;
     }
@@ -305,8 +305,8 @@ _get_colord_profile(cf_filter_data_t *data,
 #endif
 
 /* From gstoraster */
-char *
-_get_ppd_icc_fallback (cf_filter_data_t *data, ppd_file_t *ppd, char **qualifier)
+static char *
+get_ppd_icc_fallback (cf_filter_data_t *data, ppd_file_t *ppd, char **qualifier)
 {
 
   cf_logfunc_t log = data->logfunc;

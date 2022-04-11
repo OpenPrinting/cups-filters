@@ -3,9 +3,9 @@
 #include <stdexcept>
 #include <qpdf/QUtil.hh>
 
-PageRect getBoxAsRect(QPDFObjectHandle box) // {{{
+_cfPDFToPDFPageRect _cfPDFToPDFGetBoxAsRect(QPDFObjectHandle box) // {{{
 {
-  PageRect ret;
+  _cfPDFToPDFPageRect ret;
 
   ret.left=box.getArrayItem(0).getNumericValue();
   ret.bottom=box.getArrayItem(1).getNumericValue();
@@ -19,7 +19,7 @@ PageRect getBoxAsRect(QPDFObjectHandle box) // {{{
 }
 // }}}
 
-Rotation getRotate(QPDFObjectHandle page) // {{{
+pdftopdf_rotation_e _cfPDFToPDFGetRotate(QPDFObjectHandle page) // {{{
 {
   if (!page.hasKey("/Rotate")) {
     return ROT_0;
@@ -36,13 +36,13 @@ Rotation getRotate(QPDFObjectHandle page) // {{{
   } else if (rot==270.0) {
     return ROT_90;
   } else if (rot!=0.0) {
-    throw std::runtime_error("Unexpected /Rotation value: "+QUtil::double_to_string(rot));
+    throw std::runtime_error("Unexpected /Rotate value: "+QUtil::double_to_string(rot));
   }
   return ROT_0;
 }
 // }}}
 
-double getUserUnit(QPDFObjectHandle page) // {{{
+double _cfPDFToPDFGetUserUnit(QPDFObjectHandle page) // {{{
 {
   if (!page.hasKey("/UserUnit")) {
     return 1.0;
@@ -51,7 +51,7 @@ double getUserUnit(QPDFObjectHandle page) // {{{
 }
 // }}}
 
-QPDFObjectHandle makeRotate(Rotation rot) // {{{
+QPDFObjectHandle _cfPDFToPDFMakeRotate(pdftopdf_rotation_e rot) // {{{
 {
   switch (rot) {
   case ROT_0:
@@ -70,21 +70,21 @@ QPDFObjectHandle makeRotate(Rotation rot) // {{{
 
 #include "qpdf_tools.h"
 
-QPDFObjectHandle getRectAsBox(const PageRect &rect) // {{{
+QPDFObjectHandle _cfPDFToPDFGetRectAsBox(const _cfPDFToPDFPageRect &rect) // {{{
 {
-  return makeBox(rect.left,rect.bottom,rect.right,rect.top);
+  return _cfPDFToPDFMakeBox(rect.left,rect.bottom,rect.right,rect.top);
 }
 // }}}
 
 #include <qpdf/QUtil.hh>
 
-Matrix::Matrix() // {{{
+_cfPDFToPDFMatrix::_cfPDFToPDFMatrix() // {{{
   : ctm{1,0,0,1,0,0}
 {
 }
 // }}}
 
-Matrix::Matrix(QPDFObjectHandle ar) // {{{
+_cfPDFToPDFMatrix::_cfPDFToPDFMatrix(QPDFObjectHandle ar) // {{{
 {
   if (ar.getArrayNItems()!=6) {
     throw std::runtime_error("Not a ctm matrix");
@@ -95,7 +95,7 @@ Matrix::Matrix(QPDFObjectHandle ar) // {{{
 }
 // }}}
 
-Matrix &Matrix::rotate(Rotation rot) // {{{
+_cfPDFToPDFMatrix &_cfPDFToPDFMatrix::rotate(pdftopdf_rotation_e rot) // {{{
 {
   switch (rot) {
   case ROT_0:
@@ -124,7 +124,7 @@ Matrix &Matrix::rotate(Rotation rot) // {{{
 // }}}
 
 // TODO: test
-Matrix &Matrix::rotate_move(Rotation rot,double width,double height) // {{{
+_cfPDFToPDFMatrix &_cfPDFToPDFMatrix::rotate_move(pdftopdf_rotation_e rot,double width,double height) // {{{
 {
   rotate(rot);
   switch (rot) {
@@ -144,9 +144,9 @@ Matrix &Matrix::rotate_move(Rotation rot,double width,double height) // {{{
 }
 // }}}
 
-Matrix &Matrix::rotate(double rad) // {{{
+_cfPDFToPDFMatrix &_cfPDFToPDFMatrix::rotate(double rad) // {{{
 {
-  Matrix tmp;
+  _cfPDFToPDFMatrix tmp;
 
   tmp.ctm[0]=cos(rad);
   tmp.ctm[1]=sin(rad);
@@ -157,7 +157,7 @@ Matrix &Matrix::rotate(double rad) // {{{
 }
 // }}}
 
-Matrix &Matrix::translate(double tx,double ty) // {{{
+_cfPDFToPDFMatrix &_cfPDFToPDFMatrix::translate(double tx,double ty) // {{{
 {
   ctm[4]+=ctm[0]*tx+ctm[2]*ty;
   ctm[5]+=ctm[1]*tx+ctm[3]*ty;
@@ -165,7 +165,7 @@ Matrix &Matrix::translate(double tx,double ty) // {{{
 }
 // }}}
 
-Matrix &Matrix::scale(double sx,double sy) // {{{
+_cfPDFToPDFMatrix &_cfPDFToPDFMatrix::scale(double sx,double sy) // {{{
 {
   ctm[0]*=sx;
   ctm[1]*=sx;
@@ -175,7 +175,7 @@ Matrix &Matrix::scale(double sx,double sy) // {{{
 }
 // }}}
 
-Matrix &Matrix::operator*=(const Matrix &rhs) // {{{
+_cfPDFToPDFMatrix &_cfPDFToPDFMatrix::operator*=(const _cfPDFToPDFMatrix &rhs) // {{{
 {
   double tmp[6];
   std::copy(ctm,ctm+6,tmp);
@@ -193,7 +193,7 @@ Matrix &Matrix::operator*=(const Matrix &rhs) // {{{
 }
 // }}}
 
-QPDFObjectHandle Matrix::get() const // {{{
+QPDFObjectHandle _cfPDFToPDFMatrix::get() const // {{{
 {
   QPDFObjectHandle ret=QPDFObjectHandle::newArray();
   ret.appendItem(QPDFObjectHandle::newReal(ctm[0]));
@@ -206,7 +206,7 @@ QPDFObjectHandle Matrix::get() const // {{{
 }
 // }}}
 
-std::string Matrix::get_string() const // {{{
+std::string _cfPDFToPDFMatrix::get_string() const // {{{
 {
   std::string ret;
   ret.append(QUtil::double_to_string(ctm[0]));

@@ -32,16 +32,16 @@
 
 // namespace {}
 
-void setFinalPPD(ppd_file_t *ppd,const ProcessingParameters &param)
+void setFinalPPD(ppd_file_t *ppd,const _cfPDFToPDFProcessingParameters &param)
 {
-  if ((param.booklet==BOOKLET_ON)&&(ppdFindOption(ppd,"Duplex"))) {
+  if ((param.booklet==CF_PDFTOPDF_BOOKLET_ON)&&(ppdFindOption(ppd,"Duplex"))) {
     // TODO: elsewhere, better
     ppdMarkOption(ppd,"Duplex","DuplexTumble");
     // TODO? sides=two-sided-short-edge
   }
 
   // for compatibility
-  if ((param.setDuplex)&&(ppdFindOption(ppd,"Duplex")!=NULL)) {
+  if ((param.set_duplex)&&(ppdFindOption(ppd,"Duplex")!=NULL)) {
     ppdMarkOption(ppd,"Duplex","True");
     ppdMarkOption(ppd,"Duplex","On");
   }
@@ -194,19 +194,19 @@ static bool optGetCollate(int num_options,cups_option_t *options) // {{{
 }
 // }}}
 
-static bool parsePosition(const char *value,Position &xpos,Position &ypos) // {{{
+static bool parsePosition(const char *value,pdftopdf_position_e &xpos,pdftopdf_position_e &ypos) // {{{
 {
   // ['center','top','left','right','top-left','top-right','bottom','bottom-left','bottom-right']
-  xpos=Position::CENTER;
-  ypos=Position::CENTER;
+  xpos=pdftopdf_position_e::CENTER;
+  ypos=pdftopdf_position_e::CENTER;
   int next=0;
   if (strcasecmp(value,"center")==0) {
     return true;
   } else if (strncasecmp(value,"top",3)==0) {
-    ypos=Position::TOP;
+    ypos=pdftopdf_position_e::TOP;
     next=3;
   } else if (strncasecmp(value,"bottom",6)==0) {
-    ypos=Position::BOTTOM;
+    ypos=pdftopdf_position_e::BOTTOM;
     next=6;
   }
   if (next) {
@@ -218,9 +218,9 @@ static bool parsePosition(const char *value,Position &xpos,Position &ypos) // {{
     value+=next+1;
   }
   if (strcasecmp(value,"left")==0) {
-    xpos=Position::LEFT;
+    xpos=pdftopdf_position_e::LEFT;
   } else if (strcasecmp(value,"right")==0) {
-    xpos=Position::RIGHT;
+    xpos=pdftopdf_position_e::RIGHT;
   } else {
     return false;
   }
@@ -229,7 +229,7 @@ static bool parsePosition(const char *value,Position &xpos,Position &ypos) // {{
 // }}}
 
 #include <ctype.h>
-static void parseRanges(const char *range,IntervalSet &ret) // {{{
+static void parseRanges(const char *range,_cfPDFToPDFIntervalSet &ret) // {{{
 {
   ret.clear();
   if (!range) {
@@ -276,19 +276,19 @@ static void parseRanges(const char *range,IntervalSet &ret) // {{{
 }
 // }}}
 
-static bool parseBorder(const char *val,BorderType &ret) // {{{
+static bool _cfPDFToPDFParseBorder(const char *val,pdftopdf_border_type_e &ret) // {{{
 {
   assert(val);
   if (strcasecmp(val,"none")==0) {
-    ret=BorderType::NONE;
+    ret=pdftopdf_border_type_e::NONE;
   } else if (strcasecmp(val,"single")==0) {
-    ret=BorderType::ONE_THIN;
+    ret=pdftopdf_border_type_e::ONE_THIN;
   } else if (strcasecmp(val,"single-thick")==0) {
-    ret=BorderType::ONE_THICK;
+    ret=pdftopdf_border_type_e::ONE_THICK;
   } else if (strcasecmp(val,"double")==0) {
-    ret=BorderType::TWO_THIN;
+    ret=pdftopdf_border_type_e::TWO_THIN;
   } else if (strcasecmp(val,"double-thick")==0) {
-    ret=BorderType::TWO_THICK;
+    ret=pdftopdf_border_type_e::TWO_THICK;
   } else {
     return false;
   }
@@ -296,7 +296,7 @@ static bool parseBorder(const char *val,BorderType &ret) // {{{
 }
 // }}}
 
-void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options,ProcessingParameters &param,char *final_content_type,pdftopdf_doc_t *doc) // {{{
+void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options,_cfPDFToPDFProcessingParameters &param,char *final_content_type,pdftopdf_doc_t *doc) // {{{
 {
 
   ppd_file_t *ppd = data->ppd;
@@ -310,14 +310,14 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
 	(val = cupsGetOption("NumCopies", num_options, options))!=NULL) {
     int copies = atoi(val);
     if (copies > 0)
-      param.numCopies = copies;
+      param.num_copies = copies;
   }
-  // param.numCopies initially from commandline
-  if (param.numCopies==1) {
-    ppdGetInt(ppd,"Copies",&param.numCopies);
+  // param.num_copies initially from commandline
+  if (param.num_copies==1) {
+    ppdGetInt(ppd,"Copies",&param.num_copies);
   }
-  if (param.numCopies==0) {
-    param.numCopies=1;
+  if (param.num_copies==0) {
+    param.num_copies=1;
   }
 
   if((val = cupsGetOption("ipp-attribute-fidelity",num_options,options))!=NULL) {
@@ -386,13 +386,13 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
 		     "cfFilterPDFToPDF: Bad value (%d) for "
 		     "orientation-requested, using 0 degrees",
 		     ipprot);
-      param.noOrientation = true;
+      param.no_orientation = true;
     } else {
-      static const Rotation ipp2rot[4]={ROT_0, ROT_90, ROT_270, ROT_180};
+      static const pdftopdf_rotation_e ipp2rot[4]={ROT_0, ROT_90, ROT_270, ROT_180};
       param.orientation=ipp2rot[ipprot-3];
     }
   } else {
-    param.noOrientation = true;
+    param.no_orientation = true;
   }
 
   ppd_size_t *pagesize;
@@ -458,7 +458,7 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
   }
   param.paper_is_landscape=(param.page.width>param.page.height);
 
-  PageRect tmp; // borders (before rotation)
+  _cfPDFToPDFPageRect tmp; // borders (before rotation)
 
   optGetFloat("page-top",num_options,options,&tmp.top);
   optGetFloat("page-left",num_options,options,&tmp.left);
@@ -495,12 +495,12 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
     param.duplex=true;
   } else if (is_true(cupsGetOption("Duplex",num_options,options))) {
     param.duplex=true;
-    param.setDuplex=true;
+    param.set_duplex=true;
   } else if ((val=cupsGetOption("sides",num_options,options)) != NULL) {
     if ((strcasecmp(val,"two-sided-long-edge")==0)||
 	(strcasecmp(val,"two-sided-short-edge")==0)) {
       param.duplex=true;
-      param.setDuplex=true;
+      param.set_duplex=true;
     } else if (strcasecmp(val,"one-sided")!=0) {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 				     "cfFilterPDFToPDF: Unsupported sides value %s, "
@@ -511,34 +511,34 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
   // default nup is 1
   int nup=1;
   if (optGetInt("number-up",num_options,options,&nup)) {
-    if (!NupParameters::possible(nup)) {
+    if (!_cfPDFToPDFNupParameters::possible(nup)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 				     "cfFilterPDFToPDF: Unsupported number-up value "
 				     "%d, using number-up=1!", nup);
       nup=1;
     }
 // TODO   ;  TODO? nup enabled? ... fitplot
-//    NupParameters::calculate(nup,param.nup);
-    NupParameters::preset(nup,param.nup);
+//    _cfPDFToPDFNupParameters::calculate(nup,param.nup);
+    _cfPDFToPDFNupParameters::preset(nup,param.nup);
   }
 
   if ((val=cupsGetOption("number-up-layout",num_options,options)) != NULL) {
-    if (!parseNupLayout(val,param.nup)) {
+    if (!_cfPDFToPDFParseNupLayout(val,param.nup)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 				     "cfFilterPDFToPDF: Unsupported number-up-layout "
 				     "%s, using number-up-layout=lrtb!" ,val);
-      param.nup.first=Axis::X;
-      param.nup.xstart=Position::LEFT;
-      param.nup.ystart=Position::TOP;
+      param.nup.first=pdftopdf_axis_e::X;
+      param.nup.xstart=pdftopdf_position_e::LEFT;
+      param.nup.ystart=pdftopdf_position_e::TOP;
     }
   }
 
   if ((val=cupsGetOption("page-border",num_options,options)) != NULL) {
-    if (!parseBorder(val,param.border)) {
+    if (!_cfPDFToPDFParseBorder(val,param.border)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 				     "cfFilterPDFToPDF: Unsupported page-border value "
 				     "%s, using page-border=none!", val);
-      param.border=BorderType::NONE;
+      param.border=pdftopdf_border_type_e::NONE;
     }
   }
 
@@ -571,13 +571,13 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
     else
       cookedlabel.put (*it);
   }
-  param.pageLabel = cookedlabel.str ();
+  param.page_label = cookedlabel.str ();
 
   if ((val=cupsGetOption("page-set",num_options,options)) != NULL) {
     if (strcasecmp(val,"even")==0) {
-      param.oddPages=false;
+      param.odd_pages=false;
     } else if (strcasecmp(val,"odd")==0) {
-      param.evenPages=false;
+      param.even_pages=false;
     } else if (strcasecmp(val,"all")!=0) {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 				     "cfFilterPDFToPDF: Unsupported page-set value %s, "
@@ -586,11 +586,11 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
   }
 
   if ((val=cupsGetOption("page-ranges",num_options,options)) != NULL) {
-    parseRanges(val,param.pageRange);
+    parseRanges(val,param.page_ranges);
   }
 
   if ((val=cupsGetOption("input-page-ranges",num_options,options)) !=NULL){
-    parseRanges(val,param.inputPageRange);
+    parseRanges(val,param.input_page_ranges);
   }
 
   ppd_choice_t *choice;
@@ -605,29 +605,29 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
   
 
   if ((val=cupsGetOption("emit-jcl",num_options,options)) != NULL) {
-    param.emitJCL=!is_false(val)&&(strcmp(val,"0")!=0);
+    param.emit_jcl=!is_false(val)&&(strcmp(val,"0")!=0);
   }
 
-  param.booklet=BookletMode::BOOKLET_OFF;
+  param.booklet=pdftopdf_booklet_mode_e::CF_PDFTOPDF_BOOKLET_OFF;
   if ((val=cupsGetOption("booklet",num_options,options)) != NULL) {
     if (strcasecmp(val,"shuffle-only")==0) {
-      param.booklet=BookletMode::BOOKLET_JUSTSHUFFLE;
+      param.booklet=pdftopdf_booklet_mode_e::CF_PDFTOPDF_BOOKLET_JUST_SHUFFLE;
     } else if (is_true(val)) {
-      param.booklet=BookletMode::BOOKLET_ON;
+      param.booklet=pdftopdf_booklet_mode_e::CF_PDFTOPDF_BOOKLET_ON;
     } else if (!is_false(val)) {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 				     "cfFilterPDFToPDF: Unsupported booklet value %s, "
 				     "using booklet=off!", val);
     }
   }
-  param.bookSignature=-1;
-  if (optGetInt("booklet-signature",num_options,options,&param.bookSignature)) {
-    if (param.bookSignature==0) {
+  param.book_signature=-1;
+  if (optGetInt("booklet-signature",num_options,options,&param.book_signature)) {
+    if (param.book_signature==0) {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 				     "cfFilterPDFToPDF: Unsupported booklet-signature "
 				     "value, using booklet-signature=-1 "
 				     "(all)!", val);
-      param.bookSignature=-1;
+      param.book_signature=-1;
     }
   }
 
@@ -636,8 +636,8 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
 				     "cfFilterPDFToPDF: Unrecognized position value "
 				     "%s, using position=center!", val);
-      param.xpos=Position::CENTER;
-      param.ypos=Position::CENTER;
+      param.xpos=pdftopdf_position_e::CENTER;
+      param.ypos=pdftopdf_position_e::CENTER;
     }
   }
 
@@ -677,14 +677,14 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
   // FIXME? pdftopdf also supports it as cmdline option (via checkFeature())
   ppd_attr_t *attr;
   if ((attr=ppdFindAttr(ppd,"cupsEvenDuplex",0)) != NULL) {
-    param.evenDuplex=is_true(attr->value);
+    param.even_duplex=is_true(attr->value);
   }
 
   // TODO? pdftopdf* ?
   // TODO?! pdftopdfAutoRotate
 
   // TODO?!  choose default by whether pdfautoratate filter has already been run (e.g. by mimetype)
-  param.autoRotate=(!is_false(cupsGetOption("pdfAutoRotate",num_options,options)) &&
+  param.auto_rotate=(!is_false(cupsGetOption("pdfAutoRotate",num_options,options)) &&
 		    !is_false(cupsGetOption("pdftopdfAutoRotate",num_options,options)));
 
   // Do we have to do the page logging in page_log?
@@ -896,24 +896,24 @@ static bool printerWillCollate(ppd_file_t *ppd) // {{{
 }
 // }}}
 
-void calculate(cf_filter_data_t *data,ProcessingParameters &param,char *final_content_type) // {{{
+void calculate(cf_filter_data_t *data,_cfPDFToPDFProcessingParameters &param,char *final_content_type) // {{{
 {
   ppd_file_t *ppd = data->ppd;
   int num_options = 0;
   cups_option_t *options = NULL;
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
   if (param.reverse)
-    // Enable evenDuplex or the first page may be empty.
-    param.evenDuplex=true; // disabled later, if non-duplex
+    // Enable even_duplex or the first page may be empty.
+    param.even_duplex=true; // disabled later, if non-duplex
 
   setFinalPPD(ppd,param);
 
-  if (param.numCopies==1) {
-    param.deviceCopies=1;
+  if (param.num_copies==1) {
+    param.device_copies=1;
     // collate is never needed for a single copy
     param.collate=false; // (does not make a big difference for us)
   } else if ((ppd)&&(!ppd->manual_copies)) { // hw copy generation available
-    param.deviceCopies=param.numCopies;
+    param.device_copies=param.num_copies;
     if (param.collate) { // collate requested by user
       // Check output format (FINAL_CONTENT_TYPE env variable) whether it is
       // of a driverless IPP printer (PDF, Apple Raster, PWG Raster, PCLm).
@@ -925,50 +925,50 @@ void calculate(cf_filter_data_t *data,ProcessingParameters &param,char *final_co
 	   strcasestr(final_content_type, "/pwg-raster") ||
 	   strcasestr(final_content_type, "/urf") ||
 	   strcasestr(final_content_type, "/PCLm"))) {
-	param.deviceCollate = true;
+	param.device_collate = true;
       } else {
 	// check collate device, with current/final(!) ppd settings
-	param.deviceCollate=printerWillCollate(ppd);
-	if (!param.deviceCollate) {
+	param.device_collate=printerWillCollate(ppd);
+	if (!param.device_collate) {
 	  // printer can't hw collate -> we must copy collated in sw
-	  param.deviceCopies=1;
+	  param.device_copies=1;
 	}
       }
-    } // else: printer copies w/o collate and takes care of duplex/evenDuplex
+    } // else: printer copies w/o collate and takes care of duplex/even_duplex
   }
   else if(final_content_type &&
 	((strcasestr(final_content_type, "/pdf"))  ||
 	(strcasestr(final_content_type, "/vnd.cups-pdf")))){
-    param.deviceCopies = param.numCopies;
+    param.device_copies = param.num_copies;
     if(param.collate){
-	param.deviceCollate = true;
+	param.device_collate = true;
     }
   }
  else { // sw copies
-    param.deviceCopies=1;
-    if (param.duplex) { // &&(numCopies>1)
-      // sw collate + evenDuplex must be forced to prevent copies on the backsides
+    param.device_copies=1;
+    if (param.duplex) { // &&(num_copies>1)
+      // sw collate + even_duplex must be forced to prevent copies on the backsides
       param.collate=true;
-      param.deviceCollate=false;
+      param.device_collate=false;
     }
   }
 
   // TODO? FIXME:  unify code with emitJCLOptions, which does this "by-hand" now (and makes this code superfluous)
-  if (param.deviceCopies==1) {
+  if (param.device_copies==1) {
     // make sure any hardware copying is disabled
     ppdMarkOption(ppd,"Copies","1");
     ppdMarkOption(ppd,"JCLCopies","1");
   } else { // hw copy
-    param.numCopies=1; // disable sw copy
+    param.num_copies=1; // disable sw copy
   }
 
-  if ((param.collate)&&(!param.deviceCollate)) { // software collate
+  if ((param.collate)&&(!param.device_collate)) { // software collate
     ppdMarkOption(ppd,"Collate","False"); // disable any hardware-collate (in JCL)
-    param.evenDuplex=true; // fillers always needed
+    param.even_duplex=true; // fillers always needed
   }
 
   if (!param.duplex) {
-    param.evenDuplex=false;
+    param.even_duplex=false;
   }
 }
 // }}}
@@ -1060,12 +1060,12 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
     final_content_type = (char *)parameters;
 
   try {
-    ProcessingParameters param;
+    _cfPDFToPDFProcessingParameters param;
 
-    param.jobId=data->job_id;
+    param.job_id=data->job_id;
     param.user=data->job_user;
     param.title=data->job_title;
-    param.numCopies=data->copies;
+    param.num_copies=data->copies;
     param.copies_to_be_logged=data->copies;
 
     // TODO?! sanity checks
@@ -1096,7 +1096,7 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
 		     "cfFilterPDFToPDF: Streaming mode: No PDF processing, only adding of JCL");
     }
 
-    std::unique_ptr<PDFTOPDF_Processor> proc(PDFTOPDF_Factory::processor());
+    std::unique_ptr<_cfPDFToPDFProcessor> proc(_cfPDFToPDFFactory::processor());
 
     if ((inputseekable && inputfd > 0) || streaming) {
       if ((inputfp = fdopen(inputfd, "rb")) == NULL)
@@ -1118,17 +1118,17 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
 		     "cfFilterPDFToPDF: Processing PDF input with QPDF: Page-ranges, page-set, number-up, booklet, size adjustment, ...");
 
       // Load the PDF input data into QPDF
-      if (!proc->loadFile(inputfp, &doc, WillStayAlive, 1)) {
+      if (!proc->load_file(inputfp, &doc, CF_PDFTOPDF_WILL_STAY_ALIVE, 1)) {
 	fclose(inputfp);
 	return 1;
       }
 
       // Process the PDF input data
-      if (!processPDFTOPDF(*proc, param, &doc))
+      if (!_cfProcessPDFToPDF(*proc, param, &doc))
 	return 2;
 
       // Pass information to subsequent filters via PDF comments
-      emitComment(*proc, param);
+      _cfPDFToPDFEmitComment(*proc, param);
     }
 
     /* TODO
@@ -1140,7 +1140,7 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
       copyPPDLine_(fp_dest, fp_src, "*ColorDevice:");
       copyPPDLine_(fp_dest, fp_src, "*DefaultColorSpace:");
     if (cupsICCProfile) {
-      proc.addCM(...,...);
+      proc.add_cm(...,...);
     }
     */
 
@@ -1148,12 +1148,12 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
     if (outputfp == NULL)
       return 1;
 
-    emitPreamble(outputfp, data->ppd, param); // ppdEmit, JCL stuff
+    _cfPDFToPDFEmitPreamble(outputfp, data->ppd, param); // ppdEmit, JCL stuff
 
     if (!streaming) {
       // Pass on the processed input data
-      proc->emitFile(outputfp, &doc, WillStayAlive);
-      // proc->emitFilename(NULL);
+      proc->emit_file(outputfp, &doc, CF_PDFTOPDF_WILL_STAY_ALIVE);
+      // proc->emit_filename(NULL);
     } else {
       // Pass through the input data
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -1164,7 +1164,7 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
       fclose(inputfp);
     }
 
-    emitPostamble(outputfp, data->ppd,param);
+    _cfPDFToPDFEmitPostamble(outputfp, data->ppd,param);
     fclose(outputfp);
   } catch (std::exception &e) {
     // TODO? exception type

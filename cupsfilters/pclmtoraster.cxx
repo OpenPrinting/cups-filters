@@ -62,24 +62,24 @@ typedef struct pclmtoraster_data_s
   std::string colorspace; /* Colorspace of raster data */
 } pclmtoraster_data_t;
 
-typedef unsigned char *(*ConvertCSpace)(unsigned char *src, unsigned char *dst,
+typedef unsigned char *(*convert_cspace_func)(unsigned char *src, unsigned char *dst,
 					unsigned int row,
 					unsigned int pixels,
 					pclmtoraster_data_t *data);
-typedef unsigned char *(*ConvertLine)  (unsigned char *src, unsigned char *dst,
+typedef unsigned char *(*convert_line_func)  (unsigned char *src, unsigned char *dst,
 					unsigned char *buf,
 					unsigned int row, unsigned int plane,
 					pclmtoraster_data_t *data,
-					ConvertCSpace convertcspace);
+					convert_cspace_func convertcspace);
 
 typedef struct conversion_function_s
 {
-  ConvertCSpace convertcspace;	/* Function for conversion of colorspaces */
-  ConvertLine convertline;	/* Function tom modify raster data of a line */
+  convert_cspace_func convertcspace;	/* Function for conversion of colorspaces */
+  convert_line_func convertline;	/* Function tom modify raster data of a line */
 } conversion_function_t;
 
 static int
-parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
+parse_opts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
 	  pclmtoraster_data_t *pclmtoraster_data)
 {
   int			num_options = 0;
@@ -266,7 +266,7 @@ parseOpts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
 }
 
 static bool
-mediaboxlookup(QPDFObjectHandle object,
+media_box_lookup(QPDFObjectHandle object,
 	       float rect[4])
 {
   // preliminary checks
@@ -285,12 +285,12 @@ mediaboxlookup(QPDFObjectHandle object,
 }
 
 /*
- * 'rotatebitmap()' - Function to rotate a bitmap
+ * 'rotate_bitmap()' - Function to rotate a bitmap
  *                    (assumed that bits-per-component of the bitmap is 8).
  */
 
 static unsigned char *		    /* O - Output Bitmap */
-rotatebitmap(unsigned char *src,    /* I - Input string */
+rotate_bitmap(unsigned char *src,    /* I - Input string */
 	     unsigned char *dst,    /* O - Destination string */
 	     unsigned int rotate,   /* I - Rotate value (0, 90, 180, 270) */
 	     unsigned int height,   /* I - Height of raster image in pixels */
@@ -450,7 +450,7 @@ rotatebitmap(unsigned char *src,    /* I - Input string */
 }
 
 static unsigned char *
-RGBtoCMYKLine(unsigned char *src,
+rgb_to_cmyk_line(unsigned char *src,
 	      unsigned char *dst,
 	      unsigned int row,
 	      unsigned int pixels,
@@ -461,7 +461,7 @@ RGBtoCMYKLine(unsigned char *src,
 }
 
 static unsigned char *
-RGBtoCMYLine(unsigned char *src,
+rgb_to_cmy_line(unsigned char *src,
 	     unsigned char *dst,
 	     unsigned int row,
 	     unsigned int pixels,
@@ -472,7 +472,7 @@ RGBtoCMYLine(unsigned char *src,
 }
 
 static unsigned char *
-RGBtoWhiteLine(unsigned char *src,
+rgb_to_white_line(unsigned char *src,
 	       unsigned char *dst,
 	       unsigned int row,
 	       unsigned int pixels,
@@ -489,7 +489,7 @@ RGBtoWhiteLine(unsigned char *src,
 }
 
 static unsigned char *
-RGBtoBlackLine(unsigned char *src,
+rgb_to_black_line(unsigned char *src,
 	       unsigned char *dst,
 	       unsigned int row,
 	       unsigned int pixels,
@@ -505,7 +505,7 @@ RGBtoBlackLine(unsigned char *src,
 }
 
 static unsigned char *
-CMYKtoRGBLine(unsigned char *src,
+cmyk_to_rgb_line(unsigned char *src,
 	      unsigned char *dst,
 	      unsigned int row,
 	      unsigned int pixels,
@@ -516,7 +516,7 @@ CMYKtoRGBLine(unsigned char *src,
 }
 
 static unsigned char *
-CMYKtoCMYLine(unsigned char *src,
+cmyk_to_cmy_line(unsigned char *src,
 	      unsigned char *dst,
 	      unsigned int row,
 	      unsigned int pixels,
@@ -529,7 +529,7 @@ CMYKtoCMYLine(unsigned char *src,
 }
 
 static unsigned char *
-CMYKtoWhiteLine(unsigned char *src,
+cmyk_to_white_line(unsigned char *src,
 	        unsigned char *dst,
 		unsigned int row,
 		unsigned int pixels,
@@ -545,7 +545,7 @@ CMYKtoWhiteLine(unsigned char *src,
 }
 
 static unsigned char *
-CMYKtoBlackLine(unsigned char *src,
+cmyk_to_black_line(unsigned char *src,
 	        unsigned char *dst,
 		unsigned int row,
 		unsigned int pixels,
@@ -561,7 +561,7 @@ CMYKtoBlackLine(unsigned char *src,
 }
 
 static unsigned char *
-GraytoRGBLine(unsigned char *src,
+gray_to_rgb_line(unsigned char *src,
 	      unsigned char *dst,
 	      unsigned int row,
 	      unsigned int pixels,
@@ -572,7 +572,7 @@ GraytoRGBLine(unsigned char *src,
 }
 
 static unsigned char *
-GraytoCMYKLine(unsigned char *src,
+gray_to_cmyk_line(unsigned char *src,
 	       unsigned char *dst,
 	       unsigned int row,
 	       unsigned int pixels,
@@ -583,7 +583,7 @@ GraytoCMYKLine(unsigned char *src,
 }
 
 static unsigned char *
-GraytoCMYLine(unsigned char *src,
+gray_to_cmy_line(unsigned char *src,
 	      unsigned char *dst,
 	      unsigned int row,
 	      unsigned int pixels,
@@ -594,7 +594,7 @@ GraytoCMYLine(unsigned char *src,
 }
 
 static unsigned char *
-GraytoBlackLine(unsigned char *src,
+gray_to_black_line(unsigned char *src,
 		unsigned char *dst,
 		unsigned int row,
 		unsigned int pixels,
@@ -610,7 +610,7 @@ GraytoBlackLine(unsigned char *src,
 }
 
 static unsigned char *
-convertcspaceNoop(unsigned char *src,
+convert_cspace_no_op(unsigned char *src,
 		  unsigned char *dst,
 		  unsigned int row,
 		  unsigned int pixels,
@@ -620,18 +620,18 @@ convertcspaceNoop(unsigned char *src,
 }
 
 /*
- * 'convertLine()' - Function to convert colorspace and bits-per-pixel
+ * 'convert_line()' - Function to convert colorspace and bits-per-pixel
  *                   of a single line of raster data.
  */
 
 static unsigned char *			/* O - Output string */
-convertLine(unsigned char 	*src,	/* I - Input line */
+convert_line(unsigned char 	*src,	/* I - Input line */
 	    unsigned char 	*dst,	/* O - Destination string */
 	    unsigned char 	*buf,	/* I - Buffer string */
 	    unsigned int 	row,	/* I - Current Row */
 	    unsigned int 	plane,	/* I - Plane/Band */
 	    pclmtoraster_data_t *data,
-	    ConvertCSpace	convertcspace)
+	    convert_cspace_func	convertcspace)
 {
   /*
    Use only convertcspace if conversion of bits and conversion of color order
@@ -664,13 +664,13 @@ convertLine(unsigned char 	*src,	/* I - Input line */
 }
 
 /*
- * 'convertReverseLine()' - Function to convert colorspace and bits-per-pixel
+ * 'convert_reverse_line()' - Function to convert colorspace and bits-per-pixel
  *                          of a single line of raster data and reverse the
  *                          line.
  */
 
 static unsigned char *					/* O - Output string */
-convertReverseLine(unsigned char	*src,		/* I - Input line */
+convert_reverse_line(unsigned char	*src,		/* I - Input line */
 		   unsigned char	*dst,		/* O - Destination
 							       string */
 		   unsigned char	*buf,		/* I - Buffer string */
@@ -678,7 +678,7 @@ convertReverseLine(unsigned char	*src,		/* I - Input line */
 		   unsigned int		plane,		/* I - Plane/Band */
 		   pclmtoraster_data_t *data,		/* I - pclmtoraster
 							       filter data */
-		   ConvertCSpace	convertcspace)	/* I - Function for
+		   convert_cspace_func	convertcspace)	/* I - Function for
 							       conversion of
 							       colorspace */
 {
@@ -728,7 +728,7 @@ convertReverseLine(unsigned char	*src,		/* I - Input line */
 }
 
 static void					 /* O - Exit status */
-selectConvertFunc(int			pgno,	 /* I - Page number */
+select_convert_func(int			pgno,	 /* I - Page number */
 		  cf_logfunc_t	log,	 /* I - Log function */
 		  void			*ld,	 /* I - Aux. data for log
 						        function */
@@ -765,64 +765,64 @@ selectConvertFunc(int			pgno,	 /* I - Page number */
     data->numcolors = 3;
   }
 
-  convert->convertcspace = convertcspaceNoop; //Default function
+  convert->convertcspace = convert_cspace_no_op; //Default function
   /* Select convertcspace function */
   switch (header.cupsColorSpace)
   {
     case CUPS_CSPACE_K:
-     if (colorspace == "/DeviceRGB") convert->convertcspace = RGBtoBlackLine;
+     if (colorspace == "/DeviceRGB") convert->convertcspace = rgb_to_black_line;
      else if (colorspace == "/DeviceCMYK") convert->convertcspace =
-					     CMYKtoBlackLine;
+					     cmyk_to_black_line;
      else if (colorspace == "/DeviceGray") convert->convertcspace =
-					     GraytoBlackLine;
+					     gray_to_black_line;
      break;
     case CUPS_CSPACE_W:
     case CUPS_CSPACE_SW:
-     if (colorspace == "/DeviceRGB") convert->convertcspace = RGBtoWhiteLine;
+     if (colorspace == "/DeviceRGB") convert->convertcspace = rgb_to_white_line;
      else if (colorspace == "/DeviceCMYK") convert->convertcspace =
-					     CMYKtoWhiteLine;
+					     cmyk_to_white_line;
      break;
     case CUPS_CSPACE_CMY:
-     if (colorspace == "/DeviceRGB") convert->convertcspace = RGBtoCMYLine;
+     if (colorspace == "/DeviceRGB") convert->convertcspace = rgb_to_cmy_line;
      else if (colorspace == "/DeviceCMYK") convert->convertcspace =
-					     CMYKtoCMYLine;
+					     cmyk_to_cmy_line;
      else if (colorspace == "/DeviceGray") convert->convertcspace =
-					     GraytoCMYLine;
+					     gray_to_cmy_line;
      break;
     case CUPS_CSPACE_CMYK:
-     if (colorspace == "/DeviceRGB") convert->convertcspace = RGBtoCMYKLine;
+     if (colorspace == "/DeviceRGB") convert->convertcspace = rgb_to_cmyk_line;
      else if (colorspace == "/DeviceGray") convert->convertcspace =
-					     GraytoCMYKLine;
+					     gray_to_cmyk_line;
      break;
     case CUPS_CSPACE_RGB:
     case CUPS_CSPACE_ADOBERGB:
     case CUPS_CSPACE_SRGB:
     default:
-     if (colorspace == "/DeviceCMYK") convert->convertcspace = CMYKtoRGBLine;
+     if (colorspace == "/DeviceCMYK") convert->convertcspace = cmyk_to_rgb_line;
      else if (colorspace == "/DeviceGray") convert->convertcspace =
-					     GraytoRGBLine;
+					     gray_to_rgb_line;
      break;
    }
 
   /* Select convertline function */
   if (header.Duplex && (pgno & 1) && data->swap_image_x)
   {
-    convert->convertline = convertReverseLine;
+    convert->convertline = convert_reverse_line;
   }
   else
   {
-    convert->convertline = convertLine;
+    convert->convertline = convert_line;
   }
 
 }
 
 /*
- * 'outPage()' - Function to convert a single page of raster-only PDF/PCLm
+ * 'out_page()' - Function to convert a single page of raster-only PDF/PCLm
  *               input to CUPS/PWG Raster.
  */
 
 static int				/* O - Exit status */
-outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
+out_page(cups_raster_t*	 raster, 	/* I - Raster stream */
 	QPDFObjectHandle page,		/* I - QPDF Page Object */
 	int		 pgno,		/* I - Page number */
 	cf_logfunc_t log,		/* I - Log function */
@@ -853,7 +853,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
     rotate = page.getKey("/Rotate").getIntValueAsInt();
 
   // Get pagesize by the mediabox key of the page.
-  if (!mediaboxlookup(page, mediaBox))
+  if (!media_box_lookup(page, mediaBox))
   {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterPCLmToRaster: PDF page %d doesn't contain a valid mediaBox",
@@ -1015,7 +1015,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
                          // Default for pclm files in DeviceRGB
 
   /* Select convertline and convertscpace function */
-  selectConvertFunc(pgno, log, ld, data, convert);
+  select_convert_func(pgno, log, ld, data, convert);
 
   // If page is to be swapped in both x and y, rotate it by 180 degress
   if (data->header.Duplex && (pgno & 1) && data->swap_image_y &&
@@ -1030,7 +1030,7 @@ outPage(cups_raster_t*	 raster, 	/* I - Raster stream */
   if (rotate)
   {
     unsigned char *bitmap2 = (unsigned char *) malloc(pixel_count);
-    bitmap2 = rotatebitmap(bitmap, bitmap2, rotate, data->header.cupsHeight,
+    bitmap2 = rotate_bitmap(bitmap, bitmap2, rotate, data->header.cupsHeight,
 			   data->header.cupsWidth, data->rowsize,
 			   data->colorspace, log, ld);
     free(bitmap);
@@ -1165,7 +1165,7 @@ cfFilterPCLmToRaster(int inputfd,         /* I - File descriptor input stream */
   filename = tempfile;
   pdf->processFile(filename);
 
-  if (parseOpts(data, outformat, &pclmtoraster_data) != 0)
+  if (parse_opts(data, outformat, &pclmtoraster_data) != 0)
   {
     delete(pdf);
     unlink(tempfile);
@@ -1234,7 +1234,7 @@ cfFilterPCLmToRaster(int inputfd,         /* I - File descriptor input stream */
 
     if (log) log(ld, CF_LOGLEVEL_INFO,
 		 "cfFilterPCLmToRaster: Starting page %d.", i+1);
-    if (outPage(raster, pages[i], i, log, ld, &pclmtoraster_data,data,
+    if (out_page(raster, pages[i], i, log, ld, &pclmtoraster_data,data,
 		&convert) != 0)
       break;
   }

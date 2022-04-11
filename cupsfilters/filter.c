@@ -40,7 +40,7 @@ typedef struct filter_function_pid_s    /* Filter in filter chain */
  *                         of a given file descriptor.
  */
 
-int                       /* Return value of fcntl() */
+static int                /* Return value of fcntl() */
 fcntl_add_cloexec(int fd) /* File descriptor to add FD_CLOEXEC to */
 {
   return fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
@@ -52,7 +52,7 @@ fcntl_add_cloexec(int fd) /* File descriptor to add FD_CLOEXEC to */
  *                         of a given file descriptor.
  */
 
-int                        /* Return value of fcntl() */
+static int                 /* Return value of fcntl() */
 fcntl_add_nonblock(int fd) /* File descriptor to add O_NONBLOCK to */
 {
   return fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
@@ -837,7 +837,7 @@ cfFilterChain(int inputfd,         /* I - File descriptor input stream */
  *                   as used by the execve() function
  */
 
-char *                    /* O - The value, NULL if variable is not in list */
+static char *             /* O - The value, NULL if variable is not in list */
 get_env_var(char *name,   /* I - Name of environment variable to read */
 	    char **env)   /* I - List of environment variable serttings */
 {
@@ -861,7 +861,7 @@ get_env_var(char *name,   /* I - Name of environment variable to read */
  *                   as used by the execve() function
  */
 
-int                       /* O - Index of where the new value got inserted in
+static int                /* O - Index of where the new value got inserted in
 			         the list */
 add_env_var(char *name,   /* I - Name of environment variable to set */
 	    char *value,  /* I - Value of environment variable to set */
@@ -916,7 +916,7 @@ add_env_var(char *name,   /* I - Name of environment variable to set */
  * 'sanitize_device_uri()' - Remove authentication info from a device URI
  */
 
-char *                                  /* O - Sanitized URI */
+static char *                           /* O - Sanitized URI */
 sanitize_device_uri(const char *uri,	/* I - Device URI */
 		    char *buf,          /* I - Buffer for output */
 		    size_t bufsize)     /* I - Size of buffer */

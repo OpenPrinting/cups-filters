@@ -4,15 +4,15 @@
 #include <limits>
 #include <algorithm>
 
-const IntervalSet::key_t IntervalSet::npos=std::numeric_limits<IntervalSet::key_t>::max();
+const _cfPDFToPDFIntervalSet::key_t _cfPDFToPDFIntervalSet::npos=std::numeric_limits<_cfPDFToPDFIntervalSet::key_t>::max();
 
-void IntervalSet::clear() // {{{
+void _cfPDFToPDFIntervalSet::clear() // {{{
 {
   data.clear();
 }
 // }}}
 
-void IntervalSet::add(key_t start,key_t end) // {{{
+void _cfPDFToPDFIntervalSet::add(key_t start,key_t end) // {{{
 {
   if (start<end) {
     data.push_back(std::make_pair(start,end));
@@ -20,7 +20,7 @@ void IntervalSet::add(key_t start,key_t end) // {{{
 }
 // }}}
 
-void IntervalSet::finish() // {{{
+void _cfPDFToPDFIntervalSet::finish() // {{{
 {
   data_t::iterator it=data.begin(),end=data.end(),pos=it;
   if (it==end) {
@@ -49,7 +49,7 @@ void IntervalSet::finish() // {{{
 }
 // }}}
 
-bool IntervalSet::contains(key_t val) const // {{{
+bool _cfPDFToPDFIntervalSet::contains(key_t val) const // {{{
 {
   data_t::const_iterator it=std::upper_bound(data.begin(),data.end(),std::make_pair(val,npos));
   if (it==data.begin()) {
@@ -60,7 +60,7 @@ bool IntervalSet::contains(key_t val) const // {{{
 }
 // }}}
 
-IntervalSet::key_t IntervalSet::next(key_t val) const // {{{
+_cfPDFToPDFIntervalSet::key_t _cfPDFToPDFIntervalSet::next(key_t val) const // {{{
 {
   val++;
   data_t::const_iterator it=std::upper_bound(data.begin(),data.end(),std::make_pair(val,npos));
@@ -82,14 +82,14 @@ IntervalSet::key_t IntervalSet::next(key_t val) const // {{{
 }
 // }}}
 
-bool IntervalSet::intersect(const value_t &a,const value_t &b) const // {{{
+bool _cfPDFToPDFIntervalSet::intersect(const value_t &a,const value_t &b) const // {{{
 {
   return ((a.first>=b.first) && (a.first<b.second)) ||
     ((b.first>=a.first) && (b.first<a.second));
 }
 // }}}
 
-void IntervalSet::unite(value_t &aret,const value_t &b) const // {{{
+void _cfPDFToPDFIntervalSet::unite(value_t &aret,const value_t &b) const // {{{
 {
   assert(intersect(aret,b));
   if (b.first<aret.first) {
@@ -101,7 +101,7 @@ void IntervalSet::unite(value_t &aret,const value_t &b) const // {{{
 }
 // }}}
 
-void IntervalSet::dump(pdftopdf_doc_t *doc) const // {{{
+void _cfPDFToPDFIntervalSet::dump(pdftopdf_doc_t *doc) const // {{{
 {
   int len=data.size();
   if (len==0) {

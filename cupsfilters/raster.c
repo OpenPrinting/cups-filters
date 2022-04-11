@@ -37,7 +37,7 @@
  * '_strlcpy()' - Safely copy two strings.
  */
 
-size_t					/* O - Length of string */
+static size_t					/* O - Length of string */
 _strlcpy(char       *dst,		/* O - Destination string */
 	 const char *src,		/* I - Source string */
 	 size_t      size)		/* I - Size of destination string buffer */

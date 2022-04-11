@@ -62,7 +62,7 @@ typedef cups_page_header_t mupdf_page_header;
 #endif /* CUPS_RASTER_SYNCv1 */
 
 
-int
+static int
 parse_doc_type(FILE *fp, cf_logfunc_t log, void *ld)
 {
   char buf[5];

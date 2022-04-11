@@ -459,8 +459,6 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/image-pnm.c \
 	cupsfilters/image-private.h \
 	cupsfilters/image-sgi.c \
-	cupsfilters/image-sgi.h \
-	cupsfilters/image-sgilib.c \
 	cupsfilters/image-sun.c \
 	cupsfilters/image-tiff.c \
 	cupsfilters/image-zoom.c \

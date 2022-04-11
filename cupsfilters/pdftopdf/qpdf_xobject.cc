@@ -79,7 +79,7 @@ void CombineFromContents_Provider::provideStreamData(int objid, int generation, 
   [/VP]              viewport rects -- ignore/drop or recalculate into new page
 
 */
-QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page)
+QPDFObjectHandle _cfPDFToPDFMakeXObject(QPDF *pdf,QPDFObjectHandle page)
 {
   page.assertPageObject();
 
@@ -90,20 +90,20 @@ QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page)
   dict.replaceKey("/Subtype",QPDFObjectHandle::newName("/Form")); // required
   // dict.replaceKey("/FormType",QPDFObjectHandle::newInteger(1)); // optional
 
-  QPDFObjectHandle box=getTrimBox(page); // already in "form space"
+  QPDFObjectHandle box=_cfPDFToPDFGetTrimBox(page); // already in "form space"
   dict.replaceKey("/BBox",box); // reqd
 
   // [/Matrix .]   ...  default is [1 0 0 1 0 0]; we incorporate /UserUnit and /Rotate here
-  Matrix mtx;
+  _cfPDFToPDFMatrix mtx;
   if (page.hasKey("/UserUnit")) {
     mtx.scale(page.getKey("/UserUnit").getNumericValue());
   }
 
   // transform, so that bbox is [0 0 w h]  (in outer space, but after UserUnit)
-  Rotation rot=getRotate(page);
+  pdftopdf_rotation_e rot=_cfPDFToPDFGetRotate(page);
   
   // calculate rotation effect on [0 0 w h]
-  PageRect bbox=getBoxAsRect(box),tmp;
+  _cfPDFToPDFPageRect bbox=_cfPDFToPDFGetBoxAsRect(box),tmp;
   tmp.left=0;
   tmp.bottom=0;
   tmp.right=0;

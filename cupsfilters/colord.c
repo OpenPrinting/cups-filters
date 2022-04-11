@@ -374,7 +374,7 @@ out:
   return filename;
 }
 
-int
+static int
 get_profile_inhibitors ( cf_filter_data_t *data,
 			  DBusConnection *con, const char *object_path)
 {

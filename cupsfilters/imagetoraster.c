@@ -13,15 +13,15 @@
  *
  *   cfFilterImageToRaster() - The image conversion filter function
  *   blank_line()    - Clear a line buffer to the blank value...
- *   format_CMY()    - Convert image data to CMY.
- *   format_CMYK()   - Convert image data to CMYK.
- *   format_K()      - Convert image data to black.
- *   format_KCMY()   - Convert image data to KCMY.
- *   format_KCMYcm() - Convert image data to KCMYcm.
- *   format_RGBA()   - Convert image data to RGBA/RGBW.
- *   format_W()      - Convert image data to luminance.
- *   format_YMC()    - Convert image data to YMC.
- *   format_YMCK()   - Convert image data to YMCK.
+ *   format_cmy()    - Convert image data to CMY.
+ *   format_cmyk()   - Convert image data to CMYK.
+ *   format_k()      - Convert image data to black.
+ *   format_kcmy()   - Convert image data to KCMY.
+ *   format_kcmycm() - Convert image data to KCMYcm.
+ *   format_rgba()   - Convert image data to RGBA/RGBW.
+ *   format_w()      - Convert image data to luminance.
+ *   format_ymc()    - Convert image data to YMC.
+ *   format_ymck()   - Convert image data to YMCK.
  *   make_lut()      - Make a lookup table given gamma and brightness values.
  *   raster_cb()     - Validate the page header.
  */
@@ -134,11 +134,11 @@ int	Floyd4x4[4][4] =
  */
 
 static void	blank_line(cups_page_header2_t *header, unsigned char *row);
-static void	format_CMY(imagetoraster_doc_t *doc,
+static void	format_cmy(imagetoraster_doc_t *doc,
 			   cups_page_header2_t *header, unsigned char *row,
 			   int y, int z, int xsize, int ysize, int yerr0,
 			   int yerr1, cf_ib_t *r0, cf_ib_t *r1);
-static void	format_CMYK(imagetoraster_doc_t *doc,
+static void	format_cmyk(imagetoraster_doc_t *doc,
 			    cups_page_header2_t *header, unsigned char *row,
 			    int y, int z, int xsize, int ysize, int yerr0,
 			    int yerr1, cf_ib_t *r0, cf_ib_t *r1);
@@ -146,28 +146,28 @@ static void	format_K(imagetoraster_doc_t *doc,
 			 cups_page_header2_t *header, unsigned char *row,
 			 int y, int z, int xsize, int ysize, int yerr0,
 			 int yerr1, cf_ib_t *r0, cf_ib_t *r1);
-static void	format_KCMYcm(imagetoraster_doc_t *doc,
+static void	format_kcmycm(imagetoraster_doc_t *doc,
 			      cups_page_header2_t *header, unsigned char *row,
 			      int y, int z, int xsize, int ysize, int yerr0,
 			      int yerr1, cf_ib_t *r0, cf_ib_t *r1);
-static void	format_KCMY(imagetoraster_doc_t *doc,
+static void	format_kcmy(imagetoraster_doc_t *doc,
 			    cups_page_header2_t *header, unsigned char *row,
 			    int y, int z, int xsize, int ysize, int yerr0,
 			    int yerr1, cf_ib_t *r0, cf_ib_t *r1);
-#define		format_RGB format_CMY
-static void	format_RGBA(imagetoraster_doc_t *doc,
+#define		format_RGB format_cmy
+static void	format_rgba(imagetoraster_doc_t *doc,
 			    cups_page_header2_t *header, unsigned char *row,
 			    int y, int z, int xsize, int ysize, int yerr0,
 			    int yerr1, cf_ib_t *r0, cf_ib_t *r1);
-static void	format_W(imagetoraster_doc_t *doc,
+static void	format_w(imagetoraster_doc_t *doc,
 			 cups_page_header2_t *header, unsigned char *row,
 			 int y, int z, int xsize, int ysize, int yerr0,
 			 int yerr1, cf_ib_t *r0, cf_ib_t *r1);
-static void	format_YMC(imagetoraster_doc_t *doc,
+static void	format_ymc(imagetoraster_doc_t *doc,
 			   cups_page_header2_t *header, unsigned char *row,
 			   int y, int z, int xsize, int ysize, int yerr0,
 			   int yerr1, cf_ib_t *r0, cf_ib_t *r1);
-static void	format_YMCK(imagetoraster_doc_t *doc,
+static void	format_ymck(imagetoraster_doc_t *doc,
 			    cups_page_header2_t *header, unsigned char *row,
 			    int y, int z, int xsize, int ysize, int yerr0,
 			    int yerr1, cf_ib_t *r0, cf_ib_t *r1);
@@ -1880,7 +1880,7 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
 	    {
 	      case CUPS_CSPACE_W :
 	      case CUPS_CSPACE_SW :
-		  format_W(&doc, &header, row, y, plane, z->xsize, z->ysize,
+		  format_w(&doc, &header, row, y, plane, z->xsize, z->ysize,
 		           yerr0, yerr1, r0, r1);
 		  break;
               default :
@@ -1892,7 +1892,7 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
 		  break;
 	      case CUPS_CSPACE_RGBA :
 	      case CUPS_CSPACE_RGBW :
-	          format_RGBA(&doc, &header, row, y, plane, z->xsize, z->ysize,
+	          format_rgba(&doc, &header, row, y, plane, z->xsize, z->ysize,
 		              yerr0, yerr1, r0, r1);
 		  break;
 	      case CUPS_CSPACE_K :
@@ -1903,32 +1903,32 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
 		           yerr0, yerr1, r0, r1);
 		  break;
 	      case CUPS_CSPACE_CMY :
-	          format_CMY(&doc, &header, row, y, plane, z->xsize, z->ysize,
+	          format_cmy(&doc, &header, row, y, plane, z->xsize, z->ysize,
 		             yerr0, yerr1, r0, r1);
 		  break;
 	      case CUPS_CSPACE_YMC :
-	          format_YMC(&doc, &header, row, y, plane, z->xsize, z->ysize,
+	          format_ymc(&doc, &header, row, y, plane, z->xsize, z->ysize,
 		             yerr0, yerr1, r0, r1);
 		  break;
 	      case CUPS_CSPACE_CMYK :
-	          format_CMYK(&doc, &header, row, y, plane, z->xsize, z->ysize,
+	          format_cmyk(&doc, &header, row, y, plane, z->xsize, z->ysize,
 		              yerr0, yerr1, r0, r1);
 		  break;
 	      case CUPS_CSPACE_YMCK :
 	      case CUPS_CSPACE_GMCK :
 	      case CUPS_CSPACE_GMCS :
-	          format_YMCK(&doc, &header, row, y, plane, z->xsize, z->ysize,
+	          format_ymck(&doc, &header, row, y, plane, z->xsize, z->ysize,
 		              yerr0, yerr1, r0, r1);
 		  break;
 	      case CUPS_CSPACE_KCMYcm :
 	          if (header.cupsBitsPerColor == 1)
 		  {
-	            format_KCMYcm(&doc, &header, row, y, plane, z->xsize,
+	            format_kcmycm(&doc, &header, row, y, plane, z->xsize,
 				  z->ysize, yerr0, yerr1, r0, r1);
 		    break;
 		  }
 	      case CUPS_CSPACE_KCMY :
-	          format_KCMY(&doc, &header, row, y, plane, z->xsize, z->ysize,
+	          format_kcmy(&doc, &header, row, y, plane, z->xsize, z->ysize,
 		              yerr0, yerr1, r0, r1);
 		  break;
 	    }
@@ -2085,11 +2085,11 @@ blank_line(cups_page_header2_t *header,	/* I - Page header */
 
 
 /*
- * 'format_CMY()' - Convert image data to CMY.
+ * 'format_cmy()' - Convert image data to CMY.
  */
 
 static void
-format_CMY(imagetoraster_doc_t *doc,
+format_cmy(imagetoraster_doc_t *doc,
 	   cups_page_header2_t *header,	/* I - Page header */
 	   unsigned char      *row,	/* IO - Bitmap data for device */
 	   int                y,	/* I - Current row */
@@ -2461,11 +2461,11 @@ format_CMY(imagetoraster_doc_t *doc,
 
 
 /*
- * 'format_CMYK()' - Convert image data to CMYK.
+ * 'format_cmyk()' - Convert image data to CMYK.
  */
 
 static void
-format_CMYK(imagetoraster_doc_t *doc,
+format_cmyk(imagetoraster_doc_t *doc,
 	    cups_page_header2_t *header,/* I - Page header */
             unsigned char       *row,	/* IO - Bitmap data for device */
 	    int                 y,	/* I - Current row */
@@ -2978,11 +2978,11 @@ format_K(imagetoraster_doc_t *doc,
 
 
 /*
- * 'format_KCMY()' - Convert image data to KCMY.
+ * 'format_kcmy()' - Convert image data to KCMY.
  */
 
 static void
-format_KCMY(imagetoraster_doc_t *doc,
+format_kcmy(imagetoraster_doc_t *doc,
 	    cups_page_header2_t *header,/* I - Page header */
             unsigned char       *row,	/* IO - Bitmap data for device */
 	    int                 y,	/* I - Current row */
@@ -3406,11 +3406,11 @@ format_KCMY(imagetoraster_doc_t *doc,
 
 
 /*
- * 'format_KCMYcm()' - Convert image data to KCMYcm.
+ * 'format_kcmycm()' - Convert image data to KCMYcm.
  */
 
 static void
-format_KCMYcm(
+format_kcmycm(
     imagetoraster_doc_t *doc,
     cups_page_header2_t *header,	/* I - Page header */
     unsigned char       *row,		/* IO - Bitmap data for device */
@@ -3584,11 +3584,11 @@ format_KCMYcm(
 
 
 /*
- * 'format_RGBA()' - Convert image data to RGBA/RGBW.
+ * 'format_rgba()' - Convert image data to RGBA/RGBW.
  */
 
 static void
-format_RGBA(imagetoraster_doc_t *doc,
+format_rgba(imagetoraster_doc_t *doc,
 	    cups_page_header2_t *header,/* I - Page header */
             unsigned char       *row,	/* IO - Bitmap data for device */
 	    int                 y,	/* I - Current row */
@@ -3986,11 +3986,11 @@ format_RGBA(imagetoraster_doc_t *doc,
 
 
 /*
- * 'format_W()' - Convert image data to luminance.
+ * 'format_w()' - Convert image data to luminance.
  */
 
 static void
-format_W(imagetoraster_doc_t *doc,
+format_w(imagetoraster_doc_t *doc,
 	 cups_page_header2_t *header,	/* I - Page header */
 	 unsigned char    *row,	/* IO - Bitmap data for device */
 	 int              y,		/* I - Current row */
@@ -4106,11 +4106,11 @@ format_W(imagetoraster_doc_t *doc,
 
 
 /*
- * 'format_YMC()' - Convert image data to YMC.
+ * 'format_ymc()' - Convert image data to YMC.
  */
 
 static void
-format_YMC(imagetoraster_doc_t *doc,
+format_ymc(imagetoraster_doc_t *doc,
 	   cups_page_header2_t *header,	/* I - Page header */
 	   unsigned char      *row,	/* IO - Bitmap data for device */
 	   int                y,	/* I - Current row */
@@ -4497,11 +4497,11 @@ format_YMC(imagetoraster_doc_t *doc,
 
 
 /*
- * 'format_YMCK()' - Convert image data to YMCK.
+ * 'format_ymck()' - Convert image data to YMCK.
  */
 
 static void
-format_YMCK(imagetoraster_doc_t *doc,
+format_ymck(imagetoraster_doc_t *doc,
 	    cups_page_header2_t *header,/* I - Page header */
             unsigned char       *row,	/* IO - Bitmap data for device */
 	    int                 y,	/* I - Current row */

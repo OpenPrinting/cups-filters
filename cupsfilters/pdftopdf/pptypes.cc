@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-void Position_dump(Position pos,pdftopdf_doc_t *doc) // {{{
+void _cfPDFToPDFPositionDump(pdftopdf_position_e pos,pdftopdf_doc_t *doc) // {{{
 {
   static const char *pstr[3]={"Left/Bottom","Center","Right/Top"};
   if ((pos < LEFT) || (pos > RIGHT)) {
@@ -16,16 +16,16 @@ void Position_dump(Position pos,pdftopdf_doc_t *doc) // {{{
 }
 // }}}
 
-void Position_dump(Position pos,Axis axis,pdftopdf_doc_t *doc) // {{{
+void _cfPDFToPDFPositionDump(pdftopdf_position_e pos,pdftopdf_axis_e axis,pdftopdf_doc_t *doc) // {{{
 {
-  assert((axis == Axis::X) || (axis == Axis::Y));
+  assert((axis == pdftopdf_axis_e::X) || (axis == pdftopdf_axis_e::Y));
   if ((pos < LEFT) || (pos > RIGHT)) {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Position %s: (bad position: %d)",
-      (axis == Axis::X) ? "X" : "Y", pos);
+      (axis == pdftopdf_axis_e::X) ? "X" : "Y", pos);
     return;
   }
-  if (axis==Axis::X) {
+  if (axis==pdftopdf_axis_e::X) {
     static const char *pxstr[3]={"Left","Center","Right"};
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Position X: %s", pxstr[pos+1]);
@@ -37,7 +37,7 @@ void Position_dump(Position pos,Axis axis,pdftopdf_doc_t *doc) // {{{
 }
 // }}}
 
-void Rotation_dump(Rotation rot,pdftopdf_doc_t *doc) // {{{
+void _cfPDFToPDFRotationDump(pdftopdf_rotation_e rot,pdftopdf_doc_t *doc) // {{{
 {
   static const char *rstr[4]={"0 deg","90 deg","180 deg","270 deg"}; // CCW
   if ((rot < ROT_0) || (rot > ROT_270)) {
@@ -50,25 +50,25 @@ void Rotation_dump(Rotation rot,pdftopdf_doc_t *doc) // {{{
 }
 // }}}
 
-Rotation operator+(Rotation lhs,Rotation rhs) // {{{
+pdftopdf_rotation_e operator+(pdftopdf_rotation_e lhs,pdftopdf_rotation_e rhs) // {{{
 {
-  return (Rotation)(((int)lhs+(int)rhs)%4);
+  return (pdftopdf_rotation_e)(((int)lhs+(int)rhs)%4);
 }
 // }}}
 
-Rotation operator-(Rotation lhs,Rotation rhs) // {{{
+pdftopdf_rotation_e operator-(pdftopdf_rotation_e lhs,pdftopdf_rotation_e rhs) // {{{
 {
-  return (Rotation)((((int)lhs-(int)rhs)%4+4)%4);
+  return (pdftopdf_rotation_e)((((int)lhs-(int)rhs)%4+4)%4);
 }
 // }}}
 
-Rotation operator-(Rotation rhs) // {{{
+pdftopdf_rotation_e operator-(pdftopdf_rotation_e rhs) // {{{
 {
-  return (Rotation)((4-(int)rhs)%4);
+  return (pdftopdf_rotation_e)((4-(int)rhs)%4);
 }
 // }}}
 
-void BorderType_dump(BorderType border,pdftopdf_doc_t *doc) // {{{
+void _cfPDFToPDFBorderTypeDump(pdftopdf_border_type_e border,pdftopdf_doc_t *doc) // {{{
 {
   if ((border < NONE) || (border == 1) || (border > TWO_THICK)) {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
@@ -81,7 +81,7 @@ void BorderType_dump(BorderType border,pdftopdf_doc_t *doc) // {{{
 }
 // }}}
 
-void PageRect::rotate_move(Rotation r,float pwidth,float pheight) // {{{
+void _cfPDFToPDFPageRect::rotate_move(pdftopdf_rotation_e r,float pwidth,float pheight) // {{{
 {
 #if 1
   if (r>=ROT_180) {
@@ -142,7 +142,7 @@ void PageRect::rotate_move(Rotation r,float pwidth,float pheight) // {{{
 }
 // }}}
 
-void PageRect::scale(float mult) // {{{
+void _cfPDFToPDFPageRect::scale(float mult) // {{{
 {
   if (mult==1.0) {
     return;
@@ -159,7 +159,7 @@ void PageRect::scale(float mult) // {{{
 }
 // }}}
 
-void PageRect::translate(float tx,float ty) // {{{
+void _cfPDFToPDFPageRect::translate(float tx,float ty) // {{{
 {
   left+=tx;
   bottom+=ty;
@@ -168,7 +168,7 @@ void PageRect::translate(float tx,float ty) // {{{
 }
 // }}}
 
-void PageRect::set(const PageRect &rhs) // {{{
+void _cfPDFToPDFPageRect::set(const _cfPDFToPDFPageRect &rhs) // {{{
 {
   if (!std::isnan(rhs.top)) top=rhs.top;
   if (!std::isnan(rhs.left)) left=rhs.left;
@@ -177,7 +177,7 @@ void PageRect::set(const PageRect &rhs) // {{{
 }
 // }}}
 
-void PageRect::dump(pdftopdf_doc_t *doc) const // {{{
+void _cfPDFToPDFPageRect::dump(pdftopdf_doc_t *doc) const // {{{
 {
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: top: %f, left: %f, right: %f, bottom: %f, "

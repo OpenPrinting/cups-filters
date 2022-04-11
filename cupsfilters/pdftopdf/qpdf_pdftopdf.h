@@ -1,36 +1,36 @@
-#ifndef QPDF_PDFTOPDF_H
-#define QPDF_PDFTOPDF_H
+#ifndef _CUPS_FILTERS_PDFTOPDF_QPDF_PDFTOPDF_H
+#define _CUPS_FILTERS_PDFTOPDF_QPDF_PDFTOPDF_H
 
 #include <qpdf/QPDFObjectHandle.hh>
 #include "pptypes.h"
 
 // helper functions
 
-PageRect getBoxAsRect(QPDFObjectHandle box);
-QPDFObjectHandle getRectAsBox(const PageRect &rect);
+_cfPDFToPDFPageRect _cfPDFToPDFGetBoxAsRect(QPDFObjectHandle box);
+QPDFObjectHandle _cfPDFToPDFGetRectAsBox(const _cfPDFToPDFPageRect &rect);
 
 // Note that PDF specification is CW, but our Rotation is CCW
-Rotation getRotate(QPDFObjectHandle page);
-QPDFObjectHandle makeRotate(Rotation rot); // Integer
+pdftopdf_rotation_e _cfPDFToPDFGetRotate(QPDFObjectHandle page);
+QPDFObjectHandle _cfPDFToPDFMakeRotate(pdftopdf_rotation_e rot); // Integer
 
-double getUserUnit(QPDFObjectHandle page);
+double _cfPDFToPDFGetUserUnit(QPDFObjectHandle page);
 
 // PDF CTM
-class Matrix {
+class _cfPDFToPDFMatrix {
  public:
-  Matrix(); // identity
-  Matrix(QPDFObjectHandle ar);
+  _cfPDFToPDFMatrix(); // identity
+  _cfPDFToPDFMatrix(QPDFObjectHandle ar);
   
-  Matrix &rotate(Rotation rot);
-  Matrix &rotate_move(Rotation rot,double width,double height);
-  Matrix &rotate(double rad);
-  //  Matrix &rotate_deg(double deg);
+  _cfPDFToPDFMatrix &rotate(pdftopdf_rotation_e rot);
+  _cfPDFToPDFMatrix &rotate_move(pdftopdf_rotation_e rot,double width,double height);
+  _cfPDFToPDFMatrix &rotate(double rad);
+  //  _cfPDFToPDFMatrix &rotate_deg(double deg);
 
-  Matrix &translate(double tx,double ty);
-  Matrix &scale(double sx,double sy);
-  Matrix &scale(double s) { return scale(s,s); }
+  _cfPDFToPDFMatrix &translate(double tx,double ty);
+  _cfPDFToPDFMatrix &scale(double sx,double sy);
+  _cfPDFToPDFMatrix &scale(double s) { return scale(s,s); }
 
-  Matrix &operator*=(const Matrix &rhs);
+  _cfPDFToPDFMatrix &operator*=(const _cfPDFToPDFMatrix &rhs);
 
   QPDFObjectHandle get() const;
   std::string get_string() const;

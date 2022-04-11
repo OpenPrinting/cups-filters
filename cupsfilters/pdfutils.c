@@ -411,21 +411,3 @@ int cfPDFOutWriteFont(cf_pdf_out_t *pdf,EMB_PARAMS *emb) // {{{
   return f_obj;
 }
 // }}}
-
-#if 0
-one_page(...parent,resources,mediabox,contents);
-{
-//                    "  /Resources %d 0 R\n"
-  cfPDFOutPrintF(pdf,"%d 0 obj\n"
-                    "<</Type/Page\n"
-                    "  /Parent 1 0 R\n"
-                    "  /MediaBox [0 0 %d %d]\n"
-                    "  /Contents %d 0 R\n"
-                    ">>\n"
-                    "endobj\n"
-                    ,,,PageWidth,PageLength // TODO: into pdf->
-  ...
-}
-
-... pfb_embedder ... pfa?
-#endif

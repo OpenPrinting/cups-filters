@@ -43,7 +43,7 @@
 #include "filter.h"
 #include "pdf.h"
 
-enum banner_info
+typedef enum banner_info_e
 {
     INFO_IMAGEABLE_AREA = 1,
     INFO_JOB_BILLING = 1 << 1,
@@ -63,16 +63,16 @@ enum banner_info
     INFO_PRINTER_NAME = 1 << 15,
     INFO_TIME_AT_CREATION = 1 << 16,
     INFO_TIME_AT_PROCESSING = 1 << 17
-};
+} banner_info_t;
 
-typedef struct
+typedef struct banner_s
 {
     char *template_file;
     char *header, *footer;
     unsigned infos;
 } banner_t;
 
-void banner_free(banner_t *banner)
+static void banner_free(banner_t *banner)
 {
     if (banner)
     {
@@ -180,7 +180,7 @@ static char *template_path(const char *name, const char *datadir)
     return result;
 }
 
-banner_t *banner_new_from_file(const char *filename, int *num_options,
+static banner_t *banner_new_from_file(const char *filename, int *num_options,
 			       cups_option_t **options, const char *datadir,
 			       cf_logfunc_t log, void *ld)
 {
@@ -561,7 +561,7 @@ static cf_opt_t *add_opt(cf_opt_t *in_opt, const char *key, const char *val)
  *
  * Create PDF form's field names according above.
  */
-cf_opt_t *get_known_opts(
+static cf_opt_t *get_known_opts(
     cf_filter_data_t *data,
     const char *jobid,
     const char *user,

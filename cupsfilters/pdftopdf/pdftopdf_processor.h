@@ -1,5 +1,5 @@
-#ifndef PDFTOPDF_PROCESSOR_H
-#define PDFTOPDF_PROCESSOR_H
+#ifndef _CUPS_FILTERS_PDFTOPDF_PDFTOPDF_PROCESSOR_H
+#define _CUPS_FILTERS_PDFTOPDF_PDFTOPDF_PROCESSOR_H
 
 #include "pptypes.h"
 #include "nup.h"
@@ -7,12 +7,18 @@
 #include "intervalset.h"
 #include <vector>
 #include <string>
+#include <memory>
+#include <stdio.h>
 
-enum BookletMode { BOOKLET_OFF, BOOKLET_ON, BOOKLET_JUSTSHUFFLE };
+enum pdftopdf_booklet_mode_e {
+  CF_PDFTOPDF_BOOKLET_OFF,
+  CF_PDFTOPDF_BOOKLET_ON,
+  CF_PDFTOPDF_BOOKLET_JUST_SHUFFLE
+};
 
-struct ProcessingParameters {
-ProcessingParameters()
-: jobId(0),numCopies(1),
+struct _cfPDFToPDFProcessingParameters {
+_cfPDFToPDFProcessingParameters()
+: job_id(0),num_copies(1),
     user(0),title(0),
     fitplot(false),
     fillprint(false),  //print-scaling = fill
@@ -20,29 +26,29 @@ ProcessingParameters()
     autoprint(false),
     autofit(false),
     fidelity(false),
-    noOrientation(false),
+    no_orientation(false),
     orientation(ROT_0),normal_landscape(ROT_270),
     paper_is_landscape(false),
     duplex(false),
     border(NONE),
     reverse(false),
 
-    pageLabel(),
-    evenPages(true),oddPages(true),
+    page_label(),
+    even_pages(true),odd_pages(true),
 
     mirror(false),
 
     xpos(CENTER),ypos(CENTER),
 
     collate(false),
-    evenDuplex(false),
+    even_duplex(false),
 
-    booklet(BOOKLET_OFF),bookSignature(-1),
+    booklet(CF_PDFTOPDF_BOOKLET_OFF),book_signature(-1),
 
-    autoRotate(false),
+    auto_rotate(false),
 
-    emitJCL(true),deviceCopies(1),
-    deviceCollate(false),setDuplex(false),
+    emit_jcl(true),device_copies(1),
+    device_collate(false),set_duplex(false),
 
     page_logging(-1)
   {
@@ -54,13 +60,13 @@ ProcessingParameters()
     page.right=page.width-18.0;
 
     // everything
-    inputPageRange.add(1);
-    inputPageRange.finish();
-    pageRange.add(1);
-    pageRange.finish();
+    input_page_ranges.add(1);
+    input_page_ranges.finish();
+    page_ranges.add(1);
+    page_ranges.finish();
   }
 
-  int jobId, numCopies;
+  int job_id, num_copies;
   const char *user, *title; // will stay around
   bool fitplot;
   bool fillprint;   //print-scaling = fill
@@ -68,112 +74,112 @@ ProcessingParameters()
   bool autoprint;   // print-scaling = auto
   bool autofit;     // print-scaling = auto-fit
   bool fidelity;
-  bool noOrientation;
-  PageRect page;
-  Rotation orientation,normal_landscape;  // normal_landscape (i.e. default direction) is e.g. needed for number-up=2
+  bool no_orientation;
+  _cfPDFToPDFPageRect page;
+  pdftopdf_rotation_e orientation,normal_landscape;  // normal_landscape (i.e. default direction) is e.g. needed for number-up=2
   bool paper_is_landscape;
   bool duplex;
-  BorderType border;
-  NupParameters nup;
+  pdftopdf_border_type_e border;
+  _cfPDFToPDFNupParameters nup;
   bool reverse;
 
-  std::string pageLabel;
-  bool evenPages,oddPages;
-  IntervalSet pageRange;
-  IntervalSet inputPageRange;
+  std::string page_label;
+  bool even_pages,odd_pages;
+  _cfPDFToPDFIntervalSet page_ranges;
+  _cfPDFToPDFIntervalSet input_page_ranges;
 
   bool mirror;
 
-  Position xpos,ypos;
+  pdftopdf_position_e xpos,ypos;
 
   bool collate;
 
-  bool evenDuplex; // make number of pages a multiple of 2
+  bool even_duplex; // make number of pages a multiple of 2
 
-  BookletMode booklet;
-  int bookSignature;
+  pdftopdf_booklet_mode_e booklet;
+  int book_signature;
 
-  bool autoRotate;
+  bool auto_rotate;
 
   // ppd/jcl changes
-  bool emitJCL;
-  int deviceCopies;
-  bool deviceCollate;
-  bool setDuplex;
-  // unsetMirror  (always)
+  bool emit_jcl;
+  int device_copies;
+  bool device_collate;
+  bool set_duplex;
 
   int page_logging;
   int copies_to_be_logged;
 
   // helper functions
-  bool withPage(int outno) const; // 1 based
-  bool havePage(int pageno) const; //1 based
+  bool with_page(int outno) const; // 1 based
+  bool have_page(int pageno) const; //1 based
   void dump(pdftopdf_doc_t *doc) const;
 };
 
-#include <stdio.h>
-#include <memory>
+enum pdftopdf_arg_ownership_e {
+  CF_PDFTOPDF_WILL_STAY_ALIVE,
+  CF_PDFTOPDF_MUST_DUPLICATE,
+  CF_PDFTOPDF_TAKE_OWNERSHIP
+};
 
-enum ArgOwnership { WillStayAlive,MustDuplicate,TakeOwnership };
-
-class PDFTOPDF_PageHandle {
+class _cfPDFToPDFPageHandle {
  public:
-  virtual ~PDFTOPDF_PageHandle() {}
-  virtual PageRect getRect() const =0;
+  virtual ~_cfPDFToPDFPageHandle() {}
+  virtual _cfPDFToPDFPageRect get_rect() const =0;
   // fscale:  inverse_scale (from nup, fitplot)
-  virtual void add_border_rect(const PageRect &rect,BorderType border,float fscale) =0;
+  virtual void add_border_rect(const _cfPDFToPDFPageRect &rect,pdftopdf_border_type_e border,float fscale) =0;
   // TODO?! add standalone crop(...) method (not only for subpages)
-  virtual Rotation crop(const PageRect &cropRect,Rotation orientation,Rotation param_orientation,Position xpos,Position ypos,bool scale,bool autorotate,pdftopdf_doc_t *doc) =0;
-  virtual bool is_landscape(Rotation orientation) =0 ;
-  virtual void add_subpage(const std::shared_ptr<PDFTOPDF_PageHandle> &sub,float xpos,float ypos,float scale,const PageRect *crop=NULL) =0;
+  virtual pdftopdf_rotation_e crop(const _cfPDFToPDFPageRect &cropRect,pdftopdf_rotation_e orientation,pdftopdf_rotation_e param_orientation,pdftopdf_position_e xpos,pdftopdf_position_e ypos,bool scale,bool autorotate,pdftopdf_doc_t *doc) =0;
+  virtual bool is_landscape(pdftopdf_rotation_e orientation) =0 ;
+  virtual void add_subpage(const std::shared_ptr<_cfPDFToPDFPageHandle> &sub,float xpos,float ypos,float scale,const _cfPDFToPDFPageRect *crop=NULL) =0;
   virtual void mirror() =0;
-  virtual void rotate(Rotation rot) =0;
-  virtual void add_label(const PageRect &rect, const std::string label) =0;
+  virtual void rotate(pdftopdf_rotation_e rot) =0;
+  virtual void add_label(const _cfPDFToPDFPageRect &rect, const std::string label) =0;
 };
 
 // TODO: ... error output?
-class PDFTOPDF_Processor { // abstract interface
+class _cfPDFToPDFProcessor { // abstract interface
  public:
-  virtual ~PDFTOPDF_Processor() {}
+  virtual ~_cfPDFToPDFProcessor() {}
 
   // TODO: ... qpdf wants password at load time
-  virtual bool loadFile(FILE *f,pdftopdf_doc_t *doc,ArgOwnership take=WillStayAlive,int flatten_forms=1) =0;
-  virtual bool loadFilename(const char *name,pdftopdf_doc_t *doc,int flatten_forms=1) =0;
+  virtual bool load_file(FILE *f,pdftopdf_doc_t *doc,pdftopdf_arg_ownership_e take=CF_PDFTOPDF_WILL_STAY_ALIVE,int flatten_forms=1) =0;
+  virtual bool load_filename(const char *name,pdftopdf_doc_t *doc,int flatten_forms=1) =0;
 
   // TODO? virtual bool may_modify/may_print/?
   virtual bool check_print_permissions(pdftopdf_doc_t *doc) =0;
 
-  virtual std::vector<std::shared_ptr<PDFTOPDF_PageHandle>> get_pages(pdftopdf_doc_t *doc) =0; // shared_ptr because of type erasure (deleter)
+  virtual std::vector<std::shared_ptr<_cfPDFToPDFPageHandle>> get_pages(pdftopdf_doc_t *doc) =0; // shared_ptr because of type erasure (deleter)
 
-  virtual std::shared_ptr<PDFTOPDF_PageHandle> new_page(float width,float height,pdftopdf_doc_t *doc) =0;
+  virtual std::shared_ptr<_cfPDFToPDFPageHandle> new_page(float width,float height,pdftopdf_doc_t *doc) =0;
 
-  virtual void add_page(std::shared_ptr<PDFTOPDF_PageHandle> page,bool front) =0; // at back/front -- either from get_pages() or new_page()+add_subpage()-calls  (or [also allowed]: empty)
+  virtual void add_page(std::shared_ptr<_cfPDFToPDFPageHandle> page,bool front) =0; // at back/front -- either from get_pages() or new_page()+add_subpage()-calls  (or [also allowed]: empty)
 
-  //  void remove_page(std::shared_ptr<PDFTOPDF_PageHandle> ph);  // not needed: we construct from scratch, at least conceptually.
+  //  void remove_page(std::shared_ptr<_cfPDFToPDFPageHandle> ph);  // not needed: we construct from scratch, at least conceptually.
 
   virtual void multiply(int copies,bool collate) =0;
 
-  virtual void autoRotateAll(bool dst_lscape,Rotation normal_landscape) =0; // TODO elsewhere?!
-  virtual void addCM(const char *defaulticc,const char *outputicc) =0;
+  virtual void auto_rotate_all(bool dst_lscape,pdftopdf_rotation_e normal_landscape) =0; // TODO elsewhere?!
+  virtual void add_cm(const char *defaulticc,const char *outputicc) =0;
 
-  virtual void setComments(const std::vector<std::string> &comments) =0;
+  virtual void set_comments(const std::vector<std::string> &comments) =0;
 
-  virtual void emitFile(FILE *dst,pdftopdf_doc_t *doc,ArgOwnership take=WillStayAlive) =0;
-  virtual void emitFilename(const char *name,pdftopdf_doc_t *doc) =0; // NULL -> stdout
+  virtual void emit_file(FILE *dst,pdftopdf_doc_t *doc,pdftopdf_arg_ownership_e take=CF_PDFTOPDF_WILL_STAY_ALIVE) =0;
+  virtual void emit_filename(const char *name,pdftopdf_doc_t *doc) =0; // NULL -> stdout
 
-  virtual bool hasAcroForm() =0;
+  virtual bool has_acro_form() =0;
 };
 
-class PDFTOPDF_Factory {
+class _cfPDFToPDFFactory {
  public:
   // never NULL, but may throw.
-  static PDFTOPDF_Processor *processor();
+  static _cfPDFToPDFProcessor *processor();
 };
 
-//bool checkBookletSignature(int signature) { return (signature%4==0); }
-std::vector<int> bookletShuffle(int numPages,int signature=-1);
+//bool _cfPDFToPDFCheckBookletSignature(int signature) { return (signature%4==0); }
+std::vector<int> _cfPDFToPDFBookletShuffle(int numPages,int signature=-1);
 
 // This is all we want:
-bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param,pdftopdf_doc_t *doc);
+bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParameters &param,pdftopdf_doc_t *doc);
 
 #endif
