@@ -1,8 +1,8 @@
 #include "sfnt.h"
-#include "sfnt_int.h"
+#include "sfnt-int-private.h"
 #include "embed.h"
 #include "config.h"
-#include "embed_sfnt_int.h"
+#include "embed-sfnt-int-private.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

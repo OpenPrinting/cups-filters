@@ -87,6 +87,6 @@ static inline unsigned short emb_get(EMB_PARAMS *emb,int unicode) // {{{ gid
 }
 // }}}
 
-#include "embed_pdf.h"
+#include "embed-pdf.h"
 
 #endif

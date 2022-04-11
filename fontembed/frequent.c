@@ -1,4 +1,4 @@
-#include "frequent.h"
+#include "frequent-private.h"
 #include <assert.h>
 #include <stdlib.h>
 

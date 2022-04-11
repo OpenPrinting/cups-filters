@@ -1,12 +1,12 @@
 #include "embed.h"
-#include "embed_pdf.h" // already included fron embed.h ...
-#include "embed_pdf_int.h"
-#include "embed_sfnt_int.h"
+#include "embed-pdf.h" // already included fron embed.h ...
+#include "embed-pdf-int-private.h"
+#include "embed-sfnt-int-private.h"
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-#include "frequent.h"
+#include "frequent-private.h"
 
 // NOTE: these must be in sync with the EMB_FORMAT enum
 static const char *emb_pdf_font_subtype[][2]={ // {{{ (output_format,multibyte)
@@ -352,7 +352,7 @@ EMB_PDF_FONTWIDTHS *emb_pdf_fontwidths(EMB_PARAMS *emb) // {{{
 // }}}
 
 /*** PDF out stuff ***/
-#include "dynstring.h"
+#include "dynstring-private.h"
 
 #define NEXT /* {{{ */ \
   if ( (len<0)||(len>=size) ) { \

@@ -1,8 +1,8 @@
 #include "embed.h"
-#include "embed_pdf_int.h"
-#include "embed_sfnt_int.h"
+#include "embed-pdf-int-private.h"
+#include "embed-sfnt-int-private.h"
 #include "sfnt.h"
-#include "sfnt_int.h"
+#include "sfnt-int-private.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -312,10 +312,10 @@ EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_cidwidths(OTF_FILE *otf,const BITSET glyphs)
 
 /*** PS stuff ***/
 
-#include "dynstring.h"
+#include "dynstring-private.h"
 
 const char *aglfn13(unsigned short uni); // aglfn13.c
-#include "macroman.h"
+#include "macroman-private.h"
 
 // TODO? optimize pascal string skipping? (create index)
 // NOTE: might return a statically allocated string

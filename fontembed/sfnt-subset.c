@@ -1,5 +1,5 @@
 #include "sfnt.h"
-#include "sfnt_int.h"
+#include "sfnt-int-private.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

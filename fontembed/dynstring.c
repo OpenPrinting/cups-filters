@@ -1,4 +1,4 @@
-#include "dynstring.h"
+#include "dynstring-private.h"
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>

@@ -4,7 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
-#include "sfnt_int.h"
+#include "sfnt-int-private.h"
 
 // TODO?
 // get_SHORT(head+48) // fontDirectionHint

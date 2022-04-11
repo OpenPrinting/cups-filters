@@ -1,5 +1,5 @@
 #include "embed.h"
-#include "embed_sfnt_int.h"
+#include "embed-sfnt-int-private.h"
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>

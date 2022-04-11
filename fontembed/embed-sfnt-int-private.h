@@ -2,7 +2,7 @@
 #define EMBED_SFNT_INT_H
 
 #include "sfnt.h"
-#include "embed_pdf.h"
+#include "embed-pdf.h"
 
 EMB_RIGHT_TYPE emb_otf_get_rights(OTF_FILE *otf);
 

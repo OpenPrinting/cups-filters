@@ -333,6 +333,7 @@ pkgfontembedincludedir = $(includedir)/fontembed
 pkgfontembedinclude_DATA = \
 	fontembed/bitset.h \
 	fontembed/embed.h \
+	fontembed/embed-pdf.h \
 	fontembed/fontfile.h \
 	fontembed/iofn.h \
 	fontembed/sfnt.h
@@ -340,47 +341,42 @@ pkgfontembedinclude_DATA = \
 lib_LTLIBRARIES += libfontembed.la
 
 check_PROGRAMS += \
-	test_analyze \
-	test_pdf \
-	test_ps
+	test-analyze \
+	test-pdf \
+	test-ps
 TESTS += \
-	test_analyze \
-	test_pdf \
-	test_ps
+	test-analyze \
+	test-pdf \
+	test-ps
 
 libfontembed_la_SOURCES = \
 	fontembed/aglfn13.c \
-	fontembed/bitset.h \
 	fontembed/dynstring.c \
-	fontembed/dynstring.h \
+	fontembed/dynstring-private.h \
 	fontembed/embed.c \
-	fontembed/embed.h \
-	fontembed/embed_sfnt.c \
-	fontembed/embed_sfnt_int.h \
-	fontembed/embed_pdf.c \
-	fontembed/embed_pdf.h \
-	fontembed/embed_pdf_int.h \
+	fontembed/embed-sfnt.c \
+	fontembed/embed-sfnt-int-private.h \
+	fontembed/embed-pdf.c \
+	fontembed/embed-pdf-int-private.h \
 	fontembed/fontfile.c \
-	fontembed/fontfile.h \
 	fontembed/frequent.c \
-	fontembed/frequent.h \
-	fontembed/iofn.h \
-	fontembed/macroman.h \
+	fontembed/frequent-private.h \
+	fontembed/macroman-private.h \
 	fontembed/sfnt.c \
-	fontembed/sfnt.h \
-	fontembed/sfnt_int.h \
-	fontembed/sfnt_subset.c
+	fontembed/sfnt-int-private.h \
+	fontembed/sfnt-subset.c \
+	$(pkgfontembedinclude_DATA)
 libfontembed_la_LDFLAGS = \
 	-no-undefined \
 	-version-info 1
 
-test_analyze_SOURCES = fontembed/test_analyze.c
+test_analyze_SOURCES = fontembed/test-analyze.c
 test_analyze_LDADD = libfontembed.la
 
-test_pdf_SOURCES = fontembed/test_pdf.c
+test_pdf_SOURCES = fontembed/test-pdf.c
 test_pdf_LDADD = libfontembed.la
 
-test_ps_SOURCES = fontembed/test_ps.c
+test_ps_SOURCES = fontembed/test-ps.c
 test_ps_LDADD = libfontembed.la
 
 EXTRA_DIST += \
