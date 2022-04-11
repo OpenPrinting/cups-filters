@@ -1,7 +1,7 @@
 #ifndef _CUPS_FILTERS_PDFTOPDF_QPDF_PDFTOPDF_PROCESSOR_H
 #define _CUPS_FILTERS_PDFTOPDF_QPDF_PDFTOPDF_PROCESSOR_H
 
-#include "pdftopdf_processor.h"
+#include "pdftopdf-processor-private.h"
 #include <qpdf/QPDF.hh>
 
 class _cfPDFToPDFQPDFPageHandle : public _cfPDFToPDFPageHandle {

@@ -1,4 +1,4 @@
-#include "qpdf_cm.h"
+#include "qpdf-cm-private.h"
 #include <stdio.h>
 #include <assert.h>
 

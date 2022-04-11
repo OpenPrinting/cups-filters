@@ -1,4 +1,4 @@
-#include "nup.h"
+#include "nup-private.h"
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>

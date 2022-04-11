@@ -1,4 +1,4 @@
-#include "qpdf_pdftopdf.h"
+#include "qpdf-pdftopdf-private.h"
 #include <assert.h>
 #include <stdexcept>
 #include <qpdf/QUtil.hh>
@@ -68,7 +68,7 @@ QPDFObjectHandle _cfPDFToPDFMakeRotate(pdftopdf_rotation_e rot) // {{{
 }
 // }}}
 
-#include "qpdf_tools.h"
+#include "qpdf-tools-private.h"
 
 QPDFObjectHandle _cfPDFToPDFGetRectAsBox(const _cfPDFToPDFPageRect &rect) // {{{
 {

@@ -1,10 +1,10 @@
 #ifndef _CUPS_FILTERS_PDFTOPDF_PDFTOPDF_PROCESSOR_H
 #define _CUPS_FILTERS_PDFTOPDF_PDFTOPDF_PROCESSOR_H
 
-#include "pptypes.h"
-#include "nup.h"
-#include "pdftopdf.h"
-#include "intervalset.h"
+#include "pptypes-private.h"
+#include "nup-private.h"
+#include "pdftopdf-private.h"
+#include "intervalset-private.h"
 #include <vector>
 #include <string>
 #include <memory>

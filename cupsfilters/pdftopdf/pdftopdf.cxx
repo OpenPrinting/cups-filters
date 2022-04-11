@@ -21,11 +21,11 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include "pdftopdf.h"
+#include "pdftopdf-private.h"
 #include "cupsfilters/raster.h"
 #include "cupsfilters/ppdgenerator.h"
-#include "pdftopdf_processor.h"
-#include "pdftopdf_jcl.h"
+#include "pdftopdf-processor-private.h"
+#include "pdftopdf-jcl-private.h"
 
 #include <stdarg.h>
 

@@ -1,4 +1,4 @@
-#include "intervalset.h"
+#include "intervalset-private.h"
 #include <stdio.h>
 #include <assert.h>
 #include <limits>

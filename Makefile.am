@@ -471,27 +471,27 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pclmtoraster.cxx \
 	cupsfilters/pdf.cxx \
 	cupsfilters/pdftopdf/pdftopdf.cxx \
-	cupsfilters/pdftopdf/pdftopdf.h \
-	cupsfilters/pdftopdf/pdftopdf_jcl.cxx \
-	cupsfilters/pdftopdf/pdftopdf_jcl.h \
-	cupsfilters/pdftopdf/pdftopdf_processor.cxx \
-	cupsfilters/pdftopdf/pdftopdf_processor.h \
-	cupsfilters/pdftopdf/qpdf_pdftopdf_processor.cxx \
-	cupsfilters/pdftopdf/qpdf_pdftopdf_processor.h \
+	cupsfilters/pdftopdf/pdftopdf-private.h \
+	cupsfilters/pdftopdf/pdftopdf-jcl.cxx \
+	cupsfilters/pdftopdf/pdftopdf-jcl-private.h \
+	cupsfilters/pdftopdf/pdftopdf-processor.cxx \
+	cupsfilters/pdftopdf/pdftopdf-processor-private.h \
+	cupsfilters/pdftopdf/qpdf-pdftopdf-processor.cxx \
+	cupsfilters/pdftopdf/qpdf-pdftopdf-processor-private.h \
 	cupsfilters/pdftopdf/pptypes.cxx \
-	cupsfilters/pdftopdf/pptypes.h \
+	cupsfilters/pdftopdf/pptypes-private.h \
 	cupsfilters/pdftopdf/nup.cxx \
-	cupsfilters/pdftopdf/nup.h \
+	cupsfilters/pdftopdf/nup-private.h \
 	cupsfilters/pdftopdf/intervalset.cxx \
-	cupsfilters/pdftopdf/intervalset.h \
-	cupsfilters/pdftopdf/qpdf_tools.cxx \
-	cupsfilters/pdftopdf/qpdf_tools.h \
-	cupsfilters/pdftopdf/qpdf_xobject.cxx \
-	cupsfilters/pdftopdf/qpdf_xobject.h \
-	cupsfilters/pdftopdf/qpdf_pdftopdf.cxx \
-	cupsfilters/pdftopdf/qpdf_pdftopdf.h \
-	cupsfilters/pdftopdf/qpdf_cm.cxx \
-	cupsfilters/pdftopdf/qpdf_cm.h \
+	cupsfilters/pdftopdf/intervalset-private.h \
+	cupsfilters/pdftopdf/qpdf-tools.cxx \
+	cupsfilters/pdftopdf/qpdf-tools-private.h \
+	cupsfilters/pdftopdf/qpdf-xobject.cxx \
+	cupsfilters/pdftopdf/qpdf-xobject-private.h \
+	cupsfilters/pdftopdf/qpdf-pdftopdf.cxx \
+	cupsfilters/pdftopdf/qpdf-pdftopdf-private.h \
+	cupsfilters/pdftopdf/qpdf-cm.cxx \
+	cupsfilters/pdftopdf/qpdf-cm-private.h \
 	cupsfilters/pdftops.c \
 	cupsfilters/pdftoraster.cxx \
 	cupsfilters/pdfutils.c \

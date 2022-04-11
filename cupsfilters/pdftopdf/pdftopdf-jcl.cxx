@@ -1,5 +1,5 @@
 #include <ctype.h>
-#include "pdftopdf_processor.h"
+#include "pdftopdf-processor-private.h"
 #include <ppd/ppd.h>
 
 #include <string.h>

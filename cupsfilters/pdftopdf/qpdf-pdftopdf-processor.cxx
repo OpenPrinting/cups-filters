@@ -1,4 +1,4 @@
-#include "qpdf_pdftopdf_processor.h"
+#include "qpdf-pdftopdf-processor-private.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -7,10 +7,10 @@
 #include <qpdf/QUtil.hh>
 #include <qpdf/QPDFPageDocumentHelper.hh>
 #include <qpdf/QPDFAcroFormDocumentHelper.hh>
-#include "qpdf_tools.h"
-#include "qpdf_xobject.h"
-#include "qpdf_pdftopdf.h"
-#include "pdftopdf.h"
+#include "qpdf-tools-private.h"
+#include "qpdf-xobject-private.h"
+#include "qpdf-pdftopdf-private.h"
+#include "pdftopdf-private.h"
 
 // Use: content.append(debug_box(pe.sub,xpos,ypos));
 static std::string debug_box(const _cfPDFToPDFPageRect &box,float xshift,float yshift) // {{{
@@ -667,7 +667,7 @@ void _cfPDFToPDFQPDFProcessor::auto_rotate_all(bool dst_lscape,pdftopdf_rotation
 }
 // }}}
 
-#include "qpdf_cm.h"
+#include "qpdf-cm-private.h"
 
 // TODO
 void _cfPDFToPDFQPDFProcessor::add_cm(const char *defaulticc,const char *outputicc) // {{{

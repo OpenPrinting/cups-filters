@@ -1,11 +1,11 @@
-#include "qpdf_xobject.h"
+#include "qpdf-xobject-private.h"
 //#include <qpdf/Types.h>
 #include <qpdf/QPDF.hh>
 #include <qpdf/Pl_Discard.hh>
 #include <qpdf/Pl_Count.hh>
 #include <qpdf/Pl_Concatenate.hh>
-#include "qpdf_tools.h"
-#include "qpdf_pdftopdf.h"
+#include "qpdf-tools-private.h"
+#include "qpdf-pdftopdf-private.h"
 
 // TODO: need to remove  Struct Parent stuff  (or fix)
 

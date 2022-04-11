@@ -1,7 +1,7 @@
 #ifndef _CUPS_FILTERS_PDFTOPDF_NUP_H_
 #define _CUPS_FILTERS_PDFTOPDF_NUP_H_
 
-#include "pptypes.h"
+#include "pptypes-private.h"
 #include <utility>
 
 // you have to provide this

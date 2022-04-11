@@ -1,7 +1,7 @@
 #ifndef _CUPS_FILTERS_PDFTOPDF_PPTYPES_H_
 #define _CUPS_FILTERS_PDFTOPDF_PPTYPES_H_
 
-#include "pdftopdf.h"
+#include "pdftopdf-private.h"
 #include <cmath> // NAN
 
 // namespace PPTypes {}   TODO?

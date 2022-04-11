@@ -2,7 +2,7 @@
 #define _CUPS_FILTERS_PDFTOPDF_QPDF_PDFTOPDF_H
 
 #include <qpdf/QPDFObjectHandle.hh>
-#include "pptypes.h"
+#include "pptypes-private.h"
 
 // helper functions
 

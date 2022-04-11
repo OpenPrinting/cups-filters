@@ -1,4 +1,4 @@
-#include "qpdf_tools.h"
+#include "qpdf-tools-private.h"
 
 QPDFObjectHandle _cfPDFToPDFGetMediaBox(QPDFObjectHandle page) // {{{
 {

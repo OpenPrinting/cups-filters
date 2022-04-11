@@ -1,5 +1,5 @@
-#include "pdftopdf_processor.h"
-#include "qpdf_pdftopdf_processor.h"
+#include "pdftopdf-processor-private.h"
+#include "qpdf-pdftopdf-processor-private.h"
 #include <stdio.h>
 #include <assert.h>
 #include <numeric>
