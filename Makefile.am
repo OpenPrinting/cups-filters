@@ -470,27 +470,27 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pack.c \
 	cupsfilters/pclmtoraster.cxx \
 	cupsfilters/pdf.cxx \
-	cupsfilters/pdftopdf/pdftopdf.cc \
+	cupsfilters/pdftopdf/pdftopdf.cxx \
 	cupsfilters/pdftopdf/pdftopdf.h \
-	cupsfilters/pdftopdf/pdftopdf_jcl.cc \
+	cupsfilters/pdftopdf/pdftopdf_jcl.cxx \
 	cupsfilters/pdftopdf/pdftopdf_jcl.h \
-	cupsfilters/pdftopdf/pdftopdf_processor.cc \
+	cupsfilters/pdftopdf/pdftopdf_processor.cxx \
 	cupsfilters/pdftopdf/pdftopdf_processor.h \
-	cupsfilters/pdftopdf/qpdf_pdftopdf_processor.cc \
+	cupsfilters/pdftopdf/qpdf_pdftopdf_processor.cxx \
 	cupsfilters/pdftopdf/qpdf_pdftopdf_processor.h \
-	cupsfilters/pdftopdf/pptypes.cc \
+	cupsfilters/pdftopdf/pptypes.cxx \
 	cupsfilters/pdftopdf/pptypes.h \
-	cupsfilters/pdftopdf/nup.cc \
+	cupsfilters/pdftopdf/nup.cxx \
 	cupsfilters/pdftopdf/nup.h \
-	cupsfilters/pdftopdf/intervalset.cc \
+	cupsfilters/pdftopdf/intervalset.cxx \
 	cupsfilters/pdftopdf/intervalset.h \
-	cupsfilters/pdftopdf/qpdf_tools.cc \
+	cupsfilters/pdftopdf/qpdf_tools.cxx \
 	cupsfilters/pdftopdf/qpdf_tools.h \
-	cupsfilters/pdftopdf/qpdf_xobject.cc \
+	cupsfilters/pdftopdf/qpdf_xobject.cxx \
 	cupsfilters/pdftopdf/qpdf_xobject.h \
-	cupsfilters/pdftopdf/qpdf_pdftopdf.cc \
+	cupsfilters/pdftopdf/qpdf_pdftopdf.cxx \
 	cupsfilters/pdftopdf/qpdf_pdftopdf.h \
-	cupsfilters/pdftopdf/qpdf_cm.cc \
+	cupsfilters/pdftopdf/qpdf_cm.cxx \
 	cupsfilters/pdftopdf/qpdf_cm.h \
 	cupsfilters/pdftops.c \
 	cupsfilters/pdftoraster.cxx \
@@ -500,7 +500,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pwgtoraster.c \
 	cupsfilters/raster.c \
 	cupsfilters/rastertops.c \
-	cupsfilters/rastertopdf.cpp \
+	cupsfilters/rastertopdf.cxx \
 	cupsfilters/rastertopwg.c \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
