@@ -1258,18 +1258,18 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 	    (!strcasecmp(attr->value, "true") ||
 	     !strcasecmp(attr->value, "on") ||
 	     !strcasecmp(attr->value, "yes")))
-          /* Color PCL XL printer, according to PPD */
+          /* Color printer, according to PPD */
 	  n = 1;
       } else if (printer_attrs) {
 	if (((ipp_attr =
 	      ippFindAttribute(printer_attrs,
 			       "color-supported", IPP_TAG_ZERO)) != NULL &&
 	     ippGetBoolean(ipp_attr, 0))) {
-	  /* Color PCL XL printer, according to printer attributes */
+	  /* Color printer, according to printer attributes */
 	  n = 1;
 	}
       }
-      if (n == 1)
+      if (n == 1 && h.cupsNumColors > 1)
 	cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfimage24"));
       else
 	cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfimage8"));
