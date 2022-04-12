@@ -1192,7 +1192,10 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 
       /* Ghostscript output device */
 
-      cupsArrayAdd(gs_args, strdup("-sDEVICE=pclm"));
+      if (h.cupsColorSpace == CUPS_CSPACE_SW)
+	cupsArrayAdd(gs_args, strdup("-sDEVICE=pclm8"));
+      else
+	cupsArrayAdd(gs_args, strdup("-sDEVICE=pclm"));
 
       /* Strip/Band Height */
 
@@ -1424,18 +1427,9 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   } else if (!cm_disabled &&
 	     outformat == CF_FILTER_OUT_FORMAT_PCLM) {
     /* Set standard output ICC profile sGray/sRGB */
-    /*if (h.cupsColorSpace == CUPS_CSPACE_SW)
+    if (h.cupsColorSpace == CUPS_CSPACE_SW)
       cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=sgray.icc"));
-      else if (h.cupsColorSpace == CUPS_CSPACE_SRGB)*/
-    /* Note that Ghostscript can only output PCLm with its "pclm" device
-       in 8-bit sRGB, not in grayscale, so we always use the sRGB color
-       profile for now.
-       It is not possible to convert to grayscale by applying the gray
-       color profile on GhostScript's "pclm" device, see
-       https://bugs.ghostscript.com/show_bug.cgi?id=705014
-       We eill need an additional output device, like "pclm8", if we
-       want grayscale PCLM output, see
-       https://bugs.ghostscript.com/show_bug.cgi?id=705035 */
+    else if (h.cupsColorSpace == CUPS_CSPACE_SRGB)
       cupsArrayAdd(gs_args, strdup("-sOutputICCProfile=srgb.icc"));
   }
   else if (!cm_disabled)
