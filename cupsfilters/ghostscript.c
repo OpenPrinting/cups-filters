@@ -110,10 +110,8 @@ add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
   if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
       outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
       outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER) {
-#ifdef HAVE_GHOSTSCRIPT_APPLERASTER
-    if (outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER)
-#endif /* HAVE_GHOSTSCRIPT_APPLERASTER */
-    if (h->MediaClass[0] |= '\0') {
+    if (outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER &&
+	(h->MediaClass[0] |= '\0')) {
       snprintf(tmpstr, sizeof(tmpstr), "-sMediaClass=%s", h->MediaClass);
       cupsArrayAdd(gs_args, strdup(tmpstr));
     }
@@ -1018,15 +1016,10 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 
   /* Ghostscript output device */
   if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
-#ifndef HAVE_GHOSTSCRIPT_APPLERASTER
-      outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ||
-#endif /* !HAVE_GHOSTSCRIPT_APPLERASTER */
       outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=cups"));
-#ifdef HAVE_GHOSTSCRIPT_APPLERASTER
   else if (outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=appleraster"));
-#endif /* HAVE_GHOSTSCRIPT_APPLERASTER */
   else if (outformat == CF_FILTER_OUT_FORMAT_PDF)
     cupsArrayAdd(gs_args, strdup("-sDEVICE=pdfwrite"));
   /* In case of PCL XL, raster-obly PDF, or PCLm output we determine
@@ -1077,14 +1070,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   }
 
   cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
-  cfRasterPrepareHeader(&h, data, outformat,
-#ifdef HAVE_GHOSTSCRIPT_APPLERASTER
-			outformat,
-#else
-			(outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
-			 outformat : CF_FILTER_OUT_FORMAT_CUPS_RASTER),
-#endif /* HAVE_GHOSTSCRIPT_APPLERASTER */
-			0, &cspace);
+  cfRasterPrepareHeader(&h, data, outformat, outformat, 0, &cspace);
 
   /* Special Ghostscript options for raster-only PDF output */
 

@@ -717,8 +717,6 @@ popplermimefiles = \
 	mime/cupsfilters-poppler.convs
 gsmimefiles = \
 	mime/cupsfilters-ghostscript.convs
-gsapplerastermimefiles = \
-	mime/cupsfilters-ghostscript-appleraster.convs
 mutoolmimefiles = \
 	mime/cupsfilters-mupdf.convs
 
@@ -737,9 +735,6 @@ pkgmime_DATA += $(popplermimefiles)
 endif
 if ENABLE_GHOSTSCRIPT
 pkgmime_DATA += $(gsmimefiles)
-if ENABLE_GHOSTSCRIPT_APPLERASTER
-pkgmime_DATA += $(gsapplerastermimefiles)
-endif
 endif
 if ENABLE_MUTOOL
 pkgmime_DATA += $(mutoolmimefiles)
@@ -759,7 +754,6 @@ EXTRA_DIST += \
 	$(individualmimefiles) \
 	$(popplermimefiles) \
 	$(gsmimefiles) \
-	$(gsapplerastermimefiles) \
 	$(mutoolmimefiles) \
 	$(brlmimefiles)
 

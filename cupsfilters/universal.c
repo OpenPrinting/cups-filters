@@ -333,22 +333,6 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
 
-#ifndef HAVE_GHOSTSCRIPT_APPLERASTER
-      if (!strcmp(output, "image/urf"))
-      {
-	filter = malloc(sizeof(cf_filter_filter_in_chain_t));
-	outformat = malloc(sizeof(cf_filter_out_format_t));
-	*outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
-	filter->function = cfFilterRasterToPWG;
-	filter->parameters = outformat;
-	filter->name = "rastertopwg";
-	cupsArrayAdd(filter_chain, filter);
-	if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		     "cfFilterUniversal: Adding %s to chain",
-		     filter->name);
-      }
-      else
-#endif /* !HAVE_GHOSTSCRIPT_APPLERASTER */
       if (strcmp(output_type, "pwg-raster") &&
 	  strcmp(output_type, "vnd.cups-raster") &&
 	  strcmp(output_type, "PCLm"))
@@ -424,22 +408,6 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterUniversal: Adding %s to chain",
 		       filter->name);
-
-#ifndef HAVE_GHOSTSCRIPT_APPLERASTER
-	  if (!strcmp(output, "image/urf"))
-	  {
-	    filter = malloc(sizeof(cf_filter_filter_in_chain_t));
-	    outformat = malloc(sizeof(cf_filter_out_format_t));
-	    *outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
-	    filter->function = cfFilterRasterToPWG;
-	    filter->parameters = outformat;
-	    filter->name = "rastertopwg";
-	    cupsArrayAdd(filter_chain, filter);
-	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
-			 "cfFilterUniversal: Adding %s to chain",
-			 filter->name);
-	  }
-#endif /* !HAVE_GHOSTSCRIPT_APPLERASTER */
 	}
 	else if(!strcmp(output, "application/postscript") ||
 		!strcmp(output, "application/vnd.cups-postscript"))

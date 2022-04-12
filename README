@@ -35,7 +35,14 @@ INTRODUCTION
     fontconfig, liblcms (liblcms2 recommended), libavahi-common,
     libavahi-client, libdbus, and glib are needed. It is highly
     recommended, especially if non-PDF printers are used, to have at
-    least one of Ghostscript, Poppler, or MuPDF.
+    least one of Ghostscript (preferred), Poppler, or MuPDF.
+
+    If Ghostscript is used (via the "gsto..." or the "universal" CUPS
+    filters), Ghostscript 9.56.0 is required and it has to be built at
+    least with the "pdfwrite", "ps2write", "cups", "pwgraster",
+    "appleraster", "pclm", "pclm8", "pdfimage24", "pdfimage8",
+    "pxlcolor", and "pxlmono" output devices. libcups of CUPS 2.2.2 or
+    newer is required to buid Ghostscript this way.
 
     The Poppler-based pdftoraster filter needs a C++ compiler which
     supports C++11 and Poppler being built with the "./configure"
