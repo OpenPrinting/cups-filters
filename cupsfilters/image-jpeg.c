@@ -19,10 +19,12 @@
  */
 
 #include "image-private.h"
+#include <libexif/exif-data.h>
 
 #ifdef HAVE_LIBJPEG
 #  include <jpeglib.h>	/* JPEG/JFIF image definitions */
 
+#define JPEG_APP0 0xE0 /* APP0 marker code */
 
 /*
  * '_cfImageReadJPEG()' - Read a JPEG image file.
@@ -133,8 +135,18 @@ _cfImageReadJPEG(
 
   img->xsize      = cinfo.output_width;
   img->ysize      = cinfo.output_height;
+  
+/*
+    scan image file for exif data
+    */
 
-  if (cinfo.X_density > 0 && cinfo.Y_density > 0 && cinfo.density_unit > 0)
+  int temp = _cupsImageReadEXIF(img, fp);
+
+  /* 
+    check headers only if EXIF contains no info about ppi
+    */
+
+  if (temp != 1 && cinfo.X_density > 0 && cinfo.Y_density > 0 && cinfo.density_unit > 0)
   {
     if (cinfo.density_unit == 1)
     {

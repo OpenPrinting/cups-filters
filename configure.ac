@@ -309,6 +309,13 @@ AS_IF([test x"$with_tiff" != "xno"], [
 # Check for modules needed by utils/
 # ==================================
 
+# including EXIF library
+EXIF_LIBS="-lexif"
+EXIF_CFLAGS="-D_REENTRANT"
+
+AC_SUBST(EXIF_LIBS)
+AC_SUBST(EXIF_CFLAGS)
+
 dnl Avahi for cups-browsed
 AVAHI_LIBS=""
 AVAHI_CFLAGS=""

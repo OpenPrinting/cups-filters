@@ -19,6 +19,7 @@
  */
 
 #include "image-private.h"
+#include <libexif/exif-data.h>
 
 #if defined(HAVE_LIBPNG) && defined(HAVE_LIBZ)
 #  include <png.h>	/* Portable Network Graphics (PNG) definitions */
@@ -115,7 +116,18 @@ _cfImageReadPNG(
   img->xsize = width;
   img->ysize = height;
 
-  if ((xppm = png_get_x_pixels_per_meter(pp, info)) != 0 &&
+    
+/*
+    scan image file for exif data
+    */
+
+  int temp = _cupsImageReadEXIF(img, fp);
+
+  /* 
+    check headers only if EXIF contains no info about ppi
+    */
+
+  if (temp != 1 && (xppm = png_get_x_pixels_per_meter(pp, info)) != 0 &&
       (yppm = png_get_y_pixels_per_meter(pp, info)) != 0)
   {
     img->xppi = (int)((float)xppm * 0.0254);

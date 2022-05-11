@@ -140,7 +140,17 @@ _cfImageReadTIFF(
   * Get the image resolution...
   */
 
-  if (TIFFGetField(tif, TIFFTAG_XRESOLUTION, &xres) &&
+   /*
+    scan image file for exif data
+    */
+
+  int temp = _cupsImageReadEXIF(img, fp);
+
+  /* 
+    check headers only if EXIF contains no info about ppi
+    */
+
+  if (temp != 1 && TIFFGetField(tif, TIFFTAG_XRESOLUTION, &xres) &&
       TIFFGetField(tif, TIFFTAG_YRESOLUTION, &yres) &&
       TIFFGetField(tif, TIFFTAG_RESOLUTIONUNIT, &resunit))
   {
@@ -171,6 +181,7 @@ _cfImageReadTIFF(
     DEBUG_printf(("DEBUG: Stored resolution = %dx%d PPI\n",
 		  img->xppi, img->yppi));
   }
+
 
  /*
   * See if the image has an alpha channel...
