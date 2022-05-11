@@ -210,7 +210,7 @@ extern cf_izoom_t	*_cfImageZoomNew(cf_image_t *img, int xc0, int yc0,
 					 int ysize, int rotated,
 					 cf_iztype_t type);
 int		_cupsImageReadEXIF(cf_image_t *img, FILE *fp);
-static void trim_spaces(char *buf);
+void trim_spaces(char *buf);
 
 #endif /* !_CUPS_IMAGE_PRIVATE_H_ */
 

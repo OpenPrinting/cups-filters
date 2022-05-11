@@ -879,7 +879,7 @@ get_tile(cf_image_t *img,		/* I - Image */
   helper function required by EXIF read function
   */
 
-static void trim_spaces(char *buf)
+void trim_spaces(char *buf)
 {
   char *s = buf - 1;
   for (; *buf; ++buf)
@@ -909,10 +909,6 @@ char *findBytes(FILE *fp, int *size)
   long int res = ftell(fp);
 
   buf = (char *)malloc(res * sizeof(char) + 1);
-
-  int pos = 0;
-  int c;
-
   fseek(fp, 0, SEEK_SET);
 
   fread(buf, res, 1, fp);
