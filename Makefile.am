@@ -974,11 +974,9 @@ imagetopdf_SOURCES = \
 	filter/imagetopdf.c
 imagetopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	$(EXIF_CFLAGS) \
 	-I$(srcdir)/cupsfilters/
 imagetopdf_LDADD = \
 	$(CUPS_LIBS) \
-	$(EXIF_LIBS) \
 	libcupsfilters.la
 
 imagetops_SOURCES = \
@@ -1193,7 +1191,6 @@ cups_browsed_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	$(AVAHI_CFLAGS) \
 	$(AVAHI_GLIB_CFLAGS) \
-	$(EXIF_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GIO_CFLAGS) \
 	$(GIO_UNIX_CFLAGS)
@@ -1204,7 +1201,6 @@ cups_browsed_LDADD = \
 	$(CUPS_LIBS) \
 	$(AVAHI_LIBS) \
 	$(AVAHI_GLIB_LIBS) \
-	$(EXIF_LIBS) \
 	$(GLIB_LIBS) \
 	$(GIO_LIBS) \
 	$(GIO_UNIX_LIBS)

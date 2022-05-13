@@ -32,8 +32,6 @@
 #  endif /* WIN32 */
 #  include <errno.h>
 #  include <math.h>	
-#  include <libexif/exif-data.h>
-
 
 /*
  * Constants...
@@ -209,8 +207,10 @@ extern cf_izoom_t	*_cfImageZoomNew(cf_image_t *img, int xc0, int yc0,
 					 int xc1, int yc1, int xsize,
 					 int ysize, int rotated,
 					 cf_iztype_t type);
+
+#ifdef HAVE_EXIF
 int		_cupsImageReadEXIF(cf_image_t *img, FILE *fp);
-void trim_spaces(char *buf);
+#endif
 
 #endif /* !_CUPS_IMAGE_PRIVATE_H_ */
 
