@@ -47,7 +47,7 @@
 static int	flush_tile(cf_image_t *img);
 static cf_ib_t	*get_tile(cf_image_t *img, int x, int y);
 static void trim_spaces(char *buf);
-static char *find_bytes(FILE *fp, int *size)
+static char *find_bytes(FILE *fp, int *size);
 
 /*
  * 'cfImageClose()' - Close an image file.
@@ -932,7 +932,7 @@ int _cupsImageReadEXIF(cf_image_t *img, FILE *fp)
 
   int bufSize = 0;
 
-  char *buf = findBytes(fp, &bufSize);
+  char *buf = find_bytes(fp, &bufSize);
 
   ExifData *ed = exif_data_new_from_data(buf, bufSize);
 

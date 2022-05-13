@@ -33,6 +33,10 @@
 #  include <errno.h>
 #  include <math.h>	
 
+#ifdef HAVE_EXIF
+#	include <libexif/exif-data.h>
+#endif
+
 /*
  * Constants...
  */
