@@ -19,7 +19,6 @@
  */
 
 #include "image-private.h"
-#include <libexif/exif-data.h>
 
 #ifdef HAVE_LIBJPEG
 #  include <jpeglib.h>	/* JPEG/JFIF image definitions */
@@ -136,12 +135,15 @@ _cfImageReadJPEG(
   img->xsize      = cinfo.output_width;
   img->ysize      = cinfo.output_height;
   
-/*
+  int temp = -1;
+
+#ifdef HAVE_EXIF
+   /*
     scan image file for exif data
     */
 
-  int temp = _cupsImageReadEXIF(img, fp);
-
+  temp = _cupsImageReadEXIF(img, fp);
+#endif
   /* 
     check headers only if EXIF contains no info about ppi
     */

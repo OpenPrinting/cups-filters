@@ -29,6 +29,7 @@
  *   get_tile()             - Get a cached tile.
  *   _cupsImageReadEXIF()   - to read exif metadata of images
  *   trim_spaces()          - helper function to extract results from string returned by exif library functions
+ *   find_bytes()           - creates character array from image file, to make use in exif library functions
  */
 
 /*
@@ -45,7 +46,8 @@
 
 static int	flush_tile(cf_image_t *img);
 static cf_ib_t	*get_tile(cf_image_t *img, int x, int y);
-
+static void trim_spaces(char *buf);
+static char *find_bytes(FILE *fp, int *size)
 
 /*
  * 'cfImageClose()' - Close an image file.
@@ -875,11 +877,12 @@ get_tile(cf_image_t *img,		/* I - Image */
   return (ic->pixels + bpp * (y * CF_TILE_SIZE + x));
 }
 
+#ifdef HAVE_EXIF
 /*
   helper function required by EXIF read function
   */
 
-void trim_spaces(char *buf)
+static void trim_spaces(char *buf)
 {
   char *s = buf - 1;
   for (; *buf; ++buf)
@@ -898,7 +901,7 @@ void trim_spaces(char *buf)
   helper function to extract bytes from image files
   */
 
-char *findBytes(FILE *fp, int *size)
+static char *find_bytes(FILE *fp, int *size)
 {
   char *buf;
 
@@ -992,3 +995,4 @@ int _cupsImageReadEXIF(cf_image_t *img, FILE *fp)
 
   return 1;
 }
+#endif
