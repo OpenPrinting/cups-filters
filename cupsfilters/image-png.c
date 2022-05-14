@@ -115,7 +115,21 @@ _cupsImageReadPNG(
   img->xsize = width;
   img->ysize = height;
 
-  if ((xppm = png_get_x_pixels_per_meter(pp, info)) != 0 &&
+  
+  int temp = -1;
+
+#ifdef HAVE_EXIF
+   /*
+    scan image file for exif data
+    */
+
+  temp = _cupsImageReadEXIF(img, fp);
+#endif
+  /* 
+    check headers only if EXIF contains no info about ppi
+    */
+
+  if (temp != 1 && (xppm = png_get_x_pixels_per_meter(pp, info)) != 0 &&
       (yppm = png_get_y_pixels_per_meter(pp, info)) != 0)
   {
     img->xppi = (int)((float)xppm * 0.0254);

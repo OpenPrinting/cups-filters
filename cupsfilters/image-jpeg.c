@@ -23,6 +23,7 @@
 #ifdef HAVE_LIBJPEG
 #  include <jpeglib.h>	/* JPEG/JFIF image definitions */
 
+#define JPEG_APP0 0xE0 /* APP0 marker code */
 
 /*
  * '_cupsImageReadJPEG()' - Read a JPEG image file.
@@ -133,8 +134,21 @@ _cupsImageReadJPEG(
 
   img->xsize      = cinfo.output_width;
   img->ysize      = cinfo.output_height;
+  
+  int temp = -1;
 
-  if (cinfo.X_density > 0 && cinfo.Y_density > 0 && cinfo.density_unit > 0)
+#ifdef HAVE_EXIF
+   /*
+    scan image file for exif data
+    */
+
+  temp = _cupsImageReadEXIF(img, fp);
+#endif
+  /* 
+    check headers only if EXIF contains no info about ppi
+    */
+
+  if (temp != 1 && cinfo.X_density > 0 && cinfo.Y_density > 0 && cinfo.density_unit > 0)
   {
     if (cinfo.density_unit == 1)
     {
