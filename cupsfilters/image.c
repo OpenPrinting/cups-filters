@@ -48,7 +48,7 @@
 static int		flush_tile(cups_image_t *img);
 static cups_ib_t	*get_tile(cups_image_t *img, int x, int y);
 static void             trim_spaces(char *buf);
-static char             *find_bytes(FILE *fp, int *size);
+static unsigned char    *find_bytes(FILE *fp, long int *size);
 
 
 /*
@@ -876,9 +876,9 @@ static void trim_spaces(char *buf)
   helper function to extract bytes from image files
   */
 
-static char *find_bytes(FILE *fp, int *size)
+static unsigned char *find_bytes(FILE *fp, long int *size)
 {
-  char *buf;
+  unsigned char *buf;
 
   long int originalOffset = ftell(fp);
   fseek(fp, 0L, SEEK_END);
@@ -886,13 +886,19 @@ static char *find_bytes(FILE *fp, int *size)
   // calculating the size of the file
   long int res = ftell(fp);
 
-  buf = (char *)malloc(res * sizeof(char) + 1);
+  buf = (unsigned char *)malloc(res * sizeof(unsigned char) + 1);
   fseek(fp, 0, SEEK_SET);
 
-  fread(buf, res, 1, fp);
+  if (fread(buf, 1, res, fp) < res)
+  {
+    free(buf);
+    buf = NULL;
+    *size = 0;
+  }
+  else
+    *size = res + 1;
 
   fseek(fp, originalOffset, SEEK_SET);
-  *size = res + 1;
 
   return buf;
 }
@@ -905,13 +911,14 @@ int _cupsImageReadEXIF(cf_image_t *img, FILE *fp)
     return -1;
   }
 
-  int bufSize = 0;
+  long int bufSize = 0;
 
-  char *buf = find_bytes(fp, &bufSize);
+  unsigned char *buf = find_bytes(fp, &bufSize);
 
-  ExifData *ed = exif_data_new_from_data(buf, bufSize);
+  ExifData *ed = NULL;
 
-  if (ed == NULL)
+  if (buf == NULL || bufSize <= 0 ||
+      (ed = exif_data_new_from_data(buf, bufSize)) == NULL)
   {
     DEBUG_printf(("DEBUG: No EXIF data found"));
     return 2;
@@ -946,6 +953,7 @@ int _cupsImageReadEXIF(cf_image_t *img, FILE *fp)
       img->xppi = xRes;
     }
     else{
+      free(buf);
       return 2;
     }
   }
@@ -964,10 +972,12 @@ int _cupsImageReadEXIF(cf_image_t *img, FILE *fp)
       img->yppi = yRes;
     }
     else{
+      free(buf);
       return 2;
     }
   }
 
+  free(buf);
   return 1;
 }
 #endif
