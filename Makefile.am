@@ -517,6 +517,7 @@ libcupsfilters_la_LIBADD = \
 	$(LCMS_LIBS) \
 	$(LIBQPDF_LIBS) \
 	$(LIBJPEG_LIBS) \
+	$(EXIF_LIBS) \
 	$(LIBPNG_LIBS) \
 	$(TIFF_LIBS) \
 	$(POPPLER_LIBS) \
@@ -529,6 +530,7 @@ libcupsfilters_la_CFLAGS = \
 	$(LCMS_CFLAGS) \
 	$(LIBQPDF_CFLAGS) \
 	$(LIBJPEG_CFLAGS) \
+	$(EXIF_CFLAGS) \
 	$(LIBPNG_CFLAGS) \
 	$(TIFF_CFLAGS)
 libcupsfilters_la_LDFLAGS = \

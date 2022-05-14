@@ -309,6 +309,32 @@ AS_IF([test x"$with_tiff" != "xno"], [
 # Check for modules needed by utils/
 # ==================================
 
+dnl including EXIF library
+EXIF_LIBS=""
+EXIF_CFLAGS=""
+
+AC_ARG_ENABLE([exif],
+	[AS_HELP_STRING([--disable-exif], [Disable exif metadata readout from images])],
+	[enable_exif="$enableval"],
+	[enable_exif=yes]
+)
+AM_CONDITIONAL([ENABLE_EXIF], [test "x$enable_exif" != "xno"])
+
+AC_ARG_WITH(exif-libs,
+	[AS_HELP_STRING([--with-exif-libs], [Set directory for exif library.])],
+	EXIF_LIBS="-L$withval $EXIF_LIBS",)
+AC_ARG_WITH(exif-includes,
+	[AS_HELP_STRING([--with-exif-includes], [Set directory for exif includes.])],
+	EXIF_CFLAGS="-I$withval $EXIF_CFLAGS",)
+
+if test "x$enable_exif" != xno; then
+	PKG_CHECK_MODULES(EXIF, libexif,
+		[AC_DEFINE(HAVE_EXIF, [], [Define if you have the libexif library])])
+fi
+
+AC_SUBST(EXIF_LIBS)
+AC_SUBST(EXIF_CFLAGS)
+
 dnl Avahi for cups-browsed
 AVAHI_LIBS=""
 AVAHI_CFLAGS=""
@@ -976,6 +1002,7 @@ Build configuration:
 	ippfind-path:    ${with_ippfind_path}
 	imagefilters:    ${enable_imagefilters}
 	jpeg:            ${with_jpeg}
+	exif:            ${enable_exif}
 	pdftocairo-path: ${with_pdftocairo_path}
 	pdftops:         ${with_pdftops}
 	pdftops-path:    ${with_pdftops_path}

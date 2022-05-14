@@ -27,11 +27,15 @@
  *   cfImageCrop()          - Crop an image.
  *   flush_tile()           - Flush the least-recently-used tile in the cache.
  *   get_tile()             - Get a cached tile.
+ *   _cupsImageReadEXIF()   - to read exif metadata of images
+ *   trim_spaces()          - helper function to extract results from string returned by exif library functions
+ *   find_bytes()           - creates character array from image file, to make use in exif library functions
  */
 
 /*
  * Include necessary headers...
  */
+
 
 #include "image-private.h"
 
@@ -42,7 +46,8 @@
 
 static int	flush_tile(cf_image_t *img);
 static cf_ib_t	*get_tile(cf_image_t *img, int x, int y);
-
+static void trim_spaces(char *buf);
+static char *find_bytes(FILE *fp, int *size);
 
 /*
  * 'cfImageClose()' - Close an image file.
@@ -871,3 +876,123 @@ get_tile(cf_image_t *img,		/* I - Image */
 
   return (ic->pixels + bpp * (y * CF_TILE_SIZE + x));
 }
+
+#ifdef HAVE_EXIF
+/*
+  helper function required by EXIF read function
+  */
+
+static void trim_spaces(char *buf)
+{
+  char *s = buf - 1;
+  for (; *buf; ++buf)
+  {
+    if (*buf != ' ')
+      s = buf;
+  }
+  *++s = 0; /* null terminate the string on the first of the final spaces */
+}
+
+/*
+  implementation for EXIF read function
+  */
+
+/*
+  helper function to extract bytes from image files
+  */
+
+static char *find_bytes(FILE *fp, int *size)
+{
+  char *buf;
+
+  long int originalOffset = ftell(fp);
+  fseek(fp, 0L, SEEK_END);
+
+  // calculating the size of the file
+  long int res = ftell(fp);
+
+  buf = (char *)malloc(res * sizeof(char) + 1);
+  fseek(fp, 0, SEEK_SET);
+
+  fread(buf, res, 1, fp);
+
+  fseek(fp, originalOffset, SEEK_SET);
+  *size = res + 1;
+
+  return buf;
+}
+
+int _cupsImageReadEXIF(cf_image_t *img, FILE *fp)
+{
+
+  if (fp == NULL)
+  {
+    return -1;
+  }
+
+  int bufSize = 0;
+
+  char *buf = find_bytes(fp, &bufSize);
+
+  ExifData *ed = exif_data_new_from_data(buf, bufSize);
+
+  if (ed == NULL)
+  {
+    DEBUG_printf(("DEBUG: No EXIF data found"));
+    return 2;
+  }
+
+  ExifIfd ifd = EXIF_IFD_0;
+  ExifTag tagX = EXIF_TAG_X_RESOLUTION;
+  ExifTag tagY = EXIF_TAG_Y_RESOLUTION;
+
+  ExifEntry *entryX = exif_content_get_entry(ed->ifd[ifd], tagX);
+
+  ExifEntry *entryY = exif_content_get_entry(ed->ifd[ifd], tagY);
+
+  if (entryX == NULL || entryY == NULL)
+  {
+    DEBUG_printf(("DEBUG: No EXIF data found"));
+    return 2;
+  }
+
+  if (entryX)
+  {
+    char buf1[1024];
+
+    exif_entry_get_value(entryX, buf1, sizeof(buf1));
+
+    trim_spaces(buf1);
+
+    if (*buf1)
+    {
+      int xRes;
+      sscanf(buf1, "%d", &xRes);
+      img->xppi = xRes;
+    }
+    else{
+      return 2;
+    }
+  }
+
+  if (entryY)
+  {
+    char buf2[1024];
+
+    exif_entry_get_value(entryY, buf2, sizeof(buf2));
+    trim_spaces(buf2);
+
+    if (*buf2)
+    {
+      int yRes;
+      sscanf(buf2, "%d", &yRes);
+      img->yppi = yRes;
+    }
+    else{
+      return 2;
+    }
+  }
+
+  return 1;
+}
+#endif
