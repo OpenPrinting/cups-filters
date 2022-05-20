@@ -1383,8 +1383,8 @@ cfFilterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
 	  msg = buf + 7;
 	} else if (strncmp(buf, "PAGE: ", 6) == 0 ||
 		   strncmp(buf, "ATTR: ", 6) == 0 ||
-		   strncmp(buf, "STATE: ", 6) == 0 ||
-		   strncmp(buf, "PPD: ", 6) == 0) {
+		   strncmp(buf, "STATE: ", 7) == 0 ||
+		   strncmp(buf, "PPD: ", 5) == 0) {
 	  log_level = CF_LOGLEVEL_CONTROL;
 	  msg = buf;
 	} else {
