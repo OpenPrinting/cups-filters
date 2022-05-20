@@ -1054,7 +1054,7 @@ cfFilterExternalCUPS(int inputfd,         /* I - File descriptor input stream */
   add_env_var("CUPS_SERVERBIN", CUPS_SERVERBIN, &envp);
   add_env_var("CUPS_SERVERROOT", CUPS_SERVERROOT, &envp);
   add_env_var("CUPS_STATEDIR", CUPS_STATEDIR, &envp);
-  add_env_var("SOFTWARE", "CUPS/2.4.99", &envp); /* Last CUPS with PPDs */
+  add_env_var("SOFTWARE", "CUPS/2.5.99", &envp); /* Last CUPS with PPDs */
 
   /* Copy the environment in which the caller got started */
   if (environ)
