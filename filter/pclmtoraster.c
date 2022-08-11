@@ -22,6 +22,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 
 /*
  * Local globals...
@@ -46,7 +47,7 @@ int main(int argc, char **argv)
       outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
   }
 
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterPCLmToRaster, &outformat, &JobCanceled);
+  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterPCLmToRaster, &outformat, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: pclmtoraster filter function failed.\n");

@@ -112,9 +112,6 @@ void _cfPDFToPDFProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 				 (auto_rotate)?"true":"false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-				 "cfFilterPDFToPDF: emit_jcl: %s",
-				 (emit_jcl)?"true":"false");
-  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: device_copies: %d",
 				 device_copies);
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
@@ -174,6 +171,15 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
     return false;
   }
 
+  // Certain features require a given page size for the page to be
+  // printed or all pages of the document being the same size. Here we
+  // set param.pagesize_requested so that the default pag size is used
+  // when no size got specified by the user.
+  if (param.fitplot || param.fillprint || param.autoprint || param.autofit ||
+      param.booklet != CF_PDFTOPDF_BOOKLET_OFF ||
+      param.nup.nupX > 1 || param.nup.nupY > 1)
+    param.pagesize_requested = true;
+      
   const bool dst_lscape =
     (param.paper_is_landscape ==
      ((param.orientation == ROT_0) || (param.orientation == ROT_180)));
@@ -199,9 +205,10 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
   if (param.booklet!=CF_PDFTOPDF_BOOKLET_OFF) {
     shuffle=_cfPDFToPDFBookletShuffle(numOrigPages,param.book_signature);
     if (param.booklet==CF_PDFTOPDF_BOOKLET_ON) { // override options
-      // TODO? specifically "sides=two-sided-short-edge" / DuplexTumble
+      // We do not "sides=two-sided-short-edge" / DuplexTumble here.
+      // We assume it done by caller, for example ppdFilterLoadPPD() of libppd
       // param.duplex=true;
-      // param.set_duplex=true;  ?    currently done in setFinalPPD()
+      // param.set_duplex=true;
       _cfPDFToPDFNupParameters::preset(2,param.nup); // TODO?! better
     }
   } else { // 0 1 2 3 ...
@@ -291,7 +298,7 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
     param.page.top = param.page.height;
   }
 
-  if (param.fillprint || param.cropfit)
+  if (param.pagesize_requested && (param.fillprint || param.cropfit))
   {
     for (int i = 0; i < (int)input_page_range_list.size(); i ++)
     {
@@ -367,6 +374,11 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
     _cfPDFToPDFPageRect rect;
     rect = page->get_rect();
     //rect.dump(doc);
+    if (!param.pagesize_requested)
+    {
+      param.page.width = param.page.right = rect.width;
+      param.page.height = param.page.top = rect.height;
+    }
 
     bool newPage = nupstate.mext_page(rect.width, rect.height, pgedit);
     if (newPage)

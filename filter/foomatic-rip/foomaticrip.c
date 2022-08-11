@@ -1042,8 +1042,6 @@ int main(int argc, char** argv)
                   _log("INFO: Using qualifer: '%s.%s.%s'\n",
                         qualifier[0], qualifier[1], qualifier[2]);
 
-                  cfCmGetPrinterIccProfile(data, (char **)&icc_profile, 0);
-
                   /* fall back to PPD */
                   if (icc_profile == NULL) {
                     _log("INFO: need to look in PPD for matching qualifer\n");

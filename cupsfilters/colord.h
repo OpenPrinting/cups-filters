@@ -35,10 +35,13 @@ extern "C" {
 /* Common routines for accessing the colord CMS framework */
 
 #include <cups/raster.h>
-#include <ppd/ppd.h>
 #include <cupsfilters/filter.h>
 
-char **cfColordGetQualifierForPPD(ppd_file_t *ppd);
+char **cfColordGetQualifier(cf_filter_data_t *data,
+			    const char *color_space,
+			    const char *media_type,
+			    int x_res,
+			    int y_res);
 char *cfColordGetProfileForDeviceID(cf_filter_data_t *data,
 				    const char *device_id,
 				    const char **qualifier_tuple);

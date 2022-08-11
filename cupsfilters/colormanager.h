@@ -38,7 +38,6 @@ extern "C" {
 
 
 #include <cups/raster.h>
-#include <ppd/ppd.h>
 #include <cupsfilters/filter.h>
 
 
@@ -62,13 +61,14 @@ typedef enum cf_cm_calibration_e
 
 
 extern 
-cf_cm_calibration_t cfCmGetCupsColorCalibrateMode(cf_filter_data_t *data,
-						  cups_option_t *options,
-						  int num_options);
+cf_cm_calibration_t cfCmGetCupsColorCalibrateMode(cf_filter_data_t *data);
 
 extern int cfCmGetPrinterIccProfile(cf_filter_data_t *data,
-				    char **icc_profile,
-				    ppd_file_t *ppd);
+				    const char *color_space,
+				    const char *media_type,
+				    int x_res,
+				    int y_res,
+				    char **icc_profile);
 
 extern int cfCmIsPrinterCmDisabled(cf_filter_data_t *data);
 

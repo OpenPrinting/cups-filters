@@ -21,6 +21,8 @@
  */
 
 #include <cupsfilters/driver.h>
+#include <ppd/ppd.h>
+#include <ppd/ppd-filter.h>
 #include "pcl-common.h"
 #include <math.h>
 

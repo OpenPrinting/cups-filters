@@ -6,7 +6,9 @@
 /*
  * Include necessary headers...
  */
+
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <signal.h>
 
 
@@ -52,8 +54,13 @@ main(int  argc,				/* I - Number of command-line args */
 #else
   signal(SIGTERM, cancel_job);
 #endif /* HAVE_SIGSET */
-  char *t = getenv("FINAL_CONTENT_TYPE");
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterPDFToPDF, t, &JobCanceled);
+
+ /*
+  * Fire up the ppdFilterPDFToPDF() filter function
+  */
+
+  ret = ppdFilterCUPSWrapper(argc, argv, ppdFilterPDFToPDF, NULL, &JobCanceled);
+
   if (ret)
     fprintf(stderr, "ERROR: pdftopdf filter function failed.\n");
 

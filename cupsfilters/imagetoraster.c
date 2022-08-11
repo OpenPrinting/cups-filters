@@ -33,7 +33,7 @@
 #include <cupsfilters/filter.h>
 #include <cupsfilters/raster.h>
 #include <cupsfilters/colormanager.h>
-#include <cupsfilters/ppdgenerator.h>
+#include <cupsfilters/ipp.h>
 #include <cupsfilters/image-private.h>
 #include <unistd.h>
 #include <math.h>
@@ -53,7 +53,6 @@ typedef struct {                /**** Document information ****/
 	Copies;			/* Number of copies */
   int   Orientation,    	/* 0 = portrait, 1 = landscape, etc. */
         Duplex,         	/* Duplexed? */
-        LanguageLevel,  	/* Language level of printer */
         Color;    		/* Print in color? */
   float PageLeft,       	/* Left margin */
         PageRight,      	/* Right margin */
@@ -208,13 +207,8 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   int			xc0, yc0,	/* Corners of the page in image
 					   coords */
 			xc1, yc1;
-  ppd_file_t		*ppd;		/* PPD file */
-  ppd_choice_t		*choice;	/* PPD option choice */
   cups_cspace_t         cspace = -1;    /* CUPS color space */
-  char			*resolution,	/* Output resolution */
-			*media_type;	/* Media type */
-  ppd_profile_t		*profile;	/* Color profile */
-  ppd_profile_t		userprofile;	/* User-specified profile */
+  char			*media_type;	/* Media type */
   cups_raster_t		*ras;		/* Raster stream */
   cups_page_header2_t	header;		/* Page header */
   int			num_options = 0;	/* Number of print options */
@@ -247,9 +241,9 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   int                   fd;		/* File descriptor for temp file */
   char                  buf[BUFSIZ];
   int                   bytes;
-  cf_cm_calibration_t      cm_calibrate;   /* Are we color calibrating the
+  cf_cm_calibration_t   cm_calibrate;   /* Are we color calibrating the
 					   device? */
-  int                   cm_disabled;    /* Color management disabled? */
+  int                   cm_disabled = 0;/* Color management disabled? */
   int                   fillprint = 0;	/* print-scaling = fill */
   int                   cropfit = 0;	/* -o crop-to-fit */
   cf_logfunc_t      log = data->logfunc;
@@ -259,36 +253,35 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   ipp_t                 *printer_attrs = data->printer_attrs;
   ipp_t                 *job_attrs = data->job_attrs;
   ipp_attribute_t *ipp;
-  int 			min_length = __INT32_MAX__,       /*  ppd->custom_min[1]	*/
-      			min_width = __INT32_MAX__,        /*  ppd->custom_min[0]	*/
-      			max_length = 0, 		  /*  ppd->custom_max[1]	*/
-      			max_width=0;			/*  ppd->custom_max[0]	*/
-  float 		customLeft = 0.0,		/*  ppd->custom_margin[0]  */
-        		customBottom = 0.0,	        /*  ppd->custom_margin[1]  */
-			customRight = 0.0,	        /*  ppd->custom_margin[2]  */
-			customTop = 0.0;	        /*  ppd->custom_margin[3]  */
+  int 			min_length = __INT32_MAX__,
+      			min_width = __INT32_MAX__;
+  float 		customLeft = 0.0,
+        		customBottom = 0.0,
+			customRight = 0.0,
+			customTop = 0.0;
   char 			defSize[41];
   cf_filter_out_format_t   outformat;
 
   /* Note: With the CF_FILTER_OUT_FORMAT_APPLE_RASTER,
-     CF_FILTER_OUT_FORMAT_PWG_RASTER, or CF_FILTER_OUT_FORMAT_PCLM selections the
-     output is actually CUPS Raster but information about available
-     color spaces and depths are taken from the urf-supported or
-     pwg-raster-document-type-supported printer IPP attributes or
-     appropriate PPD file attributes (PCLM is always sRGB
-     8-bit). These modes are for further processing with rastertopwg
-     or rastertopclm. This can change in the future when we add Apple
-     Raster and PWG Raster output support to this filter. */
+     CF_FILTER_OUT_FORMAT_PWG_RASTER, or CF_FILTER_OUT_FORMAT_PCLM
+     selections the output is actually CUPS Raster but information
+     about available color spaces and depths are taken from the
+     urf-supported or pwg-raster-document-type-supported printer IPP
+     attributes (PCLM is always sRGB 8-bit). These modes are for
+     further processing with rastertopwg or rastertopclm. This can
+     change in the future when we add Apple Raster and PWG Raster
+     output support to this filter. */
 
-  if (parameters) {
-    outformat = *(cf_filter_out_format_t *)parameters;
-    if (outformat != CF_FILTER_OUT_FORMAT_PCLM &&
-	outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER)
-      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
-  } else
-    outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+  outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+  val = data->final_content_type;
+  if (val) {
+    if (strcasestr(val, "pwg"))
+      outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
+    else if (strcasestr(val, "urf"))
+      outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
+    else if (strcasestr(val, "pclm"))
+      outformat = CF_FILTER_OUT_FORMAT_PCLM;
+  }
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterImageToRaster: Final output format: %s",
@@ -296,17 +289,6 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
 		(outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ? "PWG Raster" :
 		 (outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
 		  "PCLm"))));
-
-  if (printer_attrs != NULL) {
-    int left, right, top, bottom;
-    cfGenerateSizes(printer_attrs, &ipp, &min_length, &min_width,
-		    &max_length, &max_width, &bottom, &left, &right, &top,
-		    defSize);
-    customLeft = left*72.0/2540.0;
-    customRight = right*72.0/2540.0;
-    customTop = top*72.0/2540.0;
-    customBottom = bottom*72.0/2540.0;
-  }
 
  /*
   * Make sure status messages are not buffered...
@@ -319,6 +301,22 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   */
 
   signal(SIGPIPE, SIG_IGN);
+
+  if (printer_attrs != NULL) {
+    int minw, minl, maxw, maxl;
+    int left, bottom, right, top;
+    cfGenerateSizes(printer_attrs, CF_GEN_SIZES_DEFAULT, NULL, &ipp,
+		    NULL, NULL, NULL, NULL, NULL, NULL,
+		    &minw, &minl, &maxw, &maxl,
+		    &left, &bottom, &right, &top,
+		    defSize, NULL);
+    min_width = minw * 72 / 2540;
+    min_length = minl * 72 / 2540;
+    customLeft = left * 72.0 / 2540.0;
+    customBottom = bottom * 72.0 / 2540.0;
+    customRight = right * 72.0 / 2540.0;
+    customTop = top * 72.0 / 2540.0;
+  }
 
  /*
   * Initialize data structure
@@ -413,11 +411,9 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   */
 
   cfRasterPrepareHeader(&header, data, outformat,
-			  CF_FILTER_OUT_FORMAT_CUPS_RASTER, 1, &cspace);
-  ppd = data->ppd;
+			CF_FILTER_OUT_FORMAT_CUPS_RASTER, 1, &cspace);
   doc.Orientation = header.Orientation;
   doc.Duplex = header.Duplex;
-  doc.LanguageLevel = 1;
   doc.Color = header.cupsNumColors>1?1:0;
   doc.PageLeft = header.cupsImagingBBox[0] != 0.0 ?
     header.cupsImagingBBox[0] :
@@ -462,7 +458,9 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
 
   /*  Find print-rendering-intent */
 
-  cfGetPrintRenderIntent(data, &header);
+  header.cupsRenderingIntent[0] = '\0';
+  cfGetPrintRenderIntent(data, header.cupsRenderingIntent,
+			 sizeof(header.cupsRenderingIntent));
   if(log) log(ld, CF_LOGLEVEL_DEBUG,
 	      "cfFilterImageToRaster: Print rendering intent = %s",
 	      header.cupsRenderingIntent);
@@ -576,100 +574,44 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   if ((val = cupsGetOption("hue", num_options, options)) != NULL)
     hue = atoi(val);
 
-  if ((choice = ppdFindMarkedChoice(ppd, "MirrorPrint")) != NULL ||
-      ((val = cupsGetOption("MirrorPrint", num_options, options)) != NULL) ||
-      (ipp = ippFindAttribute(job_attrs, "mirror-print", IPP_TAG_ZERO)) !=
-      NULL ||
+  if ((val = cupsGetOption("MirrorPrint", num_options, options)) != NULL ||
+      (val = cupsGetOption("mirror-print", num_options, options)) != NULL ||
+      (val = cupsGetOption("mirror", num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "mirror-print",
+			      IPP_TAG_ZERO)) != NULL ||
       (ipp = ippFindAttribute(printer_attrs, "mirror-print-default",
-			      IPP_TAG_ZERO))!=NULL)
+			      IPP_TAG_ZERO)) != NULL)
   {
-    if (val != NULL)
-    {
-      /*  We already found the value  */
-    }
-    else if (ipp != NULL) {
+    if (val == NULL && ipp != NULL) {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    else
-    {
-      val = choice->choice;
-      choice->marked = 0;
-    }
   }
-  else
-    val = cupsGetOption("mirror", num_options, options);
 
   if (val && (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
               !strcasecmp(val, "yes")))
     doc.Flip = 1;
 
  /*
-  * Get the media type and resolution that have been chosen...
+  * Get the media type that have been chosen...
   */
 
-  if ((choice = ppdFindMarkedChoice(ppd, "MediaType")) != NULL ||
-      (val = cupsGetOption("MediaType", num_options, options)) != NULL ||
+  if ((val = cupsGetOption("MediaType", num_options, options)) != NULL ||
+      (val = cupsGetOption("media-type", num_options, options)) != NULL ||
       (ipp = ippFindAttribute(job_attrs, "media-type", IPP_TAG_ZERO)) != NULL ||
       (ipp = ippFindAttribute(printer_attrs, "media-type-supported",
-			      IPP_TAG_ZERO))!=NULL)
+			      IPP_TAG_ZERO)) != NULL)
   {
     if (val != NULL)
-    {
       media_type = strdup(val);
-    }
-    else if(choice!=NULL)
-      media_type = strdup(choice->choice);
-    else if(ipp!=NULL){
+    else if (ipp != NULL)
       media_type = strdup(ippGetString(ipp, 0, NULL));
-    }
   }
   else
     media_type = strdup("");
 
-  if ((choice = ppdFindMarkedChoice(ppd, "Resolution")) != NULL)
-    resolution = strdup(choice->choice);
-  else if ((val = cupsGetOption("Resolution", num_options, options)) != NULL ||
-	   (ipp = ippFindAttribute(job_attrs, "printer-resolution",
-				   IPP_TAG_ZERO))!=NULL)
-  {
-    if (val == NULL) {
-      ippAttributeString(ipp, buf, sizeof(buf));
-      resolution = strdup(buf);
-    }
-    else
-    {
-      resolution = strdup(val);
-    }
-  }
-  else if ((ipp = ippFindAttribute(printer_attrs, "printer-resolution-default",
-				   IPP_TAG_ZERO)) != NULL)
-  {
-    ippAttributeString(ipp, buf, sizeof(buf));
-    resolution = strdup(buf);
-  }
-  else if((ipp = ippFindAttribute(printer_attrs,
-				  "printer-resolution-supported",
-				  IPP_TAG_ZERO)) != NULL)
-  {
-    ippAttributeString(ipp, buf, sizeof(buf));
-    resolution = strdup(buf);
-    for (i = 0; resolution[i] != '\0'; i++)
-    {
-      if (resolution[i]==' ' ||
-	  resolution[i]==',')
-      {
-	resolution[i] = '\0';
-	break;
-      }
-    }
-  }
-  else
-    resolution = strdup("300dpi");
-  if(log) log(ld, CF_LOGLEVEL_DEBUG, "Resolution = %s", resolution);
-
   /* support the "cm-calibration" option */
-  cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
+  cm_calibrate = cfCmGetCupsColorCalibrateMode(data);
 
   if (cm_calibrate == CF_CM_CALIBRATION_ENABLED)
     cm_disabled = 1;
@@ -788,73 +730,37 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   }
 
  /*
-  * Find a color profile matching the current options...
+  * Apply a color profile...
   */
    
   if ((val = cupsGetOption("profile", num_options, options)) != NULL &&
       !cm_disabled)
   {
-    profile = &userprofile;
+    float         density;                /* Ink density to use */
+    float         gamma;                  /* Gamma correction to use */
+    float         matrix[3][3];           /* Transform matrix */
+
     sscanf(val, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f",
-           &(userprofile.density), &(userprofile.gamma),
-	   userprofile.matrix[0] + 0, userprofile.matrix[0] + 1,
-	   userprofile.matrix[0] + 2,
-	   userprofile.matrix[1] + 0, userprofile.matrix[1] + 1,
-	   userprofile.matrix[1] + 2,
-	   userprofile.matrix[2] + 0, userprofile.matrix[2] + 1,
-	   userprofile.matrix[2] + 2);
+           &(density), &(gamma),
+	   matrix[0] + 0, matrix[0] + 1, matrix[0] + 2,
+	   matrix[1] + 0, matrix[1] + 1, matrix[1] + 2,
+	   matrix[2] + 0, matrix[2] + 1, matrix[2] + 2);
 
-    userprofile.density      *= 0.001f;
-    userprofile.gamma        *= 0.001f;
-    userprofile.matrix[0][0] *= 0.001f;
-    userprofile.matrix[0][1] *= 0.001f;
-    userprofile.matrix[0][2] *= 0.001f;
-    userprofile.matrix[1][0] *= 0.001f;
-    userprofile.matrix[1][1] *= 0.001f;
-    userprofile.matrix[1][2] *= 0.001f;
-    userprofile.matrix[2][0] *= 0.001f;
-    userprofile.matrix[2][1] *= 0.001f;
-    userprofile.matrix[2][2] *= 0.001f;
+    density      *= 0.001f;
+    gamma        *= 0.001f;
+
+    matrix[0][0] *= 0.001f;
+    matrix[0][1] *= 0.001f;
+    matrix[0][2] *= 0.001f;
+    matrix[1][0] *= 0.001f;
+    matrix[1][1] *= 0.001f;
+    matrix[1][2] *= 0.001f;
+    matrix[2][0] *= 0.001f;
+    matrix[2][1] *= 0.001f;
+    matrix[2][2] *= 0.001f;
+
+    cfImageSetProfile(density, gamma, matrix);
   }
-  else if (ppd != NULL && !cm_disabled)
-  {
-    if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "cfFilterImageToRaster: Searching for profile \"%s/%s\"...",
-		 resolution, media_type);
-
-    for (i = 0, profile = ppd->profiles; i < ppd->num_profiles;
-	 i ++, profile ++)
-    {
-      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterImageToRaster: \"%s/%s\" = ", profile->resolution,
-		   profile->media_type);
-
-      if ((strcmp(profile->resolution, resolution) == 0 ||
-           profile->resolution[0] == '-') &&
-          (strcmp(profile->media_type, media_type) == 0 ||
-           profile->media_type[0] == '-'))
-      {
-	if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		     "cfFilterImageToRaster:    MATCH");
-	break;
-      }
-      else
-	if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		     "cfFilterImageToRaster:    no.");
-    }
-
-   /*
-    * If we found a color profile, use it!
-    */
-
-    if (i >= ppd->num_profiles)
-      profile = NULL;
-  }
-  else
-    profile = NULL;
-
-  if (profile)
-    cfImageSetProfile(profile->density, profile->gamma, profile->matrix);
 
   cfImageSetRasterColorSpace(header.cupsColorSpace);
 
@@ -884,19 +790,11 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   int fidelity = 0;
   int document_large = 0;
 
-  if (ppd != NULL && (ppd->custom_margins[0] || ppd->custom_margins[1] ||
-                      ppd->custom_margins[2] || ppd->custom_margins[3]))
-    margin_defined = 1;
-	else{
-		if(customLeft!=0 || customRight!=0 || customBottom!=0 || customTop!=0)
-			margin_defined = 1;
-	}
-
-  if (doc.PageLength != doc.PageTop - doc.PageBottom ||
+  if (customLeft != 0 || customRight != 0 ||
+      customBottom != 0 || customTop != 0 ||
+      doc.PageLength != doc.PageTop - doc.PageBottom ||
       doc.PageWidth != doc.PageRight - doc.PageLeft)
-  {
     margin_defined = 1;
-  }
 
   if ((val = cupsGetOption("ipp-attribute-fidelity",
 			   num_options, options)) != NULL)
@@ -1361,22 +1259,11 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   */
 
   /* If size if specified by user, use it, else default size from
-     printer_attrs*/
-  if ((ipp = ippFindAttribute(job_attrs, "media-size", IPP_TAG_ZERO)) != NULL ||
-      (val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, "page-size", IPP_TAG_ZERO)) != NULL ||
-      (val = cupsGetOption("PageSize", num_options, options)) != NULL ) {
-    if (val == NULL) {
-      ippAttributeString(ipp, buf, sizeof(buf));
-      strcpy(defSize, buf);
-    }
-    else
-	snprintf(defSize, sizeof(defSize), "%s", val);
-  }
+     printer_attrs */
+  strcpy(defSize, header.cupsPageSizeName);
 
-  if (((choice = ppdFindMarkedChoice(ppd, "PageSize")) != NULL &&
-       strcasecmp(choice->choice, "Custom") == 0) ||
-      (strncasecmp(defSize, "Custom", 6)) == 0)
+  if ((strncasecmp(defSize, "Custom", 6)) == 0 ||
+      strcasestr(defSize, "_custom_"))
   {
     float	width,		/* New width in points */
 		length;		/* New length in points */
@@ -1400,41 +1287,23 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
    /*
     * Add margins to page size...
     */
-   if(ppd!=NULL){
-    	width  += ppd->custom_margins[0] + ppd->custom_margins[2];
-    	length += ppd->custom_margins[1] + ppd->custom_margins[3];
-	}
-	else{
-	  width  += customLeft + customRight;
-	  length += customBottom + customTop;
-	}
+
+    width  += customLeft + customRight;
+    length += customBottom + customTop;
+
    /*
     * Enforce minimums...
     */
-   if (ppd != NULL)
-   {
-     if (width < ppd->custom_min[0])
-       width = ppd->custom_min[0];
-   }
-   else
-   {
-     if (width < min_width)
-       width = min_width;
-   }
-   if (ppd != NULL) {
-     if (length < ppd->custom_min[1])
-       length = ppd->custom_min[1];
-   }
-   else
-   {
-     if(length < min_length)
-       length = min_length;
-   }
 
-   if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		"cfFilterImageToRaster: Updated custom page size to %.2f x %.2f "
-		"inches...",
-		width / 72.0, length / 72.0);
+    if (width < min_width)
+      width = min_width;
+    if(length < min_length)
+      length = min_length;
+
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		 "cfFilterImageToRaster: Updated custom page size to %.2f x %.2f "
+		 "inches...",
+		 width / 72.0, length / 72.0);
 
    /*
     * Set the new custom size...
@@ -1453,36 +1322,17 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
 
     doc.PageWidth  = width;
     doc.PageLength = length;
-    if (ppd != NULL)
-      doc.PageLeft   = ppd->custom_margins[0];
-    else
-      doc.PageLeft = customLeft;
-    if (ppd != NULL)
-      doc.PageRight  = width - ppd->custom_margins[2];
-    else
-      doc.PageRight = width - customRight;
-    if (ppd != NULL)
-      doc.PageBottom = ppd->custom_margins[1];
-    else
-      doc.PageBottom = customBottom;
-    if (ppd != NULL)
-      doc.PageTop    = length - ppd->custom_margins[3];
-    else
-      doc.PageTop = length - customTop;
+    doc.PageLeft = customLeft;
+    doc.PageRight = width - customRight;
+    doc.PageBottom = customBottom;
+    doc.PageTop = length - customTop;
 
    /*
     * Remove margins from page size...
     */
-   if (ppd != NULL)
-   {
-     width  -= ppd->custom_margins[0] + ppd->custom_margins[2];
-     length -= ppd->custom_margins[1] + ppd->custom_margins[3];
-   }
-   else
-   {
-     width -= customLeft + customRight;
-     length -= customTop + customBottom;
-   }
+
+    width -= customLeft + customRight;
+    length -= customTop + customBottom;
 
    /*
     * Set the bitmap size...
@@ -1490,6 +1340,7 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
 
     header.cupsWidth  = width * header.HWResolution[0] / 72.0;
     header.cupsHeight = length * header.HWResolution[1] / 72.0;
+
   } else {
    /*
     * Set the bitmap size...
@@ -1701,11 +1552,20 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   if (xpages == 1 && ypages == 1)
     doc.Collate = 0;
 
-  slowcollate = doc.Collate && ppdFindOption(ppd, "Collate") == NULL;
-  if (ppd != NULL)
-    slowcopies = ppd->manual_copies;
-  else
-    slowcopies = 1;
+  /* We should also check printer-attrs here, but printer-attrs shows
+     hardware copies ("copies-supported = 1-99") and hardware collate
+     ("multiple-document-handling-supported =
+     separate-documents-uncollated-copies,
+     separate-documents-collated-copies") even on cheapest raster
+     printers */
+  slowcollate = doc.Collate &&
+    ((val = cupsGetOption("hardware-collate", num_options, options)) == NULL ||
+     !strcasecmp(val, "false") || !strcasecmp(val, "off") ||
+     !strcasecmp(val, "no"));
+  slowcopies =
+    ((val = cupsGetOption("hardware-copies", num_options, options)) == NULL ||
+     !strcasecmp(val, "false") || !strcasecmp(val, "off") ||
+     !strcasecmp(val, "no"));
 
   if (doc.Copies > 1 && !slowcollate && !slowcopies)
   {
@@ -2001,7 +1861,6 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   */
 
  canceled:
-  free(resolution);
   free(media_type);
   free(row);
   cupsRasterClose(ras);

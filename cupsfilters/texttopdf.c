@@ -492,7 +492,7 @@ typedef struct texttopdf_doc_s
 
   cups_page_header2_t h;        /* CUPS Raster page header, to */
                                 /* accommodate results of command */
-                                /* line parsing for PPD-less queue */
+                                /* line/IPP attribute parsing */
   cf_filter_texttopdf_parameter_t env_vars;
   int		NumKeywords;
   float		PageLeft,	/* Left margin */
@@ -541,7 +541,7 @@ static void     write_font_str(float x,float y,int fontid, lchar_t *str,
 static void     write_pretty_header();
 static int      write_prolog(const char *title, const char *user,
 			    const char *classification, const char *label, 
-			    ppd_file_t *ppd, texttopdf_doc_t *doc,
+			    texttopdf_doc_t *doc,
 			    cf_logfunc_t log, void *ld);
 static void     write_page(texttopdf_doc_t *doc);
 static void     write_epilogue(texttopdf_doc_t *doc);
@@ -585,6 +585,7 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
   int		stdoutbackupfd;	/* The "real" stdout is backupped here while */
 				/* stdout is redirected */
   int		ret = 0;	/* Return value */
+  cups_cspace_t cspace = (cups_cspace_t)(-1);
 
 
  /*
@@ -661,11 +662,6 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
   * Process command-line options and write the prolog...
   */
 
-  if (data->ppd)
-  {
-    ppdMarkOptions(data->ppd, data->num_options, data->options);
-  }
-
   if ((val = cupsGetOption("prettyprint",
 			   data->num_options, data->options)) != NULL &&
       strcasecmp(val, "no") && strcasecmp(val, "off") &&
@@ -716,31 +712,69 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
     }
   }
 
-  cfFilterSetCommonOptions(data->ppd, data->num_options, data->options, 1,
-			 &(doc.Orientation), &(doc.Duplex),
-			 &(doc.LanguageLevel), &(doc.ColorDevice),
-			 &(doc.PageLeft), &(doc.PageRight), &(doc.PageTop),
-			 &(doc.PageBottom), &(doc.PageWidth), &(doc.PageLength),
-			 log, ld);
+  cfRasterPrepareHeader(&(doc.h), data, CF_FILTER_OUT_FORMAT_CUPS_RASTER,
+			CF_FILTER_OUT_FORMAT_CUPS_RASTER, 0, &cspace);
+  doc.Orientation = doc.h.Orientation;
+  doc.Duplex = doc.h.Duplex;
+  doc.ColorDevice = doc.h.cupsNumColors <= 1 ? 0 : 1;
+  doc.PageWidth = doc.h.cupsPageSize[0] != 0.0 ? doc.h.cupsPageSize[0] :
+    (float)doc.h.PageSize[0];
+  doc.PageLength = doc.h.cupsPageSize[1] != 0.0 ? doc.h.cupsPageSize[1] :
+    (float)doc.h.PageSize[1];
+  doc.PageLeft = doc.h.cupsImagingBBox[0] != 0.0 ? doc.h.cupsImagingBBox[0] :
+    (float)doc.h.ImagingBoundingBox[0];
+  doc.PageBottom = doc.h.cupsImagingBBox[1] != 0.0 ?
+    doc.h.cupsImagingBBox[1] : (float)doc.h.ImagingBoundingBox[1];
+  doc.PageRight = doc.h.cupsImagingBBox[2] != 0.0 ? doc.h.cupsImagingBBox[2] :
+    (float)doc.h.ImagingBoundingBox[2];
+  doc.PageTop = doc.h.cupsImagingBBox[3] != 0.0 ? doc.h.cupsImagingBBox[3] :
+    (float)doc.h.ImagingBoundingBox[3];
+  doc.Copies = doc.h.NumCopies;
 
-  if (!data->ppd) {
-    cfRasterParseIPPOptions(&(doc.h), data, 0, 1);
-    doc.Orientation = doc.h.Orientation;
-    doc.Duplex = doc.h.Duplex;
-    doc.ColorDevice = doc.h.cupsNumColors <= 1 ? 0 : 1;
-    doc.PageWidth = doc.h.cupsPageSize[0] != 0.0 ? doc.h.cupsPageSize[0] :
-      (float)doc.h.PageSize[0];
-    doc.PageLength = doc.h.cupsPageSize[1] != 0.0 ? doc.h.cupsPageSize[1] :
-      (float)doc.h.PageSize[1];
-    doc.PageLeft = doc.h.cupsImagingBBox[0] != 0.0 ? doc.h.cupsImagingBBox[0] :
-      (float)doc.h.ImagingBoundingBox[0];
-    doc.PageBottom = doc.h.cupsImagingBBox[1] != 0.0 ?
-      doc.h.cupsImagingBBox[1] : (float)doc.h.ImagingBoundingBox[1];
-    doc.PageRight = doc.h.cupsImagingBBox[2] != 0.0 ? doc.h.cupsImagingBBox[2] :
-      (float)doc.h.ImagingBoundingBox[2];
-    doc.PageTop = doc.h.cupsImagingBBox[3] != 0.0 ? doc.h.cupsImagingBBox[3] :
-      (float)doc.h.ImagingBoundingBox[3];
-    doc.Copies = doc.h.NumCopies;
+  /* Check whether we do borderless printing with overspray and let text only
+     get printed on the actual media size */
+  if (doc.h.cupsPageSizeName[0] != '\0')
+  {
+    /* The page size name in te header corresponds to the actual size of
+       the media, so find the size dimensions */
+    pwg_media_t *size_found = NULL;
+    strncpy(keyword, doc.h.cupsPageSizeName, sizeof(keyword));
+    if ((keyptr = strchr(keyword, '.')) != NULL)
+      *keyptr = '\0';
+    if ((size_found = pwgMediaForPPD(keyword)) != NULL ||
+	(size_found = pwgMediaForLegacy(keyword)) != NULL ||
+	(size_found = pwgMediaForPWG(keyword)) != NULL)
+    {
+      /* Dimensions in PostScript points */
+      float w = size_found->width / 2540.0 * 72.0;
+      float l = size_found->length / 2540.0 * 72.0;
+      if (w < doc.PageWidth)
+      {
+	/* Width in header > actual media width => overspray */
+	/* As the overspray is to cover tolerances in paper traction
+	   and the paper can be mis-aligned to any size, we let
+	   margins be at least double the overspray width on each
+	   side (not dividing by 2) */
+	float margin_needed = doc.PageWidth - w;
+	if (doc.PageLeft < margin_needed)
+	  doc.PageLeft = margin_needed;
+	if (doc.PageWidth - doc.PageRight < margin_needed)
+	  doc.PageRight = doc.PageWidth - margin_needed;
+      }
+      if (l < doc.PageLength)
+      {
+	/* Length in header > actual media length => overspray */
+	/* As the overspray is to cover tolerances in paper traction
+	   and the paper can be mis-aligned to any size, we let
+	   margins be at least double the overspray width on each
+	   side (not dividing by 2) */
+	float margin_needed = doc.PageLength - l;
+	if (doc.PageBottom < margin_needed)
+	  doc.PageBottom = margin_needed;
+	if (doc.PageLength - doc.PageTop < margin_needed)
+	  doc.PageTop = doc.PageLength - margin_needed;
+      }
+    }
   }
 
   if ((val = cupsGetOption("wrap", data->num_options, data->options)) == NULL)
@@ -863,7 +897,7 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 			doc.env_vars.classification,
 			cupsGetOption("page-label", data->num_options,
 				      data->options),
-			data->ppd, &doc, log, ld);
+			&doc, log, ld);
       if (ret)
 	goto out;
     }
@@ -1658,7 +1692,7 @@ write_page(texttopdf_doc_t *doc)
 
   (doc->NumPages)++;
   if (doc->PrettyPrint)
-    write_pretty_header(doc->pdf);
+    write_pretty_header(doc);
 
   for (line = 0; line < doc->SizeLines; line ++)
     write_line(line, doc->Page[line], doc);
@@ -1702,7 +1736,6 @@ write_prolog(const char *title,		/* I - Title of job */
 	    const char *user,		/* I - Username */
             const char *classification,	/* I - Classification */
 	    const char *label,		/* I - Page label */
-            ppd_file_t *ppd, 		/* I - PPD file info */
             texttopdf_doc_t *doc,
             cf_logfunc_t log,
             void *ld)

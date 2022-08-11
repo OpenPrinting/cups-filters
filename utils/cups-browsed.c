@@ -122,7 +122,7 @@ static int  ldap_rebind_proc(LDAP *RebindLDAPHandle,
 #include <cups/cups.h>
 #include <cups/raster.h>
 #include <cupsfilters/ipp.h>
-#include <cupsfilters/ppdgenerator.h>
+#include <cupsfilters/ipp.h>
 #include <ppd/ppd.h>
 
 #include "cups-notifier.h"
@@ -2097,17 +2097,13 @@ static cups_array_t* get_pagesize(ipp_t *printer_attributes)
 {
   cups_array_t            *sizes, *page_media;
   cups_size_t             *size;
-  ipp_attribute_t         *defattr;
-  char                    *ppdsizename, *temp;
-  int                     min_length = INT_MAX, min_width = INT_MAX,
-                          max_length = 0, max_width = 0,
-                          bottom, left, right, top;
-  char                    ppdname[41];
+  char                    *ppdsizename, *ptr;
 
   ppdsizename = (char *)malloc(sizeof(char) * 128);
-  sizes = cfGenerateSizes(printer_attributes, &defattr, &min_length, &min_width,
-			  &max_length, &max_width,
-			  &bottom, &left, &right, &top,ppdname);
+  cfGenerateSizes(printer_attributes, CF_GEN_SIZES_DEFAULT,
+		  &sizes, NULL, NULL, NULL, NULL,
+		  NULL, NULL, NULL, NULL, NULL, NULL,
+		  NULL, NULL, NULL, NULL, NULL, NULL, NULL);
   if ((page_media = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
 				  (cups_acopy_func_t)strdup,
 				  (cups_afree_func_t)free)) == NULL)
@@ -2115,8 +2111,8 @@ static cups_array_t* get_pagesize(ipp_t *printer_attributes)
   for (size = (cups_size_t *)cupsArrayFirst(sizes); size;
        size = (cups_size_t *)cupsArrayNext(sizes)) {
     strcpy(ppdsizename, size->media);
-    if (( temp = strchr(ppdsizename, ' ')) != NULL)
-      *temp = '\0';
+    if (( ptr = strchr(ppdsizename, ' ')) != NULL)
+      *ptr = '\0';
     cupsArrayAdd(page_media, ppdsizename);
   }
   free(ppdsizename);
@@ -2714,11 +2710,8 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
                        *sizes_ppdname;
   cups_size_t          *size;
   remote_printer_t     *p;
-  ipp_attribute_t      *defattr;
-  char                 ppdname[41], pagesize[128];
+  char                 pagesize[128];
   char*                first_space;
-  int                  min_length, min_width, max_length, max_width,
-                       bottom, left, right, top;
 
   cluster_sizes = cupsArrayNew3((cups_array_func_t)pwg_compare_sizes,
 				NULL, NULL, 0,
@@ -2733,18 +2726,10 @@ cups_array_t* get_cluster_sizes(char* cluster_name)
       if(p->status == STATUS_DISAPPEARED || p->status == STATUS_UNCONFIRMED ||
 	 p->status == STATUS_TO_BE_RELEASED )
 	continue;
-      defattr = NULL;
-      min_length = INT_MAX;
-      min_width = INT_MAX;
-      max_length = 0;
-      max_width = 0;
-      bottom = 0;
-      left = 0;
-      right = 0;
-      top = 0;
-      sizes = cfGenerateSizes(p->prattrs, &defattr, &min_length, &min_width,
-			      &max_length, &max_width,
-			      &bottom, &left, &right, &top, ppdname);
+      cfGenerateSizes(p->prattrs, CF_GEN_SIZES_DEFAULT,
+		      &sizes, NULL, NULL, NULL, NULL,
+		      NULL, NULL, NULL, NULL, NULL, NULL,
+		      NULL, NULL, NULL, NULL, NULL, NULL, NULL);
       for (size = (cups_size_t *)cupsArrayFirst(sizes);
 	   size; size = (cups_size_t *)cupsArrayNext(sizes)) {
 	if (!cupsArrayFind(cluster_sizes, size)) {
@@ -2893,7 +2878,7 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
 
 /*get_cluster_attributes - Returns ipp_t* containing the options supplied by
                            all the printers in the cluster, which can be sent
-                           to cfCreatePPDFromIPP2() to generate the PPD file */
+                           to ppdCreatePPDFromIPP2() to generate the PPD file */
 ipp_t* get_cluster_attributes(char* cluster_name)
 {
   remote_printer_t     *p;
@@ -2983,7 +2968,7 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
   int                     max_pages_per_min = 0, pages_per_min;
   remote_printer_t        *p, *def_printer = NULL;
   int                     i, count;
-  ipp_attribute_t         *attr, *media_attr, *media_col_default, *defattr;
+  ipp_attribute_t         *attr, *media_attr, *media_col_default;
   ipp_t                   *media_col,
                           *media_size, *current_media=NULL;
   char                    media_source[32], media_type[32];
@@ -2992,11 +2977,7 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
   const char              *keyword;
   cf_res_t                *res;
   int                     xres, yres;
-  int                     min_length = INT_MAX, min_width = INT_MAX,
-                          max_length = 0, max_width = 0,
-                          bottom, left, right, top;
   char                    ppdname[41];
-  cups_array_t            *sizes;
 
   /*The printer with the maximum Throughtput(pages_per_min) is selected as 
     the default printer*/
@@ -3036,9 +3017,11 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
   debug_printf("Default Attributes of the cluster %s are : \n", cluster_name);
 
   /* Generating the default pagesize for the cluster*/
-  sizes = cfGenerateSizes(def_printer->prattrs, &defattr, &min_length,
-			  &min_width, &max_length, &max_width,
-			  &bottom, &left, &right, &top, ppdname);
+  cfGenerateSizes(def_printer->prattrs, CF_GEN_SIZES_DEFAULT,
+		  NULL, NULL, NULL, NULL,
+		  NULL, NULL, NULL, NULL, NULL, NULL,
+		  NULL, NULL, NULL, NULL, NULL, NULL,
+		  ppdname, NULL);
   strcpy(default_pagesize, ppdname);
   debug_printf("Default PageSize : %s\n", default_pagesize);
 
@@ -3257,8 +3240,6 @@ void get_cluster_default_attributes(ipp_t** merged_attributes,
       cfFreeResolution(res, NULL);
     }
   }
-
-  cupsArrayDelete(sizes);
 }
 
 /* Function to see which printer in the cluster supports the
@@ -8026,11 +8007,11 @@ void create_queue(void* arg) {
          ourselves */
       printer_ipp_response = (num_cluster_printers == 1) ? p->prattrs :
         printer_attributes;
-      if (!cfCreatePPDFromIPP2(ppdname, sizeof(ppdname), printer_ipp_response,
-			       make_model,
-			       pdl, color, duplex, conflicts, sizes,
-			       default_pagesize, default_color,
-			       ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
+      if (!ppdCreatePPDFromIPP2(ppdname, sizeof(ppdname), printer_ipp_response,
+				make_model,
+				pdl, color, duplex, conflicts, sizes,
+				default_pagesize, default_color,
+				ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
         if (errno != 0)
 	  debug_printf("Unable to create PPD file: %s\n",
 		       strerror(errno));
@@ -8192,11 +8173,11 @@ void create_queue(void* arg) {
 	   ourselves */
 	printer_ipp_response = (num_cluster_printers == 1) ? p->prattrs :
 	  printer_attributes;
-	if (!cfCreatePPDFromIPP2(ppdname, sizeof(ppdname), printer_ipp_response,
-				 make_model,
-				 pdl, color, duplex, conflicts, sizes,
-				 default_pagesize, default_color,
-				 ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
+	if (!ppdCreatePPDFromIPP2(ppdname, sizeof(ppdname),
+				  printer_ipp_response, make_model,
+				  pdl, color, duplex, conflicts, sizes,
+				  default_pagesize, default_color,
+				  ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
 	  if (errno != 0)
 	    debug_printf("Unable to create PPD file: %s\n",
 			 strerror(errno));

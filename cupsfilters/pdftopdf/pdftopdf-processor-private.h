@@ -20,6 +20,7 @@ struct _cfPDFToPDFProcessingParameters {
 _cfPDFToPDFProcessingParameters()
 : job_id(0),num_copies(1),
     user(0),title(0),
+    pagesize_requested(false),
     fitplot(false),
     fillprint(false),  //print-scaling = fill
     cropfit(false),
@@ -47,8 +48,9 @@ _cfPDFToPDFProcessingParameters()
 
     auto_rotate(false),
 
-    emit_jcl(true),device_copies(1),
-    device_collate(false),set_duplex(false),
+    device_copies(1),
+    device_collate(false),
+    set_duplex(false),
 
     page_logging(-1)
   {
@@ -68,6 +70,7 @@ _cfPDFToPDFProcessingParameters()
 
   int job_id, num_copies;
   const char *user, *title; // will stay around
+  bool pagesize_requested;
   bool fitplot;
   bool fillprint;   //print-scaling = fill
   bool cropfit;     // -o crop-to-fit
@@ -101,8 +104,6 @@ _cfPDFToPDFProcessingParameters()
 
   bool auto_rotate;
 
-  // ppd/jcl changes
-  bool emit_jcl;
   int device_copies;
   bool device_collate;
   bool set_duplex;

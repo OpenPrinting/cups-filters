@@ -25,7 +25,7 @@ int main()
   int cobj=cfPDFOutAddXRef(pdf);
   const char buf[]="BT /a 10 Tf (abc) Tj ET";
   cfPDFOutPrintF(pdf,"%d 0 obj\n"
-                    "<</Length %d\n"
+                    "<</Length %ld\n"
                     ">>\n"
                     "stream\n"
                     "%s\n"

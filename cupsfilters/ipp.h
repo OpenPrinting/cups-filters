@@ -24,20 +24,39 @@
 extern "C" {
 #  endif /* __cplusplus */
 
-#ifdef HAVE_CONFIG_H
+/*
+ * Include necessary headers...
+ */
+
 #include <config.h>
-#endif
 
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <math.h>
+
+#if defined(WIN32) || defined(__EMX__)
+#  include <io.h>
+#else
+#  include <unistd.h>
+#  include <fcntl.h>
+#endif /* WIN32 || __EMX__ */
+
 #include <cups/cups.h>
 #include <cups/backend.h>
+#include <cups/raster.h>
 
 #define CF_GET_PRINTER_ATTRIBUTES_LOGSIZE 4 * 65536
 #define CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN 8192
 #define CF_GET_PRINTER_ATTRIBUTES_MAX_URI_LEN 2048
 
 extern char cf_get_printer_attributes_log[CF_GET_PRINTER_ATTRIBUTES_LOGSIZE];
+
+
+/*
+ * Types...
+ */
 
 /* Enum of possible driverless options */
 enum cf_driverless_support_modes_e {
@@ -48,6 +67,22 @@ enum cf_driverless_support_modes_e {
   CF_DRVLESS_INCOMPLETEIPP  /* Driverless support without media-col-database
 			       attribute */
 };
+
+/* Data structure for resolution (X x Y dpi) */
+typedef struct cf_res_s {
+  int x, y;
+} cf_res_t;
+
+typedef enum cf_gen_sizes_mode_e {
+  CF_GEN_SIZES_DEFAULT = 0,
+  CF_GEN_SIZES_SEARCH,
+  CF_GEN_SIZES_SEARCH_BORDERLESS_ONLY
+} cf_gen_sizes_mode_t;
+
+
+/*
+ * Prototypes...
+ */
 
 char    *cfResolveURI(const char *raw_uri);
 char    *cfippfindBasedURIConverter(const char *uri ,int is_fax);
@@ -97,6 +132,59 @@ int cfIPPAttrIntValForPrinter(ipp_t *printer_attrs,
 			      ipp_t *job_attrs,
 			      const char *attr_name,
 			      int   *value);
+int cfIPPAttrResolutionForPrinter(ipp_t *printer_attrs, ipp_t *job_attrs,
+				  const char *attr_name, int *xres, int *yres);
+int cfIPPReverseOutput(ipp_t *printer_attrs, ipp_t *job_attrs);
+
+char            *cfStrFormatd(char *buf, char *bufend, double number,
+			      struct lconv *loc);
+int             cfCompareResolutions(void *resolution_a, void *resolution_b,
+				     void *user_data);
+void            *cfCopyResolution(void *resolution, void *user_data);
+void            cfFreeResolution(void *resolution, void *user_data);
+cf_res_t        *cfNewResolution(int x, int y);
+cups_array_t    *cfNewResolutionArray();
+cf_res_t        *cfIPPResToResolution(ipp_attribute_t *attr, int index);
+cups_array_t    *cfIPPAttrToResolutionArray(ipp_attribute_t *attr);
+int             cfJoinResolutionArrays(cups_array_t **current,
+				       cups_array_t **new_arr,
+				       cf_res_t **current_default,
+				       cf_res_t **new_default);
+int             cfGetPageDimensions(ipp_t *printer_attrs,
+				    ipp_t *job_attrs,
+				    int num_options,
+				    cups_option_t *options,
+				    cups_page_header2_t *header,
+				    int transverse_fit,
+				    float *width,
+				    float *height,
+				    float *left,
+				    float *bottom,
+				    float *right,
+				    float *top,
+				    char *name,
+				    ipp_t **media_col_entry);
+void            cfGenerateSizes(ipp_t *response,
+				cf_gen_sizes_mode_t mode,
+				cups_array_t **sizes,
+				ipp_attribute_t **defattr,
+				int *width,
+				int *length,
+				int *left,
+				int *bottom,
+				int *right,
+				int *top,
+				int *min_width,
+				int *min_length,
+				int *max_width,
+				int *max_length,
+				int *custom_left,
+				int *custom_bottom,
+				int *custom_right,
+				int *custom_top,
+				char *size_name,
+				ipp_t **media_col_entry);
+
 
 #  ifdef __cplusplus
 }

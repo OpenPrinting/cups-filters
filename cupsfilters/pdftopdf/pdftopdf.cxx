@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include <cups/cups.h>
-#include <ppd/ppd.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
 #endif
@@ -23,48 +22,14 @@
 #include <sys/wait.h>
 #include "pdftopdf-private.h"
 #include "cupsfilters/raster.h"
-#include "cupsfilters/ppdgenerator.h"
+#include "cupsfilters/ipp.h"
+#include "cupsfilters/ipp.h"
 #include "pdftopdf-processor-private.h"
-#include "pdftopdf-jcl-private.h"
 
 #include <stdarg.h>
 
 
 // namespace {}
-
-void setFinalPPD(ppd_file_t *ppd,const _cfPDFToPDFProcessingParameters &param)
-{
-  if ((param.booklet==CF_PDFTOPDF_BOOKLET_ON)&&(ppdFindOption(ppd,"Duplex"))) {
-    // TODO: elsewhere, better
-    ppdMarkOption(ppd,"Duplex","DuplexTumble");
-    // TODO? sides=two-sided-short-edge
-  }
-
-  // for compatibility
-  if ((param.set_duplex)&&(ppdFindOption(ppd,"Duplex")!=NULL)) {
-    ppdMarkOption(ppd,"Duplex","True");
-    ppdMarkOption(ppd,"Duplex","On");
-  }
-
-  // we do it, printer should not
-  ppd_choice_t *choice;
-  if ((choice=ppdFindMarkedChoice(ppd,"MirrorPrint")) != NULL) {
-    choice->marked=0;
-  }
-}
-
-// for choice, only overwrites ret if found in ppd
-static bool ppdGetInt(ppd_file_t *ppd,const char *name,int *ret) // {{{
-{
-  assert(ret);
-  ppd_choice_t *choice=ppdFindMarkedChoice(ppd,name); // !ppd is ok.
-  if (choice) {
-    *ret=atoi(choice->choice);
-    return true;
-  }
-  return false;
-}
-// }}}
 
 static bool optGetInt(const char *name,int num_options,cups_option_t *options,int *ret) // {{{
 {
@@ -112,87 +77,6 @@ static bool is_true(const char *value) // {{{
 }
 // }}}
 
-static bool ppdGetDuplex(ppd_file_t *ppd) // {{{
-{
-  const char **option, **choice;
-  const char *option_names[] = {
-    "Duplex",
-    "JCLDuplex",
-    "EFDuplex",
-    "KD03Duplex",
-    NULL
-  };
-  const char *choice_names[] = {
-    "DuplexNoTumble",
-    "DuplexTumble",
-    "LongEdge",
-    "ShortEdge",
-    "Top",
-    "Bottom",
-    NULL
-  };
-  for (option = option_names; *option; option ++)
-    for (choice = choice_names; *choice; choice ++)
-      if (ppdIsMarked(ppd, *option, *choice))
-	return 1;
-  return 0;
-}
-// }}}
-
-// TODO: enum
-static bool ppdDefaultOrder(ppd_file_t *ppd, pdftopdf_doc_t *doc) // {{{  -- is reverse?
-{
-  ppd_choice_t *choice;
-  ppd_attr_t *attr;
-  const char *val=NULL;
-
-  // Figure out the right default output order from the PPD file...
-  if ((choice=ppdFindMarkedChoice(ppd,"OutputOrder")) != NULL) {
-    val=choice->choice;
-  } else if (((choice=ppdFindMarkedChoice(ppd,"OutputBin")) != NULL)&&
-	     ((attr=ppdFindAttr(ppd,"PageStackOrder",choice->choice)) != NULL)) {
-    val=attr->value;
-  } else if ((attr=ppdFindAttr(ppd,"DefaultOutputOrder",0)) != NULL) {
-    val=attr->value;
-  }
-  if ((!val)||(strcasecmp(val,"Normal")==0)||(strcasecmp(val,"same-order")==0)) {
-    return false;
-  } else if (strcasecmp(val,"Reverse")==0||(strcasecmp(val,"reverse-order")==0)) {
-    return true;
-  }
-
-  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-				 "cfFilterPDFToPDF: Unsupported output-order "
-				 "value %s, using 'normal'!",
-				 val);
-  return false;
-}
-// }}}
-
-static bool optGetCollate(int num_options,cups_option_t *options) // {{{
-{
-  if (is_true(cupsGetOption("Collate",num_options,options))) {
-    return true;
-  }
-
-  const char *val=NULL;
-  if ((val=cupsGetOption("multiple-document-handling",num_options,options)) != NULL) {
-   /* This IPP attribute is unnecessarily complicated:
-    *   single-document, separate-documents-collated-copies, single-document-new-sheet:
-    *      -> collate (true)
-    *   separate-documents-uncollated-copies:
-    *      -> can be uncollated (false)
-    */
-    return (strcasecmp(val,"separate-documents-uncollated-copies")!=0);
-  }
-
-  if ((val=cupsGetOption("sheet-collate",num_options,options)) != NULL) {
-    return (strcasecmp(val,"uncollated")!=0);
-  }
-
-  return false;
-}
-// }}}
 
 static bool parsePosition(const char *value,pdftopdf_position_e &xpos,pdftopdf_position_e &ypos) // {{{
 {
@@ -296,26 +180,24 @@ static bool _cfPDFToPDFParseBorder(const char *val,pdftopdf_border_type_e &ret) 
 }
 // }}}
 
-void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options,_cfPDFToPDFProcessingParameters &param,char *final_content_type,pdftopdf_doc_t *doc) // {{{
+void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options,_cfPDFToPDFProcessingParameters &param,pdftopdf_doc_t *doc) // {{{
 {
-
-  ppd_file_t *ppd = data->ppd;
+  char *final_content_type = data->final_content_type;
   ipp_t *printer_attrs = data->printer_attrs;
-  ipp_attribute_t *ipp;
+  ipp_t *job_attrs = data->job_attrs;
+  ipp_attribute_t *attr;
   const char *val;
    
-  if ((val = cupsGetOption("copies",num_options,options)) != NULL	||
-	(val = cupsGetOption("Copies", num_options, options))!=NULL	||
-	(val = cupsGetOption("num-copies", num_options, options))!=NULL	||
-	(val = cupsGetOption("NumCopies", num_options, options))!=NULL) {
+  if ((val = cupsGetOption("copies",num_options, options)) != NULL ||
+      (val = cupsGetOption("Copies", num_options, options)) != NULL ||
+      (val = cupsGetOption("num-copies", num_options, options)) != NULL ||
+      (val = cupsGetOption("NumCopies", num_options, options)) != NULL)
+  {
     int copies = atoi(val);
     if (copies > 0)
       param.num_copies = copies;
   }
-  // param.num_copies initially from commandline
-  if (param.num_copies==1) {
-    ppdGetInt(ppd,"Copies",&param.num_copies);
-  }
+
   if (param.num_copies==0) {
     param.num_copies=1;
   }
@@ -364,11 +246,14 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
     param.autoprint = true;
   }
 
-  if (ppd && (ppd->landscape < 0)) { // direction the printer rotates landscape (90 or -90)
+  // direction the printer rotates landscape
+  // (landscape-orientation-requested-preferred: 4: 90 or 5: -90)
+  if (printer_attrs != NULL &&
+      (attr = ippFindAttribute(printer_attrs, "landscape-orientation-requested-preferred", IPP_TAG_ZERO)) != NULL &&
+      ippGetInteger(attr, 0) == 5)
     param.normal_landscape=ROT_270;
-  } else {
+  else
     param.normal_landscape=ROT_90;
-  }
 
   int ipprot;
   param.orientation=ROT_0;
@@ -395,67 +280,51 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
     param.no_orientation = true;
   }
 
-  ppd_size_t *pagesize;
-  // param.page default is letter, border 36,18
-  if ((pagesize=ppdPageSize(ppd,0)) != NULL) { // "already rotated"
-    param.page.top=pagesize->top;
-    param.page.left=pagesize->left;
-    param.page.right=pagesize->right;
-    param.page.bottom=pagesize->bottom;
-    param.page.width=pagesize->width;
-    param.page.height=pagesize->length;
-  }
-  else 
-  {
-	if(printer_attrs!=NULL){
-	    char defSize[41];
-	    int min_length = 99999,
-	    	max_length = 0,
-	    	min_width = 99999,
-		max_width = 0,
-		left, right,
-		top, bottom; 
-	    cfGenerateSizes(printer_attrs, &ipp, &min_length, &min_width,
-			&max_length, &max_width, &bottom, &left, &right, &top,
-			defSize);
-	    param.page.top = top* 72.0/2540.0;
-	    param.page.bottom = bottom* 72.0/2540.0;
-	    param.page.right = right * 72.0/2540.0;
-	    param.page.left = left* 72.0/2540.0;
-	    param.page.width = min_width*72.0/2540.0;
-	    param.page.height = min_length*72.0/2540.0;
-  	}
+  if (printer_attrs != NULL)
+    param.pagesize_requested =
+      (cfGetPageDimensions(printer_attrs, job_attrs, num_options, options, NULL,
+			   0,
+			   &(param.page.width), &(param.page.height),
+			   &(param.page.left), &(param.page.bottom),
+			   &(param.page.right), &(param.page.top),
+			   NULL, NULL) == 1);
 
-    #ifdef HAVE_CUPS_1_7
-   	if ((val = cupsGetOption("media-size", num_options, options)) != NULL ||
-		(val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
-		(val = cupsGetOption("page-size", num_options, options)) != NULL ||
-		(val = cupsGetOption("PageSize", num_options, options)) != NULL) {
-	pwg_media_t *size_found = NULL;
-	if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-					"cfFilterPDFToPDF: Page size from command "
-					"line: %s", val);
-	if ((size_found = pwgMediaForPWG(val)) == NULL)
-		if ((size_found = pwgMediaForPPD(val)) == NULL)
-		size_found = pwgMediaForLegacy(val);
-	if (size_found != NULL) {
-		param.page.width = size_found->width * 72.0 / 2540.0;
-		param.page.height = size_found->length * 72.0 / 2540.0;
-		param.page.top=param.page.bottom=36.0;
-		param.page.right=param.page.left=18.0;
-		param.page.right=param.page.width-param.page.right;
-		param.page.top=param.page.height-param.page.top;
-		if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-					"cfFilterPDFToPDF: Width: %f, Length: %f",
-					param.page.width, param.page.height);
-	}
-	else
-		if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-					"cfFilterPDFToPDF: Unsupported page size %s.",
-					val);
-	}
-    #endif /* HAVE_CUPS_1_7 */
+  if (param.page.width <= 0 || param.page.height <= 0)
+  {
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_WARN,
+				   "cfFilterPDFToPDF: Could not determine the output page dimensions, falling back to US Letter format");
+    param.page.width = 612;
+    param.page.height = 792;
   }
+  if (param.page.left < 0)
+  {
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_WARN,
+				   "cfFilterPDFToPDF: Could not determine the width of the left margin, falling back to 18 pt/6.35 mm");
+    param.page.left = 18.0;
+  }
+  if (param.page.bottom < 0)
+  {
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_WARN,
+				   "cfFilterPDFToPDF: Could not determine the width of the bottom margin, falling back to 36 pt/12.7 mm");
+    param.page.bottom = 36.0;
+  }
+  if (param.page.right < 0)
+  {
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_WARN,
+				   "cfFilterPDFToPDF: Could not determine the width of the right margin, falling back to 18 pt/6.35 mm");
+    param.page.right = param.page.width - 18.0;
+  }
+  else
+    param.page.right = param.page.width - param.page.right;
+  if (param.page.top < 0)
+  {
+    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_WARN,
+				   "cfFilterPDFToPDF: Could not determine the width of the top margin, falling back to 36 pt/12.7 mm");
+    param.page.top = param.page.height - 36.0;
+  }
+  else
+    param.page.top = param.page.height - param.page.top;
+
   param.paper_is_landscape=(param.page.width>param.page.height);
 
   _cfPDFToPDFPageRect tmp; // borders (before rotation)
@@ -491,9 +360,11 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
 
   param.page.set(tmp); // replace values, where tmp.* != NaN  (because tmp needed rotation, param.page not!)
 
-  if (ppdGetDuplex(ppd)) {
+  if ((val = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs, "sides")) !=
+      NULL &&
+      strncmp(val, "two-sided-", 10) == 0) {
     param.duplex=true;
-  } else if (is_true(cupsGetOption("Duplex",num_options,options))) {
+  } else if (is_true(cupsGetOption("Duplex", num_options, options))) {
     param.duplex=true;
     param.set_duplex=true;
   } else if ((val=cupsGetOption("sides",num_options,options)) != NULL) {
@@ -544,12 +415,13 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
 
   if ((val=cupsGetOption("OutputOrder",num_options,options)) != NULL ||
       (val=cupsGetOption("output-order",num_options,options)) != NULL ||
-      (val=cupsGetOption("page-delivery",num_options,options)) != NULL) {
+      (val=cupsGetOption("page-delivery",num_options,options)) != NULL)
+  {
     param.reverse = (strcasecmp(val, "Reverse") == 0 ||
 		     strcasecmp(val, "reverse-order") == 0);
-  } else if (ppd) {
-    param.reverse=ppdDefaultOrder(ppd, doc);
   }
+  else
+    param.reverse = cfIPPReverseOutput(printer_attrs, job_attrs);
 
   std::string rawlabel;
   char *classification = getenv("CLASSIFICATION");
@@ -593,20 +465,9 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
     parseRanges(val,param.input_page_ranges);
   }
 
-  ppd_choice_t *choice;
-  if ((choice=ppdFindMarkedChoice(ppd,"MirrorPrint")) != NULL) {
-    val=choice->choice;
-  } else {
-    if((val = cupsGetOption("mirror", num_options, options))!=NULL  ||
-	(val = cupsGetOption("mirror-print", num_options, options))!=NULL	||
-	(val = cupsGetOption("MirrorPrint", num_options, options))!=NULL)
+  if((val = cupsGetOption("mirror", num_options, options)) != NULL ||
+     (val = cupsGetOption("mirror-print", num_options, options)) != NULL)
     param.mirror=is_true(val);
-  }
-  
-
-  if ((val=cupsGetOption("emit-jcl",num_options,options)) != NULL) {
-    param.emit_jcl=!is_false(val)&&(strcmp(val,"0")!=0);
-  }
 
   param.booklet=pdftopdf_booklet_mode_e::CF_PDFTOPDF_BOOKLET_OFF;
   if ((val=cupsGetOption("booklet",num_options,options)) != NULL) {
@@ -641,10 +502,30 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
     }
   }
 
-  param.collate=optGetCollate(num_options,options);
-  // FIXME? pdftopdf also considers if ppdCollate is set (only when cupsGetOption is /not/ given) [and if is_true overrides param.collate=true]  -- pstops does not
+  // Collate
+  if (is_true(cupsGetOption("Collate", num_options, options)))
+    param.collate = true;
+  else if ((val = cupsGetOption("sheet-collate", num_options, options)) != NULL)
+    param.collate = (strcasecmp(val, "uncollated") != 0);
+  else if (((val = cupsGetOption("multiple-document-handling",
+				 num_options, options)) != NULL &&
+	    (strcasecmp(val, "separate-documents-collated-copies") == 0 ||
+	     strcasecmp(val, "separate-documents-uncollated-copies") == 0 ||
+	     strcasecmp(val, "single-document") == 0 ||
+	     strcasecmp(val, "single-document-new-sheet") == 0)) ||
+	   (val = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
+					     "multiple-document-handling")) !=
+	   NULL)
+   /* This IPP attribute is unnecessarily complicated:
+    *   single-document, separate-documents-collated-copies, single-document-new-sheet:
+    *      -> collate (true)
+    *   separate-documents-uncollated-copies:
+    *      -> can be uncollated (false)
+    */
+    param.collate =
+      (strcasecmp(val, "separate-documents-uncollated-copies") != 0);
 
-/*
+  /*
   // TODO: scaling
   // TODO: natural-scaling
 
@@ -661,24 +542,14 @@ void getParameters(cf_filter_data_t *data,int num_options,cups_option_t *options
     naturalScaling = atoi(val) * 0.01;
   }
 
-bool checkFeature(const char *feature, int num_options, cups_option_t *options) // {{{
-{
-  const char *val;
-  ppd_attr_t *attr;
-
-  return ((val=cupsGetOption(feature,num_options,options)) != NULL && is_true(val)) ||
-         ((attr=ppdFindAttr(ppd,feature,0)) != NULL && is_true(attr->val));
-}
-// }}}
-*/
+  */
 
   // make pages a multiple of two (only considered when duplex is on).
   // i.e. printer has hardware-duplex, but needs pre-inserted filler pages
   // FIXME? pdftopdf also supports it as cmdline option (via checkFeature())
-  ppd_attr_t *attr;
-  if ((attr=ppdFindAttr(ppd,"cupsEvenDuplex",0)) != NULL) {
-    param.even_duplex=is_true(attr->value);
-  }
+  param.even_duplex =
+    (param.duplex &&
+     is_true(cupsGetOption("even-duplex", num_options, options)));
 
   // TODO? pdftopdf* ?
   // TODO?! pdftopdfAutoRotate
@@ -693,258 +564,136 @@ bool checkFeature(const char *feature, int num_options, cups_option_t *options) 
   // printer driver) does page logging in the /var/log/cups/page_log file
   // by outputting "PAGE: <# of current page> <# of copies>" to stderr.
 
-  // pdftopdf would have to do this only for PDF printers as in this case
-  // pdftopdf is the last filter, but some of the other filters are not
-  // able to do the logging because they do not have access to the number
-  // of pages of the file to be printed, so pdftopdf overtakes their logging
-  // duty.
+  // cfFilterPDFToPDF() would have to do this only for PDF printers as
+  // in this case cfFilterPDFToPDF() is the last filter, but some of
+  // the other filters are not able to do the logging because they do
+  // not have access to the number of pages of the file to be printed,
+  // so cfFilterPDFToPDF() overtakes their logging duty.
 
-  // The filters currently are:
-  // - foomatic-rip (lets Ghostscript convert PDF to printer's format via
-  //   built-in drivers, no access to the PDF content)
-  // - gstopxl (uses Ghostscript, like foomatic-rip)
-  // - *toraster on IPP Everywhere printers (then *toraster gets the last
-  //   filter, the case if FINAL_CONTENT_TYPE env var is "image/pwg-raster")
-  // - hpps (bug)
-
-  // Check whether page logging is forced or suppressed by the command line
-  if ((val=cupsGetOption("page-logging",num_options,options)) != NULL) {
+  // Check whether page logging is forced or suppressed by the options
+  if ((val = cupsGetOption("pdf-filter-page-logging",
+			   num_options, options)) != NULL) {
     if (strcasecmp(val,"auto") == 0) {
       param.page_logging = -1;
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				     "cfFilterPDFToPDF: Automatic page logging "
-				     "selected by command line.");
+				     "selected by options.");
     } else if (is_true(val)) {
       param.page_logging = 1;
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-				     "cfFilterPDFToPDF: Forced page logging selected "
-				     "by command line.");
+				     "cfFilterPDFToPDF: Forced page logging "
+				     "selected by options.");
     } else if (is_false(val)) {
       param.page_logging = 0;
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-				     "cfFilterPDFToPDF: Suppressed page logging "
-				     "selected by command line.");
+				     "cfFilterPDFToPDF: Suppressed page "
+				     "logging selected by options.");
     } else {
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-				     "cfFilterPDFToPDF: Unsupported page-logging "
-				     "value %s, using page-logging=auto!",val);
+				     "cfFilterPDFToPDF: Unsupported page "
+				     "logging setting "
+				     "\"pdf-filter-page-logging=%s\", "
+				     "using \"auto\"!", val);
       param.page_logging = -1;
     }
   }
 
   if (param.page_logging == -1) {
-    // Determine the last filter in the chain via cupsFilter(2) lines of the
-    // PPD file and FINAL_CONTENT_TYPE
-    if (!ppd) {
-      // If PPD file is not specified, we determine whether to log pages or not
-      // using FINAL_CONTENT_TYPE env variable. log pages only when FINAL_CONTENT_TYPE is
-      // either pdf or raster
-	
-        if (final_content_type && (strcasestr(final_content_type, "/pdf") ||
-	strcasestr(final_content_type, "/vnd.cups-pdf") ||
-	strcasestr(final_content_type, "/pwg-raster")))
-	      param.page_logging = 1;
-	else
-	      param.page_logging = 0;   
-	// If final_content_type is not clearly available we are not sure whether to log pages or not
-	if((char*)final_content_type==NULL || 
-		sizeof(final_content_type)==0 || 
-		final_content_type[0]=='\0'){
-	    param.page_logging = -1;	 
-	}
-	if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-		"cfFilterPDFToPDF: No PPD file specified,  "
-		"determined whether to log pages or "
-		"not using final_content_type env variable.");
-		doc->logfunc(doc->logdata,CF_LOGLEVEL_DEBUG,"final_content_type = %s page_logging=%d",final_content_type?final_content_type:"NULL",param.page_logging);
-    } else {
-      char *lastfilter = NULL;
-      if (final_content_type == NULL) {
-	// No FINAL_CONTENT_TYPE env variable set, we cannot determine
-	// whether we have to log pages, so do not log.
-	param.page_logging = 0;
-	if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-				       "cfFilterPDFToPDF: No FINAL_CONTENT_TYPE "
-				       "environment variable, could not "
-				       "determine whether to log pages or "
-				       "not, so turned off page logging.");
-      // Proceed depending on number of cupsFilter(2) lines in PPD
-      } else if (ppd->num_filters == 0) {
-	// No filter line, manufacturer-supplied PostScript PPD
-	// In this case cfFilterPSToPS, called by cfFilterPDFToPS, does the logging
-	param.page_logging = 0;
-      } else if (ppd->num_filters == 1) {
-	// One filter line, so this one filter is the last filter
-	lastfilter = ppd->filters[0];
-      } else {
-	// More than one filter line, determine the one which got
-	// actually used via FINAL_CONTENT_TYPE
-	ppd_attr_t *ppd_attr;
-	if ((ppd_attr = ppdFindAttr(ppd, "cupsFilter2", NULL)) != NULL) {
-	  // We have cupsFilter2 lines, use only these
-	  do {
-	    // Go to the second work, which is the destination MIME type
-	    char *p = ppd_attr->value;
-	    while (!isspace(*p)) p ++;
-	    while (isspace(*p)) p ++;
-	    // Compare with FINAL_CONTEN_TYPE
-	    if (!strncasecmp(final_content_type, p,
-			     strlen(final_content_type))) {
-	      lastfilter = ppd_attr->value;
-	      break;
-	    }
-	  } while ((ppd_attr = ppdFindNextAttr(ppd, "cupsFilter2", NULL))
-		   != NULL);
-	} else {
-	  // We do not have cupsFilter2 lines, use the cupsFilter lines
-	  int i;
-	  for (i = 0; i < ppd->num_filters; i ++) {
-	    // Compare source MIME type (first word) with FINAL_CONTENT_TYPE
-	    if (!strncasecmp(final_content_type, ppd->filters[i],
-			     strlen(final_content_type))) {
-	      lastfilter = ppd->filters[i];
-	      break;
-	    }
-	  }
-	}
-      }
-      if (param.page_logging == -1) {
-	if (lastfilter) {
-	  // Get the name of the last filter, without mime type and cost
-	  char *p = lastfilter;
-	  char *q = p + strlen(p) - 1;
-	  while(!isspace(*q) && *q != '/') q --;
-	  lastfilter = q + 1;
-	  // Check whether we have to log
-	  if (!strcasecmp(lastfilter, "-")) {
-	    // No filter defined in the PPD
-	    // If output data (FINAL_CONTENT_TYPE) is PDF, pdftopdf is last
-	    // filter (PDF printer) and has to log
-	    // If output data (FINAL_CONTENT_TYPE) is PWG Raster, *toraster is
-	    // last filter (IPP Everywhere printer) and pdftopdf has to log
-	    if (strcasestr(final_content_type, "/pdf") ||
-		strcasestr(final_content_type, "/vnd.cups-pdf") ||
-		strcasestr(final_content_type, "/pwg-raster"))
-	      param.page_logging = 1;
-	    else
-	      param.page_logging = 0;
-	  } else if (!strcasecmp(lastfilter, "pdftopdf")) {
-	    // pdftopdf is last filter (PDF printer)
-	    param.page_logging = 1;
-	  } else if (!strcasecmp(lastfilter, "gstopxl")) {
-	    // gstopxl is last filter, this is a Ghostscript-based filter
-	    // without access to the pages of the file to be printed, so we
-	    // log the pages
-	    param.page_logging = 1;
-	  } else if (!strcasecmp(lastfilter + strlen(lastfilter) - 8,
-				 "toraster") ||
-		     !strcasecmp(lastfilter + strlen(lastfilter) - 5,
-				 "topwg")) {
-	    // On IPP Everywhere printers which accept PWG Raster data one
-	    // of gstoraster, cfFilterPDFToRaster, or mupdftopwg is the last
-	    // filter. These filters do not log pages so pdftopdf has to
-	    // do it
-	    param.page_logging = 1;
-	  } else if (!strcasecmp(lastfilter, "foomatic-rip")) {
-	    // foomatic-rip is last filter, foomatic-rip is mainly used as
-	    // Ghostscript wrapper to use Ghostscript's built-in printer
-	    // drivers. Here there is also no access to the pages so that we
-	    // delegate the logging to pdftopdf
-	    param.page_logging = 1;
-	  } else if (!strcasecmp(lastfilter, "hpps")) {
-	    // hpps is last filter, hpps is part of HPLIP and it is a bug that
-	    // it does not do the page logging.
-	    param.page_logging = 1;
-	  } else {
-	    // All the other filters log pages as expected.
-	    param.page_logging = 0;
-	  }
-	} else {
-	  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-					 "cfFilterPDFToPDF: Last filter could not "
-					 "get determined, page logging turned "
-					 "off.");
-	  param.page_logging = 0;
-	}
-      }
-      if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-				     "cfFilterPDFToPDF: Last filter determined by the "
-				     "PPD: %s; FINAL_CONTENT_TYPE: "
-				     "%s => pdftopdf will %slog pages in "
-				     "page_log.",
-				     (lastfilter ? lastfilter : "None"),
-				     (final_content_type ? final_content_type :
-				      "(not supplied)"),
-				     (param.page_logging == 0 ? "not " : ""));
+    // We determine whether to log pages or not
+    // using the output data MIME type. log pages only when the output is
+    // either pdf or PWG Raster
+    if (final_content_type &&
+	(strcasestr(final_content_type, "/pdf") ||
+	 strcasestr(final_content_type, "/vnd.cups-pdf") ||
+	 strcasestr(final_content_type, "/pwg-raster")))
+      param.page_logging = 1;
+    else
+      param.page_logging = 0;
+
+    // If final_content_type is not clearly available we are not sure whether
+    // to log pages or not
+    if((char*)final_content_type==NULL ||
+       sizeof(final_content_type)==0 ||
+       final_content_type[0]=='\0'){
+      param.page_logging = -1;
     }
+    if (doc->logfunc)
+    {
+      doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
+		   "cfFilterPDFToPDF: Determined whether to "
+		   "log pages or not using output data type.");
+      doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
+		   "final_content_type = %s => page_logging = %d",
+		   final_content_type ? final_content_type : "NULL",
+		   param.page_logging);
+    }
+    if (param.page_logging == -1)
+      param.page_logging = 0;
   }
 }
 // }}}
 
-static bool printerWillCollate(ppd_file_t *ppd) // {{{
+void calculate(int num_options,
+	       cups_option_t *options,
+	       _cfPDFToPDFProcessingParameters &param,
+	       char *final_content_type) // {{{
 {
-  ppd_choice_t *choice;
+  const char       *val;
+  bool             hw_copies = false,
+                   hw_collate = false;
 
-  if (((choice=ppdFindMarkedChoice(ppd,"Collate")) != NULL)&&
-      (is_true(choice->choice))) {
 
-    // printer can collate, but also for the currently marked ppd features?
-    ppd_option_t *opt=ppdFindOption(ppd,"Collate");
-    return (opt)&&(!opt->conflicted);
+  // Check options for caller's instructions about hardware copies/collate
+  if ((val = cupsGetOption("hardware-copies",
+			   num_options, options)) != NULL)
+    // Use hardware copies according to the caller's instructions
+    hw_copies = is_true(val);
+  else
+    // Caller did not tell us whether the printer does Hardware copies
+    // or not, so we assume hardware copies on PDF printers, and software
+    // copies on other (usually raster) printers or if we do not know the
+    // final output format.
+    hw_copies = (final_content_type &&
+		 (strcasestr(final_content_type, "/pdf") ||
+		  strcasestr(final_content_type, "/vnd.cups-pdf")));
+  if (hw_copies)
+  {
+    if ((val = cupsGetOption("hardware-collate",
+			    num_options, options)) != NULL)
+      // Use hardware collate according to the caller's instructions
+      hw_collate = is_true(val);
+    else
+      // Check output format MIME type whether it is
+      // of a driverless IPP printer (PDF, Apple Raster, PWG Raster, PCLm).
+      // These printers do always hardware collate if they do hardware copies.
+      // https://github.com/apple/cups/issues/5433
+      hw_collate = (final_content_type &&
+		    (strcasestr(final_content_type, "/pdf") ||
+		     strcasestr(final_content_type, "/vnd.cups-pdf") ||
+		     strcasestr(final_content_type, "/pwg-raster") ||
+		     strcasestr(final_content_type, "/urf") ||
+		     strcasestr(final_content_type, "/PCLm")));
   }
-  return false;
-}
-// }}}
-
-void calculate(cf_filter_data_t *data,_cfPDFToPDFProcessingParameters &param,char *final_content_type) // {{{
-{
-  ppd_file_t *ppd = data->ppd;
-  int num_options = 0;
-  cups_option_t *options = NULL;
-  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
-  if (param.reverse)
+  
+  if (param.reverse && param.duplex)
     // Enable even_duplex or the first page may be empty.
     param.even_duplex=true; // disabled later, if non-duplex
-
-  setFinalPPD(ppd,param);
 
   if (param.num_copies==1) {
     param.device_copies=1;
     // collate is never needed for a single copy
     param.collate=false; // (does not make a big difference for us)
-  } else if ((ppd)&&(!ppd->manual_copies)) { // hw copy generation available
+  } else if (hw_copies) { // hw copy generation available
     param.device_copies=param.num_copies;
     if (param.collate) { // collate requested by user
-      // Check output format (FINAL_CONTENT_TYPE env variable) whether it is
-      // of a driverless IPP printer (PDF, Apple Raster, PWG Raster, PCLm).
-      // These printers do always hardware collate if they do hardware copies.
-      // https://github.com/apple/cups/issues/5433
-      if (final_content_type &&
-	  (strcasestr(final_content_type, "/pdf") ||
-	   strcasestr(final_content_type, "/vnd.cups-pdf") ||
-	   strcasestr(final_content_type, "/pwg-raster") ||
-	   strcasestr(final_content_type, "/urf") ||
-	   strcasestr(final_content_type, "/PCLm"))) {
-	param.device_collate = true;
-      } else {
-	// check collate device, with current/final(!) ppd settings
-	param.device_collate=printerWillCollate(ppd);
-	if (!param.device_collate) {
-	  // printer can't hw collate -> we must copy collated in sw
-	  param.device_copies=1;
-	}
+      param.device_collate = hw_collate;
+      if (!param.device_collate) {
+	// printer can't hw collate -> we must copy collated in sw
+	param.device_copies=1;
       }
     } // else: printer copies w/o collate and takes care of duplex/even_duplex
   }
-  else if(final_content_type &&
-	((strcasestr(final_content_type, "/pdf"))  ||
-	(strcasestr(final_content_type, "/vnd.cups-pdf")))){
-    param.device_copies = param.num_copies;
-    if(param.collate){
-	param.device_collate = true;
-    }
-  }
- else { // sw copies
+  else { // sw copies
     param.device_copies=1;
     if (param.duplex) { // &&(num_copies>1)
       // sw collate + even_duplex must be forced to prevent copies on the backsides
@@ -953,23 +702,15 @@ void calculate(cf_filter_data_t *data,_cfPDFToPDFProcessingParameters &param,cha
     }
   }
 
-  // TODO? FIXME:  unify code with emitJCLOptions, which does this "by-hand" now (and makes this code superfluous)
-  if (param.device_copies==1) {
-    // make sure any hardware copying is disabled
-    ppdMarkOption(ppd,"Copies","1");
-    ppdMarkOption(ppd,"JCLCopies","1");
-  } else { // hw copy
+  if (param.device_copies != 1) //hw copy
     param.num_copies=1; // disable sw copy
-  }
 
-  if ((param.collate)&&(!param.device_collate)) { // software collate
-    ppdMarkOption(ppd,"Collate","False"); // disable any hardware-collate (in JCL)
+  if (param.duplex &&
+      param.collate && !param.device_collate) // software collate
     param.even_duplex=true; // fillers always needed
-  }
 
-  if (!param.duplex) {
+  if (!param.duplex)
     param.even_duplex=false;
-  }
 }
 // }}}
 
@@ -1038,10 +779,10 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
 	 int outputfd,        /* I - File descriptor output stream */
 	 int inputseekable,   /* I - Is input stream seekable? */
 	 cf_filter_data_t *data, /* I - Job and printer data */
-	 void *parameters)    /* I - Filter-specific parameters */
+	 void *parameters)    /* I - Filter-specific parameters (unused) */
 {
   pdftopdf_doc_t     doc;         /* Document information */
-  char               *final_content_type = NULL;
+  char               *final_content_type = data->final_content_type;
   FILE               *inputfp,
                      *outputfp;
   const char         *t;
@@ -1054,10 +795,7 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
   void               *icd = data->iscanceleddata;
   int num_options = 0;
   cups_option_t *options = NULL;
-  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
-  if (parameters)
-    final_content_type = (char *)parameters;
 
   try {
     _cfPDFToPDFProcessingParameters param;
@@ -1075,9 +813,11 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
     doc.iscanceledfunc = iscanceled;
     doc.iscanceleddata = icd;
 
-    getParameters(data, num_options, options, param, final_content_type, &doc);
+    num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
-    calculate(data, param, final_content_type);
+    getParameters(data, num_options, options, param, &doc);
+
+    calculate(num_options, options, param, final_content_type);
 
 #ifdef DEBUG
     param.dump(&doc);
@@ -1095,6 +835,8 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterPDFToPDF: Streaming mode: No PDF processing, only adding of JCL");
     }
+
+    cupsFreeOptions(num_options, options);
 
     std::unique_ptr<_cfPDFToPDFProcessor> proc(_cfPDFToPDFFactory::processor());
 
@@ -1128,27 +870,29 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
 	return 2;
 
       // Pass information to subsequent filters via PDF comments
-      _cfPDFToPDFEmitComment(*proc, param);
-    }
+      std::vector<std::string> output;
 
-    /* TODO
-    // color management
-    --- PPD:
-      copyPPDLine_(fp_dest, fp_src, "*PPD-Adobe: ");
-      copyPPDLine_(fp_dest, fp_src, "*cupsICCProfile ");
-      copyPPDLine_(fp_dest, fp_src, "*Manufacturer:");
-      copyPPDLine_(fp_dest, fp_src, "*ColorDevice:");
-      copyPPDLine_(fp_dest, fp_src, "*DefaultColorSpace:");
-    if (cupsICCProfile) {
-      proc.add_cm(...,...);
+      output.push_back("% This file was generated by pdftopdf");
+
+      // This is not standard, but like PostScript. 
+      if (param.device_copies > 0)
+      {
+	char buf[256];
+	snprintf(buf, sizeof(buf), "%d", param.device_copies);
+	output.push_back(std::string("%%PDFTOPDFNumCopies : ")+buf);
+
+	if (param.device_collate)
+	  output.push_back("%%PDFTOPDFCollate : true");
+	else
+	  output.push_back("%%PDFTOPDFCollate : false");
+      }
+
+      proc->set_comments(output);
     }
-    */
 
     outputfp = fdopen(outputfd, "w");
     if (outputfp == NULL)
       return 1;
-
-    _cfPDFToPDFEmitPreamble(outputfp, data->ppd, param); // ppdEmit, JCL stuff
 
     if (!streaming) {
       // Pass on the processed input data
@@ -1164,7 +908,6 @@ cfFilterPDFToPDF(int inputfd,         /* I - File descriptor input stream */
       fclose(inputfp);
     }
 
-    _cfPDFToPDFEmitPostamble(outputfp, data->ppd,param);
     fclose(outputfp);
   } catch (std::exception &e) {
     // TODO? exception type

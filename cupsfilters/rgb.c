@@ -14,7 +14,6 @@
  *   cfRGBDelete() - Delete a color separation.
  *   cfRGBDoGray() - Do a grayscale separation...
  *   cfRGBDoRGB()  - Do a RGB separation...
- *   cfRGBLoad()   - Load a RGB color profile from a PPD file.
  *   cfRGBNew()    - Create a new RGB color separation.
  */
 
@@ -296,129 +295,6 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
         *output++ = tempr;
     }
   }
-}
-
-
-/*
- * 'cfRGBLoad()' - Load a RGB color profile from a PPD file.
- */
-
-cf_rgb_t *				/* O - New color profile */
-cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
-            const char *colormodel,	/* I - Color model */
-            const char *media,		/* I - Media type */
-            const char *resolution,	/* I - Resolution */
-	    cf_logfunc_t log,       /* I - Log function */
-	    void       *ld)             /* I - Log function data */
-{
-  int		i,			/* Looping var */
-		cube_size,		/* Size of color lookup cube */
-		num_channels,		/* Number of color channels */
-		num_samples;		/* Number of color samples */
-  cf_sample_t	*samples;		/* Color samples */
-  float		values[7];		/* Color sample values */
-  char		spec[PPD_MAX_NAME];	/* Profile name */
-  ppd_attr_t	*attr;			/* Attribute from PPD file */
-  cf_rgb_t	*rgbptr;		/* RGB color profile */
-
-
- /*
-  * Find the following attributes:
-  *
-  *    cupsRGBProfile  - Specifies the cube size, number of channels, and
-  *                      number of samples
-  *    cupsRGBSample   - Specifies an RGB to CMYK color sample
-  */
-
-  if ((attr = cfFindAttr(ppd, "cupsRGBProfile", colormodel, media,
-                           resolution, spec, sizeof(spec), log, ld)) == NULL)
-  {
-    if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "No cupsRGBProfile attribute found for the current settings!");
-    return (NULL);
-  }
-
-  if (!attr->value || sscanf(attr->value, "%d%d%d", &cube_size, &num_channels,
-                             &num_samples) != 3)
-  {
-    if (log) log(ld, CF_LOGLEVEL_ERROR,
-		 "Bad cupsRGBProfile attribute \'%s\'!",
-		 attr->value ? attr->value : "(null)");
-    return (NULL);
-  }
-
-  if (cube_size < 2 || cube_size > 16 ||
-      num_channels < 1 || num_channels > CF_MAX_RGB ||
-      num_samples != (cube_size * cube_size * cube_size))
-  {
-    if (log) log(ld, CF_LOGLEVEL_ERROR,
-		 "Bad cupsRGBProfile attribute \'%s\'!",
-		 attr->value);
-    return (NULL);
-  }
-
- /*
-  * Allocate memory for the samples and read them...
-  */
-
-  if ((samples = calloc(num_samples, sizeof(cf_sample_t))) == NULL)
-  {
-    if (log) log(ld, CF_LOGLEVEL_ERROR,
-		 "Unable to allocate memory for RGB profile!");
-    return (NULL);
-  }
-
- /*
-  * Read all of the samples...
-  */
-
-  for (i = 0; i < num_samples; i ++)
-    if ((attr = ppdFindNextAttr(ppd, "cupsRGBSample", spec)) == NULL)
-      break;
-    else if (!attr->value)
-    {
-      if (log) log(ld, CF_LOGLEVEL_ERROR,
-		   "Bad cupsRGBSample value!");
-      break;
-    }
-    else if (sscanf(attr->value, "%f%f%f%f%f%f%f", values + 0,
-                    values + 1, values + 2, values + 3, values + 4, values + 5,
-                    values + 6) != (3 + num_channels))
-    {
-      if (log) log(ld, CF_LOGLEVEL_ERROR,
-		   "Bad cupsRGBSample value!");
-      break;
-    }
-    else
-    {
-      samples[i].rgb[0]    = (int)(255.0 * values[0] + 0.5);
-      samples[i].rgb[1]    = (int)(255.0 * values[1] + 0.5);
-      samples[i].rgb[2]    = (int)(255.0 * values[2] + 0.5);
-      samples[i].colors[0] = (int)(255.0 * values[3] + 0.5);
-      if (num_channels > 1)
-	samples[i].colors[1] = (int)(255.0 * values[4] + 0.5);
-      if (num_channels > 2)
-	samples[i].colors[2] = (int)(255.0 * values[5] + 0.5);
-      if (num_channels > 3)
-	samples[i].colors[3] = (int)(255.0 * values[6] + 0.5);
-    }
-
- /*
-  * If everything went OK, create the color profile...
-  */
-
-  if (i == num_samples)
-    rgbptr = cfRGBNew(num_samples, samples, cube_size, num_channels);
-  else
-    rgbptr = NULL;
-
- /*
-  * Free the temporary sample array and return...
-  */
-
-  free(samples);
-
-  return (rgbptr);
 }
 
 

@@ -36,7 +36,7 @@
 #include <ppd/ppd.h>
 #include <cups/raster.h>
 #include <cupsfilters/ipp.h>
-#include <cupsfilters/ppdgenerator.h>
+#include <cupsfilters/ipp.h>
 
 #define MAX_OUTPUT_LEN 8192
 
@@ -641,8 +641,8 @@ generate_ppd (const char *uri, int isFax)
   }
 
   /* Generate the PPD file */
-  if (!cfCreatePPDFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0,
-			  0, ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
+  if (!ppdCreatePPDFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0,
+			   0, ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
     if (strlen(ppdgenerator_msg) > 0)
       fprintf(stderr, "ERROR: Unable to create PPD file: %s\n",
 	      ppdgenerator_msg);

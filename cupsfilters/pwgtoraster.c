@@ -33,6 +33,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "image.h"
 #include "bitmap.h"
 #include "filter.h"
+#include "ipp.h"
 #include <config.h>
 #include <cups/cups.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
@@ -45,7 +46,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <ppd/ppd.h>
 #include <stdarg.h>
 #include <cups/raster.h>
 #include <cupsfilters/image.h>
@@ -104,19 +104,15 @@ typedef struct cms_profile_s
 
 typedef struct pwgtoraster_doc_s
 {                /**** Document information ****/
+  cf_filter_data_t *data;
   bool page_size_requested;
   int bi_level;
   bool allocLineBuf;
   unsigned int bitspercolor;
   unsigned int outputNumColors; 
   unsigned int bitmapoffset[2];
-  ppd_file_t *ppd;
   cups_page_header2_t inheader;
   cups_page_header2_t outheader;
-  cf_logfunc_t logfunc;             /* Logging function, NULL for no
-					   logging */
-  void          *logdata;               /* User data for logging function, can
-					   be NULL */
   cups_file_t	*inputfp;		/* Temporary file, if any */
   FILE		*outputfp;		/* Temporary file, if any */
   /* margin swapping */
@@ -250,59 +246,20 @@ static void lcms_error_handler(cmsContext contextId, cmsUInt32Number ErrorCode,
 }
 #endif
 
-static void handle_requires_page_region(pwgtoraster_doc_t*doc) {
-  ppd_choice_t *mf;
-  ppd_choice_t *is;
-  ppd_attr_t *rregions = NULL;
-  ppd_size_t *size;
-
-  if ((size = ppdPageSize(doc->ppd,NULL)) == NULL) return;
-  mf = ppdFindMarkedChoice(doc->ppd,"ManualFeed");
-  if ((is = ppdFindMarkedChoice(doc->ppd,"InputSlot")) != NULL) {
-    rregions = ppdFindAttr(doc->ppd,"RequiresPageRegion",is->choice);
-  }
-  if (rregions == NULL) {
-    rregions = ppdFindAttr(doc->ppd,"RequiresPageRegion","All");
-  }
-  if (!strcasecmp(size->name,"Custom") || (!mf && !is) ||
-      (mf && !strcasecmp(mf->choice,"False") &&
-       (!is || (is->code && !is->code[0]))) ||
-      (!rregions && doc->ppd->num_filters > 0)) {
-    ppdMarkOption(doc->ppd,"PageSize",size->name);
-  } else if (rregions && rregions->value
-      && !strcasecmp(rregions->value,"True")) {
-    ppdMarkOption(doc->ppd,"PageRegion",size->name);
-  } else {
-    ppd_choice_t *page;
-
-    if ((page = ppdFindMarkedChoice(doc->ppd,"PageSize")) != NULL) {
-      page->marked = 0;
-      cupsArrayRemove(doc->ppd->marked,page);
-    }
-    if ((page = ppdFindMarkedChoice(doc->ppd,"PageRegion")) != NULL) {
-      page->marked = 0;
-      cupsArrayRemove(doc->ppd->marked, page);
-    }
-  }
-}
-
-static int parse_opts(cf_filter_data_t *data,
-		     cf_filter_out_format_t outformat,
-		     pwgtoraster_doc_t *doc)
+static int parse_opts(cf_filter_out_format_t outformat,
+		      pwgtoraster_doc_t *doc)
 {
   int num_options = 0;
   cups_option_t *options = NULL;
   char *profile = NULL;
-  ppd_attr_t *attr;
   const char *val;
+  cf_filter_data_t *data = doc->data;
   cf_logfunc_t log = data->logfunc;
   void *ld = data ->logdata;
   cups_cspace_t         cspace = (cups_cspace_t)(-1);
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
   
-  doc->ppd = data->ppd;
-
   // Did the user explicitly request a certain page size? If not, overtake
   // the page size(s) from the input pages
   doc->page_size_requested =
@@ -317,95 +274,83 @@ static int parse_opts(cf_filter_data_t *data,
 			  outformat == CF_FILTER_OUT_FORMAT_PCLM ?
 			  CF_FILTER_OUT_FORMAT_CUPS_RASTER : outformat, 0, &cspace);
 
-  if (doc->ppd) {
-    if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "cfFilterPWGToRaster: Using PPD file: %s", doc->ppd->nickname);
-    ppdMarkOptions(doc->ppd,num_options,options);
-    handle_requires_page_region(doc);
-    attr = ppdFindAttr(doc->ppd,"pwgtorasterRenderingIntent",NULL);
-    if (attr != NULL && attr->value != NULL) {
-      if (strcasecmp(attr->value,"PERCEPTUAL") == 0) {
-	doc->color_profile.renderingIntent = INTENT_PERCEPTUAL;
-      } else if (strcasecmp(attr->value,"RELATIVE_COLORIMETRIC") == 0) {
-	doc->color_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
-      } else if (strcasecmp(attr->value,"SATURATION") == 0) {
-	doc->color_profile.renderingIntent = INTENT_SATURATION;
-      } else if (strcasecmp(attr->value,"ABSOLUTE_COLORIMETRIC") == 0) {
-	doc->color_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
-      }
-    }
-    if (doc->outheader.Duplex) {
-      /* analyze options relevant to Duplex */
-      const char *backside = "";
-      /* APDuplexRequiresFlippedMargin */
-      enum {
-	FM_NO, FM_FALSE, FM_TRUE
-      } flippedMargin = FM_NO;
+  if (doc->outheader.Duplex)
+  {
+    int backside;
+    /* analyze options relevant to Duplex */
+    /* APDuplexRequiresFlippedMargin */
+    enum {
+      FM_NO,
+      FM_FALSE,
+      FM_TRUE
+    } flippedMargin;
 
-      attr = ppdFindAttr(doc->ppd,"cupsBackSide",NULL);
-      if (attr != NULL && attr->value != NULL) {
-	doc->ppd->flip_duplex = 0;
-	backside = attr->value;
-      } else if (doc->ppd->flip_duplex) {
-	backside = "Rotated"; /* compatible with Max OS and GS 8.71 */
-      }
+    backside = cfGetBackSideOrientation(data);
 
-      attr = ppdFindAttr(doc->ppd,"APDuplexRequiresFlippedMargin",NULL);
-      if (attr != NULL && attr->value != NULL) {
-	if (strcasecmp(attr->value,"true") == 0) {
-	  flippedMargin = FM_TRUE;
-	} else {
-	  flippedMargin = FM_FALSE;
-	}
+    if (backside >= 0)
+    {
+      flippedMargin = (backside & 16 ? FM_TRUE :
+		       (backside & 8 ? FM_FALSE :
+			FM_NO));
+      backside &= 7;
+
+      if (backside == CF_BACKSIDE_MANUAL_TUMBLE && doc->outheader.Tumble)
+      {
+	doc->swap_margin_x = doc->swap_margin_y = true;
+	if (flippedMargin == FM_TRUE)
+	  doc->swap_margin_y = false;
       }
-      if (strcasecmp(backside,"ManualTumble") == 0 && doc->outheader.Tumble) {
+      else if (backside==CF_BACKSIDE_ROTATED && !doc->outheader.Tumble)
+      {
 	doc->swap_margin_x = doc->swap_margin_y = true;
-	if (flippedMargin == FM_TRUE) {
+	if (flippedMargin == FM_TRUE)
 	  doc->swap_margin_y = false;
-	}
-      } else if (strcasecmp(backside,"Rotated") == 0 && !doc->outheader.Tumble) {
-	doc->swap_margin_x = doc->swap_margin_y = true;
-	if (flippedMargin == FM_TRUE) {
-	  doc->swap_margin_y = false;
-	}
-      } else if (strcasecmp(backside,"Flipped") == 0) {
-	if (doc->outheader.Tumble) {
+      }
+      else if (backside==CF_BACKSIDE_FLIPPED)
+      {
+	if (doc->outheader.Tumble)
 	  doc->swap_margin_x = doc->swap_margin_y = true;
-	}
-	if (flippedMargin == FM_FALSE) {
+	if (flippedMargin == FM_FALSE)
 	  doc->swap_margin_y = !doc->swap_margin_y;
-	}
       }
-    }
-
-    /* support the CUPS "cm-calibration" option */
-    doc->color_profile.cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
-
-    if (doc->color_profile.cm_calibrate == CF_CM_CALIBRATION_ENABLED)
-      doc->color_profile.cm_disabled = 1;
-    else
-      doc->color_profile.cm_disabled = cfCmIsPrinterCmDisabled(data);
-
-    if (!doc->color_profile.cm_disabled)
-      cfCmGetPrinterIccProfile(data, &profile, doc->ppd);
-
-    if (profile != NULL) {
-      doc->color_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
-      free(profile);
-    }
-  } else {
-    if (log) log(ld, CF_LOGLEVEL_DEBUG,
-      "cfFilterPWGToRaster: No PPD file is specified.");
-    if (strcasecmp(doc->outheader.cupsRenderingIntent, "Perceptual") == 0) {
-      doc->color_profile.renderingIntent = INTENT_PERCEPTUAL;
-    } else if (strcasecmp(doc->outheader.cupsRenderingIntent, "Relative") == 0) {
-      doc->color_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
-    } else if (strcasecmp(doc->outheader.cupsRenderingIntent, "Saturation") == 0) {
-      doc->color_profile.renderingIntent = INTENT_SATURATION;
-    } else if (strcasecmp(doc->outheader.cupsRenderingIntent, "Absolute") == 0) {
-      doc->color_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
     }
   }
+
+  /* support the CUPS "cm-calibration" option */
+  doc->color_profile.cm_calibrate = cfCmGetCupsColorCalibrateMode(data);
+
+  if (doc->color_profile.cm_calibrate == CF_CM_CALIBRATION_ENABLED)
+    doc->color_profile.cm_disabled = 1;
+  else
+    doc->color_profile.cm_disabled = cfCmIsPrinterCmDisabled(data);
+
+  if (!doc->color_profile.cm_disabled)
+    cfCmGetPrinterIccProfile
+      (data,
+       cfRasterColorSpaceString(doc->outheader.cupsColorSpace),
+       doc->outheader.MediaType,
+       doc->outheader.HWResolution[0], doc->outheader.HWResolution[1],
+       &profile);
+
+  if (profile != NULL)
+  {
+    doc->color_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
+    free(profile);
+  }
+
+  doc->outheader.cupsRenderingIntent[0] = '\0';
+  cfGetPrintRenderIntent(data, doc->outheader.cupsRenderingIntent,
+			 sizeof(doc->outheader.cupsRenderingIntent));
+  if (strcasecmp(doc->outheader.cupsRenderingIntent, "Perceptual") == 0) {
+    doc->color_profile.renderingIntent = INTENT_PERCEPTUAL;
+  } else if (strcasecmp(doc->outheader.cupsRenderingIntent, "Relative") == 0) {
+    doc->color_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
+  } else if (strcasecmp(doc->outheader.cupsRenderingIntent, "Saturation") == 0) {
+    doc->color_profile.renderingIntent = INTENT_SATURATION;
+  } else if (strcasecmp(doc->outheader.cupsRenderingIntent, "Absolute") == 0) {
+    doc->color_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
+  }
+
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
     doc->bi_level = 1;
@@ -843,7 +788,7 @@ static unsigned char *convert_line_plane_swap(unsigned char *src,
   return dst;
 }
 
-/* Handle special cases which appear in Gutenprint's PPDs */
+/* Handle special cases which appear in the Gutenprint driver */
 static bool select_special_case(pwgtoraster_doc_t* doc, conversion_function_t* convert)
 {
   int i;
@@ -919,11 +864,12 @@ static unsigned int get_cms_color_space_type(cmsColorSpaceSignature cs)
 
 /* select convertLine function */
 static int select_convert_func(cups_raster_t *raster,
-			     pwgtoraster_doc_t* doc,
-			     conversion_function_t *convert,
-			     cf_logfunc_t log,
-			     void* ld)
+			       pwgtoraster_doc_t* doc,
+			       conversion_function_t *convert)
 {
+  cf_logfunc_t log = doc->data->logfunc;
+  void* ld = doc->data->logdata;
+
   doc->bitspercolor = doc->outheader.cupsBitsPerColor;
 
   if ((doc->color_profile.colorProfile == NULL || doc->color_profile.outputColorProfile == doc->color_profile.colorProfile)
@@ -1094,21 +1040,17 @@ static int select_convert_func(cups_raster_t *raster,
 }
 
 static bool out_page(pwgtoraster_doc_t *doc,
-		    int pageNo,
-		    cups_raster_t *inras,
-		    cups_raster_t *outras,
-		    conversion_function_t *convert,
-		    cf_logfunc_t log,
-		    void *ld,
-		    cf_filter_iscanceledfunc_t iscanceled,
-		    void *icd)
+		     int pageNo,
+		     cups_raster_t *inras,
+		     cups_raster_t *outras,
+		     conversion_function_t *convert)
 {
   int i, j;
-  double paperdimensions[2], /* Physical size of the paper */
+  cf_filter_data_t *data = doc->data;
+  float paperdimensions[2], /* Physical size of the paper */
     margins[4];	/* Physical margins of print */
-  double swap;
+  float swap;
   int imageable_area_fit = 0;
-  int landscape_fit = 0;
   int overspray_duplicate_after_pixels = INT_MAX;
   int next_overspray_duplicate = 0;
   int next_line_read = 0;
@@ -1127,7 +1069,10 @@ static bool out_page(pwgtoraster_doc_t *doc,
   unsigned char *pagebuf = NULL;
   unsigned int res_down_factor[2];
   unsigned int res_up_factor[2];
-
+  cf_logfunc_t log = data->logfunc;
+  void *ld = data->logdata;
+  cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
+  void *icd = data->iscanceleddata;
 
   if (iscanceled && iscanceled(icd))
   {
@@ -1145,21 +1090,6 @@ static bool out_page(pwgtoraster_doc_t *doc,
     return (false);
   }
 
-  if (doc->inheader.ImagingBoundingBox[0] ||
-      doc->inheader.ImagingBoundingBox[1] ||
-      doc->inheader.ImagingBoundingBox[2] ||
-      doc->inheader.ImagingBoundingBox[3])
-  {
-    // Only CUPS Raster (not supported as input format by this filter
-    // function) defines margins and so an ImagingBoundingBox, for PWG
-    // Raster and Apple Raster (the input formats supported by this
-    // filter function) these values are all zero. With at least one not
-    // zero we consider the input not supported.
-    log(ld, CF_LOGLEVEL_ERROR,
-	"cfFilterPWGToRaster: Input page %d is not PWG or Apple Raster", pageNo);
-    return (false);
-  }
-  
   if (log) {
     log(ld, CF_LOGLEVEL_DEBUG,
 	"cfFilterPWGToRaster: Input page %d", pageNo);
@@ -1197,10 +1127,23 @@ static bool out_page(pwgtoraster_doc_t *doc,
 
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
-  if (doc->ppd)
+  if (data->printer_attrs)
   {
-    ppdRasterMatchPPDSize(&(doc->outheader), doc->ppd, margins,
-			  paperdimensions, &imageable_area_fit, &landscape_fit);
+    /* Find dimensions/margins of requested page size */
+    if (cfGetPageDimensions(data->printer_attrs, data->job_attrs,
+			    data->num_options, data->options,
+			    &(doc->outheader), 0,
+			    &(paperdimensions[0]), &(paperdimensions[1]),
+			    &(margins[0]), &(margins[1]),
+			    &(margins[2]), &(margins[3]), NULL, NULL) == 0)
+    {
+      /* Find dimensions/margins for input page size */
+      cfGetPageDimensions(data->printer_attrs, NULL, 0, NULL,
+			  &(doc->inheader), 0,
+			  &(paperdimensions[0]), &(paperdimensions[1]),
+			  &(margins[0]), &(margins[1]),
+			  &(margins[2]), &(margins[3]), NULL, NULL);
+    }
     if (doc->outheader.ImagingBoundingBox[3] == 0)
       for (i = 0; i < 4; i ++)
 	margins[i] = 0.0;
@@ -1343,6 +1286,19 @@ static bool out_page(pwgtoraster_doc_t *doc,
     return false;
 
   // Pre-conversion of resolution and color space
+  //
+  // This is needed if we work with a driver (especially Gutenprint)
+  // handling very high resolutions due to the high resolution (high
+  // ink nozzle density of printer) used for dithering but do not want
+  // to overload clients be requiring them sending high-resolution job
+  // data. So we can tell the client to send a lower resolution while
+  // we let the driver use a higher resolution. Also color spaces
+  // clients can produce are usually more limited than what drivers
+  // work with.
+  //
+  // We also need this feature for retro-fitting CUPS Raster drivers
+  // which have the driver's/the printers's capabilities defined in
+  // PPD files (handled by ppdFilterCUPSWrapper() in libppd):
   //
   // The resolution and color space/depth/order for the CUPS Raster
   // data to be fed into the filter is not simply defined by options
@@ -1508,7 +1464,7 @@ static bool out_page(pwgtoraster_doc_t *doc,
   // Input line buffer (with space for raising horizontal resolution
   // and overspray stretch if needed)
   //
-  // Note that the input lines can get stretched when the PPD defines
+  // Note that the input lines can get stretched when the driver defines
   // paper dimensions larger than the physical paper size for
   // overspraying on borderless printouts. Therefore we allocate the
   // maximum of the input line size (multiplied by a resolution
@@ -1534,7 +1490,7 @@ static bool out_page(pwgtoraster_doc_t *doc,
 
   // Overspray stretch of the input image If the output page
   // dimensions are larger than the input page dimensions we have most
-  // probably a page size from the PPD where the page dimensions are
+  // probably a page size from the driver where the page dimensions are
   // defined larger than the physical paper to do an overspray when
   // printing borderless, to avoid narrow white margins on one side if
   // the paper is not exactly aligned in the printer. The HPLIP driver
@@ -2093,11 +2049,12 @@ int cfFilterPWGToRaster(int inputfd,        /* I - File descriptor input stream 
                 int outputfd,       /* I - File descriptor output stream */
                 int inputseekable,  /* I - Is input stream seekable? (unused) */
                 cf_filter_data_t *data,/* I - Job and printer data */
-                void *parameters)   /* I - Filter-specific parameters */
+                void *parameters)   /* I - Filter-specific parameters (unused)*/
 {
   cf_filter_out_format_t outformat;
   pwgtoraster_doc_t doc;
   int i;
+  const char		*val;
   cups_raster_t *inras = NULL,
                 *outras = NULL;
   cf_logfunc_t     log = data->logfunc;
@@ -2109,15 +2066,21 @@ int cfFilterPWGToRaster(int inputfd,        /* I - File descriptor input stream 
 
 
   (void)inputseekable;
+  (void)parameters;
 
-  if (parameters) {
-    outformat = *(cf_filter_out_format_t *)parameters;
-    if (outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_PCLM)
+  val = data->final_content_type;
+  if (val)
+  {
+    if (strcasestr(val, "pwg"))
+      outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
+    else if (strcasestr(val, "urf"))
+      outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
+    else if (strcasestr(val, "pclm"))
+      outformat = CF_FILTER_OUT_FORMAT_PCLM;
+    else
       outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
-  } else
+  }
+  else
     outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -2150,10 +2113,11 @@ int cfFilterPWGToRaster(int inputfd,        /* I - File descriptor input stream 
 
   // Initialize data structure
   memset(&doc, 0, sizeof(doc));
+  doc.data = data;
   doc.color_profile.renderingIntent = INTENT_PERCEPTUAL;
 
   // Parse the options
-  if (parse_opts(data, outformat, &doc) == 1)
+  if (parse_opts(outformat, &doc) == 1)
     return (1);
 
   doc.outheader.NumCopies = data->copies;
@@ -2277,7 +2241,7 @@ int cfFilterPWGToRaster(int inputfd,        /* I - File descriptor input stream 
   */
 
   memset(&convert, 0, sizeof(conversion_function_t));
-  if (select_convert_func(outras, &doc, &convert, log, ld) == 1)
+  if (select_convert_func(outras, &doc, &convert) == 1)
   {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterPWGToRaster: Unable to select color conversion function.");
@@ -2348,8 +2312,7 @@ int cfFilterPWGToRaster(int inputfd,        /* I - File descriptor input stream 
   */
 
   i = 0;
-  while (out_page(&doc, i + 1, inras, outras, &convert, log, ld, iscanceled,
-		 icd))
+  while (out_page(&doc, i + 1, inras, outras, &convert))
     i ++;
   if (i == 0)
     if (log) log(ld, CF_LOGLEVEL_DEBUG,

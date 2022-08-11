@@ -21,8 +21,9 @@
 #include "config.h"
 #include <cupsfilters/filter.h>
 #include <cupsfilters/image.h>
-#include <cupsfilters/ppdgenerator.h>
+#include <cupsfilters/ipp.h>
 #include <cupsfilters/raster.h>
+#include <cupsfilters/ipp.h>
 #include <cupsfilters/image-private.h>
 #include <math.h>
 #include <ctype.h>
@@ -46,10 +47,9 @@ typedef struct imagetopdf_doc_s {       /**** Document information ****/
 		Collate,		/* Collate copies? */
 		Copies,			/* Number of copies */
 		Reverse,		/* Output order */
-		EvenDuplex;		/* cupsEvenDuplex */
+		EvenDuplex;		/* Duplex needs even number of pages? */
   int   	Orientation,    	/* 0 = portrait, 1 = landscape, etc. */
         	Duplex,         	/* Duplexed? */
-        	LanguageLevel,  	/* Language level of printer */
         	Color;    	 	/* Print in color? */
   float 	PageLeft,       	/* Left margin */
         	PageRight,      	/* Right margin */
@@ -88,7 +88,6 @@ typedef struct imagetopdf_doc_s {       /**** Document information ****/
   cf_ib_t	*row;			/* Current row */
   float		gammaval;		/* Gamma correction value */
   float		brightness;		/* Gamma correction value */
-  ppd_file_t	*ppd;			/* PPD file */
   char		linebuf[LINEBUFSIZE];
   FILE		*outputfp;
 } imagetopdf_doc_t;
@@ -97,7 +96,6 @@ typedef struct imagetopdf_doc_s {       /**** Document information ****/
  * Local functions...
  */
 
-static void	emit_jcl_options(imagetopdf_doc_t *doc, FILE *fp, int copies);
 #ifdef OUT_AS_HEX
 static void	out_hex(imagetopdf_doc_t *doc, cf_ib_t *, int, int);
 #else
@@ -121,64 +119,6 @@ static int	out_page_object(imagetopdf_doc_t *doc, int pageObj,
 			      int contentsObj, int imgObj);
 static int	out_page_contents(imagetopdf_doc_t *doc, int contentsObj);
 static int	out_image(imagetopdf_doc_t *doc, int imgObj);
-
-static void emit_jcl_options(imagetopdf_doc_t *doc, FILE *fp, int copies)
-{
-  int section;
-  ppd_choice_t **choices;
-  int i;
-  char buf[1024];
-  ppd_attr_t *attr;
-  int pdftopdfjcl = 0;
-  int datawritten = 0;
-
-  if (doc->ppd == 0) return;
-  if ((attr = ppdFindAttr(doc->ppd,"pdftopdfJCLBegin",NULL)) != NULL) {
-    int n = strlen(attr->value);
-    pdftopdfjcl = 1;
-    for (i = 0;i < n;i++) {
-	if (attr->value[i] == '\r' || attr->value[i] == '\n') {
-	    /* skip new line */
-	    continue;
-	}
-	fputc(attr->value[i],fp);
-	datawritten = 1;
-    }
-  }
-
-  snprintf(buf,sizeof(buf),"%d",copies);
-  if (ppdFindOption(doc->ppd,"Copies") != NULL) {
-    ppdMarkOption(doc->ppd,"Copies",buf);
-  } else {
-    if ((attr = ppdFindAttr(doc->ppd,"pdftopdfJCLCopies",buf)) != NULL) {
-      fputs(attr->value,fp);
-      datawritten = 1;
-    } else if (pdftopdfjcl) {
-      fprintf(fp,"Copies=%d;",copies);
-      datawritten = 1;
-    }
-  }
-  for (section = (int)PPD_ORDER_ANY;
-      section <= (int)PPD_ORDER_PROLOG;section++) {
-    int n;
-
-    n = ppdCollect(doc->ppd,(ppd_section_t)section,&choices);
-    for (i = 0;i < n;i++) {
-      snprintf(buf,sizeof(buf),"pdftopdfJCL%s",
-        ((ppd_option_t *)(choices[i]->option))->keyword);
-      if ((attr = ppdFindAttr(doc->ppd,buf,choices[i]->choice)) != NULL) {
-        fputs(attr->value,fp);
-	datawritten = 1;
-      } else if (pdftopdfjcl) {
-        fprintf(fp,"%s=%s;",
-          ((ppd_option_t *)(choices[i]->option))->keyword,
-          choices[i]->choice);
-	datawritten = 1;
-      }
-    }
-  }
-  if (datawritten) fputc('\n',fp);
-}
 
 static void set_offset(imagetopdf_doc_t *doc, int obj)
 {
@@ -600,62 +540,6 @@ static int out_image(imagetopdf_doc_t *doc, int imgObj)
 }
 
 /*
- * Copied ppd_decode() from CUPS which is not exported to the API
- */
-
-static int				/* O - Length of decoded string */
-ppd_decode(char *string)		/* I - String to decode */
-{
-  char	*inptr,				/* Input pointer */
-	*outptr;			/* Output pointer */
-
-
-  inptr  = string;
-  outptr = string;
-
-  while (*inptr != '\0')
-    if (*inptr == '<' && isxdigit(inptr[1] & 255))
-    {
-     /*
-      * Convert hex to 8-bit values...
-      */
-
-      inptr ++;
-      while (isxdigit(*inptr & 255))
-      {
-	if (isalpha(*inptr))
-	  *outptr = (tolower(*inptr) - 'a' + 10) << 4;
-	else
-	  *outptr = (*inptr - '0') << 4;
-
-	inptr ++;
-
-        if (!isxdigit(*inptr & 255))
-	  break;
-
-	if (isalpha(*inptr))
-	  *outptr |= tolower(*inptr) - 'a' + 10;
-	else
-	  *outptr |= *inptr - '0';
-
-	inptr ++;
-	outptr ++;
-      }
-
-      while (*inptr != '>' && *inptr != '\0')
-	inptr ++;
-      while (*inptr == '>')
-	inptr ++;
-    }
-    else
-      *outptr++ = *inptr++;
-
-  *outptr = '\0';
-
-  return ((int)(outptr - string));
-}
-
-/*
  * 'cfFilterImageToPDF()' - Filter function to convert many common image file
  *                  formats into PDF
  */
@@ -670,15 +554,13 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   imagetopdf_doc_t	doc;		/* Document information */
   cups_page_header2_t h;                /* CUPS Raster page header, to */
                                         /* accommodate results of command */
-                                        /* line parsing for PPD-less queue */
-  ppd_choice_t	*choice;		/* PPD option choice */
-  int		num_options = 0;		/* Number of print options */
-  cups_option_t	*options = NULL;		/* Print options */
+                                        /* line and IPP parsing */
+  int		num_options = 0;	/* Number of print options */
+  cups_option_t	*options = NULL;	/* Print options */
   const char	*val;			/* Option value */
   float		zoom;			/* Zoom facter */
   int		xppi, yppi;		/* Pixels-per-inch */
   int		hue, sat;		/* Hue and saturation adjustment */
-  int		emit_jcl;
   int           pdf_printer = 0;
   char		tempfile[1024];		/* Name of file to print */
   FILE          *fp;			/* Input file */
@@ -688,7 +570,6 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   int		deviceCopies = 1;
   int		deviceCollate = 0;
   int		deviceReverse = 0;
-  ppd_attr_t	*attr;
   int		pl, pr;
   int		fillprint = 0;		/* print-scaling = fill */
   int		cropfit = 0;		/* -o crop-to-fit = true */
@@ -699,14 +580,15 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   ipp_t *printer_attrs = data->printer_attrs;
   ipp_t *job_attrs = data->job_attrs;
   ipp_attribute_t *ipp;
-  int 			min_length = __INT32_MAX__,       /*  ppd->custom_min[1]	*/
-      			min_width = __INT32_MAX__,        /*  ppd->custom_min[0]	*/
-      			max_length = 0, 		  /*  ppd->custom_max[1]	*/
-      			max_width=0;			  /*  ppd->custom_max[0]	*/
-  float 		customLeft = 0.0,		/*  ppd->custom_margin[0]  */
-        		customBottom = 0.0,	        /*  ppd->custom_margin[1]  */
-			customRight = 0.0,	        /*  ppd->custom_margin[2]  */
-			customTop = 0.0;	        /*  ppd->custom_margin[3]  */
+  cups_cspace_t cspace = (cups_cspace_t)(-1);
+  int 			min_length = __INT32_MAX__,
+      			min_width = __INT32_MAX__,
+      			max_length = 0,
+      			max_width = 0;
+  float 		customLeft = 0.0,
+        		customBottom = 0.0,
+			customRight = 0.0,
+			customTop = 0.0;
   char 			defSize[41];
 
 
@@ -835,14 +717,15 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   */
 
   if (printer_attrs != NULL) {
-    int left, right, top, bottom;
-    cfGenerateSizes(printer_attrs, &ipp, &min_length, &min_width,
-		    &max_length, &max_width, &bottom, &left, &right, &top,
-		    defSize);
+    int left, bottom, right, top;
+    cfGenerateSizes(printer_attrs, CF_GEN_SIZES_DEFAULT, NULL, &ipp,
+		    NULL, NULL, NULL, NULL, NULL, NULL,
+		    &min_width, &min_length, &max_width, &max_length,
+		    &left, &bottom, &right, &top, defSize, NULL);
     customLeft = left*72.0/2540.0;
+    customBottom = bottom*72.0/2540.0;
     customRight = right*72.0/2540.0;
     customTop = top*72.0/2540.0;
-    customBottom = bottom*72.0/2540.0;
   }
 
 
@@ -850,202 +733,78 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   * Process job options...
   */
 
-  doc.ppd = data->ppd;
-  cfFilterSetCommonOptions(doc.ppd, num_options, options, 0,
-			 &doc.Orientation, &doc.Duplex,
-			 &doc.LanguageLevel, &doc.Color,
-			 &doc.PageLeft, &doc.PageRight,
-			 &doc.PageTop, &doc.PageBottom,
-			 &doc.PageWidth, &doc.PageLength,
-			 log, ld);
+  /* To find the correct output color space, resolution page size, ...
+     and to parse all releveant command line options we run 
+     cfRasterPrepareHeader() here and afterwards we simply take the
+     needed parameters from the header. */
+  cfRasterPrepareHeader(&h, data, CF_FILTER_OUT_FORMAT_CUPS_RASTER,
+			CF_FILTER_OUT_FORMAT_CUPS_RASTER, 0, &cspace);
+  doc.Color = h.cupsNumColors <= 1 ? 0 : 1;
+  doc.Orientation = h.Orientation;
+  doc.Duplex = h.Duplex;
+  doc.PageWidth = h.cupsPageSize[0] != 0.0 ? h.cupsPageSize[0] :
+    (float)h.PageSize[0];
+  doc.PageLength = h.cupsPageSize[1] != 0.0 ? h.cupsPageSize[1] :
+    (float)h.PageSize[1];
+  doc.PageLeft = h.cupsImagingBBox[0] != 0.0 ? h.cupsImagingBBox[0] :
+    (float)h.ImagingBoundingBox[0];
+  doc.PageBottom = h.cupsImagingBBox[1] != 0.0 ? h.cupsImagingBBox[1] :
+    (float)h.ImagingBoundingBox[1];
+  doc.PageRight = h.cupsImagingBBox[2] != 0.0 ? h.cupsImagingBBox[2] :
+    (float)h.ImagingBoundingBox[2];
+  doc.PageTop = h.cupsImagingBBox[3] != 0.0 ? h.cupsImagingBBox[3] :
+    (float)h.ImagingBoundingBox[3];
+  doc.Flip = h.MirrorPrint ? 1 : 0;
+  doc.Collate = h.Collate ? 1 : 0;
+  doc.Copies = data->copies;
 
-  /* The cfFilterSetCommonOptions() does not set doc.Color
-     according to option settings (user's demand for color/gray),
-     so we parse the options and set the mode here */
-  cfRasterParseIPPOptions(&h, data, 0, 1);
-  if (doc.Color)
-    doc.Color = h.cupsNumColors <= 1 ? 0 : 1;
-  if (!doc.ppd) {
-    /* Without PPD use also the other findings of cfRasterParseIPPOptions() */
-    doc.Orientation = h.Orientation;
-    doc.Duplex = h.Duplex;
-    doc.PageWidth = h.cupsPageSize[0] != 0.0 ? h.cupsPageSize[0] :
-      (float)h.PageSize[0];
-    doc.PageLength = h.cupsPageSize[1] != 0.0 ? h.cupsPageSize[1] :
-      (float)h.PageSize[1];
-    doc.PageLeft = h.cupsImagingBBox[0] != 0.0 ? h.cupsImagingBBox[0] :
-      (float)h.ImagingBoundingBox[0];
-    doc.PageBottom = h.cupsImagingBBox[1] != 0.0 ? h.cupsImagingBBox[1] :
-      (float)h.ImagingBoundingBox[1];
-    doc.PageRight = h.cupsImagingBBox[2] != 0.0 ? h.cupsImagingBBox[2] :
-      (float)h.ImagingBoundingBox[2];
-    doc.PageTop = h.cupsImagingBBox[3] != 0.0 ? h.cupsImagingBBox[3] :
-      (float)h.ImagingBoundingBox[3];
-    doc.Flip = h.MirrorPrint ? 1 : 0;
-    doc.Collate = h.Collate ? 1 : 0;
-    doc.Copies = h.NumCopies;
-  }
-
-  if (doc.Copies == 1
-      && (choice = ppdFindMarkedChoice(doc.ppd,"Copies")) != NULL) {
-    doc.Copies = atoi(choice->choice);
-  }
   if (doc.Copies == 0) doc.Copies = 1;
-  if ((val = cupsGetOption("Duplex",num_options,options)) != 0 &&
-      (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
-       !strcasecmp(val, "yes"))) {
-      /* for compatiblity */
-      if (ppdFindOption(doc.ppd,"Duplex") != NULL) {
-        ppdMarkOption(doc.ppd,"Duplex","True");
-        ppdMarkOption(doc.ppd,"Duplex","On");
-        doc.Duplex = 1;
-      }
-  } else if ((val = cupsGetOption("sides",num_options,options)) != 0 &&
-      (!strcasecmp(val, "two-sided-long-edge") ||
-       !strcasecmp(val, "two-sided-short-edge"))) {
-      /* for compatiblity */
-      if (ppdFindOption(doc.ppd,"Duplex") != NULL) {
-        ppdMarkOption(doc.ppd,"Duplex","True");
-        ppdMarkOption(doc.ppd,"Duplex","On");
-        doc.Duplex = 1;
-      }
-  }
 
-  if ((val = cupsGetOption("OutputOrder",num_options,options)) != 0	||
-	(val = cupsGetOption("outputorder", num_options, options))!=NULL) {
-    if (!strcasecmp(val, "Reverse")) {
-      doc.Reverse = 1;
-    }
-  } else if (doc.ppd) {
-   /*
-    * Figure out the right default output order from the PPD file...
-    */
-
-    if ((choice = ppdFindMarkedChoice(doc.ppd,"OutputOrder")) != 0) {
-      doc.Reverse = !strcasecmp(choice->choice,"Reverse");
-    } else if ((choice = ppdFindMarkedChoice(doc.ppd,"OutputBin")) != 0 &&
-        (attr = ppdFindAttr(doc.ppd,"PageStackOrder",choice->choice)) != 0 &&
-        attr->value) {
-      doc.Reverse = !strcasecmp(attr->value,"Reverse");
-    } else if ((attr = ppdFindAttr(doc.ppd,"DefaultOutputOrder",0)) != 0 &&
-             attr->value) {
-      doc.Reverse = !strcasecmp(attr->value,"Reverse");
-    }
+  /* Do we need to print the pages in reverse order? */
+  if ((val = cupsGetOption("OutputOrder", num_options, options)) != NULL ||
+      (val = cupsGetOption("output-order", num_options, options)) != NULL ||
+      (val = cupsGetOption("page-delivery", num_options, options)) != NULL)
+  {
+    doc.Reverse = (strcasecmp(val, "Reverse") == 0 ||
+		   strcasecmp(val, "reverse-order") == 0);
   }
-    else if(printer_attrs){
-	/*	If PPD file is NULL, we use printer attrs to determine if we need to print in reverse order */
-	char *defaultoutbin = strdup("");
-	const char* outbin;
-	if ((ipp = ippFindAttribute(printer_attrs, "output-bin-default", IPP_TAG_ZERO))
-      	!= NULL)
-    		defaultoutbin = strdup(ippGetString(ipp, 0, NULL));
-	/* Find out on which position of the list of output bins the default one is,
-	if there is no default bin, take the first of this list */
-  	int i = 0;
-	if ((ipp = ippFindAttribute(printer_attrs, "output-bin-supported",
-				IPP_TAG_ZERO)) != NULL) {
-	    int count = ippGetCount(ipp);
-		for (i = 0; i < count; i ++) {
-		    outbin = ippGetString(ipp, i, NULL);
-			if (outbin == NULL)
-			    continue;
-			if (defaultoutbin == NULL) {
-			    defaultoutbin = strdup(outbin);
-			    break;
-			} else if (strcasecmp(outbin, defaultoutbin) == 0)
-			break;
-		}
-	}
-	void *outbin_properties_octet;
-	int octet_str_len;
-	char outbin_properties[1024];
-	int outputorderinfofound = 0;
-	int faceupdown = 0;
-	int firsttolast = 0;
-	if ((ipp = ippFindAttribute(printer_attrs, "printer-output-tray",
-		IPP_TAG_STRING)) != NULL &&
-			i < ippGetCount(ipp)) {
-	    outbin_properties_octet = ippGetOctetString(ipp, i, &octet_str_len);
-	    memset(outbin_properties, 0, sizeof(outbin_properties));
-	    memcpy(outbin_properties, outbin_properties_octet,
-		((size_t)octet_str_len < sizeof(outbin_properties) - 1 ?
-		(size_t)octet_str_len : sizeof(outbin_properties) - 1));
-		if (strcasestr(outbin_properties, "pagedelivery=faceUp")) {
-		    outputorderinfofound = 1;
-		    faceupdown = -1;
-		}
-		if (strcasestr(outbin_properties, "stackingorder=lastToFirst"))
-		firsttolast = -1;
-	}
-	if (outputorderinfofound == 0 && defaultoutbin &&
-	strcasestr(defaultoutbin, "face-up"))
-	    faceupdown = -1;
-	if (defaultoutbin)
-	    free (defaultoutbin);
-	if (firsttolast * faceupdown < 0)
-	    doc.Reverse = 1;;
-    }
+  else
+    doc.Reverse = cfIPPReverseOutput(printer_attrs, job_attrs);
 
   /* adjust to even page when duplex */
-  if (((val = cupsGetOption("cupsEvenDuplex",num_options,options)) != 0 &&
-             (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
-               !strcasecmp(val, "yes"))) ||
-         ((attr = ppdFindAttr(doc.ppd,"cupsEvenDuplex",0)) != 0 &&
-             (!strcasecmp(attr->value, "true")
-               || !strcasecmp(attr->value, "on") ||
-               !strcasecmp(attr->value, "yes")))) {
+  if ((val = cupsGetOption("even-duplex", num_options, options)) != 0 &&
+      (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
+       !strcasecmp(val, "yes")))
     doc.EvenDuplex = 1;
-  }
 
-  if ((val = cupsGetOption("multiple-document-handling",
-			   num_options, options)) != NULL)
-  {
+  // Collate
+  if ((val = cupsGetOption("Collate", num_options, options)) != NULL &&
+      (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
+       !strcasecmp(val, "yes")))
+    doc.Collate = 1;
+  else if ((val = cupsGetOption("sheet-collate", num_options, options)) != NULL)
+    doc.Collate = (strcasecmp(val, "uncollated") != 0);
+  else if (((val = cupsGetOption("multiple-document-handling",
+				 num_options, options)) != NULL &&
+	    (strcasecmp(val, "separate-documents-collated-copies") == 0 ||
+	     strcasecmp(val, "separate-documents-uncollated-copies") == 0 ||
+	     strcasecmp(val, "single-document") == 0 ||
+	     strcasecmp(val, "single-document-new-sheet") == 0)) ||
+	   (val = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
+					     "multiple-document-handling")) !=
+	   NULL)
    /*
-    * This IPP attribute is unnecessarily complicated...
+    * This IPP attribute is unnecessarily complicated:
     *
-    *   single-document, separate-documents-collated-copies, and
-    *   single-document-new-sheet all require collated copies.
+    *   single-document, separate-documents-collated-copies,
+    *   single-document-new-sheet:
+    *      -> collate (true)
     *
-    *   separate-documents-uncollated-copies allows for uncollated copies.
+    *   separate-documents-uncollated-copies:
+    *      -> can be uncollated (false)
     */
-
-    doc.Collate = strcasecmp(val, "separate-documents-uncollated-copies") != 0;
-  }
-
-  if ((val = cupsGetOption("Collate", num_options, options)) != NULL  ||
-	(val = cupsGetOption("collate", num_options, options))) {
-    if (strcasecmp(val, "True") == 0) {
-      doc.Collate = 1;
-    }
-  } else {
-    if ((choice = ppdFindMarkedChoice(doc.ppd,"Collate")) != NULL
-      && (!strcasecmp(choice->choice,"true")
-        || !strcasecmp(choice->choice, "on")
-	|| !strcasecmp(choice->choice, "yes"))) {
-      doc.Collate = 1;
-    }
-    else if((ipp = ippFindAttribute(printer_attrs, "multiple-document-handling-default", 
-		IPP_TAG_ZERO))!=NULL){
-	ippAttributeString(ipp, buf, sizeof(buf));
-	val = buf;
-	doc.Collate = strcasecmp(val, "separate-documents-uncollated-copies") != 0;
-    }
-    /*	Still if we are having no clue about collate, pick any random value(1st in this case)
-	from supported options	*/
-    else if((ipp = ippFindAttribute(printer_attrs, "multiple-document-handling-supported", 
-			IPP_TAG_ZERO))!=NULL){
-	ippAttributeString(ipp, buf, sizeof(buf));
-	int i=0;
-	for(i=0; buf[i]!='\0';i++){
-	    if(buf[i]==' ' || buf[i]==','){
-	    	buf[i] = '\0';
-		break;
-	    }
-	}
-	val = buf;
-	doc.Collate = strcasecmp(val, "separate-documents-uncollated-copies") != 0;
-    }
-  }
+    doc.Collate =
+      (strcasecmp(val, "separate-documents-uncollated-copies") != 0);
 
   if ((val = cupsGetOption("gamma", num_options, options)) != NULL)
       doc.gammaval = atoi(val) * 0.001f;
@@ -1119,14 +878,6 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
       strcasecmp(val, "True") == 0)
     doc.Flip = 1;
 
-  if ((val = cupsGetOption("emit-jcl", num_options, options)) != NULL &&
-      (!strcasecmp(val, "false") || !strcasecmp(val, "off") ||
-       !strcasecmp(val, "no") || !strcmp(val, "0")))
-    emit_jcl = 0;
-  else
-    emit_jcl = 1;
-
-
 
  /*
   * Open the input image to print...
@@ -1142,13 +893,9 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   int fidelity = 0;
   int document_large = 0;
 
-  if (doc.ppd && (doc.ppd->custom_margins[0] || doc.ppd->custom_margins[1] ||
-		  doc.ppd->custom_margins[2] || doc.ppd->custom_margins[3]))
-                                            // In case of custom margins
-    margin_defined = 1;
-  else if(customBottom!=0 || customLeft!=0 || customRight!=0 || customTop!=0)
-	margin_defined = 1;
-  if (doc.PageLength != doc.PageTop - doc.PageBottom ||
+  if (customLeft != 0 || customRight != 0 ||
+      customBottom != 0 || customTop != 0 ||
+      doc.PageLength != doc.PageTop - doc.PageBottom ||
       doc.PageWidth != doc.PageRight - doc.PageLeft)
     margin_defined = 1;
 
@@ -1567,29 +1314,13 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
   * Update the page size for custom sizes...
   */
 
-  /* If size if specified by user, use it, else default size from
-     printer_attrs*/
-  if ((ipp = ippFindAttribute(job_attrs, "media-size", IPP_TAG_ZERO)) != NULL ||
-      (val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, "page-size", IPP_TAG_ZERO)) != NULL ||
-      (val = cupsGetOption("PageSize", num_options, options)) != NULL ) {
-    if (val == NULL) {
-      ippAttributeString(ipp, buf, sizeof(buf));
-      strcpy(defSize, buf);
-    }
-    else
-	snprintf(defSize, sizeof(defSize), "%s", val);
-  }
+  strcpy(defSize, h.cupsPageSizeName);
 
-
-
-  if (((choice = ppdFindMarkedChoice(doc.ppd, "PageSize")) != NULL &&
-      strcasecmp(choice->choice, "Custom") == 0) ||
-	strncasecmp(defSize, "custom", 6)==0)
+  if ((strncasecmp(defSize, "Custom", 6)) == 0 ||
+      strcasestr(defSize, "_custom_"))
   {
     float	width,		/* New width in points */
 		length;		/* New length in points */
-    char	s[255];		/* New custom page size... */
 
 
    /*
@@ -1610,31 +1341,18 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
    /*
     * Add margins to page size...
     */
-    if(doc.ppd!=NULL){
-    	width  += doc.ppd->custom_margins[0] + doc.ppd->custom_margins[2];
-    	length += doc.ppd->custom_margins[1] + doc.ppd->custom_margins[3];
-    }
-    else{
-	width += customLeft + customRight;
-	length += customTop + customBottom;
-    }
+
+    width += customLeft + customRight;
+    length += customTop + customBottom;
+
    /*
     * Enforce minimums...
     */
 
-    if(doc.ppd!=NULL)
-    {
-	if(width<doc.ppd->custom_min[0])
-	  width = doc.ppd->custom_min[0];
-	if(length<doc.ppd->custom_min[1])
-	  length = doc.ppd->custom_min[1];
-    }
-    else{
-	if(width<min_width)
-	  width = min_width;
-	if(length<min_length)
-	  length = min_length;
-    }
+    if (width < min_width)
+      width = min_width;
+    if (length < min_length)
+      length = min_length;
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterImageToPDF: Updated custom page size to %.2f x %.2f "
@@ -1645,8 +1363,12 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
     * Set the new custom size...
     */
 
-    sprintf(s, "Custom.%.0fx%.0f", width, length);
-    ppdMarkOption(doc.ppd, "PageSize", s);
+    strcpy(h.cupsPageSizeName, "Custom");
+
+    h.cupsPageSize[0] = width + 0.5;
+    h.cupsPageSize[1] = length + 0.5;
+    h.PageSize[0]     = width + 0.5;
+    h.PageSize[1]     = length + 0.5;
 
    /*
     * Update page variables...
@@ -1654,95 +1376,100 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
 
     doc.PageWidth  = width;
     doc.PageLength = length;
-    if (doc.ppd != NULL)
-      doc.PageLeft   = doc.ppd->custom_margins[0];
-    else
-      doc.PageLeft = customLeft;
-    if (doc.ppd != NULL)
-      doc.PageRight  = width - doc.ppd->custom_margins[2];
-    else
-      doc.PageRight = width - customRight;
-    if (doc.ppd != NULL)
-      doc.PageBottom = doc.ppd->custom_margins[1];
-    else
-      doc.PageBottom = customBottom;
-    if (doc.ppd != NULL)
-      doc.PageTop    = length - doc.ppd->custom_margins[3];
-    else
-      doc.PageTop = length - customTop;
+    doc.PageLeft = customLeft;
+    doc.PageRight = width - customRight;
+    doc.PageBottom = customBottom;
+    doc.PageTop = length - customTop;
   }
 
   if (doc.Copies == 1) {
     /* collate is not needed */
     doc.Collate = 0;
-    ppdMarkOption(doc.ppd,"Collate","False");
   }
+
   if (!doc.Duplex) {
     /* evenDuplex is not needed */
     doc.EvenDuplex = 0;
   }
 
-  /* check collate device */
-  if (doc.Collate) {
-    if ((choice = ppdFindMarkedChoice(doc.ppd,"Collate")) != NULL &&
-       !strcasecmp(choice->choice,"true")) {
-      ppd_option_t *opt;
-
-      if ((opt = ppdFindOption(doc.ppd,"Collate")) != NULL &&
-        !opt->conflicted) {
-        deviceCollate = 1;
-      } else {
-        ppdMarkOption(doc.ppd,"Collate","False");
-      }
-    }
-  }
-  /* check OutputOrder device */
-  if (doc.Reverse) {
-    if (ppdFindOption(doc.ppd,"OutputOrder") != NULL) {
-      deviceReverse = 1;
-    }
-  }
-  if (doc.ppd != NULL &&
-       !doc.ppd->manual_copies && doc.Collate && !deviceCollate) {
-    /* Copying by device , software collate is impossible */
-    /* Enable software copying */
-    doc.ppd->manual_copies = 1;
-  }
-  if (doc.Copies > 1 && (doc.ppd == NULL || doc.ppd->manual_copies)
-      && doc.Duplex) {
-    /* Enable software collate , or same pages are printed in both sides */
-      doc.Collate = 1;
-      if (deviceCollate) {
-        deviceCollate = 0;
-        ppdMarkOption(doc.ppd,"Collate","False");
-      }
-  }
-  if (doc.Duplex && doc.Collate && !deviceCollate) {
-    /* Enable evenDuplex or the first page may be printed other side of the
-      end of precedings */
-    doc.EvenDuplex = 1;
-  }
-  if (doc.Duplex && doc.Reverse && !deviceReverse) {
-    /* Enable evenDuplex or the first page may be empty. */
-    doc.EvenDuplex = 1;
-  }
-  /* change feature for software */
-  if (deviceCollate) {
-    doc.Collate = 0;
-  }
-  if (deviceReverse) {
-    doc.Reverse = 0;
-  }
-  if (doc.ppd != NULL) {
-    if (doc.ppd->manual_copies) {
-      /* sure disable hardware copying */
-      ppdMarkOption(doc.ppd,"Copies","1");
-      ppdMarkOption(doc.ppd,"JCLCopies","1");
-    } else {
-      /* change for hardware copying */
+  // Check options for caller's instructions about hardware copies/collate
+  if ((val = cupsGetOption("hardware-copies",
+			   num_options, options)) != NULL)
+  {
+    if (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
+	!strcasecmp(val, "yes"))
+    {
+      // Use hardware copies according to the caller's instructions
       deviceCopies = doc.Copies;
       doc.Copies = 1;
     }
+  }
+  else if (data->final_content_type &&
+	   (strcasestr(data->final_content_type, "/pdf") ||
+	    strcasestr(data->final_content_type, "/vnd.cups-pdf")))
+  {
+    // Caller did not tell us whether the printer does Hardware copies
+    // or not, so we assume hardware copies on PDF printers, and software
+    // copies on other (usually raster) printers or if we do not know the
+    // final output format.
+    deviceCopies = doc.Copies;
+    doc.Copies = 1;
+  }
+
+  if (deviceCopies > 1 && doc.Collate)
+  {
+    if ((val = cupsGetOption("hardware-collate",
+			    num_options, options)) != NULL)
+    {
+      // Use hardware collate according to the caller's instructions
+      if (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
+	  !strcasecmp(val, "yes"))
+	deviceCollate = 1;
+    }
+    else
+      // Check output format MIME type whether it is
+      // of a driverless IPP printer (PDF, Apple Raster, PWG Raster, PCLm).
+      // These printers do always hardware collate if they do hardware copies.
+      // https://github.com/apple/cups/issues/5433
+      deviceCollate = (data->final_content_type &&
+		       (strcasestr(data->final_content_type, "/pdf") ||
+			strcasestr(data->final_content_type, "/vnd.cups-pdf") ||
+			strcasestr(data->final_content_type, "/pwg-raster") ||
+			strcasestr(data->final_content_type, "/urf") ||
+			strcasestr(data->final_content_type, "/PCLm")));
+  }
+
+  if (deviceCopies && doc.Collate && !deviceCollate)
+  {
+    /* Copying by device , software collate is impossible */
+    /* Enable software copying */
+    doc.Copies = deviceCopies;
+    deviceCopies = 1;
+  }
+
+  if (doc.Copies > 1 && deviceCopies == 1 && doc.Duplex)
+  {
+    /* Enable software collate, or same pages are printed in both sides */
+    doc.Collate = 1;
+    if (deviceCollate)
+      deviceCollate = 0;
+  }
+
+  if (doc.Duplex && doc.Collate && !deviceCollate)
+    /* Enable evenDuplex or the first page of the second copy may be
+      printed on the back side of the end of the first copy */
+    doc.EvenDuplex = 1;
+
+  if (doc.Duplex && doc.Reverse && !deviceReverse)
+    /* Enable evenDuplex or the first page may be empty. */
+    doc.EvenDuplex = 1;
+
+  /* change feature for software */
+  if (deviceCollate)
+    doc.Collate = 0;
+
+  if (deviceReverse) {
+    doc.Reverse = 0;
   }
 
  /*
@@ -1754,77 +1481,11 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
     /* collate is not needed, disable it */
     deviceCollate = 0;
     doc.Collate = 0;
-    ppdMarkOption(doc.ppd,"Collate","False");
   }
 
   if (((doc.xpages*doc.ypages) % 2) == 0) {
     /* even pages, disable EvenDuplex */
     doc.EvenDuplex = 0;
-  }
-
- /*
-  * Write any "exit server" options that have been selected...
-  */
-
-  ppdEmit(doc.ppd, doc.outputfp, PPD_ORDER_EXIT);
-
- /*
-  * Write any JCL commands that are needed to print PostScript code...
-  */
-
-  if (doc.ppd && emit_jcl) {
-    /* pdftopdf only adds JCL to the job if the printer is a native PDF
-       printer and the PPD is for this mode, having the "*JCLToPDFInterpreter:"
-       keyword. We need to read this keyword manually from the PPD and replace
-       the content of ppd->jcl_ps by the value of this keyword, so that
-       ppdEmitJCL() actalually adds JCL based on the presence on
-       "*JCLToPDFInterpreter:". */
-    ppd_attr_t *attr;
-    char buf[1024];
-    int devicecopies_done = 0;
-    char *old_jcl_ps = doc.ppd->jcl_ps;
-    /* If there is a "Copies" option in the PPD file, assure that hardware
-       copies are implemented as described by this option */
-    if (ppdFindOption(doc.ppd,"Copies") != NULL && deviceCopies > 1)
-    {
-      snprintf(buf,sizeof(buf),"%d",deviceCopies);
-      ppdMarkOption(doc.ppd,"Copies",buf);
-      devicecopies_done = 1;
-    }
-    if ((attr = ppdFindAttr(doc.ppd,"JCLToPDFInterpreter",NULL)) != NULL)
-    {
-      if (deviceCopies > 1 && devicecopies_done == 0 && /* HW copies */
-	  strncmp(doc.ppd->jcl_begin, "\033%-12345X@", 10) == 0) /* PJL */
-      {
-	/* Add a PJL command to implement the hardware copies */
-        const size_t size = strlen(attr->value) + 1 + 30;
-        doc.ppd->jcl_ps = (char *)malloc(size * sizeof(char));
-        if (deviceCollate)
-	{
-          snprintf(doc.ppd->jcl_ps, size, "@PJL SET QTY=%d\n%s",
-                   deviceCopies, attr->value);
-        }
-	else
-	{
-          snprintf(doc.ppd->jcl_ps, size, "@PJL SET COPIES=%d\n%s",
-                   deviceCopies, attr->value);
-        }
-      }
-      else
-	doc.ppd->jcl_ps = strdup(attr->value);
-      ppd_decode(doc.ppd->jcl_ps);
-      pdf_printer = 1;
-    }
-    else
-    {
-      doc.ppd->jcl_ps = NULL;
-      pdf_printer = 0;
-    }
-    ppdEmitJCL(doc.ppd, doc.outputfp, data->job_id, data->job_user,
-	       data->job_title);
-    emit_jcl_options(&doc, doc.outputfp, deviceCopies);
-    free(doc.ppd->jcl_ps);
-    doc.ppd->jcl_ps = old_jcl_ps; /* cups uses pool allocator, not free() */
   }
 
  /*
@@ -2134,12 +1795,6 @@ cfFilterImageToPDF(int inputfd,         /* I - File descriptor input stream */
  /*
   * Close files...
   */
-
-  if (emit_jcl)
-  {
-    if (doc.ppd && doc.ppd->jcl_end)
-      ppdEmitJCLEnd(doc.ppd, doc.outputfp);
-  }
 
   cfImageClose(doc.img);
   fclose(doc.outputfp);

@@ -1,37 +1,37 @@
 /*
  *   Function to apply IPP options to a CUPS/PWG Raster header.
  *
- *   Copyright 2013 by Till Kamppeter.
+ *   Copyright 2013-2022 by Till Kamppeter.
  *
  *   Distribution and use rights are outlined in the file "COPYING"
  *   which should have been included with this file.
  *
  * Contents:
  *
- *   cfRasterParseIPPOptions() - Parse IPP options from the command line
- *                                 and apply them to the CUPS Raster header.
  */
 
-#include <config.h>
-#include <cups/cups.h>
-#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
-#define HAVE_CUPS_1_7 1
-#endif
 
 /*
  * Include necessary headers.
  */
 
+#include <config.h>
+#include <cups/cups.h>
 #include "raster.h"
 #include "filter.h"
 #include "driver.h"
 #include "ipp.h"
 #include <string.h>
 #include <ctype.h>
-#include <cupsfilters/ppdgenerator.h>
-#ifdef HAVE_CUPS_1_7
+#include <cupsfilters/ipp.h>
 #include <cups/pwg.h>
-#endif /* HAVE_CUPS_1_7 */
+
+/*
+ * Local functions
+ */
+
+int raster_base_header(cups_page_header2_t *h, cf_filter_data_t *data,
+		       int pwg_raster);
 
 /*
  * '_strlcpy()' - Safely copy two strings.
@@ -68,13 +68,95 @@ _strlcpy(char       *dst,		/* O - Destination string */
 
 
 /*
+ * 'cfRasterColorSpaceString()' - Return the color space name for a
+ *                                cupsColorSpace value.
+ */
+
+const char *
+cfRasterColorSpaceString(cups_cspace_t cspace)	/* I - cupsColorSpace value */
+{
+  static const char * const cups_color_spaces[] =
+  {					/* Color spaces */
+    "W",
+    "RGB",
+    "RGBA",
+    "K",
+    "CMY",
+    "YMC",
+    "CMYK",
+    "YMCK",
+    "KCMY",
+    "KCMYcm",
+    "GMCK",
+    "GMCS",
+    "WHITE",
+    "GOLD",
+    "SILVER",
+    "CIEXYZ",
+    "CIELab",
+    "RGBW",
+    "SW",
+    "SRGB",
+    "ADOBERGB",
+    "21",
+    "22",
+    "23",
+    "24",
+    "25",
+    "26",
+    "27",
+    "28",
+    "29",
+    "30",
+    "31",
+    "ICC1",
+    "ICC2",
+    "ICC3",
+    "ICC4",
+    "ICC5",
+    "ICC6",
+    "ICC7",
+    "ICC8",
+    "ICC9",
+    "ICCA",
+    "ICCB",
+    "ICCC",
+    "ICCD",
+    "ICCE",
+    "ICCF",
+    "47",
+    "DEVICE1",
+    "DEVICE2",
+    "DEVICE3",
+    "DEVICE4",
+    "DEVICE5",
+    "DEVICE6",
+    "DEVICE7",
+    "DEVICE8",
+    "DEVICE9",
+    "DEVICEA",
+    "DEVICEB",
+    "DEVICEC",
+    "DEVICED",
+    "DEVICEE",
+    "DEVICEF"
+  };
+
+  if (cspace < CUPS_CSPACE_W || cspace > CUPS_CSPACE_DEVICEF)
+    return ("Unknown");
+  else
+    return (cups_color_spaces[cspace]);
+}
+
+
+/*
  * 'cfRasterMatchIPPSize()' - Match IPP page size to header page size.
  */
 
 int 
 cfRasterMatchIPPSize(
     cups_page_header2_t *header,	/* I - Page header to match */
-    cf_filter_data_t  	*data,   	/* I - printer-data file */
+    cf_filter_data_t  	*data,   	/* I - Filter data */
     double		margins[4],	/* O - Margins of media in points */
     double		dimensions[2],	/* O - Width and Length of media in points */
     int 		*image_fit,	/* O - Imageable Area Fit */
@@ -108,26 +190,32 @@ cfRasterMatchIPPSize(
 					/* Requested PageSize */
 
   printer_attrs = data->printer_attrs;
-  printer_sizes = cfGenerateSizes(printer_attrs, &defattr, &min_length, &min_width,
-				  &max_length, &max_width,
-				  &bottom, &left, &right, &top, defsize);
 
   if (!header)
   {
-    if(log) log(ld, CF_LOGLEVEL_ERROR, "Page header cannot be NULL!\n");
-    return (-1);
-  }
-  if (!printer_attrs)
-  {
-    if(log) log(ld, CF_LOGLEVEL_ERROR, "Printer-attributes info not supplied!\n");
+    if(log) log(ld, CF_LOGLEVEL_ERROR, "Page header cannot be NULL!");
     return (-1);
   }
 
-  strncpy(pageSizeRequested, header->cupsPageSizeName, 64); /* Prefer user-selected page size. */
+  if (!printer_attrs)
+  {
+    if(log) log(ld, CF_LOGLEVEL_ERROR, "Printer-attributes info not supplied!");
+    return (-1);
+  }
+
+  cfGenerateSizes(printer_attrs, CF_GEN_SIZES_DEFAULT, &printer_sizes, &defattr,
+		  NULL, NULL, NULL, NULL, NULL, NULL,
+		  &min_width, &min_length,
+		  &max_width, &max_length,
+		  &left, &bottom, &right, &top, defsize, NULL);
+
+  strncpy(pageSizeRequested, header->cupsPageSizeName, 64);
+    /* Prefer user-selected page size. */
   memset(dimensions, 0, sizeof(double)*2);
   memset(margins, 0, sizeof(double)*4);
   size_matched = NULL;
 
+  /* XXX FullBleed? FB? */
     /* Find a page size without ".Borderless" suffix */
     /* (if all are ".Borderless" we drop the suffix in the size's names) */
     for (size = (cups_size_t *)cupsArrayFirst(printer_sizes); size;
@@ -201,7 +289,7 @@ cfRasterMatchIPPSize(
 	if(fabs(header->PageSize[1] - temptop + tempbottom) / templength < 0.01	&&
 	   fabs(header->PageSize[0] - tempright + templeft) / tempwidth < 0.01	&&
 	   (size_matched==NULL || !strcasecmp(pageSizeRequested, ippsizename))){
-		if(log)log(ld,CF_LOGLEVEL_DEBUG,"Imageable area fit\n");
+		if(log)log(ld,CF_LOGLEVEL_DEBUG,"Imageable area fit");
 		size_matched = size;
 		if (landscape) *landscape = 0;
       		if (image_fit) *image_fit = 1;
@@ -213,14 +301,14 @@ cfRasterMatchIPPSize(
    /*
     * Standard size...
     */
-    if(log)log(ld,CF_LOGLEVEL_DEBUG,"IPP matched size = %s\n", size_matched->media);
+    if(log)log(ld,CF_LOGLEVEL_DEBUG,"IPP matched size = %s", size_matched->media);
     size = size_matched;
     dimensions[0] = size->width * 72.0 / 2540.0;
     dimensions[1] = size->length * 72.0 / 2540.0;
     margins[0] = size->left * 72.0 / 2540.0;
     margins[1] = size->bottom * 72.0 / 2540.0;
-    margins[2] = (size->width - size->right) * 72.0 / 2540.0;
-    margins[3] = (size->length - size->top) * 72.0 / 2540.0;
+    margins[2] = size->right * 72.0 / 2540.0;
+    margins[3] = size->top * 72.0 / 2540.0;
     snprintf(header->cupsPageSizeName, sizeof(header->cupsPageSizeName),
 	     "%.63s", size->media);
   }
@@ -288,42 +376,42 @@ cfRasterMatchIPPSize(
 		if(fabs(header->PageSize[0] - temptop + tempbottom) / templength < 0.01	&&
 		fabs(header->PageSize[1] - tempright + templeft) / tempwidth < 0.01	&&
 		(size_matched==NULL || !strcasecmp(pageSizeRequested, ippsizename))){
-			if(log) log(ld, CF_LOGLEVEL_DEBUG, "Imageable area fit\n");
+			if(log) log(ld, CF_LOGLEVEL_DEBUG, "Imageable area fit");
 			size_matched = size;
 			if (landscape) *landscape = 1;
 			if (image_fit) *image_fit = 1;
 		}
 	}	
-  }
-  if (size_matched)
-  {
-    /*
-     * Standard size in landscape orientation...
-     */
-    size = size_matched;
-    if(log) log(ld, CF_LOGLEVEL_DEBUG, "landscape size = %s\n", size->media);
-    dimensions[0] = size->width * 72.0 / 2540.0;
-    dimensions[1] = size->length * 72.0 / 2540.0;
-    margins[0] = size->left * 72.0 / 2540.0;
-    margins[1] = size->bottom * 72.0 / 2540.0;
-    margins[2] = (size->width - size->right) * 72.0 / 2540.0;
-    margins[3] = (size->length - size->top) * 72.0 / 2540.0;
-    snprintf(header->cupsPageSizeName, sizeof(header->cupsPageSizeName),
-	     "%.63s", size->media);
-  }
-  else
-  {
-    /*
-     * Custom size...
-     */
-    if(log) log(ld, CF_LOGLEVEL_DEBUG, "size = custom\n");
-    for (i = 0; i < 2; i ++)
-      dimensions[i] = header->PageSize[i];
-    margins[0] = left * 72.0 / 2540.0;
-    margins[1] = bottom * 72.0 / 2540.0;
-    margins[2] = right * 72.0 / 2540.0;
-    margins[3] = bottom * 72.0 / 2540.0;
-    snprintf(header->cupsPageSizeName, 64, "Custom.%dx%d", header->PageSize[0], header->PageSize[1]);
+	if (size_matched)
+	{
+	 /*
+	  * Standard size in landscape orientation...
+	  */
+	  size = size_matched;
+	  if(log) log(ld, CF_LOGLEVEL_DEBUG, "landscape size = %s", size->media);
+	  dimensions[0] = size->width * 72.0 / 2540.0;
+	  dimensions[1] = size->length * 72.0 / 2540.0;
+	  margins[0] = size->left * 72.0 / 2540.0;
+	  margins[1] = size->bottom * 72.0 / 2540.0;
+	  margins[2] = size->right * 72.0 / 2540.0;
+	  margins[3] = size->top * 72.0 / 2540.0;
+	  snprintf(header->cupsPageSizeName, sizeof(header->cupsPageSizeName),
+		   "%.63s", size->media);
+	}
+	else
+	{
+	 /*
+	  * Custom size...
+	  */
+	  if(log) log(ld, CF_LOGLEVEL_DEBUG, "size = custom");
+	  for (i = 0; i < 2; i ++)
+	    dimensions[i] = header->PageSize[i];
+	  margins[0] = left * 72.0 / 2540.0;
+	  margins[1] = bottom * 72.0 / 2540.0;
+	  margins[2] = right * 72.0 / 2540.0;
+	  margins[3] = top * 72.0 / 2540.0;
+	  snprintf(header->cupsPageSizeName, 64, "Custom.%dx%d", header->PageSize[0], header->PageSize[1]);
+	}
   }
 
   return 0;
@@ -331,110 +419,160 @@ cfRasterMatchIPPSize(
 }
 
 /*
- *  'cfGetBackSideAndHeaderDuplex()' - 
- *				This functions returns the cupsBackSide using 
- *				printer attributes.
- *				meaning and reason for backside orientation:-
- *				It only makes sense if printer supports duplex,
- * 				so, if printer reports that it supports duplex 
- * 				printing via sides-supported IPP attribute, then
- *				it also reports back-side orientation for each 
- * 				PDL in PDL specific IPP attributes. Backside 
- * 				orientation is specially needed for raster
- * 				PDLs as raster PDLs are specially made for 
- * 				raster printers which do not have sufficient memory 
- *				to hold a full page bitmap(raster page). 
- *				So they cannot build the whole page in memory 
- *				before starting to print it. For one sided printing 
- *				it is easy to manage. The printer's mechanism pulls 
- *				the page in on its upper edge and starts to print,  
- *				from top to bottom, after that it ejects the page.  
- *				For double-sided printing it does the same for the  
- *				front side, but for the back side the mechanics of  
- *				the printer has to turn over the sheet, and now,  
- *				depending on how the sheet is turned over it happens  
- *				that the edge arriving in the printing mechanism is 
- *				the lower edge of the back side. And if the printer  
- *				simply prints then, the back side is the wrong way  
- *				around. The printer reports its need via back side  
- *				orientation in such a case, so that the client knows  
- *				to send the back side upside down for example.  
- *				In vector PDL, PDF and PostScript, always the full  
- *				page's raster image is completely generated in the  
- *				printer before the page is started, and therefore the  
- *				printer can start to take the pixels from the lower  
- *				edge of the raster image if needed, so back side  
- *				orientation is always "normal" for these PDLs. 
- *				And if a printer does not support duplex, back side 
- * 				orientation is not needed.
+ *  'cfGetBackSideOrientation()' - This functions returns the back
+ *				   side orientation using printer
+ *				   attributes.  Meaning and reason for
+ *				   backside orientation: It only
+ *				   makes sense if printer supports
+ *				   duplex, so, if printer reports that
+ *				   it supports duplex printing via
+ *				   sides-supported IPP attribute, then
+ *				   it also reports back-side
+ *				   orientation for each PDL in PDL
+ *				   specific IPP attributes. Backside
+ *				   orientation is specially needed for
+ *				   raster PDLs as raster PDLs are
+ *				   specially made for raster printers
+ *				   which do not have sufficient memory
+ *				   to hold a full page bitmap(raster
+ *				   page).  So they cannot build the
+ *				   whole page in memory before
+ *				   starting to print it. For one sided
+ *				   printing it is easy to manage. The
+ *				   printer's mechanism pulls the page
+ *				   in on its upper edge and starts to
+ *				   print, from top to bottom, after
+ *				   that it ejects the page.  For
+ *				   double-sided printing it does the
+ *				   same for the front side, but for
+ *				   the back side the mechanics of the
+ *				   printer has to turn over the sheet,
+ *				   and now, depending on how the sheet
+ *				   is turned over it happens that the
+ *				   edge arriving in the printing
+ *				   mechanism is the lower edge of the
+ *				   back side. And if the printer
+ *				   simply prints then, the back side
+ *				   is the wrong way around. The
+ *				   printer reports its need via back
+ *				   side orientation in such a case, so
+ *				   that the client knows to send the
+ *				   back side upside down for example.
+ *				   In vector PDL, PDF and PostScript,
+ *				   always the full page's raster image
+ *				   is completely generated in the
+ *				   printer before the page is started,
+ *				   and therefore the printer can start
+ *				   to take the pixels from the lower
+ *				   edge of the raster image if needed,
+ *				   so back side orientation is always
+ *				   "normal" for these PDLs.  And if a
+ *				   printer does not support duplex,
+ *				   back side orientation is not
+ *				   needed.
  */
 
-int							/* O - Backside obtained using printer attributes */
-cfGetBackSideAndHeaderDuplex(ipp_t *printer_attrs,	/* I - printer attributes using filter data */
-			cups_page_header2_t *header)	/* O - header */
+int				       /* O - Backside orientation (bit 0-2)
+					      Requires flipped margin?
+					      Yes: bit 4 set; No: bit 3 set */
+cfGetBackSideOrientation(cf_filter_data_t *data) /* I - Filter data */
 {
-    ipp_attribute_t *ipp_attr;	/* IPP attribute */
-    int i,			/* Looping variable */
-	count;			
-    int backside = -1;	/* backside obtained using printer attributes */
-    if((ipp_attr = ippFindAttribute(printer_attrs, "sides-supported", IPP_TAG_ZERO))!=NULL){
-	if(ippContainsString(ipp_attr, "two-sided-long-edge")){
-	    if(header) header->Duplex = CUPS_TRUE;
-	    if((ipp_attr = ippFindAttribute(printer_attrs, "urf-supported",
-		IPP_TAG_ZERO))!=NULL){
-		for(i = 0, count = ippGetCount(ipp_attr); i<count;i++){
-		    const char *dm = ippGetString(ipp_attr, i, NULL); /* DM value */
-		    if(!strcasecmp(dm, "DM1")){
-			backside = CF_BACKSIDE_NORMAL;
-			break;
-		    }
-		    if(!strcasecmp(dm, "DM2")){
-			backside = CF_BACKSIDE_FLIPPED;
-			break;
-		    }
-		    if(!strcasecmp(dm, "DM3")){
-			backside = CF_BACKSIDE_ROTATED;
-			break;
-		    }
-		    if(!strcasecmp(dm, "DM4")){
-			backside = CF_BACKSIDE_MANUAL_TUMBLE;
-			break;
-		    }
-		}
-	    }
-	    if((ipp_attr = ippFindAttribute(printer_attrs, "pwg-raster-document-sheet-back",
-		IPP_TAG_ZERO))!=NULL){
-		const char *keyword;
-		keyword = ippGetString(ipp_attr, 0, NULL);
-		if (!strcmp(keyword, "flipped"))
-		    backside = CF_BACKSIDE_FLIPPED;
-		else if (!strcmp(keyword, "manual-tumble"))
-		    backside = CF_BACKSIDE_MANUAL_TUMBLE;
-		else if (!strcmp(keyword, "normal"))
-		    backside = CF_BACKSIDE_NORMAL;
-		else
-		    backside = CF_BACKSIDE_ROTATED;		
-	    }
+  ipp_t *printer_attrs = data->printer_attrs;
+  int num_options = data->num_options;
+  cups_option_t *options = data->options;
+  char *final_content_type = data->final_content_type;
+  ipp_attribute_t *ipp_attr = NULL; /* IPP attribute */
+  int i,			/* Looping variable */
+      count;			
+  const char *keyword;
+  int backside = -1;	/* backside obtained using printer attributes */
+  // also check options
+  if ((ipp_attr = ippFindAttribute(printer_attrs, "sides-supported",
+  				     IPP_TAG_ZERO)) != NULL)
+  {
+    if (ippContainsString(ipp_attr, "two-sided-long-edge"))
+    {
+      if (final_content_type &&
+	  strcasestr(final_content_type, "/urf") &&
+	  (ipp_attr = ippFindAttribute(printer_attrs, "urf-supported",
+				       IPP_TAG_ZERO)) != NULL)
+      {
+	for (i = 0, count = ippGetCount(ipp_attr); i < count; i ++)
+	{
+	  const char *dm = ippGetString(ipp_attr, i, NULL); /* DM value */
+	  if(!strcasecmp(dm, "DM1")){
+	    backside = CF_BACKSIDE_NORMAL;
+	    break;
+	  }
+	  if(!strcasecmp(dm, "DM2")){
+	    backside = CF_BACKSIDE_FLIPPED;
+	    break;
+	  }
+	  if(!strcasecmp(dm, "DM3")){
+	    backside = CF_BACKSIDE_ROTATED;
+	    break;
+	  }
+	  if(!strcasecmp(dm, "DM4")){
+	    backside = CF_BACKSIDE_MANUAL_TUMBLE;
+	    break;
+	  }
 	}
+      }
+      else if ((final_content_type &&
+		strcasestr(final_content_type, "/vnd.pwg-raster") &&
+		(ipp_attr = ippFindAttribute(printer_attrs,
+					     "pwg-raster-document-sheet-back",
+					     IPP_TAG_ZERO)) != NULL) ||
+	       (final_content_type &&
+		strcasestr(final_content_type, "/pclm") &&
+		(ipp_attr = ippFindAttribute(printer_attrs,
+					     "pclm-raster-back-side",
+					     IPP_TAG_ZERO)) != NULL) ||
+	       ((ipp_attr = NULL) ||
+		(keyword = cupsGetOption("back-side-orientation",
+					 num_options, options)) != NULL))
+      {
+	if (ipp_attr)
+	  keyword = ippGetString(ipp_attr, 0, NULL);
+	if (!strcasecmp(keyword, "flipped"))
+	  backside = CF_BACKSIDE_FLIPPED;
+	else if (!strncasecmp(keyword, "manual", 6))
+	  backside = CF_BACKSIDE_MANUAL_TUMBLE;
+	else if (!strcasecmp(keyword, "normal"))
+	  backside = CF_BACKSIDE_NORMAL;
+	else if (!strcasecmp(keyword, "rotated"))
+	  backside = CF_BACKSIDE_ROTATED;		
+      }
+      
+      if (backside == -1)
+	backside = CF_BACKSIDE_NORMAL;
+      else if ((keyword = cupsGetOption("duplex-requires-flipped-margin",
+					num_options, options)) != NULL)
+      {
+	if (strcasecmp(keyword, "true") == 0)
+	  backside |= 16;
+	else
+	  backside |= 8;
+      }
     }
-    
-    if(header && header->Duplex==1 && backside==-1) backside = CF_BACKSIDE_NORMAL;
-    return backside;
-    
+  }
+
+  return backside;
 }
 
-int 
-cfGetPrintRenderIntent(cf_filter_data_t *data,
-			cups_page_header2_t *header)
+const char *
+cfGetPrintRenderIntent(cf_filter_data_t *data, char *ri, int ri_len)
 {
   const char		*val;
   int 			num_options = 0;
   cups_option_t 	*options = NULL;
   ipp_t 		*printer_attrs = data->printer_attrs;
   ipp_attribute_t 	*ipp_attr;
-  cf_logfunc_t 	log = data->logfunc;
+  cf_logfunc_t 	        log = data->logfunc;
   void                  *ld = data->logdata;
   int 			i;
+
+
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
   if ((val = cupsGetOption("print-rendering-intent", num_options,
@@ -444,89 +582,80 @@ cfGetPrintRenderIntent(cf_filter_data_t *data,
       (val = cupsGetOption("RenderingIntent", num_options,
 			   options)) != NULL)
   {
-    if (!strcmp(val, "absolute"))
-      snprintf(header->cupsRenderingIntent, sizeof(header->cupsRenderingIntent),
-	"%s","Absolute");
-    else if (!strcmp(val, "automatic"))
-      snprintf(header->cupsRenderingIntent,sizeof(header->cupsRenderingIntent),
-	      "%s", "Automatic");
-    else if (!strcmp(val, "perceptual"))
-      snprintf(header->cupsRenderingIntent, sizeof(header->cupsRenderingIntent),
-		"%s", "Perceptual");
-    else if (!strcmp(val, "relative"))
-      snprintf(header->cupsRenderingIntent, sizeof(header->cupsRenderingIntent),
-	      "%s",  "Relative");
-    else if (!strcmp(val, "relative-bpc"))
-      snprintf(header->cupsRenderingIntent, sizeof(header->cupsRenderingIntent),
-		"%s", "RelativeBpc");
-    else if (!strcmp(val, "saturation"))
-      snprintf(header->cupsRenderingIntent, sizeof(header->cupsRenderingIntent),
-	      "%s",  "Saturation");
+    if (!strcasecmp(val, "absolute"))
+      snprintf(ri, ri_len, "%s", "Absolute");
+    else if (!strcasecmp(val, "auto") || !strcasecmp(val, "automatic"))
+      snprintf(ri, ri_len, "%s", "Automatic");
+    else if (!strcasecmp(val, "perceptual"))
+      snprintf(ri, ri_len, "%s", "Perceptual");
+    else if (!strcasecmp(val, "relative"))
+      snprintf(ri, ri_len, "%s",  "Relative");
+    else if (!strcasecmp(val, "relative-bpc") ||
+	     !strcasecmp(val, "relativebpc"))
+      snprintf(ri, ri_len, "%s", "RelativeBpc");
+    else if (!strcasecmp(val, "saturation"))
+      snprintf(ri, ri_len, "%s",  "Saturation");
   }
-  else 
-  {
-	header->cupsRenderingIntent[0] = '\0';
-  }
-    if((ipp_attr = ippFindAttribute(printer_attrs, "print-rendering-intent-supported",
-    							IPP_TAG_ZERO))!=NULL){
-	int autoRender = 0;int count;
-        if((count = ippGetCount(ipp_attr))>0){
-    	    char temp[41] = "auto";
-    	    if(header->cupsRenderingIntent[0]!='\0'){		/* User is willing to supply some option */
-    	        for(i=0; i<count; i++){
-    		    const char *temp2 = ippGetString(ipp_attr, i, NULL);
-		    if(!strcasecmp(temp2, "auto")) autoRender = 1;
-    		    if(!strcasecmp(header->cupsRenderingIntent, temp2)){
-    		        break;
-    		    }
-    	        }
-    	    	if(i==count){
-    		    if(log) log(ld, CF_LOGLEVEL_DEBUG,
-    				"User specified print-rendering-intent not supported by printer,"
-    					"using default print rendering intent.");
-    		    header->cupsRenderingIntent[0] = '\0';
-    	    	}
-    	    }
-    	    if(header->cupsRenderingIntent[0]=='\0'){		/* Either user has not supplied any option
-								   or user supplied value is not supported by printer */
-    	    	if((ipp_attr = ippFindAttribute(printer_attrs, "print-rendering-intent-default",
-    	    						IPP_TAG_ZERO))!=NULL){
-    	            snprintf(temp,sizeof(temp),"%s",ippGetString(ipp_attr, 0, NULL));
-		    snprintf(header->cupsRenderingIntent, sizeof(header->cupsRenderingIntent),
-				"%s",ippGetString(ipp_attr, 0, NULL));
-    	    	}
-		else if(autoRender==1){
-    	            snprintf(temp,sizeof(temp),"%s","auto");
-		    snprintf(header->cupsRenderingIntent, sizeof(header->cupsRenderingIntent),
-				"%s","auto");
 
-		}
-    	    }
-        }
+  if ((ipp_attr = ippFindAttribute(printer_attrs,
+				   "print-rendering-intent-supported",
+				   IPP_TAG_ZERO)) != NULL)
+  {
+    int autoRender = 0;
+    int count;
+
+    if ((count = ippGetCount(ipp_attr)) > 0)
+    {
+      for (i = 0; i < count; i ++)
+      {
+	const char *temp = ippGetString(ipp_attr, i, NULL);
+	if (!strcasecmp(temp, "auto")) autoRender = 1;
+	if (ri[0] != '\0')
+	  /* User has supplied a setting */
+	  if (!strcasecmp(ri, temp))
+	    break;
+      }
+      if (ri[0] != '\0' && i == count)
+      {
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		     "User specified print-rendering-intent not supported "
+		     "by printer, using default print rendering intent.");
+	ri[0] = '\0';
+      }
+      if (ri[0] == '\0')
+      {	/* Either user has not supplied any setting
+	   or user supplied value is not supported by printer */
+	if ((ipp_attr = ippFindAttribute(printer_attrs,
+					 "print-rendering-intent-default",
+					 IPP_TAG_ZERO)) != NULL)
+	  snprintf(ri, ri_len, "%s", ippGetString(ipp_attr, 0, NULL));
+	else if (autoRender == 1)
+	  snprintf(ri, ri_len, "%s", "auto");
+      }
     }
-    return 0;
+  }
+
+  cupsFreeOptions(num_options, options);
+  return (ri);
 }
 
 /*
- * 'cfRasterPrepareHeader() - This function creates a CUPS/PWG
- *                              Raster header for Raster output based
- *                              on the printer and job properties
- *                              supplied to the calling filter
- *                              functions, printer properties via PPD
- *                              file or printer IPP attributes and job
- *                              properties via CUPS option list and
- *                              job IPP attributes. For PWG and Apple
- *                              Raster output the color space and
- *                              depth is auto-selected based on
- *                              available options listed in the
- *                              urf-supported and
- *                              pwg-raster-document-type-supported
- *                              printer IPP attributes (PPD generator
- *                              adds those also to the PPD) and the
- *                              settings of print-color-mode
- *                              ("ColorModel") and print-quality
- *                              ("cupsPrintQuality") job
- *                              attributes/options.
+ * 'cfRasterPrepareHeader() - This function creates a CUPS/PWG Raster
+ *                            header for Raster output based on the
+ *                            printer and job properties supplied to
+ *                            the calling filter functions, printer
+ *                            properties via printer IPP attributes
+ *                            and job properties via CUPS option list
+ *                            and job IPP attributesor optionally a
+ *                            sample header. For PWG and Apple Raster
+ *                            output the color space and depth is
+ *                            auto-selected based on available options
+ *                            listed in the urf-supported and
+ *                            pwg-raster-document-type-supported
+ *                            printer IPP attributes and the settings
+ *                            of print-color-mode ("ColorModel") and
+ *                            print-quality ("cupsPrintQuality") job
+ *                            attributes/options.
  */
 
 int                                             /* O  - 0 on success,
@@ -551,7 +680,6 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 						        found. */
 {
   int i;
-  ppd_file_t *ppd;
   ipp_t *printer_attrs, *job_attrs;
   int num_options = 0;
   cups_option_t *options = NULL;
@@ -563,16 +691,16 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       pclm = 0;
   int cupsrasterheader = 1;
   const char *p;
-  ppd_attr_t *ppd_attr;
   ipp_attribute_t *attr;
-  const char *cspaces_available, *color_mode, *quality;
+  const char *cspaces_available = NULL, *color_mode = NULL, *quality = NULL;
   int hi_depth;
-  ppd_choice_t *choice;
   char valuebuffer[2048];
   int res = 1;
   int xres = -1; int yres = -1;
-  double margins[4];
-  double dimensions[2];
+  float margins[4];
+  float dimensions[2];
+  char size_name_buf[IPP_MAX_NAME + 1];
+  
 
   if (final_outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER)
     pwgraster = 1;
@@ -583,6 +711,25 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   else
     cupsraster = 1;
 
+  if (cupsraster)
+  {
+    pwgraster = 0;
+    p = cupsGetOption("media-class", num_options, options);
+    if (p == NULL)
+      p = cupsGetOption("MediaClass", num_options, options);
+    if (p != NULL)
+    {
+      if (strcasestr(p, "pwg")) {
+	pwgraster = 1;
+	cupsraster = 0;
+	if (log)
+	  log(ld, CF_LOGLEVEL_DEBUG,
+	      "PWG Raster output requested (via \"MediaClass\"/\"media-class\" option)");
+      } else
+	pwgraster = 0;
+    }
+  }
+
   if (header_outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
       header_outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
     cupsrasterheader = 0;
@@ -591,7 +738,6 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   job_attrs = data->job_attrs;
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
-  ppd = data->ppd;
   printer_attrs = data->printer_attrs;
   job_attrs = data->job_attrs;
 
@@ -615,8 +761,7 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 				 "pwg-raster-document-resolution-supported",
 				 IPP_TAG_RESOLUTION)) != NULL)
     {
-      strncpy(valuebuffer, ippGetString(attr, 0, NULL),
-	      sizeof(valuebuffer) - 1);
+      ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
       const char *p = valuebuffer;
       xres = atoi(p);
       if ((p = strchr(p, 'x')) != NULL)
@@ -655,8 +800,7 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 				 "pclm-source-resolution-default",
 				 IPP_TAG_RESOLUTION)) != NULL)
     {
-      strncpy(valuebuffer, ippGetString(attr, 0, NULL),
-	      sizeof(valuebuffer) - 1);
+      ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
       const char *p = valuebuffer;
       xres = atoi(p);
       if ((p = strchr(p, 'x')) != NULL)
@@ -680,173 +824,87 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	 (pclm ? "PCLm" : "CUPS Raster")));
   }
 
-  if (ppd)
-  {
-    if (log)
-      log(ld, CF_LOGLEVEL_DEBUG, "PPD file present");
-    ppdRasterInterpretPPD(h, ppd, num_options, options, NULL);
-    if ((ppd_attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
-	(!strcasecmp(ppd_attr->value, "true") ||
-	 !strcasecmp(ppd_attr->value, "on") ||
-	 !strcasecmp(ppd_attr->value, "yes"))) {
-      pwgraster = 1;
-      cupsraster = 0;
-      appleraster = 0;
-      pclm = 0;
-      if (log)
-	log(ld, CF_LOGLEVEL_DEBUG,
-	    "PWG Raster output requested (via \"PWGRaster\" PPD attribute)");
-    }
-
-    if (pwgraster || appleraster || pclm) {
-      if ((pwgraster &&
-	   (ppd_attr = ppdFindAttr(ppd, "cupsPwgRasterDocumentTypeSupported",
-				   NULL)) != NULL) ||
-	  (appleraster &&
-	   (ppd_attr = ppdFindAttr(ppd, "cupsUrfSupported", NULL)) != NULL)) {
-	cspaces_available = ppd_attr->value;
-	if (cspaces_available && cspaces_available[0]) {
-	  /* PPD is from the PPD generator (cfCreatePPDFromIPP()) of
-	     cups-filters, so we auto-select color space and depth */
-	  if ((color_mode = cupsGetOption("print-color-mode", num_options,
-					  options)) == NULL) {
-	    choice = ppdFindMarkedChoice(ppd, "ColorModel");
-	    if (choice)
-	      color_mode = choice->choice;
-	    else
-	      color_mode = "auto";
-	  }
-	  if ((quality = cupsGetOption("print-quality", num_options,
-				       options)) == NULL) {
-	    choice = ppdFindMarkedChoice(ppd, "cupsPrintQuality");
-	    if (choice)
-	      quality = choice->choice;
-	    else
-	      quality = "Normal";
-	  }
-	  hi_depth = (!no_high_depth &&
-		      (!strcasecmp(quality, "High") || !strcmp(quality, "5"))) ?
-	    1 : 0;
-	  if (log) {
-	    log(ld, CF_LOGLEVEL_DEBUG,
-		"Color mode requested: %s; color depth requested: %s",
-		color_mode, hi_depth ? "High" : "Standard");
-	    log(ld, CF_LOGLEVEL_DEBUG,
-		"Determining best color space/depth ...");
-	  }
-	  res = cfRasterSetColorSpace(h, cspaces_available, color_mode,
-					cspace, &hi_depth);
-	}
-      }
-      else if (pclm)
-      {
-	/* Available color spaces are always SRGB 8 and SGray 8 */
-	cspaces_available = "srgb_8,sgray_8";
-	if ((color_mode = cupsGetOption("print-color-mode", num_options,
-					options)) == NULL) {
-	  choice = ppdFindMarkedChoice(ppd, "ColorModel");
-	  if (choice)
-	    color_mode = choice->choice;
-	  else
-	    color_mode = "auto";
-	}
-	hi_depth = 0;
-	if (log)
-	  log(ld, CF_LOGLEVEL_DEBUG,
-	      "For PCLm color mode is always SRGB/SGray 8-bit.");
-	res = cfRasterSetColorSpace(h, cspaces_available, color_mode,
-				      cspace, &hi_depth);
-      }
-    }
-
-    for (i = 0; i < 2; i ++)
-      dimensions[i] = h->PageSize[i];
-    if (cupsrasterheader) {
-      margins[0] = h->cupsImagingBBox[0];
-      margins[1] = h->cupsImagingBBox[1];
-      margins[2] = dimensions[0] - h->cupsImagingBBox[2];
-      margins[3] = dimensions[1] - h->cupsImagingBBox[3];
-    } else
-      memset(margins, 0, sizeof(margins));
-  }
+  if (data->header)
+    *h = *(data->header); /* Copy sample header */
   else
+    raster_base_header(h, data, 1 - cupsrasterheader);
+  if (cfGetPageDimensions(data->printer_attrs, data->job_attrs,
+			  data->num_options, data->options, h, 0,
+			  &(dimensions[0]), &(dimensions[1]),
+			  &(margins[0]), &(margins[1]),
+			  &(margins[2]), &(margins[3]), size_name_buf,
+			  NULL) < 0)
   {
-    if (log)
-      log(ld, CF_LOGLEVEL_DEBUG, "No PPD file present");
-    if (cupsraster)
+    pwg_media_t *pwg_media;
+    
+    for (i = 0; i < 2; i ++)
+      dimensions[i] = h->cupsPageSize[i];
+    margins[0] = h->cupsImagingBBox[0];
+    margins[1] = h->cupsImagingBBox[1];
+    margins[2] = dimensions[0] - h->cupsImagingBBox[2];
+    margins[3] = dimensions[1] - h->cupsImagingBBox[3];
+    pwg_media = pwgMediaForSize(dimensions[0] / 72 * 2540,
+				dimensions[1] / 72 * 2540);
+    if (pwg_media)
     {
-      pwgraster = 0;
-      p = cupsGetOption("media-class", num_options, options);
-      if (p == NULL)
-	p = cupsGetOption("MediaClass", num_options, options);
-      if (p != NULL)
-      {
-	if (strcasestr(p, "pwg")) {
-	  pwgraster = 1;
-	  cupsraster = 0;
-	  if (log)
-	    log(ld, CF_LOGLEVEL_DEBUG,
-		"PWG Raster output requested (via \"MediaClass\"/\"media-class\" option)");
-	} else
-	  pwgraster = 0;
-      }
+      p = (pwg_media->ppd ? pwg_media->ppd :
+	   (pwg_media->legacy ? pwg_media->legacy : pwg_media->pwg));
+      if (p)
+	_strlcpy(h->cupsPageSizeName, p, sizeof(h->cupsPageSizeName));
     }
-    cfRasterParseIPPOptions(h, data, 1 - cupsrasterheader, 1);
-    if (cfRasterMatchIPPSize(h, data, margins, dimensions, NULL, NULL) < 0) {
-      for (i = 0; i < 2; i ++)
-	dimensions[i] = h->PageSize[i];
-      memset(margins, 0, sizeof(margins));
-    }
-    if (!cupsrasterheader)
-      memset(margins, 0, sizeof(margins));
+  }
+  else if (size_name_buf[0])
+    _strlcpy(h->cupsPageSizeName, size_name_buf, sizeof(h->cupsPageSizeName));
 
-    if (printer_attrs &&
-	((pwgraster &&
-	  (attr = ippFindAttribute(printer_attrs,
-				   "pwg-raster-document-type-supported",
-				   IPP_TAG_ZERO)) != NULL) ||
-	 (appleraster &&
-	  (attr = ippFindAttribute(printer_attrs,
-				   "urf-supported",
-				   IPP_TAG_ZERO)) != NULL))) {
-      ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
-      cspaces_available = valuebuffer;
-      if ((color_mode = cupsGetOption("print-color-mode", num_options,
-				      options)) == NULL)
-	color_mode = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
+  if (!cupsrasterheader)
+    memset(margins, 0, sizeof(margins)); 
+
+  if (printer_attrs &&
+      ((pwgraster &&
+	(attr = ippFindAttribute(printer_attrs,
+				 "pwg-raster-document-type-supported",
+				 IPP_TAG_ZERO)) != NULL) ||
+       (appleraster &&
+	(attr = ippFindAttribute(printer_attrs,
+				 "urf-supported",
+				 IPP_TAG_ZERO)) != NULL))) {
+    ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+    cspaces_available = valuebuffer;
+    if ((color_mode = cupsGetOption("print-color-mode", num_options,
+				    options)) == NULL)
+      color_mode = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
 					      "print-color-mode");
-      if ((quality = cupsGetOption("print-quality", num_options,
-				   options)) == NULL)
-	quality = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
+    if ((quality = cupsGetOption("print-quality", num_options,
+				 options)) == NULL)
+      quality = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
 					   "print-quality");
-      hi_depth = (!no_high_depth &&
-		  (!strcasecmp(quality, "high") || !strcmp(quality, "5"))) ?
-	1 : 0;
-      if (log) {
-	log(ld, CF_LOGLEVEL_DEBUG,
-	    "Color mode requested: %s; color depth requested: %s",
-	    color_mode, hi_depth ? "High" : "Standard");
-	log(ld, CF_LOGLEVEL_DEBUG,
-	    "Determining best color space/depth ...");
-      }
-      res = cfRasterSetColorSpace(h, cspaces_available, color_mode,
-				    cspace, &hi_depth);
+    hi_depth = (!no_high_depth && quality &&
+		(!strcasecmp(quality, "high") || !strcmp(quality, "5"))) ?
+      1 : 0;
+    if (log) {
+      log(ld, CF_LOGLEVEL_DEBUG,
+	  "Color mode requested: %s; color depth requested: %s",
+	  color_mode, hi_depth ? "High" : "Standard");
+      log(ld, CF_LOGLEVEL_DEBUG,
+	  "Determining best color space/depth ...");
     }
-    else if (pclm)
-    {
-      /* Available color spaces are always SRGB 8 and SGray 8 */
-      cspaces_available = "srgb_8,sgray_8";
-      if ((color_mode = cupsGetOption("print-color-mode", num_options,
-				      options)) == NULL)
-	color_mode = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
+    res = cfRasterSetColorSpace(h, cspaces_available, color_mode,
+				cspace, &hi_depth);
+  }
+  else if (pclm)
+  {
+    /* Available color spaces are always SRGB 8 and SGray 8 */
+    cspaces_available = "srgb_8,sgray_8";
+    if ((color_mode = cupsGetOption("print-color-mode", num_options,
+				    options)) == NULL)
+      color_mode = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
 					      "print-color-mode");
-      hi_depth = 0;
-      if (log)
-	log(ld, CF_LOGLEVEL_DEBUG,
-	    "For PCLm color mode is always SRGB/SGray 8-bit.");
-      res = cfRasterSetColorSpace(h, cspaces_available, color_mode,
-				    cspace, &hi_depth);
-    }
+    hi_depth = 0;
+    if (log)
+      log(ld, CF_LOGLEVEL_DEBUG,
+	  "For PCLm color mode is always SRGB/SGray 8-bit.");
+    res = cfRasterSetColorSpace(h, cspaces_available, color_mode,
+				cspace, &hi_depth);
   }
 
   if (res != 1) {
@@ -874,30 +932,17 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   }
 
   if ((h->HWResolution[0] == 100) && (h->HWResolution[1] == 100)) {
-    /* No "Resolution" option */
-    if (ppd && (ppd_attr = ppdFindAttr(ppd, "DefaultResolution", 0)) != NULL) {
-      /* "*DefaultResolution" keyword in the PPD */
-      const char *p = ppd_attr->value;
-      h->HWResolution[0] = atoi(p);
-      if ((p = strchr(p, 'x')) != NULL)
-	h->HWResolution[1] = atoi(p+1);   /*  Since p now points to a pointer such that *p = 'x', 
-                                        therefore using p+1, cause p+1 points to a numeric value  */
-      else
-	h->HWResolution[1] = h->HWResolution[0];
-      if (h->HWResolution[0] <= 0)
-	h->HWResolution[0] = 300;
-      if (h->HWResolution[1] <= 0)
-	h->HWResolution[1] = h->HWResolution[0];
-  } else {
-    if(xres!=-1){
+    /* No resolution set in header */
+    if (xres != -1)
+    {
       h->HWResolution[0] = xres;
       h->HWResolution[1] = yres;  
     }
-    else{
+    else
+    {
       h->HWResolution[0] = 300;
       h->HWResolution[1] = 300;
     }
-  }
     h->cupsWidth = h->HWResolution[0] * h->PageSize[0] / 72;
     h->cupsHeight = h->HWResolution[1] * h->PageSize[1] / 72;
   }
@@ -1017,7 +1062,7 @@ cfRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
      only */
   if (islower(available[0]) &&
       (p = strstr(available, "black_1")) != NULL &&
-      !isdigit(p + 7) &&
+      !isdigit(*(p + 7)) &&
       (!strcmp(color_mode, "bi-level") ||
        !strcmp(color_mode, "process-bi-level"))) {
     /* Set parameters for bi-level, there is only one color space and color
@@ -1192,34 +1237,22 @@ cfRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 }
 
 
-/*
- * 'cfRasterParseIPPOptions()' - Parse IPP options from the command line
- *                                 and apply them to the CUPS Raster header.
- */
-
-int                                          /* O - -1 on error, 0 on success */
-cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
-			  cf_filter_data_t *data,
-			  int pwg_raster,         /* I - 1 if PWG Raster */
-			  int set_defaults)       /* I - If 1, set default
-						     values for all fields for
-						     which we did not get an
-						     option */
+int                                        /* O - -1 on error, 0 on success */
+raster_base_header(cups_page_header2_t *h, /* O - Raster header */
+		   cf_filter_data_t *data, /* I - Filter data */
+		   int pwg_raster)         /* I - 1 if PWG/Apple Raster */
 {
-#ifdef HAVE_CUPS_1_7
   int		i;			/* Looping var */
   char		*ptr,			/* Pointer into string */
 		s[255];			/* Temporary string */
   const char	*val,			/* Pointer into value */
                 *media;			/* media option */
-  char		*page_size,		/* PageSize option */
-                *media_source,          /* Media source */
+  char		*media_source,          /* Media source */
                 *media_type;		/* Media type */
   pwg_media_t   *size_found;            /* page size found for given name */
-  float         size;                   /* page size dimension */
-  int num_options = 0;          /*  number of options */
-  cups_option_t *options = NULL;  /*  Options */
-  ppd_option_t  *option;
+  int           num_options = 0;        /* Number of options */
+  cups_option_t *options = NULL;        /* Options */
+  ipp_attribute_t *attr;
 
 
  /*
@@ -1232,53 +1265,23 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
  /*
   * Join the IPP attributes and the CUPS options in a single list
   */
+
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
-
- /*
-  * If we have a PPD file in the filter data, take it into account, by
-  * not parsing options which are in the PPD file here.
-  *
-  * They should get parsed and applied separately via the
-  * ppdRasterInterpretPPD() as that function parses the embedded
-  * PostScript code. This way weird things like Gutenprint's
-  * "Resolution" option (choice name is something odd, like
-  * 301x300dpi, and actual resolution can be completely different)
-  * will get treated correctly.
-  *
-  * We mark the option settings in the PPD and call ppdRasterInterpretPPD()
-  * only when we are called with set_defaults = 1. In any case we remove
-  * the options of the PPD from our option list before we start parsing. 
-  */
-
-  if (data->ppd)
-  {
-    if (set_defaults)
-    {
-      ppdMarkOptions(data->ppd, num_options, options);
-      ppdRasterInterpretPPD(h, data->ppd, num_options, options, NULL);
-    }
-    for (option = ppdFirstOption(data->ppd); option;
-	 option = ppdNextOption(data->ppd))
-      num_options = cupsRemoveOption(option->keyword, num_options, &options);
-  } else if (set_defaults)
-    memset(h, 0, sizeof(cups_page_header2_t));
 
  /*
   * Check if the supplied "media" option is a comma-separated list of any
   * combination of page size ("media"), media source ("media-position"),
-  * and media type ("media-type") and if so, put these list elements into
-  * their dedicated options.
+  * and media type ("media-type") and if so, extract media type and source.
+  * Media size will be handled separately.
   */
 
-  page_size = NULL;
   media_source = NULL;
   media_type = NULL;
   if ((media = cupsGetOption("media", num_options, options)) != NULL)
   {
    /*
-    * Loop through the option string, separating it at commas and marking each
-    * individual option as long as the corresponding PPD option (PageSize,
-    * InputSlot, etc.) is not also set.
+    * Loop through the option string, separating it at commas and setting each
+    * individual option.
     *
     * For PageSize, we also check for an empty option value since some versions
     * of MacOS X use it to specify auto-selection of the media based solely on
@@ -1305,7 +1308,7 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       size_found = NULL;
       if ((size_found = pwgMediaForPWG(s)) == NULL)
 	if ((size_found = pwgMediaForPPD(s)) == NULL)
-	  if ((size_found = pwgMediaForPPD(s)) == NULL)
+	  if ((size_found = pwgMediaForLegacy(s)) == NULL)
 	  {
 	    if (strcasestr(s, "tray") ||
 		strcasestr(s, "feed") ||
@@ -1318,6 +1321,7 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 		strcasestr(s, "left") ||
 		strcasestr(s, "right") ||
 		strcasestr(s, "side") ||
+		strcasestr(s, "roll") ||
 		strcasestr(s, "main"))
             { 
               if (media_source == NULL)
@@ -1326,58 +1330,74 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	    else
 	      media_type = strdup(s);
 	  }
-      if (page_size == NULL && size_found)
-	page_size = strdup(size_found->pwg);
     }
   }
+
+ /*
+  * Initialize header
+  */
+
+  memset(h, 0, sizeof(cups_page_header2_t));
+
+ /*
+  * Fill in the items using printer and job IPP attributes and options
+  */
 
   if (pwg_raster)
     strcpy(h->MediaClass, "PwgRaster");
   else if ((val = cupsGetOption("media-class", num_options, options)) != NULL ||
 	   (val = cupsGetOption("MediaClass", num_options, options)) != NULL)
     _strlcpy(h->MediaClass, val, sizeof(h->MediaClass));
-  else if (set_defaults)
+  else
     strcpy(h->MediaClass, "");
+  if (strcasecmp(h->MediaClass, "PwgRaster") == 0)
+    pwg_raster = 1;
 
   if ((val = cupsGetOption("media-color", num_options, options)) != NULL ||
       (val = cupsGetOption("MediaColor", num_options, options)) != NULL)
     _strlcpy(h->MediaColor, val, sizeof(h->MediaColor));
-  else if (set_defaults)
+  else
     h->MediaColor[0] = '\0';
 
   if ((val = cupsGetOption("media-type", num_options, options)) != NULL ||
       (val = cupsGetOption("MediaType", num_options, options)) != NULL ||
-      (val = media_type) != NULL)
+      (val = media_type) != NULL ||
+      (val = cfIPPAttrEnumValForPrinter(data->printer_attrs,
+					data->job_attrs,
+					"media-type")) != NULL)
     _strlcpy(h->MediaType, val, sizeof(h->MediaType));
-  else if (set_defaults)
+  else
     h->MediaType[0] = '\0';
 
   if ((val = cupsGetOption("print-content-optimize", num_options,
 			   options)) != NULL ||
       (val = cupsGetOption("output-type", num_options, options)) != NULL ||
-      (val = cupsGetOption("OutputType", num_options, options)) != NULL)
+      (val = cupsGetOption("OutputType", num_options, options)) != NULL ||
+      (val = cfIPPAttrEnumValForPrinter(data->printer_attrs,
+					 data->job_attrs,
+					"print-content-optimize")) != NULL)
   {
-    if (!strcasecmp(val, "automatic"))
-      _strlcpy(h->OutputType, "Automatic",
+    if (!strncasecmp(val, "auto", 4))
+      _strlcpy(h->OutputType, "automatic",
 	      sizeof(h->OutputType));
     else if (!strcasecmp(val, "graphics") ||
 	     !strcasecmp(val, "graphic"))
-      _strlcpy(h->OutputType, "Graphics", sizeof(h->OutputType));
+      _strlcpy(h->OutputType, "graphics", sizeof(h->OutputType));
     else if (!strcasecmp(val, "photo"))
-      _strlcpy(h->OutputType, "Photo", sizeof(h->OutputType));
+      _strlcpy(h->OutputType, "photo", sizeof(h->OutputType));
     else if (!strcasecmp(val, "text"))
-      _strlcpy(h->OutputType, "Text", sizeof(h->OutputType));
+      _strlcpy(h->OutputType, "text", sizeof(h->OutputType));
     else if (!strcasecmp(val, "text-and-graphics") ||
 	     !strcasecmp(val, "text-and-graphic") ||
 	     !strcasecmp(val, "TextAndGraphics") ||
 	     !strcasecmp(val, "TextAndGraphic"))
-      _strlcpy(h->OutputType, "TextAndGraphics",
+      _strlcpy(h->OutputType, "text-and-graphics",
 	      sizeof(h->OutputType));
     else if (!pwg_raster)
       _strlcpy(h->OutputType, val, sizeof(h->OutputType));
   }
-  else if (set_defaults)
-    _strlcpy(h->OutputType, "Automatic", sizeof(h->OutputType));
+  else
+    _strlcpy(h->OutputType, "automatic", sizeof(h->OutputType));
 
   if (pwg_raster)
   {
@@ -1389,30 +1409,35 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   else
   {
     /* TODO - Support for advance distance and advance media */
-    if (set_defaults)
+    h->AdvanceDistance = 0;
+    h->AdvanceMedia = CUPS_ADVANCE_NONE;
+    if ((val = cupsGetOption("Collate", num_options, options)) != NULL ||
+	(val = cupsGetOption("multiple-document-handling",
+			     num_options, options)) != NULL ||
+	(val = cfIPPAttrEnumValForPrinter(data->printer_attrs,
+					  data->job_attrs,
+					  "multiple-document-handling")) !=
+	 NULL)
     {
-      h->AdvanceDistance = 0;
-      h->AdvanceMedia = CUPS_ADVANCE_NONE;
+      if (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
+	  !strcasecmp(val, "yes") ||
+	  !strcasecmp(val, "separate-documents-collated-copies"))
+	h->Collate = CUPS_TRUE;
+      else
+	h->Collate = CUPS_FALSE;
     }
-    if ((val = cupsGetOption("Collate", num_options, options)) != NULL &&
-	(!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
-	 !strcasecmp(val, "yes")))
-      h->Collate = CUPS_TRUE;
-    else if ((val = cupsGetOption("Collate", num_options, options)) != NULL &&
-	     (!strcasecmp(val, "false") || !strcasecmp(val, "off") ||
-	      !strcasecmp(val, "no")))
-      h->Collate = CUPS_FALSE;
-    else if (set_defaults)
+    else
       h->Collate = CUPS_FALSE;
   }
 
-  if (set_defaults)
-    h->CutMedia = CUPS_CUT_NONE;
+  h->CutMedia = CUPS_CUT_NONE;
 
-  if (set_defaults)
-    h->Tumble = CUPS_FALSE;
+  h->Tumble = CUPS_FALSE;
   if ((val = cupsGetOption("sides", num_options, options)) != NULL ||
-      (val = cupsGetOption("Duplex", num_options, options)) != NULL)
+      (val = cupsGetOption("Duplex", num_options, options)) != NULL ||
+      (val = cfIPPAttrEnumValForPrinter(data->printer_attrs,
+					data->job_attrs,
+					"sides")) != NULL)
   {
     if (!strcasecmp(val, "None") || !strcasecmp(val, "Off") ||
 	!strcasecmp(val, "False") || !strcasecmp(val, "No") ||
@@ -1425,15 +1450,17 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	     !strncasecmp(val, "Duplex", 6))
     {
       h->Duplex = CUPS_TRUE;
-      if (!strncasecmp(val, "DuplexTumble", 12))
+      if (!strncasecmp(val, "DuplexTumble", 12) ||
+	  strcasestr(val, "short-edge"))
 	h->Tumble = CUPS_TRUE;
-      if (!strncasecmp(val, "DuplexNoTumble", 12))
+      if (!strncasecmp(val, "DuplexNoTumble", 14) ||
+	  strcasestr(val, "long-edge"))
 	h->Tumble = CUPS_FALSE;
     }
-    else if (set_defaults)
+    else
       h->Duplex = CUPS_FALSE;
   }
-  else if (set_defaults)
+  else
     h->Duplex = CUPS_FALSE;
 
   if ((val = cupsGetOption("printer-resolution", num_options,
@@ -1451,19 +1478,11 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	yres = strtol(ptr + 1, (char **)&ptr, 10);
     }
 
-    if (ptr <= val || xres <= 0 || yres <= 0 || !ptr ||
-	(*ptr != '\0' &&
-	 strcasecmp(ptr, "dpi") &&
-	 strcasecmp(ptr, "dpc") &&
-	 strcasecmp(ptr, "dpcm")))
-    {
-      if (set_defaults)
-      {
-	h->HWResolution[0] = 600;
-	h->HWResolution[1] = 600;
-      }
-    }
-    else
+    if (ptr > val && xres > 0 && yres > 0 && ptr &&
+	(*ptr == '\0' ||
+	 !strcasecmp(ptr, "dpi") ||
+	 !strcasecmp(ptr, "dpc") ||
+	 !strcasecmp(ptr, "dpcm")))
     {
       if (!strcasecmp(ptr, "dpc") ||
 	  !strcasecmp(ptr, "dpcm"))
@@ -1474,24 +1493,36 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       h->HWResolution[0] = xres;
       h->HWResolution[1] = yres;
     }
+    else
+    {
+      h->HWResolution[0] = 100; /* Resolution invalid */
+      h->HWResolution[1] = 100;
+    }
   }
-  else if (set_defaults)
+  else
   {
-    h->HWResolution[0] = 600;
-    h->HWResolution[1] = 600;
-  }
-  
-  if (set_defaults)
-  {
-    /* TODO - Support for insert sheets */
-    h->InsertSheet = CUPS_FALSE;
+    h->HWResolution[0] = 100; /* Resolution invalid */
+    h->HWResolution[1] = 100;
   }
 
-  if (set_defaults)
+  // Resolution from IPP attrs
+  if (h->HWResolution[0] == 100 && h->HWResolution[1] == 100)
   {
-    /* TODO - Support for jog */
-    h->Jog = CUPS_JOG_NONE;
+    int x = 0, y = 0;
+    cfIPPAttrResolutionForPrinter(data->printer_attrs, data->job_attrs,
+				  NULL, &x, &y);
+    if (x && y)
+    {
+      h->HWResolution[0] = x;
+      h->HWResolution[1] = y;
+    }
   }
+  
+  /* TODO - Support for insert sheets */
+  h->InsertSheet = CUPS_FALSE;
+
+  /* TODO - Support for jog */
+  h->Jog = CUPS_JOG_NONE;
 
   if ((val = cupsGetOption("feed-orientation", num_options,
 			   options)) != NULL ||
@@ -1503,21 +1534,21 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     else if (!strcasecmp(val, "LongEdgeFirst"))
       h->LeadingEdge = CUPS_EDGE_RIGHT;
   }
-  else if (set_defaults)
+  else
     h->LeadingEdge = CUPS_EDGE_TOP;
 
-  if (pwg_raster || set_defaults)
-  {
-    /* TODO - Support for manual feed */
-    h->ManualFeed = CUPS_FALSE;
-  }
+  /* TODO - Support for manual feed */
+  h->ManualFeed = CUPS_FALSE;
 
   if ((val = cupsGetOption("media-position", num_options, options)) != NULL ||
       (val = cupsGetOption("MediaPosition", num_options, options)) != NULL ||
       (val = cupsGetOption("media-source", num_options, options)) != NULL ||
       (val = cupsGetOption("MediaSource", num_options, options)) != NULL ||
       (val = cupsGetOption("InputSlot", num_options, options)) != NULL ||
-      (val = media_source) != NULL)
+      (val = media_source) != NULL ||
+      (val = cfIPPAttrEnumValForPrinter(data->printer_attrs,
+					data->job_attrs,
+					"media-source")) != NULL)
   {
     if (!strncasecmp(val, "Auto", 4) ||
 	!strncasecmp(val, "Default", 7))
@@ -1526,7 +1557,8 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       h->MediaPosition = 1;
     else if (!strcasecmp(val, "Alternate"))
       h->MediaPosition = 2;
-    else if (!strcasecmp(val, "LargeCapacity"))
+    else if (!strcasecmp(val, "LargeCapacity") ||
+	     !strcasecmp(val, "large-capacity"))
       h->MediaPosition = 3;
     else if (!strcasecmp(val, "Manual"))
       h->MediaPosition = 4;
@@ -1538,9 +1570,11 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       h->MediaPosition = 7;
     else if (!strcasecmp(val, "Hagaki"))
       h->MediaPosition = 8;
-    else if (!strcasecmp(val, "MainRoll"))
+    else if (!strcasecmp(val, "MainRoll") ||
+	     !strcasecmp(val, "main-roll"))
       h->MediaPosition = 9;
-    else if (!strcasecmp(val, "AlternateRoll"))
+    else if (!strcasecmp(val, "AlternateRoll") ||
+	     !strcasecmp(val, "alternate-roll"))
       h->MediaPosition = 10;
     else if (!strcasecmp(val, "Top"))
       h->MediaPosition = 11;
@@ -1558,70 +1592,101 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       h->MediaPosition = 17;
     else if (!strcasecmp(val, "Rear"))
       h->MediaPosition = 18;
-    else if (!strcasecmp(val, "ByPassTray"))
+    else if (!strcasecmp(val, "ByPassTray") ||
+	     !strcasecmp(val, "bypass-tray"))
       h->MediaPosition = 19;
-    else if (!strcasecmp(val, "Tray1"))
+    else if (!strcasecmp(val, "Tray1") ||
+	     !strcasecmp(val, "tray-1"))
       h->MediaPosition = 20;
-    else if (!strcasecmp(val, "Tray2"))
+    else if (!strcasecmp(val, "Tray2") ||
+	     !strcasecmp(val, "tray-2"))
       h->MediaPosition = 21;
-    else if (!strcasecmp(val, "Tray3"))
+    else if (!strcasecmp(val, "Tray3") ||
+	     !strcasecmp(val, "tray-3"))
       h->MediaPosition = 22;
-    else if (!strcasecmp(val, "Tray4"))
+    else if (!strcasecmp(val, "Tray4") ||
+	     !strcasecmp(val, "tray-4"))
       h->MediaPosition = 23;
-    else if (!strcasecmp(val, "Tray5"))
+    else if (!strcasecmp(val, "Tray5") ||
+	     !strcasecmp(val, "tray-5"))
       h->MediaPosition = 24;
-    else if (!strcasecmp(val, "Tray6"))
+    else if (!strcasecmp(val, "Tray6") ||
+	     !strcasecmp(val, "tray-6"))
       h->MediaPosition = 25;
-    else if (!strcasecmp(val, "Tray7"))
+    else if (!strcasecmp(val, "Tray7") ||
+	     !strcasecmp(val, "tray-7"))
       h->MediaPosition = 26;
-    else if (!strcasecmp(val, "Tray8"))
+    else if (!strcasecmp(val, "Tray8") ||
+	     !strcasecmp(val, "tray-8"))
       h->MediaPosition = 27;
-    else if (!strcasecmp(val, "Tray9"))
+    else if (!strcasecmp(val, "Tray9") ||
+	     !strcasecmp(val, "tray-9"))
       h->MediaPosition = 28;
-    else if (!strcasecmp(val, "Tray10"))
+    else if (!strcasecmp(val, "Tray10") ||
+	     !strcasecmp(val, "tray-10"))
       h->MediaPosition = 29;
-    else if (!strcasecmp(val, "Tray11"))
+    else if (!strcasecmp(val, "Tray11") ||
+	     !strcasecmp(val, "tray-11"))
       h->MediaPosition = 30;
-    else if (!strcasecmp(val, "Tray12"))
+    else if (!strcasecmp(val, "Tray12") ||
+	     !strcasecmp(val, "tray-12"))
       h->MediaPosition = 31;
-    else if (!strcasecmp(val, "Tray13"))
+    else if (!strcasecmp(val, "Tray13") ||
+	     !strcasecmp(val, "tray-13"))
       h->MediaPosition = 32;
-    else if (!strcasecmp(val, "Tray14"))
+    else if (!strcasecmp(val, "Tray14") ||
+	     !strcasecmp(val, "tray-14"))
       h->MediaPosition = 33;
-    else if (!strcasecmp(val, "Tray15"))
+    else if (!strcasecmp(val, "Tray15") ||
+	     !strcasecmp(val, "tray-15"))
       h->MediaPosition = 34;
-    else if (!strcasecmp(val, "Tray16"))
+    else if (!strcasecmp(val, "Tray16") ||
+	     !strcasecmp(val, "tray-16"))
       h->MediaPosition = 35;
-    else if (!strcasecmp(val, "Tray17"))
+    else if (!strcasecmp(val, "Tray17") ||
+	     !strcasecmp(val, "tray-17"))
       h->MediaPosition = 36;
-    else if (!strcasecmp(val, "Tray18"))
+    else if (!strcasecmp(val, "Tray18") ||
+	     !strcasecmp(val, "tray-18"))
       h->MediaPosition = 37;
-    else if (!strcasecmp(val, "Tray19"))
+    else if (!strcasecmp(val, "Tray19") ||
+	     !strcasecmp(val, "tray-19"))
       h->MediaPosition = 38;
-    else if (!strcasecmp(val, "Tray20"))
+    else if (!strcasecmp(val, "Tray20") ||
+	     !strcasecmp(val, "tray-20"))
       h->MediaPosition = 39;
-    else if (!strcasecmp(val, "Roll1"))
+    else if (!strcasecmp(val, "Roll1") ||
+	     !strcasecmp(val, "roll-1"))
       h->MediaPosition = 40;
-    else if (!strcasecmp(val, "Roll2"))
+    else if (!strcasecmp(val, "Roll2") ||
+	     !strcasecmp(val, "roll-2"))
       h->MediaPosition = 41;
-    else if (!strcasecmp(val, "Roll3"))
+    else if (!strcasecmp(val, "Roll3") ||
+	     !strcasecmp(val, "roll-3"))
       h->MediaPosition = 42;
-    else if (!strcasecmp(val, "Roll4"))
+    else if (!strcasecmp(val, "Roll4") ||
+	     !strcasecmp(val, "roll-4"))
       h->MediaPosition = 43;
-    else if (!strcasecmp(val, "Roll5"))
+    else if (!strcasecmp(val, "Roll5") ||
+	     !strcasecmp(val, "roll-5"))
       h->MediaPosition = 44;
-    else if (!strcasecmp(val, "Roll6"))
+    else if (!strcasecmp(val, "Roll6") ||
+	     !strcasecmp(val, "roll-6"))
       h->MediaPosition = 45;
-    else if (!strcasecmp(val, "Roll7"))
+    else if (!strcasecmp(val, "Roll7") ||
+	     !strcasecmp(val, "roll-7"))
       h->MediaPosition = 46;
-    else if (!strcasecmp(val, "Roll8"))
+    else if (!strcasecmp(val, "Roll8") ||
+	     !strcasecmp(val, "roll-8"))
       h->MediaPosition = 47;
-    else if (!strcasecmp(val, "Roll9"))
+    else if (!strcasecmp(val, "Roll9") ||
+	     !strcasecmp(val, "roll-9"))
       h->MediaPosition = 48;
-    else if (!strcasecmp(val, "Roll10"))
+    else if (!strcasecmp(val, "Roll10") ||
+	     !strcasecmp(val, "roll-10"))
       h->MediaPosition = 49;
   }
-  else if (set_defaults)
+  else
     h->MediaPosition = 0; /* Auto */
 
   if ((val = cupsGetOption("media-weight", num_options, options)) != NULL ||
@@ -1630,7 +1695,7 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 			   options)) != NULL ||
       (val = cupsGetOption("MediaWeightMetric", num_options, options)) != NULL)
     h->MediaWeight = atol(val);
-  else if (set_defaults)
+  else
     h->MediaWeight = 0;
 
   if (pwg_raster)
@@ -1651,7 +1716,7 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	       !strcasecmp(val, "off") ||
 	       !strcasecmp(val, "no"))
 	h->MirrorPrint = CUPS_FALSE;
-      else if (set_defaults)
+      else
 	h->MirrorPrint = CUPS_FALSE;
     }
     if ((val = cupsGetOption("negative-print", num_options, options)) != NULL ||
@@ -1664,24 +1729,35 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	       !strcasecmp(val, "off") ||
 	       !strcasecmp(val, "no"))
 	h->NegativePrint = CUPS_FALSE;
-      else if (set_defaults)
+      else
 	h->NegativePrint = CUPS_FALSE;
     }
   }
 
+  i = 0;
   if ((val = cupsGetOption("copies", num_options, options)) != NULL ||
       (val = cupsGetOption("Copies", num_options, options)) != NULL ||
       (val = cupsGetOption("num-copies", num_options, options)) != NULL ||
-      (val = cupsGetOption("NumCopies", num_options, options)) != NULL)
-    h->NumCopies = atol(val);
-  else if (set_defaults)
+      (val = cupsGetOption("NumCopies", num_options, options)) != NULL ||
+      cfIPPAttrIntValForPrinter(data->printer_attrs, data->job_attrs,
+				"copies", &i) == 1)
+  {
+    if (val)
+      h->NumCopies = atol(val);
+    else if (i)
+      h->NumCopies = i;
+  }
+  else
     h->NumCopies = 1; /* 0 = Printer default */
 
   if ((val = cupsGetOption("orientation-requested", num_options,
 			   options)) != NULL ||
       (val = cupsGetOption("OrientationRequested", num_options,
 			   options)) != NULL ||
-      (val = cupsGetOption("Orientation", num_options, options)) != NULL)
+      (val = cupsGetOption("Orientation", num_options, options)) != NULL ||
+      (val = cfIPPAttrEnumValForPrinter(data->printer_attrs,
+					data->job_attrs,
+					"orientation-requested")) != NULL)
   {
     if (!strcasecmp(val, "Portrait") ||
 	!strcasecmp(val, "3") ||
@@ -1698,10 +1774,10 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	     !strcasecmp(val, "ReverseLandscape") ||
 	     !strcasecmp(val, "6"))
       h->Orientation = CUPS_ORIENT_270;
-    else if (set_defaults)
+    else
       h->Orientation = CUPS_ORIENT_0;
   }
-  else if (set_defaults)
+  else
     h->Orientation = CUPS_ORIENT_0;
 
   if (pwg_raster)
@@ -1712,137 +1788,23 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
   else
   {
     if ((val = cupsGetOption("OutputFaceUp", num_options, options)) != NULL ||
-	(val = cupsGetOption("output-face-up", num_options, options)) != NULL)
+	(val = cupsGetOption("output-face-up", num_options, options)) != NULL ||
+	(val = cupsGetOption("OutputBin", num_options, options)) != NULL ||
+	(val = cupsGetOption("output-bin", num_options, options)) != NULL ||
+	(val = cfIPPAttrEnumValForPrinter(data->printer_attrs,
+					  data->job_attrs,
+					  "output-bin")) != NULL)
     {
       if (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
-	  !strcasecmp(val, "yes"))
+	  !strcasecmp(val, "yes") || !strcasecmp(val, "face-up") ||
+	  !strcasecmp(val, "FaceUp"))
 	h->OutputFaceUp = CUPS_TRUE;
-      else if (!strcasecmp(val, "false") ||
-	       !strcasecmp(val, "off") ||
-	       !strcasecmp(val, "no"))
+      else if (!strcasecmp(val, "false") || !strcasecmp(val, "off") ||
+	       !strcasecmp(val, "no") || !strcasecmp(val, "face-down") ||
+	       !strcasecmp(val, "FaceDown"))
 	h->OutputFaceUp = CUPS_FALSE;
-      else if (set_defaults)
-	h->OutputFaceUp = CUPS_FALSE;
-    }
-  }
-
-  if ((val = cupsGetOption("media-size", num_options, options)) != NULL ||
-      (val = cupsGetOption("MediaSize", num_options, options)) != NULL ||
-      (val = cupsGetOption("page-size", num_options, options)) != NULL ||
-      (val = cupsGetOption("PageSize", num_options, options)) != NULL ||
-      (val = page_size) != NULL)
-  {
-    size_found = NULL;
-    if ((size_found = pwgMediaForPWG(val)) == NULL)
-      if ((size_found = pwgMediaForPPD(val)) == NULL)
-	size_found = pwgMediaForLegacy(val);
-    if (size_found != NULL)
-    {
-      h->PageSize[0] = size_found->width * 72 / 2540;
-      h->PageSize[1] = size_found->length * 72 / 2540;
-      _strlcpy(h->cupsPageSizeName, size_found->pwg,
-	      sizeof(h->cupsPageSizeName));
-      if (pwg_raster)
-      {
-	h->cupsPageSize[0] = 0.0;
-	h->cupsPageSize[1] = 0.0;
-      }
       else
-      {
-	h->cupsPageSize[0] = size_found->width * 72.0 / 2540.0;
-	h->cupsPageSize[1] = size_found->length * 72.0 / 2540.0;
-      }
-    }
-  }
-  else if (set_defaults)
-  {
-    /* TODO: Automatic A4/Letter, like in scheduler/conf.c in CUPS. */
-    h->cupsPageSize[0] = 612.0f;
-    h->cupsPageSize[1] = 792.0f;
-    
-    h->PageSize[0] = 612;
-    h->PageSize[1] = 792;
-    _strlcpy(h->cupsPageSizeName, "na_letter_8.5x11in",
-	    sizeof(h->cupsPageSizeName));
-    if (pwg_raster)
-    {
-      h->cupsPageSize[0] = 0.0;
-      h->cupsPageSize[1] = 0.0;
-    }
-  }
-  else if (pwg_raster)
-  {
-    h->cupsPageSize[0] = 0.0;
-    h->cupsPageSize[1] = 0.0;
-  }
-
-  if (pwg_raster)
-  {
-    /* Set "reserved" fields to 0 */
-    h->Margins[0] = 0;
-    h->Margins[1] = 0;
-    h->ImagingBoundingBox[0] = 0;
-    h->ImagingBoundingBox[1] = 0;
-    h->ImagingBoundingBox[2] = 0;
-    h->ImagingBoundingBox[3] = 0;
-    h->cupsImagingBBox[0] = 0.0;
-    h->cupsImagingBBox[1] = 0.0;
-    h->cupsImagingBBox[2] = 0.0;
-    h->cupsImagingBBox[3] = 0.0;
-  }
-  else
-  {
-    if ((val = cupsGetOption("media-left-margin", num_options, options))
-	!= NULL)
-    {
-      size = atol(val) * 72.0 / 2540.0; 
-      h->Margins[0] = (int)size;
-      h->ImagingBoundingBox[0] = (int)size;
-      h->cupsImagingBBox[0] = size;
-    }
-    else if (set_defaults)
-    {
-      h->Margins[0] = 0;
-      h->ImagingBoundingBox[0] = 0;
-      h->cupsImagingBBox[0] = 18.0f;
-    }
-    if ((val = cupsGetOption("media-bottom-margin", num_options, options))
-	!= NULL)
-    {
-      size = atol(val) * 72.0 / 2540.0; 
-      h->Margins[1] = (int)size;
-      h->ImagingBoundingBox[1] = (int)size;
-      h->cupsImagingBBox[1] = size;
-    }
-    else if (set_defaults)
-    {
-      h->Margins[1] = 0;
-      h->ImagingBoundingBox[1] = 0;
-      h->cupsImagingBBox[1] = 36.0f;
-    }
-    if ((val = cupsGetOption("media-right-margin", num_options, options))
-	!= NULL)
-    {
-      size = atol(val) * 72.0 / 2540.0; 
-      h->ImagingBoundingBox[2] = h->PageSize[0] - (int)size;
-      h->cupsImagingBBox[2] = h->cupsPageSize[0] - size;
-    }
-    else if (set_defaults)
-    {
-      h->ImagingBoundingBox[2] = h->PageSize[0];
-      h->cupsImagingBBox[2] = 594.0f;
-    }
-    if ((val = cupsGetOption("media-top-margin", num_options, options))
-	!= NULL)
-    {
-      size = atol(val) * 72.0 / 2540.0; 
-      h->ImagingBoundingBox[3] = h->PageSize[1] - (int)size;
-      h->cupsImagingBBox[3] = h->cupsPageSize[1] - size;
-    }
-    else if (set_defaults)
-    {
-      h->ImagingBoundingBox[3] = h->PageSize[1];
-      h->cupsImagingBBox[3] = 756.0f;
+	h->OutputFaceUp = CUPS_FALSE;
     }
   }
 
@@ -1864,7 +1826,7 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	       !strcasecmp(val, "off") ||
 	       !strcasecmp(val, "no"))
 	h->Separations = CUPS_FALSE;
-      else if (set_defaults)
+      else
 	h->Separations = CUPS_FALSE;
     }
     if ((val = cupsGetOption("tray-switch", num_options, options)) != NULL ||
@@ -1877,49 +1839,41 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	       !strcasecmp(val, "off") ||
 	       !strcasecmp(val, "no"))
 	h->TraySwitch = CUPS_FALSE;
-      else if (set_defaults)
+      else
 	h->TraySwitch = CUPS_FALSE;
     }
   }
 
-  if ((val = cupsGetOption("sides", num_options, options)) != NULL ||
-      (val = cupsGetOption("Tumble", num_options, options)) != NULL)
+  if ((val = cupsGetOption("Tumble", num_options, options)) != NULL)
   {
-    if (!strcasecmp(val, "None") || !strcasecmp(val, "Off") ||
-	!strcasecmp(val, "False") || !strcasecmp(val, "No") ||
-	!strcasecmp(val, "one-sided") || !strcasecmp(val, "OneSided") ||
-	!strcasecmp(val, "two-sided-long-edge") ||
-	!strcasecmp(val, "TwoSidedLongEdge") ||
-	!strcasecmp(val, "DuplexNoTumble"))
+    if (!strcasecmp(val, "Off") || !strcasecmp(val, "False") ||
+	!strcasecmp(val, "No"))
       h->Tumble = CUPS_FALSE;
-    else if (!strcasecmp(val, "On") ||
-	     !strcasecmp(val, "True") || !strcasecmp(val, "Yes") ||
-	     !strcasecmp(val, "two-sided-short-edge") ||
-	     !strcasecmp(val, "TwoSidedShortEdge") ||
-	     !strcasecmp(val, "DuplexTumble"))
+    else if (!strcasecmp(val, "On") || !strcasecmp(val, "True") ||
+	     !strcasecmp(val, "Yes"))
       h->Tumble = CUPS_TRUE;
   }
 
-  h->cupsWidth = h->HWResolution[0] * h->PageSize[0] / 72;
-  h->cupsHeight = h->HWResolution[1] * h->PageSize[1] / 72;
+  /* TODO - Support for MediaType number */
+  h->cupsMediaType = 0;
 
-  if (pwg_raster || set_defaults)
-  {
-    /* TODO - Support for MediaType number */
-    h->cupsMediaType = 0;
-  }
-
-  if ((val = cupsGetOption("pwg-raster-document-type", num_options,
-			   options)) != NULL ||
-      (val = cupsGetOption("PwgRasterDocumentType", num_options,
-			   options)) != NULL ||
-      (val = cupsGetOption("color-space", num_options, options)) != NULL ||
-      (val = cupsGetOption("ColorSpace", num_options, options)) != NULL ||
-      (val = cupsGetOption("color-model", num_options, options)) != NULL ||
-      (val = cupsGetOption("ColorModel", num_options, options)) != NULL ||
-      (val = cupsGetOption("print-color-mode", num_options, options)) != NULL ||
-      (val = cupsGetOption("output-mode", num_options, options)) != NULL ||
-      (val = cupsGetOption("OutputMode", num_options, options)) != NULL)
+  /* Only for CUPS Raster, if we do not have a sample header from a PPD file */
+  if (pwg_raster == 0 &&
+      ((val = cupsGetOption("pwg-raster-document-type", num_options,
+			    options)) != NULL ||
+       (val = cupsGetOption("PwgRasterDocumentType", num_options,
+			    options)) != NULL ||
+       (val = cupsGetOption("color-space", num_options, options)) != NULL ||
+       (val = cupsGetOption("ColorSpace", num_options, options)) != NULL ||
+       (val = cupsGetOption("color-model", num_options, options)) != NULL ||
+       (val = cupsGetOption("ColorModel", num_options, options)) != NULL ||
+       (val = cupsGetOption("print-color-mode", num_options, options)) !=
+       NULL ||
+       (val = cupsGetOption("output-mode", num_options, options)) != NULL ||
+       (val = cupsGetOption("OutputMode", num_options, options)) != NULL ||
+       (val = cfIPPAttrEnumValForPrinter(data->printer_attrs,
+					 data->job_attrs,
+					 "print-color-mode")) != NULL))
   {
     int	        bitspercolor,	/* Bits per color */
                 bitsperpixel,   /* Bits per pixel */
@@ -2055,11 +2009,8 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     else if (!strcasecmp(val, "auto"))
     {
       /* Let "auto" not look like an error */
-      if (set_defaults)
-      {
-	colorspace = 19;
-	numcolors = 3;
-      }
+      colorspace = 19;
+      numcolors = 3;
     }
     if (numcolors > 0)
     {
@@ -2078,16 +2029,13 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     }
     else
     {
-      if (set_defaults)
-      {
-	h->cupsBitsPerColor = 8;
-	h->cupsBitsPerPixel = 24;
-	h->cupsColorSpace = 19;
-	h->cupsNumColors = 3;
-      }
+      h->cupsBitsPerColor = 8;
+      h->cupsBitsPerPixel = 24;
+      h->cupsColorSpace = 19;
+      h->cupsNumColors = 3;
     }
   }
-  else if (set_defaults)
+  else
   {
     h->cupsBitsPerColor = 8;
     h->cupsBitsPerPixel = 24;
@@ -2095,38 +2043,24 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     h->cupsNumColors = 3;
   }
 
-  h->cupsBytesPerLine = (h->cupsWidth * h->cupsBitsPerPixel + 7) / 8;
+  /* TODO - Support for color orders 1 (banded) and 2 (planar) */
+  h->cupsColorOrder = 0;
   
-  if (pwg_raster || set_defaults)
-  {
-    /* TODO - Support for color orders 1 (banded) and 2 (planar) */
-    h->cupsColorOrder = 0;
-  }
-  
-  if (pwg_raster || set_defaults)
-  {
-    /* TODO - Support for these parameters */
-    h->cupsCompression = 0;
-    h->cupsRowCount = 0;
-    h->cupsRowFeed = 0;
-    h->cupsRowStep = 0;
-  }
+  /* TODO - Support for these parameters */
+  h->cupsCompression = 0;
+  h->cupsRowCount = 0;
+  h->cupsRowFeed = 0;
+  h->cupsRowStep = 0;
 
-  if (pwg_raster || set_defaults)
-  {
-    /* TODO - Support for cupsBorderlessScalingFactor */
-    h->cupsBorderlessScalingFactor = 0.0;
-  }
+  /* TODO - Support for cupsBorderlessScalingFactor */
+  h->cupsBorderlessScalingFactor = 0.0;
 
-  if (pwg_raster || set_defaults)
+  /* TODO - Support for custom values in CUPS Raster mode */
+  for (i = 0; i < 16; i ++)
   {
-    /* TODO - Support for custom values in CUPS Raster mode */
-    for (i = 0; i < 16; i ++)
-    {
-      h->cupsInteger[i] = 0;
-      h->cupsReal[i] = 0.0;
-      memset(h->cupsString[i], 0, 64);
-    }
+    h->cupsInteger[i] = 0;
+    h->cupsReal[i] = 0.0;
+    memset(h->cupsString[i], 0, 64);
   }
 
   if (pwg_raster)
@@ -2142,11 +2076,38 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	h->cupsInteger[0] = impressions;
     }
 
+    /* Printer property, command line options only for development and
+       debugging */
     if ((val = cupsGetOption("pwg-raster-document-sheet-back", num_options,
 			     options)) != NULL ||
-	(val = cupsGetOption("PwgRasterDocumentSheetBack", num_options,
-			     options)) != NULL)
+	(val = cupsGetOption("back-side-orientation", num_options,
+			     options)) != NULL ||
+	(data->printer_attrs &&
+	 ((attr = ippFindAttribute(data->printer_attrs, "urf-supported",
+				   IPP_TAG_ZERO)) != NULL ||
+	  (attr = ippFindAttribute(data->printer_attrs,
+				   "pwg-raster-document-sheet-back",
+				   IPP_TAG_ZERO)) != NULL ||
+	  (attr = ippFindAttribute(data->printer_attrs,
+				   "pclm-raster-back-side",
+				   IPP_TAG_ZERO)) != NULL)))
     {
+      if (val == NULL)
+      {
+	if (ippGetCount(attr) > 1) // urf-supported
+	{
+	  for (i = 0; i < ippGetCount(attr); i ++)
+	  {
+	    val = ippGetString(attr, i, NULL);
+	    if (strncmp(val, "DM", 2) == 0) // Duplex mode field
+	      break;
+	  }
+	  if (i == ippGetCount(attr)) // Not found, no duplex
+	    val = "DM1";
+	}
+	else // pwg-raster-document-sheet-back/pclm-raster-back-side
+	  val = ippGetString(attr, 0, NULL);
+      }
       /* Set CrossFeedTransform and FeedTransform */
       if (h->Duplex == CUPS_FALSE)
       {
@@ -2157,22 +2118,26 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       {
 	if (h->Tumble == CUPS_FALSE)
 	{
-	  if (!strcasecmp(val, "Flipped"))
+	  if (!strcasecmp(val, "Flipped") ||
+	      !strcasecmp(val, "DM2"))
 	  {
 	    h->cupsInteger[1] =  1;
 	    h->cupsInteger[2] = -1;
 	  }
-	  else if (!strncasecmp(val, "Manual", 6))
+	  else if (!strncasecmp(val, "Manual", 6) ||
+		   !strcasecmp(val, "DM4"))
 	  {
 	    h->cupsInteger[1] =  1;
 	    h->cupsInteger[2] =  1;
 	  }
-	  else if (!strcasecmp(val, "Normal"))
+	  else if (!strcasecmp(val, "Normal") ||
+		   !strcasecmp(val, "DM1"))
 	  {
 	    h->cupsInteger[1] =  1;
 	    h->cupsInteger[2] =  1;
 	  }
-	  else if (!strcasecmp(val, "Rotated"))
+	  else if (!strcasecmp(val, "Rotated") ||
+		   !strcasecmp(val, "DM3"))
 	  {
 	    h->cupsInteger[1] = -1;
 	    h->cupsInteger[2] = -1;
@@ -2185,22 +2150,26 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
 	}
 	else
 	{
-	  if (!strcasecmp(val, "Flipped"))
+	  if (!strcasecmp(val, "Flipped") ||
+	      !strcasecmp(val, "DM2"))
 	  {
 	    h->cupsInteger[1] = -1;
 	    h->cupsInteger[2] =  1;
 	  }
-	  else if (!strncasecmp(val, "Manual", 6))
+	  else if (!strncasecmp(val, "Manual", 6) ||
+		   !strcasecmp(val, "DM4"))
 	  {
 	    h->cupsInteger[1] = -1;
 	    h->cupsInteger[2] = -1;
 	  }
-	  else if (!strcasecmp(val, "Normal"))
+	  else if (!strcasecmp(val, "Normal") ||
+		   !strcasecmp(val, "DM1"))
 	  {
 	    h->cupsInteger[1] =  1;
 	    h->cupsInteger[2] =  1;
 	  }
-	  else if (!strcasecmp(val, "Rotated"))
+	  else if (!strcasecmp(val, "Rotated") ||
+		   !strcasecmp(val, "DM3"))
 	  {
 	    h->cupsInteger[1] =  1;
 	    h->cupsInteger[2] =  1;
@@ -2266,7 +2235,7 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     {
       int vendorlength = atoi(val);		/* How many bytes of vendor
 						   data? */
-      if (vendorlength <= 1088)
+      if (vendorlength > 0 && vendorlength <= 1088)
       {
 	h->cupsInteger[15] = vendorlength;
 	if ((val = cupsGetOption("vendor-data", num_options,
@@ -2279,18 +2248,18 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     }
   }
 
-  if (pwg_raster || set_defaults)
-  {
-    /* Set "reserved" fields to 0 */
-    memset(h->cupsMarkerType, 0, 64);
-  }
+  /* Set "reserved" fields to 0 */
+  memset(h->cupsMarkerType, 0, 64);
 
   if ((val = cupsGetOption("print-rendering-intent", num_options,
 			   options)) != NULL ||
       (val = cupsGetOption("PrintRenderingIntent", num_options,
 			   options)) != NULL ||
       (val = cupsGetOption("RenderingIntent", num_options,
-			   options)) != NULL)
+			   options)) != NULL ||
+      (val = cfIPPAttrEnumValForPrinter(data->printer_attrs,
+					data->job_attrs,
+					"print-rendering-intent")) != NULL)
   {
     if (!strcmp(val, "absolute"))
       _strlcpy(h->cupsRenderingIntent, "Absolute",
@@ -2304,24 +2273,22 @@ cfRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
     else if (!strcmp(val, "relative"))
       _strlcpy(h->cupsRenderingIntent, "Relative",
 	      sizeof(h->cupsRenderingIntent));
-    else if (!strcmp(val, "relative-bpc"))
+    else if (!strcmp(val, "relative-bpc") ||
+	     !strcmp(val, "RelativeBpc"))
       _strlcpy(h->cupsRenderingIntent, "RelativeBpc",
 	      sizeof(h->cupsRenderingIntent));
     else if (!strcmp(val, "saturation"))
       _strlcpy(h->cupsRenderingIntent, "Saturation",
 	      sizeof(h->cupsRenderingIntent));
   }
-  else if (set_defaults)
+  else
     h->cupsRenderingIntent[0] = '\0';
 
   if (media_source != NULL)
     free(media_source);
   if (media_type != NULL)
     free(media_type);
-  if (page_size != NULL)
-    free(page_size);
   cupsFreeOptions(num_options, options);
-#endif /* HAVE_CUPS_1_7 */
 
   return (0);
 }

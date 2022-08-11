@@ -28,6 +28,7 @@
  */
 
 #include <cupsfilters/driver.h>
+#include <ppd/ppd.h>
 #include "escp.h"
 #include <signal.h>
 #include <string.h>
@@ -244,13 +245,13 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if (header->cupsColorSpace == CUPS_CSPACE_RGB ||
       header->cupsColorSpace == CUPS_CSPACE_W)
-    RGB = cfRGBLoad(ppd, colormodel, header->MediaType, resolution,
-		      logfunc, ld);
+    RGB = ppdRGBLoad(ppd, colormodel, header->MediaType, resolution,
+		     logfunc, ld);
   else
     RGB = NULL;
 
-  CMYK = cfCMYKLoad(ppd, colormodel, header->MediaType, resolution,
-		      logfunc, ld);
+  CMYK = ppdCMYKLoad(ppd, colormodel, header->MediaType, resolution,
+		     logfunc, ld);
 
   if (RGB)
     fputs("DEBUG: Loaded RGB separation from PPD.\n", stderr);
@@ -274,66 +275,66 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   switch (PrinterPlanes)
   {
     case 1 : /* K */
-        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
         break;
 
     case 2 : /* Kk */
-        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
-        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightBlack", logfunc, ld);
         break;
 
     case 3 : /* CMY */
-        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
-        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Magenta", logfunc, ld);
-        DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[2] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Yellow", logfunc, ld);
         break;
 
     case 4 : /* CMYK */
-        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
-        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Magenta", logfunc, ld);
-        DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[2] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Yellow", logfunc, ld);
-        DitherLuts[3] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[3] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
         break;
 
     case 6 : /* CcMmYK */
-        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
-        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightCyan", logfunc, ld);
-        DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[2] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Magenta", logfunc, ld);
-        DitherLuts[3] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[3] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightMagenta", logfunc, ld);
-        DitherLuts[4] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[4] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Yellow", logfunc, ld);
-        DitherLuts[5] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[5] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
         break;
 
     case 7 : /* CcMmYKk */
-        DitherLuts[0] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
-        DitherLuts[1] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightCyan", logfunc, ld);
-        DitherLuts[2] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[2] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Magenta", logfunc, ld);
-        DitherLuts[3] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[3] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightMagenta", logfunc, ld);
-        DitherLuts[4] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[4] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Yellow", logfunc, ld);
-        DitherLuts[5] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[5] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
-        DitherLuts[6] = cfLutLoad(ppd, colormodel, header->MediaType,
+        DitherLuts[6] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightBlack", logfunc, ld);
         break;
   }
@@ -763,7 +764,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Enable unidirectional printing depending on the mode...
   */
 
-  if ((attr = cfFindAttr(ppd, "cupsESCPDirection", colormodel,
+  if ((attr = ppdFindColorAttr(ppd, "cupsESCPDirection", colormodel,
                            header->MediaType, resolution, spec,
 			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033U%c", atoi(attr->value));
@@ -772,7 +773,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Enable/disable microweaving as needed...
   */
 
-  if ((attr = cfFindAttr(ppd, "cupsESCPMicroWeave", colormodel,
+  if ((attr = ppdFindColorAttr(ppd, "cupsESCPMicroWeave", colormodel,
                            header->MediaType, resolution, spec,
 			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033(i\001%c%c", 0, atoi(attr->value));
@@ -781,7 +782,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   * Set the dot size and print speed as needed...
   */
 
-  if ((attr = cfFindAttr(ppd, "cupsESCPDotSize", colormodel,
+  if ((attr = ppdFindColorAttr(ppd, "cupsESCPDotSize", colormodel,
                            header->MediaType, resolution, spec,
 			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033(e\002%c%c%c", 0, 0, atoi(attr->value));
@@ -1204,7 +1205,7 @@ Shutdown(ppd_file_t *ppd)		/* I - PPD file */
     cfWritePrintData("\033(R\010\000\000REMOTE1", 13);
 
    /*
-    * Load defaults...
+    * LoadXS defaults...
     */
 
     cfWritePrintData("LD\000\000", 4);

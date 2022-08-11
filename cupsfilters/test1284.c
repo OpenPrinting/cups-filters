@@ -21,6 +21,7 @@
 #include <config.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdio.h>
 #ifdef WIN32
 #  include <io.h>
 #else

@@ -2,8 +2,8 @@
  *   texttotext
  *
  *   Filter to print text files on text-only printers. The filter has
- *   several configuration options controlled by a PPD file so that it
- *   should work with most printer models.
+ *   several configuration options so that it should work with most
+ *   printer models.
  *
  *   Copyright 2007-2011 by Apple Inc.
  *   Copyright 1997-2006 by Easy Software Products.
@@ -19,7 +19,6 @@
 
 #include <config.h>
 #include <cups/cups.h>
-#include <ppd/ppd.h>
 #include <cups/file.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -31,6 +30,7 @@
 #include <ctype.h>
 #include <iconv.h>
 #include <cupsfilters/image-private.h>
+#include "ipp.h"
 #include "filter.h"
 
 /*
@@ -70,21 +70,18 @@ int cfFilterTextToText(int inputfd,         /* I - File descriptor input stream 
   int		exit_status = 0;	/* Exit status */
   int		fd;			/* Copy file descriptor */
 
-  char		buffer[8192];		/* Copy buffer */
   int           num_copies;             /* Number of copies */
-  ppd_file_t	*ppd;			/* PPD file */
   int		num_options;		/* Number of options */
   cups_option_t	*options;		/* Options */
-  const char	*val, *val2;			/* Option value */
-  ppd_attr_t    *ppd_attr;              /* Attribute taken from the PPD */
+  const char	*val;			/* Option value */
   int           num_lines = 66,         /* Lines per page */
                 num_columns = 80;       /* Characters per line */
   int           page_left = 0,          /* Page margins */
                 page_right = 0,
                 page_top = 0,
                 page_bottom = 0,
-                num_lines_per_inch = 6,
-                num_chars_per_inch = 10;
+                num_lines_per_inch = 0,
+                num_chars_per_inch = 0;
   int           text_width,             /* Width of the text area on the page */
                 text_height;            /* Height of the text area on the
 					   page */
@@ -142,6 +139,10 @@ int cfFilterTextToText(int inputfd,         /* I - File descriptor input stream 
 					   empty (no visible characters)? */
   int           previous_is_cr;         /* Is the previous character processed
 					   a Carriage Return? */
+  int           new_line_started = 0;   /* Is the proceeding of starting a
+					   new line (left margin, new page's
+					   top margin, wrapped word) already
+					   done for this line? */
   int           skip_rest_of_line = 0;  /* Are we truncating an overlong
 					   line? */
   int           skip_spaces = 0;        /* Are we skipping spaces at a line
@@ -151,10 +152,11 @@ int cfFilterTextToText(int inputfd,         /* I - File descriptor input stream 
   int           num_pages = 0;          /* Number of pages which get actually
 					   printed */
  
-  ipp_t *printer_attrs = NULL;
-  ipp_t *job_attrs = NULL;
+  ipp_t *printer_attrs = data->printer_attrs;
+  ipp_t *job_attrs = data->job_attrs;
   ipp_attribute_t *ipp;
-  ipp_t *defsize;
+  ipp_t *media_col_entry;
+  float paperdimensions[2];
   char buf[2048];
 
   cf_logfunc_t     log = data->logfunc;
@@ -190,135 +192,98 @@ int cfFilterTextToText(int inputfd,         /* I - File descriptor input stream 
     num_copies = 1;
 
  /*
-  * Get the options from the fifth command line argument
+  * Parse the options and IPP attributes
   */
 
   num_options = data->num_options;
-
- /*
-  * Load the PPD file and mark options...
-  */
-
-  ppd = data->ppd;
   options = data->options;
-  if (ppd)
+
+  /* Number of lines and columns per inch This is mainly for
+     development and debugging. With these set and the page size given
+     as width and length dimension, the number of lines and columns on
+     the page gets calculated. A way for using custom sizes.  With
+     these not set, the media-col-database entry for the page size is
+     looked up and if it has the extra integer entries "num-lines" and
+     "num-columns", the numbers here are used. */
+  if ((val = cupsGetOption("NumLinesPerInch",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("num-lines-per-inch",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "num-lines-per-inch",
+			      IPP_TAG_INTEGER)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "num-lines-per-inch-default",
+			      IPP_TAG_INTEGER)) != NULL)
   {
-    ppdMarkOptions(ppd, num_options, options);
-  }
-
- /*
-  * Parse the options
-  */
-
-  /*  Default page size attributes as per printer attributes  */
-  defsize = ippGetCollection(ippFindAttribute(printer_attrs,       
-                          "media-col-default", IPP_TAG_ZERO), 0);
-  
-  if((val = cupsGetOption("NumLinesPerInch", num_options, options))!= NULL         ||
-    (ipp = ippFindAttribute(job_attrs,"num-lines-per-inch", IPP_TAG_INTEGER)) != NULL ||
-    (ipp = ippFindAttribute(printer_attrs,"num-lines-per-inch-default", IPP_TAG_INTEGER)) != NULL ||
-    (ppd_attr = ppdFindAttr(ppd, "DefaultNumLinesPerInch",NULL))!=NULL){
-      if(val == NULL && ipp!=NULL){
-        ippAttributeString(ipp, buf, sizeof(buf));
-        val = buf;
-      }
-      if(val == NULL){
-        val = ppd_attr->value;
-      }
-      num_lines_per_inch = atoi(val);
-    }
-
-  if((val = cupsGetOption("NumCharsPerInch", num_options, options))!= NULL          ||
-    (ipp = ippFindAttribute(job_attrs,"num-chars-per-inch", IPP_TAG_INTEGER)) != NULL  ||
-    (ipp = ippFindAttribute(printer_attrs,"num-chars-per-inch-default", IPP_TAG_INTEGER)) != NULL  ||
-    (ppd_attr = ppdFindAttr(ppd, "DefautlNumCharsPerInch", NULL))!=NULL){
-      if(val == NULL && ipp!=NULL){
-        ippAttributeString(ipp, buf, sizeof(buf));
-        val = buf;
-      }
-      if(val == NULL){
-        val = ppd_attr->value;
-      }
-      num_chars_per_inch = atoi(val);
-    }
-    if(log) log(ld, CF_LOGLEVEL_DEBUG,"cfFilterTextToText: num of lines per inch = %d",num_lines_per_inch);
-    if(log) log(ld, CF_LOGLEVEL_DEBUG,"cfFilterTextToText: num of chars per inch = %d",num_chars_per_inch);
-
-  /* With the "PageSize"/"PageRegion" options we only determine the number
-     of lines and columns of a page, we do not use the geometry defined by
-     "PaperDimension" and "ImageableArea" in the PPD */
-  if ((val = cupsGetOption("PageSize", num_options, options)) != NULL       ||
-      (val = cupsGetOption("PageRegion", num_options, options)) != NULL     ||
-      (ipp = ippFindAttribute(job_attrs, "page-size", IPP_TAG_ZERO ))!=NULL ||
-      (ipp = ippFindAttribute(job_attrs, "page-region", IPP_TAG_ZERO))!=NULL||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultPageSize", NULL)) != NULL        ||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultPageRegion", NULL)) != NULL) {
-    if (val == NULL && ipp!=NULL){
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val==NULL)
-      val = ppd_attr->value;
+    if (val && val[0])
+      num_lines_per_inch = atoi(val);
+    if (log)
+    {
+      if (num_lines_per_inch <= 0)
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "cfFilterTextToText: Number of lines per inch not set, if page dimensions are given, find number of lines per page via pre-defined page sizes");
+      else
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "cfFilterTextToText: Number of lines per inch: %d",
+	    num_lines_per_inch);
+    }
+  }
 
-    if(log) log(ld, CF_LOGLEVEL_DEBUG,"cfFilterTextToText: PageSize: %s", val);
-    snprintf(buffer, sizeof(buffer), "Default%sNumLines", val);
-    if ((val2 = cupsGetOption(buffer + 7, num_options, options)) != NULL ||
-  (ipp = ippFindAttribute(job_attrs, buffer+7, IPP_TAG_ZERO))!= NULL   ||
-  (ipp = ippFindAttribute(printer_attrs, buffer, IPP_TAG_ZERO))!=NULL ||
-  (ppd_attr = ppdFindAttr(ppd, buffer, NULL)) != NULL) {
-    char buf2[2048];
-      if (val2 == NULL && ipp!=NULL){
-        ippAttributeString(ipp, buf2, sizeof(buf2));
-        val2 = buf2;
-      }
-      if(val2==NULL)
-	      val2 = ppd_attr->value;
-      if (!strncasecmp(val2, "Custom.", 7))
-	val2 += 7;
-      num_lines = atoi(val2);
+  if ((val = cupsGetOption("NumCharsPerInch",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("num-chars-per-inch",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs,"num-chars-per-inch",
+			      IPP_TAG_INTEGER)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "num-chars-per-inch-default",
+			      IPP_TAG_INTEGER)) != NULL)
+  {
+    if (val == NULL)
+    {
+      ippAttributeString(ipp, buf, sizeof(buf));
+      val = buf;
     }
-    snprintf(buffer, sizeof(buffer), "Default%sNumColumns", val);
-    if ((val2 = cupsGetOption(buffer + 7, num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, buffer+7, IPP_TAG_ZERO))!=NULL  ||
-      (ipp = ippFindAttribute(printer_attrs, buffer, IPP_TAG_ZERO))!=NULL ||
-      (ppd_attr = ppdFindAttr(ppd, buffer, NULL))!=NULL) {
-    char buf2[2048];
-      if (val2 == NULL && ipp!=NULL){
-        ippAttributeString(ipp, buf2, sizeof(buf2));
-        val2 = buf2;
-      }
-if(val2==NULL)
-	val2 = ppd_attr->value;
-      if (!strncasecmp(val2, "Custom.", 7))
-	val2 += 7;
-      num_columns = atoi(val2);
-    }
-    if (num_lines <= 0) {
-      if(log) log(ld, CF_LOGLEVEL_DEBUG,"cfFilterTextToText: Invalid number of lines %d, using default: 66",
-	      num_lines);
-      num_lines = 66;
-    }
-    if (num_columns <= 0) {
-      if(log) log(ld, CF_LOGLEVEL_DEBUG,"cfFilterTextToText: Invalid number of columns %d, using default: 80",
-	      num_columns);
-      num_columns = 80;
+    if (val && val[0])
+      num_chars_per_inch = atoi(val);
+    if (log)
+    {
+      if (num_chars_per_inch <= 0)
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "cfFilterTextToText: Number of charcters per inch not set, if page dimensions are given, find number of characters per line via pre-defined page sizes");
+      else
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		     "cfFilterTextToText: Number of characters per inch = %d",
+		     num_chars_per_inch);
     }
   }
-  else if((ipp = ippFindAttribute(defsize, "media-size", IPP_TAG_ZERO))!= NULL){
-    ipp_t *media_size = ippGetCollection(ipp, 0);
-    int x_dim = ippGetInteger(ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO),0);
-    int y_dim = ippGetInteger(ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO),0);
-    num_lines = (int)((y_dim/72.0)*(num_lines_per_inch));         /*  Since y_dim and x_dim are in points, 
-                                                                      divide them by 72 to convert in inch  */
-    num_columns = (int)((x_dim/72.0)*(num_chars_per_inch));
+
+  cfGetPageDimensions(printer_attrs, job_attrs, num_options, options,
+		      NULL, 0,
+		      &(paperdimensions[0]), &(paperdimensions[1]),
+		      NULL, NULL, NULL, NULL, NULL, &media_col_entry);
+  if (media_col_entry)
+  {
+    /* We have a media-col-database and the requested/default page size
+       is contained in it (= size is supported), check whether we have
+       a number of lines/columns registered via extra interger entries
+       "num-columns" and "num-lines". */
+    num_columns = ippGetInteger(ippFindAttribute(media_col_entry,
+						 "num-columns",
+						 IPP_TAG_ZERO), 0);
+    num_lines = ippGetInteger(ippFindAttribute(media_col_entry,
+					       "num-lines",
+					       IPP_TAG_ZERO), 0);
   }
-  else if((ipp = ippFindAttribute(printer_attrs, "media-default", IPP_TAG_ZERO))!=NULL){
-    pwg_media_t *pwg = pwgMediaForPWG(ippGetString(ipp, 0, NULL));
-    int x_dim = pwg->width;
-    int y_dim = pwg->length;
-    num_lines = (int)((y_dim/72.0)*(num_lines_per_inch));
-    num_columns = (int)((x_dim/72.0)*(num_chars_per_inch));
-  }
+
+  if (num_chars_per_inch > 0 && paperdimensions[0] > 0)
+    num_columns = (int)((paperdimensions[0] / 72.0) * (num_chars_per_inch));
+  if (num_lines_per_inch > 0 && paperdimensions[1] > 0)
+    num_lines = (int)((paperdimensions[1] / 72.0) * (num_lines_per_inch));
+
   if (num_lines <= 0) {
     if(log) log(ld, CF_LOGLEVEL_DEBUG,"cfFilterTextToText: Invalid number of lines %d, using default: 66",
 	      num_lines);
@@ -332,7 +297,8 @@ if(val2==NULL)
 
   /* Direct specification of number of lines/columns, mainly for debugging
      and development */
-  if ((val = cupsGetOption("page-height", num_options, options)) != NULL  ||
+  if ((val = cupsGetOption("PageHeight", num_options, options)) != NULL ||
+      (val = cupsGetOption("page-height", num_options, options)) != NULL ||
       (ipp = ippFindAttribute(job_attrs, "page-height", IPP_TAG_INTEGER))!=NULL) {
         if(val == NULL){
           ippAttributeString(ipp, buf, sizeof(buf));
@@ -345,7 +311,8 @@ if(val2==NULL)
       if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid number of lines %d, using default value: %d",
 	      i, num_lines);
   }
-  if ((val = cupsGetOption("page-width", num_options, options)) != NULL ||
+  if ((val = cupsGetOption("PageWidth", num_options, options)) != NULL ||
+      (val = cupsGetOption("page-width", num_options, options)) != NULL ||
       (ipp = ippFindAttribute(job_attrs, "page-width", IPP_TAG_INTEGER))!=NULL) {
     if(val == NULL){
       ippAttributeString(ipp, buf, sizeof(buf));
@@ -362,85 +329,149 @@ if(val2==NULL)
   if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Lines per page: %d; Characters per line: %d",
 	  num_lines, num_columns);
   
-  if ((val = cupsGetOption("page-left", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, "page-left", IPP_TAG_INTEGER))!=NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-left", NULL)) != NULL ||
-      (ipp = ippFindAttribute(defsize, "media-left-margin", IPP_TAG_INTEGER))!=NULL) {
-    if (val == NULL && ipp!=NULL){
+  if ((val = cupsGetOption("PageLeft",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("page-left",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "page-left",
+			      IPP_TAG_INTEGER)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "page-left-default",
+			      IPP_TAG_INTEGER)) != NULL)
+  {
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val == NULL && ppd_attr!=NULL)
-      val = ppd_attr->value;
-    if (!strncasecmp(val, "Custom.", 7))
-      val += 7;
-    page_left = atoi(val);
-    if (page_left < 0 || page_left > num_columns - 1) {
-      if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid left margin %d, setting to 0",
-	      page_left);
-      page_left = 0;
+    if (val && val[0])
+    {
+      if (!strncasecmp(val, "Custom", 6))
+	val += 7;
+      page_left = atoi(val);
+    }
+    if (log)
+    {
+      if (page_left < 0 || page_left > num_columns - 1)
+      {
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "cfFilterTextToText: Left margin not set or invalid, use 0 columns");
+	page_left = 0;
+      }
+      else
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		     "cfFilterTextToText: Left margin: %d columns",
+		     page_left);
     }
   }
-  if ((val = cupsGetOption("page-right", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, "page-right", IPP_TAG_INTEGER))!=NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-right", NULL)) != NULL  ||
-        (ipp = ippFindAttribute(defsize, "media-right-margin", IPP_TAG_INTEGER))!=NULL) {
-    if (val == NULL && ipp!=NULL){
+
+  if ((val = cupsGetOption("PageRight",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("page-right",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "page-right",
+			      IPP_TAG_INTEGER)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "page-right-default",
+			      IPP_TAG_INTEGER)) != NULL)
+  {
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val == NULL && ppd_attr!=NULL)
-      val = ppd_attr->value;
-    if (!strncasecmp(val, "Custom.", 7))
-      val += 7;
-    page_right = atoi(val);
-    if (page_right < 0 || page_right > num_columns - page_left - 1) {
-      if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid right margin %d, setting to 0",
-	      page_right);
-      page_right = 0;
+    if (val && val[0])
+    {
+      if (!strncasecmp(val, "Custom", 6))
+	val += 7;
+      page_right = atoi(val);
+    }
+    if (log)
+    {
+      if (page_right < 0 || page_right > num_columns - 1)
+      {
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "cfFilterTextToText: Right margin not set or invalid, use 0 columns");
+	page_right = 0;
+      }
+      else
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		     "cfFilterTextToText: Right margin: %d columns",
+		     page_right);
     }
   }
-  if ((val = cupsGetOption("page-top", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs,"page-top", IPP_TAG_INTEGER))!=NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-top", NULL)) != NULL  ||
-      (ipp = ippFindAttribute(defsize, "media-top-margin", IPP_TAG_INTEGER))!=NULL) {
-    if (val == NULL && ipp!=NULL){
+
+  if ((val = cupsGetOption("PageTop",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("page-top",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "page-top",
+			      IPP_TAG_INTEGER)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "page-top-default",
+			      IPP_TAG_INTEGER)) != NULL)
+  {
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val == NULL && ppd_attr!=NULL)
-      val = ppd_attr->value;
-    
-    if (!strncasecmp(val, "Custom.", 7))
-      val += 7;
-    page_top = atoi(val);
-    if (page_top < 0 || page_top > num_lines - 1) {
-      if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid top margin %d, setting to 0",
-	      page_top);
-      page_top = 0;
+    if (val && val[0])
+    {
+      if (!strncasecmp(val, "Custom", 6))
+	val += 7;
+      page_top = atoi(val);
+    }
+    if (log)
+    {
+      if (page_top < 0 || page_top > num_lines - 1)
+      {
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "cfFilterTextToText: Top margin not set or invalid, use 0 lines");
+	page_top = 0;
+      }
+      else
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		     "cfFilterTextToText: Top margin: %d lines",
+		     page_top);
     }
   }
-  if ((val = cupsGetOption("page-bottom", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs,"page-bottom",IPP_TAG_INTEGER))!=NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "Defaultpage-bottom", NULL)) != NULL ||
-      (ipp = ippFindAttribute(defsize, "media-bottom-margin", IPP_TAG_INTEGER))!=NULL) {
-    if (val == NULL && ipp!=NULL){
+
+  if ((val = cupsGetOption("PageBottom",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("page-bottom",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "page-bottom",
+			      IPP_TAG_INTEGER)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "page-bottom-default",
+			      IPP_TAG_INTEGER)) != NULL)
+  {
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val==NULL && ppd_attr!=NULL)
-      val = ppd_attr->value;
-    if (!strncasecmp(val, "Custom.", 7))
-      val += 7;
-    page_bottom = atoi(val);
-    if (page_bottom < 0 || page_bottom > num_lines - page_top - 1) {
-      if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid bottom margin %d, setting to 0",
-	      page_bottom);
-      page_bottom = 0;
+    if (val && val[0])
+    {
+      if (!strncasecmp(val, "Custom", 6))
+	val += 7;
+      page_bottom = atoi(val);
+    }
+    if (log)
+    {
+      if (page_bottom < 0 || page_bottom > num_lines - 1)
+      {
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "cfFilterTextToText: Bottom margin not set or invalid, use 0 lines");
+	page_bottom = 0;
+      }
+      else
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		     "cfFilterTextToText: Bottom margin: %d lines",
+		     page_bottom);
     }
   }
-  if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Margins: Left (Columns): %d; Right (Columns): %d; Top (Lines): %d; Bottom (Lines): %d",
-	  page_left, page_right, page_top, page_bottom);
+
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
+	       "cfFilterTextToText: Margins: Left (Columns): %d; Right (Columns): %d; Top (Lines): %d; Bottom (Lines): %d",
+	       page_left, page_right, page_top, page_bottom);
 
   text_width = num_columns - page_left - page_right;
   text_height = num_lines - page_top - page_bottom;
@@ -448,139 +479,186 @@ if(val2==NULL)
 	  text_height, text_width);
 
   strcpy(encoding, "ASCII//IGNORE");
-  if ((val = cupsGetOption("PrinterEncoding", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, "printer-encoding", IPP_TAG_ZERO))!=NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultPrinterEncoding", NULL)) != NULL ||
-      (ipp = ippFindAttribute(printer_attrs, "printer-encoding-default", IPP_TAG_ZERO))!= NULL) {
-    if (val == NULL && ipp!=NULL){
+  if ((val = cupsGetOption("PrinterEncoding",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("printer-encoding",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "printer-encoding",
+			      IPP_TAG_ZERO)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "printer-encoding-default",
+			      IPP_TAG_ZERO)) != NULL)
+  {
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val == NULL && ppd_attr!=NULL)
-      val = ppd_attr->value;
-    if (!strncasecmp(val, "Custom.", 7))
-      val += 7;
-    if (val[0] != '\0') {
-      snprintf(encoding, sizeof(encoding), "%.55s//IGNORE", val);
-      for (p = encoding; *p; p ++)
-	*p = toupper(*p);
+    if (val && val[0])
+    {
+      if (!strncasecmp(val, "Custom", 6))
+	val += 7;
+      if (val[0] != '\0')
+      {
+	snprintf(encoding, sizeof(encoding), "%.55s//IGNORE", val);
+	for (p = encoding; *p; p ++)
+	  *p = toupper(*p);
+      }
     }
   }
-  if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Output encoding: %s", encoding);
-  
-  if ((val = cupsGetOption("OverlongLines", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, "overlong-lines", IPP_TAG_ENUM))!=NULL ||
-      (ipp = ippFindAttribute(printer_attrs, "overlong-lines-default", IPP_TAG_ENUM))!=NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultOverlongLines", NULL)) != NULL) {
-    if (val == NULL && ipp!=NULL){
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
+	       "cfFilterTextToText: Output encoding: %s", encoding);
+
+  if ((val = cupsGetOption("OverLongLines",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("over-long-lines",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "over-long-lines",
+			      IPP_TAG_ZERO)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "over-long-lines-default",
+			      IPP_TAG_ZERO)) != NULL)
+  {
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val == NULL)
-      val = ppd_attr->value;
-    if (!strcasecmp(val, "Truncate"))
+    if (!strcasecmp(val, "truncate"))
       overlong_lines = TRUNCATE;
-    else if (!strcasecmp(val, "WordWrap"))
+    else if (!strcasecmp(val, "word-wrap") ||
+	     !strcasecmp(val, "WordWrap"))
       overlong_lines = WORDWRAP;
-    else if (!strcasecmp(val, "WrapAtWidth"))
+    else if (!strcasecmp(val, "wrap-at-width") ||
+	     !strcasecmp(val, "WrapAtWidth"))
       overlong_lines = WRAPATWIDTH;
     else
-      if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for OverlongLines: %s, using default value",
-	      val);
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		   "cfFilterTextToText: Invalid value for over-long-lines: %s, using default value",
+		   val);
   }
-  if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Handling of overlong lines: %s",
-	  (overlong_lines == TRUNCATE ? "Truncate at maximum width" :
-	   (overlong_lines == WORDWRAP ? "Word-wrap" :
-	    "Wrap exactly at maximum width")));
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
+	       "cfFilterTextToText: Handling of overlong lines: %s",
+	       (overlong_lines == TRUNCATE ? "Truncate at maximum width" :
+		(overlong_lines == WORDWRAP ? "Word-wrap" :
+		 "Wrap exactly at maximum width")));
 
-  if ((val = cupsGetOption("TabWidth", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs,"tab-width", IPP_TAG_INTEGER))!=NULL ||
-      (ipp = ippFindAttribute(printer_attrs,"tab-width-default",  IPP_TAG_INTEGER ))!=NULL  ||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultTabWidth", NULL)) != NULL) {
-    if (val == NULL && ipp!=NULL){
+  if ((val = cupsGetOption("TabWidth",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("tab-width",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "tab-width",
+			      IPP_TAG_INTEGER)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "tab-width-default",
+			      IPP_TAG_INTEGER)) != NULL)
+  {
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val == NULL && ppd_attr!=NULL)
-      val = ppd_attr->value;
-    if (!strncasecmp(val, "Custom.", 7))
-      val += 7;
-    i = atoi(val);
-    if (i > 0)
-      tab_width = i;
-    else
-      if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid tab width %d, using default value: %d",
-	      i, tab_width);
+    if (val && val[0])
+    {
+      if (!strncasecmp(val, "Custom", 6))
+	val += 7;
+      tab_width = atoi(val);
+    }
+    if (log)
+    {
+      if (tab_width <= 0 || tab_width > num_columns - 1)
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "cfFilterTextToText: Tab width not set or invalid, use default");
+      else
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		     "cfFilterTextToText: Tab width: %d columns",
+		     tab_width);
+    }
   }
-  if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Tab width: %d", tab_width);
+  if (log) log(ld, CF_LOGLEVEL_DEBUG,
+	       "cfFilterTextToText: Tab width: %d", tab_width);
 
-  if ((val = cupsGetOption("Pagination", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, "pagination", IPP_TAG_BOOLEAN))!=NULL  ||
-      (ipp = ippFindAttribute(printer_attrs, "pagination-default", IPP_TAG_BOOLEAN))!=NULL  ||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultPagination", NULL)) != NULL) {
-    if (val == NULL && ipp!=NULL){
-      ippAttributeString(ipp, buf,sizeof(buf));
+  if ((val = cupsGetOption("Pagination",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("pagination",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "pagination",
+			      IPP_TAG_ZERO)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "pagination-default",
+			      IPP_TAG_ZERO)) != NULL)
+  {
+    if (val == NULL)
+    {
+      ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val == NULL && ppd_attr!=NULL)
-      val = ppd_attr->value;
     if (is_true(val))
       pagination = 1;
     else if (is_false(val))
       pagination = 0;
     else
-      if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for Pagination: %s, using default value",
-	      val);
+      if(log) log(ld, CF_LOGLEVEL_DEBUG,
+		  "cfFilterTextToText: Invalid value for pagination: %s, using default value",
+		  val);
   }
-  if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Pagination (Print in defined pages): %s",
-	  (pagination ? "Yes" : "No"));
+  if(log) log(ld, CF_LOGLEVEL_DEBUG,
+	      "cfFilterTextToText: Pagination (Print in defined pages): %s",
+	      (pagination ? "Yes" : "No"));
 
-  if ((val = cupsGetOption("SendFF", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, "sendff", IPP_TAG_BOOLEAN))!=NULL ||
-      (ipp = ippFindAttribute(printer_attrs, "sendff-default", IPP_TAG_BOOLEAN))!=NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultSendFF", NULL)) != NULL) {
-    if (val == NULL && ipp!=NULL){
+  if ((val = cupsGetOption("SendFF",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("send-ff",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "send-ff",
+			      IPP_TAG_ZERO)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "send-ff-default",
+			      IPP_TAG_ZERO)) != NULL)
+  {
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val==NULL && ppd_attr!=NULL)
-      val = ppd_attr->value;
     if (is_true(val))
       send_ff = 1;
     else if (is_false(val))
       send_ff = 0;
     else
-      if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for SendFF: %s, using default value",
-	      val);
+      if(log) log(ld, CF_LOGLEVEL_DEBUG,
+		  "cfFilterTextToText: Invalid value for send-ff: %s, using default value",
+		  val);
   }
-  if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Send Form Feed character at end of page: %s",
-	  (send_ff ? "Yes" : "No"));
+  if(log) log(ld, CF_LOGLEVEL_DEBUG,
+	      "cfFilterTextToText: Send Form Feed character at end of page: %s",
+	      (send_ff ? "Yes" : "No"));
 
-  if ((val = cupsGetOption("NewlineCharacters", num_options, options)) !=
-      NULL ||
-      (ipp = ippFindAttribute(job_attrs, "newline-characters", IPP_TAG_ENUM))!=NULL ||
-      (ipp = ippFindAttribute(printer_attrs, "newline-characters-default", IPP_TAG_ENUM))!=NULL ||
-      (ppd_attr = ppdFindAttr(ppd, "DefaultNewlineCharacters", NULL)) != NULL) {
-    if (val == NULL && ipp!=NULL){
+  if ((val = cupsGetOption("NewlineCharacters",
+			   num_options, options)) != NULL ||
+      (val = cupsGetOption("newline-characters",
+			   num_options, options)) != NULL ||
+      (ipp = ippFindAttribute(job_attrs, "newline-characters",
+			      IPP_TAG_ZERO)) != NULL ||
+      (ipp = ippFindAttribute(printer_attrs, "newline-characters-default",
+			      IPP_TAG_ZERO)) != NULL)
+  {
+    if (val == NULL)
+    {
       ippAttributeString(ipp, buf, sizeof(buf));
       val = buf;
     }
-    if(val == NULL && ppd_attr!=NULL)
-      val = ppd_attr->value;
-    if (!strcasecmp(val, "LF"))
+    if (!strcasecmp(val, "lf"))
       newline_char = LF;
-    else if (!strcasecmp(val, "CR"))
+    else if (!strcasecmp(val, "cr"))
       newline_char = CR;
-    else if (!strcasecmp(val, "CRLF"))
+    else if (!strcasecmp(val, "crlf"))
       newline_char = CRLF;
     else
-      if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Invalid value for NewlineCharacters: %s, using default value",
-	      val);
+      if(log) log(ld, CF_LOGLEVEL_DEBUG,
+		  "cfFilterTextToText: Invalid value for newline-characters: %s, using default value",
+		  val);
   }
-  if(log) log(ld, CF_LOGLEVEL_DEBUG, "cfFilterTextToText: Characters sent to make printer start a new line: %s",
-	  (newline_char == LF ? "Line Feed (LF)" :
-	   (newline_char == CR ? "Carriage Return (CR)" :
-	    "Carriage Return (CR) and Line Feed (LF)")));
+  if(log) log(ld, CF_LOGLEVEL_DEBUG,
+	      "cfFilterTextToText: Characters sent to make printer start a new line: %s",
+	      (newline_char == LF ? "Line Feed (LF)" :
+	       (newline_char == CR ? "Carriage Return (CR)" :
+		"Carriage Return (CR) and Line Feed (LF)")));
 
   if ((val = cupsGetOption("page-ranges", num_options, options)) !=
       NULL  ||
@@ -621,7 +699,9 @@ if(val2==NULL)
 	     (odd_pages ? "only the odd pages" :
 	      "no pages")));
   
-  if ((val = cupsGetOption("output-order", num_options, options)) !=
+  if ((val = cupsGetOption("OutputOrder", num_options, options)) !=
+      NULL  ||
+      (val = cupsGetOption("output-order", num_options, options)) !=
       NULL  ||
       (ipp = ippFindAttribute(job_attrs,"output-order", IPP_TAG_ZERO))!=NULL) {
         if(val == NULL){
@@ -662,11 +742,11 @@ if(val2==NULL)
   else if (newline_char == CRLF)
     newline_char_str = "\r\n";
 
-  /* Size of the output page in bytes (only 1-byte-per-character supported)
+  /* Size of the output page in bytes (up to 4-byte-per-character)
      in the worst case, no blank lines at top and bottom, no blank right
      margin, 2 characters for newline (CR + LF) plus form feed plus closing
      zero */
-  page_size = (num_columns + 2) * num_lines + 2;
+  page_size = ((num_columns + 2) * num_lines + 2) * 4;
 
   /* Allocate output page buffer */
   out_page = calloc(page_size, sizeof(char));
@@ -702,7 +782,7 @@ if(val2==NULL)
     page_array = cupsArrayNew(NULL, NULL);
   }
 
-  /* Main loop for readin the input file, converting the encoding, formatting
+  /* Main loop for reading the input file, converting the encoding, formatting
      the output, and printing the pages */
   destptr = out_page;
   page_empty = 1;
@@ -711,6 +791,7 @@ if(val2==NULL)
   column = 0;
   previous_is_cr = 0;
   insize = 0;
+  new_line_started = 0;
   do {
     /* Reset input pointer */
     inptr = inbuf;
@@ -742,10 +823,13 @@ if(val2==NULL)
     if (insize > 0) { /* Do we have data to convert? */
       /* Do the conversion.  */
       nconv = iconv (cd, &inptr, &insize, &outptr, &outsize);
-      if (nconv == (size_t) -1) {
+      if (log && nconv == (size_t) -1)
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "cfFilterTextToText: iconv() message: %s", strerror(errno));
+      if (nconv == (size_t) -1 && insize > 0) {
 	/* Not everything went right. It might only be
 	   an unfinished byte sequence at the end of the
-	   buffer. Or it is a real problem. */
+	   output buffer. Or it is a real problem. */
 	if (errno == EINVAL || errno == E2BIG) {
 	  /* This is harmless.  Simply move the unused
 	     bytes to the beginning of the buffer so that
@@ -802,6 +886,7 @@ if(val2==NULL)
 	  /* Position cursor in next line */
 	  line ++;
 	  column = 0;
+	  new_line_started = 0;
 	}
       }
       if ((line >= text_height && /* Current page is full */
@@ -832,13 +917,15 @@ if(val2==NULL)
 	    /* Log the page output (only once, when printing the first buffer
 	       load) */
 	    if (num_pages == 1)
-      {
-	     if(log) log(ld, CF_LOGLEVEL_INFO, "cfFilterTextToText: 1 1");
-      }
+	    {
+	      if(log) log(ld, CF_LOGLEVEL_CONTROL, "PAGE: 1 1");
+	    }
+	    cupsFilePuts(outputfp, out_page);
 	  } else if ((num_copies == 1 || !collate) && !reverse_order) {
       
 	    /* Log the page output */
-	    if(log) log(ld, CF_LOGLEVEL_INFO, "cfFilterTextToText: %d %d", num_pages, num_copies);
+	    if(log) log(ld, CF_LOGLEVEL_CONTROL, "PAGE: %d %d", num_pages, num_copies);
+	    cupsFilePuts(outputfp, out_page);
 	  } else {
 	    /* Save the page in the page array */
 	    cupsArrayAdd(page_array, strdup(out_page));
@@ -849,11 +936,13 @@ if(val2==NULL)
 	page_empty = 1;
 	line = 0;
 	column = 0;
+	new_line_started = 0;
 	page ++;
       }
       if (outbuf[0] == '\0') /* End of input file */
 	break;
-      if (column == 0) { /* Start of new line */ 
+      if (column == 0 && !new_line_started) { /* Start of new line */
+	new_line_started = 1;
 	if (line == 0 && pagination)   /* Start of new page */
 	  for (i = 0; i < page_top; i ++)
 	    for (j = 0; newline_char_str[j]; j ++)
@@ -882,6 +971,7 @@ if(val2==NULL)
 	  /* Position cursor in next line */
 	  line ++;
 	  column = 0;
+	  new_line_started = 0;
 	  /* Finished truncating an overlong line */
 	  skip_rest_of_line = 0;
 	  skip_spaces = 0;
@@ -911,6 +1001,7 @@ if(val2==NULL)
 	      for (j = 0; newline_char_str[j]; j ++)
 		*(destptr ++) = newline_char_str[j];
 	  column = 0;
+	  new_line_started = 0;
 	  /* Finished truncating an overlong line */
 	  skip_rest_of_line = 0;
 	  skip_spaces = 0;
@@ -929,7 +1020,6 @@ if(val2==NULL)
 	}
       }
     }
-    cupsFilePuts(outputfp, out_page);
   } while (outbuf[0] != '\0'); /* End of input file */
 
   close(fd);

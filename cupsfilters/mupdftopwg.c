@@ -33,9 +33,6 @@ MIT Open Source License  -  http://www.opensource.org/
 
 #include <config.h>
 #include <cups/cups.h>
-#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
-#define HAVE_CUPS_1_7 1
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -118,9 +115,9 @@ parse_pdf_header_options(FILE *fp, mupdf_page_header *h)
 }
 
 static void
-add_pdf_header_options(mupdf_page_header   *h,
-		       cf_filter_out_format_t outformat,
-		       cups_array_t 	   *mupdf_args)
+header_to_gs_args(mupdf_page_header *h,
+		  cf_filter_out_format_t outformat,
+		  cups_array_t *mupdf_args)
 {
   char tmpstr[1024];
 
@@ -391,26 +388,25 @@ int
 cfFilterMuPDFToPWG(int inputfd,         /* I - File descriptor input stream */
 		   int outputfd,        /* I - File descriptor output stream */
 		   int inputseekable,   /* I - Is input stream seekable?
-					       (unused)*/
+					       (unused) */
 		   cf_filter_data_t *data, /* I - Job and printer data */
-		   void *parameters)    /* I - Filter-specific parameters */
+		   void *parameters)    /* I - Filter-specific parameters
+					       (unused) */
 {
   cf_filter_out_format_t outformat;
+  char *val;
   char buf[BUFSIZ];
   char *icc_profile = NULL;
   char tmpstr[1024];
   cups_array_t *mupdf_args = NULL;
-  cups_option_t *options = NULL;
   FILE *fp = NULL;
   char infilename[1024];
   mupdf_page_header h;
   int fd = -1;
-  int cm_disabled;
+  int cm_disabled = 0;
   int n;
-  int num_options;
   int empty = 0;
   int status = 1;
-  ppd_file_t *ppd = NULL;
   struct sigaction sa;
   cf_cm_calibration_t cm_calibrate;
   cf_logfunc_t log = data->logfunc;
@@ -419,20 +415,24 @@ cfFilterMuPDFToPWG(int inputfd,         /* I - File descriptor input stream */
   void *icd = data->iscanceleddata;
   cups_cspace_t cspace = -1;
 
-#ifdef HAVE_CUPS_1_7
-  ppd_attr_t *attr;
-#endif /* HAVE_CUPS_1_7 */
-
   (void)inputseekable;
+  (void)parameters;
 
-  if (parameters) {
-    outformat = *(cf_filter_out_format_t *)parameters;
-    if (outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_PCLM)
+  val = data->final_content_type;
+  if (val)
+  {
+    if (strcasestr(val, "pwg"))
       outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
-  } else
+    else if (strcasestr(val, "urf"))
+      outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
+    else if (strcasestr(val, "pclm"))
+      outformat = CF_FILTER_OUT_FORMAT_PCLM;
+    else if (strcasestr(val, "cups"))
+      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+    else
+      outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
+  }
+  else
     outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -446,13 +446,6 @@ cfFilterMuPDFToPWG(int inputfd,         /* I - File descriptor input stream */
   /* Ignore SIGPIPE and have write return an error instead */
   sa.sa_handler = SIG_IGN;
   sigaction(SIGPIPE, &sa, NULL);
-
-  num_options = data->num_options;
-
-  ppd = data->ppd;
-  if (ppd) {
-    ppdMarkOptions (ppd, num_options, options);
-  }
 
   fd = cupsTempFd(infilename, 1024);
     if (fd < 0) {
@@ -496,24 +489,6 @@ cfFilterMuPDFToPWG(int inputfd,         /* I - File descriptor input stream */
   if (empty == -1)
     goto out;
 
-  /*  Check status of color management in CUPS */
-  cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
-
-  if (cm_calibrate == CF_CM_CALIBRATION_ENABLED)
-    cm_disabled = 1;
-  else 
-    cm_disabled = cfCmIsPrinterCmDisabled(data);
-
-  if (!cm_disabled)
-    cfCmGetPrinterIccProfile(data, &icc_profile, ppd);
-
-/*  Find print-rendering-intent */
-
-    cfGetPrintRenderIntent(data, &h);
-    if(log) log(ld, CF_LOGLEVEL_DEBUG,
-    	"Print rendering intent = %s", h.cupsRenderingIntent);
-
-
   /* mutool parameters */
   mupdf_args = cupsArrayNew(NULL, NULL);
   if (!mupdf_args) {
@@ -533,36 +508,13 @@ cfFilterMuPDFToPWG(int inputfd,         /* I - File descriptor input stream */
   /* mutool output parameters */
   cupsArrayAdd(mupdf_args, strdup("-Fpwg"));
 
-  /* Note that MuPDF only creates PWG Raster and never CUPS Raster,
-     so we set the PWG Raster flag in the  cfRasterPrepareHeader() call.
-     This function takes care of generating a completely consistent PWG
-     Raster header then, no extra manipulation needed.
+  /* Note that MuPDF only creates PWG Raster so we select this as header format,
+     We also supply the final output format (to which will be converted with
+     further filters) to determine the correct color space and depth.
      From the header h only cupsWidth/cupsHeight (dimensions in pixels),
      resolution, and color space are used here. */
   cfRasterPrepareHeader(&h, data, outformat,
-			  CF_FILTER_OUT_FORMAT_PWG_RASTER, 1, &cspace);
-
-  if ((h.HWResolution[0] == 100) && (h.HWResolution[1] == 100)) {
-    /* No "Resolution" option */
-    if (ppd && (attr = ppdFindAttr(ppd, "DefaultResolution", 0)) != NULL) {
-      /* "*DefaultResolution" keyword in the PPD */
-      const char *p = attr->value;
-      h.HWResolution[0] = atoi(p);
-      if ((p = strchr(p, 'x')) != NULL)
-	h.HWResolution[1] = atoi(p);
-      else
-	h.HWResolution[1] = h.HWResolution[0];
-      if (h.HWResolution[0] <= 0)
-	h.HWResolution[0] = 300;
-      if (h.HWResolution[1] <= 0)
-	h.HWResolution[1] = h.HWResolution[0];
-    } else {
-      h.HWResolution[0] = 300;
-      h.HWResolution[1] = 300;
-    }
-    h.cupsWidth = h.HWResolution[0] * h.PageSize[0] / 72;
-    h.cupsHeight = h.HWResolution[1] * h.PageSize[1] / 72;
-  }
+			CF_FILTER_OUT_FORMAT_PWG_RASTER, 1, &cspace);
 
   /* set PDF-specific options */
   parse_pdf_header_options(fp, &h);
@@ -571,8 +523,30 @@ cfFilterMuPDFToPWG(int inputfd,         /* I - File descriptor input stream */
   h.MirrorPrint = CUPS_FALSE;
   h.Orientation = CUPS_ORIENT_0;
 
+  /* Check status of color management in CUPS */
+  cm_calibrate = cfCmGetCupsColorCalibrateMode(data);
+
+  if (cm_calibrate == CF_CM_CALIBRATION_ENABLED)
+    cm_disabled = 1;
+  else
+    cm_disabled = cfCmIsPrinterCmDisabled(data);
+
+  if (!cm_disabled)
+    cfCmGetPrinterIccProfile(data, cfRasterColorSpaceString(h.cupsColorSpace),
+			     h.MediaType, h.HWResolution[0], h.HWResolution[1],
+			     &icc_profile);
+
+  /* Note: No ICC profile support in mutool! */
+
+  /*  Find print-rendering-intent */
+  h.cupsRenderingIntent[0] = '\0';
+  cfGetPrintRenderIntent(data, h.cupsRenderingIntent,
+			 sizeof(h.cupsRenderingIntent));
+  if(log) log(ld, CF_LOGLEVEL_DEBUG,
+	      "Print rendering intent = %s", h.cupsRenderingIntent);
+
   /* get all the data from the header and pass it to mutool */
-  add_pdf_header_options (&h, outformat, mupdf_args);
+  header_to_gs_args(&h, outformat, mupdf_args);
 
   snprintf(tmpstr, sizeof(tmpstr), "%s", infilename);
   cupsArrayAdd(mupdf_args, strdup(tmpstr));

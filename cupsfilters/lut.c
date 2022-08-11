@@ -12,7 +12,6 @@
  * Contents:
  *
  *   cfLutDelete() - Free the memory used by a lookup table.
- *   cfLutLoad()   - Load a LUT from a PPD file.
  *   cfLutNew()    - Make a lookup table from a list of pixel values.
  */
 
@@ -33,61 +32,6 @@ cfLutDelete(cf_lut_t *lut)		/* I - Lookup table to free */
 {
   if (lut != NULL)
     free(lut);
-}
-
-
-/*
- * 'cfLutLoad()' - Load a LUT from a PPD file.
- */
-
-cf_lut_t *				/* O - New lookup table */
-cfLutLoad(ppd_file_t *ppd,		/* I - PPD file */
-            const char *colormodel,	/* I - Color model */
-            const char *media,		/* I - Media type */
-            const char *resolution,	/* I - Resolution */
-	    const char *ink,		/* I - Ink name */
-	    cf_logfunc_t log,       /* I - Log function */
-	    void       *ld)             /* I - Log function data */
-{
-  char		name[PPD_MAX_NAME],	/* Attribute name */
-		spec[PPD_MAX_NAME];	/* Attribute spec */
-  ppd_attr_t	*attr;			/* Attribute */
-  int		nvals;			/* Number of values */
-  float		vals[4];		/* Values */
-
-
- /*
-  * Range check input...
-  */
-
-  if (!ppd || !colormodel || !media || !resolution || !ink)
-    return (NULL);
-
- /*
-  * Try to find the LUT values...
-  */
-
-  snprintf(name, sizeof(name), "cups%sDither", ink);
-
-  if ((attr = cfFindAttr(ppd, name, colormodel, media, resolution, spec,
-                           sizeof(spec), log, ld)) == NULL)
-    attr = cfFindAttr(ppd, "cupsAllDither", colormodel, media,
-                        resolution, spec, sizeof(spec), log, ld);
-
-  if (!attr)
-    return (NULL);
-
-  vals[0] = 0.0;
-  vals[1] = 0.0;
-  vals[2] = 0.0;
-  vals[3] = 0.0;
-  nvals   = sscanf(attr->value, "%f%f%f", vals + 1, vals + 2, vals + 3) + 1;
-
-  if (log) log(ld, CF_LOGLEVEL_DEBUG,
-	       "Loaded LUT %s from PPD with values [%.3f %.3f %.3f %.3f]",
-	       name, vals[0], vals[1], vals[2], vals[3]);
-
-  return (cfLutNew(nvals, vals, log, ld));
 }
 
 

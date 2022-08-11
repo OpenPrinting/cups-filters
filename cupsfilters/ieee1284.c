@@ -29,6 +29,7 @@
 #include <cups/cups.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdio.h>
 #define DEBUG_printf(x)
 #define DEBUG_puts(x)
 

@@ -32,6 +32,7 @@ MIT Open Source License  -  http://www.opensource.org/
 #include <stdio.h>
 #include <sys/types.h>
 #include <cupsfilters/filter.h>
+#include <cupsfilters/raster.h>
 #ifdef HAVE_DBUS
   #include <dbus/dbus.h>
 #endif
@@ -44,76 +45,70 @@ MIT Open Source License  -  http://www.opensource.org/
 #define QUAL_SIZE         3
 
 char **
-cfColordGetQualifierForPPD (ppd_file_t *ppd)
+cfColordGetQualifier(cf_filter_data_t *data,
+		     const char *color_space,
+		     const char *media_type,
+		     int x_res,
+		     int y_res)
 {
-  char q_keyword[PPD_MAX_NAME];
+  int i, len;
+  const char *val;
+  const char *ptr1, *ptr2;
+  char buf[64];
   char **tuple = NULL;
-  const char *q1_choice;
-  const char *q2_choice;
-  const char *q3_choice;
-  ppd_attr_t *attr;
-  ppd_attr_t *q1_attr;
-  ppd_attr_t *q2_attr;
-  ppd_attr_t *q3_attr;
+  int 			num_options = 0;
+  cups_option_t 	*options = NULL;
 
-  /* get colorspace */
-  if ((attr = ppdFindAttr (ppd, "cupsICCQualifier1", NULL)) != NULL &&
-      attr->value && attr->value[0])
+
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
+
+  /* Get data from "cm-profile-qualifier" option */
+  if ((val =
+       cupsGetOption("cm-profile-qualifier",
+		     data->num_options, data->options)) != NULL &&
+      val[0] != '\0')
   {
-    snprintf (q_keyword, sizeof (q_keyword), "Default%s", attr->value);
-    q1_attr = ppdFindAttr (ppd, q_keyword, NULL);
-  }
-  else if ((q1_attr = ppdFindAttr (ppd, "DefaultColorModel", NULL)) == NULL)
-    q1_attr = ppdFindAttr (ppd, "DefaultColorSpace", NULL);
-
-  if (q1_attr && q1_attr->value && q1_attr->value[0])
-    q1_choice = q1_attr->value;
-  else
-    q1_choice = "";
-
-  /* get media */
-  if ((attr = ppdFindAttr(ppd, "cupsICCQualifier2", NULL)) != NULL &&
-      attr->value && attr->value[0])
-  {
-    snprintf(q_keyword, sizeof(q_keyword), "Default%s", attr->value);
-    q2_attr = ppdFindAttr(ppd, q_keyword, NULL);
+    tuple = calloc(QUAL_SIZE + 1, sizeof(char*));
+    ptr1 = ptr2 = val;
+    for (i = 0; i < QUAL_SIZE; i ++)
+    {
+      while (*ptr2 && *ptr2 != '.') ptr2 ++;
+      len = ptr2 - ptr1;
+      tuple[i] = malloc((len + 1) * sizeof(char));
+      memcpy(tuple[i], ptr1, len);
+      tuple[i][len] = '\0';
+      if (*ptr2)
+	ptr2 ++;
+      ptr1 = ptr2; 
+    }
   }
   else
-    q2_attr = ppdFindAttr(ppd, "DefaultMediaType", NULL);
-
-  if (q2_attr && q2_attr->value && q2_attr->value[0])
-    q2_choice = q2_attr->value;
-  else
-    q2_choice = "";
-
-  /* get resolution */
-  if ((attr = ppdFindAttr(ppd, "cupsICCQualifier3", NULL)) != NULL &&
-      attr->value && attr->value[0])
   {
-    snprintf(q_keyword, sizeof(q_keyword), "Default%s", attr->value);
-    q3_attr = ppdFindAttr(ppd, q_keyword, NULL);
+    /* String for resolution */
+    if (x_res <= 0)
+      buf[0] = '\0';
+    else if (y_res <= 0 || y_res == x_res)
+      snprintf(buf, sizeof(buf), "%ddpi", x_res);
+    else
+      snprintf(buf, sizeof(buf), "%dx%ddpi", x_res, y_res);
+
+    /* return a NULL terminated array so we don't have to break it up later */
+    tuple = calloc(QUAL_SIZE + 1, sizeof(char*));
+    tuple[QUAL_COLORSPACE] = strdup(color_space ? color_space : "");
+    tuple[QUAL_MEDIA]      = strdup(media_type ? media_type : "");
+    tuple[QUAL_RESOLUTION] = strdup(buf);
   }
-  else
-    q3_attr = ppdFindAttr(ppd, "DefaultResolution", NULL);
+  
+  cupsFreeOptions(num_options, options);
 
-  if (q3_attr && q3_attr->value && q3_attr->value[0])
-    q3_choice = q3_attr->value;
-  else
-    q3_choice = "";
-
-  /* return a NULL terminated array so we don't have to break it up later */
-  tuple = calloc(QUAL_SIZE + 1, sizeof(char*));
-  tuple[QUAL_COLORSPACE] = strdup(q1_choice);
-  tuple[QUAL_MEDIA]      = strdup(q2_choice);
-  tuple[QUAL_RESOLUTION] = strdup(q3_choice);
   return tuple;
 }
 
 #ifdef HAVE_DBUS
 
 static char *
-get_filename_for_profile_path ( cf_filter_data_t *data,
-				DBusConnection *con,
+get_filename_for_profile_path (cf_filter_data_t *data,
+			       DBusConnection *con,
                                const char *object_path)
 {
   cf_logfunc_t log = data->logfunc;

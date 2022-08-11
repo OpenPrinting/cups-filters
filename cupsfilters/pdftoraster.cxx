@@ -32,6 +32,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "colormanager.h"
 #include "image.h"
 #include "filter.h"
+#include "ipp.h"
 #include <config.h>
 #include <cups/cups.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
@@ -46,7 +47,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifdef HAVE_CPP_POPPLER_VERSION_H
 #include <poppler/cpp/poppler-version.h>
 #endif
-#include <ppd/ppd.h>
 #include <stdarg.h>
 #include <cups/raster.h>
 #include <cupsfilters/image.h>
@@ -118,7 +118,6 @@ typedef struct pdftoraster_doc_s
   unsigned int bitspercolor;
   unsigned int popplerNumColors; 
   unsigned int bitmapoffset[2];
-  ppd_file_t *ppd = 0;
   poppler::document *poppler_doc;
   cups_page_header2_t header;
   cf_logfunc_t logfunc;             /* Logging function, NULL for no
@@ -260,55 +259,17 @@ static void lcms_error_handler(cmsContext contextId, cmsUInt32Number ErrorCode,
 }
 #endif
 
-static void handle_requires_page_region(pdftoraster_doc_t*doc) {
-  ppd_choice_t *mf;
-  ppd_choice_t *is;
-  ppd_attr_t *rregions = NULL;
-  ppd_size_t *size;
-
-  if ((size = ppdPageSize(doc->ppd,NULL)) == NULL) return;
-  mf = ppdFindMarkedChoice(doc->ppd,"ManualFeed");
-  if ((is = ppdFindMarkedChoice(doc->ppd,"InputSlot")) != NULL) {
-    rregions = ppdFindAttr(doc->ppd,"RequiresPageRegion",is->choice);
-  }
-  if (rregions == NULL) {
-    rregions = ppdFindAttr(doc->ppd,"RequiresPageRegion","All");
-  }
-  if (!strcasecmp(size->name,"Custom") || (!mf && !is) ||
-      (mf && !strcasecmp(mf->choice,"False") &&
-       (!is || (is->code && !is->code[0]))) ||
-      (!rregions && doc->ppd->num_filters > 0)) {
-    ppdMarkOption(doc->ppd,"PageSize",size->name);
-  } else if (rregions && rregions->value
-      && !strcasecmp(rregions->value,"True")) {
-    ppdMarkOption(doc->ppd,"PageRegion",size->name);
-  } else {
-    ppd_choice_t *page;
-
-    if ((page = ppdFindMarkedChoice(doc->ppd,"PageSize")) != NULL) {
-      page->marked = 0;
-      cupsArrayRemove(doc->ppd->marked,page);
-    }
-    if ((page = ppdFindMarkedChoice(doc->ppd,"PageRegion")) != NULL) {
-      page->marked = 0;
-      cupsArrayRemove(doc->ppd->marked, page);
-    }
-  }
-}
-
 static int parse_opts(cf_filter_data_t *data,
-		     cf_filter_out_format_t outformat,
-		     pdftoraster_doc_t *doc)
+		      cf_filter_out_format_t outformat,
+		      pdftoraster_doc_t *doc)
 {
   int num_options = 0;
   cups_option_t *options = NULL;
   char *profile = NULL;
   const char *t = NULL;
-  ppd_attr_t *attr;
   const char *val;
   cf_logfunc_t log = data->logfunc;
   void *ld = data ->logdata;
-  ipp_t *printer_attrs = data->printer_attrs;
   cups_cspace_t cspace = (cups_cspace_t)(-1);
 
   if (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
@@ -317,185 +278,115 @@ static int parse_opts(cf_filter_data_t *data,
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
-  doc->ppd = data->ppd;
-
-  if (doc->ppd)
-    handle_requires_page_region(doc);
-  else
-    if (log) log(ld, CF_LOGLEVEL_DEBUG,
-      "cfFilterPDFToRaster: PPD file is not specified.");
-
+  memset(&(doc->header), 0, sizeof(doc->header));
   cfRasterPrepareHeader(&(doc->header), data, outformat,
 			  (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
 			   outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
 			   outformat : CF_FILTER_OUT_FORMAT_CUPS_RASTER), 0,
 			  &cspace);
 
-  if (doc->ppd) {
-    attr = ppdFindAttr(doc->ppd,"pdftorasterRenderingIntent",NULL);
-    if (attr != NULL && attr->value != NULL) {
-      if (strcasecmp(attr->value,"PERCEPTUAL") == 0) {
-	doc->colour_profile.renderingIntent = INTENT_PERCEPTUAL;
-      } else if (strcasecmp(attr->value,"RELATIVE_COLORIMETRIC") == 0) {
-	doc->colour_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
-      } else if (strcasecmp(attr->value,"SATURATION") == 0) {
-	doc->colour_profile.renderingIntent = INTENT_SATURATION;
-      } else if (strcasecmp(attr->value,"ABSOLUTE_COLORIMETRIC") == 0) {
-	doc->colour_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
-      }
-    }
-    if (doc->header.Duplex) {
-      /* analyze options relevant to Duplex */
-      const char *backside = "";
-      /* APDuplexRequiresFlippedMargin */
-      enum {
-	FM_NO, FM_FALSE, FM_TRUE
-      } flippedMargin = FM_NO;
-
-      attr = ppdFindAttr(doc->ppd,"cupsBackSide",NULL);
-      if (attr != NULL && attr->value != NULL) {
-	doc->ppd->flip_duplex = 0;
-	backside = attr->value;
-      } else if (doc->ppd->flip_duplex) {
-	backside = "Rotated"; /* compatible with Max OS and GS 8.71 */
-      }
-
-      attr = ppdFindAttr(doc->ppd,"APDuplexRequiresFlippedMargin",NULL);
-      if (attr != NULL && attr->value != NULL) {
-	if (strcasecmp(attr->value,"true") == 0) {
-	  flippedMargin = FM_TRUE;
-	} else {
-	  flippedMargin = FM_FALSE;
-	}
-      }
-      if (strcasecmp(backside,"ManualTumble") == 0 && doc->header.Tumble) {
-	doc->swap_image_x = doc->swap_image_y = true;
-	doc->swap_margin_x = doc->swap_margin_y = true;
-	if (flippedMargin == FM_TRUE) {
-	  doc->swap_margin_y = false;
-	}
-      } else if (strcasecmp(backside,"Rotated") == 0 && !doc->header.Tumble) {
-	doc->swap_image_x = doc->swap_image_y = true;
-	doc->swap_margin_x = doc->swap_margin_y = true;
-	if (flippedMargin == FM_TRUE) {
-	  doc->swap_margin_y = false;
-	}
-      } else if (strcasecmp(backside,"Flipped") == 0) {
-	if (doc->header.Tumble) {
-	  doc->swap_image_x = true;
-	  doc->swap_margin_x = doc->swap_margin_y = true;
-	} else {
-	  doc->swap_image_y = true;
-	}
-	if (flippedMargin == FM_FALSE) {
-	  doc->swap_margin_y = !doc->swap_margin_y;
-	}
-      }
-    }
-
-    /* support the CUPS "cm-calibration" option */
-    doc->colour_profile.cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
-
-    if (doc->colour_profile.cm_calibrate == CF_CM_CALIBRATION_ENABLED)
-      doc->colour_profile.cm_disabled = 1;
-    else
-      doc->colour_profile.cm_disabled = cfCmIsPrinterCmDisabled(data);
-
-    if (!doc->colour_profile.cm_disabled)
-      cfCmGetPrinterIccProfile(data, &profile, doc->ppd);
-
-    if (profile != NULL) {
-      doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
-      free(profile);
-    }
-
-    if ((attr = ppdFindAttr(doc->ppd,"PWGRaster",0)) != 0 &&
-	(!strcasecmp(attr->value, "true")
-	 || !strcasecmp(attr->value, "on") ||
-	 !strcasecmp(attr->value, "yes")))
-      doc->pwgraster = 1;
-  } else {
+  t = cupsGetOption("media-class", num_options, options);
+  if (t == NULL)
+    t = cupsGetOption("MediaClass", num_options, options);
+  if (t != NULL && strcasestr(t, "pwg"))
     doc->pwgraster = 1;
-    t = cupsGetOption("media-class", num_options, options);
-    if (t == NULL)
-      t = cupsGetOption("MediaClass", num_options, options);
-    if (t != NULL)
-    {
-      if (strcasestr(t, "pwg"))
-	doc->pwgraster = 1;
-      else
-	doc->pwgraster = 0;
-    }
-    cfGetPrintRenderIntent(data, &(doc->header));
-    if(strcasecmp(doc->header.cupsRenderingIntent, "PERCEPTUAL")==0){
-	doc->colour_profile.renderingIntent = INTENT_PERCEPTUAL;
-    } else if (strcasecmp(doc->header.cupsRenderingIntent,"RELATIVE") == 0) {
-	doc->colour_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
-    } else if (strcasecmp(doc->header.cupsRenderingIntent,"SATURATION") == 0) {
-	doc->colour_profile.renderingIntent = INTENT_SATURATION;
-    } else if (strcasecmp(doc->header.cupsRenderingIntent,"ABSOLUTE") == 0) {
-	doc->colour_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
-    }
-    if(log) log(ld, CF_LOGLEVEL_DEBUG,
-    	"Print rendering intent = %s", doc->header.cupsRenderingIntent);
-    
-    int backside = cfGetBackSideAndHeaderDuplex(printer_attrs, &(doc->header));
-    if (doc->header.Duplex) {
-      /* analyze options relevant to Duplex */
-      /* APDuplexRequiresFlippedMargin */
-      enum {
-	FM_NO, FM_FALSE, FM_TRUE
-      } flippedMargin = FM_NO;
+  else
+    doc->pwgraster = 0;
 
-      if (backside == CF_BACKSIDE_MANUAL_TUMBLE && doc->header.Tumble) {
+  doc->header.cupsRenderingIntent[0] = '\0';
+  cfGetPrintRenderIntent(data, doc->header.cupsRenderingIntent,
+			 sizeof(doc->header.cupsRenderingIntent));
+  if (strcasecmp(doc->header.cupsRenderingIntent, "PERCEPTUAL") == 0)
+    doc->colour_profile.renderingIntent = INTENT_PERCEPTUAL;
+  else if (strcasecmp(doc->header.cupsRenderingIntent, "RELATIVE") == 0)
+    doc->colour_profile.renderingIntent = INTENT_RELATIVE_COLORIMETRIC;
+  else if (strcasecmp(doc->header.cupsRenderingIntent, "SATURATION") == 0)
+    doc->colour_profile.renderingIntent = INTENT_SATURATION;
+  else if (strcasecmp(doc->header.cupsRenderingIntent, "ABSOLUTE") == 0)
+    doc->colour_profile.renderingIntent = INTENT_ABSOLUTE_COLORIMETRIC;
+    // XXX relative-bpc ???
+
+  if(log) log(ld, CF_LOGLEVEL_DEBUG,
+	      "Print rendering intent = %s", doc->header.cupsRenderingIntent);
+
+  if (doc->header.Duplex)
+  {
+    int backside;
+    /* analyze options relevant to Duplex */
+    /* APDuplexRequiresFlippedMargin */
+    enum {
+      FM_NO,
+      FM_FALSE,
+      FM_TRUE
+    } flippedMargin;
+
+    backside = cfGetBackSideOrientation(data);
+
+    if (backside >= 0)
+    {
+      flippedMargin = (backside & 16 ? FM_TRUE :
+		       (backside & 8 ? FM_FALSE :
+			FM_NO));
+      backside &= 7;
+
+      if (backside == CF_BACKSIDE_MANUAL_TUMBLE && doc->header.Tumble)
+      {
 	doc->swap_image_x = doc->swap_image_y = true;
 	doc->swap_margin_x = doc->swap_margin_y = true;
-	if (flippedMargin == FM_TRUE) {
+	if (flippedMargin == FM_TRUE)
 	  doc->swap_margin_y = false;
-	}
-      } else if (backside==CF_BACKSIDE_ROTATED && !doc->header.Tumble) {
+      }
+      else if (backside==CF_BACKSIDE_ROTATED && !doc->header.Tumble)
+      {
 	doc->swap_image_x = doc->swap_image_y = true;
 	doc->swap_margin_x = doc->swap_margin_y = true;
-	if (flippedMargin == FM_TRUE) {
+	if (flippedMargin == FM_TRUE)
 	  doc->swap_margin_y = false;
-	}
-      } else if (backside==CF_BACKSIDE_FLIPPED) {
-	if (doc->header.Tumble) {
+      }
+      else if (backside==CF_BACKSIDE_FLIPPED)
+      {
+	if (doc->header.Tumble)
+	{
 	  doc->swap_image_x = true;
 	  doc->swap_margin_x = doc->swap_margin_y = true;
-	} else {
+	}
+	else
 	  doc->swap_image_y = true;
-	}
-	if (flippedMargin == FM_FALSE) {
+	if (flippedMargin == FM_FALSE)
 	  doc->swap_margin_y = !doc->swap_margin_y;
-	}
       }
-    }
-
-    /* support the CUPS "cm-calibration" option */
-    doc->colour_profile.cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
-
-    if (doc->colour_profile.cm_calibrate == CF_CM_CALIBRATION_ENABLED)
-      doc->colour_profile.cm_disabled = 1;
-    else
-      doc->colour_profile.cm_disabled = cfCmIsPrinterCmDisabled(data);
-
-    if (!doc->colour_profile.cm_disabled)
-      cfCmGetPrinterIccProfile(data, &profile, doc->ppd);
-
-    if (profile != NULL) {
-      doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
-      free(profile);
     }
   }
+
+  /* support the CUPS "cm-calibration" option */
+  doc->colour_profile.cm_calibrate = cfCmGetCupsColorCalibrateMode(data);
+
+  if (doc->colour_profile.cm_calibrate == CF_CM_CALIBRATION_ENABLED)
+    doc->colour_profile.cm_disabled = 1;
+  else
+    doc->colour_profile.cm_disabled = cfCmIsPrinterCmDisabled(data);
+
+  if (!doc->colour_profile.cm_disabled)
+    cfCmGetPrinterIccProfile
+      (data,
+       cfRasterColorSpaceString(doc->header.cupsColorSpace),
+       doc->header.MediaType,
+       doc->header.HWResolution[0], doc->header.HWResolution[1],
+       &profile);
+
+  if (profile != NULL)
+  {
+    doc->colour_profile.colorProfile = cmsOpenProfileFromFile(profile,"r");
+    free(profile);
+  }
+
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
     doc->bi_level = 1;
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
     "cfFilterPDFToRaster: Page size requested: %s", doc->header.cupsPageSizeName);
 
-  if (num_options)
-    cupsFreeOptions(num_options, options);
+  cupsFreeOptions(num_options, options);
 
   return (0);
 }
@@ -954,7 +845,7 @@ static unsigned char *convert_line_plane_swap(unsigned char *src,
   return dst;
 }
 
-/* Handle special cases which appear in Gutenprint's PPDs */
+/* Handle special cases which appear in the Gutenprint driver */
 static bool select_special_case(pdftoraster_doc_t* doc, conversion_function_t* convert)
 {
   int i;
@@ -1231,12 +1122,14 @@ static unsigned char *remove_alpha(unsigned char *src, unsigned char *dst, unsig
 }
 
 static void write_page_image(cups_raster_t *raster, pdftoraster_doc_t *doc,
-  int pageNo, conversion_function_t* convert, cf_filter_iscanceledfunc_t iscanceled, void *icd)
+			     int pageNo, conversion_function_t* convert, float overspray_factor, cf_filter_iscanceledfunc_t iscanceled, void *icd)
 {
+  int i;
   convert_line_func convertLine;
   unsigned char *lineBuf = NULL;
   unsigned char *dp;
   unsigned int rowsize;
+  int fakeres[2];
 
   if (iscanceled && iscanceled(icd))
     return;
@@ -1245,6 +1138,18 @@ static void write_page_image(cups_raster_t *raster, pdftoraster_doc_t *doc,
   poppler::page_renderer pr;
   pr.set_render_hint(poppler::page_renderer::antialiasing, true);
   pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
+
+  // Overspray borderless page size: If the dimensions of the page
+  // size are up to 10% larger than the ones of the input page, zoom
+  // the image by rendering with an appropriately larger fake
+  // resolution.
+  poppler::page_box_enum box = poppler::page_box_enum::crop_box;
+  poppler::rectf inputPageBox = current_page->page_rect(box);
+  for (i = 0; i < 2; i ++)
+    fakeres[i] = doc->header.HWResolution[i];
+  if (overspray_factor != 1.0)
+    for (i = 0; i < 2; i ++)
+      fakeres[i] = (int)(fakeres[i] * overspray_factor);
 
   unsigned char *colordata,*newdata,*graydata,*onebitdata;
   unsigned int pixel_count;
@@ -1255,7 +1160,7 @@ static void write_page_image(cups_raster_t *raster, pdftoraster_doc_t *doc,
    case CUPS_CSPACE_K:  // Black
    case CUPS_CSPACE_SW: // sGray
     if(doc->header.cupsBitsPerColor==1){ // Special case for 1-bit colorspaces
-      im = pr.render_page(current_page,doc->header.HWResolution[0],doc->header.HWResolution[1],doc->bitmapoffset[0],doc->bitmapoffset[1],(doc->bytesPerLine)*8,doc->header.cupsHeight);
+      im = pr.render_page(current_page,fakeres[0],fakeres[1],doc->bitmapoffset[0],doc->bitmapoffset[1],(doc->bytesPerLine)*8,doc->header.cupsHeight);
     newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
     newdata = remove_alpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
     graydata=(unsigned char *)malloc(sizeof(char)*im.width()*im.height());
@@ -1266,7 +1171,8 @@ static void write_page_image(cups_raster_t *raster, pdftoraster_doc_t *doc,
     rowsize=doc->bytesPerLine;
     }
     else{
-      im = pr.render_page(current_page,doc->header.HWResolution[0],doc->header.HWResolution[1],doc->bitmapoffset[0],doc->bitmapoffset[1],doc->header.cupsWidth,doc->header.cupsHeight);
+      
+      im = pr.render_page(current_page,fakeres[0],fakeres[1],doc->bitmapoffset[0],doc->bitmapoffset[1],doc->header.cupsWidth,doc->header.cupsHeight);
       newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
       newdata = remove_alpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
       pixel_count=im.width()*im.height();
@@ -1284,7 +1190,7 @@ static void write_page_image(cups_raster_t *raster, pdftoraster_doc_t *doc,
    case CUPS_CSPACE_CMY:
    case CUPS_CSPACE_RGBW:
    default:
-   im = pr.render_page(current_page,doc->header.HWResolution[0],doc->header.HWResolution[1],doc->bitmapoffset[0],doc->bitmapoffset[1],doc->header.cupsWidth,doc->header.cupsHeight);
+   im = pr.render_page(current_page,fakeres[0],fakeres[1],doc->bitmapoffset[0],doc->bitmapoffset[1],doc->header.cupsWidth,doc->header.cupsHeight);
    newdata = (unsigned char *)malloc(sizeof(char)*3*im.width()*im.height());
    newdata = remove_alpha((unsigned char *)im.const_data(),newdata,im.width(),im.height());
    pixel_count=im.width()*im.height();
@@ -1335,18 +1241,19 @@ static int out_page(pdftoraster_doc_t *doc, int pageNo, cf_filter_data_t *data,
   cups_raster_t *raster, conversion_function_t *convert, cf_logfunc_t log, void* ld, cf_filter_iscanceledfunc_t iscanceled, void *icd)
 {
   int rotate = 0;
-  double paperdimensions[2], /* Physical size of the paper */
+  float paperdimensions[2], /* Physical size of the paper */
     margins[4];	/* Physical margins of print */
   double l, swap;
   int imageable_area_fit = 0;
+  float overspray_factor = 1.0;
   int i;
 
   if (iscanceled && iscanceled(icd))
     return (0);
 
   poppler::page *current_page =doc->poppler_doc->create_page(pageNo-1);
-  poppler::page_box_enum box = poppler::page_box_enum::media_box;
-  poppler::rectf mediaBox = current_page->page_rect(box);
+  poppler::page_box_enum box = poppler::page_box_enum::crop_box;
+  poppler::rectf inputPageBox = current_page->page_rect(box);
   poppler::page::orientation_enum orient = current_page->orientation();
   switch (orient) {
     case poppler::page::landscape: rotate=90;
@@ -1358,35 +1265,84 @@ static int out_page(pdftoraster_doc_t *doc, int pageNo, cf_filter_data_t *data,
      default:rotate=0;
   }
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
-	       "cfFilterPDFToRaster: mediabox = [ %f %f %f %f ]; rotate = %d",
-	       mediaBox.left(), mediaBox.top(), mediaBox.right(),
-	       mediaBox.bottom(), rotate);
-  l = mediaBox.width();
+	       "cfFilterPDFToRaster: cropbox = [ %f %f %f %f ]; rotate = %d",
+	       inputPageBox.left(), inputPageBox.top(), inputPageBox.right(),
+	       inputPageBox.bottom(), rotate);
+  // Enter input page dimensions in header, so that if no page size got
+  // specified for the job, the input size gets used via the header
+  l = inputPageBox.width();
   if (l < 0) l = -l;
   if (rotate == 90 || rotate == 270)
-    doc->header.PageSize[1] = (unsigned)l;
+    doc->header.cupsPageSize[1] = l;
   else
-    doc->header.PageSize[0] = (unsigned)l;
-  l = mediaBox.height();
+    doc->header.cupsPageSize[0] = l;
+  l = inputPageBox.height();
   if (l < 0) l = -l;
   if (rotate == 90 || rotate == 270)
-    doc->header.PageSize[0] = (unsigned)l;
+    doc->header.cupsPageSize[0] = l;
   else
-    doc->header.PageSize[1] = (unsigned)l;
+    doc->header.cupsPageSize[1] = l;
+  if (rotate == 90 || rotate == 270)
+  {
+    doc->header.cupsImagingBBox[0] =
+      doc->header.cupsPageSize[0] - inputPageBox.bottom();
+    doc->header.cupsImagingBBox[1] = inputPageBox.right();
+    doc->header.cupsImagingBBox[2] =
+      doc->header.cupsPageSize[0] - inputPageBox.top();
+    doc->header.cupsImagingBBox[3] = inputPageBox.left();
+  }
+  else
+  {
+    doc->header.cupsImagingBBox[0] = inputPageBox.left();
+    doc->header.cupsImagingBBox[1] =
+      doc->header.cupsPageSize[1] - inputPageBox.bottom();
+    doc->header.cupsImagingBBox[2] = inputPageBox.right();
+    doc->header.cupsImagingBBox[3] =
+      doc->header.cupsPageSize[1] - inputPageBox.top();
+  }
+  for (i = 0; i < 2; i ++)
+    doc->header.PageSize[i] = (unsigned)(doc->header.cupsPageSize[i]);
+  for (i = 0; i < 4; i ++)
+    doc->header.ImagingBoundingBox[i] =
+      (unsigned)(doc->header.cupsImagingBBox[i]);
 
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
-  if (doc->ppd) {
-    ppdRasterMatchPPDSize(&(doc->header), doc->ppd, margins, paperdimensions, &imageable_area_fit, NULL);
+  if (data != NULL && (data->printer_attrs) != NULL)
+  {
+    i = cfGetPageDimensions(data->printer_attrs, data->job_attrs,
+			    data->num_options, data->options,
+			    &(doc->header), 0,
+			    &(paperdimensions[0]), &(paperdimensions[1]),
+			    &(margins[0]), &(margins[1]),
+			    &(margins[2]), &(margins[3]), NULL, NULL);
+    // Overspray borderless page size: If the dimensions of the page
+    // size are up to 10% larger than the ones of the input page, zoom
+    // the image by rendering with an appropriately larger fake
+    // resolution.
+    if (i == 1 && // User-requested page size or size of the input
+	          // page (if user did not request a page size) was
+	          // fitting one of the printer
+	margins[0] == 0 && margins[1] == 0 &&
+	margins[2] == 0 && margins[3] == 0 && // Borderless only
+	paperdimensions[0] > (int)(doc->header.cupsPageSize[0]) &&
+	paperdimensions[0] <= (int)(doc->header.cupsPageSize[0] * 1.10) &&
+	paperdimensions[1] > (int)(doc->header.cupsPageSize[1]) &&
+	paperdimensions[1] <= (int)(doc->header.cupsPageSize[1] * 1.10))
+    {
+      float factor0, factor1;
+      factor0 = paperdimensions[0] / doc->header.cupsPageSize[0];
+      factor1 = paperdimensions[1] / doc->header.cupsPageSize[1];
+      overspray_factor = (factor0 > factor1 ? factor0 : factor1);
+      if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		   "cfFilterPDFToRaster: Zoom factor for borderless printing with overspray: %f",
+		   overspray_factor);
+    }
     if (doc->pwgraster == 1)
       memset(margins, 0, sizeof(margins));
-  } else if(data!=NULL && (data->printer_attrs)!=NULL) {
-	cfRasterMatchIPPSize(&(doc->header), data, margins, paperdimensions, &imageable_area_fit, NULL);
-	if(doc->pwgraster==1){
-	  memset(margins, 0, sizeof(margins));
-	}
   }
-  else {
+  else
+  {
     for (i = 0; i < 2; i ++)
       paperdimensions[i] = doc->header.PageSize[i];
     if (doc->header.cupsImagingBBox[3] > 0.0) {
@@ -1463,6 +1419,20 @@ static int out_page(pdftoraster_doc_t *doc, int pageNo, cf_filter_data_t *data,
   if (doc->header.cupsColorOrder == CUPS_ORDER_BANDED) {
     doc->header.cupsBytesPerLine *= doc->header.cupsNumColors;
   }
+
+  if (log) log(ld,CF_LOGLEVEL_DEBUG,
+	       "cfFilterPDFToRaster: Page %d: Dimensions: %fx%f; Bounding box: %f %f %f %f",
+	       pageNo,
+	       doc->header.cupsPageSize[0], doc->header.cupsPageSize[1],
+	       doc->header.cupsImagingBBox[0],
+	       doc->header.cupsImagingBBox[1],
+	       doc->header.cupsImagingBBox[2],
+	       doc->header.cupsImagingBBox[3]);
+  if (log) log(ld,CF_LOGLEVEL_DEBUG,
+	       "cfFilterPDFToRaster: Page %d: Pixel dimensions: %dx%d; Bitmap offsets: %d %d",
+	       pageNo, doc->header.cupsWidth, doc->header.cupsHeight,
+	       doc->bitmapoffset[0], doc->bitmapoffset[1]);
+
   if (!cupsRasterWriteHeader2(raster,&(doc->header))) {
     if (log) log(ld,CF_LOGLEVEL_ERROR,
 		 "cfFilterPDFToRaster: Cannot write page %d header", pageNo);
@@ -1470,7 +1440,7 @@ static int out_page(pdftoraster_doc_t *doc, int pageNo, cf_filter_data_t *data,
   }
 
   /* write page image */
-  write_page_image(raster,doc,pageNo, convert, iscanceled, icd);
+  write_page_image(raster,doc,pageNo, convert, overspray_factor, iscanceled, icd);
   return (0);
 }
 
@@ -1565,8 +1535,9 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
        int outputfd,                 /* I - File descriptor output stream */
        int inputseekable,            /* I - Is input stream seekable? (unused)*/
        cf_filter_data_t *data,          /* I - Job and printer data */
-       void *parameters)             /* I - Filter-specific parameters */
+       void *parameters)             /* I - Filter-specific parameters(unused)*/
 {
+  const char *val;
   cf_filter_out_format_t outformat;
   pdftoraster_doc_t doc;
   int i;
@@ -1583,22 +1554,29 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
   int ret = 0;
 
   (void)inputseekable;
+  (void)parameters;
+
   cmsSetLogErrorHandler(lcms_error_handler);
+
+  val = data->final_content_type;
+  if (val)
+  {
+    if (strcasestr(val, "pwg"))
+      outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
+    else if (strcasestr(val, "urf"))
+      outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
+    else if (strcasestr(val, "pclm"))
+      outformat = CF_FILTER_OUT_FORMAT_PCLM;
+    else
+      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+  }
+  else
+    outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
 
   /* Note: With the CF_FILTER_OUT_FORMAT_PCLM selection the output is
      actually CUPS Raster but color spaces and depth are always
      assumed to be 8-bit sRGB or sGray, the only color spaces in
      PCLm. This mode is for further processing with rastertopclm. */
-
-  if (parameters) {
-    outformat = *(cf_filter_out_format_t *)parameters;
-    if (outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_PWG_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER &&
-	outformat != CF_FILTER_OUT_FORMAT_PCLM)
-      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
-  } else
-    outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterPDFToRaster: Final output format: %s",
@@ -1805,7 +1783,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
     }
   } else
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "cfFilterPDFToRaster: Input is empty outputting empty file.");
+		 "cfFilterPDFToRaster: Input is empty, outputting empty file.");
 
  out:
   if (raster)

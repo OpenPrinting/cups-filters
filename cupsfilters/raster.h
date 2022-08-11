@@ -51,6 +51,7 @@ typedef enum cf_backside_orient_e
  * Prototypes...
  */
 
+extern const char *     cfRasterColorSpaceString(cups_cspace_t cspace);
 extern int              cfRasterPrepareHeader(cups_page_header2_t *h,
 					      cf_filter_data_t *data,
 					      cf_filter_out_format_t
@@ -64,10 +65,6 @@ extern int              cfRasterSetColorSpace(cups_page_header2_t *h,
 					      const char *color_mode,
 					      cups_cspace_t *cspace,
 					      int *high_depth);
-extern int              cfRasterParseIPPOptions(cups_page_header2_t *h,
-						cf_filter_data_t *data,
-						int pwg_raster,
-						int set_defaults);
 extern int		cfJoinJobOptionsAndAttrs(cf_filter_data_t *data,
 						 int num_options,
 						 cups_option_t **options);
@@ -77,11 +74,9 @@ extern int		cfRasterMatchIPPSize(cups_page_header2_t *header,
 					     double dimensions[2],
 					     int *image_fit,
 					     int *landscape);
-extern int		cfGetBackSideAndHeaderDuplex(ipp_t *printer_attrs,
-						     cups_page_header2_t
-						     *header);
-extern int 		cfGetPrintRenderIntent(cf_filter_data_t *data,
-					       cups_page_header2_t *header);
+extern int		cfGetBackSideOrientation(cf_filter_data_t *data);
+extern const char 	*cfGetPrintRenderIntent(cf_filter_data_t *data,
+						char *ri, int ri_len);
 
 #  ifdef __cplusplus
 }

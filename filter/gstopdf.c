@@ -8,6 +8,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <signal.h>
 
 
@@ -54,12 +55,12 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_SIGSET */
 
   /*
-   * Fire up the cfFilterGhostscript() filter function.
+   * Fire up the ppdFilterGhostscript() filter function.
    */
 
   cf_filter_out_format_t outformat = CF_FILTER_OUT_FORMAT_PDF;
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterGhostscript, &outformat,
-			    &JobCanceled);
+  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterGhostscript, &outformat,
+			     &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: gstopdf filter failed.\n");

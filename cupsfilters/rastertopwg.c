@@ -12,7 +12,8 @@
  */
 
 #include "filter.h"
-#include <ppd/ppd.h>
+#include "raster.h"
+#include "ipp.h"
 #include <cups/raster.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -48,54 +49,51 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 			lineoffset;	/* Offset into line */
   int			tmp;
   unsigned char		white;		/* White pixel */
-	/* PPD file */
-  ppd_attr_t		*back = NULL;	/* cupsBackSide attribute */
-  ppd_cache_t		*cache = NULL;	/* PPD cache */
-  pwg_size_t		*pwg_size;	/* PWG media size */
-  pwg_media_t		*pwg_media;	/* PWG media name */
-	/* Number of options */
+  int           	back;           /* Back side orientation */
+  char                  buf[64];
+  int                   width,
+                        height,
+                        left,
+                        right,
+                        bottom,
+                        top;
+  int			num_options = 0;/* Number of options */
   cups_option_t		*options = NULL;/* Options */
   const char		*val;		/* Option value */
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
   cf_logfunc_t     log = data->logfunc;
   void          *ld = data->logdata;
-  cf_filter_out_format_t output_format;
+  int                   res = 0;
 
 
-  if (parameters)
-  {
-    output_format = *(cf_filter_out_format_t *)parameters;
-    if (output_format == CF_FILTER_OUT_FORMAT_PWG_RASTER)
+  val = data->final_content_type;
+  if (val) {
+    if (strcasestr(val, "pwg"))
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_PWG);
-    else if (output_format == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
+    else if (strcasestr(val, "urf"))
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_APPLE);
     else
     {
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterRasterToPWG: Invalid output format specified. Only PWG Raster and Apple Raster/URF are supported.");
+
+      close(inputfd);
+      close(outputfd);
       return (1);
     }
   }
   else
   {
-    if (log) log(ld, CF_LOGLEVEL_ERROR,
-		 "cfFilterRasterToPWG: Output format not specified.");
-    return (1);
+    if (log) log(ld, CF_LOGLEVEL_WARN,
+		 "cfFilterRasterToPWG: Output format not specified, defaulting to PWG Raster.");
+    
+    outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_PWG);
   }
+
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
   inras  = cupsRasterOpen(inputfd, CUPS_RASTER_READ);
-
-  if (!data->ppd)
-  {
-    if (log) log(ld, CF_LOGLEVEL_DEBUG,
-     "cfFilterRasterToPWG: PPD file is not specified.");
-  }
-  else
-  {
-    back = ppdFindAttr(data->ppd, "cupsBackSide", NULL);
-    cache = data->ppd->cache;
-  }
 
   while (cupsRasterReadHeader2(inras, &inheader))
   {
@@ -203,7 +201,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 		   "cfFilterRasterToPWG: Unsupported raster data.");
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterRasterToPWG: Bad bottom/left/top margin on page %d.", page);
-      return (1);
+      res = 1;
+      goto fail;
     }
 
     switch (inheader.cupsColorSpace)
@@ -242,7 +241,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 	if (log) log(ld,CF_LOGLEVEL_DEBUG,
 		     "cfFilterRasterToPWG: Unsupported cupsColorSpace %d on page %d.",
 		     inheader.cupsColorSpace, page);
-	return (1);
+	res = 1;
+	goto fail;
     }
 
     if (inheader.cupsColorOrder != CUPS_ORDER_CHUNKED)
@@ -252,7 +252,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld,CF_LOGLEVEL_DEBUG,
 		   "cfFilterRasterToPWG: Unsupported cupsColorOrder %d on page %d.",
 		   inheader.cupsColorOrder, page);
-      return (1);
+      res = 1;
+      goto fail;
     }
 
     if (inheader.cupsBitsPerPixel != 1 &&
@@ -263,7 +264,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld,CF_LOGLEVEL_DEBUG,
 		   "cfFilterRasterToPWG: Unsupported cupsBitsPerColor %d on page %d.",
 		   inheader.cupsBitsPerColor, page);
-      return (1);
+      res = 1;
+      goto fail;
     }
 
     memcpy(&outheader, &inheader, sizeof(outheader));
@@ -274,7 +276,7 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
     outheader.cupsInteger[14]  = 0;	/* VendorIdentifier */
     outheader.cupsInteger[15]  = 0;	/* VendorLength */
 
-    if ((val = cupsGetOption("print-content-optimize", data->num_options,
+    if ((val = cupsGetOption("print-content-optimize", num_options,
                              options)) != NULL)
     {
       if (!strcmp(val, "automatic"))
@@ -300,7 +302,7 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
     }
 
     if ((val = cupsGetOption("print-quality",
-			     data->num_options, options)) != NULL)
+			     num_options, options)) != NULL)
     {
       unsigned quality = (unsigned)atoi(val); /* print-quality value */
 
@@ -314,65 +316,63 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
       }
     }
 
-    if ((val = cupsGetOption("print-rendering-intent", data->num_options,
-                             options)) != NULL)
-    {
-      if (!strcmp(val, "absolute"))
-        strncpy(outheader.cupsRenderingIntent, "Absolute",
-                sizeof(outheader.cupsRenderingIntent));
-      else if (!strcmp(val, "automatic"))
-        strncpy(outheader.cupsRenderingIntent, "Automatic",
-                sizeof(outheader.cupsRenderingIntent));
-      else if (!strcmp(val, "perceptual"))
-        strncpy(outheader.cupsRenderingIntent, "Perceptual",
-                sizeof(outheader.cupsRenderingIntent));
-      else if (!strcmp(val, "relative"))
-        strncpy(outheader.cupsRenderingIntent, "Relative",
-                sizeof(outheader.cupsRenderingIntent));
-      else if (!strcmp(val, "relative-bpc"))
-        strncpy(outheader.cupsRenderingIntent, "RelativeBpc",
-                sizeof(outheader.cupsRenderingIntent));
-      else if (!strcmp(val, "saturation"))
-        strncpy(outheader.cupsRenderingIntent, "Saturation",
-                sizeof(outheader.cupsRenderingIntent));
-      else
-      {
-        if (log) log(ld,CF_LOGLEVEL_DEBUG,
-		     "cfFilterRasterToPWG: Unsupported print-rendering-intent value.");
-        outheader.cupsRenderingIntent[0] = '\0';
-      }
-    }
+    /* Update rendering intent with user settings or the default */
+    outheader.cupsRenderingIntent[0] = '\0';
+    cfGetPrintRenderIntent(data, outheader.cupsRenderingIntent,
+			   sizeof(outheader.cupsRenderingIntent));
 
-    if (inheader.cupsPageSizeName[0] &&
-	(pwg_size = ppdCacheGetSize(cache,
-				    inheader.cupsPageSizeName)) != NULL &&
-	pwg_size->map.pwg)
+    /* First try to use the input page size name for the output page,
+       check whether this size is supported by theprinter */
+    buf[0] = '\0';
+    if (inheader.cupsPageSizeName[0])
     {
-      strncpy(outheader.cupsPageSizeName, pwg_size->map.pwg,
-	      sizeof(outheader.cupsPageSizeName) - 1);
+      /* Take only a page size name for a page size the printer actually
+	 supports */
+      snprintf(buf, sizeof(buf), "%.63s", inheader.cupsPageSizeName);
+      cfGenerateSizes(data->printer_attrs, CF_GEN_SIZES_SEARCH, NULL, NULL,
+		      NULL, NULL, NULL, NULL, NULL, NULL,
+		      NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		      buf, NULL);
     }
+    if (buf[0])
+      snprintf(outheader.cupsPageSizeName,
+	       sizeof(outheader.cupsPageSizeName),
+	       "%.63s", buf);
     else
     {
-      pwg_media =
-	pwgMediaForSize((int)(2540.0 * inheader.cupsPageSize[0] / 72.0),
-			(int)(2540.0 * inheader.cupsPageSize[1] / 72.0));
-
-      if (pwg_media)
-        strncpy(outheader.cupsPageSizeName, pwg_media->pwg,
-                sizeof(outheader.cupsPageSizeName) - 1);
+      /* No name found, find the printer's page size by the size dimensions
+         and margins */
+      width = (int)(2540.0 * inheader.cupsPageSize[0] / 72.0);
+      height = (int)(2540.0 * inheader.cupsPageSize[1] / 72.0);
+      left = (int)(2540.0 * inheader.ImagingBoundingBox[0] / 72.0);
+      bottom = (int)(2540.0 * inheader.ImagingBoundingBox[1] / 72.0);
+      right = width - (int)(2540.0 * inheader.ImagingBoundingBox[2] / 72.0);
+      top = height - (int)(2540.0 * inheader.ImagingBoundingBox[3] / 72.0);
+      cfGenerateSizes(data->printer_attrs, CF_GEN_SIZES_SEARCH, NULL, NULL,
+		      &width, &height, &left, &bottom, &right, &top,
+		      NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		      buf, NULL);
+      if (buf[0])
+	snprintf(outheader.cupsPageSizeName,
+		 sizeof(outheader.cupsPageSizeName),
+		 "%.63s", buf);
       else
       {
         if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		     "cfFilterRasterToPWG: Unsupported PageSize %.2fx%.2f.",
+		     "cfFilterRasterToPWG: Page size %.2fx%.2f not supported by printer.",
 		     inheader.cupsPageSize[0], inheader.cupsPageSize[1]);
         outheader.cupsPageSizeName[0] = '\0';
       }
     }
 
     if (inheader.Duplex && !(page & 1) &&
-        back && strcasecmp(back->value, "Normal"))
+	(back = cfGetBackSideOrientation(data)) > 0 &&
+        (back &= 7) != CF_BACKSIDE_NORMAL)
     {
-      if (strcasecmp(back->value, "Flipped"))
+      outheader.Duplex = CUPS_TRUE;
+      outheader.Tumble = inheader.Tumble;
+
+      if (back == CF_BACKSIDE_FLIPPED)
       {
         if (inheader.Tumble)
         {
@@ -403,7 +403,7 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
       					/* ImageBoxBottom */
         }
       }
-      else if (strcasecmp(back->value, "ManualTumble"))
+      else if (back == CF_BACKSIDE_MANUAL_TUMBLE)
       {
         if (inheader.Tumble)
         {
@@ -435,7 +435,7 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
       					/* ImageBoxBottom */
         }
       }
-      else if (strcasecmp(back->value, "Rotated"))
+      else if (back == CF_BACKSIDE_ROTATED)
       {
         if (inheader.Tumble)
         {
@@ -473,7 +473,7 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
         */
 
         if (log) log(ld,CF_LOGLEVEL_DEBUG,
-		     "cfFilterRasterToPWG: Unsupported cupsBackSide value.");
+		     "cfFilterRasterToPWG: Unsupported back side orientation value.");
 
 	outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
 	outheader.cupsInteger[2] = 1;	/* FeedTransform */
@@ -490,6 +490,9 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
     }
     else
     {
+      outheader.Duplex = inheader.Duplex;
+      outheader.Tumble = inheader.Tumble;
+
       outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
       outheader.cupsInteger[2] = 1;	/* FeedTransform */
 
@@ -509,7 +512,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 		   "cfFilterRasterToPWG: Error sending raster data.");
       if (log) log(ld,CF_LOGLEVEL_DEBUG,
 		   "cfFilterRasterToPWG: Unable to write header for page %d.", page);
-      return (1);
+      res = 1;
+      goto fail;
     }
 
    /*
@@ -533,7 +537,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 	if (log) log(ld,CF_LOGLEVEL_DEBUG,
 		     "cfFilterRasterToPWG: Unable to write line %d for page %d.",
 		     page_top - y + 1, page);
-	return (1);
+	res = 1;
+	goto fail;
       }
 
     for (y = inheader.cupsHeight; y > 0; y --)
@@ -547,7 +552,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 	if (log) log(ld,CF_LOGLEVEL_DEBUG,
 		     "cfFilterRasterToPWG: Unable to read line %d for page %d.",
 		     inheader.cupsHeight - y + page_top + 1, page);
-	return (1);
+	res = 1;
+	goto fail;
       }
 
       if (!cupsRasterWritePixels(outras, line, outheader.cupsBytesPerLine))
@@ -557,7 +563,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 	if (log) log(ld,CF_LOGLEVEL_DEBUG,
 		     "cfFilterRasterToPWG: Unable to write line %d for page %d.",
 		     inheader.cupsHeight - y + page_top + 1, page);
-	return (1);
+	res = 1;
+	goto fail;
       }
     }
 
@@ -571,11 +578,14 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 		     "cfFilterRasterToPWG: Unable to write line %d for page %d.",
 		     page_bottom - y + page_top + inheader.cupsHeight + 1,
 		     page);
-	return (1);
+	res = 1;
+	goto fail;
       }
 
     free(line);
   }
+
+ fail:
 
   cupsRasterClose(inras);
   close(inputfd);
@@ -583,5 +593,7 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
   cupsRasterClose(outras);
   close(outputfd);
 
-  return (0);
+  cupsFreeOptions(num_options, options);
+
+  return (res);
 }

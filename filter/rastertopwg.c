@@ -3,6 +3,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <signal.h>
 
 /*
@@ -49,17 +50,10 @@ main(int  argc,	   /* I - Number of command-line arguments */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the cfFilterPDFToRaster() filter function
+  * Fire up the ppdFilterRasterToPWG() filter function
   */
-  cf_filter_out_format_t outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
-  char *t = getenv("FINAL_CONTENT_TYPE");
-  if (t) {
-    if (strcasestr(t, "pwg"))
-      outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
-    else if (strcasestr(t, "urf"))
-      outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
-  }
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterRasterToPWG, &outformat, &JobCanceled);
+
+  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterRasterToPWG, NULL, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: rastertopwg filter function failed.\n");

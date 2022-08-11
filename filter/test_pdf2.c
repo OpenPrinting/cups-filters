@@ -79,7 +79,7 @@ int main()
   const int clobj=cfPDFOutAddXRef(pdf);
   assert(clobj==cobj+1);
   cfPDFOutPrintF(pdf,"%d 0 obj\n"
-                    "%d\n"
+                    "%ld\n"
                     "endobj\n"
                     ,clobj,streamlen);
 

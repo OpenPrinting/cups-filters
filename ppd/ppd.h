@@ -26,7 +26,9 @@
 #  include <cupsfilters/log.h>
 
 #  include <stdio.h>
+#  include <stdbool.h>
 #  include <cups/raster.h>
+#  include <cupsfilters/driver.h>
 
 
 /*
@@ -472,6 +474,9 @@ typedef struct ppd_file_s		/**** PPD File ****/
 					   @private@ */
   char		*jcl_begin;		/* Start JCL commands */
   char		*jcl_ps;		/* Enter PostScript interpreter */
+#if HAVE_CUPS_3_X
+  char		*jcl_pdf;		/* Enter PDF interpreter */
+#endif
   char		*jcl_end;		/* End JCL commands */
   char		*lang_encoding;		/* Language encoding */
   char		*lang_version;		/* Language version (English, Spanish,
@@ -757,6 +762,7 @@ extern void		ppdFreeLanguages(cups_array_t *languages);
 extern cups_encoding_t	ppdGetEncoding(const char *name);
 extern cups_array_t	*ppdGetLanguages(ppd_file_t *ppd);
 extern ppd_globals_t	*ppdGlobals(void);
+extern void	        ppdHandleMedia(ppd_file_t *ppd);
 extern unsigned		ppdHashName(const char *name);
 extern ppd_attr_t	*ppdLocalizedAttr(ppd_file_t *ppd, const char *keyword,
 					  const char *spec, const char *ll_CC);
@@ -787,8 +793,7 @@ extern void		ppdPwgUnppdizeName(const char *ppd, char *name,
 					   const char *dashchars);
 
 /**** New in cups-filters 2.0.0: Overtaken from ippeveprinter ****/
-extern ipp_t		*ppdLoadAttributes(ppd_file_t   *ppd,
-					   cups_array_t *docformats);
+extern ipp_t		*ppdLoadAttributes(ppd_file_t   *ppd);
 
 /**** New in cups-filters 2.0.0: Overtaken from ippeveps ****/
 extern int		ppdGetOptions(cups_option_t **options,
@@ -821,6 +826,59 @@ extern int		ppdCollectionDumpCache(const char *filename,
 
 /**** New in cups-filters 2.0.0: For PPD retro-fit Printer Applications ****/
 extern void             ppdCacheAssignPresets(ppd_file_t *ppd, ppd_cache_t *pc);
+
+/**** New in cups-filters 2.0.0: JCL for PDF printers, for
+      ppdFilterPDFToPDF() and ppdFilterImageToPDF() ****/
+extern int              ppdEmitJCLPDF(ppd_file_t *ppd, FILE *fp,
+				      int job_id, const char *user,
+				      const char *title,
+				      int hw_copies, bool hw_collate);
+
+/**** New in cups-filters 2.0.0: PPD file generator for CUPS queues for
+      driverless printers, compared to the one of CUPS this one supports
+      also clusters composed of different printers as composed by
+      cups-browsed, was cfCreatePPDFromIPP(2)() in libcupsfilters before ****/
+char            *ppdCreatePPDFromIPP(char *buffer, size_t bufsize,
+				     ipp_t *response, const char *make_model,
+				     const char *pdl, int color, int duplex,
+				     char *status_msg, size_t status_msg_size);
+char            *ppdCreatePPDFromIPP2(char *buffer, size_t bufsize,
+				      ipp_t *response, const char *make_model,
+				      const char *pdl, int color, int duplex,
+				      cups_array_t* conflicts,
+				      cups_array_t *sizes,
+				      char* default_pagesize,
+				      const char *default_cluster_color,
+				      char *status_msg, size_t status_msg_size);
+
+/**** New in cups-filters 2.0.0: Functions to load color profile data from
+      PPD files, from driver.h ****/
+extern ppd_attr_t	*ppdFindColorAttr(ppd_file_t *ppd, const char *name,
+					  const char *colormodel,
+					  const char *media,
+					  const char *resolution,
+					  char *spec, int specsize,
+					  cf_logfunc_t log,
+					  void *ld);
+extern cf_lut_t		*ppdLutLoad(ppd_file_t *ppd,
+				    const char *colormodel,
+				    const char *media,
+				    const char *resolution,
+				    const char *ink,
+				    cf_logfunc_t log,
+				    void *ld);
+extern cf_rgb_t		*ppdRGBLoad(ppd_file_t *ppd,
+				    const char *colormodel,
+				    const char *media,
+				    const char *resolution,
+				    cf_logfunc_t log,
+				    void *ld);
+extern cf_cmyk_t	*ppdCMYKLoad(ppd_file_t *ppd,
+				    const char *colormodel,
+				    const char *media,
+				    const char *resolution,
+				    cf_logfunc_t log,
+				    void *ld);
 
 
 /*

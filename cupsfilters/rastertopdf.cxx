@@ -36,6 +36,7 @@
 #include <cups/raster.h>
 #include <cupsfilters/colormanager.h>
 #include <cupsfilters/image.h>
+#include <cupsfilters/raster.h>
 
 #include <arpa/inet.h>   // ntohl
 
@@ -1331,6 +1332,7 @@ cfFilterRasterToPDF(int inputfd,    /* I - File descriptor input stream */
        void *parameters)    /* I - Filter-specific parameters (outformat) */
 {
   int i;
+  char *t;
   rastertopdf_doc_t	doc;		/* Document information */
   FILE          *outputfp;              /* Output data stream */
   cf_filter_out_format_t outformat; /* Output format */
@@ -1340,7 +1342,6 @@ cfFilterRasterToPDF(int inputfd,    /* I - File descriptor input stream */
   struct pdf_info pdf;
   cups_raster_t	*ras;		/* Raster stream for printing */
   cups_page_header2_t	header;		/* Page header from file */
-  ppd_attr_t    *attr;  /* PPD attribute */
   ipp_t *printer_attrs = data->printer_attrs; /* Printer attributes from printer data*/
   ipp_attribute_t *ipp_attr; /* Printer attribute*/
   const char*         profile_name = NULL;	/* IPP Profile Name */
@@ -1362,7 +1363,21 @@ cfFilterRasterToPDF(int inputfd,    /* I - File descriptor input stream */
       outformat = CF_FILTER_OUT_FORMAT_PDF;
   }
   else
-    outformat = CF_FILTER_OUT_FORMAT_PDF;
+  {
+    t = data->final_content_type;
+    if (t)
+    {
+      if (strcasestr(t, "pclm"))
+	outformat = CF_FILTER_OUT_FORMAT_PCLM;
+      else if (strcasestr(t, "pdf"))
+	outformat = CF_FILTER_OUT_FORMAT_PDF;
+      else
+	outformat = CF_FILTER_OUT_FORMAT_PDF;
+    }
+    else
+      outformat = CF_FILTER_OUT_FORMAT_PDF;
+  }
+
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterRasterToPDF: OUTFORMAT=\"%s\"",
 	       outformat == CF_FILTER_OUT_FORMAT_PDF ? "PDF" : "PCLM");
@@ -1391,7 +1406,7 @@ cfFilterRasterToPDF(int inputfd,    /* I - File descriptor input stream */
   doc.iscanceleddata = icd;
 
   /* support the CUPS "cm-calibration" option */ 
-  cm_calibrate = cfCmGetCupsColorCalibrateMode(data, data->options, data->num_options);
+  cm_calibrate = cfCmGetCupsColorCalibrateMode(data);
 
   if (outformat == CF_FILTER_OUT_FORMAT_PCLM ||
       cm_calibrate == CF_CM_CALIBRATION_ENABLED)
@@ -1399,11 +1414,10 @@ cfFilterRasterToPDF(int inputfd,    /* I - File descriptor input stream */
   else
     doc.cm_disabled = cfCmIsPrinterCmDisabled(data);
 
-  if (outformat == CF_FILTER_OUT_FORMAT_PCLM && data->ppd == NULL
-        && printer_attrs == NULL )
+  if (outformat == CF_FILTER_OUT_FORMAT_PCLM && printer_attrs == NULL)
   {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
-      "cfFilterRasterToPDF: PCLm output:  Neither a PPD file nor printer IPP attributes are supplied, PCLm output not possible.");
+      "cfFilterRasterToPDF: PCLm output: No printer IPP attributes are supplied, PCLm output not possible.");
     return 1;
   }
 
@@ -1413,109 +1427,8 @@ cfFilterRasterToPDF(int inputfd,    /* I - File descriptor input stream */
   // Process pages as needed...
   Page = 0;
 
-  /* Get PCLm attributes from PPD */
-  if (data->ppd && outformat == CF_FILTER_OUT_FORMAT_PCLM)
-  {
-    char *attr_name = (char *)"cupsPclmStripHeightPreferred";
-    if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
-    {
-      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
-		   attr_name, attr->value);
-      pdf.pclm_strip_height_preferred = atoi(attr->value);
-    }
-    else
-      pdf.pclm_strip_height_preferred = 16; /* default strip height */
-
-    attr_name = (char *)"cupsPclmStripHeightSupported";
-    if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
-    {
-      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
-		   attr_name, attr->value);
-      pdf.pclm_strip_height_supported.clear();  // remove default value = 16
-      std::vector<std::string> vec = split_strings(attr->value, ",");
-      for (size_t i = 0; i < vec.size(); i ++)
-        pdf.pclm_strip_height_supported.push_back(atoi(vec[i].c_str()));
-      vec.clear();
-    }
-
-    attr_name = (char *)"cupsPclmRasterBackSide";
-    if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
-    {
-      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
-		   attr_name, attr->value);
-      pdf.pclm_raster_back_side = attr->value;
-    }
-
-    attr_name = (char *)"cupsPclmSourceResolutionSupported";
-    if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
-    {
-      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
-		   attr_name, attr->value);
-      pdf.pclm_source_resolution_supported = split_strings(attr->value, ",");
-    }
-
-    attr_name = (char *)"cupsPclmSourceResolutionDefault";
-    if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
-    {
-      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
-		   attr_name, attr->value);
-      pdf.pclm_source_resolution_default = attr->value;
-    }
-    else if (pdf.pclm_source_resolution_supported.size() > 0)
-    {
-      pdf.pclm_source_resolution_default =
-	pdf.pclm_source_resolution_supported[0];
-      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" missing, taking first item of \"cupsPclmSourceResolutionSupported\" as default resolution",
-		   attr_name);
-    }
-    else
-    {
-      if (log) log(ld, CF_LOGLEVEL_ERROR,
-		   "cfFilterRasterToPDF: PCLm output: PPD file does not contain printer resolution information for PCLm.");
-      return 1;
-    }
-
-    attr_name = (char *)"cupsPclmCompressionMethodPreferred";
-    if ((attr = ppdFindAttr(data->ppd, attr_name, NULL)) != NULL)
-    {
-      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterRasterToPDF: PPD PCLm attribute \"%s\" with value \"%s\"",
-		   attr_name, attr->value);
-      std::vector<std::string> vec = split_strings(attr->value, ",");
-
-      // get all compression methods supported by the printer
-      for (std::vector<std::string>::iterator it = vec.begin();
-            it != vec.end(); ++it)
-      {
-        std::string compression_method = *it;
-        for (char& x: compression_method)
-          x = tolower(x);
-        if (compression_method == "flate")
-          pdf.pclm_compression_method_preferred.push_back(FLATE_DECODE);
-        else if (compression_method == "rle")
-          pdf.pclm_compression_method_preferred.push_back(RLE_DECODE);
-        else if (compression_method == "jpeg")
-          pdf.pclm_compression_method_preferred.push_back(DCT_DECODE);
-      }
-
-    }
-    // If the compression methods is none of the above or is erreneous
-    // use FLATE as compression method and show a warning.
-    if (pdf.pclm_compression_method_preferred.empty())
-    {
-      if (log) log(ld, CF_LOGLEVEL_WARN,
-		   "(rastertopclm) Unable parse PPD attribute \"%s\". "
-		   "Using FLATE for encoding image streams.", attr_name);
-      pdf.pclm_compression_method_preferred.push_back(FLATE_DECODE);
-    }
-  }
-  else if(outformat == CF_FILTER_OUT_FORMAT_PCLM && printer_attrs)
+  /* Get PCLm parameters from printer IPP attributes */
+  if (outformat == CF_FILTER_OUT_FORMAT_PCLM)
   {
     if (log)
     {
@@ -1665,6 +1578,10 @@ cfFilterRasterToPDF(int inputfd,    /* I - File descriptor input stream */
     Page ++;
     if (log) log(ld, CF_LOGLEVEL_INFO,
 		 "cfFilterRasterToPDF: Starting page %d.", Page);
+
+    // Update rendering intent with user settings or the default
+    cfGetPrintRenderIntent(data, header.cupsRenderingIntent,
+			   sizeof(header.cupsRenderingIntent));
 
     // Use "profile=profile_name.icc" to embed 'profile_name.icc' into the PDF
     // for testing. Forces color management to enable.

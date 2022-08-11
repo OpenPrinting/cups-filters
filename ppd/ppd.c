@@ -131,6 +131,9 @@ ppdClose(ppd_file_t *ppd)		/* I - PPD file record */
   free(ppd->jcl_begin);
   free(ppd->jcl_end);
   free(ppd->jcl_ps);
+#if HAVE_CUPS_3_X
+  free(ppd->jcl_pdf);
+#endif
 
  /*
   * Free any UI groups, subgroups, and options...
@@ -873,6 +876,13 @@ ppdOpenWithLocalization(
       ppd->jcl_ps = strdup(string);
       ppd_decode(ppd->jcl_ps);		/* Decode quoted string */
     }
+#if HAVE_CUPS_3_X
+    else if (!strcmp(keyword, "JCLToPDFInterpreter"))
+    {
+      ppd->jcl_pdf = strdup(string);
+      ppd_decode(ppd->jcl_pdf);		/* Decode quoted string */
+    }
+#endif
     else if (!strcmp(keyword, "AccurateScreensSupport"))
       ppd->accurate_screens = !strcasecmp(string, "True");
     else if (!strcmp(keyword, "ColorDevice"))

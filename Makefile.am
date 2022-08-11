@@ -29,7 +29,7 @@ EXTRA_DIST = \
 	filter/braille/filters/TODO.txt
 
 EXTRA_DIST += \
-	cupsfilters/testdriver.c \
+	ppd/testdriver.c \
 	data/makePDFfromPS.sh \
 	data/classified.ps \
 	data/confidential.ps \
@@ -168,7 +168,7 @@ pkgppdincludedir = $(includedir)/ppd
 pkgppdinclude_DATA = \
 	ppd/ppd.h \
 	ppd/ppdc.h \
-	cupsfilters/log.h
+	ppd/ppd-filter.h
 
 pkgppddefsdir = $(datadir)/ppdc
 pkgppddefs_DATA = \
@@ -194,6 +194,9 @@ libppd_la_SOURCES = \
 	ppd/ppd-conflicts.c \
 	ppd/ppd-custom.c \
 	ppd/ppd-emit.c \
+	ppd/ppd-filter.c \
+	ppd/ppd-generator.c \
+	ppd/ppd-load-profile.c \
 	ppd/ppd-localize.c \
 	ppd/ppd-mark.c \
 	ppd/ppd-page.c \
@@ -206,12 +209,15 @@ libppd_la_SOURCES = \
 	ppd/encode.c \
 	ppd/file.c \
 	ppd/file-private.h \
+	ppd/imagetops-pstops.c \
 	ppd/ipp-private.h \
 	ppd/language.c \
 	ppd/language-private.h \
+	ppd/pdftops.c \
 	ppd/raster-interpret.c \
 	ppd/raster-error.c \
 	ppd/raster-private.h \
+	ppd/rastertops.c \
 	ppd/string.c \
 	ppd/snprintf.c \
 	ppd/string-private.h \
@@ -240,12 +246,16 @@ libppd_la_SOURCES = \
 	$(pkgppdinclude_DATA) \
 	$(pkgppddefs_DATA)
 libppd_la_LIBADD = \
+	libcupsfilters.la \
 	$(CUPS_LIBS)
 libppd_la_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
 	$(CUPS_CFLAGS)
 libppd_la_LDFLAGS = \
 	-no-undefined \
 	-version-info 1
+libppd_la_DEPENDENCIES = \
+	libcupsfilters.la
 
 testppd_SOURCES = ppd/testppd.c
 testppd_LDADD = libppd.la \
@@ -392,6 +402,7 @@ pkgfilterdir = $(CUPS_SERVERBIN)/filter
 pkgfiltersincludedir = $(includedir)/cupsfilters
 pkgfiltersinclude_DATA = \
 	cupsfilters/bitmap.h \
+	cupsfilters/catalog.h \
 	cupsfilters/colord.h \
 	cupsfilters/colormanager.h \
 	cupsfilters/driver.h \
@@ -402,7 +413,6 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/log.h \
 	cupsfilters/pdf.h \
 	cupsfilters/pdfutils.h \
-	cupsfilters/ppdgenerator.h \
 	cupsfilters/raster.h
 
 lib_LTLIBRARIES += libcupsfilters.la
@@ -433,9 +443,9 @@ TESTS += \
 #TESTS += test1284
 
 libcupsfilters_la_SOURCES = \
-	cupsfilters/attr.c \
 	cupsfilters/bannertopdf.c \
 	cupsfilters/bitmap.c \
+	cupsfilters/catalog.c \
 	cupsfilters/check.c \
 	cupsfilters/cmyk.c \
 	cupsfilters/colord.c \
@@ -468,8 +478,6 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pdf.cxx \
 	cupsfilters/pdftopdf/pdftopdf.cxx \
 	cupsfilters/pdftopdf/pdftopdf-private.h \
-	cupsfilters/pdftopdf/pdftopdf-jcl.cxx \
-	cupsfilters/pdftopdf/pdftopdf-jcl-private.h \
 	cupsfilters/pdftopdf/pdftopdf-processor.cxx \
 	cupsfilters/pdftopdf/pdftopdf-processor-private.h \
 	cupsfilters/pdftopdf/qpdf-pdftopdf-processor.cxx \
@@ -488,14 +496,10 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pdftopdf/qpdf-pdftopdf-private.h \
 	cupsfilters/pdftopdf/qpdf-cm.cxx \
 	cupsfilters/pdftopdf/qpdf-cm-private.h \
-	cupsfilters/pdftops.c \
 	cupsfilters/pdftoraster.cxx \
 	cupsfilters/pdfutils.c \
-	cupsfilters/ppdgenerator.c \
-	cupsfilters/imagetops-pstops.c \
 	cupsfilters/pwgtoraster.c \
 	cupsfilters/raster.c \
-	cupsfilters/rastertops.c \
 	cupsfilters/rastertopdf.cxx \
 	cupsfilters/rastertopwg.c \
 	cupsfilters/rgb.c \
@@ -508,7 +512,6 @@ EXTRA_libcupsfilters_la_SOURCES = \
 	cupsfilters/getline.c \
 	cupsfilters/strcasestr.c
 libcupsfilters_la_LIBADD = \
-	libppd.la \
 	libfontembed.la \
 	$(FONTCONFIG_LIBS) \
 	$(GETLINE) \
@@ -523,7 +526,6 @@ libcupsfilters_la_LIBADD = \
 	$(POPPLER_LIBS) \
 	-lm
 libcupsfilters_la_CFLAGS = \
-	-I$(srcdir)/ppd/ \
 	-I$(srcdir)/fontembed/ \
 	$(FONTCONFIG_CFLAGS) \
 	$(CUPS_CFLAGS) \
@@ -542,7 +544,6 @@ libcupsfilters_CXXFLAGS = -std=c++0x $(libcupsfilters_CFLAGS)   # -std=c++11
 libcupsfilters_la_LIBADD += $(DBUS_LIBS)
 endif
 libcupsfilters_la_DEPENDENCIES = \
-	libppd.la \
 	libfontembed.la \
 	$(GETLINE) \
 	$(STRCASESTR)
@@ -885,10 +886,12 @@ bannertopdf_SOURCES = \
 	filter/bannertopdf.c
 bannertopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 bannertopdf_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 commandtoescpx_SOURCES = \
 	cupsfilters/driver.h \
@@ -937,92 +940,112 @@ foomatic_rip_SOURCES = \
 foomatic_rip_CFLAGS = \
 	-DCONFIG_PATH='"$(sysconfdir)/foomatic"' \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 foomatic_rip_LDADD = \
 	$(CUPS_LIBS) \
 	-lm \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 gstoraster_SOURCES = \
 	filter/gstoraster.c
 gstoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 gstoraster_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 gstopdf_SOURCES = \
 	filter/gstopdf.c
 gstopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 gstopdf_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 gstopxl_SOURCES = \
 	filter/gstopxl.c
 gstopxl_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 gstopxl_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 imagetopdf_SOURCES = \
 	filter/imagetopdf.c
 imagetopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 imagetopdf_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 imagetops_SOURCES = \
 	filter/imagetops.c
 imagetops_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 imagetops_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 imagetoraster_SOURCES = \
 	filter/imagetoraster.c
 imagetoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 imagetoraster_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 pclmtoraster_SOURCES = \
 	filter/pclmtoraster.c
 pclmtoraster_CXXFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 pclmtoraster_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 rastertopclm_SOURCES = \
 	filter/rastertopclm.c
 rastertopclm_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertopclm_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 rastertopdf_SOURCES = \
 	filter/rastertopdf.c
 rastertopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertopdf_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 mupdftopwg_SOURCES = \
 	filter/mupdftopwg.c
@@ -1039,72 +1062,88 @@ pwgtoraster_SOURCES = \
 	filter/pwgtoraster.c
 pwgtoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 pwgtoraster_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 rastertops_SOURCES = \
 	filter/rastertops.c
 rastertops_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertops_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 rastertopwg_SOURCES = \
 	filter/rastertopwg.c
 rastertopwg_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertopwg_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 texttotext_SOURCES = \
 	filter/texttotext.c
 texttotext_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 texttotext_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 texttopdf_SOURCES = \
 	filter/texttopdf.c
 texttopdf_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 texttopdf_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 pdftops_SOURCES = \
 	filter/pdftops.c
 pdftops_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 pdftops_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 pstops_SOURCES = \
 	filter/pstops.c
 pstops_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 pstops_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 pdftoraster_SOURCES = \
 	filter/pdftoraster.c
 pdftoraster_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 pdftoraster_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 rastertoescpx_SOURCES = \
@@ -1162,6 +1201,7 @@ universal_CFLAGS = \
 	$(CUPS_CFLAGS)
 universal_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 # =====

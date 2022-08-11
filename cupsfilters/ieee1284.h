@@ -19,7 +19,6 @@
  */
 
 #  include <cups/cups.h>
-#  include <ppd/ppd.h>
 #  include <cups/backend.h>
 #  include <cups/sidechannel.h>
 #  include <string.h>

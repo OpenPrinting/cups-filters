@@ -59,6 +59,7 @@ parse_doc_type(FILE *fp)
     if (is_empty && buf[0] != '\n') is_empty = 0;
     if (strncmp(buf,"%PDF",4) == 0) type = GS_DOC_TYPE_PDF;
     if (strncmp(buf,"%!",2) == 0) type = GS_DOC_TYPE_PS;
+    if (type != GS_DOC_TYPE_UNKNOWN) break;
   }
   if (is_empty) type = GS_DOC_TYPE_EMPTY;
   rewind(fp);
@@ -100,8 +101,8 @@ parse_pdf_header_options(FILE *fp, gs_page_header *h)
 }
 
 static void
-add_pdf_header_options(gs_page_header *h, cups_array_t *gs_args,
-		       cf_filter_out_format_t outformat, int pxlcolor)
+header_to_gs_args(gs_page_header *h, cups_array_t *gs_args,
+		  cf_filter_out_format_t outformat, int pxlcolor)
 {
   int i;
   char tmpstr[1024];
@@ -702,17 +703,15 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   cups_cspace_t cspace = -1;
   int bytes;
   int fd;
-  int cm_disabled;
+  int cm_disabled = 0;
   int i;
   int num_options;
   int status = 1;
-  ppd_file_t *ppd = NULL;
   ipp_t *printer_attrs = data->printer_attrs;
   ipp_t *job_attrs = data->job_attrs;
   struct sigaction sa;
   cf_cm_calibration_t cm_calibrate;
   int pxlcolor = 0; /* 1 if printer is color printer otherwise 0. */
-  ppd_attr_t *attr;
   ipp_attribute_t *ipp_attr;
   cf_logfunc_t log = data->logfunc;
   void          *ld = data->logdata;
@@ -720,17 +719,8 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   void          *icd = data->iscanceleddata;
 
 
-  /* Note: With the CF_FILTER_OUT_FORMAT_APPLE_RASTER selection and a
-     Ghostscript version without "appleraster" output device (9.55.x
-     and older) the output is actually CUPS Raster but information
-     about available color spaces and depths is taken from the
-     urf-supported printer IPP attribute or appropriate PPD file
-     attribute. This mode is for further processing with
-     rastertopwg. With Ghostscript supporting Apple Raster output
-     (9.56.0 and newer), we actually produce Apple Raster and no
-     further filter is required. */
-
-  if (parameters) {
+  if (parameters)
+  {
     outformat = *(cf_filter_out_format_t *)parameters;
     if (outformat != CF_FILTER_OUT_FORMAT_PDF &&
 	outformat != CF_FILTER_OUT_FORMAT_PDF_IMAGE &&
@@ -740,8 +730,37 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 	outformat != CF_FILTER_OUT_FORMAT_APPLE_RASTER &&
 	outformat != CF_FILTER_OUT_FORMAT_PXL)
       outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
-  } else
-    outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+  }
+  else
+  {
+    t = data->final_content_type;
+    if (t)
+    {
+      if (strcasestr(t, "pwg"))
+	outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
+      else if (strcasestr(t, "urf"))
+	outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
+      else if (strcasestr(t, "pclm"))
+	outformat = CF_FILTER_OUT_FORMAT_PCLM;
+      else if (strcasestr(t, "pcl-xl"))
+	outformat = CF_FILTER_OUT_FORMAT_PXL;
+      else if (strcasestr(t, "pdf"))
+	outformat = CF_FILTER_OUT_FORMAT_PDF;
+      else
+	outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+    }
+    else
+      outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+  }
+
+  /* Note: With the CF_FILTER_OUT_FORMAT_APPLE_RASTER selection and a
+     Ghostscript version without "appleraster" output device (9.55.x
+     and older) the output is actually CUPS Raster but information
+     about available color spaces and depths is taken from the
+     urf-supported printer IPP attribute. This mode is for further
+     processing with rastertopwg. With Ghostscript supporting Apple
+     Raster output (9.56.0 and newer), we actually produce Apple
+     Raster and no further filter is required. */
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterGhostscript: Output format: %s",
@@ -767,8 +786,6 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   num_options = data->num_options;
   options = data->options;
 
-  ppd = data->ppd;
-
  /*
   * Environment variables for Ghostscript call ...
   */
@@ -776,13 +793,6 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   if ((t = getenv("LD_LIBRARY_PATH")) != NULL)
   {
     snprintf(tmpstr, sizeof(tmpstr), "LD_LIBRARY_PATH=%s", t);
-    envp[num_env] = strdup(tmpstr);
-    num_env ++;
-  }
-
-  if (data->ppdfile)
-  {
-    snprintf(tmpstr, sizeof(tmpstr), "PPD=%s", data->ppdfile);
     envp[num_env] = strdup(tmpstr);
     num_env ++;
   }
@@ -972,22 +982,6 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 		 "cfFilterGhostscript: Streaming mode, no checks for input format, zero-page input, instructions from previous filter");
   }
 
-  /* Find print-rendering-intent */
-  cfGetPrintRenderIntent(data, &h);
-  if(log) log(ld, CF_LOGLEVEL_DEBUG,
-	      "Print rendering intent = %s", h.cupsRenderingIntent);
-
-  /*  Check status of color management in CUPS */
-  cm_calibrate = cfCmGetCupsColorCalibrateMode(data, options, num_options);
-
-  if (cm_calibrate == CF_CM_CALIBRATION_ENABLED)
-    cm_disabled = 1;
-  else 
-    cm_disabled = cfCmIsPrinterCmDisabled(data);
-
-  if (!cm_disabled)
-    cfCmGetPrinterIccProfile(data, &icc_profile, ppd);
-
   /* Ghostscript parameters */
   gs_args = cupsArrayNew(NULL, NULL);
   if (!gs_args) {
@@ -1069,8 +1063,43 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 		 strdup("-dColorConversionStrategy=/LeaveColorUnchanged"));
   }
 
-  cspace = icc_profile ? CUPS_CSPACE_RGB : -1;
+  /* Generate a pseudo Raster header to collect all data from the
+     printer and job attributes and also from the options which is
+     relevant for the Raster output. The header is not actually
+     inserted into the output Raster stream, but instead, converted to
+     command line options for Ghostscript by the header_to_gs_args()
+     function. Then Ghostscript generates the actual headers by
+     itself.
+
+     Ghostscript especially uses the sizes of each input page as
+     output page sizes and not the page size requested on the call of
+     this filter function. This means, for avoiding to send pages of
+     unsupported size to the printer, to pass the input data through
+     cfFilterPDFToPDF() before applying the cfFilterGhostscript()
+     filter function. */
+
+  cspace = -1;
   cfRasterPrepareHeader(&h, data, outformat, outformat, 0, &cspace);
+
+  /* Find print-rendering-intent */
+  h.cupsRenderingIntent[0] = '\0';
+  cfGetPrintRenderIntent(data, h.cupsRenderingIntent,
+			 sizeof(h.cupsRenderingIntent));
+  if(log) log(ld, CF_LOGLEVEL_DEBUG,
+	      "Print rendering intent = %s", h.cupsRenderingIntent);
+
+  /* Check status of color management in CUPS */
+  cm_calibrate = cfCmGetCupsColorCalibrateMode(data);
+
+  if (cm_calibrate == CF_CM_CALIBRATION_ENABLED)
+    cm_disabled = 1;
+  else
+    cm_disabled = cfCmIsPrinterCmDisabled(data);
+
+  if (!cm_disabled)
+    cfCmGetPrinterIccProfile(data, cfRasterColorSpaceString(h.cupsColorSpace),
+			     h.MediaType, h.HWResolution[0], h.HWResolution[1],
+			     &icc_profile);
 
   /* Special Ghostscript options for raster-only PDF output */
 
@@ -1091,17 +1120,12 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
     char c;
 
     ipp_attr = NULL;
-    attr = NULL;
     if (outformat == CF_FILTER_OUT_FORMAT_PCLM || /* PCLm forced */
 	/* PCLm supported according to printer IPP attributes */
 	(printer_attrs &&
 	 (ipp_attr =
 	  ippFindAttribute(printer_attrs, "pclm-source-resolution-supported",
-			   IPP_TAG_ZERO)) != NULL) ||
-	/* PCLm supported according to PPD file */
-	(ppd &&
-	 (attr =
-	  ppdFindAttr(ppd, "cupsPclmSourceResolutionSupported", 0)) != NULL)) {
+			   IPP_TAG_ZERO)) != NULL)) {
 
       outformat = CF_FILTER_OUT_FORMAT_PCLM;
 
@@ -1111,9 +1135,7 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
          correct if needed */
       res_x = h.HWResolution[0];
       res_y = h.HWResolution[1];
-      if (attr)
-	res_str = attr->value;
-      else if (ipp_attr) {
+      if (ipp_attr) {
 	ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
 	res_str = tmpstr;
       }
@@ -1144,32 +1166,22 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
       if (best_res_x > 0 && best_res_y > 0) {
 	snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d", best_res_x, best_res_y);
 	cupsArrayAdd(gs_args, strdup(tmpstr));
-      } else if ((printer_attrs &&
-		  (ipp_attr =
-		   ippFindAttribute(printer_attrs,
-				    "pclm-source-resolution-default",
-				    IPP_TAG_ZERO)) != NULL) ||
-		 (ppd &&
-		  (attr =
-		   ppdFindAttr(ppd,
-			       "cupsPclmSourceResolutionDefault", 0)) != NULL)){
-	if (attr)
-	  res_str = attr->value;
-	else if (ipp_attr) {
-	  ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
-	  res_str = tmpstr;
-	}
-	if (res_str)
-	  if ((n = sscanf(res_str, "%d%c%d",
-			  &best_res_x, &c, &best_res_y)) > 0) {
-	    if (n < 3 || (c != 'x' && c != 'X'))
-	      best_res_y = best_res_x;
-	    if (best_res_x > 0 && best_res_y > 0) {
-	      snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",
-		       best_res_x, best_res_y);
-	      cupsArrayAdd(gs_args, strdup(tmpstr));
-	    }
+      } else if (printer_attrs &&
+		 (ipp_attr =
+		  ippFindAttribute(printer_attrs,
+				   "pclm-source-resolution-default",
+				   IPP_TAG_ZERO)) != NULL) {
+	ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
+	if ((n = sscanf(tmpstr, "%d%c%d",
+			&best_res_x, &c, &best_res_y)) > 0) {
+	  if (n < 3 || (c != 'x' && c != 'X'))
+	    best_res_y = best_res_x;
+	  if (best_res_x > 0 && best_res_y > 0) {
+	    snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d",
+		     best_res_x, best_res_y);
+	    cupsArrayAdd(gs_args, strdup(tmpstr));
 	  }
+	}
       }
       if (best_res_x <= 0 || best_res_y <= 0) {
 	snprintf(tmpstr, sizeof(tmpstr), "-r%dx%d", res_x, res_y);
@@ -1186,20 +1198,12 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
       /* Strip/Band Height */
 
       n = 0;
-      if ((printer_attrs &&
-	   (ipp_attr =
-	    ippFindAttribute(printer_attrs,
-			     "pclm-strip-height-preferred",
-			     IPP_TAG_ZERO)) != NULL) ||
-	  (ppd &&
-	   (attr =
-	    ppdFindAttr(ppd,
-			"cupsPclmStripHeightPreferred", 0)) != NULL)) {
-	if (attr)
-	  n = atoi(attr->value);
-	else if (ipp_attr)
-	  n = ippGetInteger(ipp_attr, 0);
-      }
+      if (printer_attrs &&
+	  (ipp_attr =
+	   ippFindAttribute(printer_attrs,
+			    "pclm-strip-height-preferred",
+			    IPP_TAG_ZERO)) != NULL)
+	n = ippGetInteger(ipp_attr, 0);
       if (n <= 0) n = 16;
       snprintf(tmpstr, sizeof(tmpstr), "-dStripHeight=%d", n);
       cupsArrayAdd(gs_args, strdup(tmpstr));
@@ -1208,31 +1212,19 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 
       /* Compression method */
 
-      if ((printer_attrs &&
-	   (ipp_attr =
-	    ippFindAttribute(printer_attrs,
-			     "pclm-compression-method-preferred",
-			     IPP_TAG_ZERO)) != NULL) ||
-	  (ppd &&
-	   (attr =
-	    ppdFindAttr(ppd,
-			"cupsPclmCompressionMethodPreferred", 0)) != NULL)) {
-	if (attr)
-	  res_str = attr->value;
-	else if (ipp_attr) {
-	  ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
-	  res_str = tmpstr;
-	}
-	if (res_str) {
-	  if (strcasestr(res_str, "flate"))
-	    cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
-	  else if (strcasestr(res_str, "rle"))
-	    cupsArrayAdd(gs_args, strdup("-sCompression=RLE"));
-	  else if (strcasestr(res_str, "jpeg"))
-	    cupsArrayAdd(gs_args, strdup("-sCompression=JPEG"));
-	  else
-	    cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
-	} else
+      if (printer_attrs &&
+	  (ipp_attr =
+	   ippFindAttribute(printer_attrs,
+			    "pclm-compression-method-preferred",
+			    IPP_TAG_ZERO)) != NULL) {
+	ippAttributeString(ipp_attr, tmpstr, sizeof(tmpstr));
+	if (strcasestr(tmpstr, "flate"))
+	  cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
+	else if (strcasestr(tmpstr, "rle"))
+	  cupsArrayAdd(gs_args, strdup("-sCompression=RLE"));
+	else if (strcasestr(tmpstr, "jpeg"))
+	  cupsArrayAdd(gs_args, strdup("-sCompression=JPEG"));
+	else
 	  cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
       } else
 	cupsArrayAdd(gs_args, strdup("-sCompression=Flate"));
@@ -1242,18 +1234,11 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
       /* Ghostscript output device and color/gray */
 
       n = 0;
-      if (ppd) {
-        if ((attr = ppdFindAttr(ppd,"ColorDevice", 0)) != 0 &&
-	    (!strcasecmp(attr->value, "true") ||
-	     !strcasecmp(attr->value, "on") ||
-	     !strcasecmp(attr->value, "yes")))
-          /* Color printer, according to PPD */
-	  n = 1;
-      } else if (printer_attrs) {
-	if (((ipp_attr =
-	      ippFindAttribute(printer_attrs,
-			       "color-supported", IPP_TAG_ZERO)) != NULL &&
-	     ippGetBoolean(ipp_attr, 0))) {
+      if (printer_attrs) {
+	if ((ipp_attr =
+	     ippFindAttribute(printer_attrs,
+			      "color-supported", IPP_TAG_ZERO)) != NULL &&
+	    ippGetBoolean(ipp_attr, 0)) {
 	  /* Color printer, according to printer attributes */
 	  n = 1;
 	}
@@ -1275,23 +1260,12 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 
   if (outformat == CF_FILTER_OUT_FORMAT_PXL)
   {
-    if (ppd)
+    if (printer_attrs)
     {
-      {
-        if ((attr = ppdFindAttr(ppd,"ColorDevice", 0)) != 0 &&
-	    (!strcasecmp(attr->value, "true") ||
-	     !strcasecmp(attr->value, "on") ||
-	     !strcasecmp(attr->value, "yes")))
-          /* Color PCL XL printer, according to PPD */
-	  pxlcolor = 1;
-      }  
-    }
-    else if (printer_attrs)
-    {
-      if (((ipp_attr =
-	    ippFindAttribute(printer_attrs,
-			     "color-supported", IPP_TAG_BOOLEAN)) != NULL &&
-	   ippGetBoolean(ipp_attr, 0))) {
+      if ((ipp_attr =
+	   ippFindAttribute(printer_attrs,
+			    "color-supported", IPP_TAG_BOOLEAN)) != NULL &&
+	  ippGetBoolean(ipp_attr, 0)) {
         /* Color PCL XL printer, according to printer attributes */
         pxlcolor = 1;
       }
@@ -1361,17 +1335,13 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
 	   !strncasecmp(val, "Rgbw", 4)      ||
 	   !strncasecmp(val, "Rgb", 3)       ||
 	   !strcasecmp(val, "auto"))
-        {
           pxlcolor = 1;
-        }
         else if(!strncasecmp(val, "Device", 6))
         {
           const char *ptr = val + 6;
           if(strtol(ptr, (char **)&ptr, 10)>1)  /* Printer seems to support
 						   more then 1 color  */
-          {
             pxlcolor = 1;
-          }
         }
       }
     } 
@@ -1387,13 +1357,82 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
   h.Orientation = CUPS_ORIENT_0;
 
   /* get all the data from the header and pass it to ghostscript */
-  add_pdf_header_options (&h, gs_args, outformat, pxlcolor);
+  header_to_gs_args(&h, gs_args, outformat, pxlcolor);
+
+  /* CUPS Raster versions: 2 = compressed; 3 = uncompressed */
+  /* Requires Ghostscript 9.57 or later */
+  if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
+      (t = cupsGetOption("cups-raster-version",
+			   num_options, options)) != NULL &&
+      (!strcmp(t, "2") || !strcmp(t, "3")))
+  {
+    snprintf(tmpstr, sizeof(tmpstr), "-dcupsRasterVersion=%s", t);
+    cupsArrayAdd(gs_args, strdup(tmpstr));
+  }
+
+  /* Back side orientation for duplex printing: Normal, ManualTumble,
+     Rotated, Flipped */
+  /* When printing duplex, margins on the back side meeds to get swapped? */
+  /* Requires Ghostscript 9.57 or later */
+  if (h.Duplex)
+  {
+    int backside;
+    /* analyze options relevant to Duplex */
+    /* APDuplexRequiresFlippedMargin */
+    enum {
+      FM_NO,
+      FM_FALSE,
+      FM_TRUE
+    } flippedMargin;
+
+    backside = cfGetBackSideOrientation(data);
+
+    t = NULL;
+    flippedMargin = FM_NO;
+
+    if (backside >= 0)
+    {
+      flippedMargin = (backside & 16 ? FM_TRUE :
+		       (backside & 8 ? FM_FALSE :
+			FM_NO));
+      backside &= 7;
+
+      if (backside == CF_BACKSIDE_MANUAL_TUMBLE)
+	t = "ManualTumble";
+      else if (backside == CF_BACKSIDE_ROTATED)
+	t = "Rotated";
+      else if (backside == CF_BACKSIDE_FLIPPED)
+	t = "Flipped";
+      else
+	t = "Normal";
+    }
+
+    if (t != NULL)
+    {
+      snprintf(tmpstr, sizeof(tmpstr), "-scupsBackSideOrientation=%s", t);
+      cupsArrayAdd(gs_args, strdup(tmpstr));
+    }
+
+    if (flippedMargin == FM_TRUE)
+      cupsArrayAdd(gs_args, strdup("-dcupsBackSideFlipMargins"));
+  }
+
+  /* Manual Copies needed (no device copies functionality available) */
+  /* Requires Ghostscript 9.57 or later */
+  if ((t = cupsGetOption("hardware-copies",
+			 num_options, options)) != NULL &&
+      (!strcasecmp(t, "false") || !strcasecmp(t, "off") ||
+       !strcasecmp(t, "no")))
+    cupsArrayAdd(gs_args, strdup("-dcupsManualCopies"));
 
   /* CUPS font path */
-  if ((t = getenv("CUPS_FONTPATH")) == NULL)
-    t = CUPS_FONTPATH;
-  snprintf(tmpstr, sizeof(tmpstr), "-I%s", t);
-  cupsArrayAdd(gs_args, strdup(tmpstr));
+  if ((t = cupsGetOption("cups-fontpath",
+			 num_options, options)) != NULL &&
+      t[0] != '\0')
+  {
+    snprintf(tmpstr, sizeof(tmpstr), "-I%s", t);
+    cupsArrayAdd(gs_args, strdup(tmpstr));
+  }
 
   /* Set the device output ICC profile */
   if (icc_profile != NULL && icc_profile[0] != '\0') {
@@ -1442,27 +1481,24 @@ cfFilterGhostscript(int inputfd,            /* I - File descriptor input
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
 
-  if ((t = cupsGetOption("profile", num_options, options)) != NULL) {
+  if (!cm_disabled &&
+      (t = cupsGetOption("profile", num_options, options)) != NULL) {
     snprintf(tmpstr, sizeof(tmpstr), "<</cupsProfile(%s)>>setpagedevice", t);
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
 
-  /* Do we have a "center-of-pixel" command line option or
-     "CenterOfPixel" PPD option set to "true"? In this case let
-     Ghostscript use the center-of-pixel rule instead of the
-     PostScript-standard any-part-of-pixel rule when filling a
-     path. This improves the accuracy of graphics (like bar codes for
-     example) on low-resolution printers (like label printers with
-     typically 203 dpi). See
+  /* Do we have a "center-of-pixel" or "CenterOfPixel" command line
+     option set to "true"? In this case let Ghostscript use the
+     center-of-pixel rule instead of the PostScript-standard
+     any-part-of-pixel rule when filling a path. This improves the
+     accuracy of graphics (like bar codes for example) on
+     low-resolution printers (like label printers with typically 203
+     dpi). See
      https://bugs.linuxfoundation.org/show_bug.cgi?id=1373 */
-  if (((t = cupsGetOption("CenterOfPixel", num_options, options)) == NULL &&
-       (t = cupsGetOption("center-of-pixel", num_options, options)) == NULL &&
-       ppd && (attr = ppdFindAttr(ppd,"DefaultCenterOfPixel", NULL)) != NULL &&
-       (!strcasecmp(attr->value, "true") ||
-	!strcasecmp(attr->value, "on") ||
-	!strcasecmp(attr->value, "yes"))) ||
-      (t && (!strcasecmp(t, "true") || !strcasecmp(t, "on") ||
-	     !strcasecmp(t, "yes")))) {
+  if (((t = cupsGetOption("CenterOfPixel", num_options, options)) != NULL ||
+       (t = cupsGetOption("center-of-pixel", num_options, options)) != NULL) &&
+      (!strcasecmp(t, "true") || !strcasecmp(t, "on") ||
+       !strcasecmp(t, "yes"))) {
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterGhostscript: Ghostscript using Center-of-Pixel method to "
 		 "fill paths.");

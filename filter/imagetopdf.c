@@ -14,6 +14,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <signal.h>
 
 
@@ -61,10 +62,11 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the cfFilterImageToPDF() filter function
+  * Fire up the ppdFilterImageToPDF() filter function
   */
 
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterImageToPDF, NULL, &JobCanceled);
+  ret = ppdFilterCUPSWrapper(argc, argv, ppdFilterImageToPDF, NULL,
+			     &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: imagetopdf filter function failed.\n");

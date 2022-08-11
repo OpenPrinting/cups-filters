@@ -17,25 +17,25 @@
   USA.
 ***/
 
-#ifdef HAVE_CONFIG_H
+/*
+ * Include necessary headers.
+ */
+
 #include <config.h>
-#endif
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdlib.h>
-#include <cups/cups.h>
-#include <cups/backend.h>
-#include <cupsfilters/ipp.h>
-#include <cupsfilters/ppdgenerator.h>
 #include <errno.h>
 #include <stdio.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <sys/types.h>
-
-#if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 5)
-#define HAVE_CUPS_1_6 1
-#endif
+#include <cups/cups.h>
+#include <cups/backend.h>
+#include <cups/dir.h>
+#include <cups/pwg.h>
+#include <cupsfilters/ipp.h>
 
 enum resolve_uri_converter_type	/**** Resolving DNS-SD based URI ****/
 {
@@ -113,7 +113,6 @@ cfResolveURI(const char *raw_uri)
   return (uri ? strdup(uri) : NULL);
 }
 
-#ifdef HAVE_CUPS_1_6
 /* Check how the driverless support is provided */
 int
 cfCheckDriverlessSupport(const char* uri)
@@ -256,10 +255,10 @@ cfGetPrinterAttributes5(http_t *http_printer,
     *driverless_info = CF_DRVLESS_FULL;
 
   /* Request printer properties via IPP, for example to
-      - generate a PPD file for the printer
-        (mainly driverless-capable printers)
-      - generally find capabilities, options, and default settinngs,
-      - printers status: Accepting jobs? Busy? With how many jobs? */
+      - Find capabilities, options, and default settings
+      - Printer's status: Accepting jobs? Busy? With how many jobs?
+      - Generate a PPD file for the printer
+        (mainly driverless-capable printers with CUPS 2.x) */
 
   cf_get_printer_attributes_log[0] = '\0';
 
@@ -662,8 +661,6 @@ cfippfindBasedURIConverter (const char *uri, int is_fax)
 }
 
 
-#endif /* HAVE_CUPS_1_6 */
-
 const char* /* O - Attribute value as string */
 cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
 						      as to respond
@@ -673,9 +670,10 @@ cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
 			 const char *attr_name)/* I - Attribute name */
 {
   ipp_attribute_t *attr;
-  char valuebuffer[65536],
-       printer_attr_name[256];
+  char printer_attr_name[256];
   int  i;
+  const char *res;
+
 
   if ((printer_attrs == NULL && job_attrs == NULL) || attr_name == NULL)
     return NULL;
@@ -684,41 +682,45 @@ cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
      as string */
   if (job_attrs == NULL ||
       (attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
-    valuebuffer[0] = '\0';
+    res = NULL;
   else
-    ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+    res = ippGetString(attr, 0, NULL);
 
   /* Check the printer properties if supplied to see whether the job attribute
      value is valid or if the job attribute was not supplied. Use printer
      default value of job attribute is invalid or not supplied 
      If no printer attributes are supplied (NULL), simply accept the job
      attribute value */
-  if (printer_attrs) {
-    if (valuebuffer[0]) {
+  if (printer_attrs)
+  {
+    if (res && res[0])
+    {
       /* Check whether value is valid according to printer attributes */
       snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
 	       "%s-supported", attr_name);
       if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
 				   IPP_TAG_ZERO)) != NULL) {
 	for (i = 0; i < ippGetCount(attr); i ++)
-	  if (strcasecmp(valuebuffer, ippGetString(attr, i, NULL)) == 0)
+	  if (strcasecmp(res, ippGetString(attr, i, NULL)) == 0)
 	    break; /* Job attribute value is valid */
-	if (i ==  ippGetCount(attr))
-	  valuebuffer[0] = '\0'; /* Job attribute value is not valid */
+	if (i == ippGetCount(attr))
+	  res = NULL; /* Job attribute value is not valid */
       }
     }
-    if (!valuebuffer[0]) {
+    if (!res || !res[0])
+    {
       /* Use default value from printer attributes */
       snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
 	       "%s-default", attr_name);
       if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
 				   IPP_TAG_ZERO)) != NULL)
-	ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
+	res = ippGetString(attr, 0, NULL);
     }
   }
 
-  return (valuebuffer[0] ? strdup(valuebuffer) : NULL);
+  return (res);
 }
+
 
 int                 /* O - 1: Success; 0: Error */
 cfIPPAttrIntValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
@@ -779,4 +781,1553 @@ cfIPPAttrIntValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
   if (retval == 1)
     *value = val;
   return retval;
+}
+
+
+int                 /* O - 1: Success; 0: Error */
+cfIPPAttrResolutionForPrinter(ipp_t *printer_attrs,/* I - Printer attributes */
+			      ipp_t *job_attrs,    /* I - Job attributes */
+			      const char *attr_name,/* I - Attribute name */
+			      int   *xres,         /* O - X resolution (dpi) */
+			      int   *yres)         /* O - Y resolution (dpi) */
+			      
+{
+  int i;
+  ipp_attribute_t *attr;
+  char printer_attr_name[256];
+  int  retval, x, y;
+  ipp_res_t units;
+
+  if ((printer_attrs == NULL && job_attrs == NULL))
+    return 0;
+
+  if (attr_name == NULL)
+    attr_name = "printer-resolution";
+
+  /* Check whether job got supplied the named attribute and read out its value
+     as integer */
+  if (job_attrs == NULL ||
+      (attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
+    retval = 0;
+  else
+  {
+    retval = 1;
+    x = ippGetResolution(attr, 0, &y, &units);
+    if (units == IPP_RES_PER_CM)
+    {
+      /* Get resolutions in dpi */
+      x = (int)((float)x * 2.54);
+      y = (int)((float)y * 2.54);
+    }
+  }
+
+  /* Check the printer properties if supplied to see whether the job attribute
+     value is valid or if the job attribute was not supplied. Use printer
+     default value of job attribute is invalid or not supplied 
+     If no printer attributes are supplied (NULL), simply accept the job
+     attribute value */
+  if (printer_attrs) {
+    if (retval == 1) {
+      /* Check whether value is valid according to printer attributes */
+      snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
+	       "%s-supported", attr_name);
+      if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
+				   IPP_TAG_RANGE)) != NULL)
+      {
+	for (i = 0; i < ippGetCount(attr); i ++)
+	{
+	  int sx, sy;
+	  ipp_res_t su;
+	  sx = ippGetResolution(attr, i, &sy, &su);
+	  if (su == IPP_RES_PER_CM)
+	  {
+	    /* Get resolutions in dpi */
+	    sx = (int)((float)sx * 2.54);
+	    sy = (int)((float)sy * 2.54);
+	  }
+	  if ((x - sx) * (x - sx) < 10 &&
+	      (y - sy) * (y - sy) < 10)
+	    break; /* Job attribute value is valid */
+	}
+	if (i == ippGetCount(attr))
+	  retval = 0; /* Job attribute value is not valid */
+      }
+    }
+    if (retval == 0) {
+      /* Use default value from printer attributes */
+      snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
+	       "%s-default", attr_name);
+      if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
+				   IPP_TAG_ZERO)) != NULL) {
+	retval = 1;
+	x = ippGetResolution(attr, 0, &y, &units);
+	if (units == IPP_RES_PER_CM)
+	{
+	  /* Get resolutions in dpi */
+	  x = (int)((float)x * 2.54);
+	  y = (int)((float)y * 2.54);
+	}
+      }
+    }
+  }
+
+  if (retval == 1)
+  {
+    *xres = x;
+    *yres = y;
+  }
+  return retval;
+}
+
+
+int
+cfIPPReverseOutput(ipp_t *printer_attrs,
+		   ipp_t *job_attrs)
+{
+  int i;
+  ipp_attribute_t *attr1, *attr2;
+  const char *val1, *val2;
+  char buf[1024];
+  int length;
+
+  // Figure out the right default output order from the IPP attributes...
+  if ((val1 = cfIPPAttrEnumValForPrinter(printer_attrs, job_attrs,
+					 "output-bin")) != NULL)
+  {
+    // Find corresponding "printer-output-tray" entry
+    if ((attr1 = ippFindAttribute(printer_attrs, "output-bin-supported",
+				  IPP_TAG_ZERO)) != NULL &&
+	(attr2 = ippFindAttribute(printer_attrs, "printer-output-tray",
+				  IPP_TAG_ZERO)) != NULL)
+    {
+      for (i = 0; i < ippGetCount(attr1) && i < ippGetCount(attr2); i ++)
+      {
+	if ((val2 = ippGetString(attr1, i, 0)) != NULL &&
+	    strcmp(val1, val2) == 0)
+	{
+	  if ((val2 =
+	       (const char *)ippGetOctetString(attr2, i, &length)) != NULL)
+	  {
+	    if (length > (int)(sizeof(buf) - 1))
+	      length = (int)(sizeof(buf) - 1);
+	    memcpy(buf, val2, length);
+	    buf[length] = '\0';
+	    if (strcasestr(buf, "stackingorder=firstToLast"))
+	      return (0);
+	    if (strcasestr(buf, "stackingorder=lastToFirst"))
+	      return (1);
+	    if (strcasestr(buf, "pagedelivery=faceDown"))
+	      return (0);
+	    if (strcasestr(buf, "pagedelivery=faceUp"))
+	      return (1);
+	  }
+	  break;
+	}
+      }
+    }
+    // Check whether output bin name is "face-down" or "face-up"
+    if (strcasestr(val1, "face-down"))
+      return (0);
+    if (strcasestr(val1, "face-up"))
+      return (1);
+  }
+
+  // No hint of whether to print in original or reverse order. Usually this
+  // happens for a fax-out queue, where one has no output bin. Use original
+  // order then.
+  return (0);
+}
+
+
+#ifndef HAVE_STRLCPY
+/*
+ * 'strlcpy()' - Safely copy two strings.
+ */
+
+size_t					/* O - Length of string */
+strlcpy(char       *dst,		/* O - Destination string */
+	const char *src,		/* I - Source string */
+	size_t      size)		/* I - Size of destination string buffer */
+{
+  size_t	srclen;			/* Length of source string */
+
+
+ /*
+  * Figure out how much room is needed...
+  */
+
+  size --;
+
+  srclen = strlen(src);
+
+ /*
+  * Copy the appropriate amount...
+  */
+
+  if (srclen > size)
+    srclen = size;
+
+  memmove(dst, src, srclen);
+  dst[srclen] = '\0';
+
+  return (srclen);
+}
+#endif /* !HAVE_STRLCPY */
+
+/*
+ * 'cfStrFormatd()' - Format a floating-point number.
+ */
+
+char *					/* O - Pointer to end of string */
+cfStrFormatd(char         *buf,	/* I - String */
+	     char         *bufend,	/* I - End of string buffer */
+	     double       number,	/* I - Number to format */
+	     struct lconv *loc)	/* I - Locale data */
+{
+  char		*bufptr,		/* Pointer into buffer */
+		temp[1024],		/* Temporary string */
+		*tempdec,		/* Pointer to decimal point */
+		*tempptr;		/* Pointer into temporary string */
+  const char	*dec;			/* Decimal point */
+  int		declen;			/* Length of decimal point */
+
+
+ /*
+  * Format the number using the "%.12f" format and then eliminate
+  * unnecessary trailing 0's.
+  */
+
+  snprintf(temp, sizeof(temp), "%.12f", number);
+  for (tempptr = temp + strlen(temp) - 1;
+       tempptr > temp && *tempptr == '0';
+       *tempptr-- = '\0');
+
+ /*
+  * Next, find the decimal point...
+  */
+
+  if (loc && loc->decimal_point) {
+    dec    = loc->decimal_point;
+    declen = (int)strlen(dec);
+  } else {
+    dec    = ".";
+    declen = 1;
+  }
+
+  if (declen == 1)
+    tempdec = strchr(temp, *dec);
+  else
+    tempdec = strstr(temp, dec);
+
+ /*
+  * Copy everything up to the decimal point...
+  */
+
+  if (tempdec) {
+    for (tempptr = temp, bufptr = buf;
+         tempptr < tempdec && bufptr < bufend;
+	 *bufptr++ = *tempptr++);
+
+    tempptr += declen;
+
+    if (*tempptr && bufptr < bufend) {
+      *bufptr++ = '.';
+
+      while (*tempptr && bufptr < bufend)
+        *bufptr++ = *tempptr++;
+    }
+
+    *bufptr = '\0';
+  } else {
+    strlcpy(buf, temp, (size_t)(bufend - buf + 1));
+    bufptr = buf + strlen(buf);
+  }
+
+  return (bufptr);
+}
+
+
+int
+cfCompareResolutions(void *resolution_a,
+		     void *resolution_b,
+		     void *user_data)
+{
+  cf_res_t *res_a = (cf_res_t *)resolution_a;
+  cf_res_t *res_b = (cf_res_t *)resolution_b;
+  int i, a, b;
+
+  /* Compare the pixels per square inch */
+  a = res_a->x * res_a->y;
+  b = res_b->x * res_b->y;
+  i = (a > b) - (a < b);
+  if (i) return i;
+
+  /* Compare how much the pixel shape deviates from a square, the
+     more, the worse */
+  a = 100 * res_a->y / res_a->x;
+  if (a > 100) a = 10000 / a; 
+  b = 100 * res_b->y / res_b->x;
+  if (b > 100) b = 10000 / b; 
+  return (a > b) - (a < b);
+}
+
+void *
+cfCopyResolution(void *resolution,
+		void *user_data)
+{
+  cf_res_t *res = (cf_res_t *)resolution;
+  cf_res_t *copy;
+
+  copy = (cf_res_t *)calloc(1, sizeof(cf_res_t));
+  if (copy) {
+    copy->x = res->x;
+    copy->y = res->y;
+  }
+
+  return copy;
+}
+
+void
+cfFreeResolution(void *resolution,
+		void *user_data)
+{
+  cf_res_t *res = (cf_res_t *)resolution;
+
+  if (res) free(res);
+}
+
+cups_array_t *
+cfNewResolutionArray()
+{
+  return cupsArrayNew3(cfCompareResolutions, NULL, NULL, 0,
+		       cfCopyResolution, cfFreeResolution);
+}
+
+cf_res_t *
+cfNewResolution(int x,
+		int y)
+{
+  cf_res_t *res = (cf_res_t *)calloc(1, sizeof(cf_res_t));
+  if (res) {
+    res->x = x;
+    res->y = y;
+  }
+  return res;
+}
+
+/* Read a single resolution from an IPP attribute, take care of
+   obviously wrong entries (printer firmware bugs), ignoring
+   resolutions of less than 60 dpi in at least one dimension and
+   fixing Brother's "600x2dpi" resolutions. */
+cf_res_t *
+cfIPPResToResolution(ipp_attribute_t *attr,
+		     int index)
+{
+  cf_res_t *res = NULL;
+  int x = 0, y = 0;
+  ipp_res_t units;
+
+  if (attr) {
+    ipp_tag_t tag = ippGetValueTag(attr);
+    int count = ippGetCount(attr);
+
+    if (tag == IPP_TAG_RESOLUTION && index < count) {
+      x = ippGetResolution(attr, index, &y, &units);
+      if (units == IPP_RES_PER_CM)
+      {
+	x = (int)(x * 2.54);
+	y = (int)(y * 2.54);
+      }
+      if (y == 2) y = x; /* Brother quirk ("600x2dpi") */
+      if (x >= 60 && y >= 60)
+	res = cfNewResolution(x, y);
+    }
+  }
+
+  return res;
+}
+
+cups_array_t *
+cfIPPAttrToResolutionArray(ipp_attribute_t *attr)
+{
+  cups_array_t *res_array = NULL;
+  cf_res_t *res;
+  int i;
+
+  if (attr) {
+    ipp_tag_t tag = ippGetValueTag(attr);
+    int count = ippGetCount(attr);
+
+    if (tag == IPP_TAG_RESOLUTION && count > 0) {
+      res_array = cfNewResolutionArray();
+      if (res_array) {
+	for (i = 0; i < count; i ++)
+	  if ((res = cfIPPResToResolution(attr, i)) != NULL) {
+	    if (cupsArrayFind(res_array, res) == NULL)
+	      cupsArrayAdd(res_array, res);
+	    cfFreeResolution(res, NULL);
+	  }
+      }
+      if (cupsArrayCount(res_array) == 0) {
+	cupsArrayDelete(res_array);
+	res_array = NULL;
+      }
+    }
+  }
+
+  return res_array;
+}
+
+/* Build up an array of common resolutions and most desirable default
+   resolution from multiple arrays of resolutions with an optional
+   default resolution.
+   Call this function with each resolution array you find as "new", and
+   in "current" an array of the common resolutions will be built up.
+   You do not need to create an empty array for "current" before
+   starting. Initialize it with NULL.
+   "current_default" holds the default resolution of the array "current".
+   It will get replaced by "new_default" if "current_default" is either
+   NULL or a resolution which is not in "current" any more.
+   "new" and "new_default" will be deleted/freed and set to NULL after
+   each, successful or unsuccssful operation.
+   Note that when calling this function the addresses of the pointers
+   to the resolution arrays and default resolutions have to be given
+   (call by reference) as all will get modified by the function. */
+
+int /* 1 on success, 0 on failure */
+cfJoinResolutionArrays(cups_array_t **current,
+		       cups_array_t **new_arr,
+		       cf_res_t **current_default,
+		       cf_res_t **new_default)
+{
+  cf_res_t *res;
+  int retval;
+
+  if (current == NULL || new_arr == NULL || *new_arr == NULL ||
+      cupsArrayCount(*new_arr) == 0) {
+    retval = 0;
+    goto finish;
+  }
+
+  if (*current == NULL) {
+    /* We are adding the very first resolution array, simply make it
+       our common resolutions array */
+    *current = *new_arr;
+    if (current_default) {
+      if (*current_default)
+	free(*current_default);
+      *current_default = (new_default ? *new_default : NULL);
+    }
+    return 1;
+  } else if (cupsArrayCount(*current) == 0) {
+    retval = 1;
+    goto finish;
+  }
+
+  /* Dry run: Check whether the two arrays have at least one resolution
+     in common, if not, do not touch the original array */
+  for (res = cupsArrayFirst(*current);
+       res; res = cupsArrayNext(*current))
+    if (cupsArrayFind(*new_arr, res))
+      break;
+
+  if (res) {
+    /* Reduce the original array to the resolutions which are in both
+       the original and the new array, at least one resolution will
+       remain. */
+    for (res = cupsArrayFirst(*current);
+	 res; res = cupsArrayNext(*current))
+      if (!cupsArrayFind(*new_arr, res))
+	cupsArrayRemove(*current, res);
+    if (current_default) {
+      /* Replace the current default by the new one if the current default
+	 is not in the array any more or if it is NULL. If the new default
+	 is not in the list or NULL in such a case, set the current default
+	 to NULL */
+      if (*current_default && !cupsArrayFind(*current, *current_default)) {
+	free(*current_default);
+	*current_default = NULL;
+      }
+      if (*current_default == NULL && new_default && *new_default &&
+	  cupsArrayFind(*current, *new_default))
+	*current_default = cfCopyResolution(*new_default, NULL);
+    }
+    retval = 1;
+  } else
+    retval = 0;
+
+ finish:
+  if (new_arr && *new_arr) {
+    cupsArrayDelete(*new_arr);
+    *new_arr = NULL;
+  }
+  if (new_default && *new_default) {
+    free(*new_default);
+    *new_default = NULL;
+  }
+  return retval;
+}
+
+
+/*
+ * 'pwg_compare_sizes()' - Compare two media sizes...
+ */
+
+static int				/* O - Result of comparison */
+pwg_compare_sizes(cups_size_t *a,	/* I - First media size */
+                  cups_size_t *b)	/* I - Second media size */
+{
+  return (strcmp(a->media, b->media));
+}
+
+
+/*
+ * 'pwg_copy_size()' - Copy a media size.
+ */
+
+static cups_size_t *			/* O - New media size */
+pwg_copy_size(cups_size_t *size)	/* I - Media size to copy */
+{
+  cups_size_t	*newsize = (cups_size_t *)calloc(1, sizeof(cups_size_t));
+					/* New media size */
+
+  if (newsize)
+    memcpy(newsize, size, sizeof(cups_size_t));
+
+  return (newsize);
+}
+
+
+int					/* O -  1: Requested page size supported
+					        2: Requested page size supported
+						   when rotated by 90 degrees
+					        0: No page size requested
+					       -1: Requested size unsupported */
+cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
+	            ipp_t *job_attrs,	    /* I - Job attributes */
+	            int num_options,        /* I - Number of options */
+	            cups_option_t *options, /* I - Options */
+		    cups_page_header2_t *header, /* I - Raster page header */
+		    int transverse_fit,     /* I - Accept transverse fit? */
+	            float *width,	    /* O - Width (in pt, 1/72 inches) */
+		    float *height,          /* O - Height */
+		    float *left,            /* O - Left margin */
+		    float *bottom,          /* O - Bottom margin */
+		    float *right,           /* O - Right margin */
+		    float *top,             /* O - Top margin */
+		    char *name,             /* O - Page size name */
+		    ipp_t **media_col_entry)/* O - media-col-database record of
+					           match */
+{
+  int           i;
+  const char    *attr_name;
+  char          size_name_buf[IPP_MAX_NAME + 1];
+  int           size_requested = 0;
+  const char * const media_size_attr_names[] = {
+    "Jmedia-col",
+    "Jmedia-size",
+    "Jmedia",
+    "JPageSize",
+    "JMediaSize",
+    "J", /* A raster header with media dimensions */
+    "jmedia-col",
+    "jmedia-size",
+    "jmedia",
+    "jPageSize",
+    "jMediaSize",
+    "j", /* A raster header with media dimensions */
+    "Dmedia-col-default",
+    "Dmedia-default",
+  };
+
+
+  if (name == NULL)
+    name = size_name_buf;
+  name[0] = '\0';
+
+  if (media_col_entry)
+    *media_col_entry = NULL;
+
+ /*
+  * Media from job_attrs and options, defaults from printer_attrs...
+  */
+
+  /* Go through all job attributes and options which could contain the
+     page size, afterwards go through the page size defaults in the
+     printer attributes */
+  for (i = 0;
+       i < sizeof(media_size_attr_names) / sizeof(media_size_attr_names[0]);
+       i ++)
+  {
+    ipp_attribute_t *attr = NULL;	/* Job attribute */
+    char	valstr[8192];		/* Attribute value string */
+    const char	*value = NULL;		/* Option value */
+    const char	*name_ptr = NULL;	/* Pointer to page size name */
+    int		num_media_col = 0;	/* Number of media-col values */
+    cups_option_t *media_col = NULL;	/* media-col values */
+    int         ipp_width = 0,
+                ipp_height = 0,
+                ipp_left = -1,
+                ipp_bottom = -1,
+                ipp_right = -1,
+                ipp_top = -1;
+
+    attr_name = media_size_attr_names[i];
+    if (*attr_name == 'J' ||
+	(transverse_fit && *attr_name == 'j')) /* Job attribute/option */
+    {
+      if (*(attr_name + 1) == '\0')
+      {
+	if (header)
+	{
+	  /* Raster header */
+	  if (header->cupsPageSize[0] > 0.0)
+	    ipp_width = (int)(header->cupsPageSize[0] * 2540.0 / 72.0);
+	  else if (header->PageSize[0] > 0)
+	    ipp_width = (int)(header->PageSize[0] * 2540 / 72);
+	  if (header->cupsPageSize[1] > 0.0)
+	    ipp_height = (int)(header->cupsPageSize[1] * 2540.0 / 72.0);
+	  else if (header->PageSize[1] > 0)
+	    ipp_height = (int)(header->PageSize[1] * 2540 / 72);
+	  if (header->ImagingBoundingBox[3] > 0)
+	  {
+	    if (header->cupsImagingBBox[0] >= 0.0)
+	      ipp_left = (int)(header->cupsImagingBBox[0] * 2540.0 / 72.0);
+	    else if (header->ImagingBoundingBox[0] >= 0)
+	      ipp_left = (int)(header->ImagingBoundingBox[0] * 2540 / 72);
+	    if (header->cupsImagingBBox[1] >= 0.0)
+	      ipp_bottom = (int)(header->cupsImagingBBox[1] * 2540.0 / 72.0);
+	    else if (header->ImagingBoundingBox[1] >= 0)
+	      ipp_bottom = (int)(header->ImagingBoundingBox[1] * 2540 / 72);
+	    if (header->cupsImagingBBox[2] > 0.0)
+	      ipp_right = ipp_width -
+	      (int)(header->cupsImagingBBox[2] * 2540.0 / 72.0);
+	    else if (header->ImagingBoundingBox[2] > 0)
+	      ipp_right = ipp_width -
+		(int)(header->ImagingBoundingBox[2] * 2540 / 72);
+	    if (header->cupsImagingBBox[3] > 0.0)
+	    ipp_top = ipp_height -
+	      (int)(header->cupsImagingBBox[3] * 2540.0 / 72.0);
+	    else if (header->ImagingBoundingBox[3] > 0)
+	      ipp_top = ipp_height -
+		(int)(header->ImagingBoundingBox[3] * 2540 / 72);
+	  }
+	  else
+	    ipp_left = ipp_bottom = ipp_right = ipp_top = 0;
+	}
+	else
+	  continue;
+      }
+      else if ((attr = ippFindAttribute(job_attrs, attr_name + 1,
+					IPP_TAG_ZERO)) != NULL)
+      {
+	/* String from IPP attribute */
+	ippAttributeString(attr, valstr, sizeof(valstr));
+	value = valstr;
+      }
+      else if ((value = cupsGetOption(attr_name + 1, num_options,
+				      options)) == NULL)
+	continue;
+    }
+    else if (*attr_name == 'D') /* Printer default */
+    {
+      if (*(attr_name + 1))
+      {
+	if ((attr = ippFindAttribute(printer_attrs, attr_name + 1,
+				   IPP_TAG_ZERO)) != NULL)
+        {
+	  /* String from IPP attribute */
+	  ippAttributeString(attr, valstr, sizeof(valstr));
+	  value = valstr;
+	}
+	else
+	  continue;
+      }
+      else
+	continue;
+    }
+    else
+      continue;
+
+    if (value)
+    {
+      if (*value == '{')
+      {
+       /*
+	* String is a dictionary -> "media-col" value...
+	*/
+
+	num_media_col = cupsParseOptions(value, 0, &media_col);
+
+	/* Actual size in dictionary? */
+	if ((value = cupsGetOption("media-size", num_media_col, media_col))
+	    != NULL)
+	{
+	  int		num_media_size;	/* Number of media-size values */
+	  cups_option_t *media_size;	/* media-size values */
+	  const char	*x_dimension,	/* x-dimension value */
+	                *y_dimension;	/* y-dimension value */
+
+	  num_media_size = cupsParseOptions(value, 0, &media_size);
+
+	  if ((x_dimension = cupsGetOption("x-dimension", num_media_size, media_size)) != NULL && (y_dimension = cupsGetOption("y-dimension", num_media_size, media_size)) != NULL)
+	  {
+	    ipp_width = atoi(x_dimension);
+	    ipp_height = atoi(y_dimension);
+	  }
+
+	  cupsFreeOptions(num_media_size, media_size);
+	}
+	/* Name in dictionary? Use only if actual dimensions are not supplied */
+	if ((ipp_width <= 0 || ipp_height <= 0) &&
+	    (name_ptr = cupsGetOption("media-size-name",
+				    num_media_col, media_col)) == NULL)
+	{
+	  cupsFreeOptions(num_media_col, media_col);
+	  continue;
+	}
+
+	/* Grab margins from media-col */
+	if ((value = cupsGetOption("media-left-margin",
+				   num_media_col, media_col))
+	    != NULL)
+	  ipp_left = atoi(value);
+	if ((value = cupsGetOption("media-bottom-margin",
+				   num_media_col, media_col))
+	    != NULL)
+	  ipp_bottom = atoi(value);
+	if ((value = cupsGetOption("media-right-margin",
+				   num_media_col, media_col))
+	    != NULL)
+	  ipp_right = atoi(value);
+	if ((value = cupsGetOption("media-top-margin",
+				   num_media_col, media_col))
+	    != NULL)
+	  ipp_top = atoi(value);
+      }
+      else
+      {
+       /*
+	* String is not dictionary, check also if it contains commas (list
+	* of media properties supplied via "media" CUPS option
+	*/
+
+	char *ptr;
+	name_ptr = value;
+	if (strchr(value, ','))
+	{
+	  /* Comma-separated list of media properties, supplied with "media"
+	     CUPS option */
+	  if (value != valstr)
+	  {
+	    /* Copy string for further manipulation */
+	    strlcpy(valstr, value, sizeof(valstr));
+	    value = valstr;
+	    name_ptr = value;
+	  }
+	  for (ptr = (char *)value; *ptr;)
+	  {
+	    ptr ++;
+	    if (*ptr == ',' || *ptr == '\0')
+	    {
+	      /* End of item name */
+	      if (*ptr == ',')
+	      {
+		*ptr = '\0';
+		ptr ++;
+	      }
+	      /* Find PWG media entry for the name, if we find one, the name
+		 is actually a page size name */
+	      if (pwgMediaForPWG(name_ptr) ||
+		  pwgMediaForPPD(name_ptr) ||
+		  pwgMediaForLegacy(name_ptr))
+		/* This is a page size name */
+		break;
+	      else if (*ptr)
+		/* Next item */
+		name_ptr = ptr;
+	      else
+		/* No further item */
+		name_ptr = NULL;
+	    }
+	  }
+	}
+      }
+    }
+
+    /* Get name from media */
+    if (name_ptr)
+    {
+      if (ipp_left == 0 && ipp_bottom == 0 &&
+	  ipp_right == 0 && ipp_top == 0)
+	snprintf(name, IPP_MAX_NAME, "%.29s.Borderless", name_ptr);
+      else
+	strlcpy(name, name_ptr, IPP_MAX_NAME);
+    }
+
+    /* Landscape/Transverse fit */
+    if (*attr_name == 'j') /* Only job attributes/options */
+    {
+      int swap;
+
+      swap = ipp_width;
+      ipp_width = ipp_height;
+      ipp_height = swap;
+
+      swap = ipp_left;
+      ipp_left = ipp_top;
+      ipp_top = ipp_right;
+      ipp_right = ipp_bottom;
+      ipp_bottom = swap;	
+    }
+    
+    cupsFreeOptions(num_media_col, media_col);
+
+    /* We have a valid request for a page size */
+    if (*attr_name == 'J' || *attr_name == 'j')
+      size_requested = 1;
+
+    /* Validate collected information */
+    /* If we have a size, we use the size as search term (name = "" then),
+       if we have no size but a name, use the name, always pass in margins
+       if available */
+    cfGenerateSizes(printer_attrs, CF_GEN_SIZES_SEARCH, NULL, NULL,
+		    &ipp_width, &ipp_height,
+		    &ipp_left, &ipp_bottom, &ipp_right, &ipp_top,
+		    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, name,
+		    media_col_entry);
+
+    /* Return resulting numbers */
+    if (ipp_width > 0 && ipp_height > 0 &&
+	ipp_left >= 0 && ipp_bottom >= 0 &&
+	ipp_right >= 0 && ipp_top >= 0)
+    {
+      if (width)
+	*width = ipp_width * 72.0 / 2540.0;
+      if (height)
+	*height = ipp_height * 72.0 / 2540.0;
+
+      if (left)
+	*left = ipp_left * 72.0 / 2540.0;
+      if (bottom)
+	*bottom = ipp_bottom * 72.0 / 2540.0;
+      if (right)
+	*right = ipp_right * 72.0 / 2540.0;
+      if (top)
+	*top = ipp_top * 72.0 / 2540.0;
+
+      return (*attr_name == 'J' ? 1 :
+	      (*attr_name == 'j' ? 2 :
+	       (size_requested ? -1 : 0)));
+    }
+    else if (media_col_entry)
+      *media_col_entry = NULL;
+  }
+  return (size_requested ? -1 : 0);
+}
+
+
+void
+cfGenerateSizes(ipp_t *response,
+		cf_gen_sizes_mode_t mode,
+		cups_array_t **sizes,
+		ipp_attribute_t **defattr,
+		int *width,
+		int *length,
+		int *left,
+		int *bottom,
+		int *right,
+		int *top,
+		int *min_width,
+		int *min_length,
+		int *max_width,
+		int *max_length,
+		int *custom_left,
+		int *custom_bottom,
+		int *custom_right,
+		int *custom_top,
+		char *size_name,
+		ipp_t **media_col_entry)
+{
+  ipp_attribute_t          *default_attr,
+                           *attr,                /* xxx-supported */
+                           *x_dim, *y_dim,       /* Media dimensions */
+                           *name;                /* Media size name */ 
+  ipp_t                    *media_col,           /* Media collection */
+                           *media_size;          /* Media size collection */
+  int                      i, x = 0, y = 0, count = 0;
+  pwg_media_t              *pwg, *pwg_by_name;   /* PWG media size */
+  int                      local_min_width, local_min_length,
+                           local_max_width, local_max_length;
+  int                      local_left, local_right, local_bottom, local_top;
+  ipp_attribute_t          *margin;  /* media-xxx-margin attribute */
+  const char               *psname;
+  const char               *entry_name;
+  char                     size_name_buf[IPP_MAX_NAME + 1] = "";
+  pwg_media_t              *search = NULL;
+  int                      search_width = 0,
+                           search_length = 0,
+                           search_left = -1,
+                           search_bottom = -1,
+                           search_right = -1,
+                           search_top = -1,
+                           borderless = 0;
+  long long                min_border_mismatch = LLONG_MAX,
+                           border_mismatch;
+
+
+  if (media_col_entry)
+    *media_col_entry = NULL;
+
+  if (custom_left == NULL)
+    custom_left = &local_left;
+  if ((attr = ippFindAttribute(response, "media-left-margin-supported",
+			       IPP_TAG_INTEGER)) != NULL) {
+    for (i = 1, *custom_left = ippGetInteger(attr, 0), count = ippGetCount(attr);
+	 i < count; i ++)
+      if (ippGetInteger(attr, i) < *custom_left)
+        *custom_left = ippGetInteger(attr, i);
+  } else
+    *custom_left = 635;
+
+  if (custom_bottom == NULL)
+    custom_bottom = &local_bottom;
+  if ((attr = ippFindAttribute(response, "media-bottom-margin-supported",
+			       IPP_TAG_INTEGER)) != NULL) {
+    for (i = 1, *custom_bottom = ippGetInteger(attr, 0), count = ippGetCount(attr);
+	 i < count; i ++)
+      if (ippGetInteger(attr, i) < *custom_bottom)
+        *custom_bottom = ippGetInteger(attr, i);
+  } else
+    *custom_bottom = 1270;
+
+  if (custom_right == NULL)
+    custom_right = &local_right;
+  if ((attr = ippFindAttribute(response, "media-right-margin-supported",
+			       IPP_TAG_INTEGER)) != NULL) {
+    for (i = 1, *custom_right = ippGetInteger(attr, 0), count = ippGetCount(attr);
+	 i < count; i ++)
+      if (ippGetInteger(attr, i) < *custom_right)
+        *custom_right = ippGetInteger(attr, i);
+  } else
+    *custom_right = 635;
+
+  if (custom_top == NULL)
+    custom_top = &local_top;
+  if ((attr = ippFindAttribute(response, "media-top-margin-supported",
+			       IPP_TAG_INTEGER)) != NULL) {
+    for (i = 1, *custom_top = ippGetInteger(attr, 0), count = ippGetCount(attr);
+	 i < count; i ++)
+      if (ippGetInteger(attr, i) < *custom_top)
+        *custom_top = ippGetInteger(attr, i);
+  } else
+    *custom_top = 1270;
+
+  if (mode != CF_GEN_SIZES_DEFAULT)
+  {
+    if (min_width == NULL)
+      min_width = &local_min_width;
+    *min_width = 0;
+    if (min_length == NULL)
+      min_length = &local_min_length;
+    *min_length = 0;
+    if (max_width == NULL)
+      max_width = &local_max_width;
+    *max_width = 0;
+    if (max_length == NULL)
+      max_length = &local_max_length;
+    *max_length = 0;
+  }
+
+  if (size_name == NULL)
+  {
+    size_name = size_name_buf;
+    size_name[0] = '\0';
+  }
+  if (mode == CF_GEN_SIZES_DEFAULT)
+    size_name[0] = '\0';
+  if (defattr == NULL && mode == CF_GEN_SIZES_DEFAULT)
+    defattr = &default_attr;
+  if (defattr &&
+      (*defattr = ippFindAttribute(response, "media-col-default",
+				   IPP_TAG_BEGIN_COLLECTION)) != NULL) {
+    if (mode == CF_GEN_SIZES_DEFAULT &&
+	(attr = ippFindAttribute(ippGetCollection(*defattr, 0), "media-size",
+				 IPP_TAG_BEGIN_COLLECTION)) != NULL) {
+      media_size = ippGetCollection(attr, 0);
+      x_dim      = ippFindAttribute(media_size, "x-dimension", IPP_TAG_INTEGER);
+      y_dim      = ippFindAttribute(media_size, "y-dimension", IPP_TAG_INTEGER);
+  
+      if ((margin = ippFindAttribute(ippGetCollection(*defattr, 0),
+				     "media-bottom-margin", IPP_TAG_INTEGER))
+	  != NULL)
+	local_bottom = ippGetInteger(margin, 0);
+      else
+	local_bottom = *custom_bottom;
+      if (bottom)
+	*bottom = local_bottom;
+
+      if ((margin = ippFindAttribute(ippGetCollection(*defattr, 0),
+				     "media-left-margin", IPP_TAG_INTEGER))
+	  != NULL)
+	local_left = ippGetInteger(margin, 0);
+      else
+	local_left = *custom_left;
+      if (left)
+	*left = local_left;
+
+      if ((margin = ippFindAttribute(ippGetCollection(*defattr, 0),
+				     "media-right-margin", IPP_TAG_INTEGER))
+	  != NULL)
+	local_right = ippGetInteger(margin, 0);
+      else
+	local_right = *custom_right;
+      if (right)
+	*right = local_right;
+
+      if ((margin = ippFindAttribute(ippGetCollection(*defattr, 0),
+				     "media-top-margin", IPP_TAG_INTEGER))
+	  != NULL)
+	local_top = ippGetInteger(margin, 0);
+      else
+	local_top = *custom_top;
+      if (top)
+	*top = local_top;
+
+      if (x_dim && y_dim) {
+	x = ippGetInteger(x_dim, 0);
+	y = ippGetInteger(y_dim, 0);
+	if (x > 0 && y > 0 &&
+	    (pwg = pwgMediaForSize(x, y)) != NULL) {
+	  psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
+	  if (local_bottom == 0 && local_left == 0 &&
+	      local_right == 0 && local_top == 0)
+	    snprintf(size_name, IPP_MAX_NAME, "%s.Borderless", psname);
+	  else
+	    strlcpy(size_name, psname, IPP_MAX_NAME);
+	}
+      }
+    }
+  }
+  if (mode == CF_GEN_SIZES_DEFAULT &&
+      (pwg =
+       pwgMediaForPWG(ippGetString(ippFindAttribute(response,
+						    "media-default",
+						    IPP_TAG_ZERO), 0,
+				   NULL))) != NULL) {
+    psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
+    strlcpy(size_name, psname, IPP_MAX_NAME);
+    if (x <= 0 || y <= 0) {
+      x = pwg->width;
+      y = pwg->length;
+    }
+  }
+
+  if (mode == CF_GEN_SIZES_DEFAULT)
+  {
+    /* Output the default page size dimensions, 0 if no valid size found */
+    if (!size_name[0])
+      strlcpy(size_name, "Unknown", IPP_MAX_NAME);
+    if (width)
+    {
+      if (x > 0)
+	*width = x;
+      else
+	*width = 0;
+    }
+    if (length)
+    {
+      if (y > 0)
+	*length = y;
+      else
+	*length = 0;
+    }
+  }
+  else
+  {
+    /* Find the dimensions for the page size name we got as search term */
+    char *ptr;
+    int is_transverse = (strcasestr(size_name, ".Transverse") ? 1 : 0);
+    if (strcasestr(size_name, ".Fullbleed") ||
+	strcasestr(size_name, ".Borderless") ||
+	strcasestr(size_name, ".FB"))
+      mode = CF_GEN_SIZES_SEARCH_BORDERLESS_ONLY;
+    if (size_name != size_name_buf)
+      strlcpy(size_name_buf, size_name, IPP_MAX_NAME);
+    if ((ptr = strchr(size_name_buf, '.')) != NULL &&
+	strncasecmp(size_name_buf, "Custom.", 7) != 0)
+      *ptr = '\0';
+    if ((search = pwgMediaForPWG(size_name_buf)) == NULL)
+      if ((search = pwgMediaForPPD(size_name_buf)) == NULL)
+	search = pwgMediaForLegacy(size_name_buf);
+    if (search != NULL) {
+      /* Set the appropriate dimensions */
+      if (is_transverse)
+      {
+	search_width = search->length;
+	search_length = search->width;
+      }
+      else
+      {
+	search_width = search->width;
+	search_length = search->length;
+      }
+    }
+    else
+    {
+      /* Set the dimensions if we search by dimensions */
+      if (width)
+	search_width = *width;
+      if (length)
+	search_length = *length;
+    }
+    if (search_width <= 0 || search_length <= 0)
+    {
+      /* No valid search dimensions, de-activate searching and set 0 as
+	 result */
+      mode = CF_GEN_SIZES_DEFAULT;
+      if (width)
+	*width = 0;
+      if (length)
+	*length = 0;
+    }
+    else
+    {
+      /* Check whether we have margin info so that we can search for a
+	 size with similar/the same margins, otherwise set the margins
+	 -1 to pick the first entry from the list which fits the size
+	 dimensions (if there are variants of a size, the first entry
+	 is usually the standard size) */
+      if (left && *left >= 0)
+	search_left = *left;
+      else
+	search_left = -1;
+      if (bottom && *bottom >= 0)
+	search_bottom = *bottom;
+      else
+	search_bottom = -1;
+      if (right && *right >= 0)
+	search_right = *right;
+      else
+	search_right = -1;
+      if (top && *top >= 0)
+	search_top = *top;
+      else
+	search_top = -1;
+    }
+  }
+
+  if (mode == CF_GEN_SIZES_DEFAULT &&
+      !sizes && !min_width && !max_width && !min_length && !max_length)
+    return;
+
+  if (sizes)
+    *sizes = cupsArrayNew3((cups_array_func_t)pwg_compare_sizes, NULL, NULL, 0,
+			   (cups_acopy_func_t)pwg_copy_size,
+			   (cups_afree_func_t)free);
+
+  if ((attr = ippFindAttribute(response, "media-col-database",
+			       IPP_TAG_BEGIN_COLLECTION)) != NULL) {
+    for (i = 0, count = ippGetCount(attr); i < count; i ++) {
+      cups_size_t temp, temp_by_name;   /* Current size */
+
+      media_col   = ippGetCollection(attr, i);
+      media_size  =
+	ippGetCollection(ippFindAttribute(media_col, "media-size",
+					  IPP_TAG_BEGIN_COLLECTION), 0);
+      /* These are the numeric paper dimensions explicitly mentioned
+	 in this media entry. if we were called in a retro-fitting
+	 setup via a ppdFilter...() wrapper filter function of libppd,
+	 these dimensions can deviate from the paper dimensions which
+	 the PWG-style page size name in the same entry suggests. In
+	 this case we match both sizes against the size requested for
+	 the job and consider the entry as matching if one of the two
+	 sizes matches. In this case the entry gets included in all
+	 entries which are selected by the closest fit of the margins.
+
+	 We do this as some PPD files (especially of HPLIP) contain
+	 page size entries which are variants of a standard size with
+	 the base name of a standard size (like "A4.Borderless", base
+	 name "A4") but different dimensions.
+
+	 Especially there are larger dimensions for borderless, for
+	 overspraying over the borders of the sheet so that there will
+	 be no faint white borders if the sheet is a little
+	 mis-aligned.
+
+	 So if such overspraying borderless size entry is present and
+	 has zero margins while the standard size entry has regular
+	 margins, this entry will get automatically selected if
+	 borderless printing (standard size name or dimensions plus
+	 zero margins) is selected.
+      */
+      x_dim       = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
+      y_dim       = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
+      // Move "if" for custom size parameters here 
+      //if (ippGetValueTag(x_dim) == IPP_TAG_RANGE ||
+      //	 ippGetValueTag(y_dim) == IPP_TAG_RANGE) {
+      pwg         = pwgMediaForSize(ippGetInteger(x_dim, 0),
+				    ippGetInteger(y_dim, 0));
+      name        = ippFindAttribute(media_col, "media-size-name",
+				     IPP_TAG_ZERO);
+      pwg_by_name = NULL;
+      if (name)
+      {
+	entry_name = ippGetString(name, 0, NULL);
+	if (entry_name)
+	  pwg_by_name = pwgMediaForPWG(entry_name);
+      }
+
+      if (pwg || pwg_by_name) {
+	if (!sizes && mode == CF_GEN_SIZES_DEFAULT)
+	  continue;
+
+	if (pwg)
+	{
+	  temp.width  = pwg->width;
+	  temp.length = pwg->length;
+	}
+	else
+	  temp.width = temp.length = 0;
+
+	if (pwg_by_name)
+	{
+	  temp_by_name.width  = pwg_by_name->width;
+	  temp_by_name.length = pwg_by_name->length;
+	}
+	else
+	  temp_by_name.width = temp_by_name.length = 0;
+
+	if ((margin = ippFindAttribute(media_col, "media-bottom-margin",
+				       IPP_TAG_INTEGER)) != NULL)
+	  temp.bottom = ippGetInteger(margin, 0);
+	else
+	  temp.bottom = *custom_bottom;
+
+	if ((margin = ippFindAttribute(media_col, "media-left-margin",
+				       IPP_TAG_INTEGER)) != NULL)
+	  temp.left = ippGetInteger(margin, 0);
+	else
+	  temp.left = *custom_left;
+
+	if ((margin = ippFindAttribute(media_col, "media-right-margin",
+				       IPP_TAG_INTEGER)) != NULL)
+	  temp.right = ippGetInteger(margin, 0);
+	else
+	  temp.right = *custom_right;
+
+	if ((margin = ippFindAttribute(media_col, "media-top-margin",
+				       IPP_TAG_INTEGER)) != NULL)
+	  temp.top = ippGetInteger(margin, 0);
+	else
+	  temp.top = *custom_top;
+
+	psname = (pwg_by_name ?
+		  (pwg_by_name->ppd != NULL ?
+		   pwg_by_name->ppd : pwg_by_name->pwg) :
+		  (pwg->ppd != NULL ? pwg->ppd : pwg->pwg));
+	if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 &&
+	    temp.top == 0)
+	{
+	  snprintf(temp.media, sizeof(temp.media), "%s.Borderless", psname);
+	  borderless = 1;
+	}
+	else
+	{
+	  strlcpy(temp.media, psname, sizeof(temp.media));
+	  borderless = 0;
+	}
+
+	/* Check whether this size matches our search criteria */
+	if (mode != CF_GEN_SIZES_DEFAULT &&
+	    min_border_mismatch > 0 &&
+	    search_width > 0 && search_length > 0 &&
+	    ((abs(search_width - temp_by_name.width) < 70 /* 2pt */ &&
+	      abs(search_length - temp_by_name.length) < 70) /* 2pt */ ||
+	     (abs(search_width - temp.width) < 70 /* 2pt */ &&
+	      abs(search_length - temp.length) < 70) /* 2pt */))
+	{
+	  /* Found size with the correct dimensions */
+	  int match = 0;
+	  if (mode == CF_GEN_SIZES_SEARCH_BORDERLESS_ONLY &&
+	      borderless == 1)
+	  {
+	    /* We search only for borderless sizes and have found a match */
+	    border_mismatch = 0;
+	    min_border_mismatch = 0;
+	    if (media_col_entry)
+	      *media_col_entry = media_col;
+	    match = 1;
+	  }
+	  else if (mode == CF_GEN_SIZES_SEARCH)
+	  {
+	    /* We search a size in general, borders are accepted. find the
+	       best match in terms of border size */
+	    border_mismatch =
+	      (long long)(search_left < 0 ? 1 :
+			  (abs(search_left - temp.left) + 1)) *
+	      (long long)(search_bottom < 0 ? 1 :
+			  (abs(search_bottom - temp.bottom) + 1)) *
+	      (long long)(search_right < 0 ? 1 :
+			  (abs(search_right - temp.right) + 1)) *
+	      (long long)(search_top < 0 ? 1 :
+			  (abs(search_top - temp.top) + 1));
+	    if (border_mismatch < min_border_mismatch)
+	    {
+	      min_border_mismatch = border_mismatch;
+	      if (media_col_entry)
+		*media_col_entry = media_col;
+	      match = 1;
+	    }
+	  }
+	  if (match)
+	  {
+	    if (width)
+	      *width = temp.width;
+	    if (length)
+	      *length = temp.length;
+	    if (left)
+	      *left = temp.left;
+	    if (bottom)
+	      *bottom = temp.bottom;
+	    if (right)
+	      *right = temp.right;
+	    if (top)
+	      *top = temp.top;
+	    strlcpy(size_name, temp.media, IPP_MAX_NAME);
+	  }
+	}
+
+	/* Add size to list */
+	if (sizes && !cupsArrayFind(*sizes, &temp))
+	  cupsArrayAdd(*sizes, &temp);
+
+      } else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE ||
+		 ippGetValueTag(y_dim) == IPP_TAG_RANGE) {
+	/*
+	 * Custom size - record the min/max values...
+	 */
+
+	int lower, upper;   /* Range values */
+
+	if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
+	  lower = ippGetRange(x_dim, 0, &upper);
+	else
+	  lower = upper = ippGetInteger(x_dim, 0);
+
+	if (min_width && lower < *min_width)
+	  *min_width = lower;
+	if (max_width && upper > *max_width)
+	  *max_width = upper;
+
+	if (ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+	  lower = ippGetRange(y_dim, 0, &upper);
+	else
+	  lower = upper = ippGetInteger(y_dim, 0);
+
+	if (min_length && lower < *min_length)
+	  *min_length = lower;
+	if (max_length && upper > *max_length)
+	  *max_length = upper;
+      }
+    }
+    if (min_border_mismatch < LLONG_MAX)
+    {
+      /* If we have found a matching page size in the media-col-database
+	 we stop searching */
+      min_border_mismatch = 0;
+    }
+  }
+  if ((attr = ippFindAttribute(response, "media-size-supported",
+			       IPP_TAG_BEGIN_COLLECTION)) != NULL) {
+    for (i = 0, count = ippGetCount(attr); i < count; i ++) {
+      cups_size_t temp;   /* Current size */
+
+      media_size  = ippGetCollection(attr, i);
+      x_dim       = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
+      y_dim       = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
+      pwg         = pwgMediaForSize(ippGetInteger(x_dim, 0),
+				    ippGetInteger(y_dim, 0));
+
+      if (pwg) {
+	if (!sizes && mode == CF_GEN_SIZES_DEFAULT)
+	  continue;
+
+	temp.width  = pwg->width;
+	temp.length = pwg->length;
+	temp.left   = *custom_left;
+	temp.bottom = *custom_bottom;
+	temp.right  = *custom_right;
+	temp.top    = *custom_top;
+
+	psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
+	if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 &&
+	    temp.top == 0)
+	{
+	  snprintf(temp.media, sizeof(temp.media), "%s.Borderless", psname);
+	  borderless = 1;
+	}
+	else
+	{
+	  strlcpy(temp.media, psname, sizeof(temp.media));
+	  borderless = 0;
+	}
+
+	/* Check whether this size matches our search criteria */
+	if (mode != CF_GEN_SIZES_DEFAULT &&
+	    min_border_mismatch > 0 &&
+	    search_width > 0 && search_length > 0 &&
+	    abs(search_width - temp.width) < 70 /* 2pt */ &&
+	    abs(search_length - temp.length) < 70 /* 2pt */)
+	{
+	  /* Found size with the correct dimensions */
+	  if (mode != CF_GEN_SIZES_SEARCH_BORDERLESS_ONLY ||
+	      borderless == 1)
+	  {
+	    /* We accept the entry just by the size dimensions as
+	       "media-size-supported" has no per-size margin info */
+	    if (width)
+	      *width = temp.width;
+	    if (length)
+	      *length = temp.length;
+	    if (left)
+	      *left = temp.left;
+	    if (bottom)
+	      *bottom = temp.bottom;
+	    if (right)
+	      *right = temp.right;
+	    if (top)
+	      *top = temp.top;
+	    strlcpy(size_name, temp.media, IPP_MAX_NAME);
+	    /* Found it, stop searching */
+	    min_border_mismatch = 0;
+	  }
+	}
+
+	if (sizes && !cupsArrayFind(*sizes, &temp))
+	  cupsArrayAdd(*sizes, &temp);
+      } else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE ||
+		 ippGetValueTag(y_dim) == IPP_TAG_RANGE) {
+	/*
+	 * Custom size - record the min/max values...
+	 */
+
+	int lower, upper;   /* Range values */
+
+	if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
+	  lower = ippGetRange(x_dim, 0, &upper);
+	else
+	  lower = upper = ippGetInteger(x_dim, 0);
+
+	if (min_width && lower < *min_width)
+	  *min_width = lower;
+	if (max_width && upper > *max_width)
+	  *max_width = upper;
+
+	if (ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+	  lower = ippGetRange(y_dim, 0, &upper);
+	else
+	  lower = upper = ippGetInteger(y_dim, 0);
+
+	if (min_length && lower < *min_length)
+	  *min_length = lower;
+	if (max_length && upper > *max_length)
+	  *max_length = upper;
+      }
+    }
+  }
+  if ((attr = ippFindAttribute(response, "media-supported", IPP_TAG_ZERO))
+      != NULL) {
+    for (i = 0, count = ippGetCount(attr); i < count; i ++) {
+      const char  *pwg_size = ippGetString(attr, i, NULL);
+      /* PWG size name */
+      cups_size_t temp, *temp2; /* Current size, found size */
+
+      if ((pwg = pwgMediaForPWG(pwg_size)) != NULL) {
+        if (strstr(pwg_size, "_max_") || strstr(pwg_size, "_max.")) {
+          if (max_width && pwg->width > *max_width)
+            *max_width = pwg->width;
+          if (max_length && pwg->length > *max_length)
+            *max_length = pwg->length;
+        } else if (strstr(pwg_size, "_min_") || strstr(pwg_size, "_min.")) {
+          if (min_width && pwg->width < *min_width)
+            *min_width = pwg->width;
+          if (min_length && pwg->length < *min_length)
+            *min_length = pwg->length;
+        } else {
+	  if (!sizes && mode == CF_GEN_SIZES_DEFAULT)
+	    continue;
+
+	  temp.width  = pwg->width;
+	  temp.length = pwg->length;
+	  temp.left   = *custom_left;
+	  temp.bottom = *custom_bottom;
+	  temp.right  = *custom_right;
+	  temp.top    = *custom_top;
+
+	  psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
+	  if (temp.bottom == 0 && temp.left == 0 && temp.right == 0 &&
+	      temp.top == 0)
+	    snprintf(temp.media, sizeof(temp.media), "%s.Borderless", psname);
+	  else
+	    strlcpy(temp.media, psname, sizeof(temp.media));
+
+	  /* Add the printer's original IPP name to an already found size */
+	  if (sizes)
+	  {
+	    if ((temp2 = cupsArrayFind(*sizes, &temp)) != NULL) {
+	      snprintf(temp2->media + strlen(temp2->media),
+		       sizeof(temp2->media) - strlen(temp2->media),
+		       " %s", pwg_size);
+	      /* Check if we have also a borderless version of the size and add
+		 the original IPP name also there */
+	      snprintf(temp.media, sizeof(temp.media), "%s.Borderless", psname);
+	      if ((temp2 = cupsArrayFind(*sizes, &temp)) != NULL)
+		snprintf(temp2->media + strlen(temp2->media),
+			 sizeof(temp2->media) - strlen(temp2->media),
+			 " %s", pwg_size);
+	    } else
+	      cupsArrayAdd(*sizes, &temp);
+	  }
+	}
+      }
+    }
+  }
+  if (mode != CF_GEN_SIZES_DEFAULT && min_border_mismatch > 0 &&
+      search_width > 0 && search_length > 0 &&
+      *min_width >= 0 && *min_length >= 0 &&
+      *max_width >= *min_width && *max_length >= *min_length &&
+      *custom_left >= 0 && *custom_bottom >= 0 &&
+      *custom_right >= 0 && *custom_top >= 0)
+  {
+    /* Do we have support for a custom page size and have valid size ranges for
+       it? Check whether the size we are searching for can go as custom size */
+    if (search_width >= *min_width - 70 /* 2pt */ &&
+	search_width <= *max_width + 70 /* 2pt */ &&
+	search_length >= *min_length - 70 /* 2pt */ &&
+	search_length <= *max_length + 70 /* 2pt */)
+    {
+      if (width)
+	*width = (search_width < *min_width ? *min_width :
+		  (search_width > *max_width ? *max_width : search_width));
+      if (length)
+	*length = (search_length < *min_length ? *min_length :
+		   (search_length > *max_length ? *max_length : search_length));
+      if (left) *left = *custom_left;
+      if (bottom) *bottom = *custom_bottom;
+      if (right) *right = *custom_right;
+      if (top) *top = *custom_top;
+      min_border_mismatch = 0;
+    }
+  }
+  if (mode != CF_GEN_SIZES_DEFAULT && min_border_mismatch > 0)
+  {
+    /* Size not found */
+    if (width) *width = 0;
+    if (length) *length = 0;
+    if (left) *left = -1;
+    if (bottom) *bottom = -1;
+    if (right) *right = -1;
+    if (top) *top = -1;
+  }
 }

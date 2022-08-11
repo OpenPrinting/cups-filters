@@ -25,6 +25,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <signal.h>
 
 /*
@@ -74,7 +75,8 @@ main(int  argc,	   /* I - Number of command-line arguments */
   * Fire up the cfFilterRasterToPS() filter function
   */
 
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterRasterToPS, NULL, &JobCanceled);
+  ret = ppdFilterCUPSWrapper(argc, argv, ppdFilterRasterToPS, NULL,
+			     &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: rastertops filter function failed.\n");

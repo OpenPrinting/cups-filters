@@ -26,7 +26,6 @@ extern "C" {
 #  include <time.h>
 #  include <math.h>
 #  include "filter.h"
-#  include <ppd/ppd.h>
 
 #  if defined(WIN32) || defined(__EMX__)
 #    include <io.h>
@@ -122,18 +121,6 @@ extern const unsigned char
  */
 
 /*
- * Attribute function...
- */
-
-extern ppd_attr_t	*cfFindAttr(ppd_file_t *ppd, const char *name,
-				    const char *colormodel,
-				    const char *media,
-				    const char *resolution,
-				    char *spec, int specsize,
-				    cf_logfunc_t log,
-				    void *ld);
-			       
-/*
  * Byte checking functions...
  */
 
@@ -158,13 +145,6 @@ extern void		cfDitherDelete(cf_dither_t *);
 extern cf_lut_t		*cfLutNew(int num_vals, const float *vals,
 				  cf_logfunc_t log, void *ld);
 extern void		cfLutDelete(cf_lut_t *lut);
-extern cf_lut_t		*cfLutLoad(ppd_file_t *ppd,
-				   const char *colormodel,
-				   const char *media,
-				   const char *resolution,
-				   const char *ink,
-				   cf_logfunc_t log,
-				   void *ld);
 
 
 /*
@@ -194,12 +174,6 @@ extern void		cfRGBDoGray(cf_rgb_t *rgb,
 extern void		cfRGBDoRGB(cf_rgb_t *rgb,
 				   const unsigned char *input,
 				   unsigned char *output, int num_pixels);
-extern cf_rgb_t		*cfRGBLoad(ppd_file_t *ppd,
-				   const char *colormodel,
-				   const char *media,
-				   const char *resolution,
-				   cf_logfunc_t log,
-				   void *ld);
 extern cf_rgb_t		*cfRGBNew(int num_samples, cf_sample_t *samples,
 				  int cube_size, int num_channels);
 
@@ -221,13 +195,7 @@ extern void		cfCMYKDoGray(const cf_cmyk_t *cmyk,
 extern void		cfCMYKDoRGB(const cf_cmyk_t *cmyk,
 				    const unsigned char *input,
 				    short *output, int num_pixels);
-extern cf_cmyk_t	*cfCMYKLoad(ppd_file_t *ppd,
-				    const char *colormodel,
-				    const char *media,
-				    const char *resolution,
-				    cf_logfunc_t log,
-				    void *ld);
-  extern void		cfCMYKSetBlack(cf_cmyk_t *cmyk,
+extern void		cfCMYKSetBlack(cf_cmyk_t *cmyk,
 				       float lower, float upper,
 				       cf_logfunc_t log, void *ld);
 extern void		cfCMYKSetCurve(cf_cmyk_t *cmyk, int channel,
@@ -238,7 +206,7 @@ extern void		cfCMYKSetGamma(cf_cmyk_t *cmyk, int channel,
 				       float gamval, float density,
 				       cf_logfunc_t log, void *ld);
 extern void		cfCMYKSetInkLimit(cf_cmyk_t *cmyk, float limit);
-  extern void		cfCMYKSetLtDk(cf_cmyk_t *cmyk, int channel,
+extern void		cfCMYKSetLtDk(cf_cmyk_t *cmyk, int channel,
 				      float light, float dark,
 				      cf_logfunc_t log, void *ld);
 

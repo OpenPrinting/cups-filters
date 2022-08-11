@@ -24,14 +24,15 @@
 #include "filter.h"
 #include <cups/raster.h>
 #include <cups/cups.h>
-#include <ppd/ppd.h>
 #include <errno.h>
 #include <qpdf/QPDF.hh>
 #include <qpdf/QPDFObjectHandle.hh>
 #include "image.h"
 #include "bitmap.h"
 #include "raster.h"
-#include <cupsfilters/filter.h>
+#include "filter.h"
+#include "ipp.h"
+
 
 
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
@@ -45,7 +46,6 @@ typedef struct pclmtoraster_data_s
   int numcolors = 0;
   int rowsize = 0;
   cups_page_header2_t header;
-  ppd_file_t *ppd = 0;
   char pageSizeRequested[64];
   int bi_level = 0;
   /* image swapping */
@@ -85,13 +85,10 @@ parse_opts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
   int			num_options = 0;
   cups_option_t*	options = NULL;
   const char*		t = NULL;
-  ppd_attr_t*		attr;
   const char		*val;
   cf_logfunc_t	log = data->logfunc;
   void			*ld = data->logdata;
-  ppd_file_t		*ppd = pclmtoraster_data->ppd;
   cups_page_header2_t	*header = &(pclmtoraster_data->header);
-  ipp_t                 *printer_attrs = data->printer_attrs;
   cups_cspace_t         cspace = (cups_cspace_t)(-1);
 
 
@@ -103,157 +100,72 @@ parse_opts(cf_filter_data_t *data, cf_filter_out_format_t outformat,
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
-  if (ppd)
+  t = cupsGetOption("media-class", num_options, options);
+  if (t == NULL)
+    t = cupsGetOption("MediaClass", num_options, options);
+  if (t != NULL)
   {
-    if ((attr = ppdFindAttr(ppd,"PWGRaster",0)) != 0 &&
-	(!strcasecmp(attr->value, "true")
-	 || !strcasecmp(attr->value, "on") ||
-         !strcasecmp(attr->value, "yes")))
+    if (strcasestr(t, "pwg"))
       pclmtoraster_data->outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
-  }
-  else
-  {
-    if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "cfFilterPCLmToRaster: PPD file is not specified.");
-
-    t = cupsGetOption("media-class", num_options, options);
-    if (t == NULL)
-      t = cupsGetOption("MediaClass", num_options, options);
-    if (t != NULL)
-    {
-      if (strcasestr(t, "pwg"))
-	pclmtoraster_data->outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
-    }
   }
 
   cfRasterPrepareHeader(header, data, outformat, outformat, 0, &cspace);
 
-  if (ppd)
+  if (header->Duplex)
   {
-    if (header->Duplex)
+    int backside;
+    /* analyze options relevant to Duplex */
+    /* APDuplexRequiresFlippedMargin */
+    enum {
+      FM_NO,
+      FM_FALSE,
+      FM_TRUE
+    } flippedMargin = FM_NO;
+
+    backside = cfGetBackSideOrientation(data);
+
+    if (backside >= 0)
     {
-      /* analyze options relevant to Duplex */
-      const char *backside = "";
-      /* APDuplexRequiresFlippedMargin */
-      enum {
-        FM_NO, FM_FALSE, FM_TRUE
-      } flippedMargin = FM_NO;
-
-      attr = ppdFindAttr(ppd,"cupsBackSide",NULL);
-      if (attr != NULL && attr->value != NULL)
-      {
-        ppd->flip_duplex = 0;
-        backside = attr->value;
-      }
-      else if (ppd->flip_duplex)
-      {
-        backside = "Rotated"; /* compatible with Max OS and GS 8.71 */
-      }
-
-      attr = ppdFindAttr(ppd,"APDuplexRequiresFlippedMargin",NULL);
-      if (attr != NULL && attr->value != NULL)
-      {
-        if (strcasecmp(attr->value,"true") == 0)
-	{
-          flippedMargin = FM_TRUE;
-        }
-	else
-	{
-          flippedMargin = FM_FALSE;
-        }
-      }
-      if (strcasecmp(backside,"ManualTumble") == 0 && header->Tumble)
-      {
-        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
-	  true;
-        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
-	  true;
-        if (flippedMargin == FM_TRUE)
-	{
-          pclmtoraster_data->swap_margin_y = false;
-        }
-      }
-      else if (strcasecmp(backside,"Rotated") == 0 && !header->Tumble)
-      {
-        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
-	  true;
-        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
-	  true;
-        if (flippedMargin == FM_TRUE)
-	{
-          pclmtoraster_data->swap_margin_y = false;
-        }
-      }
-      else if (strcasecmp(backside,"Flipped") == 0)
-      {
-        if (header->Tumble)
-	{
-          pclmtoraster_data->swap_image_x = true;
-          pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
-	    true;
-        }
-	else
-	{
-          pclmtoraster_data->swap_image_y = true;
-        }
-        if (flippedMargin == FM_FALSE)
-	{
-          pclmtoraster_data->swap_margin_y =
-	    !(pclmtoraster_data->swap_margin_y);
-        }
-      }
-    }
-  } else {
-    int backside = cfGetBackSideAndHeaderDuplex(printer_attrs, header);
-    if(header->Duplex){
-      /* analyze options relevant to Duplex */
-      /* APDuplexRequiresFlippedMargin */
-      enum {
-        FM_NO, FM_FALSE, FM_TRUE
-      } flippedMargin = FM_NO;
+      flippedMargin = (backside & 16 ? FM_TRUE :
+		       (backside & 8 ? FM_FALSE :
+			FM_NO));
+      backside &= 7;
 
       if (backside==CF_BACKSIDE_MANUAL_TUMBLE && header->Tumble)
       {
-        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
+	pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
 	  true;
-        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
+	pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
 	  true;
-        if (flippedMargin == FM_TRUE)
-	{
-          pclmtoraster_data->swap_margin_y = false;
-        }
+	if (flippedMargin == FM_TRUE)
+	  pclmtoraster_data->swap_margin_y = false;
       }
       else if (backside==CF_BACKSIDE_ROTATED && !header->Tumble)
       {
-        pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
+	pclmtoraster_data->swap_image_x = pclmtoraster_data->swap_image_y =
 	  true;
-        pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
+	pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
 	  true;
-        if (flippedMargin == FM_TRUE)
-	{
-          pclmtoraster_data->swap_margin_y = false;
-        }
+	if (flippedMargin == FM_TRUE)
+	  pclmtoraster_data->swap_margin_y = false;
       }
       else if (backside==CF_BACKSIDE_FLIPPED)
       {
-        if (header->Tumble)
+	if (header->Tumble)
 	{
-          pclmtoraster_data->swap_image_x = true;
-          pclmtoraster_data->swap_margin_x = pclmtoraster_data->swap_margin_y =
-	    true;
-        }
+	  pclmtoraster_data->swap_image_x = true;
+	  pclmtoraster_data->swap_margin_x =
+	    pclmtoraster_data->swap_margin_y = true;
+	}
 	else
-	{
-          pclmtoraster_data->swap_image_y = true;
-        }
-        if (flippedMargin == FM_FALSE)
-	{
-          pclmtoraster_data->swap_margin_y =
+	  pclmtoraster_data->swap_image_y = true;
+	if (flippedMargin == FM_FALSE)
+	  pclmtoraster_data->swap_margin_y =
 	    !(pclmtoraster_data->swap_margin_y);
-        }
       }
     }
   }
+
   if ((val = cupsGetOption("print-color-mode", num_options, options)) != NULL
                            && !strncasecmp(val, "bi-level", 8))
     pclmtoraster_data->bi_level = 1;
@@ -834,7 +746,7 @@ out_page(cups_raster_t*	 raster, 	/* I - Raster stream */
   long long		rotate = 0,
 			height,
 			width;
-  double		paperdimensions[2], margins[4], l, swap;
+  float			paperdimensions[2], margins[4], l, swap;
   int			bufsize = 0, pixel_count = 0,
 			temp = 0;
   float 		mediaBox[4];
@@ -846,7 +758,6 @@ out_page(cups_raster_t*	 raster, 	/* I - Raster stream */
   QPDFObjectHandle	image;
   QPDFObjectHandle	imgdict;
   QPDFObjectHandle	colorspace_obj;
-  ppd_file_t		*ppd = data->ppd;
 
   // Check if page is rotated.
   if (page.getKey("/Rotate").isInteger())
@@ -879,18 +790,17 @@ out_page(cups_raster_t*	 raster, 	/* I - Raster stream */
       data->header.PageSize[1] = (unsigned)l;
   }
 
-  // Adjust header page size and margins according to the ppd file.
-  if (ppd)
+  memset(paperdimensions, 0, sizeof(paperdimensions));
+  memset(margins, 0, sizeof(margins));
+  if (filter_data != NULL && (filter_data->printer_attrs) != NULL)
   {
-    ppdRasterMatchPPDSize(&(data->header), ppd, margins, paperdimensions, NULL,
-			  NULL);
-    if (data->outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER)
-      memset(margins, 0, sizeof(margins));
-  }
-  else if(filter_data!=NULL &&(filter_data->printer_attrs)!=NULL)
-  {
-    cfRasterMatchIPPSize(&(data->header), filter_data, margins, paperdimensions, NULL, NULL);
-    if (data->outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER)
+    cfGetPageDimensions(filter_data->printer_attrs, filter_data->job_attrs,
+			filter_data->num_options, filter_data->options,
+			&(data->header), 0,
+			&(paperdimensions[0]), &(paperdimensions[1]),
+			&(margins[0]), &(margins[1]),
+			&(margins[2]), &(margins[3]), NULL, NULL);
+    if (data->outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER)
       memset(margins, 0, sizeof(margins));
   }
   else
