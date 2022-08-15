@@ -592,11 +592,9 @@ test1284_SOURCES = \
 	cupsfilters/test1284.c
 test1284_LDADD = \
 	libcupsfilters.la \
-	libppd.la \
 	$(CUPS_LIBS)
 test1284_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 
 # =========
