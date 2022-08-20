@@ -287,8 +287,6 @@ ppdLoadAttributes(
   int		margins[10];		/* media-xxx-margin-supported values */
   int		xres,			/* Default horizontal resolution */
 		yres;			/* Default vertical resolution */
-  int           urf_supported_found;
-  int           pwg_raster_found;
   int           is_texttotext;
   int		num_items;		/* Number of IPP attribute values */
   const char	*items[20];		/* IPP attribute values */
@@ -363,18 +361,6 @@ ppdLoadAttributes(
     "Cyan Ink",
     "Magenta Ink",
     "Yellow Ink"
-  };
-  static const char * const pwg_raster_document_type_supported[] =
-  {
-    "black_1",
-    "sgray_8"
-  };
-  static const char * const pwg_raster_document_type_supported_color[] =
-  {
-    "black_1",
-    "sgray_8",
-    "srgb_8",
-    "srgb_16"
   };
   static const char * const sides_supported[] =
   {					/* sides-supported values */
@@ -528,8 +514,6 @@ ppdLoadAttributes(
   * printer IPP attributes
   */
 
-  urf_supported_found = 0;
-  pwg_raster_found = 0;
   for (i = 0; i < ppd->num_attrs; i ++)
   {
     ppd_attr = ppd->attrs[i];
@@ -542,14 +526,6 @@ ppdLoadAttributes(
     {
       /* Convert PPD-style names into IPP-style names */
       ppdPwgUnppdizeName(ppd_attr->name + 4, item_buf, sizeof(item_buf), NULL);
-      if (strcasecmp(item_buf, "urf-supported") == 0)
-	/* Explicit urf-supported string in the PPD, so we do not need to
-	   generate one later */
-	urf_supported_found = 1;
-      if (strncasecmp(item_buf, "pwg-raster-", 11) == 0)
-	/* Explicit pwg-raster-... attributes in the PPD, so we do not need to
-	   generate them later */
-	pwg_raster_found = 1;
       /* Make array from comma-separated list */
       strncpy(buf, ppd_attr->value, sizeof(buf) - 1);
       num_items = 0;
@@ -586,50 +562,6 @@ ppdLoadAttributes(
 	/* General */
 	ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, item_buf, num_items, NULL, items);
     }
-  }
-
- /*
-  * Generate urf-supported entry for the printer IPP attributes, if there
-  * is no such entry in the PPD file (from driverless PPD auto-generator
-  */
-
-  if (urf_supported_found == 0 &&
-      cupsArrayFind(docformats, (void *)"image/urf"))
-  {
-    snprintf(item_buf, sizeof(item_buf), "RS%d", yres < xres ? yres : xres);
-
-    num_items = 0;
-    items[num_items ++] = "V1.4";
-    items[num_items ++] = "CP1";
-    items[num_items ++] = item_buf;
-    items[num_items ++] = "W8";
-    if (pc->sides_2sided_long)
-      items[num_items ++] = "DM1";
-    if (ppd->color_device)
-      items[num_items ++] = "SRGB24";
-
-    /* urf-supported IPP attribute */
-    ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "urf-supported", num_items, NULL, items);
-  }
-
- /*
-  * Generate pwg-raster-document-xxx-supported entries for the printer
-  * IPP attributes, if there is no such entry in the PPD file (from
-  * driverless PPD auto-generator
-  */
-
-  if (pwg_raster_found == 0 &&
-      cupsArrayFind(docformats, (void *)"image/pwg-raster"))
-  {
-    ippAddResolution(attrs, IPP_TAG_PRINTER, "pwg-raster-document-resolution-supported", IPP_RES_PER_INCH, xres, yres);
-
-    if (pc->sides_2sided_long)
-      ippAddString(attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_KEYWORD), "pwg-raster-document-sheet-back", NULL, "normal");
-
-    if (ppd->color_device)
-      ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_KEYWORD), "pwg-raster-document-type-supported", (int)(sizeof(pwg_raster_document_type_supported_color) / sizeof(pwg_raster_document_type_supported_color[0])), NULL, pwg_raster_document_type_supported_color);
-    else
-      ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_KEYWORD), "pwg-raster-document-type-supported", (int)(sizeof(pwg_raster_document_type_supported) / sizeof(pwg_raster_document_type_supported[0])), NULL, pwg_raster_document_type_supported);
   }
 
   /* Fax out PPD? */
