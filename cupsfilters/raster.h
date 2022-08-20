@@ -68,12 +68,6 @@ extern int              cfRasterSetColorSpace(cups_page_header2_t *h,
 extern int		cfJoinJobOptionsAndAttrs(cf_filter_data_t *data,
 						 int num_options,
 						 cups_option_t **options);
-extern int		cfRasterMatchIPPSize(cups_page_header2_t *header,
-					     cf_filter_data_t *data,
-					     double margins[4],
-					     double dimensions[2],
-					     int *image_fit,
-					     int *landscape);
 extern int		cfGetBackSideOrientation(cf_filter_data_t *data);
 extern const char 	*cfGetPrintRenderIntent(cf_filter_data_t *data,
 						char *ri, int ri_len);
