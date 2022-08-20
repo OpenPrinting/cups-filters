@@ -264,11 +264,11 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
 
   signal(SIGPIPE, SIG_IGN);
 
-/*
+ /*
   * Process job options...
   */
 
-  if (set_pstops_options(&doc, filter_data_ext->ppd,
+  if (set_pstops_options(&doc, (filter_data_ext ? filter_data_ext->ppd : NULL),
 			 data->job_id, data->job_user,
 			 data->job_title, data->copies,
 			 data->num_options, data->options,
@@ -404,13 +404,14 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
   * Write any "exit server" options that have been selected...
   */
 
-  ppdEmit(filter_data_ext->ppd, outputfp, PPD_ORDER_EXIT);
+  if (filter_data_ext)
+    ppdEmit(filter_data_ext->ppd, outputfp, PPD_ORDER_EXIT);
 
  /*
   * Write any JCL commands that are needed to print PostScript code...
   */
 
-  if (doc.emit_jcl)
+  if (filter_data_ext && doc.emit_jcl)
     ppdEmitJCL(filter_data_ext->ppd, outputfp, doc.job_id, doc.user, doc.title);
 
  /*
@@ -455,7 +456,8 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
     * Yes, filter the document...
     */
 
-    copy_dsc(&doc, filter_data_ext->ppd, line, len, sizeof(line));
+    if (filter_data_ext)
+      copy_dsc(&doc, filter_data_ext->ppd, line, len, sizeof(line));
   }
   else
   {
@@ -464,7 +466,8 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
     * a single page...
     */
 
-    copy_non_dsc(&doc, filter_data_ext->ppd, line, len, sizeof(line));
+    if (filter_data_ext)
+      copy_non_dsc(&doc, filter_data_ext->ppd, line, len, sizeof(line));
   }
 
  /*
@@ -480,7 +483,8 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
 
   if (doc.emit_jcl)
   {
-    if (filter_data_ext->ppd && filter_data_ext->ppd->jcl_end)
+    if (filter_data_ext && filter_data_ext->ppd &&
+	filter_data_ext->ppd->jcl_end)
       ppdEmitJCLEnd(filter_data_ext->ppd, doc.outputfp);
     else
       doc_putc(&doc, 0x04);
@@ -592,7 +596,7 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
   int		colorspace;		/* Output colorspace */
   int		out_offset,		/* Offset into output buffer */
 		out_length;		/* Length of output buffer */
-  ppd_file_t	*ppd;			/* PPD file */
+  ppd_file_t	*ppd = NULL;		/* PPD file */
   ppd_choice_t	*choice;		/* PPD option choice */
   int		num_options;		/* Number of print options */
   cups_option_t	*options;		/* Print options */
@@ -758,7 +762,8 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
   * Process job options...
   */
 
-  ppd = filter_data_ext->ppd;
+  if (filter_data_ext)
+    ppd = filter_data_ext->ppd;
   ppdFilterSetCommonOptions(ppd, num_options, options, 0,
 			 &doc.Orientation, &doc.Duplex,
 			 &doc.LanguageLevel, &doc.Color,

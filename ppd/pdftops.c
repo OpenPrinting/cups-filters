@@ -280,7 +280,7 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   cf_filter_data_t pstops_filter_data;
   int           ret;
   const char	*val;			/* Option value */
-  ppd_file_t	*ppd;			/* PPD file */
+  ppd_file_t	*ppd = NULL;		/* PPD file */
   char		resolution[128] = "";   /* Output resolution */
   int           xres = 0, yres = 0,     /* resolution values */
                 mres, res,
@@ -393,7 +393,8 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
   
 
-  ppd = filter_data_ext->ppd;
+  if (filter_data_ext)
+    ppd = filter_data_ext->ppd;
 
  /*
   * Process job options...
