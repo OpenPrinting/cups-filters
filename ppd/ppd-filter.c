@@ -1284,7 +1284,7 @@ ppdFilterExternalCUPS(int inputfd,      /* I - File descriptor input stream */
       add_env_var("PRINTER", "Unknown", &envp);
 
     /* PPD file path/name from filter data, required for most CUPS filters */
-    if (filter_data_ext->ppdfile)
+    if (filter_data_ext && filter_data_ext->ppdfile)
       add_env_var("PPD", filter_data_ext->ppdfile, &envp);
 
     /* Device URI from parameters */
@@ -1844,14 +1844,18 @@ ppdFilterEmitJCL(int inputfd,         /* I - File descriptor input stream */
   */
 
   fp = fdopen(outputfd, "w");
-  ppdEmit(filter_data_ext->ppd, fp, PPD_ORDER_EXIT);
-  ppdEmitJCLPDF(filter_data_ext->ppd, fp,
-		data->job_id, data->job_user, data->job_title,
-		hw_copies, hw_collate);
+  if (filter_data_ext)
+  {
+    ppdEmit(filter_data_ext->ppd, fp, PPD_ORDER_EXIT);
+    ppdEmitJCLPDF(filter_data_ext->ppd, fp,
+		  data->job_id, data->job_user, data->job_title,
+		  hw_copies, hw_collate);
+  }
   while ((bytes = read(outfds[0], buf, sizeof(buf))) > 0)
     fwrite(buf, 1, bytes, fp);
   close(outfds[0]);
-  ppdEmitJCLEnd(filter_data_ext->ppd, fp);
+  if (filter_data_ext)
+    ppdEmitJCLEnd(filter_data_ext->ppd, fp);
   fclose(fp);
 
   if (!streaming)
@@ -1948,7 +1952,7 @@ ppdFilterUniversal(int inputfd,         /* I - File descriptor input stream */
   char *final_output;
   char output[256];
   cf_filter_universal_parameter_t universal_parameters;
-  ppd_file_t *ppd;
+  ppd_file_t *ppd = NULL;
   ppd_cache_t *cache;
   cups_array_t *filter_chain;
   cf_filter_filter_in_chain_t extra_filter, universal_filter;
@@ -1978,12 +1982,13 @@ ppdFilterUniversal(int inputfd,         /* I - File descriptor input stream */
     }
   }
 
-  ppd = filter_data_ext->ppd;
+  if (filter_data_ext)
+    ppd = filter_data_ext->ppd;
 
   if (universal_parameters.actual_output_type)
     strncpy(output, universal_parameters.actual_output_type,
 	    sizeof(output) - 1);
-  else if(ppd)
+  else if (ppd)
   {
     strncpy(output, data->final_content_type, sizeof(output) - 1);
 
