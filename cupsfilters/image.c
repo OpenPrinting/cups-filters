@@ -903,7 +903,7 @@ static unsigned char *find_bytes(FILE *fp, long int *size)
   return buf;
 }
 
-int _cupsImageReadEXIF(cf_image_t *img, FILE *fp)
+int _cupsImageReadEXIF(cups_image_t *img, FILE *fp)
 {
 
   if (fp == NULL)

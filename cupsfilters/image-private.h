@@ -214,7 +214,7 @@ extern void		_cupsRasterAddError(const char *f, ...);
 extern void		_cupsRasterClearError(void);
 
 #ifdef HAVE_EXIF
-int		_cupsImageReadEXIF(cf_image_t *img, FILE *fp);
+int		_cupsImageReadEXIF(cups_image_t *img, FILE *fp);
 #endif
 
 #endif /* !_CUPS_IMAGE_PRIVATE_H_ */
