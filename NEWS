@@ -1,5 +1,17 @@
-NEWS - OpenPrinting CUPS Filters v1.28.15 - 2022-04-11
+NEWS - OpenPrinting CUPS Filters v1.28.16 - 2022-08-24
 ------------------------------------------------------
+
+CHANGES IN V1.28.16
+
+	- imagetoraster, imagetopdf, libcupsfilters: Added support for
+	  reading the resolution of an image from its EXIF data when
+	  loading it. This way we get the image reproduced in its
+	  original size with "print-scaling=none" (Issue #362).
+	- libcupsfilters: Replaced deprecated data types uint16 and
+	  uint32. The function to read TIFF image files via libtiff in
+	  cupsfilters/image-tiff.c uses the deprecated types uint16
+	  and uint32. The replacements for these types are uint16_t
+	  and uint32_t.
 
 CHANGES IN V1.28.15
 
