@@ -213,7 +213,7 @@ extern cf_izoom_t	*_cfImageZoomNew(cf_image_t *img, int xc0, int yc0,
 					 cf_iztype_t type);
 
 #ifdef HAVE_EXIF
-int		_cupsImageReadEXIF(cf_image_t *img, FILE *fp);
+int		_cfImageReadEXIF(cf_image_t *img, FILE *fp);
 #endif
 
 #endif /* !_CUPS_IMAGE_PRIVATE_H_ */

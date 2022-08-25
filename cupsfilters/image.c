@@ -27,7 +27,7 @@
  *   cfImageCrop()          - Crop an image.
  *   flush_tile()           - Flush the least-recently-used tile in the cache.
  *   get_tile()             - Get a cached tile.
- *   _cupsImageReadEXIF()   - to read exif metadata of images
+ *   _cfImageReadEXIF()   - to read exif metadata of images
  *   trim_spaces()          - helper function to extract results from string returned by exif library functions
  *   find_bytes()           - creates character array from image file, to make use in exif library functions
  */
@@ -928,7 +928,7 @@ static unsigned char *find_bytes(FILE *fp, long int *size)
   return buf;
 }
 
-int _cupsImageReadEXIF(cf_image_t *img, FILE *fp)
+int _cfImageReadEXIF(cf_image_t *img, FILE *fp)
 {
 
   if (fp == NULL)

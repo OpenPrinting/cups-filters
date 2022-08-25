@@ -142,7 +142,7 @@ _cfImageReadJPEG(
     scan image file for exif data
     */
 
-  temp = _cupsImageReadEXIF(img, fp);
+  temp = _cfImageReadEXIF(img, fp);
 #endif
   /* 
     check headers only if EXIF contains no info about ppi
