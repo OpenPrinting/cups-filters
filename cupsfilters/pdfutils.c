@@ -29,7 +29,7 @@ void cfPDFOutPrintF(cf_pdf_out_t *pdf,const char *fmt,...) // {{{
 }
 // }}}
 
-void cfPDFOutPutString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
+void cfPDFOutputString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
 {
   DEBUG_assert(pdf);
   DEBUG_assert(str);
@@ -60,7 +60,7 @@ void cfPDFOutPutString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len=
 }
 // }}}
 
-void cfPDFOutPutHexString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
+void cfPDFOutputHexString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
 {
   DEBUG_assert(pdf);
   DEBUG_assert(str);
@@ -227,7 +227,7 @@ void cfPDFOutFinishPDF(cf_pdf_out_t *pdf) // {{{
                       info_obj);
     for (iA=0;iA<pdf->kvsize;iA++) {
       cfPDFOutPrintF(pdf,"  /%s ",pdf->kv[iA].key);
-      cfPDFOutPutString(pdf,pdf->kv[iA].value,-1);
+      cfPDFOutputString(pdf,pdf->kv[iA].value,-1);
       cfPDFOutPrintF(pdf,"\n");
     }
     cfPDFOutPrintF(pdf,">>\n"

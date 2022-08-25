@@ -48,8 +48,8 @@ void cfPDFOutPrintF(cf_pdf_out_t *pdf,const char *fmt,...)
 /* write out an escaped pdf string: e.g.  (Text \(Test\)\n)
  * >len==-1: use strlen(str) 
  */
-void cfPDFOutPutString(cf_pdf_out_t *pdf,const char *str,int len);
-void cfPDFOutPutHexString(cf_pdf_out_t *pdf,const char *str,int len);
+void cfPDFOutputString(cf_pdf_out_t *pdf,const char *str,int len);
+void cfPDFOutputHexString(cf_pdf_out_t *pdf,const char *str,int len);
 
 /* Format the broken up timestamp according to
  * pdf requirements for /CreationDate

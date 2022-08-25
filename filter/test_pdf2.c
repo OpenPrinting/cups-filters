@@ -25,7 +25,7 @@ static inline void write_string(cf_pdf_out_t *pdf,EMB_PARAMS *emb,const char *st
       emb_get(emb,(unsigned char)str[iA]);
       // TODO: pdf: otf_from_pdf_default_encoding
     }
-    cfPDFOutPutString(pdf,str,-1);
+    cfPDFOutputString(pdf,str,-1);
   }
 }
 // }}}
