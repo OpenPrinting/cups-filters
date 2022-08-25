@@ -8,7 +8,7 @@
  *
  */
 #include <stdio.h>
-#include <assert.h>
+#include "debug-internal.h"
 #include <stdarg.h>
 #include <memory.h>
 #include <stdlib.h>
@@ -18,7 +18,7 @@
 
 void cfPDFOutPrintF(cf_pdf_out_t *pdf,const char *fmt,...) // {{{
 {
-  assert(pdf);
+  DEBUG_assert(pdf);
   int len;
   va_list ap;
 
@@ -31,8 +31,8 @@ void cfPDFOutPrintF(cf_pdf_out_t *pdf,const char *fmt,...) // {{{
 
 void cfPDFOutPutString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
 {
-  assert(pdf);
-  assert(str);
+  DEBUG_assert(pdf);
+  DEBUG_assert(str);
   if (len==-1) {
     len=strlen(str);
   }
@@ -62,8 +62,8 @@ void cfPDFOutPutString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len=
 
 void cfPDFOutPutHexString(cf_pdf_out_t *pdf,const char *str,int len) // {{{ - >len==-1: strlen()
 {
-  assert(pdf);
-  assert(str);
+  DEBUG_assert(pdf);
+  DEBUG_assert(str);
   if (len==-1) {
     len=strlen(str);
   }
@@ -108,8 +108,8 @@ const char *cfPDFOutToPDFDate(struct tm *curtm) // {{{
 
 int cfPDFOutAddXRef(cf_pdf_out_t *pdf) // {{{  -  returns obj_no
 {
-  assert(pdf);
-  assert(pdf->xrefsize<=pdf->xrefalloc);
+  DEBUG_assert(pdf);
+  DEBUG_assert(pdf->xrefsize<=pdf->xrefalloc);
 
   if (pdf->xrefsize==pdf->xrefalloc) {
     long *tmp;
@@ -128,9 +128,9 @@ int cfPDFOutAddXRef(cf_pdf_out_t *pdf) // {{{  -  returns obj_no
 
 int cfPDFOutAddPage(cf_pdf_out_t *pdf,int obj) // {{{ -  returns false on error
 {
-  assert(pdf);
-  assert(obj>0);
-  assert(pdf->pagessize<=pdf->pagesalloc);
+  DEBUG_assert(pdf);
+  DEBUG_assert(obj>0);
+  DEBUG_assert(pdf->pagessize<=pdf->pagesalloc);
 
   if (pdf->pagessize==pdf->pagesalloc) {
     int *tmp;
@@ -149,8 +149,8 @@ int cfPDFOutAddPage(cf_pdf_out_t *pdf,int obj) // {{{ -  returns false on error
 
 int cfPDFOutAddKeyValue(cf_pdf_out_t *pdf,const char *key,const char *val) // {{{ -  returns false on error
 {
-  assert(pdf);
-  assert(pdf->kvsize<=pdf->kvalloc);
+  DEBUG_assert(pdf);
+  DEBUG_assert(pdf->kvsize<=pdf->kvalloc);
 
   if (pdf->kvsize==pdf->kvalloc) {
     struct cf_keyval_t *tmp;
@@ -174,8 +174,8 @@ int cfPDFOutAddKeyValue(cf_pdf_out_t *pdf,const char *key,const char *val) // {{
 
 int cfPDFOutBeginPDF(cf_pdf_out_t *pdf) // ,...output_device?...) // {{{ - false on error
 {
-  assert(pdf);
-  assert(pdf->kvsize==0); // otherwise: finish_pdf has not been called
+  DEBUG_assert(pdf);
+  DEBUG_assert(pdf->kvsize==0); // otherwise: finish_pdf has not been called
   int pages_obj;
 
   pdf->xrefsize=pdf->pagessize=0;
@@ -193,7 +193,7 @@ void cfPDFOutFinishPDF(cf_pdf_out_t *pdf) // {{{
 {
   int iA;
   int root_obj,info_obj=0,xref_start;
-  assert( (pdf)&&(pdf->filepos!=-1) );
+  DEBUG_assert( (pdf)&&(pdf->filepos!=-1) );
 
   // pages 
   const int pages_obj=1;
@@ -273,7 +273,7 @@ void cfPDFOutFinishPDF(cf_pdf_out_t *pdf) // {{{
 void cfPDFOutFree(cf_pdf_out_t *pdf) // {{{
 {
   if (pdf) {
-    assert(pdf->kvsize==0); // otherwise: finish_pdf has not been called
+    DEBUG_assert(pdf->kvsize==0); // otherwise: finish_pdf has not been called
     free(pdf->kv);
     free(pdf->pages);
     free(pdf->xref);
@@ -288,7 +288,7 @@ static void pdfOut_outfn(const char *buf,int len,void *context) // {{{
 
   if (fwrite(buf,1,len,stdout)!=len) {
     perror("Short write");
-    assert(0);
+    DEBUG_assert(0);
     return;
   }
   pdf->filepos+=len;
@@ -297,8 +297,8 @@ static void pdfOut_outfn(const char *buf,int len,void *context) // {{{
 
 int cfPDFOutWriteFont(cf_pdf_out_t *pdf,EMB_PARAMS *emb) // {{{ 
 {
-  assert(pdf);
-  assert(emb);
+  DEBUG_assert(pdf);
+  DEBUG_assert(emb);
 
   EMB_PDF_FONTDESCR *fdes=emb_pdf_fontdescr(emb);
   if (!fdes) {
@@ -345,7 +345,7 @@ int cfPDFOutWriteFont(cf_pdf_out_t *pdf,EMB_PARAMS *emb) // {{{
                     "endobj\n");
 
   const int l0_obj=cfPDFOutAddXRef(pdf);
-  assert(l0_obj==ff_obj+1);
+  DEBUG_assert(l0_obj==ff_obj+1);
   cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "%ld\n"
                     "endobj\n"
@@ -353,7 +353,7 @@ int cfPDFOutWriteFont(cf_pdf_out_t *pdf,EMB_PARAMS *emb) // {{{
 
   if (emb->outtype==EMB_FMT_TTF) {
     const int l1_obj=cfPDFOutAddXRef(pdf);
-    assert(l1_obj==ff_obj+2);
+    DEBUG_assert(l1_obj==ff_obj+2);
     cfPDFOutPrintF(pdf,"%d 0 obj\n"
                       "%d\n"
                       "endobj\n"

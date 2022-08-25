@@ -1,6 +1,6 @@
 #include "nup-private.h"
 #include <stdio.h>
-#include <assert.h>
+#include "cupsfilters/debug-internal.h"
 #include <string.h>
 #include <utility>
 
@@ -124,7 +124,7 @@ _cfPDFToPDFNupState::_cfPDFToPDFNupState(const _cfPDFToPDFNupParameters &param) 
     nup(param.nupX*param.nupY),
     subpage(nup)
 {
-  assert( (param.nupX>0)&&(param.nupY>0) );
+  DEBUG_assert( (param.nupX>0)&&(param.nupY>0) );
 }
 // }}}
 
@@ -245,7 +245,7 @@ static std::pair<pdftopdf_axis_e,pdftopdf_position_e> parsePosition(char a,char 
 
 bool _cfPDFToPDFParseNupLayout(const char *val,_cfPDFToPDFNupParameters &ret) // {{{
 {
-  assert(val);
+  DEBUG_assert(val);
   auto pos0=parsePosition(val[0],val[1]);
   if (pos0.second==CENTER) {
     return false;

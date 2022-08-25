@@ -285,17 +285,17 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
 	   strcasestr(pdl, "image/"))) {
 	value[0] = '\0';
 	if (strcasestr(pdl, "application/pdf"))
-	  strncat(value, ",PDF", sizeof(value));
+	  strncat(value, ",PDF", sizeof(value) - 1);
 	if (strcasestr(pdl, "application/PCLm"))
-	  strncat(value, ",PCLM", sizeof(value));
+	  strncat(value, ",PCLM", sizeof(value) - 1);
 	if (strcasestr(pdl, "application/postscript"))
-	  strncat(value, ",PS", sizeof(value));
+	  strncat(value, ",PS", sizeof(value) - 1);
 	if (strcasestr(pdl, "application/vnd.hp-PCL"))
-	  strncat(value, ",PCL", sizeof(value));
+	  strncat(value, ",PCL", sizeof(value) - 1);
 	if (strcasestr(pdl, "image/pwg-raster"))
-	  strncat(value, ",PWGRaster", sizeof(value));
+	  strncat(value, ",PWGRaster", sizeof(value) - 1);
 	if (strcasestr(pdl, "image/urf"))
-	  strncat(value, ",AppleRaster", sizeof(value));
+	  strncat(value, ",AppleRaster", sizeof(value) - 1);
 	for (ptr = strcasestr(pdl, "image/"); ptr;
 	     ptr = strcasestr(ptr, "image/")) {
 	  char *valptr = value + strlen(value);

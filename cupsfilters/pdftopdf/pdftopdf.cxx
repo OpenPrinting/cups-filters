@@ -5,7 +5,7 @@
 
 #include <config.h>
 #include <stdio.h>
-#include <assert.h>
+#include "cupsfilters/debug-internal.h"
 #include <cups/cups.h>
 #if (CUPS_VERSION_MAJOR > 1) || (CUPS_VERSION_MINOR > 6)
 #define HAVE_CUPS_1_7 1
@@ -33,7 +33,7 @@
 
 static bool optGetInt(const char *name,int num_options,cups_option_t *options,int *ret) // {{{
 {
-  assert(ret);
+  DEBUG_assert(ret);
   const char *val=cupsGetOption(name,num_options,options);
   if (val) {
     *ret=atoi(val);
@@ -45,7 +45,7 @@ static bool optGetInt(const char *name,int num_options,cups_option_t *options,in
 
 static bool optGetFloat(const char *name,int num_options,cups_option_t *options,float *ret) // {{{
 {
-  assert(ret);
+  DEBUG_assert(ret);
   const char *val=cupsGetOption(name,num_options,options);
   if (val) {
     *ret=atof(val);
@@ -162,7 +162,7 @@ static void parseRanges(const char *range,_cfPDFToPDFIntervalSet &ret) // {{{
 
 static bool _cfPDFToPDFParseBorder(const char *val,pdftopdf_border_type_e &ret) // {{{
 {
-  assert(val);
+  DEBUG_assert(val);
   if (strcasecmp(val,"none")==0) {
     ret=pdftopdf_border_type_e::NONE;
   } else if (strcasecmp(val,"single")==0) {

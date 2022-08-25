@@ -3551,7 +3551,7 @@ ppdCacheGetPageSize(
 #ifdef DEBUG
     if (attr)
       DEBUG_printf(("1ppdCacheGetPageSize: Found attribute %s (%s)",
-                    attr->name, ippTagString(attr->value_tag)));
+                    ippGetName(attr), ippTagString(ippGetValueTag(attr))));
     else
       DEBUG_puts("1ppdCacheGetPageSize: Did not find media attribute.");
 #endif /* DEBUG */

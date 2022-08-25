@@ -188,6 +188,7 @@ libfontembed_la_SOURCES = \
 	fontembed/aglfn13.c \
 	fontembed/dynstring.c \
 	fontembed/dynstring-private.h \
+	fontembed/debug-internal.h \
 	fontembed/embed.c \
 	fontembed/embed-sfnt.c \
 	fontembed/embed-sfnt-int-private.h \
@@ -275,6 +276,8 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/cmyk.c \
 	cupsfilters/colord.c \
 	cupsfilters/colormanager.c \
+	cupsfilters/debug.c \
+	cupsfilters/debug-internal.h \
 	cupsfilters/dither.c \
 	cupsfilters/filter.c \
 	cupsfilters/ghostscript.c \

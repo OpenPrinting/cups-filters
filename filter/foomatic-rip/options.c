@@ -26,7 +26,6 @@
 #include "util.h"
 #include <stdlib.h>
 #include <ctype.h>
-#include <assert.h>
 #include <regex.h>
 #include <string.h>
 #include <math.h>
@@ -482,7 +481,8 @@ static param_t * option_find_param_index(option_t *opt, const char *name, int *i
 static choice_t * option_find_choice(option_t *opt, const char *name)
 {
     choice_t *choice;
-    assert(opt && name);
+    if (!opt || !name)
+      return NULL;
     for (choice = opt->choicelist; choice; choice = choice->next) {
         if (!strcasecmp(choice->value, name))
             return choice;
@@ -815,11 +815,14 @@ void build_foomatic_custom_command(dstr_t *cmd, option_t *opt, const char *value
     if (!opt->proto && !strcmp(opt->name, "PageSize"))
     {
         choice_t *choice = option_find_choice(opt, "Custom");
-        char ** paramvalues = paramvalues_from_string(opt, values);
+        char **paramvalues = NULL;
         char width[30], height[30];
         int pos;
 
-        assert(choice);
+        if (!choice)
+	  return;
+
+	paramvalues = paramvalues_from_string(opt, values);
 
         /* Get rid of the trailing ".00000", it confuses ghostscript */
         snprintf(width, 20, "%d", atoi(paramvalues[0]));

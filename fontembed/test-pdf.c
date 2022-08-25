@@ -1,7 +1,7 @@
 #include "embed.h"
 #include "config.h"
 #include "sfnt.h"
-#include <assert.h>
+#include "debug-internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -10,7 +10,7 @@ static void example_outfn(const char *buf,int len,void *context) // {{{
   FILE *f=(FILE *)context;
   if (fwrite(buf,1,len,f)!=len) {
     fprintf(stderr,"Short write: %m\n");
-    assert(0);
+    DEBUG_assert(0);
     return;
   }
 }
@@ -47,8 +47,8 @@ static void example_outfn(const char *buf,int len,void *context) // {{{
 
 static inline void write_string(FILE *f,EMB_PARAMS *emb,const char *str) // {{{
 {
-  assert(f);
-  assert(emb);
+  DEBUG_assert(f);
+  DEBUG_assert(emb);
   int iA;
 
   if (emb->plan&EMB_A_MULTIBYTE) {
@@ -82,7 +82,7 @@ int main(int argc,char **argv)
     printf("Font %s was not loaded, exiting.\n", TESTFONT);
     return 1;
   }
-  assert(otf);
+  DEBUG_assert(otf);
   FONTFILE *ff=fontfile_open_sfnt(otf);
   EMB_PARAMS *emb=emb_new(ff,
                           EMB_DEST_PDF16,
@@ -90,7 +90,7 @@ int main(int argc,char **argv)
                           EMB_C_TAKE_FONTFILE);
 
   FILE *f=fopen("test.pdf","w");
-  assert(f);
+  DEBUG_assert(f);
   int xref[100],xrefpos=3;
   int stream_len;
 
@@ -109,9 +109,9 @@ int main(int argc,char **argv)
 
   // {{{ do font
   EMB_PDF_FONTDESCR *fdes=emb_pdf_fontdescr(emb);
-  assert(fdes);
+  DEBUG_assert(fdes);
   EMB_PDF_FONTWIDTHS *fwid=emb_pdf_fontwidths(emb);
-  assert(fwid);
+  DEBUG_assert(fwid);
 
   STREAMDICT;
   int ff_ref=xrefpos;
@@ -138,7 +138,7 @@ int main(int argc,char **argv)
   OBJ;
   const int fd_ref=xrefpos;
   char *res=emb_pdf_simple_fontdescr(emb,fdes,ff_ref);
-  assert(res);
+  DEBUG_assert(res);
   fputs(res,f);
   free(res);
   ENDOBJ;
@@ -146,7 +146,7 @@ int main(int argc,char **argv)
   OBJ;
   int f_ref=xrefpos;
   res=emb_pdf_simple_font(emb,fdes,fwid,fd_ref);
-  assert(res);
+  DEBUG_assert(res);
   fputs(res,f);
   free(res);
   ENDOBJ;
@@ -155,7 +155,7 @@ int main(int argc,char **argv)
     OBJ;
     res=emb_pdf_simple_cidfont(emb,fdes->fontname,f_ref);
     f_ref=xrefpos;
-    assert(res);
+    DEBUG_assert(res);
     fputs(res,f);
     free(res);
     ENDOBJ;

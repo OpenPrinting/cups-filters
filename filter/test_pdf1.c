@@ -1,5 +1,5 @@
 #include "pdfutils.h"
-#include <assert.h>
+#include "debug-internal.h"
 #include <string.h>
 
 int main()
@@ -7,7 +7,7 @@ int main()
   cf_pdf_out_t *pdf;
 
   pdf=cfPDFOutNew();
-  assert(pdf);
+  DEBUG_assert(pdf);
 
   cfPDFOutBeginPDF(pdf);
 

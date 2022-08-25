@@ -3,7 +3,7 @@
 #include "embed.h"
 #include "config.h"
 #include "embed-sfnt-int-private.h"
-#include <assert.h>
+#include "debug-internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -19,13 +19,13 @@ enum { WEIGHT_THIN=100,
 
 void show_post(OTF_FILE *otf) // {{{
 {
-  assert(otf);
+  DEBUG_assert(otf);
   int len=0;
   char *buf;
 
   buf=otf_get_table(otf,OTF_TAG('p','o','s','t'),&len);
   if (!buf) {
-    assert(len==-1);
+    DEBUG_assert(len==-1);
     printf("No post table\n");
     return;
   }
@@ -51,13 +51,13 @@ void show_post(OTF_FILE *otf) // {{{
 
 void show_name(OTF_FILE *otf) // {{{
 {
-  assert(otf);
+  DEBUG_assert(otf);
   int iA,len=0;
   char *buf;
 
   buf=otf_get_table(otf,OTF_TAG('n','a','m','e'),&len);
   if (!buf) {
-    assert(len==-1);
+    DEBUG_assert(len==-1);
     printf("No name table\n");
     return;
   }
@@ -97,23 +97,23 @@ void show_name(OTF_FILE *otf) // {{{
 
 void show_cmap(OTF_FILE *otf) // {{{
 {
-  assert(otf);
+  DEBUG_assert(otf);
   int iA,len=0;
 
   char *cmap=otf_get_table(otf,OTF_TAG('c','m','a','p'),&len);
   if (!cmap) {
-    assert(len==-1);
+    DEBUG_assert(len==-1);
     printf("No cmap table\n");
     return;
   }
   printf("cmap:\n");
-  assert(get_USHORT(cmap)==0x0000); // version
+  DEBUG_assert(get_USHORT(cmap)==0x0000); // version
   const int numTables=get_USHORT(cmap+2);
   printf("  numTables: %d\n",numTables);
   for (iA=0;iA<numTables;iA++) {
     const char *nrec=cmap+4+8*iA;
     const char *ndata=cmap+get_ULONG(nrec+4);
-    assert(ndata>=cmap+4+8*numTables);
+    DEBUG_assert(ndata>=cmap+4+8*numTables);
     printf("  platformID/encodingID: %d/%d\n"
            "  offset: %d  data (format: %d, length: %d, language: %d);\n",
            get_USHORT(nrec),get_USHORT(nrec+2),
@@ -126,12 +126,12 @@ void show_cmap(OTF_FILE *otf) // {{{
 
 void show_glyf(OTF_FILE *otf,int full) // {{{
 {
-  assert(otf);
+  DEBUG_assert(otf);
 
   // ensure >glyphOffsets and >gly is there
   if ( (!otf->gly)||(!otf->glyphOffsets) ) {
     if (otf_load_glyf(otf)!=0) {
-      assert(0);
+      DEBUG_assert(0);
       return;
     }
   }
@@ -140,7 +140,7 @@ void show_glyf(OTF_FILE *otf,int full) // {{{
   int compGlyf=0,zeroGlyf=0;
 
   // {{{ glyf
-  assert(otf->gly);
+  DEBUG_assert(otf->gly);
   for (iA=0;iA<otf->numGlyphs;iA++) {
     int len=otf_get_glyph(otf,iA);
     if (len==0) {
@@ -162,7 +162,7 @@ void show_glyf(OTF_FILE *otf,int full) // {{{
 
 void show_hmtx(OTF_FILE *otf) // {{{
 {
-  assert(otf);
+  DEBUG_assert(otf);
   int iA;
 
   otf_get_width(otf,0); // load table.
@@ -194,7 +194,7 @@ int main(int argc,char **argv)
     return 1;
   }
 
-  assert(otf);
+  DEBUG_assert(otf);
   if (otf->numTTC) {
     printf("TTC has %d fonts, using %d\n",otf->numTTC,otf->useTTC);
   }

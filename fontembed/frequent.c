@@ -1,5 +1,5 @@
 #include "frequent-private.h"
-#include <assert.h>
+#include "debug-internal.h"
 #include <stdlib.h>
 
 // misra-gries
@@ -14,7 +14,7 @@ struct _FREQUENT {
 // size is the precision/return size: in sequence with n _add(), it will find at most >size elements with occurence > n/(size+1) times
 FREQUENT *frequent_new(int size) // {{{ - just free() it
 {
-  assert(size>0);
+  DEBUG_assert(size>0);
   FREQUENT *ret=malloc(sizeof(ret[0])+sizeof(ret->pair[0])*size);
   if (!ret) {
     return NULL;
@@ -35,7 +35,7 @@ FREQUENT *frequent_new(int size) // {{{ - just free() it
 
 void frequent_add(FREQUENT *freq,intptr_t key) // {{{
 {
-  assert(freq);
+  DEBUG_assert(freq);
   int iA,zero=-1;
   for (iA=freq->size-1;iA>=0;iA--) {
     if (freq->pair[iA].key==key) {
@@ -68,7 +68,7 @@ static int frequent_cmp(const void *a,const void *b) // {{{
 // true frequency is somewhere between (count-zero) and count
 intptr_t frequent_get(FREQUENT *freq,int pos) // {{{
 {
-  assert(freq);
+  DEBUG_assert(freq);
   if (!freq->sorted) {
     // sort by (count-zero)
     qsort(freq->pair,freq->size,sizeof(freq->pair[0]),frequent_cmp);

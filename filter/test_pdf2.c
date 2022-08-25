@@ -1,6 +1,6 @@
 #include "pdfutils.h"
 #include "config.h"
-#include <assert.h>
+#include "debug-internal.h"
 #include "fontembed/embed.h"
 #include "fontembed/sfnt.h"
 
@@ -8,8 +8,8 @@
 
 static inline void write_string(cf_pdf_out_t *pdf,EMB_PARAMS *emb,const char *str) // {{{
 {
-  assert(pdf);
-  assert(emb);
+  DEBUG_assert(pdf);
+  DEBUG_assert(emb);
   int iA;
 
   if (emb->plan&EMB_A_MULTIBYTE) {
@@ -35,7 +35,7 @@ int main()
   cf_pdf_out_t *pdf;
 
   pdf=cfPDFOutNew();
-  assert(pdf);
+  DEBUG_assert(pdf);
 
   cfPDFOutBeginPDF(pdf);
 
@@ -53,7 +53,7 @@ int main()
     printf("Font %s was not loaded, exiting.\n", TESTFONT);
     return 1;
   }
-  assert(otf);
+  DEBUG_assert(otf);
   FONTFILE *ff=fontfile_open_sfnt(otf);
   EMB_PARAMS *emb=emb_new(ff,
                           EMB_DEST_PDF16,
@@ -77,7 +77,7 @@ int main()
   cfPDFOutPrintF(pdf,"\nendstream\n"
                     "endobj\n");
   const int clobj=cfPDFOutAddXRef(pdf);
-  assert(clobj==cobj+1);
+  DEBUG_assert(clobj==cobj+1);
   cfPDFOutPrintF(pdf,"%d 0 obj\n"
                     "%ld\n"
                     "endobj\n"
@@ -85,7 +85,7 @@ int main()
 
   // font
   int font_obj=cfPDFOutWriteFont(pdf,emb);
-  assert(font_obj);
+  DEBUG_assert(font_obj);
 
   int obj=cfPDFOutAddXRef(pdf);
   cfPDFOutPrintF(pdf,"%d 0 obj\n"

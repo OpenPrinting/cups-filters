@@ -12,7 +12,7 @@
 #include <string.h>
 #include <limits.h>
 #include <signal.h>
-#include <assert.h>
+#include "debug-internal.h"
 #include <zlib.h>
 
 /*
@@ -281,7 +281,7 @@ write_flate(cups_raster_t *ras,	        /* I - Image data */
       ret = deflate(&strm, flush);
 
       /* check whether state is not clobbered */
-      assert(ret != Z_STREAM_ERROR);
+      DEBUG_assert(ret != Z_STREAM_ERROR);
       have = alloc - strm.avail_out;
       if (fwrite(out, 1, have, doc->outputfp) != have)
       {
@@ -293,7 +293,7 @@ write_flate(cups_raster_t *ras,	        /* I - Image data */
     } while (strm.avail_out == 0);
 
     /* all input will be used */
-    assert(strm.avail_in == 0);
+    DEBUG_assert(strm.avail_in == 0);
 
     /* done when last data in file processed */
     free(pixdata);
@@ -301,7 +301,7 @@ write_flate(cups_raster_t *ras,	        /* I - Image data */
   } while (flush != Z_FINISH);
 
   /* stream will be complete */
-  assert(ret == Z_STREAM_END);
+  DEBUG_assert(ret == Z_STREAM_END);
 
   /* clean up and return */
   (void)deflateEnd(&strm);

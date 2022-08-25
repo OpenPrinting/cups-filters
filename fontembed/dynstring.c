@@ -1,22 +1,22 @@
 #include "dynstring-private.h"
+#include "debug-internal.h"
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 int dyn_init(DYN_STRING *ds,int reserve_size) // {{{
 {
-  assert(ds);
-  assert(reserve_size>0);
+  DEBUG_assert(ds);
+  DEBUG_assert(reserve_size>0);
 
   ds->len=0;
   ds->alloc=reserve_size;
   ds->buf=malloc(ds->alloc+1);
   if (!ds->buf) {
     fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
-    assert(0);
+    DEBUG_assert(0);
     ds->len=-1;
     return -1;
   }
@@ -26,7 +26,7 @@ int dyn_init(DYN_STRING *ds,int reserve_size) // {{{
 
 void dyn_free(DYN_STRING *ds) // {{{
 {
-  assert(ds);
+  DEBUG_assert(ds);
 
   ds->len=-1;
   ds->alloc=0;
@@ -37,8 +37,8 @@ void dyn_free(DYN_STRING *ds) // {{{
 
 int dyn_ensure(DYN_STRING *ds,int free_space) // {{{
 {
-  assert(ds);
-  assert(free_space);
+  DEBUG_assert(ds);
+  DEBUG_assert(free_space);
 
   if (ds->len<0) {
     return -1;
@@ -51,7 +51,7 @@ int dyn_ensure(DYN_STRING *ds,int free_space) // {{{
   if (!tmp) {
     ds->len=-1;
     fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
-    assert(0);
+    DEBUG_assert(0);
     return -1;
   }
   ds->buf=tmp;
@@ -61,7 +61,7 @@ int dyn_ensure(DYN_STRING *ds,int free_space) // {{{
 
 int dyn_vprintf(DYN_STRING *ds,const char *fmt,va_list ap) // {{{
 {
-  assert(ds);
+  DEBUG_assert(ds);
 
   int need,len=strlen(fmt)+100;
   va_list va;

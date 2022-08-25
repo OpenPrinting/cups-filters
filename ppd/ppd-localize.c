@@ -93,7 +93,7 @@ ppdLocalize(ppd_file_t *ppd)		/* I - PPD file */
 	                              ll_CC);
 	else
 	{
-	  snprintf(ckeyword, sizeof(ckeyword), "Custom%s", option->keyword);
+	  snprintf(ckeyword, sizeof(ckeyword), "Custom%.34s", option->keyword);
 
 	  locattr = ppdLocalizedAttr(ppd, ckeyword, "True", ll_CC);
 	}

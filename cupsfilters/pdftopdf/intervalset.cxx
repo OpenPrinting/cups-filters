@@ -1,6 +1,6 @@
 #include "intervalset-private.h"
 #include <stdio.h>
-#include <assert.h>
+#include "cupsfilters/debug-internal.h"
 #include <limits>
 #include <algorithm>
 
@@ -91,7 +91,7 @@ bool _cfPDFToPDFIntervalSet::intersect(const value_t &a,const value_t &b) const 
 
 void _cfPDFToPDFIntervalSet::unite(value_t &aret,const value_t &b) const // {{{
 {
-  assert(intersect(aret,b));
+  DEBUG_assert(intersect(aret,b));
   if (b.first<aret.first) {
     aret.first=b.first;
   }

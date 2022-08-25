@@ -1,6 +1,6 @@
 #include "qpdf-cm-private.h"
 #include <stdio.h>
-#include <assert.h>
+#include "cupsfilters/debug-internal.h"
 
 #include <stdexcept>
 

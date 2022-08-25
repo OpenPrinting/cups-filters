@@ -15,7 +15,7 @@
  * Include necessary headers...
  */
 
-#include <assert.h>
+#include "debug-internal.h"
 #include <config.h>
 #include "cupsfilters/pdfutils.h"
 #include "cupsfilters/raster.h"
@@ -1503,24 +1503,24 @@ static EMB_PARAMS *font_load(const char *font, int fontwidth, cf_logfunc_t log,
   }
 
   FONTFILE *ff = fontfile_open_sfnt(otf);
-  assert(ff);
+  DEBUG_assert(ff);
   EMB_PARAMS *emb = emb_new(ff,
 			    EMB_DEST_PDF16,
 			    EMB_C_FORCE_MULTIBYTE|
 			    EMB_C_TAKE_FONTFILE);
-  assert(emb);
-  assert(emb->plan&EMB_A_MULTIBYTE);
+  DEBUG_assert(emb);
+  DEBUG_assert(emb->plan&EMB_A_MULTIBYTE);
   return emb;
 }
 
 static EMB_PARAMS *font_std(const char *name)
 {
   FONTFILE *ff = fontfile_open_std(name);
-  assert(ff);
+  DEBUG_assert(ff);
   EMB_PARAMS *emb = emb_new(ff,
 			    EMB_DEST_PDF16,
 			    EMB_C_TAKE_FONTFILE);
-  assert(emb);
+  DEBUG_assert(emb);
   return emb;
 }
 
@@ -1637,7 +1637,7 @@ write_epilogue(texttopdf_doc_t *doc)
 	  (bits_used(emb->subset, emb->font->sfnt->numGlyphs)))
       {
         emb->font->fobj=cfPDFOutWriteFont(doc->pdf,emb);
-        assert(emb->font->fobj);
+        DEBUG_assert(emb->font->fobj);
       }
     }
   }
@@ -1703,7 +1703,7 @@ write_page(texttopdf_doc_t *doc)
 		"endobj\n");
   
   int len_obj=cfPDFOutAddXRef(doc->pdf);
-  assert(len_obj==content+1);
+  DEBUG_assert(len_obj==content+1);
   cfPDFOutPrintF(doc->pdf,"%d 0 obj\n"
 		"%ld\n"
 		"endobj\n",
@@ -1804,9 +1804,9 @@ write_prolog(const char *title,		/* I - Title of job */
   * {{{ Output the PDF header...
   */
 
-  assert(!(doc->pdf));
+  DEBUG_assert(!(doc->pdf));
   doc->pdf = cfPDFOutNew();
-  assert(doc->pdf);
+  DEBUG_assert(doc->pdf);
 
   cfPDFOutBeginPDF(doc->pdf);
   cfPDFOutPrintF(doc->pdf,"%%cupsRotation: %d\n",

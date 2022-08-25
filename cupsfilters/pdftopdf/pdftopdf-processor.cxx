@@ -1,7 +1,7 @@
 #include "pdftopdf-processor-private.h"
 #include "qpdf-pdftopdf-processor-private.h"
 #include <stdio.h>
-#include <assert.h>
+#include "cupsfilters/debug-internal.h"
 #include <numeric>
 
 void BookletMode_dump(pdftopdf_booklet_mode_e bkm,pdftopdf_doc_t *doc) // {{{
@@ -140,7 +140,7 @@ std::vector<int> _cfPDFToPDFBookletShuffle(int numPages,int signature) // {{{
   if (signature<0) {
     signature=(numPages+3)&~0x3;
   }
-  assert(signature%4==0);
+  DEBUG_assert(signature%4==0);
 
   std::vector<int> ret;
   ret.reserve(numPages+signature-1);

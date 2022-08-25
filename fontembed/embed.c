@@ -1,6 +1,6 @@
 #include "embed.h"
 #include "embed-sfnt-int-private.h"
-#include <assert.h>
+#include "debug-internal.h"
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,8 +8,8 @@
 
 static inline int copy_file(FILE *f,OUTPUT_FN output,void *context) // {{{
 {
-  assert(f);
-  assert(output);
+  DEBUG_assert(f);
+  DEBUG_assert(output);
 
   char buf[4096];
   int iA,ret=0;
@@ -58,7 +58,7 @@ static inline int copy_file(FILE *f,OUTPUT_FN output,void *context) // {{{
 
 EMB_PARAMS *emb_new(FONTFILE *font,EMB_DESTINATION dest,EMB_CONSTRAINTS mode) // {{{
 {
-  assert(font);
+  DEBUG_assert(font);
 
   EMB_PARAMS *ret=calloc(1,sizeof(EMB_PARAMS));
   if (!ret) {
@@ -100,7 +100,7 @@ EMB_PARAMS *emb_new(FONTFILE *font,EMB_DESTINATION dest,EMB_CONSTRAINTS mode) //
     ret->intype=EMB_FMT_STDFONT;
     ret->rights=EMB_RIGHT_NONE;
   } else {
-    assert(0);
+    DEBUG_assert(0);
   }
 /*
   if ( (ret->intype==EMB_FMT_CFF)&&
@@ -176,7 +176,7 @@ EMB_PARAMS *emb_new(FONTFILE *font,EMB_DESTINATION dest,EMB_CONSTRAINTS mode) //
 
 int emb_embed(EMB_PARAMS *emb,OUTPUT_FN output,void *context) // {{{
 {
-  assert(emb);
+  DEBUG_assert(emb);
 
   if (emb->dest==EMB_DEST_NATIVE) {
   } else if (emb->dest<=EMB_DEST_PS) {
@@ -202,7 +202,7 @@ int emb_embed(EMB_PARAMS *emb,OUTPUT_FN output,void *context) // {{{
     }
   } else if (emb->dest<=EMB_DEST_PDF16) {
     if (emb->outtype==EMB_FMT_TTF) {
-      assert(emb->font->sfnt);
+      DEBUG_assert(emb->font->sfnt);
       if (emb->plan&EMB_A_SUBSET) {
         return otf_subset(emb->font->sfnt,emb->subset,output,context);
       } else if (emb->font->sfnt->numTTC) { //
@@ -215,11 +215,11 @@ int emb_embed(EMB_PARAMS *emb,OUTPUT_FN output,void *context) // {{{
         if (emb->plan&EMB_A_T1_TO_CFF) {
           // TODO
         } else {
-          // assert(emb->font->cff);
+          // DEBUG_assert(emb->font->cff);
           // TODO
         }
       } else {
-        assert(emb->font->sfnt);
+        DEBUG_assert(emb->font->sfnt);
         if (emb->plan&EMB_A_SUBSET) {
           return otf_subset_cff(emb->font->sfnt,emb->subset,output,context);
         } else {
@@ -228,7 +228,7 @@ int emb_embed(EMB_PARAMS *emb,OUTPUT_FN output,void *context) // {{{
       }
     } else if (emb->outtype==EMB_FMT_CFF) {
       if (emb->plan&EMB_A_OTF_TO_CFF) {
-        assert(emb->font->sfnt);
+        DEBUG_assert(emb->font->sfnt);
         if (emb->plan&EMB_A_SUBSET) {
           // TODO
         } else {
@@ -241,7 +241,7 @@ int emb_embed(EMB_PARAMS *emb,OUTPUT_FN output,void *context) // {{{
   }
 
   fprintf(stderr,"NOT IMPLEMENTED\n");
-  assert(0);
+  DEBUG_assert(0);
   return -1;
 }
 // }}}

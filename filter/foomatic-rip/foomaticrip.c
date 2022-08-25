@@ -37,7 +37,6 @@
 #include <memory.h>
 #include <ctype.h>
 #include <stdarg.h>
-#include <assert.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <math.h>
@@ -101,7 +100,6 @@ jobparams_t  *job = NULL;
 
 jobparams_t * get_current_job()
 {
-    assert(job);
     return job;
 }
 

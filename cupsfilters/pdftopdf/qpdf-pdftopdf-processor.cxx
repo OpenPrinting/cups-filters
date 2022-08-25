@@ -1,7 +1,7 @@
 #include "qpdf-pdftopdf-processor-private.h"
 #include <stdio.h>
 #include <stdarg.h>
-#include <assert.h>
+#include "cupsfilters/debug-internal.h"
 #include <stdexcept>
 #include <qpdf/QPDFWriter.hh>
 #include <qpdf/QUtil.hh>
@@ -39,7 +39,7 @@ _cfPDFToPDFQPDFPageHandle::_cfPDFToPDFQPDFPageHandle(QPDF *pdf,float width,float
   : no(0),
     rotation(ROT_0)
 {
-  assert(pdf);
+  DEBUG_assert(pdf);
   page=QPDFObjectHandle::parse(
     "<<"
     "  /Type /Page"
@@ -123,8 +123,8 @@ static _cfPDFToPDFPageRect ungetRect(_cfPDFToPDFPageRect rect,const _cfPDFToPDFQ
 // TODO? for non-existing (either drop comment or facility to create split streams needed)
 void _cfPDFToPDFQPDFPageHandle::add_border_rect(const _cfPDFToPDFPageRect &_rect,pdftopdf_border_type_e border,float fscale) // {{{
 {
-  assert(is_existing());
-  assert(border!=pdftopdf_border_type_e::NONE);
+  DEBUG_assert(is_existing());
+  DEBUG_assert(border!=pdftopdf_border_type_e::NONE);
 
   // straight from pstops
   const double lw=(border&THICK)?0.5:0.24;
@@ -135,8 +135,8 @@ void _cfPDFToPDFQPDFPageHandle::add_border_rect(const _cfPDFToPDFPageRect &_rect
 
   _cfPDFToPDFPageRect rect=ungetRect(_rect,*this,rotation,page);
 
-  assert(rect.left<=rect.right);
-  assert(rect.bottom<=rect.top);
+  DEBUG_assert(rect.left<=rect.right);
+  DEBUG_assert(rect.bottom<=rect.top);
 
   std::string boxcmd="q\n";
   boxcmd+="  "+QUtil::double_to_string(line_width)+" w 0 G \n";
@@ -154,7 +154,7 @@ void _cfPDFToPDFQPDFPageHandle::add_border_rect(const _cfPDFToPDFPageRect &_rect
   //   return;
   // }
   
-  assert(page.getOwningQPDF()); // existing pages are always indirect
+  DEBUG_assert(page.getOwningQPDF()); // existing pages are always indirect
 #ifdef DEBUG  // draw it on top
   static const char *pre="%pdftopdf q\n"
     "q\n",
@@ -273,7 +273,7 @@ bool _cfPDFToPDFQPDFPageHandle::is_landscape(pdftopdf_rotation_e orientation)
 void _cfPDFToPDFQPDFPageHandle::add_subpage(const std::shared_ptr<_cfPDFToPDFPageHandle> &sub,float xpos,float ypos,float scale,const _cfPDFToPDFPageRect *crop) // {{{
 {
   auto qsub=dynamic_cast<_cfPDFToPDFQPDFPageHandle *>(sub.get());
-  assert(qsub);
+  DEBUG_assert(qsub);
 
   std::string xoname="/X"+QUtil::int_to_string((qsub->no!=-1)?qsub->no:++no);
   if (crop) {
@@ -337,7 +337,7 @@ void _cfPDFToPDFQPDFPageHandle::mirror() // {{{
     // content.append(std::string("1 0 0 1 0 0 cm\n  ");
     content.append(xoname+" Do\n");
 
-    assert(!is_existing());
+    DEBUG_assert(!is_existing());
   }
 
   static const char *pre="%pdftopdf cm\n";
@@ -357,7 +357,7 @@ void _cfPDFToPDFQPDFPageHandle::rotate(pdftopdf_rotation_e rot) // {{{
 
 void _cfPDFToPDFQPDFPageHandle::add_label(const _cfPDFToPDFPageRect &_rect, const std::string label) // {{{
 {
-  assert(is_existing());
+  DEBUG_assert(is_existing());
 
   _cfPDFToPDFPageRect rect = ungetRect (_rect, *this, rotation, page);
 
@@ -433,7 +433,7 @@ void _cfPDFToPDFQPDFPageHandle::add_label(const _cfPDFToPDFPageRect &_rect, cons
 
   boxcmd += "Q\n";
 
-  assert(page.getOwningQPDF()); // existing pages are always indirect
+  DEBUG_assert(page.getOwningQPDF()); // existing pages are always indirect
   static const char *pre="%pdftopdf q\n"
     "q\n",
     *post="%pdftopdf Q\n"
@@ -451,7 +451,7 @@ void _cfPDFToPDFQPDFPageHandle::add_label(const _cfPDFToPDFPageRect &_rect, cons
 
 void _cfPDFToPDFQPDFPageHandle::debug(const _cfPDFToPDFPageRect &rect,float xpos,float ypos) // {{{
 {
-  assert(!is_existing());
+  DEBUG_assert(!is_existing());
   content.append(debug_box(rect,xpos,ypos));
 }
 // }}}
@@ -526,7 +526,7 @@ bool _cfPDFToPDFQPDFProcessor::load_filename(const char *name,pdftopdf_doc_t *do
 
 void _cfPDFToPDFQPDFProcessor::start(int flatten_forms) // {{{
 {
-  assert(pdf);
+  DEBUG_assert(pdf);
 
   if (flatten_forms) {
     QPDFAcroFormDocumentHelper afdh(*pdf);
@@ -570,7 +570,7 @@ std::vector<std::shared_ptr<_cfPDFToPDFPageHandle>> _cfPDFToPDFQPDFProcessor::ge
   if (!pdf) {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
         "cfFilterPDFToPDF: No PDF loaded");
-    assert(0);
+    DEBUG_assert(0);
     return ret;
   }
   const int len=orig_pages.size();
@@ -587,7 +587,7 @@ std::shared_ptr<_cfPDFToPDFPageHandle> _cfPDFToPDFQPDFProcessor::new_page(float 
   if (!pdf) {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
         "cfFilterPDFToPDF: No PDF loaded");
-    assert(0);
+    DEBUG_assert(0);
     return std::shared_ptr<_cfPDFToPDFPageHandle>();
   }
   return std::shared_ptr<_cfPDFToPDFQPDFPageHandle>(new _cfPDFToPDFQPDFPageHandle(pdf.get(),width,height));
@@ -598,7 +598,7 @@ std::shared_ptr<_cfPDFToPDFPageHandle> _cfPDFToPDFQPDFProcessor::new_page(float 
 
 void _cfPDFToPDFQPDFProcessor::add_page(std::shared_ptr<_cfPDFToPDFPageHandle> page,bool front) // {{{
 {
-  assert(pdf);
+  DEBUG_assert(pdf);
   auto qpage=dynamic_cast<_cfPDFToPDFQPDFPageHandle *>(page.get());
   if (qpage) {
     pdf->addPage(qpage->get(),front);
@@ -616,8 +616,8 @@ pdf->getRoot().removeKey("/PageLabels");
 
 void _cfPDFToPDFQPDFProcessor::multiply(int copies,bool collate) // {{{
 {
-  assert(pdf);
-  assert(copies>0);
+  DEBUG_assert(pdf);
+  DEBUG_assert(copies>0);
 
   std::vector<QPDFObjectHandle> pages=pdf->getAllPages(); // need copy
   const int len=pages.size();
@@ -641,7 +641,7 @@ void _cfPDFToPDFQPDFProcessor::multiply(int copies,bool collate) // {{{
 // TODO? elsewhere?
 void _cfPDFToPDFQPDFProcessor::auto_rotate_all(bool dst_lscape,pdftopdf_rotation_e normal_landscape) // {{{
 {
-  assert(pdf);
+  DEBUG_assert(pdf);
 
   const int len=orig_pages.size();
   for (int iA=0;iA<len;iA++) {
@@ -672,7 +672,7 @@ void _cfPDFToPDFQPDFProcessor::auto_rotate_all(bool dst_lscape,pdftopdf_rotation
 // TODO
 void _cfPDFToPDFQPDFProcessor::add_cm(const char *defaulticc,const char *outputicc) // {{{
 {
-  assert(pdf);
+  DEBUG_assert(pdf);
 
   if (_cfPDFToPDFHasOutputIntent(*pdf)) {
     return; // nothing to do
@@ -692,7 +692,7 @@ void _cfPDFToPDFQPDFProcessor::set_comments(const std::vector<std::string> &comm
   extraheader.clear();
   const int len=comments.size();
   for (int iA=0;iA<len;iA++) {
-    assert(comments[iA].at(0)=='%');
+    DEBUG_assert(comments[iA].at(0)=='%');
     extraheader.append(comments[iA]);
     extraheader.push_back('\n');
   }

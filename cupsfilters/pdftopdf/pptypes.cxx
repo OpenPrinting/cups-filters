@@ -1,7 +1,7 @@
 #include "pptypes-private.h"
 #include <utility>
 #include <stdio.h>
-#include <assert.h>
+#include "cupsfilters/debug-internal.h"
 
 void _cfPDFToPDFPositionDump(pdftopdf_position_e pos,pdftopdf_doc_t *doc) // {{{
 {
@@ -18,7 +18,7 @@ void _cfPDFToPDFPositionDump(pdftopdf_position_e pos,pdftopdf_doc_t *doc) // {{{
 
 void _cfPDFToPDFPositionDump(pdftopdf_position_e pos,pdftopdf_axis_e axis,pdftopdf_doc_t *doc) // {{{
 {
-  assert((axis == pdftopdf_axis_e::X) || (axis == pdftopdf_axis_e::Y));
+  DEBUG_assert((axis == pdftopdf_axis_e::X) || (axis == pdftopdf_axis_e::Y));
   if ((pos < LEFT) || (pos > RIGHT)) {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
       "cfFilterPDFToPDF: Position %s: (bad position: %d)",
@@ -147,7 +147,7 @@ void _cfPDFToPDFPageRect::scale(float mult) // {{{
   if (mult==1.0) {
     return;
   }
-  assert(mult!=0.0);
+  DEBUG_assert(mult!=0.0);
 
   bottom*=mult;
   left*=mult;

@@ -1,5 +1,5 @@
 #include "qpdf-pdftopdf-private.h"
-#include <assert.h>
+#include "cupsfilters/debug-internal.h"
 #include <stdexcept>
 #include <qpdf/QUtil.hh>
 
@@ -117,7 +117,7 @@ _cfPDFToPDFMatrix &_cfPDFToPDFMatrix::rotate(pdftopdf_rotation_e rot) // {{{
     ctm[1]=-ctm[1];
     break;
   default:
-    assert(0);
+    DEBUG_assert(0);
   }
   return *this;
 }
