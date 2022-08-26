@@ -208,7 +208,6 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
 					   coords */
 			xc1, yc1;
   cups_cspace_t         cspace = -1;    /* CUPS color space */
-  char			*media_type;	/* Media type */
   cups_raster_t		*ras;		/* Raster stream */
   cups_page_header2_t	header;		/* Page header */
   int			num_options = 0;	/* Number of print options */
@@ -591,24 +590,6 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   if (val && (!strcasecmp(val, "true") || !strcasecmp(val, "on") ||
               !strcasecmp(val, "yes")))
     doc.Flip = 1;
-
- /*
-  * Get the media type that have been chosen...
-  */
-
-  if ((val = cupsGetOption("MediaType", num_options, options)) != NULL ||
-      (val = cupsGetOption("media-type", num_options, options)) != NULL ||
-      (ipp = ippFindAttribute(job_attrs, "media-type", IPP_TAG_ZERO)) != NULL ||
-      (ipp = ippFindAttribute(printer_attrs, "media-type-supported",
-			      IPP_TAG_ZERO)) != NULL)
-  {
-    if (val != NULL)
-      media_type = strdup(val);
-    else if (ipp != NULL)
-      media_type = strdup(ippGetString(ipp, 0, NULL));
-  }
-  else
-    media_type = strdup("");
 
   /* support the "cm-calibration" option */
   cm_calibrate = cfCmGetCupsColorCalibrateMode(data);
@@ -1861,7 +1842,6 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
   */
 
  canceled:
-  free(media_type);
   free(row);
   cupsRasterClose(ras);
   cfImageClose(img);
