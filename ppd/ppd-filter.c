@@ -855,11 +855,16 @@ ppdFilterLoadPPD(cf_filter_data_t *data) /* I/O - Job and printer data */
 	  /* No filter defined in the PPD
 	     If output data is PDF, cfFilterPDFToPDF() is last
 	     filter (PDF printer) and has to log
+	     If output data is Postscript, ppdFilterPSToPS() should log,
+	     but it only logs with a pure PostScript PPD (no filter definition),
+	     so the PDF filter has to log
 	     If output data is Apple/PWG Raster or PCLm, cfFilter*ToRaster() is
 	     last filter (Driverless IPP printer) and cfFilterPDFToPDF()
 	     also has to log */
 	  if (strcasestr(data->final_content_type, "/pdf") ||
 	      strcasestr(data->final_content_type, "/vnd.cups-pdf") ||
+	      strcasestr(data->final_content_type, "/postscript") ||
+	      strcasestr(data->final_content_type, "/vnd.cups-postscript") ||
 	      strcasestr(data->final_content_type, "/pwg-raster") ||
 	      strcasestr(data->final_content_type, "/urf") ||
 	      strcasestr(data->final_content_type, "/pclm"))
@@ -898,6 +903,13 @@ ppdFilterLoadPPD(cf_filter_data_t *data) /* I/O - Job and printer data */
 	     Ghostscript wrapper to use Ghostscript's built-in printer
 	     drivers. Here there is also no access to the pages so that we
 	     delegate the logging to the PDF filter */
+	  page_logging = 1;
+	}
+	else if (!strncasecmp(lastfilter + strlen(lastfilter) - 4, "tops", 4))
+	{
+	  /* Something-to PostScript filter is the last filter, so output is
+	     PostScript but these filters only log with pure PostScript PPD
+	     (no filter definition), so the PDF filter has to log */
 	  page_logging = 1;
 	}
 	else if (!strcasecmp(lastfilter, "hpps"))
