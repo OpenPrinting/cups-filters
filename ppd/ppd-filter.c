@@ -832,8 +832,10 @@ ppdFilterLoadPPD(cf_filter_data_t *data) /* I/O - Job and printer data */
 	  while (!isspace(*p)) p ++;
 	  while (isspace(*p)) p ++;
 	}
-	if (!strncasecmp(data->final_content_type, p,
-			 strlen(data->final_content_type))) {
+	if (strlen(p) >= strlen(data->final_content_type) &&
+	    !strncasecmp(data->final_content_type, p,
+			 strlen(data->final_content_type)) &&
+	    !isalnum(p[strlen(data->final_content_type)])) {
 	  break;
 	}
       }
