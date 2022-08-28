@@ -30,8 +30,8 @@
  * Local functions
  */
 
-int raster_base_header(cups_page_header2_t *h, cf_filter_data_t *data,
-		       int pwg_raster);
+static int raster_base_header(cups_page_header2_t *h, cf_filter_data_t *data,
+			      int pwg_raster);
 
 /*
  * '_strlcpy()' - Safely copy two strings.
@@ -968,7 +968,7 @@ cfRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 }
 
 
-int                                        /* O - -1 on error, 0 on success */
+static int                                 /* O - -1 on error, 0 on success */
 raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 		   cf_filter_data_t *data, /* I - Filter data */
 		   int pwg_raster)         /* I - 1 if PWG/Apple Raster */
