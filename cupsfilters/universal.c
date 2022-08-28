@@ -232,7 +232,8 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
     {
       filter = malloc(sizeof(cf_filter_filter_in_chain_t));
       filter->function = cfFilterBannerToPDF;
-      filter->parameters = NULL;
+      filter->parameters =
+	strdup(universal_parameters->bannertopdf_template_dir);
       filter->name = "bannertopdf";
       cupsArrayAdd(filter_chain, filter);
       if (log) log(ld, CF_LOGLEVEL_DEBUG,

@@ -33,6 +33,8 @@ main(int  argc,				/* I - Number of command-line args */
   int           ret;
   char          *p;
   cf_filter_universal_parameter_t universal_parameters;
+  char buf[1024];
+  const char *datadir;
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
 #endif /* HAVE_SIGACTION && !HAVE_SIGSET */
@@ -74,6 +76,12 @@ main(int  argc,				/* I - Number of command-line args */
     universal_parameters.texttopdf_params.classification = strdup(p);
   else
     universal_parameters.texttopdf_params.classification = NULL;
+
+  datadir = getenv("CUPS_DATADIR");
+  if (!datadir)
+    datadir = CUPS_DATADIR;
+  snprintf(buf, sizeof(buf), "%s/data", datadir);
+  universal_parameters.bannertopdf_template_dir = buf;
 
   ret = ppdFilterCUPSWrapper(argc, argv, ppdFilterUniversal,
 			     &universal_parameters, &JobCanceled);

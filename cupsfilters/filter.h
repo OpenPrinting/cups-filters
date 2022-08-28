@@ -117,6 +117,7 @@ typedef struct cf_filter_universal_parameter_s { /* Contains input and output
 						    cfFilterTextToPDF() */
   char *actual_output_type;
   cf_filter_texttopdf_parameter_t texttopdf_params;
+  const char *bannertopdf_template_dir;
 } cf_filter_universal_parameter_t;
 
 
