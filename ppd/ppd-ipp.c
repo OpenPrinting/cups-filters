@@ -297,7 +297,8 @@ ppdLoadAttributes(
                 buf[1024];
   int           def_found,
                 order,
-                face_up;
+                face_up,
+                have_custom_size = 0;
   static const int	orientation_requested_supported[4] =
   {					/* orientation-requested-supported values */
     IPP_ORIENT_PORTRAIT,
@@ -704,6 +705,27 @@ ppdLoadAttributes(
 
   /* media-col-database and media-col-default */
   attr = ippAddCollections(attrs, IPP_TAG_PRINTER, "media-col-database", pc->num_sizes, NULL);
+  if (strncasecmp(ppd_size->name, "Custom", 6) == 0)
+  {
+    /* media-col-default - Custom size */
+    int w = (int)(ppd_size->width / 72.0 * 2540.0);
+    int l = (int)(ppd_size->length / 72.0 * 2540.0);
+    if (w >= pc->custom_min_width && w <= pc->custom_max_width &&
+	l >= pc->custom_min_length && l <= pc->custom_max_length)
+    {
+      pwgFormatSizeName(buf, sizeof(buf), NULL, "custom", w, l, NULL);
+      col = create_media_col(buf, default_source, default_type, w, l,
+			     (int)(ppd_size->bottom / 72.0 * 2540.0),
+			     (int)(ppd_size->left / 72.0 * 2540.0),
+			     w - (int)(ppd_size->right / 72.0 * 2540.0),
+			     l - (int)(ppd_size->top / 72.0 * 2540.0));
+      ippAddCollection(attrs, IPP_TAG_PRINTER, "media-col-default", col);
+      ippDelete(col);
+      /* media-default */
+      ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-default", NULL, buf);
+      have_custom_size = 1;
+    }
+  }
   for (i = 0, pwg_size = pc->sizes; i < pc->num_sizes; i ++, pwg_size ++)
   {
     if ((ptr = strchr(pwg_size->map.ppd, '.')) != NULL)
@@ -749,12 +771,14 @@ ppdLoadAttributes(
     }
     ippSetCollection(attrs, &attr, i, col);
     ippDelete(col);
-    if (pwg_size == default_size)
+    if (!have_custom_size && pwg_size == default_size)
     {
-      /* media-col-default */
+      /* media-col-default - Standard size */
       col = create_media_col(ptr, default_source, default_type, pwg_size->width, pwg_size->length, pwg_size->bottom, pwg_size->left, pwg_size->right, pwg_size->top);
       ippAddCollection(attrs, IPP_TAG_PRINTER, "media-col-default", col);
       ippDelete(col);
+      /* media-default */
+      ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-default", NULL, ptr);
     }
   }
 
@@ -762,9 +786,6 @@ ppdLoadAttributes(
   col = create_media_col(default_size->map.pwg, default_source, default_type, default_size->width, default_size->length, default_size->bottom, default_size->left, default_size->right, default_size->top);
   ippAddCollection(attrs, IPP_TAG_PRINTER, "media-col-ready", col);
   ippDelete(col);
-
-  /* media-default */
-  ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-default", NULL, default_size->map.pwg);
 
   /* media-left-margin-supported */
   for (i = 0, num_margins = 0, pwg_size = pc->sizes; i < pc->num_sizes && num_margins < (int)(sizeof(margins) / sizeof(margins[0])); i ++, pwg_size ++)
@@ -828,9 +849,14 @@ ppdLoadAttributes(
   ippAddIntegers(attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "media-right-margin-supported", num_margins, margins);
 
   /* media-supported */
-  attr = ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-supported", pc->num_sizes, NULL, NULL);
+  attr = ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-supported", pc->num_sizes + (ppd->variable_sizes ? 2 : 0), NULL, NULL);
   for (i = 0, pwg_size = pc->sizes; i < pc->num_sizes; i ++, pwg_size ++)
     ippSetString(attrs, &attr, i, pwg_size->map.pwg);
+  if (ppd->variable_sizes)
+  {
+    ippSetString(attrs, &attr, pc->num_sizes, pc->custom_min_keyword);
+    ippSetString(attrs, &attr, pc->num_sizes + 1, pc->custom_max_keyword);
+  }
 
   /* media-size-supported */
   attr = ippAddCollections(attrs, IPP_TAG_PRINTER, "media-size-supported", pc->num_sizes + (ppd->variable_sizes ? 1 : 0), NULL);
