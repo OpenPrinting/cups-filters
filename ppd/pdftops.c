@@ -829,7 +829,8 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     ppdRasterInterpretPPD(&header, ppd, num_options, options, NULL);
     /* 100 dpi is default, this means that if we have 100 dpi here this
        method failed to find the printing resolution */
-    if (header.HWResolution[0] > 100 && header.HWResolution[1] > 100)
+    resolution[0] = '\0';
+    if (header.HWResolution[0] != 100 || header.HWResolution[1] != 100)
     {
       xres = header.HWResolution[0];
       yres = header.HWResolution[1];
@@ -838,11 +839,16 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
       strncpy(resolution, choice->choice, sizeof(resolution) - 1);
     else if ((attr = ppdFindAttr(ppd,"DefaultResolution",NULL)) != NULL)
       strncpy(resolution, attr->value, sizeof(resolution) - 1);
-    resolution[sizeof(resolution)-1] = '\0';
-    if ((xres == 0) && (yres == 0) &&
-	((numvalues = sscanf(resolution, "%dx%d", &xres, &yres)) <= 0))
-      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "ppdFilterPDFToPS: No resolution information found in the PPD file.");
+    resolution[sizeof(resolution) - 1] = '\0';
+    if (((xres == 100 && yres == 100) || xres <= 0 || yres <= 0))
+    {
+      if (resolution[0] &&
+	  (numvalues = sscanf(resolution, "%dx%d", &xres, &yres)) == 1)
+	yres = xres;
+      if (numvalues <= 0 && log)
+	log(ld, CF_LOGLEVEL_DEBUG,
+	    "ppdFilterPDFToPS: No resolution information found in the PPD file.");
+    }
   }
   else{
     cfRasterPrepareHeader(&header, data, CF_FILTER_OUT_FORMAT_CUPS_RASTER,
