@@ -253,7 +253,15 @@ ppdGetOptions(cups_option_t **options,	/* O - Options */
 
 
 /*
- * 'ppdLoadAttributes()' - Load IPP attributes from a PPD file.
+ * 'ppdLoadAttributes()' - Load IPP attributes from a PPD file to
+ *                         create printer IPP attriutes which describe
+ *                         the capabilities of the printer. Note that
+ *                         this is for telling filters and drivers how
+ *                         to print a job on the printer and NOT for a
+ *                         PPD retro-fitting Printer Application (or
+ *                         any other PPD-supporting IPP print server)
+ *                         to answer a get-printer-attributes IPP
+ *                         request.
  */
 
 ipp_t *					/* O - IPP attributes or `NULL`
@@ -285,8 +293,8 @@ ppdLoadAttributes(
   const char	*template;		/* Current finishings-template value */
   int		num_margins;		/* Number of media-xxx-margin-supported values */
   int		margins[10];		/* media-xxx-margin-supported values */
-  int		xres,			/* Default horizontal resolution */
-		yres;			/* Default vertical resolution */
+  int		xres = 0,		/* Default horizontal resolution */
+		yres = 0;		/* Default vertical resolution */
   int           is_texttotext;
   int		num_items;		/* Number of IPP attribute values */
   const char	*items[20];		/* IPP attribute values */
@@ -294,11 +302,31 @@ ppdLoadAttributes(
   int           res_x[20], res_y[20], int_item[20];
   char          *val,
                 *def_output_bin = NULL,
-                buf[1024];
+                buf[1024],
+                cmd[256],               /* Device ID CMD: string */
+                *cmdptr;
   int           def_found,
                 order,
                 face_up,
                 have_custom_size = 0;
+  cups_page_header2_t header;
+  static const char * const pdls[][2] =
+  {                                     /* MIME media type to command set mapping */
+    { "application/postscript", "POSTSCRIPT,PS" },
+    { "application/vnd.cups-postscript", "POSTSCRIPT,PS" },
+    { "application/pdf", "PDF" },
+    { "application/vnd.cups-pdf", "PDF" },
+    { "application/vnd.canon-cpdl", "CPDL" },
+    { "application/vnd.canon-lips", "LIPS" },
+    { "application/vnd.hp-PCL", "PCL" },
+    { "application/vnd.hp-PCLXL", "PCLXL" },
+    { "application/vnd.ms-xpsdocument", "XPS" },
+    { "image/jpeg", "JPEG" },
+    { "image/pwg-raster", "PWGRaster" },
+    { "image/urf", "URF,AppleRaster" },
+    { "application/PCLm", "PCLM" },
+    { "image/tiff", "TIFF" }
+  };
   static const int	orientation_requested_supported[4] =
   {					/* orientation-requested-supported values */
     IPP_ORIENT_PORTRAIT,
@@ -330,38 +358,13 @@ ppdLoadAttributes(
     IPP_QUALITY_NORMAL,
     IPP_QUALITY_HIGH
   };
-  static const char * const printer_supply[] =
-  {					/* printer-supply values */
-    "index=1;class=receptacleThatIsFilled;type=wasteToner;unit=percent;"
-        "maxcapacity=100;level=25;colorantname=unknown;",
-    "index=2;class=supplyThatIsConsumed;type=toner;unit=percent;"
-        "maxcapacity=100;level=75;colorantname=black;"
-  };
-  static const char * const printer_supply_color[] =
-  {					/* printer-supply values */
-    "index=1;class=receptacleThatIsFilled;type=wasteInk;unit=percent;"
-        "maxcapacity=100;level=25;colorantname=unknown;",
-    "index=2;class=supplyThatIsConsumed;type=ink;unit=percent;"
-        "maxcapacity=100;level=75;colorantname=black;",
-    "index=3;class=supplyThatIsConsumed;type=ink;unit=percent;"
-        "maxcapacity=100;level=50;colorantname=cyan;",
-    "index=4;class=supplyThatIsConsumed;type=ink;unit=percent;"
-        "maxcapacity=100;level=33;colorantname=magenta;",
-    "index=5;class=supplyThatIsConsumed;type=ink;unit=percent;"
-        "maxcapacity=100;level=67;colorantname=yellow;"
-  };
-  static const char * const printer_supply_description[] =
-  {					/* printer-supply-description values */
-    "Toner Waste Tank",
-    "Black Toner"
-  };
-  static const char * const printer_supply_description_color[] =
-  {					/* printer-supply-description values */
-    "Ink Waste Tank",
-    "Black Ink",
-    "Cyan Ink",
-    "Magenta Ink",
-    "Yellow Ink"
+  static const char * const print_content_optimize_supported[] =
+  {					/* print-content-optimize-supported values */
+    "auto",
+    "text",
+    "graphic",
+    "text-and-graphic",
+    "photo"
   };
   static const char * const sides_supported[] =
   {					/* sides-supported values */
@@ -445,26 +448,6 @@ ppdLoadAttributes(
   if (default_output_order == NULL)
     default_output_order = "Normal";
 
-  if ((ppd_attr = ppdFindAttr(ppd, "DefaultResolution", NULL)) != NULL)
-  {
-   /*
-    * Use the PPD-defined default resolution...
-    */
-
-    if ((i = sscanf(ppd_attr->value, "%dx%d", &xres, &yres)) == 1)
-      yres = xres;
-    else if (i < 0)
-      xres = yres = 300;
-  }
-  else
-  {
-   /*
-    * Use default of 300dpi...
-    */
-
-    xres = yres = 300;
-  }
-
  /*
   * Data formats which the printer understands, if the PPD specifies
   * a driver in a "*cupsFilter(2): ..." line, we add the input format
@@ -474,6 +457,8 @@ ppdLoadAttributes(
   docformats = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0, NULL,
 			     (cups_afree_func_t)free);
   is_texttotext = 0;
+  strcpy(cmd, "CMD:");
+  cmdptr = cmd + 4;
   if (ppd->num_filters)
   {
     char *filter;
@@ -481,10 +466,12 @@ ppdLoadAttributes(
 	 filter;
 	 filter = (char *)cupsArrayNext(pc->filters))
     {
-      char buf[256];
-
       /* String of the "*cupsfilter:" or "*cupsfilter2:" line */
       strncpy(buf, filter, sizeof(buf) - 1);
+
+      /* Do not count in "comandto..." filters */
+      if (strstr(buf, " commandto"))
+	continue;
 
       /* Is the PPD file using the "texttotext" filter? */
       if (strcmp(buf + strlen(buf) - 10, "texttotext") == 0)
@@ -496,12 +483,56 @@ ppdLoadAttributes(
       if (*ptr)
 	*ptr = '\0';
 
+      /* Check whether the second word is not the cost value, then we have
+	 a "*cupsFilter2:* line and the second word is the printer's input
+	 format */
+      ptr ++;
+      while (*ptr && isspace(*ptr)) ptr ++;
+      if (!isdigit(*ptr))
+      {
+	strcpy(buf, ptr);
+	ptr = buf;
+	while (*ptr && !isspace(*ptr)) ptr ++;
+	if (*ptr)
+	  *ptr = '\0';
+      }
+
       /* Add it to the list of output formats */
       cupsArrayAdd(docformats, strdup(buf));
+
+      /* Add it to the CMD: string for the device ID */
+      if (!ppdFindAttr(ppd, "1284DeviceId", NULL))
+      {
+	/* See if it is a known MIME media type and map to the corresponding
+	   1284 command-set name... */
+	for (i = 0; i < (sizeof(pdls) / sizeof(pdls[0])); i ++)
+	{
+	  if (!strcasecmp(buf, pdls[i][0]) &&
+	      strlen(pdls[i][1]) < sizeof(cmd) - (size_t)(cmdptr - cmd) - 3)
+	  {
+	    /* MIME media type matches, append this CMD value... */
+	    if (cmdptr > cmd + 4)
+	      *cmdptr++ = ',';
+	    strcpy(cmdptr, pdls[i][1]);
+	    cmdptr += strlen(cmdptr);
+	  }
+	}
+      }
     }
+    if (strlen(cmd) > 4)
+    {
+      cmdptr[0] = ';';
+      cmdptr[1] = '\0';
+    }
+    else
+      cmd[0] = '\0';
   }
   else
+  {
     cupsArrayAdd(docformats, strdup("application/vnd.cups-postscript"));
+    if (!ppdFindAttr(ppd, "1284DeviceId", NULL))
+      strcpy(cmd, "CMD:POSTSCRIPT,PS;");
+  }
 
  /*
   * Create the attributes...
@@ -539,6 +570,14 @@ ppdLoadAttributes(
 	  *p = '\0';
 	  p ++;
 	}
+	/* Default resolution via urf-supported */
+	if (!strcmp(item_buf, "urf-supported") &&
+	    (xres == 0 && yres == 0) &&/* Default resolution not found in
+					  other raster-format-related PPD
+					  attribute yet, use first resolution in
+					  urf-supported */
+	    items[num_items - 1][0] == 'R' && items[num_items - 1][1] == 'S')
+	  xres = yres = atoi(items[num_items - 1] + 2);
       }
       while (p);
       if (strlen(items[0]) > 3 &&
@@ -550,6 +589,18 @@ ppdLoadAttributes(
 	  if (sscanf(items[j], "%dx%d", &res_x[j], &res_y[j]) == 1)
 	    res_y[j] = res_x[j];
 	ippAddResolutions(attrs, IPP_TAG_PRINTER, item_buf, num_items, IPP_RES_PER_INCH, res_x, res_y);
+	/* Default resolution? */
+	if ((xres == 0 && yres == 0) ||  /* Take first in list if there is no
+					    separate PPD attribute providing a
+					    default resolution */
+	    strstr(item_buf, "default")) /* PPD attribute with default
+					    resolution, take it, even if we
+					    already had the list from which we
+					    have taken the first item. */
+	{
+	  xres = res_x[0];
+	  yres = res_y[0];
+	}
       }
       else if (strlen(items[0]) > 0 &&
 	       ((int)(strtol(items[0], &p, 10) * 0) || (errno == 0 && *p == '\0')))
@@ -562,6 +613,41 @@ ppdLoadAttributes(
       else
 	/* General */
 	ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, item_buf, num_items, NULL, items);
+    }
+  }
+
+ /*
+  * Resolution
+  */
+
+  if (xres == 0 && yres == 0)
+  {
+    /* Ignore error exits of ppdRasterInterpretPPD(), if it found a resolution
+       setting before erroring it is OK for us */
+    ppdRasterInterpretPPD(&header, ppd, 0, NULL, NULL);
+    /* 100 dpi is default, this means that if we have 100 dpi here this
+       method failed to find the printing resolution */
+    buf[0] = '\0';
+    if (header.HWResolution[0] != 100 || header.HWResolution[1] != 100)
+    {
+      xres = header.HWResolution[0];
+      yres = header.HWResolution[1];
+    }
+    else if ((ppd_choice = ppdFindMarkedChoice(ppd, "Resolution")) != NULL)
+      strncpy(buf, ppd_choice->choice, sizeof(buf) - 1);
+    else if ((ppd_attr = ppdFindAttr(ppd, "DefaultResolution", NULL)) != NULL)
+      strncpy(buf, ppd_attr->value, sizeof(buf) - 1);
+    else
+      /* Use default of 300dpi... */
+      xres = yres = 300;
+    buf[sizeof(buf) - 1] = '\0';
+    if (buf[0])
+    {
+      /* Use the marked resolution or the default resolution in the PPD... */
+      if ((i = sscanf(buf, "%dx%d", &xres, &yres)) == 1)
+	yres = xres;
+      else if (i <= 0)
+	xres = yres = 300;
     }
   }
 
@@ -595,9 +681,6 @@ ppdLoadAttributes(
   for (ptr = (char *)cupsArrayFirst(docformats), i = 0; ptr;
        ptr = (char *)cupsArrayNext(docformats), i ++)
     ippSetString(attrs, &attr, i, ptr);
-
-  /* document-password-supported */
-  ippAddInteger(attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "document-password-supported", 127);
 
   /* finishing-template-supported */
   attr = ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "finishing-template-supported", cupsArrayCount(pc->templates) + 1, NULL, NULL);
@@ -703,7 +786,8 @@ ppdLoadAttributes(
     ippAddInteger(attrs, IPP_TAG_PRINTER, IPP_TAG_ENUM, "landscape-orientation-requested-preferred", 4);
   }
 
-  /* media-col-database and media-col-default */
+  /* media-col-database, media-col-default, media-col-ready, media-default,
+     media-ready */
   attr = ippAddCollections(attrs, IPP_TAG_PRINTER, "media-col-database", pc->num_sizes, NULL);
   if (strncasecmp(ppd_size->name, "Custom", 6) == 0)
   {
@@ -720,9 +804,10 @@ ppdLoadAttributes(
 			     w - (int)(ppd_size->right / 72.0 * 2540.0),
 			     l - (int)(ppd_size->top / 72.0 * 2540.0));
       ippAddCollection(attrs, IPP_TAG_PRINTER, "media-col-default", col);
+      ippAddCollection(attrs, IPP_TAG_PRINTER, "media-col-ready", col);
       ippDelete(col);
-      /* media-default */
       ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-default", NULL, buf);
+      ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-ready", NULL, buf);
       have_custom_size = 1;
     }
   }
@@ -776,16 +861,12 @@ ppdLoadAttributes(
       /* media-col-default - Standard size */
       col = create_media_col(ptr, default_source, default_type, pwg_size->width, pwg_size->length, pwg_size->bottom, pwg_size->left, pwg_size->right, pwg_size->top);
       ippAddCollection(attrs, IPP_TAG_PRINTER, "media-col-default", col);
+      ippAddCollection(attrs, IPP_TAG_PRINTER, "media-col-ready", col);
       ippDelete(col);
-      /* media-default */
       ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-default", NULL, ptr);
+      ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-ready", NULL, ptr);
     }
   }
-
-  /* media-col-ready */
-  col = create_media_col(default_size->map.pwg, default_source, default_type, default_size->width, default_size->length, default_size->bottom, default_size->left, default_size->right, default_size->top);
-  ippAddCollection(attrs, IPP_TAG_PRINTER, "media-col-ready", col);
-  ippDelete(col);
 
   /* media-left-margin-supported */
   for (i = 0, num_margins = 0, pwg_size = pc->sizes; i < pc->num_sizes && num_margins < (int)(sizeof(margins) / sizeof(margins[0])); i ++, pwg_size ++)
@@ -815,9 +896,6 @@ ppdLoadAttributes(
   }
 
   ippAddIntegers(attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "media-left-margin-supported", num_margins, margins);
-
-  /* media-ready */
-  ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-ready", NULL, default_size->map.pwg);
 
   /* media-right-margin-supported */
   for (i = 0, num_margins = 0, pwg_size = pc->sizes; i < pc->num_sizes && num_margins < (int)(sizeof(margins) / sizeof(margins[0])); i ++, pwg_size ++)
@@ -1047,7 +1125,7 @@ ppdLoadAttributes(
   ippAddString(attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_KEYWORD), "print-content-optimize-default", NULL, "auto");
 
   /* print-content-optimize-supported */
-  ippAddString(attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_KEYWORD), "print-content-optimize-supported", NULL, "auto");
+  ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_KEYWORD), "print-content-optimize-supported", (int)(sizeof(print_content_optimize_supported) / sizeof(print_content_optimize_supported[0])), NULL, print_content_optimize_supported);
 
   /* print-quality-default */
   ippAddInteger(attrs, IPP_TAG_PRINTER, IPP_TAG_ENUM, "print-quality-default", IPP_QUALITY_NORMAL);
@@ -1093,8 +1171,7 @@ ppdLoadAttributes(
 
     char	device_id[1024];		/* Device ID string */
 
-    //XXX TODO: CMD:
-    snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;CMD:PS;", ppd->manufacturer, ppd->modelname);
+    snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;%s", ppd->manufacturer, ppd->modelname, cmd);
 
     ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_TEXT, "printer-device-id", NULL, device_id);
   }
@@ -1127,8 +1204,7 @@ ppdLoadAttributes(
     ippAddOctetString(attrs, IPP_TAG_PRINTER, "printer-input-tray", printer_input_tray, (int)strlen(printer_input_tray));
   }
 
-  /* printer-make-and-model */
-  // XXX TODO: Rip off driver info
+  /* printer-make-andXS-model */
   ippAddString(attrs, IPP_TAG_PRINTER, IPP_TAG_TEXT, "printer-make-and-model", NULL, ppd->nickname);
 
   /* printer-resolution-default */
@@ -1136,24 +1212,6 @@ ppdLoadAttributes(
 
   /* printer-resolution-supported */
   ippAddResolution(attrs, IPP_TAG_PRINTER, "printer-resolution-supported", IPP_RES_PER_INCH, xres, yres);
-
-  /* printer-supply and printer-supply-description */
-  if (ppd->color_device)
-  {
-    attr = ippAddOctetString(attrs, IPP_TAG_PRINTER, "printer-supply", printer_supply_color[0], (int)strlen(printer_supply_color[0]));
-    for (i = 1; i < (int)(sizeof(printer_supply_color) / sizeof(printer_supply_color[0])); i ++)
-      ippSetOctetString(attrs, &attr, i, printer_supply_color[i], (int)strlen(printer_supply_color[i]));
-
-    ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_TEXT), "printer-supply-description", (int)(sizeof(printer_supply_description_color) / sizeof(printer_supply_description_color[0])), NULL, printer_supply_description_color);
-  }
-  else
-  {
-    attr = ippAddOctetString(attrs, IPP_TAG_PRINTER, "printer-supply", printer_supply[0], (int)strlen(printer_supply[0]));
-    for (i = 1; i < (int)(sizeof(printer_supply) / sizeof(printer_supply[0])); i ++)
-      ippSetOctetString(attrs, &attr, i, printer_supply[i], (int)strlen(printer_supply[i]));
-
-    ippAddStrings(attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_TEXT), "printer-supply-description", (int)(sizeof(printer_supply_description) / sizeof(printer_supply_description[0])), NULL, printer_supply_description);
-  }
 
   /* sides-default */
   if (pc->sides_option && pc->sides_2sided_long &&
