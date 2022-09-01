@@ -154,6 +154,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
   }
   else
   {
+#ifdef HAVE_GHOSTSCRIPT
     if (!strcasecmp(input, "application/postscript"))
     {
       outformat = malloc(sizeof(cf_filter_out_format_t));
@@ -166,8 +167,10 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
     }
-    else if (!strcasecmp(input_super, "text") ||
-	     (!strcasecmp(input_super, "application") && input_type[0] == 'x'))
+    else
+#endif /* HAVE_GHOSTSCRIPT */
+    if (!strcasecmp(input_super, "text") ||
+	(!strcasecmp(input_super, "application") && input_type[0] == 'x'))
     {
       filter = malloc(sizeof(cf_filter_filter_in_chain_t));
       cf_filter_texttopdf_parameter_t* tparameters =
@@ -195,6 +198,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
     }
+#ifdef HAVE_GHOSTSCRIPT
     else if (!strcasecmp(input_type, "vnd.adobe-reader-postscript"))
     {
       outformat = malloc(sizeof(cf_filter_out_format_t));
@@ -228,6 +232,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 		     "cfFilterUniversal: Adding %s to chain", filter->name);
       }
     }
+#endif /* HAVE_GHOSTSCRIPT */
     else if (!strcasecmp(input, "application/vnd.cups-pdf-banner"))
     {
       filter = malloc(sizeof(cf_filter_filter_in_chain_t));
@@ -266,6 +271,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 		     "cfFilterUniversal: Adding %s to chain", filter->name);
       }
 
+#if defined(HAVE_GHOSTSCRIPT) || defined(HAVE_POPPLER_PDFTOPS)
       if (strcasecmp(output_type, "vnd.cups-pdf"))
       {
 	if (!strcasecmp(output_type, "vnd.cups-raster") ||
@@ -273,6 +279,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	    !strcasecmp(output_type, "pwg-raster") ||
 	    !strcasecmp(output_type, "PCLm"))
 	{
+#  ifdef HAVE_GHOSTSCRIPT
 	  outformat = malloc(sizeof(cf_filter_out_format_t));
 	  *outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
 	  if (!strcasecmp(output_type, "pwg-raster"))
@@ -289,13 +296,40 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterUniversal: Adding %s to chain",
 		       filter->name);
+#  else
+#    ifdef HAVE_POPPLER_PDFTOPS
+	  filter = malloc(sizeof(cf_filter_filter_in_chain_t));
+	  filter->function = cfFilterPDFToRaster;
+	  filter->parameters = NULL;
+	  filter->name = "pdftoraster";
+	  cupsArrayAdd(filter_chain, filter);
+	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		       "cfFilterUniversal: Adding %s to chain",
+		       filter->name);
+	  if (!strcasecmp(output_type, "PCLm"))
+	  {
+	    outformat = malloc(sizeof(cf_filter_out_format_t));
+	    *outformat = CF_FILTER_OUT_FORMAT_PCLM;
+	    filter = malloc(sizeof(cf_filter_filter_in_chain_t));
+	    filter->function = cfFilterRasterToPDF;
+	    filter->parameters = outformat;
+	    filter->name = "rastertopclm";
+	    cupsArrayAdd(filter_chain, filter);
+	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
+			 "cfFilterUniversal: Adding %s to chain", filter->name);
+	  }
+#    endif /* HAVE_POPPLER_PDFTOPS */
+#  endif /* HAVE_GHOSTSCRIPT */
 	}
 	else
 	{
+#endif /* HAVE_GHOSTSCRIPT || HAVE_POPPLER_PDFTOPS */
 	  // Output format is not PDF and unknown -> Error
 	  ret = 1;
 	  goto out;
+#if defined(HAVE_GHOSTSCRIPT) || defined(HAVE_POPPLER_PDFTOPS)
 	}
+#endif /* HAVE_GHOSTSCRIPT || HAVE_POPPLER_PDFTOPS */
       }
     }
   }

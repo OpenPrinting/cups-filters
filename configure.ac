@@ -553,27 +553,17 @@ AS_IF([test x"$long_long_found" = "xyes"], [
 ])
 
 # ================
-# Check for Mutool
-# ================
-AC_ARG_ENABLE([mutool],
-	[AS_HELP_STRING([--disable-mutool], [Disable filters using mutool.])],
-	[enable_mutool="$enableval"],
-	[enable_mutool=yes]
-)
-
-AC_ARG_WITH([mutool-path],
-	[AS_HELP_STRING([--with-mutool-path=value], [Set path to mutool binary (default: system).])],
-	[with_mutool_path="$withval"],
-	[with_mutool_path=system]
-)
-
-# ================
 # Check for pdf2ps
 # ================
 AC_ARG_ENABLE([ghostscript],
 	[AS_HELP_STRING([--disable-ghostscript], [Disable filters using Ghostscript.])],
 	[enable_ghostscript="$enableval"],
 	[enable_ghostscript=yes]
+)
+AC_ARG_ENABLE([pdftops],
+	[AS_HELP_STRING([--disable-pdftops], [Disable filters using Poppler's pdftops.])],
+	[enable_pdftops="$enableval"],
+	[enable_pdftops=yes]
 )
 AC_ARG_WITH([pdftops],
 	[AS_HELP_STRING([--with-pdftops=value], [Set which pdftops to use (gs,pdftops,pdftocairo,acroread,mupdf,hybrid).])],
@@ -625,6 +615,8 @@ AC_ARG_ENABLE([gs-ps2write],
 	[enable_gs_ps2write=yes]
 )
 
+CUPS_PDFTOPS_RENDERER=""
+
 CUPS_GHOSTSCRIPT=""
 AS_IF([test "x$enable_ghostscript" != "xyes"], [
        with_gs_path=""
@@ -642,7 +634,7 @@ AS_IF([test "x$enable_ghostscript" != "xyes"], [
 		AC_MSG_ERROR([Required gs binary is missing. Please install ghostscript package.])
 	])
 	AC_DEFINE([HAVE_GHOSTSCRIPT], [], [Define that we provide ghostscript binary])
-	AS_IF([test x"$with_pdftops" = xgs], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [GS], [Define default renderer])])
+	AS_IF([test x"$with_pdftops" = xgs -o x"$CUPS_PDFTOPS_RENDERER" = x], [CUPS_PDFTOPS_RENDERER=GS])
 
 	AS_IF([test "x$cross_compiling" != "xyes"], [
 		AC_MSG_CHECKING(whether gs supports the ps2write device)
@@ -660,6 +652,59 @@ AS_IF([test "x$enable_ghostscript" != "xyes"], [
 AM_CONDITIONAL(ENABLE_GHOSTSCRIPT, test "x$enable_ghostscript" = xyes)
 AC_SUBST(CUPS_GHOSTSCRIPT)
 
+AS_IF([test "x$enable_pdftops" != "xyes"], [
+       with_pdftops_path=""
+], [
+	AS_IF([test "x$with_pdftops_path" != "xsystem"], [
+		CUPS_PDFTOPS="$with_pdftops_path"
+	], [
+		AS_IF([test "x$cross_compiling" = "xyes"], [
+			CUPS_PDFTOPS="/usr/bin/pdftops"
+		], [
+			AC_CHECK_PROG(CUPS_PDFTOPS, pdftops, /usr/bin/pdftops)
+		])
+		AS_IF([test "x$CUPS_PDFTOPS" = "x"], [
+			AC_MSG_ERROR([Required pdftops is missing. Please install the pdftops utility of Poppler.])
+		])
+	])
+	AS_IF([test "x$CUPS_PDFTOPS" != "x"], [
+		AC_DEFINE([HAVE_POPPLER_PDFTOPS], [], [Define that we provide poppler pdftops.])
+		AS_IF([test x"$with_pdftops" = xpdftops -o x"$CUPS_PDFTOPS_RENDERER" = x], [CUPS_PDFTOPS_RENDERER=PDFTOPS])
+
+		AS_IF([test "x$cross_compiling" != "xyes"], [
+			AC_MSG_CHECKING([whether pdftops supports -origpagesizes])
+			AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- -origpagesizes`], [
+				AC_MSG_RESULT([yes])
+				AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES], [] , [pdftops supports -origpagesizes.])
+			], [
+				AC_MSG_RESULT([no])
+			])
+			AC_MSG_CHECKING([whether pdftops supports -r])
+			AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- '-r '`], [
+				AC_MSG_RESULT([yes])
+				AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION], [] , [pdftops supports -r argument.])
+			], [
+				AC_MSG_RESULT([no])
+			])
+		])
+	])
+])
+
+# ================
+# Check for Mutool
+# ================
+AC_ARG_ENABLE([mutool],
+	[AS_HELP_STRING([--disable-mutool], [Disable filters using mutool.])],
+	[enable_mutool="$enableval"],
+	[enable_mutool=yes]
+)
+
+AC_ARG_WITH([mutool-path],
+	[AS_HELP_STRING([--with-mutool-path=value], [Set path to mutool binary (default: system).])],
+	[with_mutool_path="$withval"],
+	[with_mutool_path=system]
+)
+
 CUPS_MUTOOL=""
 AS_IF([test "x$enable_mutool" != "xyes"], [
 	with_mutool_path=""
@@ -676,70 +721,64 @@ AS_IF([test "x$enable_mutool" != "xyes"], [
 	AS_IF([test "x$CUPS_MUTOOL" = "x"], [
 		AC_MSG_ERROR([Required mutool binary is missing. Please install mutool.])
 	])
-	AS_IF([test x"$with_pdftops" = xmupdf], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [MUPDF], [Define default renderer])])
+	AC_DEFINE([HAVE_MUTOOL], [], [Define that we provide mutool binary])
+	AS_IF([test x"$with_pdftops" = xmupdf -o x"$CUPS_PDFTOPS_RENDERER" = x], [CUPS_PDFTOPS_RENDERER=MUPDF])
 ])
 AM_CONDITIONAL(ENABLE_MUTOOL, test "x$enable_mutool" = xyes)
 AC_SUBST(CUPS_MUTOOL)
 
-AS_IF([test "x$with_pdftops_path" != "xsystem"], [
-	CUPS_PDFTOPS="$with_pdftops_path"
-], [
-	AS_IF([test "x$cross_compiling" = "xyes"], [
-		CUPS_PDFTOPS="/usr/bin/pdftops"
-	], [
-		AC_CHECK_PROG(CUPS_PDFTOPS, pdftops, /usr/bin/pdftops)
-	])
-	AS_IF([test "x$CUPS_PDFTOPS" = "x"], [
-		AC_MSG_ERROR([Required pdftops is missing. Please install the pdftops utility of Poppler.])
-	])
-])
-AS_IF([test "x$CUPS_PDFTOPS" != "x"], [
-	AC_DEFINE([HAVE_POPPLER_PDFTOPS], [], [Define that we provide poppler pdftops.])
-	AS_IF([test x"$with_pdftops" = xpdftops], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOPS], [Define default renderer])])
+AC_ARG_ENABLE([pdftocairo],
+	[AS_HELP_STRING([--disable-pdftocairo], [Disable filters using pdftocairo.])],
+	[enable_pdftocairo="$enableval"],
+	[enable_pdftocairo=yes]
+)
 
-	AS_IF([test "x$cross_compiling" != "xyes"], [
-		AC_MSG_CHECKING([whether pdftops supports -origpagesizes])
-		AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- -origpagesizes`], [
-        		AC_MSG_RESULT([yes])
-			AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES], [] , [pdftops supports -origpagesizes.])
-		], [
-	        	AC_MSG_RESULT([no])
-		])
-		AC_MSG_CHECKING([whether pdftops supports -r])
-		AS_IF([`$CUPS_PDFTOPS -h 2>&1 | grep -q -- '-r '`], [
-	        	AC_MSG_RESULT([yes])
-			AC_DEFINE([HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION], [] , [pdftops supports -r argument.])
-		], [
-        		AC_MSG_RESULT([no])
-		])
+CUPS_PDFTOCAIRO=""
+AS_IF([test "x$enable_pdftocairo" != "xyes"], [
+	with_pdftocairo_path=""
+], [
+	AS_IF([test "x$with_pdftocairo_path" != "xsystem"], [
+		CUPS_PDFTOCAIRO="$with_pdftocairo_path"
+	], [
+		CUPS_PDFTOCAIRO="pdftocairo"
+	])
+	AS_IF([test "x$CUPS_PDFTOCAIRO" != "x"], [
+		AC_DEFINE([HAVE_PDFTOCAIRO], [], [Define that we provide pdftocairo binary])
+		AS_IF([test x"$with_pdftops" = xpdftocairo -o x"$CUPS_PDFTOPS_RENDERER" = x], [CUPS_PDFTOPS_RENDERER=PDFTOCAIRO])
+	], [
+		AC_MSG_ERROR([Required pdftocairo is missing. Please install Poppler developer packages.])
 	])
 ])
-AS_IF([test "x$with_pdftocairo_path" != "xsystem"], [
-	CUPS_PDFTOCAIRO="$with_pdftocairo_path"
+
+AC_ARG_ENABLE([acroread],
+	[AS_HELP_STRING([--disable-acroread], [Disable filters using acroread.])],
+	[enable_acroread="$enableval"],
+	[enable_acroread=yes]
+)
+
+CUPS_ACROREAD=""
+AS_IF([test "x$enable_acroread" != "xyes"], [
+	with_acroread_path=""
 ], [
-	CUPS_PDFTOCAIRO="pdftocairo"
+	AS_IF([test "x$with_acroread_path" != "xsystem"], [
+		CUPS_ACROREAD="$with_acroread_path"
+	], [
+		CUPS_ACROREAD="acroread"
+	])
+	AS_IF([test "x$CUPS_ACROREAD" != "x"], [
+		AC_DEFINE([HAVE_ACROREAD], [], [Define that we provide acroread binary])
+		AS_IF([test x"$with_pdftops" = xacroread -o x"$CUPS_PDFTOPS_RENDERER" = x], [CUPS_PDFTOPS_RENDERER=ACROREAD])
+	])
 ])
-AS_IF([test "x$CUPS_PDFTOCAIRO" != "x"], [
-	AS_IF([test x"$with_pdftops" = xpdftocairo], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [PDFTOCAIRO], [Define default renderer])])
-], [
-	AC_MSG_ERROR([Required pdftocairo is missing. Please install Poppler developer packages.])
+
+AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x" -a "x$CUPS_PDFTOPS" != "x"], [
+	AS_IF([test x"$with_pdftops" = xhybrid -o x"$CUPS_PDFTOPS_RENDERER" = x], [CUPS_PDFTOPS_RENDERER=HYBRID])
 ])
-AS_IF([test "x$with_acroread_path" != "xsystem"], [
-	CUPS_ACROREAD="$with_acroread_path"
-], [
-	CUPS_ACROREAD="acroread"
-])
-AS_IF([test "x$CUPS_ACROREAD" != "x"], [
-	AS_IF([test x"$with_pdftops" = xacroread], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [ACROREAD], [Define default renderer])])
-])
+
 AS_IF([test "x$with_ippfind_path" != "xsystem"], [
 	CUPS_IPPFIND="$with_ippfind_path"
 ], [
 	CUPS_IPPFIND="ippfind"
-])
-
-AS_IF([test "x$CUPS_GHOSTSCRIPT" != "x" -a "x$CUPS_PDFTOPS" != "x"], [
-	AS_IF([test x"$with_pdftops" = xhybrid], [AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [HYBRID], [Define default renderer])])
 ])
 
 AC_DEFINE_UNQUOTED([CUPS_GHOSTSCRIPT], "$CUPS_GHOSTSCRIPT", [gs binary to use])
@@ -749,6 +788,7 @@ AC_DEFINE_UNQUOTED([CUPS_POPPLER_PDFTOCAIRO], "$CUPS_PDFTOCAIRO", [pdftocairo bi
 AC_DEFINE_UNQUOTED([CUPS_ACROREAD], "$CUPS_ACROREAD", [acroread binary to use.])
 AC_DEFINE_UNQUOTED([CUPS_IPPFIND], "$CUPS_IPPFIND", [ippfind binary to use.])
 AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_MAX_RESOLUTION], [$CUPS_PDFTOPS_MAXRES], [max resolution used for pdftops when converting images])
+AC_DEFINE_UNQUOTED([CUPS_PDFTOPS_RENDERER], [$CUPS_PDFTOPS_RENDERER], [Define default renderer])
 
 # ==================
 # Check for foomatic
@@ -1003,8 +1043,12 @@ Build configuration:
 	imagefilters:    ${enable_imagefilters}
 	jpeg:            ${with_jpeg}
 	exif:            ${enable_exif}
+	pdftocairo:      ${enable_pdftocairo}
 	pdftocairo-path: ${with_pdftocairo_path}
-	pdftops:         ${with_pdftops}
+	acroread:        ${enable_acroread}
+	acroread-path:   ${with_acroread_path}
+	pdftops:         ${CUPS_PDFTOPS_RENDERER}
+	Poppler's pdftops: ${enable_pdftops}
 	pdftops-path:    ${with_pdftops_path}
 	png:             ${with_png}
 	php:             ${with_php}
@@ -1023,7 +1067,6 @@ Build configuration:
 	universal CUPS filter: ${enable_universal_cups_filter}
 	individual CUPS filters: ${enable_individual_cups_filters}
 	driverless:      ${enable_driverless}
-	pclm:            ${enable_pclm}
 	ppdc utilities:  ${enable_ppdc_utils}
 	local queue naming for remote CUPS queues: ${REMOTE_CUPS_LOCAL_QUEUE_NAMING}
 	keep generated queues during shutdown:     ${SAVING_CREATED_QUEUES}
