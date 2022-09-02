@@ -715,6 +715,8 @@ pkgmime_DATA = \
 
 universalmimefiles = \
 	mime/cupsfilters-universal.convs
+universalpsmimefiles = \
+	mime/cupsfilters-universal-postscript.convs
 individualmimefiles = \
 	mime/cupsfilters-individual.convs
 popplermimefiles = \
@@ -725,10 +727,9 @@ mutoolmimefiles = \
 	mime/cupsfilters-mupdf.convs
 
 if ENABLE_UNIVERSAL_CUPS_FILTER
-if ENABLE_POPPLER
-if ENABLE_GHOSTSCRIPT
 pkgmime_DATA += $(universalmimefiles)
-endif
+if ENABLE_GHOSTSCRIPT
+pkgmime_DATA += $(universalpsmimefiles)
 endif
 endif
 
@@ -755,6 +756,7 @@ endif
 EXTRA_DIST += \
 	$(genmimefiles) \
 	$(universalmimefiles) \
+	$(universalpsmimefiles) \
 	$(individualmimefiles) \
 	$(popplermimefiles) \
 	$(gsmimefiles) \
@@ -824,12 +826,8 @@ pkgfilter_PROGRAMS += \
 	foomatic-rip
 endif
 if ENABLE_UNIVERSAL_CUPS_FILTER
-if ENABLE_POPPLER
-if ENABLE_GHOSTSCRIPT
 pkgfilter_PROGRAMS += \
 	universal
-endif
-endif
 endif
 pkgfilter_PROGRAMS += \
 	pdftops \

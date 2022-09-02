@@ -329,8 +329,8 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	  goto out;
 #if defined(HAVE_GHOSTSCRIPT) || defined(HAVE_POPPLER_PDFTOPS)
 	}
-#endif /* HAVE_GHOSTSCRIPT || HAVE_POPPLER_PDFTOPS */
       }
+#endif /* HAVE_GHOSTSCRIPT || HAVE_POPPLER_PDFTOPS */
     }
   }
 

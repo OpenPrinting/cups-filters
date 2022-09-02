@@ -825,11 +825,15 @@ AM_CONDITIONAL([ENABLE_RASTERTOPWG], [test "x$enable_rastertopwg" = "xyes"])
 # ===============================
 AC_ARG_ENABLE([universal-cups-filter],
 	[AS_HELP_STRING([--enable-universal-cups-filter], [Use a single, universal CUPS filter executable for all filter functions.])],
-        [enable_universal_cups_filter="$enableval"],
-        [enable_universal_cups_filter=yes]
+	[enable_universal_cups_filter="$enableval"],
+	[enable_universal_cups_filter=yes]
 )
+AS_IF([test "x$CUPS_GHOSTSCRIPT" == "x" -a "x$CUPS_PDFTOPS" == "x"], [
+	enable_universal_cups_filter=no
+])
 AM_CONDITIONAL([ENABLE_UNIVERSAL_CUPS_FILTER],
 [test "x$enable_universal_cups_filter" != "xno"])
+
 
 # =================================
 # Check for individual CUPS filters
