@@ -260,7 +260,7 @@ static void lcms_error_handler(cmsContext contextId, cmsUInt32Number ErrorCode,
 #endif
 
 static int parse_opts(cf_filter_data_t *data,
-		      cf_filter_out_format_t outformat,
+		      cf_filter_out_format_t *outformat,
 		      pdftoraster_doc_t *doc)
 {
   int num_options = 0;
@@ -272,26 +272,45 @@ static int parse_opts(cf_filter_data_t *data,
   void *ld = data ->logdata;
   cups_cspace_t cspace = (cups_cspace_t)(-1);
 
-  if (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
-      outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
+  if (*outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
+      *outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER||
+      *outformat == CF_FILTER_OUT_FORMAT_PCLM)
     doc->pwgraster = 1;
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
-  memset(&(doc->header), 0, sizeof(doc->header));
-  cfRasterPrepareHeader(&(doc->header), data, outformat,
-			  (outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
-			   outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
-			   outformat : CF_FILTER_OUT_FORMAT_CUPS_RASTER), 0,
-			  &cspace);
+  if (*outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
+      *outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER)
+  {
+    t = cupsGetOption("media-class", num_options, options);
+    if (t == NULL)
+      t = cupsGetOption("MediaClass", num_options, options);
+    if (t != NULL)
+    {
+      if (*outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
+	  strcasestr(t, "pwg"))
+      {
+	doc->pwgraster = 1;
+	*outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
+      }
+      else if (*outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER &&
+	       !strcasestr(t, "pwg"))
+      {
+	doc->pwgraster = 0;
+	*outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
+      }
+    }
+  }
 
-  t = cupsGetOption("media-class", num_options, options);
-  if (t == NULL)
-    t = cupsGetOption("MediaClass", num_options, options);
-  if (t != NULL && strcasestr(t, "pwg"))
-    doc->pwgraster = 1;
-  else
-    doc->pwgraster = 0;
+  memset(&(doc->header), 0, sizeof(doc->header));
+  cfRasterPrepareHeader(&(doc->header), data, *outformat,
+			  (*outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
+			   *outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
+			   *outformat :
+			   (*outformat == CF_FILTER_OUT_FORMAT_PCLM ?
+			    CF_FILTER_OUT_FORMAT_PWG_RASTER :
+			    CF_FILTER_OUT_FORMAT_CUPS_RASTER)), 0,
+			  &cspace);
 
   doc->header.cupsRenderingIntent[0] = '\0';
   cfGetPrintRenderIntent(data, doc->header.cupsRenderingIntent,
@@ -1574,7 +1593,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
     outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
 
   /* Note: With the CF_FILTER_OUT_FORMAT_PCLM selection the output is
-     actually CUPS Raster but color spaces and depth are always
+     actually PWG Raster but color spaces and depth are always
      assumed to be 8-bit sRGB or sGray, the only color spaces in
      PCLm. This mode is for further processing with rastertopclm. */
 
@@ -1630,7 +1649,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
   }
   close(fd);
 
-  if (parse_opts(data, outformat, &doc) == 1)
+  if (parse_opts(data, &outformat, &doc) == 1)
   {
     unlink(name);
     return (1);
@@ -1756,7 +1775,10 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
 					   (outformat ==
 					    CF_FILTER_OUT_FORMAT_APPLE_RASTER ?
 					    CUPS_RASTER_WRITE_APPLE :
-					    CUPS_RASTER_WRITE))))) == 0)
+					    (outformat ==
+					     CF_FILTER_OUT_FORMAT_PCLM ?
+					     CUPS_RASTER_WRITE_PWG :
+					     CUPS_RASTER_WRITE)))))) == 0)
   {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterPDFToRaster: Cannot open raster stream.");
