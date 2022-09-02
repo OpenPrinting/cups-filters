@@ -42,7 +42,7 @@
 
 application/pdf		application/vnd.cups-pdf		66	pdftopdf
 text/plain		application/pdf				32	texttopdf
-image/pwg-raster	application/pdf				32	rastertopdf
+image/pwg-raster	application/pdf				32	pwgtopdf
 image/gif		application/vnd.cups-pdf		65	imagetopdf
 image/png		application/vnd.cups-pdf		65	imagetopdf
 image/jpeg		application/vnd.cups-pdf		65	imagetopdf
@@ -59,7 +59,7 @@ image/x-xpixmap		application/vnd.cups-pdf		65	imagetopdf
 image/x-xwindowdump	application/vnd.cups-pdf		65	imagetopdf
 image/x-sun-raster	application/vnd.cups-pdf		65	imagetopdf
 application/vnd.cups-pdf-banner	application/pdf			32	bannertopdf
-image/urf		application/pdf				0	rastertopdf
+image/urf		application/pdf				0	pwgtopdf
 
 ########################################################################
 #
@@ -105,6 +105,5 @@ image/pwg-raster		application/vnd.cups-raster	100	pwgtoraster
 image/urf			application/vnd.cups-raster	100	pwgtoraster
 image/pwg-raster		image/urf			100	pwgtoraster
 image/urf			image/pwg-raster		100	pwgtoraster
-image/pwg-raster 		application/PCLm		100	rastertopclm
-image/urf 			application/PCLm		100	rastertopclm
-application/vnd.cups-raster	application/PCLm		100	rastertopclm
+image/pwg-raster 		application/PCLm		100	pwgtopclm
+image/urf 			application/PCLm		100	pwgtopclm

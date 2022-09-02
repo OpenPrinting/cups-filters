@@ -121,9 +121,9 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	outformat = malloc(sizeof(cf_filter_out_format_t));
 	*outformat = CF_FILTER_OUT_FORMAT_PCLM;
 	filter = malloc(sizeof(cf_filter_filter_in_chain_t));
-	filter->function = cfFilterRasterToPDF;
+	filter->function = cfFilterPWGToPDF;
 	filter->parameters = outformat;
-	filter->name = "rastertopclm";
+	filter->name = "pwgtopclm";
 	cupsArrayAdd(filter_chain, filter);
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal: Adding %s to chain", filter->name);
@@ -191,9 +191,9 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       outformat = malloc(sizeof(cf_filter_out_format_t));
       *outformat = CF_FILTER_OUT_FORMAT_PDF;
       filter = malloc(sizeof(cf_filter_filter_in_chain_t));
-      filter->function = cfFilterRasterToPDF;
+      filter->function = cfFilterPWGToPDF;
       filter->parameters = outformat;
-      filter->name = "rastertopdf";
+      filter->name = "pwgtopdf";
       cupsArrayAdd(filter_chain, filter);
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
@@ -224,9 +224,9 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	outformat = malloc(sizeof(cf_filter_out_format_t));
 	*outformat = CF_FILTER_OUT_FORMAT_PDF;
 	filter = malloc(sizeof(cf_filter_filter_in_chain_t));
-	filter->function = cfFilterRasterToPDF;
+	filter->function = cfFilterPWGToPDF;
 	filter->parameters = outformat;
-	filter->name = "rastertopdf";
+	filter->name = "pwgtopdf";
 	cupsArrayAdd(filter_chain, filter);
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterUniversal: Adding %s to chain", filter->name);
@@ -311,9 +311,9 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	    outformat = malloc(sizeof(cf_filter_out_format_t));
 	    *outformat = CF_FILTER_OUT_FORMAT_PCLM;
 	    filter = malloc(sizeof(cf_filter_filter_in_chain_t));
-	    filter->function = cfFilterRasterToPDF;
+	    filter->function = cfFilterPWGToPDF;
 	    filter->parameters = outformat;
-	    filter->name = "rastertopclm";
+	    filter->name = "pwgtopclm";
 	    cupsArrayAdd(filter_chain, filter);
 	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 			 "cfFilterUniversal: Adding %s to chain", filter->name);

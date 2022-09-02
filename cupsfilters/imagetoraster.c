@@ -267,7 +267,7 @@ cfFilterImageToRaster(int inputfd,         /* I - File descriptor input stream *
      about available color spaces and depths are taken from the
      urf-supported or pwg-raster-document-type-supported printer IPP
      attributes (PCLM is always sRGB 8-bit). These modes are for
-     further processing with rastertopwg or rastertopclm. This can
+     further processing with rastertopwg or pwgtopclm. This can
      change in the future when we add Apple Raster and PWG Raster
      output support to this filter. */
 

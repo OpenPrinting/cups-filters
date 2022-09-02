@@ -1,5 +1,5 @@
 /*
- * Raster to PDF filter (based on cfFilterRasterToPDF() filter function).
+ * Raster to PCLm filter (based on cfFilterPWGToPDF() filter function).
  */
 
 
@@ -58,11 +58,11 @@ main(int  argc,				/* I - Number of command-line args */
    * Fire up the ppdFilterRasterToPDF() filter function.
    */
 
-  cf_filter_out_format_t outformat = CF_FILTER_OUT_FORMAT_PDF;
-  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterRasterToPDF, &outformat, &JobCanceled);
+  cf_filter_out_format_t outformat = CF_FILTER_OUT_FORMAT_PCLM;
+  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterPWGToPDF, &outformat, &JobCanceled);
 
   if (ret)
-    fprintf(stderr, "ERROR: rastertopdf filter failed.\n");
+    fprintf(stderr, "ERROR: pwgtopclm filter failed.\n");
 
   return (ret);
 }

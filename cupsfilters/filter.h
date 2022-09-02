@@ -243,7 +243,7 @@ extern int cfFilterImageToRaster(int inputfd,
    color spaces and depths is taken from the urf-supported or
    pwg-raster-document-type-supported printer IPP attributes or from a
    supplied CUPS Raster sample header. This mode is for further
-   processing with rastertopwg or rastertopclm. This can change in the
+   processing with rastertopwg or pwgtopclm. This can change in the
    future when we add Apple Raster and PWG Raster output support to
    this filter function. */
 
@@ -263,7 +263,7 @@ extern int cfFilterMuPDFToPWG(int inputfd,
    and depths is taken from the urf-supported printer IPP attribute,
    the pclm- attributes, or from a supplied CUPS Raster sample header
    (PCLM is always sGray/sRGB 8-bit). These modes are for further
-   processing with pwgtoraster or rastertopclm. This can change in the
+   processing with pwgtoraster or pwgtopclm. This can change in the
    future when MuPDF adds further output formats. */
 
 
@@ -309,7 +309,7 @@ extern int cfFilterPDFToRaster(int inputfd,
    Note: With PCLm selection the output is actually CUPS Raster but
    color space and depth will be 8-bit sRGB or SGray, the only color
    spaces supported by PCLm. This mode is for further processing with
-   rastertopclm. */
+   pwgtopclm. */
 
 
 extern int cfFilterPWGToRaster(int inputfd,
@@ -325,10 +325,10 @@ extern int cfFilterPWGToRaster(int inputfd,
    Note: On the PCLM selection the output is actually CUPS Raster but
    information about available color spaces and depths is taken from
    the pclm-... printer IPP attributes. This mode is for further
-   processing with rastertopclm. */
+   processing with pwgtopclm. */
 
 
-extern int cfFilterRasterToPDF(int inputfd,
+extern int cfFilterPWGToPDF(int inputfd,
 			       int outputfd,
 			       int inputseekable,
 			       cf_filter_data_t *data,

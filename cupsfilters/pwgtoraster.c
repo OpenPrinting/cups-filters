@@ -269,7 +269,7 @@ static int parse_opts(cf_filter_out_format_t outformat,
      cupsGetOption("media-col", num_options, options));
 
   // We can directly create CUPS Raster, PWG Raster, and Apple Raster but
-  // for PCLm we have to output CUPS Raster and feed it into cfFilterRasterToPDF()
+  // for PCLm we have to output CUPS Raster and feed it into cfFilterPWGToPDF()
   cfRasterPrepareHeader(&(doc->outheader), data, outformat,
 			  outformat == CF_FILTER_OUT_FORMAT_PCLM ?
 			  CF_FILTER_OUT_FORMAT_CUPS_RASTER : outformat, 0, &cspace);

@@ -1595,7 +1595,7 @@ int cfFilterPDFToRaster(int inputfd,         /* I - File descriptor input stream
   /* Note: With the CF_FILTER_OUT_FORMAT_PCLM selection the output is
      actually PWG Raster but color spaces and depth are always
      assumed to be 8-bit sRGB or sGray, the only color spaces in
-     PCLm. This mode is for further processing with rastertopclm. */
+     PCLm. This mode is for further processing with pwgtopclm. */
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "cfFilterPDFToRaster: Final output format: %s",

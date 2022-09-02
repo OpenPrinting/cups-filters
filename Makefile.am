@@ -326,9 +326,9 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/pdftopdf/qpdf-cm-private.h \
 	cupsfilters/pdftoraster.cxx \
 	cupsfilters/pdfutils.c \
+	cupsfilters/pwgtopdf.cxx \
 	cupsfilters/pwgtoraster.c \
 	cupsfilters/raster.c \
-	cupsfilters/rastertopdf.cxx \
 	cupsfilters/rastertopwg.c \
 	cupsfilters/rgb.c \
 	cupsfilters/srgb.c \
@@ -832,8 +832,8 @@ endif
 pkgfilter_PROGRAMS += \
 	pdftops \
 	texttopdf \
-	rastertopclm \
-	rastertopdf \
+	pwgtopclm \
+	pwgtopdf \
 	bannertopdf \
 	rastertops \
 	pwgtoraster \
@@ -1024,24 +1024,24 @@ pclmtoraster_LDADD = \
 	libppd.la \
 	$(CUPS_LIBS)
 
-rastertopclm_SOURCES = \
-	filter/rastertopclm.c
-rastertopclm_CFLAGS = \
+pwgtopclm_SOURCES = \
+	filter/pwgtopclm.c
+pwgtopclm_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/
-rastertopclm_LDADD = \
+pwgtopclm_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la \
 	libppd.la
 
-rastertopdf_SOURCES = \
-	filter/rastertopdf.c
-rastertopdf_CFLAGS = \
+pwgtopdf_SOURCES = \
+	filter/pwgtopdf.c
+pwgtopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
 	-I$(srcdir)/cupsfilters/ \
 	-I$(srcdir)/ppd/
-rastertopdf_LDADD = \
+pwgtopdf_LDADD = \
 	$(CUPS_LIBS) \
 	libcupsfilters.la \
 	libppd.la
