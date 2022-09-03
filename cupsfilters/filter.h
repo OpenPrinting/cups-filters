@@ -193,6 +193,7 @@ extern int cfFilterGhostscript(int inputfd,
 			       void *parameters);
 
 /* Requires specification of output format via data->final_content_type
+   or alternatively as parameter of type cf_filter_out_format_t.
 
    Output formats: PDF, raster-only PDF, PCLm, PostScript, CUPS Raster,
    PWG Raster, Apple Raster, PCL-XL
@@ -330,6 +331,7 @@ extern int cfFilterPWGToPDF(int inputfd,
 			       void *parameters);
 
 /* Requires specification of output format via data->final_content_type
+   or alternatively as parameter of type cf_filter_out_format_t.
 
    Output formats: PDF, PCLm */
 
