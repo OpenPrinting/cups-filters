@@ -268,11 +268,9 @@ static int parse_opts(cf_filter_out_format_t outformat,
      cupsGetOption("media-size", num_options, options) ||
      cupsGetOption("media-col", num_options, options));
 
-  // We can directly create CUPS Raster, PWG Raster, and Apple Raster but
-  // for PCLm we have to output CUPS Raster and feed it into cfFilterPWGToPDF()
+  // We can directly create CUPS Raster, PWG Raster, and Apple Raster
   cfRasterPrepareHeader(&(doc->outheader), data, outformat,
-			  outformat == CF_FILTER_OUT_FORMAT_PCLM ?
-			  CF_FILTER_OUT_FORMAT_CUPS_RASTER : outformat, 0, &cspace);
+			  outformat, 0, &cspace);
 
   if (doc->outheader.Duplex)
   {
@@ -2075,8 +2073,6 @@ int cfFilterPWGToRaster(int inputfd,        /* I - File descriptor input stream 
       outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
     else if (strcasestr(val, "urf"))
       outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
-    else if (strcasestr(val, "pclm"))
-      outformat = CF_FILTER_OUT_FORMAT_PCLM;
     else
       outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
   }
@@ -2087,8 +2083,7 @@ int cfFilterPWGToRaster(int inputfd,        /* I - File descriptor input stream 
 	       "cfFilterPWGToRaster: Output format: %s",
 	       (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ? "CUPS Raster" :
 		(outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ? "PWG Raster" :
-		 (outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER ? "Apple Raster" :
-		  "PCLM"))));
+		 "Apple Raster")));
 
   cmsSetLogErrorHandler(lcms_error_handler);
 

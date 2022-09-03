@@ -50,7 +50,6 @@ image/x-xwindowdump             application/vnd.universal-input      0    -
 image/x-sun-raster              application/vnd.universal-input      0    -
 image/pwg-raster                application/vnd.universal-input      0    -
 application/vnd.cups-pdf        application/vnd.universal-input      0    -
-application/vnd.cups-raster     application/vnd.universal-input      0    -
 image/urf                       application/vnd.universal-input      0    -
 application/pdf                 application/vnd.universal-input      0    -
 text/plain                      application/vnd.universal-input      0    -

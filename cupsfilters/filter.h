@@ -320,12 +320,7 @@ extern int cfFilterPWGToRaster(int inputfd,
 
 /* Requires specification of output format via data->final_content_type
 
-   Output formats: CUPS Raster, PWG Raster, Apple Raster, PCLm
-
-   Note: On the PCLM selection the output is actually CUPS Raster but
-   information about available color spaces and depths is taken from
-   the pclm-... printer IPP attributes. This mode is for further
-   processing with pwgtopclm. */
+   Output formats: CUPS Raster, PWG Raster, Apple Raster */
 
 
 extern int cfFilterPWGToPDF(int inputfd,
@@ -347,7 +342,9 @@ extern int cfFilterRasterToPWG(int inputfd,
 
 /* Requires specification of output format via data->final_content_type
 
-   Output formats: Apple Raster or PWG Raster */
+   Output formats: Apple Raster or PWG Raster, if PCLM is specified
+   PWG Raster is produced to feed into the cfFilterPWGToPDF() filter
+   function. */
 
 
 extern int cfFilterTextToPDF(int inputfd,

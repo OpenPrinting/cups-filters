@@ -69,14 +69,14 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 
   val = data->final_content_type;
   if (val) {
-    if (strcasestr(val, "pwg"))
+    if (strcasestr(val, "pwg") || strcasestr(val, "pclm"))
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_PWG);
     else if (strcasestr(val, "urf"))
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_APPLE);
     else
     {
       if (log) log(ld, CF_LOGLEVEL_ERROR,
-		   "cfFilterRasterToPWG: Invalid output format specified. Only PWG Raster and Apple Raster/URF are supported.");
+		   "cfFilterRasterToPWG: Invalid output format specified. Only PWG Raster, Apple Raster/URF, and PCLm are supported.");
 
       close(inputfd);
       close(outputfd);
