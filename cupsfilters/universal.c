@@ -82,23 +82,9 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	!strcasecmp(output_type, "pwg-raster") ||
 	!strcasecmp(output_type, "PCLm"))
     {
-      outformat = malloc(sizeof(cf_filter_out_format_t));
-      *outformat = CF_FILTER_OUT_FORMAT_CUPS_RASTER;
-      if (!strcasecmp(output_type, "pwg-raster") ||
-	  (!strcasecmp(output_type, "vnd.cups-raster") &&
-	   !strcasecmp(final_output, "image/pwg-raster")))
-	*outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
-      else if (!strcasecmp(output_type, "urf") ||
-	       (!strcasecmp(output_type, "vnd.cups-raster") &&
-		!strcasecmp(final_output, "image/urf")))
-	*outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
-      else if (!strcasecmp(output_type, "PCLm") ||
-	       (!strcasecmp(output_type, "vnd.cups-raster") &&
-		!strcasecmp(final_output, "applicationn/PCLm")))
-	*outformat = CF_FILTER_OUT_FORMAT_PCLM;
       filter = malloc(sizeof(cf_filter_filter_in_chain_t));
       filter->function = cfFilterImageToRaster;
-      filter->parameters = outformat;
+      filter->parameters = NULL;
       filter->name = "imagetoraster";
       cupsArrayAdd(filter_chain, filter);
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -108,10 +94,8 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	  !strcasecmp(output, "application/PCLm"))
       {
 	filter = malloc(sizeof(cf_filter_filter_in_chain_t));
-	outformat = malloc(sizeof(cf_filter_out_format_t));
-	*outformat = CF_FILTER_OUT_FORMAT_PWG_RASTER;
 	filter->function = cfFilterRasterToPWG;
-	filter->parameters = outformat;
+	filter->parameters = NULL;
 	filter->name = "rastertopwg";
 	cupsArrayAdd(filter_chain, filter);
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -133,10 +117,8 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       else if (!strcasecmp(output, "image/urf"))
       {
 	filter = malloc(sizeof(cf_filter_filter_in_chain_t));
-	outformat = malloc(sizeof(cf_filter_out_format_t));
-	*outformat = CF_FILTER_OUT_FORMAT_APPLE_RASTER;
 	filter->function = cfFilterRasterToPWG;
-	filter->parameters = outformat;
+	filter->parameters = NULL;
 	filter->name = "rastertopwg";
 	cupsArrayAdd(filter_chain, filter);
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -253,7 +235,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       {
 	filter = malloc(sizeof(cf_filter_filter_in_chain_t));
 	filter->function = cfFilterPDFToPDF;
-	filter->parameters = strdup(output);
+	filter->parameters = NULL;
 	filter->name = "pdftopdf";
 	cupsArrayAdd(filter_chain, filter);
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
