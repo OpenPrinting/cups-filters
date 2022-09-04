@@ -283,17 +283,10 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/ghostscript.c \
 	cupsfilters/ieee1284.c \
 	cupsfilters/image.c \
-	cupsfilters/image-bmp.c \
 	cupsfilters/image-colorspace.c \
-	cupsfilters/image-gif.c \
 	cupsfilters/image-jpeg.c \
-	cupsfilters/image-photocd.c \
-	cupsfilters/image-pix.c \
 	cupsfilters/image-png.c \
-	cupsfilters/image-pnm.c \
 	cupsfilters/image-private.h \
-	cupsfilters/image-sgi.c \
-	cupsfilters/image-sun.c \
 	cupsfilters/image-tiff.c \
 	cupsfilters/image-zoom.c \
 	cupsfilters/imagetopdf.c \

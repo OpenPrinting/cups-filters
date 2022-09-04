@@ -380,47 +380,26 @@ cfImageOpenFP(
   img->xppi      = 200;
   img->yppi      = 200;
 
-  if (!memcmp(header, "GIF87a", 6) || !memcmp(header, "GIF89a", 6))
-    status = _cfImageReadGIF(img, fp, primary, secondary, saturation, hue,
-                               lut);
-  else if (!memcmp(header, "BM", 2))
-    status = _cfImageReadBMP(img, fp, primary, secondary, saturation, hue,
-                               lut);
-  else if (header[0] == 0x01 && header[1] == 0xda)
-    status = _cfImageReadSGI(img, fp, primary, secondary, saturation, hue,
-                               lut);
-  else if (header[0] == 0x59 && header[1] == 0xa6 &&
-           header[2] == 0x6a && header[3] == 0x95)
-    status = _cfImageReadSunRaster(img, fp, primary, secondary, saturation,
-                                     hue, lut);
-  else if (header[0] == 'P' && header[1] >= '1' && header[1] <= '6')
-    status = _cfImageReadPNM(img, fp, primary, secondary, saturation, hue,
-                               lut);
-  else if (!memcmp(header2, "PCD_IPI", 7))
-    status = _cfImageReadPhotoCD(img, fp, primary, secondary, saturation,
-                                   hue, lut);
-  else if (!memcmp(header + 8, "\000\010", 2) ||
-           !memcmp(header + 8, "\000\030", 2))
-    status = _cfImageReadPIX(img, fp, primary, secondary, saturation, hue,
-                               lut);
 #if defined(HAVE_LIBPNG) && defined(HAVE_LIBZ)
-  else if (!memcmp(header, "\211PNG", 4))
+  if (!memcmp(header, "\211PNG", 4))
     status = _cfImageReadPNG(img, fp, primary, secondary, saturation, hue,
                                lut);
+  else
 #endif /* HAVE_LIBPNG && HAVE_LIBZ */
 #ifdef HAVE_LIBJPEG
-  else if (!memcmp(header, "\377\330\377", 3) &&	/* Start-of-Image */
+  if (!memcmp(header, "\377\330\377", 3) &&	/* Start-of-Image */
 	   header[3] >= 0xe0 && header[3] <= 0xef)	/* APPn */
     status = _cfImageReadJPEG(img, fp, primary, secondary, saturation, hue,
                                 lut);
+  else
 #endif /* HAVE_LIBJPEG */
 #ifdef HAVE_LIBTIFF
-  else if (!memcmp(header, "MM\000\052", 4) ||
+  if (!memcmp(header, "MM\000\052", 4) ||
            !memcmp(header, "II\052\000", 4))
     status = _cfImageReadTIFF(img, fp, primary, secondary, saturation, hue,
                                 lut);
-#endif /* HAVE_LIBTIFF */
   else
+#endif /* HAVE_LIBTIFF */
   {
     fclose(fp);
     status = -1;

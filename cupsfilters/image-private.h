@@ -150,56 +150,16 @@ extern int		_cfImagePutCol(cf_image_t *img, int x, int y,
 				       int height, const cf_ib_t *pixels);
 extern int		_cfImagePutRow(cf_image_t *img, int x, int y,
 				       int width, const cf_ib_t *pixels);
-extern int		_cfImageReadBMP(cf_image_t *img, FILE *fp,
-					cf_icspace_t primary,
-					cf_icspace_t secondary,
-					int saturation, int hue,
-					const cf_ib_t *lut);
-extern int		_cfImageReadFPX(cf_image_t *img, FILE *fp,
-					cf_icspace_t primary,
-					cf_icspace_t secondary,
-					int saturation, int hue,
-					const cf_ib_t *lut);
-extern int		_cfImageReadGIF(cf_image_t *img, FILE *fp,
-					cf_icspace_t primary,
-					cf_icspace_t secondary,
-					int saturation, int hue,
-					const cf_ib_t *lut);
 extern int		_cfImageReadJPEG(cf_image_t *img, FILE *fp,
 					 cf_icspace_t primary,
 					 cf_icspace_t secondary,
 					 int saturation, int hue,
 					 const cf_ib_t *lut);
-extern int		_cfImageReadPIX(cf_image_t *img, FILE *fp,
-					cf_icspace_t primary,
-					cf_icspace_t secondary,
-					int saturation, int hue,
-					const cf_ib_t *lut);
 extern int		_cfImageReadPNG(cf_image_t *img, FILE *fp,
 					cf_icspace_t primary,
 					cf_icspace_t secondary,
 					int saturation, int hue,
 					const cf_ib_t *lut);
-extern int		_cfImageReadPNM(cf_image_t *img, FILE *fp,
-					cf_icspace_t primary,
-					cf_icspace_t secondary,
-					int saturation, int hue,
-					const cf_ib_t *lut);
-extern int		_cfImageReadPhotoCD(cf_image_t *img, FILE *fp,
-					    cf_icspace_t primary,
-					    cf_icspace_t secondary,
-					    int saturation, int hue,
-					    const cf_ib_t *lut);
-extern int		_cfImageReadSGI(cf_image_t *img, FILE *fp,
-					cf_icspace_t primary,
-					cf_icspace_t secondary,
-					int saturation, int hue,
-					const cf_ib_t *lut);
-extern int		_cfImageReadSunRaster(cf_image_t *img, FILE *fp,
-					      cf_icspace_t primary,
-					      cf_icspace_t secondary,
-					      int saturation, int hue,
-					      const cf_ib_t *lut);
 extern int		_cfImageReadTIFF(cf_image_t *img, FILE *fp,
 					 cf_icspace_t primary,
 					 cf_icspace_t secondary,
