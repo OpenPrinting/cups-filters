@@ -846,34 +846,6 @@ AC_ARG_ENABLE([individual-cups-filters],
 AM_CONDITIONAL([ENABLE_INDIVIDUAL_CUPS_FILTERS],
 [test "x$enable_individual_cups_filters" != "xno"])
 
-# =============
-# Check for php
-# =============
-# NOTE: This stuff is broken, requires internal cups headers.
-AC_ARG_WITH([php],
-	[AS_HELP_STRING([--with-php], [Determine whether to build php cups extension.])],
-	[with_php="$withval"],
-	[with_php=no]
-)
-AC_ARG_WITH([php-config],
-	[AS_HELP_STRING([--with-php-config=path], [Specify path to php-config executable.])],
-	[with_php_config="$withval"],
-	[with_php_config=system]
-)
-AM_CONDITIONAL([WITH_PHP], [test "x$with_php" = "xyes"])
-AS_IF([test x"$with_php" = "xyes"], [
-	AS_IF([test "x$with_php_config" != "xsystem"], [
-		PHPCONFIG=$with_php_config
-	], [
-		AC_PATH_TOOL(PHPCONFIG, [php-config])
-		AS_IF([test -z "$PHPCONFIG"], [
-			AC_MSG_ERROR([Required php-config is missing. Please install PHP developer packages.])
-		])
-	])
-	PHPDIR="`$PHPCONFIG --extension-dir`"
-	AC_SUBST(PHPDIR)
-])
-
 # =========
 # Test ARGS
 # =========
@@ -1055,8 +1027,6 @@ Build configuration:
 	Poppler's pdftops: ${enable_pdftops}
 	pdftops-path:    ${with_pdftops_path}
 	png:             ${with_png}
-	php:             ${with_php}
-	php-config:      ${with_php_config}
 	pstops:          ${enable_pstops}
 	rastertopwg:     ${enable_rastertopwg}
 	shell:           ${with_shell}

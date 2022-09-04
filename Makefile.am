@@ -1282,26 +1282,6 @@ EXTRA_DIST += \
 	$(genppdfiles) \
 	$(gsppdfiles)
 
-# =========
-# Scripting
-# =========
-if WITH_PHP
-phpextensiondir = $(PHPDIR)
-phpextension_LTLIBRARIES = libphpcups.la
-endif
-
-libphpcups_la_SOURCES = \
-	scripting/php/phpcups.c \
-	scripting/php/phpcups.h
-libphpcups_la_LIBADD = $(CUPS_LIBS)
-libphpcups_la_CFLAGS = $(CUPS_CFLAGS)
-libphpcups_la_LDFLAGS = -no-undefined
-
-EXTRA_DIST += \
-	scripting/perl \
-	scripting/php/README \
-	scripting/php/phpcups.php
-
 distclean-local:
 	rm -rf *.cache *~
 
