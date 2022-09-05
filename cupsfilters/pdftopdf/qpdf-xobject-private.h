@@ -5,4 +5,4 @@
 
 QPDFObjectHandle _cfPDFToPDFMakeXObject(QPDF *pdf, QPDFObjectHandle page);
 
-#endif
+#endif // !_CUPS_FILTERS_PDFTOPDF_QPDF_XOBJECT_H_

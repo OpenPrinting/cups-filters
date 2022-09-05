@@ -5,7 +5,8 @@
 #include <stddef.h>
 #include <vector>
 
-class _cfPDFToPDFIntervalSet {
+class _cfPDFToPDFIntervalSet
+{
   typedef int key_t; // TODO?! template <typename T>
   typedef std::pair<key_t, key_t> value_t;
   typedef std::vector<value_t> data_t;
@@ -32,4 +33,4 @@ class _cfPDFToPDFIntervalSet {
   data_t data;
 };
 
-#endif
+#endif // !_CUPS_FILTERS_PDFTOPDF_INTERVALSET_H_

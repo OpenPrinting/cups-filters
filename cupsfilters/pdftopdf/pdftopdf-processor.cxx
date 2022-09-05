@@ -4,75 +4,88 @@
 #include "cupsfilters/debug-internal.h"
 #include <numeric>
 
-void BookletMode_dump(pdftopdf_booklet_mode_e bkm,pdftopdf_doc_t *doc) // {{{
+void
+BookletMode_dump(pdftopdf_booklet_mode_e bkm,
+		 pdftopdf_doc_t *doc) // {{{
 {
-  static const char *bstr[3]={"Off","On","Shuffle-Only"};
-  if ((bkm<CF_PDFTOPDF_BOOKLET_OFF) || (bkm>CF_PDFTOPDF_BOOKLET_JUST_SHUFFLE)) {
+  static const char *bstr[3] = {"Off", "On", "Shuffle-Only"};
+
+  if ((bkm < CF_PDFTOPDF_BOOKLET_OFF) ||
+      (bkm > CF_PDFTOPDF_BOOKLET_JUST_SHUFFLE))
+  {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-				   "cfFilterPDFToPDF: bookletMode: (bad booklet mode: "
-				   "%d)", bkm);
-  } else {
+				   "cfFilterPDFToPDF: Booklet mode: (Bad booklet mode: %d)",
+				   bkm);
+  }
+  else
+  {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
-				   "cfFilterPDFToPDF: bookletMode: %s", bstr[bkm]);
+				   "cfFilterPDFToPDF: Booklet mode: %s",
+				   bstr[bkm]);
   }
 }
 // }}}
 
-bool _cfPDFToPDFProcessingParameters::with_page(int outno) const // {{{
+bool
+_cfPDFToPDFProcessingParameters::with_page(int outno) const // {{{
 {
-  if (outno%2 == 0) { // 1-based
-    if (!even_pages) {
-      return false;
-    }
-  } else if (!odd_pages) {
-    return false;
+  if (outno % 2 == 0)
+  { // 1-based
+    if (!even_pages)
+      return (false);
   }
-  return page_ranges.contains(outno);
+  else if (!odd_pages)
+    return (false);
+  return (page_ranges.contains(outno));
 }
 // }}}
-bool _cfPDFToPDFProcessingParameters::have_page(int pageno) const
+
+bool
+_cfPDFToPDFProcessingParameters::have_page(int pageno) const
 {
-  return input_page_ranges.contains(pageno);
+  return (input_page_ranges.contains(pageno));
 }
 
-void _cfPDFToPDFProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
+void
+_cfPDFToPDFProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 {
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: job_id: %d, num_copies: %d",
-				 job_id,num_copies);
+				 job_id, num_copies);
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: user: %s, title: %s",
-				 (user)?user:"(null)",(title)?title:"(null)");
+				 (user) ? user : "(null)",
+				 (title) ? title : "(null)");
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: fitplot: %s",
-				 (fitplot)?"true":"false");
+				 (fitplot) ? "true" : "false");
 
   page.dump(doc);
 
-  _cfPDFToPDFRotationDump(orientation,doc);
+  _cfPDFToPDFRotationDump(orientation, doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: paper_is_landscape: %s",
-				 (paper_is_landscape)?"true":"false");
+				 (paper_is_landscape) ? "true" : "false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: duplex: %s",
-				 (duplex)?"true":"false");
+				 (duplex) ? "true" : "false");
 
-  _cfPDFToPDFBorderTypeDump(border,doc);
+  _cfPDFToPDFBorderTypeDump(border, doc);
 
   nup.dump(doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: reverse: %s",
-				 (reverse)?"true":"false");
+				 (reverse) ? "true" : "false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: even_pages: %s, odd_pages: %s",
-				 (even_pages)?"true":"false",
-				 (odd_pages)?"true":"false");
+				 (even_pages) ? "true" : "false",
+				 (odd_pages) ? "true" : "false");
   
-   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
+  if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: input page range:");
   input_page_ranges.dump(doc);
 
@@ -82,20 +95,20 @@ void _cfPDFToPDFProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: mirror: %s",
-				 (mirror)?"true":"false");
+				 (mirror) ? "true" : "false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: Position:");
-  _cfPDFToPDFPositionDump(xpos,pdftopdf_axis_e::X,doc);
-  _cfPDFToPDFPositionDump(ypos,pdftopdf_axis_e::Y,doc);
+  _cfPDFToPDFPositionDump(xpos, pdftopdf_axis_e::X,doc);
+  _cfPDFToPDFPositionDump(ypos, pdftopdf_axis_e::Y,doc);
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: collate: %s",
-				 (collate)?"true":"false");
+				 (collate) ? "true" : "false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: even_duplex: %s",
-				 (even_duplex)?"true":"false");
+				 (even_duplex) ? "true" : "false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: page_label: %s",
@@ -109,63 +122,78 @@ void _cfPDFToPDFProcessingParameters::dump(pdftopdf_doc_t *doc) const // {{{
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: auto_rotate: %s",
-				 (auto_rotate)?"true":"false");
+				 (auto_rotate) ? "true" : "false");
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: device_copies: %d",
 				 device_copies);
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: device_collate: %s",
-				 (device_collate)?"true":"false");
+				 (device_collate) ? "true" : "false");
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: set_duplex: %s",
-				 (set_duplex)?"true":"false");
+				 (set_duplex) ? "true" : "false");
 }
 // }}}
 
 
-_cfPDFToPDFProcessor *_cfPDFToPDFFactory::processor()
+_cfPDFToPDFProcessor
+*_cfPDFToPDFFactory::processor()
 {
   return new _cfPDFToPDFQPDFProcessor();
 }
 
+//
 // (1-based)
-//   9: [*] [1] [2] [*]  [*] [3] [4] [9]  [8] [5] [6] [7]   -> signature = 12 = 3*4 = ((9+3)/4)*4
-//       1   2   3   4    5   6   7   8    9   10  11  12
-// NOTE: psbook always fills the sig completely (results in completely white pages (4-set), depending on the input)
+//   9: [*] [1] [2] [*]  [*] [3] [4] [9]  [8] [5] [6] [7]
+//       1   2   3   4    5   6   7   8    9  10  11  12
+//
+//                -> signature = 12 = 3*4 = ((9+3)/4)*4
+//
+// NOTE: psbook always fills the sig completely (results in completely
+//       white pages (4-set), depending on the input)
+//
+// empty pages must be added for output values >= numPages
+//
 
-// empty pages must be added for output values >=numPages
-std::vector<int> _cfPDFToPDFBookletShuffle(int numPages,int signature) // {{{
+std::vector<int>
+_cfPDFToPDFBookletShuffle(int numPages,
+			  int signature) // {{{
 {
-  if (signature<0) {
-    signature=(numPages+3)&~0x3;
-  }
-  DEBUG_assert(signature%4==0);
+  if (signature < 0)
+    signature = (numPages + 3) & ~0x3;
+  DEBUG_assert(signature % 4 == 0);
 
   std::vector<int> ret;
-  ret.reserve(numPages+signature-1);
+  ret.reserve(numPages + signature - 1);
 
-  int curpage=0;
-  while (curpage<numPages) {
+  int curpage = 0;
+  while (curpage < numPages)
+  {
     // as long as pages to be done -- i.e. multiple times the signature
-    int firstpage=curpage,
-      lastpage=curpage+signature-1;
+    int firstpage = curpage,
+        lastpage = curpage + signature - 1;
     // one signature
-    while (firstpage<lastpage) {
-      ret.push_back(lastpage--);
-      ret.push_back(firstpage++);
-      ret.push_back(firstpage++);
-      ret.push_back(lastpage--);
+    while (firstpage < lastpage)
+    {
+      ret.push_back(lastpage --);
+      ret.push_back(firstpage ++);
+      ret.push_back(firstpage ++);
+      ret.push_back(lastpage --);
     }
-    curpage+=signature;
+    curpage += signature;
   }
-  return ret;
+  return (ret);
 }
 // }}}
 
-bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParameters &param,pdftopdf_doc_t *doc) // {{{
+bool
+_cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,
+		   _cfPDFToPDFProcessingParameters &param,
+		   pdftopdf_doc_t *doc) // {{{
 {
-  if (!proc.check_print_permissions(doc)) {
+  if (!proc.check_print_permissions(doc))
+  {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: Not allowed to print");
     return false;
@@ -188,34 +216,39 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
     std::swap(param.nup.nupX, param.nup.nupY);
 
   if (param.auto_rotate)
-    proc.auto_rotate_all(dst_lscape,param.normal_landscape);
+    proc.auto_rotate_all(dst_lscape, param.normal_landscape);
 
-  std::vector<std::shared_ptr<_cfPDFToPDFPageHandle>> pages=proc.get_pages(doc);
+  std::vector<std::shared_ptr<_cfPDFToPDFPageHandle>> pages =
+    proc.get_pages(doc);
   
   std::vector<std::shared_ptr<_cfPDFToPDFPageHandle>> input_page_range_list;
    
-   for(int i=1;i<=(int)pages.size();i++)
-      if(param.have_page(i))
-      input_page_range_list.push_back(pages[i-1]);
+  for (int i = 1; i <= (int)pages.size(); i ++)
+    if (param.have_page(i))
+      input_page_range_list.push_back(pages[i - 1]);
 
-  const int numOrigPages=input_page_range_list.size(); 
+  const int numOrigPages = input_page_range_list.size(); 
 
   // TODO FIXME? elsewhere
   std::vector<int> shuffle;
-  if (param.booklet!=CF_PDFTOPDF_BOOKLET_OFF) {
-    shuffle=_cfPDFToPDFBookletShuffle(numOrigPages,param.book_signature);
-    if (param.booklet==CF_PDFTOPDF_BOOKLET_ON) { // override options
+  if (param.booklet != CF_PDFTOPDF_BOOKLET_OFF)
+  {
+    shuffle = _cfPDFToPDFBookletShuffle(numOrigPages, param.book_signature);
+    if (param.booklet == CF_PDFTOPDF_BOOKLET_ON)
+    { // override options
       // We do not "sides=two-sided-short-edge" / DuplexTumble here.
       // We assume it done by caller, for example ppdFilterLoadPPD() of libppd
       // param.duplex=true;
       // param.set_duplex=true;
-      _cfPDFToPDFNupParameters::preset(2,param.nup); // TODO?! better
+      _cfPDFToPDFNupParameters::preset(2, param.nup); // TODO?! better
     }
-  } else { // 0 1 2 3 ...
-    shuffle.resize(numOrigPages);
-    std::iota(shuffle.begin(),shuffle.end(),0);
   }
-  const int numPages=std::max(shuffle.size(),input_page_range_list.size());
+  else
+  { // 0 1 2 3 ...
+    shuffle.resize(numOrigPages);
+    std::iota(shuffle.begin(), shuffle.end(), 0);
+  }
+  const int numPages=std::max(shuffle.size(), input_page_range_list.size());
 
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				 "cfFilterPDFToPDF: \"print-scaling\" IPP attribute: %s",
@@ -226,11 +259,12 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
 				     (param.cropfit ? "none" :
 				      "Not defined, should never happen"))))));
 
-  if (param.autoprint || param.autofit) {
+  if (param.autoprint || param.autofit)
+  {
     bool margin_defined = true;
     bool document_large = false;
-    int pw = param.page.right-param.page.left;
-    int ph = param.page.top-param.page.bottom;
+    int pw = param.page.right - param.page.left;
+    int ph = param.page.top - param.page.bottom;
 
     if ((param.page.width == pw) && (param.page.height == ph))
       margin_defined = false;
@@ -308,7 +342,8 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
 	orientation = param.normal_landscape;
       else
 	orientation = ROT_0;
-      page->crop(param.page, orientation, param.orientation, param.xpos, param.ypos,
+      page->crop(param.page, orientation, param.orientation,
+		 param.xpos, param.ypos,
 		 !param.cropfit, param.auto_rotate, doc);
     }
     if (param.fillprint)
@@ -316,8 +351,8 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
   }
 
   std::shared_ptr<_cfPDFToPDFPageHandle> curpage;
-  int outputpage=0;
-  int outputno=0;
+  int outputpage = 0;
+  int outputno = 0;
 
   if ((param.nup.nupX == 1) && (param.nup.nupY == 1) && !param.fitplot)
   {
@@ -464,7 +499,8 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
 
   if ((param.even_duplex || !param.odd_pages) && (outputno & 1)) {
     // need to output empty page to not confuse duplex
-    proc.add_page(proc.new_page(param.page.width,param.page.height,doc),param.reverse);
+    proc.add_page(proc.new_page(param.page.width,
+				param.page.height, doc), param.reverse);
     // Log page in /var/log/cups/page_log
     if (param.page_logging == 1)
       if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_CONTROL,
@@ -472,8 +508,8 @@ bool _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,_cfPDFToPDFProcessingParamete
 				     param.copies_to_be_logged);
   }
 
-  proc.multiply(param.num_copies,param.collate);
+  proc.multiply(param.num_copies, param.collate);
 
-  return true;
+  return (true);
 }
 // }}}

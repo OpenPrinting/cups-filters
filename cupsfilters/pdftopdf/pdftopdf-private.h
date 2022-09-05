@@ -18,4 +18,4 @@ typedef struct                               /***** Document information *****/
 						function, can be NULL */
 } pdftopdf_doc_t;
 
-#endif
+#endif // !_CUPS_FILTERS_PDFTOPDF_PDFTOPDF_H

@@ -5,7 +5,8 @@
 #include <utility>
 
 // you have to provide this
-struct _cfPDFToPDFNupParameters {
+struct _cfPDFToPDFNupParameters
+{
   _cfPDFToPDFNupParameters() 
     : nupX(1), nupY(1),
       width(NAN), height(NAN),
@@ -30,13 +31,15 @@ struct _cfPDFToPDFNupParameters {
   static bool possible(int nup); // TODO?  float in_ratio, float out_ratio
   static void preset(int nup, _cfPDFToPDFNupParameters &ret);
   static float calculate(int nup, float in_ratio, float out_ratio,
-			 _cfPDFToPDFNupParameters &ret); // returns "quality", 1 is best
+			 _cfPDFToPDFNupParameters &ret); // returns "quality",
+                                                         // 1 is best
 
   void dump(pdftopdf_doc_t *doc) const;
 };
 
 // you get this
-struct _cfPDFToPDFNupPageEdit {
+struct _cfPDFToPDFNupPageEdit
+{
   // required transformation: first translate, then scale
   float xpos, ypos;  // TODO:  already given by sub.left, sub.bottom
                      // [but for rotation?]
@@ -67,7 +70,8 @@ struct _cfPDFToPDFNupPageEdit {
   }
 */
 
-class _cfPDFToPDFNupState {
+class _cfPDFToPDFNupState
+{
 public:
   _cfPDFToPDFNupState(const _cfPDFToPDFNupParameters &param);
 
@@ -91,6 +95,7 @@ private:
 
 // TODO? elsewhere
 // parsing functions for cups parameters (will not calculate nupX, nupY!)
-bool _cfPDFToPDFParseNupLayout(const char *val, _cfPDFToPDFNupParameters &ret); // lrtb, btlr, ...
+bool _cfPDFToPDFParseNupLayout(const char *val, _cfPDFToPDFNupParameters &ret);
+                                                          // lrtb, btlr, ...
 
-#endif
+#endif // !_CUPS_FILTERS_PDFTOPDF_NUP_H_
