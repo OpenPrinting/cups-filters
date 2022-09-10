@@ -55,20 +55,22 @@ struct _cfPDFToPDFNupPageEdit
   void dump(pdftopdf_doc_t *doc) const;
 };
 
-/*
-  This class does the number-up calculation. Example:
-
-  _cfPDFToPDFNupParameters param;
-  param.xyz = ...; // fill it with your data!
-
-  _cfPDFToPDFNupState nup(param);
-  _cfPDFToPDFNupPageEdit edit;
-  for (auto page : your_pages)
-  {
-    bool newPage = nup.mext_page(page.w, page.h, edit); // w, h from input page
-    // create newPage, if required; then place current page as specified in edit
-  }
-*/
+//
+//  This class does the number-up calculation. Example:
+//
+//  _cfPDFToPDFNupParameters param;
+//  param.xyz = ...; // fill it with your data!
+//
+//  _cfPDFToPDFNupState nup(param);
+//  _cfPDFToPDFNupPageEdit edit;
+//  for (auto page : your_pages)
+//  {
+//    bool newPage = nup.mext_page(page.w, page.h, edit); // w, h from input
+//                                                        // page
+//    // create newPage, if required; then place current page as specified
+//    // in edit
+//  }
+//
 
 class _cfPDFToPDFNupState
 {

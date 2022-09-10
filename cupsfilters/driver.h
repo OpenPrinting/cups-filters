@@ -1,25 +1,27 @@
-/*
- *   Printer driver utilities header file for CUPS.
- *
- *   Copyright 2007 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- */
+//
+//   Printer driver utilities header file for CUPS.
+//
+//   Copyright 2007 by Apple Inc.
+//   Copyright 1993-2005 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+
 
 #ifndef _CUPS_FILTERS_DRIVER_H_
 #  define _CUPS_FILTERS_DRIVER_H_
 
 #  ifdef __cplusplus
 extern "C" {
-#  endif /* __cplusplus */
+#  endif // __cplusplus
 
-/*
- * Include necessary headers...
- */
+
+//
+// Include necessary headers...
+//
 
 #  include <stdio.h>
 #  include <stdlib.h>
@@ -32,105 +34,107 @@ extern "C" {
 #  else
 #    include <unistd.h>
 #    include <fcntl.h>
-#  endif /* WIN32 || __EMX__ */
+#  endif // WIN32 || __EMX__
 
 #  include <cups/cups.h>
 #  include <cups/raster.h>
 
 
-/*
- * Common macros...
- */
+//
+// Common macros...
+//
 
 #  ifndef min
 #    define min(a,b)	((a) < (b) ? (a) : (b))
 #    define max(a,b)	((a) > (b) ? (a) : (b))
-#  endif /* !min */
+#  endif // !min
 
 
-/*
- * Constants...
- */
+//
+// Constants...
+//
 
-#define CF_MAX_CHAN	15		/* Maximum number of color components */
-#define CF_MAX_LUT	4095		/* Maximum LUT value */
-#define CF_MAX_RGB	4		/* Maximum number of sRGB components */
+#define CF_MAX_CHAN	15		// Maximum number of color components
+#define CF_MAX_LUT	4095		// Maximum LUT value
+#define CF_MAX_RGB	4		// Maximum number of sRGB components
 
 
-/*
- * Types/structures for the various routines.
- */
+//
+// Types/structures for the various routines.
+//
 
-typedef struct cf_lut_s			/**** Lookup Table for Dithering ****/
+typedef struct cf_lut_s			// *** Lookup Table for Dithering ***
 {
-  short		intensity;		/* Adjusted intensity */
-  short		pixel;			/* Output pixel value */
-  int		error;			/* Error from desired value */
+  short		intensity;		// Adjusted intensity
+  short		pixel;			// Output pixel value
+  int		error;			// Error from desired value
 } cf_lut_t;
 
-typedef struct cf_dither_s		/**** Dithering State ****/
+typedef struct cf_dither_s		// *** Dithering State ***
 {
-  int		width;			/* Width of buffer */
-  int		row;			/* Current row */
-  int		errors[96];		/* Error values */
+  int		width;			// Width of buffer
+  int		row;			// Current row
+  int		errors[96];		// Error values
 } cf_dither_t;
 
-typedef struct cf_sample_s		/**** Color sample point ****/
+typedef struct cf_sample_s		// *** Color sample point ***
 {
-  unsigned char	rgb[3];			/* sRGB values */
-  unsigned char	colors[CF_MAX_RGB];	/* Color values */
+  unsigned char	rgb[3];			// sRGB values
+  unsigned char	colors[CF_MAX_RGB];	// Color values
 } cf_sample_t;
 
-typedef struct cf_rgb_s			/*** Color separation lookup table ***/
+typedef struct cf_rgb_s			// *** Color separation lookup table ***
 {
-  int		cube_size;		/* Size of color cube (2-N) on a side */
-  int		num_channels;		/* Number of colors per sample */
-  unsigned char	****colors;		/* 4-D array of sample values */
-  int		cube_index[256];	/* Index into cube for a given sRGB value */
-  int		cube_mult[256];		/* Multiplier value for a given sRGB value */
-  int		cache_init;		/* Are cached values initialized? */
-  unsigned char	black[CF_MAX_RGB];	/* Cached black (sRGB = 0,0,0) */
-  unsigned char	white[CF_MAX_RGB];	/* Cached white (sRGB = 255,255,255) */
+  int		cube_size;		// Size of color cube (2-N) on a side
+  int		num_channels;		// Number of colors per sample
+  unsigned char	****colors;		// 4-D array of sample values
+  int		cube_index[256];	// Index into cube for a given sRGB
+                                        // value
+  int		cube_mult[256];		// Multiplier value for a given sRGB
+                                        // value
+  int		cache_init;		// Are cached values initialized?
+  unsigned char	black[CF_MAX_RGB];	// Cached black (sRGB = 0,0,0)
+  unsigned char	white[CF_MAX_RGB];	// Cached white (sRGB = 255,255,255)
 } cf_rgb_t;
 
-typedef struct cf_cmyk_s		/**** Simple CMYK lookup table ****/
+typedef struct cf_cmyk_s		// *** Simple CMYK lookup table ***
 {
-  unsigned char	black_lut[256];		/* Black generation LUT */
-  unsigned char	color_lut[256];		/* Color removal LUT */
-  int		ink_limit;		/* Ink limit */
-  int		num_channels;		/* Number of components */
+  unsigned char	black_lut[256];		// Black generation LUT
+  unsigned char	color_lut[256];		// Color removal LUT
+  int		ink_limit;		// Ink limit
+  int		num_channels;		// Number of components
   short		*channels[CF_MAX_CHAN];
-					/* Lookup tables */
+					// Lookup tables
 } cf_cmyk_t;
 
 
-/*
- * Globals...
- */
+//
+// Globals...
+//
 
 extern const unsigned char
 			cf_srgb_lut[256];
-					/* sRGB gamma lookup table */
+					// sRGB gamma lookup table
 extern const unsigned char
 			cf_scmy_lut[256];
-					/* sRGB gamma lookup table (inverted) */
+					// sRGB gamma lookup table (inverted)
 
 
-/*
- * Prototypes...
- */
+//
+// Prototypes...
+//
 
-/*
- * Byte checking functions...
- */
+//
+// Byte checking functions...
+//
 
 extern int		cfCheckBytes(const unsigned char *, int);
 extern int		cfCheckValue(const unsigned char *, int,
 				     const unsigned char);
 
-/*
- * Dithering functions...
- */
+//
+// Dithering functions...
+//
 
 extern void		cfDitherLine(cf_dither_t *d, const cf_lut_t *lut,
 				     const short *data, int num_channels,
@@ -138,23 +142,23 @@ extern void		cfDitherLine(cf_dither_t *d, const cf_lut_t *lut,
 extern cf_dither_t	*cfDitherNew(int width);
 extern void		cfDitherDelete(cf_dither_t *);
 
-/*
- * Lookup table functions for dithering...
- */
+//
+// Lookup table functions for dithering...
+//
 
 extern cf_lut_t		*cfLutNew(int num_vals, const float *vals,
 				  cf_logfunc_t log, void *ld);
 extern void		cfLutDelete(cf_lut_t *lut);
 
 
-/*
- * Bit packing functions...
- */
+//
+// Bit packing functions...
+//
 
 extern void		cfPackHorizontal(const unsigned char *,
 					 unsigned char *, int,
 					 const unsigned char, const int);
-  extern void		cfPackHorizontal2(const unsigned char *,
+extern void		cfPackHorizontal2(const unsigned char *,
 					  unsigned char *, int, const int);
 extern void		cfPackHorizontalBit(const unsigned char *,
 					    unsigned char *, int,
@@ -163,9 +167,9 @@ extern void		cfPackHorizontalBit(const unsigned char *,
 extern void		cfPackVertical(const unsigned char *, unsigned char *,
 				       int, const unsigned char, const int);
 
-/*
- * Color separation functions...
- */
+//
+// Color separation functions...
+//
 
 extern void		cfRGBDelete(cf_rgb_t *rgb);
 extern void		cfRGBDoGray(cf_rgb_t *rgb,
@@ -177,9 +181,9 @@ extern void		cfRGBDoRGB(cf_rgb_t *rgb,
 extern cf_rgb_t		*cfRGBNew(int num_samples, cf_sample_t *samples,
 				  int cube_size, int num_channels);
 
-/*
- * CMYK separation functions...
- */
+//
+// CMYK separation functions...
+//
 
 extern cf_cmyk_t	*cfCMYKNew(int num_channels);
 extern void		cfCMYKDelete(cf_cmyk_t *cmyk);
@@ -211,14 +215,15 @@ extern void		cfCMYKSetLtDk(cf_cmyk_t *cmyk, int channel,
 				      cf_logfunc_t log, void *ld);
 
 
-/*
- * Convenience macro for writing print data...
- */
+//
+// Convenience macro for writing print data...
+//
 
 #  define cfWritePrintData(s,n) fwrite((s), 1, (n), stdout)
 
+
 #  ifdef __cplusplus
 }
-#  endif /* __cplusplus */
+#  endif // __cplusplus
 
-#endif /* !_CUPS_FILTERS_DRIVER_H_ */
+#endif // !_CUPS_FILTERS_DRIVER_H_

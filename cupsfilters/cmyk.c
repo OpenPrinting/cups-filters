@@ -1,33 +1,33 @@
-/*
- *   CMYK color separation code for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   cfCMYKDelete()      - Delete a color separation.
- *   cfCMYKDoBlack()     - Do a black separation...
- *   cfCMYKDoCMYK()      - Do a CMYK separation...
- *   cfCMYKDoGray()      - Do a grayscale separation...
- *   cfCMYKDoRGB()       - Do an sRGB separation...
- *   cfCMYKNew()         - Create a new CMYK color separation.
- *   cfCMYKSetBlack()    - Set the transition range for CMY to black.
- *   cfCMYKSetCurve()    - Set a color transform curve using points.
- *   cfCMYKSetGamma()    - Set a color transform curve using gamma and
- *                           density.
- *   cfCMYKSetInkLimit() - Set the limit on the amount of ink.
- *   cfCMYKSetLtDk()     - Set light/dark ink transforms.
- */
+//
+//   CMYK color separation code for cups-filters.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2005 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   cfCMYKDelete()      - Delete a color separation.
+//   cfCMYKDoBlack()     - Do a black separation...
+//   cfCMYKDoCMYK()      - Do a CMYK separation...
+//   cfCMYKDoGray()      - Do a grayscale separation...
+//   cfCMYKDoRGB()       - Do an sRGB separation...
+//   cfCMYKNew()         - Create a new CMYK color separation.
+//   cfCMYKSetBlack()    - Set the transition range for CMY to black.
+//   cfCMYKSetCurve()    - Set a color transform curve using points.
+//   cfCMYKSetGamma()    - Set a color transform curve using gamma and
+//                         density.
+//   cfCMYKSetInkLimit() - Set the limit on the amount of ink.
+//   cfCMYKSetLtDk()     - Set light/dark ink transforms.
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include <config.h>
 #include "driver.h"
@@ -35,72 +35,72 @@
 #include <ctype.h>
 
 
-/*
- * 'cfCMYKDelete()' - Delete a color separation.
- */
+//
+// 'cfCMYKDelete()' - Delete a color separation.
+//
 
 void
-cfCMYKDelete(cf_cmyk_t *cmyk)	/* I - Color separation */
+cfCMYKDelete(cf_cmyk_t *cmyk)	// I - Color separation
 {
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (cmyk == NULL)
     return;
 
- /*
-  * Free memory used...
-  */
+  //
+  // Free memory used...
+  //
 
   free(cmyk->channels[0]);
   free(cmyk);
 }
 
 
-/*
- * 'cfCMYKDoBlack()' - Do a black separation...
- */
+//
+// 'cfCMYKDoBlack()' - Do a black separation...
+//
 
 void
-cfCMYKDoBlack(const cf_cmyk_t   *cmyk,
-					/* I - Color separation */
-		const unsigned char *input,
-					/* I - Input grayscale pixels */
-		short               *output,
-					/* O - Output Device-N pixels */
-		int                 num_pixels)
-					/* I - Number of pixels */
+cfCMYKDoBlack(const cf_cmyk_t     *cmyk,
+					// I - Color separation
+	      const unsigned char *input,
+					// I - Input grayscale pixels
+	      short               *output,
+					// O - Output Device-N pixels
+	      int                 num_pixels)
+					// I - Number of pixels
 {
-  int			k;		/* Current black value */
-  const short		**channels;	/* Copy of channel LUTs */
-  int			ink,		/* Amount of ink */
-			ink_limit;	/* Ink limit from separation */
+  int			k;		// Current black value
+  const short		**channels;	// Copy of channel LUTs
+  int			ink,		// Amount of ink
+			ink_limit;	// Ink limit from separation
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (cmyk == NULL || input == NULL || output == NULL || num_pixels <= 0)
     return;
 
- /*
-  * Loop through it all...
-  */
+  //
+  // Loop through it all...
+  //
 
   channels  = (const short **)cmyk->channels;
   ink_limit = cmyk->ink_limit;
 
   switch (cmyk->num_channels)
   {
-    case 1 : /* Black */
+    case 1 : // Black
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = *input++;
 	  *output++ = channels[0][k];
@@ -109,13 +109,13 @@ cfCMYKDoBlack(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 2 : /* Black, light black */
+    case 2 : // Black, light black
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = *input++;
 	  output[0] = channels[0][k];
@@ -137,13 +137,13 @@ cfCMYKDoBlack(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 3 : /* CMY */
+    case 3 : // CMY
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = *input++;
 	  output[0] = channels[0][k];
@@ -167,13 +167,13 @@ cfCMYKDoBlack(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 4 : /* CMYK */
+    case 4 : // CMYK
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = *input++;
 	  *output++ = 0;
@@ -185,13 +185,13 @@ cfCMYKDoBlack(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 6 : /* CcMmYK */
+    case 6 : // CcMmYK
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = *input++;
 	  *output++ = 0;
@@ -205,13 +205,13 @@ cfCMYKDoBlack(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 7 : /* CcMmYKk */
+    case 7 : // CcMmYKk
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = *input++;
 	  output[0] = 0;
@@ -241,52 +241,52 @@ cfCMYKDoBlack(const cf_cmyk_t   *cmyk,
 }
 
 
-/*
- * 'cfCMYKDoCMYK()' - Do a CMYK separation...
- */
+//
+// 'cfCMYKDoCMYK()' - Do a CMYK separation...
+//
 
 void
-cfCMYKDoCMYK(const cf_cmyk_t   *cmyk,
-					/* I - Color separation */
-	       const unsigned char *input,
-					/* I - Input grayscale pixels */
-	       short               *output,
-					/* O - Output Device-N pixels */
-	       int                 num_pixels)
-					/* I - Number of pixels */
+cfCMYKDoCMYK(const cf_cmyk_t     *cmyk,
+					// I - Color separation
+	     const unsigned char *input,
+					// I - Input grayscale pixels
+	     short               *output,
+					// O - Output Device-N pixels
+	     int                 num_pixels)
+					// I - Number of pixels
 {
-  int			c,		/* Current cyan value */
-			m,		/* Current magenta value */
-			y,		/* Current yellow value */
-			k;		/* Current black value */
-  const short		**channels;	/* Copy of channel LUTs */
-  int			ink,		/* Amount of ink */
-			ink_limit;	/* Ink limit from separation */
+  int			c,		// Current cyan value
+			m,		// Current magenta value
+			y,		// Current yellow value
+			k;		// Current black value
+  const short		**channels;	// Copy of channel LUTs
+  int			ink,		// Amount of ink
+			ink_limit;	// Ink limit from separation
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (cmyk == NULL || input == NULL || output == NULL || num_pixels <= 0)
     return;
 
- /*
-  * Loop through it all...
-  */
+  //
+  // Loop through it all...
+  //
 
   channels  = (const short **)cmyk->channels;
   ink_limit = cmyk->ink_limit;
 
   switch (cmyk->num_channels)
   {
-    case 1 : /* Black */
+    case 1 : // Black
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c = *input++;
 	  m = *input++;
@@ -302,13 +302,13 @@ cfCMYKDoCMYK(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 2 : /* Black, light black */
+    case 2 : // Black, light black
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c = *input++;
 	  m = *input++;
@@ -342,13 +342,13 @@ cfCMYKDoCMYK(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 3 : /* CMY */
+    case 3 : // CMY
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c = *input++;
 	  m = *input++;
@@ -390,13 +390,13 @@ cfCMYKDoCMYK(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 4 : /* CMYK */
+    case 4 : // CMYK
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c         = *input++;
 	  m         = *input++;
@@ -426,13 +426,13 @@ cfCMYKDoCMYK(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 6 : /* CcMmYK */
+    case 6 : // CcMmYK
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c         = *input++;
 	  m         = *input++;
@@ -467,13 +467,13 @@ cfCMYKDoCMYK(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 7 : /* CcMmYKk */
+    case 7 : // CcMmYKk
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c         = *input++;
 	  m         = *input++;
@@ -513,50 +513,50 @@ cfCMYKDoCMYK(const cf_cmyk_t   *cmyk,
 }
 
 
-/*
- * 'cfCMYKDoGray()' - Do a grayscale separation...
- */
+//
+// 'cfCMYKDoGray()' - Do a grayscale separation...
+//
 
 void
-cfCMYKDoGray(const cf_cmyk_t   *cmyk,
-					/* I - Color separation */
-	       const unsigned char *input,
-					/* I - Input grayscale pixels */
-	       short               *output,
-					/* O - Output Device-N pixels */
-	       int                 num_pixels)
-					/* I - Number of pixels */
+cfCMYKDoGray(const cf_cmyk_t     *cmyk,
+					// I - Color separation
+	     const unsigned char *input,
+					// I - Input grayscale pixels
+	     short               *output,
+					// O - Output Device-N pixels
+	     int                 num_pixels)
+					// I - Number of pixels
 {
-  int			k,		/* Current black value */
-			kc;		/* Current black color value */
-  const short		**channels;	/* Copy of channel LUTs */
-  int			ink,		/* Amount of ink */
-			ink_limit;	/* Ink limit from separation */
+  int			k,		// Current black value
+			kc;		// Current black color value
+  const short		**channels;	// Copy of channel LUTs
+  int			ink,		// Amount of ink
+			ink_limit;	// Ink limit from separation
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (cmyk == NULL || input == NULL || output == NULL || num_pixels <= 0)
     return;
 
- /*
-  * Loop through it all...
-  */
+  //
+  // Loop through it all...
+  //
 
   channels  = (const short **)cmyk->channels;
   ink_limit = cmyk->ink_limit;
 
   switch (cmyk->num_channels)
   {
-    case 1 : /* Black */
+    case 1 : // Black
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = cf_scmy_lut[*input++];
 	  *output++ = channels[0][k];
@@ -565,13 +565,13 @@ cfCMYKDoGray(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 2 : /* Black, light black */
+    case 2 : // Black, light black
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = cf_scmy_lut[*input++];
 	  output[0] = channels[0][k];
@@ -593,13 +593,13 @@ cfCMYKDoGray(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 3 : /* CMY */
+    case 3 : // CMY
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = cf_scmy_lut[*input++];
 	  output[0] = channels[0][k];
@@ -623,13 +623,13 @@ cfCMYKDoGray(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 4 : /* CMYK */
+    case 4 : // CMYK
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = cf_scmy_lut[*input++];
 	  kc        = cmyk->color_lut[k];
@@ -657,13 +657,13 @@ cfCMYKDoGray(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 6 : /* CcMmYK */
+    case 6 : // CcMmYK
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = cf_scmy_lut[*input++];
 	  kc        = cmyk->color_lut[k];
@@ -696,13 +696,13 @@ cfCMYKDoGray(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 7 : /* CcMmYKk */
+    case 7 : // CcMmYKk
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  k         = cf_scmy_lut[*input++];
 	  kc        = cmyk->color_lut[k];
@@ -740,54 +740,54 @@ cfCMYKDoGray(const cf_cmyk_t   *cmyk,
 }
 
 
-/*
- * 'cfCMYKDoRGB()' - Do an sRGB separation...
- */
+//
+// 'cfCMYKDoRGB()' - Do an sRGB separation...
+//
 
 void
-cfCMYKDoRGB(const cf_cmyk_t   *cmyk,
-					/* I - Color separation */
-	      const unsigned char *input,
-					/* I - Input grayscale pixels */
-	      short               *output,
-					/* O - Output Device-N pixels */
-	      int                 num_pixels)
-					/* I - Number of pixels */
+cfCMYKDoRGB(const cf_cmyk_t     *cmyk,
+					// I - Color separation
+	    const unsigned char *input,
+					// I - Input grayscale pixels
+	    short               *output,
+					// O - Output Device-N pixels
+	    int                 num_pixels)
+					// I - Number of pixels
 {
-  int			c,		/* Current cyan value */
-			m,		/* Current magenta value */
-			y,		/* Current yellow value */
-			k,		/* Current black value */
-			kc,		/* Current black color value */
-			km;		/* Maximum black value */
-  const short		**channels;	/* Copy of channel LUTs */
-  int			ink,		/* Amount of ink */
-			ink_limit;	/* Ink limit from separation */
+  int			c,		// Current cyan value
+			m,		// Current magenta value
+			y,		// Current yellow value
+			k,		// Current black value
+			kc,		// Current black color value
+			km;		// Maximum black value
+  const short		**channels;	// Copy of channel LUTs
+  int			ink,		// Amount of ink
+			ink_limit;	// Ink limit from separation
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (cmyk == NULL || input == NULL || output == NULL || num_pixels <= 0)
     return;
 
- /*
-  * Loop through it all...
-  */
+  //
+  // Loop through it all...
+  //
 
   channels  = (const short **)cmyk->channels;
   ink_limit = cmyk->ink_limit;
 
   switch (cmyk->num_channels)
   {
-    case 1 : /* Black */
+    case 1 : // Black
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c = cf_scmy_lut[*input++];
 	  m = cf_scmy_lut[*input++];
@@ -800,13 +800,13 @@ cfCMYKDoRGB(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 2 : /* Black, light black */
+    case 2 : // Black, light black
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c = cf_scmy_lut[*input++];
 	  m = cf_scmy_lut[*input++];
@@ -832,13 +832,13 @@ cfCMYKDoRGB(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 3 : /* CMY */
+    case 3 : // CMY
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c = cf_scmy_lut[*input++];
 	  m = cf_scmy_lut[*input++];
@@ -865,13 +865,13 @@ cfCMYKDoRGB(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 4 : /* CMYK */
+    case 4 : // CMYK
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c  = cf_scmy_lut[*input++];
 	  m  = cf_scmy_lut[*input++];
@@ -910,13 +910,13 @@ cfCMYKDoRGB(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 6 : /* CcMmYK */
+    case 6 : // CcMmYK
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c  = cf_scmy_lut[*input++];
 	  m  = cf_scmy_lut[*input++];
@@ -960,13 +960,13 @@ cfCMYKDoRGB(const cf_cmyk_t   *cmyk,
         }
 	break;
 
-    case 7 : /* CcMmYKk */
+    case 7 : // CcMmYKk
         while (num_pixels > 0)
         {
-	 /*
-	  * Get the input black value and then set the corresponding color
-	  * channel values...
-	  */
+	  //
+	  // Get the input black value and then set the corresponding color
+	  // channel values...
+	  //
 
 	  c  = cf_scmy_lut[*input++];
 	  m  = cf_scmy_lut[*input++];
@@ -1015,34 +1015,34 @@ cfCMYKDoRGB(const cf_cmyk_t   *cmyk,
 }
 
 
-/*
- * 'cfCMYKNew()' - Create a new CMYK color separation.
- */
+//
+// 'cfCMYKNew()' - Create a new CMYK color separation.
+//
 
-cf_cmyk_t *				/* O - New CMYK separation or NULL */
-cfCMYKNew(int num_channels)		/* I - Number of color components */
+cf_cmyk_t *				// O - New CMYK separation or NULL
+cfCMYKNew(int num_channels)		// I - Number of color components
 {
-  cf_cmyk_t	*cmyk;			/* New color separation */
-  int		i;			/* Looping var */
+  cf_cmyk_t	*cmyk;			// New color separation
+  int		i;			// Looping var
 
 
- /*
-  * Range-check the input...
-  */
+  //
+  // Range-check the input...
+  //
 
   if (num_channels < 1)
     return (NULL);
 
- /*
-  * Allocate memory for the separation...
-  */
+  //
+  // Allocate memory for the separation...
+  //
 
   if ((cmyk = calloc(1, sizeof(cf_cmyk_t))) == NULL)
     return (NULL);
 
- /*
-  * Allocate memory for the LUTs...
-  */
+  //
+  // Allocate memory for the LUTs...
+  //
 
   cmyk->num_channels = num_channels;
 
@@ -1055,23 +1055,23 @@ cfCMYKNew(int num_channels)		/* I - Number of color components */
   for (i = 1; i < num_channels; i ++)
     cmyk->channels[i] = cmyk->channels[0] + i * 256;
 
- /*
-  * Fill in the LUTs with unity transitions...
-  */
+  //
+  // Fill in the LUTs with unity transitions...
+  //
 
   for (i = 0; i < 256; i ++)
     cmyk->black_lut[i] = i;
 
   switch (num_channels)
   {
-    case 1 : /* K */
-    case 2 : /* Kk */
+    case 1 : // K
+    case 2 : // Kk
 	for (i = 0; i < 256; i ++)
 	{
 	  cmyk->channels[0][i] = CF_MAX_LUT * i / 255;
 	}
 	break;
-    case 3 : /* CMY */
+    case 3 : // CMY
 	for (i = 0; i < 256; i ++)
 	{
 	  cmyk->channels[0][i] = CF_MAX_LUT * i / 255;
@@ -1079,7 +1079,7 @@ cfCMYKNew(int num_channels)		/* I - Number of color components */
 	  cmyk->channels[2][i] = CF_MAX_LUT * i / 255;
 	}
 	break;
-    case 4 : /* CMYK */
+    case 4 : // CMYK
 	for (i = 0; i < 256; i ++)
 	{
 	  cmyk->channels[0][i] = CF_MAX_LUT * i / 255;
@@ -1088,8 +1088,8 @@ cfCMYKNew(int num_channels)		/* I - Number of color components */
 	  cmyk->channels[3][i] = CF_MAX_LUT * i / 255;
 	}
 	break;
-    case 6 : /* CcMmYK */
-    case 7 : /* CcMmYKk */
+    case 6 : // CcMmYK
+    case 7 : // CcMmYKk
 	for (i = 0; i < 256; i ++)
 	{
 	  cmyk->channels[0][i] = CF_MAX_LUT * i / 255;
@@ -1100,50 +1100,50 @@ cfCMYKNew(int num_channels)		/* I - Number of color components */
 	break;
   }
 
- /*
-  * Return the separation...
-  */
+  //
+  // Return the separation...
+  //
 
   return (cmyk);
 }
 
 
-/*
- * 'cfCMYKSetBlack()' - Set the transition range for CMY to black.
- */
+//
+// 'cfCMYKSetBlack()' - Set the transition range for CMY to black.
+//
 
 void
-cfCMYKSetBlack(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
-		 float       lower,	/* I - No black ink */
-		 float       upper,	/* I - Only black ink */
-	         cf_logfunc_t log,  /* I - Log function */
-	         void       *ld)        /* I - Log function data */
+cfCMYKSetBlack(cf_cmyk_t    *cmyk,	// I - CMYK color separation
+	       float        lower,	// I - No black ink
+	       float        upper,	// I - Only black ink
+	       cf_logfunc_t log,	// I - Log function
+	       void         *ld)	// I - Log function data
 {
-  int	i,				/* Looping var */
-	delta,				/* Difference between lower and upper */
-	ilower,				/* Lower level from 0 to 255 */
-	iupper;				/* Upper level from 0 to 255 */
+  int	i,				// Looping var
+	delta,				// Difference between lower and upper
+	ilower,				// Lower level from 0 to 255
+	iupper;				// Upper level from 0 to 255
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (cmyk == NULL || lower < 0.0 || lower > 1.0 || upper < 0.0 || upper > 1.0 ||
       lower > upper)
     return;
 
- /*
-  * Convert lower and upper to integers from 0 to 255...
-  */
+  //
+  // Convert lower and upper to integers from 0 to 255...
+  //
 
   ilower  = (int)(255.0 * lower + 0.5);
   iupper  = (int)(255.0 * upper + 0.5);
   delta   = iupper - ilower;
 
- /*
-  * Generate the CMY-only data...
-  */
+  //
+  // Generate the CMY-only data...
+  //
 
   for (i = 0; i < ilower; i ++)
   {
@@ -1151,9 +1151,9 @@ cfCMYKSetBlack(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
     cmyk->color_lut[i] = i;
   }
 
- /*
-  * Then the transition data...
-  */
+  //
+  // Then the transition data...
+  //
 
   for (; i < iupper; i ++)
   {
@@ -1161,9 +1161,9 @@ cfCMYKSetBlack(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
     cmyk->color_lut[i] = ilower - ilower * (i - ilower) / delta;
   }
 
- /*
-  * Then the K-only data...
-  */
+  //
+  // Then the K-only data...
+  //
 
   for (; i < 256; i ++)
   {
@@ -1183,39 +1183,39 @@ cfCMYKSetBlack(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
 }
 
 
-/*
- * 'cfCMYKSetCurve()' - Set a color transform curve using points.
- */
+//
+// 'cfCMYKSetCurve()' - Set a color transform curve using points.
+//
 
 void
-cfCMYKSetCurve(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
-                 int         channel,	/* I - Color channel */
-		 int         num_xypoints,
-					/* I - Number of X,Y points */
-		 const float *xypoints,	/* I - X,Y points */
-	         cf_logfunc_t log,  /* I - Log function */
-	         void       *ld)        /* I - Log function data */
+cfCMYKSetCurve(cf_cmyk_t    *cmyk,	// I - CMYK color separation
+	       int          channel,	// I - Color channel
+	       int          num_xypoints,
+					// I - Number of X,Y points
+	       const float  *xypoints,	// I - X,Y points
+	       cf_logfunc_t log,	// I - Log function
+	       void         *ld)	// I - Log function data
 {
-  int	i;				/* Looping var */
-  int	xstart;				/* Start position */
-  int	xend;				/* End position */
-  int	xdelta;				/* Difference in position */
-  int	ystart;				/* Start value */
-  int	yend;				/* End value */
-  int	ydelta;				/* Difference in value */
+  int	i;				// Looping var
+  int	xstart;				// Start position
+  int	xend;				// End position
+  int	xdelta;				// Difference in position
+  int	ystart;				// Start value
+  int	yend;				// End value
+  int	ydelta;				// Difference in value
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (cmyk == NULL || channel < 0 || channel >= cmyk->num_channels ||
       num_xypoints < 1 || xypoints == NULL)
     return;
 
- /*
-  * Initialize the lookup table for the specified channel...
-  */
+  //
+  // Initialize the lookup table for the specified channel...
+  //
 
   for (xstart = xend = 0, ystart = yend = 0;
        num_xypoints > 0;
@@ -1230,9 +1230,9 @@ cfCMYKSetCurve(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
       cmyk->channels[channel][i] = ystart + ydelta * (i - xstart) / xdelta;
   }
 
- /*
-  * Initialize any trailing values to the maximum of the last data point...
-  */
+  //
+  // Initialize any trailing values to the maximum of the last data point...
+  //
 
   for (i = xend; i < 256; i ++)
     cmyk->channels[channel][i] = yend;
@@ -1251,32 +1251,32 @@ cfCMYKSetCurve(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
 }
 
 
-/*
- * 'cfCMYKSetGamma()' - Set a color transform curve using gamma and density.
- */
+//
+// 'cfCMYKSetGamma()' - Set a color transform curve using gamma and density.
+//
 
 void
-cfCMYKSetGamma(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
-                 int         channel,	/* I - Ink channel */
-                 float       gamval,	/* I - Gamma correction */
-		 float       density,	/* I - Maximum density */
-	         cf_logfunc_t log,  /* I - Log function */
-	         void       *ld)        /* I - Log function data */
+cfCMYKSetGamma(cf_cmyk_t    *cmyk,	// I - CMYK color separation
+	       int          channel,	// I - Ink channel
+	       float        gamval,	// I - Gamma correction
+	       float        density,	// I - Maximum density
+	       cf_logfunc_t log,	// I - Log function
+	       void         *ld)        // I - Log function data
 {
-  int	i;				/* Looping var */
+  int	i;				// Looping var
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (cmyk == NULL || channel < 0 || channel >= cmyk->num_channels ||
       gamval <= 0.0 || density <= 0.0 || density > 1.0)
     return;
 
- /*
-  * Initialize the lookup table for the specified channel...
-  */
+  //
+  // Initialize the lookup table for the specified channel...
+  //
 
   for (i = 0; i < 256; i ++)
     cmyk->channels[channel][i] = (int)(density * CF_MAX_LUT *
@@ -1294,13 +1294,13 @@ cfCMYKSetGamma(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
 }
 
 
-/*
- * 'cfCMYKSetInkLimit()' - Set the limit on the amount of ink.
- */
+//
+// 'cfCMYKSetInkLimit()' - Set the limit on the amount of ink.
+//
 
 void
-cfCMYKSetInkLimit(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
-                    float       limit)	/* I - Limit of ink */
+cfCMYKSetInkLimit(cf_cmyk_t   *cmyk,	// I - CMYK color separation
+		  float       limit)	// I - Limit of ink
 {
   if (!cmyk || limit < 0.0)
     return;
@@ -1309,50 +1309,50 @@ cfCMYKSetInkLimit(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
 }
 
 
-/*
- * 'cfCMYKSetLtDk()' - Set light/dark ink transforms.
- */
+//
+// 'cfCMYKSetLtDk()' - Set light/dark ink transforms.
+//
 
 void
-cfCMYKSetLtDk(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
-                int         channel,	/* I - Dark ink channel (+1 for light) */
-		float       light,	/* I - Light ink only level */
-		float       dark,	/* I - Dark ink only level */
-	        cf_logfunc_t log,   /* I - Log function */
-	        void       *ld)         /* I - Log function data */
+cfCMYKSetLtDk(cf_cmyk_t    *cmyk,	// I - CMYK color separation
+	      int          channel,	// I - Dark ink channel (+1 for light)
+	      float        light,	// I - Light ink only level
+	      float        dark,	// I - Dark ink only level
+	      cf_logfunc_t log,		// I - Log function
+	      void         *ld)         // I - Log function data
 {
-  int	i,				/* Looping var */
-	delta,				/* Difference between lower and upper */
-	ilight,				/* Light level from 0 to 255 */
-	idark;				/* Dark level from 0 to 255 */
-  short	lut[256];			/* Original LUT data */
+  int	i,				// Looping var
+	delta,				// Difference between lower and upper
+	ilight,				// Light level from 0 to 255
+	idark;				// Dark level from 0 to 255
+  short	lut[256];			// Original LUT data
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (cmyk == NULL || light < 0.0 || light > 1.0 || dark < 0.0 || dark > 1.0 ||
       light > dark || channel < 0 || channel > (cmyk->num_channels - 2))
     return;
 
- /*
-  * Convert lower and upper to integers from 0 to 255...
-  */
+  //
+  // Convert lower and upper to integers from 0 to 255...
+  //
 
   ilight = (int)(255.0 * light + 0.5);
   idark  = (int)(255.0 * dark + 0.5);
   delta  = idark - ilight;
 
- /*
-  * Copy the dark ink LUT...
-  */
+  //
+  // Copy the dark ink LUT...
+  //
 
   memcpy(lut, cmyk->channels[channel], sizeof(lut));
 
- /*
-  * Generate the light-only data...
-  */
+  //
+  // Generate the light-only data...
+  //
 
   for (i = 0; i < ilight; i ++)
   {
@@ -1360,9 +1360,9 @@ cfCMYKSetLtDk(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
     cmyk->channels[channel + 1][i] = CF_MAX_LUT * i / ilight;
   }
 
- /*
-  * Then the transition data...
-  */
+  //
+  // Then the transition data...
+  //
 
   for (; i < idark; i ++)
   {
@@ -1372,9 +1372,9 @@ cfCMYKSetLtDk(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
                                      (i - ilight) / delta;
   }
 
- /*
-  * Then the K-only data...
-  */
+  //
+  // Then the K-only data...
+  //
 
   for (; i < 256; i ++)
   {
@@ -1392,4 +1392,3 @@ cfCMYKSetLtDk(cf_cmyk_t *cmyk,	/* I - CMYK color separation */
 	  "    %3d = %4dlt + %4ddk", i,
 	  cmyk->channels[channel + 0][i], cmyk->channels[channel + 1][i]);
 }
-

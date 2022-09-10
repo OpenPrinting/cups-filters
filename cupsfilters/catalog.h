@@ -1,32 +1,32 @@
- /***
-  This file is part of cups-filters.
-
-  This file is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as
-  published by the Free Software Foundation; either version 2.1 of the
-  License, or (at your option) any later version.
-
-  This file is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-  Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with avahi; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
-  USA.
-***/
+//
+//  This file is part of cups-filters.
+//
+//  This file is free software; you can redistribute it and/or modify it
+//  under the terms of the GNU Lesser General Public License as
+//  published by the Free Software Foundation; either version 2.1 of the
+//  License, or (at your option) any later version.
+//
+//  This file is distributed in the hope that it will be useful, but WITHOUT
+//  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+//  Public License for more details.
+//
+//  You should have received a copy of the GNU Lesser General Public
+//  License along with avahi; if not, write to the Free Software
+//  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+//  USA.
+//
 
 #ifndef _CUPS_FILTERS_CATALOG_H_
 #  define _CUPS_FILTERS_CATALOG_H_
 
 #  ifdef __cplusplus
 extern "C" {
-#  endif /* __cplusplus */
+#  endif // __cplusplus
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include <config.h>
 
@@ -41,27 +41,29 @@ extern "C" {
 #else
 #  include <unistd.h>
 #  include <fcntl.h>
-#endif /* WIN32 || __EMX__ */
+#endif // WIN32 || __EMX__
 
 #include <cups/cups.h>
 #include <cups/backend.h>
 #include <cups/raster.h>
 
-/* Data structure for IPP choice name and human-readable string */
+// Data structure for IPP choice name and human-readable string
 typedef struct catalog_choice_strings_s {
-  char *name, *human_readable;
+  char *name,
+       *human_readable;
 } catalog_choice_strings_t;
 
-/* Data structure for IPP option name, human-readable string, and choice list */
+// Data structure for IPP option name, human-readable string, and choice list
 typedef struct catalog_opt_strings_s {
-  char *name, *human_readable;
+  char *name,
+       *human_readable;
   cups_array_t *choices;
 } catalog_opt_strings_t;
 
 
-/*
- * Prototypes...
- */
+//
+// Prototypes...
+//
 
 int             cfGetURI(const char *url, char *name, size_t namesize);
 const char      *cfCatalogSearchDir(const char *dirname);
@@ -87,6 +89,6 @@ void            cfCatalogLoad(const char *location, cups_array_t *options);
 
 #  ifdef __cplusplus
 }
-#  endif /* __cplusplus */
+#  endif // __cplusplus
 
-#endif /* !_CUPS_FILTERS_CATALOG_H_ */
+#endif // !_CUPS_FILTERS_CATALOG_H_

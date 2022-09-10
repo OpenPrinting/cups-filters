@@ -295,9 +295,9 @@ getParameters(cf_filter_data_t *data,
   }
   else if (optGetInt("orientation-requested", num_options, options, &ipprot))
   {
-    /* IPP orientation values are:
-     *   3: 0 degrees,  4: 90 degrees,  5: -90 degrees,  6: 180 degrees
-     */
+    // IPP orientation values are:
+    //   3: 0 degrees,  4: 90 degrees,  5: -90 degrees,  6: 180 degrees
+
     if ((ipprot < 3) || (ipprot > 6))
     {
       if (ipprot && doc->logfunc)
@@ -859,7 +859,7 @@ cfFilterPDFToPDF(int inputfd,            // I - File descriptor input stream
 		 void *parameters)       // I - Filter-specific parameters
                                          //     (unused)
 {
-  pdftopdf_doc_t     doc;         /* Document information */
+  pdftopdf_doc_t     doc;                // Document information
   char               *final_content_type = data->final_content_type;
   FILE               *inputfp,
                      *outputfp;

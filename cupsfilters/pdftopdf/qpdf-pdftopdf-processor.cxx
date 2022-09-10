@@ -217,11 +217,13 @@ _cfPDFToPDFQPDFPageHandle::add_border_rect(const _cfPDFToPDFPageRect &_rect,
 }
 // }}}
 
-/*
- *  This crop function is written for print-scaling=fill option.
- *  Trim Box is used for trimming the page in required size.
- *  scale tells if we need to scale input file.
- */
+
+//
+//  This crop function is written for print-scaling=fill option.
+//  Trim Box is used for trimming the page in required size.
+//  scale tells if we need to scale input file.
+//
+
 pdftopdf_rotation_e
 _cfPDFToPDFQPDFPageHandle::crop(const _cfPDFToPDFPageRect &cropRect,
 				pdftopdf_rotation_e orientation,
