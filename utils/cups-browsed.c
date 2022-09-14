@@ -508,6 +508,11 @@ static autoshutdown_inactivity_type_t autoshutdown_on = NO_QUEUES;
 static guint autoshutdown_exec_id = 0;
 static const char *default_printer = NULL;
 static unsigned int notify_lease_duration = 86400;
+#ifdef FREQUENT_NETIF_UPDATE
+static int FrequentNetifUpdate = 1;
+#else
+static int FrequentNetifUpdate = 0;
+#endif
 
 static int debug_stderr = 0;
 static int debug_logfile = 0;
@@ -9625,7 +9630,7 @@ examine_discovered_printer_record(const char *host,
      or legacy CUPS, needed for the is_local_hostname() function calls.
      During DNS-SD discovery the update is already done by the Avahi
      event handler function. */
-  if (type == NULL || type[0] == '\0')
+  if (FrequentNetifUpdate && (type == NULL || type[0] == '\0'))
     update_netifs(NULL);
 
   /* Check if we have already created a queue for the discovered
@@ -10032,7 +10037,8 @@ static void resolve_callback(void* arg) {
      via UUID */
 
   pthread_rwlock_wrlock(&resolvelock);
-  update_netifs(NULL);
+  if (FrequentNetifUpdate)
+    update_netifs(NULL);
 
   if ((flags & AVAHI_LOOKUP_RESULT_LOCAL) || !strcasecmp(ifname, "lo") ||
       is_local_hostname(host_name)) {
@@ -11980,6 +11986,13 @@ read_configuration (const char *filename)
       else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
 	       !strcasecmp(value, "off") || !strcasecmp(value, "0"))
 	AutoClustering = 0;
+    } else if (!strcasecmp(line, "FrequentNetifUpdate") && value) {
+      if (!strcasecmp(value, "yes") || !strcasecmp(value, "true") ||
+	  !strcasecmp(value, "on") || !strcasecmp(value, "1"))
+	FrequentNetifUpdate = 1;
+      else if (!strcasecmp(value, "no") || !strcasecmp(value, "false") ||
+	       !strcasecmp(value, "off") || !strcasecmp(value, "0"))
+	FrequentNetifUpdate = 0;
     } else if (!strcasecmp(line, "Cluster") && value) {
       ptr = value;
       ptr2 = NULL;
