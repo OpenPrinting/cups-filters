@@ -977,6 +977,18 @@ and doing specific actions when a D-BUS notification comes.
         NotifLeaseDuration 86400
 .fam T
 .fi
+FrequentNetifUpdate turns on/off the network interface update routines
+which happen for each found entry, which can slow up cups-browsed significantly
+if we are on a network with many shared printers or if we use BrowsePoll to a server
+with many queues. Network interface updates after receiving D-BUS notification
+from NetworkManager won't be turned off with the directive. The default value
+is 'Yes'.
+.PP
+.nf
+.fam C
+        FrequentNetifUpdate Yes
+.fam T
+.fi
 .SH SEE ALSO
 
 \fBcups-browsed\fP(8)

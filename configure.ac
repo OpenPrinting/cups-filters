@@ -962,6 +962,19 @@ if test x$enable_debug_guards = xyes; then
         CXXFLAGS="$CXXFLAGS -DDEBUG_GUARDS"
 fi
 
+# =========================================================
+# Turn on/off network interface updates for each found entry
+# ==========================================================
+AC_ARG_ENABLE([frequent_netif_update],
+              [AS_HELP_STRING([--enable-frequent-netif-update], [Enable network interface update after each found entry to prevent network issues])],
+              [FREQUENT_NETIF_UPDATE=$enableval],
+              [FREQUENT_NETIF_UPDATE=yes]
+)
+
+AS_IF([test "x$FREQUENT_NETIF_UPDATE" != "xno"],
+      [AC_DEFINE([FREQUENT_NETIF_UPDATE], [1], [Define whether we want network interface update after each found entry])]
+)
+
 # =====================
 # Prepare all .in files
 # =====================
@@ -1044,6 +1057,7 @@ Build configuration:
 	ppdc utilities:  ${enable_ppdc_utils}
 	local queue naming for remote CUPS queues: ${REMOTE_CUPS_LOCAL_QUEUE_NAMING}
 	keep generated queues during shutdown:     ${SAVING_CREATED_QUEUES}
+	update network interfaces after each found entry:     ${FREQUENT_NETIF_UPDATE}
 	all ipp printer auto-setup: ${enable_auto_setup_all}
 	only driverless auto-setup: ${enable_auto_setup_driverless_only}
 	only local auto-setup: ${enable_auto_setup_local_only}
