@@ -329,9 +329,6 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/texttotext.c \
 	cupsfilters/universal.c \
 	$(pkgfiltersinclude_DATA)
-EXTRA_libcupsfilters_la_SOURCES = \
-	cupsfilters/getline.c \
-	cupsfilters/strcasestr.c
 libcupsfilters_la_LIBADD = \
 	libfontembed.la \
 	$(FONTCONFIG_LIBS) \
