@@ -32,7 +32,6 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <sys/wait.h>
-#include <cups/cups.h>
 #include <ppd/ppd.h>
 #include <cups/raster.h>
 #include <cupsfilters/ipp.h>
@@ -472,6 +471,7 @@ list_printers (int mode, int reg_type_no, int isFax)
    /*
     * Child comes here...
     */
+    fprintf(stderr, "I am inside ippfind fork\n");
 
     dup2(post_proc_pipe[1], 1);
 
