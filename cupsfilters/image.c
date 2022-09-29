@@ -1,68 +1,70 @@
-/*
- *   Base image support for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   cfImageClose()         - Close an image file.
- *   cfImageGetCol()        - Get a column of pixels from an image.
- *   cfImageGetColorSpace() - Get the image colorspace.
- *   cfImageGetDepth()      - Get the number of bytes per pixel.
- *   cfImageGetHeight()     - Get the height of an image.
- *   cfImageGetRow()        - Get a row of pixels from an image.
- *   cfImageGetWidth()      - Get the width of an image.
- *   cfImageGetXPPI()       - Get the horizontal resolution of an image.
- *   cfImageGetYPPI()       - Get the vertical resolution of an image.
- *   cfImageOpen()          - Open an image file and read it into memory.
- *   _cfImagePutCol()       - Put a column of pixels to an image.
- *   _cfImagePutRow()       - Put a row of pixels to an image.
- *   cfImageSetMaxTiles()   - Set the maximum number of tiles to cache.
- *   cfImageCrop()          - Crop an image.
- *   flush_tile()           - Flush the least-recently-used tile in the cache.
- *   get_tile()             - Get a cached tile.
- *   _cfImageReadEXIF()   - to read exif metadata of images
- *   trim_spaces()          - helper function to extract results from string returned by exif library functions
- *   find_bytes()           - creates character array from image file, to make use in exif library functions
- */
+//
+//   Base image support for libcupsfilters.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2005 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   cfImageClose()         - Close an image file.
+//   cfImageGetCol()        - Get a column of pixels from an image.
+//   cfImageGetColorSpace() - Get the image colorspace.
+//   cfImageGetDepth()      - Get the number of bytes per pixel.
+//   cfImageGetHeight()     - Get the height of an image.
+//   cfImageGetRow()        - Get a row of pixels from an image.
+//   cfImageGetWidth()      - Get the width of an image.
+//   cfImageGetXPPI()       - Get the horizontal resolution of an image.
+//   cfImageGetYPPI()       - Get the vertical resolution of an image.
+//   cfImageOpen()          - Open an image file and read it into memory.
+//   _cfImagePutCol()       - Put a column of pixels to an image.
+//   _cfImagePutRow()       - Put a row of pixels to an image.
+//   cfImageSetMaxTiles()   - Set the maximum number of tiles to cache.
+//   cfImageCrop()          - Crop an image.
+//   flush_tile()           - Flush the least-recently-used tile in the cache.
+//   get_tile()             - Get a cached tile.
+//   _cfImageReadEXIF()     - to read exif metadata of images
+//   trim_spaces()          - helper function to extract results from string 
+//                            returned by exif library functions
+//   find_bytes()           - creates character array from image file, to make
+//                            use in exif library functions
 
-/*
- * Include necessary headers...
- */
+
+//
+// Include necessary headers...
+//
 
 
 #include "image-private.h"
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static int	flush_tile(cf_image_t *img);
 static cf_ib_t	*get_tile(cf_image_t *img, int x, int y);
 static void trim_spaces(char *buf);
 static unsigned char *find_bytes(FILE *fp, long int *size);
 
-/*
- * 'cfImageClose()' - Close an image file.
- */
+//
+// 'cfImageClose()' - Close an image file.
+//
 
 void
-cfImageClose(cf_image_t *img)	/* I - Image to close */
+cfImageClose(cf_image_t *img)		// I - Image to close
 {
-  cf_ic_t	*current,		/* Current cached tile */
-		*next;			/* Next cached tile */
+  cf_ic_t	*current,		// Current cached tile
+		*next;			// Next cached tile
 
 
- /*
-  * Wipe the tile cache file (if any)...
-  */
+  //
+  // Wipe the tile cache file (if any)...
+  //
 
   if (img->cachefile >= 0)
   {
@@ -72,9 +74,9 @@ cfImageClose(cf_image_t *img)	/* I - Image to close */
     unlink(img->cachename);
   }
 
- /*
-  * Free the image cache...
-  */
+  //
+  // Free the image cache...
+  //
 
   DEBUG_puts("Freeing memory...");
 
@@ -86,9 +88,9 @@ cfImageClose(cf_image_t *img)	/* I - Image to close */
     free(current);
   }
 
- /*
-  * Free the rest of memory...
-  */
+  //
+  // Free the rest of memory...
+  //
 
   if (img->tiles != NULL)
   {
@@ -105,21 +107,21 @@ cfImageClose(cf_image_t *img)	/* I - Image to close */
 }
 
 
-/*
- * 'cfImageGetCol()' - Get a column of pixels from an image.
- */
+//
+// 'cfImageGetCol()' - Get a column of pixels from an image.
+//
 
-int					/* O - -1 on error, 0 on success */
-cfImageGetCol(cf_image_t *img,	/* I - Image */
-        	int          x,		/* I - Column */
-        	int          y,		/* I - Start row */
-        	int          height,	/* I - Column height */
-        	cf_ib_t    *pixels)	/* O - Pixel data */
+int					// O - -1 on error, 0 on success
+cfImageGetCol(cf_image_t   *img,	// I - Image
+	      int          x,		// I - Column
+	      int          y,		// I - Start row
+	      int          height,	// I - Column height
+	      cf_ib_t      *pixels)	// O - Pixel data
 {
-  int			bpp,		/* Bytes per pixel */
-			twidth,		/* Tile width */
-			count;		/* Number of pixels to get */
-  const cf_ib_t	*ib;		/* Pointer into tile */
+  int			bpp,		// Bytes per pixel
+			twidth,		// Tile width
+			count;		// Number of pixels to get
+  const cf_ib_t		*ib;		// Pointer into tile
 
 
   if (img == NULL || x < 0 || x >= img->xsize || y >= img->ysize)
@@ -172,54 +174,54 @@ cfImageGetCol(cf_image_t *img,	/* I - Image */
 }
 
 
-/*
- * 'cfImageGetColorSpace()' - Get the image colorspace.
- */
+//
+// 'cfImageGetColorSpace()' - Get the image colorspace.
+//
 
-cf_icspace_t				/* O - Colorspace */
+cf_icspace_t				// O - Colorspace
 cfImageGetColorSpace(
-    cf_image_t *img)			/* I - Image */
+    cf_image_t *img)			// I - Image
 {
   return (img->colorspace);
 }
 
 
-/*
- * 'cfImageGetDepth()' - Get the number of bytes per pixel.
- */
+//
+// 'cfImageGetDepth()' - Get the number of bytes per pixel.
+//
 
-int					/* O - Bytes per pixel */
-cfImageGetDepth(cf_image_t *img)	/* I - Image */
+int					// O - Bytes per pixel
+cfImageGetDepth(cf_image_t *img)	// I - Image
 {
   return (abs(img->colorspace));
 }
 
 
-/*
- * 'cfImageGetHeight()' - Get the height of an image.
- */
+//
+// 'cfImageGetHeight()' - Get the height of an image.
+//
 
-unsigned				/* O - Height in pixels */
-cfImageGetHeight(cf_image_t *img)	/* I - Image */
+unsigned				// O - Height in pixels
+cfImageGetHeight(cf_image_t *img)	// I - Image
 {
   return (img->ysize);
 }
 
 
-/*
- * 'cfImageGetRow()' - Get a row of pixels from an image.
- */
+//
+// 'cfImageGetRow()' - Get a row of pixels from an image.
+//
 
-int					/* O - -1 on error, 0 on success */
-cfImageGetRow(cf_image_t *img,	/* I - Image */
-                int          x,		/* I - Start column */
-                int          y,		/* I - Row */
-                int          width,	/* I - Width of row */
-                cf_ib_t    *pixels)	/* O - Pixel data */
+int					// O - -1 on error, 0 on success
+cfImageGetRow(cf_image_t   *img,	// I - Image
+	      int          x,		// I - Start column
+	      int          y,		// I - Row
+	      int          width,	// I - Width of row
+	      cf_ib_t      *pixels)	// O - Pixel data
 {
-  int			bpp,		/* Bytes per pixel */
-			count;		/* Number of pixels to get */
-  const cf_ib_t	*ib;		/* Pointer to pixels */
+  int			bpp,		// Bytes per pixel
+			count;		// Number of pixels to get
+  const cf_ib_t		*ib;		// Pointer to pixels
 
 
   if (img == NULL || y < 0 || y >= img->ysize || x >= img->xsize)
@@ -259,53 +261,54 @@ cfImageGetRow(cf_image_t *img,	/* I - Image */
 }
 
 
-/*
- * 'cfImageGetWidth()' - Get the width of an image.
- */
+//
+// 'cfImageGetWidth()' - Get the width of an image.
+//
 
-unsigned				/* O - Width in pixels */
-cfImageGetWidth(cf_image_t *img)	/* I - Image */
+unsigned				// O - Width in pixels
+cfImageGetWidth(cf_image_t *img)	// I - Image
 {
   return (img->xsize);
 }
 
 
-/*
- * 'cfImageGetXPPI()' - Get the horizontal resolution of an image.
- */
+//
+// 'cfImageGetXPPI()' - Get the horizontal resolution of an image.
+//
 
-unsigned				/* O - Horizontal PPI */
-cfImageGetXPPI(cf_image_t *img)	/* I - Image */
+unsigned				// O - Horizontal PPI
+cfImageGetXPPI(cf_image_t *img)		// I - Image
 {
   return (img->xppi);
 }
 
 
-/*
- * 'cfImageGetYPPI()' - Get the vertical resolution of an image.
- */
+//
+// 'cfImageGetYPPI()' - Get the vertical resolution of an image.
+//
 
-unsigned				/* O - Vertical PPI */
-cfImageGetYPPI(cf_image_t *img)	/* I - Image */
+unsigned				// O - Vertical PPI
+cfImageGetYPPI(cf_image_t *img)		// I - Image
 {
   return (img->yppi);
 }
 
 
-/*
- * 'cfImageOpen()' - Open an image file and read it into memory.
- */
+//
+// 'cfImageOpen()' - Open an image file and read it into memory.
+//
 
-cf_image_t *				/* O - New image */
+cf_image_t *				// O - New image
 cfImageOpen(
-    const char      *filename,		/* I - Filename of image */
-    cf_icspace_t  primary,		/* I - Primary colorspace needed */
-    cf_icspace_t  secondary,		/* I - Secondary colorspace if primary no good */
-    int             saturation,		/* I - Color saturation level */
-    int             hue,		/* I - Color hue adjustment */
-    const cf_ib_t *lut)		/* I - RGB gamma/brightness LUT */
+    const char      *filename,		// I - Filename of image
+    cf_icspace_t    primary,		// I - Primary colorspace needed
+    cf_icspace_t    secondary,		// I - Secondary colorspace if primary
+                                        //     no good
+    int             saturation,		// I - Color saturation level
+    int             hue,		// I - Color hue adjustment
+    const cf_ib_t   *lut)		// I - RGB gamma/brightness LUT
 {
-  FILE		*fp;			/* File pointer */
+  FILE		*fp;			// File pointer
 
   DEBUG_printf(("cfImageOpen(\"%s\", %d, %d, %d, %d, %p)\n",
 		filename ? filename : "(null)", primary, secondary,
@@ -314,35 +317,36 @@ cfImageOpen(
   if ((fp = fopen(filename, "r")) == NULL)
     return (NULL);
 
-  return cfImageOpenFP(fp, primary, secondary, saturation, hue, lut);
+  return (cfImageOpenFP(fp, primary, secondary, saturation, hue, lut));
 }
 
 
-/*
- * 'cfImageOpenFP()' - Open an image file and read it into memory.
- */
+//
+// 'cfImageOpenFP()' - Open an image file and read it into memory.
+//
 
-cf_image_t *				/* O - New image */
+cf_image_t *				// O - New image
 cfImageOpenFP(
-    FILE            *fp,		/* I - File pointer of image */
-    cf_icspace_t  primary,		/* I - Primary colorspace needed */
-    cf_icspace_t  secondary,		/* I - Secondary colorspace if primary no good */
-    int             saturation,		/* I - Color saturation level */
-    int             hue,		/* I - Color hue adjustment */
-    const cf_ib_t *lut)		/* I - RGB gamma/brightness LUT */
+    FILE            *fp,		// I - File pointer of image
+    cf_icspace_t    primary,		// I - Primary colorspace needed
+    cf_icspace_t    secondary,		// I - Secondary colorspace if primary
+                                        //     no good
+    int             saturation,		// I - Color saturation level
+    int             hue,		// I - Color hue adjustment
+    const cf_ib_t   *lut)		// I - RGB gamma/brightness LUT
 {
-  unsigned char	header[16],		/* First 16 bytes of file */
-		header2[16];		/* Bytes 2048-2064 (PhotoCD) */
-  cf_image_t	*img;			/* New image buffer */
-  int		status;			/* Status of load... */
+  unsigned char	header[16],		// First 16 bytes of file
+		header2[16];		// Bytes 2048-2064 (PhotoCD)
+  cf_image_t	*img;			// New image buffer
+  int		status;			// Status of load...
 
 
   DEBUG_printf(("cfImageOpen2(%p, %d, %d, %d, %d, %p)\n",
         	fp, primary, secondary, saturation, hue, lut));
 
- /*
-  * Figure out the file type...
-  */
+  //
+  // Figure out the file type...
+  //
 
   if (fp == NULL)
     return (NULL);
@@ -359,9 +363,9 @@ cfImageOpenFP(
     DEBUG_printf(("Error reading file!"));
   fseek(fp, 0, SEEK_SET);
 
- /*
-  * Allocate memory...
-  */
+  //
+  // Allocate memory...
+  //
 
   img = calloc(sizeof(cf_image_t), 1);
 
@@ -371,9 +375,9 @@ cfImageOpenFP(
     return (NULL);
   }
 
- /*
-  * Load the image as appropriate...
-  */
+  //
+  // Load the image as appropriate...
+  //
 
   img->cachefile = -1;
   img->max_ics   = CF_TILE_MINIMUM;
@@ -383,23 +387,23 @@ cfImageOpenFP(
 #if defined(HAVE_LIBPNG) && defined(HAVE_LIBZ)
   if (!memcmp(header, "\211PNG", 4))
     status = _cfImageReadPNG(img, fp, primary, secondary, saturation, hue,
-                               lut);
+			     lut);
   else
-#endif /* HAVE_LIBPNG && HAVE_LIBZ */
+#endif // HAVE_LIBPNG && HAVE_LIBZ
 #ifdef HAVE_LIBJPEG
-  if (!memcmp(header, "\377\330\377", 3) &&	/* Start-of-Image */
-	   header[3] >= 0xe0 && header[3] <= 0xef)	/* APPn */
+  if (!memcmp(header, "\377\330\377", 3) &&	// Start-of-Image
+      header[3] >= 0xe0 && header[3] <= 0xef)	// APPn
     status = _cfImageReadJPEG(img, fp, primary, secondary, saturation, hue,
-                                lut);
+			      lut);
   else
-#endif /* HAVE_LIBJPEG */
+#endif // HAVE_LIBJPEG
 #ifdef HAVE_LIBTIFF
   if (!memcmp(header, "MM\000\052", 4) ||
-           !memcmp(header, "II\052\000", 4))
+      !memcmp(header, "II\052\000", 4))
     status = _cfImageReadTIFF(img, fp, primary, secondary, saturation, hue,
-                                lut);
+			      lut);
   else
-#endif /* HAVE_LIBTIFF */
+#endif // HAVE_LIBTIFF
   {
     fclose(fp);
     status = -1;
@@ -415,24 +419,24 @@ cfImageOpenFP(
 }
 
 
-/*
- * '_cfImagePutCol()' - Put a column of pixels to an image.
- */
+//
+// '_cfImagePutCol()' - Put a column of pixels to an image.
+//
 
-int					/* O - -1 on error, 0 on success */
+int					// O - -1 on error, 0 on success
 _cfImagePutCol(
-    cf_image_t    *img,		/* I - Image */
-    int             x,			/* I - Column */
-    int             y,			/* I - Start row */
-    int             height,		/* I - Column height */
-    const cf_ib_t *pixels)		/* I - Pixels to put */
+    cf_image_t      *img,		// I - Image
+    int             x,			// I - Column
+    int             y,			// I - Start row
+    int             height,		// I - Column height
+    const cf_ib_t   *pixels)		// I - Pixels to put
 {
-  int		bpp,			/* Bytes per pixel */
-		twidth,			/* Width of tile */
-		count;			/* Number of pixels to put */
-  int		tilex,			/* Column within tile */
-		tiley;			/* Row within tile */
-  cf_ib_t	*ib;			/* Pointer to pixels in tile */
+  int		bpp,			// Bytes per pixel
+		twidth,			// Width of tile
+		count;			// Number of pixels to put
+  int		tilex,			// Column within tile
+		tiley;			// Row within tile
+  cf_ib_t	*ib;			// Pointer to pixels in tile
 
 
   if (img == NULL || x < 0 || x >= img->xsize || y >= img->ysize)
@@ -490,23 +494,23 @@ _cfImagePutCol(
 }
 
 
-/*
- * '_cfImagePutRow()' - Put a row of pixels to an image.
- */
+//
+// '_cfImagePutRow()' - Put a row of pixels to an image.
+//
 
-int					/* O - -1 on error, 0 on success */
+int					// O - -1 on error, 0 on success
 _cfImagePutRow(
-    cf_image_t    *img,		/* I - Image */
-    int             x,			/* I - Start column */
-    int             y,			/* I - Row */
-    int             width,		/* I - Row width */
-    const cf_ib_t *pixels)		/* I - Pixel data */
+    cf_image_t      *img,		// I - Image
+    int             x,			// I - Start column
+    int             y,			// I - Row
+    int             width,		// I - Row width
+    const cf_ib_t   *pixels)		// I - Pixel data
 {
-  int		bpp,			/* Bytes per pixel */
-		count;			/* Number of pixels to put */
-  int		tilex,			/* Column within tile */
-		tiley;			/* Row within tile */
-  cf_ib_t	*ib;			/* Pointer to pixels in tile */
+  int		bpp,			// Bytes per pixel
+		count;			// Number of pixels to put
+  int		tilex,			// Column within tile
+		tiley;			// Row within tile
+  cf_ib_t	*ib;			// Pointer to pixels in tile
 
 
   if (img == NULL || y < 0 || y >= img->ysize || x >= img->xsize)
@@ -551,23 +555,23 @@ _cfImagePutRow(
 }
 
 
-/*
- * 'cfImageSetMaxTiles()' - Set the maximum number of tiles to cache.
- *
- * If the "max_tiles" argument is 0 then the maximum number of tiles is
- * computed from the image size or the RIP_CACHE environment variable.
- */
+//
+// 'cfImageSetMaxTiles()' - Set the maximum number of tiles to cache.
+//
+// If the "max_tiles" argument is 0 then the maximum number of tiles is
+// computed from the image size or the RIP_CACHE environment variable.
+//
 
 void
 cfImageSetMaxTiles(
-    cf_image_t *img,			/* I - Image to set */
-    int          max_tiles)		/* I - Number of tiles to cache */
+    cf_image_t   *img,			// I - Image to set
+    int          max_tiles)		// I - Number of tiles to cache
 {
-  int	cache_size,			/* Size of tile cache in bytes */
-	min_tiles,			/* Minimum number of tiles to cache */
-	max_size;			/* Maximum cache size in bytes */
-  char	*cache_env,			/* Cache size environment variable */
-	cache_units[255];		/* Cache size units */
+  int	cache_size,			// Size of tile cache in bytes
+	min_tiles,			// Minimum number of tiles to cache
+	max_size;			// Maximum cache size in bytes
+  char	*cache_env,			// Cache size environment variable
+	cache_units[255];		// Cache size units
 
 
   min_tiles = max(CF_TILE_MINIMUM,
@@ -619,59 +623,66 @@ cfImageSetMaxTiles(
 }
 
 
+//
+// 'cfImageCrop()' - Crop an image.
+//                   (posw, posh):    Position of left corner
+//                   (width, height): Width and height of required image.
 
-/*
- * 'cfImageCrop()' - Crop an image.
- *                   (posw, posh):    Position of left corner
- *                   (width, height): Width and height of required image.
- */
-
-cf_image_t* cfImageCrop(cf_image_t* img,int posw,int posh,int width,int height)
+cf_image_t*
+cfImageCrop(cf_image_t* img,
+	    int posw,
+	    int posh,
+	    int width,
+	    int height)
 {
   int image_width = cfImageGetWidth(img);
-  cf_image_t* temp=calloc(sizeof(cf_image_t),1);
-  cf_ib_t *pixels=(cf_ib_t*)malloc(img->xsize*cfImageGetDepth(img));
+  cf_image_t* temp = calloc(sizeof(cf_image_t), 1);
+  cf_ib_t *pixels = (cf_ib_t*)malloc(img->xsize * cfImageGetDepth(img));
+
   temp->cachefile = -1;
   temp->max_ics = CF_TILE_MINIMUM;
-  temp->colorspace=img->colorspace;
+  temp->colorspace = img->colorspace;
   temp->xppi = img->xppi;
   temp->yppi = img->yppi;
   temp->num_ics = 0;
-  temp->first =temp->last = NULL;
+  temp->first = temp->last = NULL;
   temp->tiles = NULL;
   temp->xsize = width;
   temp->ysize = height;
-  for(int i=posh;i<min(cfImageGetHeight(img),posh+height);i++){
-    cfImageGetRow(img,posw,i,min(width,image_width-posw),pixels);
-    _cfImagePutRow(temp,0,i-posh,min(width,image_width-posw),pixels);
+
+  for (int i = posh; i < min(cfImageGetHeight(img), posh + height); i ++)
+  {
+    cfImageGetRow(img, posw, i, min(width, image_width - posw), pixels);
+    _cfImagePutRow(temp, 0, i - posh, min(width, image_width - posw), pixels);
   }
+
   free(pixels);
-  return temp;
+
+  return (temp);
 }
 
 
-/*
- * 'flush_tile()' - Flush the least-recently-used tile in the cache.
- */
+//
+// 'flush_tile()' - Flush the least-recently-used tile in the cache.
+//
 
 static int
-flush_tile(cf_image_t *img)		/* I - Image */
+flush_tile(cf_image_t *img)		// I - Image
 {
-  int		bpp;			/* Bytes per pixel */
-  cf_itile_t	*tile;			/* Pointer to tile */
+  int		bpp;			// Bytes per pixel
+  cf_itile_t	*tile;			// Pointer to tile
 
 
-  bpp  = cfImageGetDepth(img);
-  if(img==NULL||img->first==NULL||img->first->tile==NULL)
-  {
-    return -1;
-  }
+  bpp = cfImageGetDepth(img);
+  if(img == NULL || img->first == NULL || img->first->tile == NULL)
+    return (-1);
+
   tile = img->first->tile;
 
   if (!tile->dirty)
   {
     tile->ic = NULL;
-    return 0;
+    return (0);
   }
 
   if (img->cachefile < 0)
@@ -681,7 +692,7 @@ flush_tile(cf_image_t *img)		/* I - Image */
     {
       tile->ic    = NULL;
       tile->dirty = 0;
-      return 0;
+      return (0);
     }
 
     DEBUG_printf(("Created swap file \"%s\"...\n", img->cachename));
@@ -693,7 +704,7 @@ flush_tile(cf_image_t *img)		/* I - Image */
     {
       tile->ic    = NULL;
       tile->dirty = 0;
-      return 0;
+      return (0);
     }
   }
   else
@@ -702,7 +713,7 @@ flush_tile(cf_image_t *img)		/* I - Image */
     {
       tile->ic    = NULL;
       tile->dirty = 0;
-      return 0;
+      return (0);
     }
   }
 
@@ -712,26 +723,26 @@ flush_tile(cf_image_t *img)		/* I - Image */
 
   tile->ic    = NULL;
   tile->dirty = 0;
-  return 0;
+  return (0);
 }
 
 
-/*
- * 'get_tile()' - Get a cached tile.
- */
+//
+// 'get_tile()' - Get a cached tile.
+//
 
-static cf_ib_t *			/* O - Pointer to tile or NULL */
-get_tile(cf_image_t *img,		/* I - Image */
-         int          x,		/* I - Column in image */
-         int          y)		/* I - Row in image */
+static cf_ib_t *			// O - Pointer to tile or NULL
+get_tile(cf_image_t *img,		// I - Image
+         int          x,		// I - Column in image
+         int          y)		// I - Row in image
 {
-  int		bpp,			/* Bytes per pixel */
-		tilex,			/* Column within tile */
-		tiley,			/* Row within tile */
-		xtiles,			/* Number of tiles horizontally */
-		ytiles;			/* Number of tiles vertically */
-  cf_ic_t	*ic;			/* Cache pointer */
-  cf_itile_t	*tile;			/* Tile pointer */
+  int		bpp,			// Bytes per pixel
+		tilex,			// Column within tile
+		tiley,			// Row within tile
+		xtiles,			// Number of tiles horizontally
+		ytiles;			// Number of tiles vertically
+  cf_ic_t	*ic;			// Cache pointer
+  cf_itile_t	*tile;			// Tile pointer
 
 
   if (img->tiles == NULL)
@@ -831,18 +842,18 @@ get_tile(cf_image_t *img,		/* I - Image */
 
   if (ic != img->last)
   {
-   /*
-    * Remove the cache entry from the list...
-    */
+    //
+    // Remove the cache entry from the list...
+    //
 
     if (ic->prev != NULL)
       ic->prev->next = ic->next;
     if (ic->next != NULL)
       ic->next->prev = ic->prev;
 
-   /*
-    * And add it to the end...
-    */
+    //
+    // And add it to the end...
+    //
 
     if (img->last != NULL)
       img->last->next = ic;
@@ -856,10 +867,11 @@ get_tile(cf_image_t *img,		/* I - Image */
   return (ic->pixels + bpp * (y * CF_TILE_SIZE + x));
 }
 
+
 #ifdef HAVE_EXIF
-/*
-  helper function required by EXIF read function
-  */
+//
+// Helper function required by EXIF read function
+//
 
 static void trim_spaces(char *buf)
 {
@@ -869,18 +881,17 @@ static void trim_spaces(char *buf)
     if (*buf != ' ')
       s = buf;
   }
-  *++s = 0; /* null terminate the string on the first of the final spaces */
+  *++s = 0; // null terminate the string on the first of the final spaces
 }
 
-/*
-  implementation for EXIF read function
-  */
 
-/*
-  helper function to extract bytes from image files
-  */
+//
+// Helper function to extract bytes from image files
+//
 
-static unsigned char *find_bytes(FILE *fp, long int *size)
+static unsigned char *
+find_bytes(FILE *fp,
+	   long int *size)
 {
   unsigned char *buf;
 
@@ -904,10 +915,17 @@ static unsigned char *find_bytes(FILE *fp, long int *size)
 
   fseek(fp, originalOffset, SEEK_SET);
 
-  return buf;
+  return (buf);
 }
 
-int _cfImageReadEXIF(cf_image_t *img, FILE *fp)
+
+//
+// Implementation for EXIF read function
+//
+
+int
+_cfImageReadEXIF(cf_image_t *img,
+		 FILE *fp)
 {
 
   if (fp == NULL)
@@ -925,7 +943,7 @@ int _cfImageReadEXIF(cf_image_t *img, FILE *fp)
       (ed = exif_data_new_from_data(buf, bufSize)) == NULL)
   {
     DEBUG_printf(("DEBUG: No EXIF data found"));
-    return 2;
+    return (2);
   }
 
   ExifIfd ifd = EXIF_IFD_0;
@@ -939,7 +957,7 @@ int _cfImageReadEXIF(cf_image_t *img, FILE *fp)
   if (entryX == NULL || entryY == NULL)
   {
     DEBUG_printf(("DEBUG: No EXIF data found"));
-    return 2;
+    return (2);
   }
 
   if (entryX)
@@ -956,9 +974,10 @@ int _cfImageReadEXIF(cf_image_t *img, FILE *fp)
       sscanf(buf1, "%d", &xRes);
       img->xppi = xRes;
     }
-    else{
+    else
+    {
       free(buf);
-      return 2;
+      return (2);
     }
   }
 
@@ -977,11 +996,11 @@ int _cfImageReadEXIF(cf_image_t *img, FILE *fp)
     }
     else{
       free(buf);
-      return 2;
+      return (2);
     }
   }
 
   free(buf);
-  return 1;
+  return (1);
 }
-#endif
+#endif // HAVE_EXIF

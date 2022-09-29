@@ -1,21 +1,23 @@
-/*
- *   Private image library definitions for CUPS Filters.
- *
- *   Copyright 2007-2010 by Apple Inc.
- *   Copyright 1993-2006 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- */
+//
+//   Private image library definitions for libcupsfilters.
+//
+//   Copyright 2007-2010 by Apple Inc.
+//   Copyright 1993-2006 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+
 
 #ifndef _CUPS_IMAGE_PRIVATE_H_
 #  define _CUPS_IMAGE_PRIVATE_H_
 
-/*
- * Include necessary headers...
- */
+
+//
+// Include necessary headers...
+//
 
 #  include <config.h>
 #  include "image.h"
@@ -29,7 +31,7 @@
 #    include <io.h>
 #  else
 #    include <unistd.h>
-#  endif /* WIN32 */
+#  endif // WIN32
 #  include <errno.h>
 #  include <math.h>	
 
@@ -37,114 +39,115 @@
 #	include <libexif/exif-data.h>
 #endif
 
-/*
- * Constants...
- */
+
+//
+// Constants...
+//
 
 #  define CF_IMAGE_MAX_WIDTH	0x07ffffff
-					/* 2^27-1 to allow for 15-channel data */
+					// 2^27-1 to allow for 15-channel data
 #  define CF_IMAGE_MAX_HEIGHT	0x3fffffff
-					/* 2^30-1 */
+					// 2^30-1
 
-#  define CF_TILE_SIZE		256	/* 256x256 pixel tiles */
-#  define CF_TILE_MINIMUM	10	/* Minimum number of tiles */
+#  define CF_TILE_SIZE		256	// 256x256 pixel tiles
+#  define CF_TILE_MINIMUM	10	// Minimum number of tiles
 
 
-/*
- * min/max/abs macros...
- */
+//
+// min/max/abs macros...
+//
 
 #  ifndef max
 #    define 	max(a,b)	((a) > (b) ? (a) : (b))
-#  endif /* !max */
+#  endif // !max
 #  ifndef min
 #    define 	min(a,b)	((a) < (b) ? (a) : (b))
-#  endif /* !min */
+#  endif // !min
 #  ifndef abs
 #    define	abs(a)		((a) < 0 ? -(a) : (a))
-#  endif /* !abs */
+#  endif // !abs
 
 
-/*
- * Types and structures...
- */
+//
+// Types and structures...
+//
 
-typedef enum cf_iztype_e		/**** Image zoom type ****/
+typedef enum cf_iztype_e		// **** Image zoom type ****
 {
-  CF_IZOOM_FAST,			/* Use nearest-neighbor sampling */
-  CF_IZOOM_NORMAL,			/* Use bilinear interpolation */
-  CF_IZOOM_BEST				/* Use bicubic interpolation */
+  CF_IZOOM_FAST,			// Use nearest-neighbor sampling
+  CF_IZOOM_NORMAL,			// Use bilinear interpolation
+  CF_IZOOM_BEST				// Use bicubic interpolation
 } cf_iztype_t;
 
 struct cf_ic_s;
 
-typedef struct cf_itile_s		/**** Image tile ****/
+typedef struct cf_itile_s		// **** Image tile ****
 {
-  int			dirty;		/* True if tile is dirty */
-  off_t			pos;		/* Position of tile on disk (-1 if not
-					   written) */
-  struct cf_ic_s	*ic;		/* Pixel data */
+  int			dirty;		// True if tile is dirty
+  off_t			pos;		// Position of tile on disk (-1 if not
+					// written)
+  struct cf_ic_s	*ic;		// Pixel data
 } cf_itile_t;
 
-typedef struct cf_ic_s		/**** Image tile cache ****/
+typedef struct cf_ic_s			// **** Image tile cache ****
 {
-  struct cf_ic_s	*prev,		/* Previous tile in cache */
-			*next;		/* Next tile in cache */
-  cf_itile_t		*tile;		/* Tile this is attached to */
-  cf_ib_t		*pixels;	/* Pixel data */
+  struct cf_ic_s	*prev,		// Previous tile in cache
+			*next;		// Next tile in cache
+  cf_itile_t		*tile;		// Tile this is attached to
+  cf_ib_t		*pixels;	// Pixel data
 } cf_ic_t;
 
-struct cf_image_s			/**** Image file data ****/
+struct cf_image_s			// **** Image file data ****
 {
-  cf_icspace_t		colorspace;	/* Colorspace of image */
-  unsigned		xsize,		/* Width of image in pixels */
-			ysize,		/* Height of image in pixels */
-			xppi,		/* X resolution in pixels-per-inch */
-			yppi,		/* Y resolution in pixels-per-inch */
-			num_ics,	/* Number of cached tiles */
-			max_ics;	/* Maximum number of cached tiles */
-  cf_itile_t		**tiles;	/* Tiles in image */
-  cf_ic_t		*first,		/* First cached tile in image */
-			*last;		/* Last cached tile in image */
-  int			cachefile;	/* Tile cache file */
-  char			cachename[256];	/* Tile cache filename */
+  cf_icspace_t		colorspace;	// Colorspace of image
+  unsigned		xsize,		// Width of image in pixels
+			ysize,		// Height of image in pixels
+			xppi,		// X resolution in pixels-per-inch
+			yppi,		// Y resolution in pixels-per-inch
+			num_ics,	// Number of cached tiles
+			max_ics;	// Maximum number of cached tiles
+  cf_itile_t		**tiles;	// Tiles in image
+  cf_ic_t		*first,		// First cached tile in image
+			*last;		// Last cached tile in image
+  int			cachefile;	// Tile cache file
+  char			cachename[256];	// Tile cache filename
 };
 
-struct cf_izoom_s			/**** Image zoom data ****/
+struct cf_izoom_s			// **** Image zoom data ****
 {
-  cf_image_t		*img;		/* Image to zoom */
-  cf_iztype_t		type;		/* Type of zooming */
-  unsigned		xorig,		/* X origin */
-			yorig,		/* Y origin */
-			width,		/* Width of input area */
-			height,		/* Height of input area */
-			depth,		/* Number of bytes per pixel */
-			rotated,	/* Non-zero if image needs to be
-					   rotated */
-			xsize,		/* Width of output image */
-			ysize,		/* Height of output image */
-			xmax,		/* Maximum input image X position */
-			ymax,		/* Maximum input image Y position */
-			xmod,		/* Threshold for Bresenheim rounding */
-			ymod;		/* ... */
-  int			xstep,		/* Amount to step for each pixel along
-					   X */
+  cf_image_t		*img;		// Image to zoom
+  cf_iztype_t		type;		// Type of zooming
+  unsigned		xorig,		// X origin
+			yorig,		// Y origin
+			width,		// Width of input area
+			height,		// Height of input area
+			depth,		// Number of bytes per pixel
+			rotated,	// Non-zero if image needs to be
+					// rotated
+			xsize,		// Width of output image
+			ysize,		// Height of output image
+			xmax,		// Maximum input image X position
+			ymax,		// Maximum input image Y position
+			xmod,		// Threshold for Bresenheim rounding
+			ymod;		// ...
+  int			xstep,		// Amount to step for each pixel along
+					// X
 			xincr,
-			instep,		/* Amount to step pixel pointer along
-					   X */
+			instep,		// Amount to step pixel pointer along
+					// X
 			inincr,
-			ystep,		/* Amount to step for each pixel along
-					   Y */
+			ystep,		// Amount to step for each pixel along
+					// Y
 			yincr,
-			row;		/* Current row */
-  cf_ib_t		*rows[2],	/* Horizontally scaled pixel data */
-			*in;		/* Unscaled input pixel data */
+			row;		// Current row
+  cf_ib_t		*rows[2],	// Horizontally scaled pixel data
+			*in;		// Unscaled input pixel data
 };
 
 
-/*
- * Prototypes...
- */
+//
+// Prototypes...
+//
 
 extern int		_cfImagePutCol(cf_image_t *img, int x, int y,
 				       int height, const cf_ib_t *pixels);
@@ -173,8 +176,7 @@ extern cf_izoom_t	*_cfImageZoomNew(cf_image_t *img, int xc0, int yc0,
 					 cf_iztype_t type);
 
 #ifdef HAVE_EXIF
-int		_cfImageReadEXIF(cf_image_t *img, FILE *fp);
+extern int		_cfImageReadEXIF(cf_image_t *img, FILE *fp);
 #endif
 
-#endif /* !_CUPS_IMAGE_PRIVATE_H_ */
-
+#endif // !_CUPS_IMAGE_PRIVATE_H_

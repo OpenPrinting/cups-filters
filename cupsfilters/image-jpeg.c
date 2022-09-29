@@ -1,52 +1,53 @@
-/*
- *   JPEG image routines for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2007 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   _cfImageReadJPEG() - Read a JPEG image file.
- */
+//
+//   JPEG image routines for CUPS.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2007 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   _cfImageReadJPEG() - Read a JPEG image file.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "image-private.h"
 
 #ifdef HAVE_LIBJPEG
-#  include <jpeglib.h>	/* JPEG/JFIF image definitions */
+#  include <jpeglib.h> // JPEG/JFIF image definitions
 
-#define JPEG_APP0 0xE0 /* APP0 marker code */
+#define JPEG_APP0 0xE0 // APP0 marker code
 
-/*
- * '_cfImageReadJPEG()' - Read a JPEG image file.
- */
+//
+// '_cfImageReadJPEG()' - Read a JPEG image file.
+//
 
-int					/* O  - Read status */
+int					// O  - Read status
 _cfImageReadJPEG(
-    cf_image_t    *img,		/* IO - Image */
-    FILE            *fp,		/* I  - Image file */
-    cf_icspace_t  primary,		/* I  - Primary choice for colorspace */
-    cf_icspace_t  secondary,		/* I  - Secondary choice for colorspace */
-    int             saturation,		/* I  - Color saturation (%) */
-    int             hue,		/* I  - Color hue (degrees) */
-    const cf_ib_t *lut)		/* I  - Lookup table for gamma/brightness */
+    cf_image_t      *img,		// IO - Image
+    FILE            *fp,		// I  - Image file
+    cf_icspace_t    primary,		// I  - Primary choice for colorspace
+    cf_icspace_t    secondary,		// I  - Secondary choice for colorspace
+    int             saturation,		// I  - Color saturation (%)
+    int             hue,		// I  - Color hue (degrees)
+    const cf_ib_t   *lut)		// I  - Lookup table for
+                                        //      gamma/brightness
 {
-  struct jpeg_decompress_struct	cinfo;	/* Decompressor info */
-  struct jpeg_error_mgr	jerr;		/* Error handler info */
-  cf_ib_t		*in,		/* Input pixels */
-			*out;		/* Output pixels */
-  jpeg_saved_marker_ptr	marker;		/* Pointer to marker data */
-  int			psjpeg = 0;	/* Non-zero if Photoshop CMYK JPEG */
+  struct jpeg_decompress_struct	cinfo;	// Decompressor info
+  struct jpeg_error_mgr	jerr;		// Error handler info
+  cf_ib_t		*in,		// Input pixels
+			*out;		// Output pixels
+  jpeg_saved_marker_ptr	marker;		// Pointer to marker data
+  int			psjpeg = 0;	// Non-zero if Photoshop CMYK JPEG
   static const char	*cspaces[] =
-			{		/* JPEG colorspaces... */
+			{		// JPEG colorspaces...
 			  "JCS_UNKNOWN",
 			  "JCS_GRAYSCALE",
 			  "JCS_RGB",
@@ -57,21 +58,21 @@ _cfImageReadJPEG(
 
   (void)cspaces;
 
- /*
-  * Read the JPEG header...
-  */
+  //
+  // Read the JPEG header...
+  //
 
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_decompress(&cinfo);
-  jpeg_save_markers(&cinfo, JPEG_APP0 + 14, 0xffff); /* Adobe JPEG */
+  jpeg_save_markers(&cinfo, JPEG_APP0 + 14, 0xffff); // Adobe JPEG
   jpeg_stdio_src(&cinfo, fp);
   jpeg_read_header(&cinfo, 1);
 
- /*
-  * Parse any Adobe APPE data embedded in the JPEG file.  Since Adobe doesn't
-  * bother following standards, we have to invert the CMYK JPEG data written by
-  * Adobe apps...
-  */
+  //
+  // Parse any Adobe APPE data embedded in the JPEG file.  Since Adobe doesn't
+  // bother following standards, we have to invert the CMYK JPEG data written by
+  // Adobe apps...
+  //
 
   for (marker = cinfo.marker_list; marker; marker = marker->next)
     if (marker->marker == (JPEG_APP0 + 14) && marker->data_length >= 12 &&
@@ -138,15 +139,16 @@ _cfImageReadJPEG(
   int temp = -1;
 
 #ifdef HAVE_EXIF
-   /*
-    scan image file for exif data
-    */
+  //
+  // Scan image file for exif data
+  //
 
   temp = _cfImageReadEXIF(img, fp);
 #endif
-  /* 
-    check headers only if EXIF contains no info about ppi
-    */
+
+  //
+  // Check headers only if EXIF contains no info about ppi
+  //
 
   if (temp != 1 && cinfo.X_density > 0 && cinfo.Y_density > 0 && cinfo.density_unit > 0)
   {
@@ -186,12 +188,12 @@ _cfImageReadJPEG(
 
     if (psjpeg && cinfo.output_components == 4)
     {
-     /*
-      * Invert CMYK data from Photoshop...
-      */
+     //
+     // Invert CMYK data from Photoshop...
+     
 
-      cf_ib_t	*ptr;	/* Pointer into buffer */
-      int	i;	/* Looping var */
+      cf_ib_t	*ptr;	// Pointer into buffer
+      int	i;	// Looping var
 
 
       for (ptr = in, i = img->xsize * 4; i > 0; i --, ptr ++)
@@ -221,7 +223,7 @@ _cfImageReadJPEG(
       }
 
       DEBUG_puts("\n");
-#endif /* DEBUG */
+#endif // DEBUG
 
       if (lut)
         cfImageLut(in, img->xsize * cfImageGetDepth(img), lut);
@@ -283,7 +285,7 @@ _cfImageReadJPEG(
 
       _cfImagePutRow(img, 0, cinfo.output_scanline - 1, img->xsize, out);
     }
-    else /* JCS_CMYK */
+    else // JCS_CMYK
     {
       DEBUG_puts("DEBUG: JCS_CMYK\n");
 
@@ -323,5 +325,4 @@ _cfImageReadJPEG(
 
   return (0);
 }
-#endif /* HAVE_LIBJPEG */
-
+#endif // HAVE_LIBJPEG

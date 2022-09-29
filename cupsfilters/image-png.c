@@ -1,80 +1,80 @@
-/*
- *   PNG image routines for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2007 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   _cfImageReadPNG() - Read a PNG image file.
- */
+//
+//   PNG image routines for CUPS.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2007 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   _cfImageReadPNG() - Read a PNG image file.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "image-private.h"
 
 #if defined(HAVE_LIBPNG) && defined(HAVE_LIBZ)
-#  include <png.h>	/* Portable Network Graphics (PNG) definitions */
+#  include <png.h>	// Portable Network Graphics (PNG) definitions
 
 
-/*
- * '_cfImageReadPNG()' - Read a PNG image file.
- */
+//
+// '_cfImageReadPNG()' - Read a PNG image file.
+//
 
-int					/* O - Read status */
+int					// O - Read status
 _cfImageReadPNG(
-    cf_image_t    *img,		/* IO - Image */
-    FILE            *fp,		/* I - Image file */
-    cf_icspace_t  primary,		/* I - Primary choice for colorspace */
-    cf_icspace_t  secondary,		/* I - Secondary choice for colorspace */
-    int             saturation,		/* I - Color saturation (%) */
-    int             hue,		/* I - Color hue (degrees) */
-    const cf_ib_t *lut)		/* I - Lookup table for gamma/brightness */
+    cf_image_t      *img,		// IO - Image
+    FILE            *fp,		// I - Image file
+    cf_icspace_t    primary,		// I - Primary choice for colorspace
+    cf_icspace_t    secondary,		// I - Secondary choice for colorspace
+    int             saturation,		// I - Color saturation (%)
+    int             hue,		// I - Color hue (degrees)
+    const cf_ib_t   *lut)		// I - Lookup table for gamma/brightness
 {
-  int		y;			/* Looping var */
-  png_structp	pp;			/* PNG read pointer */
-  png_infop	info;			/* PNG info pointers */
-  png_uint_32	width,			/* Width of image */
-		height;			/* Height of image */
-  int		bit_depth,		/* Bit depth */
-		color_type,		/* Color type */
-		interlace_type,		/* Interlace type */
-		compression_type,	/* Compression type */
-		filter_type;		/* Filter type */
-  png_uint_32	xppm,			/* X pixels per meter */
-		yppm;			/* Y pixels per meter */
-  int		bpp;			/* Bytes per pixel */
-  int		pass,			/* Current pass */
-		passes;			/* Number of passes required */
-  cf_ib_t	*in,			/* Input pixels */
-		*inptr,			/* Pointer into pixels */
-		*out;			/* Output pixels */
-  png_color_16	bg;			/* Background color */
+  int		y;			// Looping var
+  png_structp	pp;			// PNG read pointer
+  png_infop	info;			// PNG info pointers
+  png_uint_32	width,			// Width of image
+		height;			// Height of image
+  int		bit_depth,		// Bit depth
+		color_type,		// Color type
+		interlace_type,		// Interlace type
+		compression_type,	// Compression type
+		filter_type;		// Filter type
+  png_uint_32	xppm,			// X pixels per meter
+		yppm;			// Y pixels per meter
+  int		bpp;			// Bytes per pixel
+  int		pass,			// Current pass
+		passes;			// Number of passes required
+  cf_ib_t	*in,			// Input pixels
+		*inptr,			// Pointer into pixels
+		*out;			// Output pixels
+  png_color_16	bg;			// Background color
 
 
- /*
-  * Setup the PNG data structures...
-  */
+  //
+  // Setup the PNG data structures...
+  //
 
   pp   = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   info = png_create_info_struct(pp);
 
- /*
-  * Initialize the PNG read "engine"...
-  */
+  //
+  // Initialize the PNG read "engine"...
+  //
 
   png_init_io(pp, fp);
 
- /*
-  * Get the image dimensions and load the output image...
-  */
+  //
+  // Get the image dimensions and load the output image...
+  //
 
   png_read_info(pp, info);
 
@@ -119,15 +119,16 @@ _cfImageReadPNG(
   int temp = -1;
 
 #ifdef HAVE_EXIF
-   /*
-    scan image file for exif data
-    */
+  //
+  // Scan image file for EXIF data
+  //
 
   temp = _cfImageReadEXIF(img, fp);
 #endif
-  /* 
-    check headers only if EXIF contains no info about ppi
-    */
+
+  //
+  // Check headers only if EXIF contains no info about ppi
+  //
 
   if (temp != 1 && (xppm = png_get_x_pixels_per_meter(pp, info)) != 0 &&
       (yppm = png_get_y_pixels_per_meter(pp, info)) != 0)
@@ -148,9 +149,9 @@ _cfImageReadPNG(
 
   passes = png_set_interlace_handling(pp);
 
- /*
-  * Handle transparency...
-  */
+  //
+  // Handle transparency...
+  //
 
   if (png_get_valid(pp, info, PNG_INFO_tRNS))
     png_set_tRNS_to_alpha(pp);
@@ -163,9 +164,9 @@ _cfImageReadPNG(
 
   if (passes == 1)
   {
-   /*
-    * Load one row at a time...
-    */
+    //
+    // Load one row at a time...
+    //
 
     if (color_type == PNG_COLOR_TYPE_GRAY ||
 	color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
@@ -175,11 +176,11 @@ _cfImageReadPNG(
   }
   else
   {
-   /*
-    * Interlaced images must be loaded all at once...
-    */
+    //
+    // Interlaced images must be loaded all at once...
+    //
 
-    size_t bufsize;			/* Size of buffer */
+    size_t bufsize;			// Size of buffer
 
 
     if (color_type == PNG_COLOR_TYPE_GRAY ||
@@ -229,9 +230,9 @@ _cfImageReadPNG(
     return (1);
   }
 
- /*
-  * Read the image, interlacing as needed...
-  */
+  //
+  // Read the image, interlacing as needed...
+  //
 
   for (pass = 1; pass <= passes; pass ++)
     for (inptr = in, y = 0; y < img->ysize; y ++)
@@ -240,9 +241,9 @@ _cfImageReadPNG(
 
       if (pass == passes)
       {
-       /*
-        * Output this row...
-	*/
+	//
+	// Output this row...
+	//
 
 	if (color_type & PNG_COLOR_MASK_COLOR)
 	{
@@ -316,5 +317,4 @@ _cfImageReadPNG(
 
   return (0);
 }
-#endif /* HAVE_LIBPNG && HAVE_LIBZ */
-
+#endif // HAVE_LIBPNG && HAVE_LIBZ

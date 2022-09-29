@@ -1,88 +1,88 @@
-/*
- *   TIFF file routines for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2007 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   _cfImageReadTIFF() - Read a TIFF image file.
- */
+//
+//   TIFF file routines for CUPS.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2007 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   _cfImageReadTIFF() - Read a TIFF image file.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "image-private.h"
 
 #ifdef HAVE_LIBTIFF
-#  include <tiff.h>	/* TIFF image definitions */
+#  include <tiff.h>	// TIFF image definitions
 #  include <tiffio.h>
 #  include <unistd.h>
 
 
-/*
- * '_cfImageReadTIFF()' - Read a TIFF image file.
- */
+//
+// '_cfImageReadTIFF()' - Read a TIFF image file.
+//
 
-int					/* O - Read status */
+int					// O - Read status
 _cfImageReadTIFF(
-    cf_image_t    *img,		/* IO - Image */
-    FILE            *fp,		/* I - Image file */
-    cf_icspace_t  primary,		/* I - Primary choice for colorspace */
-    cf_icspace_t  secondary,		/* I - Secondary choice for colorspace */
-    int             saturation,		/* I - Color saturation (%) */
-    int             hue,		/* I - Color hue (degrees) */
-    const cf_ib_t *lut)		/* I - Lookup table for gamma/brightness */
+    cf_image_t      *img,		// IO - Image
+    FILE            *fp,		// I - Image file
+    cf_icspace_t    primary,		// I - Primary choice for colorspace
+    cf_icspace_t    secondary,		// I - Secondary choice for colorspace
+    int             saturation,		// I - Color saturation (%)
+    int             hue,		// I - Color hue (degrees)
+    const cf_ib_t   *lut)		// I - Lookup table for gamma/brightness
 {
-  TIFF		*tif;			/* TIFF file */
-  uint32_t	width, height;		/* Size of image */
-  uint16_t	photometric,		/* Colorspace */
-		compression,		/* Type of compression */
-		orientation,		/* Orientation */
-		resunit,		/* Units for resolution */
-		samples,		/* Number of samples/pixel */
-		bits,			/* Number of bits/pixel */
-		inkset,			/* Ink set for color separations */
-		numinks;		/* Number of inks in set */
-  float		xres,			/* Horizontal resolution */
-		yres;			/* Vertical resolution */
-  uint16_t	*redcmap,		/* Red colormap information */
-		*greencmap,		/* Green colormap information */
-		*bluecmap;		/* Blue colormap information */
-  int		c,			/* Color index */
-		num_colors,		/* Number of colors */
-		bpp,			/* Bytes per pixel */
-		x, y,			/* Current x & y */
-		row,			/* Current row in image */
-		xstart, ystart,		/* Starting x & y */
-		xdir, ydir,		/* X & y direction */
-		xcount, ycount,		/* X & Y counters */
-		pstep,			/* Pixel step (= bpp or -2 * bpp) */
-		scanwidth,		/* Width of scanline */
-		r, g, b, k,		/* Red, green, blue, and black values */
-		alpha;			/* Image includes alpha? */
-  cf_ib_t		*in,			/* Input buffer */
-		*out,			/* Output buffer */
-		*p,			/* Pointer into buffer */
-		*scanline,		/* Scanline buffer */
-		*scanptr,		/* Pointer into scanline buffer */
-		bit,			/* Current bit */
-		pixel,			/* Current pixel */
-		zero,			/* Zero value (bitmaps) */
-		one;			/* One value (bitmaps) */
+  TIFF		*tif;			// TIFF file
+  uint32_t	width, height;		// Size of image
+  uint16_t	photometric,		// Colorspace
+		compression,		// Type of compression
+		orientation,		// Orientation
+		resunit,		// Units for resolution
+		samples,		// Number of samples/pixel
+		bits,			// Number of bits/pixel
+		inkset,			// Ink set for color separations
+		numinks;		// Number of inks in set
+  float		xres,			// Horizontal resolution
+		yres;			// Vertical resolution
+  uint16_t	*redcmap,		// Red colormap information
+		*greencmap,		// Green colormap information
+		*bluecmap;		// Blue colormap information
+  int		c,			// Color index
+		num_colors,		// Number of colors
+		bpp,			// Bytes per pixel
+		x, y,			// Current x & y
+		row,			// Current row in image
+		xstart, ystart,		// Starting x & y
+		xdir, ydir,		// X & y direction
+		xcount, ycount,		// X & Y counters
+		pstep,			// Pixel step (= bpp or -2 * bpp)
+		scanwidth,		// Width of scanline
+		r, g, b, k,		// Red, green, blue, and black values
+		alpha;			// Image includes alpha?
+  cf_ib_t	*in,			// Input buffer
+		*out,			// Output buffer
+		*p,			// Pointer into buffer
+		*scanline,		// Scanline buffer
+		*scanptr,		// Pointer into scanline buffer
+		bit,			// Current bit
+		pixel,			// Current pixel
+		zero,			// Zero value (bitmaps)
+		one;			// One value (bitmaps)
 
 
- /*
-  * Open the TIFF file and get the required parameters...
-  */
+  //
+  // Open the TIFF file and get the required parameters...
+  //
 
-  lseek(fileno(fp), 0, SEEK_SET); /* Work around "feature" in some stdio's */
+  lseek(fileno(fp), 0, SEEK_SET); // Work around "feature" in some stdio's
 
   if ((tif = TIFFFdOpen(fileno(fp), "", "r")) == NULL)
   {
@@ -129,29 +129,30 @@ _cfImageReadTIFF(
   if (!TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bits))
     bits = 1;
 
- /*
-  * Get the image orientation...
-  */
+  //
+  // Get the image orientation...
+  //
 
   if (!TIFFGetField(tif, TIFFTAG_ORIENTATION, &orientation))
     orientation = 0;
 
- /*
-  * Get the image resolution...
-  */
+  //
+  // Get the image resolution...
+  //
   
   int temp = -1;
 
 #ifdef HAVE_EXIF
-   /*
-    scan image file for exif data
-    */
+  //
+  // Scan image file for EXIF data
+  //
 
   temp = _cfImageReadEXIF(img, fp);
 #endif
-  /* 
-    check headers only if EXIF contains no info about ppi
-    */
+
+  //
+  // Check headers only if EXIF contains no info about ppi
+  //
 
   if (temp != 1 && TIFFGetField(tif, TIFFTAG_XRESOLUTION, &xres) &&
       TIFFGetField(tif, TIFFTAG_YRESOLUTION, &yres) &&
@@ -185,19 +186,18 @@ _cfImageReadTIFF(
 		  img->xppi, img->yppi));
   }
 
-
- /*
-  * See if the image has an alpha channel...
-  */
+  //
+  // See if the image has an alpha channel...
+  //
 
   if (samples == 2 || (samples == 4 && photometric == PHOTOMETRIC_RGB))
     alpha = 1;
   else
     alpha = 0;
 
- /*
-  * Check the size of the image...
-  */
+  //
+  // Check the size of the image...
+  //
 
   if (width == 0 || width > CF_IMAGE_MAX_WIDTH ||
       height == 0 || height > CF_IMAGE_MAX_HEIGHT ||
@@ -212,9 +212,9 @@ _cfImageReadTIFF(
     return (1);
   }
 
- /*
-  * Setup the image size and colorspace...
-  */
+  //
+  // Setup the image size and colorspace...
+  //
 
   img->xsize = width;
   img->ysize = height;
@@ -234,9 +234,9 @@ _cfImageReadTIFF(
 
   cfImageSetMaxTiles(img, 0);
 
- /*
-  * Set the X & Y start and direction according to the image orientation...
-  */
+  //
+  // Set the X & Y start and direction according to the image orientation...
+  //
 
   switch (orientation)
   {
@@ -300,16 +300,16 @@ _cfImageReadTIFF(
         break;
   }
 
- /*
-  * Allocate a scanline buffer...
-  */
+  //
+  // Allocate a scanline buffer...
+  //
 
   scanwidth = TIFFScanlineSize(tif);
   scanline  = _TIFFmalloc(scanwidth);
 
- /*
-  * Allocate input and output buffers...
-  */
+  //
+  // Allocate input and output buffers...
+  //
 
   if (orientation < ORIENTATION_LEFTTOP)
   {
@@ -332,11 +332,11 @@ _cfImageReadTIFF(
     out = malloc(img->ysize * bpp);
   }
 
- /*
-  * Read the image.  This is greatly complicated by the fact that TIFF
-  * supports literally hundreds of different colorspaces and orientations,
-  * each which must be handled separately...
-  */
+  //
+  // Read the image.  This is greatly complicated by the fact that TIFF
+  // supports literally hundreds of different colorspaces and orientations,
+  // each which must be handled separately...
+  //
 
   DEBUG_printf(("DEBUG: photometric = %d\n", photometric));
   DEBUG_printf(("DEBUG: compression = %d\n", compression));
@@ -358,9 +358,9 @@ _cfImageReadTIFF(
 
         if (orientation < ORIENTATION_LEFTTOP)
         {
-         /*
-          * Row major order...
-          */
+	  //
+	  // Row major order...
+	  //
 
           for (y = ystart, ycount = img->ysize, row = 0;
                ycount > 0;
@@ -509,9 +509,9 @@ _cfImageReadTIFF(
         }
         else
         {
-         /*
-          * Column major order...
-          */
+	  //
+	  // Column major order...
+	  //
 
           for (x = xstart, xcount = img->xsize, row = 0;
                xcount > 0;
@@ -685,9 +685,9 @@ _cfImageReadTIFF(
 
         if (orientation < ORIENTATION_LEFTTOP)
         {
-         /*
-          * Row major order...
-          */
+	  //
+	  // Row major order...
+	  //
 
           for (y = ystart, ycount = img->ysize, row = 0;
                ycount > 0;
@@ -818,9 +818,9 @@ _cfImageReadTIFF(
         }
         else
         {
-         /*
-          * Column major order...
-          */
+	  //
+	  // Column major order...
+	  //
 
           for (x = xstart, xcount = img->xsize, row = 0;
                xcount > 0;
@@ -954,9 +954,9 @@ _cfImageReadTIFF(
     case PHOTOMETRIC_RGB :
         if (orientation < ORIENTATION_LEFTTOP)
         {
-         /*
-          * Row major order...
-          */
+	  //
+	  // Row major order...
+	  //
 
           for (y = ystart, ycount = img->ysize, row = 0;
                ycount > 0;
@@ -1095,9 +1095,9 @@ _cfImageReadTIFF(
         }
         else
         {
-         /*
-          * Column major order...
-          */
+	  //
+	  // Column major order...
+	  //
 
           for (x = xstart, xcount = img->xsize, row = 0;
                xcount > 0;
@@ -1245,7 +1245,7 @@ _cfImageReadTIFF(
 	    !TIFFGetField(tif, TIFFTAG_NUMBEROFINKS, &numinks))
 #else
         if (!TIFFGetField(tif, TIFFTAG_INKSET, &inkset))
-#endif /* TIFFTAG_NUMBEROFINKS */
+#endif // TIFFTAG_NUMBEROFINKS
 	{
           DEBUG_puts("WARNING: No inkset or number-of-inks tag in the file!\n");
 	}
@@ -1254,9 +1254,9 @@ _cfImageReadTIFF(
 	{
           if (orientation < ORIENTATION_LEFTTOP)
           {
-           /*
-            * Row major order...
-            */
+	    //
+	    // Row major order...
+	    //
 
             for (y = ystart, ycount = img->ysize, row = 0;
         	 ycount > 0;
@@ -1476,9 +1476,9 @@ _cfImageReadTIFF(
           }
           else
           {
-           /*
-            * Column major order...
-            */
+	    //
+	    // Column major order...
+	    //
 
             for (x = xstart, xcount = img->xsize, row = 0;
         	 xcount > 0;
@@ -1710,9 +1710,9 @@ _cfImageReadTIFF(
 	return (-1);
   }
 
- /*
-  * Free temporary buffers, close the TIFF file, and return.
-  */
+  //
+  // Free temporary buffers, close the TIFF file, and return.
+  //
 
   _TIFFfree(scanline);
   free(in);
@@ -1721,5 +1721,4 @@ _cfImageReadTIFF(
   TIFFClose(tif);
   return (0);
 }
-#endif /* HAVE_LIBTIFF */
-
+#endif // HAVE_LIBTIFF

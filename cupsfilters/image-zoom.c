@@ -1,46 +1,45 @@
-/*
- *   Image zoom routines for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2006 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   _cfImageZoomDelete() - Free a zoom record...
- *   _cfImageZoomFill()   - Fill a zoom record...
- *   _cfImageZoomNew()    - Allocate a pixel zoom record...
- *   zoom_bilinear()        - Fill a zoom record with image data utilizing
- *                            bilinear interpolation.
- *   zoom_nearest()         - Fill a zoom record quickly using nearest-neighbor
- *                            sampling.
- */
+//
+//   Image zoom routines for libcupsfilters.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2006 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   _cfImageZoomDelete()   - Free a zoom record...
+//   _cfImageZoomFill()     - Fill a zoom record...
+//   _cfImageZoomNew()      - Allocate a pixel zoom record...
+//   zoom_bilinear()        - Fill a zoom record with image data utilizing
+//                            bilinear interpolation.
+//   zoom_nearest()         - Fill a zoom record quickly using nearest-neighbor
+//                            sampling.
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "image-private.h"
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static void	zoom_bilinear(cf_izoom_t *z, int iy);
 static void	zoom_nearest(cf_izoom_t *z, int iy);
 
 
-/*
- * '_cfImageZoomDelete()' - Free a zoom record...
- */
+//
+// '_cfImageZoomDelete()' - Free a zoom record...
+//
 
 void
-_cfImageZoomDelete(cf_izoom_t *z)	/* I - Zoom record to free */
+_cfImageZoomDelete(cf_izoom_t *z)	// I - Zoom record to free
 {
   free(z->rows[0]);
   free(z->rows[1]);
@@ -49,14 +48,14 @@ _cfImageZoomDelete(cf_izoom_t *z)	/* I - Zoom record to free */
 }
 
 
-/*
- * '_cfImageZoomFill()' - Fill a zoom record with image data utilizing bilinear
- *                         interpolation.
- */
+//
+// '_cfImageZoomFill()' - Fill a zoom record with image data utilizing bilinear
+//                        interpolation.
+//
 
 void
-_cfImageZoomFill(cf_izoom_t *z,	/* I - Zoom record to fill */
-                   int     iy)		/* I - Zoom image row */
+_cfImageZoomFill(cf_izoom_t *z,		// I - Zoom record to fill
+		 int        iy)		// I - Zoom image row
 {
   switch (z->type)
   {
@@ -71,31 +70,32 @@ _cfImageZoomFill(cf_izoom_t *z,	/* I - Zoom record to fill */
 }
 
 
-/*
- * '_cfImageZoomNew()' - Allocate a pixel zoom record...
- */
+//
+// '_cfImageZoomNew()' - Allocate a pixel zoom record...
+//
 
 cf_izoom_t *
 _cfImageZoomNew(
-    cf_image_t  *img,			/* I - Image to zoom */
-    int           xc0,			/* I - Upper-lefthand corner */
-    int           yc0,			/* I - ... */
-    int           xc1,			/* I - Lower-righthand corner */
-    int           yc1,			/* I - ... */
-    int           xsize,		/* I - Final width of image */
-    int           ysize,		/* I - Final height of image */
-    int           rotated,		/* I - Non-zero if image is rotated 90 degs */
-    cf_iztype_t type)			/* I - Zoom type */
+    cf_image_t    *img,			// I - Image to zoom
+    int           xc0,			// I - Upper-lefthand corner
+    int           yc0,			// I - ...
+    int           xc1,			// I - Lower-righthand corner
+    int           yc1,			// I - ...
+    int           xsize,		// I - Final width of image
+    int           ysize,		// I - Final height of image
+    int           rotated,		// I - Non-zero if image is rotated 90
+                                        //     degrees
+    cf_iztype_t type)			// I - Zoom type
 {
-  cf_izoom_t	*z;			/* New zoom record */
-  int		flip;			/* Flip on X axis? */
+  cf_izoom_t	*z;			// New zoom record
+  int		flip;			// Flip on X axis?
 
 
   if (xsize > CF_IMAGE_MAX_WIDTH ||
       ysize > CF_IMAGE_MAX_HEIGHT ||
       (xc1 - xc0) > CF_IMAGE_MAX_WIDTH ||
       (yc1 - yc0) > CF_IMAGE_MAX_HEIGHT)
-    return (NULL);		/* Protect against integer overflow */
+    return (NULL);		// Protect against integer overflow
 
   if ((z = (cf_izoom_t *)calloc(1, sizeof(cf_izoom_t))) == NULL)
     return (NULL);
@@ -131,7 +131,7 @@ _cfImageZoomNew(
     z->ystep   = z->height / z->ysize;
     z->yincr   = 1;
     z->instep  = z->xstep * z->depth;
-    z->inincr  = /* z->xincr * */ z->depth; /* z->xincr is always 1 */
+    z->inincr  = /* z->xincr * */ z->depth; // z->xincr is always 1
 
     if (z->width < img->ysize)
       z->xmax = z->width;
@@ -158,7 +158,7 @@ _cfImageZoomNew(
     z->ystep   = z->height / z->ysize;
     z->yincr   = 1;
     z->instep  = z->xstep * z->depth;
-    z->inincr  = /* z->xincr * */ z->depth; /* z->xincr is always 1 */
+    z->inincr  = /* z->xincr * */ z->depth; // z->xincr is always 1
 
     if (z->width < img->xsize)
       z->xmax = z->width;
@@ -202,19 +202,19 @@ _cfImageZoomNew(
 }
 
 
-/*
- * 'zoom_bilinear()' - Fill a zoom record with image data utilizing bilinear
- *                     interpolation.
- */
+//
+// 'zoom_bilinear()' - Fill a zoom record with image data utilizing bilinear
+//                     interpolation.
+//
 
 static void
-zoom_bilinear(cf_izoom_t *z,		/* I - Zoom record to fill */
-              int          iy)		/* I - Zoom image row */
+zoom_bilinear(cf_izoom_t   *z,		// I - Zoom record to fill
+              int          iy)		// I - Zoom image row
 {
-  cf_ib_t	*r,			/* Row pointer */
-		*inptr;			/* Pixel pointer */
-  int		xerr0,			/* X error counter */
-		xerr1;			/* ... */
+  cf_ib_t	*r,			// Row pointer
+		*inptr;			// Pixel pointer
+  int		xerr0,			// X error counter
+		xerr1;			// ...
   int		ix,
 		x,
 		count,
@@ -283,18 +283,18 @@ zoom_bilinear(cf_izoom_t *z,		/* I - Zoom record to fill */
 }
 
 
-/*
- * 'zoom_nearest()' - Fill a zoom record quickly using nearest-neighbor
- *                    sampling.
- */
+//
+// 'zoom_nearest()' - Fill a zoom record quickly using nearest-neighbor
+//                    sampling.
+//
 
 static void
-zoom_nearest(cf_izoom_t *z,		/* I - Zoom record to fill */
-             int          iy)		/* I - Zoom image row */
+zoom_nearest(cf_izoom_t   *z,		// I - Zoom record to fill
+             int          iy)		// I - Zoom image row
 {
-  cf_ib_t	*r,			/* Row pointer */
-		*inptr;			/* Pixel pointer */
-  int		xerr0;			/* X error counter */
+  cf_ib_t	*r,			// Row pointer
+		*inptr;			// Pixel pointer
+  int		xerr0;			// X error counter
   int		ix,
 		x,
 		count,
@@ -349,4 +349,3 @@ zoom_nearest(cf_izoom_t *z,		/* I - Zoom record to fill */
     }
   }
 }
-
