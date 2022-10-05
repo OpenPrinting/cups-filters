@@ -45,7 +45,7 @@ Local Globals
 #ifdef HAVE_MDNSRESPONDER
 static DNSServiceRef dnssd_ref; /* Master service reference */
 #elif defined(HAVE_AVAHI)
-AvahiClient *avahi_client = NULL; /* Client information */
+AvahiClient *avahi_client; /* Client information */
 int avahi_got_data = 0;           /* Got data from poll? */
 AvahiPoll *avahi_poll;
 #endif
@@ -55,6 +55,7 @@ static int address_family = AF_UNSPEC;
 static int bonjour_error = 0;        /* Error browsing/resolving? */
 static double bonjour_timeout = 1.0; /* Timeout in seconds */
 
+static avahi_srv_t *get_service(cups_array_t *services, const char *serviceName, const char *regtype, const char *replyDomain) _CUPS_NONNULL(1, 2, 3, 4);
 
 #define MAX_OUTPUT_LEN 8192
 
@@ -508,8 +509,25 @@ int list_printers(int mode, int reg_type_no, int isFax)
   add avahi calls to find services
   */
     int err;
-
     avahiInitialize(&avahi_poll, &avahi_client, _clientCallback, _pollCallback, &err);
+
+    fprintf(stderr,"avahi_poll = %p \n", *avahi_poll);
+    fprintf(stderr,"avahi_client = %p \n", avahi_client);
+
+    avahi_srv_t* service;
+
+    browseServices(&avahi_client, "_ipps._tcp", NULL, service_uri_list_ipps, _browseCallback, &err);
+
+    fprintf(stderr, "err = %d\n", err);
+
+    for (service = (avahi_srv_t *)cupsArrayFirst(service_uri_list_ipps);
+           service;
+           service = (avahi_srv_t *)cupsArrayNext(service_uri_list_ipps)){
+            resolveServices(avahi_client, service, service_uri_list_ipps, _resolveCallback, &err);
+
+    }
+
+
   /*
    * Create a pipe for passing the ippfind output to post-processing
    */
@@ -1013,6 +1031,8 @@ void _browseCallback(
   (void)protocol;
   (void)context;
 
+  fprintf(stderr, "inside browsecallback\n");
+
   switch (event)
   {
   case AVAHI_BROWSER_FAILURE:
@@ -1027,6 +1047,9 @@ void _browseCallback(
      * This object is new on the network. Create a device entry for it if
      * it doesn't yet exist.
      */
+
+    service = get_service((cups_array_t *)context, name, type, domain);
+    fprintf(stderr, "adding service \n");
 
     if (service == NULL)
       return;
@@ -1190,6 +1213,7 @@ void _resolveCallback(
 
   service->is_resolved = 1;
 
+  fprintf(stderr, "service resolved: host = %s, domain = %s\n", service->host, service->domain);
   if (hostTarget != NULL)
     service->host = strdup(hostTarget);
 
@@ -1231,3 +1255,68 @@ void _resolveCallback(
   // set_service_uri(service);
 }
 #endif /* HAVE_MDNSRESPONDER */
+
+
+/*
+ * 'get_service()' - Create or update a device.
+ */
+
+avahi_srv_t *                 /* O - Service */
+get_service(cups_array_t *services,  /* I - Service array */
+            const char *serviceName, /* I - Name of service/device */
+            const char *regtype,     /* I - Type of service */
+            const char *replyDomain) /* I - Service domain */
+{
+  avahi_srv_t key, /* Search key */
+      *service;    /* Service */
+  char fullName[kDNSServiceMaxDomainName];
+  /* Full name for query */
+
+  /*
+   * See if this is a new device...
+   */
+
+  key.name = (char *)serviceName;
+  key.regtype = (char *)regtype;
+
+   for (service = cupsArrayFind(services, &key);
+       service;
+       service = cupsArrayNext(services))
+  {
+
+    if (_cups_strcasecmp(service->name, key.name))
+      break;
+    else if (!strcmp(service->regtype, key.regtype))
+    {
+      return (service);
+    }
+  }
+  /*
+   * Yes, add the service...
+   */
+
+  if ((service = calloc(sizeof(avahi_srv_t), 1)) == NULL)
+    return (NULL);
+
+  service->name = strdup(serviceName);
+  service->domain = strdup(replyDomain);
+  service->regtype = strdup(regtype);
+
+  cupsArrayAdd(services, service);
+
+  /*
+   * Set the "full name" of this service, which is used for queries and
+   * resolves...
+   */
+
+#ifdef HAVE_MDNSRESPONDER
+  DNSServiceConstructFullName(fullName, serviceName, regtype, replyDomain);
+#else  /* HAVE_AVAHI */
+  avahi_service_name_join(fullName, kDNSServiceMaxDomainName, serviceName,
+                          regtype, replyDomain);
+#endif /* HAVE_MDNSRESPONDER */
+
+  service->fullName = strdup(fullName);
+
+  return (service);
+}
