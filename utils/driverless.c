@@ -80,9 +80,10 @@ convert_to_port(char *a)
   return (port);
 }
 
-void listPrintersInArray(int reg_type_no, int mode, int isFax,
-                         char *ippfind_output)
+void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
+                         char *ippfind_output, avahi_srv_t *service)
 {
+
   int port,
       is_local;
   char buffer[8192], /* Copy buffer */
@@ -100,6 +101,15 @@ void listPrintersInArray(int reg_type_no, int mode, int isFax,
           *txt_ty = NULL,
           *txt_pdl = NULL,
           *txt_uuid = NULL,
+          URF = NULL, 
+          TLS = NULL, 
+          rp = NULL,
+          Color = NULL,
+          adminurl = NULL,
+          Duplex = NULL,
+          note = NULL,
+          qtotal = NULL,
+          txtvers = NULL,
           value[256],          /* Value string */
       *service_uri,            /* URI to list for this service */
       service_host_name[1024], /* "Host name" for assembling URI */
@@ -129,31 +139,13 @@ void listPrintersInArray(int reg_type_no, int mode, int isFax,
   if (mode == -1)
   {
     /* Standard IPP URI (only manual call) */
-    service_hostname = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-    if (!ptr)
-      goto read_error;
-    *ptr = '\0';
-    ptr++;
-
-    resource = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-    if (!ptr)
-      goto read_error;
-    *ptr = '\0';
-    ptr++;
-
-    ptr_to_port = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-    if (!ptr)
-      goto read_error;
-    *ptr = '\0';
-    ptr++;
-    port = convert_to_port(ptr_to_port);
+    service_hostname = service->host;
+    resource = service->resource;
+    port = service->port;
 
     /* Do we have a local service so that we have to set the host name to
        "localhost"? */
-    is_local = (*ptr == 'L');
+    is_local = service->is_local;
 
     httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
                      2047,
@@ -165,20 +157,8 @@ void listPrintersInArray(int reg_type_no, int mode, int isFax,
   else
   {
     /* DNS-SD-service-name-based URI */
-    service_name = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-    if (!ptr)
-      goto read_error;
-    *ptr = '\0';
-    ptr++;
-
-    domain = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-    if (!ptr)
-      goto read_error;
-    *ptr = '\0';
-    ptr++;
-
+    service_name = service->name;
+    domain = service->domain;
     snprintf(service_host_name, sizeof(service_host_name) - 1, "%s.%s.%s",
              service_name, reg_type, domain);
     httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
@@ -195,49 +175,54 @@ void listPrintersInArray(int reg_type_no, int mode, int isFax,
    (/usr/lib/cups/driver/, with "list" command line argument)
    or as backend in discovery mode (/usr/lib/cups/backend/,
    env variable "SOFTWARE" starts with "CUPS") */
-      txt_usb_mfg = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr)
-        goto read_error;
-      *ptr = '\0';
-      ptr++;
-      txt_usb_mdl = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr)
-        goto read_error;
-      *ptr = '\0';
-      ptr++;
-      txt_product = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr)
-        goto read_error;
-      *ptr = '\0';
-      ptr++;
-      txt_ty = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr)
-        goto read_error;
-      *ptr = '\0';
-      ptr++;
-      txt_pdl = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr)
-        goto read_error;
-      *ptr = '\0';
-      ptr++;
-      txt_uuid = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr)
-        goto read_error;
-      *ptr = '\0';
+
+ 
       /* We check only for a fax resource (rfo) here, if there is none,
    resource will stay blank meaning device does not support fax */
-      ptr++;
-      resource = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
-      if (!ptr)
-        goto read_error;
-      *ptr = '\0';
+
+   resource = service->resource;
+
+   for(int i = 0;i < service->num_txt;i++){
+    char *currentKey = service->txt[i].name;
+    char *currentValue = service->txt[i].value;
+
+    if(currentKey == "UUID"){
+      txt_uuid = currentValue;
+    }
+    else if(currentKey == "pdl"){
+      txt_pdl = currentValue;
+    }
+    else if(currentKey == "ty"){
+      txt_ty = currentValue;
+    }
+    else if(currentKey == "adminurl"){
+      adminurl = currentValue;
+    }
+    else if(currentKey == "Color"){
+      Color = currentValue;
+    }
+    else if(currentKey == "Duplex"){
+      Duplex = currentValue;
+    }
+    else if(currentKey == "note"){
+      note = currentValue;
+    }
+    else if(currentKey == "qtotal"){
+      qtotal = currentValue;
+    }
+    else if(currentKey == "rp"){
+      rp = currentValue;
+    }
+    else if(currentKey == "TLS"){
+      TLS = currentValue;
+    }
+    else if(currentKey == "txtvers"){
+      txtvers = currentValue;
+    }
+    else if(currentKey == "URF"){
+      URF = currentValue;
+    }
+   }
 
       make_and_model[0] = '\0';
       make[0] = '\0';
@@ -406,6 +391,346 @@ void listPrintersInArray(int reg_type_no, int mode, int isFax,
   return;
 }
 
+
+
+void listPrintersInArray(int reg_type_no, int mode, int isFax,
+                         char *ippfind_output)
+{
+
+  int port,
+      is_local;
+  char buffer[8192], /* Copy buffer */
+      *ptr,          /* Pointer into string */
+          *scheme = NULL,
+          *service_name = NULL,
+          *resource = NULL,
+          *domain = NULL,
+          *ptr_to_port = NULL, /* pointer to port */
+              *reg_type = NULL,
+          *service_hostname = NULL,
+          *txt_usb_mfg = NULL,
+          *txt_usb_mdl = NULL,
+          *txt_product = NULL,
+          *txt_ty = NULL,
+          *txt_pdl = NULL,
+          *txt_uuid = NULL,
+          value[256],          /* Value string */
+      *service_uri,            /* URI to list for this service */
+      service_host_name[1024], /* "Host name" for assembling URI */
+      make_and_model[1024],    /* Manufacturer and model */
+      make[512],               /* Manufacturer */
+      model[256],              /* Model */
+      pdl[256],                /* PDL */
+      device_id[2048];         /* 1284 device ID */
+
+  service_uri = (char *)malloc(2048 * (sizeof(char)));
+  /* Mark all the fields of the output of ippfind */
+  ptr = ippfind_output;
+  if (reg_type_no < 1)
+  {
+    scheme = "ipp";
+    reg_type = "_ipp._tcp";
+  }
+  else if (reg_type_no > 1)
+  {
+    scheme = "ipps";
+    reg_type = "_ipps._tcp";
+  }
+
+  /* ... second, complete the output line, either URI-only or with
+     extra info for CUPS */
+
+  if (mode == -1)
+  {
+    /* Standard IPP URI (only manual call) */
+    service_hostname = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr)
+      goto read_error;
+    *ptr = '\0';
+    ptr++;
+
+    resource = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr)
+      goto read_error;
+    *ptr = '\0';
+    ptr++;
+
+    ptr_to_port = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr)
+      goto read_error;
+    *ptr = '\0';
+    ptr++;
+    port = convert_to_port(ptr_to_port);
+
+    /* Do we have a local service so that we have to set the host name to
+       "localhost"? */
+    is_local = (*ptr == 'L');
+
+    httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
+                     2047,
+                     scheme, NULL,
+                     (is_local ? "localhost" : service_hostname),
+                     port, "/%s", resource);
+    printf("%s\n", service_uri);
+  }
+  else
+  {
+    /* DNS-SD-service-name-based URI */
+    service_name = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr)
+      goto read_error;
+    *ptr = '\0';
+
+    fprintf(stderr, "service_name = %s\n", service_name);
+    ptr++;
+
+    domain = ptr;
+    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    if (!ptr)
+      goto read_error;
+    *ptr = '\0';
+    ptr++;
+
+    snprintf(service_host_name, sizeof(service_host_name) - 1, "%s.%s.%s",
+             service_name, reg_type, domain);
+    httpAssembleURIf(HTTP_URI_CODING_ALL, service_uri,
+                     2047,
+                     scheme, NULL,
+                     service_host_name, 0, "/");
+
+    if (mode == 0)
+      /* Manual call, only show URI, nothing more */
+      printf("%s\n", service_uri);
+    else
+    {
+      /* Call by CUPS, either as PPD generator
+   (/usr/lib/cups/driver/, with "list" command line argument)
+   or as backend in discovery mode (/usr/lib/cups/backend/,
+   env variable "SOFTWARE" starts with "CUPS") */
+      txt_usb_mfg = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+        goto read_error;
+      *ptr = '\0';
+
+      fprintf(stderr, "mfg = %s\n", txt_usb_mfg);
+      ptr++;
+      txt_usb_mdl = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+        goto read_error;
+      *ptr = '\0';
+      fprintf(stderr, "mdl = %s\n", txt_usb_mdl);
+      ptr++;
+      txt_product = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+        goto read_error;
+      *ptr = '\0';
+      fprintf(stderr, "product = %s\n", txt_product);
+      ptr++;
+      txt_ty = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+        goto read_error;
+      *ptr = '\0';
+      fprintf(stderr, "ty = %s\n", txt_ty);
+      ptr++;
+      txt_pdl = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+        goto read_error;
+      *ptr = '\0';
+      fprintf(stderr, "pdl = %s\n", txt_pdl);
+      ptr++;
+      txt_uuid = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+        goto read_error;
+      *ptr = '\0';
+      fprintf(stderr, "uuid = %s\n", txt_uuid);
+      /* We check only for a fax resource (rfo) here, if there is none,
+   resource will stay blank meaning device does not support fax */
+      ptr++;
+      resource = ptr;
+      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      if (!ptr)
+        goto read_error;
+      *ptr = '\0';
+      fprintf(stderr, "resource = %s\n", resource);
+
+      make_and_model[0] = '\0';
+      make[0] = '\0';
+      pdl[0] = '\0';
+      device_id[0] = '\0';
+      strncpy(model, "Unknown", sizeof(model) - 1);
+
+      if (txt_usb_mfg[0] != '\0')
+      {
+        strncpy(make, txt_usb_mfg, sizeof(make) - 1);
+        if (strlen(txt_usb_mfg) > 511)
+          make[511] = '\0';
+        ptr = device_id + strlen(device_id);
+        snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
+                 "MFG:%s;", txt_usb_mfg);
+      }
+      if (txt_usb_mdl[0] != '\0')
+      {
+        strncpy(model, txt_usb_mdl, sizeof(model) - 1);
+        if (strlen(txt_usb_mdl) > 255)
+          model[255] = '\0';
+        ptr = device_id + strlen(device_id);
+        snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
+                 "MDL:%s;", txt_usb_mdl);
+      }
+      else if (txt_product[0] != '\0')
+      {
+        if (txt_product[0] == '(')
+        {
+          /* Strip parenthesis... */
+          if ((ptr = txt_product + strlen(txt_product) - 1) > txt_product &&
+              *ptr == ')')
+            *ptr = '\0';
+          strncpy(model, txt_product + 1, sizeof(model) - 1);
+          if ((strlen(txt_product) + 1) > 255)
+            model[255] = '\0';
+        }
+        else
+          strncpy(model, txt_product, sizeof(model) - 1);
+      }
+      else if (txt_ty[0] != '\0')
+      {
+        strncpy(model, txt_ty, sizeof(model) - 1);
+        if (strlen(txt_ty) > 255)
+          model[255] = '\0';
+        if ((ptr = strchr(model, ',')) != NULL)
+          *ptr = '\0';
+      }
+      if (txt_pdl[0] != '\0')
+      {
+        strncpy(pdl, txt_pdl, sizeof(pdl) - 1);
+        if (strlen(txt_pdl) > 255)
+          pdl[255] = '\0';
+      }
+
+      if (!device_id[0] && strcasecmp(model, "Unknown"))
+      {
+        if (make[0])
+          snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
+                   make, model);
+        else if (!strncasecmp(model, "designjet ", 10))
+          snprintf(device_id, sizeof(device_id), "MFG:HP;MDL:%s;",
+                   model + 10);
+        else if (!strncasecmp(model, "stylus ", 7))
+          snprintf(device_id, sizeof(device_id), "MFG:EPSON;MDL:%s;",
+                   model + 7);
+        else if ((ptr = strchr(model, ' ')) != NULL)
+        {
+          /* Assume the first word is the make...*/
+          memcpy(make, model, (size_t)(ptr - model));
+          make[ptr - model] = '\0';
+          snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
+                   make, ptr + 1);
+        }
+      }
+
+      if (device_id[0] &&
+          !strcasestr(device_id, "CMD:") &&
+          !strcasestr(device_id, "COMMAND SET:") &&
+          (strcasestr(pdl, "application/pdf") ||
+           strcasestr(pdl, "application/postscript") ||
+           strcasestr(pdl, "application/vnd.hp-PCL") ||
+           strcasestr(pdl, "application/PCLm") ||
+           strcasestr(pdl, "image/")))
+      {
+        value[0] = '\0';
+        if (strcasestr(pdl, "application/pdf"))
+          strncat(value, ",PDF", sizeof(value));
+        if (strcasestr(pdl, "application/PCLm"))
+          strncat(value, ",PCLM", sizeof(value));
+        if (strcasestr(pdl, "application/postscript"))
+          strncat(value, ",PS", sizeof(value));
+        if (strcasestr(pdl, "application/vnd.hp-PCL"))
+          strncat(value, ",PCL", sizeof(value));
+        if (strcasestr(pdl, "image/pwg-raster"))
+          strncat(value, ",PWGRaster", sizeof(value));
+        if (strcasestr(pdl, "image/urf"))
+          strncat(value, ",AppleRaster", sizeof(value));
+        for (ptr = strcasestr(pdl, "image/"); ptr;
+             ptr = strcasestr(ptr, "image/"))
+        {
+          char *valptr = value + strlen(value);
+          if (valptr < (value + sizeof(value) - 1))
+            *valptr++ = ',';
+          ptr += 6;
+          while (isalnum(*ptr & 255) || *ptr == '-' || *ptr == '.')
+          {
+            if (isalnum(*ptr & 255) && valptr < (value + sizeof(value) - 1))
+              *valptr++ = (char)toupper(*ptr++ & 255);
+            else
+              break;
+          }
+          *valptr = '\0';
+        }
+        ptr = device_id + strlen(device_id);
+        snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
+                 "CMD:%s;", value + 1);
+      }
+
+      if (make[0] &&
+          (strncasecmp(model, make, strlen(make)) ||
+           !isspace(model[strlen(make)])))
+        snprintf(make_and_model, sizeof(make_and_model), "%s %s",
+                 make, model);
+      else
+        strncpy(make_and_model, model, sizeof(make_and_model) - 1);
+
+      if (mode == 1)
+      {
+        /* Only output the entry if we had this UUID not already */
+        if (!txt_uuid[0] || !cupsArrayFind(uuids, txt_uuid))
+        {
+          /* Save UUID as if an entry with the same UUID appears again, it
+             is the the same pair of print and fax PPDs */
+          if (txt_uuid[0])
+            cupsArrayAdd(uuids, strdup(txt_uuid));
+          /* Call with "list" argument  (PPD generator in list mode)   */
+          printf("\"%s%s\" en \"%s\" \"%s, %sdriverless, cups-filters " VERSION "\" \"%s\"\n",
+                 ((isFax) ? "driverless-fax:" : "driverless:"),
+                 service_uri, make, make_and_model,
+                 ((isFax) ? "Fax, " : ""),
+                 device_id);
+          if (resource[0]) /* We have also fax on this device */
+            printf("\"%s%s\" en \"%s\" \"%s, Fax, driverless, cups-filters " VERSION "\" \"%s\"\n",
+                   "driverless-fax:",
+                   service_uri, make, make_and_model,
+                   device_id);
+        }
+      }
+      else
+      {
+        /* Call without arguments and env variable "SOFTWARE" starting
+           with "CUPS" (Backend in discovery mode) */
+        printf("network %s \"%s\" \"%s (driverless)\" \"%s\" \"\"\n",
+               service_uri, make_and_model, make_and_model,
+               device_id);
+      }
+    }
+
+  read_error:
+    free(service_uri);
+    return;
+  }
+
+  free(service_uri);
+  return;
+}
+
+
 int list_printers(int mode, int reg_type_no, int isFax)
 {
   int ippfind_pid = 0,   /* Process ID of ippfind for IPP */
@@ -509,23 +834,59 @@ int list_printers(int mode, int reg_type_no, int isFax)
   add avahi calls to find services
   */
     int err;
+    char *regtype = "_ipps._tcp";
+
     avahiInitialize(&avahi_poll, &avahi_client, _clientCallback, _pollCallback, &err);
-
-    fprintf(stderr,"avahi_poll = %p \n", *avahi_poll);
-    fprintf(stderr,"avahi_client = %p \n", avahi_client);
-
     avahi_srv_t* service;
 
-    browseServices(&avahi_client, "_ipps._tcp", NULL, service_uri_list_ipps, _browseCallback, &err);
+    browseServices(&avahi_client, regtype, NULL, service_uri_list_ipps, _browseCallback, &err);
 
-    fprintf(stderr, "err = %d\n", err);
+    for(int i = 0;i < 10;i++)
+    if (avahi_simple_poll_iterate(avahi_poll, 500) > 0)
+    {
+      return (0);
+    }
 
     for (service = (avahi_srv_t *)cupsArrayFirst(service_uri_list_ipps);
            service;
            service = (avahi_srv_t *)cupsArrayNext(service_uri_list_ipps)){
-            resolveServices(avahi_client, service, service_uri_list_ipps, _resolveCallback, &err);
+
+            fprintf(stderr, "found non-zero services\n");
+            fprintf(stderr, "service name = %s\n", service->name);
+            resolveServices(&avahi_client, service, service_uri_list_ipps, _resolveCallback, &err);
 
     }
+
+    for(int i = 0;i < 10;i++)
+    if (avahi_simple_poll_iterate(avahi_poll, 500) > 0)
+    {
+      return (0);
+    }
+
+    for (service = (avahi_srv_t *)cupsArrayFirst(service_uri_list_ipps);
+           service;
+           service = (avahi_srv_t *)cupsArrayNext(service_uri_list_ipps)){
+
+            fprintf(stderr, "name \t = \t %s\n", service->name);
+            fprintf(stderr, "domain\t = \t %s\n", service->domain);
+            fprintf(stderr, "regtype\t = \t %s\n", service->regtype);
+            fprintf(stderr, "fullname\t = \t %s\n", service->fullName);
+            fprintf(stderr, "host\t = \t %s\n", service->host);
+            fprintf(stderr, "resource\t = \t %s\n", service->resource);
+            fprintf(stderr, "uri\t = \t %s\n", service->uri);
+            fprintf(stderr, "port\t = \t %d\n", service->port);
+            fprintf(stderr, "is_local\t = \t %d\n", service->is_local);
+            fprintf(stderr, "is_processed\t = \t %d\n", service->is_processed);
+            fprintf(stderr, "is_resolved\t = \t %d\n", service->is_resolved);
+
+            fprintf(stderr, "num of txt = %d\n", service->num_txt);
+
+            for(int i = 0;i < service->num_txt;i++){
+              fprintf(stderr, "txt[%d].name = %s,  txt[%d].value = %s\n", i, service->txt[i].name, i, service->txt[i].value);
+            }
+
+    }
+
 
 
   /*
@@ -585,6 +946,8 @@ int list_printers(int mode, int reg_type_no, int isFax)
     {
       ippfind_output = (char *)malloc(MAX_OUTPUT_LEN * (sizeof(char)));
       ptr = buffer;
+
+      fprintf(stderr, "ptr = %s\n", ptr);
       while (ptr && !isalnum(*ptr & 255))
         ptr++;
       if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t'))
@@ -593,6 +956,8 @@ int list_printers(int mode, int reg_type_no, int isFax)
         *ptr = '\0';
         ptr++;
         snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
+
+        fprintf(stderr, "ippfind_output = %s\n", ippfind_output);
         cupsArrayAdd(service_uri_list_ipps, ippfind_output);
       }
       else if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t'))
@@ -635,6 +1000,8 @@ int list_printers(int mode, int reg_type_no, int isFax)
 
   for (int j = 0; j < cupsArrayCount(service_uri_list_ipps); j++)
   {
+    fprintf(stderr, "printer #%d\n", j);
+
     listPrintersInArray(2, mode, isFax,
                         (char *)cupsArrayIndex(service_uri_list_ipps, j));
   }
@@ -643,40 +1010,40 @@ int list_printers(int mode, int reg_type_no, int isFax)
    * Wait for the child process to exit...
    */
 
-  while ((wait_res = waitpid(ippfind_pid, &wait_status, 0)) == -1 &&
-         errno == EINTR)
-    ;
-  if (wait_res == -1)
-  {
-    fprintf(stderr, "ERROR: ippfind (PID %d) stopped with an error: %s\n",
-            ippfind_pid, strerror(errno));
-    exit_status = errno;
-    goto error;
-  }
-  /* How did ippfind terminate */
-  if (WIFEXITED(wait_status))
-  {
-    /* Via exit() anywhere or return() in the main() function */
-    exit_status = WEXITSTATUS(wait_status);
-    /* if we get 1 from ippfind, it is actually a correct value, not an error,
-     * because CUPS backends return 0 if they don't find any queues */
-    if (exit_status == 1)
-      exit_status = 0;
-    if (exit_status)
-      fprintf(stderr, "ERROR: ippfind (PID %d) stopped with status %d!\n",
-              ippfind_pid, exit_status);
-  }
-  else if (WIFSIGNALED(wait_status) && WTERMSIG(wait_status) != SIGTERM)
-  {
-    /* Via signal */
-    exit_status = 256 * WTERMSIG(wait_status);
-    if (exit_status)
-      fprintf(stderr, "ERROR: ippfind (PID %d) stopped on signal %d!\n",
-              ippfind_pid, exit_status);
-  }
-  if (!exit_status && debug)
-    fprintf(stderr, "DEBUG: ippfind (PID %d) exited with no errors.\n",
-            ippfind_pid);
+  // while ((wait_res = waitpid(ippfind_pid, &wait_status, 0)) == -1 &&
+  //        errno == EINTR)
+  //   ;
+  // if (wait_res == -1)
+  // {
+  //   fprintf(stderr, "ERROR: ippfind (PID %d) stopped with an error: %s\n",
+  //           ippfind_pid, strerror(errno));
+  //   exit_status = errno;
+  //   goto error;
+  // }
+  // /* How did ippfind terminate */
+  // if (WIFEXITED(wait_status))
+  // {
+  //   /* Via exit() anywhere or return() in the main() function */
+  //   exit_status = WEXITSTATUS(wait_status);
+  //   /* if we get 1 from ippfind, it is actually a correct value, not an error,
+  //    * because CUPS backends return 0 if they don't find any queues */
+  //   if (exit_status == 1)
+  //     exit_status = 0;
+  //   if (exit_status)
+  //     fprintf(stderr, "ERROR: ippfind (PID %d) stopped with status %d!\n",
+  //             ippfind_pid, exit_status);
+  // }
+  // else if (WIFSIGNALED(wait_status) && WTERMSIG(wait_status) != SIGTERM)
+  // {
+  //   /* Via signal */
+  //   exit_status = 256 * WTERMSIG(wait_status);
+  //   if (exit_status)
+  //     fprintf(stderr, "ERROR: ippfind (PID %d) stopped on signal %d!\n",
+  //             ippfind_pid, exit_status);
+  // }
+  // if (!exit_status && debug)
+  //   fprintf(stderr, "DEBUG: ippfind (PID %d) exited with no errors.\n",
+  //           ippfind_pid);
 
   /*
    * Exit...
@@ -1192,7 +1559,6 @@ void _resolveCallback(
     AvahiLookupResultFlags flags,   /* I - Lookup flags */
     void *context)                  /* I - Service */
 {
-
   char key[256], /* TXT key */
       *value;    /* TXT value */
   avahi_srv_t *service = (avahi_srv_t *)context;
