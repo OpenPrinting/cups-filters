@@ -13,13 +13,12 @@
 #include <limits.h>
 #include <cups/cups.h>
 
-int                            /* O - Error status */
-cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
-	  int outputfd,        /* I - File descriptor output stream */
-	  int inputseekable,   /* I - Is input stream seekable? */
-	  cf_filter_data_t *data, /* I - Job and printer data */
-	  void *parameters)    /* I - Filter-specific parameters
-				      (input/output format) */
+int					// O - Error status
+cfFilterUniversal(int inputfd,		// I - File descriptor input stream
+		  int outputfd,		// I - File descriptor output stream
+		  int inputseekable,	// I - Is input stream seekable?
+		  cf_filter_data_t *data, // I - Job and printer data
+		  void *parameters)	// I - Filter-specific parameters
 {
   char *input;
   char *final_output;
@@ -152,7 +151,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
     }
     else
-#endif /* HAVE_GHOSTSCRIPT */
+#endif // HAVE_GHOSTSCRIPT
     if (!strcasecmp(input_super, "text") ||
 	(!strcasecmp(input_super, "application") && input_type[0] == 'x'))
     {
@@ -204,7 +203,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterUniversal: Adding %s to chain", filter->name);
     }
-#endif /* HAVE_GHOSTSCRIPT */
+#endif // HAVE_GHOSTSCRIPT
     else if (!strcasecmp(input, "application/vnd.cups-pdf-banner"))
     {
       filter = malloc(sizeof(cf_filter_filter_in_chain_t));
@@ -289,19 +288,19 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 			 "cfFilterUniversal: Adding %s to chain", filter->name);
 	  }
-#    endif /* HAVE_POPPLER_PDFTOPS */
-#  endif /* HAVE_GHOSTSCRIPT */
+#    endif // HAVE_POPPLER_PDFTOPS
+#  endif // HAVE_GHOSTSCRIPT
 	}
 	else
 	{
-#endif /* HAVE_GHOSTSCRIPT || HAVE_POPPLER_PDFTOPS */
+#endif // HAVE_GHOSTSCRIPT || HAVE_POPPLER_PDFTOPS
 	  // Output format is not PDF and unknown -> Error
 	  ret = 1;
 	  goto out;
 #if defined(HAVE_GHOSTSCRIPT) || defined(HAVE_POPPLER_PDFTOPS)
 	}
       }
-#endif /* HAVE_GHOSTSCRIPT || HAVE_POPPLER_PDFTOPS */
+#endif // HAVE_GHOSTSCRIPT || HAVE_POPPLER_PDFTOPS
     }
   }
 
@@ -313,7 +312,7 @@ cfFilterUniversal(int inputfd,         /* I - File descriptor input stream */
 		 input, output);
   }
   else
-    /* Do the dirty work ... */
+    // Do the dirty work ...
     ret = cfFilterChain(inputfd, outputfd, inputseekable, data, filter_chain);
 
   for (filter = (cf_filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);

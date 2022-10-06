@@ -220,7 +220,7 @@ get_profile_for_device_path(cf_filter_data_t *data,
                                    DBUS_TYPE_ARRAY,
                                    "s",
                                    &entry);
-  for (i=0; key[i] != NULL; i++)
+  for (i = 0; key[i] != NULL; i ++)
   {
     dbus_message_iter_append_basic(&entry,
                                    DBUS_TYPE_STRING,
@@ -264,7 +264,7 @@ get_profile_for_device_path(cf_filter_data_t *data,
   if (reply != NULL)
     dbus_message_unref(reply);
   if (key != NULL) {
-    for (i=0; i < max_keys; i++)
+    for (i = 0; i < max_keys; i ++)
       free(key[i]);
     free(key);
   }

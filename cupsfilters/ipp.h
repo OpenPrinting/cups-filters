@@ -1,32 +1,32 @@
- /***
-  This file is part of cups-filters.
-
-  This file is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as
-  published by the Free Software Foundation; either version 2.1 of the
-  License, or (at your option) any later version.
-
-  This file is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-  Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with avahi; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
-  USA.
-***/
+//
+//  IPP-related functions for libcupsfilters.
+//
+//  This file is free software; you can redistribute it and/or modify it
+//  under the terms of the GNU Lesser General Public License as
+//  published by the Free Software Foundation; either version 2.1 of the
+//  License, or (at your option) any later version.
+//
+//  This file is distributed in the hope that it will be useful, but WITHOUT
+//  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+//  Public License for more details.
+//
+//  You should have received a copy of the GNU Lesser General Public
+//  License along with avahi; if not, write to the Free Software
+//  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+//  USA.
+//
 
 #ifndef _CUPS_FILTERS_IPP_H_
 #  define _CUPS_FILTERS_IPP_H_
 
 #  ifdef __cplusplus
 extern "C" {
-#  endif /* __cplusplus */
+#  endif // __cplusplus
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include <config.h>
 
@@ -41,7 +41,7 @@ extern "C" {
 #else
 #  include <unistd.h>
 #  include <fcntl.h>
-#endif /* WIN32 || __EMX__ */
+#endif // WIN32 || __EMX__
 
 #include <cups/cups.h>
 #include <cups/backend.h>
@@ -54,35 +54,38 @@ extern "C" {
 extern char cf_get_printer_attributes_log[CF_GET_PRINTER_ATTRIBUTES_LOGSIZE];
 
 
-/*
- * Types...
- */
+//
+// Types...
+//
 
-/* Enum of possible driverless options */
-enum cf_driverless_support_modes_e {
-  CF_DRVLESS_CHECKERR,      /* Unable to get get-printer-attributes response*/
-  CF_DRVLESS_FULL,          /* Standard IPP Everywhere support, works with
-			       'everywhere' model */
-  CF_DRVLESS_IPP11,         /* Driverless support via IPP 1.1 request */
-  CF_DRVLESS_INCOMPLETEIPP  /* Driverless support without media-col-database
-			       attribute */
+// Enum of possible driverless options
+enum cf_driverless_support_modes_e
+{
+  CF_DRVLESS_CHECKERR,      // Unable to get get-printer-attributes response*/
+  CF_DRVLESS_FULL,          // Standard IPP Everywhere support, works with
+                            // 'everywhere' model
+  CF_DRVLESS_IPP11,         // Driverless support via IPP 1.1 request
+  CF_DRVLESS_INCOMPLETEIPP  // Driverless support without media-col-database
+                            // attribute
 };
 
-/* Data structure for resolution (X x Y dpi) */
-typedef struct cf_res_s {
+// Data structure for resolution (X x Y dpi)
+typedef struct cf_res_s
+{
   int x, y;
 } cf_res_t;
 
-typedef enum cf_gen_sizes_mode_e {
+typedef enum cf_gen_sizes_mode_e
+{
   CF_GEN_SIZES_DEFAULT = 0,
   CF_GEN_SIZES_SEARCH,
   CF_GEN_SIZES_SEARCH_BORDERLESS_ONLY
 } cf_gen_sizes_mode_t;
 
 
-/*
- * Prototypes...
- */
+//
+// Prototypes...
+//
 
 char    *cfResolveURI(const char *raw_uri);
 char    *cfippfindBasedURIConverter(const char *uri ,int is_fax);
@@ -150,6 +153,7 @@ int             cfJoinResolutionArrays(cups_array_t **current,
 				       cups_array_t **new_arr,
 				       cf_res_t **current_default,
 				       cf_res_t **new_default);
+
 int             cfGetPageDimensions(ipp_t *printer_attrs,
 				    ipp_t *job_attrs,
 				    int num_options,
@@ -188,6 +192,6 @@ void            cfGenerateSizes(ipp_t *response,
 
 #  ifdef __cplusplus
 }
-#  endif /* __cplusplus */
+#  endif // __cplusplus
 
-#endif /* !_CUPS_FILTERS_IPP_H_ */
+#endif // !_CUPS_FILTERS_IPP_H_

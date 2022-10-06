@@ -134,7 +134,7 @@ cfCatalogSearchDir(const char *dirname)
       i = 2;
     if (c1[i] == '_') {
       i ++;
-      if (c1[i] < 'A' || c1[i] > 'Z' || c1[i+1] < 'A' || c1[i+1] > 'Z')
+      if (c1[i] < 'A' || c1[i] > 'Z' || c1[i + 1] < 'A' || c1[i + 1] > 'Z')
 	continue;
       i += 2;
       if (c1[i] >= 'A' && c1[i] <= 'Z')

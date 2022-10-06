@@ -1,35 +1,35 @@
-/*
- *   RGB color separation code for CUPS.
- *
- *   Copyright 2007 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   cfRGBDelete() - Delete a color separation.
- *   cfRGBDoGray() - Do a grayscale separation...
- *   cfRGBDoRGB()  - Do a RGB separation...
- *   cfRGBNew()    - Create a new RGB color separation.
- */
+//
+//   RGB color separation code for libcupsfilters.
+//
+//   Copyright 2007 by Apple Inc.
+//   Copyright 1993-2005 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   cfRGBDelete() - Delete a color separation.
+//   cfRGBDoGray() - Do a grayscale separation...
+//   cfRGBDoRGB()  - Do a RGB separation...
+//   cfRGBNew()    - Create a new RGB color separation.
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include "driver.h"
 
 
-/*
- * 'cfRGBDelete()' - Delete a color separation.
- */
+//
+// 'cfRGBDelete()' - Delete a color separation.
+//
 
 void
-cfRGBDelete(cf_rgb_t *rgbptr)	/* I - Color separation */
+cfRGBDelete(cf_rgb_t *rgbptr)	// I - Color separation
 {
   if (rgbptr == NULL)
     return;
@@ -42,39 +42,37 @@ cfRGBDelete(cf_rgb_t *rgbptr)	/* I - Color separation */
 }
 
 
-/*
- * 'cfRGBDoGray()' - Do a grayscale separation...
- */
+//
+// 'cfRGBDoGray()' - Do a grayscale separation...
+//
 
 void
-cfRGBDoGray(cf_rgb_t          *rgbptr,
-					/* I - Color separation */
-	      const unsigned char *input,
-					/* I - Input grayscale pixels */
-	      unsigned char       *output,
-					/* O - Output Device-N pixels */
-	      int                 num_pixels)
-					/* I - Number of pixels */
+cfRGBDoGray(cf_rgb_t            *rgbptr,// I - Color separation
+	    const unsigned char *input,	// I - Input grayscale pixels
+	    unsigned char       *output,// O - Output Device-N pixels
+	    int                 num_pixels)
+					// I - Number of pixels
 {
-  int			i;		/* Looping var */
-  int			lastgray;	/* Previous grayscale */
-  int			xs, ys, zs,	/* Current RGB row offsets */
-			g, gi, gm0, gm1;/* Current gray index and multipliers ... */
-  const unsigned char	*color;		/* Current color data */
-  int			tempg;		/* Current separation color */
-  int			rgbsize;	/* Separation data size */
+  int			i;		// Looping var
+  int			lastgray;	// Previous grayscale
+  int			xs, ys, zs,	// Current RGB row offsets
+			g, gi, gm0, gm1;// Current gray index and
+                                        // multipliers ...
+  const unsigned char	*color;		// Current color data
+  int			tempg;		// Current separation color
+  int			rgbsize;	// Separation data size
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!rgbptr || !input || !output || num_pixels <= 0)
     return;
 
- /*
-  * Initialize variables used for the duration of the separation...
-  */
+  //
+  // Initialize variables used for the duration of the separation...
+  //
 
   lastgray = -1;
   rgbsize  = rgbptr->num_channels;
@@ -82,15 +80,15 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
   ys       = rgbptr->cube_size * rgbptr->num_channels;
   zs       = rgbptr->num_channels;
 
- /*
-  * Loop through it all...
-  */
+  //
+  // Loop through it all...
+  //
 
   while (num_pixels > 0)
   {
-   /*
-    * See if the next pixel is a cached value...
-    */
+    //
+    // See if the next pixel is a cached value...
+    //
 
     num_pixels --;
 
@@ -98,9 +96,9 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
 
     if (g == lastgray)
     {
-     /*
-      * Copy previous color and continue...
-      */
+      //
+      // Copy previous color and continue...
+      //
 
       memcpy(output, output - rgbptr->num_channels, rgbsize);
 
@@ -109,9 +107,9 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
     }
     else if (g == 0x00 && rgbptr->cache_init)
     {
-     /*
-      * Copy black color and continue...
-      */
+      //
+      // Copy black color and continue...
+      //
 
       memcpy(output, rgbptr->black, rgbsize);
 
@@ -120,9 +118,9 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
     }
     else if (g == 0xff && rgbptr->cache_init)
     {
-     /*
-      * Copy white color and continue...
-      */
+      //
+      // Copy white color and continue...
+      //
 
       memcpy(output, rgbptr->white, rgbsize);
 
@@ -130,9 +128,9 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
       continue;
     }
 
-   /*
-    * Nope, figure this one out on our own...
-    */
+    //
+    // Nope, figure this one out on our own...
+    //
 
     gi  = rgbptr->cube_index[g];
     gm0 = rgbptr->cube_mult[g];
@@ -155,46 +153,44 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
 }
 
 
-/*
- * 'cfRGBDoRGB()' - Do a RGB separation...
- */
+//
+// 'cfRGBDoRGB()' - Do a RGB separation...
+//
 
 void
-cfRGBDoRGB(cf_rgb_t          *rgbptr,
-					/* I - Color separation */
-	     const unsigned char *input,
-					/* I - Input RGB pixels */
-	     unsigned char       *output,
-					/* O - Output Device-N pixels */
-	     int                 num_pixels)
-					/* I - Number of pixels */
+cfRGBDoRGB(cf_rgb_t            *rgbptr,	// I - Color separation
+	   const unsigned char *input,	// I - Input RGB pixels
+	   unsigned char       *output,	// O - Output Device-N pixels
+	   int                 num_pixels)
+					// I - Number of pixels
 {
-  int			i;		/* Looping var */
-  int			rgb,		/* Current RGB color */
-			lastrgb;	/* Previous RGB color */
+  int			i;		// Looping var
+  int			rgb,		// Current RGB color
+			lastrgb;	// Previous RGB color
   int			r, ri, rm0, rm1, rs,
-					/* Current red index, multipliexs, and row offset */
+					// Current red index, multipliexs,
+                                        // and row offset
 			g, gi, gm0, gm1, gs,
-					/* Current green ... */
+					// Current green ...
 			b, bi, bm0, bm1, bs;
-					/* Current blue ... */
-  const unsigned char	*color;		/* Current color data */
-  int			tempr,		/* Current separation colors */
-			tempg,		/* ... */
-			tempb ;		/* ... */
-  int			rgbsize;	/* Separation data size */
+					// Current blue ...
+  const unsigned char	*color;		// Current color data
+  int			tempr,		// Current separation colors
+			tempg,		// ...
+			tempb ;		// ...
+  int			rgbsize;	// Separation data size
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!rgbptr || !input || !output || num_pixels <= 0)
     return;
 
- /*
-  * Initialize variables used for the duration of the separation...
-  */
+  //
+  // Initialize variables used for the duration of the separation...
+  //
 
   lastrgb = -1;
   rgbsize = rgbptr->num_channels;
@@ -202,15 +198,15 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
   gs      = rgbptr->cube_size * rgbptr->num_channels;
   bs      = rgbptr->num_channels;
 
- /*
-  * Loop through it all...
-  */
+  //
+  // Loop through it all...
+  //
 
   while (num_pixels > 0)
   {
-   /*
-    * See if the next pixel is a cached value...
-    */
+    //
+    // See if the next pixel is a cached value...
+    //
 
     num_pixels --;
 
@@ -221,9 +217,9 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
 
     if (rgb == lastrgb)
     {
-     /*
-      * Copy previous color and continue...
-      */
+      //
+      // Copy previous color and continue...
+      //
 
       memcpy(output, output - rgbptr->num_channels, rgbsize);
 
@@ -232,9 +228,9 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
     }
     else if (rgb == 0x000000 && rgbptr->cache_init)
     {
-     /*
-      * Copy black color and continue...
-      */
+      //
+      // Copy black color and continue...
+      //
 
       memcpy(output, rgbptr->black, rgbsize);
 
@@ -243,9 +239,9 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
     }
     else if (rgb == 0xffffff && rgbptr->cache_init)
     {
-     /*
-      * Copy white color and continue...
-      */
+      //
+      // Copy white color and continue...
+      //
 
       memcpy(output, rgbptr->white, rgbsize);
 
@@ -253,9 +249,9 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
       continue;
     }
 
-   /*
-    * Nope, figure this one out on our own...
-    */
+    //
+    // Nope, figure this one out on our own...
+    //
 
     ri  = rgbptr->cube_index[r];
     rm0 = rgbptr->cube_mult[r];
@@ -298,47 +294,47 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
 }
 
 
-/*
- * 'cfRGBNew()' - Create a new RGB color separation.
- */
+//
+// 'cfRGBNew()' - Create a new RGB color separation.
+//
 
-cf_rgb_t *				/* O - New color separation or NULL */
-cfRGBNew(int           num_samples,	/* I - Number of samples */
-	   cf_sample_t *samples,	/* I - Samples */
-	   int           cube_size,	/* I - Size of LUT cube */
-           int           num_channels)	/* I - Number of color components */
+cf_rgb_t *				// O - New color separation or NULL
+cfRGBNew(int           num_samples,	// I - Number of samples
+	   cf_sample_t *samples,	// I - Samples
+	   int           cube_size,	// I - Size of LUT cube
+           int           num_channels)	// I - Number of color components
 {
-  cf_rgb_t		*rgbptr;	/* New color separation */
-  int			i;		/* Looping var */
-  int			r, g, b;	/* Current RGB */
-  int			tempsize;	/* Sibe of main arrays */
-  unsigned char		*tempc;		/* Pointer for C arrays */
-  unsigned char		**tempb ;	/* Pointer for Z arrays */
-  unsigned char		***tempg;	/* Pointer for Y arrays */
-  unsigned char		****tempr;	/* Pointer for X array */
-  unsigned char		rgb[3];		/* Temporary RGB value */
+  cf_rgb_t		*rgbptr;	// New color separation
+  int			i;		// Looping var
+  int			r, g, b;	// Current RGB
+  int			tempsize;	// Sibe of main arrays
+  unsigned char		*tempc;		// Pointer for C arrays
+  unsigned char		**tempb ;	// Pointer for Z arrays
+  unsigned char		***tempg;	// Pointer for Y arrays
+  unsigned char		****tempr;	// Pointer for X array
+  unsigned char		rgb[3];		// Temporary RGB value
 
 
- /*
-  * Range-check the input...
-  */
+  //
+  // Range-check the input...
+  //
 
   if (!samples || num_samples != (cube_size * cube_size * cube_size) ||
       num_channels <= 0 || num_channels > CF_MAX_RGB)
     return (NULL);
 
- /*
-  * Allocate memory for the separation...
-  */
+  //
+  // Allocate memory for the separation...
+  //
 
   if ((rgbptr = calloc(1, sizeof(cf_rgb_t))) == NULL)
     return (NULL);
 
- /*
-  * Allocate memory for the samples and the LUT cube...
-  */
+  //
+  // Allocate memory for the samples and the LUT cube...
+  //
 
-  tempsize = cube_size * cube_size * cube_size;	/* FUTURE: num_samples < cs^3 */
+  tempsize = cube_size * cube_size * cube_size;	// FUTURE: num_samples < cs^3
 
   tempc = calloc(tempsize, num_channels);
   tempb = calloc(tempsize, sizeof(unsigned char *));
@@ -364,9 +360,9 @@ cfRGBNew(int           num_samples,	/* I - Number of samples */
     return (NULL);
   }
 
- /*
-  * Fill in the arrays...
-  */
+  //
+  // Fill in the arrays...
+  //
 
   for (i = 0, r = 0; r < cube_size; r ++)
   {
@@ -394,9 +390,9 @@ cfRGBNew(int           num_samples,	/* I - Number of samples */
   rgbptr->num_channels = num_channels;
   rgbptr->colors       = tempr;
 
- /*
-  * Generate the lookup tables for the cube indices and multipliers...
-  */
+  //
+  // Generate the lookup tables for the cube indices and multipliers...
+  //
 
   for (i = 0; i < 256; i ++)
   {
@@ -408,9 +404,9 @@ cfRGBNew(int           num_samples,	/* I - Number of samples */
       rgbptr->cube_mult[i] = 255 - ((i * (cube_size - 1)) & 255);
   }
 
- /*
-  * Generate the black and white cache values for the separation...
-  */
+  //
+  // Generate the black and white cache values for the separation...
+  //
 
   rgb[0] = 0;
   rgb[1] = 0;
@@ -426,10 +422,9 @@ cfRGBNew(int           num_samples,	/* I - Number of samples */
 
   rgbptr->cache_init = 1;
 
- /*
-  * Return the separation...
-  */
+  //
+  // Return the separation...
+  //
 
   return (rgbptr);
 }
-

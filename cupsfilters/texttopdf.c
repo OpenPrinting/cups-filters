@@ -1,19 +1,19 @@
-/*
- *   Text to PDF filter function for the Common UNIX Printing System (CUPS).
- *
- *   Copyright 2008,2012 by Tobias Hoffmann.
- *   Copyright 2007 by Apple Inc.
- *   Copyright 1993-2007 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- */
+//
+//   Text to PDF filter function for libcupsfilters.
+//
+//   Copyright 2008,2012 by Tobias Hoffmann.
+//   Copyright 2007 by Apple Inc.
+//   Copyright 1993-2007 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "debug-internal.h"
 #include <config.h>
@@ -27,9 +27,10 @@
 #include "fontembed/sfnt.h"
 #include "fontembed/fontfile.h"
 
-/*
- * Constants...
- */
+
+//
+// Constants...
+//
 
 #define ATTR_NORMAL	0x00
 #define ATTR_BOLD	0x01
@@ -51,11 +52,12 @@
 #define PRETTY_PERL	4
 #define PRETTY_HTML	5
 
-/*
- * Globals...
- */
 
-static char *code_keywords[] =	/* List of known C/C++ keywords... */
+//
+// Globals...
+//
+
+static char *code_keywords[] =	// List of known C/C++ keywords...
 	{
 	  "and",
 	  "and_eq",
@@ -128,7 +130,7 @@ static char *code_keywords[] =	/* List of known C/C++ keywords... */
 	  "xor",
 	  "xor_eq"
 	},
-	*sh_keywords[] =	/* List of known Boure/Korn/zsh/bash keywords... */
+	*sh_keywords[] =	// List of known Boure/Korn/zsh/bash keywords...
 	{
 	  "alias",
 	  "bg",
@@ -184,7 +186,7 @@ static char *code_keywords[] =	/* List of known C/C++ keywords... */
 	  "whence"
 	  "while",
 	},
-	*csh_keywords[] =	/* List of known csh/tcsh keywords... */
+	*csh_keywords[] =	// List of known csh/tcsh keywords...
 	{
 	  "alias",
 	  "aliases",
@@ -252,7 +254,7 @@ static char *code_keywords[] =	/* List of known C/C++ keywords... */
 	  "which",
 	  "while"
 	},
-	*perl_keywords[] =	/* List of known perl keywords... */
+	*perl_keywords[] =	// List of known perl keywords...
 	{
 	  "abs",
 	  "accept",
@@ -467,65 +469,66 @@ static char *code_keywords[] =	/* List of known C/C++ keywords... */
 	  "write"
 	};
 
-/*
- * Types...
- */
 
-typedef struct			/**** Character/attribute structure... ****/
+//
+// Types...
+//
+
+typedef struct			// **** Character/attribute structure... ****
 {
-  unsigned short ch,		/* Character */
-		attr;		/* Any attributes */
+  unsigned short ch,		// Character
+		attr;		// Any attributes
 } lchar_t;
 
 typedef struct texttopdf_doc_s
 {
-  int		NumFonts;	/* Number of fonts to use */
-  EMB_PARAMS	*Fonts[256][4];	/* Fonts to use */
-  unsigned short Chars[256];	/* Input char to unicode */
-  unsigned char	Codes[65536];	/* Unicode glyph mapping to font */
-  int		Widths[256];	/* Widths of each font */
-  int		Directions[256];/* Text directions for each font */
+  int		NumFonts;	// Number of fonts to use
+  EMB_PARAMS	*Fonts[256][4];	// Fonts to use
+  unsigned short Chars[256];	// Input char to unicode
+  unsigned char	Codes[65536];	// Unicode glyph mapping to font
+  int		Widths[256];	// Widths of each font
+  int		Directions[256];// Text directions for each font
   cf_pdf_out_t	*pdf;
-  int		FontResource;   /* Object number of font resource dictionary */
-  float		FontScaleX, FontScaleY; /* The font matrix */
-  lchar_t	*Title, *Date;	/* The title and date strings */
+  int		FontResource;   // Object number of font resource dictionary
+  float		FontScaleX, FontScaleY; // The font matrix
+  lchar_t	*Title, *Date;	// The title and date strings
 
-  cups_page_header2_t h;        /* CUPS Raster page header, to */
-                                /* accommodate results of command */
-                                /* line/IPP attribute parsing */
+  cups_page_header2_t h;        // CUPS Raster page header, to
+                                // accommodate results of command
+                                // line/IPP attribute parsing
   cf_filter_texttopdf_parameter_t env_vars;
   int		NumKeywords;
-  float		PageLeft,	/* Left margin */
-		PageRight,	/* Right margin */
-		PageBottom,	/* Bottom margin */
-		PageTop,	/* Top margin */
-		PageWidth,	/* Total page width */
+  float		PageLeft,	// Left margin
+		PageRight,	// Right margin
+		PageBottom,	// Bottom margin
+		PageTop,	// Top margin
+		PageWidth,	// Total page width
 		PageLength;
   int		NumPages;
-  int		WrapLines,	/* Wrap text in lines */
-		SizeLines,	/* Number of lines on a page */
-		SizeColumns,	/* Number of columns on a line */
-		PageColumns,	/* Number of columns on a page */
-		ColumnGutter,	/* Number of characters between text columns */
-		ColumnWidth,	/* Width of each column */
-		PrettyPrint,	/* Do pretty code formatting? */
-		Copies;		/* Number of copies to produce */
-  float		CharsPerInch,	/* Number of character columns per inch */
-		LinesPerInch;	/* Number of lines per inch */
+  int		WrapLines,	// Wrap text in lines
+		SizeLines,	// Number of lines on a page
+		SizeColumns,	// Number of columns on a line
+		PageColumns,	// Number of columns on a page
+		ColumnGutter,	// Number of characters between text columns
+		ColumnWidth,	// Width of each column
+		PrettyPrint,	// Do pretty code formatting?
+		Copies;		// Number of copies to produce
+  float		CharsPerInch,	// Number of character columns per inch
+		LinesPerInch;	// Number of lines per inch
   int		UTF8;
-  char		**Keywords;	/* List of known keywords... */
+  char		**Keywords;	// List of known keywords...
 
-  int		Orientation,	/* 0 = portrait, 1 = landscape, etc. */
-		Duplex,		/* Duplexed? */
-		LanguageLevel,	/* Language level of printer */
+  int		Orientation,	// 0 = portrait, 1 = landscape, etc.
+		Duplex,		// Duplexed?
+		LanguageLevel,	// Language level of printer
 		ColorDevice;
   lchar_t	**Page;
 } texttopdf_doc_t;
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static EMB_PARAMS *font_load(const char *font, int fontwidth, cf_logfunc_t log,
 			     void *ld);
@@ -547,83 +550,85 @@ static void     write_page(texttopdf_doc_t *doc);
 static void     write_epilogue(texttopdf_doc_t *doc);
 
 
-/*
- * 'cfFilterTextToPDF()' - Main entry for text to PDF filter.
- */
+//
+// 'cfFilterTextToPDF()' - Main entry for text to PDF filter.
+//
 
-int				/* O - Exit status */
-cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
-	  int outputfd, 	/* I - File descriptor output stream */
-	  int inputseekable,	/* I - Is input stream seekable? (unused) */
-	  cf_filter_data_t *data,	/* I - Job and printer data */
-	  void *parameters)	/* I - Filter-specific parameters (unused) */
+int					// O - Exit status
+cfFilterTextToPDF(int inputfd,  	// I - File descriptor input stream
+		  int outputfd, 	// I - File descriptor output stream
+		  int inputseekable,	// I - Is input stream seekable?
+					//     (unused)
+		  cf_filter_data_t *data,
+					// I - Job and printer data
+		  void *parameters)	// I - Filter-specific parameters
+					//     (unused)
 {
   texttopdf_doc_t doc;
-  int		i,		/* Looping var */
-		empty,		/* Is the input empty? */
-		ch,		/* Current char from file */
-		lastch,		/* Previous char from file */
-		attr,		/* Current attribute */
-		line,		/* Current line */
-		column,		/* Current column */
-		page_column;	/* Current page column */
+  int		i,		// Looping var
+		empty,		// Is the input empty?
+		ch,		// Current char from file
+		lastch,		// Previous char from file
+		attr,		// Current attribute
+		line,		// Current line
+		column,		// Current column
+		page_column;	// Current page column
 
-  const char	*val;		/* Option value */
-  char		keyword[64],	/* Keyword string */
-		*keyptr;	/* Pointer into string */
-  int		keycol;		/* Column where keyword starts */
-  enum	{NLstyl=-1, NoCmnt, SNTXstyl}
-  		cmntState;	/* Inside a comment */
-  enum	{StrBeg=-1, NoStr, StrEnd}	
-  		strState;	/* Inside a dbl-quoted string */
+  const char	*val;		// Option value
+  char		keyword[64],	// Keyword string
+		*keyptr;	// Pointer into string
+  int		keycol;		// Column where keyword starts
+  enum	{NLstyl = -1, NoCmnt, SNTXstyl}
+		cmntState;	// Inside a comment
+  enum	{StrBeg = -1, NoStr, StrEnd}	
+		strState;	// Inside a dbl-quoted string
 
-  cf_logfunc_t log = data->logfunc;
+  cf_logfunc_t  log = data->logfunc;
   void		*ld = data->logdata;
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void		*icd = data->iscanceleddata;
-  FILE		*fp;		/* Print file */
-  int		stdoutbackupfd;	/* The "real" stdout is backupped here while */
-				/* stdout is redirected */
-  int		ret = 0;	/* Return value */
+  FILE		*fp;		// Print file
+  int		stdoutbackupfd;	// The "real" stdout is backupped here while
+				// stdout is redirected
+  int		ret = 0;	// Return value
   cups_cspace_t cspace = (cups_cspace_t)(-1);
 
 
- /*
-  * Make sure status messages are not buffered...
-  */
-  #ifdef CUPS_1_4 /* CUPS 1.4.x or newer: only UTF8 is supported */
-  doc.UTF8 = 1;               /* Use UTF-8 encoding? */
-  #endif /* CUPS_1_4 */
+  //
+  // Make sure status messages are not buffered...
+  //
 
-  doc.WrapLines = 1;		/* Wrap text in lines */
-  doc.SizeLines = 60;		/* Number of lines on a page */
-  doc.SizeColumns = 80;		/* Number of columns on a line */
-  doc.PageColumns = 1;		/* Number of columns on a page */
-  doc.ColumnGutter = 0;		/* Number of characters between text columns */
-  doc.ColumnWidth = 80;		/* Width of each column */
-  doc.PrettyPrint = 0;		/* Do pretty code formatting */
-  doc.Copies = 1;		/* Number of copies */
-  doc.Page = NULL;		/* Page characters */
-  doc.NumPages = 0;		/* Number of pages in document */
-  doc.CharsPerInch = 10;	/* Number of character columns per inch */
-  doc.LinesPerInch = 6;		/* Number of lines per inch */
-  doc.NumKeywords = 0;		/* Number of known keywords */
-  doc.Keywords = NULL;		/* List of known keywords */
-  doc.Orientation = 0;		/* 0 = portrait, 1 = landscape, etc. */
-  doc.Duplex = 0;		/* Duplexed? */
-  doc.LanguageLevel = 1;	/* Language level of printer */
-  doc.ColorDevice = 1;		/* Do color text? */
-  doc.PageLeft = 18.0f;		/* Left margin */
-  doc.PageRight = 594.0f;	/* Right margin */
-  doc.PageBottom = 36.0f;	/* Bottom margin */
-  doc.PageTop = 756.0f;		/* Top margin */
-  doc.PageWidth = 612.0f;	/* Total page width */
-  doc.PageLength = 792.0f;	/* Total page length */
+  doc.UTF8 = 1;                 // Use UTF-8 encoding?
+  doc.WrapLines = 1;		// Wrap text in lines
+  doc.SizeLines = 60;		// Number of lines on a page
+  doc.SizeColumns = 80;		// Number of columns on a line
+  doc.PageColumns = 1;		// Number of columns on a page
+  doc.ColumnGutter = 0;		// Number of characters between text columns
+  doc.ColumnWidth = 80;		// Width of each column
+  doc.PrettyPrint = 0;		// Do pretty code formatting
+  doc.Copies = 1;		// Number of copies
+  doc.Page = NULL;		// Page characters
+  doc.NumPages = 0;		// Number of pages in document
+  doc.CharsPerInch = 10;	// Number of character columns per inch
+  doc.LinesPerInch = 6;		// Number of lines per inch
+  doc.NumKeywords = 0;		// Number of known keywords
+  doc.Keywords = NULL;		// List of known keywords
+  doc.Orientation = 0;		// 0 = portrait, 1 = landscape, etc.
+  doc.Duplex = 0;		// Duplexed?
+  doc.LanguageLevel = 1;	// Language level of printer
+  doc.ColorDevice = 1;		// Do color text?
+  doc.PageLeft = 18.0f;		// Left margin
+  doc.PageRight = 594.0f;	// Right margin
+  doc.PageBottom = 36.0f;	// Bottom margin
+  doc.PageTop = 756.0f;		// Top margin
+  doc.PageWidth = 612.0f;	// Total page width
+  doc.PageLength = 792.0f;	// Total page length
   doc.pdf = NULL;
 
-  if (parameters) {
+  if (parameters)
     doc.env_vars = *((cf_filter_texttopdf_parameter_t *)parameters);
-  } else {
+  else
+  {
     doc.env_vars.data_dir = CUPS_DATADIR;
     doc.env_vars.char_set = NULL;
     doc.env_vars.content_type = NULL;
@@ -632,9 +637,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 
   setbuf(stderr, NULL);
 
- /*
-  * Open the input data stream specified by the inputfd...
-  */
+  //
+  // Open the input data stream specified by the inputfd...
+  //
 
   if ((fp = fdopen(inputfd, "rb")) == NULL)
   {
@@ -646,10 +651,10 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
     return (1);
   }
 
- /*
-  * Redirect stdout to the outputfd (the PDF output strem of this filter
-  * function)
-  */
+  //
+  // Redirect stdout to the outputfd (the PDF output strem of this filter
+  // function)
+  //
 
   if (outputfd != 1)
   {
@@ -658,9 +663,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
     close(outputfd);
   }
 
- /*
-  * Process command-line options and write the prolog...
-  */
+  //
+  // Process command-line options and write the prolog...
+  //
 
   if ((val = cupsGetOption("prettyprint",
 			   data->num_options, data->options)) != NULL &&
@@ -731,12 +736,12 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
     (float)doc.h.ImagingBoundingBox[3];
   doc.Copies = doc.h.NumCopies;
 
-  /* Check whether we do borderless printing with overspray and let text only
-     get printed on the actual media size */
+  // Check whether we do borderless printing with overspray and let text only
+  // get printed on the actual media size
   if (doc.h.cupsPageSizeName[0] != '\0')
   {
-    /* The page size name in te header corresponds to the actual size of
-       the media, so find the size dimensions */
+    // The page size name in te header corresponds to the actual size of
+    // the media, so find the size dimensions
     pwg_media_t *size_found = NULL;
     strncpy(keyword, doc.h.cupsPageSizeName, sizeof(keyword));
     if ((keyptr = strchr(keyword, '.')) != NULL)
@@ -745,16 +750,16 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	(size_found = pwgMediaForLegacy(keyword)) != NULL ||
 	(size_found = pwgMediaForPWG(keyword)) != NULL)
     {
-      /* Dimensions in PostScript points */
+      // Dimensions in PostScript points
       float w = size_found->width / 2540.0 * 72.0;
       float l = size_found->length / 2540.0 * 72.0;
       if (w < doc.PageWidth)
       {
-	/* Width in header > actual media width => overspray */
-	/* As the overspray is to cover tolerances in paper traction
-	   and the paper can be mis-aligned to any size, we let
-	   margins be at least double the overspray width on each
-	   side (not dividing by 2) */
+	// Width in header > actual media width => overspray
+	// As the overspray is to cover tolerances in paper traction
+	// and the paper can be mis-aligned to any size, we let
+	// margins be at least double the overspray width on each
+	// side (not dividing by 2)
 	float margin_needed = doc.PageWidth - w;
 	if (doc.PageLeft < margin_needed)
 	  doc.PageLeft = margin_needed;
@@ -763,11 +768,11 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
       }
       if (l < doc.PageLength)
       {
-	/* Length in header > actual media length => overspray */
-	/* As the overspray is to cover tolerances in paper traction
-	   and the paper can be mis-aligned to any size, we let
-	   margins be at least double the overspray width on each
-	   side (not dividing by 2) */
+	// Length in header > actual media length => overspray
+	// As the overspray is to cover tolerances in paper traction
+	// and the paper can be mis-aligned to any size, we let
+	// margins be at least double the overspray width on each
+	// side (not dividing by 2)
 	float margin_needed = doc.PageLength - l;
 	if (doc.PageBottom < margin_needed)
 	  doc.PageBottom = margin_needed;
@@ -826,16 +831,17 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
   if (doc.PrettyPrint)
     doc.PageTop -= 216.0f / doc.LinesPerInch;
 
- /*
-  * Allocate memory for the page...
-  */
+  //
+  // Allocate memory for the page...
+  //
 
   doc.SizeColumns = (doc.PageRight - doc.PageLeft) / 72.0 * doc.CharsPerInch;
   doc.SizeLines   = (doc.PageTop - doc.PageBottom) / 72.0 * doc.LinesPerInch;
 
- /*
-  * Enforce minimum size...
-  */
+  //
+  // Enforce minimum size...
+  //
+
   if (doc.SizeColumns < 1)
     doc.SizeColumns = 1;
   if (doc.SizeLines < 1)
@@ -872,9 +878,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 
   doc.Copies = data->copies;
 
- /*
-  * Read text from the specified source and print it...
-  */
+  //
+  // Read text from the specified source and print it...
+  //
 
   empty        = 1;
   lastch       = 0;
@@ -891,7 +897,7 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
   {
     if (empty)
     {
-      /* Found the first valid character, write file header */
+      // Found the first valid character, write file header
       empty = 0;
       ret = write_prolog(data->job_title, data->job_user,
 			doc.env_vars.classification,
@@ -902,23 +908,23 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	goto out;
     }
 
-   /*
-    * Control codes:
-    *
-    *   BS	Backspace (0x08)
-    *   HT	Horizontal tab; next 8th column (0x09)
-    *   LF	Line feed; forward full line (0x0a)
-    *   VT	Vertical tab; reverse full line (0x0b)
-    *   FF	Form feed (0x0c)
-    *   CR	Carriage return (0x0d)
-    *   ESC 7	Reverse full line (0x1b 0x37)
-    *   ESC 8	Reverse half line (0x1b 0x38)
-    *   ESC 9	Forward half line (0x1b 0x39)
-    */
+    //
+    // Control codes:
+    //
+    //   BS	Backspace (0x08)
+    //   HT	Horizontal tab; next 8th column (0x09)
+    //   LF	Line feed; forward full line (0x0a)
+    //   VT	Vertical tab; reverse full line (0x0b)
+    //   FF	Form feed (0x0c)
+    //   CR	Carriage return (0x0d)
+    //   ESC 7	Reverse full line (0x1b 0x37)
+    //   ESC 8	Reverse half line (0x1b 0x38)
+    //   ESC 9	Forward half line (0x1b 0x39)
+    //
 
     switch (ch)
     {
-      case 0x08 :		/* BS - backspace for boldface & underline */
+      case 0x08 :		// BS - backspace for boldface & underline
           if (column > 0)
             column --;
 
@@ -926,7 +932,7 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	  keycol = column;
           break;
 
-      case 0x09 :		/* HT - tab to next 8th column */
+      case 0x09 :		// HT - tab to next 8th column
           if (doc.PrettyPrint && keyptr > keyword)
 	  {
 	    *keyptr = '\0';
@@ -935,9 +941,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	    if (bsearch(&keyptr, doc.Keywords, doc.NumKeywords, sizeof(char *),
 	                compare_keywords))
             {
-	     /*
-	      * Put keywords in boldface...
-	      */
+	      //
+	      // Put keywords in boldface...
+	      //
 
 	      i = page_column * (doc.ColumnWidth + doc.ColumnGutter);
 
@@ -952,7 +958,7 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
           column = (column + 8) & ~7;
 
           if (column >= doc.ColumnWidth && doc.WrapLines)
-          {			/* Wrap text to margins */
+          {			// Wrap text to margins
             line ++;
             column = 0;
 
@@ -974,20 +980,20 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
           attr &= ~ATTR_BOLD;
           break;
 
-      case 0x0d :		/* CR */
+      case 0x0d :		// CR
 #ifndef __APPLE__
-         /*
-	  * All but MacOS/Darwin treat CR as was intended by ANSI
-	  * folks, namely to move to column 0/1.  Some programs still
-	  * use this to do boldfacing and underlining...
-	  */
+	  //
+	  // All but MacOS/Darwin treat CR as was intended by ANSI
+	  // folks, namely to move to column 0/1.  Some programs still
+	  // use this to do boldfacing and underlining...
+	  //
 
           column = 0;
           break;
 #else
-         /*
-	  * MacOS/Darwin still need to treat CR as a line ending.
-	  */
+	  //
+	  // MacOS/Darwin still need to treat CR as a line ending.
+	  //
 
           {
 	    int nextch;
@@ -996,9 +1002,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	    else
 	      ch = nextch;
 	  }
-#endif /* !__APPLE__ */
+#endif // !__APPLE__
 
-      case 0x0a :		/* LF - output current line */
+      case 0x0a :		// LF - output current line
           if (doc.PrettyPrint && keyptr > keyword)
 	  {
 	    *keyptr = '\0';
@@ -1007,9 +1013,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	    if (bsearch(&keyptr, doc.Keywords, doc.NumKeywords, sizeof(char *),
 	                compare_keywords))
             {
-	     /*
-	      * Put keywords in boldface...
-	      */
+	      //
+	      // Put keywords in boldface...
+	      //
 
 	      i = page_column * (doc.ColumnWidth + doc.ColumnGutter);
 
@@ -1045,7 +1051,7 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
           }
           break;
 
-      case 0x0b :		/* VT - move up 1 line */
+      case 0x0b :		// VT - move up 1 line
           if (line > 0)
 	    line --;
 
@@ -1060,7 +1066,7 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 		      ATTR_BLUE);
           break;
 
-      case 0x0c :		/* FF - eject current page... */
+      case 0x0c :		// FF - eject current page...
           if (doc.PrettyPrint && keyptr > keyword)
 	  {
 	    *keyptr = '\0';
@@ -1069,9 +1075,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	    if (bsearch(&keyptr, doc.Keywords, doc.NumKeywords, sizeof(char *),
 	                compare_keywords))
             {
-	     /*
-	      * Put keywords in boldface...
-	      */
+	      //
+	      // Put keywords in boldface...
+	      //
 
 	      i = page_column * (doc.ColumnWidth + doc.ColumnGutter);
 
@@ -1102,22 +1108,22 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
           }
           break;
 
-      case 0x1b :		/* Escape sequence */
+      case 0x1b :		// Escape sequence
           ch = get_utf8(fp);
 	  if (ch == '7')
 	  {
-	   /*
-	    * ESC 7	Reverse full line (0x1b 0x37)
-	    */
+	    //
+	    // ESC 7	Reverse full line (0x1b 0x37)
+	    //
 
             if (line > 0)
 	      line --;
 	  }
 	  else if (ch == '8')
 	  {
-           /*
-	    *   ESC 8	Reverse half line (0x1b 0x38)
-	    */
+	    //
+	    //   ESC 8	Reverse half line (0x1b 0x38)
+	    //
 
             if ((attr & ATTR_RAISED) && line > 0)
 	    {
@@ -1131,9 +1137,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	  }
 	  else if (ch == '9')
 	  {
-           /*
-	    *   ESC 9	Forward half line (0x1b 0x39)
-	    */
+	    //
+	    //   ESC 9	Forward half line (0x1b 0x39)
+	    //
 
             if ((attr & ATTR_LOWERED) && line < (doc.SizeLines - 1))
 	    {
@@ -1147,30 +1153,30 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	  }
 	  break;
 
-      default :			/* All others... */
+      default :			// All others...
           if (ch < ' ')
-            break;		/* Ignore other control chars */
+            break;		// Ignore other control chars
 
           if (doc.PrettyPrint > PRETTY_PLAIN)
 	  {
-	   /*
-	    * Do highlighting of C/C++ keywords, preprocessor commands,
-	    * and comments...
-	    */
+	    //
+	    // Do highlighting of C/C++ keywords, preprocessor commands,
+	    // and comments...
+	    //
 
 	    if (ch == ' ' && (attr & ATTR_BOLD))
 	    {
-	     /*
-	      * Stop bolding preprocessor command...
-	      */
+	      //
+	      // Stop bolding preprocessor command...
+	      //
 
 	      attr &= ~ATTR_BOLD;
 	    }
 	    else if (!(isalnum(ch & 255) || ch == '_') && keyptr > keyword)
 	    {
-	     /*
-	      * Look for a keyword...
-	      */
+	      //
+	      // Look for a keyword...
+	      //
 
 	      *keyptr = '\0';
 	      keyptr  = keyword;
@@ -1178,9 +1184,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	      if (bsearch(&keyptr, doc.Keywords, doc.NumKeywords,
 			  sizeof(char *), compare_keywords))
               {
-	       /*
-	        * Put keywords in boldface...
-		*/
+		//
+		// Put keywords in boldface...
+		//
 
 	        i = page_column * (doc.ColumnWidth + doc.ColumnGutter);
 
@@ -1192,16 +1198,17 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	      }
 	    }
 
-	   /*
-	    * Look for Syntax-transition Starts...
-	    */
+	    //
+	    // Look for Syntax-transition Starts...
+	    //
+
 	    if (!cmntState && !strState)
 	    {
 	      if ((isalnum(ch & 255) || ch == '_'))
 	      {
-	       /*
-	        * Add characters to the current keyword (if they'll fit).
-	        */
+		//
+		// Add characters to the current keyword (if they'll fit).
+		//
 
 	        if (keyptr == keyword)
 	          keycol = column;
@@ -1211,9 +1218,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	      }
 	      else if (ch == '\"' && lastch != '\\')
 	      {
-	       /*
-	        * Start a dbl-quote string constant...
-	        */
+		//
+		// Start a dbl-quote string constant...
+		//
 
 	        strState = StrBeg;
 		attr    = ATTR_BLUE;
@@ -1221,9 +1228,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	      else if (ch == '*' && lastch == '/' &&
 	               doc.PrettyPrint != PRETTY_SHELL)
 	      {
-	       /*
-	        * Start a C-style comment...
-	        */
+		//
+		// Start a C-style comment...
+		//
 
 	        cmntState = SNTXstyl;
 	        attr     = ATTR_ITALIC | ATTR_GREEN;
@@ -1231,18 +1238,18 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	      else if (ch == '/' && lastch == '/' &&
 	               doc.PrettyPrint == PRETTY_CODE)
 	      {
-	       /*
-	        * Start a C++-style comment...
-	        */
+		//
+		// Start a C++-style comment...
+		//
 
 	        cmntState = NLstyl;
 	        attr = ATTR_ITALIC | ATTR_GREEN;
 	      }
 	      else if (ch == '#' && doc.PrettyPrint != PRETTY_CODE)
 	      {
-	       /*
-	        * Start a shell-style comment...
-	        */
+		//
+		// Start a shell-style comment...
+		//
 
 	        cmntState = NLstyl;
 	        attr = ATTR_ITALIC | ATTR_GREEN;
@@ -1250,9 +1257,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	      else if (ch == '#' && column == 0 &&
 	               doc.PrettyPrint == PRETTY_CODE)
 	      {
-	       /*
-	        * Start a preprocessor command...
-	        */
+		//
+		// Start a preprocessor command...
+		//
 
 	        attr = ATTR_BOLD | ATTR_RED;
 	      }
@@ -1260,7 +1267,7 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
           }
 
           if (column >= doc.ColumnWidth && doc.WrapLines)
-          {			/* Wrap text to margins */
+          {			// Wrap text to margins
             column = 0;
 	    line ++;
 
@@ -1277,9 +1284,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
             }
           }
 
-         /*
-	  * Add text to the current column & line...
-	  */
+	  //
+	  // Add text to the current column & line...
+	  //
 
           if (column < doc.ColumnWidth)
 	  {
@@ -1312,9 +1319,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	    if ((ch == '{' || ch == '}') && !cmntState && !strState &&
 	        column < doc.ColumnWidth)
 	    {
-	     /*
-	      * Highlight curley braces...
-	      */
+	      //
+	      // Highlight curley braces...
+	      //
 
 	      doc.Page[line][column].attr |= ATTR_BOLD;
 	    }
@@ -1322,27 +1329,27 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 	             column < doc.ColumnWidth &&
 		     doc.PrettyPrint != PRETTY_SHELL)
 	    {
-	     /*
-	      * Highlight first comment character...
-	      */
+	      //
+	      // Highlight first comment character...
+	      //
 
 	      doc.Page[line][column - 1].attr = attr;
 	    }
 	    else if (ch == '\"' && lastch != '\\' && !cmntState &&
 		     strState == StrEnd)
 	    {
-	     /*
-	      * End a dbl-quote string constant...
-	      */
+	      //
+	      // End a dbl-quote string constant...
+	      //
 
 	      strState = NoStr;
 	      attr    &= ~ATTR_BLUE;
             }
 	    else if (ch == '/' && lastch == '*' && cmntState)
 	    {
-	     /*
-	      * End a C-style comment...
-	      */
+	      //
+	      // End a C-style comment...
+	      //
 
 	      cmntState = NoCmnt;
 	      attr     &= ~(ATTR_ITALIC | ATTR_GREEN);
@@ -1356,14 +1363,14 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
           break;
     }
 
-   /*
-    * Save this character for the next cycle.
-    */
+    //
+    // Save this character for the next cycle.
+    //
 
     lastch = ch;
   }
   
-  /* Do not write anything if the input file is empty */
+  // Do not write anything if the input file is empty
   if (empty)
   {
     if(log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -1371,38 +1378,38 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
     goto out;
   }
 
- /*
-  * Write any remaining page data...
-  */
+  //
+  // Write any remaining page data...
+  //
 
   if (line > 0 || page_column > 0 || column > 0)
     write_page(&doc);
 
- /*
-  * Write the epilog and return...
-  */
+  //
+  // Write the epilog and return...
+  //
 
   write_epilogue(&doc);
 
  out:
 
- /*
-  * Close input data stream
-  */
+  //
+  // Close input data stream
+  //
 
   if (fp != stdin)
     fclose(fp);
 
- /*
-  * Flush and close output data stream
-  */
+  //
+  // Flush and close output data stream
+  //
 
   fflush(stdout);
   close(1);
 
- /*
-  * Re-activate stdout output
-  */
+  //
+  // Re-activate stdout output
+  //
 
   if (outputfd != 1)
   {
@@ -1410,9 +1417,9 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
     close(stdoutbackupfd);
   }
 
- /*
-  * Clean up
-  */
+  //
+  // Clean up
+  //
 
   if (doc.Page)
   {
@@ -1424,8 +1431,11 @@ cfFilterTextToPDF(int inputfd,  	/* I - File descriptor input stream */
 }
 
 
-static EMB_PARAMS *font_load(const char *font, int fontwidth, cf_logfunc_t log,
-		      void *ld)
+static EMB_PARAMS *
+font_load(const char *font,
+	  int fontwidth,
+	  cf_logfunc_t log,
+	  void *ld)
 {
   OTF_FILE *otf;
 
@@ -1449,14 +1459,14 @@ static EMB_PARAMS *font_load(const char *font, int fontwidth, cf_logfunc_t log,
     FcConfigSubstitute (0, pattern, FcMatchPattern);
     FcDefaultSubstitute (pattern);
 
-    /* Receive a sorted list of fonts matching our pattern */
+    // Receive a sorted list of fonts matching our pattern
     candidates = FcFontSort (0, pattern, FcFalse, 0, &result);
     FcPatternDestroy (pattern);
 
     if (candidates)
     {
-      /* In the list of fonts returned by FcFontSort()
-	 find the first one that is both in TrueType format and monospaced */
+      // In the list of fonts returned by FcFontSort()
+      // find the first one that is both in TrueType format and monospaced
       for (i = 0; i < candidates->nfont; i ++)
       {
 	FcChar8 *fontformat = NULL; // TODO? or just try?
@@ -1491,16 +1501,15 @@ static EMB_PARAMS *font_load(const char *font, int fontwidth, cf_logfunc_t log,
   if (!fontname)
   {
     // TODO: try /usr/share/fonts/*/*/%s.ttf
-    if(log) log(ld, CF_LOGLEVEL_ERROR,"cfFilterTextToPDF: No viable font found.");
-    return NULL;
+    if(log) log(ld, CF_LOGLEVEL_ERROR,
+		"cfFilterTextToPDF: No viable font found.");
+    return (NULL);
   }
 
   otf = otf_load((const char *)fontname);
   free(fontname);
   if (!otf)
-  {
-    return NULL;
-  }
+    return (NULL);
 
   FONTFILE *ff = fontfile_open_sfnt(otf);
   DEBUG_assert(ff);
@@ -1510,10 +1519,12 @@ static EMB_PARAMS *font_load(const char *font, int fontwidth, cf_logfunc_t log,
 			    EMB_C_TAKE_FONTFILE);
   DEBUG_assert(emb);
   DEBUG_assert(emb->plan&EMB_A_MULTIBYTE);
-  return emb;
+
+  return (emb);
 }
 
-static EMB_PARAMS *font_std(const char *name)
+static EMB_PARAMS *
+font_std(const char *name)
 {
   FONTFILE *ff = fontfile_open_std(name);
   DEBUG_assert(ff);
@@ -1521,64 +1532,65 @@ static EMB_PARAMS *font_std(const char *name)
 			    EMB_DEST_PDF16,
 			    EMB_C_TAKE_FONTFILE);
   DEBUG_assert(emb);
-  return emb;
+
+  return (emb);
 }
 
 
-/*
- * 'compare_keywords()' - Compare two C/C++ keywords.
- */
+//
+// 'compare_keywords()' - Compare two C/C++ keywords.
+//
 
-static int				/* O - Result of strcmp */
-compare_keywords(const void *k1,	/* I - First keyword */
-                 const void *k2)	/* I - Second keyword */
+static int				// O - Result of strcmp
+compare_keywords(const void *k1,	// I - First keyword
+                 const void *k2)	// I - Second keyword
 {
   return (strcmp(*((const char **)k1), *((const char **)k2)));
 }
 
 
-/*
- * 'get_utf8()' - Get a UTF-8 encoded wide character...
- */
+//
+// 'get_utf8()' - Get a UTF-8 encoded wide character...
+//
 
-static int		/* O - Character or -1 on error */
-get_utf8(FILE *fp)	/* I - File to read from */
+static int		// O - Character or -1 on error
+get_utf8(FILE *fp)	// I - File to read from
 {
-  int	ch;		/* Current character value */
-  int	next;		/* Next character from file */
+  int	ch;		// Current character value
+  int	next;		// Next character from file
 
 
- /*
-  * Read the first character and process things accordingly...
-  *
-  * UTF-8 maps 16-bit characters to:
-  *
-  *        0 to 127 = 0xxxxxxx
-  *     128 to 2047 = 110xxxxx 10yyyyyy (xxxxxyyyyyy)
-  *   2048 to 65535 = 1110xxxx 10yyyyyy 10zzzzzz (xxxxyyyyyyzzzzzz)
-  *
-  * We also accept:
-  *
-  *      128 to 191 = 10xxxxxx
-  *
-  * since this range of values is otherwise undefined unless you are
-  * in the middle of a multi-byte character...
-  *
-  * This code currently does not support anything beyond 16-bit
-  * characters, in part because PostScript doesn't support more than
-  * 16-bit characters...
-  */
+  //
+  // Read the first character and process things accordingly...
+  //
+  // UTF-8 maps 16-bit characters to:
+  //
+  //        0 to 127 = 0xxxxxxx
+  //     128 to 2047 = 110xxxxx 10yyyyyy (xxxxxyyyyyy)
+  //   2048 to 65535 = 1110xxxx 10yyyyyy 10zzzzzz (xxxxyyyyyyzzzzzz)
+  //
+  // We also accept:
+  //
+  //      128 to 191 = 10xxxxxx
+  //
+  // since this range of values is otherwise undefined unless you are
+  // in the middle of a multi-byte character...
+  //
+  // This code currently does not support anything beyond 16-bit
+  // characters, in part because PostScript doesn't support more than
+  // 16-bit characters...
+  //
 
   if ((ch = getc(fp)) == EOF)
     return (EOF);
 
-  if (ch < 0xc0)			/* One byte character? */
+  if (ch < 0xc0)			// One byte character?
     return (ch);
   else if ((ch & 0xe0) == 0xc0)
   {
-   /*
-    * Two byte character...
-    */
+    //
+    // Two byte character...
+    //
 
     if ((next = getc(fp)) == EOF)
       return (EOF);
@@ -1587,9 +1599,9 @@ get_utf8(FILE *fp)	/* I - File to read from */
   }
   else if ((ch & 0xf0) == 0xe0)
   {
-   /*
-    * Three byte character...
-    */
+    //
+    // Three byte character...
+    //
 
     if ((next = getc(fp)) == EOF)
       return (EOF);
@@ -1603,23 +1615,23 @@ get_utf8(FILE *fp)	/* I - File to read from */
   }
   else
   {
-   /*
-    * More than three bytes...  We don't support that...
-    */
+    //
+    // More than three bytes...  We don't support that...
+    //
 
     return (EOF);
   }
 }
 
 
-/*
- * 'write_epilogue()' - Write the PDF file epilogue.
- */
+//
+// 'write_epilogue()' - Write the PDF file epilogue.
+//
 
 static void
 write_epilogue(texttopdf_doc_t *doc)
 {
-  static char	*names[] =	/* Font names */
+  static char	*names[] =	// Font names
 		{ "FN","FB","FI","FBI" };
   int i,j;
 
@@ -1628,98 +1640,96 @@ write_epilogue(texttopdf_doc_t *doc)
   {
     for (j = 0; j < doc->NumFonts; j ++) 
     {
-      EMB_PARAMS *emb=doc->Fonts[j][i];
+      EMB_PARAMS *emb = doc->Fonts[j][i];
       if (emb->font->fobj) // already embedded
-      {
         continue;
-      }
       if ((!emb->subset) ||
 	  (bits_used(emb->subset, emb->font->sfnt->numGlyphs)))
       {
-        emb->font->fobj=cfPDFOutWriteFont(doc->pdf,emb);
+        emb->font->fobj = cfPDFOutWriteFont(doc->pdf,emb);
         DEBUG_assert(emb->font->fobj);
       }
     }
   }
 
-  /*
-   * Create the global fontdict
-   */
+  //
+  // Create the global fontdict
+  //
 
   // now fix FontResource
-  doc->pdf->xref[doc->FontResource-1]=doc->pdf->filepos;
+  doc->pdf->xref[doc->FontResource - 1] = doc->pdf->filepos;
   cfPDFOutPrintF(doc->pdf,"%d 0 obj\n"
-                    "<<\n",
-                    doc->FontResource);
+		 "<<\n",
+		 doc->FontResource);
 
   for (i = doc->PrettyPrint ? 3 : 1; i >= 0; i --)
   {
     for (j = 0; j < doc->NumFonts; j ++)
     {
-      EMB_PARAMS *emb=doc->Fonts[j][i];
+      EMB_PARAMS *emb = doc->Fonts[j][i];
       if (emb->font->fobj) // used
-      {
-        cfPDFOutPrintF(doc->pdf,"  /%s%02x %d 0 R\n",names[i],j,emb->font->fobj);
-      }
+        cfPDFOutPrintF(doc->pdf, "  /%s%02x %d 0 R\n", names[i], j,
+		       emb->font->fobj);
     }
   }
 
   cfPDFOutPrintF(doc->pdf,">>\n"
-                    "endobj\n");
+		 "endobj\n");
 
   cfPDFOutFinishPDF(doc->pdf);
 
   cfPDFOutFree(doc->pdf);
 }
 
-/*
- * {{{ 'write_page()' - Write a page of text.
- */
+
+//
+// {{{ 'write_page()' - Write a page of text.
+//
 
 static void
 write_page(texttopdf_doc_t *doc)
 {
-  int	line;			/* Current line */
+  int	line;			// Current line
 
-  int content=cfPDFOutAddXRef(doc->pdf);
+  int content = cfPDFOutAddXRef(doc->pdf);
   cfPDFOutPrintF(doc->pdf,"%d 0 obj\n"
-		"<</Length %d 0 R\n"
-		">>\n"
-		"stream\n"
-		"q\n",
-		content, content+1);
-  long size=-((doc->pdf->filepos)-2);
+		 "<</Length %d 0 R\n"
+		 ">>\n"
+		 "stream\n"
+		 "q\n",
+		 content, content + 1);
+  long size = -((doc->pdf->filepos) - 2);
 
-  (doc->NumPages)++;
+  (doc->NumPages) ++;
   if (doc->PrettyPrint)
     write_pretty_header(doc);
 
   for (line = 0; line < doc->SizeLines; line ++)
     write_line(line, doc->Page[line], doc);
 
-  size+= ((doc->pdf->filepos)+2);
+  size+= ((doc->pdf->filepos) + 2);
   cfPDFOutPrintF(doc->pdf,"Q\n"
-		"endstream\n"
-		"endobj\n");
+		 "endstream\n"
+		 "endobj\n");
   
-  int len_obj=cfPDFOutAddXRef(doc->pdf);
-  DEBUG_assert(len_obj==content+1);
+  int len_obj = cfPDFOutAddXRef(doc->pdf);
+  DEBUG_assert(len_obj == content + 1);
   cfPDFOutPrintF(doc->pdf,"%d 0 obj\n"
-		"%ld\n"
-		"endobj\n",
-		len_obj,size);
+		 "%ld\n"
+		 "endobj\n",
+		 len_obj,size);
 
-  int obj=cfPDFOutAddXRef(doc->pdf);
+  int obj = cfPDFOutAddXRef(doc->pdf);
   cfPDFOutPrintF(doc->pdf,"%d 0 obj\n"
-		"<</Type/Page\n"
-		"  /Parent 1 0 R\n"
-		"  /MediaBox [0 0 %.0f %.0f]\n"
-		"  /Contents %d 0 R\n"
-		"  /Resources << /Font %d 0 R >>\n"
-		">>\n"
-		"endobj\n",
-		obj,doc->PageWidth, doc->PageLength, content,
-		doc->FontResource);
+		 "<</Type/Page\n"
+		 "  /Parent 1 0 R\n"
+		 "  /MediaBox [0 0 %.0f %.0f]\n"
+		 "  /Contents %d 0 R\n"
+		 "  /Resources << /Font %d 0 R >>\n"
+		 ">>\n"
+		 "endobj\n",
+		 obj,doc->PageWidth, doc->PageLength, content,
+		 doc->FontResource);
   cfPDFOutAddPage(doc->pdf,obj);
 
   memset(doc->Page[0], 0,
@@ -1727,64 +1737,63 @@ write_page(texttopdf_doc_t *doc)
 }
 // }}}
 
-/* 
- * {{{'write_prolog()' - Write the PDF file prolog with options.
- */
+
+//
+// {{{'write_prolog()' - Write the PDF file prolog with options.
+//
 
 static int
-write_prolog(const char *title,		/* I - Title of job */
-	    const char *user,		/* I - Username */
-            const char *classification,	/* I - Classification */
-	    const char *label,		/* I - Page label */
-            texttopdf_doc_t *doc,
-            cf_logfunc_t log,
-            void *ld)
+write_prolog(const char *title,		// I - Title of job
+	     const char *user,		// I - Username
+	     const char *classification,// I - Classification
+	     const char *label,		// I - Page label
+	     texttopdf_doc_t *doc,
+	     cf_logfunc_t log,
+	     void *ld)
 {
-  int		i, j, k;	/* Looping vars */
-  const char	*charset;	/* Character set string */
-  char		filename[1024];	/* Glyph filenames */
-  FILE		*fp;		/* Glyph files */
-  const char	*datadir;	/* CUPS_DATADIR environment variable */
-  char		line[1024],	/* Line from file */
-		*lineptr,	/* Pointer into line */
-		*valptr;	/* Pointer to value in line */
-#ifndef CUPS_1_4 /* CUPS 1.4.x or newer: support for non-utf8 removed */
-  int		ch, unicode;	/* Character values */
-#endif
-  int		start, end;	/* Start and end values for range */
-  time_t	curtime;	/* Current time */
-  struct tm	*curtm;		/* Current date */
-  char		curdate[255];	/* Current date (text format) */
-  int		num_fonts = 0;	/* Number of unique fonts */
-  EMB_PARAMS	*fonts[1024];	/* Unique fonts */
-  char		*fontnames[1024]; /* Unique fonts */
+  int		i, j, k;	// Looping vars
+  const char	*charset;	// Character set string
+  char		filename[1024];	// Glyph filenames
+  FILE		*fp;		// Glyph files
+  const char	*datadir;	// CUPS_DATADIR environment variable
+  char		line[1024],	// Line from file
+		*lineptr,	// Pointer into line
+		*valptr;	// Pointer to value in line
+  int		start, end;	// Start and end values for range
+  time_t	curtime;	// Current time
+  struct tm	*curtm;		// Current date
+  char		curdate[255];	// Current date (text format)
+  int		num_fonts = 0;	// Number of unique fonts
+  EMB_PARAMS	*fonts[1024];	// Unique fonts
+  char		*fontnames[1024]; // Unique fonts
 #if 0
-  static char	*names[] =	/* Font names */
+  static char	*names[] =	// Font names
 		{
-                  "FN","FB","FI"
-                /*
+                  "FN", "FB", "FI"
+		  /*
 		  "cupsNormal",
 		  "cupsBold",
 		  "cupsItalic"
-                */
+		  */
 		};
 #endif
 
 
- /*
-  * Get the data directory...
-  */
+  //
+  // Get the data directory...
+  //
 
   datadir = doc->env_vars.data_dir;
- /*
-  * Adjust margins as necessary...
-  */
+
+  //
+  // Adjust margins as necessary...
+  //
 
   if (classification || label)
   {
-   /*
-    * Leave room for labels...
-    */
+    //
+    // Leave room for labels...
+    //
 
     doc->PageBottom += 36;
     doc->PageTop    -= 36;
@@ -1800,9 +1809,9 @@ write_prolog(const char *title,		/* I - Title of job */
   else
     doc->ColumnWidth = doc->SizeColumns;
 
- /*
-  * {{{ Output the PDF header...
-  */
+  //
+  // {{{ Output the PDF header...
+  //
 
   DEBUG_assert(!(doc->pdf));
   doc->pdf = cfPDFOutNew();
@@ -1810,22 +1819,22 @@ write_prolog(const char *title,		/* I - Title of job */
 
   cfPDFOutBeginPDF(doc->pdf);
   cfPDFOutPrintF(doc->pdf,"%%cupsRotation: %d\n",
-		(doc->Orientation & 3) * 90); // TODO?
+		 (doc->Orientation & 3) * 90); // TODO?
 
-  cfPDFOutAddKeyValue(doc->pdf,"Creator","texttopdf/" PACKAGE_VERSION);
+  cfPDFOutAddKeyValue(doc->pdf, "Creator", "texttopdf/" PACKAGE_VERSION);
 
   curtime = time(NULL);
   curtm   = localtime(&curtime);
   strftime(curdate, sizeof(curdate), "%c", curtm);
 
-  cfPDFOutAddKeyValue(doc->pdf,"CreationDate",cfPDFOutToPDFDate(curtm));
-  cfPDFOutAddKeyValue(doc->pdf,"Title",title);
-  cfPDFOutAddKeyValue(doc->pdf,"Author",user); // was(PostScript): /For
+  cfPDFOutAddKeyValue(doc->pdf, "CreationDate", cfPDFOutToPDFDate(curtm));
+  cfPDFOutAddKeyValue(doc->pdf, "Title", title);
+  cfPDFOutAddKeyValue(doc->pdf, "Author", user); // was(PostScript): /For
   // }}}
 
- /*
-  * {{{ Initialize globals...
-  */
+  //
+  // {{{ Initialize globals...
+  //
 
   doc->NumFonts = 0;
   memset(doc->Fonts, 0, sizeof(doc->Fonts));
@@ -1833,9 +1842,9 @@ write_prolog(const char *title,		/* I - Title of job */
   memset(doc->Codes, 0, sizeof(doc->Codes));
   // }}}
 
- /*
-  * Get the output character set...
-  */
+  //
+  // Get the output character set...
+  //
 
   charset = doc->env_vars.char_set;
   if (charset != NULL && strcmp(charset, "us-ascii") != 0) // {{{
@@ -1845,9 +1854,9 @@ write_prolog(const char *title,		/* I - Title of job */
 
     if ((fp = fopen(filename, "r")) == NULL)
     {
-     /*
-      * Can't open charset file!
-      */
+      //
+      // Can't open charset file!
+      //
 
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterTextToPDF: Unable to open %s: %s",
@@ -1855,15 +1864,15 @@ write_prolog(const char *title,		/* I - Title of job */
       return (1);
     }
 
-   /*
-    * Opened charset file; now see if this is really a charset file...
-    */
+    //
+    // Opened charset file; now see if this is really a charset file...
+    //
 
     if (fgets(line, sizeof(line), fp) == NULL)
     {
-     /*
-      * Bad/empty charset file!
-      */
+      //
+      // Bad/empty charset file!
+      //
 
       fclose(fp);
       if (log) log(ld, CF_LOGLEVEL_ERROR,
@@ -1873,9 +1882,9 @@ write_prolog(const char *title,		/* I - Title of job */
 
     if (strncmp(line, "charset", 7) != 0)
     {
-     /*
-      * Bad format/not a charset file!
-      */
+      //
+      // Bad format/not a charset file!
+      //
 
       fclose(fp);
       if (log) log(ld, CF_LOGLEVEL_ERROR,
@@ -1883,237 +1892,42 @@ write_prolog(const char *title,		/* I - Title of job */
       return (1);
     }
 
-   /*
-    * See if this is an 8-bit or UTF-8 character set file...
-    */
+    //
+    // See if this is an 8-bit or UTF-8 character set file...
+    //
 
-    line[strlen(line) - 1] = '\0'; /* Drop \n */
+    line[strlen(line) - 1] = '\0'; // Drop \n
     for (lineptr = line + 7; isspace(*lineptr & 255); lineptr ++);
-                                                   /* Skip whitespace */
+                                                   // Skip whitespace
 
-#ifndef CUPS_1_4 /* CUPS 1.4.x or newer: support for non-utf8 removed */
-    if (strcmp(lineptr, "8bit") == 0) // {{{
-    {
-     /*
-      * 8-bit text...
-      */
-
-      doc->UTF8     = 0;
-      doc->NumFonts = 0;
-
-     /*
-      * Read the font description(s)...
-      */
-
-      while (fgets(line, sizeof(line), fp) != NULL)
-      {
-       /*
-        * Skip comment and blank lines...
-	*/
-
-        if (line[0] == '#' || line[0] == '\n')
-	  continue;
-
-       /*
-	* Read the font descriptions that should look like:
-	*
-	*   first last direction width normal [bold italic bold-italic]
-	*/
-
-	lineptr = line;
-
-        start = strtol(lineptr, &lineptr, 16);
-	end   = strtol(lineptr, &lineptr, 16);
-
-	while (isspace(*lineptr & 255))
-	  lineptr ++;
-
-        if (!*lineptr)
-	  break;	/* Must be a font mapping */
-
-	valptr = lineptr;
-
-	while (!isspace(*lineptr & 255) && *lineptr)
-	  lineptr ++;
-
-	if (!*lineptr)
-	{
-	 /*
-	  * Can't have a font without all required values...
-	  */
-
-	  if (log) log(ld, CF_LOGLEVEL_ERROR,
-		       "cfFilterTextToPDF: Bad font description line: %s", valptr);
-	  return (1);
-	}
-
-	*lineptr++ = '\0';
-
-	if (strcmp(valptr, "ltor") == 0)
-	  doc->Directions[doc->NumFonts] = 1;
-	else if (strcmp(valptr, "rtol") == 0)
-	  doc->Directions[doc->NumFonts] = -1;
-	else
-	{
-	  if (log) log(ld, CF_LOGLEVEL_ERROR,
-		       "cfFilterTextToPDF: Bad text direction %s", valptr);
-	  return (1);
-	}
-
-       /*
-	* Got the direction, now get the width...
-	*/
-
-	while (isspace(*lineptr & 255))
-	  lineptr ++;
-
-	valptr = lineptr;
-
-	while (!isspace(*lineptr & 255) && *lineptr)
-	  lineptr ++;
-
-	if (!*lineptr)
-	{
-	 /*
-	  * Can't have a font without all required values...
-	  */
-
-	  if (log) log(ld, CF_LOGLEVEL_ERROR,
-		       "cfFilterTextToPDF: Bad font description line: %s", valptr);
-	  return (1);
-	}
-
-	*lineptr++ = '\0';
-
-	if (strcmp(valptr, "single") == 0)
-          doc->Widths[doc->NumFonts] = 1;
-	else if (strcmp(valptr, "double") == 0)
-          doc->Widths[doc->NumFonts] = 2;
-	else 
-	{
-	  if(log) log(ld, CF_LOGLEVEL_ERROR,
-		      "cfFilterTextToPDF: Bad text width %s", valptr);
-	  return (1);
-	}
-
-       /*
-	* Get the fonts...
-	*/
-
-	for (i = 0; *lineptr && i < 4; i ++)
-	{
-	  while (isspace(*lineptr & 255))
-	    lineptr ++;
-
-	  valptr = lineptr;
-
-	  while (!isspace(*lineptr & 255) && *lineptr)
-	    lineptr ++;
-
-          if (*lineptr)
-	    *lineptr++ = '\0';
-
-          if (lineptr > valptr)
-	  {
-            // search for duplicates
-            for (k = 0; k < num_fonts; k ++)
-              if (strcmp(valptr, fontnames[k]) == 0)
-	      {
-	        doc->Fonts[doc->NumFonts][i] = fonts[k];
-                break;
-              }
-
-            if (k==num_fonts) // not found
-	    {
-	      fonts[num_fonts] = doc->Fonts[doc->NumFonts][i] =
-		font_load(valptr, doc->Widths[doc->NumFonts], log, ld);
-              if (!fonts[num_fonts]) // font missing/corrupt, replace by first
-	      {
-                if(log) log(ld, CF_LOGLEVEL_WARN,
-			    "cfFilterTextToPDF: Ignored bad font \"%s\"",valptr);
-                break;
-              }
-              fontnames[num_fonts++] = strdup(valptr);
-            }
-          }
-	}
-
-        /* ignore complete range, when the first font is not available */
-        if (i==0)
-	{
-          continue;
-        }
-
-       /*
-	* Fill in remaining fonts as needed...
-	*/
-
-	for (j = i; j < 4; j ++)
-	  doc->Fonts[doc->NumFonts][j] = doc->Fonts[doc->NumFonts][0];
-
-       /*
-        * Define the character mappings...
-	*/
-
-	for (i = start; i <= end; i ++)
-	  doc->Codes[i] = doc->NumFonts;
-
-        (doc->NumFonts)++;
-      }
-
-     /*
-      * Read encoding lines...
-      */
-
-      do
-      {
-       /*
-        * Skip comment and blank lines...
-	*/
-
-        if (line[0] == '#' || line[0] == '\n')
-	  continue;
-
-       /*
-        * Grab the character and unicode glyph number.
-	*/
-
-	if (sscanf(line, "%x%x", &ch, &unicode) == 2 && ch < 256)
-          doc->Chars[ch] = unicode;
-      }
-      while (fgets(line, sizeof(line), fp) != NULL);
-
-      fclose(fp);
-    } else // }}}
-#endif
     if (strcmp(lineptr, "utf8") == 0) // {{{
     {
-     /*
-      * UTF-8 (Unicode) text...
-      */
+      //
+      // UTF-8 (Unicode) text...
+      //
 
       doc->UTF8 = 1;
 
-     /*
-      * Read the font descriptions...
-      */
+      //
+      // Read the font descriptions...
+      //
 
       doc->NumFonts = 0;
 
       while (fgets(line, sizeof(line), fp) != NULL)
       {
-       /*
-        * Skip comment and blank lines...
-	*/
+	//
+	// Skip comment and blank lines...
+	//
 
         if (line[0] == '#' || line[0] == '\n')
 	  continue;
 
-       /*
-	* Read the font descriptions that should look like:
-	*
-	*   start end direction width normal [bold italic bold-italic]
-	*/
+	//
+	// Read the font descriptions that should look like:
+	//
+	//   start end direction width normal [bold italic bold-italic]
+	//
 
 	lineptr = line;
 
@@ -2130,9 +1944,10 @@ write_prolog(const char *title,		/* I - Title of job */
 
 	if (!*lineptr)
 	{
-	 /*
-	  * Can't have a font without all required values...
-	  */
+	  //
+	  // Can't have a font without all required values...
+	  //
+
 	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "cfFilterTextToPDF: Bad font description line: %s", valptr);
 	  return (1);
@@ -2151,9 +1966,9 @@ write_prolog(const char *title,		/* I - Title of job */
 	  return (1);
 	}
 
-       /*
-	* Got the direction, now get the width...
-	*/
+	//
+	// Got the direction, now get the width...
+	//
 
 	while (isspace(*lineptr & 255))
 	  lineptr ++;
@@ -2165,9 +1980,10 @@ write_prolog(const char *title,		/* I - Title of job */
 
 	if (!*lineptr)
 	{
-	 /*
-	  * Can't have a font without all required values...
-	  */
+	  //
+	  // Can't have a font without all required values...
+	  //
+
 	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "cfFilterTextToPDF: Bad font description line: %s", valptr);
 	  return (1);
@@ -2186,9 +2002,9 @@ write_prolog(const char *title,		/* I - Title of job */
 	  return (1);
 	}
 
-       /*
-	* Get the fonts...
-	*/
+	//
+	// Get the fonts...
+	//
 
 	for (i = 0; *lineptr && i < 4; i ++)
 	{
@@ -2213,7 +2029,7 @@ write_prolog(const char *title,		/* I - Title of job */
                 break;
               }
 
-            if (k==num_fonts) // not found
+            if (k == num_fonts) // not found
 	    {
 	      fonts[num_fonts] = doc->Fonts[doc->NumFonts][i] =
 		font_load(valptr, doc->Widths[doc->NumFonts], log, ld);
@@ -2228,31 +2044,27 @@ write_prolog(const char *title,		/* I - Title of job */
           }
 	}
 
-        /* ignore complete range, when the first font is not available */
+        // ignore complete range, when the first font is not available
         if (i == 0)
-	{
           continue;
-        }
 
-       /*
-	* Fill in remaining fonts as needed...
-	*/
+	//
+	// Fill in remaining fonts as needed...
+	//
 
 	for (j = i; j < 4; j ++)
 	  doc->Fonts[doc->NumFonts][j] = doc->Fonts[doc->NumFonts][0];
 
-       /*
-        * Define the character mappings...
-	*/
+	//
+	// Define the character mappings...
+	//
 
 	for (i = start; i <= end; i ++)
-	{
           doc->Codes[i] = doc->NumFonts;
-	}
 
-       /*
-        * Move to the next font, stopping if needed...
-	*/
+	//
+	// Move to the next font, stopping if needed...
+	//
 
         doc->NumFonts ++;
 	if (doc->NumFonts >= 256)
@@ -2270,10 +2082,10 @@ write_prolog(const char *title,		/* I - Title of job */
   } // }}}
   else // {{{ Standard ASCII
   {
-   /*
-    * Standard ASCII output just uses Courier, Courier-Bold, and
-    * possibly Courier-Oblique.
-    */
+    //
+    // Standard ASCII output just uses Courier, Courier-Bold, and
+    // possibly Courier-Oblique.
+    //
 
     doc->NumFonts = 1;
 
@@ -2285,59 +2097,61 @@ write_prolog(const char *title,		/* I - Title of job */
     doc->Widths[0]     = 1;
     doc->Directions[0] = 1;
 
-   /*
-    * Define US-ASCII characters...
-    */
+    //
+    // Define US-ASCII characters...
+    //
 
     for (i = 32; i < 127; i ++)
     {
       doc->Chars[i] = i;
-      doc->Codes[i] = doc->NumFonts-1;
+      doc->Codes[i] = doc->NumFonts - 1;
     }
   }
   // }}}
 
-  if (doc->NumFonts == 0) {
+  if (doc->NumFonts == 0)
+  {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterTextToPDF:No usable font available");
     return (1);
   }
 
-  doc->FontScaleX=120.0 / (doc->CharsPerInch);
-  doc->FontScaleY=68.0 / (doc->LinesPerInch);
+  doc->FontScaleX = 120.0 / (doc->CharsPerInch);
+  doc->FontScaleY = 68.0 / (doc->LinesPerInch);
 
   // allocate now, for pages to use. will be fixed in epilogue
-  doc->FontResource=cfPDFOutAddXRef(doc->pdf);
+  doc->FontResource = cfPDFOutAddXRef(doc->pdf);
 
   if (doc->PrettyPrint)
   {
-    doc->Date=make_wide(curdate, doc);
-    doc->Title=make_wide(title, doc);
+    doc->Date = make_wide(curdate, doc);
+    doc->Title = make_wide(title, doc);
   }
 
   return (0);
 }
 // }}}
 
-/*
- * {{{ 'write_line()' - Write a row of text.
- */
+
+//
+// {{{ 'write_line()' - Write a row of text.
+//
 
 static void
-write_line(int     row,		/* I - Row number (0 to N) */
-           lchar_t *line,
-           texttopdf_doc_t *doc)	/* I - Line to print */
+write_line(int     row,			// I - Row number (0 to N)
+           lchar_t *line,		// I - Line to print
+           texttopdf_doc_t *doc)
 {
-  int		i;		/* Looping var */
-  int		col,xcol,xwid;		/* Current column */
-  int		attr;		/* Current attribute */
-  int		font,		/* Font to use */
-		lastfont,	/* Last font */
-		mono;		/* Monospaced? */
-  lchar_t	*start;		/* First character in sequence */
+  int		i;		// Looping var
+  int		col,xcol,xwid;		// Current column
+  int		attr;		// Current attribute
+  int		font,		// Font to use
+		lastfont,	// Last font
+		mono;		// Monospaced?
+  lchar_t	*start;		// First character in sequence
 
 
-  xcol=0;
+  xcol = 0;
   for (col = 0, start = line; col < doc->SizeColumns;)
   {
     while (col < doc->SizeColumns && (line->ch == ' ' || line->ch == 0))
@@ -2352,9 +2166,9 @@ write_line(int     row,		/* I - Row number (0 to N) */
 
     if (doc->NumFonts == 1)
     {
-     /*
-      * All characters in a single font - assume monospaced and single width...
-      */
+      //
+      // All characters in a single font - assume monospaced and single width...
+      //
 
       attr  = line->attr;
       start = line;
@@ -2369,18 +2183,17 @@ write_line(int     row,		/* I - Row number (0 to N) */
     }
     else
     {
-     /*
-      * Multiple fonts; break up based on the font...
-      */
+      //
+      // Multiple fonts; break up based on the font...
+      //
 
       attr     = line->attr;
       start    = line;
       xwid     = 0;
-      if (doc->UTF8) {
+      if (doc->UTF8)
         lastfont = doc->Codes[line->ch];
-      } else {
+      else
         lastfont = doc->Codes[doc->Chars[line->ch]];
-      }
       //mono = strncmp(Fonts[lastfont][0], "Courier", 7) == 0;
       mono = 1; // TODO
 
@@ -2393,14 +2206,10 @@ write_line(int     row,		/* I - Row number (0 to N) */
 	while (col < doc->SizeColumns && line->ch != 0 && attr == line->attr)
 	{
           if (doc->UTF8)
-	  {
             font = doc->Codes[line->ch];
-          }
 	  else
-	  {
             font = doc->Codes[doc->Chars[line->ch]];
-          }
-          if (/*strncmp(Fonts[font][0], "Courier", 7) != 0 ||*/ // TODO
+          if (//strncmp(Fonts[font][0], "Courier", 7) != 0 ||*/ // TODO
 	      font != lastfont)
 	    break;
 
@@ -2417,21 +2226,17 @@ write_line(int     row,		/* I - Row number (0 to N) */
       }
       else
       {
-       /*
-        * Do right-to-left text... ; assume no font change without direction
-        * change
-	*/
+	//
+	// Do right-to-left text... ; assume no font change without direction
+	// change
+	//
 
 	while (col < doc->SizeColumns && line->ch != 0 && attr == line->attr)
 	{
           if (doc->UTF8)
-	  {
             font = doc->Codes[line->ch];
-          }
 	  else
-	  {
             font = doc->Codes[doc->Chars[line->ch]];
-          }
           if (doc->Directions[font] > 0 &&
 	      !ispunct(line->ch & 255) && !isspace(line->ch & 255))
 	    break;
@@ -2448,45 +2253,47 @@ write_line(int     row,		/* I - Row number (0 to N) */
 	    write_string(xcol + xwid, row, 1, start, doc);
           }
 	  else
-	  {
             xwid--;
-          }
       }
     }
   }
 }
 // }}}
 
-static lchar_t *make_wide(const char *buf, texttopdf_doc_t *doc)
+
+static lchar_t
+*make_wide(const char *buf,
+	   texttopdf_doc_t *doc)
                                                // {{{ - convert to lchar_t
 {
-  const unsigned char	*utf8;	/* UTF8 text */
+  const unsigned char	*utf8;	// UTF8 text
   lchar_t *ret,*out;
-  
-  // this is enough, utf8 chars will only require less space
-  out=ret=malloc((strlen(buf)+1)*sizeof(lchar_t)); 
+
+
+  // This is enough, utf8 chars will only require less space
+  out = ret = malloc((strlen(buf) + 1) * sizeof(lchar_t));
 
   utf8 = (const unsigned char *)buf;
   while (*utf8)
   {
-    out->attr=0;
+    out->attr = 0;
 
     if (*utf8 < 0xc0 || !(doc->UTF8))
       out->ch = *utf8 ++;
     else if ((*utf8 & 0xe0) == 0xc0)
     {
-     /*
-      * Two byte character...
-      */
+      //
+      // Two byte character...
+      //
 
       out->ch = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
       utf8 += 2;
     }
     else
     {
-     /*
-      * Three byte character...
-      */
+      //
+      // Three byte character...
+      //
 
       out->ch = ((((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f)) << 6) |
                 (utf8[2] & 0x3f);
@@ -2495,29 +2302,30 @@ static lchar_t *make_wide(const char *buf, texttopdf_doc_t *doc)
 
     out++;
   }
-  out->ch=out->attr=0;
-  return ret;
+  out->ch = out->attr = 0;
+  return (ret);
 }
 // }}}
 
-/*
- * {{{ 'write_string()' - Write a string of text.
- */
+
+//
+// {{{ 'write_string()' - Write a string of text.
+//
 
 static void
-write_string(int     col,	/* I - Start column */
-             int     row,	/* I - Row */
-             int     len,	/* I - Number of characters */
-             lchar_t *s,	/* I - String to print */
+write_string(int     col,	// I - Start column
+             int     row,	// I - Row
+             int     len,	// I - Number of characters
+             lchar_t *s,	// I - String to print
              texttopdf_doc_t *doc)
 {
-  float		x, y;		/* Position of text */
-  unsigned	attr;		/* Character attributes */
+  float		x, y;		// Position of text
+  unsigned	attr;		// Character attributes
 
 
- /*
-  * Position the text and set the font...
-  */
+  //
+  // Position the text and set the font...
+  //
 
   if (doc->Duplex && (doc->NumPages & 1) == 0)
   {
@@ -2542,47 +2350,57 @@ write_string(int     col,	/* I - Start column */
 
   if (attr & ATTR_UNDERLINE)
     cfPDFOutPrintF(doc->pdf,"q 0.5 w 0 g %.3f %.3f m %.3f %.3f l S Q ",
-                      x, y - 6.8 / (doc->LinesPerInch),
-                      x + (float)len * 72.0 / (float)(doc->CharsPerInch),
-                      y - 6.8 / (doc->LinesPerInch));
+		   x, y - 6.8 / (doc->LinesPerInch),
+		   x + (float)len * 72.0 / (float)(doc->CharsPerInch),
+		   y - 6.8 / (doc->LinesPerInch));
 
   if (doc->PrettyPrint)
   {
-    if (doc->ColorDevice) {
+    if (doc->ColorDevice)
+    {
       if (attr & ATTR_RED)
-        cfPDFOutPrintF(doc->pdf,"0.5 0 0 rg\n");
+        cfPDFOutPrintF(doc->pdf, "0.5 0 0 rg\n");
       else if (attr & ATTR_GREEN)
-        cfPDFOutPrintF(doc->pdf,"0 0.5 0 rg\n");
+        cfPDFOutPrintF(doc->pdf, "0 0.5 0 rg\n");
       else if (attr & ATTR_BLUE)
-        cfPDFOutPrintF(doc->pdf,"0 0 0.5 rg\n");
+        cfPDFOutPrintF(doc->pdf, "0 0 0.5 rg\n");
       else
-        cfPDFOutPrintF(doc->pdf,"0 g\n");
-    } else {
-      if ( (attr & ATTR_RED)||(attr & ATTR_GREEN)||(attr & ATTR_BLUE) )
-        cfPDFOutPrintF(doc->pdf,"0.2 g\n");
+        cfPDFOutPrintF(doc->pdf, "0 g\n");
+    }
+    else
+    {
+      if ((attr & ATTR_RED) || (attr & ATTR_GREEN) || (attr & ATTR_BLUE))
+        cfPDFOutPrintF(doc->pdf, "0.2 g\n");
       else
-        cfPDFOutPrintF(doc->pdf,"0 g\n");
+        cfPDFOutPrintF(doc->pdf, "0 g\n");
     }
   }
   else
-    cfPDFOutPrintF(doc->pdf,"0 g\n");
+    cfPDFOutPrintF(doc->pdf, "0 g\n");
   
-  write_font_str(x,y,attr & ATTR_FONT,s,len, doc);
+  write_font_str(x, y, attr & ATTR_FONT, s, len, doc);
 }
 // }}}
 
+
 // {{{ show >len characters from >str, using the right font(s) at >x,>y
-static void write_font_str(float x,float y,int fontid, lchar_t *str,
-			   int len, texttopdf_doc_t *doc)
+static void
+write_font_str(float x,
+	       float y,
+	       int fontid,
+	       lchar_t *str,
+	       int len,
+	       texttopdf_doc_t *doc)
 {
-  unsigned short	ch;		/* Current character */
-  static char		*names[] =	/* Font names */
+  unsigned short	ch;		// Current character
+  static char		*names[] =	// Font names
 				{ "FN","FB","FI","FBI" };
 
-  if (len==-1) {
-    for (len=0;str[len].ch;len++);
-  }
-  cfPDFOutPrintF(doc->pdf,"BT\n");
+
+  if (len == -1)
+    for (len = 0; str[len].ch; len++);
+
+  cfPDFOutPrintF(doc->pdf, "BT\n");
 
   if (x == (int)x)
     cfPDFOutPrintF(doc->pdf,"  %.0f ", x);
@@ -2590,75 +2408,65 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str,
     cfPDFOutPrintF(doc->pdf,"  %.3f ", x);
 
   if (y == (int)y)
-    cfPDFOutPrintF(doc->pdf,"%.0f Td\n", y);
+    cfPDFOutPrintF(doc->pdf, "%.0f Td\n", y);
   else
-    cfPDFOutPrintF(doc->pdf,"%.3f Td\n", y);
+    cfPDFOutPrintF(doc->pdf, "%.3f Td\n", y);
 
-  int lastfont,font;
+  int lastfont, font;
 
   // split on font boundary
   while (len > 0) 
   {
-   /*
-    * Write a hex string...
-    */
+    //
+    // Write a hex string...
+    //
+
     if (doc->UTF8)
-    {
-      lastfont=doc->Codes[str->ch];
-    }
+      lastfont = doc->Codes[str->ch];
     else
-    {
-      lastfont=doc->Codes[doc->Chars[str->ch]];
-    }
-    EMB_PARAMS *emb=doc->Fonts[lastfont][fontid];
-    OTF_FILE *otf=emb->font->sfnt;
+      lastfont = doc->Codes[doc->Chars[str->ch]];
+
+    EMB_PARAMS *emb = doc->Fonts[lastfont][fontid];
+    OTF_FILE *otf = emb->font->sfnt;
 
     if (otf) // TODO?
     {
       cfPDFOutPrintF(doc->pdf,"  %.3f Tz\n",
-		    doc->FontScaleX * 600.0 /
-		    (otf_get_width(otf, 4) * 1000.0 /
-		     otf->unitsPerEm) * 100.0 / (doc->FontScaleY)); // TODO? 
-      // gid==4 is usually '!', the char after space. We just need "the"
-      // width for the monospaced font. gid==0 is bad, and space might also
+		     doc->FontScaleX * 600.0 /
+		     (otf_get_width(otf, 4) * 1000.0 /
+		      otf->unitsPerEm) * 100.0 / (doc->FontScaleY)); // TODO? 
+      // gid == 4 is usually '!', the char after space. We just need "the"
+      // width for the monospaced font. gid == 0 is bad, and space might also
       // be bad.
     }
     else
     {
       cfPDFOutPrintF(doc->pdf,"  %.3f Tz\n",
-		    doc->FontScaleX*100.0/(doc->FontScaleY)); // TODO?
+		     doc->FontScaleX*100.0/(doc->FontScaleY)); // TODO?
     }
 
     cfPDFOutPrintF(doc->pdf,"  /%s%02x %.3f Tf <",
-		  names[fontid],lastfont,doc->FontScaleY);
+		   names[fontid],lastfont,doc->FontScaleY);
 
     while (len > 0)
     {
       if (doc->UTF8)
-      {
         ch = str->ch;
-      }
       else
-      {
         ch = doc->Chars[str->ch];
-      }
 
       font = doc->Codes[ch];
       if (lastfont != font) // only possible, when not used via
 	                    // write_string (e.g. utf-8filename.txt in
 	                    // prettyprint)
-      {
         break;
-      }
       if (otf) // TODO
       {
-        const unsigned short gid=emb_get(emb,ch);
+        const unsigned short gid = emb_get(emb,ch);
         cfPDFOutPrintF(doc->pdf, "%04x", gid);
       }
       else // std 14 font with 7-bit us-ascii uses single byte encoding, TODO
-      {
         cfPDFOutPrintF(doc->pdf, "%02x", ch);
-      }
 
       len --;
       str ++;
@@ -2670,20 +2478,26 @@ static void write_font_str(float x,float y,int fontid, lchar_t *str,
 }
 // }}}
 
-static float string_width_x(lchar_t *str, texttopdf_doc_t * doc)
+
+static float
+string_width_x(lchar_t *str,
+	       texttopdf_doc_t * doc)
 {
   int len;
 
-  for (len=0;str[len].ch;len++);
 
-  return  (float)len * 72.0 / (float)(doc->CharsPerInch);
+  for (len = 0; str[len].ch; len ++);
+
+  return ((float)len * 72.0 / (float)(doc->CharsPerInch));
 }
 
-static void write_pretty_header(texttopdf_doc_t *doc) // {{{
+
+static void
+write_pretty_header(texttopdf_doc_t *doc) // {{{
 {
-  float x,y;
+  float x, y;
   cfPDFOutPrintF(doc->pdf,"q\n"
-		"0.9 g\n");
+		 "0.9 g\n");
 
   if (doc->Duplex && (doc->NumPages & 1) == 0)
   {
@@ -2696,10 +2510,10 @@ static void write_pretty_header(texttopdf_doc_t *doc) // {{{
     y = doc->PageTop + 72.0f / (doc->LinesPerInch);
   }
 
-  cfPDFOutPrintF(doc->pdf,"1 0 0 1 %.3f %.3f cm\n",x,y); // translate
-  cfPDFOutPrintF(doc->pdf,"0 0 %.3f %.3f re f\n",
-		doc->PageRight - doc->PageLeft, 144.0f / (doc->LinesPerInch));
-  cfPDFOutPrintF(doc->pdf,"0 g 0 G\n");
+  cfPDFOutPrintF(doc->pdf, "1 0 0 1 %.3f %.3f cm\n", x, y); // translate
+  cfPDFOutPrintF(doc->pdf, "0 0 %.3f %.3f re f\n",
+		 doc->PageRight - doc->PageLeft, 144.0f / (doc->LinesPerInch));
+  cfPDFOutPrintF(doc->pdf, "0 g 0 G\n");
 
   if (doc->Duplex && (doc->NumPages & 1) == 0)
   {
@@ -2719,19 +2533,15 @@ static void write_pretty_header(texttopdf_doc_t *doc) // {{{
 
   // convert pagenumber to string
   char tmp[20];
-  tmp[19]=0;
-  snprintf(tmp,19,"%d",doc->NumPages);
-  lchar_t *pagestr=make_wide(tmp, doc);
+  tmp[19] = 0;
+  snprintf(tmp, 19, "%d", doc->NumPages);
+  lchar_t *pagestr = make_wide(tmp, doc);
 
   if (doc->Duplex && (doc->NumPages & 1) == 0)
-  {
     x = 36.0f / doc->LinesPerInch;
-  }
   else
-  {
     x = doc->PageRight - doc->PageLeft -
         36.0f / doc->LinesPerInch - string_width_x(pagestr, doc);
-  }
   write_font_str(x, y, ATTR_BOLD, pagestr, -1, doc);
   free(pagestr);
 

@@ -1,25 +1,25 @@
- /***
-  This file is part of cups-filters.
+//
+//  IPP-related functions for libcupsfilters.
+//
+//  This file is free software; you can redistribute it and/or modify it
+//  under the terms of the GNU Lesser General Public License as
+//  published by the Free Software Foundation; either version 2.1 of the
+//  License, or (at your option) any later version.
+//
+//  This file is distributed in the hope that it will be useful, but WITHOUT
+//  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+//  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+//  Public License for more details.
+//
+//  You should have received a copy of the GNU Lesser General Public
+//  License along with avahi; if not, write to the Free Software
+//  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+//  USA.
+//
 
-  This file is free software; you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as
-  published by the Free Software Foundation; either version 2.1 of the
-  License, or (at your option) any later version.
-
-  This file is distributed in the hope that it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-  Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with avahi; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
-  USA.
-***/
-
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include <config.h>
 
@@ -37,7 +37,8 @@
 #include <cups/pwg.h>
 #include <cupsfilters/ipp.h>
 
-enum resolve_uri_converter_type	/**** Resolving DNS-SD based URI ****/
+
+enum resolve_uri_converter_type	// **** Resolving DNS-SD based URI ****
 {
   CUPS_BACKEND_URI_CONVERTER = -1,
   IPPFIND_BASED_CONVERTER_FOR_PRINT_URI = 0,
@@ -50,7 +51,7 @@ static int
 convert_to_port(char *a)		
 {
   int port = 0;
-  for (int i = 0; i<strlen(a); i++)
+  for (int i = 0; i < strlen(a); i ++)
     port = port*10 + (a[i] - '0');
 
   return (port);
@@ -77,43 +78,43 @@ cfResolveURI(const char *raw_uri)
   int fd1, fd2;
   char *save_device_uri_var;
 
-  /* Eliminate any output to stderr, to get rid of the CUPS-backend-specific
-     output of the cupsBackendDeviceURI() function */
+  // Eliminate any output to stderr, to get rid of the CUPS-backend-specific
+  // output of the cupsBackendDeviceURI() function
   fd1 = dup(2);
   fd2 = open("/dev/null", O_WRONLY);
   dup2(fd2, 2);
   close(fd2);
 
-  /* If set, save the DEVICE_URI environment and then unset it, so that
-     if we are running under CUPS (as filter or backend) our raw_uri gets
-     resolved and not whatever URI is set in DEVICE_URI */
+  // If set, save the DEVICE_URI environment and then unset it, so that
+  // if we are running under CUPS (as filter or backend) our raw_uri gets
+  // resolved and not whatever URI is set in DEVICE_URI
   if ((save_device_uri_var = getenv("DEVICE_URI")) != NULL)
   {
     save_device_uri_var = strdup(save_device_uri_var);
     unsetenv("DEVICE_URI");
   }
 
-  /* Use the URI resolver of libcups to support DNS-SD-service-name-based
-     URIs. The function returns the corresponding host-name-based URI */
+  // Use the URI resolver of libcups to support DNS-SD-service-name-based
+  // URIs. The function returns the corresponding host-name-based URI
   pseudo_argv[0] = (char *)raw_uri;
   pseudo_argv[1] = NULL;
   uri = cupsBackendDeviceURI(pseudo_argv);
 
-  /* Restore DEVICE_URI envidonment variable if we had unset it */
+  // Restore DEVICE_URI environment variable if we had unset it
   if (save_device_uri_var)
   {
     setenv("DEVICE_URI", save_device_uri_var, 1);
     free(save_device_uri_var);
   }
 
-  /* Re-activate stderr output */
+  // Re-activate stderr output
   dup2(fd1, 2);
   close(fd1);
 
   return (uri ? strdup(uri) : NULL);
 }
 
-/* Check how the driverless support is provided */
+// Check how the driverless support is provided
 int
 cfCheckDriverlessSupport(const char* uri)
 {
@@ -125,10 +126,10 @@ cfCheckDriverlessSupport(const char* uri)
   if (response != NULL)
     ippDelete(response);
 
-  return support_status;
+  return (support_status);
 }
 
-/* Get attributes of a printer specified only by URI */
+// Get attributes of a printer specified only by URI
 ipp_t *
 cfGetPrinterAttributes(const char* raw_uri,
 		       const char* const pattrs[],
@@ -137,12 +138,12 @@ cfGetPrinterAttributes(const char* raw_uri,
 		       int req_attrs_size,
 		       int debug)
 {
-  return cfGetPrinterAttributes2(NULL, raw_uri, pattrs, pattrs_size,
-				 req_attrs, req_attrs_size, debug);
+  return (cfGetPrinterAttributes2(NULL, raw_uri, pattrs, pattrs_size,
+				  req_attrs, req_attrs_size, debug));
 }
 
-/* Get attributes of a printer specified by URI and under a given HTTP
-   connection, for example via a domain socket */
+// Get attributes of a printer specified by URI and under a given HTTP
+// connection, for example via a domain socket
 ipp_t *
 cfGetPrinterAttributes2(http_t *http_printer,
 			const char* raw_uri,
@@ -152,13 +153,13 @@ cfGetPrinterAttributes2(http_t *http_printer,
 			int req_attrs_size,
 			int debug)
 {
-  return cfGetPrinterAttributes3(http_printer, raw_uri, pattrs, pattrs_size,
-				 req_attrs, req_attrs_size, debug, NULL);
+  return (cfGetPrinterAttributes3(http_printer, raw_uri, pattrs, pattrs_size,
+				  req_attrs, req_attrs_size, debug, NULL));
 }
 
-/* Get attributes of a printer specified by URI and under a given HTTP
-   connection, for example via a domain socket, and give info about used
-   fallbacks */
+// Get attributes of a printer specified by URI and under a given HTTP
+// connection, for example via a domain socket, and give info about used
+// fallbacks
 ipp_t *
 cfGetPrinterAttributes3(http_t *http_printer,
 			const char* raw_uri,
@@ -169,12 +170,13 @@ cfGetPrinterAttributes3(http_t *http_printer,
 			int debug,
                         int* driverless_info)
 {
-  return cfGetPrinterAttributes5(http_printer, raw_uri, pattrs, pattrs_size,
-				 req_attrs, req_attrs_size, debug,
-				 driverless_info, CUPS_BACKEND_URI_CONVERTER);
+  return (cfGetPrinterAttributes5(http_printer, raw_uri, pattrs, pattrs_size,
+				  req_attrs, req_attrs_size, debug,
+				  driverless_info, CUPS_BACKEND_URI_CONVERTER));
 }
 
-/* Get attributes of a printer specified only by URI and given info about fax-support*/
+// Get attributes of a printer specified only by URI and given info about
+// fax-support
 ipp_t   *cfGetPrinterAttributes4(const char* raw_uri,
 				 const char* const pattrs[],
 				 int pattrs_size,
@@ -183,19 +185,19 @@ ipp_t   *cfGetPrinterAttributes4(const char* raw_uri,
 				 int debug,
 				 int is_fax)
 {
-  if(is_fax)
-    return cfGetPrinterAttributes5(NULL, raw_uri, pattrs, pattrs_size,
-				   req_attrs, req_attrs_size, debug, NULL,
-				   IPPFIND_BASED_CONVERTER_FOR_FAX_URI);
+  if (is_fax)
+    return (cfGetPrinterAttributes5(NULL, raw_uri, pattrs, pattrs_size,
+				    req_attrs, req_attrs_size, debug, NULL,
+				    IPPFIND_BASED_CONVERTER_FOR_FAX_URI));
   else
-    return cfGetPrinterAttributes5(NULL, raw_uri, pattrs, pattrs_size,
-				   req_attrs, req_attrs_size, debug, NULL,
-				   IPPFIND_BASED_CONVERTER_FOR_PRINT_URI);
+    return (cfGetPrinterAttributes5(NULL, raw_uri, pattrs, pattrs_size,
+				    req_attrs, req_attrs_size, debug, NULL,
+				    IPPFIND_BASED_CONVERTER_FOR_PRINT_URI));
 }
 
-/* Get attributes of a printer specified by URI and under a given HTTP
-   connection, for example via a domain socket, and give info about used
-   fallbacks */
+// Get attributes of a printer specified by URI and under a given HTTP
+// connection, for example via a domain socket, and give info about used
+// fallbacks
 ipp_t *
 cfGetPrinterAttributes5(http_t *http_printer,
 			const char* raw_uri,
@@ -217,18 +219,21 @@ cfGetPrinterAttributes5(http_t *http_printer,
   char valuebuffer[65536];
   const char *kw;
   ipp_status_t ipp_status;
-  /* Default attributes for get-printer-attributes requests to
-     obtain complete capability lists of a printer */
-  const char * const pattrs_cap_standard[] = {
+  // Default attributes for get-printer-attributes requests to
+  // obtain complete capability lists of a printer
+  const char * const pattrs_cap_standard[] =
+  {
     "all",
     "media-col-database",
   };
-  const char * const pattrs_cap_fallback[] = {
+  const char * const pattrs_cap_fallback[] =
+  {
     "all",
   };
-  /* Attributes required in the IPP response of a complete printer
-     capability list */
-  const char * const req_attrs_cap[] = {
+  // Attributes required in the IPP response of a complete printer
+  // capability list
+  const char * const req_attrs_cap[] =
+  {
     "attributes-charset",
     "attributes-natural-language",
     "charset-configured",
@@ -250,20 +255,22 @@ cfGetPrinterAttributes5(http_t *http_printer,
     "uri-security-supported"
   };
 
-  /* Expect a device capable of standard IPP Everywhere */
+  // Expect a device capable of standard IPP Everywhere
   if (driverless_info != NULL)
     *driverless_info = CF_DRVLESS_FULL;
 
-  /* Request printer properties via IPP, for example to
-      - Find capabilities, options, and default settings
-      - Printer's status: Accepting jobs? Busy? With how many jobs?
-      - Generate a PPD file for the printer
-        (mainly driverless-capable printers with CUPS 2.x) */
+  //
+  // Request printer properties via IPP, for example to
+  //  - Find capabilities, options, and default settings
+  //  - Printer's status: Accepting jobs? Busy? With how many jobs?
+  //  - Generate a PPD file for the printer
+  //    (mainly driverless-capable printers with CUPS 2.x)
+  //
 
   cf_get_printer_attributes_log[0] = '\0';
 
-  /* Convert DNS-SD-service-name-based URIs to host-name-based URIs */
-  if(resolve_uri_type == CUPS_BACKEND_URI_CONVERTER)
+  // Convert DNS-SD-service-name-based URIs to host-name-based URIs
+  if (resolve_uri_type == CUPS_BACKEND_URI_CONVERTER)
     uri = cfResolveURI(raw_uri);
   else
     uri = cfippfindBasedURIConverter(raw_uri, resolve_uri_type);
@@ -275,15 +282,16 @@ cfGetPrinterAttributes5(http_t *http_printer,
     return NULL;
   }
 
-  /* Extract URI componants needed for the IPP request */
+  // Extract URI componants needed for the IPP request
   uri_status = httpSeparateURI(HTTP_URI_CODING_ALL, uri,
 			       scheme, sizeof(scheme),
 			       userpass, sizeof(userpass),
 			       host_name, sizeof(host_name),
 			       &(host_port),
 			       resource, sizeof(resource));
-  if (uri_status != HTTP_URI_OK) {
-    /* Invalid URI */
+  if (uri_status != HTTP_URI_OK)
+  {
+    // Invalid URI
     log_printf(cf_get_printer_attributes_log,
 	       "get-printer-attributes: Cannot parse the printer URI: %s\n",
 	       uri);
@@ -296,44 +304,51 @@ cfGetPrinterAttributes5(http_t *http_printer,
   else
     encryption = HTTP_ENCRYPTION_IF_REQUESTED;
 
-  /* Connect to the server if not already done */
-  if (http_printer == NULL) {
+  // Connect to the server if not already done
+  if (http_printer == NULL)
+  {
     have_http = 0;
     if ((http_printer =
 	 httpConnect2 (host_name, host_port, NULL, AF_UNSPEC, 
-		       encryption, 1, 3000, NULL)) == NULL) {
+		       encryption, 1, 3000, NULL)) == NULL)
+    {
       log_printf(cf_get_printer_attributes_log,
 		 "get-printer-attributes: Cannot connect to printer with URI %s.\n",
 		 uri);
       if (uri) free(uri);
       return NULL;
     }
-  } else
+  }
+  else
     have_http = 1;
 
-  /* If we got called without attribute list, use the attributes for polling
-     a complete list of capabilities of the printer.
-     If also no list of required attributes in the response is supplied, use
-     the default list */
-  if (pattrs == NULL || pattrs_size == 0) {
+  // If we got called without attribute list, use the attributes for polling
+  // a complete list of capabilities of the printer.
+  // If also no list of required attributes in the response is supplied, use
+  // the default list
+  if (pattrs == NULL || pattrs_size == 0)
+  {
     cap = 1;
     pattrs = pattrs_cap_standard;
     pattrs_size = sizeof(pattrs_cap_standard) / sizeof(pattrs_cap_standard[0]);
-    if (req_attrs == NULL || req_attrs_size == 0) {
+    if (req_attrs == NULL || req_attrs_size == 0)
+    {
       req_attrs = req_attrs_cap;
       req_attrs_size = sizeof(req_attrs_cap) / sizeof(req_attrs_cap[0]);
     }
   }
 
-  /* Loop through all fallbacks until getting a successful result */
-  for (fallback = 0; fallback < 2 + cap; fallback ++) {
+  // Loop through all fallbacks until getting a successful result
+  for (fallback = 0; fallback < 2 + cap; fallback ++)
+  {
     request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
     if (fallback == 1)
-      /* Fallback 1: Try IPP 1.1 instead of 2.0 */
+      // Fallback 1: Try IPP 1.1 instead of 2.0
       ippSetVersion(request, 1, 1);
-    if (fallback == 2 && cap) {
-      /* Fallback 2: (Only for full capability list) Try only "all",
-	 without "media-col-database */
+    if (fallback == 2 && cap)
+    {
+      // Fallback 2: (Only for full capability list) Try only "all",
+      // without "media-col-database"
       pattrs = pattrs_cap_fallback;
       pattrs_size = sizeof(pattrs_cap_fallback) /
 	sizeof(pattrs_cap_fallback[0]);
@@ -347,34 +362,35 @@ cfGetPrinterAttributes5(http_t *http_printer,
     response = cupsDoRequest(http_printer, request, resource);
     ipp_status = cupsLastError();
 
-    if (response) {
+    if (response)
+    {
       log_printf(cf_get_printer_attributes_log,
 		 "Requested IPP attributes (get-printer-attributes) for printer with URI %s\n",
 		 uri);
-      /* Log all printer attributes for debugging and count them */
+      // Log all printer attributes for debugging and count them
       if (debug)
 	log_printf(cf_get_printer_attributes_log,
 		   "Full list of all IPP attributes:\n");
       attr = ippFirstAttribute(response);
-      while (attr) {
+      while (attr)
+      {
 	total_attrs ++;
-	if (debug) {
+	if (debug)
+	{
 	  ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
 	  log_printf(cf_get_printer_attributes_log,
 		     "  Attr: %s\n",ippGetName(attr));
 	  log_printf(cf_get_printer_attributes_log,
 		     "  Value: %s\n", valuebuffer);
-	  for (i = 0; i < ippGetCount(attr); i ++) {
-	    if ((kw = ippGetString(attr, i, NULL)) != NULL) {
+	  for (i = 0; i < ippGetCount(attr); i ++)
+	    if ((kw = ippGetString(attr, i, NULL)) != NULL)
 	      log_printf(cf_get_printer_attributes_log, "  Keyword: %s\n", kw);
-	    }
-	  }
 	}
 	attr = ippNextAttribute(response);
       }
 
-      /* Check whether the IPP response contains the required attributes
-	 and is not incomplete */
+      // Check whether the IPP response contains the required attributes
+      // and is not incomplete
       if (req_attrs)
 	for (i = req_attrs_size; i > 0; i --)
 	  if (ippFindAttribute(response, req_attrs[i - 1], IPP_TAG_ZERO) ==
@@ -382,7 +398,8 @@ cfGetPrinterAttributes5(http_t *http_printer,
 	    break;
       if (ipp_status == IPP_STATUS_ERROR_BAD_REQUEST ||
 	  ipp_status == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED ||
-	  (req_attrs && i > 0) || (cap && total_attrs < 20)) {
+	  (req_attrs && i > 0) || (cap && total_attrs < 20))
+      {
 	log_printf(cf_get_printer_attributes_log,
 		   "get-printer-attributes IPP request failed:\n");
 	if (ipp_status == IPP_STATUS_ERROR_BAD_REQUEST)
@@ -400,30 +417,39 @@ cfGetPrinterAttributes5(http_t *http_printer,
 		     "  - Too few IPP attributes: %d (30 or more expected)\n",
 		     total_attrs);
 	ippDelete(response);
-      } else {
-	/* Suitable response, we are done */
+      }
+      else
+      {
+	// Suitable response, we are done
 	if (have_http == 0) httpClose(http_printer);
 	if (uri) free(uri);
 	return response;
       }
-    } else {
+    }
+    else
+    {
       log_printf(cf_get_printer_attributes_log,
 		 "Request for IPP attributes (get-printer-attributes) for printer with URI %s failed: %s\n",
 		 uri, cupsLastErrorString());
       log_printf(cf_get_printer_attributes_log, "get-printer-attributes IPP request failed:\n");
       log_printf(cf_get_printer_attributes_log, "  - No response\n");
     }
-    if (fallback == 1 + cap) {
+    if (fallback == 1 + cap)
+    {
       log_printf(cf_get_printer_attributes_log,
 		 "No further fallback available, giving up\n");
       if (driverless_info != NULL)
         *driverless_info = CF_DRVLESS_CHECKERR;
-    } else if (cap && fallback == 1) {
+    }
+    else if (cap && fallback == 1)
+    {
       log_printf(cf_get_printer_attributes_log,
 		 "The server doesn't support the standard IPP request, trying request without media-col\n");
       if (driverless_info != NULL)
         *driverless_info = CF_DRVLESS_INCOMPLETEIPP;
-    } else if (fallback == 0) {
+    }
+    else if (fallback == 0)
+    {
       log_printf(cf_get_printer_attributes_log,
 		 "The server doesn't support IPP2.0 request, trying IPP1.1 request\n");
       if (driverless_info != NULL)
@@ -433,53 +459,53 @@ cfGetPrinterAttributes5(http_t *http_printer,
 
   if (have_http == 0) httpClose(http_printer);
   if (uri) free(uri);
-  return NULL;
+  return (NULL);
 }
 
 char*
 cfippfindBasedURIConverter (const char *uri, int is_fax)
 {
-  int  ippfind_pid = 0,	        /* Process ID of ippfind for IPP */
-       post_proc_pipe[2],	/* Pipe to post-processing for IPP */
-       wait_children,		/* Number of child processes left */
-       wait_pid,		/* Process ID from wait() */
-       wait_status,		/* Status from child */
-       exit_status = 0,		/* Exit status */
+  int  ippfind_pid = 0,	        // Process ID of ippfind for IPP
+       post_proc_pipe[2],	// Pipe to post-processing for IPP
+       wait_children,		// Number of child processes left
+       wait_pid,		// Process ID from wait()
+       wait_status,		// Status from child
+       exit_status = 0,		// Exit status
        bytes,
        port,
        i,
        output_of_fax_uri = 0,
        is_local;
-  char *ippfind_argv[100],	/* Arguments for ippfind */
+  char *ippfind_argv[100],	// Arguments for ippfind
        *ptr_to_port = NULL,
        *reg_type,
-       *resolved_uri = NULL,		/*  Buffer for resolved URI */
+       *resolved_uri = NULL,	// Buffer for resolved URI
        *resource_field = NULL,
        *service_hostname = NULL,
-       /* URI components... */
+       // URI components...
        scheme[32],
        userpass[256],
        hostname[1024],
        resource[1024],
-       *buffer = NULL,		/* Copy buffer */
-       *ptr;			/* Pointer into string */;
-  cups_file_t *fp;		/* Post-processing input file */
-  int  status;			/* Status of GET request */
+       *buffer = NULL,		// Copy buffer
+       *ptr;			// Pointer into string;
+  cups_file_t *fp;		// Post-processing input file
+  int  status;			// Status of GET request
 
   status = httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme),
 			   userpass, sizeof(userpass),
 			   hostname, sizeof(hostname), &port, resource,
 			   sizeof(resource));
   if (status < HTTP_URI_OK)
-    /* Invalid URI */
+    // Invalid URI
     goto error;
 
-  /* URI is not DNS-SD-based, so do not resolve */
-  if ((reg_type = strstr(hostname, "._tcp")) == NULL) {
-    return strdup(uri);
-  }
+  // URI is not DNS-SD-based, so do not resolve
+  if ((reg_type = strstr(hostname, "._tcp")) == NULL)
+    return (strdup(uri));
 
-  resolved_uri = (char *)malloc(CF_GET_PRINTER_ATTRIBUTES_MAX_URI_LEN * (sizeof(char)));
+  resolved_uri =
+    (char *)malloc(CF_GET_PRINTER_ATTRIBUTES_MAX_URI_LEN * (sizeof(char)));
   if (resolved_uri == NULL)
     goto error;
   memset(resolved_uri, 0, CF_GET_PRINTER_ATTRIBUTES_MAX_URI_LEN);
@@ -493,42 +519,44 @@ cfippfindBasedURIConverter (const char *uri, int is_fax)
 
   i = 0;
   ippfind_argv[i++] = "ippfind";
-  ippfind_argv[i++] = reg_type;           /* list IPP(S) entries */
-  ippfind_argv[i++] = "-T";               /* DNS-SD poll timeout */
-  ippfind_argv[i++] = "0";                /* Minimum time required */
-  if (is_fax) {
+  ippfind_argv[i++] = reg_type;           // list IPP(S) entries
+  ippfind_argv[i++] = "-T";               // DNS-SD poll timeout
+  ippfind_argv[i++] = "0";                // Minimum time required
+  if (is_fax)
+  {
     ippfind_argv[i++] = "--txt";
     ippfind_argv[i++] = "rfo";
   }
   ippfind_argv[i++] = "-N";
   ippfind_argv[i++] = hostname;
   ippfind_argv[i++] = "-x";
-  ippfind_argv[i++] = "echo";             /* Output the needed data fields */
-  ippfind_argv[i++] = "-en";              /* separated by tab characters */
+  ippfind_argv[i++] = "echo";             // Output the needed data fields
+  ippfind_argv[i++] = "-en";              // separated by tab characters
   if(is_fax)
     ippfind_argv[i++] = "\n{service_hostname}\t{txt_rfo}\t{service_port}\t";
   else
     ippfind_argv[i++] = "\n{service_hostname}\t{txt_rp}\t{service_port}\t";
   ippfind_argv[i++] = ";";
-  ippfind_argv[i++] = "--local";          /* Rest only if local service */
+  ippfind_argv[i++] = "--local";          // Rest only if local service
   ippfind_argv[i++] = "-x";
-  ippfind_argv[i++] = "echo";             /* Output an 'L' at the end of the */
-  ippfind_argv[i++] = "-en";              /* line */
+  ippfind_argv[i++] = "echo";             // Output an 'L' at the end of the
+  ippfind_argv[i++] = "-en";              // line
   ippfind_argv[i++] = "L";
   ippfind_argv[i++] = ";";
   ippfind_argv[i++] = NULL;
 
- /*
-  * Create a pipe for passing the ippfind output to post-processing
-  */
+  //
+  // Create a pipe for passing the ippfind output to post-processing
+  //
 
   if (pipe(post_proc_pipe))
     goto error;
 
-  if ((ippfind_pid = fork()) == 0) {
-   /*
-    * Child comes here...
-    */
+  if ((ippfind_pid = fork()) == 0)
+  {
+    //
+    // Child comes here...
+    //
 
     dup2(post_proc_pipe[1], 1);
     close(post_proc_pipe[0]);
@@ -538,10 +566,11 @@ cfippfindBasedURIConverter (const char *uri, int is_fax)
 
     exit(1);
   }
-  else if (ippfind_pid < 0) {
-   /*
-    * Unable to fork!
-    */
+  else if (ippfind_pid < 0)
+  {
+    //
+    // Unable to fork!
+    //
 
     goto error;
   }
@@ -550,42 +579,49 @@ cfippfindBasedURIConverter (const char *uri, int is_fax)
 
   fp = cupsFileOpenFd(post_proc_pipe[0], "r");
 
-  buffer = (char*)malloc(CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN * sizeof(char));
+  buffer =
+    (char*)malloc(CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN * sizeof(char));
   if (buffer == NULL)
     goto error;
   memset(buffer, 0, CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN);
 
-  while ((bytes = cupsFileGetLine(fp, buffer, CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN)) > 0) {
-    /* Mark all the fields of the output of ippfind */
+  while ((bytes =
+	  cupsFileGetLine(fp, buffer,
+			  CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN)) > 0)
+  {
+    // Mark all the fields of the output of ippfind
     ptr = buffer;
 
-    /* ignore new lines */
+    // ignore new lines
     if (bytes < 3)
       goto read_error;
 
-    /* First, build the DNS-SD-service-name-based URI ... */
+    // First, build the DNS-SD-service-name-based URI ...
     while (ptr && !isalnum(*ptr & 255)) ptr ++;
 
     service_hostname = ptr; 
-    ptr = memchr(ptr, '\t', CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN - (ptr - buffer));
+    ptr = memchr(ptr, '\t',
+		 CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN - (ptr - buffer));
     if (!ptr) goto read_error;
     *ptr = '\0';
     ptr ++;
 
     resource_field = ptr;
-    ptr = memchr(ptr, '\t', CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN - (ptr - buffer));
+    ptr = memchr(ptr, '\t',
+		 CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN - (ptr - buffer));
     if (!ptr) goto read_error;
     *ptr = '\0';
     ptr ++;
 
     ptr_to_port = ptr;
-    ptr = memchr(ptr, '\t', CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN - (ptr - buffer));
+    ptr = memchr(ptr, '\t',
+		 CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN - (ptr - buffer));
     if (!ptr) goto read_error;
     *ptr = '\0';
     ptr ++;
 
-    /* Do we have a local service so that we have to set the host name to
-       "localhost"? */
+    // Do we have a local service so that we have to set the host name to
+    // "localhost"?
     is_local = (*ptr == 'L');
 
     ptr = strchr(reg_type, '.');
@@ -600,7 +636,7 @@ cfippfindBasedURIConverter (const char *uri, int is_fax)
 		     resource_field);
 
     if (is_fax)
-      output_of_fax_uri = 1; /* fax-uri requested from fax-capable device */
+      output_of_fax_uri = 1; // fax-uri requested from fax-capable device
 
   read_error:
     memset(buffer, 0, CF_GET_PRINTER_ATTRIBUTES_MAX_OUTPUT_LEN);
@@ -611,36 +647,43 @@ cfippfindBasedURIConverter (const char *uri, int is_fax)
   if (buffer != NULL)
     free(buffer);
 
- /*
-  * Wait for the child processes to exit...
-  */
+  //
+  // Wait for the child processes to exit...
+  //
 
   wait_children = 1;
 
-  while (wait_children > 0) {
-   /*
-    * Wait until we get a valid process ID or the job is canceled...
-    */
+  while (wait_children > 0)
+  {
+    //
+    // Wait until we get a valid process ID or the job is canceled...
+    //
 
-    while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR) {
-    }
+    while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR) {};
 
     if (wait_pid < 0)
       break;
 
     wait_children --;
 
-   /*
-    * Report child status...
-    */
+    //
+    // Report child status...
+    //
 
-    if (wait_status) {
-      if (WIFEXITED(wait_status)) {
+    if (wait_status)
+    {
+      if (WIFEXITED(wait_status))
+      {
 	exit_status = WEXITSTATUS(wait_status);
         if (wait_pid == ippfind_pid && exit_status <= 2)
           exit_status = 0;	  
-      } else if (WTERMSIG(wait_status) == SIGTERM) {
-      } else {
+      }
+      else if (WTERMSIG(wait_status) == SIGTERM)
+      {
+	// All OK, no error
+      }
+      else
+      {
 	exit_status = WTERMSIG(wait_status);
       }
     }
@@ -650,9 +693,9 @@ cfippfindBasedURIConverter (const char *uri, int is_fax)
 
   return (resolved_uri);
 
- /*
-  * Exit...
-  */
+  //
+  // Exit...
+  //
 
  error:
   if (resolved_uri != NULL)
@@ -661,13 +704,13 @@ cfippfindBasedURIConverter (const char *uri, int is_fax)
 }
 
 
-const char* /* O - Attribute value as string */
-cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
-						      as to respond
-						      get-printer-attributes,
-						      or NULL to not consider */
-			 ipp_t *job_attrs,     /* I - Job attributes */
-			 const char *attr_name)/* I - Attribute name */
+const char* // O - Attribute value as string
+cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs, // I - Printer attributes, same
+			                         //     as to respond
+			                         //     get-printer-attributes,
+			                         //     or NULL to not consider
+			   ipp_t *job_attrs,     // I - Job attributes
+			   const char *attr_name)// I - Attribute name
 {
   ipp_attribute_t *attr;
   char printer_attr_name[256];
@@ -678,38 +721,39 @@ cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
   if ((printer_attrs == NULL && job_attrs == NULL) || attr_name == NULL)
     return NULL;
 
-  /* Check whether job got supplied the named attribute and read out its value
-     as string */
+  // Check whether job got supplied the named attribute and read out its value
+  // as string
   if (job_attrs == NULL ||
       (attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
     res = NULL;
   else
     res = ippGetString(attr, 0, NULL);
 
-  /* Check the printer properties if supplied to see whether the job attribute
-     value is valid or if the job attribute was not supplied. Use printer
-     default value of job attribute is invalid or not supplied 
-     If no printer attributes are supplied (NULL), simply accept the job
-     attribute value */
+  // Check the printer properties if supplied to see whether the job attribute
+  // value is valid or if the job attribute was not supplied. Use printer
+  // default value of job attribute is invalid or not supplied
+  // If no printer attributes are supplied (NULL), simply accept the job
+  // attribute value
   if (printer_attrs)
   {
     if (res && res[0])
     {
-      /* Check whether value is valid according to printer attributes */
+      // Check whether value is valid according to printer attributes
       snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
 	       "%s-supported", attr_name);
       if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
-				   IPP_TAG_ZERO)) != NULL) {
+				   IPP_TAG_ZERO)) != NULL)
+      {
 	for (i = 0; i < ippGetCount(attr); i ++)
 	  if (strcasecmp(res, ippGetString(attr, i, NULL)) == 0)
-	    break; /* Job attribute value is valid */
+	    break; // Job attribute value is valid
 	if (i == ippGetCount(attr))
-	  res = NULL; /* Job attribute value is not valid */
+	  res = NULL; // Job attribute value is not valid
       }
     }
     if (!res || !res[0])
     {
-      /* Use default value from printer attributes */
+      // Use default value from printer attributes
       snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
 	       "%s-default", attr_name);
       if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
@@ -722,52 +766,56 @@ cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
 }
 
 
-int                 /* O - 1: Success; 0: Error */
-cfIPPAttrIntValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
-						     as to respond
-						     get-printer-attributes,
-						     or NULL to not consider */
-			ipp_t *job_attrs,     /* I - Job attributes */
-			const char *attr_name,/* I - Attribute name */
-			int   *value)         /* O - Attribute value as
-						     integer */
+int                 // O - 1: Success; 0: Error
+cfIPPAttrIntValForPrinter(ipp_t *printer_attrs, // I - Printer attributes, same
+						//     as to respond
+			                        //     get-printer-attributes,
+			                        //     or NULL to not consider
+			  ipp_t *job_attrs,     // I - Job attributes
+			  const char *attr_name,// I - Attribute name
+			  int   *value)         // O - Attribute value as
+                                                //     integer
 {
   ipp_attribute_t *attr;
   char printer_attr_name[256];
   int  retval, val, min, max;
 
   if ((printer_attrs == NULL && job_attrs == NULL) || attr_name == NULL)
-    return 0;
+    return (0);
 
-  /* Check whether job got supplied the named attribute and read out its value
-     as integer */
+  // Check whether job got supplied the named attribute and read out its value
+  // as integer
   if (job_attrs == NULL ||
       (attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
     retval = 0;
-  else {
+  else
+  {
     retval = 1;
     val = ippGetInteger(attr, 0);
   }
 
-  /* Check the printer properties if supplied to see whether the job attribute
-     value is valid or if the job attribute was not supplied. Use printer
-     default value of job attribute is invalid or not supplied 
-     If no printer attributes are supplied (NULL), simply accept the job
-     attribute value */
-  if (printer_attrs) {
-    if (retval == 1) {
-      /* Check whether value is valid according to printer attributes */
+  // Check the printer properties if supplied to see whether the job attribute
+  // value is valid or if the job attribute was not supplied. Use printer
+  // default value of job attribute is invalid or not supplied
+  // If no printer attributes are supplied (NULL), simply accept the job
+  // attribute value
+  if (printer_attrs)
+  {
+    if (retval == 1)
+    {
+      // Check whether value is valid according to printer attributes
       snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
 	       "%s-supported", attr_name);
       if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
-				   IPP_TAG_RANGE)) != NULL) {
+				   IPP_TAG_RANGE)) != NULL)
+      {
 	min = ippGetRange(attr, 0, &max);
 	if (val < min || val > max)
-	  retval = 0; /* Job attribute value out of range */
+	  retval = 0; // Job attribute value out of range
       }
     }
     if (retval == 0) {
-      /* Use default value from printer attributes */
+      // Use default value from printer attributes
       snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
 	       "%s-default", attr_name);
       if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
@@ -780,17 +828,16 @@ cfIPPAttrIntValForPrinter(ipp_t *printer_attrs, /* I - Printer attributes, same
 
   if (retval == 1)
     *value = val;
-  return retval;
+  return (retval);
 }
 
 
-int                 /* O - 1: Success; 0: Error */
-cfIPPAttrResolutionForPrinter(ipp_t *printer_attrs,/* I - Printer attributes */
-			      ipp_t *job_attrs,    /* I - Job attributes */
-			      const char *attr_name,/* I - Attribute name */
-			      int   *xres,         /* O - X resolution (dpi) */
-			      int   *yres)         /* O - Y resolution (dpi) */
-			      
+int                 // O - 1: Success; 0: Error
+cfIPPAttrResolutionForPrinter(ipp_t *printer_attrs,// I - Printer attributes
+			      ipp_t *job_attrs,    // I - Job attributes
+			      const char *attr_name,// I - Attribute name
+			      int   *xres,         // O - X resolution (dpi)
+			      int   *yres)         // O - Y resolution (dpi)
 {
   int i;
   ipp_attribute_t *attr;
@@ -799,13 +846,13 @@ cfIPPAttrResolutionForPrinter(ipp_t *printer_attrs,/* I - Printer attributes */
   ipp_res_t units;
 
   if ((printer_attrs == NULL && job_attrs == NULL))
-    return 0;
+    return (0);
 
   if (attr_name == NULL)
     attr_name = "printer-resolution";
 
-  /* Check whether job got supplied the named attribute and read out its value
-     as integer */
+  // Check whether job got supplied the named attribute and read out its value
+  // as integer
   if (job_attrs == NULL ||
       (attr = ippFindAttribute(job_attrs, attr_name, IPP_TAG_ZERO)) == NULL)
     retval = 0;
@@ -815,20 +862,22 @@ cfIPPAttrResolutionForPrinter(ipp_t *printer_attrs,/* I - Printer attributes */
     x = ippGetResolution(attr, 0, &y, &units);
     if (units == IPP_RES_PER_CM)
     {
-      /* Get resolutions in dpi */
+      // Get resolutions in dpi
       x = (int)((float)x * 2.54);
       y = (int)((float)y * 2.54);
     }
   }
 
-  /* Check the printer properties if supplied to see whether the job attribute
-     value is valid or if the job attribute was not supplied. Use printer
-     default value of job attribute is invalid or not supplied 
-     If no printer attributes are supplied (NULL), simply accept the job
-     attribute value */
-  if (printer_attrs) {
-    if (retval == 1) {
-      /* Check whether value is valid according to printer attributes */
+  // Check the printer properties if supplied to see whether the job attribute
+  // value is valid or if the job attribute was not supplied. Use printer
+  // default value of job attribute is invalid or not supplied
+  // If no printer attributes are supplied (NULL), simply accept the job
+  // attribute value
+  if (printer_attrs)
+  {
+    if (retval == 1)
+    {
+      // Check whether value is valid according to printer attributes
       snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
 	       "%s-supported", attr_name);
       if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
@@ -841,29 +890,31 @@ cfIPPAttrResolutionForPrinter(ipp_t *printer_attrs,/* I - Printer attributes */
 	  sx = ippGetResolution(attr, i, &sy, &su);
 	  if (su == IPP_RES_PER_CM)
 	  {
-	    /* Get resolutions in dpi */
+	    // Get resolutions in dpi
 	    sx = (int)((float)sx * 2.54);
 	    sy = (int)((float)sy * 2.54);
 	  }
 	  if ((x - sx) * (x - sx) < 10 &&
 	      (y - sy) * (y - sy) < 10)
-	    break; /* Job attribute value is valid */
+	    break; // Job attribute value is valid
 	}
 	if (i == ippGetCount(attr))
-	  retval = 0; /* Job attribute value is not valid */
+	  retval = 0; // Job attribute value is not valid
       }
     }
-    if (retval == 0) {
-      /* Use default value from printer attributes */
+    if (retval == 0)
+    {
+      // Use default value from printer attributes
       snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
 	       "%s-default", attr_name);
       if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
-				   IPP_TAG_ZERO)) != NULL) {
+				   IPP_TAG_ZERO)) != NULL)
+      {
 	retval = 1;
 	x = ippGetResolution(attr, 0, &y, &units);
 	if (units == IPP_RES_PER_CM)
 	{
-	  /* Get resolutions in dpi */
+	  // Get resolutions in dpi
 	  x = (int)((float)x * 2.54);
 	  y = (int)((float)y * 2.54);
 	}
@@ -940,29 +991,29 @@ cfIPPReverseOutput(ipp_t *printer_attrs,
 
 
 #ifndef HAVE_STRLCPY
-/*
- * 'strlcpy()' - Safely copy two strings.
- */
+//
+// 'strlcpy()' - Safely copy two strings.
+//
 
-size_t					/* O - Length of string */
-strlcpy(char       *dst,		/* O - Destination string */
-	const char *src,		/* I - Source string */
-	size_t      size)		/* I - Size of destination string buffer */
+size_t					// O - Length of string
+strlcpy(char       *dst,		// O - Destination string
+	const char *src,		// I - Source string
+	size_t      size)		// I - Size of destination string buffer
 {
-  size_t	srclen;			/* Length of source string */
+  size_t	srclen;			// Length of source string
 
 
- /*
-  * Figure out how much room is needed...
-  */
+  //
+  // Figure out how much room is needed...
+  //
 
   size --;
 
   srclen = strlen(src);
 
- /*
-  * Copy the appropriate amount...
-  */
+  //
+  // Copy the appropriate amount...
+  //
 
   if (srclen > size)
     srclen = size;
@@ -972,39 +1023,39 @@ strlcpy(char       *dst,		/* O - Destination string */
 
   return (srclen);
 }
-#endif /* !HAVE_STRLCPY */
+#endif // !HAVE_STRLCPY
 
-/*
- * 'cfStrFormatd()' - Format a floating-point number.
- */
+//
+// 'cfStrFormatd()' - Format a floating-point number.
+//
 
-char *					/* O - Pointer to end of string */
-cfStrFormatd(char         *buf,	/* I - String */
-	     char         *bufend,	/* I - End of string buffer */
-	     double       number,	/* I - Number to format */
-	     struct lconv *loc)	/* I - Locale data */
+char *					// O - Pointer to end of string
+cfStrFormatd(char         *buf,		// I - String
+	     char         *bufend,	// I - End of string buffer
+	     double       number,	// I - Number to format
+	     struct lconv *loc)		// I - Locale data
 {
-  char		*bufptr,		/* Pointer into buffer */
-		temp[1024],		/* Temporary string */
-		*tempdec,		/* Pointer to decimal point */
-		*tempptr;		/* Pointer into temporary string */
-  const char	*dec;			/* Decimal point */
-  int		declen;			/* Length of decimal point */
+  char		*bufptr,		// Pointer into buffer
+		temp[1024],		// Temporary string
+		*tempdec,		// Pointer to decimal point
+		*tempptr;		// Pointer into temporary string
+  const char	*dec;			// Decimal point
+  int		declen;			// Length of decimal point
 
 
- /*
-  * Format the number using the "%.12f" format and then eliminate
-  * unnecessary trailing 0's.
-  */
+  //
+  // Format the number using the "%.12f" format and then eliminate
+  // unnecessary trailing 0's.
+  //
 
   snprintf(temp, sizeof(temp), "%.12f", number);
   for (tempptr = temp + strlen(temp) - 1;
        tempptr > temp && *tempptr == '0';
        *tempptr-- = '\0');
 
- /*
-  * Next, find the decimal point...
-  */
+  //
+  // Next, find the decimal point...
+  //
 
   if (loc && loc->decimal_point) {
     dec    = loc->decimal_point;
@@ -1019,9 +1070,9 @@ cfStrFormatd(char         *buf,	/* I - String */
   else
     tempdec = strstr(temp, dec);
 
- /*
-  * Copy everything up to the decimal point...
-  */
+  //
+  // Copy everything up to the decimal point...
+  //
 
   if (tempdec) {
     for (tempptr = temp, bufptr = buf;
@@ -1056,30 +1107,31 @@ cfCompareResolutions(void *resolution_a,
   cf_res_t *res_b = (cf_res_t *)resolution_b;
   int i, a, b;
 
-  /* Compare the pixels per square inch */
+  // Compare the pixels per square inch
   a = res_a->x * res_a->y;
   b = res_b->x * res_b->y;
   i = (a > b) - (a < b);
-  if (i) return i;
+  if (i) return (i);
 
-  /* Compare how much the pixel shape deviates from a square, the
-     more, the worse */
+  // Compare how much the pixel shape deviates from a square, the
+  // more, the worse
   a = 100 * res_a->y / res_a->x;
   if (a > 100) a = 10000 / a; 
   b = 100 * res_b->y / res_b->x;
   if (b > 100) b = 10000 / b; 
-  return (a > b) - (a < b);
+  return ((a > b) - (a < b));
 }
 
 void *
 cfCopyResolution(void *resolution,
-		void *user_data)
+		 void *user_data)
 {
   cf_res_t *res = (cf_res_t *)resolution;
   cf_res_t *copy;
 
   copy = (cf_res_t *)calloc(1, sizeof(cf_res_t));
-  if (copy) {
+  if (copy)
+  {
     copy->x = res->x;
     copy->y = res->y;
   }
@@ -1089,7 +1141,7 @@ cfCopyResolution(void *resolution,
 
 void
 cfFreeResolution(void *resolution,
-		void *user_data)
+		 void *user_data)
 {
   cf_res_t *res = (cf_res_t *)resolution;
 
@@ -1099,8 +1151,8 @@ cfFreeResolution(void *resolution,
 cups_array_t *
 cfNewResolutionArray()
 {
-  return cupsArrayNew3(cfCompareResolutions, NULL, NULL, 0,
-		       cfCopyResolution, cfFreeResolution);
+  return (cupsArrayNew3(cfCompareResolutions, NULL, NULL, 0,
+			cfCopyResolution, cfFreeResolution));
 }
 
 cf_res_t *
@@ -1108,17 +1160,18 @@ cfNewResolution(int x,
 		int y)
 {
   cf_res_t *res = (cf_res_t *)calloc(1, sizeof(cf_res_t));
-  if (res) {
+  if (res)
+  {
     res->x = x;
     res->y = y;
   }
-  return res;
+  return (res);
 }
 
-/* Read a single resolution from an IPP attribute, take care of
-   obviously wrong entries (printer firmware bugs), ignoring
-   resolutions of less than 60 dpi in at least one dimension and
-   fixing Brother's "600x2dpi" resolutions. */
+// Read a single resolution from an IPP attribute, take care of
+// obviously wrong entries (printer firmware bugs), ignoring
+// resolutions of less than 60 dpi in at least one dimension and
+// fixing Brother's "600x2dpi" resolutions.
 cf_res_t *
 cfIPPResToResolution(ipp_attribute_t *attr,
 		     int index)
@@ -1127,24 +1180,26 @@ cfIPPResToResolution(ipp_attribute_t *attr,
   int x = 0, y = 0;
   ipp_res_t units;
 
-  if (attr) {
+  if (attr)
+  {
     ipp_tag_t tag = ippGetValueTag(attr);
     int count = ippGetCount(attr);
 
-    if (tag == IPP_TAG_RESOLUTION && index < count) {
+    if (tag == IPP_TAG_RESOLUTION && index < count)
+    {
       x = ippGetResolution(attr, index, &y, &units);
       if (units == IPP_RES_PER_CM)
       {
 	x = (int)(x * 2.54);
 	y = (int)(y * 2.54);
       }
-      if (y == 2) y = x; /* Brother quirk ("600x2dpi") */
+      if (y == 2) y = x; // Brother quirk ("600x2dpi")
       if (x >= 60 && y >= 60)
 	res = cfNewResolution(x, y);
     }
   }
 
-  return res;
+  return (res);
 }
 
 cups_array_t *
@@ -1154,47 +1209,52 @@ cfIPPAttrToResolutionArray(ipp_attribute_t *attr)
   cf_res_t *res;
   int i;
 
-  if (attr) {
+  if (attr)
+  {
     ipp_tag_t tag = ippGetValueTag(attr);
     int count = ippGetCount(attr);
 
-    if (tag == IPP_TAG_RESOLUTION && count > 0) {
+    if (tag == IPP_TAG_RESOLUTION && count > 0)
+    {
       res_array = cfNewResolutionArray();
-      if (res_array) {
+      if (res_array)
+      {
 	for (i = 0; i < count; i ++)
-	  if ((res = cfIPPResToResolution(attr, i)) != NULL) {
+	  if ((res = cfIPPResToResolution(attr, i)) != NULL)
+	  {
 	    if (cupsArrayFind(res_array, res) == NULL)
 	      cupsArrayAdd(res_array, res);
 	    cfFreeResolution(res, NULL);
 	  }
       }
-      if (cupsArrayCount(res_array) == 0) {
+      if (cupsArrayCount(res_array) == 0)
+      {
 	cupsArrayDelete(res_array);
 	res_array = NULL;
       }
     }
   }
 
-  return res_array;
+  return (res_array);
 }
 
-/* Build up an array of common resolutions and most desirable default
-   resolution from multiple arrays of resolutions with an optional
-   default resolution.
-   Call this function with each resolution array you find as "new", and
-   in "current" an array of the common resolutions will be built up.
-   You do not need to create an empty array for "current" before
-   starting. Initialize it with NULL.
-   "current_default" holds the default resolution of the array "current".
-   It will get replaced by "new_default" if "current_default" is either
-   NULL or a resolution which is not in "current" any more.
-   "new" and "new_default" will be deleted/freed and set to NULL after
-   each, successful or unsuccssful operation.
-   Note that when calling this function the addresses of the pointers
-   to the resolution arrays and default resolutions have to be given
-   (call by reference) as all will get modified by the function. */
+// Build up an array of common resolutions and most desirable default
+// resolution from multiple arrays of resolutions with an optional
+// default resolution.
+// Call this function with each resolution array you find as "new", and
+// in "current" an array of the common resolutions will be built up.
+// You do not need to create an empty array for "current" before
+// starting. Initialize it with NULL.
+// "current_default" holds the default resolution of the array "current".
+// It will get replaced by "new_default" if "current_default" is either
+// NULL or a resolution which is not in "current" any more.
+// "new" and "new_default" will be deleted/freed and set to NULL after
+// each, successful or unsuccssful operation.
+// Note that when calling this function the addresses of the pointers
+// to the resolution arrays and default resolutions have to be given
+// (call by reference) as all will get modified by the function.
 
-int /* 1 on success, 0 on failure */
+int // 1 on success, 0 on failure
 cfJoinResolutionArrays(cups_array_t **current,
 		       cups_array_t **new_arr,
 		       cf_res_t **current_default,
@@ -1204,47 +1264,55 @@ cfJoinResolutionArrays(cups_array_t **current,
   int retval;
 
   if (current == NULL || new_arr == NULL || *new_arr == NULL ||
-      cupsArrayCount(*new_arr) == 0) {
+      cupsArrayCount(*new_arr) == 0)
+  {
     retval = 0;
     goto finish;
   }
 
-  if (*current == NULL) {
-    /* We are adding the very first resolution array, simply make it
-       our common resolutions array */
+  if (*current == NULL)
+  {
+    // We are adding the very first resolution array, simply make it
+    // our common resolutions array
     *current = *new_arr;
-    if (current_default) {
+    if (current_default)
+    {
       if (*current_default)
 	free(*current_default);
       *current_default = (new_default ? *new_default : NULL);
     }
     return 1;
-  } else if (cupsArrayCount(*current) == 0) {
+  }
+  else if (cupsArrayCount(*current) == 0)
+  {
     retval = 1;
     goto finish;
   }
 
-  /* Dry run: Check whether the two arrays have at least one resolution
-     in common, if not, do not touch the original array */
+  // Dry run: Check whether the two arrays have at least one resolution
+  // in common, if not, do not touch the original array
   for (res = cupsArrayFirst(*current);
        res; res = cupsArrayNext(*current))
     if (cupsArrayFind(*new_arr, res))
       break;
 
-  if (res) {
-    /* Reduce the original array to the resolutions which are in both
-       the original and the new array, at least one resolution will
-       remain. */
+  if (res)
+  {
+    // Reduce the original array to the resolutions which are in both
+    // the original and the new array, at least one resolution will
+    // remain.
     for (res = cupsArrayFirst(*current);
 	 res; res = cupsArrayNext(*current))
       if (!cupsArrayFind(*new_arr, res))
 	cupsArrayRemove(*current, res);
-    if (current_default) {
-      /* Replace the current default by the new one if the current default
-	 is not in the array any more or if it is NULL. If the new default
-	 is not in the list or NULL in such a case, set the current default
-	 to NULL */
-      if (*current_default && !cupsArrayFind(*current, *current_default)) {
+    if (current_default)
+    {
+      // Replace the current default by the new one if the current default
+      // is not in the array any more or if it is NULL. If the new default
+      // is not in the list or NULL in such a case, set the current default
+      // to NULL
+      if (*current_default && !cupsArrayFind(*current, *current_default))
+      {
 	free(*current_default);
 	*current_default = NULL;
       }
@@ -1257,39 +1325,42 @@ cfJoinResolutionArrays(cups_array_t **current,
     retval = 0;
 
  finish:
-  if (new_arr && *new_arr) {
+  if (new_arr && *new_arr)
+  {
     cupsArrayDelete(*new_arr);
     *new_arr = NULL;
   }
-  if (new_default && *new_default) {
+  if (new_default && *new_default)
+  {
     free(*new_default);
     *new_default = NULL;
   }
-  return retval;
+
+  return (retval);
 }
 
 
-/*
- * 'pwg_compare_sizes()' - Compare two media sizes...
- */
+//
+// 'pwg_compare_sizes()' - Compare two media sizes...
+//
 
-static int				/* O - Result of comparison */
-pwg_compare_sizes(cups_size_t *a,	/* I - First media size */
-                  cups_size_t *b)	/* I - Second media size */
+static int				// O - Result of comparison
+pwg_compare_sizes(cups_size_t *a,	// I - First media size
+                  cups_size_t *b)	// I - Second media size
 {
   return (strcmp(a->media, b->media));
 }
 
 
-/*
- * 'pwg_copy_size()' - Copy a media size.
- */
+//
+// 'pwg_copy_size()' - Copy a media size.
+//
 
-static cups_size_t *			/* O - New media size */
-pwg_copy_size(cups_size_t *size)	/* I - Media size to copy */
+static cups_size_t *			// O - New media size
+pwg_copy_size(cups_size_t *size)	// I - Media size to copy
 {
   cups_size_t	*newsize = (cups_size_t *)calloc(1, sizeof(cups_size_t));
-					/* New media size */
+					// New media size
 
   if (newsize)
     memcpy(newsize, size, sizeof(cups_size_t));
@@ -1298,44 +1369,45 @@ pwg_copy_size(cups_size_t *size)	/* I - Media size to copy */
 }
 
 
-int					/* O -  1: Requested page size supported
-					        2: Requested page size supported
-						   when rotated by 90 degrees
-					        0: No page size requested
-					       -1: Requested size unsupported */
-cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
-	            ipp_t *job_attrs,	    /* I - Job attributes */
-	            int num_options,        /* I - Number of options */
-	            cups_option_t *options, /* I - Options */
-		    cups_page_header2_t *header, /* I - Raster page header */
-		    int transverse_fit,     /* I - Accept transverse fit? */
-	            float *width,	    /* O - Width (in pt, 1/72 inches) */
-		    float *height,          /* O - Height */
-		    float *left,            /* O - Left margin */
-		    float *bottom,          /* O - Bottom margin */
-		    float *right,           /* O - Right margin */
-		    float *top,             /* O - Top margin */
-		    char *name,             /* O - Page size name */
-		    ipp_t **media_col_entry)/* O - media-col-database record of
-					           match */
+int					// O -  1: Requested page size supported
+                                        //      2: Requested page size supported
+                                        //	   when rotated by 90 degrees
+                                        //      0: No page size requested
+                                        //     -1: Requested size unsupported
+cfGetPageDimensions(ipp_t *printer_attrs,   // I - Printer attributes
+	            ipp_t *job_attrs,	    // I - Job attributes
+	            int num_options,        // I - Number of options
+	            cups_option_t *options, // I - Options
+		    cups_page_header2_t *header, // I - Raster page header
+		    int transverse_fit,     // I - Accept transverse fit?
+	            float *width,	    // O - Width (in pt, 1/72 inches)
+		    float *height,          // O - Height
+		    float *left,            // O - Left margin
+		    float *bottom,          // O - Bottom margin
+		    float *right,           // O - Right margin
+		    float *top,             // O - Top margin
+		    char *name,             // O - Page size name
+		    ipp_t **media_col_entry)// O - media-col-database record of
+                                            //     match
 {
   int           i;
   const char    *attr_name;
   char          size_name_buf[IPP_MAX_NAME + 1];
   int           size_requested = 0;
-  const char * const media_size_attr_names[] = {
+  const char * const media_size_attr_names[] =
+  {
     "Jmedia-col",
     "Jmedia-size",
     "Jmedia",
     "JPageSize",
     "JMediaSize",
-    "J", /* A raster header with media dimensions */
+    "J", // A raster header with media dimensions
     "jmedia-col",
     "jmedia-size",
     "jmedia",
     "jPageSize",
     "jMediaSize",
-    "j", /* A raster header with media dimensions */
+    "j", // A raster header with media dimensions
     "Dmedia-col-default",
     "Dmedia-default",
   };
@@ -1348,23 +1420,23 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
   if (media_col_entry)
     *media_col_entry = NULL;
 
- /*
-  * Media from job_attrs and options, defaults from printer_attrs...
-  */
+  //
+  // Media from job_attrs and options, defaults from printer_attrs...
+  //
 
-  /* Go through all job attributes and options which could contain the
-     page size, afterwards go through the page size defaults in the
-     printer attributes */
+  // Go through all job attributes and options which could contain the
+  // page size, afterwards go through the page size defaults in the
+  // printer attributes
   for (i = 0;
        i < sizeof(media_size_attr_names) / sizeof(media_size_attr_names[0]);
        i ++)
   {
-    ipp_attribute_t *attr = NULL;	/* Job attribute */
-    char	valstr[8192];		/* Attribute value string */
-    const char	*value = NULL;		/* Option value */
-    const char	*name_ptr = NULL;	/* Pointer to page size name */
-    int		num_media_col = 0;	/* Number of media-col values */
-    cups_option_t *media_col = NULL;	/* media-col values */
+    ipp_attribute_t *attr = NULL;	// Job attribute
+    char	valstr[8192];		// Attribute value string
+    const char	*value = NULL;		// Option value
+    const char	*name_ptr = NULL;	// Pointer to page size name
+    int		num_media_col = 0;	// Number of media-col values
+    cups_option_t *media_col = NULL;	// media-col values
     int         ipp_width = 0,
                 ipp_height = 0,
                 ipp_left = -1,
@@ -1374,13 +1446,13 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
 
     attr_name = media_size_attr_names[i];
     if (*attr_name == 'J' ||
-	(transverse_fit && *attr_name == 'j')) /* Job attribute/option */
+	(transverse_fit && *attr_name == 'j')) // Job attribute/option
     {
       if (*(attr_name + 1) == '\0')
       {
 	if (header)
 	{
-	  /* Raster header */
+	  // Raster header
 	  if (header->cupsPageSize[0] > 0.0)
 	    ipp_width = (int)(header->cupsPageSize[0] * 2540.0 / 72.0);
 	  else if (header->PageSize[0] > 0)
@@ -1421,7 +1493,7 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
       else if ((attr = ippFindAttribute(job_attrs, attr_name + 1,
 					IPP_TAG_ZERO)) != NULL)
       {
-	/* String from IPP attribute */
+	// String from IPP attribute
 	ippAttributeString(attr, valstr, sizeof(valstr));
 	value = valstr;
       }
@@ -1429,14 +1501,14 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
 				      options)) == NULL)
 	continue;
     }
-    else if (*attr_name == 'D') /* Printer default */
+    else if (*attr_name == 'D') // Printer default
     {
       if (*(attr_name + 1))
       {
 	if ((attr = ippFindAttribute(printer_attrs, attr_name + 1,
 				   IPP_TAG_ZERO)) != NULL)
         {
-	  /* String from IPP attribute */
+	  // String from IPP attribute
 	  ippAttributeString(attr, valstr, sizeof(valstr));
 	  value = valstr;
 	}
@@ -1453,20 +1525,20 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
     {
       if (*value == '{')
       {
-       /*
-	* String is a dictionary -> "media-col" value...
-	*/
+	//
+	// String is a dictionary -> "media-col" value...
+	//
 
 	num_media_col = cupsParseOptions(value, 0, &media_col);
 
-	/* Actual size in dictionary? */
+	// Actual size in dictionary?
 	if ((value = cupsGetOption("media-size", num_media_col, media_col))
 	    != NULL)
 	{
-	  int		num_media_size;	/* Number of media-size values */
-	  cups_option_t *media_size;	/* media-size values */
-	  const char	*x_dimension,	/* x-dimension value */
-	                *y_dimension;	/* y-dimension value */
+	  int		num_media_size;	// Number of media-size values
+	  cups_option_t *media_size;	// media-size values
+	  const char	*x_dimension,	// x-dimension value
+	                *y_dimension;	// y-dimension value
 
 	  num_media_size = cupsParseOptions(value, 0, &media_size);
 
@@ -1478,7 +1550,7 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
 
 	  cupsFreeOptions(num_media_size, media_size);
 	}
-	/* Name in dictionary? Use only if actual dimensions are not supplied */
+	// Name in dictionary? Use only if actual dimensions are not supplied
 	if ((ipp_width <= 0 || ipp_height <= 0) &&
 	    (name_ptr = cupsGetOption("media-size-name",
 				    num_media_col, media_col)) == NULL)
@@ -1487,7 +1559,7 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
 	  continue;
 	}
 
-	/* Grab margins from media-col */
+	// Grab margins from media-col
 	if ((value = cupsGetOption("media-left-margin",
 				   num_media_col, media_col))
 	    != NULL)
@@ -1507,20 +1579,20 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
       }
       else
       {
-       /*
-	* String is not dictionary, check also if it contains commas (list
-	* of media properties supplied via "media" CUPS option
-	*/
+	//
+	// String is not dictionary, check also if it contains commas (list
+	// of media properties supplied via "media" CUPS option
+	//
 
 	char *ptr;
 	name_ptr = value;
 	if (strchr(value, ','))
 	{
-	  /* Comma-separated list of media properties, supplied with "media"
-	     CUPS option */
+	  // Comma-separated list of media properties, supplied with "media"
+	  // CUPS option
 	  if (value != valstr)
 	  {
-	    /* Copy string for further manipulation */
+	    // Copy string for further manipulation
 	    strlcpy(valstr, value, sizeof(valstr));
 	    value = valstr;
 	    name_ptr = value;
@@ -1530,24 +1602,24 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
 	    ptr ++;
 	    if (*ptr == ',' || *ptr == '\0')
 	    {
-	      /* End of item name */
+	      // End of item name
 	      if (*ptr == ',')
 	      {
 		*ptr = '\0';
 		ptr ++;
 	      }
-	      /* Find PWG media entry for the name, if we find one, the name
-		 is actually a page size name */
+	      // Find PWG media entry for the name, if we find one, the name
+	      // is actually a page size name
 	      if (pwgMediaForPWG(name_ptr) ||
 		  pwgMediaForPPD(name_ptr) ||
 		  pwgMediaForLegacy(name_ptr))
-		/* This is a page size name */
+		// This is a page size name
 		break;
 	      else if (*ptr)
-		/* Next item */
+		// Next item
 		name_ptr = ptr;
 	      else
-		/* No further item */
+		// No further item
 		name_ptr = NULL;
 	    }
 	  }
@@ -1555,7 +1627,7 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
       }
     }
 
-    /* Get name from media */
+    // Get name from media
     if (name_ptr)
     {
       if (ipp_left == 0 && ipp_bottom == 0 &&
@@ -1565,8 +1637,8 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
 	strlcpy(name, name_ptr, IPP_MAX_NAME);
     }
 
-    /* Landscape/Transverse fit */
-    if (*attr_name == 'j') /* Only job attributes/options */
+    // Landscape/Transverse fit
+    if (*attr_name == 'j') // Only job attributes/options
     {
       int swap;
 
@@ -1583,21 +1655,21 @@ cfGetPageDimensions(ipp_t *printer_attrs,   /* I - Printer attributes */
     
     cupsFreeOptions(num_media_col, media_col);
 
-    /* We have a valid request for a page size */
+    // We have a valid request for a page size
     if (*attr_name == 'J' || *attr_name == 'j')
       size_requested = 1;
 
-    /* Validate collected information */
-    /* If we have a size, we use the size as search term (name = "" then),
-       if we have no size but a name, use the name, always pass in margins
-       if available */
+    // Validate collected information
+    // If we have a size, we use the size as search term (name = "" then),
+    // if we have no size but a name, use the name, always pass in margins
+    // if available
     cfGenerateSizes(printer_attrs, CF_GEN_SIZES_SEARCH, NULL, NULL,
 		    &ipp_width, &ipp_height,
 		    &ipp_left, &ipp_bottom, &ipp_right, &ipp_top,
 		    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, name,
 		    media_col_entry);
 
-    /* Return resulting numbers */
+    // Return resulting numbers
     if (ipp_width > 0 && ipp_height > 0 &&
 	ipp_left >= 0 && ipp_bottom >= 0 &&
 	ipp_right >= 0 && ipp_top >= 0)
@@ -1650,17 +1722,17 @@ cfGenerateSizes(ipp_t *response,
 		ipp_t **media_col_entry)
 {
   ipp_attribute_t          *default_attr,
-                           *attr,                /* xxx-supported */
-                           *x_dim, *y_dim,       /* Media dimensions */
-                           *name;                /* Media size name */ 
-  ipp_t                    *media_col,           /* Media collection */
-                           *media_size;          /* Media size collection */
+                           *attr,                // xxx-supported
+                           *x_dim, *y_dim,       // Media dimensions
+                           *name;                // Media size name
+  ipp_t                    *media_col,           // Media collection
+                           *media_size;          // Media size collection
   int                      i, x = 0, y = 0, count = 0;
-  pwg_media_t              *pwg, *pwg_by_name;   /* PWG media size */
+  pwg_media_t              *pwg, *pwg_by_name;   // PWG media size
   int                      local_min_width, local_min_length,
                            local_max_width, local_max_length;
   int                      local_left, local_right, local_bottom, local_top;
-  ipp_attribute_t          *margin;  /* media-xxx-margin attribute */
+  ipp_attribute_t          *margin;  // media-xxx-margin attribute
   const char               *psname;
   const char               *entry_name;
   char                     size_name_buf[IPP_MAX_NAME + 1] = "";
@@ -1682,8 +1754,10 @@ cfGenerateSizes(ipp_t *response,
   if (custom_left == NULL)
     custom_left = &local_left;
   if ((attr = ippFindAttribute(response, "media-left-margin-supported",
-			       IPP_TAG_INTEGER)) != NULL) {
-    for (i = 1, *custom_left = ippGetInteger(attr, 0), count = ippGetCount(attr);
+			       IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, *custom_left = ippGetInteger(attr, 0),
+	   count = ippGetCount(attr);
 	 i < count; i ++)
       if (ippGetInteger(attr, i) < *custom_left)
         *custom_left = ippGetInteger(attr, i);
@@ -1693,8 +1767,10 @@ cfGenerateSizes(ipp_t *response,
   if (custom_bottom == NULL)
     custom_bottom = &local_bottom;
   if ((attr = ippFindAttribute(response, "media-bottom-margin-supported",
-			       IPP_TAG_INTEGER)) != NULL) {
-    for (i = 1, *custom_bottom = ippGetInteger(attr, 0), count = ippGetCount(attr);
+			       IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, *custom_bottom = ippGetInteger(attr, 0),
+	   count = ippGetCount(attr);
 	 i < count; i ++)
       if (ippGetInteger(attr, i) < *custom_bottom)
         *custom_bottom = ippGetInteger(attr, i);
@@ -1704,8 +1780,10 @@ cfGenerateSizes(ipp_t *response,
   if (custom_right == NULL)
     custom_right = &local_right;
   if ((attr = ippFindAttribute(response, "media-right-margin-supported",
-			       IPP_TAG_INTEGER)) != NULL) {
-    for (i = 1, *custom_right = ippGetInteger(attr, 0), count = ippGetCount(attr);
+			       IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, *custom_right = ippGetInteger(attr, 0),
+	   count = ippGetCount(attr);
 	 i < count; i ++)
       if (ippGetInteger(attr, i) < *custom_right)
         *custom_right = ippGetInteger(attr, i);
@@ -1715,8 +1793,10 @@ cfGenerateSizes(ipp_t *response,
   if (custom_top == NULL)
     custom_top = &local_top;
   if ((attr = ippFindAttribute(response, "media-top-margin-supported",
-			       IPP_TAG_INTEGER)) != NULL) {
-    for (i = 1, *custom_top = ippGetInteger(attr, 0), count = ippGetCount(attr);
+			       IPP_TAG_INTEGER)) != NULL)
+  {
+    for (i = 1, *custom_top = ippGetInteger(attr, 0),
+	   count = ippGetCount(attr);
 	 i < count; i ++)
       if (ippGetInteger(attr, i) < *custom_top)
         *custom_top = ippGetInteger(attr, i);
@@ -1750,10 +1830,12 @@ cfGenerateSizes(ipp_t *response,
     defattr = &default_attr;
   if (defattr &&
       (*defattr = ippFindAttribute(response, "media-col-default",
-				   IPP_TAG_BEGIN_COLLECTION)) != NULL) {
+				   IPP_TAG_BEGIN_COLLECTION)) != NULL)
+  {
     if (mode == CF_GEN_SIZES_DEFAULT &&
 	(attr = ippFindAttribute(ippGetCollection(*defattr, 0), "media-size",
-				 IPP_TAG_BEGIN_COLLECTION)) != NULL) {
+				 IPP_TAG_BEGIN_COLLECTION)) != NULL)
+    {
       media_size = ippGetCollection(attr, 0);
       x_dim      = ippFindAttribute(media_size, "x-dimension", IPP_TAG_INTEGER);
       y_dim      = ippFindAttribute(media_size, "y-dimension", IPP_TAG_INTEGER);
@@ -1794,7 +1876,8 @@ cfGenerateSizes(ipp_t *response,
       if (top)
 	*top = local_top;
 
-      if (x_dim && y_dim) {
+      if (x_dim && y_dim)
+      {
 	x = ippGetInteger(x_dim, 0);
 	y = ippGetInteger(y_dim, 0);
 	if (x > 0 && y > 0 &&
@@ -1814,10 +1897,12 @@ cfGenerateSizes(ipp_t *response,
        pwgMediaForPWG(ippGetString(ippFindAttribute(response,
 						    "media-default",
 						    IPP_TAG_ZERO), 0,
-				   NULL))) != NULL) {
+				   NULL))) != NULL)
+  {
     psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
     strlcpy(size_name, psname, IPP_MAX_NAME);
-    if (x <= 0 || y <= 0) {
+    if (x <= 0 || y <= 0)
+    {
       x = pwg->width;
       y = pwg->length;
     }
@@ -1825,7 +1910,7 @@ cfGenerateSizes(ipp_t *response,
 
   if (mode == CF_GEN_SIZES_DEFAULT)
   {
-    /* Output the default page size dimensions, 0 if no valid size found */
+    // Output the default page size dimensions, 0 if no valid size found
     if (!size_name[0])
       strlcpy(size_name, "Unknown", IPP_MAX_NAME);
     if (width)
@@ -1845,7 +1930,7 @@ cfGenerateSizes(ipp_t *response,
   }
   else
   {
-    /* Find the dimensions for the page size name we got as search term */
+    // Find the dimensions for the page size name we got as search term
     char *ptr;
     int is_transverse = (strcasestr(size_name, ".Transverse") ? 1 : 0);
     if (strcasestr(size_name, ".Fullbleed") ||
@@ -1860,8 +1945,9 @@ cfGenerateSizes(ipp_t *response,
     if ((search = pwgMediaForPWG(size_name_buf)) == NULL)
       if ((search = pwgMediaForPPD(size_name_buf)) == NULL)
 	search = pwgMediaForLegacy(size_name_buf);
-    if (search != NULL) {
-      /* Set the appropriate dimensions */
+    if (search != NULL)
+    {
+      // Set the appropriate dimensions
       if (is_transverse)
       {
 	search_width = search->length;
@@ -1875,7 +1961,7 @@ cfGenerateSizes(ipp_t *response,
     }
     else
     {
-      /* Set the dimensions if we search by dimensions */
+      // Set the dimensions if we search by dimensions
       if (width)
 	search_width = *width;
       if (length)
@@ -1883,8 +1969,8 @@ cfGenerateSizes(ipp_t *response,
     }
     if (search_width <= 0 || search_length <= 0)
     {
-      /* No valid search dimensions, de-activate searching and set 0 as
-	 result */
+      // No valid search dimensions, de-activate searching and set 0 as
+      // result
       mode = CF_GEN_SIZES_DEFAULT;
       if (width)
 	*width = 0;
@@ -1893,11 +1979,11 @@ cfGenerateSizes(ipp_t *response,
     }
     else
     {
-      /* Check whether we have margin info so that we can search for a
-	 size with similar/the same margins, otherwise set the margins
-	 -1 to pick the first entry from the list which fits the size
-	 dimensions (if there are variants of a size, the first entry
-	 is usually the standard size) */
+      // Check whether we have margin info so that we can search for a
+      // size with similar/the same margins, otherwise set the margins
+      // -1 to pick the first entry from the list which fits the size
+      // dimensions (if there are variants of a size, the first entry
+      // is usually the standard size)
       if (left && *left >= 0)
 	search_left = *left;
       else
@@ -1927,40 +2013,43 @@ cfGenerateSizes(ipp_t *response,
 			   (cups_afree_func_t)free);
 
   if ((attr = ippFindAttribute(response, "media-col-database",
-			       IPP_TAG_BEGIN_COLLECTION)) != NULL) {
-    for (i = 0, count = ippGetCount(attr); i < count; i ++) {
-      cups_size_t temp, temp_by_name;   /* Current size */
+			       IPP_TAG_BEGIN_COLLECTION)) != NULL)
+  {
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      cups_size_t temp, temp_by_name;   // Current size
 
       media_col   = ippGetCollection(attr, i);
       media_size  =
 	ippGetCollection(ippFindAttribute(media_col, "media-size",
 					  IPP_TAG_BEGIN_COLLECTION), 0);
-      /* These are the numeric paper dimensions explicitly mentioned
-	 in this media entry. if we were called in a retro-fitting
-	 setup via a ppdFilter...() wrapper filter function of libppd,
-	 these dimensions can deviate from the paper dimensions which
-	 the PWG-style page size name in the same entry suggests. In
-	 this case we match both sizes against the size requested for
-	 the job and consider the entry as matching if one of the two
-	 sizes matches. In this case the entry gets included in all
-	 entries which are selected by the closest fit of the margins.
 
-	 We do this as some PPD files (especially of HPLIP) contain
-	 page size entries which are variants of a standard size with
-	 the base name of a standard size (like "A4.Borderless", base
-	 name "A4") but different dimensions.
+      // These are the numeric paper dimensions explicitly mentioned
+      // in this media entry. if we were called in a retro-fitting
+      // setup via a ppdFilter...() wrapper filter function of libppd,
+      // these dimensions can deviate from the paper dimensions which
+      // the PWG-style page size name in the same entry suggests. In
+      // this case we match both sizes against the size requested for
+      // the job and consider the entry as matching if one of the two
+      // sizes matches. In this case the entry gets included in all
+      // entries which are selected by the closest fit of the margins.
+      //
+      // We do this as some PPD files (especially of HPLIP) contain
+      // page size entries which are variants of a standard size with
+      // the base name of a standard size (like "A4.Borderless", base
+      // name "A4") but different dimensions.
+      //
+      // Especially there are larger dimensions for borderless, for
+      // overspraying over the borders of the sheet so that there will
+      // be no faint white borders if the sheet is a little
+      // mis-aligned.
+      //
+      // So if such overspraying borderless size entry is present and
+      // has zero margins while the standard size entry has regular
+      // margins, this entry will get automatically selected if
+      // borderless printing (standard size name or dimensions plus
+      // zero margins) is selected.
 
-	 Especially there are larger dimensions for borderless, for
-	 overspraying over the borders of the sheet so that there will
-	 be no faint white borders if the sheet is a little
-	 mis-aligned.
-
-	 So if such overspraying borderless size entry is present and
-	 has zero margins while the standard size entry has regular
-	 margins, this entry will get automatically selected if
-	 borderless printing (standard size name or dimensions plus
-	 zero margins) is selected.
-      */
       x_dim       = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
       y_dim       = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
       // Move "if" for custom size parameters here 
@@ -1978,7 +2067,8 @@ cfGenerateSizes(ipp_t *response,
 	  pwg_by_name = pwgMediaForPWG(entry_name);
       }
 
-      if (pwg || pwg_by_name) {
+      if (pwg || pwg_by_name)
+      {
 	if (!sizes && mode == CF_GEN_SIZES_DEFAULT)
 	  continue;
 
@@ -2038,21 +2128,21 @@ cfGenerateSizes(ipp_t *response,
 	  borderless = 0;
 	}
 
-	/* Check whether this size matches our search criteria */
+	// Check whether this size matches our search criteria
 	if (mode != CF_GEN_SIZES_DEFAULT &&
 	    min_border_mismatch > 0 &&
 	    search_width > 0 && search_length > 0 &&
-	    ((abs(search_width - temp_by_name.width) < 70 /* 2pt */ &&
-	      abs(search_length - temp_by_name.length) < 70) /* 2pt */ ||
-	     (abs(search_width - temp.width) < 70 /* 2pt */ &&
-	      abs(search_length - temp.length) < 70) /* 2pt */))
+	    ((abs(search_width - temp_by_name.width) < 70 && // 2pt
+	      abs(search_length - temp_by_name.length) < 70) || // 2pt
+	     (abs(search_width - temp.width) < 70 && // 2pt
+	      abs(search_length - temp.length) < 70))) // 2pt
 	{
-	  /* Found size with the correct dimensions */
+	  // Found size with the correct dimensions
 	  int match = 0;
 	  if (mode == CF_GEN_SIZES_SEARCH_BORDERLESS_ONLY &&
 	      borderless == 1)
 	  {
-	    /* We search only for borderless sizes and have found a match */
+	    // We search only for borderless sizes and have found a match
 	    border_mismatch = 0;
 	    min_border_mismatch = 0;
 	    if (media_col_entry)
@@ -2061,8 +2151,8 @@ cfGenerateSizes(ipp_t *response,
 	  }
 	  else if (mode == CF_GEN_SIZES_SEARCH)
 	  {
-	    /* We search a size in general, borders are accepted. find the
-	       best match in terms of border size */
+	    // We search a size in general, borders are accepted. find the
+	    // best match in terms of border size
 	    border_mismatch =
 	      (long long)(search_left < 0 ? 1 :
 			  (abs(search_left - temp.left) + 1)) *
@@ -2098,17 +2188,19 @@ cfGenerateSizes(ipp_t *response,
 	  }
 	}
 
-	/* Add size to list */
+	// Add size to list
 	if (sizes && !cupsArrayFind(*sizes, &temp))
 	  cupsArrayAdd(*sizes, &temp);
 
-      } else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE ||
-		 ippGetValueTag(y_dim) == IPP_TAG_RANGE) {
-	/*
-	 * Custom size - record the min/max values...
-	 */
+      }
+      else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE ||
+	       ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+      {
+	//
+	// Custom size - record the min/max values...
+	//
 
-	int lower, upper;   /* Range values */
+	int lower, upper;   // Range values
 
 	if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
 	  lower = ippGetRange(x_dim, 0, &upper);
@@ -2133,15 +2225,17 @@ cfGenerateSizes(ipp_t *response,
     }
     if (min_border_mismatch < LLONG_MAX)
     {
-      /* If we have found a matching page size in the media-col-database
-	 we stop searching */
+      // If we have found a matching page size in the media-col-database
+      // we stop searching
       min_border_mismatch = 0;
     }
   }
   if ((attr = ippFindAttribute(response, "media-size-supported",
-			       IPP_TAG_BEGIN_COLLECTION)) != NULL) {
-    for (i = 0, count = ippGetCount(attr); i < count; i ++) {
-      cups_size_t temp;   /* Current size */
+			       IPP_TAG_BEGIN_COLLECTION)) != NULL)
+  {
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
+      cups_size_t temp;   // Current size
 
       media_size  = ippGetCollection(attr, i);
       x_dim       = ippFindAttribute(media_size, "x-dimension", IPP_TAG_ZERO);
@@ -2173,19 +2267,19 @@ cfGenerateSizes(ipp_t *response,
 	  borderless = 0;
 	}
 
-	/* Check whether this size matches our search criteria */
+	// Check whether this size matches our search criteria
 	if (mode != CF_GEN_SIZES_DEFAULT &&
 	    min_border_mismatch > 0 &&
 	    search_width > 0 && search_length > 0 &&
-	    abs(search_width - temp.width) < 70 /* 2pt */ &&
-	    abs(search_length - temp.length) < 70 /* 2pt */)
+	    abs(search_width - temp.width) < 70 && // 2pt
+	    abs(search_length - temp.length) < 70 ) // 2pt
 	{
-	  /* Found size with the correct dimensions */
+	  // Found size with the correct dimensions
 	  if (mode != CF_GEN_SIZES_SEARCH_BORDERLESS_ONLY ||
 	      borderless == 1)
 	  {
-	    /* We accept the entry just by the size dimensions as
-	       "media-size-supported" has no per-size margin info */
+	    // We accept the entry just by the size dimensions as
+	    // "media-size-supported" has no per-size margin info
 	    if (width)
 	      *width = temp.width;
 	    if (length)
@@ -2199,20 +2293,22 @@ cfGenerateSizes(ipp_t *response,
 	    if (top)
 	      *top = temp.top;
 	    strlcpy(size_name, temp.media, IPP_MAX_NAME);
-	    /* Found it, stop searching */
+	    // Found it, stop searching
 	    min_border_mismatch = 0;
 	  }
 	}
 
 	if (sizes && !cupsArrayFind(*sizes, &temp))
 	  cupsArrayAdd(*sizes, &temp);
-      } else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE ||
-		 ippGetValueTag(y_dim) == IPP_TAG_RANGE) {
-	/*
-	 * Custom size - record the min/max values...
-	 */
+      }
+      else if (ippGetValueTag(x_dim) == IPP_TAG_RANGE ||
+	       ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+      {
+	//
+	// Custom size - record the min/max values...
+	//
 
-	int lower, upper;   /* Range values */
+	int lower, upper;   // Range values
 
 	if (ippGetValueTag(x_dim) == IPP_TAG_RANGE)
 	  lower = ippGetRange(x_dim, 0, &upper);
@@ -2237,24 +2333,32 @@ cfGenerateSizes(ipp_t *response,
     }
   }
   if ((attr = ippFindAttribute(response, "media-supported", IPP_TAG_ZERO))
-      != NULL) {
-    for (i = 0, count = ippGetCount(attr); i < count; i ++) {
+      != NULL)
+  {
+    for (i = 0, count = ippGetCount(attr); i < count; i ++)
+    {
       const char  *pwg_size = ippGetString(attr, i, NULL);
-      /* PWG size name */
-      cups_size_t temp, *temp2; /* Current size, found size */
+      // PWG size name
+      cups_size_t temp, *temp2; // Current size, found size
 
-      if ((pwg = pwgMediaForPWG(pwg_size)) != NULL) {
-        if (strstr(pwg_size, "_max_") || strstr(pwg_size, "_max.")) {
+      if ((pwg = pwgMediaForPWG(pwg_size)) != NULL)
+      {
+        if (strstr(pwg_size, "_max_") || strstr(pwg_size, "_max."))
+	{
           if (max_width && pwg->width > *max_width)
             *max_width = pwg->width;
           if (max_length && pwg->length > *max_length)
             *max_length = pwg->length;
-        } else if (strstr(pwg_size, "_min_") || strstr(pwg_size, "_min.")) {
+        }
+	else if (strstr(pwg_size, "_min_") || strstr(pwg_size, "_min."))
+	{
           if (min_width && pwg->width < *min_width)
             *min_width = pwg->width;
           if (min_length && pwg->length < *min_length)
             *min_length = pwg->length;
-        } else {
+        }
+	else
+	{
 	  if (!sizes && mode == CF_GEN_SIZES_DEFAULT)
 	    continue;
 
@@ -2272,15 +2376,16 @@ cfGenerateSizes(ipp_t *response,
 	  else
 	    strlcpy(temp.media, psname, sizeof(temp.media));
 
-	  /* Add the printer's original IPP name to an already found size */
+	  // Add the printer's original IPP name to an already found size
 	  if (sizes)
 	  {
-	    if ((temp2 = cupsArrayFind(*sizes, &temp)) != NULL) {
+	    if ((temp2 = cupsArrayFind(*sizes, &temp)) != NULL)
+	    {
 	      snprintf(temp2->media + strlen(temp2->media),
 		       sizeof(temp2->media) - strlen(temp2->media),
 		       " %s", pwg_size);
-	      /* Check if we have also a borderless version of the size and add
-		 the original IPP name also there */
+	      // Check if we have also a borderless version of the size and add
+	      // the original IPP name also there
 	      snprintf(temp.media, sizeof(temp.media), "%s.Borderless", psname);
 	      if ((temp2 = cupsArrayFind(*sizes, &temp)) != NULL)
 		snprintf(temp2->media + strlen(temp2->media),
@@ -2300,12 +2405,12 @@ cfGenerateSizes(ipp_t *response,
       *custom_left >= 0 && *custom_bottom >= 0 &&
       *custom_right >= 0 && *custom_top >= 0)
   {
-    /* Do we have support for a custom page size and have valid size ranges for
-       it? Check whether the size we are searching for can go as custom size */
-    if (search_width >= *min_width - 70 /* 2pt */ &&
-	search_width <= *max_width + 70 /* 2pt */ &&
-	search_length >= *min_length - 70 /* 2pt */ &&
-	search_length <= *max_length + 70 /* 2pt */)
+    // Do we have support for a custom page size and have valid size ranges for
+    // it? Check whether the size we are searching for can go as custom size
+    if (search_width >= *min_width - 70 && // 2pt
+	search_width <= *max_width + 70 && // 2pt
+	search_length >= *min_length - 70 && // 2pt
+	search_length <= *max_length + 70) // 2pt
     {
       if (width)
 	*width = (search_width < *min_width ? *min_width :
@@ -2322,7 +2427,7 @@ cfGenerateSizes(ipp_t *response,
   }
   if (mode != CF_GEN_SIZES_DEFAULT && min_border_mismatch > 0)
   {
-    /* Size not found */
+    // Size not found
     if (width) *width = 0;
     if (length) *length = 0;
     if (left) *left = -1;

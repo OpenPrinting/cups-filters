@@ -1,15 +1,15 @@
-/*
- * CUPS raster to PWG raster format filter for CUPS.
- *
- * Copyright © 2011, 2014-2017 Apple Inc.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// CUPS raster to PWG raster format filter for libcupsfilters.
+//
+// Copyright © 2011, 2014-2017 Apple Inc.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 
-/*
- * Include necessary headers...
- */
+
+//
+// Include necessary headers...
+
 
 #include "filter.h"
 #include "raster.h"
@@ -20,36 +20,37 @@
 #include <string.h>
 
 
-/*
- * 'cfFilterRasterToPWG()' - Filter function to convert CUPS Raster
- *                           into PWG or Apple Raster
- */
+//
+// 'cfFilterRasterToPWG()' - Filter function to convert CUPS Raster
+//                           into PWG or Apple Raster
 
-int				 /* O - Exit status */
-cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
-            int outputfd,        /* I - File descriptor output stream */
-            int inputseekable,   /* I - Is input stream seekable? (unused) */
-            cf_filter_data_t *data, /* I - Job and printer data */
-            void *parameters)    /* I - Filter-specific parameters (unused) */
-{			/* I - Command-line arguments */
-  cups_raster_t		*inras;		/* Input raster stream */
-  cups_raster_t         *outras;	/* Output raster stream */
-  cups_page_header2_t	inheader,	/* Input raster page header */
-			outheader;	/* Output raster page header */
-  unsigned		y;		/* Current line */
-  unsigned char		*line;		/* Line buffer */
-  unsigned		page = 0,	/* Current page */
-			page_width,	/* Actual page width */
-			page_height,	/* Actual page height */
-			page_top,	/* Top margin */
-			page_bottom,	/* Bottom margin */
-			page_left,	/* Left margin */
-			page_right,	/* Right margin */
-			linesize,	/* Bytes per line */
-			lineoffset;	/* Offset into line */
+int					 // O - Exit status
+cfFilterRasterToPWG(int inputfd,         // I - File descriptor input stream
+		    int outputfd,        // I - File descriptor output stream
+		    int inputseekable,   // I - Is input stream seekable?
+		                         //     (unused)
+		    cf_filter_data_t *data, // I - Job and printer data
+		    void *parameters)    // I - Filter-specific parameters
+                                         //     (unused)
+{
+  cups_raster_t		*inras;		// Input raster stream
+  cups_raster_t         *outras;	// Output raster stream
+  cups_page_header2_t	inheader,	// Input raster page header
+			outheader;	// Output raster page header
+  unsigned		y;		// Current line
+  unsigned char		*line;		// Line buffer
+  unsigned		page = 0,	// Current page
+			page_width,	// Actual page width
+			page_height,	// Actual page height
+			page_top,	// Top margin
+			page_bottom,	// Bottom margin
+			page_left,	// Left margin
+			page_right,	// Right margin
+			linesize,	// Bytes per line
+			lineoffset;	// Offset into line
   int			tmp;
-  unsigned char		white;		/* White pixel */
-  int           	back;           /* Back side orientation */
+  unsigned char		white;		// White pixel
+  int           	back;           // Back side orientation
   char                  buf[64];
   int                   width,
                         height,
@@ -57,18 +58,19 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
                         right,
                         bottom,
                         top;
-  int			num_options = 0;/* Number of options */
-  cups_option_t		*options = NULL;/* Options */
-  const char		*val;		/* Option value */
+  int			num_options = 0;// Number of options
+  cups_option_t		*options = NULL;// Options
+  const char		*val;		// Option value
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
-  void                 *icd = data->iscanceleddata;
-  cf_logfunc_t     log = data->logfunc;
-  void          *ld = data->logdata;
-  int                   res = 0;
+  void			*icd = data->iscanceleddata;
+  cf_logfunc_t		log = data->logfunc;
+  void			*ld = data->logdata;
+  int			res = 0;
 
 
   val = data->final_content_type;
-  if (val) {
+  if (val)
+  {
     if (strcasestr(val, "pwg") || strcasestr(val, "pclm"))
       outras = cupsRasterOpen(outputfd, CUPS_RASTER_WRITE_PWG);
     else if (strcasestr(val, "urf"))
@@ -99,14 +101,15 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
   {
     if (iscanceled && iscanceled(icd))
     {
-      /* Canceled */
+      // Canceled
       log(ld, CF_LOGLEVEL_DEBUG,
 	  "cfFilterRasterToPWG: Job canceled on input page %d", page + 1);
     }
     
-   /*
-    * Show page device dictionary...
-    */
+    //
+    // Show page device dictionary...
+    //
+
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterRasterToPWG: Duplex = %d", inheader.Duplex);
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -124,7 +127,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterRasterToPWG: ManualFeed = %d", inheader.ManualFeed);
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "cfFilterRasterToPWG: MediaPosition = %d", inheader.MediaPosition);
+		 "cfFilterRasterToPWG: MediaPosition = %d",
+		 inheader.MediaPosition);
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterRasterToPWG: NumCopies = %d", inheader.NumCopies);
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -137,7 +141,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterRasterToPWG: cupsHeight = %d", inheader.cupsHeight);
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "cfFilterRasterToPWG: cupsMediaType = %d", inheader.cupsMediaType);
+		 "cfFilterRasterToPWG: cupsMediaType = %d",
+		 inheader.cupsMediaType);
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterRasterToPWG: cupsBitsPerColor = %d",
 		 inheader.cupsBitsPerColor);
@@ -148,15 +153,18 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 		 "cfFilterRasterToPWG: cupsBytesPerLine = %d",
 		 inheader.cupsBytesPerLine);
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "cfFilterRasterToPWG: cupsColorOrder = %d", inheader.cupsColorOrder);
+		 "cfFilterRasterToPWG: cupsColorOrder = %d",
+		 inheader.cupsColorOrder);
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "cfFilterRasterToPWG: cupsColorSpace = %d", inheader.cupsColorSpace);
+		 "cfFilterRasterToPWG: cupsColorSpace = %d",
+		 inheader.cupsColorSpace);
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "cfFilterRasterToPWG: cupsCompression = %d", inheader.cupsCompression);
+		 "cfFilterRasterToPWG: cupsCompression = %d",
+		 inheader.cupsCompression);
 
-   /*
-    * Compute the real raster size...
-    */
+    //
+    // Compute the real raster size...
+    //
 
     page ++;
 
@@ -178,17 +186,17 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
     page_bottom = (unsigned)(inheader.cupsImagingBBox[1] *
 			     inheader.HWResolution[1] / 72.0);
     tmp        = (int)(page_height - page_bottom - inheader.cupsHeight);
-    if (tmp < 0 && tmp >= -1) /* Rounding error */
+    if (tmp < 0 && tmp >= -1) // Rounding error
       page_top = 0;
     else
       page_top = (unsigned)tmp;
     tmp        = (int)(page_width - page_left - inheader.cupsWidth);
-    if (tmp < 0 && tmp >= -1) /* Rounding error */
+    if (tmp < 0 && tmp >= -1) // Rounding error
       page_right = 0;
     else
       page_right = (unsigned)tmp;
     linesize    = (page_width * inheader.cupsBitsPerPixel + 7) / 8;
-    lineoffset  = page_left * inheader.cupsBitsPerPixel / 8; /* Round down */
+    lineoffset  = page_left * inheader.cupsBitsPerPixel / 8; // Round down
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "cfFilterRasterToPWG: In pixels: Width: %u  Height: %u  Left: %u  Right:  %u  Top: %u  Bottom: %u",
@@ -273,8 +281,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
     outheader.cupsHeight       = page_height;
     outheader.cupsBytesPerLine = linesize;
 
-    outheader.cupsInteger[14]  = 0;	/* VendorIdentifier */
-    outheader.cupsInteger[15]  = 0;	/* VendorLength */
+    outheader.cupsInteger[14]  = 0;	// VendorIdentifier
+    outheader.cupsInteger[15]  = 0;	// VendorLength
 
     if ((val = cupsGetOption("print-content-optimize", num_options,
                              options)) != NULL)
@@ -304,7 +312,7 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
     if ((val = cupsGetOption("print-quality",
 			     num_options, options)) != NULL)
     {
-      unsigned quality = (unsigned)atoi(val); /* print-quality value */
+      unsigned quality = (unsigned)atoi(val); // print-quality value
 
       if (quality >= IPP_QUALITY_DRAFT && quality <= IPP_QUALITY_HIGH)
 	outheader.cupsInteger[8] = quality;
@@ -316,18 +324,18 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
       }
     }
 
-    /* Update rendering intent with user settings or the default */
+    // Update rendering intent with user settings or the default
     outheader.cupsRenderingIntent[0] = '\0';
     cfGetPrintRenderIntent(data, outheader.cupsRenderingIntent,
 			   sizeof(outheader.cupsRenderingIntent));
 
-    /* First try to use the input page size name for the output page,
-       check whether this size is supported by theprinter */
+    // First try to use the input page size name for the output page,
+    // check whether this size is supported by theprinter
     buf[0] = '\0';
     if (inheader.cupsPageSizeName[0])
     {
-      /* Take only a page size name for a page size the printer actually
-	 supports */
+      // Take only a page size name for a page size the printer actually
+      // supports
       snprintf(buf, sizeof(buf), "%.63s", inheader.cupsPageSizeName);
       cfGenerateSizes(data->printer_attrs, CF_GEN_SIZES_SEARCH, NULL, NULL,
 		      NULL, NULL, NULL, NULL, NULL, NULL,
@@ -340,8 +348,8 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
 	       "%.63s", buf);
     else
     {
-      /* No name found, find the printer's page size by the size dimensions
-         and margins */
+      // No name found, find the printer's page size by the size dimensions
+      // and margins
       width = (int)(2540.0 * inheader.cupsPageSize[0] / 72.0);
       height = (int)(2540.0 * inheader.cupsPageSize[1] / 72.0);
       left = (int)(2540.0 * inheader.ImagingBoundingBox[0] / 72.0);
@@ -376,116 +384,116 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
       {
         if (inheader.Tumble)
         {
-	  outheader.cupsInteger[1] = ~0U;/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = 1;	/* FeedTransform */
+	  outheader.cupsInteger[1] = ~0U;// CrossFeedTransform
+	  outheader.cupsInteger[2] = 1;	// FeedTransform
 
 	  outheader.cupsInteger[3] = page_right;
-					/* ImageBoxLeft */
+					// ImageBoxLeft
 	  outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
+					// ImageBoxTop
 	  outheader.cupsInteger[5] = page_width - page_left;
-      					/* ImageBoxRight */
+					// ImageBoxRight
 	  outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+					// ImageBoxBottom
         }
         else
         {
-	  outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = ~0U;/* FeedTransform */
+	  outheader.cupsInteger[1] = 1;	// CrossFeedTransform
+	  outheader.cupsInteger[2] = ~0U;// FeedTransform
 
 	  outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
+					// ImageBoxLeft
 	  outheader.cupsInteger[4] = page_bottom;
-					/* ImageBoxTop */
+					// ImageBoxTop
 	  outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
+					// ImageBoxRight
 	  outheader.cupsInteger[6] = page_height - page_top;
-      					/* ImageBoxBottom */
+					// ImageBoxBottom
         }
       }
       else if (back == CF_BACKSIDE_MANUAL_TUMBLE)
       {
         if (inheader.Tumble)
         {
-	  outheader.cupsInteger[1] = ~0U;/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = ~0U;/* FeedTransform */
+	  outheader.cupsInteger[1] = ~0U;// CrossFeedTransform
+	  outheader.cupsInteger[2] = ~0U;// FeedTransform
 
 	  outheader.cupsInteger[3] = page_width - page_left -
 	                             inheader.cupsWidth;
-					/* ImageBoxLeft */
+					// ImageBoxLeft
 	  outheader.cupsInteger[4] = page_bottom;
-					/* ImageBoxTop */
+					// ImageBoxTop
 	  outheader.cupsInteger[5] = page_width - page_left;
-      					/* ImageBoxRight */
+					// ImageBoxRight
 	  outheader.cupsInteger[6] = page_height - page_top;
-      					/* ImageBoxBottom */
+					// ImageBoxBottom
         }
         else
         {
-	  outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = 1;	/* FeedTransform */
+	  outheader.cupsInteger[1] = 1;	// CrossFeedTransform
+	  outheader.cupsInteger[2] = 1;	// FeedTransform
 
 	  outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
+					// ImageBoxLeft
 	  outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
+					// ImageBoxTop
 	  outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
+					// ImageBoxRight
 	  outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+					// ImageBoxBottom
         }
       }
       else if (back == CF_BACKSIDE_ROTATED)
       {
         if (inheader.Tumble)
         {
-	  outheader.cupsInteger[1] = ~0U;/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = ~0U;/* FeedTransform */
+	  outheader.cupsInteger[1] = ~0U;// CrossFeedTransform
+	  outheader.cupsInteger[2] = ~0U;// FeedTransform
 
 	  outheader.cupsInteger[3] = page_right;
-					/* ImageBoxLeft */
+					// ImageBoxLeft
 	  outheader.cupsInteger[4] = page_bottom;
-					/* ImageBoxTop */
+					// ImageBoxTop
 	  outheader.cupsInteger[5] = page_width - page_left;
-      					/* ImageBoxRight */
+					// ImageBoxRight
 	  outheader.cupsInteger[6] = page_height - page_top;
-      					/* ImageBoxBottom */
+					// ImageBoxBottom
         }
         else
         {
-	  outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-	  outheader.cupsInteger[2] = 1;	/* FeedTransform */
+	  outheader.cupsInteger[1] = 1;	// CrossFeedTransform
+	  outheader.cupsInteger[2] = 1;	// FeedTransform
 
 	  outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
+					// ImageBoxLeft
 	  outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
+					// ImageBoxTop
 	  outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
+					// ImageBoxRight
 	  outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+					// ImageBoxBottom
         }
       }
       else
       {
-       /*
-        * Unsupported value...
-        */
+	//
+	// Unsupported value...
+	//
 
         if (log) log(ld,CF_LOGLEVEL_DEBUG,
 		     "cfFilterRasterToPWG: Unsupported back side orientation value.");
 
-	outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-	outheader.cupsInteger[2] = 1;	/* FeedTransform */
+	outheader.cupsInteger[1] = 1;	// CrossFeedTransform
+	outheader.cupsInteger[2] = 1;	// FeedTransform
 
 	outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
+					// ImageBoxLeft
 	outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
+					// ImageBoxTop
 	outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
+					// ImageBoxRight
 	outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+					// ImageBoxBottom
       }
     }
     else
@@ -493,17 +501,17 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
       outheader.Duplex = inheader.Duplex;
       outheader.Tumble = inheader.Tumble;
 
-      outheader.cupsInteger[1] = 1;	/* CrossFeedTransform */
-      outheader.cupsInteger[2] = 1;	/* FeedTransform */
+      outheader.cupsInteger[1] = 1;	// CrossFeedTransform
+      outheader.cupsInteger[2] = 1;	// FeedTransform
 
       outheader.cupsInteger[3] = page_left;
-					/* ImageBoxLeft */
+					// ImageBoxLeft
       outheader.cupsInteger[4] = page_top;
-					/* ImageBoxTop */
+					// ImageBoxTop
       outheader.cupsInteger[5] = page_left + inheader.cupsWidth;
-      					/* ImageBoxRight */
+					// ImageBoxRight
       outheader.cupsInteger[6] = page_height - page_bottom;
-      					/* ImageBoxBottom */
+					// ImageBoxBottom
     }
 
     if (!cupsRasterWriteHeader2(outras, &outheader))
@@ -516,9 +524,9 @@ cfFilterRasterToPWG(int inputfd,         /* I - File descriptor input stream */
       goto fail;
     }
 
-   /*
-    * Copy raster data...
-    */
+    //
+    // Copy raster data...
+    //
 
     if (linesize < inheader.cupsBytesPerLine)
       linesize = inheader.cupsBytesPerLine;

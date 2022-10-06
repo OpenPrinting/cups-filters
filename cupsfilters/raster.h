@@ -1,22 +1,22 @@
-/*
- *   CUPS/PWG Raster utilities header file for cups-filters.
- *
- *   Copyright 2013 by Till Kamppeter.
- *
- *   Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- */
+//
+//   Functions to handle CUPS/PWG Raster headers for libcupsfilters.
+//
+//   Copyright 2013 by Till Kamppeter.
+//
+//   Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+
 
 #ifndef _CUPS_FILTERS_RASTER_H_
 #  define _CUPS_FILTERS_RASTER_H_
 
 #  ifdef __cplusplus
 extern "C" {
-#  endif /* __cplusplus */
+#  endif // __cplusplus
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #  include "filter.h"
 #  include <stdio.h>
@@ -29,14 +29,15 @@ extern "C" {
 #  else
 #    include <unistd.h>
 #    include <fcntl.h>
-#  endif /* WIN32 || __EMX__ */
+#  endif // WIN32 || __EMX__
 
 #  include <cups/cups.h>
 #  include <cups/raster.h>
 
-/*
- * Types
- */
+
+//
+// Types
+//
 
 typedef enum cf_backside_orient_e
 {
@@ -47,9 +48,9 @@ typedef enum cf_backside_orient_e
 } cf_backside_orient_t;
 
 
-/*
- * Prototypes...
- */
+//
+// Prototypes...
+//
 
 extern const char *     cfRasterColorSpaceString(cups_cspace_t cspace);
 extern int              cfRasterPrepareHeader(cups_page_header2_t *h,
@@ -58,7 +59,7 @@ extern int              cfRasterPrepareHeader(cups_page_header2_t *h,
 					      final_outformat,
 					      cf_filter_out_format_t
 					      header_outformat,
-					      int no_hig_depth,
+					      int no_high_depth,
 					      cups_cspace_t *cspace);
 extern int              cfRasterSetColorSpace(cups_page_header2_t *h,
 					      const char *available,
@@ -74,10 +75,6 @@ extern const char 	*cfGetPrintRenderIntent(cf_filter_data_t *data,
 
 #  ifdef __cplusplus
 }
-#  endif /* __cplusplus */
+#  endif // __cplusplus
 
-#endif /* !_CUPS_FILTERS_RASTER_H_ */
-
-/*
- * End
- */
+#endif // !_CUPS_FILTERS_RASTER_H_

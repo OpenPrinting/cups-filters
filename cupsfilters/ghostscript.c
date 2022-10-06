@@ -383,21 +383,21 @@ header_to_gs_args(gs_page_header *h,
 	       h->cupsBorderlessScalingFactor);
       cupsArrayAdd(gs_args, strdup(tmpstr));
     }
-    for (i=0; i <= 15; i ++)
+    for (i = 0; i <= 15; i ++)
       if (h->cupsInteger[i])
       {
 	snprintf(tmpstr, sizeof(tmpstr), "-dcupsInteger%d=%d",
 		 i, (unsigned)(h->cupsInteger[i]));
 	cupsArrayAdd(gs_args, strdup(tmpstr));
       }
-    for (i=0; i <= 15; i ++)
+    for (i = 0; i <= 15; i ++)
       if (h->cupsReal[i])
       {
 	snprintf(tmpstr, sizeof(tmpstr), "-dcupsReal%d=%.4f",
 		 i, h->cupsReal[i]);
 	cupsArrayAdd(gs_args, strdup(tmpstr));
       }
-    for (i=0; i <= 15; i ++)
+    for (i = 0; i <= 15; i ++)
       if (h->cupsString[i][0] != '\0')
       {
 	snprintf(tmpstr, sizeof(tmpstr), "-scupsString%d=%s",

@@ -845,7 +845,7 @@ cfFilterImageToRaster(int inputfd,         // I - File descriptor input stream
       else if(!strcasecmp(val, "fit"))
 	zoom = 1.0;           // fitplot = 1 or fit method
       else
-	cropfit=1;            // none or crop-to-fit
+	cropfit = 1;          // none or crop-to-fit
     }
     else       // print-scaling is not defined, look for alternate options.
     {

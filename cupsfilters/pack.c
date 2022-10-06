@@ -1,46 +1,46 @@
-/*
- *   Bit packing routines for CUPS.
- *
- *   Copyright 2007 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   cfPackHorizontal()    - Pack pixels horizontally...
- *   cfPackHorizontal2()   - Pack 2-bit pixels horizontally...
- *   cfPackHorizontalBit() - Pack pixels horizontally by bit...
- *   cfPackVertical()      - Pack pixels vertically...
- */
+//
+//   Bit packing routines for libcupsfilters.
+//
+//   Copyright 2007 by Apple Inc.
+//   Copyright 1993-2005 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   cfPackHorizontal()    - Pack pixels horizontally...
+//   cfPackHorizontal2()   - Pack 2-bit pixels horizontally...
+//   cfPackHorizontalBit() - Pack pixels horizontally by bit...
+//   cfPackVertical()      - Pack pixels vertically...
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "driver.h"
 
 
-/*
- * 'cfPackHorizontal()' - Pack pixels horizontally...
- */
+//
+// 'cfPackHorizontal()' - Pack pixels horizontally...
+//
 
 void
-cfPackHorizontal(const unsigned char *ipixels,/* I - Input pixels */
-        	   unsigned char       *obytes,	/* O - Output bytes */
-        	   int                 width,	/* I - Number of pixels */
-        	   const unsigned char clearto,	/* I - Initial value of bytes */
-		   const int           step)	/* I - Step value between pixels */
+cfPackHorizontal(const unsigned char *ipixels,  // I - Input pixels
+		 unsigned char       *obytes,	// O - Output bytes
+		 int                 width,	// I - Number of pixels
+		 const unsigned char clearto,	// I - Initial value of bytes
+		 const int           step)	// I - Step value between pixels
 {
-  register unsigned char	b;		/* Current byte */
+  register unsigned char	b;		// Current byte
 
 
- /*
-  * Do whole bytes first...
-  */
+  //
+  // Do whole bytes first...
+  //
 
   while (width > 7)
   {
@@ -76,9 +76,9 @@ cfPackHorizontal(const unsigned char *ipixels,/* I - Input pixels */
     width -= 8;
   }
 
- /*
-  * Then do the last N bytes (N < 8)...
-  */
+  //
+  // Then do the last N bytes (N < 8)...
+  //
 
   b = clearto;
 
@@ -111,22 +111,22 @@ cfPackHorizontal(const unsigned char *ipixels,/* I - Input pixels */
 }
 
 
-/*
- * 'cfPackHorizontal2()' - Pack 2-bit pixels horizontally...
- */
+//
+// 'cfPackHorizontal2()' - Pack 2-bit pixels horizontally...
+//
 
 void
-cfPackHorizontal2(const unsigned char *ipixels,	/* I - Input pixels */
-        	    unsigned char       *obytes,	/* O - Output bytes */
-        	    int                 width,		/* I - Number of pixels */
-		    const int           step)		/* I - Stepping value */
+cfPackHorizontal2(const unsigned char *ipixels,	// I - Input pixels
+		  unsigned char       *obytes,	// O - Output bytes
+		  int                 width,	// I - Number of pixels
+		  const int           step)	// I - Stepping value
 {
-  register unsigned char	b;			/* Current byte */
+  register unsigned char	b;		// Current byte
 
 
- /*
-  * Do whole bytes first...
-  */
+  //
+  // Do whole bytes first...
+  //
 
   while (width > 3)
   {
@@ -144,9 +144,9 @@ cfPackHorizontal2(const unsigned char *ipixels,	/* I - Input pixels */
     width -= 4;
   }
 
- /*
-  * Then do the last N bytes (N < 4)...
-  */
+  //
+  // Then do the last N bytes (N < 4)...
+  //
 
   b = 0;
 
@@ -164,23 +164,24 @@ cfPackHorizontal2(const unsigned char *ipixels,	/* I - Input pixels */
 }
 
 
-/*
- * 'cfPackHorizontalBit()' - Pack pixels horizontally by bit...
- */
+//
+// 'cfPackHorizontalBit()' - Pack pixels horizontally by bit...
+//
 
 void
-cfPackHorizontalBit(const unsigned char *ipixels,	/* I - Input pixels */
-                      unsigned char       *obytes,	/* O - Output bytes */
-                      int                 width,	/* I - Number of pixels */
-                      const unsigned char clearto,	/* I - Initial value of bytes */
-		      const unsigned char bit)		/* I - Bit to check */
+cfPackHorizontalBit(const unsigned char *ipixels,	// I - Input pixels
+		    unsigned char       *obytes,	// O - Output bytes
+		    int                 width,		// I - Number of pixels
+		    const unsigned char clearto,	// I - Initial value of
+		                                        //     bytes
+		    const unsigned char bit)		// I - Bit to check
 {
-  register unsigned char	b;			/* Current byte */
+  register unsigned char	b;			// Current byte
 
 
- /*
-  * Do whole bytes first...
-  */
+  //
+  // Do whole bytes first...
+  //
 
   while (width > 7)
   {
@@ -208,9 +209,9 @@ cfPackHorizontalBit(const unsigned char *ipixels,	/* I - Input pixels */
     width -= 8;
   }
 
- /*
-  * Then do the last N bytes (N < 8)...
-  */
+  //
+  // Then do the last N bytes (N < 8)...
+  //
 
   b = clearto;
 
@@ -243,20 +244,21 @@ cfPackHorizontalBit(const unsigned char *ipixels,	/* I - Input pixels */
 }
 
 
-/*
- * 'cfPackVertical()' - Pack pixels vertically...
- */
+//
+// 'cfPackVertical()' - Pack pixels vertically...
+//
 
 void
-cfPackVertical(const unsigned char *ipixels,	/* I - Input pixels */
-                 unsigned char       *obytes,	/* O - Output bytes */
-                 int                 width,	/* I - Number of input pixels */
-                 const unsigned char bit,	/* I - Output bit */
-                 const int           step)	/* I - Number of bytes between columns */
+cfPackVertical(const unsigned char *ipixels,	// I - Input pixels
+	       unsigned char       *obytes,	// O - Output bytes
+	       int                 width,	// I - Number of input pixels
+	       const unsigned char bit,		// I - Output bit
+	       const int           step)	// I - Number of bytes between
+                                                //     columns
 {
- /*
-  * Loop through the entire array...
-  */
+  //
+  // Loop through the entire array...
+  //
 
   while (width > 7)
   {
@@ -297,4 +299,3 @@ cfPackVertical(const unsigned char *ipixels,	/* I - Input pixels */
     width --;
   }
 }
-

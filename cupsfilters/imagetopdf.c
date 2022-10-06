@@ -1837,7 +1837,7 @@ cfFilterImageToPDF(int inputfd,         // I - File descriptor input stream
 	  goto out_of_memory;
 	if (pdf_printer && log)
 	  log(ld, CF_LOGLEVEL_CONTROL,
-	      "PAGE: %d %d\n", doc.page+1, 1);
+	      "PAGE: %d %d\n", doc.page + 1, 1);
       }
     }
   }
@@ -1983,7 +1983,7 @@ out_ascii85(imagetopdf_doc_t *doc,
       b /= 85;
       c[0] = b + '!';
 
-      c[length+1] = '\0';
+      c[length + 1] = '\0';
       out_pdf(doc, c);
     }
 

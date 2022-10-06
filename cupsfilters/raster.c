@@ -1,19 +1,27 @@
-/*
- *   Function to apply IPP options to a CUPS/PWG Raster header.
- *
- *   Copyright 2013-2022 by Till Kamppeter.
- *
- *   Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- */
+//
+//   Functions to handle CUPS/PWG Raster headers for libcupsfilters.
+//
+//   Copyright 2013-2022 by Till Kamppeter.
+//
+//   Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   cfRasterColorSpaceString() - Return strings for CUPS color spaces
+//   cfGetBackSideOrientation() - Return backside orientation for duplex
+//                                printing
+//   cfGetPrintRenderIntent()   - Return rendering intent for a job
+//   cfRasterPrepareHeader()    - Prepare a Raster header for a job
+//   cfRasterSetColorSpace()    - Find best color space for print-color-mode
+//                                and print-quality setting
+//   cfJoinJobOptionsAndAttrs() - Join job IPP attributes and job options in
+//                                one option list
+//
 
-
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include <config.h>
 #include <cups/cups.h>
@@ -26,36 +34,36 @@
 #include <cupsfilters/ipp.h>
 #include <cups/pwg.h>
 
-/*
- * Local functions
- */
+//
+// Local functions
+//
 
 static int raster_base_header(cups_page_header2_t *h, cf_filter_data_t *data,
 			      int pwg_raster);
 
-/*
- * '_strlcpy()' - Safely copy two strings.
- */
+//
+// '_strlcpy()' - Safely copy two strings.
+//
 
-static size_t					/* O - Length of string */
-_strlcpy(char       *dst,		/* O - Destination string */
-	 const char *src,		/* I - Source string */
-	 size_t      size)		/* I - Size of destination string buffer */
+static size_t				// O - Length of string
+_strlcpy(char        *dst,		// O - Destination string
+	 const char  *src,		// I - Source string
+	 size_t      size)		// I - Size of destination string buffer
 {
-  size_t	srclen;			/* Length of source string */
+  size_t	srclen;			// Length of source string
 
 
- /*
-  * Figure out how much room is needed...
-  */
+  //
+  // Figure out how much room is needed...
+  //
 
   size --;
 
   srclen = strlen(src);
 
- /*
-  * Copy the appropriate amount...
-  */
+  //
+  // Copy the appropriate amount...
+  //
 
   if (srclen > size)
     srclen = size;
@@ -67,16 +75,15 @@ _strlcpy(char       *dst,		/* O - Destination string */
 }
 
 
-/*
- * 'cfRasterColorSpaceString()' - Return the color space name for a
- *                                cupsColorSpace value.
- */
+//
+// 'cfRasterColorSpaceString()' - Return the color space name for a
+//                                cupsColorSpace value.
 
 const char *
-cfRasterColorSpaceString(cups_cspace_t cspace)	/* I - cupsColorSpace value */
+cfRasterColorSpaceString(cups_cspace_t cspace)	// I - cupsColorSpace value
 {
   static const char * const cups_color_spaces[] =
-  {					/* Color spaces */
+  {					// Color spaces
     "W",
     "RGB",
     "RGBA",
@@ -149,77 +156,79 @@ cfRasterColorSpaceString(cups_cspace_t cspace)	/* I - cupsColorSpace value */
 }
 
 
-/*
- *  'cfGetBackSideOrientation()' - This functions returns the back
- *				   side orientation using printer
- *				   attributes.  Meaning and reason for
- *				   backside orientation: It only
- *				   makes sense if printer supports
- *				   duplex, so, if printer reports that
- *				   it supports duplex printing via
- *				   sides-supported IPP attribute, then
- *				   it also reports back-side
- *				   orientation for each PDL in PDL
- *				   specific IPP attributes. Backside
- *				   orientation is specially needed for
- *				   raster PDLs as raster PDLs are
- *				   specially made for raster printers
- *				   which do not have sufficient memory
- *				   to hold a full page bitmap(raster
- *				   page).  So they cannot build the
- *				   whole page in memory before
- *				   starting to print it. For one sided
- *				   printing it is easy to manage. The
- *				   printer's mechanism pulls the page
- *				   in on its upper edge and starts to
- *				   print, from top to bottom, after
- *				   that it ejects the page.  For
- *				   double-sided printing it does the
- *				   same for the front side, but for
- *				   the back side the mechanics of the
- *				   printer has to turn over the sheet,
- *				   and now, depending on how the sheet
- *				   is turned over it happens that the
- *				   edge arriving in the printing
- *				   mechanism is the lower edge of the
- *				   back side. And if the printer
- *				   simply prints then, the back side
- *				   is the wrong way around. The
- *				   printer reports its need via back
- *				   side orientation in such a case, so
- *				   that the client knows to send the
- *				   back side upside down for example.
- *				   In vector PDL, PDF and PostScript,
- *				   always the full page's raster image
- *				   is completely generated in the
- *				   printer before the page is started,
- *				   and therefore the printer can start
- *				   to take the pixels from the lower
- *				   edge of the raster image if needed,
- *				   so back side orientation is always
- *				   "normal" for these PDLs.  And if a
- *				   printer does not support duplex,
- *				   back side orientation is not
- *				   needed.
- */
+//
+//  'cfGetBackSideOrientation()' - This functions returns the back
+//				   side orientation using printer
+//				   attributes.  Meaning and reason for
+//				   backside orientation: It only makes
+//				   sense if printer supports duplex,
+//				   so, if printer reports that it
+//				   supports duplex printing via
+//				   sides-supported IPP attribute, then
+//				   it also reports back-side
+//				   orientation for each PDL in PDL
+//				   specific IPP attributes. Backside
+//				   orientation is specially needed for
+//				   raster PDLs as raster PDLs are
+//				   specially made for raster printers
+//				   which do not have sufficient memory
+//				   to hold a full page bitmap(raster
+//				   page).  So they cannot build the
+//				   whole page in memory before
+//				   starting to print it. For one sided
+//				   printing it is easy to manage. The
+//				   printer's mechanism pulls the page
+//				   in on its upper edge and starts to
+//				   print, from top to bottom, after
+//				   that it ejects the page.  For
+//				   double-sided printing it does the
+//				   same for the front side, but for
+//				   the back side the mechanics of the
+//				   printer has to turn over the sheet,
+//				   and now, depending on how the sheet
+//				   is turned over it happens that the
+//				   edge arriving in the printing
+//				   mechanism is the lower edge of the
+//				   back side. And if the printer
+//				   simply prints then, the back side
+//				   is the wrong way around. The
+//				   printer reports its need via back
+//				   side orientation in such a case, so
+//				   that the client knows to send the
+//				   back side upside down for example.
+//				   In vector PDL, PDF and PostScript,
+//				   always the full page's raster image
+//				   is completely generated in the
+//				   printer before the page is started,
+//				   and therefore the printer can start
+//				   to take the pixels from the lower
+//				   edge of the raster image if needed,
+//				   so back side orientation is always
+//				   "normal" for these PDLs.  And if a
+//				   printer does not support duplex,
+//				   back side orientation is not
+//				   needed.
+//
 
-int				       /* O - Backside orientation (bit 0-2)
-					      Requires flipped margin?
-					      Yes: bit 4 set; No: bit 3 set */
-cfGetBackSideOrientation(cf_filter_data_t *data) /* I - Filter data */
+int				       // O - Backside orientation (bit 0-2)
+				       //     Requires flipped margin?
+				       //     Yes: bit 4 set; No: bit 3 set
+cfGetBackSideOrientation(cf_filter_data_t *data) // I - Filter data
 {
   ipp_t *printer_attrs = data->printer_attrs;
   int num_options = data->num_options;
   cups_option_t *options = data->options;
   char *final_content_type = data->final_content_type;
-  ipp_attribute_t *ipp_attr = NULL; /* IPP attribute */
-  int i,			/* Looping variable */
+  ipp_attribute_t *ipp_attr = NULL; // IPP attribute
+  int i,			// Looping variable
       count;			
   const char *keyword;
-  int backside = -1;	/* backside obtained using printer attributes */
+  int backside = -1;	// backside obtained using printer attributes
+
+
   // also check options
   if ((ipp_attr = ippFindAttribute(printer_attrs, "sides-supported",
-  				     IPP_TAG_ZERO)) != NULL)
+				   IPP_TAG_ZERO)) != NULL)
   {
     if (ippContainsString(ipp_attr, "two-sided-long-edge"))
     {
@@ -230,20 +239,24 @@ cfGetBackSideOrientation(cf_filter_data_t *data) /* I - Filter data */
       {
 	for (i = 0, count = ippGetCount(ipp_attr); i < count; i ++)
 	{
-	  const char *dm = ippGetString(ipp_attr, i, NULL); /* DM value */
-	  if(!strcasecmp(dm, "DM1")){
+	  const char *dm = ippGetString(ipp_attr, i, NULL); // DM value
+	  if (!strcasecmp(dm, "DM1"))
+	  {
 	    backside = CF_BACKSIDE_NORMAL;
 	    break;
 	  }
-	  if(!strcasecmp(dm, "DM2")){
+	  if (!strcasecmp(dm, "DM2"))
+	  {
 	    backside = CF_BACKSIDE_FLIPPED;
 	    break;
 	  }
-	  if(!strcasecmp(dm, "DM3")){
+	  if (!strcasecmp(dm, "DM3"))
+	  {
 	    backside = CF_BACKSIDE_ROTATED;
 	    break;
 	  }
-	  if(!strcasecmp(dm, "DM4")){
+	  if (!strcasecmp(dm, "DM4"))
+	  {
 	    backside = CF_BACKSIDE_MANUAL_TUMBLE;
 	    break;
 	  }
@@ -288,11 +301,14 @@ cfGetBackSideOrientation(cf_filter_data_t *data) /* I - Filter data */
     }
   }
 
-  return backside;
+  return (backside);
 }
 
+
 const char *
-cfGetPrintRenderIntent(cf_filter_data_t *data, char *ri, int ri_len)
+cfGetPrintRenderIntent(cf_filter_data_t *data,
+		       char *ri,
+		       int ri_len)
 {
   const char		*val;
   int 			num_options = 0;
@@ -320,12 +336,12 @@ cfGetPrintRenderIntent(cf_filter_data_t *data, char *ri, int ri_len)
     else if (!strcasecmp(val, "perceptual"))
       snprintf(ri, ri_len, "%s", "Perceptual");
     else if (!strcasecmp(val, "relative"))
-      snprintf(ri, ri_len, "%s",  "Relative");
+      snprintf(ri, ri_len, "%s", "Relative");
     else if (!strcasecmp(val, "relative-bpc") ||
 	     !strcasecmp(val, "relativebpc"))
       snprintf(ri, ri_len, "%s", "RelativeBpc");
     else if (!strcasecmp(val, "saturation"))
-      snprintf(ri, ri_len, "%s",  "Saturation");
+      snprintf(ri, ri_len, "%s", "Saturation");
   }
 
   if ((ipp_attr = ippFindAttribute(printer_attrs,
@@ -342,7 +358,7 @@ cfGetPrintRenderIntent(cf_filter_data_t *data, char *ri, int ri_len)
 	const char *temp = ippGetString(ipp_attr, i, NULL);
 	if (!strcasecmp(temp, "auto")) autoRender = 1;
 	if (ri[0] != '\0')
-	  /* User has supplied a setting */
+	  // User has supplied a setting
 	  if (!strcasecmp(ri, temp))
 	    break;
       }
@@ -354,8 +370,8 @@ cfGetPrintRenderIntent(cf_filter_data_t *data, char *ri, int ri_len)
 	ri[0] = '\0';
       }
       if (ri[0] == '\0')
-      {	/* Either user has not supplied any setting
-	   or user supplied value is not supported by printer */
+      {	// Either user has not supplied any setting
+	// or user supplied value is not supported by printer
 	if ((ipp_attr = ippFindAttribute(printer_attrs,
 					 "print-rendering-intent-default",
 					 IPP_TAG_ZERO)) != NULL)
@@ -370,52 +386,53 @@ cfGetPrintRenderIntent(cf_filter_data_t *data, char *ri, int ri_len)
   return (ri);
 }
 
-/*
- * 'cfRasterPrepareHeader() - This function creates a CUPS/PWG Raster
- *                            header for Raster output based on the
- *                            printer and job properties supplied to
- *                            the calling filter functions, printer
- *                            properties via printer IPP attributes
- *                            and job properties via CUPS option list
- *                            and job IPP attributesor optionally a
- *                            sample header. For PWG and Apple Raster
- *                            output the color space and depth is
- *                            auto-selected based on available options
- *                            listed in the urf-supported and
- *                            pwg-raster-document-type-supported
- *                            printer IPP attributes and the settings
- *                            of print-color-mode ("ColorModel") and
- *                            print-quality ("cupsPrintQuality") job
- *                            attributes/options.
- */
 
-int                                             /* O  - 0 on success,
-						        -1 on error */
-cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
-			cf_filter_data_t *data,    /* I  - Job and printer data */
+//
+// 'cfRasterPrepareHeader() - This function creates a CUPS/PWG Raster
+//                            header for Raster output based on the
+//                            printer and job properties supplied to
+//                            the calling filter functions, printer
+//                            properties via printer IPP attributes
+//                            and job properties via CUPS option list
+//                            and job IPP attributesor optionally a
+//                            sample header. For PWG and Apple Raster
+//                            output the color space and depth is
+//                            auto-selected based on available options
+//                            listed in the urf-supported and
+//                            pwg-raster-document-type-supported
+//                            printer IPP attributes and the settings
+//                            of print-color-mode ("ColorModel") and
+//                            print-quality ("cupsPrintQuality") job
+//                            attributes/options.
+//
+
+int                                             // O  -  0 on success,
+						//      -1 on error
+cfRasterPrepareHeader(cups_page_header2_t *h,   // I  - Raster header
+			cf_filter_data_t *data, // I  - Job and printer data
 			cf_filter_out_format_t final_outformat,
-                                                /* I  - Job output format 
-						        (determines color space,
-						         and resolution) */
+                                                // I  - Job output format
+						//      (determines color space,
+						//       and resolution)
 			cf_filter_out_format_t header_outformat,
-                                                /* I  - This filter's output
-						        format (determines
-							header format) */
-			int no_high_depth,      /* I  - Suppress use of
-						        > 8 bit per color */
-			cups_cspace_t *cspace)  /* IO - Color space we want to
-						        use, -1 for auto, we
-							return color space
-							actually used, -1 if
-						        no suitable color space
-						        found. */
+                                                // I  - This filter's output
+						//      format (determines
+						//      header format)
+			int no_high_depth,      // I  - Suppress use of
+						//      > 8 bit per color
+			cups_cspace_t *cspace)  // IO - Color space we want to
+						//      use, -1 for auto, we
+						//      return color space
+						//      actually used, -1 if
+						//      no suitable color space
+						//      found.
 {
   int i;
   ipp_t *printer_attrs, *job_attrs;
   int num_options = 0;
   cups_option_t *options = NULL;
   cf_logfunc_t log = data->logfunc;
-  void          *ld = data->logdata;
+  void         *ld = data->logdata;
   int pwgraster = 0,
       appleraster = 0,
       cupsraster = 0,
@@ -450,13 +467,15 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
       p = cupsGetOption("MediaClass", num_options, options);
     if (p != NULL)
     {
-      if (strcasestr(p, "pwg")) {
+      if (strcasestr(p, "pwg"))
+      {
 	pwgraster = 1;
 	cupsraster = 0;
 	if (log)
 	  log(ld, CF_LOGLEVEL_DEBUG,
 	      "PWG Raster output requested (via \"MediaClass\"/\"media-class\" option)");
-      } else
+      }
+      else
 	pwgraster = 0;
     }
   }
@@ -472,8 +491,8 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   printer_attrs = data->printer_attrs;
   job_attrs = data->job_attrs;
 
-  /* These values will be used in case we don't find supported resolutions
-     for given output format */
+  // These values will be used in case we don't find supported resolutions
+  // for given output format
   if ((attr = ippFindAttribute(printer_attrs, "printer-resolution-default",
 			       IPP_TAG_RESOLUTION)) != NULL)
   {
@@ -485,7 +504,7 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     else
       yres = xres;
   }
-  /* Finding supported resolution for given output format */
+  // Finding supported resolution for given output format
   if (pwgraster)
   {
     if ((attr = ippFindAttribute(printer_attrs,
@@ -541,7 +560,8 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     }
   }
 
-  if (log) {
+  if (log)
+  {
     if (*cspace == -1)
       log(ld, CF_LOGLEVEL_DEBUG,
 	  "Color space requested: Default");
@@ -556,7 +576,7 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   }
 
   if (data->header)
-    *h = *(data->header); /* Copy sample header */
+    *h = *(data->header); // Copy sample header
   else
     raster_base_header(h, data, 1 - cupsrasterheader);
   if (cfGetPageDimensions(data->printer_attrs, data->job_attrs,
@@ -598,7 +618,8 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
        (appleraster &&
 	(attr = ippFindAttribute(printer_attrs,
 				 "urf-supported",
-				 IPP_TAG_ZERO)) != NULL))) {
+				 IPP_TAG_ZERO)) != NULL)))
+  {
     ippAttributeString(attr, valuebuffer, sizeof(valuebuffer));
     cspaces_available = valuebuffer;
     if ((color_mode = cupsGetOption("print-color-mode", num_options,
@@ -612,7 +633,8 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     hi_depth = (!no_high_depth && quality &&
 		(!strcasecmp(quality, "high") || !strcmp(quality, "5"))) ?
       1 : 0;
-    if (log) {
+    if (log)
+    {
       log(ld, CF_LOGLEVEL_DEBUG,
 	  "Color mode requested: %s; color depth requested: %s",
 	  color_mode, hi_depth ? "High" : "Standard");
@@ -624,7 +646,7 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   }
   else if (pclm)
   {
-    /* Available color spaces are always SRGB 8 and SGray 8 */
+    // Available color spaces are always SRGB 8 and SGray 8
     cspaces_available = "srgb_8,sgray_8";
     if ((color_mode = cupsGetOption("print-color-mode", num_options,
 				    options)) == NULL)
@@ -638,11 +660,14 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 				cspace, &hi_depth);
   }
 
-  if (res != 1) {
-    /* cfRasterSetColorSpace() was called */
-    if (res < 0) {
-      /* failed */
-      if (log) {
+  if (res != 1)
+  {
+    // cfRasterSetColorSpace() was called
+    if (res < 0)
+    {
+      // failed
+      if (log)
+      {
 	log(ld, CF_LOGLEVEL_ERROR,
 	    "Unable to set color space/depth for Raster output!");
 	if (*cspace < 0)
@@ -654,16 +679,18 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 	      *cspace);
       }
       return (-1);
-    } else
-      /* succeeded */
+    }
+    else
+      // succeeded
       if (log)
 	log(ld, CF_LOGLEVEL_DEBUG,
 	    "Using color space #%d with %s color depth",
 	    *cspace, hi_depth ? "high" : "standard");
   }
 
-  if ((h->HWResolution[0] == 100) && (h->HWResolution[1] == 100)) {
-    /* No resolution set in header */
+  if ((h->HWResolution[0] == 100) && (h->HWResolution[1] == 100))
+  {
+    // No resolution set in header
     if (xres != -1)
     {
       h->HWResolution[0] = xres;
@@ -678,19 +705,23 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     h->cupsHeight = h->HWResolution[1] * h->PageSize[1] / 72;
   }
 
-  /* Make all page geometry fields in the header consistent */
-  if (cupsrasterheader) {
+  // Make all page geometry fields in the header consistent
+  if (cupsrasterheader)
+  {
     h->cupsWidth = ((dimensions[0] - margins[0] - margins[2]) /
 		    72.0 * h->HWResolution[0]) + 0.5;
     h->cupsHeight = ((dimensions[1] - margins[1] - margins[3]) /
 		     72.0 * h->HWResolution[1]) + 0.5;
-  } else {
+  }
+  else
+  {
     h->cupsWidth = (dimensions[0] /
 		    72.0 * h->HWResolution[0]) + 0.5;
     h->cupsHeight = (dimensions[1] /
 		     72.0 * h->HWResolution[1]) + 0.5;
   }
-  for (i = 0; i < 2; i ++) {
+  for (i = 0; i < 2; i ++)
+  {
     h->cupsPageSize[i] = dimensions[i];
     h->PageSize[i] = (unsigned int)(h->cupsPageSize[i] + 0.5);
     if (cupsrasterheader)
@@ -698,7 +729,8 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     else
       h->Margins[i] = 0;
   }
-  if (cupsrasterheader) {
+  if (cupsrasterheader)
+  {
     h->cupsImagingBBox[0] = margins[0];
     h->cupsImagingBBox[1] = margins[1];
     h->cupsImagingBBox[2] = dimensions[0] - margins[2];
@@ -706,8 +738,10 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
     for (i = 0; i < 4; i ++)
       h->ImagingBoundingBox[i] =
 	(unsigned int)(h->cupsImagingBBox[i] + 0.5);
-  } else
-    for (i = 0; i < 4; i ++) {
+  }
+  else
+    for (i = 0; i < 4; i ++)
+    {
       h->cupsImagingBBox[i] = 0.0;
       h->ImagingBoundingBox[i] = 0;
     }
@@ -715,7 +749,7 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
   if (h->cupsColorOrder == CUPS_ORDER_BANDED)
     h->cupsBytesPerLine *= h->cupsNumColors;
 
-  /* Mark header as PWG Raster if it is not CUPS Raster */
+  // Mark header as PWG Raster if it is not CUPS Raster
   if (!cupsrasterheader)
     strcpy(h->MediaClass, "PwgRaster");
 
@@ -725,61 +759,63 @@ cfRasterPrepareHeader(cups_page_header2_t *h, /* I  - Raster header */
 }
 
 
-/*
- * 'cfRasterSetColorSpace() - Update a given CUPS/PWG Raster header to
- *                              the desired color mode, color space, and
- *                              color depth. We supply one of the printer
- *                              IPP attributes urf-supported or
- *                              pwg-raster-document-type-supported as they
- *                              contain a list of all valid combos of
- *                              color space and color depth supported by
- *                              the printer, tell the print-color-mode
- *                              attribute setting for this job and request
- *                              a color space and optionally high color
- *                              depth. Then it is checked first whether the
- *                              requested color space is available and if
- *                              not we fall back to the base color space
- *                              (usually sGray or sRGB). Then knowing the
- *                              color space we will use, we check whether in
- *                              this color space more than one color depth is
- *                              supported, we chooce the lowest, and if
- *                              high color depth is requested, the highest.
- */
+//
+// 'cfRasterSetColorSpace() - Update a given CUPS/PWG Raster header to
+//                            the desired color mode, color space, and
+//                            color depth. We supply one of the
+//                            printer IPP attributes urf-supported or
+//                            pwg-raster-document-type-supported as
+//                            they contain a list of all valid combos
+//                            of color space and color depth supported
+//                            by the printer, tell the
+//                            print-color-mode attribute setting for
+//                            this job and request a color space and
+//                            optionally high color depth. Then it is
+//                            checked first whether the requested
+//                            color space is available and if not we
+//                            fall back to the base color space
+//                            (usually sGray or sRGB). Then knowing
+//                            the color space we will use, we check
+//                            whether in this color space more than
+//                            one color depth is supported, we chooce
+//                            the lowest, and if high color depth is
+//                            requested, the highest.
+//
 
-int                                             /* O  - 0 on success,
-						        -1 on error */
-cfRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
-			const char *available,  /* I  - Available color spaces
-						        IPP attribute
-						        urf-supported or
-					   pwg-raster-document-type-supported */
-			const char *color_mode, /* I  - print-color-mode IPP
-						        attribute setting */
-			cups_cspace_t *cspace,  /* IO - Color space we want to
-						        use, -1 for auto, we
-							return color space
-							actually used, -1 if
-						        no suitable color space
-						        found. */
-			int *high_depth)        /* IO - Do we want to print in
-						        high color depth? We
-						        reset to 0 if high
-						        quality not supported
-						        in the color space
-						        used. */
+int                                             // O  -  0 on success,
+						//      -1 on error
+cfRasterSetColorSpace(cups_page_header2_t *h,   // I  - Raster header
+			const char *available,  // I  - Available color spaces
+						//      from IPP attribute
+						//      urf-supported or
+					   // pwg-raster-document-type-supported
+			const char *color_mode, // I  - print-color-mode IPP
+						//      attribute setting
+			cups_cspace_t *cspace,  // IO - Color space we want to
+						//      use, -1 for auto, we
+						// 	return color space
+						// 	actually used, -1 if
+						//      no suitable color space
+						//      found.
+			int *high_depth)        // IO - Do we want to print in
+						//      high color depth? We
+						//      reset to 0 if high
+						//      quality not supported
+						//      in the color space
+						//      used.
 {
   int min_depth = 999;
   int max_depth = 0;
   int best_depth = -1;
   int num_colors;
-  int cspace_fallback = 0; /* 0: originally requested color space
-			      1: sRGB for color, sGray for mono
-			      2: sRGB for mono */
+  int cspace_fallback = 0; // 0: originally requested color space
+			   // 1: sRGB for color, sGray for mono
+			   // 2: sRGB for mono
   const char *p, *q;
 
-  /* Range-check */
+  // Range-check
   if (!h || !available || !cspace)
-    return -1;
+    return (-1);
 
   if (*cspace != -1 && *cspace != CUPS_CSPACE_SW &&
       *cspace != CUPS_CSPACE_SRGB && *cspace != CUPS_CSPACE_ADOBERGB &&
@@ -787,31 +823,37 @@ cfRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
       *cspace != CUPS_CSPACE_RGB && *cspace != CUPS_CSPACE_CMYK)
     return (-1);
 
-  /* True Bi-Level only available in PWG Raster.
-     List of properties in pwg-raster-document-type-supported IPP attribute
-     is lower-case-only whereas urf-supported for Apple Raster is upper-case-
-     only */
+  // True Bi-Level only available in PWG Raster.
+  // List of properties in pwg-raster-document-type-supported IPP attribute
+  // is lower-case-only whereas urf-supported for Apple Raster is upper-case-
+  // only
   if (islower(available[0]) &&
       (p = strstr(available, "black_1")) != NULL &&
       !isdigit(*(p + 7)) &&
       (!strcmp(color_mode, "bi-level") ||
-       !strcmp(color_mode, "process-bi-level"))) {
-    /* Set parameters for bi-level, there is only one color space and color
-       depth */
+       !strcmp(color_mode, "process-bi-level")))
+  {
+    // Set parameters for bi-level, there is only one color space and color
+    // depth
     *cspace = CUPS_CSPACE_K;
     best_depth = 1;
     num_colors = 1;
-    /* No high color depth in bi-level */
+    // No high color depth in bi-level
     if (high_depth)
       *high_depth = 0;
-  } else {
-    /* Any other color space */
-    for (;;) { /* Loop through fallbacks to default if requested color space
-		  not supported */
-      if (*cspace != -1) { /* Skip if no color space specified */
-	for (p = available; p; p = q) {
+  }
+  else
+  {
+    // Any other color space
+    for (;;)
+    {      // Loop through fallbacks to default if requested color space
+	   // not supported
+      if (*cspace != -1)
+      {    // Skip if no color space specified
+	for (p = available; p; p = q)
+	{
 	  int n, dmin, dmax;
-	  /* Check whether requested color space is supported */
+	  // Check whether requested color space is supported
 	  if ((*cspace == CUPS_CSPACE_SW &&
 	       (((q = strchr(p, 'W')) != NULL &&
 		 (q == available || *(q - 1) == ',') &&
@@ -871,68 +913,76 @@ cfRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 		 (q == available || *(q - 1) == ',') &&
 		 (q += 5) &&
 		 isdigit(*q))) &&
-	       (num_colors = 4))) {
-	    /* Color space supported, check color depth values */
+	       (num_colors = 4)))
+	  {
+	    // Color space supported, check color depth values
 	    n = sscanf(q, "%d-%d", &dmin, &dmax);
 	    if (isupper(available[0]))
-	      /* urf-supported specifies bits per pixel, we need bits per
-		 color */
+	      // urf-supported specifies bits per pixel, we need bits per
+	      // color
 	      dmin = dmin / num_colors;
 	    if (dmin < min_depth)
 	      min_depth = dmin;
-	    if (n == 2) {
+	    if (n == 2)
+	    {
 	      if (isupper(available[0]))
-		/* urf-supported specifies bits per pixel, we need bits per
-		   color */
+		// urf-supported specifies bits per pixel, we need bits per
+		// color
 		dmax = dmax / num_colors;
 	      if (dmax > max_depth)
 		max_depth = dmax;
-	    } else {
+	    }
+	    else
+	    {
 	      if (dmin > max_depth)
 		max_depth = dmin;
 	    }
-	    /* Select depth depending on whether we want to have high or
-	       standard color depth */
+	    // Select depth depending on whether we want to have high or
+	    // standard color depth
 	    if (high_depth && *high_depth)
 	      best_depth = max_depth;
 	    else
 	      best_depth = min_depth;
-	  } else
-	    /* Advance to the next color space entry */
+	  }
+	  else
+	    // Advance to the next color space entry
 	    if (q && *q != '\0')
 	      q ++;
 	}
-	if (best_depth > 0) {
-	  /* The requested color space is supported, so quit the fallback
-	     loop */
+	if (best_depth > 0)
+	{
+	  // The requested color space is supported, so quit the fallback
+	  // loop
 	  if (high_depth && *high_depth && min_depth == max_depth)
-	    /* We requested high color depth but our color space is only
-	       supported with a single color depth, reset request to tell
-	       that we did not find a higher color depth */
+	    // We requested high color depth but our color space is only
+	    // supported with a single color depth, reset request to tell
+	    // that we did not find a higher color depth
 	    *high_depth = 0;
 	  break;
 	}
       }
-      /* Arrived here, the requested color depth is not supported, try next
-	 fallback level */
+      // Arrived here, the requested color depth is not supported, try next
+      // fallback level
       cspace_fallback ++;
-      if (cspace_fallback > 2) {
-	/* Gone through all fallbacks and still no suitable color space?
-	   Quit finally */
+      if (cspace_fallback > 2)
+      {
+	// Gone through all fallbacks and still no suitable color space?
+	// Quit finally
 	*cspace = -1;
 	return (-1);
       }
-      /* Fallback 1: Suitable color space for the requested color mode
-         Fallback 2: Color always (if printer does not advertise mono mode or
-	 sRGB if DeviceRGB is requested but only sRGB available)
-         AdobeRGB instead of sRGB only if available in 16 bit per color and
-         high color depth is requested */
+      // Fallback 1: Suitable color space for the requested color mode
+      // Fallback 2: Color always (if printer does not advertise mono mode or
+      // sRGB if DeviceRGB is requested but only sRGB available)
+      // AdobeRGB instead of sRGB only if available in 16 bit per color and
+      // high color depth is requested
       if ((cspace_fallback == 1 &&
 	   (!strcasecmp(color_mode, "auto") ||
 	    strcasestr(color_mode, "color") ||
 	    strcasestr(color_mode, "rgb") ||
 	    strcasestr(color_mode, "cmy"))) ||
-	  cspace_fallback == 2) {
+	  cspace_fallback == 2)
+      {
 	if (strcasestr(color_mode, "adobe") ||
 	    (high_depth && *high_depth &&
 	     (strstr(available, "ADOBERGB24-48") ||
@@ -948,7 +998,9 @@ cfRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 	  *cspace = CUPS_CSPACE_SRGB;
 	else
 	  *cspace = CUPS_CSPACE_RGB;
-      } else {
+      }
+      else
+      {
 	if (!strcasestr(color_mode, "device"))
 	  *cspace = CUPS_CSPACE_SW;
 	else
@@ -957,7 +1009,7 @@ cfRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
     }
   }
 
-  /* Success, update the raster header */
+  // Success, update the raster header
   h->cupsBitsPerColor = best_depth;
   h->cupsBitsPerPixel = best_depth * num_colors;
   h->cupsColorSpace = *cspace;
@@ -968,62 +1020,62 @@ cfRasterSetColorSpace(cups_page_header2_t *h, /* I  - Raster header */
 }
 
 
-static int                                 /* O - -1 on error, 0 on success */
-raster_base_header(cups_page_header2_t *h, /* O - Raster header */
-		   cf_filter_data_t *data, /* I - Filter data */
-		   int pwg_raster)         /* I - 1 if PWG/Apple Raster */
+static int                                 // O - -1 on error, 0 on success
+raster_base_header(cups_page_header2_t *h, // O - Raster header
+		   cf_filter_data_t *data, // I - Filter data
+		   int pwg_raster)         // I - 1 if PWG/Apple Raster
 {
-  int		i;			/* Looping var */
-  char		*ptr,			/* Pointer into string */
-		s[255];			/* Temporary string */
-  const char	*val,			/* Pointer into value */
-                *media;			/* media option */
-  char		*media_source,          /* Media source */
-                *media_type;		/* Media type */
-  pwg_media_t   *size_found;            /* page size found for given name */
-  int           num_options = 0;        /* Number of options */
-  cups_option_t *options = NULL;        /* Options */
+  int		i;			// Looping var
+  char		*ptr,			// Pointer into string
+		s[255];			// Temporary string
+  const char	*val,			// Pointer into value
+                *media;			// media option
+  char		*media_source,          // Media source
+                *media_type;		// Media type
+  pwg_media_t   *size_found;            // page size found for given name
+  int           num_options = 0;        // Number of options
+  cups_option_t *options = NULL;        // Options
   ipp_attribute_t *attr;
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!h)
     return (-1);
 
- /*
-  * Join the IPP attributes and the CUPS options in a single list
-  */
+  //
+  // Join the IPP attributes and the CUPS options in a single list
+  //
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
 
- /*
-  * Check if the supplied "media" option is a comma-separated list of any
-  * combination of page size ("media"), media source ("media-position"),
-  * and media type ("media-type") and if so, extract media type and source.
-  * Media size will be handled separately.
-  */
+  //
+  // Check if the supplied "media" option is a comma-separated list of any
+  // combination of page size ("media"), media source ("media-position"),
+  // and media type ("media-type") and if so, extract media type and source.
+  // Media size will be handled separately.
+  //
 
   media_source = NULL;
   media_type = NULL;
   if ((media = cupsGetOption("media", num_options, options)) != NULL)
   {
-   /*
-    * Loop through the option string, separating it at commas and setting each
-    * individual option.
-    *
-    * For PageSize, we also check for an empty option value since some versions
-    * of MacOS X use it to specify auto-selection of the media based solely on
-    * the size.
-    */
+    //
+    // Loop through the option string, separating it at commas and setting each
+    // individual option.
+    //
+    // For PageSize, we also check for an empty option value since some versions
+    // of MacOS X use it to specify auto-selection of the media based solely on
+    // the size.
+    //
 
     for (val = media; *val;)
     {
-     /*
-      * Extract the sub-option from the string...
-      */
+      //
+      // Extract the sub-option from the string...
+      //
 
       for (ptr = s; *val && *val != ',' && (ptr - s) < (sizeof(s) - 1);)
 	*ptr++ = *val++;
@@ -1032,9 +1084,9 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
       if (*val == ',')
 	val ++;
 
-     /*
-      * Identify it...
-      */
+      //
+      // Identify it...
+      //
 
       size_found = NULL;
       if ((size_found = pwgMediaForPWG(s)) == NULL)
@@ -1064,15 +1116,15 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
     }
   }
 
- /*
-  * Initialize header
-  */
+  //
+  // Initialize header
+  //
 
   memset(h, 0, sizeof(cups_page_header2_t));
 
- /*
-  * Fill in the items using printer and job IPP attributes and options
-  */
+  //
+  // Fill in the items using printer and job IPP attributes and options
+  //
 
   if (pwg_raster)
     strcpy(h->MediaClass, "PwgRaster");
@@ -1132,14 +1184,14 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 
   if (pwg_raster)
   {
-    /* Set "reserved" fields to 0 */
+    // Set "reserved" fields to 0
     h->AdvanceDistance = 0;
     h->AdvanceMedia = CUPS_ADVANCE_NONE;
     h->Collate = CUPS_FALSE;
   }
   else
   {
-    /* TODO - Support for advance distance and advance media */
+    // TODO - Support for advance distance and advance media
     h->AdvanceDistance = 0;
     h->AdvanceMedia = CUPS_ADVANCE_NONE;
     if ((val = cupsGetOption("Collate", num_options, options)) != NULL ||
@@ -1198,9 +1250,9 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 			   options)) != NULL ||
       (val = cupsGetOption("Resolution", num_options, options)) != NULL)
   {
-    int	        xres,		/* X resolution */
-                yres;		/* Y resolution */
-    char	*ptr;		/* Pointer into value */
+    int	        xres,		// X resolution
+                yres;		// Y resolution
+    char	*ptr;		// Pointer into value
 
     xres = yres = strtol(val, (char **)&ptr, 10);
     if (ptr > val && xres > 0)
@@ -1226,13 +1278,13 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
     }
     else
     {
-      h->HWResolution[0] = 100; /* Resolution invalid */
+      h->HWResolution[0] = 100; // Resolution invalid
       h->HWResolution[1] = 100;
     }
   }
   else
   {
-    h->HWResolution[0] = 100; /* Resolution invalid */
+    h->HWResolution[0] = 100; // Resolution invalid
     h->HWResolution[1] = 100;
   }
 
@@ -1249,10 +1301,10 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
     }
   }
   
-  /* TODO - Support for insert sheets */
+  // TODO - Support for insert sheets
   h->InsertSheet = CUPS_FALSE;
 
-  /* TODO - Support for jog */
+  // TODO - Support for jog
   h->Jog = CUPS_JOG_NONE;
 
   if ((val = cupsGetOption("feed-orientation", num_options,
@@ -1268,7 +1320,7 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
   else
     h->LeadingEdge = CUPS_EDGE_TOP;
 
-  /* TODO - Support for manual feed */
+  // TODO - Support for manual feed
   h->ManualFeed = CUPS_FALSE;
 
   if ((val = cupsGetOption("media-position", num_options, options)) != NULL ||
@@ -1418,7 +1470,7 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
       h->MediaPosition = 49;
   }
   else
-    h->MediaPosition = 0; /* Auto */
+    h->MediaPosition = 0; // Auto
 
   if ((val = cupsGetOption("media-weight", num_options, options)) != NULL ||
       (val = cupsGetOption("MediaWeight", num_options, options)) != NULL ||
@@ -1431,7 +1483,7 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 
   if (pwg_raster)
   {
-    /* Set "reserved" fields to 0 */
+    // Set "reserved" fields to 0
     h->MirrorPrint = CUPS_FALSE;
     h->NegativePrint = CUPS_FALSE;
   }
@@ -1479,7 +1531,7 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
       h->NumCopies = i;
   }
   else
-    h->NumCopies = 1; /* 0 = Printer default */
+    h->NumCopies = 1; // 0 = Printer default
 
   if ((val = cupsGetOption("orientation-requested", num_options,
 			   options)) != NULL ||
@@ -1513,7 +1565,7 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 
   if (pwg_raster)
   {
-    /* Set "reserved" fields to 0 */
+    // Set "reserved" fields to 0
     h->OutputFaceUp = CUPS_FALSE;
   }
   else
@@ -1541,7 +1593,7 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 
   if (pwg_raster)
   {
-    /* Set "reserved" fields to 0 */
+    // Set "reserved" fields to 0
     h->Separations = CUPS_FALSE;
     h->TraySwitch = CUPS_FALSE;
   }
@@ -1585,10 +1637,10 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
       h->Tumble = CUPS_TRUE;
   }
 
-  /* TODO - Support for MediaType number */
+  // TODO - Support for MediaType number
   h->cupsMediaType = 0;
 
-  /* Only for CUPS Raster, if we do not have a sample header from a PPD file */
+  // Only for CUPS Raster, if we do not have a sample header from a PPD file
   if (pwg_raster == 0 &&
       ((val = cupsGetOption("pwg-raster-document-type", num_options,
 			    options)) != NULL ||
@@ -1606,11 +1658,11 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 					 data->job_attrs,
 					 "print-color-mode")) != NULL))
   {
-    int	        bitspercolor,	/* Bits per color */
-                bitsperpixel,   /* Bits per pixel */
-                colorspace,     /* CUPS/PWG raster color space */
-                numcolors;	/* Number of colorants */
-    const char	*ptr;		/* Pointer into value */
+    int	        bitspercolor,	// Bits per color
+                bitsperpixel,   // Bits per pixel
+                colorspace,     // CUPS/PWG raster color space
+                numcolors;	// Number of colorants
+    const char	*ptr;		// Pointer into value
 
     ptr = NULL;
     numcolors = 0;
@@ -1739,7 +1791,7 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
     }
     else if (!strcasecmp(val, "auto"))
     {
-      /* Let "auto" not look like an error */
+      // Let "auto" not look like an error
       colorspace = 19;
       numcolors = 3;
     }
@@ -1748,8 +1800,8 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
       if (ptr)
 	bitspercolor = strtol(ptr, (char **)&ptr, 10);
       bitsperpixel = bitspercolor * numcolors;
-      /* In 1-bit-per-color RGB modes we add a forth bit to each pixel
-	 to align the pixels with bytes */
+      // In 1-bit-per-color RGB modes we add a forth bit to each pixel
+      // to align the pixels with bytes
       if (bitsperpixel == 3 &&
 	  strcasestr(val, "Rgb"))
 	bitsperpixel = 4;
@@ -1774,19 +1826,19 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
     h->cupsNumColors = 3;
   }
 
-  /* TODO - Support for color orders 1 (banded) and 2 (planar) */
+  // TODO - Support for color orders 1 (banded) and 2 (planar)
   h->cupsColorOrder = 0;
   
-  /* TODO - Support for these parameters */
+  // TODO - Support for these parameters
   h->cupsCompression = 0;
   h->cupsRowCount = 0;
   h->cupsRowFeed = 0;
   h->cupsRowStep = 0;
 
-  /* TODO - Support for cupsBorderlessScalingFactor */
+  // TODO - Support for cupsBorderlessScalingFactor
   h->cupsBorderlessScalingFactor = 0.0;
 
-  /* TODO - Support for custom values in CUPS Raster mode */
+  // TODO - Support for custom values in CUPS Raster mode
   for (i = 0; i < 16; i ++)
   {
     h->cupsInteger[i] = 0;
@@ -1807,8 +1859,8 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 	h->cupsInteger[0] = impressions;
     }
 
-    /* Printer property, command line options only for development and
-       debugging */
+    // Printer property, command line options only for development and
+    // debugging
     if ((val = cupsGetOption("pwg-raster-document-sheet-back", num_options,
 			     options)) != NULL ||
 	(val = cupsGetOption("back-side-orientation", num_options,
@@ -1839,7 +1891,7 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 	else // pwg-raster-document-sheet-back/pclm-raster-back-side
 	  val = ippGetString(attr, 0, NULL);
       }
-      /* Set CrossFeedTransform and FeedTransform */
+      // Set CrossFeedTransform and FeedTransform
       if (h->Duplex == CUPS_FALSE)
       {
 	h->cupsInteger[1] = 1;
@@ -1924,16 +1976,16 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
       h->cupsInteger[2] = 1;
     }
 
-    /* TODO - Support for ImageBoxLeft, ImageBoxTop, ImageBoxRight, and
-       ImageBoxBottom (h->cupsInteger[3..6]), leave on 0 for now */
+    // TODO - Support for ImageBoxLeft, ImageBoxTop, ImageBoxRight, and
+    // ImageBoxBottom (h->cupsInteger[3..6]), leave on 0 for now
 
     if ((val = cupsGetOption("alternate-primary", num_options,
 			     options)) != NULL ||
 	(val = cupsGetOption("AlternatePrimary", num_options,
 			     options)) != NULL)
     {
-      int alternateprimary = atoi(val);		/* SRGB value for black
-						   pixels */
+      int alternateprimary = atoi(val);		// SRGB value for black
+						// pixels
       h->cupsInteger[7] = alternateprimary;
     }
 
@@ -1941,21 +1993,21 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 	(val = cupsGetOption("PrintQuality", num_options, options)) != NULL ||
 	(val = cupsGetOption("Quality", num_options, options)) != NULL)
     {
-      int quality = atoi(val);		/* print-quality value */
+      int quality = atoi(val);		// print-quality value
 
       if (!quality ||
 	  (quality >= IPP_QUALITY_DRAFT && quality <= IPP_QUALITY_HIGH))
 	h->cupsInteger[8] = quality;
     }
 
-    /* Leave "reserved" fields (h->cupsInteger[9..13]) on 0 */
+    // Leave "reserved" fields (h->cupsInteger[9..13]) on 0
 
     if ((val = cupsGetOption("vendor-identifier", num_options,
 			     options)) != NULL ||
 	(val = cupsGetOption("VendorIdentifier", num_options,
 			     options)) != NULL)
     {
-      int vendorid = atoi(val);		/* USB ID of manufacturer */
+      int vendorid = atoi(val);		// USB ID of manufacturer
       h->cupsInteger[14] = vendorid;
     }
 
@@ -1964,8 +2016,8 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 	(val = cupsGetOption("VendorLength", num_options,
 			     options)) != NULL)
     {
-      int vendorlength = atoi(val);		/* How many bytes of vendor
-						   data? */
+      int vendorlength = atoi(val);		// How many bytes of vendor
+						// data?
       if (vendorlength > 0 && vendorlength <= 1088)
       {
 	h->cupsInteger[15] = vendorlength;
@@ -1973,13 +2025,13 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 				 options)) != NULL ||
 	    (val = cupsGetOption("VendorData", num_options,
 				 options)) != NULL)
-	  /* TODO - How to enter binary data here? */
+	  // TODO - How to enter binary data here?
 	  _strlcpy((char *)&(h->cupsReal[0]), val, 1088);
       }
     }
   }
 
-  /* Set "reserved" fields to 0 */
+  // Set "reserved" fields to 0
   memset(h->cupsMarkerType, 0, 64);
 
   if ((val = cupsGetOption("print-rendering-intent", num_options,
@@ -2025,27 +2077,35 @@ raster_base_header(cups_page_header2_t *h, /* O - Raster header */
 }
 
 
-/*  Function for storing job-attrs in options */
-int cfJoinJobOptionsAndAttrs(cf_filter_data_t* data, int num_options, cups_option_t **options)
+//
+// 'cfJoinJobOptionsAndAttrs()' - Function for storing job IPP attribute in
+//                                option list, together with the options
+//
+
+int                                               // O  - New number of options
+                                                  //      in new option list
+cfJoinJobOptionsAndAttrs(cf_filter_data_t* data,  // I  - Filter data
+			 int num_options,         // I  - Current mumber of
+			                          //      options in new option
+			                          //      list
+			 cups_option_t **options) // IO - New option lsit
 {
-  ipp_t *job_attrs = data->job_attrs;   /*  Job attributes  */
-  ipp_attribute_t *ipp_attr;            /*  IPP attribute   */
-  int i = 0;                            /*  Looping variable*/
-  char buf[2048];                       /*  Buffer for storing value of ipp attr  */
+  ipp_t *job_attrs = data->job_attrs;   // Job attributes
+  ipp_attribute_t *ipp_attr;            // IPP attribute
+  int i = 0;                            // Looping variable
+  char buf[2048];                       // Buffer for storing value of ipp attr
   cups_option_t *opt;
 
-  for(i = 0, opt=data->options; i<data->num_options; i++, opt++){
+  for (i = 0, opt = data->options; i < data->num_options; i ++, opt ++)
     num_options = cupsAddOption(opt->name, opt->value, num_options, options);
-  }
 
-  for(ipp_attr = ippFirstAttribute(job_attrs); ipp_attr; ipp_attr = ippNextAttribute(job_attrs)){
+  for (ipp_attr = ippFirstAttribute(job_attrs); ipp_attr;
+       ipp_attr = ippNextAttribute(job_attrs))
+  {
     ippAttributeString(ipp_attr, buf, sizeof(buf));
-    num_options = cupsAddOption(ippGetName(ipp_attr), buf, num_options, options);
+    num_options = cupsAddOption(ippGetName(ipp_attr), buf,
+				num_options, options);
   }
 
-  return num_options;
+  return (num_options);
 }
-
-/*
- * End
- */
