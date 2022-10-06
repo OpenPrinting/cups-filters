@@ -81,26 +81,26 @@ convert_to_port(char *a)
 }
 
 void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
-                         char *ippfind_output, avahi_srv_t *service)
+                         avahi_srv_t *service)
 {
-
+  fprintf(stderr, "HELLO NEW IMPLEMENTATION, mode = %d\n", mode);
   int port,
       is_local;
   char buffer[8192], /* Copy buffer */
       *ptr,          /* Pointer into string */
           *scheme = NULL,
           *service_name = NULL,
-          *resource = NULL,
+          *resource = "\0",
           *domain = NULL,
           *ptr_to_port = NULL, /* pointer to port */
               *reg_type = NULL,
           *service_hostname = NULL,
-          *txt_usb_mfg = NULL,
-          *txt_usb_mdl = NULL,
-          *txt_product = NULL,
-          *txt_ty = NULL,
-          *txt_pdl = NULL,
-          *txt_uuid = NULL,
+          *txt_usb_mfg = "\0",
+          *txt_usb_mdl = "\0",
+          *txt_product = "\0",
+          *txt_ty = "\0",
+          *txt_pdl = "\0",
+          *txt_uuid = "\0",
           URF = NULL, 
           TLS = NULL, 
           rp = NULL,
@@ -121,7 +121,6 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
 
   service_uri = (char *)malloc(2048 * (sizeof(char)));
   /* Mark all the fields of the output of ippfind */
-  ptr = ippfind_output;
   if (reg_type_no < 1)
   {
     scheme = "ipp";
@@ -180,49 +179,70 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
       /* We check only for a fax resource (rfo) here, if there is none,
    resource will stay blank meaning device does not support fax */
 
+   fprintf(stderr, "step #1, starting...\n");
    resource = service->resource;
+
+   if(!resource)
+   resource = "\0";
 
    for(int i = 0;i < service->num_txt;i++){
     char *currentKey = service->txt[i].name;
     char *currentValue = service->txt[i].value;
 
-    if(currentKey == "UUID"){
+    fprintf(stderr, "key=%s,value=%s\n", currentKey, currentValue);
+
+    if(!strcmp(currentKey, "UUID")){
       txt_uuid = currentValue;
     }
-    else if(currentKey == "pdl"){
+    else if(!strcmp(currentKey, "usb_MDL")){
+      txt_usb_mdl = currentValue;
+    }
+    else if(!strcmp(currentKey, "usb_MFG")){
+      txt_usb_mfg = currentValue;
+    }
+    else if(!strcmp(currentKey, "product")){
+      txt_product = currentValue;
+    }
+    else if(!strcmp(currentKey, "pdl")){
       txt_pdl = currentValue;
     }
-    else if(currentKey == "ty"){
+    else if(!strcmp(currentKey, "ty")){
       txt_ty = currentValue;
     }
-    else if(currentKey == "adminurl"){
+    else if(!strcmp(currentKey, "adminurl")){
       adminurl = currentValue;
     }
-    else if(currentKey == "Color"){
+    else if(!strcmp(currentKey, "Color")){
       Color = currentValue;
     }
-    else if(currentKey == "Duplex"){
+    else if(!strcmp(currentKey, "Duplex")){
       Duplex = currentValue;
     }
-    else if(currentKey == "note"){
+    else if(!strcmp(currentKey, "note")){
       note = currentValue;
     }
-    else if(currentKey == "qtotal"){
+    else if(!strcmp(currentKey, "qtotal")){
       qtotal = currentValue;
     }
-    else if(currentKey == "rp"){
+    else if(!strcmp(currentKey, "rp")){
       rp = currentValue;
     }
-    else if(currentKey == "TLS"){
+    else if(!strcmp(currentKey, "TLS")){
       TLS = currentValue;
     }
-    else if(currentKey == "txtvers"){
+    else if(!strcmp(currentKey, "txtvers")){
       txtvers = currentValue;
     }
-    else if(currentKey == "URF"){
+    else if(!strcmp(currentKey, "URF")){
       URF = currentValue;
     }
+    else{
+      fprintf(stderr, "i = %d\n", i);
+    }
    }
+
+    fprintf(stderr, "step #1.1 DATA: txt_ty = %s\n", txt_ty);
+   fprintf(stderr, "step #2, parsed txt values\n");
 
       make_and_model[0] = '\0';
       make[0] = '\0';
@@ -230,8 +250,11 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
       device_id[0] = '\0';
       strncpy(model, "Unknown", sizeof(model) - 1);
 
+  fprintf(stderr, "step #2.1, before parsing usb_mfg\n");
+  fprintf(stderr, "step #2.2 DATA: txt_usb_mfg = %s\n", txt_usb_mfg);
       if (txt_usb_mfg[0] != '\0')
       {
+        fprintf(stderr, "step #2.3, inside usb_mfg\n");
         strncpy(make, txt_usb_mfg, sizeof(make) - 1);
         if (strlen(txt_usb_mfg) > 511)
           make[511] = '\0';
@@ -239,6 +262,9 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
         snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
                  "MFG:%s;", txt_usb_mfg);
       }
+
+      fprintf(stderr, "step #3, parsed usb_mfg\n");
+
       if (txt_usb_mdl[0] != '\0')
       {
         strncpy(model, txt_usb_mdl, sizeof(model) - 1);
@@ -247,6 +273,7 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
         ptr = device_id + strlen(device_id);
         snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
                  "MDL:%s;", txt_usb_mdl);
+        fprintf(stderr, "step #4, parsed usb_mdl\n");
       }
       else if (txt_product[0] != '\0')
       {
@@ -259,9 +286,13 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
           strncpy(model, txt_product + 1, sizeof(model) - 1);
           if ((strlen(txt_product) + 1) > 255)
             model[255] = '\0';
+
+          fprintf(stderr, "step #5, parsed peduct\n");
         }
         else
           strncpy(model, txt_product, sizeof(model) - 1);
+
+          fprintf(stderr, "step #6, parsed model is decided\n");
       }
       else if (txt_ty[0] != '\0')
       {
@@ -270,7 +301,11 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
           model[255] = '\0';
         if ((ptr = strchr(model, ',')) != NULL)
           *ptr = '\0';
+
+          fprintf(stderr, "step #7, parsed ty\n");
       }
+
+      fprintf(stderr, "step #8, before parsing pdl\n");
       if (txt_pdl[0] != '\0')
       {
         strncpy(pdl, txt_pdl, sizeof(pdl) - 1);
@@ -278,8 +313,11 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
           pdl[255] = '\0';
       }
 
+      fprintf(stderr, "step #9, before parsing device_id\n");
+
       if (!device_id[0] && strcasecmp(model, "Unknown"))
       {
+        fprintf(stderr, "step #9.01 make = %s\n", make);
         if (make[0])
           snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
                    make, model);
@@ -297,7 +335,12 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
           snprintf(device_id, sizeof(device_id), "MFG:%s;MDL:%s;",
                    make, ptr + 1);
         }
+
+         fprintf(stderr, "step #9.02 device_id = %s\n", device_id);
       }
+
+      fprintf(stderr, "step #9.1 after parsing device_id\n");
+
 
       if (device_id[0] &&
           !strcasestr(device_id, "CMD:") &&
@@ -324,6 +367,9 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
         for (ptr = strcasestr(pdl, "image/"); ptr;
              ptr = strcasestr(ptr, "image/"))
         {
+
+          fprintf(stderr, "step #10 inside for\n");
+
           char *valptr = value + strlen(value);
           if (valptr < (value + sizeof(value) - 1))
             *valptr++ = ',';
@@ -337,10 +383,16 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
           }
           *valptr = '\0';
         }
+
+        fprintf(stderr, "step #11, after for loop\n");
+
         ptr = device_id + strlen(device_id);
         snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
                  "CMD:%s;", value + 1);
       }
+
+      fprintf(stderr, "step #12 done parsing device_id\n");
+
 
       if (make[0] &&
           (strncasecmp(model, make, strlen(make)) ||
@@ -350,13 +402,19 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
       else
         strncpy(make_and_model, model, sizeof(make_and_model) - 1);
 
+
       if (mode == 1)
       {
+        fprintf(stderr, "step #13 inside if for final mode check\n");
+
         /* Only output the entry if we had this UUID not already */
         if (!txt_uuid[0] || !cupsArrayFind(uuids, txt_uuid))
         {
           /* Save UUID as if an entry with the same UUID appears again, it
              is the the same pair of print and fax PPDs */
+
+            fprintf(stderr, "step #14 before checking uuid\n");
+
           if (txt_uuid[0])
             cupsArrayAdd(uuids, strdup(txt_uuid));
           /* Call with "list" argument  (PPD generator in list mode)   */
@@ -365,11 +423,20 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
                  service_uri, make, make_and_model,
                  ((isFax) ? "Fax, " : ""),
                  device_id);
+
+          fprintf(stderr, "step #14.1 checking resources\n");
+          fprintf(stderr, "step #14.2 DATA: service->uri = %s\n", service_uri);
+          fprintf(stderr, "step #14.3 DATA: make = %s\n", make);
+          fprintf(stderr, "step #14.4 DATA: make_and_model = %s\n", make_and_model);
+          fprintf(stderr, "step #14.5 DATA: device_id = %s\n", device_id);
+          fprintf(stderr, "step #14.6 DATA: resource = %s\n", resource);
           if (resource[0]) /* We have also fax on this device */
             printf("\"%s%s\" en \"%s\" \"%s, Fax, driverless, cups-filters " VERSION "\" \"%s\"\n",
                    "driverless-fax:",
                    service_uri, make, make_and_model,
                    device_id);
+          fprintf(stderr, "step #15 after checking uuid\n");
+
         }
       }
       else
@@ -382,6 +449,7 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
       }
     }
 
+  
   read_error:
     free(service_uri);
     return;
@@ -571,6 +639,8 @@ void listPrintersInArray(int reg_type_no, int mode, int isFax,
 
       if (txt_usb_mfg[0] != '\0')
       {
+
+        fprintf(stderr, "\n\n **txt_usb_mfg** \n\n");
         strncpy(make, txt_usb_mfg, sizeof(make) - 1);
         if (strlen(txt_usb_mfg) > 511)
           make[511] = '\0';
@@ -580,6 +650,7 @@ void listPrintersInArray(int reg_type_no, int mode, int isFax,
       }
       if (txt_usb_mdl[0] != '\0')
       {
+        fprintf(stderr, "\n\n **txt_usb_mdl** \n\n");
         strncpy(model, txt_usb_mdl, sizeof(model) - 1);
         if (strlen(txt_usb_mdl) > 255)
           model[255] = '\0';
@@ -589,6 +660,7 @@ void listPrintersInArray(int reg_type_no, int mode, int isFax,
       }
       else if (txt_product[0] != '\0')
       {
+        fprintf(stderr, "\n\n **txt_product** \n\n");
         if (txt_product[0] == '(')
         {
           /* Strip parenthesis... */
@@ -604,12 +676,15 @@ void listPrintersInArray(int reg_type_no, int mode, int isFax,
       }
       else if (txt_ty[0] != '\0')
       {
+        fprintf(stderr, "\n\n **txt_ty** \n\n");
         strncpy(model, txt_ty, sizeof(model) - 1);
         if (strlen(txt_ty) > 255)
           model[255] = '\0';
         if ((ptr = strchr(model, ',')) != NULL)
           *ptr = '\0';
       }
+
+
       if (txt_pdl[0] != '\0')
       {
         strncpy(pdl, txt_pdl, sizeof(pdl) - 1);
@@ -889,122 +964,140 @@ int list_printers(int mode, int reg_type_no, int isFax)
 
 
 
-  /*
-   * Create a pipe for passing the ippfind output to post-processing
-   */
+  // /*
+  //  * Create a pipe for passing the ippfind output to post-processing
+  //  */
 
-  if (pipe(post_proc_pipe))
-  {
-    perror("ERROR: Unable to create pipe to post-processing");
+  // if (pipe(post_proc_pipe))
+  // {
+  //   perror("ERROR: Unable to create pipe to post-processing");
 
-    exit_status = 1;
-    goto error;
-  }
+  //   exit_status = 1;
+  //   goto error;
+  // }
 
-  if ((ippfind_pid = fork()) == 0)
-  {
-    /*
-     * Child comes here...
-     */
-    fprintf(stderr, "I am inside ippfind fork\n");
+  // if ((ippfind_pid = fork()) == 0)
+  // {
+  //   /*
+  //    * Child comes here...
+  //    */
+  //   fprintf(stderr, "I am inside ippfind fork\n");
 
-    dup2(post_proc_pipe[1], 1);
+  //   dup2(post_proc_pipe[1], 1);
 
-    close(post_proc_pipe[0]);
-    close(post_proc_pipe[1]);
+  //   close(post_proc_pipe[0]);
+  //   close(post_proc_pipe[1]);
 
-    execvp(CUPS_IPPFIND, ippfind_argv);
-    perror("ERROR: Unable to execute ippfind utility");
+  //   execvp(CUPS_IPPFIND, ippfind_argv);
+  //   perror("ERROR: Unable to execute ippfind utility");
 
-    exit(1);
-  }
-  else if (ippfind_pid < 0)
-  {
-    /*
-     * Unable to fork!
-     */
+  //   exit(1);
+  // }
+  // else if (ippfind_pid < 0)
+  // {
+  //   /*
+  //    * Unable to fork!
+  //    */
 
-    perror("ERROR: Unable to execute ippfind utility");
+  //   perror("ERROR: Unable to execute ippfind utility");
 
-    exit_status = 1;
-    goto error;
-  }
-  if (debug)
-    fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
-            ippfind_pid);
+  //   exit_status = 1;
+  //   goto error;
+  // }
+  // if (debug)
+  //   fprintf(stderr, "DEBUG: Started %s (PID %d)\n", ippfind_argv[0],
+  //           ippfind_pid);
 
-  close(post_proc_pipe[1]);
+  // close(post_proc_pipe[1]);
 
-  /*
-   * Reading the ippfind output into CUPS Arrays
-   */
-  fp = cupsFileOpenFd(post_proc_pipe[0], "r");
-  if (fp)
-  {
-    while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 ||
-           (bytes < 0 && (errno == EAGAIN || errno == EINTR)))
-    {
-      ippfind_output = (char *)malloc(MAX_OUTPUT_LEN * (sizeof(char)));
-      ptr = buffer;
+  // /*
+  //  * Reading the ippfind output into CUPS Arrays
+  //  */
+  // fp = cupsFileOpenFd(post_proc_pipe[0], "r");
+  // if (fp)
+  // {
+  //   while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 ||
+  //          (bytes < 0 && (errno == EAGAIN || errno == EINTR)))
+  //   {
+  //     ippfind_output = (char *)malloc(MAX_OUTPUT_LEN * (sizeof(char)));
+  //     ptr = buffer;
 
-      fprintf(stderr, "ptr = %s\n", ptr);
-      while (ptr && !isalnum(*ptr & 255))
-        ptr++;
-      if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t'))
-      {
-        ptr += 4;
-        *ptr = '\0';
-        ptr++;
-        snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
+  //     fprintf(stderr, "ptr = %s\n", ptr);
+  //     while (ptr && !isalnum(*ptr & 255))
+  //       ptr++;
+  //     if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t'))
+  //     {
+  //       ptr += 4;
+  //       *ptr = '\0';
+  //       ptr++;
+  //       snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
 
-        fprintf(stderr, "ippfind_output = %s\n", ippfind_output);
-        cupsArrayAdd(service_uri_list_ipps, ippfind_output);
-      }
-      else if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t'))
-      {
-        ptr += 3;
-        *ptr = '\0';
-        ptr++;
-        snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
-        cupsArrayAdd(service_uri_list_ipp, ippfind_output);
-      }
-      else
-        continue;
-    }
+  //       fprintf(stderr, "ippfind_output = %s\n", ippfind_output);
+  //       cupsArrayAdd(service_uri_list_ipps, ippfind_output);
+  //     }
+  //     else if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t'))
+  //     {
+  //       ptr += 3;
+  //       *ptr = '\0';
+  //       ptr++;
+  //       snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
+  //       cupsArrayAdd(service_uri_list_ipp, ippfind_output);
+  //     }
+  //     else
+  //       continue;
+  //   }
 
-    if (bytes < 0)
-    {
-      /* Read error - bail if we don't see EAGAIN or EINTR... */
-      if (errno != EAGAIN && errno != EINTR)
-      {
-        perror("ERROR: Unable to read ippfind output");
-        exit_status = 1;
-        goto error;
-      }
-    }
-  }
-  else
-  {
-    perror("ERROR: Unable to open ippfind output data stream");
-    exit_status = 1;
-    goto error;
-  }
+  //   if (bytes < 0)
+  //   {
+  //     /* Read error - bail if we don't see EAGAIN or EINTR... */
+  //     if (errno != EAGAIN && errno != EINTR)
+  //     {
+  //       perror("ERROR: Unable to read ippfind output");
+  //       exit_status = 1;
+  //       goto error;
+  //     }
+  //   }
+  // }
+  // else
+  // {
+  //   perror("ERROR: Unable to open ippfind output data stream");
+  //   exit_status = 1;
+  //   goto error;
+  // }
+
+  // for (int j = 0; j < cupsArrayCount(service_uri_list_ipp); j++)
+  // {
+  //   if (cupsArrayFind(service_uri_list_ipps,
+  //                     (char *)cupsArrayIndex(service_uri_list_ipp, j)) == NULL)
+  //     listPrintersInArray(0, mode, isFax,
+  //                         (char *)cupsArrayIndex(service_uri_list_ipp, j));
+  // }
+
+  // for (int j = 0; j < cupsArrayCount(service_uri_list_ipps); j++)
+  // {
+  //   fprintf(stderr, "printer #%d\n", j);
+
+  //   listPrintersInArray(2, mode, isFax,
+  //                       (char *)cupsArrayIndex(service_uri_list_ipps, j));
+  // }
 
   for (int j = 0; j < cupsArrayCount(service_uri_list_ipp); j++)
   {
     if (cupsArrayFind(service_uri_list_ipps,
                       (char *)cupsArrayIndex(service_uri_list_ipp, j)) == NULL)
-      listPrintersInArray(0, mode, isFax,
-                          (char *)cupsArrayIndex(service_uri_list_ipp, j));
+      listPrintersInArrayV2(0, mode, isFax,
+                          (avahi_srv_t *)cupsArrayIndex(service_uri_list_ipp, j));
   }
 
   for (int j = 0; j < cupsArrayCount(service_uri_list_ipps); j++)
   {
     fprintf(stderr, "printer #%d\n", j);
 
-    listPrintersInArray(2, mode, isFax,
-                        (char *)cupsArrayIndex(service_uri_list_ipps, j));
+    listPrintersInArrayV2(2, mode, isFax,
+                        (avahi_srv_t *)cupsArrayIndex(service_uri_list_ipps, j));
   }
+
+
 
   /*
    * Wait for the child process to exit...
