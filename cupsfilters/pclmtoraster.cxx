@@ -357,6 +357,20 @@ rotate_bitmap(unsigned char *src,    // I - Input string
 
 
 static unsigned char *
+rgb_to_rgbw_line(unsigned char *src,
+		 unsigned char *dst,
+		 unsigned int row,
+		 unsigned int pixels,
+		 pclmtoraster_data_t *data)
+{
+  cfImageRGBToCMYK(src, dst, pixels);
+  for (unsigned int i = 0; i < 4 * pixels; i ++)
+    dst[i] = ~dst[i];
+  return (dst);
+}
+
+
+static unsigned char *
 rgb_to_cmyk_line(unsigned char *src,
 		 unsigned char *dst,
 		 unsigned int row,
@@ -429,6 +443,19 @@ cmyk_to_rgb_line(unsigned char *src,
 
 
 static unsigned char *
+cmyk_to_rgbw_line(unsigned char *src,
+		  unsigned char *dst,
+		  unsigned int row,
+		  unsigned int pixels,
+		  pclmtoraster_data_t *data)
+{
+  for (unsigned int i = 0; i < 4 * pixels; i ++)
+    dst[i] = ~src[i];
+  return (dst);
+}
+
+
+static unsigned char *
 cmyk_to_cmy_line(unsigned char *src,
 		 unsigned char *dst,
 		 unsigned int row,
@@ -486,6 +513,20 @@ gray_to_rgb_line(unsigned char *src,
 		 pclmtoraster_data_t *data)
 {
   cfImageWhiteToRGB(src, dst, pixels);
+  return (dst);
+}
+
+
+static unsigned char *
+gray_to_rgbw_line(unsigned char *src,
+		  unsigned char *dst,
+		  unsigned int row,
+		  unsigned int pixels,
+		  pclmtoraster_data_t *data)
+{
+  cfImageWhiteToCMYK(src, dst, pixels);
+  for (unsigned int i = 0; i < 4 * pixels; i ++)
+    dst[i] = ~dst[i];
   return (dst);
 }
 
@@ -720,6 +761,14 @@ select_convert_func(int			pgno,	 // I - Page number
 	else if (colorspace == "/DeviceGray")
 	  convert->convertcspace = gray_to_cmyk_line;
 	break;
+    case CUPS_CSPACE_RGBW:
+        if (colorspace == "/DeviceRGB")
+	  convert->convertcspace = rgb_to_rgbw_line;
+	else if (colorspace == "/DeviceCMYK")
+	  convert->convertcspace = cmyk_to_rgbw_line;
+	else if (colorspace == "/DeviceGray")
+	  convert->convertcspace = gray_to_rgbw_line;
+	break;
     case CUPS_CSPACE_RGB:
     case CUPS_CSPACE_ADOBERGB:
     case CUPS_CSPACE_SRGB:
@@ -814,7 +863,7 @@ out_page(cups_raster_t*	 raster, 	// I - Raster stream
 			&(paperdimensions[0]), &(paperdimensions[1]),
 			&(margins[0]), &(margins[1]),
 			&(margins[2]), &(margins[3]), NULL, NULL);
-    if (data->outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER)
+    if (data->outformat != CF_FILTER_OUT_FORMAT_CUPS_RASTER)
       memset(margins, 0, sizeof(margins));
   }
   else
