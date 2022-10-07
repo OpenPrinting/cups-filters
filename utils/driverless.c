@@ -527,30 +527,23 @@ int list_printers(int mode, int reg_type_no, int isFax)
   add avahi calls to find services
   */
     int err;
-    char *regtype = "_ipps._tcp";
+    char *regtype = reg_type_no >= 1 ? "_ipps._tcp" : "_ipp._tcp";
 
     avahiInitialize(&avahi_poll, &avahi_client, _clientCallback, _pollCallback, &err);
     avahi_srv_t* service;
 
     browseServices(&avahi_client, regtype, NULL, service_uri_list_ipps, _browseCallback, &err);
 
-    for(int i = 0;i < 10;i++)
-    if (avahi_simple_poll_iterate(avahi_poll, 500) > 0)
-    {
-      return (0);
+    if(reg_type_no == 1){
+      regtype = "_ipp._tcp";
+      browseServices(&avahi_client, regtype, NULL, service_uri_list_ipps, _browseCallback, &err);
     }
-
+    
     for (service = (avahi_srv_t *)cupsArrayFirst(service_uri_list_ipps);
            service;
            service = (avahi_srv_t *)cupsArrayNext(service_uri_list_ipps)){
             resolveServices(&avahi_client, service, service_uri_list_ipps, _resolveCallback, &err);
 
-    }
-
-    for(int i = 0;i < 10;i++)
-    if (avahi_simple_poll_iterate(avahi_poll, 500) > 0)
-    {
-      return (0);
     }
 
   for (int j = 0; j < cupsArrayCount(service_uri_list_ipp); j++)
