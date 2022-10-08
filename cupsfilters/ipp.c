@@ -16,6 +16,14 @@
 //  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 //  USA.
 //
+// Contents:
+//
+//   cfGetBackSideOrientation() - Return backside orientation for duplex
+//                                printing
+//   cfGetPrintRenderIntent()   - Return rendering intent for a job
+//   cfJoinJobOptionsAndAttrs() - Join job IPP attributes and job options in
+//                                one option list
+//
 
 //
 // Include necessary headers.
@@ -987,6 +995,271 @@ cfIPPReverseOutput(ipp_t *printer_attrs,
   // happens for a fax-out queue, where one has no output bin. Use original
   // order then.
   return (0);
+}
+
+
+//
+//  'cfGetBackSideOrientation()' - This functions returns the back
+//				   side orientation using printer
+//				   attributes.  Meaning and reason for
+//				   backside orientation: It only makes
+//				   sense if printer supports duplex,
+//				   so, if printer reports that it
+//				   supports duplex printing via
+//				   sides-supported IPP attribute, then
+//				   it also reports back-side
+//				   orientation for each PDL in PDL
+//				   specific IPP attributes. Backside
+//				   orientation is specially needed for
+//				   raster PDLs as raster PDLs are
+//				   specially made for raster printers
+//				   which do not have sufficient memory
+//				   to hold a full page bitmap(raster
+//				   page).  So they cannot build the
+//				   whole page in memory before
+//				   starting to print it. For one-sided
+//				   printing it is easy to manage. The
+//				   printer's mechanism pulls the page
+//				   in on its upper edge and starts to
+//				   print, from top to bottom, after
+//				   that it ejects the page.  For
+//				   double-sided printing it does the
+//				   same for the front side, but for
+//				   the back side the mechanics of the
+//				   printer has to turn over the sheet,
+//				   and now, depending on how the sheet
+//				   is turned over it happens that the
+//				   edge arriving in the printing
+//				   mechanism is the lower edge of the
+//				   back side. And if the printer
+//				   simply prints then, the back side
+//				   is the wrong way around. The
+//				   printer reports its need via back
+//				   side orientation in such a case, so
+//				   that the client knows to send the
+//				   back side upside down for example.
+//				   In vector PDLs, PDF and PostScript,
+//				   always the full page's raster image
+//				   is completely generated in the
+//				   printer before the page is started,
+//				   and therefore the printer can start
+//				   to take the pixels from the lower
+//				   edge of the raster image if needed,
+//				   so back side orientation is always
+//				   "normal" for these PDLs.  And if a
+//				   printer does not support duplex,
+//				   back side orientation is not
+//				   needed.
+//
+
+int				       // O - Backside orientation (bit 0-2)
+				       //     Requires flipped margin?
+				       //     Yes: bit 4 set; No: bit 3 set
+cfGetBackSideOrientation(cf_filter_data_t *data) // I - Filter data
+{
+  ipp_t *printer_attrs = data->printer_attrs;
+  int num_options = data->num_options;
+  cups_option_t *options = data->options;
+  char *final_content_type = data->final_content_type;
+  ipp_attribute_t *ipp_attr = NULL; // IPP attribute
+  int i,			// Looping variable
+      count;
+  const char *keyword;
+  int backside = -1;	// backside obtained using printer attributes
+
+
+  // also check options
+  if ((ipp_attr = ippFindAttribute(printer_attrs, "sides-supported",
+				   IPP_TAG_ZERO)) != NULL)
+  {
+    if (ippContainsString(ipp_attr, "two-sided-long-edge"))
+    {
+      if (final_content_type &&
+	  strcasestr(final_content_type, "/urf") &&
+	  (ipp_attr = ippFindAttribute(printer_attrs, "urf-supported",
+				       IPP_TAG_ZERO)) != NULL)
+      {
+	for (i = 0, count = ippGetCount(ipp_attr); i < count; i ++)
+	{
+	  const char *dm = ippGetString(ipp_attr, i, NULL); // DM value
+	  if (!strcasecmp(dm, "DM1"))
+	  {
+	    backside = CF_BACKSIDE_NORMAL;
+	    break;
+	  }
+	  if (!strcasecmp(dm, "DM2"))
+	  {
+	    backside = CF_BACKSIDE_FLIPPED;
+	    break;
+	  }
+	  if (!strcasecmp(dm, "DM3"))
+	  {
+	    backside = CF_BACKSIDE_ROTATED;
+	    break;
+	  }
+	  if (!strcasecmp(dm, "DM4"))
+	  {
+	    backside = CF_BACKSIDE_MANUAL_TUMBLE;
+	    break;
+	  }
+	}
+      }
+      else if ((final_content_type &&
+		strcasestr(final_content_type, "/vnd.pwg-raster") &&
+		(ipp_attr = ippFindAttribute(printer_attrs,
+					     "pwg-raster-document-sheet-back",
+					     IPP_TAG_ZERO)) != NULL) ||
+	       (final_content_type &&
+		strcasestr(final_content_type, "/pclm") &&
+		(ipp_attr = ippFindAttribute(printer_attrs,
+					     "pclm-raster-back-side",
+					     IPP_TAG_ZERO)) != NULL) ||
+	       ((ipp_attr = NULL) ||
+		(keyword = cupsGetOption("back-side-orientation",
+					 num_options, options)) != NULL))
+      {
+	if (ipp_attr)
+	  keyword = ippGetString(ipp_attr, 0, NULL);
+	if (!strcasecmp(keyword, "flipped"))
+	  backside = CF_BACKSIDE_FLIPPED;
+	else if (!strncasecmp(keyword, "manual", 6))
+	  backside = CF_BACKSIDE_MANUAL_TUMBLE;
+	else if (!strcasecmp(keyword, "normal"))
+	  backside = CF_BACKSIDE_NORMAL;
+	else if (!strcasecmp(keyword, "rotated"))
+	  backside = CF_BACKSIDE_ROTATED;
+      }
+
+      if (backside == -1)
+	backside = CF_BACKSIDE_NORMAL;
+      else if ((keyword = cupsGetOption("duplex-requires-flipped-margin",
+					num_options, options)) != NULL)
+      {
+	if (strcasecmp(keyword, "true") == 0)
+	  backside |= 16;
+	else
+	  backside |= 8;
+      }
+    }
+  }
+
+  return (backside);
+}
+
+
+const char *
+cfGetPrintRenderIntent(cf_filter_data_t *data,
+		       char *ri,
+		       int ri_len)
+{
+  const char		*val;
+  int 			num_options = 0;
+  cups_option_t 	*options = NULL;
+  ipp_t 		*printer_attrs = data->printer_attrs;
+  ipp_attribute_t 	*ipp_attr;
+  cf_logfunc_t 	        log = data->logfunc;
+  void                  *ld = data->logdata;
+  int 			i;
+
+
+  num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
+
+  if ((val = cupsGetOption("print-rendering-intent", num_options,
+			   options)) != NULL ||
+      (val = cupsGetOption("PrintRenderingIntent", num_options,
+			   options)) != NULL ||
+      (val = cupsGetOption("RenderingIntent", num_options,
+			   options)) != NULL)
+  {
+    if (!strcasecmp(val, "absolute"))
+      snprintf(ri, ri_len, "%s", "Absolute");
+    else if (!strcasecmp(val, "auto") || !strcasecmp(val, "automatic"))
+      snprintf(ri, ri_len, "%s", "Automatic");
+    else if (!strcasecmp(val, "perceptual"))
+      snprintf(ri, ri_len, "%s", "Perceptual");
+    else if (!strcasecmp(val, "relative"))
+      snprintf(ri, ri_len, "%s", "Relative");
+    else if (!strcasecmp(val, "relative-bpc") ||
+	     !strcasecmp(val, "relativebpc"))
+      snprintf(ri, ri_len, "%s", "RelativeBpc");
+    else if (!strcasecmp(val, "saturation"))
+      snprintf(ri, ri_len, "%s", "Saturation");
+  }
+
+  if ((ipp_attr = ippFindAttribute(printer_attrs,
+				   "print-rendering-intent-supported",
+				   IPP_TAG_ZERO)) != NULL)
+  {
+    int autoRender = 0;
+    int count;
+
+    if ((count = ippGetCount(ipp_attr)) > 0)
+    {
+      for (i = 0; i < count; i ++)
+      {
+	const char *temp = ippGetString(ipp_attr, i, NULL);
+	if (!strcasecmp(temp, "auto")) autoRender = 1;
+	if (ri[0] != '\0')
+	  // User has supplied a setting
+	  if (!strcasecmp(ri, temp))
+	    break;
+      }
+      if (ri[0] != '\0' && i == count)
+      {
+	if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		     "User specified print-rendering-intent not supported "
+		     "by printer, using default print rendering intent.");
+	ri[0] = '\0';
+      }
+      if (ri[0] == '\0')
+      {	// Either user has not supplied any setting
+	// or user supplied value is not supported by printer
+	if ((ipp_attr = ippFindAttribute(printer_attrs,
+					 "print-rendering-intent-default",
+					 IPP_TAG_ZERO)) != NULL)
+	  snprintf(ri, ri_len, "%s", ippGetString(ipp_attr, 0, NULL));
+	else if (autoRender == 1)
+	  snprintf(ri, ri_len, "%s", "auto");
+      }
+    }
+  }
+
+  cupsFreeOptions(num_options, options);
+  return (ri);
+}
+
+
+//
+// 'cfJoinJobOptionsAndAttrs()' - Function for storing job IPP attribute in
+//                                option list, together with the options
+//
+
+int                                               // O  - New number of options
+                                                  //      in new option list
+cfJoinJobOptionsAndAttrs(cf_filter_data_t* data,  // I  - Filter data
+			 int num_options,         // I  - Current mumber of
+			                          //      options in new option
+			                          //      list
+			 cups_option_t **options) // IO - New option lsit
+{
+  ipp_t *job_attrs = data->job_attrs;   // Job attributes
+  ipp_attribute_t *ipp_attr;            // IPP attribute
+  int i = 0;                            // Looping variable
+  char buf[2048];                       // Buffer for storing value of ipp attr
+  cups_option_t *opt;
+
+  for (i = 0, opt = data->options; i < data->num_options; i ++, opt ++)
+    num_options = cupsAddOption(opt->name, opt->value, num_options, options);
+
+  for (ipp_attr = ippFirstAttribute(job_attrs); ipp_attr;
+       ipp_attr = ippNextAttribute(job_attrs))
+  {
+    ippAttributeString(ipp_attr, buf, sizeof(buf));
+    num_options = cupsAddOption(ippGetName(ipp_attr), buf,
+				num_options, options);
+  }
+
+  return (num_options);
 }
 
 

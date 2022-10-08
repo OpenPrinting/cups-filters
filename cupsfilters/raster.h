@@ -14,6 +14,7 @@
 extern "C" {
 #  endif // __cplusplus
 
+
 //
 // Include necessary headers...
 //
@@ -36,23 +37,10 @@ extern "C" {
 
 
 //
-// Types
-//
-
-typedef enum cf_backside_orient_e
-{
-  CF_BACKSIDE_MANUAL_TUMBLE,
-  CF_BACKSIDE_ROTATED,
-  CF_BACKSIDE_FLIPPED,
-  CF_BACKSIDE_NORMAL
-} cf_backside_orient_t;
-
-
-//
 // Prototypes...
 //
 
-extern const char *     cfRasterColorSpaceString(cups_cspace_t cspace);
+extern const char       *cfRasterColorSpaceString(cups_cspace_t cspace);
 extern int              cfRasterPrepareHeader(cups_page_header2_t *h,
 					      cf_filter_data_t *data,
 					      cf_filter_out_format_t
@@ -66,12 +54,6 @@ extern int              cfRasterSetColorSpace(cups_page_header2_t *h,
 					      const char *color_mode,
 					      cups_cspace_t *cspace,
 					      int *high_depth);
-extern int		cfJoinJobOptionsAndAttrs(cf_filter_data_t *data,
-						 int num_options,
-						 cups_option_t **options);
-extern int		cfGetBackSideOrientation(cf_filter_data_t *data);
-extern const char 	*cfGetPrintRenderIntent(cf_filter_data_t *data,
-						char *ri, int ri_len);
 
 #  ifdef __cplusplus
 }

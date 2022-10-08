@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <cupsfilters/filter.h>
 #include <cupsfilters/raster.h>
+#include <cupsfilters/ipp.h>
 #include <cupsfilters/pdf.h>
 #include <cupsfilters/image-private.h>
 #include "ppd.h"
@@ -286,7 +287,7 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
                 mres, res,
                 maxres = CUPS_PDFTOPS_MAX_RESOLUTION,
                                         /* Maximum image rendering resolution */
-                numvalues;              /* Number of values actually read */
+                numvalues = 0;          /* Number of values actually read */
   ppd_choice_t  *choice;
   ppd_attr_t    *attr;
   cups_page_header2_t header;

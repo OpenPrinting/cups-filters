@@ -30,6 +30,7 @@ extern "C" {
 
 #include <config.h>
 
+#include "filter.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,6 +70,16 @@ enum cf_driverless_support_modes_e
                             // attribute
 };
 
+// Backside orientations for duplex printing
+typedef enum cf_backside_orient_e
+{
+  CF_BACKSIDE_MANUAL_TUMBLE,
+  CF_BACKSIDE_ROTATED,
+  CF_BACKSIDE_FLIPPED,
+  CF_BACKSIDE_NORMAL
+} cf_backside_orient_t;
+
+
 // Data structure for resolution (X x Y dpi)
 typedef struct cf_res_s
 {
@@ -87,60 +98,70 @@ typedef enum cf_gen_sizes_mode_e
 // Prototypes...
 //
 
-char    *cfResolveURI(const char *raw_uri);
-char    *cfippfindBasedURIConverter(const char *uri ,int is_fax);
-int     cfCheckDriverlessSupport(const char* uri);
-ipp_t   *cfGetPrinterAttributes(const char* raw_uri,
-				const char* const pattrs[],
-				int pattrs_size,
-				const char* const req_attrs[],
-				int req_attrs_size,
-				int debug);
-ipp_t   *cfGetPrinterAttributes2(http_t *http_printer,
-				 const char* raw_uri,
-				 const char* const pattrs[],
-				 int pattrs_size,
-				 const char* const req_attrs[],
-				 int req_attrs_size,
-				 int debug);
-ipp_t   *cfGetPrinterAttributes3(http_t *http_printer,
-				 const char* raw_uri,
-				 const char* const pattrs[],
-				 int pattrs_size,
-				 const char* const req_attrs[],
-				 int req_attrs_size,
-				 int debug,
-				 int* driverless_support);
-ipp_t   *cfGetPrinterAttributes4(const char* raw_uri,
-				 const char* const pattrs[],
-				 int pattrs_size,
-				 const char* const req_attrs[],
-				 int req_attrs_size,
-				 int debug,
-				 int isFax);
-ipp_t   *cfGetPrinterAttributes5(http_t *http_printer,
-				 const char* raw_uri,
-				 const char* const pattrs[],
-				 int pattrs_size,
-				 const char* const req_attrs[],
-				 int req_attrs_size,
-				 int debug,
-				 int* driverless_support,
-				 int resolve_uri_type);
+char            *cfResolveURI(const char *raw_uri);
+char            *cfippfindBasedURIConverter(const char *uri ,int is_fax);
+int             cfCheckDriverlessSupport(const char* uri);
+ipp_t           *cfGetPrinterAttributes(const char* raw_uri,
+					const char* const pattrs[],
+					int pattrs_size,
+					const char* const req_attrs[],
+					int req_attrs_size,
+					int debug);
+ipp_t           *cfGetPrinterAttributes2(http_t *http_printer,
+					 const char* raw_uri,
+					 const char* const pattrs[],
+					 int pattrs_size,
+					 const char* const req_attrs[],
+					 int req_attrs_size,
+					 int debug);
+ipp_t           *cfGetPrinterAttributes3(http_t *http_printer,
+					 const char* raw_uri,
+					 const char* const pattrs[],
+					 int pattrs_size,
+					 const char* const req_attrs[],
+					 int req_attrs_size,
+					 int debug,
+					 int* driverless_support);
+ipp_t           *cfGetPrinterAttributes4(const char* raw_uri,
+					 const char* const pattrs[],
+					 int pattrs_size,
+					 const char* const req_attrs[],
+					 int req_attrs_size,
+					 int debug,
+					 int isFax);
+ipp_t           *cfGetPrinterAttributes5(http_t *http_printer,
+					 const char* raw_uri,
+					 const char* const pattrs[],
+					 int pattrs_size,
+					 const char* const req_attrs[],
+					 int req_attrs_size,
+					 int debug,
+					 int* driverless_support,
+					 int resolve_uri_type);
 
-const char* cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs,
-				       ipp_t *job_attrs,
-				       const char *attr_name);
-int cfIPPAttrIntValForPrinter(ipp_t *printer_attrs,
-			      ipp_t *job_attrs,
-			      const char *attr_name,
-			      int   *value);
-int cfIPPAttrResolutionForPrinter(ipp_t *printer_attrs, ipp_t *job_attrs,
-				  const char *attr_name, int *xres, int *yres);
-int cfIPPReverseOutput(ipp_t *printer_attrs, ipp_t *job_attrs);
+const char      *cfIPPAttrEnumValForPrinter(ipp_t *printer_attrs,
+					    ipp_t *job_attrs,
+					    const char *attr_name);
+int             cfIPPAttrIntValForPrinter(ipp_t *printer_attrs,
+					  ipp_t *job_attrs,
+					  const char *attr_name,
+					  int   *value);
+int             cfIPPAttrResolutionForPrinter(ipp_t *printer_attrs,
+					      ipp_t *job_attrs,
+					      const char *attr_name,
+					      int *xres, int *yres);
+int             cfIPPReverseOutput(ipp_t *printer_attrs, ipp_t *job_attrs);
+int             cfGetBackSideOrientation(cf_filter_data_t *data);
+const char      *cfGetPrintRenderIntent(cf_filter_data_t *data,
+					char *ri, int ri_len);
 
+int             cfJoinJobOptionsAndAttrs(cf_filter_data_t *data,
+					 int num_options,
+					 cups_option_t **options);
+  
 char            *cfStrFormatd(char *buf, char *bufend, double number,
 			      struct lconv *loc);
+
 int             cfCompareResolutions(void *resolution_a, void *resolution_b,
 				     void *user_data);
 void            *cfCopyResolution(void *resolution, void *user_data);

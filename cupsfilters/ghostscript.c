@@ -23,6 +23,7 @@
 #include <cups/raster.h>
 #include <cupsfilters/colormanager.h>
 #include <cupsfilters/raster.h>
+#include <cupsfilters/ipp.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>

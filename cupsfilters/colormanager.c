@@ -28,7 +28,7 @@
 #include "colormanager.h"
 #include <cupsfilters/colord.h>
 #include <cupsfilters/filter.h>
-#include <cupsfilters/raster.h>
+#include <cupsfilters/ipp.h>
 
 
 #define CM_MAX_FILE_LENGTH 1024

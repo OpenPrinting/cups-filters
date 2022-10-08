@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <cupsfilters/filter.h>
-#include <cupsfilters/raster.h>
+#include <cupsfilters/ipp.h>
 #ifdef HAVE_DBUS
   #include <dbus/dbus.h>
 #endif

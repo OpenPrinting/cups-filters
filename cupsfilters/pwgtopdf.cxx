@@ -36,7 +36,7 @@
 #include <cups/raster.h>
 #include <cupsfilters/colormanager.h>
 #include <cupsfilters/image.h>
-#include <cupsfilters/raster.h>
+#include <cupsfilters/ipp.h>
 
 #include <arpa/inet.h>   // ntohl
 
