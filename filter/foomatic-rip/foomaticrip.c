@@ -37,7 +37,6 @@
 #include <memory.h>
 #include <ctype.h>
 #include <stdarg.h>
-#include <assert.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <math.h>
@@ -101,7 +100,6 @@ jobparams_t  *job = NULL;
 
 jobparams_t * get_current_job()
 {
-    assert(job);
     return job;
 }
 
@@ -1041,8 +1039,6 @@ int main(int argc, char** argv)
                   qualifier = get_ppd_qualifier();
                   _log("INFO: Using qualifer: '%s.%s.%s'\n",
                         qualifier[0], qualifier[1], qualifier[2]);
-
-                  cfCmGetPrinterIccProfile(data, (char **)&icc_profile, 0);
 
                   /* fall back to PPD */
                   if (icc_profile == NULL) {

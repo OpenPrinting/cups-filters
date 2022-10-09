@@ -3,6 +3,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <signal.h>
 #include <fontconfig/fontconfig.h>
 #include <config.h>
@@ -50,7 +51,7 @@ main(int  argc,	   /* I - Number of command-line arguments */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the cfFilterTextToPDF() filter function
+  * Fire up the ppdFilterTextToPDF() filter function
   */
  cf_filter_texttopdf_parameter_t parameters;
  char *p;
@@ -72,7 +73,7 @@ main(int  argc,	   /* I - Number of command-line arguments */
  else
    parameters.classification = NULL;
 
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterTextToPDF, &parameters, &JobCanceled);
+  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterTextToPDF, &parameters, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: texttopdf filter function failed.\n");

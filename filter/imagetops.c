@@ -14,6 +14,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <signal.h>
 
 
@@ -64,7 +65,7 @@ main(int  argc,				/* I - Number of command-line args */
   * Fire up the cfFilterImageToPS() filter function
   */
 
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterImageToPS, NULL, &JobCanceled);
+  ret = ppdFilterCUPSWrapper(argc, argv, ppdFilterImageToPS, NULL, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: imagetops filter function failed.\n");

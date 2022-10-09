@@ -3,7 +3,7 @@
 #include "embed-sfnt-int-private.h"
 #include "sfnt.h"
 #include "sfnt-int-private.h"
-#include <assert.h>
+#include "debug-internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,9 +17,9 @@ EMB_RIGHT_TYPE emb_otf_get_rights(OTF_FILE *otf) // {{{
   if (os2) {
     const unsigned short os2_version=get_USHORT(os2);
     // check len
-    assert( (os2_version!=0x0000)||(len==78) );
-    assert( (os2_version!=0x0001)||(len==86) );
-    assert( (os2_version<0x0002)||(os2_version>0x0004)||(len==96) );
+    DEBUG_assert( (os2_version!=0x0000)||(len==78) );
+    DEBUG_assert( (os2_version!=0x0001)||(len==86) );
+    DEBUG_assert( (os2_version<0x0002)||(os2_version>0x0004)||(len==96) );
     if (os2_version<=0x0004) {
       // get rights
       unsigned short fsType=get_USHORT(os2+8);
@@ -85,7 +85,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
 //  TODO
 //  ... fill in struct
   char *head=otf_get_table(otf,OTF_TAG('h','e','a','d'),&len);
-  assert(head); // version is 1.0 from otf_load
+  DEBUG_assert(head); // version is 1.0 from otf_load
   ret->bbxmin=get_SHORT(head+36)*1000/otf->unitsPerEm;
   ret->bbymin=get_SHORT(head+38)*1000/otf->unitsPerEm;
   ret->bbxmax=get_SHORT(head+40)*1000/otf->unitsPerEm;
@@ -94,15 +94,15 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
   free(head);
 
   char *post=otf_get_table(otf,OTF_TAG('p','o','s','t'),&len);
-  assert(post);
+  DEBUG_assert(post);
   const unsigned int post_version=get_ULONG(post);
   // check length
-  assert( (post_version!=0x00010000)||(len==32) );
-  assert( (post_version!=0x00020000)||(len>=34+2*otf->numGlyphs) );
-  assert( (post_version!=0x00025000)||(len==35+otf->numGlyphs) );
-  assert( (post_version!=0x00030000)||(len==32) );
-  assert( (post_version!=0x00020000)||(get_USHORT(post+32)==otf->numGlyphs) ); // v4?
-//  assert( (post_version==0x00030000)==(!!(otf->flags&OTF_F_FMT_CFF)) ); // ghostscript embedding does this..
+  DEBUG_assert( (post_version!=0x00010000)||(len==32) );
+  DEBUG_assert( (post_version!=0x00020000)||(len>=34+2*otf->numGlyphs) );
+  DEBUG_assert( (post_version!=0x00025000)||(len==35+otf->numGlyphs) );
+  DEBUG_assert( (post_version!=0x00030000)||(len==32) );
+  DEBUG_assert( (post_version!=0x00020000)||(get_USHORT(post+32)==otf->numGlyphs) ); // v4?
+//  DEBUG_assert( (post_version==0x00030000)==(!!(otf->flags&OTF_F_FMT_CFF)) ); // ghostscript embedding does this..
   // TODO: v4 (apple) :  uint16 reencoding[numGlyphs]
   if ( (post_version==0x00010000)||
        (post_version==0x00020000)||
@@ -122,9 +122,9 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
   if (os2) {
     const unsigned short os2_version=get_USHORT(os2);
     // check len
-    assert( (os2_version!=0x0000)||(len==78) );
-    assert( (os2_version!=0x0001)||(len==86) );
-    assert( (os2_version<0x0002)||(os2_version>0x0004)||(len==96) );
+    DEBUG_assert( (os2_version!=0x0000)||(len==78) );
+    DEBUG_assert( (os2_version!=0x0001)||(len==86) );
+    DEBUG_assert( (os2_version<0x0002)||(os2_version>0x0004)||(len==96) );
     if (os2_version<=0x0004) {
 
       // from PDF14Deltas.pdf, pg 113
@@ -193,7 +193,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
     const unsigned short d_gid=otf_from_unicode(otf,'.');
     if (d_gid) { // stemV=bbox['.'].width;
       len=otf_get_glyph(otf,d_gid);
-      assert(len>=10);
+      DEBUG_assert(len>=10);
       ret->stemV=(get_SHORT(otf->gly+6)-get_SHORT(otf->gly+2))*1000/otf->unitsPerEm;
     } else {
       if (macStyle&1) { // bold
@@ -224,7 +224,7 @@ void emb_otf_get_pdf_fontdescr(OTF_FILE *otf,EMB_PDF_FONTDESCR *ret) // {{{
 // HINT: caller sets len == otf->numGlyphs   (only when not using encoding...)
 EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_widths(OTF_FILE *otf,const unsigned short *encoding,int len,const BITSET glyphs) // {{{ glyphs==NULL -> all from 0 to len
 {
-  assert(otf);
+  DEBUG_assert(otf);
 
   int first=len,last=0;
   int iA;
@@ -271,7 +271,7 @@ EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_widths(OTF_FILE *otf,const unsigned short *e
     const int gid=(encoding)?encoding[first]:otf_from_unicode(otf,first); // TODO
     if (gid>=otf->numGlyphs) {
       fprintf(stderr,"Bad glyphid\n");
-      assert(0);
+      DEBUG_assert(0);
       free(ret);
       return NULL;
     }
@@ -294,7 +294,7 @@ static int emb_otf_pdf_glyphwidth(void *context,int gid) // {{{
 
 EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_cidwidths(OTF_FILE *otf,const BITSET glyphs) // {{{ // glyphs==NULL -> output all
 {
-  assert(otf);
+  DEBUG_assert(otf);
 
   // ensure hmtx is there
   if (!otf->hmtx) {
@@ -331,7 +331,7 @@ static const char *emb_otf_get_post_name(const char *post,unsigned short gid) //
     }
   } else if (post_version==0x00020000) {
     const unsigned short num_glyphs=get_USHORT(post+32);
-    // assert(num_glyphs==otf->numGlyphs);
+    // DEBUG_assert(num_glyphs==otf->numGlyphs);
     if (gid<num_glyphs) {
       unsigned short idx=get_USHORT(post+34+2*gid);
       if (idx<258) {

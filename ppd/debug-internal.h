@@ -58,11 +58,14 @@ extern "C" {
  */
 
 #  ifdef DEBUG
+#    include <assert.h>
 #    define DEBUG_puts(x) _ppd_debug_puts(x)
 #    define DEBUG_printf(x) _ppd_debug_printf x
+#    define DEBUG_assert(x) assert(x)
 #  else
 #    define DEBUG_puts(x)
 #    define DEBUG_printf(x)
+#    define DEBUG_assert(x)
 #  endif /* DEBUG */
 
 

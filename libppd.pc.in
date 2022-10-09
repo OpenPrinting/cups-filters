@@ -4,7 +4,7 @@ libdir=@libdir@
 includedir=@includedir@
                                                                        
 Name: libppd
-Description: Library for handling PPD files
+Description: Library for handling PPD files and PostScript output
 Version: @VERSION@
 
 Libs: -L${libdir} -lppd

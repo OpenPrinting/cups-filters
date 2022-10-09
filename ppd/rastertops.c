@@ -2,9 +2,9 @@
  * Include necessary headers...
  */
 
-#include "colormanager.h"
-#include "filter.h"
-#include "image.h"
+#include <cupsfilters/colormanager.h>
+#include <cupsfilters/filter.h>
+#include <cupsfilters/image.h>
 #include <config.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -12,7 +12,7 @@
 #include <string.h>
 #include <limits.h>
 #include <signal.h>
-#include <assert.h>
+#include "debug-internal.h"
 #include <zlib.h>
 
 /*
@@ -281,7 +281,7 @@ write_flate(cups_raster_t *ras,	        /* I - Image data */
       ret = deflate(&strm, flush);
 
       /* check whether state is not clobbered */
-      assert(ret != Z_STREAM_ERROR);
+      DEBUG_assert(ret != Z_STREAM_ERROR);
       have = alloc - strm.avail_out;
       if (fwrite(out, 1, have, doc->outputfp) != have)
       {
@@ -293,7 +293,7 @@ write_flate(cups_raster_t *ras,	        /* I - Image data */
     } while (strm.avail_out == 0);
 
     /* all input will be used */
-    assert(strm.avail_in == 0);
+    DEBUG_assert(strm.avail_in == 0);
 
     /* done when last data in file processed */
     free(pixdata);
@@ -301,7 +301,7 @@ write_flate(cups_raster_t *ras,	        /* I - Image data */
   } while (flush != Z_FINISH);
 
   /* stream will be complete */
-  assert(ret == Z_STREAM_END);
+  DEBUG_assert(ret == Z_STREAM_END);
 
   /* clean up and return */
   (void)deflateEnd(&strm);
@@ -319,23 +319,23 @@ z_error(int ret, /* I - Return status of deflate */
   switch (ret) {
   case Z_ERRNO:
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "cfFilterRasterToPS: zpipe - error in source data or output file");
+		  "ppdFilterRasterToPS: zpipe - error in source data or output file");
     break;
   case Z_STREAM_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "cfFilterRasterToPS: zpipe - invalid compression level");
+		  "ppdFilterRasterToPS: zpipe - invalid compression level");
     break;
   case Z_DATA_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "cfFilterRasterToPS: zpipe - invalid or incomplete deflate data");
+		  "ppdFilterRasterToPS: zpipe - invalid or incomplete deflate data");
     break;
   case Z_MEM_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "cfFilterRasterToPS: zpipe - out of memory");
+		  "ppdFilterRasterToPS: zpipe - out of memory");
     break;
   case Z_VERSION_ERROR:
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "cfFilterRasterToPS: zpipe - zlib version mismatch!");
+		  "ppdFilterRasterToPS: zpipe - zlib version mismatch!");
   }
 }
 
@@ -365,12 +365,12 @@ write_trailer(int  pages, /* I - Number of pages */
 }
 
 /*
- * 'cfFilterRasterToPS()' - Filter function to convert PWG raster input
+ * 'ppdFilterRasterToPS()' - Filter function to convert PWG raster input
  *                  to PostScript
  */
 
 int                         /* O - Error status */
-cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
+ppdFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
        int outputfd,        /* I - File descriptor output stream */
        int inputseekable,   /* I - Is input stream seekable? (unused) */
        cf_filter_data_t *data, /* I - Job and printer data */
@@ -402,7 +402,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterRasterToPS: Unable to open input data stream.");
+		   "ppdFilterRasterToPS: Unable to open input data stream.");
     }
 
     return (1);
@@ -417,7 +417,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
     if (!iscanceled || !iscanceled(icd))
     {
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		   "cfFilterRasterToPS: Unable to open output data stream.");
+		   "ppdFilterRasterToPS: Unable to open output data stream.");
     }
 
     cupsFileClose(inputfp);
@@ -447,7 +447,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
     if (iscanceled && iscanceled(icd))
     {
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
-                  "cfFilterRasterToPS: Job canceled");
+                  "ppdFilterRasterToPS: Job canceled");
       break;
     }
 
@@ -468,7 +468,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
     Page ++;
 
     if (log) log(ld, CF_LOGLEVEL_INFO,
-     "cfFilterRasterToPS: Starting page %d.", Page);
+     "ppdFilterRasterToPS: Starting page %d.", Page);
 
    /*
     *	Write the starting of the page
@@ -493,7 +493,7 @@ cfFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
   if (empty)
   {
      if (log) log(ld, CF_LOGLEVEL_DEBUG,
-      "cfFilterRasterToPS: Input is empty, outputting empty file.");
+      "ppdFilterRasterToPS: Input is empty, outputting empty file.");
      cupsRasterClose(ras);
      return 0;
   }

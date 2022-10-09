@@ -22,13 +22,14 @@ class _cfPDFToPDFMatrix {
   _cfPDFToPDFMatrix(QPDFObjectHandle ar);
   
   _cfPDFToPDFMatrix &rotate(pdftopdf_rotation_e rot);
-  _cfPDFToPDFMatrix &rotate_move(pdftopdf_rotation_e rot,double width,double height);
+  _cfPDFToPDFMatrix &rotate_move(pdftopdf_rotation_e rot, double width,
+				 double height);
   _cfPDFToPDFMatrix &rotate(double rad);
   //  _cfPDFToPDFMatrix &rotate_deg(double deg);
 
-  _cfPDFToPDFMatrix &translate(double tx,double ty);
-  _cfPDFToPDFMatrix &scale(double sx,double sy);
-  _cfPDFToPDFMatrix &scale(double s) { return scale(s,s); }
+  _cfPDFToPDFMatrix &translate(double tx, double ty);
+  _cfPDFToPDFMatrix &scale(double sx, double sy);
+  _cfPDFToPDFMatrix &scale(double s) { return (scale(s, s)); }
 
   _cfPDFToPDFMatrix &operator*=(const _cfPDFToPDFMatrix &rhs);
 
@@ -38,4 +39,4 @@ class _cfPDFToPDFMatrix {
   double ctm[6];
 };
 
-#endif
+#endif // !_CUPS_FILTERS_PDFTOPDF_QPDF_PDFTOPDF_H

@@ -28,7 +28,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdarg.h>
-#include <assert.h>
 #include <errno.h>
 
 
@@ -981,7 +980,8 @@ void list_prepend(list_t *list, void *data)
 {
     listitem_t *item;
 
-    assert(list);
+    if (!list)
+      return;
 
     item = malloc(sizeof(listitem_t));
     item->data = data;
@@ -1003,7 +1003,8 @@ void list_append(list_t *list, void *data)
 {
     listitem_t *item;
 
-    assert(list);
+    if (!list)
+      return;
 
     item = malloc(sizeof(listitem_t));
     item->data = data;
@@ -1023,7 +1024,8 @@ void list_append(list_t *list, void *data)
 
 void list_remove(list_t *list, listitem_t *item)
 {
-    assert(item);
+    if (!list || !item)
+      return;
 
     if (item->prev)
         item->prev->next = item->next;

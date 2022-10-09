@@ -3,6 +3,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <config.h>
 #include <signal.h>
 
@@ -50,7 +51,7 @@ main(int  argc,	   /* I - Number of command-line arguments */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the cfFilterPDFToRaster() filter function
+  * Fire up the ppdFilterPDFToRaster() filter function
   */
 
   char buf[1024];
@@ -59,7 +60,8 @@ main(int  argc,	   /* I - Number of command-line arguments */
     datadir = CUPS_DATADIR;
   snprintf(buf, sizeof(buf), "%s/data", datadir);
 
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterBannerToPDF, buf, &JobCanceled);
+  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterBannerToPDF, buf,
+			     &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: bannertopdf filter function failed.\n");

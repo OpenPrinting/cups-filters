@@ -1,19 +1,19 @@
-/*
- * Copyright 2012 Canonical Ltd.
- * Copyright 2018 Sahil Arora <sahilarora.535@gmail.com>
- *
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 3, as published
- * by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranties of
- * MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
- * PURPOSE.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+//
+// Copyright 2012 Canonical Ltd.
+// Copyright 2018 Sahil Arora <sahilarora.535@gmail.com>
+//
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 3, as published
+// by the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranties of
+// MERCHANTABILITY, SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR
+// PURPOSE.  See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 #ifndef _CUPS_FILTERS_PDF_H_
 #define _CUPS_FILTERS_PDF_H_
@@ -28,10 +28,12 @@ typedef struct QPDF cf_pdf_t;
 
 typedef struct _cf_opt cf_opt_t;
 
-/*
- * Type to bunch PDF form field name and its value.
- */
-struct _cf_opt {
+//
+// Type to bunch PDF form field name and its value.
+//
+
+struct _cf_opt
+{
     const char* key;
     const char* val;
     cf_opt_t *next;
@@ -54,4 +56,4 @@ int cfPDFPagesFP(FILE *file);
 }
 #endif
 
-#endif /* !_CUPS_FILTERS_PDF_H_ */
+#endif // !_CUPS_FILTERS_PDF_H_

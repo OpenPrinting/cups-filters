@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <stdio.h>
 #include <sys/socket.h>
 
 

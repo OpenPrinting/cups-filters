@@ -14,6 +14,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <signal.h>
 
 
@@ -64,7 +65,7 @@ main(int  argc,				/* I - Number of command-line args */
   * Fire up the cfFilterPSToPS() filter function
   */
 
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterPSToPS, NULL, &JobCanceled);
+  ret = ppdFilterCUPSWrapper(argc, argv, ppdFilterPSToPS, NULL, &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: pstops filter function failed.\n");

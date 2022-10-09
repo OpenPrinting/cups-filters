@@ -36,7 +36,7 @@
 #include <cups/raster.h>
 #include <cups/avahi.h>
 #include <cupsfilters/ipp.h>
-#include <cupsfilters/ppdgenerator.h>
+#include <cupsfilters/ipp.h>
 
 /*
 Local Globals
@@ -285,6 +285,7 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
       }
 
       if (device_id[0] &&
+<<<<<<< HEAD
           !strcasestr(device_id, "CMD:") &&
           !strcasestr(device_id, "COMMAND SET:") &&
           (strcasestr(pdl, "application/pdf") ||
@@ -327,6 +328,45 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
         ptr = device_id + strlen(device_id);
         snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
                  "CMD:%s;", value + 1);
+=======
+	  !strcasestr(device_id, "CMD:") &&
+	  !strcasestr(device_id, "COMMAND SET:") &&
+	  (strcasestr(pdl, "application/pdf") ||
+	   strcasestr(pdl, "application/postscript") ||
+	   strcasestr(pdl, "application/vnd.hp-PCL") ||
+	   strcasestr(pdl, "application/PCLm") ||
+	   strcasestr(pdl, "image/"))) {
+	value[0] = '\0';
+	if (strcasestr(pdl, "application/pdf"))
+	  strncat(value, ",PDF", sizeof(value) - 1);
+	if (strcasestr(pdl, "application/PCLm"))
+	  strncat(value, ",PCLM", sizeof(value) - 1);
+	if (strcasestr(pdl, "application/postscript"))
+	  strncat(value, ",PS", sizeof(value) - 1);
+	if (strcasestr(pdl, "application/vnd.hp-PCL"))
+	  strncat(value, ",PCL", sizeof(value) - 1);
+	if (strcasestr(pdl, "image/pwg-raster"))
+	  strncat(value, ",PWGRaster", sizeof(value) - 1);
+	if (strcasestr(pdl, "image/urf"))
+	  strncat(value, ",AppleRaster", sizeof(value) - 1);
+	for (ptr = strcasestr(pdl, "image/"); ptr;
+	     ptr = strcasestr(ptr, "image/")) {
+	  char *valptr = value + strlen(value);
+	  if (valptr < (value + sizeof(value) - 1))
+	    *valptr++ = ',';
+	  ptr += 6;
+	  while (isalnum(*ptr & 255) || *ptr == '-' || *ptr == '.') {
+	    if (isalnum(*ptr & 255) && valptr < (value + sizeof(value) - 1))
+	      *valptr++ = (char)toupper(*ptr++ & 255);
+	    else
+	      break;
+	  }
+	  *valptr = '\0';
+	}
+	ptr = device_id + strlen(device_id);
+	snprintf(ptr, sizeof(device_id) - (size_t)(ptr - device_id),
+		 "CMD:%s;", value + 1);
+>>>>>>> master_clone
       }
 
       if (make[0] &&
@@ -597,9 +637,14 @@ int generate_ppd(const char *uri, int isFax)
   }
 
   /* Generate the PPD file */
+<<<<<<< HEAD
   if (!cfCreatePPDFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0,
                           0, ppdgenerator_msg, sizeof(ppdgenerator_msg)))
   {
+=======
+  if (!ppdCreatePPDFromIPP(ppdname, sizeof(ppdname), response, NULL, NULL, 0,
+			   0, ppdgenerator_msg, sizeof(ppdgenerator_msg))) {
+>>>>>>> master_clone
     if (strlen(ppdgenerator_msg) > 0)
       fprintf(stderr, "ERROR: Unable to create PPD file: %s\n",
               ppdgenerator_msg);

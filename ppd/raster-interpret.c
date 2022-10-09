@@ -553,7 +553,7 @@ ppdRasterMatchPPDSize(
 	fabs(header->PageSize[0] - size->right + size->left) / size->width < 0.01 &&
 	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
     {
-      DEBUG_printf("Imageable area fit");
+      DEBUG_puts("Imageable area fit\n");
       size_matched = size;
       if (landscape) *landscape = 0;
       if (image_fit) *image_fit = 1;
@@ -601,7 +601,7 @@ ppdRasterMatchPPDSize(
 	fabs(header->PageSize[1] - size->right + size->left) / size->width < 0.01 &&
 	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
       {
-	DEBUG_printf("Imageable area fit");
+	DEBUG_puts("Imageable area fit\n");
 	size_matched = size;
 	if (landscape) *landscape = 1;
 	if (image_fit) *image_fit = 1;
@@ -629,7 +629,7 @@ ppdRasterMatchPPDSize(
     /*
      * Custom size...
      */
-    DEBUG_printf("size = Custom");
+    DEBUG_puts("size = Custom\n");
     for (i = 0; i < 2; i ++)
       dimensions[i] = header->PageSize[i];
     for (i = 0; i < 4; i ++)

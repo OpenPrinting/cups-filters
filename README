@@ -37,6 +37,11 @@ INTRODUCTION
     recommended, especially if non-PDF printers are used, to have at
     least one of Ghostscript (preferred), Poppler, or MuPDF.
 
+    It also needs gcc (C compiler), automake, autoconf, autopoint, and
+    libtool. On Debian, Ubuntu, and distributions derived from them
+    you could also install the "build-essential" package to
+    auto-install most of these packages.
+
     If Ghostscript is used (via the "gsto..." or the "universal" CUPS
     filters), Ghostscript 9.56.0 is required and it has to be built at
     least with the "pdfwrite", "ps2write", "cups", "pwgraster",

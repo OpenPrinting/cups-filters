@@ -1,36 +1,35 @@
-/*
- *   RGB color separation code for CUPS.
- *
- *   Copyright 2007 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   cfRGBDelete() - Delete a color separation.
- *   cfRGBDoGray() - Do a grayscale separation...
- *   cfRGBDoRGB()  - Do a RGB separation...
- *   cfRGBLoad()   - Load a RGB color profile from a PPD file.
- *   cfRGBNew()    - Create a new RGB color separation.
- */
+//
+//   RGB color separation code for libcupsfilters.
+//
+//   Copyright 2007 by Apple Inc.
+//   Copyright 1993-2005 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   cfRGBDelete() - Delete a color separation.
+//   cfRGBDoGray() - Do a grayscale separation...
+//   cfRGBDoRGB()  - Do a RGB separation...
+//   cfRGBNew()    - Create a new RGB color separation.
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include "driver.h"
 
 
-/*
- * 'cfRGBDelete()' - Delete a color separation.
- */
+//
+// 'cfRGBDelete()' - Delete a color separation.
+//
 
 void
-cfRGBDelete(cf_rgb_t *rgbptr)	/* I - Color separation */
+cfRGBDelete(cf_rgb_t *rgbptr)	// I - Color separation
 {
   if (rgbptr == NULL)
     return;
@@ -43,39 +42,37 @@ cfRGBDelete(cf_rgb_t *rgbptr)	/* I - Color separation */
 }
 
 
-/*
- * 'cfRGBDoGray()' - Do a grayscale separation...
- */
+//
+// 'cfRGBDoGray()' - Do a grayscale separation...
+//
 
 void
-cfRGBDoGray(cf_rgb_t          *rgbptr,
-					/* I - Color separation */
-	      const unsigned char *input,
-					/* I - Input grayscale pixels */
-	      unsigned char       *output,
-					/* O - Output Device-N pixels */
-	      int                 num_pixels)
-					/* I - Number of pixels */
+cfRGBDoGray(cf_rgb_t            *rgbptr,// I - Color separation
+	    const unsigned char *input,	// I - Input grayscale pixels
+	    unsigned char       *output,// O - Output Device-N pixels
+	    int                 num_pixels)
+					// I - Number of pixels
 {
-  int			i;		/* Looping var */
-  int			lastgray;	/* Previous grayscale */
-  int			xs, ys, zs,	/* Current RGB row offsets */
-			g, gi, gm0, gm1;/* Current gray index and multipliers ... */
-  const unsigned char	*color;		/* Current color data */
-  int			tempg;		/* Current separation color */
-  int			rgbsize;	/* Separation data size */
+  int			i;		// Looping var
+  int			lastgray;	// Previous grayscale
+  int			xs, ys, zs,	// Current RGB row offsets
+			g, gi, gm0, gm1;// Current gray index and
+                                        // multipliers ...
+  const unsigned char	*color;		// Current color data
+  int			tempg;		// Current separation color
+  int			rgbsize;	// Separation data size
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!rgbptr || !input || !output || num_pixels <= 0)
     return;
 
- /*
-  * Initialize variables used for the duration of the separation...
-  */
+  //
+  // Initialize variables used for the duration of the separation...
+  //
 
   lastgray = -1;
   rgbsize  = rgbptr->num_channels;
@@ -83,15 +80,15 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
   ys       = rgbptr->cube_size * rgbptr->num_channels;
   zs       = rgbptr->num_channels;
 
- /*
-  * Loop through it all...
-  */
+  //
+  // Loop through it all...
+  //
 
   while (num_pixels > 0)
   {
-   /*
-    * See if the next pixel is a cached value...
-    */
+    //
+    // See if the next pixel is a cached value...
+    //
 
     num_pixels --;
 
@@ -99,9 +96,9 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
 
     if (g == lastgray)
     {
-     /*
-      * Copy previous color and continue...
-      */
+      //
+      // Copy previous color and continue...
+      //
 
       memcpy(output, output - rgbptr->num_channels, rgbsize);
 
@@ -110,9 +107,9 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
     }
     else if (g == 0x00 && rgbptr->cache_init)
     {
-     /*
-      * Copy black color and continue...
-      */
+      //
+      // Copy black color and continue...
+      //
 
       memcpy(output, rgbptr->black, rgbsize);
 
@@ -121,9 +118,9 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
     }
     else if (g == 0xff && rgbptr->cache_init)
     {
-     /*
-      * Copy white color and continue...
-      */
+      //
+      // Copy white color and continue...
+      //
 
       memcpy(output, rgbptr->white, rgbsize);
 
@@ -131,9 +128,9 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
       continue;
     }
 
-   /*
-    * Nope, figure this one out on our own...
-    */
+    //
+    // Nope, figure this one out on our own...
+    //
 
     gi  = rgbptr->cube_index[g];
     gm0 = rgbptr->cube_mult[g];
@@ -156,46 +153,44 @@ cfRGBDoGray(cf_rgb_t          *rgbptr,
 }
 
 
-/*
- * 'cfRGBDoRGB()' - Do a RGB separation...
- */
+//
+// 'cfRGBDoRGB()' - Do a RGB separation...
+//
 
 void
-cfRGBDoRGB(cf_rgb_t          *rgbptr,
-					/* I - Color separation */
-	     const unsigned char *input,
-					/* I - Input RGB pixels */
-	     unsigned char       *output,
-					/* O - Output Device-N pixels */
-	     int                 num_pixels)
-					/* I - Number of pixels */
+cfRGBDoRGB(cf_rgb_t            *rgbptr,	// I - Color separation
+	   const unsigned char *input,	// I - Input RGB pixels
+	   unsigned char       *output,	// O - Output Device-N pixels
+	   int                 num_pixels)
+					// I - Number of pixels
 {
-  int			i;		/* Looping var */
-  int			rgb,		/* Current RGB color */
-			lastrgb;	/* Previous RGB color */
+  int			i;		// Looping var
+  int			rgb,		// Current RGB color
+			lastrgb;	// Previous RGB color
   int			r, ri, rm0, rm1, rs,
-					/* Current red index, multipliexs, and row offset */
+					// Current red index, multipliexs,
+                                        // and row offset
 			g, gi, gm0, gm1, gs,
-					/* Current green ... */
+					// Current green ...
 			b, bi, bm0, bm1, bs;
-					/* Current blue ... */
-  const unsigned char	*color;		/* Current color data */
-  int			tempr,		/* Current separation colors */
-			tempg,		/* ... */
-			tempb ;		/* ... */
-  int			rgbsize;	/* Separation data size */
+					// Current blue ...
+  const unsigned char	*color;		// Current color data
+  int			tempr,		// Current separation colors
+			tempg,		// ...
+			tempb ;		// ...
+  int			rgbsize;	// Separation data size
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!rgbptr || !input || !output || num_pixels <= 0)
     return;
 
- /*
-  * Initialize variables used for the duration of the separation...
-  */
+  //
+  // Initialize variables used for the duration of the separation...
+  //
 
   lastrgb = -1;
   rgbsize = rgbptr->num_channels;
@@ -203,15 +198,15 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
   gs      = rgbptr->cube_size * rgbptr->num_channels;
   bs      = rgbptr->num_channels;
 
- /*
-  * Loop through it all...
-  */
+  //
+  // Loop through it all...
+  //
 
   while (num_pixels > 0)
   {
-   /*
-    * See if the next pixel is a cached value...
-    */
+    //
+    // See if the next pixel is a cached value...
+    //
 
     num_pixels --;
 
@@ -222,9 +217,9 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
 
     if (rgb == lastrgb)
     {
-     /*
-      * Copy previous color and continue...
-      */
+      //
+      // Copy previous color and continue...
+      //
 
       memcpy(output, output - rgbptr->num_channels, rgbsize);
 
@@ -233,9 +228,9 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
     }
     else if (rgb == 0x000000 && rgbptr->cache_init)
     {
-     /*
-      * Copy black color and continue...
-      */
+      //
+      // Copy black color and continue...
+      //
 
       memcpy(output, rgbptr->black, rgbsize);
 
@@ -244,9 +239,9 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
     }
     else if (rgb == 0xffffff && rgbptr->cache_init)
     {
-     /*
-      * Copy white color and continue...
-      */
+      //
+      // Copy white color and continue...
+      //
 
       memcpy(output, rgbptr->white, rgbsize);
 
@@ -254,9 +249,9 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
       continue;
     }
 
-   /*
-    * Nope, figure this one out on our own...
-    */
+    //
+    // Nope, figure this one out on our own...
+    //
 
     ri  = rgbptr->cube_index[r];
     rm0 = rgbptr->cube_mult[r];
@@ -299,170 +294,47 @@ cfRGBDoRGB(cf_rgb_t          *rgbptr,
 }
 
 
-/*
- * 'cfRGBLoad()' - Load a RGB color profile from a PPD file.
- */
+//
+// 'cfRGBNew()' - Create a new RGB color separation.
+//
 
-cf_rgb_t *				/* O - New color profile */
-cfRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
-            const char *colormodel,	/* I - Color model */
-            const char *media,		/* I - Media type */
-            const char *resolution,	/* I - Resolution */
-	    cf_logfunc_t log,       /* I - Log function */
-	    void       *ld)             /* I - Log function data */
+cf_rgb_t *				// O - New color separation or NULL
+cfRGBNew(int           num_samples,	// I - Number of samples
+	   cf_sample_t *samples,	// I - Samples
+	   int           cube_size,	// I - Size of LUT cube
+           int           num_channels)	// I - Number of color components
 {
-  int		i,			/* Looping var */
-		cube_size,		/* Size of color lookup cube */
-		num_channels,		/* Number of color channels */
-		num_samples;		/* Number of color samples */
-  cf_sample_t	*samples;		/* Color samples */
-  float		values[7];		/* Color sample values */
-  char		spec[PPD_MAX_NAME];	/* Profile name */
-  ppd_attr_t	*attr;			/* Attribute from PPD file */
-  cf_rgb_t	*rgbptr;		/* RGB color profile */
+  cf_rgb_t		*rgbptr;	// New color separation
+  int			i;		// Looping var
+  int			r, g, b;	// Current RGB
+  int			tempsize;	// Sibe of main arrays
+  unsigned char		*tempc;		// Pointer for C arrays
+  unsigned char		**tempb ;	// Pointer for Z arrays
+  unsigned char		***tempg;	// Pointer for Y arrays
+  unsigned char		****tempr;	// Pointer for X array
+  unsigned char		rgb[3];		// Temporary RGB value
 
 
- /*
-  * Find the following attributes:
-  *
-  *    cupsRGBProfile  - Specifies the cube size, number of channels, and
-  *                      number of samples
-  *    cupsRGBSample   - Specifies an RGB to CMYK color sample
-  */
-
-  if ((attr = cfFindAttr(ppd, "cupsRGBProfile", colormodel, media,
-                           resolution, spec, sizeof(spec), log, ld)) == NULL)
-  {
-    if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "No cupsRGBProfile attribute found for the current settings!");
-    return (NULL);
-  }
-
-  if (!attr->value || sscanf(attr->value, "%d%d%d", &cube_size, &num_channels,
-                             &num_samples) != 3)
-  {
-    if (log) log(ld, CF_LOGLEVEL_ERROR,
-		 "Bad cupsRGBProfile attribute \'%s\'!",
-		 attr->value ? attr->value : "(null)");
-    return (NULL);
-  }
-
-  if (cube_size < 2 || cube_size > 16 ||
-      num_channels < 1 || num_channels > CF_MAX_RGB ||
-      num_samples != (cube_size * cube_size * cube_size))
-  {
-    if (log) log(ld, CF_LOGLEVEL_ERROR,
-		 "Bad cupsRGBProfile attribute \'%s\'!",
-		 attr->value);
-    return (NULL);
-  }
-
- /*
-  * Allocate memory for the samples and read them...
-  */
-
-  if ((samples = calloc(num_samples, sizeof(cf_sample_t))) == NULL)
-  {
-    if (log) log(ld, CF_LOGLEVEL_ERROR,
-		 "Unable to allocate memory for RGB profile!");
-    return (NULL);
-  }
-
- /*
-  * Read all of the samples...
-  */
-
-  for (i = 0; i < num_samples; i ++)
-    if ((attr = ppdFindNextAttr(ppd, "cupsRGBSample", spec)) == NULL)
-      break;
-    else if (!attr->value)
-    {
-      if (log) log(ld, CF_LOGLEVEL_ERROR,
-		   "Bad cupsRGBSample value!");
-      break;
-    }
-    else if (sscanf(attr->value, "%f%f%f%f%f%f%f", values + 0,
-                    values + 1, values + 2, values + 3, values + 4, values + 5,
-                    values + 6) != (3 + num_channels))
-    {
-      if (log) log(ld, CF_LOGLEVEL_ERROR,
-		   "Bad cupsRGBSample value!");
-      break;
-    }
-    else
-    {
-      samples[i].rgb[0]    = (int)(255.0 * values[0] + 0.5);
-      samples[i].rgb[1]    = (int)(255.0 * values[1] + 0.5);
-      samples[i].rgb[2]    = (int)(255.0 * values[2] + 0.5);
-      samples[i].colors[0] = (int)(255.0 * values[3] + 0.5);
-      if (num_channels > 1)
-	samples[i].colors[1] = (int)(255.0 * values[4] + 0.5);
-      if (num_channels > 2)
-	samples[i].colors[2] = (int)(255.0 * values[5] + 0.5);
-      if (num_channels > 3)
-	samples[i].colors[3] = (int)(255.0 * values[6] + 0.5);
-    }
-
- /*
-  * If everything went OK, create the color profile...
-  */
-
-  if (i == num_samples)
-    rgbptr = cfRGBNew(num_samples, samples, cube_size, num_channels);
-  else
-    rgbptr = NULL;
-
- /*
-  * Free the temporary sample array and return...
-  */
-
-  free(samples);
-
-  return (rgbptr);
-}
-
-
-/*
- * 'cfRGBNew()' - Create a new RGB color separation.
- */
-
-cf_rgb_t *				/* O - New color separation or NULL */
-cfRGBNew(int           num_samples,	/* I - Number of samples */
-	   cf_sample_t *samples,	/* I - Samples */
-	   int           cube_size,	/* I - Size of LUT cube */
-           int           num_channels)	/* I - Number of color components */
-{
-  cf_rgb_t		*rgbptr;	/* New color separation */
-  int			i;		/* Looping var */
-  int			r, g, b;	/* Current RGB */
-  int			tempsize;	/* Sibe of main arrays */
-  unsigned char		*tempc;		/* Pointer for C arrays */
-  unsigned char		**tempb ;	/* Pointer for Z arrays */
-  unsigned char		***tempg;	/* Pointer for Y arrays */
-  unsigned char		****tempr;	/* Pointer for X array */
-  unsigned char		rgb[3];		/* Temporary RGB value */
-
-
- /*
-  * Range-check the input...
-  */
+  //
+  // Range-check the input...
+  //
 
   if (!samples || num_samples != (cube_size * cube_size * cube_size) ||
       num_channels <= 0 || num_channels > CF_MAX_RGB)
     return (NULL);
 
- /*
-  * Allocate memory for the separation...
-  */
+  //
+  // Allocate memory for the separation...
+  //
 
   if ((rgbptr = calloc(1, sizeof(cf_rgb_t))) == NULL)
     return (NULL);
 
- /*
-  * Allocate memory for the samples and the LUT cube...
-  */
+  //
+  // Allocate memory for the samples and the LUT cube...
+  //
 
-  tempsize = cube_size * cube_size * cube_size;	/* FUTURE: num_samples < cs^3 */
+  tempsize = cube_size * cube_size * cube_size;	// FUTURE: num_samples < cs^3
 
   tempc = calloc(tempsize, num_channels);
   tempb = calloc(tempsize, sizeof(unsigned char *));
@@ -488,9 +360,9 @@ cfRGBNew(int           num_samples,	/* I - Number of samples */
     return (NULL);
   }
 
- /*
-  * Fill in the arrays...
-  */
+  //
+  // Fill in the arrays...
+  //
 
   for (i = 0, r = 0; r < cube_size; r ++)
   {
@@ -518,9 +390,9 @@ cfRGBNew(int           num_samples,	/* I - Number of samples */
   rgbptr->num_channels = num_channels;
   rgbptr->colors       = tempr;
 
- /*
-  * Generate the lookup tables for the cube indices and multipliers...
-  */
+  //
+  // Generate the lookup tables for the cube indices and multipliers...
+  //
 
   for (i = 0; i < 256; i ++)
   {
@@ -532,9 +404,9 @@ cfRGBNew(int           num_samples,	/* I - Number of samples */
       rgbptr->cube_mult[i] = 255 - ((i * (cube_size - 1)) & 255);
   }
 
- /*
-  * Generate the black and white cache values for the separation...
-  */
+  //
+  // Generate the black and white cache values for the separation...
+  //
 
   rgb[0] = 0;
   rgb[1] = 0;
@@ -550,10 +422,9 @@ cfRGBNew(int           num_samples,	/* I - Number of samples */
 
   rgbptr->cache_init = 1;
 
- /*
-  * Return the separation...
-  */
+  //
+  // Return the separation...
+  //
 
   return (rgbptr);
 }
-

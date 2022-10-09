@@ -22,9 +22,10 @@
 #include <cups/cups.h>
 #include <ppd/ppd.h>
 #include <cupsfilters/driver.h>
+#include <cupsfilters/image.h>
+#include "escp.h"
 #include <string.h>
 #include <ctype.h>
-#include "escp.h"
 
 
 /*

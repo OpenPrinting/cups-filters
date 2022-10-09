@@ -41,9 +41,9 @@ _ppd_gettimeofday(struct timeval *tv,	/* I  - Timeval struct */
  * Globals...
  */
 
-static int		_ppd_debug_fd = -1;
+int			_ppd_debug_fd = -1;
 					/* Debug log file descriptor */
-static int		_ppd_debug_level = 1;
+int			_ppd_debug_level = 1;
 					/* Log level (0 to 9) */
 
 
@@ -54,10 +54,6 @@ static int		_ppd_debug_level = 1;
 static regex_t		*debug_filter = NULL;
 					/* Filter expression for messages */
 static int		debug_init = 0;	/* Did we initialize debugging? */
-static _ppd_mutex_t	debug_init_mutex = _PPD_MUTEX_INITIALIZER,
-					/* Mutex to control initialization */
-			debug_log_mutex = _PPD_MUTEX_INITIALIZER;
-					/* Mutex to serialize log entries */
 
 
 /*
@@ -102,9 +98,7 @@ _ppd_debug_printf(const char *format,	/* I - Printf-style format string */
   {
     int	result;				/* Filter result */
 
-    _ppdMutexLock(&debug_init_mutex);
     result = regexec(debug_filter, format, 0, NULL, 0);
-    _ppdMutexUnlock(&debug_init_mutex);
 
     if (result)
       return;
@@ -139,9 +133,7 @@ _ppd_debug_printf(const char *format,	/* I - Printf-style format string */
   * Write it out...
   */
 
-  _ppdMutexLock(&debug_log_mutex);
   write(_ppd_debug_fd, buffer, (size_t)bytes);
-  _ppdMutexUnlock(&debug_log_mutex);
 }
 
 
@@ -185,9 +177,7 @@ _ppd_debug_puts(const char *s)		/* I - String to output */
   {
     int	result;				/* Filter result */
 
-    _ppdMutexLock(&debug_init_mutex);
     result = regexec(debug_filter, s, 0, NULL, 0);
-    _ppdMutexUnlock(&debug_init_mutex);
 
     if (result)
       return;
@@ -219,9 +209,7 @@ _ppd_debug_puts(const char *s)		/* I - String to output */
   * Write it out...
   */
 
-  _ppdMutexLock(&debug_log_mutex);
   write(_ppd_debug_fd, buffer, (size_t)bytes);
-  _ppdMutexUnlock(&debug_log_mutex);
 }
 
 
@@ -235,7 +223,6 @@ _ppd_debug_set(const char *logfile,	/* I - Log file or NULL */
 		const char *filter,	/* I - Filter string or NULL */
 		int        force)	/* I - Force initialization */
 {
-  _ppdMutexLock(&debug_init_mutex);
 
   if (!debug_init || force)
   {
@@ -297,7 +284,6 @@ _ppd_debug_set(const char *logfile,	/* I - Log file or NULL */
     debug_init = 1;
   }
 
-  _ppdMutexUnlock(&debug_init_mutex);
 }
 
 

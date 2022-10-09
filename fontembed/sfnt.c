@@ -1,10 +1,10 @@
 #include "sfnt.h"
+#include "sfnt-int-private.h"
+#include "debug-internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <assert.h>
-#include "sfnt-int-private.h"
 
 // TODO?
 // get_SHORT(head+48) // fontDirectionHint
@@ -18,10 +18,10 @@ static void otf_bsearch_params(int num, // {{{
                                int *entrySelector,
                                int *rangeShift)
 {
-  assert(num>0);
-  assert(searchRange);
-  assert(entrySelector);
-  assert(rangeShift);
+  DEBUG_assert(num>0);
+  DEBUG_assert(searchRange);
+  DEBUG_assert(entrySelector);
+  DEBUG_assert(rangeShift);
 
   int iA,iB;
   for (iA=1,iB=0;iA<=num;iA<<=1,iB++) {}
@@ -66,7 +66,7 @@ static char *otf_bsearch(char *table, // {{{
 
 static OTF_FILE *otf_new(FILE *f) // {{{
 {
-  assert(f);
+  DEBUG_assert(f);
 
   OTF_FILE *ret;
   ret=calloc(1,sizeof(OTF_FILE));
@@ -88,7 +88,7 @@ static char *otf_read(OTF_FILE *otf,char *buf,long pos,int length) // {{{
   if (length==0) {
     return buf;
   } else if (length<0) {
-    assert(0);
+    DEBUG_assert(0);
     return NULL;
   }
 
@@ -345,7 +345,7 @@ OTF_FILE *otf_load(const char *file) // {{{
 
 void otf_close(OTF_FILE *otf) // {{{
 {
-  assert(otf);
+  DEBUG_assert(otf);
   if (otf) {
     free(otf->gly);
     free(otf->cmap);
@@ -392,7 +392,7 @@ int otf_find_table(OTF_FILE *otf,unsigned int tag) // {{{  - table_index  or -1 
     return -1;
   }
   char target[]={(tag>>24),(tag>>16),(tag>>8),tag};
-  //  assert(get_USHORT(buf+6)+get_USHORT(buf+10)==16*numTables);
+  //  DEBUG_assert(get_USHORT(buf+6)+get_USHORT(buf+10)==16*numTables);
   char *result=otf_bsearch(tables,target,4,
                            get_USHORT(buf+6),
                            get_USHORT(buf+8),
@@ -421,8 +421,8 @@ int otf_find_table(OTF_FILE *otf,unsigned int tag) // {{{  - table_index  or -1 
 
 char *otf_get_table(OTF_FILE *otf,unsigned int tag,int *ret_len) // {{{
 {
-  assert(otf);
-  assert(ret_len);
+  DEBUG_assert(otf);
+  DEBUG_assert(ret_len);
 
   const int idx=otf_find_table(otf,tag);
   if (idx==-1) {
@@ -453,7 +453,7 @@ char *otf_get_table(OTF_FILE *otf,unsigned int tag,int *ret_len) // {{{
 
 int otf_load_glyf(OTF_FILE *otf) // {{{  - 0 on success
 {
-  assert((otf->flags&OTF_F_FMT_CFF)==0); // not for CFF
+  DEBUG_assert((otf->flags&OTF_F_FMT_CFF)==0); // not for CFF
   int iA,len;
   // {{{ find glyf table
   iA=otf_find_table(otf,OTF_TAG('g','l','y','f'));
@@ -474,7 +474,7 @@ int otf_load_glyf(OTF_FILE *otf) // {{{  - 0 on success
   }
   if (otf->glyphOffsets) {
     free(otf->glyphOffsets);
-    assert(0);
+    DEBUG_assert(0);
   }
   otf->glyphOffsets=malloc((otf->numGlyphs+1)*sizeof(unsigned int));
   if (!otf->glyphOffsets) {
@@ -511,7 +511,7 @@ int otf_load_glyf(OTF_FILE *otf) // {{{  - 0 on success
   }
   if (otf->gly) {
     free(otf->gly);
-    assert(0);
+    DEBUG_assert(0);
   }
   otf->gly=malloc(maxGlyfLen*sizeof(char));
   if (!otf->gly) {
@@ -557,7 +557,7 @@ int otf_load_more(OTF_FILE *otf) // {{{  - 0 on success   => hhea,hmtx,name,[gly
   }
   if (otf->hmtx) {
     free(otf->hmtx);
-    assert(0);
+    DEBUG_assert(0);
   }
   otf->hmtx=hmtx;
   // }}}
@@ -584,7 +584,7 @@ int otf_load_more(OTF_FILE *otf) // {{{  - 0 on success   => hhea,hmtx,name,[gly
   }
   if (otf->name) {
     free(otf->name);
-    assert(0);
+    DEBUG_assert(0);
   }
   otf->name=name;
   // }}}
@@ -603,7 +603,7 @@ int otf_load_cmap(OTF_FILE *otf) // {{{  - 0 on success
        (get_USHORT(cmap)!=0x0000)|| // version
        (len<get_USHORT(cmap+2)*8+4) ) {
     fprintf(stderr,"Unsupported OTF font / cmap table \n");
-    assert(0);
+    DEBUG_assert(0);
     return -1;
   }
   // check bounds, find (3,0) or (3,1) [TODO?]
@@ -617,7 +617,7 @@ int otf_load_cmap(OTF_FILE *otf) // {{{  - 0 on success
          (offset+get_USHORT(ndata+2)>len) ) {
       fprintf(stderr,"Bad cmap table \n");
       free(cmap);
-      assert(0);
+      DEBUG_assert(0);
       return -1;
     }
     if ( (get_USHORT(nrec)==3)&&
@@ -629,7 +629,7 @@ int otf_load_cmap(OTF_FILE *otf) // {{{  - 0 on success
   }
   if (otf->cmap) {
     free(otf->cmap);
-    assert(0);
+    DEBUG_assert(0);
   }
   otf->cmap=cmap;
 
@@ -639,7 +639,7 @@ int otf_load_cmap(OTF_FILE *otf) // {{{  - 0 on success
 
 int otf_get_width(OTF_FILE *otf,unsigned short gid) // {{{  -1 on error
 {
-  assert(otf);
+  DEBUG_assert(otf);
 
   if (gid>=otf->numGlyphs) {
     return -1;
@@ -673,14 +673,14 @@ static int otf_name_compare(const void *a,const void *b) // {{{
 
 const char *otf_get_name(OTF_FILE *otf,int platformID,int encodingID,int languageID,int nameID,int *ret_len) // {{{
 {
-  assert(otf);
-  assert(ret_len);
+  DEBUG_assert(otf);
+  DEBUG_assert(ret_len);
 
   // ensure name is there
   if (!otf->name) {
     if (otf_load_more(otf)!=0) {
       *ret_len=-1;
-      assert(0);
+      DEBUG_assert(0);
       return NULL;
     }
   }
@@ -705,8 +705,8 @@ const char *otf_get_name(OTF_FILE *otf,int platformID,int encodingID,int languag
 
 int otf_get_glyph(OTF_FILE *otf,unsigned short gid) // {{{ result in >otf->gly, returns length, -1 on error
 {
-  assert(otf);
-  assert((otf->flags&OTF_F_FMT_CFF)==0); // not for CFF
+  DEBUG_assert(otf);
+  DEBUG_assert((otf->flags&OTF_F_FMT_CFF)==0); // not for CFF
 
   if (gid>=otf->numGlyphs) {
     return -1;
@@ -715,7 +715,7 @@ int otf_get_glyph(OTF_FILE *otf,unsigned short gid) // {{{ result in >otf->gly, 
   // ensure >glyphOffsets and >gly is there
   if ( (!otf->gly)||(!otf->glyphOffsets) ) {
     if (otf_load_more(otf)!=0) {
-      assert(0);
+      DEBUG_assert(0);
       return -1;
     }
   }
@@ -725,7 +725,7 @@ int otf_get_glyph(OTF_FILE *otf,unsigned short gid) // {{{ result in >otf->gly, 
     return 0;
   }
 
-  assert(otf->glyfTable->length>=otf->glyphOffsets[gid+1]);
+  DEBUG_assert(otf->glyfTable->length>=otf->glyphOffsets[gid+1]);
   if (!otf_read(otf,otf->gly,
                 otf->glyfTable->offset+otf->glyphOffsets[gid],len)) {
     return -1;
@@ -737,14 +737,14 @@ int otf_get_glyph(OTF_FILE *otf,unsigned short gid) // {{{ result in >otf->gly, 
 
 unsigned short otf_from_unicode(OTF_FILE *otf,int unicode) // {{{ 0 = missing
 {
-  assert(otf);
-  assert( (unicode>=0)&&(unicode<65536) );
-//  assert((otf->flags&OTF_F_FMT_CFF)==0); // not for CFF, other method!
+  DEBUG_assert(otf);
+  DEBUG_assert( (unicode>=0)&&(unicode<65536) );
+//  DEBUG_assert((otf->flags&OTF_F_FMT_CFF)==0); // not for CFF, other method!
 
   // ensure >cmap and >unimap is there
   if (!otf->cmap) {
     if (otf_load_cmap(otf)!=0) {
-      assert(0);
+      DEBUG_assert(0);
       return 0; // TODO?
     }
   }
@@ -763,7 +763,7 @@ unsigned short otf_from_unicode(OTF_FILE *otf,int unicode) // {{{ 0 = missing
                            get_USHORT(otf->unimap+10),
                            get_USHORT(otf->unimap+12),1);
   if (result>=otf->unimap+14+segCountX2) { // outside of endCode[segCount]
-    assert(0); // bad font, no 0xffff sentinel
+    DEBUG_assert(0); // bad font, no 0xffff sentinel
     return 0;
   }
 
@@ -815,7 +815,7 @@ int otf_action_copy_head(void *param,int csum,OUTPUT_FN output,void *context) //
 {
   OTF_FILE *otf=param;
   const int table_no=otf_find_table(otf,OTF_TAG('h','e','a','d')); // we can't have csum AND table_no ... never mind!
-  assert(table_no!=-1);
+  DEBUG_assert(table_no!=-1);
   const OTF_DIRENT *table=otf->tables+table_no;
 
   if (!output) { // get checksum and unpadded length
@@ -947,7 +947,7 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
   for (iA=0;iA<numTables;iA++) {
     char *entry=start+12+16*order[iA];
     const int res=(*otw[order[iA]].action)(otw[order[iA]].param,otw[order[iA]].length,NULL,&csum);
-    assert(res>=0);
+    DEBUG_assert(res>=0);
     if (otw[order[iA]].tag==OTF_TAG('h','e','a','d')) {
       headAt=order[iA];
     }
@@ -979,10 +979,10 @@ int otf_write_sfnt(struct _OTF_WRITE *otw,unsigned int version,int numTables,OUT
       free(start);
       return -1;
     }
-    assert(((res+3)&~3)==res); // correctly padded? (i.e. next line is just ret+=res;)
+    DEBUG_assert(((res+3)&~3)==res); // correctly padded? (i.e. next line is just ret+=res;)
     ret+=(res+3)&~3;
   }
-  assert(offset==ret);
+  DEBUG_assert(offset==ret);
   free(order);
   free(start);
 

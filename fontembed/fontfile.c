@@ -1,5 +1,5 @@
 #include "fontfile.h"
-#include <assert.h>
+#include "debug-internal.h"
 #include <string.h>
 
 //FONTFILE *fontfile_open(const char *filename);
@@ -16,7 +16,7 @@ FONTFILE *fontfile_open(const char *filename)
 FONTFILE *fontfile_open_sfnt(OTF_FILE *otf) // {{{
 {
   if (!otf) {
-    assert(0);
+    DEBUG_assert(0);
     return NULL;
   }
   FONTFILE *ret=calloc(1,sizeof(FONTFILE));
@@ -29,7 +29,7 @@ FONTFILE *fontfile_open_sfnt(OTF_FILE *otf) // {{{
 
 FONTFILE *fontfile_open_std(const char *name) // {{{
 {
-  assert(name);
+  DEBUG_assert(name);
   FONTFILE *ret=calloc(1,sizeof(FONTFILE));
 
   ret->stdname=strdup(name);

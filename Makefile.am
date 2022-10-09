@@ -29,7 +29,7 @@ EXTRA_DIST = \
 	filter/braille/filters/TODO.txt
 
 EXTRA_DIST += \
-	cupsfilters/testdriver.c \
+	ppd/testdriver.c \
 	data/makePDFfromPS.sh \
 	data/classified.ps \
 	data/confidential.ps \
@@ -161,6 +161,288 @@ pkgcharset_DATA = \
 
 EXTRA_DIST += $(pkgcharset_DATA)
 
+# =================
+# Fontembed library
+# =================
+pkgfontembedincludedir = $(includedir)/fontembed
+pkgfontembedinclude_DATA = \
+	fontembed/bitset.h \
+	fontembed/embed.h \
+	fontembed/embed-pdf.h \
+	fontembed/fontfile.h \
+	fontembed/iofn.h \
+	fontembed/sfnt.h
+
+lib_LTLIBRARIES = libfontembed.la
+
+check_PROGRAMS = \
+	test-analyze \
+	test-pdf \
+	test-ps
+TESTS = \
+	test-analyze \
+	test-pdf \
+	test-ps
+
+libfontembed_la_SOURCES = \
+	fontembed/aglfn13.c \
+	fontembed/dynstring.c \
+	fontembed/dynstring-private.h \
+	fontembed/debug-internal.h \
+	fontembed/embed.c \
+	fontembed/embed-sfnt.c \
+	fontembed/embed-sfnt-int-private.h \
+	fontembed/embed-pdf.c \
+	fontembed/embed-pdf-int-private.h \
+	fontembed/fontfile.c \
+	fontembed/frequent.c \
+	fontembed/frequent-private.h \
+	fontembed/macroman-private.h \
+	fontembed/sfnt.c \
+	fontembed/sfnt-int-private.h \
+	fontembed/sfnt-subset.c \
+	$(pkgfontembedinclude_DATA)
+libfontembed_la_LDFLAGS = \
+	-no-undefined \
+	-version-info 1
+
+test_analyze_SOURCES = fontembed/test-analyze.c
+test_analyze_LDADD = libfontembed.la
+
+test_pdf_SOURCES = fontembed/test-pdf.c
+test_pdf_LDADD = libfontembed.la
+
+test_ps_SOURCES = fontembed/test-ps.c
+test_ps_LDADD = libfontembed.la
+
+EXTRA_DIST += \
+	$(pkgfontembedinclude_DATA) \
+	fontembed/README
+
+pkgfilter_PROGRAMS =
+pkgfilterdir = $(CUPS_SERVERBIN)/filter
+
+# ====================
+# CUPS Filters library
+# ====================
+pkgfiltersincludedir = $(includedir)/cupsfilters
+pkgfiltersinclude_DATA = \
+	cupsfilters/bitmap.h \
+	cupsfilters/catalog.h \
+	cupsfilters/colord.h \
+	cupsfilters/colormanager.h \
+	cupsfilters/driver.h \
+	cupsfilters/filter.h \
+	cupsfilters/ieee1284.h \
+	cupsfilters/image.h \
+	cupsfilters/ipp.h \
+	cupsfilters/log.h \
+	cupsfilters/pdf.h \
+	cupsfilters/pdfutils.h \
+	cupsfilters/raster.h
+
+lib_LTLIBRARIES += libcupsfilters.la
+
+check_PROGRAMS += \
+	testcmyk \
+	testdither \
+	testimage \
+	testrgb \
+	test1284
+TESTS += \
+	testdither
+#	testcmyk # fails as it opens some image.ppm which is nowerhe to be found.
+#	testimage # requires also some ppm file as argument
+#	testrgb # same error
+# FIXME: run old testdither
+#	./testdither > test/0-255.pgm 2>test/0-255.log
+#	./testdither 0 127 255 > test/0-127-255.pgm 2>test/0-127-255.log
+#	./testdither 0 85 170 255 > test/0-85-170-255.pgm 2>test/0-85-170-255.log
+#	./testdither 0 63 127 170 198 227 255 > test/0-63-127-170-198-227-255.pgm 2>test/0-63-127-170-198-227-255.log
+#	./testdither 0 210 383 > test/0-210-383.pgm 2>test/0-210-383.log
+#	./testdither 0 82 255 > test/0-82-255.pgm 2>test/0-82-255.log
+#	./testdither 0 510 > test/0-510.pgm 2>test/0-510.log
+#	./testdither 0 1020 > test/0-1020.pgm 2>test/0-1020.log
+
+# We need ieee1284 up and running.
+# Leave it to the user to run if they have the bus.
+#TESTS += test1284
+
+libcupsfilters_la_SOURCES = \
+	cupsfilters/bannertopdf.c \
+	cupsfilters/bitmap.c \
+	cupsfilters/catalog.c \
+	cupsfilters/check.c \
+	cupsfilters/cmyk.c \
+	cupsfilters/colord.c \
+	cupsfilters/colormanager.c \
+	cupsfilters/debug.c \
+	cupsfilters/debug-internal.h \
+	cupsfilters/dither.c \
+	cupsfilters/filter.c \
+	cupsfilters/ghostscript.c \
+	cupsfilters/ieee1284.c \
+	cupsfilters/image.c \
+	cupsfilters/image-colorspace.c \
+	cupsfilters/image-jpeg.c \
+	cupsfilters/image-png.c \
+	cupsfilters/image-private.h \
+	cupsfilters/image-tiff.c \
+	cupsfilters/image-zoom.c \
+	cupsfilters/imagetopdf.c \
+	cupsfilters/imagetoraster.c \
+	cupsfilters/ipp.c \
+	cupsfilters/lut.c \
+	cupsfilters/mupdftopwg.c \
+	cupsfilters/pack.c \
+	cupsfilters/pclmtoraster.cxx \
+	cupsfilters/pdf.cxx \
+	cupsfilters/pdftopdf/pdftopdf.cxx \
+	cupsfilters/pdftopdf/pdftopdf-private.h \
+	cupsfilters/pdftopdf/pdftopdf-processor.cxx \
+	cupsfilters/pdftopdf/pdftopdf-processor-private.h \
+	cupsfilters/pdftopdf/qpdf-pdftopdf-processor.cxx \
+	cupsfilters/pdftopdf/qpdf-pdftopdf-processor-private.h \
+	cupsfilters/pdftopdf/pptypes.cxx \
+	cupsfilters/pdftopdf/pptypes-private.h \
+	cupsfilters/pdftopdf/nup.cxx \
+	cupsfilters/pdftopdf/nup-private.h \
+	cupsfilters/pdftopdf/intervalset.cxx \
+	cupsfilters/pdftopdf/intervalset-private.h \
+	cupsfilters/pdftopdf/qpdf-tools.cxx \
+	cupsfilters/pdftopdf/qpdf-tools-private.h \
+	cupsfilters/pdftopdf/qpdf-xobject.cxx \
+	cupsfilters/pdftopdf/qpdf-xobject-private.h \
+	cupsfilters/pdftopdf/qpdf-pdftopdf.cxx \
+	cupsfilters/pdftopdf/qpdf-pdftopdf-private.h \
+	cupsfilters/pdftopdf/qpdf-cm.cxx \
+	cupsfilters/pdftopdf/qpdf-cm-private.h \
+	cupsfilters/pdftoraster.cxx \
+	cupsfilters/pdfutils.c \
+	cupsfilters/pwgtopdf.cxx \
+	cupsfilters/pwgtoraster.c \
+	cupsfilters/raster.c \
+	cupsfilters/rastertopwg.c \
+	cupsfilters/rgb.c \
+	cupsfilters/srgb.c \
+	cupsfilters/texttopdf.c \
+	cupsfilters/texttotext.c \
+	cupsfilters/universal.c \
+	$(pkgfiltersinclude_DATA)
+libcupsfilters_la_LIBADD = \
+	libfontembed.la \
+	$(FONTCONFIG_LIBS) \
+	$(GETLINE) \
+	$(STRCASESTR) \
+	$(CUPS_LIBS) \
+	$(LCMS_LIBS) \
+	$(LIBQPDF_LIBS) \
+	$(LIBJPEG_LIBS) \
+	$(EXIF_LIBS) \
+	$(LIBPNG_LIBS) \
+	$(TIFF_LIBS) \
+	$(POPPLER_LIBS) \
+	-lm
+libcupsfilters_la_CFLAGS = \
+	-I$(srcdir)/fontembed/ \
+	$(FONTCONFIG_CFLAGS) \
+	$(CUPS_CFLAGS) \
+	$(LCMS_CFLAGS) \
+	$(LIBQPDF_CFLAGS) \
+	$(LIBJPEG_CFLAGS) \
+	$(EXIF_CFLAGS) \
+	$(LIBPNG_CFLAGS) \
+	$(TIFF_CFLAGS)
+libcupsfilters_la_LDFLAGS = \
+	-no-undefined \
+	-version-info 2
+if BUILD_DBUS
+libcupsfilters_la_CFLAGS += $(DBUS_CFLAGS) -DHAVE_DBUS
+libcupsfilters_CXXFLAGS = -std=c++0x $(libcupsfilters_CFLAGS)   # -std=c++11
+libcupsfilters_la_LIBADD += $(DBUS_LIBS)
+endif
+libcupsfilters_la_DEPENDENCIES = \
+	libfontembed.la \
+	$(GETLINE) \
+	$(STRCASESTR)
+
+testcmyk_SOURCES = \
+	cupsfilters/testcmyk.c \
+	$(pkgfiltersinclude_DATA)
+testcmyk_LDADD = \
+	libcupsfilters.la \
+	-lm
+
+testdither_SOURCES = \
+	cupsfilters/testdither.c \
+	$(pkgfiltersinclude_DATA)
+testdither_LDADD = \
+	libcupsfilters.la \
+	-lm
+
+testimage_SOURCES = \
+	cupsfilters/testimage.c \
+	$(pkgfiltersinclude_DATA)
+testimage_LDADD = \
+	$(LIBJPEG_LIBS) \
+	$(LIBPNG_LIBS) \
+	$(TIFF_LIBS) \
+	libcupsfilters.la \
+	-lm
+testimage_CFLAGS = \
+	$(LIBJPEG_CFLAGS) \
+	$(LIBPNG_CFLAGS) \
+	$(TIFF_CFLAGS)
+
+testrgb_SOURCES = \
+	cupsfilters/testrgb.c \
+	$(pkgfiltersinclude_DATA)
+testrgb_LDADD = \
+	libcupsfilters.la \
+	-lm
+
+EXTRA_DIST += \
+	$(pkgfiltersinclude_DATA) \
+	cupsfilters/image.pgm \
+	cupsfilters/image.ppm
+
+test1284_SOURCES = \
+	cupsfilters/test1284.c
+test1284_LDADD = \
+	libcupsfilters.la \
+	$(CUPS_LIBS)
+test1284_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	$(CUPS_CFLAGS)
+
+# =========
+# CUPS Data
+# =========
+pkgcupsdatadir = $(CUPS_DATADIR)/data
+pkgcupsdata_DATA = \
+	data/default.pdf \
+	data/form_russian.pdf \
+	data/form_english.pdf \
+	data/form_english_in.odt \
+	data/form_russian_in.odt \
+	data/default-testpage.pdf \
+	data/testprint \
+	data/classified.pdf \
+	data/confidential.pdf \
+	data/secret.pdf \
+	data/standard.pdf \
+	data/topsecret.pdf \
+	data/unclassified.pdf
+
+EXTRA_DIST += $(pkgcupsdata_DATA)
+
+# ===========
+# CUPS Config
+# ===========
+pkgcupsserverrootdir = $(CUPS_SERVERROOT)
+pkgcupsserverroot_DATA = \
+	utils/cups-browsed.conf
+
 # ==========================
 # PPD legacy support library
 # ==========================
@@ -168,7 +450,7 @@ pkgppdincludedir = $(includedir)/ppd
 pkgppdinclude_DATA = \
 	ppd/ppd.h \
 	ppd/ppdc.h \
-	cupsfilters/log.h
+	ppd/ppd-filter.h
 
 pkgppddefsdir = $(datadir)/ppdc
 pkgppddefs_DATA = \
@@ -179,11 +461,11 @@ pkgppddefs_DATA = \
 	ppd/media.defs \
 	ppd/raster.defs
 
-lib_LTLIBRARIES = libppd.la
+lib_LTLIBRARIES += libppd.la
 
-check_PROGRAMS = \
+check_PROGRAMS += \
 	testppd
-TESTS = \
+TESTS += \
 	testppd
 
 libppd_la_SOURCES = \
@@ -194,6 +476,9 @@ libppd_la_SOURCES = \
 	ppd/ppd-conflicts.c \
 	ppd/ppd-custom.c \
 	ppd/ppd-emit.c \
+	ppd/ppd-filter.c \
+	ppd/ppd-generator.c \
+	ppd/ppd-load-profile.c \
 	ppd/ppd-localize.c \
 	ppd/ppd-mark.c \
 	ppd/ppd-page.c \
@@ -206,12 +491,15 @@ libppd_la_SOURCES = \
 	ppd/encode.c \
 	ppd/file.c \
 	ppd/file-private.h \
+	ppd/imagetops-pstops.c \
 	ppd/ipp-private.h \
 	ppd/language.c \
 	ppd/language-private.h \
+	ppd/pdftops.c \
 	ppd/raster-interpret.c \
 	ppd/raster-error.c \
 	ppd/raster-private.h \
+	ppd/rastertops.c \
 	ppd/string.c \
 	ppd/snprintf.c \
 	ppd/string-private.h \
@@ -240,12 +528,16 @@ libppd_la_SOURCES = \
 	$(pkgppdinclude_DATA) \
 	$(pkgppddefs_DATA)
 libppd_la_LIBADD = \
+	libcupsfilters.la \
 	$(CUPS_LIBS)
 libppd_la_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
 	$(CUPS_CFLAGS)
 libppd_la_LDFLAGS = \
 	-no-undefined \
 	-version-info 1
+libppd_la_DEPENDENCIES = \
+	libcupsfilters.la
 
 testppd_SOURCES = ppd/testppd.c
 testppd_LDADD = libppd.la \
@@ -325,306 +617,6 @@ ppdpo_LDADD = \
 ppdpo_CFLAGS = \
 	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
-
-# =================
-# Fontembed library
-# =================
-pkgfontembedincludedir = $(includedir)/fontembed
-pkgfontembedinclude_DATA = \
-	fontembed/bitset.h \
-	fontembed/embed.h \
-	fontembed/embed-pdf.h \
-	fontembed/fontfile.h \
-	fontembed/iofn.h \
-	fontembed/sfnt.h
-
-lib_LTLIBRARIES += libfontembed.la
-
-check_PROGRAMS += \
-	test-analyze \
-	test-pdf \
-	test-ps
-TESTS += \
-	test-analyze \
-	test-pdf \
-	test-ps
-
-libfontembed_la_SOURCES = \
-	fontembed/aglfn13.c \
-	fontembed/dynstring.c \
-	fontembed/dynstring-private.h \
-	fontembed/embed.c \
-	fontembed/embed-sfnt.c \
-	fontembed/embed-sfnt-int-private.h \
-	fontembed/embed-pdf.c \
-	fontembed/embed-pdf-int-private.h \
-	fontembed/fontfile.c \
-	fontembed/frequent.c \
-	fontembed/frequent-private.h \
-	fontembed/macroman-private.h \
-	fontembed/sfnt.c \
-	fontembed/sfnt-int-private.h \
-	fontembed/sfnt-subset.c \
-	$(pkgfontembedinclude_DATA)
-libfontembed_la_LDFLAGS = \
-	-no-undefined \
-	-version-info 1
-
-test_analyze_SOURCES = fontembed/test-analyze.c
-test_analyze_LDADD = libfontembed.la
-
-test_pdf_SOURCES = fontembed/test-pdf.c
-test_pdf_LDADD = libfontembed.la
-
-test_ps_SOURCES = fontembed/test-ps.c
-test_ps_LDADD = libfontembed.la
-
-EXTRA_DIST += \
-	$(pkgfontembedinclude_DATA) \
-	fontembed/README
-
-pkgfilter_PROGRAMS =
-pkgfilterdir = $(CUPS_SERVERBIN)/filter
-
-# ====================
-# CUPS Filters library
-# ====================
-pkgfiltersincludedir = $(includedir)/cupsfilters
-pkgfiltersinclude_DATA = \
-	cupsfilters/bitmap.h \
-	cupsfilters/colord.h \
-	cupsfilters/colormanager.h \
-	cupsfilters/driver.h \
-	cupsfilters/filter.h \
-	cupsfilters/ieee1284.h \
-	cupsfilters/image.h \
-	cupsfilters/ipp.h \
-	cupsfilters/log.h \
-	cupsfilters/pdf.h \
-	cupsfilters/pdfutils.h \
-	cupsfilters/ppdgenerator.h \
-	cupsfilters/raster.h
-
-lib_LTLIBRARIES += libcupsfilters.la
-
-check_PROGRAMS += \
-	testcmyk \
-	testdither \
-	testimage \
-	testrgb \
-	test1284
-TESTS += \
-	testdither
-#	testcmyk # fails as it opens some image.ppm which is nowerhe to be found.
-#	testimage # requires also some ppm file as argument
-#	testrgb # same error
-# FIXME: run old testdither
-#	./testdither > test/0-255.pgm 2>test/0-255.log
-#	./testdither 0 127 255 > test/0-127-255.pgm 2>test/0-127-255.log
-#	./testdither 0 85 170 255 > test/0-85-170-255.pgm 2>test/0-85-170-255.log
-#	./testdither 0 63 127 170 198 227 255 > test/0-63-127-170-198-227-255.pgm 2>test/0-63-127-170-198-227-255.log
-#	./testdither 0 210 383 > test/0-210-383.pgm 2>test/0-210-383.log
-#	./testdither 0 82 255 > test/0-82-255.pgm 2>test/0-82-255.log
-#	./testdither 0 510 > test/0-510.pgm 2>test/0-510.log
-#	./testdither 0 1020 > test/0-1020.pgm 2>test/0-1020.log
-
-# We need ieee1284 up and running.
-# Leave it to the user to run if they have the bus.
-#TESTS += test1284
-
-libcupsfilters_la_SOURCES = \
-	cupsfilters/attr.c \
-	cupsfilters/bannertopdf.c \
-	cupsfilters/bitmap.c \
-	cupsfilters/check.c \
-	cupsfilters/cmyk.c \
-	cupsfilters/colord.c \
-	cupsfilters/colormanager.c \
-	cupsfilters/dither.c \
-	cupsfilters/filter.c \
-	cupsfilters/ghostscript.c \
-	cupsfilters/ieee1284.c \
-	cupsfilters/image.c \
-	cupsfilters/image-bmp.c \
-	cupsfilters/image-colorspace.c \
-	cupsfilters/image-gif.c \
-	cupsfilters/image-jpeg.c \
-	cupsfilters/image-photocd.c \
-	cupsfilters/image-pix.c \
-	cupsfilters/image-png.c \
-	cupsfilters/image-pnm.c \
-	cupsfilters/image-private.h \
-	cupsfilters/image-sgi.c \
-	cupsfilters/image-sun.c \
-	cupsfilters/image-tiff.c \
-	cupsfilters/image-zoom.c \
-	cupsfilters/imagetopdf.c \
-	cupsfilters/imagetoraster.c \
-	cupsfilters/ipp.c \
-	cupsfilters/lut.c \
-	cupsfilters/mupdftopwg.c \
-	cupsfilters/pack.c \
-	cupsfilters/pclmtoraster.cxx \
-	cupsfilters/pdf.cxx \
-	cupsfilters/pdftopdf/pdftopdf.cxx \
-	cupsfilters/pdftopdf/pdftopdf-private.h \
-	cupsfilters/pdftopdf/pdftopdf-jcl.cxx \
-	cupsfilters/pdftopdf/pdftopdf-jcl-private.h \
-	cupsfilters/pdftopdf/pdftopdf-processor.cxx \
-	cupsfilters/pdftopdf/pdftopdf-processor-private.h \
-	cupsfilters/pdftopdf/qpdf-pdftopdf-processor.cxx \
-	cupsfilters/pdftopdf/qpdf-pdftopdf-processor-private.h \
-	cupsfilters/pdftopdf/pptypes.cxx \
-	cupsfilters/pdftopdf/pptypes-private.h \
-	cupsfilters/pdftopdf/nup.cxx \
-	cupsfilters/pdftopdf/nup-private.h \
-	cupsfilters/pdftopdf/intervalset.cxx \
-	cupsfilters/pdftopdf/intervalset-private.h \
-	cupsfilters/pdftopdf/qpdf-tools.cxx \
-	cupsfilters/pdftopdf/qpdf-tools-private.h \
-	cupsfilters/pdftopdf/qpdf-xobject.cxx \
-	cupsfilters/pdftopdf/qpdf-xobject-private.h \
-	cupsfilters/pdftopdf/qpdf-pdftopdf.cxx \
-	cupsfilters/pdftopdf/qpdf-pdftopdf-private.h \
-	cupsfilters/pdftopdf/qpdf-cm.cxx \
-	cupsfilters/pdftopdf/qpdf-cm-private.h \
-	cupsfilters/pdftops.c \
-	cupsfilters/pdftoraster.cxx \
-	cupsfilters/pdfutils.c \
-	cupsfilters/ppdgenerator.c \
-	cupsfilters/imagetops-pstops.c \
-	cupsfilters/pwgtoraster.c \
-	cupsfilters/raster.c \
-	cupsfilters/rastertops.c \
-	cupsfilters/rastertopdf.cxx \
-	cupsfilters/rastertopwg.c \
-	cupsfilters/rgb.c \
-	cupsfilters/srgb.c \
-	cupsfilters/texttopdf.c \
-	cupsfilters/texttotext.c \
-	cupsfilters/universal.c \
-	$(pkgfiltersinclude_DATA)
-EXTRA_libcupsfilters_la_SOURCES = \
-	cupsfilters/getline.c \
-	cupsfilters/strcasestr.c
-libcupsfilters_la_LIBADD = \
-	libppd.la \
-	libfontembed.la \
-	$(FONTCONFIG_LIBS) \
-	$(GETLINE) \
-	$(STRCASESTR) \
-	$(CUPS_LIBS) \
-	$(LCMS_LIBS) \
-	$(LIBQPDF_LIBS) \
-	$(LIBJPEG_LIBS) \
-	$(EXIF_LIBS) \
-	$(LIBPNG_LIBS) \
-	$(TIFF_LIBS) \
-	$(POPPLER_LIBS) \
-	-lm
-libcupsfilters_la_CFLAGS = \
-	-I$(srcdir)/ppd/ \
-	-I$(srcdir)/fontembed/ \
-	$(FONTCONFIG_CFLAGS) \
-	$(CUPS_CFLAGS) \
-	$(LCMS_CFLAGS) \
-	$(LIBQPDF_CFLAGS) \
-	$(LIBJPEG_CFLAGS) \
-	$(EXIF_CFLAGS) \
-	$(LIBPNG_CFLAGS) \
-	$(TIFF_CFLAGS)
-libcupsfilters_la_LDFLAGS = \
-	-no-undefined \
-	-version-info 2
-if BUILD_DBUS
-libcupsfilters_la_CFLAGS += $(DBUS_CFLAGS) -DHAVE_DBUS
-libcupsfilters_CXXFLAGS = -std=c++0x $(libcupsfilters_CFLAGS)   # -std=c++11
-libcupsfilters_la_LIBADD += $(DBUS_LIBS)
-endif
-libcupsfilters_la_DEPENDENCIES = \
-	libppd.la \
-	libfontembed.la \
-	$(GETLINE) \
-	$(STRCASESTR)
-
-testcmyk_SOURCES = \
-	cupsfilters/testcmyk.c \
-	$(pkgfiltersinclude_DATA)
-testcmyk_LDADD = \
-	libcupsfilters.la \
-	-lm
-
-testdither_SOURCES = \
-	cupsfilters/testdither.c \
-	$(pkgfiltersinclude_DATA)
-testdither_LDADD = \
-	libcupsfilters.la \
-	-lm
-
-testimage_SOURCES = \
-	cupsfilters/testimage.c \
-	$(pkgfiltersinclude_DATA)
-testimage_LDADD = \
-	$(LIBJPEG_LIBS) \
-	$(LIBPNG_LIBS) \
-	$(TIFF_LIBS) \
-	libcupsfilters.la \
-	-lm
-testimage_CFLAGS = \
-	$(LIBJPEG_CFLAGS) \
-	$(LIBPNG_CFLAGS) \
-	$(TIFF_CFLAGS)
-
-testrgb_SOURCES = \
-	cupsfilters/testrgb.c \
-	$(pkgfiltersinclude_DATA)
-testrgb_LDADD = \
-	libcupsfilters.la \
-	-lm
-
-EXTRA_DIST += \
-	$(pkgfiltersinclude_DATA) \
-	cupsfilters/image.pgm \
-	cupsfilters/image.ppm
-
-test1284_SOURCES = \
-	cupsfilters/test1284.c
-test1284_LDADD = \
-	libcupsfilters.la \
-	libppd.la \
-	$(CUPS_LIBS)
-test1284_CFLAGS = \
-	-I$(srcdir)/cupsfilters/ \
-	-I$(srcdir)/ppd/ \
-	$(CUPS_CFLAGS)
-
-# =========
-# CUPS Data
-# =========
-pkgcupsdatadir = $(CUPS_DATADIR)/data
-pkgcupsdata_DATA = \
-	data/default.pdf \
-	data/form_russian.pdf \
-	data/form_english.pdf \
-	data/form_english_in.odt \
-	data/form_russian_in.odt \
-	data/default-testpage.pdf \
-	data/testprint \
-	data/classified.pdf \
-	data/confidential.pdf \
-	data/secret.pdf \
-	data/standard.pdf \
-	data/topsecret.pdf \
-	data/unclassified.pdf
-
-EXTRA_DIST += $(pkgcupsdata_DATA)
-
-# ===========
-# CUPS Config
-# ===========
-pkgcupsserverrootdir = $(CUPS_SERVERROOT)
-pkgcupsserverroot_DATA = \
-	utils/cups-browsed.conf
 
 # =======
 # Drivers
@@ -713,6 +705,8 @@ pkgmime_DATA = \
 
 universalmimefiles = \
 	mime/cupsfilters-universal.convs
+universalpsmimefiles = \
+	mime/cupsfilters-universal-postscript.convs
 individualmimefiles = \
 	mime/cupsfilters-individual.convs
 popplermimefiles = \
@@ -723,10 +717,9 @@ mutoolmimefiles = \
 	mime/cupsfilters-mupdf.convs
 
 if ENABLE_UNIVERSAL_CUPS_FILTER
-if ENABLE_POPPLER
-if ENABLE_GHOSTSCRIPT
 pkgmime_DATA += $(universalmimefiles)
-endif
+if ENABLE_GHOSTSCRIPT
+pkgmime_DATA += $(universalpsmimefiles)
 endif
 endif
 
@@ -753,6 +746,7 @@ endif
 EXTRA_DIST += \
 	$(genmimefiles) \
 	$(universalmimefiles) \
+	$(universalpsmimefiles) \
 	$(individualmimefiles) \
 	$(popplermimefiles) \
 	$(gsmimefiles) \
@@ -822,18 +816,14 @@ pkgfilter_PROGRAMS += \
 	foomatic-rip
 endif
 if ENABLE_UNIVERSAL_CUPS_FILTER
-if ENABLE_POPPLER
-if ENABLE_GHOSTSCRIPT
 pkgfilter_PROGRAMS += \
 	universal
-endif
-endif
 endif
 pkgfilter_PROGRAMS += \
 	pdftops \
 	texttopdf \
-	rastertopclm \
-	rastertopdf \
+	pwgtopclm \
+	pwgtopdf \
 	bannertopdf \
 	rastertops \
 	pwgtoraster \
@@ -885,10 +875,12 @@ bannertopdf_SOURCES = \
 	filter/bannertopdf.c
 bannertopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 bannertopdf_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 commandtoescpx_SOURCES = \
 	cupsfilters/driver.h \
@@ -937,92 +929,112 @@ foomatic_rip_SOURCES = \
 foomatic_rip_CFLAGS = \
 	-DCONFIG_PATH='"$(sysconfdir)/foomatic"' \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 foomatic_rip_LDADD = \
 	$(CUPS_LIBS) \
 	-lm \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 gstoraster_SOURCES = \
 	filter/gstoraster.c
 gstoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 gstoraster_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 gstopdf_SOURCES = \
 	filter/gstopdf.c
 gstopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 gstopdf_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 gstopxl_SOURCES = \
 	filter/gstopxl.c
 gstopxl_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 gstopxl_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 imagetopdf_SOURCES = \
 	filter/imagetopdf.c
 imagetopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 imagetopdf_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 imagetops_SOURCES = \
 	filter/imagetops.c
 imagetops_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 imagetops_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 imagetoraster_SOURCES = \
 	filter/imagetoraster.c
 imagetoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 imagetoraster_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 pclmtoraster_SOURCES = \
 	filter/pclmtoraster.c
 pclmtoraster_CXXFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 pclmtoraster_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
-rastertopclm_SOURCES = \
-	filter/rastertopclm.c
-rastertopclm_CFLAGS = \
+pwgtopclm_SOURCES = \
+	filter/pwgtopclm.c
+pwgtopclm_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
-rastertopclm_LDADD = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
+pwgtopclm_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
-rastertopdf_SOURCES = \
-	filter/rastertopdf.c
-rastertopdf_CFLAGS = \
+pwgtopdf_SOURCES = \
+	filter/pwgtopdf.c
+pwgtopdf_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
-rastertopdf_LDADD = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
+pwgtopdf_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 mupdftopwg_SOURCES = \
 	filter/mupdftopwg.c
@@ -1039,72 +1051,88 @@ pwgtoraster_SOURCES = \
 	filter/pwgtoraster.c
 pwgtoraster_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 pwgtoraster_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 rastertops_SOURCES = \
 	filter/rastertops.c
 rastertops_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertops_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 rastertopwg_SOURCES = \
 	filter/rastertopwg.c
 rastertopwg_CFLAGS = \
 	$(CUPS_CFLAGS) \
-	-I$(srcdir)/cupsfilters/
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/
 rastertopwg_LDADD = \
 	$(CUPS_LIBS) \
-	libcupsfilters.la
+	libcupsfilters.la \
+	libppd.la
 
 texttotext_SOURCES = \
 	filter/texttotext.c
 texttotext_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 texttotext_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 texttopdf_SOURCES = \
 	filter/texttopdf.c
 texttopdf_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 texttopdf_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 pdftops_SOURCES = \
 	filter/pdftops.c
 pdftops_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 pdftops_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 pstops_SOURCES = \
 	filter/pstops.c
 pstops_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 pstops_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 pdftoraster_SOURCES = \
 	filter/pdftoraster.c
 pdftoraster_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
 	$(CUPS_CFLAGS)
 pdftoraster_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 rastertoescpx_SOURCES = \
@@ -1162,6 +1190,7 @@ universal_CFLAGS = \
 	$(CUPS_CFLAGS)
 universal_LDADD = \
 	libcupsfilters.la \
+	libppd.la \
 	$(CUPS_LIBS)
 
 # =====
@@ -1249,26 +1278,6 @@ endif
 EXTRA_DIST += \
 	$(genppdfiles) \
 	$(gsppdfiles)
-
-# =========
-# Scripting
-# =========
-if WITH_PHP
-phpextensiondir = $(PHPDIR)
-phpextension_LTLIBRARIES = libphpcups.la
-endif
-
-libphpcups_la_SOURCES = \
-	scripting/php/phpcups.c \
-	scripting/php/phpcups.h
-libphpcups_la_LIBADD = $(CUPS_LIBS)
-libphpcups_la_CFLAGS = $(CUPS_CFLAGS)
-libphpcups_la_LDFLAGS = -no-undefined
-
-EXTRA_DIST += \
-	scripting/perl \
-	scripting/php/README \
-	scripting/php/phpcups.php
 
 distclean-local:
 	rm -rf *.cache *~

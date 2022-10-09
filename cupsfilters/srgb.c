@@ -1,25 +1,25 @@
-/*
- *   sRGB lookup tables for CUPS.
- *
- *   Copyright 2007 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- */
+//
+//   sRGB lookup tables for libcupsfilters.
+//
+//   Copyright 2007 by Apple Inc.
+//   Copyright 1993-2005 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include "driver.h"
 
 
-/*
- * sRGB gamma lookup table.
- */
+//
+// sRGB gamma lookup table.
+//
 
 const unsigned char cf_srgb_lut[256] =
 {
@@ -44,9 +44,9 @@ const unsigned char cf_srgb_lut[256] =
 };
 
 
-/*
- * sRGB gamma lookup table (inverted output to map to CMYK...)
- */
+//
+// sRGB gamma lookup table (inverted output to map to CMYK...)
+//
 
 const unsigned char cf_scmy_lut[256] =
 {
@@ -69,4 +69,3 @@ const unsigned char cf_scmy_lut[256] =
     7,   7,   6,   6,   6,   5,   5,   4,   4,   3,   3,   2,   2,   1,   1,
     0
 };
-

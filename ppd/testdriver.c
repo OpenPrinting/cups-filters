@@ -18,13 +18,16 @@
  *   main()      - Enumerate or display PPD files.
  *   cat_ppd()   - Display a PPD file.
  *   list_ppds() - List PPDs.
+ *
+ * Compile with:gcc -o testdriver testdriver.c -I.. -lppd -lcups
  */
 
 /*
  * Include necessary headers...
  */
 
-#include <cups/string-private.h>
+#include <ppd/ppd.h>
+#include <ppd/string-private.h>
 #include <cups/cups.h>
 
 

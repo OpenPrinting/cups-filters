@@ -1,5 +1,5 @@
 #include "pdfutils.h"
-#include <assert.h>
+#include "debug-internal.h"
 #include <string.h>
 
 int main()
@@ -7,7 +7,7 @@ int main()
   cf_pdf_out_t *pdf;
 
   pdf=cfPDFOutNew();
-  assert(pdf);
+  DEBUG_assert(pdf);
 
   cfPDFOutBeginPDF(pdf);
 
@@ -25,7 +25,7 @@ int main()
   int cobj=cfPDFOutAddXRef(pdf);
   const char buf[]="BT /a 10 Tf (abc) Tj ET";
   cfPDFOutPrintF(pdf,"%d 0 obj\n"
-                    "<</Length %d\n"
+                    "<</Length %ld\n"
                     ">>\n"
                     "stream\n"
                     "%s\n"

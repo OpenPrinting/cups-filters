@@ -1,17 +1,17 @@
 #include "sfnt.h"
 #include "sfnt-int-private.h"
+#include "bitset.h"
+#include "debug-internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <assert.h>
-#include "bitset.h"
 
 int otf_ttc_extract(OTF_FILE *otf,OUTPUT_FN output,void *context) // {{{
 {
-  assert(otf);
-  assert(output);
-  assert(otf->numTTC);
+  DEBUG_assert(otf);
+  DEBUG_assert(output);
+  DEBUG_assert(otf->numTTC);
   int iA;
 
   struct _OTF_WRITE *otw;
@@ -82,18 +82,21 @@ static int otf_subset_glyf(OTF_FILE *otf,int curgid,int donegid,BITSET glyphs) /
   do {
     flags=get_USHORT(cur);
     const unsigned short sub_gid=get_USHORT(cur+2);
-    assert(sub_gid<otf->numGlyphs);
+    DEBUG_assert(sub_gid<otf->numGlyphs);
     if (!bit_check(glyphs,sub_gid)) {
       // bad: temporarily load sub glyph
       const int len=otf_get_glyph(otf,sub_gid);
-      assert(len>0);
+      DEBUG_assert(len>0);
       bit_set(glyphs,sub_gid);
       if (sub_gid<donegid) {
         ret+=len;
         ret+=otf_subset_glyf(otf,sub_gid,donegid,glyphs); // composite of composites?, e.g. in DejaVu
       }
-      const int res=otf_get_glyph(otf,curgid); // reload current glyph
-      assert(res);
+#ifdef DEBUG
+      const int res =
+#endif
+	otf_get_glyph(otf,curgid); // reload current glyph
+      DEBUG_assert(res);
     }
 
     // skip parameters
@@ -117,9 +120,9 @@ static int otf_subset_glyf(OTF_FILE *otf,int curgid,int donegid,BITSET glyphs) /
 // TODO: cmap only required in non-CID context
 int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{{ - returns number of bytes written
 {
-  assert(otf);
-  assert(glyphs);
-  assert(output);
+  DEBUG_assert(otf);
+  DEBUG_assert(glyphs);
+  DEBUG_assert(output);
 
   int iA,b,c;
 
@@ -134,13 +137,13 @@ int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{
     if (glyphs[b]&c) {
       int len=otf_get_glyph(otf,iA);
       if (len<0) {
-        assert(0);
+        DEBUG_assert(0);
         return -1;
       } else if (len>0) {
         glyfSize+=len;
         len=otf_subset_glyf(otf,iA,iA,glyphs);
         if (len<0) {
-          assert(0);
+          DEBUG_assert(0);
           return -1;
         }
         glyfSize+=len;
@@ -155,7 +158,7 @@ int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{
   char *new_glyf=malloc(glyfSize);
   if ( (!new_loca)||(!new_glyf) ) {
     fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
-    assert(0);
+    DEBUG_assert(0);
     free(new_loca);
     free(new_glyf);
     return -1;
@@ -168,7 +171,7 @@ int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{
       c=1;
     }
 
-    assert(offset%2==0);
+    DEBUG_assert(offset%2==0);
     // TODO? change format? if glyfSize<0x20000
     if (otf->indexToLocFormat==0) {
       set_USHORT(new_loca+iA*2,offset/2);
@@ -178,7 +181,7 @@ int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{
 
     if (glyphs[b]&c) {
       const int len=otf_get_glyph(otf,iA);
-      assert(len>=0);
+      DEBUG_assert(len>=0);
       memcpy(new_glyf+offset,otf->gly,len);
       offset+=len;
     }
@@ -189,7 +192,7 @@ int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{
   } else { // ==1
     set_ULONG(new_loca+otf->numGlyphs*4,offset);
   }
-  assert(offset==glyfSize);
+  DEBUG_assert(offset==glyfSize);
 
   // determine new tables.
   struct _OTF_WRITE otw[]={ // sorted
@@ -224,8 +227,8 @@ int otf_subset(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{
 // TODO no subsetting actually done (for now)
 int otf_subset_cff(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) // {{{ - returns number of bytes written
 {
-  assert(otf);
-  assert(output);
+  DEBUG_assert(otf);
+  DEBUG_assert(output);
 
 // TODO char *new_cff=cff_subset(...);
 
@@ -259,8 +262,8 @@ int otf_subset_cff(OTF_FILE *otf,BITSET glyphs,OUTPUT_FN output,void *context) /
 
 static int copy_block(FILE *f,long pos,int length,OUTPUT_FN output,void *context) // {{{
 {
-  assert(f);
-  assert(output);
+  DEBUG_assert(f);
+  DEBUG_assert(output);
 
   char buf[4096];
   int iA,ret;
@@ -293,8 +296,8 @@ static int copy_block(FILE *f,long pos,int length,OUTPUT_FN output,void *context
 
 int otf_cff_extract(OTF_FILE *otf,OUTPUT_FN output,void *context) // {{{ - returns number of bytes written
 {
-  assert(otf);
-  assert(output);
+  DEBUG_assert(otf);
+  DEBUG_assert(output);
 
   int idx=otf_find_table(otf,OTF_TAG('C','F','F',' '));
   if (idx==-1) {
@@ -325,7 +328,7 @@ int otf_cff_extract(OTF_FILE *otf,OUTPUT_FN output,void *context) // {{{ - retur
   char *new_cff=malloc(cffSize);
   if (!new_cff) {
     fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
-    assert(0);
+    DEBUG_assert(0);
     return -1;
   }
 

@@ -23,6 +23,8 @@
 #  include <unistd.h>
 #endif /* _WIN32 || __EMX__ */
 #include <errno.h>
+#include <ctype.h>
+#include <string.h>
 
 
 /*
@@ -30,7 +32,6 @@
  */
 
 static int	ppd_compare_cparams(ppd_cparam_t *a, ppd_cparam_t *b);
-static void	ppd_handle_media(ppd_file_t *ppd);
 
 
 /*
@@ -353,7 +354,8 @@ ppdEmitFd(ppd_file_t    *ppd,		/* I - PPD file record */
 
 
 /*
- * 'ppdEmitJCL()' - Emit code for JCL options to a file.
+ * 'ppdEmitJCL()' - Emit code for JCL options to a file (for PostScript
+ *                  output).
  */
 
 int					/* O - 0 on success, -1 on failure */
@@ -363,6 +365,27 @@ ppdEmitJCL(ppd_file_t *ppd,		/* I - PPD file record */
 	   const char *user,		/* I - Username */
 	   const char *title)		/* I - Title */
 {
+  return ppdEmitJCLPDF(ppd, fp, job_id, user, title, -1, false);
+}
+
+
+/*
+ * 'ppdEmitJCLPDF()' - Emit code for JCL options to a file (for PDF output).
+ */
+
+int					/* O - 0 on success, -1 on failure */
+ppdEmitJCLPDF(ppd_file_t *ppd,		/* I - PPD file record */
+	      FILE       *fp,		/* I - File to write to */
+	      int        job_id,	/* I - Job ID */
+	      const char *user,		/* I - Username */
+	      const char *title,	/* I - Title */
+	      int hw_copies,            /* I - Number of hardware (device)
+					       copies, -1: PS mode */
+	      bool hw_collate)          /* I - Do we have hardware (device)
+					       collate? */
+{
+  ppd_attr_t    *attr;                  /* PPD attribute */
+  const char    *jcl_pdf = NULL;
   char		*ptr;			/* Pointer into JCL string */
   char		temp[65],		/* Local title string */
 		displaymsg[33];		/* Local display string */
@@ -372,7 +395,19 @@ ppdEmitJCL(ppd_file_t *ppd,		/* I - PPD file record */
   * Range check the input...
   */
 
-  if (!ppd || !ppd->jcl_begin || !ppd->jcl_ps)
+
+  if (!ppd || !ppd->jcl_begin)
+    return (0);
+
+#if HAVE_CUPS_3_X
+  jcl_pdf = ppd->jcl_pdf;
+#else
+  if ((attr = ppdFindAttr(ppd, "JCLToPDFInterpreter", NULL)) != NULL)
+    jcl_pdf = attr->value;
+#endif
+  
+  if ((!ppd->jcl_ps && hw_copies < 0) ||
+      (!jcl_pdf && hw_copies >= 0))
     return (0);
 
  /*
@@ -530,7 +565,30 @@ ppdEmitJCL(ppd_file_t *ppd,		/* I - PPD file record */
     fputs(ppd->jcl_begin, fp);
 
   ppdEmit(ppd, fp, PPD_ORDER_JCL);
-  fputs(ppd->jcl_ps, fp);
+
+  if (hw_copies < 0)
+    /* PostScript output */
+    fputs(ppd->jcl_ps, fp);
+  else
+  {
+    /* PDF output */
+
+    int hw_copies_done = 0;
+
+    /* There is a "Copies" option in the PPD file, so this option setting
+       always takes care of correct implementation of the copies */
+    if (ppdFindOption(ppd,"Copies") != NULL &&
+	hw_copies > 1)
+      hw_copies_done = 1;
+
+    if (hw_copies > 1 && hw_copies_done == 0 && // HW copies
+	strncmp(ppd->jcl_begin, "\033%-12345X@", 10) == 0) // PJL
+      /* Add a PJL command to implement the hardware copies */
+      fprintf(fp, "@PJL SET %s=%d\n", hw_collate ? "QTY" : "COPIES",
+	      hw_copies);
+
+    fputs(jcl_pdf, fp);
+  }
 
   return (0);
 }
@@ -633,7 +691,7 @@ ppdEmitString(ppd_file_t    *ppd,	/* I - PPD file record */
   * Use PageSize or PageRegion as required...
   */
 
-  ppd_handle_media(ppd);
+  ppdHandleMedia(ppd);
 
  /*
   * Collect the options we need to emit...
@@ -1103,23 +1161,11 @@ ppdEmitString(ppd_file_t    *ppd,	/* I - PPD file record */
 
 
 /*
- * 'ppd_compare_cparams()' - Compare the order of two custom parameters.
+ * 'ppdHandleMedia()' - Handle media selection...
  */
 
-static int				/* O - Result of comparison */
-ppd_compare_cparams(ppd_cparam_t *a,	/* I - First parameter */
-                    ppd_cparam_t *b)	/* I - Second parameter */
-{
-  return (a->order - b->order);
-}
-
-
-/*
- * 'ppd_handle_media()' - Handle media selection...
- */
-
-static void
-ppd_handle_media(ppd_file_t *ppd)	/* I - PPD file */
+void
+ppdHandleMedia(ppd_file_t *ppd)	/* I - PPD file */
 {
   ppd_choice_t	*manual_feed,		/* ManualFeed choice, if any */
 		*input_slot;		/* InputSlot choice, if any */
@@ -1212,4 +1258,16 @@ ppd_handle_media(ppd_file_t *ppd)	/* I - PPD file */
       cupsArrayRemove(ppd->marked, page);
     }
   }
+}
+
+
+/*
+ * 'ppd_compare_cparams()' - Compare the order of two custom parameters.
+ */
+
+static int				/* O - Result of comparison */
+ppd_compare_cparams(ppd_cparam_t *a,	/* I - First parameter */
+                    ppd_cparam_t *b)	/* I - Second parameter */
+{
+  return (a->order - b->order);
 }

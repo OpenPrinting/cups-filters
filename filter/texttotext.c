@@ -3,6 +3,7 @@
  */
 
 #include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <signal.h>
 
 /*
@@ -49,11 +50,12 @@ main(int  argc,	   /* I - Number of command-line arguments */
 #endif /* HAVE_SIGSET */
 
  /*
-  * Fire up the cfFilterTextToText() filter function
+  * Fire up the ppdFilterTextToText() filter function
   */
 
 
-  ret = cfFilterCUPSWrapper(argc, argv, cfFilterTextToText, NULL, &JobCanceled);
+  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterTextToText, NULL,
+			     &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: texttotext filter function failed.\n");

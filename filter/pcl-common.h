@@ -14,6 +14,7 @@
  * Include necessary headers...
  */
 
+#include <ppd/ppd.h>
 #include <string.h>
 #include <ctype.h>
 #include "pcl.h"

@@ -31,7 +31,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <cupsfilters/filter.h>
+#include <ppd/ppd-filter.h>
 #include <cupsfilters/ipp.h>
 
 /*
@@ -241,7 +241,7 @@ main(int  argc,				/* I - Number of command-line args */
       int fd, nullfd;
       cf_filter_data_t filter_data;
       cf_filter_universal_parameter_t universal_parameters;
-      cf_filter_external_cups_t ipp_backend_params;
+      ppd_filter_external_cups_t ipp_backend_params;
       cf_filter_filter_in_chain_t universal_in_chain,
 	                       ipp_in_chain;
       cups_array_t *filter_chain;
@@ -305,34 +305,17 @@ main(int  argc,				/* I - Number of command-line args */
       filter_data.job_user = argv[2];
       filter_data.job_title = title;
       filter_data.copies = atoi(argv[4]);
+      filter_data.content_type = "application/vnd.cups-pdf";
+      filter_data.final_content_type = document_format;
       filter_data.job_attrs = NULL;        /* We use command line options */
-      if ((filter_data.printer_attrs =
-	   cfGetPrinterAttributes4(printer_uri, NULL, 0, NULL, 0, 1, 0)) !=
-	  NULL)
+      filter_data.printer_attrs =
+	cfGetPrinterAttributes4(printer_uri, NULL, 0, NULL, 0, 1, 0);
                                            /* Poll the printer attributes from
 					      the printer */
-	filter_data.ppdfile = NULL;        /* We have successfully polled
-					      the IPP attributes from the
-					      printer. This is the most
-					      precise printer capability info.
-					      As the queue's PPD is only
-					      for the cluster we prefer the
-					      IPP attributes */
-      else
-	filter_data.ppdfile = getenv("PPD");/*The polling of the printer's
-					      IPP attribute failed, meaning
-					      that it is most probably not a
-					      driverless IPP printers (IPP 2.x)
-					      but a legacy IPP printer (IPP
-					      1.x) which usually has
-					      unsufficient capability info.
-					      Therefore we fall back to the
-					      PPD file here which contains
-					      some info from the printer's
-					      DNS-SD record. */
       filter_data.num_options = num_options;
       filter_data.options = options;       /* Command line options from 5th
 					      arg */
+      filter_data.extension = NULL;
       filter_data.back_pipe[0] = -1;
       filter_data.back_pipe[1] = -1;
       filter_data.side_pipe[0] = -1;
@@ -343,8 +326,19 @@ main(int  argc,				/* I - Number of command-line args */
 							   function */
       filter_data.iscanceleddata = &job_canceled;
 
-      cfFilterLoadPPD(&filter_data);
-      if (filter_data.printer_attrs == NULL && filter_data.ppd == NULL)
+      /* If the polling of the printer's IPP attributes has failed, it
+	 means most probably that it is not a driverless IPP printer
+	 (IPP 2.x) but a legacy IPP printer (IPP 1.x) which usually
+	 has unsufficient capability info. Therefore we fall back to
+	 the PPD file here which contains some info from the printer's
+	 DNS-SD record.
+
+         If we have successfully polled the IPP attributes from the
+	 printer, these attributes are the most precise printer
+	 capability info and as the queue's PPD is only for the
+	 cluster we prefer the IPP attributes. */
+      if (filter_data.printer_attrs == NULL &&
+	  ppdFilterLoadPPDFile(&filter_data, getenv("PPD")) < 0)
       {
 	ippDelete(response);
 	fprintf(stderr, "ERROR: Unable to get sufficient capability info of the destination printer.\n");
@@ -353,9 +347,8 @@ main(int  argc,				/* I - Number of command-line args */
 
       cfFilterOpenBackAndSidePipes(&filter_data);
 
-      /* Parameters (input/output MIME types) for cfFilterUniversal() call */
-      universal_parameters.input_format = "application/vnd.cups-pdf";
-      universal_parameters.output_format = document_format;
+      /* Parameters for cfFilterUniversal() call */
+      universal_parameters.actual_output_type = NULL;
       memset(&(universal_parameters.texttopdf_params), 0,
 	     sizeof(cf_filter_texttopdf_parameter_t));
 
@@ -367,13 +360,13 @@ main(int  argc,				/* I - Number of command-line args */
       ipp_backend_params.options = NULL;
       ipp_backend_params.envp = NULL;
 
-      /* Filter chain entry for the cfFilterUniversal() filter function call */
-      universal_in_chain.function = cfFilterUniversal;
+      /* Filter chain entry for the ppdFilterUniversal() filter function call */
+      universal_in_chain.function = ppdFilterUniversal;
       universal_in_chain.parameters = &universal_parameters;
       universal_in_chain.name = "Filters";
 
       /* Filter chain entry for the IPP CUPS backend call */
-      ipp_in_chain.function = cfFilterExternalCUPS;
+      ipp_in_chain.function = ppdFilterExternalCUPS;
       ipp_in_chain.parameters = &ipp_backend_params;
       ipp_in_chain.name = "Backend";
 
@@ -393,14 +386,15 @@ main(int  argc,				/* I - Number of command-line args */
 
       /* Call the filter chain to run the needed filters and the backend */
       retval = cfFilterChain(fd, nullfd, fd != 0 ? 1 : 0, &filter_data,
-			   filter_chain);
+			     filter_chain);
 
       cfFilterCloseBackAndSidePipes(&filter_data);
 
       /* Clean up */
       cupsArrayDelete(filter_chain);
       ippDelete(response);
-      cfFilterFreePPD(&filter_data);
+
+      ppdFilterFreePPDFile(&filter_data);
 
       if (retval) {
 	fprintf(stderr, "ERROR: Job processing failed.\n");
