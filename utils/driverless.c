@@ -105,12 +105,16 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
   /* Mark all the fields of the output of ippfind */
   reg_type = service->regtype;
 
-  if (!strcasecmp(reg_type, "_ipps._tcp"))
+  if(reg_type_no < 1)
   {
     scheme = "ipps";
+    reg_type = "_ipp._tcp";
   }
-  else
+  else if(reg_type_no > 1){
     scheme = "ipp";
+    reg_type = "_ipps._tcp";
+  }
+    
 
   /*
       process txt key-value pairs
@@ -531,12 +535,12 @@ int list_printers(int mode, int reg_type_no, int isFax)
 
   for (int i = 0; i < cupsArrayCount(service_uri_list_ipp) && reg_type_no <= 1; i++)
   {
+    if(cupsArrayFind(service_uri_list_ipps, (char *)cupsArrayIndex(service_uri_list_ipp, i)) == NULL)
     listPrintersInArrayV2(0, mode, isFax, (avahi_srv_t *)cupsArrayIndex(service_uri_list_ipp, i));
   }
 
   for (int j = 0; j < cupsArrayCount(service_uri_list_ipps) && reg_type_no >= 1; j++)
   {
-
     listPrintersInArrayV2(2, mode, isFax,
                           (avahi_srv_t *)cupsArrayIndex(service_uri_list_ipps, j));
   }
@@ -1133,7 +1137,7 @@ get_service(cups_array_t *services,  /* I - Service array */
        service = cupsArrayNext(services))
   {
 
-    if (!strcasecmp(service->name, key.name))
+    if (_cups_strcasecmp(service->name, key.name))
       break;
     else if (!strcmp(service->regtype, key.regtype))
     {
@@ -1169,95 +1173,6 @@ get_service(cups_array_t *services,  /* I - Service array */
 
   return (service);
 }
-
-// avahi_srv_t *                        /* O - Service */
-// get_service(cups_array_t *services,  /* I - Service array */
-//             const char *serviceName, /* I - Name of service/device */
-//             const char *regtype,     /* I - Type of service */
-//             const char *replyDomain) /* I - Service domain */
-// {
-//   avahi_srv_t key, /* Search key */
-//       *service;    /* Service */
-//   char fullName[kDNSServiceMaxDomainName];
-//   /* Full name for query */
-
-//   /*
-//    * See if this is a new device...
-//    */
-//   int diff;
-
-//   key.name = (char *)serviceName;
-//   key.regtype = (char *)regtype;
-
-//   for (service = (avahi_srv_t *)cupsArrayFirst(services);
-//        service;
-//        service = (avahi_srv_t *)cupsArrayNext(services))
-//   {
-//     if (_cups_strcasecmp(service->name, key.name))
-//       break;
-//     else
-//     { /*compare 4 characters for _ipp*/
-//       if (!strstr(service->regtype, "_ipp."))
-//       {
-//         /// if incoming regtype == "_ipp.*", ignore it
-//          service->regtype = regtype;
-//       }
-
-//       return service;
-//     }
-
-//   }
-
-//   // for (service = cupsArrayFind(services, &key);
-//   //      service;
-//   //      service = cupsArrayNext(services))
-//   // {
-//   //   if (_cups_strcasecmp(service->name, key.name))
-//   //     break;
-//   //   else if (!strcmp(service->regtype, key.regtype))
-//   //   {
-//   //     return (service);
-//   //   }
-//   //   else if (!_cups_strncasecmp(service->regtype, key.regtype, 4))
-//   //   { /*compare 3 characters for ipp*/
-//   //     if (strstr(regtype, "_ipp."))
-//   //     {
-//   //       /// if incoming regtype == "ipp.*", ignore it
-//   //       return service;
-//   //     }
-//   //     service->regtype = key.regtype;
-//   //     return service;
-//   //   }
-//   // }
-
-//   /*
-//    * Yes, add the service...
-//    */
-
-//   if ((service = calloc(sizeof(avahi_srv_t), 1)) == NULL)
-//     return (NULL);
-
-//   service->name = strdup(serviceName);
-//   service->domain = strdup(replyDomain);
-//   service->regtype = strdup(regtype);
-
-//   cupsArrayAdd(services, service);
-
-//   /*
-//    * Set the "full name" of this service, which is used for queries and
-//    * resolves...
-//    */
-
-// #ifdef HAVE_MDNSRESPONDER
-//   DNSServiceConstructFullName(fullName, serviceName, regtype, replyDomain);
-// #else  /* HAVE_AVAHI */
-//   avahi_service_name_join(fullName, kDNSServiceMaxDomainName, serviceName,
-//                           regtype, replyDomain);
-// #endif /* HAVE_MDNSRESPONDER */
-
-//   service->fullName = strdup(fullName);
-//   return (service);
-// }
 
 static double
 get_time(void)
