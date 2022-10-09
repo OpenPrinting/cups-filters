@@ -47,16 +47,13 @@ static DNSServiceRef dnssd_ref; /* Master service reference */
 #elif defined(HAVE_AVAHI)
 AvahiClient *avahi_client; /* Client information */
 int avahi_got_data = 0;    /* Got data from poll? */
-AvahiPoll *avahi_poll;
+AvahiSimplePoll *avahi_poll;
 #endif
 
 int err;
-static int address_family = AF_UNSPEC;
-/* Address family for LIST */
 static int bonjour_error = 0;        /* Error browsing/resolving? */
 static double bonjour_timeout = 1.0; /* Timeout in seconds */
 static double get_time(void);
-static void printService(avahi_srv_t *service);
 static avahi_srv_t *get_service(cups_array_t *services, const char *serviceName, const char *regtype, const char *replyDomain) _CUPS_NONNULL(1, 2, 3, 4);
 int reg_type_no = 1; /* reg_type 0 for only IPP
                                    1 for both IPPS/IPP
@@ -75,28 +72,16 @@ compare_service_uri(char *a, char *b)
   return (strcmp(a, b));
 }
 
-static int
-convert_to_port(char *a)
-{
-  int port = 0;
-  for (int i = 0; i < strlen(a); i++)
-    port = port * 10 + (a[i] - '0');
-
-  return (port);
-}
-
 void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
                            avahi_srv_t *service)
 {
   int port,
       is_local;
-  char buffer[8192], /* Copy buffer */
-      *ptr,          /* Pointer into string */
+  char *ptr,          /* Pointer into string */
           *scheme = "\0",
           *service_name = "\0",
           *resource = "\0",
           *domain = "\0",
-          *ptr_to_port = "\0", /* pointer to port */
               *reg_type = "\0",
           *service_hostname = NULL,
           *txt_usb_mfg = "\0",
@@ -105,15 +90,7 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
           *txt_ty = "\0",
           *txt_pdl = "\0",
           *txt_uuid = "\0",
-          *URF = "\0",
-          *TLS = "\0",
           *rp = "\0",
-          *Color = "\0",
-          *adminurl = "\0",
-          *Duplex = "\0",
-          *note = "\0",
-          *qtotal = "\0",
-          *txtvers = "\0",
           *rfo = "\0",
           value[256],          /* Value string */
       *service_uri,            /* URI to list for this service */
@@ -128,10 +105,12 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
   /* Mark all the fields of the output of ippfind */
   reg_type = service->regtype;
 
-  if(!strcasecmp(reg_type, "_ipps._tcp")){
+  if (!strcasecmp(reg_type, "_ipps._tcp"))
+  {
     scheme = "ipps";
   }
-  else scheme = "ipp";
+  else
+    scheme = "ipp";
 
   /*
       process txt key-value pairs
@@ -168,26 +147,6 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
     {
       txt_ty = currentValue;
     }
-    else if (!strcmp(currentKey, "adminurl"))
-    {
-      adminurl = currentValue;
-    }
-    else if (!strcmp(currentKey, "Color"))
-    {
-      Color = currentValue;
-    }
-    else if (!strcmp(currentKey, "Duplex"))
-    {
-      Duplex = currentValue;
-    }
-    else if (!strcmp(currentKey, "note"))
-    {
-      note = currentValue;
-    }
-    else if (!strcmp(currentKey, "qtotal"))
-    {
-      qtotal = currentValue;
-    }
     else if (!strcmp(currentKey, "rp"))
     {
       rp = currentValue;
@@ -196,18 +155,7 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
     {
       rfo = currentValue;
     }
-    else if (!strcmp(currentKey, "TLS"))
-    {
-      TLS = currentValue;
-    }
-    else if (!strcmp(currentKey, "txtvers"))
-    {
-      txtvers = currentValue;
-    }
-    else if (!strcmp(currentKey, "URF"))
-    {
-      URF = currentValue;
-    }
+  
   }
 
   /* ... second, complete the output line, either URI-only or with
@@ -421,19 +369,21 @@ void listPrintersInArrayV2(int reg_type_no, int mode, int isFax,
                device_id);
       }
     }
-
-  read_error:
-    free(service_uri);
-    return;
   }
 
   free(service_uri);
   return;
 }
 
-void resolve_services(cups_array_t *ipps_services, cups_array_t *ipp_services){
+void resolve_services(cups_array_t *ipps_services, cups_array_t *ipp_services, resolve_callback_t resolve_callback_ptr)
+{
 
-  double endTime = get_time() + 300.0;
+  double endTime;
+
+  if (bonjour_timeout > 1.0)
+    endTime = get_time() + bonjour_timeout;
+  else
+    endTime = get_time() + 300.0;
 
   while (get_time() < endTime)
   {
@@ -446,7 +396,7 @@ void resolve_services(cups_array_t *ipps_services, cups_array_t *ipp_services){
        * We've been told to exit the loop.  Perhaps the connection to
        * Avahi failed.
        */
-      return (0);
+      return;
     }
 
     if (!avahi_got_data)
@@ -456,15 +406,17 @@ void resolve_services(cups_array_t *ipps_services, cups_array_t *ipp_services){
       int ipp_resolved = cupsArrayCount(ipp_services);
       int ipps_resolved = cupsArrayCount(ipps_services);
 
-      if(reg_type_no > 1){
+      if (reg_type_no > 1)
+      {
         ipp_resolved = 0;
       }
 
-      if(reg_type_no < 1){
+      if (reg_type_no < 1)
+      {
         ipps_resolved = 0;
       }
 
-      for (avahi_srv_t* service = (avahi_srv_t *)cupsArrayFirst(ipps_services);
+      for (avahi_srv_t *service = (avahi_srv_t *)cupsArrayFirst(ipps_services);
            service && reg_type_no >= 1;
            service = (avahi_srv_t *)cupsArrayNext(ipps_services))
       {
@@ -472,7 +424,7 @@ void resolve_services(cups_array_t *ipps_services, cups_array_t *ipp_services){
         if (!service->ref)
         {
           if (active < 50)
-            resolveServices(&avahi_client, service, ipps_services, _resolveCallback, &err);
+            resolveServices(&avahi_client, service, ipps_services, resolve_callback_ptr, &err);
         }
         else
         {
@@ -483,7 +435,7 @@ void resolve_services(cups_array_t *ipps_services, cups_array_t *ipp_services){
           ipps_resolved--;
       }
 
-      for (avahi_srv_t* service = (avahi_srv_t *)cupsArrayFirst(ipp_services);
+      for (avahi_srv_t *service = (avahi_srv_t *)cupsArrayFirst(ipp_services);
            service && reg_type_no <= 1;
            service = (avahi_srv_t *)cupsArrayNext(ipp_services))
       {
@@ -491,7 +443,7 @@ void resolve_services(cups_array_t *ipps_services, cups_array_t *ipp_services){
         if (!service->ref)
         {
           if (active < 50)
-            resolveServices(&avahi_client, service, ipp_services, _resolveCallback, &err);
+            resolveServices(&avahi_client, service, ipp_services, resolve_callback_ptr, &err);
         }
         else
         {
@@ -501,7 +453,6 @@ void resolve_services(cups_array_t *ipps_services, cups_array_t *ipp_services){
         if (service->is_resolved)
           ipp_resolved--;
       }
-
 
       if (!ipp_resolved && !ipps_resolved)
       {
@@ -513,18 +464,11 @@ void resolve_services(cups_array_t *ipps_services, cups_array_t *ipp_services){
 
 int list_printers(int mode, int reg_type_no, int isFax)
 {
-  int i, exit_status = 0;
-  char *ippfind_argv[100];             /* Arguments for ippfind */
+  int exit_status = 0;
   cups_array_t *service_uri_list_ipps, /* Array to store ippfind output for
             IPPS */
-      *service_uri_list_ipp,           /* Array to store ippfind output for
+      *service_uri_list_ipp;           /* Array to store ippfind output for
             IPP */
-      *all_services;     /* unique services which gets resolved*/
-  cups_file_t *fp;
-  int bytes;
-  char *ptr,
-      buffer[MAX_OUTPUT_LEN], /* Copy buffer */
-      *ippfind_output;
 
   service_uri_list_ipps =
       cupsArrayNew3((cups_array_func_t)compare_service_uri, NULL, NULL, 0, NULL,
@@ -533,6 +477,16 @@ int list_printers(int mode, int reg_type_no, int isFax)
       cupsArrayNew3((cups_array_func_t)compare_service_uri, NULL, NULL, 0, NULL,
                     (cups_afree_func_t)free);
 
+   /*
+        callback pointers
+      */
+
+  resolve_callback_t resolve_callback_ptr = &resolveCallback;
+  poll_callback_t poll_callback_ptr = &pollCallback;
+  browse_callback_t browse_callback_ptr = &browseCallback;
+  client_callback_t client_callback_ptr = &clientCallback;
+
+
   /*
    * Use CUPS' ippfind utility to discover all printers designed for
    * driverless use (IPP Everywhere or Apple Raster), and only IPP
@@ -540,96 +494,44 @@ int list_printers(int mode, int reg_type_no, int isFax)
    * for our desired output.
    */
 
-  /* ippfind -T 0 _ipps._tcp _ipp._tcp ! --txt printer-type --and \( --txt-pdl image/pwg-raster --or --txt-pdl application/PCLm --or --txt-pdl image/urf --or --txt-pdl application/pdf \) -x echo -en '\n{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{service_name}\t{txt_pdl}\t{txt_UUID}\t{txt_rfo}\t' \; --local -x echo -en L \;*/
-
-  i = 0;
-  ippfind_argv[i++] = "ippfind";
-  ippfind_argv[i++] = "-T"; /* DNS-SD poll timeout */
-  ippfind_argv[i++] = "0";  /* Minimum time required */
-  if (reg_type_no >= 1)
-    ippfind_argv[i++] = "_ipps._tcp"; /* list IPPS entries */
-  if (reg_type_no <= 1)
-    ippfind_argv[i++] = "_ipp._tcp";  /* list IPPS entries */
-  ippfind_argv[i++] = "!";            /* ! --txt printer-type */
-  ippfind_argv[i++] = "--txt";        /* No remote CUPS queues */
-  ippfind_argv[i++] = "printer-type"; /* (no "printer-type" in TXT
-            record) */
-  if (isFax)
-  {
-    ippfind_argv[i++] = "--and";
-    ippfind_argv[i++] = "--txt";
-    ippfind_argv[i++] = "rfo";
-  }
-  ippfind_argv[i++] = "--and"; /* and */
-  ippfind_argv[i++] = "(";
-  ippfind_argv[i++] = "--txt-pdl";        /* PDL list in TXT record contains */
-  ippfind_argv[i++] = "image/pwg-raster"; /* PWG Raster (IPP Everywhere) */
-  ippfind_argv[i++] = "--or";             /* or */
-  ippfind_argv[i++] = "--txt-pdl";
-  ippfind_argv[i++] = "application/PCLm"; /* PCLm */
-  ippfind_argv[i++] = "--or";             /* or */
-  ippfind_argv[i++] = "--txt-pdl";
-  ippfind_argv[i++] = "image/urf"; /* Apple Raster */
-  ippfind_argv[i++] = "--or";      /* or */
-  ippfind_argv[i++] = "--txt-pdl";
-  ippfind_argv[i++] = "application/pdf"; /* PDF */
-  ippfind_argv[i++] = ")";
-  ippfind_argv[i++] = "-x";
-  ippfind_argv[i++] = "echo"; /* Output the needed data fields */
-  ippfind_argv[i++] = "-en";  /* separated by tab characters */
-  if (mode < 0)
-  {
-    if (isFax)
-      ippfind_argv[i++] =
-          "\n{service_scheme}\t{service_hostname}\t{txt_rfo}\t{service_port}\t";
-    else
-      ippfind_argv[i++] =
-          "\n{service_scheme}\t{service_hostname}\t{txt_rp}\t{service_port}\t";
-  }
-  else if (mode > 0)
-    ippfind_argv[i++] =
-        "{service_scheme}\t{service_name}\t{service_domain}\t{txt_usb_MFG}\t"
-        "{txt_usb_MDL}\t{txt_product}\t{txt_ty}\t{txt_pdl}\t{txt_UUID}\t"
-        "{txt_rfo}\t\n";
-  else
-    ippfind_argv[i++] =
-        "{service_scheme}\t{service_name}\t{service_domain}\t\n";
-  ippfind_argv[i++] = ";";
-  if (mode < 0)
-  {
-    ippfind_argv[i++] = "--local"; /* Rest only if local service */
-    ippfind_argv[i++] = "-x";
-    ippfind_argv[i++] = "echo"; /* Output an 'L' at the end of the */
-    ippfind_argv[i++] = "-en";  /* line */
-    ippfind_argv[i++] = "L";
-    ippfind_argv[i++] = ";";
-  }
-  ippfind_argv[i++] = NULL;
-
   /*
   add avahi calls to find services
   */
 
   char *regtype = reg_type_no >= 1 ? "_ipps._tcp" : "_ipp._tcp";
 
-  avahiInitialize(&avahi_poll, &avahi_client, _clientCallback, _pollCallback, &err);
-  avahi_srv_t *service;
+  avahiInitialize(&avahi_poll, &avahi_client, client_callback_ptr, poll_callback_ptr, &err);
 
-  if(reg_type_no >= 1){
+  if(err){
+    goto error;
+  }
+
+  if (reg_type_no >= 1)
+  {
     regtype = "_ipps._tcp";
-    browseServices(&avahi_client, regtype, NULL, service_uri_list_ipps, _browseCallback, &err);
+    browseServices(&avahi_client, regtype, NULL, service_uri_list_ipps, browse_callback_ptr, &err);
+
+    if(err){
+      goto error;
+    }
+
   }
 
-  if(reg_type_no <= 1){
+  if (reg_type_no <= 1)
+  {
     regtype = "_ipp._tcp";
-    browseServices(&avahi_client, regtype, NULL, service_uri_list_ipp, _browseCallback, &err);
+    browseServices(&avahi_client, regtype, NULL, service_uri_list_ipp, browse_callback_ptr, &err);
+
+    if(err){
+      goto error;
+    }
   }
 
-  resolve_services(service_uri_list_ipps, service_uri_list_ipp);
+  resolve_services(service_uri_list_ipps, service_uri_list_ipp, resolve_callback_ptr);
 
   for (int i = 0; i < cupsArrayCount(service_uri_list_ipp) && reg_type_no <= 1; i++)
   {
-        listPrintersInArrayV2(0, mode, isFax, (avahi_srv_t*)cupsArrayIndex(service_uri_list_ipp, i));
+    listPrintersInArrayV2(0, mode, isFax, (avahi_srv_t *)cupsArrayIndex(service_uri_list_ipp, i));
   }
 
   for (int j = 0; j < cupsArrayCount(service_uri_list_ipps) && reg_type_no >= 1; j++)
@@ -734,8 +636,8 @@ fail:
 
 int main(int argc, char *argv[])
 {
-  int i, isFax = 0;       /* if driverless-fax is called  0 - not called
-                                     1 - called */
+  int i, isFax = 0; /* if driverless-fax is called  0 - not called
+                               1 - called */
 
   char *val;
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
@@ -938,10 +840,10 @@ cancel_job(int sig) /* I - Signal number (unused) */
   */
 
 /*
- * '_clientCallback()' - Avahi client callback function.
+ * 'clientCallback()' - Avahi client callback function.
  */
 
-void _clientCallback(
+void clientCallback(
     AvahiClient *client,    /* I - Client information (unused) */
     AvahiClientState state, /* I - Current state */
     void *context)          /* I - User data (unused) */
@@ -961,10 +863,10 @@ void _clientCallback(
 }
 
 /*
- * '_browseCallback()' - Browse devices.
+ * 'browseCallback()' - Browse devices.
  */
 
-void _browseCallback(
+void browseCallback(
     AvahiServiceBrowser *browser, /* I - Browser */
     AvahiIfIndex interface,       /* I - Interface index (unused) */
     AvahiProtocol protocol,       /* I - Network protocol (unused) */
@@ -988,8 +890,8 @@ void _browseCallback(
   switch (event)
   {
   case AVAHI_BROWSER_FAILURE:
-    fprintf(stderr, "DEBUG: _browseCallback: %s\n",
-            avahi_strerror(avahi_client_errno(client)));
+    fprintf(stderr, "DEBUG: browseCallback: %s\n",
+            avahi_strerror(avahi_client_errno(*client)));
     bonjour_error = 1;
     avahi_simple_poll_quit(avahi_poll);
     break;
@@ -1018,7 +920,7 @@ void _browseCallback(
 
 #ifdef HAVE_AVAHI
 /*
- * '_pollCallback()' - Wait for input on the specified file descriptors.
+ * 'pollCallback()' - Wait for input on the specified file descriptors.
  *
  * Note: This function is needed because avahi_simple_poll_iterate is broken
  *       and always uses a timeout of 0 (!) milliseconds.
@@ -1026,7 +928,7 @@ void _browseCallback(
  */
 
 int /* O - Number of file descriptors matching */
-_pollCallback(
+pollCallback(
     struct pollfd *pollfds,   /* I - File descriptors */
     unsigned int num_pollfds, /* I - Number of file descriptors */
     int timeout,              /* I - Timeout in milliseconds (unused) */
@@ -1047,12 +949,12 @@ _pollCallback(
 #endif /* HAVE_AVAHI */
 
 /*
- * '_resolveCallback()' - Process resolve data.
+ * 'resolveCallback()' - Process resolve data.
  */
 
 #ifdef HAVE_MDNSRESPONDER
 void DNSSD_API
-_resolveCallback(
+resolveCallback(
     DNSServiceRef sdRef,            /* I - Service reference */
     DNSServiceFlags flags,          /* I - Data flags */
     uint32_t interfaceIndex,        /* I - Interface */
@@ -1128,7 +1030,7 @@ _resolveCallback(
 }
 
 #elif defined(HAVE_AVAHI)
-void _resolveCallback(
+void resolveCallback(
     AvahiServiceResolver *resolver, /* I - Resolver */
     AvahiIfIndex interface,         /* I - Interface */
     AvahiProtocol protocol,         /* I - Address protocol */
@@ -1209,7 +1111,6 @@ void _resolveCallback(
  * 'get_service()' - Create or update a device.
  */
 
-
 static avahi_srv_t *                 /* O - Service */
 get_service(cups_array_t *services,  /* I - Service array */
             const char *serviceName, /* I - Name of service/device */
@@ -1228,12 +1129,12 @@ get_service(cups_array_t *services,  /* I - Service array */
   key.name = (char *)serviceName;
   key.regtype = (char *)regtype;
 
-   for (service = cupsArrayFind(services, &key);
+  for (service = cupsArrayFind(services, &key);
        service;
        service = cupsArrayNext(services))
   {
 
-    if (_cups_strcasecmp(service->name, key.name))
+    if (!strcasecmp(service->name, key.name))
       break;
     else if (!strcmp(service->regtype, key.regtype))
     {
@@ -1270,7 +1171,6 @@ get_service(cups_array_t *services,  /* I - Service array */
   return (service);
 }
 
-
 // avahi_srv_t *                        /* O - Service */
 // get_service(cups_array_t *services,  /* I - Service array */
 //             const char *serviceName, /* I - Name of service/device */
@@ -1305,10 +1205,9 @@ get_service(cups_array_t *services,  /* I - Service array */
 //       }
 
 //       return service;
-//     }  
+//     }
 
 //   }
-
 
 //   // for (service = cupsArrayFind(services, &key);
 //   //      service;
@@ -1361,8 +1260,6 @@ get_service(cups_array_t *services,  /* I - Service array */
 //   return (service);
 // }
 
-
-
 static double
 get_time(void)
 {
@@ -1381,15 +1278,4 @@ get_time(void)
   else
     return (curtime.tv_sec + 0.000001 * curtime.tv_usec);
 #endif /* _WIN32 */
-}
-
-/*
-helper function to print all attributes of service
-*/
-
-void printService(avahi_srv_t *service){
-  fprintf(stderr, "service->name = %s\n", service->name);
-  fprintf(stderr, "service->regtype = %s\n", service->regtype);
-  fprintf(stderr, "service->domain = %s\n", service->domain);
-  fprintf(stderr, "service->port = %d\n", service->port);
 }
