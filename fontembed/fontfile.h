@@ -1,13 +1,15 @@
-#ifndef _FONTFILE_H
-#define _FONTFILE_H
+#ifndef _FONTEMBED_FONTFILE_H_
+#define _FONTEMBED_FONTFILE_H_
 
 #include "sfnt.h"
 
-struct _FONTFILE {
+struct _FONTFILE
+{
   OTF_FILE *sfnt;
   // ??? *cff;
   char *stdname;
-  union {
+  union
+  {
     int fobj;
     void *user;
   };
@@ -19,4 +21,4 @@ FONTFILE *fontfile_open_sfnt(OTF_FILE *otf);
 FONTFILE *fontfile_open_std(const char *name);
 void fontfile_close(FONTFILE *ff);
 
-#endif
+#endif // !_FONTEMBED_FONTFILE_H_

@@ -1,6 +1,6 @@
-#ifndef _IOFN_H
-#define _IOFN_H
+#ifndef _FONTEMBED_IOFN_H_
+#define _FONTEMBED_IOFN_H_
 
-typedef void (*OUTPUT_FN)(const char *buf,int len,void *context);
+typedef void (*OUTPUT_FN)(const char *buf, int len, void *context);
 
-#endif
+#endif // !_FONTEMBED_IOFN_H_
