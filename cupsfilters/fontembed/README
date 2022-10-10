@@ -1,9 +1,13 @@
-libfontembed - font embedding and subsetting library
-----------------------------------------------------
+fontembed/ - font embedding and subsetting functions in libcupsfilters
+----------------------------------------------------------------------
 
-This library implements all the stuff required to
+Currently used for the cfFilterTextToPDF() filter function (files
+cupsfilters/texttopdf.c, cupsfilters/pdfutils.c,
+cupsfilters/pdfutils.h).
+
+These functions implement all the stuff required to
 embed and subset TrueType fonts, as for example 
-required in PDF files. It is completely self-contained,
+required in PDF files. There are completely self-contained,
 although a FreeType binding might come sometime in the future.
 
 Currently glyf-flavored TrueType is fully supported,
@@ -19,10 +23,10 @@ which requires ToUnicode support; some preparation is already done.
 
 Usage
 -----
-(TODO)... see test_pdf.c ...
+(TODO)... see cupsfilters/fontembed/test-pdf.c ...
 
- * for direct sfnt access: use <sfnt.h>
- * for embedding: use <embed.h>  (which includes <fontfile.h>)
+ * for direct sfnt access and for embedding use <cupsfilters/fontembed.h>
+
 
 License (MIT)
 -------------

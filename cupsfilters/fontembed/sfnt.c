@@ -1,6 +1,6 @@
-#include "sfnt.h"
-#include "sfnt-int-private.h"
-#include "debug-internal.h"
+#include <cupsfilters/fontembed.h>
+#include <cupsfilters/debug-internal.h>
+#include "sfnt-private.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

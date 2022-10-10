@@ -981,7 +981,6 @@ AS_IF([test "x$FREQUENT_NETIF_UPDATE" != "xno"],
 AC_CONFIG_FILES([
 	libcupsfilters.pc
 	libppd.pc
-	libfontembed.pc
 	Makefile
 	utils/cups-browsed
 	utils/cups-browsed.conf

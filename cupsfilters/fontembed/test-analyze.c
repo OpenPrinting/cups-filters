@@ -1,9 +1,8 @@
-#include "sfnt.h"
-#include "sfnt-int-private.h"
-#include "embed.h"
+#include <cupsfilters/fontembed.h>
+#include <cupsfilters/debug-internal.h>
+#include "embed-sfnt-private.h"
+#include "sfnt-private.h"
 #include "config.h"
-#include "embed-sfnt-int-private.h"
-#include "debug-internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 

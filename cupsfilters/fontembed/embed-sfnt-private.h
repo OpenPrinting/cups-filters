@@ -1,8 +1,7 @@
 #ifndef _FONTEMBED_EMBED_SFNT_INT_H_
 #define _FONTEMBED_EMBED_SFNT_INT_H_
 
-#include "sfnt.h"
-#include "embed-pdf.h"
+#include <cupsfilters/fontembed.h>
 
 
 EMB_RIGHT_TYPE emb_otf_get_rights(OTF_FILE *otf);

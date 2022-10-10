@@ -1,5 +1,5 @@
-#include "fontfile.h"
-#include "debug-internal.h"
+#include <cupsfilters/fontembed.h>
+#include <cupsfilters/debug-internal.h>
 #include <string.h>
 
 

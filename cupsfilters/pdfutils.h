@@ -20,7 +20,7 @@ extern "C" {
 //
 
 #include <time.h>
-#include <fontembed/embed.h>
+#include <cupsfilters/fontembed.h>
 
 
 //

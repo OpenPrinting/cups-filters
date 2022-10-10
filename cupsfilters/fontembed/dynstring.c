@@ -1,5 +1,5 @@
 #include "dynstring-private.h"
-#include "debug-internal.h"
+#include <cupsfilters/debug-internal.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>

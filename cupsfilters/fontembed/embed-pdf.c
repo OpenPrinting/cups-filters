@@ -1,12 +1,11 @@
-#include "embed.h"
-#include "embed-pdf.h" // already included fron embed.h ...
-#include "embed-pdf-int-private.h"
-#include "embed-sfnt-int-private.h"
-#include "debug-internal.h"
+#include <cupsfilters/fontembed.h>
+#include <cupsfilters/debug-internal.h>
+#include "embed-pdf-private.h"
+#include "embed-sfnt-private.h"
+#include "frequent-private.h"
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-#include "frequent-private.h"
 
 
 // NOTE: these must be in sync with the EMB_FORMAT enum

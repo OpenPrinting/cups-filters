@@ -15,17 +15,15 @@
 // Include necessary headers...
 //
 
-#include "debug-internal.h"
 #include <config.h>
-#include "cupsfilters/pdfutils.h"
-#include "cupsfilters/raster.h"
+#include "pdfutils.h"
+#include "debug-internal.h"
+#include "filter.h"
+#include "raster.h"
+#include "fontembed.h"
 #include <ctype.h>
 #include <errno.h>
-#include "filter.h"
 #include "fontconfig/fontconfig.h"
-#include "fontembed/embed.h"
-#include "fontembed/sfnt.h"
-#include "fontembed/fontfile.h"
 
 
 //

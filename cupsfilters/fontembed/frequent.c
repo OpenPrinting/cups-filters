@@ -1,5 +1,5 @@
 #include "frequent-private.h"
-#include "debug-internal.h"
+#include <cupsfilters/debug-internal.h>
 #include <stdlib.h>
 
 

@@ -1,8 +1,7 @@
 #include "pdfutils.h"
 #include "config.h"
 #include "debug-internal.h"
-#include "fontembed/embed.h"
-#include "fontembed/sfnt.h"
+#include "cupsfilters/fontembed.h"
 
 #include <stdio.h>
 

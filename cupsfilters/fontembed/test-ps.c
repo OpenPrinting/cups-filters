@@ -1,7 +1,6 @@
-#include "embed.h"
+#include <cupsfilters/fontembed.h>
+#include <cupsfilters/debug-internal.h>
 #include "config.h"
-#include "sfnt.h"
-#include "debug-internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 

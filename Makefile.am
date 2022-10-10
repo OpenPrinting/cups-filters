@@ -3,8 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 pkgconfdir = $(libdir)/pkgconfig
 pkgconf_DATA = \
 	libcupsfilters.pc \
-	libppd.pc \
-	libfontembed.pc
+	libppd.pc
 
 doc_DATA = \
 	ABOUT-NLS \
@@ -21,7 +20,6 @@ EXTRA_DIST = \
 	ln-srf \
 	libcupsfilters.pc.in \
 	libppd.pc.in \
-	libfontembed.pc.in \
 	utils/cups-browsed.service \
 	utils/cups-browsed-upstart.conf \
 	utils/driverless-fax.in \
@@ -161,63 +159,9 @@ pkgcharset_DATA = \
 
 EXTRA_DIST += $(pkgcharset_DATA)
 
-# =================
-# Fontembed library
-# =================
-pkgfontembedincludedir = $(includedir)/fontembed
-pkgfontembedinclude_DATA = \
-	fontembed/bitset.h \
-	fontembed/embed.h \
-	fontembed/embed-pdf.h \
-	fontembed/fontfile.h \
-	fontembed/iofn.h \
-	fontembed/sfnt.h
-
-lib_LTLIBRARIES = libfontembed.la
-
-check_PROGRAMS = \
-	test-analyze \
-	test-pdf \
-	test-ps
-TESTS = \
-	test-analyze \
-	test-pdf \
-	test-ps
-
-libfontembed_la_SOURCES = \
-	fontembed/aglfn13.c \
-	fontembed/dynstring.c \
-	fontembed/dynstring-private.h \
-	fontembed/debug-internal.h \
-	fontembed/embed.c \
-	fontembed/embed-sfnt.c \
-	fontembed/embed-sfnt-int-private.h \
-	fontembed/embed-pdf.c \
-	fontembed/embed-pdf-int-private.h \
-	fontembed/fontfile.c \
-	fontembed/frequent.c \
-	fontembed/frequent-private.h \
-	fontembed/macroman-private.h \
-	fontembed/sfnt.c \
-	fontembed/sfnt-int-private.h \
-	fontembed/sfnt-subset.c \
-	$(pkgfontembedinclude_DATA)
-libfontembed_la_LDFLAGS = \
-	-no-undefined \
-	-version-info 1
-
-test_analyze_SOURCES = fontembed/test-analyze.c
-test_analyze_LDADD = libfontembed.la
-
-test_pdf_SOURCES = fontembed/test-pdf.c
-test_pdf_LDADD = libfontembed.la
-
-test_ps_SOURCES = fontembed/test-ps.c
-test_ps_LDADD = libfontembed.la
-
-EXTRA_DIST += \
-	$(pkgfontembedinclude_DATA) \
-	fontembed/README
+# =======
+# Filters
+# =======
 
 pkgfilter_PROGRAMS =
 pkgfilterdir = $(CUPS_SERVERBIN)/filter
@@ -233,6 +177,7 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/colormanager.h \
 	cupsfilters/driver.h \
 	cupsfilters/filter.h \
+	cupsfilters/fontembed.h \
 	cupsfilters/ieee1284.h \
 	cupsfilters/image.h \
 	cupsfilters/ipp.h \
@@ -241,16 +186,23 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/pdfutils.h \
 	cupsfilters/raster.h
 
-lib_LTLIBRARIES += libcupsfilters.la
+lib_LTLIBRARIES = libcupsfilters.la
 
-check_PROGRAMS += \
+check_PROGRAMS = \
 	testcmyk \
 	testdither \
 	testimage \
 	testrgb \
-	test1284
-TESTS += \
-	testdither
+	test1284 \
+	test-analyze \
+	test-pdf \
+	test-ps
+TESTS = \
+	testdither \
+	test-analyze \
+	test-pdf \
+	test-ps
+
 #	testcmyk # fails as it opens some image.ppm which is nowerhe to be found.
 #	testimage # requires also some ppm file as argument
 #	testrgb # same error
@@ -280,6 +232,21 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/debug-internal.h \
 	cupsfilters/dither.c \
 	cupsfilters/filter.c \
+	cupsfilters/fontembed/aglfn13.c \
+	cupsfilters/fontembed/dynstring.c \
+	cupsfilters/fontembed/dynstring-private.h \
+	cupsfilters/fontembed/embed.c \
+	cupsfilters/fontembed/embed-sfnt.c \
+	cupsfilters/fontembed/embed-sfnt-private.h \
+	cupsfilters/fontembed/embed-pdf.c \
+	cupsfilters/fontembed/embed-pdf-private.h \
+	cupsfilters/fontembed/fontfile.c \
+	cupsfilters/fontembed/frequent.c \
+	cupsfilters/fontembed/frequent-private.h \
+	cupsfilters/fontembed/macroman-private.h \
+	cupsfilters/fontembed/sfnt.c \
+	cupsfilters/fontembed/sfnt-private.h \
+	cupsfilters/fontembed/sfnt-subset.c \
 	cupsfilters/ghostscript.c \
 	cupsfilters/ieee1284.c \
 	cupsfilters/image.c \
@@ -330,10 +297,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/universal.c \
 	$(pkgfiltersinclude_DATA)
 libcupsfilters_la_LIBADD = \
-	libfontembed.la \
 	$(FONTCONFIG_LIBS) \
-	$(GETLINE) \
-	$(STRCASESTR) \
 	$(CUPS_LIBS) \
 	$(LCMS_LIBS) \
 	$(LIBQPDF_LIBS) \
@@ -344,7 +308,7 @@ libcupsfilters_la_LIBADD = \
 	$(POPPLER_LIBS) \
 	-lm
 libcupsfilters_la_CFLAGS = \
-	-I$(srcdir)/fontembed/ \
+	-I$(srcdir)/cupsfilters/fontembed/ \
 	$(FONTCONFIG_CFLAGS) \
 	$(CUPS_CFLAGS) \
 	$(LCMS_CFLAGS) \
@@ -361,10 +325,6 @@ libcupsfilters_la_CFLAGS += $(DBUS_CFLAGS) -DHAVE_DBUS
 libcupsfilters_CXXFLAGS = -std=c++0x $(libcupsfilters_CFLAGS)   # -std=c++11
 libcupsfilters_la_LIBADD += $(DBUS_LIBS)
 endif
-libcupsfilters_la_DEPENDENCIES = \
-	libfontembed.la \
-	$(GETLINE) \
-	$(STRCASESTR)
 
 testcmyk_SOURCES = \
 	cupsfilters/testcmyk.c \
@@ -401,10 +361,20 @@ testrgb_LDADD = \
 	libcupsfilters.la \
 	-lm
 
+test_analyze_SOURCES = cupsfilters/fontembed/test-analyze.c
+test_analyze_LDADD = libcupsfilters.la
+
+test_pdf_SOURCES = cupsfilters/fontembed/test-pdf.c
+test_pdf_LDADD = libcupsfilters.la
+
+test_ps_SOURCES = cupsfilters/fontembed/test-ps.c
+test_ps_LDADD = libcupsfilters.la
+
 EXTRA_DIST += \
 	$(pkgfiltersinclude_DATA) \
 	cupsfilters/image.pgm \
-	cupsfilters/image.ppm
+	cupsfilters/image.ppm \
+	cupsfilters/fontembed/README
 
 test1284_SOURCES = \
 	cupsfilters/test1284.c
@@ -1167,20 +1137,20 @@ rastertopclx_LDADD = \
 
 test_pdf1_SOURCES = \
 	filter/test_pdf1.c \
-	fontembed/embed.h \
-	fontembed/sfnt.h
-test_pdf1_CFLAGS = -I$(srcdir)/fontembed/ \
+	cupsfilters/fontembed.h
+test_pdf1_CFLAGS = \
+	-I$(srcdir)/cupsfilters/fontembed/ \
 	-I$(srcdir)/cupsfilters/
-test_pdf1_LDADD = libfontembed.la \
+test_pdf1_LDADD = \
 	libcupsfilters.la
 
 test_pdf2_SOURCES = \
 	filter/test_pdf2.c \
-	fontembed/embed.h \
-	fontembed/sfnt.h
-test_pdf2_CFLAGS = -I$(srcdir)/fontembed/ \
+	cupsfilters/fontembed.h
+test_pdf2_CFLAGS = \
+	-I$(srcdir)/cupsfilters/fontembed/ \
 	-I$(srcdir)/cupsfilters/
-test_pdf2_LDADD = libfontembed.la \
+test_pdf2_LDADD = \
 	libcupsfilters.la
 
 universal_SOURCES = \
