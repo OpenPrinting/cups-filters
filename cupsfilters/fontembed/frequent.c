@@ -6,7 +6,7 @@
 // misra-gries
 // http://www2.research.att.com/~marioh/papers/vldb08-2.pdf
 
-struct _FREQUENT
+struct __cf_fontembed_frequent_s
 {
   int size, czero;
   char sorted;
@@ -20,13 +20,14 @@ struct _FREQUENT
 
 
 // size is the precision/return size: in sequence with n _add(),
-// it will find at most >size elements with occurence > n/(size+1) times
+// it will find at most >size elements with occurence > n / (size + 1) times
 
-FREQUENT *
-frequent_new(int size) // {{{ - just free() it
+__cf_fontembed_frequent_t *
+__cfFontEmbedFrequentNew(int size) // {{{ - just free() it
 {
   DEBUG_assert(size>0);
-  FREQUENT *ret = malloc(sizeof(ret[0]) + sizeof(ret->pair[0]) * size);
+  __cf_fontembed_frequent_t *ret =
+    malloc(sizeof(ret[0]) + sizeof(ret->pair[0]) * size);
   if (!ret)
     return (NULL);
   ret->size = size;
@@ -46,8 +47,8 @@ frequent_new(int size) // {{{ - just free() it
 
 
 void
-frequent_add(FREQUENT *freq,
-	     intptr_t key) // {{{
+__cfFontEmbedFrequentAdd(__cf_fontembed_frequent_t *freq,
+			 intptr_t key) // {{{
 {
   DEBUG_assert(freq);
   int iA, zero = -1;
@@ -79,8 +80,8 @@ frequent_add(FREQUENT *freq,
 static int
 frequent_cmp(const void *a, const void *b) // {{{
 {
-  const typeof(((FREQUENT *)0)->pair[0]) *aa = a;
-  const typeof(((FREQUENT *)0)->pair[0]) *bb = b;
+  const typeof(((__cf_fontembed_frequent_t *)0)->pair[0]) *aa = a;
+  const typeof(((__cf_fontembed_frequent_t *)0)->pair[0]) *bb = b;
   return ((bb->count - bb->zero) - (aa->count - aa->zero));
 }
 // }}}
@@ -88,7 +89,9 @@ frequent_cmp(const void *a, const void *b) // {{{
 
 // true frequency is somewhere between (count-zero) and count
 
-intptr_t frequent_get(FREQUENT *freq, int pos) // {{{
+intptr_t
+__cfFontEmbedFrequentGet(__cf_fontembed_frequent_t *freq,
+			 int pos) // {{{
 {
   DEBUG_assert(freq);
   if (!freq->sorted)

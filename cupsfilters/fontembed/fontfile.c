@@ -1,12 +1,13 @@
-#include <cupsfilters/fontembed.h>
+#include <cupsfilters/fontembed-private.h>
 #include <cupsfilters/debug-internal.h>
 #include <string.h>
 
 
-//FONTFILE *fontfile_open(const char *filename);
+//_cf_fontembed_fontfile_t *_cfFontEmbedFontFileOpen(const char *filename);
 
 #if 0
-FONTFILE *fontfile_open(const char *filename)
+_cf_fontembed_fontfile_t *
+_cfFontEmbedFontFileOpen(const char *filename)
 {
   // TODO? check magic
   if (...) {
@@ -15,14 +16,15 @@ FONTFILE *fontfile_open(const char *filename)
 #endif // 0
 
 
-FONTFILE *fontfile_open_sfnt(OTF_FILE *otf) // {{{
+_cf_fontembed_fontfile_t *
+_cfFontEmbedFontFileOpenSFNT(_cf_fontembed_otf_file_t *otf) // {{{
 {
   if (!otf)
   {
     DEBUG_assert(0);
     return (NULL);
   }
-  FONTFILE *ret = calloc(1, sizeof(FONTFILE));
+  _cf_fontembed_fontfile_t *ret = calloc(1, sizeof(_cf_fontembed_fontfile_t));
 
   ret->sfnt = otf;
 
@@ -31,11 +33,11 @@ FONTFILE *fontfile_open_sfnt(OTF_FILE *otf) // {{{
 // }}}
 
 
-FONTFILE *
-fontfile_open_std(const char *name) // {{{
+_cf_fontembed_fontfile_t *
+_cfFontEmbedFontFileOpenStd(const char *name) // {{{
 {
   DEBUG_assert(name);
-  FONTFILE *ret = calloc(1, sizeof(FONTFILE));
+  _cf_fontembed_fontfile_t *ret = calloc(1, sizeof(_cf_fontembed_fontfile_t));
 
   ret->stdname = strdup(name);
 
@@ -44,11 +46,11 @@ fontfile_open_std(const char *name) // {{{
 // }}}
 
 
-void fontfile_close(FONTFILE *ff) // {{{
+void _cfFontEmbedFontFileClose(_cf_fontembed_fontfile_t *ff) // {{{
 {
   if (ff)
   {
-    otf_close(ff->sfnt);
+    _cfFontEmbedOTFClose(ff->sfnt);
     // ??? cff_close(ff->cff);
     free(ff->stdname);
     free(ff);

@@ -1,4 +1,4 @@
-#include <cupsfilters/fontembed.h>
+#include <cupsfilters/fontembed-private.h>
 #include <cupsfilters/debug-internal.h>
 #include "embed-pdf-private.h"
 #include "embed-sfnt-private.h"
@@ -8,16 +8,18 @@
 #include <string.h>
 
 
-EMB_RIGHT_TYPE
-emb_otf_get_rights(OTF_FILE *otf) // {{{
+_cf_fontembed_emb_right_t
+__cfFontEmbedEmbOTFGetRights(_cf_fontembed_otf_file_t *otf) // {{{
 {
-  EMB_RIGHT_TYPE ret = EMB_RIGHT_FULL;
+  _cf_fontembed_emb_right_t ret = _CF_FONTEMBED_EMB_RIGHT_FULL;
 
   int len;
-  char *os2 = otf_get_table(otf, OTF_TAG('O', 'S', '/', '2'), &len);
+  char *os2 =
+    _cfFontEmbedOTFGetTable(otf, _CF_FONTEMBED_OTF_TAG('O', 'S', '/', '2'),
+			    &len);
   if (os2)
   {
-    const unsigned short os2_version = get_USHORT(os2);
+    const unsigned short os2_version = __cfFontEmbedGetUShort(os2);
     // check len
     DEBUG_assert((os2_version != 0x0000) || (len == 78));
     DEBUG_assert((os2_version != 0x0001) || (len == 86));
@@ -26,15 +28,16 @@ emb_otf_get_rights(OTF_FILE *otf) // {{{
     if (os2_version <= 0x0004)
     {
       // get rights
-      unsigned short fsType = get_USHORT(os2 + 8);
+      unsigned short fsType = __cfFontEmbedGetUShort(os2 + 8);
       // from Adobe's Fontpolicies_v9.pdf, pg 13:
       if (fsType == 0x0002)
-        ret = EMB_RIGHT_NONE;
+        ret = _CF_FONTEMBED_EMB_RIGHT_NONE;
       else
       {
-        ret = fsType & 0x0300; // EMB_RIGHT_BITMAPONLY, EMB_RIGHT_NO_SUBSET
+        ret = fsType & 0x0300; // _CF_FONTEMBED_EMB_RIGHT_BITMAPONLY,
+	                       // _CF_FONTEMBED_EMB_RIGHT_NO_SUBSET
         if ((fsType & 0x000c) == 0x0004)
-          ret |= EMB_RIGHT_READONLY;
+          ret |= _CF_FONTEMBED_EMB_RIGHT_READONLY;
       }
     }
     free(os2);
@@ -47,12 +50,13 @@ emb_otf_get_rights(OTF_FILE *otf) // {{{
 // NOTE: statically allocated buffer
 
 const char *
-emb_otf_get_fontname(OTF_FILE *otf) // {{{
+__cfFontEmbedEmbOTFGetFontName(_cf_fontembed_otf_file_t *otf) // {{{
 {
   static char fontname[64];
 
   int len;
-  const char *fname = otf_get_name(otf, 3, 1, 0x409, 6, &len); // Microsoft
+  const char *fname = _cfFontEmbedOTFGetName(otf, 3, 1, 0x409, 6, &len);
+                                                                // Microsoft
   if (fname)
   {
     int iA, iB = 0;
@@ -65,7 +69,7 @@ emb_otf_get_fontname(OTF_FILE *otf) // {{{
     }
     fontname[iB] = 0;
   }
-  else if ((fname = otf_get_name(otf, 1, 0, 0, 6, &len))) // Mac
+  else if ((fname = _cfFontEmbedOTFGetName(otf, 1, 0, 0, 6, &len))) // Mac
   {
     int iA, iB = 0;
     for (iA = 0; (iA < 63) && (iA < len); iA ++)
@@ -91,25 +95,30 @@ emb_otf_get_fontname(OTF_FILE *otf) // {{{
 // TODO? use PCLT table? (esp. CFF, as table dircouraged for glyf fonts)
 
 void
-emb_otf_get_pdf_fontdescr(OTF_FILE *otf,
-			  EMB_PDF_FONTDESCR *ret) // {{{
+__cfFontEmbedEmbOTFGetPDFFontDescr(_cf_fontembed_otf_file_t *otf,
+				   _cf_fontembed_emb_pdf_font_descr_t *ret)
+                                                                        // {{{
 {
   int len;
 
 //  TODO
 //  ... fill in struct
-  char *head = otf_get_table(otf, OTF_TAG('h', 'e', 'a', 'd'), &len);
-  DEBUG_assert(head); // version is 1.0 from otf_load
-  ret->bbxmin = get_SHORT(head + 36) * 1000 / otf->unitsPerEm;
-  ret->bbymin = get_SHORT(head + 38) * 1000 / otf->unitsPerEm;
-  ret->bbxmax = get_SHORT(head + 40) * 1000 / otf->unitsPerEm;
-  ret->bbymax = get_SHORT(head + 42) * 1000 / otf->unitsPerEm;
-  const int macStyle = get_USHORT(head + 44);
+  char *head =
+    _cfFontEmbedOTFGetTable(otf, _CF_FONTEMBED_OTF_TAG('h', 'e', 'a', 'd'),
+			    &len);
+  DEBUG_assert(head); // version is 1.0 from _cfFontEmbedOTFLoad
+  ret->bbxmin = __cfFontEmbedGetShort(head + 36) * 1000 / otf->unitsPerEm;
+  ret->bbymin = __cfFontEmbedGetShort(head + 38) * 1000 / otf->unitsPerEm;
+  ret->bbxmax = __cfFontEmbedGetShort(head + 40) * 1000 / otf->unitsPerEm;
+  ret->bbymax = __cfFontEmbedGetShort(head + 42) * 1000 / otf->unitsPerEm;
+  const int macStyle = __cfFontEmbedGetUShort(head + 44);
   free(head);
 
-  char *post = otf_get_table(otf, OTF_TAG('p', 'o', 's', 't'), &len);
+  char *post =
+    _cfFontEmbedOTFGetTable(otf, _CF_FONTEMBED_OTF_TAG('p', 'o', 's', 't'),
+			    &len);
   DEBUG_assert(post);
-  const unsigned int post_version = get_ULONG(post);
+  const unsigned int post_version = __cfFontEmbedGetULong(post);
   // check length
   DEBUG_assert((post_version != 0x00010000) || (len == 32));
   DEBUG_assert((post_version != 0x00020000) ||
@@ -117,9 +126,9 @@ emb_otf_get_pdf_fontdescr(OTF_FILE *otf,
   DEBUG_assert((post_version != 0x00025000) || (len == 35 + otf->numGlyphs));
   DEBUG_assert((post_version != 0x00030000) || (len == 32));
   DEBUG_assert((post_version != 0x00020000) ||
-	       (get_USHORT(post + 32) == otf->numGlyphs)); // v4?
+	       (__cfFontEmbedGetUShort(post + 32) == otf->numGlyphs)); // v4?
   // DEBUG_assert((post_version == 0x00030000) ==
-  //              (!!(otf->flags&OTF_F_FMT_CFF)));
+  //              (!!(otf->flags&_CF_FONTEMBED_OTF_F_FMT_CFF)));
   //                                     // Ghostscript embedding does this..
   // TODO: v4 (apple) :  uint16 reencoding[numGlyphs]
   if ((post_version == 0x00010000) ||
@@ -128,18 +137,20 @@ emb_otf_get_pdf_fontdescr(OTF_FILE *otf,
       (post_version == 0x00030000) ||
       (post_version == 0x00040000))
   {
-    ret->italicAngle = get_LONG(post + 4) >> 16;
-    if (get_ULONG(post + 12) > 0) // monospaced
+    ret->italicAngle = __cfFontEmbedGetLong(post + 4) >> 16;
+    if (__cfFontEmbedGetULong(post + 12) > 0) // monospaced
       ret->flags |= 1;
   }
   else
     fprintf(stderr, "WARNING: no italicAngle, no monospaced flag\n");
   free(post);
 
-  char *os2 = otf_get_table(otf, OTF_TAG('O', 'S', '/', '2'), &len);
+  char *os2 =
+    _cfFontEmbedOTFGetTable(otf, _CF_FONTEMBED_OTF_TAG('O', 'S', '/', '2'),
+			    &len);
   if (os2)
   {
-    const unsigned short os2_version = get_USHORT(os2);
+    const unsigned short os2_version = __cfFontEmbedGetUShort(os2);
     // check len
     DEBUG_assert((os2_version != 0x0000) || (len == 78));
     DEBUG_assert((os2_version != 0x0001) || (len == 86));
@@ -148,7 +159,7 @@ emb_otf_get_pdf_fontdescr(OTF_FILE *otf,
     if (os2_version <= 0x0004)
     {
       // from PDF14Deltas.pdf, pg 113
-      const int weightClass = get_USHORT(os2 + 4);
+      const int weightClass = __cfFontEmbedGetUShort(os2 + 4);
       ret->stemV = 50 + weightClass * weightClass / (65 * 65);
                                                      // TODO, really bad
       //printf("a %d\n", weightClass);
@@ -158,14 +169,14 @@ emb_otf_get_pdf_fontdescr(OTF_FILE *otf,
         ret->panose = ret->data;
         memcpy(ret->panose, os2 + 30, 12); // sFamilyClass + panose
       }
-      const unsigned short fsSelection = get_USHORT(os2 + 62);
+      const unsigned short fsSelection = __cfFontEmbedGetUShort(os2 + 62);
       if (fsSelection & 0x01)
 	// italic
         ret->flags |= 0x0040;
       if ((fsSelection & 0x10) && (weightClass > 600))
 	// force bold
         ret->flags |= 0x0400;
-      const unsigned char family_class = get_USHORT(os2 + 30) >> 8;
+      const unsigned char family_class = __cfFontEmbedGetUShort(os2 + 30) >> 8;
       if (family_class == 10)
 	// script
         ret->flags |= 0x0008;
@@ -173,13 +184,14 @@ emb_otf_get_pdf_fontdescr(OTF_FILE *otf,
 	// not sans-serif
         ret->flags |= 0x0002;
 
-      ret->avgWidth = get_SHORT(os2 + 2) * 1000 / otf->unitsPerEm;
-      ret->ascent = get_SHORT(os2 + 68) * 1000 / otf->unitsPerEm;
-      ret->descent = get_SHORT(os2 + 70) * 1000 / otf->unitsPerEm;
+      ret->avgWidth = __cfFontEmbedGetShort(os2 + 2) * 1000 / otf->unitsPerEm;
+      ret->ascent = __cfFontEmbedGetShort(os2 + 68) * 1000 / otf->unitsPerEm;
+      ret->descent = __cfFontEmbedGetShort(os2 + 70) * 1000 / otf->unitsPerEm;
       if (os2_version >= 0x0002)
       {
-        ret->xHeight = get_SHORT(os2 + 86) * 1000 / otf->unitsPerEm;
-        ret->capHeight = get_SHORT(os2 + 88) * 1000 / otf->unitsPerEm;
+        ret->xHeight = __cfFontEmbedGetShort(os2 + 86) * 1000 / otf->unitsPerEm;
+        ret->capHeight = __cfFontEmbedGetShort(os2 + 88) * 1000 /
+	  otf->unitsPerEm;
       } // else capHeight fixed later
     }
     else
@@ -208,24 +220,27 @@ emb_otf_get_pdf_fontdescr(OTF_FILE *otf,
   // Fallbacks
   if ((!ret->ascent) || (!ret->descent))
   {
-    char *hhea = otf_get_table(otf, OTF_TAG('h', 'h', 'e', 'a'), &len);
+    char *hhea =
+      _cfFontEmbedOTFGetTable(otf, _CF_FONTEMBED_OTF_TAG('h', 'h', 'e', 'a'),
+			      &len);
     if (hhea)
     {
-      ret->ascent = get_SHORT(hhea + 4) * 1000 / otf->unitsPerEm;
-      ret->descent = get_SHORT(hhea + 6) * 1000 / otf->unitsPerEm;
+      ret->ascent = __cfFontEmbedGetShort(hhea + 4) * 1000 / otf->unitsPerEm;
+      ret->descent = __cfFontEmbedGetShort(hhea + 6) * 1000 / otf->unitsPerEm;
     }
     free(hhea);
   }
   if (!ret->stemV)
   {
     // TODO? use name
-    const unsigned short d_gid = otf_from_unicode(otf, '.');
+    const unsigned short d_gid = _cfFontEmbedOTFFromUnicode(otf, '.');
     if (d_gid)
     {
       // stemV=bbox['.'].width;
-      len = otf_get_glyph(otf, d_gid);
+      len = _cfFontEmbedOTFGetGlyph(otf, d_gid);
       DEBUG_assert(len >= 10);
-      ret->stemV = (get_SHORT(otf->gly + 6) - get_SHORT(otf->gly + 2)) * 1000 /
+      ret->stemV = (__cfFontEmbedGetShort(otf->gly + 6) -
+		    __cfFontEmbedGetShort(otf->gly + 2)) * 1000 /
 	otf->unitsPerEm;
     }
     else
@@ -259,11 +274,12 @@ emb_otf_get_pdf_fontdescr(OTF_FILE *otf,
 //    'symbol' + custom(1, 0) / (3, 0)
 // HINT: caller sets len == otf->numGlyphs   (only when not using encoding...)
 
-EMB_PDF_FONTWIDTHS *
-emb_otf_get_pdf_widths(OTF_FILE *otf,
-		       const unsigned short *encoding,
-		       int len,
-		       const BITSET glyphs) // {{{ glyphs == NULL ->
+_cf_fontembed_emb_pdf_font_widths_t *
+__cfFontEmbedEmbOTFGetPDFWidths(_cf_fontembed_otf_file_t *otf,
+				const unsigned short *encoding,
+				int len,
+				const _cf_fontembed_bit_set_t glyphs)
+                                            // {{{ glyphs == NULL ->
                                             //        all from 0 to len
 {
   DEBUG_assert(otf);
@@ -276,8 +292,8 @@ emb_otf_get_pdf_widths(OTF_FILE *otf,
     for (iA = 0; iA < len; iA ++) // iA is a "gid" when in multi_byte mode...
     {
       const int gid = (encoding) ?
-	encoding[iA] : otf_from_unicode(otf, iA); // TODO
-      if (bit_check(glyphs, gid))
+	encoding[iA] : _cfFontEmbedOTFFromUnicode(otf, iA); // TODO
+      if (_cfFontEmbedBitCheck(glyphs, gid))
       {
         if (first > iA)
 	  // first is a character index
@@ -302,7 +318,7 @@ emb_otf_get_pdf_widths(OTF_FILE *otf,
   // ensure hmtx is there
   if (!otf -> hmtx)
   {
-    if (otf_load_more(otf) != 0)
+    if (__cfFontEmbedOTFLoadMore(otf) != 0)
     {
       fprintf(stderr, "Unsupported OTF font / cmap table \n");
       return (NULL);
@@ -310,7 +326,8 @@ emb_otf_get_pdf_widths(OTF_FILE *otf,
   }
 
   // now create the array
-  EMB_PDF_FONTWIDTHS *ret = emb_pdf_fw_new(last - first + 1);
+  _cf_fontembed_emb_pdf_font_widths_t *ret =
+    __cfFontEmbedEmbPDFFWNew(last - first + 1);
   if (!ret)
     return (NULL);
   ret->first = first;
@@ -319,7 +336,7 @@ emb_otf_get_pdf_widths(OTF_FILE *otf,
   for (iA = 0; first <= last; iA ++, first ++)
   {
     const int gid = (encoding) ?
-      encoding[first] : otf_from_unicode(otf, first); // TODO
+      encoding[first] : _cfFontEmbedOTFFromUnicode(otf, first); // TODO
     if (gid >= otf->numGlyphs)
     {
       fprintf(stderr, "Bad glyphid\n");
@@ -327,8 +344,9 @@ emb_otf_get_pdf_widths(OTF_FILE *otf,
       free(ret);
       return (NULL);
     }
-    if ((!glyphs) || (bit_check(glyphs, gid)))
-      ret->widths[iA] = get_width_fast(otf, gid) * 1000 / otf->unitsPerEm;
+    if ((!glyphs) || (_cfFontEmbedBitCheck(glyphs, gid)))
+      ret->widths[iA] =
+	__cfFontEmbedGetWidthFast(otf, gid) * 1000 / otf->unitsPerEm;
       // else 0 from calloc
   }
 
@@ -342,15 +360,15 @@ emb_otf_get_pdf_widths(OTF_FILE *otf,
 static int
 emb_otf_pdf_glyphwidth(void *context, int gid) // {{{
 {
-  OTF_FILE *otf = (OTF_FILE *)context;
-  return (get_width_fast(otf, gid) * 1000 / otf->unitsPerEm);
+  _cf_fontembed_otf_file_t *otf = (_cf_fontembed_otf_file_t *)context;
+  return (__cfFontEmbedGetWidthFast(otf, gid) * 1000 / otf->unitsPerEm);
 }
 // }}}
 
 
-EMB_PDF_FONTWIDTHS *
-emb_otf_get_pdf_cidwidths(OTF_FILE *otf,
-			  const BITSET glyphs) // {{{
+_cf_fontembed_emb_pdf_font_widths_t *
+__cfFontEmbedEmbOTFGetPDFCIDWidths(_cf_fontembed_otf_file_t *otf,
+				   const _cf_fontembed_bit_set_t glyphs) // {{{
                                                // glyphs == NULL -> output all
 {
   DEBUG_assert(otf);
@@ -358,7 +376,7 @@ emb_otf_get_pdf_cidwidths(OTF_FILE *otf,
   // ensure hmtx is there
   if (!otf->hmtx)
   {
-    if (otf_load_more(otf) != 0)
+    if (__cfFontEmbedOTFLoadMore(otf) != 0)
     {
       fprintf(stderr, "Unsupported OTF font / cmap table \n");
       return NULL;
@@ -367,8 +385,8 @@ emb_otf_get_pdf_cidwidths(OTF_FILE *otf,
   // int dw = emb_otf_pdf_glyphwidth(otf, 0); // e.g.
   int dw = -1; // let them estimate
 
-  return (emb_pdf_fw_cidwidths(glyphs, otf->numGlyphs, dw,
-			       emb_otf_pdf_glyphwidth, otf));
+  return (__cfFontEmbedEmbPDFFWCIDWidths(glyphs, otf->numGlyphs, dw,
+					 emb_otf_pdf_glyphwidth, otf));
 }
 // }}}
 
@@ -390,24 +408,26 @@ emb_otf_get_post_name(const char *post,
 {
   if (!post)
     return (NULL);
-  const unsigned int post_version = get_ULONG(post);
+  const unsigned int post_version = __cfFontEmbedGetULong(post);
   if (post_version == 0x00010000) // font has only 258 chars...
                                   // font cannot be used on windows
   {
-    if (gid < sizeof(macRoman) / sizeof(macRoman[0]))
-      return (macRoman[gid]);
+    if (gid < sizeof(__cf_fontembed_mac_roman) /
+	sizeof(__cf_fontembed_mac_roman[0]))
+      return (__cf_fontembed_mac_roman[gid]);
   }
   else if (post_version == 0x00020000)
   {
-    const unsigned short num_glyphs = get_USHORT(post + 32);
+    const unsigned short num_glyphs = __cfFontEmbedGetUShort(post + 32);
     // DEBUG_assert(num_glyphs == otf->numGlyphs);
     if (gid < num_glyphs)
     {
-      unsigned short idx = get_USHORT(post + 34 + 2 * gid);
+      unsigned short idx = __cfFontEmbedGetUShort(post + 34 + 2 * gid);
       if (idx < 258)
       {
-        if (idx < sizeof(macRoman) / sizeof(macRoman[0]))
-          return (macRoman[idx]);
+        if (idx < sizeof(__cf_fontembed_mac_roman) /
+	    sizeof(__cf_fontembed_mac_roman[0]))
+          return (__cf_fontembed_mac_roman[idx]);
       }
       else if (idx < 32768)
       {
@@ -426,12 +446,13 @@ emb_otf_get_post_name(const char *post,
   else if (post_version == 0x00025000)
   {
     // similiar to 0x00010000, deprecated
-    const unsigned short num_glyphs = get_USHORT(post + 32);
+    const unsigned short num_glyphs = __cfFontEmbedGetUShort(post + 32);
     if (gid < num_glyphs)
     {
       const unsigned short idx = post[34 + gid] + gid; // post is signed char *
-      if (idx < sizeof(macRoman) / sizeof(macRoman[0]))
-        return (macRoman[idx]);
+      if (idx < sizeof(__cf_fontembed_mac_roman) /
+	  sizeof(__cf_fontembed_mac_roman[0]))
+        return (__cf_fontembed_mac_roman[idx]);
     }
   }
   else if (post_version == 0x00030000)
@@ -444,7 +465,8 @@ emb_otf_get_post_name(const char *post,
 // }}}
 
 
-// TODO!? to_unicode should be able to represent more than one unicode character?
+// TODO!? to_unicode should be able to represent more than one unicode
+//        character?
 // NOTE: statically allocated string
 
 static const char *
@@ -483,7 +505,7 @@ get_glyphname(const char *post,
 
 struct OUTFILTER_PS
 {
-  OUTPUT_FN out;
+  _cf_fontembed_output_fn_t out;
   void *ctx;
   int len;
 };
@@ -499,7 +521,7 @@ outfilter_ascii_ps(const char *buf,
 		   void *context)  // {{{
 {
   struct OUTFILTER_PS *of = context;
-  OUTPUT_FN out = of->out;
+  _cf_fontembed_output_fn_t out = of->out;
   int iA;
 
   (*out)("<", 1, of->ctx);
@@ -544,7 +566,7 @@ outfilter_binary_ps(const char *buf,
 		    void *context)  // {{{
 {
   struct OUTFILTER_PS *of = context;
-  OUTPUT_FN out = of->out;
+  _cf_fontembed_output_fn_t out = of->out;
 
   char tmp[100];
   while (len > 0)
@@ -587,8 +609,8 @@ outfilter_binary_ps(const char *buf,
 //    just map to gids, but only to names, which acro will then cmap(3, 1)
 //    to gids)
 //
-//  => problem with subsetting BITSET (keyed by gid); we want BITSET keyed
-//     by 0..255 (via encoding)
+//  => problem with subsetting _cf_fontembed_bit_set_t (keyed by gid); we want
+//     _cf_fontembed_bit_set_t keyed by 0..255 (via encoding)
 //
 //   TODO: a) multi font encoding
 //   TODO: b) cid/big font encoding (PS >= 2015) [/CIDFontType 2] : CMap does
@@ -613,12 +635,12 @@ outfilter_binary_ps(const char *buf,
 //
 
 int
-emb_otf_ps(OTF_FILE *otf,
-	   unsigned short *encoding,
-	   int len,
-	   unsigned short *to_unicode,
-	   OUTPUT_FN output,
-	   void *context) // {{{
+__cfFontEmbedEmbOTFPS(_cf_fontembed_otf_file_t *otf,
+		      unsigned short *encoding,
+		      int len,
+		      unsigned short *to_unicode,
+		      _cf_fontembed_output_fn_t output,
+		      void *context) // {{{
 {
   const int binary = 0; // binary format? // TODO
   if (len > 256)
@@ -636,26 +658,30 @@ emb_otf_ps(OTF_FILE *otf,
 
   int iA, ret=0;
 
-  DYN_STRING ds;
-  if (dyn_init(&ds, 1024) == -1)
+  __cf_fontembed_dyn_string_t ds;
+  if (__cfFontEmbedDynInit(&ds, 1024) == -1)
     return (-1);
 
   int rlen = 0;
-  char *head = otf_get_table(otf, OTF_TAG('h', 'e', 'a', 'd'), &rlen);
+  char *head =
+    _cfFontEmbedOTFGetTable(otf, _CF_FONTEMBED_OTF_TAG('h', 'e', 'a', 'd'),
+			    &rlen);
   if (!head)
   {
     free(ds.buf);
     return (-1);
   }
-  dyn_printf(&ds, "%%!PS-TrueTypeFont-%d-%d\n",
-	     otf->version, get_ULONG(head + 4));
-  const int bbxmin = get_SHORT(head + 36) * 1000 / otf->unitsPerEm,
-            bbymin = get_SHORT(head + 38) * 1000 / otf->unitsPerEm,
-            bbxmax = get_SHORT(head + 40) * 1000 / otf->unitsPerEm,
-            bbymax = get_SHORT(head + 42) * 1000 / otf->unitsPerEm;
+  __cfFontEmbedDynPrintF(&ds, "%%!PS-TrueTypeFont-%d-%d\n",
+	     otf->version, __cfFontEmbedGetULong(head + 4));
+  const int bbxmin = __cfFontEmbedGetShort(head + 36) * 1000 / otf->unitsPerEm,
+            bbymin = __cfFontEmbedGetShort(head + 38) * 1000 / otf->unitsPerEm,
+            bbxmax = __cfFontEmbedGetShort(head + 40) * 1000 / otf->unitsPerEm,
+            bbymax = __cfFontEmbedGetShort(head + 42) * 1000 / otf->unitsPerEm;
   free(head);
 
-  char *post = otf_get_table(otf, OTF_TAG('p', 'o', 's', 't'), &rlen);
+  char *post =
+    _cfFontEmbedOTFGetTable(otf, _CF_FONTEMBED_OTF_TAG('p', 'o', 's', 't'),
+			    &rlen);
   if ((!post) && (rlen != -1)) // other error than "not found"
   {
     free(ds.buf);
@@ -663,56 +689,63 @@ emb_otf_ps(OTF_FILE *otf,
   }
   if (post)
   {
-    const unsigned int minMem = get_ULONG(post + 16),
-                       maxMem = get_ULONG(post + 20);
+    const unsigned int minMem = __cfFontEmbedGetULong(post + 16),
+                       maxMem = __cfFontEmbedGetULong(post + 20);
     if (minMem)
-      dyn_printf(&ds, "%%VMusage: %d %d\n", minMem, maxMem);
+      __cfFontEmbedDynPrintF(&ds, "%%VMusage: %d %d\n", minMem, maxMem);
   }
 
   // don't forget the coordinate scaling...
-  dyn_printf(&ds, "11 dict begin\n"
-	          "/FontName /%s def\n"
-                  "/FontType 42 def\n"
-                  "/FontMatrix [1 0 0 1 0 0] def\n"
-                  "/FontBBox [%f %f %f %f] def\n"
-                  "/PaintType 0 def\n",
-//                "/XUID [42 16#%X 16#%X 16#%X 16#%X] def\n"
-//                          // TODO?!? (md5 of font data)  (16# means base16)
-	     emb_otf_get_fontname(otf),
-	     bbxmin / 1000.0, bbymin / 1000.0,
-	     bbxmax / 1000.0, bbymax / 1000.0);
+  __cfFontEmbedDynPrintF(&ds, "11 dict begin\n"
+			 "/FontName /%s def\n"
+			 "/FontType 42 def\n"
+			 "/FontMatrix [1 0 0 1 0 0] def\n"
+			 "/FontBBox [%f %f %f %f] def\n"
+			 "/PaintType 0 def\n",
+			 //"/XUID [42 16#%X 16#%X 16#%X 16#%X] def\n"
+			 //   // TODO?!? (md5 of font data)  (16# means base16)
+			 __cfFontEmbedEmbOTFGetFontName(otf),
+			 bbxmin / 1000.0, bbymin / 1000.0,
+			 bbxmax / 1000.0, bbymax / 1000.0);
   if (post)
-    dyn_printf(&ds,"/FontInfo 4 dict dup begin\n"
-                   // TODO? [even non-post]:
-	           // /version|/Notice|/Copyright|/FullName|/FamilyName|/Weight
-	           //   () readonly def\n   from name table: 5 7 0 4 1 2
-                   // using: otf_get_name(otf, 3, 1, 0x409, ?, &len) /
-	           //        otf_get_name(otf, 1, 0, 0, ?, &len)   + encoding
-                   "  /ItalicAngle %d def\n"
-                   "  /isFixedPitch %s def\n"
-                   "  /UnderlinePosition %f def\n"
-                   "  /UnderlineThickness %f def\n"
-                   "end readonly def\n",
-	       get_LONG(post + 4) >> 16,
-	       (get_ULONG(post + 12) ? "true" : "false"),
-	       (get_SHORT(post + 8) - get_SHORT(post + 10) / 2) /
-	         (float)otf->unitsPerEm,
-	       get_SHORT(post + 10) / (float)otf->unitsPerEm);
-  dyn_printf(&ds, "/Encoding 256 array\n"
-                  "0 1 255 { 1 index exch /.notdef put } for\n");
+    __cfFontEmbedDynPrintF(&ds,"/FontInfo 4 dict dup begin\n"
+                           // TODO? [even non-post]:
+	                   // /version | /Notice | /Copyright | /FullName |
+			   // /FamilyName| /Weight
+			   //   () readonly def\n   from name table: 5 7 0 4 1 2
+			   // using:
+			   // _cfFontEmbedOTFGetName(otf, 3, 1, 0x409, ?,&len) /
+			   // _cfFontEmbedOTFGetName(otf, 1, 0, 0, ?, &len) +
+			   //   encoding
+			   "  /ItalicAngle %d def\n"
+			   "  /isFixedPitch %s def\n"
+			   "  /UnderlinePosition %f def\n"
+			   "  /UnderlineThickness %f def\n"
+			   "end readonly def\n",
+			   __cfFontEmbedGetLong(post + 4) >> 16,
+			   (__cfFontEmbedGetULong(post + 12) ?
+			    "true" : "false"),
+			   (__cfFontEmbedGetShort(post + 8) -
+			    __cfFontEmbedGetShort(post + 10) / 2) /
+			   (float)otf->unitsPerEm,
+			   __cfFontEmbedGetShort(post + 10) /
+			   (float)otf->unitsPerEm);
+  __cfFontEmbedDynPrintF(&ds, "/Encoding 256 array\n"
+			 "0 1 255 { 1 index exch /.notdef put } for\n");
   for (iA = 0; iA < len; iA ++) // encoding data: 0...255 -> /glyphname
   {
-    const int gid = (encoding) ? encoding[iA] : otf_from_unicode(otf, iA);
+    const int gid =
+      (encoding) ? encoding[iA] : _cfFontEmbedOTFFromUnicode(otf, iA);
     if (gid != 0)
-      dyn_printf(&ds, "dup %d /%s put\n",
-		 iA, get_glyphname(post, to_unicode, iA, gid));
+      __cfFontEmbedDynPrintF(&ds, "dup %d /%s put\n",
+			     iA, get_glyphname(post, to_unicode, iA, gid));
   }
-  dyn_printf(&ds, "readonly def\n");
+  __cfFontEmbedDynPrintF(&ds, "readonly def\n");
 
   if (binary)
-    dyn_printf(&ds,
-	       "/RD { string currentfile exch readstring pop } executeonly def\n");
-  dyn_printf(&ds, "/sfnts[\n");
+    __cfFontEmbedDynPrintF(&ds,
+	  "/RD { string currentfile exch readstring pop } executeonly def\n");
+  __cfFontEmbedDynPrintF(&ds, "/sfnts[\n");
 
   if (ds.len < 0)
   {
@@ -724,16 +757,17 @@ emb_otf_ps(OTF_FILE *otf,
   ret += ds.len;
   ds.len = 0;
 
-  // TODO: only tables as in otf_subset
+  // TODO: only tables as in _cfFontEmbedOTFSubSet
   // TODO:  somehow communicate table boundaries:
-  //   otf_action_copy  does exactly one output call (per table)
-  //   only otf_action_replace might do two (padding)
+  //   __cfFontEmbedOTFActionCopy  does exactly one output call (per table)
+  //   only __cfFontEmbedOTFActionReplace might do two (padding)
   // {{{ copy tables verbatim (does not affect ds .len)
 
-  struct _OTF_WRITE *otfree = NULL;
+  struct __cf_fontembed_otf_write_s *otfree = NULL;
 #if 0
-  struct _OTF_WRITE *otw;
-  otwfree = otw = malloc(sizeof(struct _OTF_WRITE) * otf->numTables);
+  struct __cf_fontembed_otf_write_s *otw;
+  otwfree = otw =
+    malloc(sizeof(struct __cf_fontembed_otf_write_s) * otf->numTables);
   if (!otw)
   {
     fprintf(stderr, "Bad alloc: %m\n");
@@ -745,28 +779,39 @@ emb_otf_ps(OTF_FILE *otf,
   for (iA = 0; iA < otf->numTables; iA ++)
   {
     otw[iA].tag = otf->tables[iA].tag;
-    otw[iA].action = otf_action_copy;
+    otw[iA].action = __cfFontEmbedOTFActionCopy;
     otw[iA].param = otf;
     otw[iA].length = iA;
   }
   int numTables = otf->numTables;
 #else
-  struct _OTF_WRITE otw[] = // sorted
+  struct __cf_fontembed_otf_write_s otw[] = // sorted
   {
-    {OTF_TAG('c', 'm', 'a', 'p'), otf_action_copy, otf,},
-    {OTF_TAG('c', 'v', 't', ' '), otf_action_copy, otf,},
-    {OTF_TAG('f', 'p', 'g', 'm'), otf_action_copy, otf,},
-    {OTF_TAG('g', 'l', 'y', 'f'), otf_action_copy, otf,},
-    {OTF_TAG('h', 'e', 'a', 'd'), otf_action_copy, otf,},
-    {OTF_TAG('h', 'h', 'e', 'a'), otf_action_copy, otf,},
-    {OTF_TAG('h', 'm', 't', 'x'), otf_action_copy, otf,},
-    {OTF_TAG('l', 'o', 'c', 'a'), otf_action_copy, otf,},
-    {OTF_TAG('m', 'a', 'x', 'p'), otf_action_copy, otf,},
-    {OTF_TAG('n', 'a', 'm', 'e'), otf_action_copy, otf,},
-    {OTF_TAG('p', 'r', 'e', 'p'), otf_action_copy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('c', 'm', 'a', 'p'),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('c', 'v', 't', ' '),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('f', 'p', 'g', 'm'),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('g', 'l', 'y', 'f'),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('h', 'e', 'a', 'd'),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('h', 'h', 'e', 'a'),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('h', 'm', 't', 'x'),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('l', 'o', 'c', 'a'),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('m', 'a', 'x', 'p'),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('n', 'a', 'm', 'e'),
+     __cfFontEmbedOTFActionCopy, otf,},
+    {_CF_FONTEMBED_OTF_TAG('p', 'r', 'e', 'p'),
+     __cfFontEmbedOTFActionCopy, otf,},
     // vhea vmtx (never used in PDF, but possible in PS >= 3011)
     {0,0,0,0}};
-  int numTables = otf_intersect_tables(otf, otw);
+  int numTables = __cfFontEmbedOTFIntersectTables(otf, otw);
 #endif
 
   struct OUTFILTER_PS of;
@@ -774,9 +819,11 @@ emb_otf_ps(OTF_FILE *otf,
   of.ctx = context;
   of.len = 0;
   if (binary)
-    iA = otf_write_sfnt(otw, otf->version, numTables, outfilter_binary_ps, &of);
+    iA = __cfFontEmbedOTFWriteSFNT(otw, otf->version, numTables,
+				   outfilter_binary_ps, &of);
   else
-    iA = otf_write_sfnt(otw, otf->version, numTables, outfilter_ascii_ps, &of);
+    iA = __cfFontEmbedOTFWriteSFNT(otw, otf->version, numTables,
+				   outfilter_ascii_ps, &of);
   free(otfree);
   if (iA == -1)
   {
@@ -787,20 +834,21 @@ emb_otf_ps(OTF_FILE *otf,
   ret += of.len;
   // }}} done copying
 
-  dyn_printf(&ds, "] def\n");
+  __cfFontEmbedDynPrintF(&ds, "] def\n");
 
-  dyn_printf(&ds, "/CharStrings %d dict dup begin\n"
-                  "/.notdef 0 def\n", len);
+  __cfFontEmbedDynPrintF(&ds, "/CharStrings %d dict dup begin\n"
+			 "/.notdef 0 def\n", len);
   for (iA = 0; iA < len; iA ++) // charstrings data: /glyphname -> gid
   {
-    const int gid = (encoding) ? encoding[iA] : otf_from_unicode(otf, iA);
+    const int gid =
+      (encoding) ? encoding[iA] : _cfFontEmbedOTFFromUnicode(otf, iA);
     if (gid)
-      dyn_printf(&ds, "/%s %d def\n",
-		 get_glyphname(post, to_unicode, iA, gid), gid);
+      __cfFontEmbedDynPrintF(&ds, "/%s %d def\n",
+			     get_glyphname(post, to_unicode, iA, gid), gid);
     // (respecting subsetting...)
   }
-  dyn_printf(&ds, "end readonly def\n");
-  dyn_printf(&ds, "FontName currentdict end definefont pop\n");
+  __cfFontEmbedDynPrintF(&ds, "end readonly def\n");
+  __cfFontEmbedDynPrintF(&ds, "FontName currentdict end definefont pop\n");
   free(post);
 
   if (ds.len < 0)

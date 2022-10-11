@@ -3,16 +3,18 @@
 
 #include <stdint.h>
 
-typedef struct _FREQUENT FREQUENT;
+typedef struct __cf_fontembed_frequent_s __cf_fontembed_frequent_t;
 
 // size is the precision/return size: it will find at most >size
 // elements (i.e. all, if there) with frequency > 1 / (size + 1)
-FREQUENT *frequent_new(int size); // - just free() it
+__cf_fontembed_frequent_t *__cfFontEmbedFrequentNew(int size);
+                                                       // - just free() it
 
-void frequent_add(FREQUENT *freq, intptr_t key);
+void __cfFontEmbedFrequentAdd(__cf_fontembed_frequent_t *freq, intptr_t key);
 
 // might return INTPTR_MIN, if not populated
 // this is only an approximation!
-intptr_t frequent_get(FREQUENT *freq, int pos); // 0 is "most frequent"
+intptr_t __cfFontEmbedFrequentGet(__cf_fontembed_frequent_t *freq, int pos);
+                                                       // 0 is "most frequent"
 
 #endif // !_FONTEMBED_FREQUENT_H_

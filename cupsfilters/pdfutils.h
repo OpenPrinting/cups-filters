@@ -20,7 +20,7 @@ extern "C" {
 //
 
 #include <time.h>
-#include <cupsfilters/fontembed.h>
+#include <cupsfilters/fontembed-private.h>
 
 
 //
@@ -101,7 +101,8 @@ int cfPDFOutAddKeyValue(cf_pdf_out_t *pdf, const char *key, const char *val);
 // and returns the object number.
 // On error 0 is returned.
 
-int cfPDFOutWriteFont(cf_pdf_out_t *pdf, struct _EMB_PARAMS *emb);
+int cfPDFOutWriteFont(cf_pdf_out_t *pdf,
+		      struct _cf_fontembed_emb_params_s *emb);
 
 #  ifdef __cplusplus
 }

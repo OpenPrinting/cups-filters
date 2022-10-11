@@ -25,7 +25,8 @@ Usage
 -----
 (TODO)... see cupsfilters/fontembed/test-pdf.c ...
 
- * for direct sfnt access and for embedding use <cupsfilters/fontembed.h>
+ * for direct sfnt access and for embedding use
+   <cupsfilters/fontembed-private.h>
 
 
 License (MIT)

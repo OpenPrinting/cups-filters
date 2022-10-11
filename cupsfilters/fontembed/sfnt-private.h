@@ -2,8 +2,28 @@
 #define _FONTEMBED_SFNT_INT_H_
 
 
+//
+// Types and structures...
+//
+
+struct __cf_fontembed_otf_write_s
+{
+  unsigned long tag;
+  int (*action)(void *param, int length, _cf_fontembed_output_fn_t output,
+		void *context);
+         // -1 on error, num_bytes_written on success; if >output == NULL
+         // return checksum in (unsigned int *)context  instead.
+  void *param;
+  int length;
+};
+
+
+//
+// Inline functions...
+//
+
 static inline unsigned short
-get_USHORT(const char *buf) // {{{
+__cfFontEmbedGetUShort(const char *buf) // {{{
 {
   return (((unsigned char)buf[0] << 8) | ((unsigned char)buf[1]));
 }
@@ -11,7 +31,7 @@ get_USHORT(const char *buf) // {{{
 
 
 static inline short
-get_SHORT(const char *buf) // {{{
+__cfFontEmbedGetShort(const char *buf) // {{{
 {
   return ((buf[0] << 8) | ((unsigned char)buf[1]));
 }
@@ -19,7 +39,7 @@ get_SHORT(const char *buf) // {{{
 
 
 static inline unsigned int
-get_UINT24(const char *buf) // {{{
+__cfFontEmbedGetUInt24(const char *buf) // {{{
 {
   return (((unsigned char)buf[0] << 16) |
 	  ((unsigned char)buf[1] << 8 )|
@@ -29,7 +49,7 @@ get_UINT24(const char *buf) // {{{
 
 
 static inline unsigned int
-get_ULONG(const char *buf) // {{{
+__cfFontEmbedGetULong(const char *buf) // {{{
 {
   return (((unsigned char)buf[0] << 24) |
 	  ((unsigned char)buf[1] << 16) |
@@ -40,7 +60,7 @@ get_ULONG(const char *buf) // {{{
 
 
 static inline int
-get_LONG(const char *buf) // {{{
+__cfFontEmbedGetLong(const char *buf) // {{{
 {
   return ((buf[0] << 24) |
 	  ((unsigned char)buf[1] << 16) |
@@ -51,7 +71,7 @@ get_LONG(const char *buf) // {{{
 
 
 static inline void
-set_USHORT(char *buf,
+__cfFontEmbedSetUShort(char *buf,
 	   unsigned short val) // {{{
 {
   buf[0] = val >> 8;
@@ -61,7 +81,7 @@ set_USHORT(char *buf,
 
 // }}}
 static inline void
-set_ULONG(char *buf,
+__cfFontEmbedSetULong(char *buf,
 	  unsigned int val) // {{{
 {
   buf[0] = val >> 24;
@@ -73,61 +93,63 @@ set_ULONG(char *buf,
 
 
 static inline unsigned int
-otf_checksum(const char *buf,
+__cfFontEmbedOTFCheckSum(const char *buf,
 	     unsigned int len) // {{{
 {
   unsigned int ret = 0;
   for (len = (len + 3) / 4; len > 0; len--, buf += 4)
-    ret += get_ULONG(buf);
+    ret += __cfFontEmbedGetULong(buf);
   return (ret);
 }
 // }}}
 
 
 static inline int
-get_width_fast(OTF_FILE *otf,
+__cfFontEmbedGetWidthFast(_cf_fontembed_otf_file_t *otf,
 	       int gid) // {{{
 {
   if (gid >= otf->numberOfHMetrics)
-    return (get_USHORT(otf->hmtx + (otf->numberOfHMetrics - 1) * 4));
+    return (__cfFontEmbedGetUShort(otf->hmtx +
+				   (otf->numberOfHMetrics - 1) * 4));
   else
-    return (get_USHORT(otf->hmtx + gid * 4));
+    return (__cfFontEmbedGetUShort(otf->hmtx + gid * 4));
 }
 // }}}
 
 
-int otf_load_glyf(OTF_FILE *otf); //  - 0 on success
-int otf_load_more(OTF_FILE *otf); //  - 0 on success
+//
+// Prototypes...
+//
 
-int otf_find_table(OTF_FILE *otf, unsigned int tag); // - table_index  or
-                                                     //   -1 on error
+int __cfFontEmbedOTFLoadGlyf(_cf_fontembed_otf_file_t *otf); //  - 0 on success
+int __cfFontEmbedOTFLoadMore(_cf_fontembed_otf_file_t *otf); //  - 0 on success
 
-int otf_action_copy(void *param, int csum, OUTPUT_FN output, void *context);
-int otf_action_replace(void *param, int csum, OUTPUT_FN output, void *context);
+int __cfFontEmbedOTFFindTable(_cf_fontembed_otf_file_t *otf,
+			      unsigned int tag); // - table_index  or
+                                                 //   -1 on error
 
-// Note: don't use this directly. otf_write_sfnt will internally replace
-// otf_action_copy for head with this
-int otf_action_copy_head(void *param, int csum, OUTPUT_FN output,
-			 void *context);
+int __cfFontEmbedOTFActionCopy(void *param, int csum,
+			       _cf_fontembed_output_fn_t output, void *context);
+int __cfFontEmbedOTFActionReplace(void *param, int csum,
+				  _cf_fontembed_output_fn_t output,
+				  void *context);
 
+// Note: Don't use this directly. __cfFontEmbedOTFWriteSFNT will internally
+//       replace
+// __cfFontEmbedOTFActionCopy for head with this
+int __cfFontEmbedOTFActionCopyHead(void *param, int csum,
+				   _cf_fontembed_output_fn_t output,
+				   void *context);
 
-struct _OTF_WRITE
-{
-  unsigned long tag;
-  int (*action)(void *param, int length, OUTPUT_FN output, void *context);
-         // -1 on error, num_bytes_written on success; if >output == NULL
-         // return checksum in (unsigned int *)context  instead.
-  void *param;
-  int length;
-};
-
-
-int otf_write_sfnt(struct _OTF_WRITE *otw, unsigned int version, int numTables,
-		   OUTPUT_FN output, void *context);
+int __cfFontEmbedOTFWriteSFNT(struct __cf_fontembed_otf_write_s *otw,
+			      unsigned int version, int numTables,
+			      _cf_fontembed_output_fn_t output, void *context);
 
 /** from sfnt_subset.c: **/
 
-// otw {0, }-terminated, will be modified; returns numTables for otf_write_sfnt
-int otf_intersect_tables(OTF_FILE *otf, struct _OTF_WRITE *otw);
+// otw {0, }-terminated, will be modified; returns numTables for
+// __cfFontEmbedOTFWriteSFNT
+int __cfFontEmbedOTFIntersectTables(_cf_fontembed_otf_file_t *otf,
+				    struct __cf_fontembed_otf_write_s *otw);
 
 #endif // !_FONTEMBED_SFNT_INT_H_

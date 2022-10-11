@@ -1,22 +1,30 @@
 #ifndef _FONTEMBED_EMBED_SFNT_INT_H_
 #define _FONTEMBED_EMBED_SFNT_INT_H_
 
-#include <cupsfilters/fontembed.h>
+#include <cupsfilters/fontembed-private.h>
 
 
-EMB_RIGHT_TYPE emb_otf_get_rights(OTF_FILE *otf);
+_cf_fontembed_emb_right_t
+  __cfFontEmbedEmbOTFGetRights(_cf_fontembed_otf_file_t *otf);
 
 // NOTE: statically allocated buffer
-const char *emb_otf_get_fontname(OTF_FILE *otf);
+const char *__cfFontEmbedEmbOTFGetFontName(_cf_fontembed_otf_file_t *otf);
 
-void emb_otf_get_pdf_fontdescr(OTF_FILE *otf, EMB_PDF_FONTDESCR *ret);
-EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_widths(OTF_FILE *otf,
-					   const unsigned short *encoding,
-					   int len, const BITSET glyphs);
-EMB_PDF_FONTWIDTHS *emb_otf_get_pdf_cidwidths(OTF_FILE *otf,
-					      const BITSET glyph);
+void
+  __cfFontEmbedEmbOTFGetPDFFontDescr(_cf_fontembed_otf_file_t *otf,
+				     _cf_fontembed_emb_pdf_font_descr_t *ret);
+_cf_fontembed_emb_pdf_font_widths_t
+  *__cfFontEmbedEmbOTFGetPDFWidths(_cf_fontembed_otf_file_t *otf,
+				   const unsigned short *encoding,
+				   int len,
+				   const _cf_fontembed_bit_set_t glyphs);
+_cf_fontembed_emb_pdf_font_widths_t
+  *__cfFontEmbedEmbOTFGetPDFCIDWidths(_cf_fontembed_otf_file_t *otf,
+				      const _cf_fontembed_bit_set_t glyph);
 
-int emb_otf_ps(OTF_FILE *otf, unsigned short *encoding, int len,
-	       unsigned short *to_unicode, OUTPUT_FN output, void *context);
+int __cfFontEmbedEmbOTFPS(_cf_fontembed_otf_file_t *otf,
+			  unsigned short *encoding, int len,
+			  unsigned short *to_unicode,
+			  _cf_fontembed_output_fn_t output, void *context);
 
 #endif // !_FONTEMBED_EMBED_SFNT_INT_H_

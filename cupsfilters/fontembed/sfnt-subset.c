@@ -1,4 +1,4 @@
-#include <cupsfilters/fontembed.h>
+#include <cupsfilters/fontembed-private.h>
 #include <cupsfilters/debug-internal.h>
 #include "sfnt-private.h"
 #include <stdio.h>
@@ -8,9 +8,9 @@
 
 
 int
-otf_ttc_extract(OTF_FILE *otf,
-		OUTPUT_FN output,
-		void *context) // {{{
+_cfFontEmbedOTFTTCExtract(_cf_fontembed_otf_file_t *otf,
+			  _cf_fontembed_output_fn_t output,
+			  void *context) // {{{
 {
   DEBUG_assert(otf);
   DEBUG_assert(output);
@@ -18,8 +18,8 @@ otf_ttc_extract(OTF_FILE *otf,
 
   int iA;
 
-  struct _OTF_WRITE *otw;
-  otw = malloc(sizeof(struct _OTF_WRITE) * otf->numTables);
+  struct __cf_fontembed_otf_write_s *otw;
+  otw = malloc(sizeof(struct __cf_fontembed_otf_write_s) * otf->numTables);
   if (!otw)
   {
     fprintf(stderr, "Bad alloc: %s\n", strerror(errno));
@@ -30,21 +30,24 @@ otf_ttc_extract(OTF_FILE *otf,
   for (iA = 0; iA < otf->numTables; iA ++)
   {
     otw[iA].tag = otf->tables[iA].tag;
-    otw[iA].action = otf_action_copy;
+    otw[iA].action = __cfFontEmbedOTFActionCopy;
     otw[iA].param = otf;
     otw[iA].length = iA;
   }
-  iA = otf_write_sfnt(otw, otf->version, otf->numTables, output, context);
+  iA = __cfFontEmbedOTFWriteSFNT(otw, otf->version, otf->numTables, output,
+				 context);
   free(otw);
 
   return (iA);
 }
 // }}}
 
-// otw {0, }-terminated, will be modified; returns numTables for otf_write_sfnt
+
+// otw {0, }-terminated, will be modified; returns numTables for
+// __cfFontEmbedOTFWriteSFNT
 int
-otf_intersect_tables(OTF_FILE *otf,
-		     struct _OTF_WRITE *otw) // {{{
+__cfFontEmbedOTFIntersectTables(_cf_fontembed_otf_file_t *otf,
+				struct __cf_fontembed_otf_write_s *otw) // {{{
 {
   int iA, iB, numTables = 0;
 
@@ -52,10 +55,11 @@ otf_intersect_tables(OTF_FILE *otf,
   {
     if (otf->tables[iA].tag == otw[iB].tag)
     {
-      if (otw[iB].action == otf_action_copy)
+      if (otw[iB].action == __cfFontEmbedOTFActionCopy)
         otw[iB].length = iA; // original table location found.
       if (iB != numTables) // >, actually
-        memmove(otw + numTables, otw + iB, sizeof(struct _OTF_WRITE));
+        memmove(otw + numTables, otw + iB,
+		sizeof(struct __cf_fontembed_otf_write_s));
       iA ++;
       iB ++;
       numTables ++;
@@ -64,10 +68,11 @@ otf_intersect_tables(OTF_FILE *otf,
       iA ++;
     else // not in otf->tables
     {
-      if (otw[iB].action != otf_action_copy) // keep
+      if (otw[iB].action != __cfFontEmbedOTFActionCopy) // keep
       {
         if (iB != numTables) // >, actually
-          memmove(otw + numTables, otw + iB, sizeof(struct _OTF_WRITE));
+          memmove(otw + numTables, otw + iB,
+		  sizeof(struct __cf_fontembed_otf_write_s));
         numTables ++;
       }
       // else delete
@@ -84,13 +89,13 @@ otf_intersect_tables(OTF_FILE *otf,
 // returns additional space requirements (when bits below >donegid are touched)
 
 static int
-otf_subset_glyf(OTF_FILE *otf,
+otf_subset_glyf(_cf_fontembed_otf_file_t *otf,
 		int curgid,
 		int donegid,
-		BITSET glyphs) // {{{
+		_cf_fontembed_bit_set_t glyphs) // {{{
 {
   int ret = 0;
-  if (get_SHORT(otf->gly) >= 0) // not composite
+  if (__cfFontEmbedGetShort(otf->gly) >= 0) // not composite
     return (ret); // done
 
   char *cur = otf->gly + 10;
@@ -98,15 +103,15 @@ otf_subset_glyf(OTF_FILE *otf,
   unsigned short flags;
   do
   {
-    flags = get_USHORT(cur);
-    const unsigned short sub_gid = get_USHORT(cur + 2);
+    flags = __cfFontEmbedGetUShort(cur);
+    const unsigned short sub_gid = __cfFontEmbedGetUShort(cur + 2);
     DEBUG_assert(sub_gid < otf->numGlyphs);
-    if (!bit_check(glyphs, sub_gid))
+    if (!_cfFontEmbedBitCheck(glyphs, sub_gid))
     {
       // bad: temporarily load sub glyph
-      const int len = otf_get_glyph(otf, sub_gid);
+      const int len = _cfFontEmbedOTFGetGlyph(otf, sub_gid);
       DEBUG_assert(len > 0);
-      bit_set(glyphs, sub_gid);
+      _cfFontEmbedBitSet(glyphs, sub_gid);
       if (sub_gid < donegid)
       {
         ret += len;
@@ -116,7 +121,7 @@ otf_subset_glyf(OTF_FILE *otf,
 #ifdef DEBUG
       const int res =
 #endif
-	otf_get_glyph(otf, curgid); // reload current glyph
+	_cfFontEmbedOTFGetGlyph(otf, curgid); // reload current glyph
       DEBUG_assert(res);
     }
 
@@ -141,10 +146,10 @@ otf_subset_glyf(OTF_FILE *otf,
 // TODO: cmap only required in non-CID context
 
 int
-otf_subset(OTF_FILE *otf,
-	   BITSET glyphs,
-	   OUTPUT_FN output,
-	   void *context) // {{{ - returns number of bytes written
+_cfFontEmbedOTFSubSet(_cf_fontembed_otf_file_t *otf,
+		      _cf_fontembed_bit_set_t glyphs,
+		      _cf_fontembed_output_fn_t output,
+		      void *context) // {{{ - returns number of bytes written
 {
   DEBUG_assert(otf);
   DEBUG_assert(glyphs);
@@ -153,7 +158,7 @@ otf_subset(OTF_FILE *otf,
   int iA, b, c;
 
   // first pass: include all required glyphs
-  bit_set(glyphs, 0); // .notdef always required
+  _cfFontEmbedBitSet(glyphs, 0); // .notdef always required
   int glyfSize = 0;
   for (iA = 0, b = 0, c = 1; iA < otf->numGlyphs; iA ++, c <<= 1)
   {
@@ -164,7 +169,7 @@ otf_subset(OTF_FILE *otf,
     }
     if (glyphs[b] & c)
     {
-      int len = otf_get_glyph(otf, iA);
+      int len = _cfFontEmbedOTFGetGlyph(otf, iA);
       if (len < 0)
       {
         DEBUG_assert(0);
@@ -210,13 +215,13 @@ otf_subset(OTF_FILE *otf,
     DEBUG_assert(offset % 2 == 0);
     // TODO? change format? if glyfSize < 0x20000
     if (otf->indexToLocFormat == 0)
-      set_USHORT(new_loca + iA * 2, offset / 2);
+      __cfFontEmbedSetUShort(new_loca + iA * 2, offset / 2);
     else // ==1
-      set_ULONG(new_loca + iA * 4, offset);
+      __cfFontEmbedSetULong(new_loca + iA * 4, offset);
 
     if (glyphs[b] & c)
     {
-      const int len = otf_get_glyph(otf, iA);
+      const int len = _cfFontEmbedOTFGetGlyph(otf, iA);
       DEBUG_assert(len >= 0);
       memcpy(new_glyf + offset, otf->gly, len);
       offset += len;
@@ -224,33 +229,45 @@ otf_subset(OTF_FILE *otf,
   }
   // last entry
   if (otf->indexToLocFormat == 0)
-    set_USHORT(new_loca + otf->numGlyphs * 2, offset / 2);
+    __cfFontEmbedSetUShort(new_loca + otf->numGlyphs * 2, offset / 2);
   else // ==1
-    set_ULONG(new_loca + otf->numGlyphs * 4, offset);
+    __cfFontEmbedSetULong(new_loca + otf->numGlyphs * 4, offset);
   DEBUG_assert(offset == glyfSize);
 
   // determine new tables.
-  struct _OTF_WRITE otw[] = // sorted
+  struct __cf_fontembed_otf_write_s otw[] = // sorted
   {
     // TODO: cmap only required in non-CID context   or always in CFF
-    {OTF_TAG('c', 'm', 'a', 'p'), otf_action_copy, otf, },
-    {OTF_TAG('c', 'v', 't', ' '), otf_action_copy, otf, },
-    {OTF_TAG('f', 'p', 'g', 'm'), otf_action_copy, otf, },
-    {OTF_TAG('g', 'l', 'y', 'f'), otf_action_replace, new_glyf, glyfSize},
-    {OTF_TAG('h', 'e', 'a', 'd'), otf_action_copy, otf, }, // _copy_head
-    {OTF_TAG('h', 'h', 'e', 'a'), otf_action_copy, otf, },
-    {OTF_TAG('h', 'm', 't', 'x'), otf_action_copy, otf, },
-    {OTF_TAG('l', 'o', 'c', 'a'), otf_action_replace, new_loca, locaSize},
-    {OTF_TAG('m', 'a', 'x', 'p'), otf_action_copy, otf, },
-    {OTF_TAG('n', 'a', 'm', 'e'), otf_action_copy, otf, },
-    {OTF_TAG('p', 'r', 'e', 'p'), otf_action_copy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('c', 'm', 'a', 'p'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('c', 'v', 't', ' '),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('f', 'p', 'g', 'm'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('g', 'l', 'y', 'f'),
+     __cfFontEmbedOTFActionReplace, new_glyf, glyfSize},
+    {_CF_FONTEMBED_OTF_TAG('h', 'e', 'a', 'd'),
+     __cfFontEmbedOTFActionCopy, otf, }, // _copy_head
+    {_CF_FONTEMBED_OTF_TAG('h', 'h', 'e', 'a'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('h', 'm', 't', 'x'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('l', 'o', 'c', 'a'),
+     __cfFontEmbedOTFActionReplace, new_loca, locaSize},
+    {_CF_FONTEMBED_OTF_TAG('m', 'a', 'x', 'p'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('n', 'a', 'm', 'e'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('p', 'r', 'e', 'p'),
+     __cfFontEmbedOTFActionCopy, otf, },
     // vhea vmtx (never used in PDF, but possible in PS>=3011)
     {0, 0, 0, 0}
   };
 
   // and write them
-  int numTables = otf_intersect_tables(otf, otw);
-  int ret = otf_write_sfnt(otw, otf->version, numTables, output, context);
+  int numTables = __cfFontEmbedOTFIntersectTables(otf, otw);
+  int ret = __cfFontEmbedOTFWriteSFNT(otw, otf->version, numTables, output,
+				      context);
 
   free(new_loca);
   free(new_glyf);
@@ -265,10 +282,10 @@ otf_subset(OTF_FILE *otf,
 // TODO no subsetting actually done (for now)
 
 int
-otf_subset_cff(OTF_FILE *otf,
-	       BITSET glyphs,
-	       OUTPUT_FN output,
-	       void *context) // {{{ - returns number of bytes written
+_cfFontEmbedOTFSubSetCFF(_cf_fontembed_otf_file_t *otf,
+			 _cf_fontembed_bit_set_t glyphs,
+			 _cf_fontembed_output_fn_t output,
+			 void *context) // {{{ - returns number of bytes written
 {
   DEBUG_assert(otf);
   DEBUG_assert(output);
@@ -276,41 +293,55 @@ otf_subset_cff(OTF_FILE *otf,
   // TODO char *new_cff = cff_subset(...);
 
   // determine new tables.
-  struct _OTF_WRITE otw[] =
+  struct __cf_fontembed_otf_write_s otw[] =
   {
-    {OTF_TAG('C', 'F', 'F', ' '), otf_action_copy, otf, },
-//  {OTF_TAG('C', 'F', 'F', ' '), otf_action_replace, new_glyf, glyfSize},
-    {OTF_TAG('c', 'm', 'a', 'p'), otf_action_copy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('C', 'F', 'F', ' '),
+     __cfFontEmbedOTFActionCopy, otf, },
+//  {_CF_FONTEMBED_OTF_TAG('C', 'F', 'F', ' '),
+//   __cfFontEmbedOTFActionReplace, new_glyf, glyfSize},
+    {_CF_FONTEMBED_OTF_TAG('c', 'm', 'a', 'p'),
+     __cfFontEmbedOTFActionCopy, otf, },
 #if 0 // not actually needed!
-    {OTF_TAG('c', 'v', 't', ' '), otf_action_copy, otf, },
-    {OTF_TAG('f', 'p', 'g', 'm'), otf_action_copy, otf, },
-    {OTF_TAG('h', 'e', 'a', 'd'), otf_action_copy, otf, }, // _copy_head
-    {OTF_TAG('h', 'h', 'e', 'a'), otf_action_copy, otf, },
-    {OTF_TAG('h', 'm', 't', 'x'), otf_action_copy, otf, },
-    {OTF_TAG('m', 'a', 'x', 'p'), otf_action_copy, otf, },
-    {OTF_TAG('n', 'a', 'm', 'e'), otf_action_copy, otf, },
-    {OTF_TAG('p', 'r', 'e', 'p'), otf_action_copy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('c', 'v', 't', ' '),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('f', 'p', 'g', 'm'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('h', 'e', 'a', 'd'),
+     __cfFontEmbedOTFActionCopy, otf, }, // _copy_head
+    {_CF_FONTEMBED_OTF_TAG('h', 'h', 'e', 'a'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('h', 'm', 't', 'x'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('m', 'a', 'x', 'p'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('n', 'a', 'm', 'e'),
+     __cfFontEmbedOTFActionCopy, otf, },
+    {_CF_FONTEMBED_OTF_TAG('p', 'r', 'e', 'p'),
+     __cfFontEmbedOTFActionCopy, otf, },
 #endif // 0
     {0, 0, 0, 0}
   };
 
   // and write them
-  int numTables = otf_intersect_tables(otf, otw);
-  int ret = otf_write_sfnt(otw, otf->version, numTables, output, context);
+  int numTables = __cfFontEmbedOTFIntersectTables(otf, otw);
+  int ret = __cfFontEmbedOTFWriteSFNT(otw, otf->version, numTables, output,
+				      context);
 
 //  free(new_cff);
   return (ret);
 }
 // }}}
 
-//int copy_block(FILE *f, long pos, int length, OUTPUT_FN output,
+
+//int copy_block(FILE *f, long pos, int length,
+//               _cf_fontembed_output_fn_t output,
 //               void *context); // copied bytes or -1 (also on premature EOF)
 
 static int
 copy_block(FILE *f,
 	   long pos,
 	   int length,
-	   OUTPUT_FN output,
+	   _cf_fontembed_output_fn_t output,
 	   void *context) // {{{
 {
   DEBUG_assert(f);
@@ -345,19 +376,22 @@ copy_block(FILE *f,
 }
 // }}}
 
+
 int
-otf_cff_extract(OTF_FILE *otf,
-		OUTPUT_FN output,
-		void *context) // {{{ - returns number of bytes written
+_cfFontEmbedOTFCFFExtract(_cf_fontembed_otf_file_t *otf,
+			  _cf_fontembed_output_fn_t output,
+			  void *context) // {{{ - returns number of bytes
+                                         //       written
 {
   DEBUG_assert(otf);
   DEBUG_assert(output);
 
-  int idx = otf_find_table(otf, OTF_TAG('C', 'F', 'F', ' '));
+  int idx =
+    __cfFontEmbedOTFFindTable(otf, _CF_FONTEMBED_OTF_TAG('C', 'F', 'F', ' '));
   if (idx == -1)
     return (-1);
 
-  const OTF_DIRENT *table = otf->tables + idx;
+  const _cf_fontembed_otf_dir_ent_t *table = otf->tables + idx;
 
   return (copy_block(otf->f, table->offset, table->length, output, context));
 }
@@ -368,7 +402,7 @@ otf_cff_extract(OTF_FILE *otf,
 
 #if 0 // TODO elsewhere : char *cff_subset(...);
   // first pass: include all required glyphs
-  bit_set(glyphs, 0); // .notdef always required
+  _cfFontEmbedBitSet(glyphs, 0); // .notdef always required
   int glyfSize = 0;
   for (iA = 0, b = 0, c = 1; iA < otf->numGlyphs; iA ++, c <<= 1)
   {

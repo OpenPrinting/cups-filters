@@ -5,12 +5,14 @@ typedef struct
 {
   int len, alloc;
   char *buf;
-} DYN_STRING;
+} __cf_fontembed_dyn_string_t;
 
-int dyn_init(DYN_STRING *ds, int reserve_size); // -1 on error
-void dyn_free(DYN_STRING *ds);
-int dyn_ensure(DYN_STRING *ds, int free_space);
-int dyn_printf(DYN_STRING *ds, const char *fmt, ...) // appends
+int __cfFontEmbedDynInit(__cf_fontembed_dyn_string_t *ds,
+			 int reserve_size); // -1 on error
+void __cfFontEmbedDynFree(__cf_fontembed_dyn_string_t *ds);
+int __cfFontEmbedDynEnsure(__cf_fontembed_dyn_string_t *ds, int free_space);
+int __cfFontEmbedDynPrintF(__cf_fontembed_dyn_string_t *ds,
+			   const char *fmt, ...) // appends
   __attribute__((format(printf, 2, 3)));
 
 #endif // !_FONTEMBED_DYNSTRING_H_

@@ -1,4 +1,4 @@
-#include <cupsfilters/fontembed.h>
+#include <cupsfilters/fontembed-private.h>
 #include <cupsfilters/debug-internal.h>
 #include "embed-pdf-private.h"
 #include "embed-sfnt-private.h"
@@ -8,7 +8,7 @@
 #include <time.h>
 
 
-// NOTE: these must be in sync with the EMB_FORMAT enum
+// NOTE: these must be in sync with the _cf_fontembed_emb_format_t enum
 static const char *emb_pdf_font_subtype[][2] =
 { // {{{ (output_format, multibyte)
   {"Type1", NULL},
@@ -39,9 +39,9 @@ static const char *emb_pdf_fontfile_subtype[][2] =
 
 
 static inline int
-emb_multibyte(EMB_PARAMS *emb) // {{{
+emb_multibyte(_cf_fontembed_emb_params_t *emb) // {{{
 {
-  return ((emb->plan & EMB_A_MULTIBYTE) ? 1 : 0);
+  return ((emb->plan & _CF_FONTEMBED_EMB_A_MULTIBYTE) ? 1 : 0);
 }
 // }}}
 
@@ -80,7 +80,7 @@ static const char
 // this is in the font dict
 
 const char *
-emb_pdf_get_font_subtype(EMB_PARAMS *emb) // {{{
+_cfFontEmbedEmbPDFGetFontSubType(_cf_fontembed_emb_params_t *emb) // {{{
 {
   DEBUG_assert(emb);
   return (emb_pdf_font_subtype[emb->outtype][emb_multibyte(emb)]);
@@ -91,7 +91,7 @@ emb_pdf_get_font_subtype(EMB_PARAMS *emb) // {{{
 // in font descriptor
 
 const char *
-emb_pdf_get_fontfile_key(EMB_PARAMS *emb) // {{{
+_cfFontEmbedEmbPDFGetFontFileKey(_cf_fontembed_emb_params_t *emb) // {{{
 {
   DEBUG_assert(emb);
   return (emb_pdf_fontfile_key[emb->outtype]);
@@ -102,7 +102,7 @@ emb_pdf_get_fontfile_key(EMB_PARAMS *emb) // {{{
 // this is what to put in the font-stream dict
 
 const char *
-emb_pdf_get_fontfile_subtype(EMB_PARAMS *emb) // {{{
+_cfFontEmbedEmbPDFGetFontFileSubType(_cf_fontembed_emb_params_t *emb) // {{{
 {
   DEBUG_assert(emb);
   return (emb_pdf_fontfile_subtype[emb->outtype][emb_multibyte(emb)]);
@@ -110,11 +110,11 @@ emb_pdf_get_fontfile_subtype(EMB_PARAMS *emb) // {{{
 // }}}
 
 
-// {{{ static EMB_PDF_FONTDESCR *
+// {{{ static _cf_fontembed_emb_pdf_font_descr_t *
 //     emb_pdf_fd_new(fontname, subset_tag, cid_registry, cid_ordering,
 //                    cid_supplement, panose)
 
-static EMB_PDF_FONTDESCR *
+static _cf_fontembed_emb_pdf_font_descr_t *
 emb_pdf_fd_new(const char *fontname,
 	       const char *subset_tag,
 	       const char *cid_registry, // or supplement==-1
@@ -122,9 +122,9 @@ emb_pdf_fd_new(const char *fontname,
 	       int cid_supplement) // -1 for non-cid
 {
   DEBUG_assert(fontname);
-  EMB_PDF_FONTDESCR *ret;
+  _cf_fontembed_emb_pdf_font_descr_t *ret;
 
-  int len = sizeof(EMB_PDF_FONTDESCR);
+  int len = sizeof(_cf_fontembed_emb_pdf_font_descr_t);
   if (subset_tag)
   {
     DEBUG_assert(strlen(subset_tag) == 6);
@@ -182,8 +182,9 @@ emb_pdf_fd_new(const char *fontname,
 // }}}
 
 
-EMB_PDF_FONTDESCR *
-emb_pdf_fontdescr(EMB_PARAMS *emb) // {{{ -  to be freed by user
+_cf_fontembed_emb_pdf_font_descr_t *
+_cfFontEmbedEmbPDFFontDescr(_cf_fontembed_emb_params_t *emb) // {{{
+                                                    // -  to be freed by user
 {
   DEBUG_assert(emb);
 
@@ -195,7 +196,7 @@ emb_pdf_fontdescr(EMB_PARAMS *emb) // {{{ -  to be freed by user
 
   char subtag[7];
   subtag[6] = 0;
-  if (emb->plan & EMB_A_SUBSET)
+  if (emb->plan & _CF_FONTEMBED_EMB_A_SUBSET)
   {
     int iA;
     for (iA = 0; iA < 6; iA ++)
@@ -208,12 +209,13 @@ emb_pdf_fontdescr(EMB_PARAMS *emb) // {{{ -  to be freed by user
   // }}}
 
   const char *fontname = NULL;
-  if ((emb->intype == EMB_FMT_TTF) || (emb->intype == EMB_FMT_OTF))
+  if ((emb->intype == _CF_FONTEMBED_EMB_FMT_TTF) ||
+      (emb->intype == _CF_FONTEMBED_EMB_FMT_OTF))
   { // TODO? use fontinfo from CFF when outtype==CFT, etc.?
     DEBUG_assert(emb->font->sfnt);
-    fontname = emb_otf_get_fontname(emb->font->sfnt);
+    fontname = __cfFontEmbedEmbOTFGetFontName(emb->font->sfnt);
   }
-  else if (emb->outtype == EMB_FMT_STDFONT)
+  else if (emb->outtype == _CF_FONTEMBED_EMB_FMT_STDFONT)
     return (NULL);
   else
   {
@@ -222,8 +224,8 @@ emb_pdf_fontdescr(EMB_PARAMS *emb) // {{{ -  to be freed by user
     return (NULL);
   }
 
-  EMB_PDF_FONTDESCR *ret;
-  if (emb->plan & EMB_A_MULTIBYTE) // multibyte
+  _cf_fontembed_emb_pdf_font_descr_t *ret;
+  if (emb->plan & _CF_FONTEMBED_EMB_A_MULTIBYTE) // multibyte
     ret = emb_pdf_fd_new(fontname, subset_tag, "Adobe", "Identity", 0);
                                                       // TODO other /ROS ?
   else
@@ -231,8 +233,9 @@ emb_pdf_fontdescr(EMB_PARAMS *emb) // {{{ -  to be freed by user
   if (!ret)
     return (NULL);
 
-  if ((emb->intype == EMB_FMT_TTF) || (emb->intype == EMB_FMT_OTF))
-    emb_otf_get_pdf_fontdescr(emb->font->sfnt, ret);
+  if ((emb->intype == _CF_FONTEMBED_EMB_FMT_TTF) ||
+      (emb->intype == _CF_FONTEMBED_EMB_FMT_OTF))
+    __cfFontEmbedEmbOTFGetPDFFontDescr(emb->font->sfnt, ret);
   else
     DEBUG_assert(0);
   return (ret);
@@ -240,15 +243,16 @@ emb_pdf_fontdescr(EMB_PARAMS *emb) // {{{ -  to be freed by user
 // }}}
 
 
-EMB_PDF_FONTWIDTHS *
-emb_pdf_fw_new(int datasize) // {{{
+_cf_fontembed_emb_pdf_font_widths_t *
+__cfFontEmbedEmbPDFFWNew(int datasize) // {{{
 {
   DEBUG_assert(datasize >= 0);
-  EMB_PDF_FONTWIDTHS *ret =
-    calloc(1, sizeof(EMB_PDF_FONTWIDTHS) + datasize * sizeof(int));
+  _cf_fontembed_emb_pdf_font_widths_t *ret =
+    calloc(1, sizeof(_cf_fontembed_emb_pdf_font_widths_t) +
+	   datasize * sizeof(int));
   if (!ret)
   {
-    fprintf(stderr,"Bad alloc: %s\n", strerror(errno));
+    fprintf(stderr, "Bad alloc: %s\n", strerror(errno));
     DEBUG_assert(0);
     return (NULL);
   }
@@ -259,18 +263,19 @@ emb_pdf_fw_new(int datasize) // {{{
 
 // if default_width == -1: default_width will be estimated
 
-EMB_PDF_FONTWIDTHS *
-emb_pdf_fw_cidwidths(const BITSET glyphs,
-		     int len,
-		     int default_width,
-		     int (*getGlyphWidth)(void *context, int gid),
-		     void *context) // {{{ glyphs == NULL -> output all
+_cf_fontembed_emb_pdf_font_widths_t *
+__cfFontEmbedEmbPDFFWCIDWidths(const _cf_fontembed_bit_set_t glyphs,
+			       int len,
+			       int default_width,
+			       int (*getGlyphWidth)(void *context, int gid),
+			       void *context) // {{{ glyphs == NULL ->
+                                              //                 output all
 {
   DEBUG_assert(getGlyphWidth);
 
-  FREQUENT *freq = NULL;
+  __cf_fontembed_frequent_t *freq = NULL;
   if (default_width < 0)
-    freq = frequent_new(3);
+    freq = __cfFontEmbedFrequentNew(3);
 
   int iA, b, c;
   int size = 0,
@@ -289,7 +294,7 @@ emb_pdf_fw_cidwidths(const BITSET glyphs,
       if (freq)
       {
         const int w = (*getGlyphWidth)(context, iA);
-        frequent_add(freq, w);
+        __cfFontEmbedFrequentAdd(freq, w);
       }
       if (in_region)
         in_region ++;
@@ -311,13 +316,13 @@ emb_pdf_fw_cidwidths(const BITSET glyphs,
 
   if (freq)
   {
-    default_width = frequent_get(freq, 0);
+    default_width = __cfFontEmbedFrequentGet(freq, 0);
     free(freq);
   }
   DEBUG_assert(default_width > 0);
 
   // now create the array
-  EMB_PDF_FONTWIDTHS *ret = emb_pdf_fw_new(size + 1);
+  _cf_fontembed_emb_pdf_font_widths_t *ret = __cfFontEmbedEmbPDFFWNew(size + 1);
   if (!ret)
     return (NULL);
   ret->default_width = default_width;
@@ -412,25 +417,27 @@ emb_pdf_fw_cidwidths(const BITSET glyphs,
 // }}}
 
 
-// TODO: encoding into EMB_PARAMS (emb_new_enc(..., encoding, len, to_unicode));
-//   -> will then change interpretation of BITSET...(?really?); can we allow
-//      dynamic encoding map generation?
-//   -> encoding has a "len";  len<256
+// TODO: Encoding into _cf_fontembed_emb_params_t (emb_new_enc(..., encoding,
+//       len, to_unicode));
+//   -> will then change interpretation of _cf_fontembed_bit_set_t...
+//        (?really?); can we allow dynamic encoding map generation?
+//   -> encoding has a "len";  len < 256
 
-EMB_PDF_FONTWIDTHS *
-emb_pdf_fontwidths(EMB_PARAMS *emb) // {{{
+_cf_fontembed_emb_pdf_font_widths_t *
+_cfFontEmbedEmbPDFFontWidths(_cf_fontembed_emb_params_t *emb) // {{{
 {
   DEBUG_assert(emb);
 
-  if ((emb->intype == EMB_FMT_TTF) || (emb->intype == EMB_FMT_OTF))
+  if ((emb->intype == _CF_FONTEMBED_EMB_FMT_TTF) ||
+      (emb->intype == _CF_FONTEMBED_EMB_FMT_OTF))
   {
     DEBUG_assert(emb->font->sfnt);
-    if (emb->plan & EMB_A_MULTIBYTE)
-      return (emb_otf_get_pdf_cidwidths(emb->font->sfnt,emb->subset));
+    if (emb->plan & _CF_FONTEMBED_EMB_A_MULTIBYTE)
+      return (__cfFontEmbedEmbOTFGetPDFCIDWidths(emb->font->sfnt, emb->subset));
     else
-      return (emb_otf_get_pdf_widths(emb->font->sfnt, /*encoding*/NULL,
-				     emb->font->sfnt->numGlyphs,
-				     emb->subset)); // TODO: encoding
+      return (__cfFontEmbedEmbOTFGetPDFWidths(emb->font->sfnt, /*encoding*/NULL,
+					      emb->font->sfnt->numGlyphs,
+					      emb->subset)); // TODO: encoding
   }
   else
   {
@@ -460,9 +467,10 @@ emb_pdf_fontwidths(EMB_PARAMS *emb) // {{{
 // would be nice...
 
 char *
-emb_pdf_simple_fontdescr(EMB_PARAMS *emb,
-			 EMB_PDF_FONTDESCR *fdes,
-			 int fontfile_obj_ref) // {{{ - to be freed by user
+_cfFontEmbedEmbPDFSimpleFontDescr(_cf_fontembed_emb_params_t *emb,
+				  _cf_fontembed_emb_pdf_font_descr_t *fdes,
+				  int fontfile_obj_ref) // {{{ - to be freed
+                                                        //       by user
 {
   DEBUG_assert(emb);
   DEBUG_assert(fdes);
@@ -532,11 +540,12 @@ emb_pdf_simple_fontdescr(EMB_PARAMS *emb,
     len = snprintf(pos, size, "> >>\n");
     NEXT;
   }
-  // TODO (for Type0)? CIDSet  -> simply our glyphs BITSET  (ok. endianess?)
+  // TODO (for Type0)? CIDSet  -> simply our glyphs _cf_fontembed_bit_set_t
+  // (ok. endianess?)
   len = snprintf(pos, size,
 		 "  /%s %d 0 R\n"
 		 ">>\n",
-		 emb_pdf_get_fontfile_key(emb),
+		 _cfFontEmbedEmbPDFGetFontFileKey(emb),
 		 fontfile_obj_ref);
   NEXT;
 
@@ -546,93 +555,96 @@ emb_pdf_simple_fontdescr(EMB_PARAMS *emb,
 
 
 char *
-emb_pdf_simple_font(EMB_PARAMS *emb,
-		    EMB_PDF_FONTDESCR *fdes,
-		    EMB_PDF_FONTWIDTHS *fwid,
-		    int fontdescr_obj_ref) // {{{ - to be freed by user
+_cfFontEmbedEmbPDFSimpleFont(_cf_fontembed_emb_params_t *emb,
+			     _cf_fontembed_emb_pdf_font_descr_t *fdes,
+			     _cf_fontembed_emb_pdf_font_widths_t *fwid,
+			     int fontdescr_obj_ref) // {{{ - to be freed by user
 {
   DEBUG_assert(emb);
   DEBUG_assert(fdes);
   DEBUG_assert(fwid);
 
   int iA, iB;
-  DYN_STRING ret;
+  __cf_fontembed_dyn_string_t ret;
 
-  if (dyn_init(&ret, 500) == -1)
+  if (__cfFontEmbedDynInit(&ret, 500) == -1)
     return (NULL);
 
-  dyn_printf(&ret, "<</Type /Font\n"
-                   "  /Subtype /%s\n"
-                   "  /BaseFont /%s\n"
-                   "  /FontDescriptor %d 0 R\n",
-	     emb_pdf_get_font_subtype(emb),
-	     emb_pdf_escape_name(fdes->fontname,-1),
-	     fontdescr_obj_ref);
+  __cfFontEmbedDynPrintF(&ret,
+			 "<</Type /Font\n"
+			 "  /Subtype /%s\n"
+			 "  /BaseFont /%s\n"
+			 "  /FontDescriptor %d 0 R\n",
+			 _cfFontEmbedEmbPDFGetFontSubType(emb),
+			 emb_pdf_escape_name(fdes->fontname,-1),
+			 fontdescr_obj_ref);
 
-  if (emb->plan & EMB_A_MULTIBYTE)
+  if (emb->plan & _CF_FONTEMBED_EMB_A_MULTIBYTE)
   {
     // multibyte
     DEBUG_assert(fwid->warray);
-    dyn_printf(&ret, "  /CIDSystemInfo <<\n"
-                     "    /Registry (%s)\n"
-                     "    /Ordering (%s)\n"
-                     "    /Supplement %d\n"
-                     "  >>\n"
-                     "  /DW %d\n",
-//                   "  /CIDToGIDMap /Id...\n" // TrueType only, default
-	                                       // Identity  [optional?  which
-	                                       // PDF version says what?]
-	       fdes->registry,
-	       fdes->ordering,
-	       fdes->supplement,
-	       fwid->default_width);
+    __cfFontEmbedDynPrintF(&ret,
+			   "  /CIDSystemInfo <<\n"
+			   "    /Registry (%s)\n"
+			   "    /Ordering (%s)\n"
+			   "    /Supplement %d\n"
+			   "  >>\n"
+			   "  /DW %d\n",
+			   //"  /CIDToGIDMap /Id...\n" // TrueType only, default
+			   // Identity  [optional?  which
+			   // PDF version says what?]
+			   fdes->registry,
+			   fdes->ordering,
+			   fdes->supplement,
+			   fwid->default_width);
 
     if (fwid->warray[0])
     {
-      dyn_printf(&ret, "  /W [");
+      __cfFontEmbedDynPrintF(&ret, "  /W [");
       for (iA = 0; fwid->warray[iA];)
       {
         if (fwid->warray[iA] < 0)
 	{
 	  // c1 (c1-len) w
-          dyn_printf(&ret, " %d %d %d",
-		     fwid->warray[iA + 1],
-		     fwid->warray[iA + 1] - fwid->warray[iA],
-		     fwid->warray[iA + 2]);
+          __cfFontEmbedDynPrintF(&ret, " %d %d %d",
+				 fwid->warray[iA + 1],
+				 fwid->warray[iA + 1] - fwid->warray[iA],
+				 fwid->warray[iA + 2]);
           iA += 3;
         }
 	else
 	{
 	  // c [w ... w]
           iB = fwid->warray[iA ++]; // len
-          dyn_printf(&ret, " %d [", fwid->warray[iA ++]); // c
+          __cfFontEmbedDynPrintF(&ret, " %d [", fwid->warray[iA ++]); // c
           for (; iB > 0; iB --)
-            dyn_printf(&ret, " %d", fwid->warray[iA ++]);
-          dyn_printf(&ret, "]");
+            __cfFontEmbedDynPrintF(&ret, " %d", fwid->warray[iA ++]);
+          __cfFontEmbedDynPrintF(&ret, "]");
         }
       }
-      dyn_printf(&ret, "]\n");
+      __cfFontEmbedDynPrintF(&ret, "]\n");
     }
   }
   else
   {
     // "not std14"
     DEBUG_assert(fwid->widths);
-    dyn_printf(&ret, "  /Encoding /MacRomanEncoding\n"  // optional; TODO!!!!!
-//                   "  /ToUnicode ?\n"  // optional
-                     "  /FirstChar %d\n"
-                     "  /LastChar %d\n"
-                     "  /Widths [",
-	       fwid->first,
-	       fwid->last);
+    __cfFontEmbedDynPrintF(&ret,
+			   "  /Encoding /MacRomanEncoding\n"// optional; TODO!
+			   //"  /ToUnicode ?\n"  // optional
+			   "  /FirstChar %d\n"
+			   "  /LastChar %d\n"
+			   "  /Widths [",
+			   fwid->first,
+			   fwid->last);
     for (iA = 0, iB = fwid->first; iB <= fwid->last; iA ++, iB ++)
-      dyn_printf(&ret, " %d", fwid->widths[iA]);
-    dyn_printf(&ret, "]\n");
+      __cfFontEmbedDynPrintF(&ret, " %d", fwid->widths[iA]);
+    __cfFontEmbedDynPrintF(&ret, "]\n");
   }
-  dyn_printf(&ret, ">>\n");
+  __cfFontEmbedDynPrintF(&ret, ">>\n");
   if (ret.len == -1)
   {
-    dyn_free(&ret);
+    __cfFontEmbedDynFree(&ret);
     DEBUG_assert(0);
     return (NULL);
   }
@@ -647,10 +659,10 @@ emb_pdf_simple_font(EMB_PARAMS *emb,
 // (TODO?? fontname here without subset-tag [_some_ pdfs out there seem
 //  to be that way])
 // TODO? don't do the CidType0 check here?
-// NOTE: this is _additionally_ to emb_pdf_simple_font()!
+// NOTE: this is _additionally_ to _cfFontEmbedEmbPDFSimpleFont()!
 
 char *
-emb_pdf_simple_cidfont(EMB_PARAMS *emb,
+_cfFontEmbedEmbPDFSimpleCIDFont(_cf_fontembed_emb_params_t *emb,
 		       const char *fontname,
 		       int descendant_obj_ref) // {{{ - to be freed by user
 {
@@ -670,7 +682,7 @@ emb_pdf_simple_cidfont(EMB_PARAMS *emb,
   // for CFF: one of:
   // UniGB-UCS2-H, UniCNS-UCS2-H, UniJIS-UCS2-H, UniKS-UCS2-H
   const char *encoding = "Identity-H", *addenc = "-";
-  if (emb->outtype == EMB_FMT_TTF)
+  if (emb->outtype == _CF_FONTEMBED_EMB_FMT_TTF)
     // !=CidType0
     addenc = "";
 
@@ -696,7 +708,8 @@ emb_pdf_simple_cidfont(EMB_PARAMS *emb,
 
 
 char *
-emb_pdf_simple_stdfont(EMB_PARAMS *emb) // {{{ - to be freed by user
+_cfFontEmbedEmbPDFSimpleStdFont(_cf_fontembed_emb_params_t *emb)
+                                                 // {{{ - to be freed by user
 {
   DEBUG_assert(emb);
   DEBUG_assert(emb->font->stdname);
@@ -717,7 +730,7 @@ emb_pdf_simple_stdfont(EMB_PARAMS *emb) // {{{ - to be freed by user
 		 "  /Subtype /Type1\n"
 		 "  /BaseFont /%s\n"
 		 ">>\n",
-//               emb_pdf_get_font_subtype(emb),
+//               _cfFontEmbedEmbPDFGetFontSubType(emb),
 		 emb->font->stdname);
   NEXT;
 

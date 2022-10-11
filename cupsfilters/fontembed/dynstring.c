@@ -8,8 +8,8 @@
 
 
 int
-dyn_init(DYN_STRING *ds,
-	 int reserve_size) // {{{
+__cfFontEmbedDynInit(__cf_fontembed_dyn_string_t *ds,
+		     int reserve_size) // {{{
 {
   DEBUG_assert(ds);
   DEBUG_assert(reserve_size > 0);
@@ -30,7 +30,7 @@ dyn_init(DYN_STRING *ds,
 
 
 void
-dyn_free(DYN_STRING *ds) // {{{
+__cfFontEmbedDynFree(__cf_fontembed_dyn_string_t *ds) // {{{
 {
   DEBUG_assert(ds);
 
@@ -43,8 +43,8 @@ dyn_free(DYN_STRING *ds) // {{{
 
 
 int
-dyn_ensure(DYN_STRING *ds,
-	   int free_space) // {{{
+__cfFontEmbedDynEnsure(__cf_fontembed_dyn_string_t *ds,
+		       int free_space) // {{{
 {
   DEBUG_assert(ds);
   DEBUG_assert(free_space);
@@ -68,8 +68,8 @@ dyn_ensure(DYN_STRING *ds,
 // }}}
 
 
-int
-dyn_vprintf(DYN_STRING *ds,
+static int
+dyn_vprintf(__cf_fontembed_dyn_string_t *ds,
 	    const char *fmt,
 	    va_list ap) // {{{
 {
@@ -78,7 +78,7 @@ dyn_vprintf(DYN_STRING *ds,
   int need, len = strlen(fmt) + 100;
   va_list va;
 
-  if (dyn_ensure(ds, len) == -1)
+  if (__cfFontEmbedDynEnsure(ds, len) == -1)
     return (-1);
 
   while (1)
@@ -94,7 +94,7 @@ dyn_vprintf(DYN_STRING *ds,
       ds->len += need;
       break;
     }
-    if (dyn_ensure(ds, len) == -1)
+    if (__cfFontEmbedDynEnsure(ds, len) == -1)
       return (-1);
   }
   return (0);
@@ -102,9 +102,9 @@ dyn_vprintf(DYN_STRING *ds,
 // }}}
 
 int
-dyn_printf(DYN_STRING *ds,
-	   const char *fmt,
-	   ...) // {{{
+__cfFontEmbedDynPrintF(__cf_fontembed_dyn_string_t *ds,
+		       const char *fmt,
+		       ...) // {{{
 {
   va_list va;
   int ret;

@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "pdfutils.h"
-#include "fontembed.h"
+#include "fontembed-private.h"
 #include "debug-internal.h"
 
 
@@ -417,18 +417,18 @@ pdf_out_outfn(const char *buf,
 
 int
 cfPDFOutWriteFont(cf_pdf_out_t *pdf,
-		  EMB_PARAMS *emb) // {{{ 
+		  _cf_fontembed_emb_params_t *emb) // {{{ 
 {
   DEBUG_assert(pdf);
   DEBUG_assert(emb);
 
-  EMB_PDF_FONTDESCR *fdes = emb_pdf_fontdescr(emb);
+  _cf_fontembed_emb_pdf_font_descr_t *fdes = _cfFontEmbedEmbPDFFontDescr(emb);
   if (!fdes)
   {
-    if (emb->outtype == EMB_FMT_STDFONT)
+    if (emb->outtype == _CF_FONTEMBED_EMB_FMT_STDFONT)
     { // std-14 font
       const int f_obj = cfPDFOutAddXRef(pdf);
-      char *res = emb_pdf_simple_stdfont(emb);
+      char *res = _cfFontEmbedEmbPDFSimpleStdFont(emb);
       if (!res)
         return (0);
 
@@ -450,13 +450,13 @@ cfPDFOutWriteFont(cf_pdf_out_t *pdf,
 		 "<</Length %d 0 R\n",
 		 ff_obj,
 		 ff_obj + 1);
-  if (emb_pdf_get_fontfile_subtype(emb))
+  if (_cfFontEmbedEmbPDFGetFontFileSubType(emb))
     cfPDFOutPrintF(pdf, "  /Subtype /%s\n",
-		   emb_pdf_get_fontfile_subtype(emb));
-  if (emb->outtype == EMB_FMT_TTF)
+		   _cfFontEmbedEmbPDFGetFontFileSubType(emb));
+  if (emb->outtype == _CF_FONTEMBED_EMB_FMT_TTF)
     cfPDFOutPrintF(pdf, "  /Length1 %d 0 R\n",
 		   ff_obj + 2);
-  else if (emb->outtype == EMB_FMT_T1) // TODO
+  else if (emb->outtype == _CF_FONTEMBED_EMB_FMT_T1) // TODO
     cfPDFOutPrintF(pdf,
 		   "  /Length1 ?\n"
 		   "  /Length2 ?\n"
@@ -465,7 +465,7 @@ cfPDFOutWriteFont(cf_pdf_out_t *pdf,
 		 ">>\n"
 		 "stream\n");
   long streamsize = -pdf->filepos;
-  const int outlen = emb_embed(emb, pdf_out_outfn, pdf);
+  const int outlen = _cfFontEmbedEmbEmbed(emb, pdf_out_outfn, pdf);
   streamsize += pdf->filepos;
   cfPDFOutPrintF(pdf,"\nendstream\n"
                     "endobj\n");
@@ -478,7 +478,7 @@ cfPDFOutWriteFont(cf_pdf_out_t *pdf,
 		 "endobj\n",
 		 l0_obj, streamsize);
 
-  if (emb->outtype == EMB_FMT_TTF)
+  if (emb->outtype == _CF_FONTEMBED_EMB_FMT_TTF)
   {
     const int l1_obj = cfPDFOutAddXRef(pdf);
     DEBUG_assert(l1_obj == ff_obj + 2);
@@ -490,7 +490,7 @@ cfPDFOutWriteFont(cf_pdf_out_t *pdf,
   }
 
   const int fd_obj = cfPDFOutAddXRef(pdf);
-  char *res = emb_pdf_simple_fontdescr(emb, fdes, ff_obj);
+  char *res = _cfFontEmbedEmbPDFSimpleFontDescr(emb, fdes, ff_obj);
   if (!res)
   {
     free(fdes);
@@ -503,14 +503,14 @@ cfPDFOutWriteFont(cf_pdf_out_t *pdf,
 		 fd_obj, res);
   free(res);
 
-  EMB_PDF_FONTWIDTHS *fwid = emb_pdf_fontwidths(emb);
+  _cf_fontembed_emb_pdf_font_widths_t *fwid = _cfFontEmbedEmbPDFFontWidths(emb);
   if (!fwid)
   {
     free(fdes);
     return (0);
   }
   const int f_obj = cfPDFOutAddXRef(pdf);
-  res = emb_pdf_simple_font(emb, fdes, fwid, fd_obj);
+  res = _cfFontEmbedEmbPDFSimpleFont(emb, fdes, fwid, fd_obj);
   if (!res)
   {
     free(fwid);
@@ -525,9 +525,9 @@ cfPDFOutWriteFont(cf_pdf_out_t *pdf,
   free(res);
   free(fwid);
 
-  if (emb->plan & EMB_A_MULTIBYTE)
+  if (emb->plan & _CF_FONTEMBED_EMB_A_MULTIBYTE)
   {
-    res = emb_pdf_simple_cidfont(emb, fdes->fontname, f_obj);
+    res = _cfFontEmbedEmbPDFSimpleCIDFont(emb, fdes->fontname, f_obj);
     if (!res)
     {
       free(fdes);

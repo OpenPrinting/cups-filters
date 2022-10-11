@@ -20,7 +20,7 @@
 #include "debug-internal.h"
 #include "filter.h"
 #include "raster.h"
-#include "fontembed.h"
+#include "fontembed-private.h"
 #include <ctype.h>
 #include <errno.h>
 #include "fontconfig/fontconfig.h"
@@ -481,7 +481,7 @@ typedef struct			// **** Character/attribute structure... ****
 typedef struct texttopdf_doc_s
 {
   int		NumFonts;	// Number of fonts to use
-  EMB_PARAMS	*Fonts[256][4];	// Fonts to use
+  _cf_fontembed_emb_params_t *Fonts[256][4]; // Fonts to use
   unsigned short Chars[256];	// Input char to unicode
   unsigned char	Codes[65536];	// Unicode glyph mapping to font
   int		Widths[256];	// Widths of each font
@@ -528,9 +528,9 @@ typedef struct texttopdf_doc_s
 // Local functions...
 //
 
-static EMB_PARAMS *font_load(const char *font, int fontwidth, cf_logfunc_t log,
-			     void *ld);
-static EMB_PARAMS *font_std(const char *name);
+static _cf_fontembed_emb_params_t *font_load(const char *font, int fontwidth,
+					     cf_logfunc_t log, void *ld);
+static _cf_fontembed_emb_params_t *font_std(const char *name);
 static int	compare_keywords(const void *k1, const void *k2);
 static int	get_utf8(FILE *fp);
 static void	write_line(int row, lchar_t *line, texttopdf_doc_t *doc);
@@ -1429,13 +1429,13 @@ cfFilterTextToPDF(int inputfd,  	// I - File descriptor input stream
 }
 
 
-static EMB_PARAMS *
+static _cf_fontembed_emb_params_t *
 font_load(const char *font,
 	  int fontwidth,
 	  cf_logfunc_t log,
 	  void *ld)
 {
-  OTF_FILE *otf;
+  _cf_fontembed_otf_file_t *otf;
 
   FcPattern *pattern;
   FcFontSet *candidates;
@@ -1504,31 +1504,33 @@ font_load(const char *font,
     return (NULL);
   }
 
-  otf = otf_load((const char *)fontname);
+  otf = _cfFontEmbedOTFLoad((const char *)fontname);
   free(fontname);
   if (!otf)
     return (NULL);
 
-  FONTFILE *ff = fontfile_open_sfnt(otf);
+  _cf_fontembed_fontfile_t *ff = _cfFontEmbedFontFileOpenSFNT(otf);
   DEBUG_assert(ff);
-  EMB_PARAMS *emb = emb_new(ff,
-			    EMB_DEST_PDF16,
-			    EMB_C_FORCE_MULTIBYTE|
-			    EMB_C_TAKE_FONTFILE);
+  _cf_fontembed_emb_params_t *emb =
+    _cfFontEmbedEmbNew(ff,
+		       _CF_FONTEMBED_EMB_DEST_PDF16,
+		       _CF_FONTEMBED_EMB_C_FORCE_MULTIBYTE |
+		       _CF_FONTEMBED_EMB_C_TAKE_FONTFILE);
   DEBUG_assert(emb);
-  DEBUG_assert(emb->plan&EMB_A_MULTIBYTE);
+  DEBUG_assert(emb->plan & _CF_FONTEMBED_EMB_A_MULTIBYTE);
 
   return (emb);
 }
 
-static EMB_PARAMS *
+static _cf_fontembed_emb_params_t *
 font_std(const char *name)
 {
-  FONTFILE *ff = fontfile_open_std(name);
+  _cf_fontembed_fontfile_t *ff = _cfFontEmbedFontFileOpenStd(name);
   DEBUG_assert(ff);
-  EMB_PARAMS *emb = emb_new(ff,
-			    EMB_DEST_PDF16,
-			    EMB_C_TAKE_FONTFILE);
+  _cf_fontembed_emb_params_t *emb =
+    _cfFontEmbedEmbNew(ff,
+		       _CF_FONTEMBED_EMB_DEST_PDF16,
+		       _CF_FONTEMBED_EMB_C_TAKE_FONTFILE);
   DEBUG_assert(emb);
 
   return (emb);
@@ -1638,11 +1640,11 @@ write_epilogue(texttopdf_doc_t *doc)
   {
     for (j = 0; j < doc->NumFonts; j ++) 
     {
-      EMB_PARAMS *emb = doc->Fonts[j][i];
+      _cf_fontembed_emb_params_t *emb = doc->Fonts[j][i];
       if (emb->font->fobj) // already embedded
         continue;
       if ((!emb->subset) ||
-	  (bits_used(emb->subset, emb->font->sfnt->numGlyphs)))
+	  (_cfFontEmbedBitsUsed(emb->subset, emb->font->sfnt->numGlyphs)))
       {
         emb->font->fobj = cfPDFOutWriteFont(doc->pdf,emb);
         DEBUG_assert(emb->font->fobj);
@@ -1664,7 +1666,7 @@ write_epilogue(texttopdf_doc_t *doc)
   {
     for (j = 0; j < doc->NumFonts; j ++)
     {
-      EMB_PARAMS *emb = doc->Fonts[j][i];
+      _cf_fontembed_emb_params_t *emb = doc->Fonts[j][i];
       if (emb->font->fobj) // used
         cfPDFOutPrintF(doc->pdf, "  /%s%02x %d 0 R\n", names[i], j,
 		       emb->font->fobj);
@@ -1762,7 +1764,7 @@ write_prolog(const char *title,		// I - Title of job
   struct tm	*curtm;		// Current date
   char		curdate[255];	// Current date (text format)
   int		num_fonts = 0;	// Number of unique fonts
-  EMB_PARAMS	*fonts[1024];	// Unique fonts
+  _cf_fontembed_emb_params_t *fonts[1024]; // Unique fonts
   char		*fontnames[1024]; // Unique fonts
 #if 0
   static char	*names[] =	// Font names
@@ -2424,14 +2426,14 @@ write_font_str(float x,
     else
       lastfont = doc->Codes[doc->Chars[str->ch]];
 
-    EMB_PARAMS *emb = doc->Fonts[lastfont][fontid];
-    OTF_FILE *otf = emb->font->sfnt;
+    _cf_fontembed_emb_params_t *emb = doc->Fonts[lastfont][fontid];
+    _cf_fontembed_otf_file_t *otf = emb->font->sfnt;
 
     if (otf) // TODO?
     {
       cfPDFOutPrintF(doc->pdf,"  %.3f Tz\n",
 		     doc->FontScaleX * 600.0 /
-		     (otf_get_width(otf, 4) * 1000.0 /
+		     (_cfFontEmbedOTFGetWidth(otf, 4) * 1000.0 /
 		      otf->unitsPerEm) * 100.0 / (doc->FontScaleY)); // TODO? 
       // gid == 4 is usually '!', the char after space. We just need "the"
       // width for the monospaced font. gid == 0 is bad, and space might also
@@ -2460,7 +2462,7 @@ write_font_str(float x,
         break;
       if (otf) // TODO
       {
-        const unsigned short gid = emb_get(emb,ch);
+        const unsigned short gid = _cfFontEmbedEmbGet(emb, ch);
         cfPDFOutPrintF(doc->pdf, "%04x", gid);
       }
       else // std 14 font with 7-bit us-ascii uses single byte encoding, TODO

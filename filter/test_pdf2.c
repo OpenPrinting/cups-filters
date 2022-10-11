@@ -1,27 +1,27 @@
 #include "pdfutils.h"
 #include "config.h"
 #include "debug-internal.h"
-#include "cupsfilters/fontembed.h"
+#include "cupsfilters/fontembed-private.h"
 
 #include <stdio.h>
 
-static inline void write_string(cf_pdf_out_t *pdf,EMB_PARAMS *emb,const char *str) // {{{
+static inline void write_string(cf_pdf_out_t *pdf,_cf_fontembed_emb_params_t *emb,const char *str) // {{{
 {
   DEBUG_assert(pdf);
   DEBUG_assert(emb);
   int iA;
 
-  if (emb->plan&EMB_A_MULTIBYTE) {
+  if (emb->plan&_CF_FONTEMBED_EMB_A_MULTIBYTE) {
     putc('<',stdout); 
     for (iA=0;str[iA];iA++) {
-      const unsigned short gid=emb_get(emb,(unsigned char)str[iA]);
+      const unsigned short gid=_cfFontEmbedEmbGet(emb,(unsigned char)str[iA]);
       fprintf(stdout,"%04x",gid);
     }
     putc('>',stdout); 
     pdf->filepos+=4*iA+2;
   } else { 
     for (iA=0;str[iA];iA++) {
-      emb_get(emb,(unsigned char)str[iA]);
+      _cfFontEmbedEmbGet(emb,(unsigned char)str[iA]);
       // TODO: pdf: otf_from_pdf_default_encoding
     }
     cfPDFOutputString(pdf,str,-1);
@@ -40,24 +40,24 @@ int main()
 
   // font, pt.1 
   const char *fn=TESTFONT;
-  OTF_FILE *otf=NULL;
+  _cf_fontembed_otf_file_t *otf=NULL;
 /*
   if (argc==2) {
     fn=argv[1];
   }
 */
-  otf=otf_load(fn);
+  otf=_cfFontEmbedOTFLoad(fn);
   if (!otf)
   {
     printf("Font %s was not loaded, exiting.\n", TESTFONT);
     return 1;
   }
   DEBUG_assert(otf);
-  FONTFILE *ff=fontfile_open_sfnt(otf);
-  EMB_PARAMS *emb=emb_new(ff,
-                          EMB_DEST_PDF16,
-                          EMB_C_FORCE_MULTIBYTE|
-                          EMB_C_TAKE_FONTFILE);
+  _cf_fontembed_fontfile_t *ff=_cfFontEmbedFontFileOpenSFNT(otf);
+  _cf_fontembed_emb_params_t *emb=_cfFontEmbedEmbNew(ff,
+                          _CF_FONTEMBED_EMB_DEST_PDF16,
+                          _CF_FONTEMBED_EMB_C_FORCE_MULTIBYTE|
+                          _CF_FONTEMBED_EMB_C_TAKE_FONTFILE);
 
   // test
   const int PageWidth=595,PageLength=842;
@@ -101,7 +101,7 @@ int main()
 
   cfPDFOutFree(pdf);
 
-  emb_close(emb);
+  _cfFontEmbedEmbClose(emb);
 
   return 0;
 }

@@ -1,4 +1,4 @@
-#include <cupsfilters/fontembed.h>
+#include <cupsfilters/fontembed-private.h>
 #include <cupsfilters/debug-internal.h>
 #include "config.h"
 #include <stdio.h>
@@ -53,19 +53,20 @@ example_outfn(const char *buf,
 
 static inline void
 write_string(FILE *f,
-	     EMB_PARAMS *emb,
+	     _cf_fontembed_emb_params_t *emb,
 	     const char *str) // {{{
 {
   DEBUG_assert(f);
   DEBUG_assert(emb);
   int iA;
 
-  if (emb->plan & EMB_A_MULTIBYTE)
+  if (emb->plan & _CF_FONTEMBED_EMB_A_MULTIBYTE)
   {
     putc('<', f);
     for (iA = 0; str[iA]; iA ++)
     {
-      const unsigned short gid = emb_get(emb, (unsigned char)str[iA]);
+      const unsigned short gid =
+	_cfFontEmbedEmbGet(emb, (unsigned char)str[iA]);
       fprintf(f, "%04x", gid);
     }
     putc('>', f);
@@ -74,7 +75,7 @@ write_string(FILE *f,
   {
     putc('(', f);
     for (iA = 0; str[iA]; iA ++)
-      emb_get(emb, (unsigned char)str[iA]);
+      _cfFontEmbedEmbGet(emb, (unsigned char)str[iA]);
     fprintf(f, "%s", str); // TODO
     putc(')', f);
   }
@@ -87,21 +88,22 @@ main(int argc,
      char **argv)
 {
   const char *fn = TESTFONT;
-  OTF_FILE *otf = NULL;
+  _cf_fontembed_otf_file_t *otf = NULL;
   if (argc == 2)
     fn = argv[1];
-  otf = otf_load(fn);
+  otf = _cfFontEmbedOTFLoad(fn);
   if (!otf)
   {
     printf("Font %s was not loaded, exiting.\n", TESTFONT);
     return (1);
   }
   DEBUG_assert(otf);
-  FONTFILE *ff = fontfile_open_sfnt(otf);
-  EMB_PARAMS *emb = emb_new(ff,
-			    EMB_DEST_PDF16,
-			    EMB_C_FORCE_MULTIBYTE|
-			    EMB_C_TAKE_FONTFILE);
+  _cf_fontembed_fontfile_t *ff = _cfFontEmbedFontFileOpenSFNT(otf);
+  _cf_fontembed_emb_params_t *emb =
+    _cfFontEmbedEmbNew(ff,
+		       _CF_FONTEMBED_EMB_DEST_PDF16,
+		       _CF_FONTEMBED_EMB_C_FORCE_MULTIBYTE|
+		       _CF_FONTEMBED_EMB_C_TAKE_FONTFILE);
 
   FILE *f = fopen("test.pdf", "w");
   DEBUG_assert(f);
@@ -119,31 +121,31 @@ main(int argc,
              "ET\n");
   ENDSTREAM;
 
-  emb_get(emb, 'a');
+  _cfFontEmbedEmbGet(emb, 'a');
 
   // {{{ do font
-  EMB_PDF_FONTDESCR *fdes = emb_pdf_fontdescr(emb);
+  _cf_fontembed_emb_pdf_font_descr_t *fdes = _cfFontEmbedEmbPDFFontDescr(emb);
   DEBUG_assert(fdes);
-  EMB_PDF_FONTWIDTHS *fwid = emb_pdf_fontwidths(emb);
+  _cf_fontembed_emb_pdf_font_widths_t *fwid = _cfFontEmbedEmbPDFFontWidths(emb);
   DEBUG_assert(fwid);
 
   STREAMDICT;
   int ff_ref = xrefpos;
-  if (emb_pdf_get_fontfile_subtype(emb))
+  if (_cfFontEmbedEmbPDFGetFontFileSubType(emb))
   {
     fprintf(f,"  /Subtype /%s\n",
-	    emb_pdf_get_fontfile_subtype(emb));
+	    _cfFontEmbedEmbPDFGetFontFileSubType(emb));
   }
-  if (emb->outtype == EMB_FMT_T1)
+  if (emb->outtype == _CF_FONTEMBED_EMB_FMT_T1)
     fprintf(f, "  /Length1 ?\n"
                "  /Length2 ?\n"
                "  /Length3 ?\n");
-  else if (emb->outtype == EMB_FMT_TTF)
+  else if (emb->outtype == _CF_FONTEMBED_EMB_FMT_TTF)
     fprintf(f, "  /Length1 %d 0 R\n", xrefpos + 2);
   STREAMDATA;
-  const int outlen = emb_embed(emb, example_outfn, f);
+  const int outlen = _cfFontEmbedEmbEmbed(emb, example_outfn, f);
   ENDSTREAM;
-  if (emb->outtype == EMB_FMT_TTF)
+  if (emb->outtype == _CF_FONTEMBED_EMB_FMT_TTF)
   {
     OBJ;
     fprintf(f, "%d\n", outlen);
@@ -152,7 +154,7 @@ main(int argc,
 
   OBJ;
   const int fd_ref = xrefpos;
-  char *res = emb_pdf_simple_fontdescr(emb, fdes, ff_ref);
+  char *res = _cfFontEmbedEmbPDFSimpleFontDescr(emb, fdes, ff_ref);
   DEBUG_assert(res);
   fputs(res, f);
   free(res);
@@ -160,16 +162,16 @@ main(int argc,
 
   OBJ;
   int f_ref = xrefpos;
-  res = emb_pdf_simple_font(emb, fdes, fwid, fd_ref);
+  res = _cfFontEmbedEmbPDFSimpleFont(emb, fdes, fwid, fd_ref);
   DEBUG_assert(res);
   fputs(res, f);
   free(res);
   ENDOBJ;
 
-  if (emb->plan&EMB_A_MULTIBYTE)
+  if (emb->plan&_CF_FONTEMBED_EMB_A_MULTIBYTE)
   {
     OBJ;
-    res = emb_pdf_simple_cidfont(emb, fdes->fontname, f_ref);
+    res = _cfFontEmbedEmbPDFSimpleCIDFont(emb, fdes->fontname, f_ref);
     f_ref = xrefpos;
     DEBUG_assert(res);
     fputs(res, f);
@@ -230,7 +232,7 @@ main(int argc,
   // }}}
   fclose(f);
 
-  emb_close(emb);
+  _cfFontEmbedEmbClose(emb);
 
   return (0);
 }

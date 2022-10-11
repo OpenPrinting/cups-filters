@@ -3,7 +3,7 @@
 #define _FONTEMBED_MACROMAN_PRIVATE_H_
 
 #ifdef WITH_MACROMAN
-static const char *macRoman[] =
+static const char *__cf_fontembed_mac_roman[] =
 {
   ".notdef", ".null", "nonmarkingreturn", "space", "exclam", "quotedbl", "numbersign", "dollar", "percent", "ampersand",
   "quotesingle", "parenleft", "parenright", "asterisk", "plus", "comma", "hyphen", "period", "slash", "zero",
@@ -33,7 +33,7 @@ static const char *macRoman[] =
   "Scedilla", "scedilla", "Cacute", "cacute", "Ccaron", "ccaron", "dcroat"
 };
 #else
-static const char *macRoman[] =
+static const char *__cf_fontembed_mac_roman[] =
 {
   NULL
 };

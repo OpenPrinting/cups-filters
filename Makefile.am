@@ -177,7 +177,6 @@ pkgfiltersinclude_DATA = \
 	cupsfilters/colormanager.h \
 	cupsfilters/driver.h \
 	cupsfilters/filter.h \
-	cupsfilters/fontembed.h \
 	cupsfilters/ieee1284.h \
 	cupsfilters/image.h \
 	cupsfilters/ipp.h \
@@ -232,6 +231,7 @@ libcupsfilters_la_SOURCES = \
 	cupsfilters/debug-internal.h \
 	cupsfilters/dither.c \
 	cupsfilters/filter.c \
+	cupsfilters/fontembed-private.h \
 	cupsfilters/fontembed/aglfn13.c \
 	cupsfilters/fontembed/dynstring.c \
 	cupsfilters/fontembed/dynstring-private.h \
