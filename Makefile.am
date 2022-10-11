@@ -193,11 +193,15 @@ check_PROGRAMS = \
 	testimage \
 	testrgb \
 	test1284 \
+	testpdf1 \
+	testpdf2 \
 	test-analyze \
 	test-pdf \
 	test-ps
 TESTS = \
 	testdither \
+	testpdf1 \
+	testpdf2 \
 	test-analyze \
 	test-pdf \
 	test-ps
@@ -361,6 +365,33 @@ testrgb_LDADD = \
 	libcupsfilters.la \
 	-lm
 
+test1284_SOURCES = \
+	cupsfilters/test1284.c
+test1284_LDADD = \
+	libcupsfilters.la \
+	$(CUPS_LIBS)
+test1284_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	$(CUPS_CFLAGS)
+
+testpdf1_SOURCES = \
+	cupsfilters/testpdf1.c \
+	cupsfilters/fontembed.h
+testpdf1_CFLAGS = \
+	-I$(srcdir)/cupsfilters/fontembed/ \
+	-I$(srcdir)/cupsfilters/
+testpdf1_LDADD = \
+	libcupsfilters.la
+
+testpdf2_SOURCES = \
+	cupsfilters/testpdf2.c \
+	cupsfilters/fontembed.h
+testpdf2_CFLAGS = \
+	-I$(srcdir)/cupsfilters/fontembed/ \
+	-I$(srcdir)/cupsfilters/
+testpdf2_LDADD = \
+	libcupsfilters.la
+
 test_analyze_SOURCES = cupsfilters/fontembed/test-analyze.c
 test_analyze_LDADD = libcupsfilters.la
 
@@ -375,15 +406,6 @@ EXTRA_DIST += \
 	cupsfilters/image.pgm \
 	cupsfilters/image.ppm \
 	cupsfilters/fontembed/README
-
-test1284_SOURCES = \
-	cupsfilters/test1284.c
-test1284_LDADD = \
-	libcupsfilters.la \
-	$(CUPS_LIBS)
-test1284_CFLAGS = \
-	-I$(srcdir)/cupsfilters/ \
-	$(CUPS_CFLAGS)
 
 # =========
 # CUPS Data
@@ -826,14 +848,6 @@ pkgfilter_PROGRAMS += \
 	imagetoraster
 endif
 
-check_PROGRAMS += \
-	test_pdf1 \
-	test_pdf2
-
-TESTS += \
-	test_pdf1 \
-	test_pdf2
-
 # Not reliable bash script
 #TESTS += filter/test.sh
 
@@ -1134,24 +1148,6 @@ rastertopclx_LDADD = \
 	$(LIBPNG_LIBS) \
 	libcupsfilters.la \
 	libppd.la
-
-test_pdf1_SOURCES = \
-	filter/test_pdf1.c \
-	cupsfilters/fontembed.h
-test_pdf1_CFLAGS = \
-	-I$(srcdir)/cupsfilters/fontembed/ \
-	-I$(srcdir)/cupsfilters/
-test_pdf1_LDADD = \
-	libcupsfilters.la
-
-test_pdf2_SOURCES = \
-	filter/test_pdf2.c \
-	cupsfilters/fontembed.h
-test_pdf2_CFLAGS = \
-	-I$(srcdir)/cupsfilters/fontembed/ \
-	-I$(srcdir)/cupsfilters/
-test_pdf2_LDADD = \
-	libcupsfilters.la
 
 universal_SOURCES = \
 	filter/universal.c
