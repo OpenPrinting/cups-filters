@@ -1,24 +1,24 @@
-/*
- *   Test the new RGB color separation code for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2006 by Easy Software Products, All Rights Reserved.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   main()       - Do color rgb tests.
- *   test_gray()  - Test grayscale rgbs...
- *   test_rgb()   - Test color rgbs...
- */
+//
+//   Test the new RGB color separation code for libcupsfilters.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2006 by Easy Software Products, All Rights Reserved.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   main()       - Do color rgb tests.
+//   test_gray()  - Test grayscale rgbs...
+//   test_rgb()   - Test color rgbs...
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include <config.h>
 #include <string.h>
@@ -28,7 +28,7 @@
 
 #ifdef USE_LCMS1
 #  include <lcms.h>
-#endif /* USE_LCMS1 */
+#endif // USE_LCMS1
 
 
 void	test_gray(cf_sample_t *samples, int num_samples,
@@ -38,17 +38,17 @@ void	test_rgb(cf_sample_t *samples, int num_samples,
 		 const char *basename);
 
 
-/*
- * 'main()' - Do color rgb tests.
- */
+//
+// 'main()' - Do color rgb tests.
+//
 
-int						/* O - Exit status */
-main(int  argc,					/* I - Number of command-line arguments */
-     char *argv[])				/* I - Command-line arguments */
+int					// O - Exit status
+main(int  argc,				// I - Number of command-line arguments
+     char *argv[])			// I - Command-line arguments
 {
-  static cf_sample_t	CMYK[] =		/* Basic 4-color sep */
+  static cf_sample_t	CMYK[] =	// Basic 4-color sep
 			{
-			  /*{ r,   g,   b   }, { C,   M,   Y,   K   }*/
+			  //{ r,   g,   b   }, { C,   M,   Y,   K   }
 			  { { 0,   0,   0   }, { 0,   0,   0,   255 } },
 			  { { 255, 0,   0   }, { 0,   255, 240, 0   } },
 			  { { 0,   255, 0   }, { 200, 0,   200, 0   } },
@@ -60,58 +60,58 @@ main(int  argc,					/* I - Number of command-line arguments */
 			};
 
 
- /*
-  * Make the test directory...
-  */
+  //
+  // Make the test directory...
+  //
 
   mkdir("test", 0755);
 
- /*
-  * Run tests for CMYK and CMYK separations...
-  */
+  //
+  // Run tests for CMYK and CMYK separations...
+  //
 
   test_rgb(CMYK, 8, 2, 4, "test/rgb-cmyk");
 
   test_gray(CMYK, 8, 2, 4, "test/gray-cmyk");
 
- /*
-  * Return with no errors...
-  */
+  //
+  // Return with no errors...
+  //
 
   return (0);
 }
 
 
-/*
- * 'test_gray()' - Test grayscale rgbs...
- */
+//
+// 'test_gray()' - Test grayscale rgbs...
+//
 
 void
-test_gray(cf_sample_t *samples,	/* I - Sample values */
-          int           num_samples,	/* I - Number of samples */
-	  int           cube_size,	/* I - Cube size */
-          int           num_comps,	/* I - Number of components */
-	  const char    *basename)	/* I - Base filename of output */
+test_gray(cf_sample_t   *samples,	// I - Sample values
+          int           num_samples,	// I - Number of samples
+	  int           cube_size,	// I - Cube size
+          int           num_comps,	// I - Number of components
+	  const char    *basename)	// I - Base filename of output
 {
-  int			i;		/* Looping var */
-  char			filename[255];	/* Output filename */
-  char			line[255];	/* Line from PPM file */
-  int			width, height;	/* Width and height of test image */
-  int			x, y;		/* Current coordinate in image */
-  int			r, g, b;	/* Current RGB color */
-  unsigned char		input[7000];	/* Line to rgbarate */
-  unsigned char		output[48000],	/* Output rgb data */
-			*outptr;	/* Pointer in output */
-  FILE			*in;		/* Input PPM file */
+  int			i;		// Looping var
+  char			filename[255];	// Output filename
+  char			line[255];	// Line from PPM file
+  int			width, height;	// Width and height of test image
+  int			x, y;		// Current coordinate in image
+  int			r, g, b;	// Current RGB color
+  unsigned char		input[7000];	// Line to rgbarate
+  unsigned char		output[48000],	// Output rgb data
+			*outptr;	// Pointer in output
+  FILE			*in;		// Input PPM file
   FILE			*out[CF_MAX_CHAN];
-					/* Output PGM files */
-  FILE			*comp;		/* Composite output */
-  cf_rgb_t		*rgb;		/* Color separation */
+					// Output PGM files
+  FILE			*comp;		// Composite output
+  cf_rgb_t		*rgb;		// Color separation
 
 
- /*
-  * Open the test image...
-  */
+  //
+  // Open the test image...
+  //
 
   in = fopen("image.pgm", "rb");
   while (fgets(line, sizeof(line), in) != NULL)
@@ -120,17 +120,17 @@ test_gray(cf_sample_t *samples,	/* I - Sample values */
 
   sscanf(line, "%d%d", &width, &height);
 
-  fgets(line, sizeof(line), in);
+  if (fgets(line, sizeof(line), in)); // Ignore return value of fgets()
 
- /*
-  * Create the color rgb...
-  */
+  //
+  // Create the color rgb...
+  //
 
   rgb = cfRGBNew(num_samples, samples, cube_size, num_comps);
 
- /*
-  * Open the color rgb files...
-  */
+  //
+  // Open the color rgb files...
+  //
 
   for (i = 0; i < num_comps; i ++)
   {
@@ -145,13 +145,13 @@ test_gray(cf_sample_t *samples,	/* I - Sample values */
 
   fprintf(comp, "P6\n%d %d 255\n", width, height);
 
- /*
-  * Read the image and do the rgbs...
-  */
+  //
+  // Read the image and do the rgbs...
+  //
 
   for (y = 0; y < height; y ++)
   {
-    fread(input, width, 1, in);
+    if (fread(input, width, 1, in)); // Ignore return value of fread()
 
     cfRGBDoGray(rgb, input, output, width);
 
@@ -212,36 +212,36 @@ test_gray(cf_sample_t *samples,	/* I - Sample values */
 }
 
 
-/*
- * 'test_rgb()' - Test color rgbs...
- */
+//
+// 'test_rgb()' - Test color rgbs...
+//
 
 void
-test_rgb(cf_sample_t *samples,	/* I - Sample values */
-         int           num_samples,	/* I - Number of samples */
-	 int           cube_size,	/* I - Cube size */
-         int           num_comps,	/* I - Number of components */
-	 const char    *basename)	/* I - Base filename of output */
+test_rgb(cf_sample_t   *samples,	// I - Sample values
+         int           num_samples,	// I - Number of samples
+	 int           cube_size,	// I - Cube size
+         int           num_comps,	// I - Number of components
+	 const char    *basename)	// I - Base filename of output
 {
-  int			i;		/* Looping var */
-  char			filename[255];	/* Output filename */
-  char			line[255];	/* Line from PPM file */
-  int			width, height;	/* Width and height of test image */
-  int			x, y;		/* Current coordinate in image */
-  int			r, g, b;	/* Current RGB color */
-  unsigned char		input[7000];	/* Line to rgbarate */
-  unsigned char		output[48000],	/* Output rgb data */
-			*outptr;	/* Pointer in output */
-  FILE			*in;		/* Input PPM file */
+  int			i;		// Looping var
+  char			filename[255];	// Output filename
+  char			line[255];	// Line from PPM file
+  int			width, height;	// Width and height of test image
+  int			x, y;		// Current coordinate in image
+  int			r, g, b;	// Current RGB color
+  unsigned char		input[7000];	// Line to rgbarate
+  unsigned char		output[48000],	// Output rgb data
+			*outptr;	// Pointer in output
+  FILE			*in;		// Input PPM file
   FILE			*out[CF_MAX_CHAN];
-					/* Output PGM files */
-  FILE			*comp;		/* Composite output */
-  cf_rgb_t		*rgb;		/* Color separation */
+					// Output PGM files
+  FILE			*comp;		// Composite output
+  cf_rgb_t		*rgb;		// Color separation
 
 
- /*
-  * Open the test image...
-  */
+  //
+  // Open the test image...
+  //
 
   in = fopen("image.ppm", "rb");
   while (fgets(line, sizeof(line), in) != NULL)
@@ -250,17 +250,17 @@ test_rgb(cf_sample_t *samples,	/* I - Sample values */
 
   sscanf(line, "%d%d", &width, &height);
 
-  fgets(line, sizeof(line), in);
+  if (fgets(line, sizeof(line), in)); // Ignore return value of fgets()
 
- /*
-  * Create the color rgb...
-  */
+  //
+  // Create the color rgb...
+  //
 
   rgb = cfRGBNew(num_samples, samples, cube_size, num_comps);
 
- /*
-  * Open the color rgb files...
-  */
+  //
+  // Open the color rgb files...
+  //
 
   for (i = 0; i < num_comps; i ++)
   {
@@ -275,13 +275,13 @@ test_rgb(cf_sample_t *samples,	/* I - Sample values */
 
   fprintf(comp, "P6\n%d %d 255\n", width, height);
 
- /*
-  * Read the image and do the rgbs...
-  */
+  //
+  // Read the image and do the rgbs...
+  //
 
   for (y = 0; y < height; y ++)
   {
-    fread(input, width, 3, in);
+    if (fread(input, width, 3, in)); // Ignore return value of fread()
 
     cfRGBDoRGB(rgb, input, output, width);
 
@@ -340,4 +340,3 @@ test_rgb(cf_sample_t *samples,	/* I - Sample values */
 
   cfRGBDelete(rgb);
 }
-

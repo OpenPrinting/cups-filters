@@ -1,78 +1,78 @@
-/*
- *   Dither test program for CUPS.
- *
- *   Try the following:
- *
- *       testdither 0 255 > filename.ppm
- *       testdither 0 127 255 > filename.ppm
- *       testdither 0 85 170 255 > filename.ppm
- *       testdither 0 63 127 170 198 227 255 > filename.ppm
- *       testdither 0 210 383 > filename.ppm
- *       testdither 0 82 255 > filename.ppm
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   main()  - Test dithering and output a PPM file.
- *   usage() - Show program usage...
- */
+//
+//   Dither test program for libcupsfilters.
+//
+//   Try the following:
+//
+//       testdither 0 255 > filename.ppm
+//       testdither 0 127 255 > filename.ppm
+//       testdither 0 85 170 255 > filename.ppm
+//       testdither 0 63 127 170 198 227 255 > filename.ppm
+//       testdither 0 210 383 > filename.ppm
+//       testdither 0 82 255 > filename.ppm
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2005 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   main()  - Test dithering and output a PPM file.
+//   usage() - Show program usage...
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include "driver.h"
 #include <config.h>
 #include <string.h>
 #include <ctype.h>
 
-cf_logfunc_t logfunc = cfCUPSLogFunc;    /* Log function */
-void             *ld = NULL;                /* Log function data */
+cf_logfunc_t logfunc = cfCUPSLogFunc;    // Log function
+void         *ld = NULL;                 // Log function data
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 void	usage(void);
 
 
-/*
- * 'main()' - Test dithering and output a PPM file.
- */
+//
+// 'main()' - Test dithering and output a PPM file.
+//
 
-int				/* O - Exit status */
-main(int  argc,			/* I - Number of command-line arguments */
-     char *argv[])		/* I - Command-line arguments */
+int				// O - Exit status
+main(int  argc,			// I - Number of command-line arguments
+     char *argv[])		// I - Command-line arguments
 {
-  int		x, y;		/* Current coordinate in image */
-  short		line[512];	/* Line to dither */
-  unsigned char	pixels[512],	/* Dither pixels */
-		*pixptr;	/* Pointer in line */
-  int		output;		/* Output pixel */
-  cf_lut_t	*lut;		/* Dither lookup table */
-  cf_dither_t	*dither;	/* Dither state */
-  int		nlutvals;	/* Number of lookup values */
-  float		lutvals[16];	/* Lookup values */
-  int		pixvals[16];	/* Pixel values */
+  int		x, y;		// Current coordinate in image
+  short		line[512];	// Line to dither
+  unsigned char	pixels[512],	// Dither pixels
+		*pixptr;	// Pointer in line
+  int		output;		// Output pixel
+  cf_lut_t	*lut;		// Dither lookup table
+  cf_dither_t	*dither;	// Dither state
+  int		nlutvals;	// Number of lookup values
+  float		lutvals[16];	// Lookup values
+  int		pixvals[16];	// Pixel values
 
 
- /*
-  * See if we have lookup table values on the command-line...
-  */
+  //
+  // See if we have lookup table values on the command-line...
+  //
 
   if (argc > 1)
   {
-   /*
-    * Yes, collect them...
-    */
+    //
+    // Yes, collect them...
+    //
 
     nlutvals = 0;
 
@@ -86,18 +86,18 @@ main(int  argc,			/* I - Number of command-line arguments */
       else
         usage();
 
-   /*
-    * See if we have at least 2 values...
-    */
+    //
+    // See if we have at least 2 values...
+    //
 
     if (nlutvals < 2)
       usage();
   }
   else
   {
-   /*
-    * Otherwise use the default 2-entry LUT with values of 0 and 255...
-    */
+    //
+    // Otherwise use the default 2-entry LUT with values of 0 and 255...
+    //
 
     nlutvals   = 2;
     lutvals[0] = 0.0;
@@ -106,35 +106,35 @@ main(int  argc,			/* I - Number of command-line arguments */
     pixvals[1] = 255;
   }
 
- /*
-  * Create the lookup table and dither state...
-  */
+  //
+  // Create the lookup table and dither state...
+  //
 
   lut    = cfLutNew(nlutvals, lutvals, logfunc, ld);
   dither = cfDitherNew(512);
 
- /*
-  * Put out the PGM header for a raw 256x256x8-bit grayscale file...
-  */
+  //
+  // Put out the PGM header for a raw 256x256x8-bit grayscale file...
+  //
 
   puts("P5\n512\n512\n255");
 
- /*
-  * Dither 512 lines, which are written out in 256 image lines...
-  */
+  //
+  // Dither 512 lines, which are written out in 256 image lines...
+  //
 
   for (y = 0; y < 512; y ++)
   {
-   /*
-    * Create the grayscale data for the current line...
-    */
+    //
+    // Create the grayscale data for the current line...
+    //
 
     for (x = 0; x < 512; x ++)
       line[x] = 4095 * ((y / 32) * 16 + x / 32) / 255;
 
-   /*
-    * Dither the line...
-    */
+    //
+    // Dither the line...
+    //
 
     cfDitherLine(dither, lut, line, 1, pixels);
 
@@ -146,9 +146,9 @@ main(int  argc,			/* I - Number of command-line arguments */
       fputs("\n", stderr);
     }
 
-   /*
-    * Add or set the output pixel values...
-    */
+    //
+    // Add or set the output pixel values...
+    //
 
     for (x = 0, pixptr = pixels; x < 512; x ++, pixptr ++)
     {
@@ -161,24 +161,24 @@ main(int  argc,			/* I - Number of command-line arguments */
     }
   }
 
- /*
-  * Free the dither state and lookup table...
-  */
+  //
+  // Free the dither state and lookup table...
+  //
 
   cfDitherDelete(dither);
   cfLutDelete(lut);
 
- /*
-  * Return with no errors...
-  */
+  //
+  // Return with no errors...
+  //
 
   return (0);
 }
 
 
-/*
- * 'usage()' - Show program usage...
- */
+//
+// 'usage()' - Show program usage...
+//
 
 void
 usage(void)
@@ -186,4 +186,3 @@ usage(void)
   puts("Usage: testdither [val1 val2 [... val16]] >filename.ppm");
   exit(1);
 }
-

@@ -1,24 +1,24 @@
-/*
- *   Test the CMYK color separation code for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2006 by Easy Software Products, All Rights Reserved.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   test_gray() - Test grayscale separations...
- *   test_rgb()  - Test color separations...
- *   main()      - Do color separation tests.
- */
+//
+//   Test the CMYK color separation code for libcupsfilters.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2006 by Easy Software Products, All Rights Reserved.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   test_gray() - Test grayscale separations...
+//   test_rgb()  - Test color separations...
+//   main()      - Do color separation tests.
 
-/*
- * Include necessary headers.
- */
+
+//
+// Include necessary headers.
+
 
 #include <config.h>
 #include <string.h>
@@ -26,30 +26,30 @@
 #include "driver.h"
 #include <sys/stat.h>
 
-cf_logfunc_t logfunc = cfCUPSLogFunc;    /* Log function */
-void             *ld = NULL;                /* Log function data */
+cf_logfunc_t logfunc = cfCUPSLogFunc;    // Log function
+void         *ld = NULL;                 // Log function data
 
 void	test_gray(int num_comps, const char *basename);
 void	test_rgb(int num_comps, const char *basename);
 
 
-/*
- * 'main()' - Do color separation tests.
- */
+//
+// 'main()' - Do color separation tests.
+//
 
-int						/* O - Exit status */
-main(int  argc,					/* I - Number of command-line arguments */
-     char *argv[])				/* I - Command-line arguments */
+int				// O - Exit status
+main(int  argc,			// I - Number of command-line arguments
+     char *argv[])		// I - Command-line arguments
 {
- /*
-  * Make the test directory...
-  */
+  //
+  // Make the test directory...
+  //
 
   mkdir("test", 0755);
 
- /*
-  * Run tests for K, Kk, CMY, CMYK, CcMmYK, and CcMmYKk separations...
-  */
+  //
+  // Run tests for K, Kk, CMY, CMYK, CcMmYK, and CcMmYKk separations...
+  //
 
   test_rgb(1, "test/K-rgb");
   test_rgb(2, "test/Kk-rgb");
@@ -65,41 +65,41 @@ main(int  argc,					/* I - Number of command-line arguments */
   test_gray(6, "test/CcMmYK-gray");
   test_gray(7, "test/CcMmYKk-gray");
 
- /*
-  * Return with no errors...
-  */
+  //
+  // Return with no errors...
+  //
 
   return (0);
 }
 
 
-/*
- * 'test_gray()' - Test grayscale separations...
- */
+//
+// 'test_gray()' - Test grayscale separations...
+//
 
 void
-test_gray(int        num_comps,		/* I - Number of components */
-	  const char *basename)		/* I - Base filename of output */
+test_gray(int        num_comps,		// I - Number of components
+	  const char *basename)		// I - Base filename of output
 {
-  int			i;		/* Looping var */
-  char			filename[255];	/* Output filename */
-  char			line[255];	/* Line from PGM file */
-  int			width, height;	/* Width and height of test image */
-  int			x, y;		/* Current coordinate in image */
-  int			r, g, b;	/* Current RGB color */
-  unsigned char		input[7000];	/* Line to separate */
-  short			output[48000],	/* Output separation data */
-			*outptr;	/* Pointer in output */
-  FILE			*in;		/* Input PPM file */
+  int			i;		// Looping var
+  char			filename[255];	// Output filename
+  char			line[255];	// Line from PGM file
+  int			width, height;	// Width and height of test image
+  int			x, y;		// Current coordinate in image
+  int			r, g, b;	// Current RGB color
+  unsigned char		input[7000];	// Line to separate
+  short			output[48000],	// Output separation data
+			*outptr;	// Pointer in output
+  FILE			*in;		// Input PPM file
   FILE			*out[CF_MAX_CHAN];
-					/* Output PGM files */
-  FILE			*comp;		/* Composite output */
-  cf_cmyk_t		*cmyk;		/* Color separation */
+					// Output PGM files
+  FILE			*comp;		// Composite output
+  cf_cmyk_t		*cmyk;		// Color separation
 
 
- /*
-  * Open the test image...
-  */
+  //
+  // Open the test image...
+  //
 
   in = fopen("image.pgm", "rb");
   while (fgets(line, sizeof(line), in) != NULL)
@@ -108,17 +108,17 @@ test_gray(int        num_comps,		/* I - Number of components */
 
   sscanf(line, "%d%d", &width, &height);
 
-  fgets(line, sizeof(line), in);
+  if (fgets(line, sizeof(line), in)); // Ignore return value of fgets()
 
- /*
-  * Create the color separation...
-  */
+  //
+  // Create the color separation...
+  //
 
   cmyk = cfCMYKNew(num_comps);
 
   switch (num_comps)
   {
-    case 2 : /* Kk */
+    case 2 : // Kk
         cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
 	break;
 
@@ -127,14 +127,14 @@ test_gray(int        num_comps,		/* I - Number of components */
         cfCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
 	break;
 
-    case 6 : /* CcMmYK */
+    case 6 : // CcMmYK
         cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
         cfCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
 	cfCMYKSetGamma(cmyk, 4, 1.0, 0.9, logfunc, ld);
         cfCMYKSetBlack(cmyk, 0.5, 1.0, logfunc, ld);
 	break;
 
-    case 7 : /* CcMmYKk */
+    case 7 : // CcMmYKk
         cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
         cfCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
 	cfCMYKSetGamma(cmyk, 4, 1.0, 0.9, logfunc, ld);
@@ -142,9 +142,9 @@ test_gray(int        num_comps,		/* I - Number of components */
 	break;
   }
 
- /*
-  * Open the color separation files...
-  */
+  //
+  // Open the color separation files...
+  //
 
   for (i = 0; i < num_comps; i ++)
   {
@@ -159,13 +159,13 @@ test_gray(int        num_comps,		/* I - Number of components */
 
   fprintf(comp, "P6\n%d %d 255\n", width, height);
 
- /*
-  * Read the image and do the separations...
-  */
+  //
+  // Read the image and do the separations...
+  //
 
   for (y = 0; y < height; y ++)
   {
-    fread(input, width, 1, in);
+    if (fread(input, width, 1, in)); // Ignore return value of fread()
 
     cfCMYKDoGray(cmyk, input, output, width);
 
@@ -255,33 +255,33 @@ test_gray(int        num_comps,		/* I - Number of components */
 }
 
 
-/*
- * 'test_rgb()' - Test color separations...
- */
+//
+// 'test_rgb()' - Test color separations...
+//
 
 void
-test_rgb(int        num_comps,		/* I - Number of components */
-	 const char *basename)		/* I - Base filename of output */
+test_rgb(int        num_comps,		// I - Number of components
+	 const char *basename)		// I - Base filename of output
 {
-  int			i;		/* Looping var */
-  char			filename[255];	/* Output filename */
-  char			line[255];	/* Line from PPM file */
-  int			width, height;	/* Width and height of test image */
-  int			x, y;		/* Current coordinate in image */
-  int			r, g, b;	/* Current RGB color */
-  unsigned char		input[7000];	/* Line to separate */
-  short			output[48000],	/* Output separation data */
-			*outptr;	/* Pointer in output */
-  FILE			*in;		/* Input PPM file */
+  int			i;		// Looping var
+  char			filename[255];	// Output filename
+  char			line[255];	// Line from PPM file
+  int			width, height;	// Width and height of test image
+  int			x, y;		// Current coordinate in image
+  int			r, g, b;	// Current RGB color
+  unsigned char		input[7000];	// Line to separate
+  short			output[48000],	// Output separation data
+			*outptr;	// Pointer in output
+  FILE			*in;		// Input PPM file
   FILE			*out[CF_MAX_CHAN];
-					/* Output PGM files */
-  FILE			*comp;		/* Composite output */
-  cf_cmyk_t		*cmyk;		/* Color separation */
+					// Output PGM files
+  FILE			*comp;		// Composite output
+  cf_cmyk_t		*cmyk;		// Color separation
 
 
- /*
-  * Open the test image...
-  */
+  //
+  // Open the test image...
+  //
 
   in = fopen("image.ppm", "rb");
   while (fgets(line, sizeof(line), in) != NULL)
@@ -290,11 +290,11 @@ test_rgb(int        num_comps,		/* I - Number of components */
 
   sscanf(line, "%d%d", &width, &height);
 
-  fgets(line, sizeof(line), in);
+  if (fgets(line, sizeof(line), in)); // Ignore return value of fgets()
 
- /*
-  * Create the color separation...
-  */
+  //
+  // Create the color separation...
+  //
 
   cmyk = cfCMYKNew(num_comps);
 
@@ -302,16 +302,16 @@ test_rgb(int        num_comps,		/* I - Number of components */
 
   switch (num_comps)
   {
-    case 2 : /* Kk */
+    case 2 : // Kk
         cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
 	break;
-    case 6 : /* CcMmYK */
+    case 6 : // CcMmYK
 	cfCMYKSetGamma(cmyk, 0, 1.0, 0.8, logfunc, ld);
         cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
 	cfCMYKSetGamma(cmyk, 2, 1.0, 0.8, logfunc, ld);
         cfCMYKSetLtDk(cmyk, 2, 0.5, 1.0, logfunc, ld);
 	break;
-    case 7 : /* CcMmYKk */
+    case 7 : // CcMmYKk
 	cfCMYKSetGamma(cmyk, 0, 1.0, 0.8, logfunc, ld);
         cfCMYKSetLtDk(cmyk, 0, 0.5, 1.0, logfunc, ld);
 	cfCMYKSetGamma(cmyk, 2, 1.0, 0.8, logfunc, ld);
@@ -320,9 +320,9 @@ test_rgb(int        num_comps,		/* I - Number of components */
 	break;
   }
 
- /*
-  * Open the color separation files...
-  */
+  //
+  // Open the color separation files...
+  //
 
   for (i = 0; i < num_comps; i ++)
   {
@@ -337,13 +337,13 @@ test_rgb(int        num_comps,		/* I - Number of components */
 
   fprintf(comp, "P6\n%d %d 255\n", width, height);
 
- /*
-  * Read the image and do the separations...
-  */
+  //
+  // Read the image and do the separations...
+  //
 
   for (y = 0; y < height; y ++)
   {
-    fread(input, width, 3, in);
+    if (fread(input, width, 3, in)); // Ignore return value of fread()
 
     cfCMYKDoRGB(cmyk, input, output, width);
 
@@ -431,4 +431,3 @@ test_rgb(int        num_comps,		/* I - Number of components */
 
   cfCMYKDelete(cmyk);
 }
-

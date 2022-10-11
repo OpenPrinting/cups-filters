@@ -1,42 +1,42 @@
-/*
- *   Image library test program for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2006 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   main() - Main entry...
- */
+//
+//   Image library test program for libcupsfilters.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2006 by Easy Software Products.
+//
+//   These coded instructions, statements, and computer programs are the
+//   property of Apple Inc. and are protected by Federal copyright
+//   law.  Distribution and use rights are outlined in the file "COPYING"
+//   which should have been included with this file.
+//
+// Contents:
+//
+//   main() - Main entry...
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "image.h"
 
 
-/*
- * 'main()' - Main entry...
- */
+//
+// 'main()' - Main entry...
+//
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int					// O - Exit status
+main(int  argc,				// I - Number of command-line arguments
+     char *argv[])			// I - Command-line arguments
 {
-  cf_image_t		*img;		/* Image to print */
-  cf_icspace_t	primary;	/* Primary image colorspace */
-  FILE			*out;		/* Output PPM/PGM file */
-  cf_ib_t		*line;		/* Line from file */
-  int			y,		/* Current line */
-			width,		/* Width of image */
-			height,		/* Height of image */
-			depth;		/* Depth of image */
+  cf_image_t		*img;		// Image to print
+  cf_icspace_t		primary;	// Primary image colorspace
+  FILE			*out;		// Output PPM/PGM file
+  cf_ib_t		*line;		// Line from file
+  int			y,		// Current line
+			width,		// Width of image
+			height,		// Height of image
+			depth;		// Depth of image
 
 
   if (argc != 3)
@@ -87,4 +87,3 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   return (0);
 }
-
