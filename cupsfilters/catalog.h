@@ -17,6 +17,45 @@
 //  USA.
 //
 
+//
+// Human-readable strings for printer or scanner option/attribute
+// names and also the names for the possible choices for each option
+// are essentially important for user-friendly print dialogs and other
+// user interfaces. Also translations into the user-chosen user
+// interface language should be used.
+//
+// To allow for human-readable names and translations/localizations we
+// use the standard set of human-readable strings from the PWG:
+//
+// https://ftp.pwg.org/pub/pwg/ipp/examples/ipp.pot
+// https://ftp.pwg.org/pub/pwg/ipp/examples/ipp.strings
+//
+// Translations are supposed to go here (but none are available yet):
+//
+// https://github.com/istopwg/ippregistry/tree/master/localizations
+//
+// These standard strings are also part of CUPS' translation files:
+//
+// https://github.com/OpenPrinting/cups/tree/master/locale
+//
+// Here translations take actually place as part of the translations
+// of CUPS itself.
+//
+// We take the files from the CUPS installed into the system. It is
+// not complicated to check the user language in the printer's IPP
+// response via the attributes-natural-language attribute and then
+// request an appropriate language version of the files if
+// available. The printer-specific strings are downloaded from the
+// printer following the URI in the printer-strings-uri attribute and
+// are in the selected language.
+//
+// See also:
+//
+// https://lists.linuxfoundation.org/pipermail/printing-architecture/2021/003992.html
+// https://lists.linuxfoundation.org/pipermail/printing-architecture/2021/003995.html
+//
+
+
 #ifndef _CUPS_FILTERS_CATALOG_H_
 #  define _CUPS_FILTERS_CATALOG_H_
 
