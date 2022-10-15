@@ -1,6 +1,17 @@
-/*
- * Include necessary headers...
- */
+//
+// Raster file to PostScript filter function for libppd.
+//
+// Copyright © 2020 by Till Kamppeter
+// Copyright © 2007-2018 by Apple Inc.
+// Copyright © 1993-2007 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
+//
+// Include necessary headers...
+//
 
 #include <cupsfilters/colormanager.h>
 #include <cupsfilters/filter.h>
@@ -15,34 +26,36 @@
 #include "debug-internal.h"
 #include <zlib.h>
 
-/*
- * Types...
- */
-typedef struct rastertops_doc_s {         /**** Document information ****/
-  cups_file_t	*inputfp;		  /* Temporary file, if any */
-  FILE		*outputfp;		  /* Temporary file, if any */
-  cf_logfunc_t logfunc;               /* Logging function, NULL for no
-					     logging */
-  void          *logdata;                 /* User data for logging function, can
-					     be NULL */
-  cf_filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
-					     job is canceled, NULL for not
-					     supporting stop on cancel */
-  void *iscanceleddata;                   /* User data for is-canceled
-					     function, can be NULL */
+//
+// Types...
+//
+
+typedef struct rastertops_doc_s           // **** Document information ****
+{
+  cups_file_t	*inputfp;		  // Temporary file, if any
+  FILE		*outputfp;		  // Temporary file, if any
+  cf_logfunc_t logfunc;			  // Logging function, NULL for no
+					  // logging
+  void          *logdata;                 // User data for logging function, can
+					  // be NULL
+  cf_filter_iscanceledfunc_t iscanceledfunc; // Function returning 1 when
+					  // job is canceled, NULL for not
+					  // supporting stop on cancel
+  void *iscanceleddata;                   // User data for is-canceled
+					  // function, can be NULL
 } rastertops_doc_t;
 
 
-/*
- * 'write_prolog()' - Writing the PostScript prolog for the file
- */
+//
+// 'write_prolog()' - Writing the PostScript prolog for the file
+//
 
 static void
-write_prolog(int 	   width,  /* I - width of the image in points */
-            int 	   height, /* I - height of the image in points */
-            rastertops_doc_t *doc) /* I - Document information */
+write_prolog(int 	   width,  // I - width of the image in points
+            int 	   height, // I - height of the image in points
+            rastertops_doc_t *doc) // I - Document information
 {
-  /* Document header... */
+  // Document header...
   fprintf(doc->outputfp, "%%!PS-Adobe-3.0\n");
   fprintf(doc->outputfp, "%%%%BoundingBox: %d %d %d %d\n", 0, 0, width, height);
   fprintf(doc->outputfp, "%%%%Creator: cups-filters\n");
@@ -54,15 +67,16 @@ write_prolog(int 	   width,  /* I - width of the image in points */
   fprintf(doc->outputfp, "%%%%EndProlog\n");
 }
 
-/*
- * 'write_start_page()' - Write the basic page setup
- */
+
+//
+// 'write_start_page()' - Write the basic page setup
+//
 
 static void
-write_start_page(int  page,   /* I - Page to write */
-	       int  width,  /* I - Page width in points */
-               int  length, /* I - Page length in points */
-               rastertops_doc_t *doc) /* I - Document information */
+write_start_page(int  page,   // I - Page to write
+		 int  width,  // I - Page width in points
+		 int  length, // I - Page length in points
+		 rastertops_doc_t *doc) // I - Document information
 {
   if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_CONTROL,
 				 "PAGE: %d %d", page, 1);
@@ -73,61 +87,63 @@ write_start_page(int  page,   /* I - Page to write */
   fprintf(doc->outputfp, "%%%%EndPageSetup\n");
 }
 
-/*
- * 'find_bits()' - Finding the number of bits per color
- */
 
-static int                    /* O - Exit status */
-find_bits(cups_cspace_t mode, /* I - Color space of data */
-	  int           bpc)  /* I - Original bits per color of data */
+//
+// 'find_bits()' - Finding the number of bits per color
+//
+
+static int                    // O - Exit status
+find_bits(cups_cspace_t mode, // I - Color space of data
+	  int           bpc)  // I - Original bits per color of data
 {
   if (bpc == 1 &&
       (mode == CUPS_CSPACE_RGB ||
        mode == CUPS_CSPACE_ADOBERGB ||
        mode == CUPS_CSPACE_SRGB ||
        mode == CUPS_CSPACE_CMY))
-    return 8;
+    return (8);
 
   if (bpc == 16)
-    return 8;
+    return (8);
 
-  return bpc;
+  return (bpc);
 }
 
-/*
- * 'write_image()' - Write the information regarding the image
- */
+
+//
+// 'write_image()' - Write the information regarding the image
+//
 
 static void
-write_image(int           pagewidth,  /* I - width of page in points */
-	   int           pageheight, /* I - height of page in points */
-	   int           bpc,	     /* I - bits per color */
-	   int           pixwidth,   /* I - width of image in pixels */
-	   int           pixheight,  /* I - height of image in pixels */
-	   cups_cspace_t mode,       /* I - color model of image */
-     rastertops_doc_t *doc) /* I - Document information */
+write_image(int           pagewidth,  // I - width of page in points
+	    int           pageheight, // I - height of page in points
+	    int           bpc,	      // I - bits per color
+	    int           pixwidth,   // I - width of image in pixels
+	    int           pixheight,  // I - height of image in pixels
+	    cups_cspace_t mode,       // I - color model of image
+	    rastertops_doc_t *doc)    // I - Document information
 {
   fprintf(doc->outputfp, "gsave\n");
 
   switch (mode)
   {
-  case CUPS_CSPACE_RGB:
-  case CUPS_CSPACE_CMY:
-  case CUPS_CSPACE_SRGB:
-  case CUPS_CSPACE_ADOBERGB:
-    fprintf(doc->outputfp, "/DeviceRGB setcolorspace\n");
-    break;
+    case CUPS_CSPACE_RGB:
+    case CUPS_CSPACE_CMY:
+    case CUPS_CSPACE_SRGB:
+    case CUPS_CSPACE_ADOBERGB:
+        fprintf(doc->outputfp, "/DeviceRGB setcolorspace\n");
+	break;
 
-  case CUPS_CSPACE_CMYK:
-    fprintf(doc->outputfp, "/DeviceCMYK setcolorspace\n");
-    break;
+    case CUPS_CSPACE_CMYK:
+        fprintf(doc->outputfp, "/DeviceCMYK setcolorspace\n");
+	break;
 
-  default:
-  case CUPS_CSPACE_K:
-  case CUPS_CSPACE_W:
-  case CUPS_CSPACE_SW:
-    fprintf(doc->outputfp, "/DeviceGray setcolorspace\n");
-    break;
+    default:
+    case CUPS_CSPACE_K:
+    case CUPS_CSPACE_W:
+    case CUPS_CSPACE_SW:
+        fprintf(doc->outputfp, "/DeviceGray setcolorspace\n");
+	break;
   }
 
   if (bpc == 16)
@@ -141,52 +157,53 @@ write_image(int           pagewidth,  /* I - width of page in points */
 
   switch (mode)
   {
-  case CUPS_CSPACE_RGB:
-  case CUPS_CSPACE_CMY:
-  case CUPS_CSPACE_SRGB:
-  case CUPS_CSPACE_ADOBERGB:
-    fprintf(doc->outputfp, "/Decode [0 1 0 1 0 1]\n");
-    break;
+    case CUPS_CSPACE_RGB:
+    case CUPS_CSPACE_CMY:
+    case CUPS_CSPACE_SRGB:
+    case CUPS_CSPACE_ADOBERGB:
+        fprintf(doc->outputfp, "/Decode [0 1 0 1 0 1]\n");
+	break;
 	
-  case CUPS_CSPACE_CMYK:
-    fprintf(doc->outputfp, "/Decode [0 1 0 1 0 1 0 1]\n");
-    break;
+    case CUPS_CSPACE_CMYK:
+        fprintf(doc->outputfp, "/Decode [0 1 0 1 0 1 0 1]\n");
+	break;
   
-  case CUPS_CSPACE_SW:
-  	fprintf(doc->outputfp, "/Decode [0 1]\n");
+    case CUPS_CSPACE_SW:
+        fprintf(doc->outputfp, "/Decode [0 1]\n");
   	break;
 
-  default:
-  case CUPS_CSPACE_K:
-  case CUPS_CSPACE_W:
-    fprintf(doc->outputfp, "/Decode [1 0]\n");
-    break;
+    default:
+    case CUPS_CSPACE_K:
+    case CUPS_CSPACE_W:
+        fprintf(doc->outputfp, "/Decode [1 0]\n");
+	break;
   }     
 	
-  if(bpc==16)
+  if (bpc == 16)
     fprintf(doc->outputfp,
 	    "/DataSource {3 string 0 1 2 {1 index exch Input read {pop}"
-	   "if Input read pop put } for} bind\n");
+	    "if Input read pop put } for} bind\n");
   else
     fprintf(doc->outputfp, "/DataSource currentfile /FlateDecode filter\n");
 	
   fprintf(doc->outputfp, "/ImageMatrix [%d 0 0 %d 0 %d]\n", pixwidth,
-	  -1*pixheight, pixheight);
+	  -1 * pixheight, pixheight);
   fprintf(doc->outputfp, ">> image\n");
 }
 
-/*
- * 'convert_pixels()'- Convert 1 bpc to 8 bpc
- */
+
+//
+// 'convert_pixels()'- Convert 1 bpc to 8 bpc
+//
 
 static void
-convert_pixels(unsigned char *pixdata,      /* I - Original pixel data */
-	       unsigned char *convertedpix, /* I - Buffer for converted data */
-	       int 	     width)	    /* I - Width of data */
+convert_pixels(unsigned char *pixdata,      // I - Original pixel data
+	       unsigned char *convertedpix, // I - Buffer for converted data
+	       int 	     width)	    // I - Width of data
 {
-  int 		j, k = 0; /* Variables for iteration */
-  unsigned int  mask;	  /* Variable for per byte iteration */
-  unsigned char temp;	  /* temporary character */
+  int 		j, k = 0; // Variables for iteration
+  unsigned int  mask;	  // Variable for per byte iteration
+  unsigned char temp;	  // temporary character
 
   for(j = 0; j < width; ++j)
   {
@@ -205,48 +222,50 @@ convert_pixels(unsigned char *pixdata,      /* I - Original pixel data */
   }
 }
 
-/*
- * 'write_flate()' - Write the image data in flate encoded format
- */
 
-static int                              /* O - Error value */
-write_flate(cups_raster_t *ras,	        /* I - Image data */
-	    cups_page_header2_t	header,	/* I - Bytes Per Line */
-      rastertops_doc_t *doc) /* I - Document information */
+//
+// 'write_flate()' - Write the image data in flate encoded format
+//
+
+static int                              // O - Error value
+write_flate(cups_raster_t *ras,	        // I - Image data
+	    cups_page_header2_t	header,	// I - Bytes Per Line
+	    rastertops_doc_t *doc)      // I - Document information
 {
-  int            ret,                              /* Return value of this
-						      function */
-                 flush,                            /* Check the end of image
-						      data */
-                 curr_line=1,                      /* Maitining the working
-						      line of pixels */
+  int            ret,                              // Return value of this
+						   // function
+                 flush,                            // Check the end of image
+						   // data
+                 curr_line=1,                      // Maitining the working
+						   // line of pixels
                  alloc,
                  flag = 0;
-  unsigned       have;                             /* Bytes available in
-						      output buffer */
-  z_stream       strm;                             /* Structure required
-						      by deflate */
+  unsigned       have;                             // Bytes available in
+						   // output buffer
+  z_stream       strm;                             // Structure required
+						   // by deflate
   unsigned char  *pixdata,
                  *convertedpix;
-  unsigned char  in[header.cupsBytesPerLine * 6],  /* Input data buffer */
-                 out[header.cupsBytesPerLine * 6]; /* Output data buffer */
+  unsigned char  in[header.cupsBytesPerLine * 6],  // Input data buffer
+                 out[header.cupsBytesPerLine * 6]; // Output data buffer
 		
-  /* allocate deflate state */
+  // allocate deflate state
   strm.zalloc = Z_NULL;
   strm.zfree = Z_NULL;
   strm.opaque = Z_NULL;
   ret = deflateInit(&strm, -1);
   if (ret != Z_OK)
-    return ret;
+    return (ret);
 
-  if(header.cupsBitsPerColor == 1 &&
-     (header.cupsColorSpace == CUPS_CSPACE_RGB ||
-      header.cupsColorSpace == CUPS_CSPACE_ADOBERGB ||
-      header.cupsColorSpace == CUPS_CSPACE_SRGB))
+  if (header.cupsBitsPerColor == 1 &&
+      (header.cupsColorSpace == CUPS_CSPACE_RGB ||
+       header.cupsColorSpace == CUPS_CSPACE_ADOBERGB ||
+       header.cupsColorSpace == CUPS_CSPACE_SRGB))
     flag = 1;
 
-  /* compress until end of file */
-  do {
+  // compress until end of file
+  do
+  {
     pixdata = malloc(header.cupsBytesPerLine);
     cupsRasterReadPixels(ras, pixdata, header.cupsBytesPerLine);
     if (flag)
@@ -271,16 +290,17 @@ write_flate(cups_raster_t *ras,	        /* I - Image data */
     strm.avail_in = alloc;
     strm.next_in = in;
 
-    /* run deflate() on input until output buffer not full, finish
-     * compression if all of source has been read in */
-    do {
+    // run deflate() on input until output buffer not full, finish
+    // compression if all of source has been read in
+    do
+    {
       strm.avail_out = alloc;
       strm.next_out = out;
 
-      /* Run the deflate algorithm on the data */
+      // Run the deflate algorithm on the data
       ret = deflate(&strm, flush);
 
-      /* check whether state is not clobbered */
+      // check whether state is not clobbered
       DEBUG_assert(ret != Z_STREAM_ERROR);
       have = alloc - strm.avail_out;
       if (fwrite(out, 1, have, doc->outputfp) != have)
@@ -288,103 +308,109 @@ write_flate(cups_raster_t *ras,	        /* I - Image data */
 	(void)deflateEnd(&strm);
 	if (convertedpix != NULL)
 	  free(convertedpix);
-	return Z_ERRNO;
+	return (Z_ERRNO);
       }
-    } while (strm.avail_out == 0);
+    }
+    while (strm.avail_out == 0);
 
-    /* all input will be used */
+    // all input will be used
     DEBUG_assert(strm.avail_in == 0);
 
-    /* done when last data in file processed */
+    // done when last data in file processed
     free(pixdata);
     free(convertedpix);
-  } while (flush != Z_FINISH);
+  }
+  while (flush != Z_FINISH);
 
-  /* stream will be complete */
+  // stream will be complete
   DEBUG_assert(ret == Z_STREAM_END);
 
-  /* clean up and return */
+  // clean up and return
   (void)deflateEnd(&strm);
-  return Z_OK;
+  return (Z_OK);
 }
 
-/*
- * 'z_error()' - Report a zlib or i/o error
- */
+//
+// 'z_error()' - Report a zlib or i/o error
+//
 
 static void
-z_error(int ret, /* I - Return status of deflate */
-    rastertops_doc_t *doc) /* I - Document information */
+z_error(int ret,               // I - Return status of deflate
+	rastertops_doc_t *doc) // I - Document information
 {
-  switch (ret) {
-  case Z_ERRNO:
-    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "ppdFilterRasterToPS: zpipe - error in source data or output file");
-    break;
-  case Z_STREAM_ERROR:
-    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "ppdFilterRasterToPS: zpipe - invalid compression level");
-    break;
-  case Z_DATA_ERROR:
-    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "ppdFilterRasterToPS: zpipe - invalid or incomplete deflate data");
-    break;
-  case Z_MEM_ERROR:
-    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "ppdFilterRasterToPS: zpipe - out of memory");
-    break;
-  case Z_VERSION_ERROR:
-    if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
-		  "ppdFilterRasterToPS: zpipe - zlib version mismatch!");
+  switch (ret)
+  {
+    case Z_ERRNO:
+        if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
+				       "ppdFilterRasterToPS: zpipe - error in source data or output file");
+	break;
+    case Z_STREAM_ERROR:
+        if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
+				       "ppdFilterRasterToPS: zpipe - invalid compression level");
+	break;
+    case Z_DATA_ERROR:
+        if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
+				       "ppdFilterRasterToPS: zpipe - invalid or incomplete deflate data");
+	break;
+    case Z_MEM_ERROR:
+        if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
+				       "ppdFilterRasterToPS: zpipe - out of memory");
+	break;
+    case Z_VERSION_ERROR:
+      if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_ERROR,
+				     "ppdFilterRasterToPS: zpipe - zlib version mismatch!");
   }
 }
 
-/*
- * 'write_end_page()' - Show the current page.
- */
+
+//
+// 'write_end_page()' - Show the current page.
+//
 
 static void
-write_end_page(rastertops_doc_t *doc) /* I - Document information */
+write_end_page(rastertops_doc_t *doc) // I - Document information
 {
   fprintf(doc->outputfp, "\ngrestore\n");
   fprintf(doc->outputfp, "showpage\n");
   fprintf(doc->outputfp, "%%%%PageTrailer\n");
 }
 
-/*
- * 'write_trailer()' - Write the PostScript trailer.
- */
+//
+// 'write_trailer()' - Write the PostScript trailer.
+//
 
 static void
-write_trailer(int  pages, /* I - Number of pages */
-            rastertops_doc_t *doc) /* I - Document information */
+write_trailer(int              pages, // I - Number of pages
+	      rastertops_doc_t *doc)  // I - Document information
 {
   fprintf(doc->outputfp, "%%%%Trailer\n");
   fprintf(doc->outputfp, "%%%%Pages: %d\n", pages);
   fprintf(doc->outputfp, "%%%%EOF\n");
 }
 
-/*
- * 'ppdFilterRasterToPS()' - Filter function to convert PWG raster input
- *                  to PostScript
- */
+//
+// 'ppdFilterRasterToPS()' - Filter function to convert PWG raster input
+//                           to PostScript
+//
 
-int                         /* O - Error status */
-ppdFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
-       int outputfd,        /* I - File descriptor output stream */
-       int inputseekable,   /* I - Is input stream seekable? (unused) */
-       cf_filter_data_t *data, /* I - Job and printer data */
-       void *parameters)    /* I - Filter-specific parameters (unused) */
+int                                      // O - Error status
+ppdFilterRasterToPS(int inputfd,         // I - File descriptor input stream
+		    int outputfd,        // I - File descriptor output stream
+		    int inputseekable,   // I - Is input stream seekable?
+		                         //     (unused)
+		    cf_filter_data_t *data, // I - Job and printer data
+		    void *parameters)    // I - Filter-specific parameters
+                                         //     (unused)
 {
-  rastertops_doc_t     doc;         /* Document information */
-  cups_file_t	         *inputfp;		/* Print file */
-  FILE                 *outputfp;   /* Output data stream */
-  cups_raster_t	       *ras;        /* Raster stream for printing */
-  cups_page_header2_t  header;      /* Page header from file */
-  int           empty,         /* Is the input empty? */
-                Page = 0,      /* variable for counting the pages */
-                ret;           /* Return value of deflate compression */
-  cf_logfunc_t     log = data->logfunc;
+  rastertops_doc_t     doc;         // Document information
+  cups_file_t	       *inputfp;    // Print file
+  FILE                 *outputfp;   // Output data stream
+  cups_raster_t	       *ras;        // Raster stream for printing
+  cups_page_header2_t  header;      // Page header from file
+  int                  empty,       // Is the input empty?
+                       Page = 0,    // variable for counting the pages
+                       ret;         // Return value of deflate compression
+  cf_logfunc_t         log = data->logfunc;
   void                 *ld = data->logdata;
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
   void                 *icd = data->iscanceleddata;
@@ -393,9 +419,9 @@ ppdFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
   (void)inputseekable;
   (void)parameters;
 
-  /*
-  * Open the input data stream specified by the inputfd...
-  */
+  //
+  // Open the input data stream specified by the inputfd...
+  //
 
   if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
@@ -408,9 +434,9 @@ ppdFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
     return (1);
   }
 
-  /*
-  * Open the output data stream specified by the outputfd...
-  */
+  //
+  // Open the output data stream specified by the outputfd...
+  //
 
   if ((outputfp = fdopen(outputfd, "w")) == NULL)
   {
@@ -427,18 +453,19 @@ ppdFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
 
   doc.inputfp = inputfp;
   doc.outputfp = outputfp;
-  /* Logging function */
+  // Logging function
   doc.logfunc = log;
   doc.logdata = ld;
-  /* Job-is-canceled function */
+  // Job-is-canceled function
   doc.iscanceledfunc = iscanceled;
   doc.iscanceleddata = icd;
  
   ras = cupsRasterOpen(inputfd, CUPS_RASTER_READ);
 
-  /*
-  * Process pages as needed...
-  */
+  //
+  // Process pages as needed...
+  //
+
   Page = 0;
   empty = 1;
 
@@ -451,9 +478,9 @@ ppdFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
       break;
     }
 
-   /*
-    * Write the prolog for PS only once
-    */
+    //
+    // Write the prolog for PS only once
+    //
 
     if (empty)
     {
@@ -461,29 +488,31 @@ ppdFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
       write_prolog(header.PageSize[0], header.PageSize[1], &doc);
     }
 
-   /*
-    * Write a status message with the page number and number of copies.
-    */
+    //
+    // Write a status message with the page number and number of copies.
+    //
 
     Page ++;
 
     if (log) log(ld, CF_LOGLEVEL_INFO,
      "ppdFilterRasterToPS: Starting page %d.", Page);
 
-   /*
-    *	Write the starting of the page
-    */
+    //
+    // Write the starting of the page
+    //
+    
     write_start_page(Page, header.PageSize[0], header.PageSize[1], &doc);
 
-   /*
-    *	write the information regarding the image
-    */
+    //
+    // Write the information regarding the image
+    //
+    
     write_image(header.PageSize[0], header.PageSize[1],
-	       header.cupsBitsPerColor,
-	       header.cupsWidth, header.cupsHeight,
-	       header.cupsColorSpace, &doc);
+		header.cupsBitsPerColor,
+		header.cupsWidth, header.cupsHeight,
+		header.cupsColorSpace, &doc);
 
-    /* Write the compressed image data*/
+    // Write the compressed image data
     ret = write_flate(ras, header, &doc);
     if (ret != Z_OK)
       z_error(ret, &doc);
@@ -492,10 +521,10 @@ ppdFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
 
   if (empty)
   {
-     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-      "ppdFilterRasterToPS: Input is empty, outputting empty file.");
-     cupsRasterClose(ras);
-     return 0;
+    if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		 "ppdFilterRasterToPS: Input is empty, outputting empty file.");
+    cupsRasterClose(ras);
+    return (0);
   }
 
   write_trailer(Page, &doc);
@@ -507,5 +536,5 @@ ppdFilterRasterToPS(int inputfd,         /* I - File descriptor input stream */
   fclose(outputfp);
   close(outputfd);
 
-  return 0;
+  return (0);
 }

@@ -1,16 +1,16 @@
-/*
- * PPD test program for libppd.
- *
- * Copyright © 2007-2018 by Apple Inc.
- * Copyright © 1997-2006 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// PPD test program for libppd.
+//
+// Copyright © 2007-2018 by Apple Inc.
+// Copyright © 1997-2006 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "ppd.h"
 #include "array-private.h"
@@ -21,22 +21,23 @@
 #else
 #  include <unistd.h>
 #  include <fcntl.h>
-#endif /* _WIN32 */
+#endif // _WIN32
 #include <math.h>
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
-static int	do_ppd_tests(const char *filename, int num_options, cups_option_t *options);
+static int	do_ppd_tests(const char *filename, int num_options,
+			     cups_option_t *options);
 static int	do_ps_tests(void);
 static void	print_changes(cups_page_header2_t *header, cups_page_header2_t *expected);
 
 
-/*
- * Test data...
- */
+//
+// Test data...
+//
 
 static const char *dsc_code =
 "[{\n"
@@ -135,57 +136,57 @@ static const char *setpagedevice_code =
 
 static cups_page_header2_t setpagedevice_header =
 {
-  "Media Class",			/* MediaClass */
-  "(Media Color)",			/* MediaColor */
-  "Media\\Type",			/* MediaType */
-  "Abc",				/* OutputType */
-  1000,					/* AdvanceDistance */
-  CUPS_ADVANCE_FILE,			/* AdvanceMedia */
-  CUPS_FALSE,				/* Collate */
-  CUPS_CUT_JOB,				/* CutMedia */
-  CUPS_TRUE,				/* Duplex */
-  { 100, 200 },				/* HWResolution */
-  { 0, 0, 0, 0 },			/* ImagingBoundingBox */
-  CUPS_TRUE,				/* InsertSheet */
-  CUPS_JOG_SET,				/* Jog */
-  CUPS_EDGE_RIGHT,			/* LeadingEdge */
-  { 0, 0 },				/* Margins */
-  CUPS_TRUE,				/* ManualFeed */
-  0777,					/* MediaPosition */
-  0xfe01,				/* MediaWeight */
-  CUPS_TRUE,				/* MirrorPrint */
-  CUPS_TRUE,				/* NegativePrint */
-  1,					/* NumCopies */
-  CUPS_ORIENT_90,			/* Orientation */
-  CUPS_TRUE,				/* OutputFaceUp */
-  { 612, 792 },				/* PageSize */
-  CUPS_TRUE,				/* Separations */
-  CUPS_TRUE,				/* TraySwitch */
-  CUPS_TRUE,				/* Tumble */
-  0,					/* cupsWidth */
-  0,					/* cupsHeight */
-  2,					/* cupsMediaType */
-  0,					/* cupsBitsPerColor */
-  0,					/* cupsBitsPerPixel */
-  0,					/* cupsBytesPerLine */
-  CUPS_ORDER_BANDED,			/* cupsColorOrder */
-  CUPS_CSPACE_RGB,			/* cupsColorSpace */
-  1,					/* cupsCompression */
-  1,					/* cupsRowCount */
-  1,					/* cupsRowFeed */
-  1,					/* cupsRowStep */
-  0,					/* cupsNumColors */
-  1.001f,				/* cupsBorderlessScalingFactor */
-  { 612.0f, 792.1f },			/* cupsPageSize */
-  { 0.0f, 0.0f, 0.0f, 0.0f },		/* cupsImagingBBox */
+  "Media Class",			// MediaClass
+  "(Media Color)",			// MediaColor
+  "Media\\Type",			// MediaType
+  "Abc",				// OutputType
+  1000,					// AdvanceDistance
+  CUPS_ADVANCE_FILE,			// AdvanceMedia
+  CUPS_FALSE,				// Collate
+  CUPS_CUT_JOB,				// CutMedia
+  CUPS_TRUE,				// Duplex
+  { 100, 200 },				// HWResolution
+  { 0, 0, 0, 0 },			// ImagingBoundingBox
+  CUPS_TRUE,				// InsertSheet
+  CUPS_JOG_SET,				// Jog
+  CUPS_EDGE_RIGHT,			// LeadingEdge
+  { 0, 0 },				// Margins
+  CUPS_TRUE,				// ManualFeed
+  0777,					// MediaPosition
+  0xfe01,				// MediaWeight
+  CUPS_TRUE,				// MirrorPrint
+  CUPS_TRUE,				// NegativePrint
+  1,					// NumCopies
+  CUPS_ORIENT_90,			// Orientation
+  CUPS_TRUE,				// OutputFaceUp
+  { 612, 792 },				// PageSize
+  CUPS_TRUE,				// Separations
+  CUPS_TRUE,				// TraySwitch
+  CUPS_TRUE,				// Tumble
+  0,					// cupsWidth
+  0,					// cupsHeight
+  2,					// cupsMediaType
+  0,					// cupsBitsPerColor
+  0,					// cupsBitsPerPixel
+  0,					// cupsBytesPerLine
+  CUPS_ORDER_BANDED,			// cupsColorOrder
+  CUPS_CSPACE_RGB,			// cupsColorSpace
+  1,					// cupsCompression
+  1,					// cupsRowCount
+  1,					// cupsRowFeed
+  1,					// cupsRowStep
+  0,					// cupsNumColors
+  1.001f,				// cupsBorderlessScalingFactor
+  { 612.0f, 792.1f },			// cupsPageSize
+  { 0.0f, 0.0f, 0.0f, 0.0f },		// cupsImagingBBox
   { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 },
-					/* cupsInteger[16] */
-  { 1.1f, 2.1f, 3.1f, 4.1f, 5.1f, 6.1f, 7.1f, 8.1f, 9.1f, 10.1f, 11.1f, 12.1f, 13.1f, 14.1f, 15.1f, 16.1f },			/* cupsReal[16] */
+					// cupsInteger[16]
+  { 1.1f, 2.1f, 3.1f, 4.1f, 5.1f, 6.1f, 7.1f, 8.1f, 9.1f, 10.1f, 11.1f, 12.1f, 13.1f, 14.1f, 15.1f, 16.1f },			// cupsReal[16]
   { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13",
-    "14", "15", "16" },			/* cupsString[16] */
-  "Marker Type",			/* cupsMarkerType */
-  "Rendering Intent",			/* cupsRenderingIntent */
-  "Letter"				/* cupsPageSizeName */
+    "14", "15", "16" },			// cupsString[16]
+  "Marker Type",			// cupsMarkerType
+  "Rendering Intent",			// cupsRenderingIntent
+  "Letter"				// cupsPageSizeName
 };
 
 static const char	*default_code =
@@ -289,17 +290,17 @@ static const char	*default2_code =
 			"} stopped cleartomark\n";
 
 
-/*
- * '_ppdRasterColorSpaceString()' - Return the colorspace name for a
- *                                   cupsColorSpace value.
- */
+//
+// '_ppdRasterColorSpaceString()' - Return the colorspace name for a
+//                                  cupsColorSpace value.
+//
 
 const char *
 _ppdRasterColorSpaceString(
-    cups_cspace_t cspace)		/* I - cupsColorSpace value */
+    cups_cspace_t cspace)		// I - cupsColorSpace value
 {
   static const char * const cups_color_spaces[] =
-  {					/* Color spaces */
+  {					// Color spaces
     "W",
     "RGB",
     "RGBA",
@@ -371,9 +372,10 @@ _ppdRasterColorSpaceString(
     return (cups_color_spaces[cspace]);
 }
 
-/*
- * '_log()' - Simple log function
- */
+
+//
+// '_log()' - Simple log function
+//
 
 void
 _log(void *data,
@@ -383,7 +385,7 @@ _log(void *data,
 {
   va_list arglist;
 
-  (void)data; /* No extra data needed */
+  (void)data; // No extra data needed
 
   switch(level)
   {
@@ -404,38 +406,38 @@ _log(void *data,
 }
 
 
-/*
- * 'main()' - Main entry.
- */
+//
+// 'main()' - Main entry.
+//
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int					// O - Exit status
+main(int  argc,				// I - Number of command-line arguments
+     char *argv[])			// I - Command-line arguments
 {
-  int		i;			/* Looping var */
-  ppd_file_t	*ppd = NULL;		/* PPD file loaded from disk */
-  int		status;			/* Status of tests (0 = success, 1 = fail) */
-  int		conflicts;		/* Number of conflicts */
-  char		*s;			/* String */
-  char		buffer[8192];		/* String buffer */
-  const char	*text,			/* Localized text */
-		*val;			/* Option value */
-  int		num_options;		/* Number of options */
-  cups_option_t	*options;		/* Options */
-  ppd_size_t	minsize,		/* Minimum size */
-		maxsize,		/* Maximum size */
-		*size;			/* Current size */
-  ppd_attr_t	*attr;			/* Current attribute */
-  ppd_cache_t	*pc;			/* PPD cache */
+  int		i;			// Looping var
+  ppd_file_t	*ppd = NULL;		// PPD file loaded from disk
+  int		status;			// Status of tests (0 = success, 1 = fail)
+  int		conflicts;		// Number of conflicts
+  char		*s;			// String
+  char		buffer[8192];		// String buffer
+  const char	*text,			// Localized text
+		*val;			// Option value
+  int		num_options;		// Number of options
+  cups_option_t	*options;		// Options
+  ppd_size_t	minsize,		// Minimum size
+		maxsize,		// Maximum size
+		*size;			// Current size
+  ppd_attr_t	*attr;			// Current attribute
+  ppd_cache_t	*pc;			// PPD cache
 
 
   status = 0;
 
   if (argc == 1)
   {
-   /*
-    * Setup directories for locale stuff...
-    */
+    //
+    // Setup directories for locale stuff...
+    //
 
     if (access("locale", 0))
     {
@@ -449,9 +451,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     putenv("LOCALEDIR=locale");
     putenv("SOFTWARE=CUPS");
 
-   /*
-    * Do tests with test.ppd...
-    */
+    //
+    // Do tests with test.ppd...
+    //
 
     fputs("ppdOpenFile(\"ppd/test.ppd\"): ", stdout);
 
@@ -459,8 +461,8 @@ main(int  argc,				/* I - Number of command-line arguments */
       puts("PASS");
     else
     {
-      ppd_status_t	err;		/* Last error in file */
-      int		line;		/* Line number in file */
+      ppd_status_t	err;		// Last error in file
+      int		line;		// Line number in file
 
 
       status ++;
@@ -550,7 +552,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 
     fputs("ppdEmitString (custom size and string): ", stdout);
     ppdMarkOption(ppd, "PageSize", "Custom.400x500");
-    ppdMarkOption(ppd, "StringOption", "{String1=\"value 1\" String2=value(2)}");
+    ppdMarkOption(ppd, "StringOption",
+		  "{String1=\"value 1\" String2=value(2)}");
 
     if ((s = ppdEmitString(ppd, PPD_ORDER_ANY, 0.0)) != NULL &&
 	!strcmp(s, custom_code))
@@ -568,9 +571,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     if (s)
       free(s);
 
-   /*
-    * Test constraints...
-    */
+    //
+    // Test constraints...
+    //
 
     fputs("ppdGetConflicts(InputSlot=Envelope): ", stdout);
     ppdMarkOption(ppd, "PageSize", "Letter");
@@ -662,15 +665,17 @@ main(int  argc,				/* I - Number of command-line arguments */
       status ++;
     }
 
-   /*
-    * ppdPageSizeLimits
-    */
+    //
+    // ppdPageSizeLimits
+    //
 
     fputs("ppdPageSizeLimits: ", stdout);
     if (ppdPageSizeLimits(ppd, &minsize, &maxsize))
     {
-      if (fabs(minsize.width - 36.0) > 0.001 || fabs(minsize.length - 36.0) > 0.001 ||
-          fabs(maxsize.width - 1080.0) > 0.001 || fabs(maxsize.length - 86400.0) > 0.001)
+      if (fabs(minsize.width - 36.0) > 0.001 ||
+	  fabs(minsize.length - 36.0) > 0.001 ||
+          fabs(maxsize.width - 1080.0) > 0.001 ||
+	  fabs(maxsize.length - 86400.0) > 0.001)
       {
         printf("FAIL (got min=%.3fx%.3f, max=%.3fx%.3f, "
 	       "expected min=36x36, max=1080x86400)\n", minsize.width,
@@ -686,9 +691,9 @@ main(int  argc,				/* I - Number of command-line arguments */
       status ++;
     }
 
-   /*
-    * ppdMarkOptions with PWG and IPP size names.
-    */
+    //
+    // ppdMarkOptions with PWG and IPP size names.
+    //
 
     fputs("ppdMarkOptions(media=iso-a4): ", stdout);
     num_options = cupsAddOption("media", "iso-a4", 0, &options);
@@ -747,9 +752,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     else
       puts("PASS");
 
-   /*
-    * Custom sizes...
-    */
+    //
+    // Custom sizes...
+    //
 
     fputs("ppdMarkOptions(media=Custom.8x10in): ", stdout);
     num_options = cupsAddOption("media", "Custom.8x10in", 0, &options);
@@ -768,9 +773,9 @@ main(int  argc,				/* I - Number of command-line arguments */
     else
       puts("PASS");
 
-   /*
-    * Test localization...
-    */
+    //
+    // Test localization...
+    //
 
     fputs("ppdLocalizeIPPReason(text): ", stdout);
     if (ppdLocalizeIPPReason(ppd, "foo", NULL, buffer, sizeof(buffer)) &&
@@ -842,9 +847,9 @@ main(int  argc,				/* I - Number of command-line arguments */
       printf("FAIL (\"%s\" instead of \"Number 1 Foo Reason\")\n", buffer);
     }
 
-   /*
-    * cupsMarkerName localization...
-    */
+    //
+    // cupsMarkerName localization...
+    //
 
     putenv("LANG=en");
     putenv("LC_ALL=en");
@@ -907,9 +912,9 @@ main(int  argc,				/* I - Number of command-line arguments */
 
     ppdClose(ppd);
 
-   /*
-    * Test new constraints...
-    */
+    //
+    // Test new constraints...
+    //
 
     fputs("ppdOpenFile(\"ppd/test2.ppd\"): ", stdout);
 
@@ -917,8 +922,8 @@ main(int  argc,				/* I - Number of command-line arguments */
       puts("PASS");
     else
     {
-      ppd_status_t	err;		/* Last error in file */
-      int		line;		/* Line number in file */
+      ppd_status_t	err;		// Last error in file
+      int		line;		// Line number in file
 
 
       status ++;
@@ -1039,17 +1044,19 @@ main(int  argc,				/* I - Number of command-line arguments */
       status ++;
     }
 
-   /*
-    * ppdPageSizeLimits
-    */
+    //
+    // ppdPageSizeLimits
+    //
 
     ppdMarkDefaults(ppd);
 
     fputs("ppdPageSizeLimits(default): ", stdout);
     if (ppdPageSizeLimits(ppd, &minsize, &maxsize))
     {
-      if (fabs(minsize.width - 36.0) > 0.001 || fabs(minsize.length - 36.0) > 0.001 ||
-          fabs(maxsize.width - 1080.0) > 0.001 || fabs(maxsize.length - 86400.0) > 0.001)
+      if (fabs(minsize.width - 36.0) > 0.001 ||
+	  fabs(minsize.length - 36.0) > 0.001 ||
+          fabs(maxsize.width - 1080.0) > 0.001 ||
+	  fabs(maxsize.length - 86400.0) > 0.001)
       {
         printf("FAIL (got min=%.0fx%.0f, max=%.0fx%.0f, "
 	       "expected min=36x36, max=1080x86400)\n", minsize.width,
@@ -1070,8 +1077,10 @@ main(int  argc,				/* I - Number of command-line arguments */
     fputs("ppdPageSizeLimits(InputSlot=Manual): ", stdout);
     if (ppdPageSizeLimits(ppd, &minsize, &maxsize))
     {
-      if (fabs(minsize.width - 100.0) > 0.001 || fabs(minsize.length - 100.0) > 0.001 ||
-          fabs(maxsize.width - 1000.0) > 0.001 || fabs(maxsize.length - 1000.0) > 0.001)
+      if (fabs(minsize.width - 100.0) > 0.001 ||
+	  fabs(minsize.length - 100.0) > 0.001 ||
+          fabs(maxsize.width - 1000.0) > 0.001 ||
+	  fabs(maxsize.length - 1000.0) > 0.001)
       {
         printf("FAIL (got min=%.0fx%.0f, max=%.0fx%.0f, "
 	       "expected min=100x100, max=1000x1000)\n", minsize.width,
@@ -1092,8 +1101,10 @@ main(int  argc,				/* I - Number of command-line arguments */
     fputs("ppdPageSizeLimits(Quality=Photo): ", stdout);
     if (ppdPageSizeLimits(ppd, &minsize, &maxsize))
     {
-      if (fabs(minsize.width - 200.0) > 0.001 || fabs(minsize.length - 200.0) > 0.001 ||
-          fabs(maxsize.width - 1000.0) > 0.001 || fabs(maxsize.length - 1000.0) > 0.001)
+      if (fabs(minsize.width - 200.0) > 0.001 ||
+	  fabs(minsize.length - 200.0) > 0.001 ||
+          fabs(maxsize.width - 1000.0) > 0.001 ||
+	  fabs(maxsize.length - 1000.0) > 0.001)
       {
         printf("FAIL (got min=%.0fx%.0f, max=%.0fx%.0f, "
 	       "expected min=200x200, max=1000x1000)\n", minsize.width,
@@ -1114,8 +1125,10 @@ main(int  argc,				/* I - Number of command-line arguments */
     fputs("ppdPageSizeLimits(Quality=Photo): ", stdout);
     if (ppdPageSizeLimits(ppd, &minsize, &maxsize))
     {
-      if (fabs(minsize.width - 300.0) > 0.001 || fabs(minsize.length - 300.0) > 0.001 ||
-          fabs(maxsize.width - 1080.0) > 0.001 || fabs(maxsize.length - 86400.0) > 0.001)
+      if (fabs(minsize.width - 300.0) > 0.001 ||
+	  fabs(minsize.length - 300.0) > 0.001 ||
+          fabs(maxsize.width - 1080.0) > 0.001 ||
+	  fabs(maxsize.length - 86400.0) > 0.001)
       {
         printf("FAIL (got min=%.0fx%.0f, max=%.0fx%.0f, "
 	       "expected min=300x300, max=1080x86400)\n", minsize.width,
@@ -1175,8 +1188,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 	   (s = strcasestr(argv[1], ".ppd")) == NULL ||
 	   s[4] != '\0')
   {
-    /* First argument is not FILE.ppd but DIR or DIR,DIR,... ->
-       PPD directory list -> See whether we have valid PPD collection */
+    // First argument is not FILE.ppd but DIR or DIR,DIR,... ->
+    // PPD directory list -> See whether we have valid PPD collection
 
     cups_array_t *dirlist = _ppdArrayNewStrings(argv[1], ',');
     cups_array_t *ppd_collections = cupsArrayNew(NULL, NULL);
@@ -1255,8 +1268,8 @@ main(int  argc,				/* I - Number of command-line arguments */
       if ((ppd = ppdOpen2(ppdCollectionGetPPD(testname, ppd_collections,
 					      _log, NULL))) == NULL)
       {
-	ppd_status_t	err;		/* Last error in file */
-	int		line;		/* Line number in file */
+	ppd_status_t	err;		// Last error in file
+	int		line;		// Line number in file
 
 	status ++;
 	err = ppdLastError(&line);
@@ -1296,9 +1309,9 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
   else
   {
-    const char	*name;			/* PPD name */
-    char	*filename;		/* Name of actual file containing PPD */
-    struct stat	fileinfo;		/* File information */
+    const char	*name;			// PPD name
+    char	*filename;		// Name of actual file containing PPD
+    struct stat	fileinfo;		// File information
 
     name = argv[1];
     filename = strdup(name);
@@ -1313,8 +1326,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 
     if (S_ISLNK(fileinfo.st_mode))
     {
-      char	realfile[1024];		/* Real file path */
-      ssize_t	realsize;		/* Size of real file path */
+      char	realfile[1024];		// Real file path
+      ssize_t	realsize;		// Size of real file path
 
 
       if ((realsize = readlink(filename, realfile, sizeof(realfile) - 1)) < 0)
@@ -1341,8 +1354,8 @@ main(int  argc,				/* I - Number of command-line arguments */
     if ((ppd = ppdOpen2(ppdCollectionGetPPD(name, NULL, _log, NULL))) ==
 	NULL)
     {
-      ppd_status_t	err;		/* Last error in file */
-      int		line;		/* Line number in file */
+      ppd_status_t	err;		// Last error in file
+      int		line;		// Line number in file
 
 
       status ++;
@@ -1352,16 +1365,16 @@ main(int  argc,				/* I - Number of command-line arguments */
     }
     else
     {
-      int		j, k;		/* Looping vars */
-      ppd_group_t	*group;		/* Option group */
-      ppd_option_t	*option;	/* Option */
-      ppd_coption_t	*coption;	/* Custom option */
-      ppd_cparam_t	*cparam;	/* Custom parameter */
-      ppd_const_t	*c;		/* UIConstraints */
-      char		lang[255],	/* LANG environment variable */
-			lc_all[255],	/* LC_ALL environment variable */
-			lc_ctype[255],	/* LC_CTYPE environment variable */
-			lc_messages[255];/* LC_MESSAGES environment variable */
+      int		j, k;		// Looping vars
+      ppd_group_t	*group;		// Option group
+      ppd_option_t	*option;	// Option
+      ppd_coption_t	*coption;	// Custom option
+      ppd_cparam_t	*cparam;	// Custom parameter
+      ppd_const_t	*c;		// UIConstraints
+      char		lang[255],	// LANG environment variable
+			lc_all[255],	// LC_ALL environment variable
+			lc_ctype[255],	// LC_CTYPE environment variable
+			lc_messages[255];// LC_MESSAGES environment variable
 
 
       if (argc > 2)
@@ -1413,7 +1426,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 	      switch (cparam->type)
 	      {
 	        case PPD_CUSTOM_UNKNOWN :
-		    printf("              %s(%s): PPD_CUSTOM_UNKNOWN (error)\n", cparam->name, cparam->text);
+		    printf("              %s(%s): PPD_CUSTOM_UNKNOWN (error)\n",
+			   cparam->name, cparam->text);
 	            break;
 
 	        case PPD_CUSTOM_CURVE :
@@ -1523,14 +1537,14 @@ main(int  argc,				/* I - Number of command-line arguments */
 #ifdef __APPLE__
   if (getenv("MallocStackLogging") && getenv("MallocStackLoggingNoCompact"))
   {
-    char	command[1024];		/* malloc_history command */
+    char	command[1024];		// malloc_history command
 
     snprintf(command, sizeof(command), "malloc_history %d -all_by_size",
 	     getpid());
     fflush(stdout);
     system(command);
   }
-#endif /* __APPLE__ */
+#endif // __APPLE__
 
   ppdClose(ppd);
 
@@ -1538,17 +1552,17 @@ main(int  argc,				/* I - Number of command-line arguments */
 }
 
 
-/*
- * 'do_ppd_tests()' - Test the default option commands in a PPD file.
- */
+//
+// 'do_ppd_tests()' - Test the default option commands in a PPD file.
+//
 
-static int				/* O - Number of errors */
-do_ppd_tests(const char    *filename,	/* I - PPD file */
-             int           num_options,	/* I - Number of options */
-             cups_option_t *options)	/* I - Options */
+static int				// O - Number of errors
+do_ppd_tests(const char    *filename,	// I - PPD file
+             int           num_options,	// I - Number of options
+             cups_option_t *options)	// I - Options
 {
-  ppd_file_t		*ppd;		/* PPD file data */
-  cups_page_header2_t	header;		/* Page header */
+  ppd_file_t		*ppd;		// PPD file data
+  cups_page_header2_t	header;		// Page header
 
 
   printf("\"%s\": ", filename);
@@ -1556,8 +1570,8 @@ do_ppd_tests(const char    *filename,	/* I - PPD file */
 
   if ((ppd = ppdOpenFile(filename)) == NULL)
   {
-    ppd_status_t	status;		/* Status from PPD loader */
-    int			line;		/* Line number containing error */
+    ppd_status_t	status;		// Status from PPD loader
+    int			line;		// Line number containing error
 
 
     status = ppdLastError(&line);
@@ -1587,21 +1601,21 @@ do_ppd_tests(const char    *filename,	/* I - PPD file */
 }
 
 
-/*
- * 'do_ps_tests()' - Test standard PostScript commands.
- */
+//
+// 'do_ps_tests()' - Test standard PostScript commands.
+//
 
 static int
 do_ps_tests(void)
 {
-  cups_page_header2_t	header;		/* Page header */
-  int			preferred_bits;	/* Preferred bits */
-  int			errors = 0;	/* Number of errors */
+  cups_page_header2_t	header;		// Page header
+  int			preferred_bits;	// Preferred bits
+  int			errors = 0;	// Number of errors
 
 
- /*
-  * Test PS exec code...
-  */
+  //
+  // Test PS exec code...
+  //
 
   fputs("ppdRasterExecPS(\"setpagedevice\"): ", stdout);
   fflush(stdout);
@@ -1713,18 +1727,16 @@ do_ps_tests(void)
 }
 
 
-
-
-/*
- * 'print_changes()' - Print differences in the page header.
- */
+//
+// 'print_changes()' - Print differences in the page header.
+//
 
 static void
 print_changes(
-    cups_page_header2_t *header,	/* I - Actual page header */
-    cups_page_header2_t *expected)	/* I - Expected page header */
+    cups_page_header2_t *header,	// I - Actual page header
+    cups_page_header2_t *expected)	// I - Expected page header
 {
-  int	i;				/* Looping var */
+  int	i;				// Looping var
 
 
   if (strcmp(header->MediaClass, expected->MediaClass))
@@ -1878,7 +1890,8 @@ print_changes(
            expected->cupsColorOrder);
 
   if (header->cupsColorSpace != expected->cupsColorSpace)
-    printf("    cupsColorSpace %s, expected %s\n", _ppdRasterColorSpaceString(header->cupsColorSpace),
+    printf("    cupsColorSpace %s, expected %s\n",
+	   _ppdRasterColorSpaceString(header->cupsColorSpace),
            _ppdRasterColorSpaceString(expected->cupsColorSpace));
 
   if (header->cupsCompression != expected->cupsCompression)
@@ -1901,7 +1914,8 @@ print_changes(
     printf("    cupsNumColors %d, expected %d\n", header->cupsNumColors,
            expected->cupsNumColors);
 
-  if (fabs(header->cupsBorderlessScalingFactor - expected->cupsBorderlessScalingFactor) > 0.001)
+  if (fabs(header->cupsBorderlessScalingFactor -
+	   expected->cupsBorderlessScalingFactor) > 0.001)
     printf("    cupsBorderlessScalingFactor %g, expected %g\n",
            header->cupsBorderlessScalingFactor,
            expected->cupsBorderlessScalingFactor);

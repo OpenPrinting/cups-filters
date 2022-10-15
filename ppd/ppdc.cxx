@@ -1,10 +1,11 @@
 //
-// PPD file compiler main entry for the CUPS PPD Compiler.
+// PPD file compiler main entry for the CUPS PPD Compiler in libppd.
 //
 // Copyright 2007-2014 by Apple Inc.
 // Copyright 2002-2007 by Easy Software Products.
 //
-// Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 
 //
@@ -381,9 +382,9 @@ main(int  argc,				// I - Number of command-line arguments
 	  fprintf(stdout, _("%s: Writing %s.\n"), progname, filename);
       }
 
-     /*
-      * Write the PPD file...
-      */
+      //
+      // Write the PPD file...
+      //
 
       ppdcArray *templocales = locales;
 

@@ -1,39 +1,39 @@
-/*
- * Page size functions for libppd.
- *
- * Copyright 2007-2015 by Apple Inc.
- * Copyright 1997-2007 by Easy Software Products, all rights reserved.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- *
- * PostScript is a trademark of Adobe Systems, Inc.
- */
+//
+// Page size functions for libppd.
+//
+// Copyright 2007-2015 by Apple Inc.
+// Copyright 1997-2007 by Easy Software Products, all rights reserved.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+// PostScript is a trademark of Adobe Systems, Inc.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "string-private.h"
 #include "debug-internal.h"
 #include "ppd.h"
 
 
-/*
- * 'ppdPageSize()' - Get the page size record for the named size.
- */
+//
+// 'ppdPageSize()' - Get the page size record for the named size.
+//
 
-ppd_size_t *				/* O - Size record for page or NULL */
-ppdPageSize(ppd_file_t *ppd,		/* I - PPD file record */
-            const char *name)		/* I - Size name */
+ppd_size_t *				// O - Size record for page or NULL
+ppdPageSize(ppd_file_t *ppd,		// I - PPD file record
+            const char *name)		// I - Size name
 {
-  int		i;			/* Looping var */
-  ppd_size_t	*size;			/* Current page size */
-  double	w, l;			/* Width and length of page */
-  char		*nameptr;		/* Pointer into name */
-  struct lconv	*loc;			/* Locale data */
-  ppd_coption_t	*coption;		/* Custom option for page size */
-  ppd_cparam_t	*cparam;		/* Custom option parameter */
+  int		i;			// Looping var
+  ppd_size_t	*size;			// Current page size
+  double	w, l;			// Width and length of page
+  char		*nameptr;		// Pointer into name
+  struct lconv	*loc;			// Locale data
+  ppd_coption_t	*coption;		// Custom option for page size
+  ppd_cparam_t	*cparam;		// Custom option parameter
 
 
   DEBUG_printf(("2ppdPageSize(ppd=%p, name=\"%s\")", ppd, name));
@@ -48,9 +48,9 @@ ppdPageSize(ppd_file_t *ppd,		/* I - PPD file record */
   {
     if (!strncmp(name, "Custom.", 7) && ppd->variable_sizes)
     {
-     /*
-      * Find the custom page size...
-      */
+      //
+      // Find the custom page size...
+      //
 
       for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
 	if (!strcmp("Custom", size->name))
@@ -62,16 +62,16 @@ ppdPageSize(ppd_file_t *ppd,		/* I - PPD file record */
         return (NULL);
       }
 
-     /*
-      * Variable size; size name can be one of the following:
-      *
-      *    Custom.WIDTHxLENGTHin    - Size in inches
-      *    Custom.WIDTHxLENGTHft    - Size in feet
-      *    Custom.WIDTHxLENGTHcm    - Size in centimeters
-      *    Custom.WIDTHxLENGTHmm    - Size in millimeters
-      *    Custom.WIDTHxLENGTHm     - Size in meters
-      *    Custom.WIDTHxLENGTH[pt]  - Size in points
-      */
+      //
+      // Variable size; size name can be one of the following:
+      //
+      //    Custom.WIDTHxLENGTHin    - Size in inches
+      //    Custom.WIDTHxLENGTHft    - Size in feet
+      //    Custom.WIDTHxLENGTHcm    - Size in centimeters
+      //    Custom.WIDTHxLENGTHmm    - Size in millimeters
+      //    Custom.WIDTHxLENGTHm     - Size in meters
+      //    Custom.WIDTHxLENGTH[pt]  - Size in points
+      //
 
       loc = localeconv();
       w   = _ppdStrScand(name + 7, &nameptr, loc);
@@ -115,9 +115,9 @@ ppdPageSize(ppd_file_t *ppd,		/* I - PPD file record */
       size->right  = (float)(w - ppd->custom_margins[2]);
       size->top    = (float)(l - ppd->custom_margins[3]);
 
-     /*
-      * Update the custom option records for the page size, too...
-      */
+      //
+      // Update the custom option records for the page size, too...
+      //
 
       if ((coption = ppdFindCustomOption(ppd, "PageSize")) != NULL)
       {
@@ -128,9 +128,9 @@ ppdPageSize(ppd_file_t *ppd,		/* I - PPD file record */
 	  cparam->current.custom_points = (float)l;
       }
 
-     /*
-      * Return the page size...
-      */
+      //
+      // Return the page size...
+      //
 
       DEBUG_printf(("3ppdPageSize: Returning %p (\"%s\", %gx%g)", size,
                     size->name, size->width, size->length));
@@ -139,9 +139,9 @@ ppdPageSize(ppd_file_t *ppd,		/* I - PPD file record */
     }
     else
     {
-     /*
-      * Lookup by name...
-      */
+      //
+      // Lookup by name...
+      //
 
       for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
 	if (!_ppd_strcasecmp(name, size->name))
@@ -155,9 +155,9 @@ ppdPageSize(ppd_file_t *ppd,		/* I - PPD file record */
   }
   else
   {
-   /*
-    * Find default...
-    */
+    //
+    // Find default...
+    //
 
     for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
       if (size->marked)
@@ -175,34 +175,34 @@ ppdPageSize(ppd_file_t *ppd,		/* I - PPD file record */
 }
 
 
-/*
- * 'ppdPageSizeLimits()' - Return the custom page size limits.
- *
- * This function returns the minimum and maximum custom page sizes and printable
- * areas based on the currently-marked (selected) options.
- *
- * If the specified PPD file does not support custom page sizes, both
- * "minimum" and "maximum" are filled with zeroes.
- *
- * @since CUPS 1.4/macOS 10.6@
- */
+//
+// 'ppdPageSizeLimits()' - Return the custom page size limits.
+//
+// This function returns the minimum and maximum custom page sizes and printable
+// areas based on the currently-marked (selected) options.
+//
+// If the specified PPD file does not support custom page sizes, both
+// "minimum" and "maximum" are filled with zeroes.
+//
+// @since CUPS 1.4/macOS 10.6@
+//
 
-int					/* O - 1 if custom sizes are supported, 0 otherwise */
-ppdPageSizeLimits(ppd_file_t *ppd,	/* I - PPD file record */
-                  ppd_size_t *minimum,	/* O - Minimum custom size */
-		  ppd_size_t *maximum)	/* O - Maximum custom size */
+int					// O - 1 if custom sizes are supported, 0 otherwise
+ppdPageSizeLimits(ppd_file_t *ppd,	// I - PPD file record
+                  ppd_size_t *minimum,	// O - Minimum custom size
+		  ppd_size_t *maximum)	// O - Maximum custom size
 {
-  ppd_choice_t	*qualifier2,		/* Second media qualifier */
-		*qualifier3;		/* Third media qualifier */
-  ppd_attr_t	*attr;			/* Attribute */
-  float		width,			/* Min/max width */
-		length;			/* Min/max length */
-  char		spec[PPD_MAX_NAME];	/* Selector for min/max */
+  ppd_choice_t	*qualifier2,		// Second media qualifier
+		*qualifier3;		// Third media qualifier
+  ppd_attr_t	*attr;			// Attribute
+  float		width,			// Min/max width
+		length;			// Min/max length
+  char		spec[PPD_MAX_NAME];	// Selector for min/max
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!ppd || !ppd->variable_sizes || !minimum || !maximum)
   {
@@ -215,9 +215,10 @@ ppdPageSizeLimits(ppd_file_t *ppd,	/* I - PPD file record */
     return (0);
   }
 
- /*
-  * See if we have the cupsMediaQualifier2 and cupsMediaQualifier3 attributes...
-  */
+  //
+  // See if we have the cupsMediaQualifier2 and cupsMediaQualifier3
+  // attributes...
+  //
 
   cupsArraySave(ppd->sorted_attrs);
 
@@ -233,18 +234,18 @@ ppdPageSizeLimits(ppd_file_t *ppd,	/* I - PPD file record */
   else
     qualifier3 = NULL;
 
- /*
-  * Figure out the current minimum width and length...
-  */
+  //
+  // Figure out the current minimum width and length...
+  //
 
   width  = ppd->custom_min[0];
   length = ppd->custom_min[1];
 
   if (qualifier2)
   {
-   /*
-    * Try getting cupsMinSize...
-    */
+    //
+    // Try getting cupsMinSize...
+    //
 
     if (qualifier3)
     {
@@ -282,18 +283,18 @@ ppdPageSizeLimits(ppd_file_t *ppd,	/* I - PPD file record */
   minimum->right  = width - ppd->custom_margins[2];
   minimum->top    = length - ppd->custom_margins[3];
 
- /*
-  * Figure out the current maximum width and length...
-  */
+  //
+  // Figure out the current maximum width and length...
+  //
 
   width  = ppd->custom_max[0];
   length = ppd->custom_max[1];
 
   if (qualifier2)
   {
-   /*
-    * Try getting cupsMaxSize...
-    */
+    //
+    // Try getting cupsMaxSize...
+    //
 
     if (qualifier3)
     {
@@ -331,9 +332,9 @@ ppdPageSizeLimits(ppd_file_t *ppd,	/* I - PPD file record */
   maximum->right  = width - ppd->custom_margins[2];
   maximum->top    = length - ppd->custom_margins[3];
 
- /*
-  * Return the min and max...
-  */
+  //
+  // Return the min and max...
+  //
 
   cupsArrayRestore(ppd->sorted_attrs);
 
@@ -341,15 +342,15 @@ ppdPageSizeLimits(ppd_file_t *ppd,	/* I - PPD file record */
 }
 
 
-/*
- * 'ppdPageWidth()' - Get the page width for the given size.
- */
+//
+// 'ppdPageWidth()' - Get the page width for the given size.
+//
 
-float				/* O - Width of page in points or 0.0 */
-ppdPageWidth(ppd_file_t *ppd,	/* I - PPD file record */
-             const char *name)	/* I - Size name */
+float				// O - Width of page in points or 0.0
+ppdPageWidth(ppd_file_t *ppd,	// I - PPD file record
+             const char *name)	// I - Size name
 {
-  ppd_size_t	*size;		/* Page size */
+  ppd_size_t	*size;		// Page size
 
 
   if ((size = ppdPageSize(ppd, name)) == NULL)
@@ -359,15 +360,15 @@ ppdPageWidth(ppd_file_t *ppd,	/* I - PPD file record */
 }
 
 
-/*
- * 'ppdPageLength()' - Get the page length for the given size.
- */
+//
+// 'ppdPageLength()' - Get the page length for the given size.
+//
 
-float				/* O - Length of page in points or 0.0 */
-ppdPageLength(ppd_file_t *ppd,	/* I - PPD file */
-              const char *name)	/* I - Size name */
+float				// O - Length of page in points or 0.0
+ppdPageLength(ppd_file_t *ppd,	// I - PPD file
+              const char *name)	// I - Size name
 {
-  ppd_size_t	*size;		/* Page size */
+  ppd_size_t	*size;		// Page size
 
 
   if ((size = ppdPageSize(ppd, name)) == NULL)

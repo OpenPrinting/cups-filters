@@ -1,5 +1,5 @@
 //
-// GNU gettext message generator for the CUPS PPD Compiler.
+// GNU gettext message generator for the libppd PPD Compiler.
 //
 // This program is used to generate a dummy source file containing all of
 // the standard media and sample driver strings.  The results are picked up
@@ -172,7 +172,7 @@ add_ui_strings(ppdcDriver  *d,		// I - Driver data
 //
 
 static void
-write_cstring(const char *s)		/* I - String to write */
+write_cstring(const char *s)		// I - String to write
 {
   fputs("_(\"", stdout);
   if (s)

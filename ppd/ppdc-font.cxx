@@ -1,10 +1,11 @@
 //
-// Shared font class for the CUPS PPD Compiler.
+// Shared font class for the CUPS PPD Compiler in libppd.
 //
 // Copyright 2007-2009 by Apple Inc.
 // Copyright 2002-2005 by Easy Software Products.
 //
-// Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 
 //

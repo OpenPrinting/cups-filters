@@ -1,16 +1,16 @@
-/*
- * String functions for libppd.
- *
- * Copyright © 2007-2019 by Apple Inc.
- * Copyright © 1997-2007 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// String functions for libppd.
+//
+// Copyright © 2007-2019 by Apple Inc.
+// Copyright © 1997-2007 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #define _PPD_STRING_C_
 #include "string-private.h"
@@ -21,45 +21,45 @@
 #include <limits.h>
 
 
-/*
- * Local globals...
- */
+//
+// Local globals...
+//
 
 static _ppd_mutex_t	sp_mutex = _PPD_MUTEX_INITIALIZER;
-					/* Mutex to control access to pool */
+					// Mutex to control access to pool
 static cups_array_t	*stringpool = NULL;
-					/* Global string pool */
+					// Global string pool
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static int	ppd_compare_sp_items(_ppd_sp_item_t *a, _ppd_sp_item_t *b);
 
 
-/*
- * '_ppdStrAlloc()' - Allocate/reference a string.
- */
+//
+// '_ppdStrAlloc()' - Allocate/reference a string.
+//
 
-char *					/* O - String pointer */
-_ppdStrAlloc(const char *s)		/* I - String */
+char *					// O - String pointer
+_ppdStrAlloc(const char *s)		// I - String
 {
-  size_t		slen;		/* Length of string */
-  _ppd_sp_item_t	*item,		/* String pool item */
-			*key;		/* Search key */
+  size_t		slen;		// Length of string
+  _ppd_sp_item_t	*item,		// String pool item
+			*key;		// Search key
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!s)
     return (NULL);
 
- /*
-  * Get the string pool...
-  */
+  //
+  // Get the string pool...
+  //
 
   _ppdMutexLock(&sp_mutex);
 
@@ -73,17 +73,17 @@ _ppdStrAlloc(const char *s)		/* I - String */
     return (NULL);
   }
 
- /*
-  * See if the string is already in the pool...
-  */
+  //
+  // See if the string is already in the pool...
+  //
 
   key = (_ppd_sp_item_t *)(s - offsetof(_ppd_sp_item_t, str));
 
   if ((item = (_ppd_sp_item_t *)cupsArrayFind(stringpool, key)) != NULL)
   {
-   /*
-    * Found it, return the cached string...
-    */
+    //
+    // Found it, return the cached string...
+    //
 
     item->ref_count ++;
 
@@ -97,16 +97,16 @@ _ppdStrAlloc(const char *s)		/* I - String */
       _ppdMutexUnlock(&sp_mutex);
       abort();
     }
-#endif /* DEBUG_GUARDS */
+#endif // DEBUG_GUARDS
 
     _ppdMutexUnlock(&sp_mutex);
 
     return (item->str);
   }
 
- /*
-  * Not found, so allocate a new one...
-  */
+  //
+  // Not found, so allocate a new one...
+  //
 
   slen = strlen(s);
   item = (_ppd_sp_item_t *)calloc(1, sizeof(_ppd_sp_item_t) + slen);
@@ -126,11 +126,11 @@ _ppdStrAlloc(const char *s)		/* I - String */
   DEBUG_printf(("5_ppdStrAlloc: Created string %p(%s) for \"%s\", guard=%08x, "
 		"ref_count=%d", item, item->str, s, item->guard,
 		item->ref_count));
-#endif /* DEBUG_GUARDS */
+#endif // DEBUG_GUARDS
 
- /*
-  * Add the string to the pool and return it...
-  */
+  //
+  // Add the string to the pool and return it...
+  //
 
   cupsArrayAdd(stringpool, item);
 
@@ -140,14 +140,14 @@ _ppdStrAlloc(const char *s)		/* I - String */
 }
 
 
-/*
- * '_ppdStrFlush()' - Flush the string pool.
- */
+//
+// '_ppdStrFlush()' - Flush the string pool.
+//
 
 void
 _ppdStrFlush(void)
 {
-  _ppd_sp_item_t	*item;		/* Current item */
+  _ppd_sp_item_t	*item;		// Current item
 
 
   DEBUG_printf(("4_ppdStrFlush: %d strings in array",
@@ -167,37 +167,37 @@ _ppdStrFlush(void)
 }
 
 
-/*
- * '_ppdStrFormatd()' - Format a floating-point number.
- */
+//
+// '_ppdStrFormatd()' - Format a floating-point number.
+//
 
-char *					/* O - Pointer to end of string */
-_ppdStrFormatd(char         *buf,	/* I - String */
-                char         *bufend,	/* I - End of string buffer */
-		double       number,	/* I - Number to format */
-                struct lconv *loc)	/* I - Locale data */
+char *					// O - Pointer to end of string
+_ppdStrFormatd(char         *buf,	// I - String
+                char         *bufend,	// I - End of string buffer
+		double       number,	// I - Number to format
+                struct lconv *loc)	// I - Locale data
 {
-  char		*bufptr,		/* Pointer into buffer */
-		temp[1024],		/* Temporary string */
-		*tempdec,		/* Pointer to decimal point */
-		*tempptr;		/* Pointer into temporary string */
-  const char	*dec;			/* Decimal point */
-  int		declen;			/* Length of decimal point */
+  char		*bufptr,		// Pointer into buffer
+		temp[1024],		// Temporary string
+		*tempdec,		// Pointer to decimal point
+		*tempptr;		// Pointer into temporary string
+  const char	*dec;			// Decimal point
+  int		declen;			// Length of decimal point
 
 
- /*
-  * Format the number using the "%.12f" format and then eliminate
-  * unnecessary trailing 0's.
-  */
+  //
+  // Format the number using the "%.12f" format and then eliminate
+  // unnecessary trailing 0's.
+  //
 
   snprintf(temp, sizeof(temp), "%.12f", number);
   for (tempptr = temp + strlen(temp) - 1;
        tempptr > temp && *tempptr == '0';
        *tempptr-- = '\0');
 
- /*
-  * Next, find the decimal point...
-  */
+  //
+  // Next, find the decimal point...
+  //
 
   if (loc && loc->decimal_point)
   {
@@ -215,9 +215,9 @@ _ppdStrFormatd(char         *buf,	/* I - String */
   else
     tempdec = strstr(temp, dec);
 
- /*
-  * Copy everything up to the decimal point...
-  */
+  //
+  // Copy everything up to the decimal point...
+  //
 
   if (tempdec)
   {
@@ -247,38 +247,38 @@ _ppdStrFormatd(char         *buf,	/* I - String */
 }
 
 
-/*
- * '_ppdStrFree()' - Free/dereference a string.
- */
+//
+// '_ppdStrFree()' - Free/dereference a string.
+//
 
 void
-_ppdStrFree(const char *s)		/* I - String to free */
+_ppdStrFree(const char *s)		// I - String to free
 {
-  _ppd_sp_item_t	*item,		/* String pool item */
-			*key;		/* Search key */
+  _ppd_sp_item_t	*item,		// String pool item
+			*key;		// Search key
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!s)
     return;
 
- /*
-  * Check the string pool...
-  *
-  * We don't need to lock the mutex yet, as we only want to know if
-  * the stringpool is initialized.  The rest of the code will still
-  * work if it is initialized before we lock...
-  */
+  //
+  // Check the string pool...
+  //
+  // We don't need to lock the mutex yet, as we only want to know if
+  // the stringpool is initialized.  The rest of the code will still
+  // work if it is initialized before we lock...
+  //
 
   if (!stringpool)
     return;
 
- /*
-  * See if the string is already in the pool...
-  */
+  //
+  // See if the string is already in the pool...
+  //
 
   _ppdMutexLock(&sp_mutex);
 
@@ -287,9 +287,9 @@ _ppdStrFree(const char *s)		/* I - String to free */
   if ((item = (_ppd_sp_item_t *)cupsArrayFind(stringpool, key)) != NULL &&
       item == key)
   {
-   /*
-    * Found it, dereference...
-    */
+    //
+    // Found it, dereference...
+    //
 
 #ifdef DEBUG_GUARDS
     if (key->guard != _PPD_STR_GUARD)
@@ -298,15 +298,15 @@ _ppdStrFree(const char *s)		/* I - String to free */
       _ppdMutexUnlock(&sp_mutex);
       abort();
     }
-#endif /* DEBUG_GUARDS */
+#endif // DEBUG_GUARDS
 
     item->ref_count --;
 
     if (!item->ref_count)
     {
-     /*
-      * Remove and free...
-      */
+      //
+      // Remove and free...
+      //
 
       cupsArrayRemove(stringpool, item);
 
@@ -318,18 +318,18 @@ _ppdStrFree(const char *s)		/* I - String to free */
 }
 
 
-/*
- * '_ppdStrRetain()' - Increment the reference count of a string.
- *
- * Note: This function does not verify that the passed pointer is in the
- *       string pool, so any calls to it MUST know they are passing in a
- *       good pointer.
- */
+//
+// '_ppdStrRetain()' - Increment the reference count of a string.
+//
+// Note: This function does not verify that the passed pointer is in the
+//       string pool, so any calls to it MUST know they are passing in a
+//       good pointer.
+//
 
-char *					/* O - Pointer to string */
-_ppdStrRetain(const char *s)		/* I - String to retain */
+char *					// O - Pointer to string
+_ppdStrRetain(const char *s)		// I - String to retain
 {
-  _ppd_sp_item_t	*item;		/* Pointer to string pool item */
+  _ppd_sp_item_t	*item;		// Pointer to string pool item
 
 
   if (s)
@@ -343,7 +343,7 @@ _ppdStrRetain(const char *s)		/* I - String to retain */
                     "ref_count=%d", item, s, item->guard, item->ref_count));
       abort();
     }
-#endif /* DEBUG_GUARDS */
+#endif // DEBUG_GUARDS
 
     _ppdMutexLock(&sp_mutex);
 
@@ -356,39 +356,39 @@ _ppdStrRetain(const char *s)		/* I - String to retain */
 }
 
 
-/*
- * '_ppdStrScand()' - Scan a string for a floating-point number.
- *
- * This function handles the locale-specific BS so that a decimal
- * point is always the period (".")...
- */
+//
+// '_ppdStrScand()' - Scan a string for a floating-point number.
+//
+// This function handles the locale-specific BS so that a decimal
+// point is always the period (".")...
+//
 
-double					/* O - Number */
-_ppdStrScand(const char   *buf,	/* I - Pointer to number */
-              char         **bufptr,	/* O - New pointer or NULL on error */
-              struct lconv *loc)	/* I - Locale data */
+double					// O - Number
+_ppdStrScand(const char   *buf,		// I - Pointer to number
+	     char         **bufptr,	// O - New pointer or NULL on error
+	     struct lconv *loc)		// I - Locale data
 {
-  char	temp[1024],			/* Temporary buffer */
-	*tempptr;			/* Pointer into temporary buffer */
+  char	temp[1024],			// Temporary buffer
+	*tempptr;			// Pointer into temporary buffer
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!buf)
     return (0.0);
 
- /*
-  * Skip leading whitespace...
-  */
+  //
+  // Skip leading whitespace...
+  //
 
   while (_ppd_isspace(*buf))
     buf ++;
 
- /*
-  * Copy leading sign, numbers, period, and then numbers...
-  */
+  //
+  // Copy leading sign, numbers, period, and then numbers...
+  //
 
   tempptr = temp;
   if (*buf == '-' || *buf == '+')
@@ -407,15 +407,16 @@ _ppdStrScand(const char   *buf,	/* I - Pointer to number */
 
   if (*buf == '.')
   {
-   /*
-    * Read fractional portion of number...
-    */
+    //
+    // Read fractional portion of number...
+    //
 
     buf ++;
 
     if (loc && loc->decimal_point)
     {
-      strlcpy(tempptr, loc->decimal_point, sizeof(temp) - (size_t)(tempptr - temp));
+      strlcpy(tempptr, loc->decimal_point,
+	      sizeof(temp) - (size_t)(tempptr - temp));
       tempptr += strlen(tempptr);
     }
     else if (tempptr < (temp + sizeof(temp) - 1))
@@ -442,9 +443,9 @@ _ppdStrScand(const char   *buf,	/* I - Pointer to number */
 
   if (*buf == 'e' || *buf == 'E')
   {
-   /*
-    * Read exponent...
-    */
+    //
+    // Read exponent...
+    //
 
     if (tempptr < (temp + sizeof(temp) - 1))
       *tempptr++ = *buf++;
@@ -481,9 +482,9 @@ _ppdStrScand(const char   *buf,	/* I - Pointer to number */
       }
   }
 
- /*
-  * Nul-terminate the temporary string and return the value...
-  */
+  //
+  // Nul-terminate the temporary string and return the value...
+  //
 
   if (bufptr)
     *bufptr = (char *)buf;
@@ -494,35 +495,35 @@ _ppdStrScand(const char   *buf,	/* I - Pointer to number */
 }
 
 
-/*
- * '_ppdStrStatistics()' - Return allocation statistics for string pool.
- */
+//
+// '_ppdStrStatistics()' - Return allocation statistics for string pool.
+//
 
-size_t					/* O - Number of strings */
-_ppdStrStatistics(size_t *alloc_bytes,	/* O - Allocated bytes */
-                   size_t *total_bytes)	/* O - Total string bytes */
+size_t					// O - Number of strings
+_ppdStrStatistics(size_t *alloc_bytes,	// O - Allocated bytes
+		  size_t *total_bytes)	// O - Total string bytes
 {
-  size_t		count,		/* Number of strings */
-			abytes,		/* Allocated string bytes */
-			tbytes,		/* Total string bytes */
-			len;		/* Length of string */
-  _ppd_sp_item_t	*item;		/* Current item */
+  size_t		count,		// Number of strings
+			abytes,		// Allocated string bytes
+			tbytes,		// Total string bytes
+			len;		// Length of string
+  _ppd_sp_item_t	*item;		// Current item
 
 
- /*
-  * Loop through strings in pool, counting everything up...
-  */
+  //
+  // Loop through strings in pool, counting everything up...
+  //
 
   _ppdMutexLock(&sp_mutex);
 
   for (count = 0, abytes = 0, tbytes = 0,
-           item = (_ppd_sp_item_t *)cupsArrayFirst(stringpool);
+	 item = (_ppd_sp_item_t *)cupsArrayFirst(stringpool);
        item;
        item = (_ppd_sp_item_t *)cupsArrayNext(stringpool))
   {
-   /*
-    * Count allocated memory, using a 64-bit aligned buffer as a basis.
-    */
+    //
+    // Count allocated memory, using a 64-bit aligned buffer as a basis.
+    //
 
     count  += item->ref_count;
     len    = (strlen(item->str) + 8) & (size_t)~7;
@@ -532,9 +533,9 @@ _ppdStrStatistics(size_t *alloc_bytes,	/* O - Allocated bytes */
 
   _ppdMutexUnlock(&sp_mutex);
 
- /*
-  * Return values...
-  */
+  //
+  // Return values...
+  //
 
   if (alloc_bytes)
     *alloc_bytes = abytes;
@@ -546,13 +547,13 @@ _ppdStrStatistics(size_t *alloc_bytes,	/* O - Allocated bytes */
 }
 
 
-/*
- * '_ppd_strcpy()' - Copy a string allowing for overlapping strings.
- */
+//
+// '_ppd_strcpy()' - Copy a string allowing for overlapping strings.
+//
 
 void
-_ppd_strcpy(char       *dst,		/* I - Destination string */
-             const char *src)		/* I - Source string */
+_ppd_strcpy(char       *dst,		// I - Destination string
+	    const char *src)		// I - Source string
 {
   while (*src)
     *dst++ = *src++;
@@ -561,16 +562,16 @@ _ppd_strcpy(char       *dst,		/* I - Destination string */
 }
 
 
-/*
- * '_ppd_strdup()' - Duplicate a string.
- */
+//
+// '_ppd_strdup()' - Duplicate a string.
+//
 
 #ifndef HAVE_STRDUP
-char 	*				/* O - New string pointer */
-_ppd_strdup(const char *s)		/* I - String to duplicate */
+char 	*				// O - New string pointer
+_ppd_strdup(const char *s)		// I - String to duplicate
 {
-  char		*t;			/* New string pointer */
-  size_t	slen;			/* Length of string */
+  char		*t;			// New string pointer
+  size_t	slen;			// Length of string
 
 
   if (!s)
@@ -582,16 +583,16 @@ _ppd_strdup(const char *s)		/* I - String to duplicate */
 
   return (memcpy(t, s, slen + 1));
 }
-#endif /* !HAVE_STRDUP */
+#endif // !HAVE_STRDUP
 
 
-/*
- * '_ppd_strcasecmp()' - Do a case-insensitive comparison.
- */
+//
+// '_ppd_strcasecmp()' - Do a case-insensitive comparison.
+//
 
-int				/* O - Result of comparison (-1, 0, or 1) */
-_ppd_strcasecmp(const char *s,	/* I - First string */
-                 const char *t)	/* I - Second string */
+int				// O - Result of comparison (-1, 0, or 1)
+_ppd_strcasecmp(const char *s,	// I - First string
+		const char *t)	// I - Second string
 {
   while (*s != '\0' && *t != '\0')
   {
@@ -612,14 +613,17 @@ _ppd_strcasecmp(const char *s,	/* I - First string */
     return (-1);
 }
 
-/*
- * '_ppd_strncasecmp()' - Do a case-insensitive comparison on up to N chars.
- */
 
-int					/* O - Result of comparison (-1, 0, or 1) */
-_ppd_strncasecmp(const char *s,	/* I - First string */
-                  const char *t,	/* I - Second string */
-		  size_t     n)		/* I - Maximum number of characters to compare */
+//
+// '_ppd_strncasecmp()' - Do a case-insensitive comparison on up to N chars.
+//
+
+int					// O - Result of comparison
+					//     (-1, 0, or 1)
+_ppd_strncasecmp(const char *s,		// I - First string
+		 const char *t,		// I - Second string
+		 size_t     n)		// I - Maximum number of characters to
+					//     compare
 {
   while (*s != '\0' && *t != '\0' && n > 0)
   {
@@ -645,39 +649,39 @@ _ppd_strncasecmp(const char *s,	/* I - First string */
 
 
 #ifndef HAVE_STRLCAT
-/*
- * '_ppd_strlcat()' - Safely concatenate two strings.
- */
+//
+// '_ppd_strlcat()' - Safely concatenate two strings.
+//
 
-size_t					/* O - Length of string */
-_ppd_strlcat(char       *dst,		/* O - Destination string */
-              const char *src,		/* I - Source string */
-	      size_t     size)		/* I - Size of destination string buffer */
+size_t					// O - Length of string
+_ppd_strlcat(char       *dst,		// O - Destination string
+	     const char *src,		// I - Source string
+	     size_t     size)		// I - Size of destination string buffer
 {
-  size_t	srclen;			/* Length of source string */
-  size_t	dstlen;			/* Length of destination string */
+  size_t	srclen;			// Length of source string
+  size_t	dstlen;			// Length of destination string
 
 
- /*
-  * Figure out how much room is left...
-  */
+  //
+  // Figure out how much room is left...
+  //
 
   dstlen = strlen(dst);
 
   if (size < (dstlen + 1))
-    return (dstlen);		        /* No room, return immediately... */
+    return (dstlen);		        // No room, return immediately...
 
   size -= dstlen + 1;
 
- /*
-  * Figure out how much room is needed...
-  */
+  //
+  // Figure out how much room is needed...
+  //
 
   srclen = strlen(src);
 
- /*
-  * Copy the appropriate amount...
-  */
+  //
+  // Copy the appropriate amount...
+  //
 
   if (srclen > size)
     srclen = size;
@@ -687,33 +691,33 @@ _ppd_strlcat(char       *dst,		/* O - Destination string */
 
   return (dstlen + srclen);
 }
-#endif /* !HAVE_STRLCAT */
+#endif // !HAVE_STRLCAT
 
 
 #ifndef HAVE_STRLCPY
-/*
- * '_ppd_strlcpy()' - Safely copy two strings.
- */
+//
+// '_ppd_strlcpy()' - Safely copy two strings.
+//
 
-size_t					/* O - Length of string */
-_ppd_strlcpy(char       *dst,		/* O - Destination string */
-              const char *src,		/* I - Source string */
-	      size_t      size)		/* I - Size of destination string buffer */
+size_t					// O - Length of string
+_ppd_strlcpy(char       *dst,		// O - Destination string
+	     const char *src,		// I - Source string
+	     size_t      size)		// I - Size of destination string buffer
 {
-  size_t	srclen;			/* Length of source string */
+  size_t	srclen;			// Length of source string
 
 
- /*
-  * Figure out how much room is needed...
-  */
+  //
+  // Figure out how much room is needed...
+  //
 
   size --;
 
   srclen = strlen(src);
 
- /*
-  * Copy the appropriate amount...
-  */
+  //
+  // Copy the appropriate amount...
+  //
 
   if (srclen > size)
     srclen = size;
@@ -723,16 +727,16 @@ _ppd_strlcpy(char       *dst,		/* O - Destination string */
 
   return (srclen);
 }
-#endif /* !HAVE_STRLCPY */
+#endif // !HAVE_STRLCPY
 
 
-/*
- * 'ppd_compare_sp_items()' - Compare two string pool items...
- */
+//
+// 'ppd_compare_sp_items()' - Compare two string pool items...
+//
 
-static int				/* O - Result of comparison */
-ppd_compare_sp_items(_ppd_sp_item_t *a,	/* I - First item */
-                 _ppd_sp_item_t *b)	/* I - Second item */
+static int				// O - Result of comparison
+ppd_compare_sp_items(_ppd_sp_item_t *a,	// I - First item
+		     _ppd_sp_item_t *b)	// I - Second item
 {
   return (strcmp(a->str, b->str));
 }

@@ -1,40 +1,40 @@
-/*
- * Raster error handling for libppd.
- *
- * Copyright © 2007-2018 by Apple Inc.
- * Copyright © 2007 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Raster error handling for libppd.
+//
+// Copyright © 2007-2018 by Apple Inc.
+// Copyright © 2007 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "raster-private.h"
 #include "debug-internal.h"
 
-typedef struct _ppd_raster_error_s	/**** Error buffer structure ****/
+typedef struct _ppd_raster_error_s	// **** Error buffer structure ****
 {
-  char	*start,				/* Start of buffer */
-	*current,			/* Current position in buffer */
-	*end;				/* End of buffer */
+  char	*start,				// Start of buffer
+	*current,			// Current position in buffer
+	*end;				// End of buffer
 } _ppd_raster_error_t;
 
 static _ppd_raster_error_t	*buf = NULL;
 
-/*
- * '_ppdRasterAddError()' - Add an error message to the error buffer.
- */
+//
+// '_ppdRasterAddError()' - Add an error message to the error buffer.
+//
 
 void
-_ppdRasterAddError(const char *f,	/* I - Printf-style error message */
-                    ...)		/* I - Additional arguments as needed */
+_ppdRasterAddError(const char *f,	// I - Printf-style error message
+                    ...)		// I - Additional arguments as needed
 {
-  va_list	ap;			/* Pointer to additional arguments */
-  char		s[2048];		/* Message string */
-  ssize_t	bytes;			/* Bytes in message string */
+  va_list	ap;			// Pointer to additional arguments
+  char		s[2048];		// Message string
+  ssize_t	bytes;			// Bytes in message string
 
 
   DEBUG_printf(("_ppdRasterAddError(f=\"%s\", ...)", f));
@@ -55,12 +55,12 @@ _ppdRasterAddError(const char *f,	/* I - Printf-style error message */
 
   if (bytes > (ssize_t)(buf->end - buf->current))
   {
-   /*
-    * Allocate more memory...
-    */
+    //
+    // Allocate more memory...
+    //
 
-    char	*temp;			/* New buffer */
-    size_t	size;			/* Size of buffer */
+    char	*temp;			// New buffer
+    size_t	size;			// Size of buffer
 
 
     size = (size_t)(buf->end - buf->start + 2 * bytes + 1024);
@@ -73,32 +73,33 @@ _ppdRasterAddError(const char *f,	/* I - Printf-style error message */
     if (!temp)
       return;
 
-   /*
-    * Update pointers...
-    */
+    //
+    // Update pointers...
+    //
 
     buf->end     = temp + size;
     buf->current = temp + (buf->current - buf->start);
     buf->start   = temp;
   }
 
- /*
-  * Append the message to the end of the current string...
-  */
+  //
+  // Append the message to the end of the current string...
+  //
 
   memcpy(buf->current, s, (size_t)bytes);
   buf->current += bytes - 1;
 }
 
 
-/*
- * '_ppdRasterClearError()' - Clear the error buffer.
- */
+//
+// '_ppdRasterClearError()' - Clear the error buffer.
+//
 
 void
 _ppdRasterClearError(void)
 {
-  if (buf == NULL) {
+  if (buf == NULL)
+  {
     buf = malloc(sizeof(_ppd_raster_error_t));
     buf->start = NULL;
     buf->end = NULL;
@@ -112,15 +113,15 @@ _ppdRasterClearError(void)
 }
 
 
-/*
- * '_ppdRasterErrorString()' - Return the last error from a raster function.
- *
- * If there are no recent errors, NULL is returned.
- *
- * @since CUPS 1.3/macOS 10.5@
- */
+//
+// '_ppdRasterErrorString()' - Return the last error from a raster function.
+//
+// If there are no recent errors, NULL is returned.
+//
+// @since CUPS 1.3/macOS 10.5@
+//
 
-const char *				/* O - Last error */
+const char *				// O - Last error
 _ppdRasterErrorString(void)
 {
   if (buf->current == buf->start)

@@ -1,83 +1,83 @@
-/*
- * Option marking routines for libppd.
- *
- * Copyright © 2007-2019 by Apple Inc.
- * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- *
- * PostScript is a trademark of Adobe Systems, Inc.
- */
+//
+// Option marking routines for libppd.
+//
+// Copyright © 2007-2019 by Apple Inc.
+// Copyright © 1997-2007 by Easy Software Products, all rights reserved.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+// PostScript is a trademark of Adobe Systems, Inc.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "string-private.h"
 #include "ppd.h"
 #include "debug-internal.h"
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 #ifdef DEBUG
 static void	ppd_debug_marked(ppd_file_t *ppd, const char *title);
 #else
 #  define	ppd_debug_marked(ppd,title)
-#endif /* DEBUG */
+#endif // DEBUG
 static void	ppd_defaults(ppd_file_t *ppd, ppd_group_t *g);
 static void	ppd_mark_choices(ppd_file_t *ppd, const char *s);
 static void	ppd_mark_option(ppd_file_t *ppd, const char *option,
 		                const char *choice);
 
 
-/*
- * 'ppdMarkOptions()' - Mark command-line options in a PPD file.
- *
- * This function maps the IPP "finishings", "media", "mirror",
- * "multiple-document-handling", "output-bin", "print-color-mode",
- * "print-quality", "printer-resolution", and "sides" attributes to their
- * corresponding PPD options and choices.
- */
+//
+// 'ppdMarkOptions()' - Mark command-line options in a PPD file.
+//
+// This function maps the IPP "finishings", "media", "mirror",
+// "multiple-document-handling", "output-bin", "print-color-mode",
+// "print-quality", "printer-resolution", and "sides" attributes to their
+// corresponding PPD options and choices.
+//
 
-int					/* O - 1 if conflicts exist, 0 otherwise */
+int					// O - 1 if conflicts exist, 0 otherwise
 ppdMarkOptions(
-    ppd_file_t    *ppd,			/* I - PPD file */
-    int           num_options,		/* I - Number of options */
-    cups_option_t *options)		/* I - Options */
+    ppd_file_t    *ppd,			// I - PPD file
+    int           num_options,		// I - Number of options
+    cups_option_t *options)		// I - Options
 {
-  int		i, j;			/* Looping vars */
-  char		*ptr,			/* Pointer into string */
-		s[255];			/* Temporary string */
-  const char	*val,			/* Pointer into value */
-		*media,			/* media option */
-		*output_bin,		/* output-bin option */
-		*page_size,		/* PageSize option */
-		*ppd_keyword,		/* PPD keyword */
-		*print_color_mode,	/* print-color-mode option */
-		*print_quality,		/* print-quality option */
-		*sides;			/* sides option */
-  cups_option_t	*optptr;		/* Current option */
-  ppd_attr_t	*attr;			/* PPD attribute */
-  ppd_cache_t	*cache;			/* PPD cache and mapping data */
+  int		i, j;			// Looping vars
+  char		*ptr,			// Pointer into string
+		s[255];			// Temporary string
+  const char	*val,			// Pointer into value
+		*media,			// media option
+		*output_bin,		// output-bin option
+		*page_size,		// PageSize option
+		*ppd_keyword,		// PPD keyword
+		*print_color_mode,	// print-color-mode option
+		*print_quality,		// print-quality option
+		*sides;			// sides option
+  cups_option_t	*optptr;		// Current option
+  ppd_attr_t	*attr;			// PPD attribute
+  ppd_cache_t	*cache;			// PPD cache and mapping data
 
 
- /*
-  * Check arguments...
-  */
+  //
+  // Check arguments...
+  //
 
   if (!ppd || num_options <= 0 || !options)
     return (0);
 
   ppd_debug_marked(ppd, "Before...");
 
- /*
-  * Do special handling for finishings, media, output-bin, output-mode,
-  * print-color-mode, print-quality, and PageSize...
-  */
+  //
+  // Do special handling for finishings, media, output-bin, output-mode,
+  // print-color-mode, print-quality, and PageSize...
+  //
 
   media         = cupsGetOption("media", num_options, options);
   output_bin    = cupsGetOption("output-bin", num_options, options);
@@ -92,9 +92,9 @@ ppdMarkOptions(
   if ((media || output_bin || print_color_mode || print_quality || sides) &&
       !ppd->cache)
   {
-   /*
-    * Load PPD cache and mapping data as needed...
-    */
+    //
+    // Load PPD cache and mapping data as needed...
+    //
 
     ppd->cache = ppdCacheCreateWithPPD(ppd);
   }
@@ -103,21 +103,21 @@ ppdMarkOptions(
 
   if (media)
   {
-   /*
-    * Loop through the option string, separating it at commas and marking each
-    * individual option as long as the corresponding PPD option (PageSize,
-    * InputSlot, etc.) is not also set.
-    *
-    * For PageSize, we also check for an empty option value since some versions
-    * of macOS use it to specify auto-selection of the media based solely on
-    * the size.
-    */
+    //
+    // Loop through the option string, separating it at commas and marking each
+    // individual option as long as the corresponding PPD option (PageSize,
+    // InputSlot, etc.) is not also set.
+    //
+    // For PageSize, we also check for an empty option value since some versions
+    // of macOS use it to specify auto-selection of the media based solely on
+    // the size.
+    //
 
     for (val = media; *val;)
     {
-     /*
-      * Extract the sub-option from the string...
-      */
+      //
+      // Extract the sub-option from the string...
+      //
 
       for (ptr = s; *val && *val != ',' && (size_t)(ptr - s) < (sizeof(s) - 1);)
 	*ptr++ = *val++;
@@ -126,15 +126,16 @@ ppdMarkOptions(
       if (*val == ',')
 	val ++;
 
-     /*
-      * Mark it...
-      */
+      //
+      // Mark it...
+      //
 
       if (!page_size || !page_size[0])
       {
         if (!_ppd_strncasecmp(s, "Custom.", 7) || ppdPageSize(ppd, s))
           ppd_mark_option(ppd, "PageSize", s);
-        else if ((ppd_keyword = ppdCacheGetPageSize(cache, NULL, s, NULL)) != NULL)
+        else if ((ppd_keyword = ppdCacheGetPageSize(cache, NULL, s, NULL)) !=
+		 NULL)
 	  ppd_mark_option(ppd, "PageSize", ppd_keyword);
       }
 
@@ -156,13 +157,13 @@ ppdMarkOptions(
         !cupsGetOption("APPrinterPreset", num_options, options) &&
         (print_color_mode || print_quality))
     {
-     /*
-      * Map output-mode and print-quality to a preset...
-      */
+      //
+      // Map output-mode and print-quality to a preset...
+      //
 
-      ppd_pwg_print_color_mode_t	pwg_pcm;/* print-color-mode index */
-      ppd_pwg_print_quality_t	pwg_pq;	/* print-quality index */
-      cups_option_t		*preset;/* Current preset option */
+      ppd_pwg_print_color_mode_t	pwg_pcm;// print-color-mode index
+      ppd_pwg_print_quality_t	pwg_pq;	// print-quality index
+      cups_option_t		*preset;// Current preset option
 
       if (print_color_mode && !strcmp(print_color_mode, "monochrome"))
 	pwg_pcm = PPD_PWG_PRINT_COLOR_MODE_MONOCHROME;
@@ -171,7 +172,8 @@ ppdMarkOptions(
 
       if (print_quality)
       {
-	pwg_pq = (ppd_pwg_print_quality_t)(atoi(print_quality) - IPP_QUALITY_DRAFT);
+	pwg_pq = (ppd_pwg_print_quality_t)(atoi(print_quality) -
+					   IPP_QUALITY_DRAFT);
 	if (pwg_pq < PPD_PWG_PRINT_QUALITY_DRAFT)
 	  pwg_pq = PPD_PWG_PRINT_QUALITY_DRAFT;
 	else if (pwg_pq > PPD_PWG_PRINT_QUALITY_HIGH)
@@ -182,10 +184,10 @@ ppdMarkOptions(
 
       if (cache->num_presets[pwg_pcm][pwg_pq] == 0)
       {
-       /*
-	* Try to find a preset that works so that we maximize the chances of us
-	* getting a good print using IPP attributes.
-	*/
+	//
+	// Try to find a preset that works so that we maximize the chances of us
+	// getting a good print using IPP attributes.
+	//
 
 	if (cache->num_presets[pwg_pcm][PPD_PWG_PRINT_QUALITY_NORMAL] > 0)
 	  pwg_pq = PPD_PWG_PRINT_QUALITY_NORMAL;
@@ -200,10 +202,10 @@ ppdMarkOptions(
 
       if (cache->num_presets[pwg_pcm][pwg_pq] > 0)
       {
-       /*
-	* Copy the preset options as long as the corresponding names are not
-	* already defined in the IPP request...
-	*/
+	//
+	// Copy the preset options as long as the corresponding names are not
+	// already defined in the IPP request...
+	//
 
 	for (i = cache->num_presets[pwg_pcm][pwg_pq],
 		 preset = cache->presets[pwg_pcm][pwg_pq];
@@ -219,9 +221,9 @@ ppdMarkOptions(
     if (output_bin && !cupsGetOption("OutputBin", num_options, options) &&
 	(ppd_keyword = ppdCacheGetOutputBin(cache, output_bin)) != NULL)
     {
-     /*
-      * Map output-bin to OutputBin...
-      */
+      //
+      // Map output-bin to OutputBin...
+      //
 
       ppd_mark_option(ppd, "OutputBin", ppd_keyword);
     }
@@ -229,9 +231,9 @@ ppdMarkOptions(
     if (sides && cache->sides_option &&
         !cupsGetOption(cache->sides_option, num_options, options))
     {
-     /*
-      * Map sides to duplex option...
-      */
+      //
+      // Map sides to duplex option...
+      //
 
       if (!strcmp(sides, "one-sided") && cache->sides_1sided)
         ppd_mark_option(ppd, cache->sides_option, cache->sides_1sided);
@@ -244,9 +246,9 @@ ppdMarkOptions(
     }
   }
 
- /*
-  * Mark other options...
-  */
+  //
+  // Mark other options...
+  //
 
   for (i = num_options, optptr = options; i > 0; i --, optptr ++)
   {
@@ -261,18 +263,19 @@ ppdMarkOptions(
     {
       ppd_mark_option(ppd, "Resolution", optptr->value);
       ppd_mark_option(ppd, "SetResolution", optptr->value);
-      	/* Calcomp, Linotype, QMS, Summagraphics, Tektronix, Varityper */
+      	// Calcomp, Linotype, QMS, Summagraphics, Tektronix, Varityper
       ppd_mark_option(ppd, "JCLResolution", optptr->value);
-      	/* HP */
+      	// HP
       ppd_mark_option(ppd, "CNRes_PGP", optptr->value);
-      	/* Canon */
+      	// Canon
     }
     else if (!_ppd_strcasecmp(optptr->name, "multiple-document-handling"))
     {
       if (!cupsGetOption("Collate", num_options, options) &&
           ppdFindOption(ppd, "Collate"))
       {
-        if (_ppd_strcasecmp(optptr->value, "separate-documents-uncollated-copies"))
+        if (_ppd_strcasecmp(optptr->value,
+			    "separate-documents-uncollated-copies"))
 	  ppd_mark_option(ppd, "Collate", "True");
 	else
 	  ppd_mark_option(ppd, "Collate", "False");
@@ -280,15 +283,15 @@ ppdMarkOptions(
     }
     else if (!_ppd_strcasecmp(optptr->name, "finishings"))
     {
-     /*
-      * Lookup cupsIPPFinishings attributes for each value...
-      */
+      //
+      // Lookup cupsIPPFinishings attributes for each value...
+     
 
       for (ptr = optptr->value; *ptr;)
       {
-       /*
-        * Get the next finishings number...
-	*/
+	//
+        // Get the next finishings number...
+	//
 
         if (!isdigit(*ptr & 255))
 	  break;
@@ -296,40 +299,40 @@ ppdMarkOptions(
         if ((j = (int)strtol(ptr, &ptr, 10)) < 3)
 	  break;
 
-       /*
-        * Skip separator as needed...
-	*/
+	//
+        // Skip separator as needed...
+	//
 
         if (*ptr == ',')
 	  ptr ++;
 
-       /*
-        * Look it up in the PPD file...
-	*/
+	//
+        // Look it up in the PPD file...
+	//
 
 	sprintf(s, "%d", j);
 
         if ((attr = ppdFindAttr(ppd, "cupsIPPFinishings", s)) == NULL)
 	  continue;
 
-       /*
-        * Apply "*Option Choice" settings from the attribute value...
-	*/
+	//
+        // Apply "*Option Choice" settings from the attribute value...
+	//
 
         ppd_mark_choices(ppd, attr->value);
       }
     }
     else if (!_ppd_strcasecmp(optptr->name, "APPrinterPreset"))
     {
-     /*
-      * Lookup APPrinterPreset value...
-      */
+      //
+      // Lookup APPrinterPreset value...
+      //
 
       if ((attr = ppdFindAttr(ppd, "APPrinterPreset", optptr->value)) != NULL)
       {
-       /*
-        * Apply "*Option Choice" settings from the attribute value...
-	*/
+	//
+        // Apply "*Option Choice" settings from the attribute value...
+	//
 
         ppd_mark_choices(ppd, attr->value);
       }
@@ -342,7 +345,7 @@ ppdMarkOptions(
 
   if (print_quality)
   {
-    int pq = atoi(print_quality);       /* print-quaity value */
+    int pq = atoi(print_quality);       // print-quaity value
 
     if (pq == IPP_QUALITY_DRAFT)
       ppd_mark_option(ppd, "cupsPrintQuality", "Draft");
@@ -358,16 +361,16 @@ ppdMarkOptions(
 }
 
 
-/*
- * 'ppdFindChoice()' - Return a pointer to an option choice.
- */
+//
+// 'ppdFindChoice()' - Return a pointer to an option choice.
+//
 
-ppd_choice_t *				/* O - Choice pointer or @code NULL@ */
-ppdFindChoice(ppd_option_t *o,		/* I - Pointer to option */
-              const char   *choice)	/* I - Name of choice */
+ppd_choice_t *				// O - Choice pointer or @code NULL@
+ppdFindChoice(ppd_option_t *o,		// I - Pointer to option
+              const char   *choice)	// I - Name of choice
 {
-  int		i;			/* Looping var */
-  ppd_choice_t	*c;			/* Current choice */
+  int		i;			// Looping var
+  ppd_choice_t	*c;			// Current choice
 
 
   if (!o || !choice)
@@ -384,16 +387,16 @@ ppdFindChoice(ppd_option_t *o,		/* I - Pointer to option */
 }
 
 
-/*
- * 'ppdFindMarkedChoice()' - Return the marked choice for the specified option.
- */
+//
+// 'ppdFindMarkedChoice()' - Return the marked choice for the specified option.
+//
 
-ppd_choice_t *				/* O - Pointer to choice or @code NULL@ */
-ppdFindMarkedChoice(ppd_file_t *ppd,	/* I - PPD file */
-                    const char *option)	/* I - Keyword/option name */
+ppd_choice_t *				// O - Pointer to choice or @code NULL@
+ppdFindMarkedChoice(ppd_file_t *ppd,	// I - PPD file
+                    const char *option)	// I - Keyword/option name
 {
-  ppd_choice_t	key,			/* Search key for choice */
-		*marked;		/* Marked choice */
+  ppd_choice_t	key,			// Search key for choice
+		*marked;		// Marked choice
 
 
   DEBUG_printf(("2ppdFindMarkedChoice(ppd=%p, option=\"%s\")", ppd, option));
@@ -413,28 +416,28 @@ ppdFindMarkedChoice(ppd_file_t *ppd,	/* I - PPD file */
 }
 
 
-/*
- * 'ppdFindOption()' - Return a pointer to the specified option.
- */
+//
+// 'ppdFindOption()' - Return a pointer to the specified option.
+//
 
-ppd_option_t *				/* O - Pointer to option or @code NULL@ */
-ppdFindOption(ppd_file_t *ppd,		/* I - PPD file data */
-              const char *option)	/* I - Option/Keyword name */
+ppd_option_t *				// O - Pointer to option or @code NULL@
+ppdFindOption(ppd_file_t *ppd,		// I - PPD file data
+              const char *option)	// I - Option/Keyword name
 {
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!ppd || !option)
     return (NULL);
 
   if (ppd->options)
   {
-   /*
-    * Search in the array...
-    */
+    //
+    // Search in the array...
+    //
 
-    ppd_option_t	key;		/* Option search key */
+    ppd_option_t	key;		// Option search key
 
 
     strlcpy(key.keyword, option, sizeof(key.keyword));
@@ -443,13 +446,13 @@ ppdFindOption(ppd_file_t *ppd,		/* I - PPD file data */
   }
   else
   {
-   /*
-    * Search in each group...
-    */
+    //
+    // Search in each group...
+    //
 
-    int			i, j;		/* Looping vars */
-    ppd_group_t		*group;		/* Current group */
-    ppd_option_t	*optptr;	/* Current option */
+    int			i, j;		// Looping vars
+    ppd_group_t		*group;		// Current group
+    ppd_option_t	*optptr;	// Current option
 
 
     for (i = ppd->num_groups, group = ppd->groups; i > 0; i --, group ++)
@@ -464,17 +467,17 @@ ppdFindOption(ppd_file_t *ppd,		/* I - PPD file data */
 }
 
 
-/*
- * 'ppdIsMarked()' - Check to see if an option is marked.
- */
+//
+// 'ppdIsMarked()' - Check to see if an option is marked.
+//
 
-int					/* O - Non-zero if option is marked */
-ppdIsMarked(ppd_file_t *ppd,		/* I - PPD file data */
-            const char *option,		/* I - Option/Keyword name */
-            const char *choice)		/* I - Choice name */
+int					// O - Non-zero if option is marked
+ppdIsMarked(ppd_file_t *ppd,		// I - PPD file data
+            const char *option,		// I - Option/Keyword name
+            const char *choice)		// I - Choice name
 {
-  ppd_choice_t	key,			/* Search key */
-		*c;			/* Choice pointer */
+  ppd_choice_t	key,			// Search key
+		*c;			// Choice pointer
 
 
   if (!ppd)
@@ -490,24 +493,24 @@ ppdIsMarked(ppd_file_t *ppd,		/* I - PPD file data */
 }
 
 
-/*
- * 'ppdMarkDefaults()' - Mark all default options in the PPD file.
- */
+//
+// 'ppdMarkDefaults()' - Mark all default options in the PPD file.
+//
 
 void
-ppdMarkDefaults(ppd_file_t *ppd)	/* I - PPD file record */
+ppdMarkDefaults(ppd_file_t *ppd)	// I - PPD file record
 {
-  int		i;			/* Looping variables */
-  ppd_group_t	*g;			/* Current group */
-  ppd_choice_t	*c;			/* Current choice */
+  int		i;			// Looping variables
+  ppd_group_t	*g;			// Current group
+  ppd_choice_t	*c;			// Current choice
 
 
   if (!ppd)
     return;
 
- /*
-  * Clean out the marked array...
-  */
+  //
+  // Clean out the marked array...
+  //
 
   for (c = (ppd_choice_t *)cupsArrayFirst(ppd->marked);
        c;
@@ -517,65 +520,65 @@ ppdMarkDefaults(ppd_file_t *ppd)	/* I - PPD file record */
     c->marked = 0;
   }
 
- /*
-  * Then repopulate it with the defaults...
-  */
+  //
+  // Then repopulate it with the defaults...
+  //
 
   for (i = ppd->num_groups, g = ppd->groups; i > 0; i --, g ++)
     ppd_defaults(ppd, g);
 
- /*
-  * Finally, tag any conflicts (API compatibility) once at the end.
-  */
+  //
+  // Finally, tag any conflicts (API compatibility) once at the end.
+  //
 
   ppdConflicts(ppd);
 }
 
 
-/*
- * 'ppdMarkOption()' - Mark an option in a PPD file and return the number of
- *                     conflicts.
- */
+//
+// 'ppdMarkOption()' - Mark an option in a PPD file and return the number of
+//                     conflicts.
+//
 
-int					/* O - Number of conflicts */
-ppdMarkOption(ppd_file_t *ppd,		/* I - PPD file record */
-              const char *option,	/* I - Keyword */
-              const char *choice)	/* I - Option name */
+int					// O - Number of conflicts
+ppdMarkOption(ppd_file_t *ppd,		// I - PPD file record
+              const char *option,	// I - Keyword
+              const char *choice)	// I - Option name
 {
   DEBUG_printf(("ppdMarkOption(ppd=%p, option=\"%s\", choice=\"%s\")",
         	ppd, option, choice));
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!ppd || !option || !choice)
     return (0);
 
- /*
-  * Mark the option...
-  */
+  //
+  // Mark the option...
+  //
 
   ppd_mark_option(ppd, option, choice);
 
- /*
-  * Return the number of conflicts...
-  */
+  //
+  // Return the number of conflicts...
+  //
 
   return (ppdConflicts(ppd));
 }
 
 
-/*
- * 'ppdFirstOption()' - Return the first option in the PPD file.
- *
- * Options are returned from all groups in ascending alphanumeric order.
- *
- * @since CUPS 1.2/macOS 10.5@
- */
+//
+// 'ppdFirstOption()' - Return the first option in the PPD file.
+//
+// Options are returned from all groups in ascending alphanumeric order.
+//
+// @since CUPS 1.2/macOS 10.5@
+//
 
-ppd_option_t *				/* O - First option or @code NULL@ */
-ppdFirstOption(ppd_file_t *ppd)		/* I - PPD file */
+ppd_option_t *				// O - First option or @code NULL@
+ppdFirstOption(ppd_file_t *ppd)		// I - PPD file
 {
   if (!ppd)
     return (NULL);
@@ -584,16 +587,16 @@ ppdFirstOption(ppd_file_t *ppd)		/* I - PPD file */
 }
 
 
-/*
- * 'ppdNextOption()' - Return the next option in the PPD file.
- *
- * Options are returned from all groups in ascending alphanumeric order.
- *
- * @since CUPS 1.2/macOS 10.5@
- */
+//
+// 'ppdNextOption()' - Return the next option in the PPD file.
+//
+// Options are returned from all groups in ascending alphanumeric order.
+//
+// @since CUPS 1.2/macOS 10.5@
+//
 
-ppd_option_t *				/* O - Next option or @code NULL@ */
-ppdNextOption(ppd_file_t *ppd)		/* I - PPD file */
+ppd_option_t *				// O - Next option or @code NULL@
+ppdNextOption(ppd_file_t *ppd)		// I - PPD file
 {
   if (!ppd)
     return (NULL);
@@ -602,49 +605,49 @@ ppdNextOption(ppd_file_t *ppd)		/* I - PPD file */
 }
 
 
-/*
- * 'ppdParseOptions()' - Parse options from a PPD file.
- *
- * This function looks for strings of the form:
- *
- *     *option choice ... *optionN choiceN
- *     property value ... propertyN valueN
- *
- * It stops when it finds a string that doesn't match this format.
- */
+//
+// 'ppdParseOptions()' - Parse options from a PPD file.
+//
+// This function looks for strings of the form:
+//
+//     *option choice ... *optionN choiceN
+//     property value ... propertyN valueN
+//
+// It stops when it finds a string that doesn't match this format.
+//
 
-int					/* O  - Number of options */
+int					// O  - Number of options
 ppdParseOptions(
-    const char    *s,			/* I  - String to parse */
-    int           num_options,		/* I  - Number of options */
-    cups_option_t **options,		/* IO - Options */
-    ppd_parse_t  which)		/* I  - What to parse */
+    const char    *s,			// I  - String to parse
+    int           num_options,		// I  - Number of options
+    cups_option_t **options,		// IO - Options
+    ppd_parse_t  which)		// I  - What to parse
 {
-  char	option[PPD_MAX_NAME * 2 + 1],	/* Current option/property */
-	choice[PPD_MAX_NAME],		/* Current choice/value */
-	*ptr;				/* Pointer into option or choice */
+  char	option[PPD_MAX_NAME * 2 + 1],	// Current option/property
+	choice[PPD_MAX_NAME],		// Current choice/value
+	*ptr;				// Pointer into option or choice
 
 
   if (!s)
     return (num_options);
 
- /*
-  * Read all of the "*Option Choice" and "property value" pairs from the
-  * string, add them to an options array as we go...
-  */
+  //
+  // Read all of the "*Option Choice" and "property value" pairs from the
+  // string, add them to an options array as we go...
+  //
 
   while (*s)
   {
-   /*
-    * Skip leading whitespace...
-    */
+    //
+    // Skip leading whitespace...
+    //
 
     while (_ppd_isspace(*s))
       s ++;
 
-   /*
-    * Get the option/property name...
-    */
+    //
+    // Get the option/property name...
+    //
 
     ptr = option;
     while (*s && !_ppd_isspace(*s) && ptr < (option + sizeof(option) - 1))
@@ -655,9 +658,9 @@ ppdParseOptions(
 
     *ptr = '\0';
 
-   /*
-    * Get the choice...
-    */
+    //
+    // Get the choice...
+    //
 
     while (_ppd_isspace(*s))
       s ++;
@@ -674,9 +677,9 @@ ppdParseOptions(
 
     *ptr = '\0';
 
-   /*
-    * Add it to the options array...
-    */
+    //
+    // Add it to the options array...
+    //
 
     if (option[0] == '*' && which != PPD_PARSE_PROPERTIES)
       num_options = cupsAddOption(option + 1, choice, num_options, options);
@@ -689,15 +692,15 @@ ppdParseOptions(
 
 
 #ifdef DEBUG
-/*
- * 'ppd_debug_marked()' - Output the marked array to stdout...
- */
+//
+// 'ppd_debug_marked()' - Output the marked array to stdout...
+//
 
 static void
-ppd_debug_marked(ppd_file_t *ppd,		/* I - PPD file data */
-             const char *title)		/* I - Title for list */
+ppd_debug_marked(ppd_file_t *ppd,	// I - PPD file data
+             const char *title)		// I - Title for list
 {
-  ppd_choice_t	*c;			/* Current choice */
+  ppd_choice_t	*c;			// Current choice
 
 
   DEBUG_printf(("2ppdMarkOptions: %s", title));
@@ -707,20 +710,20 @@ ppd_debug_marked(ppd_file_t *ppd,		/* I - PPD file data */
        c = (ppd_choice_t *)cupsArrayNext(ppd->marked))
     DEBUG_printf(("2ppdMarkOptions: %s=%s", c->option->keyword, c->choice));
 }
-#endif /* DEBUG */
+#endif // DEBUG
 
 
-/*
- * 'ppd_defaults()' - Set the defaults for this group and all sub-groups.
- */
+//
+// 'ppd_defaults()' - Set the defaults for this group and all sub-groups.
+//
 
 static void
-ppd_defaults(ppd_file_t  *ppd,		/* I - PPD file */
-             ppd_group_t *g)		/* I - Group to default */
+ppd_defaults(ppd_file_t  *ppd,		// I - PPD file
+             ppd_group_t *g)		// I - Group to default
 {
-  int		i;			/* Looping var */
-  ppd_option_t	*o;			/* Current option */
-  ppd_group_t	*sg;			/* Current sub-group */
+  int		i;			// Looping var
+  ppd_option_t	*o;			// Current option
+  ppd_group_t	*sg;			// Current sub-group
 
 
   for (i = g->num_options, o = g->options; i > 0; i --, o ++)
@@ -732,18 +735,18 @@ ppd_defaults(ppd_file_t  *ppd,		/* I - PPD file */
 }
 
 
-/*
- * 'ppd_mark_choices()' - Mark one or more option choices from a string.
- */
+//
+// 'ppd_mark_choices()' - Mark one or more option choices from a string.
+//
 
 static void
-ppd_mark_choices(ppd_file_t *ppd,	/* I - PPD file */
-                 const char *s)		/* I - "*Option Choice ..." string */
+ppd_mark_choices(ppd_file_t *ppd,	// I - PPD file
+                 const char *s)		// I - "*Option Choice ..." string
 {
-  int		i,			/* Looping var */
-		num_options;		/* Number of options */
-  cups_option_t	*options,		/* Options */
-		*option;		/* Current option */
+  int		i,			// Looping var
+		num_options;		// Number of options
+  cups_option_t	*options,		// Options
+		*option;		// Current option
 
 
   if (!s)
@@ -759,30 +762,30 @@ ppd_mark_choices(ppd_file_t *ppd,	/* I - PPD file */
 }
 
 
-/*
- * 'ppd_mark_option()' - Quick mark an option without checking for conflicts.
- */
+//
+// 'ppd_mark_option()' - Quick mark an option without checking for conflicts.
+//
 
 static void
-ppd_mark_option(ppd_file_t *ppd,	/* I - PPD file */
-                const char *option,	/* I - Option name */
-                const char *choice)	/* I - Choice name */
+ppd_mark_option(ppd_file_t *ppd,	// I - PPD file
+                const char *option,	// I - Option name
+                const char *choice)	// I - Choice name
 {
-  int		i, j;			/* Looping vars */
-  ppd_option_t	*o;			/* Option pointer */
-  ppd_choice_t	*c,			/* Choice pointer */
-		*oldc,			/* Old choice pointer */
-		key;			/* Search key for choice */
-  struct lconv	*loc;			/* Locale data */
+  int		i, j;			// Looping vars
+  ppd_option_t	*o;			// Option pointer
+  ppd_choice_t	*c,			// Choice pointer
+		*oldc,			// Old choice pointer
+		key;			// Search key for choice
+  struct lconv	*loc;			// Locale data
 
 
   DEBUG_printf(("7ppd_mark_option(ppd=%p, option=\"%s\", choice=\"%s\")",
         	ppd, option, choice));
 
- /*
-  * AP_D_InputSlot is the "default input slot" on macOS, and setting
-  * it clears the regular InputSlot choices...
-  */
+  //
+  // AP_D_InputSlot is the "default input slot" on macOS, and setting
+  // it clears the regular InputSlot choices...
+  //
 
   if (!_ppd_strcasecmp(option, "AP_D_InputSlot"))
   {
@@ -801,9 +804,9 @@ ppd_mark_option(ppd_file_t *ppd,	/* I - PPD file */
     cupsArrayRestore(ppd->options);
   }
 
- /*
-  * Check for custom options...
-  */
+  //
+  // Check for custom options...
+  //
 
   cupsArraySave(ppd->options);
 
@@ -818,30 +821,30 @@ ppd_mark_option(ppd_file_t *ppd,	/* I - PPD file */
 
   if (!_ppd_strncasecmp(choice, "Custom.", 7))
   {
-   /*
-    * Handle a custom option...
-    */
+    //
+    // Handle a custom option...
+    //
 
     if ((c = ppdFindChoice(o, "Custom")) == NULL)
       return;
 
     if (!_ppd_strcasecmp(option, "PageSize"))
     {
-     /*
-      * Handle custom page sizes...
-      */
+      //
+      // Handle custom page sizes...
+      //
 
       ppdPageSize(ppd, choice);
     }
     else
     {
-     /*
-      * Handle other custom options...
-      */
+      //
+      // Handle other custom options...
+      //
 
-      ppd_coption_t	*coption;	/* Custom option */
-      ppd_cparam_t	*cparam;	/* Custom parameter */
-      char		*units;		/* Custom points units */
+      ppd_coption_t	*coption;	// Custom option
+      ppd_cparam_t	*cparam;	// Custom parameter
+      char		*units;		// Custom points units
 
 
       if ((coption = ppdFindCustomOption(ppd, option)) != NULL)
@@ -897,24 +900,24 @@ ppd_mark_option(ppd_file_t *ppd,	/* I - PPD file */
       }
     }
 
-   /*
-    * Make sure that we keep the option marked below...
-    */
+    //
+    // Make sure that we keep the option marked below...
+    //
 
     choice = "Custom";
   }
   else if (choice[0] == '{')
   {
-   /*
-    * Handle multi-value custom options...
-    */
+    //
+    // Handle multi-value custom options...
+    //
 
-    ppd_coption_t	*coption;	/* Custom option */
-    ppd_cparam_t	*cparam;	/* Custom parameter */
-    char		*units;		/* Custom points units */
-    int			num_vals;	/* Number of values */
-    cups_option_t	*vals,		/* Values */
-			*val;		/* Value */
+    ppd_coption_t	*coption;	// Custom option
+    ppd_cparam_t	*cparam;	// Custom parameter
+    char		*units;		// Custom points units
+    int			num_vals;	// Number of values
+    cups_option_t	*vals,		// Values
+			*val;		// Value
 
 
     if ((c = ppdFindChoice(o, "Custom")) == NULL)
@@ -989,15 +992,15 @@ ppd_mark_option(ppd_file_t *ppd,	/* I - PPD file */
       return;
   }
 
- /*
-  * Option found; mark it and then handle unmarking any other options.
-  */
+  //
+  // Option found; mark it and then handle unmarking any other options.
+  //
 
   if (o->ui != PPD_UI_PICKMANY)
   {
-   /*
-    * Unmark all other choices...
-    */
+    //
+    // Unmark all other choices...
+    //
 
     if ((oldc = (ppd_choice_t *)cupsArrayFind(ppd->marked, c)) != NULL)
     {
@@ -1005,20 +1008,21 @@ ppd_mark_option(ppd_file_t *ppd,	/* I - PPD file */
       cupsArrayRemove(ppd->marked, oldc);
     }
 
-    if (!_ppd_strcasecmp(option, "PageSize") || !_ppd_strcasecmp(option, "PageRegion"))
+    if (!_ppd_strcasecmp(option, "PageSize") ||
+	!_ppd_strcasecmp(option, "PageRegion"))
     {
-     /*
-      * Mark current page size...
-      */
+      //
+      // Mark current page size...
+      //
 
       for (j = 0; j < ppd->num_sizes; j ++)
 	ppd->sizes[j].marked = !_ppd_strcasecmp(ppd->sizes[j].name,
 		                           choice);
 
-     /*
-      * Unmark the current PageSize or PageRegion setting, as
-      * appropriate...
-      */
+      //
+      // Unmark the current PageSize or PageRegion setting, as
+      // appropriate...
+      //
 
       cupsArraySave(ppd->options);
 
@@ -1051,9 +1055,9 @@ ppd_mark_option(ppd_file_t *ppd,	/* I - PPD file */
     }
     else if (!_ppd_strcasecmp(option, "InputSlot"))
     {
-     /*
-      * Unmark ManualFeed option...
-      */
+      //
+      // Unmark ManualFeed option...
+      //
 
       cupsArraySave(ppd->options);
 
@@ -1072,9 +1076,9 @@ ppd_mark_option(ppd_file_t *ppd,	/* I - PPD file */
     else if (!_ppd_strcasecmp(option, "ManualFeed") &&
 	     !_ppd_strcasecmp(choice, "True"))
     {
-     /*
-      * Unmark InputSlot option...
-      */
+      //
+      // Unmark InputSlot option...
+      //
 
       cupsArraySave(ppd->options);
 

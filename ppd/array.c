@@ -1,41 +1,43 @@
-/*
- * Sorted array routines for libppd.
- *
- * Copyright 2007-2014 by Apple Inc.
- * Copyright 1997-2007 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
- */
+//
+// Sorted array routines for libppd.
+//
+// Copyright 2007-2014 by Apple Inc.
+// Copyright 1997-2007 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "string-private.h"
 #include "debug-internal.h"
 #include "array-private.h"
 
 
-/*
- * '_ppdArrayAddStrings()' - Add zero or more delimited strings to an array.
- *
- * Note: The array MUST be created using the @link _ppdArrayNewStrings@
- * function. Duplicate strings are NOT added. If the string pointer "s" is NULL
- * or the empty string, no strings are added to the array.
- */
+//
+// '_ppdArrayAddStrings()' - Add zero or more delimited strings to an array.
+//
+// Note: The array MUST be created using the @link _ppdArrayNewStrings@
+// function. Duplicate strings are NOT added. If the string pointer "s" is NULL
+// or the empty string, no strings are added to the array.
+//
 
-int					/* O - 1 on success, 0 on failure */
-_ppdArrayAddStrings(cups_array_t *a,	/* I - Array */
-                     const char   *s,	/* I - Delimited strings or NULL */
-                     char         delim)/* I - Delimiter character */
+int					// O - 1 on success, 0 on failure
+_ppdArrayAddStrings(cups_array_t *a,	// I - Array
+		    const char   *s,	// I - Delimited strings or NULL
+		    char         delim)	// I - Delimiter character
 {
-  char		*buffer,		/* Copy of string */
-		*start,			/* Start of string */
-		*end;			/* End of string */
-  int		status = 1;		/* Status of add */
+  char		*buffer,		// Copy of string
+		*start,			// Start of string
+		*end;			// End of string
+  int		status = 1;		// Status of add
 
 
-  DEBUG_printf(("_ppdArrayAddStrings(a=%p, s=\"%s\", delim='%c')", (void *)a, s, delim));
+  DEBUG_printf(("_ppdArrayAddStrings(a=%p, s=\"%s\", delim='%c')",
+		(void *)a, s, delim));
 
   if (!a || !s || !*s)
   {
@@ -45,9 +47,9 @@ _ppdArrayAddStrings(cups_array_t *a,	/* I - Array */
 
   if (delim == ' ')
   {
-   /*
-    * Skip leading whitespace...
-    */
+    //
+    // Skip leading whitespace...
+    //
 
     DEBUG_puts("1_ppdArrayAddStrings: Skipping leading whitespace.");
 
@@ -60,9 +62,9 @@ _ppdArrayAddStrings(cups_array_t *a,	/* I - Array */
   if (!strchr(s, delim) &&
       (delim != ' ' || (!strchr(s, '\t') && !strchr(s, '\n'))))
   {
-   /*
-    * String doesn't contain a delimiter, so add it as a single value...
-    */
+    //
+    // String doesn't contain a delimiter, so add it as a single value...
+    //
 
     DEBUG_puts("1_ppdArrayAddStrings: No delimiter seen, adding a single "
                "value.");
@@ -79,10 +81,10 @@ _ppdArrayAddStrings(cups_array_t *a,	/* I - Array */
   {
     for (start = end = buffer; *end; start = end)
     {
-     /*
-      * Find the end of the current delimited string and see if we need to add
-      * it...
-      */
+      //
+      // Find the end of the current delimited string and see if we need to add
+      // it...
+      //
 
       if (delim == ' ')
       {
@@ -112,19 +114,19 @@ _ppdArrayAddStrings(cups_array_t *a,	/* I - Array */
 }
 
 
-/*
- * '_ppdArrayNewStrings()' - Create a new array of comma-delimited strings.
- *
- * Note: The array automatically manages copies of the strings passed. If the
- * string pointer "s" is NULL or the empty string, no strings are added to the
- * newly created array.
- */
+//
+// '_ppdArrayNewStrings()' - Create a new array of comma-delimited strings.
+//
+// Note: The array automatically manages copies of the strings passed. If the
+// string pointer "s" is NULL or the empty string, no strings are added to the
+// newly created array.
+//
 
-cups_array_t *				/* O - Array */
-_ppdArrayNewStrings(const char *s,	/* I - Delimited strings or NULL */
-                     char       delim)	/* I - Delimiter character */
+cups_array_t *				// O - Array
+_ppdArrayNewStrings(const char *s,	// I - Delimited strings or NULL
+		    char       delim)	// I - Delimiter character
 {
-  cups_array_t	*a;			/* Array */
+  cups_array_t	*a;			// Array
 
 
   if ((a = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0,

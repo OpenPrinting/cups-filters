@@ -1,48 +1,48 @@
-/*
- * Threading primitives for libppd.
- *
- * Copyright © 2009-2018 by Apple Inc.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Threading primitives for libppd.
+//
+// Copyright © 2009-2018 by Apple Inc.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "thread-private.h"
 
 
 #if defined(HAVE_PTHREAD_H)
-/*
- * '_ppdMutexInit()' - Initialize a mutex.
- */
+//
+// '_ppdMutexInit()' - Initialize a mutex.
+//
 
 void
-_ppdMutexInit(_ppd_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexInit(_ppd_mutex_t *mutex)	// I - Mutex
 {
   pthread_mutex_init(mutex, NULL);
 }
 
 
-/*
- * '_ppdMutexLock()' - Lock a mutex.
- */
+//
+// '_ppdMutexLock()' - Lock a mutex.
+//
 
 void
-_ppdMutexLock(_ppd_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexLock(_ppd_mutex_t *mutex)	// I - Mutex
 {
   pthread_mutex_lock(mutex);
 }
 
 
-/*
- * '_ppdMutexUnlock()' - Unlock a mutex.
- */
+//
+// '_ppdMutexUnlock()' - Unlock a mutex.
+//
 
 void
-_ppdMutexUnlock(_ppd_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexUnlock(_ppd_mutex_t *mutex)	// I - Mutex
 {
   pthread_mutex_unlock(mutex);
 }
@@ -52,27 +52,27 @@ _ppdMutexUnlock(_ppd_mutex_t *mutex)	/* I - Mutex */
 #  include <process.h>
 
 static _ppd_mutex_t    ppd_global_mutex = _CUPS_MUTEX_INITIALIZER;
-                                        /* Global critical section */
+                                        // Global critical section
 
 
-/*
- * '_ppdMutexInit()' - Initialize a mutex.
- */
+//
+// '_ppdMutexInit()' - Initialize a mutex.
+//
 
 void
-_ppdMutexInit(_ppd_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexInit(_ppd_mutex_t *mutex)	// I - Mutex
 {
   InitializeCriticalSection(&mutex->m_criticalSection);
   mutex->m_init = 1;
 }
 
 
-/*
- * '_ppdMutexLock()' - Lock a mutex.
- */
+//
+// '_ppdMutexLock()' - Lock a mutex.
+//
 
 void
-_ppdMutexLock(_ppd_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexLock(_ppd_mutex_t *mutex)	// I - Mutex
 {
   if (!mutex->m_init)
   {
@@ -91,51 +91,51 @@ _ppdMutexLock(_ppd_mutex_t *mutex)	/* I - Mutex */
 }
 
 
-/*
- * '_ppdMutexUnlock()' - Unlock a mutex.
- */
+//
+// '_ppdMutexUnlock()' - Unlock a mutex.
+//
 
 void
-_ppdMutexUnlock(_ppd_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexUnlock(_ppd_mutex_t *mutex)	// I - Mutex
 {
   LeaveCriticalSection(&mutex->m_criticalSection);
 }
 
 
-#else /* No threading */
+#else // No threading
 
 
-/*
- * '_ppdMutexInit()' - Initialize a mutex.
- */
+//
+// '_ppdMutexInit()' - Initialize a mutex.
+//
 
 void
-_ppdMutexInit(_ppd_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexInit(_ppd_mutex_t *mutex)	// I - Mutex
 {
   (void)mutex;
 }
 
 
-/*
- * '_ppdMutexLock()' - Lock a mutex.
- */
+//
+// '_ppdMutexLock()' - Lock a mutex.
+//
 
 void
-_ppdMutexLock(_ppd_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexLock(_ppd_mutex_t *mutex)	// I - Mutex
 {
   (void)mutex;
 }
 
 
-/*
- * '_ppdMutexUnlock()' - Unlock a mutex.
- */
+//
+// '_ppdMutexUnlock()' - Unlock a mutex.
+//
 
 void
-_ppdMutexUnlock(_ppd_mutex_t *mutex)	/* I - Mutex */
+_ppdMutexUnlock(_ppd_mutex_t *mutex)	// I - Mutex
 {
   (void)mutex;
 }
 
 
-#endif /* HAVE_PTHREAD_H */
+#endif // HAVE_PTHREAD_H

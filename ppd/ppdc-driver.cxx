@@ -1,5 +1,5 @@
 //
-// PPD file compiler definitions for the CUPS PPD Compiler.
+// PPD file compiler definitions for the CUPS PPD Compiler in libppd.
 //
 // Copyright © 2007-2019 by Apple Inc.
 // Copyright © 2002-2006 by Easy Software Products.

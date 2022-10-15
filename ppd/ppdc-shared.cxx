@@ -1,10 +1,11 @@
 //
-// Shared data class for the CUPS PPD Compiler.
+// Shared data class for the CUPS PPD Compiler in libppd.
 //
 // Copyright 2007-2009 by Apple Inc.
 // Copyright 2002-2005 by Easy Software Products.
 //
-// Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 
 //
@@ -48,7 +49,7 @@ ppdcShared::release(void)
     fprintf(stderr, "ERROR: Over-release of %s: %p\n", class_name(), this);
     abort();
   }
-#endif /* DEBUG */
+#endif // DEBUG
 
   if (use == 0)
     delete this;

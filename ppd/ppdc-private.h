@@ -1,9 +1,10 @@
 //
-// Private definitions for the CUPS PPD Compiler.
+// Private definitions for the CUPS PPD Compilerin libppd.
 //
 // Copyright 2009-2010 by Apple Inc.
 //
-// Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 
 #ifndef _PPDC_PRIVATE_H_
@@ -34,11 +35,11 @@
 #    define PPDC_NEWVAL(s)
 #    define PPDC_DELETE
 #    define PPDC_DELETEVAL(s)
-#  endif /* PPDC_DEBUG */
+#  endif // PPDC_DEBUG
 
-/*
- * Macro for localized text...
- */
+//
+// Macro for localized text...
+//
 
 #  define _(x) x
 

@@ -1,10 +1,11 @@
 //
-// Definitions for the CUPS PPD Compiler.
+// API definitions for the CUPS PPD Compiler in libppd.
 //
 // Copyright 2007-2019 by Apple Inc.
 // Copyright 2002-2007 by Easy Software Products.
 //
-// Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 
 #ifndef _PPDC_H_

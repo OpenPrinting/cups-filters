@@ -1,16 +1,16 @@
-/*
- * PPD command interpreter for libppd.
- *
- * Copyright © 2007-2018 by Apple Inc.
- * Copyright © 1993-2007 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// PPD command interpreter for libppd.
+//
+// Copyright © 2007-2018 by Apple Inc.
+// Copyright © 1993-2007 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "raster-private.h"
 #include "ppd.h"
@@ -18,9 +18,9 @@
 #include <math.h>
 
 
-/*
- * Stack values for the PostScript mini-interpreter...
- */
+//
+// Stack values for the PostScript mini-interpreter...
+//
 
 typedef enum
 {
@@ -48,28 +48,28 @@ typedef enum
 
 typedef struct
 {
-  _ppd_ps_type_t	type;		/* Object type */
+  _ppd_ps_type_t	type;		// Object type
   union
   {
-    int		boolean;		/* Boolean value */
-    char	name[64];		/* Name value */
-    double	number;			/* Number value */
-    char	other[64];		/* Other operator */
-    char	string[64];		/* Sring value */
-  }			value;		/* Value */
+    int		boolean;		// Boolean value
+    char	name[64];		// Name value
+    double	number;			// Number value
+    char	other[64];		// Other operator
+    char	string[64];		// Sring value
+  }			value;		// Value
 } _ppd_ps_obj_t;
 
 typedef struct
 {
-  int			num_objs,	/* Number of objects on stack */
-			alloc_objs;	/* Number of allocated objects */
-  _ppd_ps_obj_t	*objs;		/* Objects in stack */
+  int			num_objs,	// Number of objects on stack
+			alloc_objs;	// Number of allocated objects
+  _ppd_ps_obj_t	*objs;		// Objects in stack
 } _ppd_ps_stack_t;
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static int		ppd_cleartomark_stack(_ppd_ps_stack_t *st);
 static int		ppd_copy_stack(_ppd_ps_stack_t *st, int count);
@@ -89,62 +89,63 @@ static int		ppd_setpagedevice(_ppd_ps_stack_t *st,
 #ifdef DEBUG
 static void		ppd_DEBUG_object(const char *prefix, _ppd_ps_obj_t *obj);
 static void		ppd_DEBUG_stack(const char *prefix, _ppd_ps_stack_t *st);
-#endif /* DEBUG */
+#endif // DEBUG
 
 
-/*
- * 'ppdRasterInterpretPPD()' - Interpret PPD commands to create a page header.
- *
- * This function is used by raster image processing (RIP) filters like
- * cgpdftoraster and imagetoraster when writing CUPS raster data for a page.
- * It is not used by raster printer driver filters which only read CUPS
- * raster data.
- *
- *
- * @code ppdRasterInterpretPPD@ does not mark the options in the PPD using
- * the "num_options" and "options" arguments.  Instead, mark the options with
- * @code ppdMarkOptions@ and @code ppdMarkOption@ prior to calling it -
- * this allows for per-page options without manipulating the options array.
- *
- * The "func" argument specifies an optional callback function that is
- * called prior to the computation of the final raster data.  The function
- * can make changes to the @link cups_page_header2_t@ data as needed to use a
- * supported raster format and then returns 0 on success and -1 if the
- * requested attributes cannot be supported.
- *
- *
- * @code ppdRasterInterpretPPD@ supports a subset of the PostScript language.
- * Currently only the @code [@, @code ]@, @code <<@, @code >>@, @code {@,
- * @code }@, @code cleartomark@, @code copy@, @code dup@, @code index@,
- * @code pop@, @code roll@, @code setpagedevice@, and @code stopped@ operators
- * are supported.
- *
- * @since CUPS 1.2/macOS 10.5@
- */
+//
+// 'ppdRasterInterpretPPD()' - Interpret PPD commands to create a page header.
+//
+// This function is used by raster image processing (RIP) filters like
+// cgpdftoraster and imagetoraster when writing CUPS raster data for a page.
+// It is not used by raster printer driver filters which only read CUPS
+// raster data.
+//
+//
+// @code ppdRasterInterpretPPD@ does not mark the options in the PPD using
+// the "num_options" and "options" arguments.  Instead, mark the options with
+// @code ppdMarkOptions@ and @code ppdMarkOption@ prior to calling it -
+// this allows for per-page options without manipulating the options array.
+//
+// The "func" argument specifies an optional callback function that is
+// called prior to the computation of the final raster data.  The function
+// can make changes to the @link cups_page_header2_t@ data as needed to use a
+// supported raster format and then returns 0 on success and -1 if the
+// requested attributes cannot be supported.
+//
+//
+// @code ppdRasterInterpretPPD@ supports a subset of the PostScript language.
+// Currently only the @code [@, @code ]@, @code <<@, @code >>@, @code {@,
+// @code }@, @code cleartomark@, @code copy@, @code dup@, @code index@,
+// @code pop@, @code roll@, @code setpagedevice@, and @code stopped@ operators
+// are supported.
+//
+// @since CUPS 1.2/macOS 10.5@
+//
 
-int					/* O - 0 on success, -1 on failure */
+int					// O - 0 on success, -1 on failure
 ppdRasterInterpretPPD(
-    cups_page_header2_t *h,		/* O - Page header to create */
-    ppd_file_t          *ppd,		/* I - PPD file */
-    int                 num_options,	/* I - Number of options */
-    cups_option_t       *options,	/* I - Options */
-    cups_interpret_cb_t func)		/* I - Optional page header callback (@code NULL@ for none) */
+    cups_page_header2_t *h,		// O - Page header to create
+    ppd_file_t          *ppd,		// I - PPD file
+    int                 num_options,	// I - Number of options
+    cups_option_t       *options,	// I - Options
+    cups_interpret_cb_t func)		// I - Optional page header callback
+					//     (@code NULL@ for none)
 {
-  int		status;			/* Cummulative status */
-  char		*code;			/* Code to run */
-  const char	*val;			/* Option value */
-  ppd_size_t	*size;			/* Current size */
-  float		left,			/* Left position */
-		bottom,			/* Bottom position */
-		right,			/* Right position */
-		top,			/* Top position */
-		temp1, temp2;		/* Temporary variables for swapping */
-  int		preferred_bits;		/* Preferred bits per color */
+  int		status;			// Cummulative status
+  char		*code;			// Code to run
+  const char	*val;			// Option value
+  ppd_size_t	*size;			// Current size
+  float		left,			// Left position
+		bottom,			// Bottom position
+		right,			// Right position
+		top,			// Top position
+		temp1, temp2;		// Temporary variables for swapping
+  int		preferred_bits;		// Preferred bits per color
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   _ppdRasterClearError();
 
@@ -154,9 +155,9 @@ ppdRasterInterpretPPD(
     return (-1);
   }
 
- /*
-  * Reset the page header to the defaults...
-  */
+  //
+  // Reset the page header to the defaults...
+  //
 
   memset(h, 0, sizeof(cups_page_header2_t));
 
@@ -179,33 +180,33 @@ ppdRasterInterpretPPD(
   strlcpy(h->cupsPageSizeName, "Letter", sizeof(h->cupsPageSizeName));
 
 #ifdef __APPLE__
- /*
-  * cupsInteger0 is also used for the total page count on macOS; set an
-  * uncommon default value so we can tell if the driver is using cupsInteger0.
-  */
+  //
+  // cupsInteger0 is also used for the total page count on macOS; set an
+  // uncommon default value so we can tell if the driver is using cupsInteger0.
+  //
 
   h->cupsInteger[0] = 0x80000000;
-#endif /* __APPLE__ */
+#endif // __APPLE__
 
- /*
-  * Apply patches and options to the page header...
-  */
+  //
+  // Apply patches and options to the page header...
+  //
 
   status         = 0;
   preferred_bits = 0;
 
   if (ppd)
   {
-   /*
-    * Apply any patch code (used to override the defaults...)
-    */
+    //
+    // Apply any patch code (used to override the defaults...)
+    //
 
     if (ppd->patches)
       status |= ppdRasterExecPS(h, &preferred_bits, ppd->patches);
 
-   /*
-    * Then apply printer options in the proper order...
-    */
+    //
+    // Then apply printer options in the proper order...
+    //
 
     if ((code = ppdEmitString(ppd, PPD_ORDER_DOCUMENT, 0.0)) != NULL)
     {
@@ -232,28 +233,28 @@ ppdRasterInterpretPPD(
     }
   }
 
- /*
-  * Allow option override for page scaling...
-  */
+  //
+  // Allow option override for page scaling...
+  //
 
   if ((val = cupsGetOption("cupsBorderlessScalingFactor", num_options,
                            options)) != NULL)
   {
-    double sc = atof(val);		/* Scale factor */
+    double sc = atof(val);		// Scale factor
 
     if (sc >= 0.1 && sc <= 2.0)
       h->cupsBorderlessScalingFactor = (float)sc;
   }
 
- /*
-  * Get the margins for the current size...
-  */
+  //
+  // Get the margins for the current size...
+  //
 
   if ((size = ppdPageSize(ppd, NULL)) != NULL)
   {
-   /*
-    * Use the margins from the PPD file...
-    */
+    //
+    // Use the margins from the PPD file...
+    //
 
     left   = size->left;
     bottom = size->bottom;
@@ -267,9 +268,9 @@ ppdRasterInterpretPPD(
   }
   else
   {
-   /*
-    * Use the default margins...
-    */
+    //
+    // Use the default margins...
+    //
 
     left   = 0.0f;
     bottom = 0.0f;
@@ -277,15 +278,15 @@ ppdRasterInterpretPPD(
     top    = 792.0f;
   }
 
- /*
-  * Handle orientation...
-  */
+  //
+  // Handle orientation...
+  //
 
   switch (h->Orientation)
   {
     case CUPS_ORIENT_0 :
     default :
-        /* Do nothing */
+        // Do nothing
         break;
 
     case CUPS_ORIENT_90 :
@@ -359,9 +360,9 @@ ppdRasterInterpretPPD(
   h->cupsImagingBBox[2]    = (float)right;
   h->cupsImagingBBox[3]    = (float)top;
 
- /*
-  * Use the callback to validate the page header...
-  */
+  //
+  // Use the callback to validate the page header...
+  //
 
   if (func && (*func)(h, preferred_bits))
   {
@@ -369,9 +370,9 @@ ppdRasterInterpretPPD(
     return (-1);
   }
 
- /*
-  * Check parameters...
-  */
+  //
+  // Check parameters...
+  //
 
   if (!h->HWResolution[0] || !h->HWResolution[1] ||
       !h->PageSize[0] || !h->PageSize[1] ||
@@ -385,14 +386,14 @@ ppdRasterInterpretPPD(
     return (-1);
   }
 
- /*
-  * Compute the bitmap parameters...
-  */
+  //
+  // Compute the bitmap parameters...
+  //
 
   h->cupsWidth  = (unsigned)((right - left) * h->cupsBorderlessScalingFactor *
-                        h->HWResolution[0] / 72.0f + 0.5f);
+			     h->HWResolution[0] / 72.0f + 0.5f);
   h->cupsHeight = (unsigned)((top - bottom) * h->cupsBorderlessScalingFactor *
-                        h->HWResolution[1] / 72.0f + 0.5f);
+			     h->HWResolution[1] / 72.0f + 0.5f);
 
   switch (h->cupsColorSpace)
   {
@@ -407,18 +408,18 @@ ppdRasterInterpretPPD(
 	break;
 
     default :
-       /*
-        * Ensure that colorimetric colorspaces use at least 8 bits per
-	* component...
-	*/
+        //
+        // Ensure that colorimetric colorspaces use at least 8 bits per
+	// component...
+
 
         if (h->cupsColorSpace >= CUPS_CSPACE_CIEXYZ &&
 	    h->cupsBitsPerColor < 8)
 	  h->cupsBitsPerColor = 8;
 
-       /*
-        * Figure out the number of bits per pixel...
-	*/
+	//
+        // Figure out the number of bits per pixel...
+	//
 
 	if (h->cupsColorOrder == CUPS_ORDER_CHUNKED)
 	{
@@ -445,9 +446,9 @@ ppdRasterInterpretPPD(
           break;
 	}
 
-       /*
-	* Fall through to CMYK code...
-	*/
+	//
+	// Fall through to CMYK code...
+	//
 
     case CUPS_CSPACE_RGBA :
     case CUPS_CSPACE_RGBW :
@@ -496,23 +497,23 @@ ppdRasterInterpretPPD(
   return (status);
 }
 
-/*
- * 'ppdRasterMatchPageSize()' - Match PPD page size to header page size.
- */
+//
+// 'ppdRasterMatchPageSize()' - Match PPD page size to header page size.
+//
 
-int     				/* O - 0 on success, -1 on failure */
+int     				// O - 0 on success, -1 on failure
 ppdRasterMatchPPDSize(
-    cups_page_header2_t *header,	/* I - Page header to match */
-    ppd_file_t  	*ppd,   	/* I - PPD file */
-    double		margins[4],	/* O - Margins of media in points */
-    double		dimensions[2],	/* O - Width and Length of media in points */
-    int 		*image_fit,	/* O - Imageable Area Fit */
-    int 		*landscape)	/* O - Landscape / Portrait Fit */
+    cups_page_header2_t *header,	// I - Page header to match
+    ppd_file_t  	*ppd,   	// I - PPD file
+    double		margins[4],	// O - Margins of media in points
+    double		dimensions[2],	// O - Width and Length of media in points
+    int 		*image_fit,	// O - Imageable Area Fit
+    int 		*landscape)	// O - Landscape / Portrait Fit
 {
-  ppd_size_t	*size,  		/* Current size */
-		*size_matched = NULL;	/* Matched size */
-  int		i = 0;			/* Loop variable */
-  char  	pageSizeRequested[64];  /* Requested PageSize */
+  ppd_size_t	*size,  		// Current size
+		*size_matched = NULL;	// Matched size
+  int		i = 0;			// Loop variable
+  char  	pageSizeRequested[64];  // Requested PageSize
 
   if (!header)
   {
@@ -525,15 +526,16 @@ ppdRasterMatchPPDSize(
     return (-1);
   }
 
-  strncpy(pageSizeRequested, header->cupsPageSizeName, 64); /* Prefer user-selected page size. */
+  strncpy(pageSizeRequested, header->cupsPageSizeName, 64);
+					// Prefer user-selected page size.
   memset(dimensions, 0, sizeof(double)*2);
   memset(margins, 0, sizeof(double)*4);
   size_matched = NULL;
 
   for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
   {
-    /* Skip page sizes which conflict with settings of the other options */
-    /* Find size of document's page under the PPD page sizes */
+    // Skip page sizes which conflict with settings of the other options
+    // Find size of document's page under the PPD page sizes
     if (fabs(header->PageSize[1] - size->length) / size->length < 0.01 &&
 	fabs(header->PageSize[0] - size->width) / size->width < 0.01 &&
 	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
@@ -545,26 +547,29 @@ ppdRasterMatchPPDSize(
   }
 
   if (size_matched == NULL)
-  /* Input page size does not fit any of the PPD's sizes, try to fit
-     the input page size into the imageable areas of the PPD's sizes */
-  for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
-  {
-    if (fabs(header->PageSize[1] - size->top + size->bottom) / size->length < 0.01 &&
-	fabs(header->PageSize[0] - size->right + size->left) / size->width < 0.01 &&
-	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
+    // Input page size does not fit any of the PPD's sizes, try to fit
+    // the input page size into the imageable areas of the PPD's sizes
+    for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
     {
-      DEBUG_puts("Imageable area fit\n");
-      size_matched = size;
-      if (landscape) *landscape = 0;
-      if (image_fit) *image_fit = 1;
+      if (fabs(header->PageSize[1] -
+	       size->top + size->bottom) / size->length < 0.01 &&
+	  fabs(header->PageSize[0] -
+	       size->right + size->left) / size->width < 0.01 &&
+	  (size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
+      {
+	DEBUG_puts("Imageable area fit\n");
+	size_matched = size;
+	if (landscape) *landscape = 0;
+	if (image_fit) *image_fit = 1;
+      }
     }
-  }
 
   if (size_matched)
   {
-    /*
-    * Standard size...
-    */
+    //
+    // Standard size...
+    //
+
     DEBUG_printf(("PPD matched size = %s", size_matched->name));
     size = size_matched;
     dimensions[0] = size->width;
@@ -577,10 +582,11 @@ ppdRasterMatchPPDSize(
   }
   else
   {
-    /*
-    * No matching portrait size; look for a matching size in
-    * landscape orientation...
-    */
+    //
+    // No matching portrait size; look for a matching size in
+    // landscape orientation...
+    //
+
     size_matched = 0;
     for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
     if (fabs(header->PageSize[0] - size->length) / size->length < 0.01 &&
@@ -593,27 +599,31 @@ ppdRasterMatchPPDSize(
     }
 
     if (size_matched == NULL)
-    /* Input page size does not fit any of the PPD's sizes, try to fit
-	the input page size into the imageable areas of the PPD's sizes */
-    for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
-    {
-      if (fabs(header->PageSize[0] - size->top + size->bottom) / size->length < 0.01 &&
-	fabs(header->PageSize[1] - size->right + size->left) / size->width < 0.01 &&
-	(size_matched == NULL || !strcasecmp(pageSizeRequested, size->name)))
+      // Input page size does not fit any of the PPD's sizes, try to fit
+      // the input page size into the imageable areas of the PPD's sizes
+      for (i = ppd->num_sizes, size = ppd->sizes; i > 0; i --, size ++)
       {
-	DEBUG_puts("Imageable area fit\n");
-	size_matched = size;
-	if (landscape) *landscape = 1;
-	if (image_fit) *image_fit = 1;
+	if (fabs(header->PageSize[0] -
+		 size->top + size->bottom) / size->length < 0.01 &&
+	    fabs(header->PageSize[1] -
+		 size->right + size->left) / size->width < 0.01 &&
+	    (size_matched == NULL ||
+	     !strcasecmp(pageSizeRequested, size->name)))
+	{
+	  DEBUG_puts("Imageable area fit\n");
+	  size_matched = size;
+	  if (landscape) *landscape = 1;
+	  if (image_fit) *image_fit = 1;
+	}
       }
-    }
   }
 
   if (size_matched)
   {
-    /*
-     * Standard size in landscape orientation...
-     */
+    //
+    // Standard size in landscape orientation...
+    //
+
     size = size_matched;
     DEBUG_printf(("landscape size = %s", size->name));
     dimensions[0] = size->width;
@@ -626,43 +636,45 @@ ppdRasterMatchPPDSize(
   }
   else
   {
-    /*
-     * Custom size...
-     */
+    //
+    // Custom size...
+    //
+
     DEBUG_puts("size = Custom\n");
     for (i = 0; i < 2; i ++)
       dimensions[i] = header->PageSize[i];
     for (i = 0; i < 4; i ++)
       margins[i] = ppd->custom_margins[i];
-    snprintf(header->cupsPageSizeName, 64, "Custom.%dx%d", header->PageSize[0], header->PageSize[1]);
+    snprintf(header->cupsPageSizeName, 64, "Custom.%dx%d",
+	     header->PageSize[0], header->PageSize[1]);
   }
 
   return 0;
 }
 
-/*
- * 'ppdRasterExecPS()' - Execute PostScript code to initialize a page header.
- */
+//
+// 'ppdRasterExecPS()' - Execute PostScript code to initialize a page header.
+//
 
-int					/* O - 0 on success, -1 on error */
+int					// O - 0 on success, -1 on error
 ppdRasterExecPS(
-    cups_page_header2_t *h,		/* O - Page header */
-    int                 *preferred_bits,/* O - Preferred bits per color */
-    const char          *code)		/* I - PS code to execute */
+    cups_page_header2_t *h,		// O - Page header
+    int                 *preferred_bits,// O - Preferred bits per color
+    const char          *code)		// I - PS code to execute
 {
-  int			error = 0;	/* Error condition? */
-  _ppd_ps_stack_t	*st;		/* PostScript value stack */
-  _ppd_ps_obj_t	*obj;		/* Object from top of stack */
-  char			*codecopy,	/* Copy of code */
-			*codeptr;	/* Pointer into copy of code */
+  int			error = 0;	// Error condition?
+  _ppd_ps_stack_t	*st;		// PostScript value stack
+  _ppd_ps_obj_t	*obj;			// Object from top of stack
+  char			*codecopy,	// Copy of code
+			*codeptr;	// Pointer into copy of code
 
 
   DEBUG_printf(("ppdRasterExecPS(h=%p, preferred_bits=%p, code=\"%s\")\n",
                 h, preferred_bits, code));
 
- /*
-  * Copy the PostScript code and create a stack...
-  */
+  //
+  // Copy the PostScript code and create a stack...
+  //
 
   if ((codecopy = strdup(code)) == NULL)
   {
@@ -677,9 +689,9 @@ ppdRasterExecPS(
     return (-1);
   }
 
- /*
-  * Parse the PS string until we run out of data...
-  */
+  //
+  // Parse the PS string until we run out of data...
+  //
 
   codeptr = codecopy;
 
@@ -688,12 +700,12 @@ ppdRasterExecPS(
 #ifdef DEBUG
     DEBUG_printf(("ppdRasterExecPS: Stack (%d objects)", st->num_objs));
     ppd_DEBUG_object("ppdRasterExecPS", obj);
-#endif /* DEBUG */
+#endif // DEBUG
 
     switch (obj->type)
     {
       default :
-          /* Do nothing for regular values */
+          // Do nothing for regular values
 	  break;
 
       case PPD_PS_CLEARTOMARK :
@@ -705,7 +717,7 @@ ppdRasterExecPS(
 #ifdef DEBUG
           DEBUG_puts("1_ppdRasterExecPS:    dup");
 	  ppd_DEBUG_stack("ppdRasterExecPS", st);
-#endif /* DEBUG */
+#endif // DEBUG
           break;
 
       case PPD_PS_COPY :
@@ -717,7 +729,7 @@ ppdRasterExecPS(
 #ifdef DEBUG
             DEBUG_puts("ppdRasterExecPS: copy");
 	    ppd_DEBUG_stack("ppdRasterExecPS", st);
-#endif /* DEBUG */
+#endif // DEBUG
           }
           break;
 
@@ -728,7 +740,7 @@ ppdRasterExecPS(
 #ifdef DEBUG
           DEBUG_puts("ppdRasterExecPS: dup");
 	  ppd_DEBUG_stack("ppdRasterExecPS", st);
-#endif /* DEBUG */
+#endif // DEBUG
           break;
 
       case PPD_PS_INDEX :
@@ -740,7 +752,7 @@ ppdRasterExecPS(
 #ifdef DEBUG
             DEBUG_puts("ppdRasterExecPS: index");
 	    ppd_DEBUG_stack("ppdRasterExecPS", st);
-#endif /* DEBUG */
+#endif // DEBUG
           }
           break;
 
@@ -751,14 +763,14 @@ ppdRasterExecPS(
 #ifdef DEBUG
           DEBUG_puts("ppdRasterExecPS: pop");
 	  ppd_DEBUG_stack("ppdRasterExecPS", st);
-#endif /* DEBUG */
+#endif // DEBUG
           break;
 
       case PPD_PS_ROLL :
           ppd_pop_stack(st);
 	  if ((obj = ppd_pop_stack(st)) != NULL)
 	  {
-            int		c;		/* Count */
+            int		c;		// Count
 
 
             c = (int)obj->value.number;
@@ -770,7 +782,7 @@ ppdRasterExecPS(
 #ifdef DEBUG
               DEBUG_puts("ppdRasterExecPS: roll");
 	      ppd_DEBUG_stack("ppdRasterExecPS", st);
-#endif /* DEBUG */
+#endif // DEBUG
             }
 	  }
           break;
@@ -782,7 +794,7 @@ ppdRasterExecPS(
 #ifdef DEBUG
           DEBUG_puts("ppdRasterExecPS: setpagedevice");
 	  ppd_DEBUG_stack("ppdRasterExecPS", st);
-#endif /* DEBUG */
+#endif // DEBUG
           break;
 
       case PPD_PS_START_PROC :
@@ -802,9 +814,9 @@ ppdRasterExecPS(
       break;
   }
 
- /*
-  * Cleanup...
-  */
+  //
+  // Cleanup...
+  //
 
   free(codecopy);
 
@@ -815,7 +827,7 @@ ppdRasterExecPS(
 #ifdef DEBUG
     DEBUG_puts("ppdRasterExecPS: Stack not empty");
     ppd_DEBUG_stack("ppdRasterExecPS", st);
-#endif /* DEBUG */
+#endif // DEBUG
 
     ppd_delete_stack(st);
 
@@ -824,22 +836,22 @@ ppdRasterExecPS(
 
   ppd_delete_stack(st);
 
- /*
-  * Return success...
-  */
+  //
+  // Return success...
+  //
 
   return (0);
 }
 
 
-/*
- * 'ppd_cleartomark_stack()' - Clear to the last mark ([) on the stack.
- */
+//
+// 'ppd_cleartomark_stack()' - Clear to the last mark ([) on the stack.
+//
 
-static int				/* O - 0 on success, -1 on error */
-ppd_cleartomark_stack(_ppd_ps_stack_t *st)	/* I - Stack */
+static int					// O - 0 on success, -1 on error
+ppd_cleartomark_stack(_ppd_ps_stack_t *st)	// I - Stack
 {
-  _ppd_ps_obj_t	*obj;		/* Current object on stack */
+  _ppd_ps_obj_t	*obj;		// Current object on stack
 
 
   while ((obj = ppd_pop_stack(st)) != NULL)
@@ -850,15 +862,15 @@ ppd_cleartomark_stack(_ppd_ps_stack_t *st)	/* I - Stack */
 }
 
 
-/*
- * 'ppd_copy_stack()' - Copy the top N stack objects.
- */
+//
+// 'ppd_copy_stack()' - Copy the top N stack objects.
+//
 
-static int				/* O - 0 on success, -1 on error */
-ppd_copy_stack(_ppd_ps_stack_t *st,	/* I - Stack */
-           int              c)		/* I - Number of objects to copy */
+static int				// O - 0 on success, -1 on error
+ppd_copy_stack(_ppd_ps_stack_t *st,	// I - Stack
+	       int              c)	// I - Number of objects to copy
 {
-  int	n;				/* Index */
+  int	n;				// Index
 
 
   if (c < 0)
@@ -882,24 +894,24 @@ ppd_copy_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 }
 
 
-/*
- * 'ppd_delete_stack()' - Free memory used by a stack.
- */
+//
+// 'ppd_delete_stack()' - Free memory used by a stack.
+//
 
 static void
-ppd_delete_stack(_ppd_ps_stack_t *st)	/* I - Stack */
+ppd_delete_stack(_ppd_ps_stack_t *st)	// I - Stack
 {
   free(st->objs);
   free(st);
 }
 
 
-/*
- * 'ppd_error_object()' - Add an object's value to the current error message.
- */
+//
+// 'ppd_error_object()' - Add an object's value to the current error message.
+//
 
 static void
-ppd_error_object(_ppd_ps_obj_t *obj)	/* I - Object to add */
+ppd_error_object(_ppd_ps_obj_t *obj)	// I - Object to add
 {
   switch (obj->type)
   {
@@ -989,16 +1001,16 @@ ppd_error_object(_ppd_ps_obj_t *obj)	/* I - Object to add */
 }
 
 
-/*
- * 'ppd_error_stack()' - Add a stack to the current error message...
- */
+//
+// 'ppd_error_stack()' - Add a stack to the current error message...
+//
 
 static void
-ppd_error_stack(_ppd_ps_stack_t *st,	/* I - Stack */
-            const char       *title)	/* I - Title string */
+ppd_error_stack(_ppd_ps_stack_t *st,	// I - Stack
+            const char       *title)	// I - Title string
 {
-  int			c;		/* Looping var */
-  _ppd_ps_obj_t	*obj;		/* Current object on stack */
+  int			c;		// Looping var
+  _ppd_ps_obj_t	*obj;		// Current object on stack
 
 
   _ppdRasterAddError("%s", title);
@@ -1010,13 +1022,13 @@ ppd_error_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 }
 
 
-/*
- * 'ppd_index_stack()' - Copy the Nth value on the stack.
- */
+//
+// 'ppd_index_stack()' - Copy the Nth value on the stack.
+//
 
-static _ppd_ps_obj_t	*		/* O - New object */
-ppd_index_stack(_ppd_ps_stack_t *st,	/* I - Stack */
-            int              n)		/* I - Object index */
+static _ppd_ps_obj_t	*		// O - New object
+ppd_index_stack(_ppd_ps_stack_t *st,	// I - Stack
+            int              n)		// I - Object index
 {
   if (n < 0 || (n = st->num_objs - n - 1) < 0)
     return (NULL);
@@ -1025,14 +1037,14 @@ ppd_index_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 }
 
 
-/*
- * 'ppd_new_stack()' - Create a new stack.
- */
+//
+// 'ppd_new_stack()' - Create a new stack.
+//
 
-static _ppd_ps_stack_t	*		/* O - New stack */
+static _ppd_ps_stack_t	*		// O - New stack
 ppd_new_stack(void)
 {
-  _ppd_ps_stack_t	*st;		/* New stack */
+  _ppd_ps_stack_t	*st;		// New stack
 
 
   if ((st = calloc(1, sizeof(_ppd_ps_stack_t))) == NULL)
@@ -1050,12 +1062,12 @@ ppd_new_stack(void)
 }
 
 
-/*
- * 'pop_stock()' - Pop the top object off the stack.
- */
+//
+// 'pop_stock()' - Pop the top object off the stack.
+//
 
-static _ppd_ps_obj_t	*		/* O - Object */
-ppd_pop_stack(_ppd_ps_stack_t *st)		/* I - Stack */
+static _ppd_ps_obj_t	*		// O - Object
+ppd_pop_stack(_ppd_ps_stack_t *st)	// I - Stack
 {
   if (st->num_objs > 0)
   {
@@ -1068,21 +1080,19 @@ ppd_pop_stack(_ppd_ps_stack_t *st)		/* I - Stack */
 }
 
 
-/*
- * 'ppd_push_stack()' - Push an object on the stack.
- */
+//
+// 'ppd_push_stack()' - Push an object on the stack.
+//
 
-static _ppd_ps_obj_t	*		/* O - New object */
-ppd_push_stack(_ppd_ps_stack_t *st,	/* I - Stack */
-           _ppd_ps_obj_t   *obj)	/* I - Object */
+static _ppd_ps_obj_t	*		// O - New object
+ppd_push_stack(_ppd_ps_stack_t *st,	// I - Stack
+           _ppd_ps_obj_t   *obj)	// I - Object
 {
-  _ppd_ps_obj_t	*temp;		/* New object */
+  _ppd_ps_obj_t	*temp;		// New object
 
 
   if (st->num_objs >= st->alloc_objs)
   {
-
-
     st->alloc_objs += 32;
 
     if ((temp = realloc(st->objs, (size_t)st->alloc_objs *
@@ -1102,24 +1112,24 @@ ppd_push_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 }
 
 
-/*
- * 'ppd_roll_stack()' - Rotate stack objects.
- */
+//
+// 'ppd_roll_stack()' - Rotate stack objects.
+//
 
-static int				/* O - 0 on success, -1 on error */
-ppd_roll_stack(_ppd_ps_stack_t *st,	/* I - Stack */
-	   int              c,		/* I - Number of objects */
-           int              s)		/* I - Amount to shift */
+static int				// O - 0 on success, -1 on error
+ppd_roll_stack(_ppd_ps_stack_t *st,	// I - Stack
+	   int              c,		// I - Number of objects
+           int              s)		// I - Amount to shift
 {
-  _ppd_ps_obj_t	*temp;		/* Temporary array of objects */
-  int			n;		/* Index into array */
+  _ppd_ps_obj_t		*temp;		// Temporary array of objects
+  int			n;		// Index into array
 
 
   DEBUG_printf(("3roll_stack(st=%p, s=%d, c=%d)", st, s, c));
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (c < 0)
     return (-1);
@@ -1134,15 +1144,15 @@ ppd_roll_stack(_ppd_ps_stack_t *st,	/* I - Stack */
   if (s == 0)
     return (0);
 
- /*
-  * Copy N objects and move things around...
-  */
+  //
+  // Copy N objects and move things around...
+  //
 
   if (s < 0)
   {
-   /*
-    * Shift down...
-    */
+    //
+    // Shift down...
+    //
 
     s = -s;
 
@@ -1150,20 +1160,22 @@ ppd_roll_stack(_ppd_ps_stack_t *st,	/* I - Stack */
       return (-1);
 
     memcpy(temp, st->objs + n, (size_t)s * sizeof(_ppd_ps_obj_t));
-    memmove(st->objs + n, st->objs + n + s, (size_t)(c - s) * sizeof(_ppd_ps_obj_t));
+    memmove(st->objs + n, st->objs + n + s,
+	    (size_t)(c - s) * sizeof(_ppd_ps_obj_t));
     memcpy(st->objs + n + c - s, temp, (size_t)s * sizeof(_ppd_ps_obj_t));
   }
   else
   {
-   /*
-    * Shift up...
-    */
+    //
+    // Shift up...
+    //
 
     if ((temp = calloc((size_t)s, sizeof(_ppd_ps_obj_t))) == NULL)
       return (-1);
 
     memcpy(temp, st->objs + n + c - s, (size_t)s * sizeof(_ppd_ps_obj_t));
-    memmove(st->objs + n + s, st->objs + n, (size_t)(c - s) * sizeof(_ppd_ps_obj_t));
+    memmove(st->objs + n + s, st->objs + n,
+	    (size_t)(c - s) * sizeof(_ppd_ps_obj_t));
     memcpy(st->objs + n, temp, (size_t)s * sizeof(_ppd_ps_obj_t));
   }
 
@@ -1173,33 +1185,33 @@ ppd_roll_stack(_ppd_ps_stack_t *st,	/* I - Stack */
 }
 
 
-/*
- * 'ppd_scan_ps()' - Scan a string for the next PS object.
- */
+//
+// 'ppd_scan_ps()' - Scan a string for the next PS object.
+//
 
-static _ppd_ps_obj_t	*		/* O  - New object or NULL on EOF */
-ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
-        char             **ptr)		/* IO - String pointer */
+static _ppd_ps_obj_t *			// O  - New object or NULL on EOF
+ppd_scan_ps(_ppd_ps_stack_t  *st,	// I  - Stack
+	    char             **ptr)	// IO - String pointer
 {
-  _ppd_ps_obj_t	obj;		/* Current object */
-  char			*start,		/* Start of object */
-			*cur,		/* Current position */
-			*valptr,	/* Pointer into value string */
-			*valend;	/* End of value string */
-  int			parens;		/* Parenthesis nesting level */
+  _ppd_ps_obj_t		obj;		// Current object
+  char			*start,		// Start of object
+			*cur,		// Current position
+			*valptr,	// Pointer into value string
+			*valend;	// End of value string
+  int			parens;		// Parenthesis nesting level
 
 
- /*
-  * Skip leading whitespace...
-  */
+  //
+  // Skip leading whitespace...
+  //
 
   for (cur = *ptr; *cur; cur ++)
   {
     if (*cur == '%')
     {
-     /*
-      * Comment, skip to end of line...
-      */
+      //
+      // Comment, skip to end of line...
+      //
 
       for (cur ++; *cur && *cur != '\n' && *cur != '\r'; cur ++);
 
@@ -1217,15 +1229,15 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
     return (NULL);
   }
 
- /*
-  * See what we have...
-  */
+  //
+  // See what we have...
+  //
 
   memset(&obj, 0, sizeof(obj));
 
   switch (*cur)
   {
-    case '(' :				/* (string) */
+    case '(' :				// (string)
         obj.type = PPD_PS_STRING;
 	start    = cur;
 
@@ -1251,9 +1263,9 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 
 	  if (*cur == '\\')
 	  {
-	   /*
-	    * Decode escaped character...
-	    */
+	    //
+	    // Decode escaped character...
+	    //
 
 	    cur ++;
 
@@ -1307,17 +1319,17 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 	cur ++;
         break;
 
-    case '[' :				/* Start array */
+    case '[' :				// Start array
         obj.type = PPD_PS_START_ARRAY;
 	cur ++;
         break;
 
-    case ']' :				/* End array */
+    case ']' :				// End array
         obj.type = PPD_PS_END_ARRAY;
 	cur ++;
         break;
 
-    case '<' :				/* Start dictionary or hex string */
+    case '<' :				// Start dictionary or hex string
         if (cur[1] == '<')
 	{
 	  obj.type = PPD_PS_START_DICT;
@@ -1333,9 +1345,7 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
                *cur;
 	       cur ++)
 	  {
-	    int	ch;			/* Current character */
-
-
+	    int	ch;			// Current character
 
             if (*cur == '>')
 	      break;
@@ -1373,7 +1383,7 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 	}
         break;
 
-    case '>' :				/* End dictionary? */
+    case '>' :				// End dictionary?
         if (cur[1] == '>')
 	{
 	  obj.type = PPD_PS_END_DICT;
@@ -1388,17 +1398,17 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 	}
         break;
 
-    case '{' :				/* Start procedure */
+    case '{' :				// Start procedure
         obj.type = PPD_PS_START_PROC;
 	cur ++;
         break;
 
-    case '}' :				/* End procedure */
+    case '}' :				// End procedure
         obj.type = PPD_PS_END_PROC;
 	cur ++;
         break;
 
-    case '-' :				/* Possible number */
+    case '-' :				// Possible number
     case '+' :
         if (!isdigit(cur[1] & 255) && cur[1] != '.')
 	{
@@ -1409,7 +1419,7 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 	  break;
 	}
 
-    case '0' :				/* Number */
+    case '0' :				// Number
     case '1' :
     case '2' :
     case '3' :
@@ -1429,18 +1439,18 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 
         if (*cur == '#')
 	{
-	 /*
-	  * Integer with radix...
-	  */
+	  //
+	  // Integer with radix...
+	  //
 
           obj.value.number = strtol(cur + 1, &cur, atoi(start));
 	  break;
 	}
 	else if (strchr(".Ee()<>[]{}/%", *cur) || isspace(*cur & 255))
 	{
-	 /*
-	  * Integer or real number...
-	  */
+	  //
+	  // Integer or real number...
+	  //
 
 	  obj.value.number = _ppdStrScand(start, &cur, localeconv());
           break;
@@ -1448,7 +1458,7 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 	else
 	  cur = start;
 
-    default :				/* Operator/variable name */
+    default :				// Operator/variable name
         start = cur;
 
 	if (*cur == '/')
@@ -1512,9 +1522,9 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 	break;
   }
 
- /*
-  * Save the current position in the string and return the new object...
-  */
+  //
+  // Save the current position in the string and return the new object...
+  //
 
   *ptr = cur;
 
@@ -1522,25 +1532,25 @@ ppd_scan_ps(_ppd_ps_stack_t *st,		/* I  - Stack */
 }
 
 
-/*
- * 'ppd_setpagedevice()' - Simulate the PostScript setpagedevice operator.
- */
+//
+// 'ppd_setpagedevice()' - Simulate the PostScript setpagedevice operator.
+//
 
-static int				/* O - 0 on success, -1 on error */
+static int				// O - 0 on success, -1 on error
 ppd_setpagedevice(
-    _ppd_ps_stack_t    *st,		/* I - Stack */
-    cups_page_header2_t *h,		/* O - Page header */
-    int                 *preferred_bits)/* O - Preferred bits per color */
+    _ppd_ps_stack_t     *st,		// I - Stack
+    cups_page_header2_t *h,		// O - Page header
+    int                 *preferred_bits)// O - Preferred bits per color
 {
-  int			i;		/* Index into array */
-  _ppd_ps_obj_t	*obj,		/* Current object */
-			*end;		/* End of dictionary */
-  const char		*name;		/* Attribute name */
+  int			i;		// Index into array
+  _ppd_ps_obj_t		*obj,		// Current object
+			*end;		// End of dictionary
+  const char		*name;		// Attribute name
 
 
- /*
-  * Make sure we have a dictionary on the stack...
-  */
+  //
+  // Make sure we have a dictionary on the stack...
+  //
 
   if (st->num_objs == 0)
     return (-1);
@@ -1563,23 +1573,23 @@ ppd_setpagedevice(
   if (obj < st->objs)
     return (-1);
 
- /*
-  * Found the start of the dictionary, empty the stack to this point...
-  */
+  //
+  // Found the start of the dictionary, empty the stack to this point...
+  //
 
   st->num_objs = (int)(obj - st->objs);
 
- /*
-  * Now pull /name and value pairs from the dictionary...
-  */
+  //
+  // Now pull /name and value pairs from the dictionary...
+  //
 
   DEBUG_puts("3ppd_setpagedevice: Dictionary:");
 
   for (obj ++; obj < end; obj ++)
   {
-   /*
-    * Grab the name...
-    */
+    //
+    // Grab the name...
+    //
 
     if (obj->type != PPD_PS_NAME)
       return (-1);
@@ -1590,11 +1600,11 @@ ppd_setpagedevice(
 #ifdef DEBUG
     DEBUG_printf(("4ppd_setpagedevice: /%s ", name));
     ppd_DEBUG_object("setpagedevice", obj);
-#endif /* DEBUG */
+#endif // DEBUG
 
-   /*
-    * Then grab the value...
-    */
+    //
+    // Then grab the value...
+    //
 
     if (!strcmp(name, "MediaClass") && obj->type == PPD_PS_STRING)
       strlcpy(h->MediaClass, obj->value.string, sizeof(h->MediaClass));
@@ -1637,13 +1647,13 @@ ppd_setpagedevice(
     else if ((!strcmp(name, "cupsMediaPosition") ||
               !strcmp(name, "MediaPosition")) && obj->type == PPD_PS_NUMBER)
     {
-     /*
-      * cupsMediaPosition is supported for backwards compatibility only.
-      * We added it back in the Ghostscript 5.50 days to work around a
-      * bug in Ghostscript WRT handling of MediaPosition and setpagedevice.
-      *
-      * All new development should set MediaPosition...
-      */
+      //
+      // cupsMediaPosition is supported for backwards compatibility only.
+      // We added it back in the Ghostscript 5.50 days to work around a
+      // bug in Ghostscript WRT handling of MediaPosition and setpagedevice.
+      //
+      // All new development should set MediaPosition...
+      //
 
       h->MediaPosition = (unsigned)obj->value.number;
     }
@@ -1735,11 +1745,12 @@ ppd_setpagedevice(
               sizeof(h->cupsRenderingIntent));
     else
     {
-     /*
-      * Ignore unknown name+value...
-      */
+      //
+      // Ignore unknown name+value...
+      //
 
-      DEBUG_printf(("4ppd_setpagedevice: Unknown name (\"%s\") or value...\n", name));
+      DEBUG_printf(("4ppd_setpagedevice: Unknown name (\"%s\") or value...\n",
+		    name));
 
       while (obj[1].type != PPD_PS_NAME && obj < end)
         obj ++;
@@ -1751,13 +1762,13 @@ ppd_setpagedevice(
 
 
 #ifdef DEBUG
-/*
- * 'ppd_DEBUG_object()' - Print an object's value...
- */
+//
+// 'ppd_DEBUG_object()' - Print an object's value...
+//
 
 static void
-ppd_DEBUG_object(const char *prefix,	/* I - Prefix string */
-             _ppd_ps_obj_t *obj)	/* I - Object to print */
+ppd_DEBUG_object(const char *prefix,	// I - Prefix string
+		 _ppd_ps_obj_t *obj)	// I - Object to print
 {
   switch (obj->type)
   {
@@ -1847,19 +1858,19 @@ ppd_DEBUG_object(const char *prefix,	/* I - Prefix string */
 }
 
 
-/*
- * 'ppd_DEBUG_stack()' - Print a stack...
- */
+//
+// 'ppd_DEBUG_stack()' - Print a stack...
+//
 
 static void
-ppd_DEBUG_stack(const char       *prefix,	/* I - Prefix string */
-            _ppd_ps_stack_t *st)	/* I - Stack */
+ppd_DEBUG_stack(const char       *prefix,	// I - Prefix string
+		_ppd_ps_stack_t *st)		// I - Stack
 {
-  int			c;		/* Looping var */
-  _ppd_ps_obj_t	*obj;		/* Current object on stack */
+  int		c;		// Looping var
+  _ppd_ps_obj_t	*obj;		// Current object on stack
 
 
   for (obj = st->objs, c = st->num_objs; c > 0; c --, obj ++)
     ppd_DEBUG_object(prefix, obj);
 }
-#endif /* DEBUG */
+#endif // DEBUG

@@ -1,10 +1,11 @@
 //
-// Shared message catalog class for the CUPS PPD Compiler.
+// Shared message catalog class for the CUPS PPD Compiler in libppd.
 //
 // Copyright 2007-2017 by Apple Inc.
 // Copyright 2002-2006 by Easy Software Products.
 //
-// Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 
 //
@@ -57,7 +58,7 @@ ppdcCatalog::ppdcCatalog(const char *l,	// I - Locale
     char	pofile[1024];		// Message catalog file
     const char  *c;
 
-    /* Determine CUPS datadir (usually /usr/share/cups) */
+    // Determine CUPS datadir (usually /usr/share/cups)
     if ((c = getenv("CUPS_DATADIR")) == NULL)
       c = CUPS_DATADIR;
 
@@ -185,14 +186,14 @@ ppdcCatalog::load_messages(
     goto unknown_load_format;
   else if (!strcmp(ptr, ".strings"))
   {
-   /*
-    * Read messages in macOS ".strings" format, which are either UTF-8/UTF-16
-    * text files of the format:
-    *
-    *     "id" = "str";
-    *
-    * Strings files can also contain C-style comments.
-    */
+    //
+    // Read messages in macOS ".strings" format, which are either UTF-8/UTF-16
+    // text files of the format:
+    //
+    //     "id" = "str";
+    //
+    // Strings files can also contain C-style comments.
+    //
 
     ppdc_cs_t	cs = PPDC_CS_AUTO;	// Character set for file
     int		ch;			// Current character from file
@@ -278,22 +279,22 @@ ppdcCatalog::load_messages(
   }
   else if (!strcmp(ptr, ".po") || !strcmp(ptr, ".gz"))
   {
-   /*
-    * Read messages from the catalog file until EOF...
-    *
-    * The format is the GNU gettext .po format, which is fairly simple:
-    *
-    *     msgid "some text"
-    *     msgstr "localized text"
-    *
-    * The ID and localized text can span multiple lines using the form:
-    *
-    *     msgid ""
-    *     "some long text"
-    *     msgstr ""
-    *     "localized text spanning "
-    *     "multiple lines"
-    */
+    //
+    // Read messages from the catalog file until EOF...
+    //
+    // The format is the GNU gettext .po format, which is fairly simple:
+    //
+    //     msgid "some text"
+    //     msgstr "localized text"
+    //
+    // The ID and localized text can span multiple lines using the form:
+    //
+    //     msgid ""
+    //     "some long text"
+    //     msgstr ""
+    //     "localized text spanning "
+    //     "multiple lines"
+    //
 
     int	which,				// In msgid?
 	haveid,				// Did we get a msgid string?
@@ -425,17 +426,17 @@ ppdcCatalog::load_messages(
   else
     goto unknown_load_format;
 
- /*
-  * Close the file and return...
-  */
+  //
+  // Close the file and return...
+  //
 
   cupsFileClose(fp);
 
   return (0);
 
- /*
-  * Unknown format error...
-  */
+  //
+  // Unknown format error...
+  //
 
   unknown_load_format:
 

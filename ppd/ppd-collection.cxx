@@ -1,20 +1,20 @@
-/*
- * PPD collection support for cups-filters
- *
- * This program handles listing and installing static PPD files, PPD files
- * created from driver information files, and dynamically generated PPD files
- * using driver helper programs.
- *
- * Copyright © 2007-2019 by Apple Inc.
- * Copyright © 1997-2007 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// PPD collection support for libppd.
+//
+// This program handles listing and installing static PPD files, PPD files
+// created from driver information files, and dynamically generated PPD files
+// using driver helper programs.
+//
+// Copyright © 2007-2019 by Apple Inc.
+// Copyright © 1997-2007 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include <cups/dir.h>
 #include <cups/transcode.h>
@@ -26,74 +26,74 @@
 #include <sys/wait.h>
 
 
-/*
- * Constants...
- */
+//
+// Constants...
+//
 
-#define TAR_BLOCK	512		/* Number of bytes in a block */
-#define TAR_BLOCKS	10		/* Blocking factor */
+#define TAR_BLOCK	512		// Number of bytes in a block
+#define TAR_BLOCKS	10		// Blocking factor
 
-#define TAR_MAGIC	"ustar"		/* 5 chars and a null */
-#define TAR_VERSION	"00"		/* POSIX tar version */
+#define TAR_MAGIC	"ustar"		// 5 chars and a null
+#define TAR_VERSION	"00"		// POSIX tar version
 #define TAR_OLDGNU_MAGIC "ustar  "
 
-#define TAR_OLDNORMAL	'\0'		/* Normal disk file, Unix compat */
-#define TAR_NORMAL	'0'		/* Normal disk file */
-#define TAR_LINK	'1'		/* Link to previously dumped file */
-#define TAR_SYMLINK	'2'		/* Symbolic link */
-#define TAR_CHR		'3'		/* Character special file */
-#define TAR_BLK		'4'		/* Block special file */
-#define TAR_DIR		'5'		/* Directory */
-#define TAR_FIFO	'6'		/* FIFO special file */
-#define TAR_CONTIG	'7'		/* Contiguous file */
+#define TAR_OLDNORMAL	'\0'		// Normal disk file, Unix compat
+#define TAR_NORMAL	'0'		// Normal disk file
+#define TAR_LINK	'1'		// Link to previously dumped file
+#define TAR_SYMLINK	'2'		// Symbolic link
+#define TAR_CHR		'3'		// Character special file
+#define TAR_BLK		'4'		// Block special file
+#define TAR_DIR		'5'		// Directory
+#define TAR_FIFO	'6'		// FIFO special file
+#define TAR_CONTIG	'7'		// Contiguous file
 
 
-/*
- * PPD information structures...
- */
+//
+// PPD information structures...
+//
 
-typedef union				/**** TAR record format ****/
+typedef union				// **** TAR record format ****
 {
-  unsigned char	all[TAR_BLOCK];		/* Raw data block */
+  unsigned char	all[TAR_BLOCK];		// Raw data block
   struct
   {
-    char	pathname[100],		/* Destination path */
-		mode[8],		/* Octal file permissions */
-		uid[8],			/* Octal user ID */
-		gid[8],			/* Octal group ID */
-		size[12],		/* Octal size in bytes */
-		mtime[12],		/* Octal modification time */
-		chksum[8],		/* Octal checksum value */
-		linkflag,		/* File type */
-		linkname[100],		/* Source path for link */
-		magic[6],		/* Magic string */
-		version[2],		/* Format version */
-		uname[32],		/* User name */
-		gname[32],		/* Group name */
-		devmajor[8],		/* Octal device major number */
-		devminor[8],		/* Octal device minor number */
-		prefix[155];		/* Prefix for long filenames */
+    char	pathname[100],		// Destination path
+		mode[8],		// Octal file permissions
+		uid[8],			// Octal user ID
+		gid[8],			// Octal group ID
+		size[12],		// Octal size in bytes
+		mtime[12],		// Octal modification time
+		chksum[8],		// Octal checksum value
+		linkflag,		// File type
+		linkname[100],		// Source path for link
+		magic[6],		// Magic string
+		version[2],		// Format version
+		uname[32],		// User name
+		gname[32],		// Group name
+		devmajor[8],		// Octal device major number
+		devminor[8],		// Octal device minor number
+		prefix[155];		// Prefix for long filenames
   }	header;
 } tar_rec_t;
 
 typedef struct
 {
-  cups_array_t	*Inodes;	/* Inodes of directories we've visited*/
+  cups_array_t	*Inodes;	// Inodes of directories we've visited
   cups_array_t	*PPDsByName,
-				/* PPD files sorted by filename and name */
+				// PPD files sorted by filename and name
 		*PPDsByMakeModel;
-				/* PPD files sorted by make and model */
-  int		ChangedPPD;	/* Did we change the PPD database? */
+				// PPD files sorted by make and model
+  int		ChangedPPD;	// Did we change the PPD database?
 } ppd_list_t;
 
 //typedef int (*cupsd_compare_func_t)(const void *, const void *);
 
 
-/*
- * Globals...
- */
+//
+// Globals...
+//
 
-static const char * const PPDTypes[] =	/* ppd-type values */
+static const char * const PPDTypes[] =	// ppd-type values
 			{
 			  "postscript",
 			  "pdf",
@@ -108,9 +108,9 @@ static const char * const PPDTypes[] =	/* ppd-type values */
 			};
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static ppd_info_t	*add_ppd(const char *filename, const char *name,
 			         const char *language, const char *make,
@@ -175,56 +175,56 @@ static int		ClosePipeCommand(cups_file_t *fp, int cpid, int epid,
 					 cf_logfunc_t log, void *ld);
 
 
-/*
- * 'ppdCollectionListPPDs()' - List PPD files.
- */
+//
+// 'ppdCollectionListPPDs()' - List PPD files.
+//
 
-cups_array_t *				/* O - List of PPD files */
+cups_array_t *				// O - List of PPD files
 ppdCollectionListPPDs(
-	cups_array_t  *ppd_collections, /* I - Directories to search for PPDs
-					       in */
-	int           limit,		/* I - Limit */
-	int           num_options,	/* I - Number of options */
-	cups_option_t *options,		/* I - Options */
-	cf_logfunc_t log,		/* I - Log function */
-	void *ld)			/* I - Aux. data for log function */
+	cups_array_t  *ppd_collections, // I - Directories to search for PPDs
+					//     in
+	int           limit,		// I - Limit
+	int           num_options,	// I - Number of options
+	cups_option_t *options,		// I - Options
+	cf_logfunc_t log,		// I - Log function
+	void *ld)			// I - Aux. data for log function
 {
-  int		i;			/* Looping var */
-  ppd_collection_t *col;		/* Pointer to PPD collection */
-  int		count;			/* Number of PPDs to list */
-  ppd_info_t	*ppd,			/* Current PPD file */
-		*newppd;		/* Copy of current PPD */
-  cups_file_t	*fp;			/* ppds.dat file */
-  cups_array_t	*include,		/* PPD schemes to include */
-		*exclude;		/* PPD schemes to exclude */
-  const char    *cachename,		/* Cache file name */
-		*only_makes,		/* Do we only want a list of makes? */
-		*device_id,		/* ppd-device-id option */
-		*language,		/* ppd-natural-language option */
-		*make,			/* ppd-make option */
-		*make_and_model,	/* ppd-make-and-model option */
-		*model_number_str,	/* ppd-model-number option */
-		*product,		/* ppd-product option */
-		*psversion,		/* ppd-psversion option */
-		*type_str;		/* ppd-type option */
-  int		model_number,		/* ppd-model-number value */
-		type;			/* ppd-type value */
-  size_t	make_and_model_len,	/* Length of ppd-make-and-model */
-		product_len;		/* Length of ppd-product */
-  regex_t	*device_id_re,		/* Regular expression for matching
-					   device ID */
-		*make_and_model_re;	/* Regular expression for matching make
-					   and model */
-  regmatch_t	re_matches[6];		/* Regular expression matches */
-  cups_array_t	*matches,		/* Matching PPDs */
-		*result;		/* Resulting PPD list */
-  ppd_list_t	ppdlist;		/* Lists of all available PPDs */
+  int		i;			// Looping var
+  ppd_collection_t *col;		// Pointer to PPD collection
+  int		count;			// Number of PPDs to list
+  ppd_info_t	*ppd,			// Current PPD file
+		*newppd;		// Copy of current PPD
+  cups_file_t	*fp;			// ppds.dat file
+  cups_array_t	*include,		// PPD schemes to include
+		*exclude;		// PPD schemes to exclude
+  const char    *cachename,		// Cache file name
+		*only_makes,		// Do we only want a list of makes?
+		*device_id,		// ppd-device-id option
+		*language,		// ppd-natural-language option
+		*make,			// ppd-make option
+		*make_and_model,	// ppd-make-and-model option
+		*model_number_str,	// ppd-model-number option
+		*product,		// ppd-product option
+		*psversion,		// ppd-psversion option
+		*type_str;		// ppd-type option
+  int		model_number,		// ppd-model-number value
+		type;			// ppd-type value
+  size_t	make_and_model_len,	// Length of ppd-make-and-model
+		product_len;		// Length of ppd-product
+  regex_t	*device_id_re,		// Regular expression for matching
+					// device ID
+		*make_and_model_re;	// Regular expression for matching make
+					// and model
+  regmatch_t	re_matches[6];		// Regular expression matches
+  cups_array_t	*matches,		// Matching PPDs
+		*result;		// Resulting PPD list
+  ppd_list_t	ppdlist;		// Lists of all available PPDs
   int		matches_array_created = 0;
 
 
- /*
-  * Initialize PPD list...
-  */
+  //
+  // Initialize PPD list...
+  //
 
   ppdlist.PPDsByName      = cupsArrayNew((cups_array_func_t)compare_names,
 					  NULL);
@@ -233,20 +233,21 @@ ppdCollectionListPPDs(
   ppdlist.ChangedPPD      = 0;
 
 
- /*
-  * See if we have a PPD database file...
-  */
+  //
+  // See if we have a PPD database file...
+  //
 
   cachename = cupsGetOption("ppd-cache", num_options, options);
   if (cachename && cachename[0] &&
-      load_ppds_dat(cachename, 1, &ppdlist, log, ld)) {
+      load_ppds_dat(cachename, 1, &ppdlist, log, ld))
+  {
     free_ppdlist(&ppdlist);
     return(NULL);
   }
 
- /*
-  * Load all PPDs in the specified directories and below...
-  */
+  //
+  // Load all PPDs in the specified directories and below...
+  //
 
   ppdlist.Inodes = cupsArrayNew((cups_array_func_t)compare_inodes, NULL);
 
@@ -258,18 +259,18 @@ ppdCollectionListPPDs(
 
   if (cachename && cachename[0])
   {
-   /*
-    * Cull PPD files that are no longer present...
-    */
+    //
+    // Cull PPD files that are no longer present...
+    //
 
     for (ppd = (ppd_info_t *)cupsArrayFirst(ppdlist.PPDsByName), i = 0;
 	 ppd;
 	 ppd = (ppd_info_t *)cupsArrayNext(ppdlist.PPDsByName), i ++)
       if (!ppd->found)
       {
-       /*
-	* Remove this PPD file from the list...
-	*/
+	//
+	// Remove this PPD file from the list...
+	//
 
 	cupsArrayRemove(ppdlist.PPDsByName, ppd);
 	cupsArrayRemove(ppdlist.PPDsByMakeModel, ppd);
@@ -278,9 +279,9 @@ ppdCollectionListPPDs(
 	ppdlist.ChangedPPD = 1;
       }
 
-   /*
-    * Write the new ppds.dat file...
-    */
+    //
+    // Write the new ppds.dat file...
+    //
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] ChangedPPD=%d",
@@ -288,13 +289,13 @@ ppdCollectionListPPDs(
 
     if (ppdlist.ChangedPPD)
     {
-      char	newname[1024];		/* New filename */
+      char	newname[1024];		// New filename
 
       snprintf(newname, sizeof(newname), "%s.%d", cachename, (int)getpid());
 
       if ((fp = cupsFileOpen(newname, "w")) != NULL)
       {
-	unsigned ppdsync = PPD_SYNC;	/* Sync word */
+	unsigned ppdsync = PPD_SYNC;	// Sync word
 
 	cupsFileWrite(fp, (char *)&ppdsync, sizeof(ppdsync));
 
@@ -326,18 +327,18 @@ ppdCollectionListPPDs(
 		   "libppd: [PPD Collections] No new or changed PPDs...");
   }
 
- /*
-  * Lists for inclusion and exclusion of certain PPD sources...
-  */
+  //
+  // Lists for inclusion and exclusion of certain PPD sources...
+  //
 
   exclude     = CreateStringsArray(cupsGetOption("exclude-schemes",
 						 num_options, options));
   include     = CreateStringsArray(cupsGetOption("include-schemes",
 						 num_options, options));
 
- /*
-  * Read further options...
-  */
+  //
+  // Read further options...
+  //
 
   only_makes       = cupsGetOption("only-makes", num_options, options);
   device_id        = cupsGetOption("device-id", num_options, options);
@@ -413,14 +414,14 @@ ppdCollectionListPPDs(
 	 ppd;
 	 ppd = (ppd_info_t *)cupsArrayNext(ppdlist.PPDsByMakeModel))
     {
-     /*
-      * Filter PPDs based on make, model, product, language, model number,
-      * and/or device ID using the "matches" score value.  An exact match
-      * for product, make-and-model, or device-id adds 3 to the score.
-      * Partial matches for make-and-model yield 1 or 2 points, and matches
-      * for the make and language add a single point.  Results are then sorted
-      * by score, highest score first.
-      */
+      //
+      // Filter PPDs based on make, model, product, language, model number,
+      // and/or device ID using the "matches" score value.  An exact match
+      // for product, make-and-model, or device-id adds 3 to the score.
+      // Partial matches for make-and-model yield 1 or 2 points, and matches
+      // for the make and language add a single point.  Results are then sorted
+      // by score, highest score first.
+      //
 
       if (ppd->record.type < PPD_TYPE_POSTSCRIPT ||
 	  ppd->record.type >= PPD_TYPE_DRV)
@@ -437,10 +438,10 @@ ppdCollectionListPPDs(
                    (size_t)(sizeof(re_matches) / sizeof(re_matches[0])),
 		   re_matches, 0))
       {
-       /*
-        * Add the number of matching values from the device ID - it will be
-	* at least 2 (manufacturer and model), and as much as 3 (command set).
-	*/
+	//
+        // Add the number of matching values from the device ID - it will be
+	// at least 2 (manufacturer and model), and as much as 3 (command set).
+	//
 
         for (i = 1; i < (int)(sizeof(re_matches) / sizeof(re_matches[0])); i ++)
 	  if (re_matches[i].rm_so >= 0)
@@ -493,7 +494,7 @@ ppdCollectionListPPDs(
 	    break;
 	  }
 	  else if (!_ppd_strncasecmp(ppd->record.products[i], product,
-	                              product_len))
+				     product_len))
 	  {
 	    ppd->matches += 2;
 	    break;
@@ -537,9 +538,9 @@ ppdCollectionListPPDs(
 	 ppd;
 	 ppd = (ppd_info_t *)cupsArrayNext(ppdlist.PPDsByMakeModel))
     {
-     /*
-      * Filter PPDs based on the include/exclude lists.
-      */
+      //
+      // Filter PPDs based on the include/exclude lists.
+      //
 
       if (ppd->record.type < PPD_TYPE_POSTSCRIPT ||
 	  ppd->record.type >= PPD_TYPE_DRV)
@@ -561,17 +562,17 @@ ppdCollectionListPPDs(
        count > 0 && ppd;
        ppd = (ppd_info_t *)cupsArrayNext(ppdlist.PPDsByMakeModel), i ++)
   {
-   /*
-    * Skip invalid PPDs...
-    */
+    //
+    // Skip invalid PPDs...
+    //
 
     if (ppd->record.type < PPD_TYPE_POSTSCRIPT ||
         ppd->record.type >= PPD_TYPE_DRV)
       continue;
 
-   /*
-    * Output this PPD...
-    */
+    //
+    // Output this PPD...
+    //
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] Sending %s (%s)...",
@@ -588,14 +589,14 @@ ppdCollectionListPPDs(
       cupsArrayAdd(result, newppd);
     }
 
-   /*
-    * If we have only requested the make, then skip
-    * the remaining PPDs with this make...
-    */
+    //
+    // If we have only requested the make, then skip
+    // the remaining PPDs with this make...
+    //
 
     if (only_makes)
     {
-      const char	*this_make;	/* This ppd-make */
+      const char	*this_make;	// This ppd-make
 
 
       for (this_make = ppd->record.make,
@@ -617,37 +618,37 @@ ppdCollectionListPPDs(
 }
 
 
-/*
- * 'ppdCollectionGetPPD()' - Copy a PPD file to stdout.
- */
+//
+// 'ppdCollectionGetPPD()' - Copy a PPD file to stdout.
+//
 
 cups_file_t *
 ppdCollectionGetPPD(
-	const char *name,		/* I - PPD URI of the desired PPD */
-	cups_array_t *ppd_collections,	/* I - Directories to search for PPDs
-					       in */
-	cf_logfunc_t log,		/* I - Log function */
-	void *ld)			/* I - Aux. data for log function */
+	const char *name,		// I - PPD URI of the desired PPD
+	cups_array_t *ppd_collections,	// I - Directories to search for PPDs
+					//     in
+	cf_logfunc_t log,		// I - Log function
+	void *ld)			// I - Aux. data for log function
 {
-  ppd_collection_t *col;		/* Pointer to PPD collection */
-  cups_file_t	*fp;			/* Archive file pointer */
+  ppd_collection_t *col;		// Pointer to PPD collection
+  cups_file_t	*fp;			// Archive file pointer
   int		fd;
-  int		cpid;			/* Process ID for driver program */
-  int		epid;			/* Process ID for logging process */
+  int		cpid;			// Process ID for driver program
+  int		epid;			// Process ID for logging process
   int		bytes;
   int           is_archive = 0;
   int           is_drv = 0;
-  char		realname[1024],		/* Scheme from PPD name */
-		buffer[8192],		/* Copy buffer */
-		tempname[1024],		/* Temp file name */
-		*ptr,			/* Pointer into string */
+  char		realname[1024],		// Scheme from PPD name
+		buffer[8192],		// Copy buffer
+		tempname[1024],		// Temp file name
+		*ptr,			// Pointer into string
 		*ppdname,
-		ppduri[1024];		/* PPD URI */
+		ppduri[1024];		// PPD URI
 
 
- /*
-  * Figure out if this is a static or dynamic PPD file...
-  */
+  //
+  // Figure out if this is a static or dynamic PPD file...
+  //
 
   if (strstr(name, "../"))
   {
@@ -732,11 +733,11 @@ ppdCollectionGetPPD(
     return(cat_static(realname, log, ld));
   else
   {
-   /*
-    * Dynamic PPD, see if we have a driver program to support it...
-    */
+    //
+    // Dynamic PPD, see if we have a driver program to support it...
+    //
 
-    char	*argv[4];		/* Arguments for program */
+    char	*argv[4];		// Arguments for program
 
     ptr = strrchr(realname, '/');
     if (ptr == NULL)
@@ -746,9 +747,9 @@ ppdCollectionGetPPD(
     ptr = ppduri + (ptr - realname);
     if (access(realname, X_OK))
     {
-     /*
-      * File does not exist or is not executable...
-      */
+      //
+      // File does not exist or is not executable...
+      //
 
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "libppd: [PPD Collections] Unable to access \"%s\" - %s",
@@ -757,9 +758,10 @@ ppdCollectionGetPPD(
       return(NULL);
     }
 
-   /*
-    * Yes, let it cat the PPD file...
-    */
+    //
+    // Yes, let it cat the PPD file...
+    //
+
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] Grabbing PPD via command: \"%s cat %s\"",
 		 realname, ptr);
@@ -795,31 +797,31 @@ ppdCollectionGetPPD(
     }
   }
 
- /*
-  * Exit with no errors...
-  */
+  //
+  // Exit with no errors...
+  //
 
   return(fp);
 }
 
 
-/*
- * 'ppdCollectionDumpCache()' - Dump the contents of the ppds.dat file.
- */
+//
+// 'ppdCollectionDumpCache()' - Dump the contents of the ppds.dat file.
+//
 
 int
-ppdCollectionDumpCache(const char *filename,	/* I - Filename */
-		       cf_logfunc_t log,	/* I - Log function */
-		       void *ld)		/* I - Aux. data for log
-						       function */
+ppdCollectionDumpCache(const char *filename,	// I - Filename
+		       cf_logfunc_t log,	// I - Log function
+		       void *ld)		// I - Aux. data for log
+						//     function
 {
-  ppd_info_t	*ppd;			/* Current PPD */
-  ppd_list_t	ppdlist;		/* Lists of all available PPDs */
+  ppd_info_t	*ppd;			// Current PPD
+  ppd_list_t	ppdlist;		// Lists of all available PPDs
 
 
- /*
-  * Initialize PPD list...
-  */
+  //
+  // Initialize PPD list...
+  //
 
   ppdlist.Inodes = NULL;
   ppdlist.PPDsByName      = cupsArrayNew((cups_array_func_t)compare_names,
@@ -829,9 +831,9 @@ ppdCollectionDumpCache(const char *filename,	/* I - Filename */
   ppdlist.ChangedPPD      = 0;
 
 
- /*
-  * See if we a PPD database file...
-  */
+  //
+  // See if we a PPD database file...
+  //
 
   if (load_ppds_dat(filename, 0, &ppdlist, log, ld)) {
     free_ppdlist(&ppdlist);
@@ -857,34 +859,34 @@ ppdCollectionDumpCache(const char *filename,	/* I - Filename */
 }
 
 
-/*
- * 'add_ppd()' - Add a PPD file.
- */
+//
+// 'add_ppd()' - Add a PPD file.
+//
 
-static ppd_info_t *			/* O - PPD */
-add_ppd(const char *filename,		/* I - PPD filename */
-        const char *name,		/* I - PPD name */
-        const char *language,		/* I - LanguageVersion */
-        const char *make,		/* I - Manufacturer */
-	const char *make_and_model,	/* I - NickName/ModelName */
-	const char *device_id,		/* I - 1284DeviceID */
-	const char *product,		/* I - Product */
-	const char *psversion,		/* I - PSVersion */
-        time_t     mtime,		/* I - Modification time */
-	size_t     size,		/* I - File size */
-	int        model_number,	/* I - Model number */
-	int        type,		/* I - Driver type */
-	const char *scheme,		/* I - PPD scheme */
+static ppd_info_t *			// O - PPD
+add_ppd(const char *filename,		// I - PPD filename
+        const char *name,		// I - PPD name
+        const char *language,		// I - LanguageVersion
+        const char *make,		// I - Manufacturer
+	const char *make_and_model,	// I - NickName/ModelName
+	const char *device_id,		// I - 1284DeviceID
+	const char *product,		// I - Product
+	const char *psversion,		// I - PSVersion
+        time_t     mtime,		// I - Modification time
+	size_t     size,		// I - File size
+	int        model_number,	// I - Model number
+	int        type,		// I - Driver type
+	const char *scheme,		// I - PPD scheme
 	ppd_list_t *ppdlist,
-	cf_logfunc_t log,		/* I - Log function */
-	void *ld)			/* I - Aux. data for log function */
+	cf_logfunc_t log,		// I - Log function
+	void *ld)			// I - Aux. data for log function
 {
-  ppd_info_t	*ppd;			/* PPD */
+  ppd_info_t	*ppd;			// PPD
 
 
- /*
-  * Add a new PPD file...
-  */
+  //
+  // Add a new PPD file...
+  //
 
   if ((ppd = (ppd_info_t *)calloc(1, sizeof(ppd_info_t))) == NULL)
   {
@@ -895,9 +897,9 @@ add_ppd(const char *filename,		/* I - PPD filename */
     return (NULL);
   }
 
- /*
-  * Zero-out the PPD data and copy the values over...
-  */
+  //
+  // Zero-out the PPD data and copy the values over...
+  //
 
   ppd->found               = 1;
   ppd->record.mtime        = mtime;
@@ -918,30 +920,30 @@ add_ppd(const char *filename,		/* I - PPD filename */
   strlcpy(ppd->record.device_id, device_id, sizeof(ppd->record.device_id));
   strlcpy(ppd->record.scheme, scheme, sizeof(ppd->record.scheme));
 
- /*
-  * Add the PPD to the PPD arrays...
-  */
+  //
+  // Add the PPD to the PPD arrays...
+  //
 
   cupsArrayAdd(ppdlist->PPDsByName, ppd);
   cupsArrayAdd(ppdlist->PPDsByMakeModel, ppd);
 
- /*
-  * Return the new PPD pointer...
-  */
+  //
+  // Return the new PPD pointer...
+  //
 
   return (ppd);
 }
 
 
-/*
- * 'cat_drv()' - Generate a PPD from a driver info file.
- */
+//
+// 'cat_drv()' - Generate a PPD from a driver info file.
+//
 
-static cups_file_t *			/* O - Pointer to PPD file */
-cat_drv(const char *filename,		/* I - *.drv file name */
-	char *ppdname,			/* I - PPD name in the *.drv file */
-	cf_logfunc_t log,		/* I - Log function */
-	void *ld)			/* I - Aux. data for log function */
+static cups_file_t *			// O - Pointer to PPD file
+cat_drv(const char *filename,		// I - *.drv file name
+	char *ppdname,			// I - PPD name in the *.drv file
+	cf_logfunc_t log,		// I - Log function
+	void *ld)			// I - Aux. data for log function
 {
   cups_file_t	*fp;			// File pointer
   int		fd;
@@ -960,8 +962,8 @@ cat_drv(const char *filename,		/* I - *.drv file name */
     return (NULL);
   }
 
-  /* Eliminate any output to stderr, to get rid of the error messages of
-     the *.drv file parser */
+  // Eliminate any output to stderr, to get rid of the error messages of
+  // the *.drv file parser
   fd1 = dup(2);
   fd2 = open("/dev/null", O_WRONLY);
   dup2(fd2, 2);
@@ -1024,7 +1026,7 @@ cat_drv(const char *filename,		/* I - *.drv file name */
   src->release();
   cupsFileClose(fp);
 
-  /* Re-activate stderr output */
+  // Re-activate stderr output
   dup2(fd1, 2);
   close(fd1);
 
@@ -1032,14 +1034,14 @@ cat_drv(const char *filename,		/* I - *.drv file name */
 }
 
 
-/*
- * 'cat_static()' - Return pointer to static PPD file
- */
+//
+// 'cat_static()' - Return pointer to static PPD file
+//
 
-static cups_file_t *			/* O - Pointer to PPD file */
-cat_static(const char *name,		/* I - PPD name */
-	   cf_logfunc_t log,	/* I - Log function */
-	   void *ld)			/* I - Aux. data for log function */
+static cups_file_t *			// O - Pointer to PPD file
+cat_static(const char *name,		// I - PPD name
+	   cf_logfunc_t log,		// I - Log function
+	   void *ld)			// I - Aux. data for log function
 {
   cups_file_t	*fp;
 
@@ -1056,30 +1058,30 @@ cat_static(const char *name,		/* I - PPD name */
 }
 
 
-/*
- * 'cat_tar()' - Copy an archived PPD file to temp file.
- */
+//
+// 'cat_tar()' - Copy an archived PPD file to temp file.
+//
 
-static cups_file_t *			/* O - Pointer to PPD file */
-cat_tar(const char *filename,		/* I - Archive name */
-	char *ppdname,			/* I - PPD name in the archive */
-	cf_logfunc_t log,		/* I - Log function */
-	void *ld)			/* I - Aux. data for log function */
+static cups_file_t *			// O - Pointer to PPD file
+cat_tar(const char *filename,		// I - Archive name
+	char *ppdname,			// I - PPD name in the archive
+	cf_logfunc_t log,		// I - Log function
+	void *ld)			// I - Aux. data for log function
 {
-  cups_file_t	*fp;			/* Archive file pointer */
+  cups_file_t	*fp;			// Archive file pointer
   int		fd;
-  char		tempname[1024],		/* Name for the temporary file */
-		curname[256],		/* Current name in archive */
-		buffer[8192];		/* Copy buffer */
-  struct stat	curinfo;		/* Current file info in archive */
-  off_t		total,			/* Total bytes copied */
-		next;			/* Offset for next record in archive */
-  ssize_t	bytes;			/* Bytes read */
+  char		tempname[1024],		// Name for the temporary file
+		curname[256],		// Current name in archive
+		buffer[8192];		// Copy buffer
+  struct stat	curinfo;		// Current file info in archive
+  off_t		total,			// Total bytes copied
+		next;			// Offset for next record in archive
+  ssize_t	bytes;			// Bytes read
 
 
- /*
-  * Open the archive file...
-  */
+  //
+  // Open the archive file...
+  //
 
   if ((fp = cupsFileOpen(filename, "r")) == NULL)
   {
@@ -1090,9 +1092,9 @@ cat_tar(const char *filename,		/* I - Archive name */
     return (NULL);
   }
 
- /*
-  * Scan the archive for the PPD...
-  */
+  //
+  // Scan the archive for the PPD...
+  //
 
   while (read_tar(fp, curname, sizeof(curname), &curinfo, log, ld))
   {
@@ -1117,9 +1119,7 @@ cat_tar(const char *filename,		/* I - Archive name */
         if ((bytes = cupsFileRead(fp, buffer, (size_t)bytes)) < 0)
         {
           if (errno == EINTR || errno == EAGAIN)
-          {
             bytes = 0;
-          }
           else
           {
 	    if (log) log(ld, CF_LOGLEVEL_ERROR,
@@ -1164,13 +1164,13 @@ cat_tar(const char *filename,		/* I - Archive name */
 }
 
 
-/*
- * 'compare_inodes()' - Compare two inodes.
- */
+//
+// 'compare_inodes()' - Compare two inodes.
+//
 
-static int				/* O - Result of comparison */
-compare_inodes(struct stat *a,		/* I - First inode */
-               struct stat *b)		/* I - Second inode */
+static int				// O - Result of comparison
+compare_inodes(struct stat *a,		// I - First inode
+               struct stat *b)		// I - Second inode
 {
   if (a->st_dev != b->st_dev)
     return (a->st_dev - b->st_dev);
@@ -1179,13 +1179,13 @@ compare_inodes(struct stat *a,		/* I - First inode */
 }
 
 
-/*
- * 'compare_matches()' - Compare PPD match scores for sorting.
- */
+//
+// 'compare_matches()' - Compare PPD match scores for sorting.
+//
 
 static int
-compare_matches(const ppd_info_t *p0,	/* I - First PPD */
-                const ppd_info_t *p1)	/* I - Second PPD */
+compare_matches(const ppd_info_t *p0,	// I - First PPD
+                const ppd_info_t *p1)	// I - Second PPD
 {
   if (p1->matches != p0->matches)
     return (p1->matches - p0->matches);
@@ -1195,15 +1195,15 @@ compare_matches(const ppd_info_t *p0,	/* I - First PPD */
 }
 
 
-/*
- * 'compare_names()' - Compare PPD filenames for sorting.
- */
+//
+// 'compare_names()' - Compare PPD filenames for sorting.
+//
 
-static int				/* O - Result of comparison */
-compare_names(const ppd_info_t *p0,	/* I - First PPD file */
-              const ppd_info_t *p1)	/* I - Second PPD file */
+static int				// O - Result of comparison
+compare_names(const ppd_info_t *p0,	// I - First PPD file
+              const ppd_info_t *p1)	// I - Second PPD file
 {
-  int	diff;				/* Difference between strings */
+  int	diff;				// Difference between strings
 
 
   if ((diff = strcmp(p0->record.filename, p1->record.filename)) != 0)
@@ -1213,20 +1213,20 @@ compare_names(const ppd_info_t *p0,	/* I - First PPD file */
 }
 
 
-/*
- * 'compare_ppds()' - Compare PPD file make and model names for sorting.
- */
+//
+// 'compare_ppds()' - Compare PPD file make and model names for sorting.
+//
 
-static int				/* O - Result of comparison */
-compare_ppds(const ppd_info_t *p0,	/* I - First PPD file */
-             const ppd_info_t *p1)	/* I - Second PPD file */
+static int				// O - Result of comparison
+compare_ppds(const ppd_info_t *p0,	// I - First PPD file
+             const ppd_info_t *p1)	// I - Second PPD file
 {
-  int	diff;				/* Difference between strings */
+  int	diff;				// Difference between strings
 
 
- /*
-  * First compare manufacturers...
-  */
+  //
+  // First compare manufacturers...
+  //
 
   if ((diff = _ppd_strcasecmp(p0->record.make, p1->record.make)) != 0)
     return (diff);
@@ -1241,14 +1241,14 @@ compare_ppds(const ppd_info_t *p0,	/* I - First PPD file */
 }
 
 
-/*
- * 'free_array()' - Free an array of strings.
- */
+//
+// 'free_array()' - Free an array of strings.
+//
 
 static void
-free_array(cups_array_t *a)		/* I - Array to free */
+free_array(cups_array_t *a)		// I - Array to free
 {
-  char	*ptr;				/* Pointer to string */
+  char	*ptr;				// Pointer to string
 
 
   for (ptr = (char *)cupsArrayFirst(a);
@@ -1260,15 +1260,15 @@ free_array(cups_array_t *a)		/* I - Array to free */
 }
 
 
-/*
- * 'free_ppdlist()' - Free the PPD list arrays.
- */
+//
+// 'free_ppdlist()' - Free the PPD list arrays.
+//
 
 static void
-free_ppdlist(ppd_list_t *ppdlist)	/* I - PPD list to free */
+free_ppdlist(ppd_list_t *ppdlist)	// I - PPD list to free
 {
-  struct stat	*dinfoptr;		/* Pointer to Inode info */
-  ppd_info_t	*ppd;			/* Pointer to PPD info */
+  struct stat	*dinfoptr;		// Pointer to Inode info
+  ppd_info_t	*ppd;			// Pointer to PPD info
 
 
   for (dinfoptr = (struct stat *)cupsArrayFirst(ppdlist->Inodes);
@@ -1286,41 +1286,41 @@ free_ppdlist(ppd_list_t *ppdlist)	/* I - PPD list to free */
 }
 
 
-/*
- * 'load_driver()' - Load driver-generated PPD files.
- */
+//
+// 'load_driver()' - Load driver-generated PPD files.
+//
 
-static int				/* O - 1 on success, 0 on failure */
-load_driver(const char *filename,	/* I - Driver excutable file name */
-	    const char *name,		/* I - Name to the rest of the world */
+static int				// O - 1 on success, 0 on failure
+load_driver(const char *filename,	// I - Driver excutable file name
+	    const char *name,		// I - Name to the rest of the world
 	    ppd_list_t *ppdlist,
-	    cf_logfunc_t log,	/* I - Log function */
-	    void *ld)			/* I - Aux. data for log function */
+	    cf_logfunc_t log,		// I - Log function
+	    void *ld)			// I - Aux. data for log function
 {
-  int		i;			/* Looping var */
-  char		*start,			/* Start of value */
-		*ptr;			/* Pointer into string */
-  const char	*scheme = NULL;		/* Scheme for this driver */
-  int		cpid;			/* Process ID for driver program */
-  int		epid;			/* Process ID for logging process */
-  cups_file_t	*fp;			/* Pipe to driver program */
-  char		*argv[3],		/* Arguments for command */
-		line[2048],		/* Line from driver */
-		ppd_name[256],		/* ppd-name */
-		make[128],		/* ppd-make */
-		make_and_model[128],	/* ppd-make-and-model */
-		device_id[256],		/* ppd-device-id */
-		languages[128],		/* ppd-natural-language */
-		product[128],		/* ppd-product */
-		psversion[128],		/* ppd-psversion */
-		type_str[128];		/* ppd-type */
-  int		type;			/* PPD type */
-  ppd_info_t	*ppd;			/* Newly added PPD */
+  int		i;			// Looping var
+  char		*start,			// Start of value
+		*ptr;			// Pointer into string
+  const char	*scheme = NULL;		// Scheme for this driver
+  int		cpid;			// Process ID for driver program
+  int		epid;			// Process ID for logging process
+  cups_file_t	*fp;			// Pipe to driver program
+  char		*argv[3],		// Arguments for command
+		line[2048],		// Line from driver
+		ppd_name[256],		// ppd-name
+		make[128],		// ppd-make
+		make_and_model[128],	// ppd-make-and-model
+		device_id[256],		// ppd-device-id
+		languages[128],		// ppd-natural-language
+		product[128],		// ppd-product
+		psversion[128],		// ppd-psversion
+		type_str[128];		// ppd-type
+  int		type;			// PPD type
+  ppd_info_t	*ppd;			// Newly added PPD
 
 
- /*
-  * Run the driver with the "list" argument and collect the output...
-  */
+  //
+  // Run the driver with the "list" argument and collect the output...
+  //
 
   argv[0] = (char *)filename;
   argv[1] = (char *)"list";
@@ -1330,12 +1330,12 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
   {
     while (cupsFileGets(fp, line, sizeof(line)))
     {
-     /*
-      * Each line is of the form:
-      *
-      *   "ppd-name" ppd-natural-language "ppd-make" "ppd-make-and-model" \
-      *       "ppd-device-id" "ppd-product" "ppd-psversion"
-      */
+      //
+      // Each line is of the form:
+      //
+      //   "ppd-name" ppd-natural-language "ppd-make" "ppd-make-and-model"
+      //       "ppd-device-id" "ppd-product" "ppd-psversion"
+      //
 
       device_id[0] = '\0';
       product[0]   = '\0';
@@ -1349,9 +1349,9 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
 		 ppd_name, languages, make, make_and_model,
 		 device_id, product, psversion, type_str) < 4)
       {
-       /*
-	* Bad format; strip trailing newline and write an error message.
-	*/
+	//
+	// Bad format; strip trailing newline and write an error message.
+	//
 
 	if (line[strlen(line) - 1] == '\n')
 	  line[strlen(line) - 1] = '\0';
@@ -1363,9 +1363,9 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
       }
       else
       {
-       /*
-	* Add the device to the array of available devices...
-	*/
+	//
+	// Add the device to the array of available devices...
+	//
 
 	if ((start = strchr(languages, ',')) != NULL)
 	  *start++ = '\0';
@@ -1392,8 +1392,9 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
 	  scheme ++;
 	  memmove(ppd_name + strlen(name), ptr, strlen(ptr) + 1);
 	  memmove(ppd_name, name, strlen(name));
-	} else if (strncmp(name, ppd_name, strlen(name)) ||
-		   *(ppd_name + strlen(name)) != ':')
+	}
+	else if (strncmp(name, ppd_name, strlen(name)) ||
+		 *(ppd_name + strlen(name)) != ':')
 	{
 	  cupsFileClose(fp);
 	  return (0);
@@ -1445,19 +1446,19 @@ load_driver(const char *filename,	/* I - Driver excutable file name */
 }
 
 
-/*
- * 'load_drv()' - Load the PPDs from a driver information file.
- */
+//
+// 'load_drv()' - Load the PPDs from a driver information file.
+//
 
-static int				/* O - 1 on success, 0 on failure */
-load_drv(const char  *filename,		/* I - Actual filename */
-         const char  *name,		/* I - Name to the rest of the world */
-         cups_file_t *fp,		/* I - File to read from */
-	 time_t      mtime,		/* I - Mod time of driver info file */
-	 off_t       size,		/* I - Size of driver info file */
+static int				// O - 1 on success, 0 on failure
+load_drv(const char  *filename,		// I - Actual filename
+         const char  *name,		// I - Name to the rest of the world
+         cups_file_t *fp,		// I - File to read from
+	 time_t      mtime,		// I - Mod time of driver info file
+	 off_t       size,		// I - Size of driver info file
 	 ppd_list_t  *ppdlist,
-	 cf_logfunc_t log,		/* I - Log function */
-	 void *ld)			/* I - Aux. data for log function */
+	 cf_logfunc_t log,		// I - Log function
+	 void *ld)			// I - Aux. data for log function
 {
   ppdcSource	*src;			// Driver information file
   ppdcDriver	*d;			// Current driver
@@ -1475,19 +1476,19 @@ load_drv(const char  *filename,		/* I - Actual filename */
   int           fd1, fd2;
 
 
- /*
-  * Eliminate any output to stderr, to get rid of the error messages of
-  * the *.drv file parser
-  */
+  //
+  // Eliminate any output to stderr, to get rid of the error messages of
+  // the *.drv file parser
+  //
 
   fd1 = dup(2);
   fd2 = open("/dev/null", O_WRONLY);
   dup2(fd2, 2);
   close(fd2);
 
- /*
-  * Load the driver info file...
-  */
+  //
+  // Load the driver info file...
+  //
 
   src = new ppdcSource(filename, fp);
 
@@ -1497,22 +1498,22 @@ load_drv(const char  *filename,		/* I - Actual filename */
 		 "libppd: [PPD Collections] Bad driver information file \"%s\"!\n",
 		 filename);
     src->release();
-    /* Re-activate stderr output */
+    // Re-activate stderr output
     dup2(fd1, 2);
     close(fd1);
     return (0);
   }
 
- /*
-  * Add a dummy entry for the file...
-  */
+  //
+  // Add a dummy entry for the file...
+  //
 
   add_ppd(filename, name, "", "", "", "", "", "", mtime, (size_t)size, 0,
 	  PPD_TYPE_DRV, "drv", ppdlist, log, ld);
 
- /*
-  * Then the drivers in the file...
-  */
+  //
+  // Then the drivers in the file...
+  //
 
   for (d = (ppdcDriver *)src->drivers->first();
        d;
@@ -1558,7 +1559,7 @@ load_drv(const char  *filename,		/* I - Actual filename */
     }
 
     for (product = (ppdcAttr *)d->attrs->first(), products_found = 0,
-             ppd = NULL;
+	   ppd = NULL;
          product;
 	 product = (ppdcAttr *)d->attrs->next())
       if (!strcmp(product->name->value, "Product"))
@@ -1588,9 +1589,9 @@ load_drv(const char  *filename,		/* I - Actual filename */
 
   src->release();
 
- /*
-  * Re-activate stderr output
-  */
+  //
+  // Re-activate stderr output
+  //
 
   dup2(fd1, 2);
   close(fd1);
@@ -1599,47 +1600,47 @@ load_drv(const char  *filename,		/* I - Actual filename */
 }
 
 
-/*
- * 'load_ppd()' - Load a PPD file.
- */
+//
+// 'load_ppd()' - Load a PPD file.
+//
 
 static void
-load_ppd(const char  *filename,		/* I - Real filename */
-         const char  *name,		/* I - Virtual filename */
-         const char  *scheme,		/* I - PPD scheme */
-         struct stat *fileinfo,		/* I - File information */
-         ppd_info_t  *ppd,		/* I - Existing PPD file or NULL */
-         cups_file_t *fp,		/* I - File to read from */
-         off_t       end,		/* I - End of file position or 0 */
+load_ppd(const char  *filename,		// I - Real filename
+         const char  *name,		// I - Virtual filename
+         const char  *scheme,		// I - PPD scheme
+         struct stat *fileinfo,		// I - File information
+         ppd_info_t  *ppd,		// I - Existing PPD file or NULL
+         cups_file_t *fp,		// I - File to read from
+         off_t       end,		// I - End of file position or 0
 	 ppd_list_t  *ppdlist,
-	 cf_logfunc_t log,		/* I - Log function */
-	 void *ld)			/* I - Aux. data for log function */
+	 cf_logfunc_t log,		// I - Log function
+	 void *ld)			// I - Aux. data for log function
 {
-  int		i;			/* Looping var */
-  char		line[256],		/* Line from file */
-		*ptr,			/* Pointer into line */
-		lang_version[64],	/* PPD LanguageVersion */
-		lang_encoding[64],	/* PPD LanguageEncoding */
-		country[64],		/* Country code */
-		manufacturer[256],	/* Manufacturer */
-		make_model[256],	/* Make and Model */
-		model_name[256],	/* ModelName */
-		nick_name[256],		/* NickName */
-		device_id[256],		/* 1284DeviceID */
-		product[256],		/* Product */
-		psversion[256],		/* PSVersion */
-		temp[512];		/* Temporary make and model */
-  int		install_group,		/* In the installable options group? */
-		model_number,		/* cupsModelNumber */
-		type;			/* ppd-type */
-  cups_array_t	*products,		/* Product array */
-		*psversions,		/* PSVersion array */
-		*cups_languages;	/* cupsLanguages array */
-  int		new_ppd;		/* Is this a new PPD? */
-  struct				/* LanguageVersion translation table */
+  int		i;			// Looping var
+  char		line[256],		// Line from file
+		*ptr,			// Pointer into line
+		lang_version[64],	// PPD LanguageVersion
+		lang_encoding[64],	// PPD LanguageEncoding
+		country[64],		// Country code
+		manufacturer[256],	// Manufacturer
+		make_model[256],	// Make and Model
+		model_name[256],	// ModelName
+		nick_name[256],		// NickName
+		device_id[256],		// 1284DeviceID
+		product[256],		// Product
+		psversion[256],		// PSVersion
+		temp[512];		// Temporary make and model
+  int		install_group,		// In the installable options group?
+		model_number,		// cupsModelNumber
+		type;			// ppd-type
+  cups_array_t	*products,		// Product array
+		*psversions,		// PSVersion array
+		*cups_languages;	// cupsLanguages array
+  int		new_ppd;		// Is this a new PPD?
+  struct				// LanguageVersion translation table
   {
-    const char	*version,		/* LanguageVersion string */
-		*language;		/* Language code */
+    const char	*version,		// LanguageVersion string
+		*language;		// Language code
   }		languages[] =
   {
     { "chinese",		"zh" },
@@ -1668,9 +1669,9 @@ load_ppd(const char  *filename,		/* I - Real filename */
   };
 
 
- /*
-  * Now read until we get the required fields...
-  */
+  //
+  // Now read until we get the required fields...
+  //
 
   cups_languages = cupsArrayNew(NULL, NULL);
   products       = cupsArrayNew(NULL, NULL);
@@ -1711,19 +1712,19 @@ load_ppd(const char  *filename,		/* I - Real filename */
     {
       if (sscanf(line, "%*[^\"]\"(%255[^\"]", product) == 1)
       {
-       /*
-	* Make sure the value ends with a right parenthesis - can't stop at
-	* the first right paren since the product name may contain escaped
-	* parenthesis...
-	*/
+	//
+	// Make sure the value ends with a right parenthesis - can't stop at
+	// the first right paren since the product name may contain escaped
+	// parenthesis...
+	//
 
 	ptr = product + strlen(product) - 1;
 	if (ptr > product && *ptr == ')')
 	{
-	 /*
-	  * Yes, ends with a parenthesis, so remove it from the end and
-	  * add the product to the list...
-	  */
+	  //
+	  // Yes, ends with a parenthesis, so remove it from the end and
+	  // add the product to the list...
+	  //
 
 	  *ptr = '\0';
 	  cupsArrayAdd(products, strdup(product));
@@ -1737,7 +1738,7 @@ load_ppd(const char  *filename,		/* I - Real filename */
     }
     else if (!strncmp(line, "*cupsLanguages:", 15))
     {
-      char	*start;			/* Start of language */
+      char	*start;			// Start of language
 
 
       for (start = line + 15; *start && isspace(*start & 255); start ++);
@@ -1787,10 +1788,10 @@ load_ppd(const char  *filename,		/* I - Real filename */
       install_group = 0;
     else if (!strncmp(line, "*OpenUI", 7))
     {
-     /*
-      * Stop early if we have a NickName or ModelName attributes
-      * before the first non-installable OpenUI...
-      */
+      //
+      // Stop early if we have a NickName or ModelName attributes
+      // before the first non-installable OpenUI...
+      //
 
       if (!install_group && (model_name[0] || nick_name[0]) &&
 	  cupsArrayCount(products) > 0 && cupsArrayCount(psversions) > 0)
@@ -1798,9 +1799,9 @@ load_ppd(const char  *filename,		/* I - Real filename */
     }
   }
 
- /*
-  * See if we got all of the required info...
-  */
+  //
+  // See if we got all of the required info...
+  //
 
   if (nick_name[0])
     cupsCharsetToUTF8((cups_utf8_t *)make_model, nick_name,
@@ -1814,9 +1815,9 @@ load_ppd(const char  *filename,		/* I - Real filename */
   if (!make_model[0] || cupsArrayCount(products) == 0 ||
       cupsArrayCount(psversions) == 0)
   {
-   /*
-    * We don't have all the info needed, so skip this file...
-    */
+    //
+    // We don't have all the info needed, so skip this file...
+    //
 
     if (!make_model[0])
       if (log) log(ld, CF_LOGLEVEL_WARN,
@@ -1844,9 +1845,9 @@ load_ppd(const char  *filename,		/* I - Real filename */
   if (model_name[0])
     cupsArrayAdd(products, strdup(model_name));
 
- /*
-  * Normalize the make and model string...
-  */
+  //
+  // Normalize the make and model string...
+  //
 
   while (isspace(manufacturer[0] & 255))
     _ppd_strcpy(manufacturer, manufacturer + 1);
@@ -1858,22 +1859,22 @@ load_ppd(const char  *filename,		/* I - Real filename */
 
   ppdNormalizeMakeAndModel(temp, make_model, sizeof(make_model));
 
- /*
-  * See if we got a manufacturer...
-  */
+  //
+  // See if we got a manufacturer...
+  //
 
   if (!manufacturer[0] || !strcmp(manufacturer, "ESP"))
   {
-   /*
-    * Nope, copy the first part of the make and model then...
-    */
+    //
+    // Nope, copy the first part of the make and model then...
+    //
 
     strlcpy(manufacturer, make_model, sizeof(manufacturer));
 
-   /*
-    * Truncate at the first space, dash, or slash, or make the
-    * manufacturer "Other"...
-    */
+    //
+    // Truncate at the first space, dash, or slash, or make the
+    // manufacturer "Other"...
+    //
 
     for (ptr = manufacturer; *ptr; ptr ++)
       if (*ptr == ' ' || *ptr == '-' || *ptr == '/')
@@ -1890,9 +1891,9 @@ load_ppd(const char  *filename,		/* I - Real filename */
   else if (!_ppd_strncasecmp(manufacturer, "Hewlett", 7))
     strlcpy(manufacturer, "HP", sizeof(manufacturer));
 
- /*
-  * Fix the lang_version as needed...
-  */
+  //
+  // Fix the lang_version as needed...
+  //
 
   if ((ptr = strchr(lang_version, '-')) != NULL)
     *ptr++ = '\0';
@@ -1901,18 +1902,18 @@ load_ppd(const char  *filename,		/* I - Real filename */
 
   if (ptr)
   {
-   /*
-    * Setup the country suffix...
-    */
+    //
+    // Setup the country suffix...
+    //
 
     country[0] = '_';
     _ppd_strcpy(country + 1, ptr);
   }
   else
   {
-   /*
-    * No country suffix...
-    */
+    //
+    // No country suffix...
+    //
 
     country[0] = '\0';
   }
@@ -1923,33 +1924,33 @@ load_ppd(const char  *filename,		/* I - Real filename */
 
   if (i < (int)(sizeof(languages) / sizeof(languages[0])))
   {
-   /*
-    * Found a known language...
-    */
+    //
+    // Found a known language...
+    //
 
     snprintf(lang_version, sizeof(lang_version), "%s%s",
 	     languages[i].language, country);
   }
   else
   {
-   /*
-    * Unknown language; use "xx"...
-    */
+    //
+    // Unknown language; use "xx"...
+    //
 
     strlcpy(lang_version, "xx", sizeof(lang_version));
   }
 
- /*
-  * Record the PPD file...
-  */
+  //
+  // Record the PPD file...
+  //
 
   new_ppd = !ppd;
 
   if (new_ppd)
   {
-   /*
-    * Add new PPD file...
-    */
+    //
+    // Add new PPD file...
+    //
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] Adding PPD \"%s\"...", name);
@@ -1965,9 +1966,9 @@ load_ppd(const char  *filename,		/* I - Real filename */
   }
   else
   {
-   /*
-    * Update existing record...
-    */
+    //
+    // Update existing record...
+    //
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "libppd: [PPD Collections] Updating ppd \"%s\"...", name);
@@ -1995,9 +1996,9 @@ load_ppd(const char  *filename,		/* I - Real filename */
     strlcpy(ppd->record.scheme, scheme, sizeof(ppd->record.scheme));
   }
 
- /*
-  * Add remaining products, versions, and languages...
-  */
+  //
+  // Add remaining products, versions, and languages...
+  //
 
   for (i = 1;
        i < PPD_MAX_PROD && (ptr = (char *)cupsArrayNext(products)) != NULL;
@@ -2017,9 +2018,9 @@ load_ppd(const char  *filename,		/* I - Real filename */
     strlcpy(ppd->record.languages[i], ptr,
 	    sizeof(ppd->record.languages[0]));
 
- /*
-  * Free products, versions, and languages...
-  */
+  //
+  // Free products, versions, and languages...
+  //
 
   free_array(cups_languages);
   free_array(products);
@@ -2029,34 +2030,34 @@ load_ppd(const char  *filename,		/* I - Real filename */
 }
 
 
-/*
- * 'load_ppds()' - Load PPD files recursively.
- */
+//
+// 'load_ppds()' - Load PPD files recursively.
+//
 
-static int				/* O - 1 on success, 0 on failure */
-load_ppds(const char *d,		/* I - Actual directory */
-          const char *p,		/* I - Virtual path in name */
-	  int        descend,		/* I - Descend into directories? */
+static int				// O - 1 on success, 0 on failure
+load_ppds(const char *d,		// I - Actual directory
+          const char *p,		// I - Virtual path in name
+	  int        descend,		// I - Descend into directories?
 	  ppd_list_t *ppdlist,
-	  cf_logfunc_t log,		/* I - Log function */
-	  void *ld)			/* I - Aux. data for log function */
+	  cf_logfunc_t log,		// I - Log function
+	  void *ld)			// I - Aux. data for log function
 {
-  struct stat	dinfo,			/* Directory information */
-		*dinfoptr;		/* Pointer to match */
-  cups_file_t	*fp;			/* Pointer to file */
-  cups_dir_t	*dir;			/* Directory pointer */
-  cups_dentry_t	*dent;			/* Directory entry */
-  char		filename[1024],		/* Name of PPD or directory */
-		line[256],		/* Line from file */
-		*ptr,			/* Pointer into name */
-		name[1024];		/* Name of PPD file */
-  ppd_info_t	*ppd,			/* New PPD file */
-		key;			/* Search key */
+  struct stat	dinfo,			// Directory information
+		*dinfoptr;		// Pointer to match
+  cups_file_t	*fp;			// Pointer to file
+  cups_dir_t	*dir;			// Directory pointer
+  cups_dentry_t	*dent;			// Directory entry
+  char		filename[1024],		// Name of PPD or directory
+		line[256],		// Line from file
+		*ptr,			// Pointer into name
+		name[1024];		// Name of PPD file
+  ppd_info_t	*ppd,			// New PPD file
+		key;			// Search key
 
 
- /*
-  * See if we've loaded this directory before...
-  */
+  //
+  // See if we've loaded this directory before...
+  //
 
   if (stat(d, &dinfo))
   {
@@ -2075,17 +2076,17 @@ load_ppds(const char *d,		/* I - Actual directory */
     return (1);
   }
 
- /*
-  * Nope, add it to the Inodes array and continue...
-  */
+  //
+  // Nope, add it to the Inodes array and continue...
+  //
 
   dinfoptr = (struct stat *)malloc(sizeof(struct stat));
   memcpy(dinfoptr, &dinfo, sizeof(struct stat));
   cupsArrayAdd(ppdlist->Inodes, dinfoptr);
 
- /*
-  * Check permissions...
-  */
+  //
+  // Check permissions...
+  //
 
   //if (_ppdFileCheck(d, _PPD_FILE_CHECK_DIRECTORY, !geteuid(), log, ld))
   //  return (0);
@@ -2106,16 +2107,16 @@ load_ppds(const char *d,		/* I - Actual directory */
 
   while ((dent = cupsDirRead(dir)) != NULL)
   {
-   /*
-    * Skip files/directories starting with "."...
-    */
+    //
+    // Skip files/directories starting with "."...
+    //
 
     if (dent->filename[0] == '.')
       continue;
 
-   /*
-    * See if this is a file...
-    */
+    //
+    // See if this is a file...
+    //
 
     if (!strcmp(d, "/"))
       snprintf(filename, sizeof(filename), "/%s", dent->filename);
@@ -2131,9 +2132,9 @@ load_ppds(const char *d,		/* I - Actual directory */
 
     if (S_ISDIR(dent->fileinfo.st_mode))
     {
-     /*
-      * Do subdirectory...
-      */
+      //
+      // Do subdirectory...
+      //
 
       if (descend)
       {
@@ -2148,9 +2149,9 @@ load_ppds(const char *d,		/* I - Actual directory */
     }
     else if (strstr(filename, ".plist"))
     {
-     /*
-      * Skip plist files in the PPDs directory...
-      */
+      //
+      // Skip plist files in the PPDs directory...
+      //
 
       continue;
     }
@@ -2158,9 +2159,9 @@ load_ppds(const char *d,		/* I - Actual directory */
     //			   log, ld))
     //   continue;
 
-   /*
-    * See if this file has been scanned before...
-    */
+    //
+    // See if this file has been scanned before...
+    //
 
     strlcpy(key.record.filename, filename, sizeof(key.record.filename));
     strlcpy(key.record.name, name, sizeof(key.record.name));
@@ -2171,16 +2172,16 @@ load_ppds(const char *d,		/* I - Actual directory */
 	ppd->record.size == dent->fileinfo.st_size &&
 	ppd->record.mtime == dent->fileinfo.st_mtime)
     {
-     /*
-      * Rewind to the first entry for this file...
-      */
+      //
+      // Rewind to the first entry for this file...
+      //
 
       while ((ppd = (ppd_info_t *)cupsArrayPrev(ppdlist->PPDsByName)) != NULL &&
 	     !strcmp(ppd->record.filename, filename));
 
-     /*
-      * Then mark all of the matches for this file as found...
-      */
+      //
+      // Then mark all of the matches for this file as found...
+      //
 
       while ((ppd = (ppd_info_t *)cupsArrayNext(ppdlist->PPDsByName)) != NULL &&
 	     !strcmp(ppd->record.filename, filename))
@@ -2189,35 +2190,35 @@ load_ppds(const char *d,		/* I - Actual directory */
       continue;
     }
 
-   /*
-    * No, file is new/changed, so re-scan it...
-    */
+    //
+    // No, file is new/changed, so re-scan it...
+    //
 
     if ((fp = cupsFileOpen(filename, "r")) == NULL)
       continue;
 
-   /*
-    * Now see if this is a PPD file...
-    */
+    //
+    // Now see if this is a PPD file...
+    //
 
     line[0] = '\0';
     cupsFileGets(fp, line, sizeof(line));
 
     if (!strncmp(line, "*PPD-Adobe:", 11))
     {
-     /*
-      * Yes, load it...
-      */
+      //
+      // Yes, load it...
+      //
 
       load_ppd(filename, name, "file", &dent->fileinfo, ppd, fp, 0, ppdlist,
 	       log, ld);
     }
     else
     {
-     /*
-      * Nope, treat it as a an archive, a PPD-generating executable, or a
-      * driver information file...
-      */
+      //
+      // Nope, treat it as a an archive, a PPD-generating executable, or a
+      // driver information file...
+      //
 
       cupsFileRewind(fp);
 
@@ -2231,15 +2232,15 @@ load_ppds(const char *d,		/* I - Actual directory */
       else if ((dent->fileinfo.st_mode & 0111) &&
 	       S_ISREG(dent->fileinfo.st_mode))
       {
-	/* File is not a PPD, not an archive, but executable, try whether
-	   it generates PPDs... */
+	// File is not a PPD, not an archive, but executable, try whether
+	// it generates PPDs...
 	load_driver(filename, name, ppdlist, log, ld);
       }
     }
 
-   /*
-    * Close the file...
-    */
+    //
+    // Close the file...
+    //
 
     cupsFileClose(fp);
   }
@@ -2250,20 +2251,20 @@ load_ppds(const char *d,		/* I - Actual directory */
 }
 
 
-/*
- * 'load_ppds_dat()' - Load the ppds.dat file.
- */
+//
+// 'load_ppds_dat()' - Load the ppds.dat file.
+//
 
 static int
-load_ppds_dat(const char *filename,	/* I - Filename */
-              int        verbose,	/* I - Be verbose? */
+load_ppds_dat(const char *filename,	// I - Filename
+              int        verbose,	// I - Be verbose?
 	      ppd_list_t *ppdlist,
-	      cf_logfunc_t log,	/* I - Log function */
-	      void *ld)			/* I - Aux. data for log function */
+	      cf_logfunc_t log,		// I - Log function
+	      void *ld)			// I - Aux. data for log function
 {
-  ppd_info_t	*ppd;			/* Current PPD file */
-  cups_file_t	*fp;			/* ppds.dat file */
-  struct stat	fileinfo;		/* ppds.dat information */
+  ppd_info_t	*ppd;			// Current PPD file
+  cups_file_t	*fp;			// ppds.dat file
+  struct stat	fileinfo;		// ppds.dat information
 
 
   if (filename == NULL || !filename[0])
@@ -2271,12 +2272,12 @@ load_ppds_dat(const char *filename,	/* I - Filename */
 
   if ((fp = cupsFileOpen(filename, "r")) != NULL)
   {
-   /*
-    * See if we have the right sync word...
-    */
+    //
+    // See if we have the right sync word...
+    //
 
-    unsigned ppdsync;			/* Sync word */
-    int      num_ppds;			/* Number of PPDs */
+    unsigned ppdsync;			// Sync word
+    int      num_ppds;			// Number of PPDs
 
     if ((size_t)cupsFileRead(fp, (char *)&ppdsync,
 			     sizeof(ppdsync)) == sizeof(ppdsync) &&
@@ -2287,9 +2288,9 @@ load_ppds_dat(const char *filename,	/* I - Filename */
 	(num_ppds = ((size_t)fileinfo.st_size - sizeof(ppdsync)) /
 	 sizeof(ppd_rec_t)) > 0)
     {
-     /*
-      * We have a ppds.dat file, so read it!
-      */
+      //
+      // We have a ppds.dat file, so read it!
+      //
 
       for (; num_ppds > 0; num_ppds --)
       {
@@ -2327,38 +2328,38 @@ load_ppds_dat(const char *filename,	/* I - Filename */
 }
 
 
-/*
- * 'load_tar()' - Load archived PPD files.
- */
+//
+// 'load_tar()' - Load archived PPD files.
+//
 
-static int				/* O - 1 on success, 0 on failure */
-load_tar(const char  *filename,		/* I - Actual filename */
-         const char  *name,		/* I - Name to the rest of the world */
-         cups_file_t *fp,		/* I - File to read from */
-	 time_t      mtime,		/* I - Mod time of driver info file */
-	 off_t       size,		/* I - Size of driver info file */
+static int				// O - 1 on success, 0 on failure
+load_tar(const char  *filename,		// I - Actual filename
+         const char  *name,		// I - Name to the rest of the world
+         cups_file_t *fp,		// I - File to read from
+	 time_t      mtime,		// I - Mod time of driver info file
+	 off_t       size,		// I - Size of driver info file
 	 ppd_list_t  *ppdlist,
-	 cf_logfunc_t log,		/* I - Log function */
-	 void *ld)			/* I - Aux. data for log function */
+	 cf_logfunc_t log,		// I - Log function
+	 void *ld)			// I - Aux. data for log function
 {
-  char		curname[256],		/* Current archive file name */
-		uri[2048];		/* Virtual file URI */
-  const char	*curext;		/* Extension on file */
-  struct stat	curinfo;		/* Current archive file information */
-  off_t		next;			/* Position for next header */
+  char		curname[256],		// Current archive file name
+		uri[2048];		// Virtual file URI
+  const char	*curext;		// Extension on file
+  struct stat	curinfo;		// Current archive file information
+  off_t		next;			// Position for next header
 
 
- /*
-  * Add a dummy entry for the file...
-  */
+  //
+  // Add a dummy entry for the file...
+  //
 
   add_ppd(filename, name, "", "", "", "", "", "", mtime, (size_t)size, 0,
 	  PPD_TYPE_ARCHIVE, "file", ppdlist, log, ld);
   ppdlist->ChangedPPD = 1;
 
- /*
-  * Scan for PPDs in the archive...
-  */
+  //
+  // Scan for PPDs in the archive...
+  //
 
   while (read_tar(fp, curname, sizeof(curname), &curinfo, log, ld))
   {
@@ -2381,29 +2382,29 @@ load_tar(const char  *filename,		/* I - Actual filename */
 }
 
 
-/*
- * 'read_tar()' - Read a file header from an archive.
- *
- * This function skips all directories and special files.
- */
+//
+// 'read_tar()' - Read a file header from an archive.
+//
+// This function skips all directories and special files.
+//
 
-static int				/* O - 1 if found, 0 on EOF */
-read_tar(cups_file_t *fp,		/* I - Archive to read */
-         char        *name,		/* I - Filename buffer */
-         size_t      namesize,		/* I - Size of filename buffer */
-         struct stat *info,		/* O - File information */
-	 cf_logfunc_t log,		/* I - Log function */
-	 void *ld)			/* I - Aux. data for log function */
+static int				// O - 1 if found, 0 on EOF
+read_tar(cups_file_t *fp,		// I - Archive to read
+         char        *name,		// I - Filename buffer
+         size_t      namesize,		// I - Size of filename buffer
+         struct stat *info,		// O - File information
+	 cf_logfunc_t log,		// I - Log function
+	 void *ld)			// I - Aux. data for log function
 {
-  tar_rec_t	record;			/* Record from file */
+  tar_rec_t	record;			// Record from file
 
 
   while ((size_t)cupsFileRead(fp, (char *)&record,
 			      sizeof(record)) == sizeof(record))
   {
-   /*
-    * Check for a valid tar header...
-    */
+    //
+    // Check for a valid tar header...
+    //
 
     if ((memcmp(record.header.magic, TAR_MAGIC, 6) ||
 	 memcmp(record.header.version, TAR_VERSION, 2)) &&
@@ -2416,17 +2417,17 @@ read_tar(cups_file_t *fp,		/* I - Archive to read */
       break;
     }
 
-   /*
-    * Ignore non-files...
-    */
+    //
+    // Ignore non-files...
+    //
 
     if (record.header.linkflag != TAR_OLDNORMAL &&
         record.header.linkflag != TAR_NORMAL)
       continue;
 
-   /*
-    * Grab size and name from tar header and return...
-    */
+    //
+    // Grab size and name from tar header and return...
+    //
 
     if (record.header.prefix[0])
       snprintf(name, namesize, "%s/%s", record.header.prefix,
@@ -2444,32 +2445,32 @@ read_tar(cups_file_t *fp,		/* I - Archive to read */
 }
 
 
-/*
- * 'regex_device_id()' - Compile a regular expression based on the 1284 device
- *                       ID.
- */
+//
+// 'regex_device_id()' - Compile a regular expression based on the 1284 device
+//                       ID.
 
-static regex_t *			/* O - Regular expression */
-regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
-		cf_logfunc_t log,	/* I - Log function */
-		void *ld)		/* I - Aux. data for log function */
+
+static regex_t *			// O - Regular expression
+regex_device_id(const char *device_id,	// I - IEEE-1284 device ID
+		cf_logfunc_t log,	// I - Log function
+		void *ld)		// I - Aux. data for log function
 {
-  char		res[2048],		/* Regular expression string */
-		*ptr;			/* Pointer into string */
-  regex_t	*re;			/* Regular expression */
-  int		cmd;			/* Command set string? */
+  char		res[2048],		// Regular expression string
+		*ptr;			// Pointer into string
+  regex_t	*re;			// Regular expression
+  int		cmd;			// Command set string?
 
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] regex_device_id(\"%s\")",
 	       device_id);
 
- /*
-  * Scan the device ID string and insert class, command set, manufacturer, and
-  * model attributes to match.  We assume that the device ID in the PPD and the
-  * device ID reported by the device itself use the same attribute names and
-  * order of attributes.
-  */
+  //
+  // Scan the device ID string and insert class, command set, manufacturer, and
+  // model attributes to match.  We assume that the device ID in the PPD and the
+  // device ID reported by the device itself use the same attribute names and
+  // order of attributes.
+  //
 
   ptr = res;
 
@@ -2498,9 +2499,9 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
 	  *ptr++ = '\\';
         if (*device_id == ':')
 	{
-	 /*
-	  * KEY:.*value
-	  */
+	  //
+	  // KEY:.*value
+	  //
 
 	  *ptr++ = *device_id++;
 	  *ptr++ = '.';
@@ -2512,9 +2513,9 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
 
       if (*device_id == ';' || !*device_id)
       {
-       /*
-        * KEY:.*value.*;
-	*/
+	//
+        // KEY:.*value.*;
+	//
 
 	*ptr++ = '.';
 	*ptr++ = '*';
@@ -2535,9 +2536,9 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] regex_device_id: \"%s\"", res);
 
- /*
-  * Compile the regular expression and return...
-  */
+  //
+  // Compile the regular expression and return...
+  //
 
   if (res[0] && (re = (regex_t *)calloc(1, sizeof(regex_t))) != NULL)
   {
@@ -2555,27 +2556,27 @@ regex_device_id(const char *device_id,	/* I - IEEE-1284 device ID */
 }
 
 
-/*
- * 'regex_string()' - Construct a regular expression to compare a simple string.
- */
+//
+// 'regex_string()' - Construct a regular expression to compare a simple string.
+//
 
-static regex_t *			/* O - Regular expression */
-regex_string(const char *s,		/* I - String to compare */
-	     cf_logfunc_t log,	/* I - Log function */
-	     void *ld)			/* I - Aux. data for log function */
+static regex_t *			// O - Regular expression
+regex_string(const char *s,		// I - String to compare
+	     cf_logfunc_t log,		// I - Log function
+	     void *ld)			// I - Aux. data for log function
 {
-  char		res[2048],		/* Regular expression string */
-		*ptr;			/* Pointer into string */
-  regex_t	*re;			/* Regular expression */
+  char		res[2048],		// Regular expression string
+		*ptr;			// Pointer into string
+  regex_t	*re;			// Regular expression
 
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] regex_string(\"%s\")", s);
 
- /*
-  * Convert the string to a regular expression, escaping special characters
-  * as needed.
-  */
+  //
+  // Convert the string to a regular expression, escaping special characters
+  // as needed.
+  //
 
   ptr = res;
 
@@ -2592,9 +2593,9 @@ regex_string(const char *s,		/* I - String to compare */
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] regex_string: \"%s\"", res);
 
- /*
-  * Create a case-insensitive regular expression...
-  */
+  //
+  // Create a case-insensitive regular expression...
+  //
 
   if (res[0] && (re = (regex_t *)calloc(1, sizeof(regex_t))) != NULL)
   {
@@ -2612,42 +2613,42 @@ regex_string(const char *s,		/* I - String to compare */
 }
 
 
-/*
- * 'CompareNames()' - Compare two names.
- *
- * This function basically does a _ppd_strcasecmp() of the two strings,
- * but is also aware of numbers so that "a2" < "a100".
- */
+//
+// 'CompareNames()' - Compare two names.
+//
+// This function basically does a _ppd_strcasecmp() of the two strings,
+// but is also aware of numbers so that "a2" < "a100".
+//
 
-int					/* O - Result of comparison */
-CompareNames(const char *s,		/* I - First string */
-	     const char *t)		/* I - Second string */
+int					// O - Result of comparison
+CompareNames(const char *s,		// I - First string
+	     const char *t)		// I - Second string
 {
-  int		diff,			/* Difference between digits */
-		digits;			/* Number of digits */
+  int		diff,			// Difference between digits
+		digits;			// Number of digits
 
 
- /*
-  * Loop through both names, returning only when a difference is
-  * seen.  Also, compare whole numbers rather than just characters, too!
-  */
+  //
+  // Loop through both names, returning only when a difference is
+  // seen.  Also, compare whole numbers rather than just characters, too!
+  //
 
   while (*s && *t)
   {
     if (isdigit(*s & 255) && isdigit(*t & 255))
     {
-     /*
-      * Got a number; start by skipping leading 0's...
-      */
+      //
+      // Got a number; start by skipping leading 0's...
+      //
 
       while (*s == '0')
         s ++;
       while (*t == '0')
         t ++;
 
-     /*
-      * Skip equal digits...
-      */
+      //
+      // Skip equal digits...
+      //
 
       while (isdigit(*s & 255) && *s == *t)
       {
@@ -2655,9 +2656,9 @@ CompareNames(const char *s,		/* I - First string */
 	t ++;
       }
 
-     /*
-      * Bounce out if *s and *t aren't both digits...
-      */
+      //
+      // Bounce out if *s and *t aren't both digits...
+      //
 
       if (isdigit(*s & 255) && !isdigit(*t & 255))
         return (1);
@@ -2671,9 +2672,9 @@ CompareNames(const char *s,		/* I - First string */
       else
         diff = 1;
 
-     /*
-      * Figure out how many more digits there are...
-      */
+      //
+      // Figure out how many more digits there are...
+      //
 
       digits = 0;
       s ++;
@@ -2691,9 +2692,9 @@ CompareNames(const char *s,		/* I - First string */
 	t ++;
       }
 
-     /*
-      * Return if the number or value of the digits is different...
-      */
+      //
+      // Return if the number or value of the digits is different...
+      //
 
       if (digits < 0)
         return (-1);
@@ -2713,9 +2714,9 @@ CompareNames(const char *s,		/* I - First string */
     }
   }
 
- /*
-  * Return the results of the final comparison...
-  */
+  //
+  // Return the results of the final comparison...
+  //
 
   if (*s)
     return (1);
@@ -2726,12 +2727,12 @@ CompareNames(const char *s,		/* I - First string */
 }
 
 
-/*
- * 'CreateStringsArray()' - Create a CUPS array of strings.
- */
+//
+// 'CreateStringsArray()' - Create a CUPS array of strings.
+//
 
-cups_array_t *				/* O - CUPS array */
-CreateStringsArray(const char *s)	/* I - Comma-delimited strings */
+cups_array_t *				// O - CUPS array
+CreateStringsArray(const char *s)	// I - Comma-delimited strings
 {
   if (!s || !*s)
     return (NULL);
@@ -2740,37 +2741,37 @@ CreateStringsArray(const char *s)	/* I - Comma-delimited strings */
 }
 
 
-/*
- * 'ExecCommand()' - Run a program with the correct environment.
- *
- * On macOS, we need to update the CFProcessPath environment variable that
- * is passed in the environment so the child can access its bundled resources.
- */
+//
+// 'ExecCommand()' - Run a program with the correct environment.
+//
+// On macOS, we need to update the CFProcessPath environment variable that
+// is passed in the environment so the child can access its bundled resources.
+//
 
-int					/* O - exec() status */
-ExecCommand(const char *command,		/* I - Full path to program */
-          char       **argv)		/* I - Command-line arguments */
+int					// O - exec() status
+ExecCommand(const char *command,	// I - Full path to program
+	    char       **argv)		// I - Command-line arguments
 {
 #ifdef __APPLE__
-  int	i, j;				/* Looping vars */
-  char	*envp[500],			/* Array of environment variables */
-	cfprocesspath[1024],		/* CFProcessPath environment variable */
-	linkpath[1024];			/* Link path for symlinks... */
-  int	linkbytes;			/* Bytes for link path */
+  int	i, j;				// Looping vars
+  char	*envp[500],			// Array of environment variables
+	cfprocesspath[1024],		// CFProcessPath environment variable
+	linkpath[1024];			// Link path for symlinks...
+  int	linkbytes;			// Bytes for link path
 
 
- /*
-  * Some macOS programs are bundled and need the CFProcessPath environment
-  * variable defined.  If the command is a symlink, resolve the link and point
-  * to the resolved location, otherwise, use the command path itself.
-  */
+  //
+  // Some macOS programs are bundled and need the CFProcessPath environment
+  // variable defined.  If the command is a symlink, resolve the link and point
+  // to the resolved location, otherwise, use the command path itself.
+  //
 
   if ((linkbytes = readlink(command, linkpath, sizeof(linkpath) - 1)) > 0)
   {
-   /*
-    * Yes, this is a symlink to the actual program, nul-terminate and
-    * use it...
-    */
+    //
+    // Yes, this is a symlink to the actual program, nul-terminate and
+    // use it...
+    //
 
     linkpath[linkbytes] = '\0';
 
@@ -2786,10 +2787,10 @@ ExecCommand(const char *command,		/* I - Full path to program */
 
   envp[0] = cfprocesspath;
 
- /*
-  * Copy the rest of the environment except for any CFProcessPath that may
-  * already be there...
-  */
+  //
+  // Copy the rest of the environment except for any CFProcessPath that may
+  // already be there...
+  //
 
   for (i = 1, j = 0;
        environ[j] && i < (int)(sizeof(envp) / sizeof(envp[0]) - 1);
@@ -2799,39 +2800,39 @@ ExecCommand(const char *command,		/* I - Full path to program */
 
   envp[i] = NULL;
 
- /*
-  * Use execve() to run the program...
-  */
+  //
+  // Use execve() to run the program...
+  //
 
   return (execve(command, argv, envp));
 
 #else
- /*
-  * On other operating systems, just call execv() to use the same environment
-  * variables as the parent...
-  */
+  //
+  // On other operating systems, just call execv() to use the same environment
+  // variables as the parent...
+  //
 
   return (execv(command, argv));
-#endif /* __APPLE__ */
+#endif // __APPLE__
 }
 
 
-/*
- * 'PipeCommand()' - Read output from a command.
- */
+//
+// 'PipeCommand()' - Read output from a command.
+//
 
-cups_file_t *				/* O - CUPS file or NULL on error */
-PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
-	    int        *epid,		/* O - Log Process ID or 0 on error */
-	    const char *command,	/* I - Command to run */
-	    char       **argv,		/* I - Arguments to pass to command */
-	    uid_t      user,		/* I - User to run as or 0 for current*/
+cups_file_t *				// O - CUPS file or NULL on error
+PipeCommand(int        *cpid,		// O - Process ID or 0 on error
+	    int        *epid,		// O - Log Process ID or 0 on error
+	    const char *command,	// I - Command to run
+	    char       **argv,		// I - Arguments to pass to command
+	    uid_t      user,		// I - User to run as or 0 for current
 	    cf_logfunc_t log,
 	    void       *ld)
 {
-  int	      fd,			/* Temporary file descriptor */
-	      cfds[2],			/* Output Pipe file descriptors */
-	      efds[2];			/* Error/Log Pipe file descriptors */
+  int	      fd,			// Temporary file descriptor
+	      cfds[2],			// Output Pipe file descriptors
+	      efds[2];			// Error/Log Pipe file descriptors
   cups_file_t *outfp, *logfp;
   char        buf[BUFSIZ];
   cf_loglevel_t log_level;
@@ -2841,9 +2842,9 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
   *cpid = *epid = 0;
   cfds[0] = cfds[1] = efds[0] = efds[1] = -1;
 
- /*
-  * First create the pipes...
-  */
+  //
+  // First create the pipes...
+  //
 
   if (pipe(cfds))
   {
@@ -2861,9 +2862,9 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
       return (NULL);
     }
 
- /*
-  * Set the "close on exec" flag on each end of the pipes...
-  */
+  //
+  // Set the "close on exec" flag on each end of the pipes...
+  //
 
   if (fcntl(cfds[0], F_SETFD, fcntl(cfds[0], F_GETFD) | FD_CLOEXEC))
   {
@@ -2912,15 +2913,15 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
     }
   }
 
- /*
-  * Then run the command...
-  */
+  //
+  // Then run the command...
+  //
 
   if ((*cpid = fork()) < 0)
   {
-   /*
-    * Unable to fork!
-    */
+    //
+    // Unable to fork!
+    //
 
     *cpid = 0;
     close(cfds[0]);
@@ -2939,30 +2940,30 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
   }
   else if (!*cpid)
   {
-   /*
-    * Child (command) comes here...
-    */
+    //
+    // Child (command) comes here...
+    //
 
-    if (!getuid() && user && setuid(user) < 0)	/* Run as restricted user */
+    if (!getuid() && user && setuid(user) < 0)	// Run as restricted user
       exit(errno);
 
     if ((fd = open("/dev/null", O_RDONLY)) > 0)
     {
-      dup2(fd, 0);			/* < /dev/null */
+      dup2(fd, 0);			// < /dev/null
       close(fd);
     }
 
-    dup2(cfds[1], 1);			/* > command pipe */
+    dup2(cfds[1], 1);			// > command pipe
     close(cfds[1]);
 
     if (log)
     {
-      dup2(efds[1], 2);			/* 2> error pipe */
+      dup2(efds[1], 2);			// 2> error pipe
       close(efds[1]);
     }
     else if ((fd = open("/dev/null", O_WRONLY)) > 0)
     {
-      dup2(fd, 2);			/* 2> /dev/null */
+      dup2(fd, 2);			// 2> /dev/null
       close(fd);
     }
 
@@ -2975,29 +2976,29 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "libppd: [PPD Collections] Started %s (PID %d)", argv[0], cpid);
 
- /*
-  * Parent comes here ...
-  */
+  //
+  // Parent comes here ...
+  //
 
   close(cfds[1]);
 
- /*
-  * Open the input side of the pipe...
-  */
+  //
+  // Open the input side of the pipe...
+  //
 
   outfp = cupsFileOpenFd(cfds[0], "r");
 
- /*
-  * Fork the error logging...
-  */
+  //
+  // Fork the error logging...
+  //
 
   if (log)
   {
     if ((*epid = fork()) < 0)
     {
-     /*
-      * Unable to fork!
-      */
+      //
+      // Unable to fork!
+      //
 
       *epid = 0;
       close(efds[0]);
@@ -3014,9 +3015,9 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
     }
     else if (!*epid)
     {
-     /*
-      * Child (logging) comes here...
-      */
+      //
+      // Child (logging) comes here...
+      //
 
       close(cfds[0]);
       close(efds[1]);
@@ -3045,9 +3046,9 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
 	  log(ld, log_level, "libppd: [PPD Collections] %s: %s", argv[0], msg);
 	}
       cupsFileClose(logfp);
-      /* No need to close the fd errfds[0], as cupsFileClose(fp) does this
-	 already */
-      /* Ignore errors of the logging process */
+      // No need to close the fd errfds[0], as cupsFileClose(fp) does this
+      // already
+      // Ignore errors of the logging process
       exit(0);
     }
 
@@ -3055,9 +3056,9 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
 	"libppd: [PPD Collections] Started logging for %s (PID %d)",
 	argv[0], cpid);
 
-   /*
-    * Parent comes here ...
-    */
+    //
+    // Parent comes here ...
+    //
 
     close(efds[0]);
     close(efds[1]);
@@ -3067,10 +3068,10 @@ PipeCommand(int        *cpid,		/* O - Process ID or 0 on error */
 }
 
 
-/*
- * 'ClosePipeCommand()' - Wait for the command called with PipeCommand() to
- *                        finish and return the status.
- */
+//
+// 'ClosePipeCommand()' - Wait for the command called with PipeCommand() to
+//                        finish and return the status.
+//
 
 static int
 ClosePipeCommand(cups_file_t *fp,
@@ -3084,18 +3085,19 @@ ClosePipeCommand(cups_file_t *fp,
   int           wstatus;
 
 
- /*
-  * close the stream...
-  */
+  //
+  // close the stream...
+  //
 
   cupsFileClose(fp);
 
- /*
-  * Wait for the child process to exit...
-  */
+  //
+  // Wait for the child process to exit...
+  //
 
   while (cpid > 0 || epid > 0) {
-    if ((pid = wait(&wstatus)) < 0) {
+    if ((pid = wait(&wstatus)) < 0)
+    {
       if (errno == EINTR)
 	continue;
       else
@@ -3111,24 +3113,30 @@ ClosePipeCommand(cups_file_t *fp,
       }
     }
 
-    /* How did the filter terminate */
-    if (wstatus) {
-      if (WIFEXITED(wstatus)) {
-	/* Via exit() anywhere or return() in the main() function */
+    // How did the filter terminate
+    if (wstatus)
+    {
+      if (WIFEXITED(wstatus))
+      {
+	// Via exit() anywhere or return() in the main() function
 	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] %s (PID %d) stopped with status %d",
 		     (pid == cpid ? "Command" : "Logging"), pid,
 		     WEXITSTATUS(wstatus));
 	status = WEXITSTATUS(wstatus);
-      } else {
-	/* Via signal */
+      }
+      else
+      {
+	// Via signal
 	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "libppd: [PPD Collections] %s (PID %d) crashed on signal %d",
 		     (pid == cpid ? "Command" : "Logging"), pid,
 		     WTERMSIG(wstatus));
 	status = 256 * WTERMSIG(wstatus);
       }
-    } else {
+    }
+    else
+    {
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "libppd: [PPD Collections] %s (PID %d) exited with no errors.",
 		   (pid == cpid ? "Command" : "Logging"), pid);
@@ -3140,5 +3148,5 @@ ClosePipeCommand(cups_file_t *fp,
       epid = -1;
   }
 
-  return status;
+  return (status);
 }

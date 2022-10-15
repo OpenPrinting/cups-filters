@@ -1,15 +1,15 @@
-/*
- * Debugging functions for libppd.
- *
- * Copyright © 2008-2018 by Apple Inc.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Debugging functions for libppd.
+//
+// Copyright © 2008-2018 by Apple Inc.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "string-private.h"
 #include "debug-internal.h"
@@ -18,11 +18,11 @@
 #  include <time.h>
 #  include <io.h>
 #  define getpid (int)GetCurrentProcessId
-int					/* O  - 0 on success, -1 on failure */
-_ppd_gettimeofday(struct timeval *tv,	/* I  - Timeval struct */
-                   void		  *tz)	/* I  - Timezone */
+int					// O  - 0 on success, -1 on failure
+_ppd_gettimeofday(struct timeval *tv,	// I  - Timeval struct
+		  void		  *tz)	// I  - Timezone
 {
-  struct _timeb timebuffer;		/* Time buffer struct */
+  struct _timeb timebuffer;		// Time buffer struct
   _ftime(&timebuffer);
   tv->tv_sec  = (long)timebuffer.time;
   tv->tv_usec = timebuffer.millitm * 1000;
@@ -31,49 +31,49 @@ _ppd_gettimeofday(struct timeval *tv,	/* I  - Timeval struct */
 #else
 #  include <sys/time.h>
 #  include <unistd.h>
-#endif /* _WIN32 */
+#endif // _WIN32
 #include <regex.h>
 #include <fcntl.h>
 
 
 #ifdef DEBUG
-/*
- * Globals...
- */
+//
+// Globals...
+//
 
 int			_ppd_debug_fd = -1;
-					/* Debug log file descriptor */
+					// Debug log file descriptor
 int			_ppd_debug_level = 1;
-					/* Log level (0 to 9) */
+					// Log level (0 to 9)
 
 
-/*
- * Local globals...
- */
+//
+// Local globals...
+//
 
 static regex_t		*debug_filter = NULL;
-					/* Filter expression for messages */
-static int		debug_init = 0;	/* Did we initialize debugging? */
+					// Filter expression for messages
+static int		debug_init = 0;	// Did we initialize debugging?
 
 
-/*
- * '_ppd_debug_printf()' - Write a formatted line to the log.
- */
+//
+// '_ppd_debug_printf()' - Write a formatted line to the log.
+//
 
 void
-_ppd_debug_printf(const char *format,	/* I - Printf-style format string */
-                   ...)			/* I - Additional arguments as needed */
+_ppd_debug_printf(const char *format,	// I - Printf-style format string
+		  ...)			// I - Additional arguments as needed
 {
-  va_list		ap;		/* Pointer to arguments */
-  struct timeval	curtime;	/* Current time */
-  char			buffer[2048];	/* Output buffer */
-  ssize_t		bytes;		/* Number of bytes in buffer */
-  int			level;		/* Log level in message */
+  va_list		ap;		// Pointer to arguments
+  struct timeval	curtime;	// Current time
+  char			buffer[2048];	// Output buffer
+  ssize_t		bytes;		// Number of bytes in buffer
+  int			level;		// Log level in message
 
 
- /*
-  * See if we need to do any logging...
-  */
+  //
+  // See if we need to do any logging...
+  //
 
   if (!debug_init)
     _ppd_debug_set(getenv("PPD_DEBUG_LOG"), getenv("PPD_DEBUG_LEVEL"),
@@ -82,9 +82,9 @@ _ppd_debug_printf(const char *format,	/* I - Printf-style format string */
   if (_ppd_debug_fd < 0)
     return;
 
- /*
-  * Filter as needed...
-  */
+  //
+  // Filter as needed...
+  //
 
   if (isdigit(format[0]))
     level = *format++ - '0';
@@ -96,7 +96,7 @@ _ppd_debug_printf(const char *format,	/* I - Printf-style format string */
 
   if (debug_filter)
   {
-    int	result;				/* Filter result */
+    int	result;				// Filter result
 
     result = regexec(debug_filter, format, 0, NULL, 0);
 
@@ -104,9 +104,9 @@ _ppd_debug_printf(const char *format,	/* I - Printf-style format string */
       return;
   }
 
- /*
-  * Format the message...
-  */
+  //
+  // Format the message...
+  //
 
   gettimeofday(&curtime, NULL);
   snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d.%03d  ",
@@ -115,7 +115,8 @@ _ppd_debug_printf(const char *format,	/* I - Printf-style format string */
 	   (int)(curtime.tv_sec % 60), (int)(curtime.tv_usec / 1000));
 
   va_start(ap, format);
-  bytes = _ppd_safe_vsnprintf(buffer + 19, sizeof(buffer) - 20, format, ap) + 19;
+  bytes = _ppd_safe_vsnprintf(buffer + 19, sizeof(buffer) - 20, format, ap) +
+    19;
   va_end(ap);
 
   if ((size_t)bytes >= (sizeof(buffer) - 1))
@@ -129,30 +130,30 @@ _ppd_debug_printf(const char *format,	/* I - Printf-style format string */
     buffer[bytes]   = '\0';
   }
 
- /*
-  * Write it out...
-  */
+  //
+  // Write it out...
+  //
 
   write(_ppd_debug_fd, buffer, (size_t)bytes);
 }
 
 
-/*
- * '_ppd_debug_puts()' - Write a single line to the log.
- */
+//
+// '_ppd_debug_puts()' - Write a single line to the log.
+//
 
 void
-_ppd_debug_puts(const char *s)		/* I - String to output */
+_ppd_debug_puts(const char *s)		// I - String to output
 {
-  struct timeval	curtime;	/* Current time */
-  char			buffer[2048];	/* Output buffer */
-  ssize_t		bytes;		/* Number of bytes in buffer */
-  int			level;		/* Log level in message */
+  struct timeval	curtime;	// Current time
+  char			buffer[2048];	// Output buffer
+  ssize_t		bytes;		// Number of bytes in buffer
+  int			level;		// Log level in message
 
 
- /*
-  * See if we need to do any logging...
-  */
+  //
+  // See if we need to do any logging...
+  //
 
   if (!debug_init)
     _ppd_debug_set(getenv("PPD_DEBUG_LOG"), getenv("PPD_DEBUG_LEVEL"),
@@ -161,9 +162,9 @@ _ppd_debug_puts(const char *s)		/* I - String to output */
   if (_ppd_debug_fd < 0)
     return;
 
- /*
-  * Filter as needed...
-  */
+  //
+  // Filter as needed...
+  //
 
   if (isdigit(s[0]))
     level = *s++ - '0';
@@ -175,7 +176,7 @@ _ppd_debug_puts(const char *s)		/* I - String to output */
 
   if (debug_filter)
   {
-    int	result;				/* Filter result */
+    int	result;				// Filter result
 
     result = regexec(debug_filter, s, 0, NULL, 0);
 
@@ -183,9 +184,9 @@ _ppd_debug_puts(const char *s)		/* I - String to output */
       return;
   }
 
- /*
-  * Format the message...
-  */
+  //
+  // Format the message...
+  //
 
   gettimeofday(&curtime, NULL);
   bytes = snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d.%03d  %s",
@@ -205,30 +206,30 @@ _ppd_debug_puts(const char *s)		/* I - String to output */
     buffer[bytes]   = '\0';
   }
 
- /*
-  * Write it out...
-  */
+  //
+  // Write it out...
+  //
 
   write(_ppd_debug_fd, buffer, (size_t)bytes);
 }
 
 
-/*
- * '_ppd_debug_set()' - Enable or disable debug logging.
- */
+//
+// '_ppd_debug_set()' - Enable or disable debug logging.
+//
 
 void
-_ppd_debug_set(const char *logfile,	/* I - Log file or NULL */
-                const char *level,	/* I - Log level or NULL */
-		const char *filter,	/* I - Filter string or NULL */
-		int        force)	/* I - Force initialization */
+_ppd_debug_set(const char *logfile,	// I - Log file or NULL
+	       const char *level,	// I - Log level or NULL
+	       const char *filter,	// I - Filter string or NULL
+	       int        force)	// I - Force initialization
 {
 
   if (!debug_init || force)
   {
-   /*
-    * Restore debug settings to defaults...
-    */
+    //
+    // Restore debug settings to defaults...
+    //
 
     if (_ppd_debug_fd != -1)
     {
@@ -244,9 +245,9 @@ _ppd_debug_set(const char *logfile,	/* I - Log file or NULL */
 
     _ppd_debug_level = 1;
 
-   /*
-    * Open logs, set log levels, etc.
-    */
+    //
+    // Open logs, set log levels, etc.
+    //
 
     if (!logfile)
       _ppd_debug_fd = -1;
@@ -254,7 +255,7 @@ _ppd_debug_set(const char *logfile,	/* I - Log file or NULL */
       _ppd_debug_fd = 2;
     else
     {
-      char	buffer[1024];		/* Filename buffer */
+      char	buffer[1024];		// Filename buffer
 
       snprintf(buffer, sizeof(buffer), logfile, getpid());
 
@@ -283,60 +284,59 @@ _ppd_debug_set(const char *logfile,	/* I - Log file or NULL */
 
     debug_init = 1;
   }
-
 }
 
 
 #else
-/*
- * '_ppd_debug_set()' - Enable or disable debug logging.
- */
+//
+// '_ppd_debug_set()' - Enable or disable debug logging.
+//
 
 void
-_ppd_debug_set(const char *logfile,	/* I - Log file or NULL */
-		const char *level,	/* I - Log level or NULL */
-		const char *filter,	/* I - Filter string or NULL */
-		int        force)	/* I - Force initialization */
+_ppd_debug_set(const char *logfile,	// I - Log file or NULL
+	       const char *level,	// I - Log level or NULL
+	       const char *filter,	// I - Filter string or NULL
+	       int        force)	// I - Force initialization
 {
   (void)logfile;
   (void)level;
   (void)filter;
   (void)force;
 }
-#endif /* DEBUG */
+#endif // DEBUG
 
 
-/*
- * '_ppd_safe_vsnprintf()' - Format a string into a fixed size buffer,
- *                            quoting special characters.
- */
+//
+// '_ppd_safe_vsnprintf()' - Format a string into a fixed size buffer,
+//                           quoting special characters.
+//
 
-ssize_t					/* O - Number of bytes formatted */
+ssize_t					// O - Number of bytes formatted
 _ppd_safe_vsnprintf(
-    char       *buffer,			/* O - Output buffer */
-    size_t     bufsize,			/* O - Size of output buffer */
-    const char *format,			/* I - printf-style format string */
-    va_list    ap)			/* I - Pointer to additional arguments */
+    char       *buffer,			// O - Output buffer
+    size_t     bufsize,			// O - Size of output buffer
+    const char *format,			// I - printf-style format string
+    va_list    ap)			// I - Pointer to additional arguments
 {
-  char		*bufptr,		/* Pointer to position in buffer */
-		*bufend,		/* Pointer to end of buffer */
-		size,			/* Size character (h, l, L) */
-		type;			/* Format type character */
-  int		width,			/* Width of field */
-		prec;			/* Number of characters of precision */
-  char		tformat[100],		/* Temporary format string for snprintf() */
-		*tptr,			/* Pointer into temporary format */
-		temp[1024];		/* Buffer for formatted numbers */
-  char		*s;			/* Pointer to string */
-  ssize_t	bytes;			/* Total number of bytes needed */
+  char		*bufptr,		// Pointer to position in buffer
+		*bufend,		// Pointer to end of buffer
+		size,			// Size character (h, l, L)
+		type;			// Format type character
+  int		width,			// Width of field
+		prec;			// Number of characters of precision
+  char		tformat[100],		// Temporary format string for snprintf()
+		*tptr,			// Pointer into temporary format
+		temp[1024];		// Buffer for formatted numbers
+  char		*s;			// Pointer to string
+  ssize_t	bytes;			// Total number of bytes needed
 
 
   if (!buffer || bufsize < 2 || !format)
     return (-1);
 
- /*
-  * Loop through the format string, formatting as needed...
-  */
+  //
+  // Loop through the format string, formatting as needed...
+  //
 
   bufptr = buffer;
   bufend = buffer + bufsize - 1;
@@ -362,9 +362,9 @@ _ppd_safe_vsnprintf(
 
       if (*format == '*')
       {
-       /*
-        * Get width from argument...
-	*/
+	//
+        // Get width from argument...
+	//
 
 	format ++;
 	width = va_arg(ap, int);
@@ -394,9 +394,9 @@ _ppd_safe_vsnprintf(
 
         if (*format == '*')
 	{
-         /*
-	  * Get precision from argument...
-	  */
+	  //
+	  // Get precision from argument...
+	  // 
 
 	  format ++;
 	  prec = va_arg(ap, int);
@@ -451,7 +451,7 @@ _ppd_safe_vsnprintf(
 
       switch (type)
       {
-	case 'E' : /* Floating point formats */
+	case 'E' : // Floating point formats
 	case 'G' :
 	case 'e' :
 	case 'f' :
@@ -470,7 +470,7 @@ _ppd_safe_vsnprintf(
 	    }
 	    break;
 
-        case 'B' : /* Integer formats */
+        case 'B' : // Integer formats
 	case 'X' :
 	case 'b' :
         case 'd' :
@@ -485,7 +485,7 @@ _ppd_safe_vsnprintf(
             if (size == 'L')
 	      snprintf(temp, sizeof(temp), tformat, va_arg(ap, long long));
 	    else
-#  endif /* HAVE_LONG_LONG */
+#  endif // HAVE_LONG_LONG
             if (size == 'l')
 	      snprintf(temp, sizeof(temp), tformat, va_arg(ap, long));
 	    else
@@ -500,7 +500,7 @@ _ppd_safe_vsnprintf(
 	    }
 	    break;
 
-	case 'p' : /* Pointer value */
+	case 'p' : // Pointer value
 	    if ((size_t)(width + 2) > sizeof(temp))
 	      break;
 
@@ -515,7 +515,7 @@ _ppd_safe_vsnprintf(
 	    }
 	    break;
 
-        case 'c' : /* Character or character array */
+        case 'c' : // Character or character array
 	    bytes += width;
 
 	    if (bufptr)
@@ -533,14 +533,14 @@ _ppd_safe_vsnprintf(
 	    }
 	    break;
 
-	case 's' : /* String */
+	case 's' : // String
 	    if ((s = va_arg(ap, char *)) == NULL)
 	      s = "(null)";
 
-           /*
-	    * Copy the C string, replacing control chars and \ with
-	    * C character escapes...
-	    */
+	    //
+	    // Copy the C string, replacing control chars and \ with
+	    // C character escapes...
+	    //
 
             for (bufend --; *s && bufptr < bufend; s ++)
 	    {
@@ -601,7 +601,7 @@ _ppd_safe_vsnprintf(
             bufend ++;
 	    break;
 
-	case 'n' : /* Output number of chars so far */
+	case 'n' : // Output number of chars so far
 	    *(va_arg(ap, int *)) = (int)bytes;
 	    break;
       }
@@ -617,9 +617,9 @@ _ppd_safe_vsnprintf(
     }
   }
 
- /*
-  * Nul-terminate the string and return the number of characters needed.
-  */
+  //
+  // Nul-terminate the string and return the number of characters needed.
+  //
 
   *bufptr = '\0';
 

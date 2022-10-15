@@ -1,49 +1,49 @@
-/*
- * snprintf functions for libppd.
- *
- * Copyright © 2007-2019 by Apple Inc.
- * Copyright © 1997-2007 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// snprintf functions for libppd.
+//
+// Copyright © 2007-2019 by Apple Inc.
+// Copyright © 1997-2007 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "string-private.h"
 
 
 #ifndef HAVE_VSNPRINTF
-/*
- * '_ppd_vsnprintf()' - Format a string into a fixed size buffer.
- */
+//
+// '_ppd_vsnprintf()' - Format a string into a fixed size buffer.
+//
 
-int					/* O - Number of bytes formatted */
-_ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
-                size_t     bufsize,	/* O - Size of output buffer */
-	        const char *format,	/* I - printf-style format string */
-	        va_list    ap)		/* I - Pointer to additional arguments */
+int					// O - Number of bytes formatted
+_ppd_vsnprintf(char       *buffer,	// O - Output buffer
+	       size_t     bufsize,	// O - Size of output buffer
+	       const char *format,	// I - printf-style format string
+	       va_list    ap)		// I - Pointer to additional arguments
 {
-  char		*bufptr,		/* Pointer to position in buffer */
-		*bufend,		/* Pointer to end of buffer */
-		sign,			/* Sign of format width */
-		type;			/* Format type character */
-  int		width,			/* Width of field */
-		prec;			/* Number of characters of precision */
-  char		tformat[100],		/* Temporary format string for sprintf() */
-		*tptr,			/* Pointer into temporary format */
-		temp[1024];		/* Buffer for formatted numbers */
-  size_t	templen;		/* Length of "temp" */
-  char		*s;			/* Pointer to string */
-  int		slen;			/* Length of string */
-  int		bytes;			/* Total number of bytes needed */
+  char		*bufptr,		// Pointer to position in buffer
+		*bufend,		// Pointer to end of buffer
+		sign,			// Sign of format width
+		type;			// Format type character
+  int		width,			// Width of field
+		prec;			// Number of characters of precision
+  char		tformat[100],		// Temporary format string for sprintf()
+		*tptr,			// Pointer into temporary format
+		temp[1024];		// Buffer for formatted numbers
+  size_t	templen;		// Length of "temp"
+  char		*s;			// Pointer to string
+  int		slen;			// Length of string
+  int		bytes;			// Total number of bytes needed
 
 
- /*
-  * Loop through the format string, formatting as needed...
-  */
+  //
+  // Loop through the format string, formatting as needed...
+  //
 
   bufptr = buffer;
   bufend = buffer + bufsize - 1;
@@ -73,9 +73,9 @@ _ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
 
       if (*format == '*')
       {
-       /*
-        * Get width from argument...
-	*/
+	//
+        // Get width from argument...
+	//
 
 	format ++;
 	width = va_arg(ap, int);
@@ -105,9 +105,9 @@ _ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
 
         if (*format == '*')
 	{
-         /*
-	  * Get precision from argument...
-	  */
+	  //
+	  // Get precision from argument...
+	  //
 
 	  format ++;
 	  prec = va_arg(ap, int);
@@ -158,7 +158,7 @@ _ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
 
       switch (type)
       {
-	case 'E' : /* Floating point formats */
+	case 'E' : // Floating point formats
 	case 'G' :
 	case 'e' :
 	case 'f' :
@@ -186,7 +186,7 @@ _ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
 	    }
 	    break;
 
-        case 'B' : /* Integer formats */
+        case 'B' : // Integer formats
 	case 'X' :
 	case 'b' :
         case 'd' :
@@ -217,7 +217,7 @@ _ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
 	    }
 	    break;
 
-	case 'p' : /* Pointer value */
+	case 'p' : // Pointer value
 	    if ((width + 2) > sizeof(temp))
 	      break;
 
@@ -241,7 +241,7 @@ _ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
 	    }
 	    break;
 
-        case 'c' : /* Character or character array */
+        case 'c' : // Character or character array
 	    bytes += width;
 
 	    if (bufptr)
@@ -259,7 +259,7 @@ _ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
 	    }
 	    break;
 
-	case 's' : /* String */
+	case 's' : // String
 	    if ((s = va_arg(ap, char *)) == NULL)
 	      s = "(null)";
 
@@ -292,7 +292,7 @@ _ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
 	    }
 	    break;
 
-	case 'n' : /* Output number of chars so far */
+	case 'n' : // Output number of chars so far
 	    *(va_arg(ap, int *)) = bytes;
 	    break;
       }
@@ -308,30 +308,30 @@ _ppd_vsnprintf(char       *buffer,	/* O - Output buffer */
     }
   }
 
- /*
-  * Nul-terminate the string and return the number of characters needed.
-  */
+  //
+  // Nul-terminate the string and return the number of characters needed.
+  //
 
   *bufptr = '\0';
 
   return (bytes);
 }
-#endif /* !HAVE_VSNPRINT */
+#endif // !HAVE_VSNPRINT
 
 
 #ifndef HAVE_SNPRINTF
-/*
- * '_ppd_snprintf()' - Format a string into a fixed size buffer.
- */
+//
+// '_ppd_snprintf()' - Format a string into a fixed size buffer.
+//
 
-int					/* O - Number of bytes formatted */
-_ppd_snprintf(char       *buffer,	/* O - Output buffer */
-               size_t     bufsize,	/* O - Size of output buffer */
-               const char *format,	/* I - printf-style format string */
-	       ...)			/* I - Additional arguments as needed */
+int					// O - Number of bytes formatted
+_ppd_snprintf(char       *buffer,	// O - Output buffer
+               size_t     bufsize,	// O - Size of output buffer
+               const char *format,	// I - printf-style format string
+	       ...)			// I - Additional arguments as needed
 {
-  int		bytes;			/* Number of bytes formatted */
-  va_list 	ap;			/* Pointer to additional arguments */
+  int		bytes;			// Number of bytes formatted
+  va_list 	ap;			// Pointer to additional arguments
 
 
   va_start(ap, format);
@@ -340,4 +340,4 @@ _ppd_snprintf(char       *buffer,	/* O - Output buffer */
 
   return (bytes);
 }
-#endif /* !HAVE_SNPRINTF */
+#endif // !HAVE_SNPRINTF

@@ -1,27 +1,27 @@
-/*
- * Option encoding routines for libppd.
- *
- * Copyright © 2007-2019 by Apple Inc.
- * Copyright © 1997-2007 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// Option encoding routines for libppd.
+//
+// Copyright © 2007-2019 by Apple Inc.
+// Copyright © 1997-2007 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "ipp-private.h"
 #include "debug-internal.h"
 
 
-/*
- * Local list of option names, the value tags they should use, and the list of
- * supported operations...
- *
- * **** THIS LIST MUST BE SORTED BY ATTRIBUTE NAME ****
- */
+//
+// Local list of option names, the value tags they should use, and the list of
+// supported operations...
+//
+// **** THIS LIST MUST BE SORTED BY ATTRIBUTE NAME ****
+//
 
 static const ipp_op_t ipp_job_creation[] =
 {
@@ -93,9 +93,12 @@ static const _ppd_ipp_option_t ipp_options[] =
   { 0, "copies",		IPP_TAG_INTEGER,	IPP_TAG_JOB,
 							IPP_TAG_DOCUMENT },
   { 0, "copies-default",	IPP_TAG_INTEGER,	IPP_TAG_PRINTER },
-  { 0, "date-time-at-completed",IPP_TAG_DATE,		IPP_TAG_ZERO }, /* never send as option */
-  { 0, "date-time-at-creation",	IPP_TAG_DATE,		IPP_TAG_ZERO }, /* never send as option */
-  { 0, "date-time-at-processing",IPP_TAG_DATE,		IPP_TAG_ZERO }, /* never send as option */
+  { 0, "date-time-at-completed",IPP_TAG_DATE,		IPP_TAG_ZERO },
+                                                         // never send as option
+  { 0, "date-time-at-creation",	IPP_TAG_DATE,		IPP_TAG_ZERO },
+                                                         // never send as option
+  { 0, "date-time-at-processing",IPP_TAG_DATE,		IPP_TAG_ZERO },
+                                                         // never send as option
   { 0, "device-uri",		IPP_TAG_URI,		IPP_TAG_PRINTER },
   { 1, "document-copies",	IPP_TAG_RANGE,		IPP_TAG_JOB,
 							IPP_TAG_DOCUMENT,
@@ -138,19 +141,24 @@ static const _ppd_ipp_option_t ipp_options[] =
   { 0, "job-cancel-after-default", IPP_TAG_INTEGER,	IPP_TAG_PRINTER },
   { 0, "job-hold-until",	IPP_TAG_KEYWORD,	IPP_TAG_JOB },
   { 0, "job-hold-until-default", IPP_TAG_KEYWORD,	IPP_TAG_PRINTER },
-  { 0, "job-id",		IPP_TAG_INTEGER,	IPP_TAG_ZERO }, /* never send as option */
+  { 0, "job-id",		IPP_TAG_INTEGER,	IPP_TAG_ZERO },
+                                                         // never send as option
   { 0, "job-impressions",	IPP_TAG_INTEGER,	IPP_TAG_OPERATION },
-  { 0, "job-impressions-completed", IPP_TAG_INTEGER,	IPP_TAG_ZERO }, /* never send as option */
+  { 0, "job-impressions-completed", IPP_TAG_INTEGER,	IPP_TAG_ZERO },
+                                                         // never send as option
   { 0, "job-k-limit",		IPP_TAG_INTEGER,	IPP_TAG_PRINTER },
   { 0, "job-k-octets",		IPP_TAG_INTEGER,	IPP_TAG_OPERATION },
-  { 0, "job-k-octets-completed",IPP_TAG_INTEGER,	IPP_TAG_ZERO }, /* never send as option */
+  { 0, "job-k-octets-completed",IPP_TAG_INTEGER,	IPP_TAG_ZERO },
+                                                         // never send as option
   { 0, "job-media-sheets",	IPP_TAG_INTEGER,	IPP_TAG_OPERATION },
-  { 0, "job-media-sheets-completed", IPP_TAG_INTEGER,	IPP_TAG_ZERO }, /* never send as option */
+  { 0, "job-media-sheets-completed", IPP_TAG_INTEGER,	IPP_TAG_ZERO },
+                                                         // never send as option
   { 0, "job-name",		IPP_TAG_NAME,		IPP_TAG_OPERATION,
 							IPP_TAG_JOB },
   { 0, "job-page-limit",	IPP_TAG_INTEGER,	IPP_TAG_PRINTER },
   { 0, "job-pages",		IPP_TAG_INTEGER,	IPP_TAG_OPERATION },
-  { 0, "job-pages-completed",	IPP_TAG_INTEGER,	IPP_TAG_ZERO }, /* never send as option */
+  { 0, "job-pages-completed",	IPP_TAG_INTEGER,	IPP_TAG_ZERO },
+                                                         // never send as option
   { 0, "job-password",          IPP_TAG_STRING,         IPP_TAG_OPERATION,
 							IPP_TAG_ZERO,
 							ipp_job_creation },
@@ -162,9 +170,12 @@ static const _ppd_ipp_option_t ipp_options[] =
   { 0, "job-quota-period",	IPP_TAG_INTEGER,	IPP_TAG_PRINTER },
   { 1, "job-sheets",		IPP_TAG_NAME,		IPP_TAG_JOB },
   { 1, "job-sheets-default",	IPP_TAG_NAME,		IPP_TAG_PRINTER },
-  { 0, "job-state",		IPP_TAG_ENUM,		IPP_TAG_ZERO }, /* never send as option */
-  { 0, "job-state-message",	IPP_TAG_TEXT,		IPP_TAG_ZERO }, /* never send as option */
-  { 0, "job-state-reasons",	IPP_TAG_KEYWORD,	IPP_TAG_ZERO }, /* never send as option */
+  { 0, "job-state",		IPP_TAG_ENUM,		IPP_TAG_ZERO },
+                                                         // never send as option
+  { 0, "job-state-message",	IPP_TAG_TEXT,		IPP_TAG_ZERO },
+                                                         // never send as option
+  { 0, "job-state-reasons",	IPP_TAG_KEYWORD,	IPP_TAG_ZERO },
+                                                         // never send as option
   { 0, "job-uuid",		IPP_TAG_URI,		IPP_TAG_JOB },
   { 0, "landscape",		IPP_TAG_BOOLEAN,	IPP_TAG_JOB },
   { 1, "marker-change-time",	IPP_TAG_INTEGER,	IPP_TAG_PRINTER },
@@ -340,9 +351,12 @@ static const _ppd_ipp_option_t ipp_options[] =
   { 0, "sides",			IPP_TAG_KEYWORD,	IPP_TAG_JOB,
 							IPP_TAG_DOCUMENT },
   { 0, "sides-default",		IPP_TAG_KEYWORD,	IPP_TAG_PRINTER },
-  { 0, "time-at-completed",	IPP_TAG_INTEGER,	IPP_TAG_ZERO }, /* never send as option */
-  { 0, "time-at-creation",	IPP_TAG_INTEGER,	IPP_TAG_ZERO }, /* never send as option */
-  { 0, "time-at-processing",	IPP_TAG_INTEGER,	IPP_TAG_ZERO }, /* never send as option */
+  { 0, "time-at-completed",	IPP_TAG_INTEGER,	IPP_TAG_ZERO },
+                                                         // never send as option
+  { 0, "time-at-creation",	IPP_TAG_INTEGER,	IPP_TAG_ZERO },
+                                                         // never send as option
+  { 0, "time-at-processing",	IPP_TAG_INTEGER,	IPP_TAG_ZERO },
+                                                         // never send as option
   { 0, "wrap",			IPP_TAG_BOOLEAN,	IPP_TAG_JOB },
   { 0, "wrap-default",		IPP_TAG_BOOLEAN,	IPP_TAG_PRINTER },
   { 0, "x-dimension",		IPP_TAG_INTEGER,	IPP_TAG_JOB,
@@ -352,45 +366,46 @@ static const _ppd_ipp_option_t ipp_options[] =
 };
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static int	ppd_compare_ipp_options(_ppd_ipp_option_t *a,
 					_ppd_ipp_option_t *b);
 
 
-/*
- * '_ppdIppFindOption()' - Find the attribute information for an option.
- */
+//
+// '_ppdIppFindOption()' - Find the attribute information for an option.
+//
 
-_ppd_ipp_option_t *				/* O - Attribute information */
-_ppdIppFindOption(const char *name)	/* I - Option/attribute name */
+_ppd_ipp_option_t *				// O - Attribute information
+_ppdIppFindOption(const char *name)		// I - Option/attribute name
 {
-  _ppd_ipp_option_t	key;			/* Search key */
+  _ppd_ipp_option_t	key;			// Search key
 
 
- /*
-  * Lookup the proper value and group tags for this option...
-  */
+  //
+  // Lookup the proper value and group tags for this option...
+  //
 
   key.name = name;
 
   return ((_ppd_ipp_option_t *)bsearch(&key, ipp_options,
-                                   sizeof(ipp_options) / sizeof(ipp_options[0]),
-				   sizeof(ipp_options[0]),
-				   (int (*)(const void *, const void *))
+				       sizeof(ipp_options) /
+				       sizeof(ipp_options[0]),
+				       sizeof(ipp_options[0]),
+				       (int (*)(const void *, const void *))
 				       ppd_compare_ipp_options));
 }
 
 
-/*
- * 'ppd_compare_ipp_options()' - Compare two IPP options.
- */
+//
+// 'ppd_compare_ipp_options()' - Compare two IPP options.
+//
 
-static int					/* O - Result of comparison */
-ppd_compare_ipp_options(_ppd_ipp_option_t *a,	/* I - First option */
-			_ppd_ipp_option_t *b)	/* I - Second option */
+static int					// O - Result of comparison
+ppd_compare_ipp_options(_ppd_ipp_option_t *a,	// I - First option
+			_ppd_ipp_option_t *b)	// I - Second option
 {
   return (strcmp(a->name, b->name));
 }

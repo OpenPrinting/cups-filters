@@ -1,5 +1,5 @@
 //
-// Source class for the CUPS PPD Compiler.
+// Source class for the CUPS PPD Compiler in libppd.
 //
 // Copyright 2007-2018 by Apple Inc.
 // Copyright 2002-2007 by Easy Software Products.
@@ -1304,8 +1304,8 @@ ppdcSource::get_integer(const char *v)	// I - Value string
         // NAME logicop value
 	for (newv = (char *)v + 1;
 	     *newv && (isalnum(*newv & 255) || *newv == '_');
-	     newv ++)
-	  /* do nothing */;
+	     newv ++);
+	  // do nothing
 
         ch    = *newv;
 	*newv = '\0';
@@ -2283,7 +2283,7 @@ ppdcSource::quotef(cups_file_t *fp,	// I - File to write to
             if (size == 'L')
 	      bytes += cupsFilePrintf(fp, tformat, va_arg(ap, long long));
 	    else
-#  endif /* HAVE_LONG_LONG */
+#  endif // HAVE_LONG_LONG
             if (size == 'l')
 	      bytes += cupsFilePrintf(fp, tformat, va_arg(ap, long));
 	    else

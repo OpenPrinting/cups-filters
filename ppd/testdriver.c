@@ -1,47 +1,45 @@
-/*
- *   Sample/test driver interface program for CUPS.
- *
- *   This program handles listing and installing both static PPD files
- *   in CUPS_DATADIR/model and dynamically generated PPD files using
- *   the driver helper programs in CUPS_SERVERBIN/driver.
- *
- *   Copyright 2007-2010 by Apple Inc.
- *   Copyright 1997-2006 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   main()      - Enumerate or display PPD files.
- *   cat_ppd()   - Display a PPD file.
- *   list_ppds() - List PPDs.
- *
- * Compile with:gcc -o testdriver testdriver.c -I.. -lppd -lcups
- */
+//
+//   Sample/test driver interface program for libppd.
+//
+//   This program handles listing and installing both static PPD files
+//   in CUPS_DATADIR/model and dynamically generated PPD files using
+//   the driver helper programs in CUPS_SERVERBIN/driver.
+//
+//   Copyright 2007-2010 by Apple Inc.
+//   Copyright 1997-2006 by Easy Software Products.
+//
+//   Licensed under Apache License v2.0.  See the file "LICENSE" for more
+//   information.
+//
+// Contents:
+//
+//   main()      - Enumerate or display PPD files.
+//   cat_ppd()   - Display a PPD file.
+//   list_ppds() - List PPDs.
+//
+// Compile with:gcc -o testdriver testdriver.c -I.. -lppd -lcups
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include <ppd/ppd.h>
 #include <ppd/string-private.h>
 #include <cups/cups.h>
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static int	cat_ppd(const char *uri);
 static int	list_ppds(const char *name);
 
 
-/*
- * Sample data...
- */
+//
+// Sample data...
+//
 
 static const char *models[][2] =
 		{
@@ -51,13 +49,13 @@ static const char *models[][2] =
 		};
 
 
-/*
- * 'main()' - Enumerate or display PPD files.
- */
+//
+// 'main()' - Enumerate or display PPD files.
+//
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line args */
-     char *argv[])			/* I - Command-line arguments */
+int					// O - Exit status
+main(int  argc,				// I - Number of command-line args
+     char *argv[])			// I - Command-line arguments
 {
   if (argc == 2 && !strcmp(argv[1], "list"))
     return (list_ppds(argv[0]));
@@ -70,20 +68,20 @@ main(int  argc,				/* I - Number of command-line args */
 }
 
 
-/*
- * 'cat_ppd()' - Display a PPD file.
- */
+//
+// 'cat_ppd()' - Display a PPD file.
+//
 
-static int				/* O - Exit status */
-cat_ppd(const char *uri)		/* I - PPD URI */
+static int				// O - Exit status
+cat_ppd(const char *uri)		// I - PPD URI
 {
-  int		i;			/* Looping var */
-  char		scheme[255],		/* URI scheme */
-		userpass[255],		/* Username/password (unused) */
-		hostname[255],		/* Hostname (unused) */
-		resource[1024];		/* Resource name */
-  int		port;			/* Port (unused) */
-  const char	*name;			/* Pointer to name in URI */
+  int		i;			// Looping var
+  char		scheme[255],		// URI scheme
+		userpass[255],		// Username/password (unused)
+		hostname[255],		// Hostname (unused)
+		resource[1024];		// Resource name
+  int		port;			// Port (unused)
+  const char	*name;			// Pointer to name in URI
 
 
   if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme),
@@ -99,9 +97,10 @@ cat_ppd(const char *uri)		/* I - PPD URI */
   for (i = 0 ; i < (int)(sizeof(models) / sizeof(models[0])); i ++)
     if (!strcmp(name, models[i][0]))
     {
-     /*
-      * Actually display the PPD file...
-      */
+      //
+      // Actually display the PPD file...
+      //
+
       puts("*PPD-Adobe: \"4.3\"");
 
       puts("*LanguageEncoding: ISOLatin1");
@@ -147,15 +146,15 @@ cat_ppd(const char *uri)		/* I - PPD URI */
 }
 
 
-/*
- * 'list_ppds()' - List PPDs.
- */
+//
+// 'list_ppds()' - List PPDs.
+//
 
-static int				/* O - Exit status */
-list_ppds(const char *name)		/* I - Program name */
+static int				// O - Exit status
+list_ppds(const char *name)		// I - Program name
 {
-  int		i;			/* Looping var */
-  const char	*base;			/* Base name of program */
+  int		i;			// Looping var
+  const char	*base;			// Base name of program
 
 
   if ((base = strrchr(name, '/')) != NULL)
@@ -169,4 +168,3 @@ list_ppds(const char *name)		/* I - Program name */
 
   return (0);
 }
-

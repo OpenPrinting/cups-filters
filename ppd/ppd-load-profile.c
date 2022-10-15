@@ -1,26 +1,24 @@
-/*
- *   PPD color profile attribute lookup functions for libppd.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   ppdFindColorAttr() - Find a PPD attribute based on the colormodel,
- *                        media, and resolution.
- *   ppdLutLoad()       - Load a LUT from a PPD file.
- *   ppdRGBLoad()       - Load a RGB color profile from a PPD file.
- *   ppdCMYKLoad()      - Load a CMYK color profile from PPD attributes.
- */
+//
+//   PPD color profile attribute lookup functions for libppd.
+//
+//   Copyright 2007-2011 by Apple Inc.
+//   Copyright 1993-2005 by Easy Software Products.
+//
+//   Licensed under Apache License v2.0.  See the file "LICENSE" for more
+//   information.
+//
+// Contents:
+//
+//   ppdFindColorAttr() - Find a PPD attribute based on the colormodel,
+//                        media, and resolution.
+//   ppdLutLoad()       - Load a LUT from a PPD file.
+//   ppdRGBLoad()       - Load a RGB color profile from a PPD file.
+//   ppdCMYKLoad()      - Load a CMYK color profile from PPD attributes.
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include <config.h>
 #include "ppd.h"
@@ -30,45 +28,45 @@
 #include <ctype.h>
 
 
-/*
- * 'ppdFindColorAttr()' - Find a PPD attribute based on the colormodel,
- *                        media, and resolution.
- */
+//
+// 'ppdFindColorAttr()' - Find a PPD attribute based on the colormodel,
+//                        media, and resolution.
+//
 
-ppd_attr_t *					/* O - Matching attribute or
-						       NULL */
-ppdFindColorAttr(ppd_file_t *ppd,		/* I - PPD file */
-		 const char *name,		/* I - Attribute name */
-		 const char *colormodel,	/* I - Color model */
-		 const char *media,		/* I - Media type */
-		 const char *resolution,	/* I - Resolution */
-		 char       *spec,		/* O - Final selection string */
-		 int        specsize,		/* I - Size of string buffer */
-		 cf_logfunc_t log,      	/* I - Log function */
-		 void       *ld)		/* I - Log function data */
+ppd_attr_t *					// O - Matching attribute or
+						//     NULL
+ppdFindColorAttr(ppd_file_t *ppd,		// I - PPD file
+		 const char *name,		// I - Attribute name
+		 const char *colormodel,	// I - Color model
+		 const char *media,		// I - Media type
+		 const char *resolution,	// I - Resolution
+		 char       *spec,		// O - Final selection string
+		 int        specsize,		// I - Size of string buffer
+		 cf_logfunc_t log,      	// I - Log function
+		 void       *ld)		// I - Log function data
 {
-  ppd_attr_t	*attr;			/* Attribute */
+  ppd_attr_t	*attr;			// Attribute
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!ppd || !name || !colormodel || !media || !resolution || !spec ||
       specsize < IPP_MAX_NAME)
     return (NULL);
 
- /*
-  * Look for the attribute with the following keywords:
-  *
-  *     ColorModel.MediaType.Resolution
-  *     ColorModel.Resolution
-  *     ColorModel
-  *     MediaType.Resolution
-  *     MediaType
-  *     Resolution
-  *     ""
-  */
+  //
+  // Look for the attribute with the following keywords:
+  //
+  //     ColorModel.MediaType.Resolution
+  //     ColorModel.Resolution
+  //     ColorModel
+  //     MediaType.Resolution
+  //     MediaType
+  //     Resolution
+  //     ""
+  //
 
   snprintf(spec, specsize, "%s.%s.%s", colormodel, media, resolution);
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
@@ -119,36 +117,36 @@ ppdFindColorAttr(ppd_file_t *ppd,		/* I - PPD file */
 }
 
  
-/*
- * 'ppdLutLoad()' - Load a LUT from a PPD file.
- */
+//
+// 'ppdLutLoad()' - Load a LUT from a PPD file.
+//
 
-cf_lut_t *				/* O - New lookup table */
-ppdLutLoad(ppd_file_t *ppd,		/* I - PPD file */
-            const char *colormodel,	/* I - Color model */
-            const char *media,		/* I - Media type */
-            const char *resolution,	/* I - Resolution */
-	    const char *ink,		/* I - Ink name */
-	    cf_logfunc_t log,       /* I - Log function */
-	    void       *ld)             /* I - Log function data */
+cf_lut_t *				// O - New lookup table
+ppdLutLoad(ppd_file_t *ppd,		// I - PPD file
+            const char *colormodel,	// I - Color model
+            const char *media,		// I - Media type
+            const char *resolution,	// I - Resolution
+	    const char *ink,		// I - Ink name
+	    cf_logfunc_t log,           // I - Log function
+	    void       *ld)             // I - Log function data
 {
-  char		name[PPD_MAX_NAME],	/* Attribute name */
-		spec[PPD_MAX_NAME];	/* Attribute spec */
-  ppd_attr_t	*attr;			/* Attribute */
-  int		nvals;			/* Number of values */
-  float		vals[4];		/* Values */
+  char		name[PPD_MAX_NAME],	// Attribute name
+		spec[PPD_MAX_NAME];	// Attribute spec
+  ppd_attr_t	*attr;			// Attribute
+  int		nvals;			// Number of values
+  float		vals[4];		// Values
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!ppd || !colormodel || !media || !resolution || !ink)
     return (NULL);
 
- /*
-  * Try to find the LUT values...
-  */
+  //
+  // Try to find the LUT values...
+  //
 
   snprintf(name, sizeof(name), "cups%sDither", ink);
 
@@ -174,36 +172,36 @@ ppdLutLoad(ppd_file_t *ppd,		/* I - PPD file */
 }
 
 
-/*
- * 'ppdRGBLoad()' - Load a RGB color profile from a PPD file.
- */
+//
+// 'ppdRGBLoad()' - Load a RGB color profile from a PPD file.
+//
 
-cf_rgb_t *				/* O - New color profile */
-ppdRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
-            const char *colormodel,	/* I - Color model */
-            const char *media,		/* I - Media type */
-            const char *resolution,	/* I - Resolution */
-	    cf_logfunc_t log,       /* I - Log function */
-	    void       *ld)             /* I - Log function data */
+cf_rgb_t *				// O - New color profile
+ppdRGBLoad(ppd_file_t *ppd,		// I - PPD file
+            const char *colormodel,	// I - Color model
+            const char *media,		// I - Media type
+            const char *resolution,	// I - Resolution
+	    cf_logfunc_t log,           // I - Log function
+	    void       *ld)             // I - Log function data
 {
-  int		i,			/* Looping var */
-		cube_size,		/* Size of color lookup cube */
-		num_channels,		/* Number of color channels */
-		num_samples;		/* Number of color samples */
-  cf_sample_t	*samples;		/* Color samples */
-  float		values[7];		/* Color sample values */
-  char		spec[IPP_MAX_NAME];	/* Profile name */
-  ppd_attr_t	*attr;			/* Attribute from PPD file */
-  cf_rgb_t	*rgbptr;		/* RGB color profile */
+  int		i,			// Looping var
+		cube_size,		// Size of color lookup cube
+		num_channels,		// Number of color channels
+		num_samples;		// Number of color samples
+  cf_sample_t	*samples;		// Color samples
+  float		values[7];		// Color sample values
+  char		spec[IPP_MAX_NAME];	// Profile name
+  ppd_attr_t	*attr;			// Attribute from PPD file
+  cf_rgb_t	*rgbptr;		// RGB color profile
 
 
- /*
-  * Find the following attributes:
-  *
-  *    cupsRGBProfile  - Specifies the cube size, number of channels, and
-  *                      number of samples
-  *    cupsRGBSample   - Specifies an RGB to CMYK color sample
-  */
+  //
+  // Find the following attributes:
+  //
+  //    cupsRGBProfile  - Specifies the cube size, number of channels, and
+  //                      number of samples
+  //    cupsRGBSample   - Specifies an RGB to CMYK color sample
+  //
 
   if ((attr = ppdFindColorAttr(ppd, "cupsRGBProfile", colormodel, media,
                            resolution, spec, sizeof(spec), log, ld)) == NULL)
@@ -232,9 +230,9 @@ ppdRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
     return (NULL);
   }
 
- /*
-  * Allocate memory for the samples and read them...
-  */
+  //
+  // Allocate memory for the samples and read them...
+  //
 
   if ((samples = calloc(num_samples, sizeof(cf_sample_t))) == NULL)
   {
@@ -243,9 +241,9 @@ ppdRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
     return (NULL);
   }
 
- /*
-  * Read all of the samples...
-  */
+  //
+  // Read all of the samples...
+  //
 
   for (i = 0; i < num_samples; i ++)
     if ((attr = ppdFindNextAttr(ppd, "cupsRGBSample", spec)) == NULL)
@@ -278,18 +276,18 @@ ppdRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
 	samples[i].colors[3] = (int)(255.0 * values[6] + 0.5);
     }
 
- /*
-  * If everything went OK, create the color profile...
-  */
+  //
+  // If everything went OK, create the color profile...
+  //
 
   if (i == num_samples)
     rgbptr = cfRGBNew(num_samples, samples, cube_size, num_channels);
   else
     rgbptr = NULL;
 
- /*
-  * Free the temporary sample array and return...
-  */
+  //
+  // Free the temporary sample array and return...
+  //
 
   free(samples);
 
@@ -297,79 +295,80 @@ ppdRGBLoad(ppd_file_t *ppd,		/* I - PPD file */
 }
 
 
-/*
- * 'ppdCMYKLoad()' - Load a CMYK color profile from PPD attributes.
- */
+//
+// 'ppdCMYKLoad()' - Load a CMYK color profile from PPD attributes.
+//
 
-cf_cmyk_t *				/* O - CMYK color separation */
-ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
-	     const char *colormodel,	/* I - ColorModel value */
-	     const char *media,		/* I - MediaType value */
-	     const char *resolution,	/* I - Resolution value */
-	     cf_logfunc_t log,      /* I - Log function */
-	     void       *ld)            /* I - Log function data */
+cf_cmyk_t *				// O - CMYK color separation
+ppdCMYKLoad(ppd_file_t *ppd,		// I - PPD file
+	     const char *colormodel,	// I - ColorModel value
+	     const char *media,		// I - MediaType value
+	     const char *resolution,	// I - Resolution value
+	     cf_logfunc_t log,          // I - Log function
+	     void       *ld)            // I - Log function data
 {
-  cf_cmyk_t	*cmyk;			/* CMYK color separation */
-  char		spec[IPP_MAX_NAME];	/* Profile name */
-  ppd_attr_t	*attr;			/* Attribute from PPD file */
-  int		num_channels;		/* Number of color components */
-  float		gamval,			/* Gamma correction value */
-		density,		/* Density value */
-		light,			/* Light ink limit */
-		dark,			/* Light ink cut-off */
-		lower,			/* Start of black ink */
-		upper;			/* End of color ink */
-  int		num_xypoints;		/* Number of X,Y points */
-  float		xypoints[100 * 2],	/* X,Y points */
-		*xyptr;			/* Current X,Y point */
+  cf_cmyk_t	*cmyk;			// CMYK color separation
+  char		spec[IPP_MAX_NAME];	// Profile name
+  ppd_attr_t	*attr;			// Attribute from PPD file
+  int		num_channels;		// Number of color components
+  float		gamval,			// Gamma correction value
+		density,		// Density value
+		light,			// Light ink limit
+		dark,			// Light ink cut-off
+		lower,			// Start of black ink
+		upper;			// End of color ink
+  int		num_xypoints;		// Number of X,Y points
+  float		xypoints[100 * 2],	// X,Y points
+		*xyptr;			// Current X,Y point
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (ppd == NULL || colormodel == NULL || resolution == NULL || media == NULL)
     return (NULL);
 
- /*
-  * Find the following attributes:
-  *
-  *     cupsAllGamma          - Set default curve using gamma + density
-  *     cupsAllXY             - Set default curve using XY points
-  *     cupsBlackGamma        - Set black curve using gamma + density
-  *     cupsBlackGeneration   - Set black generation
-  *     cupsBlackLightDark    - Set black light/dark transition
-  *     cupsBlackXY           - Set black curve using XY points
-  *     cupsCyanGamma         - Set cyan curve using gamma + density
-  *     cupsCyanLightDark     - Set cyan light/dark transition
-  *     cupsCyanXY            - Set cyan curve using XY points
-  *     cupsInkChannels       - Set number of color channels
-  *     cupsInkLimit          - Set total ink limit
-  *     cupsLightBlackGamma   - Set light black curve using gamma + density
-  *     cupsLightBlackXY      - Set light black curve using XY points
-  *     cupsLightCyanGamma    - Set light cyan curve using gamma + density
-  *     cupsLightCyanXY       - Set light cyan curve using XY points
-  *     cupsLightMagentaGamma - Set light magenta curve using gamma + density
-  *     cupsLightMagentaXY    - Set light magenta curve using XY points
-  *     cupsMagentaGamma      - Set magenta curve using gamma + density
-  *     cupsMagentaLightDark  - Set magenta light/dark transition
-  *     cupsMagentaXY         - Set magenta curve using XY points
-  *     cupsYellowGamma       - Set yellow curve using gamma + density
-  *     cupsYellowXY          - Set yellow curve using XY points
-  *
-  * The only required attribute is cupsInkChannels.
-  *
-  * The *XY attributes have precedence over the *Gamma attributes, and
-  * the *Light* attributes have precedence over the corresponding
-  * *LightDark* attributes.
-  */
+  //
+  // Find the following attributes:
+  //
+  //    cupsAllGamma          - Set default curve using gamma + density
+  //    cupsAllXY             - Set default curve using XY points
+  //    cupsBlackGamma        - Set black curve using gamma + density
+  //    cupsBlackGeneration   - Set black generation
+  //    cupsBlackLightDark    - Set black light/dark transition
+  //    cupsBlackXY           - Set black curve using XY points
+  //    cupsCyanGamma         - Set cyan curve using gamma + density
+  //    cupsCyanLightDark     - Set cyan light/dark transition
+  //    cupsCyanXY            - Set cyan curve using XY points
+  //    cupsInkChannels       - Set number of color channels
+  //    cupsInkLimit          - Set total ink limit
+  //    cupsLightBlackGamma   - Set light black curve using gamma + density
+  //    cupsLightBlackXY      - Set light black curve using XY points
+  //    cupsLightCyanGamma    - Set light cyan curve using gamma + density
+  //    cupsLightCyanXY       - Set light cyan curve using XY points
+  //    cupsLightMagentaGamma - Set light magenta curve using gamma + density
+  //    cupsLightMagentaXY    - Set light magenta curve using XY points
+  //    cupsMagentaGamma      - Set magenta curve using gamma + density
+  //    cupsMagentaLightDark  - Set magenta light/dark transition
+  //    cupsMagentaXY         - Set magenta curve using XY points
+  //    cupsYellowGamma       - Set yellow curve using gamma + density
+  //    cupsYellowXY          - Set yellow curve using XY points
+  //
+  // The only required attribute is cupsInkChannels.
+  //
+  // The *XY attributes have precedence over the *Gamma attributes, and
+  // the *Light* attributes have precedence over the corresponding
+  // *LightDark* attributes.
+  //
 
- /*
-  * Get the required cupsInkChannels attribute...
-  */
+  //
+  // Get the required cupsInkChannels attribute...
+  //
 
-  if ((attr = ppdFindColorAttr(ppd, "cupsInkChannels", colormodel, media,
-                           resolution, spec, sizeof(spec), log, ld)) == NULL)
+  if ((attr =
+       ppdFindColorAttr(ppd, "cupsInkChannels", colormodel, media,
+			resolution, spec, sizeof(spec), log, ld)) == NULL)
     return (NULL);
 
   num_channels = atoi(attr->value);
@@ -380,17 +379,17 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
   if ((cmyk = cfCMYKNew(num_channels)) == NULL)
     return (NULL);
 
- /*
-  * Get the optional cupsInkLimit attribute...
-  */
+  //
+  // Get the optional cupsInkLimit attribute...
+  //
 
   if ((attr = ppdFindColorAttr(ppd, "cupsInkLimit", colormodel, media,
                            resolution, spec, sizeof(spec), log, ld)) != NULL)
     cfCMYKSetInkLimit(cmyk, atof(attr->value));
 
- /*
-  * Get the optional cupsBlackGeneration attribute...
-  */
+  //
+  // Get the optional cupsBlackGeneration attribute...
+  //
 
   if ((attr = ppdFindColorAttr(ppd, "cupsBlackGeneration", colormodel, media,
                            resolution, spec, sizeof(spec), log, ld)) != NULL)
@@ -399,9 +398,9 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
       cfCMYKSetBlack(cmyk, lower, upper, log, ld);
   }
 
- /*
-  * Get the optional cupsBlackXY or cupsBlackGamma attributes...
-  */
+  //
+  // Get the optional cupsBlackXY or cupsBlackGamma attributes...
+  //
 
   if (num_channels != 3)
   {
@@ -505,9 +504,9 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 
   if (num_channels > 2)
   {
-   /*
-    * Get the optional cupsCyanXY or cupsCyanGamma attributes...
-    */
+    //
+    // Get the optional cupsCyanXY or cupsCyanGamma attributes...
+    //
 
     if ((attr = ppdFindColorAttr(ppd, "cupsCyanXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
@@ -553,9 +552,9 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	cfCMYKSetGamma(cmyk, 0, gamval, density, log, ld);
     }
 
-   /*
-    * Get the optional cupsMagentaXY or cupsMagentaGamma attributes...
-    */
+    //
+    // Get the optional cupsMagentaXY or cupsMagentaGamma attributes...
+    //
 
     if ((attr = ppdFindColorAttr(ppd, "cupsMagentaXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
@@ -581,8 +580,9 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	    break;
       }
     }
-    else if ((attr = ppdFindColorAttr(ppd, "cupsMagentaGamma", colormodel, media,
-                                  resolution, spec, sizeof(spec), log, ld)) !=
+    else if ((attr = ppdFindColorAttr(ppd, "cupsMagentaGamma", colormodel,
+				      media, resolution, spec, sizeof(spec),
+				      log, ld)) !=
 	     NULL)
     {
       if (sscanf(attr->value, "%f%f", &gamval, &density) == 2)
@@ -641,9 +641,9 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 	}
     }
 
-   /*
-    * Get the optional cupsYellowXY or cupsYellowGamma attributes...
-    */
+    //
+    // Get the optional cupsYellowXY or cupsYellowGamma attributes...
+    //
 
     if ((attr = ppdFindColorAttr(ppd, "cupsYellowXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
@@ -730,10 +730,10 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
     }
   }
 
- /*
-  * Get the optional cupsLightBlackXY, cupsLightBlackGamma, or
-  * cupsBlackLtDk attributes...
-  */
+  //
+  // Get the optional cupsLightBlackXY, cupsLightBlackGamma, or
+  // cupsBlackLtDk attributes...
+  //
 
   if (num_channels == 2 || num_channels == 7)
   {
@@ -801,10 +801,10 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 
   if (num_channels >= 6)
   {
-   /*
-    * Get the optional cupsLightCyanXY, cupsLightCyanGamma, or
-    * cupsCyanLtDk attributes...
-    */
+    //
+    // Get the optional cupsLightCyanXY, cupsLightCyanGamma, or
+    // cupsCyanLtDk attributes...
+    //
 
     if ((attr = ppdFindColorAttr(ppd, "cupsLightCyanXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
@@ -843,10 +843,10 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 		   "No light cyan attribute found for %s!",
 		   spec);
 
-   /*
-    * Get the optional cupsLightMagentaXY, cupsLightMagentaGamma, or
-    * cupsMagentaLtDk attributes...
-    */
+    //
+    // Get the optional cupsLightMagentaXY, cupsLightMagentaGamma, or
+    // cupsMagentaLtDk attributes...
+    //
 
     if ((attr = ppdFindColorAttr(ppd, "cupsLightMagentaXY", colormodel, media,
                              resolution, spec, sizeof(spec), log, ld)) != NULL)
@@ -886,9 +886,9 @@ ppdCMYKLoad(ppd_file_t *ppd,		/* I - PPD file */
 		   spec);
   }
 
- /*
-  * Return the new profile...
-  */
+  //
+  // Return the new profile...
+  //
 
   return (cmyk);
 }

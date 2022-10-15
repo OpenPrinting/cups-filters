@@ -1,27 +1,27 @@
-/*
- * Option conflict management routines for libppd.
- *
- * Copyright 2007-2018 by Apple Inc.
- * Copyright 1997-2007 by Easy Software Products, all rights reserved.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- *
- * PostScript is a trademark of Adobe Systems, Inc.
- */
+//
+// Option conflict management routines for libppd.
+//
+// Copyright 2007-2018 by Apple Inc.
+// Copyright 1997-2007 by Easy Software Products, all rights reserved.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+// PostScript is a trademark of Adobe Systems, Inc.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include "string-private.h"
 #include "ppd.h"
 #include "debug-internal.h"
 
 
-/*
- * Local constants...
- */
+//
+// Local constants...
+//
 
 enum
 {
@@ -31,9 +31,9 @@ enum
 };
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static int		ppd_is_installable(ppd_group_t *installable,
 			                   const char *option);
@@ -46,39 +46,39 @@ static cups_array_t	*ppd_test_constraints(ppd_file_t *ppd,
 					      int which);
 
 
-/*
- * 'ppdGetConflicts()' - Get a list of conflicting options in a marked PPD.
- *
- * This function gets a list of options that would conflict if "option" and
- * "choice" were marked in the PPD.  You would typically call this function
- * after marking the currently selected options in the PPD in order to
- * determine whether a new option selection would cause a conflict.
- *
- * The number of conflicting options are returned with "options" pointing to
- * the conflicting options.  The returned option array must be freed using
- * @link cupsFreeOptions@.
- *
- * @since CUPS 1.4/macOS 10.6@
- */
+//
+// 'ppdGetConflicts()' - Get a list of conflicting options in a marked PPD.
+//
+// This function gets a list of options that would conflict if "option" and
+// "choice" were marked in the PPD.  You would typically call this function
+// after marking the currently selected options in the PPD in order to
+// determine whether a new option selection would cause a conflict.
+//
+// The number of conflicting options are returned with "options" pointing to
+// the conflicting options.  The returned option array must be freed using
+// @link cupsFreeOptions@.
+//
+// @since CUPS 1.4/macOS 10.6@
+//
 
-int					/* O - Number of conflicting options */
+int					// O - Number of conflicting options
 ppdGetConflicts(
-    ppd_file_t    *ppd,			/* I - PPD file */
-    const char    *option,		/* I - Option to test */
-    const char    *choice,		/* I - Choice to test */
-    cups_option_t **options)		/* O - Conflicting options */
+    ppd_file_t    *ppd,			// I - PPD file
+    const char    *option,		// I - Option to test
+    const char    *choice,		// I - Choice to test
+    cups_option_t **options)		// O - Conflicting options
 {
-  int			i,		/* Looping var */
-			num_options;	/* Number of conflicting options */
-  cups_array_t		*active;	/* Active conflicts */
-  ppd_cups_uiconsts_t	*c;		/* Current constraints */
-  ppd_cups_uiconst_t	*cptr;		/* Current constraint */
-  ppd_choice_t		*marked;	/* Marked choice */
+  int			i,		// Looping var
+			num_options;	// Number of conflicting options
+  cups_array_t		*active;	// Active conflicts
+  ppd_cups_uiconsts_t	*c;		// Current constraints
+  ppd_cups_uiconst_t	*cptr;		// Current constraint
+  ppd_choice_t		*marked;	// Marked choice
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (options)
     *options = NULL;
@@ -86,16 +86,16 @@ ppdGetConflicts(
   if (!ppd || !option || !choice || !options)
     return (0);
 
- /*
-  * Test for conflicts...
-  */
+  //
+  // Test for conflicts...
+  //
 
   active = ppd_test_constraints(ppd, option, choice, 0, NULL,
                                 _PPD_ALL_CONSTRAINTS);
 
- /*
-  * Loop through all of the UI constraints and add any options that conflict...
-  */
+  //
+  // Loop through all of the UI constraints and add any options that conflict...
+  //
 
   for (num_options = 0, c = (ppd_cups_uiconsts_t *)cupsArrayFirst(active);
        c;
@@ -123,84 +123,87 @@ ppdGetConflicts(
 }
 
 
-/*
- * 'ppdResolveConflicts()' - Resolve conflicts in a marked PPD.
- *
- * This function attempts to resolve any conflicts in a marked PPD, returning
- * a list of option changes that are required to resolve them.  On input,
- * "num_options" and "options" contain any pending option changes that have
- * not yet been marked, while "option" and "choice" contain the most recent
- * selection which may or may not be in "num_options" or "options".
- *
- * On successful return, "num_options" and "options" are updated to contain
- * "option" and "choice" along with any changes required to resolve conflicts
- * specified in the PPD file and 1 is returned.
- *
- * If option conflicts cannot be resolved, "num_options" and "options" are not
- * changed and 0 is returned.
- *
- * When resolving conflicts, @code ppdResolveConflicts@ does not consider
- * changes to the current page size (@code media@, @code PageSize@, and
- * @code PageRegion@) or to the most recent option specified in "option".
- * Thus, if the only way to resolve a conflict is to change the page size
- * or the option the user most recently changed, @code ppdResolveConflicts@
- * will return 0 to indicate it was unable to resolve the conflicts.
- *
- * The @code ppdResolveConflicts@ function uses one of two sources of option
- * constraint information.  The preferred constraint information is defined by
- * @code cupsUIConstraints@ and @code cupsUIResolver@ attributes - in this
- * case, the PPD file provides constraint resolution actions.
- *
- * The backup constraint information is defined by the
- * @code UIConstraints@ and @code NonUIConstraints@ attributes.  These
- * constraints are resolved algorithmically by first selecting the default
- * choice for the conflicting option, then iterating over all possible choices
- * until a non-conflicting option choice is found.
- *
- * @since CUPS 1.4/macOS 10.6@
- */
+//
+// 'ppdResolveConflicts()' - Resolve conflicts in a marked PPD.
+//
+// This function attempts to resolve any conflicts in a marked PPD, returning
+// a list of option changes that are required to resolve them.  On input,
+// "num_options" and "options" contain any pending option changes that have
+// not yet been marked, while "option" and "choice" contain the most recent
+// selection which may or may not be in "num_options" or "options".
+//
+// On successful return, "num_options" and "options" are updated to contain
+// "option" and "choice" along with any changes required to resolve conflicts
+// specified in the PPD file and 1 is returned.
+//
+// If option conflicts cannot be resolved, "num_options" and "options" are not
+// changed and 0 is returned.
+//
+// When resolving conflicts, @code ppdResolveConflicts@ does not consider
+// changes to the current page size (@code media@, @code PageSize@, and
+// @code PageRegion@) or to the most recent option specified in "option".
+// Thus, if the only way to resolve a conflict is to change the page size
+// or the option the user most recently changed, @code ppdResolveConflicts@
+// will return 0 to indicate it was unable to resolve the conflicts.
+//
+// The @code ppdResolveConflicts@ function uses one of two sources of option
+// constraint information.  The preferred constraint information is defined by
+// @code cupsUIConstraints@ and @code cupsUIResolver@ attributes - in this
+// case, the PPD file provides constraint resolution actions.
+//
+// The backup constraint information is defined by the
+// @code UIConstraints@ and @code NonUIConstraints@ attributes.  These
+// constraints are resolved algorithmically by first selecting the default
+// choice for the conflicting option, then iterating over all possible choices
+// until a non-conflicting option choice is found.
+//
+// @since CUPS 1.4/macOS 10.6@
+//
 
-int					/* O  - 1 on success, 0 on failure */
+int					// O  - 1 on success, 0 on failure
 ppdResolveConflicts(
-    ppd_file_t    *ppd,			/* I  - PPD file */
-    const char    *option,		/* I  - Newly selected option or @code NULL@ for none */
-    const char    *choice,		/* I  - Newly selected choice or @code NULL@ for none */
-    int           *num_options,		/* IO - Number of additional selected options */
-    cups_option_t **options)		/* IO - Additional selected options */
+    ppd_file_t    *ppd,			// I  - PPD file
+    const char    *option,		// I  - Newly selected option or
+					// @code NULL@ for none
+    const char    *choice,		// I  - Newly selected choice or
+					// @code NULL@ for none
+    int           *num_options,		// IO - Number of additional selected
+					// options
+    cups_option_t **options)		// IO - Additional selected options
 {
-  int			i,		/* Looping var */
-			tries,		/* Number of tries */
-			num_newopts;	/* Number of new options */
-  cups_option_t		*newopts;	/* New options */
-  cups_array_t		*active = NULL,	/* Active constraints */
-			*pass,		/* Resolvers for this pass */
-			*resolvers,	/* Resolvers we have used */
-			*test;		/* Test array for conflicts */
-  ppd_cups_uiconsts_t	*consts;	/* Current constraints */
-  ppd_cups_uiconst_t	*constptr;	/* Current constraint */
-  ppd_attr_t		*resolver;	/* Current resolver */
-  const char		*resval;	/* Pointer into resolver value */
+  int			i,		// Looping var
+			tries,		// Number of tries
+			num_newopts;	// Number of new options
+  cups_option_t		*newopts;	// New options
+  cups_array_t		*active = NULL,	// Active constraints
+			*pass,		// Resolvers for this pass
+			*resolvers,	// Resolvers we have used
+			*test;		// Test array for conflicts
+  ppd_cups_uiconsts_t	*consts;	// Current constraints
+  ppd_cups_uiconst_t	*constptr;	// Current constraint
+  ppd_attr_t		*resolver;	// Current resolver
+  const char		*resval;	// Pointer into resolver value
   char			resoption[PPD_MAX_NAME],
-					/* Current resolver option */
+					// Current resolver option
 			reschoice[PPD_MAX_NAME],
-					/* Current resolver choice */
-			*resptr,	/* Pointer into option/choice */
-			firstpage[255];	/* AP_FIRSTPAGE_Keyword string */
-  const char		*value;		/* Selected option value */
-  int			changed;	/* Did we change anything? */
-  ppd_choice_t		*marked;	/* Marked choice */
+					// Current resolver choice
+			*resptr,	// Pointer into option/choice
+			firstpage[255];	// AP_FIRSTPAGE_Keyword string
+  const char		*value;		// Selected option value
+  int			changed;	// Did we change anything?
+  ppd_choice_t		*marked;	// Marked choice
 
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!ppd || !num_options || !options || (option == NULL) != (choice == NULL))
     return (0);
 
- /*
-  * Build a shadow option array...
-  */
+  //
+  // Build a shadow option array...
+  //
 
   num_newopts = 0;
   newopts     = NULL;
@@ -211,9 +214,9 @@ ppdResolveConflicts(
   if (option && _ppd_strcasecmp(option, "Collate"))
     num_newopts = cupsAddOption(option, choice, num_newopts, &newopts);
 
- /*
-  * Loop until we have no conflicts...
-  */
+  //
+  // Loop until we have no conflicts...
+  //
 
   cupsArraySave(ppd->sorted_attrs);
 
@@ -236,18 +239,18 @@ ppdResolveConflicts(
     {
       if (consts->resolver[0])
       {
-       /*
-        * Look up the resolver...
-	*/
+	//
+        // Look up the resolver...
+	//
 
         if (cupsArrayFind(pass, consts->resolver))
-	  continue;			/* Already applied this resolver... */
+	  continue;			// Already applied this resolver...
 
         if (cupsArrayFind(resolvers, consts->resolver))
 	{
-	 /*
-	  * Resolver loop!
-	  */
+	  //
+	  // Resolver loop!
+	  //
 
 	  DEBUG_printf(("1ppdResolveConflicts: Resolver loop with %s!",
 	                consts->resolver));
@@ -269,9 +272,9 @@ ppdResolveConflicts(
 	  goto error;
 	}
 
-       /*
-        * Add the options from the resolver...
-	*/
+	//
+        // Add the options from the resolver...
+	//
 
         cupsArrayAdd(pass, consts->resolver);
 	cupsArrayAdd(resolvers, consts->resolver);
@@ -306,9 +309,9 @@ ppdResolveConflicts(
           if (!resoption[0] || !reschoice[0])
 	    break;
 
-         /*
-	  * Is this the option we are changing?
-	  */
+	  //
+	  // Is this the option we are changing?
+	  //
 
           snprintf(firstpage, sizeof(firstpage), "AP_FIRSTPAGE_%s", resoption);
 
@@ -329,28 +332,28 @@ ppdResolveConflicts(
 	        !_ppd_strcasecmp(resoption, "PageRegion"))))
 	    continue;
 
-	 /*
-	  * Try this choice...
-	  */
+	  //
+	  // Try this choice...
+	  //
 
           if ((test = ppd_test_constraints(ppd, resoption, reschoice,
 					   num_newopts, newopts,
 					   _PPD_ALL_CONSTRAINTS)) == NULL)
 	  {
-	   /*
-	    * That worked...
-	    */
+	    //
+	    // That worked...
+	    //
 
             changed = 1;
 	  }
 	  else
             cupsArrayDelete(test);
 
-	 /*
-	  * Add the option/choice from the resolver regardless of whether it
-	  * worked; this makes sure that we can cascade several changes to
-	  * make things resolve...
-	  */
+	  //
+	  // Add the option/choice from the resolver regardless of whether it
+	  // worked; this makes sure that we can cascade several changes to
+	  // make things resolve...
+	  //
 
 	  num_newopts = cupsAddOption(resoption, reschoice, num_newopts,
 				      &newopts);
@@ -358,30 +361,30 @@ ppdResolveConflicts(
       }
       else
       {
-       /*
-        * Try resolving by choosing the default values for non-installable
-	* options, then by iterating through the possible choices...
-	*/
+	//
+        // Try resolving by choosing the default values for non-installable
+	// options, then by iterating through the possible choices...
+	//
 
-        int		j;		/* Looping var */
-	ppd_choice_t	*cptr;		/* Current choice */
-        ppd_size_t	*size;		/* Current page size */
+        int		j;		// Looping var
+	ppd_choice_t	*cptr;		// Current choice
+        ppd_size_t	*size;		// Current page size
 
 
         for (i = consts->num_constraints, constptr = consts->constraints;
 	     i > 0 && !changed;
 	     i --, constptr ++)
 	{
-	 /*
-	  * Can't resolve by changing an installable option...
-	  */
+	  //
+	  // Can't resolve by changing an installable option...
+	  //
 
 	  if (constptr->installable)
 	    continue;
 
-         /*
-	  * Is this the option we are changing?
-	  */
+	  //
+	  // Is this the option we are changing?
+	  //
 
 	  if (option &&
 	      (!_ppd_strcasecmp(constptr->option->keyword, option) ||
@@ -391,9 +394,9 @@ ppdResolveConflicts(
 		!_ppd_strcasecmp(constptr->option->keyword, "PageSize"))))
 	    continue;
 
-         /*
-	  * Get the current option choice...
-	  */
+	  //
+	  // Get the current option choice...
+	  //
 
           if ((value = cupsGetOption(constptr->option->keyword, num_newopts,
 	                             newopts)) == NULL)
@@ -423,9 +426,9 @@ ppdResolveConflicts(
 	  if (!_ppd_strncasecmp(value, "Custom.", 7))
 	    value = "Custom";
 
-         /*
-	  * Try the default choice...
-	  */
+	  //
+	  // Try the default choice...
+	  //
 
           test = NULL;
 
@@ -435,9 +438,9 @@ ppdResolveConflicts(
 					   num_newopts, newopts,
 					   _PPD_OPTION_CONSTRAINTS)) == NULL)
 	  {
-	   /*
-	    * That worked...
-	    */
+	    //
+	    // That worked...
+	    //
 
 	    num_newopts = cupsAddOption(constptr->option->keyword,
 	                                constptr->option->defchoice,
@@ -446,9 +449,9 @@ ppdResolveConflicts(
 	  }
 	  else
 	  {
-	   /*
-	    * Try each choice instead...
-	    */
+	    //
+	    // Try each choice instead...
+	    //
 
             for (j = constptr->option->num_choices,
 	             cptr = constptr->option->choices;
@@ -464,11 +467,12 @@ ppdResolveConflicts(
 	          (test = ppd_test_constraints(ppd, constptr->option->keyword,
 	                                       cptr->choice, num_newopts,
 					       newopts,
-					       _PPD_OPTION_CONSTRAINTS)) == NULL)
+					       _PPD_OPTION_CONSTRAINTS)) ==
+		  NULL)
 	      {
-	       /*
-		* This choice works...
-		*/
+		//
+		// This choice works...
+		//
 
 		num_newopts = cupsAddOption(constptr->option->keyword,
 					    cptr->choice, num_newopts,
@@ -499,26 +503,26 @@ ppdResolveConflicts(
   if (tries >= 100)
     goto error;
 
- /*
-  * Free the caller's option array...
-  */
+  //
+  // Free the caller's option array...
+  //
 
   cupsFreeOptions(*num_options, *options);
 
- /*
-  * If Collate is the option we are testing, add it here.  Otherwise, remove
-  * any Collate option from the resolve list since the filters automatically
-  * handle manual collation...
-  */
+  //
+  // If Collate is the option we are testing, add it here.  Otherwise, remove
+  // any Collate option from the resolve list since the filters automatically
+  // handle manual collation...
+  //
 
   if (option && !_ppd_strcasecmp(option, "Collate"))
     num_newopts = cupsAddOption(option, choice, num_newopts, &newopts);
   else
     num_newopts = cupsRemoveOption("Collate", num_newopts, &newopts);
 
- /*
-  * Return the new list of options to the caller...
-  */
+  //
+  // Return the new list of options to the caller...
+  //
 
   *num_options = num_newopts;
   *options     = newopts;
@@ -533,15 +537,15 @@ ppdResolveConflicts(
   for (i = 0; i < num_newopts; i ++)
     DEBUG_printf(("1ppdResolveConflicts: options[%d]: %s=%s", i,
                   newopts[i].name, newopts[i].value));
-#endif /* DEBUG */
+#endif // DEBUG
 
   return (1);
 
- /*
-  * If we get here, we failed to resolve...
-  */
+  //
+  // If we get here, we failed to resolve...
+  //
 
-  error:
+ error:
 
   cupsFreeOptions(num_newopts, newopts);
 
@@ -557,30 +561,30 @@ ppdResolveConflicts(
 }
 
 
-/*
- * 'ppdConflicts()' - Check to see if there are any conflicts among the
- *                    marked option choices.
- *
- * The returned value is the same as returned by @link ppdMarkOption@.
- */
+//
+// 'ppdConflicts()' - Check to see if there are any conflicts among the
+//                    marked option choices.
+//
+// The returned value is the same as returned by @link ppdMarkOption@.
+//
 
-int					/* O - Number of conflicts found */
-ppdConflicts(ppd_file_t *ppd)		/* I - PPD to check */
+int					// O - Number of conflicts found
+ppdConflicts(ppd_file_t *ppd)		// I - PPD to check
 {
-  int			i,		/* Looping variable */
-			conflicts;	/* Number of conflicts */
-  cups_array_t		*active;	/* Active conflicts */
-  ppd_cups_uiconsts_t	*c;		/* Current constraints */
-  ppd_cups_uiconst_t	*cptr;		/* Current constraint */
-  ppd_option_t	*o;			/* Current option */
+  int			i,		// Looping variable
+			conflicts;	// Number of conflicts
+  cups_array_t		*active;	// Active conflicts
+  ppd_cups_uiconsts_t	*c;		// Current constraints
+  ppd_cups_uiconst_t	*cptr;		// Current constraint
+  ppd_option_t	*o;			// Current option
 
 
   if (!ppd)
     return (0);
 
- /*
-  * Clear all conflicts...
-  */
+  //
+  // Clear all conflicts...
+  //
 
   cupsArraySave(ppd->options);
 
@@ -589,18 +593,18 @@ ppdConflicts(ppd_file_t *ppd)		/* I - PPD to check */
 
   cupsArrayRestore(ppd->options);
 
- /*
-  * Test for conflicts...
-  */
+  //
+  // Test for conflicts...
+  //
 
   active    = ppd_test_constraints(ppd, NULL, NULL, 0, NULL,
                                    _PPD_ALL_CONSTRAINTS);
   conflicts = cupsArrayCount(active);
 
- /*
-  * Loop through all of the UI constraints and flag any options
-  * that conflict...
-  */
+  //
+  // Loop through all of the UI constraints and flag any options
+  // that conflict...
+  //
 
   for (c = (ppd_cups_uiconsts_t *)cupsArrayFirst(active);
        c;
@@ -614,46 +618,46 @@ ppdConflicts(ppd_file_t *ppd)		/* I - PPD to check */
 
   cupsArrayDelete(active);
 
- /*
-  * Return the number of conflicts found...
-  */
+  //
+  // Return the number of conflicts found...
+  //
 
   return (conflicts);
 }
 
 
-/*
- * 'ppdInstallableConflict()' - Test whether an option choice conflicts with
- *                              an installable option.
- *
- * This function tests whether a particular option choice is available based
- * on constraints against options in the "InstallableOptions" group.
- *
- * @since CUPS 1.4/macOS 10.6@
- */
+//
+// 'ppdInstallableConflict()' - Test whether an option choice conflicts with
+//                              an installable option.
+//
+// This function tests whether a particular option choice is available based
+// on constraints against options in the "InstallableOptions" group.
+//
+// @since CUPS 1.4/macOS 10.6@
+//
 
-int					/* O - 1 if conflicting, 0 if not conflicting */
+int					// O - 1 if conflicting, 0 if not conflicting
 ppdInstallableConflict(
-    ppd_file_t *ppd,			/* I - PPD file */
-    const char *option,			/* I - Option */
-    const char *choice)			/* I - Choice */
+    ppd_file_t *ppd,			// I - PPD file
+    const char *option,			// I - Option
+    const char *choice)			// I - Choice
 {
-  cups_array_t	*active;		/* Active conflicts */
+  cups_array_t	*active;		// Active conflicts
 
 
   DEBUG_printf(("2ppdInstallableConflict(ppd=%p, option=\"%s\", choice=\"%s\")",
                 ppd, option, choice));
 
- /*
-  * Range check input...
-  */
+  //
+  // Range check input...
+  //
 
   if (!ppd || !option || !choice)
     return (0);
 
- /*
-  * Test constraints using the new option...
-  */
+  //
+  // Test constraints using the new option...
+  //
 
   active = ppd_test_constraints(ppd, option, choice, 0, NULL,
 				_PPD_INSTALLABLE_CONSTRAINTS);
@@ -664,20 +668,20 @@ ppdInstallableConflict(
 }
 
 
-/*
- * 'ppd_is_installable()' - Determine whether an option is in the
- *                          InstallableOptions group.
- */
+//
+// 'ppd_is_installable()' - Determine whether an option is in the
+//                          InstallableOptions group.
+//
 
-static int				/* O - 1 if installable, 0 if normal */
+static int				// O - 1 if installable, 0 if normal
 ppd_is_installable(
-    ppd_group_t *installable,		/* I - InstallableOptions group */
-    const char  *name)			/* I - Option name */
+    ppd_group_t *installable,		// I - InstallableOptions group
+    const char  *name)			// I - Option name
 {
   if (installable)
   {
-    int			i;		/* Looping var */
-    ppd_option_t	*option;	/* Current option */
+    int			i;		// Looping var
+    ppd_option_t	*option;	// Current option
 
 
     for (i = installable->num_options, option = installable->options;
@@ -691,36 +695,36 @@ ppd_is_installable(
 }
 
 
-/*
- * 'ppd_load_constraints()' - Load constraints from a PPD file.
- */
+//
+// 'ppd_load_constraints()' - Load constraints from a PPD file.
+//
 
 static void
-ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
+ppd_load_constraints(ppd_file_t *ppd)	// I - PPD file
 {
-  int		i;			/* Looping var */
-  ppd_const_t	*oldconst;		/* Current UIConstraints data */
-  ppd_attr_t	*constattr;		/* Current cupsUIConstraints attribute */
-  ppd_cups_uiconsts_t	*consts;	/* Current cupsUIConstraints data */
-  ppd_cups_uiconst_t	*constptr;	/* Current constraint */
-  ppd_group_t	*installable;		/* Installable options group */
-  const char	*vptr;			/* Pointer into constraint value */
-  char		option[PPD_MAX_NAME],	/* Option name/MainKeyword */
-		choice[PPD_MAX_NAME],	/* Choice/OptionKeyword */
-		*ptr;			/* Pointer into option or choice */
+  int		i;			// Looping var
+  ppd_const_t	*oldconst;		// Current UIConstraints data
+  ppd_attr_t	*constattr;		// Current cupsUIConstraints attribute
+  ppd_cups_uiconsts_t	*consts;	// Current cupsUIConstraints data
+  ppd_cups_uiconst_t	*constptr;	// Current constraint
+  ppd_group_t	*installable;		// Installable options group
+  const char	*vptr;			// Pointer into constraint value
+  char		option[PPD_MAX_NAME],	// Option name/MainKeyword
+		choice[PPD_MAX_NAME],	// Choice/OptionKeyword
+		*ptr;			// Pointer into option or choice
 
 
   DEBUG_printf(("7ppd_load_constraints(ppd=%p)", ppd));
 
- /*
-  * Create an array to hold the constraint data...
-  */
+  //
+  // Create an array to hold the constraint data...
+  //
 
   ppd->cups_uiconstraints = cupsArrayNew(NULL, NULL);
 
- /*
-  * Find the installable options group if it exists...
-  */
+  //
+  // Find the installable options group if it exists...
+  //
 
   for (i = ppd->num_groups, installable = ppd->groups;
        i > 0;
@@ -731,16 +735,16 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
   if (i <= 0)
     installable = NULL;
 
- /*
-  * Load old-style [Non]UIConstraints data...
-  */
+  //
+  // Load old-style [Non]UIConstraints data...
+  //
 
   for (i = ppd->num_consts, oldconst = ppd->consts; i > 0; i --, oldconst ++)
   {
-   /*
-    * Weed out nearby duplicates, since the PPD spec requires that you
-    * define both "*Foo foo *Bar bar" and "*Bar bar *Foo foo"...
-    */
+    //
+    // Weed out nearby duplicates, since the PPD spec requires that you
+    // define both "*Foo foo *Bar bar" and "*Bar bar *Foo foo"...
+    //
 
     if (i > 1 &&
 	!_ppd_strcasecmp(oldconst[0].option1, oldconst[1].option2) &&
@@ -749,9 +753,9 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
 	!_ppd_strcasecmp(oldconst[0].choice2, oldconst[1].choice1))
       continue;
 
-   /*
-    * Allocate memory...
-    */
+    //
+    // Allocate memory...
+    //
 
     if ((consts = calloc(1, sizeof(ppd_cups_uiconsts_t))) == NULL)
     {
@@ -768,9 +772,9 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
       return;
     }
 
-   /*
-    * Fill in the information...
-    */
+    //
+    // Fill in the information...
+    //
 
     consts->num_constraints = 2;
     consts->constraints     = constptr;
@@ -827,16 +831,16 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
 
     consts->installable = constptr[0].installable || constptr[1].installable;
 
-   /*
-    * Add it to the constraints array...
-    */
+    //
+    // Add it to the constraints array...
+    //
 
     cupsArrayAdd(ppd->cups_uiconstraints, consts);
   }
 
- /*
-  * Then load new-style constraints...
-  */
+  //
+  // Then load new-style constraints...
+  //
 
   for (constattr = ppdFindAttr(ppd, "cupsUIConstraints", NULL);
        constattr;
@@ -882,9 +886,9 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
 	 vptr;
 	 i ++, vptr = strchr(vptr, '*'), constptr ++)
     {
-     /*
-      * Extract "*Option Choice" or just "*Option"...
-      */
+      //
+      // Extract "*Option Choice" or just "*Option"...
+      //
 
       for (vptr ++, ptr = option; *vptr && !_ppd_isspace(*vptr); vptr ++)
 	if (ptr < (option + sizeof(option) - 1))
@@ -906,7 +910,8 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
 	*ptr = '\0';
       }
 
-      if (!_ppd_strncasecmp(option, "Custom", 6) && !_ppd_strcasecmp(choice, "True"))
+      if (!_ppd_strncasecmp(option, "Custom", 6) &&
+	  !_ppd_strcasecmp(choice, "True"))
       {
 	_ppd_strcpy(option, option + 6);
 	strlcpy(choice, "Custom", sizeof(choice));
@@ -936,28 +941,28 @@ ppd_load_constraints(ppd_file_t *ppd)	/* I - PPD file */
 }
 
 
-/*
- * 'ppd_test_constraints()' - See if any constraints are active.
- */
+//
+// 'ppd_test_constraints()' - See if any constraints are active.
+//
 
-static cups_array_t *			/* O - Array of active constraints */
+static cups_array_t *			// O - Array of active constraints
 ppd_test_constraints(
-    ppd_file_t    *ppd,			/* I - PPD file */
-    const char    *option,		/* I - Current option */
-    const char    *choice,		/* I - Current choice */
-    int           num_options,		/* I - Number of additional options */
-    cups_option_t *options,		/* I - Additional options */
-    int           which)		/* I - Which constraints to test */
+    ppd_file_t    *ppd,			// I - PPD file
+    const char    *option,		// I - Current option
+    const char    *choice,		// I - Current choice
+    int           num_options,		// I - Number of additional options
+    cups_option_t *options,		// I - Additional options
+    int           which)		// I - Which constraints to test
 {
-  int			i;		/* Looping var */
-  ppd_cups_uiconsts_t	*consts;	/* Current constraints */
-  ppd_cups_uiconst_t	*constptr;	/* Current constraint */
-  ppd_choice_t		key,		/* Search key */
-			*marked;	/* Marked choice */
-  cups_array_t		*active = NULL;	/* Active constraints */
-  const char		*value,		/* Current value */
-			*firstvalue;	/* AP_FIRSTPAGE_Keyword value */
-  char			firstpage[255];	/* AP_FIRSTPAGE_Keyword string */
+  int			i;		// Looping var
+  ppd_cups_uiconsts_t	*consts;	// Current constraints
+  ppd_cups_uiconst_t	*constptr;	// Current constraint
+  ppd_choice_t		key,		// Search key
+			*marked;	// Marked choice
+  cups_array_t		*active = NULL;	// Active constraints
+  const char		*value,		// Current value
+			*firstvalue;	// AP_FIRSTPAGE_Keyword value
+  char			firstpage[255];	// AP_FIRSTPAGE_Keyword string
 
 
   DEBUG_printf(("7ppd_test_constraints(ppd=%p, option=\"%s\", choice=\"%s\", "
@@ -979,25 +984,27 @@ ppd_test_constraints(
     DEBUG_printf(("9ppd_test_constraints: installable=%d, resolver=\"%s\", "
                   "num_constraints=%d option1=\"%s\", choice1=\"%s\", "
 		  "option2=\"%s\", choice2=\"%s\", ...",
-		  consts->installable, consts->resolver, consts->num_constraints,
+		  consts->installable, consts->resolver,
+		  consts->num_constraints,
 		  consts->constraints[0].option->keyword,
 		  consts->constraints[0].choice ?
-		      consts->constraints[0].choice->choice : "",
+		  consts->constraints[0].choice->choice : "",
 		  consts->constraints[1].option->keyword,
 		  consts->constraints[1].choice ?
-		      consts->constraints[1].choice->choice : ""));
+		  consts->constraints[1].choice->choice : ""));
 
     if (consts->installable && which < _PPD_INSTALLABLE_CONSTRAINTS)
-      continue;				/* Skip installable option constraint */
+      continue;			    // Skip installable option constraint
 
     if (!consts->installable && which == _PPD_INSTALLABLE_CONSTRAINTS)
-      continue;				/* Skip non-installable option constraint */
+      continue;			    // Skip non-installable option constraint
 
-    if ((which == _PPD_OPTION_CONSTRAINTS || which == _PPD_INSTALLABLE_CONSTRAINTS) && option)
+    if ((which == _PPD_OPTION_CONSTRAINTS ||
+	 which == _PPD_INSTALLABLE_CONSTRAINTS) && option)
     {
-     /*
-      * Skip constraints that do not involve the current option...
-      */
+      //
+      // Skip constraints that do not involve the current option...
+      //
 
       for (i = consts->num_constraints, constptr = consts->constraints;
 	   i > 0;
@@ -1028,11 +1035,11 @@ ppd_test_constraints(
           (!_ppd_strcasecmp(constptr->option->keyword, "PageSize") ||
            !_ppd_strcasecmp(constptr->option->keyword, "PageRegion")))
       {
-       /*
-        * PageSize and PageRegion are used depending on the selected input slot
-	* and manual feed mode.  Validate against the selected page size instead
-	* of an individual option...
-	*/
+	//
+        // PageSize and PageRegion are used depending on the selected
+	// input slot and manual feed mode.  Validate against the
+	// selected page size instead of an individual option...
+	//
 
         if (option && choice &&
 	    (!_ppd_strcasecmp(option, "PageSize") ||
@@ -1078,11 +1085,12 @@ ppd_test_constraints(
       }
       else if (constptr->choice)
       {
-       /*
-        * Compare against the constrained choice...
-	*/
+	//
+        // Compare against the constrained choice...
+	//
 
-        if (option && choice && !_ppd_strcasecmp(option, constptr->option->keyword))
+        if (option && choice &&
+	    !_ppd_strcasecmp(option, constptr->option->keyword))
 	{
 	  if (!_ppd_strncasecmp(choice, "Custom.", 7))
 	    value = "Custom";
@@ -1100,9 +1108,9 @@ ppd_test_constraints(
 	else
 	  value = NULL;
 
-       /*
-        * Now check AP_FIRSTPAGE_option...
-	*/
+	//
+        // Now check AP_FIRSTPAGE_option...
+	//
 
         snprintf(firstpage, sizeof(firstpage), "AP_FIRSTPAGE_%s",
 	         constptr->option->keyword);

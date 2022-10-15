@@ -1,18 +1,18 @@
-/*
- * PostScript filter function and image file to PostScript filter function
- * for libppd.
- *
- * Copyright © 2020 by Till Kamppeter
- * Copyright © 2007-2018 by Apple Inc.
- * Copyright © 1993-2007 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- */
+//
+// PostScript filter function and image file to PostScript filter function
+// for libppd.
+//
+// Copyright © 2020 by Till Kamppeter
+// Copyright © 2007-2018 by Apple Inc.
+// Copyright © 1993-2007 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include <cupsfilters/filter.h>
 #include <cupsfilters/image.h>
@@ -32,118 +32,118 @@
 #include <sys/wait.h>
 
 
-/*
- * Constants...
- */
+//
+// Constants...
+//
 
-#define PSTOPS_BORDERNONE	0	/* No border or hairline border */
-#define PSTOPS_BORDERTHICK	1	/* Think border */
-#define PSTOPS_BORDERSINGLE	2	/* Single-line hairline border */
-#define PSTOPS_BORDERSINGLE2	3	/* Single-line thick border */
-#define PSTOPS_BORDERDOUBLE	4	/* Double-line hairline border */
-#define PSTOPS_BORDERDOUBLE2	5	/* Double-line thick border */
+#define PSTOPS_BORDERNONE	0	// No border or hairline border
+#define PSTOPS_BORDERTHICK	1	// Think border
+#define PSTOPS_BORDERSINGLE	2	// Single-line hairline border
+#define PSTOPS_BORDERSINGLE2	3	// Single-line thick border
+#define PSTOPS_BORDERDOUBLE	4	// Double-line hairline border
+#define PSTOPS_BORDERDOUBLE2	5	// Double-line thick border
 
-#define PSTOPS_LAYOUT_LRBT	0	/* Left to right, bottom to top */
-#define PSTOPS_LAYOUT_LRTB	1	/* Left to right, top to bottom */
-#define PSTOPS_LAYOUT_RLBT	2	/* Right to left, bottom to top */
-#define PSTOPS_LAYOUT_RLTB	3	/* Right to left, top to bottom */
-#define PSTOPS_LAYOUT_BTLR	4	/* Bottom to top, left to right */
-#define PSTOPS_LAYOUT_TBLR	5	/* Top to bottom, left to right */
-#define PSTOPS_LAYOUT_BTRL	6	/* Bottom to top, right to left */
-#define PSTOPS_LAYOUT_TBRL	7	/* Top to bottom, right to left */
+#define PSTOPS_LAYOUT_LRBT	0	// Left to right, bottom to top
+#define PSTOPS_LAYOUT_LRTB	1	// Left to right, top to bottom
+#define PSTOPS_LAYOUT_RLBT	2	// Right to left, bottom to top
+#define PSTOPS_LAYOUT_RLTB	3	// Right to left, top to bottom
+#define PSTOPS_LAYOUT_BTLR	4	// Bottom to top, left to right
+#define PSTOPS_LAYOUT_TBLR	5	// Top to bottom, left to right
+#define PSTOPS_LAYOUT_BTRL	6	// Bottom to top, right to left
+#define PSTOPS_LAYOUT_TBRL	7	// Top to bottom, right to left
 
-#define PSTOPS_LAYOUT_NEGATEY	1	/* The bits for the layout */
-#define PSTOPS_LAYOUT_NEGATEX	2	/* definitions above... */
+#define PSTOPS_LAYOUT_NEGATEY	1	// The bits for the layout
+#define PSTOPS_LAYOUT_NEGATEX	2	// definitions above...
 #define PSTOPS_LAYOUT_VERTICAL	4
 
 
-/*
- * Types...
- */
+//
+// Types...
+//
 
-typedef struct				/**** Page information ****/
+typedef struct				// **** Page information ****
 {
-  char		*label;			/* Page label */
-  int		bounding_box[4];	/* PageBoundingBox */
-  off_t		offset;			/* Offset to start of page */
-  ssize_t	length;			/* Number of bytes for page */
-  int		num_options;		/* Number of options for this page */
-  cups_option_t	*options;		/* Options for this page */
+  char		*label;			// Page label
+  int		bounding_box[4];	// PageBoundingBox
+  off_t		offset;			// Offset to start of page
+  ssize_t	length;			// Number of bytes for page
+  int		num_options;		// Number of options for this page
+  cups_option_t	*options;		// Options for this page
 } pstops_page_t;
 
-typedef struct				/**** Document information ****/
+typedef struct				// **** Document information ****
 {
-  int		page;			/* Current page */
-  int		bounding_box[4];	/* BoundingBox from header */
-  int		new_bounding_box[4];	/* New composite bounding box */
-  int		num_options;		/* Number of document-wide options */
-  cups_option_t	*options;		/* Document-wide options */
-  int		normal_landscape,	/* Normal rotation for landscape? */
-		saw_eof,		/* Saw the %%EOF comment? */
-		slow_collate,		/* Collate copies by hand? */
-		slow_duplex,		/* Duplex pages slowly? */
-		slow_order,		/* Reverse pages slowly? */
-		use_ESPshowpage;	/* Use ESPshowpage? */
-  cups_array_t	*pages;			/* Pages in document */
-  cups_file_t	*temp;			/* Temporary file, if any */
-  char		tempfile[1024];		/* Temporary filename */
-  int		job_id;			/* Job ID */
-  const char	*user,			/* User name */
-		*title;			/* Job name */
-  int		copies;			/* Number of copies */
-  const char	*ap_input_slot,		/* AP_FIRSTPAGE_InputSlot value */
-		*ap_manual_feed,	/* AP_FIRSTPAGE_ManualFeed value */
-		*ap_media_color,	/* AP_FIRSTPAGE_MediaColor value */
-		*ap_media_type,		/* AP_FIRSTPAGE_MediaType value */
-		*ap_page_region,	/* AP_FIRSTPAGE_PageRegion value */
-		*ap_page_size;		/* AP_FIRSTPAGE_PageSize value */
-  int		collate,		/* Collate copies? */
-		emit_jcl,		/* Emit JCL commands? */
-		fit_to_page;		/* Fit pages to media */
-  const char	*input_slot,		/* InputSlot value */
-		*manual_feed,		/* ManualFeed value */
-		*media_color,		/* MediaColor value */
-		*media_type,		/* MediaType value */
-		*page_region,		/* PageRegion value */
-		*page_size;		/* PageSize value */
-  int		mirror,			/* doc->mirror/mirror pages */
-		number_up,		/* Number of pages on each sheet */
-		number_up_layout,	/* doc->number_up_layout of N-up
-					   pages */
-		output_order,		/* Requested reverse output order? */
-		page_border;		/* doc->page_border around pages */
-  const char	*page_label,		/* page-label option, if any */
-		*page_ranges,		/* page-ranges option, if any */
-    *inputPageRange, /* input-page-ranges option, if any */
-		*page_set;		/* page-set option, if any */
-  /* Basic settings from PPD defaults/options, global vars of original pstops */
-  int           Orientation,            /* 0 = portrait, 1 = landscape, etc. */
-                Duplex,                 /* Duplexed? */
-                LanguageLevel,          /* PS Language level of printer */
-                Color;                  /* Color printer? */
-  float         PageLeft,               /* Left margin */
-                PageRight,              /* Right margin */
-                PageBottom,             /* Bottom margin */
-                PageTop,                /* Top margin */
-                PageWidth,              /* Total page width */
-                PageLength;             /* Total page length */
-  cups_file_t	*inputfp;		/* Temporary file, if any */
-  FILE		*outputfp;		/* Temporary file, if any */
-  cf_logfunc_t logfunc;             /* Logging function, NULL for no
-					   logging */
-  void          *logdata;               /* User data for logging function, can
-					   be NULL */
-  cf_filter_iscanceledfunc_t iscanceledfunc; /* Function returning 1 when
-                                           job is canceled, NULL for not
-                                           supporting stop on cancel */
-  void *iscanceleddata;                 /* User data for is-canceled function,
-					   can be NULL */
+  int		page;			// Current page
+  int		bounding_box[4];	// BoundingBox from header
+  int		new_bounding_box[4];	// New composite bounding box
+  int		num_options;		// Number of document-wide options
+  cups_option_t	*options;		// Document-wide options
+  int		normal_landscape,	// Normal rotation for landscape?
+		saw_eof,		// Saw the %%EOF comment?
+		slow_collate,		// Collate copies by hand?
+		slow_duplex,		// Duplex pages slowly?
+		slow_order,		// Reverse pages slowly?
+		use_ESPshowpage;	// Use ESPshowpage?
+  cups_array_t	*pages;			// Pages in document
+  cups_file_t	*temp;			// Temporary file, if any
+  char		tempfile[1024];		// Temporary filename
+  int		job_id;			// Job ID
+  const char	*user,			// User name
+		*title;			// Job name
+  int		copies;			// Number of copies
+  const char	*ap_input_slot,		// AP_FIRSTPAGE_InputSlot value
+		*ap_manual_feed,	// AP_FIRSTPAGE_ManualFeed value
+		*ap_media_color,	// AP_FIRSTPAGE_MediaColor value
+		*ap_media_type,		// AP_FIRSTPAGE_MediaType value
+		*ap_page_region,	// AP_FIRSTPAGE_PageRegion value
+		*ap_page_size;		// AP_FIRSTPAGE_PageSize value
+  int		collate,		// Collate copies?
+		emit_jcl,		// Emit JCL commands?
+		fit_to_page;		// Fit pages to media
+  const char	*input_slot,		// InputSlot value
+		*manual_feed,		// ManualFeed value
+		*media_color,		// MediaColor value
+		*media_type,		// MediaType value
+		*page_region,		// PageRegion value
+		*page_size;		// PageSize value
+  int		mirror,			// doc->mirror/mirror pages
+		number_up,		// Number of pages on each sheet
+		number_up_layout,	// doc->number_up_layout of N-up
+					// pages
+		output_order,		// Requested reverse output order?
+		page_border;		// doc->page_border around pages
+  const char	*page_label,		// page-label option, if any
+		*page_ranges,		// page-ranges option, if any
+		*inputPageRange,	// input-page-ranges option, if any
+		*page_set;		// page-set option, if any
+  // Basic settings from PPD defaults/options, global vars of original pstops
+  int           Orientation,            // 0 = portrait, 1 = landscape, etc.
+                Duplex,                 // Duplexed?
+                LanguageLevel,          // PS Language level of printer
+                Color;                  // Color printer?
+  float         PageLeft,               // Left margin
+                PageRight,              // Right margin
+                PageBottom,             // Bottom margin
+                PageTop,                // Top margin
+                PageWidth,              // Total page width
+                PageLength;             // Total page length
+  cups_file_t	*inputfp;		// Temporary file, if any
+  FILE		*outputfp;		// Temporary file, if any
+  cf_logfunc_t	logfunc;		// Logging function, NULL for no
+					// logging
+  void          *logdata;               // User data for logging function, can
+					// be NULL
+  cf_filter_iscanceledfunc_t iscanceledfunc; // Function returning 1 when
+                                        // job is canceled, NULL for not
+                                        // supporting stop on cancel
+  void *iscanceleddata;                 // User data for is-canceled function,
+					// can be NULL
 } pstops_doc_t;
 
 
-/*
- * Convenience macros...
- */
+//
+// Convenience macros...
+//
 
 #define	is_first_page(p)	(doc->number_up == 1 || \
 				 ((p) % doc->number_up) == 1)
@@ -153,12 +153,13 @@ typedef struct				/**** Document information ****/
 				 ((p) % doc->number_up) != 0)
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static pstops_page_t	*add_page(pstops_doc_t *doc, const char *label);
-static int		check_range(int page ,const char *Ranges,const char *pageset);
+static int		check_range(int page, const char *Ranges,
+				    const char *pageset);
 static void		copy_bytes(pstops_doc_t *doc,
 				   off_t offset, size_t length);
 static ssize_t		copy_comments(pstops_doc_t *doc,
@@ -217,56 +218,60 @@ static void		write_label_prolog(pstops_doc_t *doc, const char *label,
 			                   float bottom, float top,
 					   float width);
 static void		write_labels(pstops_doc_t *doc, int orient);
-static void		write_labels_outputfile_only(pstops_doc_t *doc, int orient);
-static void		write_options(pstops_doc_t  *doc, ppd_file_t *ppd,
+static void		write_labels_outputfile_only(pstops_doc_t *doc,
+						     int orient);
+static void		write_options(pstops_doc_t *doc, ppd_file_t *ppd,
 			              int num_options, cups_option_t *options);
 static void		write_text_comment(pstops_doc_t *doc,
 					   const char *name, const char *value);
 
-/*
- * 'ppdFilterPSToPS()' - Filter function to insert PostScript code from
- *              PPD file (PostScript printer driver) into a 
- *              PostScript data stream
- */
 
-int                         /* O - Error status */
-ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
-       int outputfd,        /* I - File descriptor output stream */
-       int inputseekable,   /* I - Is input stream seekable? (unused) */
-       cf_filter_data_t *data, /* I - Job and printer data */
-       void *parameters)    /* I - Filter-specific parameters (unused) */
+//
+// 'ppdFilterPSToPS()' - Filter function to insert PostScript code from
+//                       PPD file (PostScript printer driver) into a
+//                       PostScript data stream
+//
+
+int					// O - Error status
+ppdFilterPSToPS(int inputfd,		// I - File descriptor input stream
+		int outputfd,		// I - File descriptor output stream
+		int inputseekable,	// I - Is input stream seekable?
+					//     (unused)
+		cf_filter_data_t *data,	// I - Job and printer data
+		void *parameters)	// I - Filter-specific parameters
+					//     (unused)
 {
   ppd_filter_data_ext_t *filter_data_ext =
     (ppd_filter_data_ext_t *)cfFilterDataGetExt(data,
 						PPD_FILTER_DATA_EXT);
-  pstops_doc_t	doc;			/* Document information */
-  cups_file_t	*inputfp,*fp;		/* Print file */
-  FILE          *outputfp;              /* Output data stream */
+  pstops_doc_t	doc;			// Document information
+  cups_file_t	*inputfp,*fp;		// Print file
+  FILE          *outputfp;              // Output data stream
   char		line[8192],
-          buffer[8192];		/* Line buffers */
-  ssize_t	len,bytes;			/* Length of line buffers */
-  pstops_page_t *pageinfo;
-  cf_logfunc_t log = data->logfunc;
-  void          *ld = data->logdata;
+		buffer[8192];		// Line buffers
+  ssize_t	len, bytes;		// Length of line buffers
+  pstops_page_t	*pageinfo;
+  cf_logfunc_t	log = data->logfunc;
+  void		*ld = data->logdata;
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
-  void          *icd = data->iscanceleddata;
-   int proc_pipe[2];
-   int pstops_pid = 0; 
-   int childStatus;
-   int status = 0;
+  void		*icd = data->iscanceleddata;
+  int		proc_pipe[2];
+  int		pstops_pid = 0;
+  int		childStatus;
+  int		status = 0;
 
   (void)inputseekable;
   (void)parameters;
 
- /*
-  * Ignore broken pipe signals...
-  */
+  //
+  // Ignore broken pipe signals...
+  //
 
   signal(SIGPIPE, SIG_IGN);
 
- /*
-  * Process job options...
-  */
+  //
+  // Process job options...
+  //
 
   if (set_pstops_options(&doc, (filter_data_ext ? filter_data_ext->ppd : NULL),
 			 data->job_id, data->job_user,
@@ -279,83 +284,85 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
 
     return (1);
   }
-  
-   if(doc.inputPageRange)
- {   
-     if(pipe(proc_pipe))
-     {
-        if (log) log(ld, CF_LOGLEVEL_ERROR,
+
+  if (doc.inputPageRange)
+  {
+    if (pipe(proc_pipe))
+    {
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "ppdFilterPSToPS: Unable to create pipe for input-page-ranges");
-		   return (1);
-     }
+      return (1);
+    }
     if ((pstops_pid = fork()) == 0)
-    {  
-     close(proc_pipe[0]);
+    {
+      close(proc_pipe[0]);
 
       if ((fp = cupsFileOpenFd(inputfd, "r")) == NULL)
-     {
+      {
         if (!iscanceled || !iscanceled(icd))
         {
-        if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		     "ppdFilterPSToPS: Unable to open input data stream.");
+	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
+		       "ppdFilterPSToPS: Unable to open input data stream.");
         }
 
-     exit (1);
-    }
+	exit (1);
+      }
 
-    bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
+      bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
 
       while (strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
-    {
-      bytes = write(proc_pipe[1], buffer, bytes);
-      if ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) == 0)
-        break;
-    }
-
-    int input_page_number=0;
-
-    while (!strncmp(buffer, "%%Page:", 7))
-    {
-      input_page_number ++;
-
-      if(check_range(input_page_number,doc.inputPageRange,NULL))
       {
+	bytes = write(proc_pipe[1], buffer, bytes);
+	if ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) == 0)
+	  break;
+      }
+
+      int input_page_number = 0;
+
+      while (!strncmp(buffer, "%%Page:", 7))
+      {
+	input_page_number ++;
+
+	if(check_range(input_page_number,doc.inputPageRange,NULL))
+	{
           bytes = write(proc_pipe[1], buffer, bytes);
-          bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
-        while(strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
-        { bytes = write(proc_pipe[1], buffer, bytes);
-          bytes = cupsFileGetLine(fp,buffer,sizeof(buffer));
-        }
+          bytes = cupsFileGetLine(fp, buffer, sizeof(buffer));
+	  while(strncmp(buffer, "%%Page:", 7) &&
+		strncmp(buffer, "%%Trailer", 9))
+	  {
+	    bytes = write(proc_pipe[1], buffer, bytes);
+	    bytes = cupsFileGetLine(fp, buffer, sizeof(buffer));
+	  }
+	}
+	else
+	{
+	  bytes = cupsFileGetLine(fp, buffer, sizeof(buffer));
+	  while(strncmp(buffer, "%%Page:", 7) &&
+		strncmp(buffer, "%%Trailer", 9))
+	    bytes = cupsFileGetLine(fp, buffer, sizeof(buffer));
+	}
       }
-      else
+      while (bytes)
       {
-        bytes = cupsFileGetLine(fp,buffer,sizeof(buffer)); 
-        while(strncmp(buffer, "%%Page:", 7) && strncmp(buffer, "%%Trailer", 9))
-        {
-          bytes = cupsFileGetLine(fp,buffer,sizeof(buffer)); 
-        }
-      }
-    }
-    while (bytes)
-    {
         bytes = write(proc_pipe[1], buffer, bytes);
         bytes= cupsFileGetLine(fp,buffer,sizeof(buffer));
+      }
+      close(proc_pipe[1]);
+      cupsFileClose(fp);
+      exit(0);
     }
-    close(proc_pipe[1]);
-    cupsFileClose(fp);
-    exit(0);
-   }
-   else
-   {
-     close(proc_pipe[1]);
-     close(inputfd);
-     inputfd=proc_pipe[0];
-   }
+    else
+    {
+      close(proc_pipe[1]);
+      close(inputfd);
+      inputfd=proc_pipe[0];
+    }
   }
 
- /*
-  * Open the input data stream specified by the inputfd...
-  */
+  //
+  // Open the input data stream specified by the inputfd...
+  //
+
   if ((inputfp = cupsFileOpenFd(inputfd, "r")) == NULL)
   {
     if (!iscanceled || !iscanceled(icd))
@@ -367,9 +374,9 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
     return (1);
   }
 
- /*
-  * Open the output data stream specified by the outputfd...
-  */
+  //
+  // Open the output data stream specified by the outputfd...
+  //
 
   if ((outputfp = fdopen(outputfd, "w")) == NULL)
   {
@@ -384,52 +391,52 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
     return (1);
   }
 
- /*
-  * Read the first line to see if we have DSC comments...
-  */
+  //
+  // Read the first line to see if we have DSC comments...
+  //
 
   if ((len = (ssize_t)cupsFileGetLine(inputfp, line, sizeof(line))) == 0)
   {
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "ppdFilterPSToPS: The print file is empty.");
-    /* Do not treat this an error, if a previous filter eliminated all
-       pages the job should get dequeued without anything printed. */
+    // Do not treat this an error, if a previous filter eliminated all
+    // pages the job should get dequeued without anything printed.
     return (0);
   }
 
   doc.inputfp = inputfp;
   doc.outputfp = outputfp;
-  
- /*
-  * Write any "exit server" options that have been selected...
-  */
+
+  //
+  // Write any "exit server" options that have been selected...
+  //
 
   if (filter_data_ext)
     ppdEmit(filter_data_ext->ppd, outputfp, PPD_ORDER_EXIT);
 
- /*
-  * Write any JCL commands that are needed to print PostScript code...
-  */
+  //
+  // Write any JCL commands that are needed to print PostScript code...
+  //
 
   if (filter_data_ext && doc.emit_jcl)
     ppdEmitJCL(filter_data_ext->ppd, outputfp, doc.job_id, doc.user, doc.title);
 
- /*
-  * Start with a DSC header...
-  */
+  //
+  // Start with a DSC header...
+  //
 
   doc_puts(&doc, "%!PS-Adobe-3.0\n");
 
- /*
-  * Skip leading PJL in the document...
-  */
+  //
+  // Skip leading PJL in the document...
+  //
 
   while (!strncmp(line, "\033%-12345X", 9) || !strncmp(line, "@PJL ", 5))
   {
-   /*
-    * Yup, we have leading PJL fun, so skip it until we hit the line
-    * with "ENTER LANGUAGE"...
-    */
+    //
+    // Yup, we have leading PJL fun, so skip it until we hit the line
+    // with "ENTER LANGUAGE"...
+    //
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "ppdFilterPSToPS: Skipping PJL header...");
@@ -445,41 +452,41 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
       break;
   }
 
- /*
-  * Now see if the document conforms to the Adobe Document Structuring
-  * Conventions...
-  */
+  //
+  // Now see if the document conforms to the Adobe Document Structuring
+  // Conventions...
+  //
 
   if (!strncmp(line, "%!PS-Adobe-", 11))
   {
-   /*
-    * Yes, filter the document...
-    */
+    //
+    // Yes, filter the document...
+    //
 
     if (filter_data_ext)
       copy_dsc(&doc, filter_data_ext->ppd, line, len, sizeof(line));
   }
   else
   {
-   /*
-    * No, display an error message and treat the file as if it contains
-    * a single page...
-    */
+    //
+    // No, display an error message and treat the file as if it contains
+    // a single page...
+    //
 
     if (filter_data_ext)
       copy_non_dsc(&doc, filter_data_ext->ppd, line, len, sizeof(line));
   }
 
- /*
-  * Send %%EOF as needed...
-  */
+  //
+  // Send %%EOF as needed...
+  //
 
   if (!doc.saw_eof)
     doc_puts(&doc, "%%EOF\n");
 
- /*
-  * End the job with the appropriate JCL command or CTRL-D...
-  */
+  //
+  // End the job with the appropriate JCL command or CTRL-D...
+  //
 
   if (doc.emit_jcl)
   {
@@ -490,9 +497,9 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
       doc_putc(&doc, 0x04);
   }
 
- /*
-  * Close files and remove the temporary file if needed...
-  */
+  //
+  // Close files and remove the temporary file if needed...
+  //
 
   if (doc.temp)
   {
@@ -515,31 +522,38 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
     doc.pages = NULL;
   }
 
-  if(doc.inputPageRange)
-    { 
-      retry_wait:
-        if (waitpid (pstops_pid, &childStatus, 0) == -1) {
-          if (errno == EINTR)
-            goto retry_wait;
-          if (log) log(ld, CF_LOGLEVEL_ERROR,
-          "ppdFilterPSToPS: Error while waiting for input_page_ranges to finish - %s.",
-          strerror(errno));
-        }
-        /* How did the sub-process terminate */
-    if (childStatus) {
-      if (WIFEXITED(childStatus)) {
-	/* Via exit() anywhere or return() in the main() function */
+  if (doc.inputPageRange)
+  {
+  retry_wait:
+    if (waitpid (pstops_pid, &childStatus, 0) == -1)
+    {
+      if (errno == EINTR)
+	goto retry_wait;
+      if (log) log(ld, CF_LOGLEVEL_ERROR,
+		   "ppdFilterPSToPS: Error while waiting for input_page_ranges to finish - %s.",
+		   strerror(errno));
+    }
+    // How did the sub-process terminate
+    if (childStatus)
+    {
+      if (WIFEXITED(childStatus))
+      {
+	// Via exit() anywhere or return() in the main() function
 	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "ppdFilterPSToPS: input-page-ranges filter (PID %d) stopped with status %d",
 		     pstops_pid, WEXITSTATUS(childStatus));
-      } else {
-	/* Via signal */
+      }
+      else
+      {
+	// Via signal
 	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "ppdFilterPSToPS: imput-page-ranges filter (PID %d) crashed on signal %d",
 		     pstops_pid, WTERMSIG(childStatus));
       }
-      status=1;
-    } else {
+      status = 1;
+    }
+    else
+    {
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "ppdFilterPSToPS: input-page-ranges-filter (PID %d) exited with no errors.",
 		   pstops_pid);
@@ -556,100 +570,102 @@ ppdFilterPSToPS(int inputfd,         /* I - File descriptor input stream */
 }
 
 
-/*
- * 'ppdFilterImageToPS()' - Filter function to convert many common image file
- *                 formats into PostScript
- */
+//
+// 'ppdFilterImageToPS()' - Filter function to convert many common image file
+//                          formats into PostScript
+//
 
-int                                       /* O - Error status */
-ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream */
-		  int outputfd,           /* I - File descriptor output stream*/
-		  int inputseekable,      /* I - Is input stream seekable?
-					     (unused) */
-		  cf_filter_data_t *data, /* I - Job and printer data */
-		  void *parameters)       /* I - Filter-specific parameters
-					     (unused) */
+int						// O - Error status
+ppdFilterImageToPS(int inputfd,			// I - File descriptor input
+						//     stream
+		   int outputfd,           	// I - File descriptor output
+						//     stream
+		   int inputseekable,		// I - Is input stream seekable?
+						//     (unused)
+		   cf_filter_data_t *data,	// I - Job and printer data
+		   void *parameters)		// I - Filter-specific
+						//     parameters (unused)
 {
   ppd_filter_data_ext_t *filter_data_ext =
     (ppd_filter_data_ext_t *)cfFilterDataGetExt(data,
 						PPD_FILTER_DATA_EXT);
-  pstops_doc_t	doc;			/* Document information */
-  cf_image_t	*img;			/* Image to print */
-  float		xprint,			/* Printable area */
+  pstops_doc_t	doc;			// Document information
+  cf_image_t	*img;			// Image to print
+  float		xprint,			// Printable area
 		yprint,
-		xinches,		/* Total size in inches */
+		xinches,		// Total size in inches
 		yinches;
-  float		xsize,			/* Total size in points */
+  float		xsize,			// Total size in points
 		ysize,
 		xsize2,
 		ysize2;
-  float		aspect;			/* Aspect ratio */
-  int		xpages,			/* # x pages */
-		ypages,			/* # y pages */
-		xpage,			/* Current x page */
-		ypage,			/* Current y page */
-		page;			/* Current page number */
-  int		xc0, yc0,		/* Corners of the page in image coords*/
+  float		aspect;			// Aspect ratio
+  int		xpages,			// # x pages
+		ypages,			// # y pages
+		xpage,			// Current x page
+		ypage,			// Current y page
+		page;			// Current page number
+  int		xc0, yc0,		// Corners of the page in image coords
 		xc1, yc1;
-  cf_ib_t	*row;			/* Current row */
-  int		y;			/* Current Y coordinate in image */
-  int		colorspace;		/* Output colorspace */
-  int		out_offset,		/* Offset into output buffer */
-		out_length;		/* Length of output buffer */
-  ppd_file_t	*ppd = NULL;		/* PPD file */
-  ppd_choice_t	*choice;		/* PPD option choice */
-  int		num_options;		/* Number of print options */
-  cups_option_t	*options;		/* Print options */
-  const char	*val;			/* Option value */
-  int		slowcollate;		/* Collate copies the slow way */
-  float		g;			/* Gamma correction value */
-  float		b;			/* Brightness factor */
-  float		zoom;			/* Zoom facter */
-  int		xppi, yppi;		/* Pixels-per-inch */
-  int		hue, sat;		/* Hue and saturation adjustment */
-  int		realcopies,		/* Real copies being printed */
-		emit_jcl;		/* Emit JCL? */
-  float		left, top;		/* Left and top of image */
-  time_t	curtime;		/* Current time */
-  struct tm	*curtm;			/* Current date */
-  char		curdate[255];		/* Current date string */
-  int		fillprint = 0;		/* print-scaling = fill */
-  int		cropfit = 0;		/* -o crop-to-fit = true */
-  cups_page_header2_t h;                /* CUPS Raster page header, to */
-                                        /* accommodate results of command */
-                                        /* line parsing for PPD-less queue */
-  int		Flip,			/* Flip/mirror pages */
-		XPosition,		/* Horizontal position on page */
-		YPosition,		/* Vertical position on page */
-		Collate,		/* Collate copies? */
-		Copies;			/* Number of copies */
-  char		tempfile[1024];		/* Name of file to print */
-  FILE          *inputfp;		/* Input file */
-  int           fd;			/* File descriptor for temp file */
+  cf_ib_t	*row;			// Current row
+  int		y;			// Current Y coordinate in image
+  int		colorspace;		// Output colorspace
+  int		out_offset,		// Offset into output buffer
+		out_length;		// Length of output buffer
+  ppd_file_t	*ppd = NULL;		// PPD file
+  ppd_choice_t	*choice;		// PPD option choice
+  int		num_options;		// Number of print options
+  cups_option_t	*options;		// Print options
+  const char	*val;			// Option value
+  int		slowcollate;		// Collate copies the slow way
+  float		g;			// Gamma correction value
+  float		b;			// Brightness factor
+  float		zoom;			// Zoom facter
+  int		xppi, yppi;		// Pixels-per-inch
+  int		hue, sat;		// Hue and saturation adjustment
+  int		realcopies,		// Real copies being printed
+		emit_jcl;		// Emit JCL?
+  float		left, top;		// Left and top of image
+  time_t	curtime;		// Current time
+  struct tm	*curtm;			// Current date
+  char		curdate[255];		// Current date string
+  int		fillprint = 0;		// print-scaling = fill
+  int		cropfit = 0;		// -o crop-to-fit = true
+  cups_page_header2_t h;                // CUPS Raster page header, to
+                                        // accommodate results of command
+                                        // line parsing for PPD-less queue
+  int		Flip,			// Flip/mirror pages
+		XPosition,		// Horizontal position on page
+		YPosition,		// Vertical position on page
+		Collate,		// Collate copies?
+		Copies;			// Number of copies
+  char		tempfile[1024];		// Name of file to print
+  FILE          *inputfp;		// Input file
+  int           fd;			// File descriptor for temp file
   char          buf[BUFSIZ];
   int           bytes;
-  cups_cspace_t cspace = (cups_cspace_t)(-1);
-  cf_logfunc_t log = data->logfunc;
-  void          *ld = data->logdata;
+  cups_cspace_t	cspace = (cups_cspace_t)(-1);
+  cf_logfunc_t	log = data->logfunc;
+  void		*ld = data->logdata;
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
-  void          *icd = data->iscanceleddata;
+  void		*icd = data->iscanceleddata;
 
 
- /*
-  * Make sure status messages are not buffered...
-  */
+  //
+  // Make sure status messages are not buffered...
+  //
 
   setbuf(stderr, NULL);
 
- /*
-  * Ignore broken pipe signals...
-  */
+  //
+  // Ignore broken pipe signals...
+  //
 
   signal(SIGPIPE, SIG_IGN);
 
- /*
-  * Initialize data structure
-  */
+  //
+  // Initialize data structure
+  //
 
   Flip = 0;
   XPosition = 0;
@@ -657,15 +673,15 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
   Collate = 0;
   Copies = 1;
 
- /*
-  * Initialize document information structure...
-  */
+  //
+  // Initialize document information structure...
+  //
 
   memset(&doc, 0, sizeof(pstops_doc_t));
 
- /*
-  * Open the input data stream specified by the inputfd ...
-  */
+  //
+  // Open the input data stream specified by the inputfd ...
+  //
 
   if ((inputfp = fdopen(inputfd, "r")) == NULL)
   {
@@ -678,9 +694,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     return (1);
   }
 
- /*
-  * Copy input into temporary file if needed ...
-  */
+  //
+  // Copy input into temporary file if needed ...
+  //
 
   if (!inputseekable) {
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
@@ -701,9 +717,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     fclose(inputfp);
     close(fd);
 
-   /*
-    * Open the temporary file to read it instead of the original input ...
-    */
+    //
+    // Open the temporary file to read it instead of the original input ...
+    //
 
     if ((inputfp = fopen(tempfile, "r")) == NULL)
     {
@@ -718,9 +734,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     }
   }
 
- /*
-  * Open the output data stream specified by the outputfd...
-  */
+  //
+  // Open the output data stream specified by the outputfd...
+  //
 
   if ((doc.outputfp = fdopen(outputfd, "w")) == NULL)
   {
@@ -737,9 +753,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     return (1);
   }
 
- /*
-  * Process command-line options and write the prolog...
-  */
+  //
+  // Process command-line options and write the prolog...
+  //
 
   zoom = 1.0;
   xppi = 0;
@@ -751,36 +767,40 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 
   Copies = data->copies;
 
- /*
-  * Option list...
-  */
+  //
+  // Option list...
+  //
 
   options     = data->options;
   num_options = data->num_options;
 
- /*
-  * Process job options...
-  */
+  //
+  // Process job options...
+  //
 
   if (filter_data_ext)
     ppd = filter_data_ext->ppd;
   ppdFilterSetCommonOptions(ppd, num_options, options, 0,
-			 &doc.Orientation, &doc.Duplex,
-			 &doc.LanguageLevel, &doc.Color,
-			 &doc.PageLeft, &doc.PageRight,
-			 &doc.PageTop, &doc.PageBottom,
-			 &doc.PageWidth, &doc.PageLength,
-			 log, ld);
+			    &doc.Orientation, &doc.Duplex,
+			    &doc.LanguageLevel, &doc.Color,
+			    &doc.PageLeft, &doc.PageRight,
+			    &doc.PageTop, &doc.PageBottom,
+			    &doc.PageWidth, &doc.PageLength,
+			    log, ld);
 
-  /* The ppdFilterSetCommonOptions() does not set doc.Color
-     according to option settings (user's demand for color/gray),
-     so we parse the options and set the mode here */
+  //
+  // The ppdFilterSetCommonOptions() does not set doc.Color
+  // according to option settings (user's demand for color/gray),
+  // so we parse the options and set the mode here
+  //
+
   cfRasterPrepareHeader(&h, data, CF_FILTER_OUT_FORMAT_CUPS_RASTER,
 			CF_FILTER_OUT_FORMAT_CUPS_RASTER, 0, &cspace);
   if (doc.Color)
     doc.Color = h.cupsNumColors <= 1 ? 0 : 1;
-  if (!ppd) {
-    /* Without PPD use also the other findings of cfRasterParseIPPOptions() */
+  if (!ppd)
+  {
+    // Without PPD use also the other findings of cfRasterParseIPPOptions()
     doc.Orientation = h.Orientation;
     doc.Duplex = h.Duplex;
     doc.LanguageLevel = 2;
@@ -801,16 +821,17 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     Copies = h.NumCopies;
   }
 
-  if ((val = cupsGetOption("multiple-document-handling", num_options, options)) != NULL)
+  if ((val = cupsGetOption("multiple-document-handling",
+			   num_options, options)) != NULL)
   {
-   /*
-    * This IPP attribute is unnecessarily complicated...
-    *
-    *   single-document, separate-documents-collated-copies, and
-    *   single-document-new-sheet all require collated copies.
-    *
-    *   separate-documents-uncollated-copies allows for uncollated copies.
-    */
+    //
+    // This IPP attribute is unnecessarily complicated...
+    //
+    //  single-document, separate-documents-collated-copies, and
+    //  single-document-new-sheet all require collated copies.
+    //
+    //  separate-documents-uncollated-copies allows for uncollated copies.
+    //
 
     Collate = strcasecmp(val, "separate-documents-uncollated-copies") != 0;
   }
@@ -821,9 +842,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 
   if ((val = cupsGetOption("gamma", num_options, options)) != NULL)
   {
-   /*
-    * Get gamma value from 1 to 10000...
-    */
+    //
+    // Get gamma value from 1 to 10000...
+    //
 
     g = atoi(val) * 0.001f;
 
@@ -835,9 +856,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 
   if ((val = cupsGetOption("brightness", num_options, options)) != NULL)
   {
-   /*
-    * Get brightness value from 10 to 1000.
-    */
+    //
+    // Get brightness value from 10 to 1000.
+    //
 
     b = atoi(val) * 0.01f;
 
@@ -928,14 +949,15 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
   else
     emit_jcl = 1;
 
- /*
-  * Open the input image to print...
-  */
+  //
+  // Open the input image to print...
+  //
 
   colorspace = doc.Color ? CF_IMAGE_RGB_CMYK : CF_IMAGE_WHITE;
 
   img = cfImageOpenFP(inputfp, colorspace, CF_IMAGE_WHITE, sat, hue, NULL);
-  if (img != NULL) {
+  if (img != NULL)
+  {
 
     int margin_defined = 0;
     int fidelity = 0;
@@ -943,7 +965,7 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 
     if (ppd && (ppd->custom_margins[0] || ppd->custom_margins[1] ||
 		ppd->custom_margins[2] || ppd->custom_margins[3]))
-      /* In case of custom margins */
+      // In case of custom margins
       margin_defined = 1;
     if (doc.PageLength != doc.PageTop - doc.PageBottom ||
 	doc.PageWidth != doc.PageRight - doc.PageLeft)
@@ -971,7 +993,8 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
       if(!strcasecmp(val, "true") || !strcasecmp(val, "yes"))
 	tempOrientation = 4;
     }
-    if (tempOrientation == 0) {
+    if (tempOrientation == 0)
+    {
       if (((pw > ph) && (w < h)) || ((pw < ph) && (w > h)))
 	tempOrientation = 4;
     }
@@ -988,7 +1011,8 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     {
       if (!strcasecmp(val, "auto"))
       {
-	if (fidelity || document_large) {
+	if (fidelity || document_large)
+	{
 	  if (margin_defined)
 	    zoom = 1.0;       // fit method
 	  else
@@ -1043,8 +1067,8 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     }
     if (fillprint || cropfit)
     {
-      /* For cropfit do the math without the unprintable margins to get correct
-         centering */
+      // For cropfit do the math without the unprintable margins to get correct
+      // centering
       if (cropfit)
       {
 	pw = doc.PageWidth;
@@ -1075,7 +1099,7 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 	}
       }
       if (tempOrientation==0)
-      { 
+      {
 	if (((pw > ph) && (w < h)) || ((pw < ph) && (w > h)))
 	{
 	  int temp = pw;
@@ -1084,11 +1108,13 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 	  flag = 4;
 	}
       }
-      if (fillprint) {
+      if (fillprint)
+      {
 	float final_w, final_h;
-	if (w * ph / pw <= h) {
+	if (w * ph / pw <= h)
+	{
 	  final_w = w;
-	  final_h = w * ph / pw; 
+	  final_h = w * ph / pw;
 	}
 	else
 	{
@@ -1148,9 +1174,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 
   colorspace = cfImageGetColorSpace(img);
 
- /*
-  * Scale as necessary...
-  */
+  //
+  // Scale as necessary...
+  //
 
   if (zoom == 0.0 && xppi == 0)
   {
@@ -1167,9 +1193,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 
   if (xppi > 0)
   {
-   /*
-    * Scale the image as neccesary to match the desired pixels-per-inch.
-    */
+    //
+    // Scale the image as neccesary to match the desired pixels-per-inch.
+    //
 
     if (doc.Orientation & 1)
     {
@@ -1202,9 +1228,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     if (cupsGetOption("orientation-requested", num_options, options) == NULL &&
         cupsGetOption("landscape", num_options, options) == NULL)
     {
-     /*
-      * Rotate the image if it will fit landscape but not portrait...
-      */
+      //
+      // Rotate the image if it will fit landscape but not portrait...
+      //
 
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "ppdFilterImageToPS: Auto orientation...");
@@ -1212,9 +1238,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
       if ((xinches > xprint || yinches > yprint) &&
           xinches <= yprint && yinches <= xprint)
       {
-       /*
-	* Rotate the image as needed...
-	*/
+	//
+	// Rotate the image as needed...
+	//
 
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "ppdFilterImageToPS: Using landscape orientation...");
@@ -1228,9 +1254,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
   }
   else
   {
-   /*
-    * Scale percentage of page size...
-    */
+    //
+    // Scale percentage of page size...
+    //
 
     xprint = (doc.PageRight - doc.PageLeft) / 72.0;
     yprint = (doc.PageTop - doc.PageBottom) / 72.0;
@@ -1276,19 +1302,19 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     if (cupsGetOption("orientation-requested", num_options, options) == NULL &&
         cupsGetOption("landscape", num_options, options) == NULL)
     {
-     /*
-      * Choose the rotation with the largest area, but prefer
-      * portrait if they are equal...
-      */
+      //
+      // Choose the rotation with the largest area, but prefer
+      // portrait if they are equal...
+      //
 
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "ppdFilterImageToPS: Auto orientation...");
 
       if ((xsize * ysize) < (xsize2 * xsize2))
       {
-       /*
-	* Do landscape orientation...
-	*/
+	//
+	// Do landscape orientation...
+	//
 
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "ppdFilterImageToPS: Using landscape orientation...");
@@ -1301,9 +1327,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
       }
       else
       {
-       /*
-	* Do portrait orientation...
-	*/
+	//
+	// Do portrait orientation...
+	//
 
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "ppdFilterImageToPS: Using portrait orientation...");
@@ -1335,10 +1361,10 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     }
   }
 
- /*
-  * Compute the number of pages to print and the size of the image on each
-  * page...
-  */
+  //
+  // Compute the number of pages to print and the size of the image on each
+  // page...
+  //
 
   xpages = ceil(xinches / xprint);
   ypages = ceil(yinches / yprint);
@@ -1350,21 +1376,21 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 	       "ppdFilterImageToPS: xpages = %dx%.2fin, ypages = %dx%.2fin",
 	       xpages, xprint, ypages, yprint);
 
- /*
-  * Update the page size for custom sizes...
-  */
+  //
+  // Update the page size for custom sizes...
+  //
 
   if ((choice = ppdFindMarkedChoice(ppd, "PageSize")) != NULL &&
       strcasecmp(choice->choice, "Custom") == 0)
   {
-    float	width,		/* New width in points */
-		length;		/* New length in points */
-    char	s[255];		/* New custom page size... */
+    float	width,		// New width in points
+		length;		// New length in points
+    char	s[255];		// New custom page size...
 
 
-   /*
-    * Use the correct width and length for the current orientation...
-    */
+    //
+    // Use the correct width and length for the current orientation...
+    //
 
     if (doc.Orientation & 1)
     {
@@ -1377,16 +1403,16 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
       length = yprint * 72.0;
     }
 
-   /*
-    * Add margins to page size...
-    */
+    //
+    // Add margins to page size...
+    //
 
     width  += ppd->custom_margins[0] + ppd->custom_margins[2];
     length += ppd->custom_margins[1] + ppd->custom_margins[3];
 
-   /*
-    * Enforce minimums...
-    */
+    //
+    // Enforce minimums...
+    //
 
     if (width < ppd->custom_min[0])
       width = ppd->custom_min[0];
@@ -1398,16 +1424,16 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 		 "ppdFilterImageToPS: Updated custom page size to %.2f x %.2f inches...",
 		 width / 72.0, length / 72.0);
 
-   /*
-    * Set the new custom size...
-    */
+    //
+    // Set the new custom size...
+    //
 
     sprintf(s, "Custom.%.0fx%.0f", width, length);
     ppdMarkOption(ppd, "PageSize", s);
 
-   /*
-    * Update page variables...
-    */
+    //
+    // Update page variables...
+    //
 
     doc.PageWidth  = width;
     doc.PageLength = length;
@@ -1417,9 +1443,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
     doc.PageTop    = length - ppd->custom_margins[3];
   }
 
- /*
-  * See if we need to collate, and if so how we need to do it...
-  */
+  //
+  // See if we need to collate, and if so how we need to do it...
+  //
 
   if (xpages == 1 && ypages == 1)
     Collate = 0;
@@ -1434,30 +1460,30 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
   else
     realcopies = 1;
 
- /*
-  * Write any "exit server" options that have been selected...
-  */
+  //
+  // Write any "exit server" options that have been selected...
+  //
 
   ppdEmit(ppd, doc.outputfp, PPD_ORDER_EXIT);
 
- /*
-  * Write any JCL commands that are needed to print PostScript code...
-  */
+  //
+  // Write any JCL commands that are needed to print PostScript code...
+  //
 
   if (emit_jcl)
     ppdEmitJCL(ppd, doc.outputfp, data->job_id, data->job_user,
 	       data->job_title);
 
- /*
-  * Start sending the document with any commands needed...
-  */
+  //
+  // Start sending the document with any commands needed...
+  //
 
   curtime = time(NULL);
   curtm   = localtime(&curtime);
 
   doc_puts(&doc, "%!PS-Adobe-3.0\n");
   doc_printf(&doc, "%%%%BoundingBox: %.0f %.0f %.0f %.0f\n",
-	  doc.PageLeft, doc.PageBottom, doc.PageRight, doc.PageTop);
+	     doc.PageLeft, doc.PageBottom, doc.PageRight, doc.PageTop);
   doc_printf(&doc, "%%%%LanguageLevel: %d\n", doc.LanguageLevel);
   doc_printf(&doc, "%%%%Pages: %d\n", xpages * ypages * Copies);
   doc_puts(&doc, "%%DocumentData: Clean7Bit\n");
@@ -1486,38 +1512,38 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 
   if (g != 1.0 || b != 1.0)
     doc_printf(&doc,
-	    "{ neg 1 add dup 0 lt { pop 1 } { %.3f exp neg 1 add } "
-	    "ifelse %.3f mul } bind settransfer\n", g, b);
+	       "{ neg 1 add dup 0 lt { pop 1 } { %.3f exp neg 1 add } "
+	       "ifelse %.3f mul } bind settransfer\n", g, b);
 
   write_common(&doc);
   switch (doc.Orientation)
   {
     case 0 :
         write_label_prolog(&doc, cupsGetOption("page-label", num_options,
-					     options),
-			 doc.PageBottom, doc.PageTop, doc.PageWidth);
+					       options),
+			   doc.PageBottom, doc.PageTop, doc.PageWidth);
         break;
 
     case 1 :
         write_label_prolog(&doc, cupsGetOption("page-label", num_options,
-					     options),
-                	 doc.PageLeft, doc.PageRight, doc.PageLength);
+					       options),
+			   doc.PageLeft, doc.PageRight, doc.PageLength);
         break;
 
     case 2 :
         write_label_prolog(&doc, cupsGetOption("page-label", num_options,
-					     options),
-			 doc.PageLength - doc.PageTop,
-			 doc.PageLength - doc.PageBottom,
-			 doc.PageWidth);
+					       options),
+			   doc.PageLength - doc.PageTop,
+			   doc.PageLength - doc.PageBottom,
+			   doc.PageWidth);
         break;
 
     case 3 :
 	write_label_prolog(&doc, cupsGetOption("page-label", num_options,
-					     options),
-			 doc.PageWidth - doc.PageRight,
-			 doc.PageWidth - doc.PageLeft,
-			 doc.PageLength);
+					       options),
+			   doc.PageWidth - doc.PageRight,
+			   doc.PageWidth - doc.PageLeft,
+			   doc.PageLength);
         break;
   }
 
@@ -1531,9 +1557,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 
   doc_puts(&doc, "%%EndProlog\n");
 
- /*
-  * Output the pages...
-  */
+  //
+  // Output the pages...
+  //
 
   row = malloc(cfImageGetWidth(img) * abs(colorspace) + 3);
   if (row == NULL)
@@ -1706,17 +1732,17 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 
 	switch (doc.Orientation)
 	{
-	  case 1 : /* Landscape */
+	  case 1 : // Landscape
 	      doc_printf(&doc, "%.0f 0 translate 90 rotate\n",
-		      doc.PageWidth);
+			 doc.PageWidth);
               break;
-	  case 2 : /* Reverse Portrait */
+	  case 2 : // Reverse Portrait
 	      doc_printf(&doc, "%.0f %.0f translate 180 rotate\n",
-		      doc.PageWidth, doc.PageLength);
+			 doc.PageWidth, doc.PageLength);
 	      break;
-	  case 3 : /* Reverse Landscape */
+	  case 3 : // Reverse Landscape
 	      doc_printf(&doc, "0 %.0f translate -90 rotate\n",
-		      doc.PageLength);
+			 doc.PageLength);
               break;
 	}
 
@@ -1730,15 +1756,15 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
         doc_printf(&doc, "%.1f %.1f translate\n", left, top);
 
 	doc_printf(&doc, "%.3f %.3f scale\n\n",
-		xprint * 72.0 / (xc1 - xc0 + 1),
-		yprint * 72.0 / (yc1 - yc0 + 1));
+		   xprint * 72.0 / (xc1 - xc0 + 1),
+		   yprint * 72.0 / (yc1 - yc0 + 1));
 
 	if (doc.LanguageLevel == 1)
 	{
 	  doc_printf(&doc, "/picture %d string def\n",
-		  (xc1 - xc0 + 1) * abs(colorspace));
+		     (xc1 - xc0 + 1) * abs(colorspace));
 	  doc_printf(&doc, "%d %d 8[1 0 0 -1 0 1]",
-		  (xc1 - xc0 + 1), (yc1 - yc0 + 1));
+		     (xc1 - xc0 + 1), (yc1 - yc0 + 1));
 
           if (colorspace == CF_IMAGE_WHITE)
             doc_puts(&doc, "{currentfile picture readhexstring pop} image\n");
@@ -1771,12 +1797,12 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
           }
 
           doc_printf(&doc,
-		  "<<"
-		  "/ImageType 1"
-		  "/Width %d"
-		  "/Height %d"
-		  "/BitsPerComponent 8",
-		  xc1 - xc0 + 1, yc1 - yc0 + 1);
+		     "<<"
+		     "/ImageType 1"
+		     "/Width %d"
+		     "/Height %d"
+		     "/BitsPerComponent 8",
+		     xc1 - xc0 + 1, yc1 - yc0 + 1);
 
           switch (colorspace)
 	  {
@@ -1822,10 +1848,10 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
   doc_puts(&doc, "%%EOF\n");
 
   free(row);
-  
- /*
-  * End the job with the appropriate JCL command or CTRL-D otherwise.
-  */
+
+  //
+  // End the job with the appropriate JCL command or CTRL-D otherwise.
+  //
 
   if (emit_jcl)
   {
@@ -1838,9 +1864,9 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "ppdFilterImageToPS: Printing completed.", page);
 
- /*
-  * Close files...
-  */
+  //
+  // Close files...
+  //
 
   cfImageClose(img);
   fclose(doc.outputfp);
@@ -1850,16 +1876,16 @@ ppdFilterImageToPS(int inputfd,            /* I - File descriptor input stream *
 }
 
 
-/*
- * 'add_page()' - Add a page to the pages array.
- */
+//
+// 'add_page()' - Add a page to the pages array.
+//
 
-static pstops_page_t *			/* O - New page info object */
-add_page(pstops_doc_t *doc,		/* I - Document information */
-         const char   *label)		/* I - Page label */
+static pstops_page_t *			// O - New page info object
+add_page(pstops_doc_t *doc,		// I - Document information
+         const char   *label)		// I - Page label
 {
-  pstops_page_t	*pageinfo;		/* New page info object */
-  cf_logfunc_t log = doc->logfunc;
+  pstops_page_t	*pageinfo;		// New page info object
+  cf_logfunc_t  log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -1891,25 +1917,26 @@ add_page(pstops_doc_t *doc,		/* I - Document information */
 }
 
 
-/*
- * 'check_range()' - Check to see if the current page is selected for
- *                   printing.
- */
+//
+// 'check_range()' - Check to see if the current page is selected for
+//                   printing.
+//
 
-static int				/* O - 1 if selected, 0 otherwise */
-check_range(int          page,    	/* I - Page number */
-            const char *Ranges,    /* I - page_ranges or inputPageRange */	
-            const char *pageset ) /* I - Only provided with page_ranges else NULL */  
+static int				// O - 1 if selected, 0 otherwise
+check_range(int        page,		// I - Page number
+            const char *Ranges,		// I - page_ranges or inputPageRange
+            const char *pageset )	// I - Only provided with page_ranges
+					//     else NULL
 {
-  const char	*range;			/* Pointer into range string */
-  int		lower, upper;		/* Lower and upper page numbers */
+  const char	*range;			// Pointer into range string
+  int		lower, upper;		// Lower and upper page numbers
 
 
   if (pageset)
   {
-   /*
-    * See if we only print even or odd pages...
-    */
+    //
+    // See if we only print even or odd pages...
+    //
 
     if (!strcasecmp(pageset, "even") && (page & 1))
       return (0);
@@ -1919,7 +1946,7 @@ check_range(int          page,    	/* I - Page number */
   }
 
   if (!Ranges)
-    return (1);				/* No range, print all pages... */
+    return (1);				// No range, print all pages...
 
   for (range = Ranges; *range != '\0';)
   {
@@ -1958,18 +1985,18 @@ check_range(int          page,    	/* I - Page number */
 }
 
 
-/*
- * 'copy_bytes()' - Copy bytes from the temporary file to the output file.
- */
+//
+// 'copy_bytes()' - Copy bytes from the temporary file to the output file.
+//
 
 static void
-copy_bytes(pstops_doc_t *doc,		/* I - Document info */
-           off_t       offset,		/* I - Offset to page data */
-           size_t      length)		/* I - Length of page data */
+copy_bytes(pstops_doc_t *doc,		// I - Document info
+           off_t       offset,		// I - Offset to page data
+           size_t      length)		// I - Length of page data
 {
-  char		buffer[8192];		/* Data buffer */
-  ssize_t	nbytes;			/* Number of bytes read */
-  size_t	nleft;			/* Number of bytes left/remaining */
+  char		buffer[8192];		// Data buffer
+  ssize_t	nbytes;			// Number of bytes read
+  size_t	nleft;			// Number of bytes left/remaining
   cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
@@ -2000,31 +2027,31 @@ copy_bytes(pstops_doc_t *doc,		/* I - Document info */
 }
 
 
-/*
- * 'copy_comments()' - Copy all of the comments section.
- *
- * This function expects "line" to be filled with a comment line.
- * On return, "line" will contain the next line in the file, if any.
- */
+//
+// 'copy_comments()' - Copy all of the comments section.
+//
+// This function expects "line" to be filled with a comment line.
+// On return, "line" will contain the next line in the file, if any.
+//
 
-static ssize_t				/* O - Length of next line */
-copy_comments(pstops_doc_t *doc,	/* I - Document info */
-	      ppd_file_t   *ppd,	/* I - PPD file */
-              char         *line,	/* I - Line buffer */
-	      ssize_t      linelen,	/* I - Length of initial line */
-	      size_t       linesize)	/* I - Size of line buffer */
+static ssize_t				// O - Length of next line
+copy_comments(pstops_doc_t *doc,	// I - Document info
+	      ppd_file_t   *ppd,	// I - PPD file
+              char         *line,	// I - Line buffer
+	      ssize_t      linelen,	// I - Length of initial line
+	      size_t       linesize)	// I - Size of line buffer
 {
-  int	saw_bounding_box,		/* Saw %%BoundingBox: comment? */
-	saw_for,			/* Saw %%For: comment? */
-	saw_pages,			/* Saw %%Pages: comment? */
-	saw_title;			/* Saw %%Title: comment? */
+  int	saw_bounding_box,		// Saw %%BoundingBox: comment?
+	saw_for,			// Saw %%For: comment?
+	saw_pages,			// Saw %%Pages: comment?
+	saw_title;			// Saw %%Title: comment?
   cf_logfunc_t log = doc->logfunc;
-  void          *ld = doc->logdata;
+  void         *ld = doc->logdata;
 
 
- /*
-  * Loop until we see %%EndComments or a non-comment line...
-  */
+  //
+  // Loop until we see %%EndComments or a non-comment line...
+  //
 
   saw_bounding_box = 0;
   saw_for          = 0;
@@ -2033,9 +2060,9 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 
   while (line[0] == '%')
   {
-   /*
-    * Strip trailing whitespace...
-    */
+    //
+    // Strip trailing whitespace...
+    //
 
     while (linelen > 0)
     {
@@ -2047,20 +2074,20 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
         line[linelen] = '\0';
     }
 
-   /*
-    * Log the header...
-    */
+    //
+    // Log the header...
+    //
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		 "ppdFilterPSToPS: %s", line);
 
-   /*
-    * Pull the headers out...
-    */
+    //
+    // Pull the headers out...
+    //
 
     if (!strncmp(line, "%%Pages:", 8))
     {
-      int	pages;			/* Number of pages */
+      int	pages;			// Number of pages
 
       if (saw_pages && log)
 	log(ld, CF_LOGLEVEL_DEBUG,
@@ -2071,9 +2098,9 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
       if (doc->Duplex &&
 	  (pages = atoi(line + 8)) > 0 && pages <= doc->number_up)
       {
-       /*
-        * Since we will only be printing on a single page, disable duplexing.
-	*/
+	//
+        // Since we will only be printing on a single page, disable duplexing.
+	//
 
 	doc->Duplex      = 0;
 	doc->slow_duplex = 0;
@@ -2123,9 +2150,9 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
       }
       else if (strstr(line + 14, "(atend)"))
       {
-       /*
-        * Do nothing for now but use the default imageable area...
-	*/
+	//
+	// Do nothing for now but use the default imageable area...
+	//
       }
       else if (sscanf(line + 14, "%d%d%d%d", doc->bounding_box + 0,
 	              doc->bounding_box + 1, doc->bounding_box + 2,
@@ -2154,23 +2181,23 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
     }
     else if (!strncmp(line, "%cupsRotation:", 14))
     {
-     /*
-      * Reset orientation of document?
-      */
+      //
+      // Reset orientation of document?
+      //
 
       int orient = (atoi(line + 14) / 90) & 3;
 
       if (orient != doc->Orientation)
       {
-       /*
-        * Yes, update things so that the pages come out right...
-	*/
+	//
+        // Yes, update things so that the pages come out right...
+	//
 
 	doc->Orientation = (4 - doc->Orientation + orient) & 3;
 	ppdFilterUpdatePageVars(doc->Orientation,
-			     &doc->PageLeft, &doc->PageRight,
-			     &doc->PageTop, &doc->PageBottom,
-			     &doc->PageWidth, &doc->PageLength);
+				&doc->PageLeft, &doc->PageRight,
+				&doc->PageTop, &doc->PageBottom,
+				&doc->PageWidth, &doc->PageLength);
 	doc->Orientation = orient;
       }
     }
@@ -2202,33 +2229,33 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 
   if (doc->copies != 1 && (!doc->collate || !doc->slow_collate))
   {
-   /*
-    * Tell the document processor the copy and duplex options
-    * that are required...
-    */
+    //
+    // Tell the document processor the copy and duplex options
+    // that are required...
+    //
 
     doc_printf(doc, "%%%%Requirements: numcopies(%d)%s%s\n", doc->copies,
                doc->collate ? " collate" : "",
 	       doc->Duplex ? " duplex" : "");
 
-   /*
-    * Apple uses RBI comments for various non-PPD options...
-    */
+    //
+    // Apple uses RBI comments for various non-PPD options...
+    //
 
     doc_printf(doc, "%%RBINumCopies: %d\n", doc->copies);
   }
   else
   {
-   /*
-    * Tell the document processor the duplex option that is required...
-    */
+    //
+    // Tell the document processor the duplex option that is required...
+    //
 
     if (doc->Duplex)
       doc_puts(doc, "%%Requirements: duplex\n");
 
-   /*
-    * Apple uses RBI comments for various non-PPD options...
-    */
+    //
+    // Apple uses RBI comments for various non-PPD options...
+    //
 
     doc_puts(doc, "%RBINumCopies: 1\n");
   }
@@ -2241,30 +2268,30 @@ copy_comments(pstops_doc_t *doc,	/* I - Document info */
 }
 
 
-/*
- * 'copy_dsc()' - Copy a DSC-conforming document.
- *
- * This function expects "line" to be filled with the %!PS-Adobe comment line.
- */
+//
+// 'copy_dsc()' - Copy a DSC-conforming document.
+//
+// This function expects "line" to be filled with the %!PS-Adobe comment line.
+//
 
 static void
-copy_dsc(pstops_doc_t *doc,		/* I - Document info */
-         ppd_file_t   *ppd,		/* I - PPD file */
-	 char         *line,		/* I - Line buffer */
-	 ssize_t      linelen,		/* I - Length of initial line */
-	 size_t       linesize)		/* I - Size of line buffer */
+copy_dsc(pstops_doc_t *doc,		// I - Document info
+         ppd_file_t   *ppd,		// I - PPD file
+	 char         *line,		// I - Line buffer
+	 ssize_t      linelen,		// I - Length of initial line
+	 size_t       linesize)		// I - Size of line buffer
 {
-  int		number;			/* Page number */
-  pstops_page_t	*pageinfo;		/* Page information */
-  cf_logfunc_t log = doc->logfunc;
+  int		number;			// Page number
+  pstops_page_t	*pageinfo;		// Page information
+  cf_logfunc_t  log = doc->logfunc;
   void          *ld = doc->logdata;
   cf_filter_iscanceledfunc_t iscanceled = doc->iscanceledfunc;
   void          *icd = doc->iscanceleddata;
 
 
- /*
-  * Make sure we use ESPshowpage for EPS files...
-  */
+  //
+  // Make sure we use ESPshowpage for EPS files...
+  //
 
   if (strstr(line, "EPSF"))
   {
@@ -2272,33 +2299,33 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
     doc->number_up       = 1;
   }
 
- /*
-  * Start sending the document with any commands needed...
-  */
+  //
+  // Start sending the document with any commands needed...
+  //
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "ppdFilterPSToPS: Before copy_comments - %s", line);
   linelen = copy_comments(doc, ppd, line, linelen, linesize);
 
- /*
-  * Now find the prolog section, if any...
-  */
+  //
+  // Now find the prolog section, if any...
+  //
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "ppdFilterPSToPS: Before copy_prolog - %s", line);
   linelen = copy_prolog(doc, ppd, line, linelen, linesize);
 
- /*
-  * Then the document setup section...
-  */
+  //
+  // Then the document setup section...
+  //
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "ppdFilterPSToPS: Before copy_setup - %s", line);
   linelen = copy_setup(doc, ppd, line, linelen, linesize);
 
- /*
-  * Copy until we see %%Page:...
-  */
+  //
+  // Copy until we see %%Page:...
+  //
 
   while (strncmp(line, "%%Page:", 7) && strncmp(line, "%%Trailer", 9))
   {
@@ -2308,9 +2335,9 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
       break;
   }
 
- /*
-  * Then process pages until we have no more...
-  */
+  //
+  // Then process pages until we have no more...
+  //
 
   number = 0;
 
@@ -2327,7 +2354,8 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
     number ++;
 
-    if (check_range((number - 1) / doc->number_up + 1,doc->page_ranges,doc->page_set))
+    if (check_range((number - 1) / doc->number_up + 1,
+		    doc->page_ranges, doc->page_set))
     {
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "ppdFilterPSToPS: Copying page %d...", number);
@@ -2341,12 +2369,13 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
     }
   }
 
- /*
-  * Finish up the last page(s)...
-  */
+  //
+  // Finish up the last page(s)...
+  //
 
   if (number && is_not_last_page(number) && cupsArrayLast(doc->pages) &&
-      check_range((number - 1) / doc->number_up + 1,doc->page_ranges,doc->page_set))
+      check_range((number - 1) / doc->number_up + 1, doc->page_ranges,
+		  doc->page_set))
   {
     pageinfo = (pstops_page_t *)cupsArrayLast(doc->pages);
 
@@ -2359,9 +2388,9 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   if (doc->slow_duplex && (doc->page & 1))
   {
-   /*
-    * Make sure we have an even number of pages...
-    */
+    //
+    // Make sure we have an even number of pages...
+    //
 
     pageinfo = add_page(doc, "(filler)");
     if (pageinfo == NULL)
@@ -2384,29 +2413,29 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
     pageinfo->length = (ssize_t)(cupsFileTell(doc->temp) - pageinfo->offset);
   }
 
- /*
-  * Make additional copies as necessary...
-  */
+  //
+  // Make additional copies as necessary...
+  //
 
   number = doc->slow_order ? 0 : doc->page;
 
   if (doc->temp && (!iscanceled || !iscanceled(icd)) &&
       cupsArrayCount(doc->pages) > 0)
   {
-    int	copy;				/* Current copy */
+    int	copy;				// Current copy
 
 
-   /*
-    * Reopen the temporary file for reading...
-    */
+    //
+    // Reopen the temporary file for reading...
+    //
 
     cupsFileClose(doc->temp);
 
     doc->temp = cupsFileOpen(doc->tempfile, "r");
 
-   /*
-    * Make the copies...
-    */
+    //
+    // Make the copies...
+    //
 
     if (doc->slow_collate)
       copy = !doc->slow_order;
@@ -2422,31 +2451,32 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 	break;
       }
 
-     /*
-      * Send end-of-job stuff followed by any start-of-job stuff required
-      * for the JCL options...
-      */
+      //
+      // Send end-of-job stuff followed by any start-of-job stuff required
+      // for the JCL options...
+      //
 
       if (number && doc->emit_jcl && ppd && ppd->jcl_end)
       {
-       /*
-        * Send the trailer...
-	*/
+	//
+        // Send the trailer...
+	//
 
         doc_puts(doc, "%%Trailer\n");
 	doc_printf(doc, "%%%%Pages: %d\n", cupsArrayCount(doc->pages));
 	if (doc->number_up > 1 || doc->fit_to_page)
 	  doc_printf(doc, "%%%%BoundingBox: %.0f %.0f %.0f %.0f\n",
-		 doc->PageLeft, doc->PageBottom, doc->PageRight, doc->PageTop);
+		     doc->PageLeft, doc->PageBottom,
+		     doc->PageRight, doc->PageTop);
 	else
 	  doc_printf(doc, "%%%%BoundingBox: %d %d %d %d\n",
-		 doc->new_bounding_box[0], doc->new_bounding_box[1],
-		 doc->new_bounding_box[2], doc->new_bounding_box[3]);
+		     doc->new_bounding_box[0], doc->new_bounding_box[1],
+		     doc->new_bounding_box[2], doc->new_bounding_box[3]);
         doc_puts(doc, "%%EOF\n");
 
-       /*
-        * Start a new document...
-	*/
+	//
+	// Start a new document...
+	//
 
         ppdEmitJCLEnd(ppd, doc->outputfp);
         ppdEmitJCL(ppd, doc->outputfp, doc->job_id, doc->user, doc->title);
@@ -2456,9 +2486,9 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 	number = 0;
       }
 
-     /*
-      * Copy the prolog as needed...
-      */
+      //
+      // Copy the prolog as needed...
+      //
 
       if (!number)
       {
@@ -2466,9 +2496,9 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 	copy_bytes(doc, 0, (size_t)pageinfo->offset);
       }
 
-     /*
-      * Then copy all of the pages...
-      */
+      //
+      // Then copy all of the pages...
+      //
 
       pageinfo = doc->slow_order ? (pstops_page_t *)cupsArrayLast(doc->pages) :
                                    (pstops_page_t *)cupsArrayFirst(doc->pages);
@@ -2494,14 +2524,15 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
 	{
 	  doc_printf(doc, "%%%%Page: (%d) %d\n", number, number);
 	  doc_printf(doc, "%%%%PageBoundingBox: %.0f %.0f %.0f %.0f\n",
-		 doc->PageLeft, doc->PageBottom, doc->PageRight, doc->PageTop);
+		     doc->PageLeft, doc->PageBottom,
+		     doc->PageRight, doc->PageTop);
 	}
 	else
 	{
           doc_printf(doc, "%%%%Page: %s %d\n", pageinfo->label, number);
 	  doc_printf(doc, "%%%%PageBoundingBox: %d %d %d %d\n",
-		  pageinfo->bounding_box[0], pageinfo->bounding_box[1],
-		  pageinfo->bounding_box[2], pageinfo->bounding_box[3]);
+		     pageinfo->bounding_box[0], pageinfo->bounding_box[1],
+		     pageinfo->bounding_box[2], pageinfo->bounding_box[3]);
 	}
 
 	copy_bytes(doc, pageinfo->offset, (size_t)pageinfo->length);
@@ -2513,39 +2544,39 @@ copy_dsc(pstops_doc_t *doc,		/* I - Document info */
     }
   }
 
- /*
-  * Restore the old showpage operator as needed...
-  */
+  //
+  // Restore the old showpage operator as needed...
+  //
 
   if (doc->use_ESPshowpage)
     doc_puts(doc, "userdict/showpage/ESPshowpage load put\n");
 
- /*
-  * Write/copy the trailer...
-  */
+  //
+  // Write/copy the trailer...
+  //
 
   if (!iscanceled || !iscanceled(icd))
     copy_trailer(doc, ppd, number, line, linelen, linesize);
 }
 
 
-/*
- * 'copy_non_dsc()' - Copy a document that does not conform to the DSC.
- *
- * This function expects "line" to be filled with the %! comment line.
- */
+//
+// 'copy_non_dsc()' - Copy a document that does not conform to the DSC.
+//
+// This function expects "line" to be filled with the %! comment line.
+//
 
 static void
-copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
-             ppd_file_t   *ppd,		/* I - PPD file */
-	     char         *line,	/* I - Line buffer */
-	     ssize_t      linelen,	/* I - Length of initial line */
-	     size_t       linesize)	/* I - Size of line buffer */
+copy_non_dsc(pstops_doc_t *doc,		// I - Document info
+             ppd_file_t   *ppd,		// I - PPD file
+	     char         *line,	// I - Line buffer
+	     ssize_t      linelen,	// I - Length of initial line
+	     size_t       linesize)	// I - Size of line buffer
 {
-  int		copy;			/* Current copy */
-  char		buffer[8192];		/* Copy buffer */
-  ssize_t	bytes;			/* Number of bytes copied */
-  cf_logfunc_t log = doc->logfunc;
+  int		copy;			// Current copy
+  char		buffer[8192];		// Copy buffer
+  ssize_t	bytes;			// Number of bytes copied
+  cf_logfunc_t  log = doc->logfunc;
   void          *ld = doc->logdata;
   cf_filter_iscanceledfunc_t iscanceled = doc->iscanceledfunc;
   void          *icd = doc->iscanceleddata;
@@ -2553,21 +2584,21 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   (void)linesize;
 
- /*
-  * First let the user know that they are attempting to print a file
-  * that may not print correctly...
-  */
+  //
+  // First let the user know that they are attempting to print a file
+  // that may not print correctly...
+  //
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "ppdFilterPSToPS: This document does not conform to the Adobe Document "
 	       "Structuring Conventions and may not print correctly.");
 
- /*
-  * Then write a standard DSC comment section...
-  */
+  //
+  // Then write a standard DSC comment section...
+  //
 
   doc_printf(doc, "%%%%BoundingBox: %.0f %.0f %.0f %.0f\n",
-	  doc->PageLeft, doc->PageBottom, doc->PageRight, doc->PageTop);
+	     doc->PageLeft, doc->PageBottom, doc->PageRight, doc->PageTop);
 
   if (doc->slow_collate && doc->copies > 1)
     doc_printf(doc, "%%%%Pages: %d\n", doc->copies);
@@ -2579,42 +2610,42 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   if (doc->copies != 1 && (!doc->collate || !doc->slow_collate))
   {
-   /*
-    * Tell the document processor the copy and duplex options
-    * that are required...
-    */
+    //
+    // Tell the document processor the copy and duplex options
+    // that are required...
+    //
 
     doc_printf(doc, "%%%%Requirements: numcopies(%d)%s%s\n", doc->copies,
-	    doc->collate ? " collate" : "",
-	    doc->Duplex ? " duplex" : "");
+	       doc->collate ? " collate" : "",
+	       doc->Duplex ? " duplex" : "");
 
-   /*
-    * Apple uses RBI comments for various non-PPD options...
-    */
+    //
+    // Apple uses RBI comments for various non-PPD options...
+    //
 
     doc_printf(doc, "%%RBINumCopies: %d\n", doc->copies);
   }
   else
   {
-   /*
-    * Tell the document processor the duplex option that is required...
-    */
+    //
+    // Tell the document processor the duplex option that is required...
+    //
 
     if (doc->Duplex)
       doc_puts(doc, "%%Requirements: duplex\n");
 
-   /*
-    * Apple uses RBI comments for various non-PPD options...
-    */
+    //
+    // Apple uses RBI comments for various non-PPD options...
+    //
 
     doc_puts(doc, "%RBINumCopies: 1\n");
   }
 
   doc_puts(doc, "%%EndComments\n");
 
- /*
-  * Then the prolog...
-  */
+  //
+  // Then the prolog...
+  //
 
   doc_puts(doc, "%%BeginProlog\n");
 
@@ -2622,9 +2653,9 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   doc_puts(doc, "%%EndProlog\n");
 
- /*
-  * Then the setup section...
-  */
+  //
+  // Then the setup section...
+  //
 
   doc_puts(doc, "%%BeginSetup\n");
 
@@ -2632,9 +2663,9 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   doc_puts(doc, "%%EndSetup\n");
 
- /*
-  * Finally, embed a copy of the file inside a %%Page...
-  */
+  //
+  // Finally, embed a copy of the file inside a %%Page...
+  //
 
   if ((!ppd || !ppd->num_filters) && log)
     log(ld, CF_LOGLEVEL_CONTROL,
@@ -2669,17 +2700,17 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
 
   if (doc->temp && (!iscanceled || !iscanceled(icd)))
   {
-   /*
-    * Reopen the temporary file for reading...
-    */
+    //
+    // Reopen the temporary file for reading...
+    //
 
     cupsFileClose(doc->temp);
 
     doc->temp = cupsFileOpen(doc->tempfile, "r");
 
-   /*
-    * Make the additional copies as needed...
-    */
+    //
+    // Make the additional copies as needed...
+    //
 
     for (copy = 1; copy < doc->copies; copy ++)
     {
@@ -2712,45 +2743,45 @@ copy_non_dsc(pstops_doc_t *doc,		/* I - Document info */
     }
   }
 
- /*
-  * Restore the old showpage operator as needed...
-  */
+  //
+  // Restore the old showpage operator as needed...
+  //
 
   if (doc->use_ESPshowpage)
     doc_puts(doc, "userdict/showpage/ESPshowpage load put\n");
 }
 
 
-/*
- * 'copy_page()' - Copy a page description.
- *
- * This function expects "line" to be filled with a %%Page comment line.
- * On return, "line" will contain the next line in the file, if any.
- */
+//
+// 'copy_page()' - Copy a page description.
+//
+// This function expects "line" to be filled with a %%Page comment line.
+// On return, "line" will contain the next line in the file, if any.
+//
 
-static ssize_t				/* O - Length of next line */
-copy_page(pstops_doc_t *doc,		/* I - Document info */
-          ppd_file_t   *ppd,		/* I - PPD file */
-	  int          number,		/* I - Current page number */
-	  char         *line,		/* I - Line buffer */
-	  ssize_t      linelen,		/* I - Length of initial line */
-	  size_t       linesize)	/* I - Size of line buffer */
+static ssize_t				// O - Length of next line
+copy_page(pstops_doc_t *doc,		// I - Document info
+          ppd_file_t   *ppd,		// I - PPD file
+	  int          number,		// I - Current page number
+	  char         *line,		// I - Line buffer
+	  ssize_t      linelen,		// I - Length of initial line
+	  size_t       linesize)	// I - Size of line buffer
 {
-  char		label[256],		/* Page label string */
-		*ptr;			/* Pointer into line */
-  int		level;			/* Embedded document level */
-  pstops_page_t	*pageinfo;		/* Page information */
-  int		first_page;		/* First page on N-up output? */
-  int		has_page_setup = 0;	/* Does the page have
-					   %%Begin/EndPageSetup? */
-  int		bounding_box[4];	/* PageBoundingBox */
-  cf_logfunc_t log = doc->logfunc;
+  char		label[256],		// Page label string
+		*ptr;			// Pointer into line
+  int		level;			// Embedded document level
+  pstops_page_t	*pageinfo;		// Page information
+  int		first_page;		// First page on N-up output?
+  int		has_page_setup = 0;	// Does the page have
+					// %%Begin/EndPageSetup?
+  int		bounding_box[4];	// PageBoundingBox
+  cf_logfunc_t  log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
- /*
-  * Get the page label for this page...
-  */
+  //
+  // Get the page label for this page...
+  //
 
   first_page = is_first_page(number);
 
@@ -2768,9 +2799,9 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
     number = doc->page;
   }
 
- /*
-  * Create or update the current output page...
-  */
+  //
+  // Create or update the current output page...
+  //
 
   if (first_page)
   {
@@ -2781,25 +2812,25 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
   else
     pageinfo = (pstops_page_t *)cupsArrayLast(doc->pages);
 
- /*
-  * Handle first page override...
-  */
+  //
+  // Handle first page override...
+  //
 
   if (doc->ap_input_slot || doc->ap_manual_feed)
   {
     if ((doc->page == 1 && (!doc->slow_order || !doc->Duplex)) ||
         (doc->page == 2 && doc->slow_order && doc->Duplex))
     {
-     /*
-      * First page/sheet gets AP_FIRSTPAGE_* options...
-      */
+      //
+      // First page/sheet gets AP_FIRSTPAGE_* options...
+      //
 
       pageinfo->num_options = cupsAddOption("InputSlot", doc->ap_input_slot,
                                             pageinfo->num_options,
 					    &(pageinfo->options));
       pageinfo->num_options = cupsAddOption("ManualFeed",
                                             doc->ap_input_slot ? "False" :
-					        doc->ap_manual_feed,
+					    doc->ap_manual_feed,
                                             pageinfo->num_options,
 					    &(pageinfo->options));
       pageinfo->num_options = cupsAddOption("MediaColor", doc->ap_media_color,
@@ -2817,16 +2848,16 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
     }
     else if (doc->page == (doc->Duplex + 2))
     {
-     /*
-      * Second page/sheet gets default options...
-      */
+      //
+      // Second page/sheet gets default options...
+      //
 
       pageinfo->num_options = cupsAddOption("InputSlot", doc->input_slot,
                                             pageinfo->num_options,
 					    &(pageinfo->options));
       pageinfo->num_options = cupsAddOption("ManualFeed",
                                             doc->input_slot ? "False" :
-					        doc->manual_feed,
+					    doc->manual_feed,
                                             pageinfo->num_options,
 					    &(pageinfo->options));
       pageinfo->num_options = cupsAddOption("MediaColor", doc->media_color,
@@ -2844,10 +2875,10 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
     }
   }
 
- /*
-  * Scan comments until we see something other than %%Page*: or
-  * %%Include*...
-  */
+  //
+  // Scan comments until we see something other than %%Page*: or
+  // %%Include*...
+  //
 
   memcpy(bounding_box, doc->bounding_box, sizeof(bounding_box));
 
@@ -2855,9 +2886,9 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
   {
     if (!strncmp(line, "%%PageBoundingBox:", 18))
     {
-     /*
-      * %%PageBoundingBox: llx lly urx ury
-      */
+      //
+      // %%PageBoundingBox: llx lly urx ury
+      //
 
       if (sscanf(line + 18, "%d%d%d%d", bounding_box + 0,
                  bounding_box + 1, bounding_box + 2,
@@ -2872,7 +2903,7 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
       }
       else if (doc->number_up == 1 && !doc->fit_to_page && doc->Orientation)
       {
-        int	temp_bbox[4];		/* Temporary bounding box */
+        int	temp_bbox[4];		// Temporary bounding box
 
 
         memcpy(temp_bbox, bounding_box, sizeof(temp_bbox));
@@ -2892,21 +2923,21 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 
         switch (doc->Orientation)
 	{
-	  case 1 : /* Landscape */
+	  case 1 : // Landscape
 	      bounding_box[0] = (int)(doc->PageLength - temp_bbox[3]);
 	      bounding_box[1] = temp_bbox[0];
 	      bounding_box[2] = (int)(doc->PageLength - temp_bbox[1]);
 	      bounding_box[3] = temp_bbox[2];
               break;
 
-	  case 2 : /* Reverse Portrait */
+	  case 2 : // Reverse Portrait
 	      bounding_box[0] = (int)(doc->PageWidth - temp_bbox[2]);
 	      bounding_box[1] = (int)(doc->PageLength - temp_bbox[3]);
 	      bounding_box[2] = (int)(doc->PageWidth - temp_bbox[0]);
 	      bounding_box[3] = (int)(doc->PageLength - temp_bbox[1]);
               break;
 
-	  case 3 : /* Reverse Landscape */
+	  case 3 : // Reverse Landscape
 	      bounding_box[0] = temp_bbox[1];
 	      bounding_box[1] = (int)(doc->PageWidth - temp_bbox[2]);
 	      bounding_box[2] = temp_bbox[3];
@@ -2928,52 +2959,52 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 	     !strncmp(line, "%%PageRequirements:", 18) ||
 	     !strncmp(line, "%%PageResources:", 16))
     {
-     /*
-      * Copy literal...
-      */
+      //
+      // Copy literal...
+      //
     }
-#endif /* 0 */
+#endif // 0
     else if (!strncmp(line, "%%PageCustomColors:", 19))
     {
-     /*
-      * %%PageCustomColors: ...
-      */
+      //
+      // %%PageCustomColors: ...
+      //
     }
     else if (!strncmp(line, "%%PageMedia:", 12))
     {
-     /*
-      * %%PageMedia: ...
-      */
+      //
+      // %%PageMedia: ...
+      //
     }
     else if (!strncmp(line, "%%PageOrientation:", 18))
     {
-     /*
-      * %%PageOrientation: ...
-      */
+      //
+      // %%PageOrientation: ...
+      //
     }
     else if (!strncmp(line, "%%PageProcessColors:", 20))
     {
-     /*
-      * %%PageProcessColors: ...
-      */
+      //
+      // %%PageProcessColors: ...
+      //
     }
     else if (!strncmp(line, "%%PageRequirements:", 18))
     {
-     /*
-      * %%PageRequirements: ...
-      */
+      //
+      // %%PageRequirements: ...
+      //
     }
     else if (!strncmp(line, "%%PageResources:", 16))
     {
-     /*
-      * %%PageResources: ...
-      */
+      //
+      // %%PageResources: ...
+      //
     }
     else if (!strncmp(line, "%%IncludeFeature:", 17))
     {
-     /*
-      * %%IncludeFeature: *MainKeyword OptionKeyword
-      */
+      //
+      // %%IncludeFeature: *MainKeyword OptionKeyword
+      //
 
       if (doc->number_up == 1 &&!doc->fit_to_page)
 	pageinfo->num_options = include_feature(doc, ppd, line,
@@ -2991,9 +3022,9 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 
   if (doc->number_up == 1)
   {
-   /*
-    * Update the document's composite and page bounding box...
-    */
+    //
+    // Update the document's composite and page bounding box...
+    //
 
     memcpy(pageinfo->bounding_box, bounding_box,
            sizeof(pageinfo->bounding_box));
@@ -3008,9 +3039,9 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
       doc->new_bounding_box[3] = bounding_box[3];
   }
 
- /*
-  * Output the page header as needed...
-  */
+  //
+  // Output the page header as needed...
+  //
 
   if (!doc->slow_order && first_page)
   {
@@ -3023,27 +3054,27 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
     {
       doc_printf(doc, "%%%%Page: (%d) %d\n", doc->page, doc->page);
       doc_printf(doc, "%%%%PageBoundingBox: %.0f %.0f %.0f %.0f\n",
-	      doc->PageLeft, doc->PageBottom, doc->PageRight, doc->PageTop);
+		 doc->PageLeft, doc->PageBottom, doc->PageRight, doc->PageTop);
     }
     else
     {
       doc_printf(doc, "%%%%Page: %s %d\n", pageinfo->label, doc->page);
       doc_printf(doc, "%%%%PageBoundingBox: %d %d %d %d\n",
-	      pageinfo->bounding_box[0], pageinfo->bounding_box[1],
-	      pageinfo->bounding_box[2], pageinfo->bounding_box[3]);
+		 pageinfo->bounding_box[0], pageinfo->bounding_box[1],
+		 pageinfo->bounding_box[2], pageinfo->bounding_box[3]);
     }
   }
 
- /*
-  * Copy any page setup commands...
-  */
+  //
+  // Copy any page setup commands...
+  //
 
   if (first_page)
     doc_puts(doc, "%%BeginPageSetup\n");
 
   if (has_page_setup)
   {
-    int	feature = 0;			/* In a Begin/EndFeature block? */
+    int	feature = 0;			// In a Begin/EndFeature block?
 
     while ((linelen = (ssize_t)cupsFileGetLine(doc->inputfp, line, linesize)) >
 	   0)
@@ -3081,9 +3112,9 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 	doc_write(doc, line, (size_t)linelen);
     }
 
-   /*
-    * Skip %%EndPageSetup...
-    */
+    //
+    // Skip %%EndPageSetup...
+    //
 
     if (linelen > 0 && !strncmp(line, "%%EndPageSetup", 14))
       linelen = (ssize_t)cupsFileGetLine(doc->inputfp, line, linesize);
@@ -3091,15 +3122,15 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 
   if (first_page)
   {
-    char	*page_setup;		/* PageSetup commands to send */
+    char	*page_setup;		// PageSetup commands to send
 
 
     if (pageinfo->num_options > 0)
       write_options(doc, ppd, pageinfo->num_options, pageinfo->options);
 
-   /*
-    * Output commands for the current page...
-    */
+    //
+    // Output commands for the current page...
+    //
 
     page_setup = ppdEmitString(ppd, PPD_ORDER_PAGE, 0);
 
@@ -3110,18 +3141,18 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
     }
   }
 
- /*
-  * Prep for the start of the page description...
-  */
+  //
+  // Prep for the start of the page description...
+  //
 
   start_nup(doc, number, 1, bounding_box);
 
   if (first_page)
     doc_puts(doc, "%%EndPageSetup\n");
 
- /*
-  * Read the rest of the page description...
-  */
+  //
+  // Read the rest of the page description...
+  //
 
   level = 0;
 
@@ -3150,11 +3181,11 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
              (!strncmp(line, "%%BeginData:", 12) &&
 	      !strstr(line, "ASCII") && !strstr(line, "Hex")))
     {
-     /*
-      * Copy binary data...
-      */
+      //
+      // Copy binary data...
+      //
 
-      int	bytes;			/* Bytes of data */
+      int	bytes;			// Bytes of data
 
 
       doc_write(doc, line, (size_t)linelen);
@@ -3189,9 +3220,9 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
   while ((linelen = (ssize_t)cupsFileGetLine(doc->inputfp, line, linesize)) >
 	 0);
 
- /*
-  * Finish up this page and return...
-  */
+  //
+  // Finish up this page and return...
+  //
 
   end_nup(doc, number);
 
@@ -3201,22 +3232,22 @@ copy_page(pstops_doc_t *doc,		/* I - Document info */
 }
 
 
-/*
- * 'copy_prolog()' - Copy the document prolog section.
- *
- * This function expects "line" to be filled with a %%BeginProlog comment line.
- * On return, "line" will contain the next line in the file, if any.
- */
+//
+// 'copy_prolog()' - Copy the document prolog section.
+//
+// This function expects "line" to be filled with a %%BeginProlog comment line.
+// On return, "line" will contain the next line in the file, if any.
+//
 
-static ssize_t				/* O - Length of next line */
-copy_prolog(pstops_doc_t *doc,		/* I - Document info */
-            ppd_file_t   *ppd,		/* I - PPD file */
-	    char         *line,		/* I - Line buffer */
-	    ssize_t      linelen,	/* I - Length of initial line */
-	    size_t       linesize)	/* I - Size of line buffer */
+static ssize_t				// O - Length of next line
+copy_prolog(pstops_doc_t *doc,		// I - Document info
+            ppd_file_t   *ppd,		// I - PPD file
+	    char         *line,		// I - Line buffer
+	    ssize_t      linelen,	// I - Length of initial line
+	    size_t       linesize)	// I - Size of line buffer
 {
   cf_logfunc_t log = doc->logfunc;
-  void          *ld = doc->logdata;
+  void         *ld = doc->logdata;
 
 
   while (strncmp(line, "%%BeginProlog", 13))
@@ -3260,23 +3291,23 @@ copy_prolog(pstops_doc_t *doc,		/* I - Document info */
 }
 
 
-/*
- * 'copy_setup()' - Copy the document setup section.
- *
- * This function expects "line" to be filled with a %%BeginSetup comment line.
- * On return, "line" will contain the next line in the file, if any.
- */
+//
+// 'copy_setup()' - Copy the document setup section.
+//
+// This function expects "line" to be filled with a %%BeginSetup comment line.
+// On return, "line" will contain the next line in the file, if any.
+//
 
-static ssize_t				/* O - Length of next line */
-copy_setup(pstops_doc_t *doc,		/* I - Document info */
-           ppd_file_t   *ppd,		/* I - PPD file */
-	   char         *line,		/* I - Line buffer */
-	   ssize_t      linelen,	/* I - Length of initial line */
-	   size_t       linesize)	/* I - Size of line buffer */
+static ssize_t				// O - Length of next line
+copy_setup(pstops_doc_t *doc,		// I - Document info
+           ppd_file_t   *ppd,		// I - PPD file
+	   char         *line,		// I - Line buffer
+	   ssize_t      linelen,	// I - Length of initial line
+	   size_t       linesize)	// I - Size of line buffer
 {
-  int		num_options;		/* Number of options */
-  cups_option_t	*options;		/* Options */
-  cf_logfunc_t log = doc->logfunc;
+  int		num_options;		// Number of options
+  cups_option_t	*options;		// Options
+  cf_logfunc_t  log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -3306,9 +3337,9 @@ copy_setup(pstops_doc_t *doc,		/* I - Document info */
         break;
       else if (!strncmp(line, "%%IncludeFeature:", 17))
       {
-       /*
-	* %%IncludeFeature: *MainKeyword OptionKeyword
-	*/
+	//
+	// %%IncludeFeature: *MainKeyword OptionKeyword
+	//
 
         if (doc->number_up == 1 && !doc->fit_to_page)
 	  num_options = include_feature(doc, ppd, line, num_options, &options);
@@ -3340,28 +3371,28 @@ copy_setup(pstops_doc_t *doc,		/* I - Document info */
 }
 
 
-/*
- * 'copy_trailer()' - Copy the document trailer.
- *
- * This function expects "line" to be filled with a %%Trailer comment line.
- * On return, "line" will contain the next line in the file, if any.
- */
+//
+// 'copy_trailer()' - Copy the document trailer.
+//
+// This function expects "line" to be filled with a %%Trailer comment line.
+// On return, "line" will contain the next line in the file, if any.
+//
 
-static ssize_t				/* O - Length of next line */
-copy_trailer(pstops_doc_t *doc,		/* I - Document info */
-             ppd_file_t   *ppd,		/* I - PPD file */
-	     int          number,	/* I - Number of pages */
-	     char         *line,	/* I - Line buffer */
-	     ssize_t      linelen,	/* I - Length of initial line */
-	     size_t       linesize)	/* I - Size of line buffer */
+static ssize_t				// O - Length of next line
+copy_trailer(pstops_doc_t *doc,		// I - Document info
+             ppd_file_t   *ppd,		// I - PPD file
+	     int          number,	// I - Number of pages
+	     char         *line,	// I - Line buffer
+	     ssize_t      linelen,	// I - Length of initial line
+	     size_t       linesize)	// I - Size of line buffer
 {
-  cf_logfunc_t log = doc->logfunc;
+  cf_logfunc_t  log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
- /*
-  * Write the trailer comments...
-  */
+  //
+  // Write the trailer comments...
+  //
 
   (void)ppd;
 
@@ -3385,30 +3416,30 @@ copy_trailer(pstops_doc_t *doc,		/* I - Document info */
   doc_printf(doc, "%%%%Pages: %d\n", number);
   if (doc->number_up > 1 || doc->fit_to_page)
     doc_printf(doc, "%%%%BoundingBox: %.0f %.0f %.0f %.0f\n",
-	    doc->PageLeft, doc->PageBottom, doc->PageRight, doc->PageTop);
+	       doc->PageLeft, doc->PageBottom, doc->PageRight, doc->PageTop);
   else
     doc_printf(doc, "%%%%BoundingBox: %d %d %d %d\n",
-	    doc->new_bounding_box[0], doc->new_bounding_box[1],
-	    doc->new_bounding_box[2], doc->new_bounding_box[3]);
+	       doc->new_bounding_box[0], doc->new_bounding_box[1],
+	       doc->new_bounding_box[2], doc->new_bounding_box[3]);
 
   return (linelen);
 }
 
 
-/*
- * 'do_prolog()' - Send the necessary document prolog commands.
- */
+//
+// 'do_prolog()' - Send the necessary document prolog commands.
+//
 
 static void
-do_prolog(pstops_doc_t *doc,		/* I - Document information */
-          ppd_file_t   *ppd)		/* I - PPD file */
+do_prolog(pstops_doc_t *doc,		// I - Document information
+          ppd_file_t   *ppd)		// I - PPD file
 {
-  char	*ps;				/* PS commands */
+  char	*ps;				// PS commands
 
 
- /*
-  * Send the document prolog commands...
-  */
+  //
+  // Send the document prolog commands...
+  //
 
   if (ppd && ppd->patches)
   {
@@ -3423,10 +3454,10 @@ do_prolog(pstops_doc_t *doc,		/* I - Document information */
     free(ps);
   }
 
- /*
-  * Define ESPshowpage here so that applications that define their
-  * own procedure to do a showpage pick it up...
-  */
+  //
+  // Define ESPshowpage here so that applications that define their
+  // own procedure to do a showpage pick it up...
+  //
 
   if (doc->use_ESPshowpage)
     doc_puts(doc, "userdict/ESPshowpage/showpage load put\n"
@@ -3434,28 +3465,28 @@ do_prolog(pstops_doc_t *doc,		/* I - Document information */
 }
 
 
-/*
- * 'do_setup()' - Send the necessary document setup commands.
- */
+//
+// 'do_setup()' - Send the necessary document setup commands.
+//
 
 static void
-do_setup(pstops_doc_t *doc,		/* I - Document information */
-         ppd_file_t   *ppd)		/* I - PPD file */
+do_setup(pstops_doc_t *doc,		// I - Document information
+         ppd_file_t   *ppd)		// I - PPD file
 {
-  char	*ps;				/* PS commands */
+  char	*ps;				// PS commands
 
 
- /*
-  * Disable CTRL-D so that embedded files don't cause printing
-  * errors...
-  */
+  //
+  // Disable CTRL-D so that embedded files don't cause printing
+  // errors...
+
 
   doc_puts(doc, "% Disable CTRL-D as an end-of-file marker...\n");
   doc_puts(doc, "userdict dup(\\004)cvn{}put (\\004\\004)cvn{}put\n");
 
- /*
-  * Send all the printer-specific setup commands...
-  */
+  //
+  // Send all the printer-specific setup commands...
+  //
 
   if ((ps = ppdEmitString(ppd, PPD_ORDER_DOCUMENT, 0.0)) != NULL)
   {
@@ -3469,9 +3500,9 @@ do_setup(pstops_doc_t *doc,		/* I - Document information */
     free(ps);
   }
 
- /*
-  * Set the number of copies for the job...
-  */
+  //
+  // Set the number of copies for the job...
+  //
 
   if (doc->copies != 1 && (!doc->collate || !doc->slow_collate))
   {
@@ -3484,9 +3515,9 @@ do_setup(pstops_doc_t *doc,		/* I - Document information */
     doc_puts(doc, "%RBIEndNonPPDFeature\n");
   }
 
- /*
-  * If we are doing N-up printing, disable setpagedevice...
-  */
+  //
+  // If we are doing N-up printing, disable setpagedevice...
+  //
 
   if (doc->number_up > 1)
   {
@@ -3494,22 +3525,22 @@ do_setup(pstops_doc_t *doc,		/* I - Document information */
     doc_puts(doc, "userdict/setpagedevice{pop}bind put\n");
   }
 
- /*
-  * Make sure we have rectclip and rectstroke procedures of some sort...
-  */
+  //
+  // Make sure we have rectclip and rectstroke procedures of some sort...
+  //
 
   write_common(doc);
 
- /*
-  * Write the page and label prologs...
-  */
+  //
+  // Write the page and label prologs...
+  //
 
   if (doc->number_up == 2 || doc->number_up == 6)
   {
-   /*
-    * For 2- and 6-up output, rotate the labels to match the orientation
-    * of the pages...
-    */
+    //
+    // For 2- and 6-up output, rotate the labels to match the orientation
+    // of the pages...
+    //
 
     if (doc->Orientation & 1)
       write_label_prolog(doc, doc->page_label, doc->PageBottom,
@@ -3525,22 +3556,22 @@ do_setup(pstops_doc_t *doc,		/* I - Document information */
 }
 
 
-/*
- * 'doc_printf()' - Send a formatted string to the output file and/or the
- *                  temp file.
- *
- * This function should be used for all page-level output that is affected
- * by ordering, collation, etc.
- */
+//
+// 'doc_printf()' - Send a formatted string to the output file and/or the
+//                  temp file.
+//
+// This function should be used for all page-level output that is affected
+// by ordering, collation, etc.
+//
 
 static void
-doc_printf(pstops_doc_t *doc,		/* I - Document information */
-           const char   *format,	/* I - Printf-style format string */
-	   ...)				/* I - Additional arguments as needed */
+doc_printf(pstops_doc_t *doc,		// I - Document information
+           const char   *format,	// I - Printf-style format string
+	   ...)				// I - Additional arguments as needed
 {
-  va_list	ap;			/* Pointer to arguments */
-  char		buffer[1024];		/* Output buffer */
-  ssize_t	bytes;			/* Number of bytes to write */
+  va_list	ap;			// Pointer to arguments
+  char		buffer[1024];		// Output buffer
+  ssize_t	bytes;			// Number of bytes to write
   cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
@@ -3560,46 +3591,46 @@ doc_printf(pstops_doc_t *doc,		/* I - Document information */
 }
 
 
-/*
- * 'doc_putc()' - Send a single character to the output file and/or the
- *                temp file.
- *
- * This function should be used for all page-level output that is affected
- * by ordering, collation, etc.
- */
+//
+// 'doc_putc()' - Send a single character to the output file and/or the
+//                temp file.
+//
+// This function should be used for all page-level output that is affected
+// by ordering, collation, etc.
+//
 
 static void
-doc_putc(pstops_doc_t *doc,		/* I - Document information */
-         const char   c)		/* I - Character to send */
+doc_putc(pstops_doc_t *doc,		// I - Document information
+         const char   c)		// I - Character to send
 {
   doc_write(doc, &c, 1);
 }
 
 
-/*
- * 'doc_puts()' - Send a nul-terminated string to the output file and/or the
- *                temp file.
- *
- * This function should be used for all page-level output that is affected
- * by ordering, collation, etc.
- */
+//
+// 'doc_puts()' - Send a nul-terminated string to the output file and/or the
+//                temp file.
+//
+// This function should be used for all page-level output that is affected
+// by ordering, collation, etc.
+//
 
 static void
-doc_puts(pstops_doc_t *doc,		/* I - Document information */
-         const char   *s)		/* I - String to send */
+doc_puts(pstops_doc_t *doc,		// I - Document information
+         const char   *s)		// I - String to send
 {
   doc_write(doc, s, strlen(s));
 }
 
 
-/*
- * 'doc_write()' - Send data to the output file and/or the temp file.
- */
+//
+// 'doc_write()' - Send data to the output file and/or the temp file.
+//
 
 static void
-doc_write(pstops_doc_t *doc,		/* I - Document information */
-          const char   *s,		/* I - Data to send */
-	  size_t       len)		/* I - Number of bytes to send */
+doc_write(pstops_doc_t *doc,		// I - Document information
+          const char   *s,		// I - Data to send
+	  size_t       len)		// I - Number of bytes to send
 {
   if (!doc->slow_order)
     fwrite(s, 1, len, doc->outputfp);
@@ -3609,13 +3640,13 @@ doc_write(pstops_doc_t *doc,		/* I - Document information */
 }
 
 
-/*
- * 'end_nup()' - End processing for N-up printing.
- */
+//
+// 'end_nup()' - End processing for N-up printing.
+//
 
 static void
-end_nup(pstops_doc_t *doc,		/* I - Document information */
-        int          number)		/* I - Page number */
+end_nup(pstops_doc_t *doc,		// I - Document information
+        int          number)		// I - Page number
 {
   if (doc->number_up > 1)
     doc_puts(doc, "userdict/ESPsave get restore\n");
@@ -3636,25 +3667,25 @@ end_nup(pstops_doc_t *doc,		/* I - Document information */
 	{
 	  if (doc->Orientation & 1)
 	  {
-	   /*
-	    * Rotate the labels back to portrait...
-	    */
+	    //
+	    // Rotate the labels back to portrait...
+	    //
 
 	    write_labels(doc, doc->Orientation - 1);
 	  }
 	  else if (doc->Orientation == 0)
 	  {
-	   /*
-	    * Rotate the labels to landscape...
-	    */
+	    //
+	    // Rotate the labels to landscape...
+	    //
 
 	    write_labels(doc, doc->normal_landscape ? 1 : 3);
 	  }
 	  else
 	  {
-	   /*
-	    * Rotate the labels to landscape...
-	    */
+	    //
+	    // Rotate the labels to landscape...
+	    //
 
 	    write_labels(doc, doc->normal_landscape ? 3 : 1);
 	  }
@@ -3676,28 +3707,28 @@ end_nup(pstops_doc_t *doc,		/* I - Document information */
 }
 
 
-/*
- * 'include_feature()' - Include a printer option/feature command.
- */
+//
+// 'include_feature()' - Include a printer option/feature command.
+//
 
-static int				/* O  - New number of options */
+static int				// O  - New number of options
 include_feature(
-    pstops_doc_t  *doc,			/* I  - Document information */
-    ppd_file_t    *ppd,			/* I  - PPD file */
-    const char    *line,		/* I  - DSC line */
-    int           num_options,		/* I  - Number of options */
-    cups_option_t **options)		/* IO - Options */
+    pstops_doc_t  *doc,			// I  - Document information
+    ppd_file_t    *ppd,			// I  - PPD file
+    const char    *line,		// I  - DSC line
+    int           num_options,		// I  - Number of options
+    cups_option_t **options)		// IO - Options
 {
-  char		name[255],		/* Option name */
-		value[255];		/* Option value */
-  ppd_option_t	*option;		/* Option in file */
-  cf_logfunc_t log = doc->logfunc;
+  char		name[255],		// Option name
+		value[255];		// Option value
+  ppd_option_t	*option;		// Option in file
+  cf_logfunc_t  log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
- /*
-  * Get the "%%IncludeFeature: *Keyword OptionKeyword" values...
-  */
+  //
+  // Get the "%%IncludeFeature: *Keyword OptionKeyword" values...
+  //
 
   if (sscanf(line + 17, "%254s%254s", name, value) != 2)
   {
@@ -3706,9 +3737,9 @@ include_feature(
     return (num_options);
   }
 
- /*
-  * Find the option and choice...
-  */
+  //
+  // Find the option and choice...
+  //
 
   if ((option = ppdFindOption(ppd, name + 1)) == NULL)
   {
@@ -3734,46 +3765,46 @@ include_feature(
     return (num_options);
   }
 
- /*
-  * Add the option to the option array and return...
-  */
+  //
+  // Add the option to the option array and return...
+  //
 
   return (cupsAddOption(name + 1, value, num_options, options));
 }
 
 
-/*
- * 'parse_text()' - Parse a text value in a comment.
- *
- * This function parses a DSC text value as defined on page 36 of the
- * DSC specification.  Text values are either surrounded by parenthesis
- * or whitespace-delimited.
- *
- * The value returned is the literal characters for the entire text
- * string, including any parenthesis and escape characters.
- */
+//
+// 'parse_text()' - Parse a text value in a comment.
+//
+// This function parses a DSC text value as defined on page 36 of the
+// DSC specification.  Text values are either surrounded by parenthesis
+// or whitespace-delimited.
+//
+// The value returned is the literal characters for the entire text
+// string, including any parenthesis and escape characters.
+//
 
-static char *				/* O - Value or NULL on error */
-parse_text(const char *start,		/* I - Start of text value */
-           char       **end,		/* O - End of text value */
-	   char       *buffer,		/* I - Buffer */
-           size_t     bufsize)		/* I - Size of buffer */
+static char *				// O - Value or NULL on error
+parse_text(const char *start,		// I - Start of text value
+           char       **end,		// O - End of text value
+	   char       *buffer,		// I - Buffer
+           size_t     bufsize)		// I - Size of buffer
 {
-  char	*bufptr,			/* Pointer in buffer */
-	*bufend;			/* End of buffer */
-  int	level;				/* Parenthesis level */
+  char	*bufptr,			// Pointer in buffer
+	*bufend;			// End of buffer
+  int	level;				// Parenthesis level
 
 
- /*
-  * Skip leading whitespace...
-  */
+  //
+  // Skip leading whitespace...
+  //
 
   while (isspace(*start & 255))
     start ++;
 
- /*
-  * Then copy the value...
-  */
+  //
+  // Then copy the value...
+  //
 
   level  = 0;
   bufptr = buffer;
@@ -3800,11 +3831,11 @@ parse_text(const char *start,		/* I - Start of text value */
     }
     else if (*start == '\\')
     {
-     /*
-      * Copy escaped character...
-      */
+      //
+      // Copy escaped character...
+      //
 
-      int	i;			/* Looping var */
+      int	i;			// Looping var
 
 
       for (i = 1;
@@ -3817,9 +3848,9 @@ parse_text(const char *start,		/* I - Start of text value */
 
   *bufptr = '\0';
 
- /*
-  * Return the value and new pointer into the line...
-  */
+  //
+  // Return the value and new pointer into the line...
+  //
 
   if (end)
     *end = (char *)start;
@@ -3831,27 +3862,27 @@ parse_text(const char *start,		/* I - Start of text value */
 }
 
 
-/*
- * 'ps_hex()' - Print binary data as a series of hexadecimal numbers.
- */
+//
+// 'ps_hex()' - Print binary data as a series of hexadecimal numbers.
+//
 
 static void
 ps_hex(pstops_doc_t *doc,
-       cf_ib_t *data,			/* I - Data to print */
-       int       length,		/* I - Number of bytes to print */
-       int       last_line)		/* I - Last line of raster data? */
+       cf_ib_t *data,			// I - Data to print
+       int       length,		// I - Number of bytes to print
+       int       last_line)		// I - Last line of raster data?
 {
-  static int	col = 0;		/* Current column */
+  static int	col = 0;		// Current column
   static char	*hex = "0123456789ABCDEF";
-					/* Hex digits */
+					// Hex digits
 
 
   while (length > 0)
   {
-   /*
-    * Put the hex chars out to the file; note that we don't use fprintf()
-    * for speed reasons...
-    */
+    //
+    // Put the hex chars out to the file; note that we don't use fprintf()
+    // for speed reasons...
+    //
 
     doc_putc(doc, hex[*data >> 4]);
     doc_putc(doc, hex[*data & 15]);
@@ -3875,19 +3906,19 @@ ps_hex(pstops_doc_t *doc,
 }
 
 
-/*
- * 'ps_ascii85()' - Print binary data as a series of base-85 numbers.
- */
+//
+// 'ps_ascii85()' - Print binary data as a series of base-85 numbers.
+//
 
 static void
 ps_ascii85(pstops_doc_t *doc,
-	   cf_ib_t *data,		/* I - Data to print */
-	   int       length,		/* I - Number of bytes to print */
-	   int       last_line)		/* I - Last line of raster data? */
+	   cf_ib_t *data,		// I - Data to print
+	   int       length,		// I - Number of bytes to print
+	   int       last_line)		// I - Last line of raster data?
 {
-  unsigned	b;			/* Binary data word */
-  unsigned char	c[5];			/* ASCII85 encoded chars */
-  static int	col = 0;		/* Current column */
+  unsigned	b;			// Binary data word
+  unsigned char	c[5];			// ASCII85 encoded chars
+  static int	col = 0;		// Current column
 
 
   while (length > 3)
@@ -3951,73 +3982,73 @@ ps_ascii85(pstops_doc_t *doc,
 }
 
 
-/*
- * 'set_pstops_options()' - Set pstops options.
- */
+//
+// 'set_pstops_options()' - Set pstops options.
+//
 
 static int
 set_pstops_options(
-    pstops_doc_t  *doc,			/* I - Document information */
-    ppd_file_t    *ppd,			/* I - PPD file */
-    int           job_id,               /* I - Job ID */
-    char          *job_user,            /* I - Job User */
-    char          *job_title,           /* I - Job Title */
-    int           copies,               /* I - Number of copies */
-    int           num_options,		/* I - Number of options */
-    cups_option_t *options,		/* I - Options */
-    cf_logfunc_t logfunc,           /* I - Logging function,
-					       NULL for no logging */
-    void *logdata,                      /* I - User data for logging function,
-					       can be NULL */
-    cf_filter_iscanceledfunc_t iscanceledfunc, /* I - Function returning 1 when
-					       job is canceled, NULL for not
-					       supporting stop on cancel */
-    void *iscanceleddata)               /* I - User data for is-canceled
-					       function, can be NULL */
+    pstops_doc_t  *doc,			// I - Document information
+    ppd_file_t    *ppd,			// I - PPD file
+    int           job_id,               // I - Job ID
+    char          *job_user,            // I - Job User
+    char          *job_title,           // I - Job Title
+    int           copies,               // I - Number of copies
+    int           num_options,		// I - Number of options
+    cups_option_t *options,		// I - Options
+    cf_logfunc_t  logfunc,              // I - Logging function,
+					//     NULL for no logging
+    void *logdata,                      // I - User data for logging function,
+					//     can be NULL
+    cf_filter_iscanceledfunc_t iscanceledfunc, // I - Function returning 1 when
+					//     job is canceled, NULL for not
+					//     supporting stop on cancel
+    void *iscanceleddata)               // I - User data for is-canceled
+					//     function, can be NULL
 {
-  const char	*val;			/* Option value */
-  int		intval;			/* Integer option value */
-  ppd_attr_t	*attr;			/* PPD attribute */
-  ppd_option_t	*option;		/* PPD option */
-  ppd_choice_t	*choice;		/* PPD choice */
-  const char	*content_type;		/* Original content type */
-  int		max_copies;		/* Maximum number of copies supported */
-  cf_logfunc_t log = logfunc;
+  const char	*val;			// Option value
+  int		intval;			// Integer option value
+  ppd_attr_t	*attr;			// PPD attribute
+  ppd_option_t	*option;		// PPD option
+  ppd_choice_t	*choice;		// PPD choice
+  const char	*content_type;		// Original content type
+  int		max_copies;		// Maximum number of copies supported
+  cf_logfunc_t  log = logfunc;
   void          *ld = logdata;
   cf_filter_iscanceledfunc_t iscanceled = iscanceledfunc;
   void          *icd = iscanceleddata;
 
 
- /*
-  * Initialize document information structure...
-  */
+  //
+  // Initialize document information structure...
+  //
 
   memset(doc, 0, sizeof(pstops_doc_t));
 
-  /* Job info, to appear on the printer's front panel while printing */
+  // Job info, to appear on the printer's front panel while printing
   doc->job_id = (job_id > 0 ? job_id : 0);
   doc->user = (job_user ? job_user : "Unknown");
   doc->title = (job_title ? job_title : "");
 
-  /* Number of copies, 1 if this filter should not handle copies */
+  // Number of copies, 1 if this filter should not handle copies
   doc->copies = (copies > 0 ? copies : 1);
 
-  /* Logging function */
+  // Logging function
   doc->logfunc = log;
   doc->logdata = ld;
 
-  /* Job-is-canceled function */
+  // Job-is-canceled function
   doc->iscanceledfunc = iscanceled;
   doc->iscanceleddata = icd;
 
-  /* Set some common values */
+  // Set some common values
   ppdFilterSetCommonOptions(ppd, num_options, options, 1,
-			 &doc->Orientation, &doc->Duplex,
-			 &doc->LanguageLevel, &doc->Color,
-			 &doc->PageLeft, &doc->PageRight,
-			 &doc->PageTop, &doc->PageBottom,
-			 &doc->PageWidth, &doc->PageLength,
-			 log, ld);
+			    &doc->Orientation, &doc->Duplex,
+			    &doc->LanguageLevel, &doc->Color,
+			    &doc->PageLeft, &doc->PageRight,
+			    &doc->PageTop, &doc->PageBottom,
+			    &doc->PageWidth, &doc->PageLength,
+			    log, ld);
 
   if (ppd && ppd->landscape > 0)
     doc->normal_landscape = 1;
@@ -4032,9 +4063,9 @@ set_pstops_options(
   doc->new_bounding_box[2] = INT_MIN;
   doc->new_bounding_box[3] = INT_MIN;
 
- /*
-  * AP_FIRSTPAGE_* and the corresponding non-first-page options.
-  */
+  //
+  // AP_FIRSTPAGE_* and the corresponding non-first-page options.
+  //
 
   doc->ap_input_slot  = cupsGetOption("AP_FIRSTPAGE_InputSlot", num_options,
                                       options);
@@ -4062,21 +4093,21 @@ set_pstops_options(
   if ((choice = ppdFindMarkedChoice(ppd, "PageSize")) != NULL)
     doc->page_size = choice->choice;
 
- /*
-  * collate, multiple-document-handling
-  */
+  //
+  // collate, multiple-document-handling
+  //
 
   if ((val = cupsGetOption("multiple-document-handling",
 			   num_options, options)) != NULL)
   {
-   /*
-    * This IPP attribute is unnecessarily complicated...
-    *
-    *   single-document, separate-documents-collated-copies, and
-    *   single-document-new-sheet all require collated copies.
-    *
-    *   separate-documents-uncollated-copies allows for uncollated copies.
-    */
+    //
+    // This IPP attribute is unnecessarily complicated...
+    //
+    //  single-document, separate-documents-collated-copies, and
+    //  single-document-new-sheet all require collated copies.
+    //
+    //  separate-documents-uncollated-copies allows for uncollated copies.
+    //
 
     doc->collate = strcasecmp(val, "separate-documents-uncollated-copies") != 0;
   }
@@ -4086,9 +4117,9 @@ set_pstops_options(
        !strcasecmp(val, "yes")))
     doc->collate = 1;
 
- /*
-  * emit-jcl
-  */
+  //
+  // emit-jcl
+  //
 
   if ((val = cupsGetOption("emit-jcl", num_options, options)) != NULL &&
       (!strcasecmp(val, "false") || !strcasecmp(val, "off") ||
@@ -4097,11 +4128,11 @@ set_pstops_options(
   else
     doc->emit_jcl = 1;
 
- /*
-  * fit-to-page/ipp-attribute-fidelity
-  *
-  * (Only for original PostScript content)
-  */
+  //
+  // fit-to-page/ipp-attribute-fidelity
+  //
+  // (Only for original PostScript content)
+  //
 
   if ((content_type = getenv("CONTENT_TYPE")) == NULL)
     content_type = "application/postscript";
@@ -4117,9 +4148,9 @@ set_pstops_options(
       doc->fit_to_page = 1;
   }
 
- /*
-  * mirror/MirrorPrint
-  */
+  //
+  // mirror/MirrorPrint
+  //
 
   if ((choice = ppdFindMarkedChoice(ppd, "MirrorPrint")) != NULL)
   {
@@ -4133,9 +4164,9 @@ set_pstops_options(
               !strcasecmp(val, "yes")))
     doc->mirror = 1;
 
- /*
-  * number-up
-  */
+  //
+  // number-up
+  //
 
   if ((val = cupsGetOption("number-up", num_options, options)) != NULL)
   {
@@ -4160,9 +4191,9 @@ set_pstops_options(
   else
     doc->number_up = 1;
 
- /*
-  * number-up-layout
-  */
+  //
+  // number-up-layout
+  //
 
   if ((val = cupsGetOption("number-up-layout", num_options, options)) != NULL)
   {
@@ -4193,9 +4224,9 @@ set_pstops_options(
   else
     doc->number_up_layout = PSTOPS_LAYOUT_LRTB;
 
- /*
-  * OutputOrder
-  */
+  //
+  // OutputOrder
+  //
 
   if ((val = cupsGetOption("OutputOrder", num_options, options)) != NULL)
   {
@@ -4204,9 +4235,9 @@ set_pstops_options(
   }
   else if (ppd)
   {
-   /*
-    * Figure out the right default output order from the PPD file...
-    */
+    //
+    // Figure out the right default output order from the PPD file...
+    //
 
     if ((choice = ppdFindMarkedChoice(ppd, "OutputBin")) != NULL &&
         (attr = ppdFindAttr(ppd, "PageStackOrder", choice->choice)) != NULL &&
@@ -4217,9 +4248,9 @@ set_pstops_options(
       doc->output_order = !strcasecmp(attr->value, "Reverse");
   }
 
- /*
-  * page-border
-  */
+  //
+  // page-border
+  //
 
   if ((val = cupsGetOption("page-border", num_options, options)) != NULL)
   {
@@ -4244,33 +4275,33 @@ set_pstops_options(
   else
     doc->page_border = PSTOPS_BORDERNONE;
 
- /*
-  * page-label
-  */
+  //
+  // page-label
+  //
 
   doc->page_label = cupsGetOption("page-label", num_options, options);
- 
- /*
- *  input-page-ranges
- */
 
-  doc->inputPageRange=cupsGetOption("input-page-ranges",num_options,options);
-  
- /*
-  * page-ranges
-  */
+  //
+  // input-page-ranges
+  //
+
+  doc->inputPageRange=cupsGetOption("input-page-ranges", num_options, options);
+
+  //
+  // page-ranges
+  //
 
   doc->page_ranges = cupsGetOption("page-ranges", num_options, options);
 
- /*
-  * page-set
-  */
+  //
+  // page-set
+  //
 
   doc->page_set = cupsGetOption("page-set", num_options, options);
 
- /*
-  * Now figure out if we have to force collated copies, etc.
-  */
+  //
+  // Now figure out if we have to force collated copies, etc.
+  //
 
   if ((attr = ppdFindAttr(ppd, "cupsMaxCopies", NULL)) != NULL)
     max_copies = atoi(attr->value);
@@ -4283,25 +4314,25 @@ set_pstops_options(
     doc->collate = 1;
   else if (ppd && ppd->manual_copies && doc->Duplex && doc->copies > 1)
   {
-   /*
-    * Force collated copies when printing a duplexed document to
-    * a non-PS printer that doesn't do hardware copy generation.
-    * Otherwise the copies will end up on the front/back side of
-    * each page.
-    */
+    //
+    // Force collated copies when printing a duplexed document to
+    // a non-PS printer that doesn't do hardware copy generation.
+    // Otherwise the copies will end up on the front/back side of
+    // each page.
+    //
 
     doc->collate = 1;
   }
 
- /*
-  * See if we have to filter the fast or slow way...
-  */
+  //
+  // See if we have to filter the fast or slow way...
+  //
 
   if (doc->collate && doc->copies > 1)
   {
-   /*
-    * See if we need to manually collate the pages...
-    */
+    //
+    // See if we need to manually collate the pages...
+    //
 
     doc->slow_collate = 1;
 
@@ -4309,11 +4340,11 @@ set_pstops_options(
         (choice = ppdFindMarkedChoice(ppd, "Collate")) != NULL &&
         !strcasecmp(choice->choice, "True"))
     {
-     /*
-      * Hardware collate option is selected, see if the option is
-      * conflicting - if not, collate in hardware.  Otherwise,
-      * turn the hardware collate option off...
-      */
+      //
+      // Hardware collate option is selected, see if the option is
+      // conflicting - if not, collate in hardware.  Otherwise,
+      // turn the hardware collate option off...
+      //
 
       if ((option = ppdFindOption(ppd, "Collate")) != NULL &&
           !option->conflicted)
@@ -4338,9 +4369,9 @@ set_pstops_options(
   else
     doc->slow_duplex = 0;
 
- /*
-  * Create a temporary file for page data if we need to filter slowly...
-  */
+  //
+  // Create a temporary file for page data if we need to filter slowly...
+  //
 
   if (doc->slow_order || doc->slow_collate)
   {
@@ -4354,16 +4385,16 @@ set_pstops_options(
     }
   }
 
- /*
-  * Figure out if we should use ESPshowpage or not...
-  */
+  //
+  // Figure out if we should use ESPshowpage or not...
+  //
 
   if (doc->page_label || getenv("CLASSIFICATION") || doc->number_up > 1 ||
       doc->page_border)
   {
-   /*
-    * Yes, use ESPshowpage...
-    */
+    //
+    // Yes, use ESPshowpage...
+    //
 
     doc->use_ESPshowpage = 1;
   }
@@ -4376,17 +4407,17 @@ set_pstops_options(
 }
 
 
-/*
- * 'skip_page()' - Skip past a page that won't be printed.
- */
+//
+// 'skip_page()' - Skip past a page that won't be printed.
+//
 
-static ssize_t				/* O - Length of next line */
-skip_page(pstops_doc_t *doc,		/* I - Document information */
-          char        *line,		/* I - Line buffer */
-	  ssize_t     linelen,		/* I - Length of initial line */
-          size_t      linesize)		/* I - Size of line buffer */
+static ssize_t				// O - Length of next line
+skip_page(pstops_doc_t *doc,		// I - Document information
+          char        *line,		// I - Line buffer
+	  ssize_t     linelen,		// I - Length of initial line
+          size_t      linesize)		// I - Size of line buffer
 {
-  int	level;				/* Embedded document level */
+  int	level;				// Embedded document level
   cf_logfunc_t log = doc->logfunc;
   void          *ld = doc->logdata;
 
@@ -4408,11 +4439,11 @@ skip_page(pstops_doc_t *doc,		/* I - Document information */
              (!strncmp(line, "%%BeginData:", 12) &&
 	      !strstr(line, "ASCII") && !strstr(line, "Hex")))
     {
-     /*
-      * Skip binary data...
-      */
+      //
+      // Skip binary data...
+      //
 
-      ssize_t	bytes;			/* Bytes of data */
+      ssize_t	bytes;			// Bytes of data
 
       bytes = atoi(strchr(line, ':') + 1);
 
@@ -4442,28 +4473,28 @@ skip_page(pstops_doc_t *doc,		/* I - Document information */
 }
 
 
-/*
- * 'start_nup()' - Start processing for N-up printing.
- */
+//
+// 'start_nup()' - Start processing for N-up printing.
+//
 
 static void
-start_nup(pstops_doc_t *doc,		/* I - Document information */
-          int          number,		/* I - Page number */
-	  int          show_border,	/* I - Show the border? */
-	  const int    *bounding_box)	/* I - BoundingBox value */
+start_nup(pstops_doc_t *doc,		// I - Document information
+          int          number,		// I - Page number
+	  int          show_border,	// I - Show the border?
+	  const int    *bounding_box)	// I - BoundingBox value
 {
-  int		pos;			/* Position on page */
-  int		x, y;			/* Relative position of subpage */
-  double	w, l,			/* Width and length of subpage */
-		tx, ty;			/* Translation values for subpage */
-  double	pagew,			/* Printable width of page */
-		pagel;			/* Printable height of page */
-  int		bboxx,			/* BoundingBox X origin */
-		bboxy,			/* BoundingBox Y origin */
-		bboxw,			/* BoundingBox width */
-		bboxl;			/* BoundingBox height */
-  double	margin = 0;		/* Current margin for border */
-  cf_logfunc_t log = doc->logfunc;
+  int		pos;			// Position on page
+  int		x, y;			// Relative position of subpage
+  double	w, l,			// Width and length of subpage
+		tx, ty;			// Translation values for subpage
+  double	pagew,			// Printable width of page
+		pagel;			// Printable height of page
+  int		bboxx,			// BoundingBox X origin
+		bboxy,			// BoundingBox Y origin
+		bboxw,			// BoundingBox width
+		bboxl;			// BoundingBox height
+  double	margin = 0;		// Current margin for border
+  cf_logfunc_t  log = doc->logfunc;
   void          *ld = doc->logdata;
 
 
@@ -4509,28 +4540,28 @@ start_nup(pstops_doc_t *doc,		/* I - Document information */
 
   switch (doc->Orientation)
   {
-    case 1 : /* Landscape */
+    case 1 : // Landscape
         doc_printf(doc, "%.1f 0.0 translate 90 rotate\n", doc->PageLength);
         break;
-    case 2 : /* Reverse Portrait */
+    case 2 : // Reverse Portrait
         doc_printf(doc, "%.1f %.1f translate 180 rotate\n", doc->PageWidth,
 	           doc->PageLength);
         break;
-    case 3 : /* Reverse Landscape */
+    case 3 : // Reverse Landscape
         doc_printf(doc, "0.0 %.1f translate -90 rotate\n", doc->PageWidth);
         break;
   }
 
- /*
-  * Mirror the page as needed...
-  */
+  //
+  // Mirror the page as needed...
+  //
 
   if (doc->mirror)
     doc_printf(doc, "%.1f 0.0 translate -1 1 scale\n", doc->PageWidth);
 
- /*
-  * Offset and scale as necessary for fit_to_page/fit-to-page/number-up...
-  */
+  //
+  // Offset and scale as necessary for fit_to_page/fit-to-page/number-up...
+  //
 
   if (doc->Duplex && doc->number_up > 1 && ((number / doc->number_up) & 1))
     doc_printf(doc, "%.1f %.1f translate\n", doc->PageWidth - doc->PageRight,
@@ -4819,32 +4850,32 @@ start_nup(pstops_doc_t *doc,		/* I - Document information */
         break;
   }
 
- /*
-  * Draw borders as necessary...
-  */
+  //
+  // Draw borders as necessary...
+  //
 
   if (doc->page_border && show_border)
   {
-    int		rects;			/* Number of border rectangles */
-    double	fscale;			/* Scaling value for points */
+    int		rects;			// Number of border rectangles
+    double	fscale;			// Scaling value for points
 
 
     rects  = (doc->page_border & PSTOPS_BORDERDOUBLE) ? 2 : 1;
     fscale = doc->PageWidth / w;
     margin = 2.25 * fscale;
 
-   /*
-    * Set the line width and color...
-    */
+    //
+    // Set the line width and color...
+    //
 
     doc_puts(doc, "gsave\n");
     doc_printf(doc, "%.3f setlinewidth 0 setgray newpath\n",
                (doc->page_border & PSTOPS_BORDERTHICK) ? 0.5 * fscale :
 	                                                 0.24 * fscale);
 
-   /*
-    * Draw border boxes...
-    */
+    //
+    // Draw border boxes...
+    //
 
     for (; rects > 0; rects --, margin += 2 * fscale)
       if (doc->number_up > 1)
@@ -4860,18 +4891,18 @@ start_nup(pstops_doc_t *doc,		/* I - Document information */
 		   doc->PageRight - doc->PageLeft - 2 * margin,
 		   doc->PageTop - doc->PageBottom - 2 * margin);
 
-   /*
-    * Restore pen settings...
-    */
+    //
+    // Restore pen settings...
+    //
 
     doc_puts(doc, "grestore\n");
   }
 
   if (doc->fit_to_page)
   {
-   /*
-    * Offset the page by its bounding box...
-    */
+    //
+    // Offset the page by its bounding box...
+    //
 
     doc_printf(doc, "%d %d translate\n", -bounding_box[0],
                -bounding_box[1]);
@@ -4879,9 +4910,9 @@ start_nup(pstops_doc_t *doc,		/* I - Document information */
 
   if (doc->fit_to_page || doc->number_up > 1)
   {
-   /*
-    * Clip the page to the page's bounding box...
-    */
+    //
+    // Clip the page to the page's bounding box...
+    //
 
     doc_printf(doc, "%.1f %.1f %.1f %.1f ESPrc\n",
                bboxx + margin, bboxy + margin,
@@ -4890,9 +4921,9 @@ start_nup(pstops_doc_t *doc,		/* I - Document information */
 }
 
 
-/*
- * 'write_common()' - Write common procedures...
- */
+//
+// 'write_common()' - Write common procedures...
+//
 
 static void
 write_common(pstops_doc_t *doc)
@@ -4915,36 +4946,36 @@ write_common(pstops_doc_t *doc)
 }
 
 
-/*
- * 'write_label_prolog()' - Write the prolog with the classification
- *                          and page label.
- */
+//
+// 'write_label_prolog()' - Write the prolog with the classification
+//                          and page label.
+
 
 static void
-write_label_prolog(pstops_doc_t *doc,	/* I - Document info */
-                   const char   *label,	/* I - Page label */
-		   float        bottom,	/* I - Bottom position in points */
-		   float        top,	/* I - Top position in points */
-		   float        width)	/* I - Width in points */
+write_label_prolog(pstops_doc_t *doc,	// I - Document info
+                   const char   *label,	// I - Page label
+		   float        bottom,	// I - Bottom position in points
+		   float        top,	// I - Top position in points
+		   float        width)	// I - Width in points
 {
-  const char	*classification;	/* CLASSIFICATION environment
-					   variable */
-  const char	*ptr;			/* Temporary string pointer */
+  const char	*classification;	// CLASSIFICATION environment
+					// variable
+  const char	*ptr;			// Temporary string pointer
 
 
- /*
-  * First get the current classification...
-  */
+  //
+  // First get the current classification...
+  //
 
   if ((classification = getenv("CLASSIFICATION")) == NULL)
     classification = "";
   if (strcmp(classification, "none") == 0)
     classification = "";
 
- /*
-  * If there is nothing to show, bind an empty 'write labels' procedure
-  * and return...
-  */
+  //
+  // If there is nothing to show, bind an empty 'write labels' procedure
+  // and return...
+  //
 
   if (!classification[0] && (label == NULL || !label[0]))
   {
@@ -4952,9 +4983,9 @@ write_label_prolog(pstops_doc_t *doc,	/* I - Document info */
     return;
   }
 
- /*
-  * Set the classification + page label string...
-  */
+  //
+  // Set the classification + page label string...
+  //
 
   doc_puts(doc, "userdict");
   if (!strcmp(classification, "confidential"))
@@ -4989,9 +5020,9 @@ write_label_prolog(pstops_doc_t *doc,	/* I - Document info */
     if (classification[0])
       doc_puts(doc, " - ");
 
-   /*
-    * Quote the label string as needed...
-    */
+    //
+    // Quote the label string as needed...
+    //
 
     for (ptr = label; *ptr; ptr ++)
     {
@@ -5006,15 +5037,15 @@ write_label_prolog(pstops_doc_t *doc,	/* I - Document info */
 
   doc_puts(doc, ")put\n");
 
- /*
-  * Then get a 14 point Helvetica-Bold font...
-  */
+  //
+  // Then get a 14 point Helvetica-Bold font...
+  //
 
   doc_puts(doc, "userdict/ESPpf /Helvetica-Bold findfont 14 scalefont put\n");
 
- /*
-  * Finally, the procedure to write the labels on the page...
-  */
+  //
+  // Finally, the procedure to write the labels on the page...
+  //
 
   doc_puts(doc, "userdict/ESPwl{\n");
   doc_puts(doc, "  ESPpf setfont\n");
@@ -5033,19 +5064,19 @@ write_label_prolog(pstops_doc_t *doc,	/* I - Document info */
 }
 
 
-/*
- * 'write_labels()' - Write the actual page labels.
- *
- * This function is a copy of the one in common.c since we need to
- * use doc_puts/doc_printf instead of puts/printf...
- */
+//
+// 'write_labels()' - Write the actual page labels.
+//
+// This function is a copy of the one in common.c since we need to
+// use doc_puts/doc_printf instead of puts/printf...
+//
 
 static void
-write_labels(pstops_doc_t *doc,		/* I - Document information */
-             int          orient)	/* I - Orientation of the page */
+write_labels(pstops_doc_t *doc,		// I - Document information
+             int          orient)	// I - Orientation of the page
 {
-  float	width,				/* Width of page */
-	length;				/* Length of page */
+  float	width,				// Width of page
+	length;				// Length of page
 
 
   doc_puts(doc, "gsave\n");
@@ -5063,13 +5094,13 @@ write_labels(pstops_doc_t *doc,		/* I - Document information */
 
   switch (orient & 3)
   {
-    case 1 : /* Landscape */
+    case 1 : // Landscape
         doc_printf(doc, "%.1f 0.0 translate 90 rotate\n", length);
         break;
-    case 2 : /* Reverse Portrait */
+    case 2 : // Reverse Portrait
         doc_printf(doc, "%.1f %.1f translate 180 rotate\n", width, length);
         break;
-    case 3 : /* Reverse Landscape */
+    case 3 : // Reverse Landscape
         doc_printf(doc, "0.0 %.1f translate -90 rotate\n", width);
         break;
   }
@@ -5079,20 +5110,20 @@ write_labels(pstops_doc_t *doc,		/* I - Document information */
 }
 
 
-/*
- * 'write_labels_outputfile_only()' - Write the actual page labels to the
- *                                    output file.
- *
- * This function is a copy of the one in common.c. Since we use it only
- * in this filter, we have moved it to here.
- */
+//
+// 'write_labels_outputfile_only()' - Write the actual page labels to the
+//                                    output file.
+//
+// This function is a copy of the one in common.c. Since we use it only
+// in this filter, we have moved it to here.
+//
 
 static void
-write_labels_outputfile_only(pstops_doc_t *doc,/* I - Document information */
-		             int        orient)/* I - Orientation of the page */
+write_labels_outputfile_only(pstops_doc_t *doc,// I - Document information
+		             int        orient)// I - Orientation of the page
 {
-  float	width,				/* Width of page */
-	length;				/* Length of page */
+  float	width,				// Width of page
+	length;				// Length of page
 
 
   doc_puts(doc, "gsave\n");
@@ -5110,14 +5141,14 @@ write_labels_outputfile_only(pstops_doc_t *doc,/* I - Document information */
 
   switch (orient & 3)
   {
-    case 1 : /* Landscape */
+    case 1 : // Landscape
         doc_printf(doc, "%.1f 0.0 translate 90 rotate\n", length);
         break;
-    case 2 : /* Reverse Portrait */
+    case 2 : // Reverse Portrait
         doc_printf(doc, "%.1f %.1f translate 180 rotate\n",
 		width, length);
         break;
-    case 3 : /* Reverse Landscape */
+    case 3 : // Reverse Landscape
         doc_printf(doc, "0.0 %.1f translate -90 rotate\n", width);
         break;
   }
@@ -5127,27 +5158,27 @@ write_labels_outputfile_only(pstops_doc_t *doc,/* I - Document information */
 }
 
 
-/*
- * 'write_options()' - Write options provided via %%IncludeFeature.
- */
+//
+// 'write_options()' - Write options provided via %%IncludeFeature.
+//
 
 static void
 write_options(
-    pstops_doc_t  *doc,		/* I - Document */
-    ppd_file_t    *ppd,		/* I - PPD file */
-    int           num_options,	/* I - Number of options */
-    cups_option_t *options)	/* I - Options */
+    pstops_doc_t  *doc,		// I - Document
+    ppd_file_t    *ppd,		// I - PPD file
+    int           num_options,	// I - Number of options
+    cups_option_t *options)	// I - Options
 {
-  int		i;		/* Looping var */
-  ppd_option_t	*option;	/* PPD option */
-  float		min_order;	/* Minimum OrderDependency value */
-  char		*doc_setup,	/* DocumentSetup commands to send */
-		*any_setup;	/* AnySetup commands to send */
+  int		i;		// Looping var
+  ppd_option_t	*option;	// PPD option
+  float		min_order;	// Minimum OrderDependency value
+  char		*doc_setup,	// DocumentSetup commands to send
+		*any_setup;	// AnySetup commands to send
 
 
- /*
-  * Figure out the minimum OrderDependency value...
-  */
+  //
+  // Figure out the minimum OrderDependency value...
+  //
 
   if ((option = ppdFindOption(ppd, "PageRegion")) != NULL)
     min_order = option->order;
@@ -5159,24 +5190,24 @@ write_options(
 	option->order < min_order)
       min_order = option->order;
 
- /*
-  * Mark and extract them...
-  */
+  //
+  // Mark and extract them...
+  //
 
   ppdMarkOptions(ppd, num_options, options);
 
   doc_setup = ppdEmitString(ppd, PPD_ORDER_DOCUMENT, min_order);
   any_setup = ppdEmitString(ppd, PPD_ORDER_ANY, min_order);
 
- /*
-  * Then send them out...
-  */
+  //
+  // Then send them out...
+  //
 
   if (doc->number_up > 1)
   {
-   /*
-    * Temporarily restore setpagedevice so we can set the options...
-    */
+    //
+    // Temporarily restore setpagedevice so we can set the options...
+    //
 
     doc_puts(doc, "userdict/setpagedevice/CUPSsetpagedevice load put\n");
   }
@@ -5195,36 +5226,36 @@ write_options(
 
   if (doc->number_up > 1)
   {
-   /*
-    * Disable setpagedevice again...
-    */
+    //
+    // Disable setpagedevice again...
+    //
 
     doc_puts(doc, "userdict/setpagedevice{pop}bind put\n");
   }
 }
 
 
-/*
- * 'write_text_comment()' - Write a DSC text comment.
- */
+//
+// 'write_text_comment()' - Write a DSC text comment.
+//
 
 static void
-write_text_comment(pstops_doc_t *doc,	/* I - Document */
-		   const char *name,	/* I - Comment name ("Title", etc.) */
-                   const char *value)	/* I - Comment value */
+write_text_comment(pstops_doc_t *doc,	// I - Document
+		   const char *name,	// I - Comment name ("Title", etc.)
+                   const char *value)	// I - Comment value
 {
-  int	len;				/* Current line length */
+  int	len;				// Current line length
 
 
- /*
-  * DSC comments are of the form:
-  *
-  *   %%name: value
-  *
-  * The name and value must be limited to 7-bit ASCII for most printers,
-  * so we escape all non-ASCII and ASCII control characters as described
-  * in the Adobe Document Structuring Conventions specification.
-  */
+  //
+  // DSC comments are of the form:
+  //
+  //   %%name: value
+  //
+  // The name and value must be limited to 7-bit ASCII for most printers,
+  // so we escape all non-ASCII and ASCII control characters as described
+  // in the Adobe Document Structuring Conventions specification.
+  //
 
   doc_printf(doc, "%%%%%s: (", name);
   len = 5 + strlen(name);
@@ -5233,11 +5264,11 @@ write_text_comment(pstops_doc_t *doc,	/* I - Document */
   {
     if (*value < ' ' || *value >= 127)
     {
-     /*
-      * Escape this character value...
-      */
+      //
+      // Escape this character value...
+      //
 
-      if (len >= 251)			/* Keep line < 254 chars */
+      if (len >= 251)			// Keep line < 254 chars
         break;
 
       doc_printf(doc, "\\%03o", *value & 255);
@@ -5245,11 +5276,11 @@ write_text_comment(pstops_doc_t *doc,	/* I - Document */
     }
     else if (*value == '\\')
     {
-     /*
-      * Escape the backslash...
-      */
+      //
+      // Escape the backslash...
+      //
 
-      if (len >= 253)			/* Keep line < 254 chars */
+      if (len >= 253)			// Keep line < 254 chars
         break;
 
       doc_putc(doc, '\\');
@@ -5258,11 +5289,11 @@ write_text_comment(pstops_doc_t *doc,	/* I - Document */
     }
     else
     {
-     /*
-      * Put this character literally...
-      */
+      //
+      // Put this character literally...
+      //
 
-      if (len >= 254)			/* Keep line < 254 chars */
+      if (len >= 254)			// Keep line < 254 chars
         break;
 
       doc_putc(doc, *value);

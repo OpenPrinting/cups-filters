@@ -1,35 +1,35 @@
-/*
- * PPD custom option routines for libppd.
- *
- * Copyright 2007-2015 by Apple Inc.
- * Copyright 1997-2006 by Easy Software Products, all rights reserved.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- *
- * PostScript is a trademark of Adobe Systems, Inc.
- */
+//
+// PPD custom option routines for libppd.
+//
+// Copyright 2007-2015 by Apple Inc.
+// Copyright 1997-2006 by Easy Software Products, all rights reserved.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+// PostScript is a trademark of Adobe Systems, Inc.
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include "string-private.h"
 #include "ppd.h"
 #include "debug-internal.h"
 
 
-/*
- * 'ppdFindCustomOption()' - Find a custom option.
- *
- * @since CUPS 1.2/macOS 10.5@
- */
+//
+// 'ppdFindCustomOption()' - Find a custom option.
+//
+// @since CUPS 1.2/macOS 10.5@
+//
 
-ppd_coption_t *				/* O - Custom option or NULL */
-ppdFindCustomOption(ppd_file_t *ppd,	/* I - PPD file */
-                    const char *keyword)/* I - Custom option name */
+ppd_coption_t *				// O - Custom option or NULL
+ppdFindCustomOption(ppd_file_t *ppd,	// I - PPD file
+                    const char *keyword)// I - Custom option name
 {
-  ppd_coption_t	key;			/* Custom option search key */
+  ppd_coption_t	key;			// Custom option search key
 
 
   if (!ppd)
@@ -40,17 +40,17 @@ ppdFindCustomOption(ppd_file_t *ppd,	/* I - PPD file */
 }
 
 
-/*
- * 'ppdFindCustomParam()' - Find a parameter for a custom option.
- *
- * @since CUPS 1.2/macOS 10.5@
- */
+//
+// 'ppdFindCustomParam()' - Find a parameter for a custom option.
+//
+// @since CUPS 1.2/macOS 10.5@
+//
 
-ppd_cparam_t *				/* O - Custom parameter or NULL */
-ppdFindCustomParam(ppd_coption_t *opt,	/* I - Custom option */
-                   const char    *name)	/* I - Parameter name */
+ppd_cparam_t *				// O - Custom parameter or NULL
+ppdFindCustomParam(ppd_coption_t *opt,	// I - Custom option
+                   const char    *name)	// I - Parameter name
 {
-  ppd_cparam_t	*param;			/* Current custom parameter */
+  ppd_cparam_t	*param;			// Current custom parameter
 
 
   if (!opt)
@@ -66,14 +66,14 @@ ppdFindCustomParam(ppd_coption_t *opt,	/* I - Custom option */
 }
 
 
-/*
- * 'ppdFirstCustomParam()' - Return the first parameter for a custom option.
- *
- * @since CUPS 1.2/macOS 10.5@
- */
+//
+// 'ppdFirstCustomParam()' - Return the first parameter for a custom option.
+//
+// @since CUPS 1.2/macOS 10.5@
+//
 
-ppd_cparam_t *				/* O - Custom parameter or NULL */
-ppdFirstCustomParam(ppd_coption_t *opt)	/* I - Custom option */
+ppd_cparam_t *				// O - Custom parameter or NULL
+ppdFirstCustomParam(ppd_coption_t *opt)	// I - Custom option
 {
   if (!opt)
     return (NULL);
@@ -82,14 +82,14 @@ ppdFirstCustomParam(ppd_coption_t *opt)	/* I - Custom option */
 }
 
 
-/*
- * 'ppdNextCustomParam()' - Return the next parameter for a custom option.
- *
- * @since CUPS 1.2/macOS 10.5@
- */
+//
+// 'ppdNextCustomParam()' - Return the next parameter for a custom option.
+//
+// @since CUPS 1.2/macOS 10.5@
+//
 
-ppd_cparam_t *				/* O - Custom parameter or NULL */
-ppdNextCustomParam(ppd_coption_t *opt)	/* I - Custom option */
+ppd_cparam_t *				// O - Custom parameter or NULL
+ppdNextCustomParam(ppd_coption_t *opt)	// I - Custom option
 {
   if (!opt)
     return (NULL);

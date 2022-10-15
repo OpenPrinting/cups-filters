@@ -1,5 +1,5 @@
 //
-// PPD file merge utility for the CUPS PPD Compiler.
+// PPD file merge utility for the CUPS PPD Compiler in libppd.
 //
 // Copyright © 2007-2018 by Apple Inc.
 // Copyright © 2002-2007 by Easy Software Products.
@@ -292,8 +292,8 @@ ppd_locale(ppd_file_t *ppd)		// I - PPD file
   static char	locale[256];		// Locale string
   static struct				// LanguageVersion translation table
   {
-    const char	*version,		// LanguageVersion string */
-		*language;		// Language code */
+    const char	*version,		// LanguageVersion string
+		*language;		// Language code
   }		languages[] =
   {
     { "chinese",		"zh" },

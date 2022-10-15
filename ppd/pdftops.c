@@ -1,24 +1,24 @@
-/*
- * PDF-to-PostScript filter function for libppd.
- *
- * Copyright 2011-2020 by Till Kamppeter
- * Copyright 2007-2011 by Apple Inc.
- * Copyright 1997-2006 by Easy Software Products.
- *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more
- * information.
- *
- * Contents:
- *
- *   parsePDFTOPDFComment() - Check whether we are executed after pdftopdf
- *   remove_options()       - Remove unwished entries from an option list
- *   log_command_line()     - Log the command line of a program which we call
- *   ppdFilterPDFToPS()              - pdftops filter function
- */
+//
+// PDF-to-PostScript filter function for libppd.
+//
+// Copyright 2011-2020 by Till Kamppeter
+// Copyright 2007-2011 by Apple Inc.
+// Copyright 1997-2006 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+// Contents:
+//
+//   parsePDFTOPDFComment() - Check whether we are executed after pdftopdf
+//   remove_options()       - Remove unwished entries from an option list
+//   log_command_line()     - Log the command line of a program which we call
+//   ppdFilterPDFToPS()     - pdftops filter function
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include <config.h>
 #include <cups/cups.h>
@@ -39,23 +39,31 @@
 
 #define MAX_CHECK_COMMENT_LINES	20
 
-/*
- * Type definitions
- */
+//
+// Type definitions
+//
 
 typedef unsigned renderer_t;
-enum renderer_e {GS = 0, PDFTOPS = 1, ACROREAD = 2, PDFTOCAIRO = 3, MUPDF = 4,
-		 HYBRID = 5};
+enum renderer_e
+{
+  GS         = 0,
+  PDFTOPS    = 1,
+  ACROREAD   = 2,
+  PDFTOCAIRO = 3,
+  MUPDF      = 4,
+  HYBRID     = 5
+};
 
 
-/*
- * When calling the "pstops" filter we exclude the following options from its
- * command line as we have applied these options already to the PDF input,
- * either on the "pdftops"/Ghostscript call in this filter or by use of the
- * "pdftopdf" filter before this filter.
- */
+//
+// When calling the "pstops" filter we exclude the following options from its
+// command line as we have applied these options already to the PDF input,
+// either on the "pdftops"/Ghostscript call in this filter or by use of the
+// "pdftopdf" filter before this filter.
+//
 
-const char *pstops_exclude_general[] = {
+const char *pstops_exclude_general[] =
+{
   "crop-to-fit",
   "fill",
   "fitplot",
@@ -65,7 +73,8 @@ const char *pstops_exclude_general[] = {
   NULL
 };
 
-const char *pstops_exclude_page_management[] = {
+const char *pstops_exclude_page_management[] =
+{
   "brightness",
   "Collate",
   "even-duplex",
@@ -94,83 +103,90 @@ const char *pstops_exclude_page_management[] = {
   NULL
 };
 
-
-/*
- * Check whether we were called after the "pdftopdf" filter and extract
- * parameters passed over by "pdftopdf" in the header comments of the PDF
- * file
- */
+//
+// Check whether we were called after the "pdftopdf" filter and extract
+// parameters passed over by "pdftopdf" in the header comments of the PDF
+// file
+//
 
 static void
-parse_pdftopdf_comment(char *filename,       /* I - Input file */
-				 int *pdftopdfapplied, /* O - Does the input
-							      data come from
-							      pdftopdf filter?*/
-				 char *deviceCopies,   /* O - Number of copies
-							      (hardware) */
-				 int *deviceCollate,   /* O - Hardware collate*/
-				 cf_logfunc_t log, /* I - Log function */
-				 void *ld)             /* I - Aux. data for
-							      log function */
+parse_pdftopdf_comment(char *filename,		// I - Input file
+		       int *pdftopdfapplied,	// O - Does the input
+						//     data come from
+						//     pdftopdf filter?
+		       char *deviceCopies,	// O - Number of copies
+						//     (hardware)
+		       int *deviceCollate,	// O - Hardware collate
+		       cf_logfunc_t log,	// I - Log function
+		       void *ld)		// I - Aux. data for
+						//     log function
 {
   char buf[4096];
   int i;
   FILE *fp;
 
-  if ((fp = fopen(filename,"rb")) == NULL) {
+  if ((fp = fopen(filename, "rb")) == NULL)
+  {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "ppdFilterPDFToPS: Cannot open input file \"%s\"",
 		 filename);
     return;
   }
 
-  /* skip until PDF start header */
-  while (fgets(buf,sizeof(buf),fp) != 0) {
-    if (strncmp(buf,"%PDF",4) == 0) {
+  // skip until PDF start header
+  while (fgets(buf, sizeof(buf), fp) != 0)
+  {
+    if (strncmp(buf, "%PDF", 4) == 0)
       break;
-    }
   }
-  for (i = 0;i < MAX_CHECK_COMMENT_LINES;i++) {
-    if (fgets(buf,sizeof(buf),fp) == 0) break;
-    if (strncmp(buf,"%%PDFTOPDFNumCopies",19) == 0) {
+  for (i = 0; i < MAX_CHECK_COMMENT_LINES; i ++)
+  {
+    if (fgets(buf, sizeof(buf), fp) == 0)
+      break;
+    if (strncmp(buf, "%%PDFTOPDFNumCopies", 19) == 0)
+    {
       char *p;
 
-      p = strchr(buf+19,':') + 1;
-      while (*p == ' ' || *p == '\t') p++;
+      p = strchr(buf + 19, ':') + 1;
+      while (*p == ' ' || *p == '\t')
+	p ++;
       strncpy(deviceCopies, p, 31);
       deviceCopies[31] = '\0';
       p = deviceCopies + strlen(deviceCopies) - 1;
-      while (*p == ' ' || *p == '\t'  || *p == '\r'  || *p == '\n') p--;
+      while (*p == ' ' || *p == '\t'  || *p == '\r'  || *p == '\n')
+	p --;
       *(p + 1) = '\0';
       *pdftopdfapplied = 1;
-    } else if (strncmp(buf,"%%PDFTOPDFCollate",17) == 0) {
+    }
+    else if (strncmp(buf, "%%PDFTOPDFCollate", 17) == 0)
+    {
       char *p;
 
-      p = strchr(buf+17,':') + 1;
-      while (*p == ' ' || *p == '\t') p++;
-      if (strncasecmp(p,"true",4) == 0) {
+      p = strchr(buf + 17, ':') + 1;
+      while (*p == ' ' || *p == '\t')
+	p ++;
+      if (strncasecmp(p, "true", 4) == 0)
 	*deviceCollate = 1;
-      } else {
+      else
 	*deviceCollate = 0;
-      }
-      *pdftopdfapplied = 1;
-    } else if (strcmp(buf,"% This file was generated by pdftopdf") == 0) {
       *pdftopdfapplied = 1;
     }
+    else if (strcmp(buf, "% This file was generated by pdftopdf") == 0)
+      *pdftopdfapplied = 1;
   }
 
   fclose(fp);
 }
 
 
-/*
- * Check whether given file is empty
- */
+//
+// Check whether given file is empty
+//
 
-static int                     /* O - Result: 1: Empty; 0: Contains pages */
-is_empty(char *filename,       /* I - Input file */
-	 cf_logfunc_t log, /* I - Log function */
-	 void *ld)             /* I - Auxiliary data for log function */
+static int                     // O - Result: 1: Empty; 0: Contains pages
+is_empty(char *filename,       // I - Input file
+	 cf_logfunc_t log,     // I - Log function
+	 void *ld)             // I - Auxiliary data for log function
 {
   FILE *fp = NULL;
   fp = fopen(filename, "rb");
@@ -179,42 +195,44 @@ is_empty(char *filename,       /* I - Input file */
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "ppdFilterPDFToPS: Cannot open input file \"%s\"",
 		 filename);
-    return 1;
+    return (1);
   }
   else
   {
     char buf[1];
     rewind(fp);
-    if (fread(buf, 1, 1, fp) == 0) {
+    if (fread(buf, 1, 1, fp) == 0)
+    {
       fclose(fp);
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "ppdFilterPDFToPS: Input is empty, outputting empty file.");
-      return 1;
+      return (1);
     }
     fclose(fp);
     int pages = cfPDFPages(filename);
-    if (pages == 0) {
+    if (pages == 0)
+    {
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "ppdFilterPDFToPS: No pages left, outputting empty file.");
-      return 1;
+      return (1);
     }
     if (pages > 0)
-      return 0;
-    return 1;
+      return (0);
+    return (1);
   }
 }
 
 
-/*
- * Before calling any command line utility, log its command line in CUPS'
- * debug mode
- */
+//
+// Before calling any command line utility, log its command line in CUPS'
+// debug mode
+//
 
 void
-log_command_line(const char* file,     /* I - Program to be executed */
-		 char *const argv[],   /* I - Argument list */
-		 cf_logfunc_t log, /* I - Log function */
-		 void *ld)             /* I - Auxiliary data for log function */
+log_command_line(const char* file,     // I - Program to be executed
+		 char *const argv[],   // I - Argument list
+		 cf_logfunc_t log,     // I - Log function
+		 void *ld)             // I - Auxiliary data for log function
 {
   int i;
   char *apos;
@@ -223,13 +241,15 @@ log_command_line(const char* file,     /* I - Program to be executed */
   if (log == NULL)
     return;
 
-  /* Debug output: Full command line of program to be called */
-  snprintf(buf, sizeof(buf) - 1, "ppdFilterPDFToPS: Running command line for %s:",
+  // Debug output: Full command line of program to be called
+  snprintf(buf, sizeof(buf) - 1,
+	   "ppdFilterPDFToPS: Running command line for %s:",
 	   (file ? file : argv[0]));
   if (file)
     snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf) - 1,
 	     " %s", file);
-  for (i = (file ? 1 : 0); argv[i]; i ++) {
+  for (i = (file ? 1 : 0); argv[i]; i ++)
+  {
     if ((strchr(argv[i],' ')) || (strchr(argv[i],'\t')))
       apos = "'";
     else
@@ -243,93 +263,96 @@ log_command_line(const char* file,     /* I - Program to be executed */
 }
 
 
-/*
- * 'ppdFilterPDFToPS()' - Filter function to convert PDF input into
- *               PostScript to be printed on PostScript printers
- */
+//
+// 'ppdFilterPDFToPS()' - Filter function to convert PDF input into
+//                        PostScript to be printed on PostScript printers
+//
 
-int                          /* O - Error status */
-ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
-	int outputfd,        /* I - File descriptor output stream */
-	int inputseekable,   /* I - Is input stream seekable? (unused) */
-	cf_filter_data_t *data, /* I - Job and printer data */
-	void *parameters)    /* I - Filter-specific parameters (unused) */
+int					// O - Error status
+ppdFilterPDFToPS(int inputfd,		// I - File descriptor input stream
+		 int outputfd,		// I - File descriptor output stream
+		 int inputseekable,	// I - Is input stream seekable?
+					//     (unused)
+		 cf_filter_data_t *data,// I - Job and printer data
+		 void *parameters)	// I - Filter-specific parameters
+					//     (unused)
 {
   ppd_filter_data_ext_t *filter_data_ext =
     (ppd_filter_data_ext_t *)cfFilterDataGetExt(data,
 						PPD_FILTER_DATA_EXT);
-  renderer_t    renderer = CUPS_PDFTOPS_RENDERER; /* Renderer: gs or pdftops
-						     or acroread or pdftocairo
-						     or hybrid */
-  FILE          *inputfp;		/* Input file pointer */
-  int		fd = 0;			/* Copy file descriptor */
+  renderer_t    renderer = CUPS_PDFTOPS_RENDERER; // Renderer: gs or pdftops
+						  // or acroread or pdftocairo
+						  // or hybrid
+  FILE          *inputfp;		// Input file pointer
+  int		fd = 0;			// Copy file descriptor
   int           i, j;
-  int		pdftopdfapplied = 0;    /* Input data from pdftopdf filter? */
-  char		deviceCopies[32] = "1"; /* Hardware copies */
-  int		deviceCollate = 0;      /* Hardware collate */
-  char          make_model[128] = "";   /* Printer make and model (for quirks)*/
-  char		*filename,		/* PDF file to convert */
-		tempfile[1024];		/* Temporary file */
-  char		buffer[8192];		/* Copy buffer */
-  int		bytes;			/* Bytes copied */
-  int		num_options = 0,		/* Number of options */
-                num_pstops_options;	/* Number of options for pstops */
-  cups_option_t	*options = NULL,		/* Options */
-                *pstops_options,	/* Options for pstops filter function */
+  int		pdftopdfapplied = 0;    // Input data from pdftopdf filter?
+  char		deviceCopies[32] = "1"; // Hardware copies
+  int		deviceCollate = 0;      // Hardware collate
+  char          make_model[128] = "";   // Printer make and model (for quirks)
+  char		*filename,		// PDF file to convert
+		tempfile[1024];		// Temporary file
+  char		buffer[8192];		// Copy buffer
+  int		bytes;			// Bytes copied
+  int		num_options = 0,	// Number of options
+                num_pstops_options;	// Number of options for pstops
+  cups_option_t	*options = NULL,	// Options
+                *pstops_options,	// Options for pstops filter function
                 *option;
   const char    *exclude;
   cf_filter_data_t pstops_filter_data;
   int           ret;
-  const char	*val;			/* Option value */
-  ppd_file_t	*ppd = NULL;		/* PPD file */
-  char		resolution[128] = "";   /* Output resolution */
-  int           xres = 0, yres = 0,     /* resolution values */
+  const char	*val;			// Option value
+  ppd_file_t	*ppd = NULL;		// PPD file
+  char		resolution[128] = "";   // Output resolution
+  int           xres = 0, yres = 0,     // resolution values
                 mres, res,
                 maxres = CUPS_PDFTOPS_MAX_RESOLUTION,
-                                        /* Maximum image rendering resolution */
-                numvalues = 0;          /* Number of values actually read */
+                                        // Maximum image rendering resolution
+                numvalues = 0;          // Number of values actually read
   ppd_choice_t  *choice;
   ppd_attr_t    *attr;
   cups_page_header2_t header;
-  cups_file_t	*fp;			/* Post-processing input file */
-  int		pdf_pid,		/* Process ID for pdftops/gs */
-		pdf_argc = 0,		/* Number of args for pdftops/gs */
-		pstops_pid = 0,		/* Process ID of pstops filter */
-		pstops_pipe[2],		/* Pipe to pstops filter */
-		need_post_proc = 0,     /* Post-processing needed? */
-		post_proc_pid = 0,	/* Process ID of post-processing */
-		post_proc_pipe[2],	/* Pipe to post-processing */
-		wait_children,		/* Number of child processes left */
-		wait_pid,		/* Process ID from wait() */
-		wait_status,		/* Status from child */
-		exit_status = 0;	/* Exit status */
-  int gray_output = 0; /* Checking for monochrome/grayscale PostScript output */
-  char		*pdf_argv[100],		/* Arguments for pdftops/gs */
-		*ptr;			/* Pointer into value */
-  int		duplex, tumble;         /* Duplex settings for PPD-less
-					   printing */
+  cups_file_t	*fp;			// Post-processing input file
+  int		pdf_pid,		// Process ID for pdftops/gs
+		pdf_argc = 0,		// Number of args for pdftops/gs
+		pstops_pid = 0,		// Process ID of pstops filter
+		pstops_pipe[2],		// Pipe to pstops filter
+		need_post_proc = 0,     // Post-processing needed?
+		post_proc_pid = 0,	// Process ID of post-processing
+		post_proc_pipe[2],	// Pipe to post-processing
+		wait_children,		// Number of child processes left
+		wait_pid,		// Process ID from wait()
+		wait_status,		// Status from child
+		exit_status = 0;	// Exit status
+  int		gray_output = 0;	// Checking for monochrome/grayscale
+					// PostScript output
+  char		*pdf_argv[100],		// Arguments for pdftops/gs
+		*ptr;			// Pointer into value
+  int		duplex, tumble;         // Duplex settings for PPD-less
+					// printing
   cups_cspace_t cspace = (cups_cspace_t)(-1);
-  cf_logfunc_t log = data->logfunc;
-  void          *ld = data->logdata;
+  cf_logfunc_t	log = data->logfunc;
+  void		*ld = data->logdata;
   cf_filter_iscanceledfunc_t iscanceled = data->iscanceledfunc;
-  void          *icd = data->iscanceleddata;
-  ipp_t *printer_attrs = data->printer_attrs;
-  ipp_t *job_attrs = data->job_attrs;
+  void		*icd = data->iscanceleddata;
+  ipp_t		*printer_attrs = data->printer_attrs;
+  ipp_t		*job_attrs = data->job_attrs;
   ipp_attribute_t *ipp;
 
 
   (void)inputseekable;
   (void)parameters;
 
- /*
-  * Ignore broken pipe signals...
-  */
+  //
+  // Ignore broken pipe signals...
+  //
 
   signal(SIGPIPE, SIG_IGN);
 
- /*
-  * Open the input data stream specified by the inputfd...
-  */
+  //
+  // Open the input data stream specified by the inputfd...
+  //
 
   if ((inputfp = fdopen(inputfd, "r")) == NULL)
   {
@@ -342,9 +365,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     return (1);
   }
 
- /*
-  * Copy input into temporary file ...
-  */
+  //
+  // Copy input into temporary file ...
+  //
 
   if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
   {
@@ -369,10 +392,10 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
   filename = tempfile;
 
- /*
-  * Stop on empty or zero-pages files without error, perhaps we eliminated
-  * all pages via the "page-ranges" option and a previous filter
-  */
+  //
+  // Stop on empty or zero-pages files without error, perhaps we eliminated
+  // all pages via the "page-ranges" option and a previous filter
+  //
 
   if (is_empty(filename, log, ld))
   {
@@ -380,16 +403,16 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     return 0;
   }
 
- /*
-  * Read out copy counts and collate setting passed over by pdftopdf
-  */
+  //
+  // Read out copy counts and collate setting passed over by pdftopdf
+  //
 
   parse_pdftopdf_comment(filename, &pdftopdfapplied, deviceCopies,
 			 &deviceCollate, log, ld);
 
- /*
-  * CUPS option list
-  */
+  //
+  // CUPS option list
+  //
 
   num_options = cfJoinJobOptionsAndAttrs(data, num_options, &options);
   
@@ -397,9 +420,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   if (filter_data_ext)
     ppd = filter_data_ext->ppd;
 
- /*
-  * Process job options...
-  */
+  //
+  // Process job options...
+  //
 
   if ((val = cupsGetOption("make-and-model", num_options, options)) != NULL)
   {
@@ -409,15 +432,19 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     for (ptr = make_model; *ptr; ptr ++)
       if (*ptr == '-') *ptr = ' ';
   }
-  else if(printer_attrs){
-    if((ipp = ippFindAttribute(printer_attrs, "printer-make-and-model", IPP_TAG_ZERO))!=NULL){
+  else if(printer_attrs)
+  {
+    if ((ipp = ippFindAttribute(printer_attrs, "printer-make-and-model",
+				IPP_TAG_ZERO)) != NULL)
+    {
       char make[56];
       char* model;
       ippAttributeString(ipp, make, sizeof(make));
       if (!strncasecmp(make, "Hewlett Packard ", 16) ||
-        !strncasecmp(make, "Hewlett-Packard ", 16)) {
-          model = make + 16;
-          strncpy(make, "HP", sizeof(make));
+	  !strncasecmp(make, "Hewlett-Packard ", 16))
+      {
+	model = make + 16;
+	strncpy(make, "HP", sizeof(make));
       }
       else if ((model = strchr(make, ' ')) != NULL)
         *model++ = '\0';
@@ -435,12 +462,12 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "ppdFilterPDFToPS: Printer make and model: %s", make_model);
 
- /*
-  * Select the PDF renderer: Ghostscript (gs), Poppler (pdftops),
-  * Adobe Reader (arcoread), Poppler with Cairo (pdftocairo), or
-  * Hybrid (hybrid, Poppler for Brother, Minolta, Konica Minolta, Dell, and
-  * old HP LaserJets and Ghostscript otherwise)
-  */
+  //
+  // Select the PDF renderer: Ghostscript (gs), Poppler (pdftops),
+  // Adobe Reader (arcoread), Poppler with Cairo (pdftocairo), or
+  // Hybrid (hybrid, Poppler for Brother, Minolta, Konica Minolta, Dell, and
+  // old HP LaserJets and Ghostscript otherwise)
+  //
 
   if ((val = cupsGetOption("pdftops-renderer", num_options, options)) != NULL)
   {
@@ -480,13 +507,15 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     }
     else
       renderer = GS;
-   /*
-    * Use Poppler instead of Ghostscript for old HP LaserJet printers due to
-    * a bug in their PS interpreters. They are very slow with Ghostscript.
-    * A LaserJet is considered old if its model number does not have a letter
-    * in the beginning, like LaserJet 3 or LaserJet 4000, not LaserJet P2015.
-    * See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=742765
-    */
+
+    //
+    // Use Poppler instead of Ghostscript for old HP LaserJet printers due to
+    // a bug in their PS interpreters. They are very slow with Ghostscript.
+    // A LaserJet is considered old if its model number does not have a letter
+    // in the beginning, like LaserJet 3 or LaserJet 4000, not LaserJet P2015.
+    // See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=742765
+    //
+
     if (make_model[0] &&
 	((!strncasecmp(make_model, "HP", 2) ||
 	  !strncasecmp(make_model, "Hewlett-Packard", 15) ||
@@ -498,8 +527,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 	if (isspace(*ptr)) continue;
 	if (isdigit(*ptr))
 	{
-	  while (*ptr && isalnum(*ptr)) ptr ++;
-	  if (!*ptr) /* End of string, no further word */
+	  while (*ptr && isalnum(*ptr))
+	    ptr ++;
+	  if (!*ptr) // End of string, no further word
 	  {
 	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 			 "ppdFilterPDFToPS: Switching to Poppler's pdftops instead of "
@@ -515,25 +545,29 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     }
   }
 
- /*
-  * Create option list for pstops filter function, stripping options which
-  * "pstops" does not need to apply any more
-  */
+  //
+  // Create option list for pstops filter function, stripping options which
+  // "pstops" does not need to apply any more
+  //
 
   num_pstops_options = 0;
   pstops_options = NULL;
   for (i = num_options, option = options; i > 0; i --, option ++)
   {
     for (j = 0, exclude = pstops_exclude_general[j]; exclude;
-	 j++, exclude = pstops_exclude_general[j])
-      if (!strcasecmp(option->name, exclude)) break;
-    if (exclude) continue;
+	 j ++, exclude = pstops_exclude_general[j])
+      if (!strcasecmp(option->name, exclude))
+	break;
+    if (exclude)
+      continue;
     if (pdftopdfapplied)
     {
       for (j = 0, exclude = pstops_exclude_page_management[j]; exclude;
 	   j++, exclude = pstops_exclude_page_management[j])
-	if (!strcasecmp(option->name, exclude)) break;
-      if (exclude) continue;
+	if (!strcasecmp(option->name, exclude))
+	  break;
+      if (exclude)
+	continue;
     }
     num_pstops_options = cupsAddOption(option->name,
 				       option->value,
@@ -542,19 +576,19 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
   if (pdftopdfapplied && deviceCollate)
   {
-   /*
-    * Add collate option to the pstops call if pdftopdf has found out that the
-    * printer does hardware collate.
-    */
+    //
+    // Add collate option to the pstops call if pdftopdf has found out that the
+    // printer does hardware collate.
+    //
 
     num_pstops_options = cupsAddOption("Collate",
 				       "True",
 				       num_pstops_options, &pstops_options);
   }
 
- /*
-  * Create data record to call the pstops filter function
-  */
+  //
+  // Create data record to call the pstops filter function
+  //
 
   pstops_filter_data.job_id = data->job_id;
   pstops_filter_data.job_user = data->job_user;
@@ -573,62 +607,71 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   pstops_filter_data.iscanceledfunc = iscanceled;
   pstops_filter_data.iscanceleddata = icd;
 
- /*
-  * Force monochrome/grayscale PostScript output 
-  * if job is to be printed in monochrome/grayscale
-  */
-  if (ppd && ppd->color_device == 0)  /* Monochrome printer */
+  //
+  // Force monochrome/grayscale PostScript output 
+  // if job is to be printed in monochrome/grayscale
+  //
+
+  if (ppd && ppd->color_device == 0)  // Monochrome printer
     gray_output = 1;
-  else  /*Color Printer - user option for Grayscale */
+  else  //Color Printer - user option for Grayscale
   {
     if ((val = cupsGetOption("pwg-raster-document-type", num_options,
-               options)) != NULL ||
-      (val = cupsGetOption("PwgRasterDocumentType", num_options,
-               options)) != NULL ||
-      (val = cupsGetOption("print-color-mode", num_options,
-               options)) != NULL ||
-      (val = cupsGetOption("PrintColorMode", num_options,
-               options)) != NULL ||
-      (val = cupsGetOption("color-space", num_options,
-               options)) != NULL ||
-      (val = cupsGetOption("ColorSpace", num_options,
-               options)) != NULL ||
-      (val = cupsGetOption("color-model", num_options,
-               options)) != NULL ||
-      (val = cupsGetOption("ColorModel", num_options,
-               options)) != NULL ||
-      (val = cupsGetOption("output-mode", num_options,
-               options)) != NULL ||
-      (val = cupsGetOption("OutputMode", num_options,
-               options)) != NULL)
+			     options)) != NULL ||
+	(val = cupsGetOption("PwgRasterDocumentType", num_options,
+			     options)) != NULL ||
+	(val = cupsGetOption("print-color-mode", num_options,
+			     options)) != NULL ||
+	(val = cupsGetOption("PrintColorMode", num_options,
+			     options)) != NULL ||
+	(val = cupsGetOption("color-space", num_options,
+			     options)) != NULL ||
+	(val = cupsGetOption("ColorSpace", num_options,
+			     options)) != NULL ||
+	(val = cupsGetOption("color-model", num_options,
+			     options)) != NULL ||
+	(val = cupsGetOption("ColorModel", num_options,
+			     options)) != NULL ||
+	(val = cupsGetOption("output-mode", num_options,
+			     options)) != NULL ||
+	(val = cupsGetOption("OutputMode", num_options,
+			     options)) != NULL)
+    {
+      if (strcasestr(val, "Black") ||
+	  strcasestr(val, "Gray") ||
+	  strcasestr(val, "Mono"))
+	gray_output = 1;
+    }
+    else
+    {
+      if(job_attrs != NULL)
       {
-          if (strcasestr(val, "Black") ||
-	      strcasestr(val, "Gray") ||
-	      strcasestr(val, "Mono"))
-            gray_output = 1;
+	if ((ipp = ippFindAttribute(job_attrs, "pwg-raster-document-type",
+				    IPP_TAG_ZERO)) != NULL ||
+	    (ipp = ippFindAttribute(job_attrs, "color-space",
+				    IPP_TAG_ZERO)) != NULL ||
+	    (ipp = ippFindAttribute(job_attrs, "color-model",
+				    IPP_TAG_ZERO)) != NULL ||
+	    (ipp = ippFindAttribute(job_attrs, "print-color-mode",
+				    IPP_TAG_ZERO)) != NULL ||
+	    (ipp = ippFindAttribute(job_attrs, "output-mode",
+				    IPP_TAG_ZERO)) != NULL)
+	{
+	  ippAttributeString(ipp, buffer, sizeof(buffer));
+	  val = buffer;
+	  if(strcasestr(val, "Black") ||
+	     (strcasestr(val, "Gray")) ||
+	     (strcasestr(val, "Mono")))
+	    gray_output = 1;
+	}
       }
-      else{
-        if(job_attrs!=NULL){
-          if((ipp = ippFindAttribute(job_attrs, "pwg-raster-document-type", IPP_TAG_ZERO))!=NULL ||
-            (ipp = ippFindAttribute(job_attrs, "color-space", IPP_TAG_ZERO))!=NULL ||
-            (ipp = ippFindAttribute(job_attrs, "color-model", IPP_TAG_ZERO))!=NULL ||
-            (ipp = ippFindAttribute(job_attrs, "print-color-mode", IPP_TAG_ZERO))!=NULL ||
-            (ipp = ippFindAttribute(job_attrs, "output-mode", IPP_TAG_ZERO))){
-              ippAttributeString(ipp, buffer, sizeof(buffer));
-              val = buffer;
-              if(strcasestr(val, "Black") ||
-                (strcasestr(val, "Gray")) ||
-                (strcasestr(val, "Mono")))
-                  gray_output = 1;
-            }
-        }
-      }
+    }
   }
 
- /*
-  * Build the command-line for the ppdFilterPDFToPS, gs, mutool, pdftocairo, or
-  * acroread filter...
-  */
+  //
+  // Build the command-line for the ppdFilterPDFToPS, gs, mutool, pdftocairo, or
+  // acroread filter...
+  //
 
   if (renderer == PDFTOPS)
   {
@@ -648,11 +691,11 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     pdf_argv[7] = (char *)"-sDEVICE=ps2write";
 #    else
     pdf_argv[7] = (char *)"-sDEVICE=pswrite";
-#    endif /* HAVE_GHOSTSCRIPT_PS2WRITE */
+#    endif // HAVE_GHOSTSCRIPT_PS2WRITE
     pdf_argv[8] = (char *)"-dShowAcroForm";
     pdf_argv[9] = (char *)"-sOUTPUTFILE=%stdout";
-    if (gray_output == 1) /* Checking for monochrome/grayscale PostScript
-			     output */
+    if (gray_output == 1) // Checking for monochrome/grayscale PostScript
+                          // output
     {
       pdf_argv[10] = (char *)"-sProcessColorModel=DeviceGray";
       pdf_argv[11] = (char *)"-sColorConversionStrategy=Gray";
@@ -669,8 +712,8 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     pdf_argv[3] = (char *)"-smtf";
     pdf_argv[4] = (char *)"-Fps";
     pdf_argv[5] = (char *)"-o-";
-    if (gray_output == 1) /* Checking for monochrome/grayscale PostScript
-			     output */
+    if (gray_output == 1) // Checking for monochrome/grayscale PostScript
+                          // output
       pdf_argv[6] = (char *)"-cgray";
     else
       pdf_argv[6] = (char *)"-crgb";
@@ -689,9 +732,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     pdf_argc    = 2;
   }
 
- /*
-  * Set language level and TrueType font handling...
-  */
+  //
+  // Set language level and TrueType font handling...
+  //
 
   if (ppd)
   {
@@ -731,18 +774,18 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
       }
       else if (renderer == GS)
 	pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=2";
-      else if (renderer != MUPDF) /* MuPDF is PS level 2 only */
-	/* PDFTOCAIRO, ACROREAD */
+      else if (renderer != MUPDF) // MuPDF is PS level 2 only
+	// PDFTOCAIRO, ACROREAD
         pdf_argv[pdf_argc++] = (char *)"-level2";
     }
     else
     {
       if (renderer == PDFTOPS)
       {
-        /* Do not emit PS Level 3 with Poppler on Brother and HP PostScript
-	   laser printers as some do not like it.
-	   See https://bugs.launchpad.net/bugs/277404 and
-	   https://bugs.launchpad.net/bugs/1306849 comment #42. */
+        // Do not emit PS Level 3 with Poppler on Brother and HP PostScript
+	// laser printers as some do not like it.
+	// See https://bugs.launchpad.net/bugs/277404 and
+	// https://bugs.launchpad.net/bugs/1306849 comment #42.
 	if (!make_model[0] ||
 	    !strncasecmp(make_model, "Brother", 7) ||
 	    ((!strncasecmp(make_model, "HP", 2) ||
@@ -755,9 +798,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
       }
       else if (renderer == GS)
       {
-        /* Do not emit PS Level 3 with Ghostscript on Brother PostScript
-	   laser printers as some do not like it.
-	   See https://bugs.launchpad.net/bugs/1306849 comment #42. */
+        // Do not emit PS Level 3 with Ghostscript on Brother PostScript
+	// laser printers as some do not like it.
+	// See https://bugs.launchpad.net/bugs/1306849 comment #42.
 	if (!make_model[0] ||
 	    !strncasecmp(make_model, "Brother", 7))
 	  pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=2";
@@ -769,7 +812,7 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 	if (log) log(ld, CF_LOGLEVEL_WARN,
 		     "ppdFilterPDFToPS: Level 3 PostScript not supported by mutool.");
       }
-      else /* PDFTOCAIRO || ACROREAD */
+      else // PDFTOCAIRO || ACROREAD
         pdf_argv[pdf_argc++] = (char *)"-level3";
     }
   }
@@ -777,8 +820,8 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   {
     if (renderer == PDFTOPS)
     {
-      /* Do not emit PS Level 3 with Poppler on HP PostScript laser printers
-	 as some do not like it. See https://bugs.launchpad.net/bugs/277404.*/
+      // Do not emit PS Level 3 with Poppler on HP PostScript laser printers
+      // as some do not like it. See https://bugs.launchpad.net/bugs/277404.
       if (!make_model[0] ||
 	  ((!strncasecmp(make_model, "HP", 2) ||
 	    !strncasecmp(make_model, "Hewlett-Packard", 15) ||
@@ -791,45 +834,45 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     }
     else if (renderer == GS)
       pdf_argv[pdf_argc++] = (char *)"-dLanguageLevel=3";
-    else if (renderer != MUPDF) /* MuPDF is PS level 2 only */
-      /* PDFTOCAIRO || ACROREAD */
+    else if (renderer != MUPDF) // MuPDF is PS level 2 only
+      // PDFTOCAIRO || ACROREAD
       pdf_argv[pdf_argc++] = (char *)"-level3";
   }
 
 #ifdef HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES
   if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
   {
-   /*
-    *  Use the page sizes of the original PDF document, this way documents
-    *  which contain pages of different sizes can be printed correctly
-    */
+    //
+    // Use the page sizes of the original PDF document, this way documents
+    // which contain pages of different sizes can be printed correctly
+    //
 
     pdf_argv[pdf_argc++] = (char *)"-origpagesizes";
     pdf_argv[pdf_argc++] = (char *)"-nocenter";
   }
   else
-#endif /* HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES */
+#endif // HAVE_POPPLER_PDFTOPS_WITH_ORIGPAGESIZES
   if (renderer == ACROREAD)
   {
-   /*
-    * Use the page sizes of the original PDF document, this way documents
-    * which contain pages of different sizes can be printed correctly
-    */
+    //
+    // Use the page sizes of the original PDF document, this way documents
+    // which contain pages of different sizes can be printed correctly
+    //
 
     pdf_argv[pdf_argc++] = (char *)"-choosePaperByPDFPageSize";
   }
 
- /*
-  * Set output resolution ...
-  */
+  //
+  // Set output resolution ...
+  //
 
   if (ppd)
   {
-    /* Ignore error exits of ppdRasterInterpretPPD(), if it found a resolution
-       setting before erroring it is OK for us */
+    // Ignore error exits of ppdRasterInterpretPPD(), if it found a resolution
+    // setting before erroring it is OK for us
     ppdRasterInterpretPPD(&header, ppd, num_options, options, NULL);
-    /* 100 dpi is default, this means that if we have 100 dpi here this
-       method failed to find the printing resolution */
+    // 100 dpi is default, this means that if we have 100 dpi here this
+    // method failed to find the printing resolution
     resolution[0] = '\0';
     if (header.HWResolution[0] != 100 || header.HWResolution[1] != 100)
     {
@@ -851,7 +894,8 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 	    "ppdFilterPDFToPS: No resolution information found in the PPD file.");
     }
   }
-  else{
+  else
+  {
     cfRasterPrepareHeader(&header, data, CF_FILTER_OUT_FORMAT_CUPS_RASTER,
 			  CF_FILTER_OUT_FORMAT_CUPS_RASTER, 0, &cspace);
     if (header.HWResolution[0] > 100 && header.HWResolution[1] > 100)
@@ -859,36 +903,43 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
       xres = header.HWResolution[0];
       yres = header.HWResolution[1];
     }
-    else if((ipp = ippFindAttribute(printer_attrs, "printer-resolution-default", IPP_TAG_ZERO))!=NULL){
+    else if ((ipp = ippFindAttribute(printer_attrs,
+				     "printer-resolution-default",
+				     IPP_TAG_ZERO)) != NULL)
+    {
       ippAttributeString(ipp, buffer, sizeof(buffer));
       const char *p = buffer;
       xres = atoi(p);
-      if((p = strchr(p, 'x'))!=NULL){
-        yres = atoi(p+1);
-      }
-      else yres = xres;
+      if ((p = strchr(p, 'x')) != NULL)
+        yres = atoi(p + 1);
+      else
+	yres = xres;
     }
-    else if((ipp = ippFindAttribute(printer_attrs, "printer-resolution-supported", IPP_TAG_ZERO))!=NULL){
+    else if ((ipp = ippFindAttribute(printer_attrs,
+				     "printer-resolution-supported",
+				     IPP_TAG_ZERO))!=NULL){
       ippAttributeString(ipp, buffer, sizeof(buffer));
-      for(i=0; buffer[i]!='\0';i++){
-        if(buffer[i]==' ' ||
-          buffer[i]==','){
-            buffer[i]='\0';
-            break;
-          }
+      for (i = 0; buffer[i] != '\0'; i ++)
+      {
+        if(buffer[i] == ' ' ||
+	   buffer[i] == ',')
+	{
+	  buffer[i] = '\0';
+	  break;
+	}
       }
       const char *p = buffer;
       xres = atoi(p);
-      if((p = strchr(p, 'x'))!=NULL){
-        yres = atoi(p+1);
-      }
-      else yres = xres;
+      if((p = strchr(p, 'x')) != NULL)
+        yres = atoi(p + 1);
+      else
+	yres = xres;
     }
   }
   if ((xres == 0) && (yres == 0))
   {
     if ((val = cupsGetOption("printer-resolution", num_options,
-			   options)) != NULL ||
+			     options)) != NULL ||
 	(val = cupsGetOption("Resolution", num_options, options)) != NULL)
     {
       xres = yres = strtol(val, (char **)&ptr, 10);
@@ -930,9 +981,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   else
     res = 300;
 
- /*
-  * Get the ceiling for the image rendering resolution
-  */
+  //
+  // Get the ceiling for the image rendering resolution
+  //
 
   if ((val = cupsGetOption("pdftops-max-image-resolution",
 			   num_options, options)) != NULL)
@@ -946,12 +997,12 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 		   val);
   }
 
- /*
-  * Reduce the image rendering resolution to not exceed a given maximum
-  * to make processing of jobs by the PDF->PS converter and the printer faster
-  *
-  * maxres = 0 means no limit
-  */
+  //
+  // Reduce the image rendering resolution to not exceed a given maximum
+  // to make processing of jobs by the PDF->PS converter and the printer faster
+  //
+  // maxres = 0 means no limit
+  //
 
   if (maxres)
     while (res > maxres)
@@ -960,32 +1011,37 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO))
   {
 #ifdef HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION
-   /*
-    * Set resolution to avoid slow processing by the printer when the
-    * resolution of embedded images does not match the printer's resolution
-    */
+    //
+    // Set resolution to avoid slow processing by the printer when the
+    // resolution of embedded images does not match the printer's resolution
+    //
+
     pdf_argv[pdf_argc++] = (char *)"-r";
     snprintf(resolution, sizeof(resolution), "%d", res);
     pdf_argv[pdf_argc++] = resolution;
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "ppdFilterPDFToPS: Using image rendering resolution %d dpi", res);
-#endif /* HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION */
-    if (gray_output == 1) /* Checking for monochrome/grayscale PostScript
-			     output */
+		 "ppdFilterPDFToPS: Using image rendering resolution %d dpi",
+		 res);
+#endif // HAVE_POPPLER_PDFTOPS_WITH_RESOLUTION
+    if (gray_output == 1) // Checking for monochrome/grayscale PostScript
+                          // output
     {
-      /* Poppler does not explicitly support turning colored PDF files into
-	 grayscale PostScript. As a workaround, one could let the "pdftops"
-         command line utility generate PostScript level 1 output which is
-         always grayscale, but output files get huge and printing too 
-         slow.
-	 Recommended solution is to not use Poppler as PDF renderer for
-	 printing, especially if one uses a color PostScript printer and
-	 wants to have the possibility to print jobs also in grayscale.
-	 See the use of the "pdftops-renderer" option in the README file. */
-      /* Example code for PostScript level1 workaround: */
-      /* pdf_argv[1] = (char *)"-level1";
-	 pdf_argv[pdf_argc++] = (char *)"-optimizecolorspace"; */
-      /* Issue a warning message when printing a grayscale job with Poppler */
+      //
+      // Poppler does not explicitly support turning colored PDF files into
+      // grayscale PostScript. As a workaround, one could let the "pdftops"
+      // command line utility generate PostScript level 1 output which is
+      // always grayscale, but output files get huge and printing too 
+      // slow.
+      // Recommended solution is to not use Poppler as PDF renderer for
+      // printing, especially if one uses a color PostScript printer and
+      // wants to have the possibility to print jobs also in grayscale.
+      // See the use of the "pdftops-renderer" option in the README file.
+      // Example code for PostScript level1 workaround:
+      // pdf_argv[1] = (char *)"-level1";
+      // pdf_argv[pdf_argc++] = (char *)"-optimizecolorspace";
+      //
+
+      // Issue a warning message when printing a grayscale job with Poppler
       if (log) log(ld, CF_LOGLEVEL_WARN,
 		   "ppdFilterPDFToPS: Grayscale/monochrome printing requested for this "
 		   "job but Poppler is not able to convert to "
@@ -1000,22 +1056,26 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   }
   else if (renderer == GS)
   {
-   /*
-    * Set resolution to avoid slow processing by the printer when the
-    * resolution of embedded images does not match the printer's resolution
-    */
+    //
+    // Set resolution to avoid slow processing by the printer when the
+    // resolution of embedded images does not match the printer's resolution
+    //
+
     snprintf(resolution, 127, "-r%d", res);
     pdf_argv[pdf_argc++] = resolution;
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "ppdFilterPDFToPS: Using image rendering resolution %d dpi", res);
-   /*
-    * PostScript debug mode: If you send a job with "lpr -o psdebug" Ghostscript
-    * will not compress the pages, so that the PostScript code can get
-    * analysed. This is especially important if a PostScript printer errors or
-    * misbehaves on Ghostscript's output.
-    * On Kyocera and Utax (uses Kyocera hard- and software) printers we always
-    * suppress page compression, to avoid slow processing of raster images.
-    */
+		 "ppdFilterPDFToPS: Using image rendering resolution %d dpi",
+		 res);
+    //
+    // PostScript debug mode: If you send a job with "lpr -o psdebug"
+    // Ghostscript will not compress the pages, so that the PostScript
+    // code can get analysed. This is especially important if a
+    // PostScript printer errors or misbehaves on Ghostscript's
+    // output. On Kyocera and Utax (uses Kyocera hard- and software)
+    // printers we always suppress page compression, to avoid slow
+    // processing of raster images.
+    //
+
     val = cupsGetOption("psdebug", num_options, options);
     if ((val && strcasecmp(val, "no") && strcasecmp(val, "off") &&
 	 strcasecmp(val, "false")) ||
@@ -1029,12 +1089,14 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 		   "or Kyocera/Utax printer)");
       pdf_argv[pdf_argc++] = (char *)"-dCompressPages=false";
     }
-   /*
-    * The PostScript interpreters on many printers have bugs which make
-    * the interpreter crash, error out, or otherwise misbehave on too
-    * heavily compressed input files, especially if code with compressed
-    * elements is compressed again. Therefore we reduce compression here.
-    */
+
+    //
+    // The PostScript interpreters on many printers have bugs which make
+    // the interpreter crash, error out, or otherwise misbehave on too
+    // heavily compressed input files, especially if code with compressed
+    // elements is compressed again. Therefore we reduce compression here.
+    //
+
     pdf_argv[pdf_argc++] = (char *)"-dCompressFonts=false";
     pdf_argv[pdf_argc++] = (char *)"-dNoT3CCITT";
     if (make_model[0] &&
@@ -1046,13 +1108,15 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
       pdf_argv[pdf_argc++] = (char *)"-dEncodeMonoImages=false";
       pdf_argv[pdf_argc++] = (char *)"-dEncodeColorImages=false";
     }
-   /*
-    * Toshiba's PS interpreters have an issue with how we handle
-    * TrueType/Type42 fonts, therefore we add command line options to turn
-    * the TTF outlines into bitmaps, usually Type 3 PostScript fonts, only
-    * large glyphs into normal image data.
-    * See https://bugs.launchpad.net/bugs/978120
-    */
+
+    //
+    // Toshiba's PS interpreters have an issue with how we handle
+    // TrueType/Type42 fonts, therefore we add command line options to turn
+    // the TTF outlines into bitmaps, usually Type 3 PostScript fonts, only
+    // large glyphs into normal image data.
+    // See https://bugs.launchpad.net/bugs/978120
+    //
+
     if (make_model[0] &&
 	!strncasecmp(make_model, "Toshiba", 7))
     {
@@ -1073,15 +1137,18 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   }
   else if (renderer == MUPDF)
   {
-   /*
-    * Add Resolution option to avoid slow processing by the printer when the
-    * resolution of embedded images does not match the printer's resolution
-    */
+    //
+    // Add Resolution option to avoid slow processing by the printer when the
+    // resolution of embedded images does not match the printer's resolution
+    //
+   
     snprintf(resolution, 127, "-r%dx%d", res, res);
     pdf_argv[pdf_argc++] = resolution;
-   /*
-    * Add input file name
-    */
+
+    //
+    // Add input file name
+    //
+   
     pdf_argv[pdf_argc++] = filename;
   }
 
@@ -1089,10 +1156,10 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
   log_command_line(NULL, pdf_argv, log, ld);
 
- /*
-  * Do we need post-processing of the PostScript output to work around bugs
-  * of the printer's PostScript interpreter?
-  */
+  //
+  // Do we need post-processing of the PostScript output to work around bugs
+  // of the printer's PostScript interpreter?
+  //
 
   if ((renderer == PDFTOPS) || (renderer == PDFTOCAIRO) ||
       (renderer == MUPDF))
@@ -1106,23 +1173,23 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   else
     need_post_proc = 1;
 
- /*
-  * Do we need post-processing of the PostScript output to apply option
-  * settings when doing PPD-less printing?
-  */
+  //
+  // Do we need post-processing of the PostScript output to apply option
+  // settings when doing PPD-less printing?
+  //
 
   if (!ppd)
     need_post_proc = 1;
 
- /*
-  * Execute "pdftops/gs/mutool [ | PS post-processing ] [ | pstops ]"...
-  */
+  //
+  // Execute "pdftops/gs/mutool [ | PS post-processing ] [ | pstops ]"...
+  //
 
 
- /*
-  * Create a pipe for each pair of subsequent processes. The variables
-  * are named by the receiving process.
-  */
+  //
+  // Create a pipe for each pair of subsequent processes. The variables
+  // are named by the receiving process.
+  //
 
   if (ppd)
   {
@@ -1152,9 +1219,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
   if ((pdf_pid = fork()) == 0)
   {
-   /*
-    * Child comes here...
-    */
+    //
+    // Child comes here...
+    //
 
     if (need_post_proc)
     {
@@ -1194,9 +1261,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     }
     else if (renderer == ACROREAD)
     {
-      /*
-       * use filename as stdin for acroread to force output to stdout
-       */
+      //
+      // use filename as stdin for acroread to force output to stdout
+      //
 
       if ((fd = open(filename, O_RDONLY)))
       {
@@ -1221,9 +1288,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   }
   else if (pdf_pid < 0)
   {
-   /*
-    * Unable to fork!
-    */
+    //
+    // Unable to fork!
+    //
 
     if (log)
     {
@@ -1254,15 +1321,16 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
   }
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
-	       "ppdFilterPDFToPS: Started filter %s (PID %d)", pdf_argv[0], pdf_pid);
+	       "ppdFilterPDFToPS: Started filter %s (PID %d)",
+	       pdf_argv[0], pdf_pid);
 
   if (need_post_proc)
   {
     if ((post_proc_pid = fork()) == 0)
     {
-     /*
-      * Child comes here...
-      */
+      //
+      // Child comes here...
+      //
 
       close(post_proc_pipe[1]);
       if (ppd)
@@ -1278,10 +1346,10 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
       if (renderer == ACROREAD)
       {
-       /*
-        * Set %Title and %For from filter arguments since acroread inserts
-        * garbage for these when using -toPostScript
-        */
+	//
+        // Set %Title and %For from filter arguments since acroread inserts
+        // garbage for these when using -toPostScript
+	//
 
         while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 &&
                strncmp(buffer, "%%BeginProlog", 13))
@@ -1294,18 +1362,19 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
             printf("%s", buffer);
         }
 
-       /*
-	* Copy the rest of the file
-	*/
+	//
+	// Copy the rest of the file
+	//
+
 	while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
 	  fwrite(buffer, 1, bytes, stdout);
       }
       else
       {
+	//
+	// Copy everything until after initial comments (Prolog section)
+	//
 
-       /*
-	* Copy everything until after initial comments (Prolog section)
-	*/
 	while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 &&
 	       strncmp(buffer, "%%BeginProlog", 13) &&
 	       strncmp(buffer, "%%EndProlog", 11) &&
@@ -1315,13 +1384,14 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
 	if (bytes > 0)
 	{
-	 /*
-	  * Insert PostScript interpreter bug fix code in the beginning of
-	  * the Prolog section (before the first active PostScript code)
-	  */
+	  //
+	  // Insert PostScript interpreter bug fix code in the beginning of
+	  // the Prolog section (before the first active PostScript code)
+	  //
+
 	  if (strncmp(buffer, "%%BeginProlog", 13))
 	  {
-	    /* No Prolog section, create one */
+	    // No Prolog section, create one
 	    if (log) log(ld, CF_LOGLEVEL_DEBUG,
 			 "ppdFilterPDFToPS: Adding Prolog section for workaround "
 			 "PostScript code");
@@ -1332,23 +1402,22 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
 	  if (renderer == GS && make_model[0])
 	  {
-
-	   /*
-	    * Kyocera (and Utax) printers have a bug in their PostScript
-	    * interpreter making them crashing on PostScript input data
-	    * generated by Ghostscript's "ps2write" output device.
-	    *
-	    * The problem can be simply worked around by preceding the
-	    * PostScript code with some extra bits.
-	    *
-	    * See https://bugs.launchpad.net/bugs/951627
-	    *
-	    * In addition, at least some of Kyocera's PostScript printers are
-	    * very slow on rendering images which request interpolation. So we
-	    * also add some code to eliminate interpolation requests.
-	    *
-	    * See https://bugs.launchpad.net/bugs/1026974
-	    */
+	    //
+	    // Kyocera (and Utax) printers have a bug in their PostScript
+	    // interpreter making them crashing on PostScript input data
+	    // generated by Ghostscript's "ps2write" output device.
+	    //
+	    // The problem can be simply worked around by preceding the
+	    // PostScript code with some extra bits.
+	    //
+	    // See https://bugs.launchpad.net/bugs/951627
+	    //
+	    // In addition, at least some of Kyocera's PostScript printers are
+	    // very slow on rendering images which request interpolation. So we
+	    // also add some code to eliminate interpolation requests.
+	    //
+	    // See https://bugs.launchpad.net/bugs/1026974
+	    //
 
 	    if (!strncasecmp(make_model, "Kyocera", 7) ||
 		!strncasecmp(make_model, "Utax", 4))
@@ -1376,16 +1445,16 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 	      puts("% =====");
 	    }
 
-	   /*
-	    * Brother printers have a bug in their PostScript interpreter
-	    * making them printing one blank page if PostScript input data
-	    * generated by Ghostscript's "ps2write" output device is used.
-	    *
-	    * The problem can be simply worked around by preceding the
-	    * PostScript code with some extra bits.
-	    *
-	    * See https://bugs.launchpad.net/bugs/950713
-	    */
+	    //
+	    // Brother printers have a bug in their PostScript interpreter
+	    // making them printing one blank page if PostScript input data
+	    // generated by Ghostscript's "ps2write" output device is used.
+	    //
+	    // The problem can be simply worked around by preceding the
+	    // PostScript code with some extra bits.
+	    //
+	    // See https://bugs.launchpad.net/bugs/950713
+	    //
 
 	    else if (!strncasecmp(make_model, "Brother", 7))
 	    {
@@ -1408,7 +1477,7 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
 	  if (strncmp(buffer, "%%BeginProlog", 13))
 	  {
-	    /* Close newly created Prolog section */
+	    // Close newly created Prolog section
 	    if (strncmp(buffer, "%%EndProlog", 11))
 	      puts("%%EndProlog");
 	    printf("%s", buffer);
@@ -1416,9 +1485,10 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
 	  if (!ppd)
 	  {
-	   /*
-	    * Copy everything until the setup section
-	    */
+	    //
+	    // Copy everything until the setup section
+	    //
+
 	    while (bytes > 0 &&
 		   strncmp(buffer, "%%BeginSetup", 12) &&
 		   strncmp(buffer, "%%EndSetup", 10) &&
@@ -1432,21 +1502,23 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 	  
 	    if (bytes > 0)
 	    {
-	     /*
-	      * Insert option PostScript code in Setup section
-	      */
+	      //
+	      // Insert option PostScript code in Setup section
+	      //
+
 	      if (strncmp(buffer, "%%BeginSetup", 12))
 	      {
-		/* No Setup section, create one */
+		// No Setup section, create one
 		if (log) log(ld, CF_LOGLEVEL_DEBUG,
 			     "ppdFilterPDFToPS: Adding Setup section for option "
 			     "PostScript code");
 		puts("%%BeginSetup");
 	      }
 
-	     /*
-	      * Duplex
-	      */
+	      //
+	      // Duplex
+	      //
+
 	      duplex = 0;
 	      tumble = 0;
 	      if ((val = cupsGetOption("sides",
@@ -1495,15 +1567,17 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 	      else
 		puts("<</Duplex false>> setpagedevice");
 
-	     /*
-	      * Resolution
-	      */
+	      //
+	      // Resolution
+	      //
+
 	      if ((xres > 0) && (yres > 0))
 		printf("<</HWResolution[%d %d]>> setpagedevice\n", xres, yres);
 
-	     /*
-	      * InputSlot/MediaSource
-	      */
+	      //
+	      // InputSlot/MediaSource
+	      //
+
 	      if ((val = cupsGetOption("media-position", num_options,
 				       options)) != NULL ||
 		  (val = cupsGetOption("MediaPosition", num_options,
@@ -1538,9 +1612,10 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 		  puts("<</MediaPosition 1 /ManualFeed false>> setpagedevice");
 	      }
 
-	     /*
-	      * ColorModel
-	      */
+	      //
+	      // ColorModel
+	      //
+
 	      if ((val = cupsGetOption("pwg-raster-document-type", num_options,
 				       options)) != NULL ||
 		  (val = cupsGetOption("PwgRasterDocumentType", num_options,
@@ -1574,7 +1649,7 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
 	      if (strncmp(buffer, "%%BeginSetup", 12))
 	      {
-		/* Close newly created Setup section */
+		// Close newly created Setup section
 		if (strncmp(buffer, "%%EndSetup", 10))
 		  puts("%%EndSetup");
 		printf("%s", buffer);
@@ -1582,9 +1657,10 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 	    }
 	  }
 
-	 /*
-	  * Copy the rest of the file
-	  */
+	  //
+	  // Copy the rest of the file
+	  //
+
 	  while ((bytes = cupsFileRead(fp, buffer, sizeof(buffer))) > 0)
 	    fwrite(buffer, 1, bytes, stdout);
 	}
@@ -1595,9 +1671,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     }
     else if (post_proc_pid < 0)
     {
-     /*
-      * Unable to fork!
-      */
+      //
+      // Unable to fork!
+      //
 
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "ppdFilterPDFToPS: Unable to execute post-processing process: %s",
@@ -1608,16 +1684,17 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "ppdFilterPDFToPS: Started post-processing (PID %d)", post_proc_pid);
+		 "ppdFilterPDFToPS: Started post-processing (PID %d)",
+		 post_proc_pid);
   }
 
   if (ppd)
   {
     if ((pstops_pid = fork()) == 0)
     {
-     /*
-      * Child comes here...
-      */
+      //
+      // Child comes here...
+      //
 
       close(pstops_pipe[1]);
       if (need_post_proc)
@@ -1626,7 +1703,8 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 	close(post_proc_pipe[1]);
       }
 
-      ret = ppdFilterPSToPS(pstops_pipe[0], outputfd, 0, &pstops_filter_data, NULL);
+      ret = ppdFilterPSToPS(pstops_pipe[0], outputfd, 0, &pstops_filter_data,
+			    NULL);
       close(pstops_pipe[0]);
 
       if (ret && log) log(ld, CF_LOGLEVEL_ERROR,
@@ -1637,9 +1715,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     }
     else if (pstops_pid < 0)
     {
-     /*
-      * Unable to fork!
-      */
+      //
+      // Unable to fork!
+      //
 
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "ppdFilterPDFToPS: Unable to execute pstops program: %s",
@@ -1650,7 +1728,8 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     }
 
     if (log) log(ld, CF_LOGLEVEL_DEBUG,
-		 "ppdFilterPDFToPS: Started filter pstops (PID %d)", pstops_pid);
+		 "ppdFilterPDFToPS: Started filter pstops (PID %d)",
+		 pstops_pid);
 
     close(pstops_pipe[0]);
     close(pstops_pipe[1]);
@@ -1662,17 +1741,17 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     close(post_proc_pipe[1]);
   }
 
- /*
-  * Wait for the child processes to exit...
-  */
+  //
+  // Wait for the child processes to exit...
+  //
 
   wait_children = 1 + need_post_proc + (ppd ? 1 : 0);
 
   while (wait_children > 0)
   {
-   /*
-    * Wait until we get a valid process ID or the job is canceled...
-    */
+    //
+    // Wait until we get a valid process ID or the job is canceled...
+    //
 
     while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR)
     {
@@ -1690,9 +1769,9 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
 
     wait_children --;
 
-   /*
-    * Report child status...
-    */
+    //
+    // Report child status...
+    //
 
     if (wait_status)
     {
@@ -1771,11 +1850,11 @@ ppdFilterPDFToPS(int inputfd,         /* I - File descriptor input stream */
     }
   }
 
- /*
-  * Cleanup and exit...
-  */
+  //
+  // Cleanup and exit...
+  //
 
-  error:
+ error:
 
   if (log) log(ld, CF_LOGLEVEL_DEBUG,
 	       "ppdFilterPDFToPS: Closing files ...");
