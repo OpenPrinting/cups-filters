@@ -50,27 +50,6 @@ typedef struct ppd_filter_data_ext_s {
   ppd_file_t *ppd;           // PPD file data
 } ppd_filter_data_ext_t;
 
-typedef struct ppd_filter_external_cups_s { // Parameters for the
-					    // ppdFilterExternalCUPS() filter
-					    // function
-  const char *filter;        // Path/Name of the CUPS filter to be called by
-			     // this filter function, required
-  int is_backend;            // 0 if we call a filter, 1 if we call a CUPS
-			     // backend, 2 if we call a CUPS backend in
-			     // device discovery mode
-  const char *device_uri;    // Device URI when calling a CUPS Backend for
-			     // processing a job, optional, alternatively
-			     // DEVICE_URI environment variable can get set
-			     // in envp
-  int num_options;           // Extra options for the 5th command line
-  cups_option_t *options;    // argument, options of filter_data have
-                             // priority, 0/NULL if none
-  char **envp;               // Additional environment variables, the already
-                             // defined ones stay valid but can be overwritten
-                             // by these ones, NULL if none
-} ppd_filter_external_cups_t;
-
-
 //
 // Prototypes...
 //
@@ -100,12 +79,19 @@ extern int ppdFilterExternalCUPS(int inputfd,
 				 cf_filter_data_t *data,
 				 void *parameters);
 
-// Parameters: ppd_filter_external_cups_t*
-// Path/Name of the CUPS filter to be called by this filter function,
-// specification whether we call a filter or a backend, an in case of
-// backend, whether in job processing or discovery mode, extra options
-// for the 5th command line argument, and extra environment
-// variables
+// Parameters: cf_filter_external_t*
+//
+// Path/Name of the external CUPS/System V filter or backend to be
+// called by this filter function, specification whether we call a
+// filter or a backend, and in case of backend, whether in job
+// processing or discovery mode, extra options for the 5th command
+// line argument, and extra environment variables
+//
+// CUPS filter:
+// See "man filter"
+//
+// CUPS Backend:
+// See "man backend"
 
 
 extern int ppdFilterEmitJCL(int inputfd,

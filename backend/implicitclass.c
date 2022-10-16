@@ -241,7 +241,7 @@ main(int  argc,				/* I - Number of command-line args */
       int fd, nullfd;
       cf_filter_data_t filter_data;
       cf_filter_universal_parameter_t universal_parameters;
-      ppd_filter_external_cups_t ipp_backend_params;
+      cf_filter_external_t ipp_backend_params;
       cf_filter_filter_in_chain_t universal_in_chain,
 	                       ipp_in_chain;
       cups_array_t *filter_chain;
@@ -354,11 +354,11 @@ main(int  argc,				/* I - Number of command-line args */
 
       /* Parameters for cfFilterExternalCUPS() call for IPP backend */
       ipp_backend_params.filter = "ipp";
-      ipp_backend_params.is_backend = 1;
-      ipp_backend_params.device_uri = printer_uri;
+      ipp_backend_params.exec_mode = 1;
       ipp_backend_params.num_options = 0;
       ipp_backend_params.options = NULL;
       ipp_backend_params.envp = NULL;
+      cfFilterAddEnvVar("DEVICE_URI", printer_uri, &ipp_backend_params.envp);
 
       /* Filter chain entry for the ppdFilterUniversal() filter function call */
       universal_in_chain.function = ppdFilterUniversal;
@@ -391,6 +391,12 @@ main(int  argc,				/* I - Number of command-line args */
       cfFilterCloseBackAndSidePipes(&filter_data);
 
       /* Clean up */
+      if (ipp_backend_params.envp)
+      {
+	for (i = 0; ipp_backend_params.envp[i]; i ++)
+	  free(ipp_backend_params.envp[i]);
+	free(ipp_backend_params.envp);
+      }
       cupsArrayDelete(filter_chain);
       ippDelete(response);
 

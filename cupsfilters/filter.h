@@ -43,7 +43,8 @@ extern "C" {
 
 typedef int (*cf_filter_iscanceledfunc_t)(void *data);
 
-typedef struct cf_filter_data_s {
+typedef struct cf_filter_data_s
+{
   char *printer;             // Print queue name or NULL
   int job_id;                // Job ID or 0
   char *job_user;            // Job user or NULL
@@ -74,7 +75,8 @@ typedef struct cf_filter_data_s {
 			     // NULL
 } cf_filter_data_t;
 
-typedef struct cf_filter_data_ext_s {
+typedef struct cf_filter_data_ext_s
+{
   char *name;
   void *ext;
 } cf_filter_data_ext_t;
@@ -83,8 +85,9 @@ typedef int (*cf_filter_function_t)(int inputfd, int outputfd,
 				    int inputseekable, cf_filter_data_t *data,
 				    void *parameters);
 
-typedef enum cf_filter_out_format_e { // Possible output formats for filter
+typedef enum cf_filter_out_format_e   // Possible output formats for filter
 				      // functions
+{
   CF_FILTER_OUT_FORMAT_PDF,	      // PDF
   CF_FILTER_OUT_FORMAT_PDF_IMAGE,     // Raster-only PDF
   CF_FILTER_OUT_FORMAT_PCLM,	      // PCLM
@@ -94,29 +97,50 @@ typedef enum cf_filter_out_format_e { // Possible output formats for filter
   CF_FILTER_OUT_FORMAT_PXL            // PCL-XL
 } cf_filter_out_format_t;
 
-typedef struct cf_filter_filter_in_chain_s { // filter entry for CUPS array to
-					     // be supplied to cfFilterChain()
-					     // filter function
+typedef struct cf_filter_filter_in_chain_s // filter entry for CUPS array to
+					   // be supplied to cfFilterChain()
+					   // filter function
+{
   cf_filter_function_t function; // Filter function to be called
   void *parameters;              // Parameters for this filter function call
   char *name;                    // Name/comment, only for logging
 } cf_filter_filter_in_chain_t;
 
-typedef struct cf_filter_texttopdf_parameter_s { // parameters container of
-						 // environemnt variables needed
-						 // by texttopdf filter
-						 // function
+typedef struct cf_filter_external_s // Parameters for the
+				    // cfFilterExternal() filter
+				    // function
+{
+  const char *filter;        // Path/Name of the CUPS filter to be called by
+			     // this filter function, required
+  int exec_mode;             // 0 if we call a CUPS filter, -1 if we call
+                             // a System V interface script, 1 if we call a CUPS
+			     // backend, 2 if we call a CUPS backend in
+			     // device discovery mode
+  int num_options;           // Extra options for the 5th command line
+  cups_option_t *options;    // argument, options of filter_data have
+                             // priority, 0/NULL if none
+  char **envp;               // Additional environment variables, the already
+                             // defined ones stay valid but can be overwritten
+                             // by these ones, NULL if none
+} cf_filter_external_t;
+
+typedef struct cf_filter_texttopdf_parameter_s // parameters container of
+					       // environemnt variables needed
+					       // by texttopdf filter
+					       // function
+{
   char *data_dir;
   char *char_set;
   char *content_type;
   char *classification;
 } cf_filter_texttopdf_parameter_t;
 
-typedef struct cf_filter_universal_parameter_s { // Contains input and output
-						 // type to be supplied to the
-						 // universal function, and also
-						 // parameters for
-						 // cfFilterTextToPDF()
+typedef struct cf_filter_universal_parameter_s // Contains input and output
+					       // type to be supplied to the
+					       // universal function, and also
+					       // parameters for
+					       // cfFilterTextToPDF()
+{
   char *actual_output_type;
   cf_filter_texttopdf_parameter_t texttopdf_params;
   const char *bannertopdf_template_dir;
@@ -144,6 +168,12 @@ extern void *cfFilterDataGetExt(cf_filter_data_t *data, const char *name);
 
 
 extern void *cfFilterDataRemoveExt(cf_filter_data_t *data, const char *name);
+
+
+extern char *cfFilterGetEnvVar(char *name, char **env);
+
+
+extern int cfFilterAddEnvVar(char *name, char *value, char ***env);
 
 
 extern int cfFilterTee(int inputfd,
@@ -180,6 +210,30 @@ extern int cfFilterChain(int inputfd,
 // List of filters to execute in a chain, next filter takes output of
 // previous filter as input, all get the same filter data, parameters
 // are supplied individually in the array
+
+
+extern int cfFilterExternal(int inputfd,
+			    int outputfd,
+			    int inputseekable,
+			    cf_filter_data_t *data,
+			    void *parameters);
+
+// Parameters: cf_filter_external_t*
+//
+// Path/Name of the external CUPS/System V filter or backend to be
+// called by this filter function, specification whether we call a
+// filter or a backend, and in case of backend, whether in job
+// processing or discovery mode, extra options for the 5th command
+// line argument, and extra environment variables
+//
+// CUPS filter:
+// See "man filter"
+//
+// CUPS Backend:
+// See "man backend"
+//
+// System V interface script:
+// https://www.ibm.com/docs/en/aix/7.2?topic=configuration-printer-interface-scripts
 
 
 extern int cfFilterOpenBackAndSidePipes(cf_filter_data_t *data);

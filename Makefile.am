@@ -376,7 +376,7 @@ test1284_CFLAGS = \
 
 testpdf1_SOURCES = \
 	cupsfilters/testpdf1.c \
-	cupsfilters/fontembed.h
+	cupsfilters/fontembed-private.h
 testpdf1_CFLAGS = \
 	-I$(srcdir)/cupsfilters/fontembed/ \
 	-I$(srcdir)/cupsfilters/
@@ -385,7 +385,7 @@ testpdf1_LDADD = \
 
 testpdf2_SOURCES = \
 	cupsfilters/testpdf2.c \
-	cupsfilters/fontembed.h
+	cupsfilters/fontembed-private.h
 testpdf2_CFLAGS = \
 	-I$(srcdir)/cupsfilters/fontembed/ \
 	-I$(srcdir)/cupsfilters/
@@ -848,6 +848,9 @@ pkgfilter_PROGRAMS += \
 	imagetoraster
 endif
 
+check_PROGRAMS += \
+	test-external
+
 # Not reliable bash script
 #TESTS += filter/test.sh
 
@@ -1155,6 +1158,17 @@ universal_CFLAGS = \
 	-I$(srcdir)/cupsfilters/ \
 	$(CUPS_CFLAGS)
 universal_LDADD = \
+	libcupsfilters.la \
+	libppd.la \
+	$(CUPS_LIBS)
+
+test_external_SOURCES = \
+	filter/test-external.c
+test_external_CFLAGS = \
+	-I$(srcdir)/cupsfilters/ \
+	-I$(srcdir)/ppd/ \
+	$(CUPS_CFLAGS)
+test_external_LDADD = \
 	libcupsfilters.la \
 	libppd.la \
 	$(CUPS_LIBS)
