@@ -431,7 +431,8 @@ cfOneBitLine(unsigned char *src,  // I - Input line
     for (int k = 0; k < 8; k++)
     {
       t <<= 1;
-      if (w + k < width) {
+      if (w + k < width)
+      {
 	if (bi_level)
 	  threshold = 128;
         else

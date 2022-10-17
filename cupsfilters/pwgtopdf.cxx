@@ -364,10 +364,13 @@ static int
 create_pdf_file(struct pdf_info * info,
 		const cf_filter_out_format_t &outformat)
 {
-  try {
+  try
+  {
     info->pdf.emptyPDF();
     info->outformat = outformat;
-  } catch (...) {
+  }
+  catch (...)
+  {
     return (1);
   }
   return (0);
@@ -659,13 +662,15 @@ get_calibration_array(const char *color_space,
     bp_str[0] = '\0';
 
   // Matrix
-  if (!strcmp("/CalRGB", color_space) && matrix != NULL) {
+  if (!strcmp("/CalRGB", color_space) && matrix != NULL)
+  {
     snprintf(matrix_str, sizeof(matrix_str),
 	     "/Matrix [%g %g %g %g %g %g %g %g %g]", 
 	     matrix[0], matrix[1], matrix[2],
 	     matrix[3], matrix[4], matrix[5],
 	     matrix[6], matrix[7], matrix[8]);
-  } else
+  }
+  else
     matrix_str[0] = '\0';
 
   // Write array string...
@@ -1777,11 +1782,12 @@ cfFilterPWGToPDF(int inputfd,  // I - File descriptor input stream
     // for testing. Forces color management to enable.
     if (outformat == CF_FILTER_OUT_FORMAT_PDF &&
         (profile_name = cupsGetOption("profile", data->num_options,
-				      data->options)) != NULL) {
+				      data->options)) != NULL)
+    {
       set_profile(profile_name, &doc);
       doc.cm_disabled = 0;
     }
-    if (doc.colorProfile != NULL)       
+    if (doc.colorProfile != NULL)
       if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		   "cfFilterPWGToPDF: TEST ICC Profile specified (color "
 		   "management forced ON): \n[%s]", profile_name);

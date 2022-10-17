@@ -667,7 +667,7 @@ cfippfindBasedURIConverter (const char *uri, int is_fax)
     // Wait until we get a valid process ID or the job is canceled...
     //
 
-    while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR) {};
+    while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR);
 
     if (wait_pid < 0)
       break;
@@ -822,12 +822,14 @@ cfIPPAttrIntValForPrinter(ipp_t *printer_attrs, // I - Printer attributes, same
 	  retval = 0; // Job attribute value out of range
       }
     }
-    if (retval == 0) {
+    if (retval == 0)
+    {
       // Use default value from printer attributes
       snprintf(printer_attr_name, sizeof(printer_attr_name) - 1,
 	       "%s-default", attr_name);
       if ((attr = ippFindAttribute(printer_attrs, printer_attr_name,
-				   IPP_TAG_ZERO)) != NULL) {
+				   IPP_TAG_ZERO)) != NULL)
+      {
 	retval = 1;
 	val = ippGetInteger(attr, 0);
       }
@@ -1330,10 +1332,13 @@ cfStrFormatd(char         *buf,		// I - String
   // Next, find the decimal point...
   //
 
-  if (loc && loc->decimal_point) {
+  if (loc && loc->decimal_point)
+  {
     dec    = loc->decimal_point;
     declen = (int)strlen(dec);
-  } else {
+  }
+  else
+  {
     dec    = ".";
     declen = 1;
   }
@@ -1347,14 +1352,16 @@ cfStrFormatd(char         *buf,		// I - String
   // Copy everything up to the decimal point...
   //
 
-  if (tempdec) {
+  if (tempdec)
+  {
     for (tempptr = temp, bufptr = buf;
          tempptr < tempdec && bufptr < bufend;
 	 *bufptr++ = *tempptr++);
 
     tempptr += declen;
 
-    if (*tempptr && bufptr < bufend) {
+    if (*tempptr && bufptr < bufend)
+    {
       *bufptr++ = '.';
 
       while (*tempptr && bufptr < bufend)
@@ -1362,7 +1369,9 @@ cfStrFormatd(char         *buf,		// I - String
     }
 
     *bufptr = '\0';
-  } else {
+  }
+  else
+  {
     strlcpy(buf, temp, (size_t)(bufend - buf + 1));
     bufptr = buf + strlen(buf);
   }
@@ -1594,7 +1603,8 @@ cfJoinResolutionArrays(cups_array_t **current,
 	*current_default = cfCopyResolution(*new_default, NULL);
     }
     retval = 1;
-  } else
+  }
+  else
     retval = 0;
 
  finish:
@@ -2034,7 +2044,8 @@ cfGenerateSizes(ipp_t *response,
 	 i < count; i ++)
       if (ippGetInteger(attr, i) < *custom_left)
         *custom_left = ippGetInteger(attr, i);
-  } else
+  }
+  else
     *custom_left = 635;
 
   if (custom_bottom == NULL)
@@ -2047,7 +2058,8 @@ cfGenerateSizes(ipp_t *response,
 	 i < count; i ++)
       if (ippGetInteger(attr, i) < *custom_bottom)
         *custom_bottom = ippGetInteger(attr, i);
-  } else
+  }
+  else
     *custom_bottom = 1270;
 
   if (custom_right == NULL)
@@ -2060,7 +2072,8 @@ cfGenerateSizes(ipp_t *response,
 	 i < count; i ++)
       if (ippGetInteger(attr, i) < *custom_right)
         *custom_right = ippGetInteger(attr, i);
-  } else
+  }
+  else
     *custom_right = 635;
 
   if (custom_top == NULL)
@@ -2073,7 +2086,8 @@ cfGenerateSizes(ipp_t *response,
 	 i < count; i ++)
       if (ippGetInteger(attr, i) < *custom_top)
         *custom_top = ippGetInteger(attr, i);
-  } else
+  }
+  else
     *custom_top = 1270;
 
   if (mode != CF_GEN_SIZES_DEFAULT)
@@ -2154,7 +2168,8 @@ cfGenerateSizes(ipp_t *response,
 	x = ippGetInteger(x_dim, 0);
 	y = ippGetInteger(y_dim, 0);
 	if (x > 0 && y > 0 &&
-	    (pwg = pwgMediaForSize(x, y)) != NULL) {
+	    (pwg = pwgMediaForSize(x, y)) != NULL)
+	{
 	  psname = (pwg->ppd != NULL ? pwg->ppd : pwg->pwg);
 	  if (local_bottom == 0 && local_left == 0 &&
 	      local_right == 0 && local_top == 0)
@@ -2327,7 +2342,8 @@ cfGenerateSizes(ipp_t *response,
       y_dim       = ippFindAttribute(media_size, "y-dimension", IPP_TAG_ZERO);
       // Move "if" for custom size parameters here 
       //if (ippGetValueTag(x_dim) == IPP_TAG_RANGE ||
-      //	 ippGetValueTag(y_dim) == IPP_TAG_RANGE) {
+      //    ippGetValueTag(y_dim) == IPP_TAG_RANGE)
+      //{
       pwg         = pwgMediaForSize(ippGetInteger(x_dim, 0),
 				    ippGetInteger(y_dim, 0));
       name        = ippFindAttribute(media_col, "media-size-name",
@@ -2516,7 +2532,8 @@ cfGenerateSizes(ipp_t *response,
       pwg         = pwgMediaForSize(ippGetInteger(x_dim, 0),
 				    ippGetInteger(y_dim, 0));
 
-      if (pwg) {
+      if (pwg)
+      {
 	if (!sizes && mode == CF_GEN_SIZES_DEFAULT)
 	  continue;
 
@@ -2664,7 +2681,8 @@ cfGenerateSizes(ipp_t *response,
 		snprintf(temp2->media + strlen(temp2->media),
 			 sizeof(temp2->media) - strlen(temp2->media),
 			 " %s", pwg_size);
-	    } else
+	    }
+	    else
 	      cupsArrayAdd(*sizes, &temp);
 	  }
 	}

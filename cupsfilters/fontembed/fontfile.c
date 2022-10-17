@@ -10,7 +10,8 @@ _cf_fontembed_fontfile_t *
 _cfFontEmbedFontFileOpen(const char *filename)
 {
   // TODO? check magic
-  if (...) {
+  if (...)
+  {
   }
 }
 #endif // 0

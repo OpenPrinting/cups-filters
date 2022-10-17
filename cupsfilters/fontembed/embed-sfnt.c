@@ -79,7 +79,8 @@ __cfFontEmbedEmbOTFGetFontName(_cf_fontembed_otf_file_t *otf) // {{{
         fontname[iB ++] = fname[iA];
     }
     fontname[iB] = 0;
-  } else
+  }
+  else
     fontname[0] = 0;
 
   if (!*fontname)
@@ -199,7 +200,9 @@ __cfFontEmbedEmbOTFGetPDFFontDescr(_cf_fontembed_otf_file_t *otf,
       free(os2);
       os2 = NULL;
     }
-  } else {
+  }
+  else
+  {
     fprintf(stderr,"WARNING: no OS/2 table\n");
     // e.g. Subsetted font from Ghostscript // e.g. CFF
   }

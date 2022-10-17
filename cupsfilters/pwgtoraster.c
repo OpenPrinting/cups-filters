@@ -518,7 +518,8 @@ rgb_to_kcmy_line(unsigned char *src,
 
   cfImageRGBToCMYK(src, dst, pixels);
   // CMYK to KCMY
-  for (unsigned int i = 0; i < pixels; i ++, bp += 3, dp += 4) {
+  for (unsigned int i = 0; i < pixels; i ++, bp += 3, dp += 4)
+  {
     d = dp[3];
     dp[3] = dp[2];
     dp[2] = dp[1];

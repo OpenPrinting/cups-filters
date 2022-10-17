@@ -835,7 +835,8 @@ ppdCollectionDumpCache(const char *filename,	// I - Filename
   // See if we a PPD database file...
   //
 
-  if (load_ppds_dat(filename, 0, &ppdlist, log, ld)) {
+  if (load_ppds_dat(filename, 0, &ppdlist, log, ld))
+  {
     free_ppdlist(&ppdlist);
     return(1);
   }
@@ -3023,23 +3024,35 @@ PipeCommand(int        *cpid,		// O - Process ID or 0 on error
       close(efds[1]);
       logfp = cupsFileOpenFd(efds[0], "r");
       while (cupsFileGets(logfp, buf, sizeof(buf)))
-	if (log) {
-	  if (strncmp(buf, "DEBUG: ", 7) == 0) {
+	if (log)
+	{
+	  if (strncmp(buf, "DEBUG: ", 7) == 0)
+	  {
 	    log_level = CF_LOGLEVEL_DEBUG;
 	    msg = buf + 7;
-	  } else if (strncmp(buf, "DEBUG2: ", 8) == 0) {
+	  }
+	  else if (strncmp(buf, "DEBUG2: ", 8) == 0)
+	  {
 	    log_level = CF_LOGLEVEL_DEBUG;
 	    msg = buf + 8;
-	  } else if (strncmp(buf, "INFO: ", 6) == 0) {
+	  }
+	  else if (strncmp(buf, "INFO: ", 6) == 0)
+	  {
 	    log_level = CF_LOGLEVEL_INFO;
 	    msg = buf + 6;
-	  } else if (strncmp(buf, "WARNING: ", 9) == 0) {
+	  }
+	  else if (strncmp(buf, "WARNING: ", 9) == 0)
+	  {
 	    log_level = CF_LOGLEVEL_WARN;
 	    msg = buf + 9;
-	  } else if (strncmp(buf, "ERROR: ", 7) == 0) {
+	  }
+	  else if (strncmp(buf, "ERROR: ", 7) == 0)
+	  {
 	    log_level = CF_LOGLEVEL_ERROR;
 	    msg = buf + 7;
-	  } else {
+	  }
+	  else
+	  {
 	    log_level = CF_LOGLEVEL_DEBUG;
 	    msg = buf;
 	  }
@@ -3095,7 +3108,8 @@ ClosePipeCommand(cups_file_t *fp,
   // Wait for the child process to exit...
   //
 
-  while (cpid > 0 || epid > 0) {
+  while (cpid > 0 || epid > 0)
+  {
     if ((pid = wait(&wstatus)) < 0)
     {
       if (errno == EINTR)

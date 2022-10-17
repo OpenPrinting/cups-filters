@@ -165,10 +165,13 @@ std::pair<int,int>
 _cfPDFToPDFNupState::convert_order(int subpage) const // {{{
 {
   int subx, suby;
-  if (param.first==pdftopdf_axis_e::X) {
+  if (param.first==pdftopdf_axis_e::X)
+  {
     subx = subpage % param.nupX;
     suby = subpage / param.nupX;
-  } else {
+  }
+  else
+  {
     subx = subpage / param.nupY;
     suby = subpage % param.nupY;
   }

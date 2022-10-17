@@ -248,7 +248,8 @@ header_to_gs_args(gs_page_header *h,
 	  mediapos = 7;
 	else
 	  mediapos = 0;
-      } else
+      }
+      else
 	mediapos = h->MediaPosition;
       snprintf(tmpstr, sizeof(tmpstr), "-dMediaPosition=%d",
 	       (unsigned)(mediapos));
@@ -969,7 +970,8 @@ cfFilterGhostscript(int inputfd,            // I - File descriptor input
 
 	goto out;
       }
-    } else
+    }
+    else
       filename = NULL;
 
     if (!inputseekable)
@@ -983,7 +985,7 @@ cfFilterGhostscript(int inputfd,            // I - File descriptor input
       if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
 	  outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
 	  outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
-	if (write(outputfd, "RaS2", 4)) {};
+	if (write(outputfd, "RaS2", 4));
       goto out;
     }
     if (doc_type == GS_DOC_TYPE_UNKNOWN)
@@ -1005,7 +1007,7 @@ cfFilterGhostscript(int inputfd,            // I - File descriptor input
 	if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
 	    outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
 	    outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
-	  if (write(outputfd, "RaS2", 4)) {};
+	  if (write(outputfd, "RaS2", 4));
 	goto out;
       }
       if (pages < 0)
@@ -1050,7 +1052,7 @@ cfFilterGhostscript(int inputfd,            // I - File descriptor input
 	if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER ||
 	    outformat == CF_FILTER_OUT_FORMAT_PWG_RASTER ||
 	    outformat == CF_FILTER_OUT_FORMAT_APPLE_RASTER)
-	  if (write(outputfd, "RaS2", 4)) {};
+	  if (write(outputfd, "RaS2", 4));
 	goto out;
       }
       if (pagecount < 0)

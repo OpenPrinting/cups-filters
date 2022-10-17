@@ -675,7 +675,8 @@ cfFilterImageToPDF(int inputfd,         // I - File descriptor input stream
   // Copy input into temporary file if needed ...
   //
 
-  if (!inputseekable) {
+  if (!inputseekable)
+  {
     if ((fd = cupsTempFd(tempfile, sizeof(tempfile))) < 0)
     {
       if (log) log(ld, CF_LOGLEVEL_ERROR,
@@ -1343,7 +1344,9 @@ cfFilterImageToPDF(int inputfd,         // I - File descriptor input stream
     // Because calculation error may be caused and
     // result of ceil function may be larger than 1.
     doc.xpages = doc.ypages = 1;
-  } else {
+  }
+  else
+  {
     doc.xpages = ceil(doc.xinches / doc.xprint);
     doc.ypages = ceil(doc.yinches / doc.yprint);
   }
@@ -1530,7 +1533,8 @@ cfFilterImageToPDF(int inputfd,         // I - File descriptor input stream
     doc.Collate = 0;
   }
 
-  if (((doc.xpages*doc.ypages) % 2) == 0) {
+  if (((doc.xpages*doc.ypages) % 2) == 0)
+  {
     // even pages, disable EvenDuplex
     doc.EvenDuplex = 0;
   }

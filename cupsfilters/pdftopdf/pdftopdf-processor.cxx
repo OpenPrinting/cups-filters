@@ -497,7 +497,8 @@ _cfProcessPDFToPDF(_cfPDFToPDFProcessor &proc,
 				     param.copies_to_be_logged);
   }
 
-  if ((param.even_duplex || !param.odd_pages) && (outputno & 1)) {
+  if ((param.even_duplex || !param.odd_pages) && (outputno & 1))
+  {
     // need to output empty page to not confuse duplex
     proc.add_page(proc.new_page(param.page.width,
 				param.page.height, doc), param.reverse);

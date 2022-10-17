@@ -74,7 +74,8 @@ _cfPDFToPDFIntervalSet::next(key_t val) const // {{{
   val ++;
   data_t::const_iterator it =
     std::upper_bound(data.begin(), data.end(), std::make_pair(val, npos));
-  if (it == data.begin()) {
+  if (it == data.begin())
+  {
     if (it == data.end()) // empty
       return (npos);
     return (it->first);
@@ -114,22 +115,27 @@ void
 _cfPDFToPDFIntervalSet::dump(pdftopdf_doc_t *doc) const // {{{
 {
   int len = data.size();
-  if (len == 0) {
+  if (len == 0)
+  {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: (empty)");
     return;
   }
   len --;
-  for (int iA = 0; iA < len; iA ++) {
+  for (int iA = 0; iA < len; iA ++)
+  {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: [%d,%d)",
 				   data[iA].first, data[iA].second);
   }
-  if (data[len].second == npos) {
+  if (data[len].second == npos)
+  {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: [%d,inf)",
 				   data[len].first);
-  } else {
+  }
+  else
+  {
     if (doc->logfunc) doc->logfunc(doc->logdata, CF_LOGLEVEL_DEBUG,
 				   "cfFilterPDFToPDF: [%d,%d)",
 				   data[len].first, data[len].second);

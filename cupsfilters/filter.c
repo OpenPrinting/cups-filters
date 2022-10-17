@@ -444,7 +444,8 @@ cfFilterPOpen(cf_filter_function_t filter_func,
   // Open a pipe ...
   //
 
-  if (pipe(pipefds) < 0) {
+  if (pipe(pipefds) < 0)
+  {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterPOpen: Could not create pipe for %s: %s",
 		 inputfd < 0 ? "input" : "output",
@@ -452,19 +453,23 @@ cfFilterPOpen(cf_filter_function_t filter_func,
     return (-1);
   }
 
-  if ((pid = fork()) == 0) {
+  if ((pid = fork()) == 0)
+  {
     //
     // Child process goes here...
     //
     // Update input and output FDs as needed...
     //
 
-    if (inputfd < 0) {
+    if (inputfd < 0)
+    {
       inputseekable = 0;
       infd = pipefds[0];
       outfd = outputfd;
       close(pipefds[1]);
-    } else {
+    }
+    else
+    {
       infd = inputfd;
       outfd = pipefds[1];
       close(pipefds[0]);
@@ -487,7 +492,9 @@ cfFilterPOpen(cf_filter_function_t filter_func,
 		 ret);
     exit(ret);
 
-  } else if (pid > 0) {
+  }
+  else if (pid > 0)
+  {
     if (log) log(ld, CF_LOGLEVEL_INFO,
 		 "cfFilterPOpen: Filter function (PID %d) started.", pid);
 
@@ -501,15 +508,20 @@ cfFilterPOpen(cf_filter_function_t filter_func,
     // Return file descriptor to stream to or from
     //
 
-    if (inputfd < 0) {
+    if (inputfd < 0)
+    {
       close(pipefds[0]);
       return (pipefds[1]);
-    } else {
+    }
+    else
+    {
       close(pipefds[1]);
       return (pipefds[0]);
     }
 
-  } else {
+  }
+  else
+  {
 
     //
     // fork() error
@@ -639,13 +651,16 @@ cfFilterChain(int inputfd,         // I - File descriptor input stream
 
   for (filter = (cf_filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);
        filter;
-       filter = (cf_filter_filter_in_chain_t *)cupsArrayNext(filter_chain)) {
-    if (!filter->function) {
+       filter = (cf_filter_filter_in_chain_t *)cupsArrayNext(filter_chain))
+  {
+    if (!filter->function)
+    {
       if (log) log(ld, CF_LOGLEVEL_INFO,
 		   "cfFilterChain: Invalid filter: %s - Removing...",
 		   filter->name ? filter->name : "Unspecified");
       cupsArrayRemove(filter_chain, filter);
-    } else
+    }
+    else
       if (log) log(ld, CF_LOGLEVEL_INFO,
 		   "cfFilterChain: Running filter: %s",
 		   filter->name ? filter->name : "Unspecified");
@@ -692,20 +707,25 @@ cfFilterChain(int inputfd,         // I - File descriptor input stream
 
   for (filter = (cf_filter_filter_in_chain_t *)cupsArrayFirst(filter_chain);
        filter;
-       filter = next, current = 1 - current) {
+       filter = next, current = 1 - current)
+  {
     next = (cf_filter_filter_in_chain_t *)cupsArrayNext(filter_chain);
 
-    if (filterfds[1 - current][0] > 1) {
+    if (filterfds[1 - current][0] > 1)
+    {
       close(filterfds[1 - current][0]);
       filterfds[1 - current][0] = -1;
     }
-    if (filterfds[1 - current][1] > 1) {
+    if (filterfds[1 - current][1] > 1)
+    {
       close(filterfds[1 - current][1]);
       filterfds[1 - current][1] = -1;
     }
 
-    if (next) {
-      if (pipe(filterfds[1 - current]) < 0) {
+    if (next)
+    {
+      if (pipe(filterfds[1 - current]) < 0)
+      {
 	if (log) log(ld, CF_LOGLEVEL_ERROR,
 		     "cfFilterChain: Could not create pipe for output of %s: %s",
 		     filter->name ? filter->name : "Unspecified filter",
@@ -714,10 +734,12 @@ cfFilterChain(int inputfd,         // I - File descriptor input stream
       }
       fcntl_add_cloexec(filterfds[1 - current][0]);
       fcntl_add_cloexec(filterfds[1 - current][1]);
-    } else
+    }
+    else
       filterfds[1 - current][1] = outputfd;
 
-    if ((pid = fork()) == 0) {
+    if ((pid = fork()) == 0)
+    {
       //
       // Child process goes here...
       //
@@ -751,7 +773,9 @@ cfFilterChain(int inputfd,         // I - File descriptor input stream
 		   filter->name ? filter->name : "Unspecified filter", ret);
       exit(ret);
 
-    } else if (pid > 0) {
+    }
+    else if (pid > 0)
+    {
       if (log) log(ld, CF_LOGLEVEL_INFO,
 		   "cfFilterChain: %s (PID %d) started.",
 		   filter->name ? filter->name : "Unspecified filter", pid);
@@ -760,7 +784,9 @@ cfFilterChain(int inputfd,         // I - File descriptor input stream
       pid_entry->pid = pid;
       pid_entry->name = filter->name ? filter->name : "Unspecified filter";
       cupsArrayAdd(pids, pid_entry);
-    } else {
+    }
+    else
+    {
       if (log) log(ld, CF_LOGLEVEL_ERROR,
 		   "cfFilterChain: Could not fork to start %s: %s",
 		   filter->name ? filter->name : "Unspecified filter",
@@ -790,39 +816,51 @@ cfFilterChain(int inputfd,         // I - File descriptor input stream
 
   retval = 0;
 
-  while (cupsArrayCount(pids) > 0) {
-    if ((pid = wait(&status)) < 0) {
-      if (errno == EINTR && iscanceled && iscanceled(icd)) {
+  while (cupsArrayCount(pids) > 0)
+  {
+    if ((pid = wait(&status)) < 0)
+    {
+      if (errno == EINTR && iscanceled && iscanceled(icd))
+      {
 	if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		     "cfFilterChain: Job canceled, killing filters ...");
 	for (pid_entry = (filter_function_pid_t *)cupsArrayFirst(pids);
 	     pid_entry;
-	     pid_entry = (filter_function_pid_t *)cupsArrayNext(pids)) {
+	     pid_entry = (filter_function_pid_t *)cupsArrayNext(pids))
+	{
 	  kill(pid_entry->pid, SIGTERM);
 	  free(pid_entry);
 	}
 	break;
-      } else
+      }
+      else
 	continue;
     }
 
     key.pid = pid;
     if ((pid_entry = (filter_function_pid_t *)cupsArrayFind(pids, &key)) !=
-	NULL) {
+	NULL)
+    {
       cupsArrayRemove(pids, pid_entry);
 
-      if (status) {
-	if (WIFEXITED(status)) {
+      if (status)
+      {
+	if (WIFEXITED(status))
+	{
 	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "cfFilterChain: %s (PID %d) stopped with status %d",
 		       pid_entry->name, pid, WEXITSTATUS(status));
-	} else {
+	}
+	else
+	{
 	  if (log) log(ld, CF_LOGLEVEL_ERROR,
 		       "cfFilterChain: %s (PID %d) crashed on signal %d",
 		       pid_entry->name, pid, WTERMSIG(status));
 	}
 	retval = 1;
-      } else {
+      }
+      else
+      {
 	if (log) log(ld, CF_LOGLEVEL_INFO,
 		       "cfFilterChain: %s (PID %d) exited with no errors.",
 		       pid_entry->name, pid);
@@ -1208,7 +1246,8 @@ cfFilterExternal(int inputfd,              // I - File descriptor input stream
 		       "cfFilterExternal (%s): Failed to connect input file descriptor with CUPS filter's stdin - %s",
 		       filter_name, strerror(errno));
 	  goto fd_error;
-	} else
+	}
+	else
 	  if (log) log(ld, CF_LOGLEVEL_DEBUG,
 		       "cfFilterExternal (%s): Connected input file descriptor %d to CUPS filter's stdin.",
 		       filter_name, inputfd);
@@ -1230,7 +1269,8 @@ cfFilterExternal(int inputfd,              // I - File descriptor input stream
       if (outputfd < 0)
         outputfd = open("/dev/null", O_WRONLY);
 
-      if (outputfd > 1) {
+      if (outputfd > 1)
+      {
 	fcntl_add_cloexec(outputfd);
 	dup2(outputfd, 1);
 	close(outputfd);
@@ -1246,7 +1286,8 @@ cfFilterExternal(int inputfd,              // I - File descriptor input stream
 	fcntl_add_cloexec(fd);
 	dup2(fd, 2);
 	close(fd);
-      } else
+      }
+      else
         close(fd);
     }
     else
@@ -1293,7 +1334,8 @@ cfFilterExternal(int inputfd,              // I - File descriptor input stream
 	{
 	  dup2(sidefd, 4);
 	  close(sidefd);
-	} else
+	}
+	else
 	  close(sidefd);
 	fcntl_add_nonblock(4);
       }

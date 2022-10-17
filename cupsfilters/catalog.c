@@ -132,7 +132,8 @@ cfCatalogSearchDir(const char *dirname)
       i = 3;
     else
       i = 2;
-    if (c1[i] == '_') {
+    if (c1[i] == '_')
+    {
       i ++;
       if (c1[i] < 'A' || c1[i] > 'Z' || c1[i + 1] < 'A' || c1[i + 1] > 'Z')
 	continue;
@@ -461,7 +462,9 @@ cfCatalogLoad(const char *location,
     }
     else
       filename = location;
-  } else {
+  }
+  else
+  {
     if (cfGetURI(location, tmpfile, sizeof(tmpfile)))
       filename = tmpfile;
   }
@@ -645,7 +648,8 @@ cfCatalogLoad(const char *location,
 	      *end ++ = *ptr;
 	    ptr ++;
 	  }
-	} else
+	}
+	else
 	  *end ++ = *ptr ++;
       }
       *end = '\0';

@@ -263,7 +263,8 @@ get_profile_for_device_path(cf_filter_data_t *data,
     dbus_message_unref(message);
   if (reply != NULL)
     dbus_message_unref(reply);
-  if (key != NULL) {
+  if (key != NULL)
+  {
     for (i = 0; i < max_keys; i ++)
       free(key[i]);
     free(key);

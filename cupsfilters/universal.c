@@ -229,7 +229,8 @@ cfFilterUniversal(int inputfd,		// I - File descriptor input stream
       !strcasecmp(input_type, "urf") ||
       !strcasecmp(input_type, "pwg-raster"))
   {
-    if (strcasecmp(output_type, "pdf")) {
+    if (strcasecmp(output_type, "pdf"))
+    {
       if (strcasecmp(input_type, "vnd.cups-pdf"))
       {
 	filter = malloc(sizeof(cf_filter_filter_in_chain_t));
@@ -306,7 +307,8 @@ cfFilterUniversal(int inputfd,		// I - File descriptor input stream
 
  out:
 
-  if (ret) {
+  if (ret)
+  {
     if (log) log(ld, CF_LOGLEVEL_ERROR,
 		 "cfFilterUniversal: Unsupported combination of input and output formats: %s -> %s",
 		 input, output);
