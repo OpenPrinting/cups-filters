@@ -1484,7 +1484,7 @@ cfFilterGhostscript(int inputfd,            // I - File descriptor input
   header_to_gs_args(&h, gs_args, outformat, pxlcolor);
 
   // CUPS Raster versions: 2 = compressed; 3 = uncompressed
-  // Requires Ghostscript 9.57 or later
+  // Requires Ghostscript 10.00.0 or later
   if (outformat == CF_FILTER_OUT_FORMAT_CUPS_RASTER &&
       (t = cupsGetOption("cups-raster-version",
 			   num_options, options)) != NULL &&
@@ -1497,7 +1497,7 @@ cfFilterGhostscript(int inputfd,            // I - File descriptor input
   // Back side orientation for duplex printing: Normal, ManualTumble,
   // Rotated, Flipped
   // When printing duplex, margins on the back side meeds to get swapped?
-  // Requires Ghostscript 9.57 or later
+  // Requires Ghostscript 10.00.0 or later
   if (h.Duplex)
   {
     int backside;
@@ -1542,7 +1542,7 @@ cfFilterGhostscript(int inputfd,            // I - File descriptor input
   }
 
   // Manual Copies needed (no device copies functionality available)
-  // Requires Ghostscript 9.57 or later
+  // Requires Ghostscript 10.00.0 or later
   if ((t = cupsGetOption("hardware-copies",
 			 num_options, options)) != NULL &&
       (!strcasecmp(t, "false") || !strcasecmp(t, "off") ||

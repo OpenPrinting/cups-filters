@@ -43,11 +43,12 @@ INTRODUCTION
     auto-install most of these packages.
 
     If Ghostscript is used (via the "gsto..." or the "universal" CUPS
-    filters), Ghostscript 9.56.0 is required and it has to be built at
-    least with the "pdfwrite", "ps2write", "cups", "pwgraster",
-    "appleraster", "pclm", "pclm8", "pdfimage24", "pdfimage8",
-    "pxlcolor", and "pxlmono" output devices. libcups of CUPS 2.2.2 or
-    newer is required to buid Ghostscript this way.
+    filters), Ghostscript 10.00.0 is required (10.01.0 is highly
+    recommended) and it has to be built at least with the "pdfwrite",
+    "ps2write", "cups", "pwgraster", "appleraster", "pclm", "pclm8",
+    "pdfimage24", "pdfimage8", "pxlcolor", and "pxlmono" output
+    devices. libcups of CUPS 2.2.2 or newer is required to buid
+    Ghostscript this way.
 
     The Poppler-based pdftoraster filter needs a C++ compiler which
     supports C++11 and Poppler being built with the "./configure"
