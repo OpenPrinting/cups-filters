@@ -1,25 +1,26 @@
-/* options.h
- *
- * Copyright (C) 2008 Till Kamppeter <till.kamppeter@gmail.com>
- * Copyright (C) 2008 Lars Karlitski (formerly Uebernickel) <lars@karlitski.net>
- *
- * This file is part of foomatic-rip.
- *
- * Foomatic-rip is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * Foomatic-rip is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
- */
+//
+// options.h
+//
+// Copyright (C) 2008 Till Kamppeter <till.kamppeter@gmail.com>
+// Copyright (C) 2008 Lars Karlitski (formerly Uebernickel) <lars@karlitski.net>
+//
+// This file is part of foomatic-rip.
+//
+// Foomatic-rip is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// Foomatic-rip is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the
+// Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+// Boston, MA 02111-1307, USA.
+//
 
 #ifndef options_h
 #define options_h
@@ -29,7 +30,7 @@
 #include <regex.h>
 #include "util.h"
 
-/* Option types */
+// Option types
 #define TYPE_NONE       0
 #define TYPE_ENUM       1
 #define TYPE_PICKMANY   2
@@ -43,7 +44,7 @@
 #define TYPE_PASSCODE   10
 #define TYPE_POINTS     11
 
-/* Sections */
+// Sections
 #define SECTION_ANYSETUP        1
 #define SECTION_PAGESETUP       2
 #define SECTION_PROLOG          3
@@ -52,68 +53,71 @@
 
 
 
-typedef struct choice_s {
-    char value [128];
-    char text [128];
-    char command[65536];
-    struct choice_s *next;
+typedef struct choice_s
+{
+  char value [128];
+  char text [128];
+  char command[65536];
+  struct choice_s *next;
 } choice_t;
 
-/* Custom option parameter */
-typedef struct param_s {
-    char name [128];
-    char text [128];       /* formerly comment, changed to 'text' to
-                              be consistent with cups */
-    int order;
+// Custom option parameter
+typedef struct param_s
+{
+  char name [128];
+  char text [128];       // formerly comment, changed to 'text' to
+                         // be consistent with cups
+  int order;
 
-    int type;
-    char min[20], max[20]; /* contents depend on 'type' */
+  int type;
+  char min[20], max[20]; // contents depend on 'type'
 
-    regex_t *allowedchars;
-    regex_t *allowedregexp;
+  regex_t *allowedchars;
+  regex_t *allowedregexp;
 
-    struct param_s *next;
+  struct param_s *next;
 } param_t;
 
-/* Option */
-typedef struct option_s {
-    char name [128];
-    char text [128];
-    char varname [128];         /* clean version of 'name' (no spaces etc.) */
-    int type;
-    int style;
-    char spot;
-    double order;
-    int section;
+// Option
+typedef struct option_s
+{
+  char name [128];
+  char text [128];
+  char varname [128];         // clean version of 'name' (no spaces etc.)
+  int type;
+  int style;
+  char spot;
+  double order;
+  int section;
 
-    int notfirst;               /* TODO remove */
+  int notfirst;               // TODO remove
 
-    choice_t *choicelist;
+  choice_t *choicelist;
 
-    /* Foomatic PPD extensions */
-    char *proto;                /* *FoomaticRIPOptionPrototype: if this is set
-                                   it will be used with only the first option
-                                   in paramlist (there should be only one) */
-    param_t *foomatic_param;
+  // Foomatic PPD extensions
+  char *proto;                // *FoomaticRIPOptionPrototype: if this is set
+                              // it will be used with only the first option
+                              // in paramlist (there should be only one)
+  param_t *foomatic_param;
 
-    /* CUPS custom options */
-    char *custom_command;       /* *CustomFoo */
-    param_t *paramlist;         /* for custom values, sorted by stack order */
-    size_t param_count;
+  // CUPS custom options
+  char *custom_command;       // *CustomFoo
+  param_t *paramlist;         // for custom values, sorted by stack order
+  size_t param_count;
 
-    struct value_s *valuelist;
+  struct value_s *valuelist;
 
-    struct option_s *next;
-    struct option_s *next_by_order;
+  struct option_s *next;
+  struct option_s *next_by_order;
 } option_t;
 
-
-/* A value for an option */
-typedef struct value_s {
-    int optionset;
-    char *value;
-    option_t *fromoption; /* This is set when this value is set by a composite */
-    struct value_s *next;
+// A value for an option
+typedef struct value_s
+{
+  int optionset;
+  char *value;
+  option_t *fromoption; // This is set when this value is set by a composite
+  struct value_s *next;
 } value_t;
 
 
@@ -135,9 +139,9 @@ int option_is_jcl_arg(option_t *opt);
 int option_is_commandline_arg(option_t *opt);
 
 
-int option_get_section(option_t *opt); /* TODO deprecated */
+int option_get_section(option_t *opt); // TODO deprecated
 
-/* handles ANYSETUP (for (PAGE|DOCUMENT)SETUP) */
+// handles ANYSETUP (for (PAGE|DOCUMENT)SETUP)
 int option_is_in_section(option_t *opt, int section);
 
 void options_init();
@@ -154,7 +158,7 @@ int ppd_supports_pdf();
 int option_set_value(option_t *opt, int optset, const char *value);
 const char * option_get_value(option_t *opt, int optset);
 
-/* section == -1 for all sections */
+// section == -1 for all sections
 int option_get_command(dstr_t *cmd, option_t *opt, int optset, int section);
 
 int option_accepts_value(option_t *opt, const char *value);
@@ -178,5 +182,4 @@ void set_options_for_page(int optset, int page);
 char *get_icc_profile_for_qualifier(const char **qualifier);
 const char **get_ppd_qualifier(void);
 
-#endif
-
+#endif // !options_h
