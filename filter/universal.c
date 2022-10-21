@@ -1,6 +1,15 @@
-/*
- * Include necessary headers...
- */
+//
+// Legacy CUPS filter wrapper for cfFilterUniversal() for cups-filters.
+//
+// Copyright © 2020-2022 by OpenPrinting.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
+//
+// Include necessary headers...
+//
 
 #include <cupsfilters/filter.h>
 #include <ppd/ppd-filter.h>
@@ -8,27 +17,27 @@
 #include <signal.h>
 
 
-/*
- * Local globals...
- */
+//
+// Local globals...
+//
 
-static int		JobCanceled = 0;/* Set to 1 on SIGTERM */
+static int		JobCanceled = 0; // Set to 1 on SIGTERM
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static void		cancel_job(int sig);
 
 
-/*
- * 'main()' - Main entry.
- */
+//
+// 'main()' - Main entry.
+//
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line args */
-     char *argv[])			/* I - Command-line arguments */
+int					// O - Exit status
+main(int  argc,				// I - Number of command-line args
+     char *argv[])			// I - Command-line arguments
 {
   int           ret;
   char          *p;
@@ -36,14 +45,14 @@ main(int  argc,				/* I - Number of command-line args */
   char buf[1024];
   const char *datadir;
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+  struct sigaction action;		// Actions for POSIX signals
+#endif // HAVE_SIGACTION && !HAVE_SIGSET
 
- /*
-  * Register a signal handler to cleanly cancel a job.
-  */
+  //
+  // Register a signal handler to cleanly cancel a job.
+  //
 
-#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
+#ifdef HAVE_SIGSET // Use System V signals over POSIX to avoid bugs
   sigset(SIGTERM, cancel_job);
 #elif defined(HAVE_SIGACTION)
   memset(&action, 0, sizeof(action));
@@ -53,9 +62,9 @@ main(int  argc,				/* I - Number of command-line args */
   sigaction(SIGTERM, &action, NULL);
 #else
   signal(SIGTERM, cancel_job);
-#endif /* HAVE_SIGSET */
+#endif // HAVE_SIGSET
 
-  universal_parameters.actual_output_type = NULL; /* Determined by PPD file */
+  universal_parameters.actual_output_type = NULL; // Determined by PPD file
   
   if ((p = getenv("CUPS_DATADIR")) != NULL)
     universal_parameters.texttopdf_params.data_dir = strdup(p);
@@ -98,15 +107,14 @@ main(int  argc,				/* I - Number of command-line args */
 }
 
 
-/*
- * 'cancel_job()' - Flag the job as canceled.
- */
+//
+// 'cancel_job()' - Flag the job as canceled.
+//
 
 static void
-cancel_job(int sig)			/* I - Signal number (unused) */
+cancel_job(int sig)			// I - Signal number (unused)
 {
   (void)sig;
 
   JobCanceled = 1;
 }
-

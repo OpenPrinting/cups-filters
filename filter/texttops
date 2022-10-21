@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# texttops - This is a Text-to-PostScript filter for CUPS
+# texttops - This is a Text-to-PostScript filter for cups-filters
 #
 # Note: This wrapper filter is only included for backward compatibility with
 # certan custom configurations. It is not mentioned in any of the .convs
@@ -11,10 +11,11 @@
 #
 # DO NOT create new PPD or .convs files using this filter! texttops is
 # DEPRECATED!
-
+#
 # (C) 2012 Till Kamppeter <till.kamppeter@gmail.com>
 #
-# Released under GPL 2 or later
+# Licensed under Apache License v2.0.  See the file "LICENSE" for more
+# information.
 #
 
 PDF2PS=`which pdf2ps`

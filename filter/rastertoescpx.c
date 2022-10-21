@@ -1,31 +1,29 @@
-/*
- *   Advanced EPSON ESC/P raster driver for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1993-2005 by Easy Software Products.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   Setup()           - Prepare the printer for graphics output.
- *   StartPage()       - Start a page of graphics.
- *   EndPage()         - Finish a page of graphics.
- *   Shutdown()        - Shutdown a printer.
- *   CancelJob()       - Cancel the current job...
- *   CompressData()    - Compress a line of graphics.
- *   OutputBand()      - Output a band of graphics.
- *   ProcessLine()     - Read graphics from the page stream and output
- *                       as needed.
- *   main()            - Main entry and processing of driver.
- */
+//
+// Advanced EPSON ESC/P raster driver for cups-filters.
+//
+// Copyright 2007-2011 by Apple Inc.
+// Copyright 1993-2005 by Easy Software Products.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+// Contents:
+//
+//   Setup()           - Prepare the printer for graphics output.
+//   StartPage()       - Start a page of graphics.
+//   EndPage()         - Finish a page of graphics.
+//   Shutdown()        - Shutdown a printer.
+//   CancelJob()       - Cancel the current job...
+//   CompressData()    - Compress a line of graphics.
+//   OutputBand()      - Output a band of graphics.
+//   ProcessLine()     - Read graphics from the page stream and output
+//                       as needed.
+//   main()            - Main entry and processing of driver.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include <cupsfilters/driver.h>
 #include <ppd/ppd.h>
@@ -35,62 +33,62 @@
 #include <ctype.h>
 
 
-/*
- * Softweave data...
- */
+//
+// Softweave data...
+//
 
 typedef struct cups_weave_str
 {
-  struct cups_weave_str	*prev,			/* Previous band */
-			*next;			/* Next band */
-  int			x, y,			/* Column/Line on the page */
-			plane,			/* Color plane */
-			dirty,			/* Is this buffer dirty? */
-			row,			/* Row in the buffer */
-			count;			/* Max rows this pass */
-  unsigned char		*buffer;		/* Data buffer */
+  struct cups_weave_str	*prev,			// Previous band
+			*next;			// Next band
+  int			x, y,			// Column/Line on the page
+			plane,			// Color plane
+			dirty,			// Is this buffer dirty?
+			row,			// Row in the buffer
+			count;			// Max rows this pass
+  unsigned char		*buffer;		// Data buffer
 } cups_weave_t;
 
 
-/*
- * Globals...
- */
+//
+// Globals...
+//
 
-cf_rgb_t	*RGB;			/* RGB color separation data */
-cf_cmyk_t	*CMYK;			/* CMYK color separation data */
-unsigned char	*PixelBuffer,		/* Pixel buffer */
-		*CMYKBuffer,		/* CMYK buffer */
-		*OutputBuffers[7],	/* Output buffers */
-		*DotBuffers[7],		/* Dot buffers */
-		*CompBuffer;		/* Compression buffer */
-short		*InputBuffer;		/* Color separation buffer */
-cups_weave_t	*DotAvailList,		/* Available buffers */
-		*DotUsedList,		/* Used buffers */
-		*DotBands[128][7];	/* Buffers in use */
-int		DotBufferSize,		/* Size of dot buffers */
-		DotRowMax,		/* Maximum row number in buffer */
-		DotColStep,		/* Step for each output column */
-		DotRowStep,		/* Step for each output line */
-		DotRowFeed,		/* Amount to feed for interleave */
-		DotRowCount,		/* Number of rows to output */
-		DotRowOffset[7],	/* Offset for each color on print head */
-		DotRowCurrent,		/* Current row */
-		DotSize;		/* Dot size (Pro 5000 only) */
-int		PrinterPlanes,		/* # of color planes */
-		BitPlanes,		/* # of bit planes per color */
-		PrinterTop,		/* Top of page */
-		PrinterLength;		/* Length of page */
-cf_lut_t	*DitherLuts[7];		/* Lookup tables for dithering */
-cf_dither_t	*DitherStates[7];	/* Dither state tables */
-int		OutputFeed;		/* Number of lines to skip */
-int		Canceled;		/* Is the job canceled? */
-cf_logfunc_t logfunc;               /* Log function */
-void            *ld;                    /* Log function data */
+cf_rgb_t	*RGB;			// RGB color separation data
+cf_cmyk_t	*CMYK;			// CMYK color separation data
+unsigned char	*PixelBuffer,		// Pixel buffer
+		*CMYKBuffer,		// CMYK buffer
+		*OutputBuffers[7],	// Output buffers
+		*DotBuffers[7],		// Dot buffers
+		*CompBuffer;		// Compression buffer
+short		*InputBuffer;		// Color separation buffer
+cups_weave_t	*DotAvailList,		// Available buffers
+		*DotUsedList,		// Used buffers
+		*DotBands[128][7];	// Buffers in use
+int		DotBufferSize,		// Size of dot buffers
+		DotRowMax,		// Maximum row number in buffer
+		DotColStep,		// Step for each output column
+		DotRowStep,		// Step for each output line
+		DotRowFeed,		// Amount to feed for interleave
+		DotRowCount,		// Number of rows to output
+		DotRowOffset[7],	// Offset for each color on print head
+		DotRowCurrent,		// Current row
+		DotSize;		// Dot size (Pro 5000 only)
+int		PrinterPlanes,		// # of color planes
+		BitPlanes,		// # of bit planes per color
+		PrinterTop,		// Top of page
+		PrinterLength;		// Length of page
+cf_lut_t	*DitherLuts[7];		// Lookup tables for dithering
+cf_dither_t	*DitherStates[7];	// Dither state tables
+int		OutputFeed;		// Number of lines to skip
+int		Canceled;		// Is the job canceled?
+cf_logfunc_t logfunc;               // Log function
+void            *ld;                    // Log function data
 
 
-/*
- * Prototypes...
- */
+//
+// Prototypes...
+//
 
 void	Setup(ppd_file_t *);
 void	StartPage(ppd_file_t *, cups_page_header2_t *);
@@ -108,45 +106,45 @@ void	ProcessLine(ppd_file_t *, cups_raster_t *,
 	            cups_page_header2_t *, const int y);
 
 
-/*
- * 'Setup()' - Prepare a printer for graphics output.
- */
+//
+// 'Setup()' - Prepare a printer for graphics output.
+//
 
 void
-Setup(ppd_file_t *ppd)		/* I - PPD file */
+Setup(ppd_file_t *ppd)		// I - PPD file
 {
- /*
-  * Some EPSON printers need an additional command issued at the
-  * beginning of each job to exit from USB "packet" mode...
-  */
+  //
+  // Some EPSON printers need an additional command issued at the
+  // beginning of each job to exit from USB "packet" mode...
+  //
 
   if (ppd->model_number & ESCP_USB)
     cfWritePrintData("\000\000\000\033\001@EJL 1284.4\n@EJL     \n\033@", 29);
 }
 
 
-/*
- * 'StartPage()' - Start a page of graphics.
- */
+//
+// 'StartPage()' - Start a page of graphics.
+//
 
 void
-StartPage(ppd_file_t         *ppd,	/* I - PPD file */
-          cups_page_header2_t *header)	/* I - Page header */
+StartPage(ppd_file_t         *ppd,	// I - PPD file
+          cups_page_header2_t *header)	// I - Page header
 {
-  int		i, y;			/* Looping vars */
-  int		subrow,			/* Current subrow */
-		modrow,			/* Subrow modulus */
-		plane;			/* Current color plane */
-  unsigned char	*ptr;			/* Pointer into dot buffer */
-  int		bands;			/* Number of bands to allocate */
-  int		units;			/* Units for resolution */
-  cups_weave_t	*band;			/* Current band */
-  const char	*colormodel;		/* Color model string */
+  int		i, y;			// Looping vars
+  int		subrow,			// Current subrow
+		modrow,			// Subrow modulus
+		plane;			// Current color plane
+  unsigned char	*ptr;			// Pointer into dot buffer
+  int		bands;			// Number of bands to allocate
+  int		units;			// Units for resolution
+  cups_weave_t	*band;			// Current band
+  const char	*colormodel;		// Color model string
   char		resolution[PPD_MAX_NAME],
-					/* Resolution string */
-		spec[PPD_MAX_NAME];	/* PPD attribute name */
-  ppd_attr_t	*attr;			/* Attribute from PPD file */
-  const float	default_lut[2] =	/* Default dithering lookup table */
+					// Resolution string
+		spec[PPD_MAX_NAME];	// PPD attribute name
+  ppd_attr_t	*attr;			// Attribute from PPD file
+  const float	default_lut[2] =	// Default dithering lookup table
 		{
 		  0.0,
 		  1.0
@@ -200,9 +198,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   fprintf(stderr, "DEBUG: cupsRowFeed = %d\n", header->cupsRowFeed);
   fprintf(stderr, "DEBUG: cupsRowStep = %d\n", header->cupsRowStep);
 
- /*
-  * Figure out the color model and spec strings...
-  */
+  //
+  // Figure out the color model and spec strings...
+  //
 
   switch (header->cupsColorSpace)
   {
@@ -231,9 +229,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   if (!header->MediaType[0])
     strcpy(header->MediaType, "Plain");
 
- /*
-  * Load the appropriate color profiles...
-  */
+  //
+  // Load the appropriate color profiles...
+  //
 
   RGB  = NULL;
   CMYK = NULL;
@@ -268,25 +266,25 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   fprintf(stderr, "DEBUG: PrinterPlanes = %d\n", PrinterPlanes);
 
- /*
-  * Get the dithering parameters...
-  */
+  //
+  // Get the dithering parameters...
+  //
 
   switch (PrinterPlanes)
   {
-    case 1 : /* K */
+    case 1 : // K
         DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
         break;
 
-    case 2 : /* Kk */
+    case 2 : // Kk
         DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Black", logfunc, ld);
         DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightBlack", logfunc, ld);
         break;
 
-    case 3 : /* CMY */
+    case 3 : // CMY
         DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
         DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
@@ -295,7 +293,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	                            resolution, "Yellow", logfunc, ld);
         break;
 
-    case 4 : /* CMYK */
+    case 4 : // CMYK
         DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
         DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
@@ -306,7 +304,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	                            resolution, "Black", logfunc, ld);
         break;
 
-    case 6 : /* CcMmYK */
+    case 6 : // CcMmYK
         DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
         DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
@@ -321,7 +319,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	                            resolution, "Black", logfunc, ld);
         break;
 
-    case 7 : /* CcMmYKk */
+    case 7 : // CcMmYKk
         DitherLuts[0] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "Cyan", logfunc, ld);
         DitherLuts[1] = ppdLutLoad(ppd, colormodel, header->MediaType,
@@ -352,35 +350,35 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   else
     BitPlanes = 1;
 
- /*
-  * Initialize the printer...
-  */
+  //
+  // Initialize the printer...
+  //
 
   printf("\033@");
 
   if (ppd->model_number & ESCP_REMOTE)
   {
-   /*
-    * Go into remote mode...
-    */
+    //
+    // Go into remote mode...
+    //
 
     cfWritePrintData("\033(R\010\000\000REMOTE1", 13);
 
-   /*
-    * Disable status reporting...
-    */
+    //
+    // Disable status reporting...
+    //
 
     cfWritePrintData("ST\002\000\000\000", 6);
 
-   /*
-    * Enable borderless printing...
-    */
+    //
+    // Enable borderless printing...
+    //
 
     if ((attr = ppdFindAttr(ppd, "cupsESCPFP", NULL)) != NULL && attr->value)
     {
-     /*
-      * Set horizontal offset...
-      */
+      //
+      // Set horizontal offset...
+      //
 
       i = atoi(attr->value);
 
@@ -389,9 +387,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       putchar(i >> 8);
     }
 
-   /*
-    * Set media type...
-    */
+    //
+    // Set media type...
+    //
 
     if (header->cupsMediaType)
     {
@@ -399,9 +397,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPSN0", spec)) != NULL && attr->value)
       {
-       /*
-        * Set feed sequence...
-	*/
+	//
+	// Set feed sequence...
+	//
 
 	cfWritePrintData("SN\003\000\000\000", 6);
 	putchar(atoi(attr->value));
@@ -409,9 +407,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPSN1", spec)) != NULL && attr->value)
       {
-       /*
-        * Set platten gap...
-	*/
+	//
+	// Set platten gap...
+	//
 
 	cfWritePrintData("SN\003\000\000\001", 6);
 	putchar(atoi(attr->value));
@@ -419,9 +417,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPSN2", spec)) != NULL && attr->value)
       {
-       /*
-        * Paper feeding/ejecting sequence...
-	*/
+	//
+	// Paper feeding/ejecting sequence...
+	//
 
 	cfWritePrintData("SN\003\000\000\002", 6);
 	putchar(atoi(attr->value));
@@ -429,9 +427,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPSN6", spec)) != NULL && attr->value)
       {
-       /*
-        * Eject delay...
-	*/
+	//
+	// Eject delay...
+	//
 
         cfWritePrintData("SN\003\000\000\006", 6);
         putchar(atoi(attr->value));
@@ -439,9 +437,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPMT", spec)) != NULL && attr->value)
       {
-       /*
-        * Set media type.
-	*/
+	//
+	// Set media type.
+	//
 
 	cfWritePrintData("MT\003\000\000\000", 6);
         putchar(atoi(attr->value));
@@ -449,9 +447,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPPH", spec)) != NULL && attr->value)
       {
-       /*
-        * Set paper thickness.
-        */
+	//
+	// Set paper thickness.
+	//
 
 	cfWritePrintData("PH\002\000\000", 5);
         putchar(atoi(attr->value));
@@ -464,9 +462,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     {
       if ((attr = ppdFindAttr(ppd, "cupsESCPPC", spec)) != NULL && attr->value)
       {
-       /*
-	* Paper check.
-	*/
+	//
+	// Paper check.
+	//
 
 	cfWritePrintData("PC\002\000\000", 5);
         putchar(atoi(attr->value));
@@ -474,9 +472,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPPP", spec)) != NULL && attr->value)
       {
-       /*
-	* Paper path.
-	*/
+	//
+	// Paper path.
+	//
 
         int a, b;
 
@@ -490,9 +488,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPEX", spec)) != NULL && attr->value)
       {
-       /*
-	* Set media position.
-	*/
+	//
+	// Set media position.
+	//
 
 	cfWritePrintData("EX\006\000\000\000\000\000\005", 9);
         putchar(atoi(attr->value));
@@ -501,16 +499,16 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
     if ((attr = ppdFindAttr(ppd, "cupsESCPMS", spec)) != NULL && attr->value)
     {
-     /*
-      * Set media size...
-      */
+      //
+      // Set media size...
+      //
 
       cfWritePrintData("MS\010\000\000", 5);
       putchar(atoi(attr->value));
 
       switch (header->PageSize[1])
       {
-        case 1191 :	/* A3 */
+        case 1191 :	// A3
 	    putchar(0x01);
 	    putchar(0x00);
 	    putchar(0x00);
@@ -518,7 +516,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 1032 :	/* B4 */
+	case 1032 :	// B4
 	    putchar(0x02);
 	    putchar(0x00);
 	    putchar(0x00);
@@ -526,7 +524,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 842 :	/* A4 */
+	case 842 :	// A4
 	    putchar(0x03);
 	    putchar(0x00);
 	    putchar(0x00);
@@ -534,7 +532,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 595 :	/* A4.Transverse */
+	case 595 :	// A4.Transverse
 	    putchar(0x03);
 	    putchar(0x01);
 	    putchar(0x00);
@@ -542,7 +540,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 729 :	/* B5 */
+	case 729 :	// B5
 	    putchar(0x04);
 	    putchar(0x00);
 	    putchar(0x00);
@@ -550,7 +548,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 516 :	/* B5.Transverse */
+	case 516 :	// B5.Transverse
 	    putchar(0x04);
 	    putchar(0x01);
 	    putchar(0x00);
@@ -558,7 +556,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 1369 :	/* Super A3/B */
+	case 1369 :	// Super A3/B
 	    putchar(0x20);
 	    putchar(0x00);
 	    putchar(0x00);
@@ -566,7 +564,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 792 :	/* Letter */
+	case 792 :	// Letter
 	    putchar(0x08);
 	    putchar(0x00);
 	    putchar(0x00);
@@ -574,7 +572,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 612 :	/* Letter.Transverse */
+	case 612 :	// Letter.Transverse
 	    putchar(0x08);
 	    putchar(0x01);
 	    putchar(0x00);
@@ -582,7 +580,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 1004 :	/* Legal */
+	case 1004 :	// Legal
 	    putchar(0x0a);
 	    putchar(0x00);
 	    putchar(0x00);
@@ -590,7 +588,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	case 1224 :	/* Tabloid */
+	case 1224 :	// Tabloid
 	    putchar(0x2d);
 	    putchar(0x00);
 	    putchar(0x00);
@@ -598,7 +596,7 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	    putchar(0x00);
 	    putchar(0x00);
 	    break;
-	default :	/* Custom size */
+	default :	// Custom size
 	    putchar(0xff);
 	    putchar(0xff);
 	    i = 360 * header->PageSize[0] / 72;
@@ -615,28 +613,30 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
     if ((attr = ppdFindAttr(ppd, "cupsESCPAC", spec)) != NULL && attr->value)
     {
-     /*
-      * Enable/disable cutter.
-      */
+      //
+      // Enable/disable cutter.
+      //
 
       cfWritePrintData("AC\002\000\000", 5);
       putchar(atoi(attr->value));
 
-      if ((attr = ppdFindAttr(ppd, "cupsESCPSN80", header->MediaType)) != NULL && attr->value)
+      if ((attr = ppdFindAttr(ppd, "cupsESCPSN80",
+			      header->MediaType)) != NULL && attr->value)
       {
-       /*
-	* Cutting method...
-	*/
+	//
+	// Cutting method...
+	//
 
 	cfWritePrintData("SN\003\000\000\200", 6);
 	putchar(atoi(attr->value));
       }
 
-      if ((attr = ppdFindAttr(ppd, "cupsESCPSN81", header->MediaType)) != NULL && attr->value)
+      if ((attr = ppdFindAttr(ppd, "cupsESCPSN81",
+			      header->MediaType)) != NULL && attr->value)
       {
-       /*
-	* Cutting pressure...
-	*/
+	//
+	// Cutting pressure...
+	//
 
 	cfWritePrintData("SN\003\000\000\201", 6);
 	putchar(atoi(attr->value));
@@ -645,33 +645,33 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
     if ((attr = ppdFindAttr(ppd, "cupsESCPCO", spec)) != NULL && attr->value)
     {
-     /*
-      * Enable/disable cutter.
-      */
+      //
+      // Enable/disable cutter.
+      //
 
       cfWritePrintData("CO\010\000\000\000", 6);
       putchar(atoi(attr->value));
       cfWritePrintData("\000\000\000\000\000", 5);
     }
 
-   /*
-    * Exit remote mode...
-    */
+    //
+    // Exit remote mode...
+    //
 
     cfWritePrintData("\033\000\000\000", 4);
   }
 
- /*
-  * Enter graphics mode...
-  */
+  //
+  // Enter graphics mode...
+  //
 
   cfWritePrintData("\033(G\001\000\001", 6);
 
- /*
-  * Set the line feed increment...
-  */
+  //
+  // Set the line feed increment...
+  //
 
-  /* TODO: get this from the PPD file... */
+  // TODO: get this from the PPD file...
   for (units = 1440; units < header->HWResolution[0]; units *= 2);
 
   if (ppd->model_number & ESCP_EXT_UNITS)
@@ -689,17 +689,17 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     putchar(3600 / header->HWResolution[1]);
   }
 
- /*
-  * Set the page length...
-  */
+  //
+  // Set the page length...
+  //
 
   PrinterLength = header->PageSize[1] * header->HWResolution[1] / 72;
 
   if (ppd->model_number & ESCP_PAGE_SIZE)
   {
-   /*
-    * Set page size (expands bottom margin)...
-    */
+    //
+    // Set page size (expands bottom margin)...
+    //
 
     cfWritePrintData("\033(S\010\000", 5);
 
@@ -722,9 +722,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     putchar(PrinterLength >> 8);
   }
 
- /*
-  * Set the top and bottom margins...
-  */
+  //
+  // Set the top and bottom margins...
+  //
 
   PrinterTop = (int)((ppd->sizes[1].length - ppd->sizes[1].top) *
                      header->HWResolution[1] / 72.0);
@@ -754,33 +754,33 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     putchar(PrinterLength >> 8);
   }
 
- /*
-  * Set the top position...
-  */
+  //
+  // Set the top position...
+  //
 
   cfWritePrintData("\033(V\002\000\000\000", 7);
 
- /*
-  * Enable unidirectional printing depending on the mode...
-  */
+  //
+  // Enable unidirectional printing depending on the mode...
+  //
 
   if ((attr = ppdFindColorAttr(ppd, "cupsESCPDirection", colormodel,
                            header->MediaType, resolution, spec,
 			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033U%c", atoi(attr->value));
 
- /*
-  * Enable/disable microweaving as needed...
-  */
+  //
+  // Enable/disable microweaving as needed...
+  //
 
   if ((attr = ppdFindColorAttr(ppd, "cupsESCPMicroWeave", colormodel,
                            header->MediaType, resolution, spec,
 			   sizeof(spec), logfunc, ld)) != NULL)
     printf("\033(i\001%c%c", 0, atoi(attr->value));
 
- /*
-  * Set the dot size and print speed as needed...
-  */
+  //
+  // Set the dot size and print speed as needed...
+  //
 
   if ((attr = ppdFindColorAttr(ppd, "cupsESCPDotSize", colormodel,
                            header->MediaType, resolution, spec,
@@ -789,31 +789,31 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if (ppd->model_number & ESCP_ESCK)
   {
-   /*
-    * Set the print mode...
-    */
+    //
+    // Set the print mode...
+    //
 
     if (PrinterPlanes == 1)
     {
-     /*
-      * Fast black printing.
-      */
+      //
+      // Fast black printing.
+      //
 
       cfWritePrintData("\033(K\002\000\000\001", 7);
     }
     else
     {
-     /*
-      * Color printing.
-      */
+      //
+      // Color printing.
+      //
 
       cfWritePrintData("\033(K\002\000\000\002", 7);
     }
   }
 
- /*
-  * Get softweave settings from header...
-  */
+  //
+  // Get softweave settings from header...
+  //
 
   if (header->cupsRowCount <= 1)
   {
@@ -833,9 +833,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       DotColStep ++;
   }
 
- /*
-  * Setup softweave parameters...
-  */
+  //
+  // Setup softweave parameters...
+  //
 
   DotRowCurrent = 0;
   DotRowMax     = DotRowCount * DotRowStep;
@@ -856,9 +856,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   if (DotRowMax > 1)
   {
-   /*
-    * Compute offsets for the color jets on the print head...
-    */
+    //
+    // Compute offsets for the color jets on the print head...
+    //
 
     bands = DotRowStep * DotColStep * PrinterPlanes * 4;
 
@@ -866,34 +866,34 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
     if (PrinterPlanes == 1)
     {
-     /*
-      * Use full height of print head...
-      */
+      //
+      // Use full height of print head...
+      //
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPBlack", resolution)) != NULL &&
           attr->value)
       {
-       /*
-        * Use custom black head data...
-	*/
+	//
+	// Use custom black head data...
+	//
 
         sscanf(attr->value, "%d%d", &DotRowCount, &DotRowStep);
       }
     }
     else if (ppd->model_number & ESCP_STAGGER)
     {
-     /*
-      * Use staggered print head...
-      */
+      //
+      // Use staggered print head...
+      //
 
       fputs("DEBUG: Offset head detected...\n", stderr);
 
       if ((attr = ppdFindAttr(ppd, "cupsESCPOffsets", resolution)) != NULL &&
           attr->value)
       {
-       /*
-        * Use only 1/3 of the print head when printing color...
-	*/
+	//
+	// Use only 1/3 of the print head when printing color...
+	//
 
         sscanf(attr->value, "%d%d%d%d", DotRowOffset + 0,
 	       DotRowOffset + 1, DotRowOffset + 2, DotRowOffset + 3);
@@ -903,9 +903,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     for (i = 0; i < PrinterPlanes; i ++)
       fprintf(stderr, "DEBUG: DotRowOffset[%d] = %d\n", i, DotRowOffset[i]);
 
-   /*
-    * Allocate bands...
-    */
+    //
+    // Allocate bands...
+    //
 
     for (i = 0; i < bands; i ++)
     {
@@ -929,17 +929,17 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
     fputs("DEBUG: ----END----\n", stderr);
 
-   /*
-    * Fill the initial bands...
-    */
+    //
+    // Fill the initial bands...
+    //
 
     modrow = DotColStep * DotRowStep;
 
     if (DotRowFeed == 0)
     {
-     /*
-      * Automatically compute the optimal feed value...
-      */
+      //
+      // Automatically compute the optimal feed value...
+      //
 
       DotRowFeed = DotRowCount / DotColStep - DotRowStep;
 
@@ -964,27 +964,27 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
     {
       while (DotBands[subrow][0])
       {
-       /*
-        * This subrow is already used, move to another one...
-	*/
+	//
+	// This subrow is already used, move to another one...
+	//
 
 	subrow = (subrow + 1) % modrow;
       }
 
       for (plane = 0; plane < PrinterPlanes; plane ++)
       {
-       /*
-        * Pull the next available band from the list...
-	*/
+	//
+	// Pull the next available band from the list...
+	//
 
         band                    = DotAvailList;
 	DotAvailList            = DotAvailList->next;
 	DotBands[subrow][plane] = band;
 
-       /*
-        * Start the band in the first few passes, with the number of rows
-	* varying to allow for a nice interleaved pattern...
-	*/
+	//
+	// Start the band in the first few passes, with the number of rows
+	// varying to allow for a nice interleaved pattern...
+	//
 
         band->x     = subrow / DotRowStep;
         band->y     = (subrow % DotRowStep) + DotRowOffset[plane];
@@ -998,7 +998,8 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 	  band->count = DotRowCount;
 
 	fprintf(stderr, "DEBUG: DotBands[%d][%d] = %p, x = %d, y = %d, plane = %d, count = %d\n",
-	        subrow, plane, (void*)band, band->x, band->y, band->plane, band->count);
+	        subrow, plane, (void*)band, band->x, band->y, band->plane,
+		band->count);
       }
 
       subrow = (subrow + DotRowFeed) % modrow;
@@ -1006,9 +1007,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   }
   else
   {
-   /*
-    * Allocate memory for a single line of graphics...
-    */
+    //
+    // Allocate memory for a single line of graphics...
+    //
 
     ptr = calloc(PrinterPlanes, DotBufferSize);
 
@@ -1016,9 +1017,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       DotBuffers[plane] = ptr;
   }
 
- /*
-  * Set the output resolution...
-  */
+  //
+  // Set the output resolution...
+  //
 
   cfWritePrintData("\033(D\004\000", 5);
   putchar(units);
@@ -1026,15 +1027,15 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   putchar(units * DotRowStep / header->HWResolution[1]);
   putchar(units * DotColStep / header->HWResolution[0]);
 
- /*
-  * Set the top of form...
-  */
+  //
+  // Set the top of form...
+  //
 
   OutputFeed = 0;
 
- /*
-  * Allocate buffers as needed...
-  */
+  //
+  // Allocate buffers as needed...
+  //
 
   PixelBuffer      = malloc(header->cupsBytesPerLine);
   InputBuffer      = malloc(header->cupsWidth * PrinterPlanes * 2);
@@ -1050,31 +1051,31 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 }
 
 
-/*
- * 'EndPage()' - Finish a page of graphics.
- */
+//
+// 'EndPage()' - Finish a page of graphics.
+//
 
 void
-EndPage(ppd_file_t         *ppd,	/* I - PPD file */
-        cups_page_header2_t *header)	/* I - Page header */
+EndPage(ppd_file_t         *ppd,	// I - PPD file
+        cups_page_header2_t *header)	// I - Page header
 {
-  int		i;			/* Looping var */
-  cups_weave_t	*band,			/* Current band */
-		*next;			/* Next band in list */
-  int		plane;			/* Current plane */
-  int		subrow;			/* Current subrow */
-  int		subrows;		/* Number of subrows */
+  int		i;			// Looping var
+  cups_weave_t	*band,			// Current band
+		*next;			// Next band in list
+  int		plane;			// Current plane
+  int		subrow;			// Current subrow
+  int		subrows;		// Number of subrows
 
 
- /*
-  * Output the last bands of print data as necessary...
-  */
+  //
+  // Output the last bands of print data as necessary...
+  //
 
   if (DotRowMax > 1)
   {
-   /*
-    * Move the remaining bands to the used or avail lists...
-    */
+    //
+    // Move the remaining bands to the used or avail lists...
+    //
 
     subrows = DotRowStep * DotColStep;
 
@@ -1083,9 +1084,9 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
       {
         if (DotBands[subrow][plane]->dirty)
 	{
-	 /*
-	  * Insert into the used list...
-	  */
+	  //
+	  // Insert into the used list...
+	  //
 
           DotBands[subrow][plane]->count = DotBands[subrow][plane]->row;
 
@@ -1093,9 +1094,9 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
 	}
 	else
 	{
-	 /*
-	  * Nothing here, so move it to the available list...
-	  */
+	  //
+	  // Nothing here, so move it to the available list...
+	  //
 
 	  DotBands[subrow][plane]->next = DotAvailList;
 	  DotAvailList                  = DotBands[subrow][plane];
@@ -1104,9 +1105,9 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
 	DotBands[subrow][plane] = NULL;
       }
 
-   /*
-    * Loop until all bands are written...
-    */
+    //
+    // Loop until all bands are written...
+    //
 
     fputs("DEBUG: Pointer list at end of page...\n", stderr);
 
@@ -1130,9 +1131,9 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
       free(band);
     }
 
-   /*
-    * Free memory for the available bands, if any...
-    */
+    //
+    // Free memory for the available bands, if any...
+    //
 
     for (band = DotAvailList; band != NULL; band = next)
     {
@@ -1151,15 +1152,15 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
     DotBuffers[0] = NULL;
   }
 
- /*
-  * Output a page eject sequence...
-  */
+  //
+  // Output a page eject sequence...
+  //
 
   putchar(12);
 
- /*
-  * Free memory for the page...
-  */
+  //
+  // Free memory for the page...
+  //
 
   for (i = 0; i < PrinterPlanes; i ++)
   {
@@ -1183,51 +1184,51 @@ EndPage(ppd_file_t         *ppd,	/* I - PPD file */
 }
 
 
-/*
- * 'Shutdown()' - Shutdown a printer.
- */
+//
+// 'Shutdown()' - Shutdown a printer.
+//
 
 void
-Shutdown(ppd_file_t *ppd)		/* I - PPD file */
+Shutdown(ppd_file_t *ppd)		// I - PPD file
 {
- /*
-  * Reset the printer...
-  */
+  //
+  // Reset the printer...
+  //
 
   printf("\033@");
 
   if (ppd->model_number & ESCP_REMOTE)
   {
-   /*
-    * Go into remote mode...
-    */
+    //
+    // Go into remote mode...
+    //
 
     cfWritePrintData("\033(R\010\000\000REMOTE1", 13);
 
-   /*
-    * LoadXS defaults...
-    */
+    //
+    // LoadXS defaults...
+    //
 
     cfWritePrintData("LD\000\000", 4);
 
-   /*
-    * Exit remote mode...
-    */
+    //
+    // Exit remote mode...
+    //
 
     cfWritePrintData("\033\000\000\000", 4);
   }
 }
 
 
-/*
- * 'AddBand()' - Add a band of data to the used list.
- */
+//
+// 'AddBand()' - Add a band of data to the used list.
+//
 
 void
-AddBand(cups_weave_t *band)			/* I - Band to add */
+AddBand(cups_weave_t *band)			// I - Band to add
 {
-  cups_weave_t	*current,			/* Current band */
-		*prev;				/* Previous band */
+  cups_weave_t	*current,			// Current band
+		*prev;				// Previous band
 
 
   if (band->count < 1)
@@ -1244,9 +1245,9 @@ AddBand(cups_weave_t *band)			/* I - Band to add */
 
   if (current != NULL)
   {
-   /*
-    * Insert the band...
-    */
+    //
+    // Insert the band...
+    //
 
     band->next    = current;
     band->prev    = prev;
@@ -1259,9 +1260,9 @@ AddBand(cups_weave_t *band)			/* I - Band to add */
   }
   else if (prev != NULL)
   {
-   /*
-    * Append the band to the end...
-    */
+    //
+    // Append the band to the end...
+    //
 
     band->prev = prev;
     prev->next = band;
@@ -1269,9 +1270,9 @@ AddBand(cups_weave_t *band)			/* I - Band to add */
   }
   else
   {
-   /*
-    * First band in list...
-    */
+    //
+    // First band in list...
+    // 
 
     DotUsedList = band;
     band->prev  = NULL;
@@ -1280,12 +1281,12 @@ AddBand(cups_weave_t *band)			/* I - Band to add */
 }
 
 
-/*
- * 'CancelJob()' - Cancel the current job...
- */
+//
+// 'CancelJob()' - Cancel the current job...
+//
 
 void
-CancelJob(int sig)			/* I - Signal */
+CancelJob(int sig)			// I - Signal
 {
   (void)sig;
 
@@ -1293,55 +1294,55 @@ CancelJob(int sig)			/* I - Signal */
 }
 
 
-/*
- * 'CompressData()' - Compress a line of graphics.
- */
+//
+// 'CompressData()' - Compress a line of graphics.
+//
 
 void
-CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
-             const unsigned char *line,	/* I - Data to compress */
-             const int           length,/* I - Number of bytes */
-	     int                 plane,	/* I - Color plane */
-	     int                 type,	/* I - Type of compression */
-	     const int           rows,	/* I - Number of lines to write */
-	     const int           xstep,	/* I - Spacing between columns */
-	     const int           ystep,	/* I - Spacing between lines */
-	     const int           offset)/* I - Head offset */
+CompressData(ppd_file_t          *ppd,	// I - PPD file information
+             const unsigned char *line,	// I - Data to compress
+             const int           length,// I - Number of bytes
+	     int                 plane,	// I - Color plane
+	     int                 type,	// I - Type of compression
+	     const int           rows,	// I - Number of lines to write
+	     const int           xstep,	// I - Spacing between columns
+	     const int           ystep,	// I - Spacing between lines
+	     const int           offset)// I - Head offset
 {
   register const unsigned char *line_ptr,
-					/* Current byte pointer */
-        	*line_end,		/* End-of-line byte pointer */
-        	*start;			/* Start of compression sequence */
-  register unsigned char *comp_ptr;	/* Pointer into compression buffer */
-  register int  count;			/* Count of bytes for output */
-  register int	bytes;			/* Number of bytes per row */
-  static int	ctable[7][7] =		/* Colors */
+					// Current byte pointer
+        	*line_end,		// End-of-line byte pointer
+        	*start;			// Start of compression sequence
+  register unsigned char *comp_ptr;	// Pointer into compression buffer
+  register int  count;			// Count of bytes for output
+  register int	bytes;			// Number of bytes per row
+  static int	ctable[7][7] =		// Colors
 		{
-		  {  0,  0,  0,  0,  0,  0,  0 },	/* K */
-		  {  0, 16,  0,  0,  0,  0,  0 },	/* Kk */
-		  {  2,  1,  4,  0,  0,  0,  0 },	/* CMY */
-		  {  2,  1,  4,  0,  0,  0,  0 },	/* CMYK */
+		  {  0,  0,  0,  0,  0,  0,  0 },	// K
+		  {  0, 16,  0,  0,  0,  0,  0 },	// Kk
+		  {  2,  1,  4,  0,  0,  0,  0 },	// CMY
+		  {  2,  1,  4,  0,  0,  0,  0 },	// CMYK
 		  {  0,  0,  0,  0,  0,  0,  0 },
-		  {  2, 18,  1, 17,  4,  0,  0 },	/* CcMmYK */
-		  {  2, 18,  1, 17,  4,  0, 16 },	/* CcMmYKk */
+		  {  2, 18,  1, 17,  4,  0,  0 },	// CcMmYK
+		  {  2, 18,  1, 17,  4,  0, 16 },	// CcMmYKk
 		};
 
 
   switch (type)
   {
     case 0 :
-       /*
-	* Do no compression...
-	*/
+        //
+	// Do no compression...
+        //
 
 	line_ptr = (const unsigned char *)line;
 	line_end = (const unsigned char *)line + length;
 	break;
 
     default :
-       /*
-        * Do TIFF pack-bits encoding...
-        */
+        //
+        // Do TIFF pack-bits encoding...
+        //
 
 	line_ptr = (const unsigned char *)line;
 	line_end = (const unsigned char *)line + length;
@@ -1351,18 +1352,18 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
 	{
 	  if ((line_ptr + 1) >= line_end)
 	  {
-	   /*
-	    * Single byte on the end...
-	    */
+	    //
+	    // Single byte on the end...
+	    //
 
 	    *comp_ptr++ = 0x00;
 	    *comp_ptr++ = *line_ptr++;
 	  }
 	  else if (line_ptr[0] == line_ptr[1])
 	  {
-	   /*
-	    * Repeated sequence...
-	    */
+	    //
+	    // Repeated sequence...
+	    //
 
 	    line_ptr ++;
 	    count = 2;
@@ -1380,9 +1381,9 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
 	  }
 	  else
 	  {
-	   /*
-	    * Non-repeated sequence...
-	    */
+	    //
+	    // Non-repeated sequence...
+	    //
 
 	    start    = line_ptr;
 	    line_ptr ++;
@@ -1417,9 +1418,9 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
 	break;
   }
 
- /*
-  * Position the print head...
-  */
+  //
+  // Position the print head...
+  //
 
   putchar(0x0d);
 
@@ -1434,17 +1435,17 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
     putchar(offset >> 8);
   }
 
- /*
-  * Send the graphics...
-  */
+  //
+  // Send the graphics...
+  //
 
   bytes = length / rows;
 
   if (ppd->model_number & ESCP_RASTER_ESCI)
   {
-   /*
-    * Send graphics with ESC i command.
-    */
+    //
+    // Send graphics with ESC i command.
+    //
 
     printf("\033i");
     putchar(ctable[PrinterPlanes - 1][plane]);
@@ -1457,9 +1458,9 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
   }
   else
   {
-   /*
-    * Set the color if necessary...
-    */
+    //
+    // Set the color if necessary...
+    //
 
     if (PrinterPlanes > 1)
     {
@@ -1471,9 +1472,9 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
 	printf("\033r%c", plane);
     }
 
-   /*
-    * Send graphics with ESC . command.
-    */
+    //
+    // Send graphics with ESC . command.
+    //
 
     bytes *= 8;
 
@@ -1490,22 +1491,22 @@ CompressData(ppd_file_t          *ppd,	/* I - PPD file information */
 }
 
 
-/*
- * 'OutputBand()' - Output a band of graphics.
- */
+//
+// 'OutputBand()' - Output a band of graphics.
+//
 
 void
-OutputBand(ppd_file_t         *ppd,	/* I - PPD file */
-           cups_page_header2_t *header,	/* I - Page header */
-           cups_weave_t       *band)	/* I - Current band */
+OutputBand(ppd_file_t         *ppd,	// I - PPD file
+           cups_page_header2_t *header,	// I - Page header
+           cups_weave_t       *band)	// I - Current band
 {
-  int	xstep,				/* Spacing between columns */
-	ystep;				/* Spacing between rows */
+  int	xstep,				// Spacing between columns
+	ystep;				// Spacing between rows
 
 
- /*
-  * Interleaved ESC/P2 graphics...
-  */
+  //
+  // Interleaved ESC/P2 graphics...
+  //
 
   OutputFeed    = band->y - DotRowCurrent;
   DotRowCurrent = band->y;
@@ -1513,16 +1514,16 @@ OutputBand(ppd_file_t         *ppd,	/* I - PPD file */
   fprintf(stderr, "DEBUG: Printing band %p, x = %d, y = %d, plane = %d, count = %d, OutputFeed = %d\n",
           (void*)band, band->x, band->y, band->plane, band->count, OutputFeed);
 
- /*
-  * Compute step values...
-  */
+  //
+  // Compute step values...
+  //
 
   xstep = 3600 * DotColStep / header->HWResolution[0];
   ystep = 3600 * DotRowStep / header->HWResolution[1];
 
- /*
-  * Output the band...
-  */
+  //
+  // Output the band...
+  //
 
   if (OutputFeed > 0)
   {
@@ -1536,52 +1537,52 @@ OutputBand(ppd_file_t         *ppd,	/* I - PPD file */
   CompressData(ppd, band->buffer, band->count * DotBufferSize, band->plane,
 	       header->cupsCompression, band->count, xstep, ystep, band->x);
 
- /*
-  * Clear the band...
-  */
+  //
+  // Clear the band...
+  //
 
   memset(band->buffer, 0, band->count * DotBufferSize);
   band->dirty = 0;
 
- /*
-  * Flush the output buffers...
-  */
+  //
+  // Flush the output buffers...
+  //
 
   fflush(stdout);
 }
 
 
-/*
- * 'ProcessLine()' - Read graphics from the page stream and output as needed.
- */
+//
+// 'ProcessLine()' - Read graphics from the page stream and output as needed.
+//
 
 void
-ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
-            cups_raster_t      *ras,	/* I - Raster stream */
-            cups_page_header2_t *header,	/* I - Page header */
-            const int          y)	/* I - Current scanline */
+ProcessLine(ppd_file_t         *ppd,	// I - PPD file
+            cups_raster_t      *ras,	// I - Raster stream
+            cups_page_header2_t *header,	// I - Page header
+            const int          y)	// I - Current scanline
 {
-  int		plane,			/* Current color plane */
-		width,			/* Width of line */
-		subwidth,		/* Width of interleaved row */
-		subrow,			/* Subrow for interleaved output */
-		offset,			/* Offset to current line */
-		pass,			/* Pass number */
-		xstep,			/* X step value */
-		ystep;			/* Y step value */
-  cups_weave_t	*band;			/* Current band */
+  int		plane,			// Current color plane
+		width,			// Width of line
+		subwidth,		// Width of interleaved row
+		subrow,			// Subrow for interleaved output
+		offset,			// Offset to current line
+		pass,			// Pass number
+		xstep,			// X step value
+		ystep;			// Y step value
+  cups_weave_t	*band;			// Current band
 
 
- /*
-  * Read a row of graphics...
-  */
+  //
+  // Read a row of graphics...
+  //
 
   if (!cupsRasterReadPixels(ras, PixelBuffer, header->cupsBytesPerLine))
     return;
 
- /*
-  * Perform the color separation...
-  */
+  //
+  // Perform the color separation...
+  //
 
   width    = header->cupsWidth;
   subwidth = header->cupsWidth / DotColStep;
@@ -1620,9 +1621,9 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
 	break;
   }
 
- /*
-  * Dither the pixels...
-  */
+  //
+  // Dither the pixels...
+  //
 
   for (plane = 0; plane < PrinterPlanes; plane ++)
   {
@@ -1631,9 +1632,9 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
 
     if (DotRowMax == 1)
     {
-     /*
-      * Handle microweaved output...
-      */
+      //
+      // Handle microweaved output...
+      //
 
       if (cfCheckBytes(OutputBuffers[plane], width))
 	continue;
@@ -1659,17 +1660,17 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
     }
     else
     {
-     /*
-      * Handle softweaved output...
-      */
+      //
+      // Handle softweaved output...
+      //
 
       for (pass = 0, subrow = y % DotRowStep;
            pass < DotColStep;
 	   pass ++, subrow += DotRowStep)
       {
-       /*
-	* See if we need to output the band...
-	*/
+	//
+	// See if we need to output the band...
+	//
 
         band   = DotBands[subrow][plane];
 	offset = band->row * DotBufferSize;
@@ -1687,15 +1688,15 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
 	{
 	  if (band->dirty)
 	  {
-	   /*
-	    * Dirty band needs to be added to the used list...
-	    */
+	    //
+	    // Dirty band needs to be added to the used list...
+	    //
 
 	    AddBand(band);
 
-           /*
-	    * Then find a new band...
-	    */
+	    //
+	    // Then find a new band...
+	    //
 
 	    if (DotAvailList == NULL)
 	    {
@@ -1722,9 +1723,9 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
 	  }
 	  else
 	  {
-	   /*
-	    * This band isn't dirty, so reuse it...
-	    */
+	    //
+	    // This band isn't dirty, so reuse it...
+	    //
 
             fprintf(stderr, "DEBUG: Blank band %p, x = %d, y = %d, plane = %d, count = %d\n",
 	            (void*)band, band->x, band->y, band->plane, band->count);
@@ -1743,44 +1744,44 @@ ProcessLine(ppd_file_t         *ppd,	/* I - PPD file */
 }
 
 
-/*
- * 'main()' - Main entry and processing of driver.
- */
+//
+// 'main()' - Main entry and processing of driver.
+//
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments */
-     char *argv[])			/* I - Command-line arguments */
+int					// O - Exit status
+main(int  argc,				// I - Number of command-line arguments
+     char *argv[])			// I - Command-line arguments
 {
-  int			fd;		/* File descriptor */
+  int			fd;		// File descriptor
   int empty = 1;
-  cups_raster_t		*ras;		/* Raster stream for printing */
-  cups_page_header2_t	header;		/* Page header from file */
-  int			page;		/* Current page */
-  int			y;		/* Current line */
-  ppd_file_t		*ppd;		/* PPD file */
-  int			num_options;	/* Number of options */
-  cups_option_t		*options;	/* Options */
+  cups_raster_t		*ras;		// Raster stream for printing
+  cups_page_header2_t	header;		// Page header from file
+  int			page;		// Current page
+  int			y;		// Current line
+  ppd_file_t		*ppd;		// PPD file
+  int			num_options;	// Number of options
+  cups_option_t		*options;	// Options
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+  struct sigaction action;		// Actions for POSIX signals
+#endif // HAVE_SIGACTION && !HAVE_SIGSET
 
 
- /*
-  * Log function for the library functions, standard CUPS logging to stderr...
-  */
+  //
+  // Log function for the library functions, standard CUPS logging to stderr...
+  //
 
   logfunc = cfCUPSLogFunc;
   ld = NULL;
 
- /*
-  * Make sure status messages are not buffered...
-  */
+  //
+  // Make sure status messages are not buffered...
+  //
 
   setbuf(stderr, NULL);
 
- /*
-  * Check command-line...
-  */
+  //
+  // Check command-line...
+  //
 
   if (argc < 6 || argc > 7)
   {
@@ -1791,16 +1792,16 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   num_options = cupsParseOptions(argv[5], 0, &options);
 
- /*
-  * Open the PPD file...
-  */
+  //
+  // Open the PPD file...
+  //
 
   ppd = ppdOpenFile(getenv("PPD"));
 
   if (!ppd)
   {
-    ppd_status_t	status;		/* PPD error */
-    int			linenum;	/* Line number */
+    ppd_status_t	status;		// PPD error
+    int			linenum;	// Line number
 
     fputs("ERROR: The PPD file could not be opened.\n", stderr);
 
@@ -1814,9 +1815,9 @@ main(int  argc,				/* I - Number of command-line arguments */
   ppdMarkDefaults(ppd);
   ppdMarkOptions(ppd, num_options, options);
 
- /*
-  * Open the page stream...
-  */
+  //
+  // Open the page stream...
+  //
 
   if (argc == 7)
   {
@@ -1831,14 +1832,14 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   ras = cupsRasterOpen(fd, CUPS_RASTER_READ);
 
- /*
-  * Register a signal handler to eject the current page if the
-  * job is cancelled.
-  */
+  //
+  // Register a signal handler to eject the current page if the
+  // job is cancelled.
+  //
 
   Canceled = 0;
 
-#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
+#ifdef HAVE_SIGSET // Use System V signals over POSIX to avoid bugs
   sigset(SIGTERM, CancelJob);
 #elif defined(HAVE_SIGACTION)
   memset(&action, 0, sizeof(action));
@@ -1848,25 +1849,26 @@ main(int  argc,				/* I - Number of command-line arguments */
   sigaction(SIGTERM, &action, NULL);
 #else
   signal(SIGTERM, CancelJob);
-#endif /* HAVE_SIGSET */
+#endif // HAVE_SIGSET
 
- /*
-  * Process pages as needed...
-  */
+  //
+  // Process pages as needed...
+  //
 
   page = 0;
 
   while (cupsRasterReadHeader2(ras, &header))
   {
-   /*
-    * Write a status message with the page number and number of copies.
-    */
+    //
+    // Write a status message with the page number and number of copies.
+    //
 
     if (empty)
     {
-     /*
-      * Initialize the print device...
-      */
+      //
+      // Initialize the print device...
+      //
+
       Setup(ppd);
       empty = 0;
     }
@@ -1883,9 +1885,9 @@ main(int  argc,				/* I - Number of command-line arguments */
 
     for (y = 0; y < header.cupsHeight; y ++)
     {
-     /*
-      * Let the user know how far we have progressed...
-      */
+      //
+      // Let the user know how far we have progressed...
+      //
 
       if (Canceled)
 	break;
@@ -1898,16 +1900,16 @@ main(int  argc,				/* I - Number of command-line arguments */
 		100 * y / header.cupsHeight);
       }
 
-     /*
-      * Read and write a line of graphics or whitespace...
-      */
+      //
+      // Read and write a line of graphics or whitespace...
+      //
 
       ProcessLine(ppd, ras, &header, y);
     }
 
-   /*
-    * Eject the page...
-    */
+    //
+    // Eject the page...
+    //
 
     fprintf(stderr, "INFO: Finished page %d.\n", page);
 
@@ -1937,4 +1939,3 @@ main(int  argc,				/* I - Number of command-line arguments */
   }
   return (page == 0);
 }
-

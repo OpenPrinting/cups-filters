@@ -1,6 +1,15 @@
-/*
- * Include necessary headers...
- */
+//
+// Legacy CUPS filter wrapper for cfFilterTextToPDF() for cups-filters.
+//
+// Copyright © 2020-2022 by OpenPrinting.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
+//
+// Include necessary headers...
+//
 
 #include <cupsfilters/filter.h>
 #include <ppd/ppd-filter.h>
@@ -8,37 +17,39 @@
 #include <fontconfig/fontconfig.h>
 #include <config.h>
 
-/*
- * Local globals...
- */
 
-static int		JobCanceled = 0;/* Set to 1 on SIGTERM */
+//
+// Local globals...
+//
+
+static int		JobCanceled = 0; // Set to 1 on SIGTERM
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static void		cancel_job(int sig);
 
-/*
- * 'main()' - Main entry and processing of driver.
- */
 
-int		   /* O - Exit status */
-main(int  argc,	   /* I - Number of command-line arguments */
-     char *argv[]) /* I - Command-line arguments */
+//
+// 'main()' - Main entry and processing of driver.
+//
+
+int		   // O - Exit status
+main(int  argc,	   // I - Number of command-line arguments
+     char *argv[]) // I - Command-line arguments
 {
   int           ret;
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+  struct sigaction action;		// Actions for POSIX signals
+#endif // HAVE_SIGACTION && !HAVE_SIGSET
 
- /*
-  * Register a signal handler to cleanly cancel a job.
-  */
+  //
+  // Register a signal handler to cleanly cancel a job.
+  // 
 
-#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
+#ifdef HAVE_SIGSET // Use System V signals over POSIX to avoid bugs
   sigset(SIGTERM, cancel_job);
 #elif defined(HAVE_SIGACTION)
   memset(&action, 0, sizeof(action));
@@ -48,32 +59,34 @@ main(int  argc,	   /* I - Number of command-line arguments */
   sigaction(SIGTERM, &action, NULL);
 #else
   signal(SIGTERM, cancel_job);
-#endif /* HAVE_SIGSET */
+#endif // HAVE_SIGSET
 
- /*
-  * Fire up the ppdFilterTextToPDF() filter function
-  */
- cf_filter_texttopdf_parameter_t parameters;
- char *p;
+  //
+  // Fire up the cfFilterTextToPDF() filter function
+  //
 
- if ((p = getenv("CUPS_DATADIR")) != NULL)
-   parameters.data_dir = p;
- else
-   parameters.data_dir = CUPS_DATADIR;
- if ((p = getenv("CHARSET")) != NULL)
-   parameters.char_set = p;
- else
-   parameters.char_set = NULL;
- if ((p = getenv("CONTENT_TYPE")) != NULL)
-   parameters.content_type = p;
- else
-   parameters.content_type = NULL;
- if ((p = getenv("CLASSIFICATION")) != NULL)
-   parameters.classification = p;
- else
-   parameters.classification = NULL;
+  cf_filter_texttopdf_parameter_t parameters;
+  char *p;
 
-  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterTextToPDF, &parameters, &JobCanceled);
+  if ((p = getenv("CUPS_DATADIR")) != NULL)
+    parameters.data_dir = p;
+  else
+    parameters.data_dir = CUPS_DATADIR;
+  if ((p = getenv("CHARSET")) != NULL)
+    parameters.char_set = p;
+  else
+    parameters.char_set = NULL;
+  if ((p = getenv("CONTENT_TYPE")) != NULL)
+    parameters.content_type = p;
+  else
+    parameters.content_type = NULL;
+  if ((p = getenv("CLASSIFICATION")) != NULL)
+    parameters.classification = p;
+  else
+    parameters.classification = NULL;
+
+  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterTextToPDF, &parameters,
+			     &JobCanceled);
 
   if (ret)
     fprintf(stderr, "ERROR: texttopdf filter function failed.\n");
@@ -82,12 +95,12 @@ main(int  argc,	   /* I - Number of command-line arguments */
 }
 
 
-/*
- * 'cancel_job()' - Flag the job as canceled.
- */
+//
+// 'cancel_job()' - Flag the job as canceled.
+//
 
 static void
-cancel_job(int sig)			/* I - Signal number (unused) */
+cancel_job(int sig)			// I - Signal number (unused)
 {
   (void)sig;
 

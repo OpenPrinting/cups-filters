@@ -1,4 +1,18 @@
 //
+// Legacy CUPS filter wrapper for cfFilterExternal() and
+// ppdFilterExternalCUPS() for cups-filters.
+//
+// Primarily for testing and debugging. CUPS filters which can be called
+// by these filter functions can also be called directly instead of this
+// wrapper.
+//
+// Copyright © 2020-2022 by OpenPrinting.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
+//
 // Include necessary headers...
 //
 
@@ -6,6 +20,7 @@
 #include <ppd/ppd-filter.h>
 #include <signal.h>
 #include <config.h>
+
 
 //
 // Local globals...
@@ -20,8 +35,9 @@ static int		JobCanceled = 0; // Set to 1 on SIGTERM
 
 static void		cancel_job(int sig);
 
+
 //
-// 'main()' - Main entry and processing of driver.
+// 'main()' - Main entry.
 //
 
 int		   // O - Exit status

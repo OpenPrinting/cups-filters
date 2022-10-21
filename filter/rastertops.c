@@ -1,65 +1,53 @@
-/*
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * @brief Convert PWG Raster to a PostScript file
- * @file rastertops.c
- * @author Pranjal Bhor <bhor.pranjal@gmail.com> (C) 2016
- * @author Neil 'Superna' Armstrong <superna9999@gmail.com> (C) 2010
- * @author Tobias Hoffmann <smilingthax@gmail.com> (c) 2012
- * @author Till Kamppeter <till.kamppeter@gmail.com> (c) 2014
- */
+//
+// Legacy CUPS filter wrapper for ppdFilterRasterToPS() for cups-filters.
+//
+// Copyright © 2020-2022 by OpenPrinting.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers...
- */
+//
+// Include necessary headers...
+//
 
 #include <cupsfilters/filter.h>
 #include <ppd/ppd-filter.h>
 #include <signal.h>
 
-/*
- * Local globals...
- */
 
-static int		JobCanceled = 0;/* Set to 1 on SIGTERM */
+//
+// Local globals...
+//
+
+static int		JobCanceled = 0; // Set to 1 on SIGTERM
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static void		cancel_job(int sig);
 
 
-/*
- * 'main()' - Main entry and processing of driver.
- */
+//
+// 'main()' - Main entry and processing of driver.
+//
 
-int		   /* O - Exit status */
-main(int  argc,	   /* I - Number of command-line arguments */
-     char *argv[]) /* I - Command-line arguments */
+int		   // O - Exit status
+main(int  argc,	   // I - Number of command-line arguments
+     char *argv[]) // I - Command-line arguments
 {
   int           ret;
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+  struct sigaction action;		// Actions for POSIX signals
+#endif // HAVE_SIGACTION && !HAVE_SIGSET
 
- /*
-  * Register a signal handler to cleanly cancel a job.
-  */
+  //
+  // Register a signal handler to cleanly cancel a job.
+  //
 
-#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
+#ifdef HAVE_SIGSET // Use System V signals over POSIX to avoid bugs
   sigset(SIGTERM, cancel_job);
 #elif defined(HAVE_SIGACTION)
   memset(&action, 0, sizeof(action));
@@ -69,11 +57,11 @@ main(int  argc,	   /* I - Number of command-line arguments */
   sigaction(SIGTERM, &action, NULL);
 #else
   signal(SIGTERM, cancel_job);
-#endif /* HAVE_SIGSET */
+#endif // HAVE_SIGSET
 
- /*
-  * Fire up the cfFilterRasterToPS() filter function
-  */
+  //
+  // Fire up the ppdFilterRasterToPS() filter function
+  //
 
   ret = ppdFilterCUPSWrapper(argc, argv, ppdFilterRasterToPS, NULL,
 			     &JobCanceled);
@@ -85,15 +73,14 @@ main(int  argc,	   /* I - Number of command-line arguments */
 }
 
 
-/*
- * 'cancel_job()' - Flag the job as canceled.
- */
+//
+// 'cancel_job()' - Flag the job as canceled.
+//
 
 static void
-cancel_job(int sig)			/* I - Signal number (unused) */
+cancel_job(int sig)			// I - Signal number (unused)
 {
   (void)sig;
 
   JobCanceled = 1;
 }
-
