@@ -1,24 +1,22 @@
-/*
- *   Serial port backend for CUPS.
- *
- *   Copyright 2007-2011 by Apple Inc.
- *   Copyright 1997-2007 by Easy Software Products, all rights reserved.
- *
- *   These coded instructions, statements, and computer programs are the
- *   property of Apple Inc. and are protected by Federal copyright
- *   law.  Distribution and use rights are outlined in the file "COPYING"
- *   which should have been included with this file.
- *
- * Contents:
- *
- *   main()         - Send a file to the printer or server.
- *   list_devices() - List all serial devices.
- *   side_cb()      - Handle side-channel requests...
- */
+//
+// Serial port backend for cups-filters.
+//
+// Copyright 2007-2011 by Apple Inc.
+// Copyright 1997-2007 by Easy Software Products, all rights reserved.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+// Contents:
+//
+//   main()         - Send a file to the printer or server.
+//   list_devices() - List all serial devices.
+//   side_cb()      - Handle side-channel requests...
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include <config.h>
 #include <cups/cups.h>
@@ -34,92 +32,92 @@
 #include <sys/select.h>
 #ifdef HAVE_SYS_IOCTL_H
 #  include <sys/ioctl.h>
-#endif /* HAVE_SYS_IOCTL_H */
+#endif // HAVE_SYS_IOCTL_H
 
 #ifndef CRTSCTS
 #  ifdef CNEW_RTSCTS
 #    define CRTSCTS CNEW_RTSCTS
 #  else
 #    define CRTSCTS 0
-#  endif /* CNEW_RTSCTS */
-#endif /* !CRTSCTS */
+#  endif // CNEW_RTSCTS
+#endif // !CRTSCTS
 
 #if defined(__APPLE__)
 #  include <CoreFoundation/CoreFoundation.h>
 #  include <IOKit/IOKitLib.h>
 #  include <IOKit/serial/IOSerialKeys.h>
 #  include <IOKit/IOBSD.h>
-#endif /* __APPLE__ */
+#endif // __APPLE__
 
 #if defined(__linux) && defined(TIOCGSERIAL)
 #  include <linux/serial.h>
 #  include <linux/ioctl.h>
-#endif /* __linux && TIOCGSERIAL */
+#endif // __linux && TIOCGSERIAL
 
 
-/*
- * Local functions...
- */
+//
+// Local functions...
+//
 
 static int	drain_output(int print_fd, int device_fd);
 static void	list_devices(void);
 static int	side_cb(int print_fd, int device_fd, int use_bc);
 
 
-/*
- * 'main()' - Send a file to the printer or server.
- *
- * Usage:
- *
- *    printer-uri job-id user title copies options [file]
- */
+//
+// 'main()' - Send a file to the printer or server.
+//
+// Usage:
+//
+//    printer-uri job-id user title copies options [file]
+//
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
-     char *argv[])			/* I - Command-line arguments */
+int					// O - Exit status
+main(int  argc,				// I - Number of command-line arguments (6 or 7)
+     char *argv[])			// I - Command-line arguments
 {
-  char		method[255],		/* Method in URI */
-		hostname[1024],		/* Hostname */
-		username[255],		/* Username info (not used) */
-		resource[1024],		/* Resource info (device and options) */
-		*options,		/* Pointer to options */
-		*name,			/* Name of option */
-		*value,			/* Value of option */
-		sep;			/* Option separator */
-  int		port;			/* Port number (not used) */
-  int		copies;			/* Number of copies to print */
-  int		side_eof = 0,		/* Saw EOF on side-channel? */
-		print_fd,		/* Print file */
-		device_fd;		/* Serial device */
-  int		nfds;			/* Maximum file descriptor value + 1 */
-  fd_set	input,			/* Input set for reading */
-		output;			/* Output set for writing */
-  ssize_t	print_bytes,		/* Print bytes read */
-		bc_bytes,		/* Backchannel bytes read */
-		total_bytes,		/* Total bytes written */
-		bytes;			/* Bytes written */
-  int		dtrdsr;			/* Do dtr/dsr flow control? */
-  int		print_size;		/* Size of output buffer for writes */
-  char		print_buffer[8192],	/* Print data buffer */
-		*print_ptr,		/* Pointer into print data buffer */
-		bc_buffer[1024];	/* Back-channel data buffer */
-  struct termios opts;			/* Serial port options */
-  struct termios origopts;		/* Original port options */
+  char		method[255],		// Method in URI
+		hostname[1024],		// Hostname
+		username[255],		// Username info (not used)
+		resource[1024],		// Resource info (device and options)
+		*options,		// Pointer to options
+		*name,			// Name of option
+		*value,			// Value of option
+		sep;			// Option separator
+  int		port;			// Port number (not used)
+  int		copies;			// Number of copies to print
+  int		side_eof = 0,		// Saw EOF on side-channel?
+		print_fd,		// Print file
+		device_fd;		// Serial device
+  int		nfds;			// Maximum file descriptor value + 1
+  fd_set	input,			// Input set for reading
+		output;			// Output set for writing
+  ssize_t	print_bytes,		// Print bytes read
+		bc_bytes,		// Backchannel bytes read
+		total_bytes,		// Total bytes written
+		bytes;			// Bytes written
+  int		dtrdsr;			// Do dtr/dsr flow control?
+  int		print_size;		// Size of output buffer for writes
+  char		print_buffer[8192],	// Print data buffer
+		*print_ptr,		// Pointer into print data buffer
+		bc_buffer[1024];	// Back-channel data buffer
+  struct termios opts;			// Serial port options
+  struct termios origopts;		// Original port options
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
-  char		print_sleep = 0;	/* Print first sleep flag on every transmit */
+  struct sigaction action;		// Actions for POSIX signals
+#endif // HAVE_SIGACTION && !HAVE_SIGSET
+  char		print_sleep = 0;	// Print first sleep flag on every transmit
 
 
- /*
-  * Make sure status messages are not buffered...
-  */
+  //
+  // Make sure status messages are not buffered...
+  //
 
   setbuf(stderr, NULL);
 
- /*
-  * Ignore SIGPIPE signals...
-  */
+  //
+  // Ignore SIGPIPE signals...
+  //
 
 #ifdef HAVE_SIGSET
   sigset(SIGPIPE, SIG_IGN);
@@ -129,11 +127,11 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
   sigaction(SIGPIPE, &action, NULL);
 #else
   signal(SIGPIPE, SIG_IGN);
-#endif /* HAVE_SIGSET */
+#endif // HAVE_SIGSET
 
- /*
-  * Check command-line...
-  */
+  //
+  // Check command-line...
+  //
 
   if (argc == 1)
   {
@@ -147,10 +145,10 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
     return (CUPS_BACKEND_FAILED);
   }
 
- /*
-  * If we have 7 arguments, print the file named on the command-line.
-  * Otherwise, send stdin instead...
-  */
+  //
+  // If we have 7 arguments, print the file named on the command-line.
+  // Otherwise, send stdin instead...
+  //
 
   if (argc == 6)
   {
@@ -159,9 +157,9 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
   }
   else
   {
-   /*
-    * Try to open the print file...
-    */
+    //
+    // Try to open the print file...
+    //
 
     if ((print_fd = open(argv[6], O_RDONLY)) < 0)
     {
@@ -172,32 +170,32 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
     copies = atoi(argv[4]);
   }
 
- /*
-  * Extract the device name and options from the URI...
-  */
+  //
+  // Extract the device name and options from the URI...
+  //
 
   httpSeparateURI(HTTP_URI_CODING_ALL, cupsBackendDeviceURI(argv),
                   method, sizeof(method), username, sizeof(username),
 		  hostname, sizeof(hostname), &port,
 		  resource, sizeof(resource));
 
- /*
-  * See if there are any options...
-  */
+  //
+  // See if there are any options...
+  //
 
   if ((options = strchr(resource, '?')) != NULL)
   {
-   /*
-    * Yup, terminate the device name string and move to the first
-    * character of the options...
-    */
+    //
+    // Yup, terminate the device name string and move to the first
+    // character of the options...
+    //
 
     *options++ = '\0';
   }
 
- /*
-  * Open the serial port device...
-  */
+  //
+  // Open the serial port device...
+  //
 
   fputs("STATE: +connecting-to-device\n", stderr);
 
@@ -208,19 +206,19 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
     {
       if (getenv("CLASS") != NULL)
       {
-       /*
-        * If the CLASS environment variable is set, the job was submitted
-	* to a class and not to a specific queue.  In this case, we want
-	* to abort immediately so that the job can be requeued on the next
-	* available printer in the class.
-	*/
+	//
+        // If the CLASS environment variable is set, the job was submitted
+        // to a class and not to a specific queue.  In this case, we want
+	// to abort immediately so that the job can be requeued on the next
+	// available printer in the class.
+	//
 
         fputs("INFO: Unable to contact printer, queuing on next printer in "
               "class.\n", stderr);
 
-       /*
-        * Sleep 5 seconds to keep the job from requeuing too rapidly...
-	*/
+	//
+        // Sleep 5 seconds to keep the job from requeuing too rapidly...
+	//
 
 	sleep(5);
 
@@ -243,27 +241,27 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 
   fputs("STATE: -connecting-to-device\n", stderr);
 
- /*
-  * Set any options provided...
-  */
+  //
+  // Set any options provided...
+  //
 
   tcgetattr(device_fd, &origopts);
   tcgetattr(device_fd, &opts);
 
   opts.c_lflag &= ~(ICANON | ECHO | ISIG);
-					/* Raw mode */
-  opts.c_oflag &= ~OPOST;		/* Don't post-process */
+					// Raw mode
+  opts.c_oflag &= ~OPOST;		// Don't post-process
 
-  print_size = 96;			/* 9600 baud / 10 bits/char / 10Hz */
-  dtrdsr     = 0;			/* No dtr/dsr flow control */
+  print_size = 96;			// 9600 baud / 10 bits/char / 10Hz
+  dtrdsr     = 0;			// No dtr/dsr flow control
 
   if (options)
   {
     while (*options)
     {
-     /*
-      * Get the name...
-      */
+      //
+      // Get the name...
+      //
 
       name = options;
 
@@ -275,9 +273,9 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 
       if (sep == '=')
       {
-       /*
-        * Get the value...
-	*/
+	//
+        // Get the value...
+	//
 
         value = options;
 
@@ -290,15 +288,15 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
       else
         value = (char *)"";
 
-     /*
-      * Process the option...
-      */
+      //
+      // Process the option...
+      //
 
       if (!strcasecmp(name, "baud"))
       {
-       /*
-        * Set the baud rate...
-	*/
+	//
+        // Set the baud rate...
+	//
 
         print_size = atoi(value) / 100;
 
@@ -337,30 +335,30 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	      cfsetispeed(&opts, B57600);
 	      cfsetospeed(&opts, B57600);
 	      break;
-#  endif /* B57600 */
+#  endif // B57600
 #  ifdef B115200
 	  case 115200 :
 	      cfsetispeed(&opts, B115200);
 	      cfsetospeed(&opts, B115200);
 	      break;
-#  endif /* B115200 */
+#  endif // B115200
 #  ifdef B230400
 	  case 230400 :
 	      cfsetispeed(&opts, B230400);
 	      cfsetospeed(&opts, B230400);
 	      break;
-#  endif /* B230400 */
+#  endif // B230400
           default :
 	      fprintf(stderr, "WARNING: Unsupported baud rate: %s\n", value);
 	      break;
 	}
-#endif /* B19200 == 19200 */
+#endif // B19200 == 19200
       }
       else if (!strcasecmp(name, "bits"))
       {
-       /*
-        * Set number of data bits...
-	*/
+	//
+        // Set number of data bits...
+	//
 
         switch (atoi(value))
 	{
@@ -379,9 +377,9 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
       }
       else if (!strcasecmp(name, "parity"))
       {
-       /*
-	* Set parity checking...
-	*/
+	//
+	// Set parity checking...
+	//
 
 	if (!strcasecmp(value, "even"))
 	{
@@ -397,9 +395,9 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	  opts.c_cflag &= ~PARENB;
 	else if (!strcasecmp(value, "space"))
 	{
-	 /*
-	  * Note: we only support space parity with 7 bits per character...
-	  */
+	  //
+	  // Note: we only support space parity with 7 bits per character...
+	  //
 
 	  opts.c_cflag &= ~CSIZE;
           opts.c_cflag |= CS8;
@@ -407,10 +405,10 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
         }
 	else if (!strcasecmp(value, "mark"))
 	{
-	 /*
-	  * Note: we only support mark parity with 7 bits per character
-	  * and 1 stop bit...
-	  */
+	  //
+	  // Note: we only support mark parity with 7 bits per character
+	  // and 1 stop bit...
+	  //
 
 	  opts.c_cflag &= ~CSIZE;
           opts.c_cflag |= CS7;
@@ -420,9 +418,9 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
       }
       else if (!strcasecmp(name, "flow"))
       {
-       /*
-	* Set flow control...
-	*/
+	//
+	// Set flow control...
+	//
 
 	if (!strcasecmp(value, "none"))
 	{
@@ -467,16 +465,16 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
   tcsetattr(device_fd, TCSANOW, &opts);
   fcntl(device_fd, F_SETFL, 0);
 
- /*
-  * Now that we are "connected" to the port, ignore SIGTERM so that we
-  * can finish out any page data the driver sends (e.g. to eject the
-  * current page...  Only ignore SIGTERM if we are printing data from
-  * stdin (otherwise you can't cancel raw jobs...)
-  */
+  //
+  // Now that we are "connected" to the port, ignore SIGTERM so that we
+  // can finish out any page data the driver sends (e.g. to eject the
+  // current page...  Only ignore SIGTERM if we are printing data from
+  // stdin (otherwise you can't cancel raw jobs...)
+  //
 
   if (!print_fd)
   {
-#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
+#ifdef HAVE_SIGSET // Use System V signals over POSIX to avoid bugs
     sigset(SIGTERM, SIG_IGN);
 #elif defined(HAVE_SIGACTION)
     memset(&action, 0, sizeof(action));
@@ -486,21 +484,21 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
     sigaction(SIGTERM, &action, NULL);
 #else
     signal(SIGTERM, SIG_IGN);
-#endif /* HAVE_SIGSET */
+#endif // HAVE_SIGSET
   }
 
- /*
-  * Figure out the maximum file descriptor value to use with select()...
-  */
+  //
+  // Figure out the maximum file descriptor value to use with select()...
+  //
 
   nfds = (print_fd > device_fd ? print_fd : device_fd) + 1;
 
- /*
-  * Finally, send the print file.  Ordinarily we would just use the
-  * backendRunLoop() function, however since we need to use smaller
-  * writes and may need to do DSR/DTR flow control, we duplicate much
-  * of the code here instead...
-  */
+  //
+  // Finally, send the print file.  Ordinarily we would just use the
+  // backendRunLoop() function, however since we need to use smaller
+  // writes and may need to do DSR/DTR flow control, we duplicate much
+  // of the code here instead...
+  //
 
   if (print_size > sizeof(print_buffer))
     print_size = sizeof(print_buffer);
@@ -517,15 +515,15 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
       lseek(print_fd, 0, SEEK_SET);
     }
 
-   /*
-    * Now loop until we are out of data from print_fd...
-    */
+    //
+    // Now loop until we are out of data from print_fd...
+    //
 
     for (print_bytes = 0, print_ptr = print_buffer;;)
     {
-     /*
-      * Use select() to determine whether we have data to copy around...
-      */
+      //
+      // Use select() to determine whether we have data to copy around...
+      //
 
       FD_ZERO(&input);
       if (!print_bytes)
@@ -539,27 +537,27 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	FD_SET(device_fd, &output);
 
       if (select(nfds, &input, &output, NULL, NULL) < 0)
-	continue;			/* Ignore errors here */
+	continue;			// Ignore errors here
 
-     /*
-      * Check if we have a side-channel request ready...
-      */
+      //
+      // Check if we have a side-channel request ready...
+      //
 
       if (FD_ISSET(CUPS_SC_FD, &input))
       {
-       /*
-	* Do the side-channel request, then start back over in the select
-	* loop since it may have read from print_fd...
-	*/
+	//
+	// Do the side-channel request, then start back over in the select
+	// loop since it may have read from print_fd...
+	//
 
         if (side_cb(print_fd, device_fd, 1))
 	  side_eof = 1;
 	continue;
       }
 
-     /*
-      * Check if we have back-channel data ready...
-      */
+      //
+      // Check if we have back-channel data ready...
+      //
 
       if (FD_ISSET(device_fd, &input))
       {
@@ -571,17 +569,17 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	}
       }
 
-     /*
-      * Check if we have print data ready...
-      */
+      //
+      // Check if we have print data ready...
+      //
 
       if (FD_ISSET(print_fd, &input))
       {
 	if ((print_bytes = read(print_fd, print_buffer, print_size)) < 0)
 	{
-	 /*
-          * Read error - bail if we don't see EAGAIN or EINTR...
-	  */
+	  //
+          // Read error - bail if we don't see EAGAIN or EINTR...
+	  //
 
 	  if (errno != EAGAIN && errno != EINTR)
 	  {
@@ -601,9 +599,9 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	}
 	else if (print_bytes == 0)
 	{
-	 /*
-          * End of file, break out of the loop...
-	  */
+	  //
+          // End of file, break out of the loop...
+	  //
 
           break;
 	}
@@ -611,18 +609,18 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	print_ptr = print_buffer;
       }
 
-     /*
-      * Check if the device is ready to receive data and we have data to
-      * send...
-      */
+      //
+      // Check if the device is ready to receive data and we have data to
+      // send...
+      //
 
       if (print_bytes && FD_ISSET(device_fd, &output))
       {
 	if (dtrdsr)
 	{
-	 /*
-	  * Check the port and sleep until DSR is set...
-	  */
+	  //
+	  // Check the port and sleep until DSR is set...
+	  //
 
 	  int status;
 
@@ -630,17 +628,17 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 	  if (!ioctl(device_fd, TIOCMGET, &status))
             if (!(status & TIOCM_DSR))
 	    {
-	     /*
-	      * Wait for DSR to go high...
-	      */
+	      //
+	      // Wait for DSR to go high...
+	      //
 
 	      fputs("DEBUG: DSR is low; waiting for device.\n", stderr);
 
               do
 	      {
-	       /*
-	        * Poll every 100ms...
-		*/
+		//
+	        // Poll every 100ms...
+		//
 
 		usleep(100000);
 
@@ -653,10 +651,11 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
             }
 	}
 
-	/*
-        * on every transmit need to wait a little
-		* even though the DSR is OK for some unknown reasons.
-	*/
+	//
+	// On every transmit need to wait a little
+	// even though the DSR is OK for some unknown reasons.
+	//
+
 	if (print_sleep == 0)
 	{
 		usleep(10000);
@@ -665,9 +664,9 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 
 	if ((bytes = write(device_fd, print_ptr, print_bytes)) < 0)
 	{
-	 /*
-          * Write error - bail if we don't see an error we can retry...
-	  */
+	  //
+          // Write error - bail if we don't see an error we can retry...
+	  //
 
 	  if (errno != EAGAIN && errno != EINTR && errno != ENOTTY)
 	  {
@@ -696,9 +695,9 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
     }
   }
 
- /*
-  * Close the serial port and input file and return...
-  */
+  //
+  // Close the serial port and input file and return...
+  //
 
   tcsetattr(device_fd, TCSADRAIN, &origopts);
 
@@ -711,38 +710,38 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
 }
 
 
-/*
- * 'drain_output()' - Drain pending print data to the device.
- */
+//
+// 'drain_output()' - Drain pending print data to the device.
+//
 
-static int				/* O - 0 on success, -1 on error */
-drain_output(int print_fd,		/* I - Print file descriptor */
-             int device_fd)		/* I - Device file descriptor */
+static int				// O - 0 on success, -1 on error
+drain_output(int print_fd,		// I - Print file descriptor
+             int device_fd)		// I - Device file descriptor
 {
-  int		nfds;			/* Maximum file descriptor value + 1 */
-  fd_set	input;			/* Input set for reading */
-  ssize_t	print_bytes,		/* Print bytes read */
-		bytes;			/* Bytes written */
-  char		print_buffer[8192],	/* Print data buffer */
-		*print_ptr;		/* Pointer into print data buffer */
-  struct timeval timeout;		/* Timeout for read... */
+  int		nfds;			// Maximum file descriptor value + 1
+  fd_set	input;			// Input set for reading
+  ssize_t	print_bytes,		// Print bytes read
+		bytes;			// Bytes written
+  char		print_buffer[8192],	// Print data buffer
+		*print_ptr;		// Pointer into print data buffer
+  struct timeval timeout;		// Timeout for read...
 
 
- /*
-  * Figure out the maximum file descriptor value to use with select()...
-  */
+ //
+ // Figure out the maximum file descriptor value to use with select()...
+ //
 
   nfds = (print_fd > device_fd ? print_fd : device_fd) + 1;
 
- /*
-  * Now loop until we are out of data from print_fd...
-  */
+  //
+  // Now loop until we are out of data from print_fd...
+  //
 
   for (;;)
   {
-   /*
-    * Use select() to determine whether we have data to copy around...
-    */
+    //
+    // Use select() to determine whether we have data to copy around...
+    //
 
     FD_ZERO(&input);
     FD_SET(print_fd, &input);
@@ -759,9 +758,9 @@ drain_output(int print_fd,		/* I - Print file descriptor */
     if ((print_bytes = read(print_fd, print_buffer,
 			    sizeof(print_buffer))) < 0)
     {
-     /*
-      * Read error - bail if we don't see EAGAIN or EINTR...
-      */
+      //
+      // Read error - bail if we don't see EAGAIN or EINTR...
+      //
 
       if (errno != EAGAIN && errno != EINTR)
       {
@@ -773,9 +772,9 @@ drain_output(int print_fd,		/* I - Print file descriptor */
     }
     else if (print_bytes == 0)
     {
-     /*
-      * End of file, return...
-      */
+      //
+      // End of file, return...
+      //
 
       return (0);
     }
@@ -787,9 +786,9 @@ drain_output(int print_fd,		/* I - Print file descriptor */
     {
       if ((bytes = write(device_fd, print_ptr, print_bytes)) < 0)
       {
-       /*
-        * Write error - bail if we don't see an error we can retry...
-	*/
+	//
+        // Write error - bail if we don't see an error we can retry...
+	//
 
         if (errno != ENOSPC && errno != ENXIO && errno != EAGAIN &&
 	    errno != EINTR && errno != ENOTTY)
@@ -810,28 +809,28 @@ drain_output(int print_fd,		/* I - Print file descriptor */
 }
 
 
-/*
- * 'list_devices()' - List all serial devices.
- */
+//
+// 'list_devices()' - List all serial devices.
+//
 
 static void
 list_devices(void)
 {
 #if defined(__sun) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
   static char	*funky_hex = "0123456789abcdefghijklmnopqrstuvwxyz";
-					/* Funky hex numbering used for some *
-					 * devices                           */
-#endif /* __sun || __FreeBSD__ || __OpenBSD__ || __FreeBSD_kernel__ */
+					// Funky hex numbering used for some *
+					 * devices                          
+#endif // __sun || __FreeBSD__ || __OpenBSD__ || __FreeBSD_kernel__
 
 
 #ifdef __linux
-  int			i, j;		/* Looping vars */
-  int			fd;		/* File descriptor */
-  char			device[255];	/* Device filename */
-  char			info[255];	/* Device info/description */
+  int			i, j;		// Looping vars
+  int			fd;		// File descriptor
+  char			device[255];	// Device filename
+  char			info[255];	// Device info/description
 #  ifdef TIOCGSERIAL
-  struct serial_struct	serinfo;	/* serial port info */
-#  endif /* TIOCGSERIAL */
+  struct serial_struct	serinfo;	// serial port info
+#  endif // TIOCGSERIAL
 
 
   for (i = 0; i < 100; i ++)
@@ -841,9 +840,9 @@ list_devices(void)
     if ((fd = open(device, O_WRONLY | O_NOCTTY | O_NDELAY)) >= 0)
     {
 #  ifdef TIOCGSERIAL
-     /*
-      * See if this port exists...
-      */
+      //
+      // See if this port exists...
+      //
 
       serinfo.reserved_char[0] = 0;
 
@@ -851,15 +850,15 @@ list_devices(void)
       {
 	if (serinfo.type == PORT_UNKNOWN)
 	{
-	 /*
-	  * Nope...
-	  */
+	  //
+	  // Nope...
+	  //
 
 	  close(fd);
 	  continue;
 	}
       }
-#  endif /* TIOCGSERIAL */
+#  endif // TIOCGSERIAL
 
       close(fd);
 
@@ -869,7 +868,7 @@ list_devices(void)
       printf("serial serial:%s?baud=230400 \"Unknown\" \"%s\"\n", device, info);
 #  else
       printf("serial serial:%s?baud=115200 \"Unknown\" \"%s\"\n", device, info);
-#  endif /* _ARCH_PPC || powerpc || __powerpc */
+#  endif // _ARCH_PPC || powerpc || __powerpc
     }
   }
 
@@ -907,14 +906,14 @@ list_devices(void)
     }
   }
 #elif defined(__sun)
-  int		i, j, n;		/* Looping vars */
-  char		device[255];		/* Device filename */
-  char		info[255];		/* Device info/description */
+  int		i, j, n;		// Looping vars
+  char		device[255];		// Device filename
+  char		info[255];		// Device info/description
 
 
- /*
-  * Standard serial ports...
-  */
+  //
+  // Standard serial ports...
+  //
 
   for (i = 0; i < 26; i ++)
   {
@@ -927,13 +926,13 @@ list_devices(void)
       printf("serial serial:%s?baud=115200 \"Unknown\" \"%s\"\n", device, info);
 #  else
       printf("serial serial:%s?baud=38400 \"Unknown\" \"%s\"\n", device, info);
-#  endif /* B115200 */
+#  endif // B115200
     }
   }
 
- /*
-  * MAGMA serial ports...
-  */
+  //
+  // MAGMA serial ports...
+  //
 
   for (i = 0; i < 40; i ++)
   {
@@ -943,15 +942,15 @@ list_devices(void)
              device, (i / 10) + 1, (i % 10) + 1);
   }
 
- /*
-  * Central Data serial ports...
-  */
+  //
+  // Central Data serial ports...
+  //
 
   for (i = 0; i < 9; i ++)
     for (j = 0; j < 8; j ++)
       for (n = 0; n < 32; n ++)
       {
-        if (i == 8)	/* EtherLite */
+        if (i == 8)	// EtherLite
           sprintf(device, "/dev/sts/ttyN%d%c", j, funky_hex[n]);
         else
           sprintf(device, "/dev/sts/tty%c%d%c", i + 'C', j,
@@ -968,15 +967,15 @@ list_devices(void)
 	}
       }
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
-  int	i, j;				/* Looping vars */
-  int	fd;				/* File descriptor */
-  char	device[255];			/* Device filename */
-  char	info[255];			/* Device info/description */
+  int	i, j;				// Looping vars
+  int	fd;				// File descriptor
+  char	device[255];			// Device filename
+  char	info[255];			// Device info/description
 
 
- /*
-  * SIO ports...
-  */
+  //
+  // SIO ports...
+  //
 
   for (i = 0; i < 32; i ++)
   {
@@ -991,11 +990,11 @@ list_devices(void)
     }
   }
 
- /*
-  * Cyclades ports...
-  */
+  //
+  // Cyclades ports...
+  //
 
-  for (i = 0; i < 16; i ++) /* Should be up to 65536 boards... */
+  for (i = 0; i < 16; i ++) // Should be up to 65536 boards...
     for (j = 0; j < 32; j ++)
     {
       sprintf(device, "/dev/ttyc%d%c", i, funky_hex[j]);
@@ -1015,11 +1014,11 @@ list_devices(void)
       }
     }
 
- /*
-  * Digiboard ports...
-  */
+  //
+  // Digiboard ports...
+  //
 
-  for (i = 0; i < 16; i ++) /* Should be up to 65536 boards... */
+  for (i = 0; i < 16; i ++) // Should be up to 65536 boards...
     for (j = 0; j < 32; j ++)
     {
       sprintf(device, "/dev/ttyD%d%c", i, funky_hex[j]);
@@ -1031,9 +1030,9 @@ list_devices(void)
       }
     }
 
- /*
-  * Stallion ports...
-  */
+  //
+  // Stallion ports...
+  //
 
   for (i = 0; i < 32; i ++)
   {
@@ -1046,9 +1045,9 @@ list_devices(void)
     }
   }
 
- /*
-  * SX ports...
-  */
+  //
+  // SX ports...
+  //
 
   for (i = 0; i < 128; i ++)
   {
@@ -1061,15 +1060,15 @@ list_devices(void)
     }
   }
 #elif defined(__NetBSD__)
-  int	i, j;				/* Looping vars */
-  int	fd;				/* File descriptor */
-  char	device[255];			/* Device filename */
-  char	info[255];			/* Device info/description */
+  int	i, j;				// Looping vars
+  int	fd;				// File descriptor
+  char	device[255];			// Device filename
+  char	info[255];			// Device info/description
 
 
- /*
-  * Standard serial ports...
-  */
+  //
+  // Standard serial ports...
+  //
 
   for (i = 0; i < 4; i ++)
   {
@@ -1084,11 +1083,11 @@ list_devices(void)
     }
   }
 
- /*
-  * Cyclades-Z ports...
-  */
+  //
+  // Cyclades-Z ports...
+  //
 
-  for (i = 0; i < 16; i ++) /* Should be up to 65536 boards... */
+  for (i = 0; i < 16; i ++) // Should be up to 65536 boards...
     for (j = 0; j < 64; j ++)
     {
       sprintf(device, "/dev/ttyCZ%02d%02d", i, j);
@@ -1100,9 +1099,9 @@ list_devices(void)
       }
     }
 #elif defined(__APPLE__)
- /*
-  * Standard serial ports on MacOS X...
-  */
+  //
+  // Standard serial ports on MacOS X...
+  //
 
   kern_return_t			kernResult;
   mach_port_t			masterPort;
@@ -1115,9 +1114,9 @@ list_devices(void)
   if (KERN_SUCCESS != kernResult)
     return;
 
- /*
-  * Serial devices are instances of class IOSerialBSDClient.
-  */
+  //
+  // Serial devices are instances of class IOSerialBSDClient.
+  //
 
   classesToMatch = IOServiceMatching(kIOSerialBSDServiceValue);
   if (classesToMatch != NULL)
@@ -1139,7 +1138,7 @@ list_devices(void)
 	Boolean		result;
 
 
-	/* Check if hidden... */
+	// Check if hidden...
 	hiddenVal = IORegistryEntrySearchCFProperty(serialService,
 						    kIOServicePlane,
 						    CFSTR("HiddenPort"),
@@ -1147,7 +1146,7 @@ list_devices(void)
 						    kIORegistryIterateRecursively |
 						    kIORegistryIterateParents);
 	if (hiddenVal)
-	  CFRelease(hiddenVal);	/* This interface should not be used */
+	  CFRelease(hiddenVal);	// This interface should not be used
 	else
 	{
 	  serialNameAsCFString =
@@ -1185,9 +1184,9 @@ list_devices(void)
 	IOObjectRelease(serialService);
       }
 
-     /*
-      * Release the iterator.
-      */
+      //
+      // Release the iterator.
+      //
 
       IOObjectRelease(serialPortIterator);
     }
@@ -1196,19 +1195,19 @@ list_devices(void)
 }
 
 
-/*
- * 'side_cb()' - Handle side-channel requests...
- */
+//
+// 'side_cb()' - Handle side-channel requests...
+//
 
-static int				/* O - 0 on success, -1 on error */
-side_cb(int print_fd,			/* I - Print file */
-        int device_fd,			/* I - Device file */
-	int use_bc)			/* I - Using back-channel? */
+static int				// O - 0 on success, -1 on error
+side_cb(int print_fd,			// I - Print file
+        int device_fd,			// I - Device file
+	int use_bc)			// I - Using back-channel?
 {
-  cups_sc_command_t	command;	/* Request command */
-  cups_sc_status_t	status;		/* Request/response status */
-  char			data[2048];	/* Request/response data */
-  int			datalen;	/* Request/response data size */
+  cups_sc_command_t	command;	// Request command
+  cups_sc_status_t	status;		// Request/response status
+  char			data[2048];	// Request/response data
+  int			datalen;	// Request/response data size
 
 
   datalen = sizeof(data);

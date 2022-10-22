@@ -1,23 +1,21 @@
-/*
- * beh ("Backend Error Handler") wrapper backend to extend the possibilities
- * of handling errors of backends.
- *
- * Copyright 2015 by Till Kamppeter
- *
- * This is based on dnssd.c of CUPS
- * dnssd.c copyright notice is follows:
- *
- * Copyright 2008-2015 by Apple Inc.
- *
- * These coded instructions, statements, and computer programs are the
- * property of Apple Inc. and are protected by Federal copyright
- * law.  Distribution and use rights are outlined in the file "COPYING"
- * which should have been included with this file.
- */
+//
+// beh ("Backend Error Handler") wrapper backend to extend the possibilities
+// of handling errors of backends.
+//
+// Copyright 2015 by Till Kamppeter
+//
+// This is based on dnssd.c of CUPS
+// dnssd.c copyright notice is as follows:
+//
+// Copyright 2008-2015 by Apple Inc.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
-/*
- * Include necessary headers.
- */
+//
+// Include necessary headers.
+//
 
 #include <config.h>
 #include <cups/cups.h>
@@ -29,42 +27,45 @@
 #include <string.h>
 #include <errno.h>
 
-/*
- * Local globals...
- */
 
-static int		job_canceled = 0; /* Set to 1 on SIGTERM */
+//
+// Local globals...
+//
 
-/*
- * Local functions...
- */
+static int		job_canceled = 0; // Set to 1 on SIGTERM
+
+
+//
+// Local functions...
+//
 
 static int		call_backend(char *uri, int argc, char **argv,
 				     char *tempfile);
 static void		sigterm_handler(int sig);
 
 
-/*
- * 'main()' - Browse for printers.
- */
+//
+// 'main()' - Browse for printers.
+//
 
-int					/* O - Exit status */
-main(int  argc,				/* I - Number of command-line args */
-     char *argv[]) {			/* I - Command-line arguments */
+int					// O - Exit status
+main(int  argc,				// I - Number of command-line args
+     char *argv[])			// I - Command-line arguments
+{
   char *uri, *ptr, *filename;
   char tmpfilename[1024], buf[8192];
   int dd, att, delay, retval;
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
-  struct sigaction action;		/* Actions for POSIX signals */
-#endif /* HAVE_SIGACTION && !HAVE_SIGSET */
+  struct sigaction action;		// Actions for POSIX signals
+#endif // HAVE_SIGACTION && !HAVE_SIGSET
 
- /*
-  * Don't buffer stderr, and catch SIGTERM...
-  */
+  //
+  // Don't buffer stderr, and catch SIGTERM...
+  //
 
   setbuf(stderr, NULL);
 
-#ifdef HAVE_SIGSET /* Use System V signals over POSIX to avoid bugs */
+#ifdef HAVE_SIGSET // Use System V signals over POSIX to avoid bugs
   sigset(SIGTERM, sigterm_handler);
 #elif defined(HAVE_SIGACTION)
   memset(&action, 0, sizeof(action));
@@ -74,13 +75,14 @@ main(int  argc,				/* I - Number of command-line args */
   sigaction(SIGTERM, &action, NULL);
 #else
   signal(SIGTERM, sigterm_handler);
-#endif /* HAVE_SIGSET */
+#endif // HAVE_SIGSET
 
- /*
-  * Check command-line...
-  */
+  //
+  // Check command-line...
+  //
 
-  if (argc == 1) {
+  if (argc == 1)
+  {
     if ((ptr = strrchr(argv[0], '/')) != NULL)
       ptr ++;
     else
@@ -88,26 +90,30 @@ main(int  argc,				/* I - Number of command-line args */
     printf("network %s \"Unknown\" \"Backend Error Handler\"\n",
 	   ptr);
     return (CUPS_BACKEND_OK);
-  } else if (argc < 6) {
+  }
+  else if (argc < 6)
+  {
     fprintf(stderr,
 	    "Usage: %s job-id user title copies options [file]\n",
 	    argv[0]);
     return (CUPS_BACKEND_FAILED);
   }
 
- /*
-  * Read out the parameters
-  */
+  //
+  // Read out the parameters
+  //
 
   uri = getenv("DEVICE_URI");
-  if (!uri) {
+  if (!uri)
+  {
     fprintf(stderr,
 	    "ERROR: No device URI supplied!");
     return (CUPS_BACKEND_FAILED);
   }
 
   ptr = strstr(uri, ":/");
-  if (!ptr) goto bad_uri;
+  if (!ptr)
+    goto bad_uri;
   ptr += 2;
   if (*ptr == '0')
     dd = 0;
@@ -116,31 +122,37 @@ main(int  argc,				/* I - Number of command-line args */
   else
     goto bad_uri;
   ptr ++;
-  if (*ptr != '/') goto bad_uri;
+  if (*ptr != '/')
+    goto bad_uri;
   ptr ++;
   att = 0;
-  while (isdigit(*ptr)) {
+  while (isdigit(*ptr))
+  {
     att = att * 10 + (int)(*ptr) - 48;
     ptr ++;
   }
-  if (*ptr != '/') goto bad_uri;
+  if (*ptr != '/')
+    goto bad_uri;
   ptr ++;
   delay = 0;
-  while (isdigit(*ptr)) {
+  while (isdigit(*ptr))
+  {
     delay = delay * 10 + (int)(*ptr) - 48;
     ptr ++;
   }
-  if (*ptr != '/') goto bad_uri;
+  if (*ptr != '/')
+    goto bad_uri;
   ptr ++;
   fprintf(stderr,
 	  "DEBUG: beh: Don't disable: %d; Attempts: %d; Delay: %d; Destination URI: %s\n",
 	  dd, att, delay, ptr);
 
- /*
-  * If reading from stdin, write everything into a temporary file
-  */
+  //
+  // If reading from stdin, write everything into a temporary file
+  //
 
-  if (argc == 6) {
+  if (argc == 6)
+  {
     char *tmpdir;
     int fd;
     FILE *tmpfile;
@@ -151,7 +163,8 @@ main(int  argc,				/* I - Number of command-line args */
       tmpdir = "/tmp";
     snprintf(tmpfilename, sizeof(tmpfilename), "%s/beh-XXXXXX", tmpdir);
     fd = mkstemp(tmpfilename);
-    if (fd < 0) {
+    if (fd < 0)
+    {
       fprintf(stderr,
 	      "ERROR: beh: Could not create temporary file: %s\n",
 	      strerror(errno));
@@ -163,19 +176,23 @@ main(int  argc,				/* I - Number of command-line args */
     fclose(tmpfile);
 		    
     filename = tmpfilename;
-  } else {
+  }
+  else
+  {
     tmpfilename[0] = '\0';
     filename = argv[6];
   }
 
- /*
-  * Do it!
-  */
+  //
+  // Do it!
+  //
 
   while ((retval = call_backend(ptr, argc, argv, filename)) !=
 	 CUPS_BACKEND_OK &&
-	 !job_canceled) {
-    if (att > 0) {
+	 !job_canceled)
+  {
+    if (att > 0)
+    {
       att --;
       if (att == 0)
 	break;
@@ -187,18 +204,18 @@ main(int  argc,				/* I - Number of command-line args */
   if (strlen(tmpfilename) > 0)
     unlink(tmpfilename);
 
- /*
-  * Return the exit value of the backend only if requested
-  */
+  //
+  // Return the exit value of the backend only if requested
+  //
 
   if (!dd)
     return (retval);
   else
     return (CUPS_BACKEND_OK);
 
- /*
-  * Error handling
-  */
+  //
+  // Error handling
+  //
 
  bad_uri:
 
@@ -208,25 +225,26 @@ main(int  argc,				/* I - Number of command-line args */
 }
 
 
-/*
- * 'call_backend()' - Execute the command line of the destination backend
- */
+//
+// 'call_backend()' - Execute the command line of the destination backend
+//
 
 static int
-call_backend(char *uri,                 /* I - URI of final destination */
-	     int  argc,                 /* I - Number of command line
-	                                       arguments */
-	     char **argv,		/* I - Command-line arguments */
-	     char *filename) {          /* I - File name of input data */
-  const char	*cups_serverbin;	/* Location of programs */
-  char		scheme[1024],           /* Scheme from URI */
-                *ptr,			/* Pointer into scheme */
-		cmdline[65536];		/* Backend command line */
+call_backend(char *uri,                 // I - URI of final destination
+	     int  argc,                 // I - Number of command line
+	                                //     arguments
+	     char **argv,		// I - Command-line arguments
+	     char *filename)            // I - File name of input data
+{
+  const char	*cups_serverbin;	// Location of programs
+  char		scheme[1024],           // Scheme from URI
+                *ptr,			// Pointer into scheme
+		cmdline[65536];		// Backend command line
   int           retval;
 
- /*
-  * Build the backend command line...
-  */
+  //
+  // Build the backend command line...
+  //
 
   strncpy(scheme, uri, sizeof(scheme) - 1);
   if (strlen(uri) > 1023)
@@ -237,24 +255,26 @@ call_backend(char *uri,                 /* I - URI of final destination */
   if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
     cups_serverbin = CUPS_SERVERBIN;
 
-  if (!strncasecmp(uri, "file:", 5) || uri[0] == '/') {
+  if (!strncasecmp(uri, "file:", 5) || uri[0] == '/')
+  {
     fprintf(stderr,
 	    "ERROR: beh: Direct output into a file not supported.\n");
     exit (CUPS_BACKEND_FAILED);
-  } else
+  }
+  else
     snprintf(cmdline, sizeof(cmdline),
 	     "%s/backend/%s '%s' '%s' '%s' '%s' '%s' %s",
 	     cups_serverbin, scheme, argv[1], argv[2], argv[3],
-	     /* Apply number of copies only if beh was called with a
-		file name and not with the print data in stdin, as
-	        backends should handle copies only if they are called
-	        with a file name */
+	     // Apply number of copies only if beh was called with a
+	     // file name and not with the print data in stdin, as
+	     // backends should handle copies only if they are called
+	     // with a file name
 	     (argc == 6 ? "1" : argv[4]),
 	     argv[5], filename);
 
- /*
-  * Overwrite the device URI and run the actual backend...
-  */
+  //
+  // Overwrite the device URI and run the actual backend...
+  //
 
   setenv("DEVICE_URI", uri, 1);
 
@@ -275,12 +295,13 @@ call_backend(char *uri,                 /* I - URI of final destination */
 }
 
 
-/*
- * 'sigterm_handler()' - Handle termination signals.
- */
+//
+// 'sigterm_handler()' - Handle termination signals.
+//
 
 static void
-sigterm_handler(int sig) {		/* I - Signal number (unused) */
+sigterm_handler(int sig)		// I - Signal number (unused)
+{
   (void)sig;
 
   fprintf(stderr,
