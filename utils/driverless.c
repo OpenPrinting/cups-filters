@@ -537,17 +537,18 @@ int list_printers(int mode, int reg_type_no, int isFax)
   }
 
   resolve_services(service_uri_list_ipps, service_uri_list_ipp, resolve_callback_ptr);
-
-  for (int i = 0; i < cupsArrayCount(service_uri_list_ipps) && reg_type_no >= 1; i++)
+ 
+  for (int j = 0; j < cupsArrayCount(service_uri_list_ipps) && reg_type_no >= 1; j++)
   {
     listPrintersInArrayV2(2, mode, isFax,
-                          (avahi_srv_t *)cupsArrayIndex(service_uri_list_ipps, i));
+                          (avahi_srv_t *)cupsArrayIndex(service_uri_list_ipps, j));
   }
-
-  for (int j = 0; j < cupsArrayCount(service_uri_list_ipp) && reg_type_no <= 1; j++)
+ 
+  for (int i = 0; i < cupsArrayCount(service_uri_list_ipp) && reg_type_no <= 1; i++)
   {
-    listPrintersInArrayV2(0, mode, isFax, (avahi_srv_t *)cupsArrayIndex(service_uri_list_ipp, j));
+    listPrintersInArrayV2(0, mode, isFax, (avahi_srv_t *)cupsArrayIndex(service_uri_list_ipp, i));
   }
+ 
 
 error:
   cupsArrayDelete(service_uri_list_ipps);
@@ -1197,7 +1198,5 @@ get_time(void)
     return (curtime.tv_sec + 0.000001 * curtime.tv_usec);
 #endif /* _WIN32 */
 }
-
-
 
 
