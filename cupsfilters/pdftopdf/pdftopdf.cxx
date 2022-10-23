@@ -1,7 +1,11 @@
+//
 // Copyright (c) 2012 Tobias Hoffmann
 //
 // Copyright (c) 2006-2011, BBR Inc.  All rights reserved.
-// MIT Licensed.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
 #include <config.h>
 #include <stdio.h>

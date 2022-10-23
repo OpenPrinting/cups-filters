@@ -1,13 +1,11 @@
 //
-//   Test the new RGB color separation code for libcupsfilters.
+// Test for the new RGB color separation code for libcupsfilters.
 //
-//   Copyright 2007-2011 by Apple Inc.
-//   Copyright 1993-2006 by Easy Software Products, All Rights Reserved.
+// Copyright 2007-2011 by Apple Inc.
+// Copyright 1993-2006 by Easy Software Products, All Rights Reserved.
 //
-//   These coded instructions, statements, and computer programs are the
-//   property of Apple Inc. and are protected by Federal copyright
-//   law.  Distribution and use rights are outlined in the file "COPYING"
-//   which should have been included with this file.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 // Contents:
 //

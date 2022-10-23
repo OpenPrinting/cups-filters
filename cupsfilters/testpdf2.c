@@ -1,3 +1,10 @@
+//
+// PDF file output test program 2 (fontembed) for libcupsfilters.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #include "pdfutils.h"
 #include "config.h"
 #include "debug-internal.h"

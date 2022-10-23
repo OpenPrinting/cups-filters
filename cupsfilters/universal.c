@@ -1,3 +1,16 @@
+//
+// Universal filter function for libcupsfilters.
+//
+// Converts from any input format into any output format, calling an
+// auto-selected chain of filter functions.
+//
+// Copyright 2021 by Pranshu Kharkwal
+// Copyright 2021-2022 by Till Kamppeter
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #include "config.h"
 #include "filter.h"
 #include <sys/types.h>

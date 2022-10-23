@@ -1,16 +1,16 @@
 //
-//   texttotext
+// Text to Text (for text-only printers) filter function for libcupsfilters.
 //
-//   Filter to print text files on text-only printers. The filter has
-//   several configuration options so that it should work with most
-//   printer models.
+// Filter function to print text files on text-only printers. The
+// filter has several configuration options so that it should work
+// with most printer models.
 //
-//   Copyright 2007-2011 by Apple Inc.
-//   Copyright 1997-2006 by Easy Software Products.
-//   Copyright 2011-2016 by Till Kamppeter
+// Copyright 2007-2011 by Apple Inc.
+// Copyright 1997-2006 by Easy Software Products.
+// Copyright 2011-2016 by Till Kamppeter
 //
-//   Distribution and use rights are outlined in the file "COPYING"
-//   which should have been included with this file.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 
 //

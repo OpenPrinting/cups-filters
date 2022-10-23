@@ -1,11 +1,11 @@
 //
-//   Functions to handle CUPS/PWG Raster headers for libcupsfilters.
+// Functions to handle CUPS/PWG Raster headers for libcupsfilters.
 //
-//   Copyright 2013 by Till Kamppeter.
+// Copyright 2013-2022 by Till Kamppeter.
 //
-//   Distribution and use rights are outlined in the file "COPYING"
-//   which should have been included with this file.
-
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
 
 #ifndef _CUPS_FILTERS_RASTER_H_
 #  define _CUPS_FILTERS_RASTER_H_

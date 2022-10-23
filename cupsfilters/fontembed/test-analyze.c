@@ -1,3 +1,10 @@
+//
+// Copyright © 2008,2012 by Tobias Hoffmann.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #include <cupsfilters/fontembed-private.h>
 #include <cupsfilters/debug-internal.h>
 #include "embed-sfnt-private.h"

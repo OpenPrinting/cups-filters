@@ -1,13 +1,11 @@
 //
-//   IEEE-1284 support functions test program for OpenPrinting CUPS Filters.
+// IEEE-1284 support functions test program for libcupsfilters.
 //
-//   Copyright 2007-2011 by Apple Inc.
-//   Copyright 1997-2006 by Easy Software Products, all rights reserved.
+// Copyright 2007-2011 by Apple Inc.
+// Copyright 1997-2006 by Easy Software Products, all rights reserved.
 //
-//   These coded instructions, statements, and computer programs are the
-//   property of Apple Inc. and are protected by Federal copyright
-//   law.  Distribution and use rights are outlined in the file "COPYING"
-//   which should have been included with this file.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 // Contents:
 //

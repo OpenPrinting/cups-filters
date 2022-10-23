@@ -1,3 +1,8 @@
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #ifndef _CUPS_FILTERS_PDFTOPDF_QPDF_PDFTOPDF_PROCESSOR_H
 #define _CUPS_FILTERS_PDFTOPDF_QPDF_PDFTOPDF_PROCESSOR_H
 

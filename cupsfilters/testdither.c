@@ -1,7 +1,7 @@
 //
-//   Dither test program for libcupsfilters.
+// Dither test program for libcupsfilters.
 //
-//   Try the following:
+// Try the following:
 //
 //       testdither 0 255 > filename.ppm
 //       testdither 0 127 255 > filename.ppm
@@ -10,13 +10,11 @@
 //       testdither 0 210 383 > filename.ppm
 //       testdither 0 82 255 > filename.ppm
 //
-//   Copyright 2007-2011 by Apple Inc.
-//   Copyright 1993-2005 by Easy Software Products.
+// Copyright 2007-2011 by Apple Inc.
+// Copyright 1993-2005 by Easy Software Products.
 //
-//   These coded instructions, statements, and computer programs are the
-//   property of Apple Inc. and are protected by Federal copyright
-//   law.  Distribution and use rights are outlined in the file "COPYING"
-//   which should have been included with this file.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 // Contents:
 //

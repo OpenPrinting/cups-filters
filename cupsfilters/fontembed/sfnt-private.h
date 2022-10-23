@@ -1,3 +1,10 @@
+//
+// Copyright © 2008,2012 by Tobias Hoffmann.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #ifndef _FONTEMBED_SFNT_INT_H_
 #define _FONTEMBED_SFNT_INT_H_
 

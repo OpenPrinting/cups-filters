@@ -1,11 +1,11 @@
 //
-// CUPS raster to PWG raster format filter for libcupsfilters.
+// CUPS Raster to PWG/Apple Raster format filter for libcupsfilters.
 //
 // Copyright © 2011, 2014-2017 Apple Inc.
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more
 // information.
-
+//
 
 //
 // Include necessary headers...

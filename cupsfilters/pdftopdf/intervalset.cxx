@@ -1,3 +1,8 @@
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #include "intervalset-private.h"
 #include <stdio.h>
 #include "cupsfilters/debug-internal.h"

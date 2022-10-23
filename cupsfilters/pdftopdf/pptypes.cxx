@@ -1,3 +1,8 @@
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #include "pptypes-private.h"
 #include <utility>
 #include <stdio.h>

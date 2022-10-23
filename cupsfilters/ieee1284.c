@@ -1,13 +1,11 @@
 //
-//   IEEE-1284 Device ID support functions for OpenPrinting CUPS Filters.
+// IEEE-1284 Device ID support functions for libcupsfilters.
 //
-//   Copyright 2007-2011 by Apple Inc.
-//   Copyright 1997-2007 by Easy Software Products, all rights reserved.
+// Copyright 2007-2011 by Apple Inc.
+// Copyright 1997-2007 by Easy Software Products, all rights reserved.
 //
-//   These coded instructions, statements, and computer programs are the
-//   property of Apple Inc. and are protected by Federal copyright
-//   law.  Distribution and use rights are outlined in the file "COPYING"
-//   which should have been included with this file.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 // Contents:
 //
@@ -18,7 +16,7 @@
 //   cfIEEE1284GetValues()             - Get 1284 device ID keys and values.
 //   cfIEEE1284NormalizeMakeModel()    - Normalize a product/make-and-model
 //                                       string.
-
+//
 
 //
 // Include necessary headers.

@@ -1,3 +1,8 @@
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #include "qpdf-pdftopdf-private.h"
 #include "qpdf-tools-private.h"
 #include "cupsfilters/debug-internal.h"

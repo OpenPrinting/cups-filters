@@ -1,5 +1,5 @@
 //
-// Ghostscript filter function for cups-filters.
+// Ghostscript filter function for libcupsfilters.
 //
 // Used for PostScript -> PDF, PDF -> Raster, PDF -> PCL-XL
 //

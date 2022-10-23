@@ -1,3 +1,10 @@
+//
+// Copyright © 2008,2012 by Tobias Hoffmann.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #ifndef _CUPSFILTERS_FONTEMBED_H_
 #define _CUPSFILTERS_FONTEMBED_H_
 

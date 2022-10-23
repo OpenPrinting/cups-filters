@@ -1,10 +1,10 @@
 //
-//   Filter functions header file for cups-filters.
+// Filter functions header file for libcupsfilters.
 //
-//   Copyright 2020 by Till Kamppeter.
+// Copyright © 2020-2022 by Till Kamppeter.
 //
-//   Distribution and use rights are outlined in the file "COPYING"
-//   which should have been included with this file.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 
 #ifndef _CUPS_FILTERS_FILTER_H_

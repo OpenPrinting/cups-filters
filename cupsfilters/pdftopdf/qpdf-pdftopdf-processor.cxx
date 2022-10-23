@@ -1,3 +1,8 @@
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #include <stdio.h>
 #include <stdarg.h>
 #include "cupsfilters/debug-internal.h"

@@ -1,3 +1,10 @@
+//
+// PDF file output test program 1 for libcupsfilters.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 #include "pdfutils.h"
 #include "debug-internal.h"
 #include <string.h>
@@ -7,7 +14,7 @@ main()
 {
   cf_pdf_out_t *pdf;
 
-  pdf=cfPDFOutNew();
+  pdf = cfPDFOutNew();
   DEBUG_assert(pdf);
 
   cfPDFOutBeginPDF(pdf);

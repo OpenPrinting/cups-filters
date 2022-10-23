@@ -1,10 +1,10 @@
 //
-//   PDF file output routines.
+// PDF file output routines for libcupsfilters.
 //
-//   Copyright 2008 by Tobias Hoffmann.
+// Copyright 2008 by Tobias Hoffmann.
 //
-//   This file is licensed as noted in "COPYING" 
-//   which should have been included with this file.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
 
 #include <stdio.h>

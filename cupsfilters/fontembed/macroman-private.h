@@ -1,3 +1,10 @@
+//
+// Copyright © 2008,2012 by Tobias Hoffmann.
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 // data header only. for inclusion in only one file
 #ifndef _FONTEMBED_MACROMAN_PRIVATE_H_
 #define _FONTEMBED_MACROMAN_PRIVATE_H_

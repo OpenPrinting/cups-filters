@@ -1,24 +1,15 @@
 //
-// This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
+// PWG/Apple Raster to PDF filter function for libcupsfilters.
 //
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
+// Copyright 2010 by Neil 'Superna' Armstrong <superna9999@gmail.com>
+// Copyright 2012 by Tobias Hoffmann
+// Copyright 2014-2022 by Till Kamppeter
+// Copyright 2017 by Sahil Arora
 //
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
 //
-// @brief Convert PWG Raster to a PDF/PCLm file
-// @file pwgtopdf.cxx
-// @author Neil 'Superna' Armstrong <superna9999@gmail.com> (C) 2010
-// @author Tobias Hoffmann <smilingthax@gmail.com> (c) 2012
-// @author Till Kamppeter <till.kamppeter@gmail.com> (c) 2014
-// @author Sahil Arora <sahilarora.535@gmail.com> (c) 2017
-//
+
 
 #include "filter.h"
 #include <config.h>
