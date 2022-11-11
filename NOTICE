@@ -1,0 +1,48 @@
+cups-filters
+
+Copyright © 2011-2022 OpenPrinting
+Copyright © 1993-2007 Easy Software Products
+Copyright © 2003-2015 Tim Waugh
+Copyright © 2003-2006 Red Hat, Inc.
+Copyright © 2006-2012 BBR Inc.
+Copyright © 2007-2019 Apple Inc.
+Copyright © 2008-2022 Till Kamppeter
+Copyright © 2008-2012 Tobias Hoffmann
+Copyright © 2008 Lars Karlitski (formerly Übernickel)
+Copyright © 2010 Neil 'Superna' Armstrong
+Copyright © 2011-2013 Richard Hughes
+Copyright © 2012 Canonical Ltd.
+Copyright © 2012 Franz Pförtsch
+Copyright © 2012 Tomáš Chvátal
+Copyright © 2013 ALT Linux, Andrew V. Stepanov
+Copyright © 2014 Joseph Simon
+Copyright © 2015-2022 Samuel Thibault
+Copyright © 2016 Pranjal Bhor
+Copyright © 2017-2018 Sahil Arora
+Copyright © 2018-2019 Deepak Patankar
+Copyright © 2019 Tanmay Anand
+Copyright © 2020 Mohit Mohan
+Copyright © 2021 Suraj Kulriya
+Copyright © 2021 Pratyush Ranjan
+Copyright © 2021 Pranshu Kharkwal
+Copyright © 2022 Chandresh Soni
+Copyright © 2022 Sachin Thakan
+
+Licensed under Apache License v2.0 with CUPS Exceptions. See the file
+"LICENSE" for the Apache License v2.0.
+
+-- CUPS Exceptions to the Apache 2.0 License --
+
+As an exception, if, as a result of your compiling your source code, portions
+of this Software are embedded into an Object form of such source code, you
+may redistribute such embedded portions in such Object form without complying
+with the conditions of Sections 4(a), 4(b) and 4(d) of the License.
+
+In addition, if you combine or link compiled forms of this Software with
+software that is licensed under the GPLv2 ("Combined Software") and if a
+court of competent jurisdiction determines that the patent provision (Section
+3), the indemnity provision (Section 9) or other Section of the License
+conflicts with the conditions of the GPLv2, you may retroactively and
+prospectively choose to deem waived or otherwise exclude such Section(s) of
+the License, but only in their entirety and only with respect to the Combined
+Software.

@@ -4,260 +4,38 @@ Upstream-Contact: OpenPrinting <printing-architecture@lists.linux-foundation.org
 Source: http://www.openprinting.org/download/cups-filters/
 
 Files: *
-Copyright: 1993-2007 Easy Software Products
- 2007-2011 Apple Inc.
- 2012 Canonical Ltd.
- 2006-2012 BBR Inc.
- 2008-2016 Till Kamppeter
- 2008,2012 Tobias Hoffmann
+Copyright: 2011-2022 OpenPrinting
+ 1993-2007 Easy Software Products
+ 2003-2015 Tim Waugh
  2003-2006 Red Hat, Inc.
- 2003-2006 Tim Waugh
+ 2006-2012 BBR Inc.
+ 2007-2019 Apple Inc.
+ 2008-2022 Till Kamppeter
+ 2008-2012 Tobias Hoffmann
+ 2008 Lars Karlitski (formerly Übernickel)
+ 2010 Neil 'Superna' Armstrong
+ 2011-2013 Richard Hughes
+ 2012 Canonical Ltd.
  2012 Franz Pförtsch
  2012 Tomáš Chvátal
- 2010 Neil 'Superna' Armstrong
- 2015-2016 Samuel Thibault
- 2008 Lars Karlitski (formerly Übernickel)
-License: GPL-2+
-
-Files: backend/implicitclass.c
-Copyright: 2015, Till Kamppeter
-  2008-2015, Apple Inc
-  2018-2019, Deepak Patankar
-License: GPL-2
-
-Files: backend/beh.c
-Copyright: 2015, Till Kamppeter
-  2008-2015, Apple Inc
-License: GPL-2
-
-Files: backend/parallel.c
-  backend/serial.c
-  backend/ieee1284.c
-  backend/test1284.c
-  backend/backend-private.h
-Copyright: 2007-2011, Apple Inc
-  1993-2007, Easy Software Products
-License: GPL-2
-
-Files: ppd/*
-Copyright: 2007-2019 by Apple Inc.
- 1997-2007 by Easy Software Products
- 2020, Till Kamppeter
+ 2013 ALT Linux, Andrew V. Stepanov
+ 2014 Joseph Simon
+ 2015-2022 Samuel Thibault
+ 2016 Pranjal Bhor
+ 2017-2018 Sahil Arora
+ 2018-2019 Deepak Patankar
+ 2019 Tanmay Anand
+ 2020 Mohit Mohan
+ 2021 Suraj Kulriya
+ 2021 Pratyush Ranjan
+ 2021 Pranshu Kharkwal
+ 2022 Chandresh Soni
+ 2022 Sachin Thakan
 Licence: Apache-2.0-with-GPL2-LGPL2-Exception
-
-Files: cupsfilters/*
-Copyright: 2007-2016 Apple Inc
- 1993-2007 by Easy Software Products
- 2011-2013, Richard Hughes
- 2011, Tim Waugh
- 2013-2019, Till Kamppeter
- 2014, Joseph Simon
- 2017, Sahil Arora
- 2018-2019, Deepak Patankar
-License: LGPL-2
-
-Files: cupsfilters/colord.c
-Copyright: 2011-2013, Richard Hughes
-  2011, Tim Waugh
-License: Expat
-
-Files: cupsfilters/colord.h
-Copyright: 2011-2013, Richard Hughes
-License: Expat
-
-Files: cupsfilters/colormanager.c
-Copyright: 2014, Joseph Simon
-  2011-2013, Richard Hughes
-License: Expat
-
-Files: cupsfilters/colormanager.h
-Copyright: 2014, Joseph Simon
-License: Expat
-
-Files: filter/pdftoraster.cxx
-Copyright: 2008-2012, BBR Inc.
-  2019, Tanmay Anand
-License: Expat
-
-Files: filter/banner.c
-  filter/banner.h
-  banners/*
-  data/*
-Copyright: 2012, Canonical Ltd
-License: GPL-3
-
-Files: filter/pdf.h
-Copyright: 2018, Sahil Arora <sahilarora.535@gmail.com>
-  2012, Canonical Ltd
-License: GPL-3
-
-Files: filter/bannertopdf.c
-  filter/pdf.cxx
-Copyright: 2018, Sahil Arora <sahilarora.535@gmail.com>
-  2013, ALT Linux, Andrew V. Stepanov <stanv@altlinux.com>
-  2012, Canonical Ltd
-License: GPL-3
-
-Files: filter/braille/*
- drv/generic-brf.drv
- drv/indexv*.drv
- mime/braille.*
-Copyright: 2015, Samuel Thibault <samuel.thibault@ens-lyon.org>
-License: Expat
-
-Files: filter/commandtoescpx.c
-  filter/commandtopclx.c
-  filter/imagetoraster.c
-  filter/rastertoescpx.c
-  filter/rastertopclx.c
-  filter/common.*
-  filter/pcl-common.*
-  filter/textcommon.*
-  filter/escp.h
-  filter/pcl.h
-  scripting/*
-Copyright: 2007-2011, Apple Inc
-  1993-2007, Easy Software Products
-License: GPL-2
-
-Files: mime/cupsfilters*.convs*
-Copyright: 2007-2011, Apple Inc
-  1997-2007, Easy Software Products
-  2012-2016, Till Kamppeter
-  2017, Sahil Arora
-License: GPL-2
-
-Files: filter/foomatic-rip/*
-Copyright: 2008, Till Kamppeter <till.kamppeter@gmail.com>
-  2008, Lars Karlitski (formerly Übernickel) <lars@karlitski.net>
-License: GPL-2+
-
-Files: filter/getline.c
-Copyright: 1993, 1996-2014, Free Software Foundation, Inc
-License: GPL-2+
-
-Files: ppdfiles/pxlcolor.ppd ppdfiles/pxlmono.ppd
-Copyright: 2001-2005 Easy Software Products
-License: GPL-2+
-
-Files: filter/gstoraster.c
-Copyright: 2011-2013, Richard Hughes
-  2011, Tim Waugh
-  2008-2016, Till Kamppeter
-License: Expat
-
-Files: filter/mupdftoraster.c
-Copyright: 2011-2013, Richard Hughes
-  2011, Tim Waugh
-  2008-2016, Till Kamppeter
-  2016, Pranjal Bhor
-License: Expat
-
-Files: filter/imagetopdf*
-Copyright: 1993-2007, Easy Software Products
-License: GPL-2
-
-Files: filter/pdftopdf/*
-Copyright: 2012 Tobias Hoffmann
- 2006-2011, BBR Inc
-License: Expat
-
-Files: ppdfiles/*-PDF.ppd
-Copyright: 2012-2016 Till Kamppeter
-License: GPL-2+
-
-Files: filter/pdftops.c
-Copyright: 2011-2013 Till Kamppeter
- 2007-2011 Apple Inc
- 1997-2006 Easy Software Products
-License: GPL-2
-
-Files: filter/pdfutils.c
-  filter/pdfutils.h
-Copyright: 2008, Tobias Hoffmann
-License: GPL-2
-
-Files: filter/rastertopclm
-Copyright: 2017 Sahil Arora <sahilarora.535@gmail.com>
-License: GPL-2+
-
-Files: filter/rastertopdf.cpp
-Copyright: 2010, Neil 'Superna' Armstrong <superna9999@gmail.com>
- 2012 Tobias Hoffmann <smilingthax@gmail.com>
- 2014 Till Kamppeter <till.kamppeter@gmail.com>
- 2017 Sahil Arora <sahilarora.535@gmail.com>
-License: GPL-3+
-
-Files: filter/rastertops.c
-Copyright: 2016 Pranjal Bhor <bhor.pranjal@gmail.com>
- 2010 Neil 'Superna' Armstrong <superna9999@gmail.com>
- 2012 Tobias Hoffmann <smilingthax@gmail.com>
- 2014 Till Kamppeter <till.kamppeter@gmail.com>
-License: GPL-3+
-
-Files: filter/strcasestr.c
-Copyright: 1990, 1993, The Regents of the University of California
-License: BSD-4-clause
-
-Files: filter/texttotext.c
-Copyright: 2011-2013, Till Kamppeter
-  2007-2011, Apple Inc
-  1997-2006, Easy Software Products
-License: GPL-2
-
-Files: filter/texttopdf.c
- charset/*
- filter/test.sh
- filter/test_pdf*.c
-Copyright: 2008, 2012, Tobias Hoffmann
-  2007, Apple Inc
-  1993-2007, Easy Software Products
-License: GPL-2
-
-Files: filter/texttops filter/imagetops filter/gstopxl filter/gstopdf
-Copyright: 2012 Till Kamppeter <till.kamppeter@gmail.com>
-License: GPL-2+
-
-Files: fontembed/*
-Copyright: 2008,2012 Tobias Hoffmann
-License: Expat
 
 Files: ltmain.sh
 Copyright: 1996-2001, 2003-2011 Free Software Foundation, Inc.
 License: GPL-2+
-
-Files: utils/cups-browsed*
- utils/org.cups.cupsd.Notifier.xml
-Copyright: 2012-2021 Till Kamppeter
- 2013-2015 Tim Waugh
- 2018-2019 Deepak Patankar
- 2020 Mohit Mohan
-License: LGPL-2.1+
-
-Files: utils/driverless*
-Copyright: 2012-2021 Till Kamppeter
- 2007-2016 Apple Inc.
- 2017 Sahil Arora
-License: LGPL-2.1+
-
-Files: drv/cupsfilters.drv
- drv/custom-media-lines
-Copyright: 2012-2016 Till Kamppeter
-License: Expat
-
-License: Apache-2.0
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-     http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS"BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- .
- On Debian systems, the complete text of the Apache License,
- Version 2.0 can be found in '/usr/share/common-licenses/Apache-2.0'.
 
 License: Apache-2.0-with-GPL2-LGPL2-Exception
  Licensed under the Apache License, Version 2.0 (the "License");
@@ -287,42 +65,6 @@ License: Apache-2.0-with-GPL2-LGPL2-Exception
  the License, but only in their entirety and only with respect to the Combined
  Software.
 
-License: Expat
- The MIT License
- .
- Permission is hereby granted, free of charge, to any person
- obtaining a copy of this software and associated
- documentation files (the "Software"), to deal in the Software
- without restriction, including without limitation the rights to
- use, copy, modify, merge, publish, distribute, sublicense,
- and/or sell copies of the Software, and to permit persons to
- whom the Software is furnished to do so, subject to the
- following conditions:
- .
- The above copyright notice and this permission notice shall
- be included in all copies or substantial portions of the
- Software.
- .
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT
- WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
- INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- MERCHANTABILITY, FITNESS FOR A PARTICULAR
- PURPOSE AND NONINFRINGEMENT. IN NO EVENT
- SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
- LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- CONNECTION WITH THE SOFTWARE OR THE USE OR
- OTHER DEALINGS IN THE SOFTWARE.
-
-License: GPL-2
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; version 2 dated June, 1991.
- .
- On Debian systems, the complete text of version 2 of the GNU General
- Public License can be found in '/usr/share/common-licenses/GPL-2'.
-
 License: GPL-2+
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -332,65 +74,3 @@ License: GPL-2+
  On Debian systems, the complete text of version 2 of the GNU General
  Public License can be found in '/usr/share/common-licenses/GPL-2'.
 
-License: GPL-3
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; version 3 dated June, 2007.
- .
- On Debian systems, the complete text of version 3 of the GNU General
- Public License can be found in '/usr/share/common-licenses/GPL-3'.
-
-License: GPL-3+
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; version 3 dated June, 2007, or (at
- your option) any later version.
- .
- On Debian systems, the complete text of version 3 of the GNU General
- Public License can be found in '/usr/share/common-licenses/GPL-3'.
-
-License: LGPL-2
- This program is free software; you can redistribute it and/or modify it
- under the terms of the GNU Library General Public License as published by the
- Free Software Foundation; version 2 of the License.
- .
- On Debian systems, the complete text of version 2 of the GNU Library General
- Public License can be found in `/usr/share/common-licenses/LGPL-2'.
-
-License: LGPL-2.1+
- This program is free software; you can redistribute it and/or modify it
- under the terms of the GNU Lesser General Public License as published by the
- Free Software Foundation; version 2.1 of the License, or (at
- your option) any later version.
- .
- On Debian systems, the complete text of version 2.1 of the GNU Lesser General
- Public License can be found in `/usr/share/common-licenses/LGPL-2.1'.
-
-License: BSD-4-clause
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions
- are met:
- 1. Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
- 2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
- 3. All advertising materials mentioning features or use of this software
-    must display the following acknowledgement:
-      This product includes software developed by the University of
-      California, Berkeley and its contributors.
- 4. Neither the name of the University nor the names of its contributors
-    may be used to endorse or promote products derived from this software
-    without specific prior written permission.
- .
- THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- SUCH DAMAGE.
