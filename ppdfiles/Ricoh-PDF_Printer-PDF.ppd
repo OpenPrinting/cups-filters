@@ -2,14 +2,15 @@
 *%
 *% This PPD file is for using a Ricoh PDF printer in its native PDF mode, with
 *% option settings controlled via PJL commands. It uses CUPS with the
-*% OpenPrinting CUPS Filters package.
+*% OpenPrinting cups-filters package.
 *%
 *% This PPD is experimental. It is possible that some of the options
 *% and settings do not make sense or do not cause any change on the output.
 *% It can even happen that with certain settings nothing or an error page
 *% comes out.
 *%
-*% This file is published under the GNU General Public License
+*% Licensed under Apache License v2.0.  See the file "LICENSE" for more
+*% information.
 *%
 *% You may save this file as 'Ricoh-PDF_Printer-PDF.ppd'
 *%

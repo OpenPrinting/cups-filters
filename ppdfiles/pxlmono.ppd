@@ -1,15 +1,12 @@
 *PPD-Adobe: "4.3"
 *%
 *%
-*%   Sample monochrome PCL XL/PCL 6 driver PPD file for the Common UNIX
-*%   Printing System (CUPS).
+*%   Sample monochrome PCL XL/PCL 6 driver PPD file for cups-filters.
 *%
 *%   Copyright 1997-2005 by Easy Software Products.
 *%
-*%   These coded instructions, statements, and computer programs are the
-*%   property of Easy Software Products and are protected by Federal
-*%   copyright law.  Distribution and use rights are outlined in the file
-*%   "COPYING" which should have been included with this file.
+*%   Licensed under Apache License v2.0.  See the file "LICENSE" for more
+*%   information.
 *%
 *FormatVersion:	"4.3"
 *FileVersion:	"1.1"

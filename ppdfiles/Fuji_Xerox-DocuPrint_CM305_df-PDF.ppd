@@ -1,16 +1,16 @@
 *PPD-Adobe: "4.3"
 *%
 *% This PPD file is for using the Fuji Xerox DocuPrint CM305 df in native PDF
-*% mode, using CUPS with the OpenPrinting CUPS Filters package
-*% option settings controlled via PJL commands. It uses CUPS with the
-*% OpenPrinting CUPS Filters package.
+*% mode, using CUPS with the OpenPrinting cups-filters package option settings
+*% controlled via PJL commands.
 *%
 *% This PPD is experimental. It is possible that some of the options
 *% and settings do not make sense or do not cause any change on the output.
 *% It can even happen that with certain settings nothing or an error page
 *% comes out.
 *%
-*% This file is published under the GNU General Public License
+*% Licensed under Apache License v2.0.  See the file "LICENSE" for more
+*% information.
 *%
 *% You may save this file as 'Fuji_Xerox-DocuPrint_CM305_df-PDF.ppd'
 *%

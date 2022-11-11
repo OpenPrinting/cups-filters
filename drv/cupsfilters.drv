@@ -1,8 +1,13 @@
+//
+// Licensed under Apache License v2.0.  See the file "LICENSE" for more
+// information.
+//
+
 // Include standard font and media definitions
 #include <font.defs>
 #include <media.defs>
 
-Version 1.0
+Version 2.0
 
 {
 // List the fonts that are supported, in this case all standard

@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Licensed under Apache License v2.0.  See the file "LICENSE" for more
+# information.
+
 # This script generates the CustomMedia lines for the Generic IPP
 # Everywhere Printer PPD file in cupsfilters.drv based on the paper
 # size info in cups/pwg-media.c of the CUPS source code.
