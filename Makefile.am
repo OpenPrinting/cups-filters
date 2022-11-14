@@ -9,9 +9,10 @@ doc_DATA = \
 	ABOUT-NLS \
 	AUTHORS \
 	COPYING \
-	NEWS \
+	CHANGES.md \
+	CHANGES-1.x.md \
 	INSTALL \
-	README
+	README.md
 
 EXTRA_DIST = \
 	$(doc_DATA) \

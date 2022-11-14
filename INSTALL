@@ -1,5 +1,5 @@
-INSTALL - OpenPrinting CUPS Filters v1.27.5 - 2020-06-05
---------------------------------------------------------
+INSTALL - OpenPrinting CUPS Filters v2.0b1 - 2022-11-14
+-------------------------------------------------------
 
 This file describes how to compile and install OpenPrinting CUPS
 Filters from source code. For more information on OpenPrinting CUPS
@@ -7,9 +7,11 @@ Filters see the file called "README.txt".  A complete change log can
 be found in "CHANGES.txt".
 
 **** IF YOU HAVE A NON-POSTSCRIPT PRINTER AND ARE NOT       ****
-**** RUNNING MAC OS X, YOU WILL ALSO NEED TO INSTALL GPL    ****
-**** GHOSTSCRIPT WITH THE "cups" DRIVER AFTER YOU INSTALL   ****
-**** CUPS AND BEFORE YOU INSTALL THIS PACKAGE.              ****
+**** RUNNING MAC OS X, YOU WILL ALSO NEED TO INSTALL        ****
+**** GHOSTSCRIPT WITH AT LEAST THE "cups", "pwgraster",     ****
+**** "appleraster", "urf", "pclm", "pclm8", "pdfwrite",     ****
+**** "pdfimage24", "pdfimage32", "pdfimage8" DRIVERS AFTER  ****
+**** YOU INSTALL CUPS AND BEFORE YOU INSTALL THIS PACKAGE.  ****
 
 
 BEFORE YOU BEGIN
@@ -19,7 +21,7 @@ BEFORE YOU BEGIN
     and we have tested the current CUPS code against several versions of GCC
     with excellent results.
 
-    The makefiles used by the project should work with most versions of make.
+    The Makefiles used by the project should work with most versions of make.
     We've tested them with GNU make as well as the make programs shipped by
     Compaq, HP, SGI, and Sun.  BSD users should use GNU make (gmake) since BSD
     make does not support "include".
@@ -40,9 +42,9 @@ BEFORE YOU BEGIN
     remote CUPS queues and make the queues available locally, you also
     need libavahi-common and libavahi-client.
 
-COMPILING THE BZR REPOSITORY CODE
+COMPILING THE GIT REPOSITORY CODE
 
-    The CUPS Filters BZR repository doesn't hold a copy of the pre-built
+    The CUPS Filters GIT repository doesn't hold a copy of the pre-built
     configure script.  You'll need to run the GNU autoconf software (2.65 or
     higher) to create it:
 
