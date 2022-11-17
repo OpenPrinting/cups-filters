@@ -1,3 +1,0 @@
-Add title option for pictures
-
-In addition to drawing contour, use textures to render colors of areas

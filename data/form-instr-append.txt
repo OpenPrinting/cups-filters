@@ -1,3 +1,0 @@
-%%#PDF-BANNER
-%%Font UseDefault
-%%Font-size 11
