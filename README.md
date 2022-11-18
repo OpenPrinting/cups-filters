@@ -1,4 +1,4 @@
-# OpenPrinting CUPS Filters v2.0b1 - 2020-11-14
+# OpenPrinting CUPS Filters v2.0b1 - 2020-11-18
 
 Looking for compile instructions?  Read the file "INSTALL"
 instead...
@@ -6,40 +6,42 @@ instead...
 
 ## INTRODUCTION
 
-CUPS is a standards-based, open-source printing system used by
-Apple's Mac OS® and other UNIX®-like operating systems,
-especially also Linux. CUPS uses the Internet Printing Protocol
-("IPP") and provides System V and Berkeley command-line
-interfaces, a web interface, and a C API to manage printers and
-print jobs.
+CUPS is a standards-based, open-source printing system used by Apple's
+Mac OS® and other UNIX®-like operating systems, especially also
+Linux. CUPS uses the Internet Printing Protocol ("IPP") and provides
+System V and Berkeley command-line interfaces, a web interface, and a
+C API to manage printers and print jobs.
 
-This package contains backends, filters, and other software that
-was once part of the core CUPS distribution, but during the time
-when CUPS was developed at Apple, Apple stopped maintining these
-parts as they were not needed by Mac OS.
+This package contains backends, filters, and other software that was
+once part of the core CUPS distribution, but during the time when CUPS
+was developed at Apple, Apple stopped maintaining these parts as they
+were not needed by Mac OS.
 
 In addition it contains more filters and software developed
 independently of Apple, especially filters for the PDF-centric
-printing workflow introduced by OpenPrinting and a daemon to
-browse broadcasts of remote CUPS printers and IPP printers to make
-them available locally.
+printing workflow introduced by OpenPrinting.
 
 Since CUPS 1.6.0 cups-filters is required for using printer
 drivers (and also driverless printing) with CUPS under Linux. This
 version of cups-filters is only for CUPS 2.2.2 or newer. Please
 use the cups-filters 1.x line for older CUPS versions.
 
+CUPS 3.x has a vastly changed architecture (what we call the New
+Architecture for printing) being all-IPP, only supporting driverless
+IPP printers and no PPD files and classic CUPS drivers any more. It
+will not use external filters any more and so will not need this
+package. This package retro-fits the filter functions of
+libcupsfilters and libppd to CUPS 2.x.
+
 For compiling and using this package CUPS (2.2.2 or newer),
-libqpdf (10.3.2 or newer), libjpeg, libpng, libtiff, freetype,
-fontconfig, liblcms (liblcms2 recommended), libavahi-common,
-libavahi-client, libdbus, and glib are needed. It is highly
-recommended, especially if non-PDF printers are used, to have at
-least one of Ghostscript (preferred), Poppler, or MuPDF.
+libcupsfilters 2.x, and libppd are needed. It is highly recommended,
+especially if non-PDF printers are used, to have at least one of
+Ghostscript (preferred), Poppler, or MuPDF installed.
 
 It also needs gcc (C compiler), automake, autoconf, autopoint, and
-libtool. On Debian, Ubuntu, and distributions derived from them
-you could also install the "build-essential" package to
-auto-install most of these packages.
+libtool. On Debian, Ubuntu, and distributions derived from them you
+could also install the "build-essential" package to auto-install most
+of these packages.
 
 If Ghostscript is used (via the "gsto..." or the "universal" CUPS
 filters), Ghostscript 10.00.0 is required (10.01.0 is highly
@@ -49,35 +51,17 @@ recommended) and it has to be built at least with the "pdfwrite",
 devices. libcups of CUPS 2.2.2 or newer is required to build
 Ghostscript this way.
 
-The Poppler-based pdftoraster filter needs a C++ compiler which
-supports C++11 and Poppler being built with the "./configure"
-option "-DENABLE_CPP=ON" for building the C++ support library
-libpoppler-cpp. This is the case for most modern Linux
-distributions.
-
 If you use MuPDF as PDF renderer make sure to use at least version
 1.15, as the older versions have bugs and so some files get not
 printed correctly.
 
-For Braille embosser support (see below) you will also need at
-least liblouis, ImageMagick, and poppler-utils. Recommended is to
-also have liblouisutdml, antiword, docx2txt for more sophisticated
-Braille generation representing also the formatting of the input
-text. None of these is needed for compiling cups-filters.
-
-CUPS, this package, and Ghostscript contain some rudimentary
-printer drivers and especially the filters needed for driverless
-printing (currently PWG Raster, Apple Raster, PCLm, and PDF output
-formats, for printers supporting IPP Everywhere, AirPrint, Wi-Fi
-Direct, and other standards). See
-http://www.openprinting.org/drivers/ for a more comprehensive set
-of printer drivers for Linux.
-
-See
-
-    https://openprinting.github.io/achievements/#pdf-instead-of-postscript-as-standard-print-job-format
-
-for information about the PDF-based printing workflow.
+CUPS, this package, and Ghostscript contain some rudimentary printer
+drivers and especially the filters needed for driverless printing
+(currently PWG Raster, Apple Raster, PCLm, and PDF output formats, for
+printers supporting IPP Everywhere, AirPrint, Wi-Fi Direct, and other
+standards). See the links to the Printer Applications below and also
+http://www.openprinting.org/drivers/ for a comprehensive set of
+printer drivers for Linux.
 
 Report bugs to
 
@@ -87,23 +71,52 @@ See the "COPYING", "LICENCE", and "NOTICE" files for legal
 information. The license is the same as for CUPS, for a maximum of
 compatibility.
 
-## IMAGE PRINTING DEFAULT CHANGED TO "SCALE TO FIT"
+## LINKS
+
+### cups-filters
+
+* [Short history](https://openprinting.github.io/achievements/#cups-filters)
+* [cups-filters 2.x development](https://openprinting.github.io/current/#cups-filters-2x)
+* [PDF-based printing workflow](https://openprinting.github.io/achievements/#pdf-instead-of-postscript-as-standard-print-job-format)
+
+### The New Architecture of Printing and Scanning
+
+* [The New Architecture - What is it?](https://openprinting.github.io/current/#the-new-architecture-for-printing-and-scanning)
+* [Ubuntu Desktop Team Indaba on YouTube](https://www.youtube.com/watch?v=P22DOu_ahBo)
+
+### Printer Applications
+
+* [All free drivers in a PPD-less world - OR - All free drivers in Snaps](https://openprinting.github.io/achievements/#all-free-drivers-in-a-ppd-less-world---or---all-free-drivers-in-snaps)
+* [Current activity on Printer Applications](https://openprinting.github.io/current/#printer-applications)
+* [PostScript Printer Application](https://github.com/OpenPrinting/ps-printer-app) ([Snap Store](https://snapcraft.io/ps-printer-app)): Printer Application Snap for PostScript printers which are supported by the manufacturer's PPD files. User can add PPD files if the needed one is not included or outdated.
+* [Ghostscript Printer Application](https://github.com/OpenPrinting/ghostscript-printer-app) ([Snap Store](https://snapcraft.io/ghostscript-printer-app)): Printer Application with Ghostscript and many other drivers, for practically all Linux-supported printers which are not PostScript and not supported by HPLIP or Gutenprint.
+* [HPLIP Printer Application](https://github.com/OpenPrinting/hplip-printer-app) ([Snap Store](https://snapcraft.io/hplip-printer-app)): HPLIP in a Printer Application Snap. Supports nearly every HP printer ever made. Installing HP's proprietary plugin (needed for a few printers) into the Snap is supported and easily done with the web interface.
+* [Gutenprint Printer Application](https://github.com/OpenPrinting/gutenprint-printer-app) ([Snap Store](https://snapcraft.io/gutenprint-printer-app)): High quality output and a lot of knobs to adjust, especially for Epson and Canon inkjets but also for many other printers, in a Printer Application Snap.
+* [Legacy Printer Application](https://github.com/OpenPrinting/pappl-retrofit#legacy-printer-application) (not available as Snap): It is a part of the [pappl-retrofit](https://github.com/OpenPrinting/pappl-retrofit) package and it makes drivers classically installed for the system's classically installed CUPS available in a Printer Application and this way for the CUPS Snap. It is especially helpful for drivers which are not (yet) available as Printer Application.
+
+
+## DOCUMENTATION FROM CUPS-FILTERS 1.x
+
+Most of this is still valid for the current cups-filters.
+
+### IMAGE PRINTING DEFAULT CHANGED TO "SCALE TO FIT"
 
 Compared to the PostScript-based original CUPS filters there is a
-change of defaults: The imagetopdf and imagetoraster filters print
-in "scale-to-fit" mode (image is scaled to fill one page but
-nothing of the image being cut off) by default.
+change of defaults: The imagetopdf and imagetoraster filters print in
+"print-scaling=fit" or "scale-to-fit" mode (image is scaled to fill
+one page but nothing of the image being cut off) by default.
 
-This is done to support photo printing via AirPrint. The photo
-apps on Apple's iOS devices send print jobs as JPEG images and do
-not allow to set any options like "scaling" or the page size. With
+This is done to support photo printing via AirPrint. The photo apps on
+Apple's iOS devices send print jobs as JPEG images and do not allow to
+set any options like "print-scaling" or the page size. With
 "scale-to-fit" mode set by default, the iOS photos come out on one
 page, as expected.
 
 To get back to the old behavior, supply one of the options
-"nofitplot" "filplot=Off", "nofit-to-page", or "fit-to-page=Off".
+"print-scaling=none", "nofitplot", "filplot=Off", "nofit-to-page", or
+"fit-to-page=Off".
 
-## GHOSTSCRIPT RENDERING OF FILLED PATHS
+### GHOSTSCRIPT RENDERING OF FILLED PATHS
 
 When Ghostscript is rendering PostScript or PDF files into a
 raster format the filled paths are ususally rendered with the
@@ -129,7 +142,7 @@ PPD file of the print queue (usually in /etc/cups/ppd/):
 This option can be used when the print queue uses the gstoraster
 filter.
 
-## POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
+### POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
 
 If you use CUPS with this package and a PostScript printer then
 the included pdftops filter converts the print job data which is
@@ -241,248 +254,29 @@ output is in /tmp/printout after the job has completed.
 This option does not change anything if Poppler's pdftops is used
 as renderer.
 
-## HELPER DAEMON FOR BROWSING REMOTE CUPS PRINTERS AND IPP NETWORK PRINTERS
+### CUPS FILTERS FOR PDF AS STANDARD PRINT JOB FORMAT
 
-From version 1.6.0 on in CUPS the CUPS broadcasting/browsing
-facility was dropped, in favour of Bonjour-based broadcasting of
-shared printers. This is done as Bonjour broadcasting of shared
-printers is a standard, established by the PWG (Printing Working
-Group, http://www.pwg.org/), and most other network services
-(shared file systems, shared media files/streams, remote desktop
-services, ...) are also broadcasted via Bonjour.
-
-Problem is that CUPS only broadcasts its shared printers but does
-not browse broadcasts of other CUPS servers to make the shared
-remote printers available locally without any configuration
-efforts. This is a regression compared to the old CUPS
-broadcasting/browsing. The intention of CUPS upstream is that the
-application's print dialogs browse the Bonjour broadcasts as an
-AirPrint-capable iPhone does, but it will take its time until all
-toolkit developers add the needed functionality, and programs
-using old toolkits or no toolkits at all, or the command line stay
-uncovered.
-
-The solution is cups-browsed, a helper daemon running in parallel
-to the CUPS daemon which listens to Bonjour broadcasts of shared
-CUPS printers on remote machines in the local network via Avahi,
-and can also listen for (and send) CUPS Browsing broadcasts. For
-each reported remote printer it creates a local raw queue pointing
-to the remote printer so that the printer appears in local print
-dialogs and is also available for printing via the command
-line. As with the former CUPS broadcasting/browsing with this
-queue the driver on the server is used and the local print dialogs
-give access to all options of the server-side printer driver.
-
-Note that CUPS broadcasting/browsing is available for legacy
-support, to let the local CUPS daemon work seamlessly together
-with remote CUPS daemons of version 1.5.x and older which only
-support CUPS broadcasting/browsing. In networks with only CUPS
-1.6.x servers (or Ubuntu or Fedora/Red Hat servers with CUPS
-1.5.x) please use the native Bonjour broadcasting of your servers
-and cups-browsed, configured for Bonjour browsing only on the
-clients.
-
-Also high availability with redundant print servers and load
-balancing is supported. If there is more than one server providing
-a shared print queue with the same name, cups-browsed forms a
-cluster locally with this name as queue name and printing through
-the "implicitclass" backend. Each job triggers cups-browsed to
-check which remote queue is suitable for the job, meaning that it
-is enabled, accepts jobs, and is not currently printing.  If none
-of the remote queues fulfills these criteria, we check again in 5
-seconds, until a printer gets free to accommodate the job. When we
-search for a free printer, we do not start at the first in the
-list, but always on the one after the last one used (as CUPS also
-does with classes), so that all printer get used, even if the
-frequency of jobs is low. This is also what CUPS formerly did with
-implicit classes. Optionally, jobs can be sent immediately into
-the remote queue with the lowest number of waiting jobs, so that
-no local queue of waiting jobs is built up.
-
-For maximum security cups-browsed uses IPPS (encrypted IPP)
-whenever possible.
-
-In addition, cups-browsed is also capable of discovering IPP
-network printers (native printers, not CUPS queues) with known
-page description languages (PWG Raster, Apple Raster, PDF,
-PostScript, PCL XL, PCL 5c/e) in the local network and auto-create
-print queues with auto-created PPD files. This functionality is
-primarily for mobile devices running CUPS to not need a printer
-setup tool nor a collection of printer drivers and PPDs.
-
-cups-browsed can also be started on-demand, for example to save
-resources on mobile devices. For this, cups-browsed can be set
-into an auto shutdown mode so that it stops automatically when it
-has no remote printers to take care of any more, especially if an
-on-demand running avahi-daemon stops. Note that CUPS must stay
-running for cups-browsed removing its queues and so being able to
-shut down. Ideal is if CUPS stays running another 30 seconds after
-finishing its last job so that cups-browsed can take down the
-queue. For how to set up and control this mode via command line,
-configuration directives, or sending signals see the man pages
-cups-browsed(8) and cups-browsed.conf(5).
-
-The configuration file for cups-browsed is
-/etc/cups/cups-browsed.conf.  This file can include limited forms
-of the original CUPS BrowseRemoteProtocols, BrowseLocalProtocols,
-BrowsePoll, and BrowseAllow directives. It also can contain the
-new CreateIPPPrinterQueues to activate discovering of IPP network
-printers and creating PPD-less queues for them.
-
-Note that cups-browsed does not work with remote CUPS servers
-specified by a client.conf file. It always connects to the local
-CUPS daemon by setting the CUPS_SERVER environment variable and so
-overriding client.conf. If your local CUPS daemon uses a
-non-standard domain socket as only way of access, you need to
-specify it via the DomainSocket directive in
-/etc/cups/cups-browsed.conf.
-
-The "make install" process installs init scripts which make the
-daemon automatically started during boot. You can also manually
-start it with (as root):
-
-    /usr/sbin/cups-browsed &
-
-or in debug mode with
-
-    /usr/sbin/cups-browsed --debug
-
-Shut it down by sending signal 2 (SIGINT) or 15 (SIGTERM) to
-it. The queues which it has created get removed then (except a
-queue set as system default, to not loose its system default
-state).
-
-On systems using systemd use a
-/usr/lib/systemd/system/cups-browsed.service file like this:
-
-    [Unit]
-    Description=Make remote CUPS printers available locally
-    After=cups.service avahi-daemon.service
-    Wants=cups.service avahi-daemon.service
-
-    [Service]
-    ExecStart=/usr/sbin/cups-browsed
-
-    [Install]
-    WantedBy=multi-user.target
-
-On systems using Upstart use an /etc/init/cups-browsed.conf file like this:
-
-    start on (filesystem
-              and (started cups or runlevel [2345]))
-    stop on runlevel [016]
-
-    respawn
-    respawn limit 3 240
-
-    pre-start script
-        [ -x /usr/sbin/cups-browsed ]
-    end script
-
-    exec /usr/sbin/cups-browsed
-
-These files are included in the source distribution as
-utils/cups-browsed.service and utils/cups-browsed-upstart.conf.
-
-In the examples we start cups-browsed after starting
-avahi-daemon. This is not required. If cups-browsed starts first,
-then Bonjour/DNS-SD browsing kicks in as soon as avahi-daemon comes
-up. cups-browsed is also robust against any shutdown and restart
-of avahi-daemon.
-
-Here is some info on how cups-browsed works internally (first concept of a
-daemon which does only Bonjour browsing):
-
-    - Daemon start
-      o Wait for CUPS daemon if it is not running
-      o Read out all CUPS queues created by this daemon (in former sessions)
-      o Mark them unconfirmed and set timeout 10 sec from now
-    - Main loop (use avahi_simple_poll_iterate() to do queue list maintenance
-                 regularly)
-      o Event: New printer shows up
-        + Queue for printer is already created by this daemon -> Mark list
-          entry confirmed, if discovered printer is ipps but existing queue ipp,
-	  upgrade existing queue by setting URI to ipps. Set status to
-	  to-be-created and timeout to now-1 sec to make the CUPS queue be
-	  updated.
-        + Queue does not yet exist -> Mark as to-be-created and set
-	  timeout to now-1 sec.
-      o Event: A printer disappears
-        + If we have listed a queue for it, mark the entry as disappeared, set
-          timeout to now-1 sec
-      o On any of the above events and every 2 sec
-        + Check through list of our listed queues
-          - If queue is unconfirmed and timeout has passed, mark it as
-            disappeared, set timeout to now-1 sec
-          - If queue is marked disappered and timeout has passed, check whether
-	    there are still jobs in it, if yes, set timeout to 10 sec from now,
-	    if no, remove the CUPS queue and the queue entry in our list. If
-	    removal fails, set timeout to 10 sec.
-	  - If queue is to-be-created, create it, if succeeded set to
-	    confirmed, if not, set timeout to 10 sec fron now. printer-is-shared
-	    must be set to false.
-    - Daemon shutdown
-      o Remove all CUPS queues in our list, as long as they do not have jobs.
-
-Do not overwrite existing queues which are not created by us If
-the simple <remote_printer> name is already taken, try to create a
-<remote_printer>@<server> name, if this is also taken, ignore the
-remote printer. Do not retry, to avoid polling CUPS all the time.
-
-Do not remove queues which are not created by us. We do this by
-listing only our queues and remove only listed queues.
-
-Queue names: Use the name of the remote queue. If a queue with the
-same name from another server already exists, mark the new queue
-as duplicate and when a queue disappears, check whether it has
-duplicates and change the URI of the disappeared queue to the URI
-of the first duplicate, mark the queue as to-be-created with
-timeout now-1 sec (to update the URI of the CUPS queue) and mark
-the duplicate disappeared with timeout now-1 sec. In terms of
-high availability we replace the old load balancing of the
-implicit class by a failover solution. Alternatively (not
-implemented), if queue with same name but from other server
-appears, create new queue as <original name>@<server name without
-.local>. When queue with simple name is removed, replace the first
-of the others by one with simple name (mark old queue disappeared
-with timeout now-1 sec and create new queue with simple name).
-
-Fill description of the created CUPS queue with the Bonjour
-service name (= original description) and location with the server
-name without .local.
-
-stderr messages only in debug mode (command line options:
-"--debug" or "-d" or "-v").
-
-Queue identified as from this daemon by doing the equivalent of
-"lpadmin -p printer -o cups-browsed-default", this generates a
-"cups-browsed" attribute in printers.conf with value "true".
-
-
-## CUPS FILTERS FOR PDF AS STANDARD PRINT JOB FORMAT
-
-Here is documentation from the former CUPS add-on tarball with the filters
-for the PDF-based printing workflow: imagetopdf, texttopdf,
+Here is documentation from the former CUPS add-on tarball with the
+filters for the PDF-based printing workflow: imagetopdf, texttopdf,
 pdftopdf, and pdftoraster
 
 The original filters are from http://sourceforge.jp/projects/opfc/
 
-NOTE: the texttops and imagetops filters shipping with this package
-are simple wrapper scripts for backward compatibility with third-party
-PPD files and custom configurations. There are not referred to in the
+NOTE: the texttops filter shipping with this package is a simple
+wrapper script for backward compatibility with third-party PPD files
+and custom configurations. It is not referred to in the
 cupsfilters.convs file and therefore not used by the default
-configuration. Direct conversion of text or images to PostScript is
-deprecated in the PDF-based printing workflow. So do not use these
-filters when creating new PPDs or custom configurations. The parameters
-for these filters are the same as for texttopdf and imagetopdf (see
-below) as the ...tops filter calls the ....topdf filter plus
-Ghostscript's pdf2ps.
+configuration. Direct conversion of text to PostScript is deprecated
+in the PDF-based printing workflow. So do not use this filter when
+creating new PPD files or custom configurations. The parameters for
+this filter are the same as for texttopdf (see below) as the texttops
+filter calls the texttopdf filter plus Ghostscript's pdf2ps.
 
 
-## Filters
+### Filters
 
 
-### IMAGETOPDF
+#### IMAGETOPDF
 
 1. INTRODUCTION
 
@@ -776,7 +570,7 @@ in the location specified by TMPDIR environment variable. Default location
 is "/tmp".
 
 
-### PDFTOPDF
+#### PDFTOPDF
 
 The pdftopdf filter depends on libqpdf to read and write PDF files.
 
@@ -785,7 +579,7 @@ A similar filter (which can serve as behavior reference)
 is called "cgpdftopdf" in OS X (not open source).
 
 
-#### Command line
+##### Command line
 
 pdftopdf follows the usual CUPS filter calling conventions, i.e.
 
@@ -904,7 +698,7 @@ form stays unflattened and so the filled in data will possibly not get
 printed.
 
 
-#### Native PDF Printer / JCL Support
+##### Native PDF Printer / JCL Support
 
 Note that for most modern native PDF printers JCL is not needed any
 more as they are controlled via IPP. For these the PPD files get
@@ -933,7 +727,7 @@ or "@PJL SET QTY=...", respectively.
 Other JCL code can be injected via "*JCLOpenUI: ..." ... "*JCLCloseUI: ...".
 
 
-#### Special PDF comments
+##### Special PDF comments
 
 pdftopdf adds comments to the pdf preamble that might esp. be of use
 to subsequent filters, e.g.
@@ -946,7 +740,7 @@ The "NumCopies" and "Collate" values refer to the expected device/hardware
 copies, i.e. when pdftopdf's soft-copy generation did not handle this options.
 
 
-#### Limitations
+##### Limitations
 
 pdftopdf does not support functions that are not related to printing
 features, including interactive features and document interchange features.
@@ -954,7 +748,7 @@ Many of these operators and sections are just ignored.
 Some of these may be output, but those functions are not assured.
 
 
-#### Known issues
+##### Known issues
 
 - Borders, esp. in the "number-up=1 fitplot=false"-case might be drawn
   at incorrect locations.
@@ -966,13 +760,13 @@ Some of these may be output, but those functions are not assured.
   from the command-line (see the Limitations section, above).
 
 
-### TEXTTOPDF
+#### TEXTTOPDF
 
 
 This implements a texttopdf filter, and is derived from cups' texttops.
 
 
-#### To configure
+##### To configure
 
 - texttopdf uses CUPS_DATADIR/charset/pdf.utf-8 for font configuration
   (when utf-8 was requested as charset). The font names given there are 
@@ -993,12 +787,12 @@ This implements a texttopdf filter, and is derived from cups' texttops.
 - You may look at the two examples: pdf.utf-8.simple and pdf.utf-8.heavy.
 
 
-#### To use
+##### To use
 
 The filter is called just like any other cups filter. Have a
 look at test.sh for example. 
 
-#### Known Issues
+##### Known Issues
 
 - Text extraction does not work (at least for pdftotext from xpdf)
   for the resulting pdfs.
@@ -1016,7 +810,7 @@ look at test.sh for example.
   Compose glyphs are not composed with the primary glyph but printed
   as separate glyphs.
 
-#### Further Info
+##### Further Info
 
 Font embedding is handled by libfontembed in the cupsfilters/fontembed
 subdirectory.
@@ -1026,10 +820,10 @@ Please report all bugs to
 https://github.com/OpenPrinting/cups-filters/issues
 
 
-### PDFTORASTER
+#### PDFTORASTER
 
 
-#### 1. INTRODUCTION
+##### 1. INTRODUCTION
 
 "pdftoraster" is a filter for CUPS. It reads PDF files, convert it and
 output CUPS raster.
@@ -1041,7 +835,7 @@ Some of these may be output, but those functions are not assured.
 Encryption feature is not supported.
 
 
-#### 2. COMMAND LINE
+##### 2. COMMAND LINE
 
 "pdftoraster" is a CUPS filter, and the command line arguments, environment
 variables and configuration files are in accordance with the CUPS filter
@@ -1059,24 +853,24 @@ When omit the <filename>, "pdftoraster" reads a PDF file from the stdin,
 and save it as a temporary file.
 
 
-#### 3. ENVIRONMENT VARIABLES
+##### 3. ENVIRONMENT VARIABLES
 
 This program refers the following environment variable;
 
 PPD:  PPD file name of the printer.
 
 
-#### 4. COMMAND OPTIONS
+##### 4. COMMAND OPTIONS
 
 See CUPS documents for details.
 
 
-#### 5. INFORMATION FOR DEVELOPERS
+##### 5. INFORMATION FOR DEVELOPERS
 
 Following information is for developers, not for driver users.
 
 
-#### 5.1 Options handled by a printer or "pdftoraster"
+##### 5.1 Options handled by a printer or "pdftoraster"
 
 "pdftopdf" outputs the following special comments from the 4th line in the
 created PDF data.
@@ -1087,17 +881,17 @@ created PDF data.
 "pdftoraster" overrides the command line options by above two option's values.
  
 
-#### 5.2 Temporally files location
+##### 5.2 Temporally files location
 
 "pdftoraster" creates temporally files if needed. Temporary files are created
 in the location specified by TMPDIR environment variable. Default location
 is "/tmp".
 
 
-### PCLMTORASTER
+#### PCLMTORASTER
 
 
-#### 1. INTRODUCTION
+##### 1. INTRODUCTION
 
 "pclmtoraster" is a filter for pclm and raster-only pdf files.
 It reads the raster graphics from each page using the QPDF API and converts
@@ -1106,14 +900,14 @@ single page bitmap for each page and one of the following colorspaces with
 8 Bits-per-component are supported DeviceGray, DeviceRGB and DeviceCMYK.
 
 
-#### 2. ENVIRONMENT VARIABLES
+##### 2. ENVIRONMENT VARIABLES
 
 This program refers the following environment variable;
 
     PPD:  PPD file name of the printer.
 
 
-#### 3. COMMAND OPTIONS
+##### 3. COMMAND OPTIONS
 
 Bi-Level output
 
@@ -1125,18 +919,18 @@ By default, ordered dithering is used.
 For other options, see CUPS documents for more details.
 
 
-#### 4. INFORMATION FOR DEVELOPERS
+##### 4. INFORMATION FOR DEVELOPERS
 
 Following information is for developers, not for filter users.
 
-#### 4.1 Temporary files location
+##### 4.1 Temporary files location
 
 "pclmtoraster" creates temporary files if needed. Temporary files are created
 in the location specified by TMPDIR environment variable. Default location
 is "/tmp".
 
 
-### TEXTTOTEXT
+#### TEXTTOTEXT
 
 This is a special filter for text-only printers (e. g. line printers,
 daisy-wheel printers, POS printers, ...) or for using printers in
@@ -1304,7 +1098,7 @@ Note that these options and multiple copies are ignored when
 pagination is turned off.
 
 
-### BEH - Backend Error Handler wrapper backend
+#### BEH - Backend Error Handler wrapper backend
 
 A wrapper for CUPS backends to make error handling more configurable
 
@@ -1404,7 +1198,7 @@ on Perl. Now it has been re-written in C and so it can be part of
 cups-filters without introducing new dependencies.
 
 
-### BRAILLE EMBOSSING
+#### BRAILLE EMBOSSING
 
 cups-filters also provides filters and drivers for braille
 embossers. It supports:
@@ -1416,7 +1210,7 @@ This is configured in CUPS just like any printer. Options can then be configured
 in the standard printer panel, or passed as -o options to the lp command.
 
 
-#### Text support
+##### Text support
 
 Text can be embossed either with no translation on the computer side (the
 embosser will translate), or with translation on the computer side (thanks to
@@ -1440,7 +1234,7 @@ proper document structure (paragraphs, titles, footnotes, etc.) to produce good
 quality.
 
 
-#### Vector Image support
+##### Vector Image support
 
 Vector images can be embossed by converting them to braille dots.
 
@@ -1454,7 +1248,7 @@ This image support is preferred over the generic image support described below,
 which has to reconstruct lines to be embossed.
 
 
-#### Image support
+##### Image support
 
 Images can be embossed by converting them to braille dots.
 
@@ -1511,7 +1305,7 @@ white or white on black:
     lp -o "nofitplot Edge=None Negate" file.png
 
 
-#### Generic embosser support
+##### Generic embosser support
 
 It should be possible to make all embossers use the generic driver. For this to
 work, one has to:
@@ -1526,7 +1320,7 @@ The generic driver can emboss text, as well as images, but images will probably
 be distorted by the Braille interline spacing.
 
 
-#### Index embossers support
+##### Index embossers support
 
 Supported models:
 
@@ -1562,7 +1356,7 @@ old 10.20 firmware.  Please either reflash the embosser with a firmware version
 cups printer options.
 
 
-#### Braille output options
+##### Braille output options
 
 The output can be finely tuned from the standard printing panel, or from the
 command-line, the following example selects translation tables for French and
@@ -1572,7 +1366,7 @@ the default values are shown here.
     lp -o "LibLouis=fr-fr-g1 LibLouis2=gr-gr-g1 TextDotDistance=250 LineSpacing=500" file.txt
 
 
-#### Reworking output before embossing
+##### Reworking output before embossing
 
 One may want to check and modify the .brf or .ubrl output before sending it to
 the embosser.  This can be achieved by first generating the .brf file:
@@ -1593,7 +1387,7 @@ The same can be achieved for images:
     lp -o document-format=image/vnd.cups-ubrl ~/test.ubrl
 
 
-#### BRF file output
+##### BRF file output
 
 One can generate BRF files by adding a virtual BRF printer.
 
@@ -1604,7 +1398,7 @@ Printing to the resulting printer will generate a .brf file in a BRF
 subdirectory of the home directory.
 
 
-#### UBRL file output
+##### UBRL file output
 
 One can generate Unicode braille files, not useful for embossing, but which can
 be easily looked at by sighted people to check for the output.
@@ -1616,7 +1410,7 @@ Printing to the resulting printer will generate a .brf file in a BRF
 subdirectory of the home directory.
 
 
-#### Remark about the source code
+##### Remark about the source code
 
 The file filter/braille/drivers/index/ubrlto4dot.c is used to generate
 the translation table in
@@ -1625,7 +1419,7 @@ filter/braille/drivers/index/imageubrltoindexv[34]. It is included as
 generation in the Makefile is more tedious than really useful.
 
 
-#### TODO
+##### TODO
 
 - Test whether one wants to negate, e.g. to emboss as few dots as possible
 - textubrltoindex when liblouis tools will be able to emit 8dot braille

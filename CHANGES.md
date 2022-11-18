@@ -1,6 +1,6 @@
-# CHANGES - OpenPrinting CUPS Filters v2.0b1 - 2022-11-14
+# CHANGES - OpenPrinting CUPS Filters v2.0b1 - 2022-11-18
 
-## CHANGES IN V2.0b1 (TBA)
+## CHANGES IN V2.0b1 (18th November 2022)
 
 - Converted nearly all filters to filter functions, only exceptions
   are rastertoescpx, rastertopclx, commandtoescpx, commandtopclx, and
