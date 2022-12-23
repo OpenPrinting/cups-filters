@@ -277,8 +277,6 @@ AC_DEFINE_UNQUOTED([CUPS_IPPFIND], "$CUPS_IPPFIND", [ippfind binary to use.])
 dnl Avahi
 AVAHI_LIBS=""
 AVAHI_CFLAGS=""
-AVAHI_GLIB_CFLAGS=""
-AVAHI_GLIB_LIBS=""
 
 AC_ARG_ENABLE([avahi],
 	[AS_HELP_STRING([--disable-avahi], [Disable DNS Service Discovery support using Avahi.])],
