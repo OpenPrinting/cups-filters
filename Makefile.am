@@ -100,7 +100,7 @@ EXTRA_DIST += $(gendrvfiles)
 # =======================
 # Definitions for drivers
 # =======================
-pkgppdcdir = $(CUPS_DATADIR)/ppdc
+pkgppdcdir = $(datadir)/ppdc
 
 genppdcfiles = \
 	filter/pcl.h \
