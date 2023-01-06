@@ -1,8 +1,8 @@
 Developing for CUPS FILTERS
 ===========================
 
-Please see the [Contributing to CUPS](CONTRIBUTING.md) file for information on
-contributing to the CUPS project.
+Please see the [Contributing to CUPS Filters](CONTRIBUTING.md) file for
+information on contributing to the CUPS project.
 
 
 How To Contact The Developers
@@ -12,24 +12,6 @@ The Linux Foundation's "printing-architecture" mailing list is the primary means
 of asking questions and informally discussing issues and feature requests with
 the OpenPrinting developers.  To subscribe or see the mailing list archives, go
 to <https://lists.linuxfoundation.org/mailman/listinfo/printing-architecture>.
-
-
-Interfaces
-----------
-
-CUPS Filters interfaces, including the C APIs and command-line arguments,
-environment variables, configuration files, and output format, are stable
-across patch versions and are generally backwards-compatible with interfaces
-used in prior major and minor versions.
-
-CUPS Filters C APIs starting with an underscore (`_`) are considered to be
-private to the library and are not subject to the normal guarantees of
-stability between CUPS releases and must never be used in source code outside
-this library. Similarly, configuration and state files written by CUPS Filters
-are considered private if a corresponding man page is not provided with the
-CUPS Filters release.  Never rely on undocumented files or formats when
-developing software for CUPS Filters.  Always use a published C API to access
-data stored in a file to avoid compatibility problems in the future.
 
 
 Build System
@@ -129,15 +111,6 @@ the source file and the copyright and licensing notice:
      */
 
 
-### Header Files
-
-Private API header files must be named with the suffix "-private", for example
-the "xxx.h" header file defines all of the public APIs while the
-"xxx-private.h" header file defines all of the private APIs as well.
-Typically a private API header file will include the corresponding public API
-header file.
-
-
 ### Comments
 
 All source code utilizes block comments within functions to describe the
@@ -149,17 +122,17 @@ comment format being preferred for multi-line comments:
 
     /*
      * Clear the state array before we begin.  Make sure that every
-     * element is set to `CUPS_STATE_IDLE`.
+     * element is set to `STATE_IDLE`.
      */
 
      for (i = 0; i < (sizeof(array) / sizeof(sizeof(array[0])); i ++)
-       array[i] = CUPS_STATE_IDLE;
+       array[i] = STATE_IDLE;
 
      // Wait for state changes on another thread...
      do
      {
        for (i = 0; i < (sizeof(array) / sizeof(sizeof(array[0])); i ++)
-         if (array[i] != CUPS_STATE_IDLE)
+         if (array[i] != STATE_IDLE)
            break;
 
        if (i == (sizeof(array) / sizeof(array[0])))
@@ -191,7 +164,7 @@ spaces after each "case" and "default" case:
 
     switch (array[i])
     {
-      case CUPS_STATE_IDLE :
+      case STATE_IDLE :
           do_this(i);
           do_that(i);
           break;
@@ -212,15 +185,15 @@ inserted between a function name and the arguments in parenthesis.
 
 Parenthesis surround values returned from a function:
 
-    return (CUPS_STATE_IDLE);
+    return (STATE_IDLE);
 
 
 ### Functions
 
-Functions with a global scope have a lowercase prefix followed by capitalized
-words, e.g., `cupsDoThis`, `cupsDoThat`, `cupsDoSomethingElse`, etc.  Private
-global functions begin with a leading underscore, e.g., `_cupsDoThis`,
-`_cupsDoThat`, etc.
+Functions with a global scope start with a lowercase letter followed by
+capitalized words ("camelCase"), e.g., `doThis`, `doThat`, `doSomethingElse`,
+etc. Private global functions begin with a leading underscore, e.g., `_doThis`,
+`_doThat`, etc.
 
 Functions with a local scope are declared static with lowercase names and
 underscores between words, e.g., `do_this`, `do_that`, `do_something_else`, etc.
@@ -257,8 +230,7 @@ function description comment:
                            for new development and scheduled for removal.
     @link name@          - Provides a hyperlink to the corresponding function
                            or type definition.
-    @since CUPS version@ - Marks the function as new in the specified version
-                           of CUPS.
+    @since version@      - Marks the function as new in the specified version.
     @private@            - Marks the function as private so it will not be
                            included in the documentation.
 
@@ -266,9 +238,7 @@ function description comment:
 ### Variables
 
 Variables with a global scope are capitalized, e.g., `ThisVariable`,
-`ThatVariable`, `ThisStateVariable`, etc.  Globals in CUPS libraries are either
-part of the per-thread global values managed by the `_cupsGlobals` function
-or are suitably protected for concurrent access.  Global variables should be
+`ThatVariable`, `ThisStateVariable`, etc. Global variables should be
 replaced by function arguments whenever possible.
 
 Variables with a local scope are lowercase with underscores between words,
@@ -286,28 +256,25 @@ comment describing the variable:
 ### Types
 
 All type names are lowercase with underscores between words and `_t` appended
-to the end of the name, e.g., `cups_this_type_t`, `cups_that_type_t`, etc.
-Type names start with a prefix, typically `cups` or the name of the program,
-to avoid conflicts with system types.  Private type names start with an
-underscore, e.g., `_cups_this_t`, `_cups_that_t`, etc.
+to the end of the name, e.g., `this_type_t`, `that_type_t`, etc.
+Private type names start with an underscore, e.g., `_this_t`, `_that_t`, etc.
 
 Each type has a comment immediately after the typedef:
 
-    typedef int cups_this_type_t;  // This type is for CUPS foobar options.
+    typedef int this_type_t;  // This type is for foobar options.
 
 
 ### Structures
 
 All structure names are lowercase with underscores between words and `_s`
-appended to the end of the name, e.g., `cups_this_s`, `cups_that_s`, etc.
-Structure names start with a prefix, typically `cups` or the name of the
-program, to avoid conflicts with system types.  Private structure names start
-with an underscore, e.g., `_cups_this_s`, `_cups_that_s`, etc.
+appended to the end of the name, e.g., `this_s`, `that_s`, etc.
+Private structure names start with an underscore, e.g., `_this_s`, `_that_s`,
+etc.
 
 Each structure has a comment immediately after the struct and each member is
 documented similar to the variable naming policy above:
 
-    struct cups_this_struct_s  // This structure is for CUPS foobar options.
+    struct this_struct_s       // This structure is for foobar options.
     {
       int this_member;         // Current state for this
       int that_member;         // Current state for that
@@ -317,20 +284,18 @@ documented similar to the variable naming policy above:
 ### Constants
 
 All constant names are uppercase with underscores between words, e.g.,
-`CUPS_THIS_CONSTANT`, `CUPS_THAT_CONSTANT`, etc.  Constants begin with an
-uppercase prefix, typically `CUPS_` or the program or type name.  Private
-constants start with an underscore, e.g., `_CUPS_THIS_CONSTANT`,
-`_CUPS_THAT_CONSTANT`, etc.
+`THIS_CONSTANT`, `THAT_CONSTANT`, etc. Private constants start with an
+underscore, e.g., `_THIS_CONSTANT`, `_THAT_CONSTANT`, etc.
 
 Typed enumerations should be used whenever possible to allow for type checking
 by the compiler.
 
 Comments immediately follow each constant:
 
-    typedef enum cups_tray_e  // Tray enumerations
+    typedef cups_tray_e  // Tray enumerations
     {
-      CUPS_TRAY_THIS,         // This tray
-      CUPS_TRAY_THAT          // That tray
-    } cups_tray_t;
+      TRAY_THIS,         // This tray
+      TRAY_THAT          // That tray
+    } tray_t;
 
 
