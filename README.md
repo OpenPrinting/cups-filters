@@ -1,4 +1,4 @@
-# OpenPrinting CUPS Filters v2.0b1 - 2020-11-18
+# OpenPrinting CUPS Filters v2.0b1 - 2022-11-18
 
 Looking for compile instructions?  Read the file "INSTALL"
 instead...
@@ -84,20 +84,10 @@ compatibility.
 * [The New Architecture - What is it?](https://openprinting.github.io/current/#the-new-architecture-for-printing-and-scanning)
 * [Ubuntu Desktop Team Indaba on YouTube](https://www.youtube.com/watch?v=P22DOu_ahBo)
 
-### Printer Applications
-
-* [All free drivers in a PPD-less world - OR - All free drivers in Snaps](https://openprinting.github.io/achievements/#all-free-drivers-in-a-ppd-less-world---or---all-free-drivers-in-snaps)
-* [Current activity on Printer Applications](https://openprinting.github.io/current/#printer-applications)
-* [PostScript Printer Application](https://github.com/OpenPrinting/ps-printer-app) ([Snap Store](https://snapcraft.io/ps-printer-app)): Printer Application Snap for PostScript printers which are supported by the manufacturer's PPD files. User can add PPD files if the needed one is not included or outdated.
-* [Ghostscript Printer Application](https://github.com/OpenPrinting/ghostscript-printer-app) ([Snap Store](https://snapcraft.io/ghostscript-printer-app)): Printer Application with Ghostscript and many other drivers, for practically all Linux-supported printers which are not PostScript and not supported by HPLIP or Gutenprint.
-* [HPLIP Printer Application](https://github.com/OpenPrinting/hplip-printer-app) ([Snap Store](https://snapcraft.io/hplip-printer-app)): HPLIP in a Printer Application Snap. Supports nearly every HP printer ever made. Installing HP's proprietary plugin (needed for a few printers) into the Snap is supported and easily done with the web interface.
-* [Gutenprint Printer Application](https://github.com/OpenPrinting/gutenprint-printer-app) ([Snap Store](https://snapcraft.io/gutenprint-printer-app)): High quality output and a lot of knobs to adjust, especially for Epson and Canon inkjets but also for many other printers, in a Printer Application Snap.
-* [Legacy Printer Application](https://github.com/OpenPrinting/pappl-retrofit#legacy-printer-application) (not available as Snap): It is a part of the [pappl-retrofit](https://github.com/OpenPrinting/pappl-retrofit) package and it makes drivers classically installed for the system's classically installed CUPS available in a Printer Application and this way for the CUPS Snap. It is especially helpful for drivers which are not (yet) available as Printer Application.
-
 
 ## DOCUMENTATION FROM CUPS-FILTERS 1.x
 
-Most of this is still valid for the current cups-filters.
+Most of this is still valid for the current version of cups-filters.
 
 ### IMAGE PRINTING DEFAULT CHANGED TO "SCALE TO FIT"
 
