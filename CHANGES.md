@@ -1,6 +1,6 @@
-# CHANGES - OpenPrinting CUPS Filters v2.0b1 - 2022-11-18
+# CHANGES - OpenPrinting CUPS Filters v2.0b2 - 2023-01-08
 
-## CHANGES IN V2.0b2 (TBA)
+## CHANGES IN V2.0b2 (8th January 2023)
 
 - Corrected installation path for *.h files of *.drv files.  The ppdc
   (and underlying functions) of libppd searches for include files in
