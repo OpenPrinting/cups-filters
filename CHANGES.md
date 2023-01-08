@@ -2,8 +2,23 @@
 
 ## CHANGES IN V2.0b2 (TBA)
 
+- Corrected installation path for *.h files of *.drv files.  The ppdc
+  (and underlying functions) of libppd searches for include files in
+  /usr/share/ppdc and not in /usr/share/cups/ppdc any more.
+
+- configure.ac: Remove unnecessary "AVAHI_GLIB_..." definitions.
+
+- Makefile.am: Include NOTICE in distribution tarball
+
 - configure.ac: Added "foreign" to to AM_INIT_AUTOMAKE() call. Makes
   automake not require a file named README.
+
+- Cleaned up .gitignore
+
+- Tons of fixes in the source code documentation: README.md, INSTALL,
+  DEVELOPING.md, CONTRIBUTING.md, COPYING, NOTICE, ... Adapted to the
+  cups-filters component, added links.
+
 
 ## CHANGES IN V2.0b1 (18th November 2022)
 
