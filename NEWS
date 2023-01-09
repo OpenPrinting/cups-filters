@@ -1,6 +1,16 @@
 NEWS - OpenPrinting CUPS Filters v1.28.16 - 2022-08-24
 ------------------------------------------------------
 
+CHANGES IN V1.28.17
+
+	- libcupsfilters: In generate_sizes() consider all margin
+	  alternatives. When generating the PPD file for a driverless
+	  printer, and in the media-{left,right,top,bottom}-margin-supported
+	  printer IPP attributes there was more than 1 vale, the first
+	  value (which often was the 0 for borderless printing was not
+	  considered, leaving the borderless functionality of many
+	  printers undiscovered (Issues #492).
+
 CHANGES IN V1.28.16
 
 	- imagetoraster, imagetopdf, libcupsfilters: Added support for
