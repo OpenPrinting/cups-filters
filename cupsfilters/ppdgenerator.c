@@ -1180,11 +1180,21 @@ cups_array_t* generate_sizes(ipp_t *response,
                            *x_dim, *y_dim;       /* Media dimensions */
   ipp_t                    *media_col,           /* Media collection */
                            *media_size;          /* Media size collection */
-  int                      i, count = 0;
+  int                      i, j, count = 0;
   pwg_media_t              *pwg;                 /* PWG media size */
   int                      left_def, right_def, bottom_def, top_def;
   ipp_attribute_t          *margin;  /* media-xxx-margin attribute */
   const char               *psname;
+  // 2 attributes which hold a list of media-col structures. Paesing is the
+  // same for them, so we use the same code. "media-col-database" is parsed
+  // first as it is more complete an accurate, "media-col-ready" is more
+  // a fallback if there is no "media-col-database".
+  const char * const col_attrs[] =
+  {
+    "media-col-database",
+    "media-col-ready",
+  };
+
 
   if ((attr = ippFindAttribute(response, "media-bottom-margin-supported",
 			       IPP_TAG_INTEGER)) != NULL) {
@@ -1284,7 +1294,9 @@ cups_array_t* generate_sizes(ipp_t *response,
 			(cups_acopy_func_t)pwg_copy_size,
 			(cups_afree_func_t)free);
 
-  if ((attr = ippFindAttribute(response, "media-col-database",
+  // Go through all attributes which are lists of media-col structures
+  for (j = 0; j < sizeof(col_attrs) / sizeof(col_attrs[0]); j ++)
+  if ((attr = ippFindAttribute(response, col_attrs[j],
 			       IPP_TAG_BEGIN_COLLECTION)) != NULL) {
     for (i = 0, count = ippGetCount(attr); i < count; i ++) {
       cups_size_t temp;   /* Current size */
