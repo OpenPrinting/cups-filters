@@ -173,9 +173,6 @@ AM_CONDITIONAL([ENABLE_IMAGEFILTERS], [test "x$enable_imagefilters" != "xno"])
 AC_ARG_ENABLE(poppler, AS_HELP_STRING([--enable-poppler],[enable Poppler-based filters]),
 	      enable_poppler=$enableval,enable_poppler=yes)
 AM_CONDITIONAL(ENABLE_POPPLER, test x$enable_poppler = xyes)
-if test x$enable_poppler = xyes; then
-	PKG_CHECK_MODULES([POPPLER], [poppler-cpp >= 0.19])
-fi
 
 # =====================
 # Check for Ghostscript
