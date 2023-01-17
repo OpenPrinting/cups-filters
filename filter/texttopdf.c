@@ -14,7 +14,6 @@
 #include <cupsfilters/filter.h>
 #include <ppd/ppd-filter.h>
 #include <signal.h>
-#include <fontconfig/fontconfig.h>
 #include <config.h>
 
 
