@@ -2023,7 +2023,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     }
   }
 #endif
-  if (cupsArrayFind(pdl_list, "image/pwg-raster")) {
+  if (!is_apple && cupsArrayFind(pdl_list, "image/pwg-raster")) {
     if ((attr = ippFindAttribute(response,
 				 "pwg-raster-document-resolution-supported",
 				 IPP_TAG_RESOLUTION)) != NULL) {
@@ -2039,7 +2039,7 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     }
   }
 #ifdef QPDF_HAVE_PCLM
-  if (cupsArrayFind(pdl_list, "application/PCLm")) {
+  if (!is_apple && !is_pwg && cupsArrayFind(pdl_list, "application/PCLm")) {
     if ((attr = ippFindAttribute(response, "pclm-source-resolution-supported",
 				 IPP_TAG_RESOLUTION)) != NULL) {
       if ((defattr = ippFindAttribute(response,
