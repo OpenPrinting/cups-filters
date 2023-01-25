@@ -3,6 +3,21 @@ NEWS - OpenPrinting CUPS Filters v1.28.16 - 2022-08-24
 
 CHANGES IN V1.28.17
 
+	- libcupsfilters: In PPD generator create only one *cupsFilter2:
+	  line for raster. Only use the most desirable/reliable format,
+	  usually Apple Raster.
+	- libcupsfilters: In get_printer_attributes() poll
+	  "media-col-database" separately if needed. On some printers
+	  one gets "media-col-database" only this way. Ofte reveals
+	  important functionality, like for example borderless
+	  printing.
+	- libcupsfilters: Let PPD generator also parse
+	  "media-col-ready" IPP attribute. "media-col-ready" lists the
+	  loaded media, in contrary to "media-ready" as list of
+	  complete descriptions of the media ("media-col" data
+	  structure).  This often lists also variants like borderless
+	  (it is the same physical paper). Especially usefull when
+	  "media-col-database" is not available.
 	- libcupsfilters: In generate_sizes() consider all margin
 	  alternatives. When generating the PPD file for a driverless
 	  printer, and in the media-{left,right,top,bottom}-margin-supported
