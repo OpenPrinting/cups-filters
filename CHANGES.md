@@ -1,5 +1,26 @@
 # CHANGES - OpenPrinting CUPS Filters v2.0b2 - 2023-01-08
 
+## CHANGES IN V2.0b3 (31st January 2023)
+
+- texttopdf: Do not include fontconfig.h in the CUPS filter wrapper
+
+- Build system: Do not explicitly check for libpoppler-cpp
+  The cups-filters package does not contain any code using
+  libpoppler-cpp, therefore we let ./configure not check for it.
+
+- COPYING, NOTICE: Simplification for autotools-generated files
+  autotools-generated files can be included under the license of the
+  upstream code, and FSF copyright added to upstream copyright
+  list. Simplified COPYING appropriately.
+
+- Makefile.am: Include LICENSE in distribution tarball
+
+- Add templates for issue reports on GitHub. This makes a selection
+  screen appear when clicking "New Issue" in the web UI, to selct
+  whether the issue is a regular bug, a feature request, or a security
+  vulnerability.
+
+
 ## CHANGES IN V2.0b2 (8th January 2023)
 
 - Corrected installation path for *.h files of *.drv files.  The ppdc
