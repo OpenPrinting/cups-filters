@@ -16,10 +16,9 @@ found in "CHANGES.md".
 
 BEFORE YOU BEGIN
 
-    You'll need ANSI-compliant C and C++ compilers, plus a make program and
-    POSIX-compliant shell (/bin/sh).  The GNU compiler tools and Bash work well
-    and we have tested the current CUPS code against several versions of GCC
-    with excellent results.
+    You'll need ANSI-compliant C, plus a make program and POSIX-compliant shell
+    (/bin/sh).  The GNU compiler tools and Bash work well and we have tested
+    the current CUPS code against several versions of GCC with excellent results.
 
     The Makefiles used by the project should work with most versions of make.
     We've tested them with GNU make as well as the make programs shipped by
