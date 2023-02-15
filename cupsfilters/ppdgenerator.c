@@ -2801,7 +2801,8 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
       have_bi_level = 0,
       have_mono = 0;
 
-    if ((keyword = ippGetString(defattr, 0, NULL)) != NULL)
+    if ((keyword = ippGetString(defattr, 0, NULL)) != NULL &&
+	strcmp(keyword, "auto"))
     {
       if (!strcmp(keyword, "bi-level"))
         default_color = "FastGray";
