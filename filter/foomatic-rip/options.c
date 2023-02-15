@@ -2261,9 +2261,8 @@ ppd_supports_pdf()
   // line
   if (startswith(cmd, "gs"))
   {
-    strncpy(cmd_pdf, cmd, 4096);
-    if (strlen(cmd) > 4095)
-      cmd_pdf[4095] = '\0';
+    strncpy(cmd_pdf, cmd, 4095);
+    cmd_pdf[4095] = '\0';
     return (1);
   }
 
