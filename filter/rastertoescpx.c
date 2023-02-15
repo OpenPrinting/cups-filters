@@ -335,6 +335,9 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
         DitherLuts[6] = ppdLutLoad(ppd, colormodel, header->MediaType,
 	                            resolution, "LightBlack", logfunc, ld);
         break;
+    case 0 : // ERROR
+        fputs("ERROR: Unable to allocate band list\n", stderr);
+        exit(1);
   }
 
   for (plane = 0; plane < PrinterPlanes; plane ++)
