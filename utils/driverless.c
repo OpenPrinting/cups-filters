@@ -495,19 +495,20 @@ list_printers (int mode, int reg_type_no, int isFax)
   if (fp) {
     while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 ||
 	   (bytes < 0 && (errno == EAGAIN || errno == EINTR))) {
-      ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
       ptr = buffer;
       while (ptr && !isalnum(*ptr & 255)) ptr ++;
       if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t')) {
 	ptr += 4;
 	*ptr = '\0';
 	ptr ++;
+	ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
 	snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
 	cupsArrayAdd(service_uri_list_ipps, ippfind_output);
       } else if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t')) {
 	ptr += 3;
 	*ptr = '\0';
 	ptr ++;
+	ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
 	snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
 	cupsArrayAdd(service_uri_list_ipp, ippfind_output);
       } else
