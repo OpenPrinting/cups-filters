@@ -1255,8 +1255,6 @@ option_has_choice(option_t *opt,
 const char *
 option_text(option_t *opt)
 {
-  if (isempty(opt->text))
-    return (opt->text);
   return (opt->text);
 }
 
