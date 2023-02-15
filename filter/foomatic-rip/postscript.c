@@ -315,6 +315,7 @@ print_ps(FILE *file,
       _log("No pages left, outputting empty file.\n");
 
     free_dstr(data_read);
+    free_dstr(line);
   }
 
   return (1);
