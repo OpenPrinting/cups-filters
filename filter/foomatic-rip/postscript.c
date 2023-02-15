@@ -178,17 +178,14 @@ print_ps(FILE *file,
 	 const char *filename)
 {
   stream_t stream;
-  char gscommand[65536];
   int pagefound = 0;
   FILE *in, *out;
   pid_t pid;
-  char buf[4096];
   struct pollfd pfd;
   size_t bytes, bytes_sent;
   char *pos;
   int pres;
-  dstr_t *line = create_dstr();
-  dstr_t *data_read = create_dstr();
+  dstr_t *line = NULL, *data_read = NULL;
 
 
   // Define input data stream for reading
@@ -228,6 +225,11 @@ print_ps(FILE *file,
     // lines, we only need the boolean answer whether there are pages or
     // not
     //
+
+    char buf[4096];
+    char gscommand[65536];
+    line = create_dstr();
+    data_read = create_dstr();
     
     snprintf(gscommand, 65536, "%s -q -dNOPAUSE -dBATCH -sDEVICE=bbox -dDEVICEWIDTHPOINTS=1 -dDEVICEHEIGHTPOINTS=1 -_ 2>&1",
 	     CUPS_GHOSTSCRIPT);
