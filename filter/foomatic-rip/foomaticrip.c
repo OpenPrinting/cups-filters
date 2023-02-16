@@ -639,7 +639,7 @@ int
 print_file(const char *filename,
 	   int convert)
 {
-  FILE *file;
+  FILE *file = NULL;
   char buf[8192];
   char tmpfilename[PATH_MAX] = "";
   int type;
@@ -664,6 +664,8 @@ print_file(const char *filename,
     n = fread_or_die(buf, 1, sizeof(buf) - 1, file);
     if (!n) {
       _log("Input is empty, outputting empty file.\n");
+      if (strcasecmp(filename, "<STDIN>"))
+        fclose(file);
       return (1);
     }
     buf[n] = '\0';

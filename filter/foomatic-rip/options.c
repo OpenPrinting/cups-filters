@@ -1255,8 +1255,6 @@ option_has_choice(option_t *opt,
 const char *
 option_text(option_t *opt)
 {
-  if (isempty(opt->text))
-    return (opt->text);
   return (opt->text);
 }
 
@@ -2263,9 +2261,8 @@ ppd_supports_pdf()
   // line
   if (startswith(cmd, "gs"))
   {
-    strncpy(cmd_pdf, cmd, 4096);
-    if (strlen(cmd) > 4095)
-      cmd_pdf[4095] = '\0';
+    strncpy(cmd_pdf, cmd, 4095);
+    cmd_pdf[4095] = '\0';
     return (1);
   }
 
