@@ -34,7 +34,7 @@ package. This package retro-fits the filter functions of
 libcupsfilters and libppd to CUPS 2.x.
 
 For compiling and using this package CUPS (2.2.2 or newer),
-libcupsfilters 2.x, and libppd are needed. It is highly recommended,
+libcupsfilters 2.x, libexif, and libppd are needed. It is highly recommended,
 especially if non-PDF printers are used, to have at least one of
 Ghostscript (preferred), Poppler, or MuPDF installed.
 
