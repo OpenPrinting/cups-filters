@@ -1978,47 +1978,112 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
     is_pdf = 1;
   }
 #ifdef CUPS_RASTER_HAVE_APPLERASTER
-  if (cupsArrayFind(pdl_list, "image/urf")) {
+  else if (cupsArrayFind(pdl_list, "image/urf"))
+  {
+    int resStore = 0; // Variable for storing the no. of resolutions in the resolution array 
+    int resArray[__INT16_MAX__]; // Creating a resolution array supporting a maximum of 32767 resolutions.
+    int lowdpi = 0, middpi = 0, hidpi = 0; // Lower , middle and higher resolution
     if ((attr = ippFindAttribute(response, "urf-supported",
-				 IPP_TAG_KEYWORD)) != NULL) {
-      int lowdpi = 0, hidpi = 0; /* Lower and higher resolution */
-      for (i = 0, count = ippGetCount(attr); i < count; i ++) {
-	const char *rs = ippGetString(attr, i, NULL); /* RS value */
-	if (_cups_strncasecmp(rs, "RS", 2))
+			IPP_TAG_KEYWORD)) != NULL)
+    {
+      for (int i = 0, count = ippGetCount(attr); i < count; i ++)
+      {  
+       	const char *rs = ippGetString(attr, i, NULL); // RS values
+        const char *rsCopy = ippGetString(attr, i, NULL); // RS values(copy) 
+ 	if (strncasecmp(rs, "RS", 2)) // Comparing attributes to have RS in the beginning to indicate the resolution feature
 	  continue;
-	lowdpi = atoi(rs + 2);
-	if ((rs = strrchr(rs, '-')) != NULL)
-	  hidpi = atoi(rs + 1);
-	else
-	  hidpi = lowdpi;
-	break;
+        int resCount = 0; // Using a count variable which can be reset 
+        while (*rsCopy != '\0') // Parsing through the copy pointer to determine the no. of resolutions
+        {
+          if (*rsCopy == '-')
+          {
+            resCount ++;
+          }
+          rsCopy ++;
+        }
+        resCount ++;
+        resStore = resCount;
+        resCount = 0;
+        resArray[resCount] = atoi(rs + 2);
+        resCount ++;
+        while (*rs != '\0') // Parsing through the entire pointer and appending each resolution to an array
+        {
+          if (*rs == '-')
+          {
+            resArray[resCount] = atoi(rs + 1);
+            resCount ++;
+          }
+          rs ++;
+        }
+        // Finding and storing the important dpi.
+        // Lowdpi the lowest resolution, hidpi the highest resolution and middpi finding the middle resolution 
+        // The middpi takes the rounded down middle value
+        lowdpi = resArray[0];
+        middpi = resArray[(resStore - 1) / 2];
+        hidpi = resArray[resStore - 1];
+        break;
       }
-      if (lowdpi == 0) {
-	/* Invalid "urf-supported" value... */
-	goto bad_ppd;
-      } else {
-	if ((current_res = resolutionArrayNew()) != NULL) {
-	  if ((current_def = resolutionNew(lowdpi, lowdpi)) != NULL)
+      if (lowdpi == 0)
+      {
+        // Invalid "urf-supported" value...
+        goto bad_ppd;
+      }
+      else
+      {
+        if ((current_res = cfNewResolutionArray()) != NULL)
+        {
+          // Adding to the resolution list
+          if ((current_def = cfNewResolution(lowdpi, lowdpi)) != NULL)
           {
 	    cupsArrayAdd(current_res, current_def);
-            free_resolution(current_def, NULL);
+            cfFreeResolution(current_def, NULL);
           }
-	  if (hidpi != lowdpi &&
-	      (current_def = resolutionNew(hidpi, hidpi)) != NULL)
+          if (hidpi != lowdpi &&
+	        (current_def = cfNewResolution(hidpi, hidpi)) != NULL)
           {
 	    cupsArrayAdd(current_res, current_def);
-            free_resolution(current_def, NULL);
+            cfFreeResolution(current_def, NULL);
           }
-	  current_def = NULL;
-	  if (cupsArrayCount(current_res) > 0 &&
-	      joinResolutionArrays(&common_res, &current_res, &common_def,
-				   &current_def)) {
+          if (middpi != hidpi && middpi != lowdpi &&
+	        (current_def = cfNewResolution(middpi, middpi)) != NULL)
+          {
+	    cupsArrayAdd(current_res, current_def);
+            cfFreeResolution(current_def, NULL);
+          }
+          current_def = NULL;
+          // Checking if there is printer-default-resolution and this resolution is in the list, use it. If not,
+          // use the middpi, rounding down if the number of available resolutions is even.
+          if ((attr = ippFindAttribute(response, "printer-resolution-supported",
+				 IPP_TAG_RESOLUTION)) != NULL)
+          {
+            if ((defattr = ippFindAttribute(response, "printer-resolution-default",
+				      IPP_TAG_RESOLUTION)) != NULL)
+            {
+              current_def = cfIPPResToResolution(defattr, 0);
+              for (int j = 0; j < resStore; j ++)
+              {
+                if (current_def == cfNewResolution(resArray[i], resArray[i]))
+                {
+                  current_def = cfIPPResToResolution(defattr, 0);
+                  break;
+                }
+                else
+                {
+                  current_def = cfNewResolution(middpi, middpi);
+                }
+              }
+            }
+          }
+          if (cupsArrayCount(current_res) > 0 &&
+	      cfJoinResolutionArrays(&common_res, &current_res, &common_def,
+				 &current_def)) 
+          {
 	    cupsFilePuts(fp, "*cupsFilter2: \"image/urf image/urf 0 -\"\n");
-	    if (formatfound == 0) manual_copies = 1;
+	    manual_copies = 1;
 	    formatfound = 1;
 	    is_apple = 1;
 	  }
-	}
+        } 
       }
     }
   }
