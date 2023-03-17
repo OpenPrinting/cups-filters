@@ -277,13 +277,17 @@ print_ps(FILE *file,
       }
     }
 
+    fclose(in);
+
     // If the input file has only a single page and the "showpage" is
     // very close to the end of the file, it cannot have been
     // discovered after the last bits of input data got
     // read. Therefore we do an extra check here.
     if (!pagefound)
     {
-      pres = poll(&pfd, 1, 1000);
+      // gs may have only started processing after we closed the input fd
+      // above, so give it a generous timeout.
+      pres = poll(&pfd, 1, 5000);
       if (pres < 0)
 	_log("Error reading Ghostscript output\n");
       else if (pres && (pfd.revents & POLLIN))
@@ -291,7 +295,6 @@ print_ps(FILE *file,
     }
 
     // Clean up and make Ghostscript stop by that
-    fclose(in);
     fclose(out);
     wait_for_process(pid);
 
