@@ -379,11 +379,9 @@ AS_IF([test x"$enable_werror" = "xyes"], [
 ])
 AS_IF([test x"$GCC" = "xyes"], [
 	# Be tough with warnings and produce less careless code
-	CFLAGS="$CFLAGS -Wall -std=gnu11"
-	CXXFLAGS="$CXXFLAGS -Wall " # -Weffc++" # TODO: enable when it does not print 1MB of warnings
+	CFLAGS="$CFLAGS -Wall"
 ])
 CFLAGS="$CFLAGS -D_GNU_SOURCE"
-CXXFLAGS="$CXXFLAGS -D_GNU_SOURCE"
 
 # =========================================================
 # Select a different shell instead of the default /bin/bash
@@ -411,7 +409,6 @@ AC_MSG_NOTICE([
 ==============================================================================
 Environment settings:
 	CFLAGS:                                    ${CFLAGS}
-	CXXFLAGS:                                  ${CXXFLAGS}
 	LDFLAGS:                                   ${LDFLAGS}
 Build configuration:
 	cups-config:     ${with_cups_config}
