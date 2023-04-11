@@ -1,4 +1,4 @@
-# OpenPrinting CUPS Filters v2.0b3 - 2023-01-31
+# OpenPrinting CUPS Filters v2.0rc1 - 2023-04-12
 
 Looking for compile instructions?  Read the file "INSTALL"
 instead...

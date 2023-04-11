@@ -1,4 +1,27 @@
-# CHANGES - OpenPrinting CUPS Filters v2.0b3 - 2023-01-31
+# CHANGES - OpenPrinting CUPS Filters v2.0rc1 - 2023-04-12
+
+## CHANGES IN V2.0rc1 (12th April 2023)
+
+- foomatic-rip: Fix a SIGPIPE error when calling gs (Pull request #517)
+  [Ubuntu's autopkgtest for
+  foo2zjs](https://autopkgtest.ubuntu.com/packages/f/foo2zjs/lunar/ppc64el)
+  shows foo2zjs's testsuite failing with cups-filters 2.0beta3 on
+  ppc64el. This is cause by a timing issue in foomatic-rip which is
+  fixed now.
+
+- Coverity check done by Zdenek Dohnal for the inclusion of
+  cups-filters in Fedora and Red Hat. Zdenek has fixed all the issues:
+  Missing `free()`, files not closed, potential string overflows,
+  ... Thanks a lot! (Pull request #510).
+
+- Dropped all C++ references and obsolete C standards (Pull requests
+  #504 and #513)
+  With no C++ compiler needed, there is no need for any checks or
+  setting for C++ in configure.ac.
+
+- configure.ac: Change deprecated AC_PROG_LIBTOOL for LT_INIT (Pull
+  request #508)
+
 
 ## CHANGES IN V2.0b3 (31st January 2023)
 
