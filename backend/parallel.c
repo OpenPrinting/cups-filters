@@ -21,6 +21,8 @@
 //
 
 #include <cupsfilters/ieee1284.h>
+#include <cups/backend.h>
+#include <cups/sidechannel.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
