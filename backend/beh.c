@@ -26,13 +26,14 @@
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/wait.h>
 
 
 //
 // Local globals...
 //
 
-static int		job_canceled = 0; // Set to 1 on SIGTERM
+static volatile int	job_canceled = 0; // Set to 1 on SIGTERM
 
 
 //
@@ -237,21 +238,44 @@ call_backend(char *uri,                 // I - URI of final destination
 	     char *filename)            // I - File name of input data
 {
   const char	*cups_serverbin;	// Location of programs
+  char          *backend_argv[8];       // Arguments for called CUPS backend
   char		scheme[1024],           // Scheme from URI
                 *ptr,			// Pointer into scheme
-		cmdline[65536];		// Backend command line
-  int           retval;
+		backend_path[2048];	// Backend path
+  int           pid,
+                wait_pid,
+                wait_status,
+                retval = 0;
+  int           bytes;
+
 
   //
   // Build the backend command line...
   //
 
-  strncpy(scheme, uri, sizeof(scheme) - 1);
-  if (strlen(uri) > 1023)
-    scheme[1023] = '\0';
+  scheme[0] = '\0';
+  strncat(scheme, uri, sizeof(scheme) - 1);
   if ((ptr = strchr(scheme, ':')) != NULL)
     *ptr = '\0';
-
+  else
+  {
+    fprintf(stderr,
+	    "ERROR: beh: Invalid URI, no colon (':') to mark end of scheme part.\n");
+    exit (CUPS_BACKEND_FAILED);
+  }
+  if (strchr(scheme, '/'))
+  {
+    fprintf(stderr,
+	    "ERROR: beh: Invalid URI, scheme contains a slash ('/').\n");
+    exit (CUPS_BACKEND_FAILED);
+  }
+  if (!strcmp(scheme, ".") || !strcmp(scheme, ".."))
+  {
+    fprintf(stderr,
+	    "ERROR: beh: Invalid URI, scheme (\"%s\") is a directory.\n",
+	    scheme);
+    exit (CUPS_BACKEND_FAILED);
+  }
   if ((cups_serverbin = getenv("CUPS_SERVERBIN")) == NULL)
     cups_serverbin = CUPS_SERVERBIN;
 
@@ -261,16 +285,25 @@ call_backend(char *uri,                 // I - URI of final destination
 	    "ERROR: beh: Direct output into a file not supported.\n");
     exit (CUPS_BACKEND_FAILED);
   }
-  else
-    snprintf(cmdline, sizeof(cmdline),
-	     "%s/backend/%s '%s' '%s' '%s' '%s' '%s' %s",
-	     cups_serverbin, scheme, argv[1], argv[2], argv[3],
-	     // Apply number of copies only if beh was called with a
-	     // file name and not with the print data in stdin, as
-	     // backends should handle copies only if they are called
-	     // with a file name
-	     (argc == 6 ? "1" : argv[4]),
-	     argv[5], filename);
+
+  backend_argv[0] = uri;
+  backend_argv[1] = argv[1];
+  backend_argv[2] = argv[2];
+  backend_argv[3] = argv[3];
+  backend_argv[4] = (argc == 6 ? "1" : argv[4]);
+  backend_argv[5] = argv[5];
+  backend_argv[6] = filename;
+  backend_argv[7] = NULL;
+
+  bytes = snprintf(backend_path, sizeof(backend_path),
+		   "%s/backend/%s", cups_serverbin, scheme);
+  if (bytes < 0 || bytes >= sizeof(backend_path))
+  {
+    fprintf(stderr,
+	    "ERROR: beh: Invalid scheme (\"%s\"), could not determing backend path.\n",
+	    scheme);
+    exit (CUPS_BACKEND_FAILED);
+  }
 
   //
   // Overwrite the device URI and run the actual backend...
@@ -279,17 +312,41 @@ call_backend(char *uri,                 // I - URI of final destination
   setenv("DEVICE_URI", uri, 1);
 
   fprintf(stderr,
-	  "DEBUG: beh: Executing backend command line \"%s\"...\n",
-	  cmdline);
+	  "DEBUG: beh: Executing backend command line \"%s '%s' '%s' '%s' '%s' '%s'%s%s\"...\n",
+	  backend_path, backend_argv[1], backend_argv[2], backend_argv[3],
+	  backend_argv[4], backend_argv[5],
+	  (backend_argv[6] && backend_argv[6][0] ? " " : ""),
+	  (backend_argv[6] && backend_argv[6][0] ? backend_argv[6] : ""));
   fprintf(stderr,
 	  "DEBUG: beh: Using device URI: %s\n",
 	  uri);
 
-  retval = system(cmdline) >> 8;
+  if ((pid = fork()) == 0)
+  {
+    retval = execv(backend_path, backend_argv);
 
-  if (retval == -1)
-    fprintf(stderr, "ERROR: Unable to execute backend command line: %s\n",
-	    strerror(errno));
+    if (retval == -1)
+      fprintf(stderr, "ERROR: Unable to execute backend: %s\n",
+	      strerror(errno));
+    exit (CUPS_BACKEND_FAILED);
+  }
+  else if (pid < 0)
+  {
+    fprintf(stderr, "ERROR: Unable to fork for backend\n");
+    return (CUPS_BACKEND_FAILED);
+  }
+
+  while ((wait_pid = wait(&wait_status)) < 0 && errno == EINTR);
+
+  if (wait_pid >= 0 && wait_status)
+  {
+    if (WIFEXITED(wait_status))
+      retval = WEXITSTATUS(wait_status);
+    else if (WTERMSIG(wait_status) != SIGTERM)
+      retval = WTERMSIG(wait_status);
+    else
+      retval = 0;
+  }
 
   return (retval);
 }
@@ -304,8 +361,10 @@ sigterm_handler(int sig)		// I - Signal number (unused)
 {
   (void)sig;
 
-  fprintf(stderr,
-	  "DEBUG: beh: Job canceled.\n");
+  const char * const msg = "DEBUG: beh: Job canceled.\n";
+  // The if() is to eliminate the return value and silence the warning
+  // about an unused return value.
+  if (write(2, msg, strlen(msg)));
 
   if (job_canceled)
     _exit(CUPS_BACKEND_OK);
