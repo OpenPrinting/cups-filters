@@ -1,4 +1,45 @@
-# CHANGES - OpenPrinting CUPS Filters v2.0rc1 - 2023-04-12
+# CHANGES - OpenPrinting CUPS Filters v2.0rc2 - 2023-06-20
+
+## CHANGES IN V2.0rc2 (20th June 2023)
+
+- beh backend: Use `execv()` instead of `system()` - CVE-2023-24805
+  With `execv()` command line arguments are passed as separate strings
+  and not the full command line in a single string. This prevents
+  arbitrary command execution by escaping the quoting of the arguments
+  in a job with forged job title.
+
+- beh backend: Extra checks against odd/forged input - CVE-2023-24805
+
+  * Do not allow `/` in the scheme of the URI (= backend executable
+    name), to assure that only backends inside
+    `/usr/lib/cups/backend/` are used.
+
+  * Pre-define scheme buffer to empty string, to be defined for case
+    of URI being NULL.
+
+  * URI must have `:`, to split off scheme, otherwise error.
+
+  * Check return value of `snprintf()` to create call path for
+    backend, to error out on truncation of a too long scheme or on
+    complete failure due to a completely odd scheme.
+
+- beh backend: Further improvements - CVE-2023-24805
+
+  * Use `strncat()` instead of `strncpy()` for getting scheme from
+    URI, the latter does not require setting terminating zero byte in
+    case of truncation.
+
+  * Also exclude `.` or `..` as scheme, as directories are not valid
+    CUPS backends.
+
+  * Do not use `fprintf()` in `sigterm_handler()`, to not interfere
+    with a `fprintf()` which could be running in the main process when
+    `sigterm_handler()` is triggered.
+
+  * Use `static volatile int` for global variable job_canceled.
+
+- `parallel` backend: Added missing `#include` lines
+
 
 ## CHANGES IN V2.0rc1 (12th April 2023)
 
