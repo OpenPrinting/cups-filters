@@ -32,6 +32,7 @@
 #
 
 application/postscript                   application/vnd.universal-input   0  -
+application/vnd.cups-postscript          application/vnd.universal-input   0  -
 
 # CUPS file conversion rules for PostScript input when we are working
 # with the PDF printing workflow: General PostScript input should be
