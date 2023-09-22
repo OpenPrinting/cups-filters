@@ -1,4 +1,13 @@
-# CHANGES - OpenPrinting CUPS Filters v2.0rc2 - 2023-06-20
+# CHANGES - OpenPrinting CUPS Filters v2.0.0 - 2023-09-22
+
+## CHANGES IN V2.0.0 (22th September 2023)
+
+- `universal`: Enable `application/vnd.cups-postscript` as input
+  There are filters which produce this MIME type (such as `hpps` of
+  HPLIP), and if someone uses such driver on a client and the server
+  has an IPP Everywhere/driverless printer, the job fails (Pull
+  request #534).
+
 
 ## CHANGES IN V2.0rc2 (20th June 2023)
 
