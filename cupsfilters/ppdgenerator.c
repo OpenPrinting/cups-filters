@@ -3082,13 +3082,25 @@ ppdCreateFromIPP2(char         *buffer,          /* I - Filename buffer */
 				IPP_TAG_KEYWORD)) != NULL &&
        ippContainsString(attr, "two-sided-long-edge")) ||
       (attr == NULL && duplex)) {
+    char *default_duplex = "None";
+
+    if ((attr = ippFindAttribute(response, "sides-default",
+				 IPP_TAG_KEYWORD)) != NULL) {
+      keyword = ippGetString(attr, 0, NULL);
+      if (!strcmp(keyword, "two-sided-long-edge")) {
+	 default_duplex = "DuplexNoTumble";
+      } else if (!strcmp(keyword, "two-sided-short-edge")) {
+	 default_duplex = "DuplexTumble";
+      }
+    }
     human_readable = lookup_option("sides", opt_strings_catalog,
 				   printer_opt_strings_catalog);
     cupsFilePrintf(fp, "*OpenUI *Duplex/%s: PickOne\n"
 		   "*OrderDependency: 10 AnySetup *Duplex\n"
-		   "*DefaultDuplex: None\n",
+		   "*DefaultDuplex: %s\n",
 		   (human_readable ? human_readable :
-		    _cupsLangString(lang, _("2-Sided Printing"))));
+		    _cupsLangString(lang, _("2-Sided Printing"))),
+		    default_duplex);
     human_readable = lookup_choice("one-sided", "sides", opt_strings_catalog,
 				   printer_opt_strings_catalog);
     cupsFilePrintf(fp, "*Duplex None/%s: \"<</Duplex false>>setpagedevice\"\n",
