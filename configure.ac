@@ -837,7 +837,10 @@ AS_IF([test x"$GCC" = "xyes"], [
 	CXXFLAGS="$CXXFLAGS -Wall " # -Weffc++" # TODO: enable when it does not print 1MB of warnings
 ])
 CFLAGS="$CFLAGS -D_GNU_SOURCE"
-CXXFLAGS="$CXXFLAGS -D_GNU_SOURCE"
+CXXFLAGS="$CXXFLAGS -D_GNU_SOURCE -DPOINTERHOLDER_TRANSITION=0"
+#                                   ^^ Silence deprecation warnings of QPDF 11
+#                                      See /usr/include/qpdf/PointerHolder.hh
+CXXFLAGS="$CXXFLAGS -std=c++17" # Needed to build with current QPDF (11.x)
 
 # ==========================
 # Braille embossing/liblouis
