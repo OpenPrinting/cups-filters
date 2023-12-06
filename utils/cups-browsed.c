@@ -736,7 +736,7 @@ void copyToFile(FILE **fp1, FILE **fp2){
     r = fread(buf, sizeof(char), buffer_size, *fp1);
     fwrite(buf, sizeof(char), r, *fp2);
   } while(r==buffer_size);
-
+  free(buf);
 }
 
 void
@@ -2077,8 +2077,10 @@ static cups_array_t* get_pagesize(ipp_t *printer_attributes)
                          &bottom, &left, &right, &top,ppdname);
   if ((page_media = cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
 				  (cups_acopy_func_t)strdup,
-				  (cups_afree_func_t)free)) == NULL)
+				  (cups_afree_func_t)free)) == NULL) {
+    free(ppdsizename);
     return NULL;
+  }
   for (size = (cups_size_t *)cupsArrayFirst(sizes); size;
        size = (cups_size_t *)cupsArrayNext(sizes)) {
     strcpy(ppdsizename, size->media);
@@ -2754,8 +2756,10 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
   if ((conflict_pairs = cupsArrayNew3((cups_array_func_t)strcasecmp,
 				      NULL, NULL, 0,
 				      (cups_acopy_func_t)strdup,
-				      (cups_afree_func_t)free)) == NULL)
+				      (cups_afree_func_t)free)) == NULL) {
+    free(ppdsizename);
     return NULL;
+  }
 
   /* Storing all the values supported by the cluster in cluster_options*/
   no_of_ppd_keywords = sizeof(ppd_keywords) / sizeof(ppd_keywords[0]);
@@ -2770,8 +2774,10 @@ cups_array_t* generate_cluster_conflicts(char* cluster_name,
       if ((pagesizes =
 	   cupsArrayNew3((cups_array_func_t)strcasecmp, NULL, NULL, 0,
 			 (cups_acopy_func_t)strdup,
-			 (cups_afree_func_t)free)) == NULL)
+			 (cups_afree_func_t)free)) == NULL) {
+	free(ppdsizename);
 	return NULL;
+      }
       for (size = (cups_size_t *)cupsArrayFirst(sizes); size;
 	   size = (cups_size_t *)cupsArrayNext(sizes)) {
         strcpy(ppdsizename, size->media);
