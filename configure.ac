@@ -349,7 +349,7 @@ AC_ARG_ENABLE([universal-cups-filter],
 	[enable_universal_cups_filter="$enableval"],
 	[enable_universal_cups_filter=yes]
 )
-AS_IF([test "x$CUPS_GHOSTSCRIPT" == "x" -a "x$CUPS_PDFTOPS" == "x"], [
+AS_IF([test "x$CUPS_GHOSTSCRIPT" = "x" -a "x$CUPS_PDFTOPS" = "x"], [
 	enable_universal_cups_filter=no
 ])
 AM_CONDITIONAL([ENABLE_UNIVERSAL_CUPS_FILTER],
