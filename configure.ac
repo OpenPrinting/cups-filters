@@ -268,32 +268,6 @@ AS_IF([test "x$with_ippfind_path" != "xsystem"], [
 AC_DEFINE_UNQUOTED([CUPS_IPPFIND], "$CUPS_IPPFIND", [ippfind binary to use.])
 
 
-dnl Avahi
-AVAHI_LIBS=""
-AVAHI_CFLAGS=""
-
-AC_ARG_ENABLE([avahi],
-	[AS_HELP_STRING([--disable-avahi], [Disable DNS Service Discovery support using Avahi.])],
-	[enable_avahi="$enableval"],
-	[enable_avahi=yes]
-)
-AM_CONDITIONAL([ENABLE_AVAHI], [test "x$enable_avahi" != "xno"])
-
-AC_ARG_WITH(avahi-libs,
-	[AS_HELP_STRING([--with-avahi-libs], [Set directory for Avahi library.])],
-	AVAHI_LIBS="-L$withval $AVAHI_LIBS",)
-AC_ARG_WITH(avahi-includes,
-	[AS_HELP_STRING([--with-avahi-includes], [Set directory for Avahi includes])],
-	AVAHI_CFLAGS="-I$withval $AVAHI_CFLAGS",)
-
-if test "x$enable_avahi" != xno; then
-	PKG_CHECK_MODULES(AVAHI, avahi-client,
-		[AC_DEFINE(HAVE_AVAHI, [], [Define if you have the avahi library])])
-fi
-
-AC_SUBST(AVAHI_LIBS)
-AC_SUBST(AVAHI_CFLAGS)
-
 # ===================================
 # Check for large files and long long
 # ===================================
@@ -423,7 +397,6 @@ Build configuration:
 	pstops:          ${enable_pstops}
 	rastertopwg:     ${enable_rastertopwg}
 	shell:           ${with_shell}
-	avahi:           ${enable_avahi}
 	universal CUPS filter: ${enable_universal_cups_filter}
 	individual CUPS filters: ${enable_individual_cups_filters}
 	driverless:      ${enable_driverless}
