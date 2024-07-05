@@ -371,7 +371,7 @@ imagetoraster_LDADD = \
 
 pclmtoraster_SOURCES = \
 	filter/pclmtoraster.c
-pclmtoraster_CXXFLAGS = \
+pclmtoraster_CFLAGS = \
 	$(LIBCUPSFILTERS_CFLAGS) \
 	$(LIBPPD_CFLAGS) \
 	$(CUPS_CFLAGS)
