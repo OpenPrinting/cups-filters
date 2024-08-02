@@ -29,8 +29,10 @@ void CombineFromContents_Provider::provideStreamData(int objid, int generation, 
 {
   Pl_Concatenate concat("concat", pipeline);
   const int clen=contents.size();
-  for (int iA=0;iA<clen;iA++) {
+  for (int iA=0;iA<clen;iA++)
+  {
     contents[iA].pipeStreamData(&concat, true, false, false);
+    concat << "\n";
   }
   concat.manualFinish();
 }
