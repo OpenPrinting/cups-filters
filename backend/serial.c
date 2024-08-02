@@ -818,8 +818,8 @@ list_devices(void)
 {
 #if defined(__sun) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
   static char	*funky_hex = "0123456789abcdefghijklmnopqrstuvwxyz";
-					// Funky hex numbering used for some *
-					 * devices                          
+					/* Funky hex numbering used for some *
+					 * devices                           */
 #endif // __sun || __FreeBSD__ || __OpenBSD__ || __FreeBSD_kernel__
 
 
