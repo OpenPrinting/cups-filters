@@ -1,4 +1,20 @@
-# CHANGES - OpenPrinting CUPS Filters v2.0.0 - 2023-09-22
+# CHANGES - OpenPrinting CUPS Filters v2.0.1 - 2024-08-15
+
+## CHANGES IN V2.0.1 (15th August 2024)
+
+- serial backend: Fixed bug in conversion of comments
+  (Pull request #548)
+
+- pclmtoraster: Properly set CFLAGS
+  As this is a C program, set `pclmtoraster_CFLAGS`, not
+  `pclmtoraster_CXXFLAGS` (Pull request #588).
+
+- `configure`: Remove `==` bashism
+  (Pull request #567)
+
+- `configure.ac`: Remove Avahi check
+  cups-filters does not use Avahi (Pull request #558)
+
 
 ## CHANGES IN V2.0.0 (22th September 2023)
 
