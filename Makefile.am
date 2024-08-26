@@ -177,6 +177,7 @@ pkgfilter_SCRIPTS = $(genfilterscripts)
 pkgfilter_PROGRAMS += \
 	pdftopdf \
 	texttotext \
+	rastertoescpos \
 	rastertoescpx \
 	rastertopclx \
 	commandtoescpx \
@@ -511,6 +512,17 @@ pdftoraster_LDADD = \
 	$(LIBCUPSFILTERS_LIBS) \
 	$(LIBPPD_LIBS) \
 	$(CUPS_LIBS)
+
+rastertoescpos_SOURCES = \
+    filter/rastertoescpos.c
+rastertoescpos_CFLAGS = \
+    $(CUPS_CFLAGS) \
+	$(LIBCUPSFILTERS_CFLAGS) \
+	$(LIBPPD_CFLAGS)
+rastertoescpos_LDADD = \
+    $(CUPS_LIBS) \
+	$(LIBCUPSFILTERS_LIBS) \
+	$(LIBPPD_LIBS)
 
 rastertoescpx_SOURCES = \
 	filter/escp.h \
