@@ -2148,7 +2148,11 @@ int main(int argc, char *argv[]) {
 /* For compatibility with g++ >= 4.7 compilers _GLIBCXX_THROW
  *  should be used as a guard, otherwise use traditional definition */
 #ifndef _GLIBCXX_THROW
+#if __cplusplus < 201703L
 #define _GLIBCXX_THROW throw
+#else
+#define _GLIBCXX_THROW(x) noexcept(false)
+#endif
 #endif
 
 void * operator new(size_t size) _GLIBCXX_THROW (std::bad_alloc)
