@@ -428,9 +428,9 @@ AC_SUBST(GIO_UNIX_CFLAGS)
 AC_SUBST(GIO_UNIX_LIBS)
 
 AC_ARG_WITH([browseremoteprotocols],
-	[AS_HELP_STRING([--with-browseremoteprotocols=value], [Set which protocols to listen for in cups-browsed (default: dnssd cups)])],
+	[AS_HELP_STRING([--with-browseremoteprotocols=value], [Set which protocols to listen for in cups-browsed (default: dnssd)])],
 	[with_browseremoteprotocols="$withval"],
-	[with_browseremoteprotocols="dnssd cups"]
+	[with_browseremoteprotocols="dnssd"]
 )
 BROWSEREMOTEPROTOCOLS="$with_browseremoteprotocols"
 AC_SUBST(BROWSEREMOTEPROTOCOLS)
