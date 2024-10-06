@@ -47,7 +47,7 @@ journal or syslog. Only if you run cups-browsed from the command line
 
 .fam T
 .fi
-Only browse remote printers (via DNS-SD or CUPS browsing) from
+Only browse remote printers (via DNS-SD) from
 selected servers using the "BrowseAllow", "BrowseDeny", and
 "BrowseOrder" directives
 .PP
@@ -330,8 +330,6 @@ Printers from all servers except "prinserver2.local" are accepted:
 The BrowsePoll directive polls a server for available printers once
 every 60 seconds. Multiple BrowsePoll directives can be specified
 to poll multiple servers. The default port to connect to is 631.
-BrowsePoll works independently of whether CUPS browsing is activated
-in BrowseRemoteProtocols.
 .PP
 .nf
 .fam C
@@ -345,12 +343,11 @@ in BrowseRemoteProtocols.
 The BrowseLocalProtocols directive specifies the protocols to use
 when advertising local shared printers on the network. The default
 is "none". Control of advertising of local shared printers using
-dnssd is done in /etc/cups/cupsd.conf.
+dnssd is done by CUPS and configured in /etc/cups/cupsd.conf.
 .PP
 .nf
 .fam C
         BrowseLocalProtocols none
-        BrowseLocalProtocols CUPS
 
 
 .fam T
@@ -358,50 +355,26 @@ dnssd is done in /etc/cups/cupsd.conf.
 The BrowseRemoteProtocols directive specifies the protocols to use
 when finding remote shared printers on the network. Multiple
 protocols can be specified by separating them with spaces.
-The default is "dnssd cups".
+The default is "dnssd".
 .PP
 .nf
 .fam C
         BrowseRemoteProtocols none
-        BrowseRemoteProtocols CUPS dnssd
-        BrowseRemoteProtocols CUPS
         BrowseRemoteProtocols dnssd
-        BrowseRemoteProtocols ldap
+
 
 .fam T
 .fi
 The BrowseProtocols directive specifies the protocols to use when
 finding remote shared printers on the network and advertising local
-shared printers. "dnssd" and "ldap" are ignored for BrowseLocalProtocols.
-Multiple protocols can be specified by separating them with spaces. The
-default is "none" for BrowseLocalProtocols and "dnssd cups" for
-BrowseRemoteProtocols.
+shared printers.
+Multiple protocols can be specified by separating them with spaces.
 .PP
 .nf
 .fam C
         BrowseProtocols none
-        BrowseProtocols CUPS dnssd
-        BrowseProtocols CUPS
         BrowseProtocols dnssd
-        BrowseProtocols ldap
 
-.fam T
-.fi
-The configuration for the LDAP browsing mode define where the LDAP search
-should be performed. If built with an LDAP library that supports TLS, the
-path to the server's certificate, or to a certificates store, can be
-specified.
-The optional filter allows the LDAP search to be more specific, and is used
-in addition to the hardcoded filter (objectclass=cupsPrinter).
-.PP
-.nf
-.fam C
-        BrowseLDAPBindDN cn=cups-browsed,dc=domain,dc=tld
-        BrowseLDAPCACertFile /path/to/server/certificate.pem
-        BrowseLDAPDN ou=printers,dc=domain,dc=tld
-        BrowseLDAPFilter (printerLocation=/Office 1/*)
-        BrowseLDAPPassword s3cret
-        BrowseLDAPServer ldaps://ldap.domain.tld
 
 .fam T
 .fi
@@ -459,8 +432,6 @@ The BrowseTimeout directive determines the amount of time that
 browsing-related operations are allowed to take in seconds.
 Notably, adding or removing one printer queue is considered as one
 operation. The timeout applies to each one of those operations.
-Especially queues discovered by CUPS broadcasts will be removed after
-this timeout if no further broadcast from the server happens.
 .PP
 .nf
 .fam C
@@ -582,7 +553,7 @@ Set DNSSDBasedDeviceURIs to "No" if cups-browsed should use the
 conventional host-name/IP-based URIs.
 .PP
 Note that this option has only influence on URIs for printers
-discovered via DNS-SD, not via legacy CUPS broewsing or LDAP.
+discovered via DNS-SD, not via BrowsePoll.
 Those printers get always assigned the conventional URIs.
 .PP
 .nf

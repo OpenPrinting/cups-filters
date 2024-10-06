@@ -36,27 +36,27 @@
 
 
 # Which protocols will we use to discover printers on the network?
-# Can use DNSSD and/or CUPS and/or LDAP, or 'none' for neither.
+# Can use DNSSD or 'none'.
 
 BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 
 
 # Which protocols will we use to broadcast shared local printers to the network?
-# Can use DNSSD and/or CUPS, or 'none' for neither.
-# Only CUPS is actually supported, as DNSSD is done by CUPS itself (we ignore
-# DNSSD in this directive).
+# Can use DNSSD or 'none'.
+# Broadcasting is currently not supported, as DNSSD is done by CUPS itself
+# (we ignore DNSSD in this directive).
 
 # BrowseLocalProtocols none
 
 
 # Settings of this directive apply to both BrowseRemoteProtocols and
 # BrowseLocalProtocols.
-# Can use DNSSD and/or CUPS and/or LDAP, or 'none' for neither.
+# Can use DNSSD or 'none'.
 
 # BrowseProtocols none
 
 
-# Only browse remote printers (via DNS-SD or CUPS browsing) from
+# Only browse remote printers (via DNS-SD) from
 # selected servers using the "BrowseAllow", "BrowseDeny", and
 # "BrowseOrder" directives
 
@@ -120,8 +120,6 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # Browsing-related operations such as adding or removing printer queues
 # and broadcasting are each allowed to take up to a given amount of time.
 # It can be configured, in seconds, with the BrowseTimeout directive.
-# Especially queues discovered by CUPS broadcasts will be removed after
-# this timeout if no further broadcast from the server happens.
 
 # BrowseTimeout 300
 
@@ -286,17 +284,6 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # BrowsePoll cups.example.com:631/version=1.1
 
 
-# LDAP browsing configuration
-# The default value for all options is an empty string. Example configuration:
-
-# BrowseLDAPBindDN cn=cups-browsed,dc=domain,dc=tld
-# BrowseLDAPCACertFile /path/to/server/certificate.pem
-# BrowseLDAPDN ou=printers,dc=domain,dc=tld
-# BrowseLDAPFilter (printerLocation=/Office 1/*)
-# BrowseLDAPPassword s3cret
-# BrowseLDAPServer ldaps://ldap.domain.tld
-
-
 # Use DomainSocket to access the local CUPS daemon via another than the
 # default domain socket. "None" or "Off" lets cups-browsed not use CUPS'
 # domain socket.
@@ -405,7 +392,7 @@ BrowseRemoteProtocols @BROWSEREMOTEPROTOCOLS@
 # conventional host-name/IP-based URIs.
 
 # Note that this option has only influence on URIs for printers
-# discovered via DNS-SD, not via legacy CUPS broewsing or LDAP.
+# discovered via DNS-SD, not via BrowsePoll.
 # Those printers get always assigned the conventional URIs.
 
 # DNSSDBasedDeviceURIs Yes
