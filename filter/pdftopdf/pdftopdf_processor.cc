@@ -255,7 +255,8 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     param.page.top = param.page.height;
   }
 
-  if(param.fillprint||param.cropfit){
+  if (param.pagesize_requested && (param.fillprint || param.cropfit))
+  {
     for(int i=0;i<(int)pages.size();i++)
     {
       std::shared_ptr<PDFTOPDF_PageHandle> page = pages[i];
@@ -330,6 +331,11 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
     PageRect rect;
     rect = page->getRect();
     //rect.dump();
+    if (!param.pagesize_requested)
+    {
+      param.page.width = param.page.right = rect.width;
+      param.page.height = param.page.top = rect.height;
+    }
 
     bool newPage=nupstate.nextPage(rect.width,rect.height,pgedit);
     if (newPage) {
