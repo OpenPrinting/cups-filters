@@ -47,6 +47,7 @@ bannertopdf
 commandtoescpx
 commandtopclx
 foomatic-rip
+!foomatic-rip/
 gstopdf
 gstopxl
 gstoraster
