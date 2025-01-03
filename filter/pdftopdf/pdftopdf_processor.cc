@@ -333,7 +333,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
 
     bool newPage=nupstate.nextPage(rect.width,rect.height,pgedit);
     if (newPage) {
-      if ((curpage)&&(param.withPage(outputpage))) {
+      if (curpage && (param.withPage(outputpage) || (numOrigPages == 1 && !param.oddPages))) {
 	curpage->rotate(param.orientation);
 	if (param.mirror)
 	  curpage->mirror();
@@ -397,7 +397,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
 
     // pgedit.dump();
   }
-  if ((curpage)&&(param.withPage(outputpage))) {
+  if (curpage && (param.withPage(outputpage) || (numOrigPages == 1 && !param.oddPages))) {
     curpage->rotate(param.orientation);
     if (param.mirror) {
       curpage->mirror();
@@ -409,7 +409,7 @@ bool processPDFTOPDF(PDFTOPDF_Processor &proc,ProcessingParameters &param) // {{
       fprintf(stderr, "PAGE: %d %d\n", outputno, param.copies_to_be_logged);
   }
 
-  if ((param.evenDuplex || !param.oddPages) && (outputno & 1)) {
+  if (param.evenDuplex && (outputno & 1)) {
     // need to output empty page to not confuse duplex
     proc.add_page(proc.new_page(param.page.width,param.page.height),param.reverse);
     // Log page in /var/log/cups/page_log
