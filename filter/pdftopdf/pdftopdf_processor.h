@@ -102,6 +102,7 @@ ProcessingParameters()
   int copies_to_be_logged;
 
   // helper functions
+  bool evenOddPage(int outno) const; // 1 based
   bool withPage(int outno) const; // 1 based
   void dump() const;
 };
