@@ -18,7 +18,7 @@
 #include <sys/wait.h>
 
 
-pid_t start_process(const char *name, int (*proc_func)(), void *user_arg,
+pid_t start_process(const char *name, int (*proc_func)(FILE*, FILE*, void*), void *user_arg,
 		    FILE **fdin, FILE **fdout);
 pid_t start_system_process(const char *name, const char *command, FILE **fdin,
 			   FILE **fdout);
