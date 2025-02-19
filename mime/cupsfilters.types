@@ -92,6 +92,7 @@ image/x-xpixmap			xpm string(3,"XPM")
 image/x-xwindowdump		xwd string(4,<00000007>)
 image/urf			urf string(0,UNIRAST<00>)
 image/jxl       		jxl string(0,<0000000C4A584C20>)
+image/jxl			jxl string(0,<FF0A>)
 
 
 ########################################################################
