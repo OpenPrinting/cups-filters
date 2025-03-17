@@ -117,6 +117,15 @@ AC_SUBST(CUPS_SERVERBIN)
 # ========================
 PKG_CHECK_MODULES([LIBCUPSFILTERS], [libcupsfilters])
 
+======================
+# Check for libjxl (JPEG-XL)
+# ======================
+PKG_CHECK_MODULES([LIBJXL], [libjxl >= 0.7.0],
+  [have_libjxl=yes],
+  [have_libjxl=no]
+)
+AM_CONDITIONAL([HAVE_LIBJXL], [test "x$have_libjxl" = "xyes"])
+
 # ================
 # Check for libppd
 # ================
@@ -373,6 +382,9 @@ AC_DEFINE_UNQUOTED([SHELL], "$with_shell", [Path for a modern shell])
 AC_CONFIG_FILES([
 	Makefile
 	filter/foomatic-rip/foomatic-rip.1
+	data/cupsfilters.types
+	data/cupsfilters-individual.convs
+	data/cupsfilters-universal.convs
 ])
 AC_OUTPUT
 
