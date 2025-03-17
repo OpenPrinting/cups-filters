@@ -382,9 +382,9 @@ AC_DEFINE_UNQUOTED([SHELL], "$with_shell", [Path for a modern shell])
 AC_CONFIG_FILES([
 	Makefile
 	filter/foomatic-rip/foomatic-rip.1
-	data/cupsfilters.types
-	data/cupsfilters-individual.convs
-	data/cupsfilters-universal.convs
+	mime/cupsfilters.types
+	mime/cupsfilters-individual.convs
+	mime/cupsfilters-universal.convs
 ])
 AC_OUTPUT
 
