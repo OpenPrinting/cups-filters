@@ -32,7 +32,7 @@
 #
 
 image/jpeg                      application/vnd.universal-input      0    -
-image/jxl                       application/vnd.universal-input      0    -
+@HAVE_LIBJXL_TRUE@image/jxl     application/vnd.universal-input      0    -
 image/png                       application/vnd.universal-input      0    -
 image/tiff                      application/vnd.universal-input      0    -
 image/pwg-raster                application/vnd.universal-input      0    -
