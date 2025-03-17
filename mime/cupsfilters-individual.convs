@@ -43,7 +43,7 @@ text/plain		application/pdf				32	texttopdf
 image/pwg-raster	application/pdf				32	pwgtopdf
 image/png		application/vnd.cups-pdf		65	imagetopdf
 image/jpeg		application/vnd.cups-pdf		65	imagetopdf
-image/jxl		application/vnd.cups-pdf		65	imagetopdf
+@HAVE_LIBJXL_TRUE@image/jxl		application/vnd.cups-pdf		65	imagetopdf
 image/tiff		application/vnd.cups-pdf		65	imagetopdf
 application/vnd.cups-pdf-banner	application/pdf			32	bannertopdf
 image/urf		application/pdf				0	pwgtopdf
@@ -76,7 +76,7 @@ application/vnd.adobe-reader-postscript	application/vnd.cups-postscript	66	pstop
 application/PCLm		application/vnd.cups-raster	32	pclmtoraster
 image/png			application/vnd.cups-raster	100	imagetoraster
 image/jpeg			application/vnd.cups-raster	100	imagetoraster
-image/jxl			application/vnd.cups-raster	100	imagetoraster
+@HAVE_LIBJXL_TRUE@image/jxl			application/vnd.cups-raster	100	imagetoraster
 image/tiff			application/vnd.cups-raster	100	imagetoraster
 image/pwg-raster		application/vnd.cups-raster	100	pwgtoraster
 image/urf			application/vnd.cups-raster	100	pwgtoraster
