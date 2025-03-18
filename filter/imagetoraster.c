@@ -1437,6 +1437,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 	    z = _cupsImageZoomNew(img, xc0, yc0, xc1, yc1, xtemp, ytemp,
 	                          Orientation & 1, zoom_type);
 
+          if (z == NULL) continue;
+
          /*
 	  * Write leading blank space as needed...
 	  */
