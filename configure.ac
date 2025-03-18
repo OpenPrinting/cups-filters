@@ -383,6 +383,7 @@ AC_DEFINE_UNQUOTED([SHELL], "$with_shell", [Path for a modern shell])
 AC_CONFIG_FILES([
 	Makefile
 	filter/foomatic-rip/foomatic-rip.1
+	mime/cupsfilters-individual.convs
 ])
 AC_OUTPUT
 

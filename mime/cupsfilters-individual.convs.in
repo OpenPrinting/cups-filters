@@ -39,7 +39,7 @@
 #
 
 application/pdf		application/vnd.cups-pdf		66	pdftopdf
-text/plain		application/pdf				32	texttopdf
+@ENABLE_TEXTTOPDF_TRUE@text/plain		application/pdf				32	texttopdf
 image/pwg-raster	application/pdf				32	pwgtopdf
 image/png		application/vnd.cups-pdf		65	imagetopdf
 image/jpeg		application/vnd.cups-pdf		65	imagetopdf
