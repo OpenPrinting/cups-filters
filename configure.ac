@@ -305,6 +305,16 @@ AC_ARG_ENABLE([pstops],
 )
 AM_CONDITIONAL([ENABLE_PSTOPS], [test "x$enable_pstops" = "xyes"])
 
+# ===================
+# Check for texttopdf
+# ===================
+AC_ARG_ENABLE([texttopdf],
+	[AS_HELP_STRING([--disable-texttopdf], [Disable the texttopdf filter.])],
+	[enable_texttopdf="$enableval"],
+	[enable_texttopdf=yes]
+)
+AM_CONDITIONAL([ENABLE_TEXTTOPDF], [test "x$enable_texttopdf" = "xyes"])
+
 # =====================
 # Check for rastertopwg
 # =====================
@@ -373,6 +383,7 @@ AC_DEFINE_UNQUOTED([SHELL], "$with_shell", [Path for a modern shell])
 AC_CONFIG_FILES([
 	Makefile
 	filter/foomatic-rip/foomatic-rip.1
+	mime/cupsfilters-individual.convs
 ])
 AC_OUTPUT
 
@@ -395,6 +406,7 @@ Build configuration:
 	ippfind-path:    ${with_ippfind_path}
 	imagefilters:    ${enable_imagefilters}
 	pstops:          ${enable_pstops}
+	texttopdf:       ${enable_texttopdf}
 	rastertopwg:     ${enable_rastertopwg}
 	shell:           ${with_shell}
 	universal CUPS filter: ${enable_universal_cups_filter}

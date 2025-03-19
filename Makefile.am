@@ -195,7 +195,6 @@ pkgfilter_PROGRAMS += \
 endif
 pkgfilter_PROGRAMS += \
 	pdftops \
-	texttopdf \
 	pwgtopclm \
 	pwgtopdf \
 	bannertopdf \
@@ -209,6 +208,10 @@ endif
 if ENABLE_PSTOPS
 pkgfilter_PROGRAMS += \
 	pstops
+endif
+if ENABLE_TEXTTOPDF
+pkgfilter_PROGRAMS += \
+	texttopdf
 endif
 if ENABLE_POPPLER
 pkgfilter_PROGRAMS += \
