@@ -1562,7 +1562,11 @@ static void writePageImage(cups_raster_t *raster, poppler::document *doc,
   poppler::page *current_page =doc->create_page(pageNo-1);
   poppler::page_renderer pr;
   pr.set_render_hint(poppler::page_renderer::antialiasing, true);
-  pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
+  // text anti-aliasing for 1-bit color produces jagged text
+  if (header.cupsBitsPerColor!=1)
+    pr.set_render_hint(poppler::page_renderer::text_antialiasing, true);
+  else
+    pr.set_render_hint(poppler::page_renderer::text_antialiasing, false);
 
   unsigned char *colordata,*newdata,*graydata,*onebitdata;
   unsigned int pixel_count;
