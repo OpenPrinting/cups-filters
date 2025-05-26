@@ -2513,8 +2513,9 @@ format_K(cups_page_header2_t *header,	/* I - Page header */
 
         for (x = xsize; x > 0; x --)
         {
-          if (*r0++ > dither[x & 15])
-            *ptr ^= bitmask;
+	  if (*r0 > dither[x & 15] || *r0 == 0xff)
+	    *ptr ^= bitmask;
+	  r0++;
 
           if (bitmask > 1)
 	    bitmask >>= 1;
@@ -3632,8 +3633,9 @@ format_W(cups_page_header2_t *header,	/* I - Page header */
 
         for (x = xsize; x > 0; x --)
         {
-          if (*r0++ > dither[x & 15])
-            *ptr ^= bitmask;
+	  if (*r0 > dither[x & 15] || *r0 == 0xff)
+	    *ptr ^= bitmask;
+	  r0++;
 
           if (bitmask > 1)
 	    bitmask >>= 1;
