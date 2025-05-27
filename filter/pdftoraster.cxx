@@ -1523,9 +1523,9 @@ static unsigned char *onebitpixel(unsigned char *src, unsigned char *dst, unsign
         cnt++;
           tem <<=1;
           unsigned int var=*src;
-          if(var > dither1[i & 0xf][(j+k) & 0xf]){
-            tem |= 0x1;
-          }
+	  if(var > dither1[i & 0xf][(j+k) & 0xf] || var == 0xff){
+	    tem |= 0x1;
+	  }
           src +=1;
       }
       *dst=tem;
