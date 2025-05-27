@@ -68,7 +68,8 @@ typedef enum
 {
   HALFTONE_DEFAULT,
   HALFTONE_STOCHASTIC,
-  HALFTONE_FOO2ZJS
+  HALFTONE_FOO2ZJS,
+  HALFTONE_BI_LEVEL
 } cups_halftone_type_t;
 
 #ifdef CUPS_RASTER_SYNCv1
@@ -992,7 +993,15 @@ main (int argc, char **argv, char *envp[])
       halftonetype = HALFTONE_STOCHASTIC;
     else if (!strcasecmp(halftone_tmp, "foo2zjs"))
       halftonetype = HALFTONE_FOO2ZJS;
+    else if (!strcasecmp(halftone_tmp, "bi-level"))
+      halftonetype = HALFTONE_BI_LEVEL;
   }
+
+  /* For bi-level type, also check print-color-mode, the way it is
+     handled by Poppler pwgtoraster/pdftoraster/pclmtoraster utilities. */
+  if ((t = cupsGetOption("print-color-mode", num_options, options)) != NULL &&
+       !strcasecmp(t, "bi-level"))
+    halftonetype = HALFTONE_BI_LEVEL;
 
   /* Use Stochastic Halftone dithering found in GhostScript stocht.ps library file.
      It is activated automatically. */
@@ -1088,6 +1097,12 @@ main (int argc, char **argv, char *envp[])
         /SpotFunction /SpotDot load\
     >>\
 >> /Default exch /Halftone defineresource sethalftone"));
+  }
+
+  /* Use simple threshold (bi-level) halftone algorithm */
+  if (halftonetype == HALFTONE_BI_LEVEL) {
+    fprintf(stderr, "DEBUG: Ghostscript using Bi-Level Halftone dithering.\n");
+    cupsArrayAdd(gs_args, strdup("{ .5 gt { 1 } { 0 } ifelse} settransfer"));
   }
 
   /* Mark the end of PostScript commands supplied on the Ghostscript command
