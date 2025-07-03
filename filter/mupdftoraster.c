@@ -110,6 +110,7 @@ parse_pdf_header_options(FILE *fp, mupdf_page_header *h)
 
       p = strchr(buf+17,':');
       if (p) {
+        p++;
         while (*p == ' ' || *p == '\t') p++;
         if (strncasecmp(p,"true",4) == 0) {
           h->Collate = CUPS_TRUE;

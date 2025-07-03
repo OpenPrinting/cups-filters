@@ -497,6 +497,7 @@ static void parsePDFTOPDFComment(FILE *fp)
 
       p = strchr(buf+17,':');
       if (p) {
+        p++;
         while (*p == ' ' || *p == '\t') p++;
         if (strncasecmp(p,"true",4) == 0) {
           deviceCollate = true;
