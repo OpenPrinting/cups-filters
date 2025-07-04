@@ -56,6 +56,9 @@ _cupsImageReadSGI(
 
   sgip = sgiOpenFile(fp, SGI_READ, 0, 0, 0, 0, 0);
 
+  if (!sgip)
+    return (1);
+
  /*
   * Get the image dimensions and load the output image...
   */
