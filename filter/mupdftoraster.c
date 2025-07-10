@@ -102,16 +102,21 @@ parse_pdf_header_options(FILE *fp, mupdf_page_header *h)
       char *p;
 
       p = strchr(buf+19,':');
-      h->NumCopies = atoi(p+1);
+      if (p) {
+        h->NumCopies = atoi(p+1);
+      }
     } else if (strncmp(buf,"%%PDFTOPDFCollate",17) == 0) {
       char *p;
 
       p = strchr(buf+17,':');
-      while (*p == ' ' || *p == '\t') p++;
-      if (strncasecmp(p,"true",4) == 0) {
-        h->Collate = CUPS_TRUE;
-      } else {
-        h->Collate = CUPS_FALSE;
+      if (p) {
+        p++;
+        while (*p == ' ' || *p == '\t') p++;
+        if (strncasecmp(p,"true",4) == 0) {
+          h->Collate = CUPS_TRUE;
+        } else {
+          h->Collate = CUPS_FALSE;
+        }
       }
     }
   }
