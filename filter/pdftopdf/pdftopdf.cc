@@ -362,6 +362,14 @@ void getParameters(ppd_file_t *ppd,int num_options,cups_option_t *options,Proces
     param.autoprint = true;
   }
 
+  // Certain features require a given page size for the page to be
+  // printed or all pages of the document being the same size. Here we
+  // set param.pagesize_requested so that the default page size is used
+  // when no size got specified by the user.
+  if (param.fitplot || param.fillprint || param.autoprint || param.autofit ||
+      param.booklet != BOOKLET_OFF || param.nup.nupX > 1 || param.nup.nupY > 1)
+    param.pagesize_requested = true;
+
   if (ppd && (ppd->landscape < 0)) { // direction the printer rotates landscape (90 or -90)
     param.normal_landscape=ROT_270;
   } else {

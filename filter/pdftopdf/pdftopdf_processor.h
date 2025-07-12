@@ -13,6 +13,7 @@ struct ProcessingParameters {
 ProcessingParameters()
 : jobId(0),numCopies(1),
     user(0),title(0),
+    pagesize_requested(false),
     fitplot(false),
     fillprint(false),  //print-scaling = fill
     cropfit(false),
@@ -59,6 +60,7 @@ ProcessingParameters()
 
   int jobId, numCopies;
   const char *user, *title; // will stay around
+  bool pagesize_requested;
   bool fitplot;
   bool fillprint;   //print-scaling = fill
   bool cropfit;     // -o crop-to-fit
