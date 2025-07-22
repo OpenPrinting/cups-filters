@@ -22,6 +22,8 @@
 
 int kidgeneration = 0;
 
+char modern_shell[] = SHELL;
+
 struct process
 {
   char name[64];
@@ -37,6 +39,13 @@ struct process procs[MAX_CHILDS] =
     { "", -1, 0 },
     { "", -1, 0 }
 };
+
+
+const char *
+get_modern_shell()
+{
+  return (modern_shell);
+}
 
 
 void

@@ -18,11 +18,70 @@
 #endif
 
 #include "config.h"
+#include <cups/cups.h>
 #include <string.h>
 #include <stdio.h>
 
+#if CUPS_VERSION_MAJOR <= 2 && CUPS_VERSION_MINOR < 5
+#  define cupsArrayGetFirst(ar) cupsArrayFirst(ar)
+#  define cupsArrayGetNext(ar) cupsArrayNext(ar)
+#endif
 
+// Constants used by this filter
+//
+// Error codes, as some spoolers behave different depending on the reason why
+// the RIP failed, we return an error code.
+
+#define EXIT_PRINTED 0                          // file was printed normally
+#define EXIT_PRNERR 1                           // printer error occured
+#define EXIT_PRNERR_NORETRY 2                   // printer error with no hope
+                                                // of retry
+#define EXIT_JOBERR 3                           // job is defective
+#define EXIT_SIGNAL 4                           // terminated after catching
+                                                // signal
+#define EXIT_ENGAGED 5                          // printer is otherwise engaged
+                                                // (connection refused)
+#define EXIT_STARVED 6                          // starved for system resources
+#define EXIT_PRNERR_NORETRY_ACCESS_DENIED 7     // bad password? bad port
+                                                // permissions?
+#define EXIT_PRNERR_NOT_RESPONDING 8            // just doesn't answer at all
+                                                // (turned off?)
+#define EXIT_PRNERR_NORETRY_BAD_SETTINGS 9      // interface settings are
+                                                // invalid
+#define EXIT_PRNERR_NO_SUCH_ADDRESS 10          // address lookup failed, may
+                                                // be transient
+#define EXIT_PRNERR_NORETRY_NO_SUCH_ADDRESS 11  // address lookup failed, not
+                                                // transient
+#define EXIT_PRNERR_NOTALLOWED 12               // the value is not allowed on the system
+#define EXIT_INCAPABLE 50                       // printer wants (lacks)
+                                                // features or resources
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
+#define CMDLINE_MAX 65536
+
+#ifndef NAME_MAX
+#define NAME_MAX 255
+#endif
+
+
+extern const char *hash_alg;
 extern const char* shellescapes;
+extern FILE* logh;
+
+// used for path validation - parameter --ppd supports files, --ppd-paths directories
+enum filetype {
+  IS_FILE,
+  IS_DIR
+};
+
+// logging and exiting...
+void _log(const char* msg, ...);
+void rip_die(int status, const char *msg, ...);
+int redirect_log_to_stderr();
+void close_log();
 
 int isempty(const char *string);
 const char * temp_dir();
@@ -131,6 +190,14 @@ int contains_command(const char *cmdline, const char *cmd);
 
 int copy_file(FILE *dest, FILE *src, const char *alreadyread,
 	      size_t alreadyread_len);
+
+// File related functions with CUPS arrays
+int load_array(cups_array_t **ar, char *filename);
+int is_valid_path(char *path, enum filetype type);
+
+// Hash functions
+int hash_data(unsigned char* data, size_t datalen, char *hash_string, size_t string_len);
+int load_system_hashes(cups_array_t **hashes);
 
 // Dynamic string
 typedef struct dstr

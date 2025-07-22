@@ -263,6 +263,29 @@ this filter are the same as for texttopdf (see below) as the texttops
 filter calls the texttopdf filter plus Ghostscript's pdf2ps.
 
 
+### Tool FOOMATIC-HASH and allowing values for foomatic-rip filter
+
+Several CVEs for printing stack exploited a different security issue
+to craft a PPD which would call the filter foomatic-rip, and provided
+malicious values for PPD options FoomaticRIPCommandLine, FoomaticRIPCommandLinePDF,
+and FoomaticRIPOptionSetting, because the filter constructs a command
+out of the values and runs it in shell under user lp.
+
+To mitigate the issue, foomatic-rip now allows only values which are allowed
+by admin, and the tool foomatic-hash was invented. The tool scans PPD file or
+a path for drivers with affected values, and generates two files - the first
+with found values for admin to review, and the second with hashes of unique
+values present in the scanned file or path. If admin reviews the found values
+and finds them correct, the found values will be allowed once the file with
+hashes is moved into the directory /etc/foomatic/hashes.d.
+
+The filter foomatic-rip reads files with allowed hashes from two directories -
+/etc/foomatic/hashes.d and /usr/share/foomatic/hashes.d. The former is meant
+for hashes allowed by the local admin, the latter is for printer driver projects
+to put there files with hashes of values which are present in their project
+after the values are reviewed.
+
+
 ### Filters
 
 

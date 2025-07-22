@@ -188,6 +188,8 @@ endif
 if ENABLE_FOOMATIC
 pkgfilter_PROGRAMS += \
 	foomatic-rip
+bin_PROGRAMS = \
+	foomatic-hash
 endif
 if ENABLE_UNIVERSAL_CUPS_FILTER
 pkgfilter_PROGRAMS += \
@@ -278,6 +280,19 @@ commandtopclx_LDADD = \
 	$(LIBPPD_LIBS) \
 	$(CUPS_LIBS)
 
+noinst_LTLIBRARIES = libfoomatic-util.la
+libfoomatic_util_la_SOURCES = \
+	filter/foomatic-rip/util.c \
+	filter/foomatic-rip/util.h \
+	filter/foomatic-rip/process.c \
+	filter/foomatic-rip/process.h
+libfoomatic_util_la_CFLAGS = \
+	-DSYS_HASH_PATH='"$(datadir)/foomatic/hashes.d"' \
+	-DUSR_HASH_PATH='"$(sysconfdir)/foomatic/hashes.d"' \
+	$(CUPS_CFLAGS)
+libfoomatic_util_la_LIBADD = \
+	$(CUPS_LIBS)
+
 foomatic_rip_SOURCES = \
 	filter/foomatic-rip/foomaticrip.c \
 	filter/foomatic-rip/foomaticrip.h \
@@ -287,24 +302,34 @@ foomatic_rip_SOURCES = \
 	filter/foomatic-rip/pdf.h \
 	filter/foomatic-rip/postscript.c \
 	filter/foomatic-rip/postscript.h \
-	filter/foomatic-rip/process.c \
-	filter/foomatic-rip/process.h \
 	filter/foomatic-rip/renderer.c \
 	filter/foomatic-rip/renderer.h \
 	filter/foomatic-rip/spooler.c \
-	filter/foomatic-rip/spooler.h \
-	filter/foomatic-rip/util.c \
-	filter/foomatic-rip/util.h
+	filter/foomatic-rip/spooler.h
 foomatic_rip_CFLAGS = \
 	-DCONFIG_PATH='"$(sysconfdir)/foomatic"' \
 	$(CUPS_CFLAGS) \
 	$(LIBCUPSFILTERS_CFLAGS) \
-	$(LIBPPD_CFLAGS)
+	$(LIBPPD_CFLAGS) \
+	-I/$(srcdir)/filter/foomatic-rip/
 foomatic_rip_LDADD = \
 	$(CUPS_LIBS) \
 	-lm \
 	$(LIBCUPSFILTERS_LIBS) \
-	$(LIBPPD_LIBS)
+	$(LIBPPD_LIBS) \
+	libfoomatic-util.la
+
+foomatic_hash_SOURCES = \
+	filter/foomatic-rip/foomatic-hash.c
+foomatic_hash_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	$(LIBPPD_CFLAGS) \
+	-I/$(srcdir)/filter/foomatic-rip/
+foomatic_hash_LDADD = \
+	$(CUPS_LIBS) \
+	-lm \
+	$(LIBPPD_LIBS) \
+	libfoomatic-util.la
 
 gstoraster_SOURCES = \
 	filter/gstoraster.c
@@ -576,6 +601,7 @@ man_MANS += $(driverlessmanpages)
 endif
 
 foomaticmanpages = \
+	filter/foomatic-rip/foomatic-hash.1 \
 	filter/foomatic-rip/foomatic-rip.1
 if ENABLE_FOOMATIC
 man_MANS += $(foomaticmanpages)
@@ -615,6 +641,8 @@ install-exec-hook:
 	$(INSTALL) -d -m 755 $(DESTDIR)$(pkgbackenddir)
 if ENABLE_FOOMATIC
 	$(LN_SRF) $(DESTDIR)$(pkgfilterdir)/foomatic-rip $(DESTDIR)$(bindir)
+	$(INSTALL) -d -m 755 $(DESTDIR)$(datadir)/foomatic/hashes.d
+	$(INSTALL) -d -m 755 $(DESTDIR)$(sysconfdir)/foomatic/hashes.d
 endif
 if ENABLE_DRIVERLESS
 	$(LN_SRF) $(DESTDIR)$(pkgppdgendir)/driverless $(DESTDIR)$(bindir)
@@ -626,6 +654,8 @@ endif
 uninstall-hook:
 if ENABLE_FOOMATIC
 	$(RM) $(DESTDIR)$(bindir)/foomatic-rip
+	$(RMDIR) $(DESTDIR)$(datadir)/foomatic/hashes.d
+	$(RMDIR) $(DESTDIR)$(sysconfdir)/foomatic/hashes.d
 endif
 if ENABLE_DRIVERLESS
 	$(RM) $(DESTDIR)$(bindir)/driverless
