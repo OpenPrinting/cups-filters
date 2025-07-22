@@ -32,36 +32,6 @@
 #define LOG_FILE "/tmp/foomatic-rip"
 #endif
 
-
-// Constants used by this filter
-//
-// Error codes, as some spoolers behave different depending on the reason why
-// the RIP failed, we return an error code.
-
-#define EXIT_PRINTED 0                          // file was printed normally
-#define EXIT_PRNERR 1                           // printer error occured
-#define EXIT_PRNERR_NORETRY 2                   // printer error with no hope
-                                                // of retry
-#define EXIT_JOBERR 3                           // job is defective
-#define EXIT_SIGNAL 4                           // terminated after catching
-                                                // signal
-#define EXIT_ENGAGED 5                          // printer is otherwise engaged
-                                                // (connection refused)
-#define EXIT_STARVED 6                          // starved for system resources
-#define EXIT_PRNERR_NORETRY_ACCESS_DENIED 7     // bad password? bad port
-                                                // permissions?
-#define EXIT_PRNERR_NOT_RESPONDING 8            // just doesn't answer at all
-                                                // (turned off?)
-#define EXIT_PRNERR_NORETRY_BAD_SETTINGS 9      // interface settings are
-                                                // invalid
-#define EXIT_PRNERR_NO_SUCH_ADDRESS 10          // address lookup failed, may
-                                                // be transient
-#define EXIT_PRNERR_NORETRY_NO_SUCH_ADDRESS 11  // address lookup failed, not
-                                                // transient
-#define EXIT_INCAPABLE 50                       // printer wants (lacks)
-                                                // features or resources
-
-
 // Supported spoolers are currently:
 //
 //   cups    - CUPS - Common Unix Printing System
@@ -72,11 +42,6 @@
 
 // The spooler from which foomatic-rip was called. set in main()
 extern int spooler;
-
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
-#define CMDLINE_MAX 65536
 
 typedef struct
 {
@@ -95,11 +60,6 @@ typedef struct
 
 jobparams_t *get_current_job();
 
-void _log(const char* msg, ...);
-int redirect_log_to_stderr();
-void rip_die(int status, const char *msg, ...);
-
-const char *get_modern_shell();
 FILE *open_postpipe();
 
 extern struct dstr *currentcmd;

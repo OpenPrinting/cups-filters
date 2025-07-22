@@ -35,72 +35,6 @@
 #include <cupsfilters/filter.h>
 
 
-// Logging
-FILE* logh = NULL;
-
-
-void
-_logv(const char *msg,
-      va_list ap)
-{
-  if (!logh)
-    return;
-  vfprintf(logh, msg, ap);
-  fflush(logh);
-}
-
-
-void
-_log(const char* msg,
-     ...)
-{
-  va_list ap;
-  va_start(ap, msg);
-  _logv(msg, ap);
-  va_end(ap);
-}
-
-
-void
-close_log()
-{
-  if (logh && logh != stderr)
-    fclose(logh);
-}
-
-
-int
-redirect_log_to_stderr()
-{
-  if (dup2(fileno(logh), fileno(stderr)) < 0)
-  {
-    _log("Could not dup logh to stderr\n");
-    return (0);
-  }
-  return (1);
-}
-
-
-void
-rip_die(int status,
-	const char *msg,
-	...)
-{
-  va_list ap;
-
-  _log("Process is dying with \"");
-  va_start(ap, msg);
-  _logv(msg, ap);
-  va_end(ap);
-  _log("\", exit stat %d\n", status);
-
-  _log("Cleaning up...\n");
-  kill_all_processes();
-
-  exit(status);
-}
-
-
 jobparams_t *job = NULL;
 
 
@@ -186,8 +120,6 @@ char cupsfilterpath[PATH_MAX] = "/usr/local/lib/cups/filter:"
                                 "/opt/cups/filter:"
                                 "/usr/lib/cups/filter";
 
-char modern_shell[] = SHELL;
-
 
 void
 config_set_option(const char *key,
@@ -236,13 +168,6 @@ config_from_file(const char *filename)
   fclose(fh);
 
   return (1);
-}
-
-
-const char *
-get_modern_shell()
-{
-  return (modern_shell);
 }
 
 

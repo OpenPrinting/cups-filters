@@ -102,6 +102,42 @@ get_icc_profile_for_qualifier(const char **qualifier)
 }
 
 
+//
+// 'is_allowed_value' - Check if the option value is allowed.
+//
+
+int					 // O - Boolean value - true 1 / false 0
+is_allowed_value(cups_array_t *ar,       // I - Array of already known hashes from system
+		 char	      *value,    // I - Scanned value from PPD file
+		 size_t       value_len) // I - Value length
+{
+  char hash_string[65];			 // Help array to store hexadecimal hashed string
+
+  //
+  // Empty string is allowed...
+  //
+
+  if (!value_len)
+    return (1);
+
+  //
+  // Hash the value and get hexadecimal string for it...
+  //
+
+  if (hash_data((unsigned char*)value, value_len, hash_string, sizeof(hash_string)))
+    return (0);
+
+  //
+  // Check if the found hexadecimal hashed string is in the array -> allowed on the system...
+  //
+
+  if (cupsArrayFind(ar, hash_string))
+    return (1);
+
+  return (0);
+}
+
+
 // a selector is a general tri-dotted specification.
 // The 2nd and 3rd elements of the qualifier are optionally modified by
 // cupsICCQualifier2 and cupsICCQualifier3:
@@ -1866,11 +1902,18 @@ read_ppd_file(const char *filename)
   option_t *opt, *current_opt = NULL;
   param_t *param;
   icc_mapping_entry_t *entry;
+  cups_array_t *known_hashes = NULL;
 
   fh = fopen(filename, "r");
   if (!fh)
     rip_die(EXIT_PRNERR_NORETRY_BAD_SETTINGS, "Unable to open PPD file %s\n", filename);
   _log("Parsing PPD file ...\n");
+
+  if (load_system_hashes(&known_hashes))
+  {
+    fclose(fh);
+    rip_die(EXIT_PRNERR_NORETRY, "Not enough memory for array allocation\n.");
+  }
 
   dstrassure(value, 256);
 
@@ -1955,10 +1998,26 @@ read_ppd_file(const char *filename)
     }
     else if (strcmp(key, "FoomaticRIPCommandLine") == 0)
     {
+      if (!is_allowed_value(known_hashes, value->data, strlen(value->data)))
+      {
+        cupsArrayDelete(known_hashes);
+        fclose(fh);
+
+        rip_die(EXIT_PRNERR_NOTALLOWED, "ERROR: The value of the key %s is not among the allowed values - see foomatic-rip man page for more instructions.\n", key);
+      }
+
       unhtmlify(cmd, 4096, value->data);
     }
     else if (strcmp(key, "FoomaticRIPCommandLinePDF") == 0)
     {
+      if (!is_allowed_value(known_hashes, value->data, strlen(value->data)))
+      {
+        cupsArrayDelete(known_hashes);
+        fclose(fh);
+
+        rip_die(EXIT_PRNERR_NOTALLOWED, "ERROR: The value of the key %s is not among the allowed values - see foomatic-rip man page for more instructions.\n", key);
+      }
+
       unhtmlify(cmd_pdf, 4096, value->data);
     }
     else if (!strcmp(key, "cupsFilter"))
@@ -2097,6 +2156,14 @@ read_ppd_file(const char *filename)
     }
     else if (!strcmp(key, "FoomaticRIPOptionSetting"))
     {
+      if (!is_allowed_value(known_hashes, value->data, strlen(value->data)))
+      {
+        cupsArrayDelete(known_hashes);
+        fclose(fh);
+
+        rip_die(EXIT_PRNERR_NOTALLOWED, "ERROR: The value of the key %s is not among the allowed values - see foomatic-rip man page for more instructions.\n", key);
+      }
+
       // "*FoomaticRIPOptionSetting <option>[=<choice>]: <code>
       // For boolean options <choice> is not given
       option_set_choice(assure_option(name),

@@ -11,7 +11,9 @@
 //
 
 #include "util.h"
-#include "foomaticrip.h"
+#include "process.h"
+#include <cups/cups.h>
+#include <cups/dir.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,7 +22,71 @@
 #include <errno.h>
 
 
+const char *hash_alg = "sha2-256"; // Used hash algorithm
 const char *shellescapes = "|;<>&!$\'\"`#*?()[]{}";
+FILE* logh = NULL;
+
+// Logging
+void
+_logv(const char *msg,
+      va_list ap)
+{
+  if (!logh)
+    return;
+  vfprintf(logh, msg, ap);
+  fflush(logh);
+}
+
+
+void
+_log(const char* msg,
+     ...)
+{
+  va_list ap;
+  va_start(ap, msg);
+  _logv(msg, ap);
+  va_end(ap);
+}
+
+
+void
+close_log()
+{
+  if (logh && logh != stderr)
+    fclose(logh);
+}
+
+
+int
+redirect_log_to_stderr()
+{
+  if (dup2(fileno(logh), fileno(stderr)) < 0)
+  {
+    _log("Could not dup logh to stderr\n");
+    return (0);
+  }
+  return (1);
+}
+
+
+void
+rip_die(int status,
+	const char *msg,
+	...)
+{
+  va_list ap;
+
+  _log("Process is dying with \"");
+  va_start(ap, msg);
+  _logv(msg, ap);
+  va_end(ap);
+  _log("\", exit stat %d\n", status);
+
+  _log("Cleaning up...\n");
+  kill_all_processes();
+
+  exit(status);
+}
 
 
 const char *
@@ -1448,4 +1514,277 @@ copy_file(FILE *dest,
     fwrite_or_die(buf, 1, bytes, dest);
 
   return (!ferror(src) && !ferror(dest));
+}
+
+
+//
+// 'hash_data()' - Hash presented data with CUPS API hash function.
+//
+
+int				      // O - success 0/error 1
+hash_data(unsigned char *data,	      // I - Data to hash
+	  size_t	datalen,      // I - Length of data
+	  char		*hash_string, // O - Hexadecimal hashed string
+	  size_t	string_len)   // I - Length of hexadecimal hashed string
+{
+  unsigned char hash[32];	      // Array for saving hash
+
+
+  if ((cupsHashData(hash_alg, data, datalen, hash, sizeof(hash))) == -1)
+  {
+    fprintf(stderr, "\"%s\" - Error when hashing\n", data);
+    return (1);
+  }
+
+  if ((cupsHashString(hash, sizeof(hash), hash_string, string_len)) == NULL)
+  {
+    fprintf(stderr, "Error when encoding hash to hexadecimal\n");
+    return (1);
+  }
+
+  return (0);
+}
+
+
+//
+// 'load_system_hashes()' - Load hashes from system.
+//
+
+int					  // O - success 0 / error 1
+load_system_hashes(cups_array_t **hashes) // O - Array of existing hashes
+{
+  char		filename[1024];		  // Absolute path to file
+  cups_dir_t    *dir = NULL;		  // CUPS struct representing dir
+  cups_dentry_t *dent = NULL;		  // CUPS struct representing an object in directory
+  int		i = 0;			  // Array index
+
+  //
+  // System directories to load system hashes from (defined in Makefile.am)
+  //
+  // SYS_HASH_PATH - /usr/share/foomatic/hashes.d by default
+  // USR_HASH_PATH - /etc/foomatic/hashes.d by default
+  //
+
+  const char *dirs[] = {
+    SYS_HASH_PATH,
+    USR_HASH_PATH,
+    NULL
+  };
+
+  if (!hashes)
+    return (1);
+
+  if ((*hashes = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0, (cups_acopy_func_t)strdup, (cups_afree_func_t)free)) == NULL)
+  {
+    fprintf(stderr, "Could not allocate array for hashes.\n");
+    return (1);
+  }
+
+  //
+  // Go through files in directories and load hashes...
+  //
+
+  while (dirs[i] != NULL)
+  {
+    if ((dir = cupsDirOpen(dirs[i])) == NULL)
+    {
+      fprintf(stderr, "Could not open the directory \"%s\" - ignoring...\n", dirs[i++]);
+      continue;
+    }
+
+    while ((dent = cupsDirRead(dir)) != NULL)
+    {
+      // Ignore any unsafe files - dirs, symlinks, hidden files, non-root writable files...
+
+      if (!strncmp(dent->filename, "../", 3) ||
+	  dent->fileinfo.st_uid ||
+	  (dent->fileinfo.st_mode & S_IWGRP) ||
+	  (dent->fileinfo.st_mode & S_ISUID) ||
+	  (dent->fileinfo.st_mode & S_IWOTH))
+        continue;
+
+      snprintf(filename, sizeof(filename), "%s/%s", dirs[i], dent->filename);
+
+      if (!is_valid_path(filename, IS_FILE))
+	continue;
+
+      if (load_array(hashes, filename))
+	continue;
+    }
+
+    cupsDirClose(dir);
+
+    i++;
+  }
+
+  return (0);
+}
+
+
+//
+// `load_array()` - Loads data from file into CUPS array...
+//
+
+int				   // O - Return value, 0 - success, 1 - error
+load_array(cups_array_t **ar,      // O - CUPS array to fill up - NULL/pointer - caller is responsible for freeing memory
+           char         *filename) // I - Path to a file
+{
+  char	      line[2048];	   // Input array for line reading
+  cups_file_t *fp = NULL;	   // File with data
+
+
+  //
+  // Make sure the file is valid and the pointer is not NULL...
+  //
+
+  if (!is_valid_path(filename, IS_FILE) || !ar)
+    return (1);
+
+  memset(line, 0, sizeof(line));
+
+  if (!*ar)
+  {
+    if((*ar = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0, (cups_acopy_func_t)strdup, (cups_afree_func_t)free)) == NULL)
+    {
+      fprintf(stderr, "Cannot allocate array.\n");
+      *ar = NULL;
+      return (1);
+    }
+  }
+
+  //
+  // Has to be accessible, but it is possible the file does not exist
+  // and will be created in the end...
+  //
+
+  if (access(filename, F_OK))
+  {
+    //
+    // It is fine for the file has not existed yet - it will be created in the end...
+    //
+
+    if (errno == ENOENT)
+      return (0);
+    else
+    {
+      fprintf(stderr, "File \"%s\" is not accessible.\n", filename);
+      return (1);
+    }
+  }
+
+  //
+  // Read the file line by line...
+  //
+
+  if ((fp = cupsFileOpen(filename, "r")) == NULL)
+  {
+    fprintf(stderr, "Cannot open file \"%s\" for read.\n", filename);
+    return (1);
+  }
+
+  while (cupsFileGets(fp, line, sizeof(line)))
+  {
+    if (!cupsArrayFind(*ar, line))
+      cupsArrayAdd(*ar, line);
+
+    memset(line, 0, sizeof(line));
+  }
+
+  cupsFileClose(fp);
+
+  return (0);
+}
+
+
+//
+// `is_valid_path()` - Checks whether the input path is valid
+// - correct length, file type, correct characters...
+//
+
+int				   // O - Boolean value, 0 - invalid/1 - valid
+is_valid_path(char	    *path, // I - Path
+	      enum filetype type)  // I - Desired file type - file/dir
+{
+  char	      *filename = NULL;	  // Filename stripped of possible path
+  struct stat fileinfo;		  // For checking whether file is symlink/dir
+  size_t      len = strlen(path); // Path len
+
+  //
+  // Check whether the whole path is not too long...
+  //
+
+  if (len > PATH_MAX || len == 0)
+    return (0);
+
+  //
+  // Be sure we can access the file, is of the correct filetype and is not symlink...
+  // Non-existing file is okay at the moment.
+  //
+
+  if (stat(path, &fileinfo))
+  {
+    if (errno != ENOENT)
+    {
+      fprintf(stderr, "The provided filename \"%s\" is not an acceptable file - %s.\n", path, strerror(errno));
+      return (0);
+    }
+  }
+  else
+  {
+    if ((type & IS_FILE) && S_ISDIR(fileinfo.st_mode))
+    {
+      fprintf(stderr, "The provided filename \"%s\" is not a file.\n", path);
+      return (0);
+    }
+
+    if ((type & IS_DIR) && !S_ISDIR(fileinfo.st_mode))
+    {
+      fprintf(stderr, "The provided filename \"%s\" is not a directory.\n", path);
+      return (0);
+    }
+
+    if (S_ISLNK(fileinfo.st_mode))
+    {
+      fprintf(stderr, "The provided filename \"%s\" is a symlink, which is not allowed.\n", path);
+      return (0);
+    }
+  }
+
+  //
+  // We accept paths only with alphanumeric characters, dots, dashes, underscores, slashes...
+  //
+
+  for (int i = 0; i < len - 1; i++)
+  {
+    if (!isalnum(path[i]) && path[i] != '.' &&
+	path[i] != '-' && path[i] != '_' &&
+	path[i] != '/')
+    {
+      fprintf(stderr, "The provided path contain non-ASCII characters.\n");
+      return (0);
+    }
+  }
+
+  //
+  // Get the filename itself...
+  //
+
+  if ((filename = strrchr(path, '/')) == NULL)
+    filename = path;
+  else
+    filename++;
+
+  if (strlen(filename) > NAME_MAX)
+  {
+    fprintf(stderr, "The filename is too long.\n");
+    return (0);
+  }
+
+  if (filename[0] == '.')
+  {
+    fprintf(stderr, "No hidden files.\n");
+    return (0);
+  }
+
+  return (1);
 }

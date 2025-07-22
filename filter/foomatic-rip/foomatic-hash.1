@@ -1,0 +1,66 @@
+.\"
+.\" foomatic-hash man page.
+.\"
+.\" Copyright @ 2025 by Zdenek Dohnal.
+.\"
+.\" Licensed under Apache License v2.0.  See the file "LICENSE" for more
+.\" information.
+.\"
+
+
+.TH "foomatic-hash" "1" "2025-06-18" "User Commands"
+
+.SH "NAME"
+
+foomatic-hash - tool for scanning provided drivers for problematic PPD options and hash them using  SHA-256
+
+.SH "SYNOPSIS"
+
+.BI \fBfoomatic-hash\fR\ \fB--ppd\fR\ \fI<ppdfile>\fR\ \fI<scanoutput>\fR\ \fI<hashes_file>\fR
+
+.BI \fBfoomatic-hash\fR\ \fB--ppd-paths\fR\ \fI<path1,path2..pathN>\fR\ \fI<scanoutput>\fR\ \fI<hashes_file>\fR
+
+
+.SH "DESCRIPTION"
+
+The tool scans the provided drivers for values of PPD keywords \fBFoomaticRIPCommandLine\fR, \fBFoomaticRIPCommandLinePDF\fR, and \fBFoomaticRIPOptionSetting\fR, puts the found values into a file for review, and prints out values hashes in hexadecimal format. The hashes are required for allowing the filter \fBfoomatic-rip\fR to process those values.
+
+
+.SH "OPTIONS"
+
+The tool \fBfoomatic-hash\fR supports two options:
+
+.TP 10
+.BI \fB--ppd\fR\ \fI<ppdfile>\fR
+The tool scans the specific PPD file.
+
+.TP 10
+.BI \fB--ppd-paths\fR\ \fI<path1,path2..pathN>\fR
+The tool scans directories \fIpath1\fR, \fIpath2\fR until \fIpathN\fR for values of desired PPD keyword. Paths are absolute, symlinks are ignored. Each path is divided by comma. LibPPD support is required for the functionality.
+
+.SH "EXAMPLES"
+Scans PPD file \fBtest.ppd\fR, prints found values into \fBfound_values\fR, hash them and save them into \fBhashed_values\fR.
+.nf
+
+    foomatic-hash --ppd test.ppd found_values hashed_values
+
+.fi
+
+Scans path \fB/etc/cups/ppd\fR for drivers, finds values if any, puts them into \fBfound_values\fR, and hashes them into \fBhashed_values\fR.
+.nf
+
+    sudo foomatic-hash --ppd-paths /etc/cups/ppd found_value hashed_values
+.fi
+
+.SH "EXIT STATUS"
+
+Returns zero if scan happens successfully, non-zero return value for any error during the process.
+
+
+.SH "SEE ALSO"
+
+.BR foomatic-rip (1)
+
+
+.BR
+.EL

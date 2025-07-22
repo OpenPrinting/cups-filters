@@ -120,7 +120,7 @@ PKG_CHECK_MODULES([LIBCUPSFILTERS], [libcupsfilters])
 # ================
 # Check for libppd
 # ================
-PKG_CHECK_MODULES([LIBPPD], [libppd])
+PKG_CHECK_MODULES([LIBPPD], [libppd], [AC_DEFINE(HAVE_LIBPPD, 1, [Have LIBPPD?])], [AC_MSG_RESULT([not found])])
 
 # ======================
 # Check system functions

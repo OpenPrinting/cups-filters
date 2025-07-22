@@ -18,11 +18,14 @@
 #include <sys/wait.h>
 
 
+extern char modern_shell[];
+
 pid_t start_process(const char *name, int (*proc_func)(FILE*, FILE*, void*), void *user_arg,
 		    FILE **fdin, FILE **fdout);
 pid_t start_system_process(const char *name, const char *command, FILE **fdin,
 			   FILE **fdout);
 
+const char *get_modern_shell();
 // returns command's return status (see waitpid(2))
 int run_system_process(const char *name, const char *command);
 
