@@ -76,7 +76,7 @@ rip_die(int status,
 {
   va_list ap;
 
-  _log("Process is dying with \"");
+  _log("ERROR: Process is dying with \"");
   va_start(ap, msg);
   _logv(msg, ap);
   va_end(ap);
