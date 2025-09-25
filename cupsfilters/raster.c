@@ -176,7 +176,7 @@ cupsRasterParseIPPOptions(cups_page_header2_t *h, /* I - Raster header */
       size_found = NULL;
       if ((size_found = pwgMediaForPWG(s)) == NULL)
 	if ((size_found = pwgMediaForPPD(s)) == NULL)
-	  if ((size_found = pwgMediaForPPD(s)) == NULL)
+	  if ((size_found = pwgMediaForLegacy(s)) == NULL)
 	  {
 	    if (strcasestr(s, "tray") ||
 		strcasestr(s, "feed") ||
