@@ -64,6 +64,14 @@ typedef enum {
   OUTPUT_FORMAT_PXL
 } OutFormatType;
 
+typedef enum
+{
+  HALFTONE_DEFAULT,
+  HALFTONE_STOCHASTIC,
+  HALFTONE_FOO2ZJS,
+  HALFTONE_BI_LEVEL
+} cups_halftone_type_t;
+
 #ifdef CUPS_RASTER_SYNCv1
 typedef cups_page_header2_t gs_page_header;
 #else
@@ -647,6 +655,8 @@ main (int argc, char **argv, char *envp[])
   struct sigaction sa;
   cm_calibration_t cm_calibrate;
   int pxlcolor = 1;
+  cups_halftone_type_t halftonetype = HALFTONE_DEFAULT;
+  char *halftone_tmp = NULL;
 #ifdef HAVE_CUPS_1_7
   int pwgraster = 0;
   ppd_attr_t *attr;
@@ -976,6 +986,35 @@ main (int argc, char **argv, char *envp[])
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
 
+  if ((t = cupsGetOption("cupsHalftoneType", num_options, options)) != NULL ||
+      (t = cupsGetOption("halftone-type", num_options, options)) != NULL)
+    halftone_tmp = t;
+  else if (ppd && (attr = ppdFindAttr(ppd, "DefaultcupsHalftoneType", NULL)) != NULL)
+    halftone_tmp = attr->value;
+
+  if (halftone_tmp) {
+    if (!strcasecmp(halftone_tmp, "true") || !strcasecmp(halftone_tmp, "on") ||
+	!strcasecmp(halftone_tmp, "yes") || !strcasecmp(halftone_tmp, "stochastic"))
+      halftonetype = HALFTONE_STOCHASTIC;
+    else if (!strcasecmp(halftone_tmp, "foo2zjs"))
+      halftonetype = HALFTONE_FOO2ZJS;
+    else if (!strcasecmp(halftone_tmp, "bi-level"))
+      halftonetype = HALFTONE_BI_LEVEL;
+  }
+
+  /* For bi-level type, also check print-color-mode, the way it is
+     handled by Poppler pwgtoraster/pdftoraster/pclmtoraster utilities. */
+  if ((t = cupsGetOption("print-color-mode", num_options, options)) != NULL &&
+       !strcasecmp(t, "bi-level"))
+    halftonetype = HALFTONE_BI_LEVEL;
+
+  /* Use Stochastic Halftone dithering found in GhostScript stocht.ps library file.
+     It is activated automatically. */
+  if (halftonetype == HALFTONE_STOCHASTIC) {
+    fprintf(stderr, "DEBUG: Ghostscript using Stochastic Halftone dithering.\n");
+    cupsArrayAdd(gs_args, strdup("stocht.ps"));
+  }
+
   /* Switch to taking PostScript commands on the Ghostscript command line */
   cupsArrayAdd(gs_args, strdup("-c"));
 
@@ -1020,6 +1059,56 @@ main (int argc, char **argv, char *envp[])
     cupsArrayAdd(gs_args, strdup("0 0 .setfilladjust2"));
   } else
     fprintf(stderr, "DEBUG: Ghostscript using Any-Part-of-Pixel method to fill paths.\n");
+
+  /* Use halftone dithering algorithm found in foo2zjs-pstops file */
+  if (halftonetype == HALFTONE_FOO2ZJS) {
+    fprintf(stderr, "DEBUG: Ghostscript using foo2zjs Halftone dithering.\n");
+    cupsArrayAdd(gs_args, strdup("/SpotDot { 180 mul cos exch 180 mul cos add 2 div } def\
+<<\
+    /HalftoneType 5\
+    /Cyan <<\
+        /HalftoneType 1\
+        /AccurateScreens true\
+        /Frequency 150\
+        /Angle 105\
+        /SpotFunction /SpotDot load\
+    >>\
+    /Magenta <<\
+        /HalftoneType 1\
+        /AccurateScreens true\
+        /Frequency 150\
+        /Angle 165\
+        /SpotFunction /SpotDot load\
+    >>\
+    /Yellow <<\
+        /HalftoneType 1\
+        /AccurateScreens true\
+        /Frequency 150\
+        /Angle 30\
+        /SpotFunction /SpotDot load\
+    >>\
+    /Black <<\
+        /HalftoneType 1\
+        /AccurateScreens true\
+        /Frequency 150\
+        /Angle 45\
+        /SpotFunction /SpotDot load\
+    >>\
+    /Default <<\
+        /HalftoneType 1\
+        /AccurateScreens true\
+        /Frequency 150\
+        /Angle 37\
+        /SpotFunction /SpotDot load\
+    >>\
+>> /Default exch /Halftone defineresource sethalftone"));
+  }
+
+  /* Use simple threshold (bi-level) halftone algorithm */
+  if (halftonetype == HALFTONE_BI_LEVEL) {
+    fprintf(stderr, "DEBUG: Ghostscript using Bi-Level Halftone dithering.\n");
+    cupsArrayAdd(gs_args, strdup("{ .5 gt { 1 } { 0 } ifelse} settransfer"));
+  }
 
   /* Mark the end of PostScript commands supplied on the Ghostscript command
      line (with the "-c" option), so that we can supply the input file name */
