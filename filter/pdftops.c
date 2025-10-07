@@ -924,8 +924,7 @@ main(int  argc,				/* I - Number of command-line args */
       /* pdf_argv[1] = (char *)"-level1";
 	 pdf_argv[pdf_argc++] = (char *)"-optimizecolorspace"; */
       /* Issue a warning message when printing a grayscale job with Poppler */
-      fprintf(stderr, "WARNING: Grayscale/monochrome printing requested for this job but Poppler is not able to convert to grayscale/monochrome PostScript.\n");
-      fprintf(stderr, "WARNING: Use \"pdftops-renderer\" option (see cups-filters README file) to use Ghostscript or MuPDF for the PDF -> PostScript conversion.\n");
+      fprintf(stderr, "WARNING: Grayscale/monochrome could be printed as color with Poppler. See cups-filters README file (\"pdftops-renderer\" option).\n");
     }
     pdf_argv[pdf_argc++] = filename;
     pdf_argv[pdf_argc++] = (char *)"-";
