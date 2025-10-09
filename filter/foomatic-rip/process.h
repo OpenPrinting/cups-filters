@@ -18,7 +18,7 @@
 #include <sys/wait.h>
 
 
-extern char modern_shell[];
+extern char *modern_shell;
 
 pid_t start_process(const char *name, int (*proc_func)(FILE*, FILE*, void*), void *user_arg,
 		    FILE **fdin, FILE **fdout);

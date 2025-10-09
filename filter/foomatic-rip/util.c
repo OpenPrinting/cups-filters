@@ -84,6 +84,7 @@ rip_die(int status,
 
   _log("Cleaning up...\n");
   kill_all_processes();
+  free(modern_shell);
 
   exit(status);
 }
