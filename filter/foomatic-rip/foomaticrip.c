@@ -138,7 +138,19 @@ config_set_option(const char *key,
   else if (strcmp(key, "cupsfilterpath") == 0)
     strlcpy(cupsfilterpath, value, PATH_MAX);
   else if (strcmp(key, "preferred_shell") == 0)
-    strlcpy(modern_shell, value, 32);
+  {
+    if (strlen(modern_shell) < strlen(value))
+    {
+      char *tmp = NULL;
+
+      if ((tmp = (char*)realloc(modern_shell, strlen(value) + 1)) == NULL)
+        rip_die(1, "ERROR: modern_shell: not enough memory to realloc");
+
+      modern_shell = tmp;
+    }
+
+    snprintf(modern_shell, strlen(value) + 1, "%s", value);
+  }
   else if (strcmp(key, "gspath") == 0)
     strlcpy(gspath, value, PATH_MAX);
   else if (strcmp(key, "echo") == 0)
@@ -782,6 +794,7 @@ main(int argc,
   data->logdata = NULL;
   data->logfunc = cfCUPSLogFunc;
   arglist = list_create_from_array(argc -1, (void**)&argv[1]);
+  modern_shell = NULL;
 
   if (argc == 2 && (arglist_find(arglist, "--version") ||
 		    arglist_find(arglist, "--help") ||
@@ -793,6 +806,15 @@ main(int argc,
     list_free(arglist);
     return (0);
   }
+
+  if ((modern_shell = (char*)calloc(strlen(SHELL) + 1, sizeof(char*))) == NULL)
+  {
+    printf("ERROR: modern_shell - not enough memory.\n");
+    list_free(arglist);
+    return (1);
+  }
+
+  snprintf(modern_shell, strlen(SHELL) + 1, "%s", SHELL);
 
   filelist = create_dstr();
   job = create_job();
@@ -1225,6 +1247,7 @@ main(int argc,
 
   argv_free(jclprepend);
   free_dstr(jclappend);
+  free(modern_shell);
 
   list_free(arglist);
 

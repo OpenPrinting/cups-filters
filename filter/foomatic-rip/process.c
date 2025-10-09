@@ -22,7 +22,7 @@
 
 int kidgeneration = 0;
 
-char modern_shell[] = SHELL;
+char *modern_shell;
 
 struct process
 {
