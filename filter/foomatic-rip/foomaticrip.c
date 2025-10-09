@@ -125,6 +125,9 @@ void
 config_set_option(const char *key,
 		  const char *value)
 {
+  if (!value)
+    return;
+
   if (strcmp(key, "debug") == 0)
     debug = atoi(value);
 
