@@ -491,6 +491,7 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,ArgOwnership take,int flatten_for
   case WillStayAlive:
     try {
       pdf->processFile("temp file",f,false);
+      pdf->setSuppressWarnings(true);
     } catch (const std::exception &e) {
       error("loadFile failed: %s",e.what());
       return false;
@@ -499,6 +500,7 @@ bool QPDF_PDFTOPDF_Processor::loadFile(FILE *f,ArgOwnership take,int flatten_for
   case TakeOwnership:
     try {
       pdf->processFile("temp file",f,true);
+      pdf->setSuppressWarnings(true);
     } catch (const std::exception &e) {
       error("loadFile failed: %s",e.what());
       return false;
@@ -519,6 +521,7 @@ bool QPDF_PDFTOPDF_Processor::loadFilename(const char *name,int flatten_forms) /
   try {
     pdf.reset(new QPDF);
     pdf->processFile(name);
+    pdf->setSuppressWarnings(true);
   } catch (const std::exception &e) {
     error("loadFilename failed: %s",e.what());
     return false;
