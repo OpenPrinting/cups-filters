@@ -174,6 +174,12 @@ DeviceRGB, DeviceGray, RGB or sGray and is not capable of
 generating PostScript level 1. So its support is only experimental
 and distributions should not choose it as default.
 
+Poppler does not explicitly support turning colored PDF files into
+grayscale PostScript, that's why grayscale/monochrome printing
+could result in color output.  
+Use alternative backends, such as Ghostscript or MuPDF, if this is
+the case with your printer.
+
 The selection is done by the "pdftops-renderer" option, setting it
 to "gs", "pdftops", "pdftocairo", "acroread", "mupdf", or "hybrid":
 
