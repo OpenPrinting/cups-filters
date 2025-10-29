@@ -94,8 +94,9 @@ _cupsImageZoomNew(
   if (xsize > CUPS_IMAGE_MAX_WIDTH ||
       ysize > CUPS_IMAGE_MAX_HEIGHT ||
       (xc1 - xc0) > CUPS_IMAGE_MAX_WIDTH ||
-      (yc1 - yc0) > CUPS_IMAGE_MAX_HEIGHT)
-    return (NULL);		/* Protect against integer overflow */
+      (yc1 - yc0) > CUPS_IMAGE_MAX_HEIGHT ||
+      xsize == 0 || ysize == 0)
+    return (NULL);		/* Protect against integer overflow and divide by zero */
 
   if ((z = (cups_izoom_t *)calloc(1, sizeof(cups_izoom_t))) == NULL)
     return (NULL);
