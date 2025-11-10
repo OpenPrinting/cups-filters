@@ -303,6 +303,14 @@ _cupsImageReadTIFF(
         break;
   }
 
+  if (orientation >= ORIENTATION_LEFTTOP)
+  {
+    fputs("ERROR: TIFF files with vertical scanlines are not supported!\n", stderr);
+    TIFFClose(tif);
+    fclose(fp);
+    return (-1);
+  }
+
   switch (orientation)
   {
     case ORIENTATION_TOPRIGHT :
