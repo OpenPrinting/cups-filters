@@ -43,6 +43,7 @@ _cupsImageReadTIFF(
   TIFF		*tif;			/* TIFF file */
   uint32_t	width, height;		/* Size of image */
   uint16_t	photometric,		/* Colorspace */
+    planar,         /* Color components in separate planes */
 		compression,		/* Type of compression */
 		orientation,		/* Orientation */
 		resunit,		/* Units for resolution */
@@ -113,6 +114,15 @@ _cupsImageReadTIFF(
     TIFFClose(tif);
     fclose(fp);
     return (-1);
+  }
+
+  if (TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planar) &&
+      planar == PLANARCONFIG_SEPARATE)
+  {
+    fputs("DEBUG: Images with planar color configuration are not supported!\n", stderr);
+    TIFFClose(tif);
+    fclose(fp);
+    return (1);
   }
 
   if (!TIFFGetField(tif, TIFFTAG_COMPRESSION, &compression))
