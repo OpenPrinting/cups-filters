@@ -1469,7 +1469,7 @@ _cupsImageReadTIFF(
 	      }
 
 	      if (lut)
-	        cupsImageLut(out, img->xsize * 3, lut);
+	        cupsImageLut(out, img->xsize * bpp, lut);
 
               _cupsImagePutRow(img, 0, y, img->xsize, out);
             }
