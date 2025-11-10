@@ -205,6 +205,23 @@ _cupsImageReadTIFF(
     alpha = 0;
 
  /*
+  * Check whether number of samples per pixel corresponds with color space
+  */
+
+  if ((photometric == PHOTOMETRIC_RGB && (samples < 3 || samples > 4)) ||
+      (photometric == PHOTOMETRIC_SEPARATED && samples != 4))
+  {
+    fprintf(stderr, "DEBUG: Number of samples per pixel does not correspond to color space! "
+                    "Color space: %s; Samples per pixel: %d\n",
+                    (photometric == PHOTOMETRIC_RGB ? "RGB" :
+                     (photometric == PHOTOMETRIC_SEPARATED ? "CMYK" : "Unknown")),
+                    samples);
+    TIFFClose(tif);
+    fclose(fp);
+    return (1);
+  }
+
+ /*
   * Check the size of the image...
   */
 
